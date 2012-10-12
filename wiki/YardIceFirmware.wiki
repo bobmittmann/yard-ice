@@ -13,4 +13,5 @@ The YARD-ICE firmware do not need any external or third-party library. All what 
   * TCP/IP - small footprint efficient stack designed for embedded systems.
   * CM3 - Cortex-M3 specific functions
   * STM32F - ST stm32f SoC hardware access functions
-
+  * ICE-COMM - library used for real-time trace using a JTAG tool like the YARD-ICE.
+  * 
