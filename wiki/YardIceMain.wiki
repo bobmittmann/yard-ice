@@ -13,7 +13,7 @@ One goal of the project is to free embedded systems developers from the Windows/
 
 This is not a software only project. The Hardware, including schematics, PCB layout and VHDL code for is free and open source as well.
 
-= Content =
+== Content ==
  
   * [YardIceHardware Hardware]
   * [YardIceFpgaVhdl FPGA/VHDL]
