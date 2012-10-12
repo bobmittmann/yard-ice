@@ -1,5 +1,3 @@
-# 
-# Makefile
 #
 # Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
 # 
@@ -17,6 +15,11 @@
 # 
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
+
+#
+# File:   Makefile
+# Author: Robinson Mittmann <bobmittmann@gmail.com>
+# 
 
 PROG = yard-ice
 
