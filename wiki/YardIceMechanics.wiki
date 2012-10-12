@@ -8,8 +8,6 @@ This image shows the YARD-ICE PCB and box assembly:
 
 http://yard-ice.googlecode.com/files/yard-ice-3d-top-transparent-box.jpg
 
-== Info ==
-
   * Manufacturer: [http://www.hammondmfg.com/1553.htm  Hammond Manufacturing Ltd.]
   * Models: 1553CBK (Black), 1553CGY (Gray)
 
