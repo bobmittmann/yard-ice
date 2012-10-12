@@ -26,6 +26,14 @@ The hardware was designed with the following features in mind:
 
   * An large external memory or SD card slot for autonomous operation. The problem is that the board is already congested and there is no space in the enclosure for extra interfaces. The solution may be use the P2,P3 and P4 connectors to support a risen daughter card.
 
+== Block Diagram ==
+
+The top-level block diagram for the platform is depicted bellow:
+
+http://yard-ice.googlecode.com/files/yard-ice-top-level-block-diag.png
+
+FIXME: this diagram is incomplete. The original SVG can be found at the source code tree under the doc/svg folder.
+
 == Release 0.1 ==
 
 A set of prototype boards where produce with the help of *I-LAX Electronics Inc.* (www.i-lax.ca) in Canada.
