@@ -4,10 +4,13 @@
 
 The software of the *YARD-ICE* comprises a set of libraries. Each library can be used independently or compiled as a part of the YARD-ICE firmware.
 
-The YARD-ICE firmware do not need any external or third-party library. All it is need is provided with the source-code including:
+== Libraries ==
+
+The YARD-ICE firmware do not need any external or third-party library. All what it is need to compile the firmware is provided with the source-code.
 
   * LIBC - the YARD libc is a small library targeted to embedded systems.
   * RTOS - uses the ThinkOS real time operating system. This RTOS was designed and optimized for Cortex-M cores.
   * TCP/IP - small footprint efficient stack designed for embedded systems.
-
+  * CM3 - Cortex-M3 specific functions
+  * STM32F - ST stm32f SoC hardware access functions
 
