@@ -1,0 +1,20 @@
+#summary YARD-ICE Mechanical Info
+
+= Enclosure =
+
+The YARD-ICE PCB was designed to fit in a standard plastic enclosure you can buy on-line trough DigiKey or Mouser.
+
+This image shows the YARD-ICE PCB and box assembly:
+
+http://yard-ice.googlecode.com/files/yard-ice-3d-top-transparent-box.jpg
+
+== Info ==
+
+  * Manufacturer: [http://www.hammondmfg.com/1553.htm  Hammond Manufacturing Ltd.]
+  * Models: 1553CBK (Black), 1553CGY (Gray)
+
+== Drawings ==
+
+  * []
+  * []
+  * []
