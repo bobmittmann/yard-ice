@@ -1,4 +1,5 @@
-#YARD_ICE Main Page
+#summary YARD-ICE Main Page
+#labels YARD-ICE,ARM,FPGA,VHDL,C,Embedded,Debugger,InCircuitEmulator
 
 = Welcome to the YARD-ICE project =
 
