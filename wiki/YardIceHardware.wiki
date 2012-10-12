@@ -34,3 +34,11 @@ There is an error in the USB connector which was fixed in the 0.2 release.
 http://yard-ice.googlecode.com/files/yard_yce_01_top.jpg
 
 http://yard-ice.googlecode.com/files/yard_yce_01_bottom.jpg
+
+== Release 0.2 ==
+
+The fabrication files for the release 0.2 can be downloaded from here:
+
+http://yard-ice.googlecode.com/files/yard-ice-pcb-rev0.2.zip
+
+There is no plans for fabrication at this point as I'm trying to figure out how to finance this. Any suggestions are welcome.
