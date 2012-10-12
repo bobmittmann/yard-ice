@@ -19,8 +19,20 @@ http://yard-ice.googlecode.com/files/yard-ice-3d-top-transparent-box.jpg
   * [http://www.hammondmfg.com/zip/1553C.zip AutoCAD]
   * [http://www.hammondmfg.com/3DZip/1553C%20Assembly.zip 3D Step Assembly]
 
+= Light Pipes =
 
-TODO: Pictures of the BOX
-TODO: Screws info
-TODO: Cutting drawings
+There are 3 surface mounted LEDs on the board. To get the light "out of the box" light pipes are used.
 
+http://yard-ice.googlecode.com/files/LPA-C011301S-20-small.jpg
+
+  * Manufacturer: [http://www.lumex.com  Lumex]
+  * Model: LPA-C011301S-20
+
+== Drawings ===
+
+  * [http://www.lumex.com/specs/LPA-C011301S-20.pdf PDF]
+
+== TODO ==
+  * Pictures of the BOX
+  * Screws info
+  * Cutting drawings
