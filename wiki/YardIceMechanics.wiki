@@ -2,7 +2,7 @@
 
 = Enclosure =
 
-The YARD-ICE PCB was designed to fit in a standard plastic enclosure you can buy on-line trough DigiKey or Mouser.
+The YARD-ICE PCB was designed to fit in a standard plastic enclosure you can buy on-line from !DigiKey or Mouser.
 
 This image shows the YARD-ICE PCB and box assembly:
 
@@ -15,6 +15,6 @@ http://yard-ice.googlecode.com/files/yard-ice-3d-top-transparent-box.jpg
 
 == Drawings ==
 
-  * []
-  * []
-  * []
+  * [http://www.hammondmfg.com/pdf/1553C.pdf PDF]
+  * [http://www.hammondmfg.com/zip/1553C.zip AutoCAD]
+  * [http://www.hammondmfg.com/3DZip/1553C%20Assembly.zip 3D Step Assembly]
