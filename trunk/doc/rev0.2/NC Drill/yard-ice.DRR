@@ -1,0 +1,24 @@
+---------------------------------------------------------------------------
+NCDrill File Report For: yard-ice.PcbDoc   10/11/2012  5:01:23 PM
+---------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : yard-ice.TXT
+
+Tool         Hole Size           Hole Type     Hole Count Plated       Tool Travel
+---------------------------------------------------------------------------
+T1        0.4mm (15.748mil)        Round          414              1421.84 mm (55.98 Inch)
+T2        0.9mm (35.433mil)        Round          4                6.50 mm (0.26 Inch)
+T3        0.95mm (37.402mil)       Round          39               202.12 mm (7.96 Inch)
+T4        1.4mm (55.118mil)        Round          1                0.00 mm (0.00 Inch)
+T5        2.2mm (86.614mil)        Round          2                12.04 mm (0.47 Inch)
+T6        1mm (39.37mil)           Round          6         NPTH   51.27 mm (2.02 Inch)
+T7        1.1mm (43.307mil)        Round          2         NPTH   19.70 mm (0.78 Inch)
+T8        1.6mm (62.992mil)        Round          1         NPTH   0.00 mm (0.00 Inch)
+T9        1.8mm (70.866mil)        Round          1         NPTH   0.00 mm (0.00 Inch)
+T11       3.2mm (125.984mil)       Round          4         NPTH   156.50 mm (6.16 Inch)
+T12       3.27mm (128.74mil)       Round          2         NPTH   12.70 mm (0.50 Inch)
+---------------------------------------------------------------------------
+Totals                                            476              1882.67 mm (74.12 Inch)
+
+Total Processing Time (hh:mm:ss) : 00:00:01
