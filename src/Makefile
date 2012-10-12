@@ -22,9 +22,9 @@ PROG = yard-ice
 
 CFILES = yard-ice.c
 
-LIBDIRS = libcm3 libstm32f libutil libthinkos libc libice-comm libmbuf libtcpip
+LIBDIRS = libcm3 libstm32f libutil libthinkos libc libice-comm libtcpip
 
-LIBS = stm32f cm3 util thinkos c ice-comm tcpip mbuf
+LIBS = stm32f cm3 util thinkos c ice-comm tcpip
 
 CFLAGS = -g -O2 
 
