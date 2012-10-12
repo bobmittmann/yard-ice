@@ -26,10 +26,18 @@ UDP_CFILES = udp_bind.c udp.c udp_close.c udp_connect.c udp_enum.c udp_input.c \
 
 TCP_CFILES = 
 
+MBUF_CFILES = mbuf.c mbuf_memavail.c mbuf_alloc.c mbuf_try_alloc.c\
+		 mbuf_try_alloc_and_wait.c mbuf_free.c mbuf_check.c\
+		 mbuf_size.c mbuf_avail.c mbuf_max.c mbuf_used.c mbuf_wait.c\
+		 mbuf_list_alloc.c mbuf_list_free.c mbuf_list_read.c mbuf_list_write.c\
+		 mbuf_queue_add.c mbuf_queue_free.c mbuf_queue_get.c\
+		 mbuf_queue_init.c mbuf_queue_remove.c mbuf_queue_trim.c
+
 CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
 		 stm32f-eth.c\
-		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES)) \
-		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES)) \
+		 $(addprefix mbuf/,$(MBUF_CFILES))\
+		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES))\
+		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES))\
 		 $(addprefix udp/,$(UDP_CFILES)) $(addprefix tcp/,$(TCP_CFILES))
 
 override INCPATH += ./include
