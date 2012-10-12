@@ -28,7 +28,7 @@ The hardware was designed with the following features in mind:
 
 == Release 0.1 ==
 
-A set of prototype boards where produce with the help of I-LAX Electronics Inc. (www.i-lax.ca) in Canada.
+A set of prototype boards where produce with the help of *I-LAX Electronics Inc.* (www.i-lax.ca) in Canada.
 There is an error in the USB connector which was fixed in the 0.2 release.
 
 http://yard-ice.googlecode.com/files/yard_yce_01_top.jpg
