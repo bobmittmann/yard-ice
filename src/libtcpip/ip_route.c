@@ -1,14 +1,28 @@
-/* $Id: ip_route.c,v 2.3 2008/05/23 03:31:09 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	ip_route.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:
- * Comment:
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file ip_route.c
+ * @brief IP layer
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
 
 #ifdef IPROUTE_DEBUG
 #ifndef DEBUG
