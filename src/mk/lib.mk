@@ -134,5 +134,5 @@ $(DFILES): | $(DDIRS)
 
 include $(MKDIR)/cc.mk
 
-include $(DFILES)
+#include $(DFILES)
 

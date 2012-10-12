@@ -11,7 +11,7 @@ LIB_STATIC = tcpip
 IFNET_CFILES = get_ifn_byipaddr.c get_ifn_byname.c ifn_enum.c ifn_getaddr.c \
 			   ifn_get_first.c ifn_getname.c ifn_get_next.c ifn_getstat.c \
 			   ifn_ipv4_get.c ifn_ipv4_set.c ifn_register.c ifn_unregister.c \
-			   loopif.c
+			   loopif.c 
 
 PCB_CFILES = in_pcb.c
 
@@ -27,6 +27,7 @@ UDP_CFILES = udp_bind.c udp.c udp_close.c udp_connect.c udp_enum.c udp_input.c \
 TCP_CFILES = 
 
 CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
+		 stm32f-eth.c\
 		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES)) \
 		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES)) \
 		 $(addprefix udp/,$(UDP_CFILES)) $(addprefix tcp/,$(TCP_CFILES))

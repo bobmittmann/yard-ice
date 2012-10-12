@@ -29,7 +29,7 @@ export SDKDIR MKDIR TOOLSDIR
 MACH = stm32f207
 ARCH = cm3
 CPU = cortex-m3
-CDEFS = STM32F207
+CDEFS += STM32F207 "CM3_SYSTICK_CLK_HZ=15000000" 
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 

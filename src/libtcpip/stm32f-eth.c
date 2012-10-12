@@ -693,10 +693,10 @@ struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask)
 int stm32f_eth_if_init(struct ifnet * __if)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth * eth)__if->io;
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 
 	drv->ifn = __if;
-	drv->eth = (struct stm32f_eth * eth)__if->io;
+	drv->eth = eth;
 
 	DCC_LOG2(LOG_TRACE, "if=0x%p drv=0x%p", __if, drv);
 
@@ -751,7 +751,7 @@ struct stm32f_eth_drv stm32f_eth_drv;
 
 void stm32f_eth_isr(void)
 {
-	struct stm32f_eth_drv * drv = stm32f_eth_drv;
+	struct stm32f_eth_drv * drv = &stm32f_eth_drv;
 	struct ifnet * ifn = drv->ifn;
 	struct stm32f_eth * eth = drv->eth;
 
