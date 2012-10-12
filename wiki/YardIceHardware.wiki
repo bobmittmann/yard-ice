@@ -30,7 +30,7 @@ The hardware was designed with the following features in mind:
 
 The top-level block diagram for the platform is depicted bellow:
 
-http://yard-ice.googlecode.com/files/yard-ice-top-level-block-diag.png
+http://yard-ice.googlecode.com/files/yard-ice-top-level-block-diagram.png
 
 FIXME: this diagram is incomplete. The original SVG can be found at the source code tree under the doc/svg folder.
 
