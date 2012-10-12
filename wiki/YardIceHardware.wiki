@@ -24,7 +24,7 @@ The hardware was designed with the following features in mind:
 
 == Missing Features ==
 
-  * An large external memory or SD card slot for autonomous operation. The problem is that the board is already congested and there is no space in the enclosure for extra interfaces. A risen daughter card with an SD card or flash memory may solve the problem.
+  * An large external memory or SD card slot for autonomous operation. The problem is that the board is already congested and there is no space in the enclosure for extra interfaces. The solution may be use the P2,P3 and P4 connectors to support a risen daughter card.
 
 == Release 0.1 ==
 
