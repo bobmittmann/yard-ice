@@ -20,3 +20,9 @@ One goal of the project is to free embedded systems developers from the Windows/
   * [YardIceFirmware Firmware]
   * [YardIceScripting Scripting]
   * [YardIceTargets Targets]
+
+== Supporters ==
+
+  * [http://www.boreste.biz/index2.htm BORESTE]
+  * [http://www.i-lax.ca I-LAX Electronics Inc.]
+  * [http://bobmittmann.blogspot.ca/ Mostly Embedded]
