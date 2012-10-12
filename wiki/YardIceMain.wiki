@@ -21,6 +21,10 @@ One goal of the project is to free embedded systems developers from the Windows/
   * [YardIceScripting Scripting]
   * [YardIceTargets Targets]
 
+== Tools ==
+
+  * GCC - information on how to compile your own GCC toolchain: http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html
+
 == Supporters ==
 
   * [http://www.boreste.biz/index2.htm BORESTE]
