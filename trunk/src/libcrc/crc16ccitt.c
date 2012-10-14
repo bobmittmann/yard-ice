@@ -1,7 +1,7 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
- * This file is part of the YARD-ICE.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
+ * This file is part of the YARD-ICE
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,38 +18,29 @@
  */
 
 /** 
- * @file vec_cmp.c
- * @brief YARD-ICE libbitvec
+ * @file crc16ccitt.c
+ * @brief YARD-ICE libcrc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <stdint.h>
-#include <string.h>
-
-int vec_cmp(const void * vec_a, const void * vec_b, int len)
+/* CRC algorithm using the CCITT 16bit polynomial: (X^16 + X^12 + X^5 + 1). */
+unsigned int crc16ccitt(unsigned int crc, const void * buf, int len)
 {
-	uint8_t * pa = (uint8_t *)vec_a;
-	uint8_t * pb = (uint8_t *)vec_b;
-	uint8_t mask;
-	uint8_t x;
-	int rem;
+	unsigned char * cp;
+	unsigned int c;
 	int i;
 
-	for (i = 0; i < (len / 8); i++) {
-		if ((x = (*pa ^ *pb)) != 0) {
-			return i + ffs(x);
-		}
-		pa++;
-		pb++;
+	cp = (unsigned char *)buf;
+
+	for (i = 0; i < len; i++) {
+		c = cp[i];
+		crc = (crc >> 8) | ((crc & 0xff) << 8);
+		crc ^= c;
+		crc ^= (crc & 0xff) >> 4;
+		crc ^= (crc & 0x0f) << 12;
+		crc ^= (crc & 0xff) << 5;
 	}
 
-	if ((rem = (len % 8)) != 0) {
-		mask = (1 << rem) - 1;	
-		if ((x = ((*pa & mask) ^ (*pb & mask))) != 0) {
-			return i + ffs(x);
-		}
-	}
-
-	return 0;
+	return crc;
 }
 
