@@ -21,21 +21,10 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-PROG = yard-ice
+LIB_STATIC = bitvec
 
-CFILES = yard-ice.c
+CFILES = vec_cat.c vec_cmp.c vec_fmt.c vec_lshift.c vec_rshift.c \
+		 vec_ones.c vec_zeros.c vec_rand.c
 
-LIBDIRS = libcm3 libstm32f libutil libthinkos libc libice-comm libtcpip libdrv\
-		  libbitvec
-
-LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec 
-
-CFLAGS = -g -O2 
-
-JTAGTOOL_ADDR = 192.168.0.80
-
-VERSION_MAJOR = "0"
-VERSION_MINOR = "1"
-
-include mk/stm32f207.mk
+include ../mk/lib.mk
 
