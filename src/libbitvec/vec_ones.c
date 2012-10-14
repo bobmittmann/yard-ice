@@ -19,7 +19,7 @@
 
 /** 
  * @file vec_ones.c
- * @brief YARD-ICE application main
+ * @brief YARD-ICE libbitvec
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
