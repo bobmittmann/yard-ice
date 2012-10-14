@@ -19,7 +19,7 @@
 
 /** 
  * @file endian.h
- * @brief minimal LIBC
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 

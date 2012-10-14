@@ -21,21 +21,9 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-PROG = yard-ice
+LIB_STATIC = crc
 
-CFILES = yard-ice.c
+CFILES = crc16ccitt.c
 
-LIBDIRS = libcm3 libstm32f libutil libthinkos libc libice-comm libtcpip libdrv\
-		  libbitvec libhexdump libcrc
-
-LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec hexdump crc
-
-CFLAGS = -g -O2 
-
-JTAGTOOL_ADDR = 192.168.0.80
-
-VERSION_MAJOR = "0"
-VERSION_MINOR = "1"
-
-include mk/stm32f207.mk
+include ../mk/lib.mk
 
