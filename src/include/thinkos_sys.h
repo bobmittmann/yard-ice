@@ -42,6 +42,7 @@
 
 #include <arch/cortex-m3.h>
 #include <stdint.h>
+#include <stddef.h>
 
 /* -------------------------------------------------------------------------- 
  * Thread context layout
@@ -162,18 +163,21 @@ struct thinkos_context {
 #define THINKOS_ENABLE_ARG_CHECK 1
 #endif
 
+#ifndef THINKOS_ENABLE_DEADLOCK_CHECK
+#define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#endif
+
 /* timed calls depends on clock */
 #if THINKOS_ENABLE_TIMED_CALLS
  #undef THINKOS_ENABLE_CLOCK
  #define THINKOS_ENABLE_CLOCK 1
 #endif
 
-/* timed calls and pause depends on thread status */
-#if THINKOS_ENABLE_TIMED_CALLS || THINKOS_ENABLE_PAUSE
+/* timed calls cancel and pause depends on thread status */
+#if THINKOS_ENABLE_TIMED_CALLS || THINKOS_ENABLE_PAUSE || THINKOS_ENABLE_CANCEL
  #undef THINKOS_ENABLE_THREAD_STAT
  #define THINKOS_ENABLE_THREAD_STAT 1
 #endif
-
 
 /* -------------------------------------------------------------------------- 
  * Run Time RTOS block
@@ -187,7 +191,7 @@ struct thinkos_rt {
 	struct thinkos_context * ctx[32]; 
 	struct thinkos_context * idle_ctx; 
 
-	int32_t active;
+	int32_t active; /* current active thread */
 
 	uint32_t wq_lst[0]; /* queue list placeholder */
 
@@ -199,6 +203,14 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_canceled; /* canceled threads wait queue */
+#endif
+
+#if THINKOS_ENABLE_PAUSE
+	uint32_t wq_paused;
+#endif
+
+#if THINKOS_ENABLE_CLOCK
+	uint32_t wq_clock;
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
@@ -220,14 +232,6 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
-
-#if THINKOS_ENABLE_PAUSE
-	uint32_t wq_paused;
-#endif
-
-#if THINKOS_ENABLE_CLOCK
-	uint32_t wq_clock;
-#endif
 
 	uint32_t wq_end[0]; /* end of queue list placeholder */
 
@@ -287,6 +291,37 @@ struct thinkos_rt {
 #endif
 
 } __attribute__ ((aligned (8)));
+
+
+/* -------------------------------------------------------------------------- 
+ * Base indexes for the wait queue list (wq_lst[])
+ * --------------------------------------------------------------------------*/
+
+#define THINKOS_WQ_READY 0
+
+#define THINKOS_WQ_CLOCK ((offsetof(struct thinkos_rt, wq_clock) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_MUTEX_BASE ((offsetof(struct thinkos_rt, wq_mutex) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_COND_BASE ((offsetof(struct thinkos_rt, wq_cond) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_SEM_BASE ((offsetof(struct thinkos_rt, wq_sem) \
+						   - offsetof(struct thinkos_rt, wq_lst)) \
+						  / sizeof(uint32_t))
+
+#define THINKOS_EVENT_BASE ((offsetof(struct thinkos_rt, wq_event) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_JOIN_BASE ((offsetof(struct thinkos_rt, wq_join) \
+						   - offsetof(struct thinkos_rt, wq_lst)) \
+						  / sizeof(uint32_t))
 
 /* -------------------------------------------------------------------------- 
  * Thread initialization 
@@ -428,15 +463,74 @@ static void inline __thinkos_wq_insert(uint32_t * wq, int32_t idx) {
 #endif
 }
 #endif
+
+#define THINKOS_IDX_NULL 32
+#define THINKOS_THREAD_NULL THINKOS_IDX_NULL
+#define THINKOS_THREAD_IDLE THINKOS_IDX_NULL
+
 static int inline __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;
 }
 
-#define THINKOS_IDX_NULL 32
-
-static int inline __thinkos_wq_head(uint32_t * ptr) {
+#if 0
+static int inline __thinkos_wq_head(uint32_t * wqptr) {
 	/* get a thread from the queue bitmap */
-	return __clz(__rbit(*ptr));
+	return __clz(__rbit(*wqptr));
+}
+#endif
+
+static int inline __thinkos_wq_head(unsigned int wq) {
+	/* get a thread from the queue bitmap */
+	return __clz(__rbit(thinkos_rt.wq_lst[wq]));
+}
+
+static void inline __thinkos_wq_insert(unsigned int wq, unsigned int th) {
+	/* insert into the event wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
+#if THINKOS_ENABLE_THREAD_STAT
+	thinkos_rt.th_stat[th] = wq << 1;
+#endif
+}
+
+static void inline __thinkos_tmdwq_insert(unsigned int wq, 
+										  unsigned int th,
+										  unsigned int ms) {
+	/* set the clock */
+	thinkos_rt.clock[th] = thinkos_rt.ticks + ms;
+	/* insert into the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
+	/* insert into the event wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 1);  
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status, mark the thread clock enable bit */
+	thinkos_rt.th_stat[th] = (wq << 1) + 1;
+#endif
+}
+
+static void inline __thinkos_wq_remove(unsigned int wq, unsigned int th) {
+	/* remove from the wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_CLOCK], th, 0);  
+#endif
+}
+
+static void inline __thinkos_wakeup(unsigned int wq, unsigned int th) {
+	/* insert the thread into ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_READY], th, 1);
+	/* remove from the wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_CLOCK], th, 0);  
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status */
+	thinkos_rt.th_stat[th] = 0;
+#endif
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = 0;
 }
 
 #ifdef __cplusplus

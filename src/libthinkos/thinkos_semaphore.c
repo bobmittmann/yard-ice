@@ -31,49 +31,59 @@
 #if THINKOS_ENABLE_SEM_ALLOC
 void thinkos_sem_alloc_svc(int32_t * arg)
 {	
+	unsigned int wq;
 	uint32_t value = (uint32_t)arg[0];
-	unsigned int sem;
+	int sem;
 
 	if ((sem = thinkos_alloc_lo(&thinkos_rt.sem_alloc, 0)) >= 0)
 		thinkos_rt.sem_val[sem] = value;
 
-	arg[0] = sem;
+	wq = sem + THINKOS_SEM_BASE;
+
+	DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", sem, wq);
+	arg[0] = wq;
 }
 
 void thinkos_sem_free_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 
+	DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", sem, wq);
 	__bit_mem_wr(&thinkos_rt.sem_alloc, sem, 0);
 }
 #endif
 
 void thinkos_sem_init_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
 	uint32_t value = (uint32_t)arg[1];
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		arg[0] = -1;
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
+
+	DCC_LOG2(LOG_TRACE, "sem[%d] <= %d", sem, value);
 
 	thinkos_rt.sem_val[sem] = value;
 	arg[0] = 0;
@@ -81,17 +91,20 @@ void thinkos_sem_init_svc(int32_t * arg)
 
 void thinkos_sem_wait_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
+	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		arg[0] = -1;
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
@@ -99,18 +112,10 @@ void thinkos_sem_wait_svc(int32_t * arg)
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
-	//	printf("%s(): <%d> ...\n", __func__, thinkos_rt.active);
 	} else {
-		int this = thinkos_rt.active;
-
-		bmp_bit_set(&thinkos_rt.wq_sem[sem], this);  
-#if THINKOS_ENABLE_THREAD_STAT
-		/* update status */
-		thinkos_rt.th_stat[this] = __wq_idx(&thinkos_rt.wq_sem[sem]) << 1;
-#endif
-
-//		printf("%s(): <%d> wait...\n", __func__, this);
-
+		/* insert into the semaphore wait queue */
+		__thinkos_wq_insert(wq, self);
+		DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 		/* wait for event */
 		__thinkos_wait();
 	}
@@ -120,16 +125,18 @@ void thinkos_sem_wait_svc(int32_t * arg)
 
 void thinkos_sem_trywait_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -149,18 +156,20 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 #if THINKOS_ENABLE_TIMED_CALLS
 void thinkos_sem_timedwait_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
 	uint32_t ms = (uint32_t)arg[1];
-	int this = thinkos_rt.active;
+	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -173,18 +182,9 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 		return;
 	}
 
-	/* insert into the sem wait queue */
-	bmp_bit_set(&thinkos_rt.wq_sem[sem], this);  
-
-	/* set the clock */
-	thinkos_rt.clock[this] = thinkos_rt.ticks + (ms / 1);
-	/* insert into the clock wait queue */
-	bmp_bit_set(&thinkos_rt.wq_clock, this);  
-
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status, mark the thread clock enable bit */
-	thinkos_rt.th_stat[this] = (__wq_idx(&thinkos_rt.wq_sem[sem]) << 1) + 1;
-#endif
+	/* insert into the semaphore wait queue */
+	__thinkos_tmdwq_insert(wq, self, ms);
+	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 
 	/* Set the default return value to timeout. The
 	   sem_post call will change this to 0 */
@@ -197,45 +197,32 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 
 void thinkos_sem_post_svc(int32_t * arg)
 {	
-	unsigned int sem = arg[0];
-	int idx;
+	unsigned int wq = arg[0];
+	unsigned int sem = wq - THINKOS_SEM_BASE;
+	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
-	idx = __thinkos_wq_head(&thinkos_rt.wq_sem[sem]);
-	if (idx == THINKOS_IDX_NULL) {
+	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the semaphore, increment. */ 
 		thinkos_rt.sem_val[sem]++;
 	} else {
-//		printf("%s(): <%d> wakeup ...\n", __func__, idx);
-
-		/* remove from the sem wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_sem[sem], idx);  
-#if THINKOS_ENABLE_TIMED_CALLS
-		/* possibly remove from the time wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_clock, idx);  
-#endif
-#if THINKOS_ENABLE_THREAD_STAT
-		/* update status */
-		thinkos_rt.th_stat[idx] = 0;
-#endif
-		/* set the thread's return value */
-		thinkos_rt.ctx[idx]->r0 = 0;
-		/* insert the thread into ready queue */
-		bmp_bit_set(&thinkos_rt.wq_ready, idx);
-
+		/* wakeup from the sem wait queue */
+		__thinkos_wakeup(wq, th);
+		DCC_LOG2(LOG_INFO, "<%d> wakeup from sem %d ", th, wq);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
