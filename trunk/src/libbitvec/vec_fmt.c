@@ -19,7 +19,7 @@
 
 /** 
  * @file vec_fmt.c
- * @brief YARD-ICE application main
+ * @brief YARD-ICE libbitvec
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
