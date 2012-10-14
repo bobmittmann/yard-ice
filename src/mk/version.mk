@@ -27,27 +27,19 @@ ifndef VERSION_MINOR
 endif
 
 ifndef VERSION_DATE
-  VERSION_DATE = "2012-07-23"
-endif
-
-ifndef COMPANY
-  COMPANY = ""
+  VERSION_DATE = "2012-10-14"
 endif
 
 ifndef PRODUCT
-  PRODUCT = ""
+  PRODUCT = "YARD-ICE"
 endif
 
 ifndef REVISION
-  REVISION = ""
+  REVISION = "0.1"
 endif
 
 ifndef ASSEMBLY
-  ASSEMBLY = ""
-endif
-
-ifndef PROJECT
-  PROJECT = $(PROG)
+  ASSEMBLY = "A"
 endif
 
 $(VERSION_H):
@@ -59,7 +51,7 @@ $(VERSION_H):
 	export VERSION_BUILD; \
 	echo "/*" > $@; \
 	echo " * File:    $@" >> $@; \
-	echo " * Project: uBoot" >> $@; \
+	echo " * Project: YARD-ICE" >> $@; \
     echo " * Author:  Robinson Mittmann (bobmittmann@gmail.com)" >> $@; \
 	echo " * Comment: Automatically generated. DO NOT edit!" >> $@; \
     echo " * Copyright(c) 2012 Bob Mittmann. All Rights Reserved." >> $@; \
@@ -68,7 +60,7 @@ $(VERSION_H):
 	echo "#ifndef __VERSION_H__" >> $@; \
 	echo "#define __VERSION_H__" >> $@; \
 	echo >> $@;\
-	echo "#define VERSION_NAME \"$(PROJECT)\"" >> $@; \
+	echo "#define VERSION_NAME \"$(PROG)\"" >> $@; \
 	echo "#define VERSION_MAJOR $(VERSION_MAJOR)" >> $@; \
 	echo "#define VERSION_MINOR $(VERSION_MINOR)" >> $@; \
 	echo "#define VERSION_BUILD \"$$VERSION_BUILD\"" >> $@; \
@@ -76,12 +68,9 @@ $(VERSION_H):
 	echo "#define VERSION_MACH \"$(MACH)\"" >> $@; \
 	echo "#define VERSION_ARCH \"$(ARCH)\"" >> $@; \
 	echo "#define VERSION_CPU \"$(CPU)\"" >> $@; \
-	echo "#define VERSION_STR \"$(PROJECT)-$(VERSION_MAJOR).$(VERSION_MINOR).$$VERSION_BUILD\"" >> $@; \
+	echo "#define VERSION_STR \"$(PROG)-$(VERSION_MAJOR).$(VERSION_MINOR).$$VERSION_BUILD\"" >> $@; \
 	echo "#define VERSION_DATE \"$$NOW\"" >> $@; \
 	echo >> $@; \
-	if [ "$(COMPANY)" != "" ]; then \
-		echo "#define COMPANY_ID $(COMPANY)" >> $@; \
-	fi; \
 	if [ "$(PRODUCT)" != "" ]; then \
 		echo "#define PRODUCT_ID $(PRODUCT)" >> $@; \
 	fi; \
@@ -96,7 +85,7 @@ $(VERSION_H):
 	
 $(PROG_TAG):
 	$(ACTION) "Creating: $@"
-	@QTAG="$(PROJECT)-$(VERSION_MAJOR)_$(VERSION_MINOR)-`date -d "$$NOW" +"%Y%m%d"`"; \
+	@QTAG="$(PROG)-$(VERSION_MAJOR)_$(VERSION_MINOR)-`date -d "$$NOW" +"%Y%m%d"`"; \
 	echo $$TAG > $@;
 	cat $@
 
