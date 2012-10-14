@@ -31,37 +31,41 @@
 #if THINKOS_ENABLE_MUTEX_ALLOC
 void thinkos_mutex_alloc_svc(int32_t * arg)
 {
+	unsigned int wq;
 	int mutex;
 
 	mutex = thinkos_alloc_lo(&thinkos_rt.mutex_alloc, 0);
 	if (mutex >= 0)
 		thinkos_rt.lock[mutex] = -1;
-	arg[0] = mutex;
+	wq = mutex + THINKOS_MUTEX_BASE;
 
-	DCC_LOG1(LOG_TRACE, "mutex=%d", mutex);
+	DCC_LOG2(LOG_TRACE, "mutex=%d wq=%d", mutex, wq);
+	arg[0] = wq;
 }
 
 void thinkos_mutex_free_svc(int32_t * arg)
 {
-	int mutex = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mutex);
+		DCC_LOG1(LOG_ERROR, "object %d is not a mutex!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 
-	DCC_LOG1(LOG_TRACE, "mutex=%d", mutex);
+	DCC_LOG2(LOG_TRACE, "mutex=%d wq=%d", mutex, wq);
 	__bit_mem_wr(&thinkos_rt.mutex_alloc, mutex, 0);
 }
 #endif
 
 void thinkos_mutex_lock_svc(int32_t * arg)
 {
-	unsigned int mutex = arg[0];
-	int this = thinkos_rt.active;
+	unsigned int wq = arg[0];
+	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
@@ -79,33 +83,34 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 #endif
 
 	if (thinkos_rt.lock[mutex] == -1) {
-		thinkos_rt.lock[mutex] = this;
-		DCC_LOG2(LOG_INFO, "<%d> mutex lock %d ", this, mutex);
-	} else {
-		/* Sanity check: the current thread already owns the lock */
-		if (thinkos_rt.lock[mutex] == this) {
-			arg[0] = THINKOS_EDEADLK;
-			return;
-		}
-		/* insert into the mutex wait queue */
-		bmp_bit_set(&thinkos_rt.wq_mutex[mutex], this);  
-#if THINKOS_ENABLE_THREAD_STAT
-		/* update status */
-		thinkos_rt.th_stat[this] = __wq_idx(&thinkos_rt.wq_mutex[mutex]) << 1;
-#endif
-		DCC_LOG2(LOG_INFO, "<%d> wait on mutex %d ", 
-				 thinkos_rt.active, mutex);
-		/* wait for event */
-		__thinkos_wait();
+		thinkos_rt.lock[mutex] = self;
+		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked", self, wq);
+		arg[0] = 0;
+		return;
 	}
 
+#if THINKOS_ENABLE_DEADLOCK_CHECK
+	/* Sanity check: the current thread already owns the lock */
+	if (thinkos_rt.lock[mutex] == self) {
+		arg[0] = THINKOS_EDEADLK;
+		return;
+	}
+#endif
+	/* insert into the mutex wait queue */
+	__thinkos_wq_insert(wq, self);
+	DCC_LOG2(LOG_TRACE, "<%d> waiting on mutex %d...", self, wq);
+
 	arg[0] = 0;
+
+	/* wait for event */
+	__thinkos_wait();
 }
 
 void thinkos_mutex_trylock_svc(int32_t * arg)
 {
-	unsigned int mutex = arg[0];
-	int this = thinkos_rt.active;
+	unsigned int wq = arg[0];
+	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
@@ -122,12 +127,14 @@ void thinkos_mutex_trylock_svc(int32_t * arg)
 #endif
 
 	if (thinkos_rt.lock[mutex] == -1) {
-		thinkos_rt.lock[mutex] = this;
+		thinkos_rt.lock[mutex] = self;
 		arg[0] = 0;
 	} else {
-		if (thinkos_rt.lock[mutex] == this)
+#if THINKOS_ENABLE_DEADLOCK_CHECK
+		if (thinkos_rt.lock[mutex] == self)
 			arg[0] = THINKOS_EDEADLK;
 		else
+#endif
 			arg[0] = THINKOS_EAGAIN;
 	}
 }
@@ -135,9 +142,10 @@ void thinkos_mutex_trylock_svc(int32_t * arg)
 #if THINKOS_ENABLE_TIMED_CALLS
 void thinkos_mutex_timedlock_svc(int32_t * arg)
 {
-	unsigned int mutex = arg[0]; 
+	unsigned int wq = arg[0];
 	uint32_t ms = (uint32_t)arg[1];
-	int this = thinkos_rt.active;
+	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
@@ -154,27 +162,24 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 #endif
 
 	if (thinkos_rt.lock[mutex] == -1) {
-		thinkos_rt.lock[mutex] = this;
+		thinkos_rt.lock[mutex] = self;
+		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked.", self, wq);
 		arg[0] = 0;
 		return;
 	}
 
+#if THINKOS_ENABLE_DEADLOCK_CHECK
 	/* Sanity check: the current thread already owns the lock */
-	if (thinkos_rt.lock[mutex] == this) {
+	if (thinkos_rt.lock[mutex] == self) {
 		arg[0] = THINKOS_EDEADLK;
 		return;
 	}
+#endif
 
 	/* insert into the mutex wait queue */
-	bmp_bit_set(&thinkos_rt.wq_mutex[mutex], this);  
-	/* set the clock */
-	thinkos_rt.clock[this] = thinkos_rt.ticks + (ms / 1);
-	/* insert into the clock wait queue */
-	bmp_bit_set(&thinkos_rt.wq_clock, this);  
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status, mark the thread clock enable bit */
-	thinkos_rt.th_stat[this] = (__wq_idx(&thinkos_rt.wq_mutex[mutex]) << 1) + 1;
-#endif
+	__thinkos_tmdwq_insert(wq, self, ms);
+	DCC_LOG2(LOG_TRACE, "<%d> waiting on mutex %d...", self, wq);
+
 	/* Set the default return value to timeout. The
 	   mutex_unlock() call will change this to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
@@ -188,8 +193,10 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 
 void thinkos_mutex_unlock_svc(int32_t * arg)
 {
-	unsigned int mutex = arg[0];
-	int idx;
+	unsigned int wq = arg[0];
+	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+	int self = thinkos_rt.active;
+	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
@@ -207,36 +214,24 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 
 	/* sanity check: avoid unlock the mutex by a thread that 
 	   does not own the lock */
-	if (thinkos_rt.lock[mutex] != thinkos_rt.active) {
+	if (thinkos_rt.lock[mutex] != self) {
+		DCC_LOG2(LOG_ERROR, "<%d> mutex %d is not ours!", self, wq);
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
 
-	DCC_LOG2(LOG_INFO, "<%d> mutex unlock %d ", thinkos_rt.active, mutex);
+	DCC_LOG2(LOG_TRACE, "<%d> mutex %d unlocked.", self, wq);
 
-	idx = __thinkos_wq_head(&thinkos_rt.wq_mutex[mutex]);
-	if (idx == THINKOS_IDX_NULL) {
+	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the lock, just release
 		   the lock */
 		thinkos_rt.lock[mutex] = -1;
 	} else {
 		/* set the mutex ownership to the new thread */
-		thinkos_rt.lock[mutex] = idx;
-		/* remove from the mutex wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_mutex[mutex], idx);  
-#if THINKOS_ENABLE_TIMED_CALLS
-		/* possibly remove from the time wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_clock, idx);  
-#endif
-#if THINKOS_ENABLE_THREAD_STAT
-		/* update status */
-		thinkos_rt.th_stat[idx] = 0;
-#endif
-		/* set the return value */
-		thinkos_rt.ctx[idx]->r0 = 0;
-		/* insert the thread into ready queue */
-		bmp_bit_set(&thinkos_rt.wq_ready, idx);
-		DCC_LOG2(LOG_INFO, "<%d> mutex lock %d ", idx, mutex);
+		thinkos_rt.lock[mutex] = th;
+		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked.", th, wq);
+		/* wakeup from the mutex wait queue */
+		__thinkos_wakeup(wq, th);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}

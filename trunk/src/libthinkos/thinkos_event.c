@@ -32,31 +32,43 @@
 #if THINKOS_ENABLE_EVENT_ALLOC
 void thinkos_ev_alloc_svc(int32_t * arg)
 {
-	arg[0] = __thinkos_ev_alloc();
+	unsigned int wq;
+	int ev;
+
+	ev = __thinkos_ev_alloc();
+	wq = ev + THINKOS_EVENT_BASE;
+
+	DCC_LOG2(LOG_TRACE, "event=%d wq=%d", ev, wq);
+	arg[0] = wq;
 }
 
 void thinkos_ev_free_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
+
 #if THINKOS_ENABLE_ARG_CHECK
 	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
+
+	DCC_LOG2(LOG_TRACE, "event=%d wq=%d", ev, wq);
 	__thinkos_ev_free(ev);
 }
 #endif
 
 void thinkos_ev_wait_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -69,14 +81,10 @@ void thinkos_ev_wait_svc(int32_t * arg)
 #endif
 #endif
 
-	/* insert into the ev wait queue */
-	bmp_bit_set(&thinkos_rt.wq_event[ev], self);  
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status */
-	thinkos_rt.th_stat[self] = __wq_idx(&thinkos_rt.wq_event[ev]) << 1;
-#endif
-	DCC_LOG2(LOG_TRACE, "<%d> wait for event %d ", 
-			 thinkos_rt.active, ev);
+	/* insert into the mutex wait queue */
+	__thinkos_wq_insert(wq, self);
+
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
 
 	/* wait for event */
 	__thinkos_wait();
@@ -84,13 +92,14 @@ void thinkos_ev_wait_svc(int32_t * arg)
 
 void thinkos_ev_timedwait_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
+	unsigned int wq = arg[0];
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -103,39 +112,28 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
-	/* insert into the ev wait queue */
-	bmp_bit_set(&thinkos_rt.wq_event[ev], self);  
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status */
-	thinkos_rt.th_stat[self] = __wq_idx(&thinkos_rt.wq_event[ev]) << 1;
-#endif
-	/* insert into the event wait queue */
-	bmp_bit_set(&thinkos_rt.wq_event[ev], self);  
-	/* set the clock */
-	thinkos_rt.clock[self] = thinkos_rt.ticks + (ms / 1);
-	/* insert into the clock wait queue */
-	bmp_bit_set(&thinkos_rt.wq_clock, self);  
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status, mark the thread clock enable bit */
-	thinkos_rt.th_stat[self] = (__wq_idx(&thinkos_rt.wq_event[ev]) << 1) + 1;
-#endif
+	/* insert into the mutex wait queue */
+	__thinkos_tmdwq_insert(wq, self, ms);
+
 	/* Set the default return value to timeout. The
 	   ev_rise() call will change self to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
-	DCC_LOG2(LOG_TRACE, "<%d> wait for event %d ", thinkos_rt.active, ev);
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+
 	/* wait for event */
 	__thinkos_wait();
 }
 
 void thinkos_ev_raise_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
-	int idx;
+	unsigned int wq = arg[0];
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -148,23 +146,10 @@ void thinkos_ev_raise_svc(int32_t * arg)
 #endif
 #endif
 
-	idx = __thinkos_wq_head(&thinkos_rt.wq_event[ev]);
-	if (idx != THINKOS_IDX_NULL) {
-		/* remove from the ev wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_event[ev], idx);  
-#if THINKOS_ENABLE_TIMED_CALLS
-		/* possibly remove from the time wait queue */
-		bmp_bit_clr(&thinkos_rt.wq_clock, idx);  
-#endif
-#if THINKOS_ENABLE_THREAD_STAT
-		/* update status */
-		thinkos_rt.th_stat[idx] = 0;
-#endif
-		/* set the return value */
-		thinkos_rt.ctx[idx]->r0 = 0;
-		/* insert the thread into ready queue */
-		bmp_bit_set(&thinkos_rt.wq_ready, idx);
-		DCC_LOG2(LOG_TRACE, "<%d> event %d ", idx, ev);
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		/* wakeup from the event wait queue */
+		__thinkos_wakeup(wq, th);
+		DCC_LOG2(LOG_TRACE, "<%d> waked up with event %d", th, wq);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}

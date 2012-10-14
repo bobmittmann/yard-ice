@@ -1,125 +1,67 @@
-/* $Id: ctype.h,v 2.1 2006/07/21 16:42:31 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	ctype.h
- * Module:	ulibc
- * Project:
- * Author:	Robinson Mittmann (bob.m@cnxtech.com)
- * Target:
- * Comment:	
- * Copyright(c) 2003-2004 CNX Technologies. All Rights Reserved.
+ * This file is part of the YARD-ICE.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-/*! \defgroup ulibc ulibc
- * @{
- */
-/*! \defgroup ctype ctype.h
- * @{
- */
-/*! \file
- *	Revision tag: $Revision: 2.1 $ $Date: 2006/07/21 16:42:31 $
- *	@author Robinson Mittman(bob@cnxtech.com)
- */
+/** 
+ * @file ctype.h
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __CTYPE_H__
 #define __CTYPE_H__
 
-extern const char _ctype_[];
+#define	_U	0x01
+#define	_L	0x02
+#define	_N	0x04
+#define	_S	0x08
+#define _P	0x10
+#define _C	0x20
+#define _X	0x40
+#define	_B	0x80
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define isalnum(C)	(ctype_lut[(unsigned)(C)] & (_U + _L + _N))
 
-int isalnum(int __c);
-int isalpha(int __c);
-int iscntrl(int __c);
-int isdigit(int __c);
-int isgraph(int __c);
-int islower(int __c);
-int isprint(int __c);
-int ispunct(int __c);
-int isspace(int __c);
-int isupper(int __c);
-int isxdigit(int __c);
+#define iscntrl(C)	(ctype_lut[(unsigned)(C)] & _C)
 
-/*! \brief Converts to lowercase ASCII value.
- *
- *	Returns the ASCII value for the lowercase equivalent of the ASCII character <i>c</i>, if it is a letter.
- *	If the character is already lowercase, it remains lowercase.
- *	\param c \n
- *	The character to be converted, if applicable.
- *	\return
- *	The equivalent ASCII for the lowercase character. If already lowercase, remains this way.
- */
-int tolower(int __c);
+#define	isalpha(C)	(ctype_lut[(unsigned)(C)] & (_U + _L))
 
-/*! \brief Converts to uppercase ASCII value.
- *
- *	Returns the ASCII value for the uppercase equivalent of the ASCII character <i>c</i>, if it is a letter.
- *	If the character is already uppercase, it remains uppercase.
- *	\param c \n
- *	The character to be converted, if applicable.
- *	\return
- *	The equivalent ASCII for the uppercase character. If already uppercase, remains this way.
- */
-int toupper(int __c);
+#define	isdigit(C)	(ctype_lut[(unsigned)(C)] & _N)
 
-#ifndef __STRICT_ANSI__
-int isascii(int __c);
-	
-/*! \brief Converts a character to its ASCII value.
- *	
- *	Receives a character as an <b>int</b> and returns its corresponding ASCII value.
- *	\param c \n
- *	The character to convert
- *	\return
- *	The ASCII value for <i>c</i>.
- */
-int toascii(int __c);
+#define	isgraph(C)	(ctype_lut[(unsigned)(C)] & (_P + _U + _L + _N))
 
-int _tolower(int __c);
-int _toupper(int __c);
-#endif
+#define	islower(C)	(ctype_lut[(unsigned)(C)] & _L)
 
-#define	_U	01
-#define	_L	02
-#define	_N	04
-#define	_S	010
-#define _P	020
-#define _C	040
-#define _X	0100
-#define	_B	0200
+#define isprint(C)	(ctype_lut[(unsigned)(C)] & (_P + _U + _L + _N + _B))
 
-#ifndef __cplusplus
+#define ispunct(C)	(ctype_lut[(unsigned)(C)] & _P)
 
-#define	isalpha(c)	((_ctype_)[(unsigned)(c)]&(_U|_L))
-#define	isupper(c)	((_ctype_)[(unsigned)(c)]&_U)
-#define	islower(c)	((_ctype_)[(unsigned)(c)]&_L)
-#define	isdigit(c)	((_ctype_)[(unsigned)(c)]&_N)
-#define	isxdigit(c)	((_ctype_)[(unsigned)(c)]&(_X|_N))
-#define	isspace(c)	((_ctype_)[(unsigned)(c)]&_S)
-#define ispunct(c)	((_ctype_)[(unsigned)(c)]&_P)
-#define isalnum(c)	((_ctype_)[(unsigned)(c)]&(_U|_L|_N))
-#define isprint(c)	((_ctype_)[(unsigned)(c)]&(_P|_U|_L|_N|_B))
-#define	isgraph(c)	((_ctype_)[(unsigned)(c)]&(_P|_U|_L|_N))
-#define iscntrl(c)	((_ctype_)[(unsigned)(c)]&_C)
+#define	isspace(C)	(ctype_lut[(unsigned)(C)] & _S)
 
-#ifdef __GNUC__
-#define toupper(c) ({ int __x = (c); islower(__x) ? (__x - 'a' + 'A') : __x;})
-#define tolower(c) ({ int __x = (c); isupper(__x) ? (__x - 'A' + 'a') : __x;})
-#endif
+#define	isupper(C)	(ctype_lut[(unsigned)(C)] & _U)
 
-#endif /* !__cplusplus */
+#define	isxdigit(C)	(ctype_lut[(unsigned)(C)] & (_X + _N))
 
-#ifndef __STRICT_ANSI__
-#define isascii(c)	((unsigned)(c)<=0177)
-#define toascii(c)	((c)&0177)
-#endif
+#define toupper(C) ({ islower(C) ? ((C) - 'a' + 'A') : (C);})
 
-#ifdef __cplusplus
-}
-#endif
+#define tolower(C) ({ isupper(C) ? ((C) - 'A' + 'a') : (C);})
+
+extern const char ctype_lut[];
+
 #endif /* __CTYPE_H__ */
 
-/*! @} */
-/*! @} */
