@@ -32,6 +32,7 @@
 #define THINKOS_EAGAIN -4
 #define THINKOS_EDEADLK -5
 #define THINKOS_EPERM -6
+#define THINKOS_ENOSYS -7
 
 #define THINKOS_OPT_PRIORITY(VAL) ((VAL) & 0xff)
 #define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 8)
@@ -47,17 +48,6 @@ static inline void thinkos_yield(void)  {
 	CM3_SCB->icsr = SCB_ICSR_PENDSVSET; /* PendSV rise */
 	asm volatile ("dsb\n"); /* Data synchronization barrier */
 }
-
-static inline void thinkos_critical_enter(void)  {
-	/* rise the BASEPRI to stop the scheduler */
-	cm3_basepri_set(0xc0); 
-}
-
-static inline void thinkos_critical_exit(void)  {
-	/* return the BASEPRI to the default to reenable the scheduler. */
-	cm3_basepri_set(0x00);
-}
-
 
 int thinkos_init(unsigned int opt);
 
@@ -118,10 +108,6 @@ int thinkos_sem_timedwait(int sem, unsigned int ms);
 
 int thinkos_sem_post(int sem);
 
-
-void thinkos_event_notify(int wq);
-
-void thinkos_event_wait(int wq);
 
 void thinkos_irq_wait(int irq);
 

@@ -31,7 +31,7 @@ LIBS = stm32f cm3 util thinkos c ice-comm tcpip
 
 CFLAGS = -g -O2 
 
-JTAGTOOL_ADDR = 192.168.1.30
+JTAGTOOL_ADDR = 192.168.0.80
 
 include mk/stm32f207.mk
 

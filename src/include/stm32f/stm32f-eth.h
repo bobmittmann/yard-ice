@@ -623,57 +623,53 @@ frame to the FIFO. */
 
 /* Bits [2..1] - MAC small FIFO read / write controllers status */
 #define ETH_MSFRWCS ((2 - 1) << 1)
-/* 
-When high, these bits indicate the respective active state of the small FIFO read and write
-controllers of the MAC receive frame controller module. */
+/* When high, these bits indicate the respective active state of the 
+   small FIFO read and write controllers of the MAC receive frame 
+   controller module. */
 
 /* Bit 0 - MAC MII receive protocol engine active */
 #define ETH_MMRPEA (1 << 0)
-/* 
-When high, it indicates that the MAC MII receive protocol engine is actively receiving data and
-is not in the Idle state. */
+/* When high, it indicates that the MAC MII receive protocol engine is 
+   actively receiving data and is not in the Idle state. */
 
 /* Ethernet MAC interrupt status register */
 #define STM32F_ETH_MACSR 0x0038
 
-
-
 /* [15..10] Reserved */
-
 
 /* Bit 9 - Time stamp trigger status */
 #define ETH_TSTS (1 << 9)
-/* 
-This bit is set high when the system time value equals or exceeds the value specified in the
-Target time high and low registers. This bit is cleared when this register is read. */
+/* This bit is set high when the system time value equals or exceeds the 
+   value specified in the Target time high and low registers. This bit 
+   is cleared when this register is read. */
 
 /* [8..7] Reserved */
 
-
 /* Bit 6 - MMC transmit status */
 #define ETH_MMCTS (1 << 6)
-/* 
-This bit is set high whenever an interrupt is generated in the ETH_MMCTIR Register. This bit is
-cleared when all the bits in this interrupt register (ETH_MMCTIR) are cleared. */
+/* This bit is set high whenever an interrupt is generated in the 
+   ETH_MMCTIR Register. This bit is cleared when all the bits in this 
+   interrupt register (ETH_MMCTIR) are cleared. */
 
 /* Bit 5 - MMC receive status */
 #define ETH_MMCRS (1 << 5)
-/* 
-This bit is set high whenever an interrupt is generated in the ETH_MMCRIR register. This bit is
-cleared when all the bits in this interrupt register (ETH_MMCRIR) are cleared. */
+/* This bit is set high whenever an interrupt is generated in the 
+   ETH_MMCRIR register. This bit is cleared when all the bits in this 
+   interrupt register (ETH_MMCRIR) are cleared. */
 
 /* Bit 4 - MMC status */
 #define ETH_MMCS (1 << 4)
-/* 
-This bit is set high whenever any of bits 6:5 is set high. It is cleared only when both bits are low. */
+/* This bit is set high whenever any of bits 6:5 is set high. It is 
+   cleared only when both bits are low. */
 
 /* Bit 3 - PMT status */
 #define ETH_PMTS (1 << 3)
-/* 
-This bit is set whenever a Magic packet or Wake-on-LAN frame is received in Power-down
-mode (See bits 5 and 6 in the ETH_MACPMTCSR register Ethernet MAC PMT control and
-status register (ETH_MACPMTCSR) on page 883). This bit is cleared when both bits[6:5], of
-this last register, are cleared due to a read operation to the ETH_MACPMTCSR register. */
+/* This bit is set whenever a Magic packet or Wake-on-LAN frame is received 
+   in Power-down mode (See bits 5 and 6 in the ETH_MACPMTCSR register 
+   Ethernet MAC PMT control and status register (ETH_MACPMTCSR) on 
+   page 883). This bit is cleared when both bits[6:5], of this last 
+   register, are cleared due to a read operation to the 
+   ETH_MACPMTCSR register. */
 
 /* [2..0] Reserved */
 
@@ -681,24 +677,18 @@ this last register, are cleared due to a read operation to the ETH_MACPMTCSR reg
 /* Ethernet MAC interrupt mask register */
 #define STM32F_ETH_MACIMR 0x003C
 
-
-
 /* [15..10] Reserved */
-
 
 /* Bit 9 - Time stamp trigger interrupt mask */
 #define ETH_TSTIM (1 << 9)
-/* 
-When set, this bit disables the time stamp interrupt generation. */
+/* When set, this bit disables the time stamp interrupt generation. */
 
 /* [8..4] Reserved */
 
-
 /* Bit 3 - PMT interrupt mask */
 #define ETH_PMTIM (1 << 3)
-/* 
-When set, this bit disables the assertion of the interrupt signal due to the setting of the PMT
-Status bit in ETH_MACSR. */
+/* When set, this bit disables the assertion of the interrupt signal due 
+   to the setting of the PMT Status bit in ETH_MACSR. */
 
 /* [2..0] Reserved */
 
@@ -1411,6 +1401,9 @@ frequency will always be correct during any one-second window). */
 
 /* Bits [22..17] - Rx DMA PBL */
 #define ETH_RDP ((22 - 17) << 17)
+#define ETH_RDP_MSK (((1 << (5 + 1)) - 1) << 17)
+#define ETH_RDP_SET(VAL) (((VAL) << 17) & ETH_RDP_MSK)
+#define ETH_RDP_GET(REG) (((REG) & ETH_RDP_MSK) >> 17)
 /* These bits indicate the maximum number of beats to be transferred in one 
    RxDMA transaction.
    This is the maximum value that is used in a single block read/write 
@@ -1430,29 +1423,39 @@ frequency will always be correct during any one-second window). */
 
 /* Bits [15..14] - Rx Tx priority ratio */
 #define ETH_RTPR ((15 - 14) << 14)
-/* RxDMA requests are given priority over TxDMA requests in the following ratio:
-00: 1:1
-01: 2:1
-10: 3:1
-11: 4:1
-This is valid only when the DA bit is cleared. */
+#define ETH_RTPR_MSK (((1 << (1 + 1)) - 1) << 14)
+#define ETH_RTPR_SET(VAL) (((VAL) << 14) & ETH_RTPR_MSK)
+#define ETH_RTPR_GET(REG) (((REG) & ETH_RTPR_MSK) >> 14)
+/* RxDMA requests are given priority over TxDMA requests in 
+   the following ratio:
+   00: 1:1
+   01: 2:1
+   10: 3:1
+   11: 4:1
+   This is valid only when the DA bit is cleared. */
 
 /* Bits [13..8] - Programmable burst length */
 #define ETH_PBL ((13 - 8) << 8)
-/* 
-These bits indicate the maximum number of beats to be transferred in one DMA transaction.
-This is the maximum value that is used in a single block read/write operation. The DMA always
-attempts to burst as specified in PBL each time it starts a burst transfer on the host bus. PBL
-can be programmed with permissible values of 1, 2, 4, 8, 16, and 32. Any other value results in
-undefined behavior. When USP is set, this PBL value is applicable for TxDMA transactions
-only.
-The PBL values have the following limitations:
-– The maximum number of beats (PBL) possible is limited by the size of the Tx FIFO and Rx
-FIFO.
-– The FIFO has a constraint that the maximum beat supported is half the depth of the FIFO.
-– If the PBL is common for both transmit and receive DMA, the minimum Rx FIFO and Tx
-FIFO depths must be considered.
-– Do not program out-of-range PBL values, because the system may not behave properly. */
+#define ETH_BPL_MSK (((1 << (5 + 1)) - 1) << 8)
+#define ETH_BPL_SET(VAL) (((VAL) << 8) & ETH_BPL_MSK)
+#define ETH_BPL_GET(REG) (((REG) & ETH_BPL_MSK) >> 8)
+/* These bits indicate the maximum number of beats to be transferred in 
+   one DMA transaction. 
+   This is the maximum value that is used in a single block read/write 
+   operation. The DMA always attempts to burst as specified in PBL each 
+   time it starts a burst transfer on the host bus. PBL can be 
+   programmed with permissible values of 1, 2, 4, 8, 16, and 32. Any 
+   other value results in undefined behavior. When USP is set, this PBL 
+   value is applicable for TxDMA transactions only.
+   The PBL values have the following limitations:
+   – The maximum number of beats (PBL) possible is limited by the size 
+   of the Tx FIFO and Rx FIFO.
+   – The FIFO has a constraint that the maximum beat supported is half 
+   the depth of the FIFO.
+   – If the PBL is common for both transmit and receive DMA, the minimum 
+   Rx FIFO and Tx FIFO depths must be considered.
+   – Do not program out-of-range PBL values, because the system may 
+   not behave properly. */
 
 /* Bit 7 - Enhanced descriptor format enable */
 #define ETH_EDFE (1 << 7)
@@ -1466,6 +1469,9 @@ FIFO depths must be considered.
 
 /* Bits [6..2] - Descriptor skip length */
 #define ETH_DSL ((6 - 2) << 2)
+#define ETH_DSL_MSK (((1 << (4 + 1)) - 1) << 2)
+#define ETH_DSL_SET(VAL) (((VAL) << 2) & ETH_DSL_MSK)
+#define ETH_DSL_GET(REG) (((REG) & ETH_DSL_MSK) >> 2)
 /* This bit specifies the number of words to skip between two unchained 
    descriptors. The address skipping starts from the end of current descriptor 
    to the start of next descriptor. When DSL value equals zero, the descriptor 
@@ -1473,12 +1479,10 @@ FIFO depths must be considered.
 
 /* Bit 1 - DMA Arbitration */
 #define ETH_DA (1 << 1)
-/* 
-0: Round-robin with Rx:Tx priority given in bits [15:14]
-1: Rx has priority over Tx */
+/* 0: Round-robin with Rx:Tx priority given in bits [15:14]
+   1: Rx has priority over Tx */
 
 /* Bit 0 - Software reset */
-//#define ETH_SR (1 << 0)
 #define ETH_SRST (1 << 0)
 /* When this bit is set, the MAC DMA controller resets all MAC Subsystem 
    internal registers and logic. It is cleared automatically after the reset 
@@ -2091,7 +2095,7 @@ FIFO depths must be considered.
 /* Normal Rx DMA descriptors */
 
 /* Bit 31 - Own bit */
-#define RXDMA_OWN (1 << 31)
+#define ETH_RXDMA_OWN (1 << 31)
 /* When set, this bit indicates that the descriptor is owned by the DMA of 
    the MAC Subsystem. When this bit is reset, it indicates that the 
    descriptor is owned by the Host. The DMA clears this bit either 
@@ -2099,12 +2103,12 @@ FIFO depths must be considered.
    associated with this descriptor are full. */
 
 /* Bit 30 - Destination address filter fail */
-#define RXDMA_AFM (1 << 30)
+#define ETH_RXDMA_AFM (1 << 30)
 /* When set, this bit indicates a frame that failed the DA filter in 
    the MAC Core. */
 
 /* Bits [29..16] - Frame length */
-#define RXDMA_FL ((29 - 16) << 16)
+#define ETH_RXDMA_FL ((29 - 16) << 16)
 /* These bits indicate the byte length of the received frame that was 
    transferred to host memory (including CRC). This field is valid only 
    when last descriptor (RDES0[8]) is set and descriptor error 
@@ -2115,7 +2119,7 @@ FIFO depths must be considered.
    transferred for the current frame. */
 
 /* Bit 15 - Error summary */
-#define RXDMA_ES (1 << 15)
+#define ETH_RXDMA_ES (1 << 15)
 /* Indicates the logical OR of the following bits:
    – RDES0[1]: CRC error
    – RDES0[3]: Receive error
@@ -2128,35 +2132,35 @@ FIFO depths must be considered.
    This field is valid only when the last descriptor (RDES0[8]) is set. */
 
 /* Bit 14 - Descriptor error */
-#define RXDMA_DSE (1 << 14)
+#define ETH_RXDMA_DSE (1 << 14)
 /* When set, this bit indicates a frame truncation caused by a frame that 
    does not fit within the current descriptor buffers, and that the DMA 
    does not own the next descriptor. The frame is truncated. This field 
    is valid only when the last descriptor (RDES0[8]) is set. */
 
 /* Bit 13 - Source address filter fail */
-#define RXDMA_SAF (1 << 13)
+#define ETH_RXDMA_SAF (1 << 13)
 /* When set, this bit indicates that the SA field of frame failed the 
    SA filter in the MAC Core.
  */
 /* Bit 12 - Length error */
-#define RXDMA_LE (1 << 12)
+#define ETH_RXDMA_LE (1 << 12)
 /* When set, this bit indicates that the actual length of the received 
    frame does not match the value in the Length/ Type field. This bit 
    is valid only when the Frame type (RDES0[5]) bit is reset. */
 
 /* Bit 11 - Overflow error */
-#define RXDMA_OE (1 << 11)
+#define ETH_RXDMA_OE (1 << 11)
 /* When set, this bit indicates that the received frame was damaged due 
    to buffer overflow. */
 
 /* Bit 10 - VLAN tag */
-#define RXDMA_VLAN (1 << 10)
+#define ETH_RXDMA_VLAN (1 << 10)
 /* When set, this bit indicates that the frame pointed to by this 
    descriptor is a VLAN frame tagged by the MAC core. */
 
 /* Bit 9 - First descriptor */
-#define RXDMA_FS (1 << 9)
+#define ETH_RXDMA_FS (1 << 9)
 /* When set, this bit indicates that this descriptor contains the first 
    buffer of the frame. If the size of the first buffer is 0, the second 
    buffer contains the beginning of the frame. If the size of the second 
@@ -2164,7 +2168,7 @@ FIFO depths must be considered.
    of the frame. */
 
 /* Bit 8 - Last descriptor */
-#define RXDMA_LS (1 << 8)
+#define ETH_RXDMA_LS (1 << 8)
 /* When set, this bit indicates that the buffers pointed to by this 
    descriptor are the last buffers of the frame.
    Bit 7 IPHCE/TSV: IPv header checksum error / time stamp valid
@@ -2180,12 +2184,12 @@ FIFO depths must be considered.
    descriptor bit (RDES0[8]) is set. */
 
 /* Bit 6 - Late collision */
-#define RXDMA_LCO (1 << 6)
+#define ETH_RXDMA_LCO (1 << 6)
 /* When set, this bit indicates that a late collision has occurred while 
    receiving the frame in Half-duplex mode. */
 
 /* Bit 5 - Frame type */
-#define RXDMA_FT (1 << 5)
+#define ETH_RXDMA_FT (1 << 5)
 /* When set, this bit indicates that the Receive frame is an Ethernet-type 
    frame (the LT field is greater than or equal to 0x0600). When this bit 
    is reset, it indicates that the received frame is an IEEE802.3 frame. 
@@ -2194,23 +2198,23 @@ FIFO depths must be considered.
    special meaning as specified in Table 145. */
 
 /* Bit 4 - Receive watchdog timeout */
-#define RXDMA_RWT (1 << 4)
+#define ETH_RXDMA_RWT (1 << 4)
 /* When set, this bit indicates that the Receive watchdog timer has expired 
    while receiving the current frame and the current frame is truncated 
    after the watchdog timeout. */
 
 /* Bit 3 - Receive error */
-#define RXDMA_RE (1 << 3)
+#define ETH_RXDMA_RE (1 << 3)
 /* When set, this bit indicates that the RX_ERR signal is asserted 
    while RX_DV is asserted during frame reception. */
 
 /* Bit 2 - Dribble bit error */
-#define RXDMA_DE (1 << 2)
+#define ETH_RXDMA_DE (1 << 2)
 /* When set, this bit indicates that the received frame has a non-integer 
    multiple of bytes (odd nibbles). This bit is valid only in MII mode. */
 
 /* Bit 1 - CRC error */
-#define RXDMA_CE (1 << 1)
+#define ETH_RXDMA_CE (1 << 1)
 /* When set, this bit indicates that a cyclic redundancy check (CRC) 
    error occurred on the received frame. This field is valid only when the 
    last descriptor (RDES0[8]) is set.
@@ -2227,6 +2231,202 @@ FIFO depths must be considered.
 	in descriptor word 4 (RDES4). ESA is valid only when the last 
 	descriptor bit (RDES0[8]) is set. */
 
+#define ETH_IPPT_UNKOWN (0 << 0)
+#define ETH_IPPT_UDP    (1 << 0)
+#define ETH_IPPT_TCP    (2 << 0)
+#define ETH_IPPT_ICMP   (3 << 0)
+
+
+/* Bit 31 - Own bit */
+#define ETH_TXDMA_OWN (1 << 31)
+/* When set, this bit indicates that the descriptor is owned by the 
+   DMA. When this bit is reset, it indicates that the descriptor is 
+   owned by the CPU. The DMA clears this bit either when it completes 
+   the frame transmission or when the buffers allocated in the 
+   descriptor are read completely. The ownership bit of the frame’s 
+   first descriptor must be set after all subsequent descriptors belonging 
+   to the same frame have been set. */
+
+/* Bit 30 - Interrupt on completion */
+#define ETH_TXDMA_IC (1 << 30)
+/* When set, this bit sets the Transmit Interrupt (Register 5[0]) after 
+   the present frame has been transmitted. */
+
+/* Bit 29 - Last segment */
+#define ETH_TXDMA_LS (1 << 29)
+/* When set, this bit indicates that the buffer contains the last segment 
+   of the frame. */
+
+/* Bit 28 - First segment */
+#define ETH_TXDMA_FS (1 << 28)
+/* When set, this bit indicates that the buffer contains the first 
+   segment of a frame. */
+
+/* Bit 27 - Disable CRC */
+#define ETH_TXDMA_DC (1 << 27)
+/* When this bit is set, the MAC does not append a cyclic redundancy 
+   check (CRC) to the end of the transmitted frame. This is valid only 
+   when the first segment (TDES0[28]) is set. */
+
+/* Bit 26 - Disable pad */
+#define ETH_TXDMA_DP (1 << 26)
+/* When set, the MAC does not automatically add padding to a frame 
+   shorter than 64 bytes.
+   When this bit is reset, the DMA automatically adds padding and CRC to 
+   a frame shorter than 64 bytes, and the CRC field is added despite the 
+   state of the DC (TDES0[27]) bit. This is valid only when the first 
+   segment (TDES0[28]) is set. */
+
+/* Bit 25 - Transmit time stamp enable */
+#define ETH_TXDMA_TTSE (1 << 25)
+/* When TTSE is set and when TSE is set (ETH_PTPTSCR bit 0), IEEE1588 
+   hardware time stamping is activated for the transmit frame described by 
+   the descriptor. This field is only valid when the First segment control 
+   bit (TDES0[28]) is set. */
+
+/* Bit 24 - Reserved, must be kept at reset value. */
+
+/* Bits 23:22 - Checksum insertion control */
+#define ETH_TXDMA_CIC (3 << 22)
+/* These bits control the checksum calculation and insertion. Bit 
+   encoding is as shown below:
+   00: Checksum Insertion disabled
+   01: Only IP header checksum calculation and insertion are enabled
+   10: IP header checksum and payload checksum calculation and insertion 
+   are enabled, but pseudo-header checksum is not calculated in hardware
+   11: IP Header checksum and payload checksum calculation and insertion 
+   are enabled, and pseudo-header checksum is calculated in hardware. */
+
+/* Bit 21 - Transmit end of ring */
+#define ETH_TXDMA_TER (1 << 21)
+/* When set, this bit indicates that the descriptor list reached its 
+   final descriptor. The DMA returns to the base address of the list, 
+   creating a descriptor ring. */
+
+/* Bit 20 - Second address chained */
+#define ETH_TXDMA_TCH (1 << 20)
+/* When set, this bit indicates that the second address in the 
+   descriptor is the next descriptor address rather than the second buffer 
+   address. When TDES0[20] is set, TBS2 (TDES1[28:16]) is a “don’t 
+   care” value. TDES0[21] takes precedence over TDES0[20]. */
+
+/* Bits 19:18 Reserved, must be kept at reset value. */
+
+/* Bit 17 - Transmit time stamp status */
+#define ETH_TXDMA_TTSS (1 << 17)
+/* This field is used as a status bit to indicate that a time stamp was 
+   captured for the described transmit frame. When this bit is set, 
+   TDES2 and TDES3 have a time stamp value captured for the transmit 
+   frame. This field is only valid when the descriptor’s Last segment 
+   control bit (TDES0[29]) is set.
+   Note that when enhanced descriptors are enabled (EDFE=1 in 
+   ETH_DMABMR), TTSS=1 indicates that TDES6 and TDES7 have the 
+   time stamp value. */
+
+/* Bit 16 - IP header error */
+#define ETH_TXDMA_IHE (1 << 16)
+/* When set, this bit indicates that the MAC transmitter detected an 
+   error in the IP datagram header. The transmitter checks the header 
+   length in the IPv4 packet against the number of header bytes received 
+   from the application and indicates an error status if there is a 
+   mismatch. For IPv6 frames, a header error is reported if the main 
+   header length is not 40 bytes. Furthermore, the Ethernet length/type 
+   field value for an IPv4 or IPv6 frame must match the IP header version 
+   received with the packet. For IPv4 frames, an error status is also 
+   indicated if the Header Length field has a value less than 0x5. */
+
+/* Bit 15 - Error summary */
+#define ETH_TXDMA_ES (1 << 15)
+/* Indicates the logical OR of the following bits:
+   TDES0[14]: Jabber timeout
+   TDES0[13]: Frame flush
+   TDES0[11]: Loss of carrier
+   TDES0[10]: No carrier
+   TDES0[9]: Late collision
+   TDES0[8]: Excessive collision
+   TDES0[2]:Excessive deferral
+   TDES0[1]: Underflow error
+   TDES0[16]: IP header error
+   TDES0[12]: IP payload error */
+
+/* Bit 14 - Jabber timeout */
+#define ETH_TXDMA_JT (1 << 14)
+/* When set, this bit indicates the MAC transmitter has experienced a 
+   jabber timeout. This bit is only set when the MAC configuration 
+   register’s JD bit is not set. */
+
+/* Bit 13 - Frame flushed */
+#define ETH_TXDMA_FF (1 << 13)
+/* When set, this bit indicates that the DMA/MTL flushed the frame due 
+   to a software Flush command given by the CPU. */
+
+/* Bit 12 - IP payload error */
+#define ETH_TXDMA_IPE (1 << 12)
+/* When set, this bit indicates that MAC transmitter detected an error 
+   in the TCP, UDP, or ICMP IP datagram payload. The transmitter checks 
+   the payload length received in the IPv4 or IPv6 header against the 
+   actual number of TCP, UDP or ICMP packet bytes received from the
+   application and issues an error status in case of a mismatch. */
+
+/* Bit 11 - Loss of carrier */
+#define ETH_TXDMA_LCA (1 << 11)
+/* When set, this bit indicates that a loss of carrier occurred during 
+   frame transmission (that is, the MII_CRS signal was inactive for one 
+   or more transmit clock periods during frame transmission). This is 
+   valid only for the frames transmitted without collision when the MAC
+   operates in Half-duplex mode. */
+
+/* Bit 10 - No carrier */
+#define ETH_TXDMA_NC (1 << 10)
+/* When set, this bit indicates that the Carrier Sense signal form the 
+   PHY was not asserted during transmission. */
+
+/* Bit 9 - Late collision */
+#define ETH_TXDMA_LCO (1 << 9)
+/* When set, this bit indicates that frame transmission was aborted due 
+   to a collision occurring after the collision window (64 byte times, 
+   including preamble, in MII mode). This bit is not valid if the 
+   Underflow Error bit is set. */
+
+/* Bit 8 - Excessive collision */
+#define ETH_TXDMA_EC (1 << 8)
+/* When set, this bit indicates that the transmission was aborted after 
+   16 successive collisions while attempting to transmit the current 
+   frame. If the RD (Disable retry) bit in the MAC Configuration register 
+   is set, this bit is set after the first collision, and the transmission 
+   of the frame is aborted. */
+
+/* Bit 7 - VLAN frame */
+#define ETH_TXDMA_VF (1 << 7)
+/* When set, this bit indicates that the transmitted frame was a 
+   VLAN-type frame. */
+
+/* Bits 6:3 - Collision count */
+#define ETH_TXDMA_CC (0xf << 3)
+/*	This 4-bit counter value indicates the number of collisions 
+	occurring before the frame was transmitted. The count is not 
+	valid when the Excessive collisions bit (TDES0[8]) is set. */
+
+/* Bit 2 - Excessive deferral */
+#define ETH_TXDMA_ED (1 << 2)
+/* When set, this bit indicates that the transmission has ended 
+   because of excessive deferral of over 24 288 bit times if the 
+   Deferral check (DC) bit in the MAC Control register is set high. */
+
+/* Bit 1 - Underflow error */
+#define ETH_TXDMA_UF (1 << 1)
+/* When set, this bit indicates that the MAC aborted the frame because 
+   data arrived late from the RAM memory. Underflow error indicates that 
+   the DMA encountered an empty transmit buffer while transmitting the 
+   frame. The transmission process enters the Suspended state and sets 
+   both Transmit underflow (Register 5[5]) and Transmit interrupt 
+   (Register 5[0]). */
+
+/* Bit 0 - Deferred bit */
+#define ETH_TXDMA_DB (1 << 0)
+/* When set, this bit indicates that the MAC defers before transmission 
+   because of the presence of the carrier. This bit is valid only 
+   in Half-duplex mode. */
 
 #ifndef __ASSEMBLER__
 
@@ -2247,14 +2447,10 @@ struct stm32f_eth {
 	uint32_t reserved1[2];
 	volatile uint32_t macsr; /* 15 */
 	volatile uint32_t macimr;
-	volatile uint32_t maca0hr;
-	volatile uint32_t maca0lr;
-	volatile uint32_t maca1hr;
-	volatile uint32_t maca1lr;
-	volatile uint32_t maca2hr;
-	volatile uint32_t maca2lr;
-	volatile uint32_t maca3hr;
-	volatile uint32_t maca3lr; /* 24 */
+	struct {
+		volatile uint32_t hr;
+		volatile uint32_t lr;
+	} maca[4]; /* 24 */
 	uint32_t reserved2[40];
 	volatile uint32_t mmccr; /* 65 */
 	volatile uint32_t mmcrir;
@@ -2299,6 +2495,211 @@ struct stm32f_eth {
 	volatile uint32_t dmachrdr;
 	volatile uint32_t dmachtbar;
 	volatile uint32_t dmachrbar;
+};
+
+struct rxdma_st {
+	uint32_t pce: 1; /* Payload checksum error */
+	uint32_t ce: 1; /* CRC error */
+	uint32_t dbe: 1; /* Dribble bit error */
+	uint32_t re: 1; /* Receive error */
+	uint32_t rwt: 1; /* Receive watchdog timeout */
+	uint32_t ft: 1; /* Frame type */
+	uint32_t lco: 1; /* Late collision */
+	uint32_t iphce_tsv: 1; /* IPv header checksum error / 
+							  time stamp valid */
+	uint32_t ls: 1; /* Last descriptor */
+	uint32_t fs: 1; /* First descriptor */
+	uint32_t vlan: 1; /* VLAN tag */
+	uint32_t oe: 1; /* Overflow error */
+	uint32_t le: 1; /* Lenght error */
+	uint32_t saf: 1; /* Source address filter fail */
+	uint32_t de: 1; /* Descriptor error*/
+	uint32_t es: 1; /* Error summary */
+	uint32_t fl: 14; /* Frame length */
+	uint32_t afm: 1; /* Destination address filter fail */
+	uint32_t own: 1; /* Own bit */
+};
+
+/* Normal receive descriptor */
+struct rxdma_desc {
+	volatile union {
+		uint32_t rdes0;
+		struct rxdma_st st;
+	};
+	union {
+		uint32_t rdes1;
+		struct {
+			uint32_t rbs1: 13; /* Receive buffer 1 size */
+			uint32_t res1: 1;
+			uint32_t rch: 1; /* Second address chained */
+			uint32_t rer: 1; /* Receive end of ring */
+			uint32_t rbs2: 15; /* Receive buffer 2 size */
+			uint32_t dic: 1; /* Disable interrupt on completion */
+		};
+	};
+	union {
+		uint32_t rdes2;
+		uint32_t * rbap1; /* Receive buffer 1 address pointer */
+		uint32_t rtsl; /* Receive frame time stamp low */
+	};
+	union {
+		uint32_t rdes3;
+		uint32_t * rbap2; /* Receive buffer 2 address pointer */
+		uint32_t rtsh; /* Receive frame time stamp high */
+	};
+};
+
+struct rxdma_ext_st {
+	uint32_t ippt: 3; /* IP payload type */
+	uint32_t iphe: 1; /* IP header error */
+	uint32_t ippe: 1; /* IP payload error */
+	uint32_t ipcb: 1; /* IP checksum bypass */
+	uint32_t ipv4pr: 1; /* IPv4 packet received */
+	uint32_t ipv6pr: 1; /* IPv6 packet received */
+	uint32_t pmt: 4; /* PTP message type */
+	uint32_t pft: 1; /* PTP frame type */
+	uint32_t pv: 1; /* PTP version */
+	uint32_t res: 18;
+};
+
+/* Enhanced receive descriptor */
+struct rxdma_enh_desc {
+	volatile union {
+		uint32_t rdes0;
+		struct rxdma_st st;
+	};
+	union {
+		uint32_t rdes1;
+		struct {
+			uint32_t rbs1: 13; /* Receive buffer 1 size */
+			uint32_t res1: 1;
+			uint32_t rch: 1; /* Second address chained */
+			uint32_t rer: 1; /* Receive end of ring */
+			uint32_t rbs2: 15; /* Receive buffer 2 size */
+			uint32_t dic: 1; /* Disable interrupt on completion */
+		};
+	};
+	union {
+		uint32_t rdes2;
+		uint32_t * rbap1; /* Receive buffer 1 address pointer */
+	};
+	union {
+		uint32_t rdes3;
+		uint32_t * rbap2; /* Receive buffer 2 address pointer */
+	};
+	union {
+		uint32_t rdes4;
+		struct rxdma_ext_st ext_st; /* Extended status */
+	};
+	union {
+		uint32_t rdes5;
+		uint32_t rtsl; /* Receive frame time stamp low */
+	};
+	union {
+		uint32_t rdes6;
+		uint32_t rtsh; /* Receive frame time stamp high */
+	};
+};
+
+struct txdma_st {
+	uint32_t db: 1; /* Deferred bit */
+	uint32_t uf: 1; /* Underflow error */
+	uint32_t ed: 1; /* Excessive deferral */
+	uint32_t cc: 4; /* Collision count */
+	uint32_t vf: 1; /* VLAN frame */
+
+	uint32_t ec: 1; /* Excessive collision */
+	uint32_t lco: 1; /* Late collision */
+	uint32_t nc: 1; /* No carrier */
+	uint32_t lca: 1; /* Loss of carrier */
+	uint32_t ipe: 1; /* IP payload error */
+	uint32_t ff: 1; /* Frame flushed */
+	uint32_t jt: 1; /* Jabber timeout */
+	uint32_t es: 1; /* Error summary */
+
+	uint32_t ihe: 1; /* IP header error */
+	uint32_t ttss: 1; /* Transmit time stamp status */
+	uint32_t res1: 2; 
+	uint32_t tch: 1; /* Second address chained */
+	uint32_t ter: 1; /* Transmit end of ring */
+	uint32_t cic: 2; /* Checksum insertion control */
+
+	uint32_t res2: 1;
+	uint32_t ttse: 1; /* Transmit time stamp enable */
+	uint32_t dp: 1; /* Disable pad */
+	uint32_t dc: 1; /* Disable CRC */
+	uint32_t fs: 1; /* First segment */
+	uint32_t ls: 1; /* Last segment */
+	uint32_t ic: 1; /* Interrupt on completion */
+	uint32_t own: 1; /* Own bit */
+};
+
+/* Normal transmit descriptor */
+struct txdma_desc {
+	volatile union {
+		uint32_t tdes0;
+		struct txdma_st st;
+	};
+	union {
+		uint32_t tdes1;
+		struct {
+			uint32_t tbs1: 13; /* Buffer 1 byte count */
+			uint32_t res1: 3;
+			uint32_t tbs2: 13; /* Buffer 2 byte count */
+			uint32_t res2: 3;
+		};
+	};
+	union {
+		uint32_t tdes2;
+		uint32_t * tbap1; /* Transmit buffer 1 address pointer */
+		uint32_t ttsl; /* Transmit frame time stamp low */
+	};
+	union {
+		uint32_t tdes3;
+		uint32_t * tbap2; /* Transmit buffer 2 address pointer */
+		uint32_t ttsh; /* Transmit frame time stamp high */
+	};
+};
+
+/* Enhanced transmit descriptor */
+struct txdma_enh_desc {
+	volatile union {
+		uint32_t tdes0;
+		struct txdma_st st;
+	};
+	union {
+		uint32_t tdes1;
+		struct {
+			uint32_t tbs1: 13; /* Buffer 1 byte count */
+			uint32_t res1: 3;
+			uint32_t tbs2: 13; /* Buffer 2 byte count */
+			uint32_t res2: 3;
+		};
+	};
+	union {
+		uint32_t tdes2;
+		uint32_t * tbap1; /* Transmit buffer 1 address pointer */
+	};
+	union {
+		uint32_t tdes3;
+		uint32_t * tbap2; /* Transmit buffer 2 address pointer */
+	};
+	union {
+		uint32_t tdes4;
+		uint32_t res3;
+	};
+	union {
+		uint32_t tdes5;
+		uint32_t res4;
+	};
+	union {
+		uint32_t tdes6;
+		uint32_t ttsl; /* Transmit frame time stamp low */
+	};
+	union {
+		uint32_t tdes7;
+		uint32_t ttsh; /* Transmit frame time stamp high */
+	};
 };
 
 #endif /* __ASSEMBLER__ */

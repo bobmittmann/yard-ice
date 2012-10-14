@@ -16,7 +16,6 @@
 
 int inet_aton(const char * name, struct in_addr * addr)
 {
-	char * p;
 	unsigned char * ip;
 	int a1;
 	int a2;
@@ -36,24 +35,21 @@ int inet_aton(const char * name, struct in_addr * addr)
 		return 1;
 	}
 
- 	a1 = strtoul(cp, &p, 0);
-	cp = p;
+ 	a1 = strtoul(cp, &cp, 0);
  	if ((*cp++ != '.' ) || (a1 > 255))
 		return 0;
 		
-	a2 = strtoul(cp, &p, 0);
-	cp = p;
+	a2 = strtoul(cp, &cp, 0);
 	if ((*cp++ != '.' ) || (a2 > 255))
 		return 0;
 		
- 	a3 = strtoul(cp, &p, 0);
-	cp = p;
+ 	a3 = strtoul(cp, &cp, 0);
 	if ((*cp++ != '.' ) || (a3 > 255))
 		return 0;
 
-	a4 = strtoul(cp, &p, 0);
+	a4 = strtoul(cp, &cp, 0);
 
-	for (cp = p; isspace(*cp); cp++);
+	for (;isspace(*cp); cp++);
 
 	if ((*cp != '\0' ) || (a4 > 255))
 		return 0;
@@ -74,3 +70,4 @@ int inet_aton(const char * name, struct in_addr * addr)
 
 	return 1;
 }
+

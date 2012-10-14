@@ -26,6 +26,7 @@
 #include <sys/stm32f.h>
 #include <sys/mii.h>
 #include <sys/dcclog.h>
+#include <sys/delay.h>
 
 #define ETH_MII_TX_CLK STM32F_GPIOC, 3
 #define ETH_MII_TX_EN STM32F_GPIOB, 11
@@ -47,10 +48,9 @@
 
 #define EXT_RST STM32F_GPIOE, 2
 
-int stm32f_eth_init(uint8_t * addr)
+void stm32f_eth_init(struct stm32f_eth * eth)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_eth * eth = STM32F_ETH;
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 
 	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
@@ -69,17 +69,12 @@ int stm32f_eth_init(uint8_t * addr)
 	stm32f_gpio_mode(EXT_RST, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_clr(EXT_RST);
 
-	DCC_LOG(LOG_TRACE, "1.");
-
 	stm32f_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_TXD0, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_TXD1, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_TXD2, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_TXD3, GPIO_AF11);
-
-	DCC_LOG(LOG_TRACE, "2.");
-
 	stm32f_gpio_af(ETH_MII_RX_CLK, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_RX_DV, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_RXD0, GPIO_AF11);
@@ -89,20 +84,15 @@ int stm32f_eth_init(uint8_t * addr)
 	stm32f_gpio_af(ETH_MII_RX_ER, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_CRS, GPIO_AF11);
 	stm32f_gpio_af(ETH_MII_COL, GPIO_AF11);
-
-	DCC_LOG(LOG_TRACE, "3.");
 	stm32f_gpio_af(ETH_MDC, GPIO_AF11);
 	stm32f_gpio_af(ETH_MDIO, GPIO_AF11);
 
-	DCC_LOG(LOG_TRACE, "4.");
 	stm32f_gpio_mode(ETH_MII_TX_CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(ETH_MII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(ETH_MII_TXD0, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(ETH_MII_TXD1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(ETH_MII_TXD2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(ETH_MII_TXD3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-
-	DCC_LOG(LOG_TRACE, "5.");
 	stm32f_gpio_mode(ETH_MII_RX_CLK, ALT_FUNC, 0);
 	stm32f_gpio_mode(ETH_MII_RX_DV, ALT_FUNC, 0);
 	stm32f_gpio_mode(ETH_MII_RXD0, ALT_FUNC, 0);
@@ -113,29 +103,51 @@ int stm32f_eth_init(uint8_t * addr)
 	stm32f_gpio_mode(ETH_MII_CRS, ALT_FUNC, 0);
 	stm32f_gpio_mode(ETH_MII_COL, ALT_FUNC, 0);
 
-	DCC_LOG(LOG_TRACE, "6.");
 	stm32f_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_LOW);
 
+	/* disable MAC interrupts */
+	eth->macimr = 0;
+	/* disable MMC recive interrupts */
+	eth->mmcrimr = 0;
+	/* disable MMC transmit interrupts */
+	eth->mmctimr = 0;
+	/* disable DMA interrupts */
+	eth->dmaier = 0;
 
-	DCC_LOG(LOG_TRACE, "Configuring ethernet...");
-	eth->maccr = ETH_CSTF | ETH_FES | ETH_ROD | ETH_DM | ETH_TE | ETH_RE;
+	/* clear all DMA status bits */
+	eth->dmasr = 0xffffffff;
 
-	/*  */
-	DCC_LOG6(LOG_TRACE, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
-		   addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-
-	eth->maca0lr = addr[0] + (addr[1] << 8) + (addr[2] << 16) + (addr[3] << 24);
-	eth->maca0hr = addr[4] + (addr[5] << 8);
-
-	DCC_LOG(LOG_TRACE, "Configuring DMA...\n");
-	eth->dmaomr = ETH_RSF | ETH_TSF | ETH_FTF;
-
-	DCC_LOG(LOG_TRACE, "PHY reset...\n");
+	DCC_LOG(LOG_TRACE, "PHY reset...");
 	udelay(1000);
 	stm32f_gpio_set(EXT_RST);
 	udelay(9000);
-
-	return 0;
 };
+
+void stm32f_eth_mac_get(struct stm32f_eth * eth, int idx, uint8_t * mac)
+{
+	uint32_t lo;
+	uint32_t hi;
+
+	lo = eth->maca[idx].lr;
+	hi = eth->maca[idx].hr;
+	
+	mac[0] = lo & 0xff;
+	mac[1] = (lo >> 8) & 0xff;
+	mac[2] = (lo >> 16) & 0xff;
+	mac[3] = (lo >> 24) & 0xff;
+	mac[4] = hi & 0xff;
+	mac[5] = (hi >> 8) & 0xff;
+}
+
+void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac)
+{
+	/*  */
+	DCC_LOG6(LOG_TRACE, "MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+		   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+	eth->maca[idx].lr = mac[0] + (mac[1] << 8) + 
+		(mac[2] << 16) + (mac[3] << 24);
+	eth->maca[idx].hr = mac[4] + (mac[5] << 8);
+}
 

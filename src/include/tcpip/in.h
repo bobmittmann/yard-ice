@@ -13,21 +13,22 @@
 #define	__TCPIP_IN_H__
 
 #include <stdint.h>
+
 #include <netinet/in.h> /* in_addr_t */
+
+#ifndef __BYTE_ORDER 
+#error "Undefined __BYTE_ORDER"
+#endif
 
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 
-#define IP4_ADDR1(a)    (((in_addr_t) (a)) & 0xff)
-#define IP4_ADDR2(a)    ((((in_addr_t) (a)) >> 8) & 0xff)
-#define IP4_ADDR3(a)    ((((in_addr_t) (a)) >> 16) & 0xff)
-#define IP4_ADDR4(a)    ((((in_addr_t) (a)) >> 24) & 0xff)
+#define IP4_ADDR1(A) ((int)(((in_addr_t)(A)) & 0xff))
+#define IP4_ADDR2(A) ((int)((((in_addr_t)(A)) >> 8) & 0xff))
+#define IP4_ADDR3(A) ((int)((((in_addr_t)(A)) >> 16) & 0xff))
+#define IP4_ADDR4(A) ((int)((((in_addr_t)(A)) >> 24) & 0xff))
 
-#define IP4_ADDR(a, b, c, d) ((((a) & 0xff) << 0) | \
-		(((b) & 0xff) << 8) | (((c) & 0xff) << 16) | (((d) & 0xff) << 24))
-
-#define IN_ADDR(a, b, c, d) (in_addr_t)((((a) & 0xff) << 0) | \
-		(((b) & 0xff) << 8) | (((c) & 0xff) << 16) | (((d) & 0xff) << 24))
-
+#define IP4_ADDR(A, B, C, D) ((((A) & 0xff) << 0) | \
+		(((B) & 0xff) << 8) | (((C) & 0xff) << 16) | (((D) & 0xff) << 24))
 
 #define NTOHL(x) \
 	((uint32_t)((((uint32_t)(x) & 0x000000ffU) << 24) | \

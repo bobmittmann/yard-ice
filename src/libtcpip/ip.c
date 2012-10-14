@@ -125,7 +125,8 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 
 	if (tot_len > __len) {
 		/* invalid datagram length */
-		DCC_LOG(LOG_WARNING, "invalid datagram length!");
+		DCC_LOG2(LOG_WARNING, "length error: ip.tot_len=%d frame.len=%d",
+				 tot_len, __len);
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		return;
 	}
@@ -161,7 +162,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 			/* interface network broadcast ip address  */
 			if (__ip->daddr != (__if->if_ipv4_addr | ~(__if->if_ipv4_mask))) {
 				/* wrong destination ! */
-				DCC_LOG3(LOG_TRACE, "invalid dest: IP %I > %I (%d)", 
+				DCC_LOG3(LOG_WARNING, "invalid dest: IP %I > %I (%d)", 
 						 __ip->saddr, __ip->daddr, len);
 #if (ENABLE_NET_ARP_PING_IPCONFIG)
 				if (__ip->proto == IPPROTO_ICMP)

@@ -172,7 +172,9 @@ int stm32f_usart_release(struct stm32f_usart * usart);
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
 
-int stm32f_eth_init(uint8_t * addr);
+void stm32f_eth_init(struct stm32f_eth * eth);
+void stm32f_eth_mac_get(struct stm32f_eth * eth, int idx, uint8_t * mac);
+void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
 
 #include <sys/file.h>
 

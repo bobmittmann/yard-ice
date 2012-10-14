@@ -60,9 +60,11 @@
 #define THINKOS_SEM_TIMEDWAIT 25
 #define THINKOS_SEM_POST 26
 
-#define THINKOS_WAIT_QUEUE_ALLOC 27
-#define THINKOS_WAIT_QUEUE_FREE 28
-#define THINKOS_WAIT_EVENT 29
+#define THINKOS_EVENT_ALLOC 27
+#define THINKOS_EVENT_FREE 28
+#define THINKOS_EVENT_WAIT 29
+#define THINKOS_EVENT_TIMEDWAIT 30
+#define THINKOS_EVENT_RAISE 31
 
 #ifndef __ASSEMBLER__
 
@@ -244,17 +246,24 @@ static inline int thinkos_sem_post(int sem)  {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
-
-static inline int thinkos_wq_alloc(void)  {
-	return THINKOS_SVC(THINKOS_WAIT_QUEUE_ALLOC);
+static inline int thinkos_ev_alloc(void)  {
+	return THINKOS_SVC(THINKOS_EVENT_ALLOC);
 }
 
-static inline int thinkos_wq_free(int wq)  {
-	return THINKOS_SVC1(THINKOS_WAIT_QUEUE_FREE, wq);
+static inline int thinkos_ev_free(int ev)  {
+	return THINKOS_SVC1(THINKOS_EVENT_FREE, ev);
 }
 
-static inline int thinkos_wait(int wq)  {
-	return THINKOS_SVC1(THINKOS_WAIT_EVENT, wq);
+static inline int thinkos_ev_wait(int ev)  {
+	return THINKOS_SVC1(THINKOS_EVENT_WAIT, ev);
+}
+
+static inline int thinkos_ev_timedwait(int ev, unsigned int ms)  {
+	return THINKOS_SVC2(THINKOS_EVENT_WAIT, ev, ms);
+}
+
+static inline int thinkos_ev_raise(int ev)  {
+	return THINKOS_SVC1(THINKOS_EVENT_RAISE, ev);
 }
 
 #ifdef __cplusplus

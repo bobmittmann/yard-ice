@@ -80,7 +80,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = this;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex lock %d ", this, mutex);
+		DCC_LOG2(LOG_INFO, "<%d> mutex lock %d ", this, mutex);
 	} else {
 		/* Sanity check: the current thread already owns the lock */
 		if (thinkos_rt.lock[mutex] == this) {
@@ -93,7 +93,8 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 		/* update status */
 		thinkos_rt.th_stat[this] = __wq_idx(&thinkos_rt.wq_mutex[mutex]) << 1;
 #endif
-		DCC_LOG2(LOG_TRACE, "<%d> wait on mutex %d ", thinkos_rt.active, mutex);
+		DCC_LOG2(LOG_INFO, "<%d> wait on mutex %d ", 
+				 thinkos_rt.active, mutex);
 		/* wait for event */
 		__thinkos_wait();
 	}
@@ -166,19 +167,16 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 
 	/* insert into the mutex wait queue */
 	bmp_bit_set(&thinkos_rt.wq_mutex[mutex], this);  
-
 	/* set the clock */
 	thinkos_rt.clock[this] = thinkos_rt.ticks + (ms / 1);
 	/* insert into the clock wait queue */
 	bmp_bit_set(&thinkos_rt.wq_clock, this);  
-
 #if THINKOS_ENABLE_THREAD_STAT
 	/* update status, mark the thread clock enable bit */
 	thinkos_rt.th_stat[this] = (__wq_idx(&thinkos_rt.wq_mutex[mutex]) << 1) + 1;
 #endif
-
 	/* Set the default return value to timeout. The
-	   sem_post call will change this to 0 */
+	   mutex_unlock() call will change this to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	/* wait for event */
@@ -214,7 +212,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		return;
 	}
 
-	DCC_LOG2(LOG_TRACE, "<%d> mutex unlock %d ", thinkos_rt.active, mutex);
+	DCC_LOG2(LOG_INFO, "<%d> mutex unlock %d ", thinkos_rt.active, mutex);
 
 	idx = __thinkos_wq_head(&thinkos_rt.wq_mutex[mutex]);
 	if (idx == THINKOS_IDX_NULL) {
@@ -238,9 +236,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		thinkos_rt.ctx[idx]->r0 = 0;
 		/* insert the thread into ready queue */
 		bmp_bit_set(&thinkos_rt.wq_ready, idx);
-
-		DCC_LOG2(LOG_TRACE, "<%d> mutex lock %d ", idx, mutex);
-
+		DCC_LOG2(LOG_INFO, "<%d> mutex lock %d ", idx, mutex);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}

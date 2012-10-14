@@ -243,12 +243,9 @@ void thinkos_thread_create_svc(int32_t * arg)
 		__thinkos_defer_sched();
 	}
 
-#if 1
-	printf("%s(): <%d> ready=%08x priority=%d/%d task=%08x sp=%08x\n", 
-		   __func__, idx, thinkos_rt.wq_ready, 
-		   thinkos_rt.sched_pri[idx], thinkos_rt.sched_limit,
-		   (int)init->task, (int)ctx);
-#endif
+	DCC_LOG5(LOG_TRACE, "<%d> pri=%d/%d task=%08x sp=%08x\n", 
+			 idx, thinkos_rt.sched_pri[idx], 
+			 thinkos_rt.sched_limit, init->task, ctx);
 
 	arg[0] = idx;
 }
