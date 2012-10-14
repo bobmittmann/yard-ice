@@ -51,7 +51,6 @@ UDP_CFILES = udp_bind.c udp.c udp_close.c udp_connect.c udp_enum.c \
 TCP_CFILES = 
 
 CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
-		 stm32f-ethif.c\
 		 $(addprefix mbuf/,$(MBUF_CFILES))\
 		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES))\
 		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES))\
