@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <sys/delay.h>
 
-void mdelay(uint32_t msec)
+void mdelay(unsigned int msec)
 {
 	while (msec) {
 		udelay(1000);

@@ -31,7 +31,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/serial.h>
 #include <sys/delay.h>
-#include <sys/ice-comm.h>
+#include <sys/dcclog.h>
 
 #include <thinkos.h>
 
@@ -41,27 +41,23 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+void tcpip_init(void);
+
 int network_config(void)
 {
-	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x81};
 	struct ifnet * ifn;
 	in_addr_t ip_addr;
 	in_addr_t netmask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
 	char s[64];
 //	char * env;
+	char * ip;
 	int dhcp;
-
-	/* XXX: initializes the stm32f ethernet hardware,
-	 this should be done elsewere, prior to the
-	 TCP/IP initialization. The MAC address should be taken from 
-	 the FLASH */
-	stm32f_eth_init(ethaddr);
 
 //	if ((env=getenv("IPCFG")) == NULL) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
-		strcpy(s, "192.168.0.2 255.255.255.0 192.168.0.254 0");
+		strcpy(s, "192.168.1.22 255.255.255.0 192.168.1.254 0");
 		/* set the default configuration */
 //		setenv("IPCFG", s, 1);
 //	} else {
@@ -70,7 +66,14 @@ int network_config(void)
 
 //	printf("IPCFG='%s'\n", s);
 
+	printf("ipcfg=%s\n", s);
+	ip = strtok(s, " ,");
+
+	printf("ip=%s\n", ip);
+
+
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
+		DCC_LOG(LOG_WARNING, "inet_aton() failed.");
 		return -1;
 	}
 
@@ -82,8 +85,8 @@ int network_config(void)
 
 	/* initialize the Ethernet interface */
 	/* configure the ip address */
-//	ifn = ethif_init(ip_addr, netmask);
-	ifn = loopif_init(ip_addr, netmask);
+	ifn = ethif_init(ip_addr, netmask);
+//	ifn = loopif_init(ip_addr, netmask);
 
 	printf("* netif ");
 	ifn_getname(ifn, s);
@@ -150,10 +153,6 @@ int console_read(struct console_ctrl * ctrl, char * buf,
 				 unsigned int len, unsigned int msec)
 {
 	uint32_t st;
-	uint32_t sr;
-
-	fprintf(stderr, "%s(ctrl=%08x, buf=%08x, len=%d)\n", 
-			__func__, (int)ctrl, (int)buf, len);
 
 	if (ctrl->rx.s->cr & DMA_EN) {
 		fprintf(stderr, "%s() DMA enabled\n", __func__);
@@ -164,11 +163,6 @@ int console_read(struct console_ctrl * ctrl, char * buf,
 	/* Number of data items to transfer */
 	ctrl->rx.s->ndtr = len;
 
-	/* clear the TC bit */
-	if ((sr = ctrl->uart->sr) & USART_TC) {
-		fprintf(stderr, "%s() TC=1\n", __func__);
-	}
-
 	/* enable DMA */
 	ctrl->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 | 
 		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
@@ -176,21 +170,8 @@ int console_read(struct console_ctrl * ctrl, char * buf,
 
 	/* wait for the DMA transfer to complete */
 	while (((st = ctrl->dma->hisr) & DMA_TCIF7) == 0) {
-		fprintf(stderr, "%s() %08x ", __func__, st);
-		if (st & DMA_HTIF7)
-			fprintf(stderr, "HT ");
-		if (st & DMA_TEIF7)
-			fprintf(stderr, "TE ");
-		if (st & DMA_DMEIF7)
-			fprintf(stderr, "DME ");
-		if (st & DMA_FEIF7)
-			fprintf(stderr, "FE ");
-		fprintf(stderr, "wait...\n");
-//		ctrl->dma->hifcr = st;
 		thinkos_irq_wait(STM32F_IRQ_DMA1_STREAM7);
 	} 
-
-	fprintf(stderr, "%s() done.\n", __func__);
 
 	/* clear the the DMA stream trasfer complete flag */
 	ctrl->dma->hifcr = DMA_CTCIF7;
@@ -203,9 +184,6 @@ int console_write(struct console_ctrl * ctrl, const void * buf,
 {
 	uint32_t st;
 	uint32_t sr;
-
-	fprintf(stderr, "%s(ctrl=%08x, buf=%08x, len=%d)\n", 
-			__func__, (int)ctrl, (int)buf, len);
 
 	if (ctrl->tx.s->cr & DMA_EN) {
 		fprintf(stderr, "%s() DMA enabled\n", __func__);
@@ -228,21 +206,8 @@ int console_write(struct console_ctrl * ctrl, const void * buf,
 
 	/* wait for the DMA transfer to complete */
 	while (((st = ctrl->dma->lisr) & DMA_TCIF0) == 0) {
-		fprintf(stderr, "%s() %08x ", __func__, st);
-		if (st & DMA_HTIF0)
-			fprintf(stderr, "HT ");
-		if (st & DMA_TEIF0)
-			fprintf(stderr, "TE ");
-		if (st & DMA_DMEIF0)
-			fprintf(stderr, "DME ");
-		if (st & DMA_FEIF0)
-			fprintf(stderr, "FE ");
-		fprintf(stderr, "wait...\n");
-//		ctrl->dma->lifcr = st;
 		thinkos_irq_wait(STM32F_IRQ_DMA1_STREAM0);
 	} 
-
-	fprintf(stderr, "%s() done.\n", __func__);
 
 	/* clear the the DMA stream trasfer complete flag */
 	ctrl->dma->lifcr = DMA_CTCIF0;
@@ -252,7 +217,6 @@ int console_write(struct console_ctrl * ctrl, const void * buf,
 
 int console_flush(struct console_ctrl * ctrl)
 {
-	fprintf(stderr, "%s(ctrl=%08x)\n", __func__, (int)ctrl);
 	return 0;
 }
 
@@ -314,27 +278,34 @@ struct file * console_open(unsigned int baudrate, unsigned int flags)
 
 int main(int argc, char ** argv)
 {
-	FILE * f;	
 	int i;
 
+	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
+	udelay(100000);
+	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
+	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
+	udelay(100000);
 
-	stdout = ice_comm_open();
-	stderr = stdout;
-
+	DCC_LOG(LOG_TRACE, "thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
+	DCC_LOG(LOG_TRACE, "tcpip_init().");
+	tcpip_init();
+
+	DCC_LOG(LOG_TRACE, "network_config().");
+	network_config();
+
 	printf("\n");
 	printf("---------------------------------------------------------\n");
-	printf(" ThinkOS ADC-DMA Test\n");
+	printf(" YAR-ICE\n");
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
-	f = console_open(115200, SERIAL_8N1);
 
-	for (i = 0; i < 10; i++) {
-		fprintf(f, "\r\nHello world %d!\r\n", i);
-		delay(1);
+	for (i = 0; i < 1000; i++) {
+		DCC_LOG1(LOG_TRACE, "%d.", i);
+		thinkos_sleep(2000);
 	}
 
 	printf("---------------------------------------------------------\n");

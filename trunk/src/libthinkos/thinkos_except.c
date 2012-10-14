@@ -81,7 +81,7 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 	printf("\n");
 
 	if (bfsr & BFSR_BFARVALID)  {
-		printf(" * ADDR = 0x%08x\n", scb->bfar);
+		printf(" * ADDR = 0x%08x\n", (int)scb->bfar);
 	}
 
 	for(;;);

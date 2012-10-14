@@ -22,6 +22,7 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #include <thinkos_svc.h>
+#include <thinkos.h>
 
 void thinkos_thread_create_svc(int32_t * arg);
 
@@ -77,11 +78,16 @@ void thinkos_sem_timedwait_svc(int32_t * arg);
 void thinkos_sem_post_svc(int32_t * arg);
 
 
-void thinkos_wq_alloc_svc(int32_t * arg);
+void thinkos_ev_alloc_svc(int32_t * arg);
 
-void thinkos_wq_free_svc(int32_t * arg);
+void thinkos_ev_free_svc(int32_t * arg);
 
-void thinkos_wq_wait_svc(int32_t * arg);
+void thinkos_ev_wait_svc(int32_t * arg);
+
+void thinkos_ev_timedwait_svc(int32_t * arg);
+
+void thinkos_ev_raise_svc(int32_t * arg);
+
 
 static inline uint32_t cm3_svc_stackframe(void) {
 	register uint32_t sp;
@@ -93,7 +99,7 @@ static inline uint32_t cm3_svc_stackframe(void) {
 	return sp;
 }
 
-void cm3_svc_handler(void)
+void cm3_svc_isr(void)
 {
 	int32_t * arg;
 	uint8_t * pc;
@@ -242,25 +248,38 @@ void cm3_svc_handler(void)
 		break;
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
-#if THINKOS_WAIT_QUEUE_MAX > 0
-#if THINKOS_ENABLE_WAIT_QUEUE_ALLOC
-	case THINKOS_WAIT_QUEUE_ALLOC:
-		thinkos_wq_alloc_svc(arg);
+#if THINKOS_EVENT_MAX > 0
+#if THINKOS_ENABLE_EVENT_ALLOC
+	case THINKOS_EVENT_ALLOC:
+		thinkos_ev_alloc_svc(arg);
 		break;
 
-	case THINKOS_WAIT_QUEUE_FREE:
-		thinkos_wq_free_svc(arg);
+	case THINKOS_EVENT_FREE:
+		thinkos_ev_free_svc(arg);
 		break;
 #endif
 
-	case THINKOS_WAIT_EVENT:
-		thinkos_wq_wait_svc(arg);
+	case THINKOS_EVENT_WAIT:
+		thinkos_ev_wait_svc(arg);
 		break;
-#endif /* THINKOS_WAIT_QUEUE_MAX > 0 */
+
+#if THINKOS_ENABLE_TIMED_CALLS
+	case THINKOS_EVENT_TIMEDWAIT:
+		thinkos_ev_timedwait_svc(arg);
+		break;
+#endif
+
+	case THINKOS_EVENT_RAISE:
+		thinkos_ev_raise_svc(arg);
+		break;
+#endif /* THINKOS_EVENT_MAX > 0 */
 
 	default:
-		arg[0] = -1;
+		arg[0] = THINKOS_ENOSYS;
 	}
 }
 
+/* FIXME: this is a hack to force linking this file. 
+ The linker then will override the weak alias for the cm3_svc_isr() */
 const char thinkos_svc_nm[] = "SVC";
+

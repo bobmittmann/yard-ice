@@ -26,6 +26,8 @@
 #define __USE_SYS_NET__
 #include <sys/net.h>
 
+#include <sys/mbuf.h>
+
 #include <sys/dcclog.h>
 
 #ifndef ENABLE_NET_UDP
@@ -41,11 +43,13 @@ int8_t net_mutex;
 void tcp_init(void);
 void udp_init(void);
 
-void __attribute__ ((constructor)) net_init(void)
+void tcpip_init(void)
 {
 	net_mutex = __os_mutex_alloc();
 
 	DCC_LOG1(LOG_TRACE, "net_mutex=%d", net_mutex);
+
+	mbuf_init();
 
 #if (ENABLE_NET_UDP)
 	udp_init();

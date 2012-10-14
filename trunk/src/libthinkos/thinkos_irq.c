@@ -22,6 +22,9 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
+
 #include <thinkos.h>
 
 #include <stdio.h>

@@ -41,14 +41,15 @@ __rom_vectors:
 	.word   ice_comm_blk
 	.word   0 
 	.word   0
-	.word   cm3_svc_handler
+	.word   cm3_svc_isr
 	.word   cm3_debug_mon_isr
 	.word   0
 	.word   cm3_pendsv_isr
 	.word   cm3_systick_isr
 	.word	stm32f_wwdg_isr /* Window WatchDog */
 	.word	stm32f_pvd_isr /* PVD through EXTI Line detection */
-	.word	stm32f_tamp_stamp_isr /* Tamper and TimeStamps through the EXTI line */
+	.word	stm32f_tamp_stamp_isr /* Tamper and TimeStamps through 
+									 the EXTI line */
 	.word	stm32f_rtc_wkup_isr /* RTC Wakeup through the EXTI line */
 	.word	stm32f_flash_isr /* FLASH */
 	.word	stm32f_rcc_isr /* RCC */
@@ -72,7 +73,8 @@ __rom_vectors:
 	.word	stm32f_exti9_5_isr /* External Line[9:5]s */
 	.word	stm32f_tim1_brk_tim9_isr /* TIM1 Break and TIM9 */
 	.word	stm32f_tim1_up_tim10_isr /* TIM1 Update and TIM10 */
-	.word	stm32f_tim1_trg_com_tim11_isr /* TIM1 Trigger and Commutation and TIM11 */
+	.word	stm32f_tim1_trg_com_tim11_isr /* TIM1 Trigger and Commutation 
+											 and TIM11 */
 	.word	stm32f_tim1_cc_isr /* TIM1 Capture Compare */
 	.word	stm32f_tim2_isr /* TIM2 */
 	.word	stm32f_tim3_isr /* TIM3 */
@@ -91,7 +93,8 @@ __rom_vectors:
 	.word	stm32f_otg_fs_wkup_isr /* USB OTG FS Wakeup through EXTI line */
 	.word	stm32f_tim8_brk_tim12_isr /* TIM8 Break and TIM12 */
 	.word	stm32f_tim8_up_tim13_isr /* TIM8 Update and TIM13 */
-	.word	stm32f_tim8_trg_com_tim14_isr /* TIM8 Trigger and Commutation and TIM14 */
+	.word	stm32f_tim8_trg_com_tim14_isr /* TIM8 Trigger and Commutation 
+											 and TIM14 */
 	.word	stm32f_tim8_cc_isr /* TIM8 Capture Compare */
 	.word	stm32f_dma1_stream7_isr /* DMA1 Stream7 */
 	.word	stm32f_fsmc_isr /* FSMC */
@@ -236,13 +239,10 @@ _void:
 	bx      lr
 	.size   _void, . - _void
 
-/*****************************************************************************
-*
-* Provide weak aliases for each Exception handler to _halt().
-* As they are weak aliases, any function with the same name will override
-* this definition.
-*
-*****************************************************************************/
+	/***********************************************************************
+	 * Provide weak aliases for each Exception handler to _halt().
+	 * Any function with the same name will override these definitions.
+	 */
 
 	.weak       ice_comm_blk
 	.set		ice_comm_blk, __vectors
@@ -268,8 +268,8 @@ _void:
 	.weak       cm3_usage_fault_isr
 	.thumb_set  cm3_usage_fault_isr,_halt
 
-	.weak       cm3_svc_handler
-	.thumb_set  cm3_svc_handler,_halt
+	.weak       cm3_svc_isr
+	.thumb_set  cm3_svc_isr,_halt
 
 	.weak       cm3_debug_mon_isr
 	.thumb_set  cm3_debug_mon_isr,_halt

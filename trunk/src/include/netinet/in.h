@@ -24,7 +24,13 @@
 #ifndef	__NETINET_IN_H__
 #define	__NETINET_IN_H__
 
+#include <stddef.h>
 #include <stdint.h>
+#include <endian.h>
+
+#ifndef __BYTE_ORDER 
+#error "Undefined __BYTE_ORDER"
+#endif
 
 /* Standard well-defined IP protocols.  */
 enum {
@@ -182,10 +188,11 @@ struct sockaddr_in {
 
 #elif __BYTE_ORDER == __BIG_ENDIAN
 
+#error "Unsupported __BYTE_ORDER"
+
 #else
 #error "Undefined __BYTE_ORDER"
 #endif
-
 
 #ifdef __cplusplus
 extern "C" {

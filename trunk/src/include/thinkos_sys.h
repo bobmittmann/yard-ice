@@ -22,9 +22,21 @@
 #ifndef __THINKOS_SYS_H__
 #define __THINKOS_SYS_H__
 
+
 #ifndef __THINKOS_SYS__
 #error "Never use <thinkos_sys.h> directly; include <thinkos.h> instead."
 #endif 
+
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef THINKOS_DEBUG
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
+#include <sys/dcclog.h>
 
 #ifndef __ASSEMBLER__
 
@@ -126,12 +138,12 @@ struct thinkos_context {
 #define THINKOS_ENABLE_SEM_ALLOC 1
 #endif
 
-#ifndef THINKOS_WAIT_QUEUE_MAX
-#define THINKOS_WAIT_QUEUE_MAX 8
+#ifndef THINKOS_EVENT_MAX
+#define THINKOS_EVENT_MAX 8
 #endif
 
-#ifndef THINKOS_ENABLE_WAIT_QUEUE_ALLOC
-#define THINKOS_ENABLE_WAIT_QUEUE_ALLOC 1
+#ifndef THINKOS_ENABLE_EVENT_ALLOC
+#define THINKOS_ENABLE_EVENT_ALLOC 1
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_STAT
@@ -201,9 +213,9 @@ struct thinkos_rt {
 	uint32_t wq_sem[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
-#if THINKOS_WAIT_QUEUE_MAX > 0
-	uint32_t wq_event[THINKOS_WAIT_QUEUE_MAX]; /* event wait queue */
-#endif /* THINKOS_WAIT_QUEUE_MAX > 0 */
+#if THINKOS_EVENT_MAX > 0
+	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
+#endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
@@ -270,8 +282,8 @@ struct thinkos_rt {
 	uint32_t sem_alloc;
 #endif
 
-#if THINKOS_ENABLE_WAIT_QUEUE_ALLOC
-	uint32_t wq_alloc;
+#if THINKOS_ENABLE_EVENT_ALLOC
+	uint32_t ev_alloc;
 #endif
 
 } __attribute__ ((aligned (8)));
@@ -325,16 +337,6 @@ struct thinkos_except_and_idle {
 extern struct thinkos_except_and_idle thinkos_idle;
 
 extern struct thinkos_rt thinkos_rt;
-
-#define SYSCALL_PRIORITY       0x60
-#define CLOCK_PRIORITY         0xa0
-#define SCHED_PRIORITY         0xc0
-
-#define IRQ_PRIORITY_HIGHEST   0x00
-#define IRQ_PRIORITY_VERY_HIGH 0x20
-#define IRQ_PRIORITY_HIGH      0x40
-#define IRQ_PRIORITY_REGULAR   0x80
-#define IRQ_PRIORITY_LOW       0xe0
 
 #ifdef __cplusplus
 extern "C" {
@@ -395,7 +397,7 @@ static void inline __thinkos_defer_sched(void) {
 
 static void inline __thinkos_wait(void) {
 	/* set the non schedule flag */
-	bmp_bit_clr(&thinkos_rt.wq_ready, thinkos_rt.active);  
+	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -410,9 +412,10 @@ static void inline __thinkos_wait(void) {
 	__thinkos_defer_sched();
 }
 
+#if 0
 static void inline __thinkos_wq_insert(uint32_t * wq, int32_t idx) {
-	bmp_bit_set(wq, idx);  
-	bmp_bit_clr(&thinkos_rt.wq_ready, idx);
+	__bit_mem_wr(wq, idx, 1);  
+	__bit_mem_wr(&thinkos_rt.wq_ready, idx, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	cm3_cpsid_i();
 	if (thinkos_rt.wq_ready == 0) {
@@ -424,7 +427,7 @@ static void inline __thinkos_wq_insert(uint32_t * wq, int32_t idx) {
 	cm3_cpsie_i();
 #endif
 }
-
+#endif
 static int inline __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;
 }
@@ -434,16 +437,6 @@ static int inline __wq_idx(uint32_t * ptr) {
 static int inline __thinkos_wq_head(uint32_t * ptr) {
 	/* get a thread from the queue bitmap */
 	return __clz(__rbit(*ptr));
-}
-
-static inline void __thinkos_critical_enter(void)  {
-	/* rise the BASEPRI to stop the scheduler */
-	cm3_basepri_set(SCHED_PRIORITY); 
-}
-
-static inline void __thinkos_critical_exit(void)  {
-	/* return the BASEPRI to the default to reenable the scheduler. */
-	cm3_basepri_set(0x00);
 }
 
 #ifdef __cplusplus
