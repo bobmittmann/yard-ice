@@ -25,7 +25,7 @@ ifndef MACH
   $(error MACH undefined!)
 endif	# CROSS_COMPILE
 
-LDSCRIPT = $(SDKDIR)/$(MACH).ld  
+LDSCRIPT = $(SDKDIR)/ld/$(MACH).ld  
 
 #------------------------------------------------------------------------------ 
 # cross compiling 

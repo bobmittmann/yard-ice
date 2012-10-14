@@ -33,5 +33,8 @@ CFLAGS = -g -O2
 
 JTAGTOOL_ADDR = 192.168.0.80
 
+VERSION_MAJOR = "0"
+VERSION_MINOR = "1"
+
 include mk/stm32f207.mk
 
