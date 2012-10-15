@@ -1,14 +1,27 @@
-/* $Id: ctype.c,v 2.1 2006/06/14 20:51:51 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	ctype.c
- * Module:	ulibc
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com)
- * Target:	
- * Comment:
- * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the YARD-ICE.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file ctype.c
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #include <ctype.h>
 
