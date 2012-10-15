@@ -1,14 +1,27 @@
-/* $Id: udp.h,v 2.0 2006/03/28 15:10:05 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	netinet/udp.h
- * Module:	
- * Project:		
- * Author:	Robinson Mittmann (bob@cnxtech.com)
- * Target:	
- * Comment:	
- * Copyright(c) 2003,2004 CNX Technologies. All Rights Reserved.
+ * This file is part of the YARD-ICE.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file netinet/udp.h
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __NETINET_UDP_H__
 #define __NETINET_UDP_H__
