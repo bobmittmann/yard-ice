@@ -26,5 +26,5 @@ LIB_STATIC = bitvec
 CFILES = vec_cat.c vec_cmp.c vec_fmt.c vec_lshift.c vec_rshift.c \
 		 vec_ones.c vec_zeros.c vec_rand.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

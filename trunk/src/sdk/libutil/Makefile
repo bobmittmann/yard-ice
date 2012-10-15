@@ -23,5 +23,5 @@ LIB_STATIC = util
 
 CFILES = udelay.c mdelay.c delay.c ilog2.c bswap_16.c bswap_32.c 
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

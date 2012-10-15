@@ -12,9 +12,7 @@ LIBS = stm32f cm3 util thinkos c ice-comm mbuf
 
 CFLAGS = -g -O2 
 
-CDEFS = "CM3_SYSTICK_CLK_HZ=15000000" 
-
 JTAGTOOL_ADDR = 192.168.1.30
 
-include ../../mk/cortex-m3.mk
+include ../../../mk/stm32f207.mk
 

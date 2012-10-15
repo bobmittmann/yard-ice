@@ -20,11 +20,11 @@
 
 MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
-SDKDIR := $(realpath $(MKDIR)/..)
+BASEDIR := $(realpath $(MKDIR)/..)
 
-TOOLSDIR = $(SDKDIR)/../tools
+TOOLSDIR = $(BASEDIR)/../tools
 
-export SDKDIR MKDIR TOOLSDIR
+export MKDIR TOOLSDIR
 
 MACH = stm32f207
 ARCH = cm3
@@ -32,6 +32,8 @@ CPU = cortex-m3
 CDEFS += STM32F207 "CM3_SYSTICK_CLK_HZ=15000000" 
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
+
+LDSCRIPT = $(BASEDIR)/ld/$(MACH).ld  
 
 include $(MKDIR)/prog.mk
 

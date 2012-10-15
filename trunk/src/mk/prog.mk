@@ -21,11 +21,10 @@
 #------------------------------------------------------------------------------ 
 # ld script
 #------------------------------------------------------------------------------ 
-ifndef MACH
-  $(error MACH undefined!)
-endif	# CROSS_COMPILE
 
-LDSCRIPT = $(SDKDIR)/ld/$(MACH).ld  
+ifndef LDSCRIPT
+  $(error LDSCRIPT undefined!)
+endif
 
 #------------------------------------------------------------------------------ 
 # cross compiling 
@@ -128,7 +127,6 @@ vars: libs-vars
 	@echo CPU=$(CPU)
 	@echo CROSS_COMPILE=$(CROSS_COMPILE)
 	@echo OUTDIR=$(OUTDIR)
-	@echo SDKDIR=$(SDKDIR)
 	@echo MKDIR=$(MKDIR)
 	@echo TOOLSDIR=$(TOOLSDIR)
 	@echo CFILES=$(CFILES)

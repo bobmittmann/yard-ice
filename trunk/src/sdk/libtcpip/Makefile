@@ -62,6 +62,6 @@ CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
 
 override INCPATH += ./include
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 
 
