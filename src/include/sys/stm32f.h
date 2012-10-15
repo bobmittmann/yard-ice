@@ -30,6 +30,8 @@
 
 #define STM32F
 
+#include <arch/cortex-m3.h>
+
 #define STM32F_HSI_HZ 16000000
 #define STM32F_HSE_HZ 24000000
 #define STM32F_PLL_HZ 120000000
@@ -128,12 +130,22 @@ static inline int gpio_status(gpio_io_t __io) {
 	return (gpio->idr & (1 << __io.pin));
 };
 
+struct stm32f_spi_io {
+	struct stm32f_gpio_io miso;
+	struct stm32f_gpio_io mosi;
+	struct stm32f_gpio_io sck;
+} __attribute__((__packed__));
+
+
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/*---------------------------------------------------------------------
+ * GPIO
+ *---------------------------------------------------------------------*/
 int stm32f_gpio_id(struct stm32f_gpio * gpio);
 
 void stm32f_gpio_clock_en(struct stm32f_gpio * gpio);
@@ -150,8 +162,9 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio, unsigned int pin,
 void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af);
 
 
-/* USART */
-
+/*---------------------------------------------------------------------
+ * USART 
+ *---------------------------------------------------------------------*/
 int stm32f_usart_putc(struct stm32f_usart * usart, int c);
 
 int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec);
@@ -172,6 +185,17 @@ int stm32f_usart_release(struct stm32f_usart * usart);
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
 
+/*---------------------------------------------------------------------
+ * SPI
+ *---------------------------------------------------------------------*/
+
+int stm32f_spi_init(struct stm32f_spi * spi, const struct stm32f_spi_io * io);
+int stm32f_spi_putc(struct stm32f_spi * spi, int c);
+int stm32f_spi_getc(struct stm32f_spi * spi);
+
+/*---------------------------------------------------------------------
+ * Ethernet
+ *---------------------------------------------------------------------*/
 void stm32f_eth_init(struct stm32f_eth * eth);
 void stm32f_eth_mac_get(struct stm32f_eth * eth, int idx, uint8_t * mac);
 void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
@@ -187,9 +211,12 @@ const struct file stm32f_usart5_file;
 }
 #endif
 
-static inline void gpio_mode(gpio_io_t __io, unsigned int __mode, 
-							 unsigned int __opt) {
-	stm32f_gpio_mode(STM32F_GPIO(__io.port), __io.pin, __mode, __opt);
+static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
+								 unsigned int __opt) {
+	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+
+	stm32f_gpio_clock_en(gpio);
+	stm32f_gpio_mode(gpio, __io.pin, __mode, __opt);
 }
 
 #endif /* __ASSEMBLER__ */

@@ -50,69 +50,69 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 }
 
 void stm32f_gpio_mode(struct stm32f_gpio * gpio, 
-					  unsigned int port, unsigned int mode, unsigned int opt)
+					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
 	uint32_t tmp;
 	uint32_t moder; 
 
-	/* set the port mode */
+	/* set the pin mode */
 	moder = gpio->moder;
-	moder &= ~GPIO_MODE_MASK(port);
+	moder &= ~GPIO_MODE_MASK(pin);
 	switch (mode & 0x0f) {
 	case INPUT:
-		moder |= GPIO_MODE_INPUT(port);
+		moder |= GPIO_MODE_INPUT(pin);
 		break;
 	case OUTPUT:
-		moder |= GPIO_MODE_OUTPUT(port);
+		moder |= GPIO_MODE_OUTPUT(pin);
 		break;
 	case ALT_FUNC:
-		moder |= GPIO_MODE_ALT_FUNC(port);
+		moder |= GPIO_MODE_ALT_FUNC(pin);
 		break;
 	case ANALOG:
-		moder |= GPIO_MODE_ANALOG(port);
+		moder |= GPIO_MODE_ANALOG(pin);
 		break;
 	}
 	gpio->moder = moder;
 
-	/* set the port output speed */
+	/* set the pin output speed */
 	tmp = gpio->ospeedr;
-	tmp &= ~GPIO_OSPEED_MASK(port);
-	tmp |= OPT_SPEED(opt) << (2 * port);
+	tmp &= ~GPIO_OSPEED_MASK(pin);
+	tmp |= OPT_SPEED(opt) << (2 * pin);
 	gpio->ospeedr = tmp;
 
-	/* set the port output type */
+	/* set the pin output type */
 	tmp = gpio->otyper;
-	tmp &= ~GPIO_OTYPE_MASK(port);
+	tmp &= ~GPIO_OTYPE_MASK(pin);
 	if (opt & OPEN_DRAIN)
-		tmp |= GPIO_OPEN_DRAIN(port);
+		tmp |= GPIO_OPEN_DRAIN(pin);
 	else
-		tmp |= GPIO_PUSH_PULL(port);
+		tmp |= GPIO_PUSH_PULL(pin);
 	gpio->otyper = tmp;
 
-	/* set the port pull up / pull down resistors */
+	/* set the pin pull up / pull down resistors */
 	tmp = gpio->pupdr;
-	tmp &= ~GPIO_PULL_MASK(port);
+	tmp &= ~GPIO_PULL_MASK(pin);
 	if (opt & PULL_UP)
-		tmp |= GPIO_PULL_UP(port);
+		tmp |= GPIO_PULL_UP(pin);
 	else if (opt & PULL_DOWN)
-		tmp |= GPIO_PULL_DOWN(port);
+		tmp |= GPIO_PULL_DOWN(pin);
 	gpio->pupdr = tmp;
 
 }
 
-void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af)
+void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;
 
-	if (port < 8) {
+	if (pin < 8) {
 		tmp = gpio->afrl;
-		tmp &= ~GPIO_AFRL_MASK(port);
-		tmp |= GPIO_AFRL_SET(port, af);
+		tmp &= ~GPIO_AFRL_MASK(pin);
+		tmp |= GPIO_AFRL_SET(pin, af);
 		gpio->afrl = tmp;
 	} else {
 		tmp = gpio->afrh;
-		tmp &= ~GPIO_AFRH_MASK(port);
-		tmp |= GPIO_AFRH_SET(port, af);
+		tmp &= ~GPIO_AFRH_MASK(pin);
+		tmp |= GPIO_AFRH_SET(pin, af);
 		gpio->afrh = tmp;
 	}
 }

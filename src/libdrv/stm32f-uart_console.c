@@ -19,7 +19,7 @@
 
 /** 
  * @file yard-ice.c
- * @brief YARD-ICE application main
+ * @brief YARD-ICE UART console
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
@@ -157,7 +157,6 @@ struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
 	ctrl->tx.s->cr = 0;
 	while (ctrl->tx.s->cr & DMA_EN); /* Wait for the channel to be ready .. */
 	ctrl->tx.s->par = &ctrl->uart->dr;
-//	ctrl->tx.s->fcr = 0;
 	ctrl->tx.s->fcr = DMA_DMDIS | DMA_FTH_FULL;
 
 	/* Disable DMA stream */
@@ -166,8 +165,6 @@ struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
 	ctrl->rx.s->par = &ctrl->uart->dr;
 	/* Memory address */
 	ctrl->tx.s->m0ar = (void *)ctrl->rx.buf;
-//	ctrl->tx.s->m0ar = (void *)ctrl->rx.buf[0];
-//	ctrl->tx.s->m1ar = (void *)ctrl->rx.buf[1];
 	/* Number of data items to transfer */
 	ctrl->tx.s->ndtr = CONSOLE_RX_BUF_LEN;
 	ctrl->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 | 
