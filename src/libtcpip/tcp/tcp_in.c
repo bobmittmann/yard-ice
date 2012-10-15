@@ -1,50 +1,33 @@
-/* $Id: tcp_in.c,v 2.25 2008/06/04 00:03:14 bob Exp $ *
- * File:	tcp_in.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment: TCP input processing. This one is really complicated.
- * Copyright(c) 2004-2009 BORESTE (www.boreste.com). All Rights Reserved.
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libtcpip.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp_in.c
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#ifndef ENABLE_TCP_HEADER_PREDICTION
-#define ENABLE_TCP_HEADER_PREDICTION 1
-#endif
-
-#ifndef ENABLE_TCPDUMP
-#define ENABLE_TCPDUMP 0
-#endif
-
-#include <stdint.h>
-#include <string.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <tcpip/etharp.h>
-#include <sys/mbuf.h>
-#include <sys/in.h>
-
-#include <tcpip/ifnet.h>
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-#include <tcpip/arp.h>
-
-#include <errno.h>
-
-#include <sys/dcclog.h>
-#include <debug.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
 
 inline struct tcp_pcb * tcp_active_lookup(in_addr_t __faddr, uint16_t __fport, 
 										  in_addr_t __laddr, uint16_t __lport)
@@ -142,8 +125,8 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 		return NULL;
 	}
 
-	if ((cond = uthread_cond_alloc()) < 0) {
-		DCC_LOG(LOG_WARNING, "uthread_cond_alloc()");
+	if ((cond = __os_cond_alloc()) < 0) {
+		DCC_LOG(LOG_WARNING, "__os_cond_alloc()");
 		return NULL;
 	}
 
@@ -211,7 +194,7 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	   function to send back the SYNC and finish handshaking. */
 	tp->t_flags = TF_ACKNOW;
 
-	uthread_cond_broadcast(mux->t_cond);
+	__os_cond_broadcast(mux->t_cond);
 
 	return tp;
 }
@@ -385,7 +368,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 					}
 				}
 
-				uthread_cond_signal(tp->t_cond);
+				__os_cond_signal(tp->t_cond);
 
 				if (tp->snd_q.len) {
 					/* schedule output */
@@ -403,7 +386,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 				/* append data */
 				len = mbuf_queue_add(&tp->rcv_q, data, ti_len);
 				tp->rcv_nxt += len;
-				uthread_cond_signal(tp->t_cond);
+				__os_cond_signal(tp->t_cond);
 
 				if (len != ti_len) {
 					DCC_LOG1(LOG_WARNING, "<%05x> no more mbufs", (int)tp);
@@ -524,7 +507,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 
 		/* XXX: */ 
 		tp->t_flags |= TF_ACKNOW;
-		uthread_cond_broadcast(tp->t_cond);
+		__os_cond_broadcast(tp->t_cond);
 
 		goto step6;
 
@@ -538,7 +521,7 @@ close_and_reset:
 		mbuf_queue_free(&tp->rcv_q);
 
 		/* notify the upper layer */
-		uthread_cond_signal(tp->t_cond);
+		__os_cond_signal(tp->t_cond);
 
 		goto dropwithreset;	
 	}
@@ -644,9 +627,7 @@ close:
 			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
 
 			/* notify the upper layer */
-			uthread_cond_signal(tp->t_cond);
-			uthread_cond_signal(__mbufs__.cond);
-
+			__os_cond_signal(tp->t_cond);
 			goto drop;
 
 		case TCPS_CLOSING:
@@ -696,7 +677,7 @@ close:
 		DCC_LOG1(LOG_TRACE, "<%05x> [ESTABLISHED]", (int)tp);
 
 		/* notify the upper layer*/
-//		uthread_cond_signal(tp->t_cond);
+//		__os_cond_signal(tp->t_cond);
 
 		/* TODO: tcp reassembly
 		tcp_reass(tp); */
@@ -781,7 +762,7 @@ close:
 		}
 
 		/* awaken a thread waiting on the send buffer ... */
-		uthread_cond_signal(tp->t_cond);
+		__os_cond_signal(tp->t_cond);
 
 		snd_una = ti_ack;
 
@@ -882,7 +863,7 @@ dodata:
 			/* 
 			 * notify the upper layer of the data arrival...
 			 */
-			uthread_cond_signal(tp->t_cond);
+			__os_cond_signal(tp->t_cond);
 //			} else {
 //				DCC_LOG2(LOG_INFO, "<%05x> rcvd %d", (int)tp, ti_len);
 //			}
@@ -918,9 +899,7 @@ dodata:
 			   has closed its side. Sockets: marks 
 			   the socket as write-only */
 			if (tp->rcv_q.len == 0) {
-				uthread_cond_signal(tp->t_cond);
-				/* XXX: */
-				uthread_cond_signal(__mbufs__.cond);
+				__os_cond_signal(tp->t_cond);
 			}
 			break;
 		case TCPS_FIN_WAIT_1:

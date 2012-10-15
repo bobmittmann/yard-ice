@@ -23,17 +23,6 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-/*! \addtogroup tcpip
- * @{
- */
-/*! \defgroup tcpip_udp tcpip/raw.h
- * @{
- */	 
-/*! \file
- *	Revision tag: $Revision: 2.1 $ $Date: 2008/06/04 00:03:14 $
- *	@author Robinson Mittman(bob@boreste.com)
- */
-
 #ifndef __TCPIP_RAW_H__
 #define __TCPIP_RAW_H__
 

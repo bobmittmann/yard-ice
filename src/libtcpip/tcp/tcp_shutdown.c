@@ -1,45 +1,31 @@
-/* $Id: tcp_shutdown.c,v 2.4 2006/09/06 15:37:21 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcp_shutdown.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:
- * Copyright(c) 2004-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
+/** 
+ * @file tcp_shutdown.c
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#include <sys/msg.h>
-#include <sys/mbuf.h>
-#include <sys/mlink.h>
-#include <sys/in.h>
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-#include <errno.h>
-
-#ifdef TCP_LOG
-#ifndef ENABLE_LOG
-#define ENABLE_LOG
-#endif
-#endif
-#include <sys/dcclog.h>
-
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
-
-#if defined(DEBUG) || defined(ENABLE_LOG)
-extern const char * const __tcp_state[];
-#endif
 
 /*
    FIXME: this implementation is almost a clone of close call 

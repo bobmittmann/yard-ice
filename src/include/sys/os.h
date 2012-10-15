@@ -128,6 +128,14 @@ static inline int __os_cond_signal(int cond) {
 #endif
 }
 
+static inline int __os_cond_broadcast(int cond) {
+#if ENABLE_THINKOS
+	return thinkos_cond_broadcast(cond);
+#else
+	return 0;
+#endif
+}
+
 /********************************************************************************* 
  * Semaphores
  */

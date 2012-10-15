@@ -1,34 +1,33 @@
-/* $Id: tcp_tmr.c,v 2.14 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcp_tmr.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp_tmr.c
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#include <stdint.h>
-#include <sys/mbuf.h>
-#include <sys/net.h>
-
-#include <tcpip/tcp.h>
-#include <tcpip/arp.h>
-
-#include <sys/dcclog.h>
-#include <errno.h>
+#define __USE_SYS_ARP__
+#include <sys/arp.h>
 
 #ifndef TCP_FAST_TMR_MS
 #define TCP_FAST_TMR_MS 100
@@ -187,19 +186,19 @@ const uint8_t tcp_keepintvl[13] = {
 int tcp_fast_tmr(void)
 {
 	struct tcp_pcb * tp;
-	struct mbuf * q;
+	struct pcb_link * q;
 	int n = 0;
 
 //	DCC_LOG2(LOG_TRACE, "timestamp=%d", tcp_rel_timestamp());
 
-	q = (struct mbuf *)&__tcp__.active.first;
+	q = (struct pcb_link *)&__tcp__.active.first;
 
 	if (q->next) {
 		DCC_LOG1(LOG_MSG, "%4u", tcp_rel_timestamp());
 	}
 
 	while ((q = q->next)) {
-		tp = (struct tcp_pcb *)&q->data;
+		tp = (struct tcp_pcb *)&q->pcb;
 
 		if (tp->t_flags & TF_DELACK) {	
 			DCC_LOG(LOG_TRACE, "delayed ack");
@@ -216,16 +215,16 @@ int tcp_fast_tmr(void)
 int tcp_rxmt_tmr(void)
 {
 	struct tcp_pcb * tp;
-	struct mbuf * q;
+	struct pcb_link * q;
 	int n = 0;
 
 	/* Update the Initial Segment Sequence */
 //	__tcp__.iss++;
 
-	q = (struct mbuf *)&__tcp__.active.first;
+	q = (struct pcb_link *)&__tcp__.active.first;
 
 	while ((q = q->next)) {
-		tp = (struct tcp_pcb *)&q->data;
+		tp = (struct tcp_pcb *)&q->pcb;
 
 		if ((tp->t_rxmt_tmr) && (--tp->t_rxmt_tmr == 0)) {
 			if (++tp->t_rxmt_cnt > TCP_MAXRXMTS) {
@@ -250,6 +249,10 @@ int tcp_rxmt_tmr(void)
 				tp->snd_off = 0;
 				tp->t_flags &= ~TF_SENTFIN;
 				n++;
+
+				snd_una = snd_una;
+				snd_nxt = snd_nxt;
+				snd_max = snd_max;
 			}
 		}
 	}
@@ -260,12 +263,12 @@ int tcp_rxmt_tmr(void)
 void tcp_idle_tmr(void)
 {
 	struct tcp_pcb * tp;
-	struct mbuf * q;
+	struct pcb_link * q;
 
-	q = (struct mbuf *)&__tcp__.active.first;
+	q = (struct pcb_link *)&__tcp__.active.first;
 
 	while ((q = q->next)) {
-		tp = (struct tcp_pcb *)&q->data;
+		tp = (struct tcp_pcb *)&q->pcb;
 
 		if ((tp->t_conn_tmr) && (--tp->t_conn_tmr == 0)) {
 			switch (tp->t_state) {
@@ -282,7 +285,7 @@ void tcp_idle_tmr(void)
 						 (int)tp);
 
 				/* notify the upper layer */
-				uthread_cond_signal(tp->t_cond);
+				__os_cond_signal(tp->t_cond);
 				/* TODO: statistics */
 				break;
 
@@ -334,13 +337,13 @@ void tcp_output_sched(struct tcp_pcb * __tp)
 {
 	/* schedule output */
 	__tcp__.need_output = 1;
-	uthread_cond_signal(__tcp__.output_cond);
+	__os_cond_signal(__tcp__.output_cond);
 }
 
-int __attribute__((noreturn, naked)) tcp_tmr_task(void * p, uthread_id_t id)
+int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 {
 	struct tcp_pcb * tp;
-	struct mbuf * q;
+	struct pcb_link * q;
 	int rxmt;
 	int idle;
 	int ret;
@@ -367,9 +370,9 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p, uthread_id_t id)
 	for (;;) {
 		if (__tcp__.need_output) {
 			__tcp__.need_output = 0;
-			q = (struct mbuf *)&__tcp__.active.first;
+			q = (struct pcb_link *)&__tcp__.active.first;
 			while ((q = q->next)) {
-				tp = (struct tcp_pcb *)&q->data;
+				tp = (struct tcp_pcb *)&q->pcb;
 				if ((ret = tcp_output(tp)) == -EAGAIN) {
 					DCC_LOG(LOG_TRACE, "tcp_output(tp)) == -EAGAIN");
 					/* if the reason to fail was an arp failure
@@ -379,7 +382,7 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p, uthread_id_t id)
 			}
 			continue;
 		}
-		ret = uthread_cond_timedwait(__tcp__.output_cond, net_mutex, 
+		ret = __os_cond_timedwait(__tcp__.output_cond, net_mutex, 
 									 TCP_FAST_TMR_MS);
 		if (ret < 0) {
 

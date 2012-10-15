@@ -1,42 +1,32 @@
 /* 
- * File:	tcp.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bobmittmann@gmail.com)
- * Target:	
- * Comment:
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libtcpip.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp.c
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <string.h>
-#include <errno.h>
-
-#include <sys/mbuf.h>
-#include <sys/in.h>
-#include <tcpip/ip.h>
-
-#include <sys/net.h>
-#include <uthreads.h>
-
-#define __LIB_TCPIP__
-#include <tcpip/tcp.h>
-
-#include <sys/dcclog.h>
-#include <debug.h>
 
 #ifndef TCP_DEFAULT_RTT
 #define TCP_DEFAULT_RTT     47
@@ -126,31 +116,32 @@ const char * const __tcp_state[11] = {
 };
 #endif
 
-struct tcp_pcb * tcp_pcb_new(struct mlink_list * __list)
+struct tcp_pcb * tcp_pcb_new(struct pcb_list * __list)
 {
 	struct tcp_pcb * tp;
 
-	/* get a new memory descriptor */
-	if ((tp = (struct tcp_pcb *)mbuf_try_alloc()) == NULL) {
-		DCC_LOG(LOG_WARNING, "could not allocate a mbuf");
-		errno = ENOBUFS;
+	/* get a new PCB */
+	if ((tp = (struct tcp_pcb *)pcb_alloc()) == NULL) {
+		DCC_LOG(LOG_WARNING, "could not allocate a PCB");
 		return NULL;
 	}
 
-	if ((pcb_insert((struct pcb *)tp, __list)) < 0) {
-		DCC_LOG(LOG_WARNING, "can't register PCB");
-		mbuf_free((struct mbuf *)tp);
-		errno = ENOMEM;
-		return NULL;
-	}
-
+	/* ensure the mem is clean */
 	memset(tp, 0, sizeof(struct tcp_pcb));
+
+	tcpip_net_lock();
+
+	pcb_insert((struct pcb *)tp, __list);
+
 	tp->t_cond = -1;
 
 	DCC_LOG1(LOG_INFO, "<%05x>", (int)tp);
 
+	tcpip_net_unlock();
+
 	return tp;
-} 
+}
+
 
 int tcp_pcb_free(struct tcp_pcb * tp)
 {
@@ -194,7 +185,7 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 
 	/* release all the control structures */
 
-	uthread_cond_free(tp->t_cond);
+	__os_cond_free(tp->t_cond);
 
 	mbuf_queue_free(&tp->rcv_q);
 
@@ -219,8 +210,8 @@ struct tcp_pcb * tcp_alloc(void)
 	return tp;
 }
 
-extern int  tcp_tmr_task(void * p, uthread_id_t id);
-extern struct uthread_mutex tcp_out_mutex;
+extern int  tcp_tmr_task(void * p);
+extern struct __os_mutex tcp_out_mutex;
 
 #if defined(DEBUG) || defined(ENABLE_TCPDUMP) || defined(IP_DEBUG) || \
 	defined(ETHARP_DEBUG)
@@ -258,26 +249,23 @@ uint32_t tcp_rel_timestamp(void)
 
 void tcp_init(void)
 {
-	int thread;
+	pcb_list_init(&__tcp__.closed);
+	pcb_list_init(&__tcp__.listen);
+	pcb_list_init(&__tcp__.active);
 
-	mlink_list_init(&__tcp__.closed);
-	mlink_list_init(&__tcp__.listen);
-	mlink_list_init(&__tcp__.active);
-
-	__tcp__.accept_cond = uthread_cond_alloc();
-	__tcp__.output_cond = uthread_cond_alloc();
+	__tcp__.accept_cond = __os_cond_alloc();
+	__tcp__.output_cond = __os_cond_alloc();
 
 	DCC_LOG1(LOG_TRACE, "tcp accept_cond=%d", __tcp__.accept_cond);
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.output_cond);
 
-	thread = uthread_create(tcp_tmr_stack, sizeof(tcp_tmr_stack), 
-				   (uthread_task_t)tcp_tmr_task, (void *)NULL, 0, NULL); 
+	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 
+					   tcp_tmr_stack, sizeof(tcp_tmr_stack), 
+					   __OS_PRIORITY_LOWEST);
 
 #if (ENABLE_TCP_PROFILING)
 	prof_clock_init();
 	prof_clock_start();
 #endif
-
-	DCC_LOG1(LOG_TRACE, "tcp tmr_thread=%d", thread);
 }
 

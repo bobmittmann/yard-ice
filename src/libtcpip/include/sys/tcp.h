@@ -1,14 +1,27 @@
-/* $Id: tcp.h,v 1.14 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	sys/tcp.h
- * Module:	
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:	TCP
- * Copyright(c) 2003-2007 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file sys/tcp.h
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __SYS_TCP_H__
 #define __SYS_TCP_H__
@@ -35,12 +48,13 @@
 
 #include <tcpip/ifnet.h>
 #include <tcpip/stat.h>
+#include <tcpip/tcp.h>
 
 #define __USE_SYS_NET__
 #include <sys/net.h>
 #include <sys/pcb.h>
 
-#include <thinkos.h>
+#include <sys/os.h>
 
 /* tcp states */
 #define TCPS_CLOSED         0
@@ -216,6 +230,8 @@ struct tcp_system {
 #endif
 
 extern struct tcp_system __tcp__;
+
+extern const char * const __tcp_state[];
 
 #define TCPDUMP_RX 0
 #define TCPDUMP_TX 1

@@ -1,14 +1,27 @@
-/* $Id: ifnet.h,v 2.7 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	sys/ifnet.h
- * Module:	
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com, bobmittmann@gmail.com)
- * Target:	
- * Comment:	TCPIP
- * Copyright(c) 2009 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file sys/ifnet.h
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __SYS_IFNET_H__
 #define __SYS_IFNET_H__
@@ -45,7 +58,41 @@
 #define ENABLE_NETIF_STAT 0
 #endif
 
-struct ifnet;
+struct ifnet {
+	/* low level io address */
+	void * if_io;
+
+	/* irq number */
+	uint8_t if_irq_no;
+
+	/* interface id */
+	uint8_t if_id;
+
+	/* flags (IFF_*) */
+	uint16_t if_flags;
+
+	/* maximum transmission unit */
+	uint16_t if_mtu;
+
+	/* interface link speed (bps) */
+	uint32_t if_link_speed;
+
+	/* IPV4 address */
+	in_addr_t if_ipv4_addr;
+
+	/* IPV4 network mask */
+	in_addr_t if_ipv4_mask;
+
+	/* low level device driver private structure */
+	void * if_drv;
+
+	/* interface operations */
+	const struct ifnet_operations * if_op;
+#if (ENABLE_NETIF_STAT)
+	struct ifnet_stat stat;
+#endif
+};
+
 
 struct ifnet_operations {
 	/* interface type */
@@ -84,41 +131,6 @@ struct ifnet_operations {
 
 	/* request a memory region */
 	int (* op_munmap)(struct ifnet * __if, void * __mem);
-};
-
-struct ifnet {
-	/* low level io address */
-	void * if_io;
-
-	/* irq number */
-	uint8_t if_irq_no;
-
-	/* interface id */
-	uint8_t if_id;
-
-	/* flags (IFF_*) */
-	uint16_t if_flags;
-
-	/* maximum transmission unit */
-	uint16_t if_mtu;
-
-	/* interface link speed (bps) */
-	uint32_t if_link_speed;
-
-	/* IPV4 address */
-	in_addr_t if_ipv4_addr;
-
-	/* IPV4 network mask */
-	in_addr_t if_ipv4_mask;
-
-	/* low level device driver private structure */
-	void * if_drv;
-
-	/* interface operations */
-	const struct ifnet_operations * if_op;
-#if (ENABLE_NETIF_STAT)
-	struct ifnet_stat stat;
-#endif
 };
 
 

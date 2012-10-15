@@ -1,42 +1,33 @@
 /* 
- * File:	tcp_connect.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:
- * Copyright(c) 2007-2009 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libtcpip.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp_connect.c
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <string.h>
-#include <errno.h>
-
-#include <sys/in.h>
-#include <sys/net.h>
-
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-
-#include <sys/dcclog.h>
-#include <debug.h>
-
-#if (defined(DEBUG) || defined(ENABLE_LOG))
-extern const char * const __tcp_state[];
-#endif
-
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
 
 int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port) 
 {
@@ -93,8 +84,8 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 	if (mss > tcp_maxmss)
 		mss = tcp_maxmss;
 
-	if ((__tp->t_cond = uthread_cond_alloc()) < 0) {
-		DCC_LOG(LOG_WARNING, "uthread_cond_alloc()");
+	if ((__tp->t_cond = __os_cond_alloc()) < 0) {
+		DCC_LOG(LOG_WARNING, "__os_cond_alloc()");
 		tcpip_net_unlock();
 		return -1;
 	}
@@ -141,7 +132,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 		if ((__tp->t_state == TCPS_CLOSED)) {
 			DCC_LOG1(LOG_WARNING, "<%05x> refused", (int)__tp);
 			/* release the conditional variable */
-			uthread_cond_free(__tp->t_cond);
+			__os_cond_free(__tp->t_cond);
 			/* XXX: discard the data */
 			mbuf_queue_free(&__tp->snd_q);
 			mbuf_queue_free(&__tp->rcv_q);
@@ -164,7 +155,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 			break;
 		}
 
-		uthread_cond_wait(__tp->t_cond, net_mutex); 
+		__os_cond_wait(__tp->t_cond, net_mutex); 
 	}
 
 	tcpip_net_unlock();

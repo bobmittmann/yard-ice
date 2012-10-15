@@ -19,7 +19,7 @@
 
 /** 
  * @file net.c
- * @brief library initialization
+ * @brief TCP/IP library initialization
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 

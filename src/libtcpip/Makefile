@@ -48,7 +48,11 @@ UDP_CFILES = udp_bind.c udp.c udp_close.c udp_connect.c udp_enum.c \
 			 udp_input.c udp_proto_getstat.c udp_recv.c udp_recv_tmo.c\
 			 udp_release.c udp_send.c udp_sendto.c
 
-TCP_CFILES = 
+TCP_CFILES = tcp_abort.c tcp_accept.c tcp_accept_tmo.c tcp_bind.c\
+			 tcp.c tcp_close.c tcp_connect.c tcp_drop.c tcp_dump.c\
+			 tcp_enum.c tcp_flags.c tcp_in.c tcp_keepalive.c tcp_listen.c\
+			 tcp_out.c tcp_proto_getstat.c tcp_recv.c tcp_send.c\
+			 tcp_shutdown.c tcp_tmr.c
 
 CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
 		 $(addprefix mbuf/,$(MBUF_CFILES))\

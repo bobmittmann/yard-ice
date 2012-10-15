@@ -1,43 +1,30 @@
-/* $Id: tcp_send.c,v 2.13 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcp_send.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp_send.c
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
-#include <stdint.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <string.h>
-#include <errno.h>
-
-#include <sys/mbuf.h>
-#include <sys/in.h>
-#include <sys/net.h>
-
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-#include <tcpip/arp.h>
-
-#include <sys/dcclog.h>
-#include <debug.h>
-
-extern const char * const __tcp_state[];
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
 int tcp_send(struct tcp_pcb * __tp, const void * __buf, 
 	int __len, int __flags)
@@ -79,7 +66,7 @@ again:
 
 		if (__tp->t_state == TCPS_SYN_RCVD) {
 			DCC_LOG1(LOG_TRACE, "<%05x> wait", (int)__tp);
-			uthread_cond_wait(__tp->t_cond, net_mutex);
+			__os_cond_wait(__tp->t_cond, net_mutex);
 			DCC_LOG2(LOG_TRACE, "<%05x> again [%s]",
 					 (int)__tp, __tcp_state[__tp->t_state]);
 			goto again;
@@ -102,10 +89,10 @@ again:
 			
 			DCC_LOG(LOG_INFO, "output request.");
 			__tcp__.need_output = 1;
-			uthread_cond_signal(__tcp__.output_cond);
+			__os_cond_signal(__tcp__.output_cond);
 		
 			DCC_LOG(LOG_INFO, "waiting for buffer space.");
-			uthread_cond_wait(__tp->t_cond, net_mutex);
+			__os_cond_wait(__tp->t_cond, net_mutex);
 
 			goto again;
 		}
@@ -142,7 +129,7 @@ again:
 			((__tp->snd_q.len - (int)__tp->snd_q.offs) >= __tp->t_maxseg)) {
 			DCC_LOG(LOG_INFO, "output request.");
 			__tcp__.need_output = 1;
-			uthread_cond_signal(__tcp__.output_cond);
+			__os_cond_signal(__tcp__.output_cond);
 //			if (tcp_output(__tp) < 0) {
 				/* if the reason to fail was an arp failure
 				   try query an address pending for resolution ... */

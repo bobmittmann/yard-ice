@@ -1,39 +1,30 @@
 /* 
- * File:	tcp_dump.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bobmittmann@gmail.com)
- * Target:	
- * Comment: TCP IO monitoring
- * Copyright(c) 2004-2009 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libtcpip.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+/** 
+ * @file tcp_dump.c
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#include <sys/types.h>
-#include <string.h>
-
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-
-#include <tcpip/etharp.h>
-
-#include <sys/mbuf.h>
-#include <sys/in.h>
-#include <tcpip/ifnet.h>
-
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-
-#include <signal.h>
-#include <errno.h>
-
-#include <stdio.h>
-
-#include <sys/dcclog.h>
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
 #ifndef TCPDUMP_SEQ_TAB_MAX
 #define TCPDUMP_SEQ_TAB_MAX 4
@@ -125,6 +116,9 @@ static void rx(struct iphdr * iph, struct tcphdr * th)
 				 tcp_basic_flags[th->th_flags & 0x0f], 
 				 seq, datalen, ntohs(th->th_win));
 	}
+
+	ack = ack;
+	seq = seq;
 }
 
 static void tx(struct iphdr * iph, struct tcphdr * th)
@@ -176,6 +170,8 @@ static void tx(struct iphdr * iph, struct tcphdr * th)
 				 tcp_basic_flags[th->th_flags & 0x0f], 
 				 seq, datalen, ntohs(th->th_win));
 	}
+	ack = ack;
+	seq = seq;
 }
 
 int tcp_dump(struct iphdr * iph, struct tcphdr * th, int dir)
