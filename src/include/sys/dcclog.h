@@ -1,7 +1,7 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * Copyright(c) 2009-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * This file is part of the libice-comm.
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,11 +18,10 @@
  */
 
 /** 
- * @file sys/ice_trace.h
- * @brief 
+ * @file sys/dcclog.h
+ * @brief libice-comm
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
-
 
 #ifndef __ICE_TRACE_H__
 #define __ICE_TRACE_H__
