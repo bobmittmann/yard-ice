@@ -1,25 +1,27 @@
-/* $Id: raw.h,v 2.1 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcpip/raw.h
- * Module:	
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:	TCPIP
- * Copyright(c) 2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-/*! \addtogroup comm
- * @{
- */
-/*! \defgroup tcpip_udp tcpip/raw.h
- * @{
- */	 
-/*! \file
- *	Revision tag: $Revision: 2.1 $ $Date: 2008/06/04 00:03:14 $
- *	@author Robinson Mittman(bob@boreste.com)
- */
+/** 
+ * @file sys/raw.h
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __SYS_RAW_H__
 #define __SYS_RAW_H__
@@ -94,7 +96,12 @@ struct raw_pcb {
 	struct iphdr * r_ip;
 };
 
-extern struct raw_pcb * ip_raw;
+struct raw_system {
+	/*! pcb list */
+	struct pcb_list list;
+};
+
+extern struct raw_system __raw__;
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,6 +110,8 @@ extern "C" {
 int raw_pcb_free(struct raw_pcb * __raw);
 
 int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len);
+
+void raw_init(void);
 
 #ifdef __cplusplus
 }

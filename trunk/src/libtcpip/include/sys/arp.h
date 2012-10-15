@@ -1,19 +1,33 @@
 /* 
- * File:	sys/arp.h
- * Module:	
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:	TCPIP
- * Copyright(c) 2003-2005 CNX Technologies. All Rights Reserved.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libtcpip.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file sys/arp.h
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __SYS_ARP_H__
 #define __SYS_ARP_H__
 
 #ifndef __USE_SYS_ARP__
-#error "Never use <sys/raw.h> directly; include <tcpip/raw.h> instead."
+#error "Never use <sys/arp.h> directly; include <tcpip/arp.h> instead."
 #endif 
 
 #ifdef CONFIG_H

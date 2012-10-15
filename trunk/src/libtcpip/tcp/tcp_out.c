@@ -1,47 +1,35 @@
-/* $Id: tcp_out.c,v 2.14 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcp_out.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment:
- * Copyright(c) 2004-2009 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
+/** 
+ * @file tcp_out.c
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
-#ifndef ENABLE_TCPDUMP
-#define ENABLE_TCPDUMP 0
-#endif
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
 
-#ifndef ENABLE_TCPCHKSUMCHECK
-#define ENABLE_TCPCHKSUMCHECK 0
-#endif
-
-#include <stdint.h>
-#include <string.h>
-#include <netinet/in.h>
-
-#include <sys/mbuf.h>
-#include <sys/in.h>
-
-#include <tcpip/etharp.h>
-#include <tcpip/ifnet.h>
 #include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-#include <uthreads.h>
-
-#include <sys/dcclog.h>
 
 /* the values here are in (miliseconds / TCP_SLOW_MS_TICK) */
 extern const uint8_t tcp_rxmtintvl[];
@@ -544,7 +532,7 @@ send:
 	if (len > 0) {
 		int n;
 		n = mbuf_queue_get(&tp->snd_q, data, off, len);
-		sum = in_chksum(sum, data, len);
+		sum = in_chksum(sum, data, n);
 	}
 
 	th->th_sum = ~sum;

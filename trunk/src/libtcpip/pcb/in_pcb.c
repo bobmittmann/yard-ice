@@ -1,14 +1,27 @@
-/* $Id: in_pcb.c,v 2.9 2008/06/04 00:03:15 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	in_pcb.c
- * Module:
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com)
- * Target:	
- * Comment: Internet protocol control blocks
- * Copyright(c) 2004-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file in_pcb.c
+ * @brief Internet Protocol Control Block
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifdef CONFIG_H
 #include "config.h"
@@ -27,69 +40,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#if 0
-static void pcb_list_init(struct pcb_list * __l) {
-	__l->first = NULL;
-	__l->last = (struct pcb_link *)&__l->first;
-}
-
-void pcb_list_insert(struct pcb_list * __l, void * __p) {
-	struct pcb_link * m;
-
-	m = (struct pcb_link *)__p - 1;
-
-	__l->last->next = m;
-	__l->last = m;
-
-	m->next = NULL;
-}
-
-int pcb_list_lookup(struct pcb_list * __l, void * __p)
-{
-	struct pcb_link * p;
-	struct pcb_link * q;
-
-	p = (struct pcb_link *)__p - 1;
-	q = (struct pcb_link *)&__l->first;
-
-	while ((q = q->next)) {
-		if (q == p)
-			return 0;
-	}
-
-	DCC_LOG(LOG_WARNING, "not found!");
-	return -1;
-}
-
-int pcb_list_remove(struct pcb_list * __l, void * __p)
-{
-	struct pcb_link * m;
-	struct pcb_link * q;
-	struct pcb_link * p;
-
-	p = (struct pcb_link *)__p - 1;
-	q = (struct pcb_link *)&__l->first;
-
-	while ((m = q->next)) {
-		if (p == m) {
-			m = m->next;
-			q->next = m;
-
-			if (__l->last == p)
-				__l->last = q;
-
-			return 0;
-		}
-		q = m;
-	}
-
-	DCC_LOG(LOG_WARNING, "not found!");
-	return -1;
-}
-#endif
-
 /*
- * Insert the pcb in a list
+ * Insert the pcb into a list
  */
 static void __insert(struct pcb_list * __list, struct pcb_link * __p)
 {
@@ -125,6 +77,9 @@ static int __remove(struct pcb_list * __list, struct pcb_link * __p)
 	return -1;
 }
 
+/*
+ * Lookup for a pcb in a list
+ */
 static int __lookup(struct pcb_list * __l, struct pcb_link * __p)
 {
 	struct pcb_link * q;

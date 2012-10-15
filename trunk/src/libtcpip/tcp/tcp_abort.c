@@ -1,39 +1,36 @@
-/* $Id: tcp_abort.c,v 2.6 2008/06/04 00:03:14 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcp_abort.c
- * Module:
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:	
- * Comment: API function.
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#include <stdint.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <string.h>
-#include <errno.h>
+/** 
+ * @file tcp_abort.c
+ * @brief
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#include <sys/mbuf.h>
-#include <sys/in.h>
-#include <tcpip/ip.h>
-#include <tcpip/tcp.h>
-
-#ifdef TCP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
 /* 
- * Sends a RST to the PEER and call the close
+ * Sends a RST to the peer and close the connection
  * 
- * This function shuld be called after the upper layer be released
+ * This function shuld be called after the upper layer released
  * its resources.
- *
  *
  */
 void tcp_abort(struct tcp_pcb * tp)
@@ -46,7 +43,7 @@ void tcp_abort(struct tcp_pcb * tp)
 
 		tp->t_state = TCPS_CLOSED;
 
-		DBG(DBG_TRACE, "<%04x> [CLOSED]", (int)tp);
+		DCC_LOG1(LOG_TRACE, "<%04x> [CLOSED]", (int)tp);
 
 		/* discard the buffers */
 		mbuf_queue_free(&tp->rcv_q);
@@ -55,7 +52,7 @@ void tcp_abort(struct tcp_pcb * tp)
 		/* move from the active pcb list to the closed list */
 		if (pcb_move((struct pcb *)tp, &__tcp__.active, 
 			&__tcp__.closed) < 0) {
-			DBG(DBG_ERROR, "<%04x> pcb_move()", (int)tp);
+			DCC_LOG1(LOG_ERROR, "<%04x> pcb_move()", (int)tp);
 		}
 
 	}
