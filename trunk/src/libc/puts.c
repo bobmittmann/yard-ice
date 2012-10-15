@@ -1,24 +1,27 @@
 /* 
- * File:	 puts.c
- * Author:   Robinson Mittmann (bobmittmann@gmail.com)
- * Target:
- * Comment:
- * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This file is part of the YARD-ICE.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file puts.c
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #include <stdio.h>
 #include <string.h>

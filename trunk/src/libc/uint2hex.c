@@ -1,9 +1,7 @@
 /* 
- * uint2hex.c
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
- * This file is part of the ThinkOS library.
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,6 +16,12 @@
  * You can receive a copy of the GNU Lesser General Public License from 
  * http://www.gnu.org/
  */
+
+/** 
+ * @file uint2hex.c
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 const char __hextab[] = {
 	'0', '1', '2', '3', '4', '5', '6', '7',
