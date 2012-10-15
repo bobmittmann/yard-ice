@@ -27,13 +27,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include <arch/cortex-m3.h>
-#include <sys/delay.h>
-#include <sys/dcclog.h>
-
 #include <sys/stm32f_ethif.h>
+#include <sys/etharp.h>
 
-#include <tcpip/etharp.h>
 #include <tcpip/ip.h>
 #include <tcpip/in.h>
 

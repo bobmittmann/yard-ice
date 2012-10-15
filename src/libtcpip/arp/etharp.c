@@ -26,11 +26,11 @@
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
 
-#include <tcpip/etharp.h>
+#include <sys/etharp.h>
+#include <sys/ethernet.h>
 
 #include <tcpip/route.h>
 
-#include <net/ethernet.h>
 #include <netinet/in.h>
 #include <string.h> 
 #include <stdlib.h> 

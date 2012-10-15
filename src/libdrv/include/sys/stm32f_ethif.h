@@ -19,9 +19,11 @@
 
 #include <sys/stm32f.h>
 
+#include <sys/ethernet.h>
+
 #include <stdint.h>
 #include <stdlib.h>
-#include <net/ethernet.h>
+
 #include <netinet/ip.h>
 #include <netinet/in.h>
 

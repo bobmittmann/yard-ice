@@ -62,9 +62,11 @@
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
 
+#include <sys/ethernet.h>
+#include <sys/etharp.h>
+
 #include <tcpip/ip.h>
 #include <tcpip/icmp.h>
-#include <tcpip/etharp.h>
 #include <tcpip/in.h>
 
 #include <string.h>
