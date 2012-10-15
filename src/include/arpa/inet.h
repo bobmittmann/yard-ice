@@ -1,32 +1,27 @@
-/* $Id: inet.h,v 2.0 2006/03/28 15:10:05 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	arpa/inet.h
- * Module:	ulibc
- * Project:	
- * Author:	Robinson Mittmann (bob@boreste.com)
- * Target:
- * Comment:
- * Copyright(c) 2004 CNX Technologies. All Rights Reserved.
+ * This file is part of the YARD-ICE.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-/*! \defgroup comm Communication
- *	
- *	To use this library, you must link with (at least) \b tcpip, \b mbuf and 
- *	\b mlink and the usual \b c, \b a7e10x2 and \b gcc (needed for all 
- *	projects), in that order.
- *	If you wish to use the DHCP client module, add \b dhcp on the beginning 
- *	of that list.
- *
- * @{
- */
-/*! \defgroup arpa_inet arpa/inet.h
- * @{
- */	 
-/*! \file
- *	Revision tag: $Revision: 2.0 $ $Date: 2006/03/28 15:10:05 $
- *	@author Robinson Mittman(bob@boreste.com)
- */
+/** 
+ * @file arpa/inet.h
+ * @brief YARD-ICE libc
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __ARPA_INET_H__
 #define	__ARPA_INET_H__
