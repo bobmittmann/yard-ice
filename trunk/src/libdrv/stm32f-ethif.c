@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file stm32f-eth.c
+ * @file stm32f-ethif.c
  * @brief STM32F Ethernet driver
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -61,7 +61,7 @@ int __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	DCC_LOG(LOG_TRACE, " DMA start receive...");
 	eth->dmaomr |= ETH_SR;
 
-	desc = &drv->rx.desc[0];
+	desc = &drv->rx.desc;
 	hdr = (struct eth_hdr *)desc->rbap1;
 
 	for (;;) {
@@ -205,7 +205,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	DCC_LOG(LOG_TRACE, "DMA RX descriptors ...");
 	/* configure recevie descriptors */
-	rxdesc = drv->rx.desc;
+	rxdesc = &drv->rx.desc;
 	/* Receive buffer 1 size */
 	rxdesc->rbs1 = STM32F_ETH_RX_BUF_SIZE;
 	/* Receive end of ring */
@@ -225,7 +225,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	   of the  transmit buffer */
 	stm32f_eth_mac_get(eth, 0, (uint8_t *)drv->tx.hdr.eth_src);
 	/* configure transmit descriptors */
-	txdesc = drv->tx.desc;
+	txdesc = &drv->tx.desc;
 	/* Transmit buffer 1 size */
 	txdesc->tbs1 = 14;
 	/* Transmit buffer 2 size */
@@ -273,7 +273,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 	DCC_LOG1(LOG_TRACE, "len=%d", __length);
 
 	/* chek for availability  */
-	if (drv->tx.desc[0].st.own)
+	if (drv->tx.desc.st.own)
 		return NULL;
 
 	return &drv->tx.buf[14];
@@ -302,7 +302,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 		return -1;
 	}
 
-	txdesc = drv->tx.desc;
+	txdesc = &drv->tx.desc;
 	__thinkos_critical_enter();
 	for (;;) {
 		/* wait for buffer availability */
