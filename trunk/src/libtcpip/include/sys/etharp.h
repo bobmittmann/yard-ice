@@ -18,20 +18,20 @@
  */
 
 /** 
- * @file tcpip/etharp.h
+ * @file sys/etharp.h
  * @brief 
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __TCPIP_ETHARP_H__
-#define __TCPIP_ETHARP_H__
+#ifndef __SYS_ETHARP_H__
+#define __SYS_ETHARP_H__
 
 #include <stdint.h>
-#include <net/ethernet.h>
-#include <net/if_arp.h>
-
 #include <tcpip/ifnet.h>
 #include <tcpip/stat.h>
+
+#define __USE_SYS_ARP__
+#include <sys/arp.h>
 
 struct etharp {
 	struct arphdr ea_hdr;	
@@ -50,6 +50,10 @@ struct etharp {
 /*
  * Ethernet ARP cache
  */
+
+#ifndef ETH_ADDR_LEN
+#define	ETH_ADDR_LEN    6
+#endif
 
 struct etharp_entry {
 	uint16_t count;

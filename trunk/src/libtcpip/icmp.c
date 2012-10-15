@@ -46,7 +46,6 @@
 #include <tcpip/route.h>
 #include <tcpip/ip.h>
 #include <tcpip/icmp.h>
-#include <tcpip/etharp.h>
 #include <tcpip/ifnet.h>
 #include <tcpip/udp.h>
 #include <tcpip/stat.h>
@@ -55,6 +54,7 @@
 
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
+#include <sys/etharp.h>
 
 #include <sys/param.h>
 
