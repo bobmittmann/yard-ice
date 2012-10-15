@@ -26,9 +26,9 @@ PROG = yard-ice
 CFILES = yard-ice.c
 
 LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc sdk/libice-comm sdk/libtcpip \
-		  sdk/libdrv sdk/libbitvec sdk/libhexdump sdk/libcrc sdk/libaltera
+		  sdk/libdrv sdk/libbitvec sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes
 
-LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec hexdump crc
+LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec hexdump crc 
 
 CFLAGS = -g -O2 
 
