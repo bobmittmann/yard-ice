@@ -1,16 +1,29 @@
-/* $Id: dhcp.h,v 2.3 2006/04/04 13:27:05 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcpip/dhcp.h
- * Module:	
- * Project:	
- * Author:	Carlos A. V. e Vieira (carlos.vieira@boreste.com)
- * Target:	
- * Comment:	DHCP client module
- * Copyright(c) 2005 BORESTE. All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-/*! \addtogroup comm
+/** 
+ * @file tcpip/dhcp.h
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+/*! \addtogroup tcpip
  * @{
  */
 /*! \defgroup tcpip_dhcp tcpip/dhcp.h

@@ -1,14 +1,27 @@
-/* $Id: route.h,v 2.1 2008/05/23 03:31:04 bob Exp $ 
+/* 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	tcpip/route.h
- * Module:	
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:
- * Comment:	generic ipv4 routing scheme	
- * Copyright(c) 2003-2005 CNX Technologies. All Rights Reserved.
+ * This file is part of the libtcpip.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
+
+/** 
+ * @file tcpip/route.h
+ * @brief 
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 #ifndef __TCPIP_ROUTE_H__
 #define __TCPIP_ROUTE_H__
