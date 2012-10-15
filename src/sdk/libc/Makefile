@@ -37,5 +37,5 @@ CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 rand.c stdin.c stdout.c stderr.c strtok.c \
 		 $(addprefix inet/,$(INET_CFILES)) \
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

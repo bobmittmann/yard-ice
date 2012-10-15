@@ -26,5 +26,5 @@ LIB_STATIC = cm3
 
 CFILES = cm3-udelay.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

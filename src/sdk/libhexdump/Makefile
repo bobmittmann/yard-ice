@@ -26,5 +26,5 @@ LIB_STATIC = hexdump
 CFILES = show_hex16.c show_hex32.c show_hex8.c show_line_char.c\
 		 show_line_hex16.c show_line_hex32.c show_line_hex8.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

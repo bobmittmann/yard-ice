@@ -25,5 +25,5 @@ LIB_STATIC = crc
 
 CFILES = crc16ccitt.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

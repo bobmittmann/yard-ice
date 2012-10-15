@@ -28,5 +28,5 @@ SFILES = stm32f-crt0.S
 CFILES = stm32f-init.c stm32f-gpio.c stm32f-usart.c stm32f-eth.c \
 		 stm32f-spi.c stm32f-fsmc.c stm32f-mco.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 

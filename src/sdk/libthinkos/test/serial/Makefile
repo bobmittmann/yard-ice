@@ -37,5 +37,5 @@ CDEFS = "CM3_SYSTICK_CLK_HZ=15000000"
 
 JTAGTOOL_ADDR = 192.168.1.30
 
-include ../../../mk/cortex-m3.mk
+include ../../../../mk/cortex-m3.mk
 

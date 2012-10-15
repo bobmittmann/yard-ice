@@ -95,7 +95,6 @@ vars:
 	@echo CROSS_COMPILE=$(CROSS_COMPILE)
 	@echo OUTDIR=$(OUTDIR)
 	@echo MKDIR=$(MKDIR)
-	@echo SDKDIR=$(SDKDIR)
 	@echo TOOLSDIR=$(TOOLSDIR)
 	@echo CFILES=$(CFILES)
 	@echo CFILES_GEN=$(CFILES_GEN)

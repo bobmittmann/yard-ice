@@ -25,5 +25,5 @@ LIB_STATIC = altera
 
 CFILES = altera.c
 
-include ../mk/lib.mk
+include ../../mk/lib.mk
 
