@@ -1,5 +1,5 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(c) 2003-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
  * This file is part of the YARD-ICE.
  *
@@ -26,15 +26,97 @@
 #include <stdint.h>
 #include <string.h>
 
-void * memcpy(void * dst, const void * src, size_t n)
+void * memcpy(void * __dst, const void * __src, size_t __n)
 {
-	register uint8_t *cpsrc = (uint8_t *)src;
-	register uint8_t *cpdst = (uint8_t *)dst;
-	register uint8_t *cpend = (uint8_t *)src + n;
+	register uint8_t * cpsrc = (uint8_t *)__src;
+	register uint8_t * cpdst = (uint8_t *)__dst;
+	register uint32_t align;
 
-	while (cpsrc != cpend)
-    	*cpdst++ = *cpsrc++;
+	align = ((uint32_t)__src | (uint32_t)__dst) & 0x3;
 
-	return dst;
+	if (align == 0) {
+		register uint32_t * psrc = (uint32_t *)__src;
+		register uint32_t * pdst = (uint32_t *)__dst;
+
+		while (__n >= (8 * sizeof(uint32_t))) {
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			__n -= (8 * sizeof(uint32_t));
+		}
+
+		if (__n >= (4 * sizeof(uint32_t))) {
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			__n -= (4 * sizeof(uint32_t));
+		}
+
+		if (__n >= (2 * sizeof(uint32_t))) {
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			*pdst++ = *psrc++;
+			__n -= (2 * sizeof(uint32_t));
+		}
+
+		cpsrc = (uint8_t *)psrc;
+		cpdst = (uint8_t *)pdst;
+	} else {
+		if (align == 2) {
+			register uint16_t * psrc = (uint16_t *)__src;
+			register uint16_t * pdst = (uint16_t *)__dst;
+
+			while (__n >= (8 * sizeof(uint16_t))) {
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				__n -= (8 * sizeof(uint16_t));
+			}
+
+			if (__n >= (4 * sizeof(uint16_t))) {
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				*pdst++ = *psrc++;
+				__n -= (4 * sizeof(uint16_t));
+			}
+		}
+	}
+
+	while (__n >= 4) {
+		cpdst[0] = cpsrc[0];
+		cpdst[1] = cpsrc[1];
+		cpdst[2] = cpsrc[2];
+		cpdst[3] = cpsrc[3];
+		cpdst += 4;
+		cpsrc += 4;
+		__n -= 4;
+	}
+
+	if (__n >= 2) {
+		cpdst[0] = cpsrc[0];
+		cpdst[1] = cpsrc[1];
+		cpdst += 2;
+		cpsrc += 2;
+		__n -= 2;
+	}
+
+	if (__n) {
+		*cpdst = *cpsrc;
+	}
+
+	return __dst;
 }
 
