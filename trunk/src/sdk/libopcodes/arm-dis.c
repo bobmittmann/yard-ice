@@ -23,9 +23,9 @@
 
 #include "opcode/arm.h"
 #include "dis-asm.h"
-#include "floatformat.h"
 
 /*
+#include "floatformat.h"
 #include "sysdep.h"
 
 #include "opintl.h"
