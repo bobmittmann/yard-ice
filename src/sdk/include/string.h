@@ -40,11 +40,17 @@ size_t strlen(const char * s);
 
 char * strcat(char * dst, const char * src);
 
+char * strncat(char * dst, const char * src, size_t n);
+
 int strcmp(const char * s1, const char * s2);
+
+int strncmp(const char *s1, const char *s2, size_t n);
 
 char * strchr(const char * s, int c);
 
 char * strcpy(char * dst, const char * src);
+
+char * strncpy(char * dst, const char * src, size_t n);
 
 char * strtok(char *, const char *);
 

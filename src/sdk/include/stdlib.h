@@ -74,6 +74,8 @@ int unsetenv(const char *name);
 
 int clearenv(void);
 
+void abort(void) __attribute__ ((__noreturn__));
+
 #ifdef __cplusplus
 }
 #endif
