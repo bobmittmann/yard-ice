@@ -1,7 +1,7 @@
 /* 
  * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  *
- * This file is part of the libtcpip.
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -43,28 +43,6 @@
 
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
-
-#if 0
-int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
-{
-	struct stm32f_eth * emac = AT91_EMAC;
-	uint32_t lo;
-	uint32_t hi;
-
-	lo = emac->sa1b;
-	hi = emac->sa1t;
-	
-	__buf[0] = lo & 0xff;
-	__buf[1] = (lo >> 8) & 0xff;
-	__buf[2] = (lo >> 16) & 0xff;
-	__buf[3] = (lo >> 24) & 0xff;
-	__buf[4] = hi & 0xff;
-	__buf[5] = (hi >> 8) & 0xff;
-
-	return 6;
-}
-
-#endif
 
 int __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
@@ -195,10 +173,9 @@ int stm32f_ethif_init(struct ifnet * __if)
 	struct txdma_enh_desc * txdesc;
 	int mtu;
 
+	DCC_LOG2(LOG_TRACE, "if=0x%p drv=0x%p", __if, drv);
 	drv->ifn = __if;
 	drv->eth = eth;
-
-	DCC_LOG2(LOG_TRACE, "if=0x%p drv=0x%p", __if, drv);
 
 	mtu = STM32F_ETH_PAYLOAD_MAX;
 	__if->if_mtu = mtu;
@@ -208,7 +185,6 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d", mtu);
 
-
 	DCC_LOG(LOG_TRACE, "MAC conficuration ...");
 	/* Bit 25 - CRC stripping for Type frames */
 	/* Bit 14 - Fast Ethernet speed */
@@ -217,9 +193,6 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* Bit 10 - IPv4 checksum offload */
 	/* Bit 3 - Transmitter enable */
 	/* Bit 2 - Receiver enable */
-//	eth->maccr = ETH_CSTF | ETH_FES | ETH_ROD | ETH_IPCO | 
-//		ETH_TE | ETH_RE;
-
 	eth->maccr = ETH_CSTF | ETH_FES | ETH_ROD | ETH_DM | ETH_IPCO | 
 		ETH_TE | ETH_RE;
 

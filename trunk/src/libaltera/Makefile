@@ -21,12 +21,9 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-LIB_STATIC = stm32f
+LIB_STATIC = altera
 
-SFILES = stm32f-crt0.S
-
-CFILES = stm32f-init.c stm32f-gpio.c stm32f-usart.c stm32f-eth.c \
-		 stm32f-spi.c stm32f-fsmc.c stm32f-mco.c
+CFILES = altera.c
 
 include ../mk/lib.mk
 
