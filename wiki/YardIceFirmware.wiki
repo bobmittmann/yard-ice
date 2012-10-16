@@ -2,10 +2,13 @@
 
 = Introduction =
 
-The software of the *YARD-ICE* is split into 3 parts:
-  * SDK Libraries (Software Development Kit Libraries)
-  * YARD-ICE Libraries (Libraries specific to the application)
-  * YARD-ICE Application
+The software of the *YARD-ICE* is separated into 3 major groups:
+  * *SDK Libraries* - Software Development Kit Libraries
+  * *YARD-ICE Libraries* - Libraries specific to the application
+  * *YARD-ICE Application*
+  * *YARD-ICE Targets* - Database of processors, SoC and platforms
+
+One important thing to notice is that the YARD-ICE firmware do not need any external or third-party library. All what it is need to compile the firmware is provided with the source-code.
 
 == SDK Libraries ==
 
@@ -20,11 +23,17 @@ These are a set of supporting libraries located inside the *src/sdk* directory. 
   * *libhexdump* - provides functions to display binary data as hexadecimal plus ASCII values, like the hexdump command.
   * *libice-comm* - library used for real-time trace. This tool will send the trace to a remote host if a tool like the YARD-ICE is connected to the JTAG port.
   * *libopcodes* - this library provides disassembler capabilities to the tool.
-  * *libstm32f* - ST stm32f SoC hardware access functions
+  * *libstm32f* - hardware access functions for the STM32F family of SoCs. 
   * *libtcpip* -  efficient and small footprint TCP/IP stack, designed for embedded systems.
   * *libthinkos* - the ThinkOS real time operating system. This small RTOS was designed and optimized for ARM Cortex-M cores. It provides a very low context switching latency a useful "_interrupt as thread_" mechanism.
   * *libutil* - set of utilities like a calibrated delay.
 
-== Libraries ==
+== YARD-ICE Libraries ==
 
-The YARD-ICE firmware do not need any external or third-party library. All what it is need to compile the firmware is provided with the source-code.
+...
+
+== YARD-ICE Targets ==
+
+...
+
+== YARD-ICE Application ==
