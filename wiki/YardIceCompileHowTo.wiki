@@ -2,9 +2,9 @@
 
 = Introduction =
 
-The source code is located in the *src* directory. 
+The source code is located in the *src* directory. All you need to compile is a working GCC-ARM Toolchain.
 
-== ARM-GCC Toolchain ==
+== GCC-ARM Toolchain ==
 
 To compile make sure you have the *GCC-ARM toolchain* (arm-none-eabi-*) installed into your host computer.
 You can compile it by yourself: [http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html ARM-GCC Tolchain How-To]
