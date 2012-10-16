@@ -13,11 +13,15 @@ To compile make sure you have the *GCC-ARM toolchain* installed into your host c
   * arm-none-eabi-ar - Archiver
   * arm-none-eabi-objcopy - Binary files copy tool
 
-You can compile it by yourself: [http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html ARM-GCC Tolchain How-To]
-or download a pre-compiled package for your system (Note: someone could write a how-to).
+You can compile it by yourself:
 
-Make sure you have the arm-none-eabi-gcc in your PATH:
+ [http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html ARM-GCC Tolchain How-To]
 
+or download a pre-compiled package for your system.
+
+(Note: someone could write a how-to get pre-compiled packages).
+
+Make sure you have the *arm-none-eabi-gcc* in your PATH:
 {{{
 $ arm-none-eabi-gcc
 arm-none-eabi-gcc: fatal error: no input files
