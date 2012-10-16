@@ -6,7 +6,13 @@ The source code is located in the *src* directory. All you need to compile is a 
 
 == GCC-ARM Toolchain ==
 
-To compile make sure you have the *GCC-ARM toolchain* (arm-none-eabi-*) installed into your host computer.
+To compile make sure you have the *GCC-ARM toolchain* installed into your host computer. The toolchain comprises of a set of "tools" to compile your firmware including:
+  * arm-none-eabi-gcc - Compiler
+  * arm-none-eabi-ld - Linker
+  * arm-none-eabi-as - Assembler
+  * arm-none-eabi-ar - Archiver
+  * arm-none-eabi-objcopy - Binary files copy tool
+
 You can compile it by yourself: [http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html ARM-GCC Tolchain How-To]
 or download a pre-compiled package for your system (Note: someone could write a how-to).
 
