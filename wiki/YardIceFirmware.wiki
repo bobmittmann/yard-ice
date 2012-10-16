@@ -9,18 +9,21 @@ The software of the *YARD-ICE* is split into 3 parts:
 
 == SDK Libraries ==
 
-These are a set of supporting libraries. Each library can be used independently or compiled as a part of the YARD-ICE firmware.
+These are a set of supporting libraries located inside the *src/sdk* directory. Each library can be used independently or compiled as a part of the YARD-ICE firmware.
 
-  * libc - the YARD libc is a small library targeted to embedded systems.
-  * libthinkos - uses the ThinkOS real time operating system. This RTOS was designed and optimized for Cortex-M cores.
-  * libtcpip - small footprint efficient stack designed for embedded systems.
-  * libcm3 - Cortex-M3 specific functions
-  * libstm32f - ST stm32f SoC hardware access functions
-  * libice-comm - library used for real-time trace using a JTAG tool like the YARD-ICE.
-  * libcrc
-  * libutil
-  * libaltera
-
+  * *libaltera* - provides functions for loading program (rbf) files into the attached FPGA. It uses an SPI interface.
+  * *libbitvec* - bit vector manipulation functions.
+  * *libc* - the YARD libc is a small library targeted to embedded systems.
+  * *libcm3* - Cortex-M3 specific functions
+  * *libcrc* - Cyclic Redundancy Check functions.
+  * *libdrv* - drivers for devices like Ethernet, Serial 
+  * *libhexdump* - provides functions to display binary data as hexadecimal plus ASCII values, like the hexdump command.
+  * *libice-comm* - library used for real-time trace. This tool will send the trace to a remote host if a tool like the YARD-ICE is connected to the JTAG port.
+  * *libopcodes* - this library provides disassembler capabilities to the tool.
+  * *libstm32f* - ST stm32f SoC hardware access functions
+  * *libtcpip* -  efficient and small footprint TCP/IP stack, designed for embedded systems.
+  * *libthinkos* - the ThinkOS real time operating system. This small RTOS was designed and optimized for ARM Cortex-M cores. It provides a very low context switching latency a useful "_interrupt as thread_" mechanism.
+  * *libutil* - set of utilities like a calibrated delay.
 
 == Libraries ==
 
