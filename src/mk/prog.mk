@@ -103,19 +103,6 @@ sym: $(PROG_SYM)
 
 lst: $(PROG_LST)
 
-help:
-	@echo 'Targets:'
-	@echo
-	@echo '  all        - Build uBoot'
-	@echo '  clean      - Remove most generated files'
-	@echo '  jtagload   - Build uBoot and try to load it into target'
-	@echo
-	@echo '  make V=0|1 [targets] 0 => quiet build (default), 1 => verbose build'
-	@echo '  make O=dir [targets] Locate all output files in "dir"'
-	@echo '  make D=0|1 [targets] 0 => release (default), 1 => debug'
-	@echo
-
-
 $(PROG_ELF): libs-all $(LIBDIRS) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $@"
 	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group $(addprefix -L,$(LIBPATH)) -lgcc -o $@ > $(PROG_MAP)
@@ -216,7 +203,7 @@ $(DDIRS) : | $(ODIRS) $(CFILES_OUT)
 $(DFILES): | $(DDIRS) $(HFILES_OUT) 
 
 
-.PHONY: all clean prog elf bin lst help libs-all libs-clean vars libs-vars 
+.PHONY: all clean prog elf bin lst libs-all libs-clean vars libs-vars 
 
 include $(MKDIR)/cc.mk
 
