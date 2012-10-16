@@ -2,9 +2,11 @@
 
 = Enclosure =
 
+http://yard-ice.googlecode.com/files/yard-ice-perspective.jpg
+
 The YARD-ICE PCB was designed to fit in a standard plastic enclosure you can buy on-line from !DigiKey or Mouser.
 
-This image shows the YARD-ICE PCB and box assembly:
+The 3D rendering bellow shows the YARD-ICE PCB inside the box assembly:
 
 http://yard-ice.googlecode.com/files/yard-ice-3d-top-transparent-box.jpg
 
@@ -34,7 +36,7 @@ http://yard-ice.googlecode.com/files/LPA-C011301S-20-small.jpg
 
 http://yard-ice.googlecode.com/files/yard-ice-back.jpg
 http://yard-ice.googlecode.com/files/yard-ice-front.jpg
-http://yard-ice.googlecode.com/files/yard-ice-perspective.jpg
+
 
 == TODO ==
   * Pictures of the BOX
