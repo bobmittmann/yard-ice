@@ -41,3 +41,17 @@ INCPATH = sdk/include
 
 include mk/stm32f207.mk
 
+help:
+	@echo 'Targets:'
+	@echo
+	@echo '  all        - Build YARD-ICE'
+	@echo '  clean      - Remove most generated files'
+	@echo '  jtagload   - Build YARD-ICE and try to load it into target'
+	@echo
+	@echo '  make V=0|1 [targets] 0 => quiet build (default), 1 => verbose build'
+	@echo '  make O=dir [targets] Locate all output files in "dir"'
+	@echo '  make D=0|1 [targets] 0 => release (default), 1 => debug'
+	@echo
+
+.PHONY: help
+
