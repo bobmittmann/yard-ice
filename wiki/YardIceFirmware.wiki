@@ -41,6 +41,28 @@ These are a set of supporting libraries located inside the *src/sdk* directory. 
 = Compiling =
 
 The source code is located in the *src* directory. To compile make sure you have the *GCC-ARM toolchain* (arm-none-eabi-*) installed into your host computer.
+
+Move inside the *src* directory and type *make*.
+
+{{{
+yard-ice/src$ make
+Creating: /home/bob/devel/yard-ice/src/release/version.h
+- LIBS START ------------------
+make[1]: Entering directory `/home/bob/devel/yard-ice/src/sdk/libcm3'
+
+...
+
+LD: /home/bob/devel/yard-ice/src/release/yard-ice.elf
+BIN: /home/bob/devel/yard-ice/src/release/yard-ice.bin
+SYM: /home/bob/devel/yard-ice/src/release/yard-ice.sym
+LST: /home/bob/devel/yard-ice/src/release/yard-ice.lst
+}}}
+
+The loadable firmware will be located into the *release* directory and is called: *yard-ice.bin*.
+
+More detailed instructions can be fund at: [YardIceCompileHowTo Yard-ICE Compile How-To].
+
+The source code is located in the *src* directory. To compile make sure you have the *GCC-ARM toolchain* (arm-none-eabi-*) installed into your host computer.
 You can compile it by yourself: [http://bobmittmann.blogspot.ca/2012/02/ubuntu-1004-lts-and-arm-gnu-toolchain.html ARM-GCC Tolchain How-To]
 or download a pre-compiled package for your system (Note: someone could write a how-to).
 
