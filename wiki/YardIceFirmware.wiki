@@ -2,7 +2,7 @@
 
 = Introduction =
 
-The software of the *YARD-ICE* is separated into 3 major groups:
+The software of the *YARD-ICE* is separated into 4 major groups:
   * *SDK Libraries* - Software Development Kit Libraries
   * *YARD-ICE Libraries* - Libraries specific to the application
   * *YARD-ICE Application*
