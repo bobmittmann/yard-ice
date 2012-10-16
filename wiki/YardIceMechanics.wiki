@@ -30,6 +30,12 @@ http://yard-ice.googlecode.com/files/LPA-C011301S-20-small.jpg
 
   * [http://www.lumex.com/specs/LPA-C011301S-20.pdf PDF]
 
+== Assembly Views ==
+
+http://yard-ice.googlecode.com/files/yard-ice-back.jpg
+http://yard-ice.googlecode.com/files/yard-ice-front.jpg
+http://yard-ice.googlecode.com/files/yard-ice-perspective.jpg
+
 == TODO ==
   * Pictures of the BOX
   * Screws info
