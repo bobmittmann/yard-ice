@@ -3,38 +3,15 @@
 = Introduction =
 
 {{{
-static inline void thinkos_yield(void);
-}}}
-
-{{{
 int thinkos_init(unsigned int opt);
 }}}
 
 {{{
-int thinkos_thread_create(int (* task)(void *), void * arg, 
-    void * stack_ptr, unsigned int stack_size, unsigned int opt);
-}}}
-
-{{{
-int thinkos_thread_self(void);
-}}}
-
-{{{
-int thinkos_cancel(unsigned int thread_id, int code);
-}}}
-
-{{{
-int thinkos_join(unsigned int thread_id);
-}}}
-
-{{{
-int thinkos_pause(unsigned int thread_id);
-}}}
-
-{{{
-int thinkos_resume(unsigned int thread_id);
-}}}
-
-{{{
-void thinkos_sleep(unsigned int ms);
+#define THINKOS_ERROR -1
+#define THINKOS_ETIMEDOUT -2
+#define THINKOS_EINVAL -3
+#define THINKOS_EAGAIN -4
+#define THINKOS_EDEADLK -5
+#define THINKOS_EPERM -6
+#define THINKOS_ENOSYS -7
 }}}
