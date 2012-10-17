@@ -12,6 +12,12 @@ int thinkos_thread_create(int (* task)(void *), void * arg,
 }}}
 
 {{{
+#define THINKOS_OPT_PRIORITY(VAL) ((VAL) & 0xff)
+#define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 8)
+#define THINKOS_OPT_PAUSED (1 << 16)
+}}}
+
+{{{
 int thinkos_thread_self(void);
 }}}
 
