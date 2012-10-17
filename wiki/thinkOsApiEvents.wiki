@@ -1,0 +1,11 @@
+#summary One-sentence summary of this page.
+
+int thinkos_ev_alloc(void);  
+
+int thinkos_ev_free(int ev);  
+
+int thinkos_ev_wait(int ev);  
+
+int thinkos_ev_timedwait(int ev, unsigned int ms);  
+
+int thinkos_ev_raise(int ev); 
