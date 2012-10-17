@@ -1,0 +1,14 @@
+#summary One-sentence summary of this page.
+
+
+int thinkos_sem_alloc(unsigned int value);
+
+int thinkos_sem_free(int sem);
+
+int thinkos_sem_init(int sem, unsigned int value);
+
+int thinkos_sem_wait(int sem);
+
+int thinkos_sem_timedwait(int sem, unsigned int ms);
+
+int thinkos_sem_post(int sem);
