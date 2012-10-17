@@ -1,0 +1,14 @@
+#summary One-sentence summary of this page.
+
+
+int thinkos_cond_alloc(void);
+
+int thinkos_cond_free(int cond);
+
+int thinkos_cond_wait(int cond, int mutex);
+
+int thinkos_cond_timedwait(int cond, int mutex, unsigned int ms);
+
+int thinkos_cond_signal(int cond);
+
+int thinkos_cond_broadcast(int cond);
