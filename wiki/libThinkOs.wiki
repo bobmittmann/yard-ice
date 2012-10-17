@@ -14,6 +14,7 @@ The ThinkOS API can be separated according to the type of object the operation i
   * *[thinkOsApiCondVar Conditional Variables]*
   * *[thinkOsApiSemaphores Semaphores]*
   * *[thinkOsApiEvents Events]*
+  * *[thinkOsApiInterrupts Interrupts]*
   * *[thinkOsApiTime Time]*
 
 == Kernel Objects ==
