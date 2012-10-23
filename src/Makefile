@@ -25,8 +25,10 @@ PROG = yard-ice
 
 CFILES = yard-ice.c
 
-LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc sdk/libice-comm sdk/libtcpip \
-		  sdk/libdrv sdk/libbitvec sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes
+LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc \
+		  sdk/libice-comm sdk/libtcpip sdk/libdrv sdk/libbitvec \
+		  sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes \
+		  yard-ice/arch yard-ice/jtag
 
 LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec hexdump crc 
 
@@ -37,7 +39,9 @@ JTAGTOOL_ADDR = 192.168.0.80
 VERSION_MAJOR = "0"
 VERSION_MINOR = "1"
 
-INCPATH = sdk/include
+CDEFS = CONFIG_H
+
+INCPATH = sdk/include yard-ice/include
 
 include mk/stm32f207.mk
 

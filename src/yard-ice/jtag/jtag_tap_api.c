@@ -36,10 +36,6 @@
 
 #include <sys/dcclog.h>
 
-#ifndef JTAG_VEC_BITS_MAX 
-#error "JTAG_VEC_BITS_MAX undefined"
-#endif
-
 #ifndef JTAG_TAP_MAX 
 #error "JTAG_TAP_MAX undefined"
 #endif
@@ -58,12 +54,15 @@ static struct {
 
 int jtag_tap_purge(void)
 {	
-	int i;
 	jtag_tap_t * tap;
+	int i;
 
 	DCC_LOG1(LOG_TRACE, "purging %d TAPs", jtag.tap_cnt);
+
 	for (i = 0; i < jtag.tap_cnt; i++) {
 		tap = &jtag.tap[i];
+		/* FIXME: ... */
+		tap = tap;
 	}
 
 	jtag.tap_cnt = 0;

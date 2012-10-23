@@ -31,7 +31,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <jtag.h>
-#include <uthreads.h>
+
+#include <sys/os.h>
 
 #include <sys/dcclog.h>
 
@@ -40,7 +41,7 @@ int jtag_nrst_pulse(unsigned int ms)
 	DCC_LOG1(LOG_INFO, "%d ms", ms);
 
 	jtag_nrst(1);
-	uthread_sleep(ms);
+	__os_sleep(ms);
 	jtag_nrst(0);
 
 	return JTAG_OK;
