@@ -33,8 +33,6 @@
 #include "lookup.h"
 #include "eval.h"
 
-#include <debug.h>
-
 int cmd_nrst(FILE * f, int argc, char ** argv)
 {
 	value_t val;

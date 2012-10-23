@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,44 +18,42 @@
  */
 
 /** 
- * @file .c
- * @brief YARD-ICE
+ * @file sys/clock.h
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#ifndef __SYS_CLOCK_H__
+#define __SYS_CLOCK_H__
 
-#include "config.h"
-#include "target.h"
-#include "debugger.h"
-#include "lookup.h"
-#include "eval.h"
+#ifndef __ASSEMBLER__
 
-int cmd_sleep(FILE * f, int argc, char ** argv)
-{
-	value_t val;
-	int ms;
-	int n;
+/*
+ * The IDs of the various system clocks (for POSIX.1b interval timers):
+ */
+#define CLOCK_REALTIME			0
+#define CLOCK_MONOTONIC			1
+#define CLOCK_PROCESS_CPUTIME_ID	2
+#define CLOCK_THREAD_CPUTIME_ID		3
 
-	argc--;
-	argv++;
+#include <stdint.h>
+#include <time.h>
 
-	if (argc == 0)
-		return ERR_PARM;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+int clock_settime(clockid_t which, const struct timespec * tp);
 
-	if ((n = eval_uint32(&val, argc, argv)) < 0)
-		return n;
+int clock_gettime(clockid_t which, struct timespec * tp);
 
-	argc -= n;
-	argv += n;
+int clock_getres(clockid_t which, struct timespec * tp);
 
-	if (argc)
-		return ERR_PARM;
-	ms = val.uint32;
-
-	return uthread_sleep(ms);
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __ASSEMBLER__ */
+
+#endif /* __SYS_CLOCK_H__ */
 

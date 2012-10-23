@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,30 +18,24 @@
  */
 
 /** 
- * @file .c
- * @brief YARD-ICE
+ * @file sys/types.h
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
+ */ 
 
+#ifndef __SYS_TYPES_H__
+#define __SYS_TYPES_H__
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#define __need_size_t
+#include <stddef.h>
 
-#include "var.h"
-#include "val.h"
-#include "module.h"
+typedef long ssize_t;
+typedef long clock_t;
+typedef long time_t;
 
-int cmd_var(FILE * f, int argc, char ** argv)
-{
-	var_def_t * var = NULL;
+typedef int clockid_t;
 
-	while ((var = var_global_next(var)) != NULL) {
-		fprintf(f, "%8s.%-8s %8s %4d\n", 
-				module_name(var->mod_id), var->name, 
-				type_name(var->type), var->id);
-	}
+typedef	unsigned int off_t;
 
-	return 0;
-}
+#endif	/* __SYS_TYPES_H__ */
 

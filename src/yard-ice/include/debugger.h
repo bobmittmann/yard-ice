@@ -27,8 +27,7 @@
 #ifndef __DEBUGGER_H__
 #define __DEBUGGER_H__
 
-#include <arch/arm.h>
-#include <uthreads.h>
+#include <sys/os.h>
 #include <stdbool.h>
 
 #include "target.h"

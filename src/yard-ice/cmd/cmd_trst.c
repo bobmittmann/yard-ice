@@ -34,8 +34,6 @@
 #include "lookup.h"
 #include "eval.h"
 
-#include <debug.h>
-
 int cmd_trst(FILE * f, int argc, char ** argv)
 {
 	argc--;

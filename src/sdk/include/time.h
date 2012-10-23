@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,30 +18,28 @@
  */
 
 /** 
- * @file .c
- * @brief YARD-ICE
+ * @file time.h
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
+ */ 
 
+#ifndef __TIME_H__
+#define __TIME_H__
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <sys/types.h>
 
-#include "var.h"
-#include "val.h"
-#include "module.h"
+struct timespec {
+	time_t  tv_sec;   /* Seconds */
+	long    tv_nsec;  /* Nanoseconds */
+};
 
-int cmd_var(FILE * f, int argc, char ** argv)
-{
-	var_def_t * var = NULL;
-
-	while ((var = var_global_next(var)) != NULL) {
-		fprintf(f, "%8s.%-8s %8s %4d\n", 
-				module_name(var->mod_id), var->name, 
-				type_name(var->type), var->id);
-	}
-
-	return 0;
+#ifdef __cplusplus
+extern "C" {
+#endif
+	
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __TIME_H__ */
 
