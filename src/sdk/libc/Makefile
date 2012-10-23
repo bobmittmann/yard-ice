@@ -29,10 +29,11 @@ INET_CFILES = inet_addr.c inet_aton.c inet_ntoa.c inet_ntop.c
 
 CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 fgets.c fprintf.c fputc.c fputs.c fread.c fwrite.c\
-		 getchar.c ctype.c \
+		 getchar.c ctype.c\
 		 int2dec.c uint2dec.c ll2dec.c ull2dec.c uint2hex.c ull2hex.c\
 		 memcmp.c memcpy.c memset.c ffs.c\
-		 printf.c putchar.c puts.c vsnprintf.c sprintf.c snprintf.c strcat.c strchr.c \
+		 printf.c putchar.c puts.c vsnprintf.c sprintf.c snprintf.c\
+		 strcasecmp.c strcat.c strchr.c\
 		 strcmp.c strcpy.c strlen.c strtol.c strtoul.c vfprintf.c\
 		 rand.c stdin.c stdout.c stderr.c strtok.c \
 		 $(addprefix inet/,$(INET_CFILES)) \
