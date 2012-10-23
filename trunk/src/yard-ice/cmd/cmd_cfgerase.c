@@ -28,12 +28,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+/*
 #include <nvconfig.h>
-
+*/
 #include "target.h"
 #include "debugger.h"
-
-#include <debug.h>
 
 int cmd_cfgerase(FILE *f, int argc, char ** argv)
 {
@@ -44,10 +43,12 @@ int cmd_cfgerase(FILE *f, int argc, char ** argv)
 	fgets(s, 32, f);
 
 	if (tolower(s[0]) == 'y') {
+/* FIXME ...
 		if (config_erase() < 0) {
 			fprintf(f, "\nERROR erasing configuration.\n");
 			return -1;
 		}
+*/
 		fprintf(f, "\nFactory defaults restored.\n");
 	}
 

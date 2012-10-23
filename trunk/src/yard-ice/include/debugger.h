@@ -115,7 +115,7 @@ struct debugger {
 
 	uint16_t tcp_port;
 
-	uthread_mutex_t busy;
+	int busy;
 
 	struct mem_range dasm;
 	struct mem_range dump;

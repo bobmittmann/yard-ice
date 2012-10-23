@@ -33,8 +33,6 @@
 #include "command.h"
 #include "eval.h"
 
-#include <debug.h>
-
 int cmd_goto(FILE * f, int argc, char ** argv)
 {
 //	uint32_t insn[4];

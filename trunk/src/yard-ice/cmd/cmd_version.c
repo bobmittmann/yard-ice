@@ -32,8 +32,8 @@
 
 int cmd_version(FILE *f, int argc, char ** argv)
 {
-	fprintf(f, "%s %s - %s\n", PRODUCT_NAME, VERSION_NUM, VERSION_DATE);
-	fprintf(f, "(c) Copyright 2005-20011 BORESTE Electronics (www.boreste.com)\n");
+	fprintf(f, "%s %s - %s\n", "YARD-ICE", VERSION_NUM, VERSION_DATE);
+	fprintf(f, "(c) Copyright 2012 - Bob Mittmann\n");
 
 #if 0
 	int n;

@@ -32,9 +32,6 @@
 #include "target.h"
 #include "debugger.h"
 
-#include <debug.h>
-
-
 int cmd_release(FILE * f, int argc, char ** argv)
 {
 	int go = 0;

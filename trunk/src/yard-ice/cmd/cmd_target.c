@@ -152,6 +152,9 @@ int cmd_target(FILE *f, int argc, char ** argv)
 
 	}
 
+	/* FIXME */
+	scan = scan;
+
 	if (target == NULL) {
 		fprintf(f, "invalid target...\n");
 		return -1;

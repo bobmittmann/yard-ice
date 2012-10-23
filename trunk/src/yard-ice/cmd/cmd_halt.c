@@ -37,8 +37,6 @@
 #include "debugger.h"
 #include "command.h"
 
-#include <debug.h>
-
 int show_context(FILE * f, int which);
 int show_stack(FILE * f);
 

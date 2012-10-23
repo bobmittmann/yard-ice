@@ -26,6 +26,10 @@
 #ifndef __TCPIP_TCP_H__
 #define __TCPIP_TCP_H__
 
+#include <stdint.h>
+#include <netinet/in.h>
+#include <tcpip/stat.h>
+
 /*
  * TCP events
  */

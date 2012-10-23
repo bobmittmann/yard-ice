@@ -29,11 +29,7 @@
 #include "config.h"
 #include "target.h"
 #include "debugger.h"
-#include "command.h"
-
 #include "eval.h"
-
-#include <debug.h>
 
 int cmd_let(FILE * f, int argc, char ** argv)
 {

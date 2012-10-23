@@ -32,11 +32,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <target.h>
-#include <debugger.h>
-#include <command.h>
-
-#include <debug.h>
+#include "target.h"
+#include "debugger.h"
 
 int cmd_probe(FILE * f, int argc, char ** argv)
 {

@@ -5391,8 +5391,8 @@ print_insn(bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 	int little_code;
 	unsigned int size = 4;
 	void (*printer) (bfd_vma, struct disassemble_info *, long);
-/*	bfd_boolean found = FALSE; */
-	struct arm_private_data *private_data;
+/*	bfd_boolean found = FALSE; 
+	struct arm_private_data *private_data; */
 
 	if (info->disassembler_options) {
 		parse_disassembler_options(info->disassembler_options);
@@ -5438,8 +5438,9 @@ print_insn(bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 		info->private_data = &private;
 	}
 
+#if 0
 	private_data = info->private_data;
-
+#endif
 	/* Decide if our code is going to be little-endian, despite what the
 	   function argument might say.  */
 	little_code = ((info->endian_code == BFD_ENDIAN_LITTLE) || little);

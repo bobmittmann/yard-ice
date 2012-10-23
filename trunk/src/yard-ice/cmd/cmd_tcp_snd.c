@@ -35,9 +35,9 @@
 #include "debugger.h"
 #include "eval.h"
 
-#include <debug.h>
-
-#define TCP_SND_BUF_LEN 4096
+#ifndef TCP_SND_BUF_LEN
+#define TCP_SND_BUF_LEN 1024
+#endif
 
 int cmd_tcp_send(FILE * f, int argc, char ** argv)
 {
@@ -61,42 +61,35 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			DBG(DBG_WARNING, "target_eval(), addr");
 			return n;
 		}
 		addr = val.uint32;
 		argc -= n;
 		argv += n;
-		DBG(DBG_TRACE, "eval: addr=%08x n=%d", addr, n);
 	} else {
 		addr = (uint32_t)dbg->transf.base;
 	}
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			DBG(DBG_WARNING, "target_eval(), size");
 			return n;
 		}
 		size = val.uint32;
 		argc -= n;
 		argv += n;
-		DBG(DBG_TRACE, "eval: addr=%08x n=%d", size, n);
 	} else {
 		size = (uint32_t)dbg->transf.size;
 	}
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			DBG(DBG_WARNING, "target_eval(), port");
 			return n;
 		}
 		port = val.uint32;
 		argc -= n;
 		argv += n;
-		DBG(DBG_TRACE, "eval: port=%08x n=%d", port, n);
 	} else {
 		port = dbg->tcp_port;
-		DBG(DBG_TRACE, "port=%d", port);
 	}
 
 	if (argc) {
@@ -119,7 +112,6 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	fprintf(f, " - Listening on port %d\n", port);
 
 	if ((tp = tcp_accept(svc)) == NULL) {
-		DBG(DBG_ERROR, "tcp_accept().");
 		tcp_close(svc);
 		return -1;
 	}
@@ -127,10 +119,12 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	/* close listenning socket */
 	tcp_close(svc);
 
+#if 0
 	fprintf(f, " - Connected to %d.%d.%d.%d:%d\n", 
 			IP4_ADDR1(tp->t_faddr), IP4_ADDR2(tp->t_faddr), 
 			IP4_ADDR3(tp->t_faddr), IP4_ADDR4(tp->t_faddr), 
 			ntohs(tp->t_fport));
+#endif
 
 	rem = size;
 	size = 0;

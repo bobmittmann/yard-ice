@@ -47,7 +47,7 @@ gpio_io_t fsmc_io[] = {
 	GPIO(PB, 7), /* NL */
 };
 
-static void fsmc_speed(int div)
+void stm32f_fsmc_speed(int div)
 {
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
 

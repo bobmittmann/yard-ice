@@ -28,7 +28,6 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <sys/socket.h>
 #include <arpa/inet.h>
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
@@ -39,7 +38,7 @@ int cmd_reboot(FILE * f, int argc, char ** argv);
 int cmd_ipcfg(FILE *f, int argc, char ** argv)
 {
 	struct ifnet * ifn;
-	struct route * rt;
+//	struct route * rt;
 	in_addr_t ip_addr;
 	in_addr_t netmask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
@@ -47,7 +46,7 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 	int change = 0;
 	char s[64];
 	char ip[16];
-	char * env;
+//	char * env;
 	char * cp;
 	int c;
 
@@ -57,6 +56,8 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 	if ((ifn = get_ifn_byname("eth0")) == NULL)
 		return -1;
 
+#if 0
+	FIXME: 
 	ip_addr = ifn->if_ipv4_addr;
 	netmask = ifn->if_ipv4_mask;
 	if ((rt = route_get(INADDR_ANY, INADDR_ANY)) == NULL)
@@ -82,7 +83,7 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 		ip_addr = ifn->if_ipv4_addr;
 		netmask = ifn->if_ipv4_mask;
 	}
-
+#endif
 
 	for(;;) {
 		fprintf(f, " - IP addr(%s): ", 
