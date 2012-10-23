@@ -32,8 +32,6 @@
 #include "target.h"
 #include "debugger.h"
 
-#include <debug.h>
-
 int cmd_init(FILE * f, int argc, char ** argv)
 {
 	int err;

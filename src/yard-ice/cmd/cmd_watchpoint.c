@@ -32,8 +32,6 @@
 #include "target.h"
 #include "debugger.h"
 
-#include <debug.h>
-
 int cmd_watchpoint(FILE * f, int argc, char ** argv)
 {
 #if 0

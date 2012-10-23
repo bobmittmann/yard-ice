@@ -56,6 +56,8 @@ int cmd_sleep(FILE * f, int argc, char ** argv)
 		return ERR_PARM;
 	ms = val.uint32;
 
-	return uthread_sleep(ms);
+	__os_sleep(ms);
+
+	return 0;
 }
 

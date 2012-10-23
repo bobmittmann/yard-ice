@@ -31,7 +31,6 @@
 #include <ctype.h>
 #include <hexdump.h>
 
-#include <sys/socket.h>
 #include <arpa/inet.h>
 
 #include "config.h"

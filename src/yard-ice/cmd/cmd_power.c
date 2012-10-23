@@ -58,7 +58,7 @@ int cmd_power(FILE * f, int argc, char ** argv)
 				}
 				fprintf(f, "Target power cycle...\n");
 				if ((err = target_power(0)) == 0) {
-					uthread_sleep(ms);
+					__os_sleep(ms);
 					err = target_power(1);
 				}
 			} else {

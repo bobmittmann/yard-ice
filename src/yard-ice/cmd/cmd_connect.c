@@ -30,8 +30,6 @@
 #include "target.h"
 #include "debugger.h"
 
-#include <debug.h>
-
 int cmd_connect(FILE * f, int argc, char ** argv)
 {
 	int err;

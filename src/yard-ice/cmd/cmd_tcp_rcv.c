@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <tcpip/tcp.h>
+#include <tcpip/in.h>
 #include <netinet/in.h>
 #include <sys/clock.h>
 
@@ -34,15 +35,6 @@
 #include "target.h"
 #include "debugger.h"
 #include "eval.h"
-
-#include <debug.h>
-
-#ifdef MEM_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
 
 //#define TCP_RCV_BUF_LEN 512
 #define TCP_RCV_BUF_LEN 4096
@@ -75,7 +67,6 @@ static void tcp_rcv_task(struct rcv_info * info, uthread_id_t id)
 	svc = info->tp;
 
 	if ((tp = tcp_accept(svc)) == NULL) {
-		DBG(DBG_ERROR, "tcp_accept().");
 		tcp_close(svc);
 		info->ret = -1;		
 		return;
@@ -173,29 +164,24 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			DBG(DBG_WARNING, "target_eval(), addr");
 			return n;
 		}
 		addr = val.uint32;
 		argc -= n;
 		argv += n;
-		DBG(DBG_TRACE, "eval: addr=%08x n=%d", addr, n);
 	} else {
 		addr = (uint32_t)dbg->transf.base;
 	}
 
 	if (argc) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			DBG(DBG_WARNING, "target_eval(), port");
 			return n;
 		}
 		port = val.uint32;
 		argc -= n;
 		argv += n;
-		DBG(DBG_TRACE, "eval: port=%08x n=%d", port, n);
 	} else {
 		port = dbg->tcp_port;
-		DBG(DBG_TRACE, "port=%d", port);
 	}
 
 	if (argc) {
@@ -219,7 +205,6 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 
 
 	if ((tp = tcp_accept(svc)) == NULL) {
-		DBG(DBG_ERROR, "tcp_accept().");
 		tcp_close(svc);
 		return -1;
 	}
@@ -228,10 +213,13 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 	/* close listenning socket */
 	tcp_close(svc);
 
+#if 0
+	FIXME: api to get address info from tp
 	fprintf(f, " - Connected to %d.%d.%d.%d:%d\n", 
 			IP4_ADDR1(tp->t_faddr), IP4_ADDR2(tp->t_faddr), 
 			IP4_ADDR3(tp->t_faddr), IP4_ADDR4(tp->t_faddr), 
 			ntohs(tp->t_fport));
+#endif
 
 	size = 0;
 	rem = TCP_RCV_BUF_LEN;
