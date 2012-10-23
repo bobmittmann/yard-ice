@@ -23,8 +23,6 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <uthreads.h>
-#include <sys/clock.h>
 #include <crc.h>
 #include <stdlib.h>
 #include <sys/dcclog.h>

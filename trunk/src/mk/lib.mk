@@ -117,11 +117,11 @@ vars:
 
 $(ODIRS):
 	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+	$(Q) mkdir -p $@
 
 $(DDIRS):
 	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+	$(Q) mkdir -p $@
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 

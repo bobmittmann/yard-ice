@@ -23,7 +23,7 @@
 
 LIB_STATIC = jtag
 
-CFILES = jtag_chain_init.c jtag_chain_probe.c  jtag_tap_app.c \
+CFILES = jtag_chain_init.c jtag_chain_probe.c  jtag_tap_api.c \
 		 jtag_nrst_pulse.c jtag_tap_idcode.c mod_jtag.c \
 		 jtag_strerror.c jtag_state.c
 

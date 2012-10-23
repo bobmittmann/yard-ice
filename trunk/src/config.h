@@ -18,31 +18,32 @@
  */
 
 /** 
- * @file .h
+ * @file config.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
 
-#ifndef __CONTEXT_H__
-#define __CONTEXT_H__
-
-/* opaque context structure */
-struct ice_context;
-typedef struct ice_context ice_context_t;
-
-/* opaque instruction structure */
-struct ice_insn;
-typedef struct ice_insn ice_insn_t;
-
-#ifdef __cplusplus
-extern "C" {
+#ifndef FPGA_RBF_ADDR 
+#define FPGA_RBF_ADDR 0x01050000
 #endif
 
-#ifdef __cplusplus
-	}
-#endif
+#define JTAG_VEC_BITS_MAX 256
 
-#endif /* __CONTEXT_H__ */
+#define JTAG_TAP_MAX 8
+
+#define	ENABLE_HISTORY 1
+
+#define ENABLE_SHELL_PROMPT_SHOW_TARGET_STATUS 1
+
+#define ENABLE_ARMICE_ARM9 1
+
+#define SHELL_ARG_MAX 16
+
+#define ENABLE_ICE_TEST 0
+
+#endif /* __CONFIG_H__ */
 
