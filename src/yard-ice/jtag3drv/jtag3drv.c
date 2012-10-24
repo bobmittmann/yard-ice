@@ -31,10 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/mclk.h>
-#include <sys/clock.h>
 #include <sys/delay.h>
-#include <errno.h>
 
 #include "jtag3drv.h"
 #include "dbglog.h"
@@ -70,7 +67,7 @@ int jtag_tck_freq_set(unsigned int tck_freq)
 
 	reg_wr(REG_CKGEN_DIV, div - 2);
 
-	uthread_sleep(5);
+	__os_sleep(5);
 
 	/* cache the interface tck_freq */
 	jtag3drv.tck_freq = fmain / (div + 2);
@@ -205,7 +202,7 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 	/* scan the vector */
 	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
 
 	if ((isr & IRQ_TAP) == 0) {
@@ -248,7 +245,7 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 	/* scan the vector */
 	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
 	if ((isr & IRQ_TAP) == 0) {
 		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
@@ -295,6 +292,7 @@ int jtag_drv_init(void)
 	reg_wr(REG_INT_EN, IRQ_TAP);
 	/* clear interrupts */
 	dummy = reg_rd(REG_INT_ST);
+	dummy = dummy;
 
 	return 0;
 }

@@ -26,6 +26,7 @@
 
 #include "nand.h"
 
+#include <stdlib.h>
 #include <sys/dcclog.h>
 
 /* convert a sequence of bytes into uint32_t 

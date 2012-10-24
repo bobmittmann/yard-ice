@@ -31,27 +31,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <sys/interrupts.h>
-#include <time.h>
-#include <unistd.h>
-#include <uthreads.h>
-#include <debug.h>
-#include <arch/at91x40.h>
 
 #include "altera.h"
 #include "jtag3drv.h"
 #include "jtag.h"
 
-#ifdef ARM7ICE_JTAG_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-
 #include <sys/dcclog.h>
 
 const struct altera_conf_io_map altera_conf = {
+#ifdef JTAGTOOL3
 	/* DCLK */
 	.dclk = PIO_P23,
 	/* nCONFIG */
@@ -62,6 +50,9 @@ const struct altera_conf_io_map altera_conf = {
 	.status = PIO_P17,
 	/* CONF_DONE */
 	.conf_done = PIO_P16
+#else
+
+#endif
 };
 
 uint16_t volatile * jtagdrv_reg;
@@ -350,6 +341,7 @@ unsigned int jtag3ctrl_get_speed(void)
 
 int jtag3ctrl_init(const void * rbf, int size)
 {
+#if 0
 	struct at91_pio * pio = AT91_PIO;
 	struct at91_ebi * ebi = AT91_EBI;
 	void * iobase;
@@ -395,7 +387,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 	/* initial configuration */
 	reg_wr(REG_CFG, CFG_RELAY_EN);
-
+#endif
 	return 0;
 }
 

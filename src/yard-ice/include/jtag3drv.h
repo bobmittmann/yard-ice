@@ -120,8 +120,7 @@
 #define EBI_CS3_BASE 0x02800000
 
 #include <stdint.h>
-#include <sys/at91.h>
-#include <uthreads.h>
+#include <sys/os.h>
 #include "jtag.h"
 
 extern uint16_t volatile * jtagdrv_vec;
@@ -141,85 +140,100 @@ extern uint16_t volatile * jtagdrv_ptr;
 #define JTAGDRV_REG jtagdrv_reg
 #endif
 
-extern inline uint16_t reg_rd(unsigned int n) {
+static inline uint16_t reg_rd(unsigned int n) {
 	return JTAGDRV_REG[n];
 }
 
-extern inline void reg_wr(unsigned int n, uint16_t val) {
+static inline void reg_wr(unsigned int n, uint16_t val) {
 	JTAGDRV_REG[n] = val;
 }
 
-extern inline uint16_t vec_rd16(unsigned int n) {
+static inline uint16_t vec_rd16(unsigned int n) {
 	return JTAGDRV_VEC[n / 2];
 }
 
-extern inline void vec_wr16(unsigned int n, uint16_t val) {
+static inline void vec_wr16(unsigned int n, uint16_t val) {
 	JTAGDRV_VEC[n / 2] = val;
 }
 
-extern inline uint32_t vec_rd32(unsigned int n) {
+static inline uint32_t vec_rd32(unsigned int n) {
 	n  /= 2;
 	return JTAGDRV_VEC[n] + (JTAGDRV_VEC[n + 1] << 16);
 }
 
-extern inline void vec_wr32(unsigned int n, uint32_t val) {
+static inline void vec_wr32(unsigned int n, uint32_t val) {
 	n  /= 2;
 	JTAGDRV_VEC[n] = val;
 	JTAGDRV_VEC[n + 1] = val >> 16;
 }
 
-extern inline uint32_t desc_rd(unsigned int pos) {
+static inline uint32_t desc_rd(unsigned int pos) {
 	return JTAGDRV_DESC[pos];
 }
 
-extern inline void desc_wr(unsigned int pos, uint32_t desc) {
+static inline void desc_wr(unsigned int pos, uint32_t desc) {
 	JTAGDRV_DESC[pos] = desc;
 }
 
-extern inline void ptr_wr(unsigned int id, uint16_t ptr) {
+static inline void ptr_wr(unsigned int id, uint16_t ptr) {
 	JTAGDRV_PTR[id] = ptr;
 }
 
-extern inline void insn_irscan(unsigned int desc, unsigned int final_state) {
+/* FIXME: irq number */
+#ifndef JTAG3DRV_IRQ
+#define JTAG3DRV_IRQ 0
+#endif
+
+static inline void jtag3drv_int_wait(void) {
+	__os_int_wait(JTAG3DRV_IRQ);
+}
+
+static inline void insn_irscan(unsigned int desc, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
-extern inline void insn_drscan(unsigned int desc, unsigned int final_state) {
+static inline void insn_drscan(unsigned int desc, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
-extern inline void insn_run_test(unsigned int cnt, unsigned int final_state) {
+static inline void insn_run_test(unsigned int cnt, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_RUN_TEST(cnt, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
-extern inline void insn_tap_reset(unsigned int cnt, unsigned int final_state) {
+static inline void insn_tap_reset(unsigned int cnt, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_TAP_RESET(cnt, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
-extern inline void insn_ir_pause(unsigned int cnt, unsigned int final_state) {
+static inline void insn_ir_pause(unsigned int cnt, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_IR_PAUSE(cnt, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
-extern inline void insn_dr_pause(unsigned int cnt, unsigned int final_state) {
+static inline void insn_dr_pause(unsigned int cnt, unsigned int final_state) {
 	unsigned int isr;
 	reg_wr(REG_INSN, INSN_DR_PAUSE(cnt, final_state));
-	uthread_int_wait(IRQ0);
+	jtag3drv_int_wait();
 	isr = reg_rd(REG_INT_ST);
+	isr = isr;
 }
 
 struct jtag3drv {

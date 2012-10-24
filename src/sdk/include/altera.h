@@ -27,8 +27,6 @@
 #define __ALTERA_H__
 
 #include <stdint.h>
-#include <sys/delay.h>
-#include <arch/at91x40.h>
 
 struct altera_conf_io_map {
 	/* DCLK */

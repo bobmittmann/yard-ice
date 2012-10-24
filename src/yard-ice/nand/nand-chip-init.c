@@ -26,6 +26,7 @@
 
 #include "nand.h"
 
+#include <stdlib.h>
 #include <sys/dcclog.h>
 
 int nand_chip_init(nand_dev_t * nand, nand_chip_t *  chip)
