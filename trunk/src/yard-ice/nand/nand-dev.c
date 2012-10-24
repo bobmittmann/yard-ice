@@ -24,12 +24,14 @@
  */
 
 
+#include <stdlib.h>
+#include <string.h>
+
+
 #include "target.h"
 #include "armice.h"
 #include "nand.h"
 #include "target/davinci.h"
-
-#include <string.h>
 
 #include <sys/dcclog.h>
 

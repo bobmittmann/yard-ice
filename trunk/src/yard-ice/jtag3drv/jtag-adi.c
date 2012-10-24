@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/mclk.h>
 #include <sys/clock.h>
 #include <sys/delay.h>
 #include <errno.h>
