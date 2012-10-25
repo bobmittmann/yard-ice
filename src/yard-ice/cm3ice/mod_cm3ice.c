@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/at91.h>
 
 #include "jtag_arm.h"
 #include "cm3ice.h"

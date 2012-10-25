@@ -32,9 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <uthreads.h>
-#include <sys/at91.h>
 #include <stdbool.h>
+#include <sys/os.h>
 
 #include "jtag_adi.h"
 #include "cm3ice.h"
@@ -409,7 +408,7 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			DCC_LOG1(LOG_WARNING, 
 					 "DEV=CONNECTED, DBG!=(SYNC|CONNECTED) %02x??", 
 					 ctrl->cc.rw.dbg);
-		//	uthread_sleep(100);
+		//	__os_sleep(100);
 			return 0;
 		}
 		DCC_LOG(LOG_TRACE, "COMM: [CONNECTED]"); 
@@ -534,7 +533,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			rem--;
 			if (rem == (ICE_COMM_RX_BUF_LEN / 2)) {
 				DCC_LOG(LOG_MSG, "DCC notify!");
-				uthread_sem_post(comm->rx_sem);
+				__os_sem_post(comm->rx_sem);
 			}
 		}
 

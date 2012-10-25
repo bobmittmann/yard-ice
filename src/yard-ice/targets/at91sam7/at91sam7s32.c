@@ -24,7 +24,6 @@
  */ 
 
 #include "target/at91sam7.h"
-#include "armice.h"
 
 const struct target_arch at91sam7s32_arch = {
 	.name = "AT91SAM7S32",

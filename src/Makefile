@@ -29,7 +29,8 @@ LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 		  sdk/libice-comm sdk/libtcpip sdk/libdrv sdk/libbitvec\
 		  sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes\
 		  yard-ice/arch yard-ice/jtag yard-ice/script yard-ice/cmd\
-		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice
+		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice yard-ice/cm3ice\
+		  yard-ice/targets
 
 LIBS = stm32f cm3 util thinkos c ice-comm tcpip drv bitvec hexdump crc 
 

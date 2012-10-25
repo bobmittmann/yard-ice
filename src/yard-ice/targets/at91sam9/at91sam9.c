@@ -23,26 +23,8 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-
-
-#include <at91sam/at91sam_ckgr.h>
-#include <at91sam/at91sam_pmc.h>
-#include <at91sam/at91sam_rstc.h>
-#include <at91sam/at91sam_wdtc.h>
-#include <at91sam/at91sam_smc.h>
-#include <at91sam/at91sam_dbgu.h>
-#include <at91sam/at91sam_matrix.h>
-#include <at91sam/at91sam_sdram.h>
-#include <at91sam/at91sam_ccfg.h>
-#include <at91sam/at91sam_pio.h>
-
-#include <uthreads.h>
-
-#include "armice.h"
 #include "target/at91sam9.h"
-#include "script.h"
-
-#include "dbglog.h"
+#include <sys/os.h>
 
 /*
  * System Controller Peripherals Base Addresses 
@@ -153,7 +135,7 @@ void at91_sdram_config(const ice_drv_t * ice, int chips, int cols,
 	}
 
 	/* 1. A minimum pause of 200us is provided to precede any signal toggle */
-	uthread_sleep(2);
+	__os_sleep(2);
 
 	ice_wr32(ice, AT91_BASE_SDRAMC + SDRAMC_MR, SDRAMC_MODE_NOP_CMD);
 	ice_wr32(ice, mem, 0);
@@ -543,7 +525,7 @@ int at91sam9_reset(FILE * f, const struct ice_drv * ice,
 	ice_wr32(ice, AT91_BASE_RSTC + RSTC_CR, 
 			  RSTC_KEY(0xa5) | RSTC_PROCRST);
 
-//	uthread_sleep(100);
+//	__os_sleep(100);
 
 	return 0;
 }

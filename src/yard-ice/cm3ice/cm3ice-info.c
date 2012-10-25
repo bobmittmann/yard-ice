@@ -28,12 +28,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/at91.h>
 
 #include "jtag_adi.h"
 #include "cm3ice.h"
 #include "dbglog.h"
-#include "uthreads.h"
 #include "hexdump.h"
 
 void print_stat(FILE * f, uint32_t stat)

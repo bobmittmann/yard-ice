@@ -23,15 +23,7 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-
-#include <uthreads.h>
-#include <arch/at91x40.h>
-
-#include "target.h"
-#include "armice.h"
-#include "ice_drv.h"
-
-#include <sys/dcclog.h>
+#include "target/at91x40.h"
 
 const struct target_sym at91x40_sym[] = {
 	{ 0xffe00000, "ebi_csr0", 4, _RW_},
@@ -143,11 +135,6 @@ int at91x40_on_run(FILE * f, const struct ice_drv * ice,
 
 	return 0;
 }
-
-#define AT91M40800 0x14080044
-#define AT91R40807 0x44080746
-#define AT91M40807 0x14080745
-#define AT91R40008 0x44000840
 
 int at91m40800_probe(FILE * f, const struct ice_drv * ice, 
 					 ice_mem_entry_t * mem)

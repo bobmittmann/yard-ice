@@ -23,18 +23,7 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include "target.h"
-#include "target/arm.h"
 #include "target/at91x40.h"
-#include "armice.h"
-#include <arch/at91x40.h>
-
-#ifdef AT91X40_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
 
 int a7e10x2_on_init(FILE * f, const struct ice_drv * ice, 
 					 ice_mem_entry_t * mem)

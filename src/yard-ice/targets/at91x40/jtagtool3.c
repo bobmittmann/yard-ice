@@ -23,12 +23,7 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <arch/at91x40.h>
-
-#include "target.h"
-#include "target/arm.h"
 #include "target/at91x40.h"
-#include "armice.h"
 
 int jtagtool3_on_init(FILE * f, const struct ice_drv * ice, 
 					 ice_mem_entry_t * mem)
