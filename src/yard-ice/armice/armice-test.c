@@ -26,13 +26,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <sys/at91.h>
 
 #include "jtag_arm.h"
 #include "armice.h"
 #include "arm_pn.h"
 #include "dbglog.h"
-#include "uthreads.h"
 
 #include "config.h"
 
