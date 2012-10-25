@@ -11,129 +11,75 @@
 # version 3.0 of the License, or (at your option) any later version.
 # 
 # This library is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# but WITHLST ANY WARRANTY; withlst even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
 # 
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+ifndef MKDIR
+  MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+endif	
 
 BASEDIR := $(realpath $(MKDIR)/..)
-
 TOOLSDIR = $(BASEDIR)/../tools
-
-MKCODELET = $(TOOLSDIR)/mkcodelet.py
 
 export MKDIR TOOLSDIR
 
-CPU = arm7tdmi
+MKCODELET = $(TOOLSDIR)/mkcodelet.py
 
-OPTIONS	= -mcpu=$(CPU) -fpic
-
-CROSS_COMPILE = arm-none-eabi-
-
+OPTIONS = -mcpu=arm7tdmi -fpic
 LDSCRIPT = $(BASEDIR)/ld/arm-pic.ld 
-
-include $(MKDIR)/cross.mk
-
-#------------------------------------------------------------------------------ 
-# update generated files list
-#------------------------------------------------------------------------------ 
-
-CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
-SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
-
 INCPATH	:= $(INCPATH) $(abspath .)
 
-#------------------------------------------------------------------------------ 
-# object files
-#------------------------------------------------------------------------------ 
-OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES:.c=.o) $(SFILES:.S=.o)))
-ODIRS = $(abspath $(sort $(dir $(OFILES))))
+override SFLAGS :=  -Wall $(OPTIONS)
+override CFLAGS :=  -Wall $(OPTIONS) 
+override LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+override CROSS_COMPILE = arm-none-eabi-
 
-#------------------------------------------------------------------------------ 
-# dependency files
-#------------------------------------------------------------------------------ 
-DFILES = $(addprefix $(DEPDIR)/, $(notdir $(CFILES:.c=.d) $(SFILES:.S=.d)))
-DDIRS = $(abspath $(sort $(dir $(DFILES))))
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)gcc
+AS = $(CROSS_COMPILE)gcc
+OBJDUMP = $(CROSS_COMPILE)objdump
 
-LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LIBPATH)
+OFILES = $(CFILES:.c=.o) $(SFILES:.S=.o)
 
-PROG_BIN = $(OUTDIR)/$(PROG).bin
-PROG_ELF = $(OUTDIR)/$(PROG).elf
-PROG_SYM = $(OUTDIR)/$(PROG).sym
-PROG_OUT = $(OUTDIR)/$(PROG).out
-PROG_C = $(OUTDIR)/$(PROG).c
+CODELIB_ELF = $(CODELIB).elf
+CODELIB_LST = $(CODELIB).lst
+CODELIB_C = $(CODELIB).c
+CODELIB_H = $(CODELIB).h
 
-all: $(PROG_OUT) $(PROG_C)
+all: $(CODELIB_C)
+	cp $(CODELIB_C) ..
 
 clean: 
-	$(Q)rm -f $(OFILES) $(PROG_ELF) $(PROG_OUT) $(PROG_SYM)
+	$(Q)rm -f $(OFILES) $(CODELIB_ELF) $(CODELIB_LST) $(CODELIB_C) $(CODELIB_H) 
 
-prog: $(PROG_BIN)
+elf: $(CODELIB_ELF)
 
-elf: $(PROG_ELF)
+lst: $(CODELIB_LST)
 
-sym: $(PROG_SYM)
+.PHONY: all clean elf lst
 
-lst: $(PROG_OUT)
+$(CODELIB_ELF): $(OFILES)
+	$(LD) $(LDFLAGS) $(OFILES) -lgcc -o $@
 
-codelet: $(PROG_C)
+$(CODELIB_LST): $(CODELIB_ELF)
 
-$(PROG_ELF): $(LIBDIRS) $(OFILES)
-	$(ACTION) "LD: $@"
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(addprefix -l,$(LIBS)) $(addprefix -L,$(LIBPATH)) -lgcc -o $@
+$(CODELIB_C): $(CODELIB_LST)
 
-vars: libs-vars
-	@echo MAKELEVEL=$(MAKELEVEL)
-	@echo ACTION=$(ACTION)
-	@echo MACH=$(MACH)
-	@echo CPU=$(CPU)
-	@echo CROSS_COMPILE=$(CROSS_COMPILE)
-	@echo OUTDIR=$(OUTDIR)
-	@echo MKDIR=$(MKDIR)
-	@echo TOOLSDIR=$(TOOLSDIR)
-	@echo CFILES=$(CFILES)
-	@echo OFILES=$(OFILES)
-	@echo SFILES=$(SFILES)
-	@echo DFILES=$(DFILES)
-	@echo CC=$(CC)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo PROG_ELF=$(PROG_ELF)
-	@echo PROG_OUT=$(PROG_OUT)
-	@echo LIBPATH=$(LIBPATH)
+.SUFFIXES:
 
-#------------------------------------------------------------------------------ 
-# Build tree
-#------------------------------------------------------------------------------ 
+%.o : %.c 
+	$(CC) $(addprefix -I,$(INCPATH)) $(DEFINES) $(CFLAGS) -o $@ -c $<
 
-$(ODIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+%.o : %.S 
+	$(AS) $(addprefix -I,$(INCPATH)) $(DEFINES) $(SFLAGS) -o $@ -c $<
 
-$(DDIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+%.lst: %.elf
+	$(OBJDUMP) -t -s -j .text $< > $@
 
-$(DDIRS) : | $(ODIRS) 
-
-$(DFILES): | $(DDIRS) 
-
-.PHONY: all clean prog elf bin lst 
-
-include $(MKDIR)/cc.mk
-
-%.out: %.elf
-	$(ACTION) "DUMP: $@"
-	$(Q)$(OBJDUMP) -t -s -j .text $< > $@
-
-%.c: %.out
-	$(ACTION) "CODELET: $@"
-	$(Q)$(MKCODELET) -o $@ $< 
-
-include $(DFILES)
-
+%.c: %.lst
+	$(MKCODELET) -o $@ $< 
 

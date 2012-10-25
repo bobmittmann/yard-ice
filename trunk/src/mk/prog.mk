@@ -45,23 +45,17 @@ else
 endif
 
 #------------------------------------------------------------------------------ 
-# update generated files list
+# generated source files
 #------------------------------------------------------------------------------ 
-
 HFILES_OUT = $(VERSION_H) $(addprefix $(OUTDIR)/, $(HFILES_GEN))
 CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
 SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
-
-HFILES = $(HFILES_OUT)
-
-INCPATH	:= $(INCPATH) $(abspath .)
 
 #------------------------------------------------------------------------------ 
 # object files
 #------------------------------------------------------------------------------ 
 OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
 			$(SFILES_OUT:.S=.o) $(CFILES:.c=.o) $(SFILES:.S=.o)))
-
 ODIRS = $(abspath $(sort $(dir $(OFILES))))
 
 #------------------------------------------------------------------------------ 
@@ -69,15 +63,18 @@ ODIRS = $(abspath $(sort $(dir $(OFILES))))
 #------------------------------------------------------------------------------ 
 DFILES = $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
 			$(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d))
-
 DDIRS = $(abspath $(sort $(dir $(DFILES))))
 
+#------------------------------------------------------------------------------ 
+# path variables
+#------------------------------------------------------------------------------ 
 LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LIBPATH)
+INCPATH	:= $(INCPATH) $(abspath .)
 
-export LIBPATH
+#export INCPATH	LIBPATH
 
 #------------------------------------------------------------------------------ 
-# library output files
+# program output files
 #------------------------------------------------------------------------------ 
 ifdef PROG
   PROG_BIN = $(OUTDIR)/$(PROG).bin
@@ -105,33 +102,9 @@ lst: $(PROG_LST)
 
 $(PROG_ELF): libs-all $(LIBDIRS) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $@"
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref\
+	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref \
 	-Wl,--sort-common -Wl,--start-group $(addprefix -l,$(LIBS)) \
     -Wl,--end-group $(addprefix -L,$(LIBPATH)) -lgcc -o $@ > $(PROG_MAP)
-
-vars: libs-vars
-	@echo MAKELEVEL=$(MAKELEVEL)
-	@echo ACTION=$(ACTION)
-	@echo MACH=$(MACH)
-	@echo CPU=$(CPU)
-	@echo CROSS_COMPILE=$(CROSS_COMPILE)
-	@echo OUTDIR=$(OUTDIR)
-	@echo MKDIR=$(MKDIR)
-	@echo TOOLSDIR=$(TOOLSDIR)
-	@echo CFILES=$(CFILES)
-	@echo CFILES_GEN=$(CFILES_GEN)
-	@echo HFILES_GEN=$(HFILES_GEN)
-	@echo HFILES_OUT=$(HFILES_OUT)
-	@echo CFILES_OUT=$(CFILES_OUT)
-	@echo OFILES=$(OFILES)
-	@echo SFILES=$(SFILES)
-	@echo DFILES=$(DFILES)
-	@echo CC=$(CC)
-	@echo INCLUDES=$(INCLUDES)
-	@echo CFLAGS=$(CFLAGS)
-	@echo PROG_ELF=$(PROG_ELF)
-	@echo PROG_OUT=$(PROG_OUT)
-	@echo LIBPATH=$(LIBPATH)
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -149,8 +122,8 @@ FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'INCPATH=$(INCPATH)'\
 				 'LIBPATH=$(LIBPATH)'
 
-libs-all: $(OUTDIR)
-	@echo - LIBS START ------------------
+libs-all: $(DDIRS)
+	$(ECHO) - LIBS START ------------------
 	$(Q)for d in $(LIBDIRS); do\
 		if [ -f ./$$d/Makefile ]; then \
 			OUT=$(OUTDIR)/`basename $$d`;\
@@ -160,22 +133,9 @@ libs-all: $(OUTDIR)
 			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) all) || exit 1;\
 		fi;\
 	done;
-	@echo - LIBS END --------------------
+	$(ECHO) - LIBS END --------------------
 
-libs-vars: $(OUTDIR)
-	@echo - LIBS START ------------------
-	$(Q)for d in $(LIBDIRS); do\
-		if [ -f ./$$d/Makefile ]; then \
-			OUT=$(OUTDIR)/`basename $$d`;\
-			if [ ! -d $$OUT ]; then\
-				mkdir $$OUT;\
-			fi;\
-			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) vars) || exit 1;\
-		fi;\
-	done;
-	@echo - LIBS END --------------------
-
-libs-clean: $(OUTDIR) 
+libs-clean: $(DDIRS)
 	$(Q)for d in $(LIBDIRS); do \
 		if [ -f ./$$d/Makefile ]; then \
 			OUT=$(OUTDIR)/`basename $$d`;\
@@ -200,10 +160,9 @@ $(DDIRS):
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
-$(DDIRS) : | $(ODIRS) $(CFILES_OUT)
+$(DDIRS): | $(ODIRS) $(CFILES_OUT) $(HFILES_OUT)
 
-$(DFILES): | $(DDIRS) $(HFILES_OUT) 
-
+$(DFILES): | $(DDIRS) 
 
 .PHONY: all clean prog elf bin lst libs-all libs-clean vars libs-vars 
 

@@ -52,9 +52,11 @@ endif
 ifeq ($(verbose),0) 
   Q = @
   ACTION = @echo
+  ECHO = @\#
 else
   Q =
   ACTION = @\#
+  ECHO = @echo
 endif
 
 DEPDIR=$(OUTDIR)/.deps
@@ -66,7 +68,7 @@ export OUTDIR DEPDIR Q ACTION
 #------------------------------------------------------------------------------ 
 
 ifndef CROSS_COMPILE
-  $(error CROSS_COMPILE undefined!)
+  $(warning CROSS_COMPILE undefined!)
 endif	# CROSS_COMPILE
 
 export CROSS_COMPILE
@@ -81,8 +83,8 @@ AR = $(CROSS_COMPILE)ar
 NM = $(CROSS_COMPILE)nm
 CXX = $(CROSS_COMPILE)g++
 RANLIB = $(CROSS_COMPILE)ranlib
-OBJCOPY	= $(CROSS_COMPILE)objcopy
-OBJDUMP	= $(CROSS_COMPILE)objdump
+OBJCOPY = $(CROSS_COMPILE)objcopy
+OBJDUMP = $(CROSS_COMPILE)objdump
 STRIP = $(CROSS_COMPILE)strip
 
 #------------------------------------------------------------------------------ 
@@ -93,8 +95,8 @@ ifneq ($(dbg_level),0)
   CDEFS := $(CDEFS) DEBUG=$(dbg_level)
 endif
 
-INCPATH	:= $(SDKDIR)/include $(OUTDIR) $(abspath $(INCPATH))
+INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))
 SFLAGS := $(OPTIONS) -Wall $(SFLAGS) $(addprefix -D,$(CDEFS))
 CFLAGS := $(OPTIONS) -Wall $(CFLAGS) $(addprefix -D,$(CDEFS))
-LDFLAGS	:= $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
 

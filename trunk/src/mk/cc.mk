@@ -28,11 +28,11 @@ assemble = $(AS) $(addprefix -I,$(INCPATH)) $(DEFINES) $(SFLAGS)
 #------------------------------------------------------------------------------ 
 
 $(DEPDIR)/%.d : $(OUTDIR)/%.c
-	$(ACTION) "DEP C 2: $@"
+	$(ACTION) "DEP .c 2: $@"
 	$(Q)$(compile) -MT $@ -MD -MP -MM -c -o $@ $<
 
 $(DEPDIR)/%.d : $(OUTDIR)/%.S
-	$(ACTION) "DEP : $@"
+	$(ACTION) "DEP .S 2: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
 $(OUTDIR)/%.o : $(OUTDIR)/%.c $(DEPDIR)/%.d
@@ -46,11 +46,11 @@ $(OUTDIR)/%.o : $(OUTDIR)/%.S $(DEPDIR)/%.d
 #------------------------------------------------------------------------------ 
 
 $(DEPDIR)/%.d : %.c
-	$(ACTION) "DEP C 1: $@"
+	$(ACTION) "DEP .c 1: $@"
 	$(Q)$(compile) -MT $@ -MD -MP -MM -c -o $@ $<
 
 $(DEPDIR)/%.d : %.S
-	$(ACTION) "DEP: $@"
+	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
 $(OUTDIR)/%.o : %.c $(DEPDIR)/%.d
