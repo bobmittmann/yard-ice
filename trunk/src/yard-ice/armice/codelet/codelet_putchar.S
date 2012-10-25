@@ -9,8 +9,6 @@
  *
  */
 
-//#include <arch/at91x40.h>
-#include <arch/at91sam9260.h>
 #include "armice.h" 
 
 	.text

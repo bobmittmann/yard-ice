@@ -34,13 +34,6 @@
 
 #include "dis-asm.h"
 
-#ifdef TARGET_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
-
 static const char * const except_tab[8] = {
 	"UNKNOWN EXCEPTION", "UNDEFINED INSTRUCTION", "UNHANDLED SWI", 
 	"PREFETCH ABORT", "DATA ABORT", "INVALID EXCEPTION",
