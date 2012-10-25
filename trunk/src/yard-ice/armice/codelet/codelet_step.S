@@ -9,8 +9,6 @@
  *
  */
 
-#include "armice.h" 
-
 	.text
 	.arm
 	.align	0
