@@ -21,7 +21,8 @@
  */
 
 
-#include "armice.h" 
+#define ARMICE_DCC_READ_FLAG    0x01
+#define ARMICE_DCC_WRITE_FLAG   0x02
 
 	.text
 	.arm
