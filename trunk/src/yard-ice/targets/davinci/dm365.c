@@ -28,6 +28,7 @@
 #include "davinci/dm36x.h"
 #include "armice.h"
 
+#include <stdlib.h>
 #include <sys/delay.h>
 #include <sys/dcclog.h>
 

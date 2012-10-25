@@ -25,6 +25,7 @@
 
 
 #include "target/stm32f.h"
+#include <stdlib.h>
 
 const struct ice_mem_entry stm32f20xxb_mem[] = {
 	{ .name = "flash", .flags = MEM_32_BITS,

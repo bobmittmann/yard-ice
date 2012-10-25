@@ -24,6 +24,7 @@
  */ 
 
 #include "target/stm32f.h"
+#include <stdlib.h>
 
 
 const struct target_arch stm32f205_arch = {

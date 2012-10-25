@@ -24,19 +24,7 @@
  */ 
 
 
-#include <at91sam/at91sam_ckgr.h>
-#include <at91sam/at91sam_pmc.h>
-#include <at91sam/at91sam_rstc.h>
-#include <at91sam/at91sam_wdtc.h>
-#include <at91sam/at91sam_mc.h>
-#include <at91sam/at91sam_dbgu.h>
-
-#include <uthreads.h>
-
-#include "armice.h"
 #include "target/at91sam7.h"
-#include "script.h"
-#include "dbglog.h"
 
 #define AT91_BASE_DBGU      0xfffff200 /* (DBGU) Base Address */
 #define AT91_BASE_PIOA      0xfffff400 /* (PIOA) Base Address */
@@ -894,7 +882,7 @@ int at91sam7_on_init(FILE * f, const ice_drv_t * ice,
 	 * Clock cycles in 1.5 microseconds. 
 	 */
 	/* No Erase Before Programming */
-	ice_wr32(ice, AT91_BASE_MC + MC_FMR, 
+	ice_wr32(ice, AT91_BASE_MC + MC_FMR0, 
 			MC_NEBP | MC_FWS(1) | MC_FMCN(AT91SAM7_MCLK_HZ / 666667));
 
 	switch (CIDR_ARCH(cidr)) {
@@ -908,11 +896,11 @@ int at91sam7_on_init(FILE * f, const ice_drv_t * ice,
 		fprintf(f, " %s: setting GPNVM bit 2\n", __func__);
 
 		/* Select boot from flash: GPNVM bit 2 set to 1 */
-		ice_wr32(ice, AT91_BASE_MC + MC_FCR, 
+		ice_wr32(ice, AT91_BASE_MC + MC_FCR0, 
 				 MC_KEY(0x5a) | MC_FCMD_SET_GP_NVM | MC_PAGEN(2));
 
 		for (again = 4096; ; again--) {
-			ice_rd32(ice, AT91_BASE_MC + MC_FSR, &data);
+			ice_rd32(ice, AT91_BASE_MC + MC_FSR0, &data);
 			if (data & MC_FRDY)
 				break;
 			if (again == 0) {
@@ -925,7 +913,7 @@ int at91sam7_on_init(FILE * f, const ice_drv_t * ice,
 		DCC_LOG(LOG_TRACE, "Unknown ATMEL series...");
 	}
 
-	ice_rd32(ice, AT91_BASE_MC + MC_FSR, &fsr);
+	ice_rd32(ice, AT91_BASE_MC + MC_FSR0, &fsr);
 	fprintf(f, " %s: fsr=0x%08x locks=%06x gpnvm=%02x\n", __func__, 
 			fsr, fsr >> 16, (fsr >> 8) & 0xff);
 
@@ -1002,7 +990,7 @@ int at91sam7s_flash256_erase(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	int page;
 
 	for (again = 4096; ; again--) {
-		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR, &data);
+		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR0, &data);
 		if (data & MC_FRDY)
 		break;
 		if (again == 0) {
@@ -1012,7 +1000,7 @@ int at91sam7s_flash256_erase(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	}
 
 	/* Erase Before Programming */
-	armice_wr32(ctrl, AT91_BASE_MC + MC_FMR, 
+	armice_wr32(ctrl, AT91_BASE_MC + MC_FMR0, 
 			 MC_FWS(1) | MC_FMCN(AT91SAM7_MCLK_HZ / 666667));
 
 	page = addr->offs >> 8;
@@ -1020,7 +1008,7 @@ int at91sam7s_flash256_erase(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	DCC_LOG4(LOG_INFO, "%08x:%06x len=%d pg=%d", 
 			 addr->base, addr->offs, len, page);
 
-	armice_wr32(ctrl, AT91_BASE_MC + MC_FCR, MC_KEY(0x5a) | 
+	armice_wr32(ctrl, AT91_BASE_MC + MC_FCR0, MC_KEY(0x5a) | 
 				MC_FCMD_START_PROG | (page << 8));
 
 	return 256;
@@ -1035,7 +1023,7 @@ int at91sam7s_flash256_write(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	int n;
 
 	for (again = 4096; ; again--) {
-		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR, &data);
+		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR0, &data);
 		if (data & MC_FRDY)
 			break;
 		if (again == 0) {
@@ -1045,7 +1033,7 @@ int at91sam7s_flash256_write(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	}
 
 	/* No Erase Before Programming */
-	armice_wr32(ctrl, AT91_BASE_MC + MC_FMR, 
+	armice_wr32(ctrl, AT91_BASE_MC + MC_FMR0, 
 			MC_NEBP | MC_FWS(1) | MC_FMCN(AT91SAM7_MCLK_HZ / 666667));
 
 
@@ -1061,7 +1049,7 @@ int at91sam7s_flash256_write(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 		return -1;
 	}
 
-	if (armice_wr32(ctrl, AT91_BASE_MC + MC_FCR, MC_KEY(0x5a) | 
+	if (armice_wr32(ctrl, AT91_BASE_MC + MC_FCR0, MC_KEY(0x5a) | 
 				 MC_FCMD_START_PROG | (page << 8)) < 0) {
 		DCC_LOG(LOG_WARNING, "arm_wr() fail!");
 		return -1;
@@ -1078,7 +1066,7 @@ int at91sam7s_flash128_erase(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	int page;
 
 	for (again = 4096; ; again--) {
-		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR, &data);
+		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR0, &data);
 		if (data & MC_FRDY)
 			break;
 		if (again == 0) {
@@ -1092,7 +1080,7 @@ int at91sam7s_flash128_erase(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	DCC_LOG4(LOG_INFO, "%08x:%06x len=%d pg=%d", 
 			 addr->base, addr->offs, len, page);
 
-	armice_wr32(ctrl, AT91_BASE_MC + MC_FCR, 0x5A000000 | 
+	armice_wr32(ctrl, AT91_BASE_MC + MC_FCR0, 0x5A000000 | 
 				MC_FCMD_START_PROG | (page << 8));
 
 	return 128;
@@ -1109,7 +1097,7 @@ int at91sam7s_flash128_write(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 	addr->offs &= 0xfffffffe;
 
 	for (again = 1024; ; again--) {
-		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR, &data);
+		armice_rd32(ctrl, AT91_BASE_MC + MC_FSR0, &data);
 		if (data & MC_FRDY)
 			break;
 		if (again == 0) {
@@ -1128,7 +1116,7 @@ int at91sam7s_flash128_write(armice_ctrl_t * ctrl, ice_mem_ref_t * addr,
 		return -1;
 	}
 
-	if (armice_wr32(ctrl, AT91_BASE_MC + MC_FCR, 
+	if (armice_wr32(ctrl, AT91_BASE_MC + MC_FCR0, 
 				  0x5A000000 | MC_FCMD_START_PROG | (page << 8)) < 0) {
 		DCC_LOG(LOG_WARNING, "arm_wr() fail!");
 		return -1;

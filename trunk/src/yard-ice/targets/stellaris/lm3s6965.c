@@ -24,6 +24,7 @@
  */ 
 
 
+#include <stdlib.h>
 #include "target/stellaris.h"
 
 const struct target_arch stellaris_lm3s6965_arch = {
