@@ -105,7 +105,9 @@ lst: $(PROG_LST)
 
 $(PROG_ELF): libs-all $(LIBDIRS) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $@"
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group $(addprefix -L,$(LIBPATH)) -lgcc -o $@ > $(PROG_MAP)
+	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref\
+	-Wl,--sort-common -Wl,--start-group $(addprefix -l,$(LIBS)) \
+    -Wl,--end-group $(addprefix -L,$(LIBPATH)) -lgcc -o $@ > $(PROG_MAP)
 
 vars: libs-vars
 	@echo MAKELEVEL=$(MAKELEVEL)

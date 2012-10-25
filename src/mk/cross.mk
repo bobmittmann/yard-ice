@@ -96,5 +96,5 @@ endif
 INCPATH	:= $(SDKDIR)/include $(OUTDIR) $(abspath $(INCPATH))
 SFLAGS := $(OPTIONS) -Wall $(SFLAGS) $(addprefix -D,$(CDEFS))
 CFLAGS := $(OPTIONS) -Wall $(CFLAGS) $(addprefix -D,$(CDEFS))
-LDFLAGS	:= $(OPTIONS) $(LDFLAGS) -nostdlib -Wl,--print-map -Wl,--cref -Wl,--sort-common -T $(LDSCRIPT)
+LDFLAGS	:= $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
 
