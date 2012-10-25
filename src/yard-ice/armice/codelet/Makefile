@@ -21,9 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-CODELET = armice.c
-
-PROG = armice
+CODELIB = codelet
 
 SFILES = codelet_cfi16.S codelet_step.S codelet_fifo.S
 

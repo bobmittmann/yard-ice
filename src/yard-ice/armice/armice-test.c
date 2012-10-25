@@ -23,6 +23,10 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -31,8 +35,6 @@
 #include "armice.h"
 #include "arm_pn.h"
 #include "dbglog.h"
-
-#include "config.h"
 
 /*****************************************************************************
  * TEST functions
