@@ -26,16 +26,10 @@
 
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "target.h"
 #include "ice_drv.h"
-
-#ifdef MEM_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
 
 #include <sys/dcclog.h>
 

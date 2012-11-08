@@ -33,7 +33,7 @@
 #include <tcpip/tcp.h>
 #include <netinet/in.h>
 #include <time.h>
-#include <uthreads.h>
+#include <sys/os.h>
 
 #include "jtag_arm.h"
 #include "armice.h"
@@ -46,14 +46,14 @@ struct comm_tcp_parm {
 	ice_comm_t * comm;
 };
 
-int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
+int comm_tcp_write_task(struct comm_tcp_parm * parm)
 {
 	struct tcp_pcb * tp = parm->tp;
 	ice_comm_t * comm = parm->comm;
 	uint8_t net_buf[128];
 	uint8_t * ptr;
 	int len;
-	int rem;
+//	int rem;
 	int n;
 
 	for (;;) {
@@ -76,7 +76,7 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
 		}
 #endif
 
-		rem = len;
+//		rem = len;
 		ptr = net_buf;
 		while (len) {
 			if ((n = ice_comm_write(comm, ptr, len, 500)) < 0) {
@@ -97,7 +97,7 @@ uint32_t comm_write_stack[512 + 128];
 
 #define COMM_TCP_BUF_SIZE 512
 
-int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
+int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
 {
 	struct comm_tcp_parm tcp_parm;
 	uint32_t buf[COMM_TCP_BUF_SIZE / sizeof(uint32_t)];
@@ -134,11 +134,12 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
 		tcp_parm.tp = tp;
 		tcp_parm.comm = comm;
 
-		th = uthread_create(comm_write_stack, sizeof(comm_write_stack), 
-							(uthread_task_t)comm_tcp_write_task, 
-							(void *)&tcp_parm, 0, NULL); 
+		th = __os_thread_create((void *)comm_tcp_write_task, (void *)&tcp_parm, 
+								comm_write_stack, sizeof(comm_write_stack), 
+								__OS_PRIORITY_LOWEST);
+
 		if (th < 0) {
-			DCC_LOG(LOG_ERROR, "uthread_create() fail!"); 
+			DCC_LOG(LOG_ERROR, "__os_thread_create() fail!"); 
 			ice_comm_close(comm);
 			tcp_close(tp);
 			DCC_LOG2(LOG_TRACE, "%I:%d closed.", 
@@ -171,7 +172,7 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
 
 		tcp_close(tp);
 
-		uthread_join(th);
+		__os_thread_join(th);
 	}
 
 	for(;;);
@@ -183,10 +184,9 @@ int comm_tcp_start(ice_comm_t * comm)
 {
 	int th;
 
-	th = uthread_create(comm_read_stack, sizeof(comm_read_stack), 
-						(uthread_task_t)comm_tcp_read_task, 
-						(void *)comm, 0, NULL); 
-
+	th = __os_thread_create((void *)comm_tcp_read_task, (void *)comm, 
+							comm_read_stack, sizeof(comm_read_stack), 
+							__OS_PRIORITY_LOWEST);
 	printf("<%d> ", th);
 
 	return 0;

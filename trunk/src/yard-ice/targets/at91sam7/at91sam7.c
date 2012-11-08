@@ -977,7 +977,7 @@ int at91sam7_reset(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 	ice_exec(ice,  addr, r, 2);
 
 	/* wait 10ms for the reset to complete. */
-	uthread_sleep(10);
+	__os_sleep(10);
 
 	return 0;
 }

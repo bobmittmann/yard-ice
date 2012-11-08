@@ -1006,7 +1006,7 @@ int jtag_arm_poll(jtag_tap_t * tap, jtag_arm_poll_t * poll,
 
 			if (rem == (ICE_COMM_RX_BUF_LEN / 2)) {
 				DCC_LOG(LOG_MSG, "DCC notify!");
-				uthread_sem_post(comm->rx_sem);
+				__os_sem_post(comm->rx_sem);
 			}
 dcc_poll:
 			if (dbg_status & ARMICE_ST_DBGACK) {
@@ -1043,7 +1043,7 @@ dcc_poll:
 			poll->status = dbg_status;
 
 			DCC_LOG(LOG_MSG, "DCC notify!");
-			uthread_sem_post(comm->tx_sem);
+			__os_sem_post(comm->tx_sem);
 
 			goto dcc_poll;
 		}

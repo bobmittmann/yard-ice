@@ -58,6 +58,7 @@ int mod_mem_on_load(struct ice_mem_entry * mem, int mod_id)
 
 	while ((size = mem->blk.count * mem->blk.size) > 0) {
 		addr = mem->addr.base + mem->addr.offs;
+		addr = addr;
 		DCC_LOG2(LOG_INFO, "id=%d addr=0x%08x", id, addr);
 		if (var_global_add(mod_id, mem->name, TYPE_UINT32, id++) < 0) {
 			DCC_LOG(LOG_WARNING, "var_global_add() fail!");

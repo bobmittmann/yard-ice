@@ -283,6 +283,7 @@ int mem_ap_topology_show(FILE * f, mem_ap_list_t * lst)
 		} else {
 			class = ID_CLASS(component_id);
 			peripheral_id = cmp->peripheral_id;
+			class = class;
 
 			fprintf(f, "PN=%03x", (int)PART_NUMBER(peripheral_id));
 			fprintf(f, ", Rev=%d", (int)REVISION(peripheral_id));

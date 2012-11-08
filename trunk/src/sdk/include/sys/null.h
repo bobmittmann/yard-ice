@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,39 +18,45 @@
  */
 
 /** 
- * @file .c
- * @brief YARD-ICE
+ * @file sys/null.h
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+#ifndef __SYS_NULL_H__
+#define __SYS_NULL_H__
+
+#include <sys/file.h>
+#include <sys/types.h>
+
+extern struct file * null;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+ * File IO operations
+ */
+int null_write(void * arg, const void * buf, int len);
+
+int null_read(void * arg, void * buf, int len);
+
+int null_close(void * arg);
+
+int null_flush(void * arg);
+
+/*
+ * Auxiliary open function
  */
 
+#include <stdio.h>
 
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+FILE * null_fopen(const char * mode);
 
-#include "lookup.h"
-
-#include <sys/dcclog.h>
-
-int lookup_int_val(const lt_entry_int_t * tab, const char * tag, int * val)
-{
-	lt_entry_int_t * lp;
-	int i = 0;
-
-	for (i = 0; ; i++) {
-		lp = (lt_entry_int_t *)&tab[i];
-
-		if (lp->tag == NULL)
-			return -1;
-
-		if (strcmp(lp->tag, tag) == 0) {
-			break;
-		}
-	}
-
-	if (val != NULL)
-		*val = lp->val;
-
-	return i;
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __SYS_NULL_H__ */
 

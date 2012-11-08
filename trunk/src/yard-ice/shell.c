@@ -31,11 +31,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <ctype.h>
 #include <tcpip/telnetd.h>
 #include <sys/shell.h>
-#include <arch/arm.h>
 
 #include "target.h"
 #include "debugger.h"
@@ -246,7 +244,7 @@ const struct shell_cmd cmd_tab[] = {
 };
 
 const char greeting[] = "\n"
-	PRODUCT_NAME " " VERSION_NUM " - " VERSION_DATE "\n"
+	"YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
 	"(c) Copyright 2005-20010 BORESTE Electronics (www.boreste.com)\n\n";
 
 const char * const prompt_tab[] = {
@@ -811,21 +809,19 @@ static char * get_cmd_next(char ** linep)
 	return cmd;
 }
 
-int dbg_shell(int fd, const char * (* get_prompt)(void), const char * greeting)
+int dbg_shell(FILE * f, const char * (* get_prompt)(void), 
+			  const char * greeting)
 {
 	char line[SHELL_LINE_MAX];
 	char * cp;
 	char * cmd;
 	char * prompt;
-	FILE * f;
 	int ret = 0;
 #if ENABLE_HISTORY
 	cmd_history_t history;
 
 	history_init(&history);
 #endif
-
-	f = fdopen(fd, "r+");
 
 	if (greeting)
 		fprintf(f, greeting);
@@ -937,10 +933,10 @@ int telnet_shell(void)
 
 #else
 
-int __attribute__((noreturn)) telnet_task(void * arg, uthread_id_t id)
+int __attribute__((noreturn)) telnet_task(void * arg)
 {
 	struct tcp_pcb * tp;
-	int fd;
+	FILE * f;
 
 	for (;;) {
 		/* start listening */
@@ -953,13 +949,13 @@ int __attribute__((noreturn)) telnet_task(void * arg, uthread_id_t id)
 
 #if (ENABLE_HISTORY)
 		/* disable echo */
-		if ((fd = telnetd_open(tp, 0)) < 0) {
+		if ((f = telnetd_fopen(tp, 0)) < 0) {
 			DCC_LOG(LOG_ERROR, "telnetd_open().");
 			break;
 		}
 #else
 		/* enable echo, enable canonical mode */
-		if ((fd = telnetd_open(tp, TELNET_ECHO | TELNET_ICANON)) < 0) {
+		if ((f = telnetd_fopen(tp, TELNET_ECHO | TELNET_ICANON)) < 0) {
 			DCC_LOG(LOG_ERROR, "telnetd_open().");
 			break;
 		}
@@ -970,7 +966,7 @@ int __attribute__((noreturn)) telnet_task(void * arg, uthread_id_t id)
 
 		DCC_LOG1(LOG_INFO, "telnet connection accepted, fd:%d", fd);
 
-		dbg_shell(fd, get_prompt, greeting);
+		dbg_shell(f, get_prompt, greeting);
 
 		close(fd);
 	}
@@ -989,8 +985,9 @@ int telnet_shell(void)
 {
 	int th;
 
-	th = uthread_create(telnet_stack, sizeof(telnet_stack), 
-				   (uthread_task_t)telnet_task, NULL, 0, NULL); 
+	th = __os_hread_create((void *)telnet_task, NULL, 
+						   telnet_stack, sizeof(telnet_stack), 
+						   0); 
 
 	printf("<%d> ", th);
 
@@ -1002,6 +999,6 @@ int telnet_shell(void)
 
 int console_shell(void)
 {
-	return dbg_shell(STDIN_FILENO, get_prompt, greeting);
+	return dbg_shell(stdin, get_prompt, greeting);
 }
 
