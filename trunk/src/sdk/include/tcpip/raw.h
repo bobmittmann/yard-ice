@@ -26,8 +26,6 @@
 #ifndef __TCPIP_RAW_H__
 #define __TCPIP_RAW_H__
 
-#include <tcpip/pcb.h>
-
 struct raw_pcb;
 
 #ifdef __cplusplus
