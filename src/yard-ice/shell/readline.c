@@ -29,8 +29,6 @@
 #include <string.h>
 #include <sys/shell.h>
 
-#include <debug.h>
-
 char * freadline(FILE * f, const char * prompt, char * buf, int len)
 {
 	char * s;
@@ -41,8 +39,6 @@ char * freadline(FILE * f, const char * prompt, char * buf, int len)
 	}
 
 	if ((s = fgets(buf, len, f)) == NULL) {
-		/* error ?? */
-		DBG(DBG_WARNING, "fgets()!\n");
 		return s;
 	}
 

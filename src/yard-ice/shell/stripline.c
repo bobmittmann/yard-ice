@@ -30,8 +30,6 @@
 #include <ctype.h>
 #include <sys/shell.h>
 
-#include <debug.h>
-
 char * shell_stripline(char * line)
 {
 	register char *s, *cp;

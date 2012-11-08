@@ -27,17 +27,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
-#include <signal.h>
 
 #include <tcpip/ethif.h>
-#include <tcpip/etharp.h>
 #include <tcpip/route.h>
 
 #include <sys/shell.h>
 
+#if 0
+#include <tcpip/etharp.h>
+#include <sys/socket.h>
 static int arp_query(uint32_t daddr)
 {
 	struct route * rt;
@@ -97,4 +96,5 @@ int cmd_arp(FILE *f, int argc, char ** argv)
 
 	return 0;
 }
+#endif
 

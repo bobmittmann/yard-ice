@@ -28,21 +28,19 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
-#include <signal.h>
-#include <fcntl.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 
 #include <tcpip/ethif.h>
-#include <tcpip/etharp.h>
 #include <tcpip/route.h>
 #include <tcpip/raw.h>
 
 #include <sys/shell.h>
 
+#if 0
+#include <tcpip/etharp.h>
+#include <sys/socket.h>
 #define DATA_LEN 64
 #define BUF_LEN (DATA_LEN + sizeof(struct iphdr) + sizeof(struct icmphdr))
 
@@ -204,3 +202,4 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+#endif

@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 
 #include <tcpip/ethif.h>
@@ -35,6 +34,8 @@
 
 #include <sys/shell.h>
 
+#if 0
+#include <sys/socket.h>
 static int show_route(struct route * p, FILE * f)
 {
 	char st[16];
@@ -144,4 +145,5 @@ int cmd_route(FILE *f, int argc, char ** argv)
 
 	return 0;
 }
+#endif
 

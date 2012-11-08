@@ -28,19 +28,16 @@
 #include <string.h>
 
 #include <netinet/in.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
 
 #include <tcpip/ethif.h>
-#include <tcpip/etharp.h>
 #include <tcpip/route.h>
-#include <tcpip/pcb.h>
 #include <tcpip/tcp.h>
 #include <tcpip/udp.h>
-#include <sys/tcp.h>
-#include <sys/mbuf.h>
 
 #include <sys/shell.h>
+
+#if 0
 
 static const char * const tcp_state[11] = {
 	"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED",
@@ -134,4 +131,6 @@ int cmd_tcpstat(FILE *f, int argc, char ** argv)
 
 	return 0;
 }
+
+#endif
 
