@@ -562,6 +562,7 @@ int dm365_on_jtag_setup(FILE * f, const ice_drv_t * drv,
 		if (tap->idcode == 0x2b900f0f) {
 			fprintf(f, " - %d (0x%08x) -> ARM ETB11\n", tap->pos, tap->idcode); 
 			has_etb = i + 1;
+			has_etb = has_etb;
 		}
 		if (tap->idcode == 0x8b83e02f) {
 			fprintf(f, " - %d (0x%08x) -> ICEPick C\n", tap->pos, 

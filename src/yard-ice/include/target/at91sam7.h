@@ -123,11 +123,19 @@
 #define FMC_FCR    (0x04) /* FMC Flash Command Register */
 #define FMC_FSR    (0x08) /* FMC Flash Status Register */
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
+
+#include <sys/os.h>
+
 #include <target.h>
 #include <target/arm.h>
 #include <target/at91sam.h>
+
 #include "armice.h"
 #include <sys/dcclog.h>
 

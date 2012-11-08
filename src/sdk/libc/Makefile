@@ -35,7 +35,7 @@ CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 printf.c putchar.c puts.c vsnprintf.c sprintf.c snprintf.c\
 		 strcasecmp.c strcat.c strchr.c\
 		 strcmp.c strcpy.c strlen.c strtol.c strtoul.c vfprintf.c\
-		 rand.c stdin.c stdout.c stderr.c strtok.c \
+		 rand.c stdin.c stdout.c stderr.c strtok.c null.c abort.c\
 		 $(addprefix inet/,$(INET_CFILES)) \
 
 include ../../mk/lib.mk

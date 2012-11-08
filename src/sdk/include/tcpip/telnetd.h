@@ -28,7 +28,6 @@
 
 #include <tcpip/tcp.h>
 #include <arpa/inet.h>
-#include <arpa/telnet.h>
 
 struct telnet_state;
 
@@ -100,7 +99,9 @@ void telnetd_stop(struct tcp_pcb * telnetd_tp);
  *	\return
  *  Returns a file descriptor, on success,  othervise a negative number.
  */
-int telnetd_open(struct tcp_pcb * tnd_tp, unsigned int flags);
+#include <stdio.h>
+
+FILE * telnetd_fopen(struct tcp_pcb * tnd_tp, unsigned int flags);
 
 #ifdef __cplusplus
 }

@@ -90,6 +90,14 @@ static inline int __os_mutex_lock(int mutex) {
 #endif
 }
 
+static inline int __os_mutex_trylock(int mutex) {
+#if ENABLE_THINKOS
+	return thinkos_mutex_trylock(mutex);
+#else
+	return 0;
+#endif
+}
+
 static inline int __os_mutex_unlock(int mutex) {
 #if ENABLE_THINKOS
 	return thinkos_mutex_unlock(mutex);
@@ -186,6 +194,14 @@ static inline int __os_sem_wait(int sem) {
 #endif
 }
 
+static inline int __os_sem_timedwait(int sem, unsigned int ms) {
+#if ENABLE_THINKOS
+	return thinkos_sem_timedwait(sem, ms);
+#else
+	return 0;
+#endif
+}
+
 static inline int __os_sem_trywait(int sem) {
 #if ENABLE_THINKOS
 	return thinkos_sem_trywait(sem);
@@ -220,6 +236,15 @@ static inline int __os_thread_self(void) {
 	return 0;
 #endif
 }
+
+static inline int __os_thread_join(int th) {
+#if ENABLE_THINKOS
+	return thinkos_join(th);
+#else
+	return 0;
+#endif
+}
+
 
 #ifdef __cplusplus
 }

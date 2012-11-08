@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <uthreads.h>
+#include <sys/os.h>
 
 #include "ice_comm.h"
 #include "dbglog.h"
@@ -90,7 +90,7 @@ int ice_comm_read(ice_comm_t * comm, void * buf, int len, int tmo)
 		DCC_LOG(LOG_MSG, "block");
 
 		/* wait for data to became available in the buffer */
-		uthread_sem_timedwait(comm->rx_sem, tmo);
+		__os_sem_timedwait(comm->rx_sem, tmo);
 
 		if ((head = comm->rx.head) == tail) {
 			DCC_LOG(LOG_MSG, "timeout.");
@@ -154,7 +154,7 @@ int ice_comm_write(ice_comm_t * comm, const void * buf,
 		if ((head - comm->tx.tail) == ICE_COMM_TX_BUF_LEN) {
 			DCC_LOG(LOG_MSG, "block");
 			/* wait the end of operation */
-			uthread_sem_timedwait(comm->tx_sem, tmo);
+			__os_sem_timedwait(comm->tx_sem, tmo);
 		}
 
 		if ((head - comm->tx.tail) == ICE_COMM_TX_BUF_LEN) {
@@ -196,11 +196,11 @@ int ice_comm_init(ice_comm_t * comm)
 
 	comm->rx.head = 0;
 	comm->rx.tail = 0;
-	comm->rx_sem = uthread_sem_alloc(0);
+	comm->rx_sem = __os_sem_alloc(0);
 
 	comm->tx.head = 0;
 	comm->tx.tail = 0;
-	comm->tx_sem = uthread_sem_alloc(ICE_COMM_TX_BUF_LEN);
+	comm->tx_sem = __os_sem_alloc(ICE_COMM_TX_BUF_LEN);
 
 	DCC_LOG(LOG_TRACE, "[INIT]");
 
@@ -209,10 +209,10 @@ int ice_comm_init(ice_comm_t * comm)
 
 int ice_comm_done(ice_comm_t * comm)
 {
-	uthread_sem_free(comm->rx_sem);
+	__os_sem_free(comm->rx_sem);
 	comm->rx_sem = -1;
 
-	uthread_sem_free(comm->tx_sem);
+	__os_sem_free(comm->tx_sem);
 	comm->tx_sem = -1;
 
 	DCC_LOG(LOG_TRACE, "[DONE]");

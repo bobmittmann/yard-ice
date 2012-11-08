@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,39 +18,14 @@
  */
 
 /** 
- * @file .c
- * @brief YARD-ICE
+ * @file abort.c
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
-
+ */ 
 
 #include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 
-#include "lookup.h"
-
-#include <sys/dcclog.h>
-
-int lookup_int_val(const lt_entry_int_t * tab, const char * tag, int * val)
+void abort(void)
 {
-	lt_entry_int_t * lp;
-	int i = 0;
-
-	for (i = 0; ; i++) {
-		lp = (lt_entry_int_t *)&tab[i];
-
-		if (lp->tag == NULL)
-			return -1;
-
-		if (strcmp(lp->tag, tag) == 0) {
-			break;
-		}
-	}
-
-	if (val != NULL)
-		*val = lp->val;
-
-	return i;
+	for(;;);
 }
-

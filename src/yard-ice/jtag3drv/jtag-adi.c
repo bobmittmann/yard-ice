@@ -689,7 +689,8 @@ int jtag_dp_init(jtag_tap_t * tap)
 			 (st & DP_STICKYORUN) ? '1' : '0', 
 			 (st & DP_STICKYCMP) ? '1' : '0',
 			 (st & DP_STICKYERR) ? '1' : '0');
-
+	st = st;
+	
 	if (adi_dp_reg_ctrl_stat & DP_STICKYERR) {
 		DCC_LOG(LOG_TRACE, "Clearing the sticky error flag");
 		/* Clear sticky error flag */

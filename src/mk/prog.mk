@@ -55,7 +55,7 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 # object files
 #------------------------------------------------------------------------------ 
 OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
-			$(SFILES_OUT:.S=.o) $(CFILES:.c=.o) $(SFILES:.S=.o)))
+			$(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
 ODIRS = $(abspath $(sort $(dir $(OFILES))))
 
 #------------------------------------------------------------------------------ 
@@ -99,6 +99,11 @@ bin: $(PROG_BIN)
 sym: $(PROG_SYM)
 
 lst: $(PROG_LST)
+
+dirs: $(ODIRS)
+	$(warning ODIRS=$(ODIRS))
+	$(warning DDIRS=$(DDIRS))
+	$(warning OFILES=$(OFILES))
 
 $(PROG_ELF): libs-all $(LIBDIRS) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $@"
@@ -174,5 +179,5 @@ endif
 
 include $(MKDIR)/jtag.mk
 
-include $(DFILES)
+#include $(DFILES)
 

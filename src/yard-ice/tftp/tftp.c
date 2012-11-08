@@ -9,8 +9,7 @@
  * version 3.0 of the License, or (at your option) any later version.
  * 
  * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  * 
  * You can receive a copy of the GNU Lesser General Public License from 
@@ -23,19 +22,20 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <sys/reboot.h>
-#include <sys/shell.h>
 #include <sys/null.h>
+#include <sys/shell.h>
 
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
-#include <tcpip/pcb.h>
 #include <tcpip/udp.h>
 
 #include <arpa/tftp.h>
@@ -44,13 +44,6 @@
 #include <command.h>
 #include <tftpd.h>
 #include <errno.h>
-
-#ifdef TFTP_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
 
 #include <sys/dcclog.h>
 
@@ -94,7 +87,7 @@ int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin,
 
 	n = sizeof(struct tftphdr) + strlen(msg) + 1;
 
-	pkt.hdr.th_opcode = HTONS(TFTP_ERROR);
+	pkt.hdr.th_opcode = htons(TFTP_ERROR);
 	pkt.hdr.th_code = htons(errno);
 	strcpy((char *)pkt.hdr.th_msg, msg);
 
@@ -108,7 +101,7 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 
 	DCC_LOG1(LOG_INFO, "block: %d", block);
 
-	hdr.th_opcode = HTONS(TFTP_ACK);
+	hdr.th_opcode = htons(TFTP_ACK);
 	hdr.th_block = htons(block);
 
 	if ((ret = udp_sendto(udp, &hdr, sizeof(struct tftphdr), sin)) < 0) {
@@ -318,7 +311,7 @@ int tftp_hex(unsigned int addr, unsigned char * buf, int size)
 	return n * 2;
 }
 
-int tftp_daemon(struct debugger * dbg, uthread_id_t id)
+int tftp_daemon_task(struct debugger * dbg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
@@ -334,14 +327,12 @@ int tftp_daemon(struct debugger * dbg, uthread_id_t id)
 	int opc;
 	int len;
 
-	DCC_LOG1(LOG_INFO, "thread: %d", id);
-
 	if ((udp = udp_alloc()) == NULL) {
 		DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
 		return -1;
 	}
 
-	if (udp_bind(udp, INADDR_ANY, HTONS(IPPORT_TFTP)) < 0) {
+	if (udp_bind(udp, INADDR_ANY, htons(IPPORT_TFTP)) < 0) {
 		DCC_LOG(LOG_WARNING, "udp_bind() fail!");
 		return -1;
 	}
@@ -654,9 +645,9 @@ int tftpd_start(void)
 {
 	int th;
 
-	th = uthread_create(tftp_stack, sizeof(tftp_stack), 
-				   (uthread_task_t)tftp_daemon, (void *)&debugger,
-				   0, NULL); 
+	th = __os_thread_create((void *)tftp_daemon_task, (void *)&debugger, 
+							tftp_stack, sizeof(tftp_stack), 
+							__OS_PRIORITY_LOWEST);
 
 	printf("<%d> ", th);
 

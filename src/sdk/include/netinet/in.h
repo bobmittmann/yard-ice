@@ -39,6 +39,35 @@
 #define IPPROTO_TCP 6
 #define IPPROTO_UDP 17
 
+
+
+/* Standard well-known ports.  */
+#define IPPORT_ECHO 7 /* Echo service.  */
+#define IPPORT_DISCARD 9 /* Discard transmissions service.  */
+#define IPPORT_SYSTAT 11 /* System status service.  */
+#define IPPORT_DAYTIME 13 /* Time of day service.  */
+#define IPPORT_NETSTAT 15 /* Network status service.  */
+#define IPPORT_FTP 21 /* File Transfer Protocol.  */
+#define IPPORT_TELNET 23 /* Telnet protocol.  */
+#define IPPORT_SMTP 25 /* Simple Mail Transfer Protocol.  */
+#define IPPORT_TIMESERVER 37 /* Timeserver service.  */
+#define IPPORT_NAMESERVER 42 /* Domain Name Service.  */
+#define IPPORT_WHOIS 43 /* Internet Whois service.  */
+#define IPPORT_BOOTPS 67 /* Bootstrap Protocol, server side */
+#define IPPORT_BOOTPC 68 /* Bootstrap Protocol, client side */
+#define IPPORT_TFTP 69 /* Trivial File Transfer Protocol.  */
+#define IPPORT_FINGER 79 /* Finger service.  */
+#define IPPORT_SUPDUP 95 /* SUPDUP protocol.  */
+#define IPPORT_SNMP 161 /* SNMP protocol.  */
+#define IPPORT_EXECSERVER 512 /* execd service.  */
+#define IPPORT_LOGINSERVER 513 /* rlogind service.  */
+
+	/* Ports less than this value are reserved for privileged processes.  */
+#define IPPORT_RESERVED 1024
+	/* Ports greater this value are reserved for (non-privileged) servers.  */
+#define IPPORT_USERRESERVED 5000
+
+
 /* Type to represent a port.  */
 typedef uint16_t in_port_t;
 
