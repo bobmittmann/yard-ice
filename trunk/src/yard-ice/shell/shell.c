@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file shell.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -66,6 +66,21 @@
 #define ENABLE_NETWORK
 #endif
 #endif
+
+struct shell_cmd * shell_lookup(const char * s, 
+								const struct shell_cmd * cmd_tab)
+{
+	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
+
+	while (cmd->callback != NULL) {
+		if ((strcmp(s, cmd->name) == 0) || (strcmp(s, cmd->alias) == 0)) {
+			return cmd;
+		}
+		cmd++;
+	}
+
+	return NULL;
+}
 
 const struct shell_cmd cmd_tab[] = {
 
