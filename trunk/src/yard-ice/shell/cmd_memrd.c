@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 static void show_hex32(FILE * f, uint32_t  addr, const void * buf, int count)
 {

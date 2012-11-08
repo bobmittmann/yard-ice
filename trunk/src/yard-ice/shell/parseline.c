@@ -30,8 +30,6 @@
 #include <ctype.h>
 #include <sys/shell.h>
 
-#include <debug.h>
-
 static const char punct_str[][2] = {
 	"!", "\"", "#", "$", "%", "&", "'", 
 	"(", ")", "*", "+", ",", "-", ".", "/", 

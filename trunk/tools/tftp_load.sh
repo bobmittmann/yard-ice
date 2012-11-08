@@ -185,7 +185,7 @@ MS=$(($TM - $SEC * 1000))
 SPEED=$((($SIZE * 1000) / $TM))
 FTM=`printf "%d.%03d" $SEC $MS`
 
-echo " - $SIZE bytes transfered in $FTM seconds ($SPEED bytes/sec)."
+echo " - $SIZE bytes transferred in $FTM seconds ($SPEED bytes/sec)."
 
 if [ ! "${RESET}" = "1" ] ; then
 	exit 0

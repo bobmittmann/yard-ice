@@ -24,6 +24,7 @@
  */
 
 #include <stdio.h>
+#if 0
 #include <vt100.h>
 
 int cmd_clear(FILE * f, int argc, char ** argv)
@@ -37,4 +38,4 @@ int cmd_clear(FILE * f, int argc, char ** argv)
 
 	return 0;
 }
-
+#endif

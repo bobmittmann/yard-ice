@@ -83,6 +83,7 @@ def mk_codelet(in_fname, out_fname, hdr_fname):
 	token_pat = re.compile("([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})")
 
 	c_file.write("#include <stdint.h>\n\n")
+	h_file.write("#include <stdint.h>\n\n")
 
 	addr = 0
 	i = 0
@@ -93,6 +94,7 @@ def mk_codelet(in_fname, out_fname, hdr_fname):
 				if (i > 0):
 					c_file.write("\n};\n\n")
 				c_file.write("uint32_t %s[] = {" % sym[addr])
+				h_file.write("extern uint32_t %s[];\n\n" % sym[addr])
 				i = 0
 			except KeyError:
 				pass

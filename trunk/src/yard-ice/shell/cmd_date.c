@@ -26,11 +26,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
 #include <sys/shell.h>
 #include <sys/clock.h>
 
+#if 0
 static const char * const month[12] = {
 	"Jan", "Fev", "Mar", "Apr", "May", "Jun", 
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
@@ -132,4 +132,4 @@ int cmd_date(FILE *f, int argc, char ** argv)
 
 	return 0;
 }
-
+#endif

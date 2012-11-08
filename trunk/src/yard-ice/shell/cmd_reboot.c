@@ -26,7 +26,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <uthreads.h>
+#include <sys/os.h>
+
+#if 0
 #include <sys/reboot.h>
 
 int cmd_reboot(FILE *f, int argc, char ** argv)
@@ -34,13 +36,13 @@ int cmd_reboot(FILE *f, int argc, char ** argv)
 	fprintf(f, "\nRestarting system...\n"); 
 	fflush(f);
 
-	uthread_sleep(100);
+	__os_sleep(100);
 
 	fclose(f);
 
-	uthread_sleep(100);
+	__os_sleep(100);
 
 	reboot(SYS_REBOOT_CMD_RESTART);
 	return 0;
 }
-
+#endif
