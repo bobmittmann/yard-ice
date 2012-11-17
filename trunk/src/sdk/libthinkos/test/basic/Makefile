@@ -28,6 +28,8 @@ LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 
 LIBS = stm32f cm3 util thinkos c ice-comm
 
+INCPATH = ../../../include
+
 CFLAGS = -g -O2 
 
 JTAGTOOL_ADDR = 192.168.0.80

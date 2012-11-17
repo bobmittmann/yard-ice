@@ -106,6 +106,8 @@ int console_read(struct console_ctrl * ctrl, char * buf,
 			fprintf(stderr, "FE ");
 		fprintf(stderr, "wait...\n");
 //		ctrl->dma->hifcr = st;
+
+		/* wait for the DMA interrupt */
 		thinkos_irq_wait(STM32F_IRQ_DMA1_STREAM7);
 	} 
 

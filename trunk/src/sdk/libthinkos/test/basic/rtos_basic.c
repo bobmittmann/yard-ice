@@ -159,6 +159,8 @@ int yield_task(void * arg)
 	return 0;
 }
 
+uint32_t thinkos_idle_val(void);
+
 #define STACK_SIZE 512
 uint32_t stack[4][STACK_SIZE / 4];
 volatile struct my_arg ctrl[4];

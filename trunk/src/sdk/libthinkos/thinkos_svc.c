@@ -88,6 +88,7 @@ void thinkos_ev_timedwait_svc(int32_t * arg);
 
 void thinkos_ev_raise_svc(int32_t * arg);
 
+void thinkos_irq_wait_svc(int32_t * arg);
 
 static inline uint32_t cm3_svc_stackframe(void) {
 	register uint32_t sp;
@@ -273,6 +274,12 @@ void cm3_svc_isr(void)
 		thinkos_ev_raise_svc(arg);
 		break;
 #endif /* THINKOS_EVENT_MAX > 0 */
+
+#if THINKOS_IRQ_MAX > 0
+	case THINKOS_IRQ_WAIT:
+		thinkos_irq_wait_svc(arg);
+		break;
+#endif /* THINKOS_IRQ_MAX > 0 */
 
 	default:
 		arg[0] = THINKOS_ENOSYS;

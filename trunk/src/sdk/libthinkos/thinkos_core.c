@@ -31,11 +31,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define THINKOS_IDLE_IDX 32
-						  
-#define ENABLE_SYSTICK_SCHED 0
-#define CM3_IRQ_MAX 80
-
 /* -------------------------------------------------------------------------- 
  * Run Time ThinkOS block
  * --------------------------------------------------------------------------*/
@@ -59,14 +54,14 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 	}
 }
 
-static inline struct thinkos_context * __sched_entry(void) {
+static inline struct thinkos_context * __attribute__((always_inline)) __sched_entry(void) {
 	register struct thinkos_context * ctx asm("r0");
 	asm volatile ("mrs   %0, PSP\n" 
 				  "stmdb %0!, {r4-r11}\n" : "=r" (ctx));
 	return ctx;
 }
 
-static inline void __sched_exit(struct thinkos_context * __ctx) {
+static inline void __attribute__((always_inline)) __sched_exit(struct thinkos_context * __ctx) {
 	asm volatile ("add    r3, %0, #8 * 4\n"
 				  "msr    PSP, r3\n"
 				  "ldmia  %0, {r4-r11}\n"
@@ -258,7 +253,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 int thinkos_init(struct thinkos_thread_opt opt)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
-	int idx;
+	int self;
 	int irq;
 
 	/* disable interrupts */
@@ -292,8 +287,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_except_pri_set(CM3_EXCEPT_PENDSV, SCHED_PRIORITY);
 
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
-	for (irq = 0; irq < CM3_IRQ_MAX; irq++)
+	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
 		cm3_irq_pri_set(irq, IRQ_PRIORITY_REGULAR);
+		thinkos_rt.irq_th[irq] = -1;
+	}
 
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
@@ -303,6 +300,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 				sizeof(thinkos_except_stack));
 #endif
 	cm3_msp_set((uint32_t)&thinkos_idle.snapshot.val);
+
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
@@ -346,9 +344,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* initialize the thread allocation bitmap */ 
 	thinkos_rt.th_alloc = 0xffffffff << THINKOS_THREADS_MAX;
-	idx = thinkos_alloc_lo(&thinkos_rt.th_alloc, opt.id);
+	self = thinkos_alloc_lo(&thinkos_rt.th_alloc, opt.id);
 #else
-	idx = opt.id;
+	self = opt.id;
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
@@ -364,8 +362,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	if (opt.priority > THINKOS_SCHED_LIMIT_MAX)
 		opt.priority = THINKOS_SCHED_LIMIT_MAX;
 
-	thinkos_rt.sched_pri[idx] = opt.priority;
-	thinkos_rt.sched_val[idx] = opt.priority / 2;
+	thinkos_rt.sched_pri[self] = opt.priority;
+	thinkos_rt.sched_val[self] = opt.priority / 2;
 
 	/* set the initial schedule limit */
 	thinkos_rt.sched_limit = opt.priority;
@@ -374,8 +372,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif /* THINKOS_ENABLE_TIMESHARE */
 
 	/* set the active thread */
-	thinkos_rt.active = idx;
-	bmp_bit_set(&thinkos_rt.wq_ready, idx);
+	thinkos_rt.active = self;
+	bmp_bit_set(&thinkos_rt.wq_ready, self);
 
 	/* initialize the SysTick module */
 	systick->load = (CM3_SYSTICK_CLK_HZ / 1000) - 1; /* 1ms tick period */
@@ -385,7 +383,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if THINKOS_ENABLE_PAUSE
 	if (opt.f_paused) {
 		/* insert into the paused list */
-		bmp_bit_set(&thinkos_rt.wq_paused, idx);  
+		bmp_bit_set(&thinkos_rt.wq_paused, self);  
 		/* invoque the scheduler */
 		__thinkos_defer_sched();
 	} else
@@ -394,7 +392,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* enable interrupts */
 	cm3_cpsie_i();
 
-	return idx;
+	DCC_LOG1(LOG_TRACE, "<%d>", self);
+
+	return self;
 }
 
 const char * thinkos_svc_link = thinkos_svc_nm;

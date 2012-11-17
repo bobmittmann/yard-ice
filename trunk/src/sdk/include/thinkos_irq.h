@@ -69,7 +69,7 @@ static inline void __thinkos_ev_free(int ev)
 static inline void __thinkos_ev_wait(int ev) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
-	/* wait for event */
+	/* prepare to wait ... */
 	__thinkos_wait();
 	__thinkos_critical_exit();
 	/* the scheduler will run at this point */
@@ -102,6 +102,19 @@ static inline void __thinkos_irq_pri_set(unsigned int irq,
 /* enable interrupts */
 static inline void __thinkos_irq_enable(unsigned int irq) {
 	cm3_irq_enable(irq);
+}
+
+static inline void __thinkos_irq_wait(int irq) {
+	int32_t self = thinkos_rt.active;
+	/* store the thread info */
+	thinkos_rt.irq_th[irq] = self;
+	__thinkos_critical_enter();
+	/* prepare to wait ... */
+	__thinkos_wait();
+	/* enable this interrupt source */
+	cm3_irq_enable(irq);
+	__thinkos_critical_exit();
+	/* the scheduler will run at this point */
 }
 
 #ifdef __cplusplus

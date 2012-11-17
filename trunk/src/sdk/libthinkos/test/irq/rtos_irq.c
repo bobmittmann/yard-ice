@@ -32,6 +32,9 @@
 
 #include <thinkos.h>
 
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
+
 struct set {
 	uint32_t tim6;
 	uint32_t tim7;
@@ -46,7 +49,7 @@ struct {
 } meter;
 
 int sem_timer; /* semaphore to signal a full buffer */
-int wq_timer; /* wait queue */
+int ev_timer; /* event */
 
 volatile bool req;
 volatile bool ack;
@@ -61,6 +64,7 @@ void stm32f_tim7_isr(void)
 
 	if (tim7->sr == 0)
 		return;
+	/* Clear update interrupt flag */
 	tim7->sr = 0;
 
 	if (meter.max.tim7 < latency)
@@ -71,17 +75,16 @@ void stm32f_tim7_isr(void)
 	meter.ticks.tim7 = ticks + 1;
 
 	if (req & !ack) {
-		thinkos_event_notify(wq_timer);
+		__thinkos_ev_raise(ev_timer);
 		ack = true;
 		req = false;
 	}
-
+#if 0
 	if (ticks & 1)
 		stm32f_gpio_set(STM32F_GPIOB, 6);
 	else
 		stm32f_gpio_clr(STM32F_GPIOB, 6);
-
-	/* Clear update interrupt flag */
+#endif
 }
 
 void stm32f_tim1_brk_tim9_isr(void)
@@ -101,8 +104,7 @@ void stm32f_tim1_brk_tim9_isr(void)
 
 	meter.avg.tim9 = (meter.avg.tim9 * 63) / 64 + latency;
 	ticks = meter.ticks.tim9++;
-
-	ticks = ticks;
+	meter.ticks.tim9 = ticks + 1;
 
 	/* This is a low priority interrupt handler, we can 
 	   invoque service calls from it. */
@@ -146,32 +148,50 @@ void tim9_init(void)
 
 }
 
+void timer_init(struct stm32f_tim * tim)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+
+	if (tim == STM32F_TIM9) {
+		/* clock enable */
+		rcc->apb2enr |= RCC_TIM9EN;
+		tim->psc = 4 - 1; /* 2 * APB2_CLK(60MHz) / 4 = 30MHz*/
+	} else {
+		if (tim == STM32F_TIM7) {
+			rcc->apb1enr |= RCC_TIM7EN;
+		} else if (tim == STM32F_TIM6) {
+			/* clock enable */
+			rcc->apb1enr |= RCC_TIM6EN;
+		}
+		tim->psc = 2 - 1; /* 2 * APB1_CLK(30MHz) / 2 = 30MHz*/
+	}
+
+	tim->arr = 30000 - 1; /* 30MHz / 3000 = 1KHz */
+	tim->cnt = 0;
+
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->cr2 = 0;
+	tim->cr1 = 0;
+}
+
+void timer_start(struct stm32f_tim * tim)
+{
+	tim->cr1 = TIM_ARPE | TIM_URS | TIM_CEN;
+}
+
 int timer_isr_task(void * arg)
 {
 	int self = thinkos_thread_self();
 	struct stm32f_tim * tim6 = STM32F_TIM6;
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	uint32_t latency;
 	uint32_t ticks;
 	uint32_t ev;
 
 	printf(" [%d] started.\n", self);
-	thinkos_sleep(100);
-
-	/* clock enable */
-	rcc->apb1enr |= RCC_TIM6EN;
-
-	tim6->cnt = 0;
-	tim6->psc = 2 - 1; /* 2 * APB1_CLK(30MHz) / 2 = 30MHz*/
-	tim6->arr = 30000 - 1; /* 30MHz / 30000 = 1K Hz*/
-
-	tim6->egr = 0;
-	tim6->dier = TIM_UIE; /* Update interrupt enable */
-	tim6->cr2 = 0;
-	tim6->cr1 = TIM_URS | TIM_CEN;
 
 	while (1) {
-		thinkos_irq_wait(STM32F_IRQ_TIM6);
+		__thinkos_irq_wait(STM32F_IRQ_TIM6);
 		latency = tim6->cnt;
 		ev = tim6->sr;
 		if (ev == 0)
@@ -187,17 +207,18 @@ int timer_isr_task(void * arg)
 		ticks = meter.ticks.tim6;
 		meter.ticks.tim6 = ticks + 1;
 
+#if 0
 		if (ticks & 1)
 			stm32f_gpio_set(STM32F_GPIOB, 7);
 		else
 			stm32f_gpio_clr(STM32F_GPIOB, 7);
-
+#endif
 	}
 
 	return 0;
 }
 
-int high_priority_task(void * arg)
+int event_wait_task(void * arg)
 {
 	struct stm32f_tim * tim7 = STM32F_TIM7;
 	int self = thinkos_thread_self();
@@ -208,16 +229,15 @@ int high_priority_task(void * arg)
 	ack = false;
 
 	printf(" [%d] started.\n", self);
-	thinkos_sleep(100);
 
 	while (1) {
 		ack = false;
 		req = true;
-		thinkos_critical_enter();
+		__thinkos_critical_enter();
 		while (!ack) {
-			thinkos_event_wait(wq_timer);
+			__thinkos_ev_wait(ev_timer);
 		}
-		thinkos_critical_exit();
+		__thinkos_critical_exit();
 
 		latency = tim7->cnt;
 
@@ -232,9 +252,14 @@ int high_priority_task(void * arg)
 	return 0;
 }
 
-int low_priority_task(void * arg)
+
+#define STACK_SIZE 512
+uint32_t stack[4][STACK_SIZE / 4];
+
+void irq_test(void)
 {
-	int self = thinkos_thread_self();
+	int timer_th;
+	int event_th;
 	struct set max;
 	struct set avg;
 	struct set ticks;
@@ -243,16 +268,72 @@ int low_priority_task(void * arg)
 	int i;
 	int ms;
 
+	/* make sure IRQs are disabled */
+	cm3_irq_disable(STM32F_IRQ_TIM6);
+	cm3_irq_disable(STM32F_IRQ_TIM7);
+	cm3_irq_disable(STM32F_IRQ_TIM9);
+
+	/* allocate semaphore */
+	printf("1.\n");
+	sem_timer = thinkos_sem_alloc(0); 
+	/* allocate event */
+	printf("2.\n");
+	ev_timer = thinkos_ev_alloc(); 
+
+	/* initialize timer 6 */
+	timer_init(STM32F_TIM6);
+
+	/* initialize timer 7 */
+	timer_init(STM32F_TIM7);
+	/* set timer 7 to very high priority */
+	cm3_irq_pri_set(STM32F_IRQ_TIM7, 0x20);
+	cm3_irq_enable(STM32F_IRQ_TIM7);
+
+	/* initialize timer 9 */
+	timer_init(STM32F_TIM9);
+	/* set timer 9 to very low priority */
+	cm3_irq_pri_set(STM32F_IRQ_TIM9, 0xff);
+	cm3_irq_enable(STM32F_IRQ_TIM9);
+
+	printf("4.\n");
+	event_th = thinkos_thread_create(event_wait_task, NULL, 
+						  stack[1], STACK_SIZE, 
+						  THINKOS_OPT_PRIORITY(0) |
+						  THINKOS_OPT_ID(0));
+
+	printf("5.\n");
+	timer_th = thinkos_thread_create(timer_isr_task, NULL, 
+						  stack[2], STACK_SIZE, 
+						  THINKOS_OPT_PRIORITY(0) |
+						  THINKOS_OPT_ID(0));
+
+
+	thinkos_sleep(100);
+
+//	printf("- All times in microseconds\n");
+	printf("| TIM6 IRQ Wait  | TIM7 High Pri  "
+		   "| TIM9 Low Pri   | TIM7 > Ev Wait |\n"); 
+
+	printf("|   dt  avg  max |   dt  avg  max "
+		   "|   dt  avg  max |   dt  avg  max |\n"); 
+		   
+	memset(&meter, 0, sizeof(meter));
+
+	timer_start(STM32F_TIM6);
+	timer_start(STM32F_TIM7);
+	timer_start(STM32F_TIM9);
+
 	ticks0.tim6 = 0;
 	ticks0.tim7 = 0;
 	ticks0.tim9 = 0;
 	ticks0.event = 0;
 
-	printf(" [%d] started.\n", self);
-	for (i = 0; i < 10; i++) {
+//	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 5; i++) {
 		for (ms = 0; ms < 1000; ms++) 
 			thinkos_sem_wait(sem_timer);
 
+		/* get data */
 		max = meter.max;
 		avg = meter.avg;
 		ticks = meter.ticks;
@@ -281,7 +362,7 @@ int low_priority_task(void * arg)
 		dt.event = ticks.event - ticks0.event;
 		ticks0.event = ticks.event;
 
-		printf("| %4d.%4d:%-4d | %4d.%4d:%-4d | %4d %4d:%-4d | %4d %4d:%-4d |\n", 
+		printf("| %4d %4d %4d | %4d %4d %4d | %4d %4d %4d | %4d %4d %4d |\n", 
 			   dt.tim6, avg.tim6, max.tim6, 
 			   dt.tim7, avg.tim7, max.tim7, 
 			   dt.tim9, avg.tim9, max.tim9,
@@ -289,68 +370,13 @@ int low_priority_task(void * arg)
 	}
 	printf("\n");
 
-	printf(" [%d] end.\n", self);
-
-	return 0;
-}
-
-
-#define STACK_SIZE 512
-uint32_t stack[4][STACK_SIZE / 4];
-
-void irq_test(void)
-{
-	int display_th;
-	int timer_th;
-	int priority_th;
-
-	/* allocate semaphore */
-	printf("1.\n");
-	sem_timer = thinkos_sem_alloc(0); 
-	printf("2.\n");
-	wq_timer = thinkos_wq_alloc(); 
-
-	printf("4.\n");
-	priority_th = thinkos_thread_create(high_priority_task, NULL, 
-						  stack[1], STACK_SIZE, 
-						  THINKOS_OPT_PRIORITY(0) |
-						  THINKOS_OPT_ID(0));
-
-	printf("5.\n");
-	timer_th = thinkos_thread_create(timer_isr_task, NULL, 
-						  stack[2], STACK_SIZE, 
-						  THINKOS_OPT_PRIORITY(0) |
-						  THINKOS_OPT_ID(0));
-	printf("3.\n");
-	display_th = thinkos_thread_create(low_priority_task, NULL, 
-						  stack[0], STACK_SIZE, 
-						  THINKOS_OPT_PRIORITY(8) |
-						  THINKOS_OPT_ID(64));
-
-	tim7_init();
-	/* set timer 7 to very high priority */
-	cm3_irq_pri_set(STM32F_IRQ_TIM7, 0x20);
-
-	tim9_init();
-	/* set timer 9 to very low priority */
-	cm3_irq_pri_set(STM32F_IRQ_TIM9, 0xff);
-
-	cm3_irq_enable(STM32F_IRQ_TIM7);
-
-	cm3_irq_enable(STM32F_IRQ_TIM9);
-
-	/* wait for the display thread to finish */
-	thinkos_join(display_th);
-
-	thinkos_cancel(priority_th, 0);
-
-	thinkos_cancel(timer_th, 0);
-
 	cm3_irq_disable(STM32F_IRQ_TIM7);
-
 	cm3_irq_disable(STM32F_IRQ_TIM9);
 
-	thinkos_wq_free(wq_timer);
+	thinkos_cancel(event_th, 0);
+	thinkos_cancel(timer_th, 0);
+
+	thinkos_ev_free(ev_timer);
 	thinkos_sem_free(sem_timer);
 }
 
@@ -372,7 +398,7 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(7));
 
 	io_init();
 
@@ -380,7 +406,7 @@ int main(int argc, char ** argv)
 
 	printf("---------------------------------------------------------\n");
 
-	thinkos_sleep(10000);
+	thinkos_sleep(5000);
 
 	return 0;
 }

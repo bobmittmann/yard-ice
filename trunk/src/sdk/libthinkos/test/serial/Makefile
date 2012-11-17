@@ -23,19 +23,17 @@ PROG = serial
 
 CFILES = serial.c
 
-MACH = stm32f207
-
-
-LIBDIRS = ../../../stm32f ../../../libcm3 ../../../libutil \
-		  ../../../thinkos ../../../libc  ../../../libice-comm
+LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
+		  ../../../libthinkos ../../../libc ../../../libice-comm
 
 LIBS = stm32f cm3 util thinkos c ice-comm
 
+INCPATH = ../../../include
+
 CFLAGS = -g -O2 
 
-CDEFS = "CM3_SYSTICK_CLK_HZ=15000000" 
+JTAGTOOL_ADDR = 192.168.0.80
 
-JTAGTOOL_ADDR = 192.168.1.30
+include ../../../../mk/stm32f207.mk
 
-include ../../../../mk/cortex-m3.mk
 

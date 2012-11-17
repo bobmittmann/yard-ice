@@ -19,48 +19,40 @@
  * http://www.gnu.org/
  */
 
-#define __THINKOS_SYS__
-#include <thinkos_sys.h>
-
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
-
 #include <thinkos.h>
 
 #include <stdio.h>
 
 void cm3_default_isr(int irq) 
 {
-	int idx;
+	int th;
 
 	/* disable this interrupt source */
 	cm3_irq_disable(irq);
 
-	idx = cm3_irq_pri_get(irq) >> 4;
-
-//	printf("[%d > %d]", irq, idx);
+	th = thinkos_rt.irq_th[irq];
 
 	/* insert the thread into ready queue */
-	bmp_bit_set(&thinkos_rt.wq_ready, idx);  
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
 
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 }
 
-void thinkos_irq_wait(int irq)
+void thinkos_irq_wait_svc(int32_t * arg)
 {
-	int32_t self = thinkos_rt.active;
+	unsigned int irq = arg[0];
 
-	cm3_irq_pri_set(irq, self << 4);
-
-//	printf("%s(): <%d> wait @ irq %d...\n", __func__, self, irq);
-
-	__thinkos_critical_enter();
-	/* wait for event */
-	__thinkos_wait();
-	/* enable this interrupt source */
-	cm3_irq_enable(irq);
-	__thinkos_critical_exit();
+#if THINKOS_ENABLE_ARG_CHECK
+	if (irq >= THINKOS_IRQ_MAX) {
+		DCC_LOG1(LOG_ERROR, "invalid IRQ %d!", irq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+	__thinkos_irq_wait(irq);
 }
 
 

@@ -93,6 +93,7 @@ STRIP = $(CROSS_COMPILE)strip
 
 ifneq ($(dbg_level),0) 
   CDEFS := $(CDEFS) DEBUG=$(dbg_level)
+  CFLAGS += -g
 endif
 
 INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))

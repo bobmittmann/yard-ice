@@ -66,6 +66,8 @@
 #define THINKOS_EVENT_TIMEDWAIT 30
 #define THINKOS_EVENT_RAISE 31
 
+#define THINKOS_IRQ_WAIT 32
+
 #ifndef __ASSEMBLER__
 
 /* -------------------------------------------------------------------------- 
@@ -264,6 +266,10 @@ static inline int thinkos_ev_timedwait(int ev, unsigned int ms)  {
 
 static inline int thinkos_ev_raise(int ev)  {
 	return THINKOS_SVC1(THINKOS_EVENT_RAISE, ev);
+}
+
+static inline int thinkos_irq_wait(int irq)  {
+	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
 }
 
 #ifdef __cplusplus

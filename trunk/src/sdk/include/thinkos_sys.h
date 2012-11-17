@@ -79,6 +79,10 @@ struct thinkos_context {
 #define THINKOS_THREADS_MAX 8
 #endif
 
+#ifndef THINKOS_IRQ_MAX 
+#define THINKOS_IRQ_MAX 80
+#endif
+
 #ifndef THINKOS_ENABLE_THREAD_ALLOC
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 #endif
@@ -270,6 +274,10 @@ struct thinkos_rt {
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
+#if THINKOS_IRQ_MAX > 0
+	int8_t irq_th[THINKOS_IRQ_MAX];
+#endif /* THINKOS_IRQ_MAX */
+
 #if THINKOS_ENABLE_THREAD_ALLOC
 	uint32_t th_alloc;
 #endif
@@ -390,18 +398,18 @@ void cm3_msp_init(uint64_t * stack_top);
  * --------------------------------------------------------------------------*/
 
 /* set a bit in a bit map atomically */
-static void inline bmp_bit_set(void * bmp, unsigned int bit)
+static void inline __attribute__((always_inline)) bmp_bit_set(void * bmp, unsigned int bit)
 {
 	__bit_mem_wr(bmp, bit, 1);  
 }
 
 /* clear a bit in a bit map atomically */
-static void inline bmp_bit_clr(void * bmp, unsigned int bit)
+static void inline __attribute__((always_inline)) bmp_bit_clr(void * bmp, unsigned int bit)
 {
 	__bit_mem_wr(bmp, bit, 0);  
 }
 
-static inline int thinkos_alloc_lo(uint32_t * ptr, int start) {
+static inline int __attribute__((always_inline)) thinkos_alloc_lo(uint32_t * ptr, int start) {
 	int idx;
 	/* Look for an empty bit MSB first */
 	idx = __clz(__rbit(~(*ptr >> start))) + start;
@@ -412,7 +420,7 @@ static inline int thinkos_alloc_lo(uint32_t * ptr, int start) {
 	return idx;
 }
 
-static inline int thinkos_alloc_hi(uint32_t * ptr, int start) {
+static inline int __attribute__((always_inline)) thinkos_alloc_hi(uint32_t * ptr, int start) {
 	int idx;
 	/* Look for an empty bit LSB first */
 	idx = start - __clz(~(*ptr << (31 - start)));
@@ -424,13 +432,13 @@ static inline int thinkos_alloc_hi(uint32_t * ptr, int start) {
 }
 
 /* flags a defered execution of the scheduller */
-static void inline __thinkos_defer_sched(void) {
+static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	struct cm3_scb * scb = CM3_SCB;
 	/* rise a pending service interrupt */
 	scb->icsr = SCB_ICSR_PENDSVSET;
 }
 
-static void inline __thinkos_wait(void) {
+static void inline __attribute__((always_inline)) __thinkos_wait(void) {
 	/* set the non schedule flag */
 	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
 #if THINKOS_ENABLE_TIMESHARE
@@ -468,7 +476,7 @@ static void inline __thinkos_wq_insert(uint32_t * wq, int32_t idx) {
 #define THINKOS_THREAD_NULL THINKOS_IDX_NULL
 #define THINKOS_THREAD_IDLE THINKOS_IDX_NULL
 
-static int inline __wq_idx(uint32_t * ptr) {
+static int inline __attribute__((always_inline)) __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;
 }
 
@@ -479,12 +487,12 @@ static int inline __thinkos_wq_head(uint32_t * wqptr) {
 }
 #endif
 
-static int inline __thinkos_wq_head(unsigned int wq) {
+static int inline __attribute__((always_inline)) __thinkos_wq_head(unsigned int wq) {
 	/* get a thread from the queue bitmap */
 	return __clz(__rbit(thinkos_rt.wq_lst[wq]));
 }
 
-static void inline __thinkos_wq_insert(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) __thinkos_wq_insert(unsigned int wq, unsigned int th) {
 	/* insert into the event wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
 #if THINKOS_ENABLE_THREAD_STAT
@@ -492,7 +500,7 @@ static void inline __thinkos_wq_insert(unsigned int wq, unsigned int th) {
 #endif
 }
 
-static void inline __thinkos_tmdwq_insert(unsigned int wq, 
+static void inline __attribute__((always_inline)) __thinkos_tmdwq_insert(unsigned int wq, 
 										  unsigned int th,
 										  unsigned int ms) {
 	/* set the clock */
@@ -507,7 +515,7 @@ static void inline __thinkos_tmdwq_insert(unsigned int wq,
 #endif
 }
 
-static void inline __thinkos_wq_remove(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) __thinkos_wq_remove(unsigned int wq, unsigned int th) {
 	/* remove from the wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -516,7 +524,7 @@ static void inline __thinkos_wq_remove(unsigned int wq, unsigned int th) {
 #endif
 }
 
-static void inline __thinkos_wakeup(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) __thinkos_wakeup(unsigned int wq, unsigned int th) {
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_READY], th, 1);
 	/* remove from the wait queue */
