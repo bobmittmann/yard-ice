@@ -33,7 +33,8 @@ enum usb_state {
 	USB_STATE_POWERED,
 	USB_STATE_DEFAULT,
 	USB_STATE_ADDRESS,
-	USB_STATE_CONFIGURED
+	USB_STATE_CONFIGURED,
+	USB_STATE_SUSPENDED
 };
 
 struct usb_cfg;
@@ -46,30 +47,30 @@ struct usb_cfg;
   hub reset or |   |
   deconfigured |   |
                |   v
-           +------------+
-  power -->| POWERED    |
-  fail     +------------+
+           +------------+    +------------+
+  power -->| POWERED    |<-->| SUSPENDED  |
+  fail     +------------+    +------------+
                    |
                    |
-                   |
+                   | reset
                    v
-           +------------+
-  reset -->| DEFAULT    |
-           +------------+
+           +------------+    +------------+
+  reset -->| DEFAULT    |<-->| SUSPENDED  |
+           +------------+    +------------+
                    |
-                   |
-                   |
+                   | address 
+                   | assigned
                    v
-           +------------+
-           | ADDRESS    |
-           +------------+
+           +------------+    +------------+
+           | ADDRESS    |<-->| SUSPENDED  |
+           +------------+    +------------+
                ^   |
-  device       |   |
-  deconfigured |   |
+  device       |   | device
+  deconfigured |   | configured
                |   v
-           +------------+
-           | CONFIGURED |
-           +------------+
+           +------------+    +------------+
+           | CONFIGURED |<-->| SUSPENDED  |
+           +------------+    +------------+
 */
 
 struct usb_request {

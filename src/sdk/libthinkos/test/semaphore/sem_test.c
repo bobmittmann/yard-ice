@@ -115,7 +115,7 @@ void semaphore_test(void)
 	for (i = 0; i < 100; i++) {
 		printf(" %3d ", i);
 		/* wait for an item to be produced */
-		while (thinkos_sem_timedwait(sem_full, 50) == THINKOS_TIMEDOUT) {
+		while (thinkos_sem_timedwait(sem_full, 50) == THINKOS_ETIMEDOUT) {
 			printf(".");
 		}
 

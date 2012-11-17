@@ -30,6 +30,18 @@
  #define ENABLE_LOG 
  #ifdef DEBUG_LEVEL
   #define LOG_LEVEL DEBUG_LEVEL
+ #elif DEBUG == 2
+  #define LOG_LEVEL 2
+ #elif DEBUG == 3
+  #define LOG_LEVEL 3
+ #elif DEBUG == 4
+  #define LOG_LEVEL 4
+ #elif DEBUG == 5
+  #define LOG_LEVEL 5
+ #elif DEBUG == 6
+  #define LOG_LEVEL 6
+ #elif DEBUG == 7
+  #define LOG_LEVEL 7
  #endif
  #undef DEBUG
  #undef DEBUG_LEVEL
@@ -67,6 +79,7 @@ struct trace_entry {
 #ifdef ENABLE_LOG
 
 #define DCC_LOG_INIT() ice_trace_init()
+#define DCC_LOG_CONNECT() ice_comm_connect()
 
 #define DCC_LOG(__LVL, __MSG) \
 	{ if (__LVL <= LOG_LEVEL)  { ice_trace0( ({ \
@@ -172,6 +185,7 @@ struct trace_entry {
 #else
 
 #define DCC_LOG_INIT()
+#define DCC_LOG_CONNECT()
 #define DCC_LOG(__LVL, __MSG)
 #define DCC_LOG1(__LVL, __FMT, __A)
 #define DCC_LOG2(__LVL, __FMT, __A, __B)
@@ -185,6 +199,7 @@ struct trace_entry {
 #define DCC_LOG10(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H, __I, __J)
 
 #endif
+
 
 #define LOG0(__LVL, __MSG) DCC_LOG(__LVL, __MSG)
 
@@ -215,7 +230,7 @@ extern "C" {
 
 void ice_trace_init(void);
 
-int ice_trace_connect(unsigned int tmo);
+void ice_comm_connect();
 
 void ice_trace0(const struct trace_entry * __entry);
 

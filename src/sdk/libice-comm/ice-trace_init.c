@@ -26,7 +26,7 @@
 #include <sys/dcclog.h>
 #include <arch/cortex-m3.h>
 
-void __attribute__((constructor)) ice_trace_init(void)
+void ice_trace_init(void)
 {
 	static const char __f[] 
 		__attribute__ ((section(".dccdata"))) = __FILE__;

@@ -483,12 +483,12 @@ extern "C" {
 #endif
 
 /* Enable Interrupt in NVIC Interrupt Controller */
-static inline void cm3_irq_enable(int irq) {
+static inline void __attribute__((always_inline)) cm3_irq_enable(int irq) {
 	CM3_NVIC->iser[irq >> 5] = (1 << (irq & 0x1f));
 }
 
 /* Disable the interrupt line for external interrupt specified */
-static inline void cm3_irq_disable(int irq) {
+static inline void __attribute__((always_inline)) cm3_irq_disable(int irq) {
 	CM3_NVIC->icer[irq >> 5] = (1 << (irq & 0x1f));
 }
 
@@ -502,49 +502,49 @@ static inline int cm3_irq_pend_get(int irq) {
 }
 
 /* Set the pending bit for an external interrupt */
-static inline void cm3_irq_pend_set(int irq) {
+static inline void __attribute__((always_inline)) cm3_irq_pend_set(int irq) {
 	CM3_NVIC->ispr[irq >> 5] = (1 << (irq & 0x1f));
 }
 
 /* Clear the pending bit for an external interrupt */
-static inline void cm3_irq_pend_clr(int irq) {
+static inline void __attribute__((always_inline)) cm3_irq_pend_clr(int irq) {
 	CM3_NVIC->icpr[irq >> 5] = (1 << (irq & 0x1f));
 }
 
 /* Read the active bit for an external interrupt */
-static inline int cm3_irq_act_get(int irq) {
+static inline int __attribute__((always_inline)) cm3_irq_act_get(int irq) {
 	return (CM3_NVIC->iabr[irq >> 5] & (1 << (irq & 0x1f))) ? 1 : 0;
 }
 
 /* Set the priority for an interrupt */
-static inline void cm3_irq_pri_set(int irq, int pri) {
+static inline void __attribute__((always_inline)) cm3_irq_pri_set(int irq, int pri) {
 	CM3_NVIC->ip[irq] = pri;
 }
 
 /* Get the priority for an interrupt */
-static inline int cm3_irq_pri_get(int irq) {
+static inline int __attribute__((always_inline)) cm3_irq_pri_get(int irq) {
 	return CM3_NVIC->ip[irq];
 }
 
 /* Set Priority for Cortex-M3 System Interrupts */
-static inline void cm3_except_pri_set(int xcpt, int pri) {
+static inline void __attribute__((always_inline)) cm3_except_pri_set(int xcpt, int pri) {
 	CM3_SCB->shp[xcpt - 4] = pri;
 }
 
 /* Get Priority for Cortex-M3 System Interrupts */
-static inline int cm3_except_pri_get(int xcpt) {
+static inline int __attribute__((always_inline)) cm3_except_pri_get(int xcpt) {
 	return CM3_SCB->shp[xcpt - 4];
 }
 
 /* read a bit from a bitbang memory region */
-static uint32_t inline __bit_mem_rd(void * ptr, int32_t bit) {
+static uint32_t inline __attribute__((always_inline)) __bit_mem_rd(void * ptr, int32_t bit) {
 	/* get the bitband bit address */
 	uint32_t * bit_addr = CM3_BITBAND_MEM(ptr, 0);
 	return bit_addr[bit];
 }
 
 /* write a bit into a bitbang memory region */
-static void inline __bit_mem_wr(void * ptr, int32_t bit, uint32_t val) {
+static inline void __attribute__((always_inline)) __bit_mem_wr(void * ptr, int32_t bit, uint32_t val) {
 	/* get the bitband bit address */
 	uint32_t * bit_addr = CM3_BITBAND_MEM(ptr, 0);
 	bit_addr[bit] = val;
@@ -556,7 +556,7 @@ static void inline __bit_mem_wr(void * ptr, int32_t bit, uint32_t val) {
 #define CONTROL_THREAD_MSP (0 << 1)
 #define CONTROL_THREAD_PSP (1 << 1)
 
-static inline void cm3_control_set(uint32_t val) {
+static inline void __attribute__((always_inline)) cm3_control_set(uint32_t val) {
 	asm volatile ("msr CONTROL, %0\n" : : "r" (val));
 }
 
@@ -571,125 +571,131 @@ static inline uint32_t __attribute__((always_inline)) cm3_basepri_get(void) {
 	return val;
 }
 
-static inline uint32_t cm3_ipsr_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_ipsr_get(void) {
 	uint32_t ipsr;
 	asm volatile ("mrs %0, IPSR\n" : "=r" (ipsr));
 	return ipsr;
 }
 
-static void inline __attribute__((always_inline)) cm3_cpsid_i(void) {
+static inline void __attribute__((always_inline)) cm3_cpsid_i(void) {
 	asm volatile ("cpsid i\n");
 }
 
-static void inline __attribute__((always_inline)) cm3_cpsie_i(void) {
+static inline void __attribute__((always_inline)) cm3_cpsie_i(void) {
 	asm volatile ("cpsie i\n");
 }
 
 /* disable interrupts and fault handlers (set fault mask) */
-static void inline __attribute__((always_inline)) cm3_cpsid_f(void) {
+static inline void __attribute__((always_inline)) cm3_cpsid_f(void) {
 	asm volatile ("cpsid f\n");
 }
 
 /* enable interrupts and fault handlers (set fault mask) */
-static void inline __attribute__((always_inline)) cm3_cpsie_f(void) {
+static inline void __attribute__((always_inline)) cm3_cpsie_f(void) {
 	asm volatile ("cpsie f\n");
 }
 
-static inline void cm3_primask_set(uint32_t val) {
+static inline void __attribute__((always_inline)) cm3_primask_set(uint32_t val) {
 	asm volatile ("msr PRIMASK, %0\n" : : "r" (val));
 }
 
-static inline uint32_t cm3_primask_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_primask_get(void) {
 	uint32_t val;
 	asm volatile ("mrs %0, PRIMASK\n" : "=r" (val));
 	return val;
 }
 
-static inline void  cm3_faultmask_set(uint32_t val) {
+static inline void __attribute__((always_inline)) cm3_faultmask_set(uint32_t val) {
 	asm volatile ("msr FAULTMASK, %0\n" : : "r" (val));
 }
 
-static inline uint32_t cm3_faultmask_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_faultmask_get(void) {
 	uint32_t val;
 	asm volatile ("mrs %0, FAULTMASK\n" : "=r" (val));
 	return val;
 }
 
-static inline void cm3_msp_set(uint32_t val) {
+static inline void __attribute__((always_inline)) cm3_msp_set(uint32_t val) {
 	asm volatile ("msr MSP, %0\n" : : "r" (val));
 }
 
-static inline uint32_t cm3_msp_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_msp_get(void) {
 	uint32_t msp;
 	asm volatile ("mrs %0, MSP\n" : "=r" (msp));
 	return msp;
 }
 
-static inline void cm3_psp_set(uint32_t val) {
+static inline void __attribute__((always_inline)) cm3_psp_set(uint32_t val) {
 	asm volatile ("msr PSP, %0\n" : : "r" (val));
 }
 
-static inline uint32_t cm3_psp_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_psp_get(void) {
 	uint32_t psp;
 	asm volatile ("mrs %0, PSP\n" : "=r" (psp));
 	return psp;
 }
 
-static inline uint32_t cm3_sp_get(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_sp_get(void) {
 	register uint32_t sp;
 	asm volatile ("mov %0, sp\n" : "=r" (sp));
 	return sp;
 }
 
-static inline uint32_t __clz(uint32_t val) {
+static inline uint32_t __attribute__((always_inline)) cm3_lr_get(void) {
+	register uint32_t lr;
+	asm volatile ("mov %0, lr\n" : "=r" (lr));
+	return lr;
+}
+
+static inline uint32_t __attribute__((always_inline)) __clz(uint32_t val) {
 	register uint32_t ret;
 	asm volatile ("clz %0, %1\n" : "=r" (ret) : "r" (val));
 	return ret;
 }
 
-static inline uint32_t __rbit(uint32_t val) {
+static inline uint32_t __attribute__((always_inline)) __rbit(uint32_t val) {
 	register uint32_t ret;
 	asm volatile ("rbit %0, %1\n" : "=r" (ret) : "r" (val));
 	return ret;
 }
 
-static inline uint8_t __ldrexb(uint8_t * addr) {
+static inline uint8_t __attribute__((always_inline)) __ldrexb(uint8_t * addr) {
 	register uint8_t ret;
 	asm volatile ("ldrexb %0, [%1]" : "=r" (ret) : "r" (addr));
 	return ret;
 }
 
-static inline uint32_t __ldrexh(uint16_t * addr) {
+static inline uint32_t __attribute__((always_inline)) __ldrexh(uint16_t * addr) {
 	register uint16_t ret;
 	asm volatile ("ldrexh %0, [%1]" : "=r" (ret) : "r" (addr));
 	return ret;
 }
 
-static inline uint32_t __ldrexw(uint32_t * addr) {
+static inline uint32_t __attribute__((always_inline)) __ldrexw(uint32_t * addr) {
 	register uint32_t ret;
 	asm volatile ("ldrex %0, [%1]" : "=r" (ret) : "r" (addr));
 	return ret;
 }
 
-static inline uint32_t __strexb(uint8_t * addr, uint8_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexb(uint8_t * addr, uint8_t val) {
 	register uint32_t ret;
 	asm volatile ("strexb %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __strexh(uint16_t * addr, uint16_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexh(uint16_t * addr, uint16_t val) {
 	register uint32_t ret;
 	asm volatile ("strexh %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __strexw(uint32_t * addr, uint32_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexw(uint32_t * addr, uint32_t val) {
 	register uint32_t ret;
 	asm volatile ("strex %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline void __clrx(void) {
+static inline void __attribute__((always_inline)) __clrx(void) {
 	asm volatile ("clrex" : );
 }
 

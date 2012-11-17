@@ -109,9 +109,18 @@ int thinkos_sem_timedwait(int sem, unsigned int ms);
 int thinkos_sem_post(int sem);
 
 
-void thinkos_irq_wait(int irq);
+int thinkos_ev_alloc(void);
 
-uint32_t thinkos_idle_val(void);
+int thinkos_ev_free(int ev);
+
+int thinkos_ev_wait(int ev);
+
+int thinkos_ev_timedwait(int ev, unsigned int ms);
+
+int thinkos_ev_raise(int ev);
+
+
+int thinkos_irq_wait(int irq);
 
 #ifdef __cplusplus
 }

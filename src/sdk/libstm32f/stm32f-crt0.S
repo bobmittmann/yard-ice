@@ -142,8 +142,11 @@ _reset:
 	.type   _reset, %function
 
 	/* jump to hardware initialization code */
+	/* disable interrupts */
+	cpsid   i
 	bl		_init
 
+0:
 	/* copy initialized variables .data section  (Copy from ROM to RAM) */
 	ldr     r2, .L_data_start
 	ldr     r3, .L_data_end
