@@ -891,8 +891,8 @@
 #define OTG_FS_PKTSTS_GET(REG) (((REG) & OTG_FS_PKTSTS_MSK) >> 17)
 
 #define OTG_FS_PKTSTS_GOUT_NACK  (0x1 << 17)
-#define OTG_FS_PKTSTS_DATA_UPDT  (0x2 << 17)
-#define OTG_FS_PKTSTS_XFER_COMP  (0x3 << 17)
+#define OTG_FS_PKTSTS_OUT_DATA_UPDT  (0x2 << 17)
+#define OTG_FS_PKTSTS_OUT_XFER_COMP  (0x3 << 17)
 #define OTG_FS_PKTSTS_SETUP_COMP (0x4 << 17)
 #define OTG_FS_PKTSTS_SETUP_UPDT (0x6 << 17)
 /* Indicates the status of the received packet
@@ -904,7 +904,7 @@
    Others: Reserved */
 
 /* Bits [16..15] - Data PID */
-#define OTG_FS_DPID ((16 - 15) << 15)
+#define OTG_FS_DPID_STAT ((16 - 15) << 15)
 /* Indicates the Data PID of the received OUT data packet
    00: DATA0
    10: DATA1
@@ -2145,6 +2145,9 @@ completion. */
 
 /* Bits [19..18] - Endpoint type */
 #define OTG_FS_EPTYP ((19 - 18) << 18)
+#define OTG_FS_EPTYP_MSK (((1 << (19 - 18 + 1)) - 1) << 18)
+#define OTG_FS_EPTYP_SET(VAL) (((VAL) << 18) & OTG_FS_EPTYP_MSK)
+#define OTG_FS_EPTYP_GET(REG) (((REG) & OTG_FS_EPTYP_MSK) >> 18)
 /* This is the transfer type supported by this logical endpoint.
  * 00: Control
  * 01: Isochronous
@@ -2153,7 +2156,7 @@ completion. */
 #define OTG_FS_EPTYP_CTRL (0 << 18)
 #define OTG_FS_EPTYP_ISOC (1 << 18)
 #define OTG_FS_EPTYP_BULK (2 << 18)
-#define OTG_FS_EPTYP_INT (2 << 18)
+#define OTG_FS_EPTYP_INT (3 << 18)
 
 /* Bit 17 - NAK status */
 #define OTG_FS_NAKSTS (1 << 17)
@@ -2180,7 +2183,7 @@ completion. */
    1: Odd frame */
 
 /* Bit 16 - Endpoint data PID */
-#define OTG_FS_DPIDN (1 << 16)
+#define OTG_FS_DPID (1 << 16)
 #define OTG_FS_DPID0 (0 << 16)
 #define OTG_FS_DPID1 (1 << 16)
 /* Applies to interrupt/bulk IN endpoints only.
@@ -2379,6 +2382,7 @@ completion. */
 
 /* Bits [19..18] - Endpoint type */
 #define OTG_FS_EPTYP ((19 - 18) << 18)
+#define OTG_FS_EPTYP_MSK (((1 << (19 - 18 + 1)) - 1) << 18)
 /* This is the transfer type supported by this logical endpoint.
  * 00: Control
  * 01: Isochronous
@@ -2387,7 +2391,7 @@ completion. */
 #define OTG_FS_EPTYP_CTRL (0 << 18)
 #define OTG_FS_EPTYP_ISOC (1 << 18)
 #define OTG_FS_EPTYP_BULK (2 << 18)
-#define OTG_FS_EPTYP_INT (2 << 18)
+#define OTG_FS_EPTYP_INT (3 << 18)
 
 /* Bit 17 - NAK status */
 #define OTG_FS_NAKSTS (1 << 17)
@@ -2412,7 +2416,9 @@ completion. */
    1: Odd frame */
 
 /* Bit 16 - Endpoint data PID */
-#define OTG_FS_DPID ((16 - 15) << 15)
+#define OTG_FS_DPID (1 << 16)
+#define OTG_FS_DPID0 (0 << 16)
+#define OTG_FS_DPID1 (1 << 16)
 /* Applies to interrupt/bulk OUT endpoints only.
    Contains the PID of the packet to be received or transmitted on this 
    endpoint. The application must program the PID of the first packet to 
@@ -2760,7 +2766,7 @@ completion. */
 struct stm32f_otg_fs {
 	/* 0x000 */
 	volatile uint32_t gotgctl;
-	volatile uint32_t gotgin;
+	volatile uint32_t gotgint;
 	volatile uint32_t gahbcfg;
 	volatile uint32_t gusbcfg;
 	/* 0x010 */
@@ -2866,10 +2872,13 @@ struct stm32f_otg_fs {
 	struct {
 		union {
 			volatile uint32_t pop;
-			uint32_t push;
+			volatile uint32_t push;
 		};
 		uint32_t res1[(0x1000 - 4) / 4];
 	} dfifo[8];
+	uint32_t res15[(0x20000 - (0x1000 + (8 * 0x1000))) / 4];
+	/* 0x20000 */
+	uint32_t ram[32768];
 };
 
 #endif /* __ASSEMBLER__ */

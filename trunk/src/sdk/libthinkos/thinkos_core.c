@@ -392,7 +392,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* enable interrupts */
 	cm3_cpsie_i();
 
-	DCC_LOG1(LOG_TRACE, "<%d>", self);
+	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
+			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
 
 	return self;
 }

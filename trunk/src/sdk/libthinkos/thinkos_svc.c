@@ -90,12 +90,12 @@ void thinkos_ev_raise_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
-static inline uint32_t cm3_svc_stackframe(void) {
+static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
 	register uint32_t sp;
 	asm volatile ("tst lr, #4\n" 
 				  "ite eq\n" 
-				  "mrseq r0, MSP\n" 
-				  "mrsne r0, PSP\n" 
+				  "mrseq %0, MSP\n" 
+				  "mrsne %0, PSP\n" 
 				  : "=r" (sp));
 	return sp;
 }

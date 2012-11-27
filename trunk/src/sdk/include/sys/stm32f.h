@@ -221,6 +221,31 @@ static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode,
 	stm32f_gpio_mode(gpio, __io.pin, __mode, __opt);
 }
 
+/*---------------------------------------------------------------------
+ * USB OTG Full Speed
+ *---------------------------------------------------------------------*/
+
+void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_txfifo_flush(struct stm32f_otg_fs * otg_fs, 
+								unsigned int num);
+
+void stm32f_otg_fs_rxfifo_flush(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_addr_set(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr, 
+							 unsigned int type, unsigned int mpsiz);
+
+void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
+				 unsigned int addr, unsigned int len);
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __SYS_STM32F_H__ */

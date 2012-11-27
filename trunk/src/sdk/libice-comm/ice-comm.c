@@ -35,6 +35,7 @@ void ice_comm_connect(void)
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
+	ice_comm_blk.dev = DEV_SYNC;
 	while (ice_comm_blk.dbg != DBG_CONNECTED) {
 		if (ice_comm_blk.dbg == DBG_SYNC)
 			ice_comm_blk.dev = DEV_CONNECTED;

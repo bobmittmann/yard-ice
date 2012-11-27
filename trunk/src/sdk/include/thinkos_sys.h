@@ -524,7 +524,8 @@ static void inline __attribute__((always_inline)) __thinkos_wq_remove(unsigned i
 #endif
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wakeup(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) 
+	__thinkos_wakeup(unsigned int wq, unsigned int th) {
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_READY], th, 1);
 	/* remove from the wait queue */
