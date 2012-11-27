@@ -45,28 +45,32 @@
 extern "C" {
 #endif
 
-static inline void __thinkos_critical_enter(void)  {
+static inline void 
+__attribute__((always_inline)) __thinkos_critical_enter(void)  {
 	/* rise the BASEPRI to stop the scheduler */
 	cm3_basepri_set(SCHED_PRIORITY); 
 }
 
-static inline void __thinkos_critical_exit(void)  {
+static inline void 
+__attribute__((always_inline)) __thinkos_critical_exit(void)  {
 	/* return the BASEPRI to the default to reenable the scheduler. */
 	cm3_basepri_set(0x00);
 }
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-static inline int __thinkos_ev_alloc(void) {
+static inline int 
+__attribute__((always_inline)) __thinkos_ev_alloc(void) {
 	return thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0);
 }
 
-static inline void __thinkos_ev_free(int ev)
-{
+static inline void 
+__attribute__((always_inline)) __thinkos_ev_free(int ev) {
 	__bit_mem_wr(&thinkos_rt.ev_alloc, ev, 0);
 }
 #endif
 
-static inline void __thinkos_ev_wait(int ev) {
+static inline void 
+__attribute__((always_inline)) __thinkos_ev_wait(int ev) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
 	/* prepare to wait ... */
@@ -76,7 +80,8 @@ static inline void __thinkos_ev_wait(int ev) {
 	__thinkos_critical_enter();
 }
 
-static inline void __thinkos_ev_raise(int ev) {
+static inline void 
+__attribute__((always_inline)) __thinkos_ev_raise(int ev) {
 	int th;
 
 	if ((th = __thinkos_wq_head(ev)) != THINKOS_THREAD_NULL) {
@@ -94,17 +99,19 @@ static inline void __thinkos_ev_raise(int ev) {
 }
 
 /* set the interrupt priority */
-static inline void __thinkos_irq_pri_set(unsigned int irq, 
-										 unsigned int priority) {
+static inline void 
+__attribute__((always_inline)) __thinkos_irq_pri_set(unsigned int irq, unsigned int priority) {
 	cm3_irq_pri_set(irq, priority);
 }
 
 /* enable interrupts */
-static inline void __thinkos_irq_enable(unsigned int irq) {
+static inline void 
+__attribute__((always_inline)) __thinkos_irq_enable(unsigned int irq) {
 	cm3_irq_enable(irq);
 }
 
-static inline void __thinkos_irq_wait(int irq) {
+static inline void 
+__attribute__((always_inline)) __thinkos_irq_wait(int irq) {
 	int32_t self = thinkos_rt.active;
 	/* store the thread info */
 	thinkos_rt.irq_th[irq] = self;

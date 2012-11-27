@@ -560,6 +560,12 @@ static inline void __attribute__((always_inline)) cm3_control_set(uint32_t val) 
 	asm volatile ("msr CONTROL, %0\n" : : "r" (val));
 }
 
+static inline uint32_t __attribute__((always_inline)) cm3_control_get(void) {
+	uint32_t val;
+	asm volatile ("mrs %0, CONTROL\n" : "=r" (val));
+	return val;
+}
+
 static inline void __attribute__((always_inline)) 
 	cm3_basepri_set(uint32_t val) {
 	asm volatile ("msr BASEPRI, %0\n" : : "r" (val));

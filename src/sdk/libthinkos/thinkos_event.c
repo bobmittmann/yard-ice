@@ -38,7 +38,7 @@ void thinkos_ev_alloc_svc(int32_t * arg)
 	ev = __thinkos_ev_alloc();
 	wq = ev + THINKOS_EVENT_BASE;
 
-	DCC_LOG2(LOG_TRACE, "event=%d wq=%d", ev, wq);
+	DCC_LOG2(LOG_INFO, "event=%d wq=%d", ev, wq);
 	arg[0] = wq;
 }
 
@@ -55,7 +55,7 @@ void thinkos_ev_free_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG2(LOG_TRACE, "event=%d wq=%d", ev, wq);
+	DCC_LOG2(LOG_INFO, "event=%d wq=%d", ev, wq);
 	__thinkos_ev_free(ev);
 }
 #endif

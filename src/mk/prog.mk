@@ -179,5 +179,5 @@ endif
 
 include $(MKDIR)/jtag.mk
 
-#include $(DFILES)
+include $(DFILES)
 

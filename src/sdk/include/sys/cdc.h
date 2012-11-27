@@ -150,6 +150,8 @@
 #define CDC_NOTIFICATION_NETWORK_CONNECTION 0x00
 #define CDC_NOTIFICATION_SERIAL_STATE       0x20
 
+#define USB_CDC_NOTIFICATION 0xa1
+
 /* Header functional descriptor 
    This header must precede any list of class-specific descriptors.
    usbcdc11.pdf - Section 5.2.3.1 */
@@ -213,10 +215,10 @@ struct cdc_call_management_descriptor {
 
 /* Union functional descriptors with one slave interface */
 struct cdc_union_1slave_descriptor  {
-	/* Union functional descriptor */
-	struct cdc_union_descriptor sUnion;
-	/* Slave interface 0 */
-	uint8_t bSlaveInterfaces[1];
+	    /* Union functional descriptor */
+	    struct cdc_union_descriptor sUnion;
+		    /* Slave interface 0 */
+		    uint8_t bSlaveInterfaces[1];
 } __attribute__((__packed__));
 
 /* Line coding structure 
@@ -233,12 +235,55 @@ struct cdc_line_coding {
     uint8_t bDataBits;
 } __attribute__((__packed__));
 
+/* Communication Interface Class notifications that the device uses to 
+   notify the host of interface, or endpoint events. */
+
+struct cdc_notification {
+	/* Characteristics of the request */
+	uint8_t bmRequestType;
+	/* Particular notification */
+	uint8_t bNotification;
+	/* Request-specific parameter */
+	uint16_t wValue;
+	/* Request-specific parameter */
+	uint16_t wIndex;
+	/* Length of data for the data phase */
+	uint16_t wLength;
+	/* data */
+	uint8_t bData[];
+} __attribute__((__packed__));
+
+
+/* Serial state notification */
+struct serial_state {
+	/* Characteristics of the request */
+	uint8_t bmRequestType;
+	/* Particular notification */
+	uint8_t bNotification;
+	/* Request-specific parameter */
+	uint16_t wValue;
+	/* Request-specific parameter */
+	uint16_t wIndex;
+	/* Length of data for the data phase */
+	uint16_t wLength;
+	/* UART State Bitmap */
+	uint16_t bRxCarrier: 1; /* DCD */
+	uint16_t bTxCarrier: 1; /* DSR */
+	uint16_t bBreak: 1;
+	uint16_t bRingSignal: 1;
+
+	uint16_t bFraming: 1;
+	uint16_t bParity: 1;
+	uint16_t bOverRun: 1;
+	uint16_t res: 9;
+} __attribute__((__packed__));
+
 /* CDC Class Specific Request Code */
 #define SEND_ENCAPSULATED_COMMAND     0x0021
-#define GET_ENCAPSULATED_RESPONSE     0x01A1
+#define GET_ENCAPSULATED_RESPONSE     0x01a1
 
 #define SET_LINE_CODING               0x2021
-#define GET_LINE_CODING               0x21A1
+#define GET_LINE_CODING               0x21a1
 #define SET_CONTROL_LINE_STATE        0x2221
 
 #endif /* __SYS_CDC_H__ */
