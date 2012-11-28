@@ -43,8 +43,6 @@
  #elif DEBUG == 7
   #define LOG_LEVEL 7
  #endif
- #undef DEBUG
- #undef DEBUG_LEVEL
 #endif
 
 struct trace_entry {
