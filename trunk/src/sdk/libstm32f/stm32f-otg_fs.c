@@ -105,122 +105,6 @@ void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 	}
 }
 
-static const char * const eptyp_nm[] = {
-	"CTRL",
-	"ISOC",
-	"BULK",
-	"INT"
-};
-
-static const uint8_t ep0_mpsiz_lut[] = {
-	64, 32, 16, 8
-};
-
-void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr) 
-{
-	int ep = addr & 0x7f;
-	uint32_t depctl;
-	uint32_t eptsiz;
-	uint32_t eptfsav;
-	uint32_t mpsiz;
-
-	depctl = otg_fs->inep[ep].diepctl;
-	if (depctl & OTG_FS_USBAEP) {
-		eptfsav = otg_fs->inep[ep].dtxfsts;
-		eptsiz = otg_fs->inep[ep].dieptsiz;
-
-		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
-			OTG_FS_MPSIZ_GET(depctl);
-
-		eptsiz = eptsiz;
-		eptfsav = eptfsav * 4;
-		mpsiz = mpsiz;
-
-		DCC_LOG5(LOG_TRACE, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
-				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
-				 OTG_FS_TXFNUM_GET(depctl),
-				 (depctl & OTG_FS_STALL) ? 1 : 0,
-				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
-
-		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
-				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
-				 (depctl & OTG_FS_DPID) ? 1 : 0,
-				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
-				 mpsiz);
-
-
-		DCC_LOG3(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d FSAVAIL=%d",
-				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz), 
-				 eptfsav);
-	} else {
-		depctl = otg_fs->outep[ep].doepctl;
-		if (depctl & OTG_FS_USBAEP) {
-			eptsiz = otg_fs->outep[ep].doeptsiz;
-			eptsiz = eptsiz;
-		} else {
-			DCC_LOG1(LOG_WARNING, "EP%d not active!", ep);
-			return;
-		}
-		
-		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
-			OTG_FS_MPSIZ_GET(depctl);
-
-		mpsiz = mpsiz;
-
-		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
-				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
-				 (depctl & OTG_FS_SNPM) ? 1 : 0,
-				 (depctl & OTG_FS_STALL) ? 1 : 0,
-				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
-
-		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
-				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
-				 (depctl & OTG_FS_DPID) ? 1 : 0,
-				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
-				 mpsiz);
-
-		DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d",
-				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz));
-	}
-
-
-}
-
-void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
-				 unsigned int addr, unsigned int len)
-{
-	unsigned int q;
-	unsigned int r;
-	unsigned int n;
-	unsigned int i;
-
-	i = ((addr >> 2) / 4) * 4;
-	n = (addr + len + 3) >> 2;
-	q = (n / 4) * 4;
-	r = n - q;
-
-	for (; i < q; i += 4) {
-		DCC_LOG5(LOG_TRACE, "%04x: %08x %08x %08x %08x", i * 4, 
-				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
-				 otg_fs->ram[i + 2], otg_fs->ram[i + 3]);
-	}
-
-	switch (r) {
-	case 1:
-		DCC_LOG2(LOG_TRACE, "%04x: %08x ", i * 4, 
-				 otg_fs->ram[i + 0]);
-		break;
-	case 2:
-		DCC_LOG3(LOG_TRACE, "%04x: %08x %08x", i * 4, 
-				 otg_fs->ram[i + 0], otg_fs->ram[i + 1]);
-		break;
-	case 3:
-		DCC_LOG4(LOG_TRACE, "%04x: %08x %08x %08x", i * 4, 
-				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
-				 otg_fs->ram[i + 2]);
-		break;
-	};
-}
 
 void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs, 
 								unsigned int addr, unsigned int mpsiz)
@@ -238,6 +122,16 @@ void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs,
 	/* EP enable */
 	otg_fs->outep[ep].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
+
+
+#if DEBUG
+static const char * const eptyp_nm[] = {
+	"CTRL",
+	"ISOC",
+	"BULK",
+	"INT"
+};
+#endif
 
 void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr, 
 							 unsigned int type, unsigned int mpsiz)
@@ -390,3 +284,115 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	otg_fs->gahbcfg |= OTG_FS_PTXFELVL | OTG_FS_TXFELVL | OTG_FS_GINTMSK; 
 }
 
+#ifdef DEBUG
+static const uint8_t ep0_mpsiz_lut[] = {
+	64, 32, 16, 8
+};
+
+void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr) 
+{
+	int ep = addr & 0x7f;
+	uint32_t depctl;
+	uint32_t eptsiz;
+	uint32_t eptfsav;
+	uint32_t mpsiz;
+
+	depctl = otg_fs->inep[ep].diepctl;
+	if (depctl & OTG_FS_USBAEP) {
+		eptfsav = otg_fs->inep[ep].dtxfsts;
+		eptsiz = otg_fs->inep[ep].dieptsiz;
+
+		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
+			OTG_FS_MPSIZ_GET(depctl);
+
+		eptsiz = eptsiz;
+		eptfsav = eptfsav * 4;
+		mpsiz = mpsiz;
+
+		DCC_LOG5(LOG_TRACE, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
+				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
+				 OTG_FS_TXFNUM_GET(depctl),
+				 (depctl & OTG_FS_STALL) ? 1 : 0,
+				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
+
+		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
+				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
+				 (depctl & OTG_FS_DPID) ? 1 : 0,
+				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
+				 mpsiz);
+
+
+		DCC_LOG3(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d FSAVAIL=%d",
+				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz), 
+				 eptfsav);
+	} else {
+		depctl = otg_fs->outep[ep].doepctl;
+		if (depctl & OTG_FS_USBAEP) {
+			eptsiz = otg_fs->outep[ep].doeptsiz;
+			eptsiz = eptsiz;
+		} else {
+			DCC_LOG1(LOG_WARNING, "EP%d not active!", ep);
+			return;
+		}
+		
+		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
+			OTG_FS_MPSIZ_GET(depctl);
+
+		mpsiz = mpsiz;
+
+		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
+				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
+				 (depctl & OTG_FS_SNPM) ? 1 : 0,
+				 (depctl & OTG_FS_STALL) ? 1 : 0,
+				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
+
+		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
+				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
+				 (depctl & OTG_FS_DPID) ? 1 : 0,
+				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
+				 mpsiz);
+
+		DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d",
+				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz));
+	}
+
+
+}
+
+void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
+				 unsigned int addr, unsigned int len)
+{
+	unsigned int q;
+	unsigned int r;
+	unsigned int n;
+	unsigned int i;
+
+	i = ((addr >> 2) / 4) * 4;
+	n = (addr + len + 3) >> 2;
+	q = (n / 4) * 4;
+	r = n - q;
+
+	for (; i < q; i += 4) {
+		DCC_LOG5(LOG_TRACE, "%04x: %08x %08x %08x %08x", i * 4, 
+				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
+				 otg_fs->ram[i + 2], otg_fs->ram[i + 3]);
+	}
+
+	switch (r) {
+	case 1:
+		DCC_LOG2(LOG_TRACE, "%04x: %08x ", i * 4, 
+				 otg_fs->ram[i + 0]);
+		break;
+	case 2:
+		DCC_LOG3(LOG_TRACE, "%04x: %08x %08x", i * 4, 
+				 otg_fs->ram[i + 0], otg_fs->ram[i + 1]);
+		break;
+	case 3:
+		DCC_LOG4(LOG_TRACE, "%04x: %08x %08x %08x", i * 4, 
+				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
+				 otg_fs->ram[i + 2]);
+		break;
+	};
+}
+
+#endif

@@ -24,7 +24,10 @@
 
 LIB_STATIC = drv
 
-CFILES = stm32f-ethif.c stm32f-uart_console.c
+USB_CFILES = usb-cdc.c cdc_acm.c 
+
+CFILES = stm32f-ethif.c stm32f-uart_console.c \
+		 $(addprefix mbuf/,$(MBUF_CFILES))
 
 override INCPATH += ./include ../libtcpip/include
 

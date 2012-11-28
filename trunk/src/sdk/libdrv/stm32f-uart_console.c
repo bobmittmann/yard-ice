@@ -33,6 +33,8 @@
 #include <sys/delay.h>
 
 #include <thinkos.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 #include <sys/dcclog.h>
 
@@ -42,9 +44,11 @@ struct uart_console_ctrl {
 	struct stm32f_usart * uart;
 	struct stm32f_dma * dma;
 	struct {
+		int irq;
 		struct stm32f_dma_stream * s;
 	} tx;
 	struct {
+		int irq;
 		struct stm32f_dma_stream * s;
 		uint8_t buf[CONSOLE_RX_BUF_LEN];
 	} rx;
@@ -70,12 +74,12 @@ int uart_console_read(struct uart_console_ctrl * ctrl, char * buf,
 		DMA_DIR_PTM | DMA_TCIE  | DMA_EN;
 
 	/* wait for the DMA transfer to complete */
-	while (((st = ctrl->dma->hisr) & DMA_TCIF7) == 0) {
-		thinkos_irq_wait(STM32F_IRQ_DMA1_STREAM7);
+	while (((st = ctrl->dma->lisr) & DMA_TCIF0) == 0) {
+		__thinkos_irq_wait(ctrl->rx.irq);
 	} 
 
 	/* clear the the DMA stream trasfer complete flag */
-	ctrl->dma->hifcr = DMA_CTCIF7;
+	ctrl->dma->lifcr = DMA_CTCIF0;
 
 	return len;
 }
@@ -106,12 +110,14 @@ int uart_console_write(struct uart_console_ctrl * ctrl, const void * buf,
 		DMA_DIR_MTP | DMA_TCIE  | DMA_EN;
 
 	/* wait for the DMA transfer to complete */
-	while (((st = ctrl->dma->lisr) & DMA_TCIF0) == 0) {
-		thinkos_irq_wait(STM32F_IRQ_DMA1_STREAM0);
+	while (((st = ctrl->dma->hisr) & DMA_TCIF7) == 0) {
+		DCC_LOG(LOG_TRACE, "wait...");
+		__thinkos_irq_wait(ctrl->tx.irq);
+		DCC_LOG(LOG_TRACE, "wakeup");
 	} 
 
 	/* clear the the DMA stream trasfer complete flag */
-	ctrl->dma->lifcr = DMA_CTCIF0;
+	ctrl->dma->hifcr = DMA_CTCIF7;
 
 	return len;
 }
@@ -131,8 +137,14 @@ const struct fileop uart_console_ops = {
 const struct uart_console_ctrl uart5_ctrl = {
 	.uart = STM32F_UART5, 
 	.dma = STM32F_DMA1,
-	.rx.s = &STM32F_DMA1->s[0],
-	.tx.s = &STM32F_DMA1->s[7]
+	.rx = {
+		.irq = STM32F_IRQ_DMA1_STREAM0,
+		.s = &STM32F_DMA1->s[0]
+	},
+	.tx = {
+		.irq = STM32F_IRQ_DMA1_STREAM7,
+		.s = &STM32F_DMA1->s[7]
+	}
 };
 
 const struct file uart_console_file = {
@@ -143,8 +155,10 @@ const struct file uart_console_file = {
 struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct uart_console_ctrl * ctrl = (struct uart_console_ctrl *)uart_console_file.data;
+	struct uart_console_ctrl * ctrl = 
+		(struct uart_console_ctrl *)uart_console_file.data;
 
+	DCC_LOG(LOG_TRACE, "...");
 	stm32f_usart_init(ctrl->uart, baudrate, flags);
 
 	/* Enable DMA for transmission and reception */

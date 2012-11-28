@@ -1461,53 +1461,8 @@ struct file * usb_cdc_open(void)
 {
 	struct usb_dev * dev = (struct usb_dev *)usb_cdc_file.data;
 
-	dev = dev;
-
-	return (struct file *)&usb_cdc_file;
-}
-
-int main(int argc, char ** argv)
-{
-	struct usb_dev * dev = &usb_cdc_dev;
-	char buf[516];
-	int i = 0;
-	int n;
-
-//	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
-	DCC_LOG_CONNECT();
-	DCC_LOG_INIT();
-
-	cm3_udelay_calibrate();
-	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
-	stderr = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
-
-	fprintf(stderr, "\n");
-	fprintf(stderr, "------------------------------------------------------\n");
-	fprintf(stderr, "- USB test\n");
-	fprintf(stderr, "------------------------------------------------------\n");
-	fprintf(stderr, "\n");
-
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-
 	usb_device_init(dev);
 
-	stdout = usb_cdc_open();
-
-	for (i = 0; ;i++) {
-		n = usb_cdc_read(dev, buf, 512, 0);
-		buf[n] = '\0';
-		fprintf(stderr, "%s", buf);
-//		thinkos_sleep(1000);
-		/* echo back */
-		printf(buf);
-//		thinkos_sleep(1000);
-
-/*		if ((len = eth_recv(frame, 2048)) > 0) {
-			DCC_LOG(LOG_TRACE, "+");
-			eth_input((uint8_t *)frame, len);
-		} */
-	}
-
-	return 0;
+	return (struct file *)&usb_cdc_file;
 }
 
