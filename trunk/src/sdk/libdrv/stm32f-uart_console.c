@@ -114,6 +114,8 @@ int uart_console_read(struct uart_console_dev * dev, char * buf,
 		cp[n++] = c;
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 	
+	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
+
 	return n;
 }
 
