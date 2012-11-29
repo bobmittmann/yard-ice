@@ -34,8 +34,6 @@ void cm3_default_isr(int irq)
 
 	th = thinkos_rt.irq_th[irq];
 
-	DCC_LOG1(LOG_TRACE, "th=%d", th);
-
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
 

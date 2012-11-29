@@ -20,9 +20,9 @@
 # 
 
 
-PROG = usb-test
+PROG = test
 
-CFILES = usb-test.c 
+CFILES = test.c 
 
 LIBDIRS = ../../libstm32f ../../libcm3 ../../libutil \
 		  ../../libthinkos ../../libc ../../libice-comm \
