@@ -337,12 +337,71 @@ const char zarathustra[] = {
 	"too.  There is ice in their laughter.\"\n\n"
 };
 
+int printer_task(FILE * f)
+{
+	unsigned int n;
+	unsigned int sz;
+	unsigned int rm;
+	char * cp;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+	thinkos_sleep(100);
+
+	return 0;
+
+	cp = (char *)zarathustra;
+	sz = sizeof(zarathustra);
+	rm = sz;
+	while (1) {
+		thinkos_sleep(20);
+		n = rand() & 0x1ff;
+		n = MIN(n , rm);
+		fwrite(cp, n, 1, f);
+		cp += n;
+		rm -= n;
+
+		if (rm == 0) {
+			DCC_LOG1(LOG_TRACE, "[%d] restarting.", thinkos_thread_self());
+			thinkos_sleep(2000);
+			rm = sz;
+			cp = (char *)zarathustra;
+		}
+	}
+
+	return 0;
+}
+
+#define BUF_SIZE 256
+
+int echo_task(FILE * f)
+{
+	char buf[BUF_SIZE];
+	unsigned int n;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+	thinkos_sleep(100);
+
+	while (1) {
+		n = rand() & 0x1ff;
+		n = MIN(n , BUF_SIZE);
+		n = fread(buf, n, 1, f);
+		fwrite(buf, n, 1, f);
+	}
+
+	return 0;
+}
+
+#define STACK_SIZE 512
+uint32_t printer_stack1[STACK_SIZE / 4];
+uint32_t printer_stack2[STACK_SIZE / 4];
+
+uint32_t echo_stack1[STACK_SIZE / 4];
+uint32_t echo_stack2[STACK_SIZE / 4];
+
 int main(int argc, char ** argv)
 {
-	char buf[516];
-	int i = 0;
-	int n;
 	FILE * f;
+	int i = 0;
 
 //	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
 	DCC_LOG_CONNECT();
@@ -366,6 +425,21 @@ int main(int argc, char ** argv)
 
 	f = uart_console_open(115200, SERIAL_8N1);
 
+	/* create some printer threads */
+	thinkos_thread_create((void *)printer_task, (void *)f, 
+						  printer_stack1, STACK_SIZE, 0);
+
+	thinkos_thread_create((void *)printer_task, (void *)f, 
+						  printer_stack2, STACK_SIZE, 0);
+
+
+	/* create some echo threads */
+	thinkos_thread_create((void *)echo_task, (void *)f, 
+						  echo_stack1, STACK_SIZE, 0);
+
+	thinkos_thread_create((void *)echo_task, (void *)f, 
+						  echo_stack2, STACK_SIZE, 0);
+
 	fprintf(f, "Hello world!\r\n");
 
 	thinkos_sleep(100);
@@ -374,18 +448,8 @@ int main(int argc, char ** argv)
 
 
 	for (i = 0; ;i++) {
-//		fgets(buf, 512, f);
-		n = fread(buf, 4, 1, f);
-		buf[n] = '\0';
-		n = fwrite(buf, n, 1, f);
-		/* echo back */
-//		printf(buf);
-//		fgets(buf, 512, f);
-//		fprintf(f, buf);
-//		thinkos_sleep(1000);
-
-//		thinkos_sleep(1000);
-//		fprintf(f, "%d ", i);
+		thinkos_sleep(10000);
+		fprintf(f, "\n[%d]\n", i);
 	}
 
 	return 0;
