@@ -94,26 +94,40 @@ int uart_console_read(struct uart_console_dev * dev, char * buf,
 	char * cp = (char *)buf;
 	int c;
 	int n = 0;
+	int th;
 
 	DCC_LOG(LOG_INFO, "read");
+	th = thinkos_thread_self();
 
 	__thinkos_critical_enter();
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_INFO, "wait...");
+		if ( th == 4) {
+			DCC_LOG1(LOG_TRACE, "[%d] wait ...", th);
+		}
 		__thinkos_ev_wait(dev->rx_ev);
+		if ( th == 4) {
+			DCC_LOG1(LOG_TRACE, "[%d] wakeup.", th);
+		}
 		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 	__thinkos_critical_exit();
 
 	do {
-		if (n == len)
-			return n;
+		if (n == len) {
+			if (!uart_fifo_is_empty(&dev->rx_fifo)) { 
+				__thinkos_ev_raise(dev->rx_ev);
+			}
+			break;
+		}
 		c = uart_fifo_get(&dev->rx_fifo);
 		if (c == '\r') 
 			c = '\n';
 		cp[n++] = c;
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
-	
+
+
+
 	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
@@ -124,7 +138,7 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 	__thinkos_critical_enter();
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_INFO, "wait...");
+		DCC_LOG(LOG_TRACE, "wait...");
 		__thinkos_ev_wait(dev->tx_ev);
 		DCC_LOG(LOG_INFO, "wakeup");
 	}

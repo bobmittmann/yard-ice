@@ -21,7 +21,9 @@
  */
 
 #include <sys/stm32f.h>
+
 #include <stdio.h>
+#include <sys/param.h>
 
 #include <sys/dcclog.h>
 #include <sys/delay.h>
@@ -165,12 +167,17 @@ void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr,
 	depctl |= OTG_FS_EPTYP_SET(type);
 	depctl |= OTG_FS_SD0PID | OTG_FS_USBAEP;
 
+	/* XXX: mask FIFO empty interrupt, maybe this should 
+	   be performed elsewhere. */
+	otg_fs->diepempmsk &= ~(1 << ep);
+
 	if (input) {
 		/* Activate IN endpoint */
 		otg_fs->inep[ep].diepctl = depctl | OTG_FS_TXFNUM_SET(ep);
 
 		/* Enable endpoint interrupt */
 		otg_fs->daintmsk |= OTG_FS_IEPM(ep);
+
 	} else {
 		uint32_t rxfsiz;
 		uint32_t pktcnt;
@@ -196,6 +203,131 @@ void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr,
 	   handshake for each valid token received for the
 	   endpoint. */
 }
+
+static const uint8_t ep0_mpsiz_lut[] = {
+	64, 32, 16, 8
+};
+
+bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep, 
+							 unsigned int len)
+{
+	uint32_t deptsiz;
+	uint32_t depctl;
+	uint32_t mpsiz;
+	uint32_t xfrsiz;
+	uint32_t pktcnt;
+
+	deptsiz = otg_fs->inep[ep].dieptsiz;
+	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+	if ((xfrsiz == 0) && (pktcnt)) {
+		DCC_LOG3(LOG_WARNING, "ep=%d len=%d %d outstanding packets in FIFO", 
+				 ep, len, pktcnt);
+		return false;
+	}
+
+	depctl = otg_fs->inep[ep].diepctl;
+	if (ep == 0)
+		mpsiz = ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)];
+	else
+		mpsiz = OTG_FS_MPSIZ_GET(depctl);
+
+	if (len > 0) {
+		/* XXX: check whether to get rid of this division or not,
+		 if the CM3 div is used it is not necessary.... */
+		pktcnt = (len + (mpsiz - 1)) / mpsiz;
+		if (pktcnt > 7) {
+			pktcnt = 7;
+			xfrsiz = 7 * mpsiz;
+		} else {
+			xfrsiz = len;
+		}
+	} else {
+		/* zero lenght packet */
+		pktcnt = 1;
+		xfrsiz = 0;
+	}
+
+	DCC_LOG3(LOG_TRACE, "ep=%d pktcnt=%d xfrsiz=%d", ep, pktcnt, xfrsiz);
+
+	otg_fs->inep[ep].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+		OTG_FS_XFRSIZ_SET(xfrsiz); 
+	/* enable end point, clear NACK */
+	otg_fs->inep[ep].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+
+	deptsiz = otg_fs->inep[ep].dieptsiz;
+	deptsiz = deptsiz;
+	DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
+			 OTG_FS_XFRSIZ_GET(deptsiz));
+
+	return true;
+}
+
+int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
+						   void * buf)
+{
+	uint32_t depctl;
+	uint32_t deptsiz;
+	uint32_t mpsiz;
+	uint32_t xfrsiz;
+	uint32_t pktcnt;
+	uint32_t free;
+	uint32_t data;
+	uint8_t * cp;
+	int cnt;
+	int i;
+
+	free = otg_fs->inep[ep].dtxfsts * 4;
+	depctl = otg_fs->inep[ep].diepctl;
+	deptsiz = otg_fs->inep[ep].dieptsiz;
+
+	if (ep == 0)
+		mpsiz = ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)];
+	else
+		mpsiz = OTG_FS_MPSIZ_GET(depctl);
+
+	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+	pktcnt = pktcnt;
+	DCC_LOG5(LOG_TRACE, "ep=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+			 ep, mpsiz, pktcnt, xfrsiz, free);
+
+	if (xfrsiz < mpsiz) {
+		if (free < xfrsiz) {
+			DCC_LOG(LOG_PANIC, "free < xfrsiz !!!");
+			return -1;
+		}
+		/* Transfer the last partial packet */
+		cnt = xfrsiz;
+	} else {
+		if (free < mpsiz) {
+			DCC_LOG(LOG_PANIC, "free < mpsiz !!!");
+			return -1;
+		}
+		if (free < xfrsiz) {
+			/* Transfer only full packets */
+			cnt = (free / mpsiz) * mpsiz;
+		} else {
+			/* Transfer all */
+			cnt = xfrsiz;
+		}
+		// XXX: debug
+//		cnt = mpsiz;
+	}
+
+	/* push into fifo */
+	cp = (uint8_t *)buf;
+	for (i = 0; i < cnt; i += 4) {
+		data = cp[0] + (cp[1] << 8) + (cp[2] << 16) + (cp[3] << 24);
+		otg_fs->dfifo[ep].push = data;
+		cp += 4;
+	}	
+
+	DCC_LOG1(LOG_TRACE, "Tx: (%d)", cnt);
+	return cnt;
+}
+
+
 
 void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 {
@@ -285,10 +417,6 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 }
 
 #ifdef DEBUG
-static const uint8_t ep0_mpsiz_lut[] = {
-	64, 32, 16, 8
-};
-
 void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr) 
 {
 	int ep = addr & 0x7f;

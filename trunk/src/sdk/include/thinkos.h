@@ -56,7 +56,7 @@ int thinkos_thread_create(int (* task)(void *),
 						  unsigned int stack_size,
 						  unsigned int opt);
 
-int thinkos_thread_self(void);
+int const thinkos_thread_self(void);
 
 
 int thinkos_cancel(unsigned int thread_id, int code);
