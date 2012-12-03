@@ -38,7 +38,7 @@
 
 #define EP_IN  2
 #define EP_IN_TX_FIFO 0
-#define EP_IN_MAX_PKT_SIZE 64 
+#define EP_IN_MAX_PKT_SIZE 64
 #define EP_IN_FIFO_SIZE 512
 
 #define EP_INT 3

@@ -420,10 +420,17 @@ int main(int argc, char ** argv)
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-//	stdout = usb_cdc_open();
-//	stdin = stdout;
+//	f = uart_console_open(115200, SERIAL_8N1);
+	f = usb_cdc_open();
 
-	f = uart_console_open(115200, SERIAL_8N1);
+	thinkos_sleep(5000);
+
+	fprintf(f, "Hello world!\r\n");
+
+	thinkos_sleep(1000);
+	fwrite(zarathustra, sizeof(zarathustra), 1, f);
+
+//	thinkos_sleep(1000 * 5);
 
 	/* create some printer threads */
 	thinkos_thread_create((void *)printer_task, (void *)f, 
@@ -437,14 +444,8 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)echo_task, (void *)f, 
 						  echo_stack1, STACK_SIZE, 0);
 
-	thinkos_thread_create((void *)echo_task, (void *)f, 
-						  echo_stack2, STACK_SIZE, 0);
-
-	fprintf(f, "Hello world!\r\n");
-
-	thinkos_sleep(100);
-
-	fwrite(zarathustra, sizeof(zarathustra), 1, f);
+//	thinkos_thread_create((void *)echo_task, (void *)f, 
+//						  echo_stack2, STACK_SIZE, 0);
 
 
 	for (i = 0; ;i++) {

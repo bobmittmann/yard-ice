@@ -140,6 +140,7 @@ struct stm32f_spi_io {
 
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -242,6 +243,14 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr);
 
 void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr, 
 							 unsigned int type, unsigned int mpsiz);
+
+/* prepare TX fifo to send */
+bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep, 
+							 unsigned int len);
+
+/* push data inot TX fifo */
+int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
+						   void * buf);
 
 void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
 				 unsigned int addr, unsigned int len);

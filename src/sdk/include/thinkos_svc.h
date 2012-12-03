@@ -137,7 +137,8 @@ extern const char thinkos_svc_nm[];
 extern "C" {
 #endif
 
-static inline int __attribute__((always_inline)) thinkos_thread_self(void)  {
+static inline int const __attribute__((always_inline)) 
+	thinkos_thread_self(void)  {
 	return THINKOS_SVC(THINKOS_THREAD_SELF);
 }
 

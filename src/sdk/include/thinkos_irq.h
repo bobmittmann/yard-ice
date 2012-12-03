@@ -52,6 +52,13 @@ __attribute__((always_inline)) __thinkos_critical_enter(void)  {
 }
 
 static inline void 
+__attribute__((always_inline)) __thinkos_critical_enter_level(int lvl)  {
+	/* rise the BASEPRI to stop the scheduler */
+	cm3_basepri_set(lvl); 
+}
+
+
+static inline void 
 __attribute__((always_inline)) __thinkos_critical_exit(void)  {
 	/* return the BASEPRI to the default to reenable the scheduler. */
 	cm3_basepri_set(0x00);
@@ -79,6 +86,18 @@ __attribute__((always_inline)) __thinkos_ev_wait(int ev) {
 	/* the scheduler will run at this point */
 	__thinkos_critical_enter();
 }
+
+static inline void 
+__attribute__((always_inline)) __thinkos_critical_ev_wait(int ev, int lvl) {
+	int self = thinkos_rt.active;
+	__thinkos_wq_insert(ev, self);
+	/* prepare to wait ... */
+	__thinkos_wait();
+	__thinkos_critical_exit();
+	/* the scheduler will run at this point */
+	__thinkos_critical_enter_level(lvl);
+}
+
 
 static inline void 
 __attribute__((always_inline)) __thinkos_ev_raise(int ev) {
