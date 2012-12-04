@@ -122,9 +122,9 @@ $(DDIRS) : | $(ODIRS) $(CFILES_OUT)
 
 $(DFILES): | $(DDIRS)
 
-.PHONY: all clean lib lst
+.PHONY: all clean lib lst deps-all deps-clean
 
 include $(MKDIR)/cc.mk
 
-include $(DFILES)
+-include $(DFILES)
 
