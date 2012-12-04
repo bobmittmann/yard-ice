@@ -24,17 +24,17 @@ PROG = test
 
 CFILES = test.c 
 
-LIBDIRS = ../../libstm32f ../../libcm3 ../../libutil \
-		  ../../libthinkos ../../libc ../../libice-comm \
-		  ../../libdrv 
+LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
+		  ../../../libthinkos ../../../libc ../../../libice-comm \
+		  ../../../libdrv 
 
 LIBS = stm32f cm3 util thinkos c ice-comm drv 
 
-INCPATH = ../../include
+INCPATH = ../../../include
 
 JTAGTOOL_ADDR = 192.168.0.80
 
 CFLAGS = -g -O2
 
-include ../../../mk/stm32f207.mk
+include ../../../../mk/stm32f207.mk
 
