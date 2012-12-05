@@ -32,11 +32,11 @@ use work.all;
 
 entity fsmc_test is
 port(
-	-- BUS data ines
+	-- Main clock
 	mclk : in std_logic;
-	-- BUS data ines
+	-- STM32F Bux data ines
 	fsmc_d : inout std_logic_vector(15 downto 0);
-	-- BUS control lines
+	-- STM32F Bus control lines
 	fsmc_clk : in std_logic;
 	fsmc_noe : in std_logic;
 	fsmc_nwe : in std_logic;

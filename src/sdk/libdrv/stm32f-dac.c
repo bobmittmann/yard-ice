@@ -23,6 +23,7 @@
 
 #include <sys/stm32f.h>
 #include <stdio.h>
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
@@ -63,6 +64,22 @@ void wave_pause(void)
 	struct stm32f_dma * dma = STM32F_DMA1;
 	/* disable DMA */
 	dma->s[DAC1_DMA].cr &= ~DMA_EN;	
+}
+
+void tone_play(unsigned int tone, unsigned int ms)
+{
+	uint8_t * wave;
+	unsigned int len;
+
+	wave = (uint8_t *)tone_lut[tone].buf;
+	len = tone_lut[tone].len;
+
+	wave_set(wave, len);
+	wave_play();
+	/* FIXME: this should be handled by an interrupt or other task. 
+	   This function should return immediately */
+	thinkos_sleep(ms);
+	wave_pause();
 }
 
 void vout_set(unsigned int mv)
@@ -133,4 +150,3 @@ void stm32f_dac_init(void)
 		DMA_CIRC | DMA_DIR_MTP;
 }
 
-struct file * uart_console_open(unsigned int baudrate, unsigned int flags);
