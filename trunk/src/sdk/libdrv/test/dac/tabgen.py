@@ -27,7 +27,7 @@ def make_tab(nm, freq, rate):
 
 	n = ((over * rate) + (freq / 2)) / freq
 
-	print "static uint8_t %s[] = /* %d */" % (nm, freq)
+	print "static const uint8_t %s[] = /* %d */" % (nm, freq)
 	print "{"
 
 	while (i < n):
@@ -73,7 +73,7 @@ def main():
 	print "static const struct {"
 	print "\tconst uint8_t * buf;"
 	print "\tuint32_t len;"
-	print "} wave_lut = {"
+	print "} tone_lut[] = {"
 	for e in tab_lst:
 		print "\t{ .buf = %s, .len = sizeof(%s) }," % (e[0], e[0])
 	print "};"

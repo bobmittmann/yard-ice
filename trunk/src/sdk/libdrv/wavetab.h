@@ -5,7 +5,7 @@
 
 #define SAMPLE_RATE 8000
 
-static uint8_t a4[] = /* 880 */
+static const uint8_t a4[] = /* 880 */
 {
 	128,
 	210,
@@ -45,7 +45,7 @@ static uint8_t a4[] = /* 880 */
 	 46,
 };
 
-static uint8_t a4s[] = /* 932 */
+static const uint8_t a4s[] = /* 932 */
 {
 	128,
 	214,
@@ -83,7 +83,7 @@ static uint8_t a4s[] = /* 932 */
 	 42,
 };
 
-static uint8_t b4[] = /* 988 */
+static const uint8_t b4[] = /* 988 */
 {
 	128,
 	218,
@@ -119,7 +119,7 @@ static uint8_t b4[] = /* 988 */
 	 38,
 };
 
-static uint8_t c4[] = /* 1046 */
+static const uint8_t c4[] = /* 1046 */
 {
 	128,
 	220,
@@ -154,7 +154,7 @@ static uint8_t c4[] = /* 1046 */
 	 36,
 };
 
-static uint8_t c4s[] = /* 1108 */
+static const uint8_t c4s[] = /* 1108 */
 {
 	128,
 	225,
@@ -187,7 +187,7 @@ static uint8_t c4s[] = /* 1108 */
 	 31,
 };
 
-static uint8_t d4[] = /* 1175 */
+static const uint8_t d4[] = /* 1175 */
 {
 	128,
 	230,
@@ -218,7 +218,7 @@ static uint8_t d4[] = /* 1175 */
 	 26,
 };
 
-static uint8_t d4s[] = /* 1244 */
+static const uint8_t d4s[] = /* 1244 */
 {
 	128,
 	233,
@@ -248,7 +248,7 @@ static uint8_t d4s[] = /* 1244 */
 	 23,
 };
 
-static uint8_t e4[] = /* 1318 */
+static const uint8_t e4[] = /* 1318 */
 {
 	128,
 	238,
@@ -276,7 +276,7 @@ static uint8_t e4[] = /* 1318 */
 	 18,
 };
 
-static uint8_t f4[] = /* 1397 */
+static const uint8_t f4[] = /* 1397 */
 {
 	128,
 	241,
@@ -303,7 +303,7 @@ static uint8_t f4[] = /* 1397 */
 	 15,
 };
 
-static uint8_t f4s[] = /* 1480 */
+static const uint8_t f4s[] = /* 1480 */
 {
 	128,
 	244,
@@ -329,7 +329,7 @@ static uint8_t f4s[] = /* 1480 */
 	 12,
 };
 
-static uint8_t g4[] = /* 1568 */
+static const uint8_t g4[] = /* 1568 */
 {
 	128,
 	249,
@@ -353,7 +353,7 @@ static uint8_t g4[] = /* 1568 */
 	  7,
 };
 
-static uint8_t g4s[] = /* 1661 */
+static const uint8_t g4s[] = /* 1661 */
 {
 	128,
 	251,
@@ -376,7 +376,7 @@ static uint8_t g4s[] = /* 1661 */
 	  5,
 };
 
-static uint8_t sin1khz[] = /* 1000 */
+static const uint8_t sin1khz[] = /* 1000 */
 {
 	128,
 	218,
@@ -392,7 +392,7 @@ static uint8_t sin1khz[] = /* 1000 */
 static const struct {
 	const uint8_t * buf;
 	uint32_t len;
-} wave_lut = {
+} tone_lut[] = {
 	{ .buf = a4, .len = sizeof(a4) },
 	{ .buf = a4s, .len = sizeof(a4s) },
 	{ .buf = b4, .len = sizeof(b4) },
