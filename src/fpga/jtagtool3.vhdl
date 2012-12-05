@@ -32,27 +32,21 @@ use work.all;
 
 entity jtagtool3 is
 port(
-	-- BUS data ines
-	data : inout std_logic_vector(15 downto 0);
-	-- BUS address ines
-	addr : in std_logic_vector(11 downto 1);
-	-- BUS control lines
-	nrd : in std_logic;
-	nwr : in std_logic;
-	p25_mcko : in std_logic;
-	p26_ncs2 : in std_logic;
-	p27_ncs3 : in std_logic;
-	-- IRQ lines
-	p9_irq0 : out std_logic;
-	p12_fiq : out std_logic;
+	-- Main clock
+	mclk : in std_logic;
+	-- STM32F Bux data ines
+	fsmc_d : inout std_logic_vector(15 downto 0);
+	-- STM32F Bus control lines
+	fsmc_clk : in std_logic;
+	fsmc_noe : in std_logic;
+	fsmc_nwe : in std_logic;
+	fsmc_nce : in std_logic;
+	-- IRQ 
+	irq : out std_logic;
 	-- Serial port (USART)
-	p13_sck0 : out std_logic;
-	p14_txd0 : in std_logic;
-	p15_rxd0 : out std_logic;
-	-- RTC interface
-	aclk : in std_logic;
-	comp : in std_logic;
-	pps : in std_logic;
+	uart_rx : out std_logic;
+	uart_tx : in std_logic;
+
 	-- TAP extra
 	tp1_aux0 : inout std_logic;
 	tp1_aux1 : inout std_logic;
@@ -71,19 +65,10 @@ port(
 	tp1_rst : out std_logic;
 	-- TAP connection test
 	tp1_tdo_tst : out std_logic;
-	-- TAP VCC enable (allows to supply power to the Target) 
-	tp1_vcc_on : out std_logic;
 	-- leds
-	led_run : out std_logic;
-	led_pwr : out std_logic;
-	led_con : out std_logic;
-	led_dcc : out std_logic;
-	led_trg : out std_logic;
+	led_1 : out std_logic;
+	led_2 : out std_logic;
 	--
-	-- digital input
-	capture : in std_logic;
-	-- relay control
-	relay : out std_logic;
 	
 	--DEBUG :
 	tap_state : out unsigned(3 downto 0)	
@@ -112,8 +97,6 @@ architecture structure of jtagtool3 is
 	constant CFG_RTCK_EN : natural := 5;
 	constant CFG_RST : natural := 6;
 	constant CFG_TDO_PROBE_EN : natural := 7;
-	constant CFG_TAP_VCC_EN : natural := 8;
-	constant CFG_RELAY_EN : natural := 9;
 	constant CFG_TAP_TRST : natural := 10;
 	constant CFG_TAP_NRST : natural := 11;
 	constant CFG_REG_BITS : natural := 12; -- width of cfg reg
@@ -136,8 +119,8 @@ architecture structure of jtagtool3 is
 	-- clocks 
 	signal s_clk_main : std_logic;
 	signal s_clk_io : std_logic;
-	signal s_clk_150mhz : std_logic;
---	signal s_clk_120mhz : std_logic;
+	signal s_clk_bus : std_logic;
+	signal s_clk_120mhz : std_logic;
 --	signal s_clk_1mhz : std_logic;
 --	signal s_clk_1khz : std_logic;
 --	signal s_clk_2hz : std_logic;
@@ -154,27 +137,6 @@ architecture structure of jtagtool3 is
 	signal s_wr : std_logic;
 
 	signal s_oe : std_logic;
-	signal s_oe0 : std_logic;
-	signal s_oe1 : std_logic;
-
-	signal s_cs0 : std_logic;
-	signal s_cs1 : std_logic;
-
-	signal s_wr0_r0 : std_logic;
-	signal s_wr0_r1 : std_logic;
-	signal s_wr0_stb : std_logic;
-
-	signal s_wr1_r0 : std_logic;
-	signal s_wr1_r1 : std_logic;
-	signal s_wr1_stb : std_logic;
-
-	signal s_rd0_r0 : std_logic;
-	signal s_rd0_r1 : std_logic;
---	signal s_rd0_stb : std_logic;
-
-	signal s_rd1_r0 : std_logic;
-	signal s_rd1_r1 : std_logic;
-	signal s_rd1_stb : std_logic;
 
 	-- register selection
 	signal s_reg_wr_stb : std_logic;
@@ -283,13 +245,9 @@ architecture structure of jtagtool3 is
 	-- serial port 
 	signal s_uart_rx : std_logic;
 	signal s_uart_tx : std_logic;
-	-- digital input capture
-	signal s_capture : std_logic;
 	-----------------------
 	signal s_tdo_probe_en : std_logic;
 	signal s_tdo_probe : std_logic;
-	signal s_tap_vcc_en : std_logic;
-	signal s_relay_en : std_logic;
 	-----------------------
 	signal s_vtref : std_logic;
 	signal s_tdo_tst : std_logic;
@@ -316,159 +274,146 @@ architecture structure of jtagtool3 is
 	end is_zero;
 
 begin
-	-- main clock (75MHz)
-	s_clk_main <= p25_mcko;
+	-- main clock (60MHz)
+	s_clk_main <= mclk;
 
 	pll : cyc_pll port map(
-		inclk0  => p25_mcko,
-		c0 => s_clk_150mhz
---		c1 => s_clk_120mhz
+		inclk0  => s_clk_main,
+		c1 => s_clk_120mhz
 	);
            
 	-- IO clock
-	s_clk_io <= s_clk_150mhz;
+	s_clk_io <= s_clk_120mhz;
 
-	---------------------------------------------------------------------------
-	-- output enable
-	s_oe0 <= (nrd nor p26_ncs2);
-	s_oe1 <= (nrd nor p27_ncs3);
-	s_oe <= s_oe0 or s_oe1;
+	-- Bus clock
+	s_clk_bus <= fsmc_clk;
 
-	-- chip select
-	s_cs0 <= not p26_ncs2;
-	s_cs1 <= not p27_ncs3;
-	---------------------------------------------------------------------------
+	-- Output enable
+	s_oe <= (fsmc_noe nor fsmc_nce);
+	-- Write
+	s_wr <= (fsmc_nwe nor fsmc_nce);
+	-- Chip enable 
+	s_ce <= not fsmc_nce;
+
 
 	---------------------------------------------------------------------------
 	-- data bus IO (bidirectional buffer)
 	-- input
-	s_data_in <= data;
-	s_addr <= addr;
+	s_data_in <= fsmc_d;
 	-- output
-	data <= s_data_out when (s_oe  = '1') else (others => 'Z');
+	fsmc_d <= s_data_out when (s_oe  = '1') else (others => 'Z');
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- data bus NWR synchronization (CS2)
-	process (nwr, s_clk_main, s_wr0_r1)
+	-- Synchronous CRAM type address multiplexed bus
+	process (fsmc_clk, fsmc_nce)
 	begin
-		if s_wr0_r1 = '1' then
-			s_wr0_r0 <= '0';
-		elsif falling_edge(nwr) then
-			s_wr0_r0 <= s_cs0;
-		end if;
-		if rising_edge(s_clk_main) then
-			s_wr0_r1 <= s_wr0_r0;
+		if (fsmc_nce = '1') then
+			s_memc_st <= MEMC_IDLE;
+		elsif rising_edge(fsmc_clk) then
+			s_memc_st <= s_memc_next_st;
 		end if;
 	end process;
-	s_wr0_stb <= s_wr0_r1;
-	---------------------------------------------------------------------------
+
+	process (s_memc_st, fsmc_noe, fsmc_nwe)
+	begin
+		case s_memc_st is
+			when MEMC_IDLE =>
+				s_memc_next_st <= MEMC_ADV;
+			when MEMC_ADV =>
+				if 	(fsmc_nwe = '0') then
+					s_memc_next_st <= MEMC_DLAT;
+				else
+					s_memc_next_st <= MEMC_DSTB;
+				end if;
+			when MEMC_DLAT =>
+				s_memc_next_st <= MEMC_DSTB;
+			when MEMC_DSTB =>
+				s_memc_next_st <= MEMC_DSTB;
+		end case;
+	end process;
+
+	s_rd_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_noe = '0')) 
+					else '0';
+
+	s_wr_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_nwe = '0')) 
+					else '0';
+
+	s_adv_stb <= '1' when (s_memc_st = MEMC_ADV) else '0';
+
+	s_adi_stb <= '1' when (s_memc_st = MEMC_DSTB) else '0';
 
 	---------------------------------------------------------------------------
-	-- data bus NWR synchronization (CS3)
-	process (nwr, s_clk_main, s_cs1, s_wr1_r1)
-	begin
-		if s_wr1_r1 = '1' then
-			s_wr1_r0 <= '0';
-		elsif falling_edge(nwr) then
-			s_wr1_r0 <= s_cs1;
-		end if;
-		if rising_edge(s_clk_main) then
-			s_wr1_r1 <= s_wr1_r0;
-		end if;
-	end process;
-	s_wr1_stb <= s_wr1_r1;
+	-- Address latch / counter
+	addr_r : entity jtag_counter
+		generic map (DATA_WIDTH => DATA_WIDTH, COUNT_BITS => DATA_WIDTH) 
+		port map (
+			-- I/O clock
+			clk => s_clk_bus,
+			-- reset
+			rst => s_rst,
+			-- load on address valid signal 
+			ld => s_adv_stb,
+			d => s_data_in,
+			-- count 
+			cin => s_adi_stb,
+			-- data out
+			q => s_addr);
 	---------------------------------------------------------------------------
 
-	---------------------------------------------------------------------------
-	-- data bus NRD synchronization (CS2)
-	process (nrd, s_clk_main, s_cs0, s_rd0_r1)
-	begin
-		if s_rd0_r1 = '1' then
-			s_rd0_r0 <= '0';
-		elsif falling_edge(nrd) then
-			s_rd0_r0 <= s_cs0;
-		end if;
-		if rising_edge(s_clk_main) then
-			s_rd0_r1 <= s_rd0_r0;
-		end if;
-	end process;
---	s_rd0_stb <= s_rd0_r1;
-	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- data bus NRD synchronization (CS3)
-	process (nrd, s_clk_main, s_cs1, s_rd1_r1)
-	begin
-		if s_rd1_r1 = '1' then
-			s_rd1_r0 <= '0';
-		elsif falling_edge(nrd) then
-			s_rd1_r0 <= s_cs1;
-		end if;
-		if rising_edge(s_clk_main) then
-			s_rd1_r1 <= s_rd1_r0;
-		end if;
-	end process;
-	s_rd1_stb <= s_rd1_r1;
-	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
 	-- address range selection
 	-- input selection decoder  (write)
-	s_tx_mem_wr_stb <= s_wr0_stb;
-	s_desc_mem_wr_stb <= s_wr1_stb when 
-		(s_addr(11) = '0' and s_addr(10) = '0') else '0';
-	s_ptr_mem_wr_stb <= s_wr1_stb when 
-		(s_addr(11) = '0' and s_addr(10) = '1') else '0';
-	s_reg_wr_stb <= s_wr1_stb when (s_addr(11) = '1') else '0';
-	s_reg_rd_stb <= s_rd1_stb when (s_addr(11) = '1') else '0';
+	s_tx_mem_wr_stb <= s_wr_stb when s_addr(12) = '1';
+	s_desc_mem_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '0' and s_addr(11) = '0' and s_addr(10) = '0') else '0';
+	s_ptr_mem_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '0' and s_addr(11) = '0' and s_addr(10) = '1') else '0';
+	s_reg_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '0' and s_addr(11) = '1') else '0';
+	s_reg_rd_stb <= s_rd_stb when 
+		(s_addr(12) = '0' and s_addr(11) = '1') else '0';
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
 	s_data_out <= 
-		s_rx_mem_dout when s_cs0 = '1' else
-		s_reg_buf when (s_cs1 = '1' and s_addr(11) = '1') else 
+		s_rx_mem_dout when (s_addr(12) = '0') else
+		s_reg_buf when (s_addr(12) = '1' and s_addr(11) = '1') else 
 		s_desc_mem_dout;
 
 	-- Memory map
 	--
-	-- CS2:
 	-- +---------+---------------+---------------+
 	-- | Address | Read          | Write         |
 	-- +---------+---------------+---------------+ 
+	-- |  0x1fff |               |               |
+	-- |   ...   |  Invalid      | Invalid       |
+	-- |         |               |               |
+	-- |  0x1810 |               |               |
+	-- +---------+---------------+---------------+ 
+	-- |  0x180f |               |               |
+	-- |   ...   |  Registers    |  Control      |
+	-- |         |               |  Registers    |
+	-- |  0x1800 |               |               |
+	-- +---------+---------------+---------------+ 
+	-- |  0x17ff |               |               |
+	-- |   ...   |  Invalid      | Invalid       |
+	-- |         |               |               |
+	-- |  0x1600 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x15ff |               |               |
+	-- |   ...   |   Invalid     | Descriptor    |
+	-- |         |               | Pointers      |
+	-- |  0x1400 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x13ff |               |               |
+	-- |   ...   |   Invalid     | Vector        |
+	-- |         |               | Descriptors   |
+	-- |  0x1000 |               |               |
+	-- +---------+---------------+---------------+
 	-- |  0x0fff |               |               |
 	-- |   ...   |  Vector TX    | Vector RX     |
 	-- |         |  Memory       | Memory        |
-	-- |  0x0000 |               |               |
-	-- +---------+---------------+---------------+
-	--
-	--
-	-- CS3:
-	-- +---------+---------------+---------------+
-	-- | Address | Read          | Write         |
-	-- +---------+---------------+---------------+ 
-	-- |  0x0fff |               |               |
-	-- |   ...   |  Invalid      | Invalid       |
-	-- |         |               |               |
-	-- |  0x0810 |               |               |
-	-- +---------+---------------+---------------+ 
-	-- |  0x080f |               |               |
-	-- |   ...   |  Registers    |  Control      |
-	-- |         |               |  Registers    |
-	-- |  0x0800 |               |               |
-	-- +---------+---------------+---------------+ 
-	-- |  0x07ff |               |               |
-	-- |   ...   |  Invalid      | Invalid       |
-	-- |         |               |               |
-	-- |  0x0600 |               |               |
-	-- +---------+---------------+---------------+
-	-- |  0x05ff |               |               |
-	-- |   ...   |   Invalid     | Descriptor    |
-	-- |         |               | Pointers      |
-	-- |  0x0400 |               |               |
-	-- +---------+---------------+---------------+
-	-- |  0x03ff |               |               |
-	-- |   ...   |   Invalid     | Vector        |
-	-- |         |               | Descriptors   |
 	-- |  0x0000 |               |               |
 	-- +---------+---------------+---------------+
 	--
@@ -602,8 +547,6 @@ begin
 			-- reset
 			clr => s_rst);
 
-	s_tap_vcc_en <= s_cfg(CFG_TAP_VCC_EN);
-	s_relay_en <= s_cfg(CFG_RELAY_EN);
 	s_rst <= s_cfg(CFG_RST); -- Global reset
 	s_ckgen_rtck_en <= s_cfg(CFG_RTCK_EN);
 	s_loopback_en <= s_cfg(CFG_LOOP);
@@ -854,47 +797,18 @@ begin
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- LED assignment
-	led_dcc_drv : entity jtag_led_drv
-		generic map (PULSE_CNT => 31, OUT_INV => true)
-		port map (
-			clk=> s_clk_main, 
-			rst => s_rst, 
-			en => s_1khz_stb, 
-			trip => s_2hz_stb, 
-			q => led_dcc
-		);
+	-- LEDs assignment
 	led_run_drv : entity jtag_led_drv
 		generic map (PULSE_CNT => 31, OUT_INV => true)
 		port map (
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_rd1_stb, 
-			q => led_run
+			trip => s_rd_stb, 
+			q => led_1
 		);
-	led_trg_drv : entity jtag_led_drv
-		generic map (PULSE_CNT => 31, OUT_INV => true)
-		port map (
-			clk=> s_clk_main, 
-			rst => s_rst, 
-			en => s_1khz_stb, 
-			trip => s_wr1_stb, 
-			q => led_trg
-		);
-	---------------------------------------------------------------------------
 
-	---------------------------------------------------------------------------
 	-- Auxiliar port activity
-	led_pwr_drv : entity jtag_led_drv
-		generic map (PULSE_CNT => 31, OUT_INV => true)
-		port map (
-			clk=> s_clk_main, 
-			rst => s_rst, 
-			en => s_1khz_stb, 
-			trip => not(s_aux0_in), 
-			q => led_pwr
-		);
 	led_con_drv : entity jtag_led_drv
 		generic map (PULSE_CNT => 31, OUT_INV => true)
 		port map (
@@ -902,7 +816,7 @@ begin
 			rst => s_rst, 
 			en => s_1khz_stb, 
 			trip => not(s_aux1_in), 
-			q => led_con
+			q => led_2
 		);
 	---------------------------------------------------------------------------
 
@@ -917,7 +831,7 @@ begin
 	---------------------------------------------------------------------------
 	-- Serial port TX
 	s_aux0_oe <= '1'; -- Enable output
-	s_uart_tx <= p14_txd0;
+	s_uart_tx <= uart_tx;
 	s_aux0_out <= s_uart_tx;
 	---------------------------------------------------------------------------
 
@@ -925,22 +839,15 @@ begin
 	-- Serial port RX
 	s_aux1_oe <= '0'; -- Disable output
 	s_uart_rx <= s_aux1_in;
-	p15_rxd0 <= s_uart_rx;
+	uart_rx <= s_uart_rx;
 	s_aux1_out <= '0';
 	---------------------------------------------------------------------------
 
-	---------------------------------------------------------------------------
-	-- Capture
-	s_capture <= capture;
-	p13_sck0 <= s_capture;
-	---------------------------------------------------------------------------
-
 	-- Interrupt
-	p9_irq0 <= s_irq_out;
+	irq <= s_irq_out;
 	-- Target detection
 	s_vtref <= tp1_vtref;
 	tp1_tdo_tst <= s_tdo_tst;
-	p12_fiq <= s_target_det;
 	-- TAP
 	s_tap_rtck <= tp1_rtck; 
 	s_tap_tdo <= s_tap_tdi when s_loopback_en = '1' else tp1_tdo;
@@ -950,10 +857,6 @@ begin
 	tp1_tck <= s_tap_tck;
 	tp1_trst <= s_tap_trst;
 	tp1_rst <= s_tap_nrst;
-	-- Open drain vcc control
-	tp1_vcc_on <= '0' when s_tap_vcc_en = '1' else 'Z';
-	-- Relay
-	relay <= '1' when s_relay_en = '1' else '0';
 	
 	tap_state <= s_tap_state;
 
