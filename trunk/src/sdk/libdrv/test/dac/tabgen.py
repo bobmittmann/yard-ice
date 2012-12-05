@@ -16,15 +16,9 @@ scale = ( \
 	("G",  "", ( 97.999, 195.998, 391.995, 783.991, 1567.982, 3135.963)), \
 	("G", "#", (103.826, 207.652, 415.305, 830.609, 1661.219, 3322.438)))
 
-
-freq = (100, 200, 300, 400, 441, 500, 600, 700, 800, 886.76, 900, 
-		1000, 1102.5, 1024, 1100, 1200, 1300, 
-		1400, 1500, 1600, 1700, 1800, 1900, 2000)
+tab_lst = []
 
 def make_tab(nm, freq, rate):
-	print "uint8_t %s[] = /* %d */" % (nm, freq)
-	print "{"
-
 	i = 0
 	if ((rate % freq) == 0):
 		over = 1
@@ -32,6 +26,10 @@ def make_tab(nm, freq, rate):
 	 	over = 4
 
 	n = ((over * rate) + (freq / 2)) / freq
+
+	print "static uint8_t %s[] = /* %d */" % (nm, freq)
+	print "{"
+
 	while (i < n):
 		x = ((2.0 * over) * pi * i) / n
 		y = sin(x)
@@ -42,9 +40,11 @@ def make_tab(nm, freq, rate):
 	print "};"
 	print ""
 
+	tab_lst.append((nm, freq, n))
+
 def main():
 
-	rate = 16000
+	rate = 8000
 
 	print "#ifndef __WAVETAB_H__"
 	print "#define __WAVETAB_H__"
@@ -67,6 +67,23 @@ def main():
 	make_tab("g4", 1568, rate)
 	make_tab("g4s", 1661, rate)
 	make_tab("sin1khz", 1000, rate)
+
+	print ""
+
+	print "static const struct {"
+	print "\tconst uint8_t * buf;"
+	print "\tuint32_t len;"
+	print "} wave_lut = {"
+	for e in tab_lst:
+		print "\t{ .buf = %s, .len = sizeof(%s) }," % (e[0], e[0])
+	print "};"
+	print ""
+
+	i = 0;
+	for e in tab_lst:
+		print "#define TONE_%s %d" % (e[0].upper(), i)
+		i = i + 1
+	print ""
 
 	print ""
 	print "#ifdef __cplusplus"
