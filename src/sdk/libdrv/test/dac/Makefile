@@ -22,7 +22,7 @@
 
 PROG = test
 
-CFILES = test.c wavegen.c
+CFILES = test.c 
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm \

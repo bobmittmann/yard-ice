@@ -48,37 +48,34 @@ port(
 	uart_tx : in std_logic;
 
 	-- TAP extra
-	tp1_aux0 : inout std_logic;
-	tp1_aux1 : inout std_logic;
-	-- TAP voltage reference
-	tp1_vtref : in std_logic;
+	tp_dbgrq : inout std_logic;
+	tp_dbgack : inout std_logic;
 	-- TAP port
-	tp1_tdo : in std_logic;
-	tp1_tck : out std_logic;
-	tp1_tdi : out std_logic;
-	tp1_tms : out std_logic;
+	tp_tdo : in std_logic;
+	tp_tck : out std_logic;
+	tp_tdi : out std_logic;
+	tp_tms : out std_logic;
 	-- TAP return clock
-	tp1_rtck : in std_logic;
+	tp_rtck : in std_logic;
 	-- TAP reset
-	tp1_trst : out std_logic;
+	tp_trst : out std_logic;
 	-- Target reset
-	tp1_rst : out std_logic;
-	-- TAP connection test
-	tp1_tdo_tst : out std_logic;
+	tp_rst : out std_logic;
 	-- leds
 	led_1 : out std_logic;
 	led_2 : out std_logic;
 	--
+	clk_aux : in std_logic
 	
 	--DEBUG :
-	tap_state : out unsigned(3 downto 0)	
+--	tap_state : out unsigned(3 downto 0)	
 );
 end jtagtool3;
 
 architecture structure of jtagtool3 is
 	
 	constant DATA_WIDTH : natural := 16;
-	constant ADDR_BITS : natural := 12;
+	constant ADDR_BITS : natural := 13;
 
 	constant VEC_LEN_BITS : natural := 10;
 	constant VEC_ADDR_BITS : natural := 10;
@@ -96,7 +93,7 @@ architecture structure of jtagtool3 is
 	constant CFG_LOOP : natural := 4;
 	constant CFG_RTCK_EN : natural := 5;
 	constant CFG_RST : natural := 6;
-	constant CFG_TDO_PROBE_EN : natural := 7;
+	constant CFG_UART_EN : natural := 10;
 	constant CFG_TAP_TRST : natural := 10;
 	constant CFG_TAP_NRST : natural := 11;
 	constant CFG_REG_BITS : natural := 12; -- width of cfg reg
@@ -134,9 +131,28 @@ architecture structure of jtagtool3 is
 	signal s_data_out : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_addr : std_logic_vector(ADDR_BITS - 1 downto 1);
 	signal s_rd : std_logic;
-	signal s_wr : std_logic;
+--	signal s_wr : std_logic;
 
+	-----------------------
+	-- STM32F synchronous bus 
 	signal s_oe : std_logic;
+--	signal s_ce : std_logic;
+	signal s_wr_stb : std_logic;
+	signal s_rd_stb : std_logic;
+	type memc_st_t is (MEMC_IDLE, MEMC_ADV, MEMC_DLAT, MEMC_DSTB);
+	signal s_memc_st : memc_st_t;
+	signal s_memc_next_st : memc_st_t;
+	-----------------------
+
+	-----------------------
+	signal s_ce_r : std_logic;
+	-- address valid
+	signal s_adv_stb : std_logic;
+	-- address increment
+	signal s_adi_stb : std_logic;
+	-- address latch
+	signal s_addr_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
+
 
 	-- register selection
 	signal s_reg_wr_stb : std_logic;
@@ -245,23 +261,12 @@ architecture structure of jtagtool3 is
 	-- serial port 
 	signal s_uart_rx : std_logic;
 	signal s_uart_tx : std_logic;
+	signal s_uart_en : std_logic;
 	-----------------------
-	signal s_tdo_probe_en : std_logic;
-	signal s_tdo_probe : std_logic;
-	-----------------------
-	signal s_vtref : std_logic;
-	signal s_tdo_tst : std_logic;
-	signal s_tdo_osc : std_logic;
-	signal s_target_det : std_logic;
 
 	-----------------------
-	signal s_aux0_oe : std_logic;
-	signal s_aux0_in : std_logic;
-	signal s_aux0_out : std_logic;
-	-----------------------
-	signal s_aux1_oe : std_logic;
-	signal s_aux1_in : std_logic;
-	signal s_aux1_out : std_logic;
+	signal s_dbgrq_out : std_logic;
+	signal s_dbgack_in : std_logic;
 	-----------------------
 
 	function is_zero(x : std_logic_vector) return std_logic is
@@ -277,13 +282,14 @@ begin
 	-- main clock (60MHz)
 	s_clk_main <= mclk;
 
-	pll : cyc_pll port map(
-		inclk0  => s_clk_main,
-		c1 => s_clk_120mhz
-	);
+--	pll : cyc_pll port map(
+--		inclk0  => s_clk_main,
+--		c1 => s_clk_120mhz
+--	);
            
 	-- IO clock
-	s_clk_io <= s_clk_120mhz;
+--	s_clk_io <= s_clk_120mhz;
+	s_clk_io <= s_clk_main;
 
 	-- Bus clock
 	s_clk_bus <= fsmc_clk;
@@ -291,9 +297,9 @@ begin
 	-- Output enable
 	s_oe <= (fsmc_noe nor fsmc_nce);
 	-- Write
-	s_wr <= (fsmc_nwe nor fsmc_nce);
+--	s_wr <= (fsmc_nwe nor fsmc_nce);
 	-- Chip enable 
-	s_ce <= not fsmc_nce;
+--	s_ce <= not fsmc_nce;
 
 
 	---------------------------------------------------------------------------
@@ -358,22 +364,24 @@ begin
 			-- count 
 			cin => s_adi_stb,
 			-- data out
-			q => s_addr);
+			q(ADDR_BITS - 2 downto 0) => s_addr(ADDR_BITS - 1 downto 1)
+			);
+
 	---------------------------------------------------------------------------
 
 
 	---------------------------------------------------------------------------
 	-- address range selection
 	-- input selection decoder  (write)
-	s_tx_mem_wr_stb <= s_wr_stb when s_addr(12) = '1';
-	s_desc_mem_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '0' and s_addr(11) = '0' and s_addr(10) = '0') else '0';
-	s_ptr_mem_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '0' and s_addr(11) = '0' and s_addr(10) = '1') else '0';
-	s_reg_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '0' and s_addr(11) = '1') else '0';
 	s_reg_rd_stb <= s_rd_stb when 
-		(s_addr(12) = '0' and s_addr(11) = '1') else '0';
+		(s_addr(12) = '1' and s_addr(11) = '1') else '0';
+	s_reg_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '1' and s_addr(11) = '1') else '0';
+	s_ptr_mem_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '1' and s_addr(11) = '0' and s_addr(10) = '1') else '0';
+	s_desc_mem_wr_stb <= s_wr_stb when 
+		(s_addr(12) = '1' and s_addr(11) = '0' and s_addr(10) = '0') else '0';
+	s_tx_mem_wr_stb <= s_wr_stb when s_addr(12) = '0';
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
 	s_data_out <= 
@@ -550,7 +558,6 @@ begin
 	s_rst <= s_cfg(CFG_RST); -- Global reset
 	s_ckgen_rtck_en <= s_cfg(CFG_RTCK_EN);
 	s_loopback_en <= s_cfg(CFG_LOOP);
-	s_tdo_probe_en <= s_cfg(CFG_TDO_PROBE_EN);
 	s_tap_trst <= '1' when s_cfg(CFG_TAP_TRST) = '1' else '0';
 	s_tap_nrst <= '0' when s_cfg(CFG_TAP_NRST) = '1' else 'Z';
 	---------------------------------------------------------------------------
@@ -771,29 +778,10 @@ begin
 		port map (
 			clk => s_clk_main,
 			rst => s_rst, 
-			en => s_1khz_stb,
+			en => s_1khz_stb
 --			q => s_clk_2hz,
-			p_stb => s_2hz_stb
+--			p_stb => s_2hz_stb
 		);
-	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- 20KHz clock generator
-	cklgen_tdo_tst: entity jtag_clk_scaler
-		generic map (CLK_DIV => 50)
-		port map (
-			clk => s_clk_main,
-			rst => s_rst, 
-			en => s_1mhz_stb,
-			q => s_tdo_osc
-		);
-	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- TDO probing
-	s_tdo_probe <= '0';
-	s_tdo_tst <= s_tdo_osc when s_tdo_probe_en = '1' else '0';
-	s_target_det <= s_tdo_probe when s_tdo_probe_en = '1' else s_vtref;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -815,50 +803,44 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => not(s_aux1_in), 
+			trip => not(s_dbgack_in), 
 			q => led_2
 		);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- Aux pins bidirectionl 
-	tp1_aux0 <= s_aux0_out when s_aux0_oe = '1' else 'Z';
-	tp1_aux1 <= s_aux1_out when s_aux1_oe = '1' else 'Z';
-	s_aux0_in <= tp1_aux0;
-	s_aux1_in <= tp1_aux1;
+	-- DBG Req/Ack
+	tp_dbgrq <= s_dbgrq_out;
+	s_dbgack_in <= tp_dbgack;
 	---------------------------------------------------------------------------
+
+	s_uart_en <= s_cfg(CFG_UART_EN);
 
 	---------------------------------------------------------------------------
 	-- Serial port TX
-	s_aux0_oe <= '1'; -- Enable output
 	s_uart_tx <= uart_tx;
-	s_aux0_out <= s_uart_tx;
+	s_dbgrq_out <= s_uart_tx when s_uart_en = '1' else '0';
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
 	-- Serial port RX
-	s_aux1_oe <= '0'; -- Disable output
-	s_uart_rx <= s_aux1_in;
+	s_uart_rx <= s_dbgack_in when s_uart_en = '1' else '1';
 	uart_rx <= s_uart_rx;
-	s_aux1_out <= '0';
 	---------------------------------------------------------------------------
 
 	-- Interrupt
 	irq <= s_irq_out;
-	-- Target detection
-	s_vtref <= tp1_vtref;
-	tp1_tdo_tst <= s_tdo_tst;
 	-- TAP
-	s_tap_rtck <= tp1_rtck; 
-	s_tap_tdo <= s_tap_tdi when s_loopback_en = '1' else tp1_tdo;
-	tp1_tdi <= s_tap_tdi when s_loopback_en = '0' else '0';
---	tp1_tdi <= s_tap_tdi;
-	tp1_tms <= s_tap_tms;
-	tp1_tck <= s_tap_tck;
-	tp1_trst <= s_tap_trst;
-	tp1_rst <= s_tap_nrst;
+	s_tap_rtck <= tp_rtck; 
+	s_tap_tdo <= s_tap_tdi when s_loopback_en = '1' else tp_tdo;
+	tp_tdi <= s_tap_tdi when s_loopback_en = '0' else '0';
+--	tp_tdi <= s_tap_tdi;
+	tp_tms <= s_tap_tms;
+	tp_tck <= s_tap_tck;
+	tp_trst <= s_tap_trst;
+	tp_rst <= s_tap_nrst;
 	
-	tap_state <= s_tap_state;
+--	tap_state <= s_tap_state;
 
 end structure;
 
