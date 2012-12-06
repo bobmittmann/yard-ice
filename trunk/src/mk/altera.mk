@@ -156,11 +156,15 @@ fpga-sta: $(FPGA_STA)
 # Target implementations
 ###################################################################
 
+$(OUTDIR):
+	$(ACTION) "Creating: $@"
+	$(Q) mkdir $@
+
 $(FPGA_QPF): 
 	$(Q)echo "PROJECT_REVISION = \"$(FPGA_PROJ)\"" > $@;\
 	echo >> $@
 
-$(FPGA_QDF): $(VHDL_FILES) $(LOCATIONS) $(INSTANCES)
+$(FPGA_QDF): $(VHDL_FILES) $(LOCATIONS) $(INSTANCES) $(OUTDIR)
 	$(Q)echo "set_global_assignment -name FAMILY \"$(FAMILY)\"" > $@;\
 	echo "set_global_assignment -name DEVICE \"$(DEVICE)\"" >> $@;\
 	echo "set_global_assignment -name TOP_LEVEL_ENTITY $(FPGA_PROJ)" >> $@;\

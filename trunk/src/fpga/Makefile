@@ -19,9 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-PROJECT	= jtagtool3
+FPGA_PROJ = jtagtool3
 
-LIBDIR = ../../pldlib
+FPGA_RBF_ADDR = 0x00010000
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
@@ -41,10 +41,8 @@ VHDL_FILES = cyc_pll.vhd \
 
 LOCATIONS = locations.txt
 INSTANCES = instances.txt
-
 FAMILY = Cyclone
 DEVICE = EP1C3T100C8
-
 SYNTHESIS_EFFORT = AUTO
 OPTIMIZE_HOLD_TIMING = OFF
 OPTIMIZE_MULTI_CORNER_TIMING = ON
@@ -53,5 +51,8 @@ HDL_MESSAGE_LEVEL = LEVEL2
 STATE_MACHINE_PROCESSING = ONE-HOT
 SYNTH_MESSAGE_LEVEL = LOW
 
-include $(LIBDIR)/altera.mk
+include ../mk/altera.mk
+
+rbf: $(FPGA_RBF)
+	@$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $<
 
