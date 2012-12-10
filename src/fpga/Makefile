@@ -37,6 +37,7 @@ VHDL_FILES = cyc_pll.vhd \
 			jtag_io_dpram.vhdl\
 			jtag_led_drv.vhdl\
 			jtag_reg.vhdl\
+			jtag_cmem.vhdl\
 			jtagtool3.vhdl
 
 LOCATIONS = locations.txt

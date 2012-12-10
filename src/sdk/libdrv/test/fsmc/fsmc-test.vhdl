@@ -76,7 +76,6 @@ architecture structure of fsmc_test is
 
 	-- clocks 
 	signal s_clk_main : std_logic;
-	signal s_clk_io : std_logic;
 --	signal s_clk_1mhz : std_logic;
 	-- clock strobes
 	signal s_1mhz_stb : std_logic;
@@ -84,17 +83,16 @@ architecture structure of fsmc_test is
 --	signal s_2hz_stb : std_logic;
 
 	-- bus access 
-	signal s_data_in : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_data_out : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_rd : std_logic;
-	signal s_wr : std_logic;
-	signal s_oe : std_logic;
-	signal s_ce : std_logic;
+	signal s_bus_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_rd : std_logic;
+	signal s_bus_wr : std_logic;
+	-----------------------
 
 	-- TAP signals
-	signal s_tap_tdo : std_logic;
-	signal s_tap_rtck : std_logic;
+--	signal s_tap_tdo : std_logic;
+--	signal s_tap_rtck : std_logic;
 	signal s_tap_tck : std_logic;
 	signal s_tap_tdi : std_logic;
 	signal s_tap_tms : std_logic;
@@ -104,24 +102,6 @@ architecture structure of fsmc_test is
 	signal s_dbgack : std_logic;
 	signal s_dbgrq : std_logic;
 	-----------------------
-
-	-----------------------
-	signal s_wr_r : std_logic;
-	signal s_wr_stb : std_logic;
-	signal s_rd_stb : std_logic;
-
-	signal s_mem_out : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_dout_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_din_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
-	-----------------------
-	signal s_ce_r : std_logic;
-	-- address valid
-	signal s_adv_stb : std_logic;
-	-- address increment
-	signal s_adi_stb : std_logic;
-	-- address latch
-	signal s_addr_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	-- serial port 
 	signal s_uart_rx : std_logic;
@@ -142,103 +122,31 @@ architecture structure of fsmc_test is
 	-- TAP output selection: NORMAL/LOOPBACK
 	signal s_loopback_en : std_logic;
 
-	type memc_st_t is (MEMC_IDLE, MEMC_ADV, MEMC_DLAT, MEMC_DSTB);
---					   MEMC_DSTB1, MEMC_DSTB2, MEMC_DSTB3, MEMC_DSTB4);
-	
-	signal s_memc_st : memc_st_t;
-	signal s_memc_next_st : memc_st_t;
-
 begin
-	---------------------------------------------------------------------------
-	-- Input Assignments
 	---------------------------------------------------------------------------
 	-- main clock
 	s_clk_main <= mclk;
-	-- IO clock
-	s_clk_io <= fsmc_clk;
---	s_clk_io <= clk_aux;
-
-	-- Output enable
-	s_oe <= (fsmc_noe nor fsmc_nce);
-	-- Write
-	s_wr <= (fsmc_nwe nor fsmc_nce);
-	-- Chip enable 
-	s_ce <= not fsmc_nce;
-
 
 	---------------------------------------------------------------------------
-	-- data bus IO (bidirectional buffer)
-	-- input
-	s_data_in <= fsmc_d;
-
-	---------------------------------------------------------------------------
-	-- Synchronous CRAM type address multiplexed bus
-	process (fsmc_clk, fsmc_nce)
-	begin
-		if (fsmc_nce = '1') then
-			s_memc_st <= MEMC_IDLE;
-		elsif rising_edge(fsmc_clk) then
-			s_memc_st <= s_memc_next_st;
-		end if;
-	end process;
-
-	process (s_memc_st, fsmc_noe, fsmc_nwe)
-	begin
-		case s_memc_st is
-			when MEMC_IDLE =>
-				s_memc_next_st <= MEMC_ADV;
-			when MEMC_ADV =>
-				if 	(fsmc_nwe = '0') then
-					s_memc_next_st <= MEMC_DLAT;
-				else
-					s_memc_next_st <= MEMC_DSTB;
-				end if;
-			when MEMC_DLAT =>
-				s_memc_next_st <= MEMC_DSTB;
-			when MEMC_DSTB =>
-				s_memc_next_st <= MEMC_DSTB;
-		end case;
-	end process;
-
-	s_rd_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_noe = '0')) 
-					else '0';
-
-	s_wr_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_nwe = '0')) 
-					else '0';
-
-	s_adv_stb <= '1' when (s_memc_st = MEMC_ADV) else '0';
-
-	s_adi_stb <= '1' when (s_memc_st = MEMC_DSTB) else '0';
-
-	---------------------------------------------------------------------------
-	-- Address latch / counter
-	addr_r : entity counter
-		generic map (DATA_WIDTH => DATA_WIDTH, COUNT_BITS => DATA_WIDTH) 
+	-- CRAM bus adapter
+	cram_bus : entity cram16
+		generic map (ADDR_BITS => DATA_WIDTH)
 		port map (
-			-- I/O clock
-			clk => s_clk_io,
-			-- reset
+			clk => s_clk_main,
 			rst => s_rst,
-			-- load on address valid signal 
-			ld => s_adv_stb,
-			d => s_data_in,
-			-- count 
-			cin => s_adi_stb,
-			-- data out
-			q => s_addr);
-	---------------------------------------------------------------------------
 
+			dout => s_bus_dout,
+			din  => s_bus_din,
+			addr  => s_bus_addr,
+			rd  => s_bus_rd,
+			wr => s_bus_wr,
 
-	---------------------------------------------------------------------------
-	-- input pipeline 
-	process (s_clk_io, s_wr_stb)
-	begin
-		if rising_edge(s_clk_io) and (s_wr_stb = '1') then
-			s_din_r <= s_data_in;
-		end if;
-	end process;
-
-	---------------------------------------------------------------------------
+			cram_clk => fsmc_clk,
+			cram_noe => fsmc_noe,
+			cram_nwe => fsmc_nwe,
+			cram_nce => fsmc_nce,
+			cram_d => fsmc_d
+		);
 
 	---------------------------------------------------------------------------
 	-- 1MHz clock generator
@@ -286,23 +194,13 @@ begin
 			ADDR_WIDTH => MEM_BITS
 		)
 		port map (
-			clk => s_clk_io,
-			addr => s_addr(MEM_BITS - 1 downto 0),
-			we => s_wr_stb, 
-			data => s_data_in,
-			q => s_mem_out
+			clk => s_clk_main,
+			addr => s_bus_addr(MEM_BITS - 1 downto 0),
+			we => s_bus_wr, 
+			data => s_bus_din,
+			q => s_bus_dout
 		);
 	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- output buffer (read)
-	process (s_clk_io, s_rd_stb)
-	begin
---		if rising_edge(s_clk_io) and (s_rd_stb = '1') then
-		if falling_edge(s_clk_io) and (s_rd_stb = '1') then
-			s_dout_r <= s_mem_out;
-		end if;
-	end process;
 
 	---------------------------------------------------------------------------
 	-- LED 1
@@ -312,7 +210,7 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_wr_stb, 
+			trip => s_bus_wr, 
 			q => s_led1
 		);
 
@@ -324,7 +222,7 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_rd_stb, 
+			trip => s_bus_rd, 
 			q => s_led2
 		);
 
@@ -334,29 +232,24 @@ begin
 	s_rst <= '0';
 
 	---------------------------------------------------------------------------
-	s_tap_trst <= s_wr_stb;
+	s_tap_trst <= s_bus_wr;
 --	s_tap_tdi <= fsmc_noe;
-	s_tap_tdi <= s_data_in(1);
-	s_tap_tms <= s_data_in(2);
+	s_tap_tdi <= s_bus_din(1);
+	s_tap_tms <= s_bus_din(2);
 --	s_tap_tdi <= '1' when (s_memc_st = MEMC_DLAT1) else '0';
 --	s_tap_tms <= '1' when (s_memc_st = MEMC_DSTB1) else '0';
 	s_tap_tck <= fsmc_clk;
-	s_tap_nrst <= s_rd_stb;
---	s_dbgrq <= s_data_out(2);
+	s_tap_nrst <= s_bus_rd;
+--	s_dbgrq <= s_bus_dout(2);
 
 	---------------------------------------------------------------------------
 
 	s_dbgrq <= s_uart_tx;
 	s_uart_rx <= s_dbgack;
-	s_data_out <= s_dout_r;
 
 	---------------------------------------------------------------------------
 	-- Output Assignments
 	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- Data bus output
-	fsmc_d <= s_data_out when (s_oe  = '1') else (others => 'Z');
 
 	---------------------------------------------------------------------------
 	-- Interrupt
@@ -364,8 +257,8 @@ begin
 
 	---------------------------------------------------------------------------
 	-- TAP
-	s_tap_rtck <= tp_rtck; 
-	s_tap_tdo <= s_tap_tdi when s_loopback_en = '1' else tp_tdo;
+--	s_tap_rtck <= tp_rtck; 
+--	s_tap_tdo <= s_tap_tdi when s_loopback_en = '1' else tp_tdo;
 	tp_tdi <= s_tap_tdi when s_loopback_en = '0' else '0';
 	tp_tms <= s_tap_tms;
 	tp_tck <= s_tap_tck;

@@ -156,10 +156,6 @@ fpga-sta: $(FPGA_STA)
 # Target implementations
 ###################################################################
 
-$(OUTDIR):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
-
 $(FPGA_QPF): 
 	$(Q)echo "PROJECT_REVISION = \"$(FPGA_PROJ)\"" > $@;\
 	echo >> $@

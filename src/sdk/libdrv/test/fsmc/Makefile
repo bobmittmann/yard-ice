@@ -20,27 +20,28 @@
 # 
 
 
-MACH = stm32f207
-
 PROG = fsmc-test
 
 CFILES = fsmc-test.c
 
-LIBDIRS = ../../stm32f ../../libcm3 ../../libutil ../../libc
+LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
+		  ../../../libthinkos ../../../libc ../../../libice-comm \
+		  ../../../libdrv 
 
-LIBS = stm32f cm3 util c
+LIBS = stm32f cm3 util thinkos c ice-comm drv 
 
-CFLAGS = -g -O1
-CDEFS = "CM3_SYSTICK_CLK_HZ=15000000"
+INCPATH = ../../../include
 
-JTAGTOOL_ADDR = 192.168.1.30
+JTAGTOOL_ADDR = 192.168.0.80
 
-include ../../mk/cortex-m3.mk
+CFLAGS = -g -O2
 
-FPGA_RBF_ADDR = 0x00010000
+include ../../../../mk/stm32f207.mk
+
+FPGA_RBF_ADDR = 0x08010000
 
 FPGA_PROJ = fsmc_test
-VHDL_FILES = clk_scaler.vhdl led_drv.vhdl sram.vhdl counter.vhdl fsmc-test.vhdl
+VHDL_FILES = clk_scaler.vhdl led_drv.vhdl sram.vhdl counter.vhdl cram16.vhdl fsmc-test.vhdl
 LOCATIONS = locations.txt
 INSTANCES = instances.txt
 FAMILY = Cyclone
@@ -53,7 +54,7 @@ HDL_MESSAGE_LEVEL = LEVEL2
 STATE_MACHINE_PROCESSING = ONE-HOT
 SYNTH_MESSAGE_LEVEL = LOW
 
-include altera.mk
+include ../../../../mk/altera.mk
 
 rbf: $(FPGA_RBF)
 	@$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $<
