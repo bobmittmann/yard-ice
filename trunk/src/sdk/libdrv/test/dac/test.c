@@ -47,6 +47,9 @@ int main(int argc, char ** argv)
 //	uint32_t prev;
 //	uint32_t dt;
 
+	DCC_LOG_CONNECT();
+	DCC_LOG_INIT();
+
 	cm3_udelay_calibrate();
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 

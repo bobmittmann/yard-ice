@@ -29,7 +29,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <thinkos.h>
 
+#include <yard-ice/drv.h>
+#include <sys/dcclog.h>
 
 /*--------------------------------------------------------------------------
  * SPI
@@ -160,8 +163,9 @@ void conf_wr(int c)
 	spi_putc(spi, c);
 
 	if ((c = spi_getc(spi)) >= 0) {
-		if (c != 0xff)
+		if (c != 0xff) {
 			printf("%02x", c);
+		}
 	}
 }
 
@@ -197,30 +201,6 @@ static void mco2_cfg(void)
 
     /* enable I/O compensation cell */
 	syscfg->cmpcr |= SYSCFG_CMP_PD;
-}
-
-#define DAC2_GPIO STM32F_GPIOA
-#define DAC2_PORT 5
-
-void dac_init(void)
-{
-	struct stm32f_dac * dac = STM32F_DAC;
-	struct stm32f_rcc * rcc = STM32F_RCC;
-
-	/* clock enable */
-	rcc->apb1enr |= RCC_DACEN;
-
-	stm32f_gpio_mode(DAC2_GPIO, DAC2_PORT, ANALOG, 0);
-
-	dac->cr = CR_EN2;
-	dac->dhr12r2 = 2048;
-}
-
-void vout(unsigned int mv)
-{
-	struct stm32f_dac * dac = STM32F_DAC;
-
-	dac->dhr12r2 = (5050 * mv) / 8192;
 }
 
 gpio_io_t fsmc_io[] = {
@@ -265,7 +245,6 @@ void fsmc_init(void)
 	gpio_io_t io;
 	int i;
 
-	dac_init();
 	mco2_cfg();
 
 
@@ -406,22 +385,28 @@ FILE * stdout = (FILE *)&stm32f_usart5_file;
 int main(int argc, char ** argv)
 {
 	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
-	struct stm32f_usart * us = STM32F_USART5;
-	uint8_t * rbf = (uint8_t *)0x10000;
+	uint8_t * rbf = (uint8_t *)0x08010000;
 	uint64_t val;
 	uint64_t buf[512];
 	int ret;
 	int i;
 	int n = 512;
 
-	stm32f_usart_open(us, 115200, SERIAL_8N1);
+	DCC_LOG_CONNECT();
+	DCC_LOG_INIT();
+
 	cm3_udelay_calibrate();
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+	stdout = uart_console_open(115200, SERIAL_8N1);
+	stdin = stdout;
 
 	printf("\n");
-	printf("--------------------------------------------\n");
-	printf("SPI test\n");
-	printf("--------------------------------------------\n");
+	printf("------------------------------------------------------\n");
+	printf("- FSMC test\n");
+	printf("------------------------------------------------------\n");
 	printf("\n");
+	printf("\r\n");
 
 	altera_io_init();
 	spi_init();
@@ -429,11 +414,11 @@ int main(int argc, char ** argv)
 
 	if ((ret = altera_configure(rbf, 40000)) < 0) {
 		printf(" # altera_configure() failed: %d!\n", ret);
+		for(;;);
 	};
 
 	printf("- FPGA configuration done.\n");
 
-	vout(3100);
 	val = 0;
 
 	fsmc_speed(1);
@@ -544,26 +529,22 @@ int main(int argc, char ** argv)
 
 	for (;;) {
 		delay(2);
-		vout(1800);
 		printf("1.8V");
 		val = fpga->h[0];
 		fpga->h[10] = val;
 		fpga->h[11] = val;
 
 		delay(2);
-		vout(2500);
 		printf("2.5V");
 		val = fpga->h[1];
 		fpga->h[11] = val;
 
 		delay(2);
-		vout(3000);
 		printf("3.0V");
 		val = fpga->h[1];
 		fpga->h[12] = val;
 
 		delay(2);
-		vout(3300);
 		printf("3.3V");
 		val = fpga->h[1];
 		fpga->h[13] = val;

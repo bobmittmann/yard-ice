@@ -116,7 +116,6 @@ architecture structure of jtagtool3 is
 	-- clocks 
 	signal s_clk_main : std_logic;
 	signal s_clk_io : std_logic;
-	signal s_clk_bus : std_logic;
 	signal s_clk_120mhz : std_logic;
 --	signal s_clk_1mhz : std_logic;
 --	signal s_clk_1khz : std_logic;
@@ -126,33 +125,12 @@ architecture structure of jtagtool3 is
 	signal s_1khz_stb : std_logic;
 	signal s_2hz_stb : std_logic;
 
-	-- bus access 
-	signal s_data_in : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_data_out : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_addr : std_logic_vector(ADDR_BITS - 1 downto 1);
-	signal s_rd : std_logic;
---	signal s_wr : std_logic;
-
-	-----------------------
-	-- STM32F synchronous bus 
-	signal s_oe : std_logic;
---	signal s_ce : std_logic;
-	signal s_wr_stb : std_logic;
-	signal s_rd_stb : std_logic;
-	type memc_st_t is (MEMC_IDLE, MEMC_ADV, MEMC_DLAT, MEMC_DSTB);
-	signal s_memc_st : memc_st_t;
-	signal s_memc_next_st : memc_st_t;
-	-----------------------
-
-	-----------------------
-	signal s_ce_r : std_logic;
-	-- address valid
-	signal s_adv_stb : std_logic;
-	-- address increment
-	signal s_adi_stb : std_logic;
-	-- address latch
-	signal s_addr_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
+	-- internal bus
+	signal s_bus_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_addr : std_logic_vector(ADDR_BITS - 1 downto 1);
+	signal s_bus_wr : std_logic;
+	signal s_bus_rd : std_logic;
 
 	-- register selection
 	signal s_reg_wr_stb : std_logic;
@@ -291,102 +269,44 @@ begin
 --	s_clk_io <= s_clk_120mhz;
 	s_clk_io <= s_clk_main;
 
-	-- Bus clock
-	s_clk_bus <= fsmc_clk;
-
-	-- Output enable
-	s_oe <= (fsmc_noe nor fsmc_nce);
-	-- Write
---	s_wr <= (fsmc_nwe nor fsmc_nce);
-	-- Chip enable 
---	s_ce <= not fsmc_nce;
-
-
 	---------------------------------------------------------------------------
-	-- data bus IO (bidirectional buffer)
-	-- input
-	s_data_in <= fsmc_d;
-	-- output
-	fsmc_d <= s_data_out when (s_oe  = '1') else (others => 'Z');
-	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- Synchronous CRAM type address multiplexed bus
-	process (fsmc_clk, fsmc_nce)
-	begin
-		if (fsmc_nce = '1') then
-			s_memc_st <= MEMC_IDLE;
-		elsif rising_edge(fsmc_clk) then
-			s_memc_st <= s_memc_next_st;
-		end if;
-	end process;
-
-	process (s_memc_st, fsmc_noe, fsmc_nwe)
-	begin
-		case s_memc_st is
-			when MEMC_IDLE =>
-				s_memc_next_st <= MEMC_ADV;
-			when MEMC_ADV =>
-				if 	(fsmc_nwe = '0') then
-					s_memc_next_st <= MEMC_DLAT;
-				else
-					s_memc_next_st <= MEMC_DSTB;
-				end if;
-			when MEMC_DLAT =>
-				s_memc_next_st <= MEMC_DSTB;
-			when MEMC_DSTB =>
-				s_memc_next_st <= MEMC_DSTB;
-		end case;
-	end process;
-
-	s_rd_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_noe = '0')) 
-					else '0';
-
-	s_wr_stb <= '1' when ((s_memc_st = MEMC_DSTB) and (fsmc_nwe = '0')) 
-					else '0';
-
-	s_adv_stb <= '1' when (s_memc_st = MEMC_ADV) else '0';
-
-	s_adi_stb <= '1' when (s_memc_st = MEMC_DSTB) else '0';
-
-	---------------------------------------------------------------------------
-	-- Address latch / counter
-	addr_r : entity jtag_counter
-		generic map (DATA_WIDTH => DATA_WIDTH, COUNT_BITS => DATA_WIDTH) 
+	-- CRAM bus adapter
+	cram_bus : entity jtag_cram16
+		generic map (ADDR_BITS => ADDR_BITS - 1) 
 		port map (
-			-- I/O clock
-			clk => s_clk_bus,
-			-- reset
+			clk => s_clk_main,
 			rst => s_rst,
-			-- load on address valid signal 
-			ld => s_adv_stb,
-			d => s_data_in,
-			-- count 
-			cin => s_adi_stb,
-			-- data out
-			q(ADDR_BITS - 2 downto 0) => s_addr(ADDR_BITS - 1 downto 1)
-			);
 
-	---------------------------------------------------------------------------
+			dout => s_bus_dout,
+			din  => s_bus_din,
+			addr  => s_bus_addr,
+			rd  => s_bus_rd,
+			wr => s_bus_wr,
 
+			cram_clk => fsmc_clk,
+			cram_noe => fsmc_noe,
+			cram_nwe => fsmc_nwe,
+			cram_nce => fsmc_nce,
+			cram_d => fsmc_d
+		);
 
 	---------------------------------------------------------------------------
 	-- address range selection
 	-- input selection decoder  (write)
-	s_reg_rd_stb <= s_rd_stb when 
-		(s_addr(12) = '1' and s_addr(11) = '1') else '0';
-	s_reg_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '1' and s_addr(11) = '1') else '0';
-	s_ptr_mem_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '1' and s_addr(11) = '0' and s_addr(10) = '1') else '0';
-	s_desc_mem_wr_stb <= s_wr_stb when 
-		(s_addr(12) = '1' and s_addr(11) = '0' and s_addr(10) = '0') else '0';
-	s_tx_mem_wr_stb <= s_wr_stb when s_addr(12) = '0';
+	s_reg_rd_stb <= s_bus_rd when 
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '1') else '0';
+	s_reg_wr_stb <= s_bus_wr when 
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '1') else '0';
+	s_ptr_mem_wr_stb <= s_bus_wr when 
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and s_bus_addr(10) = '1') else '0';
+	s_desc_mem_wr_stb <= s_bus_wr when 
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and s_bus_addr(10) = '0') else '0';
+	s_tx_mem_wr_stb <= s_bus_wr when s_bus_addr(12) = '0' else '0';
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
-	s_data_out <= 
-		s_rx_mem_dout when (s_addr(12) = '0') else
-		s_reg_buf when (s_addr(12) = '1' and s_addr(11) = '1') else 
+	s_bus_dout <= 
+		s_rx_mem_dout when (s_bus_addr(12) = '0') else
+		s_reg_buf when (s_bus_addr(12) = '1' and s_bus_addr(11) = '1') else 
 		s_desc_mem_dout;
 
 	-- Memory map
@@ -436,10 +356,9 @@ begin
 		end if;
 	end process;
 
-
 	---------------------------------------------------------------------------
 	-- register selection
-	s_reg_sel <= unsigned(s_addr(REG_SEL_BITS downto 1));
+	s_reg_sel <= unsigned(s_bus_addr(REG_SEL_BITS downto 1));
 	-- register output multiplexer
 	with s_reg_sel select 
 		s_reg_out <= s_status when REG_STATUS, 
@@ -477,7 +396,7 @@ begin
 --			-- read signal 
 --			ld => s_insn_wr_stb,
 --			-- data in
---			d => s_data_in,
+--			d => s_bus_din,
 --			-- data out
 --			q => s_insn);
 	s_exec_stb <= s_insn_wr_stb;
@@ -534,7 +453,7 @@ begin
 			-- read signal 
 			ld => s_irq_en_wr_stb,
 			-- data in
-			d => s_data_in,
+			d => s_bus_din,
 			-- data out
 			q => s_irq_en);
 	---------------------------------------------------------------------------
@@ -549,7 +468,7 @@ begin
 			-- write signal 
 			ld => s_cfg_wr_stb,
 			-- data in
-			d => s_data_in,
+			d => s_bus_din,
 			-- data out
 			q => s_cfg,
 			-- reset
@@ -573,7 +492,7 @@ begin
 			rst => s_rst,
 			-- load on write signal 
 			ld => s_tmr_wr_stb,
-			d => s_data_in,
+			d => s_bus_din,
 			-- clear on reading
 			clr => s_tmr_rd_stb,
 			-- count 
@@ -594,7 +513,7 @@ begin
 			-- read signal 
 			ld => s_ckgen_div_wr_stb,
 			-- data in
-			d => s_data_in,
+			d => s_bus_din,
 			-- data out
 			q => s_ckgen_div);
 	---------------------------------------------------------------------------
@@ -611,7 +530,7 @@ begin
 			-- read signal 
 			ld => s_ckgen_rtdiv_wr_stb,
 			-- data in
-			d => s_data_in,
+			d => s_bus_din,
 			-- data out
 			q => s_ckgen_rtdiv);
 	---------------------------------------------------------------------------
@@ -628,9 +547,9 @@ begin
 		port map (
 			clk => s_clk_main,
 			desc_addr => s_desc_addr,
-			io_addr => s_addr(DESC_ADDR_BITS + 1 downto 1),
+			io_addr => s_bus_addr(DESC_ADDR_BITS + 1 downto 1),
 			io_we => s_desc_mem_wr_stb, 
-			io_data => s_data_in,
+			io_data => s_bus_din,
 			desc_q => s_desc_data,
 			io_q => s_desc_mem_dout
 		);
@@ -646,9 +565,9 @@ begin
 		port map (
 			clk => s_clk_main,
 			rd_addr => s_ptr_addr,
-			wr_addr => s_addr(PTR_ADDR_BITS downto 1),
+			wr_addr => s_bus_addr(PTR_ADDR_BITS downto 1),
 			we => s_ptr_mem_wr_stb, 
-			data => s_data_in,
+			data => s_bus_din,
 			q => s_ptr_data
 		);
 	---------------------------------------------------------------------------
@@ -662,7 +581,7 @@ begin
 		)
 		port map (
 			clk => s_clk_main,
-			rd_addr => s_addr(VEC_ADDR_BITS downto 1),
+			rd_addr => s_bus_addr(VEC_ADDR_BITS downto 1),
 			wr_addr => s_rx_mem_addr,
 			we => s_rx_mem_wr_stb, 
 			data => s_rx_mem_din,
@@ -670,7 +589,7 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_tx_mem_din <= s_data_in;
+	s_tx_mem_din <= s_bus_din;
 
 	---------------------------------------------------------------------------
 	-- tx vector memory
@@ -682,7 +601,7 @@ begin
 		port map (
 			clk => s_clk_main,
 			rd_addr => s_tx_mem_addr,
-			wr_addr => s_addr(VEC_ADDR_BITS downto 1),
+			wr_addr => s_bus_addr(VEC_ADDR_BITS downto 1),
 			we => s_tx_mem_wr_stb, 
 			data => s_tx_mem_din,
 			q => s_tx_mem_dout
@@ -708,7 +627,7 @@ begin
 			ioclk => s_clk_io,
 			rst => s_rst,
 			exec_stb => s_exec_stb,
-			insn => s_data_in(INSN_BITS - 1 downto 0),
+			insn => s_bus_din(INSN_BITS - 1 downto 0),
 			tdo => s_tap_tdo,
 			rtck => s_tap_rtck,
 			ckgen_rtcken => s_ckgen_rtck_en,
@@ -792,7 +711,7 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_rd_stb, 
+			trip => s_bus_rd, 
 			q => led_1
 		);
 
