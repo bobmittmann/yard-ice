@@ -38,7 +38,7 @@ port (
 	-- system clock
 	clk : in std_logic;
 	-- assynchronous reset 
-	rst : in std_logic := '1';
+	rst : in std_logic := '0';
 	-- enable
 	en : in std_logic := '1';
 	-- carry in
@@ -51,7 +51,7 @@ port (
 	up : in std_logic := '1';
 	-- data out 
 	q : out std_logic_vector(DATA_WIDTH - 1 downto 0);
-	-- carrty out
+	-- carry out
 	cout : out std_logic
 );
 end counter;
