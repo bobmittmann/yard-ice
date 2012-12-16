@@ -247,7 +247,6 @@ void fsmc_init(void)
 
 	mco2_cfg();
 
-
 	/* Flexible static memory controller module clock enable */
 	rcc->ahb3enr |= RCC_FSMCEN;
 
@@ -270,12 +269,9 @@ void fsmc_init(void)
 		FSMC_BURSTEN | 
 		FSMC_MWID_16 | 
 		FSMC_MTYP_PSRAM | 
-//		FSMC_MTYP_FLASH  |
 		FSMC_MUXEN | /* Address/Data multiplexed */
 		FSMC_MBKEN |
-	//	FSMC_WAITCFG |
 		FSMC_WAITEN |
-//		FSMC_FACCEN | /* - Flash access enable */
 		FSMC_WAITPOL |
 		0;
 	
@@ -297,6 +293,19 @@ struct fpga_io {
 		uint16_t h[2048];
 		uint32_t w[1024];
 		uint64_t d[512];
+	};
+	uint32_t res[0x4000 - 1024];
+	union {
+		volatile uint16_t reg[8];
+		volatile uint32_t r32[4];
+		volatile uint64_t r64[2];
+		struct {
+			volatile uint16_t src;
+			volatile uint16_t dst;
+			volatile uint16_t len;
+			volatile uint16_t ctl;
+			volatile uint16_t cnt;
+		};
 	};
 };
 
@@ -380,6 +389,79 @@ bool cmp_16(struct fpga_io * fpga, uint64_t * buf, int len)
 	return true;
 }
 
+void registers_test(struct fpga_io * fpga)
+{
+	uint32_t val;
+	uint64_t v64;
+	int i;
+
+//	fpga->reg[7] = 88;
+//	thinkos_sleep(1);
+	v64 = 0x0004000300020001LL;
+	fpga->r64[0] = v64;
+	thinkos_sleep(1);
+	fpga->r64[0] = v64;
+
+/*	for (i = 0; i < 8; i++) {
+		fpga->reg[i] = i;
+		thinkos_sleep(1);
+	}
+*/
+	for (i = 0; i < 8; i++) {
+		val = fpga->reg[i];
+		thinkos_sleep(1);
+		printf("[%4d]-> %d\n", i, val);
+	}
+	thinkos_sleep(1000);
+}
+
+void io_test(struct fpga_io * fpga)
+{
+	uint32_t val;
+	int i = 0;
+	int r;
+	int c;
+	
+	c = getchar();
+	while (c != '\033') {
+		r = c - '0';
+
+		fpga->reg[r] = i;
+		thinkos_sleep(100);
+		val = fpga->reg[r];
+		printf("%2d - r[%d]-> %d 0x%08x\n", i, r, val, fpga->r32[r >> 1]);
+		i++;
+
+		c = getchar();
+	}
+}
+
+
+void slow_test(struct fpga_io * fpga)
+{
+	int i;
+	uint64_t v64;
+	uint32_t count;
+
+	for (i = 0; i < 64; i += 4) {
+		v64 = i + ((i  + 1) << 16) + 
+			((uint64_t)(i  + 2) << 32) + ((uint64_t)(i  + 3) << 48);
+		fpga->d[i / 4] = v64;
+		printf("%016llx\n", v64);
+	}
+
+	printf("\n");
+
+	for (i = 0; i < 64; i += 4) {
+//		fpga->src = 222;
+		fpga->cnt = 100 + i;
+		thinkos_sleep(1000);
+		count = fpga->cnt;
+		v64 = fpga->d[i / 4];
+		printf("%016llx %d\n", v64, count);
+	}
+}
+
 FILE * stdout = (FILE *)&stm32f_usart5_file;
 
 int main(int argc, char ** argv)
@@ -422,6 +504,12 @@ int main(int argc, char ** argv)
 	val = 0;
 
 	fsmc_speed(1);
+
+	io_test(fpga);
+
+	registers_test(fpga);
+
+	slow_test(fpga);
 
 	for (;;) {
 		printf("- Write 64bits ascending\n");

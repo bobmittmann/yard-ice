@@ -35,8 +35,6 @@ generic (
 	ADDR_BITS : integer := 16
 );
 port (
-	-- system clock
-	clk : in std_logic := '0';
 	-- reset
 	rst : in std_logic := '0';
 	-- JTAG controller bus
@@ -72,12 +70,6 @@ architecture rtl of cram16 is
 	signal s_cram_adv : std_logic;
 	-- address increment
 	signal s_cram_adi : std_logic;
-
-	signal s_wr_r0: std_logic;
-	signal s_wr_r1: std_logic;
-	signal s_rd_r0: std_logic;
-	signal s_rd_r1: std_logic;
-
 	-- address latch
 	signal s_addr_r : std_logic_vector(ADDR_BITS - 1 downto 0);
 	-----------------------
@@ -128,7 +120,7 @@ begin
 	---------------------------------------------------------------------------
 	-- Address latch / counter
 	addr_r : entity counter
-		generic map (DATA_WIDTH => 16, COUNT_BITS => 16) 
+		generic map (DATA_WIDTH => 16, COUNT_BITS => ADDR_BITS) 
 		port map (
 			-- I/O clock
 			clk => cram_clk,
@@ -144,22 +136,19 @@ begin
 			);
 
 	---------------------------------------------------------------------------
-
 	addr <= s_addr_r;
 
 	---------------------------------------------------------------------------
 	-- input
-	process (cram_clk)
-	begin
-		if rising_edge(cram_clk) then
-			din <= cram_d;
-		end if;
-	end process;
+	din <= cram_d;
+
 	---------------------------------------------------------------------------
 	-- output
-	process (cram_clk, s_cram_rd)
+	process (rst, cram_clk, s_cram_rd)
 	begin
-		if falling_edge(cram_clk) and (s_cram_rd = '1') then
+		if (rst = '1') then
+			s_dout_r <= (others => '0');
+		elsif falling_edge(cram_clk) and (s_cram_rd = '1') then
 			s_dout_r <= dout;
 		end if;
 	end process;
@@ -167,33 +156,8 @@ begin
 	cram_d <= s_dout_r when (s_cram_oe  = '1') else (others => 'Z');
 	---------------------------------------------------------------------------
 
-	process (cram_clk, clk, s_wr_r1, s_cram_wr)
-	begin
-		if s_wr_r1 = '1' then
-			s_wr_r0 <= '0';
-		elsif rising_edge(cram_clk) then
-			s_wr_r0 <= s_cram_wr;
-		end if;
-		if rising_edge(clk) then
-			s_wr_r1 <= s_wr_r0;
-		end if;
-	end process;
-
-	process (cram_clk, clk, s_rd_r1, s_cram_rd)
-	begin
-		if s_rd_r1 = '1' then
-			s_rd_r0 <= '0';
-		elsif rising_edge(cram_clk) then
-			s_rd_r0 <= s_cram_rd;
-		end if;
-		if rising_edge(clk) then
-			s_rd_r1 <= s_rd_r0;
-		end if;
-	end process;
-
-	wr <= s_wr_r1;
-	rd <= s_rd_r1;
-
+	rd <= s_cram_rd;
+	wr <= s_cram_wr;
 	---------------------------------------------------------------------------
 
 end rtl;
