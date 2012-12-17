@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <thinkos.h>
+#include <hexdump.h>
 
 #include <yard-ice/drv.h>
 #include <sys/dcclog.h>
@@ -294,7 +295,9 @@ struct fpga_io {
 		uint32_t w[1024];
 		uint64_t d[512];
 	};
-	uint32_t res[0x4000 - 1024];
+	uint32_t res1[0x2000 - 1024];
+	uint16_t mem[256];
+	uint32_t res2[0x4000 - 0x2000 + 128];
 	union {
 		volatile uint16_t reg[8];
 		volatile uint32_t r32[4];
@@ -436,6 +439,35 @@ void io_test(struct fpga_io * fpga)
 	}
 }
 
+void memcpy_test(struct fpga_io * fpga)
+{
+	int i = 0;
+	uint16_t buf[256];
+
+	for (i = 0; i < 256; i++) {
+		fpga->mem[i] = i;
+	}
+
+	thinkos_sleep(100);
+
+	for (i = 0; i < 256; i++)
+		buf[i] = fpga->mem[i];
+	show_hex16(stdout, 0, buf, 512);
+
+	fpga->src = 0;
+	fpga->dst = 0;
+	fpga->len = 128;
+	fpga->ctl = 1;
+
+	thinkos_sleep(100);
+
+	printf("\n");
+	for (i = 0; i < 256; i++)
+		buf[i] = fpga->mem[i];
+	show_hex16(stdout, 0, buf, 512);
+
+	thinkos_sleep(1000);
+}
 
 void slow_test(struct fpga_io * fpga)
 {
@@ -503,7 +535,9 @@ int main(int argc, char ** argv)
 
 	val = 0;
 
-	fsmc_speed(1);
+	fsmc_speed(7);
+
+	memcpy_test(fpga);
 
 	io_test(fpga);
 

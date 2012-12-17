@@ -231,10 +231,10 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_mem_wr <= s_bus_wr when s_bus_addr(15) = '0' else '0';
 	s_io_reg_wr <= s_bus_wr when s_bus_addr(15) = '1' else '0';
 	s_reg_rd <= s_bus_rd when s_bus_addr(15) = '1' else '0';
 
+	s_mem_wr <= s_bus_wr when s_bus_addr(15) = '0' else '0';
 	s_mem1_wr <= s_mem_wr when s_bus_addr(14) = '0' else '0';
 	s_mem2_wr <= s_mem_wr when s_bus_addr(14) = '1' else '0';
 
@@ -267,8 +267,6 @@ begin
 			q => s_mem1_dout
 		);
 	---------------------------------------------------------------------------
-
-
 
 
 	---------------------------------------------------------------------------
@@ -405,8 +403,6 @@ begin
 		s_cnt_r when "100",
 		(others => '0') when others; 
 
---		s_reg_dout <= s_cnt_r;
-
 	---------------------------------------------------------------------------
 	-- Mem copy
 	mem2cpy : entity memcpy
@@ -420,7 +416,7 @@ begin
 			dst => s_dst_r(7 downto 0), 
 			len => s_len_r(7 downto 0), 
 
-			start => s_cnt_wr,
+			start => s_ctl_wr,
 
 			saddr => s_cpy_saddr,
 			sdata => s_cpy_sdata,
