@@ -26,9 +26,9 @@ CFILES = fsmc-test.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm \
-		  ../../../libdrv 
+		  ../../../libhexdump ../../../libdrv 
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv 
+LIBS = stm32f cm3 util thinkos c ice-comm hexdump drv 
 
 INCPATH = ../../../include
 
