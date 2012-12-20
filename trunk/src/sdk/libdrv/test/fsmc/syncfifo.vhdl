@@ -36,16 +36,17 @@ generic (
 );
 port (
 	rst : in std_logic := '0';
+	en : in std_logic := '1';
 
 	in_clk : in std_logic := '0';
 	in_data : in std_logic_vector(DATA_WIDTH -1 downto 0) := (others => '0');
 	in_addr : in std_logic_vector(ADDR_BITS -1 downto 0) := (others => '0');
-	in_wr : in std_logic;
+	in_put : in std_logic := '0'
 
 	out_clk : in std_logic := '0';
 	out_data : out std_logic_vector(DATA_WIDTH -1 downto 0);
 	out_addr : out std_logic_vector(ADDR_BITS - 1 downto 0);
-	out_wr : out std_logic
+	out_get : out std_logic
 );
 end syncfifo;
 
@@ -57,6 +58,8 @@ architecture rtl of syncfifo is
 	signal s_syn_sel0 : unsigned(CNT_BITS - 1 downto 0);
 	signal s_syn_sel1 : unsigned(CNT_BITS - 1 downto 0);
 
+	signal s_fifo_get : std_logic;
+
 	signal s_addr0 : std_logic_vector((ADDR_BITS - 1) downto 0);
 	signal s_addr1 : std_logic_vector((ADDR_BITS - 1) downto 0);
 	signal s_addr2 : std_logic_vector((ADDR_BITS - 1) downto 0);
@@ -67,11 +70,11 @@ architecture rtl of syncfifo is
 	signal s_data2 : std_logic_vector((DATA_WIDTH - 1) downto 0);
 	signal s_data3 : std_logic_vector((DATA_WIDTH - 1) downto 0);
 begin
-	process(in_clk, rst, in_wr)
+	process(in_clk, rst, in_put)
 	begin
 		if rst = '1' then
 			s_sel_in <= (others => '0');
-		elsif rising_edge(in_clk) and (in_wr = '1') then
+		elsif rising_edge(in_clk) and (in_put = '1') then
 			case s_sel_in is
 				when "00" => s_addr0 <= in_addr;
 				when "01" => s_addr1 <= in_addr;
@@ -99,11 +102,13 @@ begin
 		end if;
 	end process;
 
-	process(out_clk, rst, s_syn_sel1, s_sel_out)
+	s_fifo_get <= '1' when (s_syn_sel1 /= s_sel_out) and (en = '1') else '0';
+
+	process(out_clk, rst, s_fifo_get)
 	begin
 		if rst = '1' then
 			s_sel_out <= (others => '0');
-		elsif rising_edge(out_clk) and (s_syn_sel1 /= s_sel_out) then
+		elsif rising_edge(out_clk) and (s_fifo_get = '1') then
 			s_sel_out <= s_sel_out + 1;
 		end if;
 	end process;
@@ -121,7 +126,7 @@ begin
 		s_addr2 when "10", 
 		s_addr3 when "11";
 
-	out_wr <= '1' when (s_syn_sel1 /= s_sel_out) else '0';
+	out_get <= s_fifo_get;
 
 end rtl;
 

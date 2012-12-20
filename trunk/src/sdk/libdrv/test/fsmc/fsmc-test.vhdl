@@ -74,6 +74,20 @@ architecture structure of fsmc_test is
 	constant DATA_WIDTH : natural := 16;
 	constant MEM_ADDR_BITS : natural := 11;
 
+	constant REG_SEL_BITS : natural := 3;
+	-- register select 
+	constant REG_SEL_SRC : unsigned := to_unsigned(0, REG_SEL_BITS);
+	constant REG_SEL_DST : unsigned := to_unsigned(1, REG_SEL_BITS);
+	constant REG_SEL_LEN : unsigned := to_unsigned(2, REG_SEL_BITS);
+	constant REG_SEL_CTL : unsigned := to_unsigned(3, REG_SEL_BITS);
+	constant REG_SEL_CNT : unsigned := to_unsigned(4, REG_SEL_BITS);
+	constant REG_SEL_IEN : unsigned := to_unsigned(5, REG_SEL_BITS);
+	constant REG_SEL_IST : unsigned := to_unsigned(6, REG_SEL_BITS);
+	-- interrupts
+	constant IRQ_BITS : natural := 2;
+	constant IRQ_MEMCPY : natural := 0;
+	constant IRQ_1KHZ : natural := 1;
+
 	-- clocks 
 	signal s_clk_main : std_logic;
 	signal s_clk_io: std_logic;
@@ -83,15 +97,18 @@ architecture structure of fsmc_test is
 	signal s_1khz_stb : std_logic;
 --	signal s_2hz_stb : std_logic;
 
+	-----------------------
+	-- IO clock referenced signals 
 	-- bus access 
+	signal s_bus_clk : std_logic;
 	signal s_bus_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_bus_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_bus_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_rd : std_logic;
 	signal s_bus_wr : std_logic;
-	-----------------------
-	-- IO clock referenced signals 
-	signal s_io_reg_wr : std_logic;
+	signal s_bus_reg_wr : std_logic;
+	signal s_bus_reg_rd : std_logic;
+	signal s_bus_rd_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_rd : std_logic;
 
 	-- TAP signals
 --	signal s_tap_tdo : std_logic;
@@ -111,13 +128,15 @@ architecture structure of fsmc_test is
 	signal s_uart_tx : std_logic;
 	-----------------------
 
-	-- IRQ
+	-- interrupt requests
+	signal s_irq : std_logic_vector(IRQ_BITS - 1 downto 0);
+	signal s_irq_reg : std_logic_vector(IRQ_BITS - 1 downto 0);
+	signal s_irq_set : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_out : std_logic;
-	-----------------------
 
-	-- Counter register
-	signal s_cnt_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_cnt_wr : std_logic;
+	signal s_irq_memcpy : std_logic;
+	signal s_irq_1khz : std_logic;
+	-----------------------
 
 	-- memcpy registers
 	signal s_src_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -128,21 +147,27 @@ architecture structure of fsmc_test is
 	signal s_len_wr : std_logic;
 	signal s_ctl_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ctl_wr : std_logic;
+	-- counter register
+	signal s_cnt_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_cnt_wr : std_logic;
+	-- interrupt status register
+	signal s_ist_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_ist_rd : std_logic;
+	-- interrupt enable register
+	signal s_ien_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_ien_wr : std_logic;
+
 
 	-- Register access
-	signal s_reg_sel : std_logic_vector(2 downto 0);
+	signal s_reg_wr_sel : std_logic_vector(REG_SEL_BITS - 1 downto 0);
+	signal s_reg_rd_sel : std_logic_vector(REG_SEL_BITS - 1 downto 0);
 	signal s_reg_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_reg_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
-	signal s_reg_wr_syn0 : std_logic;
-	signal s_reg_wr_syn1 : std_logic;
-	signal s_reg_wr_syn2 : std_logic;
 
 	-- Memory access
 	signal s_mem_wr : std_logic;
 	signal s_reg_wr : std_logic;
 	signal s_reg_rd : std_logic;
-	signal s_rd_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	signal s_mem1_wr : std_logic;
 	signal s_mem1_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -167,6 +192,15 @@ architecture structure of fsmc_test is
 	signal s_rst : std_logic;
 	-- TAP output selection: NORMAL/LOOPBACK
 	signal s_loopback_en : std_logic;
+
+	function is_zero(x : std_logic_vector) return std_logic is
+		variable y : std_logic := '0';
+	begin
+		for i in x'range loop
+			y := y or x(i);
+		end loop; 
+		return not y;
+	end is_zero;
 
 begin
 	---------------------------------------------------------------------------
@@ -219,6 +253,8 @@ begin
 		);
 	---------------------------------------------------------------------------
 
+	s_irq_1khz <= s_1khz_stb;
+
 	---------------------------------------------------------------------------
 	-- 2Hz clock generator
 	cklgen_2hz : entity clk_scaler
@@ -231,8 +267,8 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_io_reg_wr <= s_bus_wr when s_bus_addr(15) = '1' else '0';
-	s_reg_rd <= s_bus_rd when s_bus_addr(15) = '1' else '0';
+	s_io_reg_wr <= s_bus_wr and s_bus_addr(15);
+	s_io_reg_rd <= s_bus_rd and s_bus_addr(15);
 
 	s_mem_wr <= s_bus_wr when s_bus_addr(15) = '0' else '0';
 	s_mem1_wr <= s_mem_wr when s_bus_addr(14) = '0' else '0';
@@ -241,11 +277,11 @@ begin
 	process (s_clk_io)
 	begin
 		if rising_edge(s_clk_io) then
-			s_rd_addr <= s_bus_addr;
+			s_bus_rd_addr <= s_bus_addr;
 		end if;
 	end process;
 
-	with s_rd_addr(15 downto 14) select
+	with s_bus_rd_addr(15 downto 14) select
 		s_bus_dout <= 
 		s_mem1_dout when "00", 
 		s_mem2_dout when "01", 
@@ -308,33 +344,56 @@ begin
 	---------------------------------------------------------------------------
 
 
-	-- Registers access 
 	---------------------------------------------------------------------------
-	syn : entity syncfifo 
+	-- Registers write address/data fifo 
+	reg_wr_sel : entity syncfifo 
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
-			ADDR_BITS => 3
+			ADDR_BITS => REG_SEL_BITS
 		)
 		port map (
 			rst => s_rst,
 
 			in_clk => s_clk_io,
 			in_data => s_bus_din,
-			in_addr => s_bus_addr(2 downto 0),
-			in_wr => s_io_reg_wr,
+			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
+			in_put => s_io_reg_wr,
 
 			out_clk => s_clk_main,
 			out_data => s_reg_din,
-			out_addr => s_reg_sel(2 downto 0),
-			out_wr => s_reg_wr
+			out_addr => s_reg_wr_sel,
+			out_get => s_reg_wr
 		);
+
+
+	---------------------------------------------------------------------------
+	-- Registers read address fifo
+	reg_rd_sel : entity syncfifo 
+		generic map (
+			DATA_WIDTH => 0, 
+			ADDR_BITS => REG_SEL_BITS
+		)
+		port map (
+			rst => s_rst,
+
+			in_clk => not s_clk_io,
+			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
+			in_put => s_io_reg_rd
+
+			out_clk => s_clk_main,
+			out_addr => s_reg_rd_sel,
+			out_get => s_reg_rd
+		);
+
 	---------------------------------------------------------------------------
 
-	s_src_wr <= s_reg_wr when s_reg_sel = "000" else '0';
-	s_dst_wr <= s_reg_wr when s_reg_sel = "001" else '0';
-	s_len_wr <= s_reg_wr when s_reg_sel = "010" else '0';
-	s_ctl_wr <= s_reg_wr when s_reg_sel = "011" else '0';
-	s_cnt_wr <= s_reg_wr when s_reg_sel = "100" else '0';
+	s_src_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_SRC else '0';
+	s_dst_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_DST else '0';
+	s_len_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_LEN else '0';
+	s_ctl_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_CTL else '0';
+	s_cnt_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_CNT else '0';
+	s_ien_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_IEN else '0';
+	s_ist_rd <= s_reg_rd when s_reg_rd_sel = REG_SEL_IST else '0';
 
 	---------------------------------------------------------------------------
 
@@ -394,17 +453,45 @@ begin
 			q => s_cnt_r
 			);
 
-	with s_rd_addr(2 downto 0) select
+	ien_r : entity reg
+		generic map (DATA_WIDTH => DATA_WIDTH, 
+					 REG_BITS => DATA_WIDTH) 
+		port map (
+			clk => s_clk_main,
+			rst => s_rst,
+			d => s_reg_din,
+			ld => s_ien_wr,
+			q => s_ien_r
+			);
+
+	ist_r : entity reg
+		generic map (DATA_WIDTH => DATA_WIDTH, 
+					 REG_BITS => DATA_WIDTH) 
+		port map (
+			clk => s_clk_main,
+			rst => s_rst,
+			clr => s_ist_rd,
+			-- register set
+			-- set individual bits
+			set => '1',
+			d_set => s_irq_set,
+			q => s_ist_r
+			);
+
+
+	with s_bus_rd_addr(REG_SEL_BITS - 1 downto 0) select
 		s_reg_dout <= 
-		s_src_r when "000", 
-		s_dst_r when "001", 
-		s_len_r when "010", 
-		s_ctl_r when "011", 
-		s_cnt_r when "100",
+		s_src_r when REG_SEL_SRC, 
+		s_dst_r when REG_SEL_DST, 
+		s_len_r when REG_SEL_LEN,
+		s_ctl_r when REG_SEL_CTL,
+		s_cnt_r when REG_SEL_CNT,
+		s_ien_r when REG_SEL_IEN,
+		s_ist_r when REG_SEL_IST,
 		(others => '0') when others; 
 
 	---------------------------------------------------------------------------
-	-- Mem copy
+	-- Memory copy engine
 	mem2cpy : entity memcpy
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
@@ -423,8 +510,27 @@ begin
 
 			daddr => s_cpy_daddr,
 			ddata => s_cpy_ddata,
-			wr => s_cpy_wr
+			wr => s_cpy_wr,
+			done => s_irq_memcpy
 		);
+	---------------------------------------------------------------------------
+
+
+	---------------------------------------------------------------------------
+	-- interrupts assignments
+	s_irq(IRQ_MEMCPY) <= s_irq_memcpy;
+	s_irq(IRQ_1KHZ) <= s_irq_1khz;
+	s_irq_out <= not is_zero(s_ien_r and s_ist_r);
+
+	---------------------------------------------------------------------------
+	-- interrupt request synchronous rising edge detect
+	process(s_clk_main)
+	begin
+		if rising_edge(s_clk_main) then
+			s_irq_reg <= s_irq;
+		end if;
+	end process;
+	s_irq_set <= s_irq and not s_irq_reg;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -454,7 +560,6 @@ begin
 
 	---------------------------------------------------------------------------
 	s_loopback_en <= '0';
-	s_irq_out <= '0';
 	s_rst <= '0';
 
 	---------------------------------------------------------------------------
