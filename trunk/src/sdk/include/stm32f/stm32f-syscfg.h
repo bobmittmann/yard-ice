@@ -74,7 +74,6 @@
 
 /* [31..16] Reserved */
 
-
 /* Bits [15..0] - EXTI x configuration (x = 0 to 3) */
 #define SYSCFG_EXTIX_MSK (((1 << (3 + 1)) - 1) << 0)
 #define SYSCFG_EXTIX_SET(VAL) (((VAL) << 0) & SYSCFG_EXTIX_MSK)
@@ -86,10 +85,51 @@
    0010: PC[x] pin
    0011: PD[x] pin
    0100: PE[x] pin
-   0101: PF[C] pin
+   0101: PF[x] pin
    0110: PG[x] pin
    0111: PH[x] pin
    1000: PI[x] pin  */
+
+#define SYSCFG_EXTI0_PA (0x0 << 0)
+#define SYSCFG_EXTI0_PB (0x1 << 0)
+#define SYSCFG_EXTI0_PC (0x2 << 0)
+#define SYSCFG_EXTI0_PD (0x3 << 0)
+#define SYSCFG_EXTI0_PE (0x4 << 0)
+#define SYSCFG_EXTI0_PF (0x5 << 0)
+#define SYSCFG_EXTI0_PG (0x6 << 0)
+#define SYSCFG_EXTI0_PH (0x7 << 0)
+#define SYSCFG_EXTI0_PI (0x8 << 0)
+
+#define SYSCFG_EXTI1_PA (0x0 << 4)
+#define SYSCFG_EXTI1_PB (0x1 << 4)
+#define SYSCFG_EXTI1_PC (0x2 << 4)
+#define SYSCFG_EXTI1_PD (0x3 << 4)
+#define SYSCFG_EXTI1_PE (0x4 << 4)
+#define SYSCFG_EXTI1_PF (0x5 << 4)
+#define SYSCFG_EXTI1_PG (0x6 << 4)
+#define SYSCFG_EXTI1_PH (0x7 << 4)
+#define SYSCFG_EXTI1_PI (0x8 << 4)
+
+#define SYSCFG_EXTI2_PA (0x0 << 8)
+#define SYSCFG_EXTI2_PB (0x1 << 8)
+#define SYSCFG_EXTI2_PC (0x2 << 8)
+#define SYSCFG_EXTI2_PD (0x3 << 8)
+#define SYSCFG_EXTI2_PE (0x4 << 8)
+#define SYSCFG_EXTI2_PF (0x5 << 8)
+#define SYSCFG_EXTI2_PG (0x6 << 8)
+#define SYSCFG_EXTI2_PH (0x7 << 8)
+#define SYSCFG_EXTI2_PI (0x8 << 8)
+
+#define SYSCFG_EXTI3_PA (0x0 << 12)
+#define SYSCFG_EXTI3_PB (0x1 << 12)
+#define SYSCFG_EXTI3_PC (0x2 << 12)
+#define SYSCFG_EXTI3_PD (0x3 << 12)
+#define SYSCFG_EXTI3_PE (0x4 << 12)
+#define SYSCFG_EXTI3_PF (0x5 << 12)
+#define SYSCFG_EXTI3_PG (0x6 << 12)
+#define SYSCFG_EXTI3_PH (0x7 << 12)
+#define SYSCFG_EXTI3_PI (0x8 << 12)
+
 
 /* SYSCFG external interrupt configuration register 2 */
 #define STM32F_SYSCFG_EXTICR2 0x0C
@@ -112,12 +152,50 @@
    0111: PH[x] pin
    1000: PI[x] pin */
 
+#define SYSCFG_EXTI4_PA (0x0 << 0)
+#define SYSCFG_EXTI4_PB (0x1 << 0)
+#define SYSCFG_EXTI4_PC (0x2 << 0)
+#define SYSCFG_EXTI4_PD (0x3 << 0)
+#define SYSCFG_EXTI4_PE (0x4 << 0)
+#define SYSCFG_EXTI4_PF (0x5 << 0)
+#define SYSCFG_EXTI4_PG (0x6 << 0)
+#define SYSCFG_EXTI4_PH (0x7 << 0)
+#define SYSCFG_EXTI4_PI (0x8 << 0)
+
+#define SYSCFG_EXTI5_PA (0x0 << 4)
+#define SYSCFG_EXTI5_PB (0x1 << 4)
+#define SYSCFG_EXTI5_PC (0x2 << 4)
+#define SYSCFG_EXTI5_PD (0x3 << 4)
+#define SYSCFG_EXTI5_PE (0x4 << 4)
+#define SYSCFG_EXTI5_PF (0x5 << 4)
+#define SYSCFG_EXTI5_PG (0x6 << 4)
+#define SYSCFG_EXTI5_PH (0x7 << 4)
+#define SYSCFG_EXTI5_PI (0x8 << 4)
+
+#define SYSCFG_EXTI6_PA (0x0 << 8)
+#define SYSCFG_EXTI6_PB (0x1 << 8)
+#define SYSCFG_EXTI6_PC (0x2 << 8)
+#define SYSCFG_EXTI6_PD (0x3 << 8)
+#define SYSCFG_EXTI6_PE (0x4 << 8)
+#define SYSCFG_EXTI6_PF (0x5 << 8)
+#define SYSCFG_EXTI6_PG (0x6 << 8)
+#define SYSCFG_EXTI6_PH (0x7 << 8)
+#define SYSCFG_EXTI6_PI (0x8 << 8)
+
+#define SYSCFG_EXTI7_PA (0x0 << 12)
+#define SYSCFG_EXTI7_PB (0x1 << 12)
+#define SYSCFG_EXTI7_PC (0x2 << 12)
+#define SYSCFG_EXTI7_PD (0x3 << 12)
+#define SYSCFG_EXTI7_PE (0x4 << 12)
+#define SYSCFG_EXTI7_PF (0x5 << 12)
+#define SYSCFG_EXTI7_PG (0x6 << 12)
+#define SYSCFG_EXTI7_PH (0x7 << 12)
+#define SYSCFG_EXTI7_PI (0x8 << 12)
+
 /* SYSCFG external interrupt configuration register 3 */
 #define STM32F_SYSCFG_EXTICR3 0x10
 
-
 /* [31..16] Reserved */
-
 
 /* Bits [15..0] - EXTI x configuration (x = 8 to 11) */
 #define SYSCFG_EXTIX_MSK (((1 << (3 + 1)) - 1) << 0)
@@ -135,12 +213,50 @@
    0111: PH[x] pin
    1000: PI[x] pin */
 
+#define SYSCFG_EXTI8_PA (0x0 << 0)
+#define SYSCFG_EXTI8_PB (0x1 << 0)
+#define SYSCFG_EXTI8_PC (0x2 << 0)
+#define SYSCFG_EXTI8_PD (0x3 << 0)
+#define SYSCFG_EXTI8_PE (0x4 << 0)
+#define SYSCFG_EXTI8_PF (0x5 << 0)
+#define SYSCFG_EXTI8_PG (0x6 << 0)
+#define SYSCFG_EXTI8_PH (0x7 << 0)
+#define SYSCFG_EXTI8_PI (0x8 << 0)
+
+#define SYSCFG_EXTI9_PA (0x0 << 4)
+#define SYSCFG_EXTI9_PB (0x1 << 4)
+#define SYSCFG_EXTI9_PC (0x2 << 4)
+#define SYSCFG_EXTI9_PD (0x3 << 4)
+#define SYSCFG_EXTI9_PE (0x4 << 4)
+#define SYSCFG_EXTI9_PF (0x5 << 4)
+#define SYSCFG_EXTI9_PG (0x6 << 4)
+#define SYSCFG_EXTI9_PH (0x7 << 4)
+#define SYSCFG_EXTI9_PI (0x8 << 4)
+
+#define SYSCFG_EXTI10_PA (0x0 << 8)
+#define SYSCFG_EXTI10_PB (0x1 << 8)
+#define SYSCFG_EXTI10_PC (0x2 << 8)
+#define SYSCFG_EXTI10_PD (0x3 << 8)
+#define SYSCFG_EXTI10_PE (0x4 << 8)
+#define SYSCFG_EXTI10_PF (0x5 << 8)
+#define SYSCFG_EXTI10_PG (0x6 << 8)
+#define SYSCFG_EXTI10_PH (0x7 << 8)
+#define SYSCFG_EXTI10_PI (0x8 << 8)
+
+#define SYSCFG_EXTI11_PA (0x0 << 12)
+#define SYSCFG_EXTI11_PB (0x1 << 12)
+#define SYSCFG_EXTI11_PC (0x2 << 12)
+#define SYSCFG_EXTI11_PD (0x3 << 12)
+#define SYSCFG_EXTI11_PE (0x4 << 12)
+#define SYSCFG_EXTI11_PF (0x5 << 12)
+#define SYSCFG_EXTI11_PG (0x6 << 12)
+#define SYSCFG_EXTI11_PH (0x7 << 12)
+#define SYSCFG_EXTI11_PI (0x8 << 12)
+
 /* SYSCFG external interrupt configuration register 4 */
 #define STM32F_SYSCFG_EXTICR4 0x14
 
-
 /* [31..16] Reserved */
-
 
 /* Bits [15..0] - EXTI x configuration (x = 12 to 15) */
 #define SYSCFG_EXTIX_MSK (((1 << (3 + 1)) - 1) << 0)
@@ -157,6 +273,46 @@
    0110: PG[x] pin
    0111: PH[x] pin
    Note: PI[15:12] are not used. */
+
+#define SYSCFG_EXTI12_PA (0x0 << 0)
+#define SYSCFG_EXTI12_PB (0x1 << 0)
+#define SYSCFG_EXTI12_PC (0x2 << 0)
+#define SYSCFG_EXTI12_PD (0x3 << 0)
+#define SYSCFG_EXTI12_PE (0x4 << 0)
+#define SYSCFG_EXTI12_PF (0x5 << 0)
+#define SYSCFG_EXTI12_PG (0x6 << 0)
+#define SYSCFG_EXTI12_PH (0x7 << 0)
+#define SYSCFG_EXTI12_PI (0x8 << 0)
+
+#define SYSCFG_EXTI13_PA (0x0 << 4)
+#define SYSCFG_EXTI13_PB (0x1 << 4)
+#define SYSCFG_EXTI13_PC (0x2 << 4)
+#define SYSCFG_EXTI13_PD (0x3 << 4)
+#define SYSCFG_EXTI13_PE (0x4 << 4)
+#define SYSCFG_EXTI13_PF (0x5 << 4)
+#define SYSCFG_EXTI13_PG (0x6 << 4)
+#define SYSCFG_EXTI13_PH (0x7 << 4)
+#define SYSCFG_EXTI13_PI (0x8 << 4)
+
+#define SYSCFG_EXTI14_PA (0x0 << 8)
+#define SYSCFG_EXTI14_PB (0x1 << 8)
+#define SYSCFG_EXTI14_PC (0x2 << 8)
+#define SYSCFG_EXTI14_PD (0x3 << 8)
+#define SYSCFG_EXTI14_PE (0x4 << 8)
+#define SYSCFG_EXTI14_PF (0x5 << 8)
+#define SYSCFG_EXTI14_PG (0x6 << 8)
+#define SYSCFG_EXTI14_PH (0x7 << 8)
+#define SYSCFG_EXTI14_PI (0x8 << 8)
+
+#define SYSCFG_EXTI15_PA (0x0 << 12)
+#define SYSCFG_EXTI15_PB (0x1 << 12)
+#define SYSCFG_EXTI15_PC (0x2 << 12)
+#define SYSCFG_EXTI15_PD (0x3 << 12)
+#define SYSCFG_EXTI15_PE (0x4 << 12)
+#define SYSCFG_EXTI15_PF (0x5 << 12)
+#define SYSCFG_EXTI15_PG (0x6 << 12)
+#define SYSCFG_EXTI15_PH (0x7 << 12)
+#define SYSCFG_EXTI15_PI (0x8 << 12)
 
 /* Compensation cell control register */
 #define STM32F_SYSCFG_CMPCR 0x20

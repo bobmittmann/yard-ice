@@ -239,17 +239,26 @@ void fsmc_speed(int div)
 		FSMC_ADDSET_SET(0);
 }
 
+void stm32f_exti9_5_isr(void)
+{
+	struct stm32f_exti * exti = STM32F_EXTI;
+
+	DCC_LOG(LOG_INFO, "IRQ");
+
+	/* Clear pending flag */
+	exti->pr = (1 << 6);
+}
+
 void fsmc_init(void)
 {
+	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
+	struct stm32f_exti * exti = STM32F_EXTI;
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	gpio_io_t io;
 	int i;
 
 	mco2_cfg();
-
-	/* Flexible static memory controller module clock enable */
-	rcc->ahb3enr |= RCC_FSMCEN;
 
 	/* Configur IO pins */
 	stm32f_gpio_clock_en(STM32F_GPIO(PD));
@@ -261,7 +270,20 @@ void fsmc_init(void)
 		stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, GPIO_AF12);
 	}
 
+	/* IRQ */
 	stm32f_gpio_mode(STM32F_GPIO(PD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
+
+	/* Select PD6 for EXTI6 */ 
+	syscfg->exticr2 = SYSCFG_EXTI6_PD;
+	/* Unmask interrupt */
+	exti->imr |= (1 << 6);
+	/* Select rising edge trigger */
+	exti->rtsr |= (1 << 6);
+
+	cm3_irq_enable(STM32F_IRQ_EXTI9_5);
+
+	/* Flexible static memory controller module clock enable */
+	rcc->ahb3enr |= RCC_FSMCEN;
 
 	fsmc->bcr1 =
 //		FSMC_EXTMOD |
