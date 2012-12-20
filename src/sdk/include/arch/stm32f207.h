@@ -43,6 +43,7 @@
 #include <stm32f/stm32f-fsmc.h>
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>
+#include <stm32f/stm32f-exti.h>
 
 #define STM32F_BASE_FSMC    0xa0000000
 #define STM32F_BASE_RNG     0x50060800
@@ -223,6 +224,7 @@
 #define STM32F_ADC3 ((struct stm32f_adc *)STM32F_BASE_ADC3)
 #define STM32F_ADCC ((struct stm32f_adcc *)STM32F_BASE_ADCC)
 
+#define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
 #define STM32F_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
