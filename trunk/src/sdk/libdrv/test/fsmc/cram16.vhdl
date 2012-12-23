@@ -41,8 +41,9 @@ port (
 	dout : in std_logic_vector(15 downto 0) := (others => '0');
 	din : out std_logic_vector(15 downto 0);
 	addr : out std_logic_vector(ADDR_BITS - 1 downto 0);
-	rd : out std_logic;
 	wr : out std_logic;
+	raddr : out std_logic_vector(ADDR_BITS - 1 downto 0);
+	rd : out std_logic;
 	-- CRAM bus
 	cram_clk : in std_logic := '0';
 	cram_noe : in std_logic := '0';
@@ -70,6 +71,13 @@ architecture rtl of cram16 is
 	signal s_cram_adv : std_logic;
 	-- address increment
 	signal s_cram_adi : std_logic;
+	-- read strobe
+	signal s_rd_stb0 : std_logic;
+	signal s_rd_stb1 : std_logic;
+	signal s_rd_stb2 : std_logic;
+	signal s_raddr0 : std_logic_vector(ADDR_BITS - 1 downto 0);
+	signal s_raddr1 : std_logic_vector(ADDR_BITS - 1 downto 0);
+	signal s_raddr2 : std_logic_vector(ADDR_BITS - 1 downto 0);
 	-- address latch
 	signal s_addr_r : std_logic_vector(ADDR_BITS - 1 downto 0);
 	-----------------------
@@ -142,21 +150,44 @@ begin
 	-- input
 	din <= cram_d;
 
+
 	---------------------------------------------------------------------------
 	-- output
-	process (rst, cram_clk, s_cram_rd)
+
+	s_cram_oe <= (cram_noe nor cram_nce);
+
+	process (rst, cram_clk, s_cram_rd, s_cram_oe)
 	begin
-		if (rst = '1') then
-			s_dout_r <= (others => '0');
-		elsif falling_edge(cram_clk) and (s_cram_rd = '1') then
-			s_dout_r <= dout;
+		if (rst = '1') or (s_cram_oe = '0') then
+			s_rd_stb0 <= '0';
+			s_rd_stb1 <= '0';
+			s_rd_stb2 <= '0';
+		elsif falling_edge(cram_clk) then
+			s_rd_stb0 <= s_cram_rd;
+			s_rd_stb1 <= s_rd_stb0;
+			s_rd_stb2 <= s_rd_stb1;
 		end if;
 	end process;
-	s_cram_oe <= (cram_noe nor cram_nce);
-	cram_d <= s_dout_r when (s_cram_oe  = '1') else (others => 'Z');
-	---------------------------------------------------------------------------
 
-	rd <= s_cram_rd;
+	process (rst, cram_clk)
+	begin
+		if (rst = '1') then
+			s_raddr0 <= (others => '0');
+			s_raddr1 <= (others => '0');
+			s_raddr2 <= (others => '0');
+		elsif rising_edge(cram_clk) then
+			s_raddr0 <= s_addr_r;
+			s_raddr1 <= s_raddr0;
+			s_raddr2 <= s_raddr1;
+		end if;
+	end process;
+
+--	cram_d <= s_dout_r when (s_cram_oe  = '1') else (others => 'Z');
+	cram_d <= dout when (s_cram_oe  = '1') else (others => 'Z');
+	---------------------------------------------------------------------------
+	rd <= s_rd_stb2;
+	raddr <= s_raddr2;
+
 	wr <= s_cram_wr;
 	---------------------------------------------------------------------------
 

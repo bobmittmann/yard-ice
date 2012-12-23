@@ -76,13 +76,13 @@ architecture structure of fsmc_test is
 
 	constant REG_SEL_BITS : natural := 3;
 	-- register select 
-	constant REG_SEL_SRC : unsigned := to_unsigned(0, REG_SEL_BITS);
-	constant REG_SEL_DST : unsigned := to_unsigned(1, REG_SEL_BITS);
-	constant REG_SEL_LEN : unsigned := to_unsigned(2, REG_SEL_BITS);
-	constant REG_SEL_CTL : unsigned := to_unsigned(3, REG_SEL_BITS);
-	constant REG_SEL_CNT : unsigned := to_unsigned(4, REG_SEL_BITS);
-	constant REG_SEL_IEN : unsigned := to_unsigned(5, REG_SEL_BITS);
-	constant REG_SEL_IST : unsigned := to_unsigned(6, REG_SEL_BITS);
+	constant REG_SEL_SRC : std_logic_vector := "000";
+	constant REG_SEL_DST : std_logic_vector := "001";
+	constant REG_SEL_LEN : std_logic_vector := "010";
+	constant REG_SEL_CTL : std_logic_vector := "011";
+	constant REG_SEL_CNT : std_logic_vector := "100";
+	constant REG_SEL_IEN : std_logic_vector := "101";
+	constant REG_SEL_IST : std_logic_vector := "110";
 	-- interrupts
 	constant IRQ_BITS : natural := 2;
 	constant IRQ_MEMCPY : natural := 0;
@@ -104,6 +104,7 @@ architecture structure of fsmc_test is
 	signal s_bus_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_bus_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_bus_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_bus_raddr : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_bus_wr : std_logic;
 	signal s_bus_reg_wr : std_logic;
 	signal s_bus_reg_rd : std_logic;
@@ -218,6 +219,7 @@ begin
 			dout => s_bus_dout,
 			din  => s_bus_din,
 			addr  => s_bus_addr,
+			raddr  => s_bus_raddr,
 			rd  => s_bus_rd,
 			wr => s_bus_wr,
 
@@ -267,8 +269,8 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_io_reg_wr <= s_bus_wr and s_bus_addr(15);
-	s_io_reg_rd <= s_bus_rd and s_bus_addr(15);
+	s_bus_reg_wr <= s_bus_wr and s_bus_addr(15);
+	s_bus_reg_rd <= s_bus_rd and s_bus_raddr(15);
 
 	s_mem_wr <= s_bus_wr when s_bus_addr(15) = '0' else '0';
 	s_mem1_wr <= s_mem_wr when s_bus_addr(14) = '0' else '0';
@@ -357,7 +359,7 @@ begin
 			in_clk => s_clk_io,
 			in_data => s_bus_din,
 			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_io_reg_wr,
+			in_put => s_bus_reg_wr,
 
 			out_clk => s_clk_main,
 			out_data => s_reg_din,
@@ -370,15 +372,17 @@ begin
 	-- Registers read address fifo
 	reg_rd_sel : entity syncfifo 
 		generic map (
-			DATA_WIDTH => 0, 
+			DATA_WIDTH => 1, 
 			ADDR_BITS => REG_SEL_BITS
 		)
 		port map (
 			rst => s_rst,
 
-			in_clk => not s_clk_io,
-			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_io_reg_rd
+--			in_clk => not s_clk_io,
+			in_clk => s_clk_io,
+--			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
+			in_addr => s_bus_raddr(REG_SEL_BITS - 1 downto 0),
+			in_put => s_bus_reg_rd,
 
 			out_clk => s_clk_main,
 			out_addr => s_reg_rd_sel,
@@ -455,7 +459,7 @@ begin
 
 	ien_r : entity reg
 		generic map (DATA_WIDTH => DATA_WIDTH, 
-					 REG_BITS => DATA_WIDTH) 
+					 REG_BITS => IRQ_BITS) 
 		port map (
 			clk => s_clk_main,
 			rst => s_rst,
@@ -466,7 +470,7 @@ begin
 
 	ist_r : entity reg
 		generic map (DATA_WIDTH => DATA_WIDTH, 
-					 REG_BITS => DATA_WIDTH) 
+					 REG_BITS => IRQ_BITS) 
 		port map (
 			clk => s_clk_main,
 			rst => s_rst,
@@ -474,7 +478,7 @@ begin
 			-- register set
 			-- set individual bits
 			set => '1',
-			d_set => s_irq_set,
+			d_set(IRQ_BITS - 1 downto 0) => s_irq_set,
 			q => s_ist_r
 			);
 
@@ -563,14 +567,14 @@ begin
 	s_rst <= '0';
 
 	---------------------------------------------------------------------------
-	s_tap_trst <= s_bus_wr;
+	s_tap_trst <= s_bus_reg_rd;
 --	s_tap_tdi <= fsmc_noe;
-	s_tap_tdi <= s_reg_wr;
-	s_tap_tms <= s_clk_main; --s_bus_din(2);
+	s_tap_tdi <= s_bus_raddr(0);
+	s_tap_tms <= s_bus_raddr(1); --s_bus_din(2);
 --	s_tap_tdi <= '1' when (s_memc_st = MEMC_DLAT1) else '0';
 --	s_tap_tms <= '1' when (s_memc_st = MEMC_DSTB1) else '0';
-	s_tap_tck <= fsmc_clk;
-	s_tap_nrst <= s_bus_rd;
+	s_tap_tck <= s_reg_rd;
+	s_tap_nrst <= s_reg_rd_sel(0);
 --	s_dbgrq <= s_bus_dout(2);
 
 	---------------------------------------------------------------------------
