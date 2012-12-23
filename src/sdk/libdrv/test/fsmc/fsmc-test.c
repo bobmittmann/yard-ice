@@ -35,160 +35,90 @@
 #include <yard-ice/drv.h>
 #include <sys/dcclog.h>
 
-/*--------------------------------------------------------------------------
- * SPI
- ---------------------------------------------------------------------------*/
+int altera_configure(const uint8_t * buf, int len);
 
-/* SPI */
-static void io_miso_cfg(struct stm32f_gpio * gpio, int pin, int af)
-{
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(gpio, pin, af);
+struct fpga_io { 
+	union {
+		uint16_t h[2048];
+		uint32_t w[1024];
+		uint64_t d[512];
+	};
+	uint32_t res1[0x2000 - 1024];
+	uint16_t mem[256];
+	uint32_t res2[0x4000 - 0x2000 + 128];
+	union {
+		volatile uint16_t reg[8];
+		volatile uint32_t r32[4];
+		volatile uint64_t r64[2];
+		struct {
+			volatile uint16_t src;
+			volatile uint16_t dst;
+			volatile uint16_t len;
+			volatile uint16_t ctl;
+			volatile uint16_t cnt;
+			volatile uint16_t ien;
+			volatile uint16_t ist;
+		};
+	};
+};
+
+static inline void __strd(void * addr, uint64_t value) {
+	asm volatile ("strd %0, %1, [%2]" : : "r" (value), 
+				  "r" (value >> 32), "r" (addr));
 }
 
-static void io_mosi_cfg(struct stm32f_gpio * gpio, int pin, int af)
-{
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(gpio, pin, af);
+static inline uint64_t __ldrd(void * addr) {
+	register uint32_t rl;
+	register uint32_t rh;
+	asm volatile ("ldrd %0, %1, [%2]" : "=r" (rl), "=r" (rh) : "r" (addr));
+	return ((uint64_t)rh << 32) + rl;
 }
 
-static void io_sck_cfg(struct stm32f_gpio * gpio, int pin, int af)
-{
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(gpio, pin, af);
+static inline void __ldqd(void * addr, uint32_t r[]) {
+	register uint32_t r0;
+	register uint32_t r1;
+	register uint32_t r2;
+	register uint32_t r3;
+	asm volatile ("ldmia %4, {%0, %1, %2, %3}" : "=r" (r0), "=r" (r1),
+				  "=r" (r2), "=r" (r3): "r" (addr));
+	r[0] = r0;
+	r[1] = r1;
+	r[2] = r2;
+	r[3] = r3;
 }
 
-int spi_init(void)
+void __move(uint16_t * dst, uint16_t * src, unsigned int len) 
 {
+	struct stm32f_dma * dma = STM32F_DMA2;
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_spi * spi = STM32F_SPI3;
 
-	printf(" - Configuring SPI IO pins...\n");
-	io_miso_cfg(STM32F_GPIOC, 11, GPIO_AF6);
-	io_mosi_cfg(STM32F_GPIOB, 5, GPIO_AF6);
-	io_sck_cfg(STM32F_GPIOC, 10, GPIO_AF6);
+	/* DMA clock enable */
+	rcc->ahb1enr |= RCC_DMA2EN;
+	/* DMA Disable */
+	dma->s[0].cr &= ~DMA_EN;	
+	/* Wait for the channel to be ready .. */
+	while (dma->s[0].cr & DMA_EN); 
 
-	/* Enable peripheral clock */
-	printf(" - Enabling SPI clock...\n");
-	rcc->apb1enr |= RCC_SPI3EN;
+	/* Source address */
+	dma->s[0].par = (void *)src;
+	/* Destination address */
+	dma->s[0].m0ar = (void *)dst;
+	/* Number of data items to transfer */
+	dma->s[0].ndtr = 4;
+	dma->s[0].fcr = DMA_DMDIS | DMA_FTH_FULL;
+	/* Configuration single buffer */
+	dma->s[0].cr = DMA_CHSEL_SET(1) | 
+		DMA_MBURST_1 | DMA_PBURST_1 | 
+		DMA_MSIZE_32 | DMA_PSIZE_32 | 
+		DMA_MINC | DMA_PINC | 
+		DMA_DIR_MTM | DMA_EN;
 
-	spi->cr2 = 0;
-	spi->i2scfgr = 0;
-	spi->i2spr = 0;
-	spi->cr1 = SPI_SPE | SPI_MSTR | SPI_SSM | SPI_SSI | \
-			   SPI_BR_SET(5) | SPI_LSBFIRST;
-
-	return 0;
+	/* wait for the DMA transfer to complete */
+	while ((dma->lisr & DMA_TCIF0) == 0);
+	/* clear the DMA transfer complete flag */
+	dma->lifcr = DMA_CTCIF0;
 }
 
-static int inline spi_putc(struct stm32f_spi * spi, int c)
-{
-	unsigned int sr;
-	while (!((sr = spi->sr) & SPI_TXE)) {
-		if (sr & SPI_MODF) {
-			printf("MODE FAULT\n");
-			return -1;
-		}
-	}
-
-	spi->dr = c;
-
-	return 0;
-}
-
-static int inline spi_getc(struct stm32f_spi * spi)
-{
-	if (spi->sr & SPI_RXNE) {
-		return spi->dr;
-	}
-
-	return -1;
-}
-
-
-/*--------------------------------------------------------------------------
- * Altera 
- ---------------------------------------------------------------------------*/
-
-static void gpio_io_config(gpio_io_t io, int mode, int opt)
-{
-	struct stm32f_gpio * gpio = STM32F_GPIO(io.port);
-
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, io.pin, mode, opt);
-}
-
-gpio_io_t n_config = GPIO(PE, 0);
-gpio_io_t conf_done = GPIO(PE, 1);
-gpio_io_t n_status = GPIO(PC, 10);
-
-int altera_io_init(void)
-{
-	gpio_io_config(n_config, OUTPUT, 0);
-	gpio_io_config(conf_done, INPUT, 0);
-	gpio_set(n_config);
-
-	return 0;
-}
-static inline int conf_start(void)
-{
-	gpio_clr(n_config);
-	udelay(1);
-
-	if (gpio_status(n_status))
-		return -1;
-
-	if (gpio_status(conf_done))
-		return -2;
-
-	/* 40 uSec */
-	udelay(40);
-
-	gpio_set(n_config);
-
-	udelay(40);
-
-	if (gpio_status(conf_done))
-		return -4;
-
-	return 0;
-}
-
-void conf_wr(int c)
-{
-	struct stm32f_spi * spi = STM32F_SPI3;
-
-	spi_putc(spi, c);
-
-	if ((c = spi_getc(spi)) >= 0) {
-		if (c != 0xff) {
-			printf("%02x", c);
-		}
-	}
-}
-
-int altera_configure(const uint8_t * buf, int len)
-{
-	int n = 0;
-	int ret;
-
-	while ((ret = conf_start()) < 0) {
-		return ret;
-	}
-
-	while (!gpio_status(conf_done)) {
-		conf_wr(buf[n]);
-		n++;
-		if (n > len) {
-			return -6;
-		}
-	}
-
-	return 0;
-}
 
 static void mco2_cfg(void)
 {
@@ -229,6 +159,8 @@ gpio_io_t fsmc_io[] = {
 	GPIO(PB, 7), /* NL */
 };
 
+gpio_io_t irq_io = GPIO(PD, 6);
+
 void fsmc_speed(int div)
 {
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
@@ -241,12 +173,24 @@ void fsmc_speed(int div)
 
 void stm32f_exti9_5_isr(void)
 {
+	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
 	struct stm32f_exti * exti = STM32F_EXTI;
-
-	DCC_LOG(LOG_INFO, "IRQ");
+	unsigned int st;
 
 	/* Clear pending flag */
 	exti->pr = (1 << 6);
+
+	/* Clear interrupt flag */
+	st = fpga->ist;
+	(void)st;
+
+	DCC_LOG1(LOG_TRACE, "IRQ: %d", st);
+
+	/* Clear interrupt flag */
+	st = fpga->ist;
+	(void)st;
+
+	DCC_LOG1(LOG_TRACE, "IRQ: %d", st);
 }
 
 void fsmc_init(void)
@@ -271,7 +215,11 @@ void fsmc_init(void)
 	}
 
 	/* IRQ */
-	stm32f_gpio_mode(STM32F_GPIO(PD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
+	stm32f_gpio_mode(STM32F_GPIO(irq_io.port), irq_io.pin, 
+					 INPUT, PUSH_PULL | SPEED_HIGH);
+
+	/* System configuration controller clock enable */
+	rcc->apb2enr |= RCC_SYSCFGEN;
 
 	/* Select PD6 for EXTI6 */ 
 	syscfg->exticr2 = SYSCFG_EXTI6_PD;
@@ -310,41 +258,6 @@ void fsmc_init(void)
 //	printf("fsmc->bwtr1=%08x\n", &fsmc->bwtr1);
 }
 
-
-struct fpga_io { 
-	union {
-		uint16_t h[2048];
-		uint32_t w[1024];
-		uint64_t d[512];
-	};
-	uint32_t res1[0x2000 - 1024];
-	uint16_t mem[256];
-	uint32_t res2[0x4000 - 0x2000 + 128];
-	union {
-		volatile uint16_t reg[8];
-		volatile uint32_t r32[4];
-		volatile uint64_t r64[2];
-		struct {
-			volatile uint16_t src;
-			volatile uint16_t dst;
-			volatile uint16_t len;
-			volatile uint16_t ctl;
-			volatile uint16_t cnt;
-		};
-	};
-};
-
-static inline void __strd(void * addr, uint64_t value) {
-	asm volatile ("strd %0, %1, [%2]" : : "r" (value), 
-				  "r" (value >> 32), "r" (addr));
-}
-
-static inline uint64_t __ldrd(void * addr) {
-	register uint32_t rl;
-	register uint32_t rh;
-	asm volatile ("ldrd %0, %1, [%2]" : "=r" (rl), "=r" (rh) : "r" (addr));
-	return ((uint64_t)rh << 32) + rl;
-}
 
 void fill_up_64(struct fpga_io * fpga, uint64_t * buf, int len)
 {
@@ -461,10 +374,42 @@ void io_test(struct fpga_io * fpga)
 	}
 }
 
+void reg_test(struct fpga_io * fpga)
+{
+	uint32_t buf[32];
+	uint32_t st;
+	int r = 0;
+	int i = 0;
+	int c;
+	
+	c = getchar();
+	while (c != '\033') {
+		if (c <= '9') {
+			r = c - '0';
+			st = fpga->reg[r];
+		} else if (c <= 'Z') {
+			r = c - 'A';
+//			st = __ldrd((void *)&fpga->r64[r]);
+			__ldqd((void *)&fpga->r32[r], buf);
+//			__move((uint16_t *)buf, (uint16_t *)&fpga->r32[r], 16);
+		} else if (c <= 'z') {
+			r = c - 'a';
+			st = fpga->r32[r];
+		} else {
+			st = 0;
+		}
+		printf("%2d - reg[%d] = 0x%04x\n", i, r, st);
+		i++;
+		c = getchar();
+	}
+}
+
 void memcpy_test(struct fpga_io * fpga)
 {
 	int i = 0;
 	uint16_t buf[256];
+
+	fpga->ien = 1;
 
 	for (i = 0; i < 256; i++) {
 		fpga->mem[i] = i;
@@ -480,6 +425,9 @@ void memcpy_test(struct fpga_io * fpga)
 	fpga->dst = 0;
 	fpga->len = 128;
 	fpga->ctl = 1;
+
+	for (i = 0; i < 100; i++)
+		printf("%c", gpio_status(irq_io) ? '1' : '0');
 
 	thinkos_sleep(100);
 
@@ -544,8 +492,6 @@ int main(int argc, char ** argv)
 	printf("\n");
 	printf("\r\n");
 
-	altera_io_init();
-	spi_init();
 	fsmc_init();
 
 	if ((ret = altera_configure(rbf, 40000)) < 0) {
@@ -557,7 +503,9 @@ int main(int argc, char ** argv)
 
 	val = 0;
 
-	fsmc_speed(7);
+	fsmc_speed(1);
+
+	reg_test(fpga);
 
 	memcpy_test(fpga);
 

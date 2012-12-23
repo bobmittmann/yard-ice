@@ -26,9 +26,9 @@ CFILES = fsmc-test.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm \
-		  ../../../libhexdump ../../../libdrv 
+		  ../../../libhexdump ../../../libdrv ../../../libaltera
 
-LIBS = stm32f cm3 util thinkos c ice-comm hexdump drv 
+LIBS = stm32f cm3 util thinkos c ice-comm hexdump drv altera
 
 INCPATH = ../../../include
 
@@ -42,7 +42,8 @@ FPGA_RBF_ADDR = 0x08010000
 
 FPGA_PROJ = fsmc_test
 VHDL_FILES = clk_scaler.vhdl led_drv.vhdl sram.vhdl counter.vhdl memcpy.vhdl \
-			 register.vhdl dpram.vhdl cram16.vhdl syncfifo.vhdl fsmc-test.vhdl
+			 register.vhdl dpram.vhdl cram16.vhdl syncfifo.vhdl fsmc-test.vhdl \
+			 cram_adaptor.vhdl
 LOCATIONS = locations.txt
 INSTANCES = instances.txt
 FAMILY = Cyclone

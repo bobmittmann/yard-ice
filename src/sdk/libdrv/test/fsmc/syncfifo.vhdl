@@ -30,7 +30,7 @@ use ieee.math_real.all;
 
 entity syncfifo is
 generic ( 
-	DATA_WIDTH : natural := 16;
+	DATA_WIDTH : natural := 8;
 	ADDR_BITS : natural := 16;
 	FIFO_DEPTH : natural := 8
 );
@@ -41,7 +41,7 @@ port (
 	in_clk : in std_logic := '0';
 	in_data : in std_logic_vector(DATA_WIDTH -1 downto 0) := (others => '0');
 	in_addr : in std_logic_vector(ADDR_BITS -1 downto 0) := (others => '0');
-	in_put : in std_logic := '0'
+	in_put : in std_logic := '0';
 
 	out_clk : in std_logic := '0';
 	out_data : out std_logic_vector(DATA_WIDTH -1 downto 0);
