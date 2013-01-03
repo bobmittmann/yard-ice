@@ -63,20 +63,3 @@ $(OUTDIR)/%.o : %.S $(DEPDIR)/%.d
 
 #------------------------------------------------------------------------------ 
 
-%.sym: %.elf
-	$(ACTION) "SYM: $@"
-	$(Q)$(OBJDUMP) -t $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d;/^SYMBOL.*$$/d;/^.*file format.*$$/d;/^$$/d' | sort > $@
-
-%.lst: %.elf
-	$(ACTION) "LST: $@"
-	$(Q)$(OBJDUMP) -w -d -t -S -r -z $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d' > $@
-
-%.bin: %.elf
-	$(ACTION) "BIN: $@"
-	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
-
-%.lst: %.a
-	$(ACTION) "LST: $@"
-	$(Q)$(OBJDUMP) -w -t -d -S $< > $@
-
-

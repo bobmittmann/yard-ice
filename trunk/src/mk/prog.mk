@@ -77,39 +77,13 @@ INCPATH	:= $(INCPATH) $(abspath .)
 # program output files
 #------------------------------------------------------------------------------ 
 ifdef PROG
-  PROG_BIN = $(OUTDIR)/$(PROG).bin
-  PROG_MAP = $(OUTDIR)/$(PROG).map
-  PROG_ELF = $(OUTDIR)/$(PROG).elf
-  PROG_SYM = $(OUTDIR)/$(PROG).sym
-  PROG_LST = $(OUTDIR)/$(PROG).lst
-  PROG_TAG = $(OUTDIR)/$(PROG).tag
+  PROG_BIN := $(OUTDIR)/$(PROG).bin
+  PROG_MAP := $(OUTDIR)/$(PROG).map
+  PROG_ELF := $(OUTDIR)/$(PROG).elf
+  PROG_SYM := $(OUTDIR)/$(PROG).sym
+  PROG_LST := $(OUTDIR)/$(PROG).lst
+  PROG_TAG := $(OUTDIR)/$(PROG).tag
 endif
-
-all: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
-
-clean: libs-clean
-	$(Q)rm -f $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(PROG_BIN) $(PROG_ELF) $(PROG_LST) $(PROG_MAP)
-
-prog: $(PROG_BIN)
-
-elf: $(PROG_ELF)
-
-bin: $(PROG_BIN)
-
-sym: $(PROG_SYM)
-
-lst: $(PROG_LST)
-
-dirs: $(ODIRS)
-	$(warning ODIRS=$(ODIRS))
-	$(warning DDIRS=$(DDIRS))
-	$(warning OFILES=$(OFILES))
-
-$(PROG_ELF): libs-all $(LIBDIRS) $(OFILES) $(OBJ_EXTRA)
-	$(ACTION) "LD: $@"
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref \
-	-Wl,--sort-common -Wl,--start-group $(addprefix -l,$(LIBS)) \
-    -Wl,--end-group $(addprefix -L,$(LIBPATH)) -lgcc -o $@ > $(PROG_MAP)
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -127,29 +101,64 @@ FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'INCPATH=$(INCPATH)'\
 				 'LIBPATH=$(LIBPATH)'
 
-libs-all: $(DDIRS)
-	$(ECHO) - LIBS START ------------------
-	$(Q)for d in $(LIBDIRS); do\
-		if [ -f ./$$d/Makefile ]; then \
-			OUT=$(OUTDIR)/`basename $$d`;\
-			if [ ! -d $$OUT ]; then\
-				mkdir $$OUT;\
-			fi;\
-			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) all) || exit 1;\
-		fi;\
-	done;
-	$(ECHO) - LIBS END --------------------
+LIBDIRS_ALL:= $(LIBDIRS:%=%-all)
 
-libs-clean: $(DDIRS)
-	$(Q)for d in $(LIBDIRS); do \
-		if [ -f ./$$d/Makefile ]; then \
-			OUT=$(OUTDIR)/`basename $$d`;\
-			if [ ! -d $$OUT ]; then\
-				mkdir $$OUT;\
-			fi;\
-			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) clean) || exit 1;\
-		fi;\
-	done;
+LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
+
+all: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
+
+clean: $(LIBDIRS_CLEAN)
+	$(Q)rm -f $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(PROG_BIN) $(PROG_ELF) $(PROG_LST) $(PROG_MAP)
+
+prog: $(PROG_BIN)
+
+elf: $(PROG_ELF)
+
+map: $(PROG_MAP)
+
+bin: $(PROG_BIN)
+
+sym: $(PROG_SYM)
+
+lst: $(PROG_LST)
+
+libs-all: $(LIBDIRS_ALL)
+
+libs-clean: $(LIBDIRS_CLEAN)
+
+$(LIBDIRS_ALL):
+	$(ACTION) "Building : $@"
+	$(Q)OUT=$(OUTDIR)/`basename $(@:%-all=%)`;\
+	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
+
+$(LIBDIRS_CLEAN):
+	$(ACTION) "Cleaning : $@"
+	$(Q)OUT=$(OUTDIR)/`basename $(@:%-clean=%)`;\
+	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
+
+.PHONY: all clean prog elf map bin lst libs-all libs-clean vars libs-vars 
+
+.PHONY: $(LIBDIRS_BUILD) $(LIBDIRS_CLEAN)
+
+$(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
+	$(ACTION) "LD: $(PROG_ELF)"
+	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map \
+	-Wl,--cref -Wl,--sort-common \
+	-Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group \
+	$(addprefix -L,$(LIBPATH)) -lgcc -o $(PROG_ELF) > $(PROG_MAP)
+
+%.sym: %.elf
+	$(ACTION) "SYM: $@"
+	$(Q)$(OBJDUMP) -t $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d;/^SYMBOL.*$$/d;/^.*file format.*$$/d;/^$$/d' | sort > $@
+
+%.lst: %.elf
+	$(ACTION) "LST: $@"
+	$(Q)$(OBJDUMP) -w -d -t -S -r -z $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d' > $@
+
+%.bin: %.elf
+	$(ACTION) "BIN: $@"
+	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
+
 
 #------------------------------------------------------------------------------ 
 # Build tree
@@ -168,8 +177,6 @@ $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 $(DDIRS): | $(ODIRS) $(CFILES_OUT) $(HFILES_OUT)
 
 $(DFILES): | $(DDIRS) 
-
-.PHONY: all clean prog elf bin lst libs-all libs-clean vars libs-vars 
 
 include $(MKDIR)/cc.mk
 
