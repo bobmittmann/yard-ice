@@ -61,12 +61,11 @@ ifdef LIB_STATIC
   LIB_STATIC_LST = $(OUTDIR)/lib$(LIB_STATIC).lst
 endif
 
-ifdef LIB_SHARED
-  LIB_SHARED_OUT = $(OUTDIR)/lib$(LIB_SHARED).so
-  LIB_SHARED_LST = $(OUTDIR)/lib$(LIB_SHARED).so.lst
-endif
+DEPDIRS_ALL:= $(DEPDIRS:%=%-all)
 
-all: $(LIB_STATIC_LST) $(LIB_SHARED_LST)
+DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
+
+all: $(LIB_STATIC_LST)
 
 clean: deps-clean
 	$(Q)rm -f $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
@@ -77,33 +76,33 @@ lst: $(LIB_STATIC_LST)
 
 gen: $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT)
 	
-$(LIB_STATIC_OUT): deps-all $(DEPDIRS) $(LIBDEPS) $(OFILES)
+$(LIB_STATIC_OUT): $(DEPDIRS_ALL) $(OFILES)
 	$(ACTION) "AR: $@"
-	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) $(LIBDEPS) 1> /dev/null
+	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> /dev/null
 
-deps-all: $(DDIRS)
-	$(ECHO) - DEPS START ------------------
-	$(Q)for d in $(DEPDIRS); do\
-		if [ -f ./$$d/Makefile ]; then \
-			OUT=$(OUTDIR)/`basename $$d`;\
-			if [ ! -d $$OUT ]; then\
-				mkdir $$OUT;\
-			fi;\
-			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) all) || exit 1;\
-		fi;\
-	done;
-	$(ECHO) - DEPS END --------------------
+deps-all: $(DEPDIRS_ALL)
 
-deps-clean: $(DDIRS) 
-	$(Q)for d in $(DEPDIRS); do \
-		if [ -f ./$$d/Makefile ]; then \
-			OUT=$(OUTDIR)/`basename $$d`;\
-			if [ ! -d $$OUT ]; then\
-				mkdir $$OUT;\
-			fi;\
-			(cd ./$$d && $(MAKE) O=$$OUT $(FLAGS_TO_PASS) clean) || exit 1;\
-		fi;\
-	done;
+deps-clean: $(DEPDIRS_CLEAN)
+
+$(DEPDIRS_ALL):
+	$(ACTION) "Building : $@"
+	$(Q)OUT=$(OUTDIR)/`basename $(@:%-all=%)`;\
+	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
+
+$(DEPDIRS_CLEAN):
+	$(ACTION) "Cleaning : $@"
+	$(Q)OUT=$(OUTDIR)/`basename $(@:%-clean=%)`;\
+	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
+
+%.lst: %.a
+	$(ACTION) "LST: $@"
+	$(Q)$(OBJDUMP) -w -t -d -S $< > $@
+
+
+.PHONY: all clean lib lst deps-all deps-clean
+
+.PHONY: $(DEPDIRS_BUILD) $(DEPDIRS_CLEAN)
+
 #------------------------------------------------------------------------------ 
 # Build tree
 #------------------------------------------------------------------------------ 
@@ -121,8 +120,6 @@ $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 $(DDIRS) : | $(ODIRS) $(CFILES_OUT)
 
 $(DFILES): | $(DDIRS)
-
-.PHONY: all clean lib lst deps-all deps-clean
 
 include $(MKDIR)/cc.mk
 
