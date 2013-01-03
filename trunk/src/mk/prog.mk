@@ -101,7 +101,7 @@ FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'INCPATH=$(INCPATH)'\
 				 'LIBPATH=$(LIBPATH)'
 
-LIBDIRS_ALL:= $(LIBDIRS:%=%-all)
+LIBDIRS_ALL := $(LIBDIRS:%=%-all)
 
 LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
@@ -138,7 +138,7 @@ $(LIBDIRS_CLEAN):
 
 .PHONY: all clean prog elf map bin lst libs-all libs-clean vars libs-vars 
 
-.PHONY: $(LIBDIRS_BUILD) $(LIBDIRS_CLEAN)
+.PHONY: $(LIBDIRS_ALL) $(LIBDIRS_CLEAN)
 
 $(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $(PROG_ELF)"
