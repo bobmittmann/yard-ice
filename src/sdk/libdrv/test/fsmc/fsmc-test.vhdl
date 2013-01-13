@@ -72,9 +72,12 @@ end fsmc_test;
 
 architecture structure of fsmc_test is
 	constant DATA_WIDTH : natural := 16;
+	constant MEM_CNT : natural := 2;
+	constant MEM_SEL_BITS : natural := 1;
 	constant MEM_ADDR_BITS : natural := 11;
-
+	constant REG_CNT : natural := 8;
 	constant REG_SEL_BITS : natural := 3;
+
 	-- register select 
 	constant REG_SEL_SRC : std_logic_vector := "000";
 	constant REG_SEL_DST : std_logic_vector := "001";
@@ -97,19 +100,7 @@ architecture structure of fsmc_test is
 	signal s_1khz_stb : std_logic;
 --	signal s_2hz_stb : std_logic;
 
-	-----------------------
-	-- IO clock referenced signals 
-	-- bus access 
-	signal s_bus_clk : std_logic;
-	signal s_bus_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_raddr : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_wr : std_logic;
-	signal s_bus_reg_wr : std_logic;
-	signal s_bus_reg_rd : std_logic;
-	signal s_bus_rd_addr : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_bus_rd : std_logic;
+	signal s_mem_addr : std_logic_vector(MEM_ADDR_BITS - 1 downto 0);
 
 	-- TAP signals
 --	signal s_tap_tdo : std_logic;
@@ -153,7 +144,7 @@ architecture structure of fsmc_test is
 	signal s_cnt_wr : std_logic;
 	-- interrupt status register
 	signal s_ist_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_ist_rd : std_logic;
+	signal s_ist_wr : std_logic;
 	-- interrupt enable register
 	signal s_ien_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ien_wr : std_logic;
@@ -161,20 +152,25 @@ architecture structure of fsmc_test is
 
 	-- Register access
 	signal s_reg_wr_sel : std_logic_vector(REG_SEL_BITS - 1 downto 0);
+	signal s_reg_wr_stb : std_logic;
 	signal s_reg_rd_sel : std_logic_vector(REG_SEL_BITS - 1 downto 0);
 	signal s_reg_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_reg_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	-- Memory access
-	signal s_mem_wr : std_logic;
-	signal s_reg_wr : std_logic;
-	signal s_reg_rd : std_logic;
-
 	signal s_mem1_wr : std_logic;
+
+	signal s_mem_wr_stb : std_logic;
+	signal s_mem_wr_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
+	signal s_mem_rd_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
+
 	signal s_mem1_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	signal s_mem2_wr : std_logic;
 	signal s_mem2_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
+
+	signal s_mem_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_mem_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 
 	signal s_cpy_saddr : std_logic_vector(7 downto 0);
@@ -211,23 +207,35 @@ begin
 
 	---------------------------------------------------------------------------
 	-- CRAM bus adapter
-	cram_bus : entity cram16
-		generic map (ADDR_BITS => DATA_WIDTH)
+	cram_bus : entity cram_adaptor
+		generic map (
+			MEM_CNT => MEM_CNT,
+			MEM_SEL_BITS => MEM_SEL_BITS,
+			MEM_ADDR_BITS => MEM_ADDR_BITS,
+			REG_CNT => REG_CNT,
+			REG_SEL_BITS => REG_SEL_BITS)
 		port map (
+			clk => s_clk_main,
 			rst => s_rst,
-
-			dout => s_bus_dout,
-			din  => s_bus_din,
-			addr  => s_bus_addr,
-			raddr  => s_bus_raddr,
-			rd  => s_bus_rd,
-			wr => s_bus_wr,
 
 			cram_clk => fsmc_clk,
 			cram_noe => fsmc_noe,
 			cram_nwe => fsmc_nwe,
 			cram_nce => fsmc_nce,
-			cram_d => fsmc_d
+			cram_d => fsmc_d,
+
+			mem_addr  => s_mem_addr,
+			mem_rd_data => s_mem_dout,
+			mem_rd_sel  => s_mem_rd_sel,
+			mem_wr_data  => s_mem_din,
+			mem_wr_sel  => s_mem_wr_sel,
+			mem_wr_stb  => s_mem_wr_stb,
+
+			reg_rd_data => s_reg_dout,
+			reg_rd_sel  => s_reg_rd_sel,
+			reg_wr_data  => s_reg_din,
+			reg_wr_sel  => s_reg_wr_sel,
+			reg_wr_stb  => s_reg_wr_stb
 		);
 
 	---------------------------------------------------------------------------
@@ -269,26 +277,10 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_bus_reg_wr <= s_bus_wr and s_bus_addr(15);
-	s_bus_reg_rd <= s_bus_rd and s_bus_raddr(15);
+	s_mem_dout <= s_mem1_dout when s_mem_rd_sel = "0" else s_mem2_dout;
 
-	s_mem_wr <= s_bus_wr when s_bus_addr(15) = '0' else '0';
-	s_mem1_wr <= s_mem_wr when s_bus_addr(14) = '0' else '0';
-	s_mem2_wr <= s_mem_wr when s_bus_addr(14) = '1' else '0';
-
-	process (s_clk_io)
-	begin
-		if rising_edge(s_clk_io) then
-			s_bus_rd_addr <= s_bus_addr;
-		end if;
-	end process;
-
-	with s_bus_rd_addr(15 downto 14) select
-		s_bus_dout <= 
-		s_mem1_dout when "00", 
-		s_mem2_dout when "01", 
-		s_reg_dout when "10", 
-		(others => '0') when others; 
+	s_mem1_wr <= s_mem_wr_stb when s_mem_wr_sel = "0" else '0';
+	s_mem2_wr <= s_mem_wr_stb when s_mem_wr_sel = "1" else '0';
 
 	---------------------------------------------------------------------------
 	-- Auxiliary memory Rd/Wr
@@ -299,9 +291,9 @@ begin
 		)
 		port map (
 			clk => s_clk_io,
-			addr => s_bus_addr(MEM_ADDR_BITS - 1 downto 0),
+			addr => s_mem_addr,
 			we => s_mem1_wr, 
-			data => s_bus_din,
+			data => s_mem_din,
 			q => s_mem1_dout
 		);
 	---------------------------------------------------------------------------
@@ -316,9 +308,9 @@ begin
 		)
 		port map (
 			clk1 => s_clk_io,
-			addr1 => s_bus_addr(7 downto 0),
+			addr1 => s_mem_addr(7 downto 0),
 			we1 => s_mem2_wr, 
-			data1 => s_bus_din,
+			data1 => s_mem_din,
 
 			clk2 => s_clk_main,
 			addr2 => s_cpy_saddr(7 downto 0),
@@ -340,64 +332,20 @@ begin
 			data1 => s_cpy_ddata,
 
 			clk2 => s_clk_io,
-			addr2 => s_bus_addr(7 downto 0),
+			addr2 => s_mem_addr(7 downto 0),
 			q2 => s_mem2_dout
 		);
 	---------------------------------------------------------------------------
 
-
-	---------------------------------------------------------------------------
-	-- Registers write address/data fifo 
-	reg_wr_sel : entity syncfifo 
-		generic map (
-			DATA_WIDTH => DATA_WIDTH, 
-			ADDR_BITS => REG_SEL_BITS
-		)
-		port map (
-			rst => s_rst,
-
-			in_clk => s_clk_io,
-			in_data => s_bus_din,
-			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_bus_reg_wr,
-
-			out_clk => s_clk_main,
-			out_data => s_reg_din,
-			out_addr => s_reg_wr_sel,
-			out_get => s_reg_wr
-		);
-
-
-	---------------------------------------------------------------------------
-	-- Registers read address fifo
-	reg_rd_sel : entity syncfifo 
-		generic map (
-			DATA_WIDTH => 1, 
-			ADDR_BITS => REG_SEL_BITS
-		)
-		port map (
-			rst => s_rst,
-
---			in_clk => not s_clk_io,
-			in_clk => s_clk_io,
---			in_addr => s_bus_addr(REG_SEL_BITS - 1 downto 0),
-			in_addr => s_bus_raddr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_bus_reg_rd,
-
-			out_clk => s_clk_main,
-			out_addr => s_reg_rd_sel,
-			out_get => s_reg_rd
-		);
-
 	---------------------------------------------------------------------------
 
-	s_src_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_SRC else '0';
-	s_dst_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_DST else '0';
-	s_len_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_LEN else '0';
-	s_ctl_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_CTL else '0';
-	s_cnt_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_CNT else '0';
-	s_ien_wr <= s_reg_wr when s_reg_wr_sel = REG_SEL_IEN else '0';
-	s_ist_rd <= s_reg_rd when s_reg_rd_sel = REG_SEL_IST else '0';
+	s_src_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_SRC else '0';
+	s_dst_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_DST else '0';
+	s_len_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_LEN else '0';
+	s_ctl_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_CTL else '0';
+	s_cnt_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_CNT else '0';
+	s_ien_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IEN else '0';
+	s_ist_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IST else '0';
 
 	---------------------------------------------------------------------------
 
@@ -474,16 +422,17 @@ begin
 		port map (
 			clk => s_clk_main,
 			rst => s_rst,
-			clr => s_ist_rd,
 			-- register set
 			-- set individual bits
 			set => '1',
-			d_set(IRQ_BITS - 1 downto 0) => s_irq_set,
+			d_set => s_irq_set,
+			clr => s_ist_wr,
+			d_clr => s_reg_din(IRQ_BITS - 1 downto 0),
 			q => s_ist_r
 			);
 
 
-	with s_bus_rd_addr(REG_SEL_BITS - 1 downto 0) select
+	with s_reg_rd_sel(REG_SEL_BITS - 1 downto 0) select
 		s_reg_dout <= 
 		s_src_r when REG_SEL_SRC, 
 		s_dst_r when REG_SEL_DST, 
@@ -545,7 +494,7 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_bus_wr, 
+			trip => s_reg_wr_stb, 
 			q => s_led1
 		);
 
@@ -558,7 +507,7 @@ begin
 			rst => s_rst, 
 			en => s_1khz_stb, 
 --			trip => s_bus_rd, 
-			trip => s_reg_rd, 
+			trip => s_mem_wr_stb, 
 			q => s_led2
 		);
 
@@ -567,13 +516,13 @@ begin
 	s_rst <= '0';
 
 	---------------------------------------------------------------------------
-	s_tap_trst <= s_bus_reg_rd;
+	s_tap_trst <= s_mem_wr_stb;
 --	s_tap_tdi <= fsmc_noe;
-	s_tap_tdi <= s_bus_raddr(0);
-	s_tap_tms <= s_bus_raddr(1); --s_bus_din(2);
+	s_tap_tdi <= s_reg_rd_sel(2);
+	s_tap_tms <= s_reg_rd_sel(1); --s_bus_din(2);
 --	s_tap_tdi <= '1' when (s_memc_st = MEMC_DLAT1) else '0';
 --	s_tap_tms <= '1' when (s_memc_st = MEMC_DSTB1) else '0';
-	s_tap_tck <= s_reg_rd;
+	s_tap_tck <= s_mem_wr_stb;
 	s_tap_nrst <= s_reg_rd_sel(0);
 --	s_dbgrq <= s_bus_dout(2);
 

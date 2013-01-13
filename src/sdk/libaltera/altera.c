@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include <sys/dcclog.h>
 
 /*--------------------------------------------------------------------------
  * Altera 
@@ -53,7 +54,7 @@ static int altera_io_init(void)
 
 	io = conf_done;
 	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, ALT_FUNC, SPEED_MED);
+	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, INPUT, SPEED_MED);
 
 	gpio_set(n_config);
 
@@ -91,8 +92,8 @@ static void conf_wr(int c)
 	stm32f_spi_putc(spi, c);
 
 	if ((c = stm32f_spi_getc(spi)) >= 0) {
-		if (c != 0xff)
-			printf("%02x", c);
+//		if (c != 0xff)
+//			printf("%02x", c);
 	}
 }
 
@@ -118,5 +119,4 @@ int altera_configure(const uint8_t * buf, int len)
 
 	return 0;
 }
-
 

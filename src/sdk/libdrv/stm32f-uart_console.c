@@ -138,7 +138,7 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 	__thinkos_critical_enter();
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_TRACE, "wait...");
+		DCC_LOG(LOG_INFO, "wait...");
 		__thinkos_ev_wait(dev->tx_ev);
 		DCC_LOG(LOG_INFO, "wakeup");
 	}
