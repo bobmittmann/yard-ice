@@ -104,7 +104,7 @@ void semaphore_test(void)
 
 	/* create the producer thread */
 	prod_th = thinkos_thread_create(producer_task, NULL, 
-							   prod_stack, STACK_SIZE, 0);
+			prod_stack, STACK_SIZE, 0);
 
 	printf(" * Empty semaphore: %d\n", sem_empty);
 	printf(" * Full semaphore: %d\n", sem_full);
@@ -115,7 +115,8 @@ void semaphore_test(void)
 	for (i = 0; i < 100; i++) {
 		printf(" %3d ", i);
 		/* wait for an item to be produced */
-		while (thinkos_sem_timedwait(sem_full, 50) == THINKOS_ETIMEDOUT) {
+		while (thinkos_sem_timedwait(sem_full, 50) == 
+				THINKOS_ETIMEDOUT) {
 			printf(".");
 		}
 

@@ -35,11 +35,14 @@
 #define CLOCK_PRIORITY         0xa0
 #define SCHED_PRIORITY         0xc0
 
-#define IRQ_PRIORITY_HIGHEST   0x00
-#define IRQ_PRIORITY_VERY_HIGH 0x20
-#define IRQ_PRIORITY_HIGH      0x40
-#define IRQ_PRIORITY_REGULAR   0x80
-#define IRQ_PRIORITY_LOW       0xe0
+#define IRQ_PRIORITY_HIGHEST   (0 << 5)
+#define IRQ_PRIORITY_VERY_HIGH (1 << 5)
+#define IRQ_PRIORITY_HIGH      (2 << 5)
+#define IRQ_PRIORITY_SYSCALL   (3 << 5)
+#define IRQ_PRIORITY_REGULAR   (4 << 5)
+#define IRQ_PRIORITY_CLOCK     (5 << 5)
+#define IRQ_PRIORITY_SCHED     (6 << 5)
+#define IRQ_PRIORITY_LOW       (7 << 5)
 
 #ifdef __cplusplus
 extern "C" {
