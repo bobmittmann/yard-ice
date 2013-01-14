@@ -34,5 +34,7 @@ CFLAGS = -g -O2
 
 JTAGTOOL_ADDR = 192.168.0.80
 
+INCPATH = $(abspath ../../../include)
+
 include ../../../../mk/stm32f207.mk
 
