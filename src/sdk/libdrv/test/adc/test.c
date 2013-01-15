@@ -39,10 +39,18 @@
 #include <yard-ice/drv.h>
 #include <yard-ice/audio.h>
 
+/* supervisory ADC initialization */
+void stm32f_adc_init(void);
+
+int32_t supv_temperature_get(void);
+int32_t supv_vin_get(void);
+int32_t supv_vbat_get(void);
 
 int main(int argc, char ** argv)
 {
-	int c;
+	int32_t vin;
+	int32_t vbat;
+	int32_t temp;
 
 	DCC_LOG_CONNECT();
 	DCC_LOG_INIT();
@@ -60,58 +68,16 @@ int main(int argc, char ** argv)
 	printf("\n");
 	printf("\r\n");
 
-	stm32f_dac_init();
+	stm32f_adc_init();
 
 	for (;;) {
-		c = getchar();
-		printf("%c", c);
-		switch (c) {
-		case '1':
-			tone_play(TONE_A4, 125);
-			break;
-		case '2':
-			tone_play(TONE_A4S, 125);
-			break;
-		case '3':
-			tone_play(TONE_B4, 125);
-			break;
-		case '4':
-			tone_play(TONE_C4, 125);
-			break;
-		case '5':
-			tone_play(TONE_C4S, 125);
-			break;
-		case '6':
-			tone_play(TONE_D4, 125);
-			break;
-		case '7':
-			tone_play(TONE_D4S, 125);
-			break;
-		case '8':
-			tone_play(TONE_E4, 125);
-			break;
-		case '9':
-			tone_play(TONE_F4, 125);
-			break;
-		case '0':
-			tone_play(TONE_F4S, 125);
-			break;
-		case '-':
-			tone_play(TONE_G4, 125);
-			break;
-		case '=':
-			tone_play(TONE_G4S, 125);
-			break;
-		case 'a': {
-			int i;
-
-			for (i = 0; i < 5; i++) {
-				tone_play(TONE_E4, 125);
-				tone_play(TONE_A4S, 125);
-			}
-			continue;
-		}
-		}
+		thinkos_sleep(1000);
+		vin = supv_vin_get();
+		vbat = supv_vbat_get();
+		temp = supv_temperature_get();
+		printf(" Vin  = %2d.%03d[V]", vin / 1000, vin % 1000);
+		printf(" Vbat = %2d.%03d[V]", vbat / 1000, vbat % 1000);
+		printf(" Temp = %2d[dg.C]", temp);
 	}
 
 	return 0;
