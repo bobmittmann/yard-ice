@@ -394,6 +394,15 @@
    110: 144 cycles
    111: 480 cycles */
 
+#define ADC_SMP_3_CYC   0
+#define ADC_SMP_15_CYC  1
+#define ADC_SMP_28_CYC  2
+#define ADC_SMP_56_CYC  3
+#define ADC_SMP_84_CYC  4
+#define ADC_SMP_112_CYC 5
+#define ADC_SMP_144_CYC 6
+#define ADC_SMP_480_CYC 7
+
 /*-------------------------------------------------------------------------
  * ADC injected channel data offset register x */
 #define STM32F_ADC_JOFR1 0x14
@@ -442,8 +451,8 @@ in the ADC_JDRx registers. */
 
 /* Bits [23..20] - Regular channel sequence length */
 #define ADC_L_MSK (((1 << (3 + 1)) - 1) << 20)
-#define ADC_L_SET(VAL) (((VAL) << 20) & ADC_L_MSK)
-#define ADC_L_GET(REG) (((REG) & ADC_L_MSK) >> 20)
+#define ADC_L_SET(VAL) ((((VAL) - 1) << 20) & ADC_L_MSK)
+#define ADC_L_GET(REG) ((((REG) & ADC_L_MSK) >> 20) + 1)
 /* These bits are written by software to define the total number of 
    conversions in the regular channel conversion sequence.
    0000: 1 conversion
@@ -460,6 +469,8 @@ in the ADC_JDRx registers. */
 
 /* Bits [14..10] 15th conversion in regular sequence */
 #define ADC_SQ15_MSK (((1 << (4 + 1)) - 1) << 10)
+#define ADC_SQ15_SET(VAL) (((VAL) << 10) & ADC_SQ15_MSK)
+#define ADC_SQ15_GET(REG) (((REG) & ADC_SQ15_MSK) >> 10)
 
 /* Bits [9..5] - 14th conversion in regular sequence */
 #define ADC_SQ14_MSK (((1 << (4 + 1)) - 1) << 5)
@@ -868,6 +879,7 @@ struct stm32f_adcc {
 	volatile uint32_t cdr;
 };
 
+/* set the sample time for an specific ADC channel */
 static inline void stm32f_adc_smp_set(struct stm32f_adc * adc, 
 									   unsigned int chan, unsigned int val) {
 	uint32_t smpr;
@@ -880,6 +892,42 @@ static inline void stm32f_adc_smp_set(struct stm32f_adc * adc,
 		adc->smpr2 = smpr | ADC_SMP_SET(chan, val);
 	}
 }
+
+/* set the conversion channel sequence */
+static inline void stm32f_adc_seq_set(struct stm32f_adc * adc, 
+									  const uint8_t * chan, unsigned int len) {
+	uint32_t sqr1;
+	uint32_t sqr2;
+	uint32_t sqr3;
+	int n;
+	int i;
+
+	sqr1 = len;
+	sqr2 = 0;
+	sqr3 = 0;
+
+	/* First 6 channels */
+	n = (len > 6) ? 6 : len;
+	for (i = 0; i < n; i++)
+		sqr3 |= chan[i] << (5 * i);
+
+	/* Channels 7 to 12 */
+	len -= n;
+	n = (len > 6) ? 6 : len;
+	for (i = 0; i < len; i++)
+		sqr2 |= chan[i + 6] << (5 * i);
+
+	/* Channels 13 to 16 */
+	len -= n;
+	n = (len > 4) ? 4 : len;
+	for (i = 0; i < len; i++)
+		sqr1 |= chan[i + 12] << (5 * i);
+
+	adc->sqr1 = sqr1;
+	adc->sqr2 = sqr2;
+	adc->sqr3 = sqr3;
+}
+
 
 #endif /* __ASSEMBLER__ */
 

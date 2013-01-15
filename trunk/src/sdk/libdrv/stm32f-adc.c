@@ -21,66 +21,18 @@
  */
 
 
+#include <stdint.h>
+
 #include <sys/stm32f.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
 #include <arch/cortex-m3.h>
-#include <sys/serial.h>
-#include <sys/delay.h>
-
-#include <thinkos.h>
-
-struct thread_ctrl {
-	volatile bool enabled;
-};
-
-#define DAC1_GPIO STM32F_GPIOA
-#define DAC1_PORT 4
-
-#define DAC2_GPIO STM32F_GPIOA
-#define DAC2_PORT 5
 
 #define ADC6_GPIO STM32F_GPIOA
 #define ADC6_PORT 6
 
 /***********************************************************
-  ADC Configuration
- ***********************************************************/
-void adc1_init(unsigned int chans)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_adc * adc = STM32F_ADC1;
-	struct stm32f_adcc * adcc = STM32F_ADCC;
-
-	/* ADC clock enable */
-	rcc->apb2enr |= RCC_ADC1EN;
-
-	/* configure for DMA use */
-	adc->cr1 = ADC_RES_12BIT | ADC_SCAN;
-	adc->cr2 = ADC_EXTEN_RISING | ADC_EXTSEL_TIM2_TRGO | ADC_ADON |
-			   ADC_DDS | ADC_DMA;
-	adc->sqr1 = ADC_L_SET(chans - 1); 
-	adc->sqr2 = 0;
-	adc->sqr3 = ADC_SQ1_SET(6) | ADC_SQ2_SET(17) | 
-		ADC_SQ3_SET(18) | ADC_SQ4_SET(16);
-	/* set the sample time */
-	stm32f_adc_smp_set(adc, 6, 3);
-	stm32f_adc_smp_set(adc, 17, 3);
-	stm32f_adc_smp_set(adc, 18, 3);
-	stm32f_adc_smp_set(adc, 16, 3);
-
-	/* Common Control */
-	adcc->ccr = ADC_TSVREFE | ADC_VBATE | ADC_ADCPRE_4;
-	/* PCLK2 = 60MHz
-	   ADCCLK = PCLK2/4 = 15MHz */
-}
-
-/***********************************************************
   DMA Configuration
  ***********************************************************/
-void dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
+static void adc_dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_dma * dma = STM32F_DMA2;
@@ -101,9 +53,8 @@ void dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
 	dma->s[0].ndtr = ndt;
 	/* Configuration for double buffer circular */
 	dma->s[0].cr = DMA_CHSEL_SET(0) | DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_CT_M0AR | DMA_DBM |  DMA_MSIZE_32 | DMA_PSIZE_32 | DMA_MINC | 
+		DMA_CT_M0AR | DMA_DBM |  DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC | 
 		DMA_CIRC | DMA_DIR_PTM | DMA_TCIE;
-
 	/* enable DMA */
 	dma->s[0].cr |= DMA_EN;	
 }
@@ -111,7 +62,7 @@ void dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
 /***********************************************************
   Timer Configuration
  ***********************************************************/
-void tim2_init(uint32_t freq)
+static void adc_tim2_init(uint32_t freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_tim * tim2 = STM32F_TIM2;
@@ -126,8 +77,6 @@ void tim2_init(uint32_t freq)
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
 
-	printf(" %s(): div=%d pre=%d n=%d\n", __func__, pre, div, n);
-
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;
 	
@@ -137,102 +86,136 @@ void tim2_init(uint32_t freq)
 	tim2->cnt = 0;
 	tim2->egr = 0;
 	tim2->dier = TIM_UIE; /* Update interrupt enable */
-	tim2->cr2 = TIM_MMS_OC1REF;
-	tim2->cr1 = TIM_URS | TIM_CEN;
 	tim2->ccmr1 = TIM_OC1M_PWM_MODE1;
 	tim2->ccr1 = tim2->arr - 2;
-	printf(" %s(): PSC=%d AAR=%d.\n", __func__, tim2->psc, tim2->arr);
-	printf(" %s(): F=%dHz\n", __func__, (2 * STM32F_APB1_HZ) /
-		   ((tim2->psc + 1) * ( tim2->arr + 1)));
+	tim2->cr2 = TIM_MMS_OC1REF;
+	tim2->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+}
+
+/***********************************************************
+  I/O pin configuration
+ ***********************************************************/
+static void adc_gpio_init(void)
+{
+	/* ADC Input pins */
+	stm32f_gpio_clock_en(ADC6_GPIO);
+	stm32f_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
+}
+
+#define ADC_CHANS 3
+#define ADC_RATE 10
+
+static uint16_t adc_buf[2][ADC_CHANS];
+static uint32_t adc_dma_cnt;
+
+static int16_t adc_vin;
+static int16_t adc_vbat;
+static int16_t adc_temp;
+
+#if (ENABLE_ADC_SYNC)
+static uint8_t ev_adc_dma;
+#endif
+
+/***********************************************************
+  ADC Configuration
+ ***********************************************************/
+void stm32f_adc_init(void)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32f_adc * adc = STM32F_ADC1;
+	struct stm32f_adcc * adcc = STM32F_ADCC;
+	const uint8_t adc_chan_seq[] = {6, 18, 6};
+
+	/* ADC clock enable */
+	rcc->apb2enr |= RCC_ADC1EN;
+
+	/* configure for DMA use, select timer2 trigger */
+	adc->cr1 = ADC_RES_12BIT | ADC_SCAN;
+	adc->cr2 = ADC_EXTEN_RISING | ADC_EXTSEL_TIM2_TRGO | ADC_ADON |
+			   ADC_DDS | ADC_DMA;
+	/* Chan 6 is external
+	   Chan 18 is the battery (VBAT)
+	   Chan 16 is the internal temperature sensor */
+	stm32f_adc_seq_set(adc, adc_chan_seq, 3);
+	/* set the sample time */
+	stm32f_adc_smp_set(adc, 6, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 18, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 16, ADC_SMP_56_CYC);
+
+	/* Common Control */
+	adcc->ccr = ADC_TSVREFE | ADC_VBATE | ADC_ADCPRE_4;
+	/* PCLK2 = 60MHz
+	   ADCCLK = PCLK2/4 = 15MHz */
+
+	adc_gpio_init();
+
+	adc_dma2_init(adc_buf[0], adc_buf[1], (void *)&adc->dr, ADC_CHANS);
+
+#if (ENABLE_ADC_SYNC)
+	/* synchronization event */
+	ev_adc_dma = thinkos_ev_alloc(); 
+#endif
+	
+	/* Set DMA to very low priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA2_STREAM0, 0xf0);
+	/* Enable DMA interrupt */
+	cm3_irq_enable(STM32F_IRQ_DMA2_STREAM0);
+
+	/* Configure timer and start periodic conversion */
+	adc_tim2_init(ADC_RATE);
+}
+
+#define ADC_INPUT_6_SCALE 6600
+#define ADC_VBAT_SCALE 6600
+#define ADC_TEMP_SENS_SCALE 3300
+
+void stm32f_dma2_stream0_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA2;
+	uint16_t * data;
+
+	if ((dma->lisr & DMA_TCIF0) == 0)
+		return;
+
+	/* clear the DMA transfer complete flag */
+	dma->lifcr = DMA_CTCIF0;
+
+	/* get a pointer to the last filled DMA transfer buffer */
+	data = adc_buf[adc_dma_cnt++ & 1];
+
+	/* scale and sotore the samples */
+	adc_vin = (data[0] * ADC_INPUT_6_SCALE) / 4096;
+	adc_vbat = (data[1] * ADC_INPUT_6_SCALE) / 4096;
+	adc_temp = (data[2] * ADC_TEMP_SENS_SCALE) / 4096;
+
+#if (ENABLE_ADC_SYNC)
+	__thinkos_ev_raise(ev_adc_dma);
+#endif
 }
 
 #define VT25  760
 #define AVG_SLOPE 2500
-#define ADC_CHANS 4
-#define ADC_SAMPLES 2048
-#define ADC_RATE 10 * ADC_SAMPLES
 
-struct dset {
-	int32_t ch[ADC_CHANS];
-};
-
-int adc_capture_task(void * arg)
+int32_t supv_temperature_get(void)
 {
-	struct thread_ctrl * ctrl = (struct thread_ctrl *)arg;
-	struct stm32f_adc * adc = STM32F_ADC1;
-	struct stm32f_dma * dma = STM32F_DMA2;
-	int self = thinkos_thread_self();
-	struct dset adc_buf[2][ADC_SAMPLES];
-	struct dset * sample;
-	int32_t scale[ADC_CHANS];
-	int32_t val[ADC_CHANS];
-	int32_t temp;
-	int32_t sum;
-	int cnt;
-	int i;
-	int j;
-
-	printf(" [%d] started.\n", self);
-	thinkos_sleep(100);
-
-	/***********************************************************
-	 I/O pin configuration
-	 ***********************************************************/
-	/* GPIO */
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_mode(STM32F_GPIOB, 6, OUTPUT, PUSH_PULL | SPEED_MED);
-	/* ADC Input pins */
-	stm32f_gpio_clock_en(ADC6_GPIO);
-	stm32f_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
-
-	adc1_init(ADC_CHANS);
-
-	dma2_init(adc_buf[0], adc_buf[1], (void *)&adc->dr, 
-			  ADC_CHANS * ADC_SAMPLES);
-
-	tim2_init(ADC_RATE);
-
-	/* set the scale factor to get a millivolts readout */
-	scale[0] = 6600; /* ADC channel 6 */
-	scale[1] = 3300; /* VREFINT */
-	scale[2] = 6600; /* VBAT */
-	scale[3] = 3300; /* Temperature sensor */
-
-	cnt = 0;
-	while (ctrl->enabled) {
-		/* wait for the DMA transfer to complete */
-		thinkos_irq_wait(STM32F_IRQ_DMA2_STREAM0);
-		if ((dma->lisr & DMA_TCIF0) == 0) {
-			dma->lifcr = dma->lisr;
-			continue;
-		}
-		/* clear the DMA transfer complete flag */
-		dma->lifcr = DMA_CTCIF0;
-
-		/* get a pointer to the DMA sample buffer */
-		sample = adc_buf[cnt++ & 1];
-
-		/* read from DMA buffer and scale the signal */
-		for (i = 0; i < ADC_CHANS; i++) {
-			/* average the samples */
-			for (j = 0, sum = 0; j < ADC_SAMPLES; j++)
-				sum += sample[j].ch[i];
-			val[i] = ((sum / ADC_SAMPLES) * scale[i]) / 4096;
-		}
-
-		printf("\r %4d - ", cnt);
-		printf(" %2d.%03d[V]", val[0] / 1000, val[0] % 1000);
-		printf(" %2d.%03d[V]", val[1] / 1000, val[1] % 1000);
-		printf(" %2d.%03d[V]", val[2] / 1000, val[2] % 1000);
-		temp = (((val[3] - VT25) * 1000) / AVG_SLOPE) + 25;
-		printf(" %2d[dg.C]", temp);
-
-		if (cnt & 1)
-			stm32f_gpio_set(STM32F_GPIOB, 6);
-		else
-			stm32f_gpio_clr(STM32F_GPIOB, 6);
-	}
-
-	return 0;
+	return (((adc_temp - VT25) * 1000) / AVG_SLOPE) + 25;
 }
+
+int32_t supv_vin_get(void)
+{
+	return adc_vin;
+}
+
+int32_t supv_vbat_get(void)
+{
+	return adc_vbat;
+}
+
+#if (ENABLE_ADC_SYNC)
+void supv_sync(void)
+{
+	__thinkos_ev_wait(ev_adc_dma);
+}
+#endif
+
 
