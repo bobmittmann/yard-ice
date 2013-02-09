@@ -2,7 +2,7 @@
 Version=1.0
 HierarchyMode=0
 ChannelRoomNamingStyle=0
-OutputPath=
+OutputPath=Project Outputs for yard-ice
 LogFolderPath=
 ReleasesFolder=
 ReleaseVaultGUID=
@@ -206,6 +206,86 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
+
+[GeneratedDocument1]
+DocumentPath=..\doc\rev0.2\BOM\Bill of Materials-yard-ice.xls
+DItemRevisionGUID=
+
+[GeneratedDocument2]
+DocumentPath=..\doc\rev0.2\Pick Place\Pick Place for yard-ice.txt
+DItemRevisionGUID=
+
+[GeneratedDocument3]
+DocumentPath=..\doc\rev0.2\NC Drill\yard-ice-BoardEdgeRout.TXT
+DItemRevisionGUID=
+
+[GeneratedDocument4]
+DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.DRR
+DItemRevisionGUID=
+
+[GeneratedDocument5]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.EXTREP
+DItemRevisionGUID=
+
+[GeneratedDocument6]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GBL
+DItemRevisionGUID=
+
+[GeneratedDocument7]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GBS
+DItemRevisionGUID=
+
+[GeneratedDocument8]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GD1
+DItemRevisionGUID=
+
+[GeneratedDocument9]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GG1
+DItemRevisionGUID=
+
+[GeneratedDocument10]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM3
+DItemRevisionGUID=
+
+[GeneratedDocument11]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM4
+DItemRevisionGUID=
+
+[GeneratedDocument12]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GM11
+DItemRevisionGUID=
+
+[GeneratedDocument13]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTL
+DItemRevisionGUID=
+
+[GeneratedDocument14]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTO
+DItemRevisionGUID=
+
+[GeneratedDocument15]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTP
+DItemRevisionGUID=
+
+[GeneratedDocument16]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.GTS
+DItemRevisionGUID=
+
+[GeneratedDocument17]
+DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.LDP
+DItemRevisionGUID=
+
+[GeneratedDocument18]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.REP
+DItemRevisionGUID=
+
+[GeneratedDocument19]
+DocumentPath=..\doc\rev0.2\Gerber\yard-ice.RUL
+DItemRevisionGUID=
+
+[GeneratedDocument20]
+DocumentPath=..\doc\rev0.2\NC Drill\yard-ice.TXT
+DItemRevisionGUID=
 
 [PCBConfiguration1]
 ReleaseItemId=
