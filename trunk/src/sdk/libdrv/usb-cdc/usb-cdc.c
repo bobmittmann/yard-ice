@@ -1,5 +1,5 @@
 /* 
- * File:	 usb-test.c
+ * File:	 usb-cdc.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -68,12 +68,6 @@ struct ep_rx_ctrl {
 	uint32_t tmr;
 };
 
-union ep_ctrl {
-	uint8_t ep;
-	struct ep_tx_ctrl tx;
-	struct ep_rx_ctrl rx;
-};
-
 struct usb_cdc {
 	/* modem bits */
 	volatile uint8_t dtr: 1;
@@ -105,8 +99,6 @@ struct usb_dev {
 	struct ep_tx_ctrl ep2_tx;
 	/* ep1 rx ctrl */
 	struct ep_rx_ctrl ep1_rx;
-
-//	struct ep_ctrl ep[4];
 
 	uint32_t setup_buf[2];
 	uint32_t pkt_buf[4];
@@ -226,14 +218,14 @@ static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 
 }
 
-void usb_device_init(struct usb_dev * usb)
+void usb_device_init(struct usb_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
-	usb->rx_ev = thinkos_ev_alloc(); 
-	usb->tx_ev = thinkos_ev_alloc(); 
-	usb->tx_lock_ev = thinkos_ev_alloc(); 
+	dev->rx_ev = thinkos_ev_alloc(); 
+	dev->tx_ev = thinkos_ev_alloc(); 
+	dev->tx_lock_ev = thinkos_ev_alloc(); 
 
 	otg_fs_io_init();
 
@@ -258,7 +250,7 @@ void usb_device_init(struct usb_dev * usb)
 	/* Enable Cortex interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 
-	usb->state = USB_STATE_ATTACHED;
+	dev->state = USB_STATE_ATTACHED;
 	DCC_LOG(LOG_TRACE, "[ATTACHED]");
 }
 
@@ -789,7 +781,6 @@ void stm32f_otg_fs_isr(void)
 {
 	struct usb_dev * dev = &usb_cdc_dev;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-//	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	uint32_t gintsts;
 	uint32_t ep_intr;
 
@@ -1189,7 +1180,6 @@ void stm32f_otg_fs_isr(void)
 
 void usb_enumaration_wait(struct usb_dev * dev)
 {
-//	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	__thinkos_critical_enter();
@@ -1205,7 +1195,6 @@ void usb_enumaration_wait(struct usb_dev * dev)
 
 void usb_reset_wait(struct usb_dev * dev)
 {
-//	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	__thinkos_critical_enter();
@@ -1252,12 +1241,14 @@ int usb_cdc_write(struct usb_dev * dev,
 		/* if there is no DTE connected we discard the data */
 		DCC_LOG(LOG_WARNING, "no DTE!");
 		dev->tx_lock = 0;
-		__thinkos_ev_raise(dev->tx_lock);
+		__thinkos_ev_raise(dev->tx_lock_ev);
 		return len;
 	}
 
+	/* Start the transmission */
 	otg_fs_ep_tx_start(otg_fs, &dev->ep2_tx, buf, len);
 
+	/* Wait for the end of transmission */
 	__thinkos_critical_enter_level(OTG_FS_IRQ_LVL);
 	while ((dev->ep2_tx.len) && (dev->cdc.dtr)) {
 		DCC_LOG(LOG_TRACE, "wait .....................");
@@ -1268,7 +1259,7 @@ int usb_cdc_write(struct usb_dev * dev,
 
 	/* lock */
 	dev->tx_lock = 0;
-	__thinkos_ev_raise(dev->tx_lock);
+	__thinkos_ev_raise(dev->tx_lock_ev);
 
 	return len;
 }
@@ -1369,24 +1360,13 @@ int usb_cdc_flush(struct usb_dev * dev,
 	return 0;
 }
 
-const struct fileop usb_cdc_ops= {
-	.write = (void *)usb_cdc_write,
-	.read = (void *)usb_cdc_read,
-	.flush = (void *)usb_cdc_flush,
-	.close = (void *)NULL
-};
-
-const struct file usb_cdc_file = {
-	.data = (void *)&usb_cdc_dev, 
-	.op = &usb_cdc_ops
-};
-
-struct file * usb_cdc_open(void)
+struct usb_dev * usb_cdc_init(void)
 {
-	struct usb_dev * dev = (struct usb_dev *)usb_cdc_file.data;
+	struct usb_dev * dev = (struct usb_dev *)&usb_cdc_dev;
 
 	usb_device_init(dev);
 
-	return (struct file *)&usb_cdc_file;
+	return dev;
+
 }
 
