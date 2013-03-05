@@ -26,12 +26,14 @@
 #ifndef __SYS_SERIAL_H__
 #define __SYS_SERIAL_H__
 
+/* Number of data bits */
 #define SERIAL_DATABITS_6 (0 << 0)
 #define SERIAL_DATABITS_7 (1 << 0)
 #define SERIAL_DATABITS_8 (2 << 0)
 #define SERIAL_DATABITS_9 (3 << 0)
 #define SERIAL_DATABITS_MASK (0x07 << 0)
 
+/* Parity bit type */
 #define SERIAL_PARITY_NONE (0 << 3)
 #define SERIAL_PARITY_EVEN (1 << 3)
 #define SERIAL_PARITY_ODD  (2 << 3)
@@ -39,13 +41,14 @@
 #define SERIAL_PARITY_SPACE (4 << 3)
 #define SERIAL_PARITY_MASK (0x07 << 3)
 
+/* Number of stop bits */
 #define SERIAL_STOPBITS_1 (0 << 6)
 #define SERIAL_STOPBITS_2 (1 << 6)
 #define SERIAL_STOPBITS_1_5 (2 << 6)
 #define SERIAL_STOPBITS_0_5 (3 << 6)
 #define SERIAL_STOPBITS_MASK (0x03 << 6)
 
-/* common character frame options */
+/* Common character frame options */
 #define SERIAL_8N1 (SERIAL_DATABITS_8 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
 #define SERIAL_8N2 (SERIAL_DATABITS_8 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
 #define SERIAL_7N1 (SERIAL_DATABITS_7 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
@@ -61,7 +64,7 @@
 #define SERIAL_9N1 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
 #define SERIAL_9N2 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
 
-/* character frame bits mask */
+/* Character frame bits mask */
 #define SERIAL_FRAME_MASK (0xff)
 
 #define SERIAL_FLOWCTRL_NONE (0 << 8)
@@ -69,9 +72,22 @@
 #define SERIAL_FLOWCTRL_XONXOFF (2 << 8)
 #define SERIAL_FLOWCTRL_MASK (0x03 << 8)
 
+struct serial_cfg {
+    uint32_t baud_rate;
+    uint8_t stop_bits;
+    uint8_t data_bits;
+    uint8_t parity;
+    uint8_t flow_ctrl;
+};
+
+struct serial_dev;
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+int serial_cfg_get(struct serail_dev * dev, const struct serial_cfg * cfg);
 
 #ifdef __cplusplus
 }
