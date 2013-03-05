@@ -27,15 +27,27 @@ def make_tab(nm, freq, rate):
 
 	n = ((over * rate) + (freq / 2)) / freq
 
-	print "static const uint8_t %s[] = /* %d */" % (nm, freq)
+	print "static const uint8_t %s[] = /* %d Hz */" % (nm, freq)
 	print "{"
+
+	lvl = 32768;
+	offs = 0;
 
 	while (i < n):
 		x = ((2.0 * over) * pi * i) / n
 		y = sin(x)
-		z = round(y * 127) + 128;
-		print "\t%3d," % (z)
+		z = round(y * (lvl - 1)) + offs;
+		if ((i % 8) == 0):
+			print "\t%6d," % (z),
+		else:
+			if ((i % 8) == 7):
+				print "%6d," % (z)
+			else:
+				print " %6d," % (z),
 		i = i + 1
+
+	if ((i % 8) != 0):
+		print ""
 
 	print "};"
 	print ""
@@ -45,6 +57,7 @@ def make_tab(nm, freq, rate):
 def main():
 
 	rate = 8000
+#	rate = 11025
 
 	print "#ifndef __WAVETAB_H__"
 	print "#define __WAVETAB_H__"
@@ -54,7 +67,9 @@ def main():
 	print "#define SAMPLE_RATE %d" % rate
 	print ""
 
+	make_tab("a3", 440, rate)
 	make_tab("a4", 880, rate)
+	make_tab("a4", 4400, rate)
 	make_tab("a4s", 932, rate)
 	make_tab("b4", 988, rate)
 	make_tab("c4", 1046, rate)
