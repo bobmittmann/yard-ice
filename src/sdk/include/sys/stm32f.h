@@ -33,6 +33,8 @@
 #define STM32F
 
 #include <arch/cortex-m3.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #define STM32F_HSI_HZ 16000000
 #define STM32F_HSE_HZ 24000000

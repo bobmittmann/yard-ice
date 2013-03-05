@@ -430,7 +430,7 @@ void usb_on_recv(struct usb_dev * dev, int ep, int len)
 	DCC_LOG1(LOG_TRACE, "Rx: (%d)", len);
 	for (i = 0; i < len; i += 4) {
 		data = otg_fs->dfifo[ep].pop;
-		data = data; 
+		(void)data;
 		DCC_LOG1(LOG_TRACE, " %08x", data);
 	}
 	DCC_LOG(LOG_TRACE, "");
@@ -769,6 +769,7 @@ void usb_on_oepint0(struct usb_dev * dev)
 			DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d", 
 					 req_type, request, value, index, len); 
 			otg_fs_ep0_stall(otg_fs);
+			break;
 		}
 	}
 }
@@ -829,11 +830,11 @@ void stm32f_otg_fs_isr(void)
 		grxsts = otg_fs->grxstsp;
 
 		ep = OTG_FS_EPNUM_GET(grxsts);
-		ep = ep;
+		(void)ep;
 		len = OTG_FS_BCNT_GET(grxsts);
-		len = len;
+		(void)len;
 		stat = OTG_FS_PKTSTS_GET(grxsts); 
-		stat = stat;
+		(void)stat;
 
 		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep, len, stat);
 
@@ -892,7 +893,7 @@ void stm32f_otg_fs_isr(void)
 				otg_fs->gintmsk |=  OTG_FS_SOFM;
 				dev->ep1_rx.tmr = 500;
 
-				/* signalize any pending threads */
+				/* signal any pending threads */
 				__thinkos_ev_raise(dev->rx_ev);
 				DCC_LOG(LOG_INFO, "__thinkos_ev_raise(RX)");
 				break;
@@ -1291,7 +1292,7 @@ int usb_cdc_read(struct usb_dev * dev, void * buf,
 
 	/* transfer residual data from buffer */
 	if ((rem = dev->ep1_rx.rem) > 0) {
-		/* trasfer no more than 'len' bytes */
+		/* transfer no more than 'len' bytes */
 		cnt = MIN(rem, len);
 		/* get data from buffer */
 		data = dev->ep1_rx.data;
@@ -1369,4 +1370,15 @@ struct usb_dev * usb_cdc_init(void)
 	return dev;
 
 }
+
+int usb_cdc_serial_cfg_get(struct usb_dev * dev, struct serial_cfg * cfg)
+{
+	cfg->baud_rate = dev->cdc.lc.dwDTERate;
+	cfg->data_bits = dev->cdc.lc.bDataBits;
+	cfg->parity = dev->cdc.lc.bParityType;
+	cfg->stop_bits = dev->cdc.lc.bCharFormat;
+
+	return 0;
+}
+
 

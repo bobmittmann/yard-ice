@@ -49,7 +49,7 @@ const struct file usb_cdc_file = {
 	.op = &usb_cdc_ops
 };
 
-struct file * usb_cdc_open(void)
+struct file * usb_cdc_fopen(void)
 {
 	struct usb_dev * dev = (struct usb_dev *)usb_cdc_file.data;
 

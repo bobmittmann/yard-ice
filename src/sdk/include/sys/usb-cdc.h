@@ -28,8 +28,19 @@
 #define __SYS_USB_CDC_H__
 
 #include <stdint.h>
+#include <sys/cdc.h>
+#include <sys/serial.h>
+
+#define USB_CDC_EINVAL 1
+#define USB_CDC_EINTR 2
+#define USB_CDC_ETIMEDOUT 3
 
 struct usb_dev;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 void usb_connect(struct usb_dev * dev);
 
@@ -52,9 +63,10 @@ int usb_cdc_read(struct usb_dev * dev, void * buf,
 int usb_cdc_flush(struct usb_dev * dev, 
 				  const void * buf, unsigned int len);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct file * usb_cdc_fopen(void);
+
+void usb_cdc_serial_cfg_get(struct usb_dev * dev, struct serial_cfg * cfg);
+
 
 #ifdef __cplusplus
 }
