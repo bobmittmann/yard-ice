@@ -111,6 +111,7 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dev * dev, char ** buf)
 	buf = dev->rx.buf[dev->rx.idx++ & 1];
 }
 
+
 void stm32f_dma2_stream0_isr(void)
 {
 	struct stm32f_dma * dma = STM32F_DMA2;
