@@ -68,12 +68,16 @@ struct ep_rx_ctrl {
 	uint32_t tmr;
 };
 
+
 struct usb_cdc {
 	/* modem bits */
-	volatile uint8_t dtr: 1;
-	volatile uint8_t rts: 1;
-	volatile uint8_t dcd: 1;
-	volatile uint8_t dsr: 1;
+//	volatile uint8_t dtr: 1;
+//	volatile uint8_t rts: 1;
+//	volatile uint8_t dcd: 1;
+//	volatile uint8_t dsr: 1;
+
+	volatile uint8_t status; /* modem status lines */
+	volatile uint8_t control; /* modem control lines */
 
 	uint8_t lsst; /* local (set) serial state */ 
 	uint8_t rsst; /* remote (acked) serail state */
@@ -81,7 +85,7 @@ struct usb_cdc {
 	struct cdc_line_coding lc;
 };
 
-struct usb_dev {
+struct usb_cdc_dev {
 	/* class specific block */
 	struct usb_cdc cdc;
 
@@ -90,8 +94,12 @@ struct usb_dev {
 	int8_t rx_ev; /* RX event */
 	int8_t tx_ev; /* TX event */
 
-	int8_t tx_lock; /* TX spinlock */
-	int8_t tx_lock_ev; /* TX spinlock */
+	int8_t tx_lock; /* TX lock */
+	int8_t tx_lock_ev; /* TX lock/unlock event */
+
+	int8_t ctrl_ev; /* Control event */
+	uint8_t ctrl_rcv; /* control message received count */
+	uint8_t ctrl_ack; /* control message acknowledge count */
 
 	/* ep0 tx ctrl */
 	struct ep_tx_ctrl ep0_tx;
@@ -123,10 +131,11 @@ static void ep_rx_ctrl_init(struct ep_rx_ctrl * ctrl, unsigned int ep)
 
 static void cdc_init(struct usb_cdc * cdc)
 {
-	cdc->dtr = 0;
-	cdc->rts = 0;
-	cdc->dsr = 0;
-	cdc->dcd = 0;
+	/* Modem control lines */
+	cdc->control = 0;
+	/* Modem status lines */
+	cdc->status = 0;
+
 	cdc->lsst = 0;
 	cdc->rsst = 0;
 
@@ -218,13 +227,17 @@ static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 
 }
 
-void usb_device_init(struct usb_dev * dev)
+void usb_device_init(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
 	dev->rx_ev = thinkos_ev_alloc(); 
-	dev->tx_ev = thinkos_ev_alloc(); 
+	dev->tx_ev = thinkos_ev_alloc();
+	dev->ctrl_ev = thinkos_ev_alloc();
+	dev->ctrl_rcv = 0;
+	dev->ctrl_ack = 0;
+
 	dev->tx_lock_ev = thinkos_ev_alloc(); 
 
 	otg_fs_io_init();
@@ -281,7 +294,7 @@ void otg_fs_device_reset(struct stm32f_otg_fs * otg_fs)
 	/* 1. Set the NAK bit for all OUT endpoints
 	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
 	for (i = 0; i < 4; i++) {
-		/* FIXME: generic code: we are seting all end points, but not all 
+		/* FIXME: we are setting all end points, but not all
 		   of them are OUT?? */
 		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
 	}
@@ -421,7 +434,7 @@ bool usb_cdc_state_notify(struct stm32f_otg_fs * otg_fs)
 #endif
 
 
-void usb_on_recv(struct usb_dev * dev, int ep, int len)
+void usb_on_recv(struct usb_cdc_dev * dev, int ep, int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t data;
@@ -481,7 +494,7 @@ static void otg_fs_ep0_zlp_send(struct stm32f_otg_fs * otg_fs)
 	otg_fs_ep0_out_start(otg_fs);
 }
 
-static void usb_ep0_send_word(struct usb_dev * dev, unsigned int val)
+static void usb_ep0_send_word(struct usb_cdc_dev * dev, unsigned int val)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -522,7 +535,7 @@ static void otg_fs_ep0_stall(struct stm32f_otg_fs * otg_fs)
 }
 
 /* End point 0 Out */
-void usb_on_oepint0(struct usb_dev * dev)
+void usb_on_oepint0(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t doepint;
@@ -742,14 +755,13 @@ void usb_on_oepint0(struct usb_dev * dev)
 		case SET_CONTROL_LINE_STATE:
 			DCC_LOG3(LOG_TRACE, "CDC SetCtrl: idx=%d val=%d len=%d", 
 					 index, value, len);
-			cdc->dtr = (value & CDC_DTE_PRESENT) ? 1 : 0;
-			cdc->rts = (value & CDC_ACTIVATE_CARRIER) ? 1 : 0;
+			cdc->control = (value & CDC_DTE_PRESENT) ? 1 : 0;
 
 			DCC_LOG2(LOG_TRACE, "DTR=%d RTS=%d", cdc->dtr, cdc->rts);
 
 #if USB_CDC_ENABLE_STATE
 			/* update the local serial state */
-			cdc->lsst = (dev->cdc.dtr) ? CDC_SERIAL_STATE_RX_CARRIER | 
+			cdc->lsst = (value & CDC_DTE_PRESENT) ? CDC_SERIAL_STATE_RX_CARRIER |
 				CDC_SERIAL_STATE_TX_CARRIER : 0;
 
 			/* trigger a local state notification */
@@ -761,6 +773,7 @@ void usb_on_oepint0(struct usb_dev * dev)
 			   wake them up */
 			__thinkos_ev_raise(dev->rx_ev);
 			__thinkos_ev_raise(dev->tx_ev);
+			__thinkos_ev_raise(dev->ctrl_ev);
 
 			otg_fs_ep0_zlp_send(otg_fs);
 			break;
@@ -774,13 +787,13 @@ void usb_on_oepint0(struct usb_dev * dev)
 	}
 }
 
-struct usb_dev usb_cdc_dev;
+struct usb_cdc_dev usb_cdc_dev;
 
 static int otg_fs_isr_cnt = 0;
 
 void stm32f_otg_fs_isr(void)
 {
-	struct usb_dev * dev = &usb_cdc_dev;
+	struct usb_cdc_dev * dev = &usb_cdc_dev;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t gintsts;
 	uint32_t ep_intr;
@@ -1033,7 +1046,7 @@ void stm32f_otg_fs_isr(void)
 					/* mask FIFO empty interrupt */
 //					otg_fs->diepempmsk &= ~(1 << dev->ep2_tx.ep);
 					DCC_LOG(LOG_TRACE, "int mask....");
-					/* signalize any pending threads */
+					/* signal blocked thread */
 					__thinkos_ev_raise(dev->tx_ev);
 				} else {
 					stm32f_otg_fs_txf_setup(otg_fs, dev->ep2_tx.ep, 
@@ -1068,11 +1081,11 @@ void stm32f_otg_fs_isr(void)
 				otg_fs->diepempmsk &= ~(1 << EP_INT);
 				/* update modem signals according to
 				   the remote state */
-				cdc->dcd = (cdc->rsst & CDC_SERIAL_STATE_RX_CARRIER) ? 1 : 0;
-				cdc->dsr = (cdc->rsst & CDC_SERIAL_STATE_TX_CARRIER) ? 1 : 0;
-				/* signalize any pending threads */
+				cdc->status = cdc->rsst;
+				/* signal any pending threads */
 				__thinkos_ev_raise(dev->tx_ev);
 				__thinkos_ev_raise(dev->rx_ev);
+				__thinkos_ev_raise(dev->ctrl_ev);
 #if USB_CDC_ENABLE_STATE
 				if (cdc->rsst != cdc->lsst) {
 					/* local state changed, transmit state again */
@@ -1179,7 +1192,7 @@ void stm32f_otg_fs_isr(void)
 	otg_fs->gintsts = gintsts;
 }
 
-void usb_enumaration_wait(struct usb_dev * dev)
+void usb_enumaration_wait(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1194,7 +1207,7 @@ void usb_enumaration_wait(struct usb_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB Enumeration done.");
 }
 
-void usb_reset_wait(struct usb_dev * dev)
+void usb_reset_wait(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1206,7 +1219,7 @@ void usb_reset_wait(struct usb_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB reset done.");
 }
 
-void usb_connect(struct usb_dev * dev)
+void usb_connect(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1215,7 +1228,7 @@ void usb_connect(struct usb_dev * dev)
 	udelay(3000);
 }
 
-void usb_disconnect(struct usb_dev * dev)
+void usb_disconnect(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	otg_fs->dctl |= OTG_FS_SDIS;
@@ -1223,13 +1236,15 @@ void usb_disconnect(struct usb_dev * dev)
 }
 
 
-int usb_cdc_write(struct usb_dev * dev, 
+int usb_cdc_write(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	int rem;
 
+	/* lock the write call... */
 	__thinkos_critical_enter();
-	while (dev->tx_lock && dev->cdc.dtr) {
+	while (dev->tx_lock && (dev->cdc.control & CDC_DTE_PRESENT)) {
 		DCC_LOG(LOG_TRACE, "lock wait .....................");
 		__thinkos_ev_wait(dev->tx_lock_ev);
 		DCC_LOG(LOG_TRACE, "..................... wakeup");
@@ -1238,9 +1253,10 @@ int usb_cdc_write(struct usb_dev * dev,
 	dev->tx_lock = 1;
 	__thinkos_critical_exit();
 
-	if (!dev->cdc.dtr) {
+	if (!(dev->cdc.control & CDC_DTE_PRESENT)) {
 		/* if there is no DTE connected we discard the data */
 		DCC_LOG(LOG_WARNING, "no DTE!");
+		/* unlock ... */
 		dev->tx_lock = 0;
 		__thinkos_ev_raise(dev->tx_lock_ev);
 		return len;
@@ -1249,23 +1265,23 @@ int usb_cdc_write(struct usb_dev * dev,
 	/* Start the transmission */
 	otg_fs_ep_tx_start(otg_fs, &dev->ep2_tx, buf, len);
 
-	/* Wait for the end of transmission */
+	/* Wait until all the data is transfered to the TX queue */
 	__thinkos_critical_enter_level(OTG_FS_IRQ_LVL);
-	while ((dev->ep2_tx.len) && (dev->cdc.dtr)) {
+	while (((rem = dev->ep2_tx.len) > 0) && (dev->cdc.control & CDC_DTE_PRESENT)) {
 		DCC_LOG(LOG_TRACE, "wait .....................");
 		__thinkos_critical_ev_wait(dev->tx_ev, OTG_FS_IRQ_LVL);
 		DCC_LOG(LOG_TRACE, "..................... wakeup");
 	}
 	__thinkos_critical_exit();
 
-	/* lock */
+	/* unlock */
 	dev->tx_lock = 0;
 	__thinkos_ev_raise(dev->tx_lock_ev);
 
-	return len;
+	return len - rem;
 }
 
-int usb_cdc_read(struct usb_dev * dev, void * buf, 
+int usb_cdc_read(struct usb_cdc_dev * dev, void * buf, 
 				 unsigned int len, unsigned int msec)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1275,7 +1291,6 @@ int usb_cdc_read(struct usb_dev * dev, void * buf,
 	int cnt;
 	int rem;
 	int i;
-
 
 	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
 
@@ -1355,15 +1370,15 @@ int usb_cdc_read(struct usb_dev * dev, void * buf,
 	return cnt;
 }
 
-int usb_cdc_flush(struct usb_dev * dev, 
+int usb_cdc_flush(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len)
 {
 	return 0;
 }
 
-struct usb_dev * usb_cdc_init(void)
+struct usb_cdc_dev * usb_cdc_init(void)
 {
-	struct usb_dev * dev = (struct usb_dev *)&usb_cdc_dev;
+	struct usb_cdc_dev * dev = (struct usb_cdc_dev *)&usb_cdc_dev;
 
 	usb_device_init(dev);
 
@@ -1371,14 +1386,50 @@ struct usb_dev * usb_cdc_init(void)
 
 }
 
-int usb_cdc_serial_cfg_get(struct usb_dev * dev, struct serial_cfg * cfg)
+
+int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state)
 {
-	cfg->baud_rate = dev->cdc.lc.dwDTERate;
-	cfg->data_bits = dev->cdc.lc.bDataBits;
-	cfg->parity = dev->cdc.lc.bParityType;
-	cfg->stop_bits = dev->cdc.lc.bCharFormat;
+	state->cfg.baud_rate = dev->cdc.lc.dwDTERate;
+	state->cfg.data_bits = dev->cdc.lc.bDataBits;
+	state->cfg.parity = dev->cdc.lc.bParityType;
+	state->cfg.stop_bits = dev->cdc.lc.bCharFormat;
+
+	state->ctrl.dtr = (dev->cdc.control & CDC_DTE_PRESENT);
+	state->ctrl.rts = (dev->cdc.control & CDC_ACTIVATE_CARRIER);
+
+	state->stat.dsr = (dev->cdc.status & CDC_SERIAL_STATE_TX_CARRIER);
+	state->stat.ri = (dev->cdc.status & CDC_SERIAL_STATE_RING);
+	state->stat.dcd = (dev->cdc.status & CDC_SERIAL_STATE_RX_CARRIER);
+	state->stat.cts = 0;
+	state->stat.brk = (dev->cdc.status & CDC_SERIAL_STATE_BREAK);
+
+	state->err.ovr = (dev->cdc.status & CDC_SERIAL_STATE_OVERRUN);
+	state->err.par = (dev->cdc.status & CDC_SERIAL_STATE_PARITY);
+	state->err.frm = (dev->cdc.status & CDC_SERIAL_STATE_FRAMING);
 
 	return 0;
 }
 
+int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec)
+{
+	if (msec > 0)
+		__thinkos_timer_set(msec);
+
+	__thinkos_critical_enter();
+	while ((dev->ctrl_rcv == dev->ctrl_ack) && (!__thinkos_timer_timedout())) {
+		DCC_LOG(LOG_INFO, "wait .....................");
+		__thinkos_ev_wait(dev->ctrl_ev);
+		DCC_LOG(LOG_INFO, "..................... wakeup");
+	}
+	__thinkos_critical_exit();
+	
+	if (dev->ctrl_rcv == dev->ctrl_ack)
+		return THINKOS_ETIMEDOUT;
+
+	__thinkos_timer_cancel();
+
+	dev->ctrl_ack = dev->ctrl_rcv;
+
+	return 0;
+}
 

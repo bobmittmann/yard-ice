@@ -31,85 +31,137 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
 #include <sys/usb-cdc.h>
 
-struct serial_dev * serial;
+struct vcom {
+	struct serial_dev * serial;
+	struct usb_cdc_dev * usb;
+};
 
-int printer_task(FILE * f)
+#define VCOM_BUF_SIZE 128
+
+int usb_recv_task(struct vcom * vcom)
 {
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_dev * usb = vcom->usb;
+	char buf[VCOM_BUF_SIZE];
+	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-	thinkos_sleep(100);
 
-	return 0;
-}
-
-#define BUF_SIZE 256
-
-int usb_rcv_task(struct usb_dev * usb)
-{
-	char buf[BUF_SIZE];
-	int ret;
-	struct serial_cfg cfg;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-	thinkos_sleep(100);
-
-	while (1) {
-		ret = usb_cdc_read(usb, buf, BUF_SIZE, 100);
-		if (ret < 0) {
-			if (ret == -USB_CDC_EINTR) {
-				usb_cdc_serial_cfg_get(usb, &cfg);
-				serial_cfg_set(serial, &cfg);
-			}
-
-		}
+	for (;;) {
+		len = usb_cdc_read(usb, buf, VCOM_BUF_SIZE, 100);
+		if (len > 0)
+			serial_write(serial, buf, len);
 	}
 
 	return 0;
 }
 
-#define STACK_SIZE 512
-uint32_t usb_rcv_stack[STACK_SIZE / 4];
-uint32_t printer_stack2[STACK_SIZE / 4];
+int usb_ctrl_task(struct vcom * vcom)
+{
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_state prev_state;
+	struct usb_cdc_state state;
 
-uint32_t echo_stack1[STACK_SIZE / 4];
-uint32_t echo_stack2[STACK_SIZE / 4];
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	usb_cdc_state_get(usb, &prev_state);
+
+	while (1) {
+		usb_cdc_ctrl_event_wait(usb, 0);
+		usb_cdc_state_get(usb, &state);
+		if (state.cfg != prev_state.cfg) {
+			DCC_LOG1(LOG_TRACE, "[%d] config changed.", thinkos_thread_self());
+			prev_state.cfg = state.cfg;
+		}
+		if (state.ctrl != prev_state.ctrl) {
+			DCC_LOG1(LOG_TRACE, "[%d] control changed.", thinkos_thread_self());
+			prev_state.ctrl = state.ctrl;
+		}
+	}
+	return 0;
+}
+
+
+int serial_recv_task(struct vcom * vcom)
+{
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_dev * usb = vcom->usb;
+	char buf[VCOM_BUF_SIZE];
+	int len;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	for (;;) {
+		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
+		if (len > 0)
+			usb_cdc_write(usb, buf, len);
+	}
+
+	return 0;
+}
+
+int serial_ctrl_task(struct vcom * vcom)
+{
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_state prev_state;
+	struct usb_cdc_state state;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	usb_cdc_state_get(usb, &prev_state);
+
+	while (1) {
+		usb_cdc_ctrl_event_wait(usb, 0);
+		usb_cdc_state_get(usb, &state);
+		if (state.cfg != prev_state.cfg) {
+			DCC_LOG1(LOG_TRACE, "[%d] config changed.", thinkos_thread_self());
+			prev_state.cfg = state.cfg;
+		}
+		if (state.ctrl != prev_state.ctrl) {
+			DCC_LOG1(LOG_TRACE, "[%d] control changed.", thinkos_thread_self());
+			prev_state.ctrl = state.ctrl;
+		}
+	}
+	return 0;
+}
+
+#define STACK_SIZE 512
+uint32_t usb_recv_stack[STACK_SIZE / 4];
+uint32_t usb_ctrl_stack[STACK_SIZE / 4];
+uint32_t serial_recv_stack[STACK_SIZE / 4];
+uint32_t serial_ctrl_stack[STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
-	struct usb_dev * usb;
+	struct vcom vcom;
 	int i = 0;
 
-//	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
 	DCC_LOG_CONNECT();
 	DCC_LOG_INIT();
 
-	cm3_udelay_calibrate();
-	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
-	stderr = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
-
-	fprintf(stderr, "\n");
-	fprintf(stderr, "------------------------------------------------------\n");
-	fprintf(stderr, "- USB test\n");
-	fprintf(stderr, "------------------------------------------------------\n");
-	fprintf(stderr, "\n");
-	udelay(1000);
-
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	usb = usb_cdc_init();
+	vcom.usb = usb_cdc_init();
+	vcom.serial = serial_init(stm32f_uart5);
 
+	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
+						  usb_recv_stack, STACK_SIZE, 0);
 
-	/* create some printer threads */
-	thinkos_thread_create((void *)usb_rcv_task, (void *)usb, 
-						  usb_rcv_stack, STACK_SIZE, 0);
+	thinkos_thread_create((void *)usb_ctrl_task, (void *)vcom,
+						  usb_ctrl_stack, STACK_SIZE, 0);
 
+	thinkos_thread_create((void *)serial_recv_task, (void *)vcom,
+						  serial_recv_stack, STACK_SIZE, 0);
+
+	thinkos_thread_create((void *)serial_ctrl_task, (void *)vcom,
+						  serial_ctrl_stack, STACK_SIZE, 0);
 
 	for (i = 0; ;i++) {
 		thinkos_sleep(10000);

@@ -294,7 +294,7 @@ void thinkos_sleep_svc(int32_t * arg)
 
 #if THINKOS_ENABLE_THREAD_STAT
 	/* mark the thread clock enable bit */
-	thinkos_rt.th_stat[self] = 1;
+	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
 #endif
 
 	DCC_LOG2(LOG_INFO, "<%d> waiting %d milliseconds...", self, ms);

@@ -121,6 +121,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 #endif
 			/* remove from the time wait queue */
 			bmp_bit_clr(&thinkos_rt.wq_clock, j);  
+			/* insert into the ready wait queue */
 			bmp_bit_set(&thinkos_rt.wq_ready, j);  
 			sched++;
 //			printf("^%d", j);
@@ -247,7 +248,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 
 	for(;;);
 
-	idx = idx;
+	(void)idx;
 }
 
 int thinkos_init(struct thinkos_thread_opt opt)
@@ -384,7 +385,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	if (opt.f_paused) {
 		/* insert into the paused list */
 		bmp_bit_set(&thinkos_rt.wq_paused, self);  
-		/* invoque the scheduler */
+		/* Invoke the scheduler */
 		__thinkos_defer_sched();
 	} else
 #endif

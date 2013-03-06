@@ -51,7 +51,7 @@ const struct file usb_cdc_file = {
 
 struct file * usb_cdc_fopen(void)
 {
-	struct usb_dev * dev = (struct usb_dev *)usb_cdc_file.data;
+	struct usb_cdc_dev * dev = (struct usb_cdc_dev *)usb_cdc_file.data;
 
 	usb_device_init(dev);
 

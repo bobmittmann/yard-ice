@@ -40,7 +40,7 @@ struct my_arg {
 
 #define STACK_SIZE 512
 uint32_t stack[4][STACK_SIZE / 4];
-volatile struct my_arg ctrl[4];
+volatile struct my_arg dev[4];
 
 void sleep_test(void)
 {

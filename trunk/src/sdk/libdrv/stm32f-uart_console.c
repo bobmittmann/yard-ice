@@ -202,7 +202,6 @@ void stm32f_uart5_isr(void)
 	if (sr & USART_RXNE) {
 		DCC_LOG(LOG_INFO, "RXNE");
 		c = us->dr;
-		c = c;
 		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
 			uart_fifo_put(&dev->rx_fifo, c);
 		} else {
@@ -217,7 +216,7 @@ void stm32f_uart5_isr(void)
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE");
 		c = us->dr;
-		c = c;
+		(void)c;
 		__thinkos_ev_raise(dev->rx_ev);
 	}
 
@@ -233,18 +232,22 @@ void stm32f_uart5_isr(void)
 	}
 }
 
-struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
+struct file * uart_console_open(unsigned int baudrate, unsigned int mode)
 {
 	struct stm32f_usart * us = STM32F_UART5;
 	struct uart_console_dev * dev = &uart5_console_dev;
 
 	DCC_LOG(LOG_TRACE, "...");
-	stm32f_usart_init(us, baudrate, flags);
+	stm32f_usart_init(us);
 
 	dev->rx_ev = thinkos_ev_alloc(); 
 	dev->tx_ev = thinkos_ev_alloc(); 
 	uart_fifo_init(&dev->tx_fifo);
 	uart_fifo_init(&dev->rx_fifo);
+
+	stm32f_usart_baudrate_set(us, baudrate);
+
+	stm32f_usart_mode_set(us, mode);
 
 	cm3_irq_enable(STM32F_IRQ_UART5);
 	/* enable RX interrupt */
