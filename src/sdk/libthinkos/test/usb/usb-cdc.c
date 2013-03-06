@@ -87,7 +87,7 @@ struct usb_cdc {
 	struct cdc_line_coding lc;
 };
 
-struct usb_dev {
+struct usb_cdc_dev {
 	/* class specific block */
 	struct usb_cdc cdc;
 
@@ -228,7 +228,7 @@ static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 
 }
 
-void usb_device_init(struct usb_dev * usb)
+void usb_device_init(struct usb_cdc_dev * usb)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -500,7 +500,7 @@ static bool otg_fs_ep_tx_start(struct stm32f_otg_fs * otg_fs,
 
 
 #if USB_CDC_ENABLE_STATE
-bool usb_cdc_serial_state_send(struct usb_dev * dev, unsigned int state)
+bool usb_cdc_serial_state_send(struct usb_cdc_dev * dev, unsigned int state)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct cdc_notification * pkt = (struct cdc_notification *)dev->pkt_buf;
@@ -537,7 +537,7 @@ bool usb_cdc_serial_state_send(struct usb_dev * dev, unsigned int state)
 #endif
 
 
-void usb_on_recv(struct usb_dev * dev, int ep, int len)
+void usb_on_recv(struct usb_cdc_dev * dev, int ep, int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t data;
@@ -559,7 +559,7 @@ void usb_on_recv(struct usb_dev * dev, int ep, int len)
 }
 
 /* End point "id" Out */
-void usb_on_oepint(struct usb_dev * dev, int id)
+void usb_on_oepint(struct usb_cdc_dev * dev, int id)
 {
 //	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -605,7 +605,7 @@ static void otg_fs_ep0_zlp_send(struct stm32f_otg_fs * otg_fs)
 	otg_fs_ep0_out_start(otg_fs);
 }
 
-static void usb_ep0_send_word(struct usb_dev * dev, unsigned int val)
+static void usb_ep0_send_word(struct usb_cdc_dev * dev, unsigned int val)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -647,7 +647,7 @@ static void otg_fs_ep0_stall(struct stm32f_otg_fs * otg_fs)
 }
 
 /* End point 0 Out */
-void usb_on_oepint0(struct usb_dev * dev)
+void usb_on_oepint0(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t doepint;
@@ -911,13 +911,13 @@ void usb_on_oepint0(struct usb_dev * dev)
 	}
 }
 
-struct usb_dev usb_cdc_dev;
+struct usb_cdc_dev usb_cdc_dev;
 
 static int otg_fs_isr_cnt = 0;
 
 void stm32f_otg_fs_isr(void)
 {
-	struct usb_dev * dev = &usb_cdc_dev;
+	struct usb_cdc_dev * dev = &usb_cdc_dev;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 //	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	uint32_t gintsts;
@@ -1295,7 +1295,7 @@ void stm32f_otg_fs_isr(void)
 	otg_fs->gintsts = gintsts;
 }
 
-void usb_enumaration_wait(struct usb_dev * dev)
+void usb_enumaration_wait(struct usb_cdc_dev * dev)
 {
 //	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1311,7 +1311,7 @@ void usb_enumaration_wait(struct usb_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB Enumeration done.");
 }
 
-void usb_reset_wait(struct usb_dev * dev)
+void usb_reset_wait(struct usb_cdc_dev * dev)
 {
 //	struct stm32f_otg_fs * otg_fs = dev->otg_fs;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1324,7 +1324,7 @@ void usb_reset_wait(struct usb_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB reset done.");
 }
 
-void usb_connect(struct usb_dev * dev)
+void usb_connect(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1333,7 +1333,7 @@ void usb_connect(struct usb_dev * dev)
 	udelay(3000);
 }
 
-void usb_disconnect(struct usb_dev * dev)
+void usb_disconnect(struct usb_cdc_dev * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	otg_fs->dctl |= OTG_FS_SDIS;
@@ -1341,7 +1341,7 @@ void usb_disconnect(struct usb_dev * dev)
 }
 
 
-int usb_cdc_write(struct usb_dev * dev, 
+int usb_cdc_write(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1394,7 +1394,7 @@ int usb_cdc_write(struct usb_dev * dev,
 	return len;
 }
 
-int usb_cdc_read(struct usb_dev * dev, void * buf, 
+int usb_cdc_read(struct usb_cdc_dev * dev, void * buf, 
 				 unsigned int len, unsigned int msec)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1484,7 +1484,7 @@ int usb_cdc_read(struct usb_dev * dev, void * buf,
 	return cnt;
 }
 
-int usb_cdc_flush(struct usb_dev * dev, 
+int usb_cdc_flush(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len)
 {
 	return 0;
@@ -1504,7 +1504,7 @@ const struct file usb_cdc_file = {
 
 struct file * usb_cdc_open(void)
 {
-	struct usb_dev * dev = (struct usb_dev *)usb_cdc_file.data;
+	struct usb_cdc_dev * dev = (struct usb_cdc_dev *)usb_cdc_file.data;
 
 	usb_device_init(dev);
 

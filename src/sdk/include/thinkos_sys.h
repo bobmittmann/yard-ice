@@ -505,9 +505,9 @@ static void inline __attribute__((always_inline)) __thinkos_tmdwq_insert(unsigne
 										  unsigned int ms) {
 	/* set the clock */
 	thinkos_rt.clock[th] = thinkos_rt.ticks + ms;
-	/* insert into the clock wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
 	/* insert into the event wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+	/* insert into the clock wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_clock, th, 1);  
 #if THINKOS_ENABLE_THREAD_STAT
 	/* update status, mark the thread clock enable bit */
@@ -540,6 +540,48 @@ static void inline __attribute__((always_inline))
 #endif
 	/* set the thread's return value */
 	thinkos_rt.ctx[th]->r0 = 0;
+}
+
+static void inline __attribute__((always_inline))
+	__thinkos_timer_set(unsigned int ms) {
+	int self = thinkos_rt.active;
+#if THINKOS_ENABLE_CLOCK
+	/* set the clock */
+	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
+	/* insert into the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status, mark the thread clock enable bit */
+	__bit_mem_wr(&thinkos_rt.th_stat[self], 0, 1);
+#endif
+#else
+#error "__thinkos_timer_set() depends on THINKOS_ENABLE_CLOCK"
+#endif
+}
+
+static void inline __attribute__((always_inline))
+	__thinkos_timer_cancel(void) {
+	int self = thinkos_rt.active;
+#if THINKOS_ENABLE_CLOCK
+	/* remove from the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 0);
+#if THINKOS_ENABLE_THREAD_STAT
+	/* clear the thread clock enable bit */
+	__bit_mem_wr(&thinkos_rt.th_stat[self], 0, 0);
+#endif
+#else
+#error "__thinkos_timer_cancel() depends on THINKOS_ENABLE_CLOCK"
+#endif
+}
+
+static bool inline __attribute__((always_inline))
+	__thinkos_timedout(void) {
+	int self = thinkos_rt.active;
+#if THINKOS_ENABLE_CLOCK
+	return ((int32_t)(thinkos_rt.clock[self] - thinkos_rt.ticks) <= 0) ? true : false;
+#else
+#error "__thinkos_timedout() depends on THINKOS_ENABLE_CLOCK"
+#endif
 }
 
 #ifdef __cplusplus

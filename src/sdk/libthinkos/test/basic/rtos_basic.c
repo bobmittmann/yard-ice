@@ -39,58 +39,58 @@ struct my_arg {
 
 int busy_task(void * arg)
 {
-	struct my_arg * ctrl= (struct my_arg *)arg;
+	struct my_arg * dev= (struct my_arg *)arg;
 
-	ctrl->cnt = 0;
+	dev->cnt = 0;
 
-	while (ctrl->enabled) {
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+	while (dev->enabled) {
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
-		ctrl->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
 	}
 
-	return ctrl->cnt;
+	return dev->cnt;
 }
 
 int yield_task(void * arg)
 {
-	struct my_arg * ctrl = (struct my_arg *)arg;
+	struct my_arg * dev = (struct my_arg *)arg;
 
 	while (1) {
 		thinkos_yield();
@@ -153,7 +153,7 @@ int yield_task(void * arg)
 		thinkos_yield();
 		thinkos_yield();
 
-		ctrl->cnt += 50;
+		dev->cnt += 50;
 	}
 
 	return 0;
@@ -163,7 +163,7 @@ uint32_t thinkos_idle_val(void);
 
 #define STACK_SIZE 512
 uint32_t stack[4][STACK_SIZE / 4];
-volatile struct my_arg ctrl[4];
+volatile struct my_arg dev[4];
 
 void sched_speed_test(void)
 {
@@ -179,22 +179,22 @@ void sched_speed_test(void)
 	printf("---------------------------------------------------------\n");
 	printf(" - Scheduler speed test\n");
 
-	th[0] = thinkos_thread_create(yield_task, (void *)&ctrl[0], 
+	th[0] = thinkos_thread_create(yield_task, (void *)&dev[0], 
 								  stack[0], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(2) | THINKOS_OPT_PAUSED);
 								  
-	th[1] = thinkos_thread_create(yield_task, (void *)&ctrl[1], 
+	th[1] = thinkos_thread_create(yield_task, (void *)&dev[1], 
 								  stack[1], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(2) | THINKOS_OPT_PAUSED);
 
-	th[2] = thinkos_thread_create(yield_task, (void *)&ctrl[2], 
+	th[2] = thinkos_thread_create(yield_task, (void *)&dev[2], 
 								  stack[2], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(0) | THINKOS_OPT_PAUSED);
 
-	th[3] = thinkos_thread_create(yield_task, (void *)&ctrl[3], 
+	th[3] = thinkos_thread_create(yield_task, (void *)&dev[3], 
 								  stack[3], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(0) | THINKOS_OPT_PAUSED);
@@ -207,15 +207,15 @@ void sched_speed_test(void)
 	}
 
 	for (i = 0; i < 5; i++) {
-		x[0] = ctrl[0].cnt;
-		x[1] = ctrl[1].cnt;
-		x[2] = ctrl[2].cnt;
-		x[3] = ctrl[3].cnt;
+		x[0] = dev[0].cnt;
+		x[1] = dev[1].cnt;
+		x[2] = dev[2].cnt;
+		x[3] = dev[3].cnt;
 		thinkos_sleep(1000);
-		y[0] = ctrl[0].cnt;
-		y[1] = ctrl[1].cnt;
-		y[2] = ctrl[2].cnt;
-		y[3] = ctrl[3].cnt;
+		y[0] = dev[0].cnt;
+		y[1] = dev[1].cnt;
+		y[2] = dev[2].cnt;
+		y[3] = dev[3].cnt;
 
 		d[0] = y[0] - x[0];
 		d[1] = y[1] - x[1];
@@ -253,26 +253,26 @@ void busy_test(void)
 	printf(" - Scheduler test\n");
 
 	for (i = 0; i < 4; i++) {
-		ctrl[i].enabled = true;
-		ctrl[i].cnt = 0;
+		dev[i].enabled = true;
+		dev[i].cnt = 0;
 	}
 
-	th[0] = thinkos_thread_create(busy_task, (void *)&ctrl[0], 
+	th[0] = thinkos_thread_create(busy_task, (void *)&dev[0], 
 								  stack[0], STACK_SIZE, 
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(8));
 
-	th[1] = thinkos_thread_create(busy_task, (void *)&ctrl[1], 
+	th[1] = thinkos_thread_create(busy_task, (void *)&dev[1], 
 								  stack[1], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(4) |
 								  THINKOS_OPT_ID(8));
 
-	th[2] = thinkos_thread_create(busy_task, (void *)&ctrl[2], 
+	th[2] = thinkos_thread_create(busy_task, (void *)&dev[2], 
 								  stack[2], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(6) |
 								  THINKOS_OPT_ID(8));
 
-	th[3] = thinkos_thread_create(busy_task, (void *)&ctrl[3], 
+	th[3] = thinkos_thread_create(busy_task, (void *)&dev[3], 
 								  stack[3], STACK_SIZE,
 								  THINKOS_OPT_PRIORITY(8) |
 								  THINKOS_OPT_ID(8));
@@ -280,15 +280,15 @@ void busy_test(void)
 	printf("  * Threads: %d, %d, %d, %d\n", th[0], th[1], th[2], th[3]);
 
 	for (i = 0; i < 8; i++) {
-		x[0] = ctrl[0].cnt;
-		x[1] = ctrl[1].cnt;
-		x[2] = ctrl[2].cnt;
-		x[3] = ctrl[3].cnt;
+		x[0] = dev[0].cnt;
+		x[1] = dev[1].cnt;
+		x[2] = dev[2].cnt;
+		x[3] = dev[3].cnt;
 		thinkos_sleep(1000);
-		y[0] = ctrl[0].cnt;
-		y[1] = ctrl[1].cnt;
-		y[2] = ctrl[2].cnt;
-		y[3] = ctrl[3].cnt;
+		y[0] = dev[0].cnt;
+		y[1] = dev[1].cnt;
+		y[2] = dev[2].cnt;
+		y[3] = dev[3].cnt;
 
 		d[0] = y[0] - x[0];
 		d[1] = y[1] - x[1];
@@ -306,7 +306,7 @@ void busy_test(void)
 	}
 
 	for (i = 0; i < 4; i++) {
-		ctrl[i].enabled = false;
+		dev[i].enabled = false;
 		printf("  * join(%d) ...", th[i]);
 		ret = thinkos_join(th[i]);
 		printf(" %d\n", ret);

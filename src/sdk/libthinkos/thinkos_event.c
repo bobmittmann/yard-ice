@@ -116,7 +116,7 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 	__thinkos_tmdwq_insert(wq, self, ms);
 
 	/* Set the default return value to timeout. The
-	   ev_rise() call will change self to 0 */
+	   ev_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);

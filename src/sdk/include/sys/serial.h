@@ -72,22 +72,51 @@
 #define SERIAL_FLOWCTRL_XONXOFF (2 << 8)
 #define SERIAL_FLOWCTRL_MASK (0x03 << 8)
 
-struct serial_cfg {
-    uint32_t baud_rate;
-    uint8_t stop_bits;
-    uint8_t data_bits;
-    uint8_t parity;
-    uint8_t flow_ctrl;
+/* character encoding and baud rate */
+struct serial_config {
+	uint32_t baud_rate;
+	uint8_t stop_bits;
+	uint8_t data_bits;
+	uint8_t parity;
+};
+
+/* modem control bits */
+struct serial_control {
+	uint8_t dtr :1;
+	uint8_t rts :1;
+	/* sending line break */
+	uint8_t brk :1;
+};
+
+struct serial_status {
+	/* modem status bits */
+	uint8_t dsr :1;
+	uint8_t ri :1;
+	uint8_t dcd :1;
+	uint8_t cts :1;
+	/* receiving line break */
+	uint8_t brk :1;
+};
+
+struct serial_error {
+	uint8_t ovr :1;
+	uint8_t par :1;
+	uint8_t frm :1;
 };
 
 struct serial_dev;
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int serial_cfg_get(struct serail_dev * dev, const struct serial_cfg * cfg);
+int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
+
+int serial_config_set(struct serial_dev * dev, const struct serial_config * cfg);
+
+int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
+
+int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
 
 #ifdef __cplusplus
 }

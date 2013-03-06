@@ -182,13 +182,17 @@ int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
 
 int stm32f_usart_flush(struct stm32f_usart * usart);
 
-int stm32f_usart_init(struct stm32f_usart * us,
-					  unsigned int baudrate, unsigned int flags);
+int stm32f_usart_init(struct stm32f_usart * us);
 
-int stm32f_usart_release(struct stm32f_usart * usart);
+int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
+
+int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
 
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
+
+int stm32f_usart_disable(struct stm32f_usart * usart);
+
 
 /*---------------------------------------------------------------------
  * SPI

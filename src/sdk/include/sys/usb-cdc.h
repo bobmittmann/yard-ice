@@ -35,38 +35,50 @@
 #define USB_CDC_EINTR 2
 #define USB_CDC_ETIMEDOUT 3
 
-struct usb_dev;
+struct usb_cdc_state {
+	uint32_t rx_chars;
+	uint32_t tx_chars;
+	struct serial_config cfg;
+    struct serial_control ctrl;
+    struct serial_status stat;
+    struct serial_error err;
+};
+
+struct usb_cdc_dev;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-void usb_connect(struct usb_dev * dev);
+void usb_connect(struct usb_cdc_dev * dev);
 
-void usb_disconnect(struct usb_dev * dev);
+void usb_disconnect(struct usb_cdc_dev * dev);
 
-void usb_enumaration_wait(struct usb_dev * dev);
+void usb_enumaration_wait(struct usb_cdc_dev * dev);
 
-void usb_reset_wait(struct usb_dev * dev);
+void usb_reset_wait(struct usb_cdc_dev * dev);
 
-void usb_device_init(struct usb_dev * dev);
+void usb_ctrl_event_wait(struct usb_cdc_dev * dev);
 
-struct usb_dev * usb_cdc_init(void);
+void usb_device_init(struct usb_cdc_dev * dev);
 
-int usb_cdc_write(struct usb_dev * dev, 
+struct usb_cdc_dev * usb_cdc_init(void);
+
+int usb_cdc_write(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len);
 
-int usb_cdc_read(struct usb_dev * dev, void * buf, 
+int usb_cdc_read(struct usb_cdc_dev * dev, void * buf, 
 				 unsigned int len, unsigned int msec);
 
-int usb_cdc_flush(struct usb_dev * dev, 
+int usb_cdc_flush(struct usb_cdc_dev * dev, 
 				  const void * buf, unsigned int len);
 
 struct file * usb_cdc_fopen(void);
 
-void usb_cdc_serial_cfg_get(struct usb_dev * dev, struct serial_cfg * cfg);
+int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state);
 
+int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec);
 
 #ifdef __cplusplus
 }
