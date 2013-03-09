@@ -23,11 +23,16 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __STM32F207_H__
-#define __STM32F207_H__
+/* 
+   High-density performance line ARM-based 32-bit MCU with 256 to
+   512KB Flash, USB, CAN, 11 timers, 3 ADCs, 13 communication interfaces
+*/
+
+#ifndef __STM32F103_H__
+#define __STM32F103_H__
 
 #define STM32F
-#define STM32F2X
+#define STM32F10X
 
 #include <stm32f/stm32f-pwr.h>
 #include <stm32f/stm32f-syscfg.h>
@@ -47,48 +52,38 @@
 #include <stm32f/stm32f-exti.h>
 
 #define STM32F_BASE_FSMC    0xa0000000
-#define STM32F_BASE_RNG     0x50060800
-#define STM32F_BASE_HASH    0x50060400
-#define STM32F_BASE_CRYP    0x50060000
-#define STM32F_BASE_DCMI    0x50050000
 #define STM32F_BASE_OTG_FS  0x50000000
-#define STM32F_BASE_OTG_HS  0x40040000
 #define STM32F_BASE_EMAC    0x40028000
-#define STM32F_BASE_DMA2    0x40026400
-#define STM32F_BASE_DMA1    0x40026000
-#define STM32F_BASE_BKPSRAM 0x40024000
-#define STM32F_BASE_FLASH   0x40023c00
-#define STM32F_BASE_RCC     0x40023800
 #define STM32F_BASE_CRC     0x40023000
-#define STM32F_BASE_GPIOI   0x40022000
-#define STM32F_BASE_GPIOH   0x40021c00
-#define STM32F_BASE_GPIOG   0x40021800
-#define STM32F_BASE_GPIOF   0x40021400
-#define STM32F_BASE_GPIOE   0x40021000
-#define STM32F_BASE_GPIOD   0x40020c00
-#define STM32F_BASE_GPIOC   0x40020800
-#define STM32F_BASE_GPIOB   0x40020400
-#define STM32F_BASE_GPIOA   0x40020000
-#define STM32F_BASE_TIM11   0x40014800
-#define STM32F_BASE_TIM10   0x40014400
-#define STM32F_BASE_TIM9    0x40014000
-#define STM32F_BASE_EXTI    0x40013c00
-#define STM32F_BASE_SYSCFG  0x40013800
+#define STM32F_BASE_FLASH   0x40022000
+#define STM32F_BASE_RCC     0x40021000
+#define STM32F_BASE_DMA2    0x40020400
+#define STM32F_BASE_DMA1    0x40020000
+#define STM32F_BASE_SDIO    0x40018000
+#define STM32F_BASE_TIM11   0x40015400
+#define STM32F_BASE_TIM10   0x40015000
+#define STM32F_BASE_TIM9    0x40014c00
+#define STM32F_BASE_ADC3    0x40013c00
+#define STM32F_BASE_USART1  0x40013800
+#define STM32F_BASE_TIM8    0x40013400
 #define STM32F_BASE_SPI1    0x40013000
-#define STM32F_BASE_SDIO    0x40012c00
-#define STM32F_BASE_ADCC    0x40012300
-#define STM32F_BASE_ADC3    0x40012200
-#define STM32F_BASE_ADC2    0x40012100
-#define STM32F_BASE_ADC1    0x40012000
-#define STM32F_BASE_USART6  0x40011400
-#define STM32F_BASE_USART1  0x40011000
-#define STM32F_BASE_TIM8    0x40010400
-#define STM32F_BASE_TIM1    0x40010000
-#define STM32F_BASE_DAC     0x40007400
+#define STM32F_BASE_TIM1    0x40012c00
+#define STM32F_BASE_ADC2    0x40012800
+#define STM32F_BASE_ADC1    0x40012400
+#define STM32F_BASE_GPIOG   0x40012000
+#define STM32F_BASE_GPIOF   0x40011c00
+#define STM32F_BASE_GPIOE   0x40011800
+#define STM32F_BASE_GPIOD   0x40011400
+#define STM32F_BASE_GPIOC   0x40011000
+#define STM32F_BASE_GPIOB   0x40010c00
+#define STM32F_BASE_GPIOA   0x40010800
+#define STM32F_BASE_EXTI    0x40010400
+#define STM32F_BASE_AFIO    0x40010000
+#define STM32F_BASE_DAC     0x40007800
 #define STM32F_BASE_PWR     0x40007000
+#define STM32F_BASE_BKP     0x40006c00
 #define STM32F_BASE_CAN2    0x40006800
 #define STM32F_BASE_CAN1    0x40006400
-#define STM32F_BASE_I2C3    0x40005c00
 #define STM32F_BASE_I2C2    0x40005800
 #define STM32F_BASE_I2C1    0x40005400
 #define STM32F_BASE_UART5   0x40005000
@@ -218,12 +213,10 @@
 #define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
-#define STM32F_SYSCFG ((struct stm32f_syscfg *)STM32F_BASE_SYSCFG)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
 #define STM32F_ADC1 ((struct stm32f_adc *)STM32F_BASE_ADC1)
 #define STM32F_ADC2 ((struct stm32f_adc *)STM32F_BASE_ADC2)
 #define STM32F_ADC3 ((struct stm32f_adc *)STM32F_BASE_ADC3)
-#define STM32F_ADCC ((struct stm32f_adcc *)STM32F_BASE_ADCC)
 
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
@@ -233,7 +226,6 @@
 #define STM32F_USART3 ((struct stm32f_usart *)STM32F_BASE_USART3)
 #define STM32F_UART4 ((struct stm32f_usart *)STM32F_BASE_UART4)
 #define STM32F_UART5 ((struct stm32f_usart *)STM32F_BASE_UART5)
-#define STM32F_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
@@ -264,8 +256,6 @@
 #define STM32F_GPIOE ((struct stm32f_gpio *)STM32F_BASE_GPIOE)
 #define STM32F_GPIOF ((struct stm32f_gpio *)STM32F_BASE_GPIOF)
 #define STM32F_GPIOG ((struct stm32f_gpio *)STM32F_BASE_GPIOG)
-#define STM32F_GPIOH ((struct stm32f_gpio *)STM32F_BASE_GPIOH)
-#define STM32F_GPIOI ((struct stm32f_gpio *)STM32F_BASE_GPIOI)
 #define STM32F_GPIO(N) ((struct stm32f_gpio *)(STM32F_BASE_GPIOA + (N)*0x400))
 
 typedef enum {
@@ -276,15 +266,12 @@ typedef enum {
 	STM32F_GPIOE_ID,
 	STM32F_GPIOF_ID,
 	STM32F_GPIOG_ID,
-	STM32F_GPIOH_ID,
-	STM32F_GPIOI_ID
 } stmf32_gpio_id_t;
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
 
-
 #endif /* __ASSEMBLER__ */
 
-#endif /* __STM32F207_H__ */
+#endif /* __STM32F103_H__ */
 

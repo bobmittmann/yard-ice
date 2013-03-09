@@ -123,8 +123,15 @@ void stm32f_adc_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_adc * adc = STM32F_ADC1;
-	struct stm32f_adcc * adcc = STM32F_ADCC;
 	const uint8_t adc_chan_seq[] = {6, 18, 6};
+
+#ifdef	STM32F_ADCC
+	struct stm32f_adcc * adcc = STM32F_ADCC;
+	/* Common Control */
+	adcc->ccr = ADC_TSVREFE | ADC_VBATE | ADC_ADCPRE_4;
+	/* PCLK2 = 60MHz
+	   ADCCLK = PCLK2/4 = 15MHz */
+#endif
 
 	/* ADC clock enable */
 	rcc->apb2enr |= RCC_ADC1EN;
@@ -141,11 +148,6 @@ void stm32f_adc_init(void)
 	stm32f_adc_smp_set(adc, 6, ADC_SMP_56_CYC);
 	stm32f_adc_smp_set(adc, 18, ADC_SMP_56_CYC);
 	stm32f_adc_smp_set(adc, 16, ADC_SMP_56_CYC);
-
-	/* Common Control */
-	adcc->ccr = ADC_TSVREFE | ADC_VBATE | ADC_ADCPRE_4;
-	/* PCLK2 = 60MHz
-	   ADCCLK = PCLK2/4 = 15MHz */
 
 	adc_gpio_init();
 

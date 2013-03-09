@@ -42,6 +42,7 @@
 
 #include <arch/cortex-m3.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 /* -------------------------------------------------------------------------- 
@@ -575,7 +576,7 @@ static void inline __attribute__((always_inline))
 }
 
 static bool inline __attribute__((always_inline))
-	__thinkos_timedout(void) {
+	__thinkos_timer_timedout(void) {
 	int self = thinkos_rt.active;
 #if THINKOS_ENABLE_CLOCK
 	return ((int32_t)(thinkos_rt.clock[self] - thinkos_rt.ticks) <= 0) ? true : false;

@@ -31,8 +31,10 @@ const struct stm32f_gpio * stm32f_gpio_lut[] = {
 	STM32F_GPIOE,
 	STM32F_GPIOF,
 	STM32F_GPIOG,
+#ifdef STM32F_GPIOH
 	STM32F_GPIOH,
 	STM32F_GPIOI
+#endif
 };
 
 int stm32f_gpio_id(struct stm32f_gpio * gpio)

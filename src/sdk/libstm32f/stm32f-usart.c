@@ -40,7 +40,9 @@ const struct stm32f_usart * stm32f_usart_lut[6] = {
 	STM32F_USART3,
 	STM32F_UART4,
 	STM32F_UART5,
+#ifdef STM32F_USART6
 	STM32F_USART6
+#endif
 };
 
 int stm32f_usart_lookup(struct stm32f_usart * us)
@@ -127,7 +129,6 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 	uint32_t f;
 	uint32_t m;
 	uint32_t cr1;
-	int bits;
 	int id;
 
 	/* disable TX and RX */

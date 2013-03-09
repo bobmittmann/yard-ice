@@ -30,7 +30,9 @@
 #include <arch/stm32f207.h>
 #endif
 
-#define STM32F
+#ifdef STM32F103
+#include <arch/stm32f103.h>
+#endif
 
 #include <arch/cortex-m3.h>
 #include <stdint.h>

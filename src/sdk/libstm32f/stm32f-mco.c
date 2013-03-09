@@ -26,14 +26,17 @@
 void stm32f_mco2_cfg(void)
 {
 	struct stm32f_gpio * gpio = STM32F_GPIOC;
-	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 	int pin = 9;
+
+#ifdef STM32F_SYSCFG
+	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
+    /* enable I/O compensation cell */
+	syscfg->cmpcr |= SYSCFG_CMP_PD;
+#endif
 
 	stm32f_gpio_clock_en(gpio);
 	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_af(gpio, pin, GPIO_AF0);
 
-    /* enable I/O compensation cell */
-	syscfg->cmpcr |= SYSCFG_CMP_PD;
 }
 
