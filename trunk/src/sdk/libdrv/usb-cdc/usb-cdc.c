@@ -755,9 +755,9 @@ void usb_on_oepint0(struct usb_cdc_dev * dev)
 		case SET_CONTROL_LINE_STATE:
 			DCC_LOG3(LOG_TRACE, "CDC SetCtrl: idx=%d val=%d len=%d", 
 					 index, value, len);
-			cdc->control = (value & CDC_DTE_PRESENT) ? 1 : 0;
+			cdc->control = value;
 
-			DCC_LOG2(LOG_TRACE, "DTR=%d RTS=%d", cdc->dtr, cdc->rts);
+			DCC_LOG1(LOG_TRACE, "DTR=%d", (value & CDC_DTE_PRESENT));
 
 #if USB_CDC_ENABLE_STATE
 			/* update the local serial state */
@@ -1386,7 +1386,7 @@ struct usb_cdc_dev * usb_cdc_init(void)
 
 }
 
-
+#if 0
 int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state)
 {
 	state->cfg.baud_rate = dev->cdc.lc.dwDTERate;
@@ -1409,6 +1409,7 @@ int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state)
 
 	return 0;
 }
+#endif
 
 int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec)
 {

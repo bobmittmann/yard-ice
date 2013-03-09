@@ -51,7 +51,12 @@
 void stm32f_eth_init(struct stm32f_eth * eth)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
+#ifdef STM32F_SYSCFG
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
+
+	DCC_LOG(LOG_TRACE, "Selecting MII interface...");
+	syscfg->pmc = 0;
+#endif
 
 	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
 	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
@@ -62,8 +67,6 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	stm32f_gpio_clock_en(STM32F_GPIOC);
 	stm32f_gpio_clock_en(STM32F_GPIOE);
 
-	DCC_LOG(LOG_TRACE, "Selecting MII interface...");
-	syscfg->pmc = 0;
 
 	DCC_LOG(LOG_TRACE, "Configuring GPIO pins...");
 	stm32f_gpio_mode(EXT_RST, OUTPUT, PUSH_PULL | SPEED_LOW);

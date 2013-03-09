@@ -42,7 +42,7 @@
 							</tool>
 							<tool id="org.eclipse.cdt.build.core.settings.holder.89227479" name="GNU C" superClass="org.eclipse.cdt.build.core.settings.holder">
 								<option id="org.eclipse.cdt.build.core.settings.holder.incpaths.1523753823" name="Include Paths" superClass="org.eclipse.cdt.build.core.settings.holder.incpaths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;C:\cygwin\opt\arm-none-eabi\lib\gcc\arm-none-eabi\4.6.2\include&quot;"/>
+									<listOptionValue builtIn="false" value="/opt/arm-none-eabi/lib/gcc/arm-none-eabi/4.6.2/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdk/include}&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.2025763035" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
@@ -67,4 +67,8 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="1">
+		<resource resourceType="PROJECT" workspacePath="/sdk"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

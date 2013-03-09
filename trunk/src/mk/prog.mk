@@ -19,12 +19,11 @@
 # http://www.gnu.org/
 
 #------------------------------------------------------------------------------ 
-# ld script
+# ld scripts
 #------------------------------------------------------------------------------ 
-
-ifndef LDSCRIPT
-  $(error LDSCRIPT undefined!)
-endif
+ifndef LDDIR
+  $(error LDDIR undefined!)
+endif	
 
 #------------------------------------------------------------------------------ 
 # cross compiling 
@@ -33,6 +32,9 @@ ifndef MKDIR
   $(error MKDIR undefined!)
 endif	
 
+#------------------------------------------------------------------------------ 
+# cross compiling rules 
+#------------------------------------------------------------------------------ 
 include $(MKDIR)/cross.mk
 
 #------------------------------------------------------------------------------ 
@@ -68,7 +70,7 @@ DDIRS = $(abspath $(sort $(dir $(DFILES))))
 #------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
-LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LIBPATH)
+LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(LIBPATH)
 INCPATH	:= $(INCPATH) $(abspath .)
 
 #export INCPATH	LIBPATH
