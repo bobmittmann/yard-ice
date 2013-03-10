@@ -35,8 +35,9 @@ INCPATH = ../sdk/include
 
 JTAGTOOL_ADDR = 192.168.0.80
 
-CFLAGS = -g -O2
+CDEFS = CONFIG_H
+CFLAGS = -g -Os
 
-MACH = stm32f103xb
+MACH = stm32f103x6
 include ../mk/stm32f103.mk
 

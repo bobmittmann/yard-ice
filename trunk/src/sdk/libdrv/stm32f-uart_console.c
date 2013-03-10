@@ -38,10 +38,13 @@
 
 #include <sys/dcclog.h>
 
+#if (THINKOS_EVENT_MAX > 0) && (THINKOS_ENABLE_EVENT_ALLOC)
+
 #define UART_FIFO_BUF_LEN 64
 
 #define USART5_TXIE ((uint32_t *) CM3_PERIPHERAL_BITBAND_ADDR( \
 						STM32F_BASE_UART5 + STM32F_USART_CR1, 7))
+
 
 struct uart_fifo {
 	volatile uint32_t head;
@@ -476,4 +479,6 @@ struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
 }
 
 #endif
+
+#endif /* (THINKOS_EVENT_MAX > 0) && (THINKOS_ENABLE_EVENT_ALLOC) */
 

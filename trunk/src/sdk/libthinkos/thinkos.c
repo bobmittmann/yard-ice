@@ -304,8 +304,3 @@ void thinkos_sleep_svc(int32_t * arg)
 #endif
 }
 
-uint32_t thinkos_idle_val(void)
-{
-	return thinkos_idle.snapshot.val;
-}
-

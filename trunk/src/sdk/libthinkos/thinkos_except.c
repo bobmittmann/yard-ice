@@ -31,7 +31,7 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
-#if THINKOS_ENABLE_EXCEPT
+#if THINKOS_ENABLE_EXCEPTIONS
 
 void __show_ctrl(uint32_t ctrl)
 {
