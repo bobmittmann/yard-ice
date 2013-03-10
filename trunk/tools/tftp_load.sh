@@ -195,7 +195,7 @@ echo " - Reset script..."
 
 cat > ${RST_SCRIPT} << EOF
 run
-reset h
+reset
 con
 EOF
 
