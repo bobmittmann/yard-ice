@@ -32,10 +32,6 @@
 #include <stdint.h>
 #include <arch/cortex-m3.h>
 
-#ifndef CM3_SYSTICK_CLK_HZ
-#error "CM3_SYSTICK_CLK_HZ undefined"
-#endif
-
 static unsigned int cm3_get_ticks(void)
 {
 	return 0xffffffff - (CM3_SYSTICK->val << 8);

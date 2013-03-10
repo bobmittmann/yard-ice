@@ -31,6 +31,14 @@
   CM3 SysTick 
  ****************************************************************************/
 
+#ifndef CM3_SYSTICK_CLK_HZ
+ #ifdef HCLK_HZ
+  #define CM3_SYSTICK_CLK_HZ (HCLK_HZ / 8)
+ #else
+  #error "CM3_SYSTICK_CLK_HZ undefined"
+ #endif
+#endif
+
 /* SysTick Control / Status Register */
 #define SYSTICK_CTRL_COUNTFLAG  (0x01 << 16)
 #define SYSTICK_CTRL_CLKSOURCE  (0x01 << 2)

@@ -407,7 +407,8 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 #define STM32F_USART_GTPR 0x18 
 
 
-#define USART_GT_MSK (((1 << (7 + 1)) - 1) << 8) /* Bits [15..8] - Guard time value */
+/* Bits [15..8] - Guard time value */
+#define USART_GT_MSK (((1 << (7 + 1)) - 1) << 8) 
 #define USART_GT_SET(VAL) (((VAL) << 8) & GT_MSK)
 #define USART_GT_GET(REG) (((REG) & GT_MSK) >> 8)
 /* This bit-field gives the Guard time value in terms of number of baud clocks.
@@ -415,7 +416,8 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
    this guard time value.
    Note: This bit is not available for UART4 & UART5. */
 
-#define USART_PSC_MSK (((1 << (7 + 1)) - 1) << 0) /* Bits [7..0] - Prescaler value */
+/* Bits [7..0] - Prescaler value */
+#define USART_PSC_MSK (((1 << (7 + 1)) - 1) << 0) 
 #define USART_PSC_SET(VAL) (((VAL) << 0) & PSC_MSK)
 #define USART_PSC_GET(REG) (((REG) & PSC_MSK) >> 0)
 /* – In IrDA Low-power mode:

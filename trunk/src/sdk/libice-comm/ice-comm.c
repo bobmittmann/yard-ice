@@ -27,7 +27,15 @@ struct ice_comm_blk ice_comm_blk;
 
 void ice_comm_sync(void) 
 {
+	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
+
+	cm3_cpsid_f(); /* disable interrupts and faults */
+
 	ice_comm_blk.dev = DEV_SYNC;
+	ice_comm_blk.tx_head = 0;
+	ice_comm_blk.tx_tail = 0;
+
+	cm3_faultmask_set(fm);  /* restore fault mask */
 }
 
 void ice_comm_connect(void) 
@@ -40,24 +48,6 @@ void ice_comm_connect(void)
 		if (ice_comm_blk.dbg == DBG_SYNC)
 			ice_comm_blk.dev = DEV_CONNECTED;
 	}
-	cm3_faultmask_set(fm);  /* restore fault mask */
-}
-
-void ice_comm_w32(uint32_t data) 
-{
-	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
-	unsigned int head;
-
-	cm3_cpsid_f(); /* disable interrupts and faults */
-	if (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC)
-			ice_comm_blk.dev = DEV_CONNECTED;
-		goto ret;
-	}
-	head = ice_comm_blk.tx_head;
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = data;
-	ice_comm_blk.tx_head = head;
-ret:
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }
 

@@ -36,6 +36,8 @@
 	the acceleration features and control the Flash memory access 
 	time according to CPU frequency. */
 
+#ifdef STM32F2X
+
 #define FLASH_DCRST (1 << 12)
 /* Data cache reset
 0: Data cache is not reset
@@ -62,6 +64,17 @@ This bit can be written only when the I cache is disabled.*/
 /* Prefetch enable
 0: Prefetch is disabled
 1: Prefetch is enabled */
+
+#endif /* STM32F2X */
+
+#ifdef STM32F10X
+
+#define FLASH_PRFTBS (1 << 5)
+#define FLASH_PRFTBE (1 << 4)
+#define FLASH_HLFCYA (1 << 3)
+
+#endif /* STM32F10X */
+
 
 #define FLASH_LATENCY(WS) (((WS) & 0x7) << 0)
 /* Latency. These bits represent the ratio of the CPU clock period to the Flash memory access time. 

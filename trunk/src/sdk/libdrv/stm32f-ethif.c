@@ -40,6 +40,8 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+#ifdef STM32F_ETH
+
 int __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
@@ -465,4 +467,6 @@ struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask)
 
 	return ifn;
 }
+
+#endif /* STM32FX2 */
 

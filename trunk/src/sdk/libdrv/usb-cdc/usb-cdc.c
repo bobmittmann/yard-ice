@@ -39,6 +39,8 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+#if STM32FX2
+
 #define OTG_FS_IRQ_LVL IRQ_PRIORITY_REGULAR
 
 #define USB_CDC_ENABLE_STATE 1
@@ -71,11 +73,6 @@ struct ep_rx_ctrl {
 
 struct usb_cdc {
 	/* modem bits */
-//	volatile uint8_t dtr: 1;
-//	volatile uint8_t rts: 1;
-//	volatile uint8_t dcd: 1;
-//	volatile uint8_t dsr: 1;
-
 	volatile uint8_t status; /* modem status lines */
 	volatile uint8_t control; /* modem control lines */
 
@@ -149,6 +146,7 @@ static void cdc_init(struct usb_cdc * cdc)
 	cdc->lc.bDataBits = 8;
 }
 
+#if 0
 #define OTG_FS_DP STM32F_GPIOA, 12
 #define OTG_FS_DM STM32F_GPIOA, 11
 #define OTG_FS_VBUS STM32F_GPIOA, 9
@@ -171,6 +169,7 @@ static void otg_fs_io_init(void)
 	stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 	stm32f_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
+#endif
 
 static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 {
@@ -240,23 +239,21 @@ void usb_device_init(struct usb_cdc_dev * dev)
 
 	dev->tx_lock_ev = thinkos_ev_alloc(); 
 
-	otg_fs_io_init();
+	DCC_LOG(LOG_TRACE, "Enabling USB FS clock...");
 
-	DCC_LOG(LOG_MSG, "Enabling USB FS clock...");
+#ifdef STM32F2X
 	rcc->ahb2enr |= RCC_OTGFSEN;
-
-#if 0
-	{
-		int i;
-
-		for (i = 0; i < 320; i++) {
-			otg_fs->ram[i] = 0;
-		}
-	}
 #endif
 
+#ifdef STM32F10X
+	rcc->apb1enr |= RCC_USBEN;
+#endif
+
+	DCC_LOG(LOG_TRACE, "Initializing USB device...");
 	/* Initialize as a device */
 	stm32f_otg_fs_device_init(otg_fs);
+
+	DCC_LOG(LOG_TRACE, "Configuring IRQ...");
 
 	/* Set IRQ priority */
 	cm3_irq_pri_set(STM32F_IRQ_OTG_FS, OTG_FS_IRQ_LVL);
@@ -1433,4 +1430,6 @@ int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec)
 
 	return 0;
 }
+
+#endif /* STM32FX2 */
 

@@ -26,13 +26,7 @@
 #include <sys/delay.h>
 #include <stdlib.h>
 
-#define STM32F_HSI_HZ 16000000
-#define STM32F_HSE_HZ 24000000
-#define STM32F_PLL_HZ 120000000
-#define STM32F_APB1_HZ 30000000
-#define STM32F_APB2_HZ 60000000
-
-#define STM32F_AHB_HZ 120000000
+#include <sys/dcclog.h>
 
 const struct stm32f_usart * stm32f_usart_lut[6] = {
 	STM32F_USART1,
@@ -45,6 +39,35 @@ const struct stm32f_usart * stm32f_usart_lut[6] = {
 #endif
 };
 
+/* APB clock */
+
+#define APB1 (1 << 5)
+#define APB2 (1 << 6)
+#define CLK(APB, BIT) (APB | BIT)
+#define CLK_BIT 0x1f
+
+#ifdef STM32F2X
+static const uint8_t us_clk_lut[] = {  
+	CLK(APB2, 4), 
+	CLK(APB1, 17), 
+	CLK(APB1, 18), 
+	CLK(APB1, 19), 
+	CLK(APB1, 20), 
+	CLK(APB2,  5)
+};
+#endif
+
+#ifdef STM32F10X
+static const uint8_t us_clk_lut[] = {  
+	CLK(APB2, 14), 
+	CLK(APB1, 17), 
+	CLK(APB1, 18), 
+	CLK(APB1, 19), 
+	CLK(APB1, 20)
+};
+#endif
+
+
 int stm32f_usart_lookup(struct stm32f_usart * us)
 {
 	int id = sizeof(stm32f_usart_lut) / sizeof(struct stm32f_usart *);
@@ -54,6 +77,7 @@ int stm32f_usart_lookup(struct stm32f_usart * us)
 	return id;
 }
 
+#if 0
 static const struct {
 	gpio_io_t rx; /* IO port/pin */
 	gpio_io_t tx; /* IO port/pin */
@@ -63,7 +87,7 @@ static const struct {
 } __attribute__((__packed__)) cfg[6] = {
 	{ .rx = GPIO(PA, 10), .tx = GPIO(PA, 9), .af = GPIO_AF7, 
 		.ckbit = 4, .apb2 = 1},
-	{ .rx = GPIO(PA, 3), .tx = GPIO(PA, 3), .af = GPIO_AF7, 
+	{ .rx = GPIO(PA, 3), .tx = GPIO(PA, 2), .af = GPIO_AF7, 
 		.ckbit = 17, .apb2 = 0},
 	{ .rx = GPIO(PB, 11), .tx = GPIO(PB, 10), .af = GPIO_AF7,
 		.ckbit = 18, .apb2 = 0},
@@ -89,9 +113,8 @@ static void io_txd_cfg(struct stm32f_gpio * gpio, int port, int af)
 	stm32f_gpio_af(gpio, port, af);
 }
 
-int stm32f_usart_init(struct stm32f_usart * us)
+int stm32f_usart_io_cfg(struct stm32f_usart * us)
 {
-
 	int id;
 
 	if ((id = stm32f_usart_lookup(us)) < 0) {
@@ -99,26 +122,50 @@ int stm32f_usart_init(struct stm32f_usart * us)
 		return id;
 	}
 
-	/* disable all interrupts */
-	us->cr1 = 0;
-
-	/* Enable peripheral clock */
-	if (cfg[id].apb2)
-		STM32F_RCC->apb2enr |= (1 << cfg[id].ckbit);
-	else
-		STM32F_RCC->apb1enr |= (1 << cfg[id].ckbit);
-
 	/* configure IO pins */
 	io_rxd_cfg(STM32F_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
 	io_txd_cfg(STM32F_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
 
+	return 0;
+}
+#endif
+
+int stm32f_usart_init(struct stm32f_usart * us)
+{
+	int id;
+	int clk;
+
+	if ((id = stm32f_usart_lookup(us)) < 0) {
+		/* invalid UART ??? */
+		return id;
+	}
+
+	DCC_LOG2(LOG_TRACE, "USART %d -> 0x%08x.", id + 1, us);
+
+	/* disable all interrupts */
+	us->cr1 = 0;
+
+	/* Enable peripheral clock */
+	clk = us_clk_lut[id];
+
+
+	DCC_LOG2(LOG_TRACE, "APB%d |= 1 << %d.", 
+			 (clk & APB2) ? 2 : 1, (clk & CLK_BIT));
+
+	if (clk & APB2)
+		STM32F_RCC->apb2enr |= (1 << (clk & CLK_BIT));
+	else
+		STM32F_RCC->apb1enr |= (1 << (clk & CLK_BIT));
+
 	/* output drain */
-	while (!(us->sr & USART_TXE));
+//	while (!(us->sr & USART_TXE));
 
 	us->cr1 = 0;
 	us->cr2 = 0;
 	us->cr3 = 0;
 	us->gtpr = 0;
+
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return id;
 }
@@ -129,30 +176,29 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 	uint32_t f;
 	uint32_t m;
 	uint32_t cr1;
+	uint32_t f_pclk;
 	int id;
-
-	/* disable TX and RX */
-	cr1 = us->cr1;
-	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE);
 
 	if ((id = stm32f_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
 		return id;
 	}
 
-	if (cfg[id].apb2) {
-		div = STM32F_APB2_HZ / baudrate;
-	} else {
-		div = STM32F_APB1_HZ / baudrate;
-	}
+	/* disable TX and RX */
+	cr1 = us->cr1;
+	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE);
+
+	if (us_clk_lut[id] & APB2)
+		f_pclk = stm32f_apb2_hz;
+	else 
+		f_pclk = stm32f_apb1_hz;
+
+	div = f_pclk / baudrate;
+
+	DCC_LOG3(LOG_TRACE, "baudrate=%d p_clk=%d div=%d", baudrate, f_pclk, div);
 
 	m = div >> 4;
 	f = div & 0x0f;
-	if (us->cr1 & USART_OVER8) {
-		f >>= 1;
-	}
-
-	/* Write to USART BRR register */
 	us->brr = (m << 4) | f;
 
 	/* restore cr1 */
@@ -161,11 +207,11 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 	return 0;
 }
 
-
 int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 {
 	uint32_t cr1;
 	uint32_t cr2;
+	uint32_t cr_en;
 	int bits;
 	int id;
 
@@ -174,13 +220,16 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 		return id;
 	}
 
-	/* disable TX and RX */
+	/* save enable bits */
+	cr_en = us->cr1 & (USART_UE | USART_TE | USART_RE);
+	if (cr_en & USART_TE) {
+		/* drain output buffer */
+		while (!(us->sr & USART_TXE));
+	}
+
+	/* disable TX, RX and all interrupts */
 	us->cr1 = 0;
 
-	/* output drain */
-	while (!(us->sr & USART_TXE));
-
-	/* enable TX and RX */
 	cr1 = 0;
 	cr2 = 0;
 
@@ -188,13 +237,16 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 	/* parity and data bits */
 	switch (flags & SERIAL_PARITY_MASK) {
 	case SERIAL_PARITY_NONE:
+		DCC_LOG(LOG_TRACE, "parity NONE");
 		cr1 |= (bits == SERIAL_DATABITS_9) ? USART_M9 : USART_M8;
 		break;
 	case SERIAL_PARITY_EVEN:
+		DCC_LOG(LOG_TRACE, "parity EVEN");
 		cr1 |= USART_PCE | USART_PS_EVEN;
 		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
 		break;
 	case SERIAL_PARITY_ODD:
+		DCC_LOG(LOG_TRACE, "parity ODD");
 		cr1 |= USART_PCE | USART_PS_ODD;
 		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
 		break;
@@ -210,31 +262,102 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 		break;
 	}
 
-	us->cr1 = cr1 | (USART_UE | USART_TE | USART_RE);
+	us->cr1 = cr1 | cr_en;
 	us->cr2 = cr2;
 
 	return 0;
 }
 
+void stm32f_usart_enable(struct stm32f_usart * us)
+{
+	/* enable TX and RX */
+	us->cr1 |= USART_UE | USART_TE | USART_RE;
+}
 
-int stm32f_usart_disable(struct stm32f_usart * us)
+void stm32f_usart_disable(struct stm32f_usart * us)
+{
+	/* disable TX, RX and all interrupts */
+	us->cr1 = 0;
+}
+
+int stm32f_usart_power_off(struct stm32f_usart * us)
 {
 	int id;
+	int clk;
 
 	if ((id = stm32f_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
 		return id;
 	}
 
-	/* disable all interrupts */
+	/* disable TX, RX and all interrupts */
 	us->cr1 = 0;
 
 	/* Disable peripheral clock */
-	if (cfg[id].apb2)
-		STM32F_RCC->apb2enr &= ~(1 << cfg[id].ckbit);
+	clk = us_clk_lut[id];
+	if (clk & APB2)
+		STM32F_RCC->apb2enr &= ~(1 << (clk & CLK_BIT));
 	else
-		STM32F_RCC->apb1enr &= ~(1 << cfg[id].ckbit);
+		STM32F_RCC->apb1enr &= ~(1 << (clk & CLK_BIT));
 
 	return 0;
+}
+
+int stm32f_usart_putc(struct stm32f_usart * usart, int c)
+{
+	while (!(usart->sr & USART_TXE));
+
+	usart->dr = c;
+
+	return 0;
+}
+
+int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec)
+{
+	int tm;
+
+	tm = msec * 20;
+
+	for (;;) {		
+		if (usart->sr & USART_RXNE) {
+			return usart->dr;
+		}
+		if (tm == 0) {
+			return -1;
+		}
+		udelay(50);
+		tm--;
+	}
+}
+
+int stm32f_usart_read(struct stm32f_usart * usart, char * buf, 
+					  unsigned int len, unsigned int msec)
+{
+	char * cp = (char *)buf;
+	int c;
+
+	c = stm32f_usart_getc(usart, msec);
+
+	if (c < 0)
+		return 0;
+
+	*cp = c;
+		
+	return 1;
+}
+
+int stm32f_usart_write(struct stm32f_usart * usart, const void * buf, 
+					   unsigned int len)
+{
+	char * cp = (char *)buf;
+	int c;
+	int n;
+
+	for (n = 0; n < len; n++) {
+		c = cp[n];
+		stm32f_usart_putc(usart, c);
+	}
+
+	return n;
 }
 
