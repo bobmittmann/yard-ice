@@ -31,6 +31,8 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
+#if THINKOS_ENABLE_EXCEPT
+
 void __show_ctrl(uint32_t ctrl)
 {
 	printf("[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
@@ -207,4 +209,6 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 }
 
 const char thinkos_except_nm[] = "EXCEPT";
+
+#endif /* THINKOS_ENABLE_EXCEPT */
 

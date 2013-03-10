@@ -137,7 +137,8 @@ void stm32f_dma2_stream0_isr(void)
 }
 
 
-int stm32f_serial_read(struct stm32f_serial_dev * dev, char * buf, unsigned int len)
+int stm32f_serial_read(struct stm32f_serial_dev * dev, char * buf, 
+					   unsigned int len)
 {
 	uint32_t st;
 	unsigned int cnt;
@@ -175,7 +176,7 @@ int stm32f_serial_read(struct stm32f_serial_dev * dev, char * buf, unsigned int 
 	return cnt;
 }
 
-int uart_serial_write(struct stm32f_serial_dev * dev, const void * buf,
+int stm32f_serial_write(struct stm32f_serial_dev * dev, const void * buf,
 					   unsigned int len)
 {
 	unsigned int cnt;

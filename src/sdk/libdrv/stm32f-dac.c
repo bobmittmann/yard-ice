@@ -29,6 +29,8 @@
 
 #include "wavetab.h"
 
+#ifdef STM32F2X
+
 #define DAC1_GPIO STM32F_GPIOA
 #define DAC1_PORT 4
 
@@ -149,4 +151,6 @@ void stm32f_dac_init(void)
 		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
 		DMA_CIRC | DMA_DIR_MTP;
 }
+
+#endif
 

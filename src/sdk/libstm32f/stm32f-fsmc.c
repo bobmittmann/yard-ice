@@ -22,6 +22,8 @@
 
 #include <sys/stm32f.h>
 
+#ifdef STM32F2X
+
 gpio_io_t fsmc_io[] = {
 	GPIO(PD, 14), /* D0 */
 	GPIO(PD, 15), /* D1 */
@@ -100,4 +102,6 @@ void stm32f_fsmc_init(void)
 		FSMC_DATAST_SET(0) | FSMC_ADDHDL_SET(0) |
 		FSMC_ADDSET_SET(0);
 }
+
+#endif
 

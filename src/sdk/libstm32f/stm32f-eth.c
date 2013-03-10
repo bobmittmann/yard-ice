@@ -48,15 +48,15 @@
 
 #define EXT_RST STM32F_GPIOE, 2
 
+#ifdef STM32F2X
+
 void stm32f_eth_init(struct stm32f_eth * eth)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-#ifdef STM32F_SYSCFG
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 
 	DCC_LOG(LOG_TRACE, "Selecting MII interface...");
 	syscfg->pmc = 0;
-#endif
 
 	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
 	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
@@ -153,4 +153,6 @@ void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac)
 		(mac[2] << 16) + (mac[3] << 24);
 	eth->maca[idx].hr = mac[4] + (mac[5] << 8);
 }
+
+#endif
 

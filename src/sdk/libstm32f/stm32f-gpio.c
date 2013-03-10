@@ -48,12 +48,20 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
-	rcc->ahb1enr |= (1 << stm32f_gpio_id(gpio));
+#ifdef STM32F2X
+	rcc->ahb1enr |= 1 << stm32f_gpio_id(gpio);
+#endif
+	
+#ifdef STM32F10X
+	rcc->apb2enr |= 1 << (stm32f_gpio_id(gpio) + 2);
+#endif
+
 }
 
 void stm32f_gpio_mode(struct stm32f_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
+#ifdef STM32F2X
 	uint32_t tmp;
 	uint32_t moder; 
 
@@ -99,9 +107,63 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 	else if (opt & PULL_DOWN)
 		tmp |= GPIO_PULL_DOWN(pin);
 	gpio->pupdr = tmp;
+#endif
+
+#ifdef STM32F10X
+	uint32_t cnf = 0;
+	uint32_t mod = 0; 
+
+	switch (mode) {
+	case ALT_FUNC:
+		cnf |= 0x2;
+		/* Fall through */
+	case OUTPUT:
+		if (opt & OPEN_DRAIN)
+			cnf |= 0x1;
+
+		switch (OPT_SPEED(opt)) {
+		case SPEED_LOW:
+			mod = 0x2;
+			break;
+		case SPEED_MED:
+		case SPEED_FAST:
+			mod = 0x1;
+			break;
+		case SPEED_HIGH:
+			mod = 0x3;
+			break;
+		}
+		break;
+	case INPUT:
+		if (opt & PULL_UP) {
+			cnf = 0x2;
+			gpio->odr |= 1 << pin;
+		} else if (opt & PULL_DOWN) {
+			cnf = 0x2;
+			gpio->odr &= ~(1 << pin);
+		} else
+			cnf = 0x1;
+		mod = 0x0;
+		break;
+	case ANALOG:
+		cnf = 0x0;
+		mod = 0x0;
+		break;
+	}
+
+	if (pin < 8) {
+		gpio->crl &= ~(0xf << (pin * 4));
+		gpio->crl |= ((cnf << 2) | mod) << (pin * 4);
+	} else {
+		gpio->crh &= ~(0xf << ((pin - 8) * 4));
+		gpio->crh |= ((cnf << 2) | mod) << ((pin - 8) * 4);
+	}
+
+#endif
 
 }
 
+#ifdef STM32F2X
 void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;
@@ -118,4 +180,5 @@ void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
 		gpio->afrh = tmp;
 	}
 }
+#endif
 

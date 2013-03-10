@@ -29,6 +29,8 @@
 #define ADC6_GPIO STM32F_GPIOA
 #define ADC6_PORT 6
 
+#ifdef STM32F2X
+
 /***********************************************************
   DMA Configuration
  ***********************************************************/
@@ -220,4 +222,5 @@ void supv_sync(void)
 }
 #endif
 
+#endif
 

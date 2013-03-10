@@ -45,7 +45,7 @@
 #include <stm32f/stm32f-rtc.h>
 #include <stm32f/stm32f-spi.h>
 #include <stm32f/stm32f-eth.h>
-#include <stm32f/stm32f-otg_fs.h>
+#include <stm32f/stm32f-usb.h>
 #include <stm32f/stm32f-fsmc.h>
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>
@@ -84,6 +84,7 @@
 #define STM32F_BASE_BKP     0x40006c00
 #define STM32F_BASE_CAN2    0x40006800
 #define STM32F_BASE_CAN1    0x40006400
+#define STM32F_BASE_USB     0x40005c00
 #define STM32F_BASE_I2C2    0x40005800
 #define STM32F_BASE_I2C1    0x40005400
 #define STM32F_BASE_UART5   0x40005000
@@ -108,12 +109,13 @@
 
 #define STM32F_IRQ_WWDG 0 /* Window WatchDog Interrupt */
 #define STM32F_IRQ_PVD 1 /* PVD through EXTI Line detection Interrupt */
-#define STM32F_IRQ_TAMP_STAMP 2 /* Tamper and TimeStamp interrupts through the EXTI line */
+#define STM32F_IRQ_TAMPER 2 /* Tamper interrupts through the EXTI line */
 #define STM32F_IRQ_RTC_WKUP 3 /* RTC Wakeup interrupt through the EXTI line */
 #define STM32F_IRQ_FLASH 4 /* FLASH global Interrupt */
 #define STM32F_IRQ_RCC 5 /* RCC global Interrupt */
 #define STM32F_IRQ_EXTI0 6 /* EXTI Line0 Interrupt */
 #define STM32F_IRQ_EXTI1 7 /* EXTI Line1 Interrupt */
+
 #define STM32F_IRQ_EXTI2 8 /* EXTI Line2 Interrupt */
 #define STM32F_IRQ_EXTI3 9 /* EXTI Line3 Interrupt */
 #define STM32F_IRQ_EXTI4 10 /* EXTI Line4 Interrupt */
@@ -122,14 +124,18 @@
 #define STM32F_IRQ_DMA1_STREAM2 13 /* DMA1 Stream 2 global Interrupt */
 #define STM32F_IRQ_DMA1_STREAM3 14 /* DMA1 Stream 3 global Interrupt */
 #define STM32F_IRQ_DMA1_STREAM4 15 /* DMA1 Stream 4 global Interrupt */
+
 #define STM32F_IRQ_DMA1_STREAM5 16 /* DMA1 Stream 5 global Interrupt */
 #define STM32F_IRQ_DMA1_STREAM6 17 /* DMA1 Stream 6 global Interrupt */
-#define STM32F_IRQ_ADC 18 /* ADC1, ADC2 and ADC3 global Interrupts */
+#define STM32F_IRQ_ADC 18 /* ADC1 and ADC2 global Interrupts */
+#define STM32F_IRQ_USB_HP 19 /* USB High Priority */
 #define STM32F_IRQ_CAN1_TX 19 /* CAN1 TX Interrupt */
+#define STM32F_IRQ_USB_LP 20 /* USB Low Priority */
 #define STM32F_IRQ_CAN1_RX0 20 /* CAN1 RX0 Interrupt */
 #define STM32F_IRQ_CAN1_RX1 21 /* CAN1 RX1 Interrupt */
 #define STM32F_IRQ_CAN1_SCE 22 /* CAN1 SCE Interrupt */
 #define STM32F_IRQ_EXTI9_5 23 /* External Line[9:5] Interrupts */
+
 /* TIM1 Break interrupt and TIM9 global interrupt */
 #define STM32F_IRQ_TIM1_BRK 24 /* TIM1 Break interrupt  */
 #define STM32F_IRQ_TIM9 24 /* TIM9 global interrupt */
@@ -165,7 +171,7 @@
 #define STM32F_IRQ_TIM8_TRG_COM 45 /* TIM8 Trigger and Commutation Interrupt */
 #define STM32F_IRQ_TIM14 45 /* TIM14 global interrupt */
 #define STM32F_IRQ_TIM8_CC 46 /* TIM8 Capture Compare Interrupt */
-#define STM32F_IRQ_DMA1_STREAM7 47 /* DMA1 Stream7 Interrupt */
+
 #define STM32F_IRQ_FSMC 48 /* FSMC global Interrupt */
 #define STM32F_IRQ_SDIO 49 /* SDIO global Interrupt */
 #define STM32F_IRQ_TIM5 50 /* TIM5 global Interrupt */
@@ -182,35 +188,14 @@
 #define STM32F_IRQ_DMA2_STREAM1 57 /* DMA2 Stream 1 global Interrupt */
 #define STM32F_IRQ_DMA2_STREAM2 58 /* DMA2 Stream 2 global Interrupt */
 #define STM32F_IRQ_DMA2_STREAM3 59 /* DMA2 Stream 3 global Interrupt */
-#define STM32F_IRQ_DMA2_STREAM4 60 /* DMA2 Stream 4 global Interrupt */
-#define STM32F_IRQ_ETH 61 /* Ethernet global Interrupt */
-#define STM32F_IRQ_ETH_WKUP 62 /* Ethernet Wakeup through EXTI line Interrupt */
-#define STM32F_IRQ_CAN2_TX 63 /* CAN2 TX Interrupt */
-#define STM32F_IRQ_CAN2_RX0 64 /* CAN2 RX0 Interrupt */
-#define STM32F_IRQ_CAN2_RX1 65 /* CAN2 RX1 Interrupt */
-#define STM32F_IRQ_CAN2_SCE 66 /* CAN2 SCE Interrupt */
-#define STM32F_IRQ_OTG_FS 67 /* USB OTG FS global Interrupt */
-#define STM32F_IRQ_DMA2_STREAM5 68 /* DMA2 Stream 5 global interrupt */
-#define STM32F_IRQ_DMA2_STREAM6 69 /* DMA2 Stream 6 global interrupt */
-#define STM32F_IRQ_DMA2_STREAM7 70 /* DMA2 Stream 7 global interrupt */
-#define STM32F_IRQ_USART6 71 /* USART6 global interrupt */
-#define STM32F_IRQ_I2C3_EV 72 /* I2C3 event interrupt */
-#define STM32F_IRQ_I2C3_ER 73 /* I2C3 error interrupt */
-#define STM32F_IRQ_OTG_HS_EP1_OUT 74 /* USB OTG HS End Point 1 Out global interrupt */
-#define STM32F_IRQ_OTG_HS_EP1_IN 75 /* USB OTG HS End Point 1 In global interrupt */
-#define STM32F_IRQ_OTG_HS_WKUP 76 /* USB OTG HS Wakeup through EXTI interrupt */
-#define STM32F_IRQ_OTG_HS 77 /* USB OTG HS global interrupt */
-#define STM32F_IRQ_DCMI 78 /* DCMI global interrupt */
-#define STM32F_IRQ_CRYP 79 /* CRYP crypto global interrupt */
-#define STM32F_IRQ_HASH_RNG 80 /* Hash and Rng global interrupt */
+
 
 #ifndef __ASSEMBLER__
 
 #define STM32F_PWR ((struct stm32f_pwr *)STM32F_BASE_PWR)
 #define STM32F_RCC ((struct stm32f_rcc *)STM32F_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
-#define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)
-#define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
+#define STM32F_USB ((struct stm32f_usb *)STM32F_BASE_USB)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
@@ -256,6 +241,9 @@
 #define STM32F_GPIOE ((struct stm32f_gpio *)STM32F_BASE_GPIOE)
 #define STM32F_GPIOF ((struct stm32f_gpio *)STM32F_BASE_GPIOF)
 #define STM32F_GPIOG ((struct stm32f_gpio *)STM32F_BASE_GPIOG)
+
+#define STM32F_AFIO ((struct stm32f_afio *)STM32F_BASE_AFIO)
+
 #define STM32F_GPIO(N) ((struct stm32f_gpio *)(STM32F_BASE_GPIOA + (N)*0x400))
 
 typedef enum {
@@ -267,6 +255,14 @@ typedef enum {
 	STM32F_GPIOF_ID,
 	STM32F_GPIOG_ID,
 } stmf32_gpio_id_t;
+
+typedef enum {
+	STM32F_UART1_ID = 0,
+	STM32F_UART2_ID, 
+	STM32F_UART3_ID,
+	STM32F_UART4_ID,
+	STM32F_UART5_ID
+} stmf32_uart_id_t;
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)

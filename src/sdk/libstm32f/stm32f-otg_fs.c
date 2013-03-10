@@ -28,6 +28,8 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
+#if STM32F2X
+
 void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs)
 {
 	DCC_LOG(LOG_INFO, "...");
@@ -334,6 +336,8 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	uint32_t depctl;
 	int i;
 
+	DCC_LOG(LOG_TRACE, "1.");
+
 	/* Disable global interrupts */
 	otg_fs->gahbcfg &= ~OTG_FS_GINTMSK; 
 
@@ -344,6 +348,8 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 
 	/* Reset after a PHY select and set Device mode */
 	stm32f_otg_fs_core_reset(otg_fs);
+
+	DCC_LOG(LOG_TRACE, "2.");
 
 	/* Restart the Phy Clock */
 	otg_fs->pcgcctl = 0;
@@ -414,6 +420,8 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	/* AHB configuration */
 	/* Enable global interrupts */
 	otg_fs->gahbcfg |= OTG_FS_PTXFELVL | OTG_FS_TXFELVL | OTG_FS_GINTMSK; 
+
+	DCC_LOG(LOG_TRACE, "3.");
 }
 
 #ifdef DEBUG
@@ -524,3 +532,5 @@ void otg_fs_fifo(struct stm32f_otg_fs * otg_fs,
 }
 
 #endif
+
+#endif /* STM32F2X */

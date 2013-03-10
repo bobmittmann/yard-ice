@@ -127,6 +127,9 @@
    0: HSI oscillator OFF
    1: HSI oscillator ON */
 
+#ifdef STM32F2X
+
+/* ------------------------------------------------------------------------- */
 /* RCC PLL configuration register */
 #define STM32F_RCC_PLLCFGR 0x04
 
@@ -215,8 +218,61 @@
    111110: PLLM = 62
    111111: PLLM = 63 */
 
+#endif /* STM32F2X */
+
+
 /* ------------------------------------------------------------------------- */
 /* RCC clock configuration register */
+
+#if defined(STM32F10X)
+
+#define STM32F_RCC_CFGR 0x04
+
+/* STM32F10x RCC clock configuration register */
+
+#define RCC_MCO_SYSCLK (0x4 << 24)
+#define RCC_MCO_HSI    (0x5 << 24)
+#define RCC_MCO_HSE    (0x6 << 24)
+#define RCC_MCO_PLL    (0x7 << 24)
+
+#define RCC_USBPRE     (1 << 22)
+
+#define RCC_PLLMUL_MASK   (0x0f << 18)
+#define RCC_PLLMUL(M) ((((M) - 2) & 0x0f) << 18)
+
+#define RCC_PLLXTPRE      (1 << 17)
+
+#define RCC_PLLSRC     (1 << 16)
+#define RCC_PLLSRC_HSI (0 << 16)
+#define RCC_PLLSRC_HSE (1 << 16)
+
+#define RCC_ADCPRE   (0x3 << 14)
+#define RCC_ADCPRE_2 (0x0 << 14)
+#define RCC_ADCPRE_4 (0x1 << 14)
+#define RCC_ADCPRE_6 (0x2 << 14)
+#define RCC_ADCPRE_8 (0x3 << 14)
+
+#define RCC_PPRE2    (0x7 << 11)
+#define RCC_PPRE2_1  (0x0 << 11)
+#define RCC_PPRE2_2  (0x4 << 11)
+#define RCC_PPRE2_4  (0x5 << 11)
+#define RCC_PPRE2_8  (0x6 << 11)
+#define RCC_PPRE2_16 (0x7 << 11)
+#define RCC_PPRE2_GET(CFGR) (((CFGR) >> 11) 0x7)
+
+#define RCC_PPRE1    (0x7 << 8)
+#define RCC_PPRE1_1  (0x0 << 8)
+#define RCC_PPRE1_2  (0x4 << 8)
+#define RCC_PPRE1_4  (0x5 << 8)
+#define RCC_PPRE1_8  (0x6 << 8)
+#define RCC_PPRE1_16 (0x7 << 8)
+#define RCC_PPRE1_GET(CFGR) (((CFGR) >> 8) 0x7)
+
+#endif /*STM32F10X */
+
+
+#ifdef STM32F2X
+
 #define STM32F_RCC_CFGR 0x08
 
 /* Microcontroller clock output 2 */
@@ -313,6 +369,7 @@
 #define RCC_PPRE2_4 (0x5 << 13)
 #define RCC_PPRE2_8 (0x6 << 13)
 #define RCC_PPRE2_16 (0x7 << 13)
+#define RCC_PPRE2_GET(CFGR) (((CFGR) >> 13) 0x7)
 /* Set and cleared by software to control APB high-speed clock division factor.
    Caution: The software has to set these bits correctly not to exceed 
    60 MHz on this domain.
@@ -331,6 +388,7 @@
 #define RCC_PPRE1_4 (0x5 << 10)
 #define RCC_PPRE1_8 (0x6 << 10)
 #define RCC_PPRE1_16 (0x7 << 10)
+#define RCC_PPRE1_GET(CFGR) (((CFGR) >> 10) 0x7)
 /* Set and cleared by software to control APB low-speed clock division factor.
    Caution: The software has to set these bits correctly not to exceed 
    30 MHz on this domain.
@@ -341,6 +399,8 @@
    101: AHB clock divided by 4
    110: AHB clock divided by 8
    111: AHB clock divided by 16 */
+
+#endif /* STM32F2X */
 
 /* AHB prescaler */
 #define RCC_HPRE (0xf << 4)
@@ -353,6 +413,8 @@
 #define RCC_HPRE_128 (0xd << 4)
 #define RCC_HPRE_256 (0xe << 4)
 #define RCC_HPRE_512 (0xf << 4)
+#define RCC_HPRE_GET(CFGR) (((CFGR) >> 4) 0xf)
+
 /* Set and cleared by software to control AHB clock division factor.
    Caution: The clocks are divided with the new prescaler factor from 1 
    to 16 AHB cycles after HPRE write.
@@ -394,6 +456,9 @@
    10: PLL selected as system clock
    11: not allowed */
 
+
+
+#ifdef STM32F2X
 
 /* ------------------------------------------------------------------------- */
 /* RCC AHB1 peripheral clock register */
@@ -1420,10 +1485,396 @@
 /* [5..0] Reserved, always read as 0. */
 
 
+#endif /* STM32F2X */
+
+
+
+#ifdef STM32F10X
+
+/* ------------------------------------------------------------------------- */
+/* AHB peripheral clock enable register */
+#define STM32F_RCC_AHBENR 0x14
+
+/* Bit 10 - SDIO clock enable */
+#define RCC_SDIOEN (1 << 10)
+/* 
+Set and cleared by software.
+0: SDIO clock disabled
+1: SDIO clock enabled
+Bits 9
+Reserved, always read as 0. */
+
+/* Bit 8 - FSMC clock enable */
+#define RCC_FSMCEN (1 << 8)
+/* 
+Set and cleared by software.
+0: FSMC clock disabled
+1: FSMC clock enabled
+Bit 7
+Reserved, always read as 0. */
+
+/* Bit 6 - CRC clock enable */
+#define RCC_CRCEN (1 << 6)
+/* 
+Set and cleared by software.
+0: CRC clock disabled
+1: CRC clock enabled */
+
+/* Bit 5 Reserved, must be kept at reset value. */
+
+
+/* Bit 4 - FLITF clock enable */
+#define RCC_FLITFEN (1 << 4)
+/* 
+Set and cleared by software to disable/enable FLITF clock during Sleep mode.
+0: FLITF clock disabled during Sleep mode
+1: FLITF clock enabled during Sleep mode */
+
+/* Bit 3 Reserved, must be kept at reset value. */
+
+
+/* Bit 2 - SRAM interface clock enable */
+#define RCC_SRAMEN (1 << 2)
+/* 
+Set and cleared by software to disable/enable SRAM interface clock during Sleep mode.
+0: SRAM interface clock disabled during Sleep mode.
+1: SRAM interface clock enabled during Sleep mode */
+
+/* Bit 1 - DMA2 clock enable */
+#define RCC_DMA2EN (1 << 1)
+/* 
+Set and cleared by software.
+0: DMA2 clock disabled
+1: DMA2 clock enabled */
+
+/* Bit 0 - DMA1 clock enable */
+#define RCC_DMA1EN (1 << 0)
+/* 
+Set and cleared by software.
+0: DMA1 clock disabled
+1: DMA1 clock enabled */
+
+/* APB2 peripheral clock enable register */
+#define STM32F_RCC_APB2ENR 0x18
+
+/* [31..22] Reserved, must be kept at reset value. */
+
+
+/* Bit 21 - TIM11 timer clock enable */
+#define RCC_TIM11EN (1 << 21)
+/* 
+Set and cleared by software.
+0: TIM11 timer clock disabled
+1: TIM11 timer clock enabled */
+
+/* Bit 20 - TIM10 timer clock enable */
+#define RCC_TIM10EN (1 << 20)
+/* 
+Set and cleared by software.
+0: TIM10 timer clock disabled
+1: TIM10 timer clock enabled */
+
+/* Bit 19 - TIM9 timer clock enable */
+#define RCC_TIM9EN (1 << 19)
+/* 
+Set and cleared by software.
+0: TIM9 timer clock disabled
+1: TIM9 timer clock enabled */
+
+/* [18..16] Reserved, always read as 0. */
+
+
+/* Bit 15 - ADC3 interface clock enable */
+#define RCC_ADC3EN (1 << 15)
+/* 
+Set and cleared by software.
+0: ADC3 interface clock disabled
+1: ADC3 interface clock enabled */ 
+
+/* Bit 14 - USART1 clock enable */
+#define RCC_USART1EN (1 << 14)
+/* 
+Set and cleared by software.
+0: USART1 clock disabled
+1: USART1 clock enabled */
+
+/* Bit 13 - TIM8 Timer clock enable */
+#define RCC_TIM8EN (1 << 13)
+/* 
+Set and cleared by software.
+0: TIM8 timer clock disabled
+1: TIM8 timer clock enabled */
+
+/* Bit 12 - SPI1 clock enable */
+#define RCC_SPI1EN (1 << 12)
+/* 
+Set and cleared by software.
+0: SPI1 clock disabled
+1: SPI1 clock enabled */
+
+/* Bit 11 - TIM1 timer clock enable */
+#define RCC_TIM1EN (1 << 11)
+/* 
+Set and cleared by software.
+0: TIM1 timer clock disabled
+1: TIM1 timer clock enabled */
+
+/* Bit 10 - ADC 2 interface clock enable */
+#define RCC_ADC2EN (1 << 10)
+/* 
+Set and cleared by software.
+0: ADC 2 interface clock disabled
+1: ADC 2 interface clock enabled */
+
+/* Bit 9 - ADC 1 interface clock enable */
+#define RCC_ADC1EN (1 << 9)
+/* 
+Set and cleared by software.
+0: ADC 1 interface disabled
+1: ADC 1 interface clock enabled */
+
+/* Bit 8 - IO port G clock enable */
+#define RCC_IOPGEN (1 << 8)
+/* 
+Set and cleared by software.
+0: IO port G clock disabled
+1: IO port G clock enabled */
+
+/* Bit 7 - IO port F clock enable */
+#define RCC_IOPFEN (1 << 7)
+/* 
+Set and cleared by software.
+0: IO port F clock disabled
+1: IO port F clock enabled */
+
+/* Bit 6 - IO port E clock enable */
+#define RCC_IOPEEN (1 << 6)
+/* 
+Set and cleared by software.
+0: IO port E clock disabled
+1: IO port E clock enabled */
+
+/* Bit 5 - IO port D clock enable */
+#define RCC_IOPDEN (1 << 5)
+/* 
+Set and cleared by software.
+0: IO port D clock disabled
+1: IO port D clock enabled */
+
+/* Bit 4 - IO port C clock enable */
+#define RCC_IOPCEN (1 << 4)
+/* 
+Set and cleared by software.
+0: IO port C clock disabled
+1: IO port C clock enabled */
+
+/* Bit 3 - IO port B clock enable */
+#define RCC_IOPBEN (1 << 3)
+/* 
+Set and cleared by software.
+0: IO port B clock disabled
+1: IO port B clock enabled */
+
+/* Bit 2 - IO port A clock enable */
+#define RCC_IOPAEN (1 << 2)
+/* 
+Set and cleared by software.
+0: IO port A clock disabled
+1: IO port A clock enabled */
+
+/* Bit 1 Reserved, must be kept at reset value. */
+
+/* Bit 0 - Alternate function IO clock enable */
+#define RCC_AFIOEN (1 << 0)
+/* 
+Set and cleared by software.
+0: Alternate Function IO clock disabled
+1: Alternate Function IO clock enabled */
+
+/* APB1 peripheral clock enable register */
+#define STM32F_RCC_APB1ENR 0x1c
+
+/* [31..30] Reserved, must be kept at reset value. */
+
+/* Bit 29 - DAC interface clock enable */
+#define RCC_DACEN (1 << 29)
+/* 
+Set and cleared by software.
+0: DAC interface clock disabled
+1: DAC interface clock enable */
+
+/* Bit 28 - Power interface clock enable */
+#define RCC_PWREN (1 << 28)
+/* 
+Set and cleared by software.
+0: Power interface clock disabled
+1: Power interface clock enable */
+
+/* Bit 27 - Backup interface clock enable */
+#define RCC_BKPEN (1 << 27)
+/* 
+Set and cleared by software.
+0: Backup interface clock disabled
+1: Backup interface clock enabled */
+
+/* Bit 26 Reserved, must be kept at reset value. */
+
+
+/* Bit 25 - CAN clock enable */
+#define RCC_CANEN (1 << 25)
+/* 
+Set and cleared by software.
+0: CAN clock disabled
+1: CAN clock enabled */
+
+/* Bit 24 Reserved, always read as 0. */
+
+/* Bit 23 - USB clock enable */
+#define RCC_USBEN (1 << 23)
+/* 
+Set and cleared by software.
+0: USB clock disabled
+1: USB clock enabled */
+
+/* Bit 22 - I2C2 clock enable */
+#define RCC_I2C2EN (1 << 22)
+/* 
+Set and cleared by software.
+0: I2C2 clock disabled
+1: I2C2 clock enabled */
+
+/* Bit 21 - I2C1 clock enable */
+#define RCC_I2C1EN (1 << 21)
+/* 
+Set and cleared by software.
+0: I2C1 clock disabled
+1: I2C1 clock enabled */
+
+/* Bit 20 - USART5 clock enable */
+#define RCC_UART5EN (1 << 20)
+/* 
+Set and cleared by software.
+0: USART5 clock disabled
+1: USART5 clock enabled */
+
+/* Bit 19 - USART4 clock enable */
+#define RCC_UART4EN (1 << 19)
+/* 
+Set and cleared by software.
+0: USART4 clock disabled
+1: USART4 clock enabled */
+
+/* Bit 18 - USART3 clock enable */
+#define RCC_USART3EN (1 << 18)
+/* 
+Set and cleared by software.
+0: USART3 clock disabled
+1: USART3 clock enabled */
+
+/* Bit 17 - USART2 clock enable */
+#define RCC_USART2EN (1 << 17)
+/* 
+Set and cleared by software.
+0: USART2 clock disabled
+1: USART2 clock enabled */
+
+/* Bit 16 Reserved, always read as 0. */
+
+/* Bit 15 - SPI 3 clock enable */
+#define RCC_SPI3EN (1 << 15)
+/* 
+Set and cleared by software.
+0: SPI 3 clock disabled
+1: SPI 3 clock enabled */
+
+/* Bit 14 - SPI2 clock enable */
+#define RCC_SPI2EN (1 << 14)
+/* 
+Set and cleared by software.
+0: SPI2 clock disabled
+1: SPI2 clock enabled */
+
+/* [13..12] Reserved, must be kept at reset value. */
+
+/* Bit 11 - Window watchdog clock enable */
+#define RCC_WWDGEN (1 << 11)
+/* 
+Set and cleared by software.
+0: Window watchdog clock disabled
+1: Window watchdog clock enabled */
+
+/* [10..9] Reserved, must be kept at reset value. */
+
+/* Bit 8 - TIM14 timer clock enable */
+#define RCC_TIM14EN (1 << 8)
+/* 
+Set and cleared by software.
+0: TIM14 clock disabled
+1: TIM14 clock enabled */
+
+/* Bit 7 - TIM13 timer clock enable */
+#define RCC_TIM13EN (1 << 7)
+/* 
+Set and cleared by software.
+0: TIM13 clock disabled
+1: TIM13 clock enabled */
+
+/* Bit 6 - TIM12 timer clock enable */
+#define RCC_TIM12EN (1 << 6)
+/* 
+Set and cleared by software.
+0: TIM12 clock disabled
+1: TIM12 clock enabled */
+
+/* Bit 5 - TIM7 timer clock enable */
+#define RCC_TIM7EN (1 << 5)
+/* 
+Set and cleared by software.
+0: TIM7 clock disabled
+1: TIM7 clock enabled */
+
+/* Bit 4 - TIM6 timer clock enable */
+#define RCC_TIM6EN (1 << 4)
+/* 
+Set and cleared by software.
+0: TIM6 clock disabled
+1: TIM6 clock enabled */
+
+/* Bit 3 - TIM5 timer clock enable */
+#define RCC_TIM5EN (1 << 3)
+/* 
+Set and cleared by software.
+0: TIM5 clock disabled
+1: TIM5 clock enabled */
+
+/* Bit 2 - TIM4 timer clock enable */
+#define RCC_TIM4EN (1 << 2)
+/* 
+Set and cleared by software.
+0: TIM4 clock disabled
+1: TIM4 clock enabled */
+
+/* Bit 1 - TIM3 timer clock enable */
+#define RCC_TIM3EN (1 << 1)
+/* 
+Set and cleared by software.
+0: TIM3 clock disabled
+1: TIM3 clock enabled */
+
+/* Bit 0 - TIM2 timer clock enable */
+#define RCC_TIM2EN (1 << 0)
+/* 
+Set and cleared by software.
+0: TIM2 clock disabled
+1: TIM2 clock enabled */
+
+#endif /* STM32F10X */
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
 
+#ifdef STM32F2X
 struct stm32f_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t pllcfgr; 
@@ -1456,9 +1907,28 @@ struct stm32f_rcc {
 	volatile uint32_t sscgr;
 	volatile uint32_t plli2scfgr;
 };
+#endif /* STM32F2X */
+
+#ifdef STM32F10X
+struct stm32f_rcc {
+	volatile uint32_t cr; /* Control Register */
+	volatile uint32_t cfgr; 
+	volatile uint32_t cir; 
+	volatile uint32_t apb2rstr;
+
+	volatile uint32_t apb1rstr;
+	volatile uint32_t ahbenr;
+	volatile uint32_t apb2enr;
+	volatile uint32_t apb1enr;
+
+	volatile uint32_t bdcr;
+	volatile uint32_t csr;
+	volatile uint32_t ahbstr;
+	volatile uint32_t cfgr2; 
+};
+#endif /* STM32F10X */
 
 #endif /* __ASSEMBLER__ */
-
 
 #endif /* __STM32F_RCC_H__ */
 

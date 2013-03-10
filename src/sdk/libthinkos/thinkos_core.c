@@ -400,5 +400,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 }
 
 const char * thinkos_svc_link = thinkos_svc_nm;
+
+#if THINKOS_ENABLE_EXCEPT
 const char * thinkos_execpt_link = thinkos_except_nm;
+#endif
 

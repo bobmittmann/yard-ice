@@ -280,6 +280,15 @@ typedef enum {
 	STM32F_GPIOI_ID
 } stmf32_gpio_id_t;
 
+typedef enum {
+	STM32F_UART1_ID = 0,
+	STM32F_UART2_ID, 
+	STM32F_UART3_ID,
+	STM32F_UART4_ID,
+	STM32F_UART5_ID,
+	STM32F_UART6_ID
+} stmf32_uart_id_t;
+
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
 

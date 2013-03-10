@@ -38,44 +38,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define STM32F_HSI_HZ 16000000
-#define STM32F_HSE_HZ 24000000
-#define STM32F_PLL_HZ 120000000
-#define STM32F_APB1_HZ 30000000
-#define STM32F_APB2_HZ 60000000
-
-#define STM32F_AHB_HZ 120000000
+extern const uint32_t stm32f_apb1_hz;
+extern const uint32_t stm32f_apb2_hz;
+extern const uint32_t stm32f_ahb_hz;
 
 #ifndef __ASSEMBLER__
-
-typedef enum {
-	STM32F_UART1_ID = 0,
-	STM32F_UART2_ID, 
-	STM32F_UART3_ID,
-	STM32F_UART4_ID,
-	STM32F_UART5_ID,
-	STM32F_UART6_ID
-} stmf32_uart_id_t;
-
-
-#if 0
-enum {
-	OUT_PUSH_PULL = 0,
-	OUT_OPEN_DRAIN = 1
-};
-
-enum {
-	PULL_UP = 1,
-	PULL_DOWN = 2
-};
-
-enum {
-	SPEED_LOW = 0,
-	SPEED_MED = 1,
-	SPEED_FAST = 2,
-	SPEED_HIGH = 3
-};
-#endif
 
 enum {
 	INPUT = 0,
@@ -121,13 +88,13 @@ typedef struct stm32f_gpio_io gpio_io_t;
 /* set output */
 static inline void gpio_set(gpio_io_t __io) {
 	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
-	gpio->bsrrl = GPIO_SET(__io.pin);
+	gpio->bsr = GPIO_SET(__io.pin);
 };
 
 /* clear output */
 static inline void gpio_clr(gpio_io_t __io) {
 	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
-	gpio->bsrrh = GPIO_RESET(__io.pin);
+	gpio->brr = GPIO_RESET(__io.pin);
 };
 
 /* pin status */
@@ -168,6 +135,14 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio, unsigned int pin,
 /* Alternate function selection */
 void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af);
 
+static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
+								 unsigned int __opt) {
+	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+
+	stm32f_gpio_clock_en(gpio);
+	stm32f_gpio_mode(gpio, __io.pin, __mode, __opt);
+}
+
 
 /*---------------------------------------------------------------------
  * USART 
@@ -190,10 +165,12 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
 
 int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
 
+void stm32f_usart_enable(struct stm32f_usart * us);
+
+void stm32f_usart_disable(struct stm32f_usart * us);
+
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
-
-int stm32f_usart_disable(struct stm32f_usart * usart);
 
 
 /*---------------------------------------------------------------------
@@ -222,17 +199,10 @@ const struct file stm32f_usart5_file;
 }
 #endif
 
-static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
-								 unsigned int __opt) {
-	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
-
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, __io.pin, __mode, __opt);
-}
-
 /*---------------------------------------------------------------------
  * USB OTG Full Speed
  *---------------------------------------------------------------------*/
+struct stm32f_otg_fs;
 
 void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs);
 
@@ -262,6 +232,8 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 
 void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
 				 unsigned int addr, unsigned int len);
+
+
 
 #endif /* __ASSEMBLER__ */
 
