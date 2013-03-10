@@ -19,14 +19,16 @@
 # http://www.gnu.org/
 
 MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+BASEDIR := $(MKDIR)/..
+TOOLSDIR = $(realpath $(BASEDIR)/../tools)
+LDDIR = $(realpath $(BASEDIR)/ld)
 
-BASEDIR := $(realpath $(MKDIR)/..)
+export MKDIR LDDIR TOOLSDIR
 
-TOOLSDIR = $(BASEDIR)/../tools
-
-export MKDIR TOOLSDIR
-
+ifndef MACH 
 MACH = stm32f207
+endif
+
 ARCH = cm3
 CPU = cortex-m3
 CDEFS += STM32F207 "CM3_SYSTICK_CLK_HZ=15000000" 

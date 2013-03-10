@@ -120,6 +120,7 @@ __attribute__((always_inline)) __thinkos_ev_raise(int ev) {
 	}
 }
 
+#if (THINKOS_IRQ_MAX  > 0)
 /* set the interrupt priority */
 static inline void 
 __attribute__((always_inline)) __thinkos_irq_pri_set(unsigned int irq, unsigned int priority) {
@@ -145,6 +146,8 @@ __attribute__((always_inline)) __thinkos_irq_wait(int irq) {
 	__thinkos_critical_exit();
 	/* the scheduler will run at this point */
 }
+
+#endif /* THINKOS_IRQ_MAX  > 0 */
 
 #ifdef __cplusplus
 }

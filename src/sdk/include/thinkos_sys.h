@@ -96,8 +96,12 @@ struct thinkos_context {
 #define THINKOS_ENABLE_JOIN 1
 #endif
 
-#ifndef THINKOS_ENABLE_WFI
-#define THINKOS_ENABLE_WFI 0
+#ifndef THINKOS_ENABLE_IDLE_WFI
+#define THINKOS_ENABLE_IDLE_WFI 0
+#endif
+
+#ifndef THINKOS_ENABLE_IDLE_SNAPSHOT
+#define THINKOS_ENABLE_IDLE_SNAPSHOT 1
 #endif
 
 #ifndef THINKOS_ENABLE_PAUSE
@@ -170,6 +174,10 @@ struct thinkos_context {
 
 #ifndef THINKOS_ENABLE_DEADLOCK_CHECK
 #define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#endif
+
+#ifndef THINKOS_ENABLE_EXCEPTIONS
+#define THINKOS_ENABLE_EXCEPTIONS 0
 #endif
 
 /* timed calls depends on clock */

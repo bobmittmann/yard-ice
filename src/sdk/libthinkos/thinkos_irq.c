@@ -25,6 +25,8 @@
 
 #include <stdio.h>
 
+#if THINKOS_IRQ_MAX > 0
+
 void cm3_default_isr(int irq) 
 {
 	int th;
@@ -58,4 +60,5 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	__thinkos_irq_wait(irq);
 }
 
+#endif
 

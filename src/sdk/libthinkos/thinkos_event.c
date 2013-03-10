@@ -63,10 +63,11 @@ void thinkos_ev_free_svc(int32_t * arg)
 void thinkos_ev_wait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
+
 	if (ev >= THINKOS_EVENT_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
@@ -93,11 +94,12 @@ void thinkos_ev_wait_svc(int32_t * arg)
 void thinkos_ev_timedwait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
+
 	if (ev >= THINKOS_EVENT_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
@@ -128,10 +130,11 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 void thinkos_ev_raise_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int ev = wq - THINKOS_EVENT_BASE;
+
 	if (ev >= THINKOS_EVENT_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;

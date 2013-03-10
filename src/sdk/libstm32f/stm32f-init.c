@@ -22,6 +22,9 @@
 
 #include <sys/stm32f.h>
 
+#define ENABLE_DEBUG_INIT 0
+
+#if ENABLE_DEBUG_INIT
 void debug_init(void)
 {
 	int i;
@@ -50,6 +53,8 @@ void debug_init(void)
 		__NOP();
 
 }
+#endif
+
 
 /* Hardware initialization */
 
@@ -77,7 +82,9 @@ void _init(void)
 	/* Make sure we are using the internal oscillator */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
 
+#if ENABLE_DEBUG_INIT
 	debug_init();
+#endif
 
 	/* Enable external oscillator */
 	cr = rcc->cr;

@@ -44,11 +44,20 @@ struct thinkos_rt thinkos_rt;
    stack. */
 struct thinkos_except_and_idle thinkos_idle;
 
+#if THINKOS_ENABLE_IDLE_SNAPSHOT
+uint32_t thinkos_idle_val(void)
+{
+	return thinkos_idle.snapshot.val;
+}
+#endif
+
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
 	for (;;) {
+#if THINKOS_ENABLE_IDLE_SNAPSHOT
 		asm volatile ("ldr  r12, [lr, #0]\n"); /* update the snapshot value */
-#if THINKOS_ENABLE_WFI
+#endif
+#if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
 #endif
 	}
@@ -255,7 +264,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 	int self;
+#if	(THINKOS_IRQ_MAX > 0)
 	int irq;
+#endif
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -287,11 +298,13 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	   regular interrupts (higher number) */
 	cm3_except_pri_set(CM3_EXCEPT_PENDSV, SCHED_PRIORITY);
 
+#if	(THINKOS_IRQ_MAX > 0)
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
 	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
 		cm3_irq_pri_set(irq, IRQ_PRIORITY_REGULAR);
 		thinkos_rt.irq_th[irq] = -1;
 	}
+#endif
 
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
@@ -307,8 +320,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
+#if THINKOS_ENABLE_TIMESHARE
 	thinkos_rt.sched_idle_val = 0;
 	thinkos_rt.sched_idle_pri = 0;
+#endif
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 #if THINKOS_ENABLE_CLOCK
@@ -329,6 +344,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if !THINKOS_ENABLE_MUTEX_ALLOC
+#if (THINKOS_MUTEX_MAX > 0)
 	/* initialize the mutex locks */
 	{
 		int i;
@@ -336,6 +352,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		for (i = 0; i < THINKOS_MUTEX_MAX; i++) 
 			thinkos_rt.lock[i] = -1;
 	}
+#endif
 #endif
 
 	/* initialize the main thread */ 
