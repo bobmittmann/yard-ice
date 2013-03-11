@@ -73,7 +73,7 @@ static void adc_tim2_init(uint32_t freq)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((2 * STM32F_APB1_HZ) + (freq / 2)) / freq;
+	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */

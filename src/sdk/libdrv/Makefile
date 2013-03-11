@@ -27,7 +27,7 @@ LIB_STATIC = drv
 USB_CFILES = usb-cdc.c usb-cdc_fops.c cdc_acm.c 
 
 CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c \
-		 $(addprefix usb-cdc/,$(USB_CFILES))
+		 stm32f-usb_dev.c $(addprefix usb-cdc/,$(USB_CFILES))
 
 override INCPATH += ./include ../libtcpip/include
 

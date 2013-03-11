@@ -109,6 +109,7 @@ int stm32f_serial_init(struct stm32f_serial_dev * dev)
 int stm32f_serial_dma_recv(struct stm32f_serial_dev * dev, char ** buf)
 {
 	buf = dev->rx.buf[dev->rx.idx++ & 1];
+	return 0;
 }
 
 
@@ -124,12 +125,8 @@ void stm32f_dma2_stream0_isr(void)
 	dma->lifcr = DMA_CTCIF0;
 
 	/* get a pointer to the last filled DMA transfer buffer */
-	data = adc_buf[adc_dma_cnt++ & 1];
+//	data = adc_buf[adc_dma_cnt++ & 1];
 
-	/* scale and sotore the samples */
-	adc_vin = (data[0] * ADC_INPUT_6_SCALE) / 4096;
-	adc_vbat = (data[1] * ADC_INPUT_6_SCALE) / 4096;
-	adc_temp = (data[2] * ADC_TEMP_SENS_SCALE) / 4096;
 
 #if (ENABLE_ADC_SYNC)
 	__thinkos_ev_raise(ev_adc_dma);
