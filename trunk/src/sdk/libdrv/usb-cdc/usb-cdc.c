@@ -245,10 +245,6 @@ void usb_device_init(struct usb_cdc_dev * dev)
 	rcc->ahb2enr |= RCC_OTGFSEN;
 #endif
 
-#ifdef STM32F10X
-	rcc->apb1enr |= RCC_USBEN;
-#endif
-
 	DCC_LOG(LOG_TRACE, "Initializing USB device...");
 	/* Initialize as a device */
 	stm32f_otg_fs_device_init(otg_fs);

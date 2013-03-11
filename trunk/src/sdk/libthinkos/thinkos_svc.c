@@ -283,6 +283,7 @@ void cm3_svc_isr(void)
 
 	default:
 		arg[0] = THINKOS_ENOSYS;
+		break;
 	}
 }
 

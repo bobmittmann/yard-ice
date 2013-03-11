@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the YARD-ICE.
  *
@@ -19,7 +19,7 @@
 
 /** 
  * @file config.h
- * @brief YARD-ICE
+ * @brief USB to Serial Converter configuration
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 

@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the YARD-ICE.
  *
@@ -29,8 +29,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <arch/cortex-m3.h>
-#include <sys/serial.h>
 #include <sys/delay.h>
+#include <sys/usb-dev.h>
+
 
 #include <thinkos.h>
 #define __THINKOS_IRQ__
@@ -38,220 +39,196 @@
 
 #include <sys/dcclog.h>
 
-#define UART_FIFO_BUF_LEN 64
-
-#define USART5_TXIE ((uint32_t *) CM3_PERIPHERAL_BITBAND_ADDR( \
-						STM32F_BASE_UART5 + STM32F_USART_CR1, 7))
-
-struct uart_fifo {
-	volatile uint32_t head;
-	volatile uint32_t tail;
-	uint8_t buf[UART_FIFO_BUF_LEN];
+struct stm32f_usb_ep {
+	uint16_t * data;
+	uint16_t * status;
 };
 
-static inline void uart_fifo_init(struct uart_fifo * fifo)
-{
-	fifo->head = 0;
-	fifo->tail = 0;
-}
-
-static inline uint8_t uart_fifo_get(struct uart_fifo * fifo)
-{
-	return fifo->buf[fifo->tail++ & (UART_FIFO_BUF_LEN - 1)];
-}
-
-static inline void uart_fifo_put(struct uart_fifo * fifo, uint8_t c)
-{
-	fifo->buf[fifo->head++ & (UART_FIFO_BUF_LEN - 1)] = c;
-}
-
-static inline bool uart_fifo_is_empty(struct uart_fifo * fifo)
-{
-	return (fifo->tail == fifo->head) ? true : false;
-}
-
-static inline bool uart_fifo_is_full(struct uart_fifo * fifo)
-{
-	return ((fifo->head - fifo->tail) == UART_FIFO_BUF_LEN) ? true : false;
-}
-
-static inline bool uart_fifo_is_half_full(struct uart_fifo * fifo)
-{
-	return ((fifo->head - fifo->tail) > (UART_FIFO_BUF_LEN / 2)) ? true : false;
-}
-
-struct uart_console_dev {
-	int8_t rx_ev;
-	int8_t tx_ev;
-	struct uart_fifo tx_fifo;
-	struct uart_fifo rx_fifo;
+struct stm32f_usb_tx_buf_desc {
+	uint16_t addr;
+	uint16_t count;
 };
 
-int uart_console_read(struct uart_console_dev * dev, char * buf, 
-				 unsigned int len, unsigned int msec)
+struct stm32f_usb_rx_buf_desc {
+	uint16_t addr;
+	uint16_t count: 9;
+	uint16_t num_block: 5;
+	uint16_t blsize: 1;
+};
+
+/* Buffer descriptor */
+struct stm32f_usb_buf_desc {
+	union {
+		struct stm32f_usb_tx_buf_desc tx;
+		struct stm32f_usb_rx_buf_desc rx;
+	};
+};
+
+/* Endpoint control */
+struct stm32f_usb_ep {
+	struct stm32f_usb_buf_desc * desc;
+	uint16_t * status;
+};
+
+/* USB Driver */
+struct stm32f_usb_drv {
+	struct stm32f_usb_ep ep[8];
+	uint8_t ep_cnt;
+};
+
+/*
+ Upon system and power-on reset, the first operation the application software should perform
+ is to provide all required clock signals to the USB peripheral and subsequently de-assert its
+ reset signal so to be able to access its registers. The whole initialization sequence is
+ hereafter described.
+ As a first step application software needs to activate register macrocell clock and de-assert
+ macrocell specific reset signal using related control bits provided by device clock
+ management logic.
+ After that, the analog part of the device related to the USB transceiver must be switched on
+ using the PDWN bit in CNTR register, which requires a special handling. This bit is intended
+ to switch on the internal voltage references that supply the port transceiver. This circuit has
+ a defined startup time (tSTARTUP specified in the datasheet) during which the behavior of the
+ USB transceiver is not defined. It is thus necessary to wait this time, after setting the PDWN
+ bit in the CNTR register, before removing the reset condition on the USB part (by clearing
+ the FRES bit in the CNTR register). Clearing the ISTR register then removes any spurious
+ pending interrupt before any other macrocell operation is enabled.
+ At system reset, the microcontroller must initialize all required registers and the packet
+ buffer description table, to make the USB peripheral able to properly generate interrupts and
+ data transfers. All registers not specific to any endpoint must be initialized according to the
+ needs of application software (choice of enabled interrupts, chosen address of packet
+ buffers, etc.). Then the process continues as for the USB reset case (see further
+ paragraph). */
+
+
+int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, struct usb_ep_info * ep, unsigned int cnt)
 {
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32f_usb_buf_desc * desc = (struct stm32f_usb_buf_desc *)STM32F_USB_PKTBUF;
+	uint32_t ep_addr = STM32F_USB_PKTBUF_SIZE;
+	uint32_t epr;
 
-	char * cp = (char *)buf;
-	int c;
-	int n = 0;
-	int th;
+	int sz;
+	int i;
+	
+	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
+	rcc->apb1enr |= RCC_USBEN;
 
-	DCC_LOG(LOG_INFO, "read");
-	th = thinkos_thread_self();
+	/* USB power ON */
+	usb->cntr &= ~USB_PDWN;
+	/* Wait tSTARTUP time ... */
+	udelay(2);
+	/* Removing the reset condition */
+	usb->cntr &= ~USB_FRES;
 
-	__thinkos_critical_enter();
-	while (uart_fifo_is_empty(&dev->rx_fifo)) {
-		DCC_LOG(LOG_INFO, "wait...");
-		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wait ...", th);
+	/* Removing any spurious pending interrupts */
+	usb->istr = 0;
+
+	/* Configure the endpoints and allocate packet buffers */
+	usb->btable = STM32F_USB_PKTBUF;
+	for (i = 0; i < cnt; i++) {
+		int blk;
+		int blsize;
+		sz = ep[i].mxpktsz;
+		if (sz > 62) {
+			blk = sz >> 4;
+			blsize = 1;
+		} else {
+			blk = sz;
+			blsize = 0;
 		}
-		__thinkos_ev_wait(dev->rx_ev);
-		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wakeup.", th);
-		}
-		DCC_LOG(LOG_INFO, "wakeup.");
-	}
-	__thinkos_critical_exit();
 
-	do {
-		if (n == len) {
-			if (!uart_fifo_is_empty(&dev->rx_fifo)) { 
-				__thinkos_ev_raise(dev->rx_ev);
+		/* round up to a multiple of 2 */
+		sz = (sz + 1) & ~1;
+		/* set the descriptor pointer */
+		drv->ep[i].desc = desc;
+		/* Set EP address */
+		epr = USB_EA_SET(ep[i].addr);
+		switch (ep[i].type)
+		{
+		case ENDPOINT_TYPE_CONTROL:
+			epr |= USB_EP_CONTROL;
+			/* allocate single buffers for TX and RX */
+			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
+
+			ep_addr -= sz;
+			desc->tx.addr = ep_addr;
+			desc->tx.count = 0;
+			desc++;
+			ep_addr -= sz;
+			desc->rx.addr = ep_addr;
+			desc->rx.count = 0;
+			desc->rx.num_block = blk;
+			desc->rx.blsize = blsize;
+			desc++;
+			break;
+
+		case ENDPOINT_TYPE_ISOCHRONOUS:
+			epr |= USB_EP_ISO | USB_EP_DBL_BUF;
+			/* allocate double buffers for TX or RX */
+			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
+			desc += 2;
+			/* FIXME: implement this */
+			break;
+
+		case ENDPOINT_TYPE_BULK:
+			epr |= USB_EP_BULK | USB_EP_DBL_BUF;
+			DCC_LOG2(LOG_TRACE, "EP[%d]: BULK -> 0x%08x", i, desc);
+			/* allocate double buffers for TX or RX */
+			ep_addr -= 2 * sz;
+			desc[0].tx.addr = ep_addr;
+			desc[0].tx.count = 0;
+			desc[1].tx.addr = ep_addr + sz;
+			desc[1].tx.count = 0;
+			if ((ep[i].addr & USB_ENDPOINT_IN) == 0) {
+				desc[0].rx.num_block = blk;
+				desc[0].rx.blsize = blsize;
+				desc[1].rx.num_block = blk;
+				desc[1].rx.blsize = blsize;
 			}
+			desc += 2;
+			break;
+
+		case ENDPOINT_TYPE_INTERRUPT:
+			epr |= USB_EP_INTERRUPT;
+			/* allocate single buffers for TX or RX */
+			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
+			drv->ep[i].desc = desc;
+			ep_addr -= sz;
+			desc->tx.addr = ep_addr;
+			desc->tx.count = 0;
+			if ((ep[i].addr & USB_ENDPOINT_IN) == 0) {
+				desc->rx.addr = ep_addr;
+				desc->rx.count = 0;
+				desc->rx.num_block = blk;
+				desc->rx.blsize = blsize;
+			}
+			desc++;
+
 			break;
 		}
-		c = uart_fifo_get(&dev->rx_fifo);
-		if (c == '\r') 
-			c = '\n';
-		cp[n++] = c;
-	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 
-
-
-	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
-
-	return n;
-}
-
-static void uart_putc(struct uart_console_dev * dev, int c)
-{
-	__thinkos_critical_enter();
-	while (uart_fifo_is_full(&dev->tx_fifo)) {
-		/* enable TX interrupt */
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_ev_wait(dev->tx_ev);
-		DCC_LOG(LOG_INFO, "wakeup");
-	}
-	__thinkos_critical_exit();
-
-	uart_fifo_put(&dev->tx_fifo, c);
-	*USART5_TXIE = 1; 
-}
-
-int uart_console_write(struct uart_console_dev * dev, const void * buf, 
-					   unsigned int len)
-{
-	char * cp = (char *)buf;
-	int c;
-	int n;
-
-	DCC_LOG1(LOG_INFO, "len=%d", len);
-
-	for (n = 0; n < len; n++) {
-		c = cp[n];
-		if (c == '\n') {
-			DCC_LOG(LOG_INFO, "CR");
-			uart_putc(dev, '\r');
-		}
-		uart_putc(dev, c);
+		usb->epr[i] = epr;
 	}
 
-	DCC_LOG1(LOG_INFO, "cnt=%d", n);
+	drv->ep_cnt = cnt;
 
-	return n;
-}
-
-int uart_console_flush(struct uart_console_dev * ctrl)
-{
 	return 0;
 }
 
-const struct fileop uart_console_ops = {
-	.write = (void *)uart_console_write,
-	.read = (void *)uart_console_read,
-	.flush = (void *)uart_console_flush,
-	.close = (void *)NULL
+/* Private USB device driver data */
+struct stm32f_usb_drv stm32f_usb_drv0;
+
+/* USB device operations */
+const struct usb_dev_ops stm32f_usb_ops = {
+	.usb_dev_init = (usb_dev_init_t)stm32f_usb_dev_init
 };
 
-struct uart_console_dev uart5_console_dev;
-
-const struct file uart5_console_file = {
-	.data = (void *)&uart5_console_dev, 
-	.op = &uart_console_ops
+/* USB device driver */
+const struct usb_dev stm32f_usb_dev = {
+	.priv = (void *)&stm32f_usb_drv0,
+	.op = &stm32f_usb_ops
 };
-
-void stm32f_uart5_isr(void)
-{
-	struct uart_console_dev * dev = &uart5_console_dev;
-	struct stm32f_usart * us = STM32F_UART5;
-	uint32_t sr;
-	int c;
-	
-	sr = us->sr;
-
-	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_INFO, "RXNE");
-		c = us->dr;
-		(void)c;
-		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
-			uart_fifo_put(&dev->rx_fifo, c);
-		} else {
-			DCC_LOG(LOG_WARNING, "RX fifo full!");
-		}
-		
-		if (uart_fifo_is_half_full(&dev->rx_fifo)) { 
-			__thinkos_ev_raise(dev->rx_ev);
-		}
-	}	
-
-	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE");
-		c = us->dr;
-		(void)c;
-		__thinkos_ev_raise(dev->rx_ev);
-	}
-
-	if (sr & USART_TXE) {
-		DCC_LOG(LOG_MSG, "TXE");
-		if (uart_fifo_is_empty(&dev->tx_fifo)) {
-			/* disable TXE interrupts */
-			*USART5_TXIE = 0; 
-			__thinkos_ev_raise(dev->tx_ev);
-		} else {
-			us->dr = uart_fifo_get(&dev->tx_fifo);
-		}
-	}
-}
-
-struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
-{
-	struct stm32f_usart * us = STM32F_UART5;
-	struct uart_console_dev * dev = &uart5_console_dev;
-
-	DCC_LOG(LOG_TRACE, "...");
-	stm32f_usart_init(us, baudrate, flags);
-
-	dev->rx_ev = thinkos_ev_alloc(); 
-	dev->tx_ev = thinkos_ev_alloc(); 
-	uart_fifo_init(&dev->tx_fifo);
-	uart_fifo_init(&dev->rx_fifo);
-
-	cm3_irq_enable(STM32F_IRQ_UART5);
-	/* enable RX interrupt */
-	us->cr1 |= USART_RXNEIE | USART_IDLEIE;
-
-	return (struct file *)&uart5_console_file;
-}
 
 
 #if 0

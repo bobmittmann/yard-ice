@@ -189,6 +189,8 @@
 #define STM32F_IRQ_DMA2_STREAM2 58 /* DMA2 Stream 2 global Interrupt */
 #define STM32F_IRQ_DMA2_STREAM3 59 /* DMA2 Stream 3 global Interrupt */
 
+#define STM32F_USB_PKTBUF_ADDR 0x40006000
+#define STM32F_USB_PKTBUF_SIZE 512
 
 #ifndef __ASSEMBLER__
 
@@ -266,6 +268,7 @@ typedef enum {
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
+#define STM32F_USB_PKTBUF ((uint32_t *)STM32F_USB_PKTBUF_ADDR)
 
 #endif /* __ASSEMBLER__ */
 

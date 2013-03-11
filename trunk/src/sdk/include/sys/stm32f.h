@@ -44,6 +44,15 @@ extern const uint32_t stm32f_ahb_hz;
 
 #ifndef __ASSEMBLER__
 
+struct stm32f_usb_drv;
+
+/*---------------------------------------------------------------------
+ * USB Device
+ *---------------------------------------------------------------------*/
+
+extern struct stm32f_usb_drv stm32f_usb_device;
+
+
 enum {
 	INPUT = 0,
 	OUTPUT,
@@ -171,6 +180,10 @@ void stm32f_usart_disable(struct stm32f_usart * us);
 
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
+
+/*---------------------------------------------------------------------
+ * USB Device
+ *---------------------------------------------------------------------*/
 
 
 /*---------------------------------------------------------------------

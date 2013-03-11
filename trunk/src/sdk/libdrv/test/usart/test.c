@@ -75,11 +75,11 @@ int usb_ctrl_task(struct vcom * vcom)
 	while (1) {
 		usb_cdc_ctrl_event_wait(usb, 0);
 		usb_cdc_state_get(usb, &state);
-		if (state.cfg != prev_state.cfg) {
+		if (memcmp(&state.cfg, &prev_state.cfg, sizeof(struct serial_config)) != 0) {
 			DCC_LOG1(LOG_TRACE, "[%d] config changed.", thinkos_thread_self());
 			prev_state.cfg = state.cfg;
 		}
-		if (state.ctrl != prev_state.ctrl) {
+		if (memcmp(&state.ctrl, &prev_state.ctrl, sizeof(struct serial_control)) != 0) {
 			DCC_LOG1(LOG_TRACE, "[%d] control changed.", thinkos_thread_self());
 			prev_state.ctrl = state.ctrl;
 		}
@@ -120,6 +120,7 @@ int serial_ctrl_task(struct vcom * vcom)
 	while (1) {
 		usb_cdc_ctrl_event_wait(usb, 0);
 		usb_cdc_state_get(usb, &state);
+#if 0
 		if (state.cfg != prev_state.cfg) {
 			DCC_LOG1(LOG_TRACE, "[%d] config changed.", thinkos_thread_self());
 			prev_state.cfg = state.cfg;
@@ -128,6 +129,7 @@ int serial_ctrl_task(struct vcom * vcom)
 			DCC_LOG1(LOG_TRACE, "[%d] control changed.", thinkos_thread_self());
 			prev_state.ctrl = state.ctrl;
 		}
+#endif
 	}
 	return 0;
 }
@@ -151,16 +153,16 @@ int main(int argc, char ** argv)
 	vcom.usb = usb_cdc_init();
 	vcom.serial = serial_init(stm32f_uart5);
 
-	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
+	thinkos_thread_create((void *)usb_recv_task, (void *)&vcom,
 						  usb_recv_stack, STACK_SIZE, 0);
 
-	thinkos_thread_create((void *)usb_ctrl_task, (void *)vcom,
+	thinkos_thread_create((void *)usb_ctrl_task, (void *)&vcom,
 						  usb_ctrl_stack, STACK_SIZE, 0);
 
-	thinkos_thread_create((void *)serial_recv_task, (void *)vcom,
+	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom,
 						  serial_recv_stack, STACK_SIZE, 0);
 
-	thinkos_thread_create((void *)serial_ctrl_task, (void *)vcom,
+	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom,
 						  serial_ctrl_stack, STACK_SIZE, 0);
 
 	for (i = 0; ;i++) {

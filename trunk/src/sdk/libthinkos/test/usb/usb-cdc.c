@@ -389,7 +389,7 @@ static void otg_fs_ep_tx_send(struct stm32f_otg_fs * otg_fs,
 
 	free = otg_fs->inep[tx->ep].dtxfsts * 4;
 	depctl = otg_fs->inep[tx->ep].diepctl;
-	depctl = depctl;
+	(void)depctl;
 	deptsiz = otg_fs->inep[tx->ep].dieptsiz;
 
 	if (tx->ep == 0)
@@ -398,7 +398,7 @@ static void otg_fs_ep_tx_send(struct stm32f_otg_fs * otg_fs,
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
 	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
-	pktcnt = pktcnt;
+	(void)pktcnt;
 	DCC_LOG6(LOG_TRACE, "ep=%d len=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 tx->ep, tx->len, mpsiz, pktcnt, xfrsiz, free);
 
@@ -456,14 +456,14 @@ static bool otg_fs_ep_tx_start(struct stm32f_otg_fs * otg_fs,
 	}
 
 	free = otg_fs->inep[tx->ep].dtxfsts * 4;
-	free = free;
+	(void)free;
 
 	depctl = otg_fs->inep[tx->ep].diepctl;
 	if (tx->ep == 0)
 		mpsiz = ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)];
 	else
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
-	mpsiz = mpsiz;
+	(void)mpsiz;
 
 	DCC_LOG6(LOG_TRACE, "ep=%d len=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 tx->ep, tx->len, mpsiz, pktcnt, xfrsiz, free);
@@ -546,7 +546,7 @@ void usb_on_recv(struct usb_cdc_dev * dev, int ep, int len)
 	DCC_LOG1(LOG_TRACE, "Rx: (%d)", len);
 	for (i = 0; i < len; i += 4) {
 		data = otg_fs->dfifo[ep].pop;
-		data = data; 
+		(void)data;
 		DCC_LOG1(LOG_TRACE, " %08x", data);
 	}
 	DCC_LOG(LOG_TRACE, "");
@@ -907,6 +907,7 @@ void usb_on_oepint0(struct usb_cdc_dev * dev)
 			DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d", 
 					 req_type, request, value, index, len); 
 			otg_fs_ep0_stall(otg_fs);
+			break;
 		}
 	}
 }
@@ -968,11 +969,11 @@ void stm32f_otg_fs_isr(void)
 		grxsts = otg_fs->grxstsp;
 
 		ep = OTG_FS_EPNUM_GET(grxsts);
-		ep = ep;
+		(void)ep;
 		len = OTG_FS_BCNT_GET(grxsts);
-		len = len;
+		(void)len;
 		stat = OTG_FS_PKTSTS_GET(grxsts); 
-		stat = stat;
+		(void)stat;
 
 		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep, len, stat);
 

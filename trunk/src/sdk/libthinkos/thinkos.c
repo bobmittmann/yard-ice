@@ -274,9 +274,11 @@ void thinkos_thread_create_svc(int32_t * arg)
 		__thinkos_defer_sched();
 	}
 
+#if THINKOS_ENABLE_TIMESHARE
 	DCC_LOG5(LOG_TRACE, "<%d> pri=%d/%d task=%08x sp=%08x", 
 			 th, thinkos_rt.sched_pri[th], 
 			 thinkos_rt.sched_limit, init->task, ctx);
+#endif
 
 	arg[0] = th;
 }
