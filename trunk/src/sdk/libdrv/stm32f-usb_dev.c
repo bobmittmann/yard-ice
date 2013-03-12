@@ -39,11 +39,6 @@
 
 #include <sys/dcclog.h>
 
-struct stm32f_usb_ep {
-	uint16_t * data;
-	uint16_t * status;
-};
-
 struct stm32f_usb_tx_buf_desc {
 	uint16_t addr;
 	uint16_t count;
@@ -67,13 +62,20 @@ struct stm32f_usb_buf_desc {
 /* Endpoint control */
 struct stm32f_usb_ep {
 	struct stm32f_usb_buf_desc * desc;
-	uint16_t * status;
+	uint32_t * buf;
+	union {
+		usb_class_on_ep_rx_t on_rx;
+		usb_class_on_setup_t on_setup;
+	};
 };
+
+#define USB_DRIVER_EP_MAX 8
 
 /* USB Driver */
 struct stm32f_usb_drv {
-	struct stm32f_usb_ep ep[8];
+	struct stm32f_usb_ep ep[USB_DRIVER_EP_MAX];
 	uint8_t ep_cnt;
+	usb_class_t * cl;
 };
 
 /*
@@ -99,20 +101,71 @@ struct stm32f_usb_drv {
  buffers, etc.). Then the process continues as for the USB reset case (see further
  paragraph). */
 
+/* configure a RX descriptor */
+static int desc_rx_cfg(struct stm32f_usb_buf_desc * desc, int stack, int mxpktsz)
+{
+	int sz = mxpktsz + 2; /* alloc 2 extra bytes for CRC */
 
-int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, struct usb_ep_info * ep, unsigned int cnt)
+	if (sz < 63) {
+		desc->rx.num_block = sz >> 1;
+		desc->rx.blsize = 0;
+	} else {
+		/* round up to a multiple of 32 */
+		sz = (sz + 0x1f) & ~0x1f;
+		desc->rx.num_block = (sz >> 5) - 1;
+		desc->rx.blsize = 1;
+	}
+
+	stack -= sz;
+	desc->rx.addr = stack;
+	desc->rx.count = 0;
+
+	return stack;
+}
+
+/* configure a TX descriptor */
+static int desc_tx_cfg(struct stm32f_usb_buf_desc * desc, int stack, int mxpktsz)
+{
+	stack -= mxpktsz;
+	desc->tx.addr = stack;
+	desc->tx.count = 0;
+
+	return stack;
+}
+
+/*
+ * Arguments:
+ *
+ *   drv: pointer to the driver runtime structure.
+ *
+ *   ep: list of endpoint configuration information. The first item on this list
+ *       must be the endpoint 0.
+ *
+ *  cnt: number of items in the list.
+ */
+
+int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
+		usb_ep_info_t * epi, unsigned int cnt)
 {
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_usb_buf_desc * desc = (struct stm32f_usb_buf_desc *)STM32F_USB_PKTBUF;
-	uint32_t ep_addr = STM32F_USB_PKTBUF_SIZE;
-	uint32_t epr;
-
-	int sz;
+	uint32_t stack = STM32F_USB_PKTBUF_SIZE;
 	int i;
 	
+	if (cnt > USB_DRIVER_EP_MAX) {
+		DCC_LOG(LOG_WARNING, "too many endpoints...");
+		return -1;
+	}
+
+	drv->cl = cl;
+
 	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
 	rcc->apb1enr |= RCC_USBEN;
+
+	/* Make sure all interrupts are disabled */
+	usb->cntr &= ~(USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_WKUPM |
+			USB_SUSPM | USB_RESETM | USB_SOFM | USB_ESOFM);
 
 	/* USB power ON */
 	usb->cntr &= ~USB_PDWN;
@@ -127,84 +180,60 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, struct usb_ep_info * ep, un
 	/* Configure the endpoints and allocate packet buffers */
 	usb->btable = STM32F_USB_PKTBUF;
 	for (i = 0; i < cnt; i++) {
-		int blk;
-		int blsize;
-		sz = ep[i].mxpktsz;
-		if (sz > 62) {
-			blk = sz >> 4;
-			blsize = 1;
-		} else {
-			blk = sz;
-			blsize = 0;
-		}
+		int mxpktsz = epi[i].mxpktsz;
+		uint32_t epr;
 
-		/* round up to a multiple of 2 */
-		sz = (sz + 1) & ~1;
-		/* set the descriptor pointer */
+		/* set the endpoint descriptor pointer */
 		drv->ep[i].desc = desc;
+		/* set the endpoint rx/tx/setup callback */
+		drv->ep[i].on_rx = epi[i].on_rx;
+		drv->ep[i].buf = NULL;
 		/* Set EP address */
-		epr = USB_EA_SET(ep[i].addr);
-		switch (ep[i].type)
+		epr = USB_EA_SET(epi[i].addr);
+		/* Allocate packet buffers */
+		switch (epi[i].type)
 		{
 		case ENDPOINT_TYPE_CONTROL:
 			epr |= USB_EP_CONTROL;
 			/* allocate single buffers for TX and RX */
 			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-
-			ep_addr -= sz;
-			desc->tx.addr = ep_addr;
-			desc->tx.count = 0;
-			desc++;
-			ep_addr -= sz;
-			desc->rx.addr = ep_addr;
-			desc->rx.count = 0;
-			desc->rx.num_block = blk;
-			desc->rx.blsize = blsize;
-			desc++;
+			stack = desc_tx_cfg(desc++, stack, mxpktsz);
+			stack = desc_rx_cfg(desc++, stack, mxpktsz);
 			break;
 
 		case ENDPOINT_TYPE_ISOCHRONOUS:
 			epr |= USB_EP_ISO | USB_EP_DBL_BUF;
 			/* allocate double buffers for TX or RX */
 			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			desc += 2;
-			/* FIXME: implement this */
+			/* allocate double buffers for TX or RX */
+			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
+				stack = desc_rx_cfg(desc++, stack, mxpktsz);
+				stack = desc_rx_cfg(desc++, stack, mxpktsz);
+			} else {
+				stack = desc_tx_cfg(desc++, stack, mxpktsz);
+				stack = desc_tx_cfg(desc++, stack, mxpktsz);
+			}
 			break;
 
 		case ENDPOINT_TYPE_BULK:
 			epr |= USB_EP_BULK | USB_EP_DBL_BUF;
 			DCC_LOG2(LOG_TRACE, "EP[%d]: BULK -> 0x%08x", i, desc);
 			/* allocate double buffers for TX or RX */
-			ep_addr -= 2 * sz;
-			desc[0].tx.addr = ep_addr;
-			desc[0].tx.count = 0;
-			desc[1].tx.addr = ep_addr + sz;
-			desc[1].tx.count = 0;
-			if ((ep[i].addr & USB_ENDPOINT_IN) == 0) {
-				desc[0].rx.num_block = blk;
-				desc[0].rx.blsize = blsize;
-				desc[1].rx.num_block = blk;
-				desc[1].rx.blsize = blsize;
+			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
+				stack = desc_rx_cfg(desc++, stack, mxpktsz);
+				stack = desc_rx_cfg(desc++, stack, mxpktsz);
+			} else {
+				stack = desc_tx_cfg(desc++, stack, mxpktsz);
+				stack = desc_tx_cfg(desc++, stack, mxpktsz);
 			}
-			desc += 2;
 			break;
 
 		case ENDPOINT_TYPE_INTERRUPT:
 			epr |= USB_EP_INTERRUPT;
 			/* allocate single buffers for TX or RX */
 			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			drv->ep[i].desc = desc;
-			ep_addr -= sz;
-			desc->tx.addr = ep_addr;
-			desc->tx.count = 0;
-			if ((ep[i].addr & USB_ENDPOINT_IN) == 0) {
-				desc->rx.addr = ep_addr;
-				desc->rx.count = 0;
-				desc->rx.num_block = blk;
-				desc->rx.blsize = blsize;
-			}
-			desc++;
-
+			stack = desc_tx_cfg(desc++, stack, mxpktsz);
+			stack = desc_rx_cfg(desc++, stack, mxpktsz);
 			break;
 		}
 
@@ -213,15 +242,281 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, struct usb_ep_info * ep, un
 
 	drv->ep_cnt = cnt;
 
+	/* Enable Reset, SOF  and Wakeup interrupts */
+	usb->cntr |= USB_WKUP | USB_RESETM | USB_SOFM;
+
 	return 0;
+}
+
+int stm32f_usb_dev_connect(struct stm32f_usb_drv * drv)
+{
+	return 0;
+}
+
+int stm32f_usb_dev_disconnect(struct stm32f_usb_drv * drv)
+{
+	return 0;
+}
+
+/* USB reset (RESET interrupt)
+When this event occurs, the USB peripheral is put in the same conditions it is left by the
+system reset after the initialization described in the previous paragraph: communication is
+disabled in all endpoint registers (the USB peripheral will not respond to any packet). As a
+response to the USB reset event, the USB function must be enabled, having as USB
+address 0, implementing only the default control endpoint (endpoint address is 0 too). This
+is accomplished by setting the Enable Function (EF) bit of the USB_DADDR register and
+initializing the EP0R register and its related packet buffers accordingly. During USB
+enumeration process, the host assigns a unique address to this device, which must be
+written in the ADD[6:0] bits of the USB_DADDR register, and configures any other
+necessary endpoint.
+When a RESET interrupt is received, the application software is responsible to enable again
+the default endpoint of USB function 0 within 10mS from the end of reset sequence which
+triggered the interrupt. */
+
+void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* Enable Correct transfer and other interrupts */
+	usb->cntr |= USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_SUSPM;
+}
+
+void stm32f_usb_dev_enumerate(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
+}
+
+/* Endpoint initialization
+The first step to initialize an endpoint is to write appropriate values to the
+ADDRn_TX/ADDRn_RX registers so that the USB peripheral finds the data to be
+transmitted already available and the data to be received can be buffered. The EP_TYPE
+bits in the USB_EPnR register must be set according to the endpoint type, eventually using
+the EP_KIND bit to enable any special required feature. On the transmit side, the endpoint
+must be enabled using the STAT_TX bits in the USB_EPnR register and COUNTn_TX must
+be initialized. For reception, STAT_RX bits must be set to enable reception and
+COUNTn_RX must be written with the allocated buffer size using the BL_SIZE and
+NUM_BLOCK fields. Unidirectional endpoints, except Isochronous and double-buffered bulk
+endpoints, need to initialize only bits and registers related to the supported direction. Once
+the transmission and/or reception are enabled, register USB_EPnR and locations
+ADDRn_TX/ADDRn_RX, COUNTn_TX/COUNTn_RX (respectively), should not be modified
+by the application software, as the hardware can change their value on the fly. When the
+data transfer operation is completed, notified by a CTR interrupt event, they can be
+accessed again to re-enable a new operation. */
+
+/* This is a bitmask that when applied to the EPR register
+ * will NOT change its value except possibly for the address
+ */
+#define EPR_INVARIANT (USB_CTR_RX | USB_CTR_TX)
+
+void stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t epr;
+	uint32_t ea;
+
+//	desc = drv->ep[ep_id].desc;
+	epr = usb->epr[ep_id];
+	ea = USB_EA_GET(epr);
+
+	if (ea == 0) {
+		/* Control endpoint */
+		/* Set the bits we want to toggle */
+		epr = epr ^ (USB_RX_VALID | USB_TX_NAK);
+
+		/* clear the correct transfer bits */
+		epr &= ~(USB_CTR_RX | USB_CTR_TX);
+	} else {
+
+	}
+
+	usb->epr[ep_id] = epr;
+}
+
+/*
+ * The CTR_RX event is serviced by first
+   determining the transaction type (SETUP bit in the USB_EPnR register); the application
+   software must clear the interrupt flag bit and get the number of received bytes reading the
+   COUNTn_RX location inside the buffer description table entry related to the endpoint being
+ processed. After the received data is processed, the application software should set the
+STAT_RX bits to ‘11 (Valid) in the USB_EPnR, enabling further transactions. While the
+STAT_RX bits are equal to ‘10 (NAK), any OUT request addressed to that endpoint is
+NAKed, indicating a flow control condition: the USB host will retry the transaction until it
+succeeds. It is mandatory to execute the sequence of operations in the above mentioned
+order to avoid losing the notification of a second OUT transaction addressed to the same
+endpoint following immediately the one which triggered the CTR interrupt.
+ */
+
+
+void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_buf_desc * desc;
+	struct stm32f_usb_ep * ep;
+	uint32_t epr;
+	int cnt;
+	int ea;
+
+	epr = usb->epr[ep_id];
+	ep = &drv->ep[ep_id];
+	ea = USB_EA_GET(epr);
+	(void)ea;
+
+	if (epr & USB_EP_DBL_BUF) {
+		/* double buffer */
+		/* select the descriptor according to the data toggle bit */
+		desc = &ep->desc[(epr & USB_DTOG_RX) ? 0: 1];
+	} else {
+		/* single buffer */
+		/* select the RX descriptor */
+		desc = &ep->desc[1];
+	}
+
+	/* Data received */
+	cnt = desc->rx.count;
+
+	if (ep->buf != NULL) {
+		uint16_t * src;
+		uint16_t * dst;
+		int i;
+		/* copy data to destination buffer */
+		dst = (uint16_t *)ep->buf;
+		src = (uint16_t *)STM32F_USB_PKTBUF + (desc->rx.addr / 2);
+		for (i = 0; i < (cnt + 1) / 2; i++)
+			dst[i] = src[i];
+	}
+
+	if (epr & USB_SETUP) {
+		DCC_LOG2(LOG_TRACE, "SETUP EP%d, cnt=%d", ea, cnt);
+		/* call class endpoint callback */
+		ep->on_setup(drv->cl, ep->buf, cnt);
+	} else {
+		DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
+		/* call class endpoint callback */
+		ep->on_rx(drv->cl, ep->buf, cnt);
+	}
+
+	/* Set the endpoint as valid to continue receiving */
+	epr = epr ^ USB_RX_VALID; /* adjust the bits we want to toggle */
+	epr &= ~(USB_CTR_RX); 	/* clear the CTR_RX bit */
+	usb->epr[ep_id] = epr;
+}
+
+void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
+
+	DCC_LOG1(LOG_TRACE, "IN %d", ep_id);
+}
+
+void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv,
+		struct stm32f_usb_buf_desc * desc)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
+
+	DCC_LOG(LOG_TRACE, "SETUP 0");
+}
+
+void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv,
+		struct stm32f_usb_buf_desc * desc)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
+
+	DCC_LOG1(LOG_TRACE, "OUT 0, cnt=%d", cnt);
+}
+
+void stm32f_usb_dev_ep0_in(struct stm32f_usb_drv * drv,
+		struct stm32f_usb_buf_desc * desc)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
+
+	DCC_LOG(LOG_TRACE, "IN 0");
 }
 
 /* Private USB device driver data */
 struct stm32f_usb_drv stm32f_usb_drv0;
 
+
+/* USB high priority ISR */
+void stm32f_can1_tx_usb_hp_isr(void)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t sr;
+
+	sr = usb->istr;
+	(void)sr;
+}
+
+
+/* USB low priority ISR */
+void stm32f_can1_rx0_usb_lp_isr(void)
+{
+	struct stm32f_usb_drv * drv = &stm32f_usb_drv0;
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t sr;
+
+	sr = usb->istr;
+	(void)sr;
+
+	if (sr & USB_SOF) {
+		DCC_LOG(LOG_TRACE, "SOF");
+	}
+
+	if (sr & USB_RESET) {
+		DCC_LOG(LOG_TRACE, "RESET");
+		stm32f_usb_dev_reset(drv);
+	}
+
+	if (sr & USB_SUSP) {
+		DCC_LOG(LOG_TRACE, "SUSP");
+	}
+
+	if (sr & USB_WKUP) {
+		DCC_LOG(LOG_TRACE, "WKUP");
+	}
+
+	if (sr & USB_ERR) {
+		DCC_LOG(LOG_TRACE, "ERR");
+	}
+
+	if (sr & USB_PMAOVR) {
+		DCC_LOG(LOG_TRACE, "PMAOVR");
+	}
+
+	if (sr & USB_CTR) {
+		int ep_id;
+
+		ep_id = USB_EP_ID_GET(sr);
+
+		DCC_LOG1(LOG_TRACE, "CTR ep_id=%d", ep_id);
+		if (sr & USB_DIR)
+			stm32f_usb_dev_ep_out(drv, ep_id);
+		else
+			stm32f_usb_dev_ep_in(drv, ep_id);
+	}
+
+	/* clear interrupts */
+	usb->istr = ~sr;
+}
+
+
+
 /* USB device operations */
 const struct usb_dev_ops stm32f_usb_ops = {
-	.usb_dev_init = (usb_dev_init_t)stm32f_usb_dev_init
+	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
+	.connect = (usb_dev_connect_t)stm32f_usb_dev_connect,
+	.disconnect = (usb_dev_disconnect_t)stm32f_usb_dev_disconnect
 };
 
 /* USB device driver */
@@ -229,225 +524,4 @@ const struct usb_dev stm32f_usb_dev = {
 	.priv = (void *)&stm32f_usb_drv0,
 	.op = &stm32f_usb_ops
 };
-
-
-#if 0
-
-#define CONSOLE_RX_BUF_LEN 16
-
-struct uart_console_ctrl {
-	struct stm32f_usart * uart;
-	struct stm32f_dma * dma;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-	} tx;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-		uint8_t buf[CONSOLE_RX_BUF_LEN];
-	} rx;
-};
-
-int uart_console_read(struct uart_console_ctrl * ctrl, char * buf, 
-				 unsigned int len, unsigned int msec)
-{
-	uint32_t st;
-	unsigned int cnt;
-
-	DCC_LOG(LOG_INFO, "read");
-
-	if (ctrl->rx.s->cr & DMA_EN) {
-		DCC_LOG(LOG_TRACE, "DMA enabled");
-	}
-
-	/* Memory address */
-	ctrl->rx.s->m0ar = (void *)buf;
-	/* Number of data items to transfer */
-	ctrl->rx.s->ndtr = len;
-
-	/* enable DMA */
-	ctrl->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
-		DMA_DIR_PTM | DMA_TCIE  | DMA_EN;
-
-	/* wait for the DMA transfer to complete */
-	while (((st = ctrl->dma->lisr) & DMA_TCIF0) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_irq_wait(ctrl->rx.irq);
-		DCC_LOG(LOG_INFO, "wakeup.");
-	} 
-
-	/* clear the the DMA stream trasfer complete flag */
-	ctrl->dma->lifcr = DMA_CTCIF0;
-
-	/* Number of data items transfered... */
-	cnt = len - ctrl->rx.s->ndtr;
-	
-	DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
-	return cnt;
-}
-
-int uart_console_write(struct uart_console_ctrl * ctrl, const void * buf, 
-					   unsigned int len)
-{
-	unsigned int cnt;
-	uint32_t st;
-	uint32_t sr;
-
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
-
-	if (ctrl->tx.s->cr & DMA_EN) {
-		DCC_LOG(LOG_TRACE, "DMA enabled");
-	}
-
-	/* Memory address */
-	ctrl->tx.s->m0ar = (void *)buf;
-	/* Number of data items to transfer */
-	ctrl->tx.s->ndtr = len;
-
-	/* clear the TC bit */
-	if ((sr = ctrl->uart->sr) & USART_TC) {
-		DCC_LOG(LOG_INFO, "TC=1");
-	}
-
-	/* enable DMA */
-	ctrl->tx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
-		DMA_DIR_MTP | DMA_TCIE  | DMA_EN;
-
-	/* wait for the DMA transfer to complete */
-	while (((st = ctrl->dma->hisr) & DMA_TCIF7) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_irq_wait(ctrl->tx.irq);
-		DCC_LOG(LOG_INFO, "wakeup");
-	} 
-
-	/* clear the the DMA stream trasfer complete flag */
-	ctrl->dma->hifcr = DMA_CTCIF7;
-
-	/* Number of data items transfered... */
-	cnt = len - ctrl->tx.s->ndtr;
-	
-	DCC_LOG1(LOG_INFO, "cnt=%d", cnt);
-	return cnt;
-}
-
-int uart_console_flush(struct uart_console_ctrl * ctrl)
-{
-	return 0;
-}
-
-const struct uart_console_ctrl uart5_ctrl = {
-	.uart = STM32F_UART5, 
-	.dma = STM32F_DMA1,
-	.rx = {
-		.irq = STM32F_IRQ_DMA1_STREAM0,
-		.s = &STM32F_DMA1->s[0]
-	},
-	.tx = {
-		.irq = STM32F_IRQ_DMA1_STREAM7,
-		.s = &STM32F_DMA1->s[7]
-	}
-};
-
-const struct fileop uart_console_ops = {
-	.write = (void *)uart_console_write,
-	.read = (void *)uart_console_read,
-	.flush = (void *)uart_console_flush,
-	.close = (void *)NULL
-};
-
-const struct file uart_console_file = {
-	.data = (void *)&uart5_ctrl, 
-	.op = &uart_console_ops
-};
-
-void stm32f_uart5_isr(void)
-{
-//	struct serial_dev * dev = &dev_ttyS5;
-	struct stm32f_usart * us;
-	struct uart_console_ctrl * ctrl;
-	uint32_t sr;
-	int c;
-	
-	ctrl = (struct uart_console_ctrl *)uart_console_file.data;
-	us = ctrl->uart;
-	sr = us->sr;
-
-	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_TRACE, "RXNE");
-		c = us->dr;
-		c = c;
-/*		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
-			uart_fifo_put(&dev->rx_fifo, c);
-		} */
-	}	
-
-	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
-		/* disable IDLE interrupt */
-//		us->cr1 &= ~USART_IDLEIE;
-		ctrl->rx.s->cr &= ~DMA_EN;
-		c = us->dr;
-		c = c;
-	}
-
-	if (sr & USART_TXE) {
-		DCC_LOG(LOG_MSG, "TXE");
-/*		if (uart_fifo_is_empty(&dev->tx_fifo)) {
-			*dev->txeie = 0;
-		} else {
-			us->dr = uart_fifo_get(&dev->tx_fifo);
-		} */
-	}
-
-}
-
-
-struct file * uart_console_open(unsigned int baudrate, unsigned int flags)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_usart * us;
-	struct uart_console_ctrl * ctrl;
-
-	ctrl = (struct uart_console_ctrl *)uart_console_file.data;
-	us = ctrl->uart;
-
-	DCC_LOG(LOG_TRACE, "...");
-	stm32f_usart_init(ctrl->uart, baudrate, flags);
-
-	/* Enable DMA for transmission and reception */
-	ctrl->uart->cr3 |= USART_DMAT | USART_DMAR;
-
-	/* DMA clock enable */
-	rcc->ahb1enr |= (ctrl->dma == STM32F_DMA1) ? RCC_DMA1EN : RCC_DMA2EN;
-
-	/* Disable DMA stream */
-	ctrl->tx.s->cr = 0;
-	while (ctrl->tx.s->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	ctrl->tx.s->par = &ctrl->uart->dr;
-	ctrl->tx.s->fcr = DMA_DMDIS | DMA_FTH_FULL;
-
-	/* Disable DMA stream */
-	ctrl->rx.s->cr = 0;
-	while (ctrl->rx.s->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	ctrl->rx.s->par = &ctrl->uart->dr;
-	/* Memory address */
-	ctrl->tx.s->m0ar = (void *)ctrl->rx.buf;
-	/* Number of data items to transfer */
-	ctrl->tx.s->ndtr = CONSOLE_RX_BUF_LEN;
-	ctrl->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
-		DMA_DIR_PTM;
-
-
-	cm3_irq_enable(STM32F_IRQ_UART5);
-	/* enable IDLE interrupt */
-	us->cr1 |= USART_IDLEIE;
-
-	return (struct file *)&uart_console_file;
-}
-
-#endif
 

@@ -31,6 +31,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <sys/usb-dev.h>
+
 #include <sys/dcclog.h>
 
 #include "cdc_acm.h"
@@ -38,6 +40,96 @@
 #include <thinkos.h>
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
+
+struct usb_cdc {
+	/* modem bits */
+	volatile uint8_t status; /* modem status lines */
+	volatile uint8_t control; /* modem control lines */
+
+	uint8_t lsst; /* local (set) serial state */
+	uint8_t rsst; /* remote (acked) serail state */
+
+	struct cdc_line_coding lc;
+};
+
+struct usb_cdc_class {
+	/* underling USB device */
+	struct usb_dev * usb;
+
+	/* class specific block */
+	struct usb_cdc cdc;
+
+	volatile uint8_t state;
+
+	int8_t rx_ev; /* RX event */
+	int8_t tx_ev; /* TX event */
+
+	int8_t tx_lock; /* TX lock */
+	int8_t tx_lock_ev; /* TX lock/unlock event */
+
+	int8_t ctrl_ev; /* Control event */
+	uint8_t ctrl_rcv; /* control message received count */
+	uint8_t ctrl_ack; /* control message acknowledge count */
+
+	uint32_t setup_buf[2];
+	uint32_t pkt_buf[4];
+};
+
+int usb_cdc_on_ep0_rx(usb_class_t * cl, uint32_t * buf, unsigned int len)
+{
+	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	return 0;
+}
+
+int usb_cdc_on_data_rx(usb_class_t * cl, uint32_t * buf, unsigned int len)
+{
+	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	return 0;
+}
+
+const struct usb_ep_info usb_cdc_ep_info[] = {
+		{
+				.addr = 0,
+				.type = ENDPOINT_TYPE_CONTROL,
+				.mxpktsz = 64,
+				.on_rx = usb_cdc_on_ep0_rx
+		},
+		{
+				.addr = USB_ENDPOINT_OUT + 1,
+				.type = ENDPOINT_TYPE_BULK,
+				.mxpktsz = 64,
+				.on_rx = usb_cdc_on_data_rx
+		},
+		{
+				.addr = USB_ENDPOINT_IN + 2,
+				.type = ENDPOINT_TYPE_BULK,
+				.mxpktsz = 64,
+				.on_rx = usb_cdc_on_ep0_rx
+		},
+		{
+				.addr = USB_ENDPOINT_IN + 3,
+				.type = ENDPOINT_TYPE_INTERRUPT,
+				.mxpktsz = 64,
+				.on_rx = usb_cdc_on_ep0_rx
+		}
+};
+
+struct usb_cdc_class usb_cdc_rt;
+
+struct usb_cdc_class * usb_cdc_init(const usb_dev_t * usb)
+{
+	struct usb_cdc_class * cdc = &usb_cdc_rt;
+	usb_class_t * cl =  (usb_class_t *)cdc;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* initialize USB device */
+	cdc->usb = (usb_dev_t *)usb;
+	usb_dev_init(usb, cl, usb_cdc_ep_info, 4);
+
+	return cdc;
+}
+
 
 #if STM32FX2
 
@@ -82,7 +174,7 @@ struct usb_cdc {
 	struct cdc_line_coding lc;
 };
 
-struct usb_cdc_dev {
+struct usb_cdc_class {
 	/* class specific block */
 	struct usb_cdc cdc;
 
@@ -226,7 +318,7 @@ static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 
 }
 
-void usb_device_init(struct usb_cdc_dev * dev)
+void usb_device_init(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -427,7 +519,7 @@ bool usb_cdc_state_notify(struct stm32f_otg_fs * otg_fs)
 #endif
 
 
-void usb_on_recv(struct usb_cdc_dev * dev, int ep, int len)
+void usb_on_recv(struct usb_cdc_class * dev, int ep, int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t data;
@@ -487,7 +579,7 @@ static void otg_fs_ep0_zlp_send(struct stm32f_otg_fs * otg_fs)
 	otg_fs_ep0_out_start(otg_fs);
 }
 
-static void usb_ep0_send_word(struct usb_cdc_dev * dev, unsigned int val)
+static void usb_ep0_send_word(struct usb_cdc_class * dev, unsigned int val)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -528,7 +620,7 @@ static void otg_fs_ep0_stall(struct stm32f_otg_fs * otg_fs)
 }
 
 /* End point 0 Out */
-void usb_on_oepint0(struct usb_cdc_dev * dev)
+void usb_on_oepint0(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t doepint;
@@ -780,13 +872,13 @@ void usb_on_oepint0(struct usb_cdc_dev * dev)
 	}
 }
 
-struct usb_cdc_dev usb_cdc_dev;
+struct usb_cdc_class usb_cdc_class;
 
 static int otg_fs_isr_cnt = 0;
 
 void stm32f_otg_fs_isr(void)
 {
-	struct usb_cdc_dev * dev = &usb_cdc_dev;
+	struct usb_cdc_class * dev = &usb_cdc_class;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t gintsts;
 	uint32_t ep_intr;
@@ -1185,7 +1277,7 @@ void stm32f_otg_fs_isr(void)
 	otg_fs->gintsts = gintsts;
 }
 
-void usb_enumaration_wait(struct usb_cdc_dev * dev)
+void usb_enumaration_wait(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1200,7 +1292,7 @@ void usb_enumaration_wait(struct usb_cdc_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB Enumeration done.");
 }
 
-void usb_reset_wait(struct usb_cdc_dev * dev)
+void usb_reset_wait(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1212,7 +1304,7 @@ void usb_reset_wait(struct usb_cdc_dev * dev)
 	DCC_LOG(LOG_TRACE, "USB reset done.");
 }
 
-void usb_connect(struct usb_cdc_dev * dev)
+void usb_connect(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1221,7 +1313,7 @@ void usb_connect(struct usb_cdc_dev * dev)
 	udelay(3000);
 }
 
-void usb_disconnect(struct usb_cdc_dev * dev)
+void usb_disconnect(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	otg_fs->dctl |= OTG_FS_SDIS;
@@ -1229,7 +1321,7 @@ void usb_disconnect(struct usb_cdc_dev * dev)
 }
 
 
-int usb_cdc_write(struct usb_cdc_dev * dev, 
+int usb_cdc_write(struct usb_cdc_class * dev, 
 				  const void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1274,7 +1366,7 @@ int usb_cdc_write(struct usb_cdc_dev * dev,
 	return len - rem;
 }
 
-int usb_cdc_read(struct usb_cdc_dev * dev, void * buf, 
+int usb_cdc_read(struct usb_cdc_class * dev, void * buf, 
 				 unsigned int len, unsigned int msec)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
@@ -1363,15 +1455,15 @@ int usb_cdc_read(struct usb_cdc_dev * dev, void * buf,
 	return cnt;
 }
 
-int usb_cdc_flush(struct usb_cdc_dev * dev, 
+int usb_cdc_flush(struct usb_cdc_class * dev, 
 				  const void * buf, unsigned int len)
 {
 	return 0;
 }
 
-struct usb_cdc_dev * usb_cdc_init(void)
+struct usb_cdc_class * usb_cdc_init(void)
 {
-	struct usb_cdc_dev * dev = (struct usb_cdc_dev *)&usb_cdc_dev;
+	struct usb_cdc_class * dev = (struct usb_cdc_class *)&usb_cdc_class;
 
 	usb_device_init(dev);
 
@@ -1380,7 +1472,7 @@ struct usb_cdc_dev * usb_cdc_init(void)
 }
 
 #if 0
-int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state)
+int usb_cdc_state_get(struct usb_cdc_class * dev, struct usb_cdc_state * state)
 {
 	state->cfg.baud_rate = dev->cdc.lc.dwDTERate;
 	state->cfg.data_bits = dev->cdc.lc.bDataBits;
@@ -1404,7 +1496,7 @@ int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state)
 }
 #endif
 
-int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec)
+int usb_cdc_ctrl_event_wait(struct usb_cdc_class * dev, unsigned int msec)
 {
 	if (msec > 0)
 		__thinkos_timer_set(msec);

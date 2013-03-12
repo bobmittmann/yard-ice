@@ -19,6 +19,8 @@
  * http://www.gnu.org/
  */
 
+#include <sys/stm32f.h>
+
 	.syntax unified
 	.cpu cortex-m3
 
@@ -66,8 +68,14 @@ __rom_vectors:
 	.word	stm32f_dma1_stream5_isr /* DMA1 Stream 5 */
 	.word	stm32f_dma1_stream6_isr /* DMA1 Stream 6 */
 	.word	stm32f_adc_isr /* ADC1, ADC2 and ADC3s */
+#ifdef STM32F10X
+	.word   stm32f_can1_tx_usb_hp_isr /* CAN1 TX and USB High Priority */
+	.word   stm32f_can1_rx0_usb_lp_isr /* CAN1 RX0 and and USB Low Priority */
+#endif
+#ifdef STM32F2X
 	.word	stm32f_can1_tx_isr /* CAN1 TX */
 	.word	stm32f_can1_rx0_isr /* CAN1 RX0 */
+#endif
 	.word	stm32f_can1_rx1_isr /* CAN1 RX1 */
 	.word	stm32f_can1_sce_isr /* CAN1 SCE */
 	.word	stm32f_exti9_5_isr /* External Line[9:5]s */
@@ -109,6 +117,7 @@ __rom_vectors:
 	.word	stm32f_dma2_stream1_isr /* DMA2 Stream 1 */
 	.word	stm32f_dma2_stream2_isr /* DMA2 Stream 2 */
 	.word	stm32f_dma2_stream3_isr /* DMA2 Stream 3 */
+#if STM32FX2
 	.word	stm32f_dma2_stream4_isr /* DMA2 Stream 4 */
 	.word	stm32f_eth_isr /* Ethernet */
 	.word	stm32f_eth_wkup_isr /* Ethernet Wakeup through EXTI line */
@@ -130,6 +139,7 @@ __rom_vectors:
 	.word	stm32f_dcmi_isr /* DCMI */
 	.word	stm32f_cryp_isr /* CRYP crypto */
 	.word	stm32f_hash_rng_isr /* Hash and Rng */
+#endif
 	.size   __rom_vectors, . - __rom_vectors
 
 	.align  0
@@ -340,11 +350,21 @@ _void:
 	.weak       stm32f_adc_isr
 	.thumb_set  stm32f_adc_isr,_isr
 
+#ifdef STM32FX2
 	.weak       stm32f_can1_tx_isr
 	.thumb_set  stm32f_can1_tx_isr,_isr
 
 	.weak       stm32f_can1_rx0_isr
 	.thumb_set  stm32f_can1_rx0_isr,_isr
+#endif
+
+#ifdef STM32F10X
+	.weak       stm32f_can1_tx_usb_hp_isr
+	.thumb_set  stm32f_can1_tx_usb_hp_isr,_isr
+
+	.weak       stm32f_can1_rx0_usb_lp_isr
+	.thumb_set  stm32f_can1_rx0_usb_lp_isr,_isr
+#endif
 
 	.weak       stm32f_can1_rx1_isr
 	.thumb_set  stm32f_can1_rx1_isr,_isr
@@ -463,6 +483,7 @@ _void:
 	.weak       stm32f_dma2_stream3_isr
 	.thumb_set  stm32f_dma2_stream3_isr,_isr
 
+#if STM32FX2
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
@@ -525,5 +546,6 @@ _void:
 
 	.weak       stm32f_hash_rng_isr
 	.thumb_set  stm32f_hash_rng_isr,_isr
+#endif
 
 	.end

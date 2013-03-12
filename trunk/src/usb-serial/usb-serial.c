@@ -37,7 +37,7 @@
 
 struct vcom {
 	struct serial_dev * serial;
-	struct usb_cdc_dev * usb;
+	struct usb_cdc_class * cdc;
 };
 
 #define VCOM_BUF_SIZE 128
@@ -46,7 +46,7 @@ struct vcom {
 int usb_recv_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_class * usb = vcom->usb;
 	char buf[VCOM_BUF_SIZE];
 	int len;
 
@@ -64,7 +64,7 @@ int usb_recv_task(struct vcom * vcom)
 int usb_ctrl_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_class * usb = vcom->usb;
 	struct usb_cdc_state prev_state;
 	struct usb_cdc_state state;
 
@@ -91,7 +91,7 @@ int usb_ctrl_task(struct vcom * vcom)
 int serial_recv_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_class * usb = vcom->usb;
 	char buf[VCOM_BUF_SIZE];
 	int len;
 
@@ -109,7 +109,7 @@ int serial_recv_task(struct vcom * vcom)
 int serial_ctrl_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_dev * usb = vcom->usb;
+	struct usb_cdc_class * usb = vcom->usb;
 	struct usb_cdc_state prev_state;
 	struct usb_cdc_state state;
 
@@ -329,6 +329,8 @@ int main(int argc, char ** argv)
 
 //	usb_cdc_init();
 //	vcom.usb = usb_cdc_init();
+
+	usb_cdc_init(&stm32f_usb_dev);
 
 //	vcom.serial = serial_init(stm32f_uart5);
 	stm32f_usart_init(us);
