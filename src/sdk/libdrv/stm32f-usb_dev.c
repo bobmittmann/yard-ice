@@ -39,11 +39,13 @@
 
 #include <sys/dcclog.h>
 
+/* TX buffer descriptor */
 struct stm32f_usb_tx_buf_desc {
 	uint16_t addr;
 	uint16_t count;
 };
 
+/* RX buffer descriptor */
 struct stm32f_usb_rx_buf_desc {
 	uint16_t addr;
 	uint16_t count: 9;
@@ -51,7 +53,7 @@ struct stm32f_usb_rx_buf_desc {
 	uint16_t blsize: 1;
 };
 
-/* Buffer descriptor */
+/* Generic buffer descriptor */
 struct stm32f_usb_buf_desc {
 	union {
 		struct stm32f_usb_tx_buf_desc tx;
