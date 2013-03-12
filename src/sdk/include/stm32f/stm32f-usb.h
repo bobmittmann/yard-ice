@@ -518,6 +518,9 @@
    (USB_ADDRn_TX) Address offset: [USB_BTABLE] + n*16 USB local address:
    [USB_BTABLE] + n*8 */
 
+
+
+
 /* Bits [15..1] - Transmission buffer address */
 #define USB_ADDRN_TX_MSK (((1 << (15 + 1)) - 1) << 1)
 #define USB_ADDRN_TX_SET(VAL) (((VAL) << 1) & USB_ADDRN_TX_MSK)

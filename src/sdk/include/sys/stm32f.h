@@ -34,23 +34,22 @@
 #include <arch/stm32f103.h>
 #endif
 
-#include <arch/cortex-m3.h>
+#ifndef __ASSEMBLER__
+
 #include <stdint.h>
 #include <stdbool.h>
+#include <arch/cortex-m3.h>
 
 extern const uint32_t stm32f_apb1_hz;
 extern const uint32_t stm32f_apb2_hz;
 extern const uint32_t stm32f_ahb_hz;
 
-#ifndef __ASSEMBLER__
-
-struct stm32f_usb_drv;
-
 /*---------------------------------------------------------------------
  * USB Device
  *---------------------------------------------------------------------*/
+#include <sys/usb-dev.h>
+extern const usb_dev_t stm32f_usb_dev;
 
-extern struct stm32f_usb_drv stm32f_usb_device;
 
 
 enum {

@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <sys/cdc.h>
+#include <sys/usb-dev.h>
 #include <sys/serial.h>
 
 #define USB_CDC_EINVAL 1
@@ -44,41 +45,43 @@ struct usb_cdc_state {
     struct serial_error err;
 };
 
-struct usb_cdc_dev;
+struct usb_cdc_class;
+
+typedef struct usb_cdc_class usb_cdc_class_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-void usb_connect(struct usb_cdc_dev * dev);
+void usb_connect(usb_cdc_class_t * cdc);
 
-void usb_disconnect(struct usb_cdc_dev * dev);
+void usb_disconnect(usb_cdc_class_t * cdc);
 
-void usb_enumaration_wait(struct usb_cdc_dev * dev);
+void usb_enumaration_wait(usb_cdc_class_t * cdc);
 
-void usb_reset_wait(struct usb_cdc_dev * dev);
+void usb_reset_wait(usb_cdc_class_t * cdc);
 
-void usb_ctrl_event_wait(struct usb_cdc_dev * dev);
+void usb_ctrl_event_wait(usb_cdc_class_t * cdc);
 
-void usb_device_init(struct usb_cdc_dev * dev);
+void usb_device_init(usb_cdc_class_t * cdc);
 
-struct usb_cdc_dev * usb_cdc_init(void);
+struct usb_cdc_class * usb_cdc_init(const usb_dev_t * usb);
 
-int usb_cdc_write(struct usb_cdc_dev * dev, 
+int usb_cdc_write(usb_cdc_class_t * cdc,
 				  const void * buf, unsigned int len);
 
-int usb_cdc_read(struct usb_cdc_dev * dev, void * buf, 
+int usb_cdc_read(usb_cdc_class_t * cdc, void * buf,
 				 unsigned int len, unsigned int msec);
 
-int usb_cdc_flush(struct usb_cdc_dev * dev, 
+int usb_cdc_flush(usb_cdc_class_t * cdc,
 				  const void * buf, unsigned int len);
 
 struct file * usb_cdc_fopen(void);
 
-int usb_cdc_state_get(struct usb_cdc_dev * dev, struct usb_cdc_state * state);
+int usb_cdc_state_get(usb_cdc_class_t * cdc, struct usb_cdc_state * state);
 
-int usb_cdc_ctrl_event_wait(struct usb_cdc_dev * dev, unsigned int msec);
+int usb_cdc_ctrl_event_wait(usb_cdc_class_t * cdc, unsigned int msec);
 
 #ifdef __cplusplus
 }
