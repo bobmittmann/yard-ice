@@ -248,6 +248,8 @@ int button_task(void)
 
 	while (1) {
 		thinkos_sleep(LOOP_TIME);
+		continue;
+
 		btn_state = stm32f_gpio_stat(STM32F_GPIOA, 6);
 		if (btn_state != prev_state) {
 			prev_state = btn_state;
@@ -330,18 +332,18 @@ int main(int argc, char ** argv)
 //	usb_cdc_init();
 //	vcom.usb = usb_cdc_init();
 
-	usb_cdc_init(&stm32f_usb_dev);
-
 //	vcom.serial = serial_init(stm32f_uart5);
 	stm32f_usart_init(us);
 	stm32f_usart_baudrate_set(us, 100000);
 	stm32f_usart_mode_set(us, SERIAL_8N1);
 	stm32f_usart_enable(us);
 
+	usb_cdc_init(&stm32f_usb_dev);
+
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
 		stm32f_usart_putc(us, 'U');
-		thinkos_sleep(1000);
+		thinkos_sleep(3000);
 	}
 
 	return 0;

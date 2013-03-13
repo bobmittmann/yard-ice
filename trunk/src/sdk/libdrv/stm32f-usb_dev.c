@@ -151,10 +151,13 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 {
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_usb_buf_desc * desc = (struct stm32f_usb_buf_desc *)STM32F_USB_PKTBUF;
 	uint32_t stack = STM32F_USB_PKTBUF_SIZE;
+	struct stm32f_usb_buf_desc * desc;
+	uint32_t cntr;
 	int i;
 	
+	desc = (struct stm32f_usb_buf_desc *)STM32F_USB_PKTBUF;
+
 	if (cnt > USB_DRIVER_EP_MAX) {
 		DCC_LOG(LOG_WARNING, "too many endpoints...");
 		return -1;
@@ -165,9 +168,23 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
 	rcc->apb1enr |= RCC_USBEN;
 
+	cntr = usb->cntr;
+
 	/* Make sure all interrupts are disabled */
-	usb->cntr &= ~(USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_WKUPM |
-			USB_SUSPM | USB_RESETM | USB_SOFM | USB_ESOFM);
+	cntr &= ~(USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_WKUPM |
+			  USB_SUSPM | USB_RESETM | USB_SOFM | USB_ESOFM);
+	usb->cntr = cntr;
+
+	/* Disable the device */
+	usb->daddr = 0;
+
+	/* Assert reset */
+//	cntr |= USB_FRES;
+//	usb->cntr = cntr;
+//	udelay(2);
+
+	/* Disable the device */
+//	usb->daddr = 0;
 
 	/* USB power ON */
 	usb->cntr &= ~USB_PDWN;
@@ -247,6 +264,11 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	/* Enable Reset, SOF  and Wakeup interrupts */
 	usb->cntr |= USB_WKUP | USB_RESETM | USB_SOFM;
 
+	/* enable Cortex interrupts */
+	cm3_irq_enable(STM32F_IRQ_USB_LP);
+
+	cm3_irq_enable(STM32F_IRQ_USB_HP);
+
 	return 0;
 }
 
@@ -258,38 +280,6 @@ int stm32f_usb_dev_connect(struct stm32f_usb_drv * drv)
 int stm32f_usb_dev_disconnect(struct stm32f_usb_drv * drv)
 {
 	return 0;
-}
-
-/* USB reset (RESET interrupt)
-When this event occurs, the USB peripheral is put in the same conditions it is left by the
-system reset after the initialization described in the previous paragraph: communication is
-disabled in all endpoint registers (the USB peripheral will not respond to any packet). As a
-response to the USB reset event, the USB function must be enabled, having as USB
-address 0, implementing only the default control endpoint (endpoint address is 0 too). This
-is accomplished by setting the Enable Function (EF) bit of the USB_DADDR register and
-initializing the EP0R register and its related packet buffers accordingly. During USB
-enumeration process, the host assigns a unique address to this device, which must be
-written in the ADD[6:0] bits of the USB_DADDR register, and configures any other
-necessary endpoint.
-When a RESET interrupt is received, the application software is responsible to enable again
-the default endpoint of USB function 0 within 10mS from the end of reset sequence which
-triggered the interrupt. */
-
-void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* Enable Correct transfer and other interrupts */
-	usb->cntr |= USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_SUSPM;
-}
-
-void stm32f_usb_dev_enumerate(struct stm32f_usb_drv * drv)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-
-	(void)usb;
 }
 
 /* Endpoint initialization
@@ -324,6 +314,8 @@ void stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id)
 	epr = usb->epr[ep_id];
 	ea = USB_EA_GET(epr);
 
+	DCC_LOG1(LOG_TRACE, "EP%d", ea);
+
 	if (ea == 0) {
 		/* Control endpoint */
 		/* Set the bits we want to toggle */
@@ -336,6 +328,44 @@ void stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id)
 	}
 
 	usb->epr[ep_id] = epr;
+}
+
+/* USB reset (RESET interrupt)
+When this event occurs, the USB peripheral is put in the same conditions it is left by the
+system reset after the initialization described in the previous paragraph: communication is
+disabled in all endpoint registers (the USB peripheral will not respond to any packet). As a
+response to the USB reset event, the USB function must be enabled, having as USB
+address 0, implementing only the default control endpoint (endpoint address is 0 too). This
+is accomplished by setting the Enable Function (EF) bit of the USB_DADDR register and
+initializing the EP0R register and its related packet buffers accordingly. During USB
+enumeration process, the host assigns a unique address to this device, which must be
+written in the ADD[6:0] bits of the USB_DADDR register, and configures any other
+necessary endpoint.
+When a RESET interrupt is received, the application software is responsible to enable again
+the default endpoint of USB function 0 within 10mS from the end of reset sequence which
+triggered the interrupt. */
+
+void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* initializes EP0 */
+	stm32f_usb_dev_ep_init(drv, 0);
+
+	/* Enable the device and set the address to 0 */
+	usb->daddr = USB_EF + 0;
+
+	/* Enable Correct transfer and other interrupts */
+	usb->cntr |= USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_SUSPM;
+}
+
+void stm32f_usb_dev_enumerate(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	(void)usb;
 }
 
 /*
@@ -433,7 +463,7 @@ void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv,
 
 	(void)usb;
 
-	DCC_LOG1(LOG_TRACE, "OUT 0, cnt=%d", cnt);
+	DCC_LOG(LOG_TRACE, "OUT 0");
 }
 
 void stm32f_usb_dev_ep0_in(struct stm32f_usb_drv * drv,
