@@ -64,7 +64,8 @@ struct stm32f_usb_buf_desc {
 /* Endpoint control */
 struct stm32f_usb_ep {
 	struct stm32f_usb_buf_desc * desc;
-	uint32_t * buf;
+	uint32_t * rx_buf;
+	uint16_t rx_max;
 	union {
 		usb_class_on_ep_rx_t on_rx;
 		usb_class_on_setup_t on_setup;
@@ -206,7 +207,8 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 		drv->ep[i].desc = desc;
 		/* set the endpoint rx/tx/setup callback */
 		drv->ep[i].on_rx = epi[i].on_rx;
-		drv->ep[i].buf = NULL;
+		drv->ep[i].rx_buf = NULL;
+		drv->ep[i].rx_max = 0;
 		/* Set EP address */
 		epr = USB_EA_SET(epi[i].addr);
 		/* Allocate packet buffers */
@@ -410,12 +412,12 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	/* Data received */
 	cnt = desc->rx.count;
 
-	if (ep->buf != NULL) {
+	if (ep->rx_buf != NULL) {
 		uint16_t * src;
 		uint16_t * dst;
 		int i;
 		/* copy data to destination buffer */
-		dst = (uint16_t *)ep->buf;
+		dst = (uint16_t *)ep->rx_buf;
 		src = (uint16_t *)STM32F_USB_PKTBUF + (desc->rx.addr / 2);
 		for (i = 0; i < (cnt + 1) / 2; i++)
 			dst[i] = src[i];
@@ -424,11 +426,11 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	if (epr & USB_SETUP) {
 		DCC_LOG2(LOG_TRACE, "SETUP EP%d, cnt=%d", ea, cnt);
 		/* call class endpoint callback */
-		ep->on_setup(drv->cl, ep->buf, cnt);
+		ep->on_setup(drv->cl, ep->rx_buf, cnt);
 	} else {
 		DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
 		/* call class endpoint callback */
-		ep->on_rx(drv->cl, ep->buf, cnt);
+		ep->on_rx(drv->cl, ep->rx_buf, cnt);
 	}
 
 	/* Set the endpoint as valid to continue receiving */
@@ -445,6 +447,19 @@ void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
 
 	DCC_LOG1(LOG_TRACE, "IN %d", ep_id);
 }
+
+/* prepares to receive */
+int stm32f_usb_ep_rx_setup(struct stm32f_usb_drv * drv, int ep_id,
+		uint32_t * buf, unsigned int len)
+{
+	struct stm32f_usb_ep * ep;
+
+	ep = &drv->ep[ep_id];
+	ep->rx_buf = buf;
+
+	return 0;
+}
+
 
 void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv,
 		struct stm32f_usb_buf_desc * desc)
@@ -542,13 +557,12 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	usb->istr = ~sr;
 }
 
-
-
 /* USB device operations */
 const struct usb_dev_ops stm32f_usb_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
 	.connect = (usb_dev_connect_t)stm32f_usb_dev_connect,
-	.disconnect = (usb_dev_disconnect_t)stm32f_usb_dev_disconnect
+	.disconnect = (usb_dev_disconnect_t)stm32f_usb_dev_disconnect,
+	.ep_rx_setup = (usb_dev_ep_rx_setup_t)stm32f_usb_ep_rx_setup
 };
 
 /* USB device driver */

@@ -201,6 +201,13 @@ void io_init(void)
 	/* USB */
 	stm32f_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	/* USB VBUS */
+	/* When debugging the system we must first disconnect the VBUS
+	 * as it may be left connected. This must be done in order
+	 * for the host to receive a connection indication.
+	 */
+	stm32f_gpio_mode(OTG_FS_VBUS, INPUT, 0);
+	udelay(100);
 	stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 }
 
