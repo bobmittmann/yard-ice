@@ -235,7 +235,9 @@
 #define RCC_MCO_HSE    (0x6 << 24)
 #define RCC_MCO_PLL    (0x7 << 24)
 
-#define RCC_USBPRE     (1 << 22)
+#define RCC_USBPRE       (1 << 22)
+#define RCC_USBPRE_1     (1 << 22)
+#define RCC_USBPRE_1DOT5 (0 << 22)
 
 #define RCC_PLLMUL_MASK   (0x0f << 18)
 #define RCC_PLLMUL(M) ((((M) - 2) & 0x0f) << 18)

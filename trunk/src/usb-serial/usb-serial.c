@@ -171,16 +171,21 @@ int main(int argc, char ** argv)
 }
 #endif
 
-#define OTG_FS_DP STM32F_GPIOA, 12
-#define OTG_FS_DM STM32F_GPIOA, 11
-#define OTG_FS_VBUS STM32F_GPIOA, 9
+#define USB_FS_DP STM32F_GPIOA, 12
+#define USB_FS_DM STM32F_GPIOA, 11
+#define USB_FS_VBUS STM32F_GPIOA, 9
 
 void io_init(void)
 {
+	struct stm32f_rcc * rcc = STM32F_RCC;
+
 	stm32f_gpio_clock_en(STM32F_GPIOA);
 	stm32f_gpio_clock_en(STM32F_GPIOB);
 
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
+
+	/* Enable Alternate Functions IO clock */
+	rcc->apb2enr |= RCC_AFIOEN;
 
 	/* PA3: USART2_TX */
 	stm32f_gpio_mode(STM32F_GPIOA, 2, ALT_FUNC, PUSH_PULL | SPEED_LOW);
@@ -197,18 +202,11 @@ void io_init(void)
 //	stm32f_gpio_mode(STM32F_GPIOA, 5, OUTPUT, OPEN_DRAIN | PULL_UP);
 	stm32f_gpio_mode(STM32F_GPIOA, 5, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_set(STM32F_GPIOA, 5);
+}
 
-	/* USB */
-	stm32f_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	/* USB VBUS */
-	/* When debugging the system we must first disconnect the VBUS
-	 * as it may be left connected. This must be done in order
-	 * for the host to receive a connection indication.
-	 */
-	stm32f_gpio_mode(OTG_FS_VBUS, INPUT, 0);
-	udelay(100);
-	stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+void usb_vbus_connect(void)
+{
+//	stm32f_gpio_mode(USB_FS_VBUS, ALT_FUNC, SPEED_LOW);
 }
 
 #define BUTTON_STACK_SIZE 128 
@@ -325,10 +323,10 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	io_init();
-
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
+
+	io_init();
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
