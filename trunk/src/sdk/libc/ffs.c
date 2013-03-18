@@ -33,7 +33,7 @@ const char ffs_debruijn_index[32] = {
 	32, 28, 14, 24, 22, 20, 17, 8, 27, 13, 19, 7, 12, 6, 11, 10
 } ;
 
-int __attribute__((section(".uthreads_code"))) ffs(int i)
+int ffs(int i)
 {
 	if (i)
 		return ffs_debruijn_index[((i & -i) * DEBRUIJN32) >> 27];
