@@ -23,7 +23,7 @@
 
 LIB_STATIC = cdc-acm
 
-CFILES = cdc-acm_desc.c cdc-acm_dev.c cdc_acm_fops.c
+CFILES = cdc-acm_desc.c cdc-acm_dev.c cdc-acm_fops.c
 
 include ../../mk/lib.mk
 

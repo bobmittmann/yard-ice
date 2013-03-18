@@ -27,9 +27,9 @@ CFILES = usb-serial.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv 
+		  ../sdk/libdrv ../sdk/libcdc-acm
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv 
+LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm
 
 INCPATH = ../sdk/include 
 

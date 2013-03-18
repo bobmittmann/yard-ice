@@ -35,7 +35,7 @@
 
 #include <sys/dcclog.h>
 
-#include "cdc_acm.h"
+#include "cdc-acm.h"
 
 #include <thinkos.h>
 #define __THINKOS_IRQ__

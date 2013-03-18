@@ -21,7 +21,7 @@
  */
 
 
-#include "cdc_acm.h"
+#include "cdc-acm.h"
 
 const struct cdc_desc_set cdc_acm_desc = {
 	{

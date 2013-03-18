@@ -245,7 +245,21 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
 				 unsigned int addr, unsigned int len);
 
+/*---------------------------------------------------------------------
+ * USB Full Speed
+ *---------------------------------------------------------------------*/
 
+void stm32f_usb_io_init(void);
+
+void stm32f_usb_vbus_connect(bool connect);
+
+void stm32f_usb_power_on(struct stm32f_usb * usb);
+
+void stm32f_usb_power_off(struct stm32f_usb * usb);
+
+void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz);
+
+void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id, int mxpktsz);
 
 #endif /* __ASSEMBLER__ */
 
