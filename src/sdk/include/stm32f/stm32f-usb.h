@@ -549,6 +549,36 @@ struct stm32f_usb {
 	volatile uint32_t * btable;
 };
 
+/* TX packet buffer descriptor */
+struct stm32f_usb_tx_pktbuf {
+	uint32_t addr;
+	uint32_t count;
+};
+
+/* RX packet buffer descriptor */
+struct stm32f_usb_rx_pktbuf {
+	uint32_t addr;
+	uint32_t count :9;
+	uint32_t num_block :5;
+	uint32_t blsize :1;
+};
+
+/* Generic packet buffer descriptor */
+struct stm32f_usb_pktbuf {
+	union {
+		struct {
+			/* single buffer entry */
+			struct stm32f_usb_tx_pktbuf tx;
+			struct stm32f_usb_rx_pktbuf rx;
+		};
+		/* double buffer TX */
+		struct stm32f_usb_tx_pktbuf dtx[2];
+		/* double buffer RX */
+		struct stm32f_usb_rx_pktbuf drx[2];
+	};
+};
+
+
 #endif				/* __ASSEMBLER__ */
 
 #endif				/* __STM32F_USB_H__ */
