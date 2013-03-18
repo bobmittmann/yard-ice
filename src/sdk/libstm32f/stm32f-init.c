@@ -109,7 +109,7 @@ void _init(void)
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz
 	   USBCLK = 48 MHz */
-	cfg = RCC_USBPRE | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | RCC_PPRE2_2 | \
+	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | RCC_PPRE2_2 | \
 		  RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
 
 	rcc->cfgr = cfg;

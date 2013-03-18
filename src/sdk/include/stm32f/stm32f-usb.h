@@ -547,7 +547,6 @@ struct stm32f_usb {
 	volatile uint32_t daddr;
        /* 0x050 */
 	volatile uint32_t * btable;
-	uint32_t res2[(0x100 - 0x040) / 4];
 };
 
 #endif				/* __ASSEMBLER__ */

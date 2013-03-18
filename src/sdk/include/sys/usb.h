@@ -229,7 +229,7 @@ enum enpoint_type {
 	/* Defines a BULK endpoint */
 	ENDPOINT_TYPE_BULK = 0x02,
 	/* Defines an INTERRUPT endpoint */
-	ENDPOINT_TYPE_INTERRUPT =0x03
+	ENDPOINT_TYPE_INTERRUPT = 0x03
 };
 
 struct usb_descriptor_device {

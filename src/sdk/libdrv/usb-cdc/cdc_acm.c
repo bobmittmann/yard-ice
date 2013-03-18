@@ -27,33 +27,33 @@ const struct cdc_desc_set cdc_acm_desc = {
 	{
 		/* Size of this descriptor in bytes */
 		sizeof(struct usb_descriptor_device),
-			/* DEVICE descriptor type */
-			USB_DESCRIPTOR_DEVICE,
-			/* USB specification release number */
+		/* DEVICE descriptor type */
+		USB_DESCRIPTOR_DEVICE,
+		/* USB specification release number */
 //			USB2_00,
-			USB1_10,
-			/* Class code */
-			USB_CLASS_COMMUNICATION,
-			/* Subclass code */
-			0x00,
-			/* Protocol code */
-			0x00,
-			/* Control endpoint 0 max. packet size */
-			EP0_MAX_PKT_SIZE,
-			/* Vendor ID */
-			USB_VENDOR_ATMEL,
-			/* Product ID */
-			0x6119,
-			/* Device release number */
-			0x0001,
-			/* Index of manu. string descriptor */
-			0x00,
-			/* Index of prod. string descriptor */
-			0x00,
-			/* Index of S.N.  string descriptor */
-			0x00,
-			/* Number of possible configurations */
-			0x01
+		USB1_10,
+		/* Class code */
+		USB_CLASS_COMMUNICATION,
+		/* Subclass code */
+		0x00,
+		/* Protocol code */
+		0x00,
+		/* Control endpoint 0 max. packet size */
+		EP0_MAX_PKT_SIZE,
+		/* Vendor ID */
+		USB_VENDOR_ATMEL,
+		/* Product ID */
+		0x6119,
+		/* Device release number */
+		0x0001,
+		/* Index of manu. string descriptor */
+		0x00,
+		/* Index of prod. string descriptor */
+		0x00,
+		/* Index of S.N.  string descriptor */
+		0x00,
+		/* Number of possible configurations */
+		0x01
 	}, {
 		/* Configuration 1 descriptor */ 
 		{

@@ -28,7 +28,7 @@
 
 #define EP0 0
 #define EP0_TX_FIFO 0
-#define EP0_MAX_PKT_SIZE 64
+#define EP0_MAX_PKT_SIZE 8
 #define EP0_FIFO_SIZE 128
 
 #define EP_OUT 1
