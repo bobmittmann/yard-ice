@@ -558,9 +558,10 @@ struct stm32f_usb_tx_pktbuf {
 /* RX packet buffer descriptor */
 struct stm32f_usb_rx_pktbuf {
 	uint32_t addr;
-	uint32_t count :9;
-	uint32_t num_block :5;
-	uint32_t blsize :1;
+	uint32_t count: 10;
+	uint32_t num_block: 5;
+	uint32_t blsize: 1;
+	uint32_t res: 16;
 };
 
 /* Generic packet buffer descriptor */
@@ -572,9 +573,9 @@ struct stm32f_usb_pktbuf {
 			struct stm32f_usb_rx_pktbuf rx;
 		};
 		/* double buffer TX */
-		struct stm32f_usb_tx_pktbuf dtx[2];
+		struct stm32f_usb_tx_pktbuf dbtx[2];
 		/* double buffer RX */
-		struct stm32f_usb_rx_pktbuf drx[2];
+		struct stm32f_usb_rx_pktbuf dbrx[2];
 	};
 };
 
