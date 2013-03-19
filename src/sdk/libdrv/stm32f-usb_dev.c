@@ -58,85 +58,9 @@ struct stm32f_usb_drv {
 	struct stm32f_usb_ep ep[USB_DRIVER_EP_MAX];
 	uint8_t ep_cnt;
 	usb_class_t * cl;
+	const struct usb_class_events * ev;
 	const struct usb_descriptor_device * dsc_dev;
 };
-
-struct usb_desc_set {
-	struct usb_descriptor_device device;
-	struct usb_descriptor_configuration conf;
-};
-
-struct usb_descriptor {
-	uint8_t length;              
-	uint8_t type;      
-} __attribute__((__packed__));
-
-static struct usb_descriptor * 
-	usb_desc_next(struct usb_descriptor * dsc) 
-{
-	return (struct usb_descriptor *)(((uint8_t *)dsc) + dsc->length);  
-}
-
-const char * ep_type_nm[] = {
-	"CONTROL",
-	"ISOCHRONOUS",
-	"BULK",
-	"INTERRUPT"
-};
-
-int usb_desc_device_parse(const struct usb_descriptor_device * dv)
-{
-	/* make sur the descriptor is a device descriptor */
-	if (dv->type != USB_DESCRIPTOR_DEVICE)
-		return -1;
-	if (dv->length != sizeof(struct usb_descriptor_device))
-		return -1;
-	dv = (struct usb_descriptor_device *)dv;
-
-	/* Control endpoint 0 max. packet size */
-	DCC_LOG1(LOG_TRACE, "EP0 IN/OUT CONTROL maxpacketsize=%d...", 
-			 dv->max_pkt_sz0);
-
-	return dv->max_pkt_sz0;
-};
-
-int usb_desc_config_parse(const struct usb_descriptor_configuration * cfg)
-{
-	struct usb_descriptor * dsc;
-	struct usb_descriptor * end;
-
-	if (cfg->type != USB_DESCRIPTOR_CONFIGURATION)
-		return -1;
-	if (cfg->length != sizeof(struct usb_descriptor_configuration))
-		return -1;
-
-	/* skip the configuration descriptor */
-	dsc = usb_desc_next((struct usb_descriptor *) cfg);
-	/* get a pointer to the end of the configuration */
-	end = (struct usb_descriptor *)(((uint8_t *)cfg) + cfg->total_length);
-
-	/* search for endpoints */
-	while (dsc < end) {
-		if (dsc->type == USB_DESCRIPTOR_ENDPOINT) {
-			struct usb_descriptor_endpoint * e;
-			e = (struct usb_descriptor_endpoint *)dsc;
-
-			if (e->length != sizeof(struct usb_descriptor_endpoint))
-				return -1;
-
-			DCC_LOG4(LOG_TRACE, "EP%d %s %s maxpacketsize=%d...", 
-					e->endpointaddress & 0x7f, 
-					(e->endpointaddress & USB_ENDPOINT_IN) ? "IN" : "OUT", 
-					ep_type_nm[e->attributes], 
-					e->maxpacketsize);
-		}
-		dsc = usb_desc_next(dsc);
-	}
-
-	return 0;
-};
-
-
 
 /*
  Upon system and power-on reset, the first operation the application software should perform
@@ -274,27 +198,38 @@ When a RESET interrupt is received, the application software is responsible to e
 the default endpoint of USB function 0 within 10mS from the end of reset sequence which
 triggered the interrupt. */
 
+int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv, int mxpktsz)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
+
+	/* initializes EP0 */
+	stm32f_usb_ep0_init(usb, mxpktsz);
+
+	return 0;
+}
+
 
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-	int mxpktsz;
 
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* set the btable address */
 	usb->btable = 0x000;
 
-	mxpktsz = usb_desc_device_parse(drv->dsc_dev);
-		
-	/* initializes EP0 */
-	stm32f_usb_ep0_init(usb, mxpktsz);
+	DCC_LOG1(LOG_TRACE, "ev=0x%08x", drv->ev);
+
+	drv->ev->on_reset(drv->cl);
 
 	/* Enable the device and set the address to 0 */
 	usb->daddr = USB_EF + 0;
 
 	/* Enable Correct transfer and other interrupts */
-	usb->cntr |= USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_SUSPM;
+//	usb->cntr |= USB_CTRM | USB_PMAOVRM | USB_ERRM | USB_SUSPM;
+	usb->cntr |= USB_CTRM;
 }
 
 void stm32f_usb_dev_enumerate(struct stm32f_usb_drv * drv)
@@ -318,20 +253,24 @@ order to avoid losing the notification of a second OUT transaction addressed to 
 endpoint following immediately the one which triggered the CTR interrupt.
  */
 
+
 void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_pktbuf * desc;
+	struct stm32f_usb_pktbuf * pktbuf;
 	struct stm32f_usb_ep * ep;
 	uint32_t epr;
 	int cnt;
 	int ea;
+
+	pktbuf = (struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF;
 
 	epr = usb->epr[ep_id];
 	ep = &drv->ep[ep_id];
 	ea = USB_EA_GET(epr);
 	(void)ea;
 
+#if 0
 	if (epr & USB_EP_DBL_BUF) {
 		/* double buffer */
 		/* select the descriptor according to the data toggle bit */
@@ -341,17 +280,18 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 		/* select the RX descriptor */
 		desc = &ep->pktbuf[1];
 	}
+#endif
 
 	/* Data received */
-	cnt = desc->rx.count;
+	cnt = pktbuf[ep_id].rx.count;
 
 	if (ep->rx_buf != NULL) {
-		uint16_t * src;
+		uint32_t * src;
 		uint16_t * dst;
 		int i;
 		/* copy data to destination buffer */
 		dst = (uint16_t *)ep->rx_buf;
-		src = (uint16_t *)STM32F_USB_PKTBUF + (desc->rx.addr / 2);
+		src = (uint32_t *)STM32F_USB_PKTBUF + (pktbuf[ep_id].rx.addr / 2);
 		for (i = 0; i < (cnt + 1) / 2; i++)
 			dst[i] = src[i];
 	}
@@ -359,7 +299,7 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	if (epr & USB_SETUP) {
 		DCC_LOG2(LOG_TRACE, "SETUP EP%d, cnt=%d", ea, cnt);
 		/* call class endpoint callback */
-		ep->on_setup(drv->cl, ep->rx_buf, cnt);
+		drv->ev->on_setup(drv->cl, ep->rx_buf, cnt);
 	} else {
 		DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
 		/* call class endpoint callback */
@@ -387,21 +327,12 @@ int stm32f_usb_ep_rx_setup(struct stm32f_usb_drv * drv, int ep_id,
 {
 	struct stm32f_usb_ep * ep;
 
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
 	ep = &drv->ep[ep_id];
 	ep->rx_buf = buf;
 
 	return 0;
-}
-
-
-void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv,
-		struct stm32f_usb_pktbuf * desc)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-
-	(void)usb;
-
-	DCC_LOG(LOG_TRACE, "SETUP 0");
 }
 
 void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv,
@@ -436,7 +367,8 @@ void stm32f_usb_dev_ep0_in(struct stm32f_usb_drv * drv,
  */
 
 int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
-		const struct usb_descriptor_device * dsc)
+		const struct usb_descriptor_device * dsc,
+		const struct usb_class_events * ev)
 {
 	struct stm32f_usb * usb = STM32F_USB;
 //	uint32_t stack = STM32F_USB_PKTBUF_SIZE;
@@ -445,6 +377,9 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 //	desc = (struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF;
 	drv->cl = cl;
 	drv->dsc_dev = dsc;
+	drv->ev = ev;
+	
+	DCC_LOG1(LOG_TRACE, "ev=0x%08x", drv->ev);
 
 	/* Initialize IO pins */
 	stm32f_usb_io_init();
@@ -452,6 +387,10 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	stm32f_usb_power_off(usb);
 
 	stm32f_usb_power_on(usb);
+
+	/* Enable Reset, SOF  and Wakeup interrupts */
+//	usb->cntr = USB_WKUP | USB_SUSPM | USB_RESETM;
+	usb->cntr = USB_WKUP | USB_RESETM;
 
 	return 0;
 }
@@ -538,7 +477,8 @@ const struct usb_dev_ops stm32f_usb_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
 	.connect = (usb_dev_connect_t)stm32f_usb_dev_connect,
 	.disconnect = (usb_dev_disconnect_t)stm32f_usb_dev_disconnect,
-	.ep_rx_setup = (usb_dev_ep_rx_setup_t)stm32f_usb_ep_rx_setup
+	.ep_rx_setup = (usb_dev_ep_rx_setup_t)stm32f_usb_ep_rx_setup,
+	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init
 };
 
 /* USB device driver */

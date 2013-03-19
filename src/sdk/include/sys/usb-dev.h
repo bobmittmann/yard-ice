@@ -53,8 +53,14 @@ typedef int (* usb_class_on_ep_rx_t)(usb_class_t * cl,
 typedef int (* usb_class_on_setup_t)(usb_class_t * cl,
 		uint32_t * buf, unsigned int len);
 
+typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
+
 typedef int (* usb_class_on_enum_t)(usb_class_t * cl, unsigned int addr);
 
+struct usb_class_events {
+	usb_class_on_reset_t on_reset;
+	usb_class_on_setup_t on_setup;
+};
 
 struct usb_ep_info {
 	/* Address of the endpoint on the USB device */
@@ -88,7 +94,8 @@ typedef struct usb_ep_info usb_ep_info_t;
 typedef int (* usb_dev_ep_rx_setup_t)(void *, int, uint32_t *, unsigned int);
 
 typedef int (* usb_dev_init_t)(void *, usb_class_t *,
-		const struct usb_descriptor_device * dsc);
+		const struct usb_descriptor_device * dsc,
+		const struct usb_class_events * ev);
 
 typedef int (* usb_dev_connect_t)(void *);
 
@@ -105,6 +112,8 @@ typedef int (* usb_dev_ep_zlp_send_t)(void *, int);
 typedef int (* usb_dev_ep_enable_t)(void *, int);
 
 typedef int (* usb_dev_ep_disable_t)(void *, int);
+
+typedef int (* usb_dev_ep0_init_t)(void *, int);
 
 struct usb_dev_ops {
 	/* Initialize the USB device */
@@ -127,6 +136,7 @@ struct usb_dev_ops {
 	/* Disable */
 	usb_dev_ep_disable_t ep_disable;
 	/* ... */
+	usb_dev_ep0_init_t ep0_init;
 };
 
 /* USB device endpoint object */
@@ -150,8 +160,9 @@ extern "C" {
 #endif
 
 extern inline int usb_dev_init(const usb_dev_t * dev, usb_class_t * cl,
-		const struct usb_descriptor_device * dsc) {
-	return dev->op->dev_init(dev->priv, cl, dsc);
+		const struct usb_descriptor_device * dsc, 
+		const struct usb_class_events * ev) {
+	return dev->op->dev_init(dev->priv, cl, dsc, ev);
 }
 
 extern inline int usb_dev_connect(const usb_dev_t * dev) {
@@ -172,6 +183,11 @@ extern inline int usb_dev_ep_stall(const usb_dev_ep_t * ep) {
 	return ep->op->stall(ep->priv);
 }
 #endif
+
+extern inline int usb_dev_ep_rx_setup(const usb_dev_t * dev, int ep_id,
+		void * buf, int len) {
+	return dev->op->ep_rx_setup(dev->priv, ep_id, buf, len);
+}
 
 extern inline int usb_dev_ep_tx_start(const usb_dev_t * dev, int ep_id,
 		const void * buf, int len) {
@@ -196,6 +212,10 @@ extern inline int usb_dev_ep_enable(const usb_dev_t * dev, int ep_id) {
 
 extern inline int usb_dev_ep_disable(const usb_dev_t * dev, int ep_id) {
 	return dev->op->ep_disable(dev->priv, ep_id);
+}
+
+extern inline int usb_dev_ep0_init(const usb_dev_t * dev, unsigned int mxpktsz) {
+	return dev->op->ep0_init(dev->priv, mxpktsz);
 }
 
 #if 0
