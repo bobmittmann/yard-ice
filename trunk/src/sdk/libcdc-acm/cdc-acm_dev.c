@@ -109,7 +109,7 @@ int usb_desc_device_parse(const struct usb_descriptor_device * dv)
 	dv = (struct usb_descriptor_device *)dv;
 
 	/* Control endpoint 0 max. packet size */
-	DCC_LOG1(LOG_TRACE, "EP0 IN/OUT CONTROL maxpacketsize=%d...", 
+	DCC_LOG1(LOG_INFO, "EP0 IN/OUT CONTROL maxpacketsize=%d...", 
 			 dv->max_pkt_sz0);
 
 	return dv->max_pkt_sz0;
@@ -156,8 +156,6 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	struct usb_cdc_class * cdc = (struct usb_cdc_class *)cl;
 	int mxpktsz;
 
-	DCC_LOG(LOG_TRACE, "...");
-
 	mxpktsz = usb_desc_device_parse(&cdc_acm_desc.device);
 
 	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
@@ -170,7 +168,7 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	return 0;
 }
 
-int usb_cdc_on_setup(usb_class_t * cl, uint32_t * buf, unsigned int sz)
+int usb_cdc_on_setup(usb_class_t * cl, void * buf, unsigned int sz)
 {
 	struct usb_cdc_class * cdc = (struct usb_cdc_class *)cl;
 	int req_type;
@@ -179,12 +177,13 @@ int usb_cdc_on_setup(usb_class_t * cl, uint32_t * buf, unsigned int sz)
 	int	index;
 	int desc;
 	int len;
+	uint8_t * req = (uint8_t *)buf;
 
-	req_type = (buf[0] >> 0) & 0xff;
-	request = (buf[0] >> 8) & 0xff;
-	value = (buf[0] >> 16) & 0xffff;
-	index = (buf[1] >> 0) & 0xffff;
-	len = (buf[1] >> 16) & 0xffff;
+	req_type = req[0];
+	request = req[1];
+	value = req[2] | (req[3] << 8);
+	index = req[4] | (req[5] << 8);
+	len = req[6] | (req[7] << 8);
 
 	if (req_type & 0x80) {
 		DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
@@ -194,6 +193,8 @@ int usb_cdc_on_setup(usb_class_t * cl, uint32_t * buf, unsigned int sz)
 				 "Host->Dev", req_type);
 		//		otg_fs_ep0_out_start(otg_fs);
 	}
+
+	DCC_LOG1(LOG_TRACE, "len = %d", len);
 
 	/* Handle supported standard device request Cf
 	   Table 9-3 in USB specification Rev 1.1 */
@@ -398,33 +399,6 @@ int usb_cdc_on_data_rx(usb_class_t * cl, uint32_t * buf, unsigned int len)
 	DCC_LOG1(LOG_TRACE, "len=%d", len);
 	return 0;
 }
-
-const struct usb_ep_info usb_cdc_ep_info[] = {
-		{
-				.addr = 0,
-				.type = ENDPOINT_TYPE_CONTROL,
-				.mxpktsz = 64,
-				.on_rx = usb_cdc_on_ep0_rx
-		},
-		{
-				.addr = USB_ENDPOINT_OUT + 1,
-				.type = ENDPOINT_TYPE_BULK,
-				.mxpktsz = 64,
-				.on_rx = usb_cdc_on_data_rx
-		},
-		{
-				.addr = USB_ENDPOINT_IN + 2,
-				.type = ENDPOINT_TYPE_BULK,
-				.mxpktsz = 64,
-				.on_rx = usb_cdc_on_ep0_rx
-		},
-		{
-				.addr = USB_ENDPOINT_IN + 3,
-				.type = ENDPOINT_TYPE_INTERRUPT,
-				.mxpktsz = 64,
-				.on_rx = usb_cdc_on_ep0_rx
-		}
-};
 
 struct usb_cdc_class usb_cdc_rt;
 

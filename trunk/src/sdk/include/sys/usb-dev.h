@@ -48,10 +48,10 @@ typedef struct usb_ep_if usb_ep_t;
 
 /* This callback is invoked after a successful OUT transaction */
 typedef int (* usb_class_on_ep_rx_t)(usb_class_t * cl,
-		uint32_t * buf, unsigned int len);
+		void * buf, unsigned int len);
 
 typedef int (* usb_class_on_setup_t)(usb_class_t * cl,
-		uint32_t * buf, unsigned int len);
+		void * buf, unsigned int len);
 
 typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
 

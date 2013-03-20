@@ -31,6 +31,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/delay.h>
 #include <sys/usb-dev.h>
+#include <sys/param.h>
 
 
 #include <thinkos.h>
@@ -43,8 +44,10 @@
 /* Endpoint control */
 struct stm32f_usb_ep {
 	struct stm32f_usb_pktbuf * pktbuf;
-	uint32_t * rx_buf;
-	uint16_t rx_max;
+	uint8_t * rx_buf;
+	uint8_t * tx_buf;
+	uint16_t tx_rem;
+	uint16_t mxpktsz;
 	union {
 		usb_class_on_ep_rx_t on_rx;
 		usb_class_on_setup_t on_setup;
@@ -61,6 +64,46 @@ struct stm32f_usb_drv {
 	const struct usb_class_events * ev;
 	const struct usb_descriptor_device * dsc_dev;
 };
+
+int stm32f_copy_from_pktbuf(uint8_t * dst, 
+							struct stm32f_usb_rx_pktbuf * rx)
+{
+	uint32_t * src;
+	uint32_t data;
+	int cnt;
+	int i;
+
+	/* Data received */
+	cnt = rx->count;
+
+	/* copy data to destination buffer */
+	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
+	for (i = 0; i < (cnt + 1) / 2; i++) {
+		data = *src++;
+		*dst++ = data;
+		*dst++ = data >> 8;
+	}
+
+	return cnt;
+}
+
+void stm32f_copy_to_pktbuf(struct stm32f_usb_tx_pktbuf * tx, 
+						   uint8_t * src, int len)
+{
+	uint32_t * dst;
+	int i;
+
+	/* copy data to destination buffer */
+	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
+	for (i = 0; i < (len + 1) / 2; i++) {
+		*dst = src[0] | (src[1] << 8);
+		src += 2;
+	}
+
+	tx->count = len;
+}
+
+
 
 /*
  Upon system and power-on reset, the first operation the application software should perform
@@ -201,8 +244,12 @@ triggered the interrupt. */
 int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv, int mxpktsz)
 {
 	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep;
 
 	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
+
+	ep = &drv->ep[0];
+	ep->mxpktsz = mxpktsz;
 
 	/* initializes EP0 */
 	stm32f_usb_ep0_init(usb, mxpktsz);
@@ -219,8 +266,6 @@ void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 
 	/* set the btable address */
 	usb->btable = 0x000;
-
-	DCC_LOG1(LOG_TRACE, "ev=0x%08x", drv->ev);
 
 	drv->ev->on_reset(drv->cl);
 
@@ -253,17 +298,16 @@ order to avoid losing the notification of a second OUT transaction addressed to 
 endpoint following immediately the one which triggered the CTR interrupt.
  */
 
+#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
 void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_pktbuf * pktbuf;
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 	struct stm32f_usb_ep * ep;
 	uint32_t epr;
 	int cnt;
 	int ea;
-
-	pktbuf = (struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF;
 
 	epr = usb->epr[ep_id];
 	ep = &drv->ep[ep_id];
@@ -283,18 +327,7 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 #endif
 
 	/* Data received */
-	cnt = pktbuf[ep_id].rx.count;
-
-	if (ep->rx_buf != NULL) {
-		uint32_t * src;
-		uint16_t * dst;
-		int i;
-		/* copy data to destination buffer */
-		dst = (uint16_t *)ep->rx_buf;
-		src = (uint32_t *)STM32F_USB_PKTBUF + (pktbuf[ep_id].rx.addr / 2);
-		for (i = 0; i < (cnt + 1) / 2; i++)
-			dst[i] = src[i];
-	}
+	cnt = stm32f_copy_from_pktbuf(ep->rx_buf, &pktbuf[ep_id].rx);
 
 	if (epr & USB_SETUP) {
 		DCC_LOG2(LOG_TRACE, "SETUP EP%d, cnt=%d", ea, cnt);
@@ -312,18 +345,9 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	usb->epr[ep_id] = epr;
 }
 
-void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-
-	(void)usb;
-
-	DCC_LOG1(LOG_TRACE, "IN %d", ep_id);
-}
-
 /* prepares to receive */
 int stm32f_usb_ep_rx_setup(struct stm32f_usb_drv * drv, int ep_id,
-		uint32_t * buf, unsigned int len)
+		void * buf, unsigned int len)
 {
 	struct stm32f_usb_ep * ep;
 
@@ -334,6 +358,64 @@ int stm32f_usb_ep_rx_setup(struct stm32f_usb_drv * drv, int ep_id,
 
 	return 0;
 }
+
+int stm32f_usb_dev_ep_stall(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	set_ep_txstat(usb, ep_id, USB_TX_STALL);
+
+	return 0;
+}
+
+int stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep;
+	int len;
+
+	ep = &drv->ep[ep_id];
+
+	if (ep->tx_rem == 0) {
+		DCC_LOG1(LOG_TRACE, "fixme: ep_id=%d", ep_id);
+		/* TODO: ... */
+		return -1;
+	}
+
+	len = MIN(ep->tx_rem, ep->mxpktsz);
+
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
+		
+	stm32f_copy_to_pktbuf(&pktbuf[ep_id].tx, ep->tx_buf, len);
+
+	ep->tx_rem -= len;
+	ep->tx_buf += len;
+
+	set_ep_txstat(usb, ep_id, USB_TX_VALID);
+
+	return 0;
+}
+
+/* start sending */
+int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
+		void * buf, unsigned int len)
+{
+	struct stm32f_usb_ep * ep;
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	ep = &drv->ep[ep_id];
+	ep->tx_buf = buf;
+	ep->tx_rem = len;
+
+	stm32f_usb_dev_ep_in(drv, ep_id);
+
+	return 0;
+}
+
 
 void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv,
 		struct stm32f_usb_pktbuf * desc)
@@ -381,10 +463,13 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	
 	DCC_LOG1(LOG_TRACE, "ev=0x%08x", drv->ev);
 
-	/* Initialize IO pins */
-	stm32f_usb_io_init();
 
 	stm32f_usb_power_off(usb);
+
+	udelay(1000);
+
+	/* Initialize IO pins */
+	stm32f_usb_io_init();
 
 	stm32f_usb_power_on(usb);
 
@@ -394,15 +479,6 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 
 	return 0;
 }
-
-
-
-
-
-
-
-
-
 
 
 /* Private USB device driver data */
@@ -435,7 +511,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 
 	if (sr & USB_RESET) {
-		DCC_LOG(LOG_TRACE, "RESET");
+		DCC_LOG(LOG_INFO, "RESET");
 		usb->istr = ~USB_RESET;
 		stm32f_usb_dev_reset(drv);
 	}
@@ -478,7 +554,9 @@ const struct usb_dev_ops stm32f_usb_ops = {
 	.connect = (usb_dev_connect_t)stm32f_usb_dev_connect,
 	.disconnect = (usb_dev_disconnect_t)stm32f_usb_dev_disconnect,
 	.ep_rx_setup = (usb_dev_ep_rx_setup_t)stm32f_usb_ep_rx_setup,
-	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init
+	.ep_tx_start= (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
+	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init,
+	.ep_stall = (usb_dev_ep_stall_t)stm32f_usb_dev_ep_stall
 };
 
 /* USB device driver */
