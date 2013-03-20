@@ -54,7 +54,7 @@ void stm32f_usb_vbus_connect(bool connect)
 	if (connect)
 		stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
 	else
-		stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
+		stm32f_gpio_mode(USB_FS_VBUS, INPUT, SPEED_LOW);
 #if 0
 	if (connect)
 		stm32f_gpio_mode(USB_FS_VBUS, ALT_FUNC, SPEED_LOW);
@@ -104,6 +104,10 @@ void stm32f_usb_power_off(struct stm32f_usb * usb)
 
 	DCC_LOG(LOG_TRACE, "Disabling USB device clock...");
 	rcc->apb1enr &= ~RCC_USBEN;
+
+	/* disabling IO pins */
+	stm32f_gpio_mode(USB_FS_DP, INPUT, 0);
+	stm32f_gpio_mode(USB_FS_DM, INPUT, 0);
 }
 
 /* configure a RX descriptor */
@@ -152,7 +156,6 @@ int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx)
 	return sz;
 }
 
-
 /******************************************************************************/
 /*                            Endpoint register                               */
 /******************************************************************************/
@@ -191,7 +194,6 @@ int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx)
 #define EP_TX_VALID    (0x0030) /* EndPoint TX VALID */
 #define EPTX_DTOG1     (0x0010) /* EndPoint TX Data TOGgle bit1 */
 #define EPTX_DTOG2     (0x0020) /* EndPoint TX Data TOGgle bit2 */
-#define EPTX_DTOGMASK  (USB_STAT_TX_MSK | EPREG_MASK)
 
 /* STAT_RX[1:0] STATus for RX transfer */
 #define EP_RX_DIS      (0x0000) /* EndPoint RX DISabled */
@@ -200,7 +202,6 @@ int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx)
 #define EP_RX_VALID    (0x3000) /* EndPoint RX VALID */
 #define EPRX_DTOG1     (0x1000) /* EndPoint RX Data TOGgle bit1 */
 #define EPRX_DTOG2     (0x2000) /* EndPoint RX Data TOGgle bit1 */
-#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | EPREG_MASK)
 
 #define _SetEPAddress(bEpNum,bAddr) _SetENDPOINT(bEpNum,\
 _GetENDPOINT(bEpNum) & EPREG_MASK | bAddr)
@@ -215,7 +216,7 @@ _GetENDPOINT(bEpNum) & EPREG_MASK | bAddr)
 #define _GetEPAddress(bEpNum) ((uint8_t)(_GetENDPOINT(bEpNum) & EPADDR_FIELD))
 
 #define _GetBTABLE() 0
-#define PMAAddr ((uint32_t)STM32F_USB_PKTBUF)
+#define PMAAddr ((uint32_t)STM32F_USB_PKTBUF_ADDR)
 
 #define _pEPTxAddr(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8  )*2 + PMAAddr))
 #define _pEPTxCount(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8+2)*2 + PMAAddr))
@@ -333,44 +334,7 @@ void set_ep_type(struct stm32f_usb * usb, int ep_id, int type)
 	uint16_t epr;
 
 	epr = usb->epr[ep_id] & EP_T_MASK;
-
 	epr |= type;
-
-	usb->epr[ep_id] = epr;
-}
-
-void set_ep_txstat(struct stm32f_usb * usb, int ep_id, int stat)
-{
-	uint16_t epr;
-
-	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
-
-	/* Set the bits we want to toggle */
-	epr ^= stat & USB_STAT_TX_MSK;
-
-	/* e0 s | y | e1
-	   -----+---+---
-        0 0 | 0 | 0
-        0 1 | 1 | 1
-        1 0 | 1 | 0
-        1 1 | 0 | 1 
-
-	   y = e0 ^ s;
-	   e1 = e0 ^ y;
-	 */
-
-	usb->epr[ep_id] = epr;
-}
-
-void set_ep_rxstat(struct stm32f_usb * usb, int ep_id, int stat)
-{
-	uint16_t epr;
-
-	epr = usb->epr[ep_id] & EPRX_DTOGMASK;
-
-	/* Set the bits we want to toggle */
-	epr ^= stat & USB_STAT_RX_MSK;
-
 	usb->epr[ep_id] = epr;
 }
 
@@ -423,24 +387,22 @@ int get_ep_rxaddr(struct stm32f_usb * usb, int ep_id)
 /* Set the ase of the packet buffers just above the buffer descriptors:
    We have up to 8 descriptors of 8 bytes each. */
 #define PKTBUF_BUF_BASE (8 * 8)
+#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
 void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 {
-	struct stm32f_usb_pktbuf * pktbuf;
+	/* packet buffer  */
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 //	uint32_t epr;
-	unsigned int addr;
+	unsigned int addr = PKTBUF_BUF_BASE;
 	unsigned int sz;
 
-	/* packet buffer  */
-	pktbuf = (struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF;
-	addr = PKTBUF_BUF_BASE;
 
 	/* clear the correct transfer bits */
 	usb->epr[0] &= ~(USB_CTR_RX | USB_CTR_TX);
 
 	set_ep_type(usb, 0, EP_CONTROL);
 	set_ep_txstat(usb, 0, EP_TX_NAK);
-	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[0]);
 
 	sz = mxpktsz;
 	set_ep_rxaddr(usb, 0, addr);
@@ -454,28 +416,27 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 	sz = pktbuf_rx_cfg(&pktbuf[0].rx, addr, mxpktsz);
 	addr += sz;
 
-	DCC_LOG1(LOG_TRACE, "PMAAddr=%08x", PMAAddr);
-
-	DCC_LOG2(LOG_TRACE, "_pEPRxAddr=%08x %08x", _pEPRxAddr(0), 
-			 &pktbuf[0].rx);
-	DCC_LOG2(LOG_TRACE, "_pEPTxAddr=%08x %08x", _pEPTxAddr(1), 
-			 &pktbuf[1].tx);
-
-
-	DCC_LOG1(LOG_TRACE, "sizeof(pktbuf)=%d", sizeof(struct stm32f_usb_pktbuf));
-	DCC_LOG1(LOG_TRACE, "tx.addr=%d", pktbuf[0].tx.addr);
-	DCC_LOG2(LOG_TRACE, "rx.addr=%d, rx.num_block=%d", 
-			 pktbuf[0].rx.addr, pktbuf[0].rx.num_block);
-
-
-	DCC_LOG1(LOG_TRACE, "txaddr=%d", get_ep_txaddr(usb, 0));
-	DCC_LOG1(LOG_TRACE, "rxaddr=%d", get_ep_rxaddr(usb, 0));
-
 	clr_status_out(usb, 0);
 	set_ep_rxvalid(usb, 0);
 
 	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[0]);
 }
+
+#if 0
+int stm32f_usb_ep_xmit(struct stm32f_usb * usb, int ep_id)
+{
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct stm32f_usb_ep * ep;
+	int len;
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	stm32f_copy_to_pktbuf(tx, buf, len);
+	set_ep_txstat(usb, ep_id, USB_TX_VALID);
+
+	return 0;
+}
+#endif
 
 
 /* This is a bitmask that when applied to the EPR register

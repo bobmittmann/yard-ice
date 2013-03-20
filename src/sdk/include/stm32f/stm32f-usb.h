@@ -580,6 +580,28 @@ struct stm32f_usb_pktbuf {
 };
 
 
+/* EndPoint no toggle MASK (no toggle fields) */
+#define USB_EPREG_MASK (USB_CTR_RX|USB_SETUP|USB_EP_TYPE_MSK|USB_EP_KIND|USB_CTR_TX|USB_EA_MSK)
+
+#define EPTX_DTOGMASK  (USB_STAT_TX_MSK | USB_EPREG_MASK)
+#define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
+
+static inline void set_ep_txstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
+	epr ^= stat & USB_STAT_TX_MSK;
+	usb->epr[ep_id] = epr;
+};
+
+static inline void set_ep_rxstat(struct stm32f_usb * usb, 
+								 unsigned int ep_id, uint32_t stat) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & EPRX_DTOGMASK;
+	epr ^= stat & USB_STAT_RX_MSK;
+	usb->epr[ep_id] = epr;
+};
+
 #endif				/* __ASSEMBLER__ */
 
 #endif				/* __STM32F_USB_H__ */
