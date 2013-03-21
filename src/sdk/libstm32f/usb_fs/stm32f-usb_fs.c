@@ -183,7 +183,7 @@ int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx)
 #define EP_T_MASK      (~EP_T_FIELD & EPREG_MASK)
 
 /* EP_KIND EndPoint KIND */
-#define EPKIND_MASK    (~EP_KIND & EPREG_MASK)
+#define EPKIND_MASK    (~USB_EP_KIND & USB_EPREG_MASK)
 
 #define _SetEPType(bEpNum,wType) (_SetENDPOINT(bEpNum,\ ((_GetENDPOINT(bEpNum) & EP_T_MASK) | wType)))
 
@@ -302,46 +302,34 @@ _GetENDPOINT(bEpNum) & EPREG_MASK | bAddr)
 #define _GetEPTxCount(bEpNum)((uint16_t)(*_pEPTxCount(bEpNum)) & 0x3ff)
 #define _GetEPRxCount(bEpNum)((uint16_t)(*_pEPRxCount(bEpNum)) & 0x3ff)
 
+#define _ClearEP_CTR_RX(bEpNum)   (_SetENDPOINT(bEpNum,\
+								_GetENDPOINT(bEpNum) & 0x7FFF & EPREG_MASK))
+
+#define _ClearEP_CTR_TX(bEpNum)   (_SetENDPOINT(bEpNum,\
+				_GetENDPOINT(bEpNum) & 0xFF7F & EPREG_MASK))
+
+
 void clr_ep_kind(struct stm32f_usb * usb, int ep_id)
 {
-	uint16_t epr;
-
-	epr = usb->epr[ep_id];
-	
-	epr &= EPKIND_MASK;
-
-	usb->epr[ep_id] = epr;
+	clr_ep_flag(usb, ep_id, USB_EP_KIND);
 }
 
 void set_ep_kind(struct stm32f_usb * usb, int ep_id)
 {
-	uint16_t epr;
-
-	epr = usb->epr[ep_id];
-	
-	epr = (epr | EP_KIND) & EPREG_MASK;
-
-	usb->epr[ep_id] = epr;
+	set_ep_flag(usb, ep_id, USB_EP_KIND);
 }
 
 void clr_status_out(struct stm32f_usb * usb, int ep_id)
 {
-	clr_ep_kind(usb, ep_id);
+	clr_ep_flag(usb, ep_id, USB_EP_KIND);
 }
 
 void set_ep_type(struct stm32f_usb * usb, int ep_id, int type)
 {
-	uint16_t epr;
-
+	uint32_t epr;
 	epr = usb->epr[ep_id] & EP_T_MASK;
-	epr |= type;
-	usb->epr[ep_id] = epr;
+	usb->epr[ep_id] = epr | type;
 }
-
-void set_ep_rxvalid(struct stm32f_usb * usb, int ep_id)
-{
-	set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-} 
 
 void set_ep_txcount(struct stm32f_usb * usb, int ep_id, int count)
 {
@@ -351,6 +339,7 @@ void set_ep_txcount(struct stm32f_usb * usb, int ep_id, int count)
 void set_ep_rxcount(struct stm32f_usb * usb, int ep_id, int count)
 {
 	uint32_t * pdwReg = _pEPRxCount(ep_id);
+
 	_SetEPCountRxReg(pdwReg, count);
 }
 
@@ -404,12 +393,6 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 	set_ep_type(usb, 0, EP_CONTROL);
 	set_ep_txstat(usb, 0, EP_TX_NAK);
 
-	sz = mxpktsz;
-	set_ep_rxaddr(usb, 0, addr);
-	set_ep_rxcount(usb, 0, sz);
-	addr += sz;
-	set_ep_txaddr(usb, 0, addr);
-
 	/* allocate single buffers for TX and RX */
 	sz = pktbuf_tx_cfg(&pktbuf[0].tx, addr, mxpktsz);
 	addr += sz;
@@ -421,6 +404,8 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 
 	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[0]);
 }
+
+
 
 #if 0
 int stm32f_usb_ep_xmit(struct stm32f_usb * usb, int ep_id)
