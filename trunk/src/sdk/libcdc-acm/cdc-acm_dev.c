@@ -163,34 +163,26 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	/* initializes EP0 */
 	usb_dev_ep0_init(cdc->usb, mxpktsz);
 
-	usb_dev_ep_rx_setup(cdc->usb, 0, cdc->setup_buf, 2);
+	/* setup the buffer for receiving control data */
+	usb_dev_ep_rx_setup(cdc->usb, 0, cdc->setup_buf, 8);
 
 	return 0;
 }
 
-int usb_cdc_on_setup(usb_class_t * cl, void * buf, unsigned int sz)
+int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req)
 {
 	struct usb_cdc_class * cdc = (struct usb_cdc_class *)cl;
-	int req_type;
-	int request;
-	int value;
-	int	index;
+	int value = req->value;
+	int	index = req->index;
+	int len = req->length;
 	int desc;
-	int len;
-	uint8_t * req = (uint8_t *)buf;
 
-	req_type = req[0];
-	request = req[1];
-	value = req[2] | (req[3] << 8);
-	index = req[4] | (req[5] << 8);
-	len = req[6] | (req[7] << 8);
-
-	if (req_type & 0x80) {
+	if (req->type & 0x80) {
 		DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
-				 "Dev->Host", req_type);
+				 "Dev->Host", req->type);
 	} else {
 		DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
-				 "Host->Dev", req_type);
+				 "Host->Dev", req->type);
 		//		otg_fs_ep0_out_start(otg_fs);
 	}
 
@@ -199,7 +191,7 @@ int usb_cdc_on_setup(usb_class_t * cl, void * buf, unsigned int sz)
 	/* Handle supported standard device request Cf
 	   Table 9-3 in USB specification Rev 1.1 */
 
-	switch ((request << 8) | req_type) {
+	switch ((req->request << 8) | req->type) {
 	case STD_GET_DESCRIPTOR:
 		desc = value >> 8;
 
@@ -227,7 +219,7 @@ int usb_cdc_on_setup(usb_class_t * cl, void * buf, unsigned int sz)
 		DCC_LOG1(LOG_TRACE, "SetAddr: %d -------- [ADDRESS]", value);
 		usb_dev_addr_set(cdc->usb, value);
 		/* signal any pending threads */
-		__thinkos_ev_raise(cdc->rx_ev);
+//		__thinkos_ev_raise(cdc->rx_ev);
 		usb_dev_ep_zlp_send(cdc->usb, 0);
 		break;
 
@@ -379,7 +371,7 @@ int usb_cdc_on_setup(usb_class_t * cl, void * buf, unsigned int sz)
 
 	default:
 		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
-				 req_type, request, value, index, len);
+				 req->type, req->request, value, index, len);
 		usb_dev_ep_stall(cdc->usb, 0);
 		break;
 	}

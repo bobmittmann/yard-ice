@@ -51,7 +51,7 @@ typedef int (* usb_class_on_ep_rx_t)(usb_class_t * cl,
 		void * buf, unsigned int len);
 
 typedef int (* usb_class_on_setup_t)(usb_class_t * cl,
-		void * buf, unsigned int len);
+		struct usb_request * req);
 
 typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
 
