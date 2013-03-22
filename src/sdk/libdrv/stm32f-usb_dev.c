@@ -40,6 +40,15 @@
 
 #include <sys/dcclog.h>
 
+typedef enum {
+	EP_IDLE,
+	EP_STALLED,
+	EP_SETUP,
+	EP_IN_DATA,
+	EP_IN_DATA_LAST,
+	EP_WAIT_STATUS_IN,
+	EP_WAIT_STATUS_OUT,
+} ep_state_t;
 
 /* Endpoint control */
 struct stm32f_usb_ep {
@@ -48,6 +57,7 @@ struct stm32f_usb_ep {
 	uint8_t * tx_buf;
 	uint16_t tx_rem;
 	uint16_t mxpktsz;
+	ep_state_t state;
 	union {
 		usb_class_on_ep_rx_t on_rx;
 		usb_class_on_setup_t on_setup;
@@ -69,13 +79,20 @@ struct stm32f_usb_drv {
 
 enum {
 	CTRL_IDLE,
+	CTRL_ERROR,
 	CTRL_PAUSE,
 	CTRL_SETUP,
+	CTRL_SETUP_IN,
+	CTRL_SETUP_OUT,
 	CTRL_STALLED,
 	CTRL_IN_DATA,
+	CTRL_IN_DATA_LAST,
+	CTRL_IN_DATA_ZLP,
 	CTRL_WAIT_STATUS_IN,
 	CTRL_ADDR_SET
 };
+
+#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
 int stm32f_copy_from_pktbuf(void * ptr, 
 							struct stm32f_usb_rx_pktbuf * rx)
@@ -116,6 +133,52 @@ void stm32f_copy_to_pktbuf(struct stm32f_usb_tx_pktbuf * tx,
 	tx->count = len;
 }
 
+void __ep_stall(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+
+	set_ep_txstat(usb, ep_id, USB_TX_STALL);
+	set_ep_rxstat(usb, ep_id, USB_RX_STALL);
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d [STALLED]", ep_id);
+	ep->state = EP_STALLED;
+}
+
+
+int __ep_pkt_send(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+	int len;
+
+	len = MIN(ep->tx_rem, ep->mxpktsz);
+
+	DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
+
+	if (len > 0) {
+		stm32f_copy_to_pktbuf(&pktbuf[ep_id].tx, ep->tx_buf, len);
+		ep->tx_rem -= len;
+		ep->tx_buf += len;
+	}
+
+	if ((ep->tx_rem == 0) && (len != ep->mxpktsz)) {
+		/* if we put all data into the TX packet buffer but the data
+		 * didn't filled the whole packet, this is the last packet,
+		 * otherwise we need to send a ZLP to finish the transaction */
+		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+		ep->state = EP_IN_DATA_LAST;
+	} else {
+		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA]", ep_id);
+		ep->state = EP_IN_DATA;
+	}
+
+	pktbuf[ep_id].tx.count = len;
+	set_ep_txstat(usb, ep_id, USB_TX_VALID);
+
+	return len;
+}
 
 
 /*
@@ -263,6 +326,7 @@ int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv, int mxpktsz)
 
 	ep = &drv->ep[0];
 	ep->mxpktsz = mxpktsz;
+	ep->state = EP_IDLE;
 
 	/* initializes EP0 */
 	stm32f_usb_ep0_init(usb, mxpktsz);
@@ -314,7 +378,7 @@ order to avoid losing the notification of a second OUT transaction addressed to 
 endpoint following immediately the one which triggered the CTR interrupt.
  */
 
-#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
+
 
 void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 {
@@ -388,26 +452,51 @@ int stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
 
 	ep = &drv->ep[ep_id];
 
-	if (ep->tx_rem == 0) {
-		DCC_LOG1(LOG_TRACE, "fixme: ep_id=%d", ep_id);
-		/* TODO: ... */
-		return -1;
+	if ((len = ep->tx_rem) > 0) {
+		len = MIN(ep->tx_rem, ep->mxpktsz);
+		stm32f_copy_to_pktbuf(&pktbuf[ep_id].tx, ep->tx_buf, len);
+		ep->tx_rem -= len;
+		ep->tx_buf += len;
+
+		if ((ep->tx_rem == 0) && (len != ep->mxpktsz)) {
+			/* While enabling the last data stage, the opposite direction should
+			 * be set to NAK, so that, if the host reverses the transfer direction
+			 * (to perform the status stage) immediately, it is kept waiting for
+			 * the completion of the control operation. If the control operation
+			 * completes successfully, the software will change NAK to VALID,
+			 * otherwise to STALL.
+			 * */
+			set_ep_rxstat(usb, ep_id, USB_RX_NAK);
+			DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d [DATA_LAST]", ep_id, len);
+			ep->state = EP_IN_DATA_LAST;
+		} else {
+			/* A USB device can determine the number and direction of data stages
+			 * by interpreting the data transferred in the SETUP stage, and is
+			 * required to STALL the transaction in the case of errors. To do
+			 * so, at all data stages before the last, the unused direction should
+			 * be set to STALL, so that, if the host reverses the transfer
+			 * direction too soon, it gets a STALL as a status stage.
+			 * */
+			set_ep_rxstat(usb, ep_id, USB_RX_STALL);
+			DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d [DATA]", ep_id, len);
+			ep->state = EP_IN_DATA;
+		}
+	} else {
+		if (ep->state == EP_IN_DATA_LAST) {
+			set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+			DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d [IDLE]", ep_id, len);
+			ep->state = EP_IDLE;
+			return 0;
+		}
+		set_ep_rxstat(usb, ep_id, USB_RX_NAK);
+		DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d [DATA_LAST]", ep_id, len);
+		ep->state = EP_IN_DATA_LAST;
 	}
 
-	len = MIN(ep->tx_rem, ep->mxpktsz);
-
-	stm32f_copy_to_pktbuf(&pktbuf[ep_id].tx, ep->tx_buf, len);
-
-	ep->tx_rem -= len;
-	ep->tx_buf += len;
-
-	drv->ctrl_st = CTRL_IN_DATA;
-	DCC_LOG3(LOG_TRACE, "ep_id=%d rem=%d len=%d [IN_DATA]", 
-			 ep_id, ep->tx_rem, len);
-		
+	pktbuf[ep_id].tx.count = len;
 	set_ep_txstat(usb, ep_id, USB_TX_VALID);
 
-	return 0;
+	return len;
 }
 
 /* start sending */
@@ -455,69 +544,143 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-
+	struct stm32f_usb_ep * ep = &drv->ep[0];
 	(void)usb;
 
-	if (drv->ctrl_st == CTRL_IN_DATA) {
-		drv->ctrl_st = CTRL_STALLED;
-		DCC_LOG(LOG_TRACE, "OUT 0 [STALLED]");
+	if (ep->state == EP_WAIT_STATUS_OUT) {
+		ep->state = EP_IDLE;
+		DCC_LOG(LOG_TRACE, "EP0 OUT [IDLE] >>>>>>>> SETUP END");
+		set_ep_rxstat(usb, 0, USB_RX_VALID);
+		return;
+	}
+
+	if (ep->state == EP_IN_DATA) {
+		ep->state = EP_STALLED;
+		DCC_LOG(LOG_TRACE, "EP0 OUT [STALLED]");
 		set_ep_rxstat(usb, 0, USB_RX_STALL);
 		set_ep_txstat(usb, 0, USB_TX_STALL);
 		return;
 	}
 
-	DCC_LOG(LOG_TRACE, "OUT 0");
+	DCC_LOG(LOG_TRACE, "EP0 OUT ?????????????????");
 }
 
 void stm32f_usb_dev_ep0_in(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-	struct usb_request * req = &drv->req;
+	struct stm32f_usb_ep * ep = &drv->ep[0];
+	void * dummy = NULL;
 
-	if (drv->ctrl_st == CTRL_IN_DATA) {
-		DCC_LOG(LOG_TRACE, "IN 0");
-		stm32f_usb_dev_ep_in(drv, 0);
+	DCC_LOG(LOG_TRACE, "EP0 IN");
 
-		/* XXX: Expect the host to abort the data IN stage */
-		set_ep_rxstat(usb, 0, USB_RX_VALID);
-		return;
-	}
+	if (ep->state == EP_WAIT_STATUS_IN) {
+		struct usb_request * req = &drv->req;
 
-	if (drv->ctrl_st == CTRL_WAIT_STATUS_IN) {
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
 			usb->daddr = req->value | USB_EF;
 			DCC_LOG(LOG_TRACE, "address set!");
 		}
-
-		drv->ctrl_st = CTRL_STALLED;
-		DCC_LOG(LOG_TRACE, "IN 0 [STALLED]");
 		set_ep_rxstat(usb, 0, USB_RX_STALL);
 		set_ep_txstat(usb, 0, USB_TX_STALL);
+		drv->ev->on_setup_in(drv->cl, req, dummy);
+		ep->state = EP_IDLE;
+		DCC_LOG(LOG_TRACE, ">>>>>>>> SETUP END");
 		return;
 	}
 
+	if (ep->state == EP_IN_DATA_LAST) {
+		ep->state = EP_WAIT_STATUS_OUT;
+		DCC_LOG(LOG_TRACE, "EP0 [WAIT_STATUS_OUT]");
+		set_ep_rxstat(usb, 0, USB_RX_VALID);
+		return;
+	}
+
+	__ep_pkt_send(drv, 0);
+
+	if (ep->state == EP_IN_DATA) {
+		set_ep_rxstat(usb, 0, USB_RX_STALL);
+	}
 }
 
-void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv)
-{
+void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct usb_request * req = &drv->req;
+	struct stm32f_usb_ep * ep = &drv->ep[0];
+	struct stm32f_usb * usb = STM32F_USB;
 	int cnt;
+	int len;
+
+	DCC_LOG(LOG_TRACE, "SETUP START <<<<<<<<<<<<<<<");
 
 	/* copy data from mpacket buffer */
-	cnt = stm32f_copy_from_pktbuf(&drv->req, &pktbuf[0].rx);
+	cnt = stm32f_copy_from_pktbuf(req, &pktbuf[0].rx);
 
+#if ENABLE_PEDANTIC_CHECK
 	if (cnt != 8) {
-		drv->ctrl_st = CTRL_SETUP;
+		__ep_stall(drv, 0);
 		DCC_LOG1(LOG_ERROR, "cnt(%d) != 8 [ERROR]", cnt);
 		return;
 	}
+#else
+	(void)cnt;
+#endif
 
-	drv->ctrl_st = CTRL_SETUP;
-	DCC_LOG1(LOG_TRACE, "%s [SETUP]", (drv->req.type & 0x80) ?
-			 "IN Dev->Host" : "OUT Host->Dev");
+	/* No-Data control SETUP transaction */
+	if (req->length == 0) {
+		stm32f_usb_dev_ep_zlp_send(drv, 0);
+		DCC_LOG(LOG_TRACE, "EP0 [WAIT_STATUS_IN] no data Dev->Host");
+		ep->state = EP_WAIT_STATUS_IN;
+		return;
+	}
 
-	/* call class endpoint callback */
-	drv->ev->on_setup(drv->cl, &drv->req);
+	if (req->type & 0x80) {
+		/* Control Read SETUP transaction (IN Data Phase) */
+
+		DCC_LOG(LOG_TRACE, "EP0 [SETUP] IN Dev->Host");
+		ep->tx_buf = NULL;
+		len = drv->ev->on_setup_in(drv->cl, req, (void *)&ep->tx_buf);
+#if ENABLE_PEDANTIC_CHECK
+		if (len < 0) {
+			__ep_stall(drv, 0);
+			DCC_LOG(LOG_TRACE, "EP0 [STALLED] len < 0");
+			return;
+		}
+		if (ep->tx_buf == NULL) {
+			__ep_stall(drv, 0);
+			DCC_LOG(LOG_TRACE, "EP0 [STALLED] tx_buf == NULL");
+			return;
+		}
+#endif
+		ep->tx_rem = MIN(req->length, len);
+		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->tx_rem);
+		__ep_pkt_send(drv, 0);
+		/* While enabling the last data stage, the opposite direction should
+			 * be set to NAK, so that, if the host reverses the transfer direction
+			 * (to perform the status stage) immediately, it is kept waiting for
+			 * the completion of the control operation. If the control operation
+			 * completes successfully, the software will change NAK to VALID,
+			 * otherwise to STALL.
+			 * */
+		if (ep->state == EP_IN_DATA) {
+			/* A USB device can determine the number and direction of data stages
+			 * by interpreting the data transferred in the SETUP stage, and is
+			 * required to STALL the transaction in the case of errors. To do
+			 * so, at all data stages before the last, the unused direction should
+			 * be set to STALL, so that, if the host reverses the transfer
+			 * direction too soon, it gets a STALL as a status stage.
+			 * */
+			set_ep_rxstat(usb, 0, USB_RX_STALL);
+		}
+
+	} else {
+		/* Control Write SETUP transaction (OUT Data Phase) */
+
+		DCC_LOG(LOG_TRACE, "EP0 [SETUP] OUT Dev->Host!!!!");
+		//  otg_fs_ep0_out_start(otg_fs);
+		/* call class endpoint callback */
+		drv->ctrl_st = CTRL_SETUP;
+		drv->ev->on_setup(drv->cl, req);
+	}
 }
 
 /*
