@@ -18,10 +18,10 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-BASEDIR := $(MKDIR)/..
-TOOLSDIR = $(realpath $(BASEDIR)/../tools)
-LDDIR = $(realpath $(BASEDIR)/ld)
+MKDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+BASEDIR := $(realpath $(MKDIR)/..)
+TOOLSDIR := $(realpath $(MKDIR)/../../tools)
+LDDIR := $(realpath $(MKDIR)/../ld)
 
 export MKDIR LDDIR TOOLSDIR
 

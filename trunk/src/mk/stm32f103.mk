@@ -18,10 +18,11 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-BASEDIR := $(MKDIR)/..
-TOOLSDIR = $(realpath $(BASEDIR)/../tools)
-LDDIR = $(realpath $(BASEDIR)/ld)
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+MKDIR := $(realpath $(THISDIR))
+BASEDIR := $(realpath $(THISDIR)/..)
+TOOLSDIR := $(realpath $(THISDIR)/../../tools)
+LDDIR := $(realpath $(THISDIR)/../ld)
 
 export MKDIR LDDIR TOOLSDIR
 
@@ -38,4 +39,12 @@ CROSS_COMPILE = arm-none-eabi-
 LDSCRIPT = $(MACH).ld  
 
 include $(MKDIR)/prog.mk
+
+mall:
+	@echo MKDIR=$(MKDIR)
+	@echo BASEDIR=$(BASEDIR)
+	@echo TOOLSDIR=$(TOOLSDIR)
+	@echo LDDIR=$(LDDIR)
+	@echo DEBUG=$(DEBUG)
+	@echo THIS=$(THIS)
 
