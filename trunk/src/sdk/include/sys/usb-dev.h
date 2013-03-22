@@ -53,6 +53,9 @@ typedef int (* usb_class_on_ep_rx_t)(usb_class_t * cl,
 typedef int (* usb_class_on_setup_t)(usb_class_t * cl,
 		struct usb_request * req);
 
+typedef int (* usb_class_on_setup_in_t)(usb_class_t * cl,
+		struct usb_request * req, void ** tx_ptr);
+
 typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
 
 typedef int (* usb_class_on_enum_t)(usb_class_t * cl, unsigned int addr);
@@ -60,6 +63,7 @@ typedef int (* usb_class_on_enum_t)(usb_class_t * cl, unsigned int addr);
 struct usb_class_events {
 	usb_class_on_reset_t on_reset;
 	usb_class_on_setup_t on_setup;
+	usb_class_on_setup_in_t on_setup_in;
 };
 
 struct usb_ep_info {
