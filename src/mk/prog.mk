@@ -58,14 +58,16 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 #------------------------------------------------------------------------------ 
 OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
 			$(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
-ODIRS = $(abspath $(sort $(dir $(OFILES))))
+#ODIRS = $(abspath $(sort $(dir $(OFILES))))
+ODIRS = $(sort $(dir $(OFILES)))
 
 #------------------------------------------------------------------------------ 
 # dependency files
 #------------------------------------------------------------------------------ 
 DFILES = $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
 			$(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d))
-DDIRS = $(abspath $(sort $(dir $(DFILES))))
+#DDIRS = $(abspath $(sort $(dir $(DFILES))))
+DDIRS = $(sort $(dir $(DFILES)))
 
 #------------------------------------------------------------------------------ 
 # path variables
@@ -128,14 +130,17 @@ libs-all: $(LIBDIRS_ALL)
 
 libs-clean: $(LIBDIRS_CLEAN)
 
+test:
+	echo TEST
+
 $(LIBDIRS_ALL):
 	$(ACTION) "Building : $@"
-	$(Q)OUT=$(OUTDIR)/`basename $(@:%-all=%)`;\
+	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-all=%));\
 	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
 
 $(LIBDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
-	$(Q)OUT=$(OUTDIR)/`basename $(@:%-clean=%)`;\
+	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-clean=%));\
 	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
 
 .PHONY: all clean prog elf map bin lst libs-all libs-clean vars libs-vars 
@@ -168,11 +173,11 @@ $(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
 
 $(ODIRS):
 	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+	$(Q) mkdir -p $@
 
 $(DDIRS):
 	$(ACTION) "Creating: $@"
-	$(Q) mkdir $@
+	$(Q) mkdir -p $@
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 

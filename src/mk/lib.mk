@@ -40,13 +40,15 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 #------------------------------------------------------------------------------ 
 OFILES = $(addprefix $(OUTDIR)/, $(CFILES_GEN:.c=.o) \
 			$(SFILES_GEN:.S=.o) $(CFILES:.c=.o) $(SFILES:.S=.o))
-ODIRS = $(abspath $(sort $(dir $(OFILES))))
+#ODIRS = $(abspath $(sort $(dir $(OFILES))))
+ODIRS = $(sort $(dir $(OFILES)))
 
 #------------------------------------------------------------------------------ 
 # dependency files
 #------------------------------------------------------------------------------ 
 DFILES = $(addprefix $(DEPDIR)/, $(CFILES:.c=.d) $(SFILES:.S=.d))
-DDIRS = $(abspath $(sort $(dir $(DFILES))))
+#DDIRS = $(abspath $(sort $(dir $(DFILES))))
+DDIRS = $(sort $(dir $(DFILES)))
 
 #------------------------------------------------------------------------------ 
 # path variables
@@ -86,12 +88,12 @@ deps-clean: $(DEPDIRS_CLEAN)
 
 $(DEPDIRS_ALL):
 	$(ACTION) "Building : $@"
-	$(Q)OUT=$(OUTDIR)/`basename $(@:%-all=%)`;\
+	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-all=%));\
 	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
 
 $(DEPDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
-	$(Q)OUT=$(OUTDIR)/`basename $(@:%-clean=%)`;\
+	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-clean=%));\
 	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
 
 %.lst: %.a
