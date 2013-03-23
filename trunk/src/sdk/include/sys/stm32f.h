@@ -259,7 +259,9 @@ void stm32f_usb_power_off(struct stm32f_usb * usb);
 
 void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz);
 
-void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id, int mxpktsz);
+void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
+		struct usb_descriptor_endpoint * desc);
+
 
 #endif /* __ASSEMBLER__ */
 

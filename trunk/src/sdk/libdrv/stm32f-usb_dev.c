@@ -48,15 +48,22 @@ typedef enum {
 	EP_IN_DATA_LAST,
 	EP_WAIT_STATUS_IN,
 	EP_WAIT_STATUS_OUT,
+	EP_OUT_DATA,
+	EP_OUT_DATA_LAST,
 } ep_state_t;
 
 /* Endpoint control */
 struct stm32f_usb_ep {
 	struct stm32f_usb_pktbuf * pktbuf;
-	uint8_t * rx_buf;
 	uint8_t * tx_buf;
 	uint16_t tx_rem;
 	uint16_t mxpktsz;
+
+	uint8_t * xfr_ptr;
+	uint16_t xfr_rem;
+
+	uint8_t * rx_buf;
+	uint16_t rx_sz;
 	ep_state_t state;
 	union {
 		usb_class_on_ep_rx_t on_rx;
@@ -94,17 +101,18 @@ enum {
 
 #define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
-int stm32f_copy_from_pktbuf(void * ptr, 
-							struct stm32f_usb_rx_pktbuf * rx)
+void stm32f_copy_from_pktbuf(void * ptr,
+							struct stm32f_usb_rx_pktbuf * rx,
+							unsigned int cnt)
 {
 	uint32_t * src;
 	uint8_t * dst = (uint8_t *)ptr;
 	uint32_t data;
-	int cnt;
+//	int cnt;
 	int i;
 
 	/* Data received */
-	cnt = rx->count;
+//	cnt = MIN(rx->count, max);
 
 	/* copy data to destination buffer */
 	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
@@ -113,8 +121,6 @@ int stm32f_copy_from_pktbuf(void * ptr,
 		*dst++ = data;
 		*dst++ = data >> 8;
 	}
-
-	return cnt;
 }
 
 void stm32f_copy_to_pktbuf(struct stm32f_usb_tx_pktbuf * tx, 
@@ -155,7 +161,7 @@ int __ep_pkt_send(struct stm32f_usb_drv * drv, int ep_id)
 
 	len = MIN(ep->tx_rem, ep->mxpktsz);
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
+	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
 
 	if (len > 0) {
 		stm32f_copy_to_pktbuf(&pktbuf[ep_id].tx, ep->tx_buf, len);
@@ -167,10 +173,10 @@ int __ep_pkt_send(struct stm32f_usb_drv * drv, int ep_id)
 		/* if we put all data into the TX packet buffer but the data
 		 * didn't filled the whole packet, this is the last packet,
 		 * otherwise we need to send a ZLP to finish the transaction */
-		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 		ep->state = EP_IN_DATA_LAST;
 	} else {
-		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA]", ep_id);
+		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA]", ep_id);
 		ep->state = EP_IN_DATA;
 	}
 
@@ -317,24 +323,6 @@ When a RESET interrupt is received, the application software is responsible to e
 the default endpoint of USB function 0 within 10mS from the end of reset sequence which
 triggered the interrupt. */
 
-int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv, int mxpktsz)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_ep * ep;
-
-	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
-
-	ep = &drv->ep[0];
-	ep->mxpktsz = mxpktsz;
-	ep->state = EP_IDLE;
-
-	/* initializes EP0 */
-	stm32f_usb_ep0_init(usb, mxpktsz);
-
-	return 0;
-}
-
-
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
@@ -406,11 +394,11 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	}
 #endif
 
+	cnt = pktbuf[ep_id].rx.count;
 	/* Data received */
-	cnt = stm32f_copy_from_pktbuf(ep->rx_buf, &pktbuf[ep_id].rx);
+	stm32f_copy_from_pktbuf(ep->rx_buf, &pktbuf[ep_id].rx, cnt);
 
 	/* free the out(rx) packet buffer */
-
 	DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
 	/* call class endpoint callback */
 	ep->on_rx(drv->cl, ep->rx_buf, cnt);
@@ -537,7 +525,48 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 
 	pktbuf[ep_id].tx.count = 0;
 	set_ep_txstat(usb, ep_id, USB_TX_VALID);
-//	set_ep_txstat(usb, ep_id, USB_RX_VALID);
+	return 0;
+}
+
+int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id,
+		struct usb_descriptor_endpoint * desc)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep;
+	int mxpktsz = desc->maxpacketsize;
+
+	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
+
+	ep = &drv->ep[ep_id];
+	ep->mxpktsz = mxpktsz;
+//	ep->rx_buf = (uint8_t *)ctr_buf;
+//	ep->rx_sz = buf_len;
+	ep->state = EP_IDLE;
+
+	/* initializes EP0 */
+	stm32f_usb_ep_init(usb, ep_id, desc);
+
+	return 0;
+
+}
+
+int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv, int mxpktsz,
+		void * ctr_buf, int buf_len)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep;
+
+	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
+
+	ep = &drv->ep[0];
+	ep->mxpktsz = mxpktsz;
+	ep->rx_buf = (uint8_t *)ctr_buf;
+	ep->rx_sz = buf_len;
+	ep->state = EP_IDLE;
+
+	/* initializes EP0 */
+	stm32f_usb_ep0_init(usb, mxpktsz);
+
 	return 0;
 }
 
@@ -545,7 +574,9 @@ void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_usb_ep * ep = &drv->ep[0];
-	(void)usb;
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	int cnt;
+	int n;
 
 	if (ep->state == EP_WAIT_STATUS_OUT) {
 		ep->state = EP_IDLE;
@@ -554,7 +585,7 @@ void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 		return;
 	}
 
-	if (ep->state == EP_IN_DATA) {
+	if ((ep->state == EP_IN_DATA)|| (ep->state == EP_IN_DATA_LAST)) {
 		ep->state = EP_STALLED;
 		DCC_LOG(LOG_TRACE, "EP0 OUT [STALLED]");
 		set_ep_rxstat(usb, 0, USB_RX_STALL);
@@ -562,7 +593,31 @@ void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 		return;
 	}
 
-	DCC_LOG(LOG_TRACE, "EP0 OUT ?????????????????");
+		//	cnt = MIN(rx->count, max);
+
+	cnt = pktbuf[0].rx.count;
+	n = MIN(cnt, ep->xfr_rem);
+
+	stm32f_copy_from_pktbuf(ep->xfr_ptr, &pktbuf[0].rx, n);
+
+	ep->xfr_ptr += n;
+	ep->xfr_rem -= n;
+
+	if (ep->state == EP_OUT_DATA_LAST) {
+		ep->state = EP_WAIT_STATUS_IN;
+		DCC_LOG(LOG_TRACE, "EP0 [EP_WAIT_STATUS_IN]");
+		stm32f_usb_dev_ep_zlp_send(drv, 0);
+		return;
+	}
+
+	if (ep->xfr_rem < ep->mxpktsz) {
+		/* last transfer */
+		ep->state = EP_OUT_DATA_LAST;
+		DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA_LAST]");
+	}
+	set_ep_rxstat(usb, 0, USB_RX_VALID);
+
+	DCC_LOG1(LOG_TRACE, "EP0 cnt=%d", cnt);
 }
 
 void stm32f_usb_dev_ep0_in(struct stm32f_usb_drv * drv)
@@ -612,8 +667,7 @@ void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 
 	DCC_LOG(LOG_TRACE, "SETUP START <<<<<<<<<<<<<<<");
 
-	/* copy data from mpacket buffer */
-	cnt = stm32f_copy_from_pktbuf(req, &pktbuf[0].rx);
+	cnt = pktbuf[0].rx.count;
 
 #if ENABLE_PEDANTIC_CHECK
 	if (cnt != 8) {
@@ -621,13 +675,16 @@ void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 		DCC_LOG1(LOG_ERROR, "cnt(%d) != 8 [ERROR]", cnt);
 		return;
 	}
-#else
-	(void)cnt;
 #endif
+
+	/* copy data from packet buffer */
+	stm32f_copy_from_pktbuf(req, &pktbuf[0].rx, cnt);
 
 	/* No-Data control SETUP transaction */
 	if (req->length == 0) {
 		stm32f_usb_dev_ep_zlp_send(drv, 0);
+
+
 		DCC_LOG(LOG_TRACE, "EP0 [WAIT_STATUS_IN] no data Dev->Host");
 		ep->state = EP_WAIT_STATUS_IN;
 		return;
@@ -675,11 +732,24 @@ void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 	} else {
 		/* Control Write SETUP transaction (OUT Data Phase) */
 
-		DCC_LOG(LOG_TRACE, "EP0 [SETUP] OUT Dev->Host!!!!");
-		//  otg_fs_ep0_out_start(otg_fs);
-		/* call class endpoint callback */
-		drv->ctrl_st = CTRL_SETUP;
-		drv->ev->on_setup(drv->cl, req);
+		ep->xfr_ptr = ep->rx_buf;
+		ep->xfr_rem = req->length;
+		if (ep->xfr_rem > ep->rx_sz) {
+			ep->xfr_rem = ep->rx_sz;
+			DCC_LOG(LOG_ERROR, "transfer to large to fit the buffer!");
+		}
+
+		if (ep->xfr_rem < ep->mxpktsz) {
+			/* last and only transfer */
+			ep->state = EP_OUT_DATA_LAST;
+			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
+
+		} else {
+			ep->state = EP_OUT_DATA;
+			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+		}
+
+		set_ep_rxstat(usb, 0, USB_RX_VALID);
 	}
 }
 
@@ -854,6 +924,7 @@ const struct usb_dev_ops stm32f_usb_ops = {
 	.ep_rx_setup = (usb_dev_ep_rx_setup_t)stm32f_usb_ep_rx_setup,
 	.ep_tx_start= (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
 	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init,
+	.ep_init = (usb_dev_ep_init_t)stm32f_usb_dev_ep_init,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_usb_dev_ep_stall,
 	.addr_set = (usb_dev_addr_set_t)stm32f_usb_dev_addr_set,
 	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_usb_dev_ep_zlp_send

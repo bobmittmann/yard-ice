@@ -219,7 +219,7 @@ enum usb_class {
 /* Defines an IN endpoint */
 #define USB_ENDPOINT_IN            (1 << 7)
 
-/* These are the four possible tranfer type values for the bmAttributes
+/* These are the four possible transfer type values for the bmAttributes
         field of an endpoint descriptor. */
 enum enpoint_type {
 	/* Defines a CONTROL endpoint */
@@ -248,15 +248,15 @@ struct usb_descriptor_device {
 	/* Control endpoint 0 max. packet size */
 	uint8_t max_pkt_sz0;
 	/* Vendor ID */
-	uint16_t vendor;
+	uint16_t vendor_id;
 	/* Product ID */
-	uint16_t product;
+	uint16_t product_id;
 	/* Device release number */
 	uint16_t dev_release;
 	/* Index of manu. string descriptor */
 	uint8_t manufacturer;
 	/* Index of prod. string descriptor */
-	uint8_t poduct;
+	uint8_t product;
 	/* Index of S.N.  string descriptor */
 	uint8_t serial_num;
 	/* Number of possible configurations */
@@ -369,6 +369,7 @@ struct usb_language_id {
 
 /* ATMEL Vendor ID */
 #define USB_VENDOR_ATMEL            0x03EB
+#define USB_VENDOR_ST               0x0483
 
 
 /* USB standard request code */
