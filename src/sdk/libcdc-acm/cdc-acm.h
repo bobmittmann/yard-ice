@@ -46,7 +46,7 @@
 #define EP_INT_MAX_PKT_SIZE 64
 #define EP_INT_FIFO_SIZE 128
 
-struct usb_descriptor_set_cdc {
+struct cdc_acm_descriptor_config {
 	struct usb_descriptor_configuration cfg;
 	struct usb_descriptor_interface comm_if;
 	struct cdc_header_descriptor hdr;
@@ -59,12 +59,15 @@ struct usb_descriptor_set_cdc {
 	struct usb_descriptor_endpoint ep_in;
 } __attribute__((__packed__));
 
-struct cdc_desc_set {
-	struct usb_descriptor_device device;
-	struct usb_descriptor_set_cdc conf;
-} __attribute__((__packed__));
+struct usb_str_entry {
+	const uint8_t * str;
+	uint8_t len;
+};
 
-extern const struct cdc_desc_set cdc_acm_desc;
+
+const struct usb_descriptor_device cdc_acm_desc_dev;
+const struct cdc_acm_descriptor_config cdc_acm_desc_cfg;
+extern const struct usb_str_entry cdc_acm_str[];
 
 const struct usb_descriptor_endpoint * cdc_acm_ep[4];
 

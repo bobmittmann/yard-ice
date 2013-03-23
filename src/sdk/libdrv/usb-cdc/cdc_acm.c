@@ -23,6 +23,9 @@
 
 #include "cdc_acm.h"
 
+#define ATMEL_VCOM_PRODUCT_ID 0x6119
+#define ST_VCOM_PRODUCT_ID 0x5740
+
 const struct cdc_desc_set cdc_acm_desc = {
 	{
 		/* Size of this descriptor in bytes */
@@ -41,9 +44,9 @@ const struct cdc_desc_set cdc_acm_desc = {
 		/* Control endpoint 0 max. packet size */
 		EP0_MAX_PKT_SIZE,
 		/* Vendor ID */
-		USB_VENDOR_ATMEL,
+		USB_VENDOR_ST,
 		/* Product ID */
-		0x6119,
+		ST_VCOM_PRODUCT_ID,
 		/* Device release number */
 		0x0001,
 		/* Index of manu. string descriptor */

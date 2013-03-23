@@ -156,158 +156,6 @@ int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx)
 	return sz;
 }
 
-/******************************************************************************/
-/*                            Endpoint register                               */
-/******************************************************************************/
-/* bit positions */
-#define EP_CTR_RX      (0x8000) /* EndPoint Correct TRansfer RX */
-#define EP_DTOG_RX     (0x4000) /* EndPoint Data TOGGLE RX */
-#define EPRX_STAT      (0x3000) /* EndPoint RX STATus bit field */
-#define EP_SETUP       (0x0800) /* EndPoint SETUP */
-#define EP_T_FIELD     (0x0600) /* EndPoint TYPE */
-#define EP_KIND        (0x0100) /* EndPoint KIND */
-#define EP_CTR_TX      (0x0080) /* EndPoint Correct TRansfer TX */
-#define EP_DTOG_TX     (0x0040) /* EndPoint Data TOGGLE TX */
-#define EPTX_STAT      (0x0030) /* EndPoint TX STATus bit field */
-#define EPADDR_FIELD   (0x000F) /* EndPoint ADDRess FIELD */
-
-/* EndPoint REGister MASK (no toggle fields) */
-#define EPREG_MASK     (EP_CTR_RX|EP_SETUP|EP_T_FIELD|EP_KIND|EP_CTR_TX|EPADDR_FIELD)
-
-/* EP_TYPE[1:0] EndPoint TYPE */
-#define EP_TYPE_MASK   (0x0600) /* EndPoint TYPE Mask */
-#define EP_BULK        (0x0000) /* EndPoint BULK */
-#define EP_CONTROL     (0x0200) /* EndPoint CONTROL */
-#define EP_ISOCHRONOUS (0x0400) /* EndPoint ISOCHRONOUS */
-#define EP_INTERRUPT   (0x0600) /* EndPoint INTERRUPT */
-#define EP_T_MASK      (~EP_T_FIELD & EPREG_MASK)
-
-/* EP_KIND EndPoint KIND */
-#define EPKIND_MASK    (~USB_EP_KIND & USB_EPREG_MASK)
-
-#define _SetEPType(bEpNum,wType) (_SetENDPOINT(bEpNum,\ ((_GetENDPOINT(bEpNum) & EP_T_MASK) | wType)))
-
-/* STAT_TX[1:0] STATus for TX transfer */
-#define EP_TX_DIS      (0x0000) /* EndPoint TX DISabled */
-#define EP_TX_STALL    (0x0010) /* EndPoint TX STALLed */
-#define EP_TX_NAK      (0x0020) /* EndPoint TX NAKed */
-#define EP_TX_VALID    (0x0030) /* EndPoint TX VALID */
-#define EPTX_DTOG1     (0x0010) /* EndPoint TX Data TOGgle bit1 */
-#define EPTX_DTOG2     (0x0020) /* EndPoint TX Data TOGgle bit2 */
-
-/* STAT_RX[1:0] STATus for RX transfer */
-#define EP_RX_DIS      (0x0000) /* EndPoint RX DISabled */
-#define EP_RX_STALL    (0x1000) /* EndPoint RX STALLed */
-#define EP_RX_NAK      (0x2000) /* EndPoint RX NAKed */
-#define EP_RX_VALID    (0x3000) /* EndPoint RX VALID */
-#define EPRX_DTOG1     (0x1000) /* EndPoint RX Data TOGgle bit1 */
-#define EPRX_DTOG2     (0x2000) /* EndPoint RX Data TOGgle bit1 */
-
-#define _SetEPAddress(bEpNum,bAddr) _SetENDPOINT(bEpNum,\
-_GetENDPOINT(bEpNum) & EPREG_MASK | bAddr)
-
-/*******************************************************************************
-  * Macro Name     : GetEPAddress.
-  * Description    : Gets address in an endpoint register.
-  * Input          : bEpNum: Endpoint Number.
-  * Output         : None.
-  * Return         : None.
-  *******************************************************************************/
-#define _GetEPAddress(bEpNum) ((uint8_t)(_GetENDPOINT(bEpNum) & EPADDR_FIELD))
-
-#define _GetBTABLE() 0
-#define PMAAddr ((uint32_t)STM32F_USB_PKTBUF_ADDR)
-
-#define _pEPTxAddr(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8  )*2 + PMAAddr))
-#define _pEPTxCount(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8+2)*2 + PMAAddr))
-
-#define _pEPRxAddr(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8+4)*2 + PMAAddr))
-#define _pEPRxCount(bEpNum) ((uint32_t *)((_GetBTABLE()+bEpNum*8+6)*2 + PMAAddr))
-
-/*******************************************************************************
-  * Macro Name     : SetEPTxAddr / SetEPRxAddr.
-  * Description    : sets address of the tx/rx buffer.
-  * Input          : bEpNum: Endpoint Number.
-  *                  wAddr: address to be set (must be word aligned).
-  * Output         : None.
-  * Return         : None.
-  *******************************************************************************/
-#define _SetEPTxAddr(bEpNum,wAddr) (*_pEPTxAddr(bEpNum) = ((wAddr >> 1) << 1))
-#define _SetEPRxAddr(bEpNum,wAddr) (*_pEPRxAddr(bEpNum) = ((wAddr >> 1) << 1))
-
-/*******************************************************************************
-  * Macro Name     : GetEPTxAddr / GetEPRxAddr.
-  * Description    : Gets address of the tx/rx buffer.
-  * Input          : bEpNum: Endpoint Number.
-  * Output         : None.
-  * Return         : address of the buffer.
-  *******************************************************************************/
-#define _GetEPTxAddr(bEpNum) ((uint16_t)*_pEPTxAddr(bEpNum))
-#define _GetEPRxAddr(bEpNum) ((uint16_t)*_pEPRxAddr(bEpNum))
-
-/*******************************************************************************
-  * Macro Name     : SetEPCountRxReg.
-  * Description    : Sets counter of rx buffer with no. of blocks.
-  * Input          : pdwReg: pointer to counter.
-  *                  wCount: Counter.
-  * Output         : None.
-  * Return         : None.
-  *******************************************************************************/
-#define _BlocksOf32(dwReg,wCount,wNBlocks) {\
-	    wNBlocks = wCount >> 5;\
-	    if((wCount & 0x1f) == 0)\
-	      wNBlocks--;\
-	    *pdwReg = (uint32_t)((wNBlocks << 10) | 0x8000);\
-	  }/* _BlocksOf32 */
-
-#define _BlocksOf2(dwReg,wCount,wNBlocks) {\
-	    wNBlocks = wCount >> 1;\
-	    if((wCount & 0x1) != 0)\
-	      wNBlocks++;\
-	    *pdwReg = (uint32_t)(wNBlocks << 10);\
-	  }/* _BlocksOf2 */
-
-#define _SetEPCountRxReg(dwReg,wCount)  {\
-	    uint16_t wNBlocks;\
-	    if(wCount > 62){_BlocksOf32(dwReg,wCount,wNBlocks);}\
-	    else {_BlocksOf2(dwReg,wCount,wNBlocks);}\
-	  }/* _SetEPCountRxReg */
-
-
-
-#define _SetEPRxDblBuf0Count(bEpNum,wCount) {\
-	    uint32_t *pdwReg = _pEPTxCount(bEpNum); \
-	    _SetEPCountRxReg(pdwReg, wCount);\
-	  }
-/*******************************************************************************
-  * Macro Name     : SetEPTxCount / SetEPRxCount.
-  * Description    : sets counter for the tx/rx buffer.
-  * Input          : bEpNum: endpoint number.
-  *                  wCount: Counter value.
-  * Output         : None.
-  * Return         : None.
-  *******************************************************************************/
-#define _SetEPTxCount(bEpNum,wCount) (*_pEPTxCount(bEpNum) = wCount)
-#define _SetEPRxCount(bEpNum,wCount) {\
-	    uint32_t *pdwReg = _pEPRxCount(bEpNum); \
-	    _SetEPCountRxReg(pdwReg, wCount);\
-	  }
-/*******************************************************************************
-  * Macro Name     : GetEPTxCount / GetEPRxCount.
-  * Description    : gets counter of the tx buffer.
-  * Input          : bEpNum: endpoint number.
-  * Output         : None.
-  * Return         : Counter value.
-  *******************************************************************************/
-#define _GetEPTxCount(bEpNum)((uint16_t)(*_pEPTxCount(bEpNum)) & 0x3ff)
-#define _GetEPRxCount(bEpNum)((uint16_t)(*_pEPRxCount(bEpNum)) & 0x3ff)
-
-#define _ClearEP_CTR_RX(bEpNum)   (_SetENDPOINT(bEpNum,\
-								_GetENDPOINT(bEpNum) & 0x7FFF & EPREG_MASK))
-
-#define _ClearEP_CTR_TX(bEpNum)   (_SetENDPOINT(bEpNum,\
-				_GetENDPOINT(bEpNum) & 0xFF7F & EPREG_MASK))
-
 
 void clr_ep_kind(struct stm32f_usb * usb, int ep_id)
 {
@@ -327,71 +175,35 @@ void clr_status_out(struct stm32f_usb * usb, int ep_id)
 void set_ep_type(struct stm32f_usb * usb, int ep_id, int type)
 {
 	uint32_t epr;
-	epr = usb->epr[ep_id] & EP_T_MASK;
+	epr = usb->epr[ep_id] & USB_EP_TYPE_MSK;
 	usb->epr[ep_id] = epr | type;
 }
 
-void set_ep_txcount(struct stm32f_usb * usb, int ep_id, int count)
+void set_ep_addr(struct stm32f_usb * usb, int ep_id, int addr)
 {
-	*_pEPTxCount(ep_id) = count;
+	uint32_t epr;
+	epr = usb->epr[ep_id] & USB_EPREG_MASK & ~USB_EA_MSK;
+	usb->epr[ep_id] = epr | addr;
 }
 
-void set_ep_rxcount(struct stm32f_usb * usb, int ep_id, int count)
-{
-	uint32_t * pdwReg = _pEPRxCount(ep_id);
-
-	_SetEPCountRxReg(pdwReg, count);
-}
-
-void set_ep_txaddr(struct stm32f_usb * usb, int ep_id, int addr)
-{
-	*_pEPTxAddr(ep_id) = ((addr >> 1) << 1);
-}
-
-void set_ep_rxaddr(struct stm32f_usb * usb, int ep_id, int addr)
-{
-	*_pEPRxAddr(ep_id) = ((addr >> 1) << 1);
-}
-
-int get_ep_txcount(struct stm32f_usb * usb, int ep_id)
-{
-	return (uint16_t)(*_pEPTxCount(ep_id)) & 0x3ff;
-}
-
-int get_ep_rxcount(struct stm32f_usb * usb, int ep_id)
-{
-	return (uint16_t)(*_pEPRxCount(ep_id)) & 0x3ff;
-}
-
-int get_ep_txaddr(struct stm32f_usb * usb, int ep_id)
-{
-	return (uint16_t)*_pEPTxAddr(ep_id);
-}
-
-int get_ep_rxaddr(struct stm32f_usb * usb, int ep_id)
-{
-	return (uint16_t)*_pEPRxAddr(ep_id);
-}
-
-/* Set the ase of the packet buffers just above the buffer descriptors:
+/* Set the base of the packet buffers just above the buffer descriptors:
    We have up to 8 descriptors of 8 bytes each. */
 #define PKTBUF_BUF_BASE (8 * 8)
 #define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
+
+static unsigned int addr = PKTBUF_BUF_BASE;
 
 void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 {
 	/* packet buffer  */
 	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-//	uint32_t epr;
-	unsigned int addr = PKTBUF_BUF_BASE;
 	unsigned int sz;
-
 
 	/* clear the correct transfer bits */
 	usb->epr[0] &= ~(USB_CTR_RX | USB_CTR_TX);
 
-	set_ep_type(usb, 0, EP_CONTROL);
-	set_ep_txstat(usb, 0, EP_TX_NAK);
+	set_ep_type(usb, 0, USB_EP_CONTROL);
+	set_ep_txstat(usb, 0, USB_TX_NAK);
 
 	/* allocate single buffers for TX and RX */
 	sz = pktbuf_tx_cfg(&pktbuf[0].tx, addr, mxpktsz);
@@ -400,67 +212,78 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz)
 	addr += sz;
 
 	clr_status_out(usb, 0);
-	set_ep_rxvalid(usb, 0);
+	set_ep_rxstat(usb, 0, USB_RX_VALID);
 
 	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[0]);
 }
-
-
-
-#if 0
-int stm32f_usb_ep_xmit(struct stm32f_usb * usb, int ep_id)
-{
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb_ep * ep;
-	int len;
-
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
-
-	stm32f_copy_to_pktbuf(tx, buf, len);
-	set_ep_txstat(usb, ep_id, USB_TX_VALID);
-
-	return 0;
-}
-#endif
-
 
 /* This is a bitmask that when applied to the EPR register
  * will NOT change its value except possibly for the address
  */
 #define EPR_INVARIANT (USB_CTR_RX | USB_CTR_TX)
 
-void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id, int mxpktsz)
+void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
+		struct usb_descriptor_endpoint * desc)
 {
-	struct stm32f_usb_pktbuf * pktbuf;
-	uint32_t epr;
-	uint32_t ea;
-	unsigned int addr;
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	unsigned int sz;
+	unsigned int mxpktsz;
 
-//	desc = drv->ep[ep_id].desc;
+	mxpktsz = desc->maxpacketsize;
 
-	epr = usb->epr[ep_id];
-	ea = USB_EA_GET(epr);
-	(void)ea;
-	DCC_LOG2(LOG_TRACE, "epr=0x%04x btable=0x%08x", epr, usb->btable);
-
-	pktbuf = (struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF;
-
-	epr |= USB_EP_CONTROL;
-	/* allocate single buffers for TX and RX */
-	addr = 0;
-	pktbuf_tx_cfg(&pktbuf->tx, addr, 8);
-	pktbuf_rx_cfg(&pktbuf->rx, addr, 8);
-
-
-	/* Set the bits we want to toggle */
-	epr = epr ^ (USB_RX_VALID | USB_TX_NAK);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
 
 	/* clear the correct transfer bits */
-	epr &= ~(USB_CTR_RX | USB_CTR_TX);
+	usb->epr[ep_id] &= ~(USB_CTR_RX | USB_CTR_TX);
+	set_ep_addr(usb, ep_id, desc->endpointaddress & 0x7f);
+	set_ep_rxstat(usb, ep_id, USB_RX_NAK);
+	set_ep_rxstat(usb, ep_id, USB_TX_NAK);
 
-	usb->epr[ep_id] = epr;
+	switch (desc->attributes & 0x03) {
+	case ENDPOINT_TYPE_CONTROL:
+		set_ep_type(usb, ep_id, USB_EP_CONTROL);
+		/* allocate single buffers for TX and RX */
+		sz = pktbuf_tx_cfg(&pktbuf[ep_id].tx, addr, mxpktsz);
+		addr += sz;
+		sz = pktbuf_rx_cfg(&pktbuf[ep_id].rx, addr, mxpktsz);
+		addr += sz;
+		break;
 
-//	epr = usb->epr[ep_id];
-	DCC_LOG2(LOG_TRACE, "epr=0x%04x,0x%04x", epr, usb->epr[ep_id]);
+	case ENDPOINT_TYPE_ISOCHRONOUS:
+		break;
+
+	case ENDPOINT_TYPE_BULK:
+		set_ep_type(usb, ep_id, USB_EP_BULK);
+		if (desc->endpointaddress & USB_ENDPOINT_IN) {
+			sz = pktbuf_tx_cfg(&pktbuf[ep_id].dbtx[0], addr, mxpktsz);
+			addr += sz;
+			sz = pktbuf_tx_cfg(&pktbuf[ep_id].dbtx[1], addr, mxpktsz);
+			addr += sz;
+			set_ep_rxstat(usb, ep_id, USB_TX_VALID);
+		} else {
+			sz = pktbuf_rx_cfg(&pktbuf[ep_id].dbrx[0], addr, mxpktsz);
+			addr += sz;
+			sz = pktbuf_rx_cfg(&pktbuf[ep_id].dbrx[1], addr, mxpktsz);
+			addr += sz;
+			set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+		}
+		break;
+
+	case ENDPOINT_TYPE_INTERRUPT:
+		set_ep_type(usb, ep_id, USB_EP_INTERRUPT);
+		if (desc->endpointaddress & USB_ENDPOINT_IN) {
+			sz = pktbuf_tx_cfg(&pktbuf[ep_id].tx, addr, mxpktsz);
+			addr += sz;
+		} else {
+			sz = pktbuf_rx_cfg(&pktbuf[ep_id].rx, addr, mxpktsz);
+			addr += sz;
+		}
+		break;
+	}
+
+
+
+//	clr_status_out(usb, ep_id);
+
 }
 

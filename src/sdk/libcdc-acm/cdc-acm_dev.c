@@ -52,6 +52,8 @@ struct usb_cdc {
 	struct cdc_line_coding lc;
 };
 
+#define CDC_CTR_BUF_LEN 32
+
 struct usb_cdc_class {
 	/* underling USB device */
 	struct usb_dev * usb;
@@ -70,6 +72,8 @@ struct usb_cdc_class {
 	int8_t ctrl_ev; /* Control event */
 	uint8_t ctrl_rcv; /* control message received count */
 	uint8_t ctrl_ack; /* control message acknowledge count */
+
+	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 
 	uint32_t setup_buf[2];
 	uint32_t pkt_buf[4];
@@ -156,227 +160,17 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	struct usb_cdc_class * cdc = (struct usb_cdc_class *)cl;
 	int mxpktsz;
 
-	mxpktsz = usb_desc_device_parse(&cdc_acm_desc.device);
+	mxpktsz = usb_desc_device_parse(&cdc_acm_desc_dev);
 
 	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
 		
 	/* initializes EP0 */
-	usb_dev_ep0_init(cdc->usb, mxpktsz);
+	usb_dev_ep0_init(cdc->usb, mxpktsz, cdc->ctr_buf, CDC_CTR_BUF_LEN);
 
 	/* setup the buffer for receiving control data */
 	usb_dev_ep_rx_setup(cdc->usb, 0, cdc->setup_buf, 8);
 
 	return 0;
-}
-
-int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req)
-{
-	struct usb_cdc_class * cdc = (struct usb_cdc_class *)cl;
-	int value = req->value;
-	int	index = req->index;
-	int len = req->length;
-	int desc;
-
-	if (req->type & 0x80) {
-		DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
-				 "Dev->Host", req->type);
-	} else {
-		DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
-				 "Host->Dev", req->type);
-		//		otg_fs_ep0_out_start(otg_fs);
-	}
-
-	DCC_LOG1(LOG_TRACE, "len = %d", len);
-
-	/* Handle supported standard device request Cf
-	   Table 9-3 in USB specification Rev 1.1 */
-
-	switch ((req->request << 8) | req->type) {
-	case STD_GET_DESCRIPTOR:
-		desc = value >> 8;
-
-		if (desc == USB_DESCRIPTOR_DEVICE) {
-			/* Return Device Descriptor */
-			len = MIN(sizeof(struct usb_descriptor_device), len);
-			DCC_LOG1(LOG_TRACE, "GetDesc: Device: len=%d", len);
-			usb_dev_ep_tx_start(cdc->usb, 0, (void *)&cdc_acm_desc, len);
-			break;
-		}
-
-		if (desc == USB_DESCRIPTOR_CONFIGURATION)	{
-			/* Return Configuration Descriptor */
-			len = MIN(sizeof(struct usb_descriptor_set_cdc), len);
-			DCC_LOG1(LOG_TRACE, "GetDesc: Config: len=%d", len);
-			usb_dev_ep_tx_start(cdc->usb, 0, (void *)&cdc_acm_desc.conf, len);
-			break;
-		}
-
-		DCC_LOG1(LOG_TRACE, "GetDesc: %d ?", desc);
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-
-	case STD_SET_ADDRESS:
-		DCC_LOG1(LOG_TRACE, "SetAddr: %d -------- [ADDRESS]", value);
-		usb_dev_addr_set(cdc->usb, value);
-		/* signal any pending threads */
-//		__thinkos_ev_raise(cdc->rx_ev);
-		usb_dev_ep_zlp_send(cdc->usb, 0);
-		break;
-
-	case STD_SET_CONFIGURATION: {
-
-		DCC_LOG1(LOG_TRACE, "SetCfg: %d", value);
-
-		if (value) {
-			usb_dev_ep_enable(cdc->usb, 1);
-			usb_dev_ep_enable(cdc->usb, 2);
-			usb_dev_ep_enable(cdc->usb, 3);
-		} else {
-			usb_dev_ep_disable(cdc->usb, 1);
-			usb_dev_ep_disable(cdc->usb, 2);
-			usb_dev_ep_disable(cdc->usb, 3);
-		}
-
-		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
-		/* signal any pending threads */
-		__thinkos_ev_raise(cdc->rx_ev);
-		usb_dev_ep_zlp_send(cdc->usb, 0);
-		break;
-	}
-
-	case STD_GET_CONFIGURATION:
-		DCC_LOG(LOG_TRACE, "GetCfg");
-		//		data = (udp->glb_stat & UDP_CONFG) ? 1 : 0;
-		//			usb_ep0_send_word(dev, 0);
-		break;
-
-	case STD_GET_STATUS_INTERFACE:
-		DCC_LOG(LOG_TRACE, "GetStIf");
-		//			usb_ep0_send_word(dev, 0);
-		break;
-
-	case STD_GET_STATUS_ZERO:
-		DCC_LOG(LOG_TRACE, "GetStZr");
-		//			usb_ep0_send_word(dev, 0);
-		break;
-
-	case STD_GET_STATUS_ENDPOINT:
-		index &= 0x0f;
-		DCC_LOG1(LOG_TRACE, "GetStEpt:%d", index);
-#if 0
-		if ((udp->glb_stat & UDP_CONFG) && (index <= 3)) {
-			data = (udp->csr[index] & UDP_EPEDS) ? 0 : 1;
-			usb_ep0_send_word(dev, data);
-			break;
-		}
-
-		if ((udp->glb_stat & UDP_FADDEN) && (index == 0)) {
-			data = (udp->csr[index] & UDP_EPEDS) ? 0 : 1;
-			usb_ep0_send_word(dev, data);
-			break;
-		}
-#endif
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-
-	case STD_SET_FEATURE_INTERFACE:
-		DCC_LOG(LOG_TRACE, "SetIf");
-		usb_dev_ep_zlp_send(cdc->usb, 0);
-		break;
-
-	case STD_SET_FEATURE_ENDPOINT:
-		DCC_LOG(LOG_TRACE, "SetEpt");
-		index &= 0x0f;
-#if 0
-		if ((value == 0) && index && (index <= 3)) {
-			udp->csr[index] = 0;
-			goto zlp_send;
-		}
-#endif
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-
-	case STD_CLEAR_FEATURE_ZERO:
-		DCC_LOG(LOG_TRACE, "ClrZr");
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-
-	case STD_CLEAR_FEATURE_INTERFACE:
-		DCC_LOG(LOG_TRACE, "ClrIf");
-		usb_dev_ep_zlp_send(cdc->usb, 0);
-		break;
-
-	case STD_CLEAR_FEATURE_ENDPOINT:
-		index &= 0x0f;
-		DCC_LOG1(LOG_TRACE, "ClrEpt: %d", index);
-#if 0
-		if ((value == 0) && index && (index <= 3)) {
-			if (index == EP_OUT)
-				udp->csr[EP_OUT] =
-					(UDP_EPEDS | UDP_EPTYPE_BULK_OUT);
-
-			else if (index == EP_IN)
-				udp->csr[EP_IN] =
-					(UDP_EPEDS | UDP_EPTYPE_BULK_IN);
-
-#if USB_CDC_ENABLE_STATE
-			else if (index == EP_INT)
-				udp->csr[EP_INT] =
-					(UDP_EPEDS | UDP_EPTYPE_INT_IN);
-#endif
-
-			otg_fs_ep0_zlp_send(otg_fs);
-			goto zlp_send;
-		}
-#endif
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-
-	case SET_LINE_CODING:
-		/* this will be handled after the data phase */
-		DCC_LOG3(LOG_TRACE, "CDC SetLn: idx=%d val=%d len=%d",
-				 index, value, len);
-		break;
-
-	case GET_LINE_CODING:
-		DCC_LOG(LOG_TRACE, "CDC GetLn");
-		len = MIN(sizeof(struct cdc_line_coding), len);
-		usb_dev_ep_tx_start(cdc->usb, 0, (void *)&cdc->cdc.lc, len);
-		break;
-
-	case SET_CONTROL_LINE_STATE:
-		DCC_LOG3(LOG_TRACE, "CDC SetCtrl: idx=%d val=%d len=%d",
-				 index, value, len);
-		cdc->cdc.control = value;
-
-		DCC_LOG1(LOG_TRACE, "DTR=%d", (value & CDC_DTE_PRESENT));
-
-#if USB_CDC_ENABLE_STATE
-		/* update the local serial state */
-		cdc.cdc->lsst = (value & CDC_DTE_PRESENT) ? 
-			CDC_SERIAL_STATE_RX_CARRIER | CDC_SERIAL_STATE_TX_CARRIER : 0;
-		/* trigger a local state notification */
-		usb_cdc_state_notify(otg_fs);
-#endif
-
-		/* there might have threads waiting for
-		   modem control line changes (DTR, RTS)
-		   wake them up */
-		__thinkos_ev_raise(cdc->rx_ev);
-		__thinkos_ev_raise(cdc->tx_ev);
-		__thinkos_ev_raise(cdc->ctrl_ev);
-
-		usb_dev_ep_zlp_send(cdc->usb, 0);
-		break;
-
-	default:
-		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
-				 req->type, req->request, value, index, len);
-		usb_dev_ep_stall(cdc->usb, 0);
-		break;
-	}
-	return 0;
-
 }
 
 int usb_cdc_on_setup_in(usb_class_t * cl, struct usb_request * req, void ** ptr) {
@@ -395,7 +189,7 @@ int usb_cdc_on_setup_in(usb_class_t * cl, struct usb_request * req, void ** ptr)
 
 		if (desc == USB_DESCRIPTOR_DEVICE) {
 			/* Return Device Descriptor */
-			*ptr = (void *)&cdc_acm_desc;
+			*ptr = (void *)&cdc_acm_desc_dev;
 			len = sizeof(struct usb_descriptor_device);
 			DCC_LOG1(LOG_TRACE, "GetDesc: Device: len=%d", len);
 			break;
@@ -403,11 +197,22 @@ int usb_cdc_on_setup_in(usb_class_t * cl, struct usb_request * req, void ** ptr)
 
 		if (desc == USB_DESCRIPTOR_CONFIGURATION) {
 			/* Return Configuration Descriptor */
-			*ptr = (void *)&cdc_acm_desc.conf;
-			len = sizeof(struct usb_descriptor_set_cdc);
+			*ptr = (void *)&cdc_acm_desc_cfg;
+			len = sizeof(struct cdc_acm_descriptor_config);
 			DCC_LOG1(LOG_TRACE, "GetDesc: Config: len=%d", len);
 			break;
 		}
+
+#if 1
+		if (desc == USB_DESCRIPTOR_STRING) {
+			int idx = value & 0xff;
+
+			*ptr = (void *)cdc_acm_str[idx].str;
+			len = cdc_acm_str[idx].len;
+			DCC_LOG1(LOG_TRACE, "GetDesc: String: idx=%d", idx);
+			break;
+		}
+#endif
 
 		DCC_LOG1(LOG_TRACE, "GetDesc: %d ?", desc);
 		break;
@@ -417,6 +222,25 @@ int usb_cdc_on_setup_in(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		/* signal any pending threads */
 //		__thinkos_ev_raise(cdc->rx_ev);
 		break;
+
+	case STD_SET_CONFIGURATION: {
+		DCC_LOG1(LOG_TRACE, "SetCfg: %d", value);
+
+		if (value) {
+			usb_dev_ep_init(cdc->usb, 1, &cdc_acm_desc_cfg.ep_in);
+			usb_dev_ep_init(cdc->usb, 2, &cdc_acm_desc_cfg.ep_out);
+			usb_dev_ep_init(cdc->usb, 3, &cdc_acm_desc_cfg.ep_int);
+		} else {
+			usb_dev_ep_disable(cdc->usb, 1);
+			usb_dev_ep_disable(cdc->usb, 2);
+			usb_dev_ep_disable(cdc->usb, 3);
+		}
+
+		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
+		/* signal any pending threads */
+		__thinkos_ev_raise(cdc->rx_ev);
+		break;
+	}
 
 	case STD_GET_CONFIGURATION:
 		DCC_LOG(LOG_TRACE, "GetCfg");
@@ -450,26 +274,52 @@ int usb_cdc_on_setup_in(usb_class_t * cl, struct usb_request * req, void ** ptr)
 			break;
 		}
 #endif
-		usb_dev_ep_stall(cdc->usb, 0);
+		break;
+
+
+	case SET_LINE_CODING:
+		/* this will be handled after the data phase */
+		DCC_LOG3(LOG_TRACE, "CDC SetLn: idx=%d val=%d len=%d",
+				 index, value, len);
 		break;
 
 	case GET_LINE_CODING:
 		DCC_LOG(LOG_TRACE, "CDC GetLn");
 		len = MIN(sizeof(struct cdc_line_coding), len);
-		usb_dev_ep_tx_start(cdc->usb, 0, (void *) &cdc->cdc.lc, len);
+//		usb_dev_ep_tx_start(cdc->usb, 0, (void *)&cdc->cdc.lc, len);
+		break;
+
+	case SET_CONTROL_LINE_STATE:
+		DCC_LOG3(LOG_TRACE, "CDC SetCtrl: idx=%d val=%d len=%d",
+				 index, value, len);
+		cdc->cdc.control = value;
+
+		DCC_LOG1(LOG_TRACE, "DTR=%d", (value & CDC_DTE_PRESENT));
+
+#if USB_CDC_ENABLE_STATE
+		/* update the local serial state */
+		cdc.cdc->lsst = (value & CDC_DTE_PRESENT) ?
+			CDC_SERIAL_STATE_RX_CARRIER | CDC_SERIAL_STATE_TX_CARRIER : 0;
+		/* trigger a local state notification */
+		usb_cdc_state_notify(otg_fs);
+#endif
+
+		/* there might have threads waiting for
+		   modem control line changes (DTR, RTS)
+		   wake them up */
+		__thinkos_ev_raise(cdc->rx_ev);
+		__thinkos_ev_raise(cdc->tx_ev);
+		__thinkos_ev_raise(cdc->ctrl_ev);
 		break;
 
 	default:
 		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
 				req->type, req->request, value, index, len);
-		usb_dev_ep_stall(cdc->usb, 0);
 		break;
 	}
 
 	return len;
 }
-
-
 
 
 int usb_cdc_on_ep0_rx(usb_class_t * cl, uint32_t * buf, unsigned int len)
@@ -488,7 +338,6 @@ struct usb_cdc_class usb_cdc_rt;
 
 const struct usb_class_events usb_cdc_ev = {
 	.on_reset = usb_cdc_on_reset,
-	.on_setup = usb_cdc_on_setup,
 	.on_setup_in = usb_cdc_on_setup_in
 };
 
@@ -496,14 +345,16 @@ struct usb_cdc_class * usb_cdc_init(const usb_dev_t * usb)
 {
 	struct usb_cdc_class * cdc = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)cdc;
+	const struct usb_descriptor_device * desc_dev = &cdc_acm_desc_dev;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG2(LOG_TRACE, "Vendor=0x%04x Product=0x%04x",
+			desc_dev->vendor_id, desc_dev->product_id);
 
 //	usb_desc_parse(&cdc_acm_desc.device, &cdc_acm_desc.conf.cfg);
 
 	/* initialize USB device */
 	cdc->usb = (usb_dev_t *)usb;
-	usb_dev_init(usb, cl, &cdc_acm_desc.device, &usb_cdc_ev);
+	usb_dev_init(usb, cl, desc_dev, &usb_cdc_ev);
 
 	return cdc;
 }
