@@ -89,7 +89,7 @@ struct usb_cdc {
 
 struct usb_cdc_class {
 	/* class specific block */
-	struct usb_cdc cdc;
+	struct usb_cdc acm;
 
 	volatile uint8_t state;
 	
@@ -508,7 +508,7 @@ bool usb_cdc_serial_state_send(struct usb_cdc_class * dev, unsigned int state)
 	/* Send the local serial state. Even if we aren't able to transmit 
 	   the state at this point, the interrupt handler will take care of 
 	   transmitting it. */
-	DCC_LOG1(LOG_TRACE, "local state = %02x", dev->cdc.lsst);
+	DCC_LOG1(LOG_TRACE, "local state = %02x", dev->acm.lsst);
 
 	/* bmRequestType */
 	pkt->bmRequestType = USB_CDC_NOTIFICATION;
@@ -672,12 +672,12 @@ void usb_on_oepint0(struct usb_cdc_class * dev)
 	if (doepint & OTG_FS_XFRC) {
 		switch ((request << 8) | req_type) {
 		case SET_LINE_CODING:
-			memcpy(&dev->cdc.lc, dev->pkt_buf, 
+			memcpy(&dev->acm.lc, dev->pkt_buf, 
 				   sizeof(struct cdc_line_coding));
-			DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->cdc.lc.dwDTERate);
-			DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->cdc.lc.bCharFormat);
-			DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->cdc.lc.bParityType);
-			DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->cdc.lc.bDataBits);
+			DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
+			DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
+			DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
+			DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
 			otg_fs_ep0_zlp_send(otg_fs);
 			break;
 		}
@@ -689,7 +689,7 @@ void usb_on_oepint0(struct usb_cdc_class * dev)
 	}
 
 	if (doepint & OTG_FS_STUP) {
-		struct usb_cdc * cdc = &dev->cdc;
+		struct usb_cdc * cdc = &dev->acm;
 
 		if (req_type & 0x80) {
 			DCC_LOG1(LOG_TRACE, "[0] <OEPINT> <STUP> bmRequestType=%02x "
@@ -870,12 +870,12 @@ void usb_on_oepint0(struct usb_cdc_class * dev)
 			cdc->dtr = (value & CDC_DTE_PRESENT) ? 1 : 0;
 			cdc->rts = (value & CDC_ACTIVATE_CARRIER) ? 1 : 0;
 
-			DCC_LOG2(LOG_TRACE, "DTR=%d RTS=%d", cdc->dtr, cdc->rts);
+			DCC_LOG2(LOG_TRACE, "DTR=%d RTS=%d", acm->dtr, acm->rts);
 
 #if USB_CDC_ENABLE_STATE
 //			if (cdc->dtr) {
 			/* update the local serial state */
-			cdc->lsst = (dev->cdc.dtr) ? CDC_SERIAL_STATE_RX_CARRIER | 
+			cdc->lsst = (dev->acm.dtr) ? CDC_SERIAL_STATE_RX_CARRIER | 
 				CDC_SERIAL_STATE_TX_CARRIER : 0;
 
 			/* transmit the local serial state */
@@ -1090,7 +1090,7 @@ void stm32f_otg_fs_isr(void)
 		ep_tx_ctrl_init(&dev->ep2_tx, EP_IN, EP_IN_FIFO_SIZE);
 		ep_tx_ctrl_init(&dev->ep3_tx, EP_INT, EP_INT_FIFO_SIZE);
 		ep_rx_ctrl_init(&dev->ep1_rx, EP_OUT);
-		cdc_init(&dev->cdc);
+		cdc_init(&dev->acm);
 
 		otg_fs_device_reset(otg_fs);
 
@@ -1189,7 +1189,7 @@ void stm32f_otg_fs_isr(void)
 		}
 
 		if (ep_intr & OTG_FS_IEPINT3) {
-			struct usb_cdc * cdc = &dev->cdc;
+			struct usb_cdc * cdc = &dev->acm;
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
 			diepint = otg_fs->inep[3].diepint & msk;
@@ -1227,7 +1227,7 @@ void stm32f_otg_fs_isr(void)
 				uint32_t buf[4];
 				struct cdc_notification * pkt = (struct cdc_notification *)buf;
 				/* Send the local serial state. */
-				DCC_LOG1(LOG_TRACE, "local state = %02x", dev->cdc.lsst);
+				DCC_LOG1(LOG_TRACE, "local state = %02x", dev->acm.lsst);
 				/* bmRequestType */
 				pkt->bmRequestType = USB_CDC_NOTIFICATION;
 				/* bNotification */
@@ -1239,13 +1239,13 @@ void stm32f_otg_fs_isr(void)
 				/* wLength */
 				pkt->wLength = 2;
 				/* data */
-				pkt->bData[0] = dev->cdc.lsst;
+				pkt->bData[0] = dev->acm.lsst;
 				pkt->bData[1] = 0;
 				if (stm32f_otg_fs_txf_push(otg_fs, EP_INT, pkt) <= 0) {
 					DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_push() failed!");
 				} else {
 					/* update the remote state */
-					dev->cdc.rsst = dev->cdc.lsst;
+					dev->acm.rsst = dev->acm.lsst;
 				}
 			}
 
@@ -1348,7 +1348,7 @@ int usb_cdc_write(struct usb_cdc_class * dev,
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	__thinkos_critical_enter();
-	while (dev->tx_lock && dev->cdc.dtr) {
+	while (dev->tx_lock && dev->acm.dtr) {
 		DCC_LOG(LOG_TRACE, "lock wait .....................");
 		__thinkos_ev_wait(dev->tx_lock_ev);
 		DCC_LOG(LOG_TRACE, "..................... wakeup");
@@ -1357,7 +1357,7 @@ int usb_cdc_write(struct usb_cdc_class * dev,
 	dev->tx_lock = 1;
 	__thinkos_critical_exit();
 
-	if (!dev->cdc.dtr) {
+	if (!dev->acm.dtr) {
 		/* if there is no DTE connected we discard the data */
 		DCC_LOG(LOG_WARNING, "no DTE!");
 		dev->tx_lock = 0;
@@ -1381,7 +1381,7 @@ int usb_cdc_write(struct usb_cdc_class * dev,
 	otg_fs->diepempmsk |= (1 << dev->ep2_tx.ep);
 
 	__thinkos_critical_enter_level(OTG_FS_IRQ_LVL);
-	while ((dev->ep2_tx.len) && (dev->cdc.dtr)) {
+	while ((dev->ep2_tx.len) && (dev->acm.dtr)) {
 		DCC_LOG(LOG_TRACE, "wait .....................");
 		__thinkos_critical_ev_wait(dev->tx_ev, OTG_FS_IRQ_LVL);
 		DCC_LOG(LOG_TRACE, "..................... wakeup");

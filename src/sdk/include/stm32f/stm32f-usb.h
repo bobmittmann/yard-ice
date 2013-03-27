@@ -630,6 +630,62 @@ static inline void set_ep_rxvalid(struct stm32f_usb * usb, int ep_id) {
 	set_ep_rxstat(usb, ep_id, USB_RX_VALID);
 } 
 
+static inline void clr_ep_kind(struct stm32f_usb * usb, int ep_id) {
+	clr_ep_flag(usb, ep_id, USB_EP_KIND);
+}
+
+static inline void set_ep_kind(struct stm32f_usb * usb, int ep_id) {
+	set_ep_flag(usb, ep_id, USB_EP_KIND);
+}
+
+static inline void clr_status_out(struct stm32f_usb * usb, int ep_id) {
+	clr_ep_flag(usb, ep_id, USB_EP_KIND);
+}
+
+static inline void set_ep_type(struct stm32f_usb * usb, int ep_id, int type) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & USB_EPREG_MASK & ~USB_EP_TYPE_MSK;
+	usb->epr[ep_id] = epr | type;
+}
+
+static inline void set_ep_addr(struct stm32f_usb * usb, int ep_id, int addr) {
+	uint32_t epr;
+	epr = usb->epr[ep_id] & USB_EPREG_MASK & ~USB_EA_MSK;
+	usb->epr[ep_id] = epr | addr;
+}
+
+/* configure a RX descriptor */
+static inline int pktbuf_rx_cfg(struct stm32f_usb_rx_pktbuf * rx,
+		int addr, int mxpktsz) {
+	int sz = mxpktsz;
+	if (sz < 63) {
+		sz = (sz + 1) & ~0x01;
+		rx->num_block = sz >> 1;
+		rx->blsize = 0;
+	} else {
+		/* round up to a multiple of 32 */
+		sz = (sz + 0x1f) & ~0x1f;
+		rx->num_block = (sz >> 5) - 1;
+		rx->blsize = 1;
+	}
+	rx->addr = addr;
+	rx->count = 0;
+	return sz;
+}
+
+/* configure a TX descriptor */
+static inline int pktbuf_tx_cfg(struct stm32f_usb_tx_pktbuf * tx,
+		int addr, int mxpktsz) {
+	tx->addr = addr;
+	tx->count = 0;
+	return mxpktsz;
+}
+
+/* return the max packet size for the RX packet buffer */
+static inline int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx) {
+	return (rx->blsize) ? (rx->num_block + 1) * 32 : rx->num_block * 2;
+}
+
 #endif				/* __ASSEMBLER__ */
 
 #endif				/* __STM32F_USB_H__ */
