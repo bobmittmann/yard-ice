@@ -258,7 +258,8 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	otg_fs->inep[ep].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
 
 	deptsiz = otg_fs->inep[ep].dieptsiz;
-	deptsiz = deptsiz;
+	(void)deptsiz;
+
 	DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
 			 OTG_FS_XFRSIZ_GET(deptsiz));
 
@@ -290,7 +291,8 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 
 	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
-	pktcnt = pktcnt;
+	(void)pktcnt;
+
 	DCC_LOG5(LOG_TRACE, "ep=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 ep, mpsiz, pktcnt, xfrsiz, free);
 
@@ -441,9 +443,9 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
 			OTG_FS_MPSIZ_GET(depctl);
 
-		eptsiz = eptsiz;
+		(void)eptsiz;
 		eptfsav = eptfsav * 4;
-		mpsiz = mpsiz;
+		(void)mpsiz;
 
 		DCC_LOG5(LOG_TRACE, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
 				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
@@ -465,7 +467,7 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		depctl = otg_fs->outep[ep].doepctl;
 		if (depctl & OTG_FS_USBAEP) {
 			eptsiz = otg_fs->outep[ep].doeptsiz;
-			eptsiz = eptsiz;
+			(void)eptsiz;
 		} else {
 			DCC_LOG1(LOG_WARNING, "EP%d not active!", ep);
 			return;
@@ -473,8 +475,7 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		
 		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
 			OTG_FS_MPSIZ_GET(depctl);
-
-		mpsiz = mpsiz;
+		(void)mpsiz;
 
 		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
 				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
