@@ -117,7 +117,7 @@ __rom_vectors:
 	.word	stm32f_dma2_stream1_isr /* DMA2 Stream 1 */
 	.word	stm32f_dma2_stream2_isr /* DMA2 Stream 2 */
 	.word	stm32f_dma2_stream3_isr /* DMA2 Stream 3 */
-#if STM32FX2
+#ifdef STM32F2X
 	.word	stm32f_dma2_stream4_isr /* DMA2 Stream 4 */
 	.word	stm32f_eth_isr /* Ethernet */
 	.word	stm32f_eth_wkup_isr /* Ethernet Wakeup through EXTI line */
@@ -350,7 +350,7 @@ _void:
 	.weak       stm32f_adc_isr
 	.thumb_set  stm32f_adc_isr,_isr
 
-#ifdef STM32FX2
+#ifdef STM32F2X
 	.weak       stm32f_can1_tx_isr
 	.thumb_set  stm32f_can1_tx_isr,_isr
 
@@ -483,7 +483,7 @@ _void:
 	.weak       stm32f_dma2_stream3_isr
 	.thumb_set  stm32f_dma2_stream3_isr,_isr
 
-#if STM32FX2
+#ifdef STM32F2X
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
