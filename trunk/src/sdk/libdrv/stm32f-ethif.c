@@ -42,7 +42,7 @@
 
 #ifdef STM32F_ETH
 
-int __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
+void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
 	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;

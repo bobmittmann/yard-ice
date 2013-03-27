@@ -158,7 +158,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* ENDPOINT descriptor type */
 			USB_DESCRIPTOR_ENDPOINT,
 			/* Address of the endpoint on the USB device */
-			USB_ENDPOINT_IN + EP_INT,
+			USB_ENDPOINT_IN + EP_INT_ADDR,
 			/* Endpoint attributes when configured */
 			ENDPOINT_TYPE_INTERRUPT,
 			/* Maximum packet size this endpoint is capable
@@ -197,7 +197,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* ENDPOINT descriptor type */
 			USB_DESCRIPTOR_ENDPOINT,
 			/* Address of the endpoint on the USB device */
-			USB_ENDPOINT_OUT + EP_OUT,
+			USB_ENDPOINT_OUT + EP_OUT_ADDR,
 			/* Endpoint attributes when configured */
 			ENDPOINT_TYPE_BULK,
 			/* Maximum packet size this endpoint is capable of
@@ -213,7 +213,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* ENDPOINT descriptor type */
 			USB_DESCRIPTOR_ENDPOINT,
 			/* Address of the endpoint on the USB device */
-			USB_ENDPOINT_IN + EP_IN,
+			USB_ENDPOINT_IN + EP_IN_ADDR,
 			/* Endpoint attributes when configured */
 			ENDPOINT_TYPE_BULK,
 			/* Maximum packet size this endpoint is capable of
