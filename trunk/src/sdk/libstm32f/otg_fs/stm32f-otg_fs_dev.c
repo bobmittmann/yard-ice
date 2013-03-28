@@ -102,6 +102,7 @@ struct ep_rx_ctrl {
 	uint32_t tmr;
 };
 
+#if 0
 static void ep_tx_ctrl_init(struct ep_tx_ctrl * ctrl,
 							unsigned int ep, unsigned int max)
 {
@@ -120,7 +121,6 @@ static void ep_rx_ctrl_init(struct ep_rx_ctrl * ctrl, unsigned int ep)
 }
 
 
-#if 0
 #define STM32F_USB_PKTBUF ((struct stm32f_otg_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
 static void __copy_from_pktbuf(void * ptr,
@@ -311,40 +311,84 @@ static void __ep_zlp_send(struct stm32f_otg_drv * drv, int ep_id)
 #endif
 #endif
 
-/* Endpoint initialization
-The first step to initialize an endpoint is to write appropriate values to the
-ADDRn_TX/ADDRn_RX registers so that the USB peripheral finds the data to be
-transmitted already available and the data to be received can be buffered. The EP_TYPE
-bits in the USB_EPnR register must be set according to the endpoint type, eventually using
-the EP_KIND bit to enable any special required feature. On the transmit side, the endpoint
-must be enabled using the STAT_TX bits in the USB_EPnR register and COUNTn_TX must
-be initialized. For reception, STAT_RX bits must be set to enable reception and
-COUNTn_RX must be written with the allocated buffer size using the BL_SIZE and
-NUM_BLOCK fields. Unidirectional endpoints, except Isochronous and double-buffered bulk
-endpoints, need to initialize only bits and registers related to the supported direction. Once
-the transmission and/or reception are enabled, register USB_EPnR and locations
-ADDRn_TX/ADDRn_RX, COUNTn_TX/COUNTn_RX (respectively), should not be modified
-by the application software, as the hardware can change their value on the fly. When the
-data transfer operation is completed, notified by a CTR interrupt event, they can be
-accessed again to re-enable a new operation. */
+	/* Configure EP0 to receive Setup packets */
+static void __ep0_out_start(struct stm32f_otg_fs * otg_fs)
+{
+	/* Prepare to receive */
+	otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(3) |
+		OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(8 * 3);
+	/* EP enable */
+	otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+}
 
-/* USB reset (RESET interrupt)
-When this event occurs, the USB peripheral is put in the same conditions it is left by the
-system reset after the initialization described in the previous paragraph: communication is
-disabled in all endpoint registers (the USB peripheral will not respond to any packet). As a
-response to the USB reset event, the USB function must be enabled, having as USB
-address 0, implementing only the default control endpoint (endpoint address is 0 too). This
-is accomplished by setting the Enable Function (EF) bit of the USB_DADDR register and
-initializing the EP0R register and its related packet buffers accordingly. During USB
-enumeration process, the host assigns a unique address to this device, which must be
-written in the ADD[6:0] bits of the USB_DADDR register, and configures any other
-necessary endpoint.
-When a RESET interrupt is received, the application software is responsible to enable again
-the default endpoint of USB function 0 within 10mS from the end of reset sequence which
-triggered the interrupt. */
+static void __ep0_zlp_send(struct stm32f_otg_fs * otg_fs)
+{
+	otg_fs->inep[0].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
+	otg_fs->inep[0].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+	__ep0_out_start(otg_fs);
+}
 
 void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	int i;
+
+	DCC_LOG(LOG_TRACE, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+	/* Clear the Remote Wake-up Signaling */
+	otg_fs->dctl &= ~OTG_FS_RWUSIG;
+
+	/* Flush the Tx FIFO */
+	stm32f_otg_fs_txfifo_flush(otg_fs, 0x10);
+	/* Flush the Rx FIFO */
+	stm32f_otg_fs_rxfifo_flush(otg_fs);
+
+	/* Clear all pending interrupts */
+	otg_fs->daint = 0xffffffff;
+	for (i = 0; i < 4; i++) {
+		otg_fs->inep[i].diepint = 0xff;
+		otg_fs->outep[i].doepint = 0xff;
+	}
+
+	/* Reset Device Address */
+	otg_fs->dcfg &= ~OTG_FS_DAD_MSK;
+
+	/* Endpoint initialization on USB reset */
+
+	/* 1. Set the NAK bit for all OUT endpoints
+	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
+	for (i = 0; i < 4; i++)
+		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
+
+	/* 2. Unmask the following interrupt bits
+	   – INEP0 = 1 in OTG_FS_DAINTMSK (control 0 IN endpoint)
+	   – OUTEP0 = 1 in OTG_FS_DAINTMSK (control 0 OUT endpoint)
+	   – STUP = 1 in DOEPMSK
+	   – XFRC = 1 in DOEPMSK
+	   – XFRC = 1 in DIEPMSK
+	   – TOC = 1 in DIEPMSK */
+	otg_fs->daintmsk = OTG_FS_IEPM0 | OTG_FS_OEPM0;
+	otg_fs->doepmsk = OTG_FS_STUPM | OTG_FS_XFRCM | OTG_FS_EPDM;
+//	otg_fs->diepmsk = OTG_FS_XFRCM | OTG_FS_TOM | OTG_FS_EPDM;
+//	otg_fs->diepmsk = OTG_FS_INEPNEM | OTG_FS_INEPNMM | OTG_FS_ITTXFEMSK |
+	otg_fs->diepmsk = OTG_FS_TOM | OTG_FS_EPDM | OTG_FS_XFRCM;
+
+	/* 3. Set up the Data FIFO RAM for each of the FIFOs
+	   – Program the OTG_FS_GRXFSIZ register, to be able to receive
+	   control OUT data and setup data. If thresholding is not enabled,
+	   at a minimum, this must be equal to 1 max packet size of
+	   control endpoint 0 + 2 Words (for the status of the control OUT
+	   data packet) + 10 Words (for setup packets).
+	   - Program the OTG_FS_TX0FSIZ register (depending on the FIFO number
+	   chosen) to be able to transmit control IN data. At a minimum, this
+	   must be equal to 1 max packet size of control endpoint 0. */
+
+	drv->ev->on_reset(drv->cl);
+
+
+	otg_fs->gintmsk |=  OTG_FS_IEPINTM | OTG_FS_OEPINTM |
+		OTG_FS_IISOIXFRM | OTG_FS_IISOOXFRM | OTG_FS_RXFLVLM;
+
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 
@@ -448,7 +492,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
 
 	return cnt;
-#endif;
+#endif
 	return 0;
 }
 
@@ -498,6 +542,8 @@ void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 	}
 #endif
 }
+
+int fifo_addr = 0;
 
 int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 		const usb_dev_ep_info_t * info)
@@ -585,6 +631,39 @@ int stm32f_otg_dev_ep0_init(struct stm32f_otg_drv * drv,
 		const usb_dev_ep_info_t * info,
 		void * ctr_buf, int buf_len)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	uint32_t siz;
+
+	/* reset packet buffer address pointer */
+	fifo_addr = 0;
+	siz = 256;
+	otg_fs->grxfsiz = siz / 4;
+
+	/* EP0 TX fifo memory allocation */
+	fifo_addr += siz;
+	siz = info->mxpktsz;
+	otg_fs->dieptxf0 = OTG_FS_TX0FD_SET(siz / 4) |
+		OTG_FS_TX0FSA_SET(fifo_addr / 4);
+
+	/*  4. Program the following fields in the endpoint-specific registers
+	   for control OUT endpoint 0 to receive a SETUP packet
+	   – STUPCNT = 3 in OTG_FS_DOEPTSIZ0 (to receive up to 3 back-to-back
+	   SETUP packets)
+	   At this point, all initialization required to receive SETUP packets
+	   is done. */
+	otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(3) |
+		OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(3 * (8));
+
+	/* Initialize EP0 */
+	otg_fs->inep[0].diepctl = OTG_FS_TXFNUM_SET(0);
+
+	DCC_LOG2(LOG_TRACE, "   RX: addr=%04x size=%d",
+			 0, otg_fs->grxfsiz * 4);
+
+	DCC_LOG2(LOG_TRACE, "TX[0]: addr=%04x size=%d",
+			 OTG_FS_TX0FSA_GET(otg_fs->dieptxf0) * 4,
+			 OTG_FS_TX0FD_GET(otg_fs->dieptxf0) * 4);
+
 #if 0
 	/* packet buffer  */
 	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
@@ -679,6 +758,24 @@ void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
 
 void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_ep * ep = &drv->ep[0];
+	void * dummy = NULL;
+
+	if (ep->state == EP_WAIT_STATUS_IN) {
+		struct usb_request * req = &drv->req;
+
+		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
+			DCC_LOG(LOG_TRACE, "address set!");
+			stm32f_otg_fs_addr_set(otg_fs, req->value);
+		}
+		ep->on_setup(drv->cl, req, dummy);
+		ep->state = EP_IDLE;
+		DCC_LOG(LOG_TRACE, ">>>>>>>> SETUP END");
+		return;
+	}
+
+
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
@@ -719,6 +816,32 @@ void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 
 void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct usb_request * req = &drv->req;
+	struct stm32f_otg_ep * ep = &drv->ep[0];
+
+	DCC_LOG(LOG_TRACE, "SETUP START <<<<<<<<<<<<<<<");
+
+	DCC_LOG2(LOG_TRACE, "req len=%d type=%d", req->length, req->type);
+
+
+	/* No-Data control SETUP transaction */
+	if (req->length == 0) {
+		struct usb_request * req = &drv->req;
+		void * dummy = NULL;
+
+		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
+			DCC_LOG(LOG_TRACE, "address set!");
+			stm32f_otg_fs_addr_set(otg_fs, req->value);
+		}
+		ep->on_setup(drv->cl, req, dummy);
+		ep->state = EP_IDLE;
+		__ep0_zlp_send(otg_fs);
+
+		DCC_LOG(LOG_TRACE, ">>>>>>>> SETUP END");
+		return;
+	}
+
 #if 0
 	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 	struct usb_request * req = &drv->req;
@@ -817,8 +940,41 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 #endif
 }
 
+void otg_fs_on_enum_done(struct stm32f_otg_fs * otg_fs)
+{
+	uint32_t diepctl;
+	uint32_t dsts;
+
+	/* Endpoint initialization on enumeration completion
+	   1. On the Enumeration Done interrupt (ENUMDNE in OTG_FS_GINTSTS),
+	   read the OTG_FS_DSTS register to determine the enumeration speed. */
+	dsts = otg_fs->dsts;
+
+	/* 2. Program the MPSIZ field in OTG_FS_DIEPCTL0 to set the maximum
+	   packet size. This step configures control endpoint 0. The maximum
+	   packet size for a control endpoint depends on the enumeration speed. */
+
+	diepctl = otg_fs->inep[0].diepctl;
+	diepctl &= ~OTG_FS_MPSIZ_MSK;
+	if ((dsts & OTG_FS_ENUMSPD_MSK) == OTG_FS_ENUMSPD_FULL) {
+		diepctl |= OTG_FS_MPSIZ_64;
+		DCC_LOG(LOG_INFO, "USB full speed");
+	} else {
+		diepctl |= OTG_FS_MPSIZ_8;
+		DCC_LOG(LOG_INFO, "USB low speed");
+	}
+	otg_fs->inep[0].diepctl = diepctl;
+
+	/* At this point, the device is ready to receive SOF packets and is
+	   configured to perform control transfers on control endpoint 0. */
+
+	/*  Clear global IN NAK */
+	otg_fs->dctl |= OTG_FS_CGINAK;
+
+}
+
 /* Private USB device driver data */
-struct stm32f_otg_drv stm32f_otg_drv0;
+struct stm32f_otg_drv stm32f_otg_fs_drv0;
 
 #if 0
 
@@ -964,7 +1120,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 }
 #endif
 
-
 #define OTG_FS_DP STM32F_GPIOA, 12
 #define OTG_FS_DM STM32F_GPIOA, 11
 #define OTG_FS_VBUS STM32F_GPIOA, 9
@@ -998,8 +1153,6 @@ void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
-	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
-
 	otg_fs_vbus_connect(true);
 
 	DCC_LOG(LOG_MSG, "Enabling USB FS clock...");
@@ -1015,7 +1168,6 @@ void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	int ep_id;
 
 //	usb->cntr = USB_FRES;
 	/* Removing any spurious pending interrupts */
@@ -1034,9 +1186,8 @@ void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 
 }
 
-
 int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
-		const struct usb_class_events * ev)
+		const usb_class_events_t * ev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
@@ -1052,9 +1203,8 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	/* Initialize IO pins */
 	otg_fs_io_init();
 
+	otg_fs_power_on(otg_fs);
 
-
-	drv->state = USB_STATE_ATTACHED;
 	DCC_LOG(LOG_TRACE, "[ATTACHED]");
 	return 0;
 }
@@ -1062,6 +1212,335 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 
 /* Private USB device driver data */
 struct stm32f_otg_drv stm32f_otg_fs_drv0;
+
+
+void stm32f_otg_fs_isr(void)
+{
+	struct stm32f_otg_drv * drv = &stm32f_otg_fs_drv0;
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	uint32_t gintsts;
+	uint32_t ep_intr;
+	int ep_id;
+
+	gintsts = otg_fs->gintsts & otg_fs->gintmsk;
+
+	DCC_LOG1(LOG_MSG, "GINTSTS=0x%08x", gintsts);
+
+	if (gintsts & OTG_FS_SRQINT) {
+		/* Session request/new session detected interrupt */
+		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]");
+		otg_fs->gintmsk |= OTG_FS_WUIM | OTG_FS_USBRSTM | OTG_FS_ENUMDNEM |
+			OTG_FS_ESUSPM | OTG_FS_USBSUSPM;
+	}
+
+	if (gintsts & OTG_FS_PTXFE) {
+		DCC_LOG(LOG_TRACE, "<PTXFE>");
+	}
+
+	if (gintsts & OTG_FS_OTGINT) {
+		uint32_t gotgint = otg_fs->gotgint;
+		DCC_LOG(LOG_INFO, "<OTGINT>");
+		if (gotgint & OTG_FS_OTGINT) {
+			DCC_LOG(LOG_INFO, "<SEDET>  [ATTACHED]");
+			otg_fs->gintmsk = OTG_FS_SRQIM | OTG_FS_OTGINT;
+		}
+		otg_fs->gotgint = gotgint;
+	}
+
+	if (gintsts & OTG_FS_GONAKEFF) {
+		DCC_LOG(LOG_TRACE, "<GONAKEFF>");
+		otg_fs->gintmsk &= ~OTG_FS_GONAKEFFM;
+	}
+
+	if (gintsts & OTG_FS_RXFLVL) {
+		uint32_t grxsts;
+		int len;
+		int stat;
+
+		/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
+		   the application must read the Receive status pop
+		   register (OTG_FS_GRXSTSP). */
+		/* pop the rx fifo status */
+		grxsts = otg_fs->grxstsp;
+
+		ep_id = OTG_FS_EPNUM_GET(grxsts);
+		len = OTG_FS_BCNT_GET(grxsts);
+		(void)len;
+		stat = OTG_FS_PKTSTS_GET(grxsts);
+		(void)stat;
+
+		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep_id, len, stat);
+
+		if (ep_id == 0) {
+			/* 3. If the received packet’s byte count is not 0, the byte count
+			   amount of data is popped from the receive Data FIFO and stored in
+			   memory. If the received packet byte count is 0, no data is popped
+			   from the receive data FIFO. */
+
+			switch (grxsts & OTG_FS_PKTSTS_MSK) {
+			case OTG_FS_PKTSTS_GOUT_NACK:
+				/* Global OUT NAK (triggers an interrupt) */
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", ep_id);
+				break;
+			case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
+				/* OUT data packet received */
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
+				stm32f_otg_dev_ep0_out(drv);
+				break;
+			}
+			case OTG_FS_PKTSTS_OUT_XFER_COMP:
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
+				break;
+			case OTG_FS_PKTSTS_SETUP_COMP:
+				/* SETUP transaction completed (triggers an interrupt) */
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_COMP>", ep_id);
+				stm32f_otg_dev_ep0_setup(drv);
+
+				break;
+			case OTG_FS_PKTSTS_SETUP_UPDT: {
+				uint32_t * buf = (uint32_t *)&drv->req;
+
+				/* SETUP data packet received */
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_UPDT>", ep_id);
+
+				if (len != 8) {
+					DCC_LOG(LOG_ERROR, "setup data len != 8!");
+				}
+				/* Copy the received setup packet into the setup buffer */
+				buf[0] = otg_fs->dfifo[0].pop;
+				buf[1] = otg_fs->dfifo[0].pop;
+
+				DCC_LOG2(LOG_TRACE, "SETUP: 0x%08x 0x%08x", buf[0], buf[1]);
+
+				break;
+			}
+			}
+		} else {
+			switch (grxsts & OTG_FS_PKTSTS_MSK) {
+			case OTG_FS_PKTSTS_OUT_DATA_UPDT:
+				/* OUT data packet received */
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
+				/* 2. The application can mask the RXFLVL interrupt (in
+				   OTG_FS_GINTSTS) by writing to RXFLVL = 0 (in
+				   OTG_FS_GINTMSK), until it has read the packet from
+				   the receive FIFO. */
+				otg_fs->gintmsk &= ~OTG_FS_RXFLVLM;
+				/* Enable SOF interrupts */
+				otg_fs->gintmsk |=  OTG_FS_SOFM;
+				DCC_LOG(LOG_INFO, "__thinkos_ev_raise(RX)");
+				stm32f_otg_dev_ep_out(drv, ep_id);
+				break;
+			case OTG_FS_PKTSTS_OUT_XFER_COMP:
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
+				/* FIXME: generic code */
+#if 0
+				/* Prepare to receive more */
+				otg_fs->outep[ep_id].doeptsiz =
+					OTG_FS_PKTCNT_SET(EP_OUT_FIFO_SIZE / EP_OUT_MAX_PKT_SIZE) |
+					OTG_FS_XFRSIZ_SET(EP_OUT_FIFO_SIZE);
+				/* EP enable */
+				otg_fs->outep[ep_id].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+#endif
+				/* Disable SOF interrupts */
+				otg_fs->gintmsk &= ~OTG_FS_SOFM;
+
+				break;
+			}
+		}
+
+		/* 5. After the data payload is popped from the receive FIFO, the
+		   RXFLVL interrupt (OTG_FS_GINTSTS) must be unmasked. */
+		//	otg_fs->gintmsk |= OTG_FS_RXFLVLM;
+	}
+
+	if (gintsts & OTG_FS_SOF) {
+		DCC_LOG(LOG_MSG, "<SOF>");
+	}
+
+	if (gintsts & OTG_FS_WKUPINT) {
+		DCC_LOG(LOG_TRACE, "<WKUPINT>");
+		/* disable resume/wakeup interrupts */
+	}
+
+	if (gintsts & OTG_FS_USBRST ) {
+		/* end of bus reset */
+		//		DCC_LOG(LOG_TRACE, "<USBRST>");
+		/* initialize tx buffer */
+		stm32f_otg_dev_reset(drv);
+		DCC_LOG(LOG_TRACE, "<USBRST> --------------- [DEFAULT]");
+	}
+
+	if (gintsts & OTG_FS_ENUMDNE) {
+		DCC_LOG(LOG_INFO, "<ENUMDNE>");
+		otg_fs_on_enum_done(otg_fs);
+	}
+
+	if (gintsts & OTG_FS_ESUSP) {
+		DCC_LOG(LOG_INFO, "<ESUSP>");
+	}
+
+	if (gintsts & OTG_FS_USBSUSP) {
+		DCC_LOG(LOG_INFO, "<USBSUSP>");
+	}
+
+	if (gintsts & OTG_FS_IEPINT) {
+		uint32_t diepmsk;
+		uint32_t diepint;
+		uint32_t diepempmsk;
+		uint32_t msk;
+
+		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
+		diepmsk = otg_fs->diepmsk;
+		diepempmsk = otg_fs->diepempmsk;
+
+		if (ep_intr & OTG_FS_IEPINT0) {
+			/* add the Transmit FIFO empty bit to the mask */
+			msk = diepmsk | ((diepempmsk >> 0) & 0x1) << 7;
+			diepint = otg_fs->inep[0].diepint & msk;
+			if (diepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <XFRC>");
+			}
+			if (diepint & OTG_FS_TXFE) {
+				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <TXFE>");
+				/* mask FIFO empty interrupt */
+				otg_fs->diepempmsk &= ~(1 << 1);
+			}
+			/* clear interrupts */
+			otg_fs->inep[0].diepint = diepint;
+		}
+
+		if (ep_intr & OTG_FS_IEPINT1) {
+			/* add the Transmit FIFO empty bit to the mask */
+			msk = diepmsk | ((diepempmsk >> 1) & 0x1) << 7;
+			diepint = otg_fs->inep[1].diepint & msk;
+			if (diepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[1] <IEPINT> <XFRC>");
+			}
+			if (diepint & OTG_FS_TXFE) {
+				DCC_LOG(LOG_TRACE, "[1] <IEPINT> <TXFE>");
+				/* mask FIFO empty interrupt */
+				otg_fs->diepempmsk &= ~(1 << 1);
+			}
+			/* clear interrupts */
+			otg_fs->inep[1].diepint = diepint;
+		}
+
+		if (ep_intr & OTG_FS_IEPINT2) {
+			/* add the Transmit FIFO empty bit to the mask */
+			msk = diepmsk | ((diepempmsk >> 2) & 0x1) << 7;
+			diepint = otg_fs->inep[2].diepint & msk;
+			if (diepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <XFRC>");
+			}
+			if (diepint & OTG_FS_TXFE) {
+				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <TXFE>");
+				/* mask FIFO empty interrupt */
+				otg_fs->diepempmsk &= ~(1 << 2);
+			}
+			otg_fs->inep[2].diepint = diepint;
+		}
+
+		if (ep_intr & OTG_FS_IEPINT3) {
+			/* add the Transmit FIFO empty bit to the mask */
+			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
+			diepint = otg_fs->inep[3].diepint & msk;
+			if (diepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[3] <IEPINT> <XFRC>");
+			}
+			if (diepint & OTG_FS_TXFE) {
+				DCC_LOG(LOG_TRACE, "[3] <IEPINT> <TXFE>");
+				/* mask FIFO empty interrupt */
+				otg_fs->diepempmsk &= ~(1 << 2);
+			}
+			otg_fs->inep[3].diepint = diepint;
+		}
+	}
+
+	if (gintsts & OTG_FS_OEPINT) {
+
+		//		DCC_LOG(LOG_TRACE, "<OEPINT>");
+
+		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
+
+		if (ep_intr & OTG_FS_OEPINT0) {
+			DCC_LOG(LOG_INFO, "[0] <OEPINT>");
+			stm32f_otg_dev_ep0_in(drv);
+		}
+
+		if (ep_intr & OTG_FS_OEPINT1) {
+			uint32_t doepint;
+
+			doepint = otg_fs->outep[1].doepint & otg_fs->doepmsk;
+
+			if (doepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <OUT XFRC>");
+				stm32f_otg_dev_ep_in(drv, 1);
+			}
+			if (doepint & OTG_FS_EPDISD) {
+				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <EPDISD>");
+			}
+			if (doepint & OTG_FS_STUP) {
+				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <STUP>");
+			}
+			/* clear interrupts */
+			otg_fs->outep[1].doepint = doepint;
+		}
+
+		if (ep_intr & OTG_FS_OEPINT2) {
+			uint32_t doepint;
+
+			doepint = otg_fs->outep[2].doepint & otg_fs->doepmsk;
+
+			if (doepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <OUT XFRC>");
+				stm32f_otg_dev_ep_in(drv, 2);
+			}
+			if (doepint & OTG_FS_EPDISD) {
+				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <EPDISD>");
+			}
+			if (doepint & OTG_FS_STUP) {
+				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <STUP>");
+			}
+			/* clear interrupts */
+			otg_fs->outep[1].doepint = doepint;
+		}
+
+		if (ep_intr & OTG_FS_OEPINT3) {
+			uint32_t doepint;
+
+			doepint = otg_fs->outep[3].doepint & otg_fs->doepmsk;
+
+			if (doepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <OUT XFRC>");
+				stm32f_otg_dev_ep_in(drv, 3);
+			}
+			if (doepint & OTG_FS_EPDISD) {
+				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <EPDISD>");
+			}
+			if (doepint & OTG_FS_STUP) {
+				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <STUP>");
+			}
+
+			/* clear interrupts */
+			otg_fs->outep[1].doepint = doepint;
+		}
+	}
+
+	if (gintsts & OTG_FS_IISOIXFR) {
+		DCC_LOG(LOG_TRACE, "<IISOIXFR>");
+	}
+
+	if (gintsts & OTG_FS_INCOMPISOOUT) {
+		DCC_LOG(LOG_TRACE, "<INCOMPISOOUT>");
+	}
+
+	if (gintsts & OTG_FS_MMIS) {
+		DCC_LOG(LOG_TRACE, "<MMIS>");
+	}
+
+	/* clear pending interrupts */
+	otg_fs->gintsts = gintsts;
+}
 
 
 /* USB device operations */

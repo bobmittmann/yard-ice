@@ -40,11 +40,3 @@ LDSCRIPT = $(MACH).ld
 
 include $(MKDIR)/prog.mk
 
-mall:
-	@echo MKDIR=$(MKDIR)
-	@echo BASEDIR=$(BASEDIR)
-	@echo TOOLSDIR=$(TOOLSDIR)
-	@echo LDDIR=$(LDDIR)
-	@echo DEBUG=$(DEBUG)
-	@echo THIS=$(THIS)
-

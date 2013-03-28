@@ -178,12 +178,15 @@ int main(int argc, char ** argv)
 
 void io_init(void)
 {
+#ifdef STM32F10X
 	struct stm32f_rcc * rcc = STM32F_RCC;
-
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
+#endif
 
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
+
+#ifdef STM32F10X
+	stm32f_gpio_clock_en(STM32F_GPIOA);
+	stm32f_gpio_clock_en(STM32F_GPIOB);
 
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
@@ -203,11 +206,19 @@ void io_init(void)
 //	stm32f_gpio_mode(STM32F_GPIOA, 5, OUTPUT, OPEN_DRAIN | PULL_UP);
 	stm32f_gpio_mode(STM32F_GPIOA, 5, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_set(STM32F_GPIOA, 5);
-}
+#endif
 
-void usb_vbus_connect(void)
-{
-//	stm32f_gpio_mode(USB_FS_VBUS, ALT_FUNC, SPEED_LOW);
+#ifdef STM32F2X
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32f_gpio_clock_en(STM32F_GPIOD);
+
+	/* PC12: UART5_TX */
+	stm32f_gpio_mode(STM32F_GPIOC, 12, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_af(STM32F_GPIOC, 12, GPIO_AF8);
+	/* PD2: UART5_RX */
+	stm32f_gpio_mode(STM32F_GPIOD, 2, INPUT, PULL_UP);
+	stm32f_gpio_af(STM32F_GPIOD, 2, GPIO_AF8);
+#endif
 }
 
 #define BUTTON_STACK_SIZE 128 
@@ -317,7 +328,14 @@ int button_task(void)
 
 int main(int argc, char ** argv)
 {
+#ifdef STM32F10X
 	struct stm32f_usart * us = STM32F_USART2;
+#endif
+
+#ifdef STM32F2X
+	struct stm32f_usart * us = STM32F_UART5;
+#endif
+
 //	struct vcom vcom;
 	int i = 0;
 
@@ -327,24 +345,34 @@ int main(int argc, char ** argv)
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
 
+	DCC_LOG(LOG_TRACE, "1. io_init()");
 	io_init();
 
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
+#ifdef STM32F10X
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, BUTTON_STACK_SIZE, 
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+#endif
 
 //	usb_cdc_init();
 //	vcom.usb = usb_cdc_init();
 
 //	vcom.serial = serial_init(stm32f_uart5);
 	stm32f_usart_init(us);
-	stm32f_usart_baudrate_set(us, 100000);
+	stm32f_usart_baudrate_set(us, 115200);
 	stm32f_usart_mode_set(us, SERIAL_8N1);
 	stm32f_usart_enable(us);
 
-	usb_cdc_init(&stm32f_usb_dev);
+#ifdef STM32F10X
+	usb_cdc_init(&stm32f_usb_fs_dev);
+#endif
+
+#ifdef STM32F2X
+	usb_cdc_init(&stm32f_otg_fs_dev);
+#endif
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);

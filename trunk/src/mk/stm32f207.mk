@@ -18,10 +18,11 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-MKDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-BASEDIR := $(realpath $(MKDIR)/..)
-TOOLSDIR := $(realpath $(MKDIR)/../../tools)
-LDDIR := $(realpath $(MKDIR)/../ld)
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+MKDIR := $(realpath $(THISDIR))
+BASEDIR := $(realpath $(THISDIR)/..)
+TOOLSDIR := $(realpath $(THISDIR)/../../tools)
+LDDIR := $(realpath $(THISDIR)/../ld)
 
 export MKDIR LDDIR TOOLSDIR
 
@@ -31,11 +32,11 @@ endif
 
 ARCH = cm3
 CPU = cortex-m3
-CDEFS += STM32F207 "HCLK_HZ=72000000" 
+CDEFS += STM32F207 "HCLK_HZ=120000000" 
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDSCRIPT = $(BASEDIR)/ld/$(MACH).ld  
+LDSCRIPT = $(MACH).ld  
 
 include $(MKDIR)/prog.mk
 
