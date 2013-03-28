@@ -35,7 +35,7 @@
 
 #include <sys/dcclog.h>
 
-#ifdef STM32F2X
+#ifdef STM32F_OTG_FS
 
 typedef enum {
 	EP_IDLE,
@@ -101,6 +101,25 @@ struct ep_rx_ctrl {
 	uint32_t data;
 	uint32_t tmr;
 };
+
+static void __copy_from_pktbuf(void * ptr,
+							uint32_t * pop,
+							unsigned int cnt)
+{
+	uint8_t * dst = (uint8_t *)ptr;
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 2; i++) {
+		data = *pop;
+		*dst++ = data;
+		*dst++ = data >> 8;
+		*dst++ = data >> 16;
+		*dst++ = data >> 24;
+	}
+}
+
 
 #if 0
 static void ep_tx_ctrl_init(struct ep_tx_ctrl * ctrl,
@@ -704,8 +723,13 @@ int stm32f_otg_dev_ep0_init(struct stm32f_otg_drv * drv,
 	return 0;
 }
 
-void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
+void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv, int rxlen)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_ep * ep = &drv->ep[0];
+	int cnt;
+	int n;
+
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
@@ -727,17 +751,17 @@ void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
 		set_ep_txstat(usb, 0, USB_TX_STALL);
 		return;
 	}
+#endif
 
-		//	cnt = MIN(rx->count, max);
-
-	cnt = pktbuf[0].rx.count;
+	cnt = rxlen;
 	n = MIN(cnt, ep->xfr_rem);
 
-	__copy_from_pktbuf(ep->xfr_ptr, &pktbuf[0].rx, n);
+	__copy_from_pktbuf(ep->xfr_ptr, &otg_fs->dfifo[0].pop, n);
 
 	ep->xfr_ptr += n;
 	ep->xfr_rem -= n;
 
+#if 0
 	if (ep->state == EP_OUT_DATA_LAST) {
 		ep->state = EP_WAIT_STATUS_IN;
 		DCC_LOG1(LOG_INFO, "EP0 cnt=%d [EP_WAIT_STATUS_IN]", cnt);
@@ -1209,18 +1233,12 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	return 0;
 }
 
-
-/* Private USB device driver data */
-struct stm32f_otg_drv stm32f_otg_fs_drv0;
-
-
 void stm32f_otg_fs_isr(void)
 {
 	struct stm32f_otg_drv * drv = &stm32f_otg_fs_drv0;
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint32_t gintsts;
 	uint32_t ep_intr;
-	int ep_id;
 
 	gintsts = otg_fs->gintsts & otg_fs->gintmsk;
 
@@ -1252,8 +1270,10 @@ void stm32f_otg_fs_isr(void)
 		otg_fs->gintmsk &= ~OTG_FS_GONAKEFFM;
 	}
 
+	/* RxFIFO non-empty */
 	if (gintsts & OTG_FS_RXFLVL) {
 		uint32_t grxsts;
+		int ep_id;
 		int len;
 		int stat;
 
@@ -1269,7 +1289,7 @@ void stm32f_otg_fs_isr(void)
 		stat = OTG_FS_PKTSTS_GET(grxsts);
 		(void)stat;
 
-		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep_id, len, stat);
+		DCC_LOG3(LOG_TRACE, "[%d] <RXFLVL> len=%d status=%d", ep_id, len, stat);
 
 		if (ep_id == 0) {
 			/* 3. If the received packet’s byte count is not 0, the byte count
@@ -1285,7 +1305,7 @@ void stm32f_otg_fs_isr(void)
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
 				/* OUT data packet received */
 				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
-				stm32f_otg_dev_ep0_out(drv);
+				stm32f_otg_dev_ep0_out(drv, len);
 				break;
 			}
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
@@ -1299,19 +1319,18 @@ void stm32f_otg_fs_isr(void)
 				break;
 			case OTG_FS_PKTSTS_SETUP_UPDT: {
 				uint32_t * buf = (uint32_t *)&drv->req;
-
 				/* SETUP data packet received */
 				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_UPDT>", ep_id);
 
 				if (len != 8) {
 					DCC_LOG(LOG_ERROR, "setup data len != 8!");
 				}
+
 				/* Copy the received setup packet into the setup buffer */
 				buf[0] = otg_fs->dfifo[0].pop;
 				buf[1] = otg_fs->dfifo[0].pop;
 
 				DCC_LOG2(LOG_TRACE, "SETUP: 0x%08x 0x%08x", buf[0], buf[1]);
-
 				break;
 			}
 			}

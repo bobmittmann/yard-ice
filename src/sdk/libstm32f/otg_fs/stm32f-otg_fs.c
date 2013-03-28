@@ -28,7 +28,7 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
-#ifdef STM32F2X
+#ifdef STM32F_OTG_FS
 
 void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs)
 {
@@ -159,11 +159,11 @@ void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr,
 	   the following fields of the OTG_FS_DIEPCTLx register (for IN or 
 	   bidirectional endpoints) or the OTG_FS_DOEPCTLx register (for 
 	   OUT or bidirectional endpoints).
-	   – Maximum packet size
-	   – USB active endpoint = 1
-	   – Endpoint start data toggle (for interrupt and bulk endpoints)
-	   – Endpoint type
-	   – TxFIFO number */
+	   â€“ Maximum packet size
+	   â€“ USB active endpoint = 1
+	   â€“ Endpoint start data toggle (for interrupt and bulk endpoints)
+	   â€“ Endpoint type
+	   â€“ TxFIFO number */
 	
 	depctl |= OTG_FS_MPSIZ_SET(mpsiz);
 	depctl |= OTG_FS_EPTYP_SET(type);
@@ -383,18 +383,18 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	/* The application must perform the following steps to initialize the 
 	   core as a device on power-up or after a mode change from host to device.
 	1. Program the following fields in the OTG_FS_DCFG register:
-	– Device speed
+	â€“ Device speed
 	- Non-zero-length status OUT handshake */
 	otg_fs->dcfg = OTG_FS_PFIVL_80 | OTG_FS_DSPD_FULL;
 
 	/* 2. Program the OTG_FS_GINTMSK register to unmask the 
 	   following interrupts:
-	   – Wakeup 
-	   – USB reset
-	   – Enumeration done
-	   – Early suspend
-	   – USB suspend
-	   – SOF */
+	   â€“ Wakeup 
+	   â€“ USB reset
+	   â€“ Enumeration done
+	   â€“ Early suspend
+	   â€“ USB suspend
+	   â€“ SOF */
 	otg_fs->gintmsk = OTG_FS_SRQIM | OTG_FS_OTGINT;
 
 //	otg_fs->gintmsk = OTG_FS_WUIM | OTG_FS_USBRSTM | OTG_FS_ENUMDNEM | 
@@ -404,7 +404,7 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 
 
 	/* 3. Program the VBUSBSEN bit in the OTG_FS_GCCFG register to enable VBUS 
-	   sensing in “B” device mode and supply the 5 volts across the pull-up 
+	   sensing in â€œBâ€� device mode and supply the 5 volts across the pull-up 
 	   resistor on the DP line. */
 	otg_fs->gccfg = OTG_FS_VBUSBSEN | OTG_FS_PWRDWN;
 

@@ -832,7 +832,7 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_RXFLVL) {
 		uint32_t grxsts;
-		int ep;
+		int ep_id;
 		int len;
 		int stat;
 
@@ -842,16 +842,16 @@ void stm32f_otg_fs_isr(void)
 		/* pop the rx fifo status */
 		grxsts = otg_fs->grxstsp;
 
-		ep = OTG_FS_EPNUM_GET(grxsts);
-		(void)ep;
+		ep_id = OTG_FS_EPNUM_GET(grxsts);
+		(void)ep_id;
 		len = OTG_FS_BCNT_GET(grxsts);
 		(void)len;
 		stat = OTG_FS_PKTSTS_GET(grxsts); 
 		(void)stat;
 
-		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep, len, stat);
+		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", ep_id, len, stat);
 
-		if (ep == 0) {
+		if (ep_id == 0) {
 			/* 3. If the received packet’s byte count is not 0, the byte count 
 			   amount of data is popped from the receive Data FIFO and stored in 
 			   memory. If the received packet byte count is 0, no data is popped 
@@ -860,26 +860,26 @@ void stm32f_otg_fs_isr(void)
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_GOUT_NACK:
 				/* Global OUT NAK (triggers an interrupt) */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", ep_id);
 				break;
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
 				int i;
 				for (i = 0; i < len; i += 4)
 					dev->pkt_buf[i] = otg_fs->dfifo[0].pop;
 				break;
 			}
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
 				break;
 			case OTG_FS_PKTSTS_SETUP_COMP:
 				/* SETUP transaction completed (triggers an interrupt) */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_COMP>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_COMP>", ep_id);
 				break;
 			case OTG_FS_PKTSTS_SETUP_UPDT:
 				/* SETUP data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_UPDT>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_UPDT>", ep_id);
 				if (len != 8) {
 					DCC_LOG(LOG_ERROR, "setup data len != 8!");
 				}
@@ -889,11 +889,11 @@ void stm32f_otg_fs_isr(void)
 				dev->setup_buf[1] = otg_fs->dfifo[0].pop;
 				break;
 			}	
-		} else if (ep == EP_OUT) {
+		} else if (ep_id == EP_OUT) {
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT:
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
 				/* 2. The application can mask the RXFLVL interrupt (in 
 				   OTG_FS_GINTSTS) by writing to RXFLVL = 0 (in 
 				   OTG_FS_GINTMSK), until it has read the packet from 
@@ -911,14 +911,14 @@ void stm32f_otg_fs_isr(void)
 				DCC_LOG(LOG_INFO, "__thinkos_ev_raise(RX)");
 				break;
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
 				/* FIXME: generic code */
 				/* Prepare to receive more */
-				otg_fs->outep[ep].doeptsiz = 
+				otg_fs->outep[ep_id].doeptsiz = 
 					OTG_FS_PKTCNT_SET(EP_OUT_FIFO_SIZE / EP_OUT_MAX_PKT_SIZE) | 
 					OTG_FS_XFRSIZ_SET(EP_OUT_FIFO_SIZE);
 				/* EP enable */
-				otg_fs->outep[ep].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+				otg_fs->outep[ep_id].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 
 				/* Disable SOF interrupts */
 				otg_fs->gintmsk &= ~OTG_FS_SOFM;
