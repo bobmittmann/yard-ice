@@ -48,7 +48,7 @@ extern const uint32_t stm32f_ahb_hz;
  * USB Device
  *---------------------------------------------------------------------*/
 #include <sys/usb-dev.h>
-extern const usb_dev_t stm32f_usb_dev;
+extern const usb_dev_t stm32f_usb_fs_dev;
 extern const usb_dev_t stm32f_otg_fs_dev;
 
 enum {
@@ -210,6 +210,7 @@ const struct file stm32f_usart5_file;
 }
 #endif
 
+#ifdef STM32F_OTG_FS
 /*---------------------------------------------------------------------
  * USB OTG Full Speed
  *---------------------------------------------------------------------*/
@@ -243,7 +244,9 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 
 void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
 				 unsigned int addr, unsigned int len);
+#endif
 
+#ifdef STM32F_USB
 /*---------------------------------------------------------------------
  * USB Full Speed
  *---------------------------------------------------------------------*/
@@ -260,7 +263,7 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz);
 
 void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
 		struct usb_descriptor_endpoint * desc);
-
+#endif
 
 #endif /* __ASSEMBLER__ */
 

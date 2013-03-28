@@ -154,7 +154,6 @@ void _init(void)
 #endif
 
 
-
 #ifdef STM32F2X
 
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
@@ -176,6 +175,9 @@ void _init(void)
 	/* remap the SRAM to 0x00000000  */
 	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
 #endif
+
+	/* Make sure we are using the internal oscillator */
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
 
 	/* Enable external oscillator */
 	cr = rcc->cr;
@@ -245,7 +247,7 @@ void _init(void)
 	}
 
 	/* switch to pll oscillator */
-	rcc->cfgr = (cfg & ~RCC_SW) |  RCC_SW_PLL;
+	rcc->cfgr = (cfg & ~RCC_SW) | RCC_SW_PLL;
 }
 
 #endif

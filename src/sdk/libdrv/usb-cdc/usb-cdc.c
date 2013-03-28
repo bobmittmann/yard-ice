@@ -332,8 +332,6 @@ const struct usb_ep_info usb_cdc_ep_info[] = {
 
 struct usb_cdc_class usb_cdc_rt;
 
-int usb_desc_parse(const struct usb_descriptor_device * dv,
-					const struct usb_descriptor_configuration * cfg);
 
 struct usb_cdc_class * usb_cdc_init(const usb_dev_t * usb)
 {
@@ -840,7 +838,7 @@ static void otg_fs_ep0_stall(struct stm32f_otg_fs * otg_fs)
 	otg_fs_glb_out_nak(otg_fs);
 }
 
-/* End point 0 Out */
+/* End point 0 In */
 void usb_on_oepint0(struct usb_cdc_class * dev)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
