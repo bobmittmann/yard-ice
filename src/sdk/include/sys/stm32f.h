@@ -58,19 +58,6 @@ enum {
 	ANALOG
 };
 
-#define	SPEED_LOW (0 << 0)
-#define	SPEED_MED (1 << 0)
-#define	SPEED_FAST (2 << 0)
-#define	SPEED_HIGH (3 << 0)
-
-#define OPT_SPEED(OPT) (((OPT) >> 0) & 0x3)
-
-#define PUSH_PULL (0 << 4)
-#define OPEN_DRAIN (1 << 4)
-
-#define PULL_UP (1 << 5)
-#define PULL_DOWN (1 << 6)
-
 extern const struct stm32f_gpio * stm32f_gpio_lut[];
 
 #define PA STM32F_GPIOA_ID
@@ -127,20 +114,6 @@ extern "C" {
 /*---------------------------------------------------------------------
  * GPIO
  *---------------------------------------------------------------------*/
-int stm32f_gpio_id(struct stm32f_gpio * gpio);
-
-void stm32f_gpio_clock_en(struct stm32f_gpio * gpio);
-
-/* Output mode */
-void stm32f_gpio_output(struct stm32f_gpio * gpio, unsigned int pin, 
-						int type, int speed);
-
-/* mode */
-void stm32f_gpio_mode(struct stm32f_gpio * gpio, unsigned int pin, 
-					  unsigned int mode, unsigned int opt);
-
-/* Alternate function selection */
-void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af);
 
 static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
 								 unsigned int __opt) {
@@ -152,36 +125,15 @@ static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode,
 
 
 /*---------------------------------------------------------------------
+ * USB Device
+ *---------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------
  * USART 
  *---------------------------------------------------------------------*/
-int stm32f_usart_putc(struct stm32f_usart * usart, int c);
-
-int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec);
-
-int stm32f_usart_read(struct stm32f_usart * usart, char * buf, 
-					  unsigned int len, unsigned int msec);
-
-int stm32f_usart_write(struct stm32f_usart * usart, const void * buf, 
-					   unsigned int len);
-
-int stm32f_usart_flush(struct stm32f_usart * usart);
-
-int stm32f_usart_init(struct stm32f_usart * us);
-
-int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
-
-int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
-
-void stm32f_usart_enable(struct stm32f_usart * us);
-
-void stm32f_usart_disable(struct stm32f_usart * us);
 
 struct file * stm32f_usart_open(struct stm32f_usart * us,
 								unsigned int baudrate, unsigned int flags);
-
-/*---------------------------------------------------------------------
- * USB Device
- *---------------------------------------------------------------------*/
 
 
 /*---------------------------------------------------------------------
@@ -208,42 +160,6 @@ const struct file stm32f_usart5_file;
 
 #ifdef __cplusplus
 }
-#endif
-
-#ifdef STM32F_OTG_FS
-/*---------------------------------------------------------------------
- * USB OTG Full Speed
- *---------------------------------------------------------------------*/
-struct stm32f_otg_fs;
-
-void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs);
-
-void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs);
-
-void stm32f_otg_fs_txfifo_flush(struct stm32f_otg_fs * otg_fs, 
-								unsigned int num);
-
-void stm32f_otg_fs_rxfifo_flush(struct stm32f_otg_fs * otg_fs);
-
-void stm32f_otg_fs_addr_set(struct stm32f_otg_fs * otg_fs, unsigned int addr);
-
-void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr);
-
-void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr);
-
-void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr, 
-							 unsigned int type, unsigned int mpsiz);
-
-/* prepare TX fifo to send */
-bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep, 
-							 unsigned int len);
-
-/* push data inot TX fifo */
-int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
-						   void * buf);
-
-void otg_fs_fifo(struct stm32f_otg_fs * otg_fs, 
-				 unsigned int addr, unsigned int len);
 #endif
 
 #ifdef STM32F_USB

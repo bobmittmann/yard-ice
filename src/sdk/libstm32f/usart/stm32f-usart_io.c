@@ -26,15 +26,9 @@
 #include <sys/delay.h>
 #include <stdlib.h>
 
-#define STM32F_HSI_HZ 16000000
-#define STM32F_HSE_HZ 24000000
-#define STM32F_PLL_HZ 120000000
-#define STM32F_APB1_HZ 30000000
-#define STM32F_APB2_HZ 60000000
+int stm32f_usart_lookup(struct stm32f_usart * us);
 
-#define STM32F_AHB_HZ 120000000
-
-static int inline __putc(struct stm32f_usart * usart, int c)
+int stm32f_usart_putc(struct stm32f_usart * usart, int c)
 {
 	while (!(usart->sr & USART_TXE));
 
@@ -43,13 +37,13 @@ static int inline __putc(struct stm32f_usart * usart, int c)
 	return 0;
 }
 
-static int inline __getc(struct stm32f_usart * usart, unsigned int msec)
+int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec)
 {
 	int tm;
 
 	tm = msec * 20;
 
-	for (;;) {
+	for (;;) {		
 		if (usart->sr & USART_RXNE) {
 			return usart->dr;
 		}
@@ -61,57 +55,36 @@ static int inline __getc(struct stm32f_usart * usart, unsigned int msec)
 	}
 }
 
-
-static void set_baudrate(struct stm32f_usart * usart, unsigned int baudrate)
-{
-	uint32_t div;
-	uint32_t f;
-	uint32_t m;
-
-	if ((usart == STM32F_USART1) || (usart == STM32F_USART6)) {
-		div = STM32F_APB2_HZ / baudrate;
-	} else {
-		div = STM32F_APB1_HZ / baudrate;
-	}
-
-	m = div >> 4;
-	f = div & 0x0f;		
-	if (usart->cr1 & USART_OVER8) {
-		f >>= 1;
-	}
-
-	/* Write to USART BRR register */
-	usart->brr = (m << 4) | f;
-}
-
-
-int stm32f_usart_putc(struct stm32f_usart * usart, int c)
-{
-	return __putc(usart, c);
-}
-
-int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec)
-{
-	return __getc(usart, msec);
-}
-
-int stm32f_usart_read(struct stm32f_usart * usart, char * buf,
+int stm32f_usart_read(struct stm32f_usart * usart, char * buf, 
 					  unsigned int len, unsigned int msec)
 {
 	char * cp = (char *)buf;
 	int c;
 
-	c = getc(usart, msec);
+	c = stm32f_usart_getc(usart, msec);
 
 	if (c < 0)
 		return 0;
 
 	*cp = c;
-
+		
 	return 1;
 }
 
-int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
+int stm32f_usart_flush(struct stm32f_usart * usart)
+{
+	int c;
+
+	while (!(usart->sr & USART_TC));
+
+	/* clear buffered chars */
+	c = usart->dr;
+	(void)c;
+
+	return 0;
+}
+
+int stm32f_usart_write(struct stm32f_usart * usart, const void * buf, 
 					   unsigned int len)
 {
 	char * cp = (char *)buf;
@@ -120,7 +93,7 @@ int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
 
 	for (n = 0; n < len; n++) {
 		c = cp[n];
-		putc(usart, c);
+		stm32f_usart_putc(usart, c);
 	}
 
 	return n;
@@ -136,24 +109,11 @@ int stm32f_usart_canon_write(struct stm32f_usart * usart, const void * buf,
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		if (c == '\n')
-			putc(usart, '\r');
-		putc(usart, c);
+			stm32f_usart_putc(usart, '\r');
+		stm32f_usart_putc(usart, c);
 	}
 
 	return n;
-}
-
-int stm32f_usart_flush(struct stm32f_usart * usart)
-{
-	int c;
-
-	while (!(usart->sr & USART_TC));
-
-	/* clear buffered chars */
-	c = usart->dr;
-	(void)c;
-
-	return 0;
 }
 
 #if 0
@@ -188,24 +148,6 @@ static void io_txd_cfg(struct stm32f_gpio * gpio, int port, int af)
 	stm32f_gpio_af(gpio, port, af);
 }
 
-const struct stm32f_usart * stm32f_usart_lut[6] = {
-	STM32F_USART1,
-	STM32F_USART2,
-	STM32F_USART3,
-	STM32F_UART4,
-	STM32F_UART5,
-	STM32F_USART6
-};
-
-int stm32f_usart_lookup(struct stm32f_usart * us)
-{
-	int id = sizeof(stm32f_usart_lut) / sizeof(struct stm32f_usart *);
-
-	while ((--id >= 0) && (us != stm32f_usart_lut[id]));
-
-	return id;
-}
-
 static const struct {
 	gpio_io_t rx; /* IO port/pin */
 	gpio_io_t tx; /* IO port/pin */
@@ -226,78 +168,6 @@ static const struct {
 	{ .rx = GPIO(PC, 7), .tx = GPIO(PC, 6), .af = GPIO_AF8,
 		.ckbit = 5, .apb2 = 1}
 };
-
-int stm32f_usart_init(struct stm32f_usart * us,
-					  unsigned int baudrate, unsigned int flags)
-{
-	uint32_t cr1;
-	uint32_t cr2;
-	int bits;
-	int id;
-
-	if ((id = stm32f_usart_lookup(us)) < 0) {
-		/* invalid UART ??? */
-		return id;
-	}
-
-	/* disable all interrupts */
-	us->cr1 = 0;
-
-	/* Enable peripheral clock */
-	if (cfg[id].apb2)
-		STM32F_RCC->apb2enr |= (1 << cfg[id].ckbit);
-	else
-		STM32F_RCC->apb1enr |= (1 << cfg[id].ckbit);
-
-	io_rxd_cfg(STM32F_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
-	io_txd_cfg(STM32F_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
-
-	/* set character length */
-	/* 8N1 */
-	us->cr1 = USART_UE | USART_TE | USART_RE;
-
-	/* output drain */
-	while (!(us->sr & USART_TXE));
-
-	/* enable TX and RX */
-	cr1 = USART_UE | USART_TE | USART_RE;
-	cr2 = 0;
-
-	bits = flags & SERIAL_DATABITS_MASK;
-	/* parity and data bits */
-	switch (flags & SERIAL_PARITY_MASK) {
-	case SERIAL_PARITY_NONE:
-		cr1 |= (bits == SERIAL_DATABITS_9) ? USART_M9 : USART_M8;
-		break;
-	case SERIAL_PARITY_EVEN:
-		cr1 |= USART_PCE | USART_PS_EVEN;
-		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
-		break;
-	case SERIAL_PARITY_ODD:
-		cr1 |= USART_PCE | USART_PS_ODD;
-		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
-		break;
-	}
-
-	/* stop bits */
-	switch (flags & SERIAL_STOPBITS_MASK) {
-	case SERIAL_STOPBITS_2:
-		cr2 |= USART_STOP_2;
-		break;
-	case SERIAL_STOPBITS_1:
-		cr2 |= USART_STOP_1;
-		break;
-	}
-
-	us->cr1 = cr1;
-	us->cr2 = cr2;
-	us->cr3 = 0;
-	us->gtpr = 0;
-
-	set_baudrate(us, baudrate);
-
-	return id;
-}
 
 int stm32f_usart_release(struct stm32f_usart * us)
 {
@@ -341,9 +211,16 @@ struct file * stm32f_usart_open(struct stm32f_usart * us,
 {
 	int id;
 
-	if ((id = stm32f_usart_init(us, baudrate, flags)) < 0) {
+	if ((id = stm32f_usart_init(us)) < 0) {
 		return NULL;
 	}
+
+	io_rxd_cfg(STM32F_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
+	io_txd_cfg(STM32F_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
+
+	stm32f_usart_baudrate_set(us, baudrate);
+	stm32f_usart_mode_set(us, flags);
+	stm32f_usart_enable(us);
 
 	return (struct file *)&stm32f_uart_file[id];
 }

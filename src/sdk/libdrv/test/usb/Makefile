@@ -22,7 +22,8 @@
 
 PROG = test
 
-CFILES = test.c 
+CFILES = test.c  ../../usb-cdc/usb-cdc.c ../../usb-cdc/usb-cdc_fops.c\
+		 ../../usb-cdc/cdc_acm.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm \

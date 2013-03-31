@@ -330,6 +330,7 @@
 #define OTG_FS_TXFIFO_2 (0x02 << 6)
 #define OTG_FS_TXFIFO_3 (0x03 << 6)
 #define OTG_FS_TXFIFO_ALL (0x10 << 6)
+#define TXFIFO_ALL 0x10
 /* This is the FIFO number that must be flushed using the TxFIFO Flush bit. 
    This field must not be changed until the core clears the TxFIFO Flush bit.
    ● 00000: 
@@ -2153,10 +2154,10 @@ completion. */
  * 01: Isochronous
  * 10: Bulk
  * 11: Interrupt */
-#define OTG_FS_EPTYP_CTRL (0 << 18)
-#define OTG_FS_EPTYP_ISOC (1 << 18)
-#define OTG_FS_EPTYP_BULK (2 << 18)
-#define OTG_FS_EPTYP_INT (3 << 18)
+#define OTG_FS_EPTYP_CTRL (0)
+#define OTG_FS_EPTYP_ISOC (1)
+#define OTG_FS_EPTYP_BULK (2)
+#define OTG_FS_EPTYP_INT (3)
 
 /* Bit 17 - NAK status */
 #define OTG_FS_NAKSTS (1 << 17)
@@ -2388,10 +2389,10 @@ completion. */
  * 01: Isochronous
  * 10: Bulk
  * 11: Interrupt */
-#define OTG_FS_EPTYP_CTRL (0 << 18)
-#define OTG_FS_EPTYP_ISOC (1 << 18)
-#define OTG_FS_EPTYP_BULK (2 << 18)
-#define OTG_FS_EPTYP_INT (3 << 18)
+#define OTG_FS_EPTYP_CTRL (0)
+#define OTG_FS_EPTYP_ISOC (1)
+#define OTG_FS_EPTYP_BULK (2)
+#define OTG_FS_EPTYP_INT (3)
 
 /* Bit 17 - NAK status */
 #define OTG_FS_NAKSTS (1 << 17)
@@ -2762,6 +2763,7 @@ completion. */
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct stm32f_otg_fs {
 	/* 0x000 */
@@ -2880,6 +2882,52 @@ struct stm32f_otg_fs {
 	/* 0x20000 */
 	uint32_t ram[32768];
 };
+
+extern const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[];
+
+#define OTGFS_EP0_MPSIZ_GET(DEPCTL) \
+	stm32f_otg_fs_ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(DEPCTL)]
+
+#define OTG_FS_EP0_MPSIZ_SET(MPSIZ) ((MPSIZ == 64) ? OTG_FS_MPSIZ_64 : \
+		((MPSIZ == 32) ? OTG_FS_MPSIZ_32 : \
+		((MPSIZ == 16) ? OTG_FS_MPSIZ_16 : OTG_FS_MPSIZ_8)))
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_txfifo_flush(struct stm32f_otg_fs * otg_fs,
+								unsigned int num);
+
+void stm32f_otg_fs_rxfifo_flush(struct stm32f_otg_fs * otg_fs);
+
+void stm32f_otg_fs_addr_set(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr);
+
+void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr,
+							 unsigned int type, unsigned int mpsiz);
+
+/* prepare TX fifo to send */
+bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
+							 unsigned int len);
+
+/* push data inot TX fifo */
+int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
+						   void * buf);
+
+void stm32f_otg_fs_enum_done(struct stm32f_otg_fs * otg_fs);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* __ASSEMBLER__ */
 

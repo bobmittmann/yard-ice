@@ -172,6 +172,85 @@ static void otg_fs_io_init(void)
 	stm32f_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
+
+#if DEBUG
+static const char * const eptyp_nm[] = {
+	"CTRL",
+	"ISOC",
+	"BULK",
+	"INT"
+};
+#endif
+
+void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr,
+							 unsigned int type, unsigned int mpsiz)
+{
+	int ep = addr & 0x7f;
+	int input = addr & 0x80;
+	uint32_t depctl;
+
+	DCC_LOG3(LOG_TRACE, "ep=%d %s %s", ep,
+			 input ? "IN" : "OUT", eptyp_nm[type]);
+
+	depctl = input ? otg_fs->inep[ep].diepctl : otg_fs->outep[ep].doepctl;
+
+	depctl &= ~(OTG_FS_MPSIZ_MSK | OTG_FS_EPTYP_MSK | OTG_FS_TXFNUM_MSK);
+
+	/* Endpoint activation
+	   This section describes the steps required to activate a device
+	   endpoint or to configure an existing device endpoint to a
+	   new type.
+	   1. Program the characteristics of the required endpoint into
+	   the following fields of the OTG_FS_DIEPCTLx register (for IN or
+	   bidirectional endpoints) or the OTG_FS_DOEPCTLx register (for
+	   OUT or bidirectional endpoints).
+	   â€“ Maximum packet size
+	   â€“ USB active endpoint = 1
+	   â€“ Endpoint start data toggle (for interrupt and bulk endpoints)
+	   â€“ Endpoint type
+	   â€“ TxFIFO number */
+
+	depctl |= OTG_FS_MPSIZ_SET(mpsiz);
+	depctl |= OTG_FS_EPTYP_SET(type);
+	depctl |= OTG_FS_SD0PID | OTG_FS_USBAEP;
+
+	/* XXX: mask FIFO empty interrupt, maybe this should
+	   be performed elsewhere. */
+	otg_fs->diepempmsk &= ~(1 << ep);
+
+	if (input) {
+		/* Activate IN endpoint */
+		otg_fs->inep[ep].diepctl = depctl | OTG_FS_TXFNUM_SET(ep);
+
+		/* Enable endpoint interrupt */
+		otg_fs->daintmsk |= OTG_FS_IEPM(ep);
+
+	} else {
+		uint32_t rxfsiz;
+		uint32_t pktcnt;
+
+		/* Activate OUT endpoint */
+		otg_fs->outep[ep].doepctl = depctl;
+
+		rxfsiz = otg_fs->grxfsiz * 4;
+		pktcnt = rxfsiz / mpsiz;
+
+		/* Prepare EP_OUT to receive */
+		otg_fs->outep[ep].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) |
+			OTG_FS_XFRSIZ_SET(pktcnt * mpsiz);
+		/* EP enable */
+		otg_fs->outep[ep].doepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK;
+
+		/* Enable endpoint interrupt */
+		otg_fs->daintmsk |= OTG_FS_OEPM(ep);
+	}
+
+	/* 2. Once the endpoint is activated, the core starts decoding the
+	   tokens addressed to that endpoint and sends out a valid
+	   handshake for each valid token received for the
+	   endpoint. */
+}
+
 static void otg_fs_fifo_config(struct stm32f_otg_fs * otg_fs)
 {
 	uint32_t addr;
@@ -806,7 +885,7 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_SRQINT) {
 		/* Session request/new session detected interrupt */
-		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]"); 
+		DCC_LOG(LOG_TRACE, "<SRQINT>  [POWERED]");
 		otg_fs->gintmsk |= OTG_FS_WUIM | OTG_FS_USBRSTM | OTG_FS_ENUMDNEM | 
 			OTG_FS_ESUSPM | OTG_FS_USBSUSPM;
 	}
@@ -887,6 +966,8 @@ void stm32f_otg_fs_isr(void)
 				   in RAM */
 				dev->setup_buf[0] = otg_fs->dfifo[0].pop;
 				dev->setup_buf[1] = otg_fs->dfifo[0].pop;
+				DCC_LOG2(LOG_TRACE, "SETUP: 0x%08x 0x%08x", 
+						 dev->setup_buf[0], dev->setup_buf[1]);
 				break;
 			}	
 		} else if (ep_id == EP_OUT) {
@@ -976,7 +1057,7 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_ENUMDNE) {
-		DCC_LOG(LOG_INFO, "<ENUMDNE>"); 
+		DCC_LOG(LOG_TRACE, "<ENUMDNE>");
 		otg_fs_on_enum_done(otg_fs);
 	}
 

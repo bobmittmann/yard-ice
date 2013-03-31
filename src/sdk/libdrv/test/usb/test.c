@@ -38,7 +38,7 @@
 #include <thinkos_irq.h>
 
 struct file * uart_console_open(unsigned int baudrate, unsigned int flags);
-struct file * usb_cdc_open(void);
+struct file * usb_cdc_fopen(void);
 
 const char zarathustra[] = {
 	"1.\n\n"
@@ -403,9 +403,8 @@ int main(int argc, char ** argv)
 	FILE * f;
 	int i = 0;
 
-//	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
-	DCC_LOG_CONNECT();
 	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
 
 	cm3_udelay_calibrate();
 	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
@@ -420,8 +419,8 @@ int main(int argc, char ** argv)
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-//	f = uart_console_open(115200, SERIAL_8N1);
-	f = usb_cdc_open();
+	stdout = uart_console_open(115200, SERIAL_8N1);
+	f = usb_cdc_fopen();
 
 	thinkos_sleep(5000);
 

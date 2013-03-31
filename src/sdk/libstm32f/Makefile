@@ -23,7 +23,7 @@
 
 LIB_STATIC = stm32f
 
-USART_CFILES = stm32f-usart.c
+USART_CFILES = stm32f-usart.c stm32f-usart_io.c
 
 USB_FS_CFILES = stm32f-usb_fs.c stm32f-usb_fs_dev.c
 

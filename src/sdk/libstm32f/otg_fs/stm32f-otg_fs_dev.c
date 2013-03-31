@@ -71,8 +71,6 @@ struct stm32f_otg_ep {
 
 #define OTG_FS_DRIVER_EP_MAX 4
 
-
-
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
 	struct stm32f_otg_ep ep[OTG_FS_DRIVER_EP_MAX];
@@ -82,28 +80,14 @@ struct stm32f_otg_drv {
 	int state;
 };
 
-
 #define DFIFIO_ADDR (STM32F_BASE_OTG_FS +  0x20000)
 #define DFIFIO (uint32_t *)DFIFIO_ADDR
+#define RX_FIFO_SIZE 512
+uint16_t fifo_addr = 0;
 
-struct ep_tx_ctrl {
-	uint8_t ep;
-	uint8_t pkts;
-	uint16_t max;
-	volatile uint32_t len;
-	uint8_t * ptr;
-};
-
-struct ep_rx_ctrl {
-	uint8_t ep;
-	uint8_t rem;
-	volatile uint32_t len;
-	uint32_t data;
-	uint32_t tmr;
-};
 
 static void __copy_from_pktbuf(void * ptr,
-							uint32_t * pop,
+							volatile uint32_t * pop,
 							unsigned int cnt)
 {
 	uint8_t * dst = (uint8_t *)ptr;
@@ -111,7 +95,7 @@ static void __copy_from_pktbuf(void * ptr,
 	int i;
 
 	/* pop data from the fifo and copy to destination buffer */
-	for (i = 0; i < (cnt + 3) / 2; i++) {
+	for (i = 0; i < (cnt + 3) / 4; i++) {
 		data = *pop;
 		*dst++ = data;
 		*dst++ = data >> 8;
@@ -120,264 +104,177 @@ static void __copy_from_pktbuf(void * ptr,
 	}
 }
 
-
-#if 0
-static void ep_tx_ctrl_init(struct ep_tx_ctrl * ctrl,
-							unsigned int ep, unsigned int max)
+/* EP TX fifo memory allocation */
+void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int mpsiz)
 {
-	ctrl->ep = ep;
-	ctrl->max = max;
-	ctrl->len = 0;
-	ctrl->ptr = NULL;
-}
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	uint32_t dieptxf;
 
-static void ep_rx_ctrl_init(struct ep_rx_ctrl * ctrl, unsigned int ep)
-{
-	ctrl->ep = ep;
-	ctrl->rem = 0;
-	ctrl->len = 0;
-	ctrl->data = 0;
-}
+	dieptxf = OTG_FS_TX0FD_SET(mpsiz / 4) | OTG_FS_TX0FSA_SET(fifo_addr / 4);
 
-
-#define STM32F_USB_PKTBUF ((struct stm32f_otg_pktbuf *)STM32F_USB_PKTBUF_ADDR)
-
-static void __copy_from_pktbuf(void * ptr,
-							struct stm32f_otg_rx_pktbuf * rx,
-							unsigned int cnt)
-{
-	uint32_t * src;
-	uint8_t * dst = (uint8_t *)ptr;
-	uint32_t data;
-	int i;
-
-	/* copy data to destination buffer */
-	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
-	for (i = 0; i < (cnt + 1) / 2; i++) {
-		data = *src++;
-		*dst++ = data;
-		*dst++ = data >> 8;
-	}
-}
-
-static void __copy_to_pktbuf(struct stm32f_otg_tx_pktbuf * tx,
-						   uint8_t * src, int len)
-{
-	uint32_t * dst;
-	int i;
-
-	/* copy data to destination buffer */
-	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
-	for (i = 0; i < ((len + 1) / 2); i++) {
-		*dst++ = src[0] | (src[1] << 8);
-		src += 2;
+	switch (ep_id) {
+	case 0:
+		otg_fs->dieptxf0 = dieptxf;
+		break;
+	case 1:
+		otg_fs->dieptxf1 = dieptxf;
+		break;
+	case 2:
+		otg_fs->dieptxf2 = dieptxf;
+		break;
+	case 3:
+		otg_fs->dieptxf3 = dieptxf;
+		break;
 	}
 
-	tx->count = len;
+	fifo_addr += mpsiz;
 }
 
-static void __ep_stall(struct stm32f_otg_drv * drv, int ep_id)
+static bool __ep_tx_start(struct stm32f_otg_drv * drv, int ep_id)
 {
-	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	bool ret;
 
-	set_ep_txstat(usb, ep_id, USB_TX_STALL);
-	set_ep_rxstat(usb, ep_id, USB_RX_STALL);
+	if (ep->xfr_rem == 0)
+		return false;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d [STALLED]", ep_id);
-	ep->state = EP_STALLED;
-}
-
-
-static int __ep_pkt_send(struct stm32f_otg_drv * drv, int ep_id)
-{
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	int len;
-
-	len = MIN(ep->xfr_rem, ep->mxpktsz);
-
-	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
-
-	if (len > 0) {
-		__copy_to_pktbuf(&pktbuf[ep_id].tx, ep->xfr_ptr, len);
-		pktbuf[ep_id].tx.count = len;
-		ep->xfr_rem -= len;
-		ep->xfr_ptr += len;
-	}
-
-	if ((ep->xfr_rem == 0) && (len != ep->mxpktsz)) {
-		/* if we put all data into the TX packet buffer but the data
-		 * didn't filled the whole packet, this is the last packet,
-		 * otherwise we need to send a ZLP to finish the transaction */
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
-		ep->state = EP_IN_DATA_LAST;
+	/* prepare fifo to transmit */
+	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem))) {
+		/* umask FIFO empty interrupt */
+		otg_fs->diepempmsk |= (1 << ep_id);
 	} else {
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA]", ep_id);
-		ep->state = EP_IN_DATA;
+		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
 	}
 
-	pktbuf[ep_id].tx.count = len;
-	set_ep_txstat(usb, ep_id, USB_TX_VALID);
-
-	return len;
+	return ret;
 }
 
-static void __ep_zlp_send(struct stm32f_otg_drv * drv, int ep_id)
+static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
 {
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	int cnt;
 
-	pktbuf[ep_id].tx.count = 0;
-	set_ep_txstat(usb, ep_id, USB_TX_VALID);
-}
+	/* push data into transmit fifo */
+	cnt = stm32f_otg_fs_txf_push(otg_fs, 0, ep->xfr_ptr);
 
-
-
-/*
- Upon system and power-on reset, the first operation the application software should perform
- is to provide all required clock signals to the USB peripheral and subsequently de-assert its
- reset signal so to be able to access its registers. The whole initialization sequence is
- hereafter described.
- As a first step application software needs to activate register macrocell clock and de-assert
- macrocell specific reset signal using related control bits provided by device clock
- management logic.
- After that, the analog part of the device related to the USB transceiver must be switched on
- using the PDWN bit in CNTR register, which requires a special handling. This bit is intended
- to switch on the internal voltage references that supply the port transceiver. This circuit has
- a defined startup time (tSTARTUP specified in the datasheet) during which the behavior of the
- USB transceiver is not defined. It is thus necessary to wait this time, after setting the PDWN
- bit in the CNTR register, before removing the reset condition on the USB part (by clearing
- the FRES bit in the CNTR register). Clearing the ISTR register then removes any spurious
- pending interrupt before any other macrocell operation is enabled.
- At system reset, the microcontroller must initialize all required registers and the packet
- buffer description table, to make the USB peripheral able to properly generate interrupts and
- data transfers. All registers not specific to any endpoint must be initialized according to the
- needs of application software (choice of enabled interrupts, chosen address of packet
- buffers, etc.). Then the process continues as for the USB reset case (see further
- paragraph). */
-
-
-#if 0
-	/* Configure the endpoints and allocate packet buffers */
-	for (i = 0; i < cnt; i++) {
-		int mxpktsz = epi[i].mxpktsz;
-		uint32_t epr;
-
-		/* set the endpoint descriptor pointer */
-		drv->ep[i].desc = desc;
-		/* set the endpoint rx/tx/setup callback */
-		drv->ep[i].on_rx = epi[i].on_rx;
-		drv->ep[i].xfr_buf = NULL;
-		drv->ep[i].rx_max = 0;
-		/* Set EP address */
-		epr = USB_EA_SET(epi[i].addr);
-		/* Allocate packet buffers */
-		switch (epi[i].type)
-		{
-		case ENDPOINT_TYPE_CONTROL:
-			epr |= USB_EP_CONTROL;
-			/* allocate single buffers for TX and RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			break;
-
-		case ENDPOINT_TYPE_ISOCHRONOUS:
-			epr |= USB_EP_ISO | USB_EP_DBL_BUF;
-			/* allocate double buffers for TX or RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			/* allocate double buffers for TX or RX */
-			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			} else {
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			}
-			break;
-
-		case ENDPOINT_TYPE_BULK:
-			epr |= USB_EP_BULK | USB_EP_DBL_BUF;
-			DCC_LOG2(LOG_TRACE, "EP[%d]: BULK -> 0x%08x", i, desc);
-			/* allocate double buffers for TX or RX */
-			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			} else {
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			}
-			break;
-
-		case ENDPOINT_TYPE_INTERRUPT:
-			epr |= USB_EP_INTERRUPT;
-			/* allocate single buffers for TX or RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			break;
-		}
-
-		usb->epr[i] = epr;
+	if (cnt < 0) {
+		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_push() failed!");
+		return false;
 	}
 
-	drv->ep_cnt = cnt;
+	ep->xfr_ptr += cnt;
+	ep->xfr_rem -= cnt;
+	return true;
+}
 
+static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
+{
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	volatile uint32_t * pop = &otg_fs->dfifo[ep_id].pop;
+	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	uint8_t * dst;
+	uint32_t data;
+	int wcnt;
+	int i;
 
-	return 0;
-#endif
-#endif
+	/* Number of words in the receive fifo */
+	wcnt = (len + 3) / 4;
+	DCC_LOG1(LOG_TRACE, "poping %d words from FIFO.", wcnt);
 
-	/* Configure EP0 to receive Setup packets */
+	if (ep->xfr_rem >= len) {
+		/* If we have enough room in the destination buffer
+		 * pop data from the fifo and copy to destination buffer */
+		dst = ep->xfr_ptr;
+		for (i = 0; i < wcnt; ++i) {
+			data = *pop;
+			*dst++ = data;
+			*dst++ = data >> 8;
+			*dst++ = data >> 16;
+			*dst++ = data >> 24;
+		}
+		ep->xfr_ptr += len;
+		ep->xfr_rem -= len;
+	} else {
+		DCC_LOG(LOG_WARNING, "not room to copy the whole packet, discarding!");
+		for (i = 0; i < wcnt; ++i) {
+			data = *pop;
+			(void)data;
+		}
+	}
+}
+
+/* Configure EP0 to receive Setup packets */
 static void __ep0_out_start(struct stm32f_otg_fs * otg_fs)
 {
+	DCC_LOG(LOG_INFO, "Prepare to receive");
+
 	/* Prepare to receive */
 	otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(3) |
-		OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(8 * 3);
+		OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(40);
 	/* EP enable */
 	otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
-static void __ep0_zlp_send(struct stm32f_otg_fs * otg_fs)
+static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 {
-	otg_fs->inep[0].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
-	otg_fs->inep[0].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
-	__ep0_out_start(otg_fs);
+	DCC_LOG(LOG_TRACE, "Send: ZLP");
+
+	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
+	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
 void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	uint32_t siz;
 	int i;
 
-	DCC_LOG(LOG_TRACE, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+	DCC_LOG(LOG_INFO, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
 	/* Clear the Remote Wake-up Signaling */
 	otg_fs->dctl &= ~OTG_FS_RWUSIG;
 
-	/* Flush the Tx FIFO */
-	stm32f_otg_fs_txfifo_flush(otg_fs, 0x10);
-	/* Flush the Rx FIFO */
-	stm32f_otg_fs_rxfifo_flush(otg_fs);
-
 	/* Clear all pending interrupts */
+	otg_fs->diepmsk = 0;
+	otg_fs->doepmsk = 0;
 	otg_fs->daint = 0xffffffff;
+	otg_fs->daintmsk = 0;
+	otg_fs->diepempmsk = 0;
 	for (i = 0; i < 4; i++) {
 		otg_fs->inep[i].diepint = 0xff;
 		otg_fs->outep[i].doepint = 0xff;
+		otg_fs->inep[i].dieptsiz = 0;
+
+		drv->ep[i].xfr_rem = 0;
 	}
+
+	/* Flush the Tx FIFO */
+	stm32f_otg_fs_txfifo_flush(otg_fs, TXFIFO_ALL);
+	/* Flush the Rx FIFO */
+	stm32f_otg_fs_rxfifo_flush(otg_fs);
+
+
+	/* Reset global interrupts mask */
+	otg_fs->gintmsk =  OTG_FS_SRQIM | OTG_FS_OTGINT | OTG_FS_WUIM |
+			OTG_FS_USBRSTM | OTG_FS_ENUMDNEM |
+			OTG_FS_ESUSPM | OTG_FS_USBSUSPM;
 
 	/* Reset Device Address */
 	otg_fs->dcfg &= ~OTG_FS_DAD_MSK;
+
+	/*  Set global IN NAK */
+	otg_fs->dctl |= OTG_FS_SGINAK;
 
 	/* Endpoint initialization on USB reset */
 
 	/* 1. Set the NAK bit for all OUT endpoints
 	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
+//		otg_fs->inep[i].diepctl = OTG_FS_SNAK;
+	}
 
 	/* 2. Unmask the following interrupt bits
 	   – INEP0 = 1 in OTG_FS_DAINTMSK (control 0 IN endpoint)
@@ -386,7 +283,6 @@ void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	   – XFRC = 1 in DOEPMSK
 	   – XFRC = 1 in DIEPMSK
 	   – TOC = 1 in DIEPMSK */
-	otg_fs->daintmsk = OTG_FS_IEPM0 | OTG_FS_OEPM0;
 	otg_fs->doepmsk = OTG_FS_STUPM | OTG_FS_XFRCM | OTG_FS_EPDM;
 //	otg_fs->diepmsk = OTG_FS_XFRCM | OTG_FS_TOM | OTG_FS_EPDM;
 //	otg_fs->diepmsk = OTG_FS_INEPNEM | OTG_FS_INEPNMM | OTG_FS_ITTXFEMSK |
@@ -402,28 +298,18 @@ void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	   chosen) to be able to transmit control IN data. At a minimum, this
 	   must be equal to 1 max packet size of control endpoint 0. */
 
-	drv->ev->on_reset(drv->cl);
+	/* reset packet buffer address pointer */
+	fifo_addr = 0;
+	/* initialize RX fifo size */
+	siz = RX_FIFO_SIZE;
+	otg_fs->grxfsiz = siz / 4;
+	/* EP0 TX fifo memory allocation */
+	fifo_addr += siz;
 
-
-	otg_fs->gintmsk |=  OTG_FS_IEPINTM | OTG_FS_OEPINTM |
-		OTG_FS_IISOIXFRM | OTG_FS_IISOOXFRM | OTG_FS_RXFLVLM;
-
-#if 0
-	struct stm32f_usb * usb = STM32F_USB;
-
-	DCC_LOG(LOG_TRACE, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-
-	/* set the btable address */
-	usb->btable = 0x000;
+	DCC_LOG2(LOG_TRACE, "   RX: addr=%04x size=%d",
+			 0, otg_fs->grxfsiz * 4);
 
 	drv->ev->on_reset(drv->cl);
-
-	/* Enable the device and set the address to 0 */
-	usb->daddr = USB_EF + 0;
-
-	/* Enable Correct transfer interrupts */
-	usb->cntr |= USB_CTRM;
-#endif
 }
 
 
@@ -431,6 +317,8 @@ void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 int stm32f_otg_ep_rx_setup(struct stm32f_otg_drv * drv, int ep_id,
 		void * buf, unsigned int len)
 {
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
 #if 0
 	struct stm32f_otg_ep * ep;
 
@@ -455,6 +343,7 @@ int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
 int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 		void * buf, unsigned int len)
 {
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 #if 0
 	struct stm32f_otg_ep * ep;
 
@@ -473,6 +362,8 @@ int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 		void * buf, int len)
 {
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
@@ -527,6 +418,7 @@ int stm32f_otg_dev_ep_zlp_send(struct stm32f_otg_drv * drv, int ep_id)
 
 void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv, int ep_id)
 {
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
@@ -546,6 +438,8 @@ void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv, int ep_id)
 
 void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 {
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
@@ -562,19 +456,15 @@ void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 #endif
 }
 
-int fifo_addr = 0;
-
 int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 		const usb_dev_ep_info_t * info)
 {
-#if 0
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	unsigned int sz;
-	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep;
 	int mxpktsz = info->mxpktsz;
+	uint32_t depctl;
 
-	DCC_LOG2(LOG_TRACE, "sp_id=%d mxpktsz=%d", ep_id, mxpktsz);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
 
 	ep = &drv->ep[ep_id];
 	ep->mxpktsz = mxpktsz;
@@ -586,63 +476,68 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 	DCC_LOG3(LOG_TRACE, "ep_id=%d addr=%d mxpktsz=%d",
 			ep_id, info->addr & 0x7f, mxpktsz);
 
-	/* clear the correct transfer bits */
-	clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
-	set_ep_addr(usb, ep_id, info->addr & 0x7f);
+	/* XXX: mask FIFO empty interrupt, maybe this should
+	   be performed elsewhere. */
+	otg_fs->diepempmsk &= ~(1 << ep_id);
 
-	set_ep_rxstat(usb, ep_id, USB_RX_NAK);
-	set_ep_txstat(usb, ep_id, USB_TX_NAK);
+	if (info->addr & USB_ENDPOINT_IN) {
+		depctl = otg_fs->inep[ep_id].diepctl;
+		__ep_pktbuf_alloc(drv, ep_id, mxpktsz);
+	} else {
+		depctl = otg_fs->outep[ep_id].doepctl;
+	}
+
+	depctl &= ~(OTG_FS_MPSIZ_MSK | OTG_FS_EPTYP_MSK | OTG_FS_TXFNUM_MSK);
+
+	depctl |= OTG_FS_MPSIZ_SET(mxpktsz);
+	depctl |= OTG_FS_SD0PID | OTG_FS_USBAEP;
 
 	switch (info->attr & 0x03) {
 	case ENDPOINT_TYPE_CONTROL:
-		set_ep_type(usb, ep_id, USB_EP_CONTROL);
-		/* allocate single buffers for TX and RX */
-		sz = pktbuf_tx_cfg(&pktbuf[ep_id].tx, addr, mxpktsz);
-		addr += sz;
-		sz = pktbuf_rx_cfg(&pktbuf[ep_id].rx, addr, mxpktsz);
-		addr += sz;
+		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_CTRL);
 		break;
 
 	case ENDPOINT_TYPE_ISOCHRONOUS:
+		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_ISOC);
 		break;
 
 	case ENDPOINT_TYPE_BULK:
-		set_ep_type(usb, ep_id, USB_EP_BULK);
-		if (info->addr & USB_ENDPOINT_IN) {
-			sz = pktbuf_tx_cfg(&pktbuf[ep_id].dbtx[0], addr, mxpktsz);
-			addr += sz;
-			sz = pktbuf_tx_cfg(&pktbuf[ep_id].dbtx[1], addr, mxpktsz);
-			addr += sz;
-//			set_ep_txstat(usb, ep_id, USB_TX_VALID);
-		} else {
-			sz = pktbuf_rx_cfg(&pktbuf[ep_id].dbrx[0], addr, mxpktsz);
-			addr += sz;
-			sz = pktbuf_rx_cfg(&pktbuf[ep_id].dbrx[1], addr, mxpktsz);
-			addr += sz;
-			clr_status_out(usb, ep_id);
-			set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-		}
+		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_BULK);
 		break;
 
 	case ENDPOINT_TYPE_INTERRUPT:
-		set_ep_type(usb, ep_id, USB_EP_INTERRUPT);
-		if (info->addr & USB_ENDPOINT_IN) {
-			sz = pktbuf_tx_cfg(&pktbuf[ep_id].tx, addr, mxpktsz);
-			addr += sz;
-//			set_ep_txstat(usb, ep_id, USB_TX_VALID);
-		} else {
-			sz = pktbuf_rx_cfg(&pktbuf[ep_id].rx, addr, mxpktsz);
-			addr += sz;
-			clr_status_out(usb, ep_id);
-			set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-		}
+		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_INT);
 		break;
 	}
 
-	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[ep_id]);
+	if (info->addr & USB_ENDPOINT_IN) {
+		/* Activate IN endpoint */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_TXFNUM_SET(ep_id);
+	} else {
+		uint32_t rxfsiz;
+		uint32_t pktcnt;
 
-//	clr_status_out(usb, ep_id);
-#endif
+		/* Activate OUT endpoint */
+		otg_fs->outep[ep_id].doepctl = depctl;
+
+		rxfsiz = otg_fs->grxfsiz * 4;
+		pktcnt = rxfsiz / mxpktsz;
+
+		/* Prepare EP_OUT to receive */
+		otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) |
+			OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+		/* EP enable */
+		otg_fs->outep[ep_id].doepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK;
+	}
+
+	/* Enable endpoint interrupt */
+	otg_fs->daintmsk |= OTG_FS_OEPM(ep_id);
+
+	/* 2. Once the endpoint is activated, the core starts decoding the
+	   tokens addressed to that endpoint and sends out a valid
+	   handshake for each valid token received for the
+	   endpoint. */
+
 	return 0;
 }
 
@@ -651,45 +546,8 @@ int stm32f_otg_dev_ep0_init(struct stm32f_otg_drv * drv,
 		void * ctr_buf, int buf_len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-	uint32_t siz;
-
-	/* reset packet buffer address pointer */
-	fifo_addr = 0;
-	siz = 256;
-	otg_fs->grxfsiz = siz / 4;
-
-	/* EP0 TX fifo memory allocation */
-	fifo_addr += siz;
-	siz = info->mxpktsz;
-	otg_fs->dieptxf0 = OTG_FS_TX0FD_SET(siz / 4) |
-		OTG_FS_TX0FSA_SET(fifo_addr / 4);
-
-	/*  4. Program the following fields in the endpoint-specific registers
-	   for control OUT endpoint 0 to receive a SETUP packet
-	   – STUPCNT = 3 in OTG_FS_DOEPTSIZ0 (to receive up to 3 back-to-back
-	   SETUP packets)
-	   At this point, all initialization required to receive SETUP packets
-	   is done. */
-	otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(3) |
-		OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(3 * (8));
-
-	/* Initialize EP0 */
-	otg_fs->inep[0].diepctl = OTG_FS_TXFNUM_SET(0);
-
-	DCC_LOG2(LOG_TRACE, "   RX: addr=%04x size=%d",
-			 0, otg_fs->grxfsiz * 4);
-
-	DCC_LOG2(LOG_TRACE, "TX[0]: addr=%04x size=%d",
-			 OTG_FS_TX0FSA_GET(otg_fs->dieptxf0) * 4,
-			 OTG_FS_TX0FD_GET(otg_fs->dieptxf0) * 4);
-
-#if 0
-	/* packet buffer  */
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_otg_ep * ep;
 	int mxpktsz = info->mxpktsz;
-	unsigned int sz;
 
 	DCC_LOG1(LOG_TRACE, "mxpktsz=%d", mxpktsz);
 	DCC_LOG1(LOG_TRACE, "ctr_buf=0x%08x", ctr_buf);
@@ -701,141 +559,66 @@ int stm32f_otg_dev_ep0_init(struct stm32f_otg_drv * drv,
 	ep->state = EP_IDLE;
 	ep->on_setup = info->on_setup;
 
-	/* clear the correct transfer bits */
-	clr_ep_flag(usb, 0, USB_CTR_RX | USB_CTR_TX);
-	set_ep_type(usb, 0, USB_EP_CONTROL);
-	set_ep_txstat(usb, 0, USB_TX_NAK);
+	/* Initialize EP0 */
+	otg_fs->inep[0].diepctl = OTG_FS_TXFNUM_SET(0) |
+			OTG_FS_EP0_MPSIZ_SET(mxpktsz);
 
-	/* reset packet buffer address pointer */
-	addr = PKTBUF_BUF_BASE;
+	__ep_pktbuf_alloc(drv, 0, mxpktsz);
 
-	/* allocate single buffers for TX and RX */
-	sz = pktbuf_tx_cfg(&pktbuf[0].tx, addr, mxpktsz);
-	addr += sz;
-	sz = pktbuf_rx_cfg(&pktbuf[0].rx, addr, mxpktsz);
-	addr += sz;
+	/*  4. Program the following fields in the endpoint-specific registers
+	   for control OUT endpoint 0 to receive a SETUP packet
+	   – STUPCNT = 3 in OTG_FS_DOEPTSIZ0 (to receive up to 3 back-to-back
+	   SETUP packets)
+	   At this point, all initialization required to receive SETUP packets
+	   is done. */
+	__ep0_out_start(otg_fs);
 
-	clr_status_out(usb, 0);
-	set_ep_rxstat(usb, 0, USB_RX_VALID);
+	/* Unmask EP0 interrupts */
+	otg_fs->daintmsk = OTG_FS_IEPM0 | OTG_FS_OEPM0;
 
-	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[0]);
-#endif
+	DCC_LOG2(LOG_TRACE, "TX[0]: addr=%04x size=%d",
+			 OTG_FS_TX0FSA_GET(otg_fs->dieptxf0) * 4,
+			 OTG_FS_TX0FD_GET(otg_fs->dieptxf0) * 4);
+
 	return 0;
-}
-
-void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv, int rxlen)
-{
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-	struct stm32f_otg_ep * ep = &drv->ep[0];
-	int cnt;
-	int n;
-
-#if 0
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_otg_ep * ep = &drv->ep[0];
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	int cnt;
-	int n;
-
-	if (ep->state == EP_WAIT_STATUS_OUT) {
-		ep->state = EP_IDLE;
-		DCC_LOG(LOG_INFO, "EP0 OUT [IDLE] >>>>>>>> SETUP END");
-		set_ep_rxstat(usb, 0, USB_RX_VALID);
-		return;
-	}
-
-	if ((ep->state == EP_IN_DATA)|| (ep->state == EP_IN_DATA_LAST)) {
-		ep->state = EP_STALLED;
-		DCC_LOG(LOG_TRACE, "EP0 OUT [STALLED]");
-		set_ep_rxstat(usb, 0, USB_RX_STALL);
-		set_ep_txstat(usb, 0, USB_TX_STALL);
-		return;
-	}
-#endif
-
-	cnt = rxlen;
-	n = MIN(cnt, ep->xfr_rem);
-
-	__copy_from_pktbuf(ep->xfr_ptr, &otg_fs->dfifo[0].pop, n);
-
-	ep->xfr_ptr += n;
-	ep->xfr_rem -= n;
-
-#if 0
-	if (ep->state == EP_OUT_DATA_LAST) {
-		ep->state = EP_WAIT_STATUS_IN;
-		DCC_LOG1(LOG_INFO, "EP0 cnt=%d [EP_WAIT_STATUS_IN]", cnt);
-		__ep_zlp_send(drv, 0);
-		return;
-	}
-
-	if (ep->xfr_rem < ep->mxpktsz) {
-		/* last transfer */
-		ep->state = EP_OUT_DATA_LAST;
-		DCC_LOG1(LOG_INFO, "EP0 cnt=%d [OUT_DATA_LAST]", cnt);
-	}
-	set_ep_rxstat(usb, 0, USB_RX_VALID);
-
-	DCC_LOG1(LOG_INFO, "EP0 cnt=%d", cnt);
-#endif
 }
 
 void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
-	void * dummy = NULL;
 
 	if (ep->state == EP_WAIT_STATUS_IN) {
 		struct usb_request * req = &drv->req;
+		void * dummy = NULL;
 
-		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			DCC_LOG(LOG_TRACE, "address set!");
-			stm32f_otg_fs_addr_set(otg_fs, req->value);
-		}
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
-		DCC_LOG(LOG_TRACE, ">>>>>>>> SETUP END");
+		DCC_LOG(LOG_TRACE, "EP0 [IDLE]");
 		return;
 	}
 
+	if (!__ep_tx_start(drv, 0)) {
+		otg_fs->diepempmsk &= ~(1 << 0);
+		/* Prepare to receive */
+		__ep0_out_start(otg_fs);
+		ep->state = EP_IN_DATA;
+		DCC_LOG(LOG_TRACE, "EP0 [IN_DATA]");
+	}
+}
 
-#if 0
-	struct stm32f_usb * usb = STM32F_USB;
+void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
+{
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
-	void * dummy = NULL;
 
-	DCC_LOG(LOG_MSG, "EP0 IN");
-
-	if (ep->state == EP_WAIT_STATUS_IN) {
-		struct usb_request * req = &drv->req;
-
-		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			usb->daddr = req->value | USB_EF;
-			DCC_LOG(LOG_INFO, "address set!");
-		}
-		set_ep_rxstat(usb, 0, USB_RX_STALL);
-		set_ep_txstat(usb, 0, USB_TX_STALL);
-		ep->on_setup(drv->cl, req, dummy);
-		ep->state = EP_IDLE;
-		DCC_LOG(LOG_INFO, ">>>>>>>> SETUP END");
+	/* last and only transfer */
+	if (ep->state == EP_OUT_DATA_LAST) {
+		ep->state = EP_WAIT_STATUS_IN;
+		DCC_LOG(LOG_TRACE, "EP0 [WAIT_STATUS_IN]");
+		__ep_zlp_send(otg_fs, 0);
 		return;
 	}
-
-	if (ep->state == EP_IN_DATA_LAST) {
-		ep->state = EP_WAIT_STATUS_OUT;
-		DCC_LOG(LOG_INFO, "EP0 [WAIT_STATUS_OUT]");
-		set_ep_rxstat(usb, 0, USB_RX_VALID);
-		return;
-	}
-
-	__ep_pkt_send(drv, 0);
-
-	if (ep->state == EP_IN_DATA) {
-		set_ep_rxstat(usb, 0, USB_RX_STALL);
-	}
-#endif
-
 }
 
 void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
@@ -843,11 +626,10 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct usb_request * req = &drv->req;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
+	int len;
 
-	DCC_LOG(LOG_TRACE, "SETUP START <<<<<<<<<<<<<<<");
-
-	DCC_LOG2(LOG_TRACE, "req len=%d type=%d", req->length, req->type);
-
+	DCC_LOG3(LOG_TRACE, "type=0x%02x request=0x%02x len=%d ",
+			req->type, req->request, req->length);
 
 	/* No-Data control SETUP transaction */
 	if (req->length == 0) {
@@ -860,289 +642,55 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		}
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
-		__ep0_zlp_send(otg_fs);
-
-		DCC_LOG(LOG_TRACE, ">>>>>>>> SETUP END");
-		return;
-	}
-
-#if 0
-	struct stm32f_otg_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct usb_request * req = &drv->req;
-	struct stm32f_otg_ep * ep = &drv->ep[0];
-	struct stm32f_usb * usb = STM32F_USB;
-	int cnt;
-	int len;
-
-	DCC_LOG(LOG_INFO, "SETUP START <<<<<<<<<<<<<<<");
-
-	cnt = pktbuf[0].rx.count;
-
-#if ENABLE_PEDANTIC_CHECK
-	if (cnt != 8) {
-		__ep_stall(drv, 0);
-		DCC_LOG1(LOG_ERROR, "cnt(%d) != 8 [ERROR]", cnt);
-		return;
-	}
-#endif
-
-	/* copy data from packet buffer */
-	__copy_from_pktbuf(req, &pktbuf[0].rx, cnt);
-
-	/* No-Data control SETUP transaction */
-	if (req->length == 0) {
-		__ep_zlp_send(drv, 0);
-		DCC_LOG(LOG_INFO, "EP0 [WAIT_STATUS_IN] no data Dev->Host");
-		ep->state = EP_WAIT_STATUS_IN;
+		__ep_zlp_send(otg_fs, 0);
 		return;
 	}
 
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
 
-		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_TRACE, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
-#if ENABLE_PEDANTIC_CHECK
-		if (len < 0) {
-			__ep_stall(drv, 0);
-			DCC_LOG(LOG_TRACE, "EP0 [STALLED] len < 0");
-			return;
-		}
-		if (ep->tx_buf == NULL) {
-			__ep_stall(drv, 0);
-			DCC_LOG(LOG_TRACE, "EP0 [STALLED] tx_buf == NULL");
-			return;
-		}
-#endif
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
-		__ep_pkt_send(drv, 0);
-		/* While enabling the last data stage, the opposite direction should
-			 * be set to NAK, so that, if the host reverses the transfer direction
-			 * (to perform the status stage) immediately, it is kept waiting for
-			 * the completion of the control operation. If the control operation
-			 * completes successfully, the software will change NAK to VALID,
-			 * otherwise to STALL.
-			 * */
-		if (ep->state == EP_IN_DATA) {
-			/* A USB device can determine the number and direction of data stages
-			 * by interpreting the data transferred in the SETUP stage, and is
-			 * required to STALL the transaction in the case of errors. To do
-			 * so, at all data stages before the last, the unused direction should
-			 * be set to STALL, so that, if the host reverses the transfer
-			 * direction too soon, it gets a STALL as a status stage.
-			 * */
-			set_ep_rxstat(usb, 0, USB_RX_STALL);
-		}
-
+		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->xfr_rem);
+		__ep_tx_start(drv, 0);
 	} else {
 		/* Control Write SETUP transaction (OUT Data Phase) */
-
 		ep->xfr_ptr = ep->xfr_buf;
 		ep->xfr_rem = req->length;
 
-		DCC_LOG1(LOG_INFO, "xfr_ptr=0x%08x", ep->xfr_ptr);
+		DCC_LOG1(LOG_TRACE, "xfr_ptr=0x%08x", ep->xfr_ptr);
 
 		if (ep->xfr_rem > ep->xfr_buf_len) {
 			ep->xfr_rem = ep->xfr_buf_len;
-			DCC_LOG(LOG_ERROR, "transfer to large to fit the buffer!");
+			DCC_LOG(LOG_ERROR, "transfer to large to fit in the buffer!");
 		}
 
 		if (ep->xfr_rem < ep->mxpktsz) {
 			/* last and only transfer */
 			ep->state = EP_OUT_DATA_LAST;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
-
+			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
 		} else {
 			ep->state = EP_OUT_DATA;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
 		}
 
-		set_ep_rxstat(usb, 0, USB_RX_VALID);
+		DCC_LOG(LOG_INFO, "Prepare to receive");
+
+		/* Prepare to receive */
+		otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(0) |
+			OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(ep->mxpktsz);
+		/* EP enable */
+		otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 	}
-#endif
+
 }
 
-void otg_fs_on_enum_done(struct stm32f_otg_fs * otg_fs)
-{
-	uint32_t diepctl;
-	uint32_t dsts;
-
-	/* Endpoint initialization on enumeration completion
-	   1. On the Enumeration Done interrupt (ENUMDNE in OTG_FS_GINTSTS),
-	   read the OTG_FS_DSTS register to determine the enumeration speed. */
-	dsts = otg_fs->dsts;
-
-	/* 2. Program the MPSIZ field in OTG_FS_DIEPCTL0 to set the maximum
-	   packet size. This step configures control endpoint 0. The maximum
-	   packet size for a control endpoint depends on the enumeration speed. */
-
-	diepctl = otg_fs->inep[0].diepctl;
-	diepctl &= ~OTG_FS_MPSIZ_MSK;
-	if ((dsts & OTG_FS_ENUMSPD_MSK) == OTG_FS_ENUMSPD_FULL) {
-		diepctl |= OTG_FS_MPSIZ_64;
-		DCC_LOG(LOG_INFO, "USB full speed");
-	} else {
-		diepctl |= OTG_FS_MPSIZ_8;
-		DCC_LOG(LOG_INFO, "USB low speed");
-	}
-	otg_fs->inep[0].diepctl = diepctl;
-
-	/* At this point, the device is ready to receive SOF packets and is
-	   configured to perform control transfers on control endpoint 0. */
-
-	/*  Clear global IN NAK */
-	otg_fs->dctl |= OTG_FS_CGINAK;
-
-}
 
 /* Private USB device driver data */
 struct stm32f_otg_drv stm32f_otg_fs_drv0;
 
-#if 0
-
-/* USB high priority ISR */
-void stm32f_can1_tx_usb_hp_isr(void)
-{
-	struct stm32f_otg_drv * drv = &stm32f_otg_drv0;
-	struct stm32f_usb * usb = STM32F_USB;
-	uint32_t sr = usb->istr;
-
-	DCC_LOG1(LOG_TRACE, "SR 0x%04x", sr);
-
-	if (sr & USB_CTR) {
-		uint32_t epr;
-		int ep_id;
-
-		/* clear interrupt */
-		usb->istr = sr & ~USB_CTR;
-
-		ep_id = USB_EP_ID_GET(sr);
-
-		DCC_LOG1(LOG_TRACE, "CTR ep_id=%d", ep_id);
-
-		epr = usb->epr[ep_id];
-
-		if (epr & USB_CTR_RX) {
-			/* OUT */
-			clr_ep_flag(usb, ep_id, USB_CTR_RX);
-			stm32f_otg_dev_ep_out(drv, ep_id);
-		}
-
-		if (epr & USB_CTR_TX) {
-			/* IN */
-			clr_ep_flag(usb, ep_id, USB_CTR_TX);
-			stm32f_otg_dev_ep_in(drv, ep_id);
-		}
-	}
-
-}
-
-/* USB low priority ISR */
-void stm32f_can1_rx0_usb_lp_isr(void)
-{
-	struct stm32f_otg_drv * drv = &stm32f_otg_drv0;
-	struct stm32f_usb * usb = STM32F_USB;
-	uint32_t sr = usb->istr;
-
-	if (sr & USB_SOF) {
-		usb->istr = sr & ~USB_SOF;
-		DCC_LOG(LOG_INFO, "SOF");
-	}
-
-	if (sr & USB_RESET) {
-		usb->istr = sr & ~USB_RESET;
-		DCC_LOG(LOG_INFO, "RESET");
-		stm32f_otg_dev_reset(drv);
-	}
-
-	if (sr & USB_SUSP) {
-		usb->istr = sr & ~USB_SUSP;
-		DCC_LOG(LOG_TRACE, "SUSP");
-	}
-
-	if (sr & USB_WKUP) {
-		usb->istr = sr & ~USB_WKUP;
-		DCC_LOG(LOG_TRACE, "WKUP");
-	}
-
-	if (sr & USB_ERR) {
-		usb->istr = sr & ~USB_ERR;
-		DCC_LOG(LOG_TRACE, "ERR");
-	}
-
-	if (sr & USB_PMAOVR) {
-		usb->istr = sr & ~USB_PMAOVR;
-		DCC_LOG(LOG_TRACE, "PMAOVR");
-	}
-
-	if (sr & USB_CTR) {
-		uint32_t epr;
-		int ep_id;
-
-		/*
-		 * The CTR_RX event is serviced by first
-		   determining the transaction type (SETUP bit in the USB_EPnR register); the application
-		   software must clear the interrupt flag bit and get the number of received bytes reading the
-		   COUNTn_RX location inside the buffer description table entry related to the endpoint being
-		 processed. After the received data is processed, the application software should set the
-		STAT_RX bits to ‘11 (Valid) in the USB_EPnR, enabling further transactions. While the
-		STAT_RX bits are equal to ‘10 (NAK), any OUT request addressed to that endpoint is
-		NAKed, indicating a flow control condition: the USB host will retry the transaction until it
-		succeeds. It is mandatory to execute the sequence of operations in the above mentioned
-		order to avoid losing the notification of a second OUT transaction addressed to the same
-		endpoint following immediately the one which triggered the CTR interrupt.
-		 */
-
-
-		/* clear interrupt */
-		usb->istr = sr & ~USB_CTR;
-
-		ep_id = USB_EP_ID_GET(sr);
-
-		DCC_LOG1(LOG_INFO, "CTR ep_id=%d", ep_id);
-
-		epr = usb->epr[ep_id];
-
-		if (ep_id == 0) {
-			/* Service control point */
-			set_ep_rxstat(usb, ep_id, USB_RX_NAK);
-			set_ep_txstat(usb, ep_id, USB_TX_NAK);
-
-			if (((sr & USB_DIR) == 0) || (epr & USB_CTR_TX)) {
-				/* DIR = 0 -> IN */
-				clr_ep_flag(usb, 0, USB_CTR_TX);
-				stm32f_otg_dev_ep0_in(drv);
-			} else {
-				/* DIR = 1 -> OUT/SETUP */
-				clr_ep_flag(usb, 0, USB_CTR_RX);
-				if (epr & USB_SETUP) {
-					/* SETUP */
-					stm32f_otg_dev_ep0_setup(drv);
-				} else {
-					/* OUT */
-					stm32f_otg_dev_ep0_out(drv);
-				}
-			}
-			return;
-		}
-
-		if (epr & USB_CTR_RX) {
-			/* OUT */
-			clr_ep_flag(usb, ep_id, USB_CTR_RX);
-			stm32f_otg_dev_ep_out(drv, ep_id);
-		}
-
-		if (epr & USB_CTR_TX) {
-			/* IN */
-			clr_ep_flag(usb, ep_id, USB_CTR_TX);
-			stm32f_otg_dev_ep_in(drv, ep_id);
-		}
-
-	}
-}
-#endif
 
 #define OTG_FS_DP STM32F_GPIOA, 12
 #define OTG_FS_DM STM32F_GPIOA, 11
@@ -1158,10 +706,12 @@ static void otg_fs_io_init(void)
 
 	stm32f_gpio_af(OTG_FS_DP, GPIO_AF10);
 	stm32f_gpio_af(OTG_FS_DM, GPIO_AF10);
+	stm32f_gpio_af(OTG_FS_VBUS, GPIO_AF10);
 	stm32f_gpio_af(OTG_FS_ID, GPIO_AF10);
 
 	stm32f_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 	stm32f_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
@@ -1173,17 +723,32 @@ void otg_fs_vbus_connect(bool connect)
 		stm32f_gpio_mode(OTG_FS_VBUS, INPUT, 0);
 }
 
+void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
+{
+	/* Connect device */
+	otg_fs->dctl &= ~OTG_FS_SDIS;
+	udelay(3000);
+}
+
+void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
+{
+	otg_fs->dctl |= OTG_FS_SDIS;
+	udelay(3000);
+}
+
 void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
 	otg_fs_vbus_connect(true);
 
-	DCC_LOG(LOG_MSG, "Enabling USB FS clock...");
+	DCC_LOG(LOG_TRACE, "Enabling USB FS clock...");
 	rcc->ahb2enr |= RCC_OTGFSEN;
 
 	/* Initialize as a device */
 	stm32f_otg_fs_device_init(otg_fs);
+
+	otg_fs_connect(otg_fs);
 
 	/* Enable Cortex interrupt */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
@@ -1196,8 +761,8 @@ void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 //	usb->cntr = USB_FRES;
 	/* Removing any spurious pending interrupts */
 //	usb->istr = 0;
-
-	otg_fs_vbus_connect(false);
+	otg_fs_disconnect(otg_fs);
+//	otg_fs_vbus_connect(false);
 
 //	usb->cntr = USB_FRES | USB_PDWN;
 
@@ -1222,7 +787,7 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 
 	otg_fs_power_off(otg_fs);
 
-	udelay(1000);
+	udelay(10000);
 
 	/* Initialize IO pins */
 	otg_fs_io_init();
@@ -1246,7 +811,7 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_SRQINT) {
 		/* Session request/new session detected interrupt */
-		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]");
+		DCC_LOG(LOG_TRACE, "<SRQINT>  [POWERED]");
 		otg_fs->gintmsk |= OTG_FS_WUIM | OTG_FS_USBRSTM | OTG_FS_ENUMDNEM |
 			OTG_FS_ESUSPM | OTG_FS_USBSUSPM;
 	}
@@ -1273,95 +838,90 @@ void stm32f_otg_fs_isr(void)
 	/* RxFIFO non-empty */
 	if (gintsts & OTG_FS_RXFLVL) {
 		uint32_t grxsts;
-		int ep_id;
+		int epnum;
 		int len;
 		int stat;
 
 		/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
 		   the application must read the Receive status pop
 		   register (OTG_FS_GRXSTSP). */
-		/* pop the rx fifo status */
 		grxsts = otg_fs->grxstsp;
 
-		ep_id = OTG_FS_EPNUM_GET(grxsts);
+		epnum = OTG_FS_EPNUM_GET(grxsts);
 		len = OTG_FS_BCNT_GET(grxsts);
 		(void)len;
 		stat = OTG_FS_PKTSTS_GET(grxsts);
 		(void)stat;
 
-		DCC_LOG3(LOG_TRACE, "[%d] <RXFLVL> len=%d status=%d", ep_id, len, stat);
+		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", epnum, len, stat);
 
-		if (ep_id == 0) {
+		if (epnum == 0) {
+
 			/* 3. If the received packet’s byte count is not 0, the byte count
 			   amount of data is popped from the receive Data FIFO and stored in
 			   memory. If the received packet byte count is 0, no data is popped
 			   from the receive data FIFO. */
-
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_GOUT_NACK:
 				/* Global OUT NAK (triggers an interrupt) */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", ep_id);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", epnum);
 				break;
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
-				stm32f_otg_dev_ep0_out(drv, len);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
+				__ep_rx_pop(drv, 0, len);
 				break;
 			}
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
 				break;
 			case OTG_FS_PKTSTS_SETUP_COMP:
 				/* SETUP transaction completed (triggers an interrupt) */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_COMP>", ep_id);
-				stm32f_otg_dev_ep0_setup(drv);
-
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <SETUP_COMP>", epnum);
 				break;
-			case OTG_FS_PKTSTS_SETUP_UPDT: {
-				uint32_t * buf = (uint32_t *)&drv->req;
+			case OTG_FS_PKTSTS_SETUP_UPDT:
 				/* SETUP data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <SETUP_UPDT>", ep_id);
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <SETUP_UPDT>", epnum);
 
 				if (len != 8) {
 					DCC_LOG(LOG_ERROR, "setup data len != 8!");
 				}
 
 				/* Copy the received setup packet into the setup buffer */
-				buf[0] = otg_fs->dfifo[0].pop;
-				buf[1] = otg_fs->dfifo[0].pop;
+				__copy_from_pktbuf(&drv->req, &otg_fs->dfifo[0].pop, len);
 
-				DCC_LOG2(LOG_TRACE, "SETUP: 0x%08x 0x%08x", buf[0], buf[1]);
+				DCC_LOG3(LOG_INFO, "type=0x%02x request=0x%02x len=%d ",
+						drv->req.type, drv->req.request, drv->req.length);
+
 				break;
-			}
 			}
 		} else {
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT:
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", ep_id);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
 				/* 2. The application can mask the RXFLVL interrupt (in
 				   OTG_FS_GINTSTS) by writing to RXFLVL = 0 (in
 				   OTG_FS_GINTMSK), until it has read the packet from
 				   the receive FIFO. */
 				otg_fs->gintmsk &= ~OTG_FS_RXFLVLM;
 				/* Enable SOF interrupts */
-				otg_fs->gintmsk |=  OTG_FS_SOFM;
-				DCC_LOG(LOG_INFO, "__thinkos_ev_raise(RX)");
-				stm32f_otg_dev_ep_out(drv, ep_id);
+//				otg_fs->gintmsk |=  OTG_FS_SOFM;
+				stm32f_otg_dev_ep_out(drv, epnum);
 				break;
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", ep_id);
+				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
 				/* FIXME: generic code */
 #if 0
 				/* Prepare to receive more */
-				otg_fs->outep[ep_id].doeptsiz =
+				otg_fs->outep[epnum].doeptsiz =
 					OTG_FS_PKTCNT_SET(EP_OUT_FIFO_SIZE / EP_OUT_MAX_PKT_SIZE) |
 					OTG_FS_XFRSIZ_SET(EP_OUT_FIFO_SIZE);
 				/* EP enable */
-				otg_fs->outep[ep_id].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+				otg_fs->outep[epnum].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 #endif
 				/* Disable SOF interrupts */
-				otg_fs->gintmsk &= ~OTG_FS_SOFM;
+//				otg_fs->gintmsk &= ~OTG_FS_SOFM;
 
 				break;
 			}
@@ -1383,15 +943,17 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_USBRST ) {
 		/* end of bus reset */
-		//		DCC_LOG(LOG_TRACE, "<USBRST>");
-		/* initialize tx buffer */
-		stm32f_otg_dev_reset(drv);
 		DCC_LOG(LOG_TRACE, "<USBRST> --------------- [DEFAULT]");
+		stm32f_otg_dev_reset(drv);
 	}
 
 	if (gintsts & OTG_FS_ENUMDNE) {
-		DCC_LOG(LOG_INFO, "<ENUMDNE>");
-		otg_fs_on_enum_done(otg_fs);
+		DCC_LOG(LOG_TRACE, "<ENUMDNE>");
+		/* Unmask global interrupts */
+		otg_fs->gintmsk |=  OTG_FS_IEPINTM | OTG_FS_OEPINTM |
+			OTG_FS_IISOIXFRM | OTG_FS_IISOOXFRM | OTG_FS_RXFLVLM;
+		/*  Clear global IN NAK */
+		otg_fs->dctl |= OTG_FS_CGINAK;
 	}
 
 	if (gintsts & OTG_FS_ESUSP) {
@@ -1408,6 +970,8 @@ void stm32f_otg_fs_isr(void)
 		uint32_t diepempmsk;
 		uint32_t msk;
 
+		DCC_LOG(LOG_INFO, "<IEPINT>");
+
 		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
 		diepmsk = otg_fs->diepmsk;
 		diepempmsk = otg_fs->diepempmsk;
@@ -1418,11 +982,19 @@ void stm32f_otg_fs_isr(void)
 			diepint = otg_fs->inep[0].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
 				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <XFRC>");
-			}
-			if (diepint & OTG_FS_TXFE) {
+				stm32f_otg_dev_ep0_in(drv);
+#if 0
+				if (!__ep_tx_start(drv, 0)) {
+					otg_fs->diepempmsk &= ~(1 << 0);
+					/* Prepare to receive */
+					__ep0_out_start(otg_fs);
+				}
+#endif
+			} else if (diepint & OTG_FS_TXFE) {
 				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <TXFE>");
-				/* mask FIFO empty interrupt */
-				otg_fs->diepempmsk &= ~(1 << 1);
+				if (!__ep_tx_push(drv, 0)) {
+					otg_fs->diepempmsk &= ~(1 << 0);
+				}
 			}
 			/* clear interrupts */
 			otg_fs->inep[0].diepint = diepint;
@@ -1476,14 +1048,46 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_OEPINT) {
-
 		//		DCC_LOG(LOG_TRACE, "<OEPINT>");
-
 		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
 
+		DCC_LOG(LOG_INFO, "<OEPINT>");
+
 		if (ep_intr & OTG_FS_OEPINT0) {
-			DCC_LOG(LOG_INFO, "[0] <OEPINT>");
-			stm32f_otg_dev_ep0_in(drv);
+			uint32_t doepint;
+
+			doepint = otg_fs->outep[0].doepint & otg_fs->doepmsk;
+
+			if (doepint & OTG_FS_XFRC) {
+				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <OUT XFRC>");
+				stm32f_otg_dev_ep0_out(drv);
+			}
+			if (doepint & OTG_FS_EPDISD) {
+				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <EPDISD>");
+			}
+			if (doepint & OTG_FS_STUP) {
+				uint32_t doeptsiz;
+				int pktcnt;
+				int stupcnt;
+				int xfrsiz;
+
+				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <STUP>");
+
+				doeptsiz = otg_fs->outep[0].doeptsiz;
+				stupcnt = OTG_FS_STUPCNT_GET(doeptsiz);
+				(void)stupcnt;
+				pktcnt = OTG_FS_PKTCNT_GET(doeptsiz);
+				(void)pktcnt;
+				xfrsiz = OTG_FS_XFRSIZ_GET(doeptsiz);
+				(void)xfrsiz;
+
+				DCC_LOG3(LOG_INFO, "stupcnt=%d pktcnt=%d xfrsiz=%d",
+						stupcnt, pktcnt, xfrsiz);
+
+				stm32f_otg_dev_ep0_setup(drv);
+			}
+			/* clear interrupts */
+			otg_fs->outep[0].doepint = doepint;
 		}
 
 		if (ep_intr & OTG_FS_OEPINT1) {
