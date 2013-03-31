@@ -15,7 +15,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+				<configuration artifactName="usb-serial" buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941.1480804262" name="/" resourcePath="">
 						<toolChain id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.737589916" name="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base">
 							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor.1019600200" name="Processor" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor"/>
@@ -64,7 +64,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="release" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="debug|release" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -75,10 +75,8 @@
 		<project id="usb-serial.null.1550502235" name="usb-serial"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope" versionNumber="2">
-		<configuration configurationName="Default">
-			<resource resourceType="PROJECT" workspacePath="/usb-serial"/>
-		</configuration>
+	<storageModule moduleId="refreshScope" versionNumber="1">
+		<resource resourceType="PROJECT" workspacePath="/usb-serial"/>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
@@ -89,4 +87,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>

@@ -464,6 +464,36 @@ struct stm32f_usart {
 	volatile uint32_t gtpr;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int stm32f_usart_putc(struct stm32f_usart * usart, int c);
+
+int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec);
+
+int stm32f_usart_read(struct stm32f_usart * usart, char * buf,
+					  unsigned int len, unsigned int msec);
+
+int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
+					   unsigned int len);
+
+int stm32f_usart_flush(struct stm32f_usart * usart);
+
+int stm32f_usart_init(struct stm32f_usart * us);
+
+int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
+
+int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
+
+void stm32f_usart_enable(struct stm32f_usart * us);
+
+void stm32f_usart_disable(struct stm32f_usart * us);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __STM32F_USART_H__ */

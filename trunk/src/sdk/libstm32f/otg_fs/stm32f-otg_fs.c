@@ -109,8 +109,7 @@ void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 	}
 }
 
-
-void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs, 
+void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs,
 								unsigned int addr, unsigned int mpsiz)
 {
 	int ep = addr & 0x7f;
@@ -121,92 +120,13 @@ void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs,
 	pktcnt = rxfsiz / mpsiz;
 
 	/* Prepare EP_OUT to receive */
-	otg_fs->outep[ep].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+	otg_fs->outep[ep].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) |
 		OTG_FS_XFRSIZ_SET(pktcnt * mpsiz);
 	/* EP enable */
 	otg_fs->outep[ep].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
-
-#if DEBUG
-static const char * const eptyp_nm[] = {
-	"CTRL",
-	"ISOC",
-	"BULK",
-	"INT"
-};
-#endif
-
-void stm32f_otg_fs_ep_enable(struct stm32f_otg_fs * otg_fs, unsigned int addr, 
-							 unsigned int type, unsigned int mpsiz)
-{
-	int ep = addr & 0x7f;
-	int input = addr & 0x80;
-	uint32_t depctl;
-
-	DCC_LOG3(LOG_TRACE, "ep=%d %s %s", ep, 
-			 input ? "IN" : "OUT", eptyp_nm[type]);
-
-	depctl = input ? otg_fs->inep[ep].diepctl : otg_fs->outep[ep].doepctl;
-
-	depctl &= ~(OTG_FS_MPSIZ_MSK | OTG_FS_EPTYP_MSK | OTG_FS_TXFNUM_MSK);
-
-	/* Endpoint activation
-	   This section describes the steps required to activate a device 
-	   endpoint or to configure an existing device endpoint to a 
-	   new type.
-	   1. Program the characteristics of the required endpoint into 
-	   the following fields of the OTG_FS_DIEPCTLx register (for IN or 
-	   bidirectional endpoints) or the OTG_FS_DOEPCTLx register (for 
-	   OUT or bidirectional endpoints).
-	   â€“ Maximum packet size
-	   â€“ USB active endpoint = 1
-	   â€“ Endpoint start data toggle (for interrupt and bulk endpoints)
-	   â€“ Endpoint type
-	   â€“ TxFIFO number */
-	
-	depctl |= OTG_FS_MPSIZ_SET(mpsiz);
-	depctl |= OTG_FS_EPTYP_SET(type);
-	depctl |= OTG_FS_SD0PID | OTG_FS_USBAEP;
-
-	/* XXX: mask FIFO empty interrupt, maybe this should 
-	   be performed elsewhere. */
-	otg_fs->diepempmsk &= ~(1 << ep);
-
-	if (input) {
-		/* Activate IN endpoint */
-		otg_fs->inep[ep].diepctl = depctl | OTG_FS_TXFNUM_SET(ep);
-
-		/* Enable endpoint interrupt */
-		otg_fs->daintmsk |= OTG_FS_IEPM(ep);
-
-	} else {
-		uint32_t rxfsiz;
-		uint32_t pktcnt;
-
-		/* Activate OUT endpoint */
-		otg_fs->outep[ep].doepctl = depctl;
-
-		rxfsiz = otg_fs->grxfsiz * 4;
-		pktcnt = rxfsiz / mpsiz;
-	
-		/* Prepare EP_OUT to receive */
-		otg_fs->outep[ep].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
-			OTG_FS_XFRSIZ_SET(pktcnt * mpsiz);
-		/* EP enable */
-		otg_fs->outep[ep].doepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK;
-
-		/* Enable endpoint interrupt */
-		otg_fs->daintmsk |= OTG_FS_OEPM(ep);
-	}
-
-	/* 2. Once the endpoint is activated, the core starts decoding the 
-	   tokens addressed to that endpoint and sends out a valid 
-	   handshake for each valid token received for the
-	   endpoint. */
-}
-
-static const uint8_t ep0_mpsiz_lut[] = {
+const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[] = {
 	64, 32, 16, 8
 };
 
@@ -230,7 +150,7 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 
 	depctl = otg_fs->inep[ep].diepctl;
 	if (ep == 0)
-		mpsiz = ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)];
+		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
 	else
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
 
@@ -285,7 +205,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	deptsiz = otg_fs->inep[ep].dieptsiz;
 
 	if (ep == 0)
-		mpsiz = ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)];
+		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
 	else
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
 
@@ -427,6 +347,14 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 }
 
 #ifdef DEBUG
+
+static const char * const eptyp_nm[] = {
+	"CTRL",
+	"ISOC",
+	"BULK",
+	"INT"
+};
+
 void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr) 
 {
 	int ep = addr & 0x7f;
@@ -440,8 +368,7 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		eptfsav = otg_fs->inep[ep].dtxfsts;
 		eptsiz = otg_fs->inep[ep].dieptsiz;
 
-		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
-			OTG_FS_MPSIZ_GET(depctl);
+		mpsiz = (ep == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
 
 		(void)eptsiz;
 		eptfsav = eptfsav * 4;
@@ -473,8 +400,7 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 			return;
 		}
 		
-		mpsiz = (ep == 0) ? ep0_mpsiz_lut[OTG_FS_MPSIZ_GET(depctl)] : 
-			OTG_FS_MPSIZ_GET(depctl);
+		mpsiz = (ep == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
 		(void)mpsiz;
 
 		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
@@ -534,4 +460,4 @@ void otg_fs_fifo(struct stm32f_otg_fs * otg_fs,
 
 #endif
 
-#endif /* STM32F2X */
+#endif /* STM32F_OTG_FS */

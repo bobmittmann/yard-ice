@@ -98,7 +98,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* Protocol code: (V.25ter, Common AT commands)*/
 			CDC_PROTOCOL_COMMON_AT_COMMANDS,
 			/* Index of string descriptor describing this interface */
-			0
+			0x04
 		},
 		/* Header Functional Descriptor */
 		{
@@ -226,7 +226,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 
 #define LANG_STR_SZ              4
 #define VENDOR_STR_SZ            38
-#define PRODUCT_STR_SZ           38
+#define PRODUCT_STR_SZ           44
 #define SERIAL_STR_SZ            26
 #define INTERFACE_STR_SZ         16
 
@@ -245,16 +245,17 @@ const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
 
 const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Product name: "STM32 Mass Storage" */
-	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'M', 0, 'a', 0, 's', 0,
-	's', 0, ' ', 0, 'S', 0, 't', 0, 'o', 0, 'r', 0, 'a', 0, 'g', 0, 'e', 0
+	/* Product name: "STM32 Virtual ComPort" */
+	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 't', 0,
+	'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0, 'o', 0, 'm', 0, 'P', 0, 'o', 0, 'r', 0,
+	't', 0
 };
 
 const uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
 	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Serial number: "0000000000001" */
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0,
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
+	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0,
+	'0', 0, '1', 0
 };
 
 const uint8_t cdc_acm_interface_str[INTERFACE_STR_SZ] = {

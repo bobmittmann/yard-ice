@@ -342,23 +342,57 @@ struct stm32f_afio {
 };
 #endif
 
+#define	SPEED_LOW (0 << 0)
+#define	SPEED_MED (1 << 0)
+#define	SPEED_FAST (2 << 0)
+#define	SPEED_HIGH (3 << 0)
+
+#define OPT_SPEED(OPT) (((OPT) >> 0) & 0x3)
+
+#define PUSH_PULL (0 << 4)
+#define OPEN_DRAIN (1 << 4)
+
+#define PULL_UP (1 << 5)
+#define PULL_DOWN (1 << 6)
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* set pin */
-static inline void stm32f_gpio_set(struct stm32f_gpio *__gpio, int __pin)
-{
+static inline void stm32f_gpio_set(struct stm32f_gpio *__gpio, int __pin) {
 	__gpio->bsr = GPIO_SET(__pin);
 }
 
 /* clear pin */
-static inline void stm32f_gpio_clr(struct stm32f_gpio *__gpio, int __pin)
-{
+static inline void stm32f_gpio_clr(struct stm32f_gpio *__gpio, int __pin) {
 	__gpio->brr = GPIO_RESET(__pin);
 }
 
 /* get pin status */
-static inline int stm32f_gpio_stat(struct stm32f_gpio *__gpio, int __pin)
-{
+static inline int stm32f_gpio_stat(struct stm32f_gpio *__gpio, int __pin) {
 	return __gpio->idr & (1 << __pin);
 }
+
+int stm32f_gpio_id(struct stm32f_gpio * gpio);
+
+void stm32f_gpio_clock_en(struct stm32f_gpio * gpio);
+
+/* Output mode */
+void stm32f_gpio_output(struct stm32f_gpio * gpio, unsigned int pin,
+						int type, int speed);
+
+/* mode */
+void stm32f_gpio_mode(struct stm32f_gpio * gpio, unsigned int pin,
+					  unsigned int mode, unsigned int opt);
+
+/* Alternate function selection */
+void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif				/* __ASSEMBLER__ */
 
