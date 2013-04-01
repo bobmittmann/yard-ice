@@ -1,5 +1,5 @@
 #
-# stm32f103.mk 
+# stm32f100.mk 
 #
 # Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
 # 
@@ -27,13 +27,20 @@ LDDIR := $(realpath $(THISDIR)/../ld)
 export MKDIR LDDIR TOOLSDIR
 
 ifndef MACH 
-MACH = stm32f103
+MACH = stm32f100
+endif
+
+ifndef HCLK_HZ
+HCLK_HZ = "24000000"
 endif
 
 ARCH = cm3
 CPU = cortex-m3
-CDEFS += STM32F103 "HCLK_HZ=72000000" 
+
+CDEFS += STM32F100 "HCLK_HZ=$(HCLK_HZ)" 
+
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
+
 CROSS_COMPILE = arm-none-eabi-
 
 LDSCRIPT = $(MACH).ld  

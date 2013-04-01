@@ -37,7 +37,7 @@
 /* [15..10] Reserved, always read as 0 */
 
 /* Bits [9..8] - Clock division */
-#define TIM_CKD ((9 - 8) << 8)
+#define TIM_CKD (((1 << (9 - 8 + 1)) - 1) << 8)
 /* This bit-field indicates the division ratio between the timer 
    clock (CK_INT) frequency and sampling clock used by the digital 
    filters (ETR, TIx),
@@ -52,7 +52,10 @@
    1: TIMx_ARR register is buffered. */
 
 /* Bits [6..5] - Center-aligned mode selection */
-#define TIM_CMS ((6 - 5) << 5)
+#define TIM_CMS (((1 << (6 - 5 + 1)) - 1) << 5)
+#define TIM_CMS_MSK (((1 << (6 - 5 + 1)) - 1) << 5)
+#define TIM_CMS_SET(VAL) (((VAL) << 5) & TIM_CMS_MSK)
+#define TIM_CMS_GET(REG) (((REG) & TIM_CMS_MSK) >> 5)
 /* 00: Edge-aligned mode. The counter counts up or down depending on 
    the direction bit (DIR).
    01: Center-aligned mode 1. The counter counts up and down alternatively. 
@@ -209,7 +212,7 @@
    11: ETRP frequency divided by 8 */
 
 /* Bits [11..8] - External trigger filter */
-#define TIM_ETF_MSK (((1 << (3 + 1)) - 1) << 8)
+#define TIM_ETF_MSK (((1 << (11 - 8 + 1)) - 1) << 8)
 #define TIM_ETF_SET(VAL) (((VAL) << 8) & ETF_MSK)
 #define TIM_ETF_GET(REG) (((REG) & ETF_MSK) >> 8)
 /* This bit-field then defines the frequency used to sample ETRP signal and 
