@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the libstm32f.
  *
@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file stm32f103.h
+ * @file stm32f100.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -28,8 +28,8 @@
    512KB Flash, USB, CAN, 11 timers, 3 ADCs, 13 communication interfaces
 */
 
-#ifndef __STM32F103_H__
-#define __STM32F103_H__
+#ifndef __STM32F100_H__
+#define __STM32F100_H__
 
 #define STM32F
 #define STM32F10X
@@ -44,31 +44,28 @@
 #include <stm32f/stm32f-adc.h>
 #include <stm32f/stm32f-rtc.h>
 #include <stm32f/stm32f-spi.h>
-#include <stm32f/stm32f-eth.h>
-#include <stm32f/stm32f-usb.h>
 #include <stm32f/stm32f-fsmc.h>
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>
 #include <stm32f/stm32f-exti.h>
 
 #define STM32F_BASE_FSMC    0xa0000000
-#define STM32F_BASE_OTG_FS  0x50000000
-#define STM32F_BASE_EMAC    0x40028000
+
 #define STM32F_BASE_CRC     0x40023000
 #define STM32F_BASE_FLASH   0x40022000
 #define STM32F_BASE_RCC     0x40021000
 #define STM32F_BASE_DMA2    0x40020400
 #define STM32F_BASE_DMA1    0x40020000
-#define STM32F_BASE_SDIO    0x40018000
-#define STM32F_BASE_TIM11   0x40015400
-#define STM32F_BASE_TIM10   0x40015000
-#define STM32F_BASE_TIM9    0x40014c00
-#define STM32F_BASE_ADC3    0x40013c00
+
+#define STM32F_BASE_TIM17   0x40014800
+#define STM32F_BASE_TIM16   0x40014400
+#define STM32F_BASE_TIM15   0x40014000
+
 #define STM32F_BASE_USART1  0x40013800
-#define STM32F_BASE_TIM8    0x40013400
+
 #define STM32F_BASE_SPI1    0x40013000
 #define STM32F_BASE_TIM1    0x40012c00
-#define STM32F_BASE_ADC2    0x40012800
+
 #define STM32F_BASE_ADC1    0x40012400
 #define STM32F_BASE_GPIOG   0x40012000
 #define STM32F_BASE_GPIOF   0x40011c00
@@ -79,14 +76,16 @@
 #define STM32F_BASE_GPIOA   0x40010800
 #define STM32F_BASE_EXTI    0x40010400
 #define STM32F_BASE_AFIO    0x40010000
-#define STM32F_BASE_DAC     0x40007800
+
+#define STM32F_BASE_CEC     0x40007800
+#define STM32F_BASE_DAC     0x40007400
+
 #define STM32F_BASE_PWR     0x40007000
 #define STM32F_BASE_BKP     0x40006c00
-#define STM32F_BASE_CAN2    0x40006800
-#define STM32F_BASE_CAN1    0x40006400
-#define STM32F_BASE_USB     0x40005c00
+
 #define STM32F_BASE_I2C2    0x40005800
 #define STM32F_BASE_I2C1    0x40005400
+
 #define STM32F_BASE_UART5   0x40005000
 #define STM32F_BASE_UART4   0x40004c00
 #define STM32F_BASE_USART3  0x40004800
@@ -96,6 +95,7 @@
 #define STM32F_BASE_IWDG    0x40003000
 #define STM32F_BASE_WWDG    0x40002c00
 #define STM32F_BASE_RTC     0x40002800
+
 #define STM32F_BASE_TIM14   0x40002000
 #define STM32F_BASE_TIM13   0x40001c00
 #define STM32F_BASE_TIM12   0x40001800
@@ -128,23 +128,21 @@
 #define STM32F_IRQ_DMA1_STREAM5 16 /* DMA1 Stream 5 global Interrupt */
 #define STM32F_IRQ_DMA1_STREAM6 17 /* DMA1 Stream 6 global Interrupt */
 #define STM32F_IRQ_ADC 18 /* ADC1 and ADC2 global Interrupts */
-#define STM32F_IRQ_USB_HP 19 /* USB High Priority */
-#define STM32F_IRQ_CAN1_TX 19 /* CAN1 TX Interrupt */
-#define STM32F_IRQ_USB_LP 20 /* USB Low Priority */
-#define STM32F_IRQ_CAN1_RX0 20 /* CAN1 RX0 Interrupt */
-#define STM32F_IRQ_CAN1_RX1 21 /* CAN1 RX1 Interrupt */
-#define STM32F_IRQ_CAN1_SCE 22 /* CAN1 SCE Interrupt */
+
 #define STM32F_IRQ_EXTI9_5 23 /* External Line[9:5] Interrupts */
 
-/* TIM1 Break interrupt and TIM9 global interrupt */
+/* TIM1 Break interrupt and TIM15 global interrupt */
 #define STM32F_IRQ_TIM1_BRK 24 /* TIM1 Break interrupt  */
-#define STM32F_IRQ_TIM9 24 /* TIM9 global interrupt */
-/* TIM1 Update Interrupt and TIM10 global interrupt */
+#define STM32F_IRQ_TIM15 24 /* TIM15 global interrupt */
+
+/* TIM1 Update Interrupt and TIM16 global interrupt */
 #define STM32F_IRQ_TIM1_UP 25 /* TIM1 Update Interrupt */
-#define STM32F_IRQ_TIM10 25 /* TIM10 global interrupt */
-/* TIM1 Trigger and Commutation Interrupt and TIM11 global interrupt */
+#define STM32F_IRQ_TIM16 25 /* TIM16 global interrupt */
+
+/* TIM1 Trigger and Commutation Interrupt and TIM17 global interrupt */
 #define STM32F_IRQ_TIM1_TRG_COM 26 /* TIM1 Trigger and Commutation Interrupt */
-#define STM32F_IRQ_TIM11 26 /* TIM11 global interrupt */
+#define STM32F_IRQ_TIM17 26 /* TIM17 global interrupt */
+
 #define STM32F_IRQ_TIM1_CC 27 /* TIM1 Capture Compare Interrupt */
 #define STM32F_IRQ_TIM2 28 /* TIM2 global Interrupt */
 #define STM32F_IRQ_TIM3 29 /* TIM3 global Interrupt */
@@ -160,20 +158,15 @@
 #define STM32F_IRQ_USART3 39 /* USART3 global Interrupt */
 #define STM32F_IRQ_EXTI15_10 40 /* External Line[15:10] Interrupts */
 #define STM32F_IRQ_RTC_ALARM 41 /* RTC Alarm (A and B) through EXTI Line Interrupt */
-#define STM32F_IRQ_OTG_FS_WKUP 42 /* USB OTG FS Wakeup through EXTI line interrupt */
-/* TIM8 Break Interrupt and TIM12 global interrupt */
-#define STM32F_IRQ_TIM8_BRK 43 /* TIM8 Break Interrupt */
+
+#define STM32F_IRQ_CEC 42 /* CEC Global interrupt */
+
 #define STM32F_IRQ_TIM12 43 /* TIM12 global interrupt */
-/* TIM8 Update Interrupt and TIM13 global interrupt */
-#define STM32F_IRQ_TIM8_UP 44 /* TIM8 Update Interrupt */
 #define STM32F_IRQ_TIM13 44 /* TIM13 global interrupt */
-/* TIM8 Trigger and Commutation Interrupt and TIM14 global interrupt */
-#define STM32F_IRQ_TIM8_TRG_COM 45 /* TIM8 Trigger and Commutation Interrupt */
 #define STM32F_IRQ_TIM14 45 /* TIM14 global interrupt */
-#define STM32F_IRQ_TIM8_CC 46 /* TIM8 Capture Compare Interrupt */
 
 #define STM32F_IRQ_FSMC 48 /* FSMC global Interrupt */
-#define STM32F_IRQ_SDIO 49 /* SDIO global Interrupt */
+
 #define STM32F_IRQ_TIM5 50 /* TIM5 global Interrupt */
 #define STM32F_IRQ_SPI3 51 /* SPI3 global Interrupt */
 #define STM32F_IRQ_UART4 52 /* UART4 global Interrupt */
@@ -189,15 +182,11 @@
 #define STM32F_IRQ_DMA2_STREAM2 58 /* DMA2 Stream 2 global Interrupt */
 #define STM32F_IRQ_DMA2_STREAM3 59 /* DMA2 Stream 3 global Interrupt */
 
-#define STM32F_USB_PKTBUF_ADDR 0x40006000
-#define STM32F_USB_PKTBUF_SIZE 512
-
 #ifndef __ASSEMBLER__
 
 #define STM32F_PWR ((struct stm32f_pwr *)STM32F_BASE_PWR)
 #define STM32F_RCC ((struct stm32f_rcc *)STM32F_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
-#define STM32F_USB ((struct stm32f_usb *)STM32F_BASE_USB)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
@@ -222,19 +211,22 @@
 #define STM32F_DMA2 ((struct stm32f_dma *)STM32F_BASE_DMA2)
 
 #define STM32F_TIM1 ((struct stm32f_tim *)STM32F_BASE_TIM1)
+
 #define STM32F_TIM2 ((struct stm32f_tim *)STM32F_BASE_TIM2)
 #define STM32F_TIM3 ((struct stm32f_tim *)STM32F_BASE_TIM3)
 #define STM32F_TIM4 ((struct stm32f_tim *)STM32F_BASE_TIM4)
 #define STM32F_TIM5 ((struct stm32f_tim *)STM32F_BASE_TIM5)
+
 #define STM32F_TIM6 ((struct stm32f_tim *)STM32F_BASE_TIM6)
 #define STM32F_TIM7 ((struct stm32f_tim *)STM32F_BASE_TIM7)
-#define STM32F_TIM8 ((struct stm32f_tim *)STM32F_BASE_TIM8)
-#define STM32F_TIM9 ((struct stm32f_tim *)STM32F_BASE_TIM9)
-#define STM32F_TIM10 ((struct stm32f_tim *)STM32F_BASE_TIM10)
-#define STM32F_TIM11 ((struct stm32f_tim *)STM32F_BASE_TIM11)
+
 #define STM32F_TIM12 ((struct stm32f_tim *)STM32F_BASE_TIM12)
 #define STM32F_TIM13 ((struct stm32f_tim *)STM32F_BASE_TIM13)
 #define STM32F_TIM14 ((struct stm32f_tim *)STM32F_BASE_TIM14)
+
+#define STM32F_TIM15 ((struct stm32f_tim *)STM32F_BASE_TIM15)
+#define STM32F_TIM16 ((struct stm32f_tim *)STM32F_BASE_TIM16)
+#define STM32F_TIM17 ((struct stm32f_tim *)STM32F_BASE_TIM17)
 
 #define STM32F_GPIOA ((struct stm32f_gpio *)STM32F_BASE_GPIOA)
 #define STM32F_GPIOB ((struct stm32f_gpio *)STM32F_BASE_GPIOB)
@@ -266,10 +258,9 @@ typedef enum {
 	STM32F_UART5_ID
 } stmf32_uart_id_t;
 
-#define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
 
 #endif /* __ASSEMBLER__ */
 
-#endif /* __STM32F103_H__ */
+#endif /* __STM32F100_H__ */
 

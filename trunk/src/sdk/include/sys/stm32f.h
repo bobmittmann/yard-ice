@@ -34,6 +34,10 @@
 #include <arch/stm32f103.h>
 #endif
 
+#ifdef STM32F100
+#include <arch/stm32f100.h>
+#endif
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
