@@ -101,7 +101,7 @@
 #define GPIO_AF14 14
 #define GPIO_AF15 15
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 
 /* ------------------------------------------------------------------------- */
 /* AF remap and debug I/O configuration register () */
@@ -295,7 +295,7 @@
    (TIM9_CH1 on PA2 and TIM9_CH2 on PA3) 1: Remap (TIM9_CH1 on PE5 and TIM9_CH2 
    on PE6) Bits 4:0 Reserved. */
 
-#endif				/* STM32F10X */
+#endif				/* STM32F1X */
 
 #ifndef __ASSEMBLER__
 
@@ -319,7 +319,7 @@ struct stm32f_gpio {
 
 #endif
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 struct stm32f_gpio {
 	volatile uint32_t crl;
 	volatile uint32_t crh;

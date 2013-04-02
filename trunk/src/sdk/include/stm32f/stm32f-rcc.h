@@ -98,11 +98,11 @@
    1: HSE oscillator ON */
 
 /* Internal high-speed clock calibration */
-#define RCC_HSICAL (1 << 8)
+#define RCC_HSICAL (0xff << 8)
 /* These bits are initialized automatically at startup. */
 
 /* Internal high-speed clock trimming */
-#define RCC_HSITRIM (1 << 3)
+#define RCC_HSITRIM (0x1f << 3)
 /* These bits provide an additional user-programmable trimming value that 
    is added to the HSICAL[7:0] bits. It can be programmed to adjust to 
    variations in voltage and temperature that influence the frequency of 
@@ -224,7 +224,7 @@
 /* ------------------------------------------------------------------------- */
 /* RCC clock configuration register */
 
-#if defined(STM32F10X)
+#if defined(STM32F1X)
 
 #define STM32F_RCC_CFGR 0x04
 
@@ -270,7 +270,7 @@
 #define RCC_PPRE1_16 (0x7 << 8)
 #define RCC_PPRE1_GET(CFGR) (((CFGR) >> 8) 0x7)
 
-#endif /*STM32F10X */
+#endif /*STM32F1X */
 
 
 #ifdef STM32F2X
@@ -1491,7 +1491,7 @@
 
 
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 
 /* ------------------------------------------------------------------------- */
 /* AHB peripheral clock enable register */
@@ -1571,19 +1571,34 @@ Set and cleared by software.
 
 /* Bit 20 - TIM10 timer clock enable */
 #define RCC_TIM10EN (1 << 20)
-/* 
-Set and cleared by software.
+/* Set and cleared by software.
 0: TIM10 timer clock disabled
 1: TIM10 timer clock enabled */
 
 /* Bit 19 - TIM9 timer clock enable */
 #define RCC_TIM9EN (1 << 19)
-/* 
-Set and cleared by software.
+/*  Set and cleared by software.
 0: TIM9 timer clock disabled
 1: TIM9 timer clock enabled */
 
-/* [18..16] Reserved, always read as 0. */
+
+/* Bit 18 - TIM17 timer clock enable */
+#define RCC_TIM17EN (1 << 18)
+/* Set and cleared by software.
+0: TIM17 timer clock disabled
+1: TIM17 timer clock enabled */
+
+/* Bit 17 - TIM16 timer clock enable */
+#define RCC_TIM16EN (1 << 17)
+/* Set and cleared by software.
+0: TIM16 timer clock disabled
+1: TIM16 timer clock enabled */
+
+/* Bit 16 - TIM15 timer clock enable */
+#define RCC_TIM15EN (1 << 16)
+/* Set and cleared by software.
+0: TIM15 timer clock disabled
+1: TIM15 timer clock enabled */
 
 
 /* Bit 15 - ADC3 interface clock enable */
@@ -1696,7 +1711,13 @@ Set and cleared by software.
 /* APB1 peripheral clock enable register */
 #define STM32F_RCC_APB1ENR 0x1c
 
-/* [31..30] Reserved, must be kept at reset value. */
+
+/* Bit 30 - CEC  clock enable */
+#define RCC_CECEN (1 << 30)
+/*
+Set and cleared by software.
+0: CEC  clock disabled
+1: CEC  clock enable */
 
 /* Bit 29 - DAC interface clock enable */
 #define RCC_DACEN (1 << 29)
@@ -1870,7 +1891,7 @@ Set and cleared by software.
 0: TIM2 clock disabled
 1: TIM2 clock enabled */
 
-#endif /* STM32F10X */
+#endif /* STM32F1X */
 
 #ifndef __ASSEMBLER__
 
@@ -1911,7 +1932,7 @@ struct stm32f_rcc {
 };
 #endif /* STM32F2X */
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 struct stm32f_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t cfgr; 
@@ -1928,7 +1949,7 @@ struct stm32f_rcc {
 	volatile uint32_t ahbstr;
 	volatile uint32_t cfgr2; 
 };
-#endif /* STM32F10X */
+#endif /* STM32F1X */
 
 #endif /* __ASSEMBLER__ */
 

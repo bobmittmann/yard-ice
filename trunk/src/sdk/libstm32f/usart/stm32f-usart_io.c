@@ -138,14 +138,18 @@ static void io_rxd_cfg(struct stm32f_gpio * gpio, int port, int af)
 {
 	stm32f_gpio_clock_en(gpio);
 	stm32f_gpio_mode(gpio, port, ALT_FUNC, PULL_UP);
+#ifdef STM32F2X
 	stm32f_gpio_af(gpio, port, af);
+#endif
 }
 
 static void io_txd_cfg(struct stm32f_gpio * gpio, int port, int af)
 {
 	stm32f_gpio_clock_en(gpio);
 	stm32f_gpio_mode(gpio, port, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+#ifdef STM32F2X
 	stm32f_gpio_af(gpio, port, af);
+#endif
 }
 
 static const struct {
@@ -203,7 +207,9 @@ const struct file stm32f_uart_file[] = {
 	{ .data = STM32F_USART3, .op = &stm32f_usart_ops },
 	{ .data = STM32F_UART4, .op = &stm32f_usart_ops },
 	{ .data = STM32F_UART5, .op = &stm32f_usart_ops },
+#ifdef STM32F_USART6
 	{ .data = STM32F_USART6, .op = &stm32f_usart_ops }
+#endif
 };
 
 struct file * stm32f_usart_open(struct stm32f_usart * us,

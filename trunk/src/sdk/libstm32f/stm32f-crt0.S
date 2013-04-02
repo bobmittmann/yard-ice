@@ -98,7 +98,7 @@ __rom_vectors:
 	.word	stm32f_tim1_brk_isr           /* 24 TIM1 Break */
 	.word	stm32f_tim1_up_isr            /* 25 TIM1 Update */
 	.word	stm32f_tim1_trg_com_isr       /* 26 TIM1 Trigger and Commutation */
-#if defined(STM32F100)
+#elif defined(STM32F100)
 	.word	stm32f_tim1_brk_tim15_isr     /* 24 TIM1 Break and TIM15 */
 	.word	stm32f_tim1_up_tim16_isr      /* 25 TIM1 Update and TIM16 */
 	.word	stm32f_tim1_trg_com_tim17_isr /* 26 TIM1 Trigger and Commutation 
@@ -435,6 +435,24 @@ _void:
 	.weak       stm32f_tim1_trg_com_tim11_isr
 	.thumb_set  stm32f_tim1_trg_com_tim11_isr,_isr
 
+	.weak       stm32f_tim1_brk_isr
+	.thumb_set  stm32f_tim1_brk_isr,_isr
+
+	.weak       stm32f_tim1_up_isr
+	.thumb_set  stm32f_tim1_up_isr,_isr
+
+	.weak       stm32f_tim1_trg_com_isr
+	.thumb_set  stm32f_tim1_trg_com_isr,_isr
+
+	.weak       stm32f_tim1_brk_tim15_isr
+	.thumb_set  stm32f_tim1_brk_tim15_isr,_isr
+
+	.weak       stm32f_tim1_up_tim16_isr
+	.thumb_set  stm32f_tim1_up_tim16_isr,_isr
+
+	.weak       stm32f_tim1_trg_com_tim17_isr
+	.thumb_set  stm32f_tim1_trg_com_tim17_isr,_isr
+
 	.weak       stm32f_tim1_cc_isr
 	.thumb_set  stm32f_tim1_cc_isr,_isr
 
@@ -482,6 +500,18 @@ _void:
 
 	.weak       stm32f_otg_fs_wkup_isr
 	.thumb_set  stm32f_otg_fs_wkup_isr,_isr
+
+	.weak       stm32f_cec_isr
+	.thumb_set  stm32f_cec_isr,_isr
+
+	.weak       stm32f_tim12_isr
+	.thumb_set  stm32f_tim12_isr,_isr
+
+	.weak       stm32f_tim13_isr
+	.thumb_set  stm32f_tim13_isr,_isr
+
+	.weak       stm32f_tim14_isr
+	.thumb_set  stm32f_tim14_isr,_isr
 
 	.weak       stm32f_tim8_brk_tim12_isr
 	.thumb_set  stm32f_tim8_brk_tim12_isr,_isr
@@ -534,10 +564,10 @@ _void:
 	.weak       stm32f_dma2_stream3_isr
 	.thumb_set  stm32f_dma2_stream3_isr,_isr
 
-#ifdef STM32F2X
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
+#ifdef STM32F2X
 	.weak       stm32f_eth_isr
 	.thumb_set  stm32f_eth_isr,_isr
 

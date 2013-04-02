@@ -25,13 +25,13 @@ PROG = dig-pot
 CFILES = dig-pot.c 
 
 
-LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
-		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv 
+LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
+		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
+		  ../../sdk/libdrv 
 
 LIBS = stm32f cm3 util thinkos c ice-comm drv 
 
-INCPATH = ../sdk/include 
+INCPATH = ../../sdk/include 
 
 JTAGTOOL_ADDR = 192.168.0.80
 
@@ -40,5 +40,5 @@ CFLAGS = -g -O1
 
 MACH = stm32f100x4
 HCLK_HZ = 22579200
-include ../mk/stm32f100.mk
+include ../../mk/stm32f100.mk
 

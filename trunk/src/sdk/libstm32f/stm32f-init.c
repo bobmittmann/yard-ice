@@ -58,7 +58,7 @@ void debug_init(void)
 
 /* Hardware initialization */
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 2;
@@ -105,12 +105,22 @@ void _init(void)
 	cr &= ~RCC_PLLON;
 	rcc->cr = cr;
 
-	/* F_HSE = 24 MHz
+#ifdef STM32F10X
+	/* F_HSE = 12 MHz
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz
 	   USBCLK = 48 MHz */
-	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | RCC_PPRE2_2 | \
+	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | RCC_PPRE2_1 | \
+		  RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
+#endif
+
+#ifdef STM32F100
+	/* F_HSE = 12 MHz
+	   PLLCLK = 24 MHz
+	   SYSCLK = 24 MHz */
+	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_PPRE2_2 | \
 		  RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
+#endif
 
 	rcc->cfgr = cfg;
 

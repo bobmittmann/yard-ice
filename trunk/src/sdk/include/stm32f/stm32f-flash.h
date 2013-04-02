@@ -67,13 +67,13 @@ This bit can be written only when the I cache is disabled.*/
 
 #endif /* STM32F2X */
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 
 #define FLASH_PRFTBS (1 << 5)
 #define FLASH_PRFTBE (1 << 4)
 #define FLASH_HLFCYA (1 << 3)
 
-#endif /* STM32F10X */
+#endif /* STM32F1X */
 
 
 #define FLASH_LATENCY(WS) (((WS) & 0x7) << 0)
