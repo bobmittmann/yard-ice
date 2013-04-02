@@ -159,10 +159,9 @@ void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
 
 #include <sys/file.h>
 
-const struct fileop stm32f_usart_ops;
+extern const struct fileop stm32f_usart_fops;
 
-const struct file stm32f_usart5_file;
-
+extern const struct file stm32f_usart5_file;
 
 #ifdef __cplusplus
 }

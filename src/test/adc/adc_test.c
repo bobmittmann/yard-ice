@@ -1,5 +1,5 @@
 /* 
- * File:	 dig-pot.c
+ * File:	 adc_test.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -168,43 +168,45 @@ void io_init(void)
 
 }
 
-/***********************************************************
-  DMA Configuration
- ***********************************************************/
-static void adc_dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
+/* ----------------------------------------------------------------------
+ * ADC
+ * ----------------------------------------------------------------------
+ */
+
+#define ADC_DMA_CHAN 0
+
+static void adc_dma_init(void * dst, void * src, 
+						 unsigned int ndt)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_dma * dma = STM32F_DMA2;
+	struct stm32f_dma * dma = STM32F_DMA1;
 
 	/* DMA clock enable */
-	rcc->ahb1enr |= RCC_DMA2EN;
+	rcc->ahbenr |= RCC_DMA1EN;
 
 	/* Disable DMA channel */
-	dma->s[0].cr = 0;
-	while (dma->s[0].cr & DMA_EN); /* Wait for the channel to be ready .. */
+	dma->ch[ADC_DMA_CHAN].ccr = 0;
+	while (dma->ch[ADC_DMA_CHAN].ccr & DMA_EN); 
+	/* Wait for the channel to be ready .. */
 
 	/* peripheral address */
-	dma->s[0].par = src;
+	dma->ch[ADC_DMA_CHAN].cpar = src;
 	/* DMA address */
-	dma->s[0].m0ar = dst0;
-	dma->s[0].m1ar = dst1;
+	dma->ch[ADC_DMA_CHAN].cmar = dst;
 	/* Number of data items to transfer */
-	dma->s[0].ndtr = ndt;
-	/* Configuration for double buffer circular */
-	dma->s[0].cr = DMA_CHSEL_SET(0) | DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_CT_M0AR | DMA_DBM |  DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC | 
-		DMA_CIRC | DMA_DIR_PTM | DMA_TCIE;
+	dma->ch[ADC_DMA_CHAN].cndtr = ndt;
+	/* Configuration for double buffer circular, 
+	   half-transfer interrupt  */
+	dma->ch[ADC_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | 
+		DMA_MINC | DMA_CIRC | DMA_DIR_PTM | DMA_HTIE | DMA_TCIE;
 	/* enable DMA */
-	dma->s[0].cr |= DMA_EN;	
+	dma->ch[ADC_DMA_CHAN].ccr |= DMA_EN;	
 }
 
-/***********************************************************
-  Timer Configuration
- ***********************************************************/
-static void adc_tim2_init(uint32_t freq)
+static void adc_timer_init(uint32_t freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_tim * tim2 = STM32F_TIM2;
+	struct stm32f_tim * tim = STM32F_TIM3;
 	uint32_t div;
 	uint32_t pre;
 	uint32_t n;
@@ -216,44 +218,50 @@ static void adc_tim2_init(uint32_t freq)
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
 
+
+	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
+		   __func__, freq, pre, n);
+
 	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
+	rcc->apb1enr |= RCC_TIM3EN;
 	
 	/* Timer configuration */
-	tim2->psc = pre - 1;
-	tim2->arr = n - 1;
-	tim2->cnt = 0;
-	tim2->egr = 0;
-	tim2->dier = TIM_UIE; /* Update interrupt enable */
-	tim2->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim2->ccr1 = tim2->arr - 2;
-	tim2->cr2 = TIM_MMS_OC1REF;
-	tim2->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
+	tim->ccr1 = tim->arr - 2;
+	tim->cr2 = TIM_MMS_OC1REF;
+	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+
+	/* Enable DMA interrupt */
+//	cm3_irq_enable(STM32F_IRQ_TIM3);
 }
 
-/***********************************************************
-  I/O pin configuration
- ***********************************************************/
+#define ADC_IN0 STM32F_GPIOA, 0
+#define ADC_IN1 STM32F_GPIOA, 1
+#define ADC_IN2 STM32F_GPIOA, 2
+#define ADC_IN3 STM32F_GPIOA, 3
+#define ADC_IN6 STM32F_GPIOA, 6
+
 static void adc_gpio_init(void)
 {
 	/* ADC Input pins */
-	stm32f_gpio_clock_en(ADC6_GPIO);
-	stm32f_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
+	stm32f_gpio_mode(ADC_IN0, ANALOG, 0);
+	stm32f_gpio_mode(ADC_IN1, ANALOG, 0);
+	stm32f_gpio_mode(ADC_IN2, ANALOG, 0);
+	stm32f_gpio_mode(ADC_IN3, ANALOG, 0);
+	stm32f_gpio_mode(ADC_IN6, ANALOG, 0);
 }
 
-#define ADC_CHANS 3
-#define ADC_RATE 10
+#define ADC_CHANS 5
+#define ADC_RATE 1000
 
-static uint16_t adc_buf[2][ADC_CHANS];
-static uint32_t adc_dma_cnt;
-
-static int16_t adc_vin;
-static int16_t adc_vbat;
-static int16_t adc_temp;
-
-#if (ENABLE_ADC_SYNC)
-static uint8_t ev_adc_dma;
-#endif
+uint16_t adc_buf[2][ADC_CHANS];
+volatile uint32_t adc_dma_cnt;
+uint32_t adc_avg[ADC_CHANS];
 
 /***********************************************************
   ADC Configuration
@@ -262,256 +270,99 @@ void stm32f_adc_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_adc * adc = STM32F_ADC1;
-	const uint8_t adc_chan_seq[] = {6, 18, 6};
-
-#ifdef	STM32F_ADCC
-	struct stm32f_adcc * adcc = STM32F_ADCC;
-	/* Common Control */
-	adcc->ccr = ADC_TSVREFE | ADC_VBATE | ADC_ADCPRE_4;
-	/* PCLK2 = 60MHz
-	   ADCCLK = PCLK2/4 = 15MHz */
-#endif
+	const uint8_t adc_chan_seq[] = {0, 1, 2, 3, 6};
 
 	/* ADC clock enable */
 	rcc->apb2enr |= RCC_ADC1EN;
 
-	/* configure for DMA use, select timer2 trigger */
-	adc->cr1 = ADC_RES_12BIT | ADC_SCAN;
-	adc->cr2 = ADC_EXTEN_RISING | ADC_EXTSEL_TIM2_TRGO | ADC_ADON |
-			   ADC_DDS | ADC_DMA;
-	/* Chan 6 is external
-	   Chan 18 is the battery (VBAT)
-	   Chan 16 is the internal temperature sensor */
-	stm32f_adc_seq_set(adc, adc_chan_seq, 3);
+	adc->cr1 = 0;
+	adc->cr2 = ADC_RSTCAL | ADC_ADON;
+
+	/* calibrate */
+	adc->cr2 = ADC_CAL | ADC_ADON;
+	while (adc->cr2 & ADC_CAL);
+
+	/* configure for DMA use, select timer3 trigger */
+	adc->cr1 = ADC_SCAN;
+	adc->cr2 = ADC_TSVREFE | ADC_EXTTRIG | 
+		ADC_EXTSEL_TIM3_TRGO | ADC_ADON | ADC_DMA;
+
+
+	/* set the scan sequence */
+	stm32f_adc_seq_set(adc, adc_chan_seq, ADC_CHANS);
+
 	/* set the sample time */
+	stm32f_adc_smp_set(adc, 0, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 1, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 2, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 3, ADC_SMP_56_CYC);
 	stm32f_adc_smp_set(adc, 6, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 18, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 16, ADC_SMP_56_CYC);
 
 	adc_gpio_init();
 
-	adc_dma2_init(adc_buf[0], adc_buf[1], (void *)&adc->dr, ADC_CHANS);
+	adc_dma_init(adc_buf[0], (void *)&adc->dr, 2 * ADC_CHANS);
 
-#if (ENABLE_ADC_SYNC)
-	/* synchronization event */
-	ev_adc_dma = thinkos_ev_alloc(); 
-#endif
-	
 	/* Set DMA to very low priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA2_STREAM0, 0xf0);
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0xf0);
 	/* Enable DMA interrupt */
-	cm3_irq_enable(STM32F_IRQ_DMA2_STREAM0);
+	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM0);
 
 	/* Configure timer and start periodic conversion */
-	adc_tim2_init(ADC_RATE);
+	adc_timer_init(ADC_RATE);
 }
 
-#define ADC_INPUT_6_SCALE 6600
-#define ADC_VBAT_SCALE 6600
-#define ADC_TEMP_SENS_SCALE 3300
-
-void stm32f_dma2_stream0_isr(void)
+void stm32f_dma1_stream0_isr(void)
 {
-	struct stm32f_dma * dma = STM32F_DMA2;
+	struct stm32f_dma * dma = STM32F_DMA1;
 	uint16_t * data;
+	uint32_t cnt;
+	int i;
 
-	if ((dma->lisr & DMA_TCIF0) == 0)
-		return;
+	if (dma->isr & DMA_HTIF1) {
+		/* clear the DMA half transfer flag */
+		dma->ifcr = DMA_CHTIF1;
+		data = adc_buf[0];
+//		printf("-");
+	} 
 
-	/* clear the DMA transfer complete flag */
-	dma->lifcr = DMA_CTCIF0;
+	if (dma->isr & DMA_TCIF1) {
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF1;
+		data = adc_buf[1];
+//		printf("=");
+	}
 
-	/* get a pointer to the last filled DMA transfer buffer */
-	data = adc_buf[adc_dma_cnt++ & 1];
+	cnt = adc_dma_cnt + 1;
+	adc_dma_cnt = cnt;
 
-	/* scale and sotore the samples */
-	adc_vin = (data[0] * ADC_INPUT_6_SCALE) / 4096;
-	adc_vbat = (data[1] * ADC_INPUT_6_SCALE) / 4096;
-	adc_temp = (data[2] * ADC_TEMP_SENS_SCALE) / 4096;
+	/* avg = (avg * 15 + x) / 16 */
+	/* a16 = avg*16 = (avg * 15 + x) */
+	/* a16 = (a16 * 15 / 16) + x) */
 
-#if (ENABLE_ADC_SYNC)
-	__thinkos_ev_raise(ev_adc_dma);
-#endif
-}
+	#define ADC_AVG_N 16
 
-#define VT25  760
-#define AVG_SLOPE 2500
-
-int32_t supv_temperature_get(void)
-{
-	return (((adc_temp - VT25) * 1000) / AVG_SLOPE) + 25;
-}
-
-int32_t supv_vin_get(void)
-{
-	return adc_vin;
-}
-
-int32_t supv_vbat_get(void)
-{
-	return adc_vbat;
-}
-
-#if (ENABLE_ADC_SYNC)
-void supv_sync(void)
-{
-	__thinkos_ev_wait(ev_adc_dma);
-}
-#endif
-
-#endif
-
-/* ----------------------------------------------------------------------
- * ADC
- * ----------------------------------------------------------------------
- */
-#define DAC1_GPIO STM32F_GPIOA, 4
-#define DAC2_GPIO STM32F_GPIOA, 5
-
-#define DAC1_DMA_CHAN 3
-#define DAC2_DMA_CHAN 4
-
-void wave_set(int dac, uint8_t * wave, unsigned int len)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-	struct stm32f_dma_channel * ch;
-
-	if (dac)
-		ch = &dma->ch[DAC2_DMA_CHAN];
-	else
-		ch = &dma->ch[DAC1_DMA_CHAN];
-
-	/* disable DMA */
-	ch->ccr &= ~DMA_EN;
-	/* Wait for the channel to be ready .. */
-	while (ch->ccr & DMA_EN);
-	/* Memory address */
-	ch->cmar = wave;
-	/* Number of data items to transfer */
-	ch->cndtr = len;
-}
-
-void wave_play(int dac)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-	/* enable DMA */
-	if (dac)
-		dma->ch[DAC2_DMA_CHAN].ccr |= DMA_EN;
-	else
-		dma->ch[DAC1_DMA_CHAN].ccr |= DMA_EN;
-}
-
-void wave_pause(int dac)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-	/* disable DMA */
-	if (dac)
-		dma->ch[DAC2_DMA_CHAN].ccr &= ~DMA_EN;
-	else
-		dma->ch[DAC1_DMA_CHAN].ccr &= ~DMA_EN;
+	for (i = 0; i < ADC_CHANS; ++i) {
+		adc_avg[i] = (adc_avg[i] * (ADC_AVG_N - 1) / ADC_AVG_N) + data[i];
+//		adc_avg[i] = data[i];
+	}
 
 }
 
-void tone_play(int dac, unsigned int tone, unsigned int ms)
+void stm32f_tim3_isr(void)
 {
-	uint8_t * wave;
-	unsigned int len;
+	struct stm32f_tim * tim = STM32F_TIM3;
 
-	wave = (uint8_t *)tone_lut[tone].buf;
-	len = tone_lut[tone].len;
+	/* Clear interrupt flags */
+	tim->sr = 0;
 
-	wave_set(dac, wave, len);
-	wave_play(dac);
-	/* FIXME: this should be handled by an interrupt or other task. 
-	   This function should return immediately */
-	thinkos_sleep(ms);
-	wave_pause(dac);
-}
-
-#define DAC_TIMER_DIV 1
-
-void stm32f_dac_init(void)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_dac * dac = STM32F_DAC;
-	struct stm32f_tim * tim2 = STM32F_TIM2;
-	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t f_tmr = (stm32f_apb1_hz * 2) / DAC_TIMER_DIV;
-
-	/* I/O pins config */
-	stm32f_gpio_mode(DAC2_GPIO, ANALOG, 0);
-	stm32f_gpio_mode(DAC1_GPIO, ANALOG, 0);
-
-	/* DAC clock enable */
-	rcc->apb1enr |= RCC_DACEN;
-	/* DAC disable */
-	dac->cr = 0;
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	/* Timer disable */
-	tim2->cr1 = TIM_URS | TIM_CEN;
-
-	/* DMA clock enable */
-	rcc->ahbenr |= RCC_DMA1EN;
-
-	/* DMA Disable */
-	dma->ch[DAC1_DMA_CHAN].ccr = 0;
-	/* Wait for the channel to be ready .. */
-	while (dma->ch[DAC1_DMA_CHAN].ccr & DMA_EN);
-
-	/* DMA Disable */
-	dma->ch[DAC2_DMA_CHAN].ccr = 0;
-	/* Wait for the channel to be ready .. */
-	while (dma->ch[DAC2_DMA_CHAN].ccr & DMA_EN);
-
-	/* DAC configure */
-	dac->cr = DAC_EN2 | DAC_TSEL2_TIMER2 | DAC_TEN2 | DAC_DMAEN2 |
-			  DAC_EN1 | DAC_TSEL1_TIMER2 | DAC_TEN1 | DAC_DMAEN1;
-	/* DAC channel 2 initial value */
-	dac->dhr12r2 = 2048;
-	/* DAC channel 1 initial value */
-	dac->dhr12r1 = 2048;
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	tim2->psc = DAC_TIMER_DIV - 1; /* 2 * APB1_CLK(22.579200 MHz) / 1 = 4MHz */
-	tim2->arr = (f_tmr / SAMPLE_RATE) - 1; /* 22.579200 MHz / 2822 = 8001 Hz*/
-	tim2->cnt = 0;
-	tim2->egr = 0; /* Update generation */
-	tim2->dier = TIM_UIE; /* Update interrupt enable */
-	tim2->cr2 = TIM_MMS_OC1REF;
-	tim2->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim2->ccr1 = tim2->arr - 2;
-	/* enable timer */
-	tim2->cr1 = TIM_URS | TIM_CEN;
-
-	/*  DMA Configuration */
-	/* Peripheral address */
-	dma->ch[DAC1_DMA_CHAN].cpar = &dac->dhr8r1;
-	/* Memory address */
-	dma->ch[DAC1_DMA_CHAN].cmar = (void *)a3;
-	/* Number of data items to transfer */
-	dma->ch[DAC1_DMA_CHAN].cndtr = sizeof(a3);
-	/* Configuration single buffer circular */
-	dma->ch[DAC1_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
-
-	/*  DMA Configuration */
-	/* Peripheral address */
-	dma->ch[DAC2_DMA_CHAN].cpar = &dac->dhr8r2;
-	/* Memory address */
-	dma->ch[DAC2_DMA_CHAN].cmar = (void *)d3;
-	/* Number of data items to transfer */
-	dma->ch[DAC2_DMA_CHAN].cndtr = sizeof(d3);
-	/* Configuration single buffer circular */
-	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
+	printf("+");
 }
 
 int main(int argc, char ** argv)
 {
-	int i = 0;
+	int led;
+	int i;
+	int j;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -536,28 +387,28 @@ int main(int argc, char ** argv)
 
 	printf("\n\n");
 	printf("-----------------------------------------\n");
-	printf(" Tone generator test\n");
+	printf(" ADC test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	stm32f_dac_init();
-	wave_play(0);
-	wave_play(1);
+	stm32f_adc_init();
 
 	for (i = 0; ; i++) {
-		printf(" - %d\n", i);
-		DCC_LOG1(LOG_TRACE, "%d", i);
+		led = i % 5;
 
-		thinkos_sleep(1000);
-		relay_on(0);
-		led_on(0);
+		led_on(led);
+		thinkos_sleep(100);
+		led_off(led);
+		thinkos_sleep(900);
+	
 
-		thinkos_sleep(1000);
-		relay_off(0);
-		led_off(0);
+		printf(" - %3d %6d ", i, adc_dma_cnt);
 
-		thinkos_sleep(1000);
-		
+		for (j = 0; j < ADC_CHANS; ++j) {
+			printf(" %6d", adc_avg[j]);
+		}
+
+		printf("\n");
 	}
 
 	return 0;

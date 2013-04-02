@@ -30,8 +30,10 @@ def make_tab(nm, freq, rate):
 	print "static const uint8_t %s[] = /* %d Hz */" % (nm, freq)
 	print "{"
 
-	lvl = 32768;
-	offs = 0;
+#	lvl = 32768;
+#	offs = 0;
+	lvl = 127;
+	offs = 127;
 
 	while (i < n):
 		x = ((2.0 * over) * pi * i) / n
@@ -68,20 +70,23 @@ def main():
 	print ""
 
 	make_tab("a3", 440, rate)
-	make_tab("a4", 880, rate)
-	make_tab("a4", 4400, rate)
-	make_tab("a4s", 932, rate)
-	make_tab("b4", 988, rate)
-	make_tab("c4", 1046, rate)
-	make_tab("c4s", 1108, rate)
-	make_tab("d4", 1175, rate)
-	make_tab("d4s", 1244, rate)
-	make_tab("e4", 1318, rate)
-	make_tab("f4", 1397, rate)
-	make_tab("f4s", 1480, rate)
-	make_tab("g4", 1568, rate)
-	make_tab("g4s", 1661, rate)
-	make_tab("sin1khz", 1000, rate)
+#	make_tab("c3", 523.251, rate)
+	make_tab("d3", 587.330, rate)
+#	make_tab("g3", 783.991, rate)
+#	make_tab("a4", 880, rate)
+#	make_tab("a4", 4400, rate)
+#	make_tab("a4s", 932, rate)
+#	make_tab("b4", 988, rate)
+#	make_tab("c4", 1046, rate)
+#	make_tab("c4s", 1108, rate)
+#	make_tab("d4", 1175, rate)
+#	make_tab("d4s", 1244, rate)
+#	make_tab("e4", 1318, rate)
+#	make_tab("f4", 1397, rate)
+#	make_tab("f4s", 1480, rate)
+#	make_tab("g4", 1568, rate)
+#	make_tab("g4s", 1661, rate)
+#	make_tab("sin1khz", 1000, rate)
 
 	print ""
 

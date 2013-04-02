@@ -478,6 +478,11 @@ int stm32f_usart_read(struct stm32f_usart * usart, char * buf,
 int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
 					   unsigned int len);
 
+int stm32f_usart_canon_write(struct stm32f_usart * usart, const void * buf,
+							 unsigned int len);
+
+int stm32f_usart_power_off(struct stm32f_usart * us);
+
 int stm32f_usart_flush(struct stm32f_usart * usart);
 
 int stm32f_usart_init(struct stm32f_usart * us);

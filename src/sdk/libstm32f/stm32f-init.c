@@ -118,7 +118,7 @@ void _init(void)
 	/* F_HSE = 12 MHz
 	   PLLCLK = 24 MHz
 	   SYSCLK = 24 MHz */
-	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_PPRE2_2 | \
+	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_ADCPRE_2 | RCC_PPRE2_2 | \
 		  RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
 #endif
 
