@@ -36,6 +36,8 @@
 
 /* Bits 31:6 Reserved, must be kept cleared. */
 
+#if defined(STM32F2X)
+
 /* Bit 5 - Overrun */
 #define ADC_OVR (1 << 5)
 /* This bit is set by hardware when data are lost (either in single mode 
@@ -43,6 +45,8 @@
    enabled only when DMA = 1 or EOCS = 1.
    0: No overrun occurred
    1: Overrun has occurred */
+
+#endif
 
 /* Bit 4 - Regular channel start flag */
 #define ADC_STRT (1 << 4)
@@ -87,6 +91,8 @@
  * ADC control register 1 */
 #define STM32F_ADC_CR1 0x04
 
+#if defined(STM32F2X)
+
 /* Bit 26 - Overrun interrupt enable */
 #define ADC_OVRIE (1 << 26)
 /* This bit is set and cleared by software to enable/disable the Overrun 
@@ -109,6 +115,7 @@
    01: 10-bit (13 ADCCLK cycles)
    10: 8-bit (11 ADCCLK cycles)
    11: 6-bit (9 ADCCLK cycles) */
+#endif
 
 /* Bit 23 - Analog watchdog enable on regular channels */
 #define ADC_AWDEN (1 << 23)
@@ -222,6 +229,95 @@
 #define STM32F_ADC_CR2 0x08
 
 
+#if defined(STM32F1X)
+
+
+/* Bit 23 - Temperature sensor and VREFINT enable */
+#define ADC_TSVREFE (1 << 30)
+/* This bit is set and cleared by software to enable/disable the 
+   temperature sensor and VREFINT channel.
+   0: Temperature sensor and VREFINT channel disabled
+   1: Temperature sensor and VREFINT channel enabled */
+
+/* Bit 22 - Start conversion of regular channels */
+#define ADC_SWSTART (1 << 22)
+/* This bit is set by software to start conversion and cleared by hardware 
+   as soon as the conversion starts. It starts a conversion of a group 
+   of regular channels if SWSTART is selected as trigger event by 
+   the EXTSEL[2:0] bits.
+   0: Reset state
+   1: Starts conversion of regular channels */
+
+
+/* Bit 22 - Start conversion of injected channels */
+#define ADC_JSWSTART (1 << 21)
+/* This bit is set by software and cleared by hardware as soon as the 
+   conversion starts.
+   0: Reset state
+   1: Starts conversion of injected channels
+   Note: This bit can be set only when ADON = 1 otherwise no conversion 
+   is launched. */
+
+
+/* Bit 22 - External trigger conversion mode for regular channels */
+#define ADC_EXTTRIG (1 << 20)
+/* This bit is set and cleared by software to enable/disable the external 
+   trigger used to start conversion of a regular channel group.
+   0: Conversion on external event disabled
+   1: Conversion on external event enabled */
+
+/* Bits [19..17] - External event select for regular group */
+#define ADC_EXTSEL_MSK (((1 << (3)) - 1) << 17)
+#define ADC_EXTSEL_SET(VAL) (((VAL) << 17) & ADC_EXTSEL_MSK)
+#define ADC_EXTSEL_GET(REG) (((REG) & ADC_EXTSEL_MSK) >> 17)
+
+#define ADC_EXTSEL_TIM1_CC1  (0x0 << 17)
+#define ADC_EXTSEL_TIM1_CC2  (0x1 << 17)
+#define ADC_EXTSEL_TIM1_CC3  (0x2 << 17)
+#define ADC_EXTSEL_TIM2_CC2  (0x3 << 17)
+#define ADC_EXTSEL_TIM3_TRGO (0x4 << 17)
+#define ADC_EXTSEL_TIM4_CC4  (0x5 << 17)
+#define ADC_EXTSEL_EXTI      (0x6 << 17)
+#define ADC_EXTSEL_SWSTART   (0x7 << 17)
+
+/* These bits select the external event used to trigger the start of 
+   conversion of a regular group:
+   000: Timer 1 CC1 event
+   001: Timer 1 CC2 event
+   010: Timer 1 CC3 event
+   011: Timer 2 CC2 event
+   100: Timer 3 TRGO event
+   101: Timer 4 CC4 event
+   110: EXTI line11
+   111: SWSTART */
+
+
+
+/* Bit 22 - External trigger conversion mode for injected channels */
+#define ADC_JEXTTRIG (1 << 15)
+/* This bit is set and cleared by software to enable/disable the 
+   external trigger used to start conversion of an injected channel group.
+   0: Conversion on external event disabled
+   1: Conversion on external event enabled */
+
+
+/* Bits [14..12] - External event select for injected group */
+#define ADC_JEXTSEL_MSK (((1 << 3) - 1) << 12)
+#define ADC_JEXTSEL_SET(VAL) (((VAL) << 12) & ADC_JEXTSEL_MSK)
+#define ADC_JEXTSEL_GET(REG) (((REG) & ADC_JEXTSEL_MSK) >> 12)
+/* These bits select the external event used to trigger the start of 
+   conversion of an injected group.
+   000: Timer 1 TRGO event
+   001: Timer 1 CC4 event
+   010: Timer 2 TRGO event
+   011: Timer 2 CC1 event
+   100: Timer 3 CC4 event
+   101: Timer 4 TRGO event
+   110: EXTI line15 
+   111: JSWSTART */
+
+#elif defined(STM32F2X)
+
 /* Bit 30 - Start conversion of regular channels */
 #define ADC_SWSTART (1 << 30)
 /* This bit is set by software to start conversion and cleared by hardware 
@@ -244,7 +340,7 @@
    11: Trigger detection on both the rising and falling edges */
 
 /* Bits [27..24] - External event select for regular group */
-#define ADC_EXTSEL_MSK (((1 << (3 + 1)) - 1) << 24)
+#define ADC_EXTSEL_MSK (((1 << (4)) - 1) << 24)
 #define ADC_EXTSEL_SET(VAL) (((VAL) << 24) & ADC_EXTSEL_MSK)
 #define ADC_EXTSEL_GET(REG) (((REG) & ADC_EXTSEL_MSK) >> 24)
 #define ADC_EXTSEL_TIM1_CC1  (0x0 << 24)
@@ -302,8 +398,9 @@
    10: Trigger detection on the falling edge
    11: Trigger detection on both the rising and falling edges */
 
+
 /* Bits [19..16] - External event select for injected group */
-#define ADC_JEXTSEL_MSK (((1 << (3 + 1)) - 1) << 16)
+#define ADC_JEXTSEL_MSK (((1 << 4) - 1) << 16)
 #define ADC_JEXTSEL_SET(VAL) (((VAL) << 16) & ADC_JEXTSEL_MSK)
 #define ADC_JEXTSEL_GET(REG) (((REG) & ADC_JEXTSEL_MSK) >> 16)
 /* These bits select the external event used to trigger the start of 
@@ -325,11 +422,16 @@
    1110: Timer 8 CC4 event
    1111: EXTI line15 */
 
+#endif
+
 /* Bit 11 - Data alignment */
 #define ADC_ALIGN (1 << 11)
-/* This bit is set and cleared by software. Refer to Figure 32 and Figure 33.
+/* This bit is set and cleared by software. 
+   Refer to Figure 32 and Figure 33.
    0: Right alignment
    1: Left alignment */
+
+#if defined(STM32F2X)
 
 /* Bit 10 - End of conversion selection */
 #define ADC_EOCS (1 << 10)
@@ -346,6 +448,8 @@
    in the DMA controller)
    1: DMA requests are issued as long as data are converted and DMA=1 */
 
+#endif
+
 /* Bit 8 - Direct memory access mode (for single ADC mode) */
 #define ADC_DMA (1 << 8)
 /* This bit is set and cleared by software. Refer to the DMA controller 
@@ -354,6 +458,27 @@
    1: DMA mode enabled */
 
 /* Bits 7:2 Reserved, must be kept cleared. */
+
+#if defined(STM32F1X)
+
+/* Bit 3 - Reset calibration */
+#define ADC_RSTCAL (1 << 3)
+/* This bit is set by software and cleared by hardware. It is cleared after 
+   the calibration registers are initialized.
+   0: Calibration register initialized.
+   1: Initialize calibration register.
+   Note: If RSTCAL is set when conversion is ongoing, additional cycles 
+   are required to clear the calibration registers. */
+
+/* Bit 2 - A/D Calibration */
+#define ADC_CAL (1 << 2)
+/* This bit is set by software to start the calibration. It is reset 
+   by hardware after calibration is complete.
+   0: Calibration completed
+   1: Enable calibration */
+
+#endif
+
 
 /* Bit 1 - Continuous conversion */
 #define ADC_CONT (1 << 1)
@@ -394,6 +519,19 @@
    110: 144 cycles
    111: 480 cycles */
 
+#if defined(STM32F1X)
+
+#define ADC_SMP_1_CYC   0
+#define ADC_SMP_7_CYC   1
+#define ADC_SMP_13_CYC  2
+#define ADC_SMP_28_CYC  3
+#define ADC_SMP_41_CYC  4
+#define ADC_SMP_56_CYC  5
+#define ADC_SMP_71_CYC  6
+#define ADC_SMP_239_CYC 7
+
+#elif defined(STM32F2X)
+
 #define ADC_SMP_3_CYC   0
 #define ADC_SMP_15_CYC  1
 #define ADC_SMP_28_CYC  2
@@ -402,6 +540,8 @@
 #define ADC_SMP_112_CYC 5
 #define ADC_SMP_144_CYC 6
 #define ADC_SMP_480_CYC 7
+
+#endif
 
 /*-------------------------------------------------------------------------
  * ADC injected channel data offset register x */
@@ -450,7 +590,7 @@ in the ADC_JDRx registers. */
 
 
 /* Bits [23..20] - Regular channel sequence length */
-#define ADC_L_MSK (((1 << (3 + 1)) - 1) << 20)
+#define ADC_L_MSK (((1 << (4)) - 1) << 20)
 #define ADC_L_SET(VAL) ((((VAL) - 1) << 20) & ADC_L_MSK)
 #define ADC_L_GET(REG) ((((REG) & ADC_L_MSK) >> 20) + 1)
 /* These bits are written by software to define the total number of 
@@ -635,6 +775,8 @@ channel. */
    in Figure 32 and Figure 33. */
 
 
+#if defined(STM32F2X)
+
 /*-------------------------------------------------------------------------
  * ADC Common status register */
 #define STM32F_ADC_CSR 0x00
@@ -762,7 +904,6 @@ channel. */
    11: DMA mode 3 enabled (2 / 3 bytes by pairs - 2&1 then 1&3 then 3&2) */
 
 /* Bit 13 - DMA disable selection (for multi-ADC mode) */
-//#define ADC_DDS (1 << 13)
 #define ADCC_DDS (1 << 13)
 /* This bit is set and cleared by software.
    0: No new DMA request is issued after the last transfer (as configured 
@@ -842,6 +983,8 @@ channel. */
    ADC1, ADC3 and ADC2. 
    Refer to Triple ADC mode. */
 
+#endif /* STM32F2X */
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
@@ -873,11 +1016,13 @@ struct stm32f_adc {
 	volatile uint32_t dr;
 };
 
+#if defined(STM32F2X)
 struct stm32f_adcc {
 	volatile uint32_t csr;
 	volatile uint32_t ccr;
 	volatile uint32_t cdr;
 };
+#endif
 
 /* set the sample time for an specific ADC channel */
 static inline void stm32f_adc_smp_set(struct stm32f_adc * adc, 
@@ -902,7 +1047,7 @@ static inline void stm32f_adc_seq_set(struct stm32f_adc * adc,
 	int n;
 	int i;
 
-	sqr1 = len;
+	sqr1 = ADC_L_SET(len);
 	sqr2 = 0;
 	sqr3 = 0;
 

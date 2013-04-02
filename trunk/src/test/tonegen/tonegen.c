@@ -37,7 +37,6 @@
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
-#include <sys/usb-cdc.h>
 #include "wavetab.h"
 
 /* GPIO pin description */ 
@@ -177,8 +176,8 @@ void io_init(void)
 #define DAC1_GPIO STM32F_GPIOA, 4
 #define DAC2_GPIO STM32F_GPIOA, 5
 
-#define DAC1_DMA_CHAN 3
-#define DAC2_DMA_CHAN 4
+#define DAC1_DMA_CHAN 2
+#define DAC2_DMA_CHAN 3
 
 void wave_set(int dac, uint8_t * wave, unsigned int len)
 {

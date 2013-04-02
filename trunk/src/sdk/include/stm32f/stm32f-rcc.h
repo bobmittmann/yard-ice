@@ -270,10 +270,7 @@
 #define RCC_PPRE1_16 (0x7 << 8)
 #define RCC_PPRE1_GET(CFGR) (((CFGR) >> 8) 0x7)
 
-#endif /*STM32F1X */
-
-
-#ifdef STM32F2X
+#elif defined(STM32F2X)
 
 #define STM32F_RCC_CFGR 0x08
 
@@ -402,7 +399,7 @@
    110: AHB clock divided by 8
    111: AHB clock divided by 16 */
 
-#endif /* STM32F2X */
+#endif /* STM32F1X, STM32F2X */
 
 /* AHB prescaler */
 #define RCC_HPRE (0xf << 4)
