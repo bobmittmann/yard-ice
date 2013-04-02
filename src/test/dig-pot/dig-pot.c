@@ -302,7 +302,7 @@ void relays_init(void)
 		stm32f_gpio_mode(relay_io[i].gpio, relay_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
-		stm32f_gpio_set(relay_io[i].gpio, relay_io[i].pin);
+		stm32f_gpio_clr(relay_io[i].gpio, relay_io[i].pin);
 	}
 }
 
@@ -326,6 +326,20 @@ void io_init(void)
 	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
+}
+
+void self_test(void)
+{
+	int i;
+
+	for (i = 0; i < 5; ++i) {
+		relay_on(i);
+		led_on(i);
+		thinkos_sleep(500);
+		relay_off(i);
+		led_off(i);
+		thinkos_sleep(500);
+	}
 }
 
 int main(int argc, char ** argv)
@@ -358,6 +372,12 @@ int main(int argc, char ** argv)
 	stm32f_usart_baudrate_set(us, 115200);
 	stm32f_usart_mode_set(us, SERIAL_8N1);
 	stm32f_usart_enable(us);
+
+	for (i = 0; ; i++) {
+	self_test();
+	self_test();
+	self_test();
+	}
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
