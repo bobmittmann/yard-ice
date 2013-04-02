@@ -396,9 +396,9 @@ int main(int argc, char ** argv)
 	for (i = 0; ; i++) {
 		led = i % 5;
 
-		led_on(led);
+//		led_on(led);
 		thinkos_sleep(100);
-		led_off(led);
+//		led_off(led);
 		thinkos_sleep(900);
 	
 
@@ -406,6 +406,13 @@ int main(int argc, char ** argv)
 
 		for (j = 0; j < ADC_CHANS; ++j) {
 			printf(" %6d", adc_avg[j]);
+			if (adc_avg[j] > 2000) {
+				led_on(j);
+				relay_on(j);
+			} else {
+				led_off(j);
+				relay_off(j);
+			}
 		}
 
 		printf("\n");
