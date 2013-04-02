@@ -52,7 +52,7 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 	rcc->ahb1enr |= 1 << stm32f_gpio_id(gpio);
 #endif
 	
-#ifdef STM32F10X
+#ifdef STM32F1X
 	rcc->apb2enr |= 1 << (stm32f_gpio_id(gpio) + 2);
 #endif
 
@@ -109,7 +109,7 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 	gpio->pupdr = tmp;
 #endif
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 	uint32_t cnf = 0;
 	uint32_t mod = 0; 
 

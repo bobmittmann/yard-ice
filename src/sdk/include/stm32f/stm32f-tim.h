@@ -56,6 +56,10 @@
 #define TIM_CMS_MSK (((1 << (6 - 5 + 1)) - 1) << 5)
 #define TIM_CMS_SET(VAL) (((VAL) << 5) & TIM_CMS_MSK)
 #define TIM_CMS_GET(REG) (((REG) & TIM_CMS_MSK) >> 5)
+#define TIM_CMS_EDGE    (0x0 << 5)
+#define TIM_CMS_CENTER1 (0x1 << 5)
+#define TIM_CMS_CENTER2 (0x2 << 5)
+#define TIM_CMS_CENTER3 (0x3 << 5)
 /* 00: Edge-aligned mode. The counter counts up or down depending on 
    the direction bit (DIR).
    01: Center-aligned mode 1. The counter counts up and down alternatively. 
@@ -72,6 +76,8 @@
 
 /* Bit 4 - Direction */
 #define TIM_DIR (1 << 4)
+#define TIM_DIR_UP (0 << 4)
+#define TIM_DIR_DOWN (1 << 4)
 /* 0: Counter used as upcounter
    1: Counter used as downcounter
    Note: This bit is read only when the timer is configured in 
@@ -621,7 +627,11 @@
    the channel is configured in PWM1 or PWM2 mode. */
 
 /* Bits [1..0] - Capture/Compare 1 selection */
-#define TIM_CC1S ((1 - 0) << 0)
+#define TIM_CC1S ((0x3) << 0)
+#define TIM_CC1S_OUT (0x0 << 0)
+#define TIM_CC1S_TI1 (0x1 << 0)
+#define TIM_CC1S_TI2 (0x2 << 0)
+#define TIM_CC1S_TRC (0x3 << 0)
 /* This bit-field defines the direction of the channel (input/output) as 
    well as the used input.
    00: CC1 channel is configured as output.
@@ -690,7 +700,7 @@
    11: capture is done once every 8 events */
 
 /* Bits [1..0] - Capture/Compare 1 selection */
-#define TIM_CC1S ((1 - 0) << 0)
+#define TIM_CC1S ((0x3) << 0)
 /* This bit-field defines the direction of the channel (input/output) as 
    well as the used input.
    00: CC1 channel is configured as output
@@ -862,8 +872,8 @@
    This bit is used in conjunction with CC1P to define TI1FP1/TI2FP1 
    polarity. refer to CC1P description. */
 
-/* Bit 2 Reserved, always read as 0. */
-
+/* Bit 2 - Capture/Compare 1 complementary output enable . */
+#define TIM_CC1NE (2 << 1)
 
 /* Bit 1 - Capture/Compare 1 output Polarity. */
 #define TIM_CC1P (1 << 1)

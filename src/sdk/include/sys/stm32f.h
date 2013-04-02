@@ -148,12 +148,14 @@ int stm32f_spi_init(struct stm32f_spi * spi, const struct stm32f_spi_io * io);
 int stm32f_spi_putc(struct stm32f_spi * spi, int c);
 int stm32f_spi_getc(struct stm32f_spi * spi);
 
+#ifdef STM32F_ETH 
 /*---------------------------------------------------------------------
  * Ethernet
  *---------------------------------------------------------------------*/
 void stm32f_eth_init(struct stm32f_eth * eth);
 void stm32f_eth_mac_get(struct stm32f_eth * eth, int idx, uint8_t * mac);
 void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
+#endif
 
 #include <sys/file.h>
 

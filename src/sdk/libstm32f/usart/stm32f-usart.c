@@ -57,7 +57,7 @@ static const uint8_t us_clk_lut[] = {
 };
 #endif
 
-#ifdef STM32F10X
+#ifdef STM32F1X
 static const uint8_t us_clk_lut[] = {  
 	CLK(APB2, 14), 
 	CLK(APB1, 17), 

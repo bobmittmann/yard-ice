@@ -27,6 +27,10 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include <sys/stm32f.h>
+
+#ifdef STM32F_ETH
+
 #include <sys/stm32f_ethif.h>
 #include <sys/etharp.h>
 
@@ -39,8 +43,6 @@
 
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
-
-#ifdef STM32F_ETH
 
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
