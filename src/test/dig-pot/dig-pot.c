@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
@@ -37,6 +38,13 @@
 
 #include <sys/dcclog.h>
 #include <sys/usb-cdc.h>
+
+/* GPIO pin description */ 
+struct stm32f_io {
+	struct stm32f_gpio * gpio;
+	uint8_t pin;
+};
+
 
 /* 
  * MCP402X digital potentiometer protocol 
@@ -76,12 +84,6 @@
  * T_HI(MI) = 500nS
  * 
  */
-
-
-struct stm32f_io {
-	struct stm32f_gpio * gpio;
-	uint8_t pin;
-};
 
 
 #define DGPOT_STEPS 64
@@ -335,16 +337,34 @@ void self_test(void)
 	for (i = 0; i < 5; ++i) {
 		relay_on(i);
 		led_on(i);
-		thinkos_sleep(500);
+		thinkos_sleep(100);
 		relay_off(i);
 		led_off(i);
-		thinkos_sleep(500);
+		thinkos_sleep(100);
 	}
+}
+
+struct file stm32f_uart1_file = {
+	.data = STM32F_USART1, 
+	.op = &stm32f_usart_fops 
+};
+
+void stdio_init(void)
+{
+	struct stm32f_usart * us = STM32F_USART1;
+
+	stm32f_usart_init(us);
+	stm32f_usart_baudrate_set(us, 115200);
+	stm32f_usart_mode_set(us, SERIAL_8N1);
+	stm32f_usart_enable(us);
+
+	stdin = &stm32f_uart1_file;
+	stdout = &stm32f_uart1_file;
+	stderr = &stm32f_uart1_file;
 }
 
 int main(int argc, char ** argv)
 {
-	struct stm32f_usart * us = STM32F_USART1;
 	int i = 0;
 
 	DCC_LOG_INIT();
@@ -365,23 +385,23 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
-	DCC_LOG(LOG_TRACE, "5. dgpot_init()");
+	DCC_LOG(LOG_TRACE, "5. stdio_init()");
+	stdio_init();
+
+	DCC_LOG(LOG_TRACE, "6. dgpot_init()");
 	dgpot_init();
 
-	stm32f_usart_init(us);
-	stm32f_usart_baudrate_set(us, 115200);
-	stm32f_usart_mode_set(us, SERIAL_8N1);
-	stm32f_usart_enable(us);
+
+	printf("Hello world!\n");
+	printf("Hello world!\n");
 
 	for (i = 0; ; i++) {
-	self_test();
-	self_test();
-	self_test();
+		printf("- %d\n", i);
+		self_test();
 	}
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
-		stm32f_usart_putc(us, 'U');
 		thinkos_sleep(1000);
 		relay_on(1);
 		led_on(1);
