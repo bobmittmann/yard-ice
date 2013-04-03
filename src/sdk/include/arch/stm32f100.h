@@ -44,6 +44,7 @@
 #include <stm32f/stm32f-adc.h>
 #include <stm32f/stm32f-rtc.h>
 #include <stm32f/stm32f-spi.h>
+#include <stm32f/stm32f-i2c.h>
 #include <stm32f/stm32f-fsmc.h>
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>
@@ -191,8 +192,6 @@
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
 #define STM32F_ADC1 ((struct stm32f_adc *)STM32F_BASE_ADC1)
-#define STM32F_ADC2 ((struct stm32f_adc *)STM32F_BASE_ADC2)
-#define STM32F_ADC3 ((struct stm32f_adc *)STM32F_BASE_ADC3)
 
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
@@ -206,6 +205,8 @@
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
 #define STM32F_SPI3 ((struct stm32f_spi *)STM32F_BASE_SPI3)
+
+#define STM32F_I2C1 ((struct stm32f_spi *)STM32F_BASE_I2C1)
 
 #define STM32F_DMA1 ((struct stm32f_dma *)STM32F_BASE_DMA1)
 #define STM32F_DMA2 ((struct stm32f_dma *)STM32F_BASE_DMA2)
