@@ -1,5 +1,5 @@
 /* 
- * File:	 dig-pot.c
+ * File:	 i2c-master.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -37,7 +37,6 @@
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
-#include "wavetab.h"
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -166,189 +165,30 @@ void io_init(void)
 
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
-
 }
 
 /* ----------------------------------------------------------------------
- * DAC
+ * I2C
  * ----------------------------------------------------------------------
  */
-#define DAC1_GPIO STM32F_GPIOA, 4
-#define DAC2_GPIO STM32F_GPIOA, 5
+#define I2C1_SCL STM32F_GPIOB, 8
+#define I2C1_SDA STM32F_GPIOB, 9
 
-#define DAC1_DMA_CHAN 2
-#define DAC2_DMA_CHAN 3
-
-void wave_set(int dac, uint8_t * wave, unsigned int len)
+void i2c_master_init(void)
 {
-	struct stm32f_dma * dma = STM32F_DMA1;
-	struct stm32f_dma_channel * ch;
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	struct stm32f_afio * afio = STM32F_AFIO;
 
-	if (dac)
-		ch = &dma->ch[DAC2_DMA_CHAN];
-	else
-		ch = &dma->ch[DAC1_DMA_CHAN];
-
-	/* disable DMA */
-	ch->ccr &= ~DMA_EN;
-	/* Wait for the channel to be ready .. */
-	while (ch->ccr & DMA_EN);
-	/* Memory address */
-	ch->cmar = wave;
-	/* Number of data items to transfer */
-	ch->cndtr = len;
-}
-
-void wave_play(int dac)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-	/* enable DMA */
-	if (dac)
-		dma->ch[DAC2_DMA_CHAN].ccr |= DMA_EN;
-	else
-		dma->ch[DAC1_DMA_CHAN].ccr |= DMA_EN;
-}
-
-void wave_pause(int dac)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-	/* disable DMA */
-	if (dac)
-		dma->ch[DAC2_DMA_CHAN].ccr &= ~DMA_EN;
-	else
-		dma->ch[DAC1_DMA_CHAN].ccr &= ~DMA_EN;
-
-}
-
-void tone_play(int dac, unsigned int tone, unsigned int ms)
-{
-	uint8_t * wave;
-	unsigned int len;
-
-	wave = (uint8_t *)tone_lut[tone].buf;
-	len = tone_lut[tone].len;
-
-	wave_set(dac, wave, len);
-	wave_play(dac);
-	/* FIXME: this should be handled by an interrupt or other task. 
-	   This function should return immediately */
-	thinkos_sleep(ms);
-	wave_pause(dac);
-}
-
-#if 0
-void stm32f_tim2_isr(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM2;
-	/* Clear interrupt flags */
-	tim->sr = 0;
-}
-#endif
-
-static void dac_timer_init(uint32_t freq)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_tim * tim = STM32F_TIM2;
-	uint32_t div;
-	uint32_t pre;
-	uint32_t n;
-
-	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
-	/* get the minimum pre scaler */
-	pre = (div / 65536) + 1;
-	/* get the reload register value */
-	n = (div + pre / 2) / pre;
-
-
-	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
-		   __func__, freq, pre, n);
-
-	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d\n", freq, pre, n);
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	
-	/* Timer configuration */
-	tim->psc = pre - 1;
-	tim->arr = n - 1;
-	tim->cnt = 0;
-	tim->egr = 0;
-	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
-	tim->cr2 = TIM_MMS_OC1REF;
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
-
-	/* Enable DMA interrupt */
-//	cm3_irq_enable(STM32F_IRQ_TIM2);
-}
-
-void stm32f_dac_init(void)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_dac * dac = STM32F_DAC;
-	struct stm32f_dma * dma = STM32F_DMA1;
-
-	/* I/O pins config */
-	stm32f_gpio_mode(DAC2_GPIO, ANALOG, 0);
-	stm32f_gpio_mode(DAC1_GPIO, ANALOG, 0);
-
-	/* DAC clock enable */
-	rcc->apb1enr |= RCC_DACEN;
-	/* DAC disable */
-	dac->cr = 0;
-
-	/* DMA clock enable */
-	rcc->ahbenr |= RCC_DMA1EN;
-
-	/* DMA Disable */
-	dma->ch[DAC1_DMA_CHAN].ccr = 0;
-	/* Wait for the channel to be ready .. */
-	while (dma->ch[DAC1_DMA_CHAN].ccr & DMA_EN);
-
-	/* DMA Disable */
-	dma->ch[DAC2_DMA_CHAN].ccr = 0;
-	/* Wait for the channel to be ready .. */
-	while (dma->ch[DAC2_DMA_CHAN].ccr & DMA_EN);
-
-	/* DAC configure */
-	dac->cr = DAC_EN2 | DAC_TSEL2_TIMER2 | DAC_TEN2 | DAC_DMAEN2 |
-			  DAC_EN1 | DAC_TSEL1_TIMER2 | DAC_TEN1 | DAC_DMAEN1;
-
-	/* DAC channel 2 initial value */
-	dac->dhr12r2 = 2048;
-	/* DAC channel 1 initial value */
-	dac->dhr12r1 = 2048;
-
-	/*  DMA Configuration */
-	/* Peripheral address */
-	dma->ch[DAC1_DMA_CHAN].cpar = &dac->dhr8r1;
-	/* Memory address */
-	dma->ch[DAC1_DMA_CHAN].cmar = (void *)a3;
-	/* Number of data items to transfer */
-	dma->ch[DAC1_DMA_CHAN].cndtr = sizeof(a3);
-	/* Configuration single buffer circular */
-	dma->ch[DAC1_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
-
-	/*  DMA Configuration */
-	/* Peripheral address */
-	dma->ch[DAC2_DMA_CHAN].cpar = &dac->dhr8r2;
-	/* Memory address */
-	dma->ch[DAC2_DMA_CHAN].cmar = (void *)d3;
-	/* Number of data items to transfer */
-	dma->ch[DAC2_DMA_CHAN].cndtr = sizeof(d3);
-	/* Configuration single buffer circular */
-	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
-
-	dac_timer_init(SAMPLE_RATE);
+	stm32f_gpio_mode(I2C1_SCL, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_mode(I2C1_SDA, ALT_FUNC, PULL_UP);
+	/* Use alternate pins for I2C1 */
+	afio->mapr |= AFIO_I2C1_REMAP;
 }
 
 int main(int argc, char ** argv)
 {
-	int i = 0;
+	int led;
+	int i;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -373,25 +213,23 @@ int main(int argc, char ** argv)
 
 	printf("\n\n");
 	printf("-----------------------------------------\n");
-	printf(" Tone generator test\n");
+	printf(" ADC test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	stm32f_dac_init();
-	wave_play(0);
-	wave_play(1);
+	i2c_master_init();
 
 	for (i = 0; ; i++) {
-		DCC_LOG1(LOG_TRACE, "%d", i);
+		led = i % 5;
 
-		led_on(0);
-		printf(" - %4d The quick brown fox jumps over the lazy dog!\n", i);
+		led_on(led);
+		printf(" - %3d ", i);
 		thinkos_sleep(100);
-		led_off(0);
-//		relay_on(0);
+		led_off(led);
 
 		thinkos_sleep(900);
-//		relay_off(0);
+	
+		printf("\n");
 	}
 
 	return 0;

@@ -207,14 +207,12 @@
 /* [13..10] Reserved, must be kept at reset value */
 
 /* Bits [9..8] - Interface address */
-#define I2C_ADD_MSK (((1 << (9 + 1)) - 1) << 8)
-#define I2C_ADD_SET(VAL) (((VAL) << 8) & ADD_MSK)
-#define I2C_ADD_GET(REG) (((REG) & ADD_MSK) >> 8)
+
 /* 7-bit addressing mode: don’t care 10-bit addressing mode: bits9:8 of
    address */
 
 /* Bits [7..1] - Interface address */
-#define I2C_ADD_MSK (((1 << (7 + 1)) - 1) << 1)
+#define I2C_ADD_MSK (((1 << (10)) - 1) << 1)
 #define I2C_ADD_SET(VAL) (((VAL) << 1) & ADD_MSK)
 #define I2C_ADD_GET(REG) (((REG) & ADD_MSK) >> 1)
 /* bits 7:1 of address */
@@ -420,7 +418,9 @@
 
 /* Bits 15:8 PEC[7:0] Packet error checking register This register contains the 
    internal PEC when ENPEC=1. */
-#define I2C_PEC (0xff << 8)
+#define I2C_PEC_MSK (((1 << 8) - 1) << 8)
+#define I2C_PEC_SET(VAL) (((VAL) << 8) & I2C_PEC_MSK)
+#define I2C_PEC_GET(REG) (((REG) & I2C_PEC_MSK) >> 8)
 
 /* Bit 7 - Dual flag (Slave mode) */
 #define I2C_DUALF (1 << 7)
