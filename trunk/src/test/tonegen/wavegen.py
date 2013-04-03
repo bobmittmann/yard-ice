@@ -59,8 +59,6 @@ def main():
 	offs = 2482;
 	typ = "uint16_t";
 
-#	rate = 11025
-
 	print "#ifndef __WAVETAB_H__"
 	print "#define __WAVETAB_H__"
 	print ""

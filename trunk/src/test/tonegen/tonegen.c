@@ -179,7 +179,7 @@ void io_init(void)
 #define DAC1_DMA_CHAN 2
 #define DAC2_DMA_CHAN 3
 
-void wave_set(int dac, uint8_t * wave, unsigned int len)
+void dac_dma_set(int dac, uint16_t * wave, unsigned int len)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
 	struct stm32f_dma_channel * ch;
@@ -199,7 +199,7 @@ void wave_set(int dac, uint8_t * wave, unsigned int len)
 	ch->cndtr = len;
 }
 
-void wave_play(int dac)
+void dac_play(int dac)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
 	/* enable DMA */
@@ -209,7 +209,7 @@ void wave_play(int dac)
 		dma->ch[DAC1_DMA_CHAN].ccr |= DMA_EN;
 }
 
-void wave_pause(int dac)
+void dac_pause(int dac)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
 	/* disable DMA */
@@ -220,20 +220,15 @@ void wave_pause(int dac)
 
 }
 
-void tone_play(int dac, unsigned int tone, unsigned int ms)
+void dac_wave_set(int dac, unsigned int wid)
 {
-	uint8_t * wave;
+	uint16_t * wave;
 	unsigned int len;
 
-	wave = (uint8_t *)tone_lut[tone].buf;
-	len = tone_lut[tone].len;
+	wave = (uint16_t *)wave_lut[wid].buf;
+	len = wave_lut[wid].len;
 
-	wave_set(dac, wave, len);
-	wave_play(dac);
-	/* FIXME: this should be handled by an interrupt or other task. 
-	   This function should return immediately */
-	thinkos_sleep(ms);
-	wave_pause(dac);
+	dac_dma_set(dac, wave, len);
 }
 
 #if 0
@@ -317,30 +312,30 @@ void stm32f_dac_init(void)
 			  DAC_EN1 | DAC_TSEL1_TIMER2 | DAC_TEN1 | DAC_DMAEN1;
 
 	/* DAC channel 2 initial value */
-	dac->dhr12r2 = 2048;
+	dac->dhr12r2 = 2482;
 	/* DAC channel 1 initial value */
-	dac->dhr12r1 = 2048;
+	dac->dhr12r1 = 2482;
 
 	/*  DMA Configuration */
 	/* Peripheral address */
-	dma->ch[DAC1_DMA_CHAN].cpar = &dac->dhr8r1;
+	dma->ch[DAC1_DMA_CHAN].cpar = &dac->dhr12r1;
 	/* Memory address */
-	dma->ch[DAC1_DMA_CHAN].cmar = (void *)a3;
+	dma->ch[DAC1_DMA_CHAN].cmar = NULL;
 	/* Number of data items to transfer */
-	dma->ch[DAC1_DMA_CHAN].cndtr = sizeof(a3);
+	dma->ch[DAC1_DMA_CHAN].cndtr = 0;
 	/* Configuration single buffer circular */
-	dma->ch[DAC1_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
+	dma->ch[DAC1_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC |
 		DMA_CIRC | DMA_DIR_MTP;
 
 	/*  DMA Configuration */
 	/* Peripheral address */
-	dma->ch[DAC2_DMA_CHAN].cpar = &dac->dhr8r2;
+	dma->ch[DAC2_DMA_CHAN].cpar = &dac->dhr12r2;
 	/* Memory address */
-	dma->ch[DAC2_DMA_CHAN].cmar = (void *)d3;
+	dma->ch[DAC2_DMA_CHAN].cmar = NULL;
 	/* Number of data items to transfer */
-	dma->ch[DAC2_DMA_CHAN].cndtr = sizeof(d3);
+	dma->ch[DAC2_DMA_CHAN].cndtr = 0;
 	/* Configuration single buffer circular */
-	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
+	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC |
 		DMA_CIRC | DMA_DIR_MTP;
 
 	dac_timer_init(SAMPLE_RATE);
@@ -378,19 +373,23 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	stm32f_dac_init();
-	wave_play(0);
-	wave_play(1);
+	dac_wave_set(0, WAVE_A3);
+	dac_wave_set(1, WAVE_A3);
+	dac_play(0);
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
 
 		led_on(0);
+		dac_play(1);
 		printf(" - %4d The quick brown fox jumps over the lazy dog!\n", i);
 		thinkos_sleep(100);
 		led_off(0);
 //		relay_on(0);
+		thinkos_sleep(400);
+		dac_pause(1);
 
-		thinkos_sleep(900);
+		thinkos_sleep(500);
 //		relay_off(0);
 	}
 

@@ -206,7 +206,7 @@
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
 #define STM32F_SPI3 ((struct stm32f_spi *)STM32F_BASE_SPI3)
 
-#define STM32F_I2C1 ((struct stm32f_spi *)STM32F_BASE_I2C1)
+#define STM32F_I2C1 ((struct stm32f_i2c *)STM32F_BASE_I2C1)
 
 #define STM32F_DMA1 ((struct stm32f_dma *)STM32F_BASE_DMA1)
 #define STM32F_DMA2 ((struct stm32f_dma *)STM32F_BASE_DMA2)
