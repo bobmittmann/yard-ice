@@ -110,16 +110,17 @@ void _init(void)
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz
 	   USBCLK = 48 MHz */
-	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | RCC_PPRE2_1 | \
-		  RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
+	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | 
+		RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
 #endif
 
 #ifdef STM32F100
 	/* F_HSE = 12 MHz
 	   PLLCLK = 24 MHz
 	   SYSCLK = 24 MHz */
-	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_ADCPRE_2 | RCC_PPRE2_2 | \
-		  RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
+	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_ADCPRE_2 | 
+		RCC_PPRE2_2 | RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
+
 #endif
 
 	rcc->cfgr = cfg;
@@ -158,7 +159,8 @@ void _init(void)
 	}
 
 	/* switch to pll oscillator */
-	rcc->cfgr = (cfg & ~RCC_SW) | RCC_SW_PLL;
+	/* select PLL as MCO output */
+	rcc->cfgr = RCC_MCO_PLL | (cfg & ~RCC_SW) | RCC_SW_PLL;
 }
 
 #endif

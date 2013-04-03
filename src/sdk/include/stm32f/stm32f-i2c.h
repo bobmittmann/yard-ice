@@ -75,8 +75,7 @@
 
 /* Bit 10 - Acknowledge enable */
 #define I2C_ACK (1 << 10)
-/* 
-   This bit is set and cleared by software and cleared by hardware when PE=0.
+/* This bit is set and cleared by software and cleared by hardware when PE=0.
    0: No acknowledge returned 1: Acknowledge returned after a byte is received
    (matched address or data) */
 
@@ -186,8 +185,8 @@
 
 /* Bits [5..0] - Peripheral clock frequency */
 #define I2C_FREQ_MSK (((1 << (5 + 1)) - 1) << 0)
-#define I2C_FREQ_SET(VAL) (((VAL) << 0) & FREQ_MSK)
-#define I2C_FREQ_GET(REG) (((REG) & FREQ_MSK) >> 0)
+#define I2C_FREQ_SET(VAL) (((VAL) << 0) & I2C_FREQ_MSK)
+#define I2C_FREQ_GET(REG) (((REG) & I2C_FREQ_MSK) >> 0)
 /* 
    The peripheral clock frequency must be configured using the input APB clock
    frequency (I2C peripheral connected to APB). The minimum allowed frequency
@@ -213,8 +212,8 @@
 
 /* Bits [7..1] - Interface address */
 #define I2C_ADD_MSK (((1 << (10)) - 1) << 1)
-#define I2C_ADD_SET(VAL) (((VAL) << 1) & ADD_MSK)
-#define I2C_ADD_GET(REG) (((REG) & ADD_MSK) >> 1)
+#define I2C_ADD_SET(VAL) (((VAL) << 1) & I2C_ADD_MSK)
+#define I2C_ADD_GET(REG) (((REG) & I2C_ADD_MSK) >> 1)
 /* bits 7:1 of address */
 
 /* Bit 0 - Interface address */
@@ -230,8 +229,8 @@
 
 /* Bits [7..1] - Interface address */
 #define I2C_ADD2_MSK (((1 << (7 + 1)) - 1) << 1)
-#define I2C_ADD2_SET(VAL) (((VAL) << 1) & ADD2_MSK)
-#define I2C_ADD2_GET(REG) (((REG) & ADD2_MSK) >> 1)
+#define I2C_ADD2_SET(VAL) (((VAL) << 1) & I2C_ADD2_MSK)
+#define I2C_ADD2_GET(REG) (((REG) & I2C_ADD2_MSK) >> 1)
 /* bits 7:1 of address in dual addressing mode */
 
 /* Bit 0 - Dual addressing mode enable */
@@ -498,8 +497,8 @@
 
 /* Bits [11..0] - Clock control register in Fast/Standard mode (Master mode) */
 #define I2C_CCR_MSK (((1 << (11 + 1)) - 1) << 0)
-#define I2C_CCR_SET(VAL) (((VAL) << 0) & CCR_MSK)
-#define I2C_CCR_GET(REG) (((REG) & CCR_MSK) >> 0)
+#define I2C_CCR_SET(VAL) (((VAL) << 0) & I2C_CCR_MSK)
+#define I2C_CCR_GET(REG) (((REG) & I2C_CCR_MSK) >> 0)
 /* Controls the SCL clock in master mode. Standard mode or SMBus: Thigh = CCR * 
    TPCLK1 Tlow = CCR * TPCLK1 Fast mode: If DUTY = 0: Thigh = CCR * TPCLK1 Tlow 
    = 2 * CCR * TPCLK1 If DUTY = 1: (to reach 400 kHz) Thigh = 9 * CCR * TPCLK1
@@ -518,10 +517,9 @@
 
 /* Bits [5..0] - Maximum rise time in Fast/Standard mode (Master mode) */
 #define I2C_TRISE_MSK (((1 << (5 + 1)) - 1) << 0)
-#define I2C_TRISE_SET(VAL) (((VAL) << 0) & TRISE_MSK)
-#define I2C_TRISE_GET(REG) (((REG) & TRISE_MSK) >> 0)
-/* 
-   These bits must be programmed with the maximum SCL rise time given in the
+#define I2C_TRISE_SET(VAL) (((VAL) << 0) & I2C_TRISE_MSK)
+#define I2C_TRISE_GET(REG) (((REG) & I2C_TRISE_MSK) >> 0)
+/* These bits must be programmed with the maximum SCL rise time given in the
    I2C bus specification, incremented by 1. For instance: in standard mode, the 
    maximum allowed SCL rise time is 1000 ns. If, in the I2C_CR2 register, the
    value of FREQ[5:0] bits is equal to 0x08 and TPCLK1 = 125 ns therefore the
@@ -530,6 +528,8 @@
    integer, TRISE[5:0] must be programmed with the integer part, in order to
    respect the tHIGH parameter. Note: TRISE[5:0] must be configured only when
    the I2C is disabled (PE = 0). */
+
+#if defined(STM32F2X)
 
 /*-------------------------------------------------------------------------
  * I2C FLTR register */
@@ -546,8 +546,8 @@
 
 /* Bits [3..0] - Digital noise filter */
 #define I2C_DNF_MSK (((1 << (3 + 1)) - 1) << 0)
-#define I2C_DNF_SET(VAL) (((VAL) << 0) & DNF_MSK)
-#define I2C_DNF_GET(REG) (((REG) & DNF_MSK) >> 0)
+#define I2C_DNF_SET(VAL) (((VAL) << 0) & I2C_DNF_MSK)
+#define I2C_DNF_GET(REG) (((REG) & I2C_DNF_MSK) >> 0)
 /* 
    These bits are used to configure the digital noise filter on SDA and SCL
    inputs. The digital filter will suppress the spikes with a length of up to
@@ -557,6 +557,8 @@
    DNF[3:0] must be configured only when the I2C is disabled (PE = 0). If the
    analog filter is also enabled, the digital filter is added to the analog
    filter. */
+
+#endif
 
 #ifndef __ASSEMBLER__
 
@@ -574,6 +576,9 @@ struct stm32f_i2c {
 	volatile uint32_t ccr;
 
 	volatile uint32_t trise;
+#if defined(STM32F2X)
+	volatile uint32_t fltr;
+#endif
 };
 
 #endif				/* __ASSEMBLER__ */

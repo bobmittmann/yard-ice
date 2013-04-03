@@ -150,9 +150,12 @@ void stdio_init(void)
 }
 
 /* ----------------------------------------------------------------------
- * Console 
+ * I/O 
  * ----------------------------------------------------------------------
  */
+#define TLV320RST STM32F_GPIOB, 10
+#define TLV320CLK STM32F_GPIOA, 8
+
 void io_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -165,6 +168,13 @@ void io_init(void)
 
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
+
+	stm32f_gpio_mode(TLV320CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+
+	stm32f_gpio_mode(TLV320RST, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_clr(TLV320RST);
+	udelay(1000);
+	stm32f_gpio_set(TLV320RST);
 }
 
 /* ----------------------------------------------------------------------
@@ -174,19 +184,118 @@ void io_init(void)
 #define I2C1_SCL STM32F_GPIOB, 8
 #define I2C1_SDA STM32F_GPIOB, 9
 
-void i2c_master_init(void)
+void i2c_master_init(unsigned int scl_freq)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	struct stm32f_afio * afio = STM32F_AFIO;
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	uint32_t pclk = stm32f_apb1_hz;
 
-	stm32f_gpio_mode(I2C1_SCL, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_mode(I2C1_SCL, OUTPUT, PUSH_PULL);
 	stm32f_gpio_mode(I2C1_SDA, ALT_FUNC, PULL_UP);
 	/* Use alternate pins for I2C1 */
 	afio->mapr |= AFIO_I2C1_REMAP;
+
+
+	/* Enable I2C clock */
+	rcc->apb1enr |= RCC_I2C1EN;
+
+	i2c->cr1 = 0;
+
+	/* I2C Control register 2 (I2C_CR2) */
+	i2c->cr2 = I2C_FREQ_SET(pclk / 1000000);
+	/*	I2C Own address register 1 (I2C_OAR1) */
+	i2c->oar1 = 0;
+	/*	I2C Own address register 2 (I2C_OAR2) */
+	i2c->oar2 = 0;
+	/* I2C Clock control register (I2C_CCR) */ 
+	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
+	/* I2C TRISE register (I2C_TRISE) */
+	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
+	/* I2C Control register 1 (I2C_CR1) */
+	i2c->cr1 = I2C_PE | I2C_SWRST; /* Enable peripheral */
+
+	i2c->cr1 = I2C_SWRST | I2C_PE; /* Enable peripheral */
+	udelay(100);
+	i2c->cr1 = I2C_PE; /* Enable peripheral */
+
+	printf("%s() scl_freq=%d\n", __func__, scl_freq);
+	printf("%s() SR1=0x%04x SR2=0x%04x\n", __func__, i2c->sr1, i2c->sr2);
+}
+
+int i2c_master_rd(unsigned int addr, void * buf, int len)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint8_t * ptr = (uint8_t *)buf;
+	uint32_t sr;
+	uint32_t sr1;
+	uint32_t sr2;
+	int again;
+
+	printf("%s() addr=%d\n", __func__, addr);
+
+	i2c->cr1 |= I2C_START; /* generate a Start condition */
+
+	/* Once the Start condition is sent:
+	● The SB bit is set by hardware and an interrupt is generated if 
+	the ITEVFEN bit is set.
+	Then the master waits for a read of the SR1 register followed by 
+	a write in the DR register with the Slave address (see Figure 237 
+	& Figure 238 Transfer sequencing EV5). */
+
+	printf("1. START\n");
+	again = 0;
+	while (((sr1 = i2c->sr1) & I2C_SB) == 0) {
+		(void)sr1;
+		sr2 = i2c->sr2;;
+		(void)sr2;
+		if (!again)
+			printf("SR1=0x%04x SR2=0x%04x\n", sr1, sr2);
+		++again;
+		udelay(100000);
+	}
+
+
+	/* – To enter Receiver mode, a master sends the slave 
+	   address with LSB set. */
+
+	i2c->dr = (addr << 1) | 1;
+
+	printf("2. ADDR\n");
+	while ((sr = (i2c->sr1 & I2C_ADDR)) == 0) {
+		(void)sr;
+	}
+
+	if (len == 1) {
+	/* ● Case of a single byte to be received:
+		– In the ADDR event, clear the ACK bit.
+		– Clear ADDR
+		– Program the STOP/START bit.
+		– Read the data after the RxNE flag is set.a */
+		sr = i2c->sr2; /* Clear ADDR */
+		(void)sr;
+	
+		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
+	
+		printf("3. STOP/DATA\n");
+	}
+
+
+	while ((sr = (i2c->sr1 & I2C_RXNE)) == 0) {
+		(void)sr;
+	}
+
+
+	*ptr = i2c->dr;
+
+	return len;
+
 }
 
 int main(int argc, char ** argv)
 {
+	uint8_t buf[32];
+	uint8_t addr = 0;
 	int led;
 	int i;
 
@@ -213,13 +322,16 @@ int main(int argc, char ** argv)
 
 	printf("\n\n");
 	printf("-----------------------------------------\n");
-	printf(" ADC test\n");
+	printf(" I2C master test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	i2c_master_init();
+	i2c_master_init(100000);
 
 	for (i = 0; ; i++) {
+	
+		i2c_master_rd(addr++, buf, 1);
+
 		led = i % 5;
 
 		led_on(led);
