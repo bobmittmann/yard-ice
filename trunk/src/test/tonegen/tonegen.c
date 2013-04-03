@@ -236,15 +236,59 @@ void tone_play(int dac, unsigned int tone, unsigned int ms)
 	wave_pause(dac);
 }
 
-#define DAC_TIMER_DIV 1
+#if 0
+void stm32f_tim2_isr(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM2;
+	/* Clear interrupt flags */
+	tim->sr = 0;
+}
+#endif
+
+static void dac_timer_init(uint32_t freq)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32f_tim * tim = STM32F_TIM2;
+	uint32_t div;
+	uint32_t pre;
+	uint32_t n;
+
+	/* get the total divisior */
+	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	/* get the minimum pre scaler */
+	pre = (div / 65536) + 1;
+	/* get the reload register value */
+	n = (div + pre / 2) / pre;
+
+
+	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
+		   __func__, freq, pre, n);
+
+	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d\n", freq, pre, n);
+
+	/* Timer clock enable */
+	rcc->apb1enr |= RCC_TIM2EN;
+	
+	/* Timer configuration */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
+	tim->ccr1 = tim->arr - 2;
+	tim->cr2 = TIM_MMS_OC1REF;
+	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+
+	/* Enable DMA interrupt */
+//	cm3_irq_enable(STM32F_IRQ_TIM2);
+}
 
 void stm32f_dac_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_dac * dac = STM32F_DAC;
-	struct stm32f_tim * tim2 = STM32F_TIM2;
 	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t f_tmr = (stm32f_apb1_hz * 2) / DAC_TIMER_DIV;
 
 	/* I/O pins config */
 	stm32f_gpio_mode(DAC2_GPIO, ANALOG, 0);
@@ -254,11 +298,6 @@ void stm32f_dac_init(void)
 	rcc->apb1enr |= RCC_DACEN;
 	/* DAC disable */
 	dac->cr = 0;
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	/* Timer disable */
-	tim2->cr1 = TIM_URS | TIM_CEN;
 
 	/* DMA clock enable */
 	rcc->ahbenr |= RCC_DMA1EN;
@@ -276,23 +315,11 @@ void stm32f_dac_init(void)
 	/* DAC configure */
 	dac->cr = DAC_EN2 | DAC_TSEL2_TIMER2 | DAC_TEN2 | DAC_DMAEN2 |
 			  DAC_EN1 | DAC_TSEL1_TIMER2 | DAC_TEN1 | DAC_DMAEN1;
+
 	/* DAC channel 2 initial value */
 	dac->dhr12r2 = 2048;
 	/* DAC channel 1 initial value */
 	dac->dhr12r1 = 2048;
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	tim2->psc = DAC_TIMER_DIV - 1; /* 2 * APB1_CLK(22.579200 MHz) / 1 = 4MHz */
-	tim2->arr = (f_tmr / SAMPLE_RATE) - 1; /* 22.579200 MHz / 2822 = 8001 Hz*/
-	tim2->cnt = 0;
-	tim2->egr = 0; /* Update generation */
-	tim2->dier = TIM_UIE; /* Update interrupt enable */
-	tim2->cr2 = TIM_MMS_OC1REF;
-	tim2->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim2->ccr1 = tim2->arr - 2;
-	/* enable timer */
-	tim2->cr1 = TIM_URS | TIM_CEN;
 
 	/*  DMA Configuration */
 	/* Peripheral address */
@@ -315,6 +342,8 @@ void stm32f_dac_init(void)
 	/* Configuration single buffer circular */
 	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
 		DMA_CIRC | DMA_DIR_MTP;
+
+	dac_timer_init(SAMPLE_RATE);
 }
 
 int main(int argc, char ** argv)
