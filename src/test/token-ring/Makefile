@@ -22,13 +22,14 @@
 
 PROG = token-ring
 
-CFILES = token-ring.c 
+CFILES = pktbuf.c token-ring.c 
 
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
-		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm
+		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm\
+		  ../../sdk/libhexdump
 
-LIBS = stm32f cm3 util thinkos c ice-comm 
+LIBS = stm32f cm3 util thinkos c ice-comm hexdump
 
 INCPATH = ../../sdk/include 
 
