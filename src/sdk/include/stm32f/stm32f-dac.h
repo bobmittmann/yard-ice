@@ -70,6 +70,9 @@
 #define DAC_WAVE2_MSK (((1 << (1 + 1)) - 1) << 22)
 #define DAC_WAVE2_SET(VAL) (((VAL) << 22) & DAC_WAVE2_MSK)
 #define DAC_WAVE2_GET(REG) (((REG) & DAC_WAVE2_MSK) >> 22)
+
+#define DAC_WAVE2_NOISE (1 << 22)
+#define DAC_WAVE2_TRIANG (2 << 22)
 /* These bits are set/reset by software.
 	00: wave generation disabled
 	01: Noise wave generation enabled
@@ -91,7 +94,14 @@
 	111: Software trigger
 	Note: Only used if bit TEN2 = 1 (DAC channel2 trigger enabled). */
 #define DAC_TSEL2_TIMER6 (0 << 19)
+
+#if defined(STM32FX2)
 #define DAC_TSEL2_TIMER8 (1 << 19)
+#elif defined(STM32FX1)
+#define DAC_TSEL2_TIMER3 (1 << 19)
+#define DAC_TSEL2_TIMER15 (3 << 19)
+#endif
+
 #define DAC_TSEL2_TIMER7 (2 << 19)
 #define DAC_TSEL2_TIMER5 (3 << 19)
 #define DAC_TSEL2_TIMER2 (4 << 19)
@@ -157,6 +167,8 @@
 #define DAC_WAVE1_MSK (((1 << (1 + 1)) - 1) << 6)
 #define DAC_WAVE1_SET(VAL) (((VAL) << 6) & DAC_WAVE1_MSK)
 #define DAC_WAVE1_GET(REG) (((REG) & DAC_WAVE1_MSK) >> 6)
+#define DAC_WAVE1_NOISE (1 << 6)
+#define DAC_WAVE1_TRIANG (2 << 6)
 /* These bits are set and cleared by software.
 	00: wave generation disabled
 	01: Noise wave generation enabled
@@ -178,7 +190,14 @@
 	111: Software trigger
 	Note: Only used if bit TEN1 = 1 (DAC channel1 trigger enabled). */
 #define DAC_TSEL1_TIMER6 (0 << 3)
+
+#if defined(STM32FX2)
 #define DAC_TSEL1_TIMER8 (1 << 3)
+#elif defined(STM32FX1)
+#define DAC_TSEL1_TIMER3 (1 << 3)
+#define DAC_TSEL1_TIMER15 (3 << 3)
+#endif
+
 #define DAC_TSEL1_TIMER7 (2 << 3)
 #define DAC_TSEL1_TIMER5 (3 << 3)
 #define DAC_TSEL1_TIMER2 (4 << 3)
