@@ -387,10 +387,14 @@ int main(int argc, char ** argv)
 		led_off(0);
 //		relay_on(0);
 		thinkos_sleep(400);
-		dac_pause(1);
 
 		thinkos_sleep(500);
 //		relay_off(0);
+		dac_pause(1);
+
+		thinkos_sleep(500);
+
+		thinkos_sleep(500);
 	}
 
 	return 0;
