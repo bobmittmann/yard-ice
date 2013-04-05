@@ -575,11 +575,12 @@ static inline uint32_t __attribute__((always_inline)) cm3_control_get(void) {
 }
 
 static inline void __attribute__((always_inline)) 
-	cm3_basepri_set(uint32_t val) {
+cm3_basepri_set(uint32_t val) {
 	asm volatile ("msr BASEPRI, %0\n" : : "r" (val));
 }
 
-static inline uint32_t __attribute__((always_inline)) cm3_basepri_get(void) {
+static inline uint32_t __attribute__((always_inline)) 
+cm3_basepri_get(void) {
 	uint32_t val;
 	asm volatile ("mrs %0, BASEPRI\n" : "=r" (val));
 	return val;
@@ -591,10 +592,12 @@ static inline uint32_t __attribute__((always_inline)) cm3_ipsr_get(void) {
 	return ipsr;
 }
 
+/* disable interrupts */
 static inline void __attribute__((always_inline)) cm3_cpsid_i(void) {
 	asm volatile ("cpsid i\n");
 }
 
+/* enable interrupts */
 static inline void __attribute__((always_inline)) cm3_cpsie_i(void) {
 	asm volatile ("cpsie i\n");
 }

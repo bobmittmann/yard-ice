@@ -20,7 +20,7 @@
  */
 
 
-_stack = ORIGIN(sram1) + LENGTH(sram1);
+_stack = ORIGIN(sram2) + LENGTH(sram2);
 
 EXTERN(_stack)
 EXTERN(_reset)

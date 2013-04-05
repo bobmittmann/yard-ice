@@ -56,7 +56,7 @@ __attribute__((always_inline)) __thinkos_critical_enter(void)  {
 
 static inline void 
 __attribute__((always_inline)) __thinkos_critical_enter_level(int lvl)  {
-	/* rise the BASEPRI to stop the scheduler */
+	/* set the BASEPRI */
 	cm3_basepri_set(lvl); 
 }
 
@@ -66,6 +66,7 @@ __attribute__((always_inline)) __thinkos_critical_exit(void)  {
 	/* return the BASEPRI to the default to reenable the scheduler. */
 	cm3_basepri_set(0x00);
 }
+
 
 #if THINKOS_ENABLE_EVENT_ALLOC
 static inline int 

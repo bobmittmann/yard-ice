@@ -71,6 +71,7 @@ void _init(void)
 	uint32_t sr;
 	uint32_t cr;
 	uint32_t cfg;
+	uint32_t ws;
 	int again;
 #ifdef CM3_RAM_VECTORS
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
@@ -149,8 +150,10 @@ void _init(void)
 		}
 	}
 
+	ws = HCLK_HZ / 30000000;
+
 	/* adjust flash wait states and enable prefetch buffer */
-	flash->acr = FLASH_PRFTBE | FLASH_LATENCY(1);
+	flash->acr = FLASH_PRFTBE | FLASH_LATENCY(ws);
 
 	if (flash->cr & FLASH_LOCK) {
 		/* unlock flash write */
@@ -166,7 +169,7 @@ void _init(void)
 #endif
 
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 4;
@@ -180,6 +183,7 @@ void _init(void)
 	uint32_t cr;
 	uint32_t pll;
 	uint32_t cfg;
+	uint32_t ws;
 	int again;
 #ifdef CM3_RAM_VECTORS
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
@@ -206,14 +210,34 @@ void _init(void)
 		}
 
 	}
+#ifdef STM32F4X
+	/* F_HSE = 12 MHz
+	   F_VCO = 336 MHz (F_HSE * 28)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+	pll = RCC_PLLQ(7) | 
+		RCC_PLLSRC_HSE | 
+		RCC_PLLP(2) | 
+		RCC_PLLN(112) | RCC_PLLM(4);
+
+	rcc->pllcfgr = pll;
+
+	/* switch to external clock */
+	cfg = RCC_MCO2_SYSCLK | RCC_MCO2PRE_2 /* Clock output 2 */
+		| RCC_PPRE2_2 /* APB high speed prescaler : 84MHz */
+		| RCC_PPRE1_4 /* APB low speed prescaler : 42MHz */
+		| RCC_HPRE_1 /* AHB prescaler : 168MHz */ 
+		| RCC_SW_HSE;
+#else
 	/* F_HSE = 24 MHz
-	   F_VCO = 480 MHz
+	   F_VCO = 240 MHz
 	   F_MAIN = 120 MHz
 	   F_USB = 48 MHz */
-	pll = RCC_PLLQ(10) | 
+	pll = RCC_PLLQ(5) | 
 		RCC_PLLSRC_HSE | 
-		RCC_PLLP(4) | 
-		RCC_PLLN(240) | RCC_PLLM(12);
+		RCC_PLLP(2) | 
+		RCC_PLLN(120) | RCC_PLLM(12);
+
 	rcc->pllcfgr = pll;
 
 	/* switch to external clock */
@@ -222,7 +246,8 @@ void _init(void)
 		| RCC_PPRE1_4 /* APB low speed prescaler : 30MHz */
 		| RCC_HPRE_1 /* AHB prescaler : 120MHz */ 
 		| RCC_SW_HSE;
-
+#endif
+	
 	rcc->cfgr = cfg;
 
 	/* enable PLL */
@@ -249,8 +274,10 @@ void _init(void)
 		}
 	}
 
+	ws = HCLK_HZ / 30000000;
+
 	/* adjust flash wait states and enable caches */
-	flash->acr = FLASH_DCEN | FLASH_ICEN | FLASH_PRFTEN | FLASH_LATENCY(3);
+	flash->acr = FLASH_DCEN | FLASH_ICEN | FLASH_PRFTEN | FLASH_LATENCY(ws);
 
 	if (flash->cr & FLASH_LOCK) {
 		/* unlock flash write */
