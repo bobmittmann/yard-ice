@@ -48,7 +48,7 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 	rcc->ahb1enr |= 1 << stm32f_gpio_id(gpio);
 #endif
 	
@@ -61,7 +61,7 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 void stm32f_gpio_mode(struct stm32f_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 	uint32_t tmp;
 	uint32_t moder; 
 
@@ -163,7 +163,7 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 
 }
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;
