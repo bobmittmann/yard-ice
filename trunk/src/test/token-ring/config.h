@@ -26,7 +26,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define THINKOS_IRQ_MAX 40
+#define THINKOS_IRQ_MAX 86
 
 #define THINKOS_ENABLE_IDLE_WFI 1
 #define THINKOS_ENABLE_IDLE_SNAPSHOT 0
