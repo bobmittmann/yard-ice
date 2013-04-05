@@ -127,7 +127,7 @@
    0: HSI oscillator OFF
    1: HSI oscillator ON */
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* ------------------------------------------------------------------------- */
 /* RCC PLL configuration register */
@@ -270,7 +270,7 @@
 #define RCC_PPRE1_16 (0x7 << 8)
 #define RCC_PPRE1_GET(CFGR) (((CFGR) >> 8) 0x7)
 
-#elif defined(STM32F2X)
+#elif defined(STM32F2X) || defined(STM32F4X)
 
 #define STM32F_RCC_CFGR 0x08
 
@@ -456,8 +456,7 @@
    11: not allowed */
 
 
-
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* ------------------------------------------------------------------------- */
 /* RCC AHB1 peripheral clock register */
@@ -1894,42 +1893,49 @@ Set and cleared by software.
 
 #include <stdint.h>
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 struct stm32f_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t pllcfgr; 
 	volatile uint32_t cfgr; 
 	volatile uint32_t cir; 
+
 	volatile uint32_t ahb1rstr;
 	volatile uint32_t ahb2rstr;
 	volatile uint32_t ahb3rstr;
 	uint32_t res0; 
+
 	volatile uint32_t apb1rstr;
 	volatile uint32_t pb2rstr;
 	uint32_t res1[2]; 
 	volatile uint32_t ahb1enr;
+
 	volatile uint32_t ahb2enr;
 	volatile uint32_t ahb3enr;
 	uint32_t res2; 
 	volatile uint32_t apb1enr;
+
 	volatile uint32_t apb2enr;
 	uint32_t res3[2]; 
 	volatile uint32_t ahb1lpenr;
 	volatile uint32_t hb2lpenr; 
+
 	volatile uint32_t ahb3lpenr;
 	uint32_t res4; 
 	volatile uint32_t apb1lpenr;
 	volatile uint32_t apb2lpenr;
+
 	uint32_t res5[2]; 
 	volatile uint32_t bdcr;
 	volatile uint32_t csr;
 	uint32_t res6[2]; 
+
 	volatile uint32_t sscgr;
 	volatile uint32_t plli2scfgr;
 };
-#endif /* STM32F2X */
+#endif /* STM32F2X || STM32F4X  */
 
-#ifdef STM32F1X
+#if defined(STM32F1X)
 struct stm32f_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t cfgr; 
