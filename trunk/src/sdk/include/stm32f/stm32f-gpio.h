@@ -301,8 +301,8 @@
 
 #include <stdint.h>
 
-#ifdef STM32F2X
 
+#if defined(STM32F2X) || defined(STM32F4X)
 struct stm32f_gpio {
 	volatile uint32_t moder;
 	volatile uint32_t otyper;

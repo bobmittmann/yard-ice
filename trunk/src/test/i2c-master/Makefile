@@ -36,7 +36,9 @@ JTAGTOOL_ADDR = 192.168.0.80
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
-MACH = stm32f100x4
-HCLK_HZ = 22579200
-include ../../mk/stm32f100.mk
+#MACH = stm32f100x4
+#HCLK_HZ = 22579200
+#include ../../mk/stm32f100.mk
 
+MACH = stm32f405
+include ../../mk/stm32f4xx.mk

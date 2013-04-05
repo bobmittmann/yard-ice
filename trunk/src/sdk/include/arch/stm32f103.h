@@ -45,6 +45,7 @@
 #include <stm32f/stm32f-adc.h>
 #include <stm32f/stm32f-rtc.h>
 #include <stm32f/stm32f-spi.h>
+#include <stm32f/stm32f-i2c.h>
 #include <stm32f/stm32f-eth.h>
 #include <stm32f/stm32f-usb.h>
 #include <stm32f/stm32f-fsmc.h>

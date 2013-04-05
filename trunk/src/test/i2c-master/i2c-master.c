@@ -49,6 +49,7 @@ struct stm32f_io {
  * ----------------------------------------------------------------------
  */
 
+#ifdef STM32F1X
 const struct stm32f_io led_io[] = {
 	{ STM32F_GPIOB, 14 },
 	{ STM32F_GPIOB, 15 },
@@ -56,6 +57,16 @@ const struct stm32f_io led_io[] = {
 	{ STM32F_GPIOC, 14 },
 	{ STM32F_GPIOC, 15 }
 };
+#endif
+
+#ifdef STM32F4X
+const struct stm32f_io led_io[] = {
+	{ STM32F_GPIOC, 1 },
+	{ STM32F_GPIOC, 14 },
+	{ STM32F_GPIOC, 7 },
+	{ STM32F_GPIOC, 8 }
+};
+#endif
 
 void led_on(int id)
 {
@@ -71,7 +82,7 @@ void leds_init(void)
 {
 	int i;
 
-	for (i = 0; i < 5; ++i) {
+	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
 		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
@@ -79,40 +90,6 @@ void leds_init(void)
 	}
 }
 
-/* ----------------------------------------------------------------------
- * Relays 
- * ----------------------------------------------------------------------
- */
-
-const struct stm32f_io relay_io[] = {
-	{ STM32F_GPIOA, 9 },
-	{ STM32F_GPIOA, 10 },
-	{ STM32F_GPIOA, 11 },
-	{ STM32F_GPIOA, 12 },
-	{ STM32F_GPIOB, 2 }
-};
-
-void relay_on(int id)
-{
-	stm32f_gpio_set(relay_io[id].gpio, relay_io[id].pin);
-}
-
-void relay_off(int id)
-{
-	stm32f_gpio_clr(relay_io[id].gpio, relay_io[id].pin);
-}
-
-void relays_init(void)
-{
-	int i;
-
-	for (i = 0; i < 5; ++i) {
-		stm32f_gpio_mode(relay_io[i].gpio, relay_io[i].pin,
-						 OUTPUT, PUSH_PULL | SPEED_LOW);
-
-		stm32f_gpio_clr(relay_io[i].gpio, relay_io[i].pin);
-	}
-}
 
 /* ----------------------------------------------------------------------
  * Console 
@@ -129,20 +106,31 @@ struct file stm32f_uart1_file = {
 
 void stdio_init(void)
 {
-	struct stm32f_usart * us = STM32F_USART1;
+	struct stm32f_usart * uart = STM32F_USART1;
+#if defined(STM32F1X)
 	struct stm32f_afio * afio = STM32F_AFIO;
+#endif
+
+	DCC_LOG(LOG_TRACE, "...");
 
 	/* USART1_TX */
 	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+
+#if defined(STM32F1X)
 	/* USART1_RX */
 	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
+#elif defined(STM32F4X)
+	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(USART1_RX, GPIO_AF7);
+	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+#endif
 
-	stm32f_usart_init(us);
-	stm32f_usart_baudrate_set(us, 115200);
-	stm32f_usart_mode_set(us, SERIAL_8N1);
-	stm32f_usart_enable(us);
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
 
 	stdin = &stm32f_uart1_file;
 	stdout = &stm32f_uart1_file;
@@ -158,7 +146,12 @@ void stdio_init(void)
 
 void io_init(void)
 {
+#if defined(STM32F1X)
 	struct stm32f_rcc * rcc = STM32F_RCC;
+
+	/* Enable Alternate Functions IO clock */
+	rcc->apb2enr |= RCC_AFIOEN;
+#endif
 
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
 
@@ -166,15 +159,21 @@ void io_init(void)
 	stm32f_gpio_clock_en(STM32F_GPIOB);
 	stm32f_gpio_clock_en(STM32F_GPIOC);
 
-	/* Enable Alternate Functions IO clock */
-	rcc->apb2enr |= RCC_AFIOEN;
 
+#if defined(STM32F1X)
 	stm32f_gpio_mode(TLV320CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 
 	stm32f_gpio_mode(TLV320RST, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_clr(TLV320RST);
 	udelay(1000);
 	stm32f_gpio_set(TLV320RST);
+#endif
+
+#if defined(STM32F4X)
+	stm32f_gpio_mode(STM32F_GPIOB, 10, INPUT, 0);
+	stm32f_gpio_mode(STM32F_GPIOB, 11, INPUT, 0);
+#endif
+
 }
 
 /* ----------------------------------------------------------------------
@@ -187,37 +186,55 @@ void io_init(void)
 void i2c_master_init(unsigned int scl_freq)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
-	struct stm32f_afio * afio = STM32F_AFIO;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	uint32_t pclk = stm32f_apb1_hz;
+#if defined(STM32F1X)
+	struct stm32f_afio * afio = STM32F_AFIO;
+	/* Use alternate pins for I2C1 */
+	afio->mapr |= AFIO_I2C1_REMAP;
+#endif
 
+#if 0
+	stm32f_gpio_mode(I2C1_SCL, INPUT, 0);
+	stm32f_gpio_mode(I2C1_SDA, INPUT, 0);
 
-//	stm32f_gpio_mode(I2C1_SCL, OUTPUT, OPEN_DRAIN);
-//	stm32f_gpio_mode(I2C1_SDA, OUTPUT, OPEN_DRAIN);
-//	stm32f_gpio_clr(I2C1_SDA);
-//	stm32f_gpio_clr(I2C1_SCL);
-//	udelay(10);
-//	stm32f_gpio_set(I2C1_SDA);
-//	stm32f_gpio_set(I2C1_SCL);
-//	udelay(10);
-//	stm32f_gpio_clr(I2C1_SDA);
-//	stm32f_gpio_clr(I2C1_SCL);
+	printf("%s() SDA=%d SCL=%d\n", __func__,
+		   stm32f_gpio_stat(I2C1_SDA) ? 1 : 0,
+		   stm32f_gpio_stat(I2C1_SCL) ? 1 : 0);
 
+#endif
 
 	stm32f_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
 	stm32f_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
-	/* Use alternate pins for I2C1 */
-	afio->mapr |= AFIO_I2C1_REMAP;
+
+#if defined(STM32F4X)
+	stm32f_gpio_af(I2C1_SCL, GPIO_AF4);
+	stm32f_gpio_af(I2C1_SDA, GPIO_AF4);
+#endif
 
 	/* Enable I2C clock */
 	rcc->apb1enr |= RCC_I2C1EN;
 
+	printf("%s() i2c=0x%08x\n", __func__, (uint32_t)i2c);
+
+	/* Software reset */
 	i2c->cr1 = I2C_SWRST; 
+	udelay(100);
+
+
+	printf("CR1=0x%04x CR2=0x%04x CCR=0x%04x\n", 
+			 i2c->cr1, i2c->cr2, i2c->ccr);
+
+	printf("OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x\n", 
+			 i2c->oar1, i2c->oar2, i2c->trise);
+
+	printf("SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
+
 
 	DCC_LOG3(LOG_TRACE, "CR1=0x%04x CR2=0x%04x CCR=0x%04x", 
 			 i2c->cr1, i2c->cr2, i2c->ccr);
 
-	DCC_LOG3(LOG_TRACE, "OAR1=0x%04x OAR2=0x%04x TRISE=0X%04X", 
+	DCC_LOG3(LOG_TRACE, "OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x", 
 			 i2c->oar1, i2c->oar2, i2c->trise);
 
 	DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
@@ -237,15 +254,24 @@ void i2c_master_init(unsigned int scl_freq)
 	/* I2C Control register 1 (I2C_CR1) */
 	i2c->cr1 = I2C_PE;
 
-//	printf("%s() scl_freq=%d\n", __func__, scl_freq);
-//	printf("%s() SR1=0x%04x SR2=0x%04x\n", __func__, i2c->sr1, i2c->sr2);
+	printf("%s() scl_freq=%d\n", __func__, scl_freq);
+	printf("%s() SR1=0x%04x SR2=0x%04x\n", __func__, i2c->sr1, i2c->sr2);
+
+
+	printf("CR1=0x%04x CR2=0x%04x CCR=0x%04x\n", 
+			 i2c->cr1, i2c->cr2, i2c->ccr);
+
+	printf("OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x\n", 
+			 i2c->oar1, i2c->oar2, i2c->trise);
+
+	printf("SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
+
 }
 
 int i2c_master_rd(unsigned int addr, void * buf, int len)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	uint8_t * ptr = (uint8_t *)buf;
-	uint32_t sr;
 	uint32_t sr1;
 	uint32_t sr2;
 	int again;
@@ -267,19 +293,34 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 	again = 0;
 	while (((sr1 = i2c->sr1) & I2C_SB) == 0) {
+		/* If for some reason the I2C lines get stuck
+		   at high level. The start bit will
+		   never be reported. No other error will be reported also.
+			TODO: Implement a timeout mechanism ... */
+
+//		printf("%s() SDA=%d SCL=%d\n", __func__,
+//			   stm32f_gpio_stat(I2C1_SDA) ? 1 : 0,
+//			   stm32f_gpio_stat(I2C1_SCL) ? 1 : 0);
+
 		(void)sr1;
-		sr2 = i2c->sr2;;
-		(void)sr2;
-		if (!again) {
-//			printf("SR1=0x%04x SR2=0x%04x\n", sr1, sr2);
-			DCC_LOG2(LOG_INFO, "SR1=0x%04x SR2=0x%04x", sr1, sr2);
-		}
-		++again;
+//		sr2 = i2c->sr2;;
+//		(void)sr2;
+//		if ((sr1 != 0) || (sr2 != 0)) {
+//			printf("CR1=0x%04x SR1=0x%04x SR2=0x%04x\n", i2c->cr1, sr1, sr2);
+//			DCC_LOG2(LOG_INFO, "SR1=0x%04x SR2=0x%04x", sr1, sr2);
+//		}
+		if (++again == 100)
+			goto abort;
+
+		udelay(10);
 	}
 
 
 	/* – To enter Receiver mode, a master sends the slave 
 	   address with LSB set. */
+//	printf(", 2. ADDR %d", addr);
+//	printf("1.");
+//	udelay(100);
 	DCC_LOG1(LOG_INFO, "2. ADDR %d", addr);
 	i2c->dr = (addr << 1) | 1;
 
@@ -290,10 +331,16 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 		   – Program the STOP/START bit.
 		   – Read the data after the RxNE flag is set. */
 
+//		printf("2.");
+//		printf("~");
+		again = 0;
 		while (((sr1 = i2c->sr1) & I2C_ADDR) == 0) {
 			/* Acknowledge failure */
 			if (sr1 & I2C_AF )
 				goto abort;
+			if (++again == 100)
+				goto abort;
+			udelay(10);
 		}
 
 		/* Clear ADDR */
@@ -303,10 +350,9 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 		/* Program the STOP/START bit. */
 		i2c->cr1 = I2C_STOP | I2C_PE; 
 	
+//		printf("^");
 		/* Read the data after the RxNE flag is set. */
-		while ((sr = (i2c->sr1 & I2C_RXNE)) == 0) {
-			(void)sr;
-		}
+		while ((i2c->sr1 & I2C_RXNE) == 0);
 
 		DCC_LOG(LOG_TRACE, "3. STOP/DATA");
 //		printf("3. STOP/DATA\n");
@@ -328,6 +374,9 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 			/* Acknowledge failure */
 			if (sr1 & I2C_AF )
 				goto abort;
+			if (++again == 100)
+				goto abort;
+			udelay(10);
 		}
 
 		/* Clear ADDR */
@@ -343,6 +392,9 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 			/* Acknowledge failure */
 			if (sr1 & I2C_AF )
 				goto abort;
+			if (++again == 100)
+				goto abort;
+			udelay(10);
 		}
 
 		/* Program STOP */
@@ -377,12 +429,39 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 abort:
 	DCC_LOG2(LOG_TRACE, "Abort: SR1=0x%04x SR2=0x%04x", i2c->sr1, i2c->sr2);
+//	printf("?");
 	sr1 = i2c->sr1 = 0;
-	i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Start condition */
+	i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
 
+	sr1 = i2c->sr1;
+	sr2 = i2c->sr2;
+	
+	if ((sr1 != 0) || (sr2 != 0)) {
+//		printf("\nAbort: SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
+		DCC_LOG2(LOG_TRACE, "Reset: SR1=0x%04x SR2=0x%04x", i2c->sr1, i2c->sr2);
+	}
+//	printf("!");
+
+	i2c->cr1 = I2C_STOP | I2C_PE; 
+	again = 0;
 	while (i2c->sr2 & I2C_BUSY) {
+		if (++again == 1000)
+			break;
+		udelay(10);
 	};
 
+//	i2c->cr1 = 0; 
+	i2c->cr1 = I2C_PE; 
+#if 0
+	udelay(100000);
+
+	sr1 = i2c->sr1;
+	sr2 = i2c->sr2;
+	
+	if ((sr1 != 0) || (sr2 != 0)) {
+		printf("stick: SR1=0x%04x SR2=0x%04x\n", sr1, sr2);
+	}
+#endif
 	return -1;
 }
 
@@ -456,14 +535,29 @@ abort:
 	return -1;
 }
 
+/* ----------------------------------------------------------------------
+ * Supervisory task
+ * ----------------------------------------------------------------------
+ */
+int supervisor_task(void)
+{
+	for (;;) {
+		thinkos_sleep(200);
+		led_on(3);
+		thinkos_sleep(100);
+		led_off(3);
+		thinkos_sleep(400);
+	}
+}
 
 
+uint32_t supervisor_stack[256];
 
 int main(int argc, char ** argv)
 {
 	uint8_t buf[32];
 	uint8_t addr = 0;
-	int led;
+	int ret;
 	int i;
 
 	DCC_LOG_INIT();
@@ -478,13 +572,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. leds_init()");
 	leds_init();
 
-	DCC_LOG(LOG_TRACE, "3. relays_init()");
-	relays_init();
-
-	DCC_LOG(LOG_TRACE, "4. thinkos_init()");
+	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
-	DCC_LOG(LOG_TRACE, "5. stdio_init()");
+	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
 
 	printf("\n\n");
@@ -493,28 +584,51 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
+	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
+						  supervisor_stack, sizeof(supervisor_stack), 
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
 	i2c_master_init(100000);
 
-	for (addr = 0; addr < 128; ++addr) {
-		if (i2c_master_rd(addr, buf, 1) > 0) {
-			DCC_LOG2(LOG_TRACE, "addr:%d -> 0x%02x", addr, buf[0]);
-			break;
+again:
+	do {
+		thinkos_sleep(1000);
+		printf("I2C scanning ");
+		for (addr = 0; addr < 128; ++addr) {
+			printf(".");
+			led_on(0);
+			ret = i2c_master_rd(addr, buf, 1);
+			led_off(0);
+			if (ret > 0) {
+				DCC_LOG2(LOG_TRACE, "addr:%d -> 0x%02x", addr, buf[0]);
+				printf("\nI2C device found @ %d -> 0x%02x ", addr, buf[0]);
+	//			break;
+			}
+			thinkos_sleep(10);
 		}
-	}
+
+		printf("\n");
+	} while (addr == 128);
+
+	led_on(1);
+	thinkos_sleep(100);
+	led_off(1);
+	thinkos_sleep(900);
+
+	goto again;
 
 	for (i = 0; ; ++i) {
-		led = i % 5;
-		led_on(led);
-		thinkos_sleep(20);
-		led_off(led);
-		thinkos_sleep(130);
+		led_on(0);
+		thinkos_sleep(100);
+		led_off(0);
+		thinkos_sleep(900);
 
 		if (i2c_master_rd(addr, buf, 2) > 0) {
 			DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", addr, 
 					 buf[0], buf[1]);
 		}
 
-		i2c_master_wr(addr, buf, 2);
+//		i2c_master_wr(addr, buf, 2);
 
 	}
 
