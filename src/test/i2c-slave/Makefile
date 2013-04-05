@@ -20,16 +20,14 @@
 # 
 
 
-PROG = token-ring
+PROG = i2c-slave
 
-CFILES = pktbuf.c rs485lnk.c token-ring.c 
-
+CFILES = i2c-slave.c 
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
-		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm\
-		  ../../sdk/libhexdump
+		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm
 
-LIBS = stm32f cm3 util thinkos c ice-comm hexdump
+LIBS = stm32f cm3 util thinkos c ice-comm 
 
 INCPATH = ../../sdk/include 
 
@@ -38,6 +36,9 @@ JTAGTOOL_ADDR = 192.168.0.80
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
-MACH = stm32f405
-include ../../mk/stm32f4xx.mk
+MACH = stm32f100x4
+HCLK_HZ = 22579200
+include ../../mk/stm32f100.mk
 
+#MACH = stm32f405
+#include ../../mk/stm32f4xx.mk

@@ -373,8 +373,8 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	stm32f_dac_init();
-	dac_wave_set(0, WAVE_4K);
-	dac_wave_set(1, WAVE_7K);
+	dac_wave_set(0, WAVE_A3);
+	dac_wave_set(1, WAVE_4K);
 	dac_play(0);
 	dac_play(1);
 

@@ -40,7 +40,8 @@
 
 #include <sys/dcclog.h>
 
-#include <pktbuf.h>
+#include "pktbuf.h"
+#include "rs485lnk.h"
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -82,228 +83,6 @@ void leds_init(void)
 	}
 }
 
-/* ----------------------------------------------------------------------
- * RS485
- * ----------------------------------------------------------------------
- */
-
-
-/* ----------------------------------------------------------------------
- * RS485 network
- * ----------------------------------------------------------------------
- */
-
-struct rs485_link {
-	/* USART */
-	struct stm32f_usart * uart;
-	/* DMA controller */
-	struct stm32f_dma * dma;
-	struct {
-		/* DMA stream/channel id */
-		int dma_id;
-		void * pend_pkt;
-		/* Bitband pointer to interrupt status flags */
-		uint32_t * isr;
-		/* Bitband pointer to interrupt clear flags */
-		uint32_t * ifcr;
-		int dma_irq;
-	} tx;
-
-	struct {
-		/* DMA stream/channel id */
-		int dma_id;
-	} rx;
-};
-
-const uint8_t dma_isr_base_lut[] = {
-	     0,      6,      16,      22,
-	32 + 0, 32 + 6, 32 + 16, 32 + 22,
-};
-
-const uint8_t stm32f_dma1_irqnum_lut[] = {
-	STM32F_IRQ_DMA1_STREAM0,
-	STM32F_IRQ_DMA1_STREAM1,
-	STM32F_IRQ_DMA1_STREAM2,
-	STM32F_IRQ_DMA1_STREAM3,
-	STM32F_IRQ_DMA1_STREAM4,
-	STM32F_IRQ_DMA1_STREAM5,
-	STM32F_IRQ_DMA1_STREAM6,
-	STM32F_IRQ_DMA1_STREAM7
-};
-
-const uint8_t stm32f_dma2_irqnum_lut[] = {
-	STM32F_IRQ_DMA2_STREAM0,
-	STM32F_IRQ_DMA2_STREAM1,
-	STM32F_IRQ_DMA2_STREAM2,
-	STM32F_IRQ_DMA2_STREAM3,
-	STM32F_IRQ_DMA2_STREAM4,
-	STM32F_IRQ_DMA2_STREAM5,
-	STM32F_IRQ_DMA2_STREAM6,
-	STM32F_IRQ_DMA2_STREAM7
-};
-
-#define FEIF_BIT 0
-#define DMEIF_BIT 2
-#define TEIF_BIT 3
-#define HTIF_BIT 4
-#define TCIF_BIT 5
-
-void rs485_init(struct rs485_link * lnk, 
-				struct stm32f_usart * uart,
-				unsigned int speed,
-				struct stm32f_dma * dma,
-				int rx_dma_strm_id, int rx_dma_chan_id, 
-				int tx_dma_strm_id, int tx_dma_chan_id)
-{
-	struct stm32f_dma_stream * tx_dma_strm;
-	struct stm32f_dma_stream * rx_dma_strm;
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	int isr_base;
-
-	lnk->uart = uart;
-	lnk->dma = dma;
-	lnk->tx.pend_pkt = NULL;
-
-
-	/* DMA clock enable */
-	if (dma == STM32F_DMA1) {
-		rcc->ahb1enr |= RCC_DMA1EN;
-		lnk->tx.dma_irq = stm32f_dma1_irqnum_lut[tx_dma_strm_id];
-	} else {
-		rcc->ahb1enr |= RCC_DMA2EN;
-		lnk->tx.dma_irq = stm32f_dma2_irqnum_lut[tx_dma_strm_id];
-	}
-
-	/* TX DMA */
-	lnk->tx.dma_id = tx_dma_strm_id;
-
-	isr_base = dma_isr_base_lut[tx_dma_strm_id]; 
-	lnk->tx.isr = CM3_BITBAND_DEV(&dma->lisr, isr_base);
-	lnk->tx.ifcr = CM3_BITBAND_DEV(&dma->lifcr, isr_base);
-
-	DCC_LOG2(LOG_TRACE, "0x%p 0x%p", lnk->tx.isr, lnk->tx.ifcr);
-
-	tx_dma_strm = &dma->s[tx_dma_strm_id];
-	DCC_LOG2(LOG_TRACE, "TX DMA stream[%d]=0x%p", lnk->tx.dma_id, tx_dma_strm);
-
-	/* Disable DMA stream */
-	tx_dma_strm->cr = 0;
-	while (tx_dma_strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
-
-	/* clear all interrupt flags */
-	lnk->tx.ifcr[FEIF_BIT] = 1;
-	lnk->tx.ifcr[DMEIF_BIT] = 1;
-	lnk->tx.ifcr[TEIF_BIT] = 1;
-	lnk->tx.ifcr[HTIF_BIT] = 1;
-	lnk->tx.ifcr[TCIF_BIT] = 1; 
-
-	tx_dma_strm->cr = DMA_CHSEL_SET(tx_dma_chan_id) | 
-		DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | DMA_DIR_MTP | 
-		DMA_TCIE | DMA_TEIE;
-
-
-	tx_dma_strm->par = &uart->dr;
-	tx_dma_strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
-
-	/* RX DMA */
-	lnk->rx.dma_id = rx_dma_strm_id;
-
-	rx_dma_strm = &dma->s[rx_dma_strm_id];
-	DCC_LOG2(LOG_TRACE, "RX DMA stream[%d]=0x%p", lnk->rx.dma_id, rx_dma_strm);
-
-	/* Disable DMA stream */
-	rx_dma_strm->cr = 0;
-	while (rx_dma_strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
-
-	rx_dma_strm->cr = DMA_CHSEL_SET(rx_dma_chan_id) | 
-		DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | DMA_DIR_PTM;
-
-	rx_dma_strm->par = &uart->dr;
-	rx_dma_strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
-
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, speed);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-
-	/* Enable DMA for transmission and reception */
-//	uart->cr3 |= USART_DMAT | USART_DMAR;
-
-	uart->cr3 |= USART_DMAT;
-
-	stm32f_usart_enable(uart);
-}
-
-void * _rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
-{
-	int i;
-	uint8_t * s = (uint8_t *)pkt;
-
-	for (i = 0; i < len; ++i) {
-		stm32f_usart_putc(lnk->uart, s[i]);
-		thinkos_sleep(10);
-	}
-
-	return pkt;
-}
-
-void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
-{
-	struct stm32f_usart * uart = lnk->uart;
-	struct stm32f_dma * dma = lnk->dma;
-	struct stm32f_dma_stream * dma_strm;
-	uint32_t sr;
-	void * pend_pkt = NULL;
-
-	dma_strm = &dma->s[lnk->tx.dma_id];
-
-	DCC_LOG2(LOG_INFO, "DMA stream[%d]=0x%p", lnk->tx.dma_id, dma_strm);
-
-	if (lnk->tx.pend_pkt) {
-		DCC_LOG(LOG_TRACE, "pending packet...");
-
-		/* wait for the DMA transfer to complete */
-		while (!lnk->tx.isr[TCIF_BIT]) {
-			if (lnk->tx.isr[TEIF_BIT]) {
-				DCC_LOG(LOG_ERROR, "DMA transfer error!");
-				lnk->tx.ifcr[TEIF_BIT] = 1;
-			}
-			thinkos_irq_wait(lnk->tx.dma_irq);
-		} 
-
-		/* clear the the DMA trasfer complete flag */
-		lnk->tx.ifcr[TCIF_BIT] = 1;
-
-		/* return a reference to the packet just transmitted */
-		pend_pkt = lnk->tx.pend_pkt;
-	}
-	
-	if (dma_strm->cr & DMA_EN) {
-		DCC_LOG(LOG_ERROR, "DMA enabled");
-	}
-
-	/* set this packet as pending */
-	lnk->tx.pend_pkt = pkt;
-	/* set DMA memory address */
-	dma_strm->m0ar = (void *)pkt;
-	/* set DMA number of data items to transfer */
-	dma_strm->ndtr = len;
-
-	/* clear the TC bit */
-	if ((sr = uart->sr) & USART_TC) {
-		DCC_LOG(LOG_INFO, "TC=1");
-		uart->sr = 0;
-	}
-
-	/* enable DMA */
-	dma_strm->cr |= DMA_EN;
-
-	/* return previous pending packet */
-	return pend_pkt;
-}
-
-
 struct rs485_link link;
 
 #define USART2_TX STM32F_GPIOA, 2
@@ -319,6 +98,11 @@ struct rs485_link link;
 #define USART2_DMA_STRM_TX 6
 #define USART2_DMA_CHAN_TX 4
 #define USART2_DMA_IRQ_TX STM32F_IRQ_DMA1_STREAM6
+
+void stm32f_usart2_isr(void)
+{
+	rs485_link_isr(&link);
+}
 
 void net_init(void)
 {
@@ -345,9 +129,11 @@ void net_init(void)
 	 */
 
 	/* Link init */
-	rs485_init(&link, STM32F_USART2, 10000, STM32F_DMA1, 
+	rs485_init(&link, STM32F_USART2, 1000, STM32F_DMA1, 
 			   USART2_DMA_STRM_RX, USART2_DMA_CHAN_RX,
 			   USART2_DMA_STRM_TX, USART2_DMA_CHAN_TX);
+
+	cm3_irq_enable(STM32F_IRQ_USART2);
 }
 
 int net_send(const void * buf, int len)
@@ -364,6 +150,8 @@ int net_send(const void * buf, int len)
 
 	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
 
+	len = MIN(len, pktbuf_len);
+
 	pkt = rs485_pkt_enqueue(&link, pkt, len);
 
 	if (pkt != NULL)
@@ -374,21 +162,29 @@ int net_send(const void * buf, int len)
 
 int net_recv(void * buf, int len)
 {
-	struct stm32f_usart * uart = STM32F_USART2;
-	uint8_t * data = (uint8_t *)buf;
-	int c;	
-	int i;
+	void * pkt;
 
-	for (i = 0; i < len; ++i) {
-		while ((c = stm32f_usart_getc(uart, 0)) == -1) {
-			continue;
-		}
-		printf("%c", c);
-		data[i] = c;
+	pkt = pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		printf("%s(): pktbuf_alloc() failed!\n", __func__);
+		return -1;
 	}
+
+	len = rs485_pkt_receive(&link, &pkt, len);
+
+//	printf("%s(): len=%d\n", __func__, len);
+
 	DCC_LOG1(LOG_TRACE, "%d", len);
 
-	return 0;
+	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
+
+	if (pkt != NULL) {
+		memcpy(buf, pkt, len);
+		pktbuf_free(pkt);
+	}
+
+	return len;
 }
 
 /* ----------------------------------------------------------------------
@@ -407,7 +203,7 @@ struct file stm32f_uart1_file = {
 void stdio_init(void)
 {
 	struct stm32f_usart * uart = STM32F_USART1;
-#if defined(STM32F1x)
+#if defined(STM32F1X)
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
 
@@ -479,10 +275,16 @@ int supervisor_task(void)
  */
 int rx_task(void)
 {
-	uint8_t pkt[256];
+	uint8_t buf[256];
+	int n;
+	int i;
+
 
 	for (;;) {
-		net_recv(pkt, 256);
+		n = net_recv(buf, 256);
+		for (i = 0; i < n; ++i) {
+			printf("%c", buf[i]);
+		}
 	}
 }
 
@@ -499,14 +301,16 @@ int tx_task(void)
 	for (i = 0; ; ++i) {
 		n = sprintf(msg, "%d - The quick brown fox jumps over the lazy dog...\n", i);
 		net_send(msg, n);
+
+//		thinkos_sleep(1000);
 	}
 
 	return 0;
 }
 
-uint32_t rx_stack[256];
-uint32_t tx_stack[256];
-uint32_t supervisor_stack[256];
+uint32_t rx_stack[512];
+uint32_t tx_stack[512];
+uint32_t supervisor_stack[512];
 
 int main(int argc, char ** argv)
 {
