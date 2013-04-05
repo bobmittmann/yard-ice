@@ -373,15 +373,15 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	stm32f_dac_init();
-	dac_wave_set(0, WAVE_A3);
-	dac_wave_set(1, WAVE_A3);
+	dac_wave_set(0, WAVE_4K);
+	dac_wave_set(1, WAVE_7K);
 	dac_play(0);
+	dac_play(1);
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
 
 		led_on(0);
-		dac_play(1);
 		printf(" - %4d The quick brown fox jumps over the lazy dog!\n", i);
 		thinkos_sleep(100);
 		led_off(0);
@@ -390,7 +390,7 @@ int main(int argc, char ** argv)
 
 		thinkos_sleep(500);
 //		relay_off(0);
-		dac_pause(1);
+//		dac_pause(1);
 
 		thinkos_sleep(500);
 

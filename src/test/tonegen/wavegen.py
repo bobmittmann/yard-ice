@@ -54,7 +54,7 @@ def make_tab(rate, lvl, offs, typ, nm, freq):
 
 def main():
 
-	rate = 12000
+	rate = 22000
 	lvl = 620;
 	offs = 2482;
 	typ = "uint16_t";
@@ -70,6 +70,10 @@ def main():
 	make_tab(rate, lvl, offs, typ, "wave_a3", 440)
 #	make_tab("c3", 523.251, rate)
 	make_tab(rate, lvl, offs, typ, "wave_d3", 587.330)
+	make_tab(rate, lvl * 2, offs, typ, "wave_2k", 2000)
+	make_tab(rate, lvl * 2, offs, typ, "wave_4k", 4000)
+	make_tab(rate, lvl * 2, offs, typ, "wave_5k", 5333)
+	make_tab(rate, lvl * 2, offs, typ, "wave_7k", 7333)
 #	make_tab("g3", 783.991, rate)
 #	make_tab("a4", 880, rate)
 #	make_tab("a4", 4400, rate)
