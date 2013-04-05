@@ -30,7 +30,7 @@
   Direct Memory Access Controller (DMA)
   -------------------------------------------------------------------------*/
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* DMA low interrupt status register */
 #define STM32F_DMA_LISR 0x000
@@ -622,9 +622,12 @@
 	11: full FIFO
 	These bits are not used in the Direct Mode when the DMIS value is zero.
 	These bits are protected and can be written only if EN is ‘1’. */
+
 #endif
 
-#ifdef STM32F1X
+
+
+#if defined(STM32F1X)
 
 /* DMA interrupt status register */
 #define STM32F_DMA_ISR 0x000
@@ -891,7 +894,7 @@ This bit is set and cleared by software.
 
 #include <stdint.h>
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 struct stm32f_dma_stream {
 	volatile uint32_t cr;
 	volatile uint32_t ndtr;
@@ -910,8 +913,7 @@ struct stm32f_dma {
 };
 #endif
 
-#ifdef STM32F1X
-
+#if defined(STM32F1X)
 struct stm32f_dma_channel {
 	volatile uint32_t ccr;
 	volatile uint32_t cndtr;

@@ -336,10 +336,11 @@
   Bitband pointers
  ****************************************************************************/
 #define CM3_BITBAND_DEV(REG, BIT) ((uint32_t *) \
-								   CM3_PERIPHERAL_BITBAND_ADDR(REG, BIT))
+		   CM3_PERIPHERAL_BITBAND_ADDR((uint32_t)(REG), (BIT)))
 
 #define CM3_BITBAND_MEM(ADDR, BIT) ((uint32_t *) \
-								   CM3_SRAM_BITBAND_ADDR((uint32_t)ADDR, BIT))
+		   CM3_SRAM_BITBAND_ADDR((uint32_t)(ADDR), (BIT)))
+
 #include <stdint.h>
 
 struct cm3_context {

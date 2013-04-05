@@ -1908,24 +1908,25 @@ struct stm32f_rcc {
 	volatile uint32_t apb1rstr;
 	volatile uint32_t pb2rstr;
 	uint32_t res1[2]; 
-	volatile uint32_t ahb1enr;
 
+	volatile uint32_t ahb1enr;
 	volatile uint32_t ahb2enr;
 	volatile uint32_t ahb3enr;
 	uint32_t res2; 
-	volatile uint32_t apb1enr;
 
+	volatile uint32_t apb1enr;
 	volatile uint32_t apb2enr;
 	uint32_t res3[2]; 
+
 	volatile uint32_t ahb1lpenr;
 	volatile uint32_t hb2lpenr; 
-
 	volatile uint32_t ahb3lpenr;
 	uint32_t res4; 
+
 	volatile uint32_t apb1lpenr;
 	volatile uint32_t apb2lpenr;
-
 	uint32_t res5[2]; 
+
 	volatile uint32_t bdcr;
 	volatile uint32_t csr;
 	uint32_t res6[2]; 
