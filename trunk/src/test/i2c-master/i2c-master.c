@@ -590,6 +590,23 @@ int main(int argc, char ** argv)
 
 	i2c_master_init(100000);
 
+	printf("I2C scanning ");
+	addr = 0x55;
+	do {
+		thinkos_sleep(900);
+		printf(".");
+		led_on(0);
+		thinkos_sleep(100);
+		ret = i2c_master_rd(addr, buf, 2);
+		led_off(0);
+		if (ret > 0) {
+			DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", 
+					 addr, buf[0], buf[1]);
+			printf("\nI2C device found @ %d ->  0x%02x 0x%02x ", 
+				   addr, buf[0], buf[1]);
+		}
+	} while (1);
+
 again:
 	do {
 		thinkos_sleep(1000);
@@ -597,11 +614,13 @@ again:
 		for (addr = 0; addr < 128; ++addr) {
 			printf(".");
 			led_on(0);
-			ret = i2c_master_rd(addr, buf, 1);
+			ret = i2c_master_rd(addr, buf, 2);
 			led_off(0);
 			if (ret > 0) {
-				DCC_LOG2(LOG_TRACE, "addr:%d -> 0x%02x", addr, buf[0]);
-				printf("\nI2C device found @ %d -> 0x%02x ", addr, buf[0]);
+				DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", 
+						 addr, buf[0], buf[1]);
+				printf("\nI2C device found @ %d ->  0x%02x 0x%02x ", 
+					   addr, buf[0], buf[1]);
 	//			break;
 			}
 			thinkos_sleep(10);

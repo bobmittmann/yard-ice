@@ -217,9 +217,9 @@ void i2c_slave_init(unsigned int scl_freq, unsigned int addr)
 	/* I2C Control register 2 (I2C_CR2) */
 	i2c->cr2 = I2C_FREQ_SET(pclk / 1000000);
 	/*	I2C Own address register 1 (I2C_OAR1) */
-	i2c->oar1 = addr;
+	i2c->oar1 = addr << 1;
 	/*	I2C Own address register 2 (I2C_OAR2) */
-	i2c->oar2 = addr;
+	i2c->oar2 = addr << 1;
 	/* I2C Clock control register (I2C_CCR) */ 
 	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
 	/* I2C TRISE register (I2C_TRISE) */
@@ -240,47 +240,100 @@ void i2c_slave_init(unsigned int scl_freq, unsigned int addr)
 
 }
 
-int i2c_slave_io(void)
+int i2c_slave_io(uint8_t * mem, unsigned int size)
 {
-	uint8_t buf[1024];
 	struct stm32f_i2c * i2c = STM32F_I2C1;
-	uint8_t * ptr = (uint8_t *)buf;
 	uint32_t sr1;
 	uint32_t sr2;
-	int again = 0;
+	int cnt;
+	int idx = 0;
 
-	printf(".");
+//	DCC_LOG(LOG_TRACE, "1.");
+
+	i2c->cr1 = I2C_ITEVTEN | I2C_ITBUFEN | I2C_ACK | I2C_PE; 
 
 	while (((sr1 = i2c->sr1) & I2C_ADDR) == 0) {
 		/* Acknowledge failure */
-		if (sr1 & I2C_AF)
+		if (sr1 & I2C_AF) {
+			DCC_LOG(LOG_TRACE, "AF");
 			goto abort;
-		if ((again++ & 0xff) == 0) {
-			sr2 = i2c->sr2;;
-//			printf("CR1=0x%04x SR1=0x%04x SR2=0x%04x\n", i2c->cr1, sr1, sr2);
 		}
-		udelay(1000);
+		if (sr1 & I2C_STOPF) {
+			DCC_LOG(LOG_TRACE, "STOPF");
+			goto abort;
+		}
 	}
 
 	sr2 = i2c->sr2;
 	
+//	DCC_LOG(LOG_TRACE, "2.");
+
 	if (sr2 & I2C_TRA) {
-		printf("TRA=1 ");
+		cnt = 0;
+//		printf("TRA=1 ");
+//		DCC_LOG(LOG_TRACE, "TRA=1 (xmit)");
+		for (cnt = 0; ;++cnt) {
+			do {
+				sr1 = i2c->sr1;
+				if (sr1 & I2C_STOPF) {
+					DCC_LOG(LOG_TRACE, "STOPF");
+					goto eot;
+				}
+				if (sr1 & I2C_AF) {
+//					DCC_LOG(LOG_TRACE, "AF");
+					goto eot;
+				}
+				if (sr1 & I2C_BTF) {
+					DCC_LOG(LOG_TRACE, "BTF");
+					goto eot;
+				}
+			} while ((sr1 & I2C_TXE) == 0);
+
+			i2c->dr = mem[idx++];
+			idx = (idx == size) ? 0 : idx;
+		}
+eot:
+		DCC_LOG(LOG_TRACE, "3.");
+
+//		do {
+//			sr1 = i2c->sr1;
+//		} while ((sr1 & I2C_STOPF) == 0);
+
+		i2c->cr1 = I2C_PE; 
+
+		DCC_LOG(LOG_TRACE, "4.");
+/*		do {
+			sr1 = i2c->sr1;
+		} while (sr1 & I2C_STOPF); */
+
+		/* clear AF */
+		i2c->sr1 = 0;
+
+		DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
+		DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
 	} else {
-		printf("TRA=0 ");
+//		printf("TRA=0 ");
+		DCC_LOG(LOG_TRACE, "TRA=0 (recv)");
 	}
 
-	printf("\n");
-	udelay(100000);
+//	printf("\n");
 
 	return 0;
 
 abort:
-	printf("ABORT.\n");
+	DCC_LOG2(LOG_TRACE, "Abort: SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
+	/* clear AF */
+	i2c->sr1 = 0;
+	
+	i2c->cr1 = I2C_PE; 
+	udelay(500000);
 
 	return -1;
 }
 
+#define IO_MEM_SIZE 32
+
+uint8_t io_mem[IO_MEM_SIZE];
 
 int main(int argc, char ** argv)
 {
@@ -311,7 +364,10 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	i2c_slave_init(100000, 32);
+	i2c_slave_init(100000, 0x55);
+
+	for (i = 0; i < IO_MEM_SIZE; ++i)
+		io_mem[i] = i * 2;
 
 	for (i = 0; ; ++i) {
 		if ((i & 0xff) == 0) {
@@ -319,7 +375,7 @@ int main(int argc, char ** argv)
 			led_on(led);
 		}
 
-		i2c_slave_io();
+		i2c_slave_io(io_mem, IO_MEM_SIZE);
 
 		led_off(led);
 	}
