@@ -92,7 +92,7 @@ void leds_init(void)
 
 int push_btn_stat(void)
 {
-	stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+	return stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
 }
 
 void io_init(void)

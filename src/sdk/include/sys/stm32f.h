@@ -111,6 +111,45 @@ struct stm32f_spi_io {
 	struct stm32f_gpio_io sck;
 } __attribute__((__packed__));
 
+/*---------------------------------------------------------------------
+ * DMA 
+ *---------------------------------------------------------------------*/
+
+extern const uint8_t stm32f_dma_isr_base_lut[];
+extern const uint8_t stm32f_dma1_irqnum_lut[];
+extern const uint8_t stm32f_dma2_irqnum_lut[];
+
+#if defined(STM32F2X) || defined(STM32F4X)
+
+static inline uint32_t * dma_isr_bitband(struct stm32f_dma * dma,
+										 int stream) {
+	return CM3_BITBAND_DEV(&dma->lisr, stm32f_dma_isr_base_lut[stream]);
+}
+
+static inline uint32_t * dma_ifcr_bitband(struct stm32f_dma * dma,
+										 int stream) {
+	return CM3_BITBAND_DEV(&dma->lifcr, stm32f_dma_isr_base_lut[stream]);
+}
+
+#endif
+
+struct stm32f_dmactl {
+	int strm_id;
+	struct stm32f_dma_stream * strm;
+	uint32_t * isr;
+	uint32_t * ifcr;
+};
+
+void stm32f_dmactl_init(struct stm32f_dmactl * ctl, 
+						struct stm32f_dma * dma,
+						int strm_id);
+
+#define FEIF_BIT 0
+#define DMEIF_BIT 2
+#define TEIF_BIT 3
+#define HTIF_BIT 4
+#define TCIF_BIT 5
+
 
 #include <stdint.h>
 #include <stdbool.h>

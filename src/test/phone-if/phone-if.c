@@ -259,14 +259,14 @@ void process_data_in(void)
 		system_reset();
 	}
 
-	set = wr_block.led & (wr_block.led ^ wr_block.led);
-	clr = wr_block.led & (wr_block.led ^ wr_block.led);
+	set = wr_block.led & (wr_block.led ^ rd_block.led);
+	clr = rd_block.led & (wr_block.led ^ rd_block.led);
 
 	for (i = 0; i < 5; ++i) {
-		if (clr & (1 << i)) {
+		if (set & (1 << i)) {
 			printf("[LED%d ON]", i);
 			led_on(i);
-		} else if (set & (1 << i)) {
+		} else if (clr & (1 << i)) {
 			printf("[LED%d OFF]", i);
 			led_off(i);
 		}
@@ -275,14 +275,14 @@ void process_data_in(void)
 	/* update read block */
 	rd_block.led = wr_block.led;
 
-	set = wr_block.relay & (wr_block.relay ^ wr_block.relay);
-	clr = wr_block.relay & (wr_block.relay ^ wr_block.relay);
+	clr = wr_block.relay & (wr_block.relay ^ rd_block.relay);
+	set = rd_block.relay & (wr_block.relay ^ rd_block.relay);
 
 	for (i = 0; i < 5; ++i) {
-		if (clr & (1 << i)) {
+		if (set & (1 << i)) {
 			printf("[RELAY%d ON]", i);
 			relay_on(i);
-		} else if (set & (1 << i)) {
+		} else if (clr & (1 << i)) {
 			printf("[RELAY%d OFF]", i);
 			relay_off(i);
 		}

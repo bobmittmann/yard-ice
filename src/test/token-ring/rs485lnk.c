@@ -33,39 +33,6 @@
 
 #include "rs485lnk.h"
 
-const uint8_t dma_isr_base_lut[] = {
-	     0,      6,      16,      22,
-	32 + 0, 32 + 6, 32 + 16, 32 + 22,
-};
-
-const uint8_t stm32f_dma1_irqnum_lut[] = {
-	STM32F_IRQ_DMA1_STREAM0,
-	STM32F_IRQ_DMA1_STREAM1,
-	STM32F_IRQ_DMA1_STREAM2,
-	STM32F_IRQ_DMA1_STREAM3,
-	STM32F_IRQ_DMA1_STREAM4,
-	STM32F_IRQ_DMA1_STREAM5,
-	STM32F_IRQ_DMA1_STREAM6,
-	STM32F_IRQ_DMA1_STREAM7
-};
-
-const uint8_t stm32f_dma2_irqnum_lut[] = {
-	STM32F_IRQ_DMA2_STREAM0,
-	STM32F_IRQ_DMA2_STREAM1,
-	STM32F_IRQ_DMA2_STREAM2,
-	STM32F_IRQ_DMA2_STREAM3,
-	STM32F_IRQ_DMA2_STREAM4,
-	STM32F_IRQ_DMA2_STREAM5,
-	STM32F_IRQ_DMA2_STREAM6,
-	STM32F_IRQ_DMA2_STREAM7
-};
-
-#define FEIF_BIT 0
-#define DMEIF_BIT 2
-#define TEIF_BIT 3
-#define HTIF_BIT 4
-#define TCIF_BIT 5
-
 void rs485_init(struct rs485_link * lnk, 
 				struct stm32f_usart * uart,
 				unsigned int speed,
@@ -76,7 +43,6 @@ void rs485_init(struct rs485_link * lnk,
 	struct stm32f_dma_stream * tx_dma_strm;
 	struct stm32f_dma_stream * rx_dma_strm;
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	int isr_base;
 
 	lnk->uart = uart;
 	lnk->dma = dma;
@@ -97,9 +63,8 @@ void rs485_init(struct rs485_link * lnk,
 	/* TX DMA */
 	lnk->tx.dma_id = tx_dma_strm_id;
 
-	isr_base = dma_isr_base_lut[tx_dma_strm_id]; 
-	lnk->tx.isr = CM3_BITBAND_DEV(&dma->lisr, isr_base);
-	lnk->tx.ifcr = CM3_BITBAND_DEV(&dma->lifcr, isr_base);
+	lnk->tx.isr = dma_isr_bitband(dma, tx_dma_strm_id);
+	lnk->tx.ifcr = dma_ifcr_bitband(dma, tx_dma_strm_id);
 
 	DCC_LOG2(LOG_TRACE, "0x%p 0x%p", lnk->tx.isr, lnk->tx.ifcr);
 
@@ -131,9 +96,8 @@ void rs485_init(struct rs485_link * lnk,
 	/* RX DMA */
 	lnk->rx.dma_id = rx_dma_strm_id;
 
-	isr_base = dma_isr_base_lut[rx_dma_strm_id]; 
-	lnk->rx.isr = CM3_BITBAND_DEV(&dma->lisr, isr_base);
-	lnk->rx.ifcr = CM3_BITBAND_DEV(&dma->lifcr, isr_base);
+	lnk->rx.isr = dma_isr_bitband(dma, rx_dma_strm_id);
+	lnk->rx.ifcr = dma_ifcr_bitband(dma, rx_dma_strm_id);
 
 	rx_dma_strm = &dma->s[rx_dma_strm_id];
 	lnk->rx.dma_strm = rx_dma_strm;

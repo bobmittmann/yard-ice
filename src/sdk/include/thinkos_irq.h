@@ -102,7 +102,6 @@ __thinkos_critical_ev_wait(int ev, int lvl) {
 	__thinkos_critical_enter_level(lvl);
 }
 
-
 static inline void __attribute__((always_inline)) 
 __thinkos_ev_raise(int ev) {
 	int th;

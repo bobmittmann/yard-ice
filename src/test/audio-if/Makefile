@@ -22,7 +22,7 @@
 
 PROG = audio-if
 
-CFILES = audio-if.c i2c-master.c console.c io.c
+CFILES = audio-if.c i2c-master.c console.c io.c i2s.c
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm
