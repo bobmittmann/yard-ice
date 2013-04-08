@@ -384,7 +384,6 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	for (i = 0; ; ++i) {
-		thinkos_sleep(100);
 		xfer = i2c_slave_io();
 		switch (xfer) {
 		case I2C_XFER_IN:

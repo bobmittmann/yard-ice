@@ -39,7 +39,7 @@ void thinkos_mutex_alloc_svc(int32_t * arg)
 		thinkos_rt.lock[mutex] = -1;
 	wq = mutex + THINKOS_MUTEX_BASE;
 
-	DCC_LOG2(LOG_TRACE, "mutex=%d wq=%d", mutex, wq);
+	DCC_LOG2(LOG_INFO, "mutex=%d wq=%d", mutex, wq);
 	arg[0] = wq;
 }
 
@@ -56,7 +56,7 @@ void thinkos_mutex_free_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG2(LOG_TRACE, "mutex=%d wq=%d", mutex, wq);
+	DCC_LOG2(LOG_INFO, "mutex=%d wq=%d", mutex, wq);
 	__bit_mem_wr(&thinkos_rt.mutex_alloc, mutex, 0);
 }
 #endif
@@ -84,7 +84,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = self;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked", self, wq);
 		arg[0] = 0;
 		return;
 	}
@@ -98,7 +98,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 #endif
 	/* insert into the mutex wait queue */
 	__thinkos_wq_insert(wq, self);
-	DCC_LOG2(LOG_TRACE, "<%d> waiting on mutex %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", self, wq);
 
 	arg[0] = 0;
 
@@ -163,7 +163,7 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = self;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked.", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked.", self, wq);
 		arg[0] = 0;
 		return;
 	}
@@ -178,7 +178,7 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 
 	/* insert into the mutex wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
-	DCC_LOG2(LOG_TRACE, "<%d> waiting on mutex %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", self, wq);
 
 	/* Set the default return value to timeout. The
 	   mutex_unlock() call will change this to 0 */
@@ -220,7 +220,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		return;
 	}
 
-	DCC_LOG2(LOG_TRACE, "<%d> mutex %d unlocked.", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> mutex %d unlocked.", self, wq);
 
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the lock, just release
@@ -229,7 +229,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 	} else {
 		/* set the mutex ownership to the new thread */
 		thinkos_rt.lock[mutex] = th;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked.", th, wq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked.", th, wq);
 		/* wakeup from the mutex wait queue */
 		__thinkos_wakeup(wq, th);
 		/* signal the scheduler ... */

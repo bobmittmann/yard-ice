@@ -387,9 +387,9 @@ void stm32f_i2c1_ev_isr(void)
 		i2c->dr = xfer.addr;
 
 		if (xfer.addr & 1) {
-			DCC_LOG1(LOG_TRACE, "%d SB (recv)", i2c_irq_cnt);
+			DCC_LOG1(LOG_INFO, "%d SB (recv)", i2c_irq_cnt);
 		} else {
-			DCC_LOG1(LOG_TRACE, "%d SB (xmit)", i2c_irq_cnt);
+			DCC_LOG1(LOG_INFO, "%d SB (xmit)", i2c_irq_cnt);
 		}
 	}
 
@@ -437,18 +437,18 @@ do_recv:
 do_xmit:
 		if (xfer.rem > 0) {
 			i2c->dr = *xfer.ptr++;
-			DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
+			DCC_LOG1(LOG_INFO, "%d TXE", i2c_irq_cnt);
 		} else if (xfer.rem == 0) {
 			/* Program STOP. */
 			i2c->cr1 = I2C_STOP | I2C_PE; 
 			/* Clear the TXE flag */
 			i2c->dr = 0;
-			DCC_LOG1(LOG_TRACE, "%d TXE STOP", i2c_irq_cnt);
-			xfer.ret = xfer.cnt;
-			__thinkos_ev_timed_raise(xfer.event);
+			DCC_LOG1(LOG_INFO, "%d TXE STOP", i2c_irq_cnt);
 		} else {
 			i2c->dr = 0;
-			DCC_LOG1(LOG_TRACE, "%d TXE ?", i2c_irq_cnt);
+			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
+			xfer.ret = xfer.cnt;
+			__thinkos_ev_timed_raise(xfer.event);
 		} 
 		xfer.rem--;
 //		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
@@ -479,7 +479,7 @@ void stm32f_i2c1_er_isr(void)
 	}
 
 	if (sr1 & I2C_AF) {
-		DCC_LOG1(LOG_TRACE, "%d AF", i2c_irq_cnt);
+		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
 		/* clear AF */
 		i2c->sr1 = 0;
 		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
@@ -506,7 +506,7 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 	xfer.addr = addr << 1;
 	xfer.ret = -2;
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
+	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
@@ -519,7 +519,7 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 		}
 	}
 
-	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
 	return ret;
 
@@ -541,7 +541,7 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 	xfer.addr = (addr << 1) | 1;
 	xfer.ret = -2;
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
+	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
@@ -554,7 +554,7 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 		}
 	}
 
-	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
 	return ret;
 }
@@ -945,23 +945,29 @@ int32_t i2c_mutex;
 int32_t phif_addr = 0x55;
 int32_t codec_addr = 64;
 
-#define PHIF_ADC_MAGIC 0
-#define PHIF_ADC_ADDR 2
+#define PHIF_ID_REG 0
+#define PHIF_ADC_REG 2
+#define PHIF_LED_REG 12
+#define PHIF_RLY_REG 13
+#define PHIF_VR0_REG 14
+#define PHIF_VR1_REG 15
 
 int acq_task(void)
 {
 	uint16_t adc[5];
-	uint8_t idx;
+	uint8_t reg;
 	int i;
 
+	DCC_LOG(LOG_TRACE, "started...");
 	printf("%s() started...\n", __func__);
 
 	for (;;) {
-		thinkos_sleep(2000);
+		DCC_LOG(LOG_INFO, "Poll...");
+		thinkos_sleep(1000);
 		thinkos_mutex_lock(i2c_mutex);
-		idx = 2;
-		if (i2c_master_wr(phif_addr, &idx, 1) == 1) {
-			DCC_LOG(LOG_TRACE, "i2c_master_wr().");
+		reg = PHIF_ADC_REG;
+		if (i2c_master_wr(phif_addr, &reg, 1) > 0) {
+			DCC_LOG(LOG_INFO, "i2c_master_wr().");
 			if (i2c_master_rd(phif_addr, adc, sizeof(adc)) > 0) {
 				DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
 						 adc[0], adc[1], adc[2], adc[3], adc[4]);
@@ -980,6 +986,27 @@ int acq_task(void)
 	}
 }
 
+void vr_set(unsigned int val0, unsigned int val1)
+{
+	uint8_t pkt[3];
+
+	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = PHIF_VR0_REG;
+	pkt[1] = val0;
+	pkt[2] = val1;
+
+	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+}
+
 void i2c_bus_scan(void)
 {
 	uint8_t buf[4];
@@ -989,7 +1016,10 @@ void i2c_bus_scan(void)
 
 	printf("- I2C bus scan: ");
 
-	for (addr = 1; addr < 127; ++addr) {
+	/* 7 bit addresses range from 0 to 0x78 */
+	for (addr = 1; addr < 0x78; ++addr) {
+
+		DCC_LOG1(LOG_TRACE, "Addr=0x%02x", addr);
 
 		buf[0] = 0;
 		if (i2c_master_wr(addr, buf, 1) <= 0) {
@@ -998,16 +1028,24 @@ void i2c_bus_scan(void)
 		}
 
 		printf("\nI2C device found @ %d", addr);
+
 		if (i2c_master_rd(addr, buf, 2) != 2) {
 			printf("\n");
 			continue;
 		}
 
+		DCC_LOG3(LOG_TRACE, "Addr=0x%02x [0]--> 0x%02x%02x", 
+				 addr, buf[1], buf[0]);
 		printf(" 0x%02x%02x\n", buf[1], buf[0]);
 
-		thinkos_sleep(50);
+		if ((buf[0] == 'P') && (buf[1] == 'H')) {
+			printf(" Phone Interface.\n");
+			DCC_LOG1(LOG_TRACE, "Phone Interface @ 0x%02x", addr);
+			phif_addr = addr;
+		}
 	}
 
+	DCC_LOG(LOG_TRACE, "done.");
 	thinkos_mutex_unlock(i2c_mutex);
 
 	printf("\n");
@@ -1019,8 +1057,6 @@ uint32_t acq_stack[256];
 
 int main(int argc, char ** argv)
 {
-	uint8_t buf[32];
-	uint8_t addr = 0;
 	int i;
 
 	DCC_LOG_INIT();
@@ -1047,8 +1083,10 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
+	DCC_LOG(LOG_TRACE, "5. i2c_master_init()");
 	i2c_master_init(100000);
 
+	DCC_LOG(LOG_TRACE, "6. i2c_master_enable()");
 	i2c_master_enable();
 
 	thinkos_sleep(100);
@@ -1056,8 +1094,7 @@ int main(int argc, char ** argv)
 	i2c_mutex = thinkos_mutex_alloc();
 	printf("I2C mutex=%d\n", i2c_mutex);
 
-//	i2c_bus_scan();
-
+	i2c_bus_scan();
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
@@ -1071,44 +1108,10 @@ int main(int argc, char ** argv)
 						  acq_stack, sizeof(acq_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 
-	buf[0] = 0x05;
-	buf[1] = 0x18;
-	buf[2] = 0x24;
-	buf[3] = 0x42;
-
-	addr = 0x55;
-
-	while (1) {
-		thinkos_sleep(2000);
-	}
-
-
-	printf("Reading ");
 	for (i = 0; ; ++i) {
-		led_on(0);
-		thinkos_sleep(100);
-		led_off(0);
-		thinkos_sleep(900);
-
-		if (i2c_master_rd(addr, buf, 4) > 0) {
-			DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", addr, 
-					 buf[0], buf[1]);
-		}
+		thinkos_sleep(3000);
+		vr_set(i, 2 * i);
 	}
-
-
-	printf("Writing ");
-	do {
-		thinkos_mutex_lock(i2c_mutex);
-		thinkos_sleep(2000);
-		if (i2c_master_wr(addr, buf, 4) < 0) {
-			printf("?");
-		} else {
-			printf("+");
-		}
-		thinkos_mutex_unlock(i2c_mutex);
-	} while (1);
-
 
 
 	return 0;
