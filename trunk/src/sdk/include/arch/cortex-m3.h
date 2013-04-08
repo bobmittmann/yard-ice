@@ -101,7 +101,7 @@
 #define SCB_VTOR_TBLOFF (0x3fffff << 7)
 
 /* SCB Application Interrupt and Reset Control Register */
-#define SCB_AIRCR_VECTKEY (0xffff << 16)
+#define SCB_AIRCR_VECTKEY (0x05fa << 16)
 #define SCB_AIRCR_VECTKEYSTAT (0xffff << 16)
 #define SCB_AIRCR_ENDIANESS (1 << 15)
 #define SCB_AIRCR_PRIGROUP (7 << 8)

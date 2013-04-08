@@ -177,14 +177,44 @@ void io_init(void)
  * ----------------------------------------------------------------------
  */
 
-void i2c_slave_init(unsigned int scl_freq, unsigned int addr)
+struct i2c_io_blk {
+	/* index to the memory position to be transfered next */
+	uint32_t idx;
+	/* top index for the I/O memory block */
+	uint32_t max;
+	/* transfer count */
+	uint32_t cnt;
+	/* transfer status/direction */
+	int xfer;
+	/* reference to the I/O memory block */
+	void * mem;
+	int32_t event;
+};
+
+enum {
+	I2C_XFER_ERR = -1,
+	I2C_XFER_IN,
+	I2C_XFER_OUT
+};
+
+struct i2c_io_blk i2c_io;
+
+struct i2c_io_blk * i2c_slave_init(unsigned int scl_freq, 
+								   unsigned int addr,
+								   void * mem, unsigned int size)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	uint32_t pclk = stm32f_apb1_hz;
+	struct i2c_io_blk * io = &i2c_io;
 #if defined(STM32F1X)
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
+
+	io->mem = mem;
+	io->max = size - 1;
+	io->idx = 0;
+	io->cnt = 0;
 
 	stm32f_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
 	stm32f_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
@@ -224,34 +254,51 @@ void i2c_slave_init(unsigned int scl_freq, unsigned int addr)
 	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
 	/* I2C TRISE register (I2C_TRISE) */
 	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
-	/* I2C Control register 1 (I2C_CR1) */
-	i2c->cr1 = I2C_PE;
 
-	printf("%s() scl_freq=%d\n", __func__, scl_freq);
-	printf("%s() SR1=0x%04x SR2=0x%04x\n", __func__, i2c->sr1, i2c->sr2);
+	i2c_io.event = thinkos_ev_alloc();
 
-	printf("CR1=0x%04x CR2=0x%04x CCR=0x%04x\n",
-		   i2c->cr1, i2c->cr2, i2c->ccr);
-
-	printf("OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x\n",
-		   i2c->oar1, i2c->oar2, i2c->trise);
-
-	printf("SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
-
+	return io;
 }
 
-int i2c_slave_io(uint8_t * mem, unsigned int size)
+void i2c_slave_enable(void)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
+
+	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
+	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
+
+	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
+	/* enable ACK, events and errors */
+	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
+
+	DCC_LOG(LOG_TRACE, "Enabling device ....");
+	/* enable ACK */
+	/* I2C Control register 1 (I2C_CR1) */
+	i2c->cr1 = I2C_STOP | I2C_ACK | I2C_PE; 
+}
+
+/* ----------------------------------------------------------------------
+ * I2C I/O busy blocking (no interrupts)
+ * ----------------------------------------------------------------------
+ */
+int i2c_slave_io_busy(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	struct i2c_io_blk * io = &i2c_io;
+	uint8_t * mem;
 	uint32_t sr1;
 	uint32_t sr2;
 	int cnt;
-	int idx = 0;
+	int idx;
+	int max;
+	int ret;
 
+	
 //	DCC_LOG(LOG_TRACE, "1.");
+	/* enable ACK, events and errors */
+	i2c->cr1 = I2C_STOP | I2C_ACK | I2C_PE; 
 
-	i2c->cr1 = I2C_ITEVTEN | I2C_ITBUFEN | I2C_ACK | I2C_PE; 
-
+	/* Wait for address match */
 	while (((sr1 = i2c->sr1) & I2C_ADDR) == 0) {
 		/* Acknowledge failure */
 		if (sr1 & I2C_AF) {
@@ -264,61 +311,73 @@ int i2c_slave_io(uint8_t * mem, unsigned int size)
 		}
 	}
 
+	/* Clear ADDR flag */
 	sr2 = i2c->sr2;
 	
 //	DCC_LOG(LOG_TRACE, "2.");
 
+	idx = io->idx;
+	max = io->max;
+	mem = (uint8_t *)io->mem;
+
+	/* Check if the tranfer direction */
 	if (sr2 & I2C_TRA) {
+		/* Transmmit (slave --> master) */
 		cnt = 0;
-//		printf("TRA=1 ");
 //		DCC_LOG(LOG_TRACE, "TRA=1 (xmit)");
 		for (cnt = 0; ;++cnt) {
 			do {
 				sr1 = i2c->sr1;
-				if (sr1 & I2C_STOPF) {
-					DCC_LOG(LOG_TRACE, "STOPF");
+				if (sr1 & I2C_AF) {
+					DCC_LOG(LOG_TRACE, "AF");
+					/* clear AF */
 					goto eot;
 				}
-				if (sr1 & I2C_AF) {
-//					DCC_LOG(LOG_TRACE, "AF");
-					goto eot;
+				if (sr1 & I2C_STOPF) {
+					DCC_LOG(LOG_TRACE, "STOPF");
 				}
 				if (sr1 & I2C_BTF) {
 					DCC_LOG(LOG_TRACE, "BTF");
-					goto eot;
 				}
 			} while ((sr1 & I2C_TXE) == 0);
 
-			i2c->dr = mem[idx++];
-			idx = (idx == size) ? 0 : idx;
+			i2c->dr = mem[idx];
+
+			idx = (idx == max) ? 0 : idx + 1;
 		}
 eot:
-		DCC_LOG(LOG_TRACE, "3.");
-
-//		do {
-//			sr1 = i2c->sr1;
-//		} while ((sr1 & I2C_STOPF) == 0);
-
+		do {
+			sr2 = i2c->sr2;
+		} while ((sr2 & I2C_BUSY));
+		/* clear ACK */
 		i2c->cr1 = I2C_PE; 
-
-		DCC_LOG(LOG_TRACE, "4.");
-/*		do {
-			sr1 = i2c->sr1;
-		} while (sr1 & I2C_STOPF); */
-
 		/* clear AF */
 		i2c->sr1 = 0;
 
+		if (cnt) {
+			/* discard the last item, as it was inserted in
+			   the buffer but never transmitted */
+			cnt--;
+			idx = (idx == 0) ? max : idx - 1;
+		}
+
+		io->idx = idx;
+
 		DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
-		DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
+//		DCC_LOG2(LOG_TRACE, "SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
+
+		ret = I2C_XFER_IN;
 	} else {
+		/* Receive (slave <-- master) */
 //		printf("TRA=0 ");
 		DCC_LOG(LOG_TRACE, "TRA=0 (recv)");
+		cnt = 0;
+		ret = I2C_XFER_OUT;
 	}
 
 //	printf("\n");
 
-	return 0;
+	return ret;
 
 abort:
 	DCC_LOG2(LOG_TRACE, "Abort: SR1=0x%04x SR2=0x%04x ", i2c->sr1, i2c->sr2);
@@ -328,7 +387,99 @@ abort:
 	i2c->cr1 = I2C_PE; 
 	udelay(500000);
 
-	return -1;
+	return I2C_XFER_ERR;
+}
+
+/* ----------------------------------------------------------------------
+ * I2C I/O blocking (interrupts)
+ * ----------------------------------------------------------------------
+ */
+int i2c_slave_io(void)
+{
+	struct i2c_io_blk * io = &i2c_io;
+
+	DCC_LOG(LOG_TRACE, "wait...");
+	thinkos_ev_wait(io->event);
+	DCC_LOG(LOG_TRACE, "wake up.");
+
+	return io->xfer;
+}
+
+void stm32f_i2c1_ev_isr(void) 
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	struct i2c_io_blk * io = &i2c_io;
+	static uint32_t irq_cnt = 0;
+	uint8_t * mem = (uint8_t *)io->mem;
+	uint32_t sr1;
+	uint32_t sr2;
+
+	irq_cnt++;
+
+	sr1 = i2c->sr1;
+	
+	if (sr1 & I2C_ADDR) {
+		/* Clear ADDR flag */
+		sr2 = i2c->sr2;
+		/* Check if the tranfer direction */
+		if (sr2 & I2C_TRA) {
+			io->xfer = I2C_XFER_OUT;
+//			DCC_LOG1(LOG_TRACE, "%d ADDR: TRA=1 (xmit)", irq_cnt);
+		} else {
+			io->xfer = I2C_XFER_IN;
+//			DCC_LOG1(LOG_TRACE, "%d ADDR: TRA=0 (recv)", irq_cnt);
+		} 
+		io->cnt = 0;
+	}
+
+	if (sr1 & I2C_STOPF) {
+		/* Clear STOPF */
+		i2c->cr1 = I2C_ACK | I2C_PE; 
+		DCC_LOG3(LOG_TRACE, "%d STOPF: cnt=%d %s", irq_cnt, io->cnt,
+			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
+		__thinkos_ev_raise(io->event);
+	}
+
+	if (sr1 & I2C_BTF) {
+		DCC_LOG(LOG_TRACE, "BTF");
+	}
+
+	if (sr1 & I2C_RXNE) {
+		mem[io->idx] = i2c->dr;
+	//	DCC_LOG2(LOG_TRACE, "%d RXNE %02x", irq_cnt, mem[io->idx]);
+		io->idx = (io->idx == io->max) ? 0 : io->idx + 1;
+		io->cnt++;
+	}
+
+	if (sr1 & I2C_TXE) {
+	//	DCC_LOG1(LOG_TRACE, "%d TXE", irq_cnt);
+		i2c->dr = mem[io->idx];
+		io->idx = (io->idx == io->max) ? 0 : io->idx + 1;
+		io->cnt++;
+		DCC_LOG2(LOG_TRACE, "%d TXE %02x", irq_cnt, mem[io->idx]);
+	}
+}
+
+void stm32f_i2c1_er_isr(void) 
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint32_t sr1;
+
+	sr1 = i2c->sr1;
+
+	if (sr1 & I2C_BERR) {
+		DCC_LOG(LOG_TRACE, "BERR");
+	}
+
+	if (sr1 & I2C_AF) {
+		DCC_LOG(LOG_TRACE, "AF");
+		/* clear AF */
+		i2c->sr1 = 0;
+	}
+
+	if (sr1 & I2C_OVR) {
+		DCC_LOG(LOG_TRACE, "OVR");
+	}
 }
 
 #define IO_MEM_SIZE 32
@@ -338,6 +489,7 @@ uint8_t io_mem[IO_MEM_SIZE];
 int main(int argc, char ** argv)
 {
 	int led = 0;
+	int ret;
 	int i;
 
 	DCC_LOG_INIT();
@@ -364,10 +516,12 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	i2c_slave_init(100000, 0x55);
-
 	for (i = 0; i < IO_MEM_SIZE; ++i)
 		io_mem[i] = i * 2;
+
+	i2c_slave_init(100000, 0x55, io_mem, IO_MEM_SIZE);
+
+	i2c_slave_enable();
 
 	for (i = 0; ; ++i) {
 		if ((i & 0xff) == 0) {
@@ -375,7 +529,18 @@ int main(int argc, char ** argv)
 			led_on(led);
 		}
 
-		i2c_slave_io(io_mem, IO_MEM_SIZE);
+		ret = i2c_slave_io();
+		switch (ret) {
+		case I2C_XFER_IN:
+			printf("In ");
+			break;
+		case I2C_XFER_OUT:
+			printf("Out ");
+			break;
+		case I2C_XFER_ERR:
+			printf("Err ");
+			break;
+		}
 
 		led_off(led);
 	}

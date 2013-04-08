@@ -87,7 +87,7 @@ __rom_vectors:
 	.word	_halt                      /* 22 Reserved */
 #endif
 
-	.word	stm32f_exti9_5_isr         /* 23 External Line[9:5]s */
+	.word	stm32f_exti9_5_isr         /* 23 External Lines [9:5] */
 
 #if defined(STM32F2X)
 	.word	stm32f_tim1_brk_tim9_isr      /* 24 TIM1 Break and TIM9 */

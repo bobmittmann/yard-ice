@@ -32,30 +32,28 @@
 #if THINKOS_ENABLE_EVENT_ALLOC
 void thinkos_ev_alloc_svc(int32_t * arg)
 {
-	unsigned int wq;
-	int ev;
+	unsigned int ev;
 
 	ev = __thinkos_ev_alloc();
-	wq = ev + THINKOS_EVENT_BASE;
 
-	DCC_LOG2(LOG_INFO, "event=%d wq=%d", ev, wq);
-	arg[0] = wq;
+	DCC_LOG1(LOG_TRACE, "event=%d", ev);
+	arg[0] = ev;
 }
 
 void thinkos_ev_free_svc(int32_t * arg)
 {
-	unsigned int wq = arg[0];
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int ev = arg[0];
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if (ev >= THINKOS_EVENT_MAX) {
+	if ((ev < THINKOS_EVENT_BASE) || 
+		(ev >= (THINKOS_EVENT_BASE + THINKOS_EVENT_MAX))) {
 		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 
-	DCC_LOG2(LOG_INFO, "event=%d wq=%d", ev, wq);
+	DCC_LOG1(LOG_TRACE, "event=%d", ev);
 	__thinkos_ev_free(ev);
 }
 #endif
