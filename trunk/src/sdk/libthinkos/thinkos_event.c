@@ -83,7 +83,7 @@ void thinkos_ev_wait_svc(int32_t * arg)
 	/* insert into the mutex wait queue */
 	__thinkos_wq_insert(wq, self);
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for event %d...", self, wq);
 
 	/* wait for event */
 	__thinkos_wait();
@@ -119,7 +119,7 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 	   ev_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for event %d...", self, wq);
 
 	/* wait for event */
 	__thinkos_wait();
