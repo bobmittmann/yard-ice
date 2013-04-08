@@ -69,19 +69,19 @@ __attribute__((always_inline)) __thinkos_critical_exit(void)  {
 
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-static inline int 
-__attribute__((always_inline)) __thinkos_ev_alloc(void) {
-	return thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0);
+static inline int __attribute__((always_inline)) 
+__thinkos_ev_alloc(void) {
+	return thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0) + THINKOS_EVENT_BASE;
 }
 
-static inline void 
-__attribute__((always_inline)) __thinkos_ev_free(int ev) {
-	__bit_mem_wr(&thinkos_rt.ev_alloc, ev, 0);
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_free(int ev) {
+	__bit_mem_wr(&thinkos_rt.ev_alloc, ev - THINKOS_EVENT_BASE, 0);
 }
 #endif
 
-static inline void 
-__attribute__((always_inline)) __thinkos_ev_wait(int ev) {
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_wait(int ev) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
 	/* prepare to wait ... */
@@ -91,8 +91,8 @@ __attribute__((always_inline)) __thinkos_ev_wait(int ev) {
 	__thinkos_critical_enter();
 }
 
-static inline void 
-__attribute__((always_inline)) __thinkos_critical_ev_wait(int ev, int lvl) {
+static inline void __attribute__((always_inline)) 
+__thinkos_critical_ev_wait(int ev, int lvl) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
 	/* prepare to wait ... */
@@ -103,8 +103,8 @@ __attribute__((always_inline)) __thinkos_critical_ev_wait(int ev, int lvl) {
 }
 
 
-static inline void 
-__attribute__((always_inline)) __thinkos_ev_raise(int ev) {
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_raise(int ev) {
 	int th;
 
 	if ((th = __thinkos_wq_head(ev)) != THINKOS_THREAD_NULL) {
@@ -120,6 +120,18 @@ __attribute__((always_inline)) __thinkos_ev_raise(int ev) {
 		__thinkos_defer_sched();
 	}
 }
+
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_timed_raise(int ev) {
+	int th;
+
+	if ((th = __thinkos_wq_head(ev)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(ev, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
+}
+
 
 #if (THINKOS_IRQ_MAX  > 0)
 /* set the interrupt priority */

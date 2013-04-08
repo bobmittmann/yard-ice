@@ -407,18 +407,21 @@ void cm3_msp_init(uint64_t * stack_top);
  * --------------------------------------------------------------------------*/
 
 /* set a bit in a bit map atomically */
-static void inline __attribute__((always_inline)) bmp_bit_set(void * bmp, unsigned int bit)
+static void inline __attribute__((always_inline)) 
+bmp_bit_set(void * bmp, unsigned int bit)
 {
 	__bit_mem_wr(bmp, bit, 1);  
 }
 
 /* clear a bit in a bit map atomically */
-static void inline __attribute__((always_inline)) bmp_bit_clr(void * bmp, unsigned int bit)
+static void inline __attribute__((always_inline)) 
+bmp_bit_clr(void * bmp, unsigned int bit)
 {
 	__bit_mem_wr(bmp, bit, 0);  
 }
 
-static inline int __attribute__((always_inline)) thinkos_alloc_lo(uint32_t * ptr, int start) {
+static inline int __attribute__((always_inline)) 
+thinkos_alloc_lo(uint32_t * ptr, int start) {
 	int idx;
 	/* Look for an empty bit MSB first */
 	idx = __clz(__rbit(~(*ptr >> start))) + start;
@@ -429,7 +432,8 @@ static inline int __attribute__((always_inline)) thinkos_alloc_lo(uint32_t * ptr
 	return idx;
 }
 
-static inline int __attribute__((always_inline)) thinkos_alloc_hi(uint32_t * ptr, int start) {
+static inline int __attribute__((always_inline)) 
+thinkos_alloc_hi(uint32_t * ptr, int start) {
 	int idx;
 	/* Look for an empty bit LSB first */
 	idx = start - __clz(~(*ptr << (31 - start)));
@@ -455,7 +459,7 @@ static void inline __attribute__((always_inline)) __thinkos_wait(void) {
 	 the threads from the CPU wait queue */
 	cm3_cpsid_i();
 	if (thinkos_rt.wq_ready == 0) {
-		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
 		thinkos_rt.wq_tmshare = 0;
 	}
 	cm3_cpsie_i();
@@ -496,12 +500,14 @@ static int inline __thinkos_wq_head(uint32_t * wqptr) {
 }
 #endif
 
-static int inline __attribute__((always_inline)) __thinkos_wq_head(unsigned int wq) {
+static int inline __attribute__((always_inline)) 
+	__thinkos_wq_head(unsigned int wq) {
 	/* get a thread from the queue bitmap */
 	return __clz(__rbit(thinkos_rt.wq_lst[wq]));
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wq_insert(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) 
+	__thinkos_wq_insert(unsigned int wq, unsigned int th) {
 	/* insert into the event wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
 #if THINKOS_ENABLE_THREAD_STAT
@@ -509,9 +515,8 @@ static void inline __attribute__((always_inline)) __thinkos_wq_insert(unsigned i
 #endif
 }
 
-static void inline __attribute__((always_inline)) __thinkos_tmdwq_insert(unsigned int wq, 
-										  unsigned int th,
-										  unsigned int ms) {
+static void inline __attribute__((always_inline)) 
+	__thinkos_tmdwq_insert(unsigned int wq, unsigned int th, unsigned int ms) {
 	/* set the clock */
 	thinkos_rt.clock[th] = thinkos_rt.ticks + ms;
 	/* insert into the event wait queue */
@@ -524,7 +529,8 @@ static void inline __attribute__((always_inline)) __thinkos_tmdwq_insert(unsigne
 #endif
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wq_remove(unsigned int wq, unsigned int th) {
+static void inline __attribute__((always_inline)) 
+	 __thinkos_wq_remove(unsigned int wq, unsigned int th) {
 	/* remove from the wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -590,6 +596,15 @@ static bool inline __attribute__((always_inline))
 	return ((int32_t)(thinkos_rt.clock[self] - thinkos_rt.ticks) <= 0) ? true : false;
 #else
 #error "__thinkos_timedout() depends on THINKOS_ENABLE_CLOCK"
+#endif
+}
+
+static volatile inline uint32_t __attribute__((always_inline))
+	__thinkos_ticks(void) {
+#if THINKOS_ENABLE_CLOCK
+	return thinkos_rt.ticks;
+#else
+#error "__thinkos_ticks() depends on THINKOS_ENABLE_CLOCK"
 #endif
 }
 

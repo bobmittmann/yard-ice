@@ -268,7 +268,7 @@ static inline int __attribute__((always_inline)) thinkos_ev_wait(int ev)  {
 }
 
 static inline int __attribute__((always_inline)) thinkos_ev_timedwait(int ev, unsigned int ms)  {
-	return THINKOS_SVC2(THINKOS_EVENT_WAIT, ev, ms);
+	return THINKOS_SVC2(THINKOS_EVENT_TIMEDWAIT, ev, ms);
 }
 
 static inline int __attribute__((always_inline)) thinkos_ev_raise(int ev)  {

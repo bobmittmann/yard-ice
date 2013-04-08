@@ -38,6 +38,8 @@
 
 #include <sys/dcclog.h>
 
+void i2c_reset(void);
+
 /* GPIO pin description */ 
 struct stm32f_io {
 	struct stm32f_gpio * gpio;
@@ -141,8 +143,33 @@ void stdio_init(void)
  * I/O 
  * ----------------------------------------------------------------------
  */
-#define TLV320RST STM32F_GPIOB, 10
-#define TLV320CLK STM32F_GPIOA, 8
+
+void stm32f_exti9_5_isr(void)
+{
+	struct stm32f_exti * exti = STM32F_EXTI;
+	static uint32_t window_tmo;
+	static bool enabled = true;
+	uint32_t ticks;
+	
+	/* Clear pending flag */
+	exti->pr = (1 << 9);
+
+	ticks = __thinkos_ticks();
+	if (enabled) {
+		DCC_LOG(LOG_TRACE, "EVENT");
+		/* 50 ms debouncing window */
+		window_tmo = ticks + 100;
+		enabled = false;
+	} else {
+		DCC_LOG(LOG_MSG, "GLITCH");
+		if (((int32_t)(ticks - window_tmo)) > 0) {
+			enabled = true;
+		}
+	}
+}
+
+
+#define PUSH_BTN STM32F_GPIOC, 9
 
 void io_init(void)
 {
@@ -152,6 +179,11 @@ void io_init(void)
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
 #endif
+#if defined(STM32F4X)
+	struct stm32f_exti * exti = STM32F_EXTI;
+	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
+	struct stm32f_rcc * rcc = STM32F_RCC;
+#endif
 
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
 
@@ -159,19 +191,22 @@ void io_init(void)
 	stm32f_gpio_clock_en(STM32F_GPIOB);
 	stm32f_gpio_clock_en(STM32F_GPIOC);
 
-
-#if defined(STM32F1X)
-	stm32f_gpio_mode(TLV320CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-
-	stm32f_gpio_mode(TLV320RST, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_clr(TLV320RST);
-	udelay(1000);
-	stm32f_gpio_set(TLV320RST);
-#endif
-
 #if defined(STM32F4X)
 	stm32f_gpio_mode(STM32F_GPIOB, 10, INPUT, 0);
 	stm32f_gpio_mode(STM32F_GPIOB, 11, INPUT, 0);
+	stm32f_gpio_mode(PUSH_BTN, INPUT, PULL_UP);
+
+	/* System configuration controller clock enable */
+	rcc->apb2enr |= RCC_SYSCFGEN;
+
+	/* Select PC9 for EXTI9 */ 
+	syscfg->exticr3 = SYSCFG_EXTI9_PC;
+	/* Unmask interrupt */
+	exti->imr |= (1 << 9);
+	/* Select falling edge trigger */
+	exti->ftsr |= (1 << 9);
+
+//	cm3_irq_enable(STM32F_IRQ_EXTI9_5);
 #endif
 
 }
@@ -180,6 +215,17 @@ void io_init(void)
  * I2C
  * ----------------------------------------------------------------------
  */
+struct i2c_xfer {
+	volatile uint8_t * ptr;
+	volatile int32_t cnt;
+	volatile int32_t rem;
+	volatile int ret;
+	uint32_t addr;
+	int32_t event;
+};
+
+struct i2c_xfer xfer;
+
 #define I2C1_SCL STM32F_GPIOB, 8
 #define I2C1_SDA STM32F_GPIOB, 9
 
@@ -251,8 +297,6 @@ void i2c_master_init(unsigned int scl_freq)
 	i2c->ccr = I2C_CCR_SET(pclk / scl_freq / 2);
 	/* I2C TRISE register (I2C_TRISE) */
 	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
-	/* I2C Control register 1 (I2C_CR1) */
-	i2c->cr1 = I2C_PE;
 
 	printf("%s() scl_freq=%d\n", __func__, scl_freq);
 	printf("%s() SR1=0x%04x SR2=0x%04x\n", __func__, i2c->sr1, i2c->sr2);
@@ -266,9 +310,256 @@ void i2c_master_init(unsigned int scl_freq)
 
 	printf("SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
 
+	xfer.event = thinkos_ev_alloc();
+
+	printf("event=%d\n", xfer.event);
+}
+
+void i2c_master_enable(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+
+	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
+	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
+
+	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
+	/* events and errors */
+	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
+
+	DCC_LOG(LOG_TRACE, "Enabling device ....");
+
+	i2c->cr1 = I2C_PE;
+
+}
+
+void i2c_reset(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint32_t cr1;
+	uint32_t cr2;
+	uint32_t oar1;
+	uint32_t oar2;
+	uint32_t ccr;
+	uint32_t trise;
+
+	DCC_LOG(LOG_TRACE, "I2C reset...");
+
+	cr1 = i2c->cr1;
+	cr2 = i2c->cr2;
+	oar1 = i2c->oar1;
+	oar2 = i2c->oar2;
+	ccr = i2c->ccr;
+	trise = i2c->trise;
+
+	printf("CR1=0x%04x CR2=0x%04x CCR=0x%04x\n", cr1, cr2, ccr);
+	printf("OAR1=0x%04x OAR2=0x%04x TRISE=0x%04x\n", oar1, oar2, trise);
+	printf("SR1=0x%04x SR2=0x%04x\n", i2c->sr1, i2c->sr2);
+
+	/* Software reset */
+	i2c->cr1 = I2C_SWRST; 
+	udelay(10);
+	i2c->cr1 = I2C_PE;
+
+	i2c->cr2 = cr2;
+	i2c->oar1 = oar1;
+	i2c->oar2 = oar2;
+	i2c->ccr = ccr;
+	i2c->trise = trise;
+	i2c->cr1 = cr1;
+}
+
+
+uint32_t i2c_irq_cnt = 0;
+
+void stm32f_i2c1_ev_isr(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint32_t sr1;
+	uint32_t sr2;
+
+	i2c_irq_cnt++;
+
+	sr1 = i2c->sr1;
+
+	if (sr1 & I2C_SB) {
+		/* – To enter Transmitter mode, a master sends the slave 
+		   address with LSB reset. */
+		i2c->dr = xfer.addr;
+
+		if (xfer.addr & 1) {
+			DCC_LOG1(LOG_TRACE, "%d SB (recv)", i2c_irq_cnt);
+		} else {
+			DCC_LOG1(LOG_TRACE, "%d SB (xmit)", i2c_irq_cnt);
+		}
+	}
+
+	if (sr1 & I2C_ADDR) {
+		DCC_LOG1(LOG_INFO, "%d ADDR", i2c_irq_cnt);
+		/* Clear ADDR flag */
+		sr2 = i2c->sr2;
+		(void)sr2;
+
+		if ((xfer.addr & 1) & (xfer.cnt == 1)) {
+			/* ● Case of a single byte to be received:
+			   – In the ADDR event, clear the ACK bit.
+			   – Clear ADDR
+			   – Program the STOP/START bit.
+			   – Read the data after the RxNE flag is set. */
+			/* Program the STOP/START bit. */
+			i2c->cr1 = I2C_STOP | I2C_PE; 
+		}
+	}
+
+	if (sr1 & I2C_BTF) {
+		DCC_LOG1(LOG_TRACE, "%d BTF", i2c_irq_cnt);
+		if (xfer.addr & 1) {
+			goto do_recv;
+		} else {
+			goto do_xmit;
+		}
+	}
+
+	if (sr1 & I2C_RXNE) {
+		DCC_LOG1(LOG_INFO, "%d RXNE", i2c_irq_cnt);
+do_recv:
+		*xfer.ptr++ = i2c->dr;
+		xfer.rem--;
+		if (xfer.rem == 0) {
+			xfer.ret = xfer.cnt;
+			__thinkos_ev_timed_raise(xfer.event);
+		} else if (xfer.rem == 1) {
+			/* Clear ACK */
+			i2c->cr1 = I2C_STOP | I2C_PE; 
+		}
+	}
+
+	if (sr1 & I2C_TXE) {
+do_xmit:
+		if (xfer.rem > 0) {
+			i2c->dr = *xfer.ptr++;
+			DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
+		} else if (xfer.rem == 0) {
+			/* Program STOP. */
+			i2c->cr1 = I2C_STOP | I2C_PE; 
+			/* Clear the TXE flag */
+			i2c->dr = 0;
+			DCC_LOG1(LOG_TRACE, "%d TXE STOP", i2c_irq_cnt);
+			xfer.ret = xfer.cnt;
+			__thinkos_ev_timed_raise(xfer.event);
+		} else {
+			i2c->dr = 0;
+			DCC_LOG1(LOG_TRACE, "%d TXE ?", i2c_irq_cnt);
+		} 
+		xfer.rem--;
+//		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
+	}
+}
+
+void stm32f_i2c1_er_isr(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint32_t sr1;
+
+	sr1 = i2c->sr1;
+
+	i2c_irq_cnt++;
+
+	if (sr1 & I2C_BERR) {
+		DCC_LOG(LOG_TRACE, "BERR");
+		i2c->sr1 = 0;
+		xfer.ret = -1;
+		__thinkos_ev_timed_raise(xfer.event);
+	}
+
+	if (sr1 & I2C_ARLO) {
+		DCC_LOG(LOG_TRACE, "ARLO");
+		i2c->sr1 = 0;
+		xfer.ret = -1;
+		__thinkos_ev_timed_raise(xfer.event);
+	}
+
+	if (sr1 & I2C_AF) {
+		DCC_LOG1(LOG_TRACE, "%d AF", i2c_irq_cnt);
+		/* clear AF */
+		i2c->sr1 = 0;
+		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
+		xfer.ret = -1;
+		__thinkos_ev_timed_raise(xfer.event);
+	}
+
+	if (sr1 & I2C_OVR) {
+		DCC_LOG(LOG_TRACE, "OVR");
+	}
+}
+
+
+int i2c_master_wr(unsigned int addr, const void * buf, int len)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	int ret;
+
+	xfer.ptr = (uint8_t *)buf;
+	xfer.rem = len;
+	xfer.cnt = len;
+	/* – To enter Transmitter mode, a master sends the slave 
+	   address with LSB reset. */
+	xfer.addr = addr << 1;
+	xfer.ret = -2;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
+
+	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
+
+	while ((ret = xfer.ret) == -2) {
+		if (thinkos_ev_timedwait(xfer.event, 100) == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_TRACE, "Timeout...");
+			i2c_reset();
+			ret = -1;
+			break;
+		}
+	}
+
+	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+
+	return ret;
+
 }
 
 int i2c_master_rd(unsigned int addr, void * buf, int len)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	int ret;
+
+	if (len == 0)
+		return 0;
+
+	xfer.ptr = (uint8_t *)buf;
+	xfer.rem = len;
+	xfer.cnt = len;
+	/* – To enter Receiver mode, a master sends the slave 
+	   address with LSB set. */
+	xfer.addr = (addr << 1) | 1;
+	xfer.ret = -2;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
+
+	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
+
+	while ((ret = xfer.ret) == -2) {
+		if (thinkos_ev_timedwait(xfer.event, 100) == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_TRACE, "Timeout...");
+			i2c_reset();
+			ret = -1;
+			break;
+		}
+	}
+
+	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+
+	return ret;
+}
+
+int _i2c_master_rd(unsigned int addr, void * buf, int len)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	uint8_t * ptr = (uint8_t *)buf;
@@ -465,12 +756,13 @@ abort:
 	return -1;
 }
 
-int i2c_master_wr(unsigned int addr, const void * buf, int len)
+int _i2c_master_wr(unsigned int addr, const void * buf, int len)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	uint8_t * ptr = (uint8_t *)buf;
 	uint32_t sr1;
 	uint32_t sr2;
+	int again;
 	int rem;
 
 	DCC_LOG(LOG_INFO, "1. START");
@@ -483,17 +775,26 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 	Then the master waits for a read of the SR1 register followed by 
 	a write in the DR register with the Slave address (see Figure 237 
 	& Figure 238 Transfer sequencing EV5). */
-	while ((i2c->sr1 & I2C_SB) == 0);
+	again = 0;
+	while ((i2c->sr1 & I2C_SB) == 0) {
+		if (++again == 100)
+			goto abort;
+		udelay(10);
+	}
 
 	/* – To enter Transmitter mode, a master sends the slave 
 	   address with LSB reset. */
-	DCC_LOG1(LOG_TRACE, "2. ADDR %d", addr);
+	DCC_LOG1(LOG_INFO, "2. ADDR %d", addr);
 	i2c->dr = (addr << 1);
 
+	again = 0;
 	while (((sr1 = i2c->sr1) & I2C_ADDR) == 0) {
 		/* Acknowledge failure */
 		if (sr1 & I2C_AF )
 			goto abort;
+		if (++again == 100)
+			goto abort;
+		udelay(10);
 	}
 
 	/* Clear ADDR */
@@ -502,6 +803,7 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 	rem = len;
 
+	again = 0;
 	while (rem > 0) {
 		while ((sr1 = (i2c->sr1 & I2C_TXE)) == 0) {
 			(void)sr1;
@@ -517,6 +819,7 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 		rem--;
 	}
 
+//	DCC_LOG(LOG_TRACE, "2.");
 	while ((i2c->sr1 & I2C_BTF) == 0);
 
 	/* Program STOP. */
@@ -526,7 +829,7 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 abort:
 	DCC_LOG2(LOG_TRACE, "Abort: SR1=0x%04x SR2=0x%04x", i2c->sr1, i2c->sr2);
-	sr1 = i2c->sr1 = 0;
+	i2c->sr1 = 0;
 	i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Start condition */
 
 	while (i2c->sr2 & I2C_BUSY) {
@@ -541,7 +844,10 @@ abort:
  */
 int supervisor_task(void)
 {
+	printf("%s() started...\n", __func__);
+
 	for (;;) {
+		DCC_LOG(LOG_INFO, "...");
 		thinkos_sleep(200);
 		led_on(3);
 		thinkos_sleep(100);
@@ -550,14 +856,171 @@ int supervisor_task(void)
 	}
 }
 
+void system_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+
+	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+
+	for(;;);
+
+}
+
+/* ----------------------------------------------------------------------
+ * User interface task
+ * ----------------------------------------------------------------------
+ */
+int ui_task(void)
+{
+	int btn_st[2];
+	int ev_press;
+	int ev_release;
+	int rst_tmr = 0;
+
+
+	printf("%s() started...\n", __func__);
+
+	btn_st[0] = stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+	for (;;) {
+		/* process push button */
+		btn_st[1] = stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
+		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
+		btn_st[0] = btn_st[1];
+
+		if (ev_press) {
+			DCC_LOG(LOG_TRACE, "BTN Down");
+			printf("\nI2C reset...\n");
+			i2c_reset();
+			/* set reset timer */
+			rst_tmr = 50;
+		}
+
+		if (ev_release) {
+			DCC_LOG(LOG_TRACE, "BTN Up");
+			/* clear 'reset timer' */
+			rst_tmr = 0;
+		}
+
+		if (rst_tmr)
+			rst_tmr--;
+
+		switch (rst_tmr) {
+		case 18:
+		case 16:
+		case 14:
+		case 12:
+		case 10:
+		case 8:
+		case 4:
+		case 2:
+			led_on(0);
+			led_on(1);
+			led_on(2);
+			led_on(3);
+			break;
+		case 17:
+		case 15:
+		case 13:
+		case 11:
+		case 9:
+		case 7:
+		case 5:
+		case 3:
+			led_off(0);
+			led_off(1);
+			led_off(2);
+			led_off(3);
+			break;
+		case 1:
+			system_reset();
+			break;
+		}
+
+		thinkos_sleep(100);
+	}
+}
+
+int32_t i2c_mutex;
+int32_t phif_addr = 0x55;
+int32_t codec_addr = 64;
+
+#define PHIF_ADC_MAGIC 0
+#define PHIF_ADC_ADDR 2
+
+int acq_task(void)
+{
+	uint16_t adc[5];
+	uint8_t idx;
+	int i;
+
+	printf("%s() started...\n", __func__);
+
+	for (;;) {
+		thinkos_sleep(2000);
+		thinkos_mutex_lock(i2c_mutex);
+		idx = 2;
+		if (i2c_master_wr(phif_addr, &idx, 1) == 1) {
+			DCC_LOG(LOG_TRACE, "i2c_master_wr().");
+			if (i2c_master_rd(phif_addr, adc, sizeof(adc)) > 0) {
+				DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
+						 adc[0], adc[1], adc[2], adc[3], adc[4]);
+				printf("ADC: ");
+				for (i = 0; i < 5; ++i) {
+					printf("%5d", adc[i]);
+				}
+				printf("\n");
+			} else {
+				DCC_LOG(LOG_WARNING, "i2c_master_rd() failed!");
+			}
+		} else {
+			DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+		}
+		thinkos_mutex_unlock(i2c_mutex);
+	}
+}
+
+void i2c_bus_scan(void)
+{
+	uint8_t buf[4];
+	uint8_t addr = 0;
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	printf("- I2C bus scan: ");
+
+	for (addr = 1; addr < 127; ++addr) {
+
+		buf[0] = 0;
+		if (i2c_master_wr(addr, buf, 1) <= 0) {
+			printf(".");
+			continue;
+		}
+
+		printf("\nI2C device found @ %d", addr);
+		if (i2c_master_rd(addr, buf, 2) != 2) {
+			printf("\n");
+			continue;
+		}
+
+		printf(" 0x%02x%02x\n", buf[1], buf[0]);
+
+		thinkos_sleep(50);
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	printf("\n");
+}
 
 uint32_t supervisor_stack[256];
+uint32_t ui_stack[256];
+uint32_t acq_stack[256];
 
 int main(int argc, char ** argv)
 {
 	uint8_t buf[32];
 	uint8_t addr = 0;
-	int ret;
 	int i;
 
 	DCC_LOG_INIT();
@@ -584,72 +1047,69 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
+	i2c_master_init(100000);
+
+	i2c_master_enable();
+
+	thinkos_sleep(100);
+
+	i2c_mutex = thinkos_mutex_alloc();
+	printf("I2C mutex=%d\n", i2c_mutex);
+
+//	i2c_bus_scan();
+
+
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	i2c_master_init(100000);
+	thinkos_thread_create((void *)ui_task, (void *)NULL,
+						  ui_stack, sizeof(ui_stack), 
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
-	printf("I2C scanning ");
+	thinkos_thread_create((void *)acq_task, (void *)NULL,
+						  acq_stack, sizeof(acq_stack), 
+						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+
+	buf[0] = 0x05;
+	buf[1] = 0x18;
+	buf[2] = 0x24;
+	buf[3] = 0x42;
+
 	addr = 0x55;
-	do {
-		thinkos_sleep(900);
-		printf(".");
-		led_on(0);
-		thinkos_sleep(100);
-		ret = i2c_master_rd(addr, buf, 2);
-		led_off(0);
-		if (ret > 0) {
-			DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", 
-					 addr, buf[0], buf[1]);
-			printf("\nI2C device found @ %d ->  0x%02x 0x%02x ", 
-				   addr, buf[0], buf[1]);
-		}
-	} while (1);
 
-again:
-	do {
-		thinkos_sleep(1000);
-		printf("I2C scanning ");
-		for (addr = 0; addr < 128; ++addr) {
-			printf(".");
-			led_on(0);
-			ret = i2c_master_rd(addr, buf, 2);
-			led_off(0);
-			if (ret > 0) {
-				DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", 
-						 addr, buf[0], buf[1]);
-				printf("\nI2C device found @ %d ->  0x%02x 0x%02x ", 
-					   addr, buf[0], buf[1]);
-	//			break;
-			}
-			thinkos_sleep(10);
-		}
+	while (1) {
+		thinkos_sleep(2000);
+	}
 
-		printf("\n");
-	} while (addr == 128);
 
-	led_on(1);
-	thinkos_sleep(100);
-	led_off(1);
-	thinkos_sleep(900);
-
-	goto again;
-
+	printf("Reading ");
 	for (i = 0; ; ++i) {
 		led_on(0);
 		thinkos_sleep(100);
 		led_off(0);
 		thinkos_sleep(900);
 
-		if (i2c_master_rd(addr, buf, 2) > 0) {
+		if (i2c_master_rd(addr, buf, 4) > 0) {
 			DCC_LOG3(LOG_TRACE, "addr:%d -> 0x%02x 0x%02x", addr, 
 					 buf[0], buf[1]);
 		}
-
-//		i2c_master_wr(addr, buf, 2);
-
 	}
+
+
+	printf("Writing ");
+	do {
+		thinkos_mutex_lock(i2c_mutex);
+		thinkos_sleep(2000);
+		if (i2c_master_wr(addr, buf, 4) < 0) {
+			printf("?");
+		} else {
+			printf("+");
+		}
+		thinkos_mutex_unlock(i2c_mutex);
+	} while (1);
+
+
 
 	return 0;
 }

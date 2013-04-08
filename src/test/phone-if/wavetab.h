@@ -46,9 +46,6 @@ static const struct {
 	{ .buf = wave_d3, .len = sizeof(wave_d3) / sizeof(uint16_t) }
 };
 
-#define WAVE_A3 0
-#define WAVE_D3 1
-
 #ifdef __cplusplus
 extern "C" {
 #endif

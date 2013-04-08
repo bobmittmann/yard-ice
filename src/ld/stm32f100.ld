@@ -112,7 +112,7 @@ SECTIONS
 	.dccdata :
 	{
 		. = ALIGN(4);
-		KEEP(*(.rodata.__FUNCTION__*))
+		KEEP(*(.rodata.__FUNCTION__.*))
 		KEEP(*(.dccdata))
 	} >dcclog
 

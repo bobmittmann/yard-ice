@@ -31,26 +31,28 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
+#include <sys/dcclog.h>
+
 #if THINKOS_ENABLE_EXCEPTIONS
 
 void __show_ctrl(uint32_t ctrl)
 {
-	printf("[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
-	printf("%s ", (ctrl & (1 << 24)) ? "USER" : "PRIV");
-	printf("PM=%c ", ((ctrl >> 0) & 0x01) + '0');
-	printf("FM=%c ", ((ctrl >> 16) & 0x01) + '0');
-	printf("BPRI=%02x] ", (ctrl >> 8) & 0xff);
+	fprintf(stderr, "[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
+	fprintf(stderr, "%s ", (ctrl & (1 << 24)) ? "USER" : "PRIV");
+	fprintf(stderr, "PM=%c ", ((ctrl >> 0) & 0x01) + '0');
+	fprintf(stderr, "FM=%c ", ((ctrl >> 16) & 0x01) + '0');
+	fprintf(stderr, "BPRI=%02x] ", (ctrl >> 8) & 0xff);
 }
 
 static void __show_xpsr(uint32_t psr)
 {
-	printf("[N=%c ", ((psr >> 31) & 0x01) + '0');
-	printf("Z=%c ", ((psr >> 30) & 0x01) + '0');
-	printf("C=%c ", ((psr >> 29) & 0x01) + '0');
-	printf("V=%c ", ((psr >> 28) & 0x01) + '0');
-	printf("Q=%c ", ((psr >> 27) & 0x01) + '0');
-	printf("ICI/IT=%02x ", ((psr >> 19) & 0xc0) | ((psr >> 10) & 0x3f));
-	printf("XCP=%02x]", psr & 0xff);
+	fprintf(stderr, "[N=%c ", ((psr >> 31) & 0x01) + '0');
+	fprintf(stderr, "Z=%c ", ((psr >> 30) & 0x01) + '0');
+	fprintf(stderr, "C=%c ", ((psr >> 29) & 0x01) + '0');
+	fprintf(stderr, "V=%c ", ((psr >> 28) & 0x01) + '0');
+	fprintf(stderr, "Q=%c ", ((psr >> 27) & 0x01) + '0');
+	fprintf(stderr, "ICI/IT=%02x ", ((psr >> 19) & 0xc0) | ((psr >> 10) & 0x3f));
+	fprintf(stderr, "XCP=%02x]", psr & 0xff);
 }
 
 
@@ -59,30 +61,30 @@ void thinkos_context_show(const struct thinkos_context * ctx,
 {
 	__show_xpsr(ctx->xpsr);
 
-	printf("\n");
+	fprintf(stderr, "\n");
 
-	printf("   r0=%08x", ctx->r0);
-	printf("   r4=%08x", ctx->r4);
-	printf("   r8=%08x", ctx->r8);
-	printf("  r12=%08x", ctx->r12);
-	printf(" xpsr=%08x\n", ctx->r12);
+	fprintf(stderr, "   r0=%08x", ctx->r0);
+	fprintf(stderr, "   r4=%08x", ctx->r4);
+	fprintf(stderr, "   r8=%08x", ctx->r8);
+	fprintf(stderr, "  r12=%08x", ctx->r12);
+	fprintf(stderr, " xpsr=%08x\n", ctx->r12);
 
-	printf("   r1=%08x", ctx->r0);
-	printf("   r5=%08x", ctx->r5);
-	printf("   r9=%08x", ctx->r9);
-	printf("   sp=%08x", sp);
-	printf("  msp=%08x\n", msp);
+	fprintf(stderr, "   r1=%08x", ctx->r0);
+	fprintf(stderr, "   r5=%08x", ctx->r5);
+	fprintf(stderr, "   r9=%08x", ctx->r9);
+	fprintf(stderr, "   sp=%08x", sp);
+	fprintf(stderr, "  msp=%08x\n", msp);
 
-	printf("   r2=%08x", ctx->r2);
-	printf("   r6=%08x", ctx->r6);
-	printf("  r10=%08x", ctx->r10);
-	printf("   lr=%08x",  ctx->lr);
-	printf("  psp=%08x\n", psp);
+	fprintf(stderr, "   r2=%08x", ctx->r2);
+	fprintf(stderr, "   r6=%08x", ctx->r6);
+	fprintf(stderr, "  r10=%08x", ctx->r10);
+	fprintf(stderr, "   lr=%08x",  ctx->lr);
+	fprintf(stderr, "  psp=%08x\n", psp);
 
-	printf("   r3=%08x",  ctx->r3);
-	printf("   r7=%08x",  ctx->r7);
-	printf("  r11=%08x",  ctx->r11);
-	printf("   pc=%08x\n",  ctx->pc);
+	fprintf(stderr, "   r3=%08x",  ctx->r3);
+	fprintf(stderr, "   r7=%08x",  ctx->r7);
+	fprintf(stderr, "  r11=%08x",  ctx->r11);
+	fprintf(stderr, "   pc=%08x\n",  ctx->pc);
 }
 
 static inline struct thinkos_context * __attribute__((always_inline)) __get_context(void) {
@@ -125,19 +127,21 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 
 	cm3_faultmask_set(1);
 
-	printf("---\n");
-	printf("Hard fault:");
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Hard fault:");
+
+	DCC_LOG(LOG_ERROR, "Hard fault!");
 
 	hfsr = scb->hfsr;
 
 	if (hfsr & SCB_HFSR_DEBUGEVT)  
-		printf(" DEBUGEVT");
+		fprintf(stderr, " DEBUGEVT");
 	if (hfsr & SCB_HFSR_FORCED)  
-		printf(" FORCED");
+		fprintf(stderr, " FORCED");
 	if (hfsr & SCB_HFSR_VECTTBL)  
-		printf(" VECTTBL");
+		fprintf(stderr, " VECTTBL");
 
-	printf("\n");
+	fprintf(stderr, "\n");
 
 	thinkos_context_show(ctx, sp, msp, psp);
 
@@ -151,29 +155,32 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 
 	cm3_faultmask_set(1);
 
-	printf("---\n");
-	printf("Bus fault:");
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Bus fault:");
+
+	DCC_LOG(LOG_ERROR, "Bus fault!");
 
 	bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
 
 	if (bfsr & BFSR_BFARVALID)  
-		printf(" BFARVALID");
+		fprintf(stderr, " BFARVALID");
 	if (bfsr & BFSR_LSPERR)
-		printf(" LSPERR");
+		fprintf(stderr, " LSPERR");
 	if (bfsr & BFSR_STKERR)  
-		printf(" STKERR");
+		fprintf(stderr, " STKERR");
 	if (bfsr & BFSR_UNSTKERR)  
-		printf(" INVPC");
+		fprintf(stderr, " INVPC");
 	if (bfsr & BFSR_IMPRECISERR)  
-		printf(" IMPRECISERR");
+		fprintf(stderr, " IMPRECISERR");
 	if (bfsr & BFSR_PRECISERR)
-		printf(" PRECISERR");
+		fprintf(stderr, " PRECISERR");
 	if (bfsr & BFSR_IBUSERR)  
-		printf(" IBUSERR");
-	printf("\n");
+		fprintf(stderr, " IBUSERR");
+	fprintf(stderr, "\n");
 
 	if (bfsr & BFSR_BFARVALID)  {
-		printf(" * ADDR = 0x%08x\n", (int)scb->bfar);
+		fprintf(stderr, " * ADDR = 0x%08x\n", (int)scb->bfar);
+		DCC_LOG1(LOG_ERROR, "BFAR=0x%08x", scb->bfar);
 	}
 
 	for(;;);
@@ -186,24 +193,26 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 
 	cm3_faultmask_set(1);
 
-	printf("---\n");
-	printf("Usage fault:");
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Usage fault:");
+
+	DCC_LOG(LOG_ERROR, "Usage fault!");
 
 	ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
 	if (ufsr & UFSR_DIVBYZERO)  
-		printf(" DIVBYZERO");
+		fprintf(stderr, " DIVBYZERO");
 	if (ufsr & UFSR_UNALIGNED)  
-		printf(" UNALIGNED");
+		fprintf(stderr, " UNALIGNED");
 	if (ufsr & UFSR_NOCP)  
-		printf(" NOCP");
+		fprintf(stderr, " NOCP");
 	if (ufsr & UFSR_INVPC)  
-		printf(" INVPC");
+		fprintf(stderr, " INVPC");
 	if (ufsr & UFSR_INVSTATE)  
-		printf(" INVSTATE");
+		fprintf(stderr, " INVSTATE");
 	if (ufsr & UFSR_UNDEFINSTR)  
-		printf(" UNDEFINSTR");
+		fprintf(stderr, " UNDEFINSTR");
 
-	printf("\n");
+	fprintf(stderr, "\n");
 
 	for(;;);
 }
