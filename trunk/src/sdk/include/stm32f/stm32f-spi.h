@@ -208,24 +208,28 @@ Note: Not used in I2S mode and SPI TI mode */
 
 /* [15..9] Reserved. Forced to 0 by hardware. */
 
-/* Bit 8 - TI frame format error */
-#define SPI_TIFRFE (1 << 8)
+/* Bit 8 - frame format error */
+#define SPI_FRE (1 << 8)
 /* 0: No frame format error
-1: A frame format error occurred */
+   1: A frame format error occurred 
+   This flag is set by hardware and cleared by software when the SPIx_SR 
+   register is read. Note: This flag is used when the SPI operates in TI 
+   slave mode or I2S slave mode (refer to Section 27.3.10). */
 
 /* Bit 7 - Busy flag */
 #define SPI_BSY (1 << 7)
 /* 0: SPI (or I2S)not busy
-1: SPI (or I2S)is busy in communication or Tx buffer is not empty
-This flag is set and cleared by hardware.
-Note: BSY flag must be used with caution: refer to Section 25.3.7: Status flags and Section 25.3.8: Disabling the SPI. */
+   1: SPI (or I2S)is busy in communication or Tx buffer is not empty
+   This flag is set and cleared by hardware.
+   Note: BSY flag must be used with caution: refer to Section 25.3.7: 
+   Status flags and Section 25.3.8: Disabling the SPI. */
 
 /* Bit 6 - Overrun flag */
 #define SPI_OVR (1 << 6)
 /* 0: No overrun occurred
-1: Overrun occurred
-This flag is set by hardware and reset by a software sequence. Refer to Section 25.4.7 on
-page 691 for the software sequence. */
+   1: Overrun occurred
+   This flag is set by hardware and reset by a software sequence. Refer 
+   to Section 25.4.7 on page 691 for the software sequence. */
 
 /* Bit 5 - Mode fault */
 #define SPI_MODF (1 << 5)
@@ -350,6 +354,10 @@ Note: Not used for the I2S mode. */
 
 /* Bits [9..8] - I2S configuration mode */
 #define SPI_I2SCFG ((9 - 8) << 8)
+#define SPI_I2SCFG_SLV_XMT (0 << 8)
+#define SPI_I2SCFG_SLV_RCV (1 << 8)
+#define SPI_I2SCFG_MST_XMT (2 << 8)
+#define SPI_I2SCFG_MST_RCV (3 << 8)
 /*	00: Slave - transmit
 	01: Slave - receive
 	10: Master - transmit
@@ -359,6 +367,8 @@ Note: Not used for the I2S mode. */
 
 /* Bit 7 - PCM frame synchronization */
 #define SPI_PCMSYNC (1 << 7)
+#define SPI_PCMSYNC_SHORT (0 << 7)
+#define SPI_PCMSYNC_LONG (0 << 7)
 /*	0: Short frame synchronization
 	1: Long frame synchronization
 	Note: This bit has a meaning only if I2SSTD = 11 (PCM standard is used)
@@ -368,6 +378,10 @@ Note: Not used for the I2S mode. */
 
 /* Bits [5..4] - I2S standard selection */
 #define SPI_I2SSTD ((5 - 4) << 4)
+#define SPI_I2SSTD_PHILIPS (0 << 4)
+#define SPI_I2SSTD_MSB_JST (1 << 4)
+#define SPI_I2SSTD_LSB_JST (2 << 4)
+#define SPI_I2SSTD_PCM     (3 << 4)
 /*	00: I2S Phillips standard.
 	01: MSB justified standard (left justified)
 	10: LSB justified standard (right justified)
@@ -379,6 +393,8 @@ Note: Not used for the I2S mode. */
 
 /* Bit 3 - Steady state clock polarity */
 #define SPI_CKPOL (1 << 3)
+#define SPI_CKPOL_LO (0 << 3)
+#define SPI_CKPOL_HI (1 << 3)
 /*	0: I2S clock steady state is low level
 	1: I2S clock steady state is high level
 	Note: For correct operation, this bit should be configured when the I2S 
@@ -387,6 +403,9 @@ Note: Not used for the I2S mode. */
 
 /* Bits [2..1] - Data length to be transferred */
 #define SPI_DATLEN ((2 - 1) << 1)
+#define SPI_DATLEN_16 (0 << 1)
+#define SPI_DATLEN_24 (1 << 1)
+#define SPI_DATLEN_32 (2 << 1)
 /*	00: 16-bit data length
 	01: 24-bit data length
 	10: 32-bit data length
@@ -397,6 +416,8 @@ Note: Not used for the I2S mode. */
 
 /* Bit 0 - Channel length (number of bits per audio channel) */
 #define SPI_CHLEN (1 << 0)
+#define SPI_CHLEN_16 (0 << 0)
+#define SPI_CHLEN_32 (1 << 0)
 /*	0: 16-bit wide
 	1: 32-bit wide
 	The bit write operation has a meaning only if DATLEN = 00 otherwise 
@@ -443,10 +464,12 @@ struct stm32f_spi {
 	volatile uint32_t cr2;
 	volatile uint32_t sr;
 	volatile uint32_t dr;
+
 	volatile uint32_t crcpr;
 	volatile uint32_t rxcrcr;
 	volatile uint32_t txcrcr;
 	volatile uint32_t i2scfgr;
+
 	volatile uint32_t i2spr;
 };
 

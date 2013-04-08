@@ -22,6 +22,7 @@
 
 #include <sys/stm32f.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <sys/delay.h>
 
@@ -103,7 +104,11 @@ void i2c_master_enable(void)
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 
 	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
+	/* set event IRQ to very high priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x00);
 	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
+	/* set error IRQ to high priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x08);
 
 	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
 	/* events and errors */
@@ -218,17 +223,20 @@ do_xmit:
 		if (xfer.rem > 0) {
 			i2c->dr = *xfer.ptr++;
 			DCC_LOG1(LOG_INFO, "%d TXE", i2c_irq_cnt);
+//			printf("_");
 		} else if (xfer.rem == 0) {
 			/* Program STOP. */
 			i2c->cr1 = I2C_STOP | I2C_PE; 
 			/* Clear the TXE flag */
 			i2c->dr = 0;
+//			printf("!");
 			DCC_LOG1(LOG_INFO, "%d TXE STOP", i2c_irq_cnt);
 		} else {
 			i2c->dr = 0;
 			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
 			xfer.ret = xfer.cnt;
 			__thinkos_ev_timed_raise(xfer.event);
+//			__thinkos_ev_raise(xfer.event);
 		} 
 		xfer.rem--;
 //		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
@@ -291,7 +299,8 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
 	while ((ret = xfer.ret) == -2) {
-		if (thinkos_ev_timedwait(xfer.event, 100) == THINKOS_ETIMEDOUT) {
+		if (thinkos_ev_timedwait(xfer.event, 200) == THINKOS_ETIMEDOUT) {
+//			printf(" tmo %d %d ", xfer.cnt, xfer.event);
 			DCC_LOG(LOG_TRACE, "Timeout...");
 			i2c_reset();
 			ret = -1;
@@ -326,7 +335,8 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
 	while ((ret = xfer.ret) == -2) {
-		if (thinkos_ev_timedwait(xfer.event, 100) == THINKOS_ETIMEDOUT) {
+		if (thinkos_ev_timedwait(xfer.event, 10) == THINKOS_ETIMEDOUT) {
+			printf(" tmo ");
 			DCC_LOG(LOG_TRACE, "Timeout...");
 			i2c_reset();
 			ret = -1;

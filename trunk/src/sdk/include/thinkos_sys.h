@@ -468,23 +468,6 @@ static void inline __attribute__((always_inline)) __thinkos_wait(void) {
 	__thinkos_defer_sched();
 }
 
-#if 0
-static void inline __thinkos_wq_insert(uint32_t * wq, int32_t idx) {
-	__bit_mem_wr(wq, idx, 1);  
-	__bit_mem_wr(&thinkos_rt.wq_ready, idx, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-	cm3_cpsid_i();
-	if (thinkos_rt.wq_ready == 0) {
-		/* no more threads into the ready queue,
-		   move the timeshare queue to the ready queue */
-		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-	cm3_cpsie_i();
-#endif
-}
-#endif
-
 #define THINKOS_IDX_NULL 32
 #define THINKOS_THREAD_NULL THINKOS_IDX_NULL
 #define THINKOS_THREAD_IDLE THINKOS_IDX_NULL
@@ -493,21 +476,14 @@ static int inline __attribute__((always_inline)) __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;
 }
 
-#if 0
-static int inline __thinkos_wq_head(uint32_t * wqptr) {
-	/* get a thread from the queue bitmap */
-	return __clz(__rbit(*wqptr));
-}
-#endif
-
 static int inline __attribute__((always_inline)) 
-	__thinkos_wq_head(unsigned int wq) {
+__thinkos_wq_head(unsigned int wq) {
 	/* get a thread from the queue bitmap */
 	return __clz(__rbit(thinkos_rt.wq_lst[wq]));
 }
 
 static void inline __attribute__((always_inline)) 
-	__thinkos_wq_insert(unsigned int wq, unsigned int th) {
+__thinkos_wq_insert(unsigned int wq, unsigned int th) {
 	/* insert into the event wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);  
 #if THINKOS_ENABLE_THREAD_STAT
@@ -516,7 +492,7 @@ static void inline __attribute__((always_inline))
 }
 
 static void inline __attribute__((always_inline)) 
-	__thinkos_tmdwq_insert(unsigned int wq, unsigned int th, unsigned int ms) {
+__thinkos_tmdwq_insert(unsigned int wq, unsigned int th, unsigned int ms) {
 	/* set the clock */
 	thinkos_rt.clock[th] = thinkos_rt.ticks + ms;
 	/* insert into the event wait queue */
@@ -530,24 +506,24 @@ static void inline __attribute__((always_inline))
 }
 
 static void inline __attribute__((always_inline)) 
-	 __thinkos_wq_remove(unsigned int wq, unsigned int th) {
+__thinkos_wq_remove(unsigned int wq, unsigned int th) {
 	/* remove from the wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
 #if THINKOS_ENABLE_TIMED_CALLS
 	/* possibly remove from the time wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_CLOCK], th, 0);  
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
 #endif
 }
 
 static void inline __attribute__((always_inline)) 
-	__thinkos_wakeup(unsigned int wq, unsigned int th) {
+__thinkos_wakeup(unsigned int wq, unsigned int th) {
 	/* insert the thread into ready queue */
-	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_READY], th, 1);
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 	/* remove from the wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
 #if THINKOS_ENABLE_TIMED_CALLS
 	/* possibly remove from the time wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_lst[THINKOS_WQ_CLOCK], th, 0);  
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
 #endif
 #if THINKOS_ENABLE_THREAD_STAT
 	/* update status */
@@ -558,7 +534,7 @@ static void inline __attribute__((always_inline))
 }
 
 static void inline __attribute__((always_inline))
-	__thinkos_timer_set(unsigned int ms) {
+__thinkos_timer_set(unsigned int ms) {
 	int self = thinkos_rt.active;
 #if THINKOS_ENABLE_CLOCK
 	/* set the clock */

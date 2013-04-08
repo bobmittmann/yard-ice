@@ -18,6 +18,7 @@
  * You can receive a copy of the GNU Lesser General Public License from 
  * http://www.gnu.org/
  */
+#include <stdio.h>
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
@@ -57,6 +58,7 @@ void thinkos_ev_free_svc(int32_t * arg)
 	__thinkos_ev_free(ev);
 }
 #endif
+
 
 void thinkos_ev_wait_svc(int32_t * arg)
 {

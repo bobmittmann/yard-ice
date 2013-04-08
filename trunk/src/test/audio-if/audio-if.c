@@ -41,6 +41,8 @@
 #include "i2c.h"
 #include "console.h"
 #include "io.h"
+#include "i2s.h"
+#include "tlv320.h"
 
 
 /* ----------------------------------------------------------------------
@@ -93,13 +95,13 @@ void stdio_init(void)
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 
-	stderr = &stm32f_uart1_file;
+//	stderr = &stm32f_uart1_file;
 
-	stdin = uart_console_open(uart);
-	stdout = uart_console_open(uart);
+	stderr = uart_console_open(uart);
+	stdin = stderr;
+	stdout = stdin;
 
 	cm3_irq_enable(STM32F_IRQ_USART1);
-
 }
 
 /* ----------------------------------------------------------------------
@@ -111,12 +113,19 @@ int supervisor_task(void)
 	printf("%s() started...\n", __func__);
 
 	for (;;) {
-		DCC_LOG(LOG_INFO, "...");
+		thinkos_sleep(500);
+		led_on(3);
+		thinkos_sleep(100);
+		led_off(3);
 		thinkos_sleep(200);
 		led_on(3);
 		thinkos_sleep(100);
 		led_off(3);
-		thinkos_sleep(400);
+		thinkos_sleep(100);
+		led_off(3);
+
+		DCC_LOG(LOG_INFO, "...");
+//		i2s_stat();
 	}
 }
 
@@ -130,80 +139,6 @@ void system_reset(void)
 
 }
 
-/* ----------------------------------------------------------------------
- * User interface task
- * ----------------------------------------------------------------------
- */
-int ui_task(void)
-{
-	int btn_st[2];
-	int ev_press;
-	int ev_release;
-	int rst_tmr = 0;
-
-
-	printf("%s() started...\n", __func__);
-
-	btn_st[0] = push_btn_stat() ? 0 : 1;
-	for (;;) {
-		/* process push button */
-		btn_st[1] = push_btn_stat() ? 0 : 1;
-		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
-		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
-		btn_st[0] = btn_st[1];
-
-		if (ev_press) {
-			DCC_LOG(LOG_TRACE, "BTN Down");
-			printf("\nI2C reset...\n");
-			i2c_reset();
-			/* set reset timer */
-			rst_tmr = 50;
-		}
-
-		if (ev_release) {
-			DCC_LOG(LOG_TRACE, "BTN Up");
-			/* clear 'reset timer' */
-			rst_tmr = 0;
-		}
-
-		if (rst_tmr)
-			rst_tmr--;
-
-		switch (rst_tmr) {
-		case 18:
-		case 16:
-		case 14:
-		case 12:
-		case 10:
-		case 8:
-		case 4:
-		case 2:
-			led_on(0);
-			led_on(1);
-			led_on(2);
-			led_on(3);
-			break;
-		case 17:
-		case 15:
-		case 13:
-		case 11:
-		case 9:
-		case 7:
-		case 5:
-		case 3:
-			led_off(0);
-			led_off(1);
-			led_off(2);
-			led_off(3);
-			break;
-		case 1:
-			system_reset();
-			break;
-		}
-
-		thinkos_sleep(100);
-	}
-}
 
 int32_t i2c_mutex;
 int32_t phif_addr = 0x55;
@@ -216,9 +151,106 @@ int32_t codec_addr = 64;
 #define PHIF_VR0_REG 14
 #define PHIF_VR1_REG 15
 
+#define LINE_TROUBLE_OPEN 0
+#define LINE_TROUBLE_SHORT 1
+#define LINE_ON_HOOK 2
+#define LINE_OFF_HOOK 3
+
+struct {
+	int sup_st;	
+} line[5];
+
+uint16_t adc[5];
+
+int connect_off_hok(void)
+{
+	uint8_t pkt[3];
+	int i;
+
+	DCC_LOG(LOG_TRACE, ".");
+
+	printf("\nConnect off-hook... ");
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = PHIF_LED_REG;
+	pkt[1] = 0;
+	pkt[2] = 0;
+
+	for (i = 0; i < 5; ++i) {
+		if (line[i].sup_st == LINE_OFF_HOOK) {
+			pkt[1] |= (1 << i);
+			pkt[2] |= (1 << i);
+			printf("%d ", i);
+		}
+	}
+
+	printf("\n");
+
+	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
+//		printf("i2c_master_wr() ok.\n");
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+//		printf("i2c_master_wr() failed!\n");
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return 0;
+}
+
+int hangup_all(void)
+{
+	uint8_t pkt[3];
+
+	printf("\nHangup all...\n");
+	DCC_LOG(LOG_TRACE, ".");
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = PHIF_LED_REG;
+	pkt[1] = 0;
+	pkt[2] = 0;
+
+	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
+//		printf("i2c_master_wr() ok.\n");
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+//		printf("i2c_master_wr() failed!\n");
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return 0;
+}
+
+void vr_set(unsigned int val0, unsigned int val1)
+{
+	uint8_t pkt[3];
+
+	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = PHIF_VR0_REG;
+	pkt[1] = val0;
+	pkt[2] = val1;
+
+	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
+//		printf("i2c_master_wr() ok.\n");
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+//		printf("i2c_master_wr() failed!\n");
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+}
+
 int acq_task(void)
 {
-	uint16_t adc[5];
 	uint8_t reg;
 	int i;
 
@@ -238,6 +270,15 @@ int acq_task(void)
 				printf("ADC: ");
 				for (i = 0; i < 5; ++i) {
 					printf("%5d", adc[i]);
+					if (adc[i] < 3) {
+						line[i].sup_st = LINE_TROUBLE_OPEN;
+					} else if (adc[i] < 40) {
+						line[i].sup_st = LINE_ON_HOOK;
+					} else if (adc[i] < 8000) {
+						line[i].sup_st = LINE_OFF_HOOK;
+					} else {
+						line[i].sup_st = LINE_TROUBLE_SHORT;
+					}
 				}
 				printf("\n");
 			} else {
@@ -248,27 +289,6 @@ int acq_task(void)
 		}
 		thinkos_mutex_unlock(i2c_mutex);
 	}
-}
-
-void vr_set(unsigned int val0, unsigned int val1)
-{
-	uint8_t pkt[3];
-
-	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
-
-	thinkos_mutex_lock(i2c_mutex);
-
-	pkt[0] = PHIF_VR0_REG;
-	pkt[1] = val0;
-	pkt[2] = val1;
-
-	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
-		DCC_LOG(LOG_INFO, "ok.");
-	} else {
-		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
-	}
-
-	thinkos_mutex_unlock(i2c_mutex);
 }
 
 void i2c_bus_scan(void)
@@ -315,10 +335,155 @@ void i2c_bus_scan(void)
 	printf("\n");
 }
 
+
+int tlv320_wr(unsigned int reg, unsigned int val)
+{
+	uint8_t pkt[2];
+
+	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = reg;
+	pkt[1] = val;
+
+	if (i2c_master_wr(codec_addr, pkt, 2) > 0) {
+		printf("i2c_master_wr() ok.\n");
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+		printf("i2c_master_wr() failed!\n");
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return 0;
+}
+
+/* Divider values of M, N, and P to be used in junction with the 
+   FSDIV bit for calculation of FS frequency according to the 
+   formula FS = MCLK / (16 x M x N x P) */
+/* MCLK = 22579200 / 2 = 11289600 */ 
+/* FS = 8000 */ 
+void tlv320_init(void)
+{
+	printf("%s()... \n", __func__);
+
+	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS | CR3_OSR_128 | CR3_ASRF_1);
+	tlv320_wr(4, CR4_M_SET(44));
+	tlv320_wr(4, CR4_NP_SET(1, 2));
+	tlv320_wr(5, CR5A_ADGAIN_DB(4));
+	tlv320_wr(5, CR5B_DAGAIN_DB(-4));
+	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_24DB);
+	tlv320_wr(6, CR3_AINSEL_INP_M2);
+	tlv320_wr(1, CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
+	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
+};
+
 uint32_t supervisor_stack[256];
 uint32_t ui_stack[256];
 uint32_t acq_stack[256];
 
+/* ----------------------------------------------------------------------
+ * User interface task
+ * ----------------------------------------------------------------------
+ */
+int ui_task(void)
+{
+	int btn_st[2];
+	int ev_press;
+	int ev_release;
+	int ev_dbl_click;
+	int rst_tmr = 0;
+	int click_cnt = 0;
+	int click_tmr = 0;
+
+
+	printf("%s() started...\n", __func__);
+
+	btn_st[0] = push_btn_stat();
+	for (;;) {
+
+		/* process push button */
+		btn_st[1] = push_btn_stat();
+
+		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
+		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
+		ev_dbl_click = 0;
+		btn_st[0] = btn_st[1];
+
+		if (ev_press) {
+			DCC_LOG(LOG_TRACE, "BTN Down");
+			printf("[DWN]");
+			/* set reset timer */
+			rst_tmr = 50;
+			/* reset click window timer */
+			click_tmr = 10;
+			/* update click counter */
+			click_cnt++;
+			if (click_cnt == 2) {
+				/* generate a double click event */
+				ev_dbl_click = 1;
+			}
+			connect_off_hok();
+		}
+
+		if (ev_release) {
+			DCC_LOG(LOG_TRACE, "BTN Up");
+			printf("[UP]");
+			/* clear 'reset timer' */
+			rst_tmr = 0;
+		}
+
+		if (ev_dbl_click) {
+			printf("[DB CLK]");
+//			i2c_reset();
+			hangup_all();
+		}
+
+		if (rst_tmr)
+			rst_tmr--;
+
+		if (click_tmr) {
+			if (--click_tmr == 0)
+				click_cnt = 0;
+		}
+
+		switch (rst_tmr) {
+		case 18:
+		case 16:
+		case 14:
+		case 12:
+		case 10:
+		case 8:
+		case 4:
+		case 2:
+			led_on(0);
+			led_on(1);
+			led_on(2);
+			led_on(3);
+			break;
+		case 17:
+		case 15:
+		case 13:
+		case 11:
+		case 9:
+		case 7:
+		case 5:
+		case 3:
+			led_off(0);
+			led_off(1);
+			led_off(2);
+			led_off(3);
+			break;
+		case 1:
+			system_reset();
+			break;
+		}
+
+		thinkos_sleep(100);
+	}
+}
 int main(int argc, char ** argv)
 {
 	int i;
@@ -343,7 +508,7 @@ int main(int argc, char ** argv)
 
 	printf("\n\n");
 	printf("-----------------------------------------\n");
-	printf(" I2C master test\n");
+	printf(" Audio interface test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
 
@@ -360,6 +525,14 @@ int main(int argc, char ** argv)
 
 	i2c_bus_scan();
 
+	thinkos_sleep(1000);
+	tlv320_init();
+
+	thinkos_sleep(1000);
+	i2s_slave_init();
+	thinkos_sleep(1000);
+	i2s_enable();
+
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
@@ -372,9 +545,10 @@ int main(int argc, char ** argv)
 						  acq_stack, sizeof(acq_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 
+
 	for (i = 0; ; ++i) {
 		thinkos_sleep(3000);
-		vr_set(i, 2 * i);
+//		vr_set(i, 2 * i);
 	}
 
 
