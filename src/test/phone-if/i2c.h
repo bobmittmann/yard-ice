@@ -43,6 +43,8 @@ void i2c_slave_enable(void);
 
 int i2c_slave_io(void);
 
+void i2c_reset(void);
+
 #ifdef __cplusplus
 }
 #endif	

@@ -148,14 +148,18 @@ static void dgpot_timer_init(void)
 	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, 0xf0);
 }
 
-unsigned int dgpot_set(unsigned int cs, unsigned int pos)
+unsigned int dgpot_set(unsigned int cs, int pos)
 {
 	struct stm32f_tim * tim = STM32F_TIM1;
 	int diff;
 
 	/* limit the range */
+	if (pos < 0)
+		pos = 0;
+
 	if (pos > (DGPOT_STEPS - 1))
 		pos = (DGPOT_STEPS - 1);
+
 
 	diff = pos - dgpot.pos[cs];
 
