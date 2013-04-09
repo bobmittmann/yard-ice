@@ -28,15 +28,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "wavetab.h"
+
 #include <sys/dcclog.h>
 
 #define AUDIO_FRAME_LEN 128
-
-
-struct tone {
-	const int16_t * wave;
-	uint32_t len;
-};
 
 struct tonegen {
 	int16_t * wave;
@@ -45,30 +41,10 @@ struct tonegen {
 	int32_t amp;
 };
 
-/* 440Hz */
-static const int16_t a3_8ksps[] = {
-	     0,   11060,   20821,   28139,   32154,   32396,   28835,  21890,
-	 12376,    1410,   -9722,  -19713,  -27391,  -31853,  -32578, -29478,
-	-22919,  -13670,   -2817,    8367,   18569,   26592,   31493,  32699,
-	 30066,   23905,   14939,    4219,   -6996,  -17390,  -25743, -31075,
-	-32759,  -30599,  -24847,  -16180,   -5613,    5613,   16180,  24847,
-	 30599,   32759,   31075,   25743,   17390,    6996,   -4219, -14939,
-	-23905,  -30066,  -32699,  -31493,  -26592,  -18569,   -8367,   2817,
-	 13670,   22919,   29478,   32578,   31853,   27391,   19713,   9722,
-	 -1410,  -12376,  -21890,  -28835,  -32396,  -32154,  -28139, -20821,
-	-11060
-};
-
-const struct tone sine440hz8ksps = {
-	.wave = a3_8ksps,
-	.len = sizeof(a3_8ksps) / sizeof(int16_t)
-};
-
-
-void tonegen_init(struct tonegen * gen, int amp, const struct tone * tone)
+void tonegen_init(struct tonegen * gen, int amp, int tone)
 {
-	gen->wave = (int16_t *)tone->wave;
-	gen->len = tone->len;
+	gen->wave = (int16_t *)wave_lut[tone].buf;
+	gen->len = wave_lut[tone].len;
 	gen->amp = amp;
 	gen->pos = 0;
 }
@@ -78,9 +54,40 @@ void tonegen_apply(struct tonegen * gen, int16_t frm[])
 	int i;
 
 	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
-		frm[i] = (gen->amp * gen->wave[gen->pos]) >> 15;
+//		frm[i] = (gen->amp * gen->wave[gen->pos]) >> 15;
+		frm[i] = gen->wave[gen->pos];
 		if (++gen->pos == gen->len)
 			gen->pos = 0;
+	}
+}
+
+void blank_apply(int16_t frm[])
+{
+	int i;
+
+	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
+		frm[i] = 0;
+	}
+}
+
+void ramp_apply(int16_t frm[])
+{
+	int i;
+	int d = 65536 / AUDIO_FRAME_LEN;
+	int v = -32768;
+
+	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
+		frm[i] = v;
+		v += d;
+	}
+}
+
+void pulse_apply(int16_t frm[])
+{
+	int i;
+
+	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
+		frm[i] = (1 << (i % 16));
 	}
 }
 
@@ -88,7 +95,7 @@ struct tonegen tonegen;
 
 void i2s_test_init(void)
 {
-	tonegen_init(&tonegen, 16384, &sine440hz8ksps);
+	tonegen_init(&tonegen, 16384, WAVE_A3);
 }
 
 
@@ -298,13 +305,14 @@ void stm32f_dma1_stream4_isr(void)
 	if (dma->s[I2S_DMA_TX_STRM].cr & DMA_CT) {
 		usr_frm = i2s.tx.buf[1];
 		dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0];
+		DCC_LOG(LOG_INFO, "1.");
 	} else {
 		usr_frm = i2s.tx.buf[0];
 		dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1];
+		DCC_LOG(LOG_INFO, "0.");
 	}
 
 	tonegen_apply(&tonegen, usr_frm);
-	
 }
 
 void stm32f_spi2_isr(void)

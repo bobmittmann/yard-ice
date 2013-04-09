@@ -38,8 +38,10 @@
 
 #include <sys/dcclog.h>
 
-#define UART_TX_FIFO_BUF_LEN 1024
-#define UART_RX_FIFO_BUF_LEN 16
+#define UART_TX_FIFO_BUF_LEN 512
+#define UART_RX_FIFO_BUF_LEN 8
+
+#define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 
 struct uart_fifo {
 	volatile uint32_t head;
@@ -98,23 +100,15 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 {
 
 	char * cp = (char *)buf;
-	int c;
 	int n = 0;
-	int th;
+	int c;
 
 	DCC_LOG(LOG_INFO, "read");
-	th = thinkos_thread_self();
 
-	__thinkos_critical_enter();
+	__thinkos_critical_level(UART_IRQ_PRIORITY);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_INFO, "wait...");
-		if ( th == 4) {
-			DCC_LOG1(LOG_INFO, "[%d] wait ...", th);
-		}
-		__thinkos_ev_wait(dev->rx_ev);
-		if ( th == 4) {
-			DCC_LOG1(LOG_INFO, "[%d] wakeup.", th);
-		}
+		__thinkos_critical_ev_wait(dev->rx_ev, UART_IRQ_PRIORITY);
 		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 	__thinkos_critical_exit();
@@ -140,19 +134,14 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 
 static void uart_putc(struct uart_console_dev * dev, int c)
 {
-#if 0
-	__thinkos_critical_enter();
+	__thinkos_critical_level(UART_IRQ_PRIORITY);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_ev_wait(dev->tx_ev);
-		DCC_LOG(LOG_INFO, "wakeup");
+		DCC_LOG(LOG_TRACE, "wait...");
+		__thinkos_critical_ev_wait(dev->tx_ev, UART_IRQ_PRIORITY);
+		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 	__thinkos_critical_exit();
-#endif
-
-	if (uart_fifo_is_full(&dev->tx_fifo))
-		return;
 
 	uart_fifo_put(&dev->tx_fifo, c);
 	*dev->txie = 1; 
@@ -200,13 +189,14 @@ const struct file uart_console_file = {
 	.op = &uart_console_ops
 };
 
-void uart_console_isr(struct stm32f_usart * us)
+void stm32f_usart1_isr(void)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
+	struct stm32f_usart * us = dev->uart;
 	uint32_t sr;
 	int c;
 	
-	sr = us->sr;
+	sr = us->sr & us->cr1;
 
 	if (sr & USART_RXNE) {
 		DCC_LOG(LOG_INFO, "RXNE");
@@ -230,11 +220,11 @@ void uart_console_isr(struct stm32f_usart * us)
 	}
 
 	if (sr & USART_TXE) {
-		DCC_LOG(LOG_MSG, "TXE");
+		DCC_LOG(LOG_INFO, "TXE");
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
-//			__thinkos_ev_raise(dev->tx_ev);
+			__thinkos_ev_raise(dev->tx_ev);
 		} else {
 			us->dr = uart_fifo_get(&dev->tx_fifo);
 		}
@@ -254,8 +244,12 @@ struct file * uart_console_open(struct stm32f_usart * us)
 	dev->txie = CM3_BITBAND_DEV(&us->cr1, 7);
 	dev->uart = us;
 
+	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_USART1);
+
 	/* enable RX interrupt */
 	us->cr1 |= USART_RXNEIE | USART_IDLEIE;
+
 
 	return (struct file *)&uart_console_file;
 }

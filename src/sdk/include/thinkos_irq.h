@@ -34,6 +34,7 @@
 #define SYSCALL_PRIORITY       0x60
 #define CLOCK_PRIORITY         0xa0
 #define SCHED_PRIORITY         0xc0
+#define EXCEPT_PRIORITY        0x00
 
 #define IRQ_PRIORITY_HIGHEST   (0 << 5)
 #define IRQ_PRIORITY_VERY_HIGH (1 << 5)
@@ -55,7 +56,7 @@ __attribute__((always_inline)) __thinkos_critical_enter(void)  {
 }
 
 static inline void 
-__attribute__((always_inline)) __thinkos_critical_enter_level(int lvl)  {
+__attribute__((always_inline)) __thinkos_critical_level(int lvl)  {
 	/* set the BASEPRI */
 	cm3_basepri_set(lvl); 
 }
@@ -99,7 +100,38 @@ __thinkos_critical_ev_wait(int ev, int lvl) {
 	__thinkos_wait();
 	__thinkos_critical_exit();
 	/* the scheduler will run at this point */
-	__thinkos_critical_enter_level(lvl);
+	__thinkos_critical_level(lvl);
+}
+
+
+static inline void __attribute__((always_inline)) 
+__thinkos_fault(int ev) {
+	volatile int * ptr = (int *)0x30000000;
+	int val;
+
+	DCC_LOG3(LOG_TRACE, "PRIMASK=%x FAULTMASK=%x BASEPRI=%02x", 
+			 cm3_primask_get(), cm3_faultmask_get(), cm3_basepri_get());
+
+	DCC_LOG3(LOG_TRACE, "MM=%x BUS=%x USAGE=%x", 
+			 cm3_except_pri_get(CM3_EXCEPT_MEM_MANAGE),
+			 cm3_except_pri_get(CM3_EXCEPT_BUS_FAULT),
+			 cm3_except_pri_get(CM3_EXCEPT_USAGE_FAULT));
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+
+	val = *ptr;
+	(void)val;
+
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
 }
 
 static inline void __attribute__((always_inline)) 
@@ -112,14 +144,31 @@ __thinkos_ev_raise(int ev) {
 		thinkos_rt.th_stat[th] = 0;
 #endif
 		/* remove from the ev wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_lst[ev], th, 0);  
+		__bit_mem_wr(&thinkos_rt.wq_lst[ev], th, 0);
 		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
+
+#if THINKOS_ENABLE_SCHED_DEBUG
+		thinkos_rt.sched_trace_req = 1;
+#endif
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
 }
 
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_flag_set(int ev) {
+	/* set the flag bit */
+	__bit_mem_wr(&thinkos_rt.ev_flag, ev - THINKOS_EVENT_BASE, 1);  
+}
+
+static inline void __attribute__((always_inline)) 
+__thinkos_ev_flag_clr(int ev) {
+	/* clear the flag bit */
+	__bit_mem_wr(&thinkos_rt.ev_flag, ev - THINKOS_EVENT_BASE, 0);  
+}
+
+#if THINKOS_ENABLE_TIMED_CALLS
 static inline void __attribute__((always_inline)) 
 __thinkos_ev_timed_raise(int ev) {
 	int th;
@@ -130,23 +179,23 @@ __thinkos_ev_timed_raise(int ev) {
 		__thinkos_defer_sched();
 	}
 }
-
+#endif
 
 #if (THINKOS_IRQ_MAX  > 0)
 /* set the interrupt priority */
-static inline void 
-__attribute__((always_inline)) __thinkos_irq_pri_set(unsigned int irq, unsigned int priority) {
+static inline void __attribute__((always_inline)) 
+__thinkos_irq_pri_set(unsigned int irq, unsigned int priority) {
 	cm3_irq_pri_set(irq, priority);
 }
 
 /* enable interrupts */
-static inline void 
-__attribute__((always_inline)) __thinkos_irq_enable(unsigned int irq) {
+static inline void __attribute__((always_inline)) 
+__thinkos_irq_enable(unsigned int irq) {
 	cm3_irq_enable(irq);
 }
 
-static inline void 
-__attribute__((always_inline)) __thinkos_irq_wait(int irq) {
+static inline void __attribute__((always_inline)) 
+__thinkos_irq_wait(int irq) {
 	int32_t self = thinkos_rt.active;
 	/* store the thread info */
 	thinkos_rt.irq_th[irq] = self;

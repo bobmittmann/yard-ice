@@ -48,7 +48,7 @@ void thinkos_ev_free_svc(int32_t * arg)
 #if THINKOS_ENABLE_ARG_CHECK
 	if ((ev < THINKOS_EVENT_BASE) || 
 		(ev >= (THINKOS_EVENT_BASE + THINKOS_EVENT_MAX))) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+		DCC_LOG1(LOG_ERROR, "object %d is not an event!", ev);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -82,13 +82,27 @@ void thinkos_ev_wait_svc(int32_t * arg)
 #endif
 #endif
 
-	/* insert into the mutex wait queue */
+	cm3_cpsid_i();
+
+	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
 
-	DCC_LOG2(LOG_INFO, "<%d> waiting for event %d...", self, wq);
+	/* set the non schedule flag */
+	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+	if (thinkos_rt.wq_ready == 0) {
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	}
+#endif
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 
-	/* wait for event */
-	__thinkos_wait();
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+
+	cm3_cpsie_i();
 }
 
 void thinkos_ev_timedwait_svc(int32_t * arg)
@@ -114,17 +128,31 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
+	cm3_cpsid_i();
+
 	/* insert into the mutex wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
+
+	/* set the non schedule flag */
+	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+	if (thinkos_rt.wq_ready == 0) {
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	}
+#endif
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
 
 	/* Set the default return value to timeout. The
 	   ev_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
-	DCC_LOG2(LOG_INFO, "<%d> waiting for event %d...", self, wq);
-
-	/* wait for event */
-	__thinkos_wait();
+	cm3_cpsie_i();
 }
 
 void thinkos_ev_raise_svc(int32_t * arg)
