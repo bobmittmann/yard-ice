@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/delay.h>
 #include <stdio.h>
 
 #define __THINKOS_IRQ__
@@ -174,7 +175,7 @@ void stm32f_i2c1_ev_isr(void)
 	if (sr1 & I2C_STOPF) {
 		/* Clear STOPF */
 		i2c->cr1 = I2C_ACK | I2C_PE; 
-		DCC_LOG3(LOG_INFO, "%d STOPF: cnt=%d %s", io->irq_cnt, io->cnt,
+		DCC_LOG3(LOG_TRACE, "%d STOPF: cnt=%d %s", io->irq_cnt, io->cnt,
 			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
 		__thinkos_ev_raise(io->event);
 		/* Note: The STOPF bit is not set after a NACK reception.
@@ -221,11 +222,11 @@ void stm32f_i2c1_er_isr(void)
 
 	if (sr1 & I2C_BERR) {
 		DCC_LOG1(LOG_TRACE, "%d BERR", io->irq_cnt);
+		io->xfer = I2C_XFER_ERR;
+		__thinkos_ev_raise(io->event);
 	}
 
 	if (sr1 & I2C_AF) {
-		/* clear AF */
-		i2c->sr1 = 0;
 		DCC_LOG3(LOG_INFO, "%d AF: cnt=%d %s", io->irq_cnt, io->cnt,
 			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
 		__thinkos_ev_raise(io->event);
@@ -233,7 +234,12 @@ void stm32f_i2c1_er_isr(void)
 
 	if (sr1 & I2C_OVR) {
 		DCC_LOG1(LOG_TRACE, "%d OVR", io->irq_cnt);
+		io->xfer = I2C_XFER_ERR;
+		__thinkos_ev_raise(io->event);
 	}
+
+	/* clear AF */
+	i2c->sr1 = 0;
 }
 
 int i2c_slave_io(void)
@@ -246,3 +252,38 @@ int i2c_slave_io(void)
 
 	return io->xfer;
 }
+
+void i2c_reset(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
+	uint32_t cr1;
+	uint32_t cr2;
+	uint32_t oar1;
+	uint32_t oar2;
+	uint32_t ccr;
+	uint32_t trise;
+
+	DCC_LOG(LOG_TRACE, "I2C reset...");
+
+	cr1 = i2c->cr1;
+	cr2 = i2c->cr2;
+	oar1 = i2c->oar1;
+	oar2 = i2c->oar2;
+	ccr = i2c->ccr;
+	trise = i2c->trise;
+
+
+	/* Software reset */
+	i2c->cr1 = I2C_SWRST; 
+	udelay(10);
+	i2c->cr1 = I2C_PE;
+
+	i2c->cr2 = cr2;
+	i2c->oar1 = oar1;
+	i2c->oar2 = oar2;
+	i2c->ccr = ccr;
+	i2c->trise = trise;
+	i2c->cr1 = cr1;
+}
+
+

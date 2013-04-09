@@ -29,7 +29,7 @@ extern "C" {
 
 void dgpot_init(void);
 
-unsigned int dgpot_set(unsigned int cs, unsigned int pos);
+unsigned int dgpot_set(unsigned int cs, int pos);
 
 #ifdef __cplusplus
 }

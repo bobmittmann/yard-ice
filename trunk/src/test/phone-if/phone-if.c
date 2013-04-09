@@ -56,11 +56,7 @@ struct file stm32f_uart1_file = {
 
 void stm32f_usart1_isr(void)
 {
-	struct stm32f_usart * uart = STM32F_USART1;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	uart_console_isr(uart);
+	uart_console_isr(STM32F_USART1);
 }
 
 void stdio_init(void)
@@ -181,32 +177,188 @@ void wdt_init(void)
 	DCC_LOG(LOG_TRACE, "3. done.");
 }
 
+int	tone_set(int chan, int mode)
+{
+	DCC_LOG2(LOG_TRACE, "ADC%d mode=%d", chan, mode);
+
+	if (mode <= 2) {
+		dac_wave_set(chan, mode);
+		dac_play(chan);
+	} else {
+		mode = 0;
+		dac_pause(chan);
+	}
+
+	return mode;
+}
+
+struct io_block {
+	uint8_t magic[2];
+	uint16_t adc[ADC_CHANS];
+	uint8_t led;
+	uint8_t relay;
+	uint8_t dgpot[2];
+	uint8_t tone[2];
+	uint8_t opt;
+};
+
+
+struct io_block rd_block = {
+	.magic = { 'P', 'H' }
+};
+
+struct io_block wr_block;
+
+void chan_toggle(int chan)
+{
+	if (rd_block.relay & (1 << chan)) {
+		relay_off(chan);
+		led_off(chan);
+		rd_block.relay &= ~(1 << chan);
+		rd_block.led &= ~(1 << chan);
+	} else {
+		relay_on(chan);
+		led_on(chan);
+		rd_block.relay |= (1 << chan);
+		rd_block.led |= (1 << chan);
+	}
+}
+
 void show_menu(void)
 {
 	printf("\n");
 	printf("---------------------------------------\n");
 	printf("Options:\n");
-	printf("  r - reset\n");
+	printf("  1 - Toggle Chan 1\n");
+	printf("  2 - Toggle Chan 2\n");
+	printf("  3 - Toggle Chan 3\n");
+	printf("  4 - Toggle Chan 4\n");
+	printf("  5 - Toggle Chan 5\n");
+
+	printf("  q - Tone 1 440Hz\n");
+	printf("  w - Tone 1 587Hz\n");
+	printf("  e - Tone 1 off\n");
+	printf("  a - Tone 2 440Hz\n");
+	printf("  s - Tone 2 587Hz\n");
+	printf("  d - Tone 2 off\n");
+
+	printf("  - - Gain -\n");
+	printf("  = - Gain +\n");
+
+	printf("  [ - Impedance -\n");
+	printf("  ] - Impedance +\n");
+
+	printf("  p - Print ADC\n");
+
+	printf("  i - i2c reset\n");
+	printf("  r - system reset\n");
 	printf("  t - test\n");
+
 	printf("\n");
 }
 
 int shell_task(void)
 {
 	int c;
+	int val;
+	int gain;
+	int i;
 
 	for(;;) {
 		c = getchar();
-		printf("%c", c);
 		switch (c) {
 		case '\n':
 			show_menu();
 			break;
+		case '1':
+			printf("Toggle Chan 1\n");
+			chan_toggle(0);
+			break;
+		case '2':
+			printf("Toggle Chan 2\n");
+			chan_toggle(1);
+			break;
+		case '3':
+			printf("Toggle Chan 3\n");
+			chan_toggle(2);
+			break;
+		case '4':
+			printf("Toggle Chan 4\n");
+			chan_toggle(3);
+			break;
+		case '5':
+			printf("Toggle Chan 5\n");
+			chan_toggle(4);
+			break;
+		case 'q':
+			printf("Tone 1 440Hz\n");
+			tone_set(0, 0);
+			break;
+		case 'w':
+			printf("Tone 1 587Hz\n");
+			tone_set(0, 1);
+			break;
+		case 'e':
+			printf("Tone 1 off\n");
+			tone_set(0, 3);
+			break;
+		case 'a':
+			printf("Tone 2 440Hz\n");
+			tone_set(1, 0);
+			break;
+		case 's':
+			printf("Tone 2 587Hz\n");
+			tone_set(1, 1);
+			break;
+		case 'd':
+			printf("Tone 2 off\n");
+			tone_set(1, 3);
+			break;
+		case '[':
+			val = dgpot_set(0, rd_block.dgpot[0] - 1);
+			rd_block.dgpot[0] = val;
+			printf("Impedance: %d\n", (val * 5000) / 63);
+			break;
+		case ']':
+			val = dgpot_set(0, rd_block.dgpot[0] + 1);
+			rd_block.dgpot[0] = val;
+			printf("Impedance: %d\n", (val * 5000) / 63);
+			break;
+
+		case '-':
+			val = dgpot_set(1, rd_block.dgpot[1] - 1);
+			rd_block.dgpot[1] = val;
+			gain = 100 + (5000 * val) / (25 * 63);
+			printf("Gain: %d.%02d\n", gain / 100, gain % 100);
+			break;
+		case '=':
+			val = dgpot_set(1, rd_block.dgpot[1] + 1);
+			rd_block.dgpot[1] = val;
+			gain = 100 + (5000 * val) / (25 * 63);
+			printf("Gain: %d.%02d\n", gain / 100, gain % 100);
+			break;
+
+		case 'p':
+			printf("ADC:");
+			for (i = 0; i < 5; ++i)
+				printf(" %5d", rd_block.adc[i]);
+			printf("\n");
+			break;
+
+		case 'i':
+			printf("I2C reset\n");
+			i2c_reset();
+			break;
 		case 'r':
+			printf("System reset\n");
 			system_reset();
 			break;
 		case 't':
+			printf("Self teset\n");
 			self_test();
+			break;
+		default:
+			printf("%c", c);
 			break;
 		}
 	}
@@ -224,21 +376,6 @@ void shell_init(void)
 	thinkos_sleep(10);
 }
 
-struct io_block {
-	uint8_t magic[2];
-	uint16_t adc[ADC_CHANS];
-	uint8_t led;
-	uint8_t relay;
-	uint8_t dgpot[2];
-	uint8_t opt;
-};
-
-
-struct io_block rd_block = {
-	.magic = { 'P', 'H' }
-};
-
-struct io_block wr_block;
 
 void process_data_in(void)
 {
@@ -299,6 +436,18 @@ void process_data_in(void)
 	if (val != rd_block.dgpot[1]) {
 		rd_block.dgpot[1] = val;
 		printf("[POT1 %d]", val);
+	}
+	
+	if (wr_block.tone[0] != rd_block.tone[0]) {
+		val = tone_set(0, wr_block.tone[0]);
+		rd_block.tone[0] = val;
+		printf("[TONE1 %d]", val);
+	}
+
+	if (wr_block.tone[0] != rd_block.tone[0]) {
+		val = tone_set(0, wr_block.tone[0]);
+		rd_block.tone[0] = val;
+		printf("[TONE1 %d]", val);
 	}
 }
 

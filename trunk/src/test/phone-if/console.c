@@ -38,28 +38,33 @@
 
 #include <sys/dcclog.h>
 
-#define UART_FIFO_BUF_LEN 64
+#define UART_TX_FIFO_BUF_LEN 1024
+#define UART_RX_FIFO_BUF_LEN 16
 
 struct uart_fifo {
 	volatile uint32_t head;
 	volatile uint32_t tail;
-	uint8_t buf[UART_FIFO_BUF_LEN];
+	uint32_t mask;
+	uint32_t len;
+	uint8_t buf[];
 };
 
-static inline void uart_fifo_init(struct uart_fifo * fifo)
+static inline void uart_fifo_init(struct uart_fifo * fifo, int len)
 {
 	fifo->head = 0;
 	fifo->tail = 0;
+	fifo->len = len;
+	fifo->mask = len - 1;
 }
 
 static inline uint8_t uart_fifo_get(struct uart_fifo * fifo)
 {
-	return fifo->buf[fifo->tail++ & (UART_FIFO_BUF_LEN - 1)];
+	return fifo->buf[fifo->tail++ & fifo->mask];
 }
 
-static inline void uart_fifo_put(struct uart_fifo * fifo, uint8_t c)
+static inline void uart_fifo_put(struct uart_fifo * fifo, int c)
 {
-	fifo->buf[fifo->head++ & (UART_FIFO_BUF_LEN - 1)] = c;
+	fifo->buf[fifo->head++ & fifo->mask] = c;
 }
 
 static inline bool uart_fifo_is_empty(struct uart_fifo * fifo)
@@ -69,19 +74,21 @@ static inline bool uart_fifo_is_empty(struct uart_fifo * fifo)
 
 static inline bool uart_fifo_is_full(struct uart_fifo * fifo)
 {
-	return ((fifo->head - fifo->tail) == UART_FIFO_BUF_LEN) ? true : false;
+	return ((fifo->head - fifo->tail) == fifo->len) ? true : false;
 }
 
 static inline bool uart_fifo_is_half_full(struct uart_fifo * fifo)
 {
-	return ((fifo->head - fifo->tail) > (UART_FIFO_BUF_LEN / 2)) ? true : false;
+	return ((fifo->head - fifo->tail) > (fifo->len / 2)) ? true : false;
 }
 
 struct uart_console_dev {
-	int8_t rx_ev;
-	int8_t tx_ev;
+	int32_t tx_ev;
+	int32_t rx_ev;
 	struct uart_fifo tx_fifo;
+	uint8_t tx_buf[UART_TX_FIFO_BUF_LEN];
 	struct uart_fifo rx_fifo;
+	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
 	uint32_t * txie;
 	struct stm32f_usart * uart;
 };
@@ -95,20 +102,20 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 	int n = 0;
 	int th;
 
-	DCC_LOG(LOG_TRACE, "read");
+	DCC_LOG(LOG_INFO, "read");
 	th = thinkos_thread_self();
 
 	__thinkos_critical_enter();
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
-		DCC_LOG(LOG_TRACE, "wait...");
+		DCC_LOG(LOG_INFO, "wait...");
 		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wait ...", th);
+			DCC_LOG1(LOG_INFO, "[%d] wait ...", th);
 		}
 		__thinkos_ev_wait(dev->rx_ev);
 		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wakeup.", th);
+			DCC_LOG1(LOG_INFO, "[%d] wakeup.", th);
 		}
-		DCC_LOG(LOG_TRACE, "wakeup.");
+		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 	__thinkos_critical_exit();
 
@@ -126,21 +133,26 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 
 
-	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
+	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
 }
 
 static void uart_putc(struct uart_console_dev * dev, int c)
 {
+#if 0
 	__thinkos_critical_enter();
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_TRACE, "wait...");
+		DCC_LOG(LOG_INFO, "wait...");
 		__thinkos_ev_wait(dev->tx_ev);
-		DCC_LOG(LOG_TRACE, "wakeup");
+		DCC_LOG(LOG_INFO, "wakeup");
 	}
 	__thinkos_critical_exit();
+#endif
+
+	if (uart_fifo_is_full(&dev->tx_fifo))
+		return;
 
 	uart_fifo_put(&dev->tx_fifo, c);
 	*dev->txie = 1; 
@@ -153,18 +165,18 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	int c;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	DCC_LOG1(LOG_INFO, "len=%d", len);
 
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		if (c == '\n') {
-			DCC_LOG(LOG_TRACE, "CR");
+			DCC_LOG(LOG_INFO, "CR");
 			uart_putc(dev, '\r');
 		}
 		uart_putc(dev, c);
 	}
 
-	DCC_LOG1(LOG_TRACE, "cnt=%d", n);
+	DCC_LOG1(LOG_INFO, "cnt=%d", n);
 
 	return n;
 }
@@ -197,7 +209,7 @@ void uart_console_isr(struct stm32f_usart * us)
 	sr = us->sr;
 
 	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_TRACE, "RXNE");
+		DCC_LOG(LOG_INFO, "RXNE");
 		c = us->dr;
 		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
 			uart_fifo_put(&dev->rx_fifo, c);
@@ -211,7 +223,7 @@ void uart_console_isr(struct stm32f_usart * us)
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
+		DCC_LOG(LOG_INFO, "IDLE");
 		c = us->dr;
 		(void)c;
 		__thinkos_ev_raise(dev->rx_ev);
@@ -222,7 +234,7 @@ void uart_console_isr(struct stm32f_usart * us)
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
-			__thinkos_ev_raise(dev->tx_ev);
+//			__thinkos_ev_raise(dev->tx_ev);
 		} else {
 			us->dr = uart_fifo_get(&dev->tx_fifo);
 		}
@@ -233,11 +245,11 @@ struct file * uart_console_open(struct stm32f_usart * us)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	dev->rx_ev = thinkos_ev_alloc(); 
 	dev->tx_ev = thinkos_ev_alloc(); 
-	uart_fifo_init(&dev->tx_fifo);
-	uart_fifo_init(&dev->rx_fifo);
+	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
+	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
 
 	dev->txie = CM3_BITBAND_DEV(&us->cr1, 7);
 	dev->uart = us;
