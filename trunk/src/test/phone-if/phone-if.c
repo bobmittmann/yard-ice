@@ -41,6 +41,18 @@
 #include "adc.h"
 #include "console.h"
 
+#ifndef ENABLE_WATCHDOG
+#define ENABLE_WATCHDOG 0
+#endif
+
+#ifndef ENABLE_MENU
+#define ENABLE_MENU 1
+#endif
+
+#ifndef ENABLE_STATUS
+#define ENABLE_STATUS 1
+#endif
+
 /* ----------------------------------------------------------------------
  * Console 
  * ----------------------------------------------------------------------
@@ -53,11 +65,6 @@ struct file stm32f_uart1_file = {
 	.data = STM32F_USART1, 
 	.op = &stm32f_usart_fops 
 };
-
-void stm32f_usart1_isr(void)
-{
-	uart_console_isr(STM32F_USART1);
-}
 
 void stdio_init(void)
 {
@@ -88,12 +95,8 @@ void stdio_init(void)
 	stm32f_usart_enable(uart);
 
 	stderr = &stm32f_uart1_file;
-
 	stdin = uart_console_open(uart);
-	stdout = uart_console_open(uart);
-
-	cm3_irq_enable(STM32F_IRQ_USART1);
-
+	stdout = stdin;
 }
 
 void sys_init(void)
@@ -137,6 +140,7 @@ void system_reset(void)
 	for(;;);
 }
 
+#if ENABLE_WATCHDOG
 int wdt_task(void)
 {
 	struct stm32f_iwdg * iwdg = STM32F_IWDG;
@@ -176,10 +180,11 @@ void wdt_init(void)
 	thinkos_sleep(10);
 	DCC_LOG(LOG_TRACE, "3. done.");
 }
+#endif
 
 int	tone_set(int chan, int mode)
 {
-	DCC_LOG2(LOG_TRACE, "ADC%d mode=%d", chan, mode);
+	DCC_LOG2(LOG_TRACE, "DAC%d mode=%d", chan, mode);
 
 	if (mode <= 2) {
 		dac_wave_set(chan, mode);
@@ -202,7 +207,6 @@ struct io_block {
 	uint8_t opt;
 };
 
-
 struct io_block rd_block = {
 	.magic = { 'P', 'H' }
 };
@@ -222,13 +226,16 @@ void chan_toggle(int chan)
 		rd_block.relay |= (1 << chan);
 		rd_block.led |= (1 << chan);
 	}
+	wr_block.relay = rd_block.relay;
+	wr_block.led = rd_block.led;
 }
 
+#if ENABLE_MENU
 void show_menu(void)
 {
 	printf("\n");
-	printf("---------------------------------------\n");
 	printf("Options:\n");
+	printf("--------\n");
 	printf("  1 - Toggle Chan 1\n");
 	printf("  2 - Toggle Chan 2\n");
 	printf("  3 - Toggle Chan 3\n");
@@ -256,6 +263,7 @@ void show_menu(void)
 
 	printf("\n");
 }
+#endif
 
 int shell_task(void)
 {
@@ -267,9 +275,11 @@ int shell_task(void)
 	for(;;) {
 		c = getchar();
 		switch (c) {
+#if ENABLE_MENU
 		case '\n':
 			show_menu();
 			break;
+#endif
 		case '1':
 			printf("Toggle Chan 1\n");
 			chan_toggle(0);
@@ -317,23 +327,27 @@ int shell_task(void)
 		case '[':
 			val = dgpot_set(0, rd_block.dgpot[0] - 1);
 			rd_block.dgpot[0] = val;
+			wr_block.dgpot[0] = val;
 			printf("Impedance: %d\n", (val * 5000) / 63);
 			break;
 		case ']':
 			val = dgpot_set(0, rd_block.dgpot[0] + 1);
 			rd_block.dgpot[0] = val;
+			wr_block.dgpot[0] = val;
 			printf("Impedance: %d\n", (val * 5000) / 63);
 			break;
 
 		case '-':
 			val = dgpot_set(1, rd_block.dgpot[1] - 1);
 			rd_block.dgpot[1] = val;
+			wr_block.dgpot[1] = val;
 			gain = 100 + (5000 * val) / (25 * 63);
 			printf("Gain: %d.%02d\n", gain / 100, gain % 100);
 			break;
 		case '=':
 			val = dgpot_set(1, rd_block.dgpot[1] + 1);
 			rd_block.dgpot[1] = val;
+			wr_block.dgpot[1] = val;
 			gain = 100 + (5000 * val) / (25 * 63);
 			printf("Gain: %d.%02d\n", gain / 100, gain % 100);
 			break;
@@ -357,8 +371,10 @@ int shell_task(void)
 			printf("Self teset\n");
 			self_test();
 			break;
+#if 0
 		default:
 			printf("%c", c);
+#endif
 			break;
 		}
 	}
@@ -387,12 +403,16 @@ void process_data_in(void)
 	DCC_LOG(LOG_TRACE, "...");
 
 	if (wr_block.opt & OPT_SELF_TEST) {
+#if ENABLE_STATUS
 		printf("[SELF TEST]");
+#endif
 		self_test();
 	}
 
 	if (wr_block.opt & OPT_RESET) {
+#if ENABLE_STATUS
 		printf("[RESET]");
+#endif
 		system_reset();
 	}
 
@@ -401,10 +421,14 @@ void process_data_in(void)
 
 	for (i = 0; i < 5; ++i) {
 		if (set & (1 << i)) {
+#if ENABLE_STATUS
 			printf("[LED%d ON]", i);
+#endif
 			led_on(i);
 		} else if (clr & (1 << i)) {
+#if ENABLE_STATUS
 			printf("[LED%d OFF]", i);
+#endif
 			led_off(i);
 		}
 	}
@@ -412,15 +436,19 @@ void process_data_in(void)
 	/* update read block */
 	rd_block.led = wr_block.led;
 
-	clr = wr_block.relay & (wr_block.relay ^ rd_block.relay);
-	set = rd_block.relay & (wr_block.relay ^ rd_block.relay);
+	set = wr_block.relay & (wr_block.relay ^ rd_block.relay);
+	clr = rd_block.relay & (wr_block.relay ^ rd_block.relay);
 
 	for (i = 0; i < 5; ++i) {
 		if (set & (1 << i)) {
+#if ENABLE_STATUS
 			printf("[RELAY%d ON]", i);
+#endif
 			relay_on(i);
 		} else if (clr & (1 << i)) {
+#if ENABLE_STATUS
 			printf("[RELAY%d OFF]", i);
+#endif
 			relay_off(i);
 		}
 		rd_block.relay = wr_block.relay;
@@ -429,26 +457,36 @@ void process_data_in(void)
 	val = dgpot_set(0, wr_block.dgpot[0]);
 	if (val != rd_block.dgpot[0]) {
 		rd_block.dgpot[0] = val;
+#if ENABLE_STATUS
 		printf("[POT0 %d]", val);
+#endif
 	}
 
 	val = dgpot_set(1, wr_block.dgpot[1]);
 	if (val != rd_block.dgpot[1]) {
 		rd_block.dgpot[1] = val;
+#if ENABLE_STATUS
 		printf("[POT1 %d]", val);
+#endif
 	}
 	
 	if (wr_block.tone[0] != rd_block.tone[0]) {
 		val = tone_set(0, wr_block.tone[0]);
 		rd_block.tone[0] = val;
+#if ENABLE_STATUS
 		printf("[TONE1 %d]", val);
+#endif
 	}
 
 	if (wr_block.tone[0] != rd_block.tone[0]) {
 		val = tone_set(0, wr_block.tone[0]);
 		rd_block.tone[0] = val;
+#if ENABLE_STATUS
 		printf("[TONE1 %d]", val);
+#endif
 	}
+
+	memcpy(&wr_block, &rd_block, sizeof(struct io_block));
 }
 
 #define DEVICE_ADDR 0x55
@@ -474,8 +512,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
 
+#if ENABLE_WATCHDOG
 	DCC_LOG(LOG_TRACE, "5. wdt_init()");
-//	wdt_init();
+	wdt_init();
+#endif
 
 	DCC_LOG(LOG_TRACE, "6. leds_init()");
 	leds_init();
@@ -526,10 +566,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "17. shell_init()");
 	shell_init();
 
+	dac_wave_set(0, WAVE_A3);
+	dac_play(0);
+
+	dac_wave_set(1, WAVE_D3);
+	dac_play(1);
+
 	printf("\n\n");
-	printf("-----------------------------------------\n");
 	printf(" Phone interface\n");
-	printf("-----------------------------------------\n");
+	printf("----------------\n");
 	printf("\n");
 
 	for (i = 0; ; ++i) {
@@ -537,19 +582,24 @@ int main(int argc, char ** argv)
 		switch (xfer) {
 		case I2C_XFER_IN:
 			DCC_LOG(LOG_TRACE, "IN");
-			printf("In ");
+#if ENABLE_STATUS
+			printf(".I");
+#endif
 			process_data_in();
 			break;
 		case I2C_XFER_OUT:
-			DCC_LOG(LOG_TRACE, "OUT");
-			printf("Out ");
-			DCC_LOG5(LOG_TRACE, "%5d %5d %5d %5d %5d ", 
+#if ENABLE_STATUS
+			printf(".O");
+#endif
+			DCC_LOG5(LOG_TRACE, "OUT %5d %5d %5d %5d %5d ", 
 					 rd_block.adc[0], rd_block.adc[1], 
 					 rd_block.adc[2], rd_block.adc[3], 
 					 rd_block.adc[4] );
 			break;
 		case I2C_XFER_ERR:
-			printf("Err ");
+#if ENABLE_STATUS
+			printf(".E");
+#endif
 			break;
 		}
 

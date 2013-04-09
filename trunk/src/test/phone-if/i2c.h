@@ -27,6 +27,7 @@ struct i2c_io_blk;
 
 enum {
 	I2C_XFER_ERR = -1,
+	I2C_XFER_IDX,
 	I2C_XFER_IN,
 	I2C_XFER_OUT
 };

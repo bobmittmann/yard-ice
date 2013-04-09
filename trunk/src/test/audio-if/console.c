@@ -38,6 +38,10 @@
 
 #include <sys/dcclog.h>
 
+#ifndef ENABLE_UART_TX_BLOCK
+#define ENABLE_UART_TX_BLOCK 0
+#endif
+
 #define UART_TX_FIFO_BUF_LEN 8192
 #define UART_RX_FIFO_BUF_LEN 64
 
@@ -140,7 +144,7 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 
 static void uart_putc(struct uart_console_dev * dev, int c)
 {
-#if 0
+#if ENABLE_UART_TX_BLOCK
 	__thinkos_critical_enter();
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
@@ -149,10 +153,10 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 	__thinkos_critical_exit();
-#endif
-
+#else
 	if (uart_fifo_is_full(&dev->tx_fifo))
 		return;
+#endif
 
 	uart_fifo_put(&dev->tx_fifo, c);
 	*dev->txie = 1; 
@@ -165,18 +169,18 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	int c;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	DCC_LOG1(LOG_INFO, "len=%d", len);
 
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		if (c == '\n') {
-			DCC_LOG(LOG_TRACE, "CR");
+			DCC_LOG(LOG_INFO, "CR");
 			uart_putc(dev, '\r');
 		}
 		uart_putc(dev, c);
 	}
 
-	DCC_LOG1(LOG_TRACE, "cnt=%d", n);
+	DCC_LOG1(LOG_INFO, "cnt=%d", n);
 
 	return n;
 }
@@ -234,7 +238,9 @@ void uart_console_isr(struct stm32f_usart * us)
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
-//			__thinkos_ev_raise(dev->tx_ev);
+#if ENABLE_UART_TX_BLOCK
+			__thinkos_ev_raise(dev->tx_ev);
+#endif
 		} else {
 			us->dr = uart_fifo_get(&dev->tx_fifo);
 		}

@@ -60,11 +60,7 @@ struct file stm32f_uart1_file = {
 
 void stm32f_usart1_isr(void)
 {
-	struct stm32f_usart * uart = STM32F_USART1;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	uart_console_isr(uart);
+	uart_console_isr(STM32F_USART1);
 }
 
 void stdio_init(void)
@@ -340,7 +336,7 @@ int tlv320_wr(unsigned int reg, unsigned int val)
 {
 	uint8_t pkt[2];
 
-	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
+	DCC_LOG2(LOG_TRACE, "reg=%d val=0x%02x", reg, val);
 
 	thinkos_mutex_lock(i2c_mutex);
 
@@ -370,14 +366,17 @@ void tlv320_init(void)
 	printf("%s()... \n", __func__);
 
 	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS | CR3_OSR_128 | CR3_ASRF_1);
+	thinkos_sleep(1);
 	tlv320_wr(4, CR4_M_SET(44));
 	tlv320_wr(4, CR4_NP_SET(1, 2));
-	tlv320_wr(5, CR5A_ADGAIN_DB(4));
-	tlv320_wr(5, CR5B_DAGAIN_DB(-4));
-	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_24DB);
-	tlv320_wr(6, CR3_AINSEL_INP_M2);
+	tlv320_wr(5, CR5A_ADGAIN_DB(0));
+	tlv320_wr(5, CR5B_DAGAIN_DB(0));
+	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_0DB);
+	tlv320_wr(6, CR3_AINSEL_INP_M1);
 	tlv320_wr(1, CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
 	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
+//	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16 | CR1_DLB);
+//	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16 | CR1_ALB);
 };
 
 uint32_t supervisor_stack[256];

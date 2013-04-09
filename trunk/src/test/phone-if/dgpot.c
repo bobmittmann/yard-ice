@@ -78,6 +78,7 @@
 struct dgpot_drv {
 	int32_t event;
 	uint32_t lcur;
+	uint32_t busy;
 	uint8_t pos[DGPOT_CHIPS];
 } dgpot;
 
@@ -95,12 +96,15 @@ void stm32f_tim1_up_tim16_isr(void)
 	stm32f_gpio_set(DGPOT_NCS0);
 	stm32f_gpio_set(DGPOT_NCS1);
 
-	__thinkos_ev_raise(dgpot.event);
+	dgpot.busy = 0;
 
-	DCC_LOG(LOG_MSG, "tick.");
+	DCC_LOG1(LOG_TRACE, "__thinkos_ev_raise(%d)", dgpot.event);
+	__thinkos_ev_raise(dgpot.event);
 }
 
 #define TIMER_CLK_FREQ 1800000
+
+#define DGPOT_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 
 static void dgpot_timer_init(void)
 {
@@ -143,9 +147,9 @@ static void dgpot_timer_init(void)
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
 	tim->dier = TIM_UIE; /* Update interrupt enable */
 
-	cm3_irq_enable(STM32F_IRQ_TIM1_UP);
 	/* Set IRQ to low priority */
-	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, 0xf0);
+	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, DGPOT_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_TIM1_UP);
 }
 
 unsigned int dgpot_set(unsigned int cs, int pos)
@@ -165,6 +169,15 @@ unsigned int dgpot_set(unsigned int cs, int pos)
 
 	if (diff == 0)
 		return pos;
+
+	__thinkos_critical_level(DGPOT_IRQ_PRIORITY);
+	while (dgpot.busy) {
+		DCC_LOG(LOG_TRACE, "wait...");
+		__thinkos_critical_ev_wait(dgpot.event, DGPOT_IRQ_PRIORITY);
+		DCC_LOG(LOG_TRACE, "done.");
+	}
+	dgpot.busy = 1;
+	__thinkos_critical_exit();
 
 	DCC_LOG2(LOG_TRACE, "cs=%d pos=%d", cs, pos);
 
@@ -197,9 +210,6 @@ unsigned int dgpot_set(unsigned int cs, int pos)
 
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
 
-	/* wait for the end of adjustment ... */
-	thinkos_ev_wait(dgpot.event);
-
 	dgpot.pos[cs] = pos;
 
 	return pos;
@@ -218,9 +228,12 @@ void dgpot_init(void)
 	stm32f_gpio_set(DGPOT_NCS0);
 	stm32f_gpio_set(DGPOT_NCS1);
 
-	dgpot_timer_init();
-
 	dgpot.event = thinkos_ev_alloc();
+	DCC_LOG1(LOG_TRACE, "event=%d", dgpot.event);
+
+	dgpot.busy = 0;
+
+	dgpot_timer_init();
 
 	for (i = 0; i < DGPOT_CHIPS; ++i) {
 		/* artificially set the potentiometer to the 

@@ -38,6 +38,7 @@
 
 #define I2C1_SCL STM32F_GPIOB, 8
 #define I2C1_SDA STM32F_GPIOB, 9
+#define I2C_IRQ_PRIORITY IRQ_PRIORITY_VERY_HIGH 
 
 struct i2c_io_blk {
 	/* index to the memory position to be transfered next */
@@ -116,23 +117,24 @@ struct i2c_io_blk * i2c_slave_init(unsigned int scl_freq, unsigned int addr,
 
 	i2c_io.event = thinkos_ev_alloc();
 
-	return io;
-}
-
-void i2c_slave_enable(void)
-{
-	struct stm32f_i2c * i2c = STM32F_I2C1;
-
 	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
 	/* set event IRQ to very high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x00);
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
 	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
 	/* set error IRQ to high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x08);
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
 
 	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
 	/* enable ACK, events and errors */
 	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
+	return io;
+}
+
+
+
+void i2c_slave_enable(void)
+{
+	struct stm32f_i2c * i2c = STM32F_I2C1;
 
 	DCC_LOG(LOG_TRACE, "Enabling device ....");
 	/* enable ACK */
@@ -166,7 +168,7 @@ void stm32f_i2c1_ev_isr(void)
 			io->xfer = I2C_XFER_OUT;
 			DCC_LOG1(LOG_INFO, "%d ADDR: TRA=1 (xmit)", io->irq_cnt);
 		} else {
-			io->xfer = I2C_XFER_IN;
+			io->xfer = I2C_XFER_IDX;
 			DCC_LOG1(LOG_INFO, "%d ADDR: TRA=0 (recv)", io->irq_cnt);
 		} 
 		io->cnt = 0;
@@ -175,12 +177,15 @@ void stm32f_i2c1_ev_isr(void)
 	if (sr1 & I2C_STOPF) {
 		/* Clear STOPF */
 		i2c->cr1 = I2C_ACK | I2C_PE; 
-		DCC_LOG3(LOG_TRACE, "%d STOPF: cnt=%d %s", io->irq_cnt, io->cnt,
-			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
-		__thinkos_ev_raise(io->event);
 		/* Note: The STOPF bit is not set after a NACK reception.
 		  It is recommended to perform the complete clearing sequence 
 		  (READ SR1 then WRITE CR1) after the STOPF is set. */
+
+		DCC_LOG3(LOG_INFO, "%d STOPF: cnt=%d %s", io->irq_cnt, io->cnt,
+			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
+
+		if (io->xfer > I2C_XFER_IDX)
+			__thinkos_ev_raise(io->event);
 	}
 
 	if (sr1 & I2C_BTF) {
@@ -195,6 +200,7 @@ void stm32f_i2c1_ev_isr(void)
 				io->idx = 0;
 			DCC_LOG2(LOG_INFO, "%d RXNE idx=%02x", io->irq_cnt, io->idx);
 		} else {
+			io->xfer = I2C_XFER_IN;
 			wr_mem[io->idx] = i2c->dr;
 			DCC_LOG2(LOG_INFO, "%d RXNE [%02x]", io->irq_cnt, wr_mem[io->idx]);
 			io->idx = (io->idx == io->max) ? 0 : io->idx + 1;
@@ -247,7 +253,11 @@ int i2c_slave_io(void)
 	struct i2c_io_blk * io = &i2c_io;
 
 	DCC_LOG(LOG_INFO, "wait...");
-	thinkos_ev_wait(io->event);
+
+	__thinkos_critical_level(I2C_IRQ_PRIORITY);
+	__thinkos_critical_ev_wait(io->event, I2C_IRQ_PRIORITY);
+	__thinkos_critical_exit();
+
 	DCC_LOG(LOG_INFO, "wake up.");
 
 	return io->xfer;

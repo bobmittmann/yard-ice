@@ -126,7 +126,6 @@ void adc_start(void)
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
-
 struct adc_drv {
 	uint16_t buf[2][ADC_CHANS];
 	uint32_t dma_cnt;
@@ -226,6 +225,5 @@ void stm32f_dma1_stream0_isr(void)
 	}
 
 	adc_drv.dma_cnt = cnt;
-
 }
 

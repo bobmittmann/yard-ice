@@ -180,6 +180,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_EXCEPTIONS 0
 #endif
 
+#ifndef THINKOS_ENABLE_SCHED_DEBUG
+#define THINKOS_ENABLE_SCHED_DEBUG 0
+#endif
+
 /* timed calls depends on clock */
 #if THINKOS_ENABLE_TIMED_CALLS
  #undef THINKOS_ENABLE_CLOCK
@@ -283,6 +287,10 @@ struct thinkos_rt {
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
+#if THINKOS_EVENT_MAX > 0
+	uint32_t ev_flag; /* event flags */
+#endif /* THINKOS_EVENT_MAX > 0 */
+
 #if THINKOS_IRQ_MAX > 0
 	int8_t irq_th[THINKOS_IRQ_MAX];
 #endif /* THINKOS_IRQ_MAX */
@@ -305,6 +313,10 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_EVENT_ALLOC
 	uint32_t ev_alloc;
+#endif
+
+#if THINKOS_ENABLE_SCHED_DEBUG
+	uint32_t sched_trace_req;
 #endif
 
 } __attribute__ ((aligned (8)));

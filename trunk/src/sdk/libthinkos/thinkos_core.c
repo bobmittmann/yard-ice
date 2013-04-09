@@ -40,7 +40,7 @@ struct thinkos_rt thinkos_rt;
 /* This is a trick to save memory. We need an area to store
    the Idle thread context, but the Idle thread only uses 4 entries:
    xpsr, pc, lr, r12. The other registers are not used at any time. We 
-   claim the space avalibale for this registers as part of the exception 
+   claim the space avalilable for this registers as part of the exception 
    stack. */
 struct thinkos_except_and_idle thinkos_idle;
 
@@ -63,19 +63,63 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 	}
 }
 
-static inline struct thinkos_context * __attribute__((always_inline)) __sched_entry(void) {
+static inline struct thinkos_context * __attribute__((always_inline)) 
+__sched_entry(void) {
 	register struct thinkos_context * ctx asm("r0");
-	asm volatile ("mrs   %0, PSP\n" 
+	asm volatile (
+#if THINKOS_ENABLE_SCHED_DEBUG
+				  "push  {lr}\n"
+				  "sub   sp, #8\n"
+#endif				  
+				  "mrs   %0, PSP\n" 
 				  "stmdb %0!, {r4-r11}\n" : "=r" (ctx));
 	return ctx;
 }
 
-static inline void __attribute__((always_inline)) __sched_exit(struct thinkos_context * __ctx) {
+static inline void __attribute__((always_inline)) 
+__sched_exit(struct thinkos_context * __ctx) {
+#if THINKOS_ENABLE_SCHED_DEBUG
+	register struct thinkos_context * r0 asm("r0") = __ctx;
+#endif
 	asm volatile ("add    r3, %0, #8 * 4\n"
 				  "msr    PSP, r3\n"
 				  "ldmia  %0, {r4-r11}\n"
+#if THINKOS_ENABLE_SCHED_DEBUG
+				  "add	  sp, #8\n"
+				  "pop    {pc}\n" : : "r" (r0) : "r3"); 
+#else
 				  "bx     lr\n" : : "r" (__ctx) : "r3"); 
+#endif				  
 }
+
+#if THINKOS_ENABLE_SCHED_DEBUG
+static inline void __attribute__((always_inline)) 
+__dump_context(struct thinkos_context * __ctx) {
+	DCC_LOG4(LOG_TRACE, "  r0=%08x  r1=%08x  r2=%08x  r3=%08x", 
+			__ctx->r0, __ctx->r1, __ctx->r2, __ctx->r3);
+	DCC_LOG4(LOG_TRACE, "  r4=%08x  r5=%08x  r6=%08x  r7=%08x", 
+			__ctx->r4, __ctx->r7, __ctx->r6, __ctx->r7);
+	DCC_LOG4(LOG_TRACE, "  r8=%08x  r9=%08x r10=%08x r11=%08x", 
+			__ctx->r8, __ctx->r9, __ctx->r10, __ctx->r11);
+	DCC_LOG4(LOG_TRACE, " r12=%08x  sp=%08x  lr=%08x  pc=%08x", 
+			__ctx->r12, __ctx, __ctx->lr, __ctx->pc);
+	DCC_LOG1(LOG_TRACE, "xpsr=%08x", __ctx->xpsr);
+}
+
+void test_call(struct thinkos_context * ctx)
+{
+	__dump_context(ctx);
+}
+#endif
+
+static inline void __attribute__((always_inline)) __wait(void) {
+	asm volatile ("mov    r3, #1\n"
+				  "0:\n"
+				  "cbz	r3, 1f\n"
+				  "b.n  0b\n"
+				  "1:\n" : : : "r3"); 
+}
+
 
 /* THinkOS - scheduler */
 void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
@@ -99,6 +143,19 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	thinkos_rt.active = idx;
 
 	ctx = thinkos_rt.ctx[idx];
+
+#if THINKOS_ENABLE_SCHED_DEBUG
+	if (thinkos_rt.sched_trace_req) {
+		DCC_LOG1(LOG_TRACE, "active=%d", idx);
+//		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
+//		__dump_context(ctx);
+//		__wait();
+	}
+#endif
+
+#if THINKOS_ENABLE_SCHED_DEBUG
+	thinkos_rt.sched_trace_req = 0;
+#endif
 
 	/* restore the context */
 	__sched_exit(ctx);
@@ -264,6 +321,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 	int self;
+	uint32_t msp;
 #if	(THINKOS_IRQ_MAX > 0)
 	int irq;
 #endif
@@ -298,6 +356,12 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	   regular interrupts (higher number) */
 	cm3_except_pri_set(CM3_EXCEPT_PENDSV, SCHED_PRIORITY);
 
+
+	cm3_except_pri_set(CM3_EXCEPT_MEM_MANAGE, EXCEPT_PRIORITY);
+	cm3_except_pri_set(CM3_EXCEPT_BUS_FAULT, EXCEPT_PRIORITY);
+	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
+
+
 #if	(THINKOS_IRQ_MAX > 0)
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
 	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
@@ -313,7 +377,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_msp_set((uint32_t)&thinkos_except_stack + 
 				sizeof(thinkos_except_stack));
 #endif
-	cm3_msp_set((uint32_t)&thinkos_idle.snapshot.val);
+	msp = (uint32_t)&thinkos_idle.snapshot.val;
+	cm3_msp_set(msp);
+
+	DCC_LOG1(LOG_TRACE, "MSP=0x%08x", msp);
 
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
@@ -335,12 +402,12 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.mutex_alloc = 0xffffffff << THINKOS_MUTEX_MAX;
+	thinkos_rt.mutex_alloc = (uint32_t)(0xffffffffLL << THINKOS_MUTEX_MAX);
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
 	/* initialize the semaphore allocation bitmap */ 
-	thinkos_rt.sem_alloc = 0xffffffff << THINKOS_SEMAPHORE_MAX;
+	thinkos_rt.sem_alloc = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
 #endif
 
 #if !THINKOS_ENABLE_MUTEX_ALLOC
@@ -361,7 +428,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		opt.id = THINKOS_THREADS_MAX - 1;
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.th_alloc = 0xffffffff << THINKOS_THREADS_MAX;
+	thinkos_rt.th_alloc = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
 	self = thinkos_alloc_lo(&thinkos_rt.th_alloc, opt.id);
 #else
 	self = opt.id;
@@ -418,7 +485,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 const char * thinkos_svc_link = thinkos_svc_nm;
 
-#if THINKOS_ENABLE_EXCEPT
+#if THINKOS_ENABLE_EXCEPTIONS
 const char * thinkos_execpt_link = thinkos_except_nm;
 #endif
 
