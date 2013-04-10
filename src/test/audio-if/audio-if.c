@@ -43,62 +43,7 @@
 #include "io.h"
 #include "i2s.h"
 #include "tlv320.h"
-
-
-/* ----------------------------------------------------------------------
- * Console 
- * ----------------------------------------------------------------------
- */
-
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
-
-struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
-};
-
-void stm32f_usart1_isr(void)
-{
-	uart_console_isr(STM32F_USART1);
-}
-
-void stdio_init(void)
-{
-	struct stm32f_usart * uart = STM32F_USART1;
-#if defined(STM32F1X)
-	struct stm32f_afio * afio = STM32F_AFIO;
-#endif
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-
-#if defined(STM32F1X)
-	/* USART1_RX */
-	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
-	/* Use alternate pins for USART1 */
-	afio->mapr |= AFIO_USART1_REMAP;
-#elif defined(STM32F4X)
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
-#endif
-
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
-
-//	stderr = &stm32f_uart1_file;
-
-	stderr = uart_console_open(uart);
-	stdin = stderr;
-	stdout = stdin;
-
-	cm3_irq_enable(STM32F_IRQ_USART1);
-}
+#include "trace.h"
 
 /* ----------------------------------------------------------------------
  * Supervisory task
@@ -121,6 +66,7 @@ int supervisor_task(void)
 		led_off(3);
 
 		DCC_LOG(LOG_INFO, "...");
+	//	trace_print(stdout, 1);
 //		i2s_stat();
 	}
 }
@@ -263,7 +209,13 @@ int acq_task(void)
 			if (i2c_master_rd(phif_addr, adc, sizeof(adc)) > 0) {
 				DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
 						 adc[0], adc[1], adc[2], adc[3], adc[4]);
+
+//				tracef("ADC %5d %5d %5d %5d %5d", 
+//					   adc[0], adc[1], adc[2], adc[3], adc[4]);
+
 				printf("ADC: ");
+
+
 				for (i = 0; i < 5; ++i) {
 					printf("%5d", adc[i]);
 					if (adc[i] < 3) {
@@ -506,6 +458,12 @@ int main(int argc, char ** argv)
 	stdio_init();
 
 	printf("\n\n");
+	printf("\n\n");
+	printf("\n\n");
+	printf("\n\n");
+	printf("\n\n");
+	printf("\n\n");
+	printf("\n\n");
 	printf("-----------------------------------------\n");
 	printf(" Audio interface test\n");
 	printf("-----------------------------------------\n");
@@ -539,11 +497,11 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)ui_task, (void *)NULL,
 						  ui_stack, sizeof(ui_stack), 
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
-
+/*
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
-
+*/
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(3000);

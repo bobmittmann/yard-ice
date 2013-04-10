@@ -18,25 +18,40 @@
  */
 
 /** 
- * @file console.h
- * @brief YARD-ICE UART console
+ * @file trace.c
+ * @brief Real-time trace
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __CONSOLE_H__
-#define __CONSOLE_H__
-
-#include <sys/serial.h>
-#include <sys/file.h>
+#ifndef __TRACE_H__
+#define __TRACE_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void stdio_init(void);
+/* ----------------------------------------------------------------------
+ * Real-Time Trace
+ * ----------------------------------------------------------------------
+ */
+
+uint32_t trace_timestamp(void);
+
+uint32_t trace_ts2us(uint32_t tm);
+
+void trace_init(void);
+
+int32_t trace_dt(uint32_t * prev);
+
+int tracef(const char *fmt, ... );
+
+void trace(const char * msg);
+
+void trace_print(FILE * f, int flush);
+
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __CONSOLE_H__ */
+#endif /* __TRACE_H__ */
