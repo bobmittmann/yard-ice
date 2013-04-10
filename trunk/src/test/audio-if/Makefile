@@ -22,7 +22,9 @@
 
 PROG = audio-if
 
-CFILES = audio-if.c i2c-master.c console.c io.c i2s.c trace.c
+CFILES = audio-if.c i2c-master.c console.c io.c i2s.c trace.c sndbuf.c \
+		 jitbuf.c
+
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm
@@ -34,7 +36,7 @@ INCPATH = ../../sdk/include
 JTAGTOOL_ADDR = 192.168.0.80
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O1
+CFLAGS = -g -O2
 
 MACH = stm32f405
 include ../../mk/stm32f4xx.mk
