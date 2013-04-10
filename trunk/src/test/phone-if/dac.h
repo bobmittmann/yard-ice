@@ -23,8 +23,17 @@
 #ifndef __DAC_H__
 #define __DAC_H__
 
-#define WAVE_A3 0
-#define WAVE_D3 1
+#define WAVE_DC 0
+#define WAVE_A3 1
+#define WAVE_B3 2
+#define WAVE_C3 3
+#define WAVE_D3 4
+#define WAVE_E3 5
+#define WAVE_F3 6
+#define WAVE_G3 7
+#define WAVE_1K 8
+#define WAVE_2K 9
+#define WAVE_3K 10
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,7 +43,9 @@ void dac_play(int dac);
 
 void dac_pause(int dac);
 
-void dac_wave_set(int dac, unsigned int wave);
+unsigned int dac_wave_set(int dac, unsigned int wid);
+
+unsigned int wave_freq_get(unsigned int wid);
 
 void dac_init(void);
 

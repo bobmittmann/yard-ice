@@ -30,9 +30,7 @@
 extern "C" {
 #endif
 
-void uart_console_isr(struct stm32f_usart * us);
-
-struct file * uart_console_open(struct stm32f_usart * us);
+void stdio_init(void);
 
 #ifdef __cplusplus
 }

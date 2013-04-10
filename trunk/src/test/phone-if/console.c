@@ -38,6 +38,10 @@
 
 #include <sys/dcclog.h>
 
+#ifndef ENABLE_UART_TX_BLOCK
+#define ENABLE_UART_TX_BLOCK 0
+#endif
+
 #define UART_TX_FIFO_BUF_LEN 512
 #define UART_RX_FIFO_BUF_LEN 8
 
@@ -134,6 +138,7 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 
 static void uart_putc(struct uart_console_dev * dev, int c)
 {
+#if ENABLE_UART_TX_BLOCK
 	__thinkos_critical_level(UART_IRQ_PRIORITY);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
@@ -142,6 +147,10 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 	__thinkos_critical_exit();
+#else
+	if (uart_fifo_is_full(&dev->tx_fifo))
+		return;
+#endif
 
 	uart_fifo_put(&dev->tx_fifo, c);
 	*dev->txie = 1; 
@@ -224,7 +233,9 @@ void stm32f_usart1_isr(void)
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
+#if ENABLE_UART_TX_BLOCK
 			__thinkos_ev_raise(dev->tx_ev);
+#endif
 		} else {
 			us->dr = uart_fifo_get(&dev->tx_fifo);
 		}
@@ -250,8 +261,53 @@ struct file * uart_console_open(struct stm32f_usart * us)
 	/* enable RX interrupt */
 	us->cr1 |= USART_RXNEIE | USART_IDLEIE;
 
-
 	return (struct file *)&uart_console_file;
 }
 
+
+/* ----------------------------------------------------------------------
+ * Console 
+ * ----------------------------------------------------------------------
+ */
+
+#define USART1_TX STM32F_GPIOB, 6
+#define USART1_RX STM32F_GPIOB, 7
+
+struct file stm32f_uart1_file = {
+	.data = STM32F_USART1, 
+	.op = &stm32f_usart_fops 
+};
+
+void stdio_init(void)
+{
+	struct stm32f_usart * uart = STM32F_USART1;
+#if defined(STM32F1X)
+	struct stm32f_afio * afio = STM32F_AFIO;
+#endif
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* USART1_TX */
+	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+
+#if defined(STM32F1X)
+	/* USART1_RX */
+	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
+	/* Use alternate pins for USART1 */
+	afio->mapr |= AFIO_USART1_REMAP;
+#elif defined(STM32F4X)
+	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(USART1_RX, GPIO_AF7);
+	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+#endif
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
+
+	stderr = &stm32f_uart1_file;
+	stdin = uart_console_open(uart);
+	stdout = stdin;
+}
 

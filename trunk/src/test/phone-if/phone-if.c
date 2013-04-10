@@ -53,52 +53,6 @@
 #define ENABLE_STATUS 1
 #endif
 
-/* ----------------------------------------------------------------------
- * Console 
- * ----------------------------------------------------------------------
- */
-
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
-
-struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
-};
-
-void stdio_init(void)
-{
-	struct stm32f_usart * uart = STM32F_USART1;
-#if defined(STM32F1X)
-	struct stm32f_afio * afio = STM32F_AFIO;
-#endif
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-
-#if defined(STM32F1X)
-	/* USART1_RX */
-	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
-	/* Use alternate pins for USART1 */
-	afio->mapr |= AFIO_USART1_REMAP;
-#elif defined(STM32F4X)
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
-#endif
-
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
-
-	stderr = &stm32f_uart1_file;
-	stdin = uart_console_open(uart);
-	stdout = stdin;
-}
-
 void sys_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -182,17 +136,16 @@ void wdt_init(void)
 }
 #endif
 
+#define MODE_MAX 10
+
 int	tone_set(int chan, int mode)
 {
 	DCC_LOG2(LOG_TRACE, "DAC%d mode=%d", chan, mode);
 
-	if (mode <= 2) {
-		dac_wave_set(chan, mode);
-		dac_play(chan);
-	} else {
+	if (mode > MODE_MAX)
 		mode = 0;
-		dac_pause(chan);
-	}
+
+	dac_wave_set(chan, mode);
 
 	return mode;
 }
@@ -215,19 +168,42 @@ struct io_block wr_block;
 
 void chan_toggle(int chan)
 {
+	printf("Chan %d ", chan + 1);
+
 	if (rd_block.relay & (1 << chan)) {
 		relay_off(chan);
 		led_off(chan);
 		rd_block.relay &= ~(1 << chan);
 		rd_block.led &= ~(1 << chan);
+		printf("off.\n");
 	} else {
 		relay_on(chan);
 		led_on(chan);
 		rd_block.relay |= (1 << chan);
 		rd_block.led |= (1 << chan);
+		printf("on.\n");
 	}
 	wr_block.relay = rd_block.relay;
 	wr_block.led = rd_block.led;
+}
+
+void tone_cycle(int chan)
+{
+	unsigned int freq;
+	int mode;
+
+	mode = rd_block.tone[chan] + 1;
+	if (mode > MODE_MAX)
+		mode = 0;
+
+	DCC_LOG2(LOG_TRACE, "DAC%d mode=%d", chan, mode);
+
+	freq = dac_wave_set(chan, mode);
+
+	rd_block.tone[chan] = mode;
+	wr_block.tone[chan] = mode;
+
+	printf("Tone%d: %dHz.\n", chan + 1, freq);
 }
 
 #if ENABLE_MENU
@@ -242,12 +218,8 @@ void show_menu(void)
 	printf("  4 - Toggle Chan 4\n");
 	printf("  5 - Toggle Chan 5\n");
 
-	printf("  q - Tone 1 440Hz\n");
-	printf("  w - Tone 1 587Hz\n");
-	printf("  e - Tone 1 off\n");
-	printf("  a - Tone 2 440Hz\n");
-	printf("  s - Tone 2 587Hz\n");
-	printf("  d - Tone 2 off\n");
+	printf("  a - Tone 1 Select\n");
+	printf("  b - Tone 2 Select\n");
 
 	printf("  - - Gain -\n");
 	printf("  = - Gain +\n");
@@ -265,7 +237,7 @@ void show_menu(void)
 }
 #endif
 
-int shell_task(void)
+void shell_task(void)
 {
 	int c;
 	int val;
@@ -275,55 +247,36 @@ int shell_task(void)
 	for(;;) {
 		c = getchar();
 		switch (c) {
+
 #if ENABLE_MENU
 		case '\n':
 			show_menu();
 			break;
 #endif
+
 		case '1':
-			printf("Toggle Chan 1\n");
 			chan_toggle(0);
 			break;
 		case '2':
-			printf("Toggle Chan 2\n");
 			chan_toggle(1);
 			break;
 		case '3':
-			printf("Toggle Chan 3\n");
 			chan_toggle(2);
 			break;
 		case '4':
-			printf("Toggle Chan 4\n");
 			chan_toggle(3);
 			break;
 		case '5':
-			printf("Toggle Chan 5\n");
 			chan_toggle(4);
 			break;
-		case 'q':
-			printf("Tone 1 440Hz\n");
-			tone_set(0, 0);
-			break;
-		case 'w':
-			printf("Tone 1 587Hz\n");
-			tone_set(0, 1);
-			break;
-		case 'e':
-			printf("Tone 1 off\n");
-			tone_set(0, 3);
-			break;
+
 		case 'a':
-			printf("Tone 2 440Hz\n");
-			tone_set(1, 0);
+			tone_cycle(0);
 			break;
-		case 's':
-			printf("Tone 2 587Hz\n");
-			tone_set(1, 1);
+		case 'b':
+			tone_cycle(1);
 			break;
-		case 'd':
-			printf("Tone 2 off\n");
-			tone_set(1, 3);
-			break;
+
 		case '[':
 			val = dgpot_set(0, rd_block.dgpot[0] - 1);
 			rd_block.dgpot[0] = val;
@@ -565,12 +518,6 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "17. shell_init()");
 	shell_init();
-
-	dac_wave_set(0, WAVE_A3);
-	dac_play(0);
-
-	dac_wave_set(1, WAVE_D3);
-	dac_play(1);
 
 	printf("\n\n");
 	printf(" Phone interface\n");
