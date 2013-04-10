@@ -23,6 +23,7 @@
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <sys/dcclog.h>
 
@@ -38,9 +39,15 @@
 #define DAC1_DMA_CHAN 2
 #define DAC2_DMA_CHAN 3
 
+struct {
+	uint16_t * wave;
+	uint32_t len;
+} dac_chan[2];
+
 void dac_play(int dac)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
+
 	/* enable DMA */
 	if (dac)
 		dma->ch[DAC2_DMA_CHAN].ccr |= DMA_EN;
@@ -51,6 +58,7 @@ void dac_play(int dac)
 void dac_pause(int dac)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
+
 	/* disable DMA */
 	if (dac)
 		dma->ch[DAC2_DMA_CHAN].ccr &= ~DMA_EN;
@@ -59,35 +67,25 @@ void dac_pause(int dac)
 
 }
 
-static void dac_dma_set(int dac, uint16_t * wave, unsigned int len)
+unsigned int dac_wave_set(int dac, unsigned int wid)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
-	struct stm32f_dma_channel * ch;
 
+	dac_chan[dac].wave = (uint16_t *)wave_lut[wid].buf;
+	dac_chan[dac].len = wave_lut[wid].len;
+
+	/* enable DMA Interrupt */
 	if (dac)
-		ch = &dma->ch[DAC2_DMA_CHAN];
+		dma->ch[DAC2_DMA_CHAN].ccr |= DMA_TCIE | DMA_EN;
 	else
-		ch = &dma->ch[DAC1_DMA_CHAN];
+		dma->ch[DAC1_DMA_CHAN].ccr |= DMA_TCIE | DMA_EN;
 
-	/* disable DMA */
-	ch->ccr &= ~DMA_EN;
-	/* Wait for the channel to be ready .. */
-	while (ch->ccr & DMA_EN);
-	/* Memory address */
-	ch->cmar = wave;
-	/* Number of data items to transfer */
-	ch->cndtr = len;
+	return wave_lut[wid].freq;
 }
 
-void dac_wave_set(int dac, unsigned int wid)
+unsigned int wave_freq_get(unsigned int wid)
 {
-	uint16_t * wave;
-	unsigned int len;
-
-	wave = (uint16_t *)wave_lut[wid].buf;
-	len = wave_lut[wid].len;
-
-	dac_dma_set(dac, wave, len);
+	return wave_lut[wid].freq;
 }
 
 static void dac_timer_init(uint32_t freq)
@@ -103,9 +101,12 @@ static void dac_timer_init(uint32_t freq)
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
-	n = (div + pre / 2) / pre;
+	n = (div * 2 + pre) / (2 * pre);
 
 	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
+
+	fprintf(stderr, "freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
+	fprintf(stderr, "freq=%dHz pre=%d n=%d\n", freq, pre, n);
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;
@@ -175,21 +176,82 @@ void dac_init(void)
 	/*  DMA Configuration */
 	/* Peripheral address */
 	dma->ch[DAC1_DMA_CHAN].cpar = &dac->dhr12r1;
+	/* Memory pointer */
+	dma->ch[DAC1_DMA_CHAN].cmar = (void *)wave_lut[0].buf;
 	/* Number of data items to transfer */
-	dma->ch[DAC1_DMA_CHAN].cndtr = 0;
+	dma->ch[DAC1_DMA_CHAN].cndtr = wave_lut[0].len;
 	/* Configuration single buffer circular */
 	dma->ch[DAC1_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
+		DMA_CIRC | DMA_DIR_MTP | DMA_EN;
 
 	/*  DMA Configuration */
 	/* Peripheral address */
 	dma->ch[DAC2_DMA_CHAN].cpar = &dac->dhr12r2;
+	/* Memory pointer */
+	dma->ch[DAC2_DMA_CHAN].cmar = (void *)wave_lut[0].buf;
 	/* Number of data items to transfer */
-	dma->ch[DAC2_DMA_CHAN].cndtr = 0;
+	dma->ch[DAC2_DMA_CHAN].cndtr = wave_lut[0].len;
 	/* Configuration single buffer circular */
 	dma->ch[DAC2_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_MTP;
+		DMA_CIRC | DMA_DIR_MTP | DMA_EN;
 
 	dac_timer_init(SAMPLE_RATE);
+
+	/* Set DMA IRQ priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM2, 0x10);
+	/* Enable DMA interrupt */
+	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM2);
+
+	/* Set DMA IRQ priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM3, 0x10);
+	/* Enable DMA interrupt */
+	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM3);
+}
+
+void stm32f_dma1_stream2_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA1;
+	struct stm32f_dma_channel * ch = &dma->ch[DAC1_DMA_CHAN];
+	uint32_t ccr;
+
+
+	if (dma->isr & DMA_TCIF3) {
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF3;
+
+		/* disable DMA and Interrupts */
+		ch->ccr &= ~(DMA_EN | DMA_TCIE);
+		/* Wait for the channel to be ready .. */
+		while ((ccr = ch->ccr) & DMA_EN);
+		/* Memory address */
+		ch->cmar = dac_chan[0].wave;
+		/* Number of data items to transfer */
+		ch->cndtr = dac_chan[0].len;
+		/* enable interrupt */
+		ch->ccr = ccr | DMA_EN;
+	}
+}
+
+void stm32f_dma1_stream3_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA1;
+	struct stm32f_dma_channel * ch = &dma->ch[DAC2_DMA_CHAN];
+	uint32_t ccr;
+
+	if (dma->isr & DMA_TCIF4) {
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF4;
+
+		/* disable DMA and Interrupts */
+		ch->ccr &= ~(DMA_EN | DMA_TCIE);
+		/* Wait for the channel to be ready .. */
+		while ((ccr = ch->ccr) & DMA_EN);
+		/* Memory address */
+		ch->cmar = dac_chan[1].wave;
+		/* Number of data items to transfer */
+		ch->cndtr = dac_chan[1].len;
+		/* enable interrupt */
+		ch->ccr = ccr | DMA_EN;
+	}
 }
 
