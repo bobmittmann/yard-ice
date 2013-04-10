@@ -41,6 +41,14 @@
 #include "adc.h"
 #include "console.h"
 
+#ifndef VERSION_MAJOR
+#define VERSION_MAJOR 0
+#endif
+
+#ifndef VERSION_MINOR
+#define VERSION_MINOR 1
+#endif
+
 #ifndef ENABLE_WATCHDOG
 #define ENABLE_WATCHDOG 0
 #endif
@@ -52,47 +60,6 @@
 #ifndef ENABLE_STATUS
 #define ENABLE_STATUS 1
 #endif
-
-void sys_init(void)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-
-	/* Enable IO clocks */
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-
-	/* Enable Alternate Functions IO clock */
-	rcc->apb2enr |= RCC_AFIOEN;
-}
-
-#define OPT_SELF_TEST 1
-#define OPT_RESET 2
-
-void self_test(void)
-{
-	int i;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	for (i = 0; i < 5; ++i) {
-		led_on(i);
-		relay_on(i);
-		thinkos_sleep(100);
-		led_off(i);
-		relay_off(i);
-		thinkos_sleep(100);
-	}
-}
-
-void system_reset(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-
-	thinkos_sleep(10);
-    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-	for(;;);
-}
 
 #if ENABLE_WATCHDOG
 int wdt_task(void)
@@ -136,6 +103,49 @@ void wdt_init(void)
 }
 #endif
 
+void sys_init(void)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+
+	/* Enable IO clocks */
+	stm32f_gpio_clock_en(STM32F_GPIOA);
+	stm32f_gpio_clock_en(STM32F_GPIOB);
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+
+	/* Enable Alternate Functions IO clock */
+	rcc->apb2enr |= RCC_AFIOEN;
+}
+
+
+
+#define OPT_SELF_TEST 1
+#define OPT_RESET 2
+
+void self_test(void)
+{
+	int i;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	for (i = 0; i < 5; ++i) {
+		led_on(i);
+		relay_on(i);
+		thinkos_sleep(100);
+		led_off(i);
+		relay_off(i);
+		thinkos_sleep(100);
+	}
+}
+
+void system_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+
+	thinkos_sleep(10);
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+}
+
 #define MODE_MAX 10
 
 int	tone_set(int chan, int mode)
@@ -151,7 +161,8 @@ int	tone_set(int chan, int mode)
 }
 
 struct io_block {
-	uint8_t magic[2];
+	uint8_t id[2];
+	uint8_t ver[2];
 	uint16_t adc[ADC_CHANS];
 	uint8_t led;
 	uint8_t relay;
@@ -161,7 +172,8 @@ struct io_block {
 };
 
 struct io_block rd_block = {
-	.magic = { 'P', 'H' }
+	.id = { 'P', 'H' },
+	.ver = { VERSION_MAJOR, VERSION_MINOR }
 };
 
 struct io_block wr_block;
@@ -210,28 +222,28 @@ void tone_cycle(int chan)
 void show_menu(void)
 {
 	printf("\n");
-	printf("Options:\n");
-	printf("--------\n");
-	printf("  1 - Toggle Chan 1\n");
-	printf("  2 - Toggle Chan 2\n");
-	printf("  3 - Toggle Chan 3\n");
-	printf("  4 - Toggle Chan 4\n");
-	printf("  5 - Toggle Chan 5\n");
+	printf(" Options:\n");
+	printf(" --------\n");
+	printf("   1 - Toggle Chan 1\n");
+	printf("   2 - Toggle Chan 2\n");
+	printf("   3 - Toggle Chan 3\n");
+	printf("   4 - Toggle Chan 4\n");
+	printf("   5 - Toggle Chan 5\n");
 
-	printf("  a - Tone 1 Select\n");
-	printf("  b - Tone 2 Select\n");
+	printf("   a - Tone 1 Select\n");
+	printf("   b - Tone 2 Select\n");
 
-	printf("  - - Gain -\n");
-	printf("  = - Gain +\n");
+	printf("   - - Gain -\n");
+	printf("   = - Gain +\n");
 
-	printf("  [ - Impedance -\n");
-	printf("  ] - Impedance +\n");
+	printf("   [ - Impedance -\n");
+	printf("   ] - Impedance +\n");
 
-	printf("  p - Print ADC\n");
-
-	printf("  i - i2c reset\n");
-	printf("  r - system reset\n");
-	printf("  t - test\n");
+	printf("   p - Print ADC\n");
+ 
+	printf("   i - i2c reset\n");
+	printf("   r - system reset\n");
+	printf("   t - test\n");
 
 	printf("\n");
 }
@@ -520,9 +532,13 @@ int main(int argc, char ** argv)
 	shell_init();
 
 	printf("\n\n");
-	printf(" Phone interface\n");
-	printf("----------------\n");
-	printf("\n");
+	i = printf(" Firefighter Phone Interface %d.%d\n", 
+			   VERSION_MAJOR, VERSION_MINOR);
+	printf(" ");
+	i -= 2;
+	while (i-- > 0)
+		printf("-");
+	printf("\n\n");
 
 	for (i = 0; ; ++i) {
 		xfer = i2c_slave_io();

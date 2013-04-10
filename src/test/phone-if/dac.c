@@ -104,9 +104,7 @@ static void dac_timer_init(uint32_t freq)
 	n = (div * 2 + pre) / (2 * pre);
 
 	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
-
-	fprintf(stderr, "freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
-	fprintf(stderr, "freq=%dHz pre=%d n=%d\n", freq, pre, n);
+	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;
