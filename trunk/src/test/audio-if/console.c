@@ -39,11 +39,13 @@
 #include <sys/dcclog.h>
 
 #ifndef ENABLE_UART_TX_BLOCK
-#define ENABLE_UART_TX_BLOCK 0
+#define ENABLE_UART_TX_BLOCK 1
 #endif
 
-#define UART_TX_FIFO_BUF_LEN 8192
-#define UART_RX_FIFO_BUF_LEN 64
+#define UART_TX_FIFO_BUF_LEN 32768
+#define UART_RX_FIFO_BUF_LEN 16
+
+#define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 
 struct uart_fifo {
 	volatile uint32_t head;
@@ -102,24 +104,16 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 {
 
 	char * cp = (char *)buf;
-	int c;
 	int n = 0;
-	int th;
+	int c;
 
-	DCC_LOG(LOG_TRACE, "read");
-	th = thinkos_thread_self();
+	DCC_LOG(LOG_INFO, "read");
 
-	__thinkos_critical_enter();
+	__thinkos_critical_level(UART_IRQ_PRIORITY);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
-		DCC_LOG(LOG_TRACE, "wait...");
-		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wait ...", th);
-		}
-		__thinkos_ev_wait(dev->rx_ev);
-		if ( th == 4) {
-			DCC_LOG1(LOG_TRACE, "[%d] wakeup.", th);
-		}
-		DCC_LOG(LOG_TRACE, "wakeup.");
+		DCC_LOG(LOG_INFO, "wait...");
+		__thinkos_critical_ev_wait(dev->rx_ev, UART_IRQ_PRIORITY);
+		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 	__thinkos_critical_exit();
 
@@ -137,7 +131,7 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 
 
-	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
+	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
 }
@@ -145,11 +139,11 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 static void uart_putc(struct uart_console_dev * dev, int c)
 {
 #if ENABLE_UART_TX_BLOCK
-	__thinkos_critical_enter();
+	__thinkos_critical_level(UART_IRQ_PRIORITY);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
 		DCC_LOG(LOG_TRACE, "wait...");
-		__thinkos_ev_wait(dev->tx_ev);
+		__thinkos_critical_ev_wait(dev->tx_ev, UART_IRQ_PRIORITY);
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 	__thinkos_critical_exit();
@@ -204,16 +198,17 @@ const struct file uart_console_file = {
 	.op = &uart_console_ops
 };
 
-void uart_console_isr(struct stm32f_usart * us)
+void stm32f_usart1_isr(void)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
+	struct stm32f_usart * us = dev->uart;
 	uint32_t sr;
 	int c;
 	
-	sr = us->sr;
+	sr = us->sr & us->cr1;
 
 	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_TRACE, "RXNE");
+		DCC_LOG(LOG_INFO, "RXNE");
 		c = us->dr;
 		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
 			uart_fifo_put(&dev->rx_fifo, c);
@@ -227,14 +222,14 @@ void uart_console_isr(struct stm32f_usart * us)
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
+		DCC_LOG(LOG_INFO, "IDLE");
 		c = us->dr;
 		(void)c;
 		__thinkos_ev_raise(dev->rx_ev);
 	}
 
 	if (sr & USART_TXE) {
-		DCC_LOG(LOG_MSG, "TXE");
+		DCC_LOG(LOG_INFO, "TXE");
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
@@ -251,7 +246,7 @@ struct file * uart_console_open(struct stm32f_usart * us)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	dev->rx_ev = thinkos_ev_alloc(); 
 	dev->tx_ev = thinkos_ev_alloc(); 
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
@@ -260,10 +255,59 @@ struct file * uart_console_open(struct stm32f_usart * us)
 	dev->txie = CM3_BITBAND_DEV(&us->cr1, 7);
 	dev->uart = us;
 
+	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_USART1);
+
 	/* enable RX interrupt */
 	us->cr1 |= USART_RXNEIE | USART_IDLEIE;
 
 	return (struct file *)&uart_console_file;
 }
 
+
+/* ----------------------------------------------------------------------
+ * Stdio init 
+ * ----------------------------------------------------------------------
+ */
+
+#define USART1_TX STM32F_GPIOB, 6
+#define USART1_RX STM32F_GPIOB, 7
+
+struct file stm32f_uart1_file = {
+	.data = STM32F_USART1, 
+	.op = &stm32f_usart_fops 
+};
+
+void stdio_init(void)
+{
+	struct stm32f_usart * uart = STM32F_USART1;
+#if defined(STM32F1X)
+	struct stm32f_afio * afio = STM32F_AFIO;
+#endif
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* USART1_TX */
+	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+
+#if defined(STM32F1X)
+	/* USART1_RX */
+	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
+	/* Use alternate pins for USART1 */
+	afio->mapr |= AFIO_USART1_REMAP;
+#elif defined(STM32F4X)
+	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(USART1_RX, GPIO_AF7);
+	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+#endif
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
+
+	stderr = &stm32f_uart1_file;
+	stdin = uart_console_open(uart);
+	stdout = stdin;
+}
 

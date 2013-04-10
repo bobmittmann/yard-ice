@@ -49,6 +49,7 @@ struct i2c_xfer xfer;
 
 #define I2C1_SCL STM32F_GPIOB, 8
 #define I2C1_SDA STM32F_GPIOB, 9
+#define I2C_IRQ_PRIORITY IRQ_PRIORITY_VERY_HIGH 
 
 void i2c_master_init(unsigned int scl_freq)
 {
@@ -97,22 +98,22 @@ void i2c_master_init(unsigned int scl_freq)
 	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
 
 	xfer.event = thinkos_ev_alloc();
+
+	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
+	/* set event IRQ to very high priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
+	/* set error IRQ to high priority */
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, I2C_IRQ_PRIORITY);
+
+	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
+	/* enable ACK, events and errors */
+	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
 }
 
 void i2c_master_enable(void)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
-
-	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
-	/* set event IRQ to very high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x00);
-	cm3_irq_enable(STM32F_IRQ_I2C1_ER);
-	/* set error IRQ to high priority */
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, 0x08);
-
-	DCC_LOG(LOG_TRACE, "Enabling interrupts....");
-	/* events and errors */
-	i2c->cr2 |= I2C_ITERREN | I2C_ITEVTEN | I2C_ITBUFEN;
 
 	DCC_LOG(LOG_TRACE, "Enabling device ....");
 
@@ -211,7 +212,8 @@ do_recv:
 		xfer.rem--;
 		if (xfer.rem == 0) {
 			xfer.ret = xfer.cnt;
-			__thinkos_ev_timed_raise(xfer.event);
+//			__thinkos_ev_timed_raise(xfer.event);
+			__thinkos_ev_raise(xfer.event);
 		} else if (xfer.rem == 1) {
 			/* Clear ACK */
 			i2c->cr1 = I2C_STOP | I2C_PE; 
@@ -235,8 +237,8 @@ do_xmit:
 			i2c->dr = 0;
 			xfer.ret = xfer.cnt;
 			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
-			__thinkos_ev_timed_raise(xfer.event);
-//			__thinkos_ev_raise(xfer.event);
+//			__thinkos_ev_timed_raise(xfer.event);
+			__thinkos_ev_raise(xfer.event);
 		} 
 		xfer.rem--;
 //		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
@@ -256,14 +258,16 @@ void stm32f_i2c1_er_isr(void)
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "BERR");
-		__thinkos_ev_timed_raise(xfer.event);
+//		__thinkos_ev_timed_raise(xfer.event);
+		__thinkos_ev_raise(xfer.event);
 	}
 
 	if (sr1 & I2C_ARLO) {
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "ARLO");
-		__thinkos_ev_timed_raise(xfer.event);
+//		__thinkos_ev_timed_raise(xfer.event);
+		__thinkos_ev_raise(xfer.event);
 	}
 
 	if (sr1 & I2C_AF) {
@@ -272,14 +276,14 @@ void stm32f_i2c1_er_isr(void)
 		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
 		xfer.ret = -1;
 		DCC_LOG1(LOG_TRACE, "%d AF", i2c_irq_cnt);
-		__thinkos_ev_timed_raise(xfer.event);
+//		__thinkos_ev_timed_raise(xfer.event);
+		__thinkos_ev_raise(xfer.event);
 	}
 
 	if (sr1 & I2C_OVR) {
 		DCC_LOG(LOG_TRACE, "OVR");
 	}
 }
-
 
 int i2c_master_wr(unsigned int addr, const void * buf, int len)
 {
@@ -296,17 +300,28 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
+	__thinkos_critical_level(I2C_IRQ_PRIORITY);
+
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
+//	while ((ret = xfer.ret) == -2) {
+		__thinkos_critical_ev_wait(xfer.event, I2C_IRQ_PRIORITY);
+		ret = xfer.ret;
+
+//	}
+	__thinkos_critical_exit();
+
+#if 0
 	while ((ret = xfer.ret) == -2) {
 		if (thinkos_ev_timedwait(xfer.event, 200) == THINKOS_ETIMEDOUT) {
-//			printf(" tmo %d %d ", xfer.cnt, xfer.event);
+			printf(" tmo %d %d ", xfer.cnt, xfer.event);
 			DCC_LOG(LOG_TRACE, "Timeout...");
 			i2c_reset();
 			ret = -1;
 			break;
 		}
 	}
+#endif
 
 	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
@@ -332,17 +347,28 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
+	__thinkos_critical_level(I2C_IRQ_PRIORITY);
+
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
+//	while ((ret = xfer.ret) == -2) {
+		__thinkos_critical_ev_wait(xfer.event, I2C_IRQ_PRIORITY);
+		ret = xfer.ret;
+//	}
+
+	__thinkos_critical_exit();
+
+
+#if 0
 	while ((ret = xfer.ret) == -2) {
 		if (thinkos_ev_timedwait(xfer.event, 10) == THINKOS_ETIMEDOUT) {
-			printf(" tmo ");
 			DCC_LOG(LOG_TRACE, "Timeout...");
 			i2c_reset();
 			ret = -1;
 			break;
 		}
 	}
+#endif
 
 	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
