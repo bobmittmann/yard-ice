@@ -32,7 +32,7 @@
 #define __STM32F103_H__
 
 #define STM32F
-#define STM32F1XX
+#define STM32F1X
 #define STM32F10X
 
 #include <stm32f/stm32f-pwr.h>

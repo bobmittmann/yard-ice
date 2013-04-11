@@ -12,7 +12,7 @@
  * 
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
  * Lesser General Public License for more details.
  * 
  * You can receive a copy of the GNU Lesser General Public License from 
@@ -66,7 +66,14 @@
 #define THINKOS_EVENT_TIMEDWAIT 30
 #define THINKOS_EVENT_RAISE 31
 
-#define THINKOS_IRQ_WAIT 32
+#define THINKOS_FLAG_ALLOC 32
+#define THINKOS_FLAG_FREE 33
+#define THINKOS_FLAG_WAIT 34
+#define THINKOS_FLAG_TIMEDWAIT 35
+#define THINKOS_FLAG_SET 36
+#define THINKOS_FLAG_CLR 37
+
+#define THINKOS_IRQ_WAIT 38
 
 #ifndef __ASSEMBLER__
 
@@ -138,7 +145,7 @@ extern "C" {
 #endif
 
 static inline int const __attribute__((always_inline)) 
-	thinkos_thread_self(void)  {
+	thinkos_thread_self(void) {
 	return THINKOS_SVC(THINKOS_THREAD_SELF);
 }
 
@@ -152,130 +159,154 @@ static inline int __attribute__((always_inline))
 }
 
 static inline int 
-__attribute__((always_inline)) thinkos_cancel(unsigned int id, int code)  {
+__attribute__((always_inline)) thinkos_cancel(unsigned int id, int code) {
 	return THINKOS_SVC2(THINKOS_CANCEL, id, code);
 }
 
 static inline int 
-__attribute__((always_inline)) thinkos_join(unsigned int id)  {
+__attribute__((always_inline)) thinkos_join(unsigned int id) {
 	return THINKOS_SVC1(THINKOS_JOIN, id);
 }
 
 static inline int 
-__attribute__((always_inline)) thinkos_pause(unsigned int id)  {
+__attribute__((always_inline)) thinkos_pause(unsigned int id) {
 	return THINKOS_SVC1(THINKOS_PAUSE, id);
 }
 
 static inline int 
-__attribute__((always_inline)) thinkos_resume(unsigned int id)  {
+__attribute__((always_inline)) thinkos_resume(unsigned int id) {
 	return THINKOS_SVC1(THINKOS_RESUME, id);
 }
 
 
 static inline void 
-__attribute__((always_inline)) thinkos_sleep(unsigned int ms)  {
+__attribute__((always_inline)) thinkos_sleep(unsigned int ms) {
 	THINKOS_SVC1(THINKOS_SLEEP, ms);
 }
 
 
-static inline int __attribute__((always_inline)) thinkos_mutex_alloc(void)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_alloc(void) {
 	return THINKOS_SVC(THINKOS_MUTEX_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_free(int mutex)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_free(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_FREE, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_lock(int mutex)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_lock(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_trylock(int mutex)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_trylock(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_TRYLOCK, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_timedlock(int mutex, unsigned int ms)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_timedlock(int mutex, unsigned int ms) {
 	return THINKOS_SVC2(THINKOS_MUTEX_TIMEDLOCK, mutex, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_unlock(int mutex)  {
+static inline int __attribute__((always_inline)) thinkos_mutex_unlock(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_UNLOCK, mutex);
 }
 
 
-static inline int __attribute__((always_inline)) thinkos_cond_alloc(void)  {
+static inline int __attribute__((always_inline)) thinkos_cond_alloc(void) {
 	return THINKOS_SVC(THINKOS_COND_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_cond_free(int cond)  {
+static inline int __attribute__((always_inline)) thinkos_cond_free(int cond) {
 	return THINKOS_SVC1(THINKOS_COND_FREE, cond);
 }
 
-static inline int __attribute__((always_inline)) thinkos_cond_wait(int cond, int mutex)  {
+static inline int __attribute__((always_inline)) thinkos_cond_wait(int cond, int mutex) {
 	return THINKOS_SVC2(THINKOS_COND_WAIT, cond, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_cond_timedwait(int cond, int mutex, unsigned int ms)  {
+static inline int __attribute__((always_inline)) thinkos_cond_timedwait(int cond, int mutex, unsigned int ms) {
 	return THINKOS_SVC3(THINKOS_COND_TIMEDWAIT, cond, mutex, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_cond_signal(int cond)  {
+static inline int __attribute__((always_inline)) thinkos_cond_signal(int cond) {
 	return THINKOS_SVC1(THINKOS_COND_SIGNAL, cond);
 }
 
-static inline int __attribute__((always_inline)) thinkos_cond_broadcast(int cond)  {
+static inline int __attribute__((always_inline)) thinkos_cond_broadcast(int cond) {
 	return THINKOS_SVC1(THINKOS_COND_BROADCAST, cond);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_alloc(unsigned int value)  {
+static inline int __attribute__((always_inline)) thinkos_sem_alloc(unsigned int value) {
 	return THINKOS_SVC1(THINKOS_SEM_ALLOC, value);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_free(int sem)  {
+static inline int __attribute__((always_inline)) thinkos_sem_free(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_FREE, sem);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_init(int sem, unsigned int value)  {
+static inline int __attribute__((always_inline)) thinkos_sem_init(int sem, unsigned int value) {
 	return THINKOS_SVC2(THINKOS_SEM_FREE, sem, value);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_wait(int sem)  {
+static inline int __attribute__((always_inline)) thinkos_sem_wait(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_WAIT, sem);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_trywait(int sem)  {
+static inline int __attribute__((always_inline)) thinkos_sem_trywait(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_TRYWAIT, sem);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_timedwait(int sem, unsigned int ms)  {
+static inline int __attribute__((always_inline)) thinkos_sem_timedwait(int sem, unsigned int ms) {
 	return THINKOS_SVC2(THINKOS_SEM_TIMEDWAIT, sem, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_sem_post(int sem)  {
+static inline int __attribute__((always_inline)) thinkos_sem_post(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_alloc(void)  {
+static inline int __attribute__((always_inline)) thinkos_ev_alloc(void) {
 	return THINKOS_SVC(THINKOS_EVENT_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_free(int ev)  {
+static inline int __attribute__((always_inline)) thinkos_ev_free(int ev) {
 	return THINKOS_SVC1(THINKOS_EVENT_FREE, ev);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_wait(int ev)  {
+static inline int __attribute__((always_inline)) thinkos_ev_wait(int ev) {
 	return THINKOS_SVC1(THINKOS_EVENT_WAIT, ev);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_timedwait(int ev, unsigned int ms)  {
+static inline int __attribute__((always_inline)) thinkos_ev_timedwait(int ev, unsigned int ms) {
 	return THINKOS_SVC2(THINKOS_EVENT_TIMEDWAIT, ev, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_raise(int ev)  {
+static inline int __attribute__((always_inline)) thinkos_ev_raise(int ev) {
 	return THINKOS_SVC1(THINKOS_EVENT_RAISE, ev);
 }
 
-static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq)  {
+static inline int __attribute__((always_inline)) thinkos_flag_alloc(void) {
+	return THINKOS_SVC(THINKOS_FLAG_ALLOC);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_free(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_FREE, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_wait(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_WAIT, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_timedwait(int flag, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_set(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_SET, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_CLR, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
 }
 

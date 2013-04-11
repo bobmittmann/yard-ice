@@ -156,6 +156,22 @@ struct thinkos_context {
 #define THINKOS_ENABLE_EVENT_ALLOC 1
 #endif
 
+#ifndef THINKOS_ENABLE_EVENT_SYSCALL
+#define THINKOS_ENABLE_EVENT_SYSCALL 0
+#endif
+
+#ifndef THINKOS_FLAG_MAX
+#define THINKOS_FLAG_MAX 8
+#endif
+
+#ifndef THINKOS_ENABLE_FLAG_ALLOC
+#define THINKOS_ENABLE_FLAG_ALLOC 1
+#endif
+
+#ifndef THINKOS_ENABLE_FLAG_SYSCALL
+#define THINKOS_ENABLE_FLAG_SYSCALL 0
+#endif
+
 #ifndef THINKOS_ENABLE_THREAD_STAT
 #define THINKOS_ENABLE_THREAD_STAT 0
 #endif
@@ -182,6 +198,36 @@ struct thinkos_context {
 
 #ifndef THINKOS_ENABLE_SCHED_DEBUG
 #define THINKOS_ENABLE_SCHED_DEBUG 0
+#endif
+
+#if (THINKOS_ENABLE_COND_ALLOC) & !(THINKOS_COND_MAX)
+#undef THINKOS_ENABLE_COND_ALLOC
+#define THINKOS_ENABLE_COND_ALLOC 0
+#endif
+
+#if (THINKOS_ENABLE_COND_ALLOC) & !(THINKOS_COND_MAX)
+#undef THINKOS_ENABLE_COND_ALLOC
+#define THINKOS_ENABLE_COND_ALLOC 0
+#endif
+
+#if (THINKOS_ENABLE_SEM_ALLOC) & !(THINKOS_SEMAPHORE_MAX)
+#undef THINKOS_ENABLE_SEM_ALLOC
+#define THINKOS_ENABLE_SEM_ALLOC 0
+#endif
+
+#if (THINKOS_ENABLE_EVENT_ALLOC) & !(THINKOS_EVENT_MAX)
+#undef THINKOS_ENABLE_EVENT_ALLOC
+#define THINKOS_ENABLE_EVENT_ALLOC 0
+#endif
+
+#if (THINKOS_ENABLE_FLAG_ALLOC) & !(THINKOS_FLAG_MAX)
+#undef THINKOS_ENABLE_FLAG_ALLOC
+#define THINKOS_ENABLE_FLAG_ALLOC 0
+#endif
+
+#if (THINKOS_ENABLE_QUEUE_ALLOC) & !(THINKOS_QUEUE_MAX)
+#undef THINKOS_ENABLE_QUEUE_ALLOC
+#define THINKOS_ENABLE_QUEUE_ALLOC 0
 #endif
 
 /* timed calls depends on clock */
@@ -246,6 +292,10 @@ struct thinkos_rt {
 	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
+#if THINKOS_FLAG_MAX > 0
+	uint32_t wq_flag[THINKOS_FLAG_MAX]; /* flags wait queue */
+#endif /* THINKOS_FLAG_MAX > 0 */
+
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
@@ -287,8 +337,8 @@ struct thinkos_rt {
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
-#if THINKOS_EVENT_MAX > 0
-	uint32_t ev_flag; /* event flags */
+#if THINKOS_FLAG_MAX > 0
+	uint32_t flag; /* event flags */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_IRQ_MAX > 0
@@ -313,6 +363,10 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_EVENT_ALLOC
 	uint32_t ev_alloc;
+#endif
+
+#if THINKOS_ENABLE_FLAG_ALLOC
+	uint32_t flag_alloc;
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
@@ -345,6 +399,10 @@ struct thinkos_rt {
 						  / sizeof(uint32_t))
 
 #define THINKOS_EVENT_BASE ((offsetof(struct thinkos_rt, wq_event) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_FLAG_BASE ((offsetof(struct thinkos_rt, wq_flag) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 
@@ -536,13 +594,13 @@ __thinkos_wakeup(unsigned int wq, unsigned int th) {
 #if THINKOS_ENABLE_TIMED_CALLS
 	/* possibly remove from the time wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = 0;
 #endif
 #if THINKOS_ENABLE_THREAD_STAT
 	/* update status */
 	thinkos_rt.th_stat[th] = 0;
 #endif
-	/* set the thread's return value */
-	thinkos_rt.ctx[th]->r0 = 0;
 }
 
 static void inline __attribute__((always_inline))

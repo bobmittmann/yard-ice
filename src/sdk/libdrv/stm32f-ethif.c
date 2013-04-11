@@ -44,6 +44,9 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+
+#if THINKOS_ENABLE_EVENT_ALLOC && (THINKOS_IRQ_MAX > 0)
+
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
@@ -222,7 +225,6 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* alloc a new event wait queue */
 	drv->rx.ev = __thinkos_ev_alloc(); 
 	DCC_LOG1(LOG_TRACE, "rx.ev=%d", drv->rx.ev);
-
 
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
 	/* setup the source address in the ethernet header 
@@ -469,6 +471,8 @@ struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask)
 
 	return ifn;
 }
+
+#endif
 
 #endif /* STM32FX2 */
 
