@@ -89,8 +89,10 @@ static inline bool uart_fifo_is_half_full(struct uart_fifo * fifo)
 }
 
 struct uart_console_dev {
-	int32_t tx_ev;
-	int32_t rx_ev;
+	int8_t tx_ev;
+	int8_t rx_ev;
+	int8_t tx_mutex;
+	int8_t rx_mutex;
 	struct uart_fifo tx_fifo;
 	uint8_t tx_buf[UART_TX_FIFO_BUF_LEN];
 	struct uart_fifo rx_fifo;
@@ -119,9 +121,6 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 
 	do {
 		if (n == len) {
-			if (!uart_fifo_is_empty(&dev->rx_fifo)) { 
-				__thinkos_ev_raise(dev->rx_ev);
-			}
 			break;
 		}
 		c = uart_fifo_get(&dev->rx_fifo);
@@ -165,6 +164,8 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 
 	DCC_LOG1(LOG_INFO, "len=%d", len);
 
+	 thinkos_mutex_lock(dev->tx_mutex); 
+
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		if (c == '\n') {
@@ -173,6 +174,8 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 		}
 		uart_putc(dev, c);
 	}
+
+	thinkos_mutex_unlock(dev->tx_mutex); 
 
 	DCC_LOG1(LOG_INFO, "cnt=%d", n);
 
@@ -249,6 +252,7 @@ struct file * uart_console_open(struct stm32f_usart * us)
 	DCC_LOG(LOG_INFO, "...");
 	dev->rx_ev = thinkos_ev_alloc(); 
 	dev->tx_ev = thinkos_ev_alloc(); 
+	dev->tx_mutex = thinkos_mutex_alloc(); 
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
 	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
 

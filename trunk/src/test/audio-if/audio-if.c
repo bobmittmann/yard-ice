@@ -54,20 +54,11 @@ int supervisor_task(void)
 	printf("%s() started...\n", __func__);
 
 	for (;;) {
-		thinkos_sleep(500);
-		led_on(3);
+		led_on(2);
 		thinkos_sleep(100);
-		led_off(3);
-		thinkos_sleep(200);
-		led_on(3);
-		thinkos_sleep(100);
-		led_off(3);
-		thinkos_sleep(100);
-		led_off(3);
-
-		DCC_LOG(LOG_INFO, "...");
-	//	trace_print(stdout, 1);
-//		i2s_stat();
+		trace_print(stdout, 1);
+		led_off(2);
+		thinkos_sleep(400);
 	}
 }
 
@@ -251,7 +242,7 @@ void i2c_bus_scan(void)
 	/* 7 bit addresses range from 0 to 0x78 */
 	for (addr = 1; addr < 0x78; ++addr) {
 
-		DCC_LOG1(LOG_TRACE, "Addr=0x%02x", addr);
+		DCC_LOG1(LOG_INFO, "Addr=0x%02x", addr);
 
 		buf[0] = 0;
 		if (i2c_master_wr(addr, buf, 1) <= 0) {
@@ -327,8 +318,6 @@ void tlv320_init(void)
 	tlv320_wr(6, CR3_AINSEL_INP_M1);
 	tlv320_wr(1, CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
 	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
-//	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16 | CR1_DLB);
-//	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16 | CR1_ALB);
 };
 
 uint32_t supervisor_stack[256];
@@ -445,23 +434,30 @@ int main(int argc, char ** argv)
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "1. io_init()");
-	io_init();
+	DCC_LOG(LOG_TRACE, "1. trace_init()");
+	trace_init();
 
-	DCC_LOG(LOG_TRACE, "2. leds_init()");
-	leds_init();
-
-	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
+
+	DCC_LOG(LOG_TRACE, "3. io_init()");
+	io_init();
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
 
-	printf("\n\n");
-	printf("\n\n");
-	printf("\n\n");
-	printf("\n\n");
-	printf("\n\n");
+	DCC_LOG(LOG_TRACE, "5. leds_init()");
+	leds_init();
+
+	DCC_LOG(LOG_TRACE, "6. i2c_master_init()");
+	i2c_master_init(100000);
+
+	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
+	i2s_slave_init();
+
+	i2c_mutex = thinkos_mutex_alloc();
+	printf("I2C mutex=%d\n", i2c_mutex);
+
 	printf("\n\n");
 	printf("\n\n");
 	printf("-----------------------------------------\n");
@@ -469,26 +465,21 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	DCC_LOG(LOG_TRACE, "5. i2c_master_init()");
-	i2c_master_init(100000);
-
-	DCC_LOG(LOG_TRACE, "6. i2c_master_enable()");
+	DCC_LOG(LOG_TRACE, "8. i2c_master_enable()");
 	i2c_master_enable();
 
 	thinkos_sleep(100);
 
-	i2c_mutex = thinkos_mutex_alloc();
-	printf("I2C mutex=%d\n", i2c_mutex);
-
 	i2c_bus_scan();
 
-	thinkos_sleep(1000);
 	tlv320_init();
 
-	thinkos_sleep(1000);
-	i2s_slave_init();
-	thinkos_sleep(1000);
+	DCC_LOG(LOG_TRACE, "8. i2s_enable()");
 	i2s_enable();
+
+	tracef("1.");
+	tracef("2.");
+	thinkos_sleep(10);
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
@@ -504,7 +495,13 @@ int main(int argc, char ** argv)
 */
 
 	for (i = 0; ; ++i) {
-		thinkos_sleep(3000);
+		thinkos_sleep(1000);
+		tracef("Msg1: %d!", i);
+		tracef("Msg2: %d!", i);
+		trace("The quick...");
+		trace("brown fox...");
+		trace("jumps over..");
+		trace("the lazy dog.");
 //		vr_set(i, 2 * i);
 	}
 

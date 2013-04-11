@@ -200,15 +200,15 @@ void cm3_svc_isr(void)
 		thinkos_cond_wait_svc(arg);
 		break;
 
+#if THINKOS_ENABLE_TIMED_CALLS
 	case THINKOS_COND_TIMEDWAIT:
 		thinkos_cond_timedwait_svc(arg);
 		break;
+#endif
 
-#if THINKOS_ENABLE_TIMED_CALLS
 	case THINKOS_COND_SIGNAL:
 		thinkos_cond_signal_svc(arg);
 		break;
-#endif
 
 	case THINKOS_COND_BROADCAST:
 		thinkos_cond_broadcast_svc(arg);
