@@ -36,9 +36,10 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 		return id;
 	}
 
-	/* disable TX and RX */
+	/* disable TX and RX and interrupts */
 	cr1 = us->cr1;
-	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE);
+	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE | USART_TXEIE | 
+					  USART_TCIE | USART_IDLEIE | USART_RXNEIE);
 
 	if (stm32f_us_clk_lut[id] & APB2)
 		f_pclk = stm32f_apb2_hz;

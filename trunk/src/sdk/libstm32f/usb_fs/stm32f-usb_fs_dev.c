@@ -133,11 +133,19 @@ static int __ep_pkt_send(struct stm32f_usb_drv * drv, int ep_id)
 	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+//	uint32_t epr;
 	int len;
 
 	len = MIN(ep->xfr_rem, ep->mxpktsz);
 
 	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
+
+//	epr = usb->epr[ep_id];
+//	if (epr & USB_EP_DBL_BUF) {
+//		DCC_LOG(LOG_TRACE, "double");
+//	} else {
+//		DCC_LOG(LOG_TRACE, "single");
+//	}
 
 	if (len > 0) {
 		__copy_to_pktbuf(&pktbuf[ep_id].tx, ep->xfr_ptr, len);
@@ -328,22 +336,39 @@ int stm32f_usb_dev_ep_stall(struct stm32f_usb_drv * drv, int ep_id)
 	return 0;
 }
 
+void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+
+	DCC_LOG1(LOG_INFO, "================= ep_id=%d", ep_id);
+
+	if (ep->state != EP_IN_DATA_LAST) {
+		__ep_pkt_send(drv, ep_id);
+	} else {
+		set_ep_txstat(usb, ep_id, USB_TX_NAK);
+		/* call class endpoint callback */
+		ep->on_in(drv->cl, ep_id);
+	}
+}
+
 /* start sending */
 int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 		void * buf, unsigned int len)
 {
 	struct stm32f_usb_ep * ep;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = len;
 
-	return __ep_pkt_send(drv, ep_id);
+	__ep_pkt_send(drv, ep_id);
+
+	return len;
 }
 
-#if 1
 
 int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 		void * buf, int len)
@@ -364,14 +389,14 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 		/* double buffer */
 		/* select the descriptor according to the data toggle bit */
 		pkt = &pktbuf[ep_id].dbrx[(epr & USB_DTOG_RX) ? 0: 1];
-		DCC_LOG1(LOG_TRACE, "===== ep_id=%d: double buffer", ep_id);
+		DCC_LOG1(LOG_INFO, "===== ep_id=%d: double buffer", ep_id);
 	} else {
 		/* single buffer */
 		pkt = &pktbuf[ep_id].rx;
-		DCC_LOG1(LOG_TRACE, "===== ep_id=%d: single buffer", ep_id);
+		DCC_LOG1(LOG_INFO, "===== ep_id=%d: single buffer", ep_id);
 	}
 
-	DCC_LOG1(LOG_TRACE, "cnt=%d", pkt->count);
+	DCC_LOG1(LOG_INFO, "cnt=%d", pkt->count);
 
 	cnt = MIN(pkt->count, len);
 
@@ -383,7 +408,7 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 		set_ep_rxstat(usb, ep_id, USB_RX_VALID);
 	}
 
-	DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
+	DCC_LOG2(LOG_INFO, "OUT EP%d, cnt=%d", ea, cnt);
 
 	return cnt;
 }
@@ -405,7 +430,7 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 	ep->on_out(drv->cl, ep_id);
 }
 
-#else
+#if 0
 
 void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 {
@@ -477,22 +502,6 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 	__ep_zlp_send(drv, ep_id);
 
 	return 0;
-}
-
-void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
-
-	DCC_LOG1(LOG_TRACE, "================= ep_id=%d", ep_id);
-
-	if (ep->state != EP_IN_DATA_LAST) {
-		__ep_pkt_send(drv, ep_id);
-	} else {
-		set_ep_txstat(usb, ep_id, USB_TX_NAK);
-		/* call class endpoint callback */
-		ep->on_in(drv->cl, ep_id);
-	}
 }
 
 /* FIXME: find another way of initializing the packet buffer addresses */
@@ -745,7 +754,7 @@ void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
 
-		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_TRACE, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 #if ENABLE_PEDANTIC_CHECK
@@ -761,7 +770,7 @@ void stm32f_usb_dev_ep0_setup(struct stm32f_usb_drv * drv) {
 		}
 #endif
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->xfr_rem);
 		__ep_pkt_send(drv, 0);
 		/* While enabling the last data stage, the opposite direction should
 			 * be set to NAK, so that, if the host reverses the transfer direction

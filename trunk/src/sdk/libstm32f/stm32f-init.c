@@ -60,9 +60,17 @@ void debug_init(void)
 
 #ifdef STM32F1X
 
+#ifdef STM32F10X
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 2;
-const uint32_t stm32f_apb2_hz = HCLK_HZ / 2;
+const uint32_t stm32f_apb2_hz = HCLK_HZ;
+#endif
+
+#ifdef STM32F100
+const uint32_t stm32f_ahb_hz = HCLK_HZ;
+const uint32_t stm32f_apb1_hz = HCLK_HZ;
+const uint32_t stm32f_apb2_hz = HCLK_HZ;
+#endif
 
 void _init(void)
 {
@@ -110,18 +118,21 @@ void _init(void)
 	/* F_HSE = 12 MHz
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz
+	   PCLK1 = 36 MHz
+	   PCLK2 = 72 MHz
 	   USBCLK = 48 MHz */
 	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | 
-		RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
+		RCC_PPRE2_1 | RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
 #endif
 
 #ifdef STM32F100
 	/* F_HSE = 12 MHz
 	   PLLCLK = 24 MHz
+	   PCLK1 = 24 MHz
+	   PCLK2 = 24 MHz
 	   SYSCLK = 24 MHz */
 	cfg = RCC_PLLMUL(2) | RCC_PLLSRC_HSE | RCC_ADCPRE_2 | 
-		RCC_PPRE2_2 | RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
-
+		RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
 #endif
 
 	rcc->cfgr = cfg;

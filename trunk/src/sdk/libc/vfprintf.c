@@ -32,6 +32,7 @@
 #include <string.h>
 #include <sys/file.h>
 #include <stdlib.h>
+#include <sys/dcclog.h>
 
 #ifndef PRINTF_ENABLE_LEFT_ALIGN
 #define PRINTF_ENABLE_LEFT_ALIGN 1
@@ -202,8 +203,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 					cp++;
 					w--;
 				}
-//				n = ull2dec(cp, val.ull);
-				n = uint2dec(cp, 12345);
+				n = ull2dec(cp, val.ull);
 			} else
 #endif
 			{

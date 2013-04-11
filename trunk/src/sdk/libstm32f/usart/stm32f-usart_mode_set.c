@@ -36,8 +36,9 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 		return id;
 	}
 
-	/* save enable bits */
-	cr_en = us->cr1 & (USART_UE | USART_TE | USART_RE);
+	/* save bits that should be restored */
+	cr_en = us->cr1 & (USART_UE | USART_TE | USART_RE | USART_TXEIE | 
+					  USART_TCIE | USART_IDLEIE | USART_RXNEIE);
 	if (cr_en & USART_TE) {
 		/* drain output buffer */
 		while (!(us->sr & USART_TXE));
@@ -50,12 +51,21 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 	cr2 = 0;
 
 	bits = flags & SERIAL_DATABITS_MASK;
+	switch (bits) {
+	case SERIAL_DATABITS_7:
+		DCC_LOG(LOG_TRACE, "7 data bits");
+		break;
+	case SERIAL_DATABITS_9:
+		DCC_LOG(LOG_TRACE, "9 data bits");
+		break;
+	case SERIAL_DATABITS_8:
+	default:
+		DCC_LOG(LOG_TRACE, "8 data bits");
+		break;
+	}
+
 	/* parity and data bits */
 	switch (flags & SERIAL_PARITY_MASK) {
-	case SERIAL_PARITY_NONE:
-		DCC_LOG(LOG_TRACE, "parity NONE");
-		cr1 |= (bits == SERIAL_DATABITS_9) ? USART_M9 : USART_M8;
-		break;
 	case SERIAL_PARITY_EVEN:
 		DCC_LOG(LOG_TRACE, "parity EVEN");
 		cr1 |= USART_PCE | USART_PS_EVEN;
@@ -66,14 +76,22 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 		cr1 |= USART_PCE | USART_PS_ODD;
 		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
 		break;
+	case SERIAL_PARITY_NONE:
+	default:
+		DCC_LOG(LOG_TRACE, "parity NONE");
+		cr1 |= (bits == SERIAL_DATABITS_9) ? USART_M9 : USART_M8;
+		break;
 	}
 
 	/* stop bits */
 	switch (flags & SERIAL_STOPBITS_MASK) {
 	case SERIAL_STOPBITS_2:
+		DCC_LOG(LOG_TRACE, "2 stop bits");
 		cr2 |= USART_STOP_2;
 		break;
 	case SERIAL_STOPBITS_1:
+	default:
+		DCC_LOG(LOG_TRACE, "1 stop bit");
 		cr2 |= USART_STOP_1;
 		break;
 	}

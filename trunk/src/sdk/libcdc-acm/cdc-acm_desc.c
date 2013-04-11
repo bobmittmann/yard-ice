@@ -251,11 +251,11 @@ const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
 	't', 0
 };
 
-const uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
+uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
 	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Serial number: "0000000000001" */
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0,
-	'0', 0, '1', 0
+	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, 
+	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
 };
 
 const uint8_t cdc_acm_interface_str[INTERFACE_STR_SZ] = {
@@ -271,3 +271,32 @@ const struct usb_str_entry cdc_acm_str[] = {
 	{ .str = cdc_acm_serial_str, .len = SERIAL_STR_SZ},
 	{ .str = cdc_acm_interface_str, .len = INTERFACE_STR_SZ}
 };
+
+#include <sys/dcclog.h>
+
+void usb_cdc_sn_set(uint64_t sn)
+{
+	char s[24];
+	char * cp;
+	int c;
+	int i;
+	int n;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	n = sprintf(s, "%llu", sn);
+	cp = s + n - 1;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	for (i = (SERIAL_STR_SZ / 2) - 1; i >= 0; --i) {
+		if (cp < s)
+			break;
+		c = *cp--;
+		DCC_LOG1(LOG_TRACE, "'%c'", c);
+		cdc_acm_serial_str[i * 2] = c;
+	}
+
+}
+
+
