@@ -45,6 +45,8 @@ struct usb_cdc_state {
     struct serial_error err;
 };
 
+typedef struct usb_cdc_state usb_cdc_state_t;
+
 struct usb_cdc_class;
 
 typedef struct usb_cdc_class usb_cdc_class_t;
@@ -66,7 +68,7 @@ void usb_ctrl_event_wait(usb_cdc_class_t * cdc);
 
 void usb_device_init(usb_cdc_class_t * cdc);
 
-struct usb_cdc_class * usb_cdc_init(const usb_dev_t * usb);
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb);
 
 int usb_cdc_write(usb_cdc_class_t * cdc,
 				  const void * buf, unsigned int len);
@@ -79,9 +81,11 @@ int usb_cdc_flush(usb_cdc_class_t * cdc,
 
 struct file * usb_cdc_fopen(void);
 
-int usb_cdc_state_get(usb_cdc_class_t * cdc, struct usb_cdc_state * state);
+int usb_cdc_state_get(usb_cdc_class_t * cdc, usb_cdc_state_t * state);
 
-int usb_cdc_ctrl_event_wait(usb_cdc_class_t * cdc, unsigned int msec);
+int usb_cdc_ctl_wait(usb_cdc_class_t * cdc, unsigned int msec);
+
+void usb_cdc_sn_set(uint64_t sn);
 
 #ifdef __cplusplus
 }

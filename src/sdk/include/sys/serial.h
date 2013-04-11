@@ -27,26 +27,32 @@
 #define __SYS_SERIAL_H__
 
 /* Number of data bits */
-#define SERIAL_DATABITS_6 (0 << 0)
-#define SERIAL_DATABITS_7 (1 << 0)
-#define SERIAL_DATABITS_8 (2 << 0)
-#define SERIAL_DATABITS_9 (3 << 0)
-#define SERIAL_DATABITS_MASK (0x07 << 0)
+#define SERIAL_DATABITS_6 (6 << 0)
+#define SERIAL_DATABITS_7 (7 << 0)
+#define SERIAL_DATABITS_8 (8 << 0)
+#define SERIAL_DATABITS_9 (9 << 0)
+#define SERIAL_DATABITS_MASK (0x0f << 0)
 
 /* Parity bit type */
-#define SERIAL_PARITY_NONE (0 << 3)
-#define SERIAL_PARITY_EVEN (1 << 3)
-#define SERIAL_PARITY_ODD  (2 << 3)
-#define SERIAL_PARITY_MARK (3 << 3)
-#define SERIAL_PARITY_SPACE (4 << 3)
-#define SERIAL_PARITY_MASK (0x07 << 3)
+#define SERIAL_PARITY_NONE (0 << 4)
+#define SERIAL_PARITY_EVEN (1 << 4)
+#define SERIAL_PARITY_ODD  (2 << 4)
+#define SERIAL_PARITY_MARK (3 << 4)
+#define SERIAL_PARITY_SPACE (4 << 4)
+#define SERIAL_PARITY_MASK (0x0f << 4)
 
 /* Number of stop bits */
-#define SERIAL_STOPBITS_1 (0 << 6)
-#define SERIAL_STOPBITS_2 (1 << 6)
-#define SERIAL_STOPBITS_1_5 (2 << 6)
-#define SERIAL_STOPBITS_0_5 (3 << 6)
-#define SERIAL_STOPBITS_MASK (0x03 << 6)
+#define SERIAL_STOPBITS_1 (1 << 8)
+#define SERIAL_STOPBITS_2 (2 << 8)
+#define SERIAL_STOPBITS_1_5 (3 << 8)
+#define SERIAL_STOPBITS_0_5 (4 << 8)
+#define SERIAL_STOPBITS_MASK (0x0f << 8)
+
+/* Flow control bits */
+#define SERIAL_FLOWCTRL_NONE (0 << 12)
+#define SERIAL_FLOWCTRL_RTSCTS (1 << 12)
+#define SERIAL_FLOWCTRL_XONXOFF (2 << 12)
+#define SERIAL_FLOWCTRL_MASK (0x0f << 12)
 
 /* Common character frame options */
 #define SERIAL_8N1 (SERIAL_DATABITS_8 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
@@ -64,21 +70,18 @@
 #define SERIAL_9N1 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
 #define SERIAL_9N2 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
 
-/* Character frame bits mask */
-#define SERIAL_FRAME_MASK (0xff)
-
-#define SERIAL_FLOWCTRL_NONE (0 << 8)
-#define SERIAL_FLOWCTRL_RTSCTS (1 << 8)
-#define SERIAL_FLOWCTRL_XONXOFF (2 << 8)
-#define SERIAL_FLOWCTRL_MASK (0x03 << 8)
 
 /* character encoding and baud rate */
 struct serial_config {
 	uint32_t baud_rate;
-	uint8_t stop_bits;
 	uint8_t data_bits;
 	uint8_t parity;
+	uint8_t stop_bits;
 };
+
+/* Convert from the config structure to de encoded flag bits */
+#define CFG_TO_FLAGS(CFG) ((CFG)->data_bits + (CFG)->parity +\
+						  ((CFG)->stop_bits << 8))
 
 /* modem control bits */
 struct serial_control {
@@ -106,17 +109,26 @@ struct serial_error {
 
 struct serial_dev;
 
+typedef struct serial_dev serial_dev_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
 
-int serial_config_set(struct serial_dev * dev, const struct serial_config * cfg);
+int serial_config_set(struct serial_dev * dev, 
+					  const struct serial_config * cfg);
 
 int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
 
 int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
+
+int serial_write(struct serial_dev * dev, const void * buf, 
+				 unsigned int len);
+
+int serial_read(struct serial_dev * dev, char * buf, 
+				unsigned int len, unsigned int msec);
 
 #ifdef __cplusplus
 }

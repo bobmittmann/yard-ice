@@ -32,6 +32,7 @@
 #include <stdbool.h>
 
 #include <sys/usb-dev.h>
+#include <sys/usb-cdc.h>
 
 #include <sys/dcclog.h>
 
@@ -68,7 +69,7 @@ struct usb_cdc_acm_dev {
 	int8_t tx_flag; /* TX event flag */
 	int8_t tx_mutex; /* TX lock */
 
-	int8_t ctl_ev; /* Control event */
+	int8_t ctl_flag; /* Control event */
 
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
@@ -83,7 +84,9 @@ int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id)
 
 int usb_cdc_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
+	__thinkos_flag_signal(dev->tx_flag);
 	return 0;
 
 }
@@ -226,13 +229,15 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
         DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
         DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
         DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
-//            otg_fs_ep0_zlp_send(otg_fs);
+
+		__thinkos_flag_signal(dev->ctl_flag);
 		break;
 
 	case GET_LINE_CODING:
 		DCC_LOG(LOG_TRACE, "CDC GetLn");
-		len = MIN(sizeof(struct cdc_line_coding), len);
-//		usb_dev_ep_tx_start(dev->usb, 0, (void *)&dev->dev.lc, len);
+		/* Return Line Coding */
+		*ptr = (void *)&dev->acm.lc;
+		len = sizeof(struct cdc_line_coding);
 		break;
 
 	case SET_CONTROL_LINE_STATE:
@@ -255,7 +260,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		/* there might have threads waiting for
 		   modem control line changes (DTR, RTS)
 		   wake them up */
-		__thinkos_ev_raise(dev->ctl_ev);
+		__thinkos_flag_signal(dev->ctl_flag);
 		break;
 
 	default:
@@ -290,15 +295,34 @@ int usb_cdc_on_error(usb_class_t * cl, int code)
 	return 0;
 }
 
-int usb_cdc_write(struct usb_cdc_acm_dev * dev,
+int usb_cdc_write(usb_cdc_class_t * cl,
 				  const void * buf, unsigned int len)
 {
-	return 0;
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	uint8_t * ptr = (uint8_t *)buf;
+	unsigned int rem = len;
+	int n;
+
+	while (rem) {
+		while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
+			__thinkos_flag_clr(dev->ctl_flag);
+			thinkos_flag_wait(dev->ctl_flag);
+		}
+		__thinkos_flag_clr(dev->tx_flag);
+		n = usb_dev_ep_tx_start(dev->usb, 1, ptr, rem);
+		DCC_LOG(LOG_INFO, "wait");
+		thinkos_flag_wait(dev->tx_flag);
+		DCC_LOG(LOG_INFO, "wakeup");
+		rem -= n;
+	}
+
+	return len;
 }
 
-int usb_cdc_read(struct usb_cdc_acm_dev * dev, void * buf,
+int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 				 unsigned int len, unsigned int msec)
 {
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 	__thinkos_flag_clr(dev->rx_flag);
 	DCC_LOG(LOG_TRACE, "wait");
 	thinkos_flag_wait(dev->rx_flag);
@@ -307,9 +331,63 @@ int usb_cdc_read(struct usb_cdc_acm_dev * dev, void * buf,
 	return usb_dev_ep_pkt_recv(dev->usb, 2, buf, len);
 }
 
-int usb_cdc_flush(struct usb_cdc_acm_dev * dev,
+int usb_cdc_flush(usb_cdc_class_t * cl,
 				  const void * buf, unsigned int len)
 {
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	(void)dev;
+
+	return 0;
+}
+
+#define ACM_PARITY_NONE 0
+#define ACM_PARITY_ODD 1
+#define ACM_PARITY_EVEN 2
+
+int usb_cdc_state_get(usb_cdc_class_t * cl, usb_cdc_state_t * state)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+
+	state->cfg.baud_rate = dev->acm.lc.dwDTERate;
+	state->cfg.data_bits = dev->acm.lc.bDataBits;
+	switch (dev->acm.lc.bParityType) {
+	case ACM_PARITY_ODD:
+		state->cfg.parity = SERIAL_PARITY_ODD;
+		break;
+	case ACM_PARITY_EVEN:
+		state->cfg.parity = SERIAL_PARITY_EVEN;
+		break;
+	case ACM_PARITY_NONE:
+	default:
+		state->cfg.parity = SERIAL_PARITY_NONE;
+		break;
+	}
+
+	state->cfg.stop_bits = dev->acm.lc.bCharFormat;
+
+	state->ctrl.dtr = (dev->acm.control & CDC_DTE_PRESENT);
+	state->ctrl.rts = (dev->acm.control & CDC_ACTIVATE_CARRIER);
+
+	state->stat.dsr = (dev->acm.status & CDC_SERIAL_STATE_TX_CARRIER);
+	state->stat.ri = (dev->acm.status & CDC_SERIAL_STATE_RING);
+	state->stat.dcd = (dev->acm.status & CDC_SERIAL_STATE_RX_CARRIER);
+	state->stat.cts = 0;
+	state->stat.brk = (dev->acm.status & CDC_SERIAL_STATE_BREAK);
+
+	state->err.ovr = (dev->acm.status & CDC_SERIAL_STATE_OVERRUN);
+	state->err.par = (dev->acm.status & CDC_SERIAL_STATE_PARITY);
+	state->err.frm = (dev->acm.status & CDC_SERIAL_STATE_FRAMING);
+
+	return 0;
+}
+
+int usb_cdc_ctl_wait(usb_cdc_class_t * cl, unsigned int msec)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+
+	__thinkos_flag_clr(dev->ctl_flag);
+	thinkos_flag_wait(dev->ctl_flag);
+
 	return 0;
 }
 
@@ -320,7 +398,7 @@ const usb_class_events_t usb_cdc_ev = {
 	.on_error = usb_cdc_on_error
 };
 
-struct usb_cdc_acm_dev * usb_cdc_init(const usb_dev_t * usb)
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb)
 {
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)dev;
@@ -329,13 +407,13 @@ struct usb_cdc_acm_dev * usb_cdc_init(const usb_dev_t * usb)
 	dev->usb = (usb_dev_t *)usb;
 	dev->rx_flag = __thinkos_flag_alloc(); 
 	dev->tx_flag = __thinkos_flag_alloc(); 
-	dev->ctl_ev = __thinkos_ev_alloc(); 
+	dev->ctl_flag = __thinkos_flag_alloc(); 
 	__thinkos_flag_clr(dev->rx_flag);
 
 //	dev->tx_mutex = thinkos_mutex_alloc(); 
 	usb_dev_init(dev->usb, cl, &usb_cdc_ev);
 
-	return dev;
+	return (usb_cdc_class_t *)dev;
 }
 
 

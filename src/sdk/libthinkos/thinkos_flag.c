@@ -87,7 +87,7 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	cm3_cpsid_i();
 
 	if (__thinkos_flag_is_set(wq)) {
-		DCC_LOG1(LOG_TRACE, "flag %d is set!", wq);
+		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
 		cm3_cpsie_i();
 		return;
 	} 
@@ -108,7 +108,7 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 	cm3_cpsie_i();
 }
@@ -198,7 +198,7 @@ void thinkos_flag_set_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 		/* wakeup from the flag wait queue */
 		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_TRACE, "<%d> waked up with flag %d", th, wq);
+		DCC_LOG2(LOG_INFO, "<%d> waked up with flag %d", th, wq);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}

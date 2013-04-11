@@ -51,7 +51,7 @@ static int sprintf_write(struct str_buf * str, const void * buf, int len)
 	n = dst - str->ptr;
 	str->ptr = dst;;
 
-	DCC_LOG1(LOG_MSG, "n=%d", n);
+	DCC_LOG1(LOG_INFO, "n=%d", n);
 
 	return n;
 }
@@ -69,7 +69,7 @@ int vsnprintf(char * str, size_t size, const char *fmt, va_list ap)
 	buf.ptr = str;
 	buf.max = str + size;
 
-	DCC_LOG1(LOG_MSG, "size=%d", size);
+	DCC_LOG1(LOG_INFO, "size=%d", size);
 
 	f.data = (void *)&buf;
 	f.op = &sprintf_fileop;

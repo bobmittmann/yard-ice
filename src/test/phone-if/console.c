@@ -255,7 +255,7 @@ struct file * uart_console_open(struct stm32f_usart * us)
 	dev->txie = CM3_BITBAND_DEV(&us->cr1, 7);
 	dev->uart = us;
 
-	cm3_irq_pri_set(STM32F_IRQ_TIM1_UP, UART_IRQ_PRIORITY);
+	cm3_irq_pri_set(STM32F_IRQ_USART1, UART_IRQ_PRIORITY);
 	cm3_irq_enable(STM32F_IRQ_USART1);
 
 	/* enable RX interrupt */

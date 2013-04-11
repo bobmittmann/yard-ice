@@ -38,12 +38,8 @@
 
 #include <sys/dcclog.h>
 
-#ifndef ENABLE_UART_TX_BLOCK
-#define ENABLE_UART_TX_BLOCK 1
-#endif
-
-#define UART_TX_FIFO_BUF_LEN 32768
-#define UART_RX_FIFO_BUF_LEN 16
+#define UART_TX_FIFO_BUF_LEN 128
+#define UART_RX_FIFO_BUF_LEN 128
 
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 
@@ -88,11 +84,9 @@ static inline bool uart_fifo_is_half_full(struct uart_fifo * fifo)
 	return ((fifo->head - fifo->tail) > (fifo->len / 2)) ? true : false;
 }
 
-struct uart_console_dev {
-	int8_t tx_ev;
-	int8_t rx_ev;
-	int8_t tx_mutex;
-	int8_t rx_mutex;
+struct serial_dev {
+	int32_t tx_flag;
+	int32_t rx_flag;
 	struct uart_fifo tx_fifo;
 	uint8_t tx_buf[UART_TX_FIFO_BUF_LEN];
 	struct uart_fifo rx_fifo;
@@ -101,8 +95,8 @@ struct uart_console_dev {
 	struct stm32f_usart * uart;
 };
 
-static int uart_console_read(struct uart_console_dev * dev, char * buf, 
-				 unsigned int len, unsigned int msec)
+int serial_read(struct serial_dev * dev, char * buf, 
+				unsigned int len, unsigned int msec)
 {
 
 	char * cp = (char *)buf;
@@ -111,52 +105,44 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 
 	DCC_LOG(LOG_INFO, "read");
 
-	__thinkos_critical_level(UART_IRQ_PRIORITY);
+	__thinkos_flag_clr(dev->rx_flag);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_critical_ev_wait(dev->rx_ev, UART_IRQ_PRIORITY);
+		thinkos_flag_wait(dev->rx_flag);
+		__thinkos_flag_clr(dev->rx_flag);
 		DCC_LOG(LOG_INFO, "wakeup.");
 	}
-	__thinkos_critical_exit();
 
 	do {
 		if (n == len) {
 			break;
 		}
 		c = uart_fifo_get(&dev->rx_fifo);
-		if (c == '\r') 
-			c = '\n';
 		cp[n++] = c;
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
-
 
 	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
 }
 
-static void uart_putc(struct uart_console_dev * dev, int c)
+static void uart_putc(struct serial_dev * dev, int c)
 {
-#if ENABLE_UART_TX_BLOCK
-	__thinkos_critical_level(UART_IRQ_PRIORITY);
+	__thinkos_flag_clr(dev->tx_flag);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
 		DCC_LOG(LOG_TRACE, "wait...");
-		__thinkos_critical_ev_wait(dev->tx_ev, UART_IRQ_PRIORITY);
+		thinkos_flag_wait(dev->tx_flag);
+		__thinkos_flag_clr(dev->tx_flag);
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
-	__thinkos_critical_exit();
-#else
-	if (uart_fifo_is_full(&dev->tx_fifo))
-		return;
-#endif
 
 	uart_fifo_put(&dev->tx_fifo, c);
 	*dev->txie = 1; 
 }
 
-static int uart_console_write(struct uart_console_dev * dev, const void * buf, 
-					   unsigned int len)
+int serial_write(struct serial_dev * dev, const void * buf, 
+				 unsigned int len)
 {
 	char * cp = (char *)buf;
 	int c;
@@ -164,71 +150,72 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 
 	DCC_LOG1(LOG_INFO, "len=%d", len);
 
-	 thinkos_mutex_lock(dev->tx_mutex); 
-
 	for (n = 0; n < len; n++) {
 		c = cp[n];
-		if (c == '\n') {
-			DCC_LOG(LOG_INFO, "CR");
-			uart_putc(dev, '\r');
-		}
 		uart_putc(dev, c);
 	}
-
-	thinkos_mutex_unlock(dev->tx_mutex); 
 
 	DCC_LOG1(LOG_INFO, "cnt=%d", n);
 
 	return n;
 }
 
-static int uart_console_flush(struct uart_console_dev * ctrl)
+
+int serial_config_get(struct serial_dev * dev, struct serial_config * cfg)
 {
+//	struct stm32f_usart * uart = dev->uart;
+
 	return 0;
 }
 
-const struct fileop uart_console_ops = {
-	.write = (void *)uart_console_write,
-	.read = (void *)uart_console_read,
-	.flush = (void *)uart_console_flush,
-	.close = (void *)NULL
-};
-
-struct uart_console_dev uart_console_dev;
-
-const struct file uart_console_file = {
-	.data = (void *)&uart_console_dev, 
-	.op = &uart_console_ops
-};
-
-void stm32f_usart1_isr(void)
+int serial_config_set(struct serial_dev * dev, 
+					  const struct serial_config * cfg)
 {
-	struct uart_console_dev * dev = &uart_console_dev;
-	struct stm32f_usart * us = dev->uart;
+	struct stm32f_usart * uart = dev->uart;
+	uint32_t flags;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	stm32f_usart_baudrate_set(uart, cfg->baud_rate);
+
+	flags = CFG_TO_FLAGS(cfg);
+
+	stm32f_usart_mode_set(uart, flags);
+
+	return 0;
+}
+
+
+
+struct serial_dev serial_dev;
+
+void stm32f_usart2_isr(void)
+{
+	struct serial_dev * dev = &serial_dev;
+	struct stm32f_usart * uart = dev->uart;
 	uint32_t sr;
 	int c;
 	
-	sr = us->sr & us->cr1;
+	sr = uart->sr & uart->cr1;
 
 	if (sr & USART_RXNE) {
 		DCC_LOG(LOG_INFO, "RXNE");
-		c = us->dr;
+		c = uart->dr;
 		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
 			uart_fifo_put(&dev->rx_fifo, c);
 		} else {
-			DCC_LOG(LOG_WARNING, "RX fifo full!");
+			DCC_LOG(LOG_INFO, "RX fifo full!");
 		}
 		
-		if (uart_fifo_is_half_full(&dev->rx_fifo)) { 
-			__thinkos_ev_raise(dev->rx_ev);
-		}
+		if (uart_fifo_is_half_full(&dev->rx_fifo)) 
+			__thinkos_flag_signal(dev->rx_flag);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE");
-		c = us->dr;
+		c = uart->dr;
 		(void)c;
-		__thinkos_ev_raise(dev->rx_ev);
+		__thinkos_flag_signal(dev->rx_flag);
 	}
 
 	if (sr & USART_TXE) {
@@ -236,82 +223,32 @@ void stm32f_usart1_isr(void)
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
-#if ENABLE_UART_TX_BLOCK
-			__thinkos_ev_raise(dev->tx_ev);
-#endif
+			__thinkos_flag_signal(dev->tx_flag);
 		} else {
-			us->dr = uart_fifo_get(&dev->tx_fifo);
+			uart->dr = uart_fifo_get(&dev->tx_fifo);
 		}
 	}
+
 }
 
-struct file * uart_console_open(struct stm32f_usart * us)
+struct serial_dev * serial_open(struct stm32f_usart * uart)
 {
-	struct uart_console_dev * dev = &uart_console_dev;
+	struct serial_dev * dev = &serial_dev;
 
 	DCC_LOG(LOG_INFO, "...");
-	dev->rx_ev = thinkos_ev_alloc(); 
-	dev->tx_ev = thinkos_ev_alloc(); 
-	dev->tx_mutex = thinkos_mutex_alloc(); 
+	dev->rx_flag = thinkos_flag_alloc(); 
+	dev->tx_flag = thinkos_flag_alloc(); 
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
 	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
 
-	dev->txie = CM3_BITBAND_DEV(&us->cr1, 7);
-	dev->uart = us;
+	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->uart = uart;
 
-	cm3_irq_pri_set(STM32F_IRQ_USART1, UART_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_USART1);
+	cm3_irq_pri_set(STM32F_IRQ_USART2, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_USART2);
 
 	/* enable RX interrupt */
-	us->cr1 |= USART_RXNEIE | USART_IDLEIE;
+	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
 
-	return (struct file *)&uart_console_file;
+	return dev;
 }
-
-
-/* ----------------------------------------------------------------------
- * Stdio init 
- * ----------------------------------------------------------------------
- */
-
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
-
-struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
-};
-
-void stdio_init(void)
-{
-	struct stm32f_usart * uart = STM32F_USART1;
-#if defined(STM32F1X)
-	struct stm32f_afio * afio = STM32F_AFIO;
-#endif
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-
-#if defined(STM32F1X)
-	/* USART1_RX */
-	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
-	/* Use alternate pins for USART1 */
-	afio->mapr |= AFIO_USART1_REMAP;
-#elif defined(STM32F4X)
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
-#endif
-
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
-
-	stderr = &stm32f_uart1_file;
-	stdin = uart_console_open(uart);
-	stdout = stdin;
-}
-

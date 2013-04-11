@@ -22,7 +22,7 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c 
+CFILES = usb-serial.c serial.c
 
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \

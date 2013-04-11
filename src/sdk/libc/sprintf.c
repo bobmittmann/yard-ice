@@ -32,7 +32,7 @@ int sprintf(char * str, const char * fmt, ...)
 	int n;
 
 	va_start(ap, fmt);
-	n = vsnprintf(str, UINT_MAX, fmt, ap);
+	n = vsnprintf(str, INT_MAX, fmt, ap);
 	va_end(ap);
 
 	return n;
