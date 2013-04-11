@@ -1,5 +1,5 @@
 /* 
- * thikos_event.c
+ * thikos_flag.c
  *
  * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
@@ -11,7 +11,7 @@
  * version 3.0 of the License, or (at your option) any later version.
  * 
  * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * but WITHOUT ANY WARRANTY; without flagen the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  * 
@@ -28,61 +28,69 @@
 
 #include <thinkos.h>
 
-#if THINKOS_EVENT_MAX > 0
+#if THINKOS_FLAG_MAX > 0
 
-#if THINKOS_ENABLE_EVENT_ALLOC
-void thinkos_ev_alloc_svc(int32_t * arg)
+#if THINKOS_ENABLE_FLAG_ALLOC
+void thinkos_flag_alloc_svc(int32_t * arg)
 {
-	unsigned int ev;
+	unsigned int flag;
 
-	ev = __thinkos_ev_alloc();
+	flag = __thinkos_flag_alloc();
 
-	DCC_LOG1(LOG_TRACE, "event=%d", ev);
-	arg[0] = ev;
+	DCC_LOG1(LOG_TRACE, "flag=%d", flag);
+	arg[0] = flag;
 }
 
-void thinkos_ev_free_svc(int32_t * arg)
+void thinkos_flag_free_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
+	unsigned int flag = arg[0];
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if ((ev < THINKOS_EVENT_BASE) || 
-		(ev >= (THINKOS_EVENT_BASE + THINKOS_EVENT_MAX))) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", ev);
+	if ((flag < THINKOS_FLAG_BASE) || 
+		(flag >= (THINKOS_FLAG_BASE + THINKOS_FLAG_MAX))) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an flag!", flag);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 
-	DCC_LOG1(LOG_TRACE, "event=%d", ev);
-	__thinkos_ev_free(ev);
+	DCC_LOG1(LOG_TRACE, "flag=%d", flag);
+	__thinkos_flag_free(flag);
 }
 #endif
 
 
-void thinkos_ev_wait_svc(int32_t * arg)
+void thinkos_flag_wait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-#if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
+
+	arg[0] = 0;
 
 	cm3_cpsid_i();
+
+	if (__thinkos_flag_is_set(wq)) {
+		DCC_LOG1(LOG_TRACE, "flag %d is set!", wq);
+		cm3_cpsie_i();
+		return;
+	} 
 
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
@@ -100,29 +108,29 @@ void thinkos_ev_wait_svc(int32_t * arg)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
 
 	cm3_cpsie_i();
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
-void thinkos_ev_timedwait_svc(int32_t * arg)
+void thinkos_flag_timedwait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-#if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -130,6 +138,12 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 #endif
 
 	cm3_cpsid_i();
+
+	if (__thinkos_flag_is_set(wq)) {
+		arg[0] = 0;
+		cm3_cpsie_i();
+		return;
+	}
 
 	/* insert into the mutex wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
@@ -147,46 +161,73 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for event %d...", self, wq);
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
 
 	/* Set the default return value to timeout. The
-	   ev_rise() call will change it to 0 */
+	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	cm3_cpsie_i();
 }
 #endif
 
-void thinkos_ev_raise_svc(int32_t * arg)
+void thinkos_flag_set_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-#if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
+
+	__thinkos_flag_set(wq);
 
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		/* wakeup from the event wait queue */
+		/* wakeup from the flag wait queue */
 		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_TRACE, "<%d> waked up with event %d", th, wq);
+		DCC_LOG2(LOG_TRACE, "<%d> waked up with flag %d", th, wq);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
+
 }
 
-#endif /* THINKOS_EVENT_MAX > 0 */
+void thinkos_flag_clr_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+
+#if THINKOS_ENABLE_ARG_CHECK
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an flag!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	__thinkos_flag_clr(wq);
+}
+
+#endif /* THINKOS_FLAG_MAX > 0 */
 

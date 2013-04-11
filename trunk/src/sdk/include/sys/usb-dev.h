@@ -96,6 +96,8 @@ typedef int (* usb_dev_init_t)(void *, usb_class_t *,
 
 typedef int (* usb_dev_ep_tx_start_t)(void *, int, const void *, int);
 
+typedef int (* usb_dev_ep_rx_prep_t)(void *, int, void *, int);
+
 typedef int (* usb_dev_ep_stall_t)(void *, int);
 
 typedef int (* usb_dev_ep_zlp_send_t)(void *, int);
@@ -111,6 +113,8 @@ typedef int (* usb_dev_ep_pkt_recv_t)(void *, int, const void *, int);
 struct usb_dev_ops {
 	/* Initialize the USB device */
 	usb_dev_init_t dev_init;
+	/* Prepare to receive data on an endpoint  */
+	usb_dev_ep_rx_prep_t ep_rx_prep;
 	/* Start sending data on an endpoint  */
 	usb_dev_ep_tx_start_t ep_tx_start;
 	/* Stall the endpoint */
@@ -166,6 +170,11 @@ extern inline int usb_dev_ep_stall(const usb_dev_ep_t * ep) {
 extern inline int usb_dev_ep_tx_start(const usb_dev_t * dev, int ep_id,
 		const void * buf, int len) {
 	return dev->op->ep_tx_start(dev->priv, ep_id, buf, len);
+}
+
+extern inline int usb_dev_ep_rx_prep(const usb_dev_t * dev, int ep_id,
+									 void * buf, int len) {
+	return dev->op->ep_rx_prep(dev->priv, ep_id, buf, len);
 }
 
 extern inline int usb_dev_ep_stall(const usb_dev_t * dev, int ep_id) {

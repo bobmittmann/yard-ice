@@ -38,8 +38,8 @@ JTAGTOOL_ADDR = 192.168.0.80
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
-#MACH = stm32f103x6
-#include ../mk/stm32f103.mk
+MACH = stm32f103x6
+include ../mk/stm32f103.mk
 
-include ../mk/stm32f207.mk
+#include ../mk/stm32f207.mk
 

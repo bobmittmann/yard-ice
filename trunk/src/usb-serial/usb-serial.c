@@ -328,16 +328,19 @@ int button_task(void)
 
 int main(int argc, char ** argv)
 {
+	usb_cdc_class_t * cdc_acm;
+	char buf[128];
+	int n;
 #ifdef STM32F10X
 	struct stm32f_usart * us = STM32F_USART2;
 #endif
-
 #ifdef STM32F2X
 	struct stm32f_usart * us = STM32F_UART5;
 #endif
 
 //	struct vcom vcom;
-	int i = 0;
+	int i;
+	int j;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -367,17 +370,20 @@ int main(int argc, char ** argv)
 	stm32f_usart_enable(us);
 
 #ifdef STM32F10X
-	usb_cdc_init(&stm32f_usb_fs_dev);
+	cdc_acm = usb_cdc_init(&stm32f_usb_fs_dev);
 #endif
 
 #ifdef STM32F2X
-	usb_cdc_init(&stm32f_otg_fs_dev);
+	cdc_acm = usb_cdc_init(&stm32f_otg_fs_dev);
 #endif
 
-	for (i = 0; ; i++) {
-		DCC_LOG1(LOG_TRACE, "%d", i);
-		stm32f_usart_putc(us, 'U');
-		thinkos_sleep(3000);
+	for (i = 0; ; ++i) {
+		n = usb_cdc_read(cdc_acm, buf, 128, 0);
+		DCC_LOG2(LOG_TRACE, "%d usb_cdc_read()=%d", i, n);
+		for (j = 0; j < n; ++j) {
+			stm32f_usart_putc(us, buf[i]);
+		}
+		thinkos_sleep(1000);
 	}
 
 	return 0;

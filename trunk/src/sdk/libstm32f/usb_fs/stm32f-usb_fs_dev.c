@@ -319,20 +319,6 @@ void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 }
 
 
-/* prepares to receive */
-int stm32f_usb_ep_rx_setup(struct stm32f_usb_drv * drv, int ep_id,
-		void * buf, unsigned int len)
-{
-	struct stm32f_usb_ep * ep;
-
-	DCC_LOG1(LOG_TRACE, "====!!!!!!============= ep_id=%d", ep_id);
-
-	ep = &drv->ep[ep_id];
-	ep->xfr_buf = buf;
-
-	return 0;
-}
-
 int stm32f_usb_dev_ep_stall(struct stm32f_usb_drv * drv, int ep_id)
 {
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
@@ -357,6 +343,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	return __ep_pkt_send(drv, ep_id);
 }
 
+#if 1
 
 int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 		void * buf, int len)
@@ -372,18 +359,19 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	ea = USB_EA_GET(epr);
 	(void)ea;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 
 	if (epr & USB_EP_DBL_BUF) {
 		/* double buffer */
 		/* select the descriptor according to the data toggle bit */
 		pkt = &pktbuf[ep_id].dbrx[(epr & USB_DTOG_RX) ? 0: 1];
+		DCC_LOG1(LOG_TRACE, "===== ep_id=%d: double buffer", ep_id);
 	} else {
 		/* single buffer */
 		pkt = &pktbuf[ep_id].rx;
+		DCC_LOG1(LOG_TRACE, "===== ep_id=%d: single buffer", ep_id);
 	}
 
-	DCC_LOG1(LOG_TRACE, "================= ep_id=%d", ep_id);
+	DCC_LOG1(LOG_TRACE, "cnt=%d", pkt->count);
 
 	cnt = MIN(pkt->count, len);
 
@@ -398,15 +386,6 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ea, cnt);
 
 	return cnt;
-}
-
-int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
-{
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
-
-	__ep_zlp_send(drv, ep_id);
-
-	return 0;
 }
 
 void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
@@ -424,6 +403,80 @@ void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
 
 	/* call class endpoint callback */
 	ep->on_out(drv->cl, ep_id);
+}
+
+#else
+
+void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+	struct stm32f_usb_rx_pktbuf * pkt;
+	uint32_t epr;
+
+
+	epr = usb->epr[ep_id];
+	if (epr & USB_EP_DBL_BUF) {
+		/* prepare to receive on other buffer */
+		set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+		/* select the descriptor according to the data toggle bit */
+		pkt = &pktbuf[ep_id].dbrx[(epr & USB_DTOG_RX) ? 0: 1];
+	} else {
+		/* single buffer */
+		pkt = &pktbuf[ep_id].rx;
+	}
+
+	DCC_LOG1(LOG_TRACE, "================= ep_id=%d", ep_id);
+
+	cnt = MIN(pkt->count, len);
+	n = MIN(pkt->count, ep->xfr_rem);
+
+	__copy_from_pktbuf(ep->xfr_ptr, &pktbuf[0].rx, n);
+
+	ep->xfr_ptr += n;
+	ep->xfr_rem -= n;
+
+	if (!(epr & USB_EP_DBL_BUF)) {
+		/* free the out(rx) packet buffer */
+		set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+	}
+
+	DCC_LOG2(LOG_TRACE, "OUT EP%d, cnt=%d", ep_id, cnt);
+
+	return cnt;
+
+}
+
+/* prepares to receive */
+int stm32f_usb_ep_rx_prep(struct stm32f_usb_drv * drv, int ep_id,
+		void * buf, unsigned int len)
+{
+	struct stm32f_usb_ep * ep;
+
+	DCC_LOG1(LOG_TRACE, "====!!!!!!============= ep_id=%d", ep_id);
+
+	ep = &drv->ep[ep_id];
+	ep->xfr_buf = buf;
+	ep->xfr_buf_len = buf_len;
+
+	ep->xfr_ptr = buf;
+	ep->xfr_rem = buf_len;
+	ep->xfr_cnt = 0;
+	ep->state = EP_IDLE;
+
+	return 0;
+}
+
+#endif
+
+int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
+{
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	__ep_zlp_send(drv, ep_id);
+
+	return 0;
 }
 
 void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
@@ -940,7 +993,8 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 /* USB device operations */
 const struct usb_dev_ops stm32f_usb_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
-	.ep_tx_start= (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
+//	.ep_rx_prep = (usb_dev_ep_rx_prep_t)stm32f_usb_ep_rx_prep,
+	.ep_tx_start = (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
 	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init,
 	.ep_init = (usb_dev_ep_init_t)stm32f_usb_dev_ep_init,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_usb_dev_ep_stall,

@@ -88,6 +88,20 @@ void thinkos_ev_timedwait_svc(int32_t * arg);
 
 void thinkos_ev_raise_svc(int32_t * arg);
 
+
+void thinkos_flag_alloc_svc(int32_t * arg);
+
+void thinkos_flag_free_svc(int32_t * arg);
+
+void thinkos_flag_wait_svc(int32_t * arg);
+
+void thinkos_flag_timedwait_svc(int32_t * arg);
+
+void thinkos_flag_set_svc(int32_t * arg);
+
+void thinkos_flag_clr_svc(int32_t * arg);
+
+
 void thinkos_irq_wait_svc(int32_t * arg);
 
 static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
@@ -155,6 +169,7 @@ void cm3_svc_isr(void)
 		thinkos_sleep_svc(arg);
 		break;
 
+
 #if THINKOS_MUTEX_MAX > 0
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	case THINKOS_MUTEX_ALLOC:
@@ -185,6 +200,7 @@ void cm3_svc_isr(void)
 		break;
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
+
 #if THINKOS_COND_MAX > 0
 #if THINKOS_ENABLE_COND_ALLOC
 	case THINKOS_COND_ALLOC:
@@ -214,6 +230,7 @@ void cm3_svc_isr(void)
 		thinkos_cond_broadcast_svc(arg);
 		break;
 #endif /* THINKOS_COND_MAX > 0 */
+
 
 #if THINKOS_SEMAPHORE_MAX > 0
 #if THINKOS_ENABLE_SEM_ALLOC
@@ -249,7 +266,8 @@ void cm3_svc_isr(void)
 		break;
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
-#if THINKOS_EVENT_MAX > 0
+
+#if THINKOS_ENABLE_EVENT_SYSCALL
 #if THINKOS_ENABLE_EVENT_ALLOC
 	case THINKOS_EVENT_ALLOC:
 		thinkos_ev_alloc_svc(arg);
@@ -273,7 +291,39 @@ void cm3_svc_isr(void)
 	case THINKOS_EVENT_RAISE:
 		thinkos_ev_raise_svc(arg);
 		break;
-#endif /* THINKOS_EVENT_MAX > 0 */
+#endif /* THINKOS_ENABLE_EVENT_SYSCALL */
+
+
+#if THINKOS_ENABLE_FLAG_SYSCALL
+#if THINKOS_ENABLE_FLAG_ALLOC
+	case THINKOS_FLAG_ALLOC:
+		thinkos_flag_alloc_svc(arg);
+		break;
+
+	case THINKOS_FLAG_FREE:
+		thinkos_flag_free_svc(arg);
+		break;
+#endif
+
+	case THINKOS_FLAG_WAIT:
+		thinkos_flag_wait_svc(arg);
+		break;
+
+#if THINKOS_ENABLE_TIMED_CALLS
+	case THINKOS_FLAG_TIMEDWAIT:
+		thinkos_flag_timedwait_svc(arg);
+		break;
+#endif
+
+	case THINKOS_FLAG_SET:
+		thinkos_flag_set_svc(arg);
+		break;
+
+	case THINKOS_FLAG_CLR:
+		thinkos_flag_clr_svc(arg);
+		break;
+#endif /* THINKOS_ENABLE_FLAG_SYSCALL */
+
 
 #if THINKOS_IRQ_MAX > 0
 	case THINKOS_IRQ_WAIT:
