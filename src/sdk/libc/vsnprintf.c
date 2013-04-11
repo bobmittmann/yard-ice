@@ -25,8 +25,11 @@
 
 #include <string.h>
 #include <stdarg.h>
+#include <sys/param.h>
 #include <stdio.h>
 #include <sys/file.h>
+
+#include <sys/dcclog.h>
 
 struct str_buf {
 	char * ptr;
@@ -35,16 +38,22 @@ struct str_buf {
 
 static int sprintf_write(struct str_buf * str, const void * buf, int len)
 {
+	char * src = (char *)buf;
+	char * dst = (char *)str->ptr;
 	unsigned int n;
+	char * end;
 
-	n = str->max - str->ptr;
+	end = MIN(str->max, str->ptr + len);
 
-	n = n < (unsigned int)len ? n : len;
+	while (dst != end)
+		*dst++ = *src++;
 
-	memcpy(str->ptr, buf, n);
-	str->ptr += n;
+	n = dst - str->ptr;
+	str->ptr = dst;;
 
-	return len;
+	DCC_LOG1(LOG_MSG, "n=%d", n);
+
+	return n;
 }
 
 static const struct fileop sprintf_fileop = {
@@ -59,6 +68,8 @@ int vsnprintf(char * str, size_t size, const char *fmt, va_list ap)
 
 	buf.ptr = str;
 	buf.max = str + size;
+
+	DCC_LOG1(LOG_MSG, "size=%d", size);
 
 	f.data = (void *)&buf;
 	f.op = &sprintf_fileop;

@@ -275,7 +275,7 @@ void stm32f_i2c1_er_isr(void)
 		i2c->sr1 = 0;
 		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
 		xfer.ret = -1;
-		DCC_LOG1(LOG_TRACE, "%d AF", i2c_irq_cnt);
+		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
 //		__thinkos_ev_timed_raise(xfer.event);
 		__thinkos_ev_raise(xfer.event);
 	}
