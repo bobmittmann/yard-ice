@@ -28,11 +28,11 @@
 /* TLV320 Control Register 2 */
 #define TLV320_CR2     0x02
 
-#define CR2_TURBO      (0 << 7)
+#define CR2_TURBO      (1 << 7)
 
-#define CR2_DIFBP      (0 << 6)
+#define CR2_DIFBP      (1 << 6)
 
-#define CR2_I2CX_SET(A)  (((A) & 0x7) << 5)
+#define CR2_I2CX_SET(A)  (((A) & 0x7) << 3)
 
 #define CR2_HPC_I2C    (0 << 0)
 #define CR2_HPC_S2C    (1 << 0)

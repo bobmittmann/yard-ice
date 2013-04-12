@@ -368,7 +368,7 @@ Note: Not used for the I2S mode. */
 /* Bit 7 - PCM frame synchronization */
 #define SPI_PCMSYNC (1 << 7)
 #define SPI_PCMSYNC_SHORT (0 << 7)
-#define SPI_PCMSYNC_LONG (0 << 7)
+#define SPI_PCMSYNC_LONG (1 << 7)
 /*	0: Short frame synchronization
 	1: Long frame synchronization
 	Note: This bit has a meaning only if I2SSTD = 11 (PCM standard is used)

@@ -44,6 +44,7 @@
 #include "i2s.h"
 #include "tlv320.h"
 #include "trace.h"
+#include "vt100.h"
 
 /* ----------------------------------------------------------------------
  * Supervisory task
@@ -66,10 +67,9 @@ void system_reset(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-
+	thinkos_sleep(10);
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
 	for(;;);
-
 }
 
 
@@ -78,11 +78,12 @@ int32_t phif_addr = 0x55;
 int32_t codec_addr = 64;
 
 #define PHIF_ID_REG 0
-#define PHIF_ADC_REG 2
-#define PHIF_LED_REG 12
-#define PHIF_RLY_REG 13
-#define PHIF_VR0_REG 14
-#define PHIF_VR1_REG 15
+#define PHIF_VER_REG 2
+#define PHIF_ADC_REG 4
+#define PHIF_LED_REG 14
+#define PHIF_RLY_REG 15
+#define PHIF_VR0_REG 16
+#define PHIF_VR1_REG 17
 
 #define LINE_TROUBLE_OPEN 0
 #define LINE_TROUBLE_SHORT 1
@@ -90,10 +91,93 @@ int32_t codec_addr = 64;
 #define LINE_OFF_HOOK 3
 
 struct {
-	int sup_st;	
+	int sup_st;
+	bool connected;
 } line[5];
 
 uint16_t adc[5];
+
+struct {
+	uint8_t led;
+	uint8_t relay;
+	uint8_t vr[2];
+} cache;
+
+int line_set_connect(int line_idx, bool connect)
+{
+	uint8_t pkt[3];
+	unsigned int led;
+	unsigned int relay;
+	int ret;
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	led = cache.led;
+	relay = cache.relay;
+
+	if (connect) {
+		led |= (1 << line_idx);
+		relay |= (1 << line_idx);
+	} else {
+		led &= ~(1 << line_idx);
+		relay &= ~(1 << line_idx);
+	}
+
+	pkt[0] = PHIF_LED_REG;
+	pkt[1] = led;
+	pkt[2] = relay;
+
+	if ((ret = i2c_master_wr(phif_addr, pkt, 3)) > 0) {
+		cache.led = led;
+		cache.relay = relay;
+		line[line_idx].connected = connect;
+	} else {
+		tracef("%s(): i2c_master_wr() failed!", __func__);
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return ret;
+}
+
+struct {
+	uint8_t impedance;
+	uint8_t gain;
+} hybrid;
+
+int hybrid_adjust(int impedance, int gain)
+{
+
+	uint8_t pkt[3];
+	int ret;
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	if (impedance < 0 )
+		impedance = 0;
+	else if (impedance > 63)
+		impedance = 63;
+
+	if (gain < 0)
+		gain = 0;
+	else if (gain > 63)
+		gain = 63;
+
+	pkt[0] = PHIF_VR0_REG;
+	pkt[1] = impedance;
+	pkt[2] = gain;
+
+	if ((ret = i2c_master_wr(phif_addr, pkt, 3)) > 0) {
+		hybrid.impedance = impedance;;
+		hybrid.gain = gain;
+	} else {
+		tracef("%s(): i2c_master_wr() failed!", __func__);
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return ret;
+}
 
 int connect_off_hok(void)
 {
@@ -157,6 +241,19 @@ int hangup_all(void)
 	thinkos_mutex_unlock(i2c_mutex);
 
 	return 0;
+}	
+
+void line_toggle(int line_idx)
+{
+	bool connect;
+
+	printf("Line %d ", line_idx + 1);
+
+	connect = line[line_idx].connected ? false : true;
+
+	line_set_connect(line_idx, connect);
+
+	printf("%s.\n", line[line_idx].connected ? "connected" : "disconnected");
 }
 
 void vr_set(unsigned int val0, unsigned int val1)
@@ -308,16 +405,19 @@ void tlv320_init(void)
 {
 	printf("%s()... \n", __func__);
 
-	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS | CR3_OSR_128 | CR3_ASRF_1);
-	thinkos_sleep(1);
+	/* reset the device */
+	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS);
+	tlv320_wr(0, 0);
+	tlv320_wr(0, 0);
+	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
+	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS | CR3_OSR_256 | CR3_ASRF_1);
 	tlv320_wr(4, CR4_M_SET(44));
 	tlv320_wr(4, CR4_NP_SET(1, 2));
 	tlv320_wr(5, CR5A_ADGAIN_DB(0));
 	tlv320_wr(5, CR5B_DAGAIN_DB(0));
 	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_0DB);
 	tlv320_wr(6, CR3_AINSEL_INP_M1);
-	tlv320_wr(1, CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
-	tlv320_wr(1, CR1_CX | CR1_FIR | CR1_BIASV_LO | CR1_DAC16);
+	tlv320_wr(1, CR1_CX | CR1_IIR | CR1_BIASV_LO | CR1_DAC16);
 };
 
 uint32_t supervisor_stack[256];
@@ -436,6 +536,208 @@ void stm32f_tim2_isr(void)
 	tracef("%s(): irq_cnt=%d", __func__, ++tim_irq_cnt);
 }
 
+int i2s_dac_tone = 0;
+int i2s_dac_gain = 0;
+
+int tone_amp_ltu[] = {
+	    0,
+	  127,
+	  255,
+	  511,
+ 	 1023,
+	 2047,
+	 4095,
+	 8191,
+	16383,
+	32767
+};
+
+void dac_gain_step(int d)
+{
+	i2s_dac_gain += d;
+
+	if (i2s_dac_gain < 0) {
+		i2s_dac_gain = 0;
+	} else if (i2s_dac_gain > 9) {
+		i2s_dac_gain = 9;
+	}
+
+	i2s_tone_set(i2s_dac_tone, tone_amp_ltu[i2s_dac_gain]);
+
+	printf("DAC gain: %d\n", i2s_dac_gain);
+}
+
+void dac_tone_cycle(void)
+{
+	unsigned int freq;
+
+	i2s_dac_tone = (i2s_dac_tone == 10) ? 0 : i2s_dac_tone + 1;
+
+	freq = i2s_tone_set(i2s_dac_tone, tone_amp_ltu[i2s_dac_gain]);
+
+	printf("DAC tone: %dHz.\n", freq);
+}
+
+void hybrid_step_impedance(int d)
+{
+	hybrid_adjust(hybrid.impedance + d, hybrid.gain);
+	printf("Impedance: %d\n", (hybrid.impedance * 5000) / 63);
+}
+
+void hybrid_step_gain(int d)
+{
+	unsigned int gain;
+
+	hybrid_adjust(hybrid.impedance, hybrid.gain + d);
+	gain = 100 + (5000 * hybrid.gain) / (25 * 63);
+	printf("Gain: %d.%02d\n", gain / 100, gain % 100);
+}
+
+void show_menu(void)
+{
+	printf("\n");
+	printf(" Options:\n");
+	printf(" --------\n");
+	printf("   1..5 - Toggle channel\n");
+	printf("   9 0  - Hybrid impedance\n");
+	printf("   - =  - Hybrid gain\n");
+	printf("   r    - dump I2S RX buffer\n");
+	printf("   t    - dump I2S TX buffer\n");
+	printf("   d    - DAC tone select\n");
+	printf("   [ ]  - DAC tone gain\n");
+	printf("   s    - system reset\n");
+
+	printf("\n");
+}
+
+struct {
+	volatile int chan;
+	volatile int count;
+	int flag;
+} spectrum_analyzer;
+
+void spectrum_analyzer_task(void)
+{
+	while (1) {
+		thinkos_flag_wait(spectrum_analyzer.flag);
+		thinkos_flag_clr(spectrum_analyzer.flag);
+
+		printf(VT100_CLRSCR);
+
+		while (spectrum_analyzer.count) {
+
+			if (spectrum_analyzer.chan == 1)
+				i2s_rx_analyze();
+			else
+				i2s_tx_analyze();
+
+			spectrum_analyzer.count--;
+		};
+	}
+}
+
+void shell_task(void)
+{
+	int c;
+
+	printf("-------------\n");
+	printf(" Audio Shell \n");
+	printf("-------------\n");
+	printf("\n");
+
+	for(;;) {
+		c = getchar();
+		switch (c) {
+
+		case '\n':
+			show_menu();
+			break;
+
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+			line_toggle(c - '1');
+			break;
+
+		case 'R':
+			i2s_rx_dump();
+			break;
+		case 'r':
+			spectrum_analyzer.chan = 1;
+			spectrum_analyzer.count = 10000;
+			thinkos_flag_set(spectrum_analyzer.flag);
+			break;
+		case 'T':
+			i2s_tx_dump();
+			break;
+		case 't':
+			spectrum_analyzer.chan = 0;
+			spectrum_analyzer.count = 10000;
+			thinkos_flag_set(spectrum_analyzer.flag);
+			break;
+		case 'b':
+			spectrum_analyzer.count = 0;
+			break;
+		case 'd':
+			dac_tone_cycle();
+			break;
+		case 's':
+			system_reset();
+			break;
+		case '[':
+			dac_gain_step(-1);
+			break;
+		case ']':
+			dac_gain_step(1);
+			break;
+
+		case '9':
+			hybrid_step_impedance(-1);
+			break;
+		case '0':
+			hybrid_step_impedance(1);
+			break;
+
+		case '-':
+			hybrid_step_gain(-1);
+			break;
+		case '=':
+			hybrid_step_gain(1);
+			break;
+		}
+	}
+}
+
+uint32_t spectrum_analyzer_stack[1024];
+
+void spectrum_analyzer_init(void)
+{
+	DCC_LOG(LOG_TRACE, "thinkos_thread_create()");
+
+	spectrum_analyzer.flag = thinkos_flag_alloc();
+
+	thinkos_thread_create((void *)spectrum_analyzer_task, (void *)NULL,
+						  spectrum_analyzer_stack, 
+						  sizeof(spectrum_analyzer_stack), 
+						  THINKOS_OPT_PRIORITY(7) | THINKOS_OPT_ID(7));
+
+	thinkos_sleep(10);
+}
+
+uint32_t shell_stack[128];
+
+void shell_init(void)
+{
+	DCC_LOG(LOG_TRACE, "thinkos_thread_create()");
+	thinkos_thread_create((void *)shell_task, (void *)NULL,
+						  shell_stack, sizeof(shell_stack), 
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
+
+	thinkos_sleep(10);
+}
+
 void timer_init(uint32_t freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -541,6 +843,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "8. i2s_enable()");
 	tracef("i2s_enable()");
 	i2s_enable();
+
+	DCC_LOG(LOG_TRACE, "17. shell_init()");
+	spectrum_analyzer_init();
+	shell_init();
 
 //	timer_init(500);
 

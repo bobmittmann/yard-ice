@@ -20,14 +20,43 @@ tab_lst = []
 
 def make_tab(rate, lvl, offs, typ, nm, freq):
 	i = 0
-	if ((rate % freq) == 0):
+
+
+	if (freq == 0):
+		n = 2
 		over = 1
+		err = 0;
 	else:
-	 	over = 4
+		over = 1;
 
-	n = ((over * rate) + (freq / 2)) / freq
+		freq = freq * 1.0
 
-	print "static const %s %s[] = /* %d Hz */" % (typ, nm, freq)
+		x = ((over * rate) / freq);
+		err = abs(round(x) - x);
+
+		over_min = over
+		x_min = x;
+		err_min = err;
+
+		while (over < 16) & (err > 0.05):
+			over = over + 1
+			x = ((over * rate) / freq);
+			err = abs(round(x) - x);
+			if (err < err_min):
+				over_min = over
+				err_min = err
+				x_min = x
+
+
+		over = over_min
+		err = err_min
+		x = x_min
+
+		n = round(x)
+
+	print "/* over=%d err=%f freq=%.3f */" % (over, err, (over * rate) / n)
+
+	print "static const %s %s[] = /* %.3f Hz */" % (typ, nm, freq)
 	print "{"
 
 
@@ -55,9 +84,9 @@ def make_tab(rate, lvl, offs, typ, nm, freq):
 def main():
 
 	rate = 8000
-	lvl = 16384;
-	offs = 0;
-	typ = "uint16_t";
+	offs = 0
+	lvl = 32768
+	typ = "int16_t"
 
 	print "#ifndef __WAVETAB_H__"
 	print "#define __WAVETAB_H__"
@@ -67,39 +96,29 @@ def main():
 	print "#define SAMPLE_RATE %d" % rate
 	print ""
 
+
+	make_tab(rate, lvl, offs, typ, "wave_dc", 0)
 	make_tab(rate, lvl, offs, typ, "wave_a3", 440)
-#	make_tab("c3", 523.251, rate)
+	make_tab(rate, lvl, offs, typ, "wave_b3", 493.883)
+	make_tab(rate, lvl, offs, typ, "wave_c3", 523.251)
 	make_tab(rate, lvl, offs, typ, "wave_d3", 587.330)
+	make_tab(rate, lvl, offs, typ, "wave_e3", 698.456)
+	make_tab(rate, lvl, offs, typ, "wave_f3", 739.989)
+	make_tab(rate, lvl, offs, typ, "wave_g3", 783.991)
 	make_tab(rate, lvl, offs, typ, "wave_1k", 1000)
 	make_tab(rate, lvl, offs, typ, "wave_2k", 2000)
 	make_tab(rate, lvl, offs, typ, "wave_3k", 3000)
-	make_tab(rate, lvl, offs, typ, "wave_4k", 4000)
-#	make_tab("g3", 783.991, rate)
-#	make_tab("a4", 880, rate)
-#	make_tab("a4", 4400, rate)
-#	make_tab("a4s", 932, rate)
-#	make_tab("b4", 988, rate)
-#	make_tab("c4", 1046, rate)
-#	make_tab("c4s", 1108, rate)
-#	make_tab("d4", 1175, rate)
-#	make_tab("d4s", 1244, rate)
-#	make_tab("e4", 1318, rate)
-#	make_tab("f4", 1397, rate)
-#	make_tab("f4s", 1480, rate)
-#	make_tab("g4", 1568, rate)
-#	make_tab("g4s", 1661, rate)
-#	make_tab("sin1khz", 1000, rate)
 
 	print ""
 
-	print "struct tone {"
+	print "static const struct {"
 	print "\tconst %s * buf;" % (typ)
 	print "\tuint32_t len;"
-	print "};"
-	print ""
-	print "static const struct tone wave_lut[] = {"
+	print "\tuint32_t freq;"
+	print "} wave_lut[] = {"
 	for e in tab_lst:
-		print "\t{ .buf = %s, .len = sizeof(%s) / sizeof(%s) }," % (e[0], e[0], typ)
+		freq = e[1];
+		print "\t{ .buf = %s, .len = sizeof(%s)/sizeof(%s), .freq = %d }," % (e[0], e[0], typ, freq)
 	print "};"
 	print ""
 

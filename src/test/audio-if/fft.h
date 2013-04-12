@@ -1,5 +1,5 @@
 /* 
- * File:	 i2s.h
+ * File:	 fft.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,31 +20,35 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __I2S_H__
-#define __I2S_H__
+#ifndef __FFT_H__
+#define __FFT_H__
+
+#include "sndbuf.h"
+#include "fixpt.h"
+
+#define FFT_LEN 256
+
+struct spectrum {
+	uint32_t out[FFT_LEN / 2];
+	sndbuf_t * frm[FFT_LEN / SNDBUF_LEN];
+	uint32_t frm_cnt;
+	uint32_t run_cnt;
+	uint32_t max;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void i2s_slave_init(void);
+void fftR4(cplx16_t y[], cplx16_t x[], int n);
 
-void i2s_enable(void);
+void ifftR4(cplx16_t y[], cplx16_t x[], int n);
 
-void i2s_stat(void);
-
-void i2s_rx_dump(void);
-
-void i2s_tx_dump(void);
-
-void i2s_tx_analyze(void);
-
-void i2s_rx_analyze(void);
-
-int i2s_tone_set(int tone, int32_t amp);
+void spectrum(int16_t out[], int16_t in[]);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __I2S_H__ */
+#endif /* __FFT_H__ */
+
