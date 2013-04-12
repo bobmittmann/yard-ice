@@ -32,6 +32,8 @@
 
 #include <sys/dcclog.h>
 
+#include "trace.h"
+
 /* ----------------------------------------------------------------------
  * I2C
  * ----------------------------------------------------------------------
@@ -42,7 +44,7 @@ struct i2c_xfer {
 	volatile int32_t rem;
 	volatile int ret;
 	uint32_t addr;
-	int32_t event;
+	int32_t flag;
 };
 
 struct i2c_xfer xfer;
@@ -97,7 +99,7 @@ void i2c_master_init(unsigned int scl_freq)
 	/* I2C TRISE register (I2C_TRISE) */
 	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
 
-	xfer.event = thinkos_ev_alloc();
+	xfer.flag = thinkos_flag_alloc();
 
 	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
 	/* set event IRQ to very high priority */
@@ -173,9 +175,9 @@ void stm32f_i2c1_ev_isr(void)
 		i2c->dr = xfer.addr;
 
 		if (xfer.addr & 1) {
-			DCC_LOG1(LOG_INFO, "%d SB (recv)", i2c_irq_cnt);
+			DCC_LOG1(LOG_TRACE, "%d SB (recv)", i2c_irq_cnt);
 		} else {
-			DCC_LOG1(LOG_INFO, "%d SB (xmit)", i2c_irq_cnt);
+			DCC_LOG1(LOG_TRACE, "%d SB (xmit)", i2c_irq_cnt);
 		}
 	}
 
@@ -207,13 +209,14 @@ void stm32f_i2c1_ev_isr(void)
 
 	if (sr1 & I2C_RXNE) {
 		DCC_LOG1(LOG_INFO, "%d RXNE", i2c_irq_cnt);
+		trace("I2C RXNE");
 do_recv:
 		*xfer.ptr++ = i2c->dr;
 		xfer.rem--;
 		if (xfer.rem == 0) {
 			xfer.ret = xfer.cnt;
 //			__thinkos_ev_timed_raise(xfer.event);
-			__thinkos_ev_raise(xfer.event);
+			__thinkos_flag_signal(xfer.flag);
 		} else if (xfer.rem == 1) {
 			/* Clear ACK */
 			i2c->cr1 = I2C_STOP | I2C_PE; 
@@ -238,7 +241,8 @@ do_xmit:
 			xfer.ret = xfer.cnt;
 			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
 //			__thinkos_ev_timed_raise(xfer.event);
-			__thinkos_ev_raise(xfer.event);
+//			trace("I2C TXE ?");
+			__thinkos_flag_signal(xfer.flag);
 		} 
 		xfer.rem--;
 //		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
@@ -259,15 +263,17 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "BERR");
 //		__thinkos_ev_timed_raise(xfer.event);
-		__thinkos_ev_raise(xfer.event);
+			trace("I2C BERR!");
+		__thinkos_flag_signal(xfer.flag);
 	}
 
 	if (sr1 & I2C_ARLO) {
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "ARLO");
+		trace("I2C ARLO!");
 //		__thinkos_ev_timed_raise(xfer.event);
-		__thinkos_ev_raise(xfer.event);
+		__thinkos_flag_signal(xfer.flag);
 	}
 
 	if (sr1 & I2C_AF) {
@@ -276,8 +282,9 @@ void stm32f_i2c1_er_isr(void)
 		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
 		xfer.ret = -1;
 		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
+//		trace("I2C AF!");
 //		__thinkos_ev_timed_raise(xfer.event);
-		__thinkos_ev_raise(xfer.event);
+		__thinkos_flag_signal(xfer.flag);
 	}
 
 	if (sr1 & I2C_OVR) {
@@ -300,16 +307,16 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
-	__thinkos_critical_level(I2C_IRQ_PRIORITY);
+//	tracef("addr=0x%02x len=%d", addr, len);
+
+	__thinkos_flag_clr(xfer.flag);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-//	while ((ret = xfer.ret) == -2) {
-		__thinkos_critical_ev_wait(xfer.event, I2C_IRQ_PRIORITY);
-		ret = xfer.ret;
+	thinkos_flag_wait(xfer.flag);
+//	tracef("ret=%d", xfer.ret);
 
-//	}
-	__thinkos_critical_exit();
+	ret = xfer.ret;
 
 #if 0
 	while ((ret = xfer.ret) == -2) {
@@ -345,18 +352,17 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 	xfer.addr = (addr << 1) | 1;
 	xfer.ret = -2;
 
-	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
+	__thinkos_flag_clr(xfer.flag);
 
-	__thinkos_critical_level(I2C_IRQ_PRIORITY);
+	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-//	while ((ret = xfer.ret) == -2) {
-		__thinkos_critical_ev_wait(xfer.event, I2C_IRQ_PRIORITY);
-		ret = xfer.ret;
-//	}
+	trace("wait");
+	thinkos_flag_wait(xfer.flag);
+	trace("wakeup");
 
-	__thinkos_critical_exit();
+	ret = xfer.ret;
 
 
 #if 0

@@ -80,6 +80,10 @@ struct thinkos_context {
 #define THINKOS_THREADS_MAX 8
 #endif
 
+#ifndef THINKOS_EXCEPT_STACK_SIZE
+#define THINKOS_EXCEPT_STACK_SIZE 256
+#endif
+
 #ifndef THINKOS_IRQ_MAX 
 #define THINKOS_IRQ_MAX 80
 #endif
@@ -445,7 +449,7 @@ struct thinkos_idle {
 } __attribute__ ((aligned (8)));
 
 struct thinkos_except_and_idle {
-	uint32_t res[64 - 12];
+	uint32_t res[(THINKOS_EXCEPT_STACK_SIZE / 4) - 12];
 	union {
 		struct thinkos_context ctx;
 		struct {

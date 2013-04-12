@@ -5,7 +5,7 @@
 
 #define SAMPLE_RATE 8000
 
-static const uint16_t wave_a3[] = /* 440 Hz */
+static const int16_t wave_a3[] = /* 440 Hz */
 {
 	     0,    5530,   10410,   14069,   16077,   16198,   14417,  10945,
 	  6188,     705,   -4861,   -9856,  -13695,  -15926,  -16288, -14739,
@@ -19,7 +19,7 @@ static const uint16_t wave_a3[] = /* 440 Hz */
 	 -5530, 
 };
 
-static const uint16_t wave_d3[] = /* 587 Hz */
+static const int16_t wave_d3[] = /* 587 Hz */
 {
 	     0,    7230,   12976,   16058,   15843,   12374,    6365,   -951,
 	 -8071,  -13535,  -16219,  -15574,  -11730,   -5479,    1898,   8885,
@@ -30,30 +30,30 @@ static const uint16_t wave_d3[] = /* 587 Hz */
 	   830,   -6477,  -12453,  -15873,  -16034,  -12902,   -7122, 
 };
 
-static const uint16_t wave_1k[] = /* 1000 Hz */
+static const int16_t wave_1k[] = /* 1000 Hz */
 {
 	     0,   11585,   16383,   11585,       0,  -11585,  -16383, -11585,
 };
 
-static const uint16_t wave_2k[] = /* 2000 Hz */
+static const int16_t wave_2k[] = /* 2000 Hz */
 {
 	     0,   16383,       0,  -16383, 
 };
 
-static const uint16_t wave_3k[] = /* 3000 Hz */
+static const int16_t wave_3k[] = /* 3000 Hz */
 {
 	     0,   12381,  -16216,    8857,    4616,  -14903,   14903,  -4616,
 	 -8857,   16216,  -12381, 
 };
 
-static const uint16_t wave_4k[] = /* 4000 Hz */
+static const int16_t wave_4k[] = /* 4000 Hz */
 {
 	     0,       0, 
 };
 
 
 struct tone {
-	const uint16_t * buf;
+	const int16_t * buf;
 	uint32_t len;
 };
 

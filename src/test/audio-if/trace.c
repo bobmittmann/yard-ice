@@ -37,7 +37,7 @@
 #include <sys/dcclog.h>
 
 #ifndef TRACE_RING_SIZE
-#define TRACE_RING_SIZE 64
+#define TRACE_RING_SIZE 128
 #endif
 
 #ifndef TRACE_MAX_MSG_LEN
@@ -45,7 +45,7 @@
 #endif
 
 #ifndef TRACE_FMT_BUF_LEN 
-#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 2)
+#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 4)
 #endif
 
 static struct {
@@ -212,7 +212,7 @@ void trace_print(FILE * f, int flush)
 	uint32_t us;
 	uint32_t pos;
 	char * s;
-	short tail;
+	uint32_t tail;
 
 	tm = trace_ring.tm;
 
@@ -224,7 +224,7 @@ void trace_print(FILE * f, int flush)
 		ms = dt / 1000;
 		us = dt - (ms * 1000);
 
-		fprintf(f, "%7d.%03d: %s\n", ms, us, s);
+		fprintf(f, "%5d %7d.%03d: %s\n", tail, ms, us, s);
 	}
 
 	
