@@ -1,5 +1,5 @@
 /* 
- * File:	 i2s.h
+ * File:	 fft.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,31 +20,23 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __I2S_H__
-#define __I2S_H__
+#ifndef __VT100_H__
+#define __VT100_H__
+
+#define ESC "\033"
+
+#define VT100_GOTO ESC "[%d;%df"
+
+#define VT100_CLRSCR ESC "[2J"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void i2s_slave_init(void);
-
-void i2s_enable(void);
-
-void i2s_stat(void);
-
-void i2s_rx_dump(void);
-
-void i2s_tx_dump(void);
-
-void i2s_tx_analyze(void);
-
-void i2s_rx_analyze(void);
-
-int i2s_tone_set(int tone, int32_t amp);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __I2S_H__ */
+#endif /* __VT100_H__ */
+

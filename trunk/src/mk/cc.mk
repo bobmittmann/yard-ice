@@ -35,11 +35,19 @@ $(DEPDIR)/%.d : $(OUTDIR)/%.S
 	$(ACTION) "DEP .S 2: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
+$(DEPDIR)/%.d : $(OUTDIR)/%.s
+	$(ACTION) "DEP .S 2: $@"
+	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
+
 $(OUTDIR)/%.o : $(OUTDIR)/%.c $(DEPDIR)/%.d
 	$(ACTION) "CC 2: $@"
 	$(Q)$(compile) -o $@ -c $<
 
 $(OUTDIR)/%.o : $(OUTDIR)/%.S $(DEPDIR)/%.d
+	$(ACTION) "AS: $@"
+	$(Q)$(assemble) -o $@ -c $<
+
+$(OUTDIR)/%.o : $(OUTDIR)/%.s $(DEPDIR)/%.d
 	$(ACTION) "AS: $@"
 	$(Q)$(assemble) -o $@ -c $<
 
@@ -53,11 +61,19 @@ $(DEPDIR)/%.d : %.S
 	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
+$(DEPDIR)/%.d : %.s
+	$(ACTION) "DEP .S 1: $@"
+	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
+
 $(OUTDIR)/%.o : %.c $(DEPDIR)/%.d
 	$(ACTION) "CC 1: $@"
 	$(Q)$(compile) -o $@ -c $<
 
 $(OUTDIR)/%.o : %.S $(DEPDIR)/%.d
+	$(ACTION) "AS: $@"
+	$(Q)$(assemble) -o $@ -c $<
+
+$(OUTDIR)/%.o : %.s $(DEPDIR)/%.d
 	$(ACTION) "AS: $@"
 	$(Q)$(assemble) -o $@ -c $<
 

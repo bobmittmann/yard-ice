@@ -120,6 +120,18 @@ int thinkos_ev_timedwait(int ev, unsigned int ms);
 int thinkos_ev_raise(int ev);
 
 
+int thinkos_flag_alloc(void);
+
+int thinkos_flag_free(int flag);
+
+int thinkos_flag_wait(int flag);
+
+int thinkos_flag_timedwait(int flag, unsigned int ms);
+
+int thinkos_flag_clr(int flag);
+
+int thinkos_flag_set(int flag);
+
 int thinkos_irq_wait(int irq);
 
 #ifdef __cplusplus

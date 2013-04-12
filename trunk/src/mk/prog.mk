@@ -130,6 +130,12 @@ libs-all: $(LIBDIRS_ALL)
 
 libs-clean: $(LIBDIRS_CLEAN)
 
+bin_path:
+	@echo $(PROG_BIN)
+
+elf_path:
+	@echo $(PROG_ELF)
+
 $(LIBDIRS_ALL):
 	$(ACTION) "Building : $@"
 	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-all=%));\
