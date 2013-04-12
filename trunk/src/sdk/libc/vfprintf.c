@@ -296,8 +296,11 @@ print_buf:
 			cnt += w - n;
 		}
 
-		if (flags & SIGN)
+		if (flags & SIGN) {
 			f->op->write(f->data, buf, 1);
+			cnt++;
+		}
+
 		f->op->write(f->data, cp, n);
 		cnt += n;
 

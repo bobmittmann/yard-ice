@@ -424,6 +424,54 @@ int ui_task(void)
 		thinkos_sleep(100);
 	}
 }
+
+uint32_t tim_irq_cnt;
+
+void stm32f_tim2_isr(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM2;
+	/* Clear interrupt flags */
+	tim->sr = 0;
+
+	tracef("%s(): irq_cnt=%d", __func__, ++tim_irq_cnt);
+}
+
+void timer_init(uint32_t freq)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32f_tim * tim = STM32F_TIM2;
+	uint32_t div;
+	uint32_t pre;
+	uint32_t n;
+
+	/* get the total divisior */
+	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	/* get the minimum pre scaler */
+	pre = (div / 65536) + 1;
+	/* get the reload register value */
+	n = (div * 2 + pre) / (2 * pre);
+
+	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
+	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
+
+	/* Timer clock enable */
+	rcc->apb1enr |= RCC_TIM2EN;
+	
+	/* Timer configuration */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
+	tim->ccr1 = tim->arr - 2;
+
+	/* Enable interrupt */
+	cm3_irq_enable(STM32F_IRQ_TIM2);
+
+	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+}
+
 int main(int argc, char ** argv)
 {
 	int i;
@@ -449,14 +497,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. leds_init()");
 	leds_init();
 
-	DCC_LOG(LOG_TRACE, "6. i2c_master_init()");
-	i2c_master_init(100000);
 
 	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
 	i2s_slave_init();
 
+	DCC_LOG(LOG_TRACE, "6. i2c_master_init()");
+	i2c_master_init(100000);
+
 	i2c_mutex = thinkos_mutex_alloc();
-	printf("I2C mutex=%d\n", i2c_mutex);
+	tracef("I2C mutex=%d\n", i2c_mutex);
 
 	printf("\n\n");
 	printf("\n\n");
@@ -465,43 +514,42 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
+	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
+						  supervisor_stack, sizeof(supervisor_stack), 
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
 	DCC_LOG(LOG_TRACE, "8. i2c_master_enable()");
 	i2c_master_enable();
 
 	thinkos_sleep(100);
 
+	tracef("i2c_bus_scan()");
 	i2c_bus_scan();
 
+	tracef("tlv320_init()");
 	tlv320_init();
 
-	DCC_LOG(LOG_TRACE, "8. i2s_enable()");
-	i2s_enable();
-
-	tracef("1.");
-	tracef("2.");
-	thinkos_sleep(10);
-
-	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
-						  supervisor_stack, sizeof(supervisor_stack), 
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-
-	thinkos_thread_create((void *)ui_task, (void *)NULL,
-						  ui_stack, sizeof(ui_stack), 
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+//	thinkos_thread_create((void *)ui_task, (void *)NULL,
+//						  ui_stack, sizeof(ui_stack), 
+//						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 /*
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 */
 
+	DCC_LOG(LOG_TRACE, "8. i2s_enable()");
+	tracef("i2s_enable()");
+	i2s_enable();
+
+//	timer_init(500);
+
+//	supervisor_task();
+
 	for (i = 0; ; ++i) {
-		thinkos_sleep(1000);
-		tracef("Msg1: %d!", i);
-		tracef("Msg2: %d!", i);
-		trace("The quick...");
-		trace("brown fox...");
-		trace("jumps over..");
-		trace("the lazy dog.");
+//		thinkos_sleep(1);
+//		tracef("alive!");
+//		printf("[alive!]");
 //		vr_set(i, 2 * i);
 	}
 

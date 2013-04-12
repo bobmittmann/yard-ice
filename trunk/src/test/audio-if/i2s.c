@@ -29,6 +29,7 @@
 #include <stdbool.h>
 
 #include "wavetab.h"
+#include "trace.h"
 
 #include <sys/dcclog.h>
 
@@ -59,6 +60,8 @@ void tonegen_apply(struct tonegen * gen, int16_t frm[])
 		if (++gen->pos == gen->len)
 			gen->pos = 0;
 	}
+
+//	DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
 }
 
 void blank_apply(int16_t frm[])
@@ -91,13 +94,25 @@ void pulse_apply(int16_t frm[])
 	}
 }
 
-struct tonegen tonegen;
-
-void i2s_test_init(void)
+void pattern_apply(int16_t frm[])
 {
-	tonegen_init(&tonegen, 16384, WAVE_A3);
+	int i;
+
+	for (i = 0; i < AUDIO_FRAME_LEN; i += 8) {
+		frm[i] = 0x4000;
+		frm[i + 1] = 0x4000;
+		frm[i + 2] = 0x4000;
+		frm[i + 3] = 0x4000;
+
+		frm[i + 4] = 0x0000;
+		frm[i + 5] = 0x0000;
+		frm[i + 6] = 0x0000;
+		frm[i + 7] = 0x0000;
+	}
 }
 
+
+struct tonegen tonegen;
 
 #define I2S2_WS     STM32F_GPIOB, 12
 #define I2S2_CK     STM32F_GPIOB, 13
@@ -110,20 +125,35 @@ void i2s_test_init(void)
 
 #define I2S_DMA_TX_STRM 4
 #define I2S_DMA_TX_CHAN 2
-//#define I2S_DMA_TX_CHAN 0
 #define I2S_DMA_TX_IRQ STM32F_IRQ_DMA1_STREAM4
-
 
 struct {
 	struct {
-		struct stm32f_dmactl dma;
+//		struct stm32f_dmactl dma;
 		int16_t buf[2][AUDIO_FRAME_LEN];
 	} tx;
 	struct {
-		struct stm32f_dmactl dma;
+//		struct stm32f_dmactl dma;
 		int16_t buf[2][AUDIO_FRAME_LEN];
 	} rx;
-} i2s;
+} i2s; 
+
+void i2s_test_init(void)
+{
+	int i;
+
+	tonegen_init(&tonegen, 16384, WAVE_1K);
+
+	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
+		i2s.tx.buf[0][i] =  wave_1k[i % 8];
+//		i2s.tx.buf[1][i] =  wave_1k[i % 8];
+		i2s.tx.buf[1][i] =  0;
+	}
+
+	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
+		tracef("%d", i2s.tx.buf[0][i]);
+	}
+}
 
 void i2s_slave_init(void)
 {
@@ -132,10 +162,8 @@ void i2s_slave_init(void)
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_dma * dma = STM32F_DMA1;
 
-	fprintf(stderr, "%s...\n", __func__);
-
-	fprintf(stderr, "%s SPI=0x%08x\n", __func__, (uint32_t)spi);
-	fprintf(stderr, "%s I2S_EXT=0X%08x\n", __func__, (uint32_t)i2s_ext);
+	tracef("%s SPI=0x%08x", __func__, (uint32_t)spi);
+	tracef("%s I2S_EXT=0X%08x", __func__, (uint32_t)i2s_ext);
 
 	stm32f_gpio_mode(I2S2_WS, ALT_FUNC, SPEED_MED);
 	stm32f_gpio_mode(I2S2_CK, ALT_FUNC, SPEED_MED);
@@ -147,8 +175,26 @@ void i2s_slave_init(void)
 	stm32f_gpio_af(I2S2EXT_SD, GPIO_AF6);
 	stm32f_gpio_af(I2S2_SD, GPIO_AF5);
 
+	/* DMA clock enable */
+	rcc->ahb1enr |= RCC_DMA1EN;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* Disable DMA channel */
+	dma->s[I2S_DMA_RX_STRM].cr = 0;
+	while (dma->s[I2S_DMA_RX_STRM].cr & DMA_EN); 
+
+	dma->s[I2S_DMA_TX_STRM].cr = 0;
+	while (dma->s[I2S_DMA_TX_STRM].cr & DMA_EN); 
+
+	DCC_LOG(LOG_TRACE, "2.");
+
 	/* Enable SPI clock */
 	rcc->apb1enr |= RCC_SPI2EN;
+
+	/* disable peripherals */
+	spi->i2scfgr |= SPI_I2SE;
+	i2s_ext->i2scfgr |= SPI_I2SE;
 
 	spi->cr1 = 0;
 	spi->cr2 = 0;
@@ -158,6 +204,8 @@ void i2s_slave_init(void)
 	spi->i2spr = 0;
 	spi->cr2 = SPI_RXDMAEN;
 
+	DCC_LOG(LOG_TRACE, "3.");
+
 	i2s_ext->cr1 = 0;
 	i2s_ext->cr2 = 0;
 	i2s_ext->i2scfgr = SPI_I2SMOD | SPI_I2SCFG_SLV_XMT | 
@@ -166,9 +214,7 @@ void i2s_slave_init(void)
 	i2s_ext->i2spr = 0;
 	i2s_ext->cr2 = SPI_TXDMAEN;
 
-
-	/* DMA clock enable */
-	rcc->ahb1enr |= RCC_DMA1EN;
+	DCC_LOG(LOG_TRACE, "4.");
 
 #if 0
 	/* configure RX DMA stream */
@@ -197,44 +243,41 @@ void i2s_slave_init(void)
 	i2s.tx.dma.strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
 #endif
 
-	/* Disable DMA channel */
-	dma->s[I2S_DMA_RX_STRM].cr = 0;
-	while (dma->s[I2S_DMA_RX_STRM].cr & DMA_EN); 
-
+	/* Configure DMA channel */
 	dma->s[I2S_DMA_RX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_RX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
 		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM | 
-		DMA_TCIE | DMA_TEIE;
+		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	dma->s[I2S_DMA_RX_STRM].par = &spi->dr;
 	dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0];
 	dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1];
 	dma->s[I2S_DMA_RX_STRM].ndtr = AUDIO_FRAME_LEN;
-	dma->s[I2S_DMA_RX_STRM].fcr = DMA_DMDIS | DMA_FTH_FULL;
+	dma->s[I2S_DMA_RX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 
-	dma->s[I2S_DMA_TX_STRM].cr = 0;
-	while (dma->s[I2S_DMA_TX_STRM].cr & DMA_EN); 
+	DCC_LOG(LOG_TRACE, "5.");
 
 	dma->s[I2S_DMA_TX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_TX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_MTP | 
-		DMA_TCIE | DMA_TEIE;
+		DMA_CT_M0AR | DMA_DBM | DMA_CIRC | DMA_MINC | DMA_DIR_MTP | 
+		DMA_TCIE | DMA_TEIE	| DMA_DMEIE;
 	dma->s[I2S_DMA_TX_STRM].par = &i2s_ext->dr;
 	dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0];
 	dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1];
 	dma->s[I2S_DMA_TX_STRM].ndtr = AUDIO_FRAME_LEN;
-	dma->s[I2S_DMA_TX_STRM].fcr = DMA_DMDIS | DMA_FTH_FULL;
+	dma->s[I2S_DMA_TX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
+
+	DCC_LOG(LOG_TRACE, "6.");
 
 	/* Set DMA to medium priority */
-	cm3_irq_pri_set(I2S_DMA_RX_IRQ, 0x40);
+	cm3_irq_pri_set(I2S_DMA_RX_IRQ, 0x10);
 	cm3_irq_enable(I2S_DMA_RX_IRQ);
 
-	cm3_irq_pri_set(I2S_DMA_TX_IRQ, 0x40);
+	DCC_LOG(LOG_TRACE, "7.");
+
+	cm3_irq_pri_set(I2S_DMA_TX_IRQ, 0x10);
 	cm3_irq_enable(I2S_DMA_TX_IRQ);
 
-	/* enable DMA */
-	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;	
-	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;	
-
+	DCC_LOG(LOG_TRACE, "8.");
 
 	i2s_test_init();
 }
@@ -243,18 +286,24 @@ void i2s_enable(void)
 {
 	struct stm32f_spi * spi = STM32F_SPI2;
 	struct stm32f_spi * i2s_ext = STM32F_I2S2EXT;
+	struct stm32f_dma * dma = STM32F_DMA1;
 
-	fprintf(stderr, "%s...\n", __func__);
+	tracef("%s...", __func__);
+	DCC_LOG(LOG_TRACE, "...");
 
-	cm3_irq_enable(STM32F_IRQ_SPI2);
-
-	/* Enable interrupts */
+#if 0
+//	cm3_irq_enable(STM32F_IRQ_SPI2);
 //	spi->cr2 |= SPI_RXNEIE | SPI_TXEIE | SPI_ERRIE;
 // spi->cr2 |= SPI_ERRIE;
+#endif
+	/* enable DMA */
+	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;	
+	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;	
 
-	/* Enable peripheral */
+	/* Enable peripherals */
 	spi->i2scfgr |= SPI_I2SE;
 	i2s_ext->i2scfgr |= SPI_I2SE;
+
 }
 
 
@@ -267,27 +316,12 @@ void i2s_stat(void)
 	uint32_t rx_cnt = i2s_rx_cnt;
 	i2s_rx_cnt = 0;
 	i2s_tx_cnt = 0;
-	printf("-- I2S status --\n");
-	printf("  Samples: RX=%d TX=%d\n", rx_cnt, tx_cnt);
+
+	printf("-- I2S status --");
+	printf("  Samples: RX=%d TX=%d", rx_cnt, tx_cnt);
 
 //	cm3_irq_pend_set(I2S_DMA_RX_IRQ);
 //	cm3_irq_pend_set(I2S_DMA_TX_IRQ);
-}
-
-/* RX DMA IRQ */
-void stm32f_dma1_stream3_isr(void)
-{
-	struct stm32f_dma * dma = STM32F_DMA1;
-
-	if ((dma->lisr & DMA_TCIF3) == 0)
-		return;
-
-	/* clear the DMA transfer complete flag */
-	dma->lifcr = DMA_CTCIF3;
-
-	/* clear the the DMA trasfer complete flag */
-//	i2s.tx.dma.ifcr[TCIF_BIT] = 1;
-//	printf("[R]");
 }
 
 /* TX DMA IRQ */
@@ -296,11 +330,47 @@ void stm32f_dma1_stream4_isr(void)
 	struct stm32f_dma * dma = STM32F_DMA1;
 	int16_t * usr_frm;
 
-	if ((dma->hisr & DMA_TCIF4) == 0)
+	if (dma->hisr & DMA_FEIF4) {
+	//	trace("DMA_FEIF4");
+		DCC_LOG(LOG_TRACE, "DMA_FEIF4");
+		dma->hifcr = DMA_CFEIF4;
+//		dma->s[I2S_DMA_TX_STRM].cr = 0;	
+//		udelay(10000);
+	}
+
+	if (dma->hisr & DMA_DMEIF4) {
+	//	trace("DMA_DMEIF4");
+		DCC_LOG(LOG_TRACE, "DMA_DMEIF4");
+		dma->hifcr = DMA_CDMEIF4;
+	//	dma->s[I2S_DMA_TX_STRM].cr = 0;	
+	//	udelay(10000);
+	}
+
+	if (dma->hisr & DMA_TEIF4) {
+	//	trace("DMA_TEIF4");
+		DCC_LOG(LOG_TRACE, "DMA_TEIF4");
+		dma->hifcr = DMA_CTEIF4;
+//		dma->s[I2S_DMA_TX_STRM].cr = 0;	
+//		udelay(10000);
+	}
+
+	if (dma->hisr & DMA_HTIF4) {
+	//	trace("DMA_HTIF4");
+		DCC_LOG(LOG_MSG, "DMA_HTIF4");
+//		dma->hifcr = DMA_CHTIF4;
+	}
+
+	if ((dma->hisr & DMA_TCIF4) == 0) {
+	//	trace("!= DMA_TCIF4!!!");
+		DCC_LOG(LOG_TRACE, "!=DMA_TCIF4");
 		return;
+	}
+
+	//trace("DMA_TCIF4");
 
 	/* clear the DMA transfer complete flag */
 	dma->hifcr = DMA_CTCIF4;
+//	dma->hifcr = DMA_CHTIF4 | DMA_CTEIF4 | DMA_CDMEIF4 | DMA_CFEIF4;
 
 	if (dma->s[I2S_DMA_TX_STRM].cr & DMA_CT) {
 		usr_frm = i2s.tx.buf[1];
@@ -311,9 +381,67 @@ void stm32f_dma1_stream4_isr(void)
 		dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1];
 		DCC_LOG(LOG_INFO, "0.");
 	}
-
-	tonegen_apply(&tonegen, usr_frm);
+	(void)usr_frm;
+//	tonegen_apply(&tonegen, usr_frm);
+//	pulse_apply(usr_frm);
+	pattern_apply(usr_frm);
 }
+
+
+/* RX DMA IRQ */
+void stm32f_dma1_stream3_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA1;
+	int16_t * usr_frm;
+
+	if ((dma->lisr & DMA_HTIF3) == 0) {
+		trace("DMA_HTIF3");
+		DCC_LOG(LOG_TRACE, "DMA_HTIF3");
+		dma->lifcr = DMA_CHTIF3;
+	}
+
+	if ((dma->lisr & DMA_DMEIF3) == 0) {
+		trace("DMA_DMEIF3");
+		DCC_LOG(LOG_TRACE, "DMA_DMEIF3");
+		dma->lifcr = DMA_CDMEIF3;
+		/* disable DMA !!! */
+		dma->s[I2S_DMA_RX_STRM].cr &= ~DMA_EN;	
+	}
+
+	if ((dma->lisr & DMA_FEIF3) == 0) {
+		trace("DMA_FEIF3");
+		DCC_LOG(LOG_TRACE, "DMA_FEIF3");
+		dma->lifcr = DMA_CFEIF3;
+		/* disable DMA !!! */
+		dma->s[I2S_DMA_RX_STRM].cr &= ~DMA_EN;	
+	}
+
+	if ((dma->lisr & DMA_TCIF3) == 0) {
+		trace("!= DMA_TCIF3!!!");
+		DCC_LOG(LOG_TRACE, "!=DMA_TCIF3");
+		return;
+	}
+
+	trace("DMA_TCIF3");
+
+	/* clear the DMA transfer complete flag */
+	dma->lifcr = DMA_CTCIF3;
+//	dma->hifcr = DMA_CHTIF3 | DMA_CTEIF3 | DMA_CDMEIF3 | DMA_CFEIF3;
+
+	if (dma->s[I2S_DMA_RX_STRM].cr & DMA_CT) {
+		usr_frm = i2s.rx.buf[1];
+		dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0];
+		DCC_LOG(LOG_INFO, "1.");
+	} else {
+		usr_frm = i2s.rx.buf[0];
+		dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1];
+		DCC_LOG(LOG_INFO, "0.");
+	}
+
+	(void)usr_frm;
+//	tonegen_apply(&tonegen, usr_frm);
+}
+
 
 void stm32f_spi2_isr(void)
 {
@@ -324,26 +452,26 @@ void stm32f_spi2_isr(void)
 	sr = spi->sr;
 
 	if (sr & SPI_FRE) {
-		fprintf(stderr, "FRE");
+		trace("FRE");
 	};
 
 	if (sr & SPI_OVR) {
-		fprintf(stderr, "OVR");
+		trace("OVR");
 	};
 
 	if (sr & SPI_UDR) {
-		fprintf(stderr, "UDR");
+		trace("UDR");
 	};
 
 	if (sr & SPI_TXE) {
-//		fprintf(stderr, "T");
+//		tracef("T");
 		data = 0;
 		spi->dr = data;
 		i2s_tx_cnt++;
 	};
 
 	if (sr & SPI_RXNE) {
-//		fprintf(stderr, "R");
+//		tracef("R");
 		data = spi->dr;
 		(void)data;
 		i2s_rx_cnt++;
