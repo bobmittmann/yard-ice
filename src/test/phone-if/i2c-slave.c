@@ -52,7 +52,7 @@ struct i2c_io_blk {
 	/* reference to the I/O memory block */
 	void * rd_mem;
 	void * wr_mem;
-	int32_t event;
+	int flag;
 	uint32_t irq_cnt;
 };
 
@@ -115,7 +115,7 @@ struct i2c_io_blk * i2c_slave_init(unsigned int scl_freq, unsigned int addr,
 	/* I2C TRISE register (I2C_TRISE) */
 	i2c->trise = I2C_TRISE_SET((pclk / 1000000) + 1);
 
-	i2c_io.event = thinkos_ev_alloc();
+	i2c_io.flag = thinkos_flag_alloc();
 
 	cm3_irq_enable(STM32F_IRQ_I2C1_EV);
 	/* set event IRQ to very high priority */
@@ -185,7 +185,7 @@ void stm32f_i2c1_ev_isr(void)
 			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
 
 		if (io->xfer > I2C_XFER_IDX)
-			__thinkos_ev_raise(io->event);
+			__thinkos_flag_signal(io->flag);
 	}
 
 	if (sr1 & I2C_BTF) {
@@ -229,19 +229,19 @@ void stm32f_i2c1_er_isr(void)
 	if (sr1 & I2C_BERR) {
 		DCC_LOG1(LOG_TRACE, "%d BERR", io->irq_cnt);
 		io->xfer = I2C_XFER_ERR;
-		__thinkos_ev_raise(io->event);
+		__thinkos_flag_signal(io->flag);
 	}
 
 	if (sr1 & I2C_AF) {
 		DCC_LOG3(LOG_INFO, "%d AF: cnt=%d %s", io->irq_cnt, io->cnt,
 			(io->xfer == I2C_XFER_IN) ? "IN" : "OUT");
-		__thinkos_ev_raise(io->event);
+		__thinkos_flag_signal(io->flag);
 	}
 
 	if (sr1 & I2C_OVR) {
 		DCC_LOG1(LOG_TRACE, "%d OVR", io->irq_cnt);
 		io->xfer = I2C_XFER_ERR;
-		__thinkos_ev_raise(io->event);
+		__thinkos_flag_signal(io->flag);
 	}
 
 	/* clear AF */
@@ -254,9 +254,8 @@ int i2c_slave_io(void)
 
 	DCC_LOG(LOG_INFO, "wait...");
 
-	__thinkos_critical_level(I2C_IRQ_PRIORITY);
-	__thinkos_critical_ev_wait(io->event, I2C_IRQ_PRIORITY);
-	__thinkos_critical_exit();
+	__thinkos_flag_clr(io->flag);
+	thinkos_flag_wait(io->flag);
 
 	DCC_LOG(LOG_INFO, "wake up.");
 

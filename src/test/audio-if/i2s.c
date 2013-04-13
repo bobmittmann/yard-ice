@@ -393,7 +393,7 @@ void stm32f_dma1_stream4_isr(void)
 		return;
 	}
 
-	tracef("TX DMA_TCIF4 %d", i2s_tx_cnt); 
+//	tracef("TX DMA_TCIF4 %d", i2s_tx_cnt); 
 
 	/* clear the DMA transfer complete flag */
 	dma->hifcr = DMA_CTCIF4;
@@ -479,7 +479,7 @@ void stm32f_dma1_stream3_isr(void)
 		return;
 	}
 
-	tracef("RX DMA_TCIF3 %d", i2s_rx_cnt); 
+//	tracef("RX DMA_TCIF3 %d", i2s_rx_cnt); 
 
 	/* clear the DMA transfer complete flag */
 	dma->lifcr = DMA_CTCIF3;
