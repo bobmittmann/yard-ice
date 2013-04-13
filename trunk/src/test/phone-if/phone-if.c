@@ -256,6 +256,16 @@ void shell_task(void)
 	int gain;
 	int i;
 
+	printf("\n\n");
+	i = printf(" Firefighter Phone Interface %d.%d\n", 
+			   VERSION_MAJOR, VERSION_MINOR);
+	printf(" ");
+	i -= 2;
+	while (i-- > 0)
+		printf("-");
+	printf("\n\n");
+
+
 	for(;;) {
 		c = getchar();
 		switch (c) {
@@ -484,6 +494,7 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "6. leds_init()");
 	leds_init();
+	leds_all_on();
 
 	DCC_LOG(LOG_TRACE, "7. relays_init()");
 	relays_init();
@@ -504,41 +515,22 @@ int main(int argc, char ** argv)
 	i2c_slave_init(100000, DEVICE_ADDR, &rd_block, &wr_block, 
 				   sizeof(struct io_block));
 
-	leds_all_on();
-	thinkos_sleep(100);
-	leds_all_off();
-	thinkos_sleep(100);
-	leds_all_on();
-	thinkos_sleep(100);
-	leds_all_off();
-	thinkos_sleep(100);
-	leds_all_on();
-	thinkos_sleep(100);
-	leds_all_off();
-
-	DCC_LOG(LOG_TRACE, "13. self_test()");
-	self_test();
-
-	DCC_LOG(LOG_TRACE, "14. i2c_slave_enable()");
-	i2c_slave_enable();
-
-	DCC_LOG(LOG_TRACE, "15. adc_start()");
+	DCC_LOG(LOG_TRACE, "13. adc_start()");
 	adc_start();
 
-	DCC_LOG(LOG_TRACE, "16. dac_start()");
+	DCC_LOG(LOG_TRACE, "14. dac_start()");
 	dac_start();
 
-	DCC_LOG(LOG_TRACE, "17. shell_init()");
+	DCC_LOG(LOG_TRACE, "15. i2c_slave_enable()");
+	i2c_slave_enable();
+
+	DCC_LOG(LOG_TRACE, "16. shell_init()");
 	shell_init();
 
-	printf("\n\n");
-	i = printf(" Firefighter Phone Interface %d.%d\n", 
-			   VERSION_MAJOR, VERSION_MINOR);
-	printf(" ");
-	i -= 2;
-	while (i-- > 0)
-		printf("-");
-	printf("\n\n");
+	DCC_LOG(LOG_TRACE, "17. codec_rst_hi()");
+	codec_rst_hi();
+
+	leds_all_off();
 
 	for (i = 0; ; ++i) {
 		xfer = i2c_slave_io();

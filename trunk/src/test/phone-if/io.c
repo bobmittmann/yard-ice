@@ -141,7 +141,5 @@ void codec_io_init(void)
 	stm32f_gpio_mode(TLV320RST, OUTPUT, PUSH_PULL | SPEED_LOW);
 
 	stm32f_gpio_clr(TLV320RST);
-	udelay(1000);
-	stm32f_gpio_set(TLV320RST);
 }
 
