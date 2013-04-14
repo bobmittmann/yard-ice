@@ -5,11 +5,14 @@
 #include <stdint.h>
 
 // Conversion form float to fixed point Q1.15
-#define Q15(F) ((LWORD_S)((F) * 32768))
+#define Q15(F) ((int32_t)((F) * 32768))
 // Convert from fractional Q1.15 to float point
 #define Q15F(Q) ((float)(((float)(Q)) / 32768.0))
 // Q15 Multiply
-#define Q15_MUL(X, Y) (((X) * (Y) + (1 << 14)) >> 15)
+
+#define Q15_MUL(X1, X2) (((int32_t)(X1) * (int32_t)(X2) + (1 << 14)) >> 15)
+#define Q15_UMUL(X1, X2) ((((uint32_t)(X1) * (uint32_t)(X2)) + (1 << 14)) >> 15)
+
 // Q15 Divide
 #define Q15_DIV(X, Y) (((X) << 15) / (Y))
 // Q15 Saturation
@@ -44,7 +47,7 @@ static inline int32_t int32_sqrt(int32_t x)
 	return (x > res) ? res + 1 : res;
 }
 
-static inline int16_t cplx16_abs(cplx16_t z) {
+static inline uint16_t cplx16_abs(cplx16_t z) {
 	int32_t x;
 	int32_t y;
 
@@ -54,6 +57,15 @@ static inline int16_t cplx16_abs(cplx16_t z) {
 	return int32_sqrt(x + y);
 }
 
+extern const uint16_t q15_db2amp_ltu[];
+extern const uint16_t q15_db2amp_min;
+
+extern const uint16_t q15_db2pwr_ltu[];
+extern const uint16_t q15_db2pwr_min;
+
+const uint16_t q15_db2amp(int amp);
+
+const uint16_t q15_db2pwr(int pwr);
 
 #endif // __FIXPT_H__
 

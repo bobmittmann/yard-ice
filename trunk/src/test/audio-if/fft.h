@@ -23,17 +23,20 @@
 #ifndef __FFT_H__
 #define __FFT_H__
 
+#include <stdbool.h>
 #include "sndbuf.h"
 #include "fixpt.h"
 
 #define FFT_LEN 256
+#define SPECTRUM_BINS (FFT_LEN /2)
 
 struct spectrum {
-	uint32_t out[FFT_LEN / 2];
-	sndbuf_t * frm[FFT_LEN / SNDBUF_LEN];
+	uint32_t mag[SPECTRUM_BINS];
+	sndbuf_t buf[FFT_LEN / SNDBUF_LEN];
 	uint32_t frm_cnt;
 	uint32_t run_cnt;
-	uint32_t max;
+	uint32_t rate;
+	volatile bool locked;
 };
 
 #ifdef __cplusplus
@@ -44,7 +47,17 @@ void fftR4(cplx16_t y[], cplx16_t x[], int n);
 
 void ifftR4(cplx16_t y[], cplx16_t x[], int n);
 
-void spectrum(int16_t out[], int16_t in[]);
+void spectrum_init(struct spectrum * sa, unsigned int rate);
+
+void spectrum_run(struct spectrum * sa);
+
+void spectrum_normalize(struct spectrum * sa, uint16_t * out);
+
+void spectrum_rec(struct spectrum * sa, sndbuf_t buf);
+
+void spectrum_show(uint16_t mag[]);
+
+void spectrum_print(struct spectrum * sa, int16_t mag[]);
 
 #ifdef __cplusplus
 }

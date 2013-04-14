@@ -29,132 +29,16 @@
 #include <stdbool.h>
 #include <hexdump.h>
 
-#include "wavetab.h"
 #include "trace.h"
 #include "fft.h"
 #include "vt100.h"
+#include "fixpt.h"
+#include "sndbuf.h"
+#include "tonegen.h"
 
 #include <sys/dcclog.h>
 
-#define AUDIO_FRAME_LEN 256
-
-struct tonegen {
-	volatile int locked;
-	uint32_t len;
-	uint32_t pos;
-	int16_t wave[256];
-};
-
-int tonegen_init(struct tonegen * gen, int32_t amp, int tone)
-{
-	int32_t y;
-	int i;
-
-	if (tone > WAVE_3K)
-		return -1;
-
-
-	if (wave_lut[tone].len > 256) {
-		return -1;
-	}
-
-	gen->locked = 1;
-
-	gen->len = wave_lut[tone].len;
-	gen->pos = 0;
-
-	for (i = 0; i < gen->len; ++i) {
-		y = wave_lut[tone].buf[i];
-		/* scale */
-		y = ((y * amp) + 16384) / 32768;
-		/* saturate */
-		if (y > 32767) 
-			y = 32767;
-		else if (y < -32768)
-			y = -32768;
-		gen->wave[i] = y;
-	}
-
-	gen->locked = 0;
-
-	return wave_lut[tone].freq;
-}
-
-void tonegen_apply(struct tonegen * gen, int16_t frm[])
-{
-	int pos;
-	int len;
-	int i;
-
-	if (gen->locked)
-		return;
-
-	pos = gen->pos;
-	len = gen->len;
-
-	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
-		frm[i] = gen->wave[pos];
-		if (++pos == len)
-			pos = 0;
-	}
-
-	gen->pos = pos;
-}
-
-
-void blank_apply(int16_t frm[])
-{
-	int i;
-
-	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
-		frm[i] = 0;
-	}
-}
-
-void ramp_apply(int16_t frm[])
-{
-	int i;
-//	int d = 65536 / AUDIO_FRAME_LEN;
-//	int v = -32768;
-
-	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
-		frm[i] = i;
-	}
-}
-
-void pulse_apply(int16_t frm[])
-{
-	int i;
-
-	for (i = 0; i < AUDIO_FRAME_LEN; ++i) {
-		frm[i] = (1 << (i % 16));
-	}
-}
-
-void pattern_apply(int16_t frm[])
-{
-	int i;
-
-	for (i = 0; i < AUDIO_FRAME_LEN; i += 8) {
-		frm[i] = 0x4000;
-		frm[i + 1] = 0x4000;
-		frm[i + 2] = 0x4000;
-		frm[i + 3] = 0x4000;
-
-		frm[i + 4] = 0x0000;
-		frm[i + 5] = 0x0000;
-		frm[i + 6] = 0x0000;
-		frm[i + 7] = 0x0000;
-	}
-}
-
-
-struct tonegen tonegen;
-
-int i2s_tone_set(int tone, int32_t amp)
-{
-	return tonegen_init(&tonegen, amp, tone);
-}
+#define SAMPLE_RATE 8000
 
 #define I2S2_WS     STM32F_GPIOB, 12
 #define I2S2_CK     STM32F_GPIOB, 13
@@ -171,17 +55,18 @@ int i2s_tone_set(int tone, int32_t amp)
 
 struct {
 	struct {
-//		struct stm32f_dmactl dma;
-		int16_t buf[2][AUDIO_FRAME_LEN];
-		uint32_t cnt;
+		sndbuf_t buf[2];
+		uint32_t idx;
 	} tx;
 	struct {
-//		struct stm32f_dmactl dma;
-		int16_t buf[2][AUDIO_FRAME_LEN];
+		int16_t buf[2][SNDBUF_LEN];
 		uint32_t cnt;
 	} rx;
 } i2s; 
 
+struct spectrum i2s_tx_sa;
+struct spectrum i2s_rx_sa;
+struct tonegen tonegen;
 
 void i2s_slave_init(void)
 {
@@ -193,10 +78,6 @@ void i2s_slave_init(void)
 	tracef("%s SPI=0x%08x", __func__, (uint32_t)spi);
 	tracef("%s I2S_EXT=0X%08x", __func__, (uint32_t)i2s_ext);
 
-	stm32f_gpio_mode(I2S2_WS, ALT_FUNC, SPEED_MED);
-	stm32f_gpio_mode(I2S2_CK, ALT_FUNC, SPEED_MED);
-	stm32f_gpio_mode(I2S2EXT_SD, ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32f_gpio_mode(I2S2_SD, ALT_FUNC, SPEED_MED);
 
 	stm32f_gpio_af(I2S2_WS, GPIO_AF5);
 	stm32f_gpio_af(I2S2_CK, GPIO_AF5);
@@ -244,55 +125,34 @@ void i2s_slave_init(void)
 
 	DCC_LOG(LOG_TRACE, "4.");
 
-#if 0
-	/* configure RX DMA stream */
-	stm32f_dmactl_init(&i2s.rx.dma, STM32F_DMA1, I2S_DMA_RX_STRM);
-	/* Configuration for double buffer circular, 
-	   half-transfer interrupt  */
-	i2s.rx.dma.strm->cr = DMA_CHSEL_SET(I2S_DMA_RX_CHAN) | 
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CIRC | DMA_MINC | DMA_DIR_PTM |
-		DMA_HTIE | DMA_TCIE | DMA_TEIE;
-	i2s.rx.dma.strm->par = &spi->dr;
-	i2s.rx.dma.strm->m0ar = i2s.rx.buf;
-	i2s.rx.dma.strm->ndtr = 2 * AUDIO_FRAME_LEN;
-	i2s.rx.dma.strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
+	i2s.tx.buf[0] = (sndbuf_t)&sndbuf_zero;
+	i2s.tx.buf[1] = (sndbuf_t)&sndbuf_zero;
 
-	/* configure TX DMA */
-	stm32f_dmactl_init(&i2s.tx.dma, STM32F_DMA1, I2S_DMA_TX_STRM);
-
-	i2s.tx.dma.strm->cr = DMA_CHSEL_SET(I2S_DMA_TX_CHAN) | 
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CIRC | DMA_MINC | DMA_DIR_MTP | 
-		DMA_HTIE | DMA_TCIE | DMA_TEIE;
-	i2s.tx.dma.strm->par = &i2s_ext->dr;
-	i2s.rx.dma.strm->m0ar = i2s.tx.buf;
-	i2s.rx.dma.strm->ndtr = 2 * AUDIO_FRAME_LEN;
-	i2s.tx.dma.strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
-#endif
+//	i2s.rx.buf[0] = &sndbuf_null;
+//	i2s.rx.buf[1] = &sndbuf_null;
 
 	/* Configure DMA channel */
 	dma->s[I2S_DMA_RX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_RX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM | 
+		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM |
 		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	dma->s[I2S_DMA_RX_STRM].par = &spi->dr;
 	dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0];
 	dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1];
-	dma->s[I2S_DMA_RX_STRM].ndtr = AUDIO_FRAME_LEN;
+	dma->s[I2S_DMA_RX_STRM].ndtr = SNDBUF_LEN;
 	dma->s[I2S_DMA_RX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 
 	DCC_LOG(LOG_TRACE, "5.");
 
 	dma->s[I2S_DMA_TX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_TX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CT_M0AR | DMA_DBM | DMA_CIRC | DMA_MINC | DMA_DIR_MTP | 
-		DMA_TCIE | DMA_TEIE	| DMA_DMEIE;
+		DMA_CT_M0AR | DMA_DBM | DMA_CIRC | DMA_MINC | DMA_DIR_MTP;
 	dma->s[I2S_DMA_TX_STRM].par = &i2s_ext->dr;
 	dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0];
 	dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1];
-	dma->s[I2S_DMA_TX_STRM].ndtr = AUDIO_FRAME_LEN;
+	dma->s[I2S_DMA_TX_STRM].ndtr = SNDBUF_LEN;
 	dma->s[I2S_DMA_TX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
+
 
 	DCC_LOG(LOG_TRACE, "6.");
 
@@ -307,7 +167,13 @@ void i2s_slave_init(void)
 
 	DCC_LOG(LOG_TRACE, "8.");
 
+	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;	
+	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;	
+
 	tonegen_init(&tonegen, 0, 0);
+
+	spectrum_init(&i2s_tx_sa, SAMPLE_RATE);
+	spectrum_init(&i2s_rx_sa, SAMPLE_RATE);
 }
 
 void i2s_enable(void)
@@ -319,44 +185,66 @@ void i2s_enable(void)
 	tracef("%s...", __func__);
 	DCC_LOG(LOG_TRACE, "...");
 
-#if 0
-//	cm3_irq_enable(STM32F_IRQ_SPI2);
-//	spi->cr2 |= SPI_RXNEIE | SPI_TXEIE | SPI_ERRIE;
-// spi->cr2 |= SPI_ERRIE;
-#endif
+	/* Enable IO pins */
+	stm32f_gpio_mode(I2S2_WS, ALT_FUNC, SPEED_MED);
+	stm32f_gpio_mode(I2S2_CK, ALT_FUNC, SPEED_MED);
+	stm32f_gpio_mode(I2S2EXT_SD, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32f_gpio_mode(I2S2_SD, ALT_FUNC, SPEED_MED);
+
+	/* flush TX bufffers */
+	i2s.tx.idx = 0;
+
+	if (i2s.tx.buf[0] != sndbuf_zero) {
+		sndbuf_free(i2s.tx.buf[0]);
+		i2s.tx.buf[0] = (sndbuf_t)&sndbuf_zero;
+	}
+
+	if (i2s.tx.buf[1] != sndbuf_zero) {
+		sndbuf_free(i2s.tx.buf[1]);
+		i2s.tx.buf[1] = (sndbuf_t)&sndbuf_zero;
+	}
+
 	/* enable DMA */
-	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;	
-	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;	
+	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;
+	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;	
 
 	/* Enable peripherals */
 	spi->i2scfgr |= SPI_I2SE;
 	i2s_ext->i2scfgr |= SPI_I2SE;
-
 }
 
-
-volatile uint32_t i2s_tx_cnt = 0;
-volatile uint32_t i2s_rx_cnt = 0;
-
-void i2s_stat(void)
+void i2s_disable(void)
 {
-	uint32_t tx_cnt = i2s_tx_cnt;
-	uint32_t rx_cnt = i2s_rx_cnt;
-	i2s_rx_cnt = 0;
-	i2s_tx_cnt = 0;
+	struct stm32f_spi * spi = STM32F_SPI2;
+	struct stm32f_spi * i2s_ext = STM32F_I2S2EXT;
+	struct stm32f_dma * dma = STM32F_DMA1;
 
-	printf("-- I2S status --");
-	printf("  Samples: RX=%d TX=%d", rx_cnt, tx_cnt);
+	tracef("%s...", __func__);
+	DCC_LOG(LOG_TRACE, "...");
 
-//	cm3_irq_pend_set(I2S_DMA_RX_IRQ);
-//	cm3_irq_pend_set(I2S_DMA_TX_IRQ);
+	/* Disable peripherals */
+	spi->i2scfgr &= ~SPI_I2SE;
+	i2s_ext->i2scfgr &= ~SPI_I2SE;
+
+	/* Disable DMA */
+	dma->s[I2S_DMA_TX_STRM].cr &= ~DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;
+	dma->s[I2S_DMA_RX_STRM].cr &= ~DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;	
+
+	/* Disable IO pins */
+	stm32f_gpio_mode(I2S2_WS, INPUT, 0);
+	stm32f_gpio_mode(I2S2_CK, INPUT, 0);
+	stm32f_gpio_mode(I2S2EXT_SD, INPUT, 0);
+	stm32f_gpio_mode(I2S2_SD, INPUT, 0);
 }
+
+
 
 /* TX DMA IRQ */
 void stm32f_dma1_stream4_isr(void)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
-	int16_t * usr_frm;
+	sndbuf_t frm;
+	int idx;
 
 	if (dma->hisr & DMA_FEIF4) {
 		trace("DMA_FEIF4");
@@ -379,73 +267,45 @@ void stm32f_dma1_stream4_isr(void)
 //		dma->s[I2S_DMA_TX_STRM].cr = 0;	
 	}
 
-#if 0
-	if (dma->hisr & DMA_HTIF4) {
-		trace("DMA_HTIF4");
-		DCC_LOG(LOG_MSG, "DMA_HTIF4");
-//		dma->hifcr = DMA_CHTIF4;
-	}
-#endif
-
 	if ((dma->hisr & DMA_TCIF4) == 0) {
 	//	trace("!= DMA_TCIF4!!!");
 		DCC_LOG(LOG_TRACE, "!=DMA_TCIF4");
 		return;
 	}
 
-//	tracef("TX DMA_TCIF4 %d", i2s_tx_cnt); 
-
 	/* clear the DMA transfer complete flag */
 	dma->hifcr = DMA_CTCIF4;
-//	dma->hifcr = DMA_CHTIF4 | DMA_CTEIF4 | DMA_CDMEIF4 | DMA_CFEIF4;
 
 	if (dma->s[I2S_DMA_TX_STRM].cr & DMA_CT) {
-		usr_frm = i2s.tx.buf[1];
+		if (i2s.tx.buf[0] == sndbuf_zero) {
+			trace("txbuf == zero!!");
+		}
 		dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0];
+		i2s.tx.idx = idx = 1;
 		DCC_LOG(LOG_INFO, "1.");
 	} else {
-		usr_frm = i2s.tx.buf[0];
+		if (i2s.tx.buf[1] == sndbuf_zero) {
+			trace("txbuf == zero!!");
+		}
 		dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1];
+		i2s.tx.idx = idx = 0;
 		DCC_LOG(LOG_INFO, "0.");
 	}
 
-	(void)usr_frm;
-
-	i2s.tx.cnt++;
-
-	if (usr_frm != i2s.tx.buf[i2s.tx.cnt & 1]) 
-		trace("Out of sync!");
-
-//	tonegen_apply(&tonegen, usr_frm);
+	frm = i2s.tx.buf[idx];
+	if (frm != sndbuf_zero) {
+		i2s.tx.buf[idx] = (sndbuf_t)sndbuf_zero;
+		sndbuf_free(frm);
+	}
 }
 
-
-void cmp(int16_t * rx, int16_t * tx)
-{
-	int i;
-	int j = 1;
-
-	for (i = 0; i < (AUDIO_FRAME_LEN - 1); ++i) {
-		if ((tx[j] == rx[i]) && (tx[j+1] == rx[i+1])) {
-			tracef("rx[%d]=%d", i, rx[i]);
-			break;
-		}
-	}
-
-#if 0
-	for (; i < AUDIO_FRAME_LEN; ++i, j++) {
-		if (tx[j] == rx[i]) {
-			tracef("rx[%d]=%d", i, rx[i]);
-		}
-	}
-#endif
-}
 
 /* RX DMA IRQ */
 void stm32f_dma1_stream3_isr(void)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
 	int16_t * usr_frm;
+	sndbuf_t buf;
 
 	if (dma->lisr & DMA_FEIF3) {
 		trace("DMA_FEIF3");
@@ -499,131 +359,58 @@ void stm32f_dma1_stream3_isr(void)
 
 	(void)usr_frm;
 
-//	cmp(usr_frm, i2s.tx.buf[0]);
+	if ((buf = sndbuf_alloc()) == NULL) {
+		trace("sndbuf_alloc() failed!");
+	} else {
+		tonegen_apply(&tonegen, (int16_t *)buf);
+		spectrum_rec(&i2s_tx_sa, buf);
 
-	usr_frm = i2s.tx.buf[(i2s.tx.cnt & 1) ^ 1];
-	tonegen_apply(&tonegen, usr_frm);
-}
-
-
-void stm32f_spi2_isr(void)
-{
-	struct stm32f_spi * spi = STM32F_SPI2;
-	uint32_t sr;
-	uint32_t data;
-
-	sr = spi->sr;
-
-	if (sr & SPI_FRE) {
-		trace("FRE");
-	};
-
-	if (sr & SPI_OVR) {
-		trace("OVR");
-	};
-
-	if (sr & SPI_UDR) {
-		trace("UDR");
-	};
-
-	if (sr & SPI_TXE) {
-//		tracef("T");
-		data = 0;
-		spi->dr = data;
-		i2s_tx_cnt++;
-	};
-
-	if (sr & SPI_RXNE) {
-//		tracef("R");
-		data = spi->dr;
-		(void)data;
-		i2s_rx_cnt++;
-	};
-	
-}
-
-void print_spectrum(int16_t mag[])
-{
-	int max = 0;
-	int i;
-	int f;
-	int j;
-	int n;
-
-	for (i = 0; i < FFT_LEN / 2; ++i) {
-		if (mag[i] > max)
-			max = mag[i];
-	}
-
-	for (i = 0; i < FFT_LEN / 2; ++i) {
-
-		f = (i * SAMPLE_RATE + (FFT_LEN / 2)) / FFT_LEN;
-		printf("%4d %5d ", f, mag[i]);
-		n = (mag[i] * 64) / max;
-		for (j = 0; j < n; j++)
-			printf("#");
-		printf("\n");
-	}
-}
-
-void show_spectrum(int16_t mag[])
-{
-	uint32_t ext[80];
-	char ln[80];
-	int i;
-	int x;
-	int y;
-
-	for (i = 0; i < 80; ++i) {
-		ext[i] = (mag[i] * mag[i]) * 8;
-		ln[i] = ' ';
-	}
-
-	for (y = 0; y < 32; ++y) {
-		printf(VT100_GOTO, y, 0); 
-		for (x = 0; x < 80; ++x) {
-			if (ln[x] == ' ')
-				ln[x] = (ext[x] & (0x80000000 >> y)) ? '|' : ' ';
+		if (i2s.tx.buf[i2s.tx.idx] != sndbuf_zero) {
+			trace("txbuf != zero");
 		}
-		ln[x] = '\0';
-		printf(ln); 
+
+		i2s.tx.buf[i2s.tx.idx] = buf;
 	}
 }
+
 
 void i2s_tx_analyze(void) 
 {
-	int16_t mag[FFT_LEN / 2];
+	uint16_t mag[FFT_LEN / 2];
 
-	spectrum(mag, i2s.tx.buf[(i2s.tx.cnt & 1) ^ 1]);
+	spectrum_run(&i2s_tx_sa);
 
-	show_spectrum(mag);
+	spectrum_normalize(&i2s_tx_sa, mag);
+
+	spectrum_show(mag);
 }
 
 void i2s_rx_analyze(void) 
 {
-	int16_t mag[FFT_LEN / 2];
-
-	spectrum(mag, i2s.rx.buf[(i2s.rx.cnt & 1) ^ 1]);
-//	spectrum(mag, i2s.rx.buf[i2s.rx.cnt & 1]);
-
-	show_spectrum(mag);
+//	int16_t mag[FFT_LEN / 2];
+//	show_spectrum(mag);
 }
 
 void i2s_rx_dump(void)
 {
 	printf("RX frames: %d\n", i2s.rx.cnt);
 
-	show_hex16(stdout, 0, i2s.rx.buf[i2s.rx.cnt & 1], AUDIO_FRAME_LEN * 2);
+	show_hex16(stdout, 0, i2s.rx.buf[i2s.rx.cnt & 1], SNDBUF_LEN * 2);
 
 	printf("\n");
 }
 
 void i2s_tx_dump(void)
 {
-	printf("TX frames: %d\n", i2s.tx.cnt);
+	printf("TX frames: %d\n", i2s.tx.idx);
 
-	show_hex16(stdout, 0, i2s.tx.buf[i2s.tx.cnt & 1], AUDIO_FRAME_LEN * 2);
+	show_hex16(stdout, 0, i2s.tx.buf[i2s.tx.idx], SNDBUF_LEN * 2);
 
 	printf("\n");
+}
+
+int i2s_tone_set(int tone, int gain)
+{
+	return tonegen_init(&tonegen, q15_db2amp(gain), tone);
 }
 

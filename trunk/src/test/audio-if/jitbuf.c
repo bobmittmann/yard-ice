@@ -34,7 +34,7 @@ void jitbuf_init(struct jitbuf *jb, unsigned int delay)
 	jb->delay = delay;
 }
 
-int jitbuf_put(struct jitbuf * jb, sndbuf_t * buf[], 
+int jitbuf_put(struct jitbuf * jb, sndbuf_t buf[], 
 				unsigned int cnt, uint32_t ts)
 {
 	unsigned int head;
@@ -113,7 +113,7 @@ int jitbuf_put(struct jitbuf * jb, sndbuf_t * buf[],
 	//trace_printf("%s: n=%d head=%d free=%d", __func__, n, head, free);
 
 	for (i = 0; i < n; ++i) {
-		jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = *buf++;
+		jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = buf++;
 		dt += SNDBUF_LEN;
 	}
 	jb->head = head;

@@ -1,5 +1,5 @@
 /* 
- * File:	 i2c-master.c
+ * File:	 audio-if.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -44,7 +44,10 @@
 #include "i2s.h"
 #include "tlv320.h"
 #include "trace.h"
+#include "fixpt.h"
+#include "sndbuf.h"
 #include "vt100.h"
+#include "tonegen.h"
 
 /* ----------------------------------------------------------------------
  * Supervisory task
@@ -73,7 +76,6 @@ void system_reset(void)
 }
 
 
-int32_t i2c_mutex;
 int32_t phif_addr = 0x55;
 int32_t codec_addr = 64;
 
@@ -105,12 +107,10 @@ struct {
 
 int line_set_connect(int line_idx, bool connect)
 {
-	uint8_t pkt[3];
+	uint8_t reg[2];
 	unsigned int led;
 	unsigned int relay;
 	int ret;
-
-	thinkos_mutex_lock(i2c_mutex);
 
 	led = cache.led;
 	relay = cache.relay;
@@ -123,19 +123,16 @@ int line_set_connect(int line_idx, bool connect)
 		relay &= ~(1 << line_idx);
 	}
 
-	pkt[0] = PHIF_LED_REG;
-	pkt[1] = led;
-	pkt[2] = relay;
+	reg[0] = led;
+	reg[1] = relay;
 
-	if ((ret = i2c_master_wr(phif_addr, pkt, 3)) > 0) {
+	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
 		cache.led = led;
 		cache.relay = relay;
 		line[line_idx].connected = connect;
 	} else {
-		tracef("%s(): i2c_master_wr() failed!", __func__);
+		tracef("%s(): i2c_write() failed!", __func__);
 	}
-
-	thinkos_mutex_unlock(i2c_mutex);
 
 	return ret;
 }
@@ -148,10 +145,8 @@ struct {
 int hybrid_adjust(int impedance, int gain)
 {
 
-	uint8_t pkt[3];
+	uint8_t reg[2];
 	int ret;
-
-	thinkos_mutex_lock(i2c_mutex);
 
 	if (impedance < 0 )
 		impedance = 0;
@@ -163,125 +158,103 @@ int hybrid_adjust(int impedance, int gain)
 	else if (gain > 63)
 		gain = 63;
 
-	pkt[0] = PHIF_VR0_REG;
-	pkt[1] = impedance;
-	pkt[2] = gain;
+	reg[0] = impedance;
+	reg[1] = gain;
 
-	if ((ret = i2c_master_wr(phif_addr, pkt, 3)) > 0) {
+	if ((ret = i2c_write(phif_addr, PHIF_VR0_REG, reg, 2)) > 0) {
 		hybrid.impedance = impedance;;
 		hybrid.gain = gain;
 	} else {
-		tracef("%s(): i2c_master_wr() failed!", __func__);
+		tracef("%s(): i2c_write() failed!", __func__);
 	}
-
-	thinkos_mutex_unlock(i2c_mutex);
 
 	return ret;
 }
 
 int connect_off_hok(void)
 {
-	uint8_t pkt[3];
+	uint8_t reg[2];
+	int ret;
 	int i;
 
 	DCC_LOG(LOG_TRACE, ".");
 
 	printf("\nConnect off-hook... ");
 
-	thinkos_mutex_lock(i2c_mutex);
-
-	pkt[0] = PHIF_LED_REG;
-	pkt[1] = 0;
-	pkt[2] = 0;
+	reg[0] = 0;
+	reg[1] = 0;
 
 	for (i = 0; i < 5; ++i) {
 		if (line[i].sup_st == LINE_OFF_HOOK) {
-			pkt[1] |= (1 << i);
-			pkt[2] |= (1 << i);
+			reg[0] |= (1 << i);
+			reg[1] |= (1 << i);
 			printf("%d ", i);
 		}
 	}
 
 	printf("\n");
 
-	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
-//		printf("i2c_master_wr() ok.\n");
-		DCC_LOG(LOG_INFO, "ok.");
+	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
+		cache.led = reg[0];
+		cache.relay = reg[1];
+		for (i = 0; i < 5; ++i) {
+			if (line[i].sup_st == LINE_OFF_HOOK) {
+				line[i].connected = true;
+			}
+		}
 	} else {
-//		printf("i2c_master_wr() failed!\n");
-		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+		tracef("%s(): i2c_write() failed!", __func__);
 	}
 
-	thinkos_mutex_unlock(i2c_mutex);
-
-	return 0;
+	return ret;
 }
 
 int hangup_all(void)
 {
-	uint8_t pkt[3];
+	uint8_t reg[2];
+	int ret;
+	int i;
 
 	printf("\nHangup all...\n");
 	DCC_LOG(LOG_TRACE, ".");
 
-	thinkos_mutex_lock(i2c_mutex);
+	reg[0] = 0;
+	reg[1] = 0;
 
-	pkt[0] = PHIF_LED_REG;
-	pkt[1] = 0;
-	pkt[2] = 0;
-
-	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
-//		printf("i2c_master_wr() ok.\n");
-		DCC_LOG(LOG_INFO, "ok.");
+	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
+		cache.led = reg[0];
+		cache.relay = reg[1];
+		for (i = 0; i < 5; ++i) {
+			line[i].connected = false;
+		}
 	} else {
-//		printf("i2c_master_wr() failed!\n");
-		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+		tracef("%s(): i2c_write() failed!", __func__);
 	}
 
-	thinkos_mutex_unlock(i2c_mutex);
-
-	return 0;
+	return ret;
 }	
 
 void line_toggle(int line_idx)
 {
 	bool connect;
+	char msg[32];
+	char * cp = msg;
 
-	printf("Line %d ", line_idx + 1);
+	cp += sprintf(cp, VT100_GOTO, 0, 0); 
+	cp += sprintf(cp, "Line %d ", line_idx + 1);
 
 	connect = line[line_idx].connected ? false : true;
 
 	line_set_connect(line_idx, connect);
 
-	printf("%s.\n", line[line_idx].connected ? "connected" : "disconnected");
-}
-
-void vr_set(unsigned int val0, unsigned int val1)
-{
-	uint8_t pkt[3];
-
-	DCC_LOG2(LOG_TRACE, "vr0=%d vr1=%d", val0, val1);
-
-	thinkos_mutex_lock(i2c_mutex);
-
-	pkt[0] = PHIF_VR0_REG;
-	pkt[1] = val0;
-	pkt[2] = val1;
-
-	if (i2c_master_wr(phif_addr, pkt, 3) > 0) {
-//		printf("i2c_master_wr() ok.\n");
-		DCC_LOG(LOG_INFO, "ok.");
-	} else {
-//		printf("i2c_master_wr() failed!\n");
-		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
-	}
-
-	thinkos_mutex_unlock(i2c_mutex);
+	cp += sprintf(cp, "%s", 
+				  line[line_idx].connected ? "connected" : "disconnected");
+	cp += sprintf(cp, VT100_CLREOL); 
+	printf(msg);
 }
 
 int acq_task(void)
 {
-	uint8_t reg;
 	int i;
 
 	DCC_LOG(LOG_TRACE, "started...");
@@ -290,110 +263,42 @@ int acq_task(void)
 	for (;;) {
 		DCC_LOG(LOG_INFO, "Poll...");
 		thinkos_sleep(1000);
-		thinkos_mutex_lock(i2c_mutex);
-		reg = PHIF_ADC_REG;
-		if (i2c_master_wr(phif_addr, &reg, 1) > 0) {
-			DCC_LOG(LOG_INFO, "i2c_master_wr().");
-			if (i2c_master_rd(phif_addr, adc, sizeof(adc)) > 0) {
-				DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
-						 adc[0], adc[1], adc[2], adc[3], adc[4]);
+		if (i2c_read(phif_addr, PHIF_ADC_REG, adc, sizeof(adc)) > 0) {
+			DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
+					 adc[0], adc[1], adc[2], adc[3], adc[4]);
 
-//				tracef("ADC %5d %5d %5d %5d %5d", 
-//					   adc[0], adc[1], adc[2], adc[3], adc[4]);
+			//				tracef("ADC %5d %5d %5d %5d %5d", 
+			//					   adc[0], adc[1], adc[2], adc[3], adc[4]);
 
-				printf("ADC: ");
+			printf("ADC: ");
 
 
-				for (i = 0; i < 5; ++i) {
-					printf("%5d", adc[i]);
-					if (adc[i] < 3) {
-						line[i].sup_st = LINE_TROUBLE_OPEN;
-					} else if (adc[i] < 40) {
-						line[i].sup_st = LINE_ON_HOOK;
-					} else if (adc[i] < 8000) {
-						line[i].sup_st = LINE_OFF_HOOK;
-					} else {
-						line[i].sup_st = LINE_TROUBLE_SHORT;
-					}
+			for (i = 0; i < 5; ++i) {
+				printf("%5d", adc[i]);
+				if (adc[i] < 3) {
+					line[i].sup_st = LINE_TROUBLE_OPEN;
+				} else if (adc[i] < 40) {
+					line[i].sup_st = LINE_ON_HOOK;
+				} else if (adc[i] < 8000) {
+					line[i].sup_st = LINE_OFF_HOOK;
+				} else {
+					line[i].sup_st = LINE_TROUBLE_SHORT;
 				}
-				printf("\n");
-			} else {
-				DCC_LOG(LOG_WARNING, "i2c_master_rd() failed!");
 			}
-		} else {
-			DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
-		}
-		thinkos_mutex_unlock(i2c_mutex);
-	}
-}
-
-void i2c_bus_scan(void)
-{
-	uint8_t buf[4];
-	uint8_t addr = 0;
-
-	thinkos_mutex_lock(i2c_mutex);
-
-	printf("- I2C bus scan: ");
-
-	/* 7 bit addresses range from 0 to 0x78 */
-	for (addr = 1; addr < 0x78; ++addr) {
-
-		DCC_LOG1(LOG_INFO, "Addr=0x%02x", addr);
-
-		buf[0] = 0;
-		if (i2c_master_wr(addr, buf, 1) <= 0) {
-			printf(".");
-			continue;
-		}
-
-		printf("\nI2C device found @ %d", addr);
-
-		if (i2c_master_rd(addr, buf, 2) != 2) {
 			printf("\n");
-			continue;
-		}
-
-		DCC_LOG3(LOG_TRACE, "Addr=0x%02x [0]--> 0x%02x%02x", 
-				 addr, buf[1], buf[0]);
-		printf(" 0x%02x%02x\n", buf[1], buf[0]);
-
-		if ((buf[0] == 'P') && (buf[1] == 'H')) {
-			printf(" Phone Interface.\n");
-			DCC_LOG1(LOG_TRACE, "Phone Interface @ 0x%02x", addr);
-			phif_addr = addr;
 		}
 	}
-
-	DCC_LOG(LOG_TRACE, "done.");
-	thinkos_mutex_unlock(i2c_mutex);
-
-	printf("\n");
 }
 
-
-int tlv320_wr(unsigned int reg, unsigned int val)
+void tlv320_wr(unsigned int reg, unsigned int val)
 {
-	uint8_t pkt[2];
+	uint8_t buf[1];
+	
+	buf[0] = val;
 
-	DCC_LOG2(LOG_TRACE, "reg=%d val=0x%02x", reg, val);
+	i2c_write(codec_addr, reg, buf, 1);
 
-	thinkos_mutex_lock(i2c_mutex);
-
-	pkt[0] = reg;
-	pkt[1] = val;
-
-	if (i2c_master_wr(codec_addr, pkt, 2) > 0) {
-		printf("i2c_master_wr() ok.\n");
-		DCC_LOG(LOG_INFO, "ok.");
-	} else {
-		printf("i2c_master_wr() failed!\n");
-		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
-	}
-
-	thinkos_mutex_unlock(i2c_mutex);
-
-	return 0;
+	thinkos_sleep(5);
 }
 
 /* Divider values of M, N, and P to be used in junction with the 
@@ -403,20 +308,43 @@ int tlv320_wr(unsigned int reg, unsigned int val)
 /* FS = 8000 */ 
 void tlv320_init(void)
 {
+	uint8_t tlv[4];
 	printf("%s()... \n", __func__);
+
+	i2s_disable();
+
+	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
+		printf("%s(): tlv320_rd() failed!\n", __func__);
+		DCC_LOG(LOG_WARNING, "tlv320_rd() failed!");
+		return;
+	}
+	printf("%s(): 0x%02x 0x%02x 0x%02x 0x%02x\n", __func__,
+		   tlv[0], tlv[1], tlv[2], tlv[3]);
 
 	/* reset the device */
 	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS);
-	tlv320_wr(0, 0);
-	tlv320_wr(0, 0);
-	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
-	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS | CR3_OSR_256 | CR3_ASRF_1);
+
+	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
+		return;
+	}
+
+	printf("%s(): 0x%02x 0x%02x 0x%02x 0x%02x\n", __func__,
+		   tlv[0], tlv[1], tlv[2], tlv[3]);
+
+
+	/* wait at least 132MCLK ~ 12us (11.2896 MHz) */
+//	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
+//	tlv320_wr(2, CR2_I2CX_SET(4) | CR2_HPC_I2C);
+	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_128 | CR3_ASRF_1);
 	tlv320_wr(4, CR4_M_SET(44));
 	tlv320_wr(4, CR4_NP_SET(1, 2));
 	tlv320_wr(5, CR5A_ADGAIN_DB(0));
 	tlv320_wr(5, CR5B_DAGAIN_DB(0));
 	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_0DB);
 	tlv320_wr(6, CR3_AINSEL_INP_M1);
+
+	i2s_enable();
+
 	tlv320_wr(1, CR1_CX | CR1_IIR | CR1_BIASV_LO | CR1_DAC16);
 };
 
@@ -539,58 +467,68 @@ void stm32f_tim2_isr(void)
 int i2s_dac_tone = 0;
 int i2s_dac_gain = 0;
 
-int tone_amp_ltu[] = {
-	    0,
-	  127,
-	  255,
-	  511,
- 	 1023,
-	 2047,
-	 4095,
-	 8191,
-	16383,
-	32767
-};
-
 void dac_gain_step(int d)
 {
+	char msg[32];
+	char * cp = msg;
+
 	i2s_dac_gain += d;
 
-	if (i2s_dac_gain < 0) {
+	if (i2s_dac_gain > 0) {
 		i2s_dac_gain = 0;
-	} else if (i2s_dac_gain > 9) {
-		i2s_dac_gain = 9;
+	} else if (i2s_dac_gain < q15_db2amp_min) {
+		i2s_dac_gain = q15_db2amp_min;
 	}
 
-	i2s_tone_set(i2s_dac_tone, tone_amp_ltu[i2s_dac_gain]);
+	i2s_tone_set(i2s_dac_tone, i2s_dac_gain);
 
-	printf("DAC gain: %d\n", i2s_dac_gain);
+	cp += sprintf(cp, VT100_GOTO, 0, 0); 
+	cp += sprintf(cp, "DAC gain: %d", i2s_dac_gain);
+	cp += sprintf(cp, VT100_CLREOL); 
+	printf(msg);
 }
 
 void dac_tone_cycle(void)
 {
 	unsigned int freq;
+	char msg[32];
+	char * cp = msg;
 
-	i2s_dac_tone = (i2s_dac_tone == 10) ? 0 : i2s_dac_tone + 1;
+	i2s_dac_tone = (i2s_dac_tone == wave_max) ? 0 : i2s_dac_tone + 1;
 
-	freq = i2s_tone_set(i2s_dac_tone, tone_amp_ltu[i2s_dac_gain]);
+	freq = i2s_tone_set(i2s_dac_tone, i2s_dac_gain);
 
-	printf("DAC tone: %dHz.\n", freq);
+	cp += sprintf(cp, VT100_GOTO, 0, 0); 
+	cp += sprintf(cp, "DAC tone: %dHz", freq);
+	cp += sprintf(cp, VT100_CLREOL); 
+	printf(msg);
 }
 
 void hybrid_step_impedance(int d)
 {
+	char msg[32];
+	char * cp = msg;
+
 	hybrid_adjust(hybrid.impedance + d, hybrid.gain);
-	printf("Impedance: %d\n", (hybrid.impedance * 5000) / 63);
+	cp += sprintf(cp, VT100_GOTO, 0, 0); 
+	cp += sprintf(cp, "Impedance: %d", (hybrid.impedance * 5000) / 63);
+	cp += sprintf(cp, VT100_CLREOL); 
+	printf(msg);
 }
 
 void hybrid_step_gain(int d)
 {
 	unsigned int gain;
+	char msg[32];
+	char * cp = msg;
 
 	hybrid_adjust(hybrid.impedance, hybrid.gain + d);
 	gain = 100 + (5000 * hybrid.gain) / (25 * 63);
-	printf("Gain: %d.%02d\n", gain / 100, gain % 100);
+
+	cp += sprintf(cp, VT100_GOTO, 0, 0); 
+	cp += sprintf(cp, "Gain: %d.%02d", gain / 100, gain % 100);
+	cp += sprintf(cp, VT100_CLREOL); 
+	printf(msg);
 }
 
 void show_menu(void)
@@ -613,6 +551,7 @@ void show_menu(void)
 struct {
 	volatile int chan;
 	volatile int count;
+	volatile bool enabled;
 	int flag;
 } spectrum_analyzer;
 
@@ -624,7 +563,7 @@ void spectrum_analyzer_task(void)
 
 		printf(VT100_CLRSCR);
 
-		while (spectrum_analyzer.count) {
+		while (spectrum_analyzer.enabled) {
 
 			if (spectrum_analyzer.chan == 1)
 				i2s_rx_analyze();
@@ -632,7 +571,21 @@ void spectrum_analyzer_task(void)
 				i2s_tx_analyze();
 
 			spectrum_analyzer.count--;
+			if (spectrum_analyzer.count == 0)
+				spectrum_analyzer.enabled = false;
 		};
+	}
+}
+
+void phone_test(void)
+{
+	int i;
+
+	i2s_dac_gain = 0;
+
+	for (i = 2; i < wave_max; ++i) {
+		i2s_tone_set(i2s_dac_tone = i, i2s_dac_gain);
+		thinkos_sleep(1000);
 	}
 }
 
@@ -667,6 +620,7 @@ void shell_task(void)
 		case 'r':
 			spectrum_analyzer.chan = 1;
 			spectrum_analyzer.count = 10000;
+			spectrum_analyzer.enabled = true;
 			thinkos_flag_set(spectrum_analyzer.flag);
 			break;
 		case 'T':
@@ -675,10 +629,11 @@ void shell_task(void)
 		case 't':
 			spectrum_analyzer.chan = 0;
 			spectrum_analyzer.count = 10000;
+			spectrum_analyzer.enabled = true;
 			thinkos_flag_set(spectrum_analyzer.flag);
 			break;
 		case 'b':
-			spectrum_analyzer.count = 0;
+			spectrum_analyzer.enabled = false;
 			break;
 		case 'd':
 			dac_tone_cycle();
@@ -691,6 +646,14 @@ void shell_task(void)
 			break;
 		case ']':
 			dac_gain_step(1);
+			break;
+
+		case 'z':
+			phone_test();
+			break;
+
+		case 'i':
+			tlv320_init();
 			break;
 
 		case '9':
@@ -799,15 +762,14 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. leds_init()");
 	leds_init();
 
+	sndbuf_pool_init();
 
 	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
 	i2s_slave_init();
 
-	DCC_LOG(LOG_TRACE, "6. i2c_master_init()");
-	i2c_master_init(100000);
+	DCC_LOG(LOG_TRACE, "6. i2c_init()");
+	i2c_init();
 
-	i2c_mutex = thinkos_mutex_alloc();
-	tracef("I2C mutex=%d\n", i2c_mutex);
 
 	printf("\n\n");
 	printf("\n\n");
@@ -820,16 +782,8 @@ int main(int argc, char ** argv)
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "8. i2c_master_enable()");
-	i2c_master_enable();
-
-	thinkos_sleep(100);
-
-	tracef("i2c_bus_scan()");
-	i2c_bus_scan();
-
-	tracef("tlv320_init()");
-	tlv320_init();
+//	tracef("tlv320_init()");
+//	tlv320_init();
 
 //	thinkos_thread_create((void *)ui_task, (void *)NULL,
 //						  ui_stack, sizeof(ui_stack), 
@@ -840,9 +794,6 @@ int main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 */
 
-	DCC_LOG(LOG_TRACE, "8. i2s_enable()");
-	tracef("i2s_enable()");
-	i2s_enable();
 
 	DCC_LOG(LOG_TRACE, "17. shell_init()");
 	spectrum_analyzer_init();
@@ -856,7 +807,6 @@ int main(int argc, char ** argv)
 //		thinkos_sleep(1);
 //		tracef("alive!");
 //		printf("[alive!]");
-//		vr_set(i, 2 * i);
 	}
 
 

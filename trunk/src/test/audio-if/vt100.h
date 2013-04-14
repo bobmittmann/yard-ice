@@ -29,6 +29,12 @@
 
 #define VT100_CLRSCR ESC "[2J"
 
+#define VT100_CLREOL ESC "[K"
+
+#define VT100_CURSOR_SHOW ESC "[?25h"
+
+#define VT100_CURSOR_HIDE ESC "[?25l"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -31,11 +31,21 @@ void i2c_master_init(unsigned int scl_freq);
 
 void i2c_master_enable(void);
 
-void i2c_reset(void);
-
 int i2c_master_wr(unsigned int addr, const void * buf, int len);
 
 int i2c_master_rd(unsigned int addr, void * buf, int len);
+
+
+
+int i2c_read(unsigned int addr, unsigned int reg, void * buf, int n);
+
+int i2c_write(unsigned int addr, unsigned int reg, const void * buf, int n);
+
+void i2c_reset(void);
+
+void i2c_init(void);
+
+int i2c_bus_scan(unsigned int from, unsigned int to, uint8_t lst[], int len);
 
 #ifdef __cplusplus
 }
