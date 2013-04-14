@@ -23,6 +23,7 @@
 #include <sys/stm32f.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <sys/delay.h>
 
@@ -123,7 +124,7 @@ void i2c_master_enable(void)
 
 }
 
-void i2c_reset(void)
+void i2c_master_reset(void)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	uint32_t cr1;
@@ -209,13 +210,12 @@ void stm32f_i2c1_ev_isr(void)
 
 	if (sr1 & I2C_RXNE) {
 		DCC_LOG1(LOG_INFO, "%d RXNE", i2c_irq_cnt);
-		trace("I2C RXNE");
+//		trace("I2C RXNE");
 do_recv:
 		*xfer.ptr++ = i2c->dr;
 		xfer.rem--;
 		if (xfer.rem == 0) {
 			xfer.ret = xfer.cnt;
-//			__thinkos_ev_timed_raise(xfer.event);
 			__thinkos_flag_signal(xfer.flag);
 		} else if (xfer.rem == 1) {
 			/* Clear ACK */
@@ -240,7 +240,6 @@ do_xmit:
 			i2c->dr = 0;
 			xfer.ret = xfer.cnt;
 			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
-//			__thinkos_ev_timed_raise(xfer.event);
 //			trace("I2C TXE ?");
 			__thinkos_flag_signal(xfer.flag);
 		} 
@@ -262,8 +261,7 @@ void stm32f_i2c1_er_isr(void)
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "BERR");
-//		__thinkos_ev_timed_raise(xfer.event);
-			trace("I2C BERR!");
+		trace("I2C BERR!");
 		__thinkos_flag_signal(xfer.flag);
 	}
 
@@ -272,7 +270,6 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "ARLO");
 		trace("I2C ARLO!");
-//		__thinkos_ev_timed_raise(xfer.event);
 		__thinkos_flag_signal(xfer.flag);
 	}
 
@@ -283,7 +280,6 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
 //		trace("I2C AF!");
-//		__thinkos_ev_timed_raise(xfer.event);
 		__thinkos_flag_signal(xfer.flag);
 	}
 
@@ -313,22 +309,13 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-	thinkos_flag_wait(xfer.flag);
-//	tracef("ret=%d", xfer.ret);
-
-	ret = xfer.ret;
-
-#if 0
-	while ((ret = xfer.ret) == -2) {
-		if (thinkos_ev_timedwait(xfer.event, 200) == THINKOS_ETIMEDOUT) {
-			printf(" tmo %d %d ", xfer.cnt, xfer.event);
-			DCC_LOG(LOG_TRACE, "Timeout...");
-			i2c_reset();
-			ret = -1;
-			break;
-		}
-	}
-#endif
+	if (thinkos_flag_timedwait(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
+	//	tracef("thinkos_flag_timedwait() tmo %d %d ", xfer.cnt, xfer.flag);
+		DCC_LOG(LOG_TRACE, "Timeout...");
+		i2c_master_reset();
+		ret = -1;
+	} else
+		ret = xfer.ret;
 
 	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
@@ -358,26 +345,129 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-	trace("wait");
-	thinkos_flag_wait(xfer.flag);
-	trace("wakeup");
-
-	ret = xfer.ret;
-
-
-#if 0
-	while ((ret = xfer.ret) == -2) {
-		if (thinkos_ev_timedwait(xfer.event, 10) == THINKOS_ETIMEDOUT) {
-			DCC_LOG(LOG_TRACE, "Timeout...");
-			i2c_reset();
-			ret = -1;
-			break;
-		}
-	}
-#endif
+//	trace("wait");
+	thinkos_flag_timedwait(xfer.flag, 100);
+//	trace("wakeup");
+	if (thinkos_flag_timedwait(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
+//		tracef("thinkos_flag_timedwait() tmo %d %d ", xfer.cnt, xfer.flag);
+		DCC_LOG(LOG_TRACE, "Timeout...");
+		i2c_master_reset();
+		ret = -1;
+	} else
+		ret = xfer.ret;
 
 	DCC_LOG1(LOG_INFO, "ret=%d", ret);
 
 	return ret;
+}
+
+int i2c_mutex = -1;
+
+int i2c_read(unsigned int addr, unsigned int reg, void * buf, int n)
+{
+	uint8_t pkt[1];
+	int ret;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%02x reg=%d", addr, reg);
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = reg;
+
+	if ((ret = i2c_master_wr(addr, pkt, 1)) > 0) {
+		if ((ret = i2c_master_rd(addr, buf, n)) > 0) {
+			DCC_LOG(LOG_INFO, "ok.");
+		} else {
+			DCC_LOG(LOG_WARNING, "i2c_master_rd() failed!");
+		}
+	} else {
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return ret;
+}
+
+int i2c_write(unsigned int addr, unsigned int reg, const void * buf, int n)
+{
+	uint8_t pkt[n + 1];
+	int ret;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%02x reg=%d", addr, reg);
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	pkt[0] = reg;
+	memcpy(&pkt[1], buf, n);
+
+	if ((ret = i2c_master_wr(addr, pkt, n + 1)) > 0) {
+		ret--;
+		DCC_LOG(LOG_INFO, "ok.");
+	} else {
+		DCC_LOG(LOG_WARNING, "i2c_master_wr() failed!");
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return ret;
+}
+
+void i2c_reset(void)
+{
+	thinkos_mutex_lock(i2c_mutex);
+
+	i2c_master_reset();
+
+	thinkos_mutex_unlock(i2c_mutex);
+}
+
+void i2c_init(void)
+{
+	i2c_mutex = thinkos_mutex_alloc();
+//	tracef("I2C mutex=%d\n", i2c_mutex);
+
+	thinkos_mutex_lock(i2c_mutex);
+	i2c_master_init(100000);
+
+	i2c_master_enable();
+	thinkos_mutex_unlock(i2c_mutex);
+}
+
+int i2c_bus_scan(unsigned int from, unsigned int to, uint8_t lst[], int len)
+{
+	uint8_t buf[4];
+	uint8_t addr = 0;
+	int n;
+
+	thinkos_mutex_lock(i2c_mutex);
+
+	/* 7 bit addresses range from 1 to 0x78 */
+	if (from < 1)
+		from = 1;
+	if (to > 0x78)
+		to = 0x78;
+
+	n = 0;
+	for (addr = from; addr < to; ++addr) {
+
+		DCC_LOG1(LOG_INFO, "Addr=0x%02x", addr);
+
+		buf[0] = 0;
+		if (i2c_master_wr(addr, buf, 1) <= 0) {
+			continue;
+		}
+
+		if (i2c_master_rd(addr, buf, 1) <= 0) {
+			continue;
+		}
+
+		if (n < len)
+			lst[n++] = addr;
+	}
+
+	thinkos_mutex_unlock(i2c_mutex);
+
+	return n;
 }
 

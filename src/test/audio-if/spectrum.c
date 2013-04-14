@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "trace.h"
 #include "fft.h"
+#include "vt100.h"
 
 #define FFT_LEN 256
 
@@ -39,29 +41,7 @@ const int16_t hann_window[FFT_LEN] = {
 	0x0452, 0x03c5, 0x0341, 0x02c7, 0x0256, 0x01ef, 0x0191, 0x013d,
 	0x00f3, 0x00b3, 0x007c, 0x0050, 0x002d, 0x0014, 0x0005, 0x0000 };
 
-void spectrum(int16_t out[], int16_t in[])
-{
-	cplx16_t fft_in[FFT_LEN];
-	cplx16_t fft_out[FFT_LEN];
-	int16_t v;
-	int i;
-
-	for (i = 0; i < FFT_LEN; ++i) {
-		v = Q15_MUL(in[i], hann_window[i]);
-		fft_in[i].re = v;
-		fft_in[i].im = 0;
-	}
-
-	/* FFT calculation */
-	fftR4(fft_out, fft_in, FFT_LEN);
-
-	for (i = 0; i < (FFT_LEN / 2); ++i) {
-		out[i] = cplx16_abs(fft_out[i]);
-	}
-}
-
-
-void _spectrum(struct spectrum * sa)
+void spectrum_run(struct spectrum * sa)
 {
 	cplx16_t fft_in[FFT_LEN];
 	cplx16_t fft_out[FFT_LEN];
@@ -71,28 +51,42 @@ void _spectrum(struct spectrum * sa)
 	int i;
 	int j;
 
+	sa->locked = true;
+
 	pos = sa->frm_cnt;
 
-	for (j = 0; j < (FFT_LEN / SNDBUF_LEN); j++) {
-
-		frm = (int16_t *)sa->frm[pos++ & ((FFT_LEN / SNDBUF_LEN) - 1)];
-
-		for (i = 0; i < SNDBUF_LEN; i++) {
+	for (j = 0; j < (FFT_LEN / SNDBUF_LEN); ++j) {
+		frm = (int16_t *)sa->buf[pos++ & ((FFT_LEN / SNDBUF_LEN) - 1)];
+		for (i = 0; i < SNDBUF_LEN; ++i) {
 			v = Q15_MUL(frm[i], hann_window[j * SNDBUF_LEN + i]);
 			fft_in[j * SNDBUF_LEN + i].re = v;
 			fft_in[j * SNDBUF_LEN + i].im = 0;
 		}
+		sndbuf_free(frm);
 	}
 
 	/* FFT calculation */
 	fftR4(fft_in, fft_out, FFT_LEN);
 
-	for (i = 0; i < (FFT_LEN / 2); i++) {
+	for (i = 0; i < (FFT_LEN / 2); ++i) {
 		/* Accumulate the absolute values */
-		sa->out[i] = cplx16_abs(fft_out[i]);
+		sa->mag[i] += cplx16_abs(fft_out[i]);
 	}
 
 	sa->run_cnt++;
+	sa->locked = false;
+}
+
+void spectrum_normalize(struct spectrum * sa, uint16_t * out)
+{
+	int i;
+
+	for (i = 0; i < (FFT_LEN / 2); ++i) {
+		out[i] = sa->mag[i] / sa->run_cnt;
+		sa->mag[i]  = 0;
+	}
+
+	sa->run_cnt = 0;
 }
 
 void spectrum_reset(struct spectrum * sa)
@@ -100,24 +94,95 @@ void spectrum_reset(struct spectrum * sa)
 	int i;
 
 	for (i = 0; i < 256; i++)
-		sa->out[i] = 0;
+		sa->mag[i] = 0;
 
 	sa->run_cnt = 0;
 }
 
-void spectrum_init(struct spectrum * sa)
+void spectrum_init(struct spectrum * sa, unsigned int rate)
 {
 	int i;
 
 	for (i = 0; i < 256; i++)
-		sa->out[i] = 0;
+		sa->mag[i] = 0;
 
 	sa->run_cnt = 0;
 	sa->frm_cnt = 0;
+	sa->locked = false;
+	sa->rate = rate;
 }
 
-void spectrum_record(struct spectrum * sa, sndbuf_t * buf)
+void spectrum_rec(struct spectrum * sa, sndbuf_t buf)
 {
-	sa->frm[sa->frm_cnt++ & ((FFT_LEN / SNDBUF_LEN) - 1)] = buf;
+	int pos;
+
+	/* spectrum analizer is locked */
+	if (sa->locked)
+		return;
+
+	/* increment the buffer reference counter */
+	if ((buf = sndbuf_use(buf)) == NULL)
+		return;
+
+	/* insert into the queue */
+	pos = sa->frm_cnt++ & ((FFT_LEN / SNDBUF_LEN) - 1);
+
+	if (sa->buf[pos] != NULL)
+		sndbuf_free(sa->buf[pos]);
+
+	sa->buf[pos] = buf;
+}
+
+void spectrum_print(struct spectrum * sa, int16_t mag[])
+{
+	int max = 0;
+	int i;
+	int f;
+	int j;
+	int n;
+
+	for (i = 0; i < FFT_LEN / 2; ++i) {
+		if (mag[i] > max)
+			max = mag[i];
+	}
+
+	for (i = 0; i < FFT_LEN / 2; ++i) {
+
+		f = (i * sa->rate + (FFT_LEN / 2)) / FFT_LEN;
+		printf("%4d %5d ", f, mag[i]);
+		n = (mag[i] * 64) / max;
+		for (j = 0; j < n; j++)
+			printf("#");
+		printf("\n");
+	}
+}
+
+void spectrum_show(uint16_t mag[])
+{
+	uint16_t pwr[80];
+	char ln[128];
+	char * cp;
+	int i;
+	int x;
+	int y;
+	char mark;	
+
+	printf(VT100_CURSOR_HIDE); 
+
+	for (i = 0; i < 80; ++i) {
+		pwr[i] = Q15_UMUL(mag[i], mag[i]);
+	}
+
+	for (y = 4; y < 41; ++y) {
+		cp = ln;
+		cp += sprintf(cp, VT100_GOTO, y - 2, 1); 
+		mark = (y % 10) ? ' ' : '-';
+
+		for (x = 0; x < 80; ++x) {
+			cp[x] = (pwr[x] >= q15_db2pwr_ltu[y]) ? '|' : mark;
+		}
+		cp[x] = '\0';
+		printf(ln); 
+	}
 }
 

@@ -31,6 +31,8 @@ void i2s_slave_init(void);
 
 void i2s_enable(void);
 
+void i2s_disable(void);
+
 void i2s_stat(void);
 
 void i2s_rx_dump(void);

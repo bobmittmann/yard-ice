@@ -32,12 +32,12 @@
  */
 
 
-
 struct sndbuf {
+	uint32_t ref;
 	union {
 		struct sndbuf * next;
 		uint64_t u64;
-		int16_t data[SNDBUF_LEN + sizeof(uint32_t) / (sizeof(uint32_t) * 2)];
+		int16_t data[SNDBUF_LEN];
     };
 };
 
@@ -49,7 +49,7 @@ struct {
 
 const unsigned int sndbuf_len  = SNDBUF_LEN;
 
-sndbuf_t * sndbuf_alloc(void)
+sndbuf_t sndbuf_alloc(void)
 {
 	struct sndbuf * buf;
 	uint32_t primask;
@@ -58,18 +58,19 @@ sndbuf_t * sndbuf_alloc(void)
 	primask = cm3_primask_get();
 	cm3_basepri_set(1);
 
-	if ((buf = sndbuf_pool.free) != NULL)
+	if ((buf = sndbuf_pool.free) != NULL) {
 		sndbuf_pool.free = buf->next;
-	else
+		buf->ref = 0;
+	} else
 		sndbuf_pool.error++;
 
 	/* critical section exit */
 	cm3_primask_set(primask);
 
-	return (sndbuf_t *)buf;
+	return buf->data;
 }
 
-sndbuf_t * sndbuf_clear(sndbuf_t * buf)
+sndbuf_t sndbuf_clear(sndbuf_t buf)
 {
 	uint64_t * ptr;
 
@@ -238,22 +239,46 @@ sndbuf_t * sndbuf_clear(sndbuf_t * buf)
 	return buf;
 }
 
-sndbuf_t * sndbuf_calloc(void)
+sndbuf_t sndbuf_calloc(void)
 {
 	return sndbuf_clear( sndbuf_alloc());
 }
 
-void sndbuf_free(sndbuf_t * ptr)
+sndbuf_t sndbuf_use(sndbuf_t ptr)
 {
-	struct sndbuf * buf = (struct sndbuf *)ptr;
+	struct sndbuf * buf = (struct sndbuf *)(((uint32_t *)ptr) - 1);
 	uint32_t primask;
 
 	/* critical section enter */
 	primask = cm3_primask_get();
 	cm3_basepri_set(1);
 
-	buf->next = sndbuf_pool.free;
-	sndbuf_pool.free = buf;
+	/* check whether the buffer is valid or not */
+	if (buf->ref == 0)
+		ptr = NULL;
+	else
+		buf->ref++;
+
+	/* critical section exit */
+	cm3_primask_set(primask);
+
+	return ptr;
+}
+
+void sndbuf_free(sndbuf_t ptr)
+{
+	struct sndbuf * buf = (struct sndbuf *)(((uint32_t *)ptr) - 1);
+	uint32_t primask;
+
+	/* critical section enter */
+	primask = cm3_primask_get();
+	cm3_basepri_set(1);
+
+	/* decrement reference counter */
+	if (--buf->ref == 0) {
+		buf->next = sndbuf_pool.free;
+		sndbuf_pool.free = buf;
+	}
 
 	/* critical section exit */
 	cm3_primask_set(primask);
@@ -274,4 +299,20 @@ void sndbuf_pool_init(void)
 	sndbuf_pool.error = 0;
 }
 
+int sndbuf_cmp(sndbuf_t a, sndbuf_t b)
+{
+	int i;
+
+	for (i = 0; i < SNDBUF_LEN; ++i) {
+		if (a[i] != b[i]) {
+			return i + 1;
+		}
+	}
+
+	return 0;
+}
+
+const int16_t sndbuf_zero[SNDBUF_LEN];
+
+int16_t sndbuf_null[SNDBUF_LEN];
 
