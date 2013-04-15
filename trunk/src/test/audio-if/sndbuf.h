@@ -27,7 +27,7 @@
 #endif
 
 #ifndef SNDBUF_LEN 
-#define SNDBUF_LEN 32
+#define SNDBUF_LEN 256
 #endif
 
 #ifndef SNDBUF_POOL_SIZE
@@ -60,6 +60,8 @@ void sndbuf_free(sndbuf_t * buf);
 void sndbuf_pool_init(void);
 
 int sndbuf_pool_test(void);
+
+int sndbuf_id(sndbuf_t * buf);
 
 #ifdef __cplusplus
 }

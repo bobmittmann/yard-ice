@@ -27,50 +27,7 @@ typedef struct {
 
 #define Q15_ABS
 
-static inline uint32_t int32_sqrt(uint32_t x)
-{
-	uint32_t rem = 0;
-	uint32_t root = 0;
-	int i;
-
-	for (i = 0; i < 16; ++i) {
-		root <<= 1;
-		rem = ((rem << 2) + (x >> 30));
-		x <<= 2;
-		root++;
-		if (root <= rem) {
-			rem -= root;
-			root++;
-		} else
-			root--;
-	}
-	return root >> 1;
-}	
-
-static inline int16_t _q15_sqrt(int16_t x)
-{
-	uint32_t rem = 0;
-	uint32_t root = 0;
-	int i;
-
-	x <<= 15;
-
-	for (i = 0; i < 16; ++i) {
-		root <<= 1;
-		rem = ((rem << 2) + (x >> 30));
-		x <<= 2;
-		root++;
-		if (root <= rem) {
-			rem -= root;
-			root++;
-		} else
-			root--;
-	}
-	return root >> 1;
-}	
-
-
-int16_t q15_sqrt(int16_t x);
+int32_t isqrt(uint32_t x);
 
 static inline uint16_t cplx16_abs(cplx16_t z) {
 	uint32_t x;
@@ -79,7 +36,7 @@ static inline uint16_t cplx16_abs(cplx16_t z) {
 	x = z.re * z.re;
 	y = z.im * z.im;
 
-	return int32_sqrt(x + y);
+	return isqrt(x + y);
 }
 
 extern const uint16_t q15_db2amp_ltu[];

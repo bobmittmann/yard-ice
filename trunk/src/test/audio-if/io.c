@@ -26,6 +26,8 @@
 
 #include <sys/dcclog.h>
 
+#include "trace.h"
+
 /* GPIO pin description */ 
 struct stm32f_io {
 	struct stm32f_gpio * gpio;
@@ -44,6 +46,8 @@ const struct stm32f_io led_io[] = {
 	{ STM32F_GPIOC, 8 }
 };
 
+uint8_t tmr[sizeof(led_io) / sizeof(struct stm32f_io)];
+
 void led_on(int id)
 {
 	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
@@ -52,6 +56,14 @@ void led_on(int id)
 void led_off(int id)
 {
 	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+}
+
+#define POLL_PERIOD_MS 32
+
+void led_flash(int id, int ms)
+{
+	tmr[id] = ms / POLL_PERIOD_MS;
+	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_all_off(void)
@@ -95,6 +107,59 @@ int push_btn_stat(void)
 	return stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
 }
 
+void stm32f_tim2_isr(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM2;
+	int i;
+
+	/* Clear interrupt flags */
+	tim->sr = 0;
+
+	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
+		if (tmr[i] == 0)
+			continue;
+		if (--tmr[i] == 0) 
+			stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+	}
+//	tracef("%s(): irq_cnt=%d", __func__, ++tim_irq_cnt);
+}
+
+void io_timer_init(uint32_t freq)
+{
+	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32f_tim * tim = STM32F_TIM2;
+	uint32_t div;
+	uint32_t pre;
+	uint32_t n;
+
+	/* get the total divisior */
+	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	/* get the minimum pre scaler */
+	pre = (div / 65536) + 1;
+	/* get the reload register value */
+	n = (div * 2 + pre) / (2 * pre);
+
+	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
+	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
+
+	/* Timer clock enable */
+	rcc->apb1enr |= RCC_TIM2EN;
+	
+	/* Timer configuration */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
+	tim->ccr1 = tim->arr / 2;
+
+	/* Enable interrupt */
+	cm3_irq_enable(STM32F_IRQ_TIM2);
+
+	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+}
+
 void io_init(void)
 {
 	/* Enable IO clocks */
@@ -106,6 +171,8 @@ void io_init(void)
 
 	stm32f_gpio_mode(STM32F_GPIOB, 10, INPUT, 0);
 	stm32f_gpio_mode(STM32F_GPIOB, 11, INPUT, 0);
+
+	io_timer_init(1000 / POLL_PERIOD_MS);
 
 #if 0
 	/* System configuration controller clock enable */

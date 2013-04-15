@@ -320,7 +320,8 @@ void stdio_init(void)
 #endif
 
 	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_baudrate_set(uart, 115200 * 4);
+//	stm32f_usart_baudrate_set(uart, 115200);
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 

@@ -253,6 +253,12 @@ sndbuf_t * sndbuf_calloc(void)
 	return sndbuf_clear(sndbuf_alloc());
 }
 
+int sndbuf_id(sndbuf_t * buf)
+{
+	return buf - (sndbuf_t *)sndbuf_pool.blk;
+}
+
+
 sndbuf_t * sndbuf_use(sndbuf_t * buf)
 {
 	uint32_t primask;
@@ -262,12 +268,16 @@ sndbuf_t * sndbuf_use(sndbuf_t * buf)
 	cm3_basepri_set(1);
 
 	/* check whether the buffer is valid or not */
-	if (buf->ref == 0) {
-		DCC_LOG1(LOG_WARNING, "buf=0x%08x invalid!", buf);
-		buf = NULL;
-	 } else {
-		DCC_LOG1(LOG_INFO, "buf=%d", buf - (sndbuf_t *)sndbuf_pool.blk);
-		buf->ref++;
+	if (buf == NULL) {
+		DCC_LOG(LOG_PANIC, "NULL pointer!");
+	} else {
+		if (buf->ref == 0) {
+			DCC_LOG1(LOG_WARNING, "buf=0x%08x invalid!", buf);
+			buf = NULL;
+	 	} else {
+			DCC_LOG1(LOG_INFO, "buf=%d", buf - (sndbuf_t *)sndbuf_pool.blk);
+			buf->ref++;
+		}
 	}
 
 	/* critical section exit */

@@ -41,12 +41,12 @@
 #include "i2c.h"
 #include "console.h"
 #include "io.h"
-#include "i2s.h"
-#include "tlv320.h"
+#include "audio.h"
 #include "trace.h"
 #include "fixpt.h"
 #include "sndbuf.h"
 #include "vt100.h"
+#include "telctl.h"
 #include "tonegen.h"
 
 /* ----------------------------------------------------------------------
@@ -55,13 +55,14 @@
  */
 int supervisor_task(void)
 {
-	printf("%s() started...\n", __func__);
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
-		led_on(2);
+//		led_on(LED_S2);
+		led_flash(LED_S2, 100);
 		thinkos_sleep(100);
 		trace_print(stdout, 1);
-		led_off(2);
+//		led_off(LED_S2);
 		thinkos_sleep(400);
 	}
 }
@@ -75,392 +76,62 @@ void system_reset(void)
 	for(;;);
 }
 
+const char sup_nm_ltu[][4] = {
+	"UN",
+	"OP",
+	"ST",
+	"ID",
+	"1P",
+	"2P",
+	"3P",
+	"4P",
+	"5P"
+};
 
-int32_t phif_addr = 0x55;
-int32_t codec_addr = 64;
-
-#define PHIF_ID_REG 0
-#define PHIF_VER_REG 2
-#define PHIF_ADC_REG 4
-#define PHIF_LED_REG 14
-#define PHIF_RLY_REG 15
-#define PHIF_VR0_REG 16
-#define PHIF_VR1_REG 17
-
-#define LINE_TROUBLE_OPEN 0
-#define LINE_TROUBLE_SHORT 1
-#define LINE_ON_HOOK 2
-#define LINE_OFF_HOOK 3
-
-struct {
-	int sup_st;
-	bool connected;
-} line[5];
-
-uint16_t adc[5];
-
-struct {
-	uint8_t led;
-	uint8_t relay;
-	uint8_t vr[2];
-} cache;
-
-int line_set_connect(int line_idx, bool connect)
+void line_supv_status(void)
 {
-	uint8_t reg[2];
-	unsigned int led;
-	unsigned int relay;
-	int ret;
-
-	led = cache.led;
-	relay = cache.relay;
-
-	if (connect) {
-		led |= (1 << line_idx);
-		relay |= (1 << line_idx);
-	} else {
-		led &= ~(1 << line_idx);
-		relay &= ~(1 << line_idx);
-	}
-
-	reg[0] = led;
-	reg[1] = relay;
-
-	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
-		cache.led = led;
-		cache.relay = relay;
-		line[line_idx].connected = connect;
-	} else {
-		tracef("%s(): i2c_write() failed!", __func__);
-	}
-
-	return ret;
-}
-
-struct {
-	uint8_t impedance;
-	uint8_t gain;
-} hybrid;
-
-int hybrid_adjust(int impedance, int gain)
-{
-
-	uint8_t reg[2];
-	int ret;
-
-	if (impedance < 0 )
-		impedance = 0;
-	else if (impedance > 63)
-		impedance = 63;
-
-	if (gain < 0)
-		gain = 0;
-	else if (gain > 63)
-		gain = 63;
-
-	reg[0] = impedance;
-	reg[1] = gain;
-
-	if ((ret = i2c_write(phif_addr, PHIF_VR0_REG, reg, 2)) > 0) {
-		hybrid.impedance = impedance;;
-		hybrid.gain = gain;
-	} else {
-		tracef("%s(): i2c_write() failed!", __func__);
-	}
-
-	return ret;
-}
-
-int connect_off_hok(void)
-{
-	uint8_t reg[2];
-	int ret;
+	char s[64];
+	char * cp = s;
 	int i;
+	int g;
+	int z;
 
-	DCC_LOG(LOG_TRACE, ".");
+	g = telctl.hybrid.g;
+	z = telctl.hybrid.z;
 
-	printf("\nConnect off-hook... ");
-
-	reg[0] = 0;
-	reg[1] = 0;
+	cp += sprintf(cp, VT100_CURSOR_SAVE VT100_GOTO, 1, 53); 
+	cp += sprintf(cp, "%4d %d.%02d ", z, g / 100, g % 100);
 
 	for (i = 0; i < 5; ++i) {
-		if (line[i].sup_st == LINE_OFF_HOOK) {
-			reg[0] |= (1 << i);
-			reg[1] |= (1 << i);
-			printf("%d ", i);
-		}
+		cp += sprintf(cp, "%s ", sup_nm_ltu[telctl.line[i].sup_st]);
 	}
 
-	printf("\n");
+	cp += sprintf(cp, VT100_CURSOR_UNSAVE); 
 
-	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
-		cache.led = reg[0];
-		cache.relay = reg[1];
-		for (i = 0; i < 5; ++i) {
-			if (line[i].sup_st == LINE_OFF_HOOK) {
-				line[i].connected = true;
-			}
-		}
-	} else {
-		tracef("%s(): i2c_write() failed!", __func__);
-	}
-
-	return ret;
-}
-
-int hangup_all(void)
-{
-	uint8_t reg[2];
-	int ret;
-	int i;
-
-	printf("\nHangup all...\n");
-	DCC_LOG(LOG_TRACE, ".");
-
-	reg[0] = 0;
-	reg[1] = 0;
-
-	if ((ret = i2c_write(phif_addr, PHIF_LED_REG, reg, 2)) > 0) {
-		cache.led = reg[0];
-		cache.relay = reg[1];
-		for (i = 0; i < 5; ++i) {
-			line[i].connected = false;
-		}
-	} else {
-		tracef("%s(): i2c_write() failed!", __func__);
-	}
-
-	return ret;
-}	
-
-void line_toggle(int line_idx)
-{
-	bool connect;
-	char msg[32];
-	char * cp = msg;
-
-	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "Line %d ", line_idx + 1);
-
-	connect = line[line_idx].connected ? false : true;
-
-	line_set_connect(line_idx, connect);
-
-	cp += sprintf(cp, "%s", 
-				  line[line_idx].connected ? "connected" : "disconnected");
-	cp += sprintf(cp, VT100_CLREOL); 
-	printf(msg);
+	printf(s);
 }
 
 int acq_task(void)
 {
-	int i;
+	int z;
+	int vr;
 
 	DCC_LOG(LOG_TRACE, "started...");
-	printf("%s() started...\n", __func__);
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
 		DCC_LOG(LOG_INFO, "Poll...");
-		thinkos_sleep(1000);
-		if (i2c_read(phif_addr, PHIF_ADC_REG, adc, sizeof(adc)) > 0) {
-			DCC_LOG5(LOG_TRACE, "ADC %5d %5d %5d %5d %5d",
-					 adc[0], adc[1], adc[2], adc[3], adc[4]);
+		thinkos_sleep(500);
+		if (telctl_adc_scan() >= 0) { 
+			z = (1000 * telctl.load.cnt) - 500;
+			vr = (z * 63) / 5000;
+			hybrid_impedance_set(vr);
+		};
 
-			//				tracef("ADC %5d %5d %5d %5d %5d", 
-			//					   adc[0], adc[1], adc[2], adc[3], adc[4]);
+		line_disconnect_on_hook();
 
-			printf("ADC: ");
-
-
-			for (i = 0; i < 5; ++i) {
-				printf("%5d", adc[i]);
-				if (adc[i] < 3) {
-					line[i].sup_st = LINE_TROUBLE_OPEN;
-				} else if (adc[i] < 40) {
-					line[i].sup_st = LINE_ON_HOOK;
-				} else if (adc[i] < 8000) {
-					line[i].sup_st = LINE_OFF_HOOK;
-				} else {
-					line[i].sup_st = LINE_TROUBLE_SHORT;
-				}
-			}
-			printf("\n");
-		}
+		line_supv_status();
 	}
-}
-
-void tlv320_wr(unsigned int reg, unsigned int val)
-{
-	uint8_t buf[1];
-	
-	buf[0] = val;
-
-	i2c_write(codec_addr, reg, buf, 1);
-
-	thinkos_sleep(5);
-}
-
-/* Divider values of M, N, and P to be used in junction with the 
-   FSDIV bit for calculation of FS frequency according to the 
-   formula FS = MCLK / (16 x M x N x P) */
-/* MCLK = 22579200 / 2 = 11289600 */ 
-/* FS = 8000 */ 
-void tlv320_init(void)
-{
-	uint8_t tlv[4];
-	printf("%s()... \n", __func__);
-
-	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
-		printf("%s(): tlv320_rd() failed!\n", __func__);
-		DCC_LOG(LOG_WARNING, "tlv320_rd() failed!");
-		return;
-	}
-	printf("%s(): 0x%02x 0x%02x 0x%02x 0x%02x\n", __func__,
-		   tlv[0], tlv[1], tlv[2], tlv[3]);
-
-	/* reset the device */
-	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS);
-	/* wait at least 132MCLK ~ 12us (11.2896 MHz) */
-
-	i2s_disable();
-
-	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
-		return;
-	}
-
-	printf("%s(): 0x%02x 0x%02x 0x%02x 0x%02x\n", __func__,
-		   tlv[0], tlv[1], tlv[2], tlv[3]);
-
-//	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
-//	tlv320_wr(2, CR2_I2CX_SET(4) | CR2_HPC_I2C);
-	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_128 | CR3_ASRF_1);
-	tlv320_wr(4, CR4_M_SET(44));
-	tlv320_wr(4, CR4_NP_SET(1, 2));
-	tlv320_wr(5, CR5A_ADGAIN_DB(0));
-	tlv320_wr(5, CR5B_DAGAIN_DB(0));
-	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_0DB);
-	tlv320_wr(6, CR3_AINSEL_INP_M1);
-
-	i2s_enable();
-
-	tlv320_wr(1, CR1_CX | CR1_IIR | CR1_BIASV_LO | CR1_DAC16);
-};
-
-uint32_t supervisor_stack[256];
-uint32_t ui_stack[256];
-uint32_t acq_stack[256];
-
-/* ----------------------------------------------------------------------
- * User interface task
- * ----------------------------------------------------------------------
- */
-int ui_task(void)
-{
-	int btn_st[2];
-	int ev_press;
-	int ev_release;
-	int ev_dbl_click;
-	int rst_tmr = 0;
-	int click_cnt = 0;
-	int click_tmr = 0;
-
-
-	printf("%s() started...\n", __func__);
-
-	btn_st[0] = push_btn_stat();
-	for (;;) {
-
-		/* process push button */
-		btn_st[1] = push_btn_stat();
-
-		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
-		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
-		ev_dbl_click = 0;
-		btn_st[0] = btn_st[1];
-
-		if (ev_press) {
-			DCC_LOG(LOG_TRACE, "BTN Down");
-			printf("[DWN]");
-			/* set reset timer */
-			rst_tmr = 50;
-			/* reset click window timer */
-			click_tmr = 10;
-			/* update click counter */
-			click_cnt++;
-			if (click_cnt == 2) {
-				/* generate a double click event */
-				ev_dbl_click = 1;
-			}
-			connect_off_hok();
-		}
-
-		if (ev_release) {
-			DCC_LOG(LOG_TRACE, "BTN Up");
-			printf("[UP]");
-			/* clear 'reset timer' */
-			rst_tmr = 0;
-		}
-
-		if (ev_dbl_click) {
-			printf("[DB CLK]");
-//			i2c_reset();
-			hangup_all();
-		}
-
-		if (rst_tmr)
-			rst_tmr--;
-
-		if (click_tmr) {
-			if (--click_tmr == 0)
-				click_cnt = 0;
-		}
-
-		switch (rst_tmr) {
-		case 18:
-		case 16:
-		case 14:
-		case 12:
-		case 10:
-		case 8:
-		case 4:
-		case 2:
-			led_on(0);
-			led_on(1);
-			led_on(2);
-			led_on(3);
-			break;
-		case 17:
-		case 15:
-		case 13:
-		case 11:
-		case 9:
-		case 7:
-		case 5:
-		case 3:
-			led_off(0);
-			led_off(1);
-			led_off(2);
-			led_off(3);
-			break;
-		case 1:
-			system_reset();
-			break;
-		}
-
-		thinkos_sleep(100);
-	}
-}
-
-uint32_t tim_irq_cnt;
-
-void stm32f_tim2_isr(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM2;
-	/* Clear interrupt flags */
-	tim->sr = 0;
-
-	tracef("%s(): irq_cnt=%d", __func__, ++tim_irq_cnt);
 }
 
 int i2s_dac_tone = 0;
@@ -480,7 +151,7 @@ void dac_gain_step(int d)
 		gain = i2s_dac_gain;
 	}
 
-	i2s_tone_set(i2s_dac_tone, gain);
+	audio_tone_set(i2s_dac_tone, gain);
 	
 	i2s_dac_gain = gain;
 
@@ -499,37 +170,10 @@ void dac_tone_cycle(void)
 
 	i2s_dac_tone = (i2s_dac_tone == wave_max) ? 0 : i2s_dac_tone + 1;
 
-	freq = i2s_tone_set(i2s_dac_tone, i2s_dac_gain);
+	freq = audio_tone_set(i2s_dac_tone, i2s_dac_gain);
 
 	cp += sprintf(cp, VT100_GOTO, 0, 0); 
 	cp += sprintf(cp, "DAC tone: %dHz", freq);
-	cp += sprintf(cp, VT100_CLREOL); 
-	printf(msg);
-}
-
-void hybrid_step_impedance(int d)
-{
-	char msg[32];
-	char * cp = msg;
-
-	hybrid_adjust(hybrid.impedance + d, hybrid.gain);
-	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "Impedance: %d", (hybrid.impedance * 5000) / 63);
-	cp += sprintf(cp, VT100_CLREOL); 
-	printf(msg);
-}
-
-void hybrid_step_gain(int d)
-{
-	unsigned int gain;
-	char msg[32];
-	char * cp = msg;
-
-	hybrid_adjust(hybrid.impedance, hybrid.gain + d);
-	gain = 100 + (5000 * hybrid.gain) / (25 * 63);
-
-	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "Gain: %d.%02d", gain / 100, gain % 100);
 	cp += sprintf(cp, VT100_CLREOL); 
 	printf(msg);
 }
@@ -569,13 +213,15 @@ void spectrum_analyzer_task(void)
 		while (spectrum_analyzer.enabled) {
 
 			if (spectrum_analyzer.chan == 1)
-				i2s_rx_analyze();
+				audio_rx_analyze();
 			else
-				i2s_tx_analyze();
+				audio_tx_analyze();
 
 			spectrum_analyzer.count--;
 			if (spectrum_analyzer.count == 0)
 				spectrum_analyzer.enabled = false;
+
+//			thinkos_sleep(200);
 		};
 	}
 }
@@ -587,7 +233,7 @@ void phone_test(void)
 	i2s_dac_gain = 0;
 
 	for (i = 2; i < wave_max; ++i) {
-		i2s_tone_set(i2s_dac_tone = i, i2s_dac_gain);
+		audio_tone_set(i2s_dac_tone = i, i2s_dac_gain);
 		thinkos_sleep(1000);
 	}
 }
@@ -617,17 +263,11 @@ void shell_task(void)
 			line_toggle(c - '1');
 			break;
 
-		case 'R':
-			i2s_rx_dump();
-			break;
 		case 'r':
 			spectrum_analyzer.chan = 1;
 			spectrum_analyzer.count = 10000;
 			spectrum_analyzer.enabled = true;
 			thinkos_flag_set(spectrum_analyzer.flag);
-			break;
-		case 'T':
-			i2s_tx_dump();
 			break;
 		case 't':
 			spectrum_analyzer.chan = 0;
@@ -640,6 +280,12 @@ void shell_task(void)
 			break;
 		case 'd':
 			dac_tone_cycle();
+			break;
+		case 'e':
+			audio_enable();
+			break;
+		case 'o':
+			audio_disable();
 			break;
 		case 's':
 			system_reset();
@@ -655,22 +301,23 @@ void shell_task(void)
 			phone_test();
 			break;
 
-		case 'i':
-			tlv320_init();
+		case 'a':
+			printf(" " VT100_CLRSCR);
+			audio_reset();
 			break;
 
 		case '9':
-			hybrid_step_impedance(-1);
+			hybrid_impedance_step(-1);
 			break;
 		case '0':
-			hybrid_step_impedance(1);
+			hybrid_impedance_step(1);
 			break;
 
 		case '-':
-			hybrid_step_gain(-1);
+			hybrid_gain_step(-1);
 			break;
 		case '=':
-			hybrid_step_gain(1);
+			hybrid_gain_step(1);
 			break;
 		}
 	}
@@ -704,71 +351,105 @@ void shell_init(void)
 	thinkos_sleep(10);
 }
 
-char * q15_fmt(int16_t x)
-{
-	static char s[10];
-	int32_t d;
-	int32_t q;
-	int32_t r;
-	int sig = 0;
 
-	if (x < 0) {
-		sig = 1;
-		x = -x;
+/* ----------------------------------------------------------------------
+ * User interface task
+ * ----------------------------------------------------------------------
+ */
+int ui_task(void)
+{
+	int btn_st[2];
+	int ev_press;
+	int ev_release;
+	int ev_dbl_click;
+	int rst_tmr = 0;
+	int click_cnt = 0;
+	int click_tmr = 0;
+
+
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	btn_st[0] = push_btn_stat();
+	for (;;) {
+
+		/* process push button */
+		btn_st[1] = push_btn_stat();
+
+		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
+		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
+		ev_dbl_click = 0;
+		btn_st[0] = btn_st[1];
+
+		if (ev_press) {
+			DCC_LOG(LOG_TRACE, "BTN Down");
+			printf("[DWN]");
+			/* set reset timer */
+			rst_tmr = 50;
+			/* reset click window timer */
+			click_tmr = 10;
+			/* update click counter */
+			click_cnt++;
+			if (click_cnt == 2) {
+				/* generate a double click event */
+				ev_dbl_click = 1;
+			}
+			line_connect_off_hook();
+		}
+
+		if (ev_release) {
+			DCC_LOG(LOG_TRACE, "BTN Up");
+			printf("[UP]");
+			/* clear 'reset timer' */
+			rst_tmr = 0;
+		}
+
+		if (ev_dbl_click) {
+			printf("[DB CLK]");
+			line_hangup_all();
+		}
+
+		if (rst_tmr)
+			rst_tmr--;
+
+		if (click_tmr) {
+			if (--click_tmr == 0)
+				click_cnt = 0;
+		}
+
+		switch (rst_tmr) {
+		case 18:
+		case 16:
+		case 12:
+		case 8:
+		case 4:
+			led_on(0);
+			led_on(1);
+			led_on(2);
+			led_on(3);
+			break;
+		case 17:
+		case 13:
+		case 9:
+		case 5:
+			led_off(0);
+			led_off(1);
+			led_off(2);
+			led_off(3);
+			break;
+		case 1:
+			system_reset();
+			break;
+		}
+
+		thinkos_sleep(50);
 	}
-
-	d = (uint64_t)((uint64_t)x * (uint64_t)1000000LL) >> 15LL;
-	q = d / 1000000;
-	r = d % 1000000;
-
-	if (sig)
-		sprintf(s, "-%d.%06d", q, r);
-	else
-		sprintf(s, "0.%06d", r);
-
-	return s;
 }
 
-void timer_init(uint32_t freq)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_tim * tim = STM32F_TIM2;
-	uint32_t div;
-	uint32_t pre;
-	uint32_t n;
-
-	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
-	/* get the minimum pre scaler */
-	pre = (div / 65536) + 1;
-	/* get the reload register value */
-	n = (div * 2 + pre) / (2 * pre);
-
-	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
-	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
-	
-	/* Timer configuration */
-	tim->psc = pre - 1;
-	tim->arr = n - 1;
-	tim->cnt = 0;
-	tim->egr = 0;
-	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
-
-	/* Enable interrupt */
-	cm3_irq_enable(STM32F_IRQ_TIM2);
-
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
-}
+uint32_t supervisor_stack[256];
+uint32_t acq_stack[128];
 
 int main(int argc, char ** argv)
 {
-	int i;
-
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -787,18 +468,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
 
-	DCC_LOG(LOG_TRACE, "5. leds_init()");
-	leds_init();
-
-	DCC_LOG(LOG_TRACE, "6. sndbuf_pool_init()");
-	sndbuf_pool_init();
-
-	DCC_LOG(LOG_TRACE, "6. i2c_init()");
-	i2c_init();
-
-	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
-	i2s_slave_init();
-
+	printf(" " VT100_CLRSCR);
 	printf("\n\n");
 	printf("\n\n");
 	printf("-----------------------------------------\n");
@@ -806,22 +476,28 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
+	DCC_LOG(LOG_TRACE, "5. leds_init()");
+	leds_init();
+
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
 
-//	tracef("tlv320_init()");
-//	tlv320_init();
+	DCC_LOG(LOG_TRACE, "6. sndbuf_pool_init()");
+	sndbuf_pool_init();
 
-//	thinkos_thread_create((void *)ui_task, (void *)NULL,
-//						  ui_stack, sizeof(ui_stack), 
-//						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
-/*
+	DCC_LOG(LOG_TRACE, "6. i2c_init()");
+	i2c_init();
+
+	/* give a little time for the slave board start-up */
+	thinkos_sleep(100);
+
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
-*/
 
+	DCC_LOG(LOG_TRACE, "6. i2c_init()");
+	audio_init();
 
 	DCC_LOG(LOG_TRACE, "17. shell_init()");
 
@@ -829,18 +505,8 @@ int main(int argc, char ** argv)
 
 	shell_init();
 
-//	timer_init(500);
+	audio_enable();
 
-//	supervisor_task();
-
-	for (i = 0; ; ++i) {
-		
-//		thinkos_sleep(1);
-//		tracef("alive!");
-//		printf("[alive!]");
-	}
-
-
-	return 0;
+	return ui_task();
 }
 

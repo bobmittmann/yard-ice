@@ -38,7 +38,9 @@
 
 #include <sys/dcclog.h>
 
-#define SAMPLE_RATE 8000
+#include <thinkos.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 #define I2S2_WS     STM32F_GPIOB, 12
 #define I2S2_CK     STM32F_GPIOB, 13
@@ -56,17 +58,15 @@
 struct {
 	struct {
 		sndbuf_t * buf[2];
-		uint32_t idx;
+		volatile uint32_t idx;
 	} tx;
 	struct {
 		sndbuf_t * buf[2];
-		uint32_t idx;
+		sndbuf_t * xfr[2];
+		volatile uint32_t idx;
 	} rx;
+	int io_flag;
 } i2s; 
-
-struct spectrum i2s_tx_sa;
-struct spectrum i2s_rx_sa;
-struct tonegen tonegen;
 
 void i2s_slave_init(void)
 {
@@ -102,14 +102,13 @@ void i2s_slave_init(void)
 	rcc->apb1enr |= RCC_SPI2EN;
 
 	/* disable peripherals */
-	spi->i2scfgr |= SPI_I2SE;
-	i2s_ext->i2scfgr |= SPI_I2SE;
+	spi->i2scfgr &= ~SPI_I2SE;
+	i2s_ext->i2scfgr &= ~SPI_I2SE;
 
 	spi->cr1 = 0;
 	spi->cr2 = 0;
 	spi->i2scfgr = SPI_I2SMOD | SPI_I2SCFG_SLV_RCV | 
-		SPI_PCMSYNC_SHORT | SPI_CKPOL_LO | SPI_I2SSTD_PCM | SPI_DATLEN_16 |
-		SPI_CHLEN_16;
+		SPI_PCMSYNC_SHORT | SPI_I2SSTD_PCM | SPI_DATLEN_16 | SPI_CHLEN_16;
 	spi->i2spr = 0;
 	spi->cr2 = SPI_RXDMAEN;
 
@@ -118,8 +117,7 @@ void i2s_slave_init(void)
 	i2s_ext->cr1 = 0;
 	i2s_ext->cr2 = 0;
 	i2s_ext->i2scfgr = SPI_I2SMOD | SPI_I2SCFG_SLV_XMT | 
-		SPI_PCMSYNC_SHORT | SPI_CKPOL_LO | SPI_I2SSTD_PCM | SPI_DATLEN_16 |
-		SPI_CHLEN_16;
+		SPI_PCMSYNC_SHORT | SPI_I2SSTD_PCM | SPI_DATLEN_16 | SPI_CHLEN_16;
 	i2s_ext->i2spr = 0;
 	i2s_ext->cr2 = SPI_TXDMAEN;
 
@@ -137,10 +135,11 @@ void i2s_slave_init(void)
 	dma->s[I2S_DMA_RX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_RX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
 		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM;
-//		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	dma->s[I2S_DMA_RX_STRM].par = &spi->dr;
-	dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0];
-	dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1];
+	dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0]->data;
+	i2s.rx.xfr[0] = i2s.rx.buf[0];
+	dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1]->data;
+	i2s.rx.xfr[1] = i2s.rx.buf[1];
 	dma->s[I2S_DMA_RX_STRM].ndtr = SNDBUF_LEN;
 	dma->s[I2S_DMA_RX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 
@@ -169,13 +168,8 @@ void i2s_slave_init(void)
 
 	DCC_LOG(LOG_TRACE, "8.");
 
-//	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;	
-//	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;	
-
-	tonegen_init(&tonegen, 0, 0);
-
-	spectrum_init(&i2s_tx_sa, SAMPLE_RATE);
-	spectrum_init(&i2s_rx_sa, SAMPLE_RATE);
+	i2s.io_flag = thinkos_flag_alloc(); 
+	tracef("%s(): flag=%d.", __func__, i2s.io_flag);
 }
 
 void i2s_enable(void)
@@ -184,7 +178,7 @@ void i2s_enable(void)
 	struct stm32f_spi * i2s_ext = STM32F_I2S2EXT;
 	struct stm32f_dma * dma = STM32F_DMA1;
 
-	tracef("%s...", __func__);
+	tracef("%s(): ...", __func__);
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* Enable IO pins */
@@ -193,28 +187,6 @@ void i2s_enable(void)
 	stm32f_gpio_mode(I2S2EXT_SD, ALT_FUNC, PUSH_PULL | SPEED_MED);
 	stm32f_gpio_mode(I2S2_SD, ALT_FUNC, SPEED_MED);
 
-	/* flush TX bufffers */
-	if (i2s.tx.buf[0] != &sndbuf_zero) {
-		sndbuf_free(i2s.tx.buf[0]);
-		i2s.tx.buf[0] = (sndbuf_t *)&sndbuf_zero;
-	}
-
-	if (i2s.tx.buf[1] != &sndbuf_zero) {
-		sndbuf_free(i2s.tx.buf[1]);
-		i2s.tx.buf[1] = (sndbuf_t *)&sndbuf_zero;
-	}
-
-	/* flush RX bufffers */
-	if (i2s.rx.buf[0] != &sndbuf_null) {
-		sndbuf_free(i2s.rx.buf[0]);
-		i2s.rx.buf[0] = &sndbuf_null;
-	}
-
-	if (i2s.rx.buf[1] != &sndbuf_null) {
-		sndbuf_free(i2s.rx.buf[1]);
-		i2s.rx.buf[1] = &sndbuf_null;
-	}
-
 	/* enable DMA */
 	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;	
@@ -222,6 +194,7 @@ void i2s_enable(void)
 	/* Enable peripherals */
 	spi->i2scfgr |= SPI_I2SE;
 	i2s_ext->i2scfgr |= SPI_I2SE;
+
 }
 
 void i2s_disable(void)
@@ -230,7 +203,7 @@ void i2s_disable(void)
 	struct stm32f_spi * i2s_ext = STM32F_I2S2EXT;
 	struct stm32f_dma * dma = STM32F_DMA1;
 
-	tracef("%s...", __func__);
+	tracef("%s(): ... ", __func__);
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* Disable peripherals */
@@ -254,28 +227,23 @@ void i2s_disable(void)
 void stm32f_dma1_stream4_isr(void)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
-	sndbuf_t * buf;
-	int idx;
 
 	if (dma->hisr & DMA_FEIF4) {
 		trace("DMA_FEIF4");
 		DCC_LOG(LOG_TRACE, "DMA_FEIF4");
 		dma->hifcr = DMA_CFEIF4;
-//		dma->s[I2S_DMA_TX_STRM].cr = 0;	
 	}
 
 	if (dma->hisr & DMA_DMEIF4) {
 		trace("DMA_DMEIF4");
 		DCC_LOG(LOG_TRACE, "DMA_DMEIF4");
 		dma->hifcr = DMA_CDMEIF4;
-	//	dma->s[I2S_DMA_TX_STRM].cr = 0;	
 	}
 
 	if (dma->hisr & DMA_TEIF4) {
 		trace("DMA_TEIF4");
 		DCC_LOG(LOG_TRACE, "DMA_TEIF4");
 		dma->hifcr = DMA_CTEIF4;
-//		dma->s[I2S_DMA_TX_STRM].cr = 0;	
 	}
 
 	if ((dma->hisr & DMA_TCIF4) == 0) {
@@ -290,29 +258,13 @@ void stm32f_dma1_stream4_isr(void)
 	dma->hifcr = DMA_CTCIF4;
 
 	if (dma->s[I2S_DMA_TX_STRM].cr & DMA_CT) {
-		if (i2s.tx.buf[0] == &sndbuf_zero) {
-			trace("txbuf[0] == zero!!");
-			DCC_LOG(LOG_TRACE, "TXBUF[0] == zero!!");
-		}
 		dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0]->data;
-		i2s.tx.idx = idx = 1;
+		i2s.tx.idx = 1;
 		DCC_LOG(LOG_INFO, "1.");
 	} else {
-		if (i2s.tx.buf[1] == &sndbuf_zero) {
-			trace("txbuf[1] == zero!!");
-			DCC_LOG(LOG_TRACE, "TXBUF[1] == zero!!");
-		}
 		dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1]->data;
-		i2s.tx.idx = idx = 0;
+		i2s.tx.idx = 0;
 		DCC_LOG(LOG_INFO, "0.");
-	}
-
-	buf = i2s.tx.buf[idx];
-	if (buf != &sndbuf_zero) {
-		i2s.tx.buf[idx] = (sndbuf_t *)&sndbuf_zero;
-		sndbuf_free(buf);
-	} else {
-		DCC_LOG1(LOG_WARNING, "TXBUF[%d] == zero", idx);
 	}
 }
 
@@ -322,7 +274,6 @@ void stm32f_dma1_stream3_isr(void)
 {
 	struct stm32f_dma * dma = STM32F_DMA1;
 	sndbuf_t * buf;
-	int idx;
 
 	if (dma->lisr & DMA_FEIF3) {
 		trace("DMA_FEIF3");
@@ -348,106 +299,70 @@ void stm32f_dma1_stream3_isr(void)
 		return;
 	}
 
-//	tracef("RX DMA_TCIF3 %d", i2s_rx_cnt); 
 
 	/* clear the DMA transfer complete flag */
 	dma->lifcr = DMA_CTCIF3;
 
-	if ((buf = sndbuf_alloc()) == NULL) {
-		trace("rxbuf == null!!!!");
-		buf = &sndbuf_null;
-	}
-
 	if (dma->s[I2S_DMA_RX_STRM].cr & DMA_CT) {
-		if (i2s.rx.buf[0] != &sndbuf_null) {
-			trace("rxbuf[0] != null!!");
-			DCC_LOG(LOG_TRACE, "RXBUF[0] != null!!");
-		}
+		
+		buf = i2s.rx.xfr[0];
+		dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0]->data;
+		i2s.rx.xfr[0] = i2s.rx.buf[0];
 		i2s.rx.buf[0] = buf;
-		dma->s[I2S_DMA_RX_STRM].m0ar = buf->data;
-		i2s.rx.idx = idx = 1;
-		DCC_LOG(LOG_INFO, "1.");
+		i2s.rx.idx = 0;
+//		tracef("%d <-- DMA[0] <-- %d", sndbuf_id(buf), 
+//			   sndbuf_id(i2s.rx.xfr[0])); 
+
 	} else {
-		if (i2s.rx.buf[1] != &sndbuf_null) {
-			trace("rxbuf[1] != null!!");
-			DCC_LOG(LOG_TRACE, "RXBUF[1] != null!!");
-		}
+		buf = i2s.rx.xfr[1];
+		dma->s[I2S_DMA_RX_STRM].m1ar = i2s.rx.buf[1]->data;
+		i2s.rx.xfr[1] = i2s.rx.buf[1];
 		i2s.rx.buf[1] = buf;
-		dma->s[I2S_DMA_RX_STRM].m1ar = buf->data;
-		i2s.rx.idx = idx = 0;
-
-		DCC_LOG(LOG_INFO, "0.");
+		i2s.rx.idx = 1;
+//		tracef("%d <-- DMA[1] <-- %d", sndbuf_id(buf), 
+//			   sndbuf_id(i2s.rx.xfr[1])); 
 	}
 
-	/* get the input data */
-	buf = i2s.rx.buf[idx];
-	if (buf != &sndbuf_null) {
-		i2s.rx.buf[idx] = &sndbuf_null;
-		spectrum_rec(&i2s_rx_sa, buf);
-		sndbuf_free(buf);
-	}
+	__thinkos_flag_signal(i2s.io_flag);
+}
 
-	if ((buf = sndbuf_alloc()) == NULL) {
-		trace("sndbuf_alloc() failed!");
+
+sndbuf_t * i2s_io(sndbuf_t * out_buf)
+{
+	sndbuf_t * in_buf;
+	sndbuf_t * buf;
+	int idx;
+
+	if (out_buf == NULL) {
+		trace("txbuf = zero");
+		out_buf = (sndbuf_t *)&sndbuf_zero;
 	} else {
-		tonegen_apply(&tonegen, buf);
-		spectrum_rec(&i2s_tx_sa, buf);
-
-		if (i2s.tx.buf[i2s.tx.idx] != &sndbuf_zero) {
-			trace("txbuf != zero");
-		}
-
-		i2s.tx.buf[i2s.tx.idx] = buf;
+		/* incerement the reference counter */
+		sndbuf_use(out_buf);
 	}
+
+	/* wait for the end of transfer cycle */
+//	tracef("%s(): wait ", __func__);
+	thinkos_flag_wait(i2s.io_flag);
+	__thinkos_flag_clr(i2s.io_flag);
+
+	idx = i2s.rx.idx;
+	/* get the input data buffer */
+	in_buf = i2s.rx.buf[idx];
+	/* alloc an empty buffer for next cycle */
+	buf = sndbuf_alloc();
+
+//	tracef("%d <-- IN[%d] <-- %d", sndbuf_id(in_buf), idx, sndbuf_id(buf)); 
+	/* set the input buffer for next cycle */
+	i2s.rx.buf[idx] = (buf == NULL) ? &sndbuf_null : buf;
+
+	idx = i2s.tx.idx;
+	/* release the previouslly transmitted buffer */
+	sndbuf_free(i2s.tx.buf[idx]);
+	/* set the output data buffer */
+	i2s.tx.buf[idx] = out_buf;
+
+	return in_buf;
 }
 
-
-void i2s_tx_analyze(void) 
-{
-//	spectrum_reset(&i2s_tx_sa);
-
-	spectrum_run(&i2s_tx_sa);
-
-	spectrum_normalize(&i2s_tx_sa);
-
-//	spectrum_pwr_show(&i2s_tx_sa);
-
-	spectrum_mag_show(&i2s_tx_sa);
-}
-
-void i2s_rx_analyze(void) 
-{
-//	spectrum_reset(&i2s_rx_sa);
-
-	spectrum_run(&i2s_rx_sa);
-
-	spectrum_normalize(&i2s_rx_sa);
-
-//	spectrum_pwr_show(&i2s_rx_sa);
-
-	spectrum_mag_show(&i2s_rx_sa);
-}
-
-void i2s_rx_dump(void)
-{
-	printf("RX frames: %d\n", i2s.rx.idx);
-
-	show_hex16(stdout, 0, i2s.rx.buf[i2s.rx.idx], SNDBUF_LEN * 2);
-
-	printf("\n");
-}
-
-void i2s_tx_dump(void)
-{
-	printf("TX frames: %d\n", i2s.tx.idx);
-
-	show_hex16(stdout, 0, i2s.tx.buf[i2s.tx.idx], SNDBUF_LEN * 2);
-
-	printf("\n");
-}
-
-int i2s_tone_set(int tone, int gain)
-{
-	return tonegen_init(&tonegen, q15_db2amp(gain), tone);
-}
 

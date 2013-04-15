@@ -43,7 +43,7 @@ const int16_t hann_window[FFT_LEN] = {
 	0x0452, 0x03c5, 0x0341, 0x02c7, 0x0256, 0x01ef, 0x0191, 0x013d,
 	0x00f3, 0x00b3, 0x007c, 0x0050, 0x002d, 0x0014, 0x0005, 0x0000 };
 
-void spectrum_run(struct spectrum * sa)
+void spectrum_run(struct spectrum * sa, bool window)
 {
 	cplx16_t fft_in[FFT_LEN];
 	cplx16_t fft_out[FFT_LEN];
@@ -66,8 +66,10 @@ void spectrum_run(struct spectrum * sa)
 			}
 		} else {
 			for (i = 0; i < SNDBUF_LEN; ++i) {
-				v = Q15_MUL(buf->data[i], hann_window[j * SNDBUF_LEN + i]);
-//				v = buf->data[i];
+				if (window)
+					v = Q15_MUL(buf->data[i], hann_window[j * SNDBUF_LEN + i]);
+				else
+					v = buf->data[i];
 				fft_in[j * SNDBUF_LEN + i].re = v;
 				fft_in[j * SNDBUF_LEN + i].im = 0;
 			}

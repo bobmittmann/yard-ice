@@ -137,6 +137,14 @@ void self_test(void)
 	}
 }
 
+void codec_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	codec_rst_lo();
+	udelay(10);
+	codec_rst_hi();
+}
+
 void system_reset(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
@@ -168,7 +176,8 @@ struct io_block {
 	uint8_t relay;
 	uint8_t dgpot[2];
 	uint8_t tone[2];
-	uint8_t opt;
+	uint8_t codec_rst;
+	uint8_t system_rst;
 };
 
 struct io_block rd_block = {
@@ -363,8 +372,6 @@ void shell_init(void)
 	thinkos_thread_create((void *)shell_task, (void *)NULL,
 						  shell_stack, sizeof(shell_stack), 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
-
-	thinkos_sleep(10);
 }
 
 
@@ -376,20 +383,6 @@ void process_data_in(void)
 	int i;
 
 	DCC_LOG(LOG_TRACE, "...");
-
-	if (wr_block.opt & OPT_SELF_TEST) {
-#if ENABLE_STATUS
-		printf("[SELF TEST]");
-#endif
-		self_test();
-	}
-
-	if (wr_block.opt & OPT_RESET) {
-#if ENABLE_STATUS
-		printf("[RESET]");
-#endif
-		system_reset();
-	}
 
 	set = wr_block.led & (wr_block.led ^ rd_block.led);
 	clr = rd_block.led & (wr_block.led ^ rd_block.led);
@@ -461,6 +454,21 @@ void process_data_in(void)
 #endif
 	}
 
+	if (wr_block.codec_rst == 'R') {
+#if ENABLE_STATUS
+		printf("[TLV RST]");
+#endif
+		codec_reset();
+	}
+
+	if (wr_block.system_rst == 'S') {
+#if ENABLE_STATUS
+		printf("[RESET]");
+#endif
+		system_reset();
+	}
+
+	/* reset the write block */
 	memcpy(&wr_block, &rd_block, sizeof(struct io_block));
 }
 
