@@ -5,6 +5,7 @@ from math import *
 def main():
 
 	print "#include <stdint.h>"
+	print "#include \"fixpt.h\""
 	print ""
 	print "/* Q15 dB to gain lookup table */"
 	print "const uint16_t q15_db2pwr_ltu[] = {"
@@ -23,7 +24,7 @@ def main():
 	print ""
 
 	print "#define Q15_DB2PWR_MIN %d" % (db)
-	print "const uint16_t q15_db2pwr_min = Q15_DB2PWR_MIN;"
+	print "const int8_t q15_db2pwr_min = Q15_DB2PWR_MIN;"
 	print ""
 	print "const uint16_t q15_db2pwr(int pwr)"
 	print "{"
@@ -53,7 +54,7 @@ def main():
 	print ""
 
 	print "#define Q15_DB2AMP_MIN %d" % (db)
-	print "const uint16_t q15_db2amp_min = Q15_DB2AMP_MIN;"
+	print "const int8_t q15_db2amp_min = Q15_DB2AMP_MIN;"
 	print ""
 	print "const uint16_t q15_db2amp(int amp)"
 	print "{"

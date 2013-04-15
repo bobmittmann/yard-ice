@@ -146,13 +146,13 @@ void system_reset(void)
 	for(;;);
 }
 
-#define MODE_MAX 10
+extern unsigned int wave_max;
 
 int	tone_set(int chan, int mode)
 {
 	DCC_LOG2(LOG_TRACE, "DAC%d mode=%d", chan, mode);
 
-	if (mode > MODE_MAX)
+	if (mode > wave_max)
 		mode = 0;
 
 	dac_wave_set(chan, mode);
@@ -205,7 +205,7 @@ void tone_cycle(int chan)
 	int mode;
 
 	mode = rd_block.tone[chan] + 1;
-	if (mode > MODE_MAX)
+	if (mode > wave_max)
 		mode = 0;
 
 	DCC_LOG2(LOG_TRACE, "DAC%d mode=%d", chan, mode);

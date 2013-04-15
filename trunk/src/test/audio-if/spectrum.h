@@ -1,5 +1,5 @@
 /* 
- * File:	 fft.h
+ * File:	 spectrum.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,22 +20,48 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __FFT_H__
-#define __FFT_H__
+#ifndef __SPECTRUM_H__
+#define __SPECTRUM_H__
 
-#include "fixpt.h"
+#include <stdbool.h>
+#include "sndbuf.h"
+#include "fft.h"
+
+#define SPECTRUM_LEN 256
+#define SPECTRUM_BINS (SPECTRUM_LEN / 2)
+
+struct spectrum {
+	uint32_t mag[SPECTRUM_BINS];
+	sndbuf_t * ring[SPECTRUM_LEN / SNDBUF_LEN];
+	volatile uint32_t frm_cnt;
+	uint32_t run_cnt;
+	uint32_t rate;
+	volatile bool locked;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void fftR4(cplx16_t y[], cplx16_t x[], int n);
+void spectrum_init(struct spectrum * sa, unsigned int rate);
 
-void ifftR4(cplx16_t y[], cplx16_t x[], int n);
+void spectrum_run(struct spectrum * sa);
+
+void spectrum_normalize(struct spectrum * sa);
+
+void spectrum_reset(struct spectrum * sa);
+
+void spectrum_rec(struct spectrum * sa, sndbuf_t * buf);
+
+void spectrum_mag_show(struct spectrum * sa);
+
+void spectrum_pwr_show(struct spectrum * sa);
+
+void spectrum_print(struct spectrum * sa);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __FFT_H__ */
+#endif /* __SPECTRUM_H__ */
 

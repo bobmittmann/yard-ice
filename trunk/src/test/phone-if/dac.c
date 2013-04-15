@@ -97,14 +97,15 @@ static void dac_timer_init(uint32_t freq)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	div = ((stm32f_tim1_hz) + (freq / 2)) / freq;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
 	n = (div * 2 + pre) / (2 * pre);
 
+	DCC_LOG1(LOG_TRACE, "stm32f_tim1_hz=%dHz", stm32f_tim1_hz);
 	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
-	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
+	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", stm32f_tim1_hz / pre / n);
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;
@@ -116,7 +117,7 @@ static void dac_timer_init(uint32_t freq)
 	tim->egr = 0;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
+	tim->ccr1 = tim->arr / 2;
 	tim->cr2 = TIM_MMS_OC1REF;
 }
 

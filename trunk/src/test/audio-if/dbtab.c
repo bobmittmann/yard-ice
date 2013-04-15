@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "fixpt.h"
 
 /* Q15 dB to gain lookup table */
 const uint16_t q15_db2pwr_ltu[] = {
@@ -50,7 +51,7 @@ const uint16_t q15_db2pwr_ltu[] = {
 };
 
 #define Q15_DB2PWR_MIN -45
-const uint16_t q15_db2pwr_min = Q15_DB2PWR_MIN;
+const int8_t q15_db2pwr_min = Q15_DB2PWR_MIN;
 
 const uint16_t q15_db2pwr(int pwr)
 {
@@ -155,7 +156,7 @@ const uint16_t q15_db2amp_ltu[] = {
 };
 
 #define Q15_DB2AMP_MIN -88
-const uint16_t q15_db2amp_min = Q15_DB2AMP_MIN;
+const int8_t q15_db2amp_min = Q15_DB2AMP_MIN;
 
 const uint16_t q15_db2amp(int amp)
 {

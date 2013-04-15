@@ -84,6 +84,7 @@ def make_tab(rate, lvl, offs, typ, nm, freq):
 def main():
 
 #	rate = 12000
+#	rate = 8000
 	rate = 11997
 
 #	lvl = 16384;
@@ -106,15 +107,18 @@ def main():
 
 	make_tab(rate, lvl, offs, typ, "wave_dc", 0)
 	make_tab(rate, lvl, offs, typ, "wave_a3", 440)
-	make_tab(rate, lvl, offs, typ, "wave_b3", 493.883)
-	make_tab(rate, lvl, offs, typ, "wave_c3", 523.251)
-	make_tab(rate, lvl, offs, typ, "wave_d3", 587.330)
-	make_tab(rate, lvl, offs, typ, "wave_e3", 698.456)
-	make_tab(rate, lvl, offs, typ, "wave_f3", 739.989)
-	make_tab(rate, lvl, offs, typ, "wave_g3", 783.991)
-	make_tab(rate, lvl, offs, typ, "wave_1k", 1000)
-	make_tab(rate, lvl, offs, typ, "wave_2k", 2000)
-	make_tab(rate, lvl, offs, typ, "wave_3k", 3000)
+#	make_tab(rate, lvl, offs, typ, "wave_b3", 493.883)
+#	make_tab(rate, lvl, offs, typ, "wave_c3", 523.251)
+#	make_tab(rate, lvl, offs, typ, "wave_d3", 587.330)
+#	make_tab(rate, lvl, offs, typ, "wave_e3", 698.456)
+#	make_tab(rate, lvl, offs, typ, "wave_f3", 739.989)
+#	make_tab(rate, lvl, offs, typ, "wave_g3", 783.991)
+	make_tab(rate, lvl, offs, typ, "wave_500", 500)
+	make_tab(rate, lvl, offs, typ, "wave_1000", 1000)
+	make_tab(rate, lvl, offs, typ, "wave_1500", 1500)
+	make_tab(rate, lvl, offs, typ, "wave_2000", 2000)
+	make_tab(rate, lvl, offs, typ, "wave_2500", 2500)
+	make_tab(rate, lvl, offs, typ, "wave_3000", 3000)
 
 	print ""
 
@@ -135,6 +139,7 @@ def main():
 		i = i + 1
 	print ""
 
+	print "const unsigned int wave_max = %d;" %(i - 1);
 	print ""
 	print "#ifdef __cplusplus"
 	print "extern \"C\" {"

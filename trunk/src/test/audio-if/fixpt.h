@@ -11,6 +11,8 @@
 // Q15 Multiply
 
 #define Q15_MUL(X1, X2) (((int32_t)(X1) * (int32_t)(X2) + (1 << 14)) >> 15)
+//#define Q15_MUL(X1, X2) (((int32_t)(X1) * (int32_t)(X2)) >> 15)
+
 #define Q15_UMUL(X1, X2) ((((uint32_t)(X1) * (uint32_t)(X2)) + (1 << 14)) >> 15)
 
 // Q15 Divide
@@ -25,31 +27,54 @@ typedef struct {
 
 #define Q15_ABS
 
-static inline int32_t int32_sqrt(int32_t x)
+static inline uint32_t int32_sqrt(uint32_t x)
 {
-	int32_t res = 0;
-	int32_t one = 1uL << ((sizeof(int32_t ) * 8) - 2);
+	uint32_t rem = 0;
+	uint32_t root = 0;
+	int i;
 
-	// "one" starts at the highest power of four <= than the argument.
-	while (one > x)
-		one >>= 2;
-
-	while (one != 0) {
-		if (x >= res + one) {
-			x = x - (res + one);
-			res = res +  2 * one;
-		}
-		res >>= 1;
-		one >>= 2;
+	for (i = 0; i < 16; ++i) {
+		root <<= 1;
+		rem = ((rem << 2) + (x >> 30));
+		x <<= 2;
+		root++;
+		if (root <= rem) {
+			rem -= root;
+			root++;
+		} else
+			root--;
 	}
+	return root >> 1;
+}	
 
-	// arithmetic rounding to nearest integer
-	return (x > res) ? res + 1 : res;
-}
+static inline int16_t _q15_sqrt(int16_t x)
+{
+	uint32_t rem = 0;
+	uint32_t root = 0;
+	int i;
+
+	x <<= 15;
+
+	for (i = 0; i < 16; ++i) {
+		root <<= 1;
+		rem = ((rem << 2) + (x >> 30));
+		x <<= 2;
+		root++;
+		if (root <= rem) {
+			rem -= root;
+			root++;
+		} else
+			root--;
+	}
+	return root >> 1;
+}	
+
+
+int16_t q15_sqrt(int16_t x);
 
 static inline uint16_t cplx16_abs(cplx16_t z) {
-	int32_t x;
-	int32_t y;
+	uint32_t x;
+	uint32_t y;
 
 	x = z.re * z.re;
 	y = z.im * z.im;
@@ -58,10 +83,10 @@ static inline uint16_t cplx16_abs(cplx16_t z) {
 }
 
 extern const uint16_t q15_db2amp_ltu[];
-extern const uint16_t q15_db2amp_min;
+extern const int8_t q15_db2amp_min;
 
 extern const uint16_t q15_db2pwr_ltu[];
-extern const uint16_t q15_db2pwr_min;
+extern const int8_t q15_db2pwr_min;
 
 const uint16_t q15_db2amp(int amp);
 

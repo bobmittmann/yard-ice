@@ -23,58 +23,67 @@
 #include <arch/cortex-m3.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/dcclog.h>
 
 #include "sndbuf.h"
+
+const unsigned int sndbuf_len  = SNDBUF_LEN;
 
 /* ----------------------------------------------------------------------
  * sound buffer pool
  * ----------------------------------------------------------------------
  */
 
-
-struct sndbuf {
-	uint32_t ref;
+struct sndbuf_blk {
 	union {
-		struct sndbuf * next;
-		uint64_t u64;
-		int16_t data[SNDBUF_LEN];
+		struct sndbuf buf;
+		struct {
+			uint32_t ref;
+			struct sndbuf_blk * next;
+		};
     };
 };
 
 struct {
 	uint32_t error;
-	struct sndbuf * free;
-	struct sndbuf buf[SNDBUF_POOL_SIZE];
+	uint32_t free_cnt;
+	uint32_t alloc_cnt;
+	struct sndbuf_blk * free;
+	struct sndbuf_blk blk[SNDBUF_POOL_SIZE];
 } sndbuf_pool;
 
-const unsigned int sndbuf_len  = SNDBUF_LEN;
 
-sndbuf_t sndbuf_alloc(void)
+sndbuf_t * sndbuf_alloc(void)
 {
-	struct sndbuf * buf;
+	struct sndbuf_blk * blk;
 	uint32_t primask;
 
 	/* critical section enter */
 	primask = cm3_primask_get();
 	cm3_basepri_set(1);
 
-	if ((buf = sndbuf_pool.free) != NULL) {
-		sndbuf_pool.free = buf->next;
-		buf->ref = 0;
-	} else
+	if ((blk = sndbuf_pool.free) != NULL) {
+		sndbuf_pool.free = blk->next;
+		blk->ref = 1;
+		sndbuf_pool.alloc_cnt++;
+		DCC_LOG1(LOG_INFO, "buf=0x%08x", blk);
+	} else {
 		sndbuf_pool.error++;
+		DCC_LOG2(LOG_ERROR, "failed!, allocs=%d frees=%d",
+				 sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
+	}
 
 	/* critical section exit */
 	cm3_primask_set(primask);
 
-	return buf->data;
+	return (sndbuf_t *)blk;
 }
 
-sndbuf_t sndbuf_clear(sndbuf_t buf)
+sndbuf_t * sndbuf_clear(sndbuf_t * buf)
 {
 	uint64_t * ptr;
 
-	if ((ptr = (uint64_t *)buf) == NULL)
+	if ((ptr = (uint64_t *)buf->data) == NULL)
 		return buf;
 
 #if SNDBUF_LEN <= 4
@@ -239,14 +248,13 @@ sndbuf_t sndbuf_clear(sndbuf_t buf)
 	return buf;
 }
 
-sndbuf_t sndbuf_calloc(void)
+sndbuf_t * sndbuf_calloc(void)
 {
-	return sndbuf_clear( sndbuf_alloc());
+	return sndbuf_clear(sndbuf_alloc());
 }
 
-sndbuf_t sndbuf_use(sndbuf_t ptr)
+sndbuf_t * sndbuf_use(sndbuf_t * buf)
 {
-	struct sndbuf * buf = (struct sndbuf *)(((uint32_t *)ptr) - 1);
 	uint32_t primask;
 
 	/* critical section enter */
@@ -254,30 +262,44 @@ sndbuf_t sndbuf_use(sndbuf_t ptr)
 	cm3_basepri_set(1);
 
 	/* check whether the buffer is valid or not */
-	if (buf->ref == 0)
-		ptr = NULL;
-	else
+	if (buf->ref == 0) {
+		DCC_LOG1(LOG_WARNING, "buf=0x%08x invalid!", buf);
+		buf = NULL;
+	 } else {
+		DCC_LOG1(LOG_INFO, "buf=%d", buf - (sndbuf_t *)sndbuf_pool.blk);
 		buf->ref++;
+	}
 
 	/* critical section exit */
 	cm3_primask_set(primask);
 
-	return ptr;
+	return buf;
 }
 
-void sndbuf_free(sndbuf_t ptr)
+void sndbuf_free(sndbuf_t * buf)
 {
-	struct sndbuf * buf = (struct sndbuf *)(((uint32_t *)ptr) - 1);
+	struct sndbuf_blk * blk = (struct sndbuf_blk *)buf;
 	uint32_t primask;
 
 	/* critical section enter */
 	primask = cm3_primask_get();
 	cm3_basepri_set(1);
 
-	/* decrement reference counter */
-	if (--buf->ref == 0) {
-		buf->next = sndbuf_pool.free;
-		sndbuf_pool.free = buf;
+	if (buf == NULL) {
+		DCC_LOG(LOG_PANIC, "NULL pointer!");
+	} else {
+		/* decrement reference counter */
+		if (buf->ref == 0) {
+			DCC_LOG1(LOG_WARNING, "buf=0x%08x invalid!", buf);
+		} else { 
+			DCC_LOG2(LOG_INFO, "buf=%d ref=%d", 
+					 buf - (sndbuf_t *)sndbuf_pool.blk, buf->ref);
+			if (--buf->ref == 0) {
+				blk->next = sndbuf_pool.free;
+				sndbuf_pool.free = blk;
+				sndbuf_pool.free_cnt++;
+			}
+		}
 	}
 
 	/* critical section exit */
@@ -289,22 +311,62 @@ void sndbuf_pool_init(void)
 {
 	int i;
 
-	sndbuf_pool.free = &sndbuf_pool.buf[0];
+	DCC_LOG1(LOG_TRACE, "pool_size=%d.", SNDBUF_POOL_SIZE);
 
-	for (i = 0; i < SNDBUF_POOL_SIZE - 1; i++) {
-		sndbuf_pool.buf[i].next = &sndbuf_pool.buf[i + 1];
+	sndbuf_pool.free = &sndbuf_pool.blk[0];
+
+	for (i = 0; i < SNDBUF_POOL_SIZE - 1; ++i) {
+		sndbuf_pool.blk[i].next = &sndbuf_pool.blk[i + 1];
+		sndbuf_pool.blk[i].ref = 0;
 	}
 
-	sndbuf_pool.buf[i].next = NULL;
+	sndbuf_pool.blk[i].next = NULL;
+	sndbuf_pool.blk[i].ref = 0;
 	sndbuf_pool.error = 0;
+	sndbuf_pool.free_cnt = 0;
+	sndbuf_pool.alloc_cnt = 0;
 }
 
-int sndbuf_cmp(sndbuf_t a, sndbuf_t b)
+int sndbuf_pool_test(void)
+{
+	sndbuf_t * lst[SNDBUF_POOL_SIZE];
+	sndbuf_t * buf;
+	int i;
+	int j = 0;
+
+	do {
+		for (i = 0; i < SNDBUF_POOL_SIZE; ++i) {
+			buf = sndbuf_alloc();
+			if (buf == NULL) {
+				DCC_LOG1(LOG_PANIC, "%d: sndbuf_alloc() failed!", i);
+				return -1;
+			}
+			lst[i] = buf;
+		}
+
+		buf = sndbuf_alloc();
+		if (buf != NULL) {
+			DCC_LOG2(LOG_PANIC, "%d: sndbuf_alloc() != NULL!", i, buf);
+			return -1;
+		}
+
+		for (i = 0; i < SNDBUF_POOL_SIZE; ++i) {
+			sndbuf_free(lst[i]);
+		}
+
+	} while (++j < 2);
+
+	DCC_LOG(LOG_TRACE, "success.");
+
+	return 0;
+}
+
+int sndbuf_cmp(sndbuf_t * a, sndbuf_t * b)
 {
 	int i;
 
 	for (i = 0; i < SNDBUF_LEN; ++i) {
-		if (a[i] != b[i]) {
+		if (a->data[i] != b->data[i]) {
 			return i + 1;
 		}
 	}
@@ -312,7 +374,7 @@ int sndbuf_cmp(sndbuf_t a, sndbuf_t b)
 	return 0;
 }
 
-const int16_t sndbuf_zero[SNDBUF_LEN];
+const struct sndbuf sndbuf_zero;
 
-int16_t sndbuf_null[SNDBUF_LEN];
+struct sndbuf sndbuf_null;
 

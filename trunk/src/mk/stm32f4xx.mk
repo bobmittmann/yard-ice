@@ -33,7 +33,7 @@ endif
 ARCH = cm3
 CPU = cortex-m4
 CDEFS += STM32F405 "HCLK_HZ=168000000" 
-OPTIONS	= -mcpu=$(CPU) -mfloat-abi=hard -mthumb -mthumb-interwork 
+OPTIONS	= -mcpu=$(CPU) -mfpu=vfp -mfloat-abi=hard -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
 LDSCRIPT = $(MACH).ld  

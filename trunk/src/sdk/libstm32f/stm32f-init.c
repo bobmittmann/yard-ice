@@ -63,13 +63,17 @@ void debug_init(void)
 #ifdef STM32F10X
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 2;
+const uint32_t stm32f_tim1_hz = HCLK_HZ;
+
 const uint32_t stm32f_apb2_hz = HCLK_HZ;
+const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #endif
 
 #ifdef STM32F100
-const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ;
 const uint32_t stm32f_apb2_hz = HCLK_HZ;
+const uint32_t stm32f_tim1_hz = HCLK_HZ;
+const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #endif
 
 void _init(void)
@@ -184,7 +188,9 @@ void _init(void)
 
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 4;
+const uint32_t stm32f_tim1_hz = HCLK_HZ / 2;
 const uint32_t stm32f_apb2_hz = HCLK_HZ / 2;
+const uint32_t stm32f_tim2_hz = HCLK_HZ;
 
 void _init(void)
 {

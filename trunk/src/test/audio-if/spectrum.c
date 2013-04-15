@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/dcclog.h>
 
 #include "trace.h"
 #include "fft.h"
 #include "vt100.h"
+#include "spectrum.h"
 
 #define FFT_LEN 256
 
@@ -45,28 +47,37 @@ void spectrum_run(struct spectrum * sa)
 {
 	cplx16_t fft_in[FFT_LEN];
 	cplx16_t fft_out[FFT_LEN];
-	int16_t * frm;
-	int16_t v;
+	sndbuf_t * buf;
+	int32_t v;
 	int pos;
 	int i;
 	int j;
 
 	sa->locked = true;
-
 	pos = sa->frm_cnt;
 
 	for (j = 0; j < (FFT_LEN / SNDBUF_LEN); ++j) {
-		frm = (int16_t *)sa->buf[pos++ & ((FFT_LEN / SNDBUF_LEN) - 1)];
-		for (i = 0; i < SNDBUF_LEN; ++i) {
-			v = Q15_MUL(frm[i], hann_window[j * SNDBUF_LEN + i]);
-			fft_in[j * SNDBUF_LEN + i].re = v;
-			fft_in[j * SNDBUF_LEN + i].im = 0;
+		buf = sa->ring[pos++ & ((FFT_LEN / SNDBUF_LEN) - 1)];
+		if (buf == NULL) {
+			DCC_LOG(LOG_WARNING, "buf == NULL!");
+			for (i = 0; i < SNDBUF_LEN; ++i) {
+				fft_in[j * SNDBUF_LEN + i].re = 0;
+				fft_in[j * SNDBUF_LEN + i].im = 0;
+			}
+		} else {
+			for (i = 0; i < SNDBUF_LEN; ++i) {
+				v = Q15_MUL(buf->data[i], hann_window[j * SNDBUF_LEN + i]);
+//				v = buf->data[i];
+				fft_in[j * SNDBUF_LEN + i].re = v;
+				fft_in[j * SNDBUF_LEN + i].im = 0;
+			}
 		}
-		sndbuf_free(frm);
 	}
 
+	sa->locked = false;
+
 	/* FFT calculation */
-	fftR4(fft_in, fft_out, FFT_LEN);
+	fftR4(fft_out, fft_in, FFT_LEN);
 
 	for (i = 0; i < (FFT_LEN / 2); ++i) {
 		/* Accumulate the absolute values */
@@ -74,26 +85,27 @@ void spectrum_run(struct spectrum * sa)
 	}
 
 	sa->run_cnt++;
-	sa->locked = false;
 }
 
-void spectrum_normalize(struct spectrum * sa, uint16_t * out)
+void spectrum_normalize(struct spectrum * sa)
 {
 	int i;
 
+	if (sa->run_cnt == 0)
+		return;
+
 	for (i = 0; i < (FFT_LEN / 2); ++i) {
-		out[i] = sa->mag[i] / sa->run_cnt;
-		sa->mag[i]  = 0;
+		sa->mag[i] /= sa->run_cnt;
 	}
 
-	sa->run_cnt = 0;
+	sa->run_cnt = 1;
 }
 
 void spectrum_reset(struct spectrum * sa)
 {
 	int i;
 
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < (FFT_LEN / 2); ++i)
 		sa->mag[i] = 0;
 
 	sa->run_cnt = 0;
@@ -103,8 +115,11 @@ void spectrum_init(struct spectrum * sa, unsigned int rate)
 {
 	int i;
 
-	for (i = 0; i < 256; i++)
+	for (i = 0; i < (FFT_LEN / 2); ++i)
 		sa->mag[i] = 0;
+
+	for (i = 0; i < (FFT_LEN / SNDBUF_LEN); ++i)
+		sa->ring[i] = NULL;
 
 	sa->run_cnt = 0;
 	sa->frm_cnt = 0;
@@ -112,28 +127,34 @@ void spectrum_init(struct spectrum * sa, unsigned int rate)
 	sa->rate = rate;
 }
 
-void spectrum_rec(struct spectrum * sa, sndbuf_t buf)
+void spectrum_rec(struct spectrum * sa, sndbuf_t * buf)
 {
 	int pos;
 
 	/* spectrum analizer is locked */
-	if (sa->locked)
+	if (sa->locked) {
+		DCC_LOG(LOG_TRACE, "locked!");
 		return;
+	}
 
 	/* increment the buffer reference counter */
-	if ((buf = sndbuf_use(buf)) == NULL)
+	if ((buf = sndbuf_use(buf)) == NULL) {
+		DCC_LOG(LOG_TRACE, "buffer invalid!");
 		return;
+	}
 
 	/* insert into the queue */
 	pos = sa->frm_cnt++ & ((FFT_LEN / SNDBUF_LEN) - 1);
 
-	if (sa->buf[pos] != NULL)
-		sndbuf_free(sa->buf[pos]);
+	if (sa->ring[pos] != NULL) {
+		/* discard old buffers */
+		sndbuf_free(sa->ring[pos]);
+	}
 
-	sa->buf[pos] = buf;
+	sa->ring[pos] = buf;
 }
 
-void spectrum_print(struct spectrum * sa, int16_t mag[])
+void spectrum_print(struct spectrum * sa)
 {
 	int max = 0;
 	int i;
@@ -142,25 +163,25 @@ void spectrum_print(struct spectrum * sa, int16_t mag[])
 	int n;
 
 	for (i = 0; i < FFT_LEN / 2; ++i) {
-		if (mag[i] > max)
-			max = mag[i];
+		if (sa->mag[i] > max)
+			max = sa->mag[i];
 	}
 
 	for (i = 0; i < FFT_LEN / 2; ++i) {
 
 		f = (i * sa->rate + (FFT_LEN / 2)) / FFT_LEN;
-		printf("%4d %5d ", f, mag[i]);
-		n = (mag[i] * 64) / max;
+		printf("%4d %5d ", f, sa->mag[i]);
+		n = (sa->mag[i] * 64) / max;
 		for (j = 0; j < n; j++)
 			printf("#");
 		printf("\n");
 	}
 }
 
-void spectrum_show(uint16_t mag[])
+void spectrum_pwr_show(struct spectrum * sa)
 {
-	uint16_t pwr[80];
-	char ln[128];
+	uint32_t pwr[FFT_LEN / 2];
+	char ln[160];
 	char * cp;
 	int i;
 	int x;
@@ -169,8 +190,8 @@ void spectrum_show(uint16_t mag[])
 
 	printf(VT100_CURSOR_HIDE); 
 
-	for (i = 0; i < 80; ++i) {
-		pwr[i] = Q15_UMUL(mag[i], mag[i]);
+	for (i = 0; i < (FFT_LEN / 2); ++i) {
+		pwr[i] = Q15_UMUL(sa->mag[i], sa->mag[i]);
 	}
 
 	for (y = 4; y < 41; ++y) {
@@ -180,6 +201,29 @@ void spectrum_show(uint16_t mag[])
 
 		for (x = 0; x < 80; ++x) {
 			cp[x] = (pwr[x] >= q15_db2pwr_ltu[y]) ? '|' : mark;
+		}
+		cp[x] = '\0';
+		printf(ln); 
+	}
+}
+
+void spectrum_mag_show(struct spectrum * sa)
+{
+	char ln[160];
+	char mark;	
+	char * cp;
+	int x;
+	int y;
+
+	printf(VT100_CURSOR_HIDE); 
+
+	for (y = 1; y < 41; ++y) {
+		cp = ln;
+		cp += sprintf(cp, VT100_GOTO, y + 1, 1); 
+		mark = (y % 10) ? ' ' : '-';
+
+		for (x = 0; x < 80; ++x) {
+			cp[x] = (sa->mag[x] >= q15_db2amp_ltu[y * 2]) ? '|' : mark;
 		}
 		cp[x] = '\0';
 		printf(ln); 

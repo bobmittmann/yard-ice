@@ -25,28 +25,28 @@
 #ifdef STM32F2X
 
 gpio_io_t fsmc_io[] = {
-	GPIO(PD, 14), /* D0 */
-	GPIO(PD, 15), /* D1 */
-	GPIO(PD, 0),  /* D2 */
-	GPIO(PD, 1),  /* D3 */
-	GPIO(PE, 7),  /* D4 */
-	GPIO(PE, 8),  /* D5 */
-	GPIO(PE, 9),  /* D6 */
-	GPIO(PE, 10), /* D7 */
-	GPIO(PE, 11), /* D8 */
-	GPIO(PE, 12), /* D9 */
-	GPIO(PE, 13), /* D10 */
-	GPIO(PE, 14), /* D11 */
-	GPIO(PE, 15), /* D12 */
-	GPIO(PD, 8),  /* D13 */
-	GPIO(PD, 9),  /* D14 */
-	GPIO(PD, 10), /* D15 */
-	GPIO(PD, 3), /* CLK */
-	GPIO(PD, 4), /* NOE */
-	GPIO(PD, 5), /* NWE */
-	GPIO(PD, 7), /* NE1 */
-//	GPIO(PD, 6), /* NWAIT */
-	GPIO(PB, 7), /* NL */
+	GPIO(GPIOD, 14), /* D0 */
+	GPIO(GPIOD, 15), /* D1 */
+	GPIO(GPIOD, 0),  /* D2 */
+	GPIO(GPIOD, 1),  /* D3 */
+	GPIO(GPIOE, 7),  /* D4 */
+	GPIO(GPIOE, 8),  /* D5 */
+	GPIO(GPIOE, 9),  /* D6 */
+	GPIO(GPIOE, 10), /* D7 */
+	GPIO(GPIOE, 11), /* D8 */
+	GPIO(GPIOE, 12), /* D9 */
+	GPIO(GPIOE, 13), /* D10 */
+	GPIO(GPIOE, 14), /* D11 */
+	GPIO(GPIOE, 15), /* D12 */
+	GPIO(GPIOD, 8),  /* D13 */
+	GPIO(GPIOD, 9),  /* D14 */
+	GPIO(GPIOD, 10), /* D15 */
+	GPIO(GPIOD, 3), /* CLK */
+	GPIO(GPIOD, 4), /* NOE */
+	GPIO(GPIOD, 5), /* NWE */
+	GPIO(GPIOD, 7), /* NE1 */
+//	GPIO(GPIOD, 6), /* NWAIT */
+	GPIO(GPIOB, 7), /* NL */
 };
 
 void stm32f_fsmc_speed(int div)
@@ -70,8 +70,8 @@ void stm32f_fsmc_init(void)
 	rcc->ahb3enr |= RCC_FSMCEN;
 
 	/* Configur IO pins */
-	stm32f_gpio_clock_en(STM32F_GPIO(PD));
-	stm32f_gpio_clock_en(STM32F_GPIO(PE));
+	stm32f_gpio_clock_en(STM32F_GPIO(GPIOD));
+	stm32f_gpio_clock_en(STM32F_GPIO(GPIOE));
 
 	for (i = 0; i < sizeof(fsmc_io) / sizeof(gpio_io_t); i++) {
 		io = fsmc_io[i];
@@ -80,7 +80,7 @@ void stm32f_fsmc_init(void)
 		stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, GPIO_AF12);
 	}
 
-	stm32f_gpio_mode(STM32F_GPIO(PD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
+	stm32f_gpio_mode(STM32F_GPIO(GPIOD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
 
 	fsmc->bcr1 = FSMC_CBURSTRW |	
 		FSMC_WREN | 

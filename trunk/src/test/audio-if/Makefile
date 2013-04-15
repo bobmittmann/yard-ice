@@ -23,7 +23,7 @@
 PROG = audio-if
 
 CFILES = audio-if.c i2c-master.c console.c io.c i2s.c trace.c sndbuf.c \
-		 jitbuf.c spectrum.c tonegen.c dbtab.c
+		 jitbuf.c spectrum.c tonegen.c dbtab.c sqrt.c
 
 SFILES = FFTCM3.S
 

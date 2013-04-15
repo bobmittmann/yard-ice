@@ -1,5 +1,5 @@
 /* 
- * File:	 fft.h
+ * File:	 tonegen.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,22 +20,42 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __FFT_H__
-#define __FFT_H__
+#ifndef __TONEGEN_H__
+#define __TONEGEN_H__
 
+#include <stdint.h>
+#include "sndbuf.h"
 #include "fixpt.h"
+
+struct tonegen {
+	volatile int locked;
+	uint32_t len;
+	uint32_t pos;
+	int16_t wave[256];
+};
+
+extern const unsigned int wave_max;
+extern const unsigned int dac_gain_max;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void fftR4(cplx16_t y[], cplx16_t x[], int n);
+int tonegen_init(struct tonegen * gen, int32_t amp, int tone);
 
-void ifftR4(cplx16_t y[], cplx16_t x[], int n);
+void tonegen_apply(struct tonegen * gen, sndbuf_t * buf);
+
+void blank_apply(int16_t frm[]);
+
+void ramp_apply(int16_t frm[]);
+
+void pulse_apply(int16_t frm[]);
+
+void pattern_apply(int16_t frm[]);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __FFT_H__ */
+#endif /* __TONEGEN_H__ */
 

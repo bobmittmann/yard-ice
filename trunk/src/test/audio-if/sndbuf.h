@@ -27,32 +27,39 @@
 #endif
 
 #ifndef SNDBUF_LEN 
-#define SNDBUF_LEN 64
+#define SNDBUF_LEN 32
 #endif
 
 #ifndef SNDBUF_POOL_SIZE
 #define SNDBUF_POOL_SIZE 128
 #endif
 
+struct sndbuf {
+	uint32_t ref;
+	int16_t data[SNDBUF_LEN];
+};
+
 extern const unsigned int sndbuf_len;
 
-typedef int16_t * sndbuf_t;
+typedef struct sndbuf sndbuf_t;
 
-extern const int16_t sndbuf_zero[];
+extern const sndbuf_t sndbuf_zero;
 
-extern int16_t sndbuf_null[];
+extern sndbuf_t sndbuf_null;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-sndbuf_t sndbuf_alloc(void);
+sndbuf_t * sndbuf_alloc(void);
 
-sndbuf_t sndbuf_use(sndbuf_t ptr);
+sndbuf_t * sndbuf_use(sndbuf_t * buf);
 
-void sndbuf_free(sndbuf_t buf);
+void sndbuf_free(sndbuf_t * buf);
 
 void sndbuf_pool_init(void);
+
+int sndbuf_pool_test(void);
 
 #ifdef __cplusplus
 }
