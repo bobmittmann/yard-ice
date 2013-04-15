@@ -404,24 +404,28 @@ void stm32f_dma1_stream3_isr(void)
 
 void i2s_tx_analyze(void) 
 {
-	spectrum_reset(&i2s_tx_sa);
+//	spectrum_reset(&i2s_tx_sa);
 
 	spectrum_run(&i2s_tx_sa);
 
 	spectrum_normalize(&i2s_tx_sa);
 
-	spectrum_pwr_show(&i2s_tx_sa);
+//	spectrum_pwr_show(&i2s_tx_sa);
+
+	spectrum_mag_show(&i2s_tx_sa);
 }
 
 void i2s_rx_analyze(void) 
 {
-	spectrum_reset(&i2s_rx_sa);
+//	spectrum_reset(&i2s_rx_sa);
 
 	spectrum_run(&i2s_rx_sa);
 
 	spectrum_normalize(&i2s_rx_sa);
 
-	spectrum_pwr_show(&i2s_rx_sa);
+//	spectrum_pwr_show(&i2s_rx_sa);
+
+	spectrum_mag_show(&i2s_rx_sa);
 }
 
 void i2s_rx_dump(void)
