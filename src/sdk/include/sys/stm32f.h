@@ -49,7 +49,9 @@
 #include <arch/cortex-m3.h>
 
 extern const uint32_t stm32f_apb1_hz;
+extern const uint32_t stm32f_tim1_hz;
 extern const uint32_t stm32f_apb2_hz;
+extern const uint32_t stm32f_tim2_hz;
 extern const uint32_t stm32f_ahb_hz;
 
 /*---------------------------------------------------------------------
@@ -66,17 +68,17 @@ enum {
 	ANALOG
 };
 
-extern const struct stm32f_gpio * stm32f_gpio_lut[];
+#define GPIOA STM32F_GPIOA_ID
+#define GPIOB STM32F_GPIOB_ID
+#define GPIOC STM32F_GPIOC_ID
+#define GPIOD STM32F_GPIOD_ID
+#define GPIOE STM32F_GPIOE_ID
+#define GPIOF STM32F_GPIOF_ID
+#define GPIOG STM32F_GPIOG_ID
+#define GPIOH STM32F_GPIOH_ID
+#define GPIOI STM32F_GPIOI_ID
 
-#define PA STM32F_GPIOA_ID
-#define PB STM32F_GPIOB_ID
-#define PC STM32F_GPIOC_ID
-#define PD STM32F_GPIOD_ID
-#define PE STM32F_GPIOE_ID
-#define PF STM32F_GPIOF_ID
-#define PG STM32F_GPIOG_ID
-#define PH STM32F_GPIOH_ID
-#define PI STM32F_GPIOI_ID
+extern const struct stm32f_gpio * stm32f_gpio_lut[];
 
 struct stm32f_gpio_io {
 	uint8_t pin:4;

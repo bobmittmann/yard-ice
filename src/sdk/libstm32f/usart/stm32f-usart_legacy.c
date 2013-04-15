@@ -47,17 +47,17 @@ static const struct {
 	uint8_t	ckbit : 5;  
 	uint8_t	apb2 : 1;  
 } __attribute__((__packed__)) cfg[6] = {
-	{ .rx = GPIO(PA, 10), .tx = GPIO(PA, 9), .af = GPIO_AF7, 
+	{ .rx = GPIO(GPIOA, 10), .tx = GPIO(GPIOA, 9), .af = GPIO_AF7, 
 		.ckbit = 4, .apb2 = 1},
-	{ .rx = GPIO(PA, 3), .tx = GPIO(PA, 3), .af = GPIO_AF7, 
+	{ .rx = GPIO(GPIOA, 3), .tx = GPIO(GPIOA, 3), .af = GPIO_AF7, 
 		.ckbit = 17, .apb2 = 0},
-	{ .rx = GPIO(PB, 11), .tx = GPIO(PB, 10), .af = GPIO_AF7,
+	{ .rx = GPIO(GPIOB, 11), .tx = GPIO(GPIOB, 10), .af = GPIO_AF7,
 		.ckbit = 18, .apb2 = 0},
-	{ .rx = GPIO(PC, 12), .tx = GPIO(PC, 10), .af = GPIO_AF8,
+	{ .rx = GPIO(GPIOC, 12), .tx = GPIO(GPIOC, 10), .af = GPIO_AF8,
 		.ckbit = 19, .apb2 = 0},
-	{ .rx = GPIO(PD, 2), .tx = GPIO(PC, 12), .af = GPIO_AF8,
+	{ .rx = GPIO(GPIOD, 2), .tx = GPIO(GPIOC, 12), .af = GPIO_AF8,
 		.ckbit = 20, .apb2 = 0},
-	{ .rx = GPIO(PC, 7), .tx = GPIO(PC, 6), .af = GPIO_AF8,
+	{ .rx = GPIO(GPIOC, 7), .tx = GPIO(GPIOC, 6), .af = GPIO_AF8,
 		.ckbit = 5, .apb2 = 1}
 };
 

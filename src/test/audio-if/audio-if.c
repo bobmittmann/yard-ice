@@ -311,8 +311,6 @@ void tlv320_init(void)
 	uint8_t tlv[4];
 	printf("%s()... \n", __func__);
 
-	i2s_disable();
-
 	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
 		printf("%s(): tlv320_rd() failed!\n", __func__);
 		DCC_LOG(LOG_WARNING, "tlv320_rd() failed!");
@@ -323,6 +321,9 @@ void tlv320_init(void)
 
 	/* reset the device */
 	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS);
+	/* wait at least 132MCLK ~ 12us (11.2896 MHz) */
+
+	i2s_disable();
 
 	if (i2c_read(codec_addr, 0, tlv, 4) < 0) {
 		return;
@@ -331,8 +332,6 @@ void tlv320_init(void)
 	printf("%s(): 0x%02x 0x%02x 0x%02x 0x%02x\n", __func__,
 		   tlv[0], tlv[1], tlv[2], tlv[3]);
 
-
-	/* wait at least 132MCLK ~ 12us (11.2896 MHz) */
 //	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
 //	tlv320_wr(2, CR2_I2CX_SET(4) | CR2_HPC_I2C);
 	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_128 | CR3_ASRF_1);
@@ -471,21 +470,25 @@ void dac_gain_step(int d)
 {
 	char msg[32];
 	char * cp = msg;
+	int gain;
 
-	i2s_dac_gain += d;
+	gain = i2s_dac_gain + d;
 
-	if (i2s_dac_gain > 0) {
-		i2s_dac_gain = 0;
-	} else if (i2s_dac_gain < q15_db2amp_min) {
-		i2s_dac_gain = q15_db2amp_min;
+	if (gain > 0) {
+		gain = 0;
+	} else if (gain < q15_db2amp_min) {
+		gain = i2s_dac_gain;
 	}
 
-	i2s_tone_set(i2s_dac_tone, i2s_dac_gain);
+	i2s_tone_set(i2s_dac_tone, gain);
+	
+	i2s_dac_gain = gain;
 
 	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "DAC gain: %d", i2s_dac_gain);
+	cp += sprintf(cp, "DAC gain: %ddB", i2s_dac_gain);
 	cp += sprintf(cp, VT100_CLREOL); 
 	printf(msg);
+
 }
 
 void dac_tone_cycle(void)
@@ -642,10 +645,10 @@ void shell_task(void)
 			system_reset();
 			break;
 		case '[':
-			dac_gain_step(-1);
+			dac_gain_step(-6);
 			break;
 		case ']':
-			dac_gain_step(1);
+			dac_gain_step(6);
 			break;
 
 		case 'z':
@@ -699,6 +702,31 @@ void shell_init(void)
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 
 	thinkos_sleep(10);
+}
+
+char * q15_fmt(int16_t x)
+{
+	static char s[10];
+	int32_t d;
+	int32_t q;
+	int32_t r;
+	int sig = 0;
+
+	if (x < 0) {
+		sig = 1;
+		x = -x;
+	}
+
+	d = (uint64_t)((uint64_t)x * (uint64_t)1000000LL) >> 15LL;
+	q = d / 1000000;
+	r = d % 1000000;
+
+	if (sig)
+		sprintf(s, "-%d.%06d", q, r);
+	else
+		sprintf(s, "0.%06d", r);
+
+	return s;
 }
 
 void timer_init(uint32_t freq)
@@ -762,14 +790,14 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. leds_init()");
 	leds_init();
 
+	DCC_LOG(LOG_TRACE, "6. sndbuf_pool_init()");
 	sndbuf_pool_init();
-
-	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
-	i2s_slave_init();
 
 	DCC_LOG(LOG_TRACE, "6. i2c_init()");
 	i2c_init();
 
+	DCC_LOG(LOG_TRACE, "7. i2s_slave_init()");
+	i2s_slave_init();
 
 	printf("\n\n");
 	printf("\n\n");
@@ -796,7 +824,9 @@ int main(int argc, char ** argv)
 
 
 	DCC_LOG(LOG_TRACE, "17. shell_init()");
+
 	spectrum_analyzer_init();
+
 	shell_init();
 
 //	timer_init(500);
@@ -804,6 +834,7 @@ int main(int argc, char ** argv)
 //	supervisor_task();
 
 	for (i = 0; ; ++i) {
+		
 //		thinkos_sleep(1);
 //		tracef("alive!");
 //		printf("[alive!]");

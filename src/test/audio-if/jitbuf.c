@@ -120,7 +120,7 @@ int jitbuf_put(struct jitbuf * jb, sndbuf_t buf[],
 	jb->head_ts = ts + dt;
 
 	for (; i < cnt; ++i)
-		sndbuf_free(*buf++);
+		sndbuf_free(buf++);
 
 	return n;
 }
