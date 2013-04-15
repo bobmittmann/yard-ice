@@ -73,9 +73,9 @@ static void adc_dma_init(void * dst, void * src,
 	/* Configuration for double buffer circular, 
 	   half-transfer interrupt  */
 	dma->ch[ADC_DMA_CHAN].ccr = DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_MINC | DMA_CIRC | DMA_DIR_PTM | DMA_HTIE | DMA_TCIE;
+		DMA_MINC | DMA_CIRC | DMA_DIR_PTM;
 	/* enable DMA */
-	dma->ch[ADC_DMA_CHAN].ccr |= DMA_EN;	
+	dma->ch[ADC_DMA_CHAN].ccr |= DMA_EN | DMA_HTIE | DMA_TCIE | DMA_TEIE;
 }
 
 static void adc_timer_init(uint32_t freq)
@@ -87,7 +87,7 @@ static void adc_timer_init(uint32_t freq)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	div = (stm32f_tim1_hz + (freq / 2)) / freq;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
@@ -106,9 +106,9 @@ static void adc_timer_init(uint32_t freq)
 	tim->arr = n - 1;
 	tim->cnt = 0;
 	tim->egr = 0;
-	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->dier = 0;
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
+	tim->ccr1 = tim->arr / 2;
 	tim->cr2 = TIM_MMS_OC1REF;
 }
 
@@ -141,7 +141,8 @@ void adc_init(uint16_t buf[])
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_adc * adc = STM32F_ADC1;
 //	const uint8_t adc_chan_seq[] = {0, 1, 2, 3, 6};
-	const uint8_t adc_chan_seq[] = {6, 0, 1, 2, 3};
+//	const uint8_t adc_chan_seq[] = {6, 0, 1, 2, 3};
+	const uint8_t adc_chan_seq[] = {1, 2, 3, 6, 0};
 
 	/* Initialize runtime driver strcucture */
 	adc_drv.dma_cnt = 0;
@@ -169,11 +170,11 @@ void adc_init(uint16_t buf[])
 	stm32f_adc_seq_set(adc, adc_chan_seq, ADC_CHANS);
 
 	/* set the sample time */
-	stm32f_adc_smp_set(adc, 0, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 1, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 2, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 3, ADC_SMP_56_CYC);
-	stm32f_adc_smp_set(adc, 6, ADC_SMP_56_CYC);
+	stm32f_adc_smp_set(adc, 0, ADC_SMP_41_CYC);
+	stm32f_adc_smp_set(adc, 1, ADC_SMP_41_CYC);
+	stm32f_adc_smp_set(adc, 2, ADC_SMP_41_CYC);
+	stm32f_adc_smp_set(adc, 3, ADC_SMP_41_CYC);
+	stm32f_adc_smp_set(adc, 6, ADC_SMP_41_CYC);
 
 	adc_gpio_init();
 
@@ -192,6 +193,12 @@ void stm32f_dma1_stream0_isr(void)
 	uint16_t * data;
 	uint32_t cnt;
 	int i;
+
+	if (dma->isr & DMA_TEIF1) {
+		DCC_LOG(LOG_TRACE, "DMA_TEIF1");
+		dma->ifcr = DMA_CTEIF1;
+		return;
+	}
 
 	if (dma->isr & DMA_HTIF1) {
 		/* clear the DMA half transfer flag */

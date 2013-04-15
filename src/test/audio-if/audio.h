@@ -1,5 +1,5 @@
 /* 
- * File:	 io.h
+ * File:	 audio.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,47 +20,35 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __IO_H__
-#define __IO_H__
-
-enum {
-	LED_NET = 0,
-	LED_I2S,
-	LED_S2,
-	LED_S1
-};
+#ifndef __AUDIO_H__
+#define __AUDIO_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ----------------------------------------------------------------------
- * IO subsystem
- * ----------------------------------------------------------------------
- */
-void io_init(void);
+void audio_init(void);
 
-int push_btn_stat(void);
+void audio_enable(void);
 
-/* ----------------------------------------------------------------------
- * LEDs 
- * ----------------------------------------------------------------------
- */
+void audio_disable(void);
 
-void leds_init(void);
- 
-void leds_all_on(void);
+void audio_reset(void);
 
-void leds_all_off(void);
+void audio_stat(void);
 
-void led_off(int id);
+void audio_rx_dump(void);
 
-void led_on(int id);
+void audio_tx_dump(void);
 
-void led_flash(int id, int ms);
+void audio_tx_analyze(void);
+
+void audio_rx_analyze(void);
+
+int audio_tone_set(int tone, int32_t amp);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __IO_H__ */
+#endif /* __AUDIO_H__ */

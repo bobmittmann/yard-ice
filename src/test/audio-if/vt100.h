@@ -35,6 +35,14 @@
 
 #define VT100_CURSOR_HIDE ESC "[?25l"
 
+#define VT100_CURSOR_SAVE ESC "[s"
+
+#define VT100_CURSOR_UNSAVE ESC "[u"
+
+#define VT100_ATTR_SAVE ESC "[7"
+
+#define VT100_ATTR_RESTORE ESC "[8"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

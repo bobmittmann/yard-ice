@@ -105,7 +105,7 @@
 #define CR5_D (3 << 6)
 
 /* TLV320 Control Register 6 */
-#define TLV320_CR6     0x05
+#define TLV320_CR6     0x06
 
 #define CR3_PSDO       (1 << 7)
 

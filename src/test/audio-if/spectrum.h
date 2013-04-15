@@ -45,7 +45,7 @@ extern "C" {
 
 void spectrum_init(struct spectrum * sa, unsigned int rate);
 
-void spectrum_run(struct spectrum * sa);
+void spectrum_run(struct spectrum * sa, bool window);
 
 void spectrum_normalize(struct spectrum * sa);
 

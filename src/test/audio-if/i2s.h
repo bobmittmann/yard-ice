@@ -23,6 +23,8 @@
 #ifndef __I2S_H__
 #define __I2S_H__
 
+#include "sndbuf.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -33,17 +35,7 @@ void i2s_enable(void);
 
 void i2s_disable(void);
 
-void i2s_stat(void);
-
-void i2s_rx_dump(void);
-
-void i2s_tx_dump(void);
-
-void i2s_tx_analyze(void);
-
-void i2s_rx_analyze(void);
-
-int i2s_tone_set(int tone, int32_t amp);
+sndbuf_t * i2s_io(sndbuf_t * out_buf);
 
 #ifdef __cplusplus
 }
