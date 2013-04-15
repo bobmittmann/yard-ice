@@ -194,7 +194,7 @@ void spectrum_pwr_show(struct spectrum * sa)
 		pwr[i] = Q15_UMUL(sa->mag[i], sa->mag[i]);
 	}
 
-	for (y = 4; y < 41; ++y) {
+	for (y = 4; y < 42; ++y) {
 		cp = ln;
 		cp += sprintf(cp, VT100_GOTO, y - 2, 1); 
 		mark = (y % 10) ? ' ' : '-';
@@ -209,13 +209,19 @@ void spectrum_pwr_show(struct spectrum * sa)
 
 void spectrum_mag_show(struct spectrum * sa)
 {
+	uint32_t mag[FFT_LEN / 2];
 	char ln[160];
 	char mark;	
 	char * cp;
 	int x;
 	int y;
+	int i;
 
 	printf(VT100_CURSOR_HIDE); 
+
+	for (i = 0; i < (FFT_LEN / 2); ++i) {
+		mag[i] = sa->mag[i];
+	}
 
 	for (y = 1; y < 41; ++y) {
 		cp = ln;
@@ -223,7 +229,7 @@ void spectrum_mag_show(struct spectrum * sa)
 		mark = (y % 10) ? ' ' : '-';
 
 		for (x = 0; x < 80; ++x) {
-			cp[x] = (sa->mag[x] >= q15_db2amp_ltu[y * 2]) ? '|' : mark;
+			cp[x] = (mag[x] >= q15_db2amp_ltu[y * 2]) ? '|' : mark;
 		}
 		cp[x] = '\0';
 		printf(ln); 
