@@ -28,13 +28,26 @@
 #define JITBUF_FIFO_LEN 64
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+struct ratio32 {
+	int32_t num;
+	uint32_t den;
+};
+
+typedef struct ratio32 ratio32_t;
+
+uint32_t tsclk_rate;
 
 struct jitbuf {
-	uint32_t head_ts;
+	/* Rate of the TSCLK (timestamp clock) [Hz] */
+	uint32_t tsclk_rate;
+	/* Sample rate [Hz] */
+	uint32_t sample_rate;
+	/* delay time (TSCLK periods) */
 	uint32_t delay;
+	/* period of a sound buffer (TSCLK periods) */
+	uint32_t tbuf;
+	/* time stamp at the head of the queue (TSCLK periods) */
+	volatile uint32_t head_ts;
 	volatile uint32_t head;
 	volatile uint32_t tail;
 	sndbuf_t * fifo[JITBUF_FIFO_LEN];
@@ -42,6 +55,17 @@ struct jitbuf {
 
 
 typedef struct jitbuf jitbuf_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int jitbuf_init(jitbuf_t *jb, unsigned int tsclk_rate, 
+				 unsigned int sample_rate, unsigned int delay_ms);
+
+int jitbuf_enqueue(jitbuf_t * jb, sndbuf_t * buf, uint32_t ts);
+
+sndbuf_t * jitbuf_dequeue(jitbuf_t * jb);
 
 #ifdef __cplusplus
 }

@@ -26,6 +26,7 @@
 #include <sys/dcclog.h>
 
 #include "sndbuf.h"
+#include "trace.h"
 
 const unsigned int sndbuf_len  = SNDBUF_LEN;
 
@@ -71,6 +72,9 @@ sndbuf_t * sndbuf_alloc(void)
 		sndbuf_pool.error++;
 		DCC_LOG2(LOG_ERROR, "failed!, allocs=%d frees=%d",
 				 sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
+
+		tracef("%s(): failed!, allocs=%d frees=%d", 
+			   __func__, sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
 	}
 
 	/* critical section exit */

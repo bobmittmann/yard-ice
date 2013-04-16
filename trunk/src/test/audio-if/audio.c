@@ -40,6 +40,8 @@
 #include "i2c.h"
 #include "io.h"
 #include "telctl.h"
+#include "jitbuf.h"
+#include "net.h"
 
 #include <sys/dcclog.h>
 
@@ -56,7 +58,9 @@ struct tonegen tonegen;
 
 struct {
 	bool enabled;
-	int thread;
+	int io_thread;
+	int net_thread;
+	jitbuf_t jitbuf;
 } audio_drv;
 
 void tlv320_wr(unsigned int reg, unsigned int val)
@@ -171,10 +175,12 @@ int audio_tone_set(int tone, int gain)
 	return tonegen_init(&tonegen, q15_db2amp(gain), tone);
 }
 
-void audio_task(void)
+
+void audio_io_task(void)
 {
 	sndbuf_t * out_buf;
 	sndbuf_t * in_buf;
+	uint32_t ts = 0;
 
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
@@ -183,22 +189,62 @@ void audio_task(void)
 	spectrum_init(&audio_rx_sa, SAMPLE_RATE);
 
 	for (;;) {
+		out_buf = jitbuf_dequeue(&audio_drv.jitbuf);
 
-		if ((out_buf = sndbuf_alloc()) == NULL) {
-			trace("sndbuf_alloc() failed!");
+		if (out_buf == NULL) {
+			tracef("%s(): out_buf == NULL!", __func__);
 			out_buf = (sndbuf_t *)&sndbuf_zero;
-		} else {
-			tonegen_apply(&tonegen, out_buf);
 		}
+
+//		if ((out_buf = sndbuf_alloc()) == NULL) {
+//			tracef("%s(): sndbuf_alloc() failed!", __func__);
+//			out_buf = (sndbuf_t *)&sndbuf_zero;
+//		} else {
+//			tonegen_apply(&tonegen, out_buf);
+//		}
 
 		in_buf = i2s_io(out_buf);
 		led_flash(LED_I2S, 100);
 
+//		tonegen_apply(&tonegen, in_buf);
+
 		spectrum_rec(&audio_tx_sa, out_buf);
 		spectrum_rec(&audio_rx_sa, in_buf);
 
+		if (audio_send(0, in_buf, ts) < 0) {
+			tracef("%s(): net_send() failed!", __func__);
+		}
+
+		ts += SNDBUF_LEN;
+
 		sndbuf_free(in_buf);
 		sndbuf_free(out_buf);
+	}
+}
+
+void net_rcv_task(void)
+{
+	sndbuf_t * buf;
+	uint32_t ts;
+	int n;
+
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	for (;;) {
+		while ((buf = sndbuf_alloc()) == NULL) {
+			tracef("%s(): sndbuf_alloc() failed!", __func__);
+			thinkos_sleep(1000);
+		}
+
+		n = audio_recv(0, buf, &ts);
+
+		if (n != sndbuf_len) {
+			tracef("%s(): (n=%d != sndbuf_len)!", __func__, n);
+		} else {
+			jitbuf_enqueue(&audio_drv.jitbuf, buf, ts);
+		}
+
+		sndbuf_free(buf);
 	}
 }
 
@@ -223,14 +269,18 @@ void audio_reset(void)
 	codec_hw_reset();
 	
 	tlv320_reset();
+
 	if (audio_drv.enabled)
 		i2s_disable();
+
 	tlv320_init();
+
 	if (audio_drv.enabled)
 		i2s_enable();
 }
 
-uint32_t audio_stack[128];
+uint32_t audio_io_stack[256];
+uint32_t net_rcv_stack[256];
 
 void audio_init(void)
 {
@@ -239,6 +289,10 @@ void audio_init(void)
 	DCC_LOG(LOG_TRACE, "...");
 
 	audio_drv.enabled = false;
+
+	/* 100 ms jitter buffer */
+	jitbuf_init(&audio_drv.jitbuf, SAMPLE_RATE,
+				SAMPLE_RATE, 100);
 
 	codec_hw_reset();
 
@@ -250,11 +304,19 @@ void audio_init(void)
 
 	tlv320_init();
 
-	th = thinkos_thread_create((void *)audio_task, (void *)NULL,
-							   audio_stack, 
-							   sizeof(audio_stack), 
+	th = thinkos_thread_create((void *)net_rcv_task, (void *)NULL,
+							   net_rcv_stack, 
+							   sizeof(net_rcv_stack), 
+							   THINKOS_OPT_PRIORITY(1) | 
+							   THINKOS_OPT_ID(1));
+	audio_drv.net_thread = th;
+
+	th = thinkos_thread_create((void *)audio_io_task, (void *)NULL,
+							   audio_io_stack, 
+							   sizeof(audio_io_stack), 
 							   THINKOS_OPT_PRIORITY(0) | 
 							   THINKOS_OPT_ID(0));
-	audio_drv.thread = th;
+	audio_drv.io_thread = th;
+
 }
 

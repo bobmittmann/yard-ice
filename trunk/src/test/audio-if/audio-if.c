@@ -48,6 +48,7 @@
 #include "vt100.h"
 #include "telctl.h"
 #include "tonegen.h"
+#include "net.h"
 
 /* ----------------------------------------------------------------------
  * Supervisory task
@@ -488,6 +489,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "6. i2c_init()");
 	i2c_init();
+
+	net_init();
 
 	/* give a little time for the slave board start-up */
 	thinkos_sleep(100);
