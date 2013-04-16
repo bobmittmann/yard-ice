@@ -184,6 +184,12 @@ void led_init(void)
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 }
 
+void system_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+}
 
 #define LOOP_TIME 50 
 #define BUSY_TIME (5000 / LOOP_TIME)
@@ -197,21 +203,23 @@ enum {
 	EVENT_NONE,
 	EVENT_BTN_PRESSED,
 	EVENT_BTN_RELEASED,
-	EVENT_RST_TIMEOUT
+	EVENT_EXT_RST_TIMEOUT,
+	EVENT_SYS_RST_TIMEOUT
 };
 
 enum {
-	RST_OFF,
-	RST_ON,
-	RST_WAIT
+	EXT_RST_OFF,
+	EXT_RST_ON,
+	EXT_RST_WAIT
 };
 
 
 int button_task(void)
 {
 	int btn_st[2];
-	int rst_tmr = 0;
-	int rst_st = RST_OFF;
+	int sys_rst_tmr = 0;
+	int ext_rst_tmr = 0;
+	int ext_rst_st = EXT_RST_OFF;
 	int event;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
@@ -226,9 +234,12 @@ int button_task(void)
 			/* process push button */
 			event = btn_st[1] ? EVENT_BTN_PRESSED : EVENT_BTN_RELEASED;
 			btn_st[0] = btn_st[1];
-		} else if (rst_tmr) {
-			/* process timer */
-			event = (--rst_tmr == 0) ? EVENT_RST_TIMEOUT: EVENT_NONE;
+		} else if (ext_rst_tmr) {
+			/* process external reset timer */
+			event = (--ext_rst_tmr == 0) ? EVENT_EXT_RST_TIMEOUT: EVENT_NONE;
+		} else if (sys_rst_tmr) {
+			/* process system reset timer */
+			event = (--sys_rst_tmr == 0) ? EVENT_SYS_RST_TIMEOUT: EVENT_NONE;
 		} else {
 			event = EVENT_NONE;
 		}
@@ -236,28 +247,53 @@ int button_task(void)
 		switch (event) {
 
 		case EVENT_BTN_PRESSED:
-			if (rst_st == RST_OFF) {
-				rst_tmr = 500 / LOOP_TIME;
+			if (ext_rst_st == EXT_RST_OFF) {
+				/* start external reset timer */
+				ext_rst_tmr = 500 / LOOP_TIME;
+				/* start system reset timer */
+				sys_rst_tmr = 5000 / LOOP_TIME;
 				stm32f_gpio_set(EXTRST_IO);
 				led_lock();
 				led_on();
-				rst_st = RST_ON;
+				ext_rst_st = EXT_RST_ON;
 			}
 			break;
 
 		case EVENT_BTN_RELEASED:
-			if (rst_st == RST_WAIT) {
-				rst_st = RST_OFF;
+			if (ext_rst_st == EXT_RST_WAIT) {
+				ext_rst_st = EXT_RST_OFF;
 			}
+			/* reset system reset timer */
+			sys_rst_tmr = 0;
 			break;
 
-		case EVENT_RST_TIMEOUT:
+		case EVENT_EXT_RST_TIMEOUT:
 			stm32f_gpio_clr(EXTRST_IO);
 			led_off();
 			led_unlock();
-			rst_st = RST_WAIT;
+			ext_rst_st = EXT_RST_WAIT;
 			break;
 
+		case EVENT_SYS_RST_TIMEOUT:
+			led_lock();
+
+			led_on();
+			thinkos_sleep(153);
+			led_off();
+			thinkos_sleep(180);
+
+			led_on();
+			thinkos_sleep(153);
+			led_off();
+			thinkos_sleep(180);
+
+			led_on();
+			thinkos_sleep(153);
+			led_off();
+			thinkos_sleep(180);
+
+			system_reset();
+			break;
 		}
 	}
 	return 0;
