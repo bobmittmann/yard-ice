@@ -416,4 +416,3 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb)
 	return (usb_cdc_class_t *)dev;
 }
 
-
