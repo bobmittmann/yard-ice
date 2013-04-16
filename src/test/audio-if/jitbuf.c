@@ -21,111 +21,122 @@
  */
 
 #include <arch/cortex-m3.h>
+#include <sys/param.h>
 #include <stdlib.h>
 #include <stdint.h>
 
 #include "jitbuf.h"
+#include "trace.h"
 
-void jitbuf_init(struct jitbuf *jb, unsigned int delay)
+int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate, 
+				 uint32_t sample_rate, uint32_t delay_ms)
 {
+	uint32_t delay;
+	uint32_t tbuf;
+
+	/* ceiling delay time in TSCLK periods */
+	delay = ((delay_ms * tsclk_rate) + 999) / 1000;
+
+	/* ceiling buffer period in TSCLK periods */
+	tbuf = (SNDBUF_LEN * tsclk_rate) / sample_rate;
+		
+	tracef("%s(): delay=%d [TCLK], tbuf=%d [TCLK]", 
+		   __func__, delay, tbuf);
+
 	jb->head_ts = 0;
 	jb->head = 0;
 	jb->tail = 0;
 	jb->delay = delay;
+	jb->tbuf = tbuf;
+
+	return 0;
 }
 
-int jitbuf_put(struct jitbuf * jb, sndbuf_t buf[], 
-				unsigned int cnt, uint32_t ts)
+int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 {
-	unsigned int head;
-	unsigned int tail;
-	unsigned int free;
+	uint32_t head;
+	uint32_t lvl;
 	int32_t dt;
-	int n;
-	int i;
 
-	// Get the head frame pointer
+	/* get the queue head pointer */
 	head = jb->head;
-	tail = jb->tail;
+	/* level of the current level of the queue */
+	lvl = head - jb->tail;
 
-	if (head == tail) {
-		// Buffer empty. Fill with silence up to "delay" time
+	if (lvl == JITBUF_FIFO_LEN) {
+		tracef("%s(): ts=%d, fifo full!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
+
+	if (sndbuf_use(buf) == NULL) {
+		tracef("%s(): ts=%d, sndbuf_use() failed!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
+
+
+	if (lvl == 0) {
+		/* Queue empty. Fill with silence up to "delay" time. */
 		dt = jb->delay;
-//		trace_printf("%s: Warn: buffer empty, resync!", __func__);
-	} else {
-		// Compute the difference between the input time
-		// and the time at the jitter buffer's head.
+		tracef("%s(): ts=%d, buffer empty, resync!", __func__, ts);
+	} else { 
+		/* Compute the difference between the input time
+		   and the time at the jitter buffer's head. */
 		dt = (int32_t)(ts - jb->head_ts);
 
 		if (dt > 0) {
-			unsigned int jit_tm;
-			/* There is a dt gap between the received packet and the 
-			   head of the buffer
-			   How many samples (sound frames) are missing ???
+			uint32_t jit_tm;
+			/* There is a dt gap between the received frame and the 
+			   head of the queue.
+			   How many samples (sound frames) are missing ??? */
 
-			   Take this opportunity to resync the buffer
-			   Compute the time of pending samples in the jitter buffer */
-			jit_tm = (int32_t)(head - tail) * SNDBUF_LEN;
-			if ((jit_tm + dt) > (int32_t)jb->delay) {
-				//trace_printf("%s: (JimTm=%d + dt=%d) > Delay=%d!", __func__,
-				//    jit_tm, dt, jb->Delay);
+			/* Take this opportunity to resync the buffer */
+
+			/*  Compute the time span of pending samples in the jitter buffer */
+			jit_tm = lvl * jb->tbuf;
+			if ((jit_tm + dt) > jb->delay) {
+				tracef("%s(): (jit_tm=%d + dt=%d) > Delay=%d!", __func__, 
+					   jit_tm, dt, jb->delay);
 				dt = jb->delay - jit_tm;
-				if (dt < 0) {
-					// Ignore overlapping
-					dt = 0;
-				}
 			}
-		} else if (dt < 0) {
-//			trace_printf("%s: Error: data overlap!!!!", __func__);
-			// Ignore overlapping and append at the end
+		} 
+			
+		if (dt < 0) {
+			tracef("%s(): Error: data overlap, ts=%d dt=%d!", 
+				   __func__, ts, dt);
+			/*  Ignore overlapping and append at the end */
 			dt = 0;
 		}
+	} 
+	
+	if (dt != 0) {
+		int cnt;
+
+		/* Get how many frames we have to insert in the gap */
+		cnt = dt / jb->tbuf;
+		/* The gap canont be higher than the available space
+		   in the fifo, less 1 position (reserved for insertion) */
+		cnt = MIN(cnt, JITBUF_FIFO_LEN - (lvl + 1));
+
+		tracef("%s(): dt=%d head=%d cnt=%d", __func__, dt, head, cnt);
+
+		/* Fill the gap with silence */
+		while (cnt--)
+			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = (sndbuf_t *)&sndbuf_zero;
+
+		/* The buffer is in sync... */
 	}
 
-	if (0L != dt) {
-		//trace_printf("%s: dt=%d head=%d tail=%d", __func__, dt, head, tail);
-		n = dt / SNDBUF_LEN;
-
-		// Get how many free frames we have
-		free = JITBUF_FIFO_LEN - (unsigned int)(head - tail);
-		if (n > free) {
-			n = free;
-//			trace_printf("%s: ERROR: buffer overflow!!!!", __func__);
-		} else {
-			// Fill in the gap
-			while (n--)
-				jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = NULL;
-		}
-		// The buffer is in sync..., clear the compensation time
-		dt = 0;
-	}
-
-	// Free entries in the buffer
-	free = JITBUF_FIFO_LEN - (unsigned int)(head - tail);
-
-	if (cnt > free) {
-		n = free;
-//		trace_printf("%s: Error: buffer overflow!!!!", __func__);
-	} else {
-		n = cnt;
-	}
-
-	//trace_printf("%s: n=%d head=%d free=%d", __func__, n, head, free);
-
-	for (i = 0; i < n; ++i) {
-		jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = buf++;
-		dt += SNDBUF_LEN;
-	}
+	jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = buf;
 	jb->head = head;
-	jb->head_ts = ts + dt;
+	jb->head_ts = ts + jb->tbuf;
 
-	for (; i < cnt; ++i)
-		sndbuf_free(buf++);
 
-	return n;
+	return 1;
 }
 
-sndbuf_t * jitbuf_get(struct jitbuf * jb)
+sndbuf_t * jitbuf_dequeue(struct jitbuf * jb)
 {
 	int tail = jb->tail;
 	sndbuf_t * buf;

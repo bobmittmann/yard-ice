@@ -23,15 +23,16 @@
 PROG = audio-if
 
 CFILES = audio-if.c i2c-master.c console.c io.c i2s.c trace.c sndbuf.c \
-		 jitbuf.c spectrum.c tonegen.c telctl.c dbtab.c q15_fmt.c audio.c
+		 jitbuf.c spectrum.c tonegen.c telctl.c dbtab.c q15_fmt.c audio.c \
+		 pktbuf.c rs485lnk.c net.c
 
 SFILES = FFTCM3.S
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
-		  ../../sdk/libhexdump
+		  ../../sdk/libhexdump ../../sdk/libcrc
 
-LIBS = stm32f cm3 util thinkos c ice-comm hexdump
+LIBS = stm32f cm3 util thinkos c ice-comm hexdump crc
 
 INCPATH = ../../sdk/include 
 

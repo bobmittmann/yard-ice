@@ -134,7 +134,8 @@ void i2s_slave_init(void)
 	/* Configure DMA channel */
 	dma->s[I2S_DMA_RX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_RX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM;
+		DMA_CT_M0AR | DMA_DBM |  DMA_CIRC | DMA_MINC | DMA_DIR_PTM |
+		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	dma->s[I2S_DMA_RX_STRM].par = &spi->dr;
 	dma->s[I2S_DMA_RX_STRM].m0ar = i2s.rx.buf[0]->data;
 	i2s.rx.xfr[0] = i2s.rx.buf[0];
@@ -147,7 +148,9 @@ void i2s_slave_init(void)
 
 	dma->s[I2S_DMA_TX_STRM].cr = DMA_CHSEL_SET(I2S_DMA_TX_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_16 | DMA_PSIZE_16 | 
-		DMA_CT_M0AR | DMA_DBM | DMA_CIRC | DMA_MINC | DMA_DIR_MTP;
+		DMA_CT_M0AR | DMA_DBM | DMA_CIRC | DMA_MINC | DMA_DIR_MTP |
+		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
+	dma->s[I2S_DMA_RX_STRM].par = &spi->dr;
 	dma->s[I2S_DMA_TX_STRM].par = &i2s_ext->dr;
 	dma->s[I2S_DMA_TX_STRM].m0ar = i2s.tx.buf[0]->data;
 	dma->s[I2S_DMA_TX_STRM].m1ar = i2s.tx.buf[1]->data;
@@ -188,8 +191,8 @@ void i2s_enable(void)
 	stm32f_gpio_mode(I2S2_SD, ALT_FUNC, SPEED_MED);
 
 	/* enable DMA */
-	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN | DMA_TCIE | DMA_TEIE | DMA_DMEIE;	
+	dma->s[I2S_DMA_TX_STRM].cr |= DMA_EN;
+	dma->s[I2S_DMA_RX_STRM].cr |= DMA_EN;
 
 	/* Enable peripherals */
 	spi->i2scfgr |= SPI_I2SE;
@@ -234,12 +237,6 @@ void stm32f_dma1_stream4_isr(void)
 		dma->hifcr = DMA_CFEIF4;
 	}
 
-	if (dma->hisr & DMA_DMEIF4) {
-		trace("DMA_DMEIF4");
-		DCC_LOG(LOG_TRACE, "DMA_DMEIF4");
-		dma->hifcr = DMA_CDMEIF4;
-	}
-
 	if (dma->hisr & DMA_TEIF4) {
 		trace("DMA_TEIF4");
 		DCC_LOG(LOG_TRACE, "DMA_TEIF4");
@@ -279,12 +276,6 @@ void stm32f_dma1_stream3_isr(void)
 		trace("DMA_FEIF3");
 		DCC_LOG(LOG_TRACE, "DMA_FEIF3");
 		dma->lifcr = DMA_CFEIF3;
-	}
-
-	if (dma->lisr & DMA_DMEIF3) {
-		trace("DMA_DMEIF3");
-		DCC_LOG(LOG_TRACE, "DMA_DMEIF3");
-		dma->lifcr = DMA_CDMEIF3;
 	}
 
 	if (dma->lisr & DMA_TEIF3) {
@@ -351,6 +342,10 @@ sndbuf_t * i2s_io(sndbuf_t * out_buf)
 	in_buf = i2s.rx.buf[idx];
 	/* alloc an empty buffer for next cycle */
 	buf = sndbuf_alloc();
+	
+	if (buf == NULL) {
+		tracef("%s(): sndbuf_alloc() failed!", __func__);
+	}
 
 //	tracef("%d <-- IN[%d] <-- %d", sndbuf_id(in_buf), idx, sndbuf_id(buf)); 
 	/* set the input buffer for next cycle */

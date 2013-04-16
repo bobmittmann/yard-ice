@@ -303,10 +303,15 @@ int codec_hw_reset(void)
 	uint8_t reg[1];
 	int ret;
 
+	tracef("%s(): ...", __func__);
+
 	reg[0] = 'R';
 
 	if ((ret = i2c_write(TELCTL_I2C_ADDR, TELCTL_CRST_REG, reg, 1)) < 0) {
 		tracef("%s(): i2c_write() failed!", __func__);
+	} else {
+		/* wait for the coddec to start up */
+		thinkos_sleep(2);
 	}
 
 	return ret;
