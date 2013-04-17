@@ -186,7 +186,6 @@ int serial_config_set(struct serial_dev * dev,
 }
 
 
-
 struct serial_dev serial_dev;
 
 void stm32f_usart2_isr(void)
@@ -252,3 +251,4 @@ struct serial_dev * serial_open(struct stm32f_usart * uart)
 
 	return dev;
 }
+

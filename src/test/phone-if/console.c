@@ -148,10 +148,10 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 	__thinkos_flag_clr(dev->tx_flag);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_TRACE, "wait...");
+		DCC_LOG(LOG_INFO, "wait...");
 		thinkos_flag_wait(dev->tx_flag);
 		__thinkos_flag_clr(dev->tx_flag);
-		DCC_LOG(LOG_TRACE, "wakeup");
+		DCC_LOG(LOG_INFO, "wakeup");
 	}
 #else
 	if (uart_fifo_is_full(&dev->tx_fifo))

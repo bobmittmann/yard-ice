@@ -38,8 +38,10 @@
 #include <sys/usb-cdc.h>
 
 struct serial_dev * serial_open(struct stm32f_usart * uart);
+
 int serial_write(struct serial_dev * dev, const void * buf, 
 				 unsigned int len);
+
 int serial_read(struct serial_dev * dev, char * buf, 
 				unsigned int len, unsigned int msec);
 
@@ -50,34 +52,6 @@ struct vcom {
 
 #define VCOM_BUF_SIZE 128
 
-#if 0
-int usb_ctrl_task(struct vcom * vcom)
-{
-	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_class * usb = vcom->usb;
-	struct usb_cdc_state prev_state;
-	struct usb_cdc_state state;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	usb_cdc_state_get(usb, &prev_state);
-
-	while (1) {
-		usb_cdc_ctrl_event_wait(usb, 0);
-		usb_cdc_state_get(usb, &state);
-		if (state.cfg != prev_state.cfg) {
-			DCC_LOG1(LOG_TRACE, "[%d] config changed.", thinkos_thread_self());
-			prev_state.cfg = state.cfg;
-		}
-		if (state.ctrl != prev_state.ctrl) {
-			DCC_LOG1(LOG_TRACE, "[%d] control changed.", thinkos_thread_self());
-			prev_state.ctrl = state.ctrl;
-		}
-	}
-	return 0;
-}
-#endif
-
 #define USB_FS_DP STM32F_GPIOA, 12
 #define USB_FS_DM STM32F_GPIOA, 11
 #define USB_FS_VBUS STM32F_GPIOA, 9
@@ -86,49 +60,42 @@ int usb_ctrl_task(struct vcom * vcom)
 #define PUSHBTN_IO STM32F_GPIOA, 6
 #define EXTRST_IO STM32F_GPIOA, 5
 
+#define USART2_TX STM32F_GPIOA, 2
+#define USART2_RX STM32F_GPIOA, 3
+
+#define USART3_TX STM32F_GPIOB, 10
+#define USART3_RX STM32F_GPIOB, 11
+
 void io_init(void)
 {
-#ifdef STM32F10X
 	struct stm32f_rcc * rcc = STM32F_RCC;
-#endif
 
-	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
-
-#ifdef STM32F10X
 	stm32f_gpio_clock_en(STM32F_GPIOA);
 	stm32f_gpio_clock_en(STM32F_GPIOB);
 
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
 
-	/* PA3: USART2_TX */
-	stm32f_gpio_mode(STM32F_GPIOA, 2, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	/* PA2: USART2_RX */
-	stm32f_gpio_mode(STM32F_GPIOA, 3, INPUT, PULL_UP);
+	/* Primary UART TX */
+	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	/* Primary UART RX */
+	stm32f_gpio_mode(USART2_RX, INPUT, PULL_UP);
 
-	/* PB9: LED */
+	/* Secondary UART TX */
+	stm32f_gpio_mode(USART3_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	/* Secondary UART RX */
+	stm32f_gpio_mode(USART3_RX, INPUT, PULL_UP);
+
+	/* LED */
 	stm32f_gpio_mode(LED0_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 
-	/* PA6: Push button */
+	/* Push button */
 	stm32f_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
 
-	/* PA5: External Reset */
+	/* External Reset */
 	stm32f_gpio_mode(EXTRST_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
 //	stm32f_gpio_mode(EXTRST_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_set(EXTRST_IO);
-#endif
-
-#ifdef STM32F2X
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-	stm32f_gpio_clock_en(STM32F_GPIOD);
-
-	/* PC12: UART5_TX */
-	stm32f_gpio_mode(STM32F_GPIOC, 12, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(STM32F_GPIOC, 12, GPIO_AF8);
-	/* PD2: UART5_RX */
-	stm32f_gpio_mode(STM32F_GPIOD, 2, INPUT, PULL_UP);
-	stm32f_gpio_af(STM32F_GPIOD, 2, GPIO_AF8);
-#endif
 }
 
 int8_t led_flag;
@@ -173,17 +140,6 @@ int led_task(void)
 	}
 }
 
-uint32_t led_stack[32];
-
-void led_init(void)
-{
-	led_flag = thinkos_flag_alloc();
-
-	thinkos_thread_create((void *)led_task, (void *)NULL,
-						  led_stack, sizeof(led_stack),
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-}
-
 void system_reset(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
@@ -221,6 +177,7 @@ int button_task(void)
 	int ext_rst_tmr = 0;
 	int ext_rst_st = EXT_RST_OFF;
 	int event;
+	int i;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
@@ -277,37 +234,18 @@ int button_task(void)
 		case EVENT_SYS_RST_TIMEOUT:
 			led_lock();
 
-			led_on();
-			thinkos_sleep(153);
-			led_off();
-			thinkos_sleep(180);
-
-			led_on();
-			thinkos_sleep(153);
-			led_off();
-			thinkos_sleep(180);
-
-			led_on();
-			thinkos_sleep(153);
-			led_off();
-			thinkos_sleep(180);
+			for (i = 0; i < 5; ++i) {
+				led_on();
+				thinkos_sleep(200);
+				led_off();
+				thinkos_sleep(300);
+			}
 
 			system_reset();
 			break;
 		}
 	}
 	return 0;
-}
-
-uint32_t button_stack[32];
-
-void button_init(void)
-{
-#ifdef STM32F10X
-	thinkos_thread_create((void *)button_task, (void *)NULL,
-						  button_stack, sizeof(button_stack),
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-#endif
 }
 
 int usb_recv_task(struct vcom * vcom)
@@ -371,21 +309,18 @@ int serial_ctrl_task(struct vcom * vcom)
 	return 0;
 }
 
+uint32_t led_stack[32];
+uint32_t button_stack[32];
 uint32_t serial_ctrl_stack[32];
-uint32_t usb_recv_stack[128];
-uint32_t serial_recv_stack[128];
+uint32_t serial_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
+uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 
 int main(int argc, char ** argv)
 {
 	uint64_t esn;
 	struct vcom vcom;
 	unsigned int i;
-#ifdef STM32F10X
 	struct stm32f_usart * uart = STM32F_USART2;
-#endif
-#ifdef STM32F2X
-	struct stm32f_usart * uart = STM32F_UART5;
-#endif
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -397,7 +332,13 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
-	thinkos_init(THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
+	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
+
+	led_flag = thinkos_flag_alloc();
+
+	thinkos_thread_create((void *)led_task, (void *)NULL,
+						  led_stack, sizeof(led_stack),
+						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
 	stm32f_usart_init(uart);
 	stm32f_usart_baudrate_set(uart, 9600);
@@ -406,21 +347,15 @@ int main(int argc, char ** argv)
 
 	vcom.serial = serial_open(uart);
 
-	led_init();
-
-	button_init();
-
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 	usb_cdc_sn_set(esn);
 
-#ifdef STM32F10X
 	vcom.cdc = usb_cdc_init(&stm32f_usb_fs_dev);
-#endif
 
-#ifdef STM32F2X
-	vcom.cdc = usb_cdc_init(&stm32f_otg_fs_dev);
-#endif
+	thinkos_thread_create((void *)button_task, (void *)NULL,
+						  button_stack, sizeof(button_stack),
+						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
 
 	thinkos_thread_create((void *)usb_recv_task, (void *)&vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),
@@ -432,7 +367,7 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom,
 						  serial_ctrl_stack, sizeof(serial_ctrl_stack),
-						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(3));
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
