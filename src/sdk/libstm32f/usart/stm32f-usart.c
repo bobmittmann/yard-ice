@@ -33,40 +33,44 @@ const struct stm32f_usart * stm32f_usart_lut[6] = {
 #endif
 };
 
-/* APB clock */
+const uint8_t stm32f_usart_irq_lut[] = {
+	STM32F_IRQ_USART1,
+	STM32F_IRQ_USART2,
+	STM32F_IRQ_USART3,
+	STM32F_IRQ_UART4,
+	STM32F_IRQ_UART5,
+#ifdef STM32F_USART6
+	STM32F_IRQ_USART6
+#endif
+};
 
-#define APB1 (1 << 5)
-#define APB2 (1 << 6)
-#define CLK(APB, BIT) (APB | BIT)
-#define CLK_BIT 0x1f
-
-#ifdef STM32F2X
-const uint8_t stm32f_us_clk_lut[] = {  
-	CLK(APB2, 4), 
-	CLK(APB1, 17), 
-	CLK(APB1, 18), 
-	CLK(APB1, 19), 
-	CLK(APB1, 20), 
-	CLK(APB2,  5)
+#if defined(STM32F2X) || defined(STM32F4X)
+const struct stm32f_clk stm32f_usart_clk_lut[] = {  
+	{ STM32F_APB2,  4}, 
+	{ STM32F_APB1, 17}, 
+	{ STM32F_APB1, 18}, 
+	{ STM32F_APB1, 19}, 
+	{ STM32F_APB1, 20}, 
+	{ STM32F_APB2,  5}
 };
 #endif
 
-#ifdef STM32F1X
-const uint8_t stm32f_us_clk_lut[] = {  
-	CLK(APB2, 14), 
-	CLK(APB1, 17), 
-	CLK(APB1, 18), 
-	CLK(APB1, 19), 
-	CLK(APB1, 20)
+#if defined(STM32F1X)
+const struct stm32f_clk stm32f_usart_clk_lut[] = {  
+	{ STM32F_APB2, 14}, 
+	{ STM32F_APB1, 17}, 
+	{ STM32F_APB1, 18}, 
+	{ STM32F_APB1, 19}, 
+	{ STM32F_APB1, 20}
 };
 #endif
 
 
-int stm32f_usart_lookup(struct stm32f_usart * us)
+int stm32f_usart_lookup(struct stm32f_usart * usart)
 {
 	int id = sizeof(stm32f_usart_lut) / sizeof(struct stm32f_usart *);
 
-	while ((--id >= 0) && (us != stm32f_usart_lut[id]));
+	while ((--id >= 0) && (usart != stm32f_usart_lut[id]));
 
 	return id;
 }

@@ -23,6 +23,12 @@
 #ifndef __AUDIO_H__
 #define __AUDIO_H__
 
+enum {
+	TONE_OFF,
+	TONE_DAC,
+	TONE_ADC
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +52,12 @@ void audio_tx_analyze(void);
 void audio_rx_analyze(void);
 
 int audio_tone_set(int tone, int32_t amp);
+
+int audio_tone_mode_set(int mode);
+
+void audio_stream_enable(void);
+
+void audio_stream_disable(void);
 
 #ifdef __cplusplus
 }

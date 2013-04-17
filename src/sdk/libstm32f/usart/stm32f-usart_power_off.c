@@ -25,7 +25,6 @@
 int stm32f_usart_power_off(struct stm32f_usart * us)
 {
 	int id;
-	int clk;
 
 	if ((id = stm32f_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
@@ -36,11 +35,7 @@ int stm32f_usart_power_off(struct stm32f_usart * us)
 	us->cr1 = 0;
 
 	/* Disable peripheral clock */
-	clk = stm32f_us_clk_lut[id];
-	if (clk & APB2)
-		STM32F_RCC->apb2enr &= ~(1 << (clk & CLK_BIT));
-	else
-		STM32F_RCC->apb1enr &= ~(1 << (clk & CLK_BIT));
+	stm32f_clk_disable(STM32F_RCC, stm32f_usart_clk_lut[id]);
 
 	return 0;
 }

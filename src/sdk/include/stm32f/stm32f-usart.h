@@ -464,9 +464,15 @@ struct stm32f_usart {
 	volatile uint32_t gtpr;
 };
 
+extern const uint8_t stm32f_usart_irq_lut[];
+
+extern const struct stm32f_usart * stm32f_usart_lut[];
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+int stm32f_usart_lookup(struct stm32f_usart * usart);
 
 int stm32f_usart_putc(struct stm32f_usart * usart, int c);
 
@@ -498,6 +504,11 @@ void stm32f_usart_disable(struct stm32f_usart * us);
 #ifdef __cplusplus
 }
 #endif
+
+static inline int stm32f_usart_irq_lookup(struct stm32f_usart * usart) {
+	return stm32f_usart_irq_lut[stm32f_usart_lookup(usart)];
+}
+
 
 #endif /* __ASSEMBLER__ */
 

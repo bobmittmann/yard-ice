@@ -52,7 +52,7 @@ int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate,
 	return 0;
 }
 
-int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
+int __jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 {
 	uint32_t head;
 	uint32_t lvl;
@@ -132,6 +132,57 @@ int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 	jb->head = head;
 	jb->head_ts = ts + jb->tbuf;
 
+
+	return 1;
+}
+
+int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
+{
+	uint32_t head;
+	uint32_t lvl;
+	int32_t dt;
+
+	/* get the queue head pointer */
+	head = jb->head;
+	/* level of the current level of the queue */
+	lvl = head - jb->tail;
+
+	if (lvl == JITBUF_FIFO_LEN) {
+		tracef("%s(): ts=%d, fifo full!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
+
+	if (sndbuf_use(buf) == NULL) {
+		tracef("%s(): ts=%d, sndbuf_use() failed!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
+
+
+	if (lvl == 0) {
+		int cnt;
+		/* Queue empty. Fill with silence up to "delay" time. */
+		dt = jb->delay;
+		tracef("%s(): ts=%d, buffer empty, resync!", __func__, ts);
+
+		/* Get how many frames we have to insert in the gap */
+		cnt = dt / jb->tbuf;
+		/* The gap canont be higher than the available space
+		   in the fifo, less 1 position (reserved for insertion) */
+		cnt = MIN(cnt, JITBUF_FIFO_LEN - (lvl + 1));
+
+		tracef("%s(): dt=%d head=%d cnt=%d", __func__, dt, head, cnt);
+
+		/* Fill the gap with silence */
+		while (cnt--)
+			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = (sndbuf_t *)&sndbuf_zero;
+
+	} 
+
+	jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = buf;
+	jb->head = head;
+	jb->head_ts = ts + jb->tbuf;
 
 	return 1;
 }

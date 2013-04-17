@@ -446,9 +446,9 @@ void process_data_in(void)
 #endif
 	}
 
-	if (wr_block.tone[0] != rd_block.tone[0]) {
-		val = tone_set(0, wr_block.tone[0]);
-		rd_block.tone[0] = val;
+	if (wr_block.tone[1] != rd_block.tone[1]) {
+		val = tone_set(1, wr_block.tone[1]);
+		rd_block.tone[1] = val;
 #if ENABLE_STATUS
 		printf("[TONE1 %d]", val);
 #endif

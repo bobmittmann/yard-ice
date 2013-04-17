@@ -42,6 +42,7 @@
 #include "telctl.h"
 #include "jitbuf.h"
 #include "net.h"
+#include "audio.h"
 
 #include <sys/dcclog.h>
 
@@ -60,6 +61,8 @@ struct {
 	bool enabled;
 	int io_thread;
 	int net_thread;
+	int tone_mode;
+	volatile bool stream_enabled;
 	jitbuf_t jitbuf;
 } audio_drv;
 
@@ -131,13 +134,13 @@ void tlv320_init(void)
 //	tlv320_wr(2, CR2_DIFBP | CR2_I2CX_SET(4) | CR2_HPC_I2C);
 //	tlv320_wr(2, CR2_I2CX_SET(4) | CR2_HPC_I2C);
 
-	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_128 | CR3_ASRF_1);
+	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_512 | CR3_ASRF_1);
 	tlv320_wr(4, CR4_M_SET(44));
 	tlv320_wr(4, CR4_NP_SET(1, 2));
 	tlv320_wr(5, CR5A_ADGAIN_DB(0));
 
 	tlv320_wr(5, CR5B_DAGAIN_DB(0));
-	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_0DB);
+	tlv320_wr(5, CR5C_DGSTG_MUTE | CR5C_INBG_6DB);
 	tlv320_wr(6, CR3_AINSEL_INP_M1);
 	tlv320_wr(1, CR1_CX | CR1_IIR | CR1_BIASV_LO | CR1_DAC16);
 };
@@ -175,6 +178,17 @@ int audio_tone_set(int tone, int gain)
 	return tonegen_init(&tonegen, q15_db2amp(gain), tone);
 }
 
+int audio_tone_mode_set(int mode)
+{
+	if (mode < TONE_OFF)
+		mode = TONE_OFF;
+	else if (mode > TONE_ADC)
+		mode = TONE_ADC;
+
+	return audio_drv.tone_mode = mode;
+}
+
+sndbuf_t * xfr_buf;
 
 void audio_io_task(void)
 {
@@ -190,29 +204,30 @@ void audio_io_task(void)
 
 	for (;;) {
 		out_buf = jitbuf_dequeue(&audio_drv.jitbuf);
+//		out_buf = xfr_buf;
 
 		if (out_buf == NULL) {
-			tracef("%s(): out_buf == NULL!", __func__);
+//			tracef("%s(): out_buf == NULL!", __func__);
 			out_buf = (sndbuf_t *)&sndbuf_zero;
+		} else {
+			if (audio_drv.tone_mode == TONE_DAC)
+				tonegen_apply(&tonegen, out_buf);
 		}
-
-//		if ((out_buf = sndbuf_alloc()) == NULL) {
-//			tracef("%s(): sndbuf_alloc() failed!", __func__);
-//			out_buf = (sndbuf_t *)&sndbuf_zero;
-//		} else {
-//			tonegen_apply(&tonegen, out_buf);
-//		}
 
 		in_buf = i2s_io(out_buf);
 		led_flash(LED_I2S, 100);
 
-//		tonegen_apply(&tonegen, in_buf);
+		if (audio_drv.tone_mode == TONE_ADC)
+			tonegen_apply(&tonegen, in_buf);
 
 		spectrum_rec(&audio_tx_sa, out_buf);
 		spectrum_rec(&audio_rx_sa, in_buf);
 
-		if (audio_send(0, in_buf, ts) < 0) {
-			tracef("%s(): net_send() failed!", __func__);
+		if (audio_drv.stream_enabled) {
+			if (audio_send(0, in_buf, ts) < 0) {
+				tracef("%s(): net_send() failed!", __func__);
+			}
+			led_flash(LED_NET, 100);
 		}
 
 		ts += SNDBUF_LEN;
@@ -241,11 +256,37 @@ void net_rcv_task(void)
 		if (n != sndbuf_len) {
 			tracef("%s(): (n=%d != sndbuf_len)!", __func__, n);
 		} else {
-			jitbuf_enqueue(&audio_drv.jitbuf, buf, ts);
+			if (audio_drv.stream_enabled) {
+				jitbuf_enqueue(&audio_drv.jitbuf, buf, ts);
+			}
 		}
 
+//		xfr_buf = buf;
 		sndbuf_free(buf);
 	}
+}
+
+void audio_stream_enable(void)
+{
+	if (!audio_drv.enabled)
+		return;
+
+	if (audio_drv.stream_enabled)
+		return;
+	audio_drv.stream_enabled = true;
+	tracef("%s(): audio stream enabled.", __func__);
+}
+
+void audio_stream_disable(void)
+{
+	if (!audio_drv.enabled)
+		return;
+
+	if (!audio_drv.stream_enabled)
+		return;
+
+	audio_drv.stream_enabled = false;
+	tracef("%s(): audio stream disabled.", __func__);
 }
 
 void audio_enable(void)
@@ -259,6 +300,7 @@ void audio_enable(void)
 void audio_disable(void)
 {
 	if (audio_drv.enabled) {
+		audio_drv.stream_enabled = false;
 		i2s_disable();
 		audio_drv.enabled = false;
 	}
@@ -266,6 +308,14 @@ void audio_disable(void)
 
 void audio_reset(void)
 {
+	bool enable_stream;
+
+	tracef("%s(): audio system reset ...", __func__);
+
+	enable_stream = audio_drv.stream_enabled;
+
+	audio_drv.stream_enabled = false;
+
 	codec_hw_reset();
 	
 	tlv320_reset();
@@ -277,6 +327,8 @@ void audio_reset(void)
 
 	if (audio_drv.enabled)
 		i2s_enable();
+
+	audio_drv.stream_enabled = enable_stream;
 }
 
 uint32_t audio_io_stack[256];
@@ -290,9 +342,9 @@ void audio_init(void)
 
 	audio_drv.enabled = false;
 
-	/* 100 ms jitter buffer */
+	/* 50 ms jitter buffer */
 	jitbuf_init(&audio_drv.jitbuf, SAMPLE_RATE,
-				SAMPLE_RATE, 100);
+				SAMPLE_RATE, 50);
 
 	codec_hw_reset();
 

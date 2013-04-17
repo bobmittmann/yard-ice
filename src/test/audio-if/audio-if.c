@@ -50,6 +50,11 @@
 #include "tonegen.h"
 #include "net.h"
 
+int tone_gain = 0;
+int tone_wave = 0;
+int tone_freq = 0;
+int tone_mode = TONE_OFF;
+
 /* ----------------------------------------------------------------------
  * Supervisory task
  * ----------------------------------------------------------------------
@@ -59,12 +64,12 @@ int supervisor_task(void)
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
-//		led_on(LED_S2);
-		led_flash(LED_S2, 100);
-		thinkos_sleep(100);
+//		led_flash(LED_S2, 100);
+		led_flash(LED_S1, 100);
 		trace_print(stdout, 1);
-//		led_off(LED_S2);
-		thinkos_sleep(400);
+		thinkos_sleep(500);
+		trace_print(stdout, 1);
+		thinkos_sleep(500);
 	}
 }
 
@@ -77,7 +82,7 @@ void system_reset(void)
 	for(;;);
 }
 
-const char sup_nm_ltu[][4] = {
+const char sup_nm_lut[][4] = {
 	"UN",
 	"OP",
 	"ST",
@@ -89,6 +94,12 @@ const char sup_nm_ltu[][4] = {
 	"5P"
 };
 
+const char tone_nm_lut[][4] = {
+	"OFF",
+	"DAC",
+	"ADC"
+};
+
 void line_supv_status(void)
 {
 	char s[64];
@@ -96,16 +107,27 @@ void line_supv_status(void)
 	int i;
 	int g;
 	int z;
+	int cnt;
 
 	g = telctl.hybrid.g;
 	z = telctl.hybrid.z;
 
-	cp += sprintf(cp, VT100_CURSOR_SAVE VT100_GOTO, 1, 53); 
-	cp += sprintf(cp, "%4d %d.%02d ", z, g / 100, g % 100);
+	cp += sprintf(cp, VT100_CURSOR_SAVE VT100_GOTO, 1, 40); 
+	cp += sprintf(cp, "%3s %-4d | ", tone_nm_lut[tone_mode], tone_freq);
 
+	cp += sprintf(cp, "%4d %d.%02d | ", z, g / 100, g % 100);
+
+	cnt = 0;
 	for (i = 0; i < 5; ++i) {
-		cp += sprintf(cp, "%s ", sup_nm_ltu[telctl.line[i].sup_st]);
+		cp += sprintf(cp, "%s ", sup_nm_lut[telctl.line[i].sup_st]);
+		if ((telctl.line[i].sup_st >= LINE_PHONE1) && 
+			(!telctl.line[i].connected)) {
+			cnt++;
+		}
 	}
+
+	if (cnt)
+		led_flash(LED_S2, 100);
 
 	cp += sprintf(cp, VT100_CURSOR_UNSAVE); 
 
@@ -122,61 +144,63 @@ int acq_task(void)
 
 	for (;;) {
 		DCC_LOG(LOG_INFO, "Poll...");
-		thinkos_sleep(500);
+		thinkos_sleep(250);
 		if (telctl_adc_scan() >= 0) { 
-			z = (1000 * telctl.load.cnt) - 500;
-			vr = (z * 63) / 5000;
+			switch (telctl.load.cnt) {
+			case 1:
+				z = 1293;
+				break;
+			case 2:
+				z = 2325;
+				break;
+			case 3:
+				z = 3595;
+				break;
+			case 0:
+			default:
+				z = 0;
+				break;
+			}
+//			z = (1000 * telctl.load.cnt) - 500;
+			z -= 500;
+			vr = ((z * 63) + 2500) / 5000;
 			hybrid_impedance_set(vr);
+			(void)vr;
 		};
 
-		line_disconnect_on_hook();
+		if (line_disconnect_on_hook() == 0)
+			audio_stream_disable();
 
 		line_supv_status();
 	}
 }
 
-int i2s_dac_tone = 0;
-int i2s_dac_gain = 0;
-
-void dac_gain_step(int d)
+void tone_gain_step(int d)
 {
-	char msg[32];
-	char * cp = msg;
 	int gain;
 
-	gain = i2s_dac_gain + d;
+	gain = tone_gain + d;
 
 	if (gain > 0) {
 		gain = 0;
 	} else if (gain < q15_db2amp_min) {
-		gain = i2s_dac_gain;
+		gain = tone_gain;
 	}
 
-	audio_tone_set(i2s_dac_tone, gain);
-	
-	i2s_dac_gain = gain;
-
-	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "DAC gain: %ddB", i2s_dac_gain);
-	cp += sprintf(cp, VT100_CLREOL); 
-	printf(msg);
-
+	audio_tone_set(tone_wave, gain);
+	tone_gain = gain;
 }
 
-void dac_tone_cycle(void)
+void tone_mode_cycle(void)
 {
-	unsigned int freq;
-	char msg[32];
-	char * cp = msg;
+	tone_mode = (tone_mode == TONE_ADC) ? TONE_OFF : tone_mode + 1;
+	tone_mode = audio_tone_mode_set(tone_mode);
+}
 
-	i2s_dac_tone = (i2s_dac_tone == wave_max) ? 0 : i2s_dac_tone + 1;
-
-	freq = audio_tone_set(i2s_dac_tone, i2s_dac_gain);
-
-	cp += sprintf(cp, VT100_GOTO, 0, 0); 
-	cp += sprintf(cp, "DAC tone: %dHz", freq);
-	cp += sprintf(cp, VT100_CLREOL); 
-	printf(msg);
+void tone_freq_cycle(void)
+{
+	tone_wave = (tone_wave == wave_max) ? 0 : tone_wave + 1;
+	tone_freq = audio_tone_set(tone_wave, tone_gain);
 }
 
 void show_menu(void)
@@ -227,18 +251,6 @@ void spectrum_analyzer_task(void)
 	}
 }
 
-void phone_test(void)
-{
-	int i;
-
-	i2s_dac_gain = 0;
-
-	for (i = 2; i < wave_max; ++i) {
-		audio_tone_set(i2s_dac_tone = i, i2s_dac_gain);
-		thinkos_sleep(1000);
-	}
-}
-
 void shell_task(void)
 {
 	int c;
@@ -279,9 +291,6 @@ void shell_task(void)
 		case 'b':
 			spectrum_analyzer.enabled = false;
 			break;
-		case 'd':
-			dac_tone_cycle();
-			break;
 		case 'e':
 			audio_enable();
 			break;
@@ -292,14 +301,17 @@ void shell_task(void)
 			system_reset();
 			break;
 		case '[':
-			dac_gain_step(-6);
+			tone_gain_step(-6);
 			break;
 		case ']':
-			dac_gain_step(6);
+			tone_gain_step(6);
 			break;
 
-		case 'z':
-			phone_test();
+		case 'm':
+			tone_mode_cycle();
+			break;
+		case 'f':
+			tone_freq_cycle();
 			break;
 
 		case 'a':
@@ -394,7 +406,9 @@ int ui_task(void)
 				/* generate a double click event */
 				ev_dbl_click = 1;
 			}
-			line_connect_off_hook();
+			if (line_connect_off_hook() > 0) {
+				audio_stream_enable();
+			}
 		}
 
 		if (ev_release) {
@@ -406,6 +420,7 @@ int ui_task(void)
 
 		if (ev_dbl_click) {
 			printf("[DB CLK]");
+			audio_stream_disable();
 			line_hangup_all();
 		}
 
@@ -494,6 +509,10 @@ int main(int argc, char ** argv)
 
 	/* give a little time for the slave board start-up */
 	thinkos_sleep(100);
+
+	telctl_sync();
+
+	telctl_tonegen_set(1, 1);
 
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 

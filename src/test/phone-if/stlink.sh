@@ -20,14 +20,14 @@ STLINKDIR="${STM32UTILDIR}"/ST-LINK\ Utility
 PATH=$PATH:"${STLINKDIR}"
 STLINKCLI=ST-LINK_CLI.exe
 
+make -j 4 || exit 1;
+
 echo WINPROGDIR=${WINPROGDIR}
 echo STM32UTILDIR=${STM32UTILDIR}
 echo STLINKDIR=${STLINKDIR}
 
 UNIX_BINFILE=`make bin_path`
 BINFILE=`cygpath -w "${UNIX_BINFILE}"`
-
-make -j 4 || exit 1;
 
 ${STLINKCLI} -P "${BINFILE}" 0x08000000 -Rst
 
