@@ -97,6 +97,8 @@ void hybrid_impedance_set(int z_vr);
 
 void hybrid_impedance_step(int d);
 
+void hybrid_gain_set(int g_vr);
+
 void hybrid_gain_step(int d);
 
 int telctl_adc_scan(void);

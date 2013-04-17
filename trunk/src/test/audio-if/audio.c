@@ -62,22 +62,23 @@ struct {
 	int io_thread;
 	int net_thread;
 	int tone_mode;
+	int dac_gain;
 	volatile bool stream_enabled;
 	jitbuf_t jitbuf;
 } audio_drv;
 
-void tlv320_wr(unsigned int reg, unsigned int val)
+int tlv320_wr(unsigned int reg, unsigned int val)
 {
 	uint8_t buf[1];
+	int ret;
 	
 	buf[0] = val;
 
-	if (i2c_write(codec_addr, reg, buf, 1) < 0) {
+	if ((ret = i2c_write(codec_addr, reg, buf, 1)) < 0) {
 		tracef("%s(): i2c_write() failed!", __func__);
-		return;
 	}
 
-	thinkos_sleep(5);
+	return ret;
 }
 
 void tlv320_reset(void)
@@ -95,6 +96,7 @@ void tlv320_reset(void)
 	tlv320_wr(3, CR3_PWDN_NO | CR3_SWRS);
 	/* wait at least 132MCLK ~ 12us (11.2896 MHz) */
 
+	thinkos_sleep(1);
 }	
 
 void tlv320_status(void)
@@ -145,6 +147,22 @@ void tlv320_init(void)
 	tlv320_wr(1, CR1_CX | CR1_IIR | CR1_BIASV_LO | CR1_DAC16);
 };
 
+/* Set the DAC gain in dB (-42 to 20) */
+void audio_dac_gain_set(int gain)
+{
+	if (gain < -42)
+		gain = -42;
+	else if (gain > 20)
+		gain = 20;
+
+	if (audio_drv.dac_gain == gain)
+		return;
+
+	if (tlv320_wr(5, CR5B_DAGAIN_DB(gain)) > 0) {
+		audio_drv.dac_gain = gain;
+		tracef("%s(): gain=%ddB", __func__, gain);
+	}
+}
 
 void audio_tx_analyze(void) 
 {
