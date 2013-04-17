@@ -25,7 +25,6 @@
 int stm32f_usart_init(struct stm32f_usart * us)
 {
 	int id;
-	int clk;
 
 	if ((id = stm32f_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
@@ -38,16 +37,7 @@ int stm32f_usart_init(struct stm32f_usart * us)
 	us->cr1 = 0;
 
 	/* Enable peripheral clock */
-	clk = stm32f_us_clk_lut[id];
-
-
-	DCC_LOG2(LOG_TRACE, "APB%d |= 1 << %d.", 
-			 (clk & APB2) ? 2 : 1, (clk & CLK_BIT));
-
-	if (clk & APB2)
-		STM32F_RCC->apb2enr |= (1 << (clk & CLK_BIT));
-	else
-		STM32F_RCC->apb1enr |= (1 << (clk & CLK_BIT));
+	stm32f_clk_enable(STM32F_RCC, stm32f_usart_clk_lut[id]);
 
 	/* output drain */
 //	while (!(us->sr & USART_TXE));

@@ -103,6 +103,10 @@ int telctl_adc_scan(void);
 
 int codec_hw_reset(void);
 
+int telctl_tonegen_set(int tone0, int tone1);
+
+int telctl_sync(void);
+
 #ifdef __cplusplus
 }
 #endif	

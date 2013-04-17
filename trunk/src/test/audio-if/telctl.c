@@ -45,6 +45,7 @@ static struct {
 	uint8_t relay;
 	uint8_t z_vr;
 	uint8_t g_vr;
+	uint8_t tone[2];
 } cache;
 
 int line_set_connect(int line_idx, bool connect)
@@ -83,6 +84,7 @@ int line_connect_off_hook(void)
 {
 	uint8_t reg[2];
 	int ret;
+	int cnt;
 	int i;
 
 	DCC_LOG(LOG_TRACE, ".");
@@ -103,11 +105,14 @@ int line_connect_off_hook(void)
 	if ((ret = i2c_write(TELCTL_I2C_ADDR, TELCTL_LED_REG, reg, 2)) > 0) {
 		cache.led = reg[0];
 		cache.relay = reg[1];
+		cnt = 0;
 		for (i = 0; i < 5; ++i) {
 			if (telctl.line[i].sup_st >= LINE_PHONE1) {
 				telctl.line[i].connected = true;
+				cnt++;
 			}
 		}
+		ret = cnt;
 	} else {
 		tracef("%s(): i2c_write() failed!", __func__);
 	}
@@ -119,6 +124,7 @@ int line_disconnect_on_hook(void)
 {
 	uint8_t reg[2];
 	int ret;
+	int cnt;
 	int i;
 
 	DCC_LOG(LOG_TRACE, ".");
@@ -126,24 +132,35 @@ int line_disconnect_on_hook(void)
 	reg[0] = cache.led;
 	reg[1] = cache.relay;
 
+	cnt = 0;
 	for (i = 0; i < TELCTL_LINE_CNT; ++i) {
+		if (telctl.line[i].connected) {
+			cnt++;
+		}
 		if (telctl.line[i].sup_st < LINE_PHONE1) {
 			reg[0] &= ~(1 << i);
 			reg[1] &= ~(1 << i);
 		}
 	}
 
-	if (cache.led == reg[0])
-		return 0;
+	if (cache.led == reg[0]) {
+		/* return the number of connected lines */
+		return cnt;
+	}
 
 	if ((ret = i2c_write(TELCTL_I2C_ADDR, TELCTL_LED_REG, reg, 2)) > 0) {
 		cache.led = reg[0];
 		cache.relay = reg[1];
+		cnt = 0;
 		for (i = 0; i < TELCTL_LED_REG; ++i) {
 			if (telctl.line[i].sup_st < LINE_PHONE1) {
 				telctl.line[i].connected = false;
+			} else {
+				telctl.line[i].connected = true;
+				cnt++;
 			}
 		}
+		ret = cnt;
 	} else {
 		tracef("%s(): i2c_write() failed!", __func__);
 	}
@@ -312,6 +329,51 @@ int codec_hw_reset(void)
 	} else {
 		/* wait for the coddec to start up */
 		thinkos_sleep(2);
+	}
+
+	return ret;
+}
+
+int telctl_tonegen_set(int tone0, int tone1)
+{
+	uint8_t reg[2];
+	int ret;
+
+	if (tone0 < 0 )
+		tone0 = 0;
+	else if (tone0 > 7)
+		tone0 = 7;
+
+	if (tone1 < 0 )
+		tone1 = 0;
+	else if (tone1 > 7)
+		tone1 = 7;
+
+	tracef("%s(): tone0=%d tone1=%d!", __func__, tone0, tone1);
+
+//	if ((cache.tone[0] == tone0) && (cache.tone[1] == tone1)) {
+//		return 0;
+//	}
+
+	reg[0] = tone0;
+	reg[1] = tone1;
+
+	if ((ret = i2c_write(TELCTL_I2C_ADDR, TELCTL_TONE0_REG, reg, 2)) > 0) {
+		cache.tone[0] = tone0;
+		cache.tone[1] = tone1;
+	} else {
+		tracef("%s(): i2c_write() failed!", __func__);
+	}
+
+	return ret;
+}
+
+int telctl_sync(void)
+{
+	int ret;
+
+	if ((ret = i2c_read(TELCTL_I2C_ADDR, TELCTL_LED_REG, &cache, 6)) < 0) {
+		tracef("%s(): i2c_read() failed!", __func__);
 	}
 
 	return ret;

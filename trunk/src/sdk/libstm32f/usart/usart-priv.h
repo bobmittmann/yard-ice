@@ -28,15 +28,7 @@
 
 #include <sys/dcclog.h>
 
-extern const struct stm32f_usart * stm32f_usart_lut[];
-
-/* APB clock */
-#define APB1 (1 << 5)
-#define APB2 (1 << 6)
-#define CLK(APB, BIT) (APB | BIT)
-#define CLK_BIT 0x1f
-
-extern const uint8_t stm32f_us_clk_lut[];
+extern const struct stm32f_clk stm32f_usart_clk_lut[];
 
 #ifdef __cplusplus
 extern "C" {

@@ -90,7 +90,8 @@ def main():
 #	lvl = 16384;
 #	offs = 0;
 #	lvl = 1241;
-	lvl = 621;
+#	lvl = 621;
+	lvl = 160;
 	offs = 2482;
 #	offs = 0;
 
