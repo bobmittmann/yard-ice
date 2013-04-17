@@ -36,6 +36,7 @@ JTAGTOOL_ADDR = 192.168.0.80
 
 CFLAGS = -g -O2
 
+HCLK_HZ = 24000000
 include ../../../../mk/stm32f207.mk
 
 FPGA_RBF_ADDR = 0x08010000

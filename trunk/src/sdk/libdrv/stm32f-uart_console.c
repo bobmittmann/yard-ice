@@ -41,19 +41,19 @@
 #if (THINKOS_EVENT_MAX > 0) && (THINKOS_ENABLE_EVENT_ALLOC)
 
 #ifndef ENABLE_UART_TX_BLOCK
-#define ENABLE_UART_TX_BLOCK 0
+#define ENABLE_UART_TX_BLOCK 1
 #endif
 
 #ifndef ENABLE_UART_TX_MUTEX
-#define ENABLE_UART_TX_MUTEX 0
+#define ENABLE_UART_TX_MUTEX 1
 #endif
 
 #define UART_TX_FIFO_BUF_LEN 512
 #define UART_RX_FIFO_BUF_LEN 8
 
 #define UART STM32F_UART5
-#define UART_TX STM32F_GPIOB, 6
-#define UART_RX STM32F_GPIOB, 7
+#define UART_TX STM32F_GPIOC, 12
+#define UART_RX STM32F_GPIOD, 2
 #define UART_ISR stm32f_uart5_isr
 #define UART_IRQ_NUM STM32F_IRQ_UART5
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
@@ -260,16 +260,20 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 											unsigned int flags)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32f_usart * uart = UART;
 #if defined(STM32F1X)
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
 
-	DCC_LOG(LOG_TRACE, "...");
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32f_gpio_clock_en(STM32F_GPIOD);
 
 	/* USART1_TX */
 	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 
+	DCC_LOG1(LOG_TRACE, "UART=0x%08x", uart);
+
+	dev->uart = uart;
 #if defined(STM32F1X)
 	/* USART1_RX */
 	stm32f_gpio_mode(UART_RX, INPUT, PULL_UP);
@@ -279,6 +283,10 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
 	stm32f_gpio_af(UART_RX, GPIO_AF7);
 	stm32f_gpio_af(UART_TX, GPIO_AF7);
+#elif defined(STM32F2X)
+	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(UART_RX, GPIO_AF8);
+	stm32f_gpio_af(UART_TX, GPIO_AF8);
 #endif
 
 	DCC_LOG(LOG_INFO, "...");
@@ -309,7 +317,6 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	return dev;
 }
 
-
 /* ----------------------------------------------------------------------
  * Console file operations 
  * ----------------------------------------------------------------------
@@ -322,13 +329,13 @@ const struct fileop uart_console_ops = {
 	.close = (void *)NULL
 };
 
-struct file uart_console_file = {
-	.data = (void *)&uart_console_dev, 
-	.op = &uart_console_ops
-};
+struct file uart_console_file;
 
 struct file * uart_console_fopen(struct uart_console_dev * dev)
 {
+	uart_console_file.data = dev;
+	uart_console_file.op = &uart_console_ops;
+
 	return (struct file *)&uart_console_file;
 }
 
