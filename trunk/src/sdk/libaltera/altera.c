@@ -34,14 +34,14 @@
  * Altera 
  ---------------------------------------------------------------------------*/
 
-gpio_io_t n_config = GPIO(PE, 0);
-gpio_io_t conf_done = GPIO(PE, 1);
-gpio_io_t n_status = GPIO(PC, 10);
+gpio_io_t n_config = GPIO(GPIOE, 0);
+gpio_io_t conf_done = GPIO(GPIOE, 1);
+gpio_io_t n_status = GPIO(GPIOC, 10);
 
 static const struct stm32f_spi_io spi3_io = {
-	.miso = GPIO(PC, 11), /* MISO */
-	.mosi = GPIO(PB, 5), /* MOSI */
-	.sck = GPIO(PC, 10)  /* SCK */
+	.miso = GPIO(GPIOC, 11), /* MISO */
+	.mosi = GPIO(GPIOB, 5), /* MOSI */
+	.sck = GPIO(GPIOC, 10)  /* SCK */
 };
 
 static int altera_io_init(void)

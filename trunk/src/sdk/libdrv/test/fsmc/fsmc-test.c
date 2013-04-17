@@ -135,31 +135,31 @@ static void mco2_cfg(void)
 }
 
 gpio_io_t fsmc_io[] = {
-	GPIO(PD, 14), /* D0 */
-	GPIO(PD, 15), /* D1 */
-	GPIO(PD, 0),  /* D2 */
-	GPIO(PD, 1),  /* D3 */
-	GPIO(PE, 7),  /* D4 */
-	GPIO(PE, 8),  /* D5 */
-	GPIO(PE, 9),  /* D6 */
-	GPIO(PE, 10), /* D7 */
-	GPIO(PE, 11), /* D8 */
-	GPIO(PE, 12), /* D9 */
-	GPIO(PE, 13), /* D10 */
-	GPIO(PE, 14), /* D11 */
-	GPIO(PE, 15), /* D12 */
-	GPIO(PD, 8),  /* D13 */
-	GPIO(PD, 9),  /* D14 */
-	GPIO(PD, 10), /* D15 */
-	GPIO(PD, 3), /* CLK */
-	GPIO(PD, 4), /* NOE */
-	GPIO(PD, 5), /* NWE */
-	GPIO(PD, 7), /* NE1 */
-//	GPIO(PD, 6), /* NWAIT */
-	GPIO(PB, 7), /* NL */
+	GPIO(GPIOD, 14), /* D0 */
+	GPIO(GPIOD, 15), /* D1 */
+	GPIO(GPIOD, 0),  /* D2 */
+	GPIO(GPIOD, 1),  /* D3 */
+	GPIO(GPIOE, 7),  /* D4 */
+	GPIO(GPIOE, 8),  /* D5 */
+	GPIO(GPIOE, 9),  /* D6 */
+	GPIO(GPIOE, 10), /* D7 */
+	GPIO(GPIOE, 11), /* D8 */
+	GPIO(GPIOE, 12), /* D9 */
+	GPIO(GPIOE, 13), /* D10 */
+	GPIO(GPIOE, 14), /* D11 */
+	GPIO(GPIOE, 15), /* D12 */
+	GPIO(GPIOD, 8),  /* D13 */
+	GPIO(GPIOD, 9),  /* D14 */
+	GPIO(GPIOD, 10), /* D15 */
+	GPIO(GPIOD, 3), /* CLK */
+	GPIO(GPIOD, 4), /* NOE */
+	GPIO(GPIOD, 5), /* NWE */
+	GPIO(GPIOD, 7), /* NE1 */
+//	GPIO(GPIOD, 6), /* NWAIT */
+	GPIO(GPIOB, 7), /* NL */
 };
 
-gpio_io_t irq_io = GPIO(PD, 6);
+gpio_io_t irq_io = GPIO(GPIOD, 6);
 
 void fsmc_speed(int div)
 {
@@ -205,8 +205,8 @@ void fsmc_init(void)
 	mco2_cfg();
 
 	/* Configur IO pins */
-	stm32f_gpio_clock_en(STM32F_GPIO(PD));
-	stm32f_gpio_clock_en(STM32F_GPIO(PE));
+	stm32f_gpio_clock_en(STM32F_GPIO(GPIOD));
+	stm32f_gpio_clock_en(STM32F_GPIO(GPIOE));
 	for (i = 0; i < sizeof(fsmc_io) / sizeof(gpio_io_t); i++) {
 		io = fsmc_io[i];
 		stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, 
@@ -376,7 +376,6 @@ void io_test(struct fpga_io * fpga)
 
 void reg_test(struct fpga_io * fpga)
 {
-	uint32_t buf[32];
 	uint32_t st;
 	int r = 0;
 	int i = 0;
@@ -389,8 +388,7 @@ void reg_test(struct fpga_io * fpga)
 			st = fpga->reg[r];
 		} else if (c <= 'Z') {
 			r = c - 'A';
-//			st = __ldrd((void *)&fpga->r64[r]);
-			__ldqd((void *)&fpga->r32[r], buf);
+			st = __ldrd((void *)&fpga->r64[r]);
 //			__move((uint16_t *)buf, (uint16_t *)&fpga->r32[r], 16);
 		} else if (c <= 'z') {
 			r = c - 'a';
@@ -464,8 +462,6 @@ void slow_test(struct fpga_io * fpga)
 	}
 }
 
-FILE * stdout = (FILE *)&stm32f_usart5_file;
-
 int main(int argc, char ** argv)
 {
 	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
@@ -482,7 +478,7 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	stdout = uart_console_open(115200, SERIAL_8N1);
+	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
 	stdin = stdout;
 
 	printf("\n");

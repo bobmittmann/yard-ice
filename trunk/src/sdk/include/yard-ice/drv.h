@@ -37,7 +37,10 @@ void stm32f_dac_init(void);
 
 void stm32f_adc_init(void);
 
-struct file * uart_console_open(unsigned int baudrate, unsigned int flags);
+struct uart_console_dev * uart_console_init(unsigned int baudrate, 
+											unsigned int flags);
+
+struct file * uart_console_fopen(struct uart_console_dev * dev);
 
 
 #ifdef __cplusplus
