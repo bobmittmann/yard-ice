@@ -165,6 +165,8 @@ void fsmc_speed(int div)
 {
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
 
+	printf("- FSCM div=%d.\n", div);
+
 	fsmc->btr1 = FSMC_ACCMOD_A | FSMC_DATLAT_SET(0) |
 		FSMC_CLKDIV_SET(div) | FSMC_BUSTURN_SET(0) |
 		FSMC_DATAST_SET(0) | FSMC_ADDHDL_SET(0) |
@@ -381,6 +383,8 @@ void reg_test(struct fpga_io * fpga)
 	int i = 0;
 	int c;
 	
+	printf("Register read test:\n");
+
 	c = getchar();
 	while (c != '\033') {
 		if (c <= '9') {
@@ -407,6 +411,8 @@ void memcpy_test(struct fpga_io * fpga)
 	int i = 0;
 	uint16_t buf[256];
 
+	printf("- Memory copy test\n");
+
 	fpga->ien = 1;
 
 	for (i = 0; i < 256; i++) {
@@ -417,6 +423,7 @@ void memcpy_test(struct fpga_io * fpga)
 
 	for (i = 0; i < 256; i++)
 		buf[i] = fpga->mem[i];
+
 	show_hex16(stdout, 0, buf, 512);
 
 	fpga->src = 0;
@@ -462,6 +469,21 @@ void slow_test(struct fpga_io * fpga)
 	}
 }
 
+struct file stm32f_uart_file = {
+	.data = STM32F_UART5, 
+	.op = &stm32f_usart_fops 
+};
+
+#define UART_TX STM32F_GPIOC, 12
+#define UART_RX STM32F_GPIOD, 2
+
+void stdio_init(void)
+{
+	stderr = &stm32f_uart_file;
+	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
+	stdin = stdout;
+}
+
 int main(int argc, char ** argv)
 {
 	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
@@ -472,14 +494,17 @@ int main(int argc, char ** argv)
 	int i;
 	int n = 512;
 
-	DCC_LOG_CONNECT();
 	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
 
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
+
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
-	stdin = stdout;
+	DCC_LOG(LOG_TRACE, "3. stdio_init()");
+	stdio_init();
 
 	printf("\n");
 	printf("------------------------------------------------------\n");
@@ -501,7 +526,7 @@ int main(int argc, char ** argv)
 
 	fsmc_speed(1);
 
-	reg_test(fpga);
+//	reg_test(fpga);
 
 	memcpy_test(fpga);
 
