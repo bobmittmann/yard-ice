@@ -100,6 +100,9 @@ const char tone_nm_lut[][4] = {
 	"ADC"
 };
 
+bool autobalance_enabled = true;
+bool autogain_enabled = true;
+
 void line_supv_status(void)
 {
 	char s[64];
@@ -112,7 +115,11 @@ void line_supv_status(void)
 	g = telctl.hybrid.g;
 	z = telctl.hybrid.z;
 
-	cp += sprintf(cp, VT100_CURSOR_SAVE VT100_GOTO, 1, 40); 
+	cp += sprintf(cp, VT100_CURSOR_SAVE VT100_GOTO, 1, 36); 
+	cp += sprintf(cp, "| %c %c | ", 
+				  autobalance_enabled  ? 'B' : '-',
+				  autogain_enabled  ? 'G' : '-');
+
 	cp += sprintf(cp, "%3s %-4d | ", tone_nm_lut[tone_mode], tone_freq);
 
 	cp += sprintf(cp, "%4d %d.%02d | ", z, g / 100, g % 100);
@@ -138,6 +145,7 @@ int acq_task(void)
 {
 	int z;
 	int vr;
+	int gain;
 
 	DCC_LOG(LOG_TRACE, "started...");
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
@@ -149,23 +157,37 @@ int acq_task(void)
 			switch (telctl.load.cnt) {
 			case 1:
 				z = 1293;
+				gain = 0;
 				break;
 			case 2:
 				z = 2325;
+				gain = 3;
 				break;
 			case 3:
 				z = 3595;
+				gain = 5;
+				break;
+			case 4:
+				z = 4500;
+				gain = 7;
+				break;
+			case 5:
+				z = 5500;
+				gain = 9;
 				break;
 			case 0:
 			default:
 				z = 0;
+				gain = 0;
 				break;
 			}
 //			z = (1000 * telctl.load.cnt) - 500;
 			z -= 500;
 			vr = ((z * 63) + 2500) / 5000;
-			hybrid_impedance_set(vr);
-			(void)vr;
+			if (autobalance_enabled)
+				hybrid_impedance_set(vr);
+			if (autogain_enabled)
+				audio_dac_gain_set(gain);
 		};
 
 		if (line_disconnect_on_hook() == 0)
@@ -315,8 +337,11 @@ void shell_task(void)
 			break;
 
 		case 'a':
-			printf(" " VT100_CLRSCR);
-			audio_reset();
+			autogain_enabled = (autogain_enabled) ? false : true;
+			break;
+
+		case 'h':
+			autobalance_enabled = (autobalance_enabled) ? false : true;
 			break;
 
 		case '9':
@@ -513,6 +538,8 @@ int main(int argc, char ** argv)
 	telctl_sync();
 
 	telctl_tonegen_set(1, 1);
+
+	hybrid_gain_set(16);
 
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 

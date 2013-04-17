@@ -1,5 +1,5 @@
 /* 
- * File:	 audio.h
+ * File:	 net.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,49 +20,29 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __AUDIO_H__
-#define __AUDIO_H__
-
-enum {
-	TONE_OFF,
-	TONE_DAC,
-	TONE_ADC
-};
+#ifndef __NET_H__
+#define __NET_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void audio_init(void);
+/* ----------------------------------------------------------------------
+ * NET subsystem
+ * ----------------------------------------------------------------------
+ */
+void net_init(void);
 
-void audio_enable(void);
+int net_send(int sock, const void * buf, int len);
 
-void audio_disable(void);
+int net_recv(int sock, void * buf, int len);
 
-void audio_reset(void);
+int audio_send(int stream, sndbuf_t * buf, uint32_t ts);
 
-void audio_stat(void);
-
-void audio_rx_dump(void);
-
-void audio_tx_dump(void);
-
-void audio_tx_analyze(void);
-
-void audio_rx_analyze(void);
-
-int audio_tone_set(int tone, int32_t amp);
-
-int audio_tone_mode_set(int mode);
-
-void audio_stream_enable(void);
-
-void audio_stream_disable(void);
-
-void audio_dac_gain_set(int gain);
+int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __AUDIO_H__ */
+#endif /* __NET_H__ */

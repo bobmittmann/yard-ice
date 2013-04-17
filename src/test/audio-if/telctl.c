@@ -257,6 +257,11 @@ void hybrid_gain_step(int d)
 	hybrid_adjust(cache.z_vr, cache.g_vr + d);
 }
 
+void hybrid_gain_set(int g_vr)
+{
+	hybrid_adjust(cache.z_vr, g_vr);
+}
+
 int telctl_adc_scan(void)
 {
 	int state;
