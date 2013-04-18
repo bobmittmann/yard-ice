@@ -47,7 +47,7 @@ void rs485_init(struct rs485_link * lnk,
 	uint32_t us;
 	int c;
 
-	tracef("%s():...\n", __func__);
+	tracef("%s():...", __func__);
 
 	lnk->uart = uart;
 	lnk->dma = dma;
@@ -155,28 +155,6 @@ void rs485_init(struct rs485_link * lnk,
 	(void)c;
 
 	stm32f_usart_enable(uart);
-
-//	cm3_irq_enable(lnk->uart_irq);
-}
-
-void rs485_link_isr(struct rs485_link * lnk)
-{
-	struct stm32f_usart * uart = lnk->uart;
-	uint32_t sr;
-	int c;	
-	
-	sr = uart->sr;
-
-	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
-		/* Stop RX DMA transfer */
-		lnk->rx.dma_strm->cr &= ~DMA_EN;
-		/* clear interrupt flag */
-		c = uart->dr;
-		(void)c;
-		trace("UART IDLE");
-	}
-
 }
 
 int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)

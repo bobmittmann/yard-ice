@@ -189,6 +189,8 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 	for(;;);
 }
 
+void thinkos_exception_dsr(struct thinkos_context * ctx);
+
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	struct thinkos_context * ctx;
@@ -241,8 +243,17 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 	DCC_LOG1(LOG_ERROR, "CFSR=0x%08x", scb->cfsr);
 	DCC_LOG1(LOG_ERROR, "BFAR=0x%08x", scb->bfar);
 
+	thinkos_exception_dsr(ctx);
+
 	for(;;);
 }
+
+void thinkos_default_exception_dsr(struct thinkos_context * ctx)
+{
+}
+
+void thinkos_exception_dsr(struct thinkos_context *) 
+	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
 const char thinkos_except_nm[] = "EXCEPT";
 

@@ -33,16 +33,21 @@ int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate,
 {
 	uint32_t delay;
 	uint32_t tbuf;
+	int cnt;
 
 	/* ceiling delay time in TSCLK periods */
 	delay = ((delay_ms * tsclk_rate) + 999) / 1000;
 
 	/* ceiling buffer period in TSCLK periods */
 	tbuf = (SNDBUF_LEN * tsclk_rate) / sample_rate;
-		
-	tracef("%s(): delay=%d [TCLK], tbuf=%d [TCLK]", 
-		   __func__, delay, tbuf);
 
+	cnt = delay / tbuf;
+
+	tracef("%s(): delay=%d[ms],%d[TSCLK],%d[bufs]", 
+		   __func__, delay_ms, delay, cnt);
+
+	tracef("%s(): tbuf=%d[TSCLK]", __func__, tbuf);
+		
 	jb->head_ts = 0;
 	jb->head = 0;
 	jb->tail = 0;
@@ -55,13 +60,19 @@ int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate,
 int __jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 {
 	uint32_t head;
-	uint32_t lvl;
+	int32_t lvl;
 	int32_t dt;
 
 	/* get the queue head pointer */
 	head = jb->head;
 	/* level of the current level of the queue */
 	lvl = head - jb->tail;
+
+	if (lvl > JITBUF_FIFO_LEN) {
+		tracef("%s(): ERROR ts=%d, fifo overflow!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
 
 	if (lvl == JITBUF_FIFO_LEN) {
 		tracef("%s(): ts=%d, fifo full!", __func__, ts);
@@ -147,6 +158,12 @@ int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 	/* level of the current level of the queue */
 	lvl = head - jb->tail;
 
+	if (lvl > JITBUF_FIFO_LEN) {
+		tracef("%s(): ERROR ts=%d, fifo overflow!", __func__, ts);
+		/* Queue is full, discard */
+		return -1;
+	}
+
 	if (lvl == JITBUF_FIFO_LEN) {
 		tracef("%s(): ts=%d, fifo full!", __func__, ts);
 		/* Queue is full, discard */
@@ -195,8 +212,7 @@ sndbuf_t * jitbuf_dequeue(struct jitbuf * jb)
 	if ((int)(jb->head - tail) > 0) {
 		buf = jb->fifo[tail++ & (JITBUF_FIFO_LEN - 1)];
 		jb->tail = tail;
-	}
-	else
+	} else
 		buf = NULL;
 
 	return buf;

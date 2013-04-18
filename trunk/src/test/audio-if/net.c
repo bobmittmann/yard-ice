@@ -66,7 +66,7 @@ struct rs485_link link;
 
 void net_init(void)
 {
-	tracef("%s():...\n", __func__);
+	tracef("%s():...", __func__);
 
 	/* IO init */
 	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);

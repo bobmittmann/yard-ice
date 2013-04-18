@@ -55,32 +55,13 @@ int tone_wave = 0;
 int tone_freq = 0;
 int tone_mode = TONE_OFF;
 
+bool autobalance_enabled = true;
+bool autogain_enabled = true;
+
 /* ----------------------------------------------------------------------
  * Supervisory task
  * ----------------------------------------------------------------------
  */
-int supervisor_task(void)
-{
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
-
-	for (;;) {
-//		led_flash(LED_S2, 100);
-		led_flash(LED_S1, 100);
-		trace_print(stdout, 1);
-		thinkos_sleep(500);
-		trace_print(stdout, 1);
-		thinkos_sleep(500);
-	}
-}
-
-void system_reset(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-
-	thinkos_sleep(10);
-    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-	for(;;);
-}
 
 const char sup_nm_lut[][4] = {
 	"UN",
@@ -100,10 +81,7 @@ const char tone_nm_lut[][4] = {
 	"ADC"
 };
 
-bool autobalance_enabled = true;
-bool autogain_enabled = true;
-
-void line_supv_status(void)
+void print_status(void)
 {
 	char s[64];
 	char * cp = s;
@@ -140,6 +118,43 @@ void line_supv_status(void)
 
 	printf(s);
 }
+
+void thinkos_exception_dsr(struct thinkos_context * ctx)
+{
+	trace_print(stderr, 0);
+	fprintf(stderr, "---------\n");
+}
+
+int supervisor_task(void)
+{
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	for (;;) {
+		trace_print(stdout, 1);
+
+		print_status();
+
+		if (autobalance_enabled && autogain_enabled) {
+			led_on(LED_S1);
+		} else if (autobalance_enabled || autogain_enabled) {
+			led_flash(LED_S1, 100);
+		} else {
+			led_off(LED_S1);
+		}
+
+		thinkos_sleep(250);
+	}
+}
+
+void system_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+
+	thinkos_sleep(10);
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+}
+
 
 int acq_task(void)
 {
@@ -190,10 +205,9 @@ int acq_task(void)
 				audio_dac_gain_set(gain);
 		};
 
-		if (line_disconnect_on_hook() == 0)
+		if (line_disconnect_on_hook() == 0) {
 			audio_stream_disable();
-
-		line_supv_status();
+		}
 	}
 }
 
@@ -396,93 +410,63 @@ void shell_init(void)
  */
 int ui_task(void)
 {
-	int btn_st[2];
-	int ev_press;
-	int ev_release;
-	int ev_dbl_click;
-	int rst_tmr = 0;
-	int click_cnt = 0;
-	int click_tmr = 0;
-
+	int event;
+	int i;
 
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
-	btn_st[0] = push_btn_stat();
-	for (;;) {
 
-		/* process push button */
-		btn_st[1] = push_btn_stat();
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
-		ev_press = btn_st[1] & (btn_st[1] ^ btn_st[0]);
-		ev_release = btn_st[0] & (btn_st[1] ^ btn_st[0]);
-		ev_dbl_click = 0;
-		btn_st[0] = btn_st[1];
+	while (1) {
 
-		if (ev_press) {
-			DCC_LOG(LOG_TRACE, "BTN Down");
-			printf("[DWN]");
-			/* set reset timer */
-			rst_tmr = 50;
-			/* reset click window timer */
-			click_tmr = 10;
-			/* update click counter */
-			click_cnt++;
-			if (click_cnt == 2) {
-				/* generate a double click event */
-				ev_dbl_click = 1;
-			}
+		/* wait for a push buton event */
+		event = btn_event_wait();
+
+		switch (event) {
+		case EVENT_CLICK:
+	//		tracef("Click");
 			if (line_connect_off_hook() > 0) {
 				audio_stream_enable();
 			}
-		}
+			break;
 
-		if (ev_release) {
-			DCC_LOG(LOG_TRACE, "BTN Up");
-			printf("[UP]");
-			/* clear 'reset timer' */
-			rst_tmr = 0;
-		}
+		case EVENT_DBL_CLICK:
+	//		tracef("Double click");
+			if (autobalance_enabled) {
+				autobalance_enabled = false;
+				autogain_enabled = false;
+				hybrid_gain_set(32);
+				hybrid_impedance_set(0);
+				audio_dac_gain_set(0);
+			} else {
+				autobalance_enabled = true;
+				autogain_enabled = true;
+			}
 
-		if (ev_dbl_click) {
-			printf("[DB CLK]");
+			break;
+
+		case EVENT_HOLD1:
+	//		tracef("Hold 1");
 			audio_stream_disable();
 			line_hangup_all();
-		}
-
-		if (rst_tmr)
-			rst_tmr--;
-
-		if (click_tmr) {
-			if (--click_tmr == 0)
-				click_cnt = 0;
-		}
-
-		switch (rst_tmr) {
-		case 18:
-		case 16:
-		case 12:
-		case 8:
-		case 4:
-			led_on(0);
-			led_on(1);
-			led_on(2);
-			led_on(3);
 			break;
-		case 17:
-		case 13:
-		case 9:
-		case 5:
-			led_off(0);
-			led_off(1);
-			led_off(2);
-			led_off(3);
+
+		case EVENT_CLICK_N_HOLD:
+	//		tracef("click'n hold");
 			break;
-		case 1:
+
+		case EVENT_HOLD2:
+	//		tracef("Hold 2");
+			leds_lock();
+			leds_all_off();
+			for (i = 0; i < 6; ++i) {
+				thinkos_sleep(500);
+				leds_all_flash(200);
+			}
 			system_reset();
 			break;
 		}
-
-		thinkos_sleep(50);
 	}
 }
 
@@ -517,9 +501,6 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	DCC_LOG(LOG_TRACE, "5. leds_init()");
-	leds_init();
-
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
@@ -539,7 +520,7 @@ int main(int argc, char ** argv)
 
 	telctl_tonegen_set(1, 1);
 
-	hybrid_gain_set(16);
+	hybrid_gain_set(32);
 
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 
