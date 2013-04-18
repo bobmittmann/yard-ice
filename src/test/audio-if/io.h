@@ -30,6 +30,15 @@ enum {
 	LED_S1
 };
 
+enum {
+	EVENT_NONE,
+	EVENT_CLICK,
+	EVENT_DBL_CLICK,
+	EVENT_HOLD1,
+	EVENT_CLICK_N_HOLD,
+	EVENT_HOLD2
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,15 +49,18 @@ extern "C" {
  */
 void io_init(void);
 
-int push_btn_stat(void);
+/* ----------------------------------------------------------------------
+ * Push button 
+ * ----------------------------------------------------------------------
+ */
+
+int btn_event_wait(void);
 
 /* ----------------------------------------------------------------------
  * LEDs 
  * ----------------------------------------------------------------------
  */
 
-void leds_init(void);
- 
 void leds_all_on(void);
 
 void leds_all_off(void);
@@ -59,8 +71,15 @@ void led_on(int id);
 
 void led_flash(int id, int ms);
 
+void leds_all_flash(int ms);
+
+void leds_lock(void);
+
+void leds_unlock(void);
+
 #ifdef __cplusplus
 }
 #endif	
 
 #endif /* __IO_H__ */
+

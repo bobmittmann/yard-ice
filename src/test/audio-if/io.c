@@ -27,6 +27,13 @@
 #include <sys/dcclog.h>
 
 #include "trace.h"
+#include "io.h"
+
+#include <thinkos.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
+
+#define POLL_PERIOD_MS 32
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -46,29 +53,44 @@ const struct stm32f_io led_io[] = {
 	{ STM32F_GPIOC, 8 }
 };
 
-uint8_t tmr[sizeof(led_io) / sizeof(struct stm32f_io)];
+#define UNLOCKED -1
+
+struct {
+	int lock;
+	uint8_t tmr[sizeof(led_io) / sizeof(struct stm32f_io)];
+} led_drv;
 
 void led_on(int id)
 {
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
 	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
 {
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
 	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
 
-#define POLL_PERIOD_MS 32
-
 void led_flash(int id, int ms)
 {
-	tmr[id] = ms / POLL_PERIOD_MS;
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
+	led_drv.tmr[id] = ms / POLL_PERIOD_MS;
 	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_all_off(void)
 {
 	int i;
+
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i)
 		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
@@ -78,13 +100,48 @@ void leds_all_on(void)
 {
 	int i;
 
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i)
 		stm32f_gpio_set(led_io[i].gpio, led_io[i].pin);
 }
 
-void leds_init(void)
+void leds_all_flash(int ms)
 {
 	int i;
+
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
+	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
+		led_drv.tmr[i] = ms / POLL_PERIOD_MS;
+		stm32f_gpio_set(led_io[i].gpio, led_io[i].pin);
+	}
+}
+
+void leds_lock(void)
+{
+	if (led_drv.lock != UNLOCKED)
+		return;
+
+	led_drv.lock = thinkos_thread_self();
+}
+
+void leds_unlock(void)
+{
+	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+		return;
+
+	led_drv.lock = UNLOCKED;
+}
+
+
+static void leds_init(void)
+{
+	int i;
+
+	led_drv.lock = UNLOCKED;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
 		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
@@ -102,29 +159,186 @@ void leds_init(void)
 
 #define PUSH_BTN STM32F_GPIOC, 9
 
-int push_btn_stat(void)
+/* Button internal events */
+enum {
+	BTN_PRESSED = 1,
+	BTN_RELEASED,
+	BTN_TIMEOUT
+};
+
+/* Button FSM states */
+enum {
+	BTN_FSM_IDLE = 0,
+	BTN_FSM_CLICK1_WAIT,
+	BTN_FSM_PRE_WAIT1,
+	BTN_FSM_CLICK2_WAIT,
+	BTN_FSM_HOLD_TIME_WAIT,
+	BTN_FSM_CLICK_N_HOLD_TIME_WAIT,
+	BTN_FSM_HOLD_RELEASE_WAIT,
+};
+
+struct btn_drv {
+	uint8_t st;
+	volatile uint8_t tmr;
+	uint8_t fsm;
+	int8_t event;
+	int flag;
+} btn_drv;
+
+int btn_event_wait(void)
 {
-	return stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+	int event = EVENT_NONE;
+	int irq_ev;
+
+//	tracef("%s(): wait...", __func__);
+	thinkos_flag_wait(btn_drv.flag);
+
+	/* FIXME: possible race condition on this variable */
+	irq_ev = btn_drv.event;
+	btn_drv.event = 0;
+
+	thinkos_flag_clr(btn_drv.flag);
+
+	switch (btn_drv.fsm) {
+	case BTN_FSM_IDLE:
+		if (irq_ev == BTN_PRESSED) {
+			/* double click timer */
+			btn_drv.tmr = 500 / POLL_PERIOD_MS;
+			btn_drv.fsm = BTN_FSM_CLICK1_WAIT;
+		}
+		break;
+
+	case BTN_FSM_CLICK1_WAIT:
+		/* wait for button release after first press */
+		if (irq_ev == BTN_RELEASED) {
+			event = EVENT_CLICK;
+			btn_drv.fsm = BTN_FSM_PRE_WAIT1;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			/* hold timer */
+			btn_drv.tmr = 500 / POLL_PERIOD_MS;;
+			btn_drv.fsm = BTN_FSM_HOLD_TIME_WAIT;
+		}
+		break;
+
+	case BTN_FSM_PRE_WAIT1:
+		/* wait for button press after first press and release
+		 inside the double click timer */
+		if (irq_ev == BTN_PRESSED) {
+			btn_drv.fsm = BTN_FSM_CLICK2_WAIT;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			btn_drv.fsm = BTN_FSM_IDLE;
+		}
+		break;
+
+	case BTN_FSM_CLICK2_WAIT:
+		/* wait for button release after press/release/press
+		 inside the double click timer */
+		if (irq_ev == BTN_RELEASED) {
+			event = EVENT_DBL_CLICK;
+			btn_drv.tmr = 0;
+			btn_drv.fsm = BTN_FSM_IDLE;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			btn_drv.fsm = BTN_FSM_IDLE;
+			/* hold and click timer */
+			btn_drv.tmr = 500 / POLL_PERIOD_MS;;
+			btn_drv.fsm = BTN_FSM_CLICK_N_HOLD_TIME_WAIT;
+		}
+		break;
+
+
+	case BTN_FSM_HOLD_TIME_WAIT:
+		/* wait for button release after press
+		 inside the hold timer */
+		if (irq_ev == BTN_RELEASED) {
+			btn_drv.tmr = 0;
+			btn_drv.fsm = BTN_FSM_IDLE;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			event = EVENT_HOLD1;
+			/* long hold timer */
+			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
+			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
+		}
+		break;
+
+	case BTN_FSM_CLICK_N_HOLD_TIME_WAIT:
+		/* wait for button release after press/release/press
+		 inside the hold timer */
+		if (irq_ev == BTN_RELEASED) {
+			btn_drv.tmr = 0;
+			btn_drv.fsm = BTN_FSM_IDLE;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			event = EVENT_CLICK_N_HOLD;
+			/* long hold timer */
+			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
+			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
+		}
+		break;
+
+	case BTN_FSM_HOLD_RELEASE_WAIT:
+		/* wait for button release after the hold timer expired */
+		if (irq_ev == BTN_RELEASED) {
+			btn_drv.tmr = 0;
+			btn_drv.fsm = BTN_FSM_IDLE;
+		} else if (irq_ev == BTN_TIMEOUT) {
+			event = EVENT_HOLD2;
+			btn_drv.fsm = BTN_FSM_IDLE;
+		}
+		break;
+	};
+
+	return event;
 }
+
+
+static void btn_init(void)
+{
+	btn_drv.flag = thinkos_flag_alloc();
+	btn_drv.st = stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+	btn_drv.fsm = BTN_FSM_IDLE;
+
+	tracef("%s(): flag=%d...", __func__, btn_drv.flag);
+}
+
+
+/* ----------------------------------------------------------------------
+ * I/O 
+ * ----------------------------------------------------------------------
+ */
 
 void stm32f_tim2_isr(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM2;
+	int st;
 	int i;
 
 	/* Clear interrupt flags */
 	tim->sr = 0;
 
+	/* process led timers */
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
-		if (tmr[i] == 0)
+		if (led_drv.tmr[i] == 0)
 			continue;
-		if (--tmr[i] == 0) 
+		if (--led_drv.tmr[i] == 0) 
 			stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
-//	tracef("%s(): irq_cnt=%d", __func__, ++tim_irq_cnt);
+
+	if ((btn_drv.tmr) && (--btn_drv.tmr == 0)) {
+		/* process button timer */
+		btn_drv.event = BTN_TIMEOUT;
+		__thinkos_flag_signal(btn_drv.flag);
+	} else {
+		/* process push button */
+		st = stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
+		if (btn_drv.st != st) {
+			btn_drv.st = st;
+			btn_drv.event = st ? BTN_PRESSED : BTN_RELEASED;
+			__thinkos_flag_signal(btn_drv.flag);
+		}
+	}
 }
 
-void io_timer_init(uint32_t freq)
+
+static void io_timer_init(uint32_t freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_tim * tim = STM32F_TIM2;
@@ -154,6 +368,7 @@ void io_timer_init(uint32_t freq)
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
 	tim->ccr1 = tim->arr / 2;
 
+	cm3_irq_pri_set(STM32F_IRQ_TIM2, IRQ_PRIORITY_REGULAR);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32F_IRQ_TIM2);
 
@@ -171,6 +386,9 @@ void io_init(void)
 
 	stm32f_gpio_mode(STM32F_GPIOB, 10, INPUT, 0);
 	stm32f_gpio_mode(STM32F_GPIOB, 11, INPUT, 0);
+
+	btn_init();
+	leds_init();
 
 	io_timer_init(1000 / POLL_PERIOD_MS);
 

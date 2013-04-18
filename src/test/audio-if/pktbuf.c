@@ -34,7 +34,7 @@
  */
 
 #ifndef PKTBUF_LEN 
-#define PKTBUF_LEN (256 + 8)
+#define PKTBUF_LEN (512 + 16)
 #endif
 
 #ifndef PKTBUF_POOL_SIZE

@@ -137,7 +137,10 @@ void tlv320_init(void)
 //	tlv320_wr(2, CR2_I2CX_SET(4) | CR2_HPC_I2C);
 
 	tlv320_wr(3, CR3_PWDN_NO | CR3_OSR_512 | CR3_ASRF_1);
+	/* 8000 sps */
 	tlv320_wr(4, CR4_M_SET(44));
+	/* 11025 sps */
+//	tlv320_wr(4, CR4_M_SET(32));
 	tlv320_wr(4, CR4_NP_SET(1, 2));
 	tlv320_wr(5, CR5A_ADGAIN_DB(0));
 
@@ -206,7 +209,11 @@ int audio_tone_mode_set(int mode)
 	return audio_drv.tone_mode = mode;
 }
 
+#define DISABLE_JITBUF 0
+
+#if DISABLE_JITBUF
 sndbuf_t * xfr_buf;
+#endif
 
 void audio_io_task(void)
 {
@@ -221,11 +228,16 @@ void audio_io_task(void)
 	spectrum_init(&audio_rx_sa, SAMPLE_RATE);
 
 	for (;;) {
+#if DISABLE_JITBUF
+		out_buf = xfr_buf;
+#else
 		out_buf = jitbuf_dequeue(&audio_drv.jitbuf);
-//		out_buf = xfr_buf;
+#endif
 
 		if (out_buf == NULL) {
-//			tracef("%s(): out_buf == NULL!", __func__);
+#if 0
+			tracef("%s(): out_buf == NULL!", __func__);
+#endif
 			out_buf = (sndbuf_t *)&sndbuf_zero;
 		} else {
 			if (audio_drv.tone_mode == TONE_DAC)
@@ -275,12 +287,17 @@ void net_rcv_task(void)
 			tracef("%s(): (n=%d != sndbuf_len)!", __func__, n);
 		} else {
 			if (audio_drv.stream_enabled) {
+#if !DISABLE_JITBUF
 				jitbuf_enqueue(&audio_drv.jitbuf, buf, ts);
+#endif
 			}
 		}
 
-//		xfr_buf = buf;
+#if DISABLE_JITBUF
+		xfr_buf = buf;
+#else
 		sndbuf_free(buf);
+#endif
 	}
 }
 
@@ -291,6 +308,7 @@ void audio_stream_enable(void)
 
 	if (audio_drv.stream_enabled)
 		return;
+
 	audio_drv.stream_enabled = true;
 	tracef("%s(): audio stream enabled.", __func__);
 }

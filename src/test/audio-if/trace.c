@@ -45,7 +45,7 @@
 #endif
 
 #ifndef TRACE_FMT_BUF_LEN 
-#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 2)
+#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 1)
 #endif
 
 static struct {
