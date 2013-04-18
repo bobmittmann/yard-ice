@@ -268,8 +268,6 @@ void fpga_irq_init(struct fpga_io * fpga)
 {
 	struct stm32f_exti * exti = STM32F_EXTI;
 
-	/* FIXME: an interrupt is flagged as soon as  the interrupts
-	 are enabled with no apparent reason */
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* Disable interrupts */
@@ -283,10 +281,18 @@ void fpga_irq_init(struct fpga_io * fpga)
 
 	/* Clear Cortex Interrupt Pending */
 	cm3_irq_pend_clr(STM32F_IRQ_EXTI9_5);
+}
 
-	/* Enable Cortex Interrupt */
+void fpga_irq_disable(void)
+{
+	cm3_irq_disable(STM32F_IRQ_EXTI9_5);
+}
+
+void fpga_irq_enable(void)
+{
 	cm3_irq_enable(STM32F_IRQ_EXTI9_5);
 }
+
 
 void fill_up_64(struct fpga_io * fpga, uint64_t * buf, int len)
 {
@@ -417,9 +423,9 @@ void registers_test(struct fpga_io * fpga)
 	uint16_t val;
 	int j;
 
-	printf("- Registers test\n");
+	printf("- Registers test...");
 
-	for (j = 0; j < 10; ++j) {
+	for (j = 1000; j > 0; --j) {
 		src = rand() & 0x00ff;
 		dst = rand() & 0x00ff;
 		len = rand() & 0x00ff;
@@ -452,6 +458,9 @@ void registers_test(struct fpga_io * fpga)
 			break;
 		}
 	}
+
+	if (j == 0)
+		printf(" OK.\n");
 }
 
 void memcpy_test(struct fpga_io * fpga)
@@ -461,7 +470,6 @@ void memcpy_test(struct fpga_io * fpga)
 	unsigned int src;
 	unsigned int dst;
 	unsigned int len;
-	int repeats = 8;
 	int size = 256;
 	int i = 0;
 	int j;
@@ -471,7 +479,9 @@ void memcpy_test(struct fpga_io * fpga)
 	DCC_LOG(LOG_TRACE, "Enabling memcpy interrupts...");
 	fpga->ien = 1;
 
-	for (j = 0; j < repeats; ++j) {
+	fpga_irq_enable();
+	 	
+	for (j = 0; j < 100; ++j) {
 
 		for (i = 0; i < size; ++i) {
 			/* fill in the input buffer, with random nonzero values */
@@ -516,8 +526,6 @@ void memcpy_test(struct fpga_io * fpga)
 				break;
 			}
 		}
-
-		thinkos_sleep(100);
 	}
 
 	printf("\n");
@@ -559,6 +567,8 @@ void count_test(struct fpga_io * fpga)
 //	DCC_LOG(LOG_TRACE, "Enabling timer interrupts...");
 //	fpga->ien = 2;
 
+	printf("  Up: ");
+
 	for (i = 0; i < 10; ++i) {
 		cnt = fpga->cnt;
 		thinkos_sleep(100);
@@ -566,8 +576,7 @@ void count_test(struct fpga_io * fpga)
 		printf("%4d ", diff);
 	}
 
-	printf("\n");
-
+	printf("\nDown: ");
 	for (i = 0; i < 10; ++i) {
 		cnt = fpga->dwn;
 		thinkos_sleep(100);
@@ -575,13 +584,13 @@ void count_test(struct fpga_io * fpga)
 		printf("%4d ", diff);
 	}
 
-	printf("\n");
+	printf("\nDiff: ");
 
 	for (i = 0; i < 10; ++i) {
 		u32 = fpga->r32[1];
 		cnt = u32;
 		dwn = u32 >> 16;
-		printf("0x%04x ", cnt ^ dwn);
+		printf("%4d ", (cnt + dwn) & 0xffff);
 		thinkos_sleep(100);
 	}
 
@@ -644,7 +653,7 @@ int main(int argc, char ** argv)
 
 	val = 0;
 
-	fsmc_speed(2);
+	fsmc_speed(1);
 
 	fpga_irq_init(fpga);
 

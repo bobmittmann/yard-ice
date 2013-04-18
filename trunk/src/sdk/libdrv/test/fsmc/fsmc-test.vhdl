@@ -209,7 +209,7 @@ begin
 	s_clk_io <= fsmc_clk;
 
 	---------------------------------------------------------------------------
-	-- CRAM bus adapter
+	-- CRAM bus adaptor
 	cram_bus : entity cram_adaptor
 		generic map (
 			MEM_CNT => MEM_CNT,
