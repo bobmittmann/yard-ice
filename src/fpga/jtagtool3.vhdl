@@ -298,9 +298,11 @@ begin
 	s_reg_wr_stb <= s_bus_wr when 
 		(s_bus_addr(12) = '1' and s_bus_addr(11) = '1') else '0';
 	s_ptr_mem_wr_stb <= s_bus_wr when 
-		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and s_bus_addr(10) = '1') else '0';
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and 
+		 s_bus_addr(10) = '1') else '0';
 	s_desc_mem_wr_stb <= s_bus_wr when 
-		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and s_bus_addr(10) = '0') else '0';
+		(s_bus_addr(12) = '1' and s_bus_addr(11) = '0' and 
+		 s_bus_addr(10) = '0') else '0';
 	s_tx_mem_wr_stb <= s_bus_wr when s_bus_addr(12) = '0' else '0';
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
