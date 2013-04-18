@@ -79,13 +79,14 @@ architecture structure of fsmc_test is
 	constant REG_SEL_BITS : natural := 3;
 
 	-- register select 
-	constant REG_SEL_SRC : std_logic_vector := "000";
-	constant REG_SEL_DST : std_logic_vector := "001";
-	constant REG_SEL_LEN : std_logic_vector := "010";
-	constant REG_SEL_CTL : std_logic_vector := "011";
-	constant REG_SEL_CNT : std_logic_vector := "100";
-	constant REG_SEL_IEN : std_logic_vector := "101";
-	constant REG_SEL_IST : std_logic_vector := "110";
+	constant REG_SEL_IST : std_logic_vector := "000";
+	constant REG_SEL_IEN : std_logic_vector := "001";
+	constant REG_SEL_CNT : std_logic_vector := "010";
+	constant REG_SEL_DWN : std_logic_vector := "011";
+	constant REG_SEL_SRC : std_logic_vector := "100";
+	constant REG_SEL_DST : std_logic_vector := "101";
+	constant REG_SEL_LEN : std_logic_vector := "110";
+	constant REG_SEL_CTL : std_logic_vector := "111";
 	-- interrupts
 	constant IRQ_BITS : natural := 2;
 	constant IRQ_MEMCPY : natural := 0;
@@ -139,9 +140,11 @@ architecture structure of fsmc_test is
 	signal s_len_wr : std_logic;
 	signal s_ctl_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ctl_wr : std_logic;
-	-- counter register
+	-- counter registers
 	signal s_cnt_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_cnt_wr : std_logic;
+	signal s_dwn_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_dwn_wr : std_logic;
 	-- interrupt status register
 	signal s_ist_r : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ist_wr : std_logic;
@@ -339,13 +342,14 @@ begin
 
 	---------------------------------------------------------------------------
 
+	s_ist_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IST else '0';
+	s_ien_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IEN else '0';
+	s_cnt_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_CNT else '0';
+	s_dwn_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_DWN else '0';
 	s_src_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_SRC else '0';
 	s_dst_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_DST else '0';
 	s_len_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_LEN else '0';
 	s_ctl_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_CTL else '0';
-	s_cnt_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_CNT else '0';
-	s_ien_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IEN else '0';
-	s_ist_wr <= s_reg_wr_stb when s_reg_wr_sel = REG_SEL_IST else '0';
 
 	---------------------------------------------------------------------------
 
@@ -405,6 +409,19 @@ begin
 			q => s_cnt_r
 			);
 
+	dwn_r : entity counter
+		generic map (DATA_WIDTH => DATA_WIDTH, 
+					 COUNT_BITS => DATA_WIDTH) 
+		port map (
+			clk => s_clk_main,
+			rst => s_rst,
+			d => s_reg_din,
+			ld => s_dwn_wr,
+			cin => s_1khz_stb,
+			up => '0',
+			q => s_dwn_r
+			);
+
 	ien_r : entity reg
 		generic map (DATA_WIDTH => DATA_WIDTH, 
 					 REG_BITS => IRQ_BITS) 
@@ -434,13 +451,14 @@ begin
 
 	with s_reg_rd_sel(REG_SEL_BITS - 1 downto 0) select
 		s_reg_dout <= 
+		s_ist_r when REG_SEL_IST,
+		s_ien_r when REG_SEL_IEN,
+		s_cnt_r when REG_SEL_CNT,
+		s_dwn_r when REG_SEL_DWN,
 		s_src_r when REG_SEL_SRC, 
 		s_dst_r when REG_SEL_DST, 
 		s_len_r when REG_SEL_LEN,
 		s_ctl_r when REG_SEL_CTL,
-		s_cnt_r when REG_SEL_CNT,
-		s_ien_r when REG_SEL_IEN,
-		s_ist_r when REG_SEL_IST,
 		(others => '0') when others; 
 
 	---------------------------------------------------------------------------

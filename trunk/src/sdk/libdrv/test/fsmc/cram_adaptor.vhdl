@@ -20,7 +20,7 @@
 -- 
 
 -- 
--- JTAG Register
+-- CRAM Synchronous Bus Adaptor
 --
 
 library ieee;
@@ -31,9 +31,6 @@ use ieee.math_real.all;
 library work;
 use work.counter;
 use work.syncfifo;
-
---package cram_pkg is
---end package cram_pkg;
 
 entity cram_adaptor is
 generic ( 
@@ -109,6 +106,7 @@ architecture rtl of cram_adaptor is
 	signal s_reg_wr_addr: std_logic_vector(REG_SEL_BITS -1 downto 0);
 	signal s_reg_wr_stb : std_logic;
 	signal s_reg_rd_data : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_reg_tmp_data : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 
 begin 
@@ -222,15 +220,21 @@ begin
 
 	---------------------------------------------------------------------------
 	-- Registers read latch
-	s_reg_rd_en <= s_cram_rd_addr(15) and s_cram_rd;
+--	s_reg_rd_en <= s_cram_rd_addr(15) and s_cram_rd;
+	s_reg_rd_en <= s_cram_rd_addr(15);
 	process (rst, cram_clk, s_reg_rd_en)
 	begin
 		if (rst = '1') then
-			s_reg_rd_data <= (others => '0');
-		elsif rising_edge(cram_clk) and (s_reg_rd_en = '1') then
-			s_reg_rd_data <= reg_rd_data;
+	--		s_reg_rd_data <= (others => '0');
+			s_reg_tmp_data <= (others => '0');
+--		elsif rising_edge(cram_clk) and (s_reg_rd_en = '1') then
+		elsif rising_edge(cram_clk) then
+			s_reg_tmp_data <= reg_rd_data;
+	--		s_reg_rd_data <= s_reg_tmp_data; 
 		end if;
 	end process;
+
+	s_reg_rd_data <= reg_rd_data; 
 
 	---------------------------------------------------------------------------
 	-- CRAM bus output
