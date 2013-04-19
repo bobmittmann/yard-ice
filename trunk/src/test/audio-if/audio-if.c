@@ -121,7 +121,7 @@ void print_status(void)
 
 void thinkos_exception_dsr(struct thinkos_context * ctx)
 {
-	trace_print(stderr, 0);
+	trace_fprint(stderr, 0);
 	fprintf(stderr, "---------\n");
 }
 
@@ -130,7 +130,7 @@ int supervisor_task(void)
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
-		trace_print(stdout, 1);
+		trace_fprint(stdout, 1);
 
 		print_status();
 
