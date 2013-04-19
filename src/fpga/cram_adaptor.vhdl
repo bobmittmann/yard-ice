@@ -83,7 +83,7 @@ architecture rtl of cram_adaptor is
 	-- output enable
 	signal s_cram_oe : std_logic;
 	-- read 
-	signal s_cram_rd : std_logic;
+--	signal s_cram_rd : std_logic;
 	-- write
 	signal s_cram_wr : std_logic;
 	-- address valid
@@ -137,8 +137,8 @@ begin
 		end case;
 	end process;
 
-	s_cram_rd <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_noe = '0')) 
-					else '0';
+--	s_cram_rd <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_noe = '0')) 
+--					else '0';
 	s_cram_wr <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_nwe = '0')) 
 					else '0';
 	s_cram_adv <= '1' when (s_cram_st = MEMC_ADV) else '0';

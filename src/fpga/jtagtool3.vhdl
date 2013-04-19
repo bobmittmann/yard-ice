@@ -77,6 +77,9 @@ architecture structure of jtagtool3 is
 	constant DATA_WIDTH : natural := 16;
 	constant ADDR_BITS : natural := 13;
 
+	constant MEM_SEL_BITS : natural := 2;
+	constant MEM_ADDR_BITS : natural := 12;
+
 	constant VEC_LEN_BITS : natural := 10;
 	constant VEC_ADDR_BITS : natural := 10;
 	constant DESC_DATA_BITS : natural := 32;
@@ -99,14 +102,15 @@ architecture structure of jtagtool3 is
 	constant CFG_REG_BITS : natural := 12; -- width of cfg reg
 
 	-- registers 
-	constant REG_INSN : unsigned := to_unsigned(0, REG_SEL_BITS);
-	constant REG_STATUS : unsigned := to_unsigned(0, REG_SEL_BITS);
-	constant REG_INT_ST : unsigned := to_unsigned(1, REG_SEL_BITS);
-	constant REG_INT_EN : unsigned := to_unsigned(2, REG_SEL_BITS);
-	constant REG_CKGEN_DIV : unsigned := to_unsigned(4, REG_SEL_BITS);
-	constant REG_CKGEN_RTDIV : unsigned := to_unsigned(5, REG_SEL_BITS);
-	constant REG_CFG : unsigned := to_unsigned(6, REG_SEL_BITS);
-	constant REG_TMR : unsigned := to_unsigned(7, REG_SEL_BITS);
+	constant REG_INSN : natural := 0;
+	constant REG_STATUS : natural := 0;
+	constant REG_INT_ST : natural := 1;
+	constant REG_INT_EN : natural := 2;
+	constant REG_CKGEN_DIV : natural := 4;
+	constant REG_CKGEN_RTDIV : natural := 5;
+	constant REG_CFG : natural := 6;
+	constant REG_TMR : natural := 7;
+
 	-- interrupts
 	constant IRQ_TAP : natural := 0;
 	constant IRQ_RTCKTMO : natural := 1;
@@ -175,9 +179,10 @@ architecture structure of jtagtool3 is
 	-- TAP state
 	signal s_tap_state : unsigned(3 downto 0);
 
-	-- interrupt status (R/O)
+	-- interrupt status (W/R)
 	signal s_irq_st : std_logic_vector(DATA_WIDTH - 1 downto 0);
-	signal s_irq_st_rd_stb : std_logic;
+	signal s_irq_st_wr_stb : std_logic;
+	
 	-- interrupt enable (W/O)
 	signal s_irq_en : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_irq_en_wr_stb : std_logic;
@@ -193,7 +198,6 @@ architecture structure of jtagtool3 is
 	-- timer register
 	signal s_tmr : std_logic_vector(DATA_WIDTH - 1 downto 0); 
 	signal s_tmr_wr_stb : std_logic; 
-	signal s_tmr_rd_stb : std_logic; 
 	-- interrupt requests
 	signal s_irq : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_reg : std_logic_vector(IRQ_BITS - 1 downto 0);
@@ -236,7 +240,6 @@ architecture structure of jtagtool3 is
 	-- TX memory address
 	signal s_tx_mem_addr : std_logic_vector((VEC_ADDR_BITS - 1) downto 0);
 	-- TX memory data
-	signal s_tx_mem_din : std_logic_vector((DATA_WIDTH - 1) downto 0);
 	signal s_tx_mem_dout : std_logic_vector((DATA_WIDTH - 1) downto 0);
 	-- TX memory read strobe
 --	signal s_tx_mem_rd_stb : std_logic;
@@ -268,6 +271,11 @@ architecture structure of jtagtool3 is
 		return not y;
 	end is_zero;
 
+	function reg(n : natural) return std_logic_vector is
+	begin
+		return std_logic_vector(to_unsigned(n, REG_SEL_BITS));
+	end reg;
+
 begin
 	-- main clock (60MHz)
 	s_clk_main <= mclk;
@@ -280,27 +288,6 @@ begin
 	-- IO clock
 --	s_clk_io <= s_clk_120mhz;
 	s_clk_io <= s_clk_main;
-
-	---------------------------------------------------------------------------
-	-- CRAM bus adapter
-	cram_bus : entity jtag_cram16
-		generic map (ADDR_BITS => ADDR_BITS - 1) 
-		port map (
-			clk => s_clk_main,
-			rst => s_rst,
-
-			dout => s_bus_dout,
-			din  => s_bus_din,
-			addr  => s_bus_addr,
-			rd  => s_bus_rd,
-			wr => s_bus_wr,
-
-			cram_clk => fsmc_clk,
-			cram_noe => fsmc_noe,
-			cram_nwe => fsmc_nwe,
-			cram_nce => fsmc_nce,
-			cram_d => fsmc_d
-		);
 
 	---------------------------------------------------------------------------
 	-- CRAM bus adaptor
@@ -342,8 +329,6 @@ begin
 	s_ptr_mem_wr_stb <= s_mem_wr_stb when s_mem_wr_sel = "10" else '0';
 
 	---------------------------------------------------------------------------
-	s_mem_dout <= s_mem1_dout when s_mem_rd_sel = "0" else s_mem2_dout;
-
 	-- output selection multiplexer (read)
 	with s_mem_rd_sel select
 		s_mem_dout <= 
@@ -351,39 +336,49 @@ begin
 		s_desc_mem_dout when "01",
 		(others => '0') when others; 
 
-	-- Memory map
+	-- Memory map 
+    --	
+	--  1 xxx xxxx xxxx xxxx - Registers
+	--  0 10x xxxx xxxx xxxx - Descriptor Pointers
+	--  0 01x xxxx xxxx xxxx - Vector Descriptors
+	--  0 00x xxxx xxxx xxxx - Vector Memory
 	--
 	-- +---------+---------------+---------------+
 	-- | Address | Read          | Write         |
 	-- +---------+---------------+---------------+ 
-	-- |  0x4fff |               |               |
+	-- |  0x8fff |               |               |
 	-- |   ...   | Invalid       | Invalid       |
 	-- |         |               |               |
-	-- |  0x4010 |               |               |
+	-- |  0x8010 |               |               |
 	-- +---------+---------------+---------------+ 
-	-- |  0x400f |               |               |
+	-- |  0x800f |               |               |
 	-- |   ...   | Registers     |  Control      |
 	-- |         |               |  Registers    |
+	-- |  0x8000 |               |               |
+	-- +---------+---------------+---------------+ 
+	-- |  0x7fff |               |               |
+	-- |   ...   | Invalid       | Invalid       |
+	-- |         |               |               |
+	-- |  0x4200 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x41ff |               |               |
+	-- |   ...   |  Invalid      | Descriptor    |
+	-- |         |               | Pointers      |
 	-- |  0x4000 |               |               |
 	-- +---------+---------------+---------------+ 
 	-- |  0x3fff |               |               |
 	-- |   ...   | Invalid       | Invalid       |
 	-- |         |               |               |
-	-- |  0x2200 |               |               |
+	-- |  0x2100 |               |               |
 	-- +---------+---------------+---------------+
-	-- |  0x21ff |               |               |
-	-- |   ...   |  Invalid      | Descriptor    |
-	-- |         |               | Pointers      |
+	-- |  0x20ff |               |               |
+	-- |   ...   | Vector        | Vector        |
+	-- |         | Descriptors   | Descriptors   |
 	-- |  0x2000 |               |               |
-	-- +---------+---------------+---------------+ 
+	-- +---------+---------------+---------------+
 	-- |  0x1fff |               |               |
 	-- |   ...   | Invalid       | Invalid       |
 	-- |         |               |               |
-	-- |  0x1400 |               |               |
-	-- +---------+---------------+---------------+
-	-- |  0x13ff |               |               |
-	-- |   ...   | Vector        | Vector        |
-	-- |         | Descriptors   | Descriptors   |
 	-- |  0x1000 |               |               |
 	-- +---------+---------------+---------------+
 	-- |  0x0fff |               |               |
@@ -397,28 +392,30 @@ begin
 	---------------------------------------------------------------------------
 	-- register output multiplexer
 	with s_reg_rd_sel select 
-		s_reg_dout <= s_status when REG_STATUS, 
-		s_irq_st when REG_INT_ST,
-		s_irq_en when REG_INT_EN,
-		s_ckgen_div when REG_CKGEN_DIV,
-		s_ckgen_rtdiv when REG_CKGEN_RTDIV,
-		s_cfg when REG_CFG,
-		s_tmr when REG_TMR,
+		s_reg_dout <= s_status when reg(REG_STATUS), 
+		s_irq_st when reg(REG_INT_ST),
+		s_irq_en when reg(REG_INT_EN),
+		s_ckgen_div when reg(REG_CKGEN_DIV),
+		s_ckgen_rtdiv when reg(REG_CKGEN_RTDIV),
+		s_cfg when reg(REG_CFG),
+		s_tmr when reg(REG_TMR),
 		(others => '0') when others;
 
 	-- register write enable decoder 
-	s_insn_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_INSN) else '0';
-	s_irq_st_wr_stb <= s_reg_wr_stb when (s_reg_sel = REG_INT_ST) else '0';
-	s_irq_en_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_INT_EN) else '0';
-	s_ckgen_div_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_CKGEN_DIV) 
-										else '0';
-	s_ckgen_rtdiv_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_CKGEN_RTDIV)
-										else '0';
-	s_cfg_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_CFG) else '0';
-	s_tmr_wr_stb <= s_reg_wr_stb when (s_reg_wr_sel = REG_TMR) else '0';
-	-- register read decoder 
-	s_irq_st_rd_stb <= s_reg_rd_stb when (s_reg_wr_sel = REG_INT_ST) else '0';
-	s_tmr_rd_stb <= s_reg_rd_stb when (s_reg_wr_sel = REG_TMR) else '0';
+	s_insn_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_INSN) else '0';
+	s_irq_st_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_INT_ST) else '0';
+	s_irq_en_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_INT_EN) else '0';
+	s_ckgen_div_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_CKGEN_DIV) else '0';
+	s_ckgen_rtdiv_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_CKGEN_RTDIV) else '0';
+	s_cfg_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_CFG) else '0';
+	s_tmr_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_TMR) else '0';
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -469,10 +466,9 @@ begin
 			clk => s_clk_main,
 			-- reset
 			rst => s_rst,
-			-- read signal 
-			-- clear all
-			clr => s_irq_st_rd_stb,
-			-- register set
+			-- write '1' to clear register bits
+			clr => s_irq_st_wr_stb,
+			d_clr => s_reg_din(IRQ_BITS - 1 downto 0),
 			-- set individual bits
 			set => '1',
 			d_set => s_irq_set,
@@ -487,12 +483,15 @@ begin
 		port map (
 			-- system clock
 			clk => s_clk_main,
+			-- reset
+			rst => s_rst,
 			-- read signal 
 			ld => s_irq_en_wr_stb,
 			-- data in
-			d => s_bus_din,
+			d => s_reg_din,
 			-- data out
 			q => s_irq_en);
+
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -502,10 +501,12 @@ begin
 		port map (
 			-- system clock
 			clk => s_clk_main,
+			-- reset
+			rst => s_rst,
 			-- write signal 
 			ld => s_cfg_wr_stb,
 			-- data in
-			d => s_bus_din,
+			d => s_reg_din,
 			-- data out
 			q => s_cfg,
 			-- reset
@@ -520,7 +521,7 @@ begin
 
 	---------------------------------------------------------------------------
 	-- timer register
-	tmr_r : entity jtag_counter
+	tmr_r : entity counter
 		generic map (DATA_WIDTH => DATA_WIDTH, COUNT_BITS => DATA_WIDTH) 
 		port map (
 			-- system clock
@@ -529,9 +530,7 @@ begin
 			rst => s_rst,
 			-- load on write signal 
 			ld => s_tmr_wr_stb,
-			d => s_bus_din,
-			-- clear on reading
-			clr => s_tmr_rd_stb,
+			d => s_reg_din,
 			-- count 
 			cin => s_irq_set(IRQ_1KHZ),
 			-- data out
@@ -550,7 +549,7 @@ begin
 			-- read signal 
 			ld => s_ckgen_div_wr_stb,
 			-- data in
-			d => s_bus_din,
+			d => s_reg_din,
 			-- data out
 			q => s_ckgen_div);
 	---------------------------------------------------------------------------
@@ -567,7 +566,7 @@ begin
 			-- read signal 
 			ld => s_ckgen_rtdiv_wr_stb,
 			-- data in
-			d => s_bus_din,
+			d => s_reg_din,
 			-- data out
 			q => s_ckgen_rtdiv);
 	---------------------------------------------------------------------------
@@ -586,7 +585,7 @@ begin
 			desc_addr => s_desc_addr,
 			io_addr => s_mem_addr(DESC_ADDR_BITS + 1 downto 1),
 			io_we => s_desc_mem_wr_stb, 
-			io_data => s_bus_din,
+			io_data => s_mem_din,
 			desc_q => s_desc_data,
 			io_q => s_desc_mem_dout
 		);
@@ -604,7 +603,7 @@ begin
 			rd_addr => s_ptr_addr,
 			wr_addr => s_mem_addr(PTR_ADDR_BITS downto 1),
 			we => s_ptr_mem_wr_stb, 
-			data => s_bus_din,
+			data => s_mem_din,
 			q => s_ptr_data
 		);
 	---------------------------------------------------------------------------
@@ -626,8 +625,6 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_tx_mem_din <= s_bus_din;
-
 	---------------------------------------------------------------------------
 	-- tx vector memory
 	tx_mem : entity jtag_io_dpram
@@ -640,7 +637,7 @@ begin
 			rd_addr => s_tx_mem_addr,
 			wr_addr => s_mem_addr(VEC_ADDR_BITS downto 1),
 			we => s_tx_mem_wr_stb, 
-			data => s_tx_mem_din,
+			data => s_mem_din,
 			q => s_tx_mem_dout
 		);
 	---------------------------------------------------------------------------
@@ -664,7 +661,7 @@ begin
 			ioclk => s_clk_io,
 			rst => s_rst,
 			exec_stb => s_exec_stb,
-			insn => s_bus_din(INSN_BITS - 1 downto 0),
+			insn => s_reg_din(INSN_BITS - 1 downto 0),
 			tdo => s_tap_tdo,
 			rtck => s_tap_rtck,
 			ckgen_rtcken => s_ckgen_rtck_en,
@@ -748,7 +745,7 @@ begin
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => s_bus_rd, 
+			trip => s_reg_wr_stb, 
 			q => led_1
 		);
 

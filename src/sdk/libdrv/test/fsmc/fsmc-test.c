@@ -597,18 +597,14 @@ void count_test(struct fpga_io * fpga)
 	printf("\n");
 }
 
-
-struct file stm32f_uart_file = {
+const struct file stm32f_uart_file = {
 	.data = STM32F_UART5, 
 	.op = &stm32f_usart_fops 
 };
 
-#define UART_TX STM32F_GPIOC, 12
-#define UART_RX STM32F_GPIOD, 2
-
 void stdio_init(void)
 {
-	stderr = &stm32f_uart_file;
+	stderr = (struct file *)&stm32f_uart_file;
 	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
 	stdin = stdout;
 }
