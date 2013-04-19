@@ -28,11 +28,12 @@
 #endif
 
 #include <sys/stm32f.h>
-#include <arch/cortex-m3.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+
+#include <trace.h>
 
 #include <sys/dcclog.h>
 
@@ -45,7 +46,7 @@
 #endif
 
 #ifndef TRACE_FMT_BUF_LEN 
-#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 1)
+#define TRACE_FMT_BUF_LEN ((TRACE_RING_SIZE) * (TRACE_MAX_MSG_LEN) / 2)
 #endif
 
 static struct {
@@ -80,17 +81,16 @@ static inline uint32_t __timer_ts(void)
 	return tim->cnt;
 }
 
+#define TIMESTAMP_FREQ 1000000
+
 static void __timer_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_tim * tim = STM32F_TIM5;
-	unsigned int freq = 1000000;
 	uint32_t div;
 
 	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
-
-	DCC_LOG3(LOG_TRACE, "APB1=%d F=%d div=%d", stm32f_apb1_hz, freq, div);
+	div = (stm32f_tim1_hz + (TIMESTAMP_FREQ / 2)) / TIMESTAMP_FREQ;
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM5EN;
@@ -204,10 +204,12 @@ void trace(const char * msg)
 	cm3_basepri_set(pri);
 }
 
-void trace_print(FILE * f, int flush)
+void trace_fprint(FILE * f, unsigned int opt)
 {
 	int32_t dt;
 	uint32_t tm;
+	uint32_t ts;
+	int32_t sec;
 	uint32_t ms;
 	uint32_t us;
 	uint32_t pos;
@@ -219,16 +221,30 @@ void trace_print(FILE * f, int flush)
 	for (tail = trace_ring.tail; tail != trace_ring.head; tail++) {
 		pos = tail & (TRACE_RING_SIZE - 1);
 		s = trace_ring.buf[pos].msg;
-		dt = __timer_ts2us((int32_t)(trace_ring.buf[pos].ts - tm));
-		tm = trace_ring.buf[pos].ts;
-		ms = dt / 1000;
-		us = dt - (ms * 1000);
+	
+		if (opt & TRACE_ABSTIME) {
+			ts = __timer_ts2us(trace_ring.buf[pos].ts);
+			sec = ts / 1000000;
+			ts -= (sec * 1000000);
+			ms = ts / 1000;
+			us = ts - (ms * 1000);
+		} else {
+			dt = __timer_ts2us((int32_t)(trace_ring.buf[pos].ts - tm));
+			sec = dt / 1000000;
+			dt -= (sec * 1000000);
+			ms = dt / 1000;
+			us = dt - (ms * 1000);
+		}
 
-		fprintf(f, "%5d %7d.%03d: %s\n", tail, ms, us, s);
+		if (opt & TRACE_COUNT)
+			fprintf(f, "%5d %4d,%03d.%03d: %s\n", tail, sec, ms, us, s);
+		else
+			fprintf(f, "%4d,%03d.%03d: %s\n", sec, ms, us, s);
+
+		tm = trace_ring.buf[pos].ts;
 	}
 
-	
-	if (flush) {
+	if (opt & TRACE_FLUSH) {
 		trace_ring.tail = tail;
 		trace_ring.tm = tm;
 	}

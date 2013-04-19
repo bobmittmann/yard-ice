@@ -25,7 +25,6 @@ FPGA_RBF_ADDR = 0x00010000
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
-			jtag_counter.vhdl\
 			jtag_desc_ram.vhdl\
 			jtag_enh_ckgen.vhdl\
 			jtag_enh_ecu.vhdl\
@@ -37,7 +36,9 @@ VHDL_FILES = cyc_pll.vhd \
 			jtag_io_dpram.vhdl\
 			jtag_led_drv.vhdl\
 			jtag_reg.vhdl\
-			jtag_cmem.vhdl\
+			syncfifo.vhdl\
+			counter.vhdl\
+			cram_adaptor.vhdl\
 			jtagtool3.vhdl
 
 LOCATIONS = locations.txt

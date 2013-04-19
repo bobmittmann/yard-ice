@@ -29,6 +29,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* Trace optons */
+#define TRACE_FLUSH     (1 << 0)
+#define TRACE_COUNT     (1 << 1)
+#define TRACE_ABSTIME   (1 << 2)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,7 +55,7 @@ int tracef(const char *fmt, ... );
 
 void trace(const char * msg);
 
-void trace_print(FILE * f, int flush);
+void trace_fprint(FILE * f, unsigned int opt);
 
 
 #ifdef __cplusplus
