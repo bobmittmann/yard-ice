@@ -51,12 +51,12 @@ struct jtag3drv jtag3drv;
  *
  ***************************************************************************/
 
-#define FMAIN 150000000
+#define JTAG_FMAIN 60000000
 
 int jtag_tck_freq_set(unsigned int tck_freq)
 {
 
-	uint32_t fmain = FMAIN;
+	uint32_t fmain = JTAG_FMAIN;
 	int32_t div;
 
 	DCC_LOG1(LOG_TRACE, "freq: %d Hz", tck_freq);
@@ -79,7 +79,7 @@ int jtag_tck_freq_set(unsigned int tck_freq)
 
 unsigned int jtag_tck_freq_get(void)
 {
-	uint32_t fmain = FMAIN;
+	uint32_t fmain = JTAG_FMAIN;
 	unsigned int div;
 
 	/* brg divisor */
@@ -90,7 +90,7 @@ unsigned int jtag_tck_freq_get(void)
 
 int jtag_rtck_freq_set(unsigned int freq)
 {
-	uint32_t fmain = FMAIN;
+	uint32_t fmain = JTAG_FMAIN;
 	uint32_t div;
 
 	DCC_LOG1(LOG_TRACE, "freq: %d Hz", freq);
@@ -104,7 +104,7 @@ int jtag_rtck_freq_set(unsigned int freq)
 
 unsigned int jtag_rtck_freq_get(void)
 {
-	uint32_t fmain = FMAIN;
+	uint32_t fmain = JTAG_FMAIN;
 	unsigned int div;
 
 	DCC_LOG(LOG_TRACE, ".");
@@ -170,18 +170,6 @@ void jtag_run_test(int n, unsigned int final_state)
 	insn_run_test(n, final_state);
 }
 
-int jtag_pwr_ctrl(int on)
-{	
-	jtag3ctrl_relay(on);
-	return JTAG_OK;
-}
-
-int jtag_relay(int enable)
-{	
-	jtag3ctrl_relay(enable);
-	return JTAG_OK;
-}
-
 int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout, 
 				 int vlen, unsigned int final_state)
 {
@@ -202,8 +190,7 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 	/* scan the vector */
 	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
+	isr = jtag3drv_int_wait(IRQ_TAP);
 
 	if ((isr & IRQ_TAP) == 0) {
 		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
@@ -245,8 +232,8 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 
 	/* scan the vector */
 	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
+	isr = jtag3drv_int_wait(IRQ_TAP);
+
 	if ((isr & IRQ_TAP) == 0) {
 		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
 		return -1;
@@ -282,7 +269,7 @@ int jtag_tap_select(jtag_tap_t * tap)
 
 int jtag_drv_init(void)
 {
-	int dummy;
+	DCC_LOG1(LOG_TRACE, "RBF=0x%08x", jtag3ctrl_rbf);
 
 	if (jtag3ctrl_init(jtag3ctrl_rbf, 64 * 1024) < 0) {
 		return JTAG_ERR_HARDWARE;
@@ -291,8 +278,7 @@ int jtag_drv_init(void)
 	/* enable TAP interrupts */
 	reg_wr(REG_INT_EN, IRQ_TAP);
 	/* clear interrupts */
-	dummy = reg_rd(REG_INT_ST);
-	dummy = dummy;
+	reg_wr(REG_INT_ST, 0xffff);
 
 	return 0;
 }

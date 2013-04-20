@@ -28,15 +28,60 @@
 #ifndef __JTAG3DRV_H__
 #define __JTAG3DRV_H__
 
+/* -- +---------+---------------+---------------+
+	-- | Address | Read          | Write         |
+	-- +---------+---------------+---------------+ 
+	-- | 0x1ffff |               |               |
+	-- |   ...   | Invalid       | Invalid       |
+	-- |         |               |               |
+	-- | 0x10010 |               |               |
+	-- +----------+---------------+---------------+ 
+	-- | 0x1000f |               |               |
+	-- |  ...    | Registers     |  Control      |
+	-- |         |               |  Registers    |
+	-- | 0x10000 |               |               |
+	-- +---------+---------------+---------------+ 
+	-- | 0x0ffff |               |               |
+	-- |   ...   | Invalid       | Invalid       |
+	-- |         |               |               |
+	-- | 0x08200 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x81ff |               |               |
+	-- |   ...   |  Invalid      | Descriptor    |
+	-- |         |               | Pointers      |
+	-- |  0x8000 |               |               |
+	-- +---------+---------------+---------------+ 
+	-- |  0x5fff |               |               |
+	-- |   ...   | Invalid       | Invalid       |
+	-- |         |               |               |
+	-- |  0x4100 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x41ff |               |               |
+	-- |   ...   | Vector        | Vector        |
+	-- |         | Descriptors   | Descriptors   |
+	-- |  0x4000 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x4fff |               |               |
+	-- |   ...   | Invalid       | Invalid       |
+	-- |         |               |               |
+	-- |  0x1000 |               |               |
+	-- +---------+---------------+---------------+
+	-- |  0x03ff |               |               |
+	-- |   ...   | Vector TX     | Vector RX     |
+	-- |         | Memory        | Memory        |
+	-- |  0x0000 |               |               |
+	-- +---------+---------------+---------------+
+*/
+
 #define VEC_ADDR_BITS 10
 #define VEC_MEM_SIZE (1 << VEC_ADDR_BITS)
 #define VEC_LEN_BITS 10
 #define VEC_LEN_MAX  ((1 << VEC_LEN_BITS) - 1)
 
-#define MEM_VECTOR_OFFS (0 << 11)
-#define MEM_DESCRIPTOR_OFFS (0 << 11)
-#define MEM_PTR_OFFS (1 << 10)
-#define MEM_REGISTER_OFFS (1 << 11)
+#define MEM_VECTOR_OFFS     (0x00000)
+#define MEM_DESCRIPTOR_OFFS (0x04000)
+#define MEM_PTR_OFFS        (0x08000)
+#define MEM_REGISTER_OFFS   (0x10000)
 
 #define REG_INSN 0
 #define REG_STATUS 0
@@ -53,16 +98,15 @@
 #define CFG_LOOP (1 << 4)
 #define CFG_RTCK_EN (1 << 5)
 #define CFG_RST (1 << 6)
-#define CFG_TDO_PROBE_EN (1 << 7)
-#define CFG_TAP_VCC_EN (1 << 8)
-#define CFG_RELAY_EN (1 << 9)
+#define CFG_UART_EN (1 << 7)
+
 #define CFG_TAP_TRST (1 << 10)
 #define CFG_TAP_NRST (1 << 11)
 
 #define IRQ_TAP (1 << 0)
 #define IRQ_TMO (1 << 1)
 #define IRQ_1KHZ (1 << 2)
-
+#define IRQ_TMR  (1 << 3)
 
 /* JTAG controller instructions */
 #define INSN_IR_SCAN(D, E) (0xf000 | (((E) & 0xf) << 8) | ((D) & 0xff))
@@ -116,29 +160,67 @@
 #define DESC_RX_MSBF(DESC) ((DESC >> 31) & 1)
 #define DESC_LEN(DESC) ((DESC & 0x3ff) + 1)
 
-#define EBI_CS2_BASE 0x02400000
-#define EBI_CS3_BASE 0x02800000
-
 #include <stdint.h>
 #include <sys/os.h>
+#include <sys/stm32f.h>
 #include "jtag.h"
 
-extern uint16_t volatile * jtagdrv_vec;
-extern uint16_t volatile * jtagdrv_reg;
-extern uint32_t volatile * jtagdrv_desc;
-extern uint16_t volatile * jtagdrv_ptr;
+struct jtag_io { 
+	union {
+		uint16_t h[1024];
+		uint32_t w[512];
+		uint64_t d[256];
+	} vec;
+	uint32_t res1[(0x4000 - 2048) / 4];
+	union {
+		uint16_t h[128];
+		uint32_t w[64];
+		uint64_t d[32];
+	} desc;
+	uint32_t res2[(0x4000 - 256) / 4];
+	union {
+		uint16_t h[256];
+		uint32_t w[128];
+		uint64_t d[64];
+	} ptr;
+	uint32_t res3[(0x8000 - 512) / 4];
+	union {
+		volatile uint16_t reg[8];
+		volatile uint32_t r32[4];
+		volatile uint64_t r64[2];
+		struct {
+			volatile uint16_t inst;
+			volatile uint16_t int_st;
+			volatile uint16_t int_en;
+			volatile uint16_t r3;
 
-#if 1
-#define JTAGDRV_VEC ((volatile uint16_t *)(EBI_CS2_BASE + MEM_VECTOR_OFFS))
-#define JTAGDRV_DESC ((volatile uint32_t *)(EBI_CS3_BASE + MEM_DESCRIPTOR_OFFS))
-#define JTAGDRV_REG ((volatile uint16_t *)(EBI_CS3_BASE + MEM_REGISTER_OFFS))
-#define JTAGDRV_PTR ((volatile uint16_t *)(EBI_CS3_BASE + MEM_PTR_OFFS))
-#else
+			volatile uint16_t div;
+			volatile uint16_t rtdiv;
+			volatile uint16_t cfg;
+			volatile uint16_t tmr;
+		};
+	};
+};
 
-#define JTAGDRV_VEC jtagdrv_vec 
-#define JTAGDRV_DESC jtagdrv_desc 
-#define JTAGDRV_REG jtagdrv_reg
+/* FIXME: irq number */
+#ifndef JTAG3DRV_IRQ
+#define JTAG3DRV_IRQ 23
 #endif
+
+#ifndef JTAG3DRV_BASE
+#define JTAG3DRV_BASE (0x60000000)
+#endif
+
+#define JTAG_IO ((struct jtag_io *)JTAG3DRV_BASE)
+
+#define JTAGDRV_VEC ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_VECTOR_OFFS))
+#define JTAGDRV_DESC ((volatile uint32_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
+#define JTAGDRV_REG ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_REGISTER_OFFS))
+
+#define JTAGDRV_VEC ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_VECTOR_OFFS))
+#define JTAGDRV_DESC ((volatile uint32_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
+#define JTAGDRV_REG ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_REGISTER_OFFS))
+#define JTAGDRV_PTR ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_PTR_OFFS))
 
 static inline uint16_t reg_rd(unsigned int n) {
 	return JTAGDRV_REG[n];
@@ -179,61 +261,45 @@ static inline void ptr_wr(unsigned int id, uint16_t ptr) {
 	JTAGDRV_PTR[id] = ptr;
 }
 
-/* FIXME: irq number */
-#ifndef JTAG3DRV_IRQ
-#define JTAG3DRV_IRQ 0
-#endif
-
-static inline void jtag3drv_int_wait(void) {
-	__os_int_wait(JTAG3DRV_IRQ);
+static inline uint32_t __attribute__((always_inline)) 
+jtag3drv_int_wait(unsigned int irq_mask) {
+	struct stm32f_exti * exti = STM32F_EXTI;
+	uint32_t isr;
+	while (((isr = reg_rd(REG_INT_ST)) & irq_mask) == 0) {
+		__os_int_wait(JTAG3DRV_IRQ);
+   		exti->pr = (1 << 6); /* clear external interrupt pending flag */
+	}
+	return isr;
 }
 
 static inline void insn_irscan(unsigned int desc, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 static inline void insn_drscan(unsigned int desc, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 static inline void insn_run_test(unsigned int cnt, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_RUN_TEST(cnt, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 static inline void insn_tap_reset(unsigned int cnt, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_TAP_RESET(cnt, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 static inline void insn_ir_pause(unsigned int cnt, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_IR_PAUSE(cnt, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 static inline void insn_dr_pause(unsigned int cnt, unsigned int final_state) {
-	unsigned int isr;
 	reg_wr(REG_INSN, INSN_DR_PAUSE(cnt, final_state));
-	jtag3drv_int_wait();
-	isr = reg_rd(REG_INT_ST);
-	isr = isr;
+	jtag3drv_int_wait(IRQ_TAP);
 }
 
 struct jtag3drv {
@@ -285,23 +351,19 @@ void  jtag3ctrl_tap_reset(void);
 
 void  jtag3ctrl_run_test(int n);
 
-void jtag3ctrl_tdo_probe(int enable);
-
-void jtag3ctrl_tap_vcc(int enable);
-
-void jtag3ctrl_relay(int enable);
-
-void jtag3ctrl_trst(int set);
+void jtag3ctrl_trst(bool set);
 	
-void jtag3ctrl_nrst(int set);
+void jtag3ctrl_nrst(bool set);
 
-void jtag3ctrl_loopback(int enable);
+void jtag3ctrl_loopback(bool enable);
 
 void jtag3ctrl_int_en(unsigned int mask);
 
+void jtag3ctrl_int_clr(unsigned int mask);
+
 void jtag3ctrl_sys_rst(void);
 
-void jtag3ctrl_rtck(int enable);
+void jtag3ctrl_rtck(bool enable);
 
 #ifdef __cplusplus
 }

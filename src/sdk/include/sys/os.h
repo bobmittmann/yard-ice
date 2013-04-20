@@ -210,7 +210,7 @@ static inline int __os_sem_trywait(int sem) {
 #endif
 }
 
-static inline void __os_int_wait(int irq) {
+static inline void __attribute__((always_inline)) __os_int_wait(int irq) {
 #if ENABLE_THINKOS
 	thinkos_irq_wait(irq);
 #else

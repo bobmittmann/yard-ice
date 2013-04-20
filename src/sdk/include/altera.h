@@ -28,33 +28,11 @@
 
 #include <stdint.h>
 
-struct altera_conf_io_map {
-	/* DCLK */
-	uint32_t dclk;
-	/* nCONFIG */
-	uint32_t config;
-	/* DATA0 */
-	uint32_t data;
-	/* nSTATUS */
-	uint32_t status;
-	/* CONF_DONE */
-	uint32_t conf_done;
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*
-	Hardware setup
-*/
-int altera_io_init(const struct altera_conf_io_map * io);
-
-int altera_configure(const struct altera_conf_io_map * io, const uint8_t * buf, int len);
-
-int altera_nstatus(const struct altera_conf_io_map * io);
-
-int altera_conf_done(const struct altera_conf_io_map * io);
+int altera_configure(const uint8_t * buf, int len);
 
 #ifdef __cplusplus
 }

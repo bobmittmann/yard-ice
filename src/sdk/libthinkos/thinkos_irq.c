@@ -46,6 +46,7 @@ void cm3_default_isr(int irq)
 void thinkos_irq_wait_svc(int32_t * arg)
 {
 	unsigned int irq = arg[0];
+	int32_t self = thinkos_rt.active;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (irq >= THINKOS_IRQ_MAX) {
@@ -57,7 +58,17 @@ void thinkos_irq_wait_svc(int32_t * arg)
 
 	DCC_LOG1(LOG_TRACE, "IRQ %d", irq);
 
-	__thinkos_irq_wait(irq);
+	/* store the thread info */
+	thinkos_rt.irq_th[irq] = self;
+
+	/* clear pending interrupt */
+	cm3_irq_pend_clr(irq);
+
+	/* enable this interrupt source */
+	cm3_irq_enable(irq);
+
+	/* prepare to wait ... */
+	__thinkos_wait();
 }
 
 #endif

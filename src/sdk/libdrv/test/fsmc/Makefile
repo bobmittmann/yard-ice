@@ -39,7 +39,7 @@ CFLAGS = -g -O2
 HCLK_HZ = 24000000
 include ../../../../mk/stm32f207.mk
 
-FPGA_RBF_ADDR = 0x08010000
+FPGA_RBF_ADDR = 0x08040000
 
 FPGA_PROJ = fsmc_test
 VHDL_FILES = clk_scaler.vhdl led_drv.vhdl sram.vhdl counter.vhdl memcpy.vhdl \

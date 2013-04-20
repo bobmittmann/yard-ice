@@ -35,6 +35,9 @@ extern "C" {
 
 void stm32f_dac_init(void);
 
+void stm32f_dac_vout_set(unsigned int mv);
+
+
 void stm32f_adc_init(void);
 
 struct uart_console_dev * uart_console_init(unsigned int baudrate, 

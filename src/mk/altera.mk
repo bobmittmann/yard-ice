@@ -19,6 +19,11 @@
 # http://www.gnu.org/
 
 
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+MKDIR := $(realpath $(THISDIR))
+BASEDIR := $(realpath $(THISDIR)/..)
+TOOLSDIR := $(realpath $(THISDIR)/../../tools)
+
 #------------------------------------------------------------------------------ 
 # default output directories
 #------------------------------------------------------------------------------ 

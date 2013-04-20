@@ -21,7 +21,9 @@
 
 FPGA_PROJ = jtagtool3
 
-FPGA_RBF_ADDR = 0x00010000
+FPGA_RBF_ADDR = 0x08040000
+
+JTAGTOOL_ADDR = 192.168.0.80
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
@@ -33,11 +35,11 @@ VHDL_FILES = cyc_pll.vhd \
 			jtag_enh_shift_ctrl.vhdl\
 			jtag_enh_shifter.vhdl\
 			jtag_enh_tx.vhdl\
-			jtag_io_dpram.vhdl\
 			jtag_led_drv.vhdl\
 			jtag_reg.vhdl\
 			syncfifo.vhdl\
 			counter.vhdl\
+			dpram.vhdl\
 			cram_adaptor.vhdl\
 			jtagtool3.vhdl
 
@@ -54,7 +56,14 @@ STATE_MACHINE_PROCESSING = ONE-HOT
 SYNTH_MESSAGE_LEVEL = LOW
 
 include ../mk/altera.mk
+include ../mk/jtag.mk
+
+#	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $<
+
+ifndef TFTPLOAD
+  $(error TFTPLOAD undefined!)
+endif
 
 rbf: $(FPGA_RBF)
-	@$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $<
+	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $(FPGA_RBF)
 

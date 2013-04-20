@@ -432,8 +432,9 @@ static int hw_reset(const ice_drv_t * ice, const target_info_t * target)
 	DCC_LOG(LOG_TRACE, "reset...");
 	int ms = 100;
 
+	/* FIXME: trst is TCK synchronous ... */
 	if (target->has_trst == YES)
-		jtag_trst(0);
+		jtag_trst(true);
 
 	if (target->has_nrst == YES)
 		jtag_nrst_pulse(ms);
@@ -441,7 +442,7 @@ static int hw_reset(const ice_drv_t * ice, const target_info_t * target)
 		__os_sleep(ms);
 
 	if (target->has_trst == YES)
-		jtag_trst(1);
+		jtag_trst(false);
 
 	jtag_tap_reset();
 
@@ -1908,17 +1909,17 @@ int target_tap_trst(unsigned int mode)
 
 	switch (mode) {
 	case 0:
-		ret = jtag_trst(0);
+		ret = jtag_trst(true);
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
 	case 1:
-		ret = jtag_trst(1);
+		ret = jtag_trst(false);
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
 	default:
-		if ((ret = jtag_trst(0)) == JTAG_OK) {
+		if ((ret = jtag_trst(true)) == JTAG_OK) {
 			jtag_run_test(1, JTAG_TAP_IDLE);
-			ret = jtag_trst(1);
+			ret = jtag_trst(false);
 			jtag_tap_reset();
 		}
 	}
@@ -1990,7 +1991,7 @@ int target_power(int on)
 		ice_release(&dbg->ice);
 
 		/* force 0 on trst */
-		jtag_trst(0);
+		jtag_trst(true);
 		/* force 0 in TMS and TDI */
 		jtag_run_test(1, JTAG_TAP_IDLE);
 	}	
@@ -2204,10 +2205,10 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 #if 0
 		DCC_LOG(LOG_MSG, "TAP reset...");
 		/* assert the JTAG TRST signal (low) */
-		jtag_trst(0);
+		jtag_trst(true);
 		jtag_run_test(1, JTAG_TAP_IDLE);
 		/* deasser the JTAG TRST signal (high) */
-		jtag_trst(1);
+		jtag_trst(false);
 
 		jtag_tap_reset();
 #endif

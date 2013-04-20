@@ -107,6 +107,7 @@ port (
 
 	start_ack : out std_logic;
 	end_stb : out std_logic;
+	busy : out std_logic;
 
 	-- DEBUG
 	tap_state : out unsigned(3 downto 0);
@@ -1491,6 +1492,7 @@ begin
 	tdi_en <= s_tdi_en;
 	ptr_addr <= s_ptr_addr;
 	end_stb <= s_end_stb;
+	busy <= s_exec_r0;
 
 	insn_reset <= '1' when s_opc = OPC_RESET else '0';
 	insn_goto <= s_goto_state_en;

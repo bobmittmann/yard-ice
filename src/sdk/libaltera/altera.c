@@ -103,6 +103,7 @@ int altera_configure(const uint8_t * buf, int len)
 	int ret;
 
 	altera_io_init();
+
 	stm32f_spi_init(STM32F_SPI3, &spi3_io);
 
 	while ((ret = conf_start()) < 0) {

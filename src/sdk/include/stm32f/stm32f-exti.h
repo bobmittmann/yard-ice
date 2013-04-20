@@ -92,7 +92,15 @@ struct stm32f_exti {
 	volatile uint32_t pr;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __ASSEMBLER__ */
 
-
 #endif /* __STM32F_EXTI_H__ */
+

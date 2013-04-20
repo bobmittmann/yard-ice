@@ -39,12 +39,6 @@
 #error "JTAG_VEC_BITS_MAX undefined"
 #endif
 
-#if 0
-static const uint8_t ir_idcode[8] = { 
-	0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff 
-};
-#endif
-
 int jtag_chain_init(uint8_t * irlen, int cnt)
 {
 	uint32_t vec[JTAG_VEC_BITS_MAX / 32];
@@ -59,29 +53,13 @@ int jtag_chain_init(uint8_t * irlen, int cnt)
 	/* remove all taps from the chain */
 	jtag_tap_purge();
 
-#if 0
 	/* reset the TAPs to put the IDCODE in the DR scan */
 	jtag_tap_reset();
-#endif
 
-#if 0
-	int n;
-	char s[64];
-
-	for (len = 0, i = 0; i < cnt; i++) {
-		n = irlen[i];
-		vec_cat(vec, len, ir_idcode, n);
-		len += n;
+	if (cnt > (JTAG_VEC_BITS_MAX / 32)) {
+		DCC_LOG(LOG_WARNING, "too many devices on the chain!");
+		cnt = (JTAG_VEC_BITS_MAX / 32);
 	}
-
-	printf("[%s]", vec_fmt(s, vec, len));
-
-	/* shift the vector trough the instruction register... */
-	if ((ret = jtag_ir_scan(vec, vec, len, JTAG_TAP_IRUPDATE)) != JTAG_OK) {
-		DCC_LOG(LOG_ERROR, "jtag_ir_scan() fail!");
-		return ret;
-	}
-#endif
 
 	/* create an all zeros vector */
 	len = cnt * 32;

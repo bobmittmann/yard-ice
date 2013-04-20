@@ -330,7 +330,8 @@
 
 
 /* Bit 0 - Compensation cell power-down */
-#define SYSCFG_CMP_PD (1 << 0)
+#define SYSCFG_CMP_PD (0 << 0)
+#define SYSCFG_CMP_EN (1 << 0)
 /* 0: I/O compensation cell power-down mode
    1: I/O compensation cell enabled  */
 
@@ -341,10 +342,15 @@
 struct stm32f_syscfg {
 	volatile uint32_t memrmp;
 	volatile uint32_t pmc;
-	volatile uint32_t exticr1;
-	volatile uint32_t exticr2;
-	volatile uint32_t exticr3;
-	volatile uint32_t exticr4;
+	union {
+		struct {
+			volatile uint32_t exticr1;
+			volatile uint32_t exticr2;
+			volatile uint32_t exticr3;
+			volatile uint32_t exticr4;
+		};
+		volatile uint32_t exticr[4];
+	};
 	volatile uint32_t res[2];
 	volatile uint32_t cmpcr; /* Compensation cell control register */
 };
