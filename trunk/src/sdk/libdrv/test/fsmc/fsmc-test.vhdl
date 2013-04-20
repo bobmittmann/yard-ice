@@ -212,10 +212,8 @@ begin
 	-- CRAM bus adaptor
 	cram_bus : entity cram_adaptor
 		generic map (
-			MEM_CNT => MEM_CNT,
 			MEM_SEL_BITS => MEM_SEL_BITS,
 			MEM_ADDR_BITS => MEM_ADDR_BITS,
-			REG_CNT => REG_CNT,
 			REG_SEL_BITS => REG_SEL_BITS)
 		port map (
 			clk => s_clk_main,

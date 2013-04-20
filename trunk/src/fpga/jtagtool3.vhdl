@@ -48,8 +48,8 @@ port(
 	uart_tx : in std_logic;
 
 	-- TAP extra
-	tp_dbgrq : inout std_logic;
-	tp_dbgack : inout std_logic;
+	tp_dbgrq : out std_logic;
+	tp_dbgack : in std_logic;
 	-- TAP port
 	tp_tdo : in std_logic;
 	tp_tck : out std_logic;
@@ -96,7 +96,7 @@ architecture structure of jtagtool3 is
 	constant CFG_LOOP : natural := 4;
 	constant CFG_RTCK_EN : natural := 5;
 	constant CFG_RST : natural := 6;
-	constant CFG_UART_EN : natural := 10;
+	constant CFG_UART_EN : natural := 7;
 	constant CFG_TAP_TRST : natural := 10;
 	constant CFG_TAP_NRST : natural := 11;
 	constant CFG_REG_BITS : natural := 12; -- width of cfg reg
@@ -106,6 +106,7 @@ architecture structure of jtagtool3 is
 	constant REG_STATUS : natural := 0;
 	constant REG_INT_ST : natural := 1;
 	constant REG_INT_EN : natural := 2;
+	constant REG_3 : natural := 3;
 	constant REG_CKGEN_DIV : natural := 4;
 	constant REG_CKGEN_RTDIV : natural := 5;
 	constant REG_CFG : natural := 6;
@@ -115,11 +116,12 @@ architecture structure of jtagtool3 is
 	constant IRQ_TAP : natural := 0;
 	constant IRQ_RTCKTMO : natural := 1;
 	constant IRQ_1KHZ : natural := 2;
-	constant IRQ_BITS : natural := 3;
+	constant IRQ_TMR : natural := 3;
+	constant IRQ_BITS : natural := 4;
 
 	-- clocks 
 	signal s_clk_main : std_logic;
-	signal s_clk_io : std_logic;
+	signal s_clk_bus : std_logic;
 	signal s_clk_120mhz : std_logic;
 --	signal s_clk_1mhz : std_logic;
 --	signal s_clk_1khz : std_logic;
@@ -133,7 +135,7 @@ architecture structure of jtagtool3 is
 	-- Internal Bus
 	---------------------------------------------------------------------------
 	-- internal memory bus
-	signal s_mem_addr : std_logic_vector(MEM_ADDR_BITS - 1 downto 0);
+	signal s_mem_addr : std_logic_vector(MEM_ADDR_BITS downto 1);
 
 	signal s_mem_wr_stb : std_logic;
 	signal s_mem_wr_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
@@ -150,13 +152,12 @@ architecture structure of jtagtool3 is
 
 	-- vector descriptor table memory access
 	-- descriptor address
-	signal s_desc_addr : std_logic_vector(DESC_ADDR_BITS - 1 downto 0);
+	signal s_desc_addr : std_logic_vector(DESC_ADDR_BITS downto 1);
 	signal s_desc_data : std_logic_vector(DESC_DATA_BITS -1 downto 0);
 	signal s_desc_mem_wr_stb : std_logic;
-	signal s_desc_mem_dout : std_logic_vector((DATA_WIDTH - 1) downto 0);
 
 	-- vector descriptor pointer memory access
-	signal s_ptr_addr : std_logic_vector(PTR_ADDR_BITS - 1 downto 0);
+	signal s_ptr_addr : std_logic_vector(PTR_ADDR_BITS downto 1);
 	signal s_ptr_data : std_logic_vector(PTR_DATA_BITS - 1 downto 0);
 	signal s_ptr_mem_wr_stb : std_logic;
 
@@ -178,14 +179,19 @@ architecture structure of jtagtool3 is
 	signal s_insn_wr_stb : std_logic;
 	-- TAP state
 	signal s_tap_state : unsigned(3 downto 0);
+	signal s_tap_busy : std_logic;
 
-	-- interrupt status (W/R)
+	-- interrupt status (R/C)
 	signal s_irq_st : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_irq_st_wr_stb : std_logic;
 	
 	-- interrupt enable (W/O)
 	signal s_irq_en : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_irq_en_wr_stb : std_logic;
+
+	-- spare register (R/W)
+	signal s_r3 : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_r3_wr_stb : std_logic;
 	-- clock generator generator divider (R/W)
 	signal s_ckgen_div : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ckgen_div_wr_stb : std_logic;
@@ -198,15 +204,21 @@ architecture structure of jtagtool3 is
 	-- timer register
 	signal s_tmr : std_logic_vector(DATA_WIDTH - 1 downto 0); 
 	signal s_tmr_wr_stb : std_logic; 
+	signal s_tmr_cnt_stb : std_logic; 
+	signal s_tmr_cnt_en : std_logic; 
+	signal s_tmr_timeout : std_logic; 
+
 	-- interrupt requests
 	signal s_irq : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_reg : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_set : std_logic_vector(IRQ_BITS - 1 downto 0);
+	signal s_irq_act : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_out : std_logic;
 
 	signal s_irq_tap : std_logic;
-	signal s_irq_1khz : std_logic;
 	signal s_irq_rtcktmo : std_logic;
+	signal s_irq_1khz : std_logic;
+	signal s_irq_tmr : std_logic;
 
 	-- global reset
 	signal s_rst : std_logic;
@@ -248,7 +260,7 @@ architecture structure of jtagtool3 is
 	-- execution start acknowlegment
 --	signal s_exec_ack : std_logic;
 	-- execution end strobe
-	signal s_exec_end : std_logic;
+--	signal s_exec_end_stb : std_logic;
 
 	
 	-- serial port 
@@ -287,7 +299,8 @@ begin
            
 	-- IO clock
 --	s_clk_io <= s_clk_120mhz;
-	s_clk_io <= s_clk_main;
+--	s_clk_io <= s_clk_main;
+	s_clk_bus <= fsmc_clk;
 
 	---------------------------------------------------------------------------
 	-- CRAM bus adaptor
@@ -331,9 +344,7 @@ begin
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
 	with s_mem_rd_sel select
-		s_mem_dout <= 
-		s_rx_mem_dout when "00",
-		s_desc_mem_dout when "01",
+		s_mem_dout <= s_rx_mem_dout when "00",
 		(others => '0') when others; 
 
 	-- Memory map 
@@ -346,7 +357,7 @@ begin
 	-- +---------+---------------+---------------+
 	-- | Address | Read          | Write         |
 	-- +---------+---------------+---------------+ 
-	-- |  0x8fff |               |               |
+	-- |  0xffff |               |               |
 	-- |   ...   | Invalid       | Invalid       |
 	-- |         |               |               |
 	-- |  0x8010 |               |               |
@@ -395,6 +406,7 @@ begin
 		s_reg_dout <= s_status when reg(REG_STATUS), 
 		s_irq_st when reg(REG_INT_ST),
 		s_irq_en when reg(REG_INT_EN),
+		s_r3 when reg(REG_3),
 		s_ckgen_div when reg(REG_CKGEN_DIV),
 		s_ckgen_rtdiv when reg(REG_CKGEN_RTDIV),
 		s_cfg when reg(REG_CFG),
@@ -408,6 +420,8 @@ begin
 		when s_reg_wr_sel = reg(REG_INT_ST) else '0';
 	s_irq_en_wr_stb <= s_reg_wr_stb 
 		when s_reg_wr_sel = reg(REG_INT_EN) else '0';
+	s_r3_wr_stb <= s_reg_wr_stb 
+		when s_reg_wr_sel = reg(REG_3) else '0';
 	s_ckgen_div_wr_stb <= s_reg_wr_stb 
 		when s_reg_wr_sel = reg(REG_CKGEN_DIV) else '0';
 	s_ckgen_rtdiv_wr_stb <= s_reg_wr_stb 
@@ -442,8 +456,7 @@ begin
 	s_irq(IRQ_TAP) <= s_irq_tap;
 	s_irq(IRQ_RTCKTMO) <= s_irq_rtcktmo;
 	s_irq(IRQ_1KHZ) <= s_irq_1khz;
-	s_irq_out <= not is_zero(s_irq_en and s_irq_st);
---	s_irq_out <= '0' when (s_irq_en and s_irq_st) = (others => '0') else '1';
+	s_irq(IRQ_TMR) <= s_irq_tmr;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -454,7 +467,8 @@ begin
 			s_irq_reg <= s_irq;
 		end if;
 	end process;
-	s_irq_set <= s_irq and not s_irq_reg;
+--	s_irq_set <= s_irq and not s_irq_reg;
+	s_irq_set <= s_irq;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -471,9 +485,22 @@ begin
 			d_clr => s_reg_din(IRQ_BITS - 1 downto 0),
 			-- set individual bits
 			set => '1',
-			d_set => s_irq_set,
+			d_set => s_irq_set
 			-- data out
-			q => s_irq_st);
+--			q => s_irq_st
+			);
+
+	s_irq_st(IRQ_BITS - 1 downto 0) <= s_irq_reg;
+	s_irq_st(DATA_WIDTH -1 downto IRQ_BITS) <= (others => '0');
+
+	-- IRQ output 
+	process(s_clk_main)
+	begin
+		if rising_edge(s_clk_main) then
+			s_irq_out <= not is_zero(s_irq_en and s_irq);
+		end if;
+	end process;
+
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -497,7 +524,7 @@ begin
 	---------------------------------------------------------------------------
 	-- configuration register
 	cfg_r : entity jtag_reg
-		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => CFG_REG_BITS) 
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => DATA_WIDTH) 
 		port map (
 			-- system clock
 			clk => s_clk_main,
@@ -515,7 +542,7 @@ begin
 	s_rst <= s_cfg(CFG_RST); -- Global reset
 	s_ckgen_rtck_en <= s_cfg(CFG_RTCK_EN);
 	s_loopback_en <= s_cfg(CFG_LOOP);
-	s_tap_trst <= '1' when s_cfg(CFG_TAP_TRST) = '1' else '0';
+	s_tap_trst <= '0' when s_cfg(CFG_TAP_TRST) = '1' else '1';
 	s_tap_nrst <= '0' when s_cfg(CFG_TAP_NRST) = '1' else 'Z';
 	---------------------------------------------------------------------------
 
@@ -528,13 +555,51 @@ begin
 			clk => s_clk_main,
 			-- reset
 			rst => s_rst,
+			up => '0',
+			cin => s_tmr_cnt_stb,
 			-- load on write signal 
 			ld => s_tmr_wr_stb,
 			d => s_reg_din,
 			-- count 
-			cin => s_irq_set(IRQ_1KHZ),
+			cout => s_tmr_timeout,
 			-- data out
 			q => s_tmr);
+
+	s_tmr_cnt_stb <= s_1mhz_stb and s_tmr_cnt_en;
+
+	process (s_clk_main, s_rst, s_tmr_wr_stb, s_tmr_timeout)
+	begin
+		if (s_rst = '1') then
+			s_tmr_cnt_en <= '0';
+		elsif rising_edge(s_clk_main) then
+			if (s_tmr_wr_stb = '1') then
+				s_tmr_cnt_en <= '1';
+			elsif (s_tmr_timeout = '1') then
+				s_tmr_cnt_en <= '0';
+			end if;
+		end if;
+	end process;
+
+	s_irq_tmr <= not s_tmr_cnt_en;
+
+	---------------------------------------------------------------------------
+
+
+	---------------------------------------------------------------------------
+	-- spare register 
+	r3 : entity jtag_reg
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => DATA_WIDTH) 
+		port map (
+			-- system clock
+			clk => s_clk_main,
+			-- reset 
+			rst => s_rst,
+			-- read signal 
+			ld => s_r3_wr_stb,
+			-- data in
+			d => s_reg_din,
+			-- data out
+			q => s_r3);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -581,65 +646,75 @@ begin
 			DESC_ADDR_BITS=> DESC_ADDR_BITS
 		)
 		port map (
-			clk => s_clk_main,
-			desc_addr => s_desc_addr,
+			io_clk => s_clk_bus,
 			io_addr => s_mem_addr(DESC_ADDR_BITS + 1 downto 1),
 			io_we => s_desc_mem_wr_stb, 
 			io_data => s_mem_din,
-			desc_q => s_desc_data,
-			io_q => s_desc_mem_dout
+
+			clk => s_clk_main,
+			desc_addr => s_desc_addr,
+			desc_q => s_desc_data
 		);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- descriptor pointers memory
-	ptr_mem : entity jtag_io_dpram
+	-- descriptor pointers memory (Write only)
+	ptr_mem : entity dpram
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
 			ADDR_WIDTH => PTR_ADDR_BITS
 		)
 		port map (
-			clk => s_clk_main,
-			rd_addr => s_ptr_addr,
-			wr_addr => s_mem_addr(PTR_ADDR_BITS downto 1),
-			we => s_ptr_mem_wr_stb, 
-			data => s_mem_din,
-			q => s_ptr_data
+			clk1 => s_clk_bus,
+			addr1 => s_mem_addr(PTR_ADDR_BITS downto 1),
+			we1 => s_ptr_mem_wr_stb, 
+			data1 => s_mem_din,
+
+			clk2 => s_clk_main,
+			addr2 => s_ptr_addr,
+			q2 => s_ptr_data
 		);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- rx vector memory
-	rx_mem : entity jtag_io_dpram
+	-- rx vector memory (Read only)
+	rx_mem : entity dpram
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
 			ADDR_WIDTH => VEC_ADDR_BITS
 		)
 		port map (
-			clk => s_clk_main,
-			rd_addr => s_mem_addr(VEC_ADDR_BITS downto 1),
-			wr_addr => s_rx_mem_addr,
-			we => s_rx_mem_wr_stb, 
-			data => s_rx_mem_din,
-			q => s_rx_mem_dout
+			clk1 => s_clk_main,
+			addr1 => s_rx_mem_addr,
+			we1 => s_rx_mem_wr_stb, 
+			data1 => s_rx_mem_din,
+	--		data1 => s_tx_mem_dout,
+
+			clk2 => s_clk_bus,
+			addr2 => s_mem_addr(VEC_ADDR_BITS downto 1),
+			q2 => s_rx_mem_dout
 		);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
-	-- tx vector memory
-	tx_mem : entity jtag_io_dpram
+	-- tx vector memory (Write only)
+	tx_mem : entity dpram
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
 			ADDR_WIDTH => VEC_ADDR_BITS
 		)
 		port map (
-			clk => s_clk_main,
-			rd_addr => s_tx_mem_addr,
-			wr_addr => s_mem_addr(VEC_ADDR_BITS downto 1),
-			we => s_tx_mem_wr_stb, 
-			data => s_mem_din,
-			q => s_tx_mem_dout
+			clk1 => s_clk_bus,
+			addr1 => s_mem_addr(VEC_ADDR_BITS downto 1),
+			we1 => s_tx_mem_wr_stb, 
+			data1 => s_mem_din,
+
+			clk2 => s_clk_main,
+			addr2 => s_tx_mem_addr,
+			q2 => s_tx_mem_dout
 		);
+
+--	 s_tx_mem_dout <= "0101010100110011";
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -658,7 +733,7 @@ begin
 		)
 		port map (
 			clk => s_clk_main,
-			ioclk => s_clk_io,
+			ioclk => s_clk_main,
 			rst => s_rst,
 			exec_stb => s_exec_stb,
 			insn => s_reg_din(INSN_BITS - 1 downto 0),
@@ -689,10 +764,11 @@ begin
 --			desc_rd_stb => s_desc_rd_stb,
 
 --			exec_ack => s_exec_ack,
-			exec_end => s_exec_end,
-			tap_state => s_tap_state 
+--			end_stb => s_exec_end_stb,
+			tap_state => s_tap_state,
+			busy => s_tap_busy
 		);
-		s_irq_tap <= s_exec_end;
+		s_irq_tap <= not s_tap_busy;
 	---------------------------------------------------------------------------
 
 	s_status(15 downto 4) <= (others => '0');
@@ -701,7 +777,7 @@ begin
 	---------------------------------------------------------------------------
 	-- 1MHz clock generator
 	cklgen_1mhz : entity jtag_clk_scaler
-		generic map (CLK_DIV => 75)
+		generic map (CLK_DIV => 60)
 		port map (
 			clk => s_clk_main,
 			rst => s_rst, 
@@ -740,7 +816,7 @@ begin
 	---------------------------------------------------------------------------
 	-- LEDs assignment
 	led_run_drv : entity jtag_led_drv
-		generic map (PULSE_CNT => 31, OUT_INV => true)
+		generic map (PULSE_CNT => 31, OUT_INV => false)
 		port map (
 			clk=> s_clk_main, 
 			rst => s_rst, 
@@ -751,12 +827,12 @@ begin
 
 	-- Auxiliar port activity
 	led_con_drv : entity jtag_led_drv
-		generic map (PULSE_CNT => 31, OUT_INV => true)
+		generic map (PULSE_CNT => 31, OUT_INV => false)
 		port map (
 			clk=> s_clk_main, 
 			rst => s_rst, 
 			en => s_1khz_stb, 
-			trip => not(s_dbgack_in), 
+			trip => s_mem_wr_stb, 
 			q => led_2
 		);
 	---------------------------------------------------------------------------
@@ -773,6 +849,7 @@ begin
 	-- Serial port TX
 	s_uart_tx <= uart_tx;
 	s_dbgrq_out <= s_uart_tx when s_uart_en = '1' else '0';
+--	s_dbgrq_out <= s_irq_out;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -791,6 +868,7 @@ begin
 	tp_tms <= s_tap_tms;
 	tp_tck <= s_tap_tck;
 	tp_trst <= s_tap_trst;
+--	tp_trst <= s_rx_mem_wr_stb;
 	tp_rst <= s_tap_nrst;
 	
 --	tap_state <= s_tap_state;

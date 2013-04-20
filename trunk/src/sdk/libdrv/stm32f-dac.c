@@ -84,11 +84,11 @@ void tone_play(unsigned int tone, unsigned int ms)
 	wave_pause();
 }
 
-void vout_set(unsigned int mv)
+void stm32f_dac_vout_set(unsigned int mv)
 {
 	struct stm32f_dac * dac = STM32F_DAC;
 
-	dac->dhr12r2 = (5160 * mv) / 8192;
+	dac->dhr12r2 = (5084 * mv) / 8192;
 }
 
 void stm32f_dac_init(void)

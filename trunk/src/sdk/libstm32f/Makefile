@@ -39,7 +39,7 @@ OTG_FS_CFILES = stm32f-otg_fs.c stm32f-otg_fs_dev.c
 SFILES = stm32f-crt0.S
 
 CFILES = stm32f-init.c stm32f-gpio.c stm32f-eth.c\
-		 stm32f-spi.c stm32f-fsmc.c stm32f-mco.c\
+		 stm32f-spi.c stm32f-fsmc.c  stm32f-exti.c stm32f-mco.c\
 		 stm32f-dma.c stm32f-flash.c\
 		 $(addprefix usart/,$(USART_CFILES))\
 		 $(addprefix usb_fs/,$(USB_FS_CFILES))\

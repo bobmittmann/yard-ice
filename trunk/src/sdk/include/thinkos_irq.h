@@ -207,6 +207,8 @@ __thinkos_irq_wait(int irq) {
 	__thinkos_critical_enter();
 	/* prepare to wait ... */
 	__thinkos_wait();
+	/* clear pending interrupt */
+	cm3_irq_pend_clr(irq);
 	/* enable this interrupt source */
 	cm3_irq_enable(irq);
 	__thinkos_critical_exit();

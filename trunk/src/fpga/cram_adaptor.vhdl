@@ -61,7 +61,10 @@ port (
 	reg_rd_sel : out std_logic_vector(REG_SEL_BITS - 1 downto 0);
 	reg_wr_data : out std_logic_vector(15 downto 0);
 	reg_wr_sel : out std_logic_vector(REG_SEL_BITS - 1 downto 0);
-	reg_wr_stb : out std_logic
+	reg_wr_stb : out std_logic;
+	-- Debug
+	dbg_mem_rd : out std_logic;
+	dbg_reg_rd : out std_logic
 );
 end cram_adaptor;
 
@@ -83,7 +86,7 @@ architecture rtl of cram_adaptor is
 	-- output enable
 	signal s_cram_oe : std_logic;
 	-- read 
---	signal s_cram_rd : std_logic;
+	signal s_cram_rd : std_logic;
 	-- write
 	signal s_cram_wr : std_logic;
 	-- address valid
@@ -101,7 +104,7 @@ architecture rtl of cram_adaptor is
 	-----------------------
 	signal s_mem_rd_en : std_logic;
 	-----------------------
---	signal s_reg_rd_en : std_logic;
+	signal s_reg_rd_en : std_logic;
 	signal s_reg_wr_addr: std_logic_vector(REG_SEL_BITS -1 downto 0);
 	signal s_reg_wr_stb : std_logic;
 	signal s_reg_rd_data : std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -137,8 +140,8 @@ begin
 		end case;
 	end process;
 
---	s_cram_rd <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_noe = '0')) 
---					else '0';
+	s_cram_rd <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_noe = '0')) 
+					else '0';
 	s_cram_wr <= '1' when ((s_cram_st = MEMC_DSTB) and (cram_nwe = '0')) 
 					else '0';
 	s_cram_adv <= '1' when (s_cram_st = MEMC_ADV) else '0';
@@ -221,7 +224,7 @@ begin
 
 	---------------------------------------------------------------------------
 	-- Registers read latch
---	s_reg_rd_en <= s_cram_reg_rd_addr(15) and s_cram_rd;
+	s_reg_rd_en <= s_cram_reg_rd_addr(15) and s_cram_rd;
 	process (rst, cram_clk)
 	begin
 		if (rst = '1') then
@@ -236,6 +239,11 @@ begin
 	s_cram_dout <= mem_rd_data when s_mem_rd_en = '1' else s_reg_rd_data;
 	s_cram_oe <= (cram_noe nor cram_nce);
 	cram_d <= s_cram_dout when (s_cram_oe  = '1') else (others => 'Z');
+
+
+	dbg_mem_rd <= s_cram_rd and s_mem_rd_en;
+	dbg_reg_rd <= s_cram_rd and s_reg_rd_en;
+
 	---------------------------------------------------------------------------
 
 end rtl;

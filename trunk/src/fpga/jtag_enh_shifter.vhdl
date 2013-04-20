@@ -108,7 +108,8 @@ port (
 	
 	-- shift start acknowlegment
 	exec_ack : out std_logic;
-	exec_end : out std_logic;
+	end_stb : out std_logic;
+	busy : out std_logic;
 	
 	-- DEBUG
 	-- Main clock domain TCK positive strobe
@@ -330,7 +331,8 @@ begin
 			ptr_addr => ptr_addr,
 			ptr_rd_stb => s_ptr_rd_stb,
 			start_ack => exec_ack,
-			end_stb => exec_end,
+			end_stb => end_stb,
+			busy => busy,
 			tap_state => tap_state,
 			insn_invalid => insn_invalid,
 			insn_reset => insn_reset,

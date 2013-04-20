@@ -36,28 +36,13 @@
 #include "jtag3drv.h"
 #include "jtag.h"
 
+#include <sys/stm32f.h>
 #include <sys/dcclog.h>
+#include <altera.h>
 
-const struct altera_conf_io_map altera_conf = {
-#ifdef JTAGTOOL3
-	/* DCLK */
-	.dclk = PIO_P23,
-	/* nCONFIG */
-	.config = PIO_P19,
-	/* DATA0 */
-	.data = PIO_P18,
-	/* nSTATUS */
-	.status = PIO_P17,
-	/* CONF_DONE */
-	.conf_done = PIO_P16
-#else
-
-#endif
-};
-
-uint16_t volatile * jtagdrv_reg;
-uint16_t volatile * jtagdrv_vec;
-uint32_t volatile * jtagdrv_desc;
+uint16_t volatile * jtagdrv_reg = JTAGDRV_REG;
+uint16_t volatile * jtagdrv_vec = JTAGDRV_VEC;
+uint32_t volatile * jtagdrv_desc = JTAGDRV_DESC;
 
 /* read a vector of 'len' bits from the controller's memory */
 void jtag3ctrl_vec_rd(unsigned int addr, uint16_t * buf, int len)
@@ -131,43 +116,11 @@ int jtag3ctrl_wait(int state)
 	return 0;
 }
 
-void jtag3ctrl_tdo_probe(int enable)
-{
-	int cfg = reg_rd(REG_CFG);
-	if (enable)
-		cfg |= CFG_TDO_PROBE_EN;
-	else
-		cfg &= ~CFG_TDO_PROBE_EN;
-	reg_wr(REG_CFG, cfg);
-}
-
-void jtag3ctrl_tap_vcc(int enable)
-{
-	int cfg = reg_rd(REG_CFG);
-	if (enable)
-		cfg |= CFG_TAP_VCC_EN;
-	else
-		cfg &= ~CFG_TAP_VCC_EN;
-
-	reg_wr(REG_CFG, cfg);
-}
-
-void jtag3ctrl_relay(int enable)
-{
-	int cfg = reg_rd(REG_CFG);
-
-	if (enable)
-		cfg |= CFG_RELAY_EN;
-	else
-		cfg &= ~CFG_RELAY_EN;
-	reg_wr(REG_CFG, cfg);
-}
-
 /*
  * TRST is a low level assertion signal...
  * TRST is synchronous and must be clocked by TCK
  */
-void jtag3ctrl_trst(int assert)
+void jtag3ctrl_trst(bool assert)
 {
 	int cfg = reg_rd(REG_CFG);
 
@@ -178,7 +131,7 @@ void jtag3ctrl_trst(int assert)
 	reg_wr(REG_CFG, cfg);
 }
 
-void jtag3ctrl_nrst(int assert)
+void jtag3ctrl_nrst(bool assert)
 {
 	int cfg = reg_rd(REG_CFG);
 	if (assert)
@@ -188,7 +141,7 @@ void jtag3ctrl_nrst(int assert)
 	reg_wr(REG_CFG, cfg);
 }
 
-void jtag3ctrl_loopback(int enable)
+void jtag3ctrl_loopback(bool enable)
 {
 	unsigned int cfg;
 
@@ -197,7 +150,7 @@ void jtag3ctrl_loopback(int enable)
 	reg_wr(REG_CFG, cfg);
 }
 
-void jtag3ctrl_rtck(int enable)
+void jtag3ctrl_rtck(bool enable)
 {
 	int cfg = reg_rd(REG_CFG);
 	if (enable)
@@ -207,10 +160,14 @@ void jtag3ctrl_rtck(int enable)
 	reg_wr(REG_CFG, cfg);
 }
 
-
 void jtag3ctrl_int_en(unsigned int mask)
 {
 	reg_wr(REG_INT_EN, mask);
+}
+
+void jtag3ctrl_int_clr(unsigned int mask)
+{
+	reg_wr(REG_INT_ST, mask);
 }
 
 void jtag3ctrl_sys_rst(void)
@@ -341,53 +298,29 @@ unsigned int jtag3ctrl_get_speed(void)
 
 int jtag3ctrl_init(const void * rbf, int size)
 {
-#if 0
-	struct at91_pio * pio = AT91_PIO;
-	struct at91_ebi * ebi = AT91_EBI;
-	void * iobase;
 	int ret;
 
-	interrupt_disable(IRQ0);
+	/* Enable clock output */
+	stm32f_mco2_init();
 
-	iobase = (void *)EBI_BA(ebi->csr[2]);
-	ebi->csr[2] = (uint32_t)iobase | EBI_CSEN | EBI_PAGES_1M | 
-		EBI_DBW_16 | EBI_WSE | EBI_NWS_3;
+	/* Configure memory controller ... */
+	stm32f_fsmc_init();
+		
+	/* Configure external interrupt ... */
+	stm32f_exti_init(STM32F_GPIOD, 6, EXTI_EDGE_RISING);
 
-	iobase = (void *)EBI_BA(ebi->csr[3]);
-	ebi->csr[3] = (uint32_t)iobase | EBI_CSEN | EBI_PAGES_1M | 
-		EBI_DBW_16 | EBI_WSE | EBI_NWS_3;
+	if ((ret = altera_configure(rbf, 60000)) < 0) {
+		printf(" # altera_configure() failed: %d!\n", ret);
+		for(;;);
+	};
 
-	DCC_LOG1(LOG_INFO, "EBI CS2: %08x", EBI_BA(ebi->csr[2]));
-	DCC_LOG1(LOG_INFO, "EBI CS3: %08x", EBI_BA(ebi->csr[3]));
-
-	jtagdrv_vec = (uint16_t *)(EBI_BA(ebi->csr[2]) + MEM_VECTOR_OFFS);
-	jtagdrv_desc = (uint32_t *)(EBI_BA(ebi->csr[3]) + MEM_DESCRIPTOR_OFFS);
-	jtagdrv_reg = (uint16_t *)(EBI_BA(ebi->csr[3]) + MEM_REGISTER_OFFS);
-
-	pio->per = PIO_IRQ0 | PIO_FIQ;
-	pio->odr = PIO_IRQ0 | PIO_FIQ;
-	pio->ifer = PIO_IRQ0 | PIO_FIQ;
-	/* Disable the PIO of the interrupt pin */
-	pio->pdr = PIO_IRQ0 | PIO_MCKO;
-
-	altera_io_init(&altera_conf);
-
-	if ((ret = altera_configure(&altera_conf, rbf, size)) < 0) {
-		printf("#ERROR: altera_configure() fail: %d!\n", ret);	
-		printf("nSTATUS=%d CONF_DONE=%d\n", altera_nstatus(&altera_conf), 
-			   altera_conf_done(&altera_conf));
-		return ret;
-	}
+	printf("- FPGA configuration done.\n");
 
 	/* wait for the FPGA initialize */
-	uthread_sleep(20);
-
-	/* configure as a low priority interrupt */
-	interrupt_config(IRQ0, INT_HIGH_LEVEL, 7);
+	__os_sleep(20);
 
 	/* initial configuration */
-	reg_wr(REG_CFG, CFG_RELAY_EN);
-#endif
+	reg_wr(REG_CFG, 0);
 	return 0;
 }
 

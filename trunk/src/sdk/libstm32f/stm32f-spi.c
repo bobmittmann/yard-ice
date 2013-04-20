@@ -93,7 +93,7 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 	spi->i2scfgr = 0;
 	spi->i2spr = 0;
 	spi->cr1 = SPI_SPE | SPI_MSTR | SPI_SSM | SPI_SSI | \
-			   SPI_BR_SET(5) | SPI_LSBFIRST;
+			   SPI_BR_SET(6) | SPI_LSBFIRST;
 
 	return 0;
 }

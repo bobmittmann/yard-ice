@@ -300,6 +300,11 @@ int jtag_chain_init(uint8_t * irlen, int cnt);
 
 char * jtag_strerror(int errno);
 
+
+int jtag_drv_init(void);
+
+int jtag_drv_done(void);
+
 #ifdef __cplusplus
 }
 #endif

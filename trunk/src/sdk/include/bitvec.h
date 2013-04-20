@@ -43,7 +43,7 @@ int vec_rshift(uint32_t * dst, const uint32_t * src, int len, int bits);
 int vec_lshift(uint32_t * dst, const uint32_t * src, int len, int bits);
 
 /* Convert the bit vector to string */
-char * vec_fmt(void * buf, const void * vec, int len);
+char * vec_fmt(char * buf, const void * vec, int len);
 
 /* Create a random bit vector */
 void vec_rand(void * vec, int len);

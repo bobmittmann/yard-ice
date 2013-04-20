@@ -18,6 +18,10 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+ifndef TOOLSDIR
+  $(error TOOLSDIR undefined!)
+endif	
+
 TFTPLOAD = $(TOOLSDIR)/tftp_load.sh 
 DCCLOGVIEW = $(TOOLSDIR)/dcclog
 
