@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file mod_jtag..c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -102,6 +102,8 @@ int jtag_drv_done(void);
 int mod_jtag_init(void * jtag, int mod_id)
 {
 	jtag_drv_init();
+	jtag_tck_freq_set(1000000);
+	jtag_rtck_freq_set(1000000);
 
 	var_global_add(mod_id, "speed", TYPE_UINT32, ID_JTAG_CLK);
 

@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file vpm-dm36x.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 

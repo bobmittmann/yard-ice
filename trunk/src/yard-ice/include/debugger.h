@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file debugger.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -101,6 +101,11 @@ typedef struct dbg_bp_ctrl dbg_bp_ctrl_t;
 struct debugger {
 	/* Target ice driver */
 	ice_drv_t ice;
+
+	/* configuration */
+	struct {
+		bool enable_ice_polling;
+	} cfg;
 
 	dbg_state_t state;
 
@@ -279,6 +284,9 @@ int target_nand_dev_get(int dev_id, nand_dev_t ** nandp);
 
 int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp);
 
+int target_enable_ice_poll(bool flag);
+
+int target_enable_comm(bool flag);
 
 #ifdef __cplusplus
 	}

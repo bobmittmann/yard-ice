@@ -18,102 +18,31 @@
  */
 
 /** 
- * @file .c
+ * @file stm32f207.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
 
 #include "target/stm32f.h"
-#include <stdlib.h>
 
-const struct ice_mem_entry stm32f20xxb_mem[] = {
-	{ .name = "flash", .flags = MEM_32_BITS,
-		.addr = { .base = 0x00000000, .offs = 0 }, 
-		.blk = {.count = 128, .size = MEM_KiB(1)},
-		.op = &flash_stm32f_oper
-	},
-	{ .name = "sram", .flags = MEM_32_BITS,
-		.addr = { .base = 0x20000000, .offs = 0 }, 
-		.blk = {.count = 8, .size = MEM_KiB(16)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 
-		.blk = {.count = 0, .size = 0},
-		.op = NULL
-	}
-};
+#include <stdio.h>
+#include <sys/dcclog.h>
 
-const struct ice_mem_entry stm32f20xxc_mem[] = {
-	{ .name = "flash", .flags = MEM_32_BITS,
-		.addr = { .base = 0x08000000, .offs = 0 }, 
-		.blk = {.count = 256, .size = MEM_KiB(1)},
-		.op = &flash_stm32f_oper
-	},
-	{ .name = "sram0", .flags = MEM_32_BITS,
-		.addr = { .base = 0x20000000, .offs = 0 }, 
-		.blk = {.count = 1, .size = MEM_KiB(112)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "sram1", .flags = MEM_32_BITS,
-		.addr = { .base = 0x20000000, .offs = MEM_KiB(112) }, 
-		.blk = {.count = 1, .size = MEM_KiB(16)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 
-		.blk = {.count = 0, .size = 0},
-		.op = NULL
-	}
-};
-
-const struct ice_mem_entry stm32f20xxe_mem[] = {
-	{ .name = "boot", .flags = MEM_32_BITS,
-		.addr = { .base = 0x00000000, .offs = 0 }, 
-		.blk = {.count = 64, .size = MEM_KiB(64)},
-		.op = &cm3_ram_oper
-	},
-	{ .name = "flash", .flags = MEM_32_BITS,
-		.addr = { .base = 0x08000000, .offs = 0 }, 
-		.blk = {.count = 32, .size = MEM_KiB(16)},
-		.op = &flash_stm32f_oper
-	},
-	{ .name = "sram0", .flags = MEM_32_BITS,
-		.addr = { .base = 0x20000000, .offs = 0 }, 
-		.blk = {.count = 1, .size = MEM_KiB(112)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "sram1", .flags = MEM_32_BITS,
-		.addr = { .base = 0x20000000, .offs = MEM_KiB(112) }, 
-		.blk = {.count = 1, .size = MEM_KiB(16)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "bkpsram", .flags = MEM_32_BITS,
-		.addr = { .base = 0x40000000, .offs = 0x00024000 }, 
-		.blk = {.count = 1, .size = MEM_KiB(4)},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "scs", .flags = MEM_32_BITS,
-		.addr = { .base = 0xe000e000, .offs = 0x00000000 }, 
-		.blk = {.count = 1, .size = 0x1000},
-		.op = &cm3_ram_oper 
-	},
-	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 
-		.blk = {.count = 0, .size = 0},
-		.op = NULL
-	}
-};
+#define STM32F2X
+#include "stm32f_defs.h"
 
 
 const struct target_info stm32f207ve = {
 	.name = "stm32f207ve",
 	.arch = &stm32f_arch,
-	.mem = (struct ice_mem_entry *)stm32f20xxe_mem,
-
 	.ice_drv = &cm3ice_drv,
 	.ice_cfg = (void *)&stm32f_cfg,
 
-	.jtag_clk_slow = 8000000,
-	.jtag_clk_def = 8000000,
+	.mem = (struct ice_mem_entry *)stm32f20xxe_mem,
+
+	.jtag_clk_slow = 12000000,
+	.jtag_clk_def = 12000000,
 	.jtag_clk_max = 16000000,
 
 	/* The target has a TRST connection */
@@ -138,11 +67,9 @@ const struct target_info stm32f207ve = {
 
 	.start_addr = 0x00000000,
 
-	.on_init = (target_script_t)stm32f_on_init,
-	.on_halt = (target_script_t)NULL,
-	.on_run = NULL,
+
+	.on_init = (target_script_t)stm32f2xx_on_init,
 	.reset_script = (target_script_t)cm3_reset,
-	.probe = (target_script_t)cm3_probe,
-	.test = (target_test_t)NULL
+	.probe = (target_script_t)cm3_probe
 };
 

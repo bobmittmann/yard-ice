@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file targets.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -51,6 +51,8 @@ const struct target_info * const target_db[] = {
 	&at91sam9260, 
 	&at91sam7x256,
 	&stm32f207ve,
+	&stm32f10x,
+	&stm32f,
 /*
 	&at91sam7s64,
 	&a7e10x2_2m,

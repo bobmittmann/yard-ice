@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file dm365.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -536,8 +536,8 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 	return ret;
 }
 
-int dm365_on_jtag_setup(FILE * f, const ice_drv_t * drv,
-						const target_info_t * taerget)
+int dm365_jtag_setup(FILE * f, const ice_drv_t * drv,
+						const target_info_t * target)
 {
 	jtag_tap_t * tap;
 	int has_arm = 0;
@@ -562,7 +562,7 @@ int dm365_on_jtag_setup(FILE * f, const ice_drv_t * drv,
 		if (tap->idcode == 0x2b900f0f) {
 			fprintf(f, " - %d (0x%08x) -> ARM ETB11\n", tap->pos, tap->idcode); 
 			has_etb = i + 1;
-			has_etb = has_etb;
+			(void)has_etb;
 		}
 		if (tap->idcode == 0x8b83e02f) {
 			fprintf(f, " - %d (0x%08x) -> ICEPick C\n", tap->pos, 
@@ -743,7 +743,7 @@ const struct target_info ti_dm365 = {
 
 	.start_addr = 0x00000000,
 
-	.jtag_setup = (target_setup_script_t)dm365_on_jtag_setup,
+	.pre_config = (target_config_t)dm365_jtag_setup,
 	.on_init = (target_script_t)dm365_on_init,
 	.on_halt = (target_script_t)davinci_on_halt,
 	.on_run = NULL,
@@ -787,7 +787,7 @@ const struct target_info ti_dm365hs = {
 
 	.start_addr = 0x00000000,
 
-	.jtag_setup = (target_setup_script_t)dm365_on_jtag_setup,
+	.pre_config = (target_config_t)dm365_jtag_setup,
 	.on_init = (target_script_t)dm365_on_init,
 	.on_halt = (target_script_t)davinci_on_halt,
 	.on_run = NULL,

@@ -18,12 +18,16 @@
  */
 
 /** 
- * @file .c
+ * @file a7e10x2.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#include "target.h"
+#include "target/arm.h"
 #include "target/at91x40.h"
+#include "armice.h"
+#include <arch/at91x40.h>
 
 int a7e10x2_on_init(FILE * f, const struct ice_drv * ice, 
 					 ice_mem_entry_t * mem)

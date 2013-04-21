@@ -33,6 +33,13 @@ int ifn_ipv4_set(struct ifnet * __if, in_addr_t __addr, in_addr_t __mask)
 	if (__if == NULL)
 		return -1;
 
+	DCC_LOG(LOG_TRACE, "tcpip_net_lock().");
+	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_TRACE, "2.");
+	DCC_LOG(LOG_TRACE, "3.");
+	DCC_LOG(LOG_TRACE, "4.");
+	DCC_LOG(LOG_TRACE, "5.");
+	DCC_LOG(LOG_TRACE, "6.");
 	tcpip_net_lock();
 
 	/* 
@@ -53,7 +60,10 @@ int ifn_ipv4_set(struct ifnet * __if, in_addr_t __addr, in_addr_t __mask)
 		ifn_type_name[__if->if_id >> 4], __if->if_id & 0x0f,
 		__if->if_ipv4_addr, __if->if_ipv4_mask);
 
+	DCC_LOG(LOG_TRACE, "tcpip_net_unlock().");
 	tcpip_net_unlock();
+
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return 0;
 }

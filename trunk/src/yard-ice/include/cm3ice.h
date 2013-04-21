@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file cm3ice.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -124,8 +124,6 @@ typedef struct cm3ice_context cm3ice_context_t;
 
 struct cm3ice_cfg {
 	uint8_t endianness:1;
-	uint32_t work_addr;
-	uint32_t work_size;
 };
 
 typedef struct cm3ice_cfg cm3ice_cfg_t;

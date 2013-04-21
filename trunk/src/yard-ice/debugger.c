@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file debugger.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -459,7 +459,7 @@ static int dbg_reset(const ice_drv_t * ice, const target_info_t * target)
  Status, Profiling and console Polling
  ***********************************************************************/
 
-static int dbg_poll_task(struct debugger * dbg)
+static int dbg_poll_task(struct debugger * dbg, int id)
 {
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ice_st;
@@ -514,6 +514,9 @@ static int poll_start(struct debugger * dbg)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 
 	if (dbg->state != DBG_ST_RUNNING)
+		return OK;
+
+	if (!dbg->cfg.enable_ice_polling)
 		return OK;
 
 	/* sync */
@@ -923,7 +926,7 @@ static int read_memory(bfd_vma addr, uint8_t * buf, unsigned int len,
 	struct debugger * dbg = &debugger;
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	
-	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
 	if (len == 0)
 		return 0;
@@ -1779,6 +1782,13 @@ int target_reset(FILE * f, int mode)
 			DCC_LOG(LOG_WARNING, "core reset failed!");
 		}
 		break;
+	case RST_SYS:
+		fprintf(f, " - system reset...\n");
+		DCC_LOG(LOG_TRACE, "system reset...");
+		if ((ret = ice_system_reset(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "system reset failed!");
+		}
+		break;
 	case RST_DBG:
 		fprintf(f, " - debug reset...\n");
 		DCC_LOG(LOG_TRACE, "debug reset...");
@@ -1908,11 +1918,11 @@ int target_tap_trst(unsigned int mode)
 	ice_release(&dbg->ice);
 
 	switch (mode) {
-	case 0:
+	case TARGET_IO_CLR:
 		ret = jtag_trst(true);
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
-	case 1:
+	case TARGET_IO_SET:
 		ret = jtag_trst(false);
 //		jtag_run_test(1, JTAG_TAP_IDLE);
 		break;
@@ -1996,9 +2006,12 @@ int target_power(int on)
 		jtag_run_test(1, JTAG_TAP_IDLE);
 	}	
 
+
+/* FIXME: power and relay driver 
 	if ((ret = jtag_relay(on)) != JTAG_OK) {
 		DCC_LOG(LOG_WARNING, "ice_power() fail");
 	}
+*/
 
 	__os_mutex_unlock(dbg->busy);
 
@@ -2225,7 +2238,7 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 			cnt = 1;
 		}
 		irpath = irlen;
-		irpath = irpath;
+		(void)irpath;
 		tap_pos = -1;
 	} else {
 		/* TODO: preconfigured scan chain */
@@ -2251,16 +2264,16 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 		return ret;
 	}
 
-	if (target->jtag_setup) {
-		DCC_LOG(LOG_TRACE, "Target JTAG setup callback...");
-		if ((ret = target->jtag_setup(f, ice, target)) < 0) {
-			DCC_LOG(LOG_ERROR, "target->jtag_setup() fail!");
+	if (target->pre_config) {
+		DCC_LOG(LOG_TRACE, "Target pre config callback...");
+		if ((ret = target->pre_config(f, ice, target)) < 0) {
+			DCC_LOG(LOG_ERROR, "target->pre_config() fail!");
 			__os_mutex_unlock(dbg->busy);
 			return ret;
 		}
 		cnt = jtag_tap_tell();
 	} else {
-		DCC_LOG(LOG_TRACE, "target->jtag_setup callback undefined!");
+		DCC_LOG(LOG_TRACE, "target->pre_config callback undefined!");
 	}
 
 	if (tap_pos < 0) {
@@ -2358,9 +2371,20 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 
 
+	/* Finally execute the target specific configuration */
+	if (target->pos_config) {
+		DCC_LOG(LOG_TRACE, "Target pos config callback...");
+		if ((ret = target->pos_config(f, ice, target)) < 0) {
+			DCC_LOG(LOG_ERROR, "target->pos_config() fail!");
+		}
+	} else {
+		DCC_LOG(LOG_TRACE, "target->pos_config callback undefined!");
+		ret = 0;
+	}
+
 	__os_mutex_unlock(dbg->busy);
 
-	return 0;
+	return ret;
 }
 
 int target_ice_test(FILE * f, uint32_t val)
@@ -2498,6 +2522,8 @@ void debugger_init(void)
 	dbg->state = DBG_ST_UNCONNECTED;
 	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 
+	dbg->cfg.enable_ice_polling = true;
+
 	dbg->dasm.base = 0;
 	dbg->dasm.size = 20;
 	dbg->dump.base = 0;
@@ -2520,16 +2546,41 @@ void debugger_init(void)
 	dbg->poll_stop_req = false;
 	dbg->poll_start_req = false;
 
+	DCC_LOG3(LOG_TRACE, "poll_mutex=%d poll_cond=%d halt_cond=%d", 
+			 dbg->poll_mutex, dbg->poll_cond, dbg->halt_cond);
+
 	ice_comm_init(&dbg->comm);
 
 	dbg->poll_thread = __os_thread_create((void *)dbg_poll_task, (void *)dbg, 
 							dbg_poll_stack, sizeof(dbg_poll_stack), 
 							__OS_PRIORITY_LOWEST);
 
-	DCC_LOG1(LOG_TRACE, "__os_create()=%d", dbg->poll_thread);
-
+	DCC_LOG1(LOG_TRACE, "__os_thread_create()=%d", dbg->poll_thread);
 }
 
+int target_enable_ice_poll(bool flag)
+{
+	struct debugger * dbg = &debugger;
+
+	DCC_LOG(LOG_TRACE, ".");
+
+	__os_mutex_lock(dbg->busy);
+
+	poll_stop(dbg);
+
+	dbg->cfg.enable_ice_polling = flag;
+
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return 0;
+}
+
+int target_enable_comm(bool flag)
+{
+	return 0;
+}
 
 #if 0
 int target_int_enable(void)

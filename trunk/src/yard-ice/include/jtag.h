@@ -77,6 +77,7 @@
 #else /* __ASSEMBLER__ */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef uint32_t jtag_idcode_t;
 
@@ -177,14 +178,14 @@ int jtag_state(void);
  * @param set 1 - assert,  0 -  deassert 
  * @returns JTAG_OK on success, or a negative code if an error occured.
  */
-int jtag_trst(int assert);
+int jtag_trst(bool assert);
 
 /**
  * Control the nRST line.
  * @param set 1 - assert,  0 -  deassert 
  * @returns JTAG_OK on success, or a negative code if an error occured.
  */
-int jtag_nrst(int assert);
+int jtag_nrst(bool assert);
 
 int jtag_nrst_pulse(unsigned int ms);
 

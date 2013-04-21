@@ -31,7 +31,7 @@
 
 /* Network Framework mutex - all functions accessing the network stack must
  lock this mutex to avoid race conditions...  */
-extern int8_t net_mutex;
+extern int32_t net_mutex;
 
 #ifdef __cplusplus
 extern "C" {

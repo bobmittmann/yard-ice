@@ -76,16 +76,16 @@ struct thinkos_context {
  * Set default configuration options
  * --------------------------------------------------------------------------*/
 
-#ifndef THINKOS_THREADS_MAX 
-#define THINKOS_THREADS_MAX 8
-#endif
-
 #ifndef THINKOS_EXCEPT_STACK_SIZE
 #define THINKOS_EXCEPT_STACK_SIZE 256
 #endif
 
 #ifndef THINKOS_IRQ_MAX 
 #define THINKOS_IRQ_MAX 80
+#endif
+
+#ifndef THINKOS_THREADS_MAX 
+#define THINKOS_THREADS_MAX 8
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_ALLOC
@@ -204,9 +204,20 @@ struct thinkos_context {
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 #endif
 
+
+/* -------------------------------------------------------------------------- 
+ * Sanity check
+ * --------------------------------------------------------------------------*/
+
+#if THINKOS_ENABLE_THREAD_ALLOC && (THINKOS_THREADS_MAX > 32)
+  #undef THINKOS_THREADS_MAX 
+  #define THINKOS_THREADS_MAX 32
+  #warn "THINKOS_THREADS_MAX set to 32"
+#endif
+
 #if (THINKOS_ENABLE_COND_ALLOC) & !(THINKOS_COND_MAX)
-#undef THINKOS_ENABLE_COND_ALLOC
-#define THINKOS_ENABLE_COND_ALLOC 0
+  #undef THINKOS_ENABLE_COND_ALLOC
+  #define THINKOS_ENABLE_COND_ALLOC 0
 #endif
 
 #if (THINKOS_ENABLE_COND_ALLOC) & !(THINKOS_COND_MAX)
@@ -509,6 +520,10 @@ thinkos_alloc_lo(uint32_t * ptr, int start) {
 static inline int __attribute__((always_inline)) 
 thinkos_alloc_hi(uint32_t * ptr, int start) {
 	int idx;
+
+	if (start > 31)
+		start = 31;
+
 	/* Look for an empty bit LSB first */
 	idx = start - __clz(~(*ptr << (31 - start)));
 	if (idx < 0)

@@ -202,7 +202,8 @@ int ice_comm_init(ice_comm_t * comm)
 	comm->tx.tail = 0;
 	comm->tx_sem = __os_sem_alloc(ICE_COMM_TX_BUF_LEN);
 
-	DCC_LOG(LOG_TRACE, "[INIT]");
+	DCC_LOG2(LOG_TRACE, "[INIT] rx_sem=%d tx_sem=%d",
+			 comm->rx_sem, comm->tx_sem);
 
 	return 0;
 }

@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file command.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -165,6 +165,10 @@ int cmd_runtest(FILE * f, int argc, char ** argv);
 int cmd_irpause(FILE * f, int argc, char ** argv);
 
 int cmd_drpause(FILE * f, int argc, char ** argv);
+
+int cmd_enable(FILE * f, int argc, char ** argv);
+
+int cmd_disable(FILE * f, int argc, char ** argv);
 
 int exec(FILE * f, char * line);
 

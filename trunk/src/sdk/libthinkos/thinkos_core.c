@@ -380,8 +380,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	msp = (uint32_t)&thinkos_idle.snapshot.val;
 	cm3_msp_set(msp);
 
-	DCC_LOG1(LOG_TRACE, "MSP=0x%08x", msp);
-
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
@@ -477,7 +475,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* enable interrupts */
 	cm3_cpsie_i();
 
-	DCC_LOG4(LOG_INFO, "<%d> msp=%08x psp=%08x ctrl=%08x", 
+	DCC_LOG4(LOG_TRACE, "<%d> msp=%08x psp=%08x ctrl=%08x", 
 			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
 
 	return self;

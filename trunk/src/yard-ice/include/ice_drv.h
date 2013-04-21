@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file ice_drv..h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -28,6 +28,7 @@
 #define __ICE_DRV_H__
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "jtag.h"
 #include "ice_comm.h"
@@ -106,7 +107,8 @@ typedef enum {
 
 typedef enum {
 	ICE_SIG_POLL_STOP = 0,
-	ICE_SIG_POLL_START
+	ICE_SIG_POLL_START,
+	ICE_SIG_TARGET_RESET
 } ice_sig_t;
 
 typedef enum {
@@ -225,6 +227,8 @@ typedef int (* ice_info_t)(ice_ctrl_t * ctrl, FILE * f, uint32_t which);
 
 typedef int (* ice_core_reset_t)(ice_ctrl_t * ctrl);
 
+typedef int (* ice_system_reset_t)(ice_ctrl_t * ctrl);
+
 typedef int (* ice_on_break_t)(ice_ctrl_t * ctrl);
 
 #if 0
@@ -317,6 +321,9 @@ struct ice_oper {
 
 	/* core reset */	
 	ice_core_reset_t core_reset;
+
+	/* system reset */	
+	ice_system_reset_t system_reset;
 
 	/* stack access */	
 	ice_context_show_t context_show;
@@ -549,6 +556,10 @@ extern inline int ice_int_disable(const ice_drv_t * ice) {
 
 extern inline int ice_core_reset(const ice_drv_t * ice) {
 	return ice->op.core_reset(ice->ctrl);
+}
+
+extern inline int ice_system_reset(const ice_drv_t * ice) {
+	return ice->op.system_reset(ice->ctrl);
 }
 
 extern inline int ice_bp_set(const ice_drv_t * ice, uint32_t addr, 

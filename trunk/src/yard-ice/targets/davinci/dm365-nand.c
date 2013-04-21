@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file dm365-nand.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -52,7 +52,7 @@ void dm365_nand_ecc_disable(const void * arg, nand_chip_t * chip)
 	/* Read any ECC register to end the calculation and 
 	   clear the ECC start bit */
 	dummy = AEMIF_REG_RD(AEMIF_NAND4BITECC1);
-	dummy = dummy;
+	(void)dummy;
 }
 
 
@@ -82,7 +82,7 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 
 	/* Clear bit13 of NANDFCR */
 	tmp = AEMIF_REG_RD(AEMIF_NANDERRADD1);
-	tmp = tmp;
+	(void)tmp;
 
 	/* Load the syndrome10 (from 7 to 0) values */
 	for (i = 7; i >= 0; i--) {

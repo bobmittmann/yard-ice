@@ -27,9 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/os.h>
-
-#if 0
-#include <sys/reboot.h>
+#include <arch/cortex-m3.h>
 
 int cmd_reboot(FILE *f, int argc, char ** argv)
 {
@@ -42,7 +40,9 @@ int cmd_reboot(FILE *f, int argc, char ** argv)
 
 	__os_sleep(100);
 
-	reboot(SYS_REBOOT_CMD_RESTART);
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+
 	return 0;
 }
-#endif
+

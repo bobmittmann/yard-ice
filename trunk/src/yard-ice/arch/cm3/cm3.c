@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cm3.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -91,8 +91,6 @@ const struct target_cpu cortex_m3_cpu = {
 
 const struct cm3ice_cfg cortex_m3_cfg = {
 	.endianness = LITTLE_ENDIAN,
-	.work_addr = 0x20000000 + MEM_KiB(64) - MEM_KiB(4),
-	.work_size = MEM_KiB(4),
 };
 
 const struct ice_mem_entry cortex_m3_mem[] = {
@@ -155,11 +153,7 @@ const struct target_info cortex_m3 = {
 
 	.start_addr = 0x00000000,
 
-	.on_init = (target_script_t)NULL,
-	.on_halt = (target_script_t)NULL,
-	.on_run = NULL,
 	.reset_script = (target_script_t)cm3_reset,
 	.probe = (target_script_t)cm3_probe,
-	.test = (target_test_t)NULL
 };
 

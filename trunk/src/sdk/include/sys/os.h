@@ -41,9 +41,9 @@
 extern "C" {
 #endif
 
-typedef int8_t __os_mutex_t;
-typedef int8_t __os_cond_t;
-typedef int8_t __os_sem_t;
+typedef int32_t __os_mutex_t;
+typedef int32_t __os_cond_t;
+typedef int32_t __os_sem_t;
 
 static inline void __os_sleep(unsigned int msec) {
 #if ENABLE_THINKOS

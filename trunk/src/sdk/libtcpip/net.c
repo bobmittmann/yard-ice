@@ -38,7 +38,7 @@
 #define ENABLE_NET_TCP 0
 #endif
 
-int8_t net_mutex;
+int32_t net_mutex;
 
 void tcp_init(void);
 void udp_init(void);

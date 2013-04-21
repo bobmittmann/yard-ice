@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file dm365-nand-mem.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 

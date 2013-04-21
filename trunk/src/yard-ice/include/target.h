@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file target.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -29,6 +29,7 @@
 #define __TARGET_H__
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <ice_drv.h>
 
 #define LITTLE_ENDIAN 0
@@ -77,8 +78,8 @@ typedef struct target_info target_info_t;
 typedef int (* target_script_t)(FILE * f, const ice_drv_t * drv, 
 								ice_mem_entry_t const * mem_map);
 
-typedef int (* target_setup_script_t)(FILE * f, const ice_drv_t * drv,
-									  const target_info_t * taerget); 
+typedef int (* target_config_t)(FILE * f, const ice_drv_t * drv,
+								const target_info_t * target); 
 
 typedef int (* target_test_t)(FILE * f, const ice_drv_t * drv, 
 								ice_mem_entry_t const * mem_map, uint32_t val);
@@ -139,7 +140,8 @@ typedef enum {
 	RST_HARD = 1,
 	RST_SOFT = 2,
 	RST_CORE = 3, /* core only */
-	RST_DBG = 4 /* debugger logic only */
+	RST_DBG = 4, /* debugger logic only */
+	RST_SYS = 5 /* system */
 } reset_mode_t;
 
 struct target_info {
@@ -179,11 +181,19 @@ struct target_info {
 	uint8_t reset_mode;
 
 	ice_mem_addr_t start_addr;
-	ice_mem_addr_t work_addr;
-	ice_mem_size_t work_size;
 
 	target_sym_map_t sym;
-	target_setup_script_t jtag_setup;
+
+	/* this callbacak allows to configure the JTACG chain
+	   for a specific target. This is called once 
+	   before to the ICE configuration */
+	target_config_t pre_config;
+
+	/* this callbacak allows dinamic configuration of the
+	   target prior to connection. This is called once
+	   after to the ICE configuration */
+	target_config_t pos_config;
+
 	target_script_t on_init;
 	target_script_t on_halt;
 	target_script_t on_run;

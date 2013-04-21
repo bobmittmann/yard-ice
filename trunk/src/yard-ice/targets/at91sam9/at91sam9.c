@@ -18,13 +18,30 @@
  */
 
 /** 
- * @file .c
+ * @file at91sam9.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include "target/at91sam9.h"
+
+#include <at91sam/at91sam_ckgr.h>
+#include <at91sam/at91sam_pmc.h>
+#include <at91sam/at91sam_rstc.h>
+#include <at91sam/at91sam_wdtc.h>
+#include <at91sam/at91sam_smc.h>
+#include <at91sam/at91sam_dbgu.h>
+#include <at91sam/at91sam_matrix.h>
+#include <at91sam/at91sam_sdram.h>
+#include <at91sam/at91sam_ccfg.h>
+#include <at91sam/at91sam_pio.h>
+
 #include <sys/os.h>
+
+#include "armice.h"
+#include "target/at91sam9.h"
+#include "script.h"
+
+#include "dbglog.h"
 
 /*
  * System Controller Peripherals Base Addresses 

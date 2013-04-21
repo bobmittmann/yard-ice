@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file jtag_arm.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file var.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
