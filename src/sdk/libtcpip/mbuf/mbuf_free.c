@@ -17,10 +17,10 @@ int mbuf_free(void * __p)
 	struct mbuf * p = (struct mbuf *)__p; 
 
 #ifdef DEBUG
-	if (!is_mbuf(__p)) {
-		DCC_LOG1(LOG_WARNING, "invalid mbuf: 0x%08x", (int)p);
-		return -1;
-	}
+//	if (!is_mbuf(__p)) {
+//		DCC_LOG1(LOG_WARNING, "invalid mbuf: 0x%08x", (int)p);
+//		return -1;
+//	}
 #endif
 
 	DCC_LOG1(LOG_INFO, "p=0x%05x", (int)p);

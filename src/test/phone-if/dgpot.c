@@ -76,9 +76,8 @@
 #define DGPOT_CHIPS 2
 
 struct dgpot_drv {
-	int32_t event;
+	int32_t flag;
 	uint32_t lcur;
-	uint32_t busy;
 	uint8_t pos[DGPOT_CHIPS];
 } dgpot;
 
@@ -96,10 +95,8 @@ void stm32f_tim1_up_tim16_isr(void)
 	stm32f_gpio_set(DGPOT_NCS0);
 	stm32f_gpio_set(DGPOT_NCS1);
 
-	dgpot.busy = 0;
-
-	DCC_LOG1(LOG_TRACE, "__thinkos_ev_raise(%d)", dgpot.event);
-	__thinkos_ev_raise(dgpot.event);
+	DCC_LOG1(LOG_TRACE, "__thinkos_ev_raise(%d)", dgpot.flag);
+	__thinkos_flag_signal(dgpot.flag);
 }
 
 #define TIMER_CLK_FREQ 1800000
@@ -170,14 +167,10 @@ unsigned int dgpot_set(unsigned int cs, int pos)
 	if (diff == 0)
 		return pos;
 
-	__thinkos_critical_level(DGPOT_IRQ_PRIORITY);
-	while (dgpot.busy) {
-		DCC_LOG(LOG_TRACE, "wait...");
-		__thinkos_critical_ev_wait(dgpot.event, DGPOT_IRQ_PRIORITY);
-		DCC_LOG(LOG_TRACE, "done.");
-	}
-	dgpot.busy = 1;
-	__thinkos_critical_exit();
+	DCC_LOG(LOG_TRACE, "wait...");
+	thinkos_flag_wait(dgpot.flag);
+	DCC_LOG(LOG_TRACE, "done.");
+	__thinkos_flag_clr(dgpot.flag);
 
 	DCC_LOG2(LOG_TRACE, "cs=%d pos=%d", cs, pos);
 
@@ -198,7 +191,7 @@ unsigned int dgpot_set(unsigned int cs, int pos)
 
 	tim->ccmr1 = TIM_OC1M_TOGGLE | TIM_OC1PE;
 
-	/* Generate an update event to start */
+	/* Generate an update flag to start */
 	tim->egr = TIM_UG;
 
 	tim->cnt = dgpot.lcur;
@@ -228,10 +221,8 @@ void dgpot_init(void)
 	stm32f_gpio_set(DGPOT_NCS0);
 	stm32f_gpio_set(DGPOT_NCS1);
 
-	dgpot.event = thinkos_ev_alloc();
-	DCC_LOG1(LOG_TRACE, "event=%d", dgpot.event);
-
-	dgpot.busy = 0;
+	dgpot.flag = thinkos_flag_alloc();
+	DCC_LOG1(LOG_TRACE, "flag=%d", dgpot.flag);
 
 	dgpot_timer_init();
 

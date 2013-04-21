@@ -34,7 +34,7 @@ DAVINCI_CFILES = davinci.c dm365.c dm365-nand.c vpm-dm36x.c
 
 STELLARIS_CFILES = stellaris.c lm3s6965.c
 
-STM32F_CFILES = stm32f.c stm32f205.c stm32f207.c
+STM32F_CFILES = stm32f.c stm32f10x.c stm32f2xx.c stm32f205.c stm32f207.c
 
 CFILES = target_db.c dummy.c \
 		$(addprefix at91x40/,$(AT91X40_CFILES)) \

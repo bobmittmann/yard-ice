@@ -115,7 +115,7 @@ static int16_t adc_vbat;
 static int16_t adc_temp;
 
 #if (ENABLE_ADC_SYNC)
-static uint8_t ev_adc_dma;
+static int adc_dma_sync;
 #endif
 
 /***********************************************************
@@ -157,7 +157,7 @@ void stm32f_adc_init(void)
 
 #if (ENABLE_ADC_SYNC)
 	/* synchronization event */
-	ev_adc_dma = thinkos_ev_alloc(); 
+	adc_dma_sync = thinkos_flag_alloc(); 
 #endif
 	
 	/* Set DMA to very low priority */
@@ -193,7 +193,7 @@ void stm32f_dma2_stream0_isr(void)
 	adc_temp = (data[2] * ADC_TEMP_SENS_SCALE) / 4096;
 
 #if (ENABLE_ADC_SYNC)
-	__thinkos_ev_raise(ev_adc_dma);
+	__thinkos_flag_signal(adc_dma_sync);
 #endif
 }
 
@@ -218,7 +218,8 @@ int32_t supv_vbat_get(void)
 #if (ENABLE_ADC_SYNC)
 void supv_sync(void)
 {
-	__thinkos_ev_wait(ev_adc_dma);
+	thinkos_flag_clr(adc_dma_sync);
+	thinkos_flag_wait(adc_dma_sync);
 }
 #endif
 

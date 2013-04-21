@@ -41,8 +41,51 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <jtag.h>
+#include <trace.h>
+
+#include <yard-ice/drv.h>
+
+#include "module.h"
+#include "debugger.h"
+#include "gdb_rspd.h"
+#include "tftpd.h"
+#include "dcc_tcp.h"
+#include "version.h"
+#include "vcom.h"
+#include "jtag.h"
+#include "dbglog.h" 
+#include "nand.h" 
+
+#ifndef ENABLE_NETWORK
+#define ENABLE_NETWORK 0
+#endif
+
 void tcpip_init(void);
 
+const struct file stm32f_uart_file = {
+	.data = STM32F_UART5, 
+	.op = &stm32f_usart_fops 
+};
+
+void stdio_init(void)
+{
+	stderr = (struct file *)&stm32f_uart_file;
+	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
+	stdin = stdout;
+}
+
+int supervisor_task(void)
+{
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	for (;;) {
+		trace_fprint(stdout, TRACE_FLUSH);
+		thinkos_sleep(250);
+	}
+}
+
+#if ENABLE_NETWORK
 int network_config(void)
 {
 	struct ifnet * ifn;
@@ -50,21 +93,24 @@ int network_config(void)
 	in_addr_t netmask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
 	char s[64];
-//	char * env;
+	char * env;
 	char * ip;
 	int dhcp;
 
-//	if ((env=getenv("IPCFG")) == NULL) {
+	DCC_LOG(LOG_TRACE, "tcpip_init().");
+	tcpip_init();
+
+	if ((env = getenv("IPCFG")) == NULL) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
 		strcpy(s, "192.168.1.22 255.255.255.0 192.168.1.254 0");
 		/* set the default configuration */
-//		setenv("IPCFG", s, 1);
-//	} else {
-//		strcpy(s, env);
-//	}
+		setenv("IPCFG", s, 1);
+	} else {
+		strcpy(s, env);
+	}
 
-//	printf("IPCFG='%s'\n", s);
+	printf("IPCFG='%s'\n", s);
 
 	printf("ipcfg=%s\n", s);
 	ip = strtok(s, " ,");
@@ -115,44 +161,125 @@ int network_config(void)
 
 	return 0;
 }
+#endif
 
-int main(int argc, char ** argv)
+void debugger_init(void);
+
+int init_debugger(void) 
 {
-	int i;
+#if 0
+	struct target_info * target;
+#endif
 
-	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
-	cm3_udelay_calibrate();
-	udelay(100000);
-	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
-	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
-	udelay(100000);
+	debugger_init();
 
-	DCC_LOG(LOG_TRACE, "thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+#if 0
+	target = target_lookup(getenv("TARGET"));
 
-	DCC_LOG(LOG_TRACE, "tcpip_init().");
-	tcpip_init();
+	if (target == NULL) {
+		target = target_first();
+		printf("WARNING: invalid target.\n");
+		printf("Fallback to default: %s.\n", target->name);
+	};
 
-	DCC_LOG(LOG_TRACE, "network_config().");
-	network_config();
+	printf("* target select...\n");
 
-	printf("\n");
-	printf("---------------------------------------------------------\n");
-	printf(" YAR-ICE\n");
-	printf("---------------------------------------------------------\n");
-	printf("\n");
-
-
-	for (i = 0; i < 1000; i++) {
-		DCC_LOG1(LOG_TRACE, "%d.", i);
-		thinkos_sleep(2000);
+	/* TODO: ice driver selection */
+	if (target_configure(stdout, target, 1) < 0) {
+		printf("ERROR: target_configure()!\n");
+		return 0;
 	}
 
-	printf("---------------------------------------------------------\n");
-	delay(10);
-
+	printf("* target: %s [%s-%s-%s %s-%s-%s]\n", target->name, 
+		   target->arch->name, target->arch->model, target->arch->vendor,
+		   target->arch->cpu->family, target->arch->cpu->model, 
+		   target->arch->cpu->vendor);
+#endif
 	return 0;
 }
 
+uint32_t supervisor_stack[256];
 
+int console_shell(void);
+void telnet_shell(void);
+int sys_start(void);
+
+int main(int argc, char ** argv)
+{
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
+	cm3_udelay_calibrate();
+	trace_init();
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(1));
+	stdio_init();
+
+//	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
+//						  supervisor_stack, sizeof(supervisor_stack), 
+//						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+
+#if ENABLE_NETWORK
+	DCC_LOG(LOG_TRACE, "network_config().");
+	network_config();
+#endif
+
+	DCC_LOG(LOG_TRACE, "modules_init().");
+	modules_init();
+
+	printf("* Starting system module ...");
+	DCC_LOG(LOG_TRACE, "sys_start().");
+	sys_start();
+	printf("ok\n");
+
+	printf("* Initializing JTAG module ...");
+	if (jtag_start() < 0) {
+		printf("fail!\n");
+		return 0;
+	}
+	printf("ok\n");
+
+#if (ENABLE_NAND)
+	printf("* Initializing NAND module...");
+	if (mod_nand_start() < 0) {
+		printf("fail!\n");
+		return 0;
+	}
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_TELNET
+	printf("* starting TELNET server ... ");
+	telnet_shell();
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_TFTP
+	printf("* starting TFTP server ... ");
+	tftpd_start();
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_GDB
+	printf("* starting GDB daemon ... ");
+	gdb_rspd_start();
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_COMM
+	printf("* starting COMM daemon ... ");
+	comm_tcp_start(&debugger.comm);
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_VCOM
+	printf("* starting VCOM daemon ... ");
+	vcom_start();
+	printf("ok\n");
+#endif
+
+	__os_sleep(150);
+	init_debugger();
+
+	return console_shell();
+}
 

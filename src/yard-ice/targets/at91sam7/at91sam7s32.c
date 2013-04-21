@@ -18,12 +18,13 @@
  */
 
 /** 
- * @file .c
+ * @file at91sam7s32.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
 #include "target/at91sam7.h"
+#include "armice.h"
 
 const struct target_arch at91sam7s32_arch = {
 	.name = "AT91SAM7S32",

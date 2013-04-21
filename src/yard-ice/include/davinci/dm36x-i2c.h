@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file dm36x-i2c.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

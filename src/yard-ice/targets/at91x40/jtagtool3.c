@@ -18,12 +18,17 @@
  */
 
 /** 
- * @file .c
+ * @file jtagtool3.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#include <arch/at91x40.h>
+
+#include "target.h"
+#include "target/arm.h"
 #include "target/at91x40.h"
+#include "armice.h"
 
 int jtagtool3_on_init(FILE * f, const struct ice_drv * ice, 
 					 ice_mem_entry_t * mem)
@@ -153,7 +158,6 @@ const struct target_info jtagtool3 = {
 
 	.start_addr = 0x1010000,
 
-	.jtag_setup = (target_setup_script_t)NULL,
 	.on_init = (target_script_t)jtagtool3_on_init,
 	.on_halt = (target_script_t)at91x40_on_halt,
 	.on_run = (target_script_t)at91x40_on_run,

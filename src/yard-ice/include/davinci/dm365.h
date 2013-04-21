@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file dm365.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

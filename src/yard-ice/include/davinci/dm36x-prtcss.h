@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file dm36x-prtcss.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

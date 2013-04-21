@@ -63,8 +63,8 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm)
 			break;
 		}
 
-		DCC_LOG3(LOG_TRACE, "%I:%d recv: %d", tp->t_faddr, 
-				 ntohs(tp->t_fport), len);
+//		DCC_LOG3(LOG_TRACE, "%I:%d recv: %d", tp->t_faddr, 
+//				 ntohs(tp->t_fport), len);
 
 #if 0
 		ptr = net_buf;
@@ -115,7 +115,7 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
 		tcp_bind(mux, INADDR_ANY, htons(port));
 
 		if (tcp_listen(mux, 1) != 0) {
-			DCC_LOG1(LOG_WARNING, "<%d> tcp_listen()", id);
+			DCC_LOG(LOG_WARNING, "tcp_listen() failed!");
 			break;
 		}
 
@@ -126,8 +126,8 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
 
 		tcp_close(mux);
 
-		DCC_LOG2(LOG_TRACE, "%I:%d accepted.", 
-				 tp->t_faddr, ntohs(tp->t_fport));
+//		DCC_LOG2(LOG_TRACE, "%I:%d accepted.", 
+//				 tp->t_faddr, ntohs(tp->t_fport));
 	
 		ice_comm_open(comm);
 
@@ -142,8 +142,8 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
 			DCC_LOG(LOG_ERROR, "__os_thread_create() fail!"); 
 			ice_comm_close(comm);
 			tcp_close(tp);
-			DCC_LOG2(LOG_TRACE, "%I:%d closed.", 
-					 tp->t_faddr, ntohs(tp->t_fport));
+//			DCC_LOG2(LOG_TRACE, "%I:%d closed.", 
+//					 tp->t_faddr, ntohs(tp->t_fport));
 			break;
 		}
 
@@ -160,15 +160,15 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
 			}
 
 			if ((n = tcp_send(tp, buf, n, 0)) < 0) {
-				DCC_LOG2(LOG_TRACE, "%I:%d error.", 
-						 tp->t_faddr, ntohs(tp->t_fport));
+//				DCC_LOG2(LOG_TRACE, "%I:%d error.", 
+//						 tp->t_faddr, ntohs(tp->t_fport));
 				break;
 			}
 		} 
 
 		ice_comm_close(comm);
 
-		DCC_LOG2(LOG_TRACE, "%I:%d closed.", tp->t_faddr, ntohs(tp->t_fport));
+//		DCC_LOG2(LOG_TRACE, "%I:%d closed.", tp->t_faddr, ntohs(tp->t_fport));
 
 		tcp_close(tp);
 

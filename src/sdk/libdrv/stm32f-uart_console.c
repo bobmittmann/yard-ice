@@ -23,6 +23,10 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
@@ -39,6 +43,18 @@
 #include <sys/dcclog.h>
 
 #if (THINKOS_FLAG_MAX > 0) && (THINKOS_ENABLE_FLAG_ALLOC)
+
+#ifndef ENABLE_ONLCR
+#define ENABLE_ONLCR 1
+#endif
+
+#ifndef ENABLE_ICRNL
+#define ENABLE_ICRNL 0
+#endif
+
+#ifndef ENABLE_INLCR
+#define ENABLE_INLCR 0
+#endif
 
 #ifndef ENABLE_UART_TX_BLOCK
 #define ENABLE_UART_TX_BLOCK 1
@@ -123,14 +139,14 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 	int n = 0;
 	int c;
 
-	DCC_LOG(LOG_INFO, "read");
+	DCC_LOG(LOG_MSG, "read");
 
 	__thinkos_flag_clr(dev->rx_flag);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
-		DCC_LOG(LOG_INFO, "wait...");
+		DCC_LOG(LOG_MSG, "wait...");
 		thinkos_flag_wait(dev->rx_flag);
 		__thinkos_flag_clr(dev->rx_flag);
-		DCC_LOG(LOG_INFO, "wakeup.");
+		DCC_LOG(LOG_MSG, "wakeup.");
 	}
 
 	do {
@@ -138,13 +154,19 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 			break;
 		}
 		c = uart_fifo_get(&dev->rx_fifo);
+#if ENABLE_ICRNL
 		if (c == '\r') 
 			c = '\n';
+#endif
+#if ENABLE_INLCR
+		if (c == '\n') 
+			c = '\r';
+#endif
 		cp[n++] = c;
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 
 
-	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
+	DCC_LOG2(LOG_MSG, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
 }
@@ -155,10 +177,10 @@ static void uart_putc(struct uart_console_dev * dev, int c)
 	__thinkos_flag_clr(dev->tx_flag);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_INFO, "wait...");
+		DCC_LOG(LOG_MSG, "wait...");
 		thinkos_flag_wait(dev->tx_flag);
 		__thinkos_flag_clr(dev->tx_flag);
-		DCC_LOG(LOG_INFO, "wakeup");
+		DCC_LOG(LOG_MSG, "wakeup");
 	}
 #else
 	if (uart_fifo_is_full(&dev->tx_fifo))
@@ -176,7 +198,7 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	int c;
 	int n;
 
-	DCC_LOG1(LOG_INFO, "len=%d", len);
+	DCC_LOG1(LOG_MSG, "len=%d", len);
 
 #if ENABLE_UART_TX_MUTEX
 	 thinkos_mutex_lock(dev->tx_mutex); 
@@ -184,10 +206,13 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 
 	for (n = 0; n < len; n++) {
 		c = cp[n];
+
+#if ENABLE_ONLCR
 		if (c == '\n') {
-			DCC_LOG(LOG_INFO, "CR");
+			DCC_LOG(LOG_MSG, "CR");
 			uart_putc(dev, '\r');
 		}
+#endif
 		uart_putc(dev, c);
 	}
 
@@ -195,7 +220,7 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	thinkos_mutex_unlock(dev->tx_mutex); 
 #endif
 
-	DCC_LOG1(LOG_INFO, "cnt=%d", n);
+	DCC_LOG1(LOG_MSG, "cnt=%d", n);
 
 	return n;
 }
@@ -217,7 +242,7 @@ void UART_ISR(void)
 	sr = uart->sr & uart->cr1;
 
 	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_INFO, "RXNE");
+		DCC_LOG(LOG_MSG, "RXNE");
 		c = uart->dr;
 		if (!uart_fifo_is_full(&dev->rx_fifo)) { 
 			uart_fifo_put(&dev->rx_fifo, c);
@@ -230,14 +255,14 @@ void UART_ISR(void)
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE");
+		DCC_LOG(LOG_MSG, "IDLE");
 		c = uart->dr;
 		(void)c;
 		__thinkos_flag_signal(dev->rx_flag);
 	}
 
 	if (sr & USART_TXE) {
-		DCC_LOG(LOG_INFO, "TXE");
+		DCC_LOG(LOG_MSG, "TXE");
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
@@ -289,7 +314,7 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	stm32f_gpio_af(UART_TX, GPIO_AF8);
 #endif
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_MSG, "...");
 	dev->rx_flag = thinkos_flag_alloc(); 
 #if ENABLE_UART_TX_BLOCK
 	dev->tx_flag = thinkos_flag_alloc(); 
@@ -365,7 +390,7 @@ int uart_console_read(struct uart_console_ctrl * ctrl, char * buf,
 	uint32_t st;
 	unsigned int cnt;
 
-	DCC_LOG(LOG_INFO, "read");
+	DCC_LOG(LOG_MSG, "read");
 
 	if (ctrl->rx.s->cr & DMA_EN) {
 		DCC_LOG(LOG_TRACE, "DMA enabled");
@@ -383,9 +408,9 @@ int uart_console_read(struct uart_console_ctrl * ctrl, char * buf,
 
 	/* wait for the DMA transfer to complete */
 	while (((st = ctrl->dma->lisr) & DMA_TCIF0) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
+		DCC_LOG(LOG_MSG, "wait...");
 		__thinkos_irq_wait(ctrl->rx.irq);
-		DCC_LOG(LOG_INFO, "wakeup.");
+		DCC_LOG(LOG_MSG, "wakeup.");
 	} 
 
 	/* clear the the DMA stream trasfer complete flag */
@@ -418,7 +443,7 @@ int uart_console_write(struct uart_console_ctrl * ctrl, const void * buf,
 
 	/* clear the TC bit */
 	if ((sr = ctrl->uart->sr) & USART_TC) {
-		DCC_LOG(LOG_INFO, "TC=1");
+		DCC_LOG(LOG_MSG, "TC=1");
 	}
 
 	/* enable DMA */
@@ -428,9 +453,9 @@ int uart_console_write(struct uart_console_ctrl * ctrl, const void * buf,
 
 	/* wait for the DMA transfer to complete */
 	while (((st = ctrl->dma->hisr) & DMA_TCIF7) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
+		DCC_LOG(LOG_MSG, "wait...");
 		__thinkos_irq_wait(ctrl->tx.irq);
-		DCC_LOG(LOG_INFO, "wakeup");
+		DCC_LOG(LOG_MSG, "wakeup");
 	} 
 
 	/* clear the the DMA stream trasfer complete flag */
@@ -439,7 +464,7 @@ int uart_console_write(struct uart_console_ctrl * ctrl, const void * buf,
 	/* Number of data items transfered... */
 	cnt = len - ctrl->tx.s->ndtr;
 	
-	DCC_LOG1(LOG_INFO, "cnt=%d", cnt);
+	DCC_LOG1(LOG_MSG, "cnt=%d", cnt);
 	return cnt;
 }
 

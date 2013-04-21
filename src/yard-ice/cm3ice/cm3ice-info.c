@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cm3ice-info.c.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -82,6 +82,22 @@ void print_base(FILE * f, uint32_t base)
 	fprintf(f, ", Present=%s\n", BASE_ENTRY_PRESENT(base) ? "Yes" : "No");
 }
 
+
+static bool dp_stickyerr_check(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t stat;
+
+	stat = jtag_dp_ctrl_stat_get(tap);
+
+	if (stat & DP_STICKYERR) {
+		fprintf(f, " * clearing STICKYERR!\n");
+		/* clear stick error */
+		jtag_dp_ctrl_set(tap, DP_STICKYERR);
+		return true;
+	}
+
+	return false;
+}
 
 
 #define MEM_AP_COMPONENT_MAX 16
@@ -283,7 +299,6 @@ int mem_ap_topology_show(FILE * f, mem_ap_list_t * lst)
 		} else {
 			class = ID_CLASS(component_id);
 			peripheral_id = cmp->peripheral_id;
-			class = class;
 
 			fprintf(f, "PN=%03x", (int)PART_NUMBER(peripheral_id));
 			fprintf(f, ", Rev=%d", (int)REVISION(peripheral_id));
@@ -451,16 +466,21 @@ void dap_info(FILE * f, jtag_tap_t * tap)
 	fprintf(f, " * DP Ctrl/Stat = 0x%08x:\n", stat);
 	print_stat(f, stat);
 	print_ctrl(f, stat);
-
-	jtag_mem_ap_reg_rd(tap, ADI_AP_CSW, &csw);
-	fprintf(f, " * AP CSW = 0x%08x:\n", csw);
-	stat = jtag_dp_ctrl_stat_get(tap);
 	if (stat & DP_STICKYERR) {
-		print_stat(f, stat);
 		/* clear stick error */
 		jtag_dp_ctrl_set(tap, DP_STICKYERR);
-	} else
+	} 
+
+	jtag_mem_ap_reg_rd(tap, ADI_AP_CSW, &csw);
+	stat = jtag_dp_ctrl_stat_get(tap);
+	if (stat & DP_STICKYERR) {
+		fprintf(f, " * AP CSW acess error!\n");
+		/* clear stick error */
+		jtag_dp_ctrl_set(tap, DP_STICKYERR);
+	} else {
+		fprintf(f, " * AP CSW = 0x%08x:\n", csw);
 		print_csw(f, csw);
+	}
 
 	jtag_mem_ap_reg_rd(tap, ADI_AP_TAR, &tar);
 	fprintf(f, " * AP TAR = 0x%08x\n", tar);
@@ -469,14 +489,15 @@ void dap_info(FILE * f, jtag_tap_t * tap)
 	fprintf(f, " * AP CFG = 0x%08x\n", cfg);
 
 	jtag_mem_ap_reg_rd(tap, ADI_AP_IDR, &idr);
-	fprintf(f, " * AP IDR = 0x%08x\n", idr);
 	stat = jtag_dp_ctrl_stat_get(tap);
 	if (stat & DP_STICKYERR) {
-		print_stat(f, stat);
+		fprintf(f, " * AP IDR acess error!\n");
 		/* clear stick error */
 		jtag_dp_ctrl_set(tap, DP_STICKYERR);
-	} else
+	} else {
+		fprintf(f, " * AP IDR = 0x%08x\n", idr);
 		print_idr(f, idr);
+	}
 }
 
 void mem_ap_info(FILE * f, jtag_tap_t * tap)
@@ -549,6 +570,7 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which)
 		break;
 	default:
 		fprintf(f, "== Cortex M3 ICE ==\n");
+		dp_stickyerr_check(f, tap);
 		cpu_info(f, tap);
 		dcb_info(f, tap);
 		fault_info(f, tap);

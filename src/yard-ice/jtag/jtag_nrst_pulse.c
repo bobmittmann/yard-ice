@@ -28,6 +28,7 @@
 #include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <jtag.h>
@@ -40,9 +41,9 @@ int jtag_nrst_pulse(unsigned int ms)
 {
 	DCC_LOG1(LOG_INFO, "%d ms", ms);
 
-	jtag_nrst(1);
+	jtag_nrst(true);
 	__os_sleep(ms);
-	jtag_nrst(0);
+	jtag_nrst(false);
 
 	return JTAG_OK;
 }

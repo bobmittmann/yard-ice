@@ -216,6 +216,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	if (init->opt.id >= THINKOS_THREADS_MAX) {
 		th = thinkos_alloc_hi(&thinkos_rt.th_alloc, THINKOS_THREADS_MAX);
 		DCC_LOG2(LOG_TRACE, "thinkos_alloc_hi() %d -> %d.", init->opt.id, th);
+		DCC_LOG1(LOG_TRACE, "thinkos_rt.th_alloc=0x%08x", thinkos_rt.th_alloc);
 	} else {
 		/* Look for the next available slot */
 		th = thinkos_alloc_lo(&thinkos_rt.th_alloc, init->opt.id);
@@ -299,7 +300,7 @@ void thinkos_sleep_svc(int32_t * arg)
 	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
 #endif
 
-	DCC_LOG2(LOG_INFO, "<%d> waiting %d milliseconds...", self, ms);
+	DCC_LOG2(LOG_MSG, "<%d> waiting %d milliseconds...", self, ms);
 
 	/* wait for event */
 	__thinkos_wait();

@@ -46,24 +46,24 @@ struct stm32f_serial_dev {
 	struct {
 		int irq;
 		struct stm32f_dma_stream * s;
+		int flag;
 	} tx;
 	struct {
 		int irq;
 		struct stm32f_dma_stream * s;
 		uint8_t buf[2][SERIAL_RX_BUF_LEN];
 		uint32_t idx;
+		int flag;
 	} rx;
 
-	int8_t rx_ev;
-	int8_t tx_ev;
 };
 
 int stm32f_serial_init(struct stm32f_serial_dev * dev)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 
-	dev->rx_ev = thinkos_ev_alloc();
-	dev->tx_ev = thinkos_ev_alloc();
+	dev->rx.flag = thinkos_flag_alloc();
+	dev->tx.flag = thinkos_flag_alloc();
 
 	DCC_LOG(LOG_TRACE, "...");
 	stm32f_usart_init(dev->uart);
@@ -127,10 +127,6 @@ void stm32f_dma2_stream0_isr(void)
 	/* get a pointer to the last filled DMA transfer buffer */
 //	data = adc_buf[adc_dma_cnt++ & 1];
 
-
-#if (ENABLE_ADC_SYNC)
-	__thinkos_ev_raise(ev_adc_dma);
-#endif
 }
 
 

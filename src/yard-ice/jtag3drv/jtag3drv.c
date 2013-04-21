@@ -139,7 +139,7 @@ int jtag_rtck_disable(void)
 	return JTAG_OK;
 }
 
-int jtag_trst(int assert)
+int jtag_trst(bool assert)
 {
 	DCC_LOG1(LOG_TRACE, "%s", assert ? "LOW" : "HIGH");
 	jtag3ctrl_trst(assert);
@@ -147,7 +147,7 @@ int jtag_trst(int assert)
 	return JTAG_OK;
 }
 
-int jtag_nrst(int assert)
+int jtag_nrst(bool assert)
 {
 	DCC_LOG1(LOG_TRACE, "%s", assert ? "LOW" : "HIGH");
 

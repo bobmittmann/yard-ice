@@ -29,10 +29,8 @@
 #ifdef CONFIG_H
 #include "config.h"
 #endif
-#include <sys/dcclog.h>
 
 #include <sys/stm32f.h>
-
 #include <sys/ethernet.h>
 
 #include <stdint.h>
@@ -43,6 +41,8 @@
 
 #include <tcpip/ifnet.h>
 #include <sys/os.h>
+
+#include <sys/dcclog.h>
 
 #ifndef STM32F_ETH_PAYLOAD_MAX
 #define STM32F_ETH_PAYLOAD_MAX 1500
@@ -66,13 +66,13 @@ struct stm32f_eth_drv {
 	struct {
 		uint32_t buf[STM32F_ETH_RX_BUF_SIZE / sizeof(uint32_t)];
 		struct rxdma_enh_desc desc;
-		int ev;
+		int flag;
 	} rx;
 	struct {
 		struct eth_hdr hdr;
 		uint32_t buf[STM32F_ETH_TX_BUF_SIZE / sizeof(uint32_t)];
 		struct txdma_enh_desc desc;
-		int ev;
+		int flag;
 	} tx;
 	uint32_t stack[STM32F_ETH_INPUT_STACK_SIZE / sizeof(uint32_t)];
 } __attribute__ ((aligned (16)));

@@ -18,13 +18,12 @@
  */
 
 /** 
- * @file .c
+ * @file stm32f205.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
 #include "target/stm32f.h"
-#include <stdlib.h>
 
 
 const struct target_arch stm32f205_arch = {
@@ -39,7 +38,7 @@ const struct ice_mem_entry stm32f205_mem[] = {
 	{ .name = "flash", .flags = MEM_32_BITS,
 		.addr = { .base = 0x00000000, .offs = 0 }, 
 		.blk = {.count = 256, .size = MEM_KiB(1)},
-		.op = &flash_stm32f_oper
+		.op = &flash_stm32f2_oper
 	},
 	{ .name = "sram", .flags = MEM_32_BITS,
 		.addr = { .base = 0x20000000, .offs = 0 }, 
@@ -55,7 +54,6 @@ const struct ice_mem_entry stm32f205_mem[] = {
 const struct target_info stm32f205 = {
 	.name = "STM32F205",
 	.arch = &stm32f205_arch,
-//	.cpu = &cortex_m3_cpu,
 	.mem = (struct ice_mem_entry *)stm32f205_mem,
 
 	.ice_drv = &cm3ice_drv,
@@ -87,7 +85,7 @@ const struct target_info stm32f205 = {
 
 	.start_addr = 0x00000000,
 
-	.on_init = (target_script_t)stm32f_on_init,
+	.on_init = (target_script_t)stm32f2xx_on_init,
 	.on_halt = (target_script_t)NULL,
 	.on_run = NULL,
 	.reset_script = (target_script_t)cm3_reset,

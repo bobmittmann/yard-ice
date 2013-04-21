@@ -809,12 +809,13 @@ int armice_configure(armice_ctrl_t * ctrl, jtag_tap_t * tap,
 
 	arm_pn_decode(idcode, &ctrl->pn);
 
-	if (ctrl->pn.device == 0)
+	if (ctrl->pn.device == 0) {
 		DCC_LOG2(LOG_TRACE, "ARM%d%s", ctrl->pn.family, 
 				 arm_capability_str(&ctrl->pn));
-	else
+	} else {
 		DCC_LOG3(LOG_TRACE, "ARM%d%02x%s", ctrl->pn.family, 
 				 ctrl->pn.device, arm_capability_str(&ctrl->pn));
+	}
 
 	if (ctrl->pn.family == 7) {
 		/* configure the driver */

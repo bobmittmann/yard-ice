@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file hexdump.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

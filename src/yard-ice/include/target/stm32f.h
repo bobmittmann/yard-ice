@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file stm32.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -32,17 +32,34 @@
 #include <target.h>
 #include <target/cm3.h>
 
+extern struct ice_mem_entry stm32f_mem[];
+
+extern const struct ice_mem_entry stm32f20xxb_mem[];
+
+extern const struct ice_mem_entry stm32f20xxc_mem[];
+
+extern const struct ice_mem_entry stm32f20xxe_mem[];
+
+extern const struct ice_mem_oper flash_stm32f1_oper;
+
+extern const struct ice_mem_oper flash_stm32f2_oper;
+
 extern const struct cm3ice_cfg stm32f_cfg;
 
-const struct target_arch stm32f_arch;
+extern const struct target_arch stm32f_arch;
 
 extern const struct target_info stm32f205;
 
+extern const struct target_info stm32f10x;
+
 extern const struct target_info stm32f207ve;
 
-const struct ice_mem_oper flash_stm32f_oper;
+extern const struct target_info stm32f;
 
-int stm32f_on_init(FILE * f, const ice_drv_t * ice, 
+int stm32f1xx_on_init(FILE * f, const ice_drv_t * ice, 
+					 ice_mem_entry_t * mem);
+
+int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice, 
 					 ice_mem_entry_t * mem);
 
 #ifdef __cplusplus

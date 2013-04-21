@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file armv7m-dbg.c.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

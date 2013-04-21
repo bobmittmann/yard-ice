@@ -55,6 +55,7 @@ int cmd_detect(FILE * f, int argc, char ** argv)
 
 	fprintf(f, " - Probing the JTAG scan chain...\n");
 
+	insn_tap_reset(5, JTAG_TAP_RESET);
 
 	if (jtag_chain_probe(irlen, 32, &cnt) != JTAG_OK) {
 		fprintf(f, "jtag_chain_probe() fail!\n");

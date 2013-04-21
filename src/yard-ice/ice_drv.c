@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file ice_drv.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -26,7 +26,6 @@
 
 
 #include <string.h>
-#include <stdlib.h>
 
 #include "target.h"
 #include "ice_drv.h"

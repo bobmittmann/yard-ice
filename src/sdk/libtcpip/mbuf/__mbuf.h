@@ -35,7 +35,7 @@
 #define MBUF_DATA_SIZE (__MBUF_SIZE - 4)
 
 #ifndef MBUF_POOL_SIZE
-#define MBUF_POOL_SIZE 32
+#define MBUF_POOL_SIZE 128
 #endif
 
 #ifndef ENABLE_MBUF_STATS

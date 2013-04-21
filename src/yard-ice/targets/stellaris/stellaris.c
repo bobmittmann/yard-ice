@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file stellaris.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -190,8 +190,6 @@ int stellaris_flash_write(cm3ice_ctrl_t * ctrl, uint32_t base,
 
 const struct cm3ice_cfg stellaris_cfg = {
 	.endianness = LITTLE_ENDIAN,
-	.work_addr = 0x20000000 + MEM_KiB(64) - MEM_KiB(4),
-	.work_size = MEM_KiB(4),
 };
 
 /*

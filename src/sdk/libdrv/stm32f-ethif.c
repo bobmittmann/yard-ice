@@ -45,7 +45,7 @@
 #include <thinkos_irq.h>
 
 
-#if THINKOS_ENABLE_EVENT_ALLOC && (THINKOS_IRQ_MAX > 0)
+#if THINKOS_ENABLE_FLAG_ALLOC
 
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
@@ -72,7 +72,6 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	hdr = (struct eth_hdr *)desc->rbap1;
 
 	for (;;) {
-		__thinkos_critical_enter();
 		for (;;) {
 			st = desc->st;
 			if (st.es) {
@@ -82,10 +81,12 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 				break;
 			}
 			DCC_LOG(LOG_TRACE, "wait....");
-			__thinkos_ev_wait(drv->rx.ev);
+
+			thinkos_flag_wait(drv->rx.flag);
+			__thinkos_flag_clr(drv->rx.flag);
+
 			DCC_LOG(LOG_MSG, "wakeup....");
 		}
-		__thinkos_critical_exit();
 
 		len = st.fl;
 		DCC_LOG1(LOG_TRACE, "frame len=%d", len);
@@ -188,7 +189,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d", mtu);
 
-	DCC_LOG(LOG_TRACE, "MAC conficuration ...");
+	DCC_LOG(LOG_TRACE, "MAC configuration ...");
 	/* Bit 25 - CRC stripping for Type frames */
 	/* Bit 14 - Fast Ethernet speed */
 	/* Bit 13 - Receive own disable */
@@ -223,8 +224,8 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* DMA receive descriptor list address */
 	eth->dmardlar = (uint32_t)rxdesc;
 	/* alloc a new event wait queue */
-	drv->rx.ev = __thinkos_ev_alloc(); 
-	DCC_LOG1(LOG_TRACE, "rx.ev=%d", drv->rx.ev);
+	drv->rx.flag = thinkos_flag_alloc(); 
+	DCC_LOG1(LOG_TRACE, "rx.flag=%d", drv->rx.flag);
 
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
 	/* setup the source address in the ethernet header 
@@ -245,8 +246,8 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* DMA receive descriptor list address */
 	eth->dmatdlar = (uint32_t)txdesc;
 	/* alloc a new event wait queue */
-	drv->tx.ev = __thinkos_ev_alloc(); 
-	DCC_LOG1(LOG_TRACE, "tx.ev=%d", drv->rx.ev);
+	drv->tx.flag = thinkos_flag_alloc(); 
+	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->rx.flag);
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	__os_thread_create((void *)stm32f_ethif_input, (void *)__if, 
@@ -309,7 +310,6 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	}
 
 	txdesc = &drv->tx.desc;
-	__thinkos_critical_enter();
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
@@ -330,10 +330,10 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 			break;
 		}
 		DCC_LOG(LOG_MSG, "wait....");
-		__thinkos_ev_wait(drv->tx.ev);
+		thinkos_flag_wait(drv->tx.flag);
+		__thinkos_flag_clr(drv->tx.flag);
 		DCC_LOG(LOG_MSG, "wakeup....");
 	}
-	__thinkos_critical_exit();
 
 	DCC_LOG7(LOG_MSG, "to: %02x:%02x:%02x:%02x:%02x:%02x (%d)",
 			 __dst[0], __dst[1], __dst[2], __dst[3], __dst[4], __dst[5], __len);
@@ -397,7 +397,7 @@ void stm32f_eth_isr(void)
 	dmasr = eth->dmasr;
 //	show_dma_status(dmasr);
 
-	DCC_LOG1(LOG_MSG, "DMASR=0x%08x", dmasr);
+	DCC_LOG1(LOG_TRACE, "DMASR=0x%08x", dmasr);
 
 	if (dmasr & ETH_RS) {
 		DCC_LOG(LOG_TRACE, "DMA RS");
@@ -405,13 +405,13 @@ void stm32f_eth_isr(void)
 		eth->dmaier &= ~ETH_RIE;
 		/* clear RS bit */
 	//	eth->dmasr = ETH_RS;
-		__thinkos_ev_raise(drv->rx.ev);
+		__thinkos_flag_signal(drv->rx.flag);
 	}
 
 	if (dmasr & ETH_TS) {
 		DCC_LOG(LOG_MSG, "DMA TS, stop transmission...");
 		eth->dmaomr &= ~ETH_ST;
-		__thinkos_ev_raise(drv->tx.ev);
+		__thinkos_flag_signal(drv->tx.flag);
 	}
 
 	if (dmasr & ETH_TBUS)
@@ -468,6 +468,8 @@ struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask)
 	if (ifn != NULL) {
 		ifn_ipv4_set(ifn, ip_addr, netmask);
 	}
+
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return ifn;
 }

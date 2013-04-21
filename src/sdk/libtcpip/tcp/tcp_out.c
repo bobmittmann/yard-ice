@@ -299,10 +299,11 @@ again:
 		
 		if ((idle || (tp->t_flags & TF_NODELAY)) && 
 			(len + off >= tp->snd_q.len)) {
-			if (idle)
+			if (idle) {
 				DCC_LOG(LOG_TRACE, "idle, send..."); 
-			else
+			} else  {
 				DCC_LOG(LOG_TRACE, "no delay, send..."); 
+			}
 			goto send;
 		} 
 
