@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .h
+ * @file jtag3drv.h
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -47,7 +47,7 @@
 	-- | 0x08200 |               |               |
 	-- +---------+---------------+---------------+
 	-- |  0x81ff |               |               |
-	-- |   ...   |  Invalid      | Descriptor    |
+	-- |   ...   | Invalid       | Descriptor    |
 	-- |         |               | Pointers      |
 	-- |  0x8000 |               |               |
 	-- +---------+---------------+---------------+ 
@@ -57,8 +57,8 @@
 	-- |  0x4100 |               |               |
 	-- +---------+---------------+---------------+
 	-- |  0x41ff |               |               |
-	-- |   ...   | Vector        | Vector        |
-	-- |         | Descriptors   | Descriptors   |
+	-- |   ...   | Invalid       | Vector        |
+	-- |         |               | Descriptors   |
 	-- |  0x4000 |               |               |
 	-- +---------+---------------+---------------+
 	-- |  0x4fff |               |               |

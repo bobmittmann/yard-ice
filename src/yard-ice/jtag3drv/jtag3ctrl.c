@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file jtag3ctrl.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -321,6 +321,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 	/* initial configuration */
 	reg_wr(REG_CFG, 0);
+
 	return 0;
 }
 

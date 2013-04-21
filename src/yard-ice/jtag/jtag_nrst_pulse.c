@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file jtag_nrst_pulse.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
