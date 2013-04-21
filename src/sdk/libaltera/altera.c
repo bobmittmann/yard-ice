@@ -97,23 +97,27 @@ static void conf_wr(int c)
 	}
 }
 
-int altera_configure(const uint8_t * buf, int len)
+int altera_configure(const uint8_t * buf, unsigned int max)
 {
 	int n = 0;
 	int ret;
 
 	altera_io_init();
 
-	stm32f_spi_init(STM32F_SPI3, &spi3_io);
+	stm32f_spi_init(STM32F_SPI3, &spi3_io, 2000000);
+
+	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
 
 	while ((ret = conf_start()) < 0) {
+		DCC_LOG(LOG_ERROR, "conf_start() failed!");
 		return ret;
 	}
 
 	while (!gpio_status(conf_done)) {
 		conf_wr(buf[n]);
 		n++;
-		if (n > len) {
+		if (n > max) {
+			DCC_LOG2(LOG_ERROR, "n(%d) > max(%d)!", n, max);
 			return -6;
 		}
 	}

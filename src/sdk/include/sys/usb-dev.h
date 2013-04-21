@@ -104,9 +104,10 @@ typedef int (* usb_dev_ep_zlp_send_t)(void *, int);
 
 typedef int (* usb_dev_ep_disable_t)(void *, int);
 
-typedef int (* usb_dev_ep0_init_t)(void *, const usb_dev_ep_info_t *, void *, int);
+typedef int (* usb_dev_ep0_init_t)(void *, const usb_dev_ep_info_t *, 
+								   void *, int);
 
-typedef int (* usb_dev_ep_init_t)(void *, int, const usb_dev_ep_info_t *);
+typedef int (* usb_dev_ep_init_t)(void *, const usb_dev_ep_info_t *);
 
 typedef int (* usb_dev_ep_pkt_recv_t)(void *, int, const void *, int);
 
@@ -189,9 +190,9 @@ extern inline int usb_dev_ep_disable(const usb_dev_t * dev, int ep_id) {
 	return dev->op->ep_disable(dev->priv, ep_id);
 }
 
-extern inline int usb_dev_ep_init(const usb_dev_t * dev, int ep_id,
-	const usb_dev_ep_info_t * info) {
-	return dev->op->ep_init(dev->priv, ep_id, info);
+extern inline int usb_dev_ep_init(const usb_dev_t * dev, 
+								  const usb_dev_ep_info_t * info) {
+	return dev->op->ep_init(dev->priv, info);
 }
 
 extern inline int usb_dev_ep0_init(const usb_dev_t * dev,

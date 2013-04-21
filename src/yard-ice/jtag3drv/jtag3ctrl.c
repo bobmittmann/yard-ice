@@ -42,7 +42,6 @@
 
 uint16_t volatile * jtagdrv_reg = JTAGDRV_REG;
 uint16_t volatile * jtagdrv_vec = JTAGDRV_VEC;
-uint32_t volatile * jtagdrv_desc = JTAGDRV_DESC;
 
 /* read a vector of 'len' bits from the controller's memory */
 void jtag3ctrl_vec_rd(unsigned int addr, uint16_t * buf, int len)

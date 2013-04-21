@@ -51,7 +51,7 @@ void trace_init(void);
 
 int32_t trace_dt(uint32_t * prev);
 
-int tracef(const char *fmt, ... );
+__attribute__((format (__printf__, 1, 2))) int tracef(const char *fmt, ... );
 
 void trace(const char * msg);
 

@@ -81,6 +81,7 @@
 #define MEM_VECTOR_OFFS     (0x00000)
 #define MEM_DESCRIPTOR_OFFS (0x04000)
 #define MEM_PTR_OFFS        (0x08000)
+#define MEM_AUX_OFFS        (0x0c000)
 #define MEM_REGISTER_OFFS   (0x10000)
 
 #define REG_INSN 0
@@ -92,6 +93,12 @@
 #define REG_CKGEN_RTDIV 5
 #define REG_CFG 6
 #define REG_TMR 7
+
+#define REG_MEM_WR_ADDR 8
+#define REG_MEM_RD_ADDR 9
+
+#define REG_DESC_LO 10
+#define REG_DESC_HI 11
 
 #define CFG_CLK_SEL(X) (((X) & 0xf) << 0)
 #define GET_CLK_SEL(CFG) (((CFG) >> 0) & 0xf)
@@ -108,46 +115,52 @@
 #define IRQ_1KHZ (1 << 2)
 #define IRQ_TMR  (1 << 3)
 
-/* JTAG controller instructions */
-#define INSN_IR_SCAN(D, E) (0xf000 | (((E) & 0xf) << 8) | ((D) & 0xff))
-#define INSN_DR_SCAN(D, E) (0xe000 | (((E) & 0xf) << 8) | ((D) & 0xff))
-/* FIXME: 
-#define INSN_TAP_RESET(N, E) (0xd000 | (((E) & 0xf) << 8) | (((N) - 1) & 0xff))
-*/
+/* JTAG controller instructions 
+   DP: Descriptor Pointer 
+    E: End state
+    N: Counter
+ */
+#define INSN_IR_SCAN(DP, E)  (0xf000 | (((E) & 0xf) << 8) | ((DP) & 0xff))
+#define INSN_DR_SCAN(DP, E)  (0xe000 | (((E) & 0xf) << 8) | ((DP) & 0xff))
 #define INSN_TAP_RESET(N, E) (0xd000 | (((E) & 0xf) << 8) | ((N) & 0xff))
-
-#define INSN_RUN_TEST(N, E) (0xc000 | (((E) & 0xf) << 8) | ((N) & 0xff))
-#define INSN_IR_PAUSE(N, E) (0xb000 | (((E) & 0xf) << 8) | ((N) & 0xff))
-#define INSN_DR_PAUSE(N, E) (0xa000 | (((E) & 0xf) << 8) | ((N) & 0xff))
-#define INSN_SET_STATE(E) (0x9000 | ((E) & 0xf))
+#define INSN_RUN_TEST(N, E)  (0xc000 | (((E) & 0xf) << 8) | ((N) & 0xff))
+#define INSN_IR_PAUSE(N, E)  (0xb000 | (((E) & 0xf) << 8) | ((N) & 0xff))
+#define INSN_DR_PAUSE(N, E)  (0xa000 | (((E) & 0xf) << 8) | ((N) & 0xff))
+#define INSN_SET_STATE(E)    (0x9000 | ((E) & 0xf))
 
 
 /* Descriptor Pointer fields */
-#define PTR_DESC_LEN (0x00ff << 0)
-#define PTR_DESC_ADDR (0x00ff << 8)
+#define PTR_DESC_LEN        (0x00ff << 0)
+#define PTR_DESC_ADDR       (0x00ff << 8)
 
 /* Vector descriptor fields */
-#define DESC_VEC_LEN (0x03ff << 0)
-#define DESC_TX_VEC_ADDR (0x03ff << 10)
-#define DESC_RX_VEC_ADDR (0x03ff << 20)
-#define DESC_TX_VEC_MSBF (1 << 30)
-#define DESC_RX_VEC_MSBF (1 << 31)
+#define DESC_VEC_LEN        (0x03ff << 0)
+#define DESC_TX_VEC_ADDR    (0x03ff << 10)
+#define DESC_RX_VEC_ADDR    (0x03ff << 20)
+#define DESC_TX_VEC_MSBF    (1 << 30)
+#define DESC_RX_VEC_MSBF    (1 << 31)
 
-#define RX_DIR (1 << 31)
-#define TX_DIR (1 << 30)
+/* Vector options */
+#define RX_DIR       (1 << 31)
+#define TX_DIR       (1 << 30)
 #define RX_LSB_FIRST 0
 #define TX_LSB_FIRST 0
+
 #define RX_MSB_FIRST RX_DIR
 #define TX_MSB_FIRST TX_DIR
 
 
 /* JTAG vector descriptor:
-	RA: RX address
-	RM: RX MSB first
-	TA: TX address
-	TM: TX MSB first
-	N: vector length
+   RA: RX address
+   RM: RX MSB first
+   TA: TX address
+   TM: TX MSB first
+    N: vector length
 */
+
+/* | 31 | 30 | 29 .. 20 | 19 .. 10 | 9 .. 0 | 
+   | RM | TM |    RA    |    TA    |   N    | */
+
 #define JTAG_DESC(RA, RM, TA, TM, N) (\
 	(((RA) & 0x07fe) << 19) | (((RM) & 1) << 31) | \
 	(((TA) & 0x07fe) << 9) | (((TM) & 1) << 30) | (((N) - 1) & 0x03ff))
@@ -171,19 +184,25 @@ struct jtag_io {
 		uint32_t w[512];
 		uint64_t d[256];
 	} vec;
-	uint32_t res1[(0x4000 - 2048) / 4];
+	uint32_t res1[(0x4000 - 0x2000 + 2048) / 4];
 	union {
 		uint16_t h[128];
 		uint32_t w[64];
 		uint64_t d[32];
 	} desc;
-	uint32_t res2[(0x4000 - 256) / 4];
+	uint32_t res2[(0x8000 - 0x4000 + 256) / 4];
 	union {
 		uint16_t h[256];
 		uint32_t w[128];
 		uint64_t d[64];
 	} ptr;
-	uint32_t res3[(0x8000 - 512) / 4];
+	uint32_t res3[(0xc000 - 0x8000 + 512) / 4];
+	union {
+		uint16_t h[256];
+		uint32_t w[128];
+		uint64_t d[64];
+	} aux;
+	uint32_t res4[(0x100000 - 0xc000 + 512) / 4];
 	union {
 		volatile uint16_t reg[8];
 		volatile uint32_t r32[4];
@@ -214,13 +233,11 @@ struct jtag_io {
 #define JTAG_IO ((struct jtag_io *)JTAG3DRV_BASE)
 
 #define JTAGDRV_VEC ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_VECTOR_OFFS))
-#define JTAGDRV_DESC ((volatile uint32_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
+//#define JTAGDRV_DESC ((uint32_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
+#define JTAGDRV_DESC ((uint16_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
+#define JTAGDRV_PTR ((uint16_t *)(JTAG3DRV_BASE + MEM_PTR_OFFS))
+#define JTAGDRV_AUX ((uint32_t *)(JTAG3DRV_BASE + MEM_AUX_OFFS))
 #define JTAGDRV_REG ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_REGISTER_OFFS))
-
-#define JTAGDRV_VEC ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_VECTOR_OFFS))
-#define JTAGDRV_DESC ((volatile uint32_t *)(JTAG3DRV_BASE + MEM_DESCRIPTOR_OFFS))
-#define JTAGDRV_REG ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_REGISTER_OFFS))
-#define JTAGDRV_PTR ((volatile uint16_t *)(JTAG3DRV_BASE + MEM_PTR_OFFS))
 
 static inline uint16_t reg_rd(unsigned int n) {
 	return JTAGDRV_REG[n];
@@ -230,23 +247,23 @@ static inline void reg_wr(unsigned int n, uint16_t val) {
 	JTAGDRV_REG[n] = val;
 }
 
-static inline uint16_t vec_rd16(unsigned int n) {
-	return JTAGDRV_VEC[n / 2];
+static inline uint16_t vec_rd16(unsigned int offs) {
+	return JTAGDRV_VEC[offs / 2];
 }
 
-static inline void vec_wr16(unsigned int n, uint16_t val) {
-	JTAGDRV_VEC[n / 2] = val;
+static inline void vec_wr16(unsigned int offs, uint16_t val) {
+	JTAGDRV_VEC[offs / 2] = val;
 }
 
-static inline uint32_t vec_rd32(unsigned int n) {
-	n  /= 2;
-	return JTAGDRV_VEC[n] + (JTAGDRV_VEC[n + 1] << 16);
+static inline uint32_t vec_rd32(unsigned int offs) {
+	unsigned pos = offs / 2;
+	return JTAGDRV_VEC[pos] + (JTAGDRV_VEC[pos + 1] << 16);
 }
 
-static inline void vec_wr32(unsigned int n, uint32_t val) {
-	n  /= 2;
-	JTAGDRV_VEC[n] = val;
-	JTAGDRV_VEC[n + 1] = val >> 16;
+static inline void vec_wr32(unsigned int offs, uint32_t val) {
+	unsigned pos = offs / 2;
+	JTAGDRV_VEC[pos] = val;
+	JTAGDRV_VEC[pos + 1] = val >> 16;
 }
 
 static inline uint32_t desc_rd(unsigned int pos) {
@@ -254,8 +271,19 @@ static inline uint32_t desc_rd(unsigned int pos) {
 }
 
 static inline void desc_wr(unsigned int pos, uint32_t desc) {
-	JTAGDRV_DESC[pos] = desc;
+	JTAGDRV_DESC[pos * 2] = desc;
+	JTAGDRV_DESC[pos * 2 + 1] = desc >> 16;
+//	JTAGDRV_DESC[pos] = desc;
 }
+
+static inline uint32_t aux_rd(unsigned int pos) {
+	return JTAGDRV_AUX[pos];
+}
+
+static inline void aux_wr(unsigned int pos, uint32_t data) {
+	JTAGDRV_AUX[pos] = data;
+}
+
 
 static inline void ptr_wr(unsigned int id, uint16_t ptr) {
 	JTAGDRV_PTR[id] = ptr;
@@ -272,13 +300,13 @@ jtag3drv_int_wait(unsigned int irq_mask) {
 	return isr;
 }
 
-static inline void insn_irscan(unsigned int desc, unsigned int final_state) {
-	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
+static inline void insn_irscan(unsigned int dsc_ptr, unsigned int final_state) {
+	reg_wr(REG_INSN, INSN_IR_SCAN(dsc_ptr, final_state));
 	jtag3drv_int_wait(IRQ_TAP);
 }
 
-static inline void insn_drscan(unsigned int desc, unsigned int final_state) {
-	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
+static inline void insn_drscan(unsigned int dsc_ptr, unsigned int final_state) {
+	reg_wr(REG_INSN, INSN_DR_SCAN(dsc_ptr, final_state));
 	jtag3drv_int_wait(IRQ_TAP);
 }
 

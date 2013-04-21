@@ -120,13 +120,13 @@
 #define SPI_BR_MSK (((1 << (2 + 1)) - 1) << 3)
 #define SPI_BR_SET(VAL) (((VAL) << 3) & SPI_BR_MSK)
 #define SPI_BR_GET(REG) (((REG) & SPI_BR_MSK) >> 3)
-/*	100: fPCLK/32
-	000: fPCLK/2
+/*	000: fPCLK/2
 	001: fPCLK/4
-	101: fPCLK/64
 	010: fPCLK/8
-	110: fPCLK/128
 	011: fPCLK/16
+	100: fPCLK/32
+	101: fPCLK/64
+	110: fPCLK/128
 	111: fPCLK/256
 	Note: These bits should not be changed when communication is ongoing.
 	Not used in I2S mode */

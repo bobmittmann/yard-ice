@@ -51,7 +51,7 @@ typedef enum {
 
 /* Endpoint control */
 struct stm32f_usb_ep {
-
+	struct stm32f_usb_drv * usb_drv;
 	uint16_t mxpktsz;
 	ep_state_t state;
 
@@ -180,133 +180,9 @@ static void __ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 	set_ep_txstat(usb, ep_id, USB_TX_VALID);
 }
 
+/* ------------------------------------------------------------------------- */
 
-
-/*
- Upon system and power-on reset, the first operation the application software should perform
- is to provide all required clock signals to the USB peripheral and subsequently de-assert its
- reset signal so to be able to access its registers. The whole initialization sequence is
- hereafter described.
- As a first step application software needs to activate register macrocell clock and de-assert
- macrocell specific reset signal using related control bits provided by device clock
- management logic.
- After that, the analog part of the device related to the USB transceiver must be switched on
- using the PDWN bit in CNTR register, which requires a special handling. This bit is intended
- to switch on the internal voltage references that supply the port transceiver. This circuit has
- a defined startup time (tSTARTUP specified in the datasheet) during which the behavior of the
- USB transceiver is not defined. It is thus necessary to wait this time, after setting the PDWN
- bit in the CNTR register, before removing the reset condition on the USB part (by clearing
- the FRES bit in the CNTR register). Clearing the ISTR register then removes any spurious
- pending interrupt before any other macrocell operation is enabled.
- At system reset, the microcontroller must initialize all required registers and the packet
- buffer description table, to make the USB peripheral able to properly generate interrupts and
- data transfers. All registers not specific to any endpoint must be initialized according to the
- needs of application software (choice of enabled interrupts, chosen address of packet
- buffers, etc.). Then the process continues as for the USB reset case (see further
- paragraph). */
-
-
-#if 0
-	/* Configure the endpoints and allocate packet buffers */
-	for (i = 0; i < cnt; i++) {
-		int mxpktsz = epi[i].mxpktsz;
-		uint32_t epr;
-
-		/* set the endpoint descriptor pointer */
-		drv->ep[i].desc = desc;
-		/* set the endpoint rx/tx/setup callback */
-		drv->ep[i].on_rx = epi[i].on_rx;
-		drv->ep[i].xfr_buf = NULL;
-		drv->ep[i].rx_max = 0;
-		/* Set EP address */
-		epr = USB_EA_SET(epi[i].addr);
-		/* Allocate packet buffers */
-		switch (epi[i].type)
-		{
-		case ENDPOINT_TYPE_CONTROL:
-			epr |= USB_EP_CONTROL;
-			/* allocate single buffers for TX and RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			break;
-
-		case ENDPOINT_TYPE_ISOCHRONOUS:
-			epr |= USB_EP_ISO | USB_EP_DBL_BUF;
-			/* allocate double buffers for TX or RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			/* allocate double buffers for TX or RX */
-			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			} else {
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			}
-			break;
-
-		case ENDPOINT_TYPE_BULK:
-			epr |= USB_EP_BULK | USB_EP_DBL_BUF;
-			DCC_LOG2(LOG_TRACE, "EP[%d]: BULK -> 0x%08x", i, desc);
-			/* allocate double buffers for TX or RX */
-			if ((epi[i].addr & USB_ENDPOINT_IN) == 0) {
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			} else {
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-				stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			}
-			break;
-
-		case ENDPOINT_TYPE_INTERRUPT:
-			epr |= USB_EP_INTERRUPT;
-			/* allocate single buffers for TX or RX */
-			DCC_LOG2(LOG_TRACE, "EP[%d]: CONTROL -> 0x%08x", i, desc);
-			stack = pktbuf_tx_cfg(desc++, stack, mxpktsz);
-			stack = pktbuf_rx_cfg(desc++, stack, mxpktsz);
-			break;
-		}
-
-		usb->epr[i] = epr;
-	}
-
-	drv->ep_cnt = cnt;
-
-
-	return 0;
-#endif
-
-/* Endpoint initialization
-The first step to initialize an endpoint is to write appropriate values to the
-ADDRn_TX/ADDRn_RX registers so that the USB peripheral finds the data to be
-transmitted already available and the data to be received can be buffered. The EP_TYPE
-bits in the USB_EPnR register must be set according to the endpoint type, eventually using
-the EP_KIND bit to enable any special required feature. On the transmit side, the endpoint
-must be enabled using the STAT_TX bits in the USB_EPnR register and COUNTn_TX must
-be initialized. For reception, STAT_RX bits must be set to enable reception and
-COUNTn_RX must be written with the allocated buffer size using the BL_SIZE and
-NUM_BLOCK fields. Unidirectional endpoints, except Isochronous and double-buffered bulk
-endpoints, need to initialize only bits and registers related to the supported direction. Once
-the transmission and/or reception are enabled, register USB_EPnR and locations
-ADDRn_TX/ADDRn_RX, COUNTn_TX/COUNTn_RX (respectively), should not be modified
-by the application software, as the hardware can change their value on the fly. When the
-data transfer operation is completed, notified by a CTR interrupt event, they can be
-accessed again to re-enable a new operation. */
-
-/* USB reset (RESET interrupt)
-When this event occurs, the USB peripheral is put in the same conditions it is left by the
-system reset after the initialization described in the previous paragraph: communication is
-disabled in all endpoint registers (the USB peripheral will not respond to any packet). As a
-response to the USB reset event, the USB function must be enabled, having as USB
-address 0, implementing only the default control endpoint (endpoint address is 0 too). This
-is accomplished by setting the Enable Function (EF) bit of the USB_DADDR register and
-initializing the EP0R register and its related packet buffers accordingly. During USB
-enumeration process, the host assigns a unique address to this device, which must be
-written in the ADD[6:0] bits of the USB_DADDR register, and configures any other
-necessary endpoint.
-When a RESET interrupt is received, the application software is responsible to enable again
-the default endpoint of USB function 0 within 10mS from the end of reset sequence which
-triggered the interrupt. */
+/* ------------------------------------------------------------------------- */
 
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 {
@@ -353,10 +229,10 @@ void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
 }
 
 /* start sending */
-int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
-		void * buf, unsigned int len)
+int stm32f_usb_ep_tx_start(struct stm32f_usb_ep * ep, int ep_id,
+						   void * buf, unsigned int len)
 {
-	struct stm32f_usb_ep * ep;
+	struct stm32f_usb_drv * drv = ep->usb_drv;
 
 	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
@@ -508,15 +384,20 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 #define PKTBUF_BUF_BASE (8 * 8)
 static unsigned int addr = PKTBUF_BUF_BASE;
 
-
-int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id,
-		const usb_dev_ep_info_t * info)
+int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, 
+						   const usb_dev_ep_info_t * info)
 {
 	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 	unsigned int sz;
 	struct stm32f_usb * usb = STM32F_USB;
 	struct stm32f_usb_ep * ep;
 	int mxpktsz = info->mxpktsz;
+	int ep_id;
+
+	if ((ep_id = info->addr & 0x7f) > 7) {
+		DCC_LOG1(LOG_WARNING, "addr(%d) > 7", ep_id);
+		return -1;
+	}
 
 	DCC_LOG2(LOG_TRACE, "sp_id=%d mxpktsz=%d", ep_id, mxpktsz);
 
@@ -587,7 +468,7 @@ int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv, int ep_id,
 
 //	clr_status_out(usb, ep_id);
 
-	return 0;
+	return ep_id;
 }
 
 int stm32f_usb_dev_ep0_init(struct stm32f_usb_drv * drv,
@@ -1002,7 +883,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 /* USB device operations */
 const struct usb_dev_ops stm32f_usb_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
-//	.ep_rx_prep = (usb_dev_ep_rx_prep_t)stm32f_usb_ep_rx_prep,
 	.ep_tx_start = (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
 	.ep0_init = (usb_dev_ep0_init_t)stm32f_usb_dev_ep0_init,
 	.ep_init = (usb_dev_ep_init_t)stm32f_usb_dev_ep_init,

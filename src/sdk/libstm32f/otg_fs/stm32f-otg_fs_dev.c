@@ -105,29 +105,32 @@ static void __copy_from_pktbuf(void * ptr,
 }
 
 /* EP TX fifo memory allocation */
-void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int mpsiz)
+void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-	uint32_t dieptxf;
-
-	dieptxf = OTG_FS_TX0FD_SET(mpsiz / 4) | OTG_FS_TX0FSA_SET(fifo_addr / 4);
 
 	switch (ep_id) {
 	case 0:
-		otg_fs->dieptxf0 = dieptxf;
+		otg_fs->dieptxf0 = OTG_FS_TX0FD_SET(siz / 4) | 
+			OTG_FS_TX0FSA_SET(fifo_addr / 4);
 		break;
 	case 1:
-		otg_fs->dieptxf1 = dieptxf;
+		otg_fs->dieptxf1 = OTG_FS_INEPTXFD_SET(siz / 4) | 
+			OTG_FS_INEPTXSA_SET(fifo_addr / 4);
 		break;
 	case 2:
-		otg_fs->dieptxf2 = dieptxf;
+		otg_fs->dieptxf2 = OTG_FS_INEPTXFD_SET(siz / 4) | 
+			OTG_FS_INEPTXSA_SET(fifo_addr / 4);
 		break;
 	case 3:
-		otg_fs->dieptxf3 = dieptxf;
+		otg_fs->dieptxf3 = OTG_FS_INEPTXFD_SET(siz / 4) | 
+			OTG_FS_INEPTXSA_SET(fifo_addr / 4);
 		break;
 	}
 
-	fifo_addr += mpsiz;
+	DCC_LOG2(LOG_TRACE, "addr=%d siz=%d", fifo_addr, siz);
+
+	fifo_addr += siz;
 }
 
 static bool __ep_tx_start(struct stm32f_otg_drv * drv, int ep_id)
@@ -136,8 +139,10 @@ static bool __ep_tx_start(struct stm32f_otg_drv * drv, int ep_id)
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	bool ret;
 
-	if (ep->xfr_rem == 0)
+	if (ep->xfr_rem == 0) {
+		DCC_LOG(LOG_MSG, "(ep->xfr_rem == 0)!");
 		return false;
+	}
 
 	/* prepare fifo to transmit */
 	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem))) {
@@ -181,7 +186,7 @@ static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 
 	/* Number of words in the receive fifo */
 	wcnt = (len + 3) / 4;
-	DCC_LOG1(LOG_TRACE, "poping %d words from FIFO.", wcnt);
+	DCC_LOG1(LOG_INFO, "poping %d words from FIFO.", wcnt);
 
 	if (ep->xfr_rem >= len) {
 		/* If we have enough room in the destination buffer
@@ -219,7 +224,7 @@ static void __ep0_out_start(struct stm32f_otg_fs * otg_fs)
 
 static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 {
-	DCC_LOG(LOG_TRACE, "Send: ZLP");
+	DCC_LOG(LOG_INFO, "Send: ZLP");
 
 	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
@@ -343,19 +348,16 @@ int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
 int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 		void * buf, unsigned int len)
 {
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
-#if 0
 	struct stm32f_otg_ep * ep;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = len;
 
-	return __ep_pkt_send(drv, ep_id);
-#endif
-	return 0;
+	return __ep_tx_start(drv, ep_id);
 }
 
 
@@ -456,15 +458,22 @@ void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 #endif
 }
 
-int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
+int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, 
 		const usb_dev_ep_info_t * info)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep;
 	int mxpktsz = info->mxpktsz;
 	uint32_t depctl;
+	int ep_id;
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
+	if ((ep_id = info->addr & 0x7f) > 3) {
+		DCC_LOG1(LOG_ERROR, "invalid address addr=%d", ep_id);
+		return -1;
+	}
+
+	DCC_LOG3(LOG_TRACE, "ep_id=%d addr=%d mxpktsz=%d", 
+			 ep_id, info->addr & 0x7f, mxpktsz);
 
 	ep = &drv->ep[ep_id];
 	ep->mxpktsz = mxpktsz;
@@ -473,17 +482,20 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 	ep->state = EP_IDLE;
 	ep->on_ev = info->on_ev;
 
-	DCC_LOG3(LOG_TRACE, "ep_id=%d addr=%d mxpktsz=%d",
-			ep_id, info->addr & 0x7f, mxpktsz);
-
 	/* XXX: mask FIFO empty interrupt, maybe this should
 	   be performed elsewhere. */
 	otg_fs->diepempmsk &= ~(1 << ep_id);
 
 	if (info->addr & USB_ENDPOINT_IN) {
+		DCC_LOG(LOG_TRACE, "IN ENDPOINT");
+		if ((info->attr & 0x03) == ENDPOINT_TYPE_BULK)
+			__ep_pktbuf_alloc(drv, ep_id, mxpktsz * 2);
+		else
+			__ep_pktbuf_alloc(drv, ep_id, mxpktsz);
+
 		depctl = otg_fs->inep[ep_id].diepctl;
-		__ep_pktbuf_alloc(drv, ep_id, mxpktsz);
 	} else {
+		DCC_LOG(LOG_TRACE, "OUT ENDPOINT");
 		depctl = otg_fs->outep[ep_id].doepctl;
 	}
 
@@ -494,18 +506,22 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 
 	switch (info->attr & 0x03) {
 	case ENDPOINT_TYPE_CONTROL:
+		DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_CONTROL");
 		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_CTRL);
 		break;
 
 	case ENDPOINT_TYPE_ISOCHRONOUS:
+		DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_ISOCHRONOUS");
 		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_ISOC);
 		break;
 
 	case ENDPOINT_TYPE_BULK:
+		DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_BULK");
 		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_BULK);
 		break;
 
 	case ENDPOINT_TYPE_INTERRUPT:
+		DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_INTERRUPT");
 		depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_INT);
 		break;
 	}
@@ -516,7 +532,6 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 	} else {
 		uint32_t rxfsiz;
 		uint32_t pktcnt;
-
 		/* Activate OUT endpoint */
 		otg_fs->outep[ep_id].doepctl = depctl;
 
@@ -538,7 +553,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, int ep_id,
 	   handshake for each valid token received for the
 	   endpoint. */
 
-	return 0;
+	return ep_id;
 }
 
 int stm32f_otg_dev_ep0_init(struct stm32f_otg_drv * drv,
@@ -594,7 +609,7 @@ void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
-		DCC_LOG(LOG_TRACE, "EP0 [IDLE]");
+		DCC_LOG(LOG_INFO, "EP0 [IDLE]");
 		return;
 	}
 
@@ -603,7 +618,7 @@ void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		/* Prepare to receive */
 		__ep0_out_start(otg_fs);
 		ep->state = EP_IN_DATA;
-		DCC_LOG(LOG_TRACE, "EP0 [IN_DATA]");
+		DCC_LOG(LOG_INFO, "EP0 [IN_DATA]");
 	}
 }
 
@@ -615,7 +630,7 @@ void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
 	/* last and only transfer */
 	if (ep->state == EP_OUT_DATA_LAST) {
 		ep->state = EP_WAIT_STATUS_IN;
-		DCC_LOG(LOG_TRACE, "EP0 [WAIT_STATUS_IN]");
+		DCC_LOG(LOG_INFO, "EP0 [WAIT_STATUS_IN]");
 		__ep_zlp_send(otg_fs, 0);
 		return;
 	}
@@ -628,7 +643,7 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 	struct stm32f_otg_ep * ep = &drv->ep[0];
 	int len;
 
-	DCC_LOG3(LOG_TRACE, "type=0x%02x request=0x%02x len=%d ",
+	DCC_LOG3(LOG_INFO, "type=0x%02x request=0x%02x len=%d ",
 			req->type, req->request, req->length);
 
 	/* No-Data control SETUP transaction */
@@ -649,18 +664,18 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
 
-		DCC_LOG(LOG_TRACE, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
 		__ep_tx_start(drv, 0);
 	} else {
 		/* Control Write SETUP transaction (OUT Data Phase) */
 		ep->xfr_ptr = ep->xfr_buf;
 		ep->xfr_rem = req->length;
 
-		DCC_LOG1(LOG_TRACE, "xfr_ptr=0x%08x", ep->xfr_ptr);
+		DCC_LOG1(LOG_INFO, "xfr_ptr=0x%08x", ep->xfr_ptr);
 
 		if (ep->xfr_rem > ep->xfr_buf_len) {
 			ep->xfr_rem = ep->xfr_buf_len;
@@ -670,10 +685,10 @@ void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		if (ep->xfr_rem < ep->mxpktsz) {
 			/* last and only transfer */
 			ep->state = EP_OUT_DATA_LAST;
-			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
 		} else {
 			ep->state = EP_OUT_DATA;
-			DCC_LOG(LOG_TRACE, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
 		}
 
 		DCC_LOG(LOG_INFO, "Prepare to receive");
@@ -981,7 +996,7 @@ void stm32f_otg_fs_isr(void)
 			msk = diepmsk | ((diepempmsk >> 0) & 0x1) << 7;
 			diepint = otg_fs->inep[0].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[0] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep0_in(drv);
 #if 0
 				if (!__ep_tx_start(drv, 0)) {
@@ -991,7 +1006,7 @@ void stm32f_otg_fs_isr(void)
 				}
 #endif
 			} else if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[0] <IEPINT> <TXFE>");
 				if (!__ep_tx_push(drv, 0)) {
 					otg_fs->diepempmsk &= ~(1 << 0);
 				}
@@ -1001,6 +1016,8 @@ void stm32f_otg_fs_isr(void)
 		}
 
 		if (ep_intr & OTG_FS_IEPINT1) {
+			DCC_LOG(LOG_TRACE, "[1] <IEPINT> ???");
+
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 1) & 0x1) << 7;
 			diepint = otg_fs->inep[1].diepint & msk;
@@ -1059,11 +1076,11 @@ void stm32f_otg_fs_isr(void)
 			doepint = otg_fs->outep[0].doepint & otg_fs->doepmsk;
 
 			if (doepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <OUT XFRC>");
+				DCC_LOG(LOG_INFO, "[0] <OEPINT> <OUT XFRC>");
 				stm32f_otg_dev_ep0_out(drv);
 			}
 			if (doepint & OTG_FS_EPDISD) {
-				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <EPDISD>");
+				DCC_LOG(LOG_INFO, "[0] <OEPINT> <EPDISD>");
 			}
 			if (doepint & OTG_FS_STUP) {
 				uint32_t doeptsiz;
@@ -1071,7 +1088,7 @@ void stm32f_otg_fs_isr(void)
 				int stupcnt;
 				int xfrsiz;
 
-				DCC_LOG(LOG_TRACE, "[0] <OEPINT> <STUP>");
+				DCC_LOG(LOG_INFO, "[0] <OEPINT> <STUP>");
 
 				doeptsiz = otg_fs->outep[0].doeptsiz;
 				stupcnt = OTG_FS_STUPCNT_GET(doeptsiz);

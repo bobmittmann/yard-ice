@@ -189,7 +189,7 @@ int jtag_ir_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	jtag3ctrl_vec_wr(tx_addr, (uint16_t *)vin, vlen);
 
 	/* scan the vector */
-	reg_wr(REG_INSN, INSN_IR_SCAN(desc, final_state));
+	reg_wr(REG_INSN, INSN_IR_SCAN(ptr, final_state));
 	isr = jtag3drv_int_wait(IRQ_TAP);
 
 	if ((isr & IRQ_TAP) == 0) {
@@ -231,7 +231,7 @@ int jtag_dr_scan(const jtag_vec_t vin, jtag_vec_t vout,
 	jtag3ctrl_vec_wr(tx_addr, (uint16_t *)vin, vlen);
 
 	/* scan the vector */
-	reg_wr(REG_INSN, INSN_DR_SCAN(desc, final_state));
+	reg_wr(REG_INSN, INSN_DR_SCAN(ptr, final_state));
 	isr = jtag3drv_int_wait(IRQ_TAP);
 
 	if ((isr & IRQ_TAP) == 0) {
