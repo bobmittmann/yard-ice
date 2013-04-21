@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file jtag_chain_probe.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

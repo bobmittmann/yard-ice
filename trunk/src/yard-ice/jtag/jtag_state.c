@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file jtag_state.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

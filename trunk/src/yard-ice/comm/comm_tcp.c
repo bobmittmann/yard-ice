@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file comm_tcp.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -46,14 +46,14 @@ struct comm_tcp_parm {
 	ice_comm_t * comm;
 };
 
-int comm_tcp_write_task(struct comm_tcp_parm * parm)
+int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
 {
 	struct tcp_pcb * tp = parm->tp;
 	ice_comm_t * comm = parm->comm;
 	uint8_t net_buf[128];
 	uint8_t * ptr;
 	int len;
-//	int rem;
+	int rem;
 	int n;
 
 	for (;;) {
@@ -76,19 +76,23 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm)
 		}
 #endif
 
-//		rem = len;
+		rem = len;
 		ptr = net_buf;
-		while (len) {
+		while (rem) {
 			if ((n = ice_comm_write(comm, ptr, len, 500)) < 0) {
 				DCC_LOG1(LOG_WARNING, "ice_comm_write(): %d", n); 
 				break;
 			}
 			ptr += n;
-			len -= n;
+			rem -= n;
 		}
 	} 
 
 	ice_comm_close(comm);
+
+
+	DCC_LOG(LOG_TRACE, "done..."); 
+
 
 	return 0;
 }
@@ -97,7 +101,7 @@ uint32_t comm_write_stack[512 + 128];
 
 #define COMM_TCP_BUF_SIZE 512
 
-int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm)
+int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
 {
 	struct comm_tcp_parm tcp_parm;
 	uint32_t buf[COMM_TCP_BUF_SIZE / sizeof(uint32_t)];

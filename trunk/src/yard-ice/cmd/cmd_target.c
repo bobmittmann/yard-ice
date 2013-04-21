@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file target.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -153,7 +153,7 @@ int cmd_target(FILE *f, int argc, char ** argv)
 	}
 
 	/* FIXME */
-	scan = scan;
+	(void)scan;
 
 	if (target == NULL) {
 		fprintf(f, "invalid target...\n");
