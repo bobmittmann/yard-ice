@@ -208,47 +208,59 @@ int memcmp64(uint64_t * v1, uint64_t * v2, int cnt)
 	return 0;
 }
 
-bool jtag_mem_test(struct jtag_io * jtag)
+void memcpy32(uint32_t * dst, uint32_t * src, int cnt)
 {
-	uint64_t buf[512];
-	volatile uint16_t * ptr = (uint16_t*)0x60004000;
-	int len = 512;
-	int ret;
+	uint32_t * end = dst + cnt;
+
+	DCC_LOG3(LOG_INFO, "dst=0x%08x dst=0x%08x cnt=%d", dst, src, cnt);
+	while (dst != end)
+		*dst++ = *src++;
+}
+
+void memrand32(uint32_t * dst, int cnt)
+{
 	int i;
 
-	printf("%s():..\n", __func__);
+	DCC_LOG2(LOG_INFO, "dst=0x%08x cnt=%d", dst, cnt);
+	for (i = 0; i < cnt; ++i)
+		dst[i] = rand() + (rand() << 31);
+}
 
-	DCC_LOG2(LOG_TRACE, "jtagt=0x%08x len=%d", jtag, len);
+int memcmp32(uint32_t * v1, uint32_t * v2, int cnt)
+{
+	int i;
 
-	for (;;) {
-		ptr[0] = 0x8001;
-		ptr[1] = 0x4002;
-		ptr[2] = 0x2004;
-		ptr[3] = 0x1008;
-		tracef("%04x %04x %04x %04x", ptr[0], ptr[1], ptr[2], ptr[3]);
-		thinkos_sleep(200);
+	DCC_LOG3(LOG_INFO, "v1=0x%08x v2=0x%08x cnt=%d", v1, v2, cnt);
+	for (i = 0; i < cnt; ++i) {
+		if (v1[i] != v2[i])
+			return i + 1;
 	}
 
-	for (i = 0; i < 100; ++i) {
-		len = 128;
-		memrand16((uint16_t *)buf, len);
-		memcpy16(jtag->desc.h, (uint16_t *)buf, len);
-		if ((ret = memcmp16(jtag->desc.h, (uint16_t *)buf, len)) != 0) {
-			printf("%s(): 16bits error @ %d!\n", __func__, ret);
-			return false;
-		}
+	return 0;
+}
 
-		len = 32;
-		memrand64(buf, len);
-		memcpy64(jtag->desc.d, buf, len);
-		if ((ret = memcmp64(jtag->desc.d, buf, len)) != 0) {
-			printf("%s(): 64bits error @ %d!\n", __func__, ret);
+bool jtag_mem_test(void)
+{
+	uint32_t in[128];
+	uint32_t out[128];
+	int i;
+
+	for (i = 32; i > 0; --i) {
+		memrand32(in, 128);
+		memcpy32((uint32_t *)JTAGDRV_AUX, in, 128);
+		memcpy32(out, JTAGDRV_AUX, 128);
+
+		if (memcmp32(in, out, 128) != 0) {
+			tracef("memory test failed!");
 			return false;
 		}
 	}
+
+	tracef("memory test ok.");
 
 	return true;
 }
+
 
 bool jtag_loop_test(void)
 {
@@ -283,6 +295,157 @@ bool jtag_loop_test(void)
 			tracef("vout=%s", vec_fmt(s2, vout, len - 1));
 		}
 
+	}
+
+	return true;
+}
+
+int test_ir_scan(unsigned int desc, unsigned int ptr, 
+				 unsigned int tx_addr, unsigned int rx_addr,
+				 const jtag_vec_t vin, jtag_vec_t vout, 
+				 int vlen, unsigned int final_state)
+{
+	unsigned int isr;
+
+	DCC_LOG2(LOG_TRACE, "len=%d state=%s", vlen, jtag_state_name[final_state]);
+
+	/* create a descriptor table with one entry */
+	desc_wr(desc, JTAG_DESC(rx_addr, 0, tx_addr, 0, vlen));
+	/* create a pointer to the descriptor */
+	ptr_wr(ptr, JTAG_PTR(desc, 1));
+
+	/* write the vector in the controller's memory */
+	jtag3ctrl_vec_wr(tx_addr, (uint16_t *)vin, vlen);
+
+	/* scan the vector */
+	reg_wr(REG_INSN, INSN_IR_SCAN(ptr, final_state));
+	isr = jtag3drv_int_wait(IRQ_TAP);
+
+	if ((isr & IRQ_TAP) == 0) {
+		DCC_LOG1(LOG_WARNING, "isr:0x%02x", isr);
+		return -1;
+	}
+
+	DCC_LOG(LOG_INFO, ".");
+
+	if (vout != NULL)
+		jtag3ctrl_vec_rd(rx_addr, (uint16_t *)vout, vlen);
+
+	return 0;
+}
+
+bool my_test(void)
+{
+	uint32_t vin[32];
+	uint32_t vout[32];
+	char s1[33 * 4];
+	char s2[33 * 4];
+	unsigned int desc;
+	unsigned int ptr;
+	unsigned int tx_addr;
+	unsigned int rx_addr;
+	unsigned int len = 32 * 4;
+	int i;
+
+	jtag_tck_freq_set(100000);
+
+	/* enable TAP interrupts */
+	jtag3ctrl_int_en(IRQ_TAP);
+
+	/* clear interrupts */
+	jtag3ctrl_int_clr(IRQ_TAP);
+
+	jtag3ctrl_loopback(1);
+
+	for (i = 1; i > 0; --i) {
+//		len = rand() & 0x7f;
+		len = 15;
+		desc = rand() & 0xff;
+		ptr = rand() & 0xff;
+		rx_addr = (rand() % (0x400 - len)) & ~1;
+		tx_addr = (rand() % (0x400 - len)) & ~1;
+//		rx_addr = 0;
+//		tx_addr = 128 + 64 + 32;
+
+		/* create a descriptor table with one entry */
+//		desc_wr(desc, JTAG_DESC(rx_addr, 0, tx_addr, 0, len));
+		tracef("desc addr=%d,%d", desc * 4, reg_rd(REG_MEM_WR_ADDR));
+//		break;
+
+		vec_rand(vin, len);
+
+		tracef("ir_scan(dsc=%d ptr=%d tx=%d rx=%d len=%d)",
+			   desc, ptr, tx_addr, rx_addr, len);
+
+		test_ir_scan(desc, ptr, tx_addr, rx_addr, 
+					 vin, vout, len, JTAG_TAP_IDLE);
+		
+		tracef("desc =0x%04x%04x", reg_rd(REG_DESC_HI), reg_rd(REG_DESC_LO));
+
+		if (vec_cmp(vin, vout, len) != 0) {
+			tracef("tx=%d rx=%d", reg_rd(REG_MEM_WR_ADDR), 
+				   reg_rd(REG_MEM_RD_ADDR));
+			tracef("fail: vin=%s", vec_fmt(s1, vin, len));
+			tracef("     vout=%s", vec_fmt(s2, vout, len));
+			break;
+		}
+
+		trace("ok.");
+	}
+
+	return true;
+}
+
+bool jtag_desc_test(void)
+{
+	uint32_t vin[32];
+	uint32_t vout[32];
+	char s1[33 * 4];
+	char s2[33 * 4];
+	unsigned int desc;
+	unsigned int ptr;
+	unsigned int tx_addr;
+	unsigned int rx_addr;
+	unsigned int len = 32 * 4;
+	int i;
+
+	jtag_tck_freq_set(100000);
+
+	/* enable TAP interrupts */
+	jtag3ctrl_int_en(IRQ_TAP);
+
+	/* clear interrupts */
+	jtag3ctrl_int_clr(IRQ_TAP);
+
+	jtag3ctrl_loopback(1);
+
+	for (i = 1; i > 0; --i) {
+		len = rand() & 0x7f;
+		desc = rand() & 0xff;
+		ptr = rand() & 0xff;
+		tx_addr = (rand() % (0x080 - len)) & ~1;
+		rx_addr = (rand() % (0x080 - len)) & ~1;
+		tx_addr = 2;
+		rx_addr = 2;
+
+		vec_rand(vin, len);
+
+		tracef("ir_scan(dsc=%d ptr=%d tx=%d rx=%d len=%d)",
+			   desc, ptr, tx_addr, rx_addr, len);
+		test_ir_scan(desc, ptr, tx_addr, rx_addr, 
+					 vin, vout, len, JTAG_TAP_IDLE);
+
+		//	vec_rshift(vout, vout, len, 1);
+
+		if (vec_cmp(vin, vout, len) != 0) {
+			tracef("tx=%d rx=%d", reg_rd(REG_MEM_WR_ADDR), 
+				   reg_rd(REG_MEM_RD_ADDR));
+			tracef("fail: vin=%s", vec_fmt(s1, vin, len));
+			tracef("     vout=%s", vec_fmt(s2, vout, len));
+			break;
+		}
+
+		trace("ok.");
 	}
 
 	return true;
@@ -482,10 +645,14 @@ int main(int argc, char ** argv)
 //	printf("JTAG memory Ok.\n");
 //	jtag_irq_test();
 		
+	jtag_mem_test();
+
 	for (i = 0; ; i++) {
 		getchar();
 //		jtag_loop_test();
-		tap_probe();
+//		jtag_desc_test();
+		my_test();
+//		tap_probe();
 //		jtag_irscan_test();
 	}
 

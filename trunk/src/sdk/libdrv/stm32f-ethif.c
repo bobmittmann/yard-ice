@@ -45,7 +45,7 @@
 #include <thinkos_irq.h>
 
 
-#if THINKOS_ENABLE_FLAG_ALLOC
+#if THINKOS_ENABLE_FLAG_ALLOC && ENABLE_NETWORK
 
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {

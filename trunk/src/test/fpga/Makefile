@@ -39,7 +39,7 @@ INCPATH = ../../sdk/include  ../../yard-ice/include
 JTAGTOOL_ADDR = 192.168.0.80
 
 CDEFS = CONFIG_H
-FLAGS = -g -O1
+FLAGS = -g -O2
 
 HCLK_HZ = 24000000
 include ../../mk/stm32f207.mk

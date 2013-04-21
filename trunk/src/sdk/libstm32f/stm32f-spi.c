@@ -23,6 +23,7 @@
 #include <sys/stm32f.h>
 
 #include <sys/dcclog.h>
+#include <string.h>
 
 const struct stm32f_spi * stm32f_spi_lut[3] = {
 	STM32F_SPI1,
@@ -51,18 +52,19 @@ static const struct {
 };
 
 int stm32f_spi_init(struct stm32f_spi * spi, 
-					const struct stm32f_spi_io * spi_io)
+					const struct stm32f_spi_io * spi_io, 
+					unsigned int freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	gpio_io_t io;
+	uint32_t div;
+	int br;
 	int id;
 
 	if ((id = stm32f_spi_lookup(spi)) < 0) {
 		/* invalid SPI ??? */
 		return id;
 	}
-
-    DCC_LOG1(LOG_TRACE, "SPI id=%d", id);
 
 	/* Configure IO pins */
 	io = spi_io->miso;
@@ -84,16 +86,25 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 	stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, spi_cfg[id].af);
 
 	/* Enable peripheral clock */
-	if (spi_cfg[id].apb2)
+	if (spi_cfg[id].apb2) {
 		rcc->apb2enr |= (1 << spi_cfg[id].ckbit);
-	else
+		div = stm32f_apb2_hz / freq / 2;
+	} else {
 		rcc->apb1enr |= (1 << spi_cfg[id].ckbit);
+		div = stm32f_apb1_hz / freq / 2;
+	}
+
+	br = 31 - __clz(div);
+	if (div > (1 << br)) {
+		br++;
+	}
+    DCC_LOG3(LOG_TRACE, "SPI id=%d div=%d br=%d", id, div, br);
 
 	spi->cr2 = 0;
 	spi->i2scfgr = 0;
 	spi->i2spr = 0;
 	spi->cr1 = SPI_SPE | SPI_MSTR | SPI_SSM | SPI_SSI | \
-			   SPI_BR_SET(6) | SPI_LSBFIRST;
+			   SPI_BR_SET(br) | SPI_LSBFIRST;
 
 	return 0;
 }

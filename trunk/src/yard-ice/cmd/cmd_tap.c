@@ -104,13 +104,11 @@ static int tap_probe(FILE * f)
 	uint8_t irlen[32];
 	unsigned int cnt;
 
-#if 0
 	fprintf(f, " - JTAG TRST assert ...\n");
 	target_tap_trst(TARGET_IO_PULSE);
 
 	fprintf(f, " - TAP reset...\n");
 	target_tap_reset();
-#endif
 
 	fprintf(f, " - Probing the JTAG scan chain...\n");
 
@@ -125,11 +123,9 @@ static int tap_probe(FILE * f)
 		return 0;
 	}
 
-#if 0
 	fprintf(f, " - TAP reset...\n");
 	/* reset the TAPs to put the IDCODE in the DR scan */
 	target_tap_reset();
-#endif
 
 	/* initializing the jtag chain */
 	if (jtag_chain_init(irlen, cnt)  != JTAG_OK) {

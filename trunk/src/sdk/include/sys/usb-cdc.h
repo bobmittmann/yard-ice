@@ -79,7 +79,7 @@ int usb_cdc_read(usb_cdc_class_t * cdc, void * buf,
 int usb_cdc_flush(usb_cdc_class_t * cdc,
 				  const void * buf, unsigned int len);
 
-struct file * usb_cdc_fopen(void);
+struct file * usb_cdc_fopen(usb_cdc_class_t * cdc);
 
 int usb_cdc_state_get(usb_cdc_class_t * cdc, usb_cdc_state_t * state);
 

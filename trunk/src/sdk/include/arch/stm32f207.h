@@ -46,6 +46,7 @@
 #include <stm32f/stm32f-dma.h>
 #include <stm32f/stm32f-exti.h>
 
+#define STM32F_BASE_UID		0x1fff7a10
 #define STM32F_BASE_FSMC    0xa0000000
 #define STM32F_BASE_RNG     0x50060800
 #define STM32F_BASE_HASH    0x50060400
@@ -267,6 +268,8 @@
 #define STM32F_GPIOH ((struct stm32f_gpio *)STM32F_BASE_GPIOH)
 #define STM32F_GPIOI ((struct stm32f_gpio *)STM32F_BASE_GPIOI)
 #define STM32F_GPIO(N) ((struct stm32f_gpio *)(STM32F_BASE_GPIOA + (N)*0x400))
+
+#define STM32F_UID ((uint32_t *)STM32F_BASE_UID)
 
 typedef enum {
 	STM32F_GPIOA_ID = 0,

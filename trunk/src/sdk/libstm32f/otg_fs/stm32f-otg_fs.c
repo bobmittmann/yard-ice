@@ -170,7 +170,7 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 		xfrsiz = 0;
 	}
 
-	DCC_LOG3(LOG_TRACE, "ep=%d pktcnt=%d xfrsiz=%d", ep, pktcnt, xfrsiz);
+	DCC_LOG3(LOG_INFO, "ep=%d pktcnt=%d xfrsiz=%d", ep, pktcnt, xfrsiz);
 
 	otg_fs->inep[ep].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
 		OTG_FS_XFRSIZ_SET(xfrsiz); 
@@ -180,7 +180,7 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	deptsiz = otg_fs->inep[ep].dieptsiz;
 	(void)deptsiz;
 
-	DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
+	DCC_LOG2(LOG_INFO, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
 			 OTG_FS_XFRSIZ_GET(deptsiz));
 
 	return true;
@@ -213,7 +213,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
 	(void)pktcnt;
 
-	DCC_LOG5(LOG_TRACE, "ep=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+	DCC_LOG5(LOG_INFO, "ep=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 ep, mpsiz, pktcnt, xfrsiz, free);
 
 	if (xfrsiz < mpsiz) {
@@ -247,7 +247,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 		cp += 4;
 	}	
 
-	DCC_LOG1(LOG_TRACE, "Tx: (%d)", cnt);
+	DCC_LOG1(LOG_INFO, "Tx: (%d)", cnt);
 	return cnt;
 }
 

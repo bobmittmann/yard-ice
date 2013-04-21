@@ -73,7 +73,7 @@ end fsmc_test;
 architecture structure of fsmc_test is
 	constant DATA_WIDTH : natural := 16;
 	constant MEM_CNT : natural := 2;
-	constant MEM_SEL_BITS : natural := 1;
+	constant MEM_SEL_BITS : natural := 2;
 	constant MEM_ADDR_BITS : natural := 11;
 	constant REG_CNT : natural := 8;
 	constant REG_SEL_BITS : natural := 3;
@@ -278,10 +278,10 @@ begin
 		);
 	---------------------------------------------------------------------------
 
-	s_mem_dout <= s_mem1_dout when s_mem_rd_sel = "0" else s_mem2_dout;
+	s_mem_dout <= s_mem1_dout when s_mem_rd_sel = "00" else s_mem2_dout;
 
-	s_mem1_wr <= s_mem_wr_stb when s_mem_wr_sel = "0" else '0';
-	s_mem2_wr <= s_mem_wr_stb when s_mem_wr_sel = "1" else '0';
+	s_mem1_wr <= s_mem_wr_stb when s_mem_wr_sel = "00" else '0';
+	s_mem2_wr <= s_mem_wr_stb when s_mem_wr_sel = "10" else '0';
 
 	---------------------------------------------------------------------------
 	-- Auxiliary memory Rd/Wr

@@ -42,19 +42,17 @@ const struct fileop usb_cdc_ops= {
 	.close = (void *)NULL
 };
 
-extern void * usb_cdc_dev;
+/* FIXME file structure dynamic allocation */
+struct file usb_cdc_file;
 
-const struct file usb_cdc_file = {
-	.data = (void *)&usb_cdc_dev, 
-	.op = &usb_cdc_ops
-};
-
-struct file * usb_cdc_fopen(void)
+struct file * usb_cdc_fopen(struct usb_cdc_class * dev)
 {
-	struct usb_cdc_class * dev = (struct usb_cdc_class *)usb_cdc_file.data;
+	FILE * f;
+	f = (struct file *)&usb_cdc_file;
 
-	usb_device_init(dev);
+	f->data = (void *)&dev;
+	f->op =&usb_cdc_ops; 
 
-	return (struct file *)&usb_cdc_file;
+	return (struct file *)f;
 }
 

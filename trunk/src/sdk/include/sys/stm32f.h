@@ -211,7 +211,9 @@ struct file * stm32f_usart_open(struct stm32f_usart * us,
  * SPI
  *---------------------------------------------------------------------*/
 
-int stm32f_spi_init(struct stm32f_spi * spi, const struct stm32f_spi_io * io);
+int stm32f_spi_init(struct stm32f_spi * spi, 
+					const struct stm32f_spi_io * spi_io, 
+					unsigned int freq);
 int stm32f_spi_putc(struct stm32f_spi * spi, int c);
 int stm32f_spi_getc(struct stm32f_spi * spi);
 

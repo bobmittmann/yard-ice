@@ -124,60 +124,51 @@ void __move(uint16_t * dst, uint16_t * src, unsigned int len)
 }
 
 
-static void mco2_cfg(void)
+int fpga_init(struct fpga_io * fpga, const void * rbf, int size) 
 {
-	struct stm32f_gpio * gpio = STM32F_GPIOC;
-	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
-	int pin = 9;
+	struct stm32f_exti * exti = STM32F_EXTI;
+	int ret; 
 
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_af(gpio, pin, GPIO_AF0);
+	/* Enable clock output */
+	stm32f_mco2_init();
 
-    /* enable I/O compensation cell */
-	syscfg->cmpcr |= SYSCFG_CMP_PD;
+	/* Configure memory controller ... */
+	stm32f_fsmc_init();
+
+	stm32f_fsmc_speed(1);
+
+	/* Configure external interrupt ... */
+	stm32f_exti_init(STM32F_GPIOD, 6, EXTI_EDGE_RISING);
+
+	if ((ret = altera_configure(rbf, size)) < 0) {
+		printf(" # altera_configure() failed: %d!\n", ret);
+		for(;;);
+	};
+
+	printf("- FPGA configuration done.\n");
+
+	/* wait for the FPGA initialize */
+	thinkos_sleep(20);
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* Disable interrupts */
+	fpga->ien = 0x0000;
+
+	/* Clear FPGA's pending interrupts */
+	fpga->ist = 0xffff;
+
+	/* Clear EXTI pending flag */
+	exti->pr = (1 << 6);
+
+	/* Clear Cortex Interrupt Pending */
+	cm3_irq_pend_clr(STM32F_IRQ_EXTI9_5);
+
+	return 0;
 }
 
-gpio_io_t fsmc_io[] = {
-	GPIO(GPIOD, 14), /* D0 */
-	GPIO(GPIOD, 15), /* D1 */
-	GPIO(GPIOD, 0),  /* D2 */
-	GPIO(GPIOD, 1),  /* D3 */
-	GPIO(GPIOE, 7),  /* D4 */
-	GPIO(GPIOE, 8),  /* D5 */
-	GPIO(GPIOE, 9),  /* D6 */
-	GPIO(GPIOE, 10), /* D7 */
-	GPIO(GPIOE, 11), /* D8 */
-	GPIO(GPIOE, 12), /* D9 */
-	GPIO(GPIOE, 13), /* D10 */
-	GPIO(GPIOE, 14), /* D11 */
-	GPIO(GPIOE, 15), /* D12 */
-	GPIO(GPIOD, 8),  /* D13 */
-	GPIO(GPIOD, 9),  /* D14 */
-	GPIO(GPIOD, 10), /* D15 */
-	GPIO(GPIOD, 3), /* CLK */
-	GPIO(GPIOD, 4), /* NOE */
-	GPIO(GPIOD, 5), /* NWE */
-	GPIO(GPIOD, 7), /* NE1 */
-//	GPIO(GPIOD, 6), /* NWAIT */
-	GPIO(GPIOB, 7), /* NL */
-};
 
-gpio_io_t irq_io = GPIO(GPIOD, 6);
-
-void fsmc_speed(int div)
-{
-	struct stm32f_fsmc * fsmc = STM32F_FSMC;
-
-	printf("- FSCM div=%d.\n", div);
-
-	fsmc->btr1 = FSMC_ACCMOD_A | FSMC_DATLAT_SET(0) |
-		FSMC_CLKDIV_SET(div) | FSMC_BUSTURN_SET(0) |
-		FSMC_DATAST_SET(0) | FSMC_ADDHDL_SET(0) |
-		FSMC_ADDSET_SET(0);
-}
-
-void stm32f_exti9_5_isr(void)
+void __stm32f_exti9_5_isr(void)
 {
 	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
 	struct stm32f_exti * exti = STM32F_EXTI;
@@ -200,89 +191,6 @@ void stm32f_exti9_5_isr(void)
 //	DCC_LOG1(LOG_TRACE, "IRQ: st=0x%02x", fpga->ist);
 }
 
-void fsmc_init(void)
-{
-	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
-	struct stm32f_exti * exti = STM32F_EXTI;
-	struct stm32f_fsmc * fsmc = STM32F_FSMC;
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	gpio_io_t io;
-	int i;
-
-	mco2_cfg();
-
-	/* IRQ PIN */
-	stm32f_gpio_mode(STM32F_GPIO(irq_io.port), irq_io.pin, 
-					 INPUT, PUSH_PULL | SPEED_HIGH);
-	/* System configuration controller clock enable */
-	rcc->apb2enr |= RCC_SYSCFGEN;
-	/* Select PD6 for EXTI6 */ 
-	syscfg->exticr2 = SYSCFG_EXTI6_PD;
-	/* Unmask interrupt */
-	exti->imr |= (1 << 6);
-	/* Select rising edge trigger */
-	exti->rtsr |= (1 << 6);
-	/* Clear pending flag */
-	exti->pr = (1 << 6);
-
-	/* Configure IO pins */
-	stm32f_gpio_clock_en(STM32F_GPIO(GPIOD));
-	stm32f_gpio_clock_en(STM32F_GPIO(GPIOE));
-	for (i = 0; i < sizeof(fsmc_io) / sizeof(gpio_io_t); ++i) {
-		io = fsmc_io[i];
-		stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, 
-						 ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, GPIO_AF12);
-	}
-
-	/* Flexible static memory controller module clock enable */
-	rcc->ahb3enr |= RCC_FSMCEN;
-
-	fsmc->bcr1 =
-//		FSMC_EXTMOD |
-		FSMC_CBURSTRW |	
-		FSMC_WREN | 
-		FSMC_BURSTEN | 
-		FSMC_MWID_16 | 
-		FSMC_MTYP_PSRAM | 
-		FSMC_MUXEN | /* Address/Data multiplexed */
-		FSMC_MBKEN |
-		FSMC_WAITEN |
-		FSMC_WAITPOL |
-		0;
-	
-	fsmc->btr1 = FSMC_ACCMOD_A | FSMC_DATLAT_SET(0) |
-		FSMC_CLKDIV_SET(3) | FSMC_BUSTURN_SET(0) |
-		FSMC_DATAST_SET(0) | FSMC_ADDHDL_SET(0) |
-		FSMC_ADDSET_SET(0);
-
-	fsmc->bwtr1 = FSMC_ACCMOD_A | FSMC_DATLAT_SET(0) |
-		FSMC_CLKDIV_SET(1) | FSMC_BUSTURN_SET(0) |
-		FSMC_DATAST_SET(0) | FSMC_ADDHDL_SET(0) |
-		FSMC_ADDSET_SET(0);
-//	printf("fsmc->bwtr1=%08x\n", &fsmc->bwtr1);
-
-}
-
-void fpga_irq_init(struct fpga_io * fpga)
-{
-	struct stm32f_exti * exti = STM32F_EXTI;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	/* Disable interrupts */
-	fpga->ien = 0x0000;
-
-	/* Clear FPGA's pending interrupts */
-	fpga->ist = 0xffff;
-
-	/* Clear EXTI pending flag */
-	exti->pr = (1 << 6);
-
-	/* Clear Cortex Interrupt Pending */
-	cm3_irq_pend_clr(STM32F_IRQ_EXTI9_5);
-}
-
 void fpga_irq_disable(void)
 {
 	cm3_irq_disable(STM32F_IRQ_EXTI9_5);
@@ -293,6 +201,22 @@ void fpga_irq_enable(void)
 	cm3_irq_enable(STM32F_IRQ_EXTI9_5);
 }
 
+void fpga_irq_wait(struct fpga_io * fpga, unsigned int mask) 
+{
+	struct stm32f_exti * exti = STM32F_EXTI;
+	int st;
+
+	while (((st = fpga->ist) & mask) == 0) {
+		DCC_LOG2(LOG_TRACE, "IRQ: st=0x%02x en=0x%02x", st, fpga->ien);
+		thinkos_irq_wait(STM32F_IRQ_EXTI9_5);
+	}
+	/* Clear pending flag */
+	exti->pr = (1 << 6);
+	/* Clear interrupt flag */
+	fpga->ist = st;
+}
+
+gpio_io_t irq_io = GPIO(GPIOD, 6);
 
 void fill_up_64(struct fpga_io * fpga, uint64_t * buf, int len)
 {
@@ -463,7 +387,7 @@ void registers_test(struct fpga_io * fpga)
 		printf(" OK.\n");
 }
 
-void memcpy_test(struct fpga_io * fpga)
+bool memcpy_test(struct fpga_io * fpga)
 {
 	uint16_t buf_in[256];
 	uint16_t buf_out[256];
@@ -474,14 +398,14 @@ void memcpy_test(struct fpga_io * fpga)
 	int i = 0;
 	int j;
 
-	printf("- Memory copy test\n");
+	printf("- Memory copy test ");
 
 	DCC_LOG(LOG_TRACE, "Enabling memcpy interrupts...");
-	fpga->ien = 1;
-
-	fpga_irq_enable();
+	fpga->ien = 0x01;
 	 	
-	for (j = 0; j < 100; ++j) {
+	for (j = 0; j < 1000; ++j) {
+
+		printf(".");
 
 		for (i = 0; i < size; ++i) {
 			/* fill in the input buffer, with random nonzero values */
@@ -499,20 +423,13 @@ void memcpy_test(struct fpga_io * fpga)
 		src = rand() % (size - len);
 		dst = rand() % (size - len);
 
-		if ((j % 4) == 0)
-			printf("\n");
-		printf("0x%02x->0x%02x,%-3d ", src, dst, len);
-
 		/* copy from write mem to read mem */
 		fpga->src = src;
 		fpga->dst = dst;
 		fpga->len = len;
 		fpga->ctl = 1;
 
-		for (i = 0; i < 100000; ++i) {
-			if (gpio_status(irq_io))
-				break;
-		}
+		fpga_irq_wait(fpga, 0x01); 
 
 		/* read from FPGA */
 		for (i = 0; i < size; ++i)
@@ -523,12 +440,15 @@ void memcpy_test(struct fpga_io * fpga)
 			if (buf_out[dst + i] != buf_in[src + i]) {
 				printf("\nError @ %d: 0x%04x != 0x%04x\n", 
 					   i, buf_out[dst + i], buf_in[src + i]);
-				break;
+				printf("      0x%02x->0x%02x,%-3d\n", src, dst, len);
+				return false;
 			}
 		}
 	}
 
-	printf("\n");
+	printf(" OK.\n");
+
+	return true;
 }
 
 void slow_test(struct fpga_io * fpga)
@@ -569,7 +489,7 @@ void count_test(struct fpga_io * fpga)
 
 	printf("  Up: ");
 
-	for (i = 0; i < 10; ++i) {
+	for (i = 0; i < 4; ++i) {
 		cnt = fpga->cnt;
 		thinkos_sleep(100);
 		diff = fpga->cnt - cnt;
@@ -577,7 +497,7 @@ void count_test(struct fpga_io * fpga)
 	}
 
 	printf("\nDown: ");
-	for (i = 0; i < 10; ++i) {
+	for (i = 0; i < 4; ++i) {
 		cnt = fpga->dwn;
 		thinkos_sleep(100);
 		diff = fpga->dwn - cnt;
@@ -586,7 +506,7 @@ void count_test(struct fpga_io * fpga)
 
 	printf("\nDiff: ");
 
-	for (i = 0; i < 10; ++i) {
+	for (i = 0; i < 4; ++i) {
 		u32 = fpga->r32[1];
 		cnt = u32;
 		dwn = u32 >> 16;
@@ -612,10 +532,9 @@ void stdio_init(void)
 int main(int argc, char ** argv)
 {
 	struct fpga_io * fpga =  (struct fpga_io *)STM32F_FSMC_NE1;
-	uint8_t * rbf = (uint8_t *)0x08010000;
+	uint8_t * rbf = (uint8_t *)0x08040000;
 	uint64_t val;
 	uint64_t buf[512];
-	int ret;
 	int i;
 	int n = 512;
 
@@ -638,26 +557,18 @@ int main(int argc, char ** argv)
 	printf("\n");
 	printf("\r\n");
 
-	fsmc_init();
+	stm32f_dac_init();
+	stm32f_dac_vout_set(3300);
 
-	if ((ret = altera_configure(rbf, 40000)) < 0) {
-		printf(" # altera_configure() failed: %d!\n", ret);
-		for(;;);
-	};
-
-	printf("- FPGA configuration done.\n");
+	fpga_init(fpga, rbf, 50000);
 
 	val = 0;
-
-	fsmc_speed(1);
-
-	fpga_irq_init(fpga);
 
 	count_test(fpga);
 
 	registers_test(fpga);
 
-	memcpy_test(fpga);
+//	memcpy_test(fpga);
 
 	io_test(fpga);
 
