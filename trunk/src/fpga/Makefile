@@ -40,6 +40,7 @@ VHDL_FILES = cyc_pll.vhd \
 			syncfifo.vhdl\
 			counter.vhdl\
 			dpram.vhdl\
+			sram.vhdl\
 			cram_adaptor.vhdl\
 			jtagtool3.vhdl
 

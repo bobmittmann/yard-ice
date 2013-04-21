@@ -230,23 +230,24 @@ architecture rtl of jtag_enh_ecu is
 
 	type tms_matrix_t is array (tap_state_t, tap_state_t) of std_logic;
 
+	-- return the TMS value from TAP transition (current, next state)
 	constant tms_lookup : tms_matrix_t := (
-		TAP_DREXIT2 => (TAP_DRSHIFT => '0', TAP_DRUPDATE => '1', others => 'X'),
-		TAP_DREXIT1 => (TAP_DRPAUSE => '0', TAP_DRUPDATE => '1', others => 'X'),
-		TAP_DRSHIFT => (TAP_DRSHIFT => '0', TAP_DREXIT1 => '1', others => 'X'),
-		TAP_DRPAUSE => (TAP_DRPAUSE => '0', TAP_DREXIT2 => '1', others => 'X'),
-		TAP_IRSELECT => (TAP_IRCAPTURE => '0', TAP_RESET => '1', others => 'X'),
-		TAP_DRUPDATE => (TAP_IDLE => '0', TAP_DRSELECT => '1', others => 'X'),
-		TAP_DRCAPTURE => (TAP_DRSHIFT => '0', TAP_DREXIT1 => '1', others => 'X'),
-		TAP_DRSELECT => (TAP_DRCAPTURE => '0', TAP_IRSELECT => '1', others => 'X'),
-		TAP_IREXIT2 => (TAP_IRSHIFT => '0', TAP_IRUPDATE => '1', others => 'X'),
-		TAP_IREXIT1 => (TAP_IRPAUSE => '0', TAP_IRUPDATE => '1', others => 'X'),
-		TAP_IRSHIFT => (TAP_IRSHIFT => '0', TAP_IREXIT1 => '1', others => 'X'),
-		TAP_IRPAUSE => (TAP_IRPAUSE => '0', TAP_IREXIT2 => '1', others => 'X'),
-		TAP_IRUPDATE => (TAP_IDLE => '0', TAP_DRSELECT => '1', others => 'X'),
-		TAP_IDLE => (TAP_IDLE => '0', TAP_DRSELECT => '1', others => 'X'),
-		TAP_IRCAPTURE => (TAP_IRSHIFT => '0', TAP_IREXIT1 => '1', others => 'X'),
-		TAP_RESET => (TAP_IDLE => '0', TAP_RESET => '1', others => 'X')
+		TAP_DREXIT2 =>   (TAP_DRSHIFT =>   '0', TAP_DRUPDATE => '1', others => 'X'),
+		TAP_DREXIT1 =>   (TAP_DRPAUSE =>   '0', TAP_DRUPDATE => '1', others => 'X'),
+		TAP_DRSHIFT =>   (TAP_DRSHIFT =>   '0', TAP_DREXIT1 =>  '1', others => 'X'),
+		TAP_DRPAUSE =>   (TAP_DRPAUSE =>   '0', TAP_DREXIT2 =>  '1', others => 'X'),
+		TAP_IRSELECT =>  (TAP_IRCAPTURE => '0', TAP_RESET =>    '1', others => 'X'),
+		TAP_DRUPDATE =>  (TAP_IDLE =>      '0', TAP_DRSELECT => '1', others => 'X'),
+		TAP_DRCAPTURE => (TAP_DRSHIFT =>   '0', TAP_DREXIT1 =>  '1', others => 'X'),
+		TAP_DRSELECT =>  (TAP_DRCAPTURE => '0', TAP_IRSELECT => '1', others => 'X'),
+		TAP_IREXIT2 =>   (TAP_IRSHIFT =>   '0', TAP_IRUPDATE => '1', others => 'X'),
+		TAP_IREXIT1 =>   (TAP_IRPAUSE =>   '0', TAP_IRUPDATE => '1', others => 'X'),
+		TAP_IRSHIFT =>   (TAP_IRSHIFT =>   '0', TAP_IREXIT1 =>  '1', others => 'X'),
+		TAP_IRPAUSE =>   (TAP_IRPAUSE =>   '0', TAP_IREXIT2 =>  '1', others => 'X'),
+		TAP_IRUPDATE =>  (TAP_IDLE =>      '0', TAP_DRSELECT => '1', others => 'X'),
+		TAP_IDLE =>      (TAP_IDLE =>      '0', TAP_DRSELECT => '1', others => 'X'),
+		TAP_IRCAPTURE => (TAP_IRSHIFT =>   '0', TAP_IREXIT1 =>  '1', others => 'X'),
+		TAP_RESET =>     (TAP_IDLE =>      '0', TAP_RESET =>    '1', others => 'X')
 	);
 	
 begin
@@ -305,7 +306,7 @@ begin
 	--
 	--
 	-- eeee : end state (4 bits)
-	-- vvvv vvvv : vector descriptor
+	-- vvvv vvvv : vector descriptor pointer
 	-- nnnn nnnn : immediate 8 bits number
 
 	---------------------------------------------------------------------------

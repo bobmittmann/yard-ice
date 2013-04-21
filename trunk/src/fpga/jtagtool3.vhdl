@@ -111,6 +111,10 @@ architecture structure of jtagtool3 is
 	constant REG_CKGEN_RTDIV : natural := 5;
 	constant REG_CFG : natural := 6;
 	constant REG_TMR : natural := 7;
+	constant REG_WR_ADDR : natural := 8;
+	constant REG_RD_ADDR : natural := 9;
+	constant REG_DESC_LO: natural := 10;
+	constant REG_DESC_HI: natural := 11;
 
 	-- interrupts
 	constant IRQ_TAP : natural := 0;
@@ -139,13 +143,8 @@ architecture structure of jtagtool3 is
 
 	signal s_mem_wr_stb : std_logic;
 	signal s_mem_wr_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
+--	signal s_mem_rd_stb : std_logic;
 	signal s_mem_rd_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
-
-	signal s_mem1_wr : std_logic;
-	signal s_mem1_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
-	signal s_mem2_wr : std_logic;
-	signal s_mem2_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	signal s_mem_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_mem_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
@@ -153,13 +152,18 @@ architecture structure of jtagtool3 is
 	-- vector descriptor table memory access
 	-- descriptor address
 	signal s_desc_addr : std_logic_vector(DESC_ADDR_BITS downto 1);
-	signal s_desc_data : std_logic_vector(DESC_DATA_BITS -1 downto 0);
+	signal s_desc_data : std_logic_vector(DESC_DATA_BITS - 1 downto 0);
 	signal s_desc_mem_wr_stb : std_logic;
 
 	-- vector descriptor pointer memory access
 	signal s_ptr_addr : std_logic_vector(PTR_ADDR_BITS downto 1);
 	signal s_ptr_data : std_logic_vector(PTR_DATA_BITS - 1 downto 0);
 	signal s_ptr_mem_wr_stb : std_logic;
+
+	-- auxiliary memory access
+
+	signal s_aux_mem_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_aux_mem_wr_stb : std_logic;
 
 	-- Register access
 	signal s_reg_wr_sel : std_logic_vector(REG_SEL_BITS - 1 downto 0);
@@ -174,9 +178,10 @@ architecture structure of jtagtool3 is
 	---------------------------------------------------------------------------
 
 	-- instruction register
---	signal s_insn : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_insn : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_status : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_insn_wr_stb : std_logic;
+
 	-- TAP state
 	signal s_tap_state : unsigned(3 downto 0);
 	signal s_tap_busy : std_logic;
@@ -189,18 +194,19 @@ architecture structure of jtagtool3 is
 	signal s_irq_en : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_irq_en_wr_stb : std_logic;
 
-	-- spare register (R/W)
+	-- debug registers (R/W)
 	signal s_r3 : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_r3_wr_stb : std_logic;
+
 	-- clock generator generator divider (R/W)
 	signal s_ckgen_div : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ckgen_div_wr_stb : std_logic;
+
 	-- RTCK clock generator generator divider (R/W)
 	signal s_ckgen_rtdiv : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	signal s_ckgen_rtdiv_wr_stb : std_logic;
-	-- configuration register
-	signal s_cfg : std_logic_vector(DATA_WIDTH - 1 downto 0); 
-	signal s_cfg_wr_stb : std_logic; 
+
+	---------------------------------------------------------------------------
 	-- timer register
 	signal s_tmr : std_logic_vector(DATA_WIDTH - 1 downto 0); 
 	signal s_tmr_wr_stb : std_logic; 
@@ -208,7 +214,28 @@ architecture structure of jtagtool3 is
 	signal s_tmr_cnt_en : std_logic; 
 	signal s_tmr_timeout : std_logic; 
 
-	-- interrupt requests
+	---------------------------------------------------------------------------
+	-- last memory access registers (R/O)
+	signal s_mem_wr_addr: std_logic_vector(DATA_WIDTH - 1 downto 0); 
+	signal s_mem_rd_addr: std_logic_vector(DATA_WIDTH - 1 downto 0); 
+
+	signal s_desc_lo: std_logic_vector(DATA_WIDTH - 1 downto 0); 
+	signal s_desc_hi: std_logic_vector(DATA_WIDTH - 1 downto 0); 
+	signal s_desc_rd_stb: std_logic;
+	---------------------------------------------------------------------------
+	-- configuration register
+	signal s_cfg : std_logic_vector(DATA_WIDTH - 1 downto 0); 
+	signal s_cfg_wr_stb : std_logic; 
+	-- global reset
+	signal s_rst : std_logic;
+	-- TAP output selection: NORMAL/LOOPBACK
+	signal s_loopback_en : std_logic;
+	-- Clock generator RTCK enable
+	signal s_ckgen_rtck_en : std_logic;
+
+	---------------------------------------------------------------------------
+	-- IRQ interrupt requests
+	---------------------------------------------------------------------------
 	signal s_irq : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_reg : std_logic_vector(IRQ_BITS - 1 downto 0);
 	signal s_irq_set : std_logic_vector(IRQ_BITS - 1 downto 0);
@@ -220,14 +247,9 @@ architecture structure of jtagtool3 is
 	signal s_irq_1khz : std_logic;
 	signal s_irq_tmr : std_logic;
 
-	-- global reset
-	signal s_rst : std_logic;
-	-- TAP output selection: NORMAL/LOOPBACK
-	signal s_loopback_en : std_logic;
-	-- Clock generator RTCK enable
-	signal s_ckgen_rtck_en : std_logic;
-
+	---------------------------------------------------------------------------
 	-- JTAG execution unit connections  
+	---------------------------------------------------------------------------
 	-- Exec strobe
 	signal s_exec_stb : std_logic;
 
@@ -242,17 +264,17 @@ architecture structure of jtagtool3 is
 
 
 	-- RX memory address
-	signal s_rx_mem_addr : std_logic_vector((VEC_ADDR_BITS - 1) downto 0);
+	signal s_rx_mem_addr : std_logic_vector(VEC_ADDR_BITS - 1 downto 0);
 	-- RX memory data
-	signal s_rx_mem_din : std_logic_vector((DATA_WIDTH - 1) downto 0);
-	signal s_rx_mem_dout : std_logic_vector((DATA_WIDTH - 1) downto 0);
+	signal s_rx_mem_din : std_logic_vector(DATA_WIDTH - 1 downto 0);
+	signal s_rx_mem_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	-- RX memory write strobe
 	signal s_rx_mem_wr_stb : std_logic;
 
 	-- TX memory address
-	signal s_tx_mem_addr : std_logic_vector((VEC_ADDR_BITS - 1) downto 0);
+	signal s_tx_mem_addr : std_logic_vector(VEC_ADDR_BITS - 1 downto 0);
 	-- TX memory data
-	signal s_tx_mem_dout : std_logic_vector((DATA_WIDTH - 1) downto 0);
+	signal s_tx_mem_dout : std_logic_vector(DATA_WIDTH - 1 downto 0);
 	-- TX memory read strobe
 --	signal s_tx_mem_rd_stb : std_logic;
 	signal s_tx_mem_wr_stb : std_logic;
@@ -273,6 +295,11 @@ architecture structure of jtagtool3 is
 	signal s_dbgrq_out : std_logic;
 	signal s_dbgack_in : std_logic;
 	-----------------------
+
+	signal s_dbg_mem_rd : std_logic;
+	signal s_dbg_mem_wr : std_logic;
+--	signal s_dbg_reg_rd : std_logic
+--	signal s_dbg_reg_wr : std_logic
 
 	function is_zero(x : std_logic_vector) return std_logic is
 		variable y : std_logic := '0';
@@ -322,6 +349,7 @@ begin
 			mem_addr  => s_mem_addr,
 			mem_rd_data => s_mem_dout,
 			mem_rd_sel  => s_mem_rd_sel,
+--			mem_rd_stb  => s_mem_rd_stb,
 			mem_wr_data  => s_mem_din,
 			mem_wr_sel  => s_mem_wr_sel,
 			mem_wr_stb  => s_mem_wr_stb,
@@ -330,7 +358,10 @@ begin
 			reg_rd_sel  => s_reg_rd_sel,
 			reg_wr_data  => s_reg_din,
 			reg_wr_sel  => s_reg_wr_sel,
-			reg_wr_stb  => s_reg_wr_stb
+			reg_wr_stb  => s_reg_wr_stb,
+
+			dbg_mem_rd => s_dbg_mem_rd,
+			dbg_mem_wr => s_dbg_mem_wr
 		);
 
 	---------------------------------------------------------------------------
@@ -340,12 +371,19 @@ begin
 	s_tx_mem_wr_stb <= s_mem_wr_stb when s_mem_wr_sel = "00" else '0';
 	s_desc_mem_wr_stb <= s_mem_wr_stb when s_mem_wr_sel = "01" else '0';
 	s_ptr_mem_wr_stb <= s_mem_wr_stb when s_mem_wr_sel = "10" else '0';
+	s_aux_mem_wr_stb <= s_mem_wr_stb when s_mem_wr_sel = "11" else '0';
 
 	---------------------------------------------------------------------------
 	-- output selection multiplexer (read)
-	with s_mem_rd_sel select
-		s_mem_dout <= s_rx_mem_dout when "00",
+	with s_mem_rd_sel select s_mem_dout <= 
+		s_rx_mem_dout when "00",
+		s_aux_mem_dout when "11",
 		(others => '0') when others; 
+
+--	s_mem_dout <= s_aux_mem_dout;
+--	s_mem_dout <= "0101010110101010";
+
+	---------------------------------------------------------------------------
 
 	-- Memory map 
     --	
@@ -411,6 +449,10 @@ begin
 		s_ckgen_rtdiv when reg(REG_CKGEN_RTDIV),
 		s_cfg when reg(REG_CFG),
 		s_tmr when reg(REG_TMR),
+		s_mem_wr_addr when reg(REG_WR_ADDR),
+		s_mem_rd_addr when reg(REG_RD_ADDR),
+		s_desc_lo when reg(REG_DESC_LO),
+		s_desc_hi when reg(REG_DESC_HI),
 		(others => '0') when others;
 
 	-- register write enable decoder 
@@ -430,24 +472,6 @@ begin
 		when s_reg_wr_sel = reg(REG_CFG) else '0';
 	s_tmr_wr_stb <= s_reg_wr_stb 
 		when s_reg_wr_sel = reg(REG_TMR) else '0';
-	---------------------------------------------------------------------------
-
-	---------------------------------------------------------------------------
-	-- instruction register
---	insn_r : entity jtag_reg
---		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => INSN_BITS)
---		port map (
---			-- system clock
---			clk => s_clk_main,
---			-- reset
---			rst => s_rst,
---			-- read signal 
---			ld => s_insn_wr_stb,
---			-- data in
---			d => s_bus_din,
---			-- data out
---			q => s_insn);
-	s_exec_stb <= s_insn_wr_stb;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -586,7 +610,7 @@ begin
 
 
 	---------------------------------------------------------------------------
-	-- spare register 
+	-- debug registers 
 	r3 : entity jtag_reg
 		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => DATA_WIDTH) 
 		port map (
@@ -600,6 +624,65 @@ begin
 			d => s_reg_din,
 			-- data out
 			q => s_r3);
+
+	-- capture the memory write address
+	mem_wr_addr : entity jtag_reg
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => MEM_ADDR_BITS) 
+		port map (
+			-- system clock
+			clk => s_clk_bus,
+			-- reset 
+			rst => s_rst,
+			-- read signal 
+			ld => s_dbg_mem_wr,
+			-- data in
+			d => "000" & s_mem_addr & "0",
+			-- data out
+			q => s_mem_wr_addr);
+
+	-- capture the memory read address
+	mem_rd_addr : entity jtag_reg
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => MEM_ADDR_BITS) 
+		port map (
+			-- system clock
+			clk => s_clk_bus,
+			-- reset 
+			rst => s_rst,
+			-- read signal 
+			ld => s_dbg_mem_rd,
+			-- data in
+			d => "000" & s_mem_addr & "0",
+			-- data out
+			q => s_mem_rd_addr);
+
+	-- capture the last vector descriptor
+	desc_lo : entity jtag_reg
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => DATA_WIDTH) 
+		port map (
+			-- system clock
+			clk => s_clk_main,
+			-- reset 
+			rst => s_rst,
+			-- read signal 
+			ld => s_desc_rd_stb,
+			-- data in
+			d => s_desc_data(15 downto 0),
+			-- data out
+			q => s_desc_lo);
+
+	desc_hi : entity jtag_reg
+		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => DATA_WIDTH) 
+		port map (
+			-- system clock
+			clk => s_clk_main,
+			-- reset 
+			rst => s_rst,
+			-- read signal 
+			ld => s_desc_rd_stb,
+			-- data in
+			d => s_desc_data(31 downto 16),
+			-- data out
+			q => s_desc_hi);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -652,8 +735,8 @@ begin
 			io_data => s_mem_din,
 
 			clk => s_clk_main,
-			desc_addr => s_desc_addr,
-			desc_q => s_desc_data
+			addr => s_desc_addr,
+			q => s_desc_data
 		);
 	---------------------------------------------------------------------------
 
@@ -688,7 +771,6 @@ begin
 			addr1 => s_rx_mem_addr,
 			we1 => s_rx_mem_wr_stb, 
 			data1 => s_rx_mem_din,
-	--		data1 => s_tx_mem_dout,
 
 			clk2 => s_clk_bus,
 			addr2 => s_mem_addr(VEC_ADDR_BITS downto 1),
@@ -714,11 +796,45 @@ begin
 			q2 => s_tx_mem_dout
 		);
 
---	 s_tx_mem_dout <= "0101010100110011";
+	---------------------------------------------------------------------------
+
+	---------------------------------------------------------------------------
+	-- Auxiliary memory (Read/Write)
+	aux_mem : entity dpram
+		generic map (
+			DATA_WIDTH => DATA_WIDTH, 
+			ADDR_WIDTH => 8 
+		)
+		port map (
+			clk1 => s_clk_bus,
+			addr1 => s_mem_addr(8 downto 1),
+			we1 => s_aux_mem_wr_stb, 
+			data1 => s_mem_din,
+
+			clk2 => s_clk_bus,
+			addr2 => s_mem_addr(8 downto 1),
+			q2 => s_aux_mem_dout
+		);
+
+--	aux_mem : entity sram
+--		generic map (
+--			DATA_WIDTH => DATA_WIDTH, 
+--			ADDR_WIDTH => 8 
+--		)
+--		port map (
+--			clk => s_clk_bus,
+--			addr => s_mem_addr(8 downto 1),
+--			we => s_aux_mem_wr_stb, 
+--			data => s_mem_din,
+--			q => s_aux_mem_dout
+--		);
+
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
 	-- JTAG controller
+	s_insn <= s_reg_din(INSN_BITS - 1 downto 0);
+	s_exec_stb <= s_insn_wr_stb;
 	shifter : entity jtag_enh_shifter
 		generic map (
 			DATA_WIDTH => DATA_WIDTH, 
@@ -736,7 +852,7 @@ begin
 			ioclk => s_clk_main,
 			rst => s_rst,
 			exec_stb => s_exec_stb,
-			insn => s_reg_din(INSN_BITS - 1 downto 0),
+			insn => s_insn,
 			tdo => s_tap_tdo,
 			rtck => s_tap_rtck,
 			ckgen_rtcken => s_ckgen_rtck_en,
@@ -757,11 +873,11 @@ begin
 
 			desc_addr => s_desc_addr,
 			desc_data => s_desc_data,
+			desc_rd_stb => s_desc_rd_stb,
 
 			ptr_addr => s_ptr_addr,
 			ptr_data => s_ptr_data,
 
---			desc_rd_stb => s_desc_rd_stb,
 
 --			exec_ack => s_exec_ack,
 --			end_stb => s_exec_end_stb,
@@ -849,7 +965,7 @@ begin
 	-- Serial port TX
 	s_uart_tx <= uart_tx;
 	s_dbgrq_out <= s_uart_tx when s_uart_en = '1' else '0';
---	s_dbgrq_out <= s_irq_out;
+--	s_dbgrq_out <= fsmc_clk;
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -868,7 +984,7 @@ begin
 	tp_tms <= s_tap_tms;
 	tp_tck <= s_tap_tck;
 	tp_trst <= s_tap_trst;
---	tp_trst <= s_rx_mem_wr_stb;
+--	tp_trst <= s_aux_mem_wr_stb;
 	tp_rst <= s_tap_nrst;
 	
 --	tap_state <= s_tap_state;

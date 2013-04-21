@@ -19,8 +19,8 @@ port
 	io_data : in std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 	clk : in std_logic;
-	desc_addr : in std_logic_vector(DESC_ADDR_BITS - 1 downto 0);
-	desc_q : out std_logic_vector(DESC_DATA_BITS - 1 downto 0)
+	addr : in std_logic_vector(DESC_ADDR_BITS - 1 downto 0);
+	q : out std_logic_vector(DESC_DATA_BITS - 1 downto 0)
 );
 end jtag_desc_ram;
 
@@ -46,30 +46,30 @@ begin
 	s_we_lo <= io_we and not io_addr(0);
 	s_we_hi <= io_we and io_addr(0);
 
-	s_desc_addr <= to_integer(unsigned(desc_addr));
-
-	process(clk)
-	begin
-		if (rising_edge(clk)) then
-			if (s_we_lo = '1') then
-				ram_lo(s_io_addr) <= io_data;
-			end if;
-			s_desc_lo <= ram_lo(s_desc_addr); 
-		end if;
-	end process;
+	s_desc_addr <= to_integer(unsigned(addr));
 
 	process(io_clk)
 	begin
 		if (rising_edge(io_clk)) then
+			if (s_we_lo = '1') then
+				ram_lo(s_io_addr) <= io_data;
+			end if;
 			if (s_we_hi = '1') then
 				ram_hi(s_io_addr) <= io_data;
 			end if;
+		end if;
+	end process;
+
+	process(clk)
+	begin
+		if (rising_edge(clk)) then 
+			s_desc_lo <= ram_lo(s_desc_addr); 
 			s_desc_hi <= ram_hi(s_desc_addr); 			
 		end if;
 	end process;
 
-	desc_q(DATA_WIDTH - 1 downto 0) <= s_desc_lo;
-	desc_q((DATA_WIDTH * 2) - 1 downto DATA_WIDTH) <= s_desc_hi;
+	q(DATA_WIDTH - 1 downto 0) <= s_desc_lo;
+	q((DATA_WIDTH * 2) - 1 downto DATA_WIDTH) <= s_desc_hi;
 
 end rtl;
 
