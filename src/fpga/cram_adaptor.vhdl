@@ -53,6 +53,7 @@ port (
 	mem_addr : out std_logic_vector(MEM_ADDR_BITS - 1 downto 0);
 	mem_rd_data : in std_logic_vector(15 downto 0) := (others => '0');
 	mem_rd_sel : out std_logic_vector(MEM_SEL_BITS - 1 downto 0);
+	mem_rd_stb : out std_logic;
 	mem_wr_data : out std_logic_vector(15 downto 0);
 	mem_wr_sel : out std_logic_vector(MEM_SEL_BITS - 1 downto 0);
 	mem_wr_stb : out std_logic;
@@ -64,7 +65,9 @@ port (
 	reg_wr_stb : out std_logic;
 	-- Debug
 	dbg_mem_rd : out std_logic;
-	dbg_reg_rd : out std_logic
+	dbg_mem_wr : out std_logic;
+	dbg_reg_rd : out std_logic;
+	dbg_reg_wr : out std_logic
 );
 end cram_adaptor;
 
@@ -73,8 +76,11 @@ architecture rtl of cram_adaptor is
 	constant DATA_WIDTH : natural := 16;
 	constant BUS_ADDR_BITS : natural := DATA_WIDTH;
 
-	constant MEM_SEL_FROM : natural := 14;
-	constant MEM_SEL_TO : natural := 14 - MEM_SEL_BITS;
+	-- register/memory selection address bit
+	constant REG_SEL : natural := BUS_ADDR_BITS - 1;
+
+	constant MEM_SEL_TOP : natural := BUS_ADDR_BITS - 2;
+	constant MEM_SEL_BOT : natural := MEM_SEL_TOP - MEM_SEL_BITS + 1;
 
 	-----------------------
 	-- bust state decoding
@@ -104,12 +110,17 @@ architecture rtl of cram_adaptor is
 	-----------------------
 	signal s_mem_rd_en : std_logic;
 	-----------------------
-	signal s_reg_rd_en : std_logic;
-	signal s_reg_wr_addr: std_logic_vector(REG_SEL_BITS -1 downto 0);
+--	signal s_reg_rd_en : std_logic;
+	signal s_reg_wr_addr: std_logic_vector(REG_SEL_BITS - 1 downto 0);
 	signal s_reg_wr_stb : std_logic;
 	signal s_reg_rd_data : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
-
+	-----------------------
+	signal s_op_mem_rd : std_logic;
+	signal s_op_mem_wr : std_logic;
+	signal s_op_reg_rd : std_logic;
+	signal s_op_reg_wr : std_logic;
+	signal s_start_stb : std_logic;
 begin 
 	---------------------------------------------------------------------------
 	-- Synchronous CRAM type address multiplexed bus
@@ -150,7 +161,7 @@ begin
 	---------------------------------------------------------------------------
 	-- Address latch / counter
 	addr_r : entity counter
-		generic map (DATA_WIDTH => 16, COUNT_BITS => BUS_ADDR_BITS) 
+		generic map (DATA_WIDTH => DATA_WIDTH, COUNT_BITS => BUS_ADDR_BITS) 
 		port map (
 			-- I/O clock
 			clk => cram_clk,
@@ -166,6 +177,30 @@ begin
 			);
 	---------------------------------------------------------------------------
 
+	process (rst, cram_clk, s_cram_adv)
+	begin
+		if (rst = '1') then
+			s_op_mem_wr <= '0';
+			s_op_mem_rd <= '0';
+			s_op_reg_wr <= '0';
+			s_op_reg_rd <= '0';
+		elsif rising_edge(cram_clk) and (s_cram_adv = '1') then
+			s_op_mem_wr <= (cram_nwe nor cram_nce) and not cram_d(REG_SEL);
+			s_op_mem_rd <= (cram_nwe and not cram_nce) and not cram_d(REG_SEL);
+			s_op_reg_wr <= (cram_nwe nor cram_nce) and cram_d(REG_SEL);
+			s_op_reg_rd <= (cram_nwe and not cram_nce) and cram_d(REG_SEL);
+		end if;
+	end process;
+
+	process (rst, cram_clk, s_cram_adv)
+	begin
+		if (rst = '1') then
+			s_start_stb <= '0';
+		elsif rising_edge(cram_clk) then
+			s_start_stb <= s_cram_adv;
+		end if;
+	end process;
+
 	---------------------------------------------------------------------------
 	-- The read selection lines have to be registered to delay 1 clock period
 	process (rst, cram_clk)
@@ -177,7 +212,7 @@ begin
 		end if;
 	end process;
 	-- memory read selector
-	s_mem_rd_en <= not s_cram_mem_rd_addr(15);
+	s_mem_rd_en <= not s_cram_mem_rd_addr(REG_SEL);
 	---------------------------------------------------------------------------
 
 	---------------------------------------------------------------------------
@@ -185,11 +220,13 @@ begin
 	mem_addr <= s_cram_wr_addr(MEM_ADDR_BITS - 1 downto 0);
 	mem_wr_data <= cram_d;
 	-- memory write strobe
-	mem_wr_stb <= s_cram_wr and not s_cram_wr_addr(15);
+	mem_wr_stb <= s_cram_wr and not s_cram_wr_addr(REG_SEL);
 	-- memory block write selector
-	mem_wr_sel <= s_cram_wr_addr(14 downto 15 - MEM_SEL_BITS);
+	mem_wr_sel <= s_cram_wr_addr(MEM_SEL_TOP downto MEM_SEL_BOT);
+	-- memory block read strobe
+	mem_rd_stb <= s_cram_rd and not s_cram_wr_addr(REG_SEL);
 	-- memory block read selector
-	mem_rd_sel <= s_cram_mem_rd_addr(14 downto 15 - MEM_SEL_BITS);
+	mem_rd_sel <= s_cram_mem_rd_addr(MEM_SEL_TOP downto MEM_SEL_BOT);
 
 	---------------------------------------------------------------------------
 	-- Registers write address/data fifo 
@@ -204,7 +241,7 @@ begin
 			in_clk => cram_clk,
 			in_data => cram_d,
 			in_addr => s_cram_wr_addr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_cram_wr and s_cram_wr_addr(15),
+			in_put => s_cram_wr and s_cram_wr_addr(REG_SEL),
 
 			out_clk => clk,
 			out_data => reg_wr_data,
@@ -224,7 +261,7 @@ begin
 
 	---------------------------------------------------------------------------
 	-- Registers read latch
-	s_reg_rd_en <= s_cram_reg_rd_addr(15) and s_cram_rd;
+--	s_reg_rd_en <= s_cram_reg_rd_addr(REG_SEL) and s_cram_rd;
 	process (rst, cram_clk)
 	begin
 		if (rst = '1') then
@@ -241,8 +278,11 @@ begin
 	cram_d <= s_cram_dout when (s_cram_oe  = '1') else (others => 'Z');
 
 
-	dbg_mem_rd <= s_cram_rd and s_mem_rd_en;
-	dbg_reg_rd <= s_cram_rd and s_reg_rd_en;
+	dbg_reg_rd <= s_start_stb and s_op_reg_rd;
+	dbg_reg_wr <= s_start_stb and s_op_reg_wr;
+
+	dbg_mem_rd <= s_start_stb and s_op_mem_rd;
+	dbg_mem_wr <= s_start_stb and s_op_mem_wr;
 
 	---------------------------------------------------------------------------
 
