@@ -56,7 +56,7 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG1(LOG_TRACE, "IRQ %d", irq);
+	DCC_LOG1(LOG_MSG, "IRQ %d", irq);
 
 	/* store the thread info */
 	thinkos_rt.irq_th[irq] = self;

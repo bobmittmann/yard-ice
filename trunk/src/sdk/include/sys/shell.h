@@ -38,9 +38,14 @@ struct shell_cmd {
 	char * const desc;
 };
 
+extern const char yard_ice_greeting[];
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+const char * yard_ice_get_prompt(void);
 
 char * shell_stripline(char * line);
 
@@ -64,12 +69,14 @@ struct shell_cmd * shell_lookup(const char * s,
  *	\return
  *  Returns ....
  */
-int shell(int fd, const char * (* get_prompt)(void), 
-		  const struct shell_cmd * cmd_tab);
+
+int shell(FILE * f, const char * (* get_prompt)(void), 
+		  const char * greeting);
 
 char * freadline(FILE * f, const char * prompt, char * buf, int len);
 
 int shell_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
+
 
 #ifdef __cplusplus
 }

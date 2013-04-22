@@ -129,16 +129,18 @@ var_def_t * var_global_lookup(const char * name)
 	struct var_def * var;
 	int i;
 
+	DCC_LOG(LOG_TRACE, "...");
+
 	for (i = 0; i < var_cnt; i++) {
 		var = &var_tab[i];
 		if (strcmp(var->name, name) == 0) {
-			DCC_LOG(LOG_INFO, "ok.");
+			DCC_LOG(LOG_TRACE, "ok.");
 
 			return var;
 		}
 	}
 
-	DCC_LOG(LOG_INFO, "fail!");
+	DCC_LOG(LOG_TRACE, "fail!");
 		
 	return NULL;
 }

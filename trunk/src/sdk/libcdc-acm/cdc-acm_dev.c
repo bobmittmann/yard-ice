@@ -428,7 +428,7 @@ const usb_class_events_t usb_cdc_ev = {
 	.on_error = usb_cdc_on_error
 };
 
-usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb)
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 {
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)dev;
@@ -440,8 +440,11 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb)
 	dev->ctl_flag = __thinkos_flag_alloc(); 
 	__thinkos_flag_clr(dev->rx_flag);
 
+	usb_cdc_sn_set(sn);
+
 //	dev->tx_mutex = thinkos_mutex_alloc(); 
 	usb_dev_init(dev->usb, cl, &usb_cdc_ev);
+
 
 	return (usb_cdc_class_t *)dev;
 }

@@ -293,10 +293,12 @@ void armice_signal(armice_ctrl_t * ctrl, ice_sig_t sig)
 {
 	switch (sig) {
 	case ICE_SIG_POLL_STOP:
-		ctrl->poll.enabled = 0;
+		ctrl->poll.enabled = false;
 		break;
 	case ICE_SIG_POLL_START:
-		ctrl->poll.enabled = 1;
+		ctrl->poll.enabled = true;
+		break;
+	case ICE_SIG_TARGET_RESET:
 		break;
 	} 
 }

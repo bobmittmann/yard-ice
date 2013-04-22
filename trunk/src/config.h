@@ -91,5 +91,7 @@
 
 #define ENABLE_ICE_TEST 0
 
+#define ENABLE_USB 1
+
 #endif /* __CONFIG_H__ */
 

@@ -23,6 +23,10 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
@@ -59,6 +63,10 @@
 
 #ifndef ENABLE_NETWORK
 #define ENABLE_NETWORK 0
+#endif
+
+#ifndef ENABLE_USB
+#define ENABLE_USB 0
 #endif
 
 void tcpip_init(void);
@@ -202,6 +210,7 @@ uint32_t supervisor_stack[256];
 
 int console_shell(void);
 void telnet_shell(void);
+void usb_shell(void);
 int sys_start(void);
 
 int main(int argc, char ** argv)
@@ -247,12 +256,6 @@ int main(int argc, char ** argv)
 	printf("ok\n");
 #endif
 
-#ifdef ENABLE_TELNET
-	printf("* starting TELNET server ... ");
-	telnet_shell();
-	printf("ok\n");
-#endif
-
 #ifdef ENABLE_TFTP
 	printf("* starting TFTP server ... ");
 	tftpd_start();
@@ -279,6 +282,18 @@ int main(int argc, char ** argv)
 
 	__os_sleep(150);
 	init_debugger();
+
+#if ENABLE_USB
+	printf("* starting USB shell ... ");
+	usb_shell();
+	printf("ok\n");
+#endif
+
+#ifdef ENABLE_TELNET
+	printf("* starting TELNET server ... ");
+	telnet_shell();
+	printf("ok\n");
+#endif
 
 	return console_shell();
 }
