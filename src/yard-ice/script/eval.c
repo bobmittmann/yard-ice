@@ -44,7 +44,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 	int args;
 	int n;
 
-	DCC_LOG1(LOG_INFO, "argc:%d", argc);
+	DCC_LOG1(LOG_TRACE, "argc:%d", argc);
 
 	if (val == NULL)
 		return -1;
@@ -94,7 +94,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 				((c1 >= 'A') && (c1 <= 'Z'))) {
 				var_def_t * var;
 
-				if ((var = var_global_lookup(cp)) < 0) {
+				if ((var = var_global_lookup(cp)) == NULL) {
 					return -1;
 				}
 

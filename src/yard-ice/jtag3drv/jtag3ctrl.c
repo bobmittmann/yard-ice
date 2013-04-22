@@ -37,6 +37,7 @@
 #include "jtag.h"
 
 #include <sys/stm32f.h>
+
 #include <sys/dcclog.h>
 #include <altera.h>
 

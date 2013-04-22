@@ -33,6 +33,8 @@
 #include <string.h>
 #include <sys/delay.h>
 
+#include <yard-ice/drv.h>
+
 #include "jtag3drv.h"
 #include "dbglog.h"
 
@@ -270,6 +272,10 @@ int jtag_tap_select(jtag_tap_t * tap)
 int jtag_drv_init(void)
 {
 	DCC_LOG1(LOG_TRACE, "RBF=0x%08x", jtag3ctrl_rbf);
+
+	stm32f_dac_init();
+
+	stm32f_dac_vout_set(3300);
 
 	if (jtag3ctrl_init(jtag3ctrl_rbf, 64 * 1024) < 0) {
 		return JTAG_ERR_HARDWARE;

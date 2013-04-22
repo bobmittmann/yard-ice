@@ -586,6 +586,8 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 
+	ep->xfr_rem = len;
+
 	/* call class endpoint callback */
 	ep->on_out(drv->cl, ep_id, len);
 }

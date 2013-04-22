@@ -24,19 +24,20 @@
 PROG = yard-ice
 
 CFILES = yard-ice.c yard-ice/debugger.c yard-ice/ice_drv.c yard-ice/mod_mem.c\
-		 yard-ice/fmt_freq.c yard-ice/mem_hexdump.c yard-ice/targets.c
+		 yard-ice/fmt_freq.c yard-ice/mem_hexdump.c yard-ice/targets.c\
+		 yard-ice/usb.c
 
 LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 		  sdk/libice-comm sdk/libtcpip sdk/libdrv sdk/libbitvec\
 		  sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes\
-		  sdk/libtrace\
+		  sdk/libtrace sdk/libcdc-acm sdk/libtty\
 		  yard-ice/arch yard-ice/jtag yard-ice/script yard-ice/cmd\
 		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice yard-ice/cm3ice\
 		  yard-ice/targets yard-ice/comm yard-ice/tftp yard-ice/shell
 
 LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-	targets comm tftp shell
+	targets comm tftp shell cdc-acm tty
 	
 
 CFLAGS = -g -O2 

@@ -68,7 +68,7 @@ void usb_ctrl_event_wait(usb_cdc_class_t * cdc);
 
 void usb_device_init(usb_cdc_class_t * cdc);
 
-usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb);
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn);
 
 int usb_cdc_write(usb_cdc_class_t * cdc,
 				  const void * buf, unsigned int len);

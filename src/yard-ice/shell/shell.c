@@ -43,6 +43,14 @@
 
 #include <sys/dcclog.h>
 
+#ifndef ENABLE_SHELL_HISTORY
+#define ENABLE_SHELL_HISTORY 1
+#endif
+
+#ifndef ENABLE_SHELL_THREAD
+#define EENABLE_SHELL_THREAD 0
+#endif
+
 #ifndef SHELL_LINE_MAX
 #define SHELL_LINE_MAX 128
 #endif
@@ -258,9 +266,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ NULL, "", "", NULL, NULL }
 };
 
-const char greeting[] = "\n"
+const char yard_ice_greeting[] = "\n"
 	"YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2005-20010 BORESTE Electronics (www.boreste.com)\n\n";
+	"(c) Copyright 2013 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
 
 const char * const prompt_tab[] = {
 	"[JTAGTOOL ERR]$ ",
@@ -319,6 +327,8 @@ int exec(FILE * f, char * line)
 	}
 
 	if ((cmd = shell_lookup(argv[0], cmd_tab)) == NULL) {
+
+		DCC_LOG(LOG_TRACE, "shell_lookup() == NULL");
 
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "eval_uint32()");
@@ -498,7 +508,7 @@ char * freadline_history(cmd_history_t * ht, FILE * f,
 	max--;
 	for (;;) {
 		if ((c = fgetc(f)) == EOF) {
-			DCC_LOG(LOG_INFO, "EOF");
+			DCC_LOG(LOG_TRACE, "EOF");
 			return NULL;
 		}
 
@@ -824,7 +834,7 @@ static char * get_cmd_next(char ** linep)
 	return cmd;
 }
 
-int dbg_shell(FILE * f, const char * (* get_prompt)(void), 
+int shell(FILE * f, const char * (* get_prompt)(void), 
 			  const char * greeting)
 {
 	char line[SHELL_LINE_MAX];
@@ -832,7 +842,7 @@ int dbg_shell(FILE * f, const char * (* get_prompt)(void),
 	char * cmd;
 	char * prompt;
 	int ret = 0;
-#if ENABLE_HISTORY
+#if ENABLE_SHELL_HISTORY
 	cmd_history_t history;
 
 	history_init(&history);
@@ -844,7 +854,7 @@ int dbg_shell(FILE * f, const char * (* get_prompt)(void),
 	for (;;) {
 		prompt = (char *)get_prompt();
 
-#if ENABLE_HISTORY
+#if ENABLE_SHELL_HISTORY
 		fprintf(f, "%s", prompt);
 
 		if (freadline_history(&history, f, line, SHELL_LINE_MAX) == NULL)
@@ -885,135 +895,17 @@ int dbg_shell(FILE * f, const char * (* get_prompt)(void),
 	}
 }
 
-const char * get_prompt(void)
+const char * yard_ice_get_prompt(void)
 {
 	int status;
 
-#if ENABLE_SHELL_PROMPT_SHOW_TARGET_STATUS
 	status = target_status();
-#else
-	status = 0;
-#endif
+
 	return (char * )prompt_tab[status + 3];
 }
 
-#ifdef ENABLE_TELNET
-
-//#ifdef JTAGTOOL3
-#if 0
-int __attribute__((noreturn)) telnet_task(struct tcp_pcb * tp, uthread_id_t id)
-{
-	int fd;
-
-	for (;;) {
-		/* connection accept */
-		if ((fd = telnetd_open(tp)) < 0) {
-			DCC_LOG(LOG_ERROR, "telnetd_open().");
-			break;
-		}
-
-		DCC_LOG1(LOG_INFO, "telnet connection accepted, fd:%d", fd);
-
-		dbg_shell(fd, get_prompt, greeting);
-
-		close(fd);
-	}
-
-	for (;;);
-}
-
-int telnet_shell(void)
-{
-	struct tcp_pcb * tp;
-	int th;
-
-	/* start listening */
-	if ((tp = telnetd_start(IPPORT_TELNET, 1)) == NULL) {
-		DCC_LOG(LOG_ERROR, "telnetd_start().");
-		return -1;
-	}
-
-	th = uthread_create(NULL, 2048, (uthread_task_t)telnet_task, 
-						(void *)tp, 0, NULL); 
-
-	printf("<%d> ", th);
-
-	th = uthread_create(NULL, 2048, (uthread_task_t)telnet_task, 
-						(void *)tp, 0, NULL); 
-
-	printf("<%d> ", th);
-
-	return 0;
-}
-
-#else
-
-int __attribute__((noreturn)) telnet_task(void * arg)
-{
-	struct tcp_pcb * tp;
-	FILE * f;
-
-	for (;;) {
-		/* start listening */
-		if ((tp = telnetd_start(IPPORT_TELNET, 1)) == NULL) {
-			DCC_LOG(LOG_ERROR, "telnetd_start().");
-			break;;
-		}
-
-		/* connection accept */
-
-#if (ENABLE_HISTORY)
-		/* disable echo */
-		if ((f = telnetd_fopen(tp, 0)) < 0) {
-			DCC_LOG(LOG_ERROR, "telnetd_open().");
-			break;
-		}
-#else
-		/* enable echo, enable canonical mode */
-		if ((f = telnetd_fopen(tp, TELNET_ECHO | TELNET_ICANON)) < 0) {
-			DCC_LOG(LOG_ERROR, "telnetd_open().");
-			break;
-		}
-#endif
-
-		/* stop listening and release the descriptor */
-		telnetd_stop(tp);
-
-		DCC_LOG1(LOG_INFO, "telnet connection accepted, fd:%d", fd);
-
-		dbg_shell(f, get_prompt, greeting);
-
-		close(fd);
-	}
-
-	for (;;);
-}
-
-#if ENABLE_HISTORY
-uint32_t telnet_stack[1024 + 512];
-#else
-uint32_t telnet_stack[512];
-#endif
-/* uint32_t telnet_stack[224 + 256 - 64]; */
-
-int telnet_shell(void)
-{
-	int th;
-
-	th = __os_hread_create((void *)telnet_task, NULL, 
-						   telnet_stack, sizeof(telnet_stack), 
-						   0); 
-
-	printf("<%d> ", th);
-
-	return 0;
-}
-#endif
-
-#endif /* ENABLE_TELNET */
-
 int console_shell(void)
 {
-	return dbg_shell(stdin, get_prompt, greeting);
+	return shell(stdin, yard_ice_get_prompt, yard_ice_greeting);
 }
 
