@@ -25,28 +25,28 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <sys/tty.h>
+
 #include <sys/dcclog.h>
 
-#include <sys/usb-cdc.h>
-
-const struct fileop usb_cdc_ops= {
-	.write = (void *)usb_cdc_write,
-	.read = (void *)usb_cdc_read,
-	.flush = (void *)usb_cdc_flush,
+const struct fileop tty_ops = {
+	.write = (void *)tty_write,
+	.read = (void *)tty_read,
+	.flush = (void *)tty_flush,
 	.close = (void *)NULL
 };
 
 /* FIXME file structure dynamic allocation */
-struct file usb_cdc_file;
+struct file tty_file;
 
-FILE * usb_cdc_fopen(struct usb_cdc_class * dev)
+FILE * tty_fopen(struct tty_dev * dev)
 {
-	struct file * f = (struct file *)&usb_cdc_file;
+	struct file * f = (struct file *)&tty_file;
 
 	DCC_LOG(LOG_TRACE, "...");
 
 	f->data = (void *)dev;
-	f->op = &usb_cdc_ops; 
+	f->op = &tty_ops; 
 
 	return f;
 }

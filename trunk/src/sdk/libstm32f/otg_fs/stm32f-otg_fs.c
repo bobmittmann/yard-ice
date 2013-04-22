@@ -93,26 +93,26 @@ void stm32f_otg_fs_addr_set(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 
 void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 {
-	int ep = addr & 0x7f;
+	int ep_id = addr & 0x7f;
 	int input = addr & 0x80;
 
-	DCC_LOG2(LOG_TRACE, "ep=%d %s", ep, input ? "IN" : "OUT");
+	DCC_LOG2(LOG_TRACE, "ep_id=%d %s", ep_id, input ? "IN" : "OUT");
 
 	/* Diable endpoint interrupt */
-	otg_fs->daintmsk &= ~OTG_FS_IEPM(ep);
+	otg_fs->daintmsk &= ~OTG_FS_IEPM(ep_id);
 
 	/* Disable endpoint */
 	if (input) {
-		otg_fs->inep[ep].diepctl &= ~OTG_FS_USBAEP;
+		otg_fs->inep[ep_id].diepctl &= ~OTG_FS_USBAEP;
 	} else {
-		otg_fs->outep[ep].doepctl &= ~OTG_FS_USBAEP;
+		otg_fs->outep[ep_id].doepctl &= ~OTG_FS_USBAEP;
 	}
 }
 
 void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs,
 								unsigned int addr, unsigned int mpsiz)
 {
-	int ep = addr & 0x7f;
+	int ep_id = addr & 0x7f;
 	uint32_t rxfsiz;
 	uint32_t pktcnt;
 
@@ -120,18 +120,18 @@ void stm32f_otg_fs_ep_out_start(struct stm32f_otg_fs * otg_fs,
 	pktcnt = rxfsiz / mpsiz;
 
 	/* Prepare EP_OUT to receive */
-	otg_fs->outep[ep].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) |
+	otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) |
 		OTG_FS_XFRSIZ_SET(pktcnt * mpsiz);
 	/* EP enable */
-	otg_fs->outep[ep].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
 const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[] = {
 	64, 32, 16, 8
 };
 
-bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep, 
-							 unsigned int len)
+int stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, 
+							unsigned int ep_id, unsigned int len)
 {
 	uint32_t deptsiz;
 	uint32_t depctl;
@@ -139,17 +139,17 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	uint32_t xfrsiz;
 	uint32_t pktcnt;
 
-	deptsiz = otg_fs->inep[ep].dieptsiz;
+	deptsiz = otg_fs->inep[ep_id].dieptsiz;
 	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
 	if ((xfrsiz == 0) && (pktcnt)) {
-		DCC_LOG3(LOG_WARNING, "ep=%d len=%d %d outstanding packets in FIFO", 
-				 ep, len, pktcnt);
-		return false;
+		DCC_LOG3(LOG_WARNING, "ep_id=%d len=%d %d outstanding packets in FIFO", 
+				 ep_id, len, pktcnt);
+		return -1;
 	}
 
-	depctl = otg_fs->inep[ep].diepctl;
-	if (ep == 0)
+	depctl = otg_fs->inep[ep_id].diepctl;
+	if (ep_id == 0)
 		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
 	else
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
@@ -170,23 +170,23 @@ bool stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 		xfrsiz = 0;
 	}
 
-	DCC_LOG3(LOG_INFO, "ep=%d pktcnt=%d xfrsiz=%d", ep, pktcnt, xfrsiz);
+	DCC_LOG3(LOG_TRACE, "ep_id=%d pktcnt=%d xfrsiz=%d", ep_id, pktcnt, xfrsiz);
 
-	otg_fs->inep[ep].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+	otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
 		OTG_FS_XFRSIZ_SET(xfrsiz); 
 	/* enable end point, clear NACK */
-	otg_fs->inep[ep].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+	otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
 
-	deptsiz = otg_fs->inep[ep].dieptsiz;
+	deptsiz = otg_fs->inep[ep_id].dieptsiz;
 	(void)deptsiz;
 
-	DCC_LOG2(LOG_INFO, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
+	DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
 			 OTG_FS_XFRSIZ_GET(deptsiz));
 
-	return true;
+	return xfrsiz;
 }
 
-int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
+int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep_id,
 						   void * buf)
 {
 	uint32_t depctl;
@@ -200,11 +200,11 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	int cnt;
 	int i;
 
-	free = otg_fs->inep[ep].dtxfsts * 4;
-	depctl = otg_fs->inep[ep].diepctl;
-	deptsiz = otg_fs->inep[ep].dieptsiz;
+	free = otg_fs->inep[ep_id].dtxfsts * 4;
+	depctl = otg_fs->inep[ep_id].diepctl;
+	deptsiz = otg_fs->inep[ep_id].dieptsiz;
 
-	if (ep == 0)
+	if (ep_id == 0)
 		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
 	else
 		mpsiz = OTG_FS_MPSIZ_GET(depctl);
@@ -213,8 +213,8 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
 	(void)pktcnt;
 
-	DCC_LOG5(LOG_INFO, "ep=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
-			 ep, mpsiz, pktcnt, xfrsiz, free);
+	DCC_LOG5(LOG_INFO, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+			 ep_id, mpsiz, pktcnt, xfrsiz, free);
 
 	if (xfrsiz < mpsiz) {
 		if (free < xfrsiz) {
@@ -243,7 +243,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep,
 	cp = (uint8_t *)buf;
 	for (i = 0; i < cnt; i += 4) {
 		data = cp[0] + (cp[1] << 8) + (cp[2] << 16) + (cp[3] << 24);
-		otg_fs->dfifo[ep].push = data;
+		otg_fs->dfifo[ep_id].push = data;
 		cp += 4;
 	}	
 
@@ -357,25 +357,25 @@ static const char * const eptyp_nm[] = {
 
 void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr) 
 {
-	int ep = addr & 0x7f;
+	int ep_id = addr & 0x7f;
 	uint32_t depctl;
 	uint32_t eptsiz;
 	uint32_t eptfsav;
 	uint32_t mpsiz;
 
-	depctl = otg_fs->inep[ep].diepctl;
+	depctl = otg_fs->inep[ep_id].diepctl;
 	if (depctl & OTG_FS_USBAEP) {
-		eptfsav = otg_fs->inep[ep].dtxfsts;
-		eptsiz = otg_fs->inep[ep].dieptsiz;
+		eptfsav = otg_fs->inep[ep_id].dtxfsts;
+		eptsiz = otg_fs->inep[ep_id].dieptsiz;
 
-		mpsiz = (ep == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
+		mpsiz = (ep_id == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
 
 		(void)eptsiz;
 		eptfsav = eptfsav * 4;
 		(void)mpsiz;
 
 		DCC_LOG5(LOG_TRACE, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
-				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
+				 ep_id, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
 				 OTG_FS_TXFNUM_GET(depctl),
 				 (depctl & OTG_FS_STALL) ? 1 : 0,
 				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
@@ -391,20 +391,20 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz), 
 				 eptfsav);
 	} else {
-		depctl = otg_fs->outep[ep].doepctl;
+		depctl = otg_fs->outep[ep_id].doepctl;
 		if (depctl & OTG_FS_USBAEP) {
-			eptsiz = otg_fs->outep[ep].doeptsiz;
+			eptsiz = otg_fs->outep[ep_id].doeptsiz;
 			(void)eptsiz;
 		} else {
-			DCC_LOG1(LOG_WARNING, "EP%d not active!", ep);
+			DCC_LOG1(LOG_WARNING, "EP%d not active!", ep_id);
 			return;
 		}
 		
-		mpsiz = (ep == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
+		mpsiz = (ep_id == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
 		(void)mpsiz;
 
 		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
-				 ep, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
+				 ep_id, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
 				 (depctl & OTG_FS_SNPM) ? 1 : 0,
 				 (depctl & OTG_FS_STALL) ? 1 : 0,
 				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
