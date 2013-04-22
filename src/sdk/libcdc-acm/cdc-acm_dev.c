@@ -79,10 +79,10 @@ struct usb_cdc_acm_dev {
 	int int_ep;
 };
 
-int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id)
+int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 	__thinkos_flag_signal(dev->rx_flag);
 	return 0;
 }
@@ -175,9 +175,9 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		DCC_LOG1(LOG_TRACE, "SetCfg: %d", value);
 
 		if (value) {
-			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_cdc_in_info);
-			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_cdc_out_info);
-			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_cdc_int_info);
+			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_cdc_in_info, NULL, 0);
+			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_cdc_out_info, NULL, 0);
+			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_cdc_int_info, NULL, 0);
 		} else {
 			usb_dev_ep_disable(dev->usb, dev->in_ep);
 			usb_dev_ep_disable(dev->usb, dev->out_ep);
@@ -291,8 +291,8 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* initializes EP0 */
-	dev->ctl_ep = usb_dev_ep0_init(dev->usb, &usb_cdc_ep0_info, 
-								   dev->ctr_buf, CDC_CTR_BUF_LEN);
+	dev->ctl_ep = usb_dev_ep_init(dev->usb, &usb_cdc_ep0_info, 
+								  dev->ctr_buf, CDC_CTR_BUF_LEN);
 
 	return 0;
 }
@@ -325,6 +325,7 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 		thinkos_flag_wait(dev->tx_flag);
 		DCC_LOG(LOG_TRACE, "wakeup");
 		rem -= n;
+		ptr += n;
 	}
 
 	return len;
@@ -334,13 +335,16 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 				 unsigned int len, unsigned int msec)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	int ret;
 
-	__thinkos_flag_clr(dev->rx_flag);
 	DCC_LOG(LOG_TRACE, "wait");
 	thinkos_flag_wait(dev->rx_flag);
+	__thinkos_flag_clr(dev->rx_flag);
 	DCC_LOG(LOG_TRACE, "wakeup");
 
-	return usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+	ret = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+
+	return ret;
 }
 
 int usb_cdc_flush(usb_cdc_class_t * cl,
@@ -423,7 +427,6 @@ const usb_class_events_t usb_cdc_ev = {
 	.on_reset = usb_cdc_on_reset,
 	.on_error = usb_cdc_on_error
 };
-
 
 usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb)
 {
