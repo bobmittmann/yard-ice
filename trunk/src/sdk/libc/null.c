@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <sys/dcclog.h>
+
 int null_write(void * arg, const void * buf, int len)
 {
 	return len;
@@ -45,6 +47,7 @@ int null_flush(void * arg)
 
 int null_close(void * arg)
 {
+	DCC_LOG(LOG_TRACE, "...");
 	return 0;
 }
 

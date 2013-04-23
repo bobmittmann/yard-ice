@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cmd_reset.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -40,11 +40,13 @@ static const lt_entry_int_t rst_mode[] = {
 	{ "hard", RST_HARD },
 	{ "core", RST_CORE },
 	{ "dbg", RST_DBG },
+	{ "sys", RST_SYS },
 	{ "a", RST_AUTO },
 	{ "s", RST_SOFT },
 	{ "h", RST_HARD },
 	{ "c", RST_CORE },
 	{ "d", RST_DBG },
+	{ "y", RST_SYS },
 	{ NULL, 0 }
 };
 

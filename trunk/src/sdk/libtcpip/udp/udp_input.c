@@ -45,13 +45,14 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 	int n;
 
 	len = ntohs(__udp->len);
-#if 0
+
+#if 1
 	if (len > __len) {
 		DCC_LOG1(LOG_WARNING, "invalid len=%d!", len);
 		return 1;
 	}
 #endif
-		
+
 	up = (struct udp_pcb *)pcb_wildlookup(__ip->saddr, __udp->sport, 
 										   __ip->daddr, __udp->dport, 
 										   &__udp__.list);
@@ -119,12 +120,9 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 			up->u_rcv_tail = tail + 1;
 			__os_cond_signal(up->u_rcv_cond);
 
-			DCC_LOG5(LOG_INFO, "%I:%d > %I:%d (%d)", 
+			DCC_LOG5(LOG_TRACE, "%I:%d > %I:%d (%d) queued.", 
 					 __ip->saddr, ntohs(__udp->sport), __ip->daddr, 
 					 ntohs(__udp->dport), len); 
-#if (LOG_LEVEL < LOG_INFO)
-			DCC_LOG(LOG_TRACE, "queued.");
-#endif
 
 		} else {
 			UDP_PROTO_STAT_ADD(rx_drop, 1);

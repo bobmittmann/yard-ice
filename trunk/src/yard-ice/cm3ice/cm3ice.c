@@ -41,6 +41,8 @@
 #include "arm-fpb.h"
 #include "dbglog.h"
 
+#include "trace.h"
+
 #ifndef ENABLE_CM3ICE_DP_STICKYERR
 #define ENABLE_CM3ICE_DP_STICKYERR 0
 #endif
@@ -541,7 +543,7 @@ static int cm3ice_comm_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			break;
 		}
 
-		DCC_LOG3(LOG_INFO, "head=%d tail=%d cnt=%d",
+		DCC_LOG3(LOG_TRACE, "head=%d tail=%d cnt=%d",
 				 ctrl->cc.ro.tx_head, ctrl->cc.rw.tx_tail, cnt);
 
 		for (i = 0; i < cnt; i++) {
@@ -590,8 +592,6 @@ int cm3ice_poll(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 	int ret;
 //	uint32_t dfsr;
 	
-	ctrl->polling = true;
-
 #if 0	
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DFSR, &dfsr) != JTAG_ADI_ACK_OK_FAULT) {
 			DCC_LOG(LOG_WARNING, "jtag_mem_ap_rd32() failed!"); 
@@ -645,6 +645,7 @@ int cm3ice_signal(cm3ice_ctrl_t * ctrl, ice_sig_t sig)
 		break;
 	case ICE_SIG_POLL_START:
 		ctrl->poll_enabled = true;
+		ctrl->polling = true;
 		break;
 	case ICE_SIG_TARGET_RESET:
 		break;
@@ -657,9 +658,13 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 	jtag_tap_t * tap = ctrl->tap;
 	uint32_t dhcsr;
 
+	DCC_LOG(LOG_TRACE, "1.");
+
 	if (ctrl->polling) {
+		DCC_LOG(LOG_TRACE, "2.");
 		dhcsr = ctrl->dhcsr;
 	} else {
+		DCC_LOG(LOG_TRACE, "3.");
 //		ctrl->jtag_lock = true;
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
 							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
@@ -1521,7 +1526,7 @@ const struct ice_oper cm3ice_oper = {
 const struct ice_drv_info cm3ice_drv = {
 	.name = "cm3ice",
 	.version = "0.3",
-	.vendor = "BORESTE",
+	.vendor = "YARD-ICE",
 	.oper = (void *)&cm3ice_oper
 };
 

@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file arm7_cfi16.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -28,12 +28,6 @@
 #include "arm7ice.h"
 #include "ice_drv.h"
 
-#ifdef CFI_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-#include <debug.h>
 
 /**************************************************************
  * ARM Macros

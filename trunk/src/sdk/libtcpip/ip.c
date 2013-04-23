@@ -154,7 +154,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	ptr = (void *)&__ip->opt[hdr_len - sizeof(struct iphdr)];
 	len = tot_len - hdr_len;
 
-	DCC_LOG3(LOG_INFO, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
+	DCC_LOG3(LOG_TRACE, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
 
 	/* check the destination ip address */
 	/* get interface ip address */

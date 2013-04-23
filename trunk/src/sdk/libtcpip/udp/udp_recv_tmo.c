@@ -114,15 +114,11 @@ int udp_recv_tmo(struct udp_pcb * __up, void * __buf, int __len,
 		__addr->sin_addr.s_addr = dgram->addr;
 	}
 
-	DCC_LOG5(LOG_TRACE, "%I:%d > %I:%d (%d)", 
+	DCC_LOG5(LOG_INFO, "%I:%d > %I:%d (%d)", 
 		__up->u_laddr, ntohs(__up->u_lport), dgram->addr, 
 		ntohs(dgram->port), dgram->len); 
 
 	tcpip_net_unlock();
-	
-#if (LOG_LEVEL < LOG_INFO)
-	DCC_LOG(LOG_TRACE, "received.");
-#endif
 
 	return n;
 }

@@ -575,10 +575,18 @@ static int dbg_status(struct debugger * dbg)
 	int ice_st;
 	int ret;
 
+	DCC_LOG(LOG_TRACE, "1.");
+
 	if (dbg->state > DBG_ST_UNCONNECTED) {
+
+		DCC_LOG(LOG_TRACE, "2.");
+
 		if ((ice_st = ice_status(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "ice_status() failed!");
 			return ice_st;
 		};
+
+		DCC_LOG(LOG_TRACE, "3.");
 
 		if (ice_st & ICE_ST_HALT) {
 			if (dbg->state != DBG_ST_HALTED) {
@@ -589,7 +597,7 @@ static int dbg_status(struct debugger * dbg)
 				DCC_LOG(LOG_TRACE, "[DBG_ST_HALTED]");
 				dbg->state = DBG_ST_HALTED;
 			} else {
-				DCC_LOG(LOG_INFO, "already halted do nothing ...");
+				DCC_LOG(LOG_TRACE, "already halted do nothing ...");
 			}
 		} else {
 			if (dbg->state != DBG_ST_RUNNING) {
@@ -597,10 +605,15 @@ static int dbg_status(struct debugger * dbg)
 				dbg->state = DBG_ST_RUNNING;
 				poll_start(dbg);
 			} else {
-				DCC_LOG(LOG_INFO, "already running do nothing ...");
+				DCC_LOG(LOG_TRACE, "already running do nothing ...");
 			}
 		}
+
+	} else {
+		DCC_LOG(LOG_TRACE, "unconnected!");
 	}
+
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return dbg->state;
 }
@@ -612,10 +625,16 @@ int target_status(void)
 	struct debugger * dbg = &debugger;
 	int status;
 
-	if (__os_mutex_trylock(dbg->busy) < 0)
+
+	DCC_LOG(LOG_TRACE, "try_lock");
+	if (__os_mutex_trylock(dbg->busy) < 0) {
+		DCC_LOG(LOG_TRACE, "__os_mutex_trylock() failed!");
 		return DBG_ST_BUSY;
+	}
 
 	status = dbg_status(dbg);
+
+	DCC_LOG(LOG_TRACE, ".");
 
 	__os_mutex_unlock(dbg->busy);
 
@@ -699,6 +718,8 @@ int target_connect(int force)
 	dbg_status(dbg);
 
 	__os_mutex_unlock(dbg->busy);
+
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return ret;
 }
@@ -1235,7 +1256,7 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
 	if (len == 0)
 		return 0;

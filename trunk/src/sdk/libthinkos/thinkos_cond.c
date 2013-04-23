@@ -34,12 +34,9 @@ void thinkos_cond_alloc_svc(int32_t * arg)
 	int cond;
 
 	cond = thinkos_alloc_lo(&thinkos_rt.cond_alloc, 0);
-	if (cond >= 0)
-		thinkos_rt.lock[cond] = -1;
-
 	wq = cond + THINKOS_COND_BASE;
 
-	DCC_LOG2(LOG_TRACE, "cond=%d wq=%d", cond, wq);
+	DCC_LOG2(LOG_INFO, "cond=%d wq=%d", cond, wq);
 	arg[0] = wq;
 }
 
@@ -56,7 +53,7 @@ void thinkos_cond_free_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG2(LOG_TRACE, "cond=%d wq=%d", cond, wq);
+	DCC_LOG2(LOG_INFO, "cond=%d wq=%d", cond, wq);
 	__bit_mem_wr(&thinkos_rt.cond_alloc, cond, 0);
 }
 #endif
@@ -72,23 +69,25 @@ void thinkos_cond_wait_svc(int32_t * arg)
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mutex);
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 	if (cond >= THINKOS_COND_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cond);
+		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -97,7 +96,9 @@ void thinkos_cond_wait_svc(int32_t * arg)
 
 	/* sanity check: avoid unlock the mutex by a thread that 
 	   does not own the lock */
-	if (thinkos_rt.lock[mutex] != thinkos_rt.active) {
+	if (thinkos_rt.lock[mutex] != self) {
+		DCC_LOG3(LOG_WARNING, "<%d> mutex %d is locked by <%d>", 
+				 self, mwq, thinkos_rt.lock[mutex]);
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
@@ -224,7 +225,7 @@ void thinkos_cond_signal_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(cwq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the conditional variable. */ 
 	} else {
-		DCC_LOG2(LOG_TRACE, "<%d> wakeup from cond %d.", th, cwq);
+		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
 
 		/* remove from the conditional variable wait queue */
 		__thinkos_wq_remove(cwq, th);
@@ -284,7 +285,7 @@ void thinkos_cond_broadcast_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(cwq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the conditional variable. */ 
 	} else {
-		DCC_LOG2(LOG_TRACE, "<%d> wakeup from cond %d.", th, cwq);
+		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
 
 		/* remove from the conditional variable wait queue */
 		__thinkos_wq_remove(cwq, th);

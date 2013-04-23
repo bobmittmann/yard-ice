@@ -67,11 +67,9 @@
 #define SHELL_HISTORY_MAX 32
 #endif
 
-#if defined(ENABLE_TELNET) || defined(ENABLE_TFTP) \
-	|| defined(ENABLE_GDB) || defined(ENABLE_DCC) \
-    || defined(ENABLE_VCOM)
+#if ENABLE_TELNET || ENABLE_TFTP || ENABLE_GDB || ENABLE_DCC || ENABLE_VCOM
 #ifndef ENABLE_NETWORK
-#define ENABLE_NETWORK
+#define ENABLE_NETWORK 1
 #endif
 #endif
 
@@ -232,7 +230,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 
-#ifdef ENABLE_NETWORK
+//#if (ENABLE_NETWORK)
+#if 0
 	{ cmd_arp, "arp", "arp", 
 		"", "show / manipulate the system ARP cache" },
 
@@ -255,7 +254,8 @@ const struct shell_cmd cmd_tab[] = {
 		"", "print TCP stack info" },
 #endif
 
-#ifdef ENABLE_NETWORK
+//#if (ENABLE_NETWORK)
+#if 0
 	{ cmd_tcp_recv, "rcvnet", "rn", 
 		"[ADDR] [PORT]", "receive file trough network" },
 

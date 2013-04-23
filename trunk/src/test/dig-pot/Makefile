@@ -36,7 +36,7 @@ INCPATH = ../../sdk/include
 JTAGTOOL_ADDR = 192.168.0.80
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O1
+CFLAGS = -g -Os
 
 MACH = stm32f100x4
 HCLK_HZ = 22579200

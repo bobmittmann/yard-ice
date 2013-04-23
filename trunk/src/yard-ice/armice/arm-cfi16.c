@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file arm-cfi16.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -27,12 +27,12 @@
 #include "target/arm.h"
 #include "armice.h"
 
+#if 0
 /* 
  * Common Flash Interface memory access methods
  */
-#if 0
 const struct ice_mem_oper arm_cfi16_oper = {
-	.read = (ice_mem_read_t)arm7_mem_rd,
+	.read = (ice_mem_read_t)armice_mem_read,
 	.write = (ice_mem_write_t)arm7_cfi16_write, 
 	.erase = (ice_mem_erase_t)arm7_cfi16_erase
 };

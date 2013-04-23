@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cmd_config.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -32,7 +32,6 @@
 #include "target.h"
 #include "debugger.h"
 
-#include <debug.h>
 
 int cmd_config(FILE *f, int argc, char ** argv)
 {

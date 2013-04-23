@@ -46,10 +46,10 @@ const struct target_sym void_sym[] = {
 
 const struct target_info * const target_db[] = {
 	&target_null,
-	&a7e10x2,
+/*	&a7e10x2,
 	&jtagtool3,
 	&at91sam9260, 
-	&at91sam7x256,
+	&at91sam7x256, */
 	&stm32f207ve,
 	&stm32f10x,
 	&stm32f,

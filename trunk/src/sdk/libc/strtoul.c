@@ -33,17 +33,16 @@ unsigned long strtoul(const char * __s, char ** __endp, int base)
 
 	for (; ((c = *cp) == ' '); cp++);
 
-	if (base == 0) {
-		if (*cp == '0') {
+	if ((base == 0 || base == 16) && (c == '0')) {
+		cp++;
+		if ((*cp & ~('a' - 'A')) == 'X') {
+			base = 16;
 			cp++;
-			if ((*cp & ~('a' - 'A')) == 'X') {
-				base = 16;
-				cp++;
-			} else 
-				base = 8;
-		} else
-			base = 10;
+		}
 	}
+
+	if (base == 0)
+		base = c == '0' ? 8 : 10;
 
 	switch (base) {
 		while ((c = *cp) != '\0') {
@@ -65,13 +64,14 @@ unsigned long strtoul(const char * __s, char ** __endp, int base)
 		break;
 	case 16:
 		while ((c = *cp) != '\0') {
+
 			if (c >= 'a')
 				c &= ~('a' - 'A');
 
 			if ((c >= 'A') && (c <= 'F'))
 				c -= ('A' - 10);
 			else {
-				if ((c >='0') && (c <= '9'))
+				if ((c >= '0') && (c <= '9'))
 					c -= '0';
 				else
 					break;

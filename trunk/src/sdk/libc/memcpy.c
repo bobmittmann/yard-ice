@@ -26,6 +26,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <sys/dcclog.h>
+
+#if 0
 void * memcpy(void * __dst, const void * __src, size_t __n)
 {
 	register uint8_t * cpsrc = (uint8_t *)__src;
@@ -61,8 +64,6 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 		if (__n >= (2 * sizeof(uint32_t))) {
 			*pdst++ = *psrc++;
 			*pdst++ = *psrc++;
-			*pdst++ = *psrc++;
-			*pdst++ = *psrc++;
 			__n -= (2 * sizeof(uint32_t));
 		}
 
@@ -92,6 +93,9 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 				*pdst++ = *psrc++;
 				__n -= (4 * sizeof(uint16_t));
 			}
+
+			cpsrc = (uint8_t *)psrc;
+			cpdst = (uint8_t *)pdst;
 		}
 	}
 
@@ -115,6 +119,49 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 
 	if (__n) {
 		*cpdst = *cpsrc;
+	}
+
+	return __dst;
+}
+#endif
+
+void * memcpy(void * __dst, const void * __src, size_t __n)
+{
+	register uint8_t * cpsrc = (uint8_t *)__src;
+	register uint8_t * cpdst = (uint8_t *)__dst;
+	register uint32_t align;
+
+	align = ((uint32_t)__src | (uint32_t)__dst) & 0x3;
+
+	if (align == 0) {
+		register uint32_t * psrc = (uint32_t *)__src;
+		register uint32_t * pdst = (uint32_t *)__dst;
+
+		while (__n >= sizeof(uint32_t)) {
+			*pdst++ = *psrc++;
+			__n -= sizeof(uint32_t);
+		}
+
+		cpsrc = (uint8_t *)psrc;
+		cpdst = (uint8_t *)pdst;
+	} else {
+		if (align == 2) {
+			register uint16_t * psrc = (uint16_t *)__src;
+			register uint16_t * pdst = (uint16_t *)__dst;
+
+			if (__n >= sizeof(uint16_t)) {
+				*pdst++ = *psrc++;
+				__n -= sizeof(uint16_t);
+			}
+
+			cpsrc = (uint8_t *)psrc;
+			cpdst = (uint8_t *)pdst;
+		}
+	}
+
+	while (__n) {
+		*cpdst++ = *cpsrc++;
+		__n--;
 	}
 
 	return __dst;

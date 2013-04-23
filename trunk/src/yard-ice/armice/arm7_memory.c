@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file arm7_memory.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
