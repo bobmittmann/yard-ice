@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file eval.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -44,7 +44,7 @@ int eval_uint32(value_t * val, int argc, char * argv[])
 	int args;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "argc:%d", argc);
+	DCC_LOG1(LOG_INFO, "argc:%d", argc);
 
 	if (val == NULL)
 		return -1;

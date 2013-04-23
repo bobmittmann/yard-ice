@@ -113,10 +113,9 @@ int udp_sendto(struct udp_pcb * __up, void * __buf, int __len,
 	if ((rt = route_lookup(daddr)) == NULL) {
 		DCC_LOG2(LOG_WARNING, "<%05x> no route to host: %I", (int)__up, daddr);
 		tcpip_net_unlock();
-		errno = EHOSTUNREACH;
 		UDP_PROTO_STAT_ADD(tx_drop, 1);
 		UDP_PROTO_STAT_ADD(tx_err, 1);
-		return -6;
+		return -EHOSTUNREACH;
 	}
 
 	ifn = (struct ifnet *)rt->rt_ifn;

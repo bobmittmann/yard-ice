@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cmd_get.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 

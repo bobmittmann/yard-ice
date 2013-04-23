@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file cmd_trst.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

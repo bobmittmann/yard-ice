@@ -78,36 +78,33 @@ void * memset(void * __dst, int __c, size_t __n)
 		if (__n >= (2 * sizeof(uint32_t))) {
 			*pdst++ = data;
 			*pdst++ = data;
-			*pdst++ = data;
-			*pdst++ = data;
 			__n -= (2 * sizeof(uint32_t));
 		}
 
 		cpdst = (uint8_t *)pdst;
-	} else {
-		if (align == 2) {
-			register uint16_t * pdst = (uint16_t *)__dst;
+	} else if (align == 2) {
+		register uint16_t * pdst = (uint16_t *)__dst;
 
-			while (__n >= (8 * sizeof(uint16_t))) {
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				__n -= (8 * sizeof(uint16_t));
-			}
-
-			if (__n >= (4 * sizeof(uint16_t))) {
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				*pdst++ = data;
-				__n -= (4 * sizeof(uint16_t));
-			}
+		while (__n >= (8 * sizeof(uint16_t))) {
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			__n -= (8 * sizeof(uint16_t));
 		}
+
+		if (__n >= (4 * sizeof(uint16_t))) {
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			*pdst++ = data;
+			__n -= (4 * sizeof(uint16_t));
+		}
+		cpdst = (uint8_t *)pdst;
 	}
 
 	while (__n >= 4) {

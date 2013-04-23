@@ -69,6 +69,14 @@
 #define ENABLE_USB 0
 #endif
 
+#ifndef ENABLE_TELNET
+#define ENABLE_TELNET 0
+#endif
+
+#ifndef ENABLE_TFTP
+#define ENABLE_TFTP 0
+#endif
+
 void tcpip_init(void);
 
 const struct file stm32f_uart_file = {
@@ -220,12 +228,12 @@ int main(int argc, char ** argv)
 
 	cm3_udelay_calibrate();
 	trace_init();
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(1));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 	stdio_init();
 
-//	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
-//						  supervisor_stack, sizeof(supervisor_stack), 
-//						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
+						  supervisor_stack, sizeof(supervisor_stack), 
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
 #if ENABLE_NETWORK
 	DCC_LOG(LOG_TRACE, "network_config().");
@@ -256,7 +264,7 @@ int main(int argc, char ** argv)
 	printf("ok\n");
 #endif
 
-#ifdef ENABLE_TFTP
+#if (ENABLE_TFTP)
 	printf("* starting TFTP server ... ");
 	tftpd_start();
 	printf("ok\n");
@@ -289,7 +297,7 @@ int main(int argc, char ** argv)
 	printf("ok\n");
 #endif
 
-#ifdef ENABLE_TELNET
+#if ENABLE_TELNET
 	printf("* starting TELNET server ... ");
 	telnet_shell();
 	printf("ok\n");

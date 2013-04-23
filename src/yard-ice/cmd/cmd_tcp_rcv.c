@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file tcp_rcv.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
@@ -35,6 +35,8 @@
 #include "target.h"
 #include "debugger.h"
 #include "eval.h"
+
+#if ENABLE_TCP_RCV
 
 //#define TCP_RCV_BUF_LEN 512
 #define TCP_RCV_BUF_LEN 4096
@@ -275,4 +277,6 @@ int cmd_tcp_recv(FILE * f, int argc, char ** argv)
 
 	return 0;
 }
+
+#endif /* ENABLE_TCP_RCV */
 

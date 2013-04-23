@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file .c
+ * @file mod_nand.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */

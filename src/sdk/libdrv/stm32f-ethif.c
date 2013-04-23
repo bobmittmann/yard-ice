@@ -80,7 +80,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 			if (st.own == 0) {
 				break;
 			}
-			DCC_LOG(LOG_TRACE, "wait....");
+			DCC_LOG(LOG_INFO, "wait....");
 
 			thinkos_flag_wait(drv->rx.flag);
 			__thinkos_flag_clr(drv->rx.flag);
@@ -89,7 +89,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 		}
 
 		len = st.fl;
-		DCC_LOG1(LOG_TRACE, "frame len=%d", len);
+		DCC_LOG1(LOG_INFO, "frame len=%d", len);
 
 		ext_st = desc->ext_st;
 
@@ -99,7 +99,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 			DCC_LOG(LOG_TRACE, "not IP!");
 			break;
 		case ETH_IPPT_UDP:
-			DCC_LOG(LOG_TRACE, "UDP");
+			DCC_LOG(LOG_INFO, "UDP");
 			break;
 		case ETH_IPPT_TCP:
 			DCC_LOG(LOG_TRACE, "TCP");
@@ -116,7 +116,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 		if (ext_st.ipcb)
 			DCC_LOG(LOG_TRACE, "IP checksum bypass.");
 		if (ext_st.ipv4pr)
-			DCC_LOG(LOG_TRACE, "IPv4 packet received.");
+			DCC_LOG(LOG_INFO, "IPv4 packet received.");
 		if (ext_st.ipv6pr)
 			DCC_LOG(LOG_TRACE, "IPv6 packet received.");
 
@@ -397,10 +397,10 @@ void stm32f_eth_isr(void)
 	dmasr = eth->dmasr;
 //	show_dma_status(dmasr);
 
-	DCC_LOG1(LOG_TRACE, "DMASR=0x%08x", dmasr);
+	DCC_LOG1(LOG_INFO, "DMASR=0x%08x", dmasr);
 
 	if (dmasr & ETH_RS) {
-		DCC_LOG(LOG_TRACE, "DMA RS");
+		DCC_LOG(LOG_INFO, "DMA RS");
 		/* disable DMA receive interrupts */
 		eth->dmaier &= ~ETH_RIE;
 		/* clear RS bit */

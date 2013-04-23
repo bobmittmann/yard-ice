@@ -30,10 +30,13 @@
 #include <netinet/in.h>
 #include <sys/clock.h>
 
+
 #include "config.h"
 #include "target.h"
 #include "debugger.h"
 #include "eval.h"
+
+#if ENABLE_TCP_SND
 
 #ifndef TCP_SND_BUF_LEN
 #define TCP_SND_BUF_LEN 1024
@@ -166,3 +169,4 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+#endif /* ENABLE_TCP_SND */
