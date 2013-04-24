@@ -39,10 +39,10 @@ static inline uint16_t cplx16_abs(cplx16_t z) {
 	return isqrt(x + y);
 }
 
-extern const uint16_t q15_db2amp_ltu[];
+extern const uint16_t q15_db2amp_lut[];
 extern const int8_t q15_db2amp_min;
 
-extern const uint16_t q15_db2pwr_ltu[];
+extern const uint16_t q15_db2pwr_lut[];
 extern const int8_t q15_db2pwr_min;
 
 const uint16_t q15_db2amp(int amp);

@@ -49,6 +49,7 @@
 #include "telctl.h"
 #include "tonegen.h"
 #include "net.h"
+#include "g711.h"
 
 int tone_gain = 0;
 int tone_wave = 0;
@@ -244,13 +245,17 @@ void show_menu(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf(" --------\n");
-	printf("   1..5 - Toggle channel\n");
+	printf("   1..5 - Toggle line \n");
 	printf("   9 0  - Hybrid impedance\n");
 	printf("   - =  - Hybrid gain\n");
-	printf("   r    - dump I2S RX buffer\n");
-	printf("   t    - dump I2S TX buffer\n");
-	printf("   d    - DAC tone select\n");
-	printf("   [ ]  - DAC tone gain\n");
+	printf("   r    - ADC (RX) analyzer\n");
+	printf("   t    - DAC (TX) analyzer\n");
+	printf("   y    - Halt analyzer\n");
+	printf("   g    - Auto gain enable/disable\n");
+	printf("   b    - Auto balance enable/disable\n");
+	printf("   m    - Tone mode select\n");
+	printf("   f    - Tone frequency select\n");
+	printf("   [ ]  - Tone generator gain\n");
 	printf("   s    - system reset\n");
 
 	printf("\n");
@@ -324,9 +329,10 @@ void shell_task(void)
 			spectrum_analyzer.enabled = true;
 			thinkos_flag_set(spectrum_analyzer.flag);
 			break;
-		case 'b':
+		case 'y':
 			spectrum_analyzer.enabled = false;
 			break;
+
 		case 'e':
 			audio_enable();
 			break;
@@ -353,8 +359,7 @@ void shell_task(void)
 		case 'a':
 			autogain_enabled = (autogain_enabled) ? false : true;
 			break;
-
-		case 'h':
+		case 'b':
 			autobalance_enabled = (autobalance_enabled) ? false : true;
 			break;
 
@@ -473,6 +478,19 @@ int ui_task(void)
 uint32_t supervisor_stack[256];
 uint32_t acq_stack[128];
 
+void test(void)
+{
+	int i;
+	int16_t val;
+
+	for (i = -32768; i <= 32767; i++) {
+		val = i;
+		printf("0x%4x - > %d %d %d\n", val & 0xffff, 
+			   __top_bit(val), 31 - __clz((uint16_t)val), 
+			   ffs((uint16_t)val));
+	}
+}
+
 int main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
@@ -500,6 +518,8 @@ int main(int argc, char ** argv)
 	printf(" Audio interface test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
+
+//	test();
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
