@@ -121,7 +121,7 @@ void * loopif_mmap(struct ifnet * __if, size_t __length)
 	return drv->buf;
 }
 
-int loopif_getinfo(struct ifnet * __if, char * s, int len)
+int loopif_getdesc(struct ifnet * __if, char * __s, int __len)
 {
 	return 0;
 }
@@ -163,7 +163,7 @@ const struct ifnet_operations loopif_op = {
 	.op_send = loopif_send,
 	.op_arplookup = loopif_arplookup,
 	.op_getaddr = NULL,
-	.op_getinfo = loopif_getinfo,
+	.op_getdesc = loopif_getdesc,
 	.op_sleep = NULL,
 	.op_wakeup = NULL
 };

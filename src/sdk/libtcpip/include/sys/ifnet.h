@@ -93,7 +93,6 @@ struct ifnet {
 #endif
 };
 
-
 struct ifnet_operations {
 	/* interface type */
 	uint8_t op_type;
@@ -127,7 +126,7 @@ struct ifnet_operations {
 	int (* op_wakeup)(struct ifnet * __if);
 
 	/* return a string describing the interface. */
-	int (* op_getinfo)(struct ifnet * __if, char * __s, int __len);
+	int (* op_getdesc)(struct ifnet * __if,  char * __desc, int len);
 
 	/* request a memory region */
 	int (* op_munmap)(struct ifnet * __if, void * __mem);
@@ -140,31 +139,6 @@ struct ifnet_operations {
 #define NETIF_STAT_ADD(NETIF, STAT, VAL)
 #endif
 
-
-/* Network Interface Flags */
-/* interface is up */
-#define	IFF_UP              0x0001		
-/* broadcast address valid */
-#define IFF_BROADCAST       0x0002
-/* is a loopback net */
-#define IFF_LOOPBACK        0x0004
-/* interface is has p-p link */
-#define IFF_POINTTOPOINT    0x0008
-/* no ARP protocol */
-#define IFF_NOARP           0x0010
-/* receive all packets */
-/* supports multicast */
-#define IFF_MULTICAST       0x0020
-/* link is active */
-#define IFF_LINK_UP         0x0080
-
-/* Network Interface Type */
-#define IFT_MASK            0xf0
-#define IFT_OTHER           0x00
-#define IFT_ETHER           0x10
-#define IFT_LOOP            0x20
-#define IFT_SLIP            0x30
-#define IFT_PPP             0x40
 
 extern inline int ifn_init(struct ifnet * __if) {
 	return __if->if_op->op_init(__if);
@@ -199,8 +173,8 @@ extern inline int ifn_getaddr(struct ifnet * __if, uint8_t * __buf) {
 	return __if->if_op->op_getaddr(__if, __buf);
 }
 
-extern inline int ifn_getinfo(struct ifnet * __if, char * __s, int __len) {
-	return __if->if_op->op_getinfo(__if, __s, __len);
+extern inline int ifn_getdesc(struct ifnet * __if, char * __s, int __len) {
+	return __if->if_op->op_getdesc(__if, __s, __len);
 }
 
 extern inline int in_broadcast(in_addr_t __addr, struct ifnet * __if)

@@ -18,41 +18,33 @@
  */
 
 /** 
- * @file get_ifn_byname.c
- * @brief 
+ * @file ifn_getinfo.c
+ * @brief Get Network Interface Name
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
 #define __USE_SYS_IFNET__
 #include <sys/ifnet.h>
-
 #include <tcpip/ifnet.h>
 
-#include <string.h>
-#include <stdlib.h>
+#include <stdio.h>
 
-struct ifnet * get_ifn_byname(const char * __s)
+int ifn_getinfo(struct ifnet * __if, struct ifnet_info * __info)
 {
-	struct ifnet * ifn = NULL;
-	char nm[8];
-	int i;
+	if ((__if == NULL) || (__info == NULL))
+		return -1;
 
-	tcpip_net_lock();
+	__info->type = __if->if_id & IFT_MASK;
+	__info->flags = __if->if_flags;
+	__info->mtu = __if->if_mtu;
+	__info->lnk_speed = __if->if_link_speed;
 
-	for (i = 0; i < ifnet_max; i++) {
-		/* naive lookup method to avoid division */
-		if (__ifnet__[i].if_id != 0) {
-			ifn = &__ifnet__[i];
+	ifn_getname(__if, __info->name);
+	ifn_getaddr(__if, __info->hw_addr);
+	if (ifn_getdesc(__if, __info->desc, IFNET_INFO_DESC_MAX) == 0)
+		__info->desc[0] = '\0';
 
-			ifn_getname(ifn, nm);
-
-			if (strcmp(nm, __s) == 0)
-				break;
-		}
-	}
-
-	tcpip_net_unlock();
-
-	return ifn;
+	return 0;
 }
+
 

@@ -225,7 +225,12 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	return n;
 }
 
-static int uart_console_flush(struct uart_console_dev * ctrl)
+static int uart_console_flush(struct uart_console_dev * dev)
+{
+	return 0;
+}
+
+static int uart_console_close(struct uart_console_dev * dev)
 {
 	return 0;
 }
@@ -351,7 +356,7 @@ const struct fileop uart_console_ops = {
 	.write = (void *)uart_console_write,
 	.read = (void *)uart_console_read,
 	.flush = (void *)uart_console_flush,
-	.close = (void *)NULL
+	.close = (void *)uart_console_close
 };
 
 struct file uart_console_file;

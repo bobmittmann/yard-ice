@@ -82,11 +82,13 @@ struct stm32f_otg_drv {
 	const struct usb_class_events * ev;
 	struct usb_request req;
 	uint16_t fifo_addr;
+/*
+	uint16_t rx_tmr;
+	uint16_t rx_tmr;
+	*/
 };
 
-#define DFIFIO_ADDR (STM32F_BASE_OTG_FS +  0x20000)
-#define DFIFIO (uint32_t *)DFIFIO_ADDR
-#define RX_FIFO_SIZE 512
+#define OTG_FS_RX_FIFO_SIZE 512
 
 /* EP TX fifo memory allocation */
 void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
@@ -133,28 +135,6 @@ static void __copy_from_pktbuf(void * ptr,
 		*dst++ = data >> 16;
 		*dst++ = data >> 24;
 	}
-}
-
-static int __ep_tx_start(struct stm32f_otg_drv * drv, int ep_id)
-{
-	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-	int ret;
-
-	if (ep->xfr_rem == 0) {
-		DCC_LOG(LOG_MSG, "(ep->xfr_rem == 0)!");
-		return 0;
-	}
-
-	/* prepare fifo to transmit */
-	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
-	} else {
-		/* umask FIFO empty interrupt */
-		otg_fs->diepempmsk |= (1 << ep_id);
-	}
-
-	return ret;
 }
 
 static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
@@ -222,6 +202,16 @@ static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
+void stm32f_otg_dev_ep_nak(struct stm32f_otg_drv * drv, int ep_id, bool flag)
+{
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+
+	/* FIXME: select outep/inep ... */
+	if (flag)
+		otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
+	else
+		otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+}
 
 int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
 {
@@ -236,6 +226,7 @@ int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
 int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 		void * buf, unsigned int len)
 {
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep;
 	int ret;
 
@@ -243,11 +234,16 @@ int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = MIN(len, ep->xfr_max);
 
-	ret = __ep_tx_start(drv, ep_id);
+	/* prepare fifo to transmit */
+	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
+	} else {
+		/* umask FIFO empty interrupt */
+		otg_fs->diepempmsk |= (1 << ep_id);
+	}
 
 	DCC_LOG4(LOG_TRACE, "ep_id=%d len=%d xfr_max=%d ret=%d", 
 			 ep_id, len, ep->xfr_max, ret);
-
 	return ret;
 }
 
@@ -360,6 +356,16 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		otg_fs->inep[0].diepctl = OTG_FS_TXFNUM_SET(0) |
 			OTG_FS_EP0_MPSIZ_SET(mxpktsz);
 
+		/* 3. Set up the Data FIFO RAM for each of the FIFOs
+		   – Program the OTG_FS_GRXFSIZ register, to be able to receive
+		   control OUT data and setup data. If thresholding is not enabled,
+		   at a minimum, this must be equal to 1 max packet size of
+		   control endpoint 0 + 2 Words (for the status of the control OUT
+		   data packet) + 10 Words (for setup packets).
+		   - Program the OTG_FS_TX0FSIZ register (depending on the FIFO number
+		   chosen) to be able to transmit control IN data. At a minimum, this
+		   must be equal to 1 max packet size of control endpoint 0. */
+
 		__ep_pktbuf_alloc(drv, 0, mxpktsz);
 
 		/*  4. Program the following fields in the endpoint-specific registers
@@ -440,7 +446,9 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 			uint32_t rxfsiz;
 			uint32_t pktcnt;
 
+			/* get the size of the RX fifio */
 			rxfsiz = otg_fs->grxfsiz * 4;
+
 			pktcnt = rxfsiz / mxpktsz;
 
 			/* cache this value to be reused */
@@ -618,7 +626,8 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		return;
 	}
 
-	if (!__ep_tx_start(drv, 0)) {
+
+	if (ep->xfr_rem == 0) {
 		otg_fs->diepempmsk &= ~(1 << 0);
 		/* Prepare to receive */
 		otg_fs->outep[0].doeptsiz = ep->doeptsiz;
@@ -626,6 +635,14 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 		ep->state = EP_IN_DATA;
 		DCC_LOG(LOG_INFO, "EP0 [IN_DATA]");
+		return;
+	} 
+	
+	if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
+		DCC_LOG(LOG_ERROR, "stm32f_otg_fs_txf_setup() failed!");
+	} else {
+		/* umask FIFO empty interrupt */
+		otg_fs->diepempmsk |= (1 << 0);
 	}
 }
 
@@ -670,13 +687,18 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
-
 		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 		ep->xfr_rem = MIN(req->length, len);
 		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
-		__ep_tx_start(drv, 0);
+		/* prepare fifo to transmit */
+		if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
+			DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
+		} else {
+			/* umask FIFO empty interrupt */
+			otg_fs->diepempmsk |= (1 << 0);
+		}
 	} else {
 		/* Control Write SETUP transaction (OUT Data Phase) */
 		ep->xfr_ptr = ep->xfr_buf;
@@ -780,12 +802,12 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	   chosen) to be able to transmit control IN data. At a minimum, this
 	   must be equal to 1 max packet size of control endpoint 0. */
 
-	/* reset packet buffer address pointer */
+	/* reset fifo memory (packet buffer) allocation pointer */
 	drv->fifo_addr = 0;
 	/* initialize RX fifo size */
-	siz = RX_FIFO_SIZE;
+	siz = OTG_FS_RX_FIFO_SIZE;
 	otg_fs->grxfsiz = siz / 4;
-	/* EP0 TX fifo memory allocation */
+	/* update fifo memory allocation pointer */
 	drv->fifo_addr += siz;
 
 	DCC_LOG2(LOG_TRACE, "   RX: addr=%04x size=%d",
@@ -916,10 +938,15 @@ void stm32f_otg_fs_isr(void)
 				/* Prepare to receive more */
 				otg_fs->outep[epnum].doeptsiz = drv->ep[epnum].doeptsiz;
 				/* EP enable */
-				otg_fs->outep[epnum].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+				/* FIXME: not clearing the NAK here reduces the performance,
+				   but we have to garantee tha the class driver
+				   periodically remove the packets from 
+				   the fifo. Otherwise the EP0 will not receive its
+				   packets and we end up with a deadlock situation */
+
+//				otg_fs->outep[epnum].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 				/* Disable SOF interrupts */
 //				otg_fs->gintmsk &= ~OTG_FS_SOFM;
-
 				break;
 			}
 		}
@@ -931,6 +958,23 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_SOF) {
 		DCC_LOG(LOG_MSG, "<SOF>");
+#if 0
+		if (--dev->rx_tmr == 0) {
+			int i;
+			/* Disable SOF interrupts */
+			otg_fs->gintmsk &= ~OTG_FS_SOFM;
+
+			DCC_LOG(LOG_TRACE, "RX timeout"); 
+			/* pop data from fifo */
+			for (i = 0; i < dev->ep1_rx.len; i++) {
+				(void)otg_fs->dfifo[EP_OUT].pop;
+			}
+			ep->xfer_rem = 0;
+			ep->xfer_len = 0;
+			/* Reenable RX fifo interrupts */
+			otg_fs->gintmsk |= OTG_FS_RXFLVLM;
+		}
+#endif
 	}
 
 	if (gintsts & OTG_FS_WKUPINT) {
@@ -1162,6 +1206,7 @@ const struct usb_dev_ops stm32f_otg_fs_ops = {
 	.ep_init = (usb_dev_ep_init_t)stm32f_otg_dev_ep_init,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_otg_dev_ep_stall,
 	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_otg_dev_ep_zlp_send,
+	.ep_nak = (usb_dev_ep_nak_t)stm32f_otg_dev_ep_nak,
 	.ep_pkt_recv = (usb_dev_ep_pkt_recv_t)stm32f_otg_dev_ep_pkt_recv
 };
 

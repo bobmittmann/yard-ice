@@ -28,6 +28,7 @@
 #define __SYS_USB_DEV_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/usb.h>
 
 /* USB class callback functions */
@@ -60,6 +61,7 @@ typedef int (* usb_class_on_ep_ev_t)(usb_class_t * cl,
 typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
 
 typedef int (* usb_class_on_error_t)(usb_class_t * cl, int code);
+
 
 struct usb_class_events {
 	usb_class_on_reset_t on_reset;
@@ -102,6 +104,8 @@ typedef int (* usb_dev_ep_zlp_send_t)(void *, int);
 
 typedef int (* usb_dev_ep_disable_t)(void *, int);
 
+typedef void (* usb_dev_ep_nak_t)(void *, int, bool);
+
 typedef int (* usb_dev_ep_init_t)(void *, const usb_dev_ep_info_t *,
 								  void *, int);
 
@@ -116,6 +120,8 @@ struct usb_dev_ops {
 	usb_dev_ep_stall_t ep_stall;
 	/* Send a zero-length package */
 	usb_dev_ep_zlp_send_t ep_zlp_send;
+	/* EP set/clear nak */
+	usb_dev_ep_nak_t ep_nak;
 	/* EP Disable */
 	usb_dev_ep_disable_t ep_disable;
 	/* EP Initialize */
@@ -156,6 +162,10 @@ extern inline int usb_dev_ep_tx_start(const usb_dev_t * dev, int ep_id,
 
 extern inline int usb_dev_ep_stall(const usb_dev_t * dev, int ep_id) {
 	return dev->op->ep_stall(dev->priv, ep_id);
+}
+
+extern inline void usb_dev_ep_nak(const usb_dev_t * dev, int ep_id, bool flag) {
+	return dev->op->ep_nak(dev->priv, ep_id, flag);
 }
 
 extern inline int usb_dev_ep_zlp_send(const usb_dev_t * dev, int ep_id) {

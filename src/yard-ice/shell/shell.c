@@ -230,16 +230,16 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 
-//#if (ENABLE_NETWORK)
-#if 0
-	{ cmd_arp, "arp", "arp", 
-		"", "show / manipulate the system ARP cache" },
-
+#if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
 
 	{ cmd_ipcfg, "ipcfg", "ipcf", 
 		"", "ip configuration utility" },
+
+#if 0
+	{ cmd_arp, "arp", "arp", 
+		"", "show / manipulate the system ARP cache" },
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
@@ -252,6 +252,7 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_tcpstat, "tcpstat", "ts", 
 		"", "print TCP stack info" },
+#endif
 #endif
 
 //#if (ENABLE_NETWORK)

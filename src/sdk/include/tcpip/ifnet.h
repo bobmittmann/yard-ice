@@ -42,6 +42,46 @@ struct ifnet_stat {
 	uint32_t tx_err;
 };
 
+#define IFNET_INFO_NAME_MAX 7
+#define IFNET_INFO_DESC_MAX 63
+#define IFNET_HW_ADDR_MAX 16
+
+struct ifnet_info {
+	uint8_t type;
+	uint16_t flags;
+	uint16_t mtu;
+	uint32_t lnk_speed;
+	uint8_t hw_addr[IFNET_HW_ADDR_MAX];
+	char name[IFNET_INFO_NAME_MAX + 1];
+	char desc[IFNET_INFO_DESC_MAX + 1];
+};
+
+/* Network Interface Flags */
+/* interface is up */
+#define	IFF_UP              0x0001		
+/* broadcast address valid */
+#define IFF_BROADCAST       0x0002
+/* is a loopback net */
+#define IFF_LOOPBACK        0x0004
+/* interface is has p-p link */
+#define IFF_POINTTOPOINT    0x0008
+/* no ARP protocol */
+#define IFF_NOARP           0x0010
+/* receive all packets */
+/* supports multicast */
+#define IFF_MULTICAST       0x0020
+/* link is active */
+#define IFF_LINK_UP         0x0080
+
+/* Network Interface Type */
+#define IFT_MASK            0xf0
+#define IFT_OTHER           0x00
+#define IFT_ETHER           0x10
+#define IFT_LOOP            0x20
+#define IFT_SLIP            0x30
+#define IFT_PPP             0x40
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,6 +97,8 @@ struct ifnet * get_ifn_byname(const char * __s);
 
 struct ifnet * get_ifn_byipaddr(in_addr_t __addr);
 
+int ifn_getname(struct ifnet * __if, char * __s);
+
 /* Netork device initialization */
 struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 							void * __io, int __irq_no);
@@ -70,14 +112,11 @@ int ifn_ipv4_set(struct ifnet * __if, in_addr_t __addr, in_addr_t __mask);
 /* get network ipv4 address */
 int ifn_ipv4_get(struct ifnet * __if, in_addr_t * __addr, in_addr_t * __mask);
 
-/* get the interface name ('eth0'...) */
-int ifn_getname(struct ifnet * __if, char * __s);
-
 /* get the interface media address if any */
 int ifn_getaddr(struct ifnet * __if, uint8_t * __buf);
 
-/* return a string describing the interface. */
-int ifn_getinfo(struct ifnet * __if, char * __s, int __len);
+/* return a structure describing the interface. */
+int ifn_getinfo(struct ifnet * __if, struct ifnet_info * __info);
 
 /* get the network interface statistic counters, 
    optionally reseting the counters */

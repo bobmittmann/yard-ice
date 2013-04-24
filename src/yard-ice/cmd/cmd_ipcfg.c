@@ -38,15 +38,15 @@ int cmd_reboot(FILE * f, int argc, char ** argv);
 int cmd_ipcfg(FILE *f, int argc, char ** argv)
 {
 	struct ifnet * ifn;
-//	struct route * rt;
-	in_addr_t ip_addr;
-	in_addr_t netmask = INADDR_ANY;
+	struct route * rt;
+	in_addr_t ipv4_addr;
+	in_addr_t ipv4_mask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
 	int use_dhcp = 0;
 	int change = 0;
 	char s[64];
 	char ip[16];
-//	char * env;
+	char * env;
 	char * cp;
 	int c;
 
@@ -56,10 +56,8 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 	if ((ifn = get_ifn_byname("eth0")) == NULL)
 		return -1;
 
-#if 0
-	FIXME: 
-	ip_addr = ifn->if_ipv4_addr;
-	netmask = ifn->if_ipv4_mask;
+	ifn_ipv4_get(ifn, &ipv4_addr, &ipv4_mask);
+	
 	if ((rt = route_get(INADDR_ANY, INADDR_ANY)) == NULL)
 		gw_addr = INADDR_ANY;
 	else
@@ -67,31 +65,27 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 	use_dhcp = 0;
 
 	/* get environment variable */
-	if ((env=getenv("IPCFG")) != NULL) {
+	if ((env = getenv("IPCFG")) != NULL) {
 		strcpy(s, env);
 
-		if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
+		if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ipv4_addr)) {
 			return -1;
 		}
 
-		if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&netmask)) {
+		if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&ipv4_mask)) {
 			if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&gw_addr)) {
 				use_dhcp = strtoul(strtok(NULL, " , "), NULL, 0);
 			}
 		}
-	} else {
-		ip_addr = ifn->if_ipv4_addr;
-		netmask = ifn->if_ipv4_mask;
-	}
-#endif
+	} 
 
 	for(;;) {
 		fprintf(f, " - IP addr(%s): ", 
-		   inet_ntop(AF_INET, (void *)&ip_addr, ip, 16));
+		   inet_ntop(AF_INET, (void *)&ipv4_addr, ip, 16));
 		fgets(s, 32, f);
 		if (s[0] == '\n')
 			break;
-		if (inet_aton(s, (struct in_addr *)&ip_addr)) {
+		if (inet_aton(s, (struct in_addr *)&ipv4_addr)) {
 			change++;
 			break;
 		}
@@ -99,11 +93,11 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 
 	for(;;) {
 		fprintf(f, " - Network mask(%s): ", 
-		   inet_ntop(AF_INET, (void *)&netmask, ip, 16));
+		   inet_ntop(AF_INET, (void *)&ipv4_mask, ip, 16));
 		fgets(s, 32, f);
 		if (s[0] == '\n')
 			break;
-		if (inet_aton(s, (struct in_addr *)&netmask)) {
+		if (inet_aton(s, (struct in_addr *)&ipv4_mask)) {
 			change++;
 			break;
 		}
@@ -139,8 +133,8 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 		return 0;
 	}
 
-	cp = s + sprintf(s, "%s", inet_ntop(AF_INET, (void *)&ip_addr, ip, 16));
-	cp += sprintf(cp, " %s", inet_ntop(AF_INET, (void *)&netmask, ip, 16));
+	cp = s + sprintf(s, "%s", inet_ntop(AF_INET, (void *)&ipv4_addr, ip, 16));
+	cp += sprintf(cp, " %s", inet_ntop(AF_INET, (void *)&ipv4_mask, ip, 16));
 	cp += sprintf(cp, " %s", inet_ntop(AF_INET, (void *)&gw_addr, ip, 16));
 	sprintf(cp, " %d", use_dhcp);
 
