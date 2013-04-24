@@ -377,7 +377,7 @@ int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
 	return 0;
 }
 
-int stm32f_ethif_getinfo(struct ifnet * __if, char * __s, int __len)
+int stm32f_ethif_getdesc(struct ifnet * __if, char * __s, int __len)
 {
 	return 0;
 }
@@ -443,7 +443,7 @@ const struct ifnet_operations stm32f_ethif_op = {
 	.op_send = stm32f_ethif_send,
 	.op_arplookup = etharp_lookup, 
 	.op_getaddr = stm32f_ethif_getaddr,
-	.op_getinfo = stm32f_ethif_getinfo, 
+	.op_getdesc = stm32f_ethif_getdesc, 
 	.op_sleep = NULL,
 	.op_wakeup = NULL,
 	.op_munmap = stm32f_ethif_munmap

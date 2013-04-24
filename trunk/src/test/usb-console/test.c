@@ -430,7 +430,6 @@ int main(int argc, char ** argv)
 {
 	usb_cdc_class_t * cdc;
 	uint8_t buf[128];
-	uint64_t esn;
 	FILE * f_tty;
 	FILE * f_raw;
 	struct tty_dev * tty;
@@ -445,12 +444,8 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
-	esn = *((uint64_t *)STM32F_UID);
-	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
-	usb_cdc_sn_set(esn);
-
 	DCC_LOG(LOG_TRACE, "usb_cdc_init()");
-	cdc = usb_cdc_init(&stm32f_otg_fs_dev);
+	cdc = usb_cdc_init(&stm32f_otg_fs_dev, *((uint64_t *)STM32F_UID));
 
 	while (0) {
 		thinkos_sleep(5000);
@@ -465,7 +460,7 @@ int main(int argc, char ** argv)
 		DCC_LOG1(LOG_TRACE, "n=%d", n);
 	};
 
-	thinkos_sleep(5000);
+	thinkos_sleep(1000);
 
 	usb_cdc_write(cdc, msg, sizeof(msg));
 
@@ -503,8 +498,8 @@ int main(int argc, char ** argv)
 
 
 	for (i = 0; ;i++) {
-		thinkos_sleep(10000);
-		fprintf(f_tty, "[%d]\n", i);
+		thinkos_sleep(2000);
+		fprintf(f_tty, "[%d] hello world...\n", i);
 	}
 
 	return 0;

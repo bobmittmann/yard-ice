@@ -33,7 +33,7 @@ const struct fileop usb_cdc_ops= {
 	.write = (void *)usb_cdc_write,
 	.read = (void *)usb_cdc_read,
 	.flush = (void *)usb_cdc_flush,
-	.close = (void *)NULL
+	.close = (void *)usb_cdc_release
 };
 
 /* FIXME file structure dynamic allocation */

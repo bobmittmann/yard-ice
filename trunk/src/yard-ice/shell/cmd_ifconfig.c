@@ -28,12 +28,15 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 #include <tcpip/ethif.h>
+#include <tcpip/ifnet.h>
+
 
 #include <sys/shell.h>
 
-#if 0
-#include <sys/socket.h>
+//#include <sys/socket.h>
+
 /*
  * ifconfig
  */
@@ -42,61 +45,64 @@
 
 static int show_ifn(struct ifnet * __if, FILE * f)
 {
-	uint32_t bcast;
+	struct ifnet_info inf;
 	char buf[BUF_SIZE];
-	int type;
+	in_addr_t ipv4_bcast;
+	in_addr_t ipv4_addr;
+	in_addr_t ipv4_mask;
 
-	ifn_getname(__if, buf);
+	ifn_getinfo(__if, &inf);
 
-	fprintf(f, "%s, \tLink encap:", buf);
+	fprintf(f, "%s, \tLink encap:", inf.name);
 
-	type = __if->if_id & IFT_MASK;
-	if (type == IFT_ETHER) {
-		ifn_getaddr(__if, (unsigned char *)buf);
+	if (inf.type == IFT_ETHER) {
 		fprintf(f, "Ethernet  HWaddr: %02x:%02x:%02x:%02x:%02x:%02x\n",
-			buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+			inf.hw_addr[0], inf.hw_addr[1], inf.hw_addr[2], 
+			inf.hw_addr[3], inf.hw_addr[4], inf.hw_addr[5]);
 	} else { 
-		if (type == IFT_PPP)
+		if (inf.type == IFT_PPP)
 			fprintf(f, "POINTTOPOINT ");
 		else {
-			if (type == IFT_LOOP)
+			if (inf.type == IFT_LOOP)
 				fprintf(f, "Local Loopback\n");
 			else
 				fprintf(f, "Unknown\n");
 		}
 	}
-	fprintf(f, "\tinet addr: %s", 
-		   inet_ntop(AF_INET, (void *)&__if->if_ipv4_addr, buf, 16));
 
-	if (__if->if_flags & IFF_BROADCAST) {
-		bcast = (__if->if_ipv4_addr & __if->if_ipv4_mask) | ~__if->if_ipv4_mask;
-		if (bcast != __if->if_ipv4_addr) {
+	ifn_ipv4_get(__if, &ipv4_addr, &ipv4_mask);
+
+	fprintf(f, "\tinet addr: %s", 
+		   inet_ntop(AF_INET, (void *)&ipv4_addr, buf, 16));
+
+	if (inf.flags & IFF_BROADCAST) {
+		ipv4_bcast = (ipv4_addr & ipv4_mask) | ~ipv4_mask;
+		if (ipv4_bcast != ipv4_addr) {
 			fprintf(f, " Bcast: %s" , 
-					inet_ntop(AF_INET, (void *)&bcast, buf, 16));
+					inet_ntop(AF_INET, (void *)&ipv4_bcast, buf, 16));
 		}
 	}
 	fprintf(f, " Mask: %s\n\t", 
-			inet_ntop(AF_INET, (void *)&__if->if_ipv4_mask, buf, 16));
+			inet_ntop(AF_INET, (void *)&ipv4_mask, buf, 16));
 
-	if (__if->if_flags & IFF_UP)
+	if (inf.flags & IFF_UP)
 		fprintf(f, "UP ");
-	if (__if->if_flags & IFF_BROADCAST)
+	if (inf.flags & IFF_BROADCAST)
 		fprintf(f, "BROADCAST ");
-	if (__if->if_flags & IFF_LINK_UP)
+	if (inf.flags & IFF_LINK_UP)
 		fprintf(f, "RUNNING ");
-	if (__if->if_flags & IFF_POINTTOPOINT)
+	if (inf.flags & IFF_POINTTOPOINT)
 		fprintf(f, "POINTTOPOINT ");
-	if (__if->if_flags & IFF_LOOPBACK)
+	if (inf.flags & IFF_LOOPBACK)
 		fprintf(f, "LOOPBACK ");
-	if (__if->if_flags & IFF_NOARP)
+	if (inf.flags & IFF_NOARP)
 		fprintf(f, "NOARP ");
-	if (__if->if_flags & IFF_MULTICAST)
+	if (inf.flags & IFF_MULTICAST)
 		fprintf(f, "MULTICAST ");
 
-	fprintf(f, "MTU:%d\n", __if->if_mtu);
-	if (ifn_getinfo(__if, buf, BUF_SIZE) > 0) {
-		fprintf(f, "\t%s\n", buf);
-	}
+	fprintf(f, "MTU:%d\n", inf.mtu);
+	if (strlen(inf.desc) > 0)
+		fprintf(f, "\t%s\n", inf.desc);
 
 	fprintf(f, "\n");
 
@@ -162,9 +168,10 @@ int cmd_ifconfig(FILE *f, int argc, char ** argv)
 		}
 	}
 
-	ifn_ipconfig(ifn, ip_addr, netmask);
+	ifn_ipv4_set(ifn, ip_addr, netmask);
+
 	show_ifn(ifn, f);
 
 	return 0;
 }
-#endif
+
