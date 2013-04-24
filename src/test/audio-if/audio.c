@@ -50,7 +50,13 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+#ifndef SAMPLE_RATE 
 #define SAMPLE_RATE 8000
+#endif
+
+#ifndef ENABLE_G711
+#define ENABLE_G711 1
+#endif
 
 int32_t codec_addr = 64;
 struct spectrum audio_tx_sa;
@@ -254,9 +260,15 @@ void audio_io_task(void)
 		spectrum_rec(&audio_rx_sa, in_buf);
 
 		if (audio_drv.stream_enabled) {
+#if ENABLE_G711
+			if (g711_alaw_send(0, in_buf, ts) < 0) {
+				tracef("%s(): net_send() failed!", __func__);
+			}
+#else
 			if (audio_send(0, in_buf, ts) < 0) {
 				tracef("%s(): net_send() failed!", __func__);
 			}
+#endif
 			led_flash(LED_NET, 100);
 		}
 
@@ -281,7 +293,11 @@ void net_rcv_task(void)
 			thinkos_sleep(1000);
 		}
 
+#if ENABLE_G711
+		n = g711_alaw_recv(0, buf, &ts);
+#else
 		n = audio_recv(0, buf, &ts);
+#endif
 
 		if (n != sndbuf_len) {
 			tracef("%s(): (n=%d != sndbuf_len)!", __func__, n);

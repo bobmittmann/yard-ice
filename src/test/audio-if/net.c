@@ -43,6 +43,7 @@
 #include "trace.h"
 #include "pktbuf.h"
 #include "rs485lnk.h"
+#include "g711.h"
 #include "crc.h"
 
 struct rs485_link link;
@@ -156,6 +157,96 @@ struct audio_pkt {
 	uint16_t data_len;
 	uint32_t data[];
 };
+
+int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts)
+{
+	struct audio_pkt * pkt;
+	unsigned int data_len;
+	uint8_t * dst;
+	int i;
+
+	pkt = (struct audio_pkt *)pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		return -1;
+	}
+
+	data_len = MIN(sndbuf_len, pktbuf_len - sizeof(struct audio_pkt));
+
+	pkt->ts = ts;
+	pkt->crc = 0;
+	pkt->data_len = data_len;
+	dst = (uint8_t *)pkt->data;
+
+	for (i = 0; i < data_len; ++i) {
+		dst[i] = linear2alaw(buf->data[i] >> 3);
+	}
+
+	pkt->crc = crc16ccitt(0, pkt, data_len + sizeof(struct audio_pkt));
+
+//	tracef("%s(): ts=%d data_len=%d", __func__, ts, data_len);
+
+	pkt = rs485_pkt_enqueue(&link, pkt, data_len + sizeof(struct audio_pkt));
+
+	if (pkt != NULL)
+		pktbuf_free(pkt);
+
+	return 0;
+}
+
+int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts)
+{
+	struct audio_pkt * pkt;
+	int data_len;
+	uint16_t crc;
+	uint8_t * src;
+	int len;
+	int i;
+
+	pkt = (struct audio_pkt *)pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		return -1;
+	}
+
+	len = rs485_pkt_receive(&link, (void **)&pkt, pktbuf_len);
+
+	if (len < 0) {
+		tracef("%s(): rs485_pkt_receive() failed!", __func__);
+		return -1;
+	}
+
+	if (len == 0) {
+		tracef("%s(): rs485_pkt_receive() == 0!", __func__);
+		return -1;
+	}
+
+	if (pkt != NULL) {
+		data_len = len - sizeof(struct audio_pkt);
+		crc = pkt->crc;
+		pkt->crc = 0;
+		if (crc16ccitt(0, pkt,
+					   data_len + sizeof(struct audio_pkt)) != crc) {
+			tracef("%s(): crc error!", __func__);
+			data_len = -1;
+		} else {
+			if ((data_len = len - sizeof(struct audio_pkt)) > 0) {
+				*ts = pkt->ts;
+				src = (uint8_t *)pkt->data;
+				for (i = 0; i < data_len; ++i) {
+					buf->data[i] = alaw2linear(src[i]) << 3;
+				}
+			}
+		}
+		pktbuf_free(pkt);
+		return data_len;
+	} 
+
+	return len;
+}
+
 
 int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 {

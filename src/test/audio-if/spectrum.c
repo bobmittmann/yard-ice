@@ -202,7 +202,7 @@ void spectrum_pwr_show(struct spectrum * sa)
 		mark = (y % 10) ? ' ' : '-';
 
 		for (x = 0; x < 80; ++x) {
-			cp[x] = (pwr[x] >= q15_db2pwr_ltu[y]) ? '|' : mark;
+			cp[x] = (pwr[x] >= q15_db2pwr_lut[y]) ? '|' : mark;
 		}
 		cp[x] = '\0';
 		printf(ln); 
@@ -231,7 +231,7 @@ void spectrum_mag_show(struct spectrum * sa)
 		mark = (y % 10) ? ' ' : '-';
 
 		for (x = 0; x < 80; ++x) {
-			cp[x] = (mag[x] >= q15_db2amp_ltu[y * 2]) ? '|' : mark;
+			cp[x] = (mag[x] >= q15_db2amp_lut[y * 2]) ? '|' : mark;
 		}
 		cp[x] = '\0';
 		printf(ln); 

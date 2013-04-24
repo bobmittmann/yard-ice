@@ -41,6 +41,10 @@ int audio_send(int stream, sndbuf_t * buf, uint32_t ts);
 
 int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts);
 
+int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts);
+
+int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts);
+
 #ifdef __cplusplus
 }
 #endif	
