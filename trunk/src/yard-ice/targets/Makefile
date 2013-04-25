@@ -30,7 +30,7 @@ AT91SAM7_CFILES = at91sam7.c at91sam7s32.c at91sam7s64.c at91sam7s128.c \
 
 AT91SAM9_CFILES = at91sam9.c at91sam9260.c
 
-DAVINCI_CFILES = davinci.c dm365.c dm365-nand.c vpm-dm36x.c
+DAVINCI_CFILES = dm365.c dm365-nand.c davinci.c
 
 STELLARIS_CFILES = stellaris.c lm3s6965.c
 
