@@ -22,15 +22,24 @@
 
 #include <sys/file.h>
 #include <thinkos.h>
+#include <stdlib.h>
 
 #include <sys/dcclog.h>
 
 #include <sys/tty.h>
 
+#define TTY_INBUF_LEN 64
+#define TTY_EDITBUF_SIZE 79
+
 struct tty_dev {
-	/* underling device */
-	void * data;
-	const struct fileop * op;
+	struct file f;
+
+	char inbuf[TTY_INBUF_LEN];
+	int inpos;
+	int inlen;
+
+	char editbuf[TTY_EDITBUF_SIZE + 1];
+	int editpos;
 };
 
 int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
@@ -53,12 +62,12 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 		if (cp[m] > 0) {
 			/* send data except '\n' */
 			if (m) {
-				if (tty->op->write(tty->data, cp, m) <= 0)
+				if (tty->f.op->write(tty->f.data, cp, m) <= 0)
 					return cnt;
 			}
 
 			/* cr - force to send */
-			if (tty->op->write(tty->data, &cr, 1) <= 0)
+			if (tty->f.op->write(tty->f.data, &cr, 1) <= 0)
 				return cnt;
 
 			cnt += m + 1;
@@ -67,7 +76,7 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 			m = 1;
 		} else {
 			if (m) {
-				if (tty->op->write(tty->data, cp, m) <= 0)
+				if (tty->f.op->write(tty->f.data, cp, m) <= 0)
 					return cnt;
 			}
 			cnt += m;
@@ -82,7 +91,7 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 
 	/* send the last chunk */
 	if (m) {
-		if (tty->op->write(tty->data, cp, m) <= 0)
+		if (tty->f.op->write(tty->f.data, cp, m) <= 0)
 			return cnt;
 	}
 
@@ -91,27 +100,122 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 	return cnt;
 }
 
+#define IN_BS      '\x8'
+#define IN_DEL      0x7F
+#define IN_EOL      '\r'
+#define IN_SKIP     '\3'
+#define IN_EOF      '\x1A'
+#define IN_ESC      '\033'
+
+#define OUT_DEL     "\x8 \x8"
+#define OUT_EOL     "\r\n"
+#define OUT_SKIP    "^C\r\n"
+#define OUT_EOF     "^Z"
+#define OUT_BEL     "\7"
+
+static int tty_get_char(struct tty_dev * tty)
+{
+	int ret;
+
+	while (tty->inpos >= tty->inlen) {
+		if ((ret = tty->f.op->read(tty->f.data, 
+								   tty->inbuf, TTY_INBUF_LEN)) < 0) {
+			tty->inlen = 0;
+			return ret;
+		}
+
+		tty->inlen = ret;
+		tty->inpos = 0;
+	}
+
+	return tty->inbuf[tty->inpos++];
+}
+
 int tty_read(struct tty_dev * tty, void * buf, unsigned int len)
 {
-	return tty->op->read(tty->data, buf, len);
+	char * s;
+	int size;
+	int pos;
+	int c;
+
+	s = (char *)buf;
+	size = len;
+	pos = 0;
+
+	for (;;) {
+		c = tty_get_char(tty);
+
+		if ((c == IN_DEL) || (c == IN_BS)) {
+			if (pos > 0) {
+				pos--;
+				tty->f.op->write(tty->f.data, OUT_DEL, sizeof(OUT_DEL) - 1);
+			}
+			continue;
+		}
+
+		if (c == IN_ESC) {
+			continue;
+		}
+
+		if (c != IN_EOL) {
+			if (pos == size) {
+				tty->f.op->write(tty->f.data, OUT_BEL, sizeof(OUT_BEL) - 1);
+				continue;
+			}
+			s[pos++] = c;
+			tty->f.op->write(tty->f.data, &c, sizeof(char));
+			continue;
+		}
+
+		s[pos] = '\n';
+		tty->f.op->write(tty->f.data, OUT_EOL, sizeof(OUT_EOL) - 1);
+		break;
+	}
+
+	return len;
 }
 
 int tty_flush(struct tty_dev * tty)
 {
-	return tty->op->flush(tty->data);
+	return tty->f.op->flush(tty->f.data);
 }
 
+#ifndef TTY_MAX
+#define TTY_MAX 4
+#endif
 
-/* FIXME: dynamic allocation */
-struct tty_dev tty_dev;
+static struct tty_dev __tty[TTY_MAX];
+
+int tty_release(struct tty_dev * tty)
+{
+	tty->f.op = NULL;
+	tty->f.data = NULL;
+
+	return 0;
+}
 
 struct tty_dev * tty_init(struct file * f)
 {
-	struct tty_dev * tty = &tty_dev;
+	struct tty_dev * tty;
+	int i;
 
-	tty->op = f->op;
-	tty->data = f->data;
+	for (i = 0; i < TTY_MAX; ++i) {
+		tty = &__tty[i];
+		if (tty->f.data == NULL) {
+			tty->inpos = 0;
+			tty->inlen = 0;
+			tty->editpos = 0;
+			tty->f.op = f->op;
+			tty->f.data = f->data;
+			return tty;
+		}
+	}
 
-	return tty;
+	return NULL;
+}
+
+struct file * tty_lowlevel(struct tty_dev * tty)
+{
+	return &tty->f;
 }
 

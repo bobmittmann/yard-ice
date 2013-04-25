@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <tcpip/telnetd.h>
 #include <sys/shell.h>
+#include <sys/tty.h>
 
 #include "target.h"
 #include "debugger.h"
@@ -499,6 +500,10 @@ char * freadline_history(cmd_history_t * ht, FILE * f,
 	int c;
 	int i;
 	char * s;
+
+	if (isfatty(f)) {
+		f = ftty_lowlevel(f);
+	}
 
 	mode = 0;
 	pos = 0;

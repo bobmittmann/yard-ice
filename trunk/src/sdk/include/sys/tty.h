@@ -18,35 +18,46 @@
  */
 
 /** 
- * @file cmd_cfgerase.c
- * @brief YARD-ICE
+ * @file sys/tty.h
+ * @brief YARD-ICE libstm32f
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */
+ */ 
 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-/*
-#include <nvconfig.h>
-*/
-#include "target.h"
-#include "debugger.h"
+#ifndef __SYS_TTY_H__
+#define __SYS_TTY_H__
 
-int cmd_cfgerase(FILE *f, int argc, char ** argv)
-{
-	char s[64];
+#include <stdint.h>
+#include <sys/file.h>
 
-	fprintf(f, "\nErase the configuration [y/n]? ");
+struct tty_dev;
 
-	fgets(s, 32, f);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	if (tolower(s[0]) == 'y') {
-		clearenv();
-		fprintf(f, "\nFactory defaults restored.\n");
-	}
+struct tty_dev * tty_init(struct file * f);
 
-	return 0;
+int tty_write(struct tty_dev * tty, 
+			  const void * buf, unsigned int len);
+
+int tty_read(struct tty_dev * tty, void * buf, unsigned int len);
+
+int tty_flush(struct tty_dev * tty);
+
+int tty_release(struct tty_dev * tty);
+
+struct file * tty_fopen(struct tty_dev * tty);
+
+int isfatty(struct file * f);
+
+struct file * tty_lowlevel(struct tty_dev * tty);
+
+struct file * ftty_lowlevel(struct file * f);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __SYS_TTY_H__ */
 

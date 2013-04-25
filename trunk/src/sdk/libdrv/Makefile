@@ -24,7 +24,8 @@
 
 LIB_STATIC = drv
 
-CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c 
+CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c \
+		 stm32f-bkp_sram.c 
 
 override INCPATH += ./include ../libtcpip/include
 

@@ -78,6 +78,7 @@
 #endif
 
 void tcpip_init(void);
+void env_init(void);
 
 const struct file stm32f_uart_file = {
 	.data = STM32F_UART5, 
@@ -183,13 +184,10 @@ void debugger_init(void);
 
 int init_debugger(void) 
 {
-#if 0
 	struct target_info * target;
-#endif
 
 	debugger_init();
 
-#if 0
 	target = target_lookup(getenv("TARGET"));
 
 	if (target == NULL) {
@@ -210,7 +208,7 @@ int init_debugger(void)
 		   target->arch->name, target->arch->model, target->arch->vendor,
 		   target->arch->cpu->family, target->arch->cpu->model, 
 		   target->arch->cpu->vendor);
-#endif
+
 	return 0;
 }
 
@@ -229,6 +227,7 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 	trace_init();
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	env_init();
 	stdio_init();
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
