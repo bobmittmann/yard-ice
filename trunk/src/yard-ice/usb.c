@@ -52,7 +52,7 @@ int usb_task(void * arg)
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, esn);
 	f_raw = usb_cdc_fopen(cdc);
 
-	tty = tty_init(f_raw);
+	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
 	for (;;) {

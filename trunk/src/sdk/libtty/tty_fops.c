@@ -36,13 +36,8 @@ const struct fileop tty_ops = {
 	.close = (void *)tty_release
 };
 
-/* FIXME file structure dynamic allocation */
-struct file tty_file;
-
 FILE * tty_fopen(struct tty_dev * dev)
 {
-	struct file * f = (struct file *)&tty_file;
-
 	if (dev == NULL) {
 		DCC_LOG(LOG_WARNING, "(dev == NULL)!");
 		return NULL;
@@ -50,10 +45,7 @@ FILE * tty_fopen(struct tty_dev * dev)
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	f->data = (void *)dev;
-	f->op = &tty_ops; 
-
-	return f;
+	return file_alloc(dev, &tty_ops);
 }
 
 int isfatty(struct file * f)

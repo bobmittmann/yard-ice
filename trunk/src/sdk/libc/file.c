@@ -1,6 +1,6 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,48 +18,48 @@
  */
 
 /** 
- * @file sys/tty.h
- * @brief YARD-ICE libstm32f
+ * @file file.c
+ * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-
-#ifndef __SYS_TTY_H__
-#define __SYS_TTY_H__
-
-#include <stdint.h>
+#include <stdlib.h>
 #include <sys/file.h>
+#include <sys/null.h>
 
-struct tty_dev;
-
-#ifdef __cplusplus
-extern "C" {
+#ifndef FILE_MAX
+#define FILE_MAX 8
 #endif
 
-struct tty_dev * tty_attach(struct file * f);
+static struct file __file[FILE_MAX];
 
-struct file * tty_fopen(struct tty_dev * tty);
+struct file * file_alloc(void * dev, const struct fileop * op)
+{
+	struct file * f;
+	int i;
 
-int tty_write(struct tty_dev * tty, 
-			  const void * buf, unsigned int len);
+	for (i = 0; i < FILE_MAX; ++i) {
+		f = &__file[i];
+		if (f->data == NULL) {
+			f->data = dev;
+			f->op = op;
+			return f;
+		}
+	}
 
-int tty_read(struct tty_dev * tty, void * buf, unsigned int len);
-
-int tty_flush(struct tty_dev * tty);
-
-int tty_release(struct tty_dev * tty);
-
-
-
-int isfatty(struct file * f);
-
-struct file * tty_lowlevel(struct tty_dev * tty);
-
-struct file * ftty_lowlevel(struct file * f);
-
-#ifdef __cplusplus
+	return NULL;
 }
-#endif
 
-#endif /* __SYS_TTY_H__ */
+int file_free(struct file * f)
+{
+	if (f == NULL)
+		return -1;
+
+	if (f->data != NULL) {
+		f->data = NULL;
+		f->op = &null_fileop;
+	}
+
+	return 0;
+}
 

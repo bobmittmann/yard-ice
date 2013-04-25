@@ -194,7 +194,7 @@ int tty_release(struct tty_dev * tty)
 	return 0;
 }
 
-struct tty_dev * tty_init(struct file * f)
+struct tty_dev * tty_attach(struct file * f)
 {
 	struct tty_dev * tty;
 	int i;
