@@ -36,13 +36,14 @@
 #include <tcpip/udp.h>
 
 #include <sys/shell.h>
-#if 0
+
 static const char * const tcp_state[11] = {
 	"CLOSED", "LISTEN", "SYN_SENT", "SYN_RCVD", "ESTABLISHED",
 	"CLOSE_WAIT", "FIN_WAIT_1", "CLOSING", "LAST_ACK",
 	"FIN_WAIT_2", "TIME_WAIT"
 };
 
+#if 0
 static char * sock2str(char * s, uint32_t addr, uint16_t port) 
 {
 	char ip[16];
@@ -60,29 +61,31 @@ static char * sock2str(char * s, uint32_t addr, uint16_t port)
 				strcpy(s, "*:*");
 	return s;
 }
+#endif
 
 static int show_tcp_pcb(struct tcp_pcb * tp, FILE * f)
 {
+#if 0
 	char buf1[24];	
 	char buf2[24];	
-
 	fprintf(f, "tcp    %-22s %-22s %s\n", 
 				sock2str(buf1, tp->t_laddr, tp->t_lport),
 				sock2str(buf2, tp->t_faddr, tp->t_fport),
 				tcp_state[(int)tp->t_state]);
-
+#endif
 	return 0;
 }
 
-static int show_udp_pcb(struct pcb * pb, FILE * f)
+static int show_udp_pcb(struct udp_pcb * pb, FILE * f)
 {
+#if 0
 	char buf1[24];	
 	char buf2[24];	
 
 	fprintf(f, "udp    %-22s %-22s\n", 
 				sock2str(buf1, pb->inp_laddr, pb->inp_lport), 
 				sock2str(buf2, pb->inp_faddr, pb->inp_fport));
-
+#endif
 	return 0;
 }
 				
@@ -99,4 +102,3 @@ int cmd_netstat(FILE *f, int argc, char ** argv)
 	return 0;
 }
 
-#endif
