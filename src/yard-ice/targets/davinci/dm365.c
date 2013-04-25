@@ -32,6 +32,10 @@
 #include <sys/delay.h>
 #include <sys/dcclog.h>
 
+#ifndef ENABLE_TARGET_DM365HS
+#define ENABLE_TARGET_DM365HS 1
+#endif
+
 void dm36x_pinmux(const struct ice_drv * ice, int offs, 
 				  uint32_t mask, uint32_t value)
 {
@@ -491,6 +495,7 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 		ret = dm365_emif_init(ice);
 	}
 
+#if ENABLE_DAVINCI_NANAD
 	if (ret == 0) {
 		nand_dev_t * nand;
 		nand_chip_t * chip;
@@ -521,20 +526,11 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 			}
 		}
 	}
-
-	if (ret == 0) {
-		fprintf(f, "- NAND memory mapping init...\n");
-/*
-		if ((nand = nand_mem_map(ice, DM365_CE0_BASE,
-								 &dm365_nand_io8, 
-								 &dm365_nand_ecc, 
-								 &dm365_nand_bb)) == NULL)  {
-			fprintf(f, "- nand_mem_map_init() fail!!!\n");
-			ret = -1; */
-	}
+#endif
 
 	return ret;
 }
+
 
 int dm365_jtag_setup(FILE * f, const ice_drv_t * drv,
 						const target_info_t * target)
@@ -629,6 +625,7 @@ int dm365_jtag_setup(FILE * f, const ice_drv_t * drv,
 		DCC_LOG(LOG_ERROR, "jtag_tap_insert() fail!");
 		return ret;
 	}
+
 	if ((ret = jtag_tap_insert(&tap, 1, 4, 0x0792602f)) != JTAG_OK) {
 		DCC_LOG(LOG_ERROR, "jtag_tap_insert() fail!");
 		return ret;
@@ -685,23 +682,25 @@ const struct ice_mem_entry ti_dm365_mem[] = {
 	{ .name = "ce0", .flags = MEM_16_BITS,
 		.addr = { .base = 0x02000000, .offs = 0 },
 		.blk = {.count = 1, .size = MEM_MiB(4)},
-		.op = &arm_cfi16_2_oper
+		.op = &arm_ram_oper
 	},
 	{ .name = "ce1", .flags = MEM_16_BITS,
 		.addr = { .base = 0x04000000, .offs = 0 },
 		.blk = {.count = 1, .size = MEM_MiB(4)},
-		.op = &arm_cfi16_2_oper
+		.op = &arm_ram_oper
 	},
 	{ .name = "ddr", .flags = MEM_32_BITS,
 		.addr = { .base = 0x80000000, .offs = 0 },
 		.blk = {.count = 256, .size = MEM_MiB(1)},
 		.op = &arm_ram_oper
 	},
+#if ENABLE_DAVINCI_NANAD
 	{ .name = "nand", .flags = MEM_8_BITS,
 		.addr = { .base = 0xc0000000, .offs = 0 },
 		.blk = {.count = 32 * 4096, .size = 512},
 		.op = &nand_mem_oper
 	},
+#endif
 	{ .name = "", .flags = 0, .addr = { .base = 0, .offs = 0 }, 
 		.blk = {.count = 0, .size = 0},
 		.op = NULL
@@ -711,7 +710,6 @@ const struct ice_mem_entry ti_dm365_mem[] = {
 const struct target_info ti_dm365 = {
 	.name = "dm365",
 	.arch = &ti_dm365_arch,
-//	.cpu = &davinci_cpu,
 	.mem = (struct ice_mem_entry *)ti_dm365_mem,
 
 	.ice_drv = &armice_drv,
@@ -745,17 +743,22 @@ const struct target_info ti_dm365 = {
 
 	.pre_config = (target_config_t)dm365_jtag_setup,
 	.on_init = (target_script_t)dm365_on_init,
+#if 0
 	.on_halt = (target_script_t)davinci_on_halt,
 	.on_run = NULL,
 	.reset_script = (target_script_t)davinci_reset,
 	.probe = (target_script_t)davinci_probe,
+#endif
+#if ENABLE_DAVINCI_TEST
 	.test = (target_test_t)davinci_test
+#endif
 };
+
+#if ENABLE_TARGET_DM365HS
 
 const struct target_info ti_dm365hs = {
 	.name = "dm365hs",
 	.arch = &ti_dm365_arch,
-//	.cpu = &davinci_cpu,
 	.mem = (struct ice_mem_entry *)ti_dm365_mem,
 
 	.ice_drv = &armice_drv,
@@ -772,7 +775,7 @@ const struct target_info ti_dm365hs = {
 	/* Target supports adaptive clock */
 	.has_rtck = NO,
 	/* The preferred clock method is adaptive (RTCK) */
-	.prefer_rtck = YES,
+	.prefer_rtck = NO,
 	/* Start with slow clock */
 	.clk_slow_on_connect = YES,
 	/* Set default clock after init  */
@@ -789,10 +792,15 @@ const struct target_info ti_dm365hs = {
 
 	.pre_config = (target_config_t)dm365_jtag_setup,
 	.on_init = (target_script_t)dm365_on_init,
+#if 0
 	.on_halt = (target_script_t)davinci_on_halt,
 	.on_run = NULL,
 	.reset_script = (target_script_t)davinci_reset,
 	.probe = (target_script_t)davinci_probe,
+#endif
+#if ENABLE_DAVINCI_TEST
 	.test = (target_test_t)davinci_test
+#endif
 };
 
+#endif

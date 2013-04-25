@@ -160,6 +160,21 @@ SECTIONS
 		*(.glue_7) *(.glue_7t) *(.vfp11_veneer) *(.v4_bx)
 		/* all .rodata sections (constants, strings, etc.)  */
 		*(.rodata .rodata.* .gnu.linkonce.r.*)
+	} >flash = 0xffffffff
+
+	.ARM.extab : 
+	{
+		*(.ARM.extab* .gnu.linkonce.armextab.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_start = .);
+	.ARM.exidx : 
+	{ 
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_end = .);
+
+	.init_array :
+	{
 		. = ALIGN(4);
 		/* constructors */
 		PROVIDE(__ctors_start = .);
@@ -168,10 +183,12 @@ SECTIONS
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
+
 		/* define a global symbol marking the end of read only data sections */
 		. = ALIGN(8); 
 		PROVIDE(__text_end = .);
 	} >flash = 0xffffffff
+
 
 	.data :
 	{

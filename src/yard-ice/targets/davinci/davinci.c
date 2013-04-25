@@ -137,6 +137,32 @@ int davinci_prtcss_rd(const struct ice_drv * ice, int reg,
 	return len;
 }
 
+#if 0
+int davinci_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
+{
+	uint8_t rtc_ctrl[1];
+
+	fprintf(f, "Davinci init script...\n");
+
+	davinci_prtcss_rd(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
+
+	fprintf(f, "PRTCSS_RTC_CTRL=%02x\n", *rtc_ctrl);
+
+	if (*rtc_ctrl & CTRL_WEN) {
+		fprintf(f, "- PRTCSS WDT enabled, disabling it...\n");
+		while (*rtc_ctrl & CTRL_WDTBUSY) {
+			davinci_prtcss_rd(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
+		}
+		*rtc_ctrl &= ~CTRL_WEN; 
+		davinci_prtcss_wr(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
+	}
+
+	return 0;
+}
+#endif
+
+#if ENABLE_DAVINCI_TEST
+
 int davinci_pll_info(FILE * f, const ice_drv_t * ice, 
 					 uint32_t pll_base, int nsys)
 {
@@ -222,6 +248,8 @@ int davinci_pll_info(FILE * f, const ice_drv_t * ice,
 	return 0;
 }
 
+
+
 int davinci_sys_test(FILE * f, const ice_drv_t * ice)
 {
 	uint32_t clkctl;
@@ -242,32 +270,6 @@ int davinci_sys_test(FILE * f, const ice_drv_t * ice)
 
 	fprintf(f, "- DDR2 clock: %s\n", 
 			clkctl & PERI_CLKCTL_DDRCLKS ? "PLLC2 SYSCLK3" : "PLLC1 SYSCLK7");
-
-	return 0;
-}
-
-const struct target_sym davinci_sym[] = {
-	{0, "", 0} 
-};
-
-int davinci_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
-{
-	uint8_t rtc_ctrl[1];
-
-	fprintf(f, "DM36x init script...\n");
-
-	davinci_prtcss_rd(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
-
-	fprintf(f, "PRTCSS_RTC_CTRL=%02x\n", *rtc_ctrl);
-
-	if (*rtc_ctrl & CTRL_WEN) {
-		fprintf(f, "- PRTCSS WDT enabled, disabling it...\n");
-		while (*rtc_ctrl & CTRL_WDTBUSY) {
-			davinci_prtcss_rd(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
-		}
-		*rtc_ctrl &= ~CTRL_WEN; 
-		davinci_prtcss_wr(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
-	}
 
 	return 0;
 }
@@ -517,6 +519,11 @@ int davinci_test(FILE * f, const struct ice_drv * ice,
 	return 0;
 }
 
+#endif /* ENABLE_DAVINCI_TEST */
+
+const struct target_sym davinci_sym[] = {
+	{0, "", 0} 
+};
 
 const struct target_cpu davinci_cpu = {
 	.family = "DAVINCI",
@@ -528,9 +535,10 @@ const struct target_cpu davinci_cpu = {
 	.sym = davinci_sym
 };
 
+
 const struct armice_cfg davinci_cfg = {
 	.endianness = LITTLE_ENDIAN,
 	.work_addr = 0x00014000,
-	.work_size = MEM_KiB(16),
+	.work_size = MEM_KiB(16)
 };
 
