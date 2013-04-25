@@ -25,7 +25,7 @@
 
 #include <crc.h>
 #include <stdlib.h>
-#include <sys/clock.h>
+#include <sys/os.h>
 
 #include "target.h"
 #include "armice.h"
@@ -295,8 +295,8 @@ int davinci_probe(FILE * f, const struct ice_drv * ice,
 
 int prtcss_test(FILE * f, const struct ice_drv * ice)
 {
-	struct timespec tv;
-	uint32_t tmo_sec;
+	uint32_t tmo_top;
+	uint32_t tmo_cmp;
 	uint8_t tm[8];
 	uint8_t sec;
 	int i;
@@ -306,11 +306,10 @@ int prtcss_test(FILE * f, const struct ice_drv * ice)
 	davinci_prtcss_rd(ice, PRTCSS_RTC_SEC, tm, 5);
 
 	for (i = 0; i < 15; i++) {
-		clock_gettime(CLOCK_MONOTONIC, &tv);
-		tmo_sec = tv.tv_sec + 2;
+		tmo_top = __os_ms_ticks() + 2000;
 		do {
-			clock_gettime(CLOCK_MONOTONIC, &tv);
-			if (tv.tv_sec > tmo_sec) {
+			tmo_cmp = __os_ms_ticks();
+			if ((int32_t)(tmo_cmp - tmo_top) < 0) {
 				fprintf(f, "#ERROR: davinci_prtcss_rd() polling timeout!\n");
 				return -1;
 			}

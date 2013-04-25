@@ -26,10 +26,16 @@
 #ifndef __SYS_OS_H__
 #define __SYS_OS_H__
 
-#include <thinkos.h>
 #include <errno.h>
 
 #define ENABLE_THINKOS 1
+
+#if ENABLE_THINKOS
+#include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
+#endif
+
 
 #define __OS_PRIORITY_HIGHEST 0
 #define __OS_PRIORITY_HIGH    1
@@ -214,6 +220,18 @@ static inline void __attribute__((always_inline)) __os_int_wait(int irq) {
 #if ENABLE_THINKOS
 	thinkos_irq_wait(irq);
 #else
+#endif
+}
+
+/********************************************************************************* 
+ * Clock 
+ */
+
+static inline uint32_t __attribute__((always_inline)) __os_ms_ticks() {
+#if ENABLE_THINKOS
+	return __thinkos_ticks();
+#else
+	return 0;
 #endif
 }
 
