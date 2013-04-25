@@ -323,6 +323,8 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 
 		DCC_LOG2(LOG_TRACE, "len=%d rem=%d", len, rem);
 
+		__thinkos_flag_clr(dev->tx_flag);
+
 		if ((n = usb_dev_ep_tx_start(dev->usb, dev->in_ep, ptr, rem)) < 0) {
 			return n;
 		}
@@ -332,7 +334,6 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 
 		DCC_LOG(LOG_TRACE, "wait");
 		thinkos_flag_wait(dev->tx_flag);
-		__thinkos_flag_clr(dev->tx_flag);
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 

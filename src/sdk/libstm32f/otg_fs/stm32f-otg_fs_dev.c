@@ -244,6 +244,7 @@ int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 
 	DCC_LOG4(LOG_TRACE, "ep_id=%d len=%d xfr_max=%d ret=%d", 
 			 ep_id, len, ep->xfr_max, ret);
+
 	return ret;
 }
 

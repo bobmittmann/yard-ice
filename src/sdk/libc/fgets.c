@@ -43,45 +43,52 @@
 
 char * fgets(char * s, int size, FILE * f)
 {
+	char * cp;
+	char * end;
+	int len;
+
+#if 0
 	char buf[1];
 	int c;
 	int pos;
 
 	/* left room to '\0' */
 	size--;
+	pos = 0;
 
-	if (f->op->read(f->data, buf, sizeof(char)) <= 0) {
-		return NULL;
-	}
-
-	c = buf[0];
-	
-	pos = strlen(s);
-
-	if ((c == IN_DEL) || (c == IN_BS)) {
-		if (pos) {
-			s[pos - 1] = '\0';
-			f->op->write(f->data, OUT_DEL, sizeof(OUT_DEL) - 1);
-		}
-		return NULL;
-	}
-
-	if (c == IN_ESC) {
-		return NULL;
-	}
-
-	if (c != IN_EOL) {
-		if (pos == size) {
-			f->op->write(f->data, OUT_BEL, sizeof(OUT_BEL) - 1);
+	do {
+		if (f->op->read(f->data, buf, sizeof(char)) <= 0) {
 			return NULL;
 		}
+
+		c = buf[0];
+
+		if (c == '\n') {
+			break;
+		}
+
 		s[pos++] = c;
-		s[pos] = '\0';
-		f->op->write(f->data, &c, sizeof(char));
+
+		if (pos == size)
+			break;
+	}
+
+	s[pos] = '\0';
+
+#endif
+
+	if ((len = f->op->read(f->data, s, size - 1)) <= 0) {
 		return NULL;
 	}
 
-	f->op->write(f->data, OUT_EOL, sizeof(OUT_EOL) - 1);
+	for (cp = s, end = s + len; cp < end ; ++cp) {
+		if (*cp == '\n') {
+			++cp;
+			break;
+		}
+	}
+
+	*cp = '\0';
 
 	return s;
 }

@@ -33,7 +33,7 @@ const struct fileop tty_ops = {
 	.write = (void *)tty_write,
 	.read = (void *)tty_read,
 	.flush = (void *)tty_flush,
-	.close = (void *)NULL
+	.close = (void *)tty_release
 };
 
 /* FIXME file structure dynamic allocation */
@@ -43,11 +43,30 @@ FILE * tty_fopen(struct tty_dev * dev)
 {
 	struct file * f = (struct file *)&tty_file;
 
+	if (dev == NULL) {
+		DCC_LOG(LOG_WARNING, "(dev == NULL)!");
+		return NULL;
+	}
+
 	DCC_LOG(LOG_TRACE, "...");
 
 	f->data = (void *)dev;
 	f->op = &tty_ops; 
 
 	return f;
+}
+
+int isfatty(struct file * f)
+{
+	return (f->op == &tty_ops) ? 1 : 0;
+}
+
+struct file * ftty_lowlevel(struct file * f)
+{
+	struct tty_dev * dev;
+
+	dev = (struct tty_dev *)f->data;
+
+	return tty_lowlevel(dev);
 }
 

@@ -40,11 +40,7 @@ typedef struct {
 
 #define RAND_MAX 0x7fffffff
 
-#define ENVIRON_MAX 32
-
-#define environ (__environ(({char * __buf[ENVIRON_MAX]; (void *)__buf;})))
-
-char ** __environ(void **) __attribute__ ((const));
+extern char ** environ;
 
 #ifdef __cplusplus
 extern "C" {
