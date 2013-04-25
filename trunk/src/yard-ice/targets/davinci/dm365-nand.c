@@ -25,7 +25,7 @@
 
 #include <sys/dcclog.h>
 
-#include <sys/clock.h>
+#include <sys/os.h>
 #include "nand.h"
 #include "target/davinci.h"
 
@@ -60,7 +60,6 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 						 uint8_t * data, uint16_t * ecc)
 {
 	ice_drv_t * ice = (ice_drv_t *)arg;
-	struct timespec tv;
 	uint32_t tm_top;
 	uint32_t tm_cmp;
 	uint32_t state;
@@ -118,17 +117,15 @@ int dm365_nand_ecc_correct(const void * arg, nand_chip_t * chip,
 	/* Loop until timeout or the ECC calculations 
 	   are complete (bit 11:10 == 00b) */
 
-	clock_gettime(CLOCK_MONOTONIC, &tv);
 	/* This sum may overflow, but is ok because we are dealing 
 	   with time differences */
-	tm_top = (tv.tv_sec * 1000) + (tv.tv_nsec >> 20) + chip->tmo_ms;
+	tm_top = __os_ms_ticks() + chip->tmo_ms;
 
 	for (;;) {
 		state = AEMIF_REG_RD(AEMIF_NANDFSR) & NANDFSR_ECC_STATE_MASK;
 		if (state <= NANDFSR_ECC_COMPLETE)
 			break;
-		clock_gettime(CLOCK_MONOTONIC, &tv);
-		tm_cmp = (tv.tv_sec * 1000) + (tv.tv_nsec >> 20);
+		tm_cmp = __os_ms_ticks();
 		if ((int32_t)(tm_top - tm_cmp) < 0)
 			break;
 	}
@@ -262,16 +259,12 @@ const struct nand_bb_op dm365_nand_bb = {
 int dm365_nand_ready_wait(void * arg, nand_chip_t * chip)
 {
 	ice_drv_t * ice = (ice_drv_t *)arg;
-	struct timespec tv;
 	uint32_t tm_top;
 	uint32_t tm_cmp;
 	
 	DCC_LOG(LOG_INFO, ".");
 
-	clock_gettime(CLOCK_MONOTONIC, &tv);
-	/* This sum may overflow, but is ok because we are dealing 
-	   with time differences */
-	tm_top = (tv.tv_sec * 1000) + (tv.tv_nsec >> 20) + chip->tmo_ms;
+	tm_top = __os_ms_ticks() + chip->tmo_ms;
 
 #if 0
 	/* Wait for the status to show busy, and then after that
@@ -287,8 +280,7 @@ int dm365_nand_ready_wait(void * arg, nand_chip_t * chip)
 #endif
 
 	while (!(AEMIF_REG_RD(AEMIF_NANDFSR) & NANDFSR_READY)) {
-		clock_gettime(CLOCK_MONOTONIC, &tv);
-		tm_cmp = (tv.tv_sec * 1000) + (tv.tv_nsec >> 20);
+		tm_cmp = __os_ms_ticks();
 		if ((int32_t)(tm_top - tm_cmp) < 0)
 			return -1;
 	}

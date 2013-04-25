@@ -298,6 +298,7 @@ int mem_ap_topology_show(FILE * f, mem_ap_list_t * lst)
 			fprintf(f, "non standard component\n");
 		} else {
 			class = ID_CLASS(component_id);
+			(void)class;
 			peripheral_id = cmp->peripheral_id;
 
 			fprintf(f, "PN=%03x", (int)PART_NUMBER(peripheral_id));
