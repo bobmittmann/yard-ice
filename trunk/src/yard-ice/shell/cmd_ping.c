@@ -37,10 +37,12 @@
 #include <tcpip/raw.h>
 
 #include <sys/shell.h>
+#include <sys/os.h>
 
-#if 0
-#include <tcpip/etharp.h>
-#include <sys/socket.h>
+#include <tcpip/in.h>
+//#include <tcpip/etharp.h>
+//#include <sys/socket.h>
+
 #define DATA_LEN 64
 #define BUF_LEN (DATA_LEN + sizeof(struct iphdr) + sizeof(struct icmphdr))
 
@@ -59,13 +61,11 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	int len;
 	int id;
 	int seq;
-//	int opt;
-//	int tm;
-	int dt;
+	int32_t dt;
+	uint32_t ts;
+	uint32_t now;
 	int i;
 	int n;
-	struct timeval tv;
-	struct timeval * ts;
 
 	if (argc > 3) {
 		fprintf(f, "ping - send ICMP ECHO_REQUEST to network host\n");
@@ -86,10 +86,7 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 
 	raw = raw_pcb_new(IPPROTO_ICMP);
 
-//	opt = 1;
-//	raw_ioctl(raw, FIONBIO, &opt);
-
-	id = uthread_id();	
+	id = __os_thread_self();	
 	datalen = DATA_LEN;
 
 	fprintf(f, "PING %s: %d octets data.\n", 
@@ -108,55 +105,14 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 
 		sin.sin_addr.s_addr = ip_addr;
 		sin.sin_family = AF_INET;
-		gettimeofday(&tv, NULL);
-		memcpy(data, &tv, sizeof(struct timeval));
+		ts = __os_ms_ticks();
+//		gettimeofday(&tv, NULL);
+		memcpy(data, &ts, sizeof(uint32_t));
 
 		icmp->chksum = 0;
 		icmp->chksum = ~in_chksum(0, icmp, len);
 
 		raw_sendto(raw, buf, len, (struct sockaddr_in *)&sin);
-	
-/*		for (tm = 100; tm > 0; tm--) {
-			len = raw_recvfrom(raw, buf, BUF_LEN, (struct sockaddr_in *)&sin);
-
-			if (len < 0) {
-				if (len != -EAGAIN)
-					return -1;
-				uthread_sleep(10);
-				continue;
-			}
-
-			ip = (struct iphdr *)buf;
-			iphdrlen = ip->hlen * 4;
-			icmp = (struct icmphdr *)(buf + iphdrlen);
-
-			if ((icmp->type == ICMP_ECHOREPLY) && 
-				(icmp->un.echo.id == id)) {
-
-				ts = (struct timeval *)(buf + iphdrlen + 
-										sizeof(struct icmphdr));
-
-				len -= iphdrlen + sizeof(struct icmphdr);
-
-				gettimeofday(&tv, NULL);
-				dt = (int)(tv.tv_sec - ts->tv_sec) * 1000;
-				dt += (int)(tv.tv_usec - ts->tv_usec) / 1000;
-
-				fprintf(f, "%d octets from %s: icmp_seq=%d "
-						"ttl=%d time=%d ms\n",
-						len, inet_ntop(AF_INET, (void *)&sin.sin_addr, s, 16), 
-						icmp->un.echo.sequence, len, dt);
-				break;
-			}
-		}
-		if (tm == 0) {
-			fprintf(f, "timed out.\n");
-		}
-
-		for (; tm > 0; tm--) {
-			uthread_sleep(10);
-		}
-		*/
 
 		len = raw_recvfrom_tmo(raw, buf, BUF_LEN, 
 							   (struct sockaddr_in *)&sin, 1000);
@@ -169,7 +125,7 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 			continue;
 		}
 
-		gettimeofday(&tv, NULL);
+		now = __os_ms_ticks();
 
 		ip = (struct iphdr *)buf;
 		iphdrlen = ip->hlen * 4;
@@ -178,13 +134,12 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 		if ((icmp->type == ICMP_ECHOREPLY) && 
 			(icmp->un.echo.id == id)) {
 
-			ts = (struct timeval *)(buf + iphdrlen + 
-									sizeof(struct icmphdr));
+			memcpy(&ts, buf + iphdrlen + sizeof(struct icmphdr), 
+				   sizeof(uint32_t));
 
 			len -= iphdrlen + sizeof(struct icmphdr);
 
-			dt = (int)(tv.tv_sec - ts->tv_sec) * 1000;
-			dt += (int)(tv.tv_usec - ts->tv_usec) / 1000;
+			dt = (int32_t)(now - ts);
 
 			fprintf(f, "%d octets from %s: icmp_seq=%d "
 					"ttl=%d time=%d ms\n",
@@ -194,7 +149,7 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 			fprintf(f, "icmp: %d\n", icmp->type);
 		}
 
-		uthread_sleep(250);
+		__os_sleep(250);
 	}
 
 	raw_close(raw);
@@ -202,4 +157,3 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-#endif

@@ -89,6 +89,7 @@
 #define ENABLE_USB 1
 #define ENABLE_NETWORK 1
 #define ENABLE_TFTP 1
+#define ENABLE_NAND 1
 
 #endif /* __CONFIG_H__ */
 

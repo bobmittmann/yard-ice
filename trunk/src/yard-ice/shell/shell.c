@@ -238,15 +238,15 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_ipcfg, "ipcfg", "ipcf", 
 		"", "ip configuration utility" },
 
-#if 0
-	{ cmd_arp, "arp", "arp", 
-		"", "show / manipulate the system ARP cache" },
+	{ cmd_ping, "ping", "", 
+		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
 
-	{ cmd_ping, "ping", "", 
-		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
+#if 0
+	{ cmd_arp, "arp", "arp", 
+		"", "show / manipulate the system ARP cache" },
 
 	{ cmd_route, "route", "rt", 
 		"", "show / manipulate the IP routing table" },
