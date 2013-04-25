@@ -44,6 +44,10 @@ struct file {
 extern "C" {
 #endif
 
+int file_free(struct file * f);
+
+struct file * file_alloc(void * dev, const struct fileop * op);
+
 #ifdef __cplusplus
 }
 #endif

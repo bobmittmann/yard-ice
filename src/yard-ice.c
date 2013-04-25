@@ -44,6 +44,7 @@
 #include <tcpip/loopif.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/tty.h>
 
 #include <jtag.h>
 #include <trace.h>
@@ -87,8 +88,16 @@ const struct file stm32f_uart_file = {
 
 void stdio_init(void)
 {
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
+
+	f_raw = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
+
 	stderr = (struct file *)&stm32f_uart_file;
-	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
+	stdout = f_tty;
 	stdin = stdout;
 }
 

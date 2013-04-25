@@ -27,9 +27,10 @@
 #define __SYS_NULL_H__
 
 #include <sys/file.h>
-#include <sys/types.h>
 
 extern struct file * null;
+
+const struct fileop null_fileop;
 
 #ifdef __cplusplus
 extern "C" {
