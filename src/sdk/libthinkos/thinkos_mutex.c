@@ -92,8 +92,8 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 #if THINKOS_ENABLE_DEADLOCK_CHECK
 	/* Sanity check: the current thread already owns the lock */
 	if (thinkos_rt.lock[mutex] == self) {
-		arg[0] = THINKOS_EDEADLK;
 		DCC_LOG2(LOG_WARNING, "<%d> mutex %d, possible deadlock!", self, wq);
+		arg[0] = THINKOS_EDEADLK;
 		return;
 	}
 #endif
