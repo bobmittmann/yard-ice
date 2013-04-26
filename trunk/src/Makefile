@@ -42,7 +42,7 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
 
 CFLAGS = -g -O2 
 
-JTAGTOOL_ADDR = 192.168.0.80
+#JTAGTOOL_ADDR = 192.168.0.80
 
 VERSION_MAJOR = "0"
 VERSION_MINOR = "1"

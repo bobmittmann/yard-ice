@@ -181,11 +181,11 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 
 	/* release all the control structures */
 
-	__os_cond_free(tp->t_cond);
-
 	mbuf_queue_free(&tp->rcv_q);
 
 	mbuf_queue_free(&tp->snd_q);
+
+	__os_cond_free(tp->t_cond);
 
 	return pcb_release((struct pcb *)tp, &__tcp__.active);
 } 

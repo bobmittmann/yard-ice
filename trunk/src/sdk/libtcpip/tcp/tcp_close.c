@@ -44,10 +44,10 @@ int tcp_close(struct tcp_pcb * __tp)
 
 	switch(__tp->t_state) {
 		case TCPS_LISTEN:
-			DCC_LOG1(LOG_TRACE, "<%05x> [LISTEN]", (int)__tp);
 		case TCPS_TIME_WAIT:
 		case TCPS_CLOSED:  
 		case TCPS_SYN_SENT:
+			DCC_LOG2(LOG_TRACE, "<%05x> [%s]", (int)__tp, __tcp_state[__tp->t_state]);
 			ret = tcp_pcb_free(__tp);
 			tcpip_net_unlock();
 			return ret;
@@ -87,6 +87,7 @@ int tcp_close(struct tcp_pcb * __tp)
 			tcpip_net_unlock();
 			return -1;
 		}
+
 	}
 
 	/* ACK now */

@@ -131,7 +131,7 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	}
 
 	if ((tp = tcp_pcb_new(&__tcp__.active)) == NULL) {
-		DCC_LOG(LOG_WARNING, "tcp_pcb_new()");
+		DCC_LOG(LOG_WARNING, "tcp_pcb_new() failed!");
 		return NULL;
 	}
 
@@ -368,7 +368,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 					}
 				}
 
-				__os_cond_signal(tp->t_cond);
+				__os_cond_broadcast(tp->t_cond);
 
 				if (tp->snd_q.len) {
 					/* schedule output */
@@ -386,7 +386,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 				/* append data */
 				len = mbuf_queue_add(&tp->rcv_q, data, ti_len);
 				tp->rcv_nxt += len;
-				__os_cond_signal(tp->t_cond);
+				__os_cond_broadcast(tp->t_cond);
 
 				if (len != ti_len) {
 					DCC_LOG1(LOG_WARNING, "<%05x> no more mbufs", (int)tp);
@@ -521,7 +521,7 @@ close_and_reset:
 		mbuf_queue_free(&tp->rcv_q);
 
 		/* notify the upper layer */
-		__os_cond_signal(tp->t_cond);
+		__os_cond_broadcast(tp->t_cond);
 
 		goto dropwithreset;	
 	}
@@ -627,7 +627,8 @@ close:
 			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
 
 			/* notify the upper layer */
-			__os_cond_signal(tp->t_cond);
+			__os_cond_broadcast(tp->t_cond);
+//			__os_cond_signal(__mbufs__.cond);
 			goto drop;
 
 		case TCPS_CLOSING:
@@ -899,7 +900,7 @@ dodata:
 			   has closed its side. Sockets: marks 
 			   the socket as write-only */
 			if (tp->rcv_q.len == 0) {
-				__os_cond_signal(tp->t_cond);
+				__os_cond_broadcast(tp->t_cond);
 			}
 			break;
 		case TCPS_FIN_WAIT_1:

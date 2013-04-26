@@ -47,6 +47,17 @@
 extern "C" {
 #endif
 
+#if ENABLE_THINKOS
+#define __OS_ERROR THINKOS_ERROR
+#define __OS_TIMEOUT THINKOS_ETIMEDOUT
+#define __OS_EINVAL THINKOS_EINVAL
+#define __OS_EAGAIN THINKOS_EAGAIN
+#define __OS_EDEADLK THINKOS_EDEADLK
+#define __OS_EPERM THINKOS_EPERM
+#define __OS_ENOSYS THINKOS_ENOSYS
+#endif
+
+
 typedef int32_t __os_mutex_t;
 typedef int32_t __os_cond_t;
 typedef int32_t __os_sem_t;

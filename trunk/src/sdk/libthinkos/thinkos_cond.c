@@ -142,23 +142,25 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (mutex >= THINKOS_MUTEX_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mutex);
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 	if (cond >= THINKOS_COND_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cond);
+		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -167,7 +169,9 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 
 	/* sanity check: avoid unlock the mutex by a thread that 
 	   does not own the lock */
-	if (thinkos_rt.lock[mutex] != thinkos_rt.active) {
+	if (thinkos_rt.lock[mutex] != self) {
+		DCC_LOG3(LOG_WARNING, "<%d> mutex %d is locked by <%d>", 
+				 self, mwq, thinkos_rt.lock[mutex]);
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
@@ -192,7 +196,10 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 		__thinkos_wakeup(mwq, th);
 	}
 
-	arg[0] = 0;
+	/* Set the default return value to timeout. The
+	   sem_post call will change this to 0 */
+	arg[0] = THINKOS_ETIMEDOUT;
+
 
 	/* wait for event */
 	__thinkos_wait();

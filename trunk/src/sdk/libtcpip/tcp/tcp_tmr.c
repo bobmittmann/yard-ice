@@ -250,9 +250,9 @@ int tcp_rxmt_tmr(void)
 				tp->t_flags &= ~TF_SENTFIN;
 				n++;
 
-				snd_una = snd_una;
-				snd_nxt = snd_nxt;
-				snd_max = snd_max;
+				(void)snd_una;
+				(void)snd_nxt;
+				(void)snd_max;
 			}
 		}
 	}
@@ -382,9 +382,10 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 			}
 			continue;
 		}
+
 		ret = __os_cond_timedwait(__tcp__.output_cond, net_mutex, 
 									 TCP_FAST_TMR_MS);
-		if (ret < 0) {
+		if (ret == __OS_TIMEOUT) {
 
 			/* timeout */
 			if (tcp_fast_tmr() != 0) {
@@ -404,7 +405,8 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 			}
 
 		} else {
-			DCC_LOG(LOG_INFO, "signal.");
+			DCC_LOG1(LOG_WARNING, "__os_cond_timedwait() failed: %d.", ret);
+			__os_sleep(200);
 		}
 	}
 }
