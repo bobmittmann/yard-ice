@@ -58,40 +58,7 @@
 #define ENABLE_NETIF_STAT 0
 #endif
 
-struct ifnet {
-	/* low level io address */
-	void * if_io;
-
-	/* irq number */
-	uint8_t if_irq_no;
-
-	/* interface id */
-	uint8_t if_id;
-
-	/* flags (IFF_*) */
-	uint16_t if_flags;
-
-	/* maximum transmission unit */
-	uint16_t if_mtu;
-
-	/* interface link speed (bps) */
-	uint32_t if_link_speed;
-
-	/* IPV4 address */
-	in_addr_t if_ipv4_addr;
-
-	/* IPV4 network mask */
-	in_addr_t if_ipv4_mask;
-
-	/* low level device driver private structure */
-	void * if_drv;
-
-	/* interface operations */
-	const struct ifnet_operations * if_op;
-#if (ENABLE_NETIF_STAT)
-	struct ifnet_stat stat;
-#endif
-};
+struct ifnet;
 
 struct ifnet_operations {
 	/* interface type */
@@ -130,6 +97,41 @@ struct ifnet_operations {
 
 	/* request a memory region */
 	int (* op_munmap)(struct ifnet * __if, void * __mem);
+};
+
+struct ifnet {
+	/* low level io address */
+	void * if_io;
+
+	/* irq number */
+	uint8_t if_irq_no;
+
+	/* interface id */
+	uint8_t if_id;
+
+	/* flags (IFF_*) */
+	uint16_t if_flags;
+
+	/* maximum transmission unit */
+	uint16_t if_mtu;
+
+	/* interface link speed (bps) */
+	uint32_t if_link_speed;
+
+	/* IPV4 address */
+	in_addr_t if_ipv4_addr;
+
+	/* IPV4 network mask */
+	in_addr_t if_ipv4_mask;
+
+	/* low level device driver private structure */
+	void * if_drv;
+
+	/* interface operations */
+	const struct ifnet_operations * if_op;
+#if (ENABLE_NETIF_STAT)
+	struct ifnet_stat stat;
+#endif
 };
 
 

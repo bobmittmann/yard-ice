@@ -117,8 +117,8 @@ static void rx(struct iphdr * iph, struct tcphdr * th)
 				 seq, datalen, ntohs(th->th_win));
 	}
 
-	ack = ack;
-	seq = seq;
+	(void)ack;
+	(void)seq;
 }
 
 static void tx(struct iphdr * iph, struct tcphdr * th)
@@ -170,8 +170,8 @@ static void tx(struct iphdr * iph, struct tcphdr * th)
 				 tcp_basic_flags[th->th_flags & 0x0f], 
 				 seq, datalen, ntohs(th->th_win));
 	}
-	ack = ack;
-	seq = seq;
+	(void)ack;
+	(void)seq;
 }
 
 int tcp_dump(struct iphdr * iph, struct tcphdr * th, int dir)

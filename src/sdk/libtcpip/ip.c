@@ -48,7 +48,7 @@
 #endif
 
 #ifndef ENABLE_NET_TCP
-#define ENABLE_NET_TCP 0
+#define ENABLE_NET_TCP 1
 #endif
 
 #define __USE_SYS_RAW__
