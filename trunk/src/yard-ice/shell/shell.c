@@ -36,6 +36,9 @@
 #include <sys/shell.h>
 #include <sys/tty.h>
 
+#include <sys/serial.h>
+#include <yard-ice/drv.h>
+
 #include "target.h"
 #include "debugger.h"
 #include "version.h"
@@ -912,6 +915,19 @@ const char * yard_ice_get_prompt(void)
 
 int console_shell(void)
 {
-	return shell(stdin, yard_ice_get_prompt, yard_ice_greeting);
+	struct uart_console_dev * dev;
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
+
+	dev = uart_console_init(115200, SERIAL_8N1);
+	f_raw = uart_console_fopen(dev);
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
+
+	stdout = f_tty;
+	stdin = stdout;
+
+	return shell(f_tty, yard_ice_get_prompt, yard_ice_greeting);
 }
 

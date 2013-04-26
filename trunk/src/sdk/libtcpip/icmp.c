@@ -54,6 +54,8 @@
 
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
+#define __USE_SYS_UDP__
+#include <sys/udp.h>
 #include <sys/etharp.h>
 
 #include <sys/param.h>

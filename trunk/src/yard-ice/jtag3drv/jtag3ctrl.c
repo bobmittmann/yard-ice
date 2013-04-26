@@ -40,6 +40,7 @@
 
 #include <sys/dcclog.h>
 #include <altera.h>
+#include <trace.h>
 
 uint16_t volatile * jtagdrv_reg = JTAGDRV_REG;
 uint16_t volatile * jtagdrv_vec = JTAGDRV_VEC;
@@ -300,21 +301,21 @@ int jtag3ctrl_init(const void * rbf, int size)
 {
 	int ret;
 
-	/* Enable clock output */
-	stm32f_mco2_init();
-
 	/* Configure memory controller ... */
 	stm32f_fsmc_init();
 		
 	/* Configure external interrupt ... */
 	stm32f_exti_init(STM32F_GPIOD, 6, EXTI_EDGE_RISING);
 
+	/* Enable clock output */
+	stm32f_mco2_init();
+
 	if ((ret = altera_configure(rbf, 60000)) < 0) {
-		printf(" # altera_configure() failed: %d!\n", ret);
-		for(;;);
+		tracef(" # altera_configure() failed: %d!", ret);
+		return ret;
 	};
 
-	printf("- FPGA configuration done.\n");
+	tracef("- FPGA configuration done...");
 
 	/* wait for the FPGA initialize */
 	__os_sleep(20);

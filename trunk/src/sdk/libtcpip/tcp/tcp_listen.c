@@ -59,9 +59,8 @@ int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 
 		DCC_LOG3(LOG_WARNING, "<%04x> %I:%d in use", (int)tp, tp->t_laddr, 
 				 ntohs(tp->t_lport));
-		errno = EADDRINUSE;
 		tcpip_net_unlock();
-		return -1;
+		return -EADDRINUSE;
 	}
 
 	if (tp->t_state == TCPS_CLOSED) {

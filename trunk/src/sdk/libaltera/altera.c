@@ -36,7 +36,7 @@
 
 gpio_io_t n_config = GPIO(GPIOE, 0);
 gpio_io_t conf_done = GPIO(GPIOE, 1);
-gpio_io_t n_status = GPIO(GPIOC, 10);
+gpio_io_t n_status = GPIO(GPIOC, 11);
 
 static const struct stm32f_spi_io spi3_io = {
 	.miso = GPIO(GPIOC, 11), /* MISO */
@@ -48,6 +48,10 @@ static int altera_io_init(void)
 {
 	gpio_io_t io;
 
+	stm32f_gpio_clock_en(STM32F_GPIOB);
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32f_gpio_clock_en(STM32F_GPIOE);
+
 	io = n_config;
 	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
 	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
@@ -56,13 +60,20 @@ static int altera_io_init(void)
 	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
 	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, INPUT, SPEED_MED);
 
+	io = n_status;
+	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
+	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, INPUT, SPEED_MED);
+
 	gpio_set(n_config);
+	udelay(40);
 
 	return 0;
 }
 
 static inline int conf_start(void)
 {
+	int tmo;
+
 	gpio_clr(n_config);
 	udelay(1);
 
@@ -80,7 +91,14 @@ static inline int conf_start(void)
 	udelay(40);
 
 	if (gpio_status(conf_done))
-		return -4;
+		return -3;
+
+	tmo = 500; /* 50 ms */
+	while (!gpio_status(n_status)) {
+		udelay(100);
+		if (--tmo ==0)
+			return -4;
+	}
 
 	return 0;
 }
@@ -103,7 +121,7 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 	int ret;
 
 	altera_io_init();
-
+	
 	stm32f_spi_init(STM32F_SPI3, &spi3_io, 2000000);
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
@@ -114,6 +132,10 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 	}
 
 	while (!gpio_status(conf_done)) {
+		if (!gpio_status(n_status)) {
+			return -5;
+		};
+
 		conf_wr(buf[n]);
 		n++;
 		if (n > max) {

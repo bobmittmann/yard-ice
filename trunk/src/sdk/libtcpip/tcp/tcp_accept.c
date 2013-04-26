@@ -37,7 +37,11 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 
 		DCC_LOG1(LOG_TRACE, "<%04x> waiting...", (int)mux);
 
-		__os_cond_wait(__mux->t_cond, net_mutex);
+		if (__os_cond_wait(__mux->t_cond, net_mutex) < 0) {
+			DCC_LOG3(LOG_ERROR, "<%04x> __os_cond_wait(%d, %d) failed!", 
+					 (int)mux, __mux->t_cond, net_mutex);
+			return NULL;
+		}
 	};
 
 	tp = (struct tcp_pcb *)mux->t_backlog[mux->t_head++];

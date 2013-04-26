@@ -321,7 +321,6 @@ struct ice_oper {
 
 	/* core reset */	
 	ice_core_reset_t core_reset;
-
 	/* system reset */	
 	ice_system_reset_t system_reset;
 

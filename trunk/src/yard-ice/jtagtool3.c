@@ -169,16 +169,14 @@ int main(void)
 
 	modules_init();
 
-	printf("* Starting system module ...");
+	tracef("* Starting system module ...");
 	sys_start();
-	printf("ok\n");
 
-	printf("* Initializing JTAG module ...");
+	tracef("* Initializing JTAG module.");
 	if (jtag_start() < 0) {
-		printf("fail!\n");
+		tracef("jtag_start() failed!");
 		return 0;
 	}
-	printf("ok\n");
 
 #if (ENABLE_NAND)
 	printf("* Initializing NAND module...");
