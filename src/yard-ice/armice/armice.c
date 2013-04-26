@@ -273,7 +273,6 @@ int armice_poll(armice_ctrl_t * ctrl, ice_comm_t * comm)
 {
 	int dbg_status;
 
-	ctrl->polling = true;
 	/* invalidate the status */
 	ctrl->poll.status = -1;
 
@@ -297,6 +296,7 @@ void armice_signal(armice_ctrl_t * ctrl, ice_sig_t sig)
 		break;
 	case ICE_SIG_POLL_START:
 		ctrl->poll.enabled = true;
+		ctrl->polling = true;
 		break;
 	case ICE_SIG_TARGET_RESET:
 		break;
@@ -1751,7 +1751,6 @@ const struct ice_oper armice_oper = {
 	.close = (ice_close_t)armice_close,
 
 	.configure = (ice_configure_t)armice_configure,
-
 	.status = (ice_status_t)armice_status,
 	.poll = (ice_poll_t)armice_poll,
 	.signal = (ice_signal_t)armice_signal,
@@ -1774,8 +1773,11 @@ const struct ice_oper armice_oper = {
 	.wp_set = (ice_wp_set_t)armice_wp_set,
 	.wp_clr = (ice_wp_clr_t)armice_wp_clr,
 
-	.context_show = (ice_context_show_t)armice_context_show,
-	.print_insn = (ice_print_insn_t)armice_print_insn,
+	.reg_get = (ice_reg_get_t)armice_reg_get,
+	.reg_set = (ice_reg_set_t)armice_reg_set,
+
+	.ifa_get = (ice_ifa_get_t)armice_ifa_get,
+	.ifa_set = (ice_ifa_set_t)armice_ifa_set,
 
 	.mem_lock = (ice_mem_lock_t)armice_mem_lock,
 	.mem_unlock = (ice_mem_unlock_t)armice_mem_unlock,
@@ -1792,16 +1794,14 @@ const struct ice_oper armice_oper = {
 	.fifo_rd8 = (ice_fifo_rd8_t)armice_fifo_rd8,
 	.fifo_wr8 = (ice_fifo_wr8_t)armice_fifo_wr8,
 
-	.reg_get = (ice_reg_get_t)armice_reg_get,
-	.reg_set = (ice_reg_set_t)armice_reg_set,
-
-	.ifa_get = (ice_ifa_get_t)armice_ifa_get,
-	.ifa_set = (ice_ifa_set_t)armice_ifa_set,
-
 	.test = (ice_test_t)armice_test,
 	.info = (ice_info_t)armice_info,
 
-	.core_reset = (ice_core_reset_t)armice_core_reset
+	.core_reset = (ice_core_reset_t)armice_core_reset,
+	.system_reset = (ice_system_reset_t)NULL,
+
+	.context_show = (ice_context_show_t)armice_context_show,
+	.print_insn = (ice_print_insn_t)armice_print_insn
 };
 
 const struct ice_drv_info armice_drv = {

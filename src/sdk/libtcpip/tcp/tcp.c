@@ -129,15 +129,11 @@ struct tcp_pcb * tcp_pcb_new(struct pcb_list * __list)
 	/* ensure the mem is clean */
 	memset(tp, 0, sizeof(struct tcp_pcb));
 
-	tcpip_net_lock();
-
 	pcb_insert((struct pcb *)tp, __list);
 
 	tp->t_cond = -1;
 
 	DCC_LOG1(LOG_INFO, "<%05x>", (int)tp);
-
-	tcpip_net_unlock();
 
 	return tp;
 }

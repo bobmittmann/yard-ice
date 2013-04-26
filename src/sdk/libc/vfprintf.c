@@ -39,7 +39,7 @@
 #endif
 
 #ifndef PRINTF_ENABLE_LARGE_PADDING
-#define PRINTF_ENABLE_LARGE_PADDING 0
+#define PRINTF_ENABLE_LARGE_PADDING 1
 #endif
 
 #ifndef PRINTF_ENABLE_FAST
@@ -56,6 +56,10 @@
 
 #ifndef PRINTF_ENABLE_LONG
 #define PRINTF_ENABLE_LONG 1
+#endif
+
+#ifndef PRINTF_ENABLE_ARG_WIDTH
+#define PRINTF_ENABLE_ARG_WIDTH 1
 #endif
 
 int uint2dec(char * s, unsigned int val);
@@ -177,6 +181,13 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 #else
 		if (c == '-')
 			continue;
+#endif
+
+#if (PRINTF_ENABLE_ARG_WIDTH)
+		if (c == '*') {
+			w = va_arg(ap, int);
+			continue;
+		}
 #endif
 
 #if (PRINTF_ENABLE_LONG)

@@ -158,7 +158,6 @@ void jtag_arm_cache_clr(void)
 	jtag3drv.arm_scan_chain = -1;
 }
 
-
 int jtag_arm_dr_select(jtag_tap_t * tap, int scan_n)
 {
 	if (jtag3drv.arm_scan_chain == scan_n) {
@@ -179,7 +178,8 @@ int jtag_arm_dr_select(jtag_tap_t * tap, int scan_n)
  	vec_wr16(VEC_DR_SCAN_N, scan_n);
 	insn_drscan(PTR_DR_SCAN_N, JTAG_TAP_DRUPDATE);
 	if ((vec_rd16(0) & jtag3drv.arm_scan_n_mask) != jtag3drv.arm_scan_n_cmp) {
-		DCC_LOG1(LOG_WARNING, "dr_scan(SCAN_N) fail:0x%x!", vec_rd16(0));
+		DCC_LOG2(LOG_WARNING, "dr_scan(SCAN_N) failed: 0x%x != 0x%x!", 
+				 vec_rd16(0), jtag3drv.arm_scan_n_cmp);
 		return JTAG_ERR_ARM_DR_SCAN_N;
 	}
 
@@ -208,7 +208,6 @@ int jtag_arm_dr_select(jtag_tap_t * tap, int scan_n)
 
 	return JTAG_OK;
 }
-
 
 int jtag_arm_ice_rt_wr(jtag_tap_t * tap, int reg, uint32_t data)
 {
@@ -1382,6 +1381,7 @@ int jtag_arm_tap_setup(jtag_tap_t * tap, int family)
 		}
 	}
 
+	DCC_LOG1(LOG_INFO, "i=%d", i);
 
 	/* create pointers to the descriptor tables */
 	ptr_wr(PTR_IR_BYPASS, JTAG_PTR(DESC_IR_BYPASS, i));

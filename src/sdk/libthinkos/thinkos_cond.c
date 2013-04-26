@@ -318,7 +318,7 @@ void thinkos_cond_broadcast_svc(int32_t * arg)
 		}
 
 		/* insert all remaining threads into mutex wait queue */
-		while ((th = __thinkos_wq_head(cwq)) == THINKOS_THREAD_NULL) {
+		while ((th = __thinkos_wq_head(cwq)) != THINKOS_THREAD_NULL) {
 			__thinkos_wq_insert(mwq, th);
 			DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", th, mwq);
 		}

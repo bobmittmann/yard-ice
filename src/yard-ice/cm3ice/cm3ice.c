@@ -1435,10 +1435,10 @@ int cm3ice_open(cm3ice_ctrl_t * ctrl)
 	ctrl->core.cache_bmp = 0; /* cache bitmap */
 	ctrl->core.wback_bmp = 0; /* write back bitmap */
 
-	ctrl->mod_id = module_register(&cm3ice_module, ctrl);
-
 	ctrl->polling = false;
 	ctrl->comm_addr = 0;
+
+	ctrl->mod_id = module_register(&cm3ice_module, ctrl);
 
 	DCC_LOG(LOG_TRACE, "[OPEN]");
 

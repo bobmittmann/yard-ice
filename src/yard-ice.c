@@ -78,6 +78,10 @@
 #define ENABLE_TFTP 0
 #endif
 
+#ifndef ENABLE_COMM
+#define ENABLE_COMM
+#endif
+
 void tcpip_init(void);
 void env_init(void);
 
@@ -86,18 +90,27 @@ const struct file stm32f_uart_file = {
 	.op = &stm32f_usart_fops 
 };
 
+#define UART_TX STM32F_GPIOC, 12
+#define UART_RX STM32F_GPIOD, 2
+
 void stdio_init(void)
 {
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
+	struct stm32f_usart * uart = STM32F_UART5;
 
-	f_raw = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32f_gpio_clock_en(STM32F_GPIOD);
+	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(UART_RX, GPIO_AF8);
+	stm32f_gpio_af(UART_TX, GPIO_AF8);
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
 
 	stderr = (struct file *)&stm32f_uart_file;
-	stdout = f_tty;
+	stdout = stderr;
 	stdin = stdout;
 }
 
@@ -106,8 +119,8 @@ int supervisor_task(void)
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
-		trace_fprint(stdout, TRACE_FLUSH);
 		thinkos_sleep(250);
+		trace_fprint(stdout, TRACE_FLUSH);
 	}
 }
 
@@ -119,30 +132,23 @@ int network_config(void)
 	in_addr_t netmask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
 	char s[64];
+	char s1[16];
+	char s2[16];
 	char * env;
-	char * ip;
 	int dhcp;
 
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
 	if ((env = getenv("IPCFG")) == NULL) {
-		printf("IPCFG not set, using defaults!\n");
+		tracef("IPCFG not set, using defaults!\n");
 		/* default configuration */
-		strcpy(s, "192.168.1.22 255.255.255.0 192.168.1.254 0");
+		strcpy(s, "192.168.0.80 255.255.255.0 192.168.0.1 0");
 		/* set the default configuration */
 		setenv("IPCFG", s, 1);
 	} else {
 		strcpy(s, env);
 	}
-
-	printf("IPCFG='%s'\n", s);
-
-	printf("ipcfg=%s\n", s);
-	ip = strtok(s, " ,");
-
-	printf("ip=%s\n", ip);
-
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
 		DCC_LOG(LOG_WARNING, "inet_aton() failed.");
@@ -160,19 +166,17 @@ int network_config(void)
 	ifn = ethif_init(ip_addr, netmask);
 //	ifn = loopif_init(ip_addr, netmask);
 
-	printf("* netif ");
 	ifn_getname(ifn, s);
-	printf("%s: ", s);
-
 	ifn_ipv4_get(ifn, &ip_addr, &netmask);
-	printf("%s, ", inet_ntop(AF_INET, (void *)&ip_addr, s, 16));
-	printf("%s\n", inet_ntop(AF_INET, (void *)&netmask, s, 16));
+	tracef("* netif %s: %s, %s", s, 
+		   inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
+		   inet_ntop(AF_INET, (void *)&netmask, s2, 16));
 
 	if (gw_addr != INADDR_ANY) {
 		/* add the default route (gateway) to ethif */
 		route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
-		printf("* default route gw: ");
-		printf("%s\n", inet_ntop(AF_INET, (void *)&gw_addr, s, 16));
+		tracef("* default route gw: %s", 
+			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
 	}
 
 	if (dhcp) {
@@ -181,7 +185,7 @@ int network_config(void)
 		dhcp_start();
 		/* schedule the interface to be configured through dhcp */
 		dhcp_ifconfig(ethif, dhcp_callback);
-		printf("DHCP started.\n");
+		tracef("DHCP started.\n");
 #endif
 	}
 
@@ -201,19 +205,19 @@ int init_debugger(void)
 
 	if (target == NULL) {
 		target = target_first();
-		printf("WARNING: invalid target.\n");
-		printf("Fallback to default: %s.\n", target->name);
+		trace("WARNING: invalid target.");
+		tracef("Fallback to default: %s.", target->name);
 	};
 
-	printf("* target select...\n");
+	trace("* target select...");
 
 	/* TODO: ice driver selection */
 	if (target_configure(stdout, target, 1) < 0) {
-		printf("ERROR: target_configure()!\n");
+		tracef("ERROR: target_configure()!");
 		return 0;
 	}
 
-	printf("* target: %s [%s-%s-%s %s-%s-%s]\n", target->name, 
+	tracef("* target: %s [%s-%s-%s %s-%s-%s]", target->name, 
 		   target->arch->name, target->arch->model, target->arch->vendor,
 		   target->arch->cpu->family, target->arch->cpu->model, 
 		   target->arch->cpu->vendor);
@@ -230,85 +234,94 @@ int sys_start(void);
 
 int main(int argc, char ** argv)
 {
+	int ret;
+
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	cm3_udelay_calibrate();
-	trace_init();
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-	env_init();
 	stdio_init();
+	printf("\n---\n");
+
+	cm3_udelay_calibrate();
+	printf(".1");
+	trace_init();
+	printf(".2");
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	printf(".3");
+	env_init();
+	printf(".4");
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+	printf(".5");
 
 #if ENABLE_NETWORK
 	DCC_LOG(LOG_TRACE, "network_config().");
 	network_config();
 #endif
 
+	printf(".6");
+
 	DCC_LOG(LOG_TRACE, "modules_init().");
 	modules_init();
 
-	printf("* Starting system module ...");
+	printf(".7");
+
+	tracef("* Starting system module ...");
 	DCC_LOG(LOG_TRACE, "sys_start().");
 	sys_start();
-	printf("ok\n");
 
-	printf("* Initializing JTAG module ...");
-	if (jtag_start() < 0) {
-		printf("fail!\n");
-		return 0;
+	printf(".8");
+
+	tracef("* Initializing JTAG module ...");
+	if ((ret = jtag_start()) < 0) {
+		printf("[%d]", ret);
+		tracef("jtag_start() failed!");
+		__os_sleep(250);
 	}
-	printf("ok\n");
+
+	printf(".9");
 
 #if (ENABLE_NAND)
-	printf("* Initializing NAND module...");
+	tracef("* Initializing NAND module...");
 	if (mod_nand_start() < 0) {
-		printf("fail!\n");
+		tracef("mod_nand_start() failed!");
 		return 0;
 	}
-	printf("ok\n");
 #endif
 
 #if (ENABLE_TFTP)
-	printf("* starting TFTP server ... ");
+	tracef("* starting TFTP server ... ");
 	tftpd_start();
-	printf("ok\n");
 #endif
 
 #ifdef ENABLE_GDB
-	printf("* starting GDB daemon ... ");
+	tracef("* starting GDB daemon ... ");
 	gdb_rspd_start();
-	printf("ok\n");
 #endif
 
-#ifdef ENABLE_COMM
-	printf("* starting COMM daemon ... ");
+#if (ENABLE_COMM)
+	tracef("* starting COMM daemon ... ");
 	comm_tcp_start(&debugger.comm);
-	printf("ok\n");
 #endif
 
 #ifdef ENABLE_VCOM
-	printf("* starting VCOM daemon ... ");
+	tracef("* starting VCOM daemon ... ");
 	vcom_start();
-	printf("ok\n");
 #endif
 
 	__os_sleep(150);
 	init_debugger();
 
 #if ENABLE_USB
-	printf("* starting USB shell ... ");
+	tracef("* starting USB shell ... ");
 	usb_shell();
-	printf("ok\n");
 #endif
 
 #if ENABLE_TELNET
-	printf("* starting TELNET server ... ");
+	tracef("* starting TELNET server ... ");
 	telnet_shell();
-	printf("ok\n");
 #endif
 
 	return console_shell();

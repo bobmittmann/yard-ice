@@ -78,7 +78,7 @@
 
 #define JTAG_VEC_BITS_MAX 256
 
-#define JTAG_TAP_MAX 16
+#define JTAG_TAP_MAX 8
 
 #define	ENABLE_HISTORY 1
 
@@ -90,6 +90,10 @@
 #define ENABLE_NETWORK 1
 #define ENABLE_TFTP 1
 #define ENABLE_NAND 1
+#define ENABLE_COMM 1
+
+#define ENABLE_NET_TCP 1
+#define ENABLE_NET_UDP 1
 
 #endif /* __CONFIG_H__ */
 

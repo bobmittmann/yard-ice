@@ -34,6 +34,7 @@
 #include <netinet/in.h>
 #include <time.h>
 #include <sys/os.h>
+#include <trace.h>
 
 #include "jtag_arm.h"
 #include "armice.h"
@@ -101,7 +102,7 @@ uint32_t comm_write_stack[512 + 128];
 
 #define COMM_TCP_BUF_SIZE 512
 
-int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
+int comm_tcp_read_task(ice_comm_t * comm)
 {
 	struct comm_tcp_parm tcp_parm;
 	uint32_t buf[COMM_TCP_BUF_SIZE / sizeof(uint32_t)];
@@ -111,7 +112,13 @@ int __attribute__((noreturn)) comm_tcp_read_task(ice_comm_t * comm, int id)
 	int n;
 	int port = 1001;
 
+	__os_sleep(100);
+	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
+	__os_sleep(100);
+	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
+
 	for (;;) {
+
 		mux = tcp_alloc();
 
 		DCC_LOG1(LOG_TRACE, "mux=%p", mux);
@@ -191,7 +198,8 @@ int comm_tcp_start(ice_comm_t * comm)
 	th = __os_thread_create((void *)comm_tcp_read_task, (void *)comm, 
 							comm_read_stack, sizeof(comm_read_stack), 
 							__OS_PRIORITY_LOWEST);
-	printf("<%d> ", th);
+
+	tracef("comm_tcp_start th=%d", th);
 
 	return 0;
 }
