@@ -36,6 +36,8 @@
 
 #include <sys/dcclog.h>
 
+#if defined(STM32F2X) || defined(STM32F4X)
+
 void stm32f_bkp_sram_init(void)
 {
 	struct stm32f_pwr * pwr = STM32F_PWR;
@@ -340,4 +342,6 @@ int clearenv(void)
 
 	return 0;
 }
+
+#endif /* defined(STM32F2X) || defined(STM32F4X) */
 

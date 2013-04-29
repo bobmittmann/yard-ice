@@ -349,9 +349,8 @@ int main(int argc, char ** argv)
 
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
-	usb_cdc_sn_set(esn);
 
-	vcom.cdc = usb_cdc_init(&stm32f_usb_fs_dev);
+	vcom.cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
 
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
