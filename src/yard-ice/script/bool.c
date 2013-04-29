@@ -59,7 +59,7 @@ int val_bool_decode(const value_t * val, char * s)
 	return sprintf(s, "%s", val->int32 ? "TRUE" : "FALSE");
 }
 
-struct type_def type_def_bool = {
+const struct type_def type_def_bool = {
 	.name = "bool",
 	.encode = (val_encode_t)val_bool_encode,
 	.decode = (val_decode_t)val_bool_decode

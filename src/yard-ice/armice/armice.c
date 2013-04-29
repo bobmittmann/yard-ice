@@ -36,6 +36,10 @@
 #include "arm_pn.h"
 #include "dbglog.h"
 
+#ifndef ENABLE_ARMICE_ARM9
+#define ENABLE_ARMICE_ARM9 1
+#endif
+
 static int core_on_break(armice_ctrl_t * ctrl, int dbg_status)
 {
 	int ret;
@@ -343,7 +347,11 @@ int armice_connect(armice_ctrl_t * ctrl, uint32_t idmask,
 			 idmask, idcomp, force);
 
 	/* reset the JTAG tap */
+/*
+	FIXME: configure whether to reset or not the TAP before 
+	connecting.
 	jtag_tap_reset();
+	*/
 
 	jtag_arm_cache_clr();
 

@@ -105,18 +105,18 @@ typedef struct type_def type_def_t;
 /*
  * standard type definitions 
  */
-extern struct type_def type_def_void;
-extern struct type_def type_def_int32;
-extern struct type_def type_def_uint32;
-extern struct type_def type_def_bool;
-extern struct type_def type_def_string;
-extern struct type_def type_def_range32;
-extern struct type_def type_def_freq;
+extern const struct type_def type_def_void;
+extern const struct type_def type_def_int32;
+extern const struct type_def type_def_uint32;
+extern const struct type_def type_def_bool;
+extern const struct type_def type_def_string;
+extern const struct type_def type_def_range32;
+extern const struct type_def type_def_freq;
 
 /*
  * standard type definitions 
  */
-extern const type_def_t * type_def_tab[9];
+extern const struct type_def * const type_def_tab[];
 
 extern inline type_def_t * def_of(int type) {
 	return (type_def_t *)type_def_tab[type];

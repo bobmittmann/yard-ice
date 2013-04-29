@@ -79,7 +79,7 @@
 #endif
 
 #ifndef ENABLE_COMM
-#define ENABLE_COMM
+#define ENABLE_COMM 0
 #endif
 
 void tcpip_init(void);
@@ -251,6 +251,8 @@ int main(int argc, char ** argv)
 	env_init();
 	printf(".4");
 
+	bsp_io_ini();
+
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
@@ -278,7 +280,7 @@ int main(int argc, char ** argv)
 	if ((ret = jtag_start()) < 0) {
 		printf("[%d]", ret);
 		tracef("jtag_start() failed!");
-		__os_sleep(250);
+		__os_sleep(1000);
 	}
 
 	printf(".9");
@@ -311,7 +313,6 @@ int main(int argc, char ** argv)
 	vcom_start();
 #endif
 
-	__os_sleep(150);
 	init_debugger();
 
 #if ENABLE_USB

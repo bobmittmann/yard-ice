@@ -643,7 +643,7 @@ send_data:
 					if (len == -ECONNREFUSED) {
 						DCC_LOG(LOG_WARNING, "udp_recv_tmo() lost peer!");
 					} else {
-						DCC_LOG(LOG_WARNING, "udp_recv_tmo() fial!");
+						DCC_LOG(LOG_WARNING, "udp_recv_tmo() failed!");
 					}
 				}
 				/* break the inner loop */

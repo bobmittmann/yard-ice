@@ -38,27 +38,25 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
 
-#include <tcpip/ifnet.h>
-#include <tcpip/route.h>
-#include <tcpip/ip.h>
-#include <tcpip/icmp.h>
-#include <tcpip/ifnet.h>
-#include <tcpip/udp.h>
-#include <tcpip/stat.h>
-#include <tcpip/in.h>
-
-
 #define __USE_SYS_ARP__
-#include <sys/arp.h>
+//#include <sys/arp.h>
 #define __USE_SYS_UDP__
 #include <sys/udp.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
+#define __USE_SYS_ETHARP__
 #include <sys/etharp.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
 
-#include <sys/param.h>
+#include <sys/ip.h>
+
+#include <tcpip/icmp.h>
 
 #define ICMP_MAXTYPE NR_ICMP_TYPES
 
@@ -96,7 +94,7 @@ int icmp_send(struct iphdr * __ip, struct icmp * __icp, int __len)
 	DCC_LOG3(LOG_INFO, "ICMP %I > %I (%d)", 
 			 __ip->saddr, __ip->daddr, __len); 
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 		DCC_LOG1(LOG_WARNING, "no route to host: %I", daddr);
 		return -1;
@@ -139,7 +137,7 @@ int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip,
 	__ip->daddr = __ip->saddr;
 	__ip->saddr = tmp;
 
-	if ((rt = route_lookup(__ip->daddr)) == NULL) {
+	if ((rt = __route_lookup(__ip->daddr)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "no route to host: %I", __ip->daddr);
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 		return -1;
@@ -156,7 +154,6 @@ int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip,
 	
 	return __len;
 }
-
 
 #if (ENABLE_NET_UDP)
 static void * icmp_skip_ip_hdr(struct iphdr * ip, int frag_len)

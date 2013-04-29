@@ -25,6 +25,7 @@
 
 #define __USE_SYS_RAW__
 #include <sys/raw.h>
+#include <tcpip/stat.h>
 
 #include <string.h>
 

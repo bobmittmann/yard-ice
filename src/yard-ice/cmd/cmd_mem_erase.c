@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <trace.h>
 
 #include "config.h"
 #include "target.h"
@@ -64,7 +65,7 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 			return n;
 		}
 		size = val.uint32;
-		DCC_LOG2(LOG_TRACE, "size=%d n=%d", size, n);
+		DCC_LOG2(LOG_INFO, "size=%d n=%d", size, n);
 		argc -= n;
 		argv += n;
 	} else
@@ -78,7 +79,9 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 	dbg->transf.base = addr & ~0x03;
 	dbg->transf.size = size;
 
-//	printf("cmd_mem_erase: %08x, %d\n", addr, size);
+	tracef("target_mem_erase: 0x%08x, %d", addr, size);
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
 	return target_mem_erase(addr, size);
 }

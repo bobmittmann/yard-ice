@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-uint32_t codelet_cfi16_write[] = {
+const uint32_t codelet_cfi16_write[] = {
 	0x000000a8, 0xe3a030f0, 0xe18030b1, 0xe3a04eaa,
 	0xe284400a, 0xe3a05d55, 0xe2855014, 0xe3a060aa,
 	0xe3a07055, 0xe3a080a0, 0xee10be10, 0xe31b0001,
@@ -14,7 +14,7 @@ uint32_t codelet_cfi16_write[] = {
 	0xe3e00000, 0xee010e10, 0xeafffffe
 };
 
-uint32_t codelet_cfi16_erase[] = {
+const uint32_t codelet_cfi16_erase[] = {
 	0x000000b0, 0xe3a030f0, 0xe18030b1, 0xe3a04eaa,
 	0xe284400a, 0xe3a05d55, 0xe2855014, 0xe3a060aa,
 	0xe3a07055, 0xe3a08080, 0xe3a09030, 0xe252a000,
@@ -29,7 +29,7 @@ uint32_t codelet_cfi16_erase[] = {
 	0xeafffffc
 };
 
-uint32_t codelet_step[] = {
+const uint32_t codelet_step[] = {
 	0x000000cc, 0xe3a00001, 0xe3a00002, 0xe3a00003,
 	0xe3a00004, 0xe3a00005, 0xe3a00006, 0xe3a00007,
 	0xe3a00008, 0xe3a00009, 0xe3a0000a, 0xe3a0000b,
@@ -45,7 +45,7 @@ uint32_t codelet_step[] = {
 	0xe3a00030, 0xe3a00031, 0xe3a00032, 0xeaffffcc
 };
 
-uint32_t codelet_step2[] = {
+const uint32_t codelet_step2[] = {
 	0x00000088, 0xea000006, 0xe3a08a11, 0xe3a09a22,
 	0xe3a0aa33, 0xe3a0b911, 0xe1a00000, 0xe1a00000,
 	0xeafffffc, 0xe3a02002, 0xe3a03003, 0xe3a04004,
@@ -57,7 +57,7 @@ uint32_t codelet_step2[] = {
 	0xe0811000, 0xe3a00000, 0xeaffffec
 };
 
-uint32_t codelet_step_thumb[] = {
+const uint32_t codelet_step_thumb[] = {
 	0x0000006a, 0xea000006, 0xe3a08a11, 0xe3a09a22,
 	0xe3a0aa33, 0xe3a0b911, 0xe1a00000, 0xe1a00000,
 	0xeafffffc, 0xe3a02002, 0xe3a03003, 0xe3a04004,
@@ -67,7 +67,7 @@ uint32_t codelet_step_thumb[] = {
 	0x30013001, 0x30013001, 0x20001809, 0x0000e7ec
 };
 
-uint32_t codelet_step_thumb_arm[] = {
+const uint32_t codelet_step_thumb_arm[] = {
 	0x00000064, 0xea000006, 0xe3a08a11, 0xe3a09a22,
 	0xe3a0aa33, 0xe3a0b911, 0xe1a00000, 0xe1a00000,
 	0xeafffffc, 0xe3a02002, 0xe3a03003, 0xe3a04004,
@@ -77,7 +77,7 @@ uint32_t codelet_step_thumb_arm[] = {
 	0xe2800001, 0xeafffff5
 };
 
-uint32_t codelet_fifo_write[] = {
+const uint32_t codelet_fifo_write[] = {
 	0x00000048, 0xe3510000, 0x0afffffd, 0xee105e10,
 	0xe3150001, 0x0afffffc, 0xee115e10, 0xe5c05000,
 	0xe2511001, 0x11a05425, 0x15c05000, 0x12511001,
@@ -85,7 +85,7 @@ uint32_t codelet_fifo_write[] = {
 	0x15c05000, 0x12511001, 0xeaffffed
 };
 
-uint32_t codelet_fifo_read[] = {
+const uint32_t codelet_fifo_read[] = {
 	0x00000048, 0xe3510000, 0x0afffffd, 0xe5d05000,
 	0xe2511001, 0x15d06000, 0x11855406, 0x12511001,
 	0x15d07000, 0x11855807, 0x12511001, 0x15d08000,

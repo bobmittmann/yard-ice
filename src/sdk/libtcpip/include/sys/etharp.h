@@ -27,11 +27,12 @@
 #define __SYS_ETHARP_H__
 
 #include <stdint.h>
-#include <tcpip/ifnet.h>
 #include <tcpip/stat.h>
 
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
 
 struct etharp {
 	struct arphdr ea_hdr;	

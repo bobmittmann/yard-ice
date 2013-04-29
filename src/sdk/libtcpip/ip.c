@@ -65,9 +65,9 @@
 #include <sys/ethernet.h>
 #include <sys/etharp.h>
 
-#include <tcpip/ip.h>
+//#include <tcpip/ip.h>
 #include <tcpip/icmp.h>
-#include <tcpip/in.h>
+//#include <tcpip/in.h>
 
 #include <string.h>
 #include <stdlib.h>

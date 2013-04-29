@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-const struct stm32f_usart * stm32f_usart_lut[6] = {
+const struct stm32f_usart * const stm32f_usart_lut[6] = {
 	STM32F_USART1,
 	STM32F_USART2,
 	STM32F_USART3,

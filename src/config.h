@@ -23,7 +23,6 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
-
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
@@ -41,7 +40,7 @@
 #define THINKOS_THREADS_MAX 32
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 
-#define THINKOS_ENABLE_JOIN 0
+#define THINKOS_ENABLE_JOIN 1
 #define THINKOS_ENABLE_PAUSE 0
 #define THINKOS_ENABLE_CANCEL 0
 
@@ -74,6 +73,8 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE 256
 
+#define THINKOS_ENABLE_SCHED_DEBUG 0
+
 #define FPGA_RBF_ADDR 0x08040000
 
 #define JTAG_VEC_BITS_MAX 256
@@ -95,5 +96,9 @@
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
 
+#define TCP_MAX_RCV_QUEUE 2048
+#define TCP_MAX_SND_QUEUE 2048 
+
 #endif /* __CONFIG_H__ */
+
 

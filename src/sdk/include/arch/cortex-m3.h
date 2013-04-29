@@ -330,6 +330,17 @@
 	((((ADDR) - 0x1ef00000) * 32) + (4 * (BIT)))
 */
 
+/****************************************************************************
+ Exception return
+ ****************************************************************************/
+
+/* Return to handler mode */
+#define CM3_EXC_RET_HANDLER    0xfffffff1
+/* Return to thread mode and on return use the main stack */
+#define CM3_EXC_RET_THREAD_MSP 0xfffffff9
+/* Return to thread mode and on return use the process stack */
+#define CM3_EXC_RET_THREAD_PSP 0xfffffffd
+
 #ifndef __ASSEMBLER__
 
 /****************************************************************************
@@ -663,6 +674,10 @@ static inline uint32_t __attribute__((always_inline)) cm3_lr_get(void) {
 	register uint32_t lr;
 	asm volatile ("mov %0, lr\n" : "=r" (lr));
 	return lr;
+}
+
+static inline void __attribute__((always_inline)) cm3_lr_set(uint32_t lr) {
+	asm volatile ("mov lr, %0\n" : "=r" (lr));
 }
 
 static inline uint32_t __attribute__((always_inline)) __clz(uint32_t val) {

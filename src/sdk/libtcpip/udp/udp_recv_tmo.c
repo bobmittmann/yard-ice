@@ -89,7 +89,8 @@ int udp_recv_tmo(struct udp_pcb * __up, void * __buf, int __len,
 
 		ret = __os_cond_timedwait(__up->u_rcv_cond, net_mutex, msec);
 		if (ret < 0) {
-			if (ret == -ETIMEDOUT) {
+			if (ret == __OS_TIMEOUT) {
+				ret = -ETIMEDOUT;
 				DCC_LOG(LOG_WARNING, "timeout!");
 			} else {
 				DCC_LOG(LOG_ERROR, "__os_cond_timedwait()!");

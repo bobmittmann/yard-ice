@@ -282,18 +282,13 @@ void usb_cdc_sn_set(uint64_t sn)
 	int i;
 	int n;
 
-	DCC_LOG(LOG_TRACE, "1.");
-
 	n = sprintf(s, "%llu", sn);
 	cp = s + n - 1;
-
-	DCC_LOG(LOG_TRACE, "1.");
 
 	for (i = (SERIAL_STR_SZ / 2) - 1; i >= 0; --i) {
 		if (cp < s)
 			break;
 		c = *cp--;
-		DCC_LOG1(LOG_TRACE, "'%c'", c);
 		cdc_acm_serial_str[i * 2] = c;
 	}
 

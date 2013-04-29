@@ -33,7 +33,7 @@
 
 #define SYSCALL_PRIORITY       0x60
 #define CLOCK_PRIORITY         0xa0
-#define SCHED_PRIORITY         0xc0
+#define SCHED_PRIORITY         0xff
 #define EXCEPT_PRIORITY        0x00
 
 #define IRQ_PRIORITY_HIGHEST   (0 << 5)

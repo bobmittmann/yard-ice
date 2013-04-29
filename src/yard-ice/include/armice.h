@@ -529,17 +529,17 @@ void arm926_thumb_context_restore(jtag_tap_t * tap, armice_context_t * ct);
  * Common
  */
 
-int arm_cfi16_erase(armice_ctrl_t * ctrl, uint32_t base, 
-					uint32_t offs, int len);
+int arm_cfi16_rase(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  ice_size_t len);
 
-int arm_cfi16_write(armice_ctrl_t * ctrl, uint32_t base, 
-					uint32_t offs, const void * ptr, int len);
+int arm_cfi16_write(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  const void * buf, ice_size_t len);
 
-int arm_cfi16_2_erase(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, int len);
+int arm_cfi16_2_erase(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  ice_size_t len);
 
-int arm_cfi16_2_write(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, const void * ptr, int len);
+int arm_cfi16_2_write(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  const void * buf, ice_size_t len);
 
 int armice_mem_read(armice_ctrl_t * ctrl, ice_mem_ref_t * addr, 
 					void * p, ice_size_t len);

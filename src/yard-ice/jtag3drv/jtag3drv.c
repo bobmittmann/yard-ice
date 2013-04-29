@@ -158,13 +158,6 @@ int jtag_nrst(bool assert)
 	return JTAG_OK;
 }
 
-void jtag_tap_reset(void)
-{	
-	DCC_LOG(LOG_TRACE, "[-----]");
-	insn_tap_reset(5, JTAG_TAP_RESET);
-	jtag3drv.arm_scan_chain = -1;
-}
-
 void jtag_run_test(int n, unsigned int final_state)
 {	
 	DCC_LOG2(LOG_TRACE, "cycles: %d --> %s", n, jtag_state_name[final_state]);
@@ -261,6 +254,14 @@ void jtag_dr_pause(int n, unsigned int final_state)
  * Initialization and configuration
  *
  ***************************************************************************/
+
+void jtag_drv_tap_reset(int cnt)
+{	
+	DCC_LOG(LOG_TRACE, "[-----]");
+	insn_tap_reset(cnt, JTAG_TAP_RESET);
+	jtag3drv.arm_scan_chain = -1;
+}
+
 
 int jtag_tap_select(jtag_tap_t * tap)
 {

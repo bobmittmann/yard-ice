@@ -38,10 +38,13 @@ int nand_block_erase(nand_dev_t * nand, int block)
 	chip = &nand->chip[nand->chip_sel];
 
 	/* bounds checking */
-	if (block >= chip->num_blocks)
+	if (block >= chip->num_blocks) {
+		DCC_LOG2(LOG_WARNING, "block(%d) >= chip->num_blocks(%d)", 
+				 block, chip->num_blocks);
 		return -1;
+	}
 
-	DCC_LOG1(LOG_TRACE, "Erasing block %d", block);
+	DCC_LOG1(LOG_INFO, "Erasing block %d", block);
 
 	/* First erase command */
 	nand->io->cmd(arg, chip, NAND_BERASEC1);

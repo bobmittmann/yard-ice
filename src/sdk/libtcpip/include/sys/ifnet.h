@@ -52,8 +52,6 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 
-#include <tcpip/route.h>
-
 #ifndef ENABLE_NETIF_STAT
 #define ENABLE_NETIF_STAT 0
 #endif

@@ -41,7 +41,7 @@ int val_null_decode(const value_t * val, char * s)
 	return 0;
 }
 
-struct type_def type_def_void = {
+const struct type_def type_def_void = {
 	.name = "void",
 	.encode = val_null_encode,
 	.decode = val_null_decode

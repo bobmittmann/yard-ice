@@ -178,17 +178,16 @@ void mutex_test(void)
 	printf("\n");
 };
 
+void stdio_init(void);
+
 int main(int argc, char ** argv)
 {
-	DCC_LOG(LOG_TRACE, "cm3_udelay_calibrate()");
-	cm3_udelay_calibrate();
-	udelay(100000);
-	DCC_LOG(LOG_TRACE, "stm32f_usart_open().");
-	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
-	udelay(100000);
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
 
-	DCC_LOG(LOG_TRACE, "thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	cm3_udelay_calibrate();
+
+	stdio_init();
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -196,10 +195,13 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
 	sleep_test();
+
 	mutex_test();
 
-	thinkos_sleep(10000);
+	thinkos_sleep(1000);
 
 	return 0;
 }

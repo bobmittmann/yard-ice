@@ -43,7 +43,7 @@ int val_string_decode(const value_t * val, char * s)
 	return 0;
 }
 
-struct type_def type_def_string = {
+const struct type_def type_def_string = {
 	.name = "string",
 	.encode = (val_encode_t)val_string_encode,
 	.decode = (val_decode_t)val_string_decode

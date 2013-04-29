@@ -26,8 +26,7 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
+#include <tcpip/tcp.h>
 
 int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port) 
 {
@@ -49,7 +48,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 
 	tcpip_net_lock();
 
-	if ((rt = route_lookup(__tp->t_faddr)) == NULL) {
+	if ((rt = __route_lookup(__tp->t_faddr)) == NULL) {
 		DCC_LOG(LOG_WARNING, "no route to host");			
 		if (__tp->t_laddr == INADDR_ANY) {
 			DCC_LOG(LOG_WARNING, "no local address");			

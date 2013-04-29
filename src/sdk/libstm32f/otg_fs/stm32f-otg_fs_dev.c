@@ -254,11 +254,11 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint8_t * cp = (uint8_t *)buf;
 	struct stm32f_otg_ep * ep;
-	unsigned int rem;
-	unsigned int cnt;
 	uint32_t data;
+	int cnt;
+	int rem;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 	
@@ -295,7 +295,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 			data = otg_fs->dfifo[ep_id].pop;
 			(void)data;
 			rem -= 4;
-		} while (rem);
+		} while (rem > 0);
 	}
 
 	/* reset transfer pointer */

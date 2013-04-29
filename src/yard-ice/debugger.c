@@ -32,6 +32,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include <yard-ice/drv.h>
+
 #include "var.h"
 
 #include "dbglog.h"
@@ -2016,23 +2018,20 @@ int target_power(int on)
 
 	__os_mutex_lock(dbg->busy);
 
-	if (on == 0) {
+	if (on) {
+		ext_pwr_on();
+		dbg->ext_pwr = 1;
+	} else {
 		/* release the target */
 		poll_stop(dbg);
 		ice_release(&dbg->ice);
-
 		/* force 0 on trst */
 		jtag_trst(true);
 		/* force 0 in TMS and TDI */
 		jtag_run_test(1, JTAG_TAP_IDLE);
+		ext_pwr_off();
+		dbg->ext_pwr = 0;
 	}	
-
-
-/* FIXME: power and relay driver 
-	if ((ret = jtag_relay(on)) != JTAG_OK) {
-		DCC_LOG(LOG_WARNING, "ice_power() fail");
-	}
-*/
 
 	__os_mutex_unlock(dbg->busy);
 
@@ -2108,6 +2107,13 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 	if ((info = target->ice_drv) == NULL) {
 		DCC_LOG(LOG_ERROR, "NULL ice driver info!");
 		return ERR_PARM;
+	}
+
+	if (!dbg->ext_pwr) { 
+		ext_pwr_on();
+		/* FIXME: configurable power on time */
+		__os_sleep(200);
+		dbg->ext_pwr = 1;
 	}
 
 	__os_mutex_lock(dbg->busy);
@@ -2272,7 +2278,7 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "No TAPs defined!");
 		__os_mutex_unlock(dbg->busy);
-		return -1;
+		return 0;
 	}
 
 	/* reset the TAPs to put the IDCODE in the DR scan */

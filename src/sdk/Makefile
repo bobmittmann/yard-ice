@@ -34,7 +34,7 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
 
 CFLAGS = -g -O1
 
-CDEFS = 
+CDEFS = CONFIG_H
 
 INCPATH = include 
 

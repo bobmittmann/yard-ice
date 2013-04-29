@@ -23,13 +23,11 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#define __USE_SYS_ARP__
-#include <sys/arp.h>
-
 #include <sys/etharp.h>
 #include <sys/ethernet.h>
 
-#include <tcpip/route.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
 
 #include <netinet/in.h>
 #include <string.h> 
@@ -380,7 +378,7 @@ int arp_query_pending(void)
 
 	__etharp__.pending = INADDR_ANY;
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "no route to host: %I", daddr);
 		return -1;
 	}

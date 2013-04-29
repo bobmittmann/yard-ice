@@ -34,9 +34,9 @@
  * Altera 
  ---------------------------------------------------------------------------*/
 
-gpio_io_t n_config = GPIO(GPIOE, 0);
-gpio_io_t conf_done = GPIO(GPIOE, 1);
-gpio_io_t n_status = GPIO(GPIOC, 11);
+static const gpio_io_t n_config = GPIO(GPIOE, 0);
+static const gpio_io_t conf_done = GPIO(GPIOE, 1);
+static const gpio_io_t n_status = GPIO(GPIOC, 11);
 
 static const struct stm32f_spi_io spi3_io = {
 	.miso = GPIO(GPIOC, 11), /* MISO */

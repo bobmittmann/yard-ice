@@ -183,12 +183,11 @@ SECTIONS
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
-
 		/* define a global symbol marking the end of read only data sections */
-		. = ALIGN(8); 
-		PROVIDE(__text_end = .);
 	} >flash = 0xffffffff
 
+	. = ALIGN(4); 
+	PROVIDE(__text_end = .);
 
 	.data :
 	{

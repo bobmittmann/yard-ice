@@ -56,7 +56,7 @@ int val_range32_decode(const value_t * val, char * s)
 	return sprintf(s, "%08x:%08x", val->range32.from, val->range32.to);
 }
 
-struct type_def type_def_range32 = {
+const struct type_def type_def_range32 = {
 	.name = "range32",
 	.encode = (val_encode_t)val_range32_encode,
 	.decode = (val_decode_t)val_range32_decode

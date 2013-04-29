@@ -1222,7 +1222,7 @@ void dhcp_default_callback(struct dhcp * dhcp)
 			dhcp->mask = dhcp->ifn->if_mask;
 		if (dhcp->gw == INADDR_NONE) {
 			struct route * route;
-			route = route_lookup(INADDR_ANY);
+			route = __route_lookup(INADDR_ANY);
 			if (route->rt_dev == dhcp->ifn) {
 				dhcp->gw = route->rt_gateway;
 				DBG(DBG_NOTICE, "No GW, found previous GW: %d.%d.%d.%d.", 
@@ -1235,14 +1235,14 @@ void dhcp_default_callback(struct dhcp * dhcp)
 	/* configure the ip address */
 	if (ifn_ipconfig(dhcp->ifn, dhcp->ip, dhcp->mask) >= 0) {
 		/* add the default route (gateway) to ifn */
-		route_del(INADDR_ANY);
-		route_add(INADDR_ANY, INADDR_ANY, dhcp->gw, dhcp->ifn);
+		__route_del(INADDR_ANY);
+		__route_add(INADDR_ANY, INADDR_ANY, dhcp->gw, dhcp->ifn);
 		return;
 	}
 	
 	if (dhcp->bcast != INADDR_NONE) {
-		route_del(IN_ADDR(255, 255, 255, 255));
-		route_add(IN_ADDR(255, 255, 255, 255), IN_ADDR(255, 255, 255, 255), 
+		__route_del(IN_ADDR(255, 255, 255, 255));
+		__route_add(IN_ADDR(255, 255, 255, 255), IN_ADDR(255, 255, 255, 255), 
 				  dhcp->bcast, dhcp->ifn);
 	}
 	
@@ -1373,12 +1373,12 @@ struct dhcp * dhcp_ifconfig(struct ifnet * __ifn,
 		dhcp->ip = __ifn->if_addr;
 		dhcp->mask = __ifn->if_mask;
 
-		if ((rt = route_lookup(INADDR_ANY)) == NULL)
+		if ((rt = __route_lookup(INADDR_ANY)) == NULL)
 			dhcp->gw = INADDR_ANY;
 		else
 			dhcp->gw = rt->rt_gateway;
 
-		if ((rt = route_lookup(__ifn->if_addr & __ifn->if_mask)) == NULL)
+		if ((rt = __route_lookup(__ifn->if_addr & __ifn->if_mask)) == NULL)
 			dhcp->bcast = INADDR_ANY;
 		else
 			dhcp->bcast = rt->rt_gateway;

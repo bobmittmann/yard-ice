@@ -120,6 +120,8 @@ struct debugger {
 
 	uint16_t tcp_port;
 
+	uint8_t ext_pwr;
+
 	int busy;
 
 	struct mem_range dasm;

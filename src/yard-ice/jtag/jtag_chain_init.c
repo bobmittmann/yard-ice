@@ -54,7 +54,7 @@ int jtag_chain_init(uint8_t * irlen, int cnt)
 	jtag_tap_purge();
 
 	/* reset the TAPs to put the IDCODE in the DR scan */
-	jtag_tap_reset();
+	jtag_drv_tap_reset(4 + cnt);
 
 	if (cnt > (JTAG_VEC_BITS_MAX / 32)) {
 		DCC_LOG(LOG_WARNING, "too many devices on the chain!");

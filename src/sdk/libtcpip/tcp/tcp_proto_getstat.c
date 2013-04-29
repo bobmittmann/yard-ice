@@ -25,7 +25,7 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
-
+#include <tcpip/stat.h>
 #include <string.h>
 
 void tcp_proto_getstat(struct proto_stat * __st, int __rst)

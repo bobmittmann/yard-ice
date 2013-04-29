@@ -36,6 +36,10 @@
 #define ENABLE_TARGET_DM365HS 1
 #endif
 
+#ifndef ENABLE_DAVINCI_NANAD
+#define ENABLE_DAVINCI_NANAD 1
+#endif
+
 void dm36x_pinmux(const struct ice_drv * ice, int offs, 
 				  uint32_t mask, uint32_t value)
 {
@@ -716,8 +720,8 @@ const struct target_info ti_dm365 = {
 	.ice_cfg = (void *)&davinci_cfg,
 
 	.jtag_clk_slow = 1000000,
-	.jtag_clk_def = 15000000,
-	.jtag_clk_max = 15000000,
+	.jtag_clk_def = 20000000,
+	.jtag_clk_max = 20000000,
 
 	/* The target has a TRST connection */
 	.has_trst = YES,
@@ -765,8 +769,8 @@ const struct target_info ti_dm365hs = {
 	.ice_cfg = (void *)&davinci_cfg,
 
 	.jtag_clk_slow = 1000000,
-	.jtag_clk_def = 15000000,
-	.jtag_clk_max = 15000000,
+	.jtag_clk_def = 7500000,
+	.jtag_clk_max = 7500000,
 
 	/* The target has a TRST connection */
 	.has_trst = YES,
