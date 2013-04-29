@@ -33,16 +33,17 @@
 #define TCP_FAST_TMR_MS 100
 #endif
 
-/* miliseconds per fast timer ticks */
-const uint16_t tcp_fast_tmr_ms = TCP_FAST_TMR_MS;
-
-/*
- * The slow timer constants
- */
-
 #ifndef TCP_SLOW_TMR_MS
 #define TCP_SLOW_TMR_MS 500
 #endif
+
+#if TCP_SLOW_TMR_MS < (2 * TCP_FAST_TMR_MS)
+#undef TCP_SLOW_TMR_MS
+#define TCP_SLOW_TMR_MS  (2 * TCP_FAST_TMR_MS)
+#endif
+
+/* miliseconds per fast timer ticks */
+const uint16_t tcp_fast_tmr_ms = TCP_FAST_TMR_MS;
 
 /* miliseconds per slow timer ticks */
 const uint16_t tcp_slow_tmr_ms = TCP_SLOW_TMR_MS;
@@ -75,6 +76,11 @@ const uint8_t tcp_rxmtintvl[] = {
  */
 #ifndef TCP_IDLE_TMR_MS
 #define TCP_IDLE_TMR_MS 1000
+#endif
+
+#if TCP_IDLE_TMR_MS < (2 * TCP_FAST_TMR_MS)
+#undef TCP_IDLE_TMR_MS 
+#define TCP_IDLE_TMR_MS (2 * TCP_FAST_TMR_MS)
 #endif
 
 /* we set the default MSL to 2 seconds becase we have no enougth resorces 
@@ -386,6 +392,7 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 		ret = __os_cond_timedwait(__tcp__.output_cond, net_mutex, 
 									 TCP_FAST_TMR_MS);
 		if (ret == __OS_TIMEOUT) {
+			DCC_LOG(LOG_MSG, "__os_cond_timedwait() timeout!");
 
 			/* timeout */
 			if (tcp_fast_tmr() != 0) {
@@ -403,10 +410,8 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 				idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;
 				tcp_idle_tmr();
 			}
-
-		} else {
+		} else if (ret < 0)  {
 			DCC_LOG1(LOG_WARNING, "__os_cond_timedwait() failed: %d.", ret);
-			__os_sleep(200);
 		}
 	}
 }

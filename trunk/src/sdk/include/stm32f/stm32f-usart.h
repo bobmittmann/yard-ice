@@ -466,7 +466,7 @@ struct stm32f_usart {
 
 extern const uint8_t stm32f_usart_irq_lut[];
 
-extern const struct stm32f_usart * stm32f_usart_lut[];
+extern const struct stm32f_usart * const stm32f_usart_lut[];
 
 #ifdef __cplusplus
 extern "C" {

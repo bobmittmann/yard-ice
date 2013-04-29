@@ -35,23 +35,24 @@
 extern struct armice_codelet codelet_cfi16_write;
 extern struct armice_codelet codelet_cfi16_erase;
 
-int arm_cfi16_2_write(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, const void * ptr, int len)
+int arm_cfi16_2_write(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  const void * buf, ice_size_t len)
 {
 	uint32_t exec_addr = ctrl->work_addr;
 	uint32_t data;
 	uint8_t * cp;
 	uint32_t reg[2];
+	uint32_t offs;
 	int ret;
 	int n;
 	int m;
 
-	DCC_LOG3(LOG_INFO, "%08x:%06x len=%d", base, offs, len);
+	DCC_LOG3(LOG_INFO, "%08x:%06x len=%d", addr->base, addr->offs, len);
 
-	cp = (uint8_t *)ptr;
+	cp = (uint8_t *)buf;
 
 	/* FIXME: offset not aligned */
-	offs &= ~0x000003;
+	offs = addr->offs & ~0x000003;
 
 	if ((ret = armice_code_load(ctrl, exec_addr, 
 								codelet_cfi16_write.code, 
@@ -61,7 +62,7 @@ int arm_cfi16_2_write(armice_ctrl_t * ctrl, uint32_t base,
 		return ret;
 	}
 
-	reg[0] = base;
+	reg[0] = addr->base;
 	reg[1] = offs;
 
 	DCC_LOG(LOG_INFO, "code exec...");
@@ -96,8 +97,8 @@ int arm_cfi16_2_write(armice_ctrl_t * ctrl, uint32_t base,
 	return n;
 }
 
-int arm_cfi16_2_erase(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, int len)
+int arm_cfi16_2_erase(armice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					  ice_size_t len)
 {
 	uint32_t exec_addr = ctrl->work_addr;
 	unsigned int tmo;
@@ -107,7 +108,7 @@ int arm_cfi16_2_erase(armice_ctrl_t * ctrl, uint32_t base,
 
 //	printf("erasing %d bytes...\n", len);
 
-	DCC_LOG3(LOG_INFO, "%08x:%06x len=%d", base, offs, len);
+	DCC_LOG3(LOG_INFO, "%08x:%06x len=%d", addr->base, addr->offs, len);
 
 	/* flushes the dcc channel */
 	jtag_arm_dcc_in(ctrl->tap, &data, 1);
@@ -122,8 +123,8 @@ int arm_cfi16_2_erase(armice_ctrl_t * ctrl, uint32_t base,
 	}
 
 
-	reg[0] = base;
-	reg[1] = offs;
+	reg[0] = addr->base;
+	reg[1] = addr->offs;
 	reg[2] = len;
 
 	if ((ret = armice_code_exec(ctrl, exec_addr, reg, 3)) < 0) { 

@@ -34,27 +34,31 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+#include <netinet/ip.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
+#include <sys/os.h>
+#include <sys/mbuf.h>
+#include <sys/net.h>
+#include <sys/pcb.h>
+#define __USE_SYS_NET__
+#include <sys/net.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
+#define __USE_SYS_ARP__
+#include <sys/arp.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
+#include <sys/ip.h>
+
 #ifdef TCP_DEBUG
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
 #include <sys/dcclog.h>
-
-#include <stdint.h>
-#include <netinet/ip.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-
-#include <tcpip/ifnet.h>
-#include <tcpip/stat.h>
-#include <tcpip/tcp.h>
-
-#define __USE_SYS_NET__
-#include <sys/net.h>
-#include <sys/pcb.h>
-
-#include <sys/os.h>
 
 /* tcp states */
 #define TCPS_CLOSED         0
@@ -100,6 +104,10 @@
 #define ENABLE_TCP_PROTO_STAT 0
 #endif
 
+#ifndef ENABLE_TCP_HEADER_PREDICTION
+#define ENABLE_TCP_HEADER_PREDICTION 1
+#endif
+
 struct tcp_listen_pcb {
 	/* foreign address */
 	in_addr_t t_faddr;
@@ -124,8 +132,8 @@ struct tcp_listen_pcb {
 	uint8_t t_count;
 
 	uint8_t t_max;
-	uint8_t t_head;
-	uint8_t t_tail;
+	volatile uint8_t t_head;
+	volatile uint8_t t_tail;
 	struct tcp_pcb * t_backlog[0]; 
 };
 

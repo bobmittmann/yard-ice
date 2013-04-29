@@ -25,7 +25,7 @@
 #include <sys/dcclog.h>
 #include <string.h>
 
-const struct stm32f_spi * stm32f_spi_lut[3] = {
+const struct stm32f_spi * const stm32f_spi_lut[3] = {
 	STM32F_SPI1,
 	STM32F_SPI2,
 	STM32F_SPI3

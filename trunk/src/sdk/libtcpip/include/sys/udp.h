@@ -34,27 +34,30 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+#include <netinet/in.h>
+#include <netinet/udp.h>
+
+#include <sys/os.h>
+#include <sys/mbuf.h>
+#include <sys/net.h>
+#include <sys/pcb.h>
+#define __USE_SYS_NET__
+#include <sys/net.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
+#define __USE_SYS_ARP__
+#include <sys/arp.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
+#include <sys/ip.h>
+
 #ifdef UDP_DEBUG
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
 #include <sys/dcclog.h>
-
-#include <sys/os.h>
-
-#include <stdint.h>
-
-#include <netinet/in.h>
-#include <netinet/udp.h>
-
-#include <sys/mbuf.h>
-#include <sys/net.h>
-#include <sys/pcb.h>
-
-#include <tcpip/ip.h>
-#include <tcpip/udp.h>
-#include <tcpip/arp.h>
 
 #ifndef UDP_PCB_TAB_LEN
 #define UDP_PCB_TAB_LEN 2

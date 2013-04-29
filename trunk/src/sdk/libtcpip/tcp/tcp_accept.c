@@ -35,14 +35,14 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 	
 	while (mux->t_head == mux->t_tail) {
 
-		DCC_LOG1(LOG_TRACE, "<%04x> waiting...", (int)mux);
+		DCC_LOG1(LOG_INFO, "<%04x> waiting...", (int)mux);
 
 		if (__os_cond_wait(__mux->t_cond, net_mutex) < 0) {
 			DCC_LOG3(LOG_ERROR, "<%04x> __os_cond_wait(%d, %d) failed!", 
 					 (int)mux, __mux->t_cond, net_mutex);
 			return NULL;
 		}
-	};
+	}
 
 	tp = (struct tcp_pcb *)mux->t_backlog[mux->t_head++];
 
@@ -53,7 +53,7 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 	if (tp == NULL) {
 		DCC_LOG(LOG_PANIC, "NULL pointer");
 	} else {
-		DCC_LOG4(LOG_TRACE, "<%04x> --> <%04x> %I:%d", (int)mux, 
+		DCC_LOG4(LOG_INFO, "<%04x> --> <%04x> %I:%d", (int)mux, 
 				 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
 	}
 

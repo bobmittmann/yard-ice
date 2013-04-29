@@ -413,7 +413,7 @@ int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 
 	e = (ice_mem_entry_t *)mem_map;
 
-	DCC_LOG2(LOG_INFO, "addr:%08x len:%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "addr:%08x len:%d", addr, len);
 
 	rem = len;
 	for (; (size = e->blk.count * e->blk.size) > 0; e++) {
@@ -527,7 +527,7 @@ struct ice_mem_entry * ice_mem_by_name(const ice_drv_t * ice,
 	return (struct ice_mem_entry *)&mem[idx];
 }
 
-const char * ice_errtab[] = {
+const char * const ice_errtab[] = {
 	"ICE OK",
 	"ICE undefined error",
 	"ICE invalid argument",

@@ -26,11 +26,7 @@
 #define __USE_SYS_UDP__
 #include <sys/udp.h>
 
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
-
-#define __USE_SYS_ARP__
-#include <sys/arp.h>
+#include <tcpip/udp.h>
 
 #include <string.h>
 #include <errno.h>
@@ -110,7 +106,7 @@ int udp_sendto(struct udp_pcb * __up, void * __buf, int __len,
 		}
 	}
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		DCC_LOG2(LOG_WARNING, "<%05x> no route to host: %I", (int)__up, daddr);
 		tcpip_net_unlock();
 		UDP_PROTO_STAT_ADD(tx_drop, 1);

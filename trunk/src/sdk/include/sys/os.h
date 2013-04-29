@@ -36,7 +36,6 @@
 #include <thinkos_sys.h>
 #endif
 
-
 #define __OS_PRIORITY_HIGHEST 0
 #define __OS_PRIORITY_HIGH    1
 #define __OS_PRIORITY_MEDIUM  2

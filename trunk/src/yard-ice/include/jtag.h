@@ -306,6 +306,8 @@ int jtag_drv_init(void);
 
 int jtag_drv_done(void);
 
+void jtag_drv_tap_reset(int cnt);
+
 #ifdef __cplusplus
 }
 #endif

@@ -34,12 +34,14 @@
 #include <sys/stm32f_ethif.h>
 #include <sys/etharp.h>
 
-#include <tcpip/ip.h>
 #include <tcpip/in.h>
 
 #define __USE_SYS_IFNET__
 #include "sys/ifnet.h"
+#define __USE_SYS_ROUTE__
+#include "sys/route.h"
 #include "sys/net.h"
+#include "sys/ip.h"
 
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
@@ -96,16 +98,16 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 		/* IP payload type */
 		switch (ext_st.ippt) {
 		case ETH_IPPT_UNKOWN:
-			DCC_LOG(LOG_TRACE, "not IP!");
+			DCC_LOG(LOG_INFO, "not IP!");
 			break;
 		case ETH_IPPT_UDP:
 			DCC_LOG(LOG_INFO, "UDP");
 			break;
 		case ETH_IPPT_TCP:
-			DCC_LOG(LOG_TRACE, "TCP");
+			DCC_LOG(LOG_INFO, "TCP");
 			break;
 		case ETH_IPPT_ICMP:
-			DCC_LOG(LOG_TRACE, "ICMP");
+			DCC_LOG(LOG_INFO, "ICMP");
 			break;
 		}
 
@@ -276,32 +278,68 @@ int stm32f_ethif_cleanup(struct ifnet * __if)
 void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
+	void * ptr;
+#if 1
+	struct txdma_enh_desc * txdesc;
+	struct txdma_st st;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", __length);
-
+	txdesc = &drv->tx.desc;
+	for (;;) {
+		/* wait for buffer availability */
+		st = txdesc->st;
+		if (st.es) {
+			DCC_LOG10(LOG_WARNING, "Error:%s%s%s%s%s%s%s%s%s%s",
+					 (st.uf) ? " UF" : "",
+					 (st.ed) ? " ED" : "",
+					 (st.ec) ? " EC" : "",
+					 (st.lco) ? " LCO" : "",
+					 (st.nc) ? " NC" : "",
+					 (st.lca) ? " LCA" : "",
+					 (st.ipe) ? " IPE" : "",
+					 (st.ff) ? " FF" : "",
+					 (st.jt) ? " JT" : "",
+					 (st.ihe) ? " IHE" : "");
+		}
+		if (st.own == 0) {
+			break;
+		}
+		DCC_LOG(LOG_MSG, "wait....");
+		thinkos_flag_wait(drv->tx.flag);
+		__thinkos_flag_clr(drv->tx.flag);
+		DCC_LOG(LOG_MSG, "wakeup....");
+	}
+#else
 	/* chek for availability  */
-	if (drv->tx.desc.st.own)
+	if (drv->tx.desc.st.own) {
+		DCC_LOG(LOG_WARNING, "not available TX buffers!");
 		return NULL;
+	}
+#endif
 
-	return &drv->tx.buf[14];
+	ptr = &drv->tx.buf[14];
+
+	DCC_LOG2(LOG_TRACE, "mem=%p len=%d", ptr, __length);
+
+	return ptr;
 }
 
 int stm32f_ethif_munmap(struct ifnet * __if, void * __mem)
 {
 //	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 //
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	return 0;
 }
 
 int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst, 
 					  int __proto, const void * __buf, int __len)
 {
-	DCC_LOG1(LOG_TRACE, "len=%d", __len);
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct txdma_enh_desc * txdesc;
 	struct txdma_st st;
+
+	DCC_LOG1(LOG_INFO, "len=%d", __len);
 
 	if (__len > __if->if_mtu) {
 		NETIF_STAT_ADD(__if, tx_drop, 1);

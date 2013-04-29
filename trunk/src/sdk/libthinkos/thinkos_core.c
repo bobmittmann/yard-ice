@@ -51,9 +51,35 @@ uint32_t thinkos_idle_val(void)
 }
 #endif
 
+#if THINKOS_ENABLE_SCHED_DEBUG
+
+static inline void __attribute__((always_inline)) 
+__dump_context(struct thinkos_context * __ctx) {
+	DCC_LOG4(LOG_TRACE, "  r0=%08x  r1=%08x  r2=%08x  r3=%08x", 
+			__ctx->r0, __ctx->r1, __ctx->r2, __ctx->r3);
+	DCC_LOG4(LOG_TRACE, "  r4=%08x  r5=%08x  r6=%08x  r7=%08x", 
+			__ctx->r4, __ctx->r7, __ctx->r6, __ctx->r7);
+	DCC_LOG4(LOG_TRACE, "  r8=%08x  r9=%08x r10=%08x r11=%08x", 
+			__ctx->r8, __ctx->r9, __ctx->r10, __ctx->r11);
+	DCC_LOG4(LOG_TRACE, " r12=%08x  sp=%08x  lr=%08x  pc=%08x", 
+			__ctx->r12, __ctx, __ctx->lr, __ctx->pc);
+	DCC_LOG2(LOG_TRACE, "xpsr=%08x ret=%08x ", 
+			 __ctx->xpsr, __ctx->ret);
+}
+
+void test_call(struct thinkos_context * ctx)
+{
+	__dump_context(ctx);
+}
+#endif
+
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
 	for (;;) {
+#if THINKOS_ENABLE_SCHED_DEBUG
+		DCC_LOG(LOG_MSG, "zzz...");
+//		__dump_context(&thinkos_idle.ctx);
+#endif
 #if THINKOS_ENABLE_IDLE_SNAPSHOT
 		asm volatile ("ldr  r12, [lr, #0]\n"); /* update the snapshot value */
 #endif
@@ -69,48 +95,28 @@ __sched_entry(void) {
 	asm volatile (
 #if THINKOS_ENABLE_SCHED_DEBUG
 				  "push  {lr}\n"
-				  "sub   sp, #8\n"
+				  "sub   sp, #16\n"
 #endif				  
 				  "mrs   %0, PSP\n" 
-				  "stmdb %0!, {r4-r11}\n" : "=r" (ctx));
+				  "stmdb %0!, {r4-r11}\n"
+				  : "=r" (ctx));
 	return ctx;
 }
 
 static inline void __attribute__((always_inline)) 
 __sched_exit(struct thinkos_context * __ctx) {
-#if THINKOS_ENABLE_SCHED_DEBUG
 	register struct thinkos_context * r0 asm("r0") = __ctx;
-#endif
-	asm volatile ("add    r3, %0, #8 * 4\n"
+	asm volatile (
+#if THINKOS_ENABLE_SCHED_DEBUG
+				  "add    sp, #16\n"
+				  "pop    {lr}\n"
+#endif				  
+				  "add    r3, %0, #8 * 4\n"
 				  "msr    PSP, r3\n"
 				  "ldmia  %0, {r4-r11}\n"
-#if THINKOS_ENABLE_SCHED_DEBUG
-				  "add	  sp, #8\n"
-				  "pop    {pc}\n" : : "r" (r0) : "r3"); 
-#else
-				  "bx     lr\n" : : "r" (__ctx) : "r3"); 
-#endif				  
+				  "bx     lr\n"
+				  : : "r" (r0) : "r3"); 
 }
-
-#if THINKOS_ENABLE_SCHED_DEBUG
-static inline void __attribute__((always_inline)) 
-__dump_context(struct thinkos_context * __ctx) {
-	DCC_LOG4(LOG_TRACE, "  r0=%08x  r1=%08x  r2=%08x  r3=%08x", 
-			__ctx->r0, __ctx->r1, __ctx->r2, __ctx->r3);
-	DCC_LOG4(LOG_TRACE, "  r4=%08x  r5=%08x  r6=%08x  r7=%08x", 
-			__ctx->r4, __ctx->r7, __ctx->r6, __ctx->r7);
-	DCC_LOG4(LOG_TRACE, "  r8=%08x  r9=%08x r10=%08x r11=%08x", 
-			__ctx->r8, __ctx->r9, __ctx->r10, __ctx->r11);
-	DCC_LOG4(LOG_TRACE, " r12=%08x  sp=%08x  lr=%08x  pc=%08x", 
-			__ctx->r12, __ctx, __ctx->lr, __ctx->pc);
-	DCC_LOG1(LOG_TRACE, "xpsr=%08x", __ctx->xpsr);
-}
-
-void test_call(struct thinkos_context * ctx)
-{
-	__dump_context(ctx);
-}
-#endif
 
 static inline void __attribute__((always_inline)) __wait(void) {
 	asm volatile ("mov    r3, #1\n"
@@ -120,6 +126,9 @@ static inline void __attribute__((always_inline)) __wait(void) {
 				  "1:\n" : : : "r3"); 
 }
 
+#include <sys/delay.h>
+
+int sched_busy = 0;
 
 /* THinkOS - scheduler */
 void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
@@ -127,8 +136,14 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	struct thinkos_context * ctx;
 	uint32_t idx;
 
+//	sched_busy = 1;
+
+//	DCC_LOG(LOG_TRACE, "...");
+
 	/* save the context */
 	ctx = __sched_entry();
+
+//	udelay(2000);
 
 	/* get the active thread and schedule bit */	
 	idx = thinkos_rt.active;
@@ -146,16 +161,15 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 
 #if THINKOS_ENABLE_SCHED_DEBUG
 	if (thinkos_rt.sched_trace_req) {
-		DCC_LOG1(LOG_TRACE, "active=%d", idx);
+//		DCC_LOG1(LOG_TRACE, "active=%d", idx);
 //		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
 //		__dump_context(ctx);
 //		__wait();
+		thinkos_rt.sched_trace_req = 0;
 	}
 #endif
 
-#if THINKOS_ENABLE_SCHED_DEBUG
-	thinkos_rt.sched_trace_req = 0;
-#endif
+//	sched_busy = 0;
 
 	/* restore the context */
 	__sched_exit(ctx);
@@ -168,6 +182,9 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	uint32_t ticks;
 	uint32_t wq;
 	int j;
+
+//	if (sched_busy)
+//		__wait();
 
 	ticks = thinkos_rt.ticks; 
 	ticks++;
@@ -187,6 +204,10 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 #endif
 			/* remove from the time wait queue */
 			bmp_bit_clr(&thinkos_rt.wq_clock, j);  
+			DCC_LOG1(LOG_MSG, "Wakeup %d...", j);
+#if THINKOS_ENABLE_SCHED_DEBUG
+			thinkos_rt.sched_trace_req = 1;
+#endif
 			/* insert into the ready wait queue */
 			bmp_bit_set(&thinkos_rt.wq_ready, j);  
 			sched++;
@@ -377,8 +398,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_msp_set((uint32_t)&thinkos_except_stack + 
 				sizeof(thinkos_except_stack));
 #endif
-	msp = (uint32_t)&thinkos_idle.snapshot.val;
+	msp = (uint32_t)&thinkos_idle.stack.r12;
 	cm3_msp_set(msp);
+
+	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
@@ -389,6 +412,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.sched_idle_val = 0;
 	thinkos_rt.sched_idle_pri = 0;
 #endif
+//	thinkos_idle.ctx.ret = CM3_EXC_RET_THREAD_PSP;
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 #if THINKOS_ENABLE_CLOCK
@@ -481,9 +505,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	return self;
 }
 
-const char * thinkos_svc_link = thinkos_svc_nm;
+const char * const thinkos_svc_link = thinkos_svc_nm;
 
 #if THINKOS_ENABLE_EXCEPTIONS
-const char * thinkos_execpt_link = thinkos_except_nm;
+const char * const thinkos_execpt_link = thinkos_except_nm;
 #endif
 

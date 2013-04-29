@@ -26,12 +26,6 @@
 #define __USE_SYS_RAW__
 #include <sys/raw.h>
 
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
-
-#define __USE_SYS_ARP__
-#include <sys/arp.h>
-
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -67,7 +61,7 @@ int raw_sendto(struct raw_pcb * __raw, void * __buf, int __len,
 
 	daddr = __sin->sin_addr.s_addr;
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "no route to host: %I", daddr);
 		tcpip_net_unlock();
 		return -1;

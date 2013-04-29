@@ -78,7 +78,7 @@ enum {
 #define GPIOH STM32F_GPIOH_ID
 #define GPIOI STM32F_GPIOI_ID
 
-extern const struct stm32f_gpio * stm32f_gpio_lut[];
+extern const struct stm32f_gpio * const stm32f_gpio_lut[];
 
 struct stm32f_gpio_io {
 	uint8_t pin:4;

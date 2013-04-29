@@ -244,6 +244,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 
 	ctx = (struct thinkos_context *)sp;
 
+//	ctx->ret = CM3_EXC_RET_THREAD_PSP;
 	ctx->r0 = (uint32_t)init->arg;
 	ctx->lr = (uint32_t)thinkos_thread_exit;
 	ctx->pc = (uint32_t)init->task;
@@ -300,7 +301,7 @@ void thinkos_sleep_svc(int32_t * arg)
 	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
 #endif
 
-	DCC_LOG2(LOG_MSG, "<%d> waiting %d milliseconds...", self, ms);
+	DCC_LOG2(LOG_INFO, "<%d> waiting %d milliseconds...", self, ms);
 
 	/* wait for event */
 	__thinkos_wait();

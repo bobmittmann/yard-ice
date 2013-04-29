@@ -43,11 +43,18 @@
 
 #define __USE_SYS_NET__
 #include <sys/net.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
+#define __USE_SYS_IFNET__
+#include <sys/ifnet.h>
+#define __USE_SYS_ARP__
+#include <sys/arp.h>
+
 #include <sys/pcb.h>
+#include <sys/ip.h>
 
 #include <tcpip/in.h>
-#include <tcpip/ip.h>
-#include <tcpip/route.h>
+
 
 /* raw pcb flags */
 #define RF_NONBLOCK     0x80

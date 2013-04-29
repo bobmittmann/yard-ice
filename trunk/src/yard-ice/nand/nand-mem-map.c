@@ -38,8 +38,8 @@ static int32_t cache_pg = -1;
 /* write pending */
 static int8_t cache_wp = 0;
 
-int nand_mem_write(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, const void * ptr, int len)
+int nand_mem_write(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+				   const void * buf, ice_size_t len)
 {
 	nand_dev_t * nand;
 	nand_chip_t * chip;
@@ -54,8 +54,8 @@ int nand_mem_write(armice_ctrl_t * ctrl, uint32_t base,
 	DCC_LOG1(LOG_TRACE, "chip=%d", nand->chip_sel);
 	chip = &nand->chip[nand->chip_sel];
 
-	pg = offs / chip->data_size;
-	end = (offs + len) / chip->data_size;
+	pg = addr->offs / chip->data_size;
+	end = (addr->offs + len) / chip->data_size;
 
 	if ((pg != cache_pg) && (cache_wp)) {
 		/* write back */
@@ -66,10 +66,10 @@ int nand_mem_write(armice_ctrl_t * ctrl, uint32_t base,
 		}
 	}
 
-	pos = offs % chip->data_size;
+	pos = addr->offs % chip->data_size;
 	n = chip->data_size - pos;
 	n = (len < n) ? len : n;
-	memcpy(&cp[pos], ptr, n);
+	memcpy(&cp[pos], buf, n);
 
 	if (end != pg) {
 		/* write thrugh */
@@ -86,8 +86,8 @@ int nand_mem_write(armice_ctrl_t * ctrl, uint32_t base,
 	return n;
 }
 
-int nand_mem_read(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, void * ptr, int len)
+int nand_mem_read(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+					 void * buf, ice_size_t len)
 {
 	nand_dev_t * nand;
 	nand_chip_t * chip;
@@ -101,7 +101,7 @@ int nand_mem_read(armice_ctrl_t * ctrl, uint32_t base,
 	DCC_LOG1(LOG_TRACE, "chip=%d", nand->chip_sel);
 	chip = &nand->chip[nand->chip_sel];
 
-	pg = offs / chip->data_size;
+	pg = addr->offs / chip->data_size;
 
 	if (cache_wp) {
 		/* write back */
@@ -120,33 +120,35 @@ int nand_mem_read(armice_ctrl_t * ctrl, uint32_t base,
 		cache_pg = pg;
 	}
 
-	pos = offs % chip->data_size;
+	pos = addr->offs % chip->data_size;
 	n = chip->data_size - pos;
 	n = (len < n) ? len : n;
 
-	memcpy(ptr, &cp[pos], n);
+	memcpy(buf, &cp[pos], n);
 
 	return n;
 }
 
-int nand_mem_erase(armice_ctrl_t * ctrl, uint32_t base, 
-					  uint32_t offs, int len)
+int nand_mem_erase(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr, 
+				   ice_size_t len)
 {
 	nand_dev_t * nand;
 	nand_chip_t * chip;
-	int blk;
-//	int end;
 	int blk_size;;
+	int blk;
 	int ret;
 
 	nand = nand_dev_sel_get();
-	DCC_LOG1(LOG_TRACE, "chip=%d", nand->chip_sel);
 	chip = &nand->chip[nand->chip_sel];
+
+	DCC_LOG4(LOG_INFO, "chip=%d base=%08x offs=%d len=%d", 
+			 nand->chip_sel, addr->base, addr->offs, len);
 
 	if (cache_wp) {
 		/* write back */
 		cache_wp = 0;
 		if ((ret = nand_page_write(nand, cache_pg, cache)) < 0) {
+			DCC_LOG(LOG_WARNING, "nand_page_write() failed!");
 			cache_pg = -1;
 			return ret;
 		}
@@ -155,31 +157,25 @@ int nand_mem_erase(armice_ctrl_t * ctrl, uint32_t base,
 	cache_pg = -1;
 
 	blk_size = (chip->data_size * chip->pgs_per_blk);
-	blk = (offs / blk_size);
-#if 0
-	end = (offs + len - 1) / blk_size;
+	blk = (addr->offs / blk_size);
 
-	while (blk <= end) {
-		if (nand_block_erase(nand, blk) < 0)
-			return -1;
-		blk++;
-	}
-#endif
-	if (offs % blk_size) {
-		DCC_LOG1(LOG_MSG, "block %d skiping ", blk);
+	if (addr->offs % blk_size) {
+		DCC_LOG1(LOG_MSG, "offs(%d) is not block boundary.", addr->offs);
 		return len;
 	}
 
-	if (nand_block_erase(nand, blk) < 0)
+	if (nand_block_erase(nand, blk) < 0) {
+		DCC_LOG(LOG_WARNING, "nand_block_erase() failed!");
 		return -1;
+	}
 
 	return len;
 }
 
 const struct ice_mem_oper nand_mem_oper = {
-	.read = (ice_mem_read_t)nand_mem_read,
-	.write = (ice_mem_write_t)nand_mem_write, 
-	.erase = (ice_mem_erase_t)nand_mem_erase
+	.read = nand_mem_read,
+	.write = nand_mem_write, 
+	.erase = nand_mem_erase
 };
 
 #if 0

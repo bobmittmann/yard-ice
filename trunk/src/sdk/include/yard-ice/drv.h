@@ -45,6 +45,15 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 
 struct file * uart_console_fopen(struct uart_console_dev * dev);
 
+void bsp_io_ini(void);
+
+void relay_on(void);
+
+void relay_off(void);
+
+void ext_pwr_on(void);
+
+void ext_pwr_off(void);
 
 #ifdef __cplusplus
 }

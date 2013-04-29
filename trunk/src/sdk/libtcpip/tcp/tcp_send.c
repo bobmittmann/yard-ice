@@ -25,6 +25,7 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
+#include <tcpip/tcp.h>
 
 int tcp_send(struct tcp_pcb * __tp, const void * __buf, 
 	int __len, int __flags)
@@ -83,9 +84,8 @@ again:
 		/* buffer limit ... */
 		m = tcp_maxrcv - __tp->snd_q.len;
 		if (m <= 0) {
-			DCC_LOG1(LOG_WARNING, "<%05x> queue limit", (int)__tp);
+			DCC_LOG1(LOG_INFO, "<%05x> queue limit", (int)__tp);
 			__tp->t_flags |= TF_ACKNOW;
-
 			
 			DCC_LOG(LOG_INFO, "output request.");
 			__tcp__.need_output = 1;

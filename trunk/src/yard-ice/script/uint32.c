@@ -46,7 +46,7 @@ int val_uint32_decode(const value_t * val, char * s)
 	return sprintf(s, "%u", val->uint32);
 }
 
-struct type_def type_def_uint32 = {
+const struct type_def type_def_uint32 = {
 	.name = "uint32",
 	.encode = (val_encode_t)val_uint32_encode,
 	.decode = (val_decode_t)val_uint32_decode

@@ -170,3 +170,13 @@ int jtag_tap_tell(void)
 	return jtag.tap_cnt;
 }
 
+void jtag_tap_reset(void)
+{	
+	DCC_LOG(LOG_TRACE, "[-----]");
+
+	if (jtag.tap_cnt > 0)
+		jtag_drv_tap_reset(4 + jtag.tap_cnt);
+	else
+		jtag_drv_tap_reset(4 + 16);
+}
+

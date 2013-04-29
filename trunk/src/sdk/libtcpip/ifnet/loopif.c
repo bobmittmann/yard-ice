@@ -42,13 +42,12 @@
 
 #define __USE_SYS_NET__
 #include <sys/net.h>
-
 #define __USE_SYS_IFNET__
 #include <sys/ifnet.h>
-
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
 #include <tcpip/ifnet.h>
-
-#include <tcpip/ip.h>
+#include <sys/ip.h>
 
 #define LOOPIF_STACK_SIZE 256
 

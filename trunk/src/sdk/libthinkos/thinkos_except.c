@@ -255,7 +255,7 @@ void thinkos_default_exception_dsr(struct thinkos_context * ctx)
 void thinkos_exception_dsr(struct thinkos_context *) 
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
-const char thinkos_except_nm[] = "EXCEPT";
+const char const thinkos_except_nm[] = "EXCEPT";
 
 #endif /* THINKOS_ENABLE_EXCEPT */
 

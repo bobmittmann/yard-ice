@@ -26,6 +26,8 @@
 #define __USE_SYS_IFNET__
 #include <sys/ifnet.h>
 
+#include <tcpip/ifnet.h>
+
 #include <stdlib.h>
 
 #ifndef IFNET_INTERFACES_MAX

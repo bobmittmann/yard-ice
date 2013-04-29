@@ -29,7 +29,6 @@
 #include <stdint.h>
 
 #include <tcpip/in.h> /* in_addr_t */
-#include <tcpip/route.h> /* struct ip_route */
 
 #include <sys/mbuf.h>
 

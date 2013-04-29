@@ -26,6 +26,8 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
+#include <tcpip/tcp.h>
+
 #ifndef TCPDUMP_SEQ_TAB_MAX
 #define TCPDUMP_SEQ_TAB_MAX 4
 #endif

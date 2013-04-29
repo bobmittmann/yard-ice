@@ -29,7 +29,7 @@
 
 #ifdef STM32F2X
 
-gpio_io_t fsmc_io[] = {
+const gpio_io_t fsmc_io[] = {
 	GPIO(GPIOD, 14), /* D0 */
 	GPIO(GPIOD, 15), /* D1 */
 	GPIO(GPIOD, 0),  /* D2 */

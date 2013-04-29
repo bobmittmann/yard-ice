@@ -25,11 +25,8 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
-
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
-
 #include <tcpip/ip.h>
+#include <tcpip/tcp.h>
 
 /*
  * Send a TCP keepalive probe. 
@@ -49,7 +46,7 @@ int tcp_keepalive(struct tcp_pcb * tp)
 	daddr = tp->t_faddr;
 	saddr = tp->t_laddr;
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		DCC_LOG2(LOG_WARNING, "<%05x> no route to host: %I", (int)tp, daddr);
 		TCP_PROTO_STAT_ADD(tx_err, 1);
 		return -1;

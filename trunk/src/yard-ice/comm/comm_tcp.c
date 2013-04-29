@@ -112,9 +112,6 @@ int comm_tcp_read_task(ice_comm_t * comm)
 	int n;
 	int port = 1001;
 
-	__os_sleep(100);
-	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
-	__os_sleep(100);
 	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
 
 	for (;;) {
@@ -137,8 +134,7 @@ int comm_tcp_read_task(ice_comm_t * comm)
 
 		tcp_close(mux);
 
-//		DCC_LOG2(LOG_TRACE, "%I:%d accepted.", 
-//				 tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG(LOG_TRACE, "connection accepted...");
 	
 		ice_comm_open(comm);
 
@@ -164,15 +160,14 @@ int comm_tcp_read_task(ice_comm_t * comm)
 				break;
 			}
 
-			DCC_LOG1(LOG_MSG, "ice_comm_read(): %d", n); 
+			DCC_LOG1(LOG_INFO, "ice_comm_read(): %d", n); 
 
 			if (n == 0) {
 				continue;
 			}
 
 			if ((n = tcp_send(tp, buf, n, 0)) < 0) {
-//				DCC_LOG2(LOG_TRACE, "%I:%d error.", 
-//						 tp->t_faddr, ntohs(tp->t_fport));
+				DCC_LOG(LOG_WARNING, "tcp_send() failed!");
 				break;
 			}
 		} 
@@ -183,6 +178,7 @@ int comm_tcp_read_task(ice_comm_t * comm)
 
 		tcp_close(tp);
 
+		DCC_LOG1(LOG_TRACE, "joining thread %d...", th);
 		__os_thread_join(th);
 	}
 

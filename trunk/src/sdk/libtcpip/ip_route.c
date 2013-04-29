@@ -36,7 +36,10 @@
 
 #include <stdlib.h>
 
-#include <tcpip/route.h>
+#define __USE_SYS_ROUTE__
+#include <sys/route.h>
+
+#include <sys/net.h>
 
 #include <sys/dcclog.h>
 
@@ -47,7 +50,7 @@
 struct route __route__[IP_ROUTE_TABLE_LEN];
 const uint8_t ip_maxroute = IP_ROUTE_TABLE_LEN;
 
-struct route * route_lookup(in_addr_t __target)
+struct route * __route_lookup(in_addr_t __target)
 {
 	int i;
 	struct route * p;
@@ -72,7 +75,7 @@ struct route * route_lookup(in_addr_t __target)
 	return NULL;
 }
 
-int route_del(in_addr_t __dst)
+int __route_del(in_addr_t __dst)
 {
 	int i;
 	struct route * p;
@@ -107,7 +110,7 @@ int route_del(in_addr_t __dst)
 	return 0;
 }
 
-int route_add(in_addr_t __dst, in_addr_t __mask, 
+int __route_add(in_addr_t __dst, in_addr_t __mask, 
 	in_addr_t __gw, struct ifnet * __if)
 {
 
@@ -120,7 +123,7 @@ int route_add(in_addr_t __dst, in_addr_t __mask,
 
 	p = __route__;
 	/* remove a possibly previous entry */
-	route_del(__dst);
+	__route_del(__dst);
 
 	/* locate the possition for the new entry by its netmask */
 	p = __route__;
@@ -178,6 +181,48 @@ int route_add(in_addr_t __dst, in_addr_t __mask,
 
 	return 0;
 }
+
+int route_add(in_addr_t __dst, in_addr_t __mask, 
+	in_addr_t __gw, struct ifnet * __if)
+{
+	int ret;
+
+	tcpip_net_lock();
+
+	ret = __route_add(__dst, __mask, __gw, __if);
+
+	tcpip_net_unlock();
+
+	return ret;
+}
+
+int route_del(in_addr_t __dst)
+{
+	int ret;
+
+	tcpip_net_lock();
+
+	ret = __route_del(__dst);
+
+	tcpip_net_unlock();
+
+	return ret;
+}
+
+struct route * route_lookup(in_addr_t __target)
+{
+	struct route * p;
+
+	tcpip_net_lock();
+
+	p =  __route_lookup(__target);
+
+	tcpip_net_unlock();
+
+	return p;
+}
+
+
 
 struct route * route_get(in_addr_t __dst, in_addr_t __mask)
 {

@@ -32,7 +32,7 @@
 #include "dbglog.h"
 
 #ifndef VAR_GLOBAL_MAX
-#define VAR_GLOBAL_MAX 40
+#define VAR_GLOBAL_MAX 64
 #endif
 
 struct var_def var_tab[VAR_GLOBAL_MAX];

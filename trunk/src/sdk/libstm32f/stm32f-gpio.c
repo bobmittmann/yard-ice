@@ -23,7 +23,7 @@
 
 #include <sys/stm32f.h>
 
-const struct stm32f_gpio * stm32f_gpio_lut[] = {
+const struct stm32f_gpio * const stm32f_gpio_lut[] = {
 	STM32F_GPIOA,
 	STM32F_GPIOB,
 	STM32F_GPIOC,

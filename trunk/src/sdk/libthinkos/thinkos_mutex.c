@@ -84,7 +84,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = self;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked", self, wq);
 		arg[0] = 0;
 		return;
 	}
@@ -99,7 +99,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 #endif
 	/* insert into the mutex wait queue */
 	__thinkos_wq_insert(wq, self);
-	DCC_LOG2(LOG_TRACE , "<%d> waiting on mutex %d...", self, wq);
+	DCC_LOG2(LOG_INFO , "<%d> waiting on mutex %d...", self, wq);
 
 	arg[0] = 0;
 
@@ -230,16 +230,17 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		return;
 	}
 
-	DCC_LOG2(LOG_TRACE, "<%d> mutex %d unlocked.", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> mutex %d unlocked.", self, wq);
 
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the lock, just release
 		   the lock */
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d released", self, wq);
 		thinkos_rt.lock[mutex] = -1;
 	} else {
 		/* set the mutex ownership to the new thread */
 		thinkos_rt.lock[mutex] = th;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked.", th, wq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked.", th, wq);
 		/* wakeup from the mutex wait queue */
 		__thinkos_wakeup(wq, th);
 		/* signal the scheduler ... */

@@ -60,6 +60,7 @@ struct thinkos_context {
 	uint32_t r9;
 	uint32_t r10;
 	uint32_t r11;
+
 	/* exception context */
 	uint32_t r0;
 	uint32_t r1;
@@ -448,11 +449,14 @@ struct thinkos_thread_init {
 /* -------------------------------------------------------------------------- 
  * Idle thread
  * --------------------------------------------------------------------------*/
+
+#define IDLE_UNUSED_REGS 12
+
 struct thinkos_idle {
 	union {
 		struct thinkos_context ctx;
 		struct {
-			uint32_t r[12];
+			uint32_t r[IDLE_UNUSED_REGS];
 			uint32_t val;
 			uint32_t * ptr;
 		} snapshot;
@@ -460,13 +464,22 @@ struct thinkos_idle {
 } __attribute__ ((aligned (8)));
 
 struct thinkos_except_and_idle {
-	uint32_t res[(THINKOS_EXCEPT_STACK_SIZE / 4) - 12];
+	uint32_t res1[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
 	union {
 		struct thinkos_context ctx;
 		struct {
-			uint32_t r[12];
+			uint32_t res2[IDLE_UNUSED_REGS];
+			uint32_t r12;
+			uint32_t lr;
+			uint32_t pc;
+			uint32_t xpsr;
+		} stack;
+		struct {
+			uint32_t res3[IDLE_UNUSED_REGS];
 			uint32_t val;
 			uint32_t * ptr;
+			uint32_t pc;
+			uint32_t xpsr;
 		} snapshot;
 	};
 } __attribute__ ((aligned (8)));

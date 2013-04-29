@@ -25,9 +25,7 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
-
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
+#include <tcpip/tcp.h>
 
 inline struct tcp_pcb * tcp_active_lookup(in_addr_t __faddr, uint16_t __fport, 
 										  in_addr_t __laddr, uint16_t __lport)
@@ -151,7 +149,7 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	mbuf_queue_init(&tp->rcv_q);
 	mbuf_queue_init(&tp->snd_q);
 
-	if ((rt = route_lookup(tp->t_faddr)) == NULL) {
+	if ((rt = __route_lookup(tp->t_faddr)) == NULL) {
 		DCC_LOG(LOG_WARNING, "no route to host");			
 		tp->t_maxseg = tcp_defmss;
 	} else {
@@ -194,7 +192,7 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	   function to send back the SYNC and finish handshaking. */
 	tp->t_flags = TF_ACKNOW;
 
-	__os_cond_broadcast(mux->t_cond);
+	__os_cond_signal(mux->t_cond);
 
 	return tp;
 }
@@ -500,11 +498,8 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 
 		tp->t_state = TCPS_ESTABLISHED;
 		DCC_LOG1(LOG_TRACE, "<%05x> [ESTABLISHED]", (int)tp);
-
-
 		/* TODO: initialization of receive urgent pointer
 		tcp->rcv_up = ti_seq; */
-
 		/* XXX: */ 
 		tp->t_flags |= TF_ACKNOW;
 		__os_cond_broadcast(tp->t_cond);
@@ -676,7 +671,6 @@ close:
 		tp->snd_off--;
 		tp->snd_max--;
 		DCC_LOG1(LOG_TRACE, "<%05x> [ESTABLISHED]", (int)tp);
-
 		/* notify the upper layer*/
 //		__os_cond_signal(tp->t_cond);
 
@@ -705,6 +699,7 @@ close:
 			} else {
 //				dupacks = 0;
 			}
+
 			break;
 		}
 
@@ -763,7 +758,7 @@ close:
 		}
 
 		/* awaken a thread waiting on the send buffer ... */
-		__os_cond_signal(tp->t_cond);
+		__os_cond_broadcast(tp->t_cond);
 
 		snd_una = ti_ack;
 

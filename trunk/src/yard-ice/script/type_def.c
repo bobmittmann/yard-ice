@@ -29,7 +29,7 @@
 #include <string.h>
 #include "val.h"
 
-const struct type_def * type_def_tab[] = {
+const struct type_def * const type_def_tab[] = {
 	&type_def_void,
 	&type_def_int32,
 	&type_def_uint32,

@@ -1964,8 +1964,6 @@ struct stm32f_clk {
 	uint8_t bit:5;
 } __attribute__((packed))__;
 
-extern const struct stm32f_usart * stm32f_usart_lut[];
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -21,7 +21,7 @@
 
 PROG = mutex-test
 
-CFILES = mutex-test.c
+CFILES = mutex-test.c stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm
@@ -29,6 +29,8 @@ LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 LIBS = stm32f cm3 util thinkos c ice-comm
 
 INCPATH = ../../../include
+
+CDEFS = CONFIG_H
 
 CFLAGS = -g -O2 
 

@@ -25,11 +25,12 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
+#include <sys/mbuf.h>
+#include <tcpip/tcp.h>
 
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
-
-#include <tcpip/ip.h>
+#ifndef ENABLE_TCPCHKSUMCHECK
+#define ENABLE_TCPCHKSUMCHECK 0
+#endif
 
 /* the values here are in (miliseconds / TCP_SLOW_MS_TICK) */
 extern const uint8_t tcp_rxmtintvl[];
@@ -101,7 +102,7 @@ int tcp_respond(struct iphdr * iph, struct tcphdr * th,
 	sum += (iph->daddr & 0xffff) + (iph->daddr >> 16);
 	th->th_sum = ~in_chksum(sum, (uint16_t *)th, sizeof(struct tcphdr));
 
-	if ((rt = route_lookup(daddr)) == NULL) {
+	if ((rt = __route_lookup(daddr)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "<____> no route to host: %I", daddr);
 		TCP_PROTO_STAT_ADD(tx_err, 1);
 		return -1;
@@ -293,7 +294,7 @@ again:
 	   Ref.: TCP/IP Ilustrated Voume 2, pg. 859 */
 	if (len) {
 		if (len == tp->t_maxseg) {
-			DCC_LOG(LOG_TRACE, "len == maxseg, send..."); 
+			DCC_LOG1(LOG_TRACE, "len == maxseg (%d), send...", len); 
 			goto send;
 		}
 		
@@ -404,7 +405,7 @@ send:
 	saddr = tp->t_laddr;
 
 	if (!(tp->t_route)) {
-		if ((rt = route_lookup(daddr)) == NULL) {
+		if ((rt = __route_lookup(daddr)) == NULL) {
 			DCC_LOG2(LOG_WARNING, "<%05x> no route to host: %I", 
 					 (int)tp, daddr);
 			/* XXX: ???? */
@@ -428,11 +429,16 @@ send:
 	if ((sizeof(struct iphdr) + sizeof(struct tcphdr) + len) > 
 		rt->rt_ifn->if_mtu) {
 		len = rt->rt_ifn->if_mtu - (sizeof(struct iphdr) + 
-										sizeof(struct tcphdr));
+									sizeof(struct tcphdr));
 	}
 
-	iph = ifn_mmap(rt->rt_ifn, sizeof(struct iphdr) + sizeof(struct tcphdr) + 
-				   len);
+	iph = ifn_mmap(rt->rt_ifn, sizeof(struct iphdr) + 
+				   sizeof(struct tcphdr) + len);
+
+	if (iph == NULL) {
+		DCC_LOG1(LOG_ERROR, "<%05x> ifn_mmap() failed!", (int)tp);
+		return 0;
+	}
 
 	iph_template(iph, IPPROTO_TCP, ip_defttl, ip_deftos);
 	th = (struct tcphdr *)iph->opt;
@@ -595,8 +601,8 @@ send:
 				 iph->daddr, ntohs(th->th_dport), 
 				 tcp_all_flags[th->th_flags], len);
 		ifn_munmap(rt->rt_ifn, iph);
-		/* if the reason to fail was an arp failure
-		   try query an address pending for resolution ... */
+		/* FIXME: if the reason to fail was an arp failure
+		   try to query an address pending for resolution ... */
 		TCP_PROTO_STAT_ADD(tx_drop, 1);
 		return ret;
 	}
@@ -622,8 +628,10 @@ send:
 	DCC_LOG5(LOG_INFO, "seq=%u off=%d max=%d snd_q.len=%d rcv_nxt=%u", 
 		tp->snd_seq, tp->snd_off, tp->snd_max, tp->snd_q.len, tp->rcv_nxt);
 
-	if (sendalot)
+	if (sendalot) {
+		DCC_LOG(LOG_INFO, "again...........................................");
 		goto again;
+	}
 
 	return 0;
 }

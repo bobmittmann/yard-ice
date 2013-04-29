@@ -101,9 +101,14 @@ int jtag_drv_done(void);
 
 int mod_jtag_init(void * jtag, int mod_id)
 {
+	DCC_LOG(LOG_TRACE, "...");
 	jtag_drv_init();
-	jtag_tck_freq_set(1000000);
-	jtag_rtck_freq_set(1000000);
+	jtag_tck_freq_set(100000);
+	jtag_rtck_freq_set(100000);
+	/* force 0 on TRST */
+	jtag_trst(true);
+	/* force 0 in TMS and TDI */
+	jtag_run_test(1, JTAG_TAP_IDLE);
 
 	var_global_add(mod_id, "speed", TYPE_UINT32, ID_JTAG_CLK);
 

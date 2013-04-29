@@ -26,6 +26,8 @@
 #define __USE_SYS_UDP__
 #include <sys/udp.h>
 
+#include <tcpip/udp.h>
+
 #include <stdlib.h>
 
 int udp_send(struct udp_pcb * __up, void * __buf, int __len)
