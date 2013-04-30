@@ -76,8 +76,11 @@ void tone_play(unsigned int tone, unsigned int ms)
 	uint8_t * wave;
 	unsigned int len;
 
-	wave = (uint8_t *)tone_lut[tone].buf;
-	len = tone_lut[tone].len;
+	if (tone > wave_max)
+		tone = wave_max; 
+
+	wave = (uint8_t *)wave_lut[tone].buf;
+	len = wave_lut[tone].len;
 
 	wave_set(wave, len);
 	wave_play();
@@ -145,9 +148,9 @@ void stm32f_dac_init(void)
 	/* Peripheral address */
 	dma->s[DAC1_DMA].par = &dac->dhr8r1;
 	/* Memory address */
-	dma->s[DAC1_DMA].m0ar = (void *)sin1khz;
+	dma->s[DAC1_DMA].m0ar = (void *)wave_dc;
 	/* Number of data items to transfer */
-	dma->s[DAC1_DMA].ndtr = sizeof(sin1khz);
+	dma->s[DAC1_DMA].ndtr = sizeof(wave_dc);
 	/* Configuration single buffer circular */
 	dma->s[DAC1_DMA].cr = DMA_CHSEL_SET(DAC1_DMA_CHAN) | 
 		DMA_MBURST_1 | DMA_PBURST_1 | 

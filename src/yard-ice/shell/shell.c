@@ -94,6 +94,9 @@ struct shell_cmd * shell_lookup(const char * s,
 
 const struct shell_cmd cmd_tab[] = {
 
+	{ cmd_beep, "beep", "", 
+		"[tone [time]]", "play a tone" },
+
 	{ cmd_cfgerase, "cfgerase", "ce", 
 		"", "restore default configuration" },
 

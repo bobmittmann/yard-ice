@@ -23,7 +23,7 @@
 
 LIB_STATIC = cmd
 
-CFILES = show_asm.c \
+CFILES = show_asm.c cmd_beep.c \
 	  cmd_breakpoint.c cmd_cfgerase.c cmd_connect.c \
 	  cmd_dint.c cmd_disassemble.c cmd_eint.c \
 	  cmd_goto.c cmd_halt.c cmd_init.c cmd_ipcfg.c cmd_release.c \

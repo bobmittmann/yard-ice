@@ -1,7 +1,8 @@
+
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
- * This file is part of the libcrc.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,44 +19,39 @@
  */
 
 /** 
- * @file audio.h
- * @brief YARD-ICE libdrv
+ * @file cmd_run.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __AUDIO_H__
-#define __AUDIO_H__
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-#include <stdint.h>
+#include <yard-ice/drv.h>
 
-#define TONE_DC 0
-#define TONE_A4 1
-#define TONE_A4S 2
-#define TONE_B4 3
-#define TONE_C4 4
-#define TONE_C4S 5
-#define TONE_D4 6
-#define TONE_D4S 7
-#define TONE_E4 8
-#define TONE_F4 9
-#define TONE_F4S 10
-#define TONE_G4 11
-#define TONE_G4S 12
-#define TONE_1KHZ 13
+#include <sys/dcclog.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+int cmd_beep(FILE * f, int argc, char ** argv)
+{
+	unsigned int tone = 1;
+	unsigned int time = 100;
 
-void wave_set(uint8_t * wave, unsigned int len);
+	if (argc > 3) {
+		fprintf(f, "usage: beep [tone [time]]\n");
+		return -1;
+	}
 
-void wave_play(void);
+	if (argc > 1) {
+		tone = strtoul(argv[1], NULL, 0);
+		if (argc > 2) {
+			time = strtoul(argv[2], NULL, 0);
+		} 
+	}
 
-void wave_pause(void);
 
-#ifdef __cplusplus
+	tone_play(tone, time);
+
+	return 0;
 }
-#endif	
-
-#endif /* __AUDIO_H__ */
 
