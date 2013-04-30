@@ -42,6 +42,8 @@ extern const struct shell_cmd cmd_tab[];
 extern "C" {
 #endif
 
+int cmd_beep(FILE * f, int argc, char ** argv);
+
 int cmd_info(FILE * f, int argc, char ** argv);
 
 int cmd_probe(FILE * f, int argc, char ** argv);

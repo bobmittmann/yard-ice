@@ -28,6 +28,7 @@
 
 
 #include <sys/file.h>
+#include <yard-ice/audio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,8 @@ void relay_off(void);
 void ext_pwr_on(void);
 
 void ext_pwr_off(void);
+
+void tone_play(unsigned int tone, unsigned int ms);
 
 #ifdef __cplusplus
 }
