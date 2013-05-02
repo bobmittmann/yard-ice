@@ -19,11 +19,11 @@ The ThinkOS API can be separated according to the type of object the operation i
 
 == Kernel Objects ==
 
-One feature that distinguish the *ThinkOS* from most of other Operating Systems is the way the control structures for the several type of objects  held by kernel. The usual approach for holding this information is to allocate a structure specific for a certain object and pass a pointer to the kernel. The kernel then stores this is in a list or array. ThinkOS in other hand holds the information on a _structure of arrays_, each of this array refers to one field of an object. This may look very obscure but the idea here is to protect the memory and speed-up the scheduler.
+One feature that distinguish the *ThinkOS* from most of other Operating Systems is the way the control structures for the several type of objects are held by kernel. The usual approach for holding this information is to allocate a structure specific for a certain object and pass a pointer to the kernel. The kernel then stores this in a list or array. ThinkOS in other hand holds the information on a _structure of arrays_, each array refers to one field of an object. This may look very obscure but the idea here is to protect the memory and speed-up the scheduler.
 
 == Threads ==
 
-The ThinkOS is preemptive time-sharing kernel.
+The ThinkOS is a preemptive time-sharing kernel.
 Each thread have it's own stack and a timer. This timer is used to block the thread's execution for a certain period of time as in *thinkos_sleep()*.
 
 = Scheduler =
@@ -32,7 +32,7 @@ ThinkOS scheduler was designed to reduce the context switch time to a minimum. T
 
 = Time Sharing =
 
-All threads with priority higher than 0 go into a round-robin time sharing scheduling policy. Their execution time will be inversely proportional to their priority.   
+All threads with priority higher than 0 go into a round-robin time sharing scheduling policy, when this feature is enabled. Their execution time will be inversely proportional to their priority.   
 
 = Interrupt Model =
 
@@ -52,7 +52,6 @@ Note: if you are using the ThinkOS as part of the YARD-ICE there is a _config.h_
 
 == Preformance ==
 
-The main bottleneck for performance is usually the scheduler. The ThinkOS running in a 120MHz Cortex-M3 (STM32F270) have a measured latency time of
-0.5 microseconds.
+The main bottleneck for performance is usually the scheduler. The ThinkOS running in a 120MHz Cortex-M3 (STM32F270) have a measured latency time of 0.5 microseconds.
 
 There are some tests and calculations that need to be done to determine the latencies of other elements of the system...
