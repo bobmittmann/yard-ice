@@ -240,24 +240,34 @@ void audio_io_task(void)
 		out_buf = jitbuf_dequeue(&audio_drv.jitbuf);
 #endif
 
-		if (out_buf == NULL) {
+		if (audio_drv.tone_mode == TONE_DAC) {
+			if (out_buf == NULL) {
+				if ((out_buf = sndbuf_alloc()) != NULL)
+					tonegen_apply(&tonegen, out_buf);
+				else
+					out_buf = (sndbuf_t *)&sndbuf_zero;
+			}
+		} else {
+			if (out_buf == NULL) {
 #if 0
 			tracef("%s(): out_buf == NULL!", __func__);
 #endif
-			out_buf = (sndbuf_t *)&sndbuf_zero;
-		} else {
-			if (audio_drv.tone_mode == TONE_DAC)
-				tonegen_apply(&tonegen, out_buf);
+				out_buf = (sndbuf_t *)&sndbuf_zero;
+			}
 		}
 
+		spectrum_rec(&audio_tx_sa, out_buf);
+
 		in_buf = i2s_io(out_buf);
+
 		led_flash(LED_I2S, 100);
 
-		if (audio_drv.tone_mode == TONE_ADC)
-			tonegen_apply(&tonegen, in_buf);
+		if (in_buf != &sndbuf_null) {
+			if (audio_drv.tone_mode == TONE_ADC)
+				tonegen_apply(&tonegen, in_buf);
 
-		spectrum_rec(&audio_tx_sa, out_buf);
-		spectrum_rec(&audio_rx_sa, in_buf);
+			spectrum_rec(&audio_rx_sa, in_buf);
+		}
 
 		if (audio_drv.stream_enabled) {
 #if ENABLE_G711

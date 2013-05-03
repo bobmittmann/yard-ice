@@ -41,7 +41,7 @@
 #include "armice.h"
 
 #ifndef FPGA_RBF_ADDR 
-#define FPGA_RBF_ADDR 0x01050000
+#define FPGA_RBF_ADDR 0x01070000
 #endif
 
 const uint8_t * jtag3ctrl_rbf = (uint8_t *)(FPGA_RBF_ADDR);
