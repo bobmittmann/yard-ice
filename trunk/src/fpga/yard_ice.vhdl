@@ -1,4 +1,4 @@
--- File:	jtagtool3.vhdl
+-- File:	yard-ice.vhdl
 -- Author:	Robinson Mittmann (bobmittmann@gmail.com)
 -- Target:
 -- Comment:
@@ -30,7 +30,7 @@ use ieee.numeric_std.all;
 library work;
 use work.all;
 
-entity jtagtool3 is
+entity yard_ice is
 port(
 	-- Main clock
 	mclk : in std_logic;
@@ -70,9 +70,9 @@ port(
 	--DEBUG :
 --	tap_state : out unsigned(3 downto 0)	
 );
-end jtagtool3;
+end yard_ice;
 
-architecture structure of jtagtool3 is
+architecture structure of yard_ice is
 	
 	constant DATA_WIDTH : natural := 16;
 	constant ADDR_BITS : natural := 13;
