@@ -19,11 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-FPGA_PROJ = jtagtool3
+FPGA_PROJ = yard_ice
 
-FPGA_RBF_ADDR = 0x08040000
-
-JTAGTOOL_ADDR = 192.168.0.80
+FPGA_RBF_ADDR = 0x08070000
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
@@ -42,12 +40,12 @@ VHDL_FILES = cyc_pll.vhd \
 			dpram.vhdl\
 			sram.vhdl\
 			cram_adaptor.vhdl\
-			jtagtool3.vhdl
+			yard_ice.vhdl
 
 LOCATIONS = locations.txt
 INSTANCES = instances.txt
 FAMILY = Cyclone
-DEVICE = EP1C3T100C8
+DEVICE = EP1C3T100C6
 SYNTHESIS_EFFORT = AUTO
 OPTIMIZE_HOLD_TIMING = OFF
 OPTIMIZE_MULTI_CORNER_TIMING = ON
@@ -58,8 +56,6 @@ SYNTH_MESSAGE_LEVEL = LOW
 
 include ../mk/altera.mk
 include ../mk/jtag.mk
-
-#	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $<
 
 ifndef TFTPLOAD
   $(error TFTPLOAD undefined!)
