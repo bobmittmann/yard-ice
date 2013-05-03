@@ -163,7 +163,6 @@ const struct ice_mem_oper flash_stm32f2_oper = {
 	.erase = (ice_mem_erase_t)stm32f2_flash_erase
 };
 
-
 int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice, 
 					 ice_mem_entry_t * mem)
 {
@@ -180,19 +179,26 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 	switch (cfg & SWS) {
 	case SWS_HSI:
 		fprintf(f, " %s: system clock is internal\n", __func__);
+		DCC_LOG(LOG_TRACE, "system clock is internal");
 		break;
 	case SWS_HSE:
 		fprintf(f, " %s: system clock is external\n", __func__);
+		DCC_LOG(LOG_TRACE, "system clock is external");
 		break;
 	case SWS_PLL:
-		fprintf(f, " %s:  system clock is PLL\n", __func__);
+		fprintf(f, " %s: system clock is PLL\n", __func__);
+		DCC_LOG(LOG_TRACE, "system clock is PLL");
 		break;
+	default:
+		fprintf(f, " %s: system clock switch invalid!\n", __func__);
+		DCC_LOG(LOG_WARNING, "system clock switch invalid!");
+		return -1;
 	}
 
 	if ((cfg & SWS) != SWS_HSI) {
 		if (!(cr & HSION)) {
 			/* enable internal oscillator */
-			cr = HSION;
+			cr |= HSION;
 			ice_wr32(ice, STM32F_BASE_RCC + RCC_CR, cr);
 
 			for (again = 256; ; again--) {
@@ -257,9 +263,6 @@ int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice,
 	}
 
 	/* adjust flash wait states and enable caches */
-//	ice_wr32(ice, STM32F_BASE_FLASH + FLASH_ACR, 
-//			 DCEN | ICEN | PRFTEN | LATENCY(7));
-
 	ice_wr32(ice, STM32F_BASE_FLASH + FLASH_ACR, PRFTEN | LATENCY(7));
 
 	ice_rd32(ice, STM32F_BASE_FLASH + FLASH_CR, &cr);

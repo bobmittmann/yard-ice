@@ -54,7 +54,7 @@ extern const struct target_info stm32f10x;
 
 extern const struct target_info stm32f207ve;
 
-extern const struct target_info stm32f;
+extern struct target_info stm32f;
 
 int stm32f1xx_on_init(FILE * f, const ice_drv_t * ice, 
 					 ice_mem_entry_t * mem);

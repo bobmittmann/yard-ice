@@ -46,6 +46,8 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 	uint32_t id;
 	uint32_t dev_id;
 
+	DCC_LOG1(LOG_TRACE, "target=0x%p", target);
+
 	ice_rd32(ice, 0xe0042000, &id);
 
 	fprintf(f, " - MCU device id: 0x%08x\n", id); 
@@ -91,6 +93,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = memsz / 16;
 		mem[SRAM].blk.count = 192;
+		DCC_LOG1(LOG_TRACE, "on_init=0x%p", target->on_init);
 		break;
 	case 0x420:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
@@ -161,7 +164,7 @@ struct ice_mem_entry stm32f_mem[] = {
 	}
 };
 
-const struct target_info stm32f = {
+struct target_info stm32f = {
 	.name = "stm32f",
 	.arch = &stm32f_arch,
 	.ice_drv = &cm3ice_drv,

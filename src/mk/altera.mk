@@ -218,3 +218,6 @@ $(FPGA_STA): $(FPGA_FIT)
 
 $(FPGA_RBF): $(FPGA_ASM)
 
+$(OUTDIR):
+	$(ACTION) "Creating: $@"
+	$(Q) mkdir -p $@

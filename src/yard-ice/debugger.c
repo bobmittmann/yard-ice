@@ -679,7 +679,7 @@ int target_connect(int force)
 	target_cpu_t * cpu = (target_cpu_t *)dbg->target->arch->cpu;
 	int ret;
 
-	DCC_LOG1(LOG_INFO, "force=%d", force);
+	DCC_LOG1(LOG_TRACE, "target=0x%p", dbg->target);
 
 	__os_mutex_lock(dbg->busy);
 
@@ -1849,7 +1849,7 @@ int target_init(FILE * f)
 	target_script_t script;
 	int ret = 0;
 
-	DCC_LOG(LOG_INFO, ".");
+	DCC_LOG1(LOG_TRACE, "target=0x%p", target);
 
 	__os_mutex_lock(dbg->busy);
 
@@ -1867,7 +1867,7 @@ int target_init(FILE * f)
 	}
 
 	if ((script = (target_script_t)target->on_init) != NULL) {
-		DCC_LOG1(LOG_TRACE, "on_init.script(): %08x", script);
+		DCC_LOG1(LOG_TRACE, "on_init.script()=0x%p", script);
 		if ((ret = ice_mem_lock(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
 		} else {
