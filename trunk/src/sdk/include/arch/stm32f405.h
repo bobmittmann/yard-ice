@@ -77,6 +77,7 @@
 #define STM32F_BASE_TIM9    0x40014000
 #define STM32F_BASE_EXTI    0x40013c00
 #define STM32F_BASE_SYSCFG  0x40013800
+#define STM32F_BASE_SPI4    0x40013400
 #define STM32F_BASE_SPI1    0x40013000
 #define STM32F_BASE_SDIO    0x40012c00
 #define STM32F_BASE_ADCC    0x40012300
@@ -241,10 +242,14 @@
 #define STM32F_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
+
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
 #define STM32F_I2S2EXT ((struct stm32f_spi *)STM32F_BASE_I2S2EXT)
+
 #define STM32F_SPI3 ((struct stm32f_spi *)STM32F_BASE_SPI3)
 #define STM32F_I2S3EXT ((struct stm32f_spi *)STM32F_BASE_I2S3EXT)
+
+#define STM32F_SPI4 ((struct stm32f_spi *)STM32F_BASE_SPI4)
 
 #define STM32F_I2C1 ((struct stm32f_i2c *)STM32F_BASE_I2C1)
 #define STM32F_I2C2 ((struct stm32f_i2c *)STM32F_BASE_I2C2)

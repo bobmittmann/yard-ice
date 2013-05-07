@@ -30,17 +30,16 @@ ifndef MACH
 MACH = stm32f100
 endif
 
-ifndef HCLK_HZ
-HCLK_HZ = "24000000"
-endif
-
 ARCH = cm3
 CPU = cortex-m3
-
-CDEFS += STM32F100 "HCLK_HZ=$(HCLK_HZ)" 
-
+CDEFS += STM32F100 
+ifdef HCLK_HZ
+CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
+endif
+ifdef HSE_HZ
+CDEFS += "HSE_HZ=$(HSE_HZ)" 
+endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
-
 CROSS_COMPILE = arm-none-eabi-
 
 LDSCRIPT = $(MACH).ld  

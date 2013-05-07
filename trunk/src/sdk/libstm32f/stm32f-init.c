@@ -22,6 +22,57 @@
 
 #include <sys/stm32f.h>
 
+/* Set default values for system clocks */
+
+#if defined(STM32F100)
+
+#error "1"
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 12000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 24000000
+  #endif
+
+#elif defined(STM32F10X)
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 12000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 72000000
+  #endif
+
+#elif defined(STM32F4X)
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 12000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 168000000
+  #endif
+
+#elif defined(STM32F2X)
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 24000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 120000000
+  #endif
+
+#else
+
+#endif
+
+/* This constant is used to calibrate the systick timer */
+const uint32_t cm3_systick_load_1ms = ((HCLK_HZ / 8) / 1000) - 1;
+
 #define ENABLE_DEBUG_INIT 0
 
 #if ENABLE_DEBUG_INIT
@@ -227,7 +278,10 @@ void _init(void)
 		}
 
 	}
-#ifdef STM32F4X
+
+#if (HCLK_HZ == 168000000)
+
+#if (HSE_HZ == 12000000)
 	/* F_HSE = 12 MHz
 	   F_VCO = 336 MHz (F_HSE * 28)
 	   F_MAIN = 168 MHz (F_VCO / 2)
@@ -236,16 +290,22 @@ void _init(void)
 		RCC_PLLSRC_HSE | 
 		RCC_PLLP(2) | 
 		RCC_PLLN(112) | RCC_PLLM(4);
-
-	rcc->pllcfgr = pll;
-
-	/* switch to external clock */
-	cfg = RCC_MCO2_SYSCLK | RCC_MCO2PRE_2 /* Clock output 2 */
-		| RCC_PPRE2_2 /* APB high speed prescaler : 84MHz */
-		| RCC_PPRE1_4 /* APB low speed prescaler : 42MHz */
-		| RCC_HPRE_1 /* AHB prescaler : 168MHz */ 
-		| RCC_SW_HSE;
+#elif (HSE_HZ == 8000000)
+	/* F_HSE = 8 MHz
+	   F_VCO = 336 MHz (F_HSE * 42)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+	pll = RCC_PLLQ(7) | 
+		RCC_PLLSRC_HSE | 
+		RCC_PLLP(2) | 
+		RCC_PLLN(168) | RCC_PLLM(4);
 #else
+#error "HSE_HZ invalid!"
+#endif
+
+#elif (HCLK_HZ == 120000000)
+
+#if (HSE_HZ == 24000000)
 	/* F_HSE = 24 MHz
 	   F_VCO = 240 MHz
 	   F_MAIN = 120 MHz
@@ -254,16 +314,29 @@ void _init(void)
 		RCC_PLLSRC_HSE | 
 		RCC_PLLP(2) | 
 		RCC_PLLN(120) | RCC_PLLM(12);
+#elif (HSE_HZ == 12000000)
+	/* F_HSE = 24 MHz
+	   F_VCO = 240 MHz
+	   F_MAIN = 120 MHz
+	   F_USB = 48 MHz */
+	pll = RCC_PLLQ(5) | 
+		RCC_PLLSRC_HSE | 
+		RCC_PLLP(2) | 
+		RCC_PLLN(240) | RCC_PLLM(12);
+#else
+//#error "HSE_HZ invalid!"
+#endif
+
+#endif
 
 	rcc->pllcfgr = pll;
 
 	/* switch to external clock */
 	cfg = RCC_MCO2_SYSCLK | RCC_MCO2PRE_2 /* Clock output 2 */
-		| RCC_PPRE2_2 /* APB high speed prescaler : 60MHz */
-		| RCC_PPRE1_4 /* APB low speed prescaler : 30MHz */
-		| RCC_HPRE_1 /* AHB prescaler : 120MHz */ 
+		| RCC_PPRE2_2 /* APB high speed prescaler : 60|84MHz */
+		| RCC_PPRE1_4 /* APB low speed prescaler : 30|42MHz */
+		| RCC_HPRE_1 /* AHB prescaler : 120|168MHz */ 
 		| RCC_SW_HSE;
-#endif
 	
 	rcc->cfgr = cfg;
 
