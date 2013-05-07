@@ -483,7 +483,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	bmp_bit_set(&thinkos_rt.wq_ready, self);
 
 	/* initialize the SysTick module */
-	systick->load = (CM3_SYSTICK_CLK_HZ / 1000) - 1; /* 1ms tick period */
+	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
 	systick->val = 0;
 	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
 

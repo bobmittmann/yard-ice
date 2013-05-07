@@ -31,14 +31,6 @@
   CM3 SysTick 
  ****************************************************************************/
 
-#ifndef CM3_SYSTICK_CLK_HZ
- #ifdef HCLK_HZ
-  #define CM3_SYSTICK_CLK_HZ (HCLK_HZ / 8)
- #else
-  #error "CM3_SYSTICK_CLK_HZ undefined"
- #endif
-#endif
-
 /* SysTick Control / Status Register */
 #define SYSTICK_CTRL_COUNTFLAG  (0x01 << 16)
 #define SYSTICK_CTRL_CLKSOURCE  (0x01 << 2)
@@ -497,6 +489,8 @@ struct cm3_itm {
 #define CM3_ITM ((struct cm3_itm *) CM3_ITM_BASE) 
 #define CM3_MPU ((struct cm3_mpu *) CM3_MPU_BASE) 
 
+/* this constant must be privided by the BSP */
+extern const uint32_t cm3_systick_load_1ms;
 
 #ifdef __cplusplus
 extern "C" {

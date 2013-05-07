@@ -25,10 +25,13 @@
 #include <sys/dcclog.h>
 #include <string.h>
 
-const struct stm32f_spi * const stm32f_spi_lut[3] = {
+const struct stm32f_spi * const stm32f_spi_lut[] = {
 	STM32F_SPI1,
 	STM32F_SPI2,
-	STM32F_SPI3
+	STM32F_SPI3,
+#ifdef STM32F_SPI4
+	STM32F_SPI4
+#endif
 };
 
 int stm32f_spi_lookup(struct stm32f_spi * spi)
@@ -45,15 +48,19 @@ static const struct {
 	uint8_t	af; /* Alternate function */
 	uint8_t	ckbit : 5; /* clock bit */  
 	uint8_t	apb2 : 1; /* APB1/APB2 */ 
-} __attribute__((__packed__)) spi_cfg[6] = {
+} __attribute__((__packed__)) spi_cfg[] = {
 	{ .af = GPIO_AF5, .ckbit = 12, .apb2 = 1},
-	{ .af = GPIO_AF6, .ckbit = 14, .apb2 = 0},
-	{ .af = GPIO_AF6, .ckbit = 15, .apb2 = 0}
+	{ .af = GPIO_AF5, .ckbit = 14, .apb2 = 0},
+	{ .af = GPIO_AF6, .ckbit = 15, .apb2 = 0},
+#ifdef STM32F_SPI4
+	/* FIXME: check the alternate function bit */
+	{ .af = GPIO_AF5, .ckbit = 13, .apb2 = 1}
+#endif
 };
 
 int stm32f_spi_init(struct stm32f_spi * spi, 
 					const struct stm32f_spi_io * spi_io, 
-					unsigned int freq)
+					unsigned int freq, unsigned int opt)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	gpio_io_t io;
@@ -100,13 +107,21 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 	}
     DCC_LOG3(LOG_TRACE, "SPI id=%d div=%d br=%d", id, div, br);
 
+	spi->cr1 = 0;
 	spi->cr2 = 0;
 	spi->i2scfgr = 0;
 	spi->i2spr = 0;
+
+	spi->cr1 = SPI_BR_SET(br) | opt | SPI_SSM | SPI_SSI;
+
+#if 0
 	spi->cr1 = SPI_SPE | SPI_MSTR | SPI_SSM | SPI_SSI | \
 			   SPI_BR_SET(br) | SPI_LSBFIRST;
+#endif
 
-	return 0;
+	spi->cr1 |= SPI_SPE;
+
+	return id;
 }
 
 int stm32f_spi_putc(struct stm32f_spi * spi, int c)
@@ -132,5 +147,4 @@ int stm32f_spi_getc(struct stm32f_spi * spi)
 
 	return -1;
 }
-
 

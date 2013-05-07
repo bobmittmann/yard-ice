@@ -32,7 +32,13 @@ endif
 
 ARCH = cm3
 CPU = cortex-m3
-CDEFS += STM32F103 "HCLK_HZ=72000000" 
+CDEFS += STM32F103 
+ifdef HCLK_HZ
+CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
+endif
+ifdef HSE_HZ
+CDEFS += "HSE_HZ=$(HSE_HZ)" 
+endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
