@@ -33,11 +33,12 @@
 #include <thinkos.h>
 
 volatile uint64_t buffer; /* production buffer */
-volatile bool prod_enabled; /* producer control flag */
 
 int sem_empty; /* semaphore to signal an empty buffer */
 int sem_full; /* semaphore to signal a full buffer */
 
+int prod_count;
+volatile bool prod_done; /* production control flag */
 
 int producer_task(void * arg)
 {
@@ -46,10 +47,12 @@ int producer_task(void * arg)
 	uint64_t x0 = 0;
 	uint64_t x1 = 0;
 
+	prod_done = false;
+
 	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
 	thinkos_sleep(100);
 
-	while (prod_enabled) {
+	for (i = 0; i < prod_count; i++) {
 		/* let's spend some time thinking */
 		thinkos_sleep(500);
 
@@ -63,31 +66,62 @@ int producer_task(void * arg)
 
 		x0 = x1;
 		x1 = y;
-		i++;
 
 		/* waiting for room to insert a new item */
 		thinkos_sem_wait(sem_empty);
 
-//		printf(" %s(): [%d] produced\n", __func__, thinkos_thread_self());
-
 		/* insert the produced item in the buffer */
 		buffer = y;
 
-		/* signall a full buffer */
+		/* signal a full buffer */
 		thinkos_sem_post(sem_full);
 	}
+
+	prod_done = true;
 
 	return i;
 }
 
-#define STACK_SIZE 512
-uint32_t prod_stack[STACK_SIZE / 4];
+int consumer_task(void * arg)
+{
+	int i = 0;
+
+	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
+	thinkos_sleep(100);
+
+	/* set the production enable flag to start production */
+	
+	do {
+		printf(" %3d ", i);
+		/* wait for an item to be produced */
+		while (thinkos_sem_timedwait(sem_full, 50) == THINKOS_ETIMEDOUT) {
+			printf(".");
+		}
+
+		/* unload the buffer */
+		printf(" %016llx %llu\n", buffer, buffer);
+		/* signal the empty buffer */
+		thinkos_sem_post(sem_empty);
+		i++;
+	} while (!prod_done);
+
+	/* get the last produced item, if any */
+	if (thinkos_sem_timedwait(sem_full, 0) == 0) {
+		thinkos_sem_post(sem_empty);
+		printf(" %lld\n", buffer);
+	}
+
+	return i;
+};
+
+uint32_t producer_stack[128];
+uint32_t consumer_stack[128];
 
 void semaphore_test(void)
 {
-	int prod_th;
+	int producer_th;
+	int consumer_th;
 	int ret;
-	int i = 0;
 
 	/* allocate the empty signal semaphores */
 	sem_empty = thinkos_sem_alloc(1); /* initialize the empty as 1
@@ -99,47 +133,31 @@ void semaphore_test(void)
 										as we don't haven't produced
 										anything yet. */
 
-	/* set the production enable flag */
-	prod_enabled = true;
-
 	/* create the producer thread */
-	prod_th = thinkos_thread_create(producer_task, NULL, 
-			prod_stack, STACK_SIZE, 0);
+	producer_th = thinkos_thread_create(producer_task, NULL, 
+			producer_stack, sizeof(producer_stack), 0);
+
+	/* create the consuer thread */
+	consumer_th = thinkos_thread_create(consumer_task, NULL, 
+			consumer_stack, sizeof(consumer_stack), 0);
 
 	printf(" * Empty semaphore: %d\n", sem_empty);
 	printf(" * Full semaphore: %d\n", sem_full);
-	printf(" * Producer thread: %d\n", prod_th);
+	printf(" * Producer thread: %d\n", producer_th);
+	printf(" * Consumer thread: %d\n", consumer_th);
 	printf("\n");
 	thinkos_sleep(100);
 
-	for (i = 0; i < 100; i++) {
-		printf(" %3d ", i);
-		/* wait for an item to be produced */
-		while (thinkos_sem_timedwait(sem_full, 50) == 
-				THINKOS_ETIMEDOUT) {
-			printf(".");
-		}
-
-//		thinkos_sem_wait(sem_full);
-			   
-		/* unload the buffer */
-		printf(" %016llx %llu\n", buffer, buffer);
-		/* signal the empty buffer */
-		thinkos_sem_post(sem_empty);
-	}
-
-	/* clear the enable flag to stop production */
-	prod_enabled = false;
+	/* number of items to be produced */
+	prod_count = 100;
 
 	/* wait for the production thread to finish */
-	ret = thinkos_join(prod_th);
-	printf(" * production return = %d\n", ret);
+	ret = thinkos_join(producer_th);
+	printf(" * Production return = %d\n", ret);
 
-	/* get the last produced item, if any */
-	if (thinkos_sem_timedwait(sem_full, 0) == 0) {
-		thinkos_sem_post(sem_empty);
-		printf(" %lld\n", buffer);
-	}
+	/* wait for the consumer thread to finish */
+	ret = thinkos_join(consumer_th);
+	printf(" * Consumer return = %d\n", ret);
 
 	/* release the semaphores */
 	thinkos_sem_free(sem_empty);
@@ -148,32 +166,30 @@ void semaphore_test(void)
 	printf("\n");
 };
 
+void stdio_init(void);
+
 int main(int argc, char ** argv)
 {
+	/* Calibrate the the uDelay loop */
 	cm3_udelay_calibrate();
-	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
 
+	/* Initialize the stdin, stdout and stderr */
+	stdio_init();
+
+	/* Print a useful information message */
 	printf("\n");
 	printf("---------------------------------------------------------\n");
 	printf(" ThinkOS - Semaphore example\n");
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
+	/* Initialize the ThinkOS kernel */
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-#if 0
-	printf("1.\n");
-	thinkos_sleep(1000);
-	printf("2.\n");
-	thinkos_sleep(1000);
-	printf("3.\n");
-	thinkos_sleep(1000);
-#endif
-
+	/* Run the test */
 	semaphore_test();
 
-//	thinkos_sleep(10000);
-	delay(10);
+	thinkos_sleep(10000);
 
 	return 0;
 }

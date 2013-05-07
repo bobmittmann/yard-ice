@@ -21,7 +21,7 @@
 
 PROG = sem_test
 
-CFILES = sem_test.c
+CFILES = sem_test.c stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm
@@ -31,8 +31,6 @@ LIBS = stm32f cm3 util thinkos c ice-comm
 INCPATH = ../../../include
 
 CFLAGS = -g -O2 
-
-JTAGTOOL_ADDR = 192.168.0.80
 
 include ../../../../mk/stm32f207.mk
 
