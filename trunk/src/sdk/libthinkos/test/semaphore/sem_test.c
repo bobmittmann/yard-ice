@@ -90,7 +90,6 @@ int consumer_task(void * arg)
 	thinkos_sleep(100);
 
 	/* set the production enable flag to start production */
-	
 	do {
 		printf(" %3d ", i);
 		/* wait for an item to be produced */
@@ -100,15 +99,17 @@ int consumer_task(void * arg)
 
 		/* unload the buffer */
 		printf(" %016llx %llu\n", buffer, buffer);
+		i++;
 		/* signal the empty buffer */
 		thinkos_sem_post(sem_empty);
-		i++;
 	} while (!prod_done);
 
 	/* get the last produced item, if any */
 	if (thinkos_sem_timedwait(sem_full, 0) == 0) {
+		printf(" %3d ", i);
+		printf(" %016llx %llu\n", buffer, buffer);
+		i++;
 		thinkos_sem_post(sem_empty);
-		printf(" %lld\n", buffer);
 	}
 
 	return i;
