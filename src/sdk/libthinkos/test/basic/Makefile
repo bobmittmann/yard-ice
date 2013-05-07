@@ -21,7 +21,7 @@
 
 PROG = rtos_basic
 
-CFILES = rtos_basic.c
+CFILES = rtos_basic.c stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm
