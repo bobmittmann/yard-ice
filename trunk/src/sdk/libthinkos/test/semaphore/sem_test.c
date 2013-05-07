@@ -121,17 +121,16 @@ void semaphore_test(void)
 {
 	int producer_th;
 	int consumer_th;
-	int ret;
+	int producer_ret;
+	int consumer_ret;
 
 	/* allocate the empty signal semaphores */
-	sem_empty = thinkos_sem_alloc(1); /* initialize the empty as 1
-										 so we can insert an item
-										 immediately */
+	/* initialize the empty as 1 so we can insert an item immediately. */
+	sem_empty = thinkos_sem_alloc(1); 
 
 	/* allocate the full signal semaphores */
-	sem_full = thinkos_sem_alloc(0); /* initialize the full as 0
-										as we don't haven't produced
-										anything yet. */
+	/* initialize the full as 0 as we don't have produced anything yet. */
+	sem_full = thinkos_sem_alloc(0); 
 
 	/* create the producer thread */
 	producer_th = thinkos_thread_create(producer_task, NULL, 
@@ -152,12 +151,13 @@ void semaphore_test(void)
 	prod_count = 100;
 
 	/* wait for the production thread to finish */
-	ret = thinkos_join(producer_th);
-	printf(" * Production return = %d\n", ret);
+	producer_ret = thinkos_join(producer_th);
 
 	/* wait for the consumer thread to finish */
-	ret = thinkos_join(consumer_th);
-	printf(" * Consumer return = %d\n", ret);
+	consumer_ret = thinkos_join(consumer_th);
+
+	printf(" * Production return = %d\n", producer_ret);
+	printf(" * Consumer return = %d\n", consumer_ret);
 
 	/* release the semaphores */
 	thinkos_sem_free(sem_empty);
