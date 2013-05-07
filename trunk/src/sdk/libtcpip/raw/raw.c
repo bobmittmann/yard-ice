@@ -34,6 +34,8 @@
 #include <sys/os.h>
 #include <sys/mbuf.h>
 
+#if (ENABLE_NET_RAW)
+
 struct raw_system __raw__;
 
 struct raw_pcb * raw_pcb_new(int __protocol)
@@ -55,6 +57,8 @@ struct raw_pcb * raw_pcb_new(int __protocol)
 	raw->r_cond = __os_cond_alloc();
 	raw->r_protocol = __protocol;
 
+	DCC_LOG2(LOG_TRACE, "<%x> protocol=%d", raw, __protocol); 
+
 	pcb_insert((struct pcb *)raw, &__raw__.list);
 
 	tcpip_net_unlock();
@@ -64,6 +68,8 @@ struct raw_pcb * raw_pcb_new(int __protocol)
 
 int raw_pcb_free(struct raw_pcb * __raw)
 {
+	DCC_LOG1(LOG_TRACE, "<%x>...", __raw); 
+
 	__os_cond_free(__raw->r_cond);
 
 	pcb_release((struct pcb *)__raw, &__raw__.list);
@@ -78,8 +84,13 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 
 	q = (struct pcb_link *)&__raw__.list.first;
 
+	DCC_LOG3(LOG_TRACE, "%I > %I (%d)", __ip->saddr, __ip->daddr, __len); 
+
 	while ((q = q->next)) {
 		raw = (struct raw_pcb *)&q->pcb;
+
+		DCC_LOG2(LOG_TRACE, "<%0x> protocol=%d", raw, __ip->proto); 
+
 		if (raw->r_protocol != __ip->proto)
 			continue;
 
@@ -92,7 +103,6 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		raw->r_laddr = __ip->daddr;
 
 		__os_cond_signal(raw->r_cond);
-		__os_cond_wait(raw->r_cond, net_mutex);
 
 		return 1;
 	}
@@ -102,6 +112,10 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 
 void raw_init(void)
 {
+	DCC_LOG(LOG_TRACE, "initializing RAW subsystem."); 
+
 	pcb_list_init(&__raw__.list);
 }
+
+#endif /* !ENABLE_NET_RAW */
 

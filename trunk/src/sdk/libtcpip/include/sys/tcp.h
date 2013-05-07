@@ -34,6 +34,11 @@
 #include "config.h"
 #endif
 
+#ifndef ENABLE_NET_TCP
+#warning "ENABLE_NET_TCP undefined"
+#define ENABLE_NET_TCP 1
+#endif
+
 #include <stdint.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>

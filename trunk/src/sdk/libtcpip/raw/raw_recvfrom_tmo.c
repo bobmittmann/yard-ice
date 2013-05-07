@@ -50,7 +50,7 @@ int raw_recvfrom_tmo(struct raw_pcb * __raw, void * __buf,
 			return -EAGAIN;
 		}
 
-		DCC_LOG3(LOG_INFO, "<%05x> wait [%d, %d]", (int)__raw, 
+		DCC_LOG3(LOG_TRACE, "<%05x> wait [%d, %d]", (int)__raw, 
 			__raw->r_cond, net_mutex);
 
 		if ((err = __os_cond_timedwait(__raw->r_cond, net_mutex, msec)) < 0) {
@@ -58,7 +58,7 @@ int raw_recvfrom_tmo(struct raw_pcb * __raw, void * __buf,
 			return err;
 		}
 
-		DCC_LOG2(LOG_INFO, "<%05x> lock [%d]", (int)__raw, net_mutex);
+		DCC_LOG2(LOG_TRACE, "<%05x> lock [%d]", (int)__raw, net_mutex);
 	}
 
 	if (__sin != NULL) {
@@ -74,8 +74,6 @@ int raw_recvfrom_tmo(struct raw_pcb * __raw, void * __buf,
 	__raw->r_len = 0;
 
 	DCC_LOG2(LOG_TRACE, "<%05x> len=%d", (int)__raw, n);
-
-	__os_cond_signal(__raw->r_cond);
 
 	tcpip_net_unlock();
 

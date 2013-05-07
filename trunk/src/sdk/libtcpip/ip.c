@@ -39,18 +39,6 @@
 #define ENABLE_NET_ARP_PING_IPCONFIG 0
 #endif
 
-#ifndef ENABLE_NET_RAW
-#define ENABLE_NET_RAW 1
-#endif
-
-#ifndef ENABLE_NET_UDP
-#define ENABLE_NET_UDP 1
-#endif
-
-#ifndef ENABLE_NET_TCP
-#define ENABLE_NET_TCP 1
-#endif
-
 #define __USE_SYS_RAW__
 #include <sys/raw.h>
 #define __USE_SYS_UDP__

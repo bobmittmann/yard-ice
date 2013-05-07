@@ -70,8 +70,6 @@ int raw_recvfrom(struct raw_pcb * __raw, void * __buf,
 
 	DCC_LOG2(LOG_TRACE, "<%05x> len=%d", (int)__raw, n);
 
-	__os_cond_signal(__raw->r_cond);
-
 	tcpip_net_unlock();
 
 	return n;
