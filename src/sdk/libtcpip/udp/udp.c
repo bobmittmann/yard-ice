@@ -95,6 +95,8 @@ int udp_port_unreach(in_addr_t __faddr, uint16_t __fport,
 
 void udp_init(void)
 {
+	DCC_LOG(LOG_TRACE, "initializing UDP subsystem."); 
+
 	pcb_list_init(&__udp__.list);
 }
 

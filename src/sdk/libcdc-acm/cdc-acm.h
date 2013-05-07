@@ -29,22 +29,18 @@
 #define EP0_ADDR 0
 #define EP0_TX_FIFO 0
 #define EP0_MAX_PKT_SIZE 64
-#define EP0_FIFO_SIZE 128
 
 #define EP_OUT_ADDR 1
 #define EP_OUT_TX_FIFO 1
 #define EP_OUT_MAX_PKT_SIZE 64
-#define EP_OUT_FIFO_SIZE 512
 
 #define EP_IN_ADDR  2
 #define EP_IN_TX_FIFO 0
 #define EP_IN_MAX_PKT_SIZE 64
-#define EP_IN_FIFO_SIZE 512
 
 #define EP_INT_ADDR 3
 #define EP_INT_TX_FIFO 2
 #define EP_INT_MAX_PKT_SIZE 64
-#define EP_INT_FIFO_SIZE 128
 
 struct cdc_acm_descriptor_config {
 	struct usb_descriptor_configuration cfg;

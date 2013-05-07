@@ -95,6 +95,7 @@
 
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
+#define ENABLE_NET_RAW 1
 
 #define TCP_MAX_RCV_QUEUE 2048
 #define TCP_MAX_SND_QUEUE 2048 

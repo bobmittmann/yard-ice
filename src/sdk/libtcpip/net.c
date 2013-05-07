@@ -28,15 +28,12 @@
 
 #include <sys/mbuf.h>
 
-#include <sys/dcclog.h>
-
-#ifndef ENABLE_NET_UDP
-#define ENABLE_NET_UDP 1
-#endif
-
-#ifndef ENABLE_NET_TCP
-#define ENABLE_NET_TCP 1
-#endif
+#define __USE_SYS_RAW__
+#include <sys/raw.h>
+#define __USE_SYS_UDP__
+#include <sys/udp.h>
+#define __USE_SYS_TCP__
+#include <sys/tcp.h>
 
 int32_t net_mutex;
 
@@ -50,6 +47,10 @@ void tcpip_init(void)
 	DCC_LOG1(LOG_TRACE, "net_mutex=%d", net_mutex);
 
 	mbuf_init();
+
+#if (ENABLE_NET_RAW)
+	raw_init();
+#endif
 
 #if (ENABLE_NET_UDP)
 	udp_init();

@@ -66,6 +66,7 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	uint32_t now;
 	int i;
 	int n;
+	int ret = 0;
 
 	if (argc > 3) {
 		fprintf(f, "ping - send ICMP ECHO_REQUEST to network host\n");
@@ -119,7 +120,8 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 
 		if (len < 0) {
 			if (len != -ETIMEDOUT) {
-				return -1;
+				ret = -1;
+				break;
 			}
 			fprintf(f, "timed out.\n");
 			continue;
@@ -154,6 +156,6 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 
 	raw_close(raw);
 
-	return 0;
+	return ret;
 }
 

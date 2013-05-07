@@ -66,6 +66,10 @@ struct usb_cdc_acm_dev {
 	uint8_t rx_flag; /* RX event flag */
 	uint8_t rx_mutex; 
 
+	uint8_t rx_cnt; 
+	uint8_t rx_pos; 
+	uint8_t rx_buf[EP_IN_MAX_PKT_SIZE];
+
 	uint8_t tx_flag; /* TX event flag */
 	uint8_t tx_mutex; /* TX lock */
 
@@ -106,21 +110,21 @@ int usb_cdc_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 const usb_dev_ep_info_t usb_cdc_in_info = {
 	.addr = USB_ENDPOINT_IN + EP_IN_ADDR,
 	.attr = ENDPOINT_TYPE_BULK,
-	.mxpktsz = EP0_MAX_PKT_SIZE,
+	.mxpktsz = EP_IN_MAX_PKT_SIZE,
 	.on_in = usb_cdc_on_eot
 };
 
 const usb_dev_ep_info_t usb_cdc_out_info = {
 	.addr = USB_ENDPOINT_OUT + EP_OUT_ADDR,
 	.attr = ENDPOINT_TYPE_BULK,
-	.mxpktsz = EP0_MAX_PKT_SIZE,
+	.mxpktsz = EP_OUT_MAX_PKT_SIZE,
 	.on_out = usb_cdc_on_rcv
 };
 
 const usb_dev_ep_info_t usb_cdc_int_info = {
 	.addr = USB_ENDPOINT_IN + EP_INT_ADDR,
 	.attr = ENDPOINT_TYPE_INTERRUPT,
-	.mxpktsz = EP0_MAX_PKT_SIZE,
+	.mxpktsz = EP_INT_MAX_PKT_SIZE,
 	.on_in = usb_cdc_on_eot_int
 };
 
@@ -344,18 +348,37 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 				 unsigned int len, unsigned int msec)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	int ret;
+	int n;
 
+	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
+	
+	if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
+		goto read_from_buffer;
+	};
+
+	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
 	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
-
-	DCC_LOG(LOG_TRACE, "wait");
 	thinkos_flag_wait(dev->rx_flag);
 	__thinkos_flag_clr(dev->rx_flag);
-	DCC_LOG(LOG_TRACE, "wakeup");
 
-	ret = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+	if (len >= EP_IN_MAX_PKT_SIZE) {
+		DCC_LOG(LOG_TRACE, "wakeup");
+		return usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+	} 
+	
+	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
+								dev->rx_buf, EP_IN_MAX_PKT_SIZE);
+		
+	dev->rx_pos = 0;
+	dev->rx_cnt = n;
 
-	return ret;
+read_from_buffer:
+	DCC_LOG(LOG_TRACE, "reading from buffer");
+	/* get data from the rx buffer if not empty */
+	n = MIN(n, len);
+	memcpy(buf, &dev->rx_buf[dev->rx_pos], n); 
+	dev->rx_pos += n;
+	return n;
 }
 
 int usb_cdc_flush(usb_cdc_class_t * cl)
@@ -460,6 +483,9 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 	dev->rx_flag = __thinkos_flag_alloc(); 
 	dev->tx_flag = __thinkos_flag_alloc(); 
 	dev->ctl_flag = __thinkos_flag_alloc(); 
+	dev->rx_cnt = 0;
+	dev->rx_pos = 0;
+
 	__thinkos_flag_clr(dev->rx_flag);
 
 	usb_cdc_sn_set(sn);

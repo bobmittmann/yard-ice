@@ -245,6 +245,8 @@ uint32_t tcp_rel_timestamp(void)
 
 void tcp_init(void)
 {
+	DCC_LOG(LOG_TRACE, "initializing TCP subsystem."); 
+
 	pcb_list_init(&__tcp__.closed);
 	pcb_list_init(&__tcp__.listen);
 	pcb_list_init(&__tcp__.active);

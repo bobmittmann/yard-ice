@@ -34,6 +34,11 @@
 #include "config.h"
 #endif
 
+#ifndef ENABLE_NET_UDP
+#warning "ENABLE_NET_UDP undefined"
+#define ENABLE_NET_UDP 1
+#endif
+
 #include <stdint.h>
 #include <netinet/in.h>
 #include <netinet/udp.h>
