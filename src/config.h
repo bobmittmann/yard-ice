@@ -93,6 +93,9 @@
 #define ENABLE_NAND 1
 #define ENABLE_COMM 1
 
+#define ENABLE_TCP_SEND 1
+#define ENABLE_TCP_RECV 1
+
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
 #define ENABLE_NET_RAW 1

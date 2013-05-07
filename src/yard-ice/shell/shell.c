@@ -262,13 +262,15 @@ const struct shell_cmd cmd_tab[] = {
 #endif
 #endif
 
-//#if (ENABLE_NETWORK)
-#if 0
+#if (ENABLE_NETWORK)
+#if (ENABLE_TCP_RECV)
 	{ cmd_tcp_recv, "rcvnet", "rn", 
 		"[ADDR] [PORT]", "receive file trough network" },
-
+#endif
+#if (ENABLE_TCP_SEND)
 	{ cmd_tcp_send, "sndnet", "sn", 
 		"[ADDR] [SIZE] [PORT]", "send a memory block trough network" },
+#endif
 #endif
 
 	{ NULL, "", "", NULL, NULL }
