@@ -25,7 +25,7 @@ These are a set of supporting libraries located inside the *src/sdk* directory. 
   * *libopcodes* - this library provides disassembler capabilities to the tool.
   * *libstm32f* - hardware access functions for the STM32F family of SoCs. 
   * *libtcpip* -  efficient and small footprint TCP/IP stack, designed for embedded systems.
-  * *[libThinkOs libthinkos]* - the ThinkOS real time operating system. This small RTOS was designed and optimized for ARM Cortex-M cores. It provides a very low context switching latency a useful "_interrupt as thread_" mechanism.
+  * *[libThinkOs libthinkos]* - the ThinkOS real time operating system. This small RTOS was designed and optimized for ARM Cortex-M cores. It provides a very low context switching latency and a useful "_interrupt as thread_" mechanism.
   * *libutil* - set of utilities like a calibrated delay.
 
 == YARD-ICE Libraries ==
