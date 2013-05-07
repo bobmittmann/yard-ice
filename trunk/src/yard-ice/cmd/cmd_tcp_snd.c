@@ -36,7 +36,7 @@
 #include "debugger.h"
 #include "eval.h"
 
-#if ENABLE_TCP_SND
+#if ENABLE_TCP_SEND
 
 #ifndef TCP_SND_BUF_LEN
 #define TCP_SND_BUF_LEN 1024
@@ -52,8 +52,9 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	uint32_t addr;
 	uint32_t port;
 	uint32_t size;
-	struct timespec start;
-	struct timespec end;
+//	struct timespec start;
+//	struct timespec end;
+	uint32_t start;
 	unsigned int ms;
 	int rem;
 	uint8_t * ptr;
@@ -133,7 +134,8 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	size = 0;
 	ptr = buf;
 
-	clock_gettime(CLOCK_REALTIME, &start);
+	// clock_gettime(CLOCK_REALTIME, &start);
+	start = __os_ms_ticks();
 
 	for (;;) {
 		n = (rem < TCP_SND_BUF_LEN) ? rem : TCP_SND_BUF_LEN;
@@ -154,10 +156,12 @@ int cmd_tcp_send(FILE * f, int argc, char ** argv)
 	}
 
 	if (size) {
-		clock_gettime(CLOCK_REALTIME, &end);
+	//	clock_gettime(CLOCK_REALTIME, &end);
 
-		ms = ((end.tv_sec - start.tv_sec) * 1000) + 
-			((end.tv_nsec - start.tv_nsec) / 1000000);
+	//	ms = ((end.tv_sec - start.tv_sec) * 1000) + 
+	//		((end.tv_nsec - start.tv_nsec) / 1000000);
+
+		ms = (int32_t)(__os_ms_ticks() - start);
 
 		fprintf(f, "\n - EOT: size=%d tm=%d[ms] speed=%d[bytes/sec]\n", 
 				size, ms, (size * 1000) / ms);
