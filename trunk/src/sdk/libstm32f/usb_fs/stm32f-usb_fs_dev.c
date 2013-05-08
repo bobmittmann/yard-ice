@@ -192,6 +192,22 @@ static void __ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 
 /* ------------------------------------------------------------------------- */
 
+void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+	int ep_id;
+
+	for (ep_id = 0; ep_id < 8; ep_id++) {
+		clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
+		set_ep_addr(usb, ep_id, 0);
+	}
+
+	/* Enable Reset and Wakeup interrupts */
+	usb->cntr = USB_WKUP | USB_RESETM;
+
+	drv->ev->on_suspend(drv->cl);
+}
+
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
@@ -207,7 +223,7 @@ void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 	usb->daddr = USB_EF + 0;
 
 	/* Enable Correct transfer interrupts */
-	usb->cntr |= USB_CTRM;
+	usb->cntr |= USB_CTRM | USB_SUSPM;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -398,6 +414,20 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 	return 0;
 }
 
+void stm32f_usb_dev_ep_nak(struct stm32f_usb_drv * drv, int ep_id, bool flag)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+
+	/* FIXME: select outep/inep ... */
+	if (flag)
+		set_ep_txstat(usb, ep_id, USB_TX_NAK);
+	else
+		set_ep_txstat(usb, ep_id, USB_TX_VALID);
+}
+
+
 /* FIXME: find another way of initializing the packet buffer addresses */
 #define PKTBUF_BUF_BASE (8 * 8)
 static unsigned int addr = PKTBUF_BUF_BASE;
@@ -418,7 +448,7 @@ int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv,
 		return -1;
 	}
 
-	DCC_LOG2(LOG_TRACE, "sp_id=%d mxpktsz=%d", ep_id, mxpktsz);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
 
 	ep = &drv->ep[ep_id];
 	ep->mxpktsz = mxpktsz;
@@ -509,8 +539,6 @@ int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv,
 	}
 
 	DCC_LOG1(LOG_TRACE, "epr=0x%04x...", usb->epr[ep_id]);
-
-	//	clr_status_out(usb, ep_id);
 
 	return ep_id;
 }
@@ -791,18 +819,21 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		DCC_LOG(LOG_INFO, "SOF");
 	}
 
+	if (sr & USB_SUSP) {
+		/* clear interrupts */
+		usb->istr = sr & ~USB_SUSP;
+		DCC_LOG(LOG_TRACE, "SUSP");
+		stm32f_usb_dev_suspend(drv);
+	}
+
 	if (sr & USB_RESET) {
 		usb->istr = sr & ~USB_RESET;
 		DCC_LOG(LOG_INFO, "RESET");
 		stm32f_usb_dev_reset(drv);
 	}
 
-	if (sr & USB_SUSP) {
-		usb->istr = sr & ~USB_SUSP;
-		DCC_LOG(LOG_TRACE, "SUSP");
-	}
-
 	if (sr & USB_WKUP) {
+		usb->cntr = USB_WKUP | USB_RESETM;
 		usb->istr = sr & ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
 	}
@@ -895,6 +926,7 @@ const struct usb_dev_ops stm32f_usb_ops = {
 	.ep_init = (usb_dev_ep_init_t)stm32f_usb_dev_ep_init,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_usb_dev_ep_stall,
 	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_usb_dev_ep_zlp_send,
+	.ep_nak = (usb_dev_ep_nak_t)stm32f_usb_dev_ep_nak,
 	.ep_pkt_recv = (usb_dev_ep_pkt_recv_t)stm32f_usb_dev_ep_pkt_recv
 };
 

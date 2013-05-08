@@ -33,8 +33,6 @@ LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm
 
 INCPATH = ../sdk/include 
 
-JTAGTOOL_ADDR = 192.168.0.80
-
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
 

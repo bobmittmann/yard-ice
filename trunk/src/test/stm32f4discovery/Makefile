@@ -22,7 +22,7 @@
 
 PROG = discovery
 
-CFILES = discovery.c
+CFILES = stdio.c discovery.c
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 	  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm 

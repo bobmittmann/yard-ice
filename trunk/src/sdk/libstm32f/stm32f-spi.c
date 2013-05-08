@@ -112,14 +112,12 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 	spi->i2scfgr = 0;
 	spi->i2spr = 0;
 
-	spi->cr1 = SPI_BR_SET(br) | opt | SPI_SSM | SPI_SSI;
+	spi->cr1 = SPI_SPE | SPI_BR_SET(br) | opt | SPI_SSM | SPI_SSI;
 
 #if 0
 	spi->cr1 = SPI_SPE | SPI_MSTR | SPI_SSM | SPI_SSI | \
 			   SPI_BR_SET(br) | SPI_LSBFIRST;
 #endif
-
-	spi->cr1 |= SPI_SPE;
 
 	return id;
 }
