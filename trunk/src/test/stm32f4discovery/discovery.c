@@ -27,13 +27,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <arch/cortex-m3.h>
-#include <sys/serial.h>
 #include <sys/delay.h>
-#include <sys/dcclog.h>
 
 #include <thinkos.h>
 
+#include "lis302dl.h"
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -81,6 +79,8 @@ static int __leds_task(void)
 	unsigned int rate;
 	unsigned int tm;
 
+	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
+
 	for (i = 0; i < LED_COUNT; ++i)
 		tmr[i] = led_rate[i];
 
@@ -110,7 +110,7 @@ static int __leds_task(void)
 
 		thinkos_mutex_unlock(leds_mutex); 
 
-		thinkos_sleep(5);
+		thinkos_sleep(10);
 	}
 
 	return 0;
@@ -174,7 +174,7 @@ void led_blink(unsigned int id, unsigned int rate)
 	thinkos_mutex_unlock(leds_mutex); 
 }
 
-uint32_t leds_stack[64];
+uint32_t leds_stack[128];
 
 void leds_init(void)
 {
@@ -192,12 +192,87 @@ void leds_init(void)
 
 	leds_mutex = thinkos_mutex_alloc();
 
+	printf("%s(): leds_mutex=%d.\n", __func__, leds_mutex);
+
 	thinkos_thread_create((void *)__leds_task, (void *)NULL,
 						  leds_stack, sizeof(leds_stack), 
 						  THINKOS_OPT_PRIORITY(2));
 
+	thinkos_sleep(100);
 }
 
+/* ----------------------------------------------------------------------
+ * Push button
+ * ----------------------------------------------------------------------
+ */
+
+/* Button events */
+enum {
+	BTN_NONE = 0,
+	BTN_PRESSED,
+	BTN_RELEASED
+};
+
+
+int btn_st;
+int btn_mutex;
+volatile int btn_event;
+
+#define PUSH_BTN STM32F_GPIOA, 0
+
+static int __btn_task(void)
+{
+	int st;
+
+	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
+
+	stm32f_gpio_clock_en(STM32F_GPIOA);
+	stm32f_gpio_mode(PUSH_BTN, INPUT, 0);
+
+	btn_st = stm32f_gpio_stat(PUSH_BTN) ? 1 : 0;
+
+	for (;;) {
+
+		thinkos_sleep(50);
+
+		/* process push button */
+		st = stm32f_gpio_stat(PUSH_BTN) ? 1 : 0;
+		if (btn_st != st) {
+			btn_st = st;
+			thinkos_mutex_lock(btn_mutex);
+			btn_event = st ? BTN_PRESSED : BTN_RELEASED;
+			thinkos_mutex_unlock(btn_mutex);
+		}
+	}
+
+	return 0;
+}
+
+uint32_t btn_stack[128];
+
+static void btn_init(void)
+{
+	btn_mutex = thinkos_mutex_alloc();
+
+	printf("%s(): btn_mutex=%d.\n", __func__, btn_mutex);
+
+	thinkos_thread_create((void *)__btn_task, (void *)NULL,
+						  btn_stack, sizeof(btn_stack), 
+						  THINKOS_OPT_PRIORITY(2));
+	thinkos_sleep(100);
+}
+
+int btn_event_get(void)
+{
+	int event;
+
+	thinkos_mutex_lock(btn_mutex);
+	event = btn_event;
+	btn_event = BTN_NONE;
+	thinkos_mutex_unlock(btn_mutex);
+
+	return event;
+}
 
 /* ----------------------------------------------------------------------
  * Accelerometer
@@ -211,23 +286,6 @@ static const struct stm32f_spi_io spi1_io = {
 };
 
 static const gpio_io_t lis302_cs = GPIO(GPIOE, 3);
-
-
-int spi_io(struct stm32f_spi * spi, unsigned int dout)
-{
-	unsigned int sr;
-	int din = -1;
-
-	sr = spi->sr;
-
-	while (!(sr & SPI_TXE)) {
-		thinkos_irq_wait(STM32F_IRQ_SPI1);
-		if (sr & SPI_RXNE)
-			din = spi->dr;
-	}
-
-	return din;
-}
 
 int lis302_wr(unsigned int reg, void * buf, unsigned int len)
 {
@@ -396,81 +454,83 @@ int lis302_init(void)
 }
 
 
+#define AVG_N 16
 
-
-#define LIS302_WHO_AM_I         0x0f
-#define LIS302_CTRL_REG1        0x20
-
-#define CTRL_DR   (1 << 7)
-#define CTRL_PD   (1 << 6)
-#define CTRL_FS   (1 << 5)
-#define CTRL_STP  (1 << 4)
-#define CTRL_STM  (1 << 3)
-#define CTRL_ZEN  (1 << 2)
-#define CTRL_YEN  (1 << 1)
-#define CTRL_XEN  (1 << 0)
-
-#define LIS302_CTRL_REG2        0x21
-
-#define CTRL_SIM  (1 << 7)
-#define CTRL_BOOT (1 << 6)
-#define CTRL_FDS  (1 << 4)
-
-#define LIS302_CTRL_REG3        0x22
-#define LIS302_HP_FILTER_RESET  0x23
-
-#define LIS302_STATUS_REG       0x27
-
-#define STAT_ZYXOR  (1 << 7)
-#define STAT_ZOR    (1 << 6)
-#define STAT_YOR    (1 << 5)
-#define STAT_XOR    (1 << 4)
-
-#define STAT_ZYXDA  (1 << 3)
-#define STAT_ZDA    (1 << 2)
-#define STAT_YDA    (1 << 1)
-#define STAT_XDA    (1 << 0)
-
-#define LIS302_OUT_X            0x29
-#define LIS302_OUT_Y            0x2b
-#define LIS302_OUT_Z            0x2d
-
-#define LIS302_FF_WU_CFG_1      0x30
-#define LIS302_FF_WU_SRC_1      0x31
-#define LIS302_FF_WU_THS_1      0x32
-#define LIS302_FF_WU_DURATION_1 0x33
-
-#define LIS302_FF_WU_CFG_2      0x34
-#define LIS302_FF_WU_SRC_2      0x35
-#define LIS302_FF_WU_THS_2      0x36
-#define LIS302_FF_WU_DURATION_2 0x37
-
-#define LIS302_CLICK_CFG        0x38
-#define LIS302_CLICK_SRC        0x39
-#define LIS302_CLICK_THSY_X     0x3b
-#define LIS302_CLICK_THSZ       0x3c
-#define LIS302_CLICK_TIME_LIMIT 0x3d
-#define LIS302_CLICK_LATENCY    0x3e
-#define LIS302_CLICK_WINDOW     0x3f
-
-struct lis302_data {
-	int8_t x;
-	uint8_t res1;
-	int8_t y;
-	uint8_t res2;
-	int8_t z;
+struct acc_info {
+	volatile int y;
+	volatile int x;
+	volatile int z;
+	volatile bool cal_req;
+	int sem;
 };
 
-#define PA1 STM32F_GPIOA, 1
-#define PA3 STM32F_GPIOA, 3
+static int accelerometer_task(struct acc_info * acc)
+{
+	struct {
+		int8_t x;
+		uint8_t res1;
+		int8_t y;
+		uint8_t res2;
+		int8_t z;
+	} data;
+	uint8_t cfg[4];
+	uint8_t st;
+	int x = 0;
+	int y = 0;
+	int z = 0;
+	int x_off = 0;
+	int y_off = 0;
+	int z_off = 0;
+
+	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
+
+	if (lis302_init() < 0) {
+		return -1;
+	}
+
+	cfg[0] = CTRL_PD | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
+	cfg[1] = 0;
+	cfg[3] = 0;
+	lis302_wr(LIS302_CTRL_REG1, cfg, 3);
+
+	for (; ;) {
+		thinkos_sleep(1);
+		/* poll the sensor */
+		lis302_rd(LIS302_STATUS_REG, &st, 1);
+
+		if (st & STAT_ZYXDA) {
+			/* get the forces data */
+			lis302_rd(LIS302_OUT_X, &data, 5);
+
+			/* Filter */
+			x = (x * (AVG_N - 1) / AVG_N) + data.x;
+			y = (y * (AVG_N - 1) / AVG_N) + data.y;
+			z = (z * (AVG_N - 1) / AVG_N) + data.z;
+
+			if (acc->cal_req) {
+				x_off = -x;
+				y_off = -y;
+				z_off = -z;
+				acc->cal_req = false;
+			}
+
+			acc->x = x_off + x;
+			acc->y = y_off + y;
+			acc->z = z_off + z;
+
+			thinkos_sem_post(acc->sem);
+		} 
+	}
+}
 
 void stdio_init(void);
 
+uint32_t accelerometer_stack[128];
+
 int main(int argc, char ** argv)
 {
-	struct lis302_data d;
-	uint8_t cfg[4];
-	uint8_t st;
+	struct acc_info acc;
+	uint32_t cnt = 0;
 	int x;
 	int y;
 	int i;
@@ -481,12 +541,6 @@ int main(int argc, char ** argv)
 	/* Initialize the stdin, stdout and stderr */
 	stdio_init();
 
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_mode(PA1, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(PA3, OUTPUT, PUSH_PULL | SPEED_LOW);
-
-	thinkos_init(THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
-
 	/* Print a useful information message */
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -494,58 +548,54 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
+	thinkos_init(THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
+
 	leds_init();
+	btn_init();
 
-	if (lis302_init() < 0) {
-		for (;;) {
-			led_on(0);
-			udelay(100000);
-			led_off(0);
-			udelay(100000);
-		}
-	}
-
-	cfg[0] = CTRL_PD | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
-	cfg[1] = 0;
-	cfg[3] = 0;
-	lis302_wr(LIS302_CTRL_REG1, cfg, 3);
-
-	led_blink(0, 100);
-	led_blink(1, 100);
-	led_blink(2, 100);
-	led_blink(3, 100);
+	acc.sem = thinkos_sem_alloc(0);
+	printf("%s(): acc.sem=%d.\n", __func__, acc.sem);
+	thinkos_thread_create((void *)accelerometer_task, (void *)&acc,
+						  accelerometer_stack, sizeof(accelerometer_stack), 
+						  THINKOS_OPT_PRIORITY(1));
 
 	for (i = 0; ; ++i) {
-//		thinkos_sleep(1);
+		thinkos_sem_wait(acc.sem);
 
-		lis302_rd(LIS302_STATUS_REG, &st, 1);
+		if (btn_event_get() == BTN_PRESSED) {
+			/* request calibration */
+			acc.cal_req = true;
+		}
+	
+		/* Scale */
+		x = acc.x * 64 / 512;
+		y = acc.y * 64 / 512;
 
-		if (st & STAT_ZYXDA) {
+		if ((++cnt & 0x03) == 0) {
+			printf("%5d,%5d\r", x, y);
+		}
 
-			stm32f_gpio_set(PA1);
+		if (x == 0) {
+			led_on(1);
+			led_on(3);
+		} else if (x < 0) {
+			led_blink(3, -x);
+			led_off(1);
+		} else {
+			led_blink(1, x);
+			led_off(3);
+		}
 
-			lis302_rd(LIS302_OUT_X, &d, 5);
-
-			x = d.x;
-			y = d.y;
-			if (x < 0) {
-				led_blink(1, 64 + x);
-				led_off(3);
-			} else {
-				led_blink(3, 64 - x);
-				led_off(1);
-			}
-
-			if (y < 0) {
-				led_off(0);
-				led_blink(2, 64 + y);
-			} else {
-				led_off(2);
-				led_blink(0, 64 - y);
-			}
-
-			stm32f_gpio_clr(PA1);
-		} 
+		if (y == 0) {
+			led_on(0);
+			led_on(2);
+		} else if (y < 0) {
+			led_off(0);
+			led_blink(2, -y);
+		} else {
+			led_off(2);
+			led_blink(0, y);
+		}
 	}
 
 	return 0;

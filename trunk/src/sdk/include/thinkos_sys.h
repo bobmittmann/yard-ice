@@ -102,7 +102,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_IDLE_WFI
-#define THINKOS_ENABLE_IDLE_WFI 0
+#define THINKOS_ENABLE_IDLE_WFI 1
 #endif
 
 #ifndef THINKOS_ENABLE_IDLE_SNAPSHOT
@@ -174,7 +174,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_SYSCALL
-#define THINKOS_ENABLE_FLAG_SYSCALL 0
+#define THINKOS_ENABLE_FLAG_SYSCALL 1
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_STAT
@@ -198,7 +198,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_EXCEPTIONS
-#define THINKOS_ENABLE_EXCEPTIONS 0
+#define THINKOS_ENABLE_EXCEPTIONS 1
 #endif
 
 #ifndef THINKOS_ENABLE_SCHED_DEBUG

@@ -226,6 +226,8 @@ void thinkos_flag_clr_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = __thinkos_flag_is_set(wq);
+
 	__thinkos_flag_clr(wq);
 }
 
