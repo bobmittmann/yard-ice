@@ -123,12 +123,16 @@ void led_unlock(void)
 
 void led_flash(void)
 {
+	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
 	thinkos_flag_set(led_flag);
 }
 
 int led_task(void)
 {
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
 	while (1) {
+		DCC_LOG(LOG_TRACE, "thinkos_flag_wait()...");
 		thinkos_flag_wait(led_flag);
 		thinkos_flag_clr(led_flag);
 		if (!led_locked)
@@ -338,7 +342,7 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack),
-						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
+						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
 
 	stm32f_usart_init(uart);
 	stm32f_usart_baudrate_set(uart, 9600);
@@ -354,7 +358,7 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
-						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
+						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
 	thinkos_thread_create((void *)usb_recv_task, (void *)&vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),

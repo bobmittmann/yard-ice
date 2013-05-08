@@ -464,6 +464,8 @@ struct lis302_data {
 #define PA1 STM32F_GPIOA, 1
 #define PA3 STM32F_GPIOA, 3
 
+void stdio_init(void);
+
 int main(int argc, char ** argv)
 {
 	struct lis302_data d;
@@ -476,11 +478,21 @@ int main(int argc, char ** argv)
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
 
+	/* Initialize the stdin, stdout and stderr */
+	stdio_init();
+
 	stm32f_gpio_clock_en(STM32F_GPIOA);
 	stm32f_gpio_mode(PA1, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_mode(PA3, OUTPUT, PUSH_PULL | SPEED_LOW);
 
 	thinkos_init(THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
+
+	/* Print a useful information message */
+	printf("\n");
+	printf("---------------------------------------------------------\n");
+	printf(" STM32F4 Discovery example\n");
+	printf("---------------------------------------------------------\n");
+	printf("\n");
 
 	leds_init();
 

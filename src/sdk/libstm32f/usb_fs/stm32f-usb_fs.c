@@ -95,7 +95,6 @@ void stm32f_usb_power_on(struct stm32f_usb * usb)
 void stm32f_usb_power_off(struct stm32f_usb * usb)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
-	int ep_id;
 
 	usb->cntr = USB_FRES;
 	/* Removing any spurious pending interrupts */
@@ -112,10 +111,6 @@ void stm32f_usb_power_off(struct stm32f_usb * usb)
 	stm32f_gpio_mode(USB_FS_DP, INPUT, 0);
 	stm32f_gpio_mode(USB_FS_DM, INPUT, 0);
 
-	for (ep_id = 0; ep_id < 8; ep_id++) {
-		clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
-		set_ep_addr(usb, ep_id, 0);
-	}
 }
 
 #endif /* STM32F103 */

@@ -305,8 +305,26 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	return 0;
 }
 
+int usb_cdc_on_suspend(usb_class_t * cl)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+
+	DCC_LOG(LOG_TRACE, "...");
+	dev->acm.control = 0;
+
+	__thinkos_flag_signal(dev->ctl_flag);
+	__thinkos_flag_signal(dev->tx_flag);
+	__thinkos_flag_signal(dev->rx_flag);
+
+	return 0;
+}
+
+
 int usb_cdc_on_error(usb_class_t * cl, int code)
 {
+	DCC_LOG(LOG_TRACE, "...");
+
+
 	return 0;
 }
 
@@ -452,7 +470,7 @@ int usb_cdc_ctl_wait(usb_cdc_class_t * cl, unsigned int msec)
 	return 0;
 }
 
-int usb_cdc_tde_wait(usb_cdc_class_t * cl)
+int usb_cdc_dte_wait(usb_cdc_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
@@ -470,6 +488,7 @@ struct usb_cdc_acm_dev usb_cdc_rt;
 
 const usb_class_events_t usb_cdc_ev = {
 	.on_reset = usb_cdc_on_reset,
+	.on_suspend = usb_cdc_on_suspend,
 	.on_error = usb_cdc_on_error
 };
 
