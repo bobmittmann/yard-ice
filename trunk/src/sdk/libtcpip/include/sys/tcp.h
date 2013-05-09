@@ -35,7 +35,6 @@
 #endif
 
 #ifndef ENABLE_NET_TCP
-#warning "ENABLE_NET_TCP undefined"
 #define ENABLE_NET_TCP 1
 #endif
 

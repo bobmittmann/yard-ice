@@ -577,18 +577,18 @@ static int dbg_status(struct debugger * dbg)
 	int ice_st;
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_MSG, "1.");
 
 	if (dbg->state > DBG_ST_UNCONNECTED) {
 
-		DCC_LOG(LOG_TRACE, "2.");
+		DCC_LOG(LOG_MSG, "2.");
 
 		if ((ice_st = ice_status(ice)) < 0) {
 			DCC_LOG(LOG_WARNING, "ice_status() failed!");
 			return ice_st;
 		};
 
-		DCC_LOG(LOG_TRACE, "3.");
+		DCC_LOG(LOG_MSG, "3.");
 
 		if (ice_st & ICE_ST_HALT) {
 			if (dbg->state != DBG_ST_HALTED) {
@@ -596,26 +596,26 @@ static int dbg_status(struct debugger * dbg)
 				if ((ret = dbg_bp_deactivate_all(ice, &dbg->bp_ctrl)) < 0) {
 					DCC_LOG(LOG_WARNING, "dbg_bp_deactivate_all() failed!");
 				}
-				DCC_LOG(LOG_TRACE, "[DBG_ST_HALTED]");
+				DCC_LOG(LOG_MSG, "[DBG_ST_HALTED]");
 				dbg->state = DBG_ST_HALTED;
 			} else {
-				DCC_LOG(LOG_TRACE, "already halted do nothing ...");
+				DCC_LOG(LOG_MSG, "already halted do nothing ...");
 			}
 		} else {
 			if (dbg->state != DBG_ST_RUNNING) {
-				DCC_LOG(LOG_TRACE, "[DBG_ST_RUNNING], start polling...");
+				DCC_LOG(LOG_MSG, "[DBG_ST_RUNNING], start polling...");
 				dbg->state = DBG_ST_RUNNING;
 				poll_start(dbg);
 			} else {
-				DCC_LOG(LOG_TRACE, "already running do nothing ...");
+				DCC_LOG(LOG_MSG, "already running do nothing ...");
 			}
 		}
 
 	} else {
-		DCC_LOG(LOG_TRACE, "unconnected!");
+		DCC_LOG(LOG_MSG, "unconnected!");
 	}
 
-	DCC_LOG(LOG_TRACE, "done.");
+	DCC_LOG(LOG_MSG, "done.");
 
 	return dbg->state;
 }
@@ -628,7 +628,8 @@ int target_status(void)
 	int status;
 
 
-	DCC_LOG(LOG_TRACE, "try_lock");
+	DCC_LOG(LOG_MSG, "try_lock");
+
 	if (__os_mutex_trylock(dbg->busy) < 0) {
 		DCC_LOG(LOG_TRACE, "__os_mutex_trylock() failed!");
 		return DBG_ST_BUSY;
@@ -636,7 +637,7 @@ int target_status(void)
 
 	status = dbg_status(dbg);
 
-	DCC_LOG(LOG_TRACE, ".");
+	DCC_LOG(LOG_MSG, ".");
 
 	__os_mutex_unlock(dbg->busy);
 

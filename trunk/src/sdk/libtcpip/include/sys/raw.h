@@ -35,7 +35,6 @@
 #endif
 
 #ifndef ENABLE_NET_RAW
-#warning "ENABLE_NET_RAW undefined"
 #define ENABLE_NET_RAW 1
 #endif
 

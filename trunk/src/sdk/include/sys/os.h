@@ -265,6 +265,14 @@ static inline int __os_thread_self(void) {
 #endif
 }
 
+static inline int __os_thread_cancel(int th, int code) {
+#if ENABLE_THINKOS
+	return thinkos_cancel(th, code);
+#else
+	return 0;
+#endif
+}
+
 static inline int __os_thread_join(int th) {
 #if ENABLE_THINKOS
 	return thinkos_join(th);

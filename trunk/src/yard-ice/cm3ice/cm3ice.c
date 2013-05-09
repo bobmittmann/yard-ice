@@ -658,13 +658,13 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 	jtag_tap_t * tap = ctrl->tap;
 	uint32_t dhcsr;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_MSG, "1.");
 
 	if (ctrl->polling) {
-		DCC_LOG(LOG_TRACE, "2.");
+		DCC_LOG(LOG_MSG, "2.");
 		dhcsr = ctrl->dhcsr;
 	} else {
-		DCC_LOG(LOG_TRACE, "3.");
+		DCC_LOG(LOG_MSG, "3.");
 //		ctrl->jtag_lock = true;
 		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
 							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
@@ -675,7 +675,7 @@ int cm3ice_status(cm3ice_ctrl_t * ctrl)
 //		ctrl->jtag_lock = false;
 	}
 
-	DCC_LOG5(LOG_TRACE, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+	DCC_LOG5(LOG_INFO, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
 			 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
 			 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,

@@ -29,28 +29,22 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/file.h>
-#include <sys/fd.h>
 #include <sys/null.h>
 #include <command.h>
 
-
 #include <netinet/in.h>
 #include <tcpip/tcp.h>
-#include <unistd.h>
-#include <sys/signal.h>
+
+#include <sys/os.h>
+#include <trace.h>
 
 #include "gdb_rspd.h"
 #include "debugger.h"
 
-#ifdef ARM7ICE_DEBUG
-#ifndef DEBUG
-#define DEBUG
-#endif
-#endif
-
-#include <debug.h>
-
 #include <sys/dcclog.h>
+
+
+#define	SIGTRAP	5	/* trace trap (not reset when caught) */
 
 #ifndef RSP_BUFFER_LEN
 #define RSP_BUFFER_LEN 512
@@ -181,7 +175,7 @@ static int rsp_break_signal(struct tcp_pcb * tp, char * pkt)
 	}
 
 	/* signal that we are now running */
-	uthread_sem_post(gdb_target_run_sem);
+	__os_sem_post(gdb_target_run_sem);
 
 	return 0;
 #if 0
@@ -402,37 +396,16 @@ int rsp_read(struct tcp_pcb * tp, const void * buf, int len)
 	return 0;
 }
 
-const struct file_op rsp_fileop = {
-	.write = (file_write_t)rsp_write,
-	.read = (file_read_t)rsp_read,
-	.select = (file_select_t)null_select,
-	.ioctl = (file_ioctl_t)null_ioctl,
-	.close = (file_close_t)null_close,
-	.flush = (file_flush_t)null_flush,
-	.sync = (file_sync_t)null_sync,
-	.seek = (file_seek_t)null_seek,
-	.mmap = (file_mmap_t)null_mmap,
-	.munmap = (file_munmap_t)null_munmap,
-	.readdir = (file_readdir_t)null_readdir
+const struct fileop rsp_fileop = {
+	.write = (void *)rsp_write,
+	.read = (void *)rsp_read,
+	.close = (void *)null_close,
+	.flush = (void *)null_flush,
 };
 
-int rsp_open(struct tcp_pcb * tp)
+struct file * rsp_fopen(struct tcp_pcb * tp)
 {
-	struct file * file;
-	int fd;
-
-	if ((fd = fd_alloc()) < 0) {
-		DCC_LOG(LOG_WARNING, "fd_alloc() failed!");
-		return fd;
-	}
-
-	DCC_LOG1(LOG_MSG, "fd=%d", fd);
-
-	file = file_from_fd(fd);
-	file->data = (void *)tp;
-	file->op = (struct file_op *)&rsp_fileop;
-	
-	return fd;
+	return file_alloc(tp, &rsp_fileop);
 }
 
 
@@ -440,17 +413,14 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 {
 	char * cp = pkt + 6;
 	char * s = pkt;
+	FILE * f;
+	int ret;
 	int c;
 	int i;
-	FILE * f;
-	int fd;
-	int ret;
 
-	if ((fd = rsp_open(tp)) < 0) {
-		return rsp_error(tp, -fd);
+	if ((f = rsp_fopen(tp)) == NULL) {
+		return rsp_error(tp, -1);
 	}
-
-	f = fdopen(fd, "r+");
 
 	len -= 6;
 	DCC_LOG1(LOG_INFO, "len=%d", len);
@@ -464,11 +434,11 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 
 	if ((ret = exec(f, s)) < 0) {
 		DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
-		close(fd);
+		fclose(f);
 		return rsp_error(tp, -ret);
 	}
 
-	close(fd);
+	fclose(f);
 	return rsp_ok(tp);
 }
 
@@ -778,6 +748,9 @@ static int rsp_memory_write(struct tcp_pcb * tp, char * pkt, int len)
 	size = strtoul(cp, &cp, 16);
 	cp++;
 
+	(void)addr;
+	(void)size;
+
 	DCC_LOG2(LOG_WARNING, "addr=0x%08x size=%d, not implemented!", addr, size);
 	return rsp_ok(tp);
 }
@@ -881,7 +854,7 @@ static int rsp_continue(struct tcp_pcb * tp, char * pkt, int len)
 	} 
 
 	/* signal that we are now running */
-	uthread_sem_post(gdb_target_run_sem);
+	__os_sem_post(gdb_target_run_sem);
 
 	return tcp_send(tp, "+", 1, TCP_SEND_NOWAIT);
 }
@@ -933,6 +906,7 @@ static int rsp_h_packet(struct tcp_pcb * tp, char * pkt, int len)
 		ret = rsp_empty(tp);
 	}
 
+	(void)ret;
 	return 0;
 }
 
@@ -1053,21 +1027,21 @@ static inline void log_pkt(char * pkt, int len)
 }
 #endif
 
-int __attribute__((noreturn)) gdb_brk_task(struct tcp_pcb * tp, 
-										   uthread_id_t id)
+int __attribute__((noreturn)) gdb_brk_task(struct tcp_pcb * tp)
 {
 	char pkt[32];
 	int sum;;
 	int sig = 5;
 	int state;
 
-	DCC_LOG1(LOG_TRACE, "thread id=%d", id);
+	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
+	tracef("%s(): <%d>", __func__, __os_thread_self());
 
 	for (;;) {
 		do {
 			/* wait for a 'target run' indication */
 			DCC_LOG(LOG_TRACE, "waiting run...");
-			uthread_sem_wait(gdb_target_run_sem);
+			__os_sem_wait(gdb_target_run_sem);
 
 			DCC_LOG(LOG_TRACE, "waiting halt...");
 			while ((state = target_halt_wait(5000)) == ERR_TIMEOUT) {
@@ -1090,7 +1064,7 @@ int __attribute__((noreturn)) gdb_brk_task(struct tcp_pcb * tp,
 
 uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
 
-int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc, uthread_id_t id)
+int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 {
 	struct tcp_pcb * tp;
 	char buf[RSP_BUFFER_LEN];
@@ -1100,27 +1074,37 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc, uthread_id_t id)
 	int c;
 	int brk_th;
 
+	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
+	tracef("%s(): <%d>", __func__, __os_thread_self());
+
 	for (;;) {
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
 		}
 
+		tracef("%s(): accepted: %08x", __func__, (int)tp);
+
 		gdb_noack_mode = 0;
 
-		DCC_LOG2(LOG_TRACE, "%I:%d accepted.", tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG(LOG_TRACE, "accepted.");
 
-		gdb_target_run_sem = uthread_sem_alloc(0);
+		gdb_target_run_sem = __os_sem_alloc(0);
 
-		brk_th = uthread_create(gdb_brk_stack, sizeof(gdb_brk_stack), 
-								(uthread_task_t)gdb_brk_task, (void *)tp, 
-								0, NULL); 
+		brk_th = __os_thread_create((void *)gdb_brk_task, (void *)tp, 
+									gdb_brk_stack, sizeof(gdb_brk_stack), 
+									__OS_PRIORITY_LOWEST);
+
+		DCC_LOG1(LOG_TRACE, "brk_th=%d", brk_th);
 
 		for (;;) {
 			if ((len = tcp_recv(tp, buf, 1)) <= 0) {
+				tracef("%s(): tcp_recv() failed!", __func__);
 				DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
 				break;
 			}
+		
+			tracef("%s(): tcp_recv: %d", __func__, len);
 
 			c = buf[0];
 
@@ -1246,23 +1230,19 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc, uthread_id_t id)
 				break;
 		}
 
-		DCC_LOG2(LOG_TRACE, "%I:%d close...", tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
 
-		uthread_sem_free(gdb_target_run_sem);
-		uthread_cancel(brk_th);
-		uthread_join(brk_th);
+		__os_sem_free(gdb_target_run_sem);
+		__os_thread_cancel(brk_th, 0);
+		__os_thread_join(brk_th);
 	}
 
 	for (;;);
 }
 
-#ifdef DEBUG
-uint32_t gdb_stack[512 + 512];
-#else
-uint32_t gdb_stack[512 + 256];
-#endif
+uint32_t gdb_stack[1024];
 
 int gdb_rspd_start(void)
 {  
@@ -1274,14 +1254,15 @@ int gdb_rspd_start(void)
 	tcp_bind(svc, INADDR_ANY, htons(1000));
 
 	if (tcp_listen(svc, 1) != 0) {
-		printf("Can't register the TCP listner!\n");
+		tracef("Can't register the TCP listner!");
 		return -1;
 	}
 
-	th = uthread_create(gdb_stack, sizeof(gdb_stack), 
-						(uthread_task_t)gdb_task, (void *)svc, 0, NULL); 
+	th = __os_thread_create((void *)gdb_task, (void *)svc, 
+							gdb_stack, sizeof(gdb_stack), 
+							__OS_PRIORITY_LOWEST);
 
-	printf("<%d> ", th);
+	tracef("GDB server started th=%d", th);
 
 	return 0;
 }
