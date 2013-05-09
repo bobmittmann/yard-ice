@@ -110,6 +110,15 @@ void thinkos_sem_wait_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = 0;
+
+	/* avoid possible race condition on sem_val */
+	/* this is only necessary in case we use the __uthread_sem_post() call
+	   inside interrupt handlers */
+	/* TODO: study the possibility of using exclusive access instead of 
+	   disabling interrupts. */
+	cm3_cpsid_i();
+
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
 	} else {
@@ -117,10 +126,23 @@ void thinkos_sem_wait_svc(int32_t * arg)
 		__thinkos_wq_insert(wq, self);
 		DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 		/* wait for event */
-		__thinkos_wait();
+		/* remove from the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+#if THINKOS_ENABLE_TIMESHARE
+		/* if the ready queue is empty, collect
+		   the threads from the CPU wait queue */
+		if (thinkos_rt.wq_ready == 0) {
+			thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+			thinkos_rt.wq_tmshare = 0;
+		}
+#endif
 	}
 
-	arg[0] = 0;
+	/* reenable interrupts ... */
+	cm3_cpsie_i();
+
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
 void thinkos_sem_trywait_svc(int32_t * arg)
@@ -143,6 +165,13 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 #endif
 #endif
 
+	/* avoid possible race condition on sem_val */
+	/* this is only necessary in case we use the __uthread_sem_post() call
+	   inside interrupt handlers */
+	/* TODO: study the possibility of using exclusive access instead of 
+	   disabling interrupts. */
+	cm3_cpsid_i();
+
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
 		arg[0] = 0;
@@ -150,7 +179,7 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 		arg[0] = THINKOS_EAGAIN;
 	}
 
-	arg[0] = 0;
+	cm3_cpsie_i();
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -176,22 +205,40 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
+	/* avoid possible race condition on sem_val */
+	/* this is only necessary in case we use the __uthread_sem_post() call
+	   inside interrupt handlers */
+	/* TODO: study the possibility of using exclusive access instead of 
+	   disabling interrupts. */
+	cm3_cpsid_i();
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
 		arg[0] = 0;
-		return;
+	} else {
+		/* insert into the semaphore wait queue */
+		__thinkos_tmdwq_insert(wq, self, ms);
+		DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+		/* wait for event */
+		/* remove from the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+#if THINKOS_ENABLE_TIMESHARE
+		/* if the ready queue is empty, collect
+		   the threads from the CPU wait queue */
+		if (thinkos_rt.wq_ready == 0) {
+			thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+			thinkos_rt.wq_tmshare = 0;
+		}
+#endif
+		/* Set the default return value to timeout. The
+		   sem_post call will change this to 0 */
+		arg[0] = THINKOS_ETIMEDOUT;
 	}
 
-	/* insert into the semaphore wait queue */
-	__thinkos_tmdwq_insert(wq, self, ms);
-	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+	/* reenable interrupts ... */
+	cm3_cpsie_i();
 
-	/* Set the default return value to timeout. The
-	   sem_post call will change this to 0 */
-	arg[0] = THINKOS_ETIMEDOUT;
-
-	/* wait for event */
-	__thinkos_wait();
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 #endif
 

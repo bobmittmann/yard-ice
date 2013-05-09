@@ -554,7 +554,7 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 }
 
 static void inline __attribute__((always_inline)) __thinkos_wait(void) {
-	/* set the non schedule flag */
+	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
