@@ -26,6 +26,8 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
+void bull_flush(void);
+
 int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 {
 	int n;
@@ -34,6 +36,7 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 		/* invalid argument */
 		return -1;
 	}
+
 
 	tcpip_net_lock();
 
@@ -59,8 +62,6 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 			return 0;
 		}
 
-		DCC_LOG2(LOG_INFO, "<%05x> wait [%d]", (int)__tp, __tp->t_cond);
-
 		if (__tp->rcv_q.len)
 			break;
 
@@ -68,6 +69,8 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 			tcpip_net_unlock();
 			return 0;
 		}
+
+		DCC_LOG2(LOG_MSG, "<%05x> wait [%d]", (int)__tp, __tp->t_cond);
 
 		__os_cond_wait(__tp->t_cond, net_mutex); 
 	}

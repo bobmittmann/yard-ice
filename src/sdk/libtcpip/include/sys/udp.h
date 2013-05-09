@@ -35,7 +35,6 @@
 #endif
 
 #ifndef ENABLE_NET_UDP
-#warning "ENABLE_NET_UDP undefined"
 #define ENABLE_NET_UDP 1
 #endif
 

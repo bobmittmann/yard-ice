@@ -32,7 +32,7 @@ struct mbuf;
 
 struct mbuf_queue {
 	uint8_t offs;
-	uint16_t len;
+	volatile uint16_t len;
 	struct mbuf * first;
 	struct mbuf * last;
 };

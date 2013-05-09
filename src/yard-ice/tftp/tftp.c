@@ -671,7 +671,7 @@ int tftpd_start(void)
 							tftp_stack, sizeof(tftp_stack), 
 							__OS_PRIORITY_LOWEST);
 
-	printf("<%d> ", th);
+	tracef("TFTP started th=%d", th);
 
 	return 0;
 }

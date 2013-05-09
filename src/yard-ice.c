@@ -82,6 +82,10 @@
 #define ENABLE_COMM 0
 #endif
 
+#ifndef ENABLE_GDB
+#define ENABLE_GDB 0
+#endif
+
 void tcpip_init(void);
 void env_init(void);
 
@@ -298,7 +302,7 @@ int main(int argc, char ** argv)
 	tftpd_start();
 #endif
 
-#ifdef ENABLE_GDB
+#if (ENABLE_GDB)
 	tracef("* starting GDB daemon ... ");
 	gdb_rspd_start();
 #endif
