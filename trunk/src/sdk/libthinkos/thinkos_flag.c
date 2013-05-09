@@ -95,8 +95,8 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
 
-	/* set the non schedule flag */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -105,12 +105,12 @@ void thinkos_flag_wait_svc(int32_t * arg)
 		thinkos_rt.wq_tmshare = 0;
 	}
 #endif
+	cm3_cpsie_i();
+
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-
-	cm3_cpsie_i();
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -148,8 +148,8 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	/* insert into the mutex wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
 
-	/* set the non schedule flag */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -158,16 +158,17 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 		thinkos_rt.wq_tmshare = 0;
 	}
 #endif
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
-
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
-
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	cm3_cpsie_i();
+
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+
+	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
+
 }
 #endif
 
