@@ -202,7 +202,9 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 {
 	struct tcp_listen_pcb * mux;
 	struct tcp_pcb * tp;
+#if (ENABLE_NET_TCP_CHECKSUM)
 	unsigned int sum;
+#endif
 	int ti_len;
 	int acked = 0;
 	int ourfinisacked = 0;
@@ -228,24 +230,26 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 	optlen = ((th->th_off << 2) - sizeof(struct tcphdr));
 	hdrlen = sizeof(struct tcphdr) + optlen;
 
+	data = (uint8_t *)&th->th_opt[optlen];
+	ti_len = len - hdrlen;
+	
+#if (ENABLE_NET_TCP_CHECKSUM)
 	/* initialize checksum */
 	sum = htons(len) + (IPPROTO_TCP << 8);
 	sum = in_chksum(sum, &iph->saddr,  8);
 	sum = in_chksum(sum, th,  hdrlen);
 
-	data = (uint8_t *)&th->th_opt[optlen];
-	ti_len = len - hdrlen;
-	
 	if (ti_len) {
 		sum = in_chksum(sum, data, ti_len);
 	}
 
 	if (sum != 0x0000ffff) {
-		DCC_LOG3(LOG_TRACE, "checksum error: 0x%04x hdrlen=%d, len=%d", 
+		DCC_LOG3(LOG_WARNING, "checksum error: 0x%04x hdrlen=%d, len=%d", 
 				 sum, hdrlen, len);
 		TCP_PROTO_STAT_ADD(rx_err, 1);
 		goto drop;
 	}
+#endif
 
 	tiflags = th->th_flags;
 	/* convert TCP protocol specific fields to host format */

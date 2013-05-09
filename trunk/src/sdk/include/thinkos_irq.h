@@ -184,6 +184,24 @@ __thinkos_flag_is_set(int flag) {
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
 
+#if (THINKOS_SEMAPHORE_MAX  > 0)
+
+static inline void __attribute__((always_inline)) 
+__thinkos_sem_post(int sem) {
+	int th;
+	if ((th = __thinkos_wq_head(sem)) == THINKOS_THREAD_NULL) {
+		/* no threads waiting on the semaphore, increment. */ 
+		thinkos_rt.sem_val[sem - THINKOS_SEM_BASE]++;
+	} else {
+		/* wakeup from the sem wait queue */
+		__thinkos_wakeup(sem, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
+}
+
+#endif /* (THINKOS_SEMAPHORE_MAX > 0) */
+
 
 /* set the interrupt priority */
 static inline void __attribute__((always_inline)) 
