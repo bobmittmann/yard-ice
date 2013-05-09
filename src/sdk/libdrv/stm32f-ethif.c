@@ -57,6 +57,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	struct rxdma_st st;
 	struct rxdma_enh_desc * desc;
 	struct eth_hdr * hdr;
+	uint32_t cnt = 0;
 	uint8_t * pkt;
 	int type;
 	int len;
@@ -70,10 +71,9 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	DCC_LOG(LOG_TRACE, " DMA start receive...");
 	eth->dmaomr |= ETH_SR;
 
-	desc = &drv->rx.desc;
-	hdr = (struct eth_hdr *)desc->rbap1;
-
 	for (;;) {
+		desc = &drv->rx.desc[cnt++ & 1];
+
 		for (;;) {
 			st = desc->st;
 			if (st.es) {
@@ -84,8 +84,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 			}
 			DCC_LOG(LOG_INFO, "wait....");
 
-			thinkos_flag_wait(drv->rx.flag);
-			__thinkos_flag_clr(drv->rx.flag);
+			thinkos_sem_wait(drv->rx.sem);
 
 			DCC_LOG(LOG_MSG, "wakeup....");
 		}
@@ -122,14 +121,16 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 		if (ext_st.ipv6pr)
 			DCC_LOG(LOG_TRACE, "IPv6 packet received.");
 
-#if LOG_LEVEL == LOG_MSG
+		hdr = (struct eth_hdr *)desc->rbap1;
+
+#if LOG_LEVEL == LOG_TRACE
 		{
 			uint8_t * da = hdr->eth_dst;
 			uint8_t * sa = hdr->eth_src;
-			DCC_LOG6(LOG_MSG, "Dst: %02x:%02x:%02x:%02x:%02x:%02x",
+			DCC_LOG6(LOG_TRACE, "Dst: %02x:%02x:%02x:%02x:%02x:%02x",
 					 da[0], da[1], da[2], da[3], da[4], da[5]);
 
-			DCC_LOG6(LOG_MSG, "Src: %02x:%02x:%02x:%02x:%02x:%02x",
+			DCC_LOG6(LOG_TRACE, "Src: %02x:%02x:%02x:%02x:%02x:%02x",
 					 sa[0], sa[1], sa[2], sa[3], sa[4], sa[5]);
 		}
 #endif
@@ -178,6 +179,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	struct rxdma_enh_desc * rxdesc;
 	struct txdma_enh_desc * txdesc;
 	int mtu;
+	int i;
 
 	DCC_LOG2(LOG_TRACE, "if=0x%p drv=0x%p", __if, drv);
 	drv->ifn = __if;
@@ -212,22 +214,33 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* Bit 7 - Enhanced descriptor format enable */
 	eth->dmabmr = ETH_EDFE;
 
-
 	DCC_LOG(LOG_TRACE, "DMA RX descriptors ...");
-	/* configure recevie descriptors */
-	rxdesc = &drv->rx.desc;
-	/* Receive buffer 1 size */
-	rxdesc->rbs1 = STM32F_ETH_RX_BUF_SIZE;
-	/* Receive end of ring */
-	rxdesc->rer = 1;
-	rxdesc->dic = 0;
-	rxdesc->rbap1 = drv->rx.buf;
-	rxdesc->rdes0 = ETH_RXDMA_OWN;
+	for (i = 0; i < 2; ++i) {
+		/* configure recevie descriptors */
+		rxdesc = &drv->rx.desc[i];
+		rxdesc->rdes0 = ETH_RXDMA_OWN;
+		/* Receive buffer 1 size */
+		rxdesc->rbs1 = STM32F_ETH_RX_BUF_SIZE;
+		/* Receive end of ring */
+		rxdesc->rer = 0;
+		/* Disable interrupt on comletion */
+		rxdesc->dic = 0;
+		/* Second address chained */
+		rxdesc->rch = 1;
+		rxdesc->rbap1 = drv->rx.buf[i];
+		/* link to the next descriptor */
+		rxdesc->rbap2 = &drv->rx.desc[i + 1];
+	}
+
+	/* link to the first */
+	rxdesc->rbap2 = &drv->rx.desc[0];
+
 	/* DMA receive descriptor list address */
-	eth->dmardlar = (uint32_t)rxdesc;
-	/* alloc a new event wait queue */
-	drv->rx.flag = thinkos_flag_alloc(); 
-	DCC_LOG1(LOG_TRACE, "rx.flag=%d", drv->rx.flag);
+	eth->dmardlar = (uint32_t)&drv->rx.desc[0];
+
+	/* alloc a new semaphore */
+	drv->rx.sem = thinkos_sem_alloc(0); 
+	DCC_LOG1(LOG_TRACE, "rx.sem=%d", drv->rx.sem);
 
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
 	/* setup the source address in the ethernet header 
@@ -249,7 +262,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	eth->dmatdlar = (uint32_t)txdesc;
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
-	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->rx.flag);
+	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	__os_thread_create((void *)stm32f_ethif_input, (void *)__if, 
@@ -443,7 +456,7 @@ void stm32f_eth_isr(void)
 		eth->dmaier &= ~ETH_RIE;
 		/* clear RS bit */
 	//	eth->dmasr = ETH_RS;
-		__thinkos_flag_signal(drv->rx.flag);
+		__thinkos_sem_post(drv->rx.sem);
 	}
 
 	if (dmasr & ETH_TS) {
@@ -466,6 +479,8 @@ void stm32f_eth_isr(void)
 				 (dmasr & ETH_ROS) ? " ROS" : "",
 				 (dmasr & ETH_TJTS) ? " TJTS" : "",
 				 (dmasr & ETH_TPSS) ? " TPSS" : "");
+		if (dmasr & ETH_RBUS) {
+		}
 	}
 
 	/* clear interrupt bits */

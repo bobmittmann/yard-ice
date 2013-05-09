@@ -100,6 +100,10 @@
 #define TCP_MAX_RCV_QUEUE 2048
 #define TCP_MAX_SND_QUEUE 2048 
 
+/* use hardware checksum */
+#define  ENABLE_NET_TCP_CHECKSUM 0
+#define  ENABLE_NET_UDP_CHECKSUM 0
+
 #endif /* __CONFIG_H__ */
 
 

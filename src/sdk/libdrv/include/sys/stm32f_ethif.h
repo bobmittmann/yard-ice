@@ -64,9 +64,9 @@ struct stm32f_eth_drv {
 	struct ifnet * ifn;
 	struct stm32f_eth * eth;
 	struct {
-		uint32_t buf[STM32F_ETH_RX_BUF_SIZE / sizeof(uint32_t)];
-		struct rxdma_enh_desc desc;
-		int flag;
+		uint32_t buf[2][STM32F_ETH_RX_BUF_SIZE / sizeof(uint32_t)];
+		struct rxdma_enh_desc desc[2];
+		int sem;
 	} rx;
 	struct {
 		struct eth_hdr hdr;
