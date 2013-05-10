@@ -64,30 +64,26 @@ struct usb_cdc_acm_dev {
 	struct usb_cdc_acm acm;
 
 	uint8_t rx_flag; /* RX event flag */
-	uint8_t rx_mutex; 
 
 	uint8_t rx_cnt; 
 	uint8_t rx_pos; 
 	uint8_t rx_buf[EP_IN_MAX_PKT_SIZE];
 
 	uint8_t tx_flag; /* TX event flag */
-	uint8_t tx_mutex; /* TX lock */
-
 	uint8_t ctl_flag; /* Control event */
 
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 
-	int ctl_ep;
-	int in_ep;
-	int out_ep;
-	int int_ep;
+	uint8_t ctl_ep;
+	uint8_t in_ep;
+	uint8_t out_ep;
+	uint8_t int_ep;
 };
 
 int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
-	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 	__thinkos_flag_signal(dev->rx_flag);
 	return 0;
 }
@@ -182,7 +178,6 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		if (value) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_cdc_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_cdc_out_info, NULL, 0);
-			usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_cdc_int_info, NULL, 0);
 		} else {
 			usb_dev_ep_disable(dev->usb, dev->in_ep);
@@ -371,21 +366,22 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
 	
 	if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
+		DCC_LOG(LOG_TRACE, "read from intern buffer");
 		goto read_from_buffer;
 	};
 
-	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
-	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
 	thinkos_flag_wait(dev->rx_flag);
 	__thinkos_flag_clr(dev->rx_flag);
 
 	if (len >= EP_IN_MAX_PKT_SIZE) {
-		DCC_LOG(LOG_TRACE, "wakeup");
-		return usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+		n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+		DCC_LOG1(LOG_TRACE, "wakeup, pkt rcv extern buffer: %d bytes", n);
+		return n;
 	} 
 	
 	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 								dev->rx_buf, EP_IN_MAX_PKT_SIZE);
+	DCC_LOG1(LOG_TRACE, "wakeup, pkt rcv intern buffer: %d bytes", n);
 		
 	dev->rx_pos = 0;
 	dev->rx_cnt = n;
@@ -509,7 +505,6 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 
 	usb_cdc_sn_set(sn);
 
-//	dev->tx_mutex = thinkos_mutex_alloc(); 
 	usb_dev_init(dev->usb, cl, &usb_cdc_ev);
 
 

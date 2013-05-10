@@ -93,8 +93,8 @@ void io_init(void)
 	stm32f_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
 
 	/* External Reset */
-	stm32f_gpio_mode(EXTRST_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
-//	stm32f_gpio_mode(EXTRST_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
+//	stm32f_gpio_mode(EXTRST_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
+	stm32f_gpio_mode(EXTRST_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_set(EXTRST_IO);
 }
 
@@ -132,7 +132,7 @@ int led_task(void)
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
 	while (1) {
-		DCC_LOG(LOG_TRACE, "thinkos_flag_wait()...");
+		DCC_LOG(LOG_INFO, "thinkos_flag_wait()...");
 		thinkos_flag_wait(led_flag);
 		thinkos_flag_clr(led_flag);
 		if (!led_locked)
@@ -319,6 +319,37 @@ uint32_t serial_ctrl_stack[32];
 uint32_t serial_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 
+const char msg[] = "\r\n1.\r\n"
+	"When Zarathustra was thirty years old, he left his home and the lake of "
+	"his home, and went into the mountains.  There he enjoyed his spirit and "
+	"solitude, and for ten years did not weary of it.  But at last his heart "
+	"changed,--and rising one morning with the rosy dawn, he went before the "
+	"sun, and spake thus unto it:\r\n"
+	"Thou great star!  What would be thy happiness if thou hadst not those for "
+	"whom thou shinest!\r\n"
+	"For ten years hast thou climbed hither unto my cave:  thou wouldst have "
+	"wearied of thy light and of the journey, had it not been for me, mine "
+	"eagle, and my serpent.\r\n"
+	"But we awaited thee every morning, took from thee thine overflow "
+	"and blessed thee for it.\r\n"
+	"Lo!  I am weary of my wisdom, like the bee that hath gathered too much "
+	"honey; I need hands outstretched to take it.\r\n"
+	"I would fain bestow and distribute, until the wise have once more become "
+	"joyous in their folly, and the poor happy in their riches.\r\n\r\n"
+	"Therefore must I descend into the deep:  as thou doest in the evening, "
+	"when thou goest behind the sea, and givest light "
+	"also to the nether-world, "
+	"thou exuberant star!\r\n\r\n"
+	"Like thee must I GO DOWN, as men say, to whom I shall descend.\r\n\r\n"
+	"Bless me, then, thou tranquil eye, that canst behold even the greatest "
+	"happiness without envy!\r\n\r\n"
+	"Bless the cup that is about to overflow, "
+	"that the water may flow golden out "
+	"of it, and carry everywhere the reflection of thy bliss!\r\n\r\n"
+	"Lo!  This cup is again going to empty itself, and Zarathustra is again "
+	"going to be a man.\r\n\r\n"
+	"Thus began Zarathustra's down-going.\r\n\r\n\r\n";
+
 int main(int argc, char ** argv)
 {
 	uint64_t esn;
@@ -375,7 +406,8 @@ int main(int argc, char ** argv)
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
 		led_flash();
-		DCC_LOG1(LOG_TRACE, "%d tick.", i);
+		DCC_LOG1(LOG_INFO, "%d tick.", i);
+		usb_cdc_write(vcom.cdc, msg, sizeof(msg));
 	}
 
 	return 0;

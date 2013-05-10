@@ -546,7 +546,7 @@ thinkos_alloc_hi(uint32_t * ptr, int start) {
 	return idx;
 }
 
-/* flags a defered execution of the scheduller */
+/* flags a deferred execution of the scheduler */
 static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	struct cm3_scb * scb = CM3_SCB;
 	/* rise a pending service interrupt */

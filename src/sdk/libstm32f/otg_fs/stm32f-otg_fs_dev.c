@@ -592,10 +592,23 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 								  int ep_id, int len)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 
 	ep->xfr_rem = len;
+
+#if 0
+	/* XXX: set the nak on endpoint ???? */
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
+	
+#endif
+	/* FIXME: the single input fifo creates a problem as 
+	   packets pending on the fifo blocks packets for unraletaed 
+	   endpoints. Ex: an outstanding OUT packet may block a control
+	   packet. Either the upper layer garantees the removal or
+	   buffering at this layer should be implemented.
+	 */
 
 	/* call class endpoint callback */
 	ep->on_out(drv->cl, ep_id, len);
