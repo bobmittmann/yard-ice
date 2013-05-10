@@ -228,23 +228,6 @@ int stm32f_usb_dev_ep_stall(struct stm32f_usb_drv * drv, int ep_id)
 	return 0;
 }
 
-void stm32f_usb_dev_ep_in(struct stm32f_usb_drv * drv, int ep_id)
-{
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
-	struct stm32f_usb * usb = STM32F_USB;
-
-	DCC_LOG1(LOG_TRACE, "================= ep_id=%d", ep_id);
-
-	if (ep->state != EP_IN_DATA_LAST) {
-		__ep_pkt_send(usb, ep_id, ep, &pktbuf[ep_id].tx);
-	} else {
-		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
-		/* call class endpoint callback */
-		ep->on_in(drv->cl, ep_id);
-	}
-}
-
 /* start sending */
 int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 						   void * buf, unsigned int len)
@@ -292,7 +275,6 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 {
 	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 	struct stm32f_usb * usb = STM32F_USB;
-//	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
 	struct stm32f_usb_rx_pktbuf * rx_pktbuf;
 	uint32_t epr;
 	int cnt;
@@ -301,8 +283,6 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	epr = usb->epr[ep_id];
 	ea = USB_EA_GET(epr);
 	(void)ea;
-
-//	rx_pktbuf = ep->rx_pktbuf;
 
 	if (epr & USB_EP_DBL_BUF) {
 		/* double buffer */
@@ -323,45 +303,17 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	/* Data received */
 	__copy_from_pktbuf(buf, rx_pktbuf, cnt);
 
-	if ((epr & USB_EP_DBL_BUF) == 0) {
+	if (epr & USB_EP_DBL_BUF) {
+		/* release the buffer to the USB controller */
+		__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
+	} else {
 		/* free the out(rx) packet buffer */
 		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-	} else {
-		/* release the buffer */
-		__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
 	}
 
 	DCC_LOG2(LOG_INFO, "OUT EP%d, cnt=%d", ea, cnt);
 
 	return cnt;
-}
-
-void stm32f_usb_dev_ep_out(struct stm32f_usb_drv * drv, int ep_id)
-{
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
-	struct stm32f_usb_rx_pktbuf * rx_pktbuf;
-	uint32_t epr;
-
-	epr = usb->epr[ep_id];
-	if (epr & USB_EP_DBL_BUF) {
-		/* double buffer */
-		/* prepare to receive on other buffer */
-		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_DTOG_RX) ? 0: 1];
-
-		DCC_LOG2(LOG_TRACE, "RX buffer %d, cnt=%d", 
-				 (epr & USB_DTOG_RX) ? 0: 1, rx_pktbuf->count);
-	} else {
-		/* single buffer */
-		rx_pktbuf = &pktbuf[ep_id].rx;
-		DCC_LOG1(LOG_TRACE, "cnt=%d", rx_pktbuf->count);
-	}
-
-	/* call class endpoint callback */
-	ep->on_out(drv->cl, ep_id, rx_pktbuf->count);
 }
 
 int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
@@ -899,17 +851,36 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		}
 
 		if (epr & USB_CTR_RX) {
+			struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+			struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+			struct stm32f_usb_rx_pktbuf * rx_pktbuf;
+
 			/* OUT */
 			__clr_ep_flag(usb, ep_id, USB_CTR_RX);
-			stm32f_usb_dev_ep_out(drv, ep_id);
+
+			/* single buffer */
+			rx_pktbuf = &pktbuf[ep_id].rx;
+			DCC_LOG1(LOG_TRACE, "cnt=%d", rx_pktbuf->count);
+
+			/* call class endpoint callback */
+			ep->on_out(drv->cl, ep_id, rx_pktbuf->count);
 		}
 
 		if (epr & USB_CTR_TX) {
+			struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+			struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+
 			/* IN */
 			__clr_ep_flag(usb, ep_id, USB_CTR_TX);
-			stm32f_usb_dev_ep_in(drv, ep_id);
-		}
 
+			if (ep->state != EP_IN_DATA_LAST) {
+				__ep_pkt_send(usb, ep_id, ep, &pktbuf[ep_id].tx);
+			} else {
+				__set_ep_txstat(usb, ep_id, USB_TX_NAK);
+				/* call class endpoint callback */
+				ep->on_in(drv->cl, ep_id);
+			}
+		}
 	}
 }
 
