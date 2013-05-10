@@ -97,6 +97,7 @@ void thinkos_flag_wait_svc(int32_t * arg)
 
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -105,6 +106,7 @@ void thinkos_flag_wait_svc(int32_t * arg)
 		thinkos_rt.wq_tmshare = 0;
 	}
 #endif
+
 	cm3_cpsie_i();
 
 	/* signal the scheduler ... */

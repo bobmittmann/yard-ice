@@ -91,7 +91,7 @@
 #define ENABLE_NETWORK 1
 #define ENABLE_TFTP 1
 #define ENABLE_NAND 0
-#define ENABLE_COMM 0
+#define ENABLE_COMM 1
 #define ENABLE_GDB 1
 
 #define ENABLE_TCP_SEND 0

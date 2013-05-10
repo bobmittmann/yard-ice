@@ -349,6 +349,7 @@
 
 /* Bit 14 - Data Toggle, for reception transfers */
 #define USB_DTOG_RX (1 << 14)
+#define USB_SWBUF_TX (1 << 14)
 /* If the endpoint is not Isochronous, this bit contains the expected value of
    the data toggle bit (0=DATA0, 1=DATA1) for the next data packet to be
    received. Hardware toggles this bit, when the ACK handshake is sent to the
@@ -463,6 +464,7 @@
 
 /* Bit 6 - Data Toggle, for transmission transfers */
 #define USB_DTOG_TX (1 << 6)
+#define USB_SWBUF_RX (1 << 6)
 /* If the endpoint is non-isochronous, this bit contains the required value of
    the data toggle bit (0=DATA0, 1=DATA1) for the next data packet to be
    transmitted. Hardware toggles this bit when the ACK handshake is received
@@ -587,75 +589,89 @@ struct stm32f_usb_pktbuf {
 #define EPTX_DTOGMASK  (USB_STAT_TX_MSK | USB_EPREG_MASK)
 #define EPRX_DTOGMASK  (USB_STAT_RX_MSK | USB_EPREG_MASK)
 
-static inline void set_ep_txstat(struct stm32f_usb * usb, 
+static inline void __set_ep_txstat(struct stm32f_usb * usb, 
 								 unsigned int ep_id, uint32_t stat) {
 	uint32_t epr;
 	epr = usb->epr[ep_id] & EPTX_DTOGMASK;
 	usb->epr[ep_id] = epr ^ (stat & USB_STAT_TX_MSK);
 };
 
-static inline void set_ep_rxstat(struct stm32f_usb * usb, 
+static inline void __set_ep_rxstat(struct stm32f_usb * usb, 
 								 unsigned int ep_id, uint32_t stat) {
 	uint32_t epr;
 	epr = usb->epr[ep_id] & EPRX_DTOGMASK;
 	usb->epr[ep_id] = epr ^ (stat & USB_STAT_RX_MSK);
 };
 
-static inline uint32_t get_ep_txstat(struct stm32f_usb * usb, 
+static inline uint32_t __get_ep_txstat(struct stm32f_usb * usb, 
 									 unsigned int ep_id) {
 	return usb->epr[ep_id] & USB_STAT_TX_MSK;
 };
 
-static inline uint32_t get_ep_rxstat(struct stm32f_usb * usb, 
+static inline uint32_t __get_ep_rxstat(struct stm32f_usb * usb, 
 									 unsigned int ep_id) {
 	return usb->epr[ep_id] & USB_STAT_RX_MSK;
 };
 
 
-static inline void clr_ep_flag(struct stm32f_usb * usb, 
+static inline void __clr_ep_flag(struct stm32f_usb * usb, 
 							   int ep_id, uint32_t flag) {
 	uint32_t epr;
 	epr = usb->epr[ep_id];
 	usb->epr[ep_id] = (epr & ~flag) & USB_EPREG_MASK;
 }
 
-static inline void set_ep_flag(struct stm32f_usb * usb, 
+static inline void __set_ep_flag(struct stm32f_usb * usb, 
 							   int ep_id, uint32_t flag) {
 	uint32_t epr;
 	epr = usb->epr[ep_id];
 	usb->epr[ep_id] = (epr | flag) & USB_EPREG_MASK;
 }
 
-static inline void set_ep_rxvalid(struct stm32f_usb * usb, int ep_id) {
-	set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+static inline void __toggle_ep_flag(struct stm32f_usb * usb, 
+									int ep_id, uint32_t flag) {
+	uint32_t epr;
+	epr = usb->epr[ep_id];
+	usb->epr[ep_id] = (epr & USB_EPREG_MASK) | flag;
+}
+
+
+/*
+static inline void __set_ep_rxvalid(struct stm32f_usb * usb, int ep_id) {
+	__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
 } 
 
-static inline void clr_ep_kind(struct stm32f_usb * usb, int ep_id) {
-	clr_ep_flag(usb, ep_id, USB_EP_KIND);
+static inline void __clr_ep_kind(struct stm32f_usb * usb, int ep_id) {
+	__clr_ep_flag(usb, ep_id, USB_EP_KIND);
 }
 
-static inline void set_ep_kind(struct stm32f_usb * usb, int ep_id) {
-	set_ep_flag(usb, ep_id, USB_EP_KIND);
+static inline void __set_ep_kind(struct stm32f_usb * usb, int ep_id) {
+	__set_ep_flag(usb, ep_id, USB_EP_KIND);
 }
 
-static inline void clr_status_out(struct stm32f_usb * usb, int ep_id) {
-	clr_ep_flag(usb, ep_id, USB_EP_KIND);
+static inline void __set_ep_dbl_buf(struct stm32f_usb * usb, int ep_id) {
+	__set_ep_flag(usb, ep_id, USB_EP_DBL_BUF);
 }
 
-static inline void set_ep_type(struct stm32f_usb * usb, int ep_id, int type) {
+static inline void __clr_status_out(struct stm32f_usb * usb, int ep_id) {
+	__clr_ep_flag(usb, ep_id, USB_EP_STATUS_OUT);
+}
+*/
+
+static inline void __set_ep_type(struct stm32f_usb * usb, int ep_id, int type) {
 	uint32_t epr;
 	epr = usb->epr[ep_id] & USB_EPREG_MASK & ~USB_EP_TYPE_MSK;
 	usb->epr[ep_id] = epr | type;
 }
 
-static inline void set_ep_addr(struct stm32f_usb * usb, int ep_id, int addr) {
+static inline void __set_ep_addr(struct stm32f_usb * usb, int ep_id, int addr) {
 	uint32_t epr;
 	epr = usb->epr[ep_id] & USB_EPREG_MASK & ~USB_EA_MSK;
 	usb->epr[ep_id] = epr | addr;
 }
 
 /* configure a RX descriptor */
-static inline int pktbuf_rx_cfg(struct stm32f_usb_rx_pktbuf * rx,
+static inline int __pktbuf_rx_cfg(struct stm32f_usb_rx_pktbuf * rx,
 		int addr, int mxpktsz) {
 	int sz = mxpktsz;
 	if (sz < 63) {
@@ -674,7 +690,7 @@ static inline int pktbuf_rx_cfg(struct stm32f_usb_rx_pktbuf * rx,
 }
 
 /* configure a TX descriptor */
-static inline int pktbuf_tx_cfg(struct stm32f_usb_tx_pktbuf * tx,
+static inline int __pktbuf_tx_cfg(struct stm32f_usb_tx_pktbuf * tx,
 		int addr, int mxpktsz) {
 	tx->addr = addr;
 	tx->count = 0;
@@ -682,7 +698,7 @@ static inline int pktbuf_tx_cfg(struct stm32f_usb_tx_pktbuf * tx,
 }
 
 /* return the max packet size for the RX packet buffer */
-static inline int pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx) {
+static inline int __pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx) {
 	return (rx->blsize) ? (rx->num_block + 1) * 32 : rx->num_block * 2;
 }
 
