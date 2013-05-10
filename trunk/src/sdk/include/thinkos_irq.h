@@ -170,6 +170,22 @@ __thinkos_flag_signal(int flag) {
 }
 
 static inline void __attribute__((always_inline)) 
+__thinkos_flag_signal_all(int flag) {
+	int th;
+	/* set the flag */
+	__thinkos_flag_set(flag);
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(flag, th);
+		while ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(flag, th);
+		}
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
+}
+
+static inline void __attribute__((always_inline)) 
 __thinkos_flag_clr(int flag) {
 	/* clear the flag bit */
 	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 0);  

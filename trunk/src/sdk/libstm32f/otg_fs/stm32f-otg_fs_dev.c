@@ -38,6 +38,7 @@
 #ifdef STM32F_OTG_FS
 
 typedef enum {
+	EP_UNCONFIGURED = 0,
 	EP_IDLE,
 	EP_STALLED,
 	EP_SETUP,
@@ -475,6 +476,19 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 
 	return ep_id;
 }
+
+int stm32f_otg_dev_ep_disable(struct stm32f_otg_drv * drv,  int ep_id)
+{
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d...", ep_id);
+
+//	__ep_stall(drv, 0);
+	ep->state = EP_UNCONFIGURED;
+
+	return 0;
+}
+
 
 #define OTG_FS_DP STM32F_GPIOA, 12
 #define OTG_FS_DM STM32F_GPIOA, 11
@@ -1218,6 +1232,7 @@ const struct usb_dev_ops stm32f_otg_fs_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_otg_fs_dev_init,
 	.ep_tx_start= (usb_dev_ep_tx_start_t)stm32f_otg_dev_ep_tx_start,
 	.ep_init = (usb_dev_ep_init_t)stm32f_otg_dev_ep_init,
+	.ep_disable = (usb_dev_ep_disable_t)stm32f_otg_dev_ep_disable,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_otg_dev_ep_stall,
 	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_otg_dev_ep_zlp_send,
 	.ep_nak = (usb_dev_ep_nak_t)stm32f_otg_dev_ep_nak,
