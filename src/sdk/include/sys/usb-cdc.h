@@ -84,6 +84,8 @@ struct file * usb_cdc_fopen(usb_cdc_class_t * cdc);
 
 int usb_cdc_state_get(usb_cdc_class_t * cdc, usb_cdc_state_t * state);
 
+int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat);
+
 int usb_cdc_ctl_wait(usb_cdc_class_t * cdc, unsigned int msec);
 
 void usb_cdc_sn_set(uint64_t sn);

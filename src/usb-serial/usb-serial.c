@@ -48,6 +48,7 @@ int serial_read(struct serial_dev * dev, char * buf,
 struct vcom {
 	struct serial_dev * serial;
 	usb_cdc_class_t * cdc;
+	struct serial_status ser_stat;
 };
 
 #define VCOM_BUF_SIZE 128
@@ -308,6 +309,13 @@ int serial_ctrl_task(struct vcom * vcom)
 			serial_config_set(serial, &state.cfg);
 			prev_state.cfg = state.cfg;
 		}
+
+		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
+			vcom->ser_stat.dsr = state.ctrl.dtr;
+			usb_cdc_status_set(cdc, &vcom->ser_stat);
+			prev_state.ctrl = state.ctrl;
+		}
+
 		usb_cdc_ctl_wait(cdc, 0);
 	}
 	return 0;
@@ -406,8 +414,15 @@ int main(int argc, char ** argv)
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
 		led_flash();
-		DCC_LOG1(LOG_INFO, "%d tick.", i);
-		usb_cdc_write(vcom.cdc, msg, sizeof(msg));
+		DCC_LOG1(LOG_TRACE, "%d tick.", i);
+//		usb_cdc_write(vcom.cdc, msg, sizeof(msg));
+
+//		vcom.ser_stat.dsr = i & 1;
+//		vcom.ser_stat.ri = i & 1;
+//		vcom.ser_stat.dcd = i & 1;
+//		vcom.ser_stat.brk = i & 1;
+
+//		usb_cdc_status_set(vcom.cdc, &vcom.ser_stat);
 	}
 
 	return 0;

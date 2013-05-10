@@ -39,6 +39,7 @@
 
 /* Endpoint state */
 typedef enum {
+	EP_DISABLED,
 	EP_IDLE,
 	EP_STALLED,
 	EP_SETUP,
@@ -163,8 +164,6 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 		ep->state = EP_IN_DATA;
 	}
 
-//	__set_ep_txstat(usb, ep_id, USB_TX_VALID);
-
 	return len;
 }
 
@@ -189,6 +188,9 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 	int ep_id;
 
 	for (ep_id = 0; ep_id < 8; ep_id++) {
+		drv->ep[ep_id].state = EP_DISABLED;
+		__set_ep_txstat(usb, ep_id, USB_TX_DISABLED);
+		__set_ep_rxstat(usb, ep_id, USB_RX_DISABLED);
 		__clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
 		__set_ep_addr(usb, ep_id, 0);
 	}
@@ -240,10 +242,16 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 
 	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
+	ep = &drv->ep[ep_id];
+
+	if (ep->state == EP_DISABLED) {
+		DCC_LOG1(LOG_WARNING, "ep_id=%d invalid endpoint state!", ep_id);
+		return -1;
+	}
+
 	if (len == 0)
 		return 0;
 
-	ep = &drv->ep[ep_id];
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = len;
 
@@ -263,7 +271,8 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 
 	if (epr & USB_EP_DBL_BUF) {
 		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-
+	} else {
+		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
 	}
 
 	return len;
@@ -457,6 +466,21 @@ int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv,
 	return ep_id;
 }
 
+int stm32f_usb_dev_ep_disable(struct stm32f_usb_drv * drv,  int ep_id)
+{
+	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+	struct stm32f_usb * usb = STM32F_USB;
+
+	DCC_LOG1(LOG_TRACE, "ep_id=%d...", ep_id);
+
+	ep->state = EP_DISABLED;
+	__set_ep_txstat(usb, ep_id, USB_TX_DISABLED);
+	__set_ep_rxstat(usb, ep_id, USB_RX_DISABLED);
+	__clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
+	__set_ep_addr(usb, ep_id, 0);
+
+	return 0;
+}
 
 void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 {
@@ -473,11 +497,9 @@ void stm32f_usb_dev_ep0_out(struct stm32f_usb_drv * drv)
 		return;
 	}
 
-	if ((ep->state == EP_IN_DATA)|| (ep->state == EP_IN_DATA_LAST)) {
-		ep->state = EP_STALLED;
+	if ((ep->state == EP_IN_DATA) || (ep->state == EP_IN_DATA_LAST)) {
 		DCC_LOG(LOG_TRACE, "EP0 OUT [STALLED]");
-		__set_ep_rxstat(usb, 0, USB_RX_STALL);
-		__set_ep_txstat(usb, 0, USB_TX_STALL);
+		__ep_stall(drv, 0);
 		return;
 	}
 
@@ -661,6 +683,7 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 						const struct usb_class_events * ev)
 {
 	struct stm32f_usb * usb = STM32F_USB;
+	int i;
 
 	drv->cl = cl;
 	drv->ev = ev;
@@ -675,6 +698,10 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	stm32f_usb_io_init();
 
 	stm32f_usb_power_on(usb);
+
+	for (i = 0;  i < USB_DRIVER_EP_MAX; ++i) {
+		drv->ep[i].state = EP_DISABLED;
+	}
 
 	/* Enable Reset, SOF  and Wakeup interrupts */
 	usb->cntr = USB_WKUP | USB_RESETM;
@@ -747,6 +774,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			/* release the previous buffer */
 			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
 		} else {
+			ep->state = EP_IDLE;
 			/* call class endpoint callback */
 			ep->on_in(drv->cl, ep_id);
 		}
@@ -795,6 +823,8 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 
 	if (sr & USB_CTR) {
+		struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
+		struct stm32f_usb_ep * ep;
 		uint32_t epr;
 		int ep_id;
 
@@ -826,6 +856,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		DCC_LOG1(LOG_INFO, "CTR ep_id=%d", ep_id);
 
 		epr = usb->epr[ep_id];
+		ep = &drv->ep[ep_id];
 
 		if (ep_id == 0) {
 			/* Service control point */
@@ -851,8 +882,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		}
 
 		if (epr & USB_CTR_RX) {
-			struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-			struct stm32f_usb_ep * ep = &drv->ep[ep_id];
 			struct stm32f_usb_rx_pktbuf * rx_pktbuf;
 
 			/* OUT */
@@ -867,9 +896,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		}
 
 		if (epr & USB_CTR_TX) {
-			struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-			struct stm32f_usb_ep * ep = &drv->ep[ep_id];
-
 			/* IN */
 			__clr_ep_flag(usb, ep_id, USB_CTR_TX);
 
@@ -877,6 +903,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 				__ep_pkt_send(usb, ep_id, ep, &pktbuf[ep_id].tx);
 			} else {
 				__set_ep_txstat(usb, ep_id, USB_TX_NAK);
+				ep->state = EP_IDLE;
 				/* call class endpoint callback */
 				ep->on_in(drv->cl, ep_id);
 			}
@@ -889,6 +916,7 @@ const struct usb_dev_ops stm32f_usb_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_usb_dev_init,
 	.ep_tx_start = (usb_dev_ep_tx_start_t)stm32f_usb_ep_tx_start,
 	.ep_init = (usb_dev_ep_init_t)stm32f_usb_dev_ep_init,
+	.ep_disable = (usb_dev_ep_disable_t)stm32f_usb_dev_ep_disable,
 	.ep_stall = (usb_dev_ep_stall_t)stm32f_usb_dev_ep_stall,
 	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_usb_dev_ep_zlp_send,
 	.ep_nak = (usb_dev_ep_nak_t)stm32f_usb_dev_ep_nak,

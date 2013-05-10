@@ -46,10 +46,6 @@ struct usb_cdc_acm {
 	/* modem bits */
 	volatile uint8_t status; /* modem status lines */
 	volatile uint8_t control; /* modem control lines */
-
-	uint8_t lsst; /* local (set) serial state */
-	uint8_t rsst; /* remote (acked) serail state */
-
 	struct cdc_line_coding lc;
 };
 
@@ -84,6 +80,7 @@ int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
+	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 	__thinkos_flag_signal(dev->rx_flag);
 	return 0;
 }
@@ -99,7 +96,9 @@ int usb_cdc_on_eot(usb_class_t * cl, unsigned int ep_id)
 
 int usb_cdc_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 {
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	__thinkos_flag_signal_all(dev->ctl_flag);
 	return 0;
 }
 
@@ -178,6 +177,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		if (value) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_cdc_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_cdc_out_info, NULL, 0);
+			usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_cdc_int_info, NULL, 0);
 		} else {
 			usb_dev_ep_disable(dev->usb, dev->in_ep);
@@ -189,7 +189,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		/* signal any pending threads */
 		__thinkos_flag_signal(dev->rx_flag);
 		__thinkos_flag_signal(dev->tx_flag);
-		__thinkos_flag_signal(dev->ctl_flag);
+		__thinkos_flag_signal_all(dev->ctl_flag);
 		break;
 	}
 
@@ -238,7 +238,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
         DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
         DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
 
-		__thinkos_flag_signal(dev->ctl_flag);
+		__thinkos_flag_signal_all(dev->ctl_flag);
 		break;
 
 	case GET_LINE_CODING:
@@ -257,18 +257,10 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
 
-#if USB_CDC_ENABLE_STATE
-		/* update the local serial state */
-		acm.acm->lsst = (value & CDC_DTE_PRESENT) ?
-			CDC_SERIAL_STATE_RX_CARRIER | CDC_SERIAL_STATE_TX_CARRIER : 0;
-		/* trigger a local state notification */
-		usb_cdc_state_notify(otg_fs);
-#endif
-
 		/* there might have threads waiting for
 		   modem control line changes (DTR, RTS)
 		   wake them up */
-		__thinkos_flag_signal(dev->ctl_flag);
+		__thinkos_flag_signal_all(dev->ctl_flag);
 		break;
 
 	default:
@@ -307,7 +299,7 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 	DCC_LOG(LOG_TRACE, "...");
 	dev->acm.control = 0;
 
-	__thinkos_flag_signal(dev->ctl_flag);
+	__thinkos_flag_signal_all(dev->ctl_flag);
 	__thinkos_flag_signal(dev->tx_flag);
 	__thinkos_flag_signal(dev->rx_flag);
 
@@ -335,6 +327,7 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 		while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
 			DCC_LOG(LOG_TRACE, "CTL wait...");
 			thinkos_flag_wait(dev->ctl_flag);
+			DCC_LOG(LOG_TRACE, "CTL wakeup...");
 			__thinkos_flag_clr(dev->ctl_flag);
 		}
 
@@ -370,6 +363,7 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 		goto read_from_buffer;
 	};
 
+	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
 	thinkos_flag_wait(dev->rx_flag);
 	__thinkos_flag_clr(dev->rx_flag);
 
@@ -462,6 +456,7 @@ int usb_cdc_ctl_wait(usb_cdc_class_t * cl, unsigned int msec)
 
 	__thinkos_flag_clr(dev->ctl_flag);
 	thinkos_flag_wait(dev->ctl_flag);
+	DCC_LOG(LOG_TRACE, "CTL wakeup...");
 
 	return 0;
 }
@@ -474,11 +469,66 @@ int usb_cdc_dte_wait(usb_cdc_class_t * cl)
 		__thinkos_flag_clr(dev->ctl_flag);
 		DCC_LOG(LOG_TRACE, "wait");
 		thinkos_flag_wait(dev->ctl_flag);
-		DCC_LOG(LOG_TRACE, "wakeup");
+		DCC_LOG(LOG_TRACE, "CTL wakeup...");
 	}
 
 	return 0;
 }
+
+int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	struct cdc_notification * pkt;
+	uint32_t buf[4];
+	uint32_t status;
+
+	status = stat->dsr ? CDC_SERIAL_STATE_TX_CARRIER : 0;
+	status |= stat->ri ? CDC_SERIAL_STATE_RING : 0;
+	status |= stat->dcd ? CDC_SERIAL_STATE_RX_CARRIER : 0;
+	status |= stat->cts ? 0 : 0;
+	status |= stat->brk ? CDC_SERIAL_STATE_BREAK : 0;
+
+	if (dev->acm.status != status) {
+		int ret;
+
+		DCC_LOG(LOG_TRACE, "status update");
+
+		pkt = (struct cdc_notification *)buf;
+		/* bmRequestType */
+		pkt->bmRequestType = USB_CDC_NOTIFICATION;
+		/* bNotification */
+		pkt->bNotification = CDC_NOTIFICATION_SERIAL_STATE;
+		/* wValue */
+		pkt->wValue = 0;
+		/* wIndex */
+		pkt->wIndex = 1;
+		/* wLength */
+		pkt->wLength = 2;
+		/* data */
+		pkt->bData[0] = status;
+		pkt->bData[1] = 0;
+
+		__thinkos_flag_clr(dev->ctl_flag);
+
+		ret = usb_dev_ep_tx_start(dev->usb, dev->int_ep, pkt, 
+							sizeof(struct cdc_notification));
+		if (ret < 0) {
+			DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!");
+			return ret;
+		}
+
+		DCC_LOG1(LOG_TRACE, "ret=%d wait", ret);
+		thinkos_flag_wait(dev->ctl_flag);
+		DCC_LOG(LOG_TRACE, "CTL wakeup...");
+
+		/* FIXME: handle failures .... */
+		/* set the status */
+		dev->acm.status = status;
+	}
+
+	return 0;
+}
+
 
 struct usb_cdc_acm_dev usb_cdc_rt;
 
