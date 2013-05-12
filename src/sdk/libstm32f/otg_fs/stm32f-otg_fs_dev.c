@@ -479,7 +479,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 
 int stm32f_otg_dev_ep_disable(struct stm32f_otg_drv * drv,  int ep_id)
 {
-	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
 	DCC_LOG1(LOG_TRACE, "ep_id=%d...", ep_id);
 
@@ -606,7 +606,7 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 								  int ep_id, int len)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+//	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 
