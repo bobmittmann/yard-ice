@@ -2,6 +2,9 @@
 
 if [[ "$OSTYPE" =~ ^cygwin ]]; then
 	WINPROG_PREFIX=/cygdrive/c/Program\ Files
+	CYGWIN=yes
+elif [[ "$OSTYPE" =~ ^msys ]]; then
+	WINPROG_PREFIX=/c/Program\ Files
 else
 	echo "#Error: unsuportted OS: ${OSTYPE}"
 	exit 1
@@ -15,15 +18,28 @@ else
 	WINPROGDIR=${WINPROG_PREFIX}
 fi
 
+echo ${WINPROGDIR}
+
 STM32UTILDIR="${WINPROGDIR}"/STMicroelectronics/STM32\ ST-LINK\ Utility
 STLINKDIR="${STM32UTILDIR}"/ST-LINK\ Utility
 PATH=$PATH:"${STLINKDIR}"
 STLINKCLI=ST-LINK_CLI.exe
 
+echo ${STLINKDIR}
+
 make -j 4 || exit 1;
 
 UNIX_BINFILE=`make bin_path`
-BINFILE=`cygpath -w "${UNIX_BINFILE}"`
+
+if [[ "$OSTYPE" =~ ^cygwin ]]; then
+	BINFILE=`cygpath -w "${UNIX_BINFILE}"`
+elif [[ "$OSTYPE" =~ ^msys ]]; then
+	BINNAME=`basename ${UNIX_BINFILE}`
+	BINDIR=`dirname ${UNIX_BINFILE}`
+	BINFILE=`cd ${BINDIR}; pwd -W`"/${BINNAME}"
+else
+	BINFILE=${UNIX_BINFILE};
+fi
 
 ${STLINKCLI} -P "${BINFILE}" 0x08000000 -Rst
 
