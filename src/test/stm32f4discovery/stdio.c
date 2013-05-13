@@ -35,7 +35,7 @@
 #define UART_TX STM32F_GPIOC, 6
 #define UART_RX STM32F_GPIOC, 7
 
-struct file stm32f_uart_file = {
+const struct file stm32f_uart_file = {
 	.data = STM32F_USART6, 
 	.op = &stm32f_usart_fops 
 };
@@ -60,7 +60,7 @@ void stdio_init(void)
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 
-	stderr = &stm32f_uart_file;
+	stderr = (struct file *)&stm32f_uart_file;
 	stdin = stderr;
 	stdout = stdin;
 }
