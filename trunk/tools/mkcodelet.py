@@ -93,8 +93,8 @@ def mk_codelet(in_fname, out_fname, hdr_fname):
 				sym[addr]
 				if (i > 0):
 					c_file.write("\n};\n\n")
-				c_file.write("uint32_t %s[] = {" % sym[addr])
-				h_file.write("extern uint32_t %s[];\n\n" % sym[addr])
+				c_file.write("const uint32_t %s[] = {" % sym[addr])
+				h_file.write("extern const uint32_t %s[];\n\n" % sym[addr])
 				i = 0
 			except KeyError:
 				pass

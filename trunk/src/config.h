@@ -87,15 +87,15 @@
 
 #define ENABLE_ICE_TEST 0
 
-#define ENABLE_USB 0
+#define ENABLE_USB 1
 #define ENABLE_NETWORK 1
 #define ENABLE_TFTP 1
-#define ENABLE_NAND 0
+#define ENABLE_NAND 1
 #define ENABLE_COMM 1
 #define ENABLE_GDB 1
 
-#define ENABLE_TCP_SEND 0
-#define ENABLE_TCP_RECV 0
+#define ENABLE_TCP_SEND 1
+#define ENABLE_TCP_RECV 1
 
 #define TCP_MAX_RCV_QUEUE 2048
 #define TCP_MAX_SND_QUEUE 2048 
