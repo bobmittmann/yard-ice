@@ -1,5 +1,5 @@
 #
-# stm32f405.mk 
+# stm32f4xx.mk 
 #
 # Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
 # 
@@ -19,26 +19,27 @@
 # http://www.gnu.org/
 
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-MKDIR := $(realpath $(THISDIR))
-BASEDIR := $(realpath $(THISDIR)/..)
-TOOLSDIR := $(realpath $(THISDIR)/../../tools)
-LDDIR := $(realpath $(THISDIR)/../ld)
-
-export MKDIR LDDIR TOOLSDIR
+include $(THISDIR)/common.mk
 
 ifndef MACH 
 MACH = stm32f405
 endif
 
-ARCH = cm3
-CPU = cortex-m4
-CDEFS += STM32F405 
 ifdef HCLK_HZ
 CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
 endif
+
 ifdef HSE_HZ
 CDEFS += "HSE_HZ=$(HSE_HZ)" 
 endif
+
+ifeq ($(findstring $(MACH), stm32f405 stm32f407),)
+  $(error "Unsupported machine type: MACH=$(MACH)")
+endif
+
+ARCH = cm3
+CPU = cortex-m4
+CDEFS += $(call uc,$(MACH))
 OPTIONS	= -mcpu=$(CPU) -mfpu=vfp -mfloat-abi=hard -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 

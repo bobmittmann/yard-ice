@@ -1,5 +1,5 @@
 #
-# stm32f207.mk 
+# stm32f2xx.mk 
 #
 # Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
 # 
