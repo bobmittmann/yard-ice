@@ -180,7 +180,7 @@ int acq_task(void)
 				gain = 3;
 				break;
 			case 3:
-				z = 3595;
+				z = 3992;
 				gain = 5;
 				break;
 			case 4:
@@ -197,8 +197,8 @@ int acq_task(void)
 				gain = 0;
 				break;
 			}
-//			z = (1000 * telctl.load.cnt) - 500;
-			z -= 500;
+//			z -= 500;
+			z = (1300 * telctl.load.cnt) - 500;
 			vr = ((z * 63) + 2500) / 5000;
 			if (autobalance_enabled)
 				hybrid_impedance_set(vr);
@@ -356,7 +356,7 @@ void shell_task(void)
 			tone_freq_cycle();
 			break;
 
-		case 'a':
+		case 'g':
 			autogain_enabled = (autogain_enabled) ? false : true;
 			break;
 		case 'b':
@@ -441,7 +441,7 @@ int ui_task(void)
 			if (autobalance_enabled) {
 				autobalance_enabled = false;
 				autogain_enabled = false;
-				hybrid_gain_set(32);
+//				hybrid_gain_set(16);
 				hybrid_impedance_set(0);
 				audio_dac_gain_set(0);
 			} else {
@@ -540,7 +540,7 @@ int main(int argc, char ** argv)
 
 	telctl_tonegen_set(1, 1);
 
-	hybrid_gain_set(32);
+	hybrid_gain_set(63);
 
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 

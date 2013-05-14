@@ -55,8 +55,59 @@
 #endif
 
 #ifndef ENABLE_G711
-#define ENABLE_G711 1
+#define ENABLE_G711 0
 #endif
+
+#ifndef DISABLE_JITBUF
+#define DISABLE_JITBUF 0
+#endif
+
+//
+// 2nd order IIR filter
+//
+typedef struct FXA_IIR2_TAG
+  {
+  int16_t A[3];
+  int16_t B[3];
+  int16_t y[3];
+  int16_t x[3];
+  } FXA_IIR2;
+
+static inline int16_t FxaIirApply(FXA_IIR2 * pF, int16_t Val) {
+  int32_t y;
+  // Shift the old samples
+  pF->x[2] = pF->x[1];
+  pF->x[1] = pF->x[0];
+  pF->y[2] = pF->y[1];
+  pF->y[1] = pF->y[0];
+  // Calculate the new output
+  pF->x[0] = Val;
+  y = pF->A[0] * pF->x[0];
+  y += pF->A[1] * pF->x[1] - pF->B[1] * pF->y[1];
+  y += pF->A[2] * pF->x[2] - pF->B[2] * pF->y[2];
+  // Scale down
+  y *= pF->B[0];
+  y /= 32768;
+  pF->y[0] = y;
+  return y;
+  }
+
+FXA_IIR2 iir_hp_240hz =
+{
+  .A = { 13985, -27971, 13985 },
+  .B = { 2, -27693, 11808 },
+  .y = { 0, 0, 0 },
+  .x = { 0, 0, 0 }
+};
+
+FXA_IIR2 iir_hp_120hz =
+{
+  .A = { 15123, -30246, 15123 },
+  .B = { 2, -30164, 13914 },
+  .y = { 0, 0, 0 },
+  .x = { 0, 0, 0 }
+};
+
 
 int32_t codec_addr = 64;
 struct spectrum audio_tx_sa;
@@ -215,8 +266,6 @@ int audio_tone_mode_set(int mode)
 	return audio_drv.tone_mode = mode;
 }
 
-#define DISABLE_JITBUF 0
-
 #if DISABLE_JITBUF
 sndbuf_t * xfr_buf;
 #endif
@@ -226,6 +275,7 @@ void audio_io_task(void)
 	sndbuf_t * out_buf;
 	sndbuf_t * in_buf;
 	uint32_t ts = 0;
+	int i;
 
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
@@ -259,6 +309,10 @@ void audio_io_task(void)
 		spectrum_rec(&audio_tx_sa, out_buf);
 
 		in_buf = i2s_io(out_buf);
+
+  		for (i = 0; i < SNDBUF_LEN; i++)
+		    in_buf->data[i] = FxaIirApply(&iir_hp_120hz, in_buf->data[i]);
+//		    in_buf->data[i] = FxaIirApply(&iir_hp_240hz, in_buf->data[i]);
 
 		led_flash(LED_I2S, 100);
 
