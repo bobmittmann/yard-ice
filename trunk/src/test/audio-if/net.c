@@ -60,6 +60,8 @@ struct rs485_link link;
 #define USART2_DMA_STRM_TX 6
 #define USART2_DMA_CHAN_TX 4
 
+#define LINK_SPEED 250000
+
 //void stm32f_usart2_isr(void)
 //{
 //	rs485_link_isr(&link);
@@ -90,7 +92,7 @@ void net_init(void)
 	 */
 
 	/* Link init */
-	rs485_init(&link, STM32F_USART2, 250000, STM32F_DMA1, 
+	rs485_init(&link, STM32F_USART2, LINK_SPEED, STM32F_DMA1, 
 			   USART2_DMA_STRM_RX, USART2_DMA_CHAN_RX,
 			   USART2_DMA_STRM_TX, USART2_DMA_CHAN_TX);
 
@@ -229,7 +231,7 @@ int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 		pkt->crc = 0;
 		if (crc16ccitt(0, pkt,
 					   data_len + sizeof(struct audio_pkt)) != crc) {
-			tracef("%s(): crc error!", __func__);
+			tracef("%s(): crc error, data_len=%d!", __func__, data_len);
 			data_len = -1;
 		} else {
 			if ((data_len = len - sizeof(struct audio_pkt)) > 0) {
@@ -244,9 +246,8 @@ int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 		return data_len;
 	} 
 
-	return len;
+	return -1;
 }
-
 
 int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 {
@@ -281,9 +282,10 @@ int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 {
 	struct audio_pkt * pkt;
-	int len;
-	int data_len;
 	uint16_t crc;
+	int data_len;
+	int len;
+	int ret = -1;
 
 	pkt = (struct audio_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
@@ -308,20 +310,21 @@ int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 		data_len = len - sizeof(struct audio_pkt);
 		crc = pkt->crc;
 		pkt->crc = 0;
-		if (crc16ccitt(0, pkt,
+		if (pkt->data_len != data_len) {
+			tracef("%s(): data_len=%d!=%d error!", __func__, 
+				   data_len, pkt->data_len);
+		} else if (crc16ccitt(0, pkt,
 					   data_len + sizeof(struct audio_pkt)) != crc) {
-			tracef("%s(): crc error!", __func__);
-			data_len = -1;
-		} else {
-			if ((data_len = len - sizeof(struct audio_pkt)) > 0) {
-				*ts = pkt->ts;
-				memcpy(buf->data, pkt->data, data_len);
-			}
+			tracef("%s(): CRC error, data_len=%d!", __func__, data_len);
+		} else { 
+//			tracef("%s(): ts=%d data_len=%d", __func__, pkt->ts, data_len);
+			*ts = pkt->ts;
+			memcpy(buf->data, pkt->data, data_len);
+			ret =  data_len / 2;
 		}
 		pktbuf_free(pkt);
-		return data_len / 2;
 	} 
 
-	return len;
+	return ret;
 }
 
