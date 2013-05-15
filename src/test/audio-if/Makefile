@@ -39,6 +39,9 @@ INCPATH = ../../sdk/include
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
+JATGTOOL_ADDR := "10.10.10.30"
+export JATGTOOL_ADDR
+
 MACH = stm32f405
 include ../../mk/stm32f4xx.mk
 

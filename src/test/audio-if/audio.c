@@ -460,7 +460,7 @@ void audio_init(void)
 
 	/* 50 ms jitter buffer */
 	jitbuf_init(&audio_drv.jitbuf, SAMPLE_RATE,
-				SAMPLE_RATE, 50);
+				SAMPLE_RATE, 25);
 
 	codec_hw_reset();
 

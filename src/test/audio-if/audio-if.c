@@ -540,7 +540,7 @@ int main(int argc, char ** argv)
 
 	telctl_tonegen_set(1, 1);
 
-	hybrid_gain_set(63);
+	hybrid_gain_set(40);
 
 	thinkos_thread_create((void *)acq_task, (void *)NULL,
 						  acq_stack, sizeof(acq_stack), 
