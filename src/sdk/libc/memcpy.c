@@ -125,7 +125,6 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 }
 #endif
 
-#if 0
 void * memcpy(void * __dst, const void * __src, size_t __n)
 {
 	register uint8_t * cpsrc = (uint8_t *)__src;
@@ -167,9 +166,8 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 
 	return __dst;
 }
-#endif
 
-
+#if 0
 void * memcpy(void * __dst, const void * __src, size_t __n)
 {
 	register uint8_t * cpsrc = (uint8_t *)__src;
@@ -182,4 +180,4 @@ void * memcpy(void * __dst, const void * __src, size_t __n)
 
 	return __dst;
 }
-
+#endif
