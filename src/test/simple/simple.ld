@@ -136,14 +136,15 @@ SECTIONS
 
 	.init :
 	{
-		KEEP (*(.rom_vectors))
-		KEEP (*(SORT(.rom_vectors.*)))
 		KEEP (*(.boot))
 		KEEP (*(.init))
 	} >flash = 0xffffffff
 
 	.text :
 	{
+		KEEP (*(.rom_vectors))
+		KEEP (*(SORT(.rom_vectors.*)))
+
 		/* all .text sections (code)  */
 		*(.text .text.* .gnu.linkonce.t.*)
 		/* all .glue_7t sections (interworking thumb helpers) */

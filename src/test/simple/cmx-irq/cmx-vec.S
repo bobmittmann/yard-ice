@@ -24,10 +24,14 @@
 
 	.section .rom_vectors, "ax", %progbits
 
+	.align  2
+	.thumb
+	.thumb_func
 	.global _rom_vectors
-	.type _rom_vectors, %object
+//	.type _rom_vectors, %object
+	.type _rom_vectors, %function
 _rom_vectors:
-	
+
 	.word	_stack
 	.word   _reset
 	.word   _nmi_isr
