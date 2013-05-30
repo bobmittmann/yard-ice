@@ -1,5 +1,5 @@
 /* 
- * stm32f10302.ld
+ * stm32f302xb.ld
  *
  * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
  * 
@@ -19,10 +19,7 @@
  * http://www.gnu.org/
  */
 
-/* 
-   Medium-density performance line ARM-based 32-bit MCU with 64
-   or 128 KB Flash, USB, CAN, 7 timers, 2 ADCs, 9 com. interfaces
-*/
+/* */
 
 OUTPUT_FORMAT ("elf32-littlearm")
 ENTRY(_reset)
@@ -31,8 +28,8 @@ SEARCH_DIR(.)
 MEMORY
 {
 	vectors(r) : ORIGIN = 0x00000000, LENGTH = 1K
-	flash (rx) : ORIGIN = 0x08000000, LENGTH = 256K
-	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 32K
+	flash (rx) : ORIGIN = 0x08000000, LENGTH = 128K 
+	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 24K
 	sram1 (rw) : ORIGIN = 0x10000000, LENGTH = 8K
 	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
 }

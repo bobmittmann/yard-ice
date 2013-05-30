@@ -20,7 +20,7 @@
  */
 
 
-_stack = ORIGIN(sram1) + LENGTH(sram1);
+_stack = ORIGIN(sram0) + LENGTH(sram0);
 
 EXTERN(_stack)
 EXTERN(_reset)
@@ -43,6 +43,7 @@ EXTERN(stm32f_flash_isr)
 EXTERN(stm32f_rcc_isr)
 EXTERN(stm32f_exti0_isr)
 EXTERN(stm32f_exti1_isr)
+
 EXTERN(stm32f_exti2_tsc_isr)
 EXTERN(stm32f_exti3_isr)
 EXTERN(stm32f_exti4_isr)
@@ -102,7 +103,7 @@ EXTERN(stm32f_comp7)
 
 EXTERN(stm32f_usb_hp_isr)
 EXTERN(stm32f_usb_lp_isr)
-EXTERN(stm32f_usb_wkup2_isr)
+EXTERN(stm32f_usb_wkup_isr)
 
 EXTERN(stm32f_fpu_isr)
 
