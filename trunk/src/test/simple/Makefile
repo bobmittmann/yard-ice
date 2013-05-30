@@ -24,9 +24,9 @@ PROG = simple
 
 CFILES = simple.c
 
-LIBDIRS = ../../sdk/libcm3 isr
+LIBDIRS = ../../sdk/libcm3 cmx-irq
 
-LIBS = cm3 isr
+LIBS = cmx cm3
 
 INCPATH = ../../sdk/include 
 
