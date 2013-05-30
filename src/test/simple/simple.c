@@ -27,6 +27,35 @@
 
 #include <sys/dcclog.h>
 
+void _init(void)
+{
+}
+
+void stm32f_can1_sce_isr(void)
+{
+	__NOP();
+}
+
+void stm32f_exti5_isr(void)
+{
+	__NOP();
+}
+
+void stm32f_wwdg_isr(void)
+{
+	__NOP();
+}
+
+void stm32f_pvd_isr(void)
+{
+	__NOP();
+}
+
+void stm32f_rtc_wkup_isr(void)
+{
+	__NOP();
+}
+
 int main(int argc, char ** argv)
 {
 	int i;

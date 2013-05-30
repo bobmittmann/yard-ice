@@ -24,9 +24,9 @@ PROG = simple
 
 CFILES = simple.c
 
-LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 
+LIBDIRS = ../../sdk/libcm3 isr
 
-LIBS = stm32f cm3 
+LIBS = cm3 isr
 
 INCPATH = ../../sdk/include 
 
