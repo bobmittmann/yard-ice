@@ -229,11 +229,11 @@ int stm32f_ethif_init(struct ifnet * __if)
 		rxdesc->rch = 1;
 		rxdesc->rbap1 = drv->rx.buf[i];
 		/* link to the next descriptor */
-		rxdesc->rbap2 = &drv->rx.desc[i + 1];
+		rxdesc->rbap2 = (void *)&drv->rx.desc[i + 1];
 	}
 
 	/* link to the first */
-	rxdesc->rbap2 = &drv->rx.desc[0];
+	rxdesc->rbap2 = (void *)&drv->rx.desc[0];
 
 	/* DMA receive descriptor list address */
 	eth->dmardlar = (uint32_t)&drv->rx.desc[0];
