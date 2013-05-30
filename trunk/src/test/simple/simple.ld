@@ -35,81 +35,87 @@ _stack = ORIGIN(sram) + LENGTH(sram);
 
 EXTERN(_stack)
 EXTERN(_reset)
-EXTERN(cm3_nmi_isr)
-EXTERN(cm3_hard_fault_isr)
-EXTERN(cm3_mem_manage_isr)
-EXTERN(cm3_bus_fault_isr)
-EXTERN(cm3_usage_fault_isr)
-EXTERN(cm3_svc_isr)
-EXTERN(cm3_debug_mon_isr)
-EXTERN(cm3_pendsv_isr)
-EXTERN(cm3_systick_isr)
-EXTERN(ice_comm_blk)
+EXTERN(_except)
+EXTERN(_isr)
 
-EXTERN(stm32f_wwdg_isr)
-EXTERN(stm32f_pvd_isr)
-EXTERN(stm32f_tamp_stamp_isr)
-EXTERN(stm32f_rtc_wkup_isr)
-EXTERN(stm32f_flash_isr)
-EXTERN(stm32f_rcc_isr)
-EXTERN(stm32f_exti0_isr)
-EXTERN(stm32f_exti1_isr)
-EXTERN(stm32f_exti2_isr)
-EXTERN(stm32f_exti3_isr)
-EXTERN(stm32f_exti4_isr)
-EXTERN(stm32f_dma1_stream0_isr)
-EXTERN(stm32f_dma1_stream1_isr)
-EXTERN(stm32f_dma1_stream2_isr)
-EXTERN(stm32f_dma1_stream3_isr)
-EXTERN(stm32f_dma1_stream4_isr)
-EXTERN(stm32f_dma1_stream5_isr)
-EXTERN(stm32f_dma1_stream6_isr)
-EXTERN(stm32f_adc_isr)
+/* Cortex-Mx exception vectors */
+EXTERN(_rom_vectors)
 
-EXTERN(stm32f_exti9_5_isr)
+_nmi_isr = DEFINED(cm_nmi_isr) ? cm_nmi_isr : _except ;
+_hard_fault_isr = DEFINED(cm_hard_fault_isr) ? cm_hard_fault_isr : _except ;
+_mem_manage_isr = DEFINED(cm_mem_manage_isr) ? cm_mem_manage_isr : _except ;
+_bus_fault_isr = DEFINED(cm_bus_fault_isr) ? cm_bus_fault_isr : _except ;
+_usage_fault_isr = DEFINED(cm_usage_fault_isr) ? cm_usage_fault_isr : _except ;
+_svc_isr = DEFINED(cm_svc_isr) ? cm_svc_isr : _except ;
+_debug_mon_isr = DEFINED(cm_debug_mon_isr) ? cm_debug_mon_isr : _except ;
+_pendsv_isr = DEFINED(cm_pendsv_isr) ? cm_pendsv_isr : _except ;
+_systick_isr = DEFINED(cm_systick_isr) ? cm_systick_isr : _isr ;
 
-EXTERN(stm32f_tim1_brk_tim15_isr)
-EXTERN(stm32f_tim1_up_tim16_isr)
-EXTERN(stm32f_tim1_trg_com_tim17_isr)
+/* Common STM32F IRQ vectors: 0 to 7 */
+EXTERN(_irq0_vec)
+EXTERN(_irq1_vec)
+EXTERN(_irq2_vec)
+EXTERN(_irq3_vec)
+EXTERN(_irq4_vec)
+EXTERN(_irq5_vec)
+EXTERN(_irq6_vec)
+EXTERN(_irq7_vec)
 
-EXTERN(stm32f_tim1_cc_isr)
-EXTERN(stm32f_tim2_isr)
-EXTERN(stm32f_tim3_isr)
+_irq0_isr = DEFINED(stm32f_wwdg_isr) ? stm32f_wwdg_isr : _isr ;
+_irq1_isr = DEFINED(stm32f_pvd_isr) ? stm32f_pvd_isr : _isr ;
+_irq2_isr = DEFINED(stm32f_tamp_stamp_isr) ? stm32f_tamp_stamp_isr : _isr ;
+_irq3_isr = DEFINED(stm32f_rtc_wkup_isr) ? stm32f_rtc_wkup_isr : _isr ;
+_irq4_isr = DEFINED(stm32f_flash_isr) ? stm32f_flash_isr : _isr ;
+_irq5_isr = DEFINED(stm32f_rcc_isr) ? stm32f_rcc_isr : _isr ;
+_irq6_isr = DEFINED(stm32f_exti0_isr) ? stm32f_exti0_isr : _isr ;
+_irq7_isr = DEFINED(stm32f_exti1_isr) ? stm32f_exti1_isr : _isr ;
 
-EXTERN(stm32f_tim4_isr)
-EXTERN(stm32f_i2c1_ev_isr)
-EXTERN(stm32f_i2c1_er_isr)
-EXTERN(stm32f_i2c2_ev_isr)
-EXTERN(stm32f_i2c2_er_isr)
-EXTERN(stm32f_spi1_isr)
-EXTERN(stm32f_spi2_isr)
-EXTERN(stm32f_usart1_isr)
-EXTERN(stm32f_usart2_isr)
-EXTERN(stm32f_usart3_isr)
+/* Common STM32F3xx IRQ vectors: 0 to 7 */
+EXTERN(_irq8_vec)
+EXTERN(_irq9_vec)
+EXTERN(_irq10_vec)
+EXTERN(_irq11_vec)
+EXTERN(_irq12_vec)
+EXTERN(_irq13_vec)
+EXTERN(_irq14_vec)
+EXTERN(_irq15_vec)
 
-EXTERN(stm32f_exti15_10_isr)
-EXTERN(stm32f_rtc_alarm_isr)
+_irq8_isr = DEFINED(stm32f_exti2_isr) ? stm32f_exti2_isr : 
+			DEFINED(stm32f_tsc_isr) ? stm32f_tsc_isr : _isr ;
+_irq9_isr = DEFINED(stm32f_exti3_isr) ? stm32f_exti3_isr : _isr ;
+_irq10_isr = DEFINED(stm32f_exti4_isr) ? stm32f_exti4_isr : _isr ;
+_irq11_isr = DEFINED(stm32f_dma1_chan1_isr) ? stm32f_dma1_chan1_isr : _isr ;
+_irq12_isr = DEFINED(stm32f_dma1_chan2_isr) ? stm32f_dma1_chan2_isr : _isr ;
+_irq13_isr = DEFINED(stm32f_dma1_chan3_isr) ? stm32f_dma1_chan3_isr : _isr ;
+_irq14_isr = DEFINED(stm32f_dma1_chan4_isr) ? stm32f_dma1_chan4_isr : _isr ;
+_irq15_isr = DEFINED(stm32f_dma1_chan5_isr) ? stm32f_dma1_chan5_isr : _isr ;
 
-EXTERN(stm32f_cec_isr)
+EXTERN(_irq16_vec)
+EXTERN(_irq17_vec)
+EXTERN(_irq18_vec)
+EXTERN(_irq19_vec)
+EXTERN(_irq20_vec)
+EXTERN(_irq21_vec)
+EXTERN(_irq22_vec)
+EXTERN(_irq23_vec)
 
-EXTERN(stm32f_tim12_isr)
-EXTERN(stm32f_tim13_isr)
-EXTERN(stm32f_tim14_isr)
+_irq16_isr = DEFINED(stm32f_dma1_chan6_isr) ? stm32f_dma1_chan6_isr : _isr ;
+_irq17_isr = DEFINED(stm32f_dma1_chan7_isr) ? stm32f_dma1_chan7_isr : _isr ;
+_irq18_isr = DEFINED(stm32f_adc1_isr) ? stm32f_adc1_isr :
+			 DEFINED(stm32f_adc2_isr) ? stm32f_adc2_isr : _isr ;
+_irq19_isr = DEFINED(stm32f_can1_tx_isr) ? stm32f_can1_tx_isr :
+			 DEFINED(stm32f_usb_hp_isr) ? stm32f_usb_hp_isr : _isr ;
+_irq20_isr = DEFINED(stm32f_can1_rx0_isr) ? stm32f_can1_rx0_isr :
+			 DEFINED(stm32f_usb_lp_isr) ? stm32f_usb_lp_isr : _isr ;
+_irq21_isr = DEFINED(stm32f_can1_rx1_isr) ? stm32f_can1_rx1_isr : _isr ;
+_irq22_isr = DEFINED(stm32f_can1_sce_isr) ? stm32f_can1_sce_isr : _isr ;
+_irq23_isr = DEFINED(stm32f_exti9_5_isr) ? stm32f_exti9_5_isr :
+			 DEFINED(stm32f_exti9_isr) ? stm32f_exti9_isr :
+			 DEFINED(stm32f_exti8_isr) ? stm32f_exti8_isr :
+			 DEFINED(stm32f_exti7_isr) ? stm32f_exti7_isr :
+			 DEFINED(stm32f_exti6_isr) ? stm32f_exti6_isr :
+			 DEFINED(stm32f_exti5_isr) ? stm32f_exti5_isr : _isr ;
 
-EXTERN(stm32f_fsmc_isr)
-
-EXTERN(stm32f_tim5_isr)
-EXTERN(stm32f_spi3_isr)
-EXTERN(stm32f_uart4_isr)
-EXTERN(stm32f_uart5_isr)
-EXTERN(stm32f_tim6_dac_isr)
-EXTERN(stm32f_tim7_isr)
-EXTERN(stm32f_dma2_stream0_isr)
-EXTERN(stm32f_dma2_stream1_isr)
-EXTERN(stm32f_dma2_stream2_isr)
-EXTERN(stm32f_dma2_stream3_isr)
-
-EXTERN(stm32f_dma2_stream4_isr)
 
 SECTIONS
 {
@@ -130,8 +136,8 @@ SECTIONS
 
 	.init :
 	{
-		vec0 = DEFINED(cm3_nmi_isr) ? cm3_nmi_isr : . ;
 		KEEP (*(.rom_vectors))
+		KEEP (*(SORT(.rom_vectors.*)))
 		KEEP (*(.boot))
 		KEEP (*(.init))
 	} >flash = 0xffffffff
