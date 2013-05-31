@@ -30,9 +30,13 @@ const struct stm32f_gpio * const stm32f_gpio_lut[] = {
 	STM32F_GPIOD,
 	STM32F_GPIOE,
 	STM32F_GPIOF,
+#ifdef STM32F_GPIOG
 	STM32F_GPIOG,
+#endif
 #ifdef STM32F_GPIOH
 	STM32F_GPIOH,
+#endif
+#ifdef STM32F_GPIOI
 	STM32F_GPIOI
 #endif
 };
@@ -51,8 +55,12 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 #if defined(STM32F2X) || defined(STM32F4X)
 	rcc->ahb1enr |= 1 << stm32f_gpio_id(gpio);
 #endif
+
+#if defined(STM32F3X) 
+	rcc->ahbenr |= 1 << (stm32f_gpio_id(gpio) + 17);
+#endif
 	
-#ifdef STM32F1X
+#if defined(STM32F1X)
 	rcc->apb2enr |= 1 << (stm32f_gpio_id(gpio) + 2);
 #endif
 
@@ -61,7 +69,7 @@ void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
 void stm32f_gpio_mode(struct stm32f_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
-#if defined(STM32F2X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
 	uint32_t tmp;
 	uint32_t moder; 
 
@@ -109,7 +117,7 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 	gpio->pupdr = tmp;
 #endif
 
-#ifdef STM32F1X
+#if defined(STM32F1X)
 	uint32_t cnf = 0;
 	uint32_t mod = 0; 
 
@@ -163,7 +171,7 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 
 }
 
-#if defined(STM32F2X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
 void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;

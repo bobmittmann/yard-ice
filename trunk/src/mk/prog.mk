@@ -21,15 +21,20 @@
 #------------------------------------------------------------------------------ 
 # ld scripts
 #------------------------------------------------------------------------------ 
-ifndef LDDIR
-  $(error LDDIR undefined!)
+
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+ifndef MKDIR
+  MKDIR := $(realpath $(THISDIR))
+  BASEDIR := $(realpath $(THISDIR)/..)
 endif	
 
-#------------------------------------------------------------------------------ 
-# cross compiling 
-#------------------------------------------------------------------------------ 
-ifndef MKDIR
-  $(error MKDIR undefined!)
+ifndef TOOLSDIR
+  TOOLSDIR := $(realpath $(THISDIR)/../../tools)
+endif
+
+ifndef LDDIR
+  LDDIR := $(realpath $(THISDIR)/../ld)
 endif	
 
 #------------------------------------------------------------------------------ 

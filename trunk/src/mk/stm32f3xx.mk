@@ -33,7 +33,7 @@ ifdef HSE_HZ
 CDEFS += "HSE_HZ=$(HSE_HZ)" 
 endif
 
-ifeq ($(findstring $(MACH), stm32f302 stm32f303),)
+ifeq ($(findstring $(MACH), stm32f302 stm32f303 stm32f303xb stm32f303xc),)
   $(error "Unsupported machine type: MACH=$(MACH)")
 endif
 

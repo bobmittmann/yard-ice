@@ -127,6 +127,9 @@
    0: HSI oscillator OFF
    1: HSI oscillator ON */
 
+
+
+
 #if defined(STM32F2X) || defined(STM32F4X)
 
 /* ------------------------------------------------------------------------- */
@@ -218,32 +221,76 @@
    111110: PLLM = 62
    111111: PLLM = 63 */
 
-#endif /* STM32F2X */
+#endif /* defined(STM32F2X) || defined(STM32F4X) */
+
 
 
 /* ------------------------------------------------------------------------- */
 /* RCC clock configuration register */
 
-#if defined(STM32F1X)
-
-#define STM32F_RCC_CFGR 0x04
+#if defined(STM32F1X) || defined(STM32F3X)
 
 /* STM32F10x RCC clock configuration register */
+#define STM32F_RCC_CFGR 0x04
 
+/* Microcontroller Clock Output Flag */
+#define RCC_MCOF       (1 << 28)
+/* MCOF: Microcontroller Clock Output Flag
+   Set and reset by hardware.
+   It is reset by hardware when MCO field is written with a new value
+   It is set by hardware when the switch to the new MCO source is effective. */
+
+/* Bits 26:24 MCO: Microcontroller clock output */
+#define RCC_MCO_OFF    (0x0 << 24)
+#define RCC_MCO_LSI    (0x2 << 24)
+#define RCC_MCO_LSE    (0x3 << 24)
 #define RCC_MCO_SYSCLK (0x4 << 24)
 #define RCC_MCO_HSI    (0x5 << 24)
 #define RCC_MCO_HSE    (0x6 << 24)
 #define RCC_MCO_PLL    (0x7 << 24)
+/* Set and cleared by software.
+   000: MCO output disabled, no clock on MCO
+   001: Reserved
+   010: LSI clock selected.
+   011: LSE clock selected.
+   100: System clock (SYSCLK) selected
+   101: HSI clock selected
+   110: HSE clock selected
+   111: PLL clock divided by 2 selected
+   Note: This clock output may have some truncated cycles at startup or 
+   during MCO clock source switching. */
 
+/* Bit 23 I2SSRC: I2S external clock source selection */
+#define RCC_I2SSRC    (1 << 23)
+/* Set and reset by software to clock I2S2 and I2S3 with an external 
+   clock. This bits must be valid before enabling I2S2-3 clocks.
+   0: I2S2 and I2S3 clocked by system clock
+   1: I2S2 and I2S3 clocked by the external clock */
+
+/* Bit 22 USBPRE: USB prescaler */
 #define RCC_USBPRE       (1 << 22)
 #define RCC_USBPRE_1     (1 << 22)
 #define RCC_USBPRE_1DOT5 (0 << 22)
+/* Set and reset by software to generate 48 MHz USB clock. These bits must 
+   be valid before enabling USB clocks.
+   0: PLL clock is divided by 1,5
+   1: PLL clock is not divided */
 
+/* Bits 21:18 PLLMUL: PLL multiplication factor */
 #define RCC_PLLMUL_MASK   (0x0f << 18)
-#define RCC_PLLMUL(M) ((((M) - 2) & 0x0f) << 18)
+#define RCC_PLLMUL(M)     ((((M) - 2) & 0x0f) << 18)
 
+/* Bit 17 PLLXTPRE: HSE divider for PLL input clock */
 #define RCC_PLLXTPRE      (1 << 17)
+/* This bits is set and cleared by software to select the HSE division 
+   factor for the PLL. It can be written only when the PLL is disabled.
+   Note: This bit is the same as the LSB of PREDIV in Clock 
+   configuration register 2 (RCC_CFGR2) (for compatibility with 
+   other STM32 products)
+   0000: HSE input to PLL not divided
+   0001: HSE input to PLL divided by 2 */
 
+/* Bit 16 PLLSRC: PLL entry clock source */
 #define RCC_PLLSRC     (1 << 16)
 #define RCC_PLLSRC_HSI (0 << 16)
 #define RCC_PLLSRC_HSE (1 << 16)
@@ -254,6 +301,7 @@
 #define RCC_ADCPRE_6 (0x2 << 14)
 #define RCC_ADCPRE_8 (0x3 << 14)
 
+/* Bits 13:11 PPRE2: APB high-speed prescaler (APB2) */
 #define RCC_PPRE2    (0x7 << 11)
 #define RCC_PPRE2_1  (0x0 << 11)
 #define RCC_PPRE2_2  (0x4 << 11)
@@ -262,6 +310,7 @@
 #define RCC_PPRE2_16 (0x7 << 11)
 #define RCC_PPRE2_GET(CFGR) (((CFGR) >> 11) 0x7)
 
+/* Bits 10:8 PPRE1:APB Low-speed prescaler (APB1) */
 #define RCC_PPRE1    (0x7 << 8)
 #define RCC_PPRE1_1  (0x0 << 8)
 #define RCC_PPRE1_2  (0x4 << 8)
@@ -269,6 +318,7 @@
 #define RCC_PPRE1_8  (0x6 << 8)
 #define RCC_PPRE1_16 (0x7 << 8)
 #define RCC_PPRE1_GET(CFGR) (((CFGR) >> 8) 0x7)
+
 
 #elif defined(STM32F2X) || defined(STM32F4X)
 
@@ -399,7 +449,7 @@
    110: AHB clock divided by 8
    111: AHB clock divided by 16 */
 
-#endif /* STM32F1X, STM32F2X */
+#endif /* STM32F1X, STM32F3X */
 
 /* AHB prescaler */
 #define RCC_HPRE (0xf << 4)
@@ -413,7 +463,6 @@
 #define RCC_HPRE_256 (0xe << 4)
 #define RCC_HPRE_512 (0xf << 4)
 #define RCC_HPRE_GET(CFGR) (((CFGR) >> 4) 0xf)
-
 /* Set and cleared by software to control AHB clock division factor.
    Caution: The clocks are divided with the new prescaler factor from 1 
    to 16 AHB cycles after HPRE write.
@@ -454,6 +503,7 @@
    01: HSE oscillator selected as system clock
    10: PLL selected as system clock
    11: not allowed */
+
 
 
 #if defined(STM32F2X) || defined(STM32F4X)
@@ -1488,7 +1538,19 @@
 
 
 /* ------------------------------------------------------------------------- */
-#if defined(STM32F1X)
+#if defined(STM32F1X) || defined(STM32F3X)
+
+/* ------------------------------------------------------------------------- */
+/* Clock interrupt register */
+#define STM32F_RCC_CIR 0x08
+
+/* ------------------------------------------------------------------------- */
+/* APB2 peripheral reset register */
+#define STM32F_RCC_APB2RSTR 0x0c
+
+/* ------------------------------------------------------------------------- */
+/* APB1 peripheral reset register */
+#define STM32F_RCC_APB1RSTR 0x10
 
 /* ------------------------------------------------------------------------- */
 /* AHB peripheral clock enable register */
@@ -1888,7 +1950,392 @@ Set and cleared by software.
 0: TIM2 clock disabled
 1: TIM2 clock enabled */
 
-#endif /* STM32F1X */
+/* ------------------------------------------------------------------------- */
+/* RCC Backup domain control register */
+#define STM32F_RCC_BDCR 0x20
+
+/* [31..17] Reserved, must be kept at reset value. */
+
+/* Bit 16 - Backup domain software reset */
+#define RCC_BDRST (1 << 16)
+/* Set and cleared by software.
+0: Reset not activated
+1: Resets the entire Backup domain */
+
+/* Bit 15 - RTC clock enable */
+#define RCC_RTCEN (1 << 15)
+/* Set and cleared by software.
+0: RTC clock disabled
+1: RTC clock enabled */
+
+/* [14..10] Reserved, must be kept at reset value. */
+
+/* Bits [9..8] - RTC clock source selection */
+#define RCC_RTCSEL_MSK (((1 << (1 + 1)) - 1) << 8)
+#define RCC_RTCSEL_SET(VAL) (((VAL) << 8) & RTCSEL_MSK)
+#define RCC_RTCSEL_GET(REG) (((REG) & RTCSEL_MSK) >> 8)
+/* Set by software to select the clock source for the RTC. Once the RTC clock source has been
+selected, it cannot be changed anymore unless the Backup domain is reset. The BDRST bit
+can be used to reset them.
+00: No clock
+01: LSE oscillator clock used as RTC clock
+10: LSI oscillator clock used as RTC clock
+11: HSE oscillator clock divided by 32 used as RTC clock */
+
+/* [7..5] Reserved, must be kept at reset value. */
+
+
+/* Bits [4..3] - LSE oscillator drive capability */
+#define RCC_LSEDRV ((4 - 3) << 3)
+/* Set and reset by software to modulate the LSE oscillator’s drive 
+   capability. A reset of the backup domain restores the default value.
+   00: ‘Xtal mode’ lower driving capability
+   01: ‘Xtal mode’ medium low driving capability
+   10: ‘Xtal mode’ medium high driving capability
+   11: ‘Xtal mode’ higher driving capability (reset value)
+   Note: The oscillator is in Xtal mode when it is not in bypass mode. */
+
+/* Bit 2 - LSE oscillator bypass */
+#define RCC_LSEBYP (1 << 2)
+/* Set and cleared by software to bypass oscillator in debug mode. This 
+   bit can be written only when the external 32 kHz oscillator is disabled.
+   0: LSE oscillator not bypassed
+   1: LSE oscillator bypassed */
+
+/* Bit 1 - LSE oscillator ready */
+#define RCC_LSERDY (1 << 1)
+/* Set and cleared by hardware to indicate when the external 32 kHz 
+   oscillator is stable. After the LSEON bit is cleared, LSERDY goes low 
+   after 6 external low-speed oscillator clock cycles.
+   0: LSE oscillator not ready
+   1: LSE oscillator ready */
+
+/* Bit 0 - LSE oscillator enable */
+#define RCC_LSEON (1 << 0)
+/* Set and cleared by software.
+   0: LSE oscillator OFF
+   1: LSE oscillator ON */
+
+/* ------------------------------------------------------------------------- */
+/* Control/status register (RCC_CSR) */
+#define STMF32_RCC_CSR 0x24
+
+/* Bit 31 - Low-power reset flag */
+#define RCC_LPWRSTF (1 << 31)
+/* Set by hardware when a Low-power management reset occurs.
+Cleared by writing to the RMVF bit.
+0: No Low-power management reset occurred
+1: Low-power management reset occurred
+For further information on Low-power management reset, refer to Low-power management
+reset. */
+
+/* Bit 30 - Window watchdog reset flag */
+#define RCC_WWDGRSTF (1 << 30)
+/* Set by hardware when a window watchdog reset occurs.
+Cleared by writing to the RMVF bit.
+0: No window watchdog reset occurred
+1: Window watchdog reset occurred */
+
+/* Bit 29 - Independent window watchdog reset flag */
+#define RCC_IWDGRSTF (1 << 29)
+/* Set by hardware when an independent watchdog reset from VDD domain occurs.
+Cleared by writing to the RMVF bit.
+0: No watchdog reset occurred
+1: Watchdog reset occurred */
+
+/* Bit 28 - Software reset flag */
+#define RCC_SFTRSTF (1 << 28)
+/* Set by hardware when a software reset occurs.
+Cleared by writing to the RMVF bit.
+0: No software reset occurred
+1: Software reset occurred */
+
+/* Bit 27 - POR/PDR flag */
+#define RCC_PORRSTF (1 << 27)
+/* Set by hardware when a POR/PDR occurs.
+Cleared by writing to the RMVF bit.
+0: No POR/PDR occurred
+1: POR/PDR occurred */
+
+/* Bit 26 - PIN reset flag */
+#define RCC_PINRSTF (1 << 26)
+/* Set by hardware when a reset from the NRST pin occurs.
+Cleared by writing to the RMVF bit.
+0: No reset from NRST pin occurred
+1: Reset from NRST pin occurred */
+
+/* Bit 25 - Option byte loader reset flag */
+#define RCC_OBLRSTF (1 << 25)
+/* Set by hardware when a reset from the OBL occurs.
+Cleared by writing to the RMVF bit.
+0: No reset from OBL occurred
+1: Reset from OBL occurred */
+
+/* Bit 24 - Remove reset flag */
+#define RCC_RMVF (1 << 24)
+/* Set by software to clear the reset flags.
+0: No effect
+1: Clear the reset flags */
+
+/* [23..2] Reserved, must be kept at reset value. */
+
+
+/* Bit 1 - LSI oscillator ready */
+#define RCC_LSIRDY (1 << 1)
+/* Set and cleared by hardware to indicate when the LSI oscillator is stable. After the LSION bit
+is cleared, LSIRDY goes low after 3 LSI oscillator clock cycles.
+0: LSI oscillator not ready
+1: LSI oscillator ready */
+
+/* Bit 0 - LSI oscillator enable */
+#define RCC_LSION (1 << 0)
+/* Set and cleared by software.
+0: LSI oscillator OFF
+1: LSI oscillator ON */
+
+
+/* ------------------------------------------------------------------------- */
+/* AHB peripheral reset register (RCC_AHBRSTR) */
+#define STMF32_RCC_AHBRSTR 0x28
+
+/* [27..25] Reserved, must be kept at reset value. */
+
+
+/* Bit 29 - ADC3 and ADC4 reset */
+#define RCC_ADC34RST (1 << 29)
+/* Set and reset by software.
+0: does not reset the ADC3 and ADC4
+1: resets the ADC3 and ADC4 */
+
+/* Bit 28 - ADC1 and ADC2 reset */
+#define RCC_ADC12RST (1 << 28)
+/* Set and reset by software.
+0: does not reset the ADC1 and ADC2
+1: resets the ADC1 and ADC2 */
+
+/* [27..25] Reserved, must be kept at reset value. */
+
+
+/* Bit 24 - Touch sensing controller reset */
+#define RCC_TSCRST (1 << 24)
+/* Set and cleared by software.
+0: No effect
+1: Reset TSC */
+
+/* Bit 23 Reserved, must be kept at reset value. */
+
+/* Bit 22 - I/O port F reset */
+#define RCC_IOPFRST (1 << 22)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port F */
+
+/* Bit 21 - I/O port E reset */
+#define RCC_OPERST (1 << 21)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port E */
+
+/* Bit 20 - I/O port D reset */
+#define RCC_IOPDRST (1 << 20)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port D */
+
+/* Bit 19 - I/O port C reset */
+#define RCC_IOPCRST (1 << 19)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port C */
+
+/* Bit 18 - I/O port B reset */
+#define RCC_IOPBRST (1 << 18)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port B */
+
+/* Bit 17 - I/O port A reset */
+#define RCC_IOPARST (1 << 17)
+/* Set and cleared by software.
+0: No effect
+1: Reset I/O port A */
+
+/* [16..0] Reserved, must be kept at reset value. */
+
+
+
+/* ------------------------------------------------------------------------- */
+/* Clock configuration register 2 (RCC_CFGR2) */
+#define STMF32_RCC_CFGR2 0x2C
+
+/* [31..14] Reserved, must be kept at reset value. */
+
+
+/* Bits [13..9] - ADC34 prescaler */
+#define RCC_ADC34PRES ((13 - 9) << 9)
+/* Set and reset by software to control PLL clock to ADC34 division factor.
+0xxxx: ADC34 clock disabled, ADC34 can use AHB clock
+10000: PLL clock divided by 1
+10001: PLL clock divided by 2
+10010: PLL clock divided by 4
+10011: PLL clock divided by 6
+10100: PLL clock divided by 8
+10101: PLL clock divided by 10
+10110: PLL clock divided by 12
+10111: PLL clock divided by 16
+11000: PLL clock divided by 32
+11001: PLL clock divided by 64
+11010: PLL clock divided by 128
+11011: PLL clock divided by 256
+others: PLL clock divided by 256 */
+
+/* Bits [8..4] - ADC prescaler */
+#define RCC_ADC12PRES ((8 - 4) << 4)
+/* Set and reset by software to control PLL clock to ADC12 division factor.
+0xxxx: ADC12 clock disabled, ADC12 can use AHB clock
+10000: PLL clock divided by 1
+10001: PLL clock divided by 2
+10010: PLL clock divided by 4
+10011: PLL clock divided by 6
+10100: PLL clock divided by 8
+10101: PLL clock divided by 10
+10110: PLL clock divided by 12
+10111: PLL clock divided by 16
+11000: PLL clock divided by 32
+11001: PLL clock divided by 64
+11010: PLL clock divided by 128
+11011: PLL clock divided by 256
+others: PLL clock divided by 256 */
+
+/* Bits [3..0] - PREDIV division factor */
+#define RCC_PREDIV_MSK (((1 << (3 + 1)) - 1) << 0)
+#define RCC_PREDIV_SET(VAL) (((VAL) << 0) & PREDIV_MSK)
+#define RCC_PREDIV_GET(REG) (((REG) & PREDIV_MSK) >> 0)
+/* These bits are set and cleared by software to select PREDIV division factor. They can be
+written only when the PLL is disabled.
+Note: Bit 0 is the same bit as bit17 in Clock configuration register (RCC_CFGR), so modifying
+bit17 Clock configuration register (RCC_CFGR) also modifies bit 0 in Clock
+configuration register 2 (RCC_CFGR2) (for compatibility with other STM32 products)
+0000: HSE input to PLL not divided
+0001: HSE input to PLL divided by 2
+0010: HSE input to PLL divided by 3
+0011: HSE input to PLL divided by 4
+0100: HSE input to PLL divided by 5
+0101: HSE input to PLL divided by 6
+0110: HSE input to PLL divided by 7
+0111: HSE input to PLL divided by 8
+1000: HSE input to PLL divided by 9
+1001: HSE input to PLL divided by 10
+1010: HSE input to PLL divided by 11
+1011: HSE input to PLL divided by 12
+1100: HSE input to PLL divided by 13
+1101: HSE input to PLL divided by 14
+1110: HSE input to PLL divided by 15
+1111: HSE input to PLL divided by 16 */
+
+#endif /* if defined(STM32F1X) || defined(STM32F3X) */
+
+#if defined(STM32F3X)
+
+/* ------------------------------------------------------------------------- */
+/* Clock configuration register 3 (RCC_CFGR3) */
+#define STMF32_RCC_CFGR3 0x30
+
+/* [31..24] Reserved, must be kept at reset value. */
+
+
+/* Bits [23..22] - UART5 clock source selection */
+#define RCC_UART5SW_MSK (((1 << (1 + 1)) - 1) << 22)
+#define RCC_UART5SW_SET(VAL) (((VAL) << 22) & UART5SW_MSK)
+#define RCC_UART5SW_GET(REG) (((REG) & UART5SW_MSK) >> 22)
+/* This bit is set and cleared by software to select the UART5 clock source.
+00: PCLK selected as UART5 clock source (default)
+01: System clock (SYSCLK) selected as UART5 clock
+10: LSE clock selected as UART5 clock
+11: HSI clock selected as UART5 clock */
+
+/* Bits [21..20] - UART4 clock source selection */
+#define RCC_UART4SW_MSK (((1 << (1 + 1)) - 1) << 20)
+#define RCC_UART4SW_SET(VAL) (((VAL) << 20) & UART4SW_MSK)
+#define RCC_UART4SW_GET(REG) (((REG) & UART4SW_MSK) >> 20)
+/* This bit is set and cleared by software to select the UART4 clock source.
+00: PCLK selected as UART4 clock source (default)
+01: System clock (SYSCLK) selected as UART4 clock
+10: LSE clock selected as UART4 clock
+11: HSI clock selected as UART4 clock */
+
+/* Bits [19..18] - USART3 clock source selection */
+#define RCC_USART3SW_MSK (((1 << (1 + 1)) - 1) << 18)
+#define RCC_USART3SW_SET(VAL) (((VAL) << 18) & USART3SW_MSK)
+#define RCC_USART3SW_GET(REG) (((REG) & USART3SW_MSK) >> 18)
+/* This bit is set and cleared by software to select the USART3 clock source.
+00: PCLK selected as USART3 clock source (default)
+01: System clock (SYSCLK) selected as USART3 clock
+10: LSE clock selected as USART3 clock
+11: HSI clock selected as USART3 clock */
+
+/* Bits [17..16] - USART2 clock source selection */
+#define RCC_USART2SW_MSK (((1 << (1 + 1)) - 1) << 16)
+#define RCC_USART2SW_SET(VAL) (((VAL) << 16) & USART2SW_MSK)
+#define RCC_USART2SW_GET(REG) (((REG) & USART2SW_MSK) >> 16)
+/* This bit is set and cleared by software to select the USART2 clock source.
+00: PCLK selected as USART2 clock source (default)
+01: System clock (SYSCLK) selected as USART2 clock
+10: LSE clock selected as USART2 clock
+11: HSI clock selected as USART2 clock */
+
+/* [15..10] Reserved, must be kept at reset value. */
+
+
+/* Bit 9 - Timer8 clock source selection */
+#define RCC_TIM8SW (1 << 9)
+/* Set and reset by software to select TIM8 clock source.
+The bit is writable only when the following conditions occur: clock system = PLL, and AHB
+and APB2 subsystem clock not divided respect the clock system.
+The bit is reset by hardware when exiting from the previous condition (user must set the bit
+again in case of a new switch is required)
+0: PCLK2 clock (doubled frequency when prescaled) (default)
+1: PLL vco output (running up to 144 MHz) */
+
+/* Bit 8 - Timer1 clock source selection */
+#define RCC_TIM1SW (1 << 8)
+/* Set and reset by software to select TIM1 clock source.
+The bit is writable only when the following conditions occur: clock system = PLL, and AHB
+and APB2 subsystem clock not divided respect the clock system.
+The bit is reset by hardware when exiting from the previous condition (user must set the bit
+again in case of a new switch is required)
+0: PCLK2 clock (doubled frequency when prescaled) (default)
+1: PLL vco output (running up to 144 MHz) */
+
+/* [7..6] Reserved, must be kept at reset value. */
+
+
+/* Bit 5 - I2C2 clock source selection */
+#define RCC_I2C2SW (1 << 5)
+/* This bit is set and cleared by software to select the I2C2 clock source.
+0: HSI clock selected as I2C2 clock source (default)
+1: PCLK clock selected as I2C2 clock */
+
+/* Bit 4 - I2C1 clock source selection */
+#define RCC_I2C1SW (1 << 4)
+/* This bit is set and cleared by software to select the I2C1 clock source.
+0: HSI clock selected as I2C1 clock source (default)
+1: PCLK selected as I2C1 clock */
+
+/* [3..2] Reserved, must be kept at reset value. */
+
+
+/* Bits [1..0] - USART1 clock source selection */
+#define RCC_USART1SW_MSK (((1 << (1 + 1)) - 1) << 0)
+#define RCC_USART1SW_SET(VAL) (((VAL) << 0) & USART1SW_MSK)
+#define RCC_USART1SW_GET(REG) (((REG) & USART1SW_MSK) >> 0)
+/* This bit is set and cleared by software to select the USART1 clock source.
+00: PCLK selected as USART1 clock source (default)
+01: System clock (SYSCLK) selected as USART1 clock
+10: LSE clock selected as USART1 clock
+11: HSI clock selected as USART1 clock */
+
+#endif /* defined(STM32F3X) */
 
 #ifndef __ASSEMBLER__
 
@@ -1935,9 +2382,10 @@ struct stm32f_rcc {
 	volatile uint32_t sscgr;
 	volatile uint32_t plli2scfgr;
 };
+
 #endif /* STM32F2X || STM32F4X  */
 
-#if defined(STM32F1X)
+#if defined(STM32F1X) || defined(STM32F3X)
 struct stm32f_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t cfgr; 
@@ -1951,10 +2399,13 @@ struct stm32f_rcc {
 
 	volatile uint32_t bdcr;
 	volatile uint32_t csr;
-	volatile uint32_t ahbstr;
+	volatile uint32_t ahbrstr;
 	volatile uint32_t cfgr2; 
+#if defined(STM32F3X)
+	volatile uint32_t cfgr3; 
+#endif
 };
-#endif /* STM32F1X */
+#endif /* STM32F1X || STM32F3X */
 
 #define STM32F_APB1 0
 #define STM32F_APB2 1

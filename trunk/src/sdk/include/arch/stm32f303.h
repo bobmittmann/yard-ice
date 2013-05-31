@@ -66,16 +66,13 @@
 #define STM32F_TIM2 ((struct stm32f_tim *)STM32F_BASE_TIM2)
 #define STM32F_TIM3 ((struct stm32f_tim *)STM32F_BASE_TIM3)
 #define STM32F_TIM4 ((struct stm32f_tim *)STM32F_BASE_TIM4)
-#define STM32F_TIM5 ((struct stm32f_tim *)STM32F_BASE_TIM5)
+
 #define STM32F_TIM6 ((struct stm32f_tim *)STM32F_BASE_TIM6)
 #define STM32F_TIM7 ((struct stm32f_tim *)STM32F_BASE_TIM7)
 #define STM32F_TIM8 ((struct stm32f_tim *)STM32F_BASE_TIM8)
-#define STM32F_TIM9 ((struct stm32f_tim *)STM32F_BASE_TIM9)
-#define STM32F_TIM10 ((struct stm32f_tim *)STM32F_BASE_TIM10)
-#define STM32F_TIM11 ((struct stm32f_tim *)STM32F_BASE_TIM11)
-#define STM32F_TIM12 ((struct stm32f_tim *)STM32F_BASE_TIM12)
-#define STM32F_TIM13 ((struct stm32f_tim *)STM32F_BASE_TIM13)
-#define STM32F_TIM14 ((struct stm32f_tim *)STM32F_BASE_TIM14)
+#define STM32F_TIM15 ((struct stm32f_tim *)STM32F_BASE_TIM15)
+#define STM32F_TIM16 ((struct stm32f_tim *)STM32F_BASE_TIM16)
+#define STM32F_TIM17 ((struct stm32f_tim *)STM32F_BASE_TIM17)
 
 #define STM32F_GPIOA ((struct stm32f_gpio *)STM32F_BASE_GPIOA)
 #define STM32F_GPIOB ((struct stm32f_gpio *)STM32F_BASE_GPIOB)
@@ -83,7 +80,8 @@
 #define STM32F_GPIOD ((struct stm32f_gpio *)STM32F_BASE_GPIOD)
 #define STM32F_GPIOE ((struct stm32f_gpio *)STM32F_BASE_GPIOE)
 #define STM32F_GPIOF ((struct stm32f_gpio *)STM32F_BASE_GPIOF)
-#define STM32F_GPIOG ((struct stm32f_gpio *)STM32F_BASE_GPIOG)
+
+#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_BASE_USB_SRAM)
 
 #endif /* __ASSEMBLER__ */
 

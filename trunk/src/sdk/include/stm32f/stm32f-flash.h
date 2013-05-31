@@ -36,7 +36,7 @@
 	the acceleration features and control the Flash memory access 
 	time according to CPU frequency. */
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 #define FLASH_DCRST (1 << 12)
 /* Data cache reset
@@ -67,13 +67,13 @@ This bit can be written only when the I cache is disabled.*/
 
 #endif /* STM32F2X */
 
-#ifdef STM32F1X
+#if defined(STM32F1X) || defined(STM32F3X)
 
 #define FLASH_PRFTBS (1 << 5)
 #define FLASH_PRFTBE (1 << 4)
 #define FLASH_HLFCYA (1 << 3)
 
-#endif /* STM32F1X */
+#endif /* defined(STM32F1X) || defined(STM32F3X) */
 
 
 #define FLASH_LATENCY(WS) (((WS) & 0x7) << 0)

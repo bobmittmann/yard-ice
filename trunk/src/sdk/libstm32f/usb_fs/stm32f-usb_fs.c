@@ -32,7 +32,7 @@
 #include <sys/delay.h>
 #include <sys/dcclog.h>
 
-#ifdef STM32F103
+#if defined(STM32F103) || defined(STM32F30X)
 
 #define USB_FS_DP STM32F_GPIOA, 12
 #define USB_FS_DM STM32F_GPIOA, 11
