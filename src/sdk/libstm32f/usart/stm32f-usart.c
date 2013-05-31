@@ -55,7 +55,7 @@ const struct stm32f_clk stm32f_usart_clk_lut[] = {
 };
 #endif
 
-#if defined(STM32F1X)
+#if defined(STM32F1X) || defined(STM32F3X)
 const struct stm32f_clk stm32f_usart_clk_lut[] = {  
 	{ STM32F_APB2, 14}, 
 	{ STM32F_APB1, 17}, 

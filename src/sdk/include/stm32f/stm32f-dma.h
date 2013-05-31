@@ -627,7 +627,7 @@
 
 
 
-#if defined(STM32F1X)
+#if defined(STM32F1X) || defined(STM32F3X)
 
 /* DMA interrupt status register */
 #define STM32F_DMA_ISR 0x000
@@ -913,7 +913,7 @@ struct stm32f_dma {
 };
 #endif
 
-#if defined(STM32F1X)
+#if defined(STM32F1X) || defined(STM32F3X)
 struct stm32f_dma_channel {
 	volatile uint32_t ccr;
 	volatile uint32_t cndtr;

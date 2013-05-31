@@ -34,6 +34,10 @@
 #include <arch/stm32f207.h>
 #endif
 
+#if defined(STM32F303) || defined(STM32F303XB) || defined(STM32F303XC)
+#include <arch/stm32f303.h>
+#endif
+
 #ifdef STM32F103
 #include <arch/stm32f103.h>
 #endif

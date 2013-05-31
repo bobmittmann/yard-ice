@@ -35,7 +35,7 @@
 
 #include <sys/dcclog.h>
 
-#ifdef STM32F103
+#if defined(STM32F103) || defined(STM32F30X)
 
 /* Endpoint state */
 typedef enum {
@@ -83,8 +83,6 @@ struct stm32f_usb_drv {
 /* -------------------------------------------------------------------------
  * End point packet buffer helpers
  * ------------------------------------------------------------------------- */
-
-#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 
 static void __copy_from_pktbuf(void * ptr,
 							   struct stm32f_usb_rx_pktbuf * rx,
@@ -929,4 +927,5 @@ const struct usb_dev stm32f_usb_fs_dev = {
 	.op = &stm32f_usb_ops
 };
 
-#endif /* STM32F103 */
+#endif /* defined(STM32F103) || defined(STM32F30X) */
+

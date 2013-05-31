@@ -274,6 +274,8 @@ typedef enum {
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
 
+#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __STM32F103_H__ */

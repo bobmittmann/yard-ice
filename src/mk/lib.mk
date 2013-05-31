@@ -21,9 +21,12 @@
 #------------------------------------------------------------------------------ 
 # cross compiling 
 #------------------------------------------------------------------------------ 
+
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
 ifndef MKDIR
-  $(warning MKDIR undefined!)
-  MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+  MKDIR := $(realpath $(THISDIR))
+  BASEDIR := $(realpath $(THISDIR)/..)
 endif	
 
 include $(MKDIR)/cross.mk

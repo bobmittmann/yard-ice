@@ -26,8 +26,6 @@
 
 #if defined(STM32F100)
 
-#error "1"
-
   #ifndef HSE_HZ
     #define HSE_HZ 12000000
   #endif
@@ -40,6 +38,16 @@
 
   #ifndef HSE_HZ
     #define HSE_HZ 12000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 72000000
+  #endif
+
+#elif defined(STM32F30X)
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 8000000
   #endif
 
   #ifndef HCLK_HZ
@@ -109,22 +117,24 @@ void debug_init(void)
 
 /* Hardware initialization */
 
-#ifdef STM32F1X
+#if defined(STM32F1X) || defined(STM32F3X)
 
-#ifdef STM32F10X
 const uint32_t stm32f_ahb_hz = HCLK_HZ;
+
+#if defined(STM32F10X) || defined(STM32F30X)
+
 const uint32_t stm32f_apb1_hz = HCLK_HZ / 2;
-const uint32_t stm32f_tim1_hz = HCLK_HZ;
-
 const uint32_t stm32f_apb2_hz = HCLK_HZ;
+const uint32_t stm32f_tim1_hz = HCLK_HZ;
 const uint32_t stm32f_tim2_hz = HCLK_HZ;
-#endif
 
-#ifdef STM32F100
+#elif defined(STM32F100)
+
 const uint32_t stm32f_apb1_hz = HCLK_HZ;
 const uint32_t stm32f_apb2_hz = HCLK_HZ;
 const uint32_t stm32f_tim1_hz = HCLK_HZ;
 const uint32_t stm32f_tim2_hz = HCLK_HZ;
+
 #endif
 
 void _init(void)
@@ -169,7 +179,7 @@ void _init(void)
 	cr &= ~RCC_PLLON;
 	rcc->cr = cr;
 
-#ifdef STM32F10X
+#if defined(STM32F10X) || defined(STM32F30X)
 	/* F_HSE = 12 MHz
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz

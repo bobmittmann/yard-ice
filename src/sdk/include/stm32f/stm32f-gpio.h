@@ -101,7 +101,7 @@
 #define GPIO_AF14 14
 #define GPIO_AF15 15
 
-#ifdef STM32F1X
+#if defined(STM32F1X) 
 
 /* ------------------------------------------------------------------------- */
 /* AF remap and debug I/O configuration register () */
@@ -295,14 +295,14 @@
    (TIM9_CH1 on PA2 and TIM9_CH2 on PA3) 1: Remap (TIM9_CH1 on PE5 and TIM9_CH2 
    on PE6) Bits 4:0 Reserved. */
 
-#endif				/* STM32F1X */
+#endif /* defined(STM32F1X) */
 
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
 
 
-#if defined(STM32F2X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
 struct stm32f_gpio {
 	volatile uint32_t moder;
 	volatile uint32_t otyper;
@@ -319,7 +319,7 @@ struct stm32f_gpio {
 
 #endif
 
-#ifdef STM32F1X
+#if defined(STM32F1X)
 struct stm32f_gpio {
 	volatile uint32_t crl;
 	volatile uint32_t crh;
@@ -340,7 +340,8 @@ struct stm32f_afio {
 	volatile uint32_t exticr4;
 	volatile uint32_t mapr2;
 };
-#endif
+
+#endif /* defined(STM32F1X) */
 
 #define	SPEED_LOW (0 << 0)
 #define	SPEED_MED (1 << 0)
