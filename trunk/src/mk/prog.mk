@@ -18,9 +18,6 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-#------------------------------------------------------------------------------ 
-# ld scripts
-#------------------------------------------------------------------------------ 
 
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
@@ -31,8 +28,11 @@ endif
 
 ifndef TOOLSDIR
   TOOLSDIR := $(realpath $(THISDIR)/../../tools)
-endif
+endif	
 
+#------------------------------------------------------------------------------ 
+# ld scripts
+#------------------------------------------------------------------------------ 
 ifndef LDDIR
   LDDIR := $(realpath $(THISDIR)/../ld)
 endif	
