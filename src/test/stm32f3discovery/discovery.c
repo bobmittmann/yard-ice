@@ -45,10 +45,14 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ STM32F_GPIOD, 12 }, /* LED4 */
-	{ STM32F_GPIOD, 13 }, /* LED3 */
-	{ STM32F_GPIOD, 14 }, /* LED5 */
-	{ STM32F_GPIOD, 15 }, /* LED6 */
+	{ STM32F_GPIOE,  9 }, /* LED3 */
+	{ STM32F_GPIOE, 10 }, /* LED5 */
+	{ STM32F_GPIOE, 11 }, /* LED7 */
+	{ STM32F_GPIOE, 12 }, /* LED9 */
+	{ STM32F_GPIOE, 13 }, /* LED10 */
+	{ STM32F_GPIOE, 14 }, /* LED8 */
+	{ STM32F_GPIOE, 15 }, /* LED6 */
+	{ STM32F_GPIOE,  8 }, /* LED4 */
 };
 
 
@@ -180,7 +184,7 @@ void leds_init(void)
 {
 	int i;
 
-	stm32f_gpio_clock_en(STM32F_GPIOD);
+	stm32f_gpio_clock_en(STM32F_GPIOE);
 
 	for (i = 0; i < LED_COUNT; ++i) {
 		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
@@ -552,6 +556,14 @@ int main(int argc, char ** argv)
 
 	leds_init();
 	btn_init();
+
+	while (1) {
+		leds_all_on();
+		thinkos_sleep(200);
+		leds_all_off();
+		thinkos_sleep(200);
+	}
+
 
 	acc.sem = thinkos_sem_alloc(0);
 	printf("%s(): acc.sem=%d.\n", __func__, acc.sem);
