@@ -242,10 +242,8 @@
 #define STM32F_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
-
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
 #define STM32F_I2S2EXT ((struct stm32f_spi *)STM32F_BASE_I2S2EXT)
-
 #define STM32F_SPI3 ((struct stm32f_spi *)STM32F_BASE_SPI3)
 #define STM32F_I2S3EXT ((struct stm32f_spi *)STM32F_BASE_I2S3EXT)
 

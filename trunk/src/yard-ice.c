@@ -61,6 +61,7 @@
 #include "jtag.h"
 #include "dbglog.h" 
 #include "nand.h" 
+#include "i2c.h" 
 
 #ifndef ENABLE_NETWORK
 #define ENABLE_NETWORK 0
@@ -84,6 +85,10 @@
 
 #ifndef ENABLE_GDB
 #define ENABLE_GDB 0
+#endif
+
+#ifndef ENABLE_I2C
+#define ENABLE_I2C 1
 #endif
 
 void tcpip_init(void);
@@ -295,6 +300,11 @@ int main(int argc, char ** argv)
 		tracef("mod_nand_start() failed!");
 		return 0;
 	}
+#endif
+
+#if (ENABLE_I2C)
+	tracef("* starting I2C module ... ");
+	i2c_init();
 #endif
 
 #if (ENABLE_TFTP)
