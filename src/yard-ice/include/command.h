@@ -172,6 +172,8 @@ int cmd_enable(FILE * f, int argc, char ** argv);
 
 int cmd_disable(FILE * f, int argc, char ** argv);
 
+int cmd_i2c(FILE * f, int argc, char ** argv);
+
 int exec(FILE * f, char * line);
 
 void show_val(FILE * f, uint32_t val);

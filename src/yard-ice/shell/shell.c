@@ -207,6 +207,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_tap, "tap", "", 
 		"[reset | info | probe | select N]", "JTAG TAP operations." },
 
+	{ cmd_i2c, "i2c", "", 
+		"[reset | info | probe | select N]", "I2C operations." },
+
 	{ cmd_trst, "trst", "tr", 
 		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
 
