@@ -76,6 +76,20 @@ static inline void __led_off(int id)
 	led_state[id] = 0;
 }
 
+static void __leds_io_init(void)
+{
+	int i;
+
+	stm32f_gpio_clock_en(STM32F_GPIOE);
+
+	for (i = 0; i < LED_COUNT; ++i) {
+		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+						 OUTPUT, PUSH_PULL | SPEED_LOW);
+
+		__led_off(i);
+	}
+}
+
 static int __leds_task(void)
 {
 	unsigned int tmr[4];
@@ -141,6 +155,22 @@ void led_off(unsigned int id)
 	thinkos_mutex_unlock(leds_mutex); 
 }
 
+void  __leds_all_on(void)
+{
+	int i;
+
+	for (i = 0; i < LED_COUNT; ++i)
+		__led_on(i);
+}
+
+void  __leds_all_off(void)
+{
+	int i;
+
+	for (i = 0; i < LED_COUNT; ++i)
+		__led_off(i);
+}
+
 void leds_all_off(void)
 {
 	int i;
@@ -184,15 +214,10 @@ void leds_init(void)
 {
 	int i;
 
-	stm32f_gpio_clock_en(STM32F_GPIOE);
+	__leds_io_init();
 
-	for (i = 0; i < LED_COUNT; ++i) {
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
-						 OUTPUT, PUSH_PULL | SPEED_LOW);
-
-		__led_off(i);
+	for (i = 0; i < LED_COUNT; ++i)
 		led_rate[i] = 0;
-	}
 
 	leds_mutex = thinkos_mutex_alloc();
 
@@ -535,6 +560,7 @@ int main(int argc, char ** argv)
 {
 	struct acc_info acc;
 	uint32_t cnt = 0;
+	int dt;
 	int x;
 	int y;
 	int i;
@@ -542,26 +568,51 @@ int main(int argc, char ** argv)
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
 
+	__leds_io_init();
+
+	__leds_all_on();
+	udelay(100000);
+	__leds_all_off();
+	udelay(100000);
+
 	/* Initialize the stdin, stdout and stderr */
 	stdio_init();
 
+	__leds_all_on();
+	udelay(100000);
+
 	/* Print a useful information message */
 	printf("\n");
+
+	__leds_all_off();
+
 	printf("---------------------------------------------------------\n");
 	printf(" STM32F4 Discovery example\n");
 	printf("---------------------------------------------------------\n");
 	printf("\n");
+
+//	while (1) {
+//		__leds_all_on();
+//		udelay(100000);
+//		__leds_all_off();
+//		udelay(100000);
+//	}
+
 
 	thinkos_init(THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 
 	leds_init();
 	btn_init();
 
-	while (1) {
-		leds_all_on();
-		thinkos_sleep(200);
-		leds_all_off();
-		thinkos_sleep(200);
+	for (i = 0; ; ++i) {
+		led_off((i - 2) & 0x7);
+		led_on(i & 0x7);
+
+		dt = i & 255;
+		if (dt > 127)
+			dt = 255 - dt;
+
+		thinkos_sleep(dt);
 	}
 
 

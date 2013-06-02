@@ -1623,70 +1623,65 @@ Set and cleared by software.
 
 /* Bit 21 - TIM11 timer clock enable */
 #define RCC_TIM11EN (1 << 21)
-/* 
-Set and cleared by software.
-0: TIM11 timer clock disabled
-1: TIM11 timer clock enabled */
+/* Set and cleared by software.
+   0: TIM11 timer clock disabled
+   1: TIM11 timer clock enabled */
 
 /* Bit 20 - TIM10 timer clock enable */
 #define RCC_TIM10EN (1 << 20)
 /* Set and cleared by software.
-0: TIM10 timer clock disabled
-1: TIM10 timer clock enabled */
+   0: TIM10 timer clock disabled
+   1: TIM10 timer clock enabled */
 
 /* Bit 19 - TIM9 timer clock enable */
 #define RCC_TIM9EN (1 << 19)
 /*  Set and cleared by software.
-0: TIM9 timer clock disabled
-1: TIM9 timer clock enabled */
+   0: TIM9 timer clock disabled
+   1: TIM9 timer clock enabled */
 
 
 /* Bit 18 - TIM17 timer clock enable */
 #define RCC_TIM17EN (1 << 18)
 /* Set and cleared by software.
-0: TIM17 timer clock disabled
-1: TIM17 timer clock enabled */
+   0: TIM17 timer clock disabled
+   1: TIM17 timer clock enabled */
 
 /* Bit 17 - TIM16 timer clock enable */
 #define RCC_TIM16EN (1 << 17)
 /* Set and cleared by software.
-0: TIM16 timer clock disabled
-1: TIM16 timer clock enabled */
+   0: TIM16 timer clock disabled
+   1: TIM16 timer clock enabled */
 
 /* Bit 16 - TIM15 timer clock enable */
 #define RCC_TIM15EN (1 << 16)
 /* Set and cleared by software.
-0: TIM15 timer clock disabled
-1: TIM15 timer clock enabled */
+   0: TIM15 timer clock disabled
+   1: TIM15 timer clock enabled */
 
 
 /* Bit 15 - ADC3 interface clock enable */
 #define RCC_ADC3EN (1 << 15)
-/* 
-Set and cleared by software.
-0: ADC3 interface clock disabled
-1: ADC3 interface clock enabled */ 
+/* Set and cleared by software.
+   0: ADC3 interface clock disabled
+   1: ADC3 interface clock enabled */ 
 
 /* Bit 14 - USART1 clock enable */
 #define RCC_USART1EN (1 << 14)
-/* 
-Set and cleared by software.
-0: USART1 clock disabled
-1: USART1 clock enabled */
+/* Set and cleared by software.
+   0: USART1 clock disabled
+   1: USART1 clock enabled */
 
 /* Bit 13 - TIM8 Timer clock enable */
 #define RCC_TIM8EN (1 << 13)
-/* 
-Set and cleared by software.
-0: TIM8 timer clock disabled
-1: TIM8 timer clock enabled */
+/* Set and cleared by software.
+   0: TIM8 timer clock disabled
+   1: TIM8 timer clock enabled */
 
 /* Bit 12 - SPI1 clock enable */
 #define RCC_SPI1EN (1 << 12)
-/* 
-Set and cleared by software.
-0: SPI1 clock disabled
-1: SPI1 clock enabled */
+/* Set and cleared by software.
+   0: SPI1 clock disabled
+   1: SPI1 clock enabled */
 
 /* Bit 11 - TIM1 timer clock enable */
 #define RCC_TIM1EN (1 << 11)

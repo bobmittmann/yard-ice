@@ -24,9 +24,9 @@
 
 int stm32f_usart_putc(struct stm32f_usart * usart, int c)
 {
-	while (!(usart->sr & USART_TXE));
+	while (!(usart->isr & USART_TXE));
 
-	usart->dr = c;
+	usart->tdr = c;
 
 	return 0;
 }
