@@ -1,5 +1,5 @@
 /* 
- * File:	stm32f-usart_init.c
+ * File:     stm32f-usart_init.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:

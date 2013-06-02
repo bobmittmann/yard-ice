@@ -455,13 +455,36 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 #include <stdint.h>
 
 struct stm32f_usart {
+#if defined(STM32F3X)
+	volatile uint32_t cr1;
+	volatile uint32_t cr2;
+	volatile uint32_t cr3;
+	volatile uint32_t brr;
+
+	volatile uint32_t gtpr;
+	volatile uint32_t rtor;
+	volatile uint32_t rqr;
+	union {
+		volatile uint32_t isr;
+		volatile uint32_t sr; /* compatibility name */
+	};
+
+	volatile uint32_t icr;
+	volatile uint32_t rdr;
+	volatile uint32_t tdr;
+#else
 	volatile uint32_t sr;
-	volatile uint32_t dr;
+	enum {
+		volatile uint32_t dr;
+		volatile uint32_t rdr;
+		volatile uint32_t tdr;
+	};
 	volatile uint32_t brr;
 	volatile uint32_t cr1;
 	volatile uint32_t cr2;
 	volatile uint32_t cr3;
 	volatile uint32_t gtpr;
+#endif
 };
 
 extern const uint8_t stm32f_usart_irq_lut[];
@@ -508,7 +531,6 @@ void stm32f_usart_disable(struct stm32f_usart * us);
 static inline int stm32f_usart_irq_lookup(struct stm32f_usart * usart) {
 	return stm32f_usart_irq_lut[stm32f_usart_lookup(usart)];
 }
-
 
 #endif /* __ASSEMBLER__ */
 

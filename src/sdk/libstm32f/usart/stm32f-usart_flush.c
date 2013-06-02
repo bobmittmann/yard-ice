@@ -26,10 +26,10 @@ int stm32f_usart_flush(struct stm32f_usart * usart)
 {
 	int c;
 
-	while (!(usart->sr & USART_TC));
+	while (!(usart->isr & USART_TC));
 
 	/* clear buffered chars */
-	c = usart->dr;
+	c = usart->rdr;
 	(void)c;
 
 	return 0;

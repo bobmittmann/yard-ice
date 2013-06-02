@@ -57,7 +57,11 @@ __rom_vectors:
 	.word	stm32f_rcc_isr          /*  5 RCC */
 	.word	stm32f_exti0_isr        /*  6 EXTI Line0 */
 	.word	stm32f_exti1_isr        /*  7 EXTI Line1 */
+#if defined(STM32F3X)
+	.word	stm32f_exti2_tsc_isr    /*  8 EXTI Line2 */
+#else
 	.word	stm32f_exti2_isr        /*  8 EXTI Line2 */
+#endif
 	.word	stm32f_exti3_isr        /*  9 EXTI Line3 */
 	.word	stm32f_exti4_isr        /* 10 EXTI Line4 */
 	.word	stm32f_dma1_stream0_isr /* 11 DMA1 Stream 0 */
@@ -74,7 +78,7 @@ __rom_vectors:
 	.word	stm32f_can1_rx0_isr        /* 20 CAN1 RX0 */
 	.word	stm32f_can1_rx1_isr        /* 21 CAN1 RX1 */
 	.word	stm32f_can1_sce_isr        /* 22 CAN1 SCE */
-#elif defined(STM32F10X)
+#elif defined(STM32F10X) || defined(STM32F3X)
 	.word   stm32f_can1_tx_usb_hp_isr  /* 19 CAN1 TX and USB High Priority */
 	.word   stm32f_can1_rx0_usb_lp_isr /* 20 CAN1 RX0 and and USB 
 										       Low Priority */
@@ -98,7 +102,7 @@ __rom_vectors:
 	.word	stm32f_tim1_brk_isr           /* 24 TIM1 Break */
 	.word	stm32f_tim1_up_isr            /* 25 TIM1 Update */
 	.word	stm32f_tim1_trg_com_isr       /* 26 TIM1 Trigger and Commutation */
-#elif defined(STM32F100)
+#elif defined(STM32F100) || defined(STM32F3X)
 	.word	stm32f_tim1_brk_tim15_isr     /* 24 TIM1 Break and TIM15 */
 	.word	stm32f_tim1_up_tim16_isr      /* 25 TIM1 Update and TIM16 */
 	.word	stm32f_tim1_trg_com_tim17_isr /* 26 TIM1 Trigger and Commutation 
@@ -109,15 +113,31 @@ __rom_vectors:
 	.word	stm32f_tim3_isr           /* 29 TIM3 */
 
 	.word	stm32f_tim4_isr           /* 30 TIM4 */
+
+#if defined(STM32F3X)
+	.word	stm32f_i2c1_ev_exti23_isr        /* 31 I2C1 Event */
+	.word	stm32f_i2c1_er_isr        /* 32 I2C1 Error */
+	.word	stm32f_i2c2_ev_exti24_isr        /* 33 I2C2 Event */
+	.word	stm32f_i2c2_er_isr        /* 34 I2C2 Error */
+#else
 	.word	stm32f_i2c1_ev_isr        /* 31 I2C1 Event */
 	.word	stm32f_i2c1_er_isr        /* 32 I2C1 Error */
 	.word	stm32f_i2c2_ev_isr        /* 33 I2C2 Event */
 	.word	stm32f_i2c2_er_isr        /* 34 I2C2 Error */
+#endif
+
 	.word	stm32f_spi1_isr           /* 35 SPI1 */
 	.word	stm32f_spi2_isr           /* 36 SPI2 */
+
+#if defined(STM32F3X)
+	.word	stm32f_usart1_exti25_isr  /* 37 USART1 */
+	.word	stm32f_usart2_exti26_isr  /* 38 USART2 */
+	.word	stm32f_usart3_exti28_isr  /* 39 USART3 */
+#eles
 	.word	stm32f_usart1_isr         /* 37 USART1 */
 	.word	stm32f_usart2_isr         /* 38 USART2 */
 	.word	stm32f_usart3_isr         /* 39 USART3 */
+#endif
 
 	.word	stm32f_exti15_10_isr      /* 40 External Line[15:10]s */
 	.word	stm32f_rtc_alarm_isr      /* 41 RTC Alarm (A and B) 
@@ -125,6 +145,9 @@ __rom_vectors:
 #if defined(STM32F2X)
 	.word	stm32f_otg_fs_wkup_isr    /* 42 USB OTG FS Wakeup 
 	                                     through EXTI line */
+#elif defined(STM32F10X) || defined(STM32F3X)
+	.word	stm32f_usb_wkup_isr    /* 42 USB FS Wakeup  */
+
 #else
 	.word	stm32f_cec_isr            /* 42 CEC Global Interrupt */
 #endif
@@ -371,6 +394,9 @@ _void:
 	.weak       stm32f_exti2_isr
 	.thumb_set  stm32f_exti2_isr,_isr
 
+	.weak       stm32f_exti2_tsc_isr
+	.thumb_set  stm32f_exti2_tsc_isr,_isr
+
 	.weak       stm32f_exti3_isr
 	.thumb_set  stm32f_exti3_isr,_isr
 
@@ -468,11 +494,17 @@ _void:
 	.weak       stm32f_i2c1_ev_isr
 	.thumb_set  stm32f_i2c1_ev_isr,_isr
 
+	.weak       stm32f_i2c1_ev_exti23_isr
+	.thumb_set  stm32f_i2c1_ev_exti23_isr,_isr
+
 	.weak       stm32f_i2c1_er_isr
 	.thumb_set  stm32f_i2c1_er_isr,_isr
 
 	.weak       stm32f_i2c2_ev_isr
 	.thumb_set  stm32f_i2c2_ev_isr,_isr
+
+	.weak       stm32f_i2c2_ev_exti24_isr
+	.thumb_set  stm32f_i2c2_ev_exti24_isr,_isr
 
 	.weak       stm32f_i2c2_er_isr
 	.thumb_set  stm32f_i2c2_er_isr,_isr
@@ -486,11 +518,20 @@ _void:
 	.weak       stm32f_usart1_isr
 	.thumb_set  stm32f_usart1_isr,_isr
 
+	.weak       stm32f_usart1_exti25_isr
+	.thumb_set  stm32f_usart1_exti25_isr,_isr
+
 	.weak       stm32f_usart2_isr
 	.thumb_set  stm32f_usart2_isr,_isr
 
+	.weak       stm32f_usart2_exti26_isr
+	.thumb_set  stm32f_usart2_exti26_isr,_isr
+
 	.weak       stm32f_usart3_isr
 	.thumb_set  stm32f_usart3_isr,_isr
+
+	.weak       stm32f_usart3_exti28_isr
+	.thumb_set  stm32f_usart3_exti28_isr,_isr
 
 	.weak       stm32f_exti15_10_isr
 	.thumb_set  stm32f_exti15_10_isr,_isr
@@ -500,6 +541,9 @@ _void:
 
 	.weak       stm32f_otg_fs_wkup_isr
 	.thumb_set  stm32f_otg_fs_wkup_isr,_isr
+
+	.weak       stm32f_usb_wkup_isr
+	.thumb_set  stm32f_usb_wkup_isr,_isr
 
 	.weak       stm32f_cec_isr
 	.thumb_set  stm32f_cec_isr,_isr

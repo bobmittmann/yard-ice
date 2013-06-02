@@ -180,6 +180,7 @@ void _init(void)
 	rcc->cr = cr;
 
 #if defined(STM32F10X) || defined(STM32F30X)
+#if (HSE_HZ == 12000000)
 	/* F_HSE = 12 MHz
 	   PLLCLK = 72 MHz
 	   SYSCLK = 72 MHz
@@ -188,6 +189,19 @@ void _init(void)
 	   USBCLK = 48 MHz */
 	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(6) | RCC_PLLSRC_HSE | 
 		RCC_PPRE2_1 | RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
+#elif (HSE_HZ == 8000000)
+	/* F_HSE = 8 MHz
+	   PLLCLK = 72 MHz
+	   SYSCLK = 72 MHz
+	   PCLK1 = 36 MHz
+	   PCLK2 = 72 MHz
+	   USBCLK = 48 MHz */
+	cfg = RCC_USBPRE_1DOT5 | RCC_PLLMUL(9) | RCC_PLLSRC_HSE | 
+		RCC_PPRE2_1 | RCC_PPRE1_2 | RCC_HPRE_1 | RCC_SW_HSE;
+#else
+#error "HSE_HZ invalid!"
+#endif
+
 #endif
 
 #ifdef STM32F100

@@ -30,8 +30,8 @@ int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec)
 	tm = msec * 20;
 
 	for (;;) {		
-		if (usart->sr & USART_RXNE) {
-			return usart->dr;
+		if (usart->isr & USART_RXNE) {
+			return usart->rdr;
 		}
 		if (tm == 0) {
 			return -1;

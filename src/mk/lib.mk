@@ -26,7 +26,6 @@ THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 ifndef MKDIR
   MKDIR := $(realpath $(THISDIR))
-  BASEDIR := $(realpath $(THISDIR)/..)
 endif	
 
 include $(MKDIR)/cross.mk
