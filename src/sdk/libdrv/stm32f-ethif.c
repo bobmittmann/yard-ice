@@ -123,14 +123,14 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 
 		hdr = (struct eth_hdr *)desc->rbap1;
 
-#if LOG_LEVEL == LOG_TRACE
+#if LOG_LEVEL == LOG_INFO
 		{
 			uint8_t * da = hdr->eth_dst;
 			uint8_t * sa = hdr->eth_src;
-			DCC_LOG6(LOG_TRACE, "Dst: %02x:%02x:%02x:%02x:%02x:%02x",
+			DCC_LOG6(LOG_LEVEL, "Dst: %02x:%02x:%02x:%02x:%02x:%02x",
 					 da[0], da[1], da[2], da[3], da[4], da[5]);
 
-			DCC_LOG6(LOG_TRACE, "Src: %02x:%02x:%02x:%02x:%02x:%02x",
+			DCC_LOG6(LOG_LEVEL, "Src: %02x:%02x:%02x:%02x:%02x:%02x",
 					 sa[0], sa[1], sa[2], sa[3], sa[4], sa[5]);
 		}
 #endif

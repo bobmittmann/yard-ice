@@ -31,13 +31,106 @@
 #include <tcpip/tcp.h>
 
 #include <sys/dcclog.h>
-#include <sys/at91.h>
 #include <sys/serial.h>
+#include <sys/os.h>
+
+#include <sys/stm32f.h>
+#include <trace.h>
 
 #define TELOPTS
 
-#include <arpa/telnet.h>
-#include <rfc2217.h>
+//#include <arpa/telnet.h>
+#include "rfc2217.h"
+
+/*
+ * Definitions for the TELNET protocol.
+ */
+#define	IAC	255		/* interpret as command: */
+#define	DONT	254		/* you are not to use option */
+#define	DO	253		/* please, you use option */
+#define	WONT	252		/* I won't use option */
+#define	WILL	251		/* I will use option */
+#define	SB	250		/* interpret as subnegotiation */
+#define	GA	249		/* you may reverse the line */
+#define	EL	248		/* erase the current line */
+#define	EC	247		/* erase the current character */
+#define	AYT	246		/* are you there */
+#define	AO	245		/* abort output--but let prog finish */
+#define	IP	244		/* interrupt process--permanently */
+#define	BREAK	243		/* break */
+#define	DM	242		/* data mark--for connect. cleaning */
+#define	NOP	241		/* nop */
+#define	SE	240		/* end sub negotiation */
+#define EOR     239             /* end of record (transparent mode) */
+#define	ABORT	238		/* Abort process */
+#define	SUSP	237		/* Suspend process */
+#define	xEOF	236		/* End of file: EOF is already used... */
+
+#define SYNCH	242		/* for telfunc calls */
+
+/* telnet options */
+#define TELOPT_BINARY	0	/* 8-bit data path */
+#define TELOPT_ECHO	1	/* echo */
+#define	TELOPT_RCP	2	/* prepare to reconnect */
+#define	TELOPT_SGA	3	/* suppress go ahead */
+#define	TELOPT_NAMS	4	/* approximate message size */
+#define	TELOPT_STATUS	5	/* give status */
+#define	TELOPT_TM	6	/* timing mark */
+#define	TELOPT_RCTE	7	/* remote controlled transmission and echo */
+#define TELOPT_NAOL	8	/* negotiate about output line width */
+#define TELOPT_NAOP	9	/* negotiate about output page size */
+#define TELOPT_NAOCRD	10	/* negotiate about CR disposition */
+#define TELOPT_NAOHTS	11	/* negotiate about horizontal tabstops */
+#define TELOPT_NAOHTD	12	/* negotiate about horizontal tab disposition */
+#define TELOPT_NAOFFD	13	/* negotiate about formfeed disposition */
+#define TELOPT_NAOVTS	14	/* negotiate about vertical tab stops */
+#define TELOPT_NAOVTD	15	/* negotiate about vertical tab disposition */
+#define TELOPT_NAOLFD	16	/* negotiate about output LF disposition */
+#define TELOPT_XASCII	17	/* extended ascic character set */
+#define	TELOPT_LOGOUT	18	/* force logout */
+#define	TELOPT_BM	19	/* byte macro */
+#define	TELOPT_DET	20	/* data entry terminal */
+#define	TELOPT_SUPDUP	21	/* supdup protocol */
+#define	TELOPT_SUPDUPOUTPUT 22	/* supdup output */
+#define	TELOPT_SNDLOC	23	/* send location */
+#define	TELOPT_TTYPE	24	/* terminal type */
+#define	TELOPT_EOR	25	/* end or record */
+#define	TELOPT_TUID	26	/* TACACS user identification */
+#define	TELOPT_OUTMRK	27	/* output marking */
+#define	TELOPT_TTYLOC	28	/* terminal location number */
+#define	TELOPT_3270REGIME 29	/* 3270 regime */
+#define	TELOPT_X3PAD	30	/* X.3 PAD */
+#define	TELOPT_NAWS	31	/* window size */
+#define	TELOPT_TSPEED	32	/* terminal speed */
+#define	TELOPT_LFLOW	33	/* remote flow control */
+#define TELOPT_LINEMODE	34	/* Linemode option */
+#define TELOPT_XDISPLOC	35	/* X Display Location */
+#define TELOPT_OLD_ENVIRON 36	/* Old - Environment variables */
+#define	TELOPT_AUTHENTICATION 37/* Authenticate */
+#define	TELOPT_ENCRYPT	38	/* Encryption option */
+#define TELOPT_NEW_ENVIRON 39	/* New - Environment variables */
+#define	TELOPT_EXOPL	255	/* extended-options-list */
+#define TELOPT_ENVIRON TELOPT_OLD_ENVIRON
+
+#define	NTELOPTS	(1 + TELOPT_NEW_ENVIRON)
+const char * const telopts[NTELOPTS + 1] = {
+	"BINARY", "ECHO", "RCP", "SUPPRESS GO AHEAD", "NAME",
+	"STATUS", "TIMING MARK", "RCTE", "NAOL", "NAOP",
+	"NAOCRD", "NAOHTS", "NAOHTD", "NAOFFD", "NAOVTS",
+	"NAOVTD", "NAOLFD", "EXTEND ASCII", "LOGOUT", "BYTE MACRO",
+	"DATA ENTRY TERMINAL", "SUPDUP", "SUPDUP OUTPUT",
+	"SEND LOCATION", "TERMINAL TYPE", "END OF RECORD",
+	"TACACS UID", "OUTPUT MARKING", "TTYLOC",
+	"3270 REGIME", "X.3 PAD", "NAWS", "TSPEED", "LFLOW",
+	"LINEMODE", "XDISPLOC", "OLD-ENVIRON", "AUTHENTICATION",
+	"ENCRYPT", "NEW-ENVIRON",
+	0,
+};
+#define	TELOPT_FIRST	TELOPT_BINARY
+#define	TELOPT_LAST	TELOPT_NEW_ENVIRON
+#define	TELOPT_OK(x)	((unsigned int)(x) <= TELOPT_LAST)
+#define	TELOPT(x)	telopts[(x)-TELOPT_FIRST]
+
 
 /* CPC Serial Default Values */
 #define CPC_DEF_BAUD	9600
@@ -120,17 +213,16 @@ int par2cpc(char cpc)
 	}
 }
 
-int at91_us_init(struct at91_us_dev * dev, int port);
+struct serial_dev * serial_open(void);
 
-int at91_us_write(struct at91_us_dev * dev, const void * buf, int len);
+int serial_write(struct serial_dev * dev, const void * buf, 
+				 unsigned int len);
 
-int at91_us_read(struct at91_us_dev * dev, void * buf, int len, int msec);
-
-int at91_us_config(struct at91_us_dev * dev, int baudrate, 
-				   int mode, int tmo_bits);
+int serial_read(struct serial_dev * dev, char * buf, 
+				unsigned int len, unsigned int msec);
 
 struct vcom {
-	struct at91_us_dev * dev;
+	struct serial_dev * serial;
 	struct tcp_pcb * volatile tp;
 	int baud;
 	int datab;
@@ -143,7 +235,7 @@ struct tn_opt {
 	uint32_t remote; /* remote options */
 };
 
-int  cpc_opt_will(struct tcp_pcb * tp, struct tn_opt * t, int opt)
+int cpc_opt_will(struct tcp_pcb * tp, struct tn_opt * t, int opt)
 {
 	uint8_t buf[4];
 
@@ -230,14 +322,13 @@ void cpc_opt_clr(struct tn_opt * t)
 	t->remote = 0;
 }
 
-int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom, 
-											 uthread_id_t id)
+int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 {
-	struct at91_us_dev * dev = vcom->dev;
+	struct serial_dev * serial = vcom->serial;
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
 	char buf[128];
-	char sb_buf[64];
+//	char sb_buf[64];
 	int sb_len;
 	int len;
 	int ret;
@@ -259,7 +350,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 			break;
 		}
 
-		DCC_LOG2(LOG_TRACE, "%I:%d accepted.", tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG(LOG_TRACE, "accepted.");
 
 		vcom->tp  = tp;
 
@@ -277,8 +368,8 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 		for (;;) {
 			if (cnt) {
 				/* flush input buffer */
-				if ((ret = at91_us_write(dev, buf, cnt)) <= 0) {
-					DCC_LOG1(LOG_WARNING, "at91_us_write(): %d", ret);
+				if ((ret = serial_write(serial, buf, cnt)) <= 0) {
+					DCC_LOG(LOG_ERROR, "serial_write() failed!");
 					break;
 				}
 				/* reset output data pointer */
@@ -293,8 +384,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 				break;
 			}
 
-			DCC_LOG3(LOG_MSG, "%I:%d recv: %d", tp->t_faddr, 
-					 ntohs(tp->t_fport), len);
+			DCC_LOG1(LOG_MSG, "recv: %d", len);
 
 			/* set the input processing pointer */
 			src = buf;
@@ -439,7 +529,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 					if (sb_len < CPC_SB_BUF_LEN) {
 						DCC_LOG1(LOG_TRACE, "suboption: %d", c);
 					}
-					sb_buf[sb_len++] = c;
+//					sb_buf[sb_len++] = c;
 					break;
 
 				case CPC_SB_IAC_RCVD:
@@ -448,7 +538,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 //						cpc_suboption(cpc, sb_buf, sb_len);
 					} else {
 						state = CPC_SUBOPTION;
-						sb_buf[sb_len++] = c;
+//						sb_buf[sb_len++] = c;
 					}
 					break;
 
@@ -485,7 +575,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 
 		}
 
-		DCC_LOG2(LOG_TRACE, "%I:%d close...", tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
 		vcom->tp  = NULL;
@@ -495,49 +585,50 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom,
 	for(;;);
 }
 
-int __attribute__((noreturn)) serial_input_task(struct vcom * vcom, 
-												uthread_id_t id)
+#define VCOM_BUF_SIZE 128
+
+int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 {
-	struct at91_us_dev * dev = vcom->dev;
-	char buf[128];
+	struct serial_dev * serial = vcom->serial;
+	char buf[VCOM_BUF_SIZE];
 	int len;
 	int ret;
 
+	DCC_LOG1(LOG_TRACE, "<%d> started...", __os_thread_self());
+
 	for (;;) {
-		for (;;) {
-			if ((len = at91_us_read(dev, buf, 128, 10000)) < 0) {
-				DCC_LOG1(LOG_WARNING, "at91_us_read(): %d", len);
-				break;
-			}
-			//			len = 0;
-			//			uthread_sleep(100000);
-
-			if (len == 0) {
-				DCC_LOG(LOG_MSG, "timeout");
-				continue;
-			}
-
-			if (vcom->tp == NULL)
-				continue;
-
-			if ((ret = tcp_send(vcom->tp, buf, len, TCP_SEND_NOWAIT)) <= 0) {
-				DCC_LOG1(LOG_WARNING, "tcp_send(): %d", ret);
-				break;
-			}
-			DCC_LOG3(LOG_MSG, "%I:%d send: %d", vcom->tp->t_faddr, 
-					 ntohs(vcom->tp->t_fport), ret);
+		if ((len = serial_read(serial, buf, VCOM_BUF_SIZE, 100)) < 0) {
+			DCC_LOG(LOG_ERROR, "serial_read(): failed!");
+			continue;
 		}
+
+		if (len == 0) {
+			DCC_LOG(LOG_TRACE, "timeout");
+			continue;
+		}
+
+		if (vcom->tp == NULL)
+			continue;
+
+		if ((ret = tcp_send(vcom->tp, buf, len, TCP_SEND_NOWAIT)) <= 0) {
+			DCC_LOG1(LOG_WARNING, "tcp_send(): %d", ret);
+			continue;
+		}
+		DCC_LOG1(LOG_MSG, "send: %d", ret);
 	}
+
+	for (;;);
 }
 
 uint32_t tcp_input_stack[512];
 uint32_t serial_input_stack[512];
 
+struct vcom serial_vcom;
+
 int vcom_start(void)
 {  
-	struct at91_us_dev * dev;
 	struct tcp_pcb * svc;
-	struct vcom * vcom;
+	struct vcom * vcom = &serial_vcom;
 	int th;
 
 	svc = tcp_alloc();
@@ -545,39 +636,26 @@ int vcom_start(void)
 	tcp_bind(svc, INADDR_ANY, htons(2000));
 
 	if (tcp_listen(svc, 1) != 0) {
-		printf("Can't register the TCP listner!\n");
+		tracef("%s(): Can't register the TCP listner!", __func__);
 		return -1;
 	}
 
-	if ((dev = malloc(sizeof(struct at91_us_dev))) == NULL) {
-		DCC_LOG(LOG_ERROR, "malloc() failed!");
-		return -1;
-	}
-
-	DCC_LOG1(LOG_TRACE, "dev=%08x", dev);
-
-	if (at91_us_init(dev, 0) < 0) {
-		free(dev);
-		printf("Can't initialize serial port driver!\n");
-		return -1;
-	}
-
-	at91_us_config(dev, 115200, SERIAL_8N1, 50);
-
-	vcom = malloc(sizeof(struct vcom));
-	vcom->dev = dev;
+	vcom->serial = serial_open();
 	vcom->tp = svc;
 
-	th = uthread_create(tcp_input_stack, sizeof(tcp_input_stack), 
-						(uthread_task_t)tcp_input_task, 
-						(void *)vcom, 1, NULL); 
-	printf("<%d> ", th);
+	th = __os_thread_create((void *)tcp_input_task, (void *)vcom, 
+								tcp_input_stack, sizeof(tcp_input_stack), 
+								__OS_PRIORITY_LOWEST);
 
 
-	th = uthread_create(serial_input_stack, sizeof(serial_input_stack), 
-						(uthread_task_t)serial_input_task, 
-						(void *)vcom, 1, NULL); 
-	printf("<%d> ", th);
+	tracef("VCOM TCP input thread=%d", th);
+
+
+	th = __os_thread_create((void *)serial_input_task, (void *)vcom, 
+								serial_input_stack, sizeof(serial_input_stack), 
+								__OS_PRIORITY_LOWEST);
+
+	tracef("VCOM serial input thread=%d", th);
 
 	return 0;
 }

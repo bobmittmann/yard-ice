@@ -62,6 +62,7 @@
 #include "dbglog.h" 
 #include "nand.h" 
 #include "i2c.h" 
+#include "jtag3drv.h" 
 
 #ifndef ENABLE_NETWORK
 #define ENABLE_NETWORK 0
@@ -88,7 +89,11 @@
 #endif
 
 #ifndef ENABLE_I2C
-#define ENABLE_I2C 1
+#define ENABLE_I2C 0
+#endif
+
+#ifndef ENABLE_VCOM
+#define ENABLE_VCOM 0
 #endif
 
 void tcpip_init(void);
@@ -322,8 +327,10 @@ int main(int argc, char ** argv)
 	comm_tcp_start(&debugger.comm);
 #endif
 
-#ifdef ENABLE_VCOM
+#if (ENABLE_VCOM)
 	tracef("* starting VCOM daemon ... ");
+	/* connect the UART to the JTAG auxiliary pins */
+	jtag3ctrl_aux_uart(true);
 	vcom_start();
 #endif
 
