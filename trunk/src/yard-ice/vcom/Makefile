@@ -23,7 +23,7 @@
 
 LIB_STATIC = vcom
 
-CFILES = at91-us.c vcom.c
+CFILES = vcom.c stm32f-serial.c
 
 include ../../mk/lib.mk
 

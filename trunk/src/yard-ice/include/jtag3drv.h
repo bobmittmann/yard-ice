@@ -393,6 +393,8 @@ void jtag3ctrl_sys_rst(void);
 
 void jtag3ctrl_rtck(bool enable);
 
+void jtag3ctrl_aux_uart(bool enable);
+
 #ifdef __cplusplus
 }
 #endif

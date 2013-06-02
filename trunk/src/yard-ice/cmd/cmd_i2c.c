@@ -54,12 +54,12 @@ static int i2c_info(FILE * f)
 uint8_t i2c_adc_lst[I2C_ADC_MAX];
 uint8_t i2c_adc_cnt;
 
-static void dac_lst_purge(void)
+static void adc_lst_purge(void)
 {
 	i2c_adc_cnt = 0;
 }
 
-static void dac_lst_insert(unsigned int addr)
+static void adc_lst_insert(unsigned int addr)
 {
 	if (i2c_adc_cnt < I2C_ADC_MAX) {
 		i2c_adc_lst[i2c_adc_cnt++] = addr;
@@ -68,12 +68,14 @@ static void dac_lst_insert(unsigned int addr)
 
 static int i2c_adc_scan(FILE * f)
 {
-	uint16_t val;
+	uint8_t buf[4];
+	unsigned int val;
 	int i;
 
 	for (i = 0; i < i2c_adc_cnt; ++i) {
-		i2c_read(i2c_adc_lst[i], &val, 2);
-		fprintf(f, " %d", val);
+		i2c_read(i2c_adc_lst[i], buf, 2);
+		val = buf[0] + (buf[1] << 8);
+		fprintf(f, "%6d", val);
 	}
 
 	fprintf(f, "\n");
@@ -86,16 +88,21 @@ static int i2c_probe(FILE * f)
 	int n;
 	int i;
 
-	fprintf(f, " - I2C probe...\n");
-
 	n = i2c_bus_scan(0x1, 0x78, addr, sizeof(addr));
+	adc_lst_purge();
+	
+	if (n == 0) {
+		fprintf(f, "No devices.\n");
+		return 0;
+	}
 
-	dac_lst_purge();
 	for (i = 0; i < n; ++i) {
-		fprintf(f, " - %d --> 0x%02x", i, addr[i]);
+		fprintf(f, "%2d 0x%02x - ", i, addr[i]);
 		if ((addr[i] & 0x48) == 0x48) {
-			fprintf(f, ": MCP3221 %d", addr[i] & 0x7);
-			dac_lst_insert(addr[i]);
+			fprintf(f, " MCP3221-%d", addr[i] & 0x7);
+			adc_lst_insert(addr[i]);
+		} else {
+			fprintf(f, "Unknown");
 		}
 		fprintf(f, "\n");
 	}

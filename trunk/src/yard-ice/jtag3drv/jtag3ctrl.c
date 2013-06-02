@@ -151,6 +151,15 @@ void jtag3ctrl_loopback(bool enable)
 	reg_wr(REG_CFG, cfg);
 }
 
+void jtag3ctrl_aux_uart(bool enable)
+{
+	unsigned int cfg;
+
+	cfg = reg_rd(REG_CFG);
+	cfg = (enable) ? cfg | CFG_UART_EN : cfg & ~CFG_UART_EN;
+	reg_wr(REG_CFG, cfg);
+}
+
 void jtag3ctrl_rtck(bool enable)
 {
 	int cfg = reg_rd(REG_CFG);
