@@ -20,9 +20,9 @@
 # 
 
 
-PROG = discovery
+PROG = leds_test
 
-CFILES = stdio.c discovery.c
+CFILES = leds_test.c
 
 LIBDIRS = ../../../sdk/libstm32f ../../../sdk/libcm3 ../../../sdk/libutil 
 
