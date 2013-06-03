@@ -86,12 +86,8 @@ int main(int argc, char ** argv)
 	for (i = 0; ; ++i) {
 		led_off((i - 2) & 0x7);
 		led_on(i & 0x7);
-
-		dt = i & 255;
-		if (dt > 127)
-			dt = 255 - dt;
-
-		udelay(1000 * dt);
+		/* wait 100 ms */
+		udelay(100000);
 	}
 
 	return 0;

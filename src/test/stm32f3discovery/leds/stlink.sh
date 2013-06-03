@@ -4,7 +4,8 @@ if [[ "$OSTYPE" =~ ^cygwin ]]; then
 	WINPROG_PREFIX=/cygdrive/c/Program\ Files
 	CYGWIN=yes
 elif [[ "$OSTYPE" =~ ^msys ]]; then
-	WINPROG_PREFIX=/d/Program\ Files
+	WINPROG_PREFIX=$PROGRAMFILES
+#	WINPROG_PREFIX=/c/Program\ Files
 else
 	echo "#Error: unsuportted OS: ${OSTYPE}"
 	exit 1
