@@ -158,110 +158,178 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 
 /*	These 4 bits define the fraction of the USART Divider (USARTDIV) */
 
-
+/* ------------------------------------------------------------------------- */
 /* USART Control register 1 */
+#if defined(STM32F3X)
+#define STM32F_USART_CR1 0x00
+#else
 #define STM32F_USART_CR1 0x0C
+#endif
 
 /*	Reset value: 0x0000 */
 
-/* [31..16] Reserved, forced by hardware to 0. */
-
-#define USART_OVER8 (1 << 15) /* Bit 15 - Oversampling mode */
+/* Bit 15 - Oversampling mode */
+#define USART_OVER8 (1 << 15) 
 /* 0: oversampling by 16
    1: oversampling by 8
    Note: Oversampling by 8 is not available in the Smartcard, IrDA and 
    LIN modes: when SCEN=1,IREN=1 or LINEN=1 then OVER8 is forced to ‘0 by 
    hardware. */
 
-/*	Bit 14 Reserved, forced by hardware to 0. */
+#if defined(STM32F3X)
 
-#define USART_UE (1 << 13) /* Bit 13 - USART enable */
-/* When this bit is cleared the USART prescalers and outputs are stopped and the end of the current byte transfer in order to reduce power consumption. This bit is set and cleared by software.
+/* Bit 14 - Character match interrupt enable */
+#define USART_CMIE (1 << 14) 
+/* This bit is set and cleared by software.
+   0: Interrupt is inhibited
+   1: A USART interrupt is generated when the CMF bit is set in the 
+   USART_ISR register. */
+
+/* Bit 13 - Mute mode enable */
+#define USART_CMIE (1 << 13) 
+/* This bit activates the mute mode function of the USART. When set, 
+   the USART can switch between the active and mute modes, as defined by 
+   the WAKE bit. It is set and cleared by software.
+   0: Receiver in active mode permanently
+   1: Receiver can switch between mute mode and active mode. */
+
+/* Bit 1 - USART enable in Stop mode */
+#define USART_UESM (1 << 1) 
+/* When this bit is cleared, the USART is not able to wake up the MCU 
+   from Stop mode. When this bit is set, the USART is able to wake up 
+   the MCU from Stop mode, provided that the USART clock selection is 
+   HSI or LSE in the RCC. 
+   This bit is set and cleared by software.
+   0: USART not able to wake up the MCU from Stop mode.
+   1: USART able to wake up the MCU from Stop mode. When this function is 
+   active, the clock source for the USART must be HSI or LSE (see RCC chapter)
+   Note: 1: It is recommended to set the UESM bit just before entering 
+   Stop mode and clear it on exit from Stop mode.
+   2: If the USART does not support the wakeup from Stop feature, 
+   this bit is reserved and forced by hardware to ‘0’. */
+
+/* Bit 0 - USART enable */
+#define USART_UE (1 << 0) 
+
+#else
+
+/* Bit 13 - USART enable */
+#define USART_UE (1 << 13) 
+
+#endif
+/* When this bit is cleared the USART prescalers and outputs are stopped 
+   and the end of the current byte transfer in order to reduce power 
+   consumption. This bit is set and cleared by software.
 	0: USART prescaler and outputs disabled
 	1: USART enabled */
 
-#define USART_M (1 << 12) /* Bit 12 - Word length */
+/* Bit 12 - Word length */
+#define USART_M (1 << 12) 
 #define USART_M8 (0 << 12)
 #define USART_M9 (1 << 12)
 /* This bit determines the word length. It is set or cleared by software.
 	0: 1 Start bit, 8 Data bits, n Stop bit
 	1: 1 Start bit, 9 Data bits, n Stop bit
-	Note: The M bit must not be modified during a data transfer (both transmission and reception) */
+	Note: The M bit must not be modified during a data transfer 
+	(both transmission and reception) */
 
-#define USART_WAKE (1 << 11) /* Bit 11 - Wakeup method */
+/* Bit 11 - Wakeup method */
+#define USART_WAKE (1 << 11) 
 /* This bit determines the USART wakeup method, it is set or cleared by 
    software.
 	0: Idle Line
 	1: Address Mark */
 
-#define USART_PCE (1 << 10) /* Bit 10 - Parity control enable */
+/* Bit 10 - Parity control enable */
+#define USART_PCE (1 << 10) 
 /* This bit selects the hardware parity control (generation and detection). When the parity control is enabled, the computed parity is inserted at the MSB position (9th bit if M=1; 8th bit if M=0) and parity is checked on the received data. This bit is set and cleared by software.
 	Once it is set, PCE is active after the current byte (in reception and in transmission).
 	0: Parity control disabled
 	1: Parity control enabled */
 
-#define USART_PS (1 << 9) /* Bit 9 - Parity selection */
+/* Bit 9 - Parity selection */
+#define USART_PS (1 << 9)
 #define USART_PS_EVEN (0 << 9)
 #define USART_PS_ODD (1 << 9)
-/* This bit selects the odd or even parity when the parity generation/detection is enabled (PCE bit set). It is set and cleared by software. The parity will be selected after the current byte.
+/* This bit selects the odd or even parity when the parity 
+   generation/detection is enabled (PCE bit set). It is set and cleared 
+   by software. The parity will be selected after the current byte.
 	0: Even parity
 	1: Odd parity */
 
-#define USART_PEIE (1 << 8) /* Bit 8 - PE interrupt enable */
+/* Bit 8 - PE interrupt enable */
+#define USART_PEIE (1 << 8) 
 /* This bit is set and cleared by software.
 	0: Interrupt is inhibited
 	1: An USART interrupt is generated whenever PE=1 in the USART_SR register */
 
-#define USART_TXEIE (1 << 7) /* Bit 7 - TXE interrupt enable */
+/* Bit 7 - TXE interrupt enable */
+#define USART_TXEIE (1 << 7)
 /* This bit is set and cleared by software.
 	0: Interrupt is inhibited
 	1: An USART interrupt is generated whenever TXE=1 in the 
 	USART_SR register */
 
-#define USART_TCIE (1 << 6) /* Bit 6 - Transmission complete interrupt enable */
+/* Bit 6 - Transmission complete interrupt enable */
+#define USART_TCIE (1 << 6) 
 /* This bit is set and cleared by software.
 	0: Interrupt is inhibited
 	1: An USART interrupt is generated whenever TC=1 in the USART_SR register */
 
-#define USART_RXNEIE (1 << 5) /* Bit 5 - RXNE interrupt enable */
+/* Bit 5 - RXNE interrupt enable */
+#define USART_RXNEIE (1 << 5) 
 /* This bit is set and cleared by software.
 	0: Interrupt is inhibited
-	1: An USART interrupt is generated whenever ORE=1 or RXNE=1 in the USART_SR
-	register */
+	1: An USART interrupt is generated whenever ORE=1 or RXNE=1 in 
+	the USART_SR register */
 
-#define USART_IDLEIE (1 << 4) /* Bit 4 - IDLE interrupt enable */
+/* Bit 4 - IDLE interrupt enable */
+#define USART_IDLEIE (1 << 4) 
 /* This bit is set and cleared by software.
 	0: Interrupt is inhibited
 	1: An USART interrupt is generated whenever IDLE=1 in the 
 	USART_SR register */
 
-#define USART_TE (1 << 3) /* Bit 3 - Transmitter enable */
+/* Bit 3 - Transmitter enable */
+#define USART_TE (1 << 3) 
 /* This bit enables the transmitter. It is set and cleared by software.
 	0: Transmitter is disabled
 	1: Transmitter is enabled
-	Note: 1: During transmission, a “0” pulse on the TE bit (“0” followed by “1”) sends a preamble
+	Note: 1: During transmission, a “0” pulse on the TE 
+	bit (“0” followed by “1”) sends a preamble
 	(idle line) after the current word, except in smartcard mode.
-	2: When TE is set there is a 1 bit-time delay before the transmission starts. */
+	2: When TE is set there is a 1 bit-time delay before the 
+	transmission starts. */
 
-#define USART_RE (1 << 2) /* Bit 2 - Receiver enable */
+/* Bit 2 - Receiver enable */
+#define USART_RE (1 << 2)
 /* This bit enables the receiver. It is set and cleared by software.
 	0: Receiver is disabled
 	1: Receiver is enabled and begins searching for a start bit */
 
-#define USART_RWU (1 << 1) /* Bit 1 - Receiver wakeup */
-/* This bit determines if the USART is in mute mode or not. It is set and cleared by software and can be cleared by hardware when a wakeup sequence is recognized.
+/* Bit 1 - Receiver wakeup */
+#define USART_RWU (1 << 1)
+/* This bit determines if the USART is in mute mode or not. It is set 
+   and cleared by software and can be cleared by hardware when a wakeup 
+   sequence is recognized.
 	0: Receiver in active mode
 	1: Receiver in mute mode
-	Note: 1: Before selecting Mute mode (by setting the RWU bit) the USART must first receive a data byte, otherwise it cannot function in Mute mode with wakeup by Idle line detection.
-	2: In Address Mark Detection wakeup configuration (WAKE bit=1) the RWU bit cannot be modified by software while the RXNE bit is set. */
+	Note: 1: Before selecting Mute mode (by setting the RWU bit) the 
+	USART must first receive a data byte, otherwise it cannot function in 
+	Mute mode with wakeup by Idle line detection.
+	2: In Address Mark Detection wakeup configuration (WAKE bit=1) the RWU 
+	bit cannot be modified by software while the RXNE bit is set. */
 
-#define USART_SBK (1 << 0) /* Bit 0 - Send break */
-
-/*	This bit set is used to send break characters. It can be set and cleared by software. It should be set by software, and will be reset by hardware during the stop bit of break.
- 
+/* Bit 0 - Send break */
+#define USART_SBK (1 << 0) 
+/*	This bit set is used to send break characters. It can be set and 
+	cleared by software. It should be set by software, and will be reset 
+	by hardware during the stop bit of break.
 	0: No break character is transmitted
 	1: Break character will be transmitted */
 
+
+/* ------------------------------------------------------------------------- */
 /* USART Control register 2 */
 #define STM32F_USART_CR2 0x10 
 
@@ -335,6 +403,7 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 	Note: These 3 bits (CPOL, CPHA, LBCL) should not be written while the transmitter is enabled. */
 
 
+/* ------------------------------------------------------------------------- */
 /* USART Control register 3 */
 #define STM32F_USART_CR3 0x14 
 
