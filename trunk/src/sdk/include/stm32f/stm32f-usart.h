@@ -186,7 +186,7 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
    USART_ISR register. */
 
 /* Bit 13 - Mute mode enable */
-#define USART_CMIE (1 << 13) 
+#define USART_MME (1 << 13) 
 /* This bit activates the mute mode function of the USART. When set, 
    the USART can switch between the active and mute modes, as defined by 
    the WAKE bit. It is set and cleared by software.
@@ -210,18 +210,18 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 
 /* Bit 0 - USART enable */
 #define USART_UE (1 << 0) 
-
-#else
-
-/* Bit 13 - USART enable */
-#define USART_UE (1 << 13) 
-
-#endif
 /* When this bit is cleared the USART prescalers and outputs are stopped 
    and the end of the current byte transfer in order to reduce power 
    consumption. This bit is set and cleared by software.
 	0: USART prescaler and outputs disabled
 	1: USART enabled */
+
+#else /* STM32F3X */
+
+/* Bit 13 - USART enable */
+#define USART_UE (1 << 13) 
+
+#endif /* STM32F3X */
 
 /* Bit 12 - Word length */
 #define USART_M (1 << 12) 
