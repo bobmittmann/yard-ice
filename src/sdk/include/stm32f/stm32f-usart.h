@@ -473,8 +473,11 @@ struct stm32f_usart {
 	volatile uint32_t rdr;
 	volatile uint32_t tdr;
 #else
-	volatile uint32_t sr;
-	enum {
+	union {
+		volatile uint32_t isr; /* compatibility name */
+		volatile uint32_t sr; 
+	};
+	union {
 		volatile uint32_t dr;
 		volatile uint32_t rdr;
 		volatile uint32_t tdr;

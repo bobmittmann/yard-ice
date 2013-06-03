@@ -331,7 +331,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 
 	ptr = &drv->tx.buf[14];
 
-	DCC_LOG2(LOG_TRACE, "mem=%p len=%d", ptr, __length);
+	DCC_LOG2(LOG_INFO, "mem=%p len=%d", ptr, __length);
 
 	return ptr;
 }

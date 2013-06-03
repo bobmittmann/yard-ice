@@ -107,19 +107,19 @@ void thinkos_cond_wait_svc(int32_t * arg)
 	thinkos_rt.cond_mutex[cond] = mwq;
 	/* insert into the cond wait queue */
 	__thinkos_wq_insert(cwq, self);
-	DCC_LOG3(LOG_TRACE, "<%d> mutex %d unlocked, waiting on cond %d...", 
+	DCC_LOG3(LOG_INFO, "<%d> mutex %d unlocked, waiting on cond %d...", 
 			 self, mwq, cwq);
 
 	/* check for threads wating on the mutex wait queue */
 	if ((th = __thinkos_wq_head(mwq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the lock, just release
 		   the lock */
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d released", self, mwq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d released", self, mwq);
 		thinkos_rt.lock[mutex] = -1;
 	} else {
 		/* set the mutex ownership to the new thread */
 		thinkos_rt.lock[mutex] = th;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked", th, mwq);
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked", th, mwq);
 		/* wakeup from the mutex wait queue */
 		__thinkos_wakeup(mwq, th);
 	}
@@ -244,20 +244,6 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 }
 #endif
 
-#if 0
-	/* exception context */
-	uint32_t r0;
-	uint32_t r1;
-	uint32_t r2;
-	uint32_t r3;
-
-	uint32_t r12;
-	uint32_t lr;
-	uint32_t pc;
-	uint32_t xpsr;
-#endif
-
-
 void thinkos_cond_signal_svc(int32_t * arg)
 {	
 	unsigned int cwq = arg[0];
@@ -286,7 +272,7 @@ void thinkos_cond_signal_svc(int32_t * arg)
 
 	/* insert all remaining threads into mutex wait queue */
 	if ((th = __thinkos_wq_head(cwq)) != THINKOS_THREAD_NULL) {
-		DCC_LOG2(LOG_TRACE, "<%d> wakeup from cond %d.", th, cwq);
+		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
 		/* wakeup from the mutex wait queue */
 		__thinkos_wakeup(cwq, th);
 		/* signal the scheduler ... */
