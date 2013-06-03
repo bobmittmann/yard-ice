@@ -40,7 +40,6 @@ LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets comm tftp shell cdc-acm tty gdb vcom
-	
 
 CFLAGS = -g -O2 
 

@@ -108,16 +108,16 @@ __rom_vectors:
 	.word	stm32f_tim1_trg_com_tim17_isr /* 26 TIM1 Trigger and Commutation 
 											 and TIM17 */
 #endif
+
 	.word	stm32f_tim1_cc_isr        /* 27 TIM1 Capture Compare */
 	.word	stm32f_tim2_isr           /* 28 TIM2 */
 	.word	stm32f_tim3_isr           /* 29 TIM3 */
-
 	.word	stm32f_tim4_isr           /* 30 TIM4 */
 
 #if defined(STM32F3X)
-	.word	stm32f_i2c1_ev_exti23_isr        /* 31 I2C1 Event */
+	.word	stm32f_i2c1_ev_exti23_isr /* 31 I2C1 Event */
 	.word	stm32f_i2c1_er_isr        /* 32 I2C1 Error */
-	.word	stm32f_i2c2_ev_exti24_isr        /* 33 I2C2 Event */
+	.word	stm32f_i2c2_ev_exti24_isr /* 33 I2C2 Event */
 	.word	stm32f_i2c2_er_isr        /* 34 I2C2 Error */
 #else
 	.word	stm32f_i2c1_ev_isr        /* 31 I2C1 Event */
@@ -133,7 +133,7 @@ __rom_vectors:
 	.word	stm32f_usart1_exti25_isr  /* 37 USART1 */
 	.word	stm32f_usart2_exti26_isr  /* 38 USART2 */
 	.word	stm32f_usart3_exti28_isr  /* 39 USART3 */
-#eles
+#else
 	.word	stm32f_usart1_isr         /* 37 USART1 */
 	.word	stm32f_usart2_isr         /* 38 USART2 */
 	.word	stm32f_usart3_isr         /* 39 USART3 */
@@ -146,8 +146,7 @@ __rom_vectors:
 	.word	stm32f_otg_fs_wkup_isr    /* 42 USB OTG FS Wakeup 
 	                                     through EXTI line */
 #elif defined(STM32F10X) || defined(STM32F3X)
-	.word	stm32f_usb_wkup_isr    /* 42 USB FS Wakeup  */
-
+	.word	stm32f_usb_wkup_isr       /* 42 USB FS Wakeup  */
 #else
 	.word	stm32f_cec_isr            /* 42 CEC Global Interrupt */
 #endif
@@ -162,6 +161,7 @@ __rom_vectors:
 	.word	stm32f_tim8_trg_com_tim14_isr /* 45 TIM8 Trigger and Commutation 
 	                                            and TIM14 */
 #endif
+
 #if defined(STM32F100)
 	.word	_halt                     /* 46 Reserved */
 	.word	_halt                     /* 47 Reserved */
@@ -611,7 +611,7 @@ _void:
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
-#ifdef STM32F2X
+#if defined(STM32F2X)
 	.weak       stm32f_eth_isr
 	.thumb_set  stm32f_eth_isr,_isr
 

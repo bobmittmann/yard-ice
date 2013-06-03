@@ -241,7 +241,7 @@ static void io_init(void)
 	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32f_gpio_af(UART_TX, GPIO_AF8);
 	/* UART RX */
-	stm32f_gpio_mode(UART_RX, INPUT, PULL_UP);
+	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
 	stm32f_gpio_af(UART_RX, GPIO_AF8);
 }
 
