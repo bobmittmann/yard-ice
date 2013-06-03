@@ -42,7 +42,7 @@ const struct file stm32f_uart_file = {
 	.op = &stm32f_usart_fops 
 };
 
-void stdio_init(void)
+void stdio_init()
 {
 	struct stm32f_usart * uart = STM32F_USART1;
 
@@ -62,14 +62,16 @@ void stdio_init(void)
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 
-	stm32f_usart_write(uart, "Hello world!", 12);
-
 	stderr = (struct file *)&stm32f_uart_file;
 	stdin = stderr;
 	stdout = stdin;
 }
 
+#define LED_INIT(LED) stm32f_gpio_mode(LED, OUTPUT, PUSH_PULL | SPEED_LOW);
+#define LED_ON(LED) stm32f_gpio_set(LED)
+#define LED_OFF(LED) stm32f_gpio_clr(LED)
 
+#define LED1 STM32F_GPIOE,  9
 
 int main(int argc, char ** argv)
 {
@@ -77,6 +79,12 @@ int main(int argc, char ** argv)
 
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
+
+	/* Enable LED GPIO clock */
+	stm32f_gpio_clock_en(STM32F_GPIOE);
+
+	/* Configure LED GPIO */
+	LED_INIT(LED1);
 
 	/* stdio initialization */
 	stdio_init();
@@ -88,8 +96,13 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	for (i = 0; ; ++i) {
+		LED_ON(LED1);
+		udelay(250000);
+
 		printf("%d\n", i);
-		udelay(500000);
+
+		LED_OFF(LED1);
+		udelay(250000);
 	}
 
 	return 0;
