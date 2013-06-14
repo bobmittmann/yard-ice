@@ -43,6 +43,7 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 	uint32_t addr;
 	uint32_t size;
 	int n;
+	int ret;
 
 	argc--;
 	argv++;
@@ -83,6 +84,10 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	return target_mem_erase(addr, size);
+	ret = target_mem_erase(addr, size);
+
+	tracef("target_mem_erase: return %d", ret);
+
+	return ret;
 }
 
