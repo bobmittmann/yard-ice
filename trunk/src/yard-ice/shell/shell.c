@@ -210,6 +210,12 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_i2c, "i2c", "", 
 		"[reset | info | probe | select N]", "I2C operations." },
 
+	{ cmd_enable, "enable", "en", 
+		"[poll | comm ]", "enable feature." },
+
+	{ cmd_disable, "disable", "dis", 
+		"[poll | comm ]", "disable feature." },
+
 	{ cmd_trst, "trst", "tr", 
 		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
 

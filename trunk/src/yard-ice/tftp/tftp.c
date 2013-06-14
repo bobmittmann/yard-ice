@@ -262,9 +262,17 @@ int tftp_recv_netascii(struct udp_pcb * udp, struct sockaddr_in * sin,
 	ret = 0;
 	while (i < len) {
 		for (line = &buf[i]; i < len; i++) {
+			/* CR or [CR, LF] */
 			if (buf[i] == '\r') {
 				buf[i++] = '\0';
 				if (buf[i] == '\n')
+					i++;
+				break;
+			}
+			/* LF or [LF, CR] */
+			if (buf[i] == '\n') {
+				buf[i++] = '\0';
+				if (buf[i] == '\r')
 					i++;
 				break;
 			}
