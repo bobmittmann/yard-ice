@@ -35,7 +35,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 	int mss;
 
 	if (__tp == NULL) {
-		DCC_LOG1(LOG_ERROR, "<%04x> NULL", (int)__tp);
+		DCC_LOG(LOG_WARNING, "NULL pointer");
 		/* FIXME: not a socket? The semantic here is not exactly the same
 		   as the sockets API. */
 		return -ENOTSOCK;

@@ -30,6 +30,11 @@ int tcp_close(struct tcp_pcb * __tp)
 {
 	int ret;
 
+	if (__tp == NULL) {
+		DCC_LOG(LOG_WARNING, "NULL pointer");
+		return -1;
+	}
+
 	tcpip_net_lock();
 
 #ifdef ENABLE_SANITY

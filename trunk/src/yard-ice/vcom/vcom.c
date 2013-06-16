@@ -108,6 +108,7 @@ int serial_read(struct serial_dev * dev, char * buf,
 
 struct vcom {
 	struct serial_dev * serial;
+	struct tcp_pcb * svc;
 	struct tcp_pcb * volatile tp;
 	int baud;
 	int datab;
@@ -224,16 +225,21 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 	int c;
 	struct tn_opt opt;
 
-	svc = vcom->tp;
-	vcom->tp = NULL;
+	svc = vcom->svc;
 
 	for (;;) {
+
+		tracef("VCOM/TCP wating for incomming connections...");
+
+		DCC_LOG(LOG_TRACE, "VCOM/TCP wating for connection.");
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
 		}
 
-		DCC_LOG(LOG_TRACE, "accepted.");
+		DCC_LOG(LOG_TRACE, "VCOM/TCP connection accepted.");
+
+		tracef("VCOM/TCP connection accepted.");
 
 		vcom->tp  = tp;
 
@@ -438,6 +444,8 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 
 		tcp_close(tp);
 		vcom->tp  = NULL;
+
+		tracef("VCOM connection closed.");
 	}
 
 	DCC_LOG(LOG_ERROR, "thread loop break!!!");
@@ -522,7 +530,7 @@ int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 	for (;;);
 }
 
-uint32_t tcp_input_stack[512];
+uint32_t tcp_input_stack[1024];
 uint32_t serial_input_stack[512];
 
 struct vcom serial_vcom;
@@ -543,7 +551,8 @@ int vcom_start(void)
 	}
 
 	vcom->serial = serial_open();
-	vcom->tp = svc;
+	vcom->svc = svc;
+	vcom->tp = NULL;
 
 	th = __os_thread_create((void *)tcp_input_task, (void *)vcom, 
 								tcp_input_stack, sizeof(tcp_input_stack), 

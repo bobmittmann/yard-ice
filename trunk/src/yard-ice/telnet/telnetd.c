@@ -59,7 +59,7 @@ int telnetd_task(void * arg)
 	}
 }
 
-uint32_t telnetd_stack[1024];
+uint32_t telnetd_stack[1024 + 512];
 
 int telnet_shell(void)
 {

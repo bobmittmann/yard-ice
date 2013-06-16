@@ -90,6 +90,7 @@
 #endif
 
 struct telnet_svc {
+	struct tcp_pcb * volatile svc;
 	struct tcp_pcb * volatile tp;
 	struct {
 		int nonempty_flag;
@@ -207,16 +208,20 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 	struct tn_opt opt;
 	unsigned int head;
 
-	svc = tn->tp;
-	tn->tp = NULL;
+	svc = tn->svc;
 
 	for (;;) {
+
+		tracef("TELNET wating for connection.");
+		DCC_LOG(LOG_TRACE, "TELNET: waiting for connection...");
+
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
 		}
 
-		DCC_LOG(LOG_TRACE, "accepted.");
+		tracef("TELNET connection accepted.");
+		DCC_LOG(LOG_TRACE, "TELNET: accepted.");
 
 		tn->tp  = tp;
 
@@ -229,7 +234,6 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 		tn_opt_will(tp, &opt, TELOPT_ECHO);
 		tn_opt_will(tp, &opt, TELOPT_BINARY);
 		tn_opt_do(tp, &opt, TELOPT_BINARY);
-
 
 		head = tn->rx.head;
 
@@ -441,6 +445,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
+		tracef("TELNET connection closed.");
 		tn->tp  = NULL;
 	}
 
@@ -458,6 +463,11 @@ int telnet_svc_write(struct telnet_svc * tn,
 	int pos;
 
 	DCC_LOG1(LOG_TRACE, "len=%d", len);
+
+	if (tn->tp == NULL) {
+		/* discard if we are not connected */
+		return len;
+	}
 
 	cp = (char *)buf;
 	rem = len;
@@ -500,7 +510,8 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 	int cnt;
 	int pos;
 
-	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
+	DCC_LOG3(LOG_TRACE, "<%d> len=%d msec=%d", 
+			 __os_thread_self(), len, msec);
 
 	/* rx.tail can oly be changed inside this function, it is declared 
 	   as volatile, for performance reasons we read it only once at 
@@ -508,12 +519,14 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 	tail = tn->rx.tail;
 
 	while (1) {
+		DCC_LOG(LOG_INFO, "flag clr...");
 		thinkos_flag_clr(tn->rx.nonempty_flag);
 
 		/* get the maximum number of chars we can read from the buffer */
 		if ((max = tn->rx.head - tail) > 0)
 			break;
 
+		DCC_LOG(LOG_INFO, "waiting...");
 		/* wait for a signal indicating that there is some data in the
 		   input buffer */
 		thinkos_flag_wait(tn->rx.nonempty_flag);
@@ -577,10 +590,11 @@ struct telnet_svc * telnet_svc_init(int port)
 	if (port == 0)
 		port = 23; /* use default TELNET srvice port */
 
-	tn->tp = tcp_alloc();
-	tcp_bind(tn->tp, INADDR_ANY, htons(port));
+	tn->svc = tcp_alloc();
+	tn->tp = NULL;
+	tcp_bind(tn->svc, INADDR_ANY, htons(port));
 
-	if (tcp_listen(tn->tp, 1) != 0) {
+	if (tcp_listen(tn->svc, 1) != 0) {
 		tracef("%s(): Can't register the TCP listner!", __func__);
 		return NULL;
 	}

@@ -32,11 +32,16 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 {
 	int n;
 
-	if (__len == 0) {
-		/* invalid argument */
+	if (__tp == NULL) {
+		DCC_LOG(LOG_WARNING, "NULL pointer");
 		return -1;
 	}
 
+	if (__len == 0) {
+		/* invalid argument */
+		DCC_LOG(LOG_WARNING, "invalid argument");
+		return -1;
+	}
 
 	tcpip_net_lock();
 

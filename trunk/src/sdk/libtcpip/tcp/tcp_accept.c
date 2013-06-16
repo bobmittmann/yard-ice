@@ -31,6 +31,9 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 	struct tcp_listen_pcb * mux = (struct tcp_listen_pcb *)__mux;
 	struct tcp_pcb * tp;
 
+	if (__mux == NULL)
+		DCC_LOG(LOG_WARNING, "NULL pointer");
+
 	tcpip_net_lock();
 	
 	while (mux->t_head == mux->t_tail) {
