@@ -21,10 +21,25 @@
  */
 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include "cdc-acm.h"
+#include <sys/param.h>
+#include <string.h>
+
+#ifndef CDC_ACM_ENABLE_PRODUCT_SET
+#define CDC_ACM_ENABLE_PRODUCT_SET 0
+#endif
 
 #define ATMEL_VCOM_PRODUCT_ID 0x6119
 #define ST_VCOM_PRODUCT_ID 0x5740
+
+#ifndef CDC_ACM_PRODUCT_ID
+#define CDC_ACM_PRODUCT_ID ST_VCOM_PRODUCT_ID 
+#endif
+
 
 const struct usb_descriptor_device cdc_acm_desc_dev = {
 		/* Size of this descriptor in bytes */
@@ -44,7 +59,7 @@ const struct usb_descriptor_device cdc_acm_desc_dev = {
 		/* Vendor ID */
 		USB_VENDOR_ST,
 		/* Product ID */
-		ST_VCOM_PRODUCT_ID,
+		CDC_ACM_PRODUCT_ID,
 		/* Device release number */
 		0x0002,
 		/* Index of manufacturer string descriptor */
@@ -225,17 +240,13 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 };
 
 #define LANG_STR_SZ              4
-#define VENDOR_STR_SZ            38
-#define PRODUCT_STR_SZ           44
-#define SERIAL_STR_SZ            26
-#define INTERFACE_STR_SZ         16
-
 /* LangID = 0x0409: U.S. English */
 const uint8_t cdc_acm_lang_str[LANG_STR_SZ] = {
 	LANG_STR_SZ, USB_DESCRIPTOR_STRING,
 	0x09, 0x04
 };
 
+#define VENDOR_STR_SZ            38
 const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
 	VENDOR_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Manufacturer: "STMicroelectronics" */
@@ -243,14 +254,24 @@ const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
 	'c', 0, 't', 0, 'r', 0, 'o', 0, 'n', 0, 'i', 0, 'c', 0, 's', 0
 };
 
+
+#define PRODUCT_STR_SZ           44
+
+#if (CDC_ACM_ENABLE_PRODUCT_SET)
+#define PRODUCT_STR_SZ_MAX       50
+uint8_t cdc_acm_product_str[PRODUCT_STR_SZ_MAX] = {
+#else
 const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
+#endif
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Product name: "STM32 Virtual ComPort" */
 	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 't', 0,
 	'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0, 'o', 0, 'm', 0, 'P', 0, 'o', 0, 'r', 0,
-	't', 0
+	't', 0,
 };
 
+
+#define SERIAL_STR_SZ            26
 uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
 	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Serial number: "0000000000001" */
@@ -258,21 +279,20 @@ uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
 	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
 };
 
+#define INTERFACE_STR_SZ         16
 const uint8_t cdc_acm_interface_str[INTERFACE_STR_SZ] = {
 	INTERFACE_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Interface 0: "ST VCOM" */
 	'S', 0, 'T', 0, ' ', 0, 'V', 0, 'C', 0, 'O', 0, 'M', 0
 };
 
-const struct usb_str_entry cdc_acm_str[] = {
-	{ .str = cdc_acm_lang_str, .len = LANG_STR_SZ},
-	{ .str = cdc_acm_vendor_str, .len = VENDOR_STR_SZ},
-	{ .str = cdc_acm_product_str, .len = PRODUCT_STR_SZ},
-	{ .str = cdc_acm_serial_str, .len = SERIAL_STR_SZ},
-	{ .str = cdc_acm_interface_str, .len = INTERFACE_STR_SZ}
+const uint8_t * const cdc_acm_str[] = {
+	cdc_acm_lang_str,
+	cdc_acm_vendor_str,
+	cdc_acm_product_str,
+	cdc_acm_serial_str,
+	cdc_acm_interface_str
 };
-
-#include <sys/dcclog.h>
 
 void usb_cdc_sn_set(uint64_t sn)
 {
@@ -291,7 +311,22 @@ void usb_cdc_sn_set(uint64_t sn)
 		c = *cp--;
 		cdc_acm_serial_str[i * 2] = c;
 	}
-
 }
+
+void usb_cdc_product_set(const char * s)
+{
+#if (CDC_ACM_ENABLE_PRODUCT_SET)
+	char * cp;
+	int len;
+	int i;
+
+	len = MIN(strlen(s), ((PRODUCT_STR_SZ_MAX - 1)/2));
+	cdc_acm_product_str[0] = (len + 1) * 2;
+	cp = (char *)s;
+	for (i = 1; i <= len; ++i)
+		cdc_acm_product_str[i * 2] = *cp++;
+#endif
+}
+
 
 

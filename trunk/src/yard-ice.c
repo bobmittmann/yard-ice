@@ -188,7 +188,7 @@ int network_config(void)
 
 	if (gw_addr != INADDR_ANY) {
 		/* add the default route (gateway) to ethif */
-		route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
+		ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
 		tracef("* default route gw: %s", 
 			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
 	}

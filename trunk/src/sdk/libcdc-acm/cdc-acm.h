@@ -63,7 +63,7 @@ struct usb_str_entry {
 
 const struct usb_descriptor_device cdc_acm_desc_dev;
 const struct cdc_acm_descriptor_config cdc_acm_desc_cfg;
-extern const struct usb_str_entry cdc_acm_str[];
+extern const uint8_t * const cdc_acm_str[];
 
 const struct usb_descriptor_endpoint * cdc_acm_ep[4];
 

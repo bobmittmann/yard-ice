@@ -90,6 +90,8 @@ int usb_cdc_ctl_wait(usb_cdc_class_t * cdc, unsigned int msec);
 
 void usb_cdc_sn_set(uint64_t sn);
 
+void usb_cdc_product_set(const char * s);
+
 #ifdef __cplusplus
 }
 #endif

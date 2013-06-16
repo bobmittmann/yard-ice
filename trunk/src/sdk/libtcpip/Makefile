@@ -58,7 +58,8 @@ CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
 		 $(addprefix mbuf/,$(MBUF_CFILES))\
 		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES))\
 		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES))\
-		 $(addprefix udp/,$(UDP_CFILES)) $(addprefix tcp/,$(TCP_CFILES))
+		 $(addprefix udp/,$(UDP_CFILES)) $(addprefix tcp/,$(TCP_CFILES))\
+		 telnet/telopts.c
 
 override INCPATH += ./include
 

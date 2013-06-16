@@ -48,7 +48,6 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 	char ip[16];
 	char * env;
 	char * cp;
-	int c;
 
 	fprintf(f, "\n** IP configuration utility **\n\n");
 
@@ -58,7 +57,7 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 
 	ifn_ipv4_get(ifn, &ipv4_addr, &ipv4_mask);
 	
-	if ((rt = route_get(INADDR_ANY, INADDR_ANY)) == NULL)
+	if ((rt = ipv4_route_get(INADDR_ANY, INADDR_ANY)) == NULL)
 		gw_addr = INADDR_ANY;
 	else
 		gw_addr = rt->rt_gateway;
@@ -115,7 +114,10 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 		}
 	} 
 
+#if 0
 	for (;;) {
+		int c;
+
 		fprintf(f, " - Enable DHCP [y/n]? (%c): ", use_dhcp ? 'y' : 'n');
 		fgets(s, 32, f);
 		if (s[0] == '\n')
@@ -127,6 +129,7 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 			break;
 		}
 	};
+#endif
 
 	if (!change) {
 		fprintf(f, "\nKeeping current configuration.\n");
@@ -145,12 +148,20 @@ int cmd_ipcfg(FILE *f, int argc, char ** argv)
 
 	fprintf(f, "\nConfiguration saved.\n");
 
+	ifn_ipv4_set(ifn, ipv4_addr, ipv4_mask);
+	/* set the default route */
+	ipv4_route_del(INADDR_ANY);
+	ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
+
+
+#if 0
 	fprintf(f, "\n - Restart the system [y/n]? ");
 	fgets(s, 32, f);
 
 	if ((tolower(s[0]) == 'y')) {
 		cmd_reboot(f, 0, NULL);
 	};
+#endif
 
 	return 0;
 }

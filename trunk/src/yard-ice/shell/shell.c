@@ -258,14 +258,14 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
-
 #if 0
 	{ cmd_arp, "arp", "arp", 
 		"", "show / manipulate the system ARP cache" },
-
+#endif
 	{ cmd_route, "route", "rt", 
 		"", "show / manipulate the IP routing table" },
 
+#if 0
 	{ cmd_tcpstat, "tcpstat", "ts", 
 		"", "print TCP stack info" },
 #endif
