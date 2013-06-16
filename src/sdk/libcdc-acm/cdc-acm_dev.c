@@ -22,10 +22,8 @@
 
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
-#include <sys/delay.h>
-#include <sys/serial.h>
 #include <sys/param.h>
-#include <sys/file.h>
+#include <sys/serial.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -155,8 +153,8 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		if (desc == USB_DESCRIPTOR_STRING) {
 			int n = value & 0xff;
-			*ptr = (void *)cdc_acm_str[n].str;
-			len = cdc_acm_str[n].len;
+			*ptr = (void *)cdc_acm_str[n];
+			len = cdc_acm_str[n][0];
 			DCC_LOG1(LOG_TRACE, "GetDesc: String[%d]", n);
 			break;
 		}

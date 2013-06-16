@@ -34,8 +34,6 @@
 
 #include <sys/shell.h>
 
-#if 0
-#include <sys/socket.h>
 static int show_route(struct route * p, FILE * f)
 {
 	char st[16];
@@ -71,7 +69,7 @@ int cmd_route(FILE *f, int argc, char ** argv)
 
 	if (argc == 1) {
 		fprintf(f, "Destination     Gateway         Genmask         Iface\n");
-		route_enum((void *)show_route, (void *)f);
+		ipv4_route_enum((void *)show_route, (void *)f);
 		return 0;
 	}
 
@@ -92,7 +90,7 @@ int cmd_route(FILE *f, int argc, char ** argv)
 		}
 		fprintf(f, "deleting entry %s.\n", 
 				inet_ntop(AF_INET, (void *)&dst, buf, 16));
-		return route_del(dst);
+		return ipv4_route_del(dst);
 	}
 
 	if ((argc < 4) || (strcmp(argv[1], "add") != 0)) {
@@ -133,7 +131,7 @@ int cmd_route(FILE *f, int argc, char ** argv)
 			return -1;
 		}
 	} else {
-		if ((rt = route_lookup(gw)) == NULL) {
+		if ((rt = ipv4_route_lookup(gw)) == NULL) {
 			fprintf(f, "no route to gateway: %s", 
 				   inet_ntop(AF_INET, (void *)&gw, buf, 16));
 			return -1;
@@ -141,9 +139,8 @@ int cmd_route(FILE *f, int argc, char ** argv)
 		ifn = rt->rt_ifn;
 	}
 
-	route_add(dst, netmask, gw, ifn);
+	ipv4_route_add(dst, netmask, gw, ifn);
 
 	return 0;
 }
-#endif
 

@@ -182,7 +182,7 @@ int __route_add(in_addr_t __dst, in_addr_t __mask,
 	return 0;
 }
 
-int route_add(in_addr_t __dst, in_addr_t __mask, 
+int ipv4_route_add(in_addr_t __dst, in_addr_t __mask, 
 	in_addr_t __gw, struct ifnet * __if)
 {
 	int ret;
@@ -196,7 +196,7 @@ int route_add(in_addr_t __dst, in_addr_t __mask,
 	return ret;
 }
 
-int route_del(in_addr_t __dst)
+int ipv4_route_del(in_addr_t __dst)
 {
 	int ret;
 
@@ -209,7 +209,7 @@ int route_del(in_addr_t __dst)
 	return ret;
 }
 
-struct route * route_lookup(in_addr_t __target)
+struct route * ipv4_route_lookup(in_addr_t __target)
 {
 	struct route * p;
 
@@ -224,7 +224,7 @@ struct route * route_lookup(in_addr_t __target)
 
 
 
-struct route * route_get(in_addr_t __dst, in_addr_t __mask)
+struct route * ipv4_route_get(in_addr_t __dst, in_addr_t __mask)
 {
 	int i;
 	struct route * p;
@@ -241,7 +241,7 @@ struct route * route_get(in_addr_t __dst, in_addr_t __mask)
 	return NULL;
 }
 
-int route_enum(int (* __callback)(struct route *, void *), void * __parm)
+int ipv4_route_enum(int (* __callback)(struct route *, void *), void * __parm)
 {
 	int i;
 	struct route * p;
