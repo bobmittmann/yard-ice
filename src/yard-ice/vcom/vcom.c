@@ -61,8 +61,6 @@
 #define CPC_SUBOPTION_ID 6
 #define CPC_SUBOPTION    7
 #define CPC_SB_IAC_RCVD  8
-#define CPC_ESC_RCVD     9
-#define CPC_ESC_SQR      10
 #define CPC_INVALID_SUBOPTION	11
 #define CPC_INVALID_SB_IAC_RCVD	12
 
@@ -75,28 +73,6 @@
 #define CPC_OPT_STATUS   0x20
 #define CPC_OPT_TM       0x40
 #define CPC_OPT_RCTE     0x80
-
-/* TTY input chars */
-#define IN_NULL     '\0'
-#define IN_BS       '\x8'
-#define IN_DEL      0x7F
-#define IN_EOL      '\r'
-#define IN_SKIP     '\3'
-#define IN_EOF      '\x1A'
-#define IN_ESC      '\033'
-
-/* TTY output translation */
-#define OUT_DEL     "\x8 \x8"
-#define OUT_EOL     "\r\n"
-#define OUT_SKIP    "^C\n"
-#define OUT_EOF     "^Z"
-#define OUT_BEL     "\7"
-
-#ifndef MIN
-#define MIN(X, Y) (((int)(X) < (int)(Y)) ? (X) : (Y))
-#endif
-
-#define CPC_SB_BUF_LEN 16
 
 char cpc2par(int par)
 {
@@ -237,8 +213,6 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
 	char buf[128];
-//	char sb_buf[64];
-	int sb_len;
 	int len;
 	int ret;
 	char * src;
@@ -265,7 +239,6 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 
 		cpc_opt_clr(&opt);
 		cnt = 0;
-		sb_len = 0;
 		binary = 0;
 		state = CPC_DATA;
 		cpc_opt_will(tp, &opt, TELOPT_SGA);
@@ -312,11 +285,6 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 							/* ascii characters */
 							*dst++ = c;
 							cnt++;
-						} else  {
-							if (c == IN_ESC) {
-								/* escape sequence */
-								state = CPC_ESC_RCVD;
-							}
 						}
 					}
 					continue;
@@ -435,19 +403,13 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 				case CPC_SUBOPTION:
 					if (c == IAC)
 						state = CPC_SB_IAC_RCVD;
-					if (sb_len < CPC_SB_BUF_LEN) {
-						DCC_LOG1(LOG_TRACE, "suboption: %d", c);
-					}
-//					sb_buf[sb_len++] = c;
 					break;
 
 				case CPC_SB_IAC_RCVD:
 					if (c == SE) {
 						state = CPC_DATA;
-//						cpc_suboption(cpc, sb_buf, sb_len);
 					} else {
 						state = CPC_SUBOPTION;
-//						sb_buf[sb_len++] = c;
 					}
 					break;
 
@@ -461,18 +423,6 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 						state = CPC_DATA;
 					else
 						state = CPC_INVALID_SUBOPTION;
-					break;
-
-					/* slave tty processing */
-				case CPC_ESC_RCVD:
-					if (c == '[')
-						state = CPC_ESC_SQR;
-					else
-						state = CPC_DATA;		
-					break;
-
-				case CPC_ESC_SQR:
-					state = CPC_DATA;		
 					break;
 
 				default:
@@ -493,6 +443,48 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 	DCC_LOG(LOG_ERROR, "thread loop break!!!");
 	for(;;);
 }
+
+int vcom_write(struct tcp_pcb * tp, const void * buf, int len)
+{
+	char * cp;
+	int cnt;
+	int rem;
+	int pos;
+
+	DCC_LOG1(LOG_TRACE, "len=%d", len);
+
+	cp = (char *)buf;
+	rem = len;
+	cnt = 0;
+
+	/* search for IAC */
+	for (pos = 0; (pos < rem) && (cp[pos] != IAC); pos++);
+
+	while (pos < rem) {
+		if (cp[pos] == IAC) {
+			/* send data until IAC, inclusive */
+			if (tcp_send(tp, cp, pos + 1, 0) <= 0)
+				return cnt;
+		} 
+		cnt += pos + 1;
+		cp += pos;
+		rem -= pos;
+		pos = 1;
+		/* search for next IAC */
+		for (; (pos < rem) && (cp[pos] != IAC); pos++);
+	};
+
+	/* send the last chunk */
+	if (pos) {
+		if (tcp_send(tp, cp, pos, TCP_SEND_NOWAIT) <= 0)
+			return cnt;
+	}
+
+	cnt += pos;
+
+	return cnt;
+}
+
 
 #define VCOM_BUF_SIZE 128
 
@@ -519,7 +511,8 @@ int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 		if (vcom->tp == NULL)
 			continue;
 
-		if ((ret = tcp_send(vcom->tp, buf, len, TCP_SEND_NOWAIT)) <= 0) {
+		/* FIXME: convert IAC to IAC, IAC */
+		if ((ret = vcom_write(vcom->tp, buf, len)) <= 0) {
 			DCC_LOG1(LOG_WARNING, "tcp_send(): %d", ret);
 			continue;
 		}

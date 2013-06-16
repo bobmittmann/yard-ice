@@ -188,9 +188,10 @@ static struct tty_dev __tty[TTY_MAX];
 
 int tty_release(struct tty_dev * tty)
 {
-	tty->f.op = NULL;
+	tty->f.op->close(tty->f.data);
+/*	tty->f.op = NULL;
 	tty->f.data = NULL;
-
+*/
 	return 0;
 }
 

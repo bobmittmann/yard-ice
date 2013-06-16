@@ -35,11 +35,11 @@ LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 		  yard-ice/arch yard-ice/jtag yard-ice/script yard-ice/cmd\
 		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice yard-ice/cm3ice\
 		  yard-ice/targets yard-ice/comm yard-ice/tftp yard-ice/shell\
-		  yard-ice/gdb yard-ice/vcom
+		  yard-ice/gdb yard-ice/vcom yard-ice/telnet
 
 LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-	targets comm tftp shell cdc-acm tty gdb vcom
+	targets comm tftp shell cdc-acm tty gdb vcom telnet
 
 CFLAGS = -g -O2 
 

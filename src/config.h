@@ -95,6 +95,7 @@
 #define ENABLE_GDB 1
 #define ENABLE_VCOM 1
 #define ENABLE_I2C 1
+#define ENABLE_TELNET 1
 
 #define ENABLE_TCP_SEND 1
 #define ENABLE_TCP_RECV 1
