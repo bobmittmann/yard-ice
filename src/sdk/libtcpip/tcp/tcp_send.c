@@ -35,6 +35,23 @@ int tcp_send(struct tcp_pcb * __tp, const void * __buf,
 	int n;
 	int m;
 
+	if (__tp == NULL) {
+		DCC_LOG(LOG_WARNING, "NULL pointer");
+		return -1;
+	}
+
+#ifdef ENABLE_SANITY
+	if (__buf == NULL) {
+		DCC_LOG1(LOG_WARNING, "<%04x> NULL pointer:", (int)__tp);
+		return -1;
+	}
+
+	if (__len < 0) {
+		DCC_LOG2(LOG_WARNING, "<%04x> invalid length: %d", (int)__tp, __len);
+		return -1;
+	}
+#endif
+
 	tcpip_net_lock();
 
 #ifdef ENABLE_SANITY
@@ -42,12 +59,6 @@ int tcp_send(struct tcp_pcb * __tp, const void * __buf,
 		DCC_LOG(LOG_ERROR, "<%04x> pcb_find()", (int)__tp);
 		tcpip_net_unlock();
 		return -1;
-	}
-
-	if (__len < 0) {
-		DCC_LOG(LOG_WARNING, "<%04x> invalid length: %d", (int)__tp, __len);
-		tcpip_net_unlock();
-		return 0;
 	}
 #endif
 

@@ -35,6 +35,9 @@
  */
 int tcp_shutdown(struct tcp_pcb * __tp, int __how)
 {
+	if (__tp == NULL)
+		DCC_LOG(LOG_WARNING, "NULL pointer");
+
 	return 0;
 }
 

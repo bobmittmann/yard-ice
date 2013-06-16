@@ -312,6 +312,8 @@ int main(int argc, char ** argv)
 	i2c_init();
 #endif
 
+	init_debugger();
+
 #if (ENABLE_TFTP)
 	tracef("* starting TFTP server ... ");
 	tftpd_start();
@@ -333,8 +335,6 @@ int main(int argc, char ** argv)
 	jtag3ctrl_aux_uart(true);
 	vcom_start();
 #endif
-
-	init_debugger();
 
 #if ENABLE_USB
 	tracef("* starting USB shell ... ");

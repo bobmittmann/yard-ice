@@ -34,11 +34,11 @@
 
 #include <sys/usb-cdc.h>
 #include <sys/tty.h>
-
+#include <sys/shell.h>
 #include <sys/os.h>
+#include <trace.h>
 
 #include <sys/dcclog.h>
-#include <sys/shell.h>
 
 int usb_task(void * arg)
 {
@@ -68,6 +68,9 @@ int usb_shell(void)
 
 	th = __os_thread_create((void *)usb_task, NULL, 
 						   usb_stack, sizeof(usb_stack), 0); 
+
+	tracef("USB CDC-ACM shell thread=%d", th);
+
 	return th;
 }
 
