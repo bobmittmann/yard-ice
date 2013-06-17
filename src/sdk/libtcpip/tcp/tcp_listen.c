@@ -83,8 +83,7 @@ int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 	 	tp->t_max = __backlog;
 		tp->t_tail = 0;
 		tp->t_head = 0;
-		/* uses a global conditional variable for all listening sockets */
-		tp->t_cond = __tcp__.accept_cond;
+		tp->t_sem = __os_sem_alloc(0);
 	}
 
 	DCC_LOG2(LOG_TRACE, "<%04x> port:%d [LISTEN]", (int)tp, 

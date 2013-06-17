@@ -35,6 +35,8 @@
 
 #include <trace.h>
 
+#include <sys/os.h>
+
 #include <sys/dcclog.h>
 
 #ifndef TRACE_RING_SIZE
@@ -50,9 +52,11 @@
 #endif
 
 static struct {
-	int tm;
+	uint32_t tm;
+	int mutex;
 	volatile uint32_t head;
 	volatile uint32_t tail;
+	volatile uint32_t print;
 	struct {
 		int32_t ts;
 		char * msg;
@@ -127,6 +131,10 @@ uint32_t trace_ts2us(uint32_t tm)
 void trace_init(void)
 {
 	__timer_init();
+	trace_ring.mutex = __os_mutex_alloc();
+	trace_ring.print = 0;
+	trace_ring.head = 0;
+	trace_ring.tail = 0;
 	trace_ring.tm = __timer_ts();
 }
 
@@ -204,7 +212,7 @@ void trace(const char * msg)
 	cm3_basepri_set(pri);
 }
 
-void trace_fprint(FILE * f, unsigned int opt)
+int trace_fprint(FILE * f, unsigned int opt)
 {
 	int32_t dt;
 	uint32_t tm;
@@ -215,10 +223,19 @@ void trace_fprint(FILE * f, unsigned int opt)
 	uint32_t pos;
 	char * s;
 	uint32_t tail;
+	int ret = 0;
+
+	if ((opt & TRACE_UNSAFE) == 0)
+		__os_mutex_lock(trace_ring.mutex);
 
 	tm = trace_ring.tm;
 
-	for (tail = trace_ring.tail; tail != trace_ring.head; tail++) {
+	if (opt & TRACE_ALL)
+		tail = trace_ring.tail;
+	else
+		tail = trace_ring.print;
+
+	for (; tail != trace_ring.head; tail++) {
 		pos = tail & (TRACE_RING_SIZE - 1);
 		s = trace_ring.buf[pos].msg;
 	
@@ -237,16 +254,47 @@ void trace_fprint(FILE * f, unsigned int opt)
 		}
 
 		if (opt & TRACE_COUNT)
-			fprintf(f, "%5d %4d,%03d.%03d: %s\n", tail, sec, ms, us, s);
+			ret = fprintf(f, "%5d %4d,%03d.%03d: %s\n", tail, sec, ms, us, s);
 		else
-			fprintf(f, "%4d,%03d.%03d: %s\n", sec, ms, us, s);
+			ret = fprintf(f, "%4d,%03d.%03d: %s\n", sec, ms, us, s);
+
+		if (ret < 0) {
+			break;
+		}
 
 		tm = trace_ring.buf[pos].ts;
 	}
 
+	if ((opt & TRACE_ALL) == 0)
+		trace_ring.print = tail;
+
 	if (opt & TRACE_FLUSH) {
 		trace_ring.tail = tail;
+		trace_ring.print = tail;
 		trace_ring.tm = tm;
 	}
+
+	if ((opt & TRACE_UNSAFE) == 0)
+		__os_mutex_unlock(trace_ring.mutex);
+
+	if (ret > 0)
+		ret = 0;
+
+	return ret;
+}
+
+void trace_flush(void)
+{
+	uint32_t head;
+
+	__os_mutex_lock(trace_ring.mutex);
+
+	head = trace_ring.head;
+
+	trace_ring.print = head;
+	trace_ring.tail = head;
+	trace_ring.tm = __timer_ts();
+
+	__os_mutex_unlock(trace_ring.mutex);
 }
 

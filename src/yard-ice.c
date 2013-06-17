@@ -128,14 +128,39 @@ void stdio_init(void)
 	stdin = stdout;
 }
 
+FILE * monitor_stream;
+bool monitor_auto_flush;
+
 int supervisor_task(void)
 {
+	int opt;
+
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
 		thinkos_sleep(250);
-		trace_fprint(stdout, TRACE_FLUSH);
+
+		if (monitor_auto_flush)
+			opt = TRACE_FLUSH;      
+		else
+			opt = 0;
+
+		if (trace_fprint(monitor_stream, opt) < 0) {
+			/* fall back to stdout */
+			monitor_stream = stdout;
+		}
 	}
+}
+
+uint32_t supervisor_stack[512];
+
+void supervisor_init(void)
+{
+	monitor_stream = stdout;
+
+	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
+						  supervisor_stack, sizeof(supervisor_stack), 
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
 
 #if ENABLE_NETWORK
@@ -239,8 +264,6 @@ int init_debugger(void)
 	return 0;
 }
 
-uint32_t supervisor_stack[256];
-
 int console_shell(void);
 void telnet_shell(void);
 void usb_shell(void);
@@ -258,18 +281,17 @@ int main(int argc, char ** argv)
 
 	cm3_udelay_calibrate();
 	printf(".1");
-	trace_init();
-	printf(".2");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	printf(".2");
+	trace_init();
 	printf(".3");
 	env_init();
 	printf(".4");
 
 	bsp_io_ini();
 
-	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
-						  supervisor_stack, sizeof(supervisor_stack), 
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+	supervisor_init();
+
 	printf(".5");
 
 #if ENABLE_NETWORK

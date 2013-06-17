@@ -111,14 +111,14 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 {
 	struct tcp_pcb * tp;
 	struct route * rt;
-	int new_tail;
+	int new_head;
 	int cond;
 
-	new_tail = mux->t_tail + 1;
-	if (new_tail == mux->t_max)
-		new_tail = 0;
+	new_head = mux->t_head + 1;
+	if (new_head == mux->t_max)
+		new_head = 0;
 
-	if (mux->t_head == new_tail) {
+	if (mux->t_tail == new_head) {
 		DCC_LOG(LOG_WARNING, "backlog limit");
 		return NULL;
 	}
@@ -132,10 +132,6 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 		DCC_LOG(LOG_WARNING, "tcp_pcb_new() failed!");
 		return NULL;
 	}
-
-	/* insert into backlog */
-	mux->t_backlog[mux->t_tail] = tp;
-	mux->t_tail = new_tail;
 
 	/* Set up the new PCB. */
 	tp->t_lport = th->th_dport;
@@ -192,10 +188,14 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	   function to send back the SYNC and finish handshaking. */
 	tp->t_flags = TF_ACKNOW;
 
-	__os_cond_signal(mux->t_cond);
+	/* insert into backlog */
+	mux->t_backlog[mux->t_head] = tp;
+	mux->t_head = new_head;
+	__os_sem_post(mux->t_sem);
 
 	return tp;
 }
+
 
 int tcp_input(struct ifnet * __if, struct iphdr * iph, 
 			   struct tcphdr * th, int len)

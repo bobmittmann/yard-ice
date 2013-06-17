@@ -36,7 +36,8 @@ CFILES = show_asm.c cmd_beep.c \
 	  cmd_power.c cmd_irscan.c cmd_drscan.c cmd_idcode.c \
 	  cmd_var.c cmd_ice_test.c cmd_test.c\
 	  cmd_ice_info.c cmd_bb_scan.c cmd_sleep.c cmd_runtest.c \
-	  cmd_irpause.c cmd_drpause.c cmd_i2c.c cmd_en_dis.c
+	  cmd_irpause.c cmd_drpause.c cmd_i2c.c cmd_en_dis.c \
+	  cmd_trace.c
 
 include ../../mk/lib.mk
 

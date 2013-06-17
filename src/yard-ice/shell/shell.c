@@ -243,6 +243,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_var, "variable", "var", 
 		"", "show global variables" },
 
+	{ cmd_trace, "trace", "tc", 
+		"[monitor | flush]", "handle the trace ring..." },
+
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 

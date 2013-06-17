@@ -33,6 +33,8 @@
 #define TRACE_FLUSH     (1 << 0)
 #define TRACE_COUNT     (1 << 1)
 #define TRACE_ABSTIME   (1 << 2)
+#define TRACE_ALL       (1 << 3)
+#define TRACE_UNSAFE    (1 << 4)
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,8 +57,9 @@ __attribute__((format (__printf__, 1, 2))) int tracef(const char *fmt, ... );
 
 void trace(const char * msg);
 
-void trace_fprint(FILE * f, unsigned int opt);
+int trace_fprint(FILE * f, unsigned int opt);
 
+void trace_flush(void);
 
 #ifdef __cplusplus
 }
