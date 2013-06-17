@@ -48,11 +48,19 @@ int tcp_close(struct tcp_pcb * __tp)
 #endif
 
 	switch(__tp->t_state) {
-		case TCPS_LISTEN:
+		case TCPS_LISTEN: {
+			struct tcp_listen_pcb * tlp = (struct tcp_listen_pcb *)__tp;
+			/* TODO: close all pending connections in the backlog */ 
+			__os_sem_free(tlp->t_sem);
+			pcb_release((struct pcb *)tlp, &__tcp__.listen);
+			return 0;
+		}
+
 		case TCPS_TIME_WAIT:
 		case TCPS_CLOSED:  
 		case TCPS_SYN_SENT:
-			DCC_LOG2(LOG_TRACE, "<%05x> [%s]", (int)__tp, __tcp_state[__tp->t_state]);
+			DCC_LOG2(LOG_TRACE, "<%05x> [%s]", (int)__tp, 
+					 __tcp_state[__tp->t_state]);
 			ret = tcp_pcb_free(__tp);
 			tcpip_net_unlock();
 			return ret;

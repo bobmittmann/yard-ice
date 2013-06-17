@@ -174,9 +174,12 @@ int cmd_disable(FILE * f, int argc, char ** argv);
 
 int cmd_i2c(FILE * f, int argc, char ** argv);
 
+int cmd_trace(FILE * f, int argc, char ** argv);
+
 int exec(FILE * f, char * line);
 
 void show_val(FILE * f, uint32_t val);
+
 
 int lookup_int_val(const struct lt_entry_int * table, int val);
 

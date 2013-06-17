@@ -31,17 +31,18 @@ struct tcp_pcb * tcp_accept_tmo(const struct tcp_pcb * __mux, int __tmo)
 {
 	struct tcp_listen_pcb * mux = (struct tcp_listen_pcb *)__mux;
 	struct tcp_pcb * tp;
-	int ret;
 
-	tcpip_net_lock();
-	
+	if (__mux == NULL)
+		DCC_LOG(LOG_WARNING, "NULL pointer");
+
 	while (mux->t_head == mux->t_tail) {
 
 		DCC_LOG1(LOG_TRACE, "<%04x> waiting...", (int)mux);
 
-		if ((ret = __os_cond_timedwait(__mux->t_cond, net_mutex, __tmo)) < 0) {
-			if (ret == -ETIMEDOUT)
-				return NULL;
+		if (__os_sem_timedwait(mux->t_sem, __tmo) < 0) {
+			DCC_LOG2(LOG_ERROR, "<%04x> __os_sem_wait(%d) failed!", 
+					 (int)mux, mux->t_sem);
+			return NULL;
 		}
 	}
 
@@ -51,15 +52,13 @@ struct tcp_pcb * tcp_accept_tmo(const struct tcp_pcb * __mux, int __tmo)
 	if (mux->t_head == mux->t_max)
 		mux->t_head = 0;
 
-	if (tp == NULL) {
+#ifdef ENABLE_SANITY
+	if (tp == NULL)
 		DCC_LOG(LOG_PANIC, "NULL pointer");
-	} else {
-		DCC_LOG3(LOG_TRACE, "<%04x> %I:%d", (int)tp, 
-				 tp->t_faddr, ntohs(tp->t_fport));
-	}
+#endif
 
-	tcpip_net_unlock();
-
+	DCC_LOG4(LOG_TRACE, "<%04x> --> <%04x> %I:%d", (int)mux, 
+			 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
 	return tp;
 }
 

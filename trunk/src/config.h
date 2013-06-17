@@ -87,14 +87,14 @@
 
 #define ENABLE_ICE_TEST 0
 
-#define ENABLE_USB 0
+#define ENABLE_USB 1
 #define ENABLE_NETWORK 1
-#define ENABLE_TFTP 0
+#define ENABLE_TFTP 1
 #define ENABLE_NAND 1
-#define ENABLE_COMM 0
-#define ENABLE_GDB 0
+#define ENABLE_COMM 1
+#define ENABLE_GDB 1
 #define ENABLE_VCOM 1
-#define ENABLE_I2C 0
+#define ENABLE_I2C 1
 #define ENABLE_TELNET 1
 
 #define ENABLE_TCP_SEND 1

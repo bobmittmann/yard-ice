@@ -207,7 +207,6 @@ struct tcp_pcb * tcp_alloc(void)
 }
 
 extern int  tcp_tmr_task(void * p);
-extern struct __os_mutex tcp_out_mutex;
 
 #if defined(DEBUG) || defined(ENABLE_TCPDUMP) || defined(IP_DEBUG) || \
 	defined(ETHARP_DEBUG)
@@ -251,10 +250,8 @@ void tcp_init(void)
 	pcb_list_init(&__tcp__.listen);
 	pcb_list_init(&__tcp__.active);
 
-	__tcp__.accept_cond = __os_cond_alloc();
 	__tcp__.output_cond = __os_cond_alloc();
 
-	DCC_LOG1(LOG_TRACE, "tcp accept_cond=%d", __tcp__.accept_cond);
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.output_cond);
 
 	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 

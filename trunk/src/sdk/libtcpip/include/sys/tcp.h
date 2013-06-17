@@ -134,8 +134,8 @@ struct tcp_listen_pcb {
 	uint8_t t_flags;
 	/* tcp state */
 	uint8_t t_state;
-	/* conditional variable */
-	int8_t t_cond;
+	/* semaphore */
+	int8_t t_sem;
 	/* event counter */
 	uint8_t t_count;
 
@@ -233,7 +233,6 @@ struct tcp_system {
 	uint16_t port_seq;
 	volatile uint8_t need_output;
 	int8_t output_cond;
-	int8_t accept_cond;
 #if ENABLE_TCP_PROTO_STAT
 	struct proto_stat stat;
 #endif

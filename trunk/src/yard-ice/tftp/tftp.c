@@ -587,6 +587,8 @@ send_data:
 						if (n < 0) {
 							DCC_LOG(LOG_ERROR, "target_mem_write()!");
 							sprintf(msg, "TARGET WRITE FAIL: %08x", addr);
+							tracef("%s(): memory write failed at "
+								   "addr=0x%08x, code %d", __func__, addr, n);
 						} else {
 							DCC_LOG2(LOG_WARNING, "short read: "
 									 "ret(%d) < len(%d)!", n, len);
