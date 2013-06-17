@@ -50,10 +50,21 @@
 
 #include "trace.h"
 
-#define MAX_TFTP_MSG (TFTP_SEGSIZE  + sizeof(struct tftphdr))
+#define MAX_TFTP_SEGSIZE 1428
+#define MAX_TFTP_MSG (MAX_TFTP_SEGSIZE + sizeof(struct tftphdr))
+
+enum {
+	TFTP_NETASCII = 0,
+	TFTP_OCTET = 1,
+	TFTP_EMAIL = 2
+};
 
 const char * const tftp_opc[] = {
 	"UNKNOWN", "RRQ", "WRQ", "DATA", "ACK", "ERROR"
+};
+
+const char * const tftp_mode[] = {
+	"NETASCII", "OCTET", "EMAIL"
 };
 
 const char * const tftp_err[] = {
@@ -61,7 +72,7 @@ const char * const tftp_err[] = {
 	"EBADOP", "EBADID", "EEXISTS", "ENOUSER"
 };
 
-enum tftp_st {
+enum {
 	TFTPD_IDLE = 0,
 	TFTPD_RECV_NETASCII = 1,
 	TFTPD_RECV_OCTET = 2,
@@ -70,17 +81,24 @@ enum tftp_st {
 	TFTPD_RECV_ERROR = 5
 };
 
-#define TFTP_MSG_MAX 63
+#define TFTP_ERR_MSG_MAX 63
 
-struct tftp_msg {
+struct tftp_pkt_err {
 	struct tftphdr hdr;
-	uint8_t payload[TFTP_MSG_MAX + 1];
+	uint8_t payload[TFTP_ERR_MSG_MAX + 1];
+};
+
+#define TFTP_OACK_OPT_MAX 64
+
+struct tftp_pkt_oack {
+	uint16_t th_opcode;
+	char opt[TFTP_OACK_OPT_MAX];
 };
 
 int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin, 
 			   int errno, char * msg)
 {
-	struct tftp_msg pkt;
+	struct tftp_pkt_err pkt;
 	int len;
 	int n;
 
@@ -88,7 +106,7 @@ int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin,
 		msg = (char *)tftp_err[errno];
 	}
 
-	n = MIN(strlen(msg), TFTP_MSG_MAX);
+	n = MIN(strlen(msg), TFTP_ERR_MSG_MAX);
 
 	pkt.hdr.th_opcode = htons(TFTP_ERROR);
 	pkt.hdr.th_code = htons(errno);
@@ -117,6 +135,24 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 	}
 
 	return ret;
+}
+
+int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
+			  char * opt, int len)
+{
+	struct tftp_pkt_oack pkt;
+
+	if (len > TFTP_OACK_OPT_MAX) {
+		DCC_LOG1(LOG_ERROR, "len(%d) > TFTP_OACK_OPT_MAX", len);
+		return -1;
+	}
+
+	DCC_LOG(LOG_TRACE, "OACK....");
+
+	pkt.th_opcode = htons(TFTP_OACK);
+	memcpy(pkt.opt, opt, len);
+
+	return udp_sendto(udp, &pkt, 2 + len, sin);
 }
 
 int tftp_decode_fname(struct debugger * dbg, char * fname)
@@ -336,6 +372,53 @@ int tftp_hex(unsigned int addr, unsigned char * buf, int size)
 	return n * 2;
 }
 
+struct tftp_req {
+	char * fname;
+	uint8_t mode;
+	uint8_t opt_len;
+	uint16_t blksize;
+	char opt[TFTP_OACK_OPT_MAX];
+};
+
+int tftp_req_parse(char * hdr, struct tftp_req * req)
+{
+	char * cp;
+	char * opt;
+	int n;
+
+	/* Read Request */
+	req->fname = hdr;
+
+	cp = req->fname + strlen(req->fname) + 1;
+
+	if (strcmp(cp, "octet") == 0) {
+		req->mode = TFTP_OCTET;
+	} else if (strcmp(cp, "netascii") == 0) {
+		req->mode = TFTP_NETASCII;
+	} else {
+		return -1;
+	}
+
+	opt = req->opt;
+	req->opt_len = 0;
+	cp += strlen(cp) + 1;
+	if (strcmp(cp, "blksize") == 0) {
+		cp += strlen(cp) + 1;
+		req->blksize = strtoul(cp, NULL, 10);
+		if (req->blksize > MAX_TFTP_SEGSIZE)
+			req->blksize = MAX_TFTP_SEGSIZE;
+		n = sprintf(opt, "blksize.%d", req->blksize);
+		opt[7] = '\0';
+		opt += n + 1;
+		req->opt_len += n + 1;
+	} else {
+		/* default segment size */
+		req->blksize = TFTP_SEGSIZE; 
+	}
+
+	return 0;
+}
+
 int tftp_daemon_task(struct debugger * dbg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
@@ -343,14 +426,14 @@ int tftp_daemon_task(struct debugger * dbg)
 	char * msg = (char *)buf;
 	struct sockaddr_in sin;
 	struct udp_pcb * udp;
-	char * fname;
-	char * mode;
+	struct tftp_req req;
 	int state = TFTPD_IDLE;
 	unsigned int addr_start = 0;
 	unsigned int addr_end = 0;
 	int block = 0;
 	int opc;
 	int len;
+	int blksize = TFTP_SEGSIZE; 
 
 	DCC_LOG1(LOG_TRACE, "thread: %d", __os_thread_self());
 
@@ -401,13 +484,15 @@ int tftp_daemon_task(struct debugger * dbg)
 
 			switch (opc) {
 			case TFTP_RRQ:
-				/* Read Request */
-				fname = (char *)&(hdr->th_stuff);
-				mode = fname + strlen(fname) + 1;
-
 				DCC_LOG(LOG_TRACE, "read request: ...");
 
-				if (tftp_decode_fname(dbg, fname) < 0) {
+				tftp_req_parse((char *)&(hdr->th_stuff), &req);
+				blksize = req.blksize;
+
+				tracef("%s(): RRQ '%s' '%s' blksize=%d", __func__, req.fname, 
+					   tftp_mode[req.mode], req.blksize);
+
+				if (tftp_decode_fname(dbg, req.fname) < 0) {
 					tftp_error(udp, &sin, TFTP_ENOTFOUND, "BAD ADDR.");
 					break;
 				}
@@ -420,28 +505,39 @@ int tftp_daemon_task(struct debugger * dbg)
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
 						 addr_start, addr_end);
 
-				if (strcmp(mode, "netascii") == 0) {
+				if (req.mode == TFTP_NETASCII) {
 					state = TFTPD_SEND_NETASCII;
-					goto send_netascii;
-				} 
-
-				if (strcmp(mode, "octet") == 0) {
+				} else if (req.mode == TFTP_OCTET) {
 					state = TFTPD_SEND_OCTET;
-					goto send_octet;
+				} else {
+					tftp_error(udp, &sin, TFTP_EUNDEF, NULL);
+					break;
 				}
 
-				tftp_error(udp, &sin, TFTP_EUNDEF, NULL);
+				if (req.opt_len) {
+					tftp_oack(udp, &sin, req.opt, req.opt_len);
+					break;
+				}
+
+				if (req.mode == TFTP_NETASCII)
+					goto send_netascii;
+
+				if (req.mode == TFTP_OCTET)
+					goto send_octet;
+
 				break;
 
 			case TFTP_WRQ:
 				/* Write Request */
-				fname = (char *)&(hdr->th_stuff);
-				mode = fname + strlen(fname) + 1;
 				DCC_LOG(LOG_TRACE, "write request...");
-			
-				tracef("%s(): WRQ '%s' '%s'", __func__, fname, mode);
 
-				if (tftp_decode_fname(dbg, fname) < 0) {
+				tftp_req_parse((char *)&(hdr->th_stuff), &req);
+				blksize = req.blksize;
+
+				tracef("%s(): WRQ '%s' '%s' blksize=%d", __func__, req.fname, 
+					   tftp_mode[req.mode], req.blksize);
+
+				if (tftp_decode_fname(dbg, req.fname) < 0) {
 					tftp_error(udp, &sin, TFTP_ENOTFOUND, "BAD ADDR.");
 					break;
 				}
@@ -454,17 +550,17 @@ int tftp_daemon_task(struct debugger * dbg)
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
 						 addr_start, addr_end);
 
-				if (strcmp(mode, "netascii") == 0) {
-					state = TFTPD_RECV_NETASCII;
-					tftp_ack(udp, block, &sin);
+				if ((req.mode == TFTP_NETASCII) || (req.mode == TFTP_OCTET)) {
+					state = (req.mode == TFTP_NETASCII) ? 
+						TFTPD_RECV_NETASCII : TFTPD_RECV_OCTET;
+
+					if (req.opt_len) 
+						tftp_oack(udp, &sin, req.opt, req.opt_len);
+					else
+						tftp_ack(udp, block, &sin);
+
 					break;
 				} 
-
-				if (strcmp(mode, "octet") == 0) {
-					state = TFTPD_RECV_OCTET;
-					tftp_ack(udp, block, &sin);
-					break;
-				}
 
 				tftp_error(udp, &sin, TFTP_EUNDEF, NULL);
 				break;
@@ -505,7 +601,7 @@ send_netascii:
 					int n;
 
 send_octet:
-					addr = addr_start + (block * TFTP_SEGSIZE);
+					addr = addr_start + (block * blksize);
 					rem = addr_end - addr;
 					if (rem < 0) {
 						state = TFTPD_IDLE;
@@ -513,7 +609,7 @@ send_octet:
 								 addr_end - addr_start);
 						break;
 					}
-					n = (rem < TFTP_SEGSIZE) ? rem : TFTP_SEGSIZE;
+					n = (rem < blksize) ? rem : blksize;
 
 					DCC_LOG2(LOG_TRACE, "send octet: addr=0x%08x n=%d", addr, n);
 
@@ -562,11 +658,11 @@ send_data:
 					unsigned int addr;
 					int n;
 
-					addr = addr_start + (block * TFTP_SEGSIZE);
+					addr = addr_start + (block * blksize);
 
 					block++;
 
-					if (len != TFTP_SEGSIZE) {
+					if (len != blksize) {
 						DCC_LOG(LOG_TRACE, "last packet...");
 						state = TFTPD_IDLE;
 						if (len == 0) {
@@ -618,7 +714,7 @@ send_data:
 
 				if (state == TFTPD_RECV_NETASCII) {
 					block++;
-					if (len != TFTP_SEGSIZE) {
+					if (len != blksize) {
 						state = TFTPD_IDLE;
 						if (len == 0) {
 							tftp_ack(udp, block, &sin);
@@ -671,7 +767,7 @@ send_data:
 	return 0;
 }
 
-uint32_t tftp_stack[512];
+uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 
 int tftpd_start(void)
 {

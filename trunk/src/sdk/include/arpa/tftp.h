@@ -44,9 +44,11 @@
 #define TFTP_ACK   4 /* acknowledgement */
 #define TFTP_ERROR 5 /* error code */
 
+#define TFTP_OACK  6 /* RFC 2347 - TFTP Option */
+
 struct tftphdr {
 	uint16_t th_opcode; /* packet type */
-	uint16_t th_code;   /* packet type */
+	uint16_t th_code;   /* error code / block number */
 	uint8_t th_data[0]; /* data or error string */
 };
 
@@ -67,6 +69,8 @@ struct tftphdr {
 #define TFTP_EBADID    5 /* unknown transfer ID */
 #define TFTP_EEXISTS   6 /* file already exists */
 #define TFTP_ENOUSER   7 /* no such user */
+
+#define TFTP_ERROPTION 8 /* RFC 2347 - TFTP Option */
 
 #ifdef __cplusplus
 extern "C" {
