@@ -56,7 +56,8 @@ static struct {
 	int mutex;
 	volatile uint32_t head;
 	volatile uint32_t tail;
-	volatile uint32_t print;
+	volatile uint32_t print_pos;
+	volatile uint32_t print_tm;
 	struct {
 		int32_t ts;
 		char * msg;
@@ -132,7 +133,8 @@ void trace_init(void)
 {
 	__timer_init();
 	trace_ring.mutex = __os_mutex_alloc();
-	trace_ring.print = 0;
+	trace_ring.print_pos = 0;
+	trace_ring.print_tm = 0;
 	trace_ring.head = 0;
 	trace_ring.tail = 0;
 	trace_ring.tm = __timer_ts();
@@ -228,12 +230,13 @@ int trace_fprint(FILE * f, unsigned int opt)
 	if ((opt & TRACE_UNSAFE) == 0)
 		__os_mutex_lock(trace_ring.mutex);
 
-	tm = trace_ring.tm;
-
-	if (opt & TRACE_ALL)
+	if (opt & TRACE_ALL) {
 		tail = trace_ring.tail;
-	else
-		tail = trace_ring.print;
+		tm = trace_ring.tm;
+	} else {
+		tail = trace_ring.print_pos;
+		tm = trace_ring.print_tm;
+	}
 
 	for (; tail != trace_ring.head; tail++) {
 		pos = tail & (TRACE_RING_SIZE - 1);
@@ -266,11 +269,13 @@ int trace_fprint(FILE * f, unsigned int opt)
 	}
 
 	if ((opt & TRACE_ALL) == 0)
-		trace_ring.print = tail;
+		trace_ring.print_pos = tail;
+
+	trace_ring.print_tm = tm;
 
 	if (opt & TRACE_FLUSH) {
 		trace_ring.tail = tail;
-		trace_ring.print = tail;
+		trace_ring.print_pos = tail;
 		trace_ring.tm = tm;
 	}
 
@@ -286,14 +291,17 @@ int trace_fprint(FILE * f, unsigned int opt)
 void trace_flush(void)
 {
 	uint32_t head;
+	uint32_t tm;
 
 	__os_mutex_lock(trace_ring.mutex);
 
 	head = trace_ring.head;
+	tm = __timer_ts();
 
-	trace_ring.print = head;
+	trace_ring.print_pos = head;
 	trace_ring.tail = head;
-	trace_ring.tm = __timer_ts();
+	trace_ring.tm = tm ;
+	trace_ring.print_tm  = tm;
 
 	__os_mutex_unlock(trace_ring.mutex);
 }
