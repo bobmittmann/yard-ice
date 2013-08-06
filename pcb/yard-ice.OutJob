@@ -8,7 +8,7 @@ TargetOutputMedium=Generate Files
 VariantName=[No Variations]
 VariantScope=0
 CurrentConfigurationName=
-TargetPrinter=Microsoft XPS Document Writer
+TargetPrinter=\\TANGO\BrotherHL-2140series
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintWhat=0
 OutputMedium1=Print To \\MOOSE\pdf
 OutputMedium1_Type=Printer
@@ -33,7 +33,7 @@ OutputEnabled1_OutputMedium4=0
 OutputDefault1=0
 PageOptions1=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.00|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-4|MediaType=1|DitherType=10|PaperKind=A4|PrintScaleMode=1
 Configuration1_Name1=OutputConfigurationParameter1
-Configuration1_Item1=DesignatorDisplayMode=Physical|PrintArea=DesignExtent|PrintAreaLowerLeftCornerX=0|PrintAreaLowerLeftCornerY=0|PrintAreaUpperRightCornerX=0|PrintAreaUpperRightCornerY=0|Record=PcbPrintView
+Configuration1_Item1=PrintArea=DesignExtent|PrintAreaLowerLeftCornerX=0|PrintAreaLowerLeftCornerY=0|PrintAreaUpperRightCornerX=0|PrintAreaUpperRightCornerY=0|Record=PcbPrintView
 Configuration1_Name2=OutputConfigurationParameter2
 Configuration1_Item2=IncludeBottomLayerComponents=True|IncludeMultiLayerComponents=True|IncludeTopLayerComponents=True|Index=0|Mirror=False|Name=Multilayer Composite Print|PadNumberFontSize=14|Record=PcbPrintOut|ShowHoles=False|ShowPadNets=False|ShowPadNumbers=False|SubstituteFonts=False
 Configuration1_Name3=OutputConfigurationParameter3
@@ -46,8 +46,6 @@ Configuration1_Name6=OutputConfigurationParameter6
 Configuration1_Item6=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|DDSymbolKind=0|DDSymbolSize=500000|DDSymbolSortKind=0|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical4|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer
 Configuration1_Name7=OutputConfigurationParameter7
 Configuration1_Item7=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|DDSymbolKind=0|DDSymbolSize=500000|DDSymbolSortKind=0|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical11|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer
-Configuration1_Name8=OutputConfigurationParameter8
-Configuration1_Item8=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|DDSymbolKind=0|DDSymbolSize=500000|DDSymbolSortKind=0|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=DrillDrawing|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer
 OutputType2=PCB 3D Print
 OutputName2=PCB 3D Prints
 OutputCategory2=Documentation
@@ -59,9 +57,7 @@ OutputEnabled2_OutputMedium2=4
 OutputEnabled2_OutputMedium3=0
 OutputEnabled2_OutputMedium4=0
 OutputDefault2=0
-PageOptions2=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=2.72|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-4|MediaType=1|DitherType=10|PaperKind=A4|PrintScaleMode=1
-Configuration2_Name1=OutputConfigurationParameter1
-Configuration2_Item1=Record=Pcb3DPrintView|ResX=150|ResY=150|ViewX=42967746|ViewY=27297852|LookAtX=126995680|LookAtY=108242768|LookAtZ=-1000|QuatX=0|QuatY=0|QuatZ=0|QuatW=1|Zoom=3.76952736061431E-5|UnitsPercent=True|UnitsDPI=True|LockResAspect=True|ViewConfigType=.config_3d|CustomCamera=False|ViewFromTop=True|ViewConfig=
+PageOptions2=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.00|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-4|MediaType=1|DitherType=10|PaperKind=A4|PrintScaleMode=1
 OutputType3=Schematic Print
 OutputName3=Schematic Prints
 OutputCategory3=Documentation
@@ -522,10 +518,10 @@ OutputEnabled11=1
 OutputEnabled11_OutputMedium1=0
 OutputEnabled11_OutputMedium2=0
 OutputEnabled11_OutputMedium3=0
-OutputEnabled11_OutputMedium4=4
+OutputEnabled11_OutputMedium4=3
 OutputDefault11=0
 Configuration11_Name1=OutputConfigurationParameter1
-Configuration11_Item1=BoardEdgeRoutToolDia=1181102|GenerateBoardEdgeRout=True|GenerateDrilledSlotsG85=False|GenerateEIADrillFile=False|GenerateSeparatePlatedNonPlatedFiles=False|NumberOfDecimals=4|NumberOfUnits=2|OptimizeChangeLocationCommands=True|OriginPosition=Relative|Record=DrillView|Units=Imperial|ZeroesMode=KeepLeadingAndTrailingZeroes
+Configuration11_Item1=BoardEdgeRoutToolDia=1181102|GenerateBoardEdgeRout=True|GenerateDrilledSlotsG85=False|GenerateSeparatePlatedNonPlatedFiles=False|NumberOfDecimals=4|NumberOfUnits=4|OptimizeChangeLocationCommands=True|OriginPosition=Relative|Record=DrillView|Units=Metric|ZeroesMode=SuppressTrailingZeroes
 OutputType12=ODB
 OutputName12=ODB++ Files
 OutputCategory12=Fabrication
@@ -593,7 +589,7 @@ OutputEnabled17=1
 OutputEnabled17_OutputMedium1=0
 OutputEnabled17_OutputMedium2=0
 OutputEnabled17_OutputMedium3=0
-OutputEnabled17_OutputMedium4=3
+OutputEnabled17_OutputMedium4=4
 OutputDefault17=0
 PageOptions17=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.00|XCorrection=1.00|YCorrection=1.00|PrintKind=0|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-4|MediaType=1|DitherType=10|PaperKind=A4|PrintScaleMode=1
 Configuration17_Name1=Filter
@@ -610,9 +606,9 @@ Configuration17_Name6=VisibleOrder
 Configuration17_Item6=PN=63|Designator=153|Quantity=63|Description=215|Value=63|Package=63|MF PN=100|MF=100
 
 [PublishSettings]
-OutputFilePath2=C:\devel\yard-ice\pcb\../doc/rev0.2\
+OutputFilePath2=C:\devel\yard-ice-rev0.2\release\rev0.2\
 ReleaseManaged2=0
-OutputBasePath2=../doc/rev0.2\
+OutputBasePath2=..\release\rev0.2\
 OutputPathMedia2=
 OutputPathOutputer2=
 OutputFileName2=yard-ice.PDF
@@ -645,20 +641,20 @@ MarkNetLabels3=1
 MarkPortsId3=1
 WebOutputMediumType3=FS
 OutputDirectory3=J:\013-vc-box-hq1-side\rev2\WebOutput
-OutputFilePath4=C:\devel\yard-ice\doc\rev0.2\
+OutputFilePath4=C:\devel\yard-ice-rev0.2\release\rev0.2\
 ReleaseManaged4=0
-OutputBasePath4=..\doc\rev0.2\
+OutputBasePath4=..\release\rev0.2\
 OutputPathMedia4=
 OutputPathOutputer4=[Output Type]
 OutputFileName4=
 OpenOutput4=1
 
 [GeneratedFilesSettings]
-RelativeOutputPath2=C:\devel\yard-ice\pcb\../doc/rev0.2\
+RelativeOutputPath2=C:\devel\yard-ice-rev0.2\release\rev0.2\
 OpenOutputs2=1
 RelativeOutputPath3=C:\devel\998-Yard-Ice\pcb\Project Outputs for yard-ice\
 OpenOutputs3=1
-RelativeOutputPath4=C:\devel\yard-ice\doc\rev0.2\
+RelativeOutputPath4=C:\devel\yard-ice-rev0.2\release\rev0.2\
 OpenOutputs4=1
 AddToProject4=1
 TimestampFolder4=0
