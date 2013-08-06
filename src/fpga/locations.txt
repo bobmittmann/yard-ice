@@ -1,4 +1,4 @@
-PIN_66 mclk
+PIN_10 mclk
 PIN_77 fsmc_d[15]
 PIN_78 fsmc_d[14]
 PIN_79 fsmc_d[13]
@@ -15,7 +15,7 @@ PIN_73 fsmc_d[3]
 PIN_74 fsmc_d[2]
 PIN_75 fsmc_d[1]
 PIN_76 fsmc_d[0]
-PIN_10 fsmc_clk
+PIN_66 fsmc_clk
 PIN_69 clk_aux
 PIN_70 fsmc_noe
 PIN_71 fsmc_nwe
