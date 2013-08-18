@@ -132,6 +132,8 @@ int cmd_tap(FILE * f, int argc, char ** argv);
 
 int cmd_power(FILE * f, int argc, char ** argv);
 
+int cmd_relay(FILE * f, int argc, char ** argv);
+
 int cmd_irscan(FILE * f, int argc, char ** argv);
 
 int cmd_drscan(FILE * f, int argc, char ** argv);

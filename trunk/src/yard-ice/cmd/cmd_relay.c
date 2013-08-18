@@ -31,40 +31,36 @@
 #include "config.h"
 #include "target.h"
 #include "debugger.h"
-#include "lookup.h"
 
-#include <debug.h>
-
-static const lt_entry_int_t relay_state[] = {
-	{ "off", 0},
-	{ "on", 1},
-	{ "cycle", 2},
-	{ NULL, 0 }
-};
-
-int cmd_power(FILE * f, int argc, char ** argv)
+int cmd_relay(FILE * f, int argc, char ** argv)
 {
 	int err;
-	int mode;
-	int n;
+	int ms;
 
-	if (argc != 2) {
+	if ((argc < 2) || (argc > 3)) {
 //		printf(msg_reset_usage);
 		return -1;
 	}
 
-	if (strcmp(argv[1], "on")) {
-		fprintf(f, "Target power on...\n");
-		err = target_power(f, 1);
+	if ((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "1") == 0)) {
+		fprintf(f, "Target relay on...\n");
+		err = target_relay(true);
 	} else {
-		if (strcmp(argv[1], "off")) {
-			fprintf(f, "Target power off...\n");
-			err = target_power(f, 0);
+		if ((strcmp(argv[1], "off") == 0) || (strcmp(argv[1], "0") == 0)) {
+			fprintf(f, "Target relay off...\n");
+			err = target_relay(false);
 		} else {
-			if (strcmp(argv[1], "cycle")) {
-				fprintf(f, "Target power cycle...\n");
-				if ((err = target_power(f, 0)) == 0) {
-					err = target_power(f, 1);
+			if ((strcmp(argv[1], "cycle") == 0) || 
+				(strcmp(argv[1], "cyc") == 0)) {
+				if (argc == 3) {
+					ms = strtoul(argv[2], NULL, 0);
+				} else {
+					ms = 250;
+				}
+				fprintf(f, "Target relay cycle...\n");
+				if ((err = target_relay(false)) == 0) {
+					__os_sleep(ms);
+					err = target_relay(true);
 				}
 			} else {
 				printf("ERROR: invalid argument %s\n", argv[1]);
@@ -74,7 +70,7 @@ int cmd_power(FILE * f, int argc, char ** argv)
 	}
 
 	if (err < 0) {
-		printf("ERROR: power: %s.\n", target_strerror());
+		printf("ERROR: relay: %s.\n", target_strerror(err));
 	}
 
 	return err;
