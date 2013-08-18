@@ -243,7 +243,11 @@ int target_tap_trst(unsigned int mode);
 
 int target_nrst(unsigned int mode, unsigned int ms);
 
-int target_power(int on);
+int target_power_ctl(bool on);
+
+int target_power_stat(FILE * f);
+
+int target_relay(bool on);
 
 //int context_register_get(struct ice_context * ct, int reg, uint32_t * val);
 

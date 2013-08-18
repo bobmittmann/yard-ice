@@ -201,6 +201,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_power, "power", "pwr", 
 		"[on | off | cycle]", "control the target power ..." },
 
+	{ cmd_relay, "relay", "rly", 
+		"[on | off | cycle]", "control on board relay..." },
+
 	{ cmd_mem_write, "write", "mw", 
 		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
 
