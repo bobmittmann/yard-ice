@@ -286,6 +286,8 @@ int target_ice_info(FILE * f, uint32_t which);
 
 int target_nand_bb_check(uint32_t block);
 
+int target_nand_block_erase(uint32_t block, bool force);
+
 int target_nand_dev_get(int dev_id, nand_dev_t ** nandp);
 
 int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp);

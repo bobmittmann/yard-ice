@@ -1370,6 +1370,56 @@ int target_nand_bb_check(uint32_t block)
 	return ret;
 }
 
+int target_nand_block_erase(uint32_t block, bool force)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	nand_dev_t * nand;
+	int ret;
+	
+	DCC_LOG1(LOG_INFO, "block=%d", block);
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	/* stop polling */
+	poll_stop(dbg);
+
+	if ((ret = ice_mem_lock(ice)) < 0) {
+		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
+	} else {
+		bool badblock = false;
+		nand = nand_dev_select(0);
+
+		if (!force) {
+			if ((ret = nand_bb_check(nand, block)) < 0) {
+				DCC_LOG(LOG_WARNING, "nand_bb_check(), fail");
+				badblock = true;
+			}
+		}
+
+		if (!badblock) {
+			if ((ret = nand_block_erase(nand, block)) < 0) {
+				DCC_LOG(LOG_WARNING, "nand_block_erase(), fail");
+			}
+		}
+
+		ice_mem_unlock(ice);
+	}
+
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+
 int target_nand_dev_get(int dev_id, nand_dev_t ** nandp)
 {
 	struct debugger * dbg = &debugger;

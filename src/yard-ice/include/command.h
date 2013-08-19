@@ -164,6 +164,8 @@ int cmd_sleep(FILE *f, int argc, char ** argv);
 
 int cmd_bb_scan(FILE *f, int argc, char ** argv);
 
+int cmd_scrub(FILE * f, int argc, char ** argv);
+
 int cmd_runtest(FILE * f, int argc, char ** argv);
 
 int cmd_irpause(FILE * f, int argc, char ** argv);
