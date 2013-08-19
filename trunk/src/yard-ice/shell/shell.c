@@ -172,6 +172,9 @@ const struct shell_cmd cmd_tab[] = {
 #if (ENABLE_NAND)
 	{ cmd_bb_scan, "bbscan", "bbs", 
 		"", "NAND bad block scan" },
+
+	{ cmd_scrub, "scrub", "scrub", 
+		"", "NAND block forced erase" },
 #endif
 
 	{ cmd_reboot, "reboot", "rb", 
