@@ -1,4 +1,4 @@
-# STM32F Firmware Upgrade on Windows
+#summary STM32F Firmware Upgrade on Windows
 
 = YARD-ICE Firmware Upgrade =
 
