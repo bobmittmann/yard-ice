@@ -11,3 +11,6 @@ ST provides a demo application that can be used to upload the firmware using the
 == How To ==
 
   * Download the [http://www.st.com/st-web-ui/static/active/en/st_prod_software_internet/resource/technical/software/demo_and_example/stsw-stm32080.zip DfuSe USB device firmware upgrade STMicroelectronics extension].
+  * Decompress the ZIP file:
+  http://yard-ice.googlecode.com/files/dfuse-7zip-stsw-stm32080-zip.png
+  
