@@ -61,3 +61,7 @@ LST: /home/bob/devel/yard-ice/src/release/yard-ice.lst
 The loadable firmware will be located into the *release* directory and is called: *yard-ice.bin*.
 
 More detailed instructions can be fund at: [YardIceCompileHowTo Yard-ICE Compile How-To].
+
+== Firmware Installation ==
+
+If you have a Windows box you can follow this instructions: [YardIceWindowsUsbFirmwareUpdate STM32F Firmware Upgrade on Windows].
