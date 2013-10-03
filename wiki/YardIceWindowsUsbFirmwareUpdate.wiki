@@ -1,5 +1,13 @@
 #summary One-sentence summary of this page.
 
-= Introduction =
+= YARD-ICE Firmware Upgrade =
 
-  * Download the [http://www.st.com/st-web-ui/static/active/en/st_prod_software_internet/resource/technical/software/demo_and_example/stsw-mcu005.zip STM32 and STM8 Flash loader demonstrator (UM0462)].
+== Introduction ==
+
+One of the nice features of the STM32 family of microcontrollers is the embedded flash loader. 
+
+ST provides a demo application that can be used to upload the firmware using the USB connection.
+
+== How To ==
+
+  * Download the [ http://www.st.com/st-web-ui/static/active/en/st_prod_software_internet/resource/technical/software/demo_and_example/stsw-stm32080.zip DfuSe USB device firmware upgrade STMicroelectronics extension].
