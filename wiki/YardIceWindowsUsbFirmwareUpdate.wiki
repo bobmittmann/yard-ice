@@ -21,7 +21,7 @@ ST provides a demo application that can be used to upload the firmware using the
   * Connect the USB cable
   * Run the {{{STMicroelectronics->DfuSe->DfuSe Demonstration}}}
   https://yard-ice.googlecode.com/files/dfuse-demo-v303.png
-  * The {{{DfuSe Demo}} application should show {{{STM Device in DFU Mode}}} under the {{{Available DFU Devices}}}
+  * The *{{{DfuSe Demo}}}* application should show {{{STM Device in DFU Mode}}} under the {{{Available DFU Devices}}}
   * Under "Upgrade or Veriy Action" press the "Choose..." button
   * Select the *yard-yce.dfu* firmware file. See the next section on how to create the DFU file.
   * Press the Upgrade button
