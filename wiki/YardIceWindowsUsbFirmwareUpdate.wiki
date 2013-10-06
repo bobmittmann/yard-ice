@@ -26,6 +26,8 @@ ST provides a demo application that can be used to upload the firmware using the
   * Select the *yard-yce.dfu* firmware file. See the next section on how to create the DFU file.
   * Press the {{{[Upgrade]}}} button
 
+  * After writing the firmware, power cycle the system without jumper P2.
+
 == How To Create a DFU File ==
 
 The ST utility requires the firmware to be packed in a proprietary FDU format. There is one utility provided in the demo that allows to convert the output binary into a FDU file format.
