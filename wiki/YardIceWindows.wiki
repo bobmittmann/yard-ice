@@ -1,0 +1,12 @@
+#summary Windows Tool and Tips
+
+= Introduction =
+
+This page is dedicated to bundle the Windows related tips, tools and tricks to compile, program and use YARD-ICE.
+
+= Guides =
+
+  * [YardIceWindowsUsbFirmwareUpdate YARD-ICE Firmware Upgrade]
+  * [YardIceWindowsUsbTeraTerm Using YARD-ICE with Tera Term]
+
+
