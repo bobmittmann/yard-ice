@@ -627,8 +627,12 @@ int armice_core_reset(armice_ctrl_t * ctrl)
 
 	core_state_save(ctrl, ct);
 
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < 13; i++)
 		ct->r[i] = 0;
+
+	ct->sp = 0;
+	ct->lr = 0;
+	ct->pc = 0;
 
 	ct->cpsr = ARM_DISABLE_IRQ | ARM_DISABLE_FIQ | ARM_MODE_SUPERVISOR;
 
