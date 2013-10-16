@@ -173,7 +173,7 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_bb_scan, "bbscan", "bbs", 
 		"", "NAND bad block scan" },
 
-	{ cmd_scrub, "scrub", "scrub", 
+	{ cmd_scrub, "scrub", "scb", 
 		"", "NAND block forced erase" },
 #endif
 

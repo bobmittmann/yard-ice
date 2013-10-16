@@ -64,3 +64,6 @@ endif
 rbf: $(FPGA_RBF)
 	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $(FPGA_RBF)
 
+load:
+	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $(FPGA_RBF)
+

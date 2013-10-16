@@ -502,10 +502,7 @@ const struct ifnet_operations stm32f_ethif_op = {
 	.op_munmap = stm32f_ethif_munmap
 };
 
-/* TODO: The MAC address should be taken from the OTP FLASH */
-static const uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x81};
-
-struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask)
+struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, in_addr_t netmask)
 {
 	struct stm32f_eth * eth = STM32F_ETH;
 	struct ifnet * ifn;

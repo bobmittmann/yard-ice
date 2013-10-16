@@ -48,6 +48,7 @@
 
 #include <jtag.h>
 #include <trace.h>
+#include <ctype.h>
 
 #include <yard-ice/drv.h>
 
@@ -163,6 +164,45 @@ void supervisor_init(void)
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
 
+/* TODO: The MAC address should be taken from the OTP FLASH */
+static const uint8_t def_ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x81};
+
+int eth_strtomac(uint8_t ethaddr[], const char * s)
+{
+	char * cp = (char *)s;
+	int i;
+	char buf[4];
+	long int val;
+
+	while (isspace(*cp))
+		cp++;
+
+	for (i = 0; i < 6; ++i) {
+
+		if (!isxdigit(*cp))
+			break;
+
+		buf[0] = *cp++;
+		if (!isxdigit(*cp))
+			break;
+		buf[1] = *cp++;
+
+		buf[2] = '\0';
+		val = strtol(buf, NULL, 16);
+
+		DCC_LOG1(LOG_TRACE, "val=%02x", val);
+
+		ethaddr[i] = val;
+
+		if (*cp == '\0')
+			break;
+
+		cp++;
+	}
+
+	return 0;
+};
+
 #if ENABLE_NETWORK
 int network_config(void)
 {
@@ -174,6 +214,8 @@ int network_config(void)
 	char s1[16];
 	char s2[16];
 	char * env;
+	/* TODO: random initial mac address */
+	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x80};
 	int dhcp;
 
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
@@ -182,11 +224,17 @@ int network_config(void)
 	if ((env = getenv("IPCFG")) == NULL) {
 		tracef("IPCFG not set, using defaults!\n");
 		/* default configuration */
-		strcpy(s, "192.168.0.80 255.255.255.0 192.168.0.1 0");
+		strcpy(s, "192.168.0.128 255.255.255.0 192.168.0.1 0");
 		/* set the default configuration */
 		setenv("IPCFG", s, 1);
 	} else {
 		strcpy(s, env);
+	}
+
+	if ((env = getenv("ETHADDR")) != NULL) {
+		eth_strtomac(ethaddr, env);
+	} else {
+		tracef("Ethernet MAC address not set, using defaults!\n");
 	}
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
@@ -202,7 +250,7 @@ int network_config(void)
 
 	/* initialize the Ethernet interface */
 	/* configure the ip address */
-	ifn = ethif_init(ip_addr, netmask);
+	ifn = ethif_init(ethaddr, ip_addr, netmask);
 //	ifn = loopif_init(ip_addr, netmask);
 
 	ifn_getname(ifn, s);
