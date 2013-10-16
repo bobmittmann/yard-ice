@@ -115,7 +115,7 @@ void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 		break;
 	}
 
-	DCC_LOG2(LOG_TRACE, "addr=%d siz=%d", drv->fifo_addr, siz);
+	DCC_LOG2(LOG_INFO, "addr=%d siz=%d", drv->fifo_addr, siz);
 
 	drv->fifo_addr += siz;
 }
@@ -216,7 +216,7 @@ void stm32f_otg_dev_ep_nak(struct stm32f_otg_drv * drv, int ep_id, bool flag)
 
 int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
 {
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 #if 0
 	__ep_stall(drv, ep_id);
 #endif
@@ -243,7 +243,7 @@ int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
 		otg_fs->diepempmsk |= (1 << ep_id);
 	}
 
-	DCC_LOG4(LOG_TRACE, "ep_id=%d len=%d xfr_max=%d ret=%d", 
+	DCC_LOG4(LOG_INFO, "ep_id=%d len=%d xfr_max=%d ret=%d", 
 			 ep_id, len, ep->xfr_max, ret);
 
 	return ret;
@@ -259,7 +259,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	int cnt;
 	int rem;
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
+	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 	
@@ -304,7 +304,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 
 	/* 5. After the data payload is popped from the receive FIFO, the 
 	   RXFLVL interrupt (OTG_FS_GINTSTS) must be unmasked. */
-	DCC_LOG1(LOG_TRACE, "cnt=%d enabling RXFLVL interrupt", cnt);
+	DCC_LOG1(LOG_INFO, "cnt=%d enabling RXFLVL interrupt", cnt);
 
 	/* Reenable RX fifo interrupts */
 	otg_fs->gintmsk |= OTG_FS_RXFLVLM;
@@ -316,7 +316,7 @@ int stm32f_otg_dev_ep_zlp_send(struct stm32f_otg_drv * drv, int ep_id)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 
 	__ep_zlp_send(otg_fs, ep_id);
 
@@ -337,7 +337,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		return -1;
 	}
 
-	DCC_LOG3(LOG_TRACE, "ep_id=%d addr=%d mxpktsz=%d", 
+	DCC_LOG3(LOG_INFO, "ep_id=%d addr=%d mxpktsz=%d", 
 			 ep_id, info->addr & 0x7f, mxpktsz);
 
 	ep = &drv->ep[ep_id];
@@ -389,14 +389,14 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		/* Unmask EP0 interrupts */
 		otg_fs->daintmsk = OTG_FS_IEPM0 | OTG_FS_OEPM0;
 
-		DCC_LOG2(LOG_TRACE, "TX[0]: addr=%04x size=%d",
+		DCC_LOG2(LOG_INFO, "TX[0]: addr=%04x size=%d",
 				 OTG_FS_TX0FSA_GET(otg_fs->dieptxf0) * 4,
 				 OTG_FS_TX0FD_GET(otg_fs->dieptxf0) * 4);
 	} else {
 		uint32_t depctl;
 
 		if (info->addr & USB_ENDPOINT_IN) {
-			DCC_LOG(LOG_TRACE, "IN ENDPOINT");
+			DCC_LOG(LOG_INFO, "IN ENDPOINT");
 
 			if ((info->attr & 0x03) == ENDPOINT_TYPE_BULK) {
 				ep->xfr_max = 6 * mxpktsz;
@@ -407,7 +407,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 			__ep_pktbuf_alloc(drv, ep_id, ep->xfr_max);
 			depctl = otg_fs->inep[ep_id].diepctl;
 		} else {
-			DCC_LOG(LOG_TRACE, "OUT ENDPOINT");
+			DCC_LOG(LOG_INFO, "OUT ENDPOINT");
 			depctl = otg_fs->outep[ep_id].doepctl;
 		}
 
@@ -418,22 +418,22 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 
 		switch (info->attr & 0x03) {
 		case ENDPOINT_TYPE_CONTROL:
-			DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_CONTROL");
+			DCC_LOG(LOG_INFO, "ENDPOINT_TYPE_CONTROL");
 			depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_CTRL);
 			break;
 
 		case ENDPOINT_TYPE_ISOCHRONOUS:
-			DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_ISOCHRONOUS");
+			DCC_LOG(LOG_INFO, "ENDPOINT_TYPE_ISOCHRONOUS");
 			depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_ISOC);
 			break;
 
 		case ENDPOINT_TYPE_BULK:
-			DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_BULK");
+			DCC_LOG(LOG_INFO, "ENDPOINT_TYPE_BULK");
 			depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_BULK);
 			break;
 
 		case ENDPOINT_TYPE_INTERRUPT:
-			DCC_LOG(LOG_TRACE, "ENDPOINT_TYPE_INTERRUPT");
+			DCC_LOG(LOG_INFO, "ENDPOINT_TYPE_INTERRUPT");
 			depctl |= OTG_FS_EPTYP_SET(OTG_FS_EPTYP_INT);
 			break;
 		}
@@ -481,7 +481,7 @@ int stm32f_otg_dev_ep_disable(struct stm32f_otg_drv * drv,  int ep_id)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d...", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d...", ep_id);
 
 //	__ep_stall(drv, 0);
 	ep->state = EP_UNCONFIGURED;
@@ -540,7 +540,7 @@ void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 
 	otg_fs_vbus_connect(true);
 
-	DCC_LOG(LOG_TRACE, "Enabling USB FS clock...");
+	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
 	rcc->ahb2enr |= RCC_OTGFSEN;
 
 	/* Initialize as a device */
@@ -564,7 +564,7 @@ void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 
 //	usb->cntr = USB_FRES | USB_PDWN;
 
-	DCC_LOG(LOG_TRACE, "Disabling USB device clock...");
+	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
 	rcc->ahb2enr &= ~RCC_OTGFSEN;
 
 	/* disabling IO pins */
@@ -581,7 +581,7 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	drv->cl = cl;
 	drv->ev = ev;
 
-	DCC_LOG1(LOG_TRACE, "ev=0x%08x", drv->ev);
+	DCC_LOG1(LOG_INFO, "ev=0x%08x", drv->ev);
 
 	otg_fs_power_off(otg_fs);
 
@@ -592,7 +592,7 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 
 	otg_fs_power_on(otg_fs);
 
-	DCC_LOG(LOG_TRACE, "[ATTACHED]");
+	DCC_LOG(LOG_INFO, "[ATTACHED]");
 	return 0;
 }
 
@@ -608,7 +608,7 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 //	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 
 	ep->xfr_rem = len;
 
@@ -633,7 +633,7 @@ static void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 
 	/* call class endpoint callback */
 	ep->on_in(drv->cl, ep_id);
@@ -704,7 +704,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			DCC_LOG(LOG_TRACE, "address set!");
+			DCC_LOG(LOG_INFO, "address set!");
 			stm32f_otg_fs_addr_set(otg_fs, req->value);
 		}
 		ep->on_setup(drv->cl, req, dummy);
@@ -838,7 +838,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	/* update fifo memory allocation pointer */
 	drv->fifo_addr += siz;
 
-	DCC_LOG2(LOG_TRACE, "   RX: addr=%04x size=%d",
+	DCC_LOG2(LOG_INFO, "   RX: addr=%04x size=%d",
 			 0, otg_fs->grxfsiz * 4);
 
 	drv->ev->on_reset(drv->cl);
@@ -860,13 +860,13 @@ void stm32f_otg_fs_isr(void)
 
 	if (gintsts & OTG_FS_SRQINT) {
 		/* Session request/new session detected interrupt */
-		DCC_LOG(LOG_TRACE, "<SRQINT>  [POWERED]");
+		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]");
 		otg_fs->gintmsk |= OTG_FS_WUIM | OTG_FS_USBRSTM | OTG_FS_ENUMDNEM |
 			OTG_FS_ESUSPM | OTG_FS_USBSUSPM;
 	}
 
 	if (gintsts & OTG_FS_PTXFE) {
-		DCC_LOG(LOG_TRACE, "<PTXFE>");
+		DCC_LOG(LOG_INFO, "<PTXFE>");
 	}
 
 	if (gintsts & OTG_FS_OTGINT) {
@@ -880,7 +880,7 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_GONAKEFF) {
-		DCC_LOG(LOG_TRACE, "<GONAKEFF>");
+		DCC_LOG(LOG_INFO, "<GONAKEFF>");
 		otg_fs->gintmsk &= ~OTG_FS_GONAKEFFM;
 	}
 
@@ -913,16 +913,16 @@ void stm32f_otg_fs_isr(void)
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_GOUT_NACK:
 				/* Global OUT NAK (triggers an interrupt) */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <GOUT_NACK>", epnum);
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <GOUT_NACK>", epnum);
 				break;
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
 				__ep_rx_pop(drv, 0, len);
 				break;
 			}
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
 				break;
 			case OTG_FS_PKTSTS_SETUP_COMP:
 				/* SETUP transaction completed (triggers an interrupt) */
@@ -948,7 +948,7 @@ void stm32f_otg_fs_isr(void)
 			switch (grxsts & OTG_FS_PKTSTS_MSK) {
 			case OTG_FS_PKTSTS_OUT_DATA_UPDT:
 				/* OUT data packet received */
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <OUT_DATA_UPDT>", epnum);
 				/* 2. The application can mask the RXFLVL interrupt (in
 				   OTG_FS_GINTSTS) by writing to RXFLVL = 0 (in
 				   OTG_FS_GINTMSK), until it has read the packet from
@@ -960,8 +960,8 @@ void stm32f_otg_fs_isr(void)
 				stm32f_otg_dev_ep_out(drv, epnum, len);
 				break;
 			case OTG_FS_PKTSTS_OUT_XFER_COMP:
-				DCC_LOG1(LOG_TRACE, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
-				DCC_LOG2(LOG_TRACE, "[%d] doeptsiz=%08x", epnum, 
+				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
+				DCC_LOG2(LOG_INFO, "[%d] doeptsiz=%08x", epnum, 
 						 otg_fs->outep[epnum].doeptsiz);	 
 				/* Prepare to receive more */
 				otg_fs->outep[epnum].doeptsiz = drv->ep[epnum].doeptsiz;
@@ -992,7 +992,7 @@ void stm32f_otg_fs_isr(void)
 			/* Disable SOF interrupts */
 			otg_fs->gintmsk &= ~OTG_FS_SOFM;
 
-			DCC_LOG(LOG_TRACE, "RX timeout"); 
+			DCC_LOG(LOG_INFO, "RX timeout"); 
 			/* pop data from fifo */
 			for (i = 0; i < dev->ep1_rx.len; i++) {
 				(void)otg_fs->dfifo[EP_OUT].pop;
@@ -1006,18 +1006,18 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_WKUPINT) {
-		DCC_LOG(LOG_TRACE, "<WKUPINT>");
+		DCC_LOG(LOG_INFO, "<WKUPINT>");
 		/* disable resume/wakeup interrupts */
 	}
 
 	if (gintsts & OTG_FS_USBRST ) {
 		/* end of bus reset */
-		DCC_LOG(LOG_TRACE, "<USBRST> --------------- [DEFAULT]");
+		DCC_LOG(LOG_INFO, "<USBRST> --------------- [DEFAULT]");
 		stm32f_otg_dev_reset(drv);
 	}
 
 	if (gintsts & OTG_FS_ENUMDNE) {
-		DCC_LOG(LOG_TRACE, "<ENUMDNE>");
+		DCC_LOG(LOG_INFO, "<ENUMDNE>");
 		/* Unmask global interrupts */
 		otg_fs->gintmsk |=  OTG_FS_IEPINTM | OTG_FS_OEPINTM |
 			OTG_FS_IISOIXFRM | OTG_FS_IISOOXFRM | OTG_FS_RXFLVLM;
@@ -1050,10 +1050,10 @@ void stm32f_otg_fs_isr(void)
 			msk = diepmsk | ((diepempmsk >> 0) & 0x1) << 7;
 			diepint = otg_fs->inep[0].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[0] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep0_in(drv);
 			} else if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[0] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[0] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 0);
 			}
 			/* clear interrupts */
@@ -1065,11 +1065,11 @@ void stm32f_otg_fs_isr(void)
 			msk = diepmsk | ((diepempmsk >> 1) & 0x1) << 7;
 			diepint = otg_fs->inep[1].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[1] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[1] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep_in(drv, 1);
 			}
 			if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[1] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[1] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 1);
 			}
 			/* clear interrupts */
@@ -1081,11 +1081,11 @@ void stm32f_otg_fs_isr(void)
 			msk = diepmsk | ((diepempmsk >> 2) & 0x1) << 7;
 			diepint = otg_fs->inep[2].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[2] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep_in(drv, 2);
 			}
 			if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[2] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 2);
 			}
 			otg_fs->inep[2].diepint = diepint;
@@ -1096,11 +1096,11 @@ void stm32f_otg_fs_isr(void)
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
 			diepint = otg_fs->inep[3].diepint & msk;
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[3] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[3] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep_in(drv, 3);
 			}
 			if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[3] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[3] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 3);
 			}
 			otg_fs->inep[3].diepint = diepint;
@@ -1157,14 +1157,14 @@ void stm32f_otg_fs_isr(void)
 			doepint = otg_fs->outep[1].doepint & otg_fs->doepmsk;
 
 			if (doepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <OUT XFRC>");
+				DCC_LOG(LOG_INFO, "[1] <OEPINT> <OUT XFRC>");
 //				stm32f_otg_dev_ep_out(drv, 1);
 			}
 			if (doepint & OTG_FS_EPDISD) {
-				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <EPDISD>");
+				DCC_LOG(LOG_INFO, "[1] <OEPINT> <EPDISD>");
 			}
 			if (doepint & OTG_FS_STUP) {
-				DCC_LOG(LOG_TRACE, "[1] <OEPINT> <STUP>");
+				DCC_LOG(LOG_INFO, "[1] <OEPINT> <STUP>");
 			}
 			/* clear interrupts */
 			otg_fs->outep[1].doepint = doepint;
@@ -1176,14 +1176,14 @@ void stm32f_otg_fs_isr(void)
 			doepint = otg_fs->outep[2].doepint & otg_fs->doepmsk;
 
 			if (doepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <OUT XFRC>");
+				DCC_LOG(LOG_INFO, "[2] <OEPINT> <OUT XFRC>");
 //				stm32f_otg_dev_ep_out(drv, 2);
 			}
 			if (doepint & OTG_FS_EPDISD) {
-				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <EPDISD>");
+				DCC_LOG(LOG_INFO, "[2] <OEPINT> <EPDISD>");
 			}
 			if (doepint & OTG_FS_STUP) {
-				DCC_LOG(LOG_TRACE, "[2] <OEPINT> <STUP>");
+				DCC_LOG(LOG_INFO, "[2] <OEPINT> <STUP>");
 			}
 			/* clear interrupts */
 			otg_fs->outep[1].doepint = doepint;
@@ -1195,14 +1195,14 @@ void stm32f_otg_fs_isr(void)
 			doepint = otg_fs->outep[3].doepint & otg_fs->doepmsk;
 
 			if (doepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <OUT XFRC>");
+				DCC_LOG(LOG_INFO, "[3] <OEPINT> <OUT XFRC>");
 //				stm32f_otg_dev_ep_out(drv, 3);
 			}
 			if (doepint & OTG_FS_EPDISD) {
-				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <EPDISD>");
+				DCC_LOG(LOG_INFO, "[3] <OEPINT> <EPDISD>");
 			}
 			if (doepint & OTG_FS_STUP) {
-				DCC_LOG(LOG_TRACE, "[3] <OEPINT> <STUP>");
+				DCC_LOG(LOG_INFO, "[3] <OEPINT> <STUP>");
 			}
 
 			/* clear interrupts */
@@ -1211,15 +1211,15 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_IISOIXFR) {
-		DCC_LOG(LOG_TRACE, "<IISOIXFR>");
+		DCC_LOG(LOG_INFO, "<IISOIXFR>");
 	}
 
 	if (gintsts & OTG_FS_INCOMPISOOUT) {
-		DCC_LOG(LOG_TRACE, "<INCOMPISOOUT>");
+		DCC_LOG(LOG_INFO, "<INCOMPISOOUT>");
 	}
 
 	if (gintsts & OTG_FS_MMIS) {
-		DCC_LOG(LOG_TRACE, "<MMIS>");
+		DCC_LOG(LOG_INFO, "<MMIS>");
 	}
 
 	/* clear pending interrupts */
