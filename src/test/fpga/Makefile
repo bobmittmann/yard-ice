@@ -27,20 +27,17 @@ CFILES = fpga-test.c
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
-		  ../../sdk/libdrv ../../sdk/libtrace ../../sdk/libbitvec \
-		  ../../sdk/libaltera \
+		  ../../sdk/libtrace ../../sdk/libbitvec \
+		  ../../sdk/libaltera ../../sdk/libdrv \
 		  ../../yard-ice/jtag3drv ../../yard-ice/jtag 
 
-LIBS = drv stm32f cm3 util thinkos c ice-comm trace bitvec jtag3drv\
-	   jtag altera
+LIBS = stm32f cm3 util thinkos c ice-comm trace bitvec jtag3drv\
+	   jtag altera drv
 
 INCPATH = ../../sdk/include  ../../yard-ice/include
-
-JTAGTOOL_ADDR = 192.168.0.80
 
 CDEFS = CONFIG_H
 FLAGS = -g -O2
 
-HCLK_HZ = 24000000
 include ../../mk/stm32f207.mk
 

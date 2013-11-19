@@ -48,10 +48,27 @@ const struct file stm32f_uart_file = {
 	.op = &stm32f_usart_fops 
 };
 
+#define UART_TX STM32F_GPIOC, 12
+#define UART_RX STM32F_GPIOD, 2
+
 void stdio_init(void)
 {
+	struct stm32f_usart * uart = STM32F_UART5;
+
+	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32f_gpio_clock_en(STM32F_GPIOD);
+	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32f_gpio_af(UART_RX, GPIO_AF8);
+	stm32f_gpio_af(UART_TX, GPIO_AF8);
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
+
 	stderr = (struct file *)&stm32f_uart_file;
-	stdout = uart_console_fopen(uart_console_init(115200, SERIAL_8N1));
+	stdout = stderr;
 	stdin = stdout;
 }
 
@@ -602,14 +619,20 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
-	trace_init();
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
+
+	trace_init();
+
 	stdio_init();
 
+/*
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
+*/
 
 	printf("\n\n");
 	printf("-----------------------------------------\n");
@@ -617,8 +640,8 @@ int main(int argc, char ** argv)
 	printf("-----------------------------------------\n");
 	printf("\n");
 
-	stm32f_dac_init();
-	stm32f_dac_vout_set(3300);
+//	stm32f_dac_init();
+//	stm32f_dac_vout_set(3300);
 
 	if (jtag_drv_init() != 0) {
 

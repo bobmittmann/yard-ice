@@ -198,6 +198,8 @@ void stm32f_exti_init(struct stm32f_gpio * gpio, unsigned int pin,
  *---------------------------------------------------------------------*/
 
 void stm32f_mco2_init(void);
+void stm32f_mco2_disable(void);
+void stm32f_mco2_enable(void);
 
 /*---------------------------------------------------------------------
  * USB Device
