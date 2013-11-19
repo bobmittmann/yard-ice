@@ -123,6 +123,8 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 	altera_io_init();
 	
 	stm32f_spi_init(STM32F_SPI3, &spi3_io, 2000000, SPI_MSTR | SPI_LSBFIRST);
+//	stm32f_spi_init(STM32F_SPI3, &spi3_io, 500000, SPI_MSTR | SPI_LSBFIRST);
+//	stm32f_spi_init(STM32F_SPI3, &spi3_io, 125000, SPI_MSTR | SPI_LSBFIRST);
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
 
@@ -132,7 +134,15 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 	}
 
 	while (!gpio_status(conf_done)) {
+#if 0
+		if ((n & 0x7) == 0) {
+			DCC_LOG8(LOG_TRACE, "%02x %02x %02x %02x %02x %02x %02x %02x", 
+				buf[n], buf[n + 1], buf[n + 2], buf[n + 3],
+				buf[n + 4], buf[n + 5], buf[n + 6], buf[n + 7]);
+		}
+#endif
 		if (!gpio_status(n_status)) {
+			DCC_LOG1(LOG_ERROR, "nSTATUS low after %d bytes!", n);
 			return -5;
 		};
 

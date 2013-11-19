@@ -26,10 +26,13 @@
 
 #include <sys/stm32f.h>
 
+#define MCO2_GPIO STM32F_GPIOC
+#define MCO2_PIN 9
+
 void stm32f_mco2_init(void)
 {
-	struct stm32f_gpio * gpio = STM32F_GPIOC;
-	int pin = 9;
+	struct stm32f_gpio * gpio = MCO2_GPIO;
+	int pin = MCO2_PIN;
 
 #ifdef STM32F_SYSCFG
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
@@ -37,8 +40,25 @@ void stm32f_mco2_init(void)
 	syscfg->cmpcr |= SYSCFG_CMP_EN;
 #endif
 
+	/* initial state is disabled */
+	stm32f_gpio_mode(gpio, pin, OUTPUT, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32f_gpio_af(gpio, pin, GPIO_AF0);
+}
+
+void stm32f_mco2_disable(void)
+{
+	struct stm32f_gpio * gpio = MCO2_GPIO;
+	int pin = MCO2_PIN;
+
+	stm32f_gpio_mode(gpio, pin, OUTPUT, PUSH_PULL | SPEED_HIGH);
+}
+
+void stm32f_mco2_enable(void)
+{
+	struct stm32f_gpio * gpio = MCO2_GPIO;
+	int pin = MCO2_PIN;
+
+	stm32f_gpio_mode(gpio, pin, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
