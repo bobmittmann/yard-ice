@@ -184,6 +184,22 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
 	int ep_id;
+	/* A brief description of a typical suspend procedure is provided below, 
+	   focused on the USB-related aspects of the application software routine 
+	   responding to the SUSP notification of the USB peripheral:
+	1. Set the FSUSP bit in the USB_CNTR register to 1. This action activates 
+	the suspend mode within the USB peripheral. As soon as the suspend mode is 
+	activated, the check on SOF reception is disabled to avoid any further 
+	SUSP interrupts being issued while the USB is suspended.
+	2. Remove or reduce any static power consumption in blocks different from 
+	the USB peripheral.
+	3. Set LP_MODE bit in USB_CNTR register to 1 to remove static power 
+	consumption in the analog USB transceivers but keeping them able to 
+	detect resume activity.
+	4. Optionally turn off external oscillator and device PLL to stop 
+	any activity inside the device. */
+
+	usb->cntr |= USB_FSUSP;
 
 	for (ep_id = 0; ep_id < 8; ep_id++) {
 		drv->ep[ep_id].state = EP_DISABLED;
@@ -194,9 +210,26 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 	}
 
 	/* Enable Reset and Wakeup interrupts */
-	usb->cntr = USB_WKUP | USB_RESETM;
+	usb->cntr |= USB_WKUPM | USB_RESETM;
 
 	drv->ev->on_suspend(drv->cl);
+
+	/* Low power mode */
+	usb->cntr |= USB_LP_MODE;
+
+	DCC_LOG(LOG_TRACE, "suspended.");
+}
+
+void stm32f_usb_dev_wakeup(struct stm32f_usb_drv * drv)
+{
+	struct stm32f_usb * usb = STM32F_USB;
+
+//	drv->ev->on_wakeup(drv->cl);
+
+	/* Clear FSUSP flag */
+	usb->cntr = USB_WKUPM | USB_RESETM;
+
+	DCC_LOG(LOG_TRACE, "resumed.");
 }
 
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
@@ -255,7 +288,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 
 	epr = usb->epr[ep_id];
 	if (epr & USB_EP_DBL_BUF) {
-		DCC_LOG2(LOG_TRACE, "double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG2(LOG_INFO, "double buffer: DTOG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 		/* select the descriptor according to the data toggle bit */
@@ -334,14 +367,15 @@ int stm32f_usb_dev_ep_zlp_send(struct stm32f_usb_drv * drv, int ep_id)
 
 void stm32f_usb_dev_ep_nak(struct stm32f_usb_drv * drv, int ep_id, bool flag)
 {
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 #if 0
+	struct stm32f_usb * usb = STM32F_USB;
 	/* FIXME: select outep/inep ... */
 	if (flag)
 		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
 	else
 		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
 #endif
+	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 }
 
 
@@ -365,7 +399,7 @@ int stm32f_usb_dev_ep_init(struct stm32f_usb_drv * drv,
 		return -1;
 	}
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
+	DCC_LOG2(LOG_MSG, "ep_id=%d mxpktsz=%d", ep_id, mxpktsz);
 
 	ep = &drv->ep[ep_id];
 	ep->mxpktsz = mxpktsz;
@@ -704,6 +738,7 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 	/* Enable Reset, SOF  and Wakeup interrupts */
 	usb->cntr = USB_WKUP | USB_RESETM;
 
+	DCC_LOG(LOG_INFO, "[ATTACHED]");
 	return 0;
 }
 
@@ -763,7 +798,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		/* IN */
 		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
 
-		DCC_LOG2(LOG_TRACE, "TX double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG2(LOG_INFO, "TX double buffer: DTOG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 		/* select the descriptor according to the data toggle bit */
@@ -805,9 +840,9 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 
 	if (sr & USB_WKUP) {
-		usb->cntr = USB_WKUP | USB_RESETM;
 		usb->istr = sr & ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
+		stm32f_usb_dev_wakeup(drv);
 	}
 
 	if (sr & USB_ERR) {

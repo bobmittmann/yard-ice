@@ -112,7 +112,7 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
+	DCC_LOG2(LOG_MSG, "<%d> waiting for flag %d...", self, wq);
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -201,7 +201,7 @@ void thinkos_flag_set_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 		/* wakeup from the flag wait queue */
 		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_INFO, "<%d> waked up with flag %d", th, wq);
+		DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}

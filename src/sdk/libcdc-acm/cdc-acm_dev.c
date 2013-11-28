@@ -383,6 +383,39 @@ read_from_buffer:
 	/* get data from the rx buffer if not empty */
 	n = MIN(n, len);
 	memcpy(buf, &dev->rx_buf[dev->rx_pos], n); 
+
+#if 0
+	{
+		int rem;
+		uint8_t * cp = (uint8_t *)buf;
+
+		rem = n;
+
+		while (rem > 4) {
+			DCC_LOG4(LOG_TRACE, "%02x %02x %02x %02x", 
+					 cp[0], cp[1], cp[2], cp[3]);
+			rem -= 4;
+			cp += 4;
+		}
+
+		switch (rem) {
+		case 3:
+			DCC_LOG3(LOG_TRACE, "%02x %02x %02x", cp[0], cp[1], cp[2]);
+			break;
+		case 2:
+			DCC_LOG2(LOG_TRACE, "%02x %02x", cp[0], cp[1]);
+			break;
+		case 1:
+			if ((*cp) >= ' ') { 
+				DCC_LOG1(LOG_TRACE, "'%c'", cp[0]);
+			} else {
+				DCC_LOG1(LOG_TRACE, "%02x", cp[0]);
+			}
+			break;
+		}
+	}
+#endif
+
 	dev->rx_pos += n;
 	return n;
 }
