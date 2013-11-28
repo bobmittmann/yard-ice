@@ -45,6 +45,59 @@ int serial_write(struct serial_dev * dev, const void * buf,
 int serial_read(struct serial_dev * dev, char * buf, 
 				unsigned int len, unsigned int msec);
 
+void led_lock(void);
+void led_unlock(void);
+void led1_flash(unsigned int cnt);
+void led2_flash(unsigned int cnt);
+void led1_on(void);
+void led1_off(void);
+void led2_on(void);
+void led2_off(void);
+void leds_init(void);
+
+#ifndef USB_DEBUG
+#ifdef DEBUG
+#define USB_DEBUG 1
+#else
+#define USB_DEBUG 0
+#endif
+#endif
+
+#if USB_DEBUG
+volatile uint32_t dbg_msg_dump;
+
+const char dbg_msg[] = "\r\n1.\r\n"
+"When Zarathustra was thirty years old, he left his home and the lake of\r\n"
+"his home, and went into the mountains.  There he enjoyed his spirit and\r\n"
+"solitude, and for ten years did not weary of it.  But at last his heart\r\n"
+"changed,--and rising one morning with the rosy dawn, he went before the\r\n"
+"sun, and spake thus unto it:\r\n\r\n"
+"Thou great star!  What would be thy happiness if thou hadst not those for\r\n"
+"whom thou shinest!\r\n\r\n"
+"For ten years hast thou climbed hither unto my cave:  thou wouldst have\r\n"
+"wearied of thy light and of the journey, had it not been for me, mine\r\n"
+"eagle, and my serpent.\r\n\r\n"
+"But we awaited thee every morning, took from thee thine overflow\r\n"
+"and blessed thee for it.\r\n\r\n"
+"Lo!  I am weary of my wisdom, like the bee that hath gathered too much\r\n"
+"honey; I need hands outstretched to take it.\r\n\r\n"
+"I would fain bestow and distribute, until the wise have once more become\r\n"
+"joyous in their folly, and the poor happy in their riches.\r\n\r\n"
+"Therefore must I descend into the deep:  as thou doest in the evening,\r\n"
+"when thou goest behind the sea, and givest light\r\n"
+"also to the nether-world,\r\n"
+"thou exuberant star!\r\n\r\n"
+"Like thee must I GO DOWN, as men say, to whom I shall descend.\r\n\r\n"
+"Bless me, then, thou tranquil eye, that canst behold even the greatest\r\n"
+"happiness without envy!\r\n\r\n"
+"Bless the cup that is about to overflow,\r\n"
+"that the water may flow golden out\r\n"
+"of it, and carry everywhere the reflection of thy bliss!\r\n\r\n"
+"Lo!  This cup is again going to empty itself, and Zarathustra is again\r\n"
+"going to be a man.\r\n\r\n"
+"Thus began Zarathustra's down-going.\r\n\r\n\r\n";
+#endif
+
 struct vcom {
 	struct serial_dev * serial;
 	usb_cdc_class_t * cdc;
@@ -55,17 +108,71 @@ struct vcom {
 
 #define USB_FS_DP STM32F_GPIOA, 12
 #define USB_FS_DM STM32F_GPIOA, 11
-#define USB_FS_VBUS STM32F_GPIOA, 9
 
-#define LED0_IO STM32F_GPIOB, 9
-#define PUSHBTN_IO STM32F_GPIOA, 6
-#define EXTRST_IO STM32F_GPIOA, 5
+#define USB_FS_VBUS STM32F_GPIOB, 6 /* PB6 */
+
+#define PUSHBTN_IO STM32F_GPIOB, 8
+#define EXTRST0_IO STM32F_GPIOB, 0 
+#define EXTRST1_IO STM32F_GPIOA, 5 /* PA5 (connected to USART2_CK/ USART3_TX) */
+
+#define USART1_TX STM32F_GPIOA, 9
+#define USART1_RX STM32F_GPIOA, 10
 
 #define USART2_TX STM32F_GPIOA, 2
 #define USART2_RX STM32F_GPIOA, 3
 
 #define USART3_TX STM32F_GPIOB, 10
 #define USART3_RX STM32F_GPIOB, 11
+
+void io2_sel_pa5(void)
+{
+	stm32f_gpio_mode(USART3_TX, INPUT, 0);
+	stm32f_gpio_mode(EXTRST1_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
+}
+
+void io_sel_usart3(void)
+{
+	stm32f_gpio_mode(EXTRST1_IO, INPUT, 0);
+	stm32f_gpio_mode(USART3_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+}
+
+void io_sel_i2c(void)
+{
+}
+
+void io_sel_rts(void)
+{
+}
+
+/* USART1 and USART2 pins are connected together.
+   Only one TX pin must be enable at any time */
+
+/* Select USART2 TX */
+void io_sel_usart2(void)
+{
+	stm32f_gpio_mode(USART1_TX, INPUT, 0);
+	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+}
+
+/* Select USART1 TX */
+void io_sel_usart1(void)
+{
+	stm32f_gpio_mode(USART2_TX, INPUT, 0);
+	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+}
+
+void usb_vbus(bool on)
+{
+//	if (on)
+//		stm32f_gpio_set(USB_FS_VBUS);
+//	else
+//		stm32f_gpio_clr(USB_FS_VBUS);
+
+	if (on)
+		stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
+	else
+		stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
+}
 
 void io_init(void)
 {
@@ -77,6 +184,11 @@ void io_init(void)
 	/* Enable Alternate Functions IO clock */
 	rcc->apb2enr |= RCC_AFIOEN;
 
+	/* UART1 TX (disabled) */
+	stm32f_gpio_mode(USART1_TX, INPUT, 0);
+	/* UART1 RX */
+	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
+
 	/* Primary UART TX */
 	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	/* Primary UART RX */
@@ -87,62 +199,21 @@ void io_init(void)
 	/* Secondary UART RX */
 	stm32f_gpio_mode(USART3_RX, INPUT, PULL_UP);
 
-	/* LED */
-	stm32f_gpio_mode(LED0_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-
 	/* Push button */
 	stm32f_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
 
-	/* External Reset */
-//	stm32f_gpio_mode(EXTRST_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
-	stm32f_gpio_mode(EXTRST_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_set(EXTRST_IO);
-}
+	/* External Reset pins */
+	stm32f_gpio_mode(EXTRST0_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32f_gpio_set(EXTRST0_IO);
 
-int8_t led_flag;
-volatile int8_t led_locked;
+	stm32f_gpio_mode(EXTRST1_IO, INPUT, 0);
+	stm32f_gpio_set(EXTRST1_IO);
 
-void led_on(void)
-{
-	stm32f_gpio_set(LED0_IO);
-}
+//	stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
+//	stm32f_gpio_clr(USB_FS_VBUS);
 
-void led_off(void)
-{
-	stm32f_gpio_clr(LED0_IO);
-}
-
-void led_lock(void)
-{
-	led_locked = 1;
-}
-
-void led_unlock(void)
-{
-	led_locked = 0;
-}
-
-void led_flash(void)
-{
-	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
-	thinkos_flag_set(led_flag);
-}
-
-int led_task(void)
-{
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	while (1) {
-		DCC_LOG(LOG_INFO, "thinkos_flag_wait()...");
-		thinkos_flag_wait(led_flag);
-		thinkos_flag_clr(led_flag);
-		if (!led_locked)
-			led_on();
-		thinkos_sleep(100);
-		if (!led_locked)
-			led_off();
-		thinkos_sleep(100);
-	}
+	stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
+	stm32f_gpio_set(USB_FS_VBUS);
 }
 
 void system_reset(void)
@@ -157,7 +228,7 @@ void system_reset(void)
 
 static int push_btn_stat(void)
 {
-	return stm32f_gpio_stat(PUSHBTN_IO) ? 0 : 1;
+	return stm32f_gpio_stat(PUSHBTN_IO) ? 1 : 0;
 }
 
 enum {
@@ -209,41 +280,53 @@ int button_task(void)
 		switch (event) {
 
 		case EVENT_BTN_PRESSED:
+			DCC_LOG(LOG_TRACE, "BTN_PRESSED");
 			if (ext_rst_st == EXT_RST_OFF) {
 				/* start external reset timer */
 				ext_rst_tmr = 500 / LOOP_TIME;
 				/* start system reset timer */
 				sys_rst_tmr = 5000 / LOOP_TIME;
-				stm32f_gpio_set(EXTRST_IO);
+				stm32f_gpio_set(EXTRST1_IO);
+				stm32f_gpio_set(EXTRST0_IO);
 				led_lock();
-				led_on();
+				led2_on();
 				ext_rst_st = EXT_RST_ON;
 			}
+#if USB_DEBUG
+			if (dbg_msg_dump == 0)
+				dbg_msg_dump = 1;
+			else
+				dbg_msg_dump <<= 1;
+#endif
 			break;
 
 		case EVENT_BTN_RELEASED:
-			if (ext_rst_st == EXT_RST_WAIT) {
-				ext_rst_st = EXT_RST_OFF;
-			}
+			DCC_LOG(LOG_TRACE, "BTN_RELEASED");
+//			if (ext_rst_st == EXT_RST_WAIT) {
+//				ext_rst_st = EXT_RST_OFF;
+//			}
 			/* reset system reset timer */
 			sys_rst_tmr = 0;
 			break;
 
 		case EVENT_EXT_RST_TIMEOUT:
-			stm32f_gpio_clr(EXTRST_IO);
-			led_off();
+			DCC_LOG(LOG_TRACE, "EXT_RST_TIMEOUT");
+			stm32f_gpio_clr(EXTRST0_IO);
+			stm32f_gpio_clr(EXTRST1_IO);
+			led2_off();
 			led_unlock();
-			ext_rst_st = EXT_RST_WAIT;
+			ext_rst_st = EXT_RST_OFF;
 			break;
 
 		case EVENT_SYS_RST_TIMEOUT:
+			DCC_LOG(LOG_TRACE, "SYS_RST_TIMEOUT");
 			led_lock();
 
-			for (i = 0; i < 5; ++i) {
-				led_on();
+			for (i = 0; i < 10; ++i) {
+				led2_on();
+				thinkos_sleep(100);
+				led2_off();
 				thinkos_sleep(200);
-				led_off();
-				thinkos_sleep(300);
 			}
 
 			system_reset();
@@ -264,7 +347,7 @@ int usb_recv_task(struct vcom * vcom)
 
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 100);
-		led_flash();
+		led1_flash(1);
 		serial_write(serial, buf, len);
 	}
 
@@ -282,7 +365,7 @@ int serial_recv_task(struct vcom * vcom)
 
 	for (;;) {
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
-		led_flash();
+		led2_flash(1);
 		usb_cdc_write(cdc, buf, len);
 	}
 
@@ -321,42 +404,10 @@ int serial_ctrl_task(struct vcom * vcom)
 	return 0;
 }
 
-uint32_t led_stack[32];
 uint32_t button_stack[32];
 uint32_t serial_ctrl_stack[32];
 uint32_t serial_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
-
-const char msg[] = "\r\n1.\r\n"
-	"When Zarathustra was thirty years old, he left his home and the lake of "
-	"his home, and went into the mountains.  There he enjoyed his spirit and "
-	"solitude, and for ten years did not weary of it.  But at last his heart "
-	"changed,--and rising one morning with the rosy dawn, he went before the "
-	"sun, and spake thus unto it:\r\n"
-	"Thou great star!  What would be thy happiness if thou hadst not those for "
-	"whom thou shinest!\r\n"
-	"For ten years hast thou climbed hither unto my cave:  thou wouldst have "
-	"wearied of thy light and of the journey, had it not been for me, mine "
-	"eagle, and my serpent.\r\n"
-	"But we awaited thee every morning, took from thee thine overflow "
-	"and blessed thee for it.\r\n"
-	"Lo!  I am weary of my wisdom, like the bee that hath gathered too much "
-	"honey; I need hands outstretched to take it.\r\n"
-	"I would fain bestow and distribute, until the wise have once more become "
-	"joyous in their folly, and the poor happy in their riches.\r\n\r\n"
-	"Therefore must I descend into the deep:  as thou doest in the evening, "
-	"when thou goest behind the sea, and givest light "
-	"also to the nether-world, "
-	"thou exuberant star!\r\n\r\n"
-	"Like thee must I GO DOWN, as men say, to whom I shall descend.\r\n\r\n"
-	"Bless me, then, thou tranquil eye, that canst behold even the greatest "
-	"happiness without envy!\r\n\r\n"
-	"Bless the cup that is about to overflow, "
-	"that the water may flow golden out "
-	"of it, and carry everywhere the reflection of thy bliss!\r\n\r\n"
-	"Lo!  This cup is again going to empty itself, and Zarathustra is again "
-	"going to be a man.\r\n\r\n"
-	"Thus began Zarathustra's down-going.\r\n\r\n\r\n";
 
 int main(int argc, char ** argv)
 {
@@ -377,11 +428,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
-	led_flag = thinkos_flag_alloc();
-
-	thinkos_thread_create((void *)led_task, (void *)NULL,
-						  led_stack, sizeof(led_stack),
-						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
+	leds_init();
 
 	stm32f_usart_init(uart);
 	stm32f_usart_baudrate_set(uart, 9600);
@@ -411,11 +458,23 @@ int main(int argc, char ** argv)
 						  serial_ctrl_stack, sizeof(serial_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 
+	usb_vbus(true);
+
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
-		led_flash();
+		led2_flash(1);
 		DCC_LOG1(LOG_TRACE, "%d tick.", i);
-//		usb_cdc_write(vcom.cdc, msg, sizeof(msg));
+#if USB_DEBUG
+		if (dbg_msg_dump) {
+			int cnt = dbg_msg_dump;
+			int j;
+			for (j = 1; j <= cnt; ++j) {
+				DCC_LOG1(LOG_TRACE, "dump: %d.", j);
+				usb_cdc_write(vcom.cdc, dbg_msg, sizeof(dbg_msg));
+			}
+			dbg_msg_dump = 0;
+		}
+#endif
 
 //		vcom.ser_stat.dsr = i & 1;
 //		vcom.ser_stat.ri = i & 1;

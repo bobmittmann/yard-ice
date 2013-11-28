@@ -469,6 +469,8 @@ void stm32f_eth_isr(void)
 		DCC_LOG(LOG_MSG, "TBUS");
 
 	if (dmasr & ETH_AIS) {
+		if (dmasr & ETH_RBUS) {
+		}
 		DCC_LOG9(LOG_WARNING, "AIS:%s%s%s%s%s%s%s%s%s",
 				 (dmasr & ETH_FBES) ? " FBES" : "",
 				 (dmasr & ETH_ETS) ? " ETS" : "",
@@ -479,8 +481,6 @@ void stm32f_eth_isr(void)
 				 (dmasr & ETH_ROS) ? " ROS" : "",
 				 (dmasr & ETH_TJTS) ? " TJTS" : "",
 				 (dmasr & ETH_TPSS) ? " TPSS" : "");
-		if (dmasr & ETH_RBUS) {
-		}
 	}
 
 	/* clear interrupt bits */

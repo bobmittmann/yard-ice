@@ -195,7 +195,34 @@ void stm32f_usart2_isr(void)
 	uint32_t sr;
 	int c;
 	
-	sr = uart->sr & uart->cr1;
+	sr = uart->sr;
+	
+	if (sr & USART_LBD) {
+		/* Line break detection */
+		DCC_LOG(LOG_TRACE, "LBD");
+	}
+
+	if (sr & USART_ORE) {
+		/* Overrun error */
+		DCC_LOG(LOG_TRACE, "ORE");
+	}
+
+	if (sr & USART_NE) {
+		/* Noise error */
+		DCC_LOG(LOG_TRACE, "NE");
+	}
+
+	if (sr & USART_FE) {
+		/* Framming error */
+		DCC_LOG(LOG_TRACE, "FE");
+	}
+
+	if (sr & USART_PE) {
+		/* Parity error */
+		DCC_LOG(LOG_TRACE, "PE");
+	}
+
+	sr &= uart->cr1;
 
 	if (sr & USART_RXNE) {
 		DCC_LOG(LOG_INFO, "RXNE");
@@ -246,8 +273,10 @@ struct serial_dev * serial_open(struct stm32f_usart * uart)
 	cm3_irq_pri_set(STM32F_IRQ_USART2, UART_IRQ_PRIORITY);
 	cm3_irq_enable(STM32F_IRQ_USART2);
 
-	/* enable RX interrupt */
+	/* enable RX and IDLE interrupts */
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
+	/* Errors interrupt */
+	uart->cr3 |= USART_EIE;
 
 	return dev;
 }
