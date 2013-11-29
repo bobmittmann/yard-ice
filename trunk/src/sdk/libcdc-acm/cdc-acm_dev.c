@@ -448,8 +448,8 @@ int usb_cdc_state_get(usb_cdc_class_t * cl, usb_cdc_state_t * state)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	state->cfg.baud_rate = dev->acm.lc.dwDTERate;
-	state->cfg.data_bits = dev->acm.lc.bDataBits;
+	state->cfg.baudrate = dev->acm.lc.dwDTERate;
+	state->cfg.databits = dev->acm.lc.bDataBits;
 	switch (dev->acm.lc.bParityType) {
 	case ACM_PARITY_ODD:
 		state->cfg.parity = SERIAL_PARITY_ODD;
@@ -463,7 +463,7 @@ int usb_cdc_state_get(usb_cdc_class_t * cl, usb_cdc_state_t * state)
 		break;
 	}
 
-	state->cfg.stop_bits = dev->acm.lc.bCharFormat;
+	state->cfg.stopbits = dev->acm.lc.bCharFormat;
 
 	state->ctrl.dtr = (dev->acm.control & CDC_DTE_PRESENT);
 	state->ctrl.rts = (dev->acm.control & CDC_ACTIVATE_CARRIER);

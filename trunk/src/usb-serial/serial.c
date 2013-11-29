@@ -176,7 +176,7 @@ int serial_config_set(struct serial_dev * dev,
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	stm32f_usart_baudrate_set(uart, cfg->baud_rate);
+	stm32f_usart_baudrate_set(uart, cfg->baudrate);
 
 	flags = CFG_TO_FLAGS(cfg);
 

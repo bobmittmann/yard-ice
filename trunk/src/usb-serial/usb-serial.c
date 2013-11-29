@@ -385,10 +385,10 @@ int serial_ctrl_task(struct vcom * vcom)
 
 	while (1) {
 		usb_cdc_state_get(cdc, &state);
-		if ((state.cfg.baud_rate != prev_state.cfg.baud_rate) ||
-			(state.cfg.data_bits != prev_state.cfg.data_bits) ||
+		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
+			(state.cfg.databits != prev_state.cfg.databits) ||
 			(state.cfg.parity != prev_state.cfg.parity) ||
-			(state.cfg.stop_bits != prev_state.cfg.stop_bits)) {
+			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
 			serial_config_set(serial, &state.cfg);
 			prev_state.cfg = state.cfg;
 		}
