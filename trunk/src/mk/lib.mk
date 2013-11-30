@@ -18,17 +18,29 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+ifndef SCRPTDIR
+  SCRPTDIR := $(abspath $(THISDIR))
+  BASEDIR := $(abspath $(THISDIR)/..)
+endif	
+
 #------------------------------------------------------------------------------ 
 # cross compiling 
 #------------------------------------------------------------------------------ 
 
-THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-
-ifndef MKDIR
-  MKDIR := $(realpath $(THISDIR))
+ifndef CROSS_COMPILE
+  # default to the host compiler by tricking the make to assign a 
+  # empty string to the CROSS_COMPILE variable
+  empty =
+  CROSS_COMPILE = $(empty)
 endif	
 
-include $(MKDIR)/cross.mk
+ifndef CFLAGS
+  CFLAGS := -g -O1
+endif
+
+include $(SCRPTDIR)/cross.mk
 
 #------------------------------------------------------------------------------ 
 # generated source files
@@ -56,6 +68,12 @@ DDIRS = $(sort $(dir $(DFILES)))
 # path variables
 #------------------------------------------------------------------------------ 
 override INCPATH += $(abspath .)
+#INCPATH := $(abspath $(INCPATH))
+
+ifeq ($(HOST),Cygwin)
+  INCPATH_WIN := $(subst \,\\,$(foreach h,$(INCPATH),$(shell cygpath -w $h)))
+  OFILES_WIN := $(subst \,\\,$(foreach o,$(OFILES),$(shell cygpath -w $o)))
+endif
 
 #------------------------------------------------------------------------------ 
 # library output files
@@ -63,48 +81,129 @@ override INCPATH += $(abspath .)
 ifdef LIB_STATIC
   LIB_STATIC_OUT = $(OUTDIR)/lib$(LIB_STATIC).a
   LIB_STATIC_LST = $(OUTDIR)/lib$(LIB_STATIC).lst
+  LIB_OUT := $(LIB_STATIC_OUT)
+  LIB_LST := $(LIB_STATIC_LST)
+endif
+
+ifdef LIB_SHARED
+  LIB_SHARED_LST = $(OUTDIR)/lib$(LIB_SHARED).lst
+  ifeq ($(SOEXT),dll)
+    LIB_SHARED_OUT = $(OUTDIR)/$(LIB_SHARED).$(SOEXT)
+    LDFLAGS = -Wl,--dll
+  else
+    LIB_SHARED_OUT = $(OUTDIR)/lib$(LIB_SHARED).$(SOEXT)
+    LDFLAGS = -Wl,-soname,$(LIB_SHARED).so
+  endif
+  LIB_OUT += $(LIB_SHARED_OUT)
+  LIB_LST += $(LIB_SHARED_LST)
 endif
 
 DEPDIRS_ALL:= $(DEPDIRS:%=%-all)
 
 DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 
-all: $(LIB_STATIC_LST)
+CLEAN_FILES := $(OFILES) $(DFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
+
+ifeq ($(DIRMODE),windows)
+  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
+endif
+
+#$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+#$(info ODIRS= '$(ODIRS)')
+#$(info OS = '$(OS)')
+#$(info OSTYPE = '$(OSTYPE)')
+#$(info HOST = '$(HOST)')
+#$(info DIRMODE = '$(DIRMODE)')
+#$(info MSYSTEM = '$(MSYSTEM)')
+#$(info MSYSCON = '$(MSYSCON)')
+#$(info MAKE_MODE = '$(MAKE_MODE)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info INCPATH_WIN = '$(INCPATH_WIN)')
+#$(info LIBDIRS = '$(LIBDIRS)')
+#$(info abspath = '$(abspath .)')
+#$(info realpath = '$(realpath .)')
+#$(info CFLAGS = '$(CFLAGS)')
+#$(info HOME = '$(HOME)')
+#$(info HOMEPATH = '$(HOMEPATH)')
+#$(info CLEAN_FILES = '$(CLEAN_FILES)')
+#$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+
+all: $(LIB_OUT)
 
 clean: deps-clean
-	$(Q)rm -f $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
+	$(Q)$(RMALL) $(CLEAN_FILES)
 
-lib: $(LIB_STATIC_OUT)
+lib: $(LIB_OUT)
 
-lst: $(LIB_STATIC_LST)
+lst: $(LIB_LST)
 
 gen: $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT)
 	
-$(LIB_STATIC_OUT): $(DEPDIRS_ALL) $(OFILES)
-	$(ACTION) "AR: $@"
-	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> /dev/null
-
 deps-all: $(DEPDIRS_ALL)
 
 deps-clean: $(DEPDIRS_CLEAN)
 
+#------------------------------------------------------------------------------ 
+# Code::Blocks targets
+#------------------------------------------------------------------------------ 
+
+Debug: 
+	$(Q)$(MAKE) D=1 all
+
+Release: 
+	$(Q)$(MAKE) D=0 all
+
+cleanDebug: 
+	$(Q)$(MAKE) D=1 clean
+
+cleanRelease: 
+	$(Q)$(MAKE) D=0 clean
+
+#------------------------------------------------------------------------------ 
+# Library targets
+#------------------------------------------------------------------------------ 
+
+#$(LIB_STATIC_OUT): $(DEPDIRS_ALL) $(OFILES)
+$(LIB_STATIC_OUT): $(OFILES)
+	$(ACTION) "AR: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(AR) $(ARFLAGS) $(subst \,\\,$(shell cygpath -w $@)) $(OFILES_WIN) > $(DEVNULL)
+else
+	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> $(DEVNULL)
+endif
+
+$(LIB_SHARED_OUT): $(DEPDIRS_ALL) $(OFILES)
+	$(ACTION) "LD: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(LD) $(LDFLAGS) -shared $(OFILES_WIN) $(OBJ_EXTRA) \
+	$(addprefix -l,$(LIBS)) $(addprefix -L,$(LIBPATH_WIN)) -o $@
+else
+	$(Q)$(LD) $(LDFLAGS) -shared $(OFILES) $(OBJ_EXTRA) \
+	$(addprefix -l,$(LIBS)) $(addprefix -L,$(LIBPATH)) -o $@
+endif
+
+#------------------------------------------------------------------------------ 
+# Library dependencies targets
+#------------------------------------------------------------------------------ 
+
 $(DEPDIRS_ALL):
 	$(ACTION) "Building : $@"
-	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-all=%));\
-	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
+	$(Q)$(MAKE) -C $(@:%-all=%) O=$(OUTDIR)/$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
 
 $(DEPDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
-	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-clean=%));\
-	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
+	$(Q)$(MAKE) -C $(@:%-clean=%) O=$(OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
 
 %.lst: %.a
 	$(ACTION) "LST: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(OBJDUMP) -w -t -d -S $(subst \,\\,$(shell cygpath -w $<)) > $@
+else
 	$(Q)$(OBJDUMP) -w -t -d -S $< > $@
-
+endif
 
 .PHONY: all clean lib lst deps-all deps-clean
-
+.PHONY: Debug Release cleanDebug cleanRelease
 .PHONY: $(DEPDIRS_BUILD) $(DEPDIRS_CLEAN)
 
 #------------------------------------------------------------------------------ 
@@ -112,12 +211,20 @@ $(DEPDIRS_CLEAN):
 #------------------------------------------------------------------------------ 
 
 $(ODIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir -p $@
+	$(ACTION) "Creating outdir: $@"
+ifeq ($(HOST),Windows)
+	$(Q)$(MKDIR) $(subst /,\,$@) 
+else
+	-$(Q)$(MKDIR) $@ 
+endif
 
 $(DDIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir -p $@
+	$(ACTION) "Creating depdir: $@"
+ifeq ($(HOST),Windows)
+	$(Q)$(MKDIR) $(subst /,\,$@) 
+else
+	-$(Q)$(MKDIR) $@ 
+endif
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
@@ -125,7 +232,15 @@ $(DDIRS) : | $(ODIRS) $(CFILES_OUT)
 
 $(DFILES): | $(DDIRS)
 
-include $(MKDIR)/cc.mk
+include $(SCRPTDIR)/cc.mk
 
+#
+# FIXME: automatic dependencies are NOT included in Cygwin.
+# The dependencie files must have the paths converted
+# to cygwin (unix) style to be of any use!
+#
+ifneq ($(HOST),Cygwin)
 -include $(DFILES)
+endif
+
 

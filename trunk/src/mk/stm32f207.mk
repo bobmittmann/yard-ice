@@ -39,7 +39,7 @@ CDEFS += $(call uc,$(MACH))
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDSCRIPT = $(MACH).ld  
+LDFLAGS = -nostdlib -T $(MACH).ld
 
 include $(MKDIR)/prog.mk
 
