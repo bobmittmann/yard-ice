@@ -49,14 +49,111 @@ else
   endif
 endif
 
-ifeq ($(verbose),0) 
-  Q = @
-  ACTION = @echo
-  ECHO = @\#
+#------------------------------------------------------------------------------ 
+# Host OS detection
+#------------------------------------------------------------------------------ 
+
+ifeq (, $(OS))
+ OS := $(shell uname -o) 
+ ifneq (,$(findstring Linux, $(OS)))
+# $(info Linux Host)
+  HOST := Linux
+  DIRMODE := unix
+ else
+  $(error Unsuported OS)
+ endif
 else
-  Q =
-  ACTION = @\#
-  ECHO = @echo
+ ifneq (,$(findstring Windows, $(OS)))
+  ifeq ($(PROGRAMFILES\(X86\))$(ProgramFiles\(x86\)),)
+#   $(info Windows 32bits)
+   WIN := Win32
+  else
+#   $(info Windows 64bits)
+   WIN := Win64
+  endif
+  ifneq (,$(findstring MINGW, $(MSYSTEM)))
+#   $(info Windows MinGW/Msys Host)
+   HOST := Msys
+   DIRMODE := windows
+  else 
+   ifneq (,$(HOME))
+#    $(info Windows Cygwin Host)
+    HOST := Cygwin
+    DIRMODE := unix
+   else
+#    $(info Windows Native Host)
+    HOST := Windows
+    DIRMODE := windows
+   endif
+  endif
+ endif
+endif
+
+#------------------------------------------------------------------------------ 
+# OS specific helper macros
+#------------------------------------------------------------------------------ 
+
+ifeq ($(HOST),Linux)
+ CAT := cat
+ RMALL := rm -f 
+ RMDIR := rm -fr
+ CP := cp
+ MV := mv    
+ MKDIR := mkdir -p
+ ECHO := echo
+ DEVNULL := /dev/null
+else
+ifeq ($(HOST),Cygwin)
+ CAT := cat
+ RMALL := rm -f 
+ RMDIR := rm -fr
+ CP := cp
+ MV := mv    
+ MKDIR := mkdir -p
+ ECHO := echo
+ DEVNULL := /dev/null
+else
+ifeq ($(HOST),Msys)
+ CAT := cat
+ RMALL := rm -f
+ RMDIR := rm -fr
+ CP := cp
+ MV := mv    
+ MKDIR := mkdir -p
+ ECHO := echo
+ DEVNULL := /dev/null
+else
+ifeq ($(HOST),Windows)
+ CAT := type
+ RMALL := del /F /Q 
+ CP := copy 
+ MV := ren
+ MKDIR := mkdir
+ ECHO := echo
+ DEVNULL := NUL:
+else
+ $(error Unsuported HOST)
+endif
+endif
+endif
+endif
+
+#------------------------------------------------------------------------------ 
+# Other macros
+#------------------------------------------------------------------------------ 
+
+ifeq ($(verbose),0) 
+  Q := @
+  ACTION := @echo
+#  ECHO := @\#
+else
+  Q :=
+ ifeq ($(HOST),Windows)
+   ACTION := @rem
+ else
+   ACTION := @\#
+ endif
+#  ECHO := @echo
 endif
 
 DEPDIR=$(OUTDIR)/.deps
@@ -71,21 +168,45 @@ ifndef CROSS_COMPILE
   $(warning CROSS_COMPILE undefined!)
 endif	# CROSS_COMPILE
 
-export CROSS_COMPILE
+#------------------------------------------------------------------------------ 
+# Shared object file extensions
+#------------------------------------------------------------------------------ 
+
+#------------------------------------------------------------------------------ 
+# Warning: This discovery method is very poor.
+# The assumption is if your host is Msys or Windows shell and the
+# CROSS_COMPILE is empty then most probably your tring to produce a DLL
+#
+
+ifeq ($(strip $(CROSS_COMPILE)),)
+  # Cross compiling is set to an empty string (assuming host=target)
+  ifeq ($(HOST),Windows)
+    SOEXT := dll
+  else 
+    ifeq ($(HOST),Msys)
+      SOEXT := dll
+    else
+      SOEXT := so
+    endif
+  endif
+else
+  # cross compiling (assuming *NIX shared objects)
+  SOEXT := so
+endif
 
 #------------------------------------------------------------------------------ 
 # gcc toolchain
 #------------------------------------------------------------------------------ 
-CC = $(CROSS_COMPILE)gcc
-LD = $(CROSS_COMPILE)gcc
-AS = $(CROSS_COMPILE)gcc
-AR = $(CROSS_COMPILE)ar
-NM = $(CROSS_COMPILE)nm
-CXX = $(CROSS_COMPILE)g++
-RANLIB = $(CROSS_COMPILE)ranlib
-OBJCOPY = $(CROSS_COMPILE)objcopy
-OBJDUMP = $(CROSS_COMPILE)objdump
-STRIP = $(CROSS_COMPILE)strip
+CC := $(strip $(CROSS_COMPILE))gcc
+LD := $(strip $(CROSS_COMPILE))gcc
+AS := $(strip $(CROSS_COMPILE))gcc
+AR := $(strip $(CROSS_COMPILE))ar
+NM := $(strip $(CROSS_COMPILE))nm
+CXX := $(strip $(CROSS_COMPILE))g++
+RANLIB := $(strip $(CROSS_COMPILE))ranlib
+OBJCOPY := $(strip $(CROSS_COMPILE))objcopy
+OBJDUMP := $(strip $(CROSS_COMPILE))objdump
+STRIP := $(strip $(CROSS_COMPILE))strip
 
 #------------------------------------------------------------------------------ 
 # compiler flags
@@ -93,11 +214,12 @@ STRIP = $(CROSS_COMPILE)strip
 
 ifneq ($(dbg_level),0) 
   CDEFS := $(CDEFS) DEBUG=$(dbg_level)
-  CFLAGS += -g
+#  CFLAGS += -g
 endif
 
-INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))
+#INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))
+#INCPATH += $(OUTDIR)
 SFLAGS := $(OPTIONS) -Wall $(SFLAGS) $(addprefix -D,$(CDEFS))
 CFLAGS := $(OPTIONS) -Wall $(CFLAGS) $(addprefix -D,$(CDEFS))
-LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+LDFLAGS := $(OPTIONS) $(LDFLAGS)
 

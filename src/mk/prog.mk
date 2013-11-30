@@ -18,12 +18,11 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-ifndef MKDIR
-  MKDIR := $(realpath $(THISDIR))
-  BASEDIR := $(realpath $(THISDIR)/..)
+ifndef SCRPTDIR
+  SCRPTDIR := $(abspath $(THISDIR))
+  BASEDIR := $(abspath $(THISDIR)/..)
 endif	
 
 ifndef TOOLSDIR
@@ -38,9 +37,21 @@ ifndef LDDIR
 endif	
 
 #------------------------------------------------------------------------------ 
-# cross compiling rules 
+# cross compiling 
 #------------------------------------------------------------------------------ 
-include $(MKDIR)/cross.mk
+
+ifndef CROSS_COMPILE
+  # default to the host compiler by tricking the make to assign a 
+  # empty string to the CROSS_COMPILE variable
+  empty =
+  CROSS_COMPILE = $(empty)
+endif	
+
+ifndef CFLAGS
+  CFLAGS := -g -O1
+endif
+
+include $(SCRPTDIR)/cross.mk
 
 #------------------------------------------------------------------------------ 
 # generated files
@@ -62,37 +73,76 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 # object files
 #------------------------------------------------------------------------------ 
 OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
-			$(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
+         $(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
 #ODIRS = $(abspath $(sort $(dir $(OFILES))))
 ODIRS = $(sort $(dir $(OFILES)))
 
 #------------------------------------------------------------------------------ 
 # dependency files
 #------------------------------------------------------------------------------ 
+#DFILES = $(abspath $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
+#         $(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d)))
 DFILES = $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
 			$(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d))
 #DDIRS = $(abspath $(sort $(dir $(DFILES))))
 DDIRS = $(sort $(dir $(DFILES)))
 
 #------------------------------------------------------------------------------ 
+# library dircetories 
+#------------------------------------------------------------------------------ 
+LIBDIRS := $(abspath $(LIBDIRS))
+
+#------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
-LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(LIBPATH)
-INCPATH	:= $(INCPATH) $(abspath .)
+LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
+INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
 
-#export INCPATH	LIBPATH
+#$(info --------------------------)
+#$(info OS = '$(OS)')
+#$(info OSTYPE = '$(OSTYPE)')
+#$(info HOST = '$(HOST)')
+#$(info DIRMODE = '$(DIRMODE)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info LIBDIRS = '$(LIBDIRS)')
+#$(info LIBPATH = '$(LIBPATH)')
+#$(info abspath = '$(abspath .)')
+#$(info realpath = '$(realpath .)')
+#$(info CFLAGS = '$(CFLAGS)')
+#$(info --------------------------)
 
 #------------------------------------------------------------------------------ 
 # program output files
 #------------------------------------------------------------------------------ 
 ifdef PROG
-  PROG_BIN := $(OUTDIR)/$(PROG).bin
+  ifeq ($(strip $(CROSS_COMPILE)),)
+    ifneq ($(HOST),Linux)
+    	PROG_BIN := $(OUTDIR)/$(PROG).exe
+    else
+    	PROG_BIN := $(OUTDIR)/$(PROG)
+    endif
+  else
+    PROG_BIN := $(OUTDIR)/$(PROG).bin
+  endif
   PROG_MAP := $(OUTDIR)/$(PROG).map
   PROG_ELF := $(OUTDIR)/$(PROG).elf
   PROG_SYM := $(OUTDIR)/$(PROG).sym
   PROG_LST := $(OUTDIR)/$(PROG).lst
   PROG_TAG := $(OUTDIR)/$(PROG).tag
 endif
+
+ifeq ($(HOST),Cygwin)
+  INCPATH_WIN := $(subst \,\\,$(foreach h,$(INCPATH),$(shell cygpath -w $h)))
+  OFILES_WIN := $(subst \,\\,$(foreach o,$(OFILES),$(shell cygpath -w $o)))
+  LIBPATH_WIN := $(subst \,\\,$(foreach l,$(LIBPATH),$(shell cygpath -w $l)))
+  PROG_BIN_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_BIN)))
+  PROG_ELF_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_ELF)))
+  PROG_LST_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_LST)))
+  PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
+endif
+
+
+#export LDFLAGS INCPATH LIBPATH
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -114,10 +164,16 @@ LIBDIRS_ALL := $(LIBDIRS:%=%-all)
 
 LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
+CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) $(PROG_BIN) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) $(PROG_MAP)
+
+ifeq (Windows,$(HOST))
+  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
+endif
+
 all: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
-clean: $(LIBDIRS_CLEAN)
-	$(Q)rm -f $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(PROG_BIN) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) $(PROG_MAP)
+clean: libs-clean
+	$(Q)$(RMALL) $(CLEAN_FILES)
 
 prog: $(PROG_BIN)
 
@@ -135,44 +191,95 @@ libs-all: $(LIBDIRS_ALL)
 
 libs-clean: $(LIBDIRS_CLEAN)
 
+#------------------------------------------------------------------------------ 
+# Helpers to print the binary full path
+#------------------------------------------------------------------------------ 
+
 bin_path:
-	@echo $(PROG_BIN)
+	@$(ECHO) $(PROG_BIN)
 
 elf_path:
-	@echo $(PROG_ELF)
+	@$(ECHO) $(PROG_ELF)
+
+#------------------------------------------------------------------------------ 
+# Code::Blocks targets
+#------------------------------------------------------------------------------ 
+
+Debug: 
+	$(Q)$(MAKE) D=1 all
+
+Release: 
+	$(Q)$(MAKE) D=0 all
+
+cleanDebug: 
+	$(Q)$(MAKE) D=1 clean
+
+cleanRelease: 
+	$(Q)$(MAKE) D=0 clean
+
+.PHONY: all clean prog elf map bin lst libs-all libs-clean bin_path elf_path 
+.PHONY: Debug Release cleanDebug cleanRelease
+.PHONY: $(LIBDIRS_ALL) $(LIBDIRS_CLEAN)
+
+#------------------------------------------------------------------------------ 
+# Library dependencies targets
+#------------------------------------------------------------------------------ 
 
 $(LIBDIRS_ALL):
 	$(ACTION) "Building : $@"
-	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-all=%));\
-	$(MAKE) -C $(@:%-all=%) O=$$OUT $(FLAGS_TO_PASS) all
+	$(Q)$(MAKE) -C $(@:%-all=%) O=$(OUTDIR)/$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
 
 $(LIBDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
-	$(Q)OUT=$(OUTDIR)/$(notdir $(@:%-clean=%));\
-	$(MAKE) -C $(@:%-clean=%) O=$$OUT $(FLAGS_TO_PASS) clean
+	$(Q)$(MAKE) -C $(@:%-clean=%) O=$(OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
 
-.PHONY: all clean prog elf map bin lst libs-all libs-clean vars libs-vars 
-
-.PHONY: $(LIBDIRS_ALL) $(LIBDIRS_CLEAN)
+#------------------------------------------------------------------------------ 
+# Program targets
+#------------------------------------------------------------------------------ 
 
 $(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $(PROG_ELF)"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(LD) $(LDFLAGS) $(OFILES_WIN) $(OBJ_EXTRA) -Wl,--print-map \
+	-Wl,--cref -Wl,--sort-common \
+	-Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group \
+	$(addprefix -L,$(LIBPATH_WIN)) -o $(PROG_ELF_WIN) > $(PROG_MAP)
+else
 	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map \
 	-Wl,--cref -Wl,--sort-common \
 	-Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group \
-	$(addprefix -L,$(LIBPATH)) -lgcc -o $(PROG_ELF) > $(PROG_MAP)
+	$(addprefix -L,$(LIBPATH)) -o $(PROG_ELF) > $(PROG_MAP)
+endif
 
 %.sym: %.elf
 	$(ACTION) "SYM: $@"
-	$(Q)$(OBJDUMP) -t $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d;/^SYMBOL.*$$/d;/^.*file format.*$$/d;/^$$/d' | sort > $@
+ifeq ($(HOST),Cygwin)
+	$(Q)$(OBJDUMP) -t $(PROG_ELF_WIN) | sort > $@
+else
+	$(Q)$(OBJDUMP) -t $< | sort > $@
+endif
 
 %.lst: %.elf
 	$(ACTION) "LST: $@"
-	$(Q)$(OBJDUMP) -w -d -t -S -r -z $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d' > $@
+ifeq ($(HOST),Cygwin)
+	$(Q)$(OBJDUMP) -w -d -t -S -r -z $(PROG_ELF_WIN) > $@
+else
+	$(Q)$(OBJDUMP) -w -d -t -S -r -z $< > $@
+endif
 
+ifeq ($(strip $(CROSS_COMPILE)),)
 %.bin: %.elf
 	$(ACTION) "BIN: $@"
 	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
+else
+$(PROG_BIN): $(PROG_ELF)
+	$(ACTION) "Strip: $(PROG_ELF)"
+  ifeq ($(HOST),Cygwin)
+	$(Q)$(STRIP) -o $(PROG_BIN_WIN) $(PROG_ELF_WIN)
+  else
+	$(Q)$(STRIP) -o $@ $<
+  endif
+endif
 
 
 #------------------------------------------------------------------------------ 
@@ -180,12 +287,22 @@ $(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
 #------------------------------------------------------------------------------ 
 
 $(ODIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir -p $@
+	$(ACTION) "Creating outdir: $@"
+ifeq ($(HOST),Windows)
+	$(Q)$(MKDIR) $(subst /,\,$@)
+else
+	-$(Q)$(MKDIR) $@
+endif
 
 $(DDIRS):
-	$(ACTION) "Creating: $@"
-	$(Q) mkdir -p $@
+	$(ACTION) "Creating depdir: $@"
+ifeq ($(HOST),Windows)
+	$(Q)$(MKDIR) $(subst /,\,$@)
+else
+	-$(Q)$(MKDIR) $@ 
+endif
+
+$(LIBDIRS_ALL): | $(ODIRS)
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
@@ -193,13 +310,20 @@ $(DDIRS): | $(ODIRS) $(CFILES_OUT) $(HFILES_OUT)
 
 $(DFILES): | $(DDIRS) 
 
-include $(MKDIR)/cc.mk
-
 ifdef VERSION_MAJOR
-  include $(MKDIR)/version.mk
+  include $(SCRPTDIR)/version.mk
 endif
 
-include $(MKDIR)/jtag.mk
+include $(SCRPTDIR)/cc.mk
 
+#
+# FIXME: automatic dependencies are NOT included in Cygwin.
+# The dependencie files must have the paths converted
+# to cygwin (unix) style to be of any use!
+#
+ifneq ($(HOST),Cygwin)
 -include $(DFILES)
+endif
+
+
 
