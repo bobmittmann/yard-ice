@@ -61,6 +61,13 @@ void led2_flash(unsigned int cnt)
 	thinkos_flag_set(led_flag);
 }
 
+void led_flash_all(unsigned int cnt)
+{
+	led1_flash_head = led1_flash_tail + cnt;
+	led2_flash_head = led2_flash_tail + cnt;
+	thinkos_flag_set(led_flag);
+}
+
 void led1_on(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
@@ -121,7 +128,7 @@ int led_task(void)
 	}
 }
 
-static uint32_t led_stack[32];
+static uint32_t led_stack[40];
 
 #define TIMER_PWM_FREQ 8000
 
