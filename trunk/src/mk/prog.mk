@@ -268,10 +268,6 @@ else
 endif
 
 ifeq ($(strip $(CROSS_COMPILE)),)
-%.bin: %.elf
-	$(ACTION) "BIN: $@"
-	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
-else
 $(PROG_BIN): $(PROG_ELF)
 	$(ACTION) "Strip: $(PROG_ELF)"
   ifeq ($(HOST),Cygwin)
@@ -279,6 +275,10 @@ $(PROG_BIN): $(PROG_ELF)
   else
 	$(Q)$(STRIP) -o $@ $<
   endif
+else
+%.bin: %.elf
+	$(ACTION) "BIN: $@"
+	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
 endif
 
 
@@ -315,6 +315,8 @@ ifdef VERSION_MAJOR
 endif
 
 include $(SCRPTDIR)/cc.mk
+
+include $(SCRPTDIR)/jtag.mk
 
 #
 # FIXME: automatic dependencies are NOT included in Cygwin.

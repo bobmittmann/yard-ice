@@ -185,12 +185,8 @@ int serial_config_set(struct serial_dev * dev,
 	return 0;
 }
 
-
-struct serial_dev serial_dev;
-
-void stm32f_usart2_isr(void)
+void serial_isr(struct serial_dev * dev)
 {
-	struct serial_dev * dev = &serial_dev;
 	struct stm32f_usart * uart = dev->uart;
 	uint32_t sr;
 	int c;
@@ -254,12 +250,19 @@ void stm32f_usart2_isr(void)
 			uart->dr = uart_fifo_get(&dev->tx_fifo);
 		}
 	}
-
 }
 
-struct serial_dev * serial_open(struct stm32f_usart * uart)
+struct serial_dev serial2_dev;
+
+void stm32f_usart2_isr(void)
 {
-	struct serial_dev * dev = &serial_dev;
+	serial_isr(&serial2_dev);
+}
+
+struct serial_dev * serial2_open(void)
+{
+	struct serial_dev * dev = &serial2_dev;
+	struct stm32f_usart * uart = STM32F_USART2;
 
 	DCC_LOG(LOG_INFO, "...");
 	dev->rx_flag = thinkos_flag_alloc(); 
@@ -272,6 +275,48 @@ struct serial_dev * serial_open(struct stm32f_usart * uart)
 
 	cm3_irq_pri_set(STM32F_IRQ_USART2, UART_IRQ_PRIORITY);
 	cm3_irq_enable(STM32F_IRQ_USART2);
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 9600);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
+
+	/* enable RX and IDLE interrupts */
+	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
+	/* Errors interrupt */
+	uart->cr3 |= USART_EIE;
+
+	return dev;
+}
+
+struct serial_dev serial3_dev;
+
+void stm32f_usart3_isr(void)
+{
+	serial_isr(&serial3_dev);
+}
+
+struct serial_dev * serial3_open(void)
+{
+	struct serial_dev * dev = &serial3_dev;
+	struct stm32f_usart * uart = STM32F_USART3;
+
+	DCC_LOG(LOG_INFO, "...");
+	dev->rx_flag = thinkos_flag_alloc(); 
+	dev->tx_flag = thinkos_flag_alloc(); 
+	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
+	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
+
+	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->uart = uart;
+
+	cm3_irq_pri_set(STM32F_IRQ_USART3, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_USART3);
+
+	stm32f_usart_init(uart);
+	stm32f_usart_baudrate_set(uart, 9600);
+	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32f_usart_enable(uart);
 
 	/* enable RX and IDLE interrupts */
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
