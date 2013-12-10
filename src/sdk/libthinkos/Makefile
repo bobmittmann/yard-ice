@@ -23,7 +23,7 @@ LIB_STATIC = thinkos
 
 CFILES = thinkos.c thinkos_core.c thinkos_mutex.c thinkos_cond.c \
 		 thinkos_semaphore.c thinkos_event.c thinkos_svc.c thinkos_irq.c \
-		 thinkos_flag.c thinkos_except.c
+		 thinkos_flag.c thinkos_except.c thinkos_util.c
 
 include ../../mk/lib.mk
 

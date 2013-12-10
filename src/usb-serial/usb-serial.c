@@ -33,9 +33,15 @@
 #include <stdio.h>
 
 #include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
 
 #include <sys/dcclog.h>
 #include <sys/usb-cdc.h>
+
+void pfclock_init(void);
+uint32_t pfclock(void);
+uint32_t pfdt(void);
 
 struct serial_dev * serial2_open(void);
 
@@ -46,6 +52,8 @@ int serial_write(struct serial_dev * dev, const void * buf,
 
 int serial_read(struct serial_dev * dev, char * buf, 
 				unsigned int len, unsigned int msec);
+
+int xmodem_recv(int (*__getc)(int), int (*__putc)(int), int max);
 
 void led_lock(void);
 void led_unlock(void);
@@ -58,6 +66,9 @@ void led2_on(void);
 void led2_off(void);
 void leds_init(void);
 
+#define SERIAL_DEBUG 1
+#define USB_DEBUG 0
+
 #ifndef USB_DEBUG
 #ifdef DEBUG
 #define USB_DEBUG 1
@@ -66,7 +77,16 @@ void leds_init(void);
 #endif
 #endif
 
-#if USB_DEBUG
+#ifndef SERIAL_DEBUG
+#ifdef DEBUG
+#define SERIAL_DEBUG 1
+#else
+#define SERIAL_DEBUG 0
+#endif
+#endif
+
+
+#if USB_DEBUG | SERIAL_DEBUG
 volatile uint32_t dbg_msg_dump;
 
 const char dbg_msg[] = "\r\n1.\r\n"
@@ -99,6 +119,12 @@ const char dbg_msg[] = "\r\n1.\r\n"
 "Lo!  This cup is again going to empty itself, and Zarathustra is again\r\n"
 "going to be a man.\r\n\r\n"
 "Thus began Zarathustra's down-going.\r\n\r\n\r\n";
+
+
+const char dbg_pattern[] = "0123456789 "
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ+abcdefghijklmnopqrstuvwxyz=[@]{!}<?>(^)%&;";
+//"\r\n";
+
 #endif
 
 struct vcom {
@@ -295,7 +321,7 @@ int button_task(void)
 				led2_on();
 				ext_rst_st = EXT_RST_ON;
 			}
-#if USB_DEBUG
+#if USB_DEBUG | SERIAL_DEBUG
 			if (dbg_msg_dump == 0)
 				dbg_msg_dump = 1;
 			else
@@ -339,9 +365,18 @@ int button_task(void)
 	return 0;
 }
 
+volatile uint32_t usb_rx_head = 0;
+uint32_t usb_rx_tail = 0;
+
+volatile uint32_t serial_rx_head = 0;
+uint32_t serial_rx_tail = 0;
+
+uint8_t serial_first_char;
+uint8_t usb_first_char;
+
 int usb_recv_task(struct vcom * vcom)
 {
-	struct serial_dev * serial1 = vcom[0].serial;
+//	struct serial_dev * serial1 = vcom[0].serial;
 	struct serial_dev * serial2 = vcom[1].serial;
 	usb_cdc_class_t * cdc = vcom[0].cdc;
 	char buf[VCOM_BUF_SIZE];
@@ -350,9 +385,20 @@ int usb_recv_task(struct vcom * vcom)
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
 	for (;;) {
+		int32_t n;
+
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 100);
+
+		if ((n = (serial_rx_head - serial_rx_tail)) > 0) {
+			DCC_LOG3(LOG_TRACE, "%8d: SER-->USB %02x(%d)",
+					 pfdt(), serial_first_char, n);
+			serial_rx_tail += n;
+			usb_first_char = buf[1];
+		}
+
+		usb_rx_head += len;
 		led1_flash(1);
-		serial_write(serial1, buf, len);
+//		serial_write(serial1, buf, len);
 		serial_write(serial2, buf, len);
 	}
 
@@ -369,7 +415,18 @@ int serial_recv_task(struct vcom * vcom)
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
 	for (;;) {
+		int32_t n;
+
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
+
+		if ((n = (usb_rx_head - usb_rx_tail)) > 0) {
+			DCC_LOG3(LOG_TRACE, "%8d: USB->SER %02x(%d)", 
+					 pfdt(), usb_first_char, n);
+			usb_rx_tail += n;
+			serial_first_char = buf[0];
+		}
+
+		serial_rx_head += len;
 		led2_flash(1);
 		usb_cdc_write(cdc, buf, len);
 	}
@@ -411,12 +468,50 @@ int serial_ctrl_task(struct vcom * vcom)
 	return 0;
 }
 
+static struct usb_cdc_class * __cdc;
+
+struct thinkos_rt error_rt;
+
+static int __getc(int tmo) 
+{
+	uint8_t buf[1];
+	int ret;
+
+	if ((ret = usb_cdc_read(__cdc, buf, 1, tmo)) < 0) {
+		if (ret == THINKOS_ETIMEDOUT) {
+			DCC_LOG1(LOG_TRACE, "%d timeout!", pfdt());
+			thinkos_rt_snapshot(&error_rt);
+		}
+		return -1;
+	}
+
+	return buf[0];
+}
+
+static int __putc(int c) 
+{
+	uint8_t buf[1] = { c };
+
+	return usb_cdc_write(__cdc, buf, 1);
+}
+
+int usb_xmodem_recv(struct usb_cdc_class * cdc)
+{
+	__cdc = cdc;
+
+	DCC_LOG1(LOG_TRACE, "%d ---------------", pfdt());
+	return xmodem_recv(__getc, __putc, 10000000);
+}
+
 uint32_t button_stack[40];
+
+/*
 uint32_t serial1_ctrl_stack[64];
 uint32_t serial2_ctrl_stack[64];
 uint32_t serial1_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 uint32_t serial2_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
+*/
 
 int main(int argc, char ** argv)
 {
@@ -432,6 +527,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "1. io_init()");
 	io_init();
+
+	pfclock_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
@@ -450,7 +547,7 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
-
+/*
 	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
@@ -471,27 +568,37 @@ int main(int argc, char ** argv)
 						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 
+*/
 	led_flash_all(3);
 
 	usb_vbus(true);
 
 	for (i = 0; ; ++i) {
-		thinkos_sleep(5000);
+//		thinkos_sleep(500);
+
+		usb_xmodem_recv(vcom[0].cdc);
+
 #if 0
 		led2_flash(1);
-		DCC_LOG1(LOG_TRACE, "%d tick.", i);
 #endif
-#if USB_DEBUG
+//		DCC_LOG2(LOG_TRACE, "%6d tick %d.", pfdt(), i);
+		DCC_LOG1(LOG_TRACE, "tick %d.", i);
+
 		if (dbg_msg_dump) {
 			int cnt = dbg_msg_dump;
 			int j;
 			for (j = 1; j <= cnt; ++j) {
+#if USB_DEBUG
 				DCC_LOG1(LOG_TRACE, "dump: %d.", j);
 				usb_cdc_write(vcom[0].cdc, dbg_msg, sizeof(dbg_msg));
+#endif
+#if SERIAL_DEBUG
+				DCC_LOG1(LOG_TRACE, "dump: %d.", j);
+				serial_write(vcom[1].serial, dbg_pattern, sizeof(dbg_pattern));
+#endif
 			}
 			dbg_msg_dump = 0;
 		}
-#endif
 
 //		vcom.ser_stat.dsr = i & 1;
 //		vcom.ser_stat.ri = i & 1;

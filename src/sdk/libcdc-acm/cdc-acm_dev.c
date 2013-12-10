@@ -77,8 +77,8 @@ struct usb_cdc_acm_dev {
 int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
-	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 	__thinkos_flag_signal(dev->rx_flag);
 	return 0;
 }
@@ -183,7 +183,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			usb_dev_ep_disable(dev->usb, dev->int_ep);
 		}
 
-		DCC_LOG(LOG_INFO, "[CONFIGURED]");
+		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
 		/* signal any pending threads */
 		__thinkos_flag_signal(dev->rx_flag);
 		__thinkos_flag_signal(dev->tx_flag);
@@ -294,7 +294,7 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 	dev->acm.control = 0;
 
 	__thinkos_flag_signal_all(dev->ctl_flag);
@@ -352,6 +352,7 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 				 unsigned int len, unsigned int msec)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	int ret;
 	int n;
 
 	DCC_LOG2(LOG_INFO, "len=%d msec=%d", len, msec);
@@ -362,7 +363,12 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	};
 
 	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
-	thinkos_flag_wait(dev->rx_flag);
+	if ((ret = thinkos_flag_timedwait(dev->rx_flag, msec)) < 0) {
+//		if (ret == THINKOS_ETIMEDOUT) {
+//			DCC_LOG(LOG_TRACE, "timeout!!");
+//		}
+		return ret;
+	}
 	__thinkos_flag_clr(dev->rx_flag);
 
 	if (len >= EP_IN_MAX_PKT_SIZE) {
