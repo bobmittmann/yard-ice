@@ -38,8 +38,8 @@
 
 #include <sys/dcclog.h>
 
-#define UART_TX_FIFO_BUF_LEN 128
-#define UART_RX_FIFO_BUF_LEN 128
+#define UART_TX_FIFO_BUF_LEN 256
+#define UART_RX_FIFO_BUF_LEN 64
 
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 
@@ -128,13 +128,12 @@ int serial_read(struct serial_dev * dev, char * buf,
 
 static void uart_putc(struct serial_dev * dev, int c)
 {
-	__thinkos_flag_clr(dev->tx_flag);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
-		DCC_LOG(LOG_TRACE, "wait...");
+		DCC_LOG(LOG_INFO, "wait...");
 		thinkos_flag_wait(dev->tx_flag);
 		__thinkos_flag_clr(dev->tx_flag);
-		DCC_LOG(LOG_TRACE, "wakeup");
+		DCC_LOG(LOG_INFO, "wakeup");
 	}
 
 	uart_fifo_put(&dev->tx_fifo, c);
@@ -150,7 +149,7 @@ int serial_write(struct serial_dev * dev, const void * buf,
 
 	DCC_LOG1(LOG_INFO, "len=%d", len);
 
-	for (n = 0; n < len; n++) {
+	for (n = 0; n < len; ++n) {
 		c = cp[n];
 		uart_putc(dev, c);
 	}
@@ -192,7 +191,8 @@ void serial_isr(struct serial_dev * dev)
 	int c;
 	
 	sr = uart->sr;
-	
+
+#if 0	
 	if (sr & USART_LBD) {
 		/* Line break detection */
 		DCC_LOG(LOG_TRACE, "LBD");
@@ -217,6 +217,7 @@ void serial_isr(struct serial_dev * dev)
 		/* Parity error */
 		DCC_LOG(LOG_TRACE, "PE");
 	}
+#endif
 
 	sr &= uart->cr1;
 
@@ -280,6 +281,8 @@ struct serial_dev * serial2_open(void)
 	stm32f_usart_baudrate_set(uart, 9600);
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
+
+	__thinkos_flag_clr(dev->tx_flag);
 
 	/* enable RX and IDLE interrupts */
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;

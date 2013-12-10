@@ -147,7 +147,7 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 		return;
 	}
 
-	/* insert into the mutex wait queue */
+	/* insert into the flag wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
 
 	/* remove from the ready wait queue */
@@ -169,7 +169,7 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_TRACE, "<%d> waiting for flag %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 }
 #endif

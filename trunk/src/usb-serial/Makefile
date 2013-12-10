@@ -22,7 +22,7 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c leds.c
+CFILES = usb-serial.c serial.c pfclock.c leds.c xmodem_recv.c
 
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \

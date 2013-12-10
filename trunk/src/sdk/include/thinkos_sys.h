@@ -686,6 +686,8 @@ static volatile inline uint32_t __attribute__((always_inline))
 #endif
 }
 
+void thinkos_rt_snapshot(struct thinkos_rt * rt);
+
 #ifdef __cplusplus
 }
 #endif
