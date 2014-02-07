@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = thinkos
 
 CFILES = thinkos.c thinkos_core.c thinkos_mutex.c thinkos_cond.c \

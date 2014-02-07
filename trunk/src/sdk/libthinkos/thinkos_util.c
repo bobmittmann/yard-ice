@@ -122,7 +122,7 @@ void thinkos_rt_dump(FILE * f, struct thinkos_rt * rt)
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
 #if THINKOS_COND_MAX > 0
-	for (i = 0; i < TTHINKOS_COND_MAX; ++i) {
+	for (i = 0; i < THINKOS_COND_MAX; ++i) {
 		if (rt->wq_cond[i]) {
 			dump_obj_queue(f, "Conditional %d wait threads:", 
 						   i, rt->wq_cond[i]);
@@ -299,7 +299,7 @@ void thinkos_rt_trace(struct thinkos_rt * rt)
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
 #if THINKOS_COND_MAX > 0
-	for (i = 0; i < TTHINKOS_COND_MAX; ++i) {
+	for (i = 0; i < THINKOS_COND_MAX; ++i) {
 		if (rt->wq_cond[i]) {
 			dump_obj_queue(f, "Conditional %d wait threads:", 
 						   i, rt->wq_cond[i]);

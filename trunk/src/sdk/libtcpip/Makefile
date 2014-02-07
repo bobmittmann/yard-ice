@@ -22,6 +22,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = tcpip
 
 MBUF_CFILES = mbuf.c mbuf_memavail.c mbuf_alloc.c mbuf_try_alloc.c\
