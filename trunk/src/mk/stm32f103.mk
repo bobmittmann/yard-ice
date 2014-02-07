@@ -19,20 +19,21 @@
 # http://www.gnu.org/
 
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-MKDIR := $(realpath $(THISDIR))
-BASEDIR := $(realpath $(THISDIR)/..)
-TOOLSDIR := $(realpath $(THISDIR)/../../tools)
-LDDIR := $(realpath $(THISDIR)/../ld)
 
-export MKDIR LDDIR TOOLSDIR
+include $(THISDIR)/config.mk
+include $(THISDIR)/common.mk
 
 ifndef MACH 
 MACH = stm32f103
 endif
 
+ifeq ($(findstring $(MACH), stm32f103),)
+  $(error "Unsupported machine type: MACH=$(MACH)")
+endif
+
 ARCH = cm3
 CPU = cortex-m3
-CDEFS += STM32F103 
+CDEFS += $(call uc,$(MACH))
 ifdef HCLK_HZ
 CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
 endif
@@ -44,5 +45,5 @@ CROSS_COMPILE = arm-none-eabi-
 
 LDFLAGS = -nostdlib -T $(MACH).ld
 
-include $(MKDIR)/prog.mk
+include $(THISDIR)/prog.mk
 

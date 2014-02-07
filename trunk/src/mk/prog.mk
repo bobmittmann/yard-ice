@@ -18,23 +18,9 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-
-ifndef SCRPTDIR
-  SCRPTDIR := $(abspath $(THISDIR))
-  BASEDIR := $(abspath $(THISDIR)/..)
-endif	
-
-ifndef TOOLSDIR
-  TOOLSDIR := $(realpath $(THISDIR)/../../tools)
-endif	
-
-#------------------------------------------------------------------------------ 
-# ld scripts
-#------------------------------------------------------------------------------ 
-ifndef LDDIR
-  LDDIR := $(realpath $(THISDIR)/../ld)
-endif	
+ifndef CONFIG_MK
+ $(error Please include "config.mk" in your Makefile)
+endif
 
 #------------------------------------------------------------------------------ 
 # cross compiling 
@@ -98,18 +84,19 @@ LIBDIRS := $(abspath $(LIBDIRS))
 LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
 INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
 
-#$(info --------------------------)
-#$(info OS = '$(OS)')
-#$(info OSTYPE = '$(OSTYPE)')
-#$(info HOST = '$(HOST)')
-#$(info DIRMODE = '$(DIRMODE)')
-#$(info INCPATH = '$(INCPATH)')
+$(info --------------------------)
+$(info OS = '$(OS)')
+$(info OSTYPE = '$(OSTYPE)')
+$(info HOST = '$(HOST)')
+$(info DIRMODE = '$(DIRMODE)')
 #$(info LIBDIRS = '$(LIBDIRS)')
+$(info DDIRS = '$(DDIRS)')
+#$(info INCPATH = '$(INCPATH)')
 #$(info LIBPATH = '$(LIBPATH)')
 #$(info abspath = '$(abspath .)')
 #$(info realpath = '$(realpath .)')
 #$(info CFLAGS = '$(CFLAGS)')
-#$(info --------------------------)
+$(info --------------------------)
 
 #------------------------------------------------------------------------------ 
 # program output files
@@ -299,6 +286,7 @@ $(DDIRS):
 ifeq ($(HOST),Windows)
 	$(Q)$(MKDIR) $(subst /,\,$@)
 else
+	echo $(Q)$(MKDIR) $@ 
 	-$(Q)$(MKDIR) $@ 
 endif
 
@@ -314,10 +302,6 @@ ifdef VERSION_MAJOR
   include $(SCRPTDIR)/version.mk
 endif
 
-include $(SCRPTDIR)/cc.mk
-
-include $(SCRPTDIR)/jtag.mk
-
 #
 # FIXME: automatic dependencies are NOT included in Cygwin.
 # The dependencie files must have the paths converted
@@ -328,4 +312,7 @@ ifneq ($(HOST),Cygwin)
 endif
 
 
+include $(SCRPTDIR)/cc.mk
+
+include $(SCRPTDIR)/jtag.mk
 

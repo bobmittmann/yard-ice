@@ -19,18 +19,12 @@
 # http://www.gnu.org/
 
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+include $(THISDIR)/config.mk
 include $(THISDIR)/common.mk
 
 ifndef MACH 
 MACH = stm32f303
-endif
-
-ifdef HCLK_HZ
-CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
-endif
-
-ifdef HSE_HZ
-CDEFS += "HSE_HZ=$(HSE_HZ)" 
 endif
 
 ifeq ($(findstring $(MACH), stm32f302 stm32f303 stm32f303xb stm32f303xc),)
@@ -40,10 +34,16 @@ endif
 ARCH = cm3
 CPU = cortex-m4
 CDEFS += $(call uc,$(MACH))
+ifdef HCLK_HZ
+CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
+endif
+ifdef HSE_HZ
+CDEFS += "HSE_HZ=$(HSE_HZ)" 
+endif
 OPTIONS	= -mcpu=$(CPU) -mfpu=vfp -mfloat-abi=hard -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDSCRIPT = $(MACH).ld  
+LDFLAGS = -nostdlib -T $(MACH).ld
 
-include $(MKDIR)/prog.mk
+include $(THISDIR)/prog.mk
 

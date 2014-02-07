@@ -19,19 +19,6 @@
 # http://www.gnu.org/
 
 # ----------------------------------------------------------------------------
-# export some variables to be used by other scripts
-
-THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-MKDIR := $(realpath $(THISDIR))
-BASEDIR := $(realpath $(THISDIR)/..)
-TOOLSDIR := $(realpath $(THISDIR)/../../tools)
-LDDIR := $(realpath $(THISDIR)/../ld)
-
-export MKDIR LDDIR TOOLSDIR
-
-# ----------------------------------------------------------------------------
-
-# ----------------------------------------------------------------------------
 # Function: lc
 #   Return: text in upper case
 # ----------------------------------------------------------------------------
