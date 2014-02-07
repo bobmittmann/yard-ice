@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = stm32f
 
 USART_CFILES = stm32f-usart.c stm32f-usart_init.c\

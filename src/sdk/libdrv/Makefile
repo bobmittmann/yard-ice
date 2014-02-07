@@ -22,6 +22,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = drv
 
 CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c \

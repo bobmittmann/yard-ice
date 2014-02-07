@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = hexdump
 
 CFILES = show_hex16.c show_hex32.c show_hex8.c show_line_char.c\

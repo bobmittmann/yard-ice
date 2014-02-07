@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = ice-comm
 
 CFILES = ice-comm.c ice-io.c ice-comm_wr32.c \
