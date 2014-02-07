@@ -18,6 +18,10 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+ifndef CONFIG_MK
+ $(error Please include "config.mk" in your Makefile)
+endif
+
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 ifndef SCRPTDIR
@@ -104,7 +108,7 @@ DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 
 CLEAN_FILES := $(OFILES) $(DFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
 
-ifeq ($(DIRMODE),windows)
+ifeq (Windows,$(HOST))
   CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
 endif
 

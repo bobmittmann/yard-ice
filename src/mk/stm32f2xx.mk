@@ -19,27 +19,31 @@
 # http://www.gnu.org/
 
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+
+include $(THISDIR)/config.mk
 include $(THISDIR)/common.mk
 
 ifndef MACH 
 MACH = stm32f207
 endif
 
-ifdef HCLK_HZ
-CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
-endif
-
-ifdef HSE_HZ
-CDEFS += "HSE_HZ=$(HSE_HZ)" 
+ifeq ($(findstring $(MACH), stm32f205, stm32f207),)
+  $(error "Unsupported machine type: MACH=$(MACH)")
 endif
 
 ARCH = cm3
 CPU = cortex-m3
 CDEFS += $(call uc,$(MACH))
+ifdef HCLK_HZ
+CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
+endif
+ifdef HSE_HZ
+CDEFS += "HSE_HZ=$(HSE_HZ)" 
+endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDSCRIPT = $(MACH).ld  
+LDFLAGS = -nostdlib -T $(MACH).ld
 
-include $(MKDIR)/prog.mk
+include $(THISDIR)/prog.mk
 
