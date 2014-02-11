@@ -27,7 +27,5 @@ LIB_STATIC = opcodes
 
 CFILES = arm-dis.c
 
-INCPATH = include
-
 include ../../mk/lib.mk
 

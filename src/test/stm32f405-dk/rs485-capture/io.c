@@ -24,8 +24,6 @@
 #include <sys/delay.h>
 #include <stdint.h>
 
-#include <sys/dcclog.h>
-
 #include "trace.h"
 #include "io.h"
 
@@ -62,16 +60,16 @@ struct {
 
 void led_on(int id)
 {
-	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
-		return;
+//	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+//		return;
 
 	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
 {
-	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
-		return;
+//	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+//		return;
 
 	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
@@ -295,8 +293,6 @@ static void btn_init(void)
 	btn_drv.flag = thinkos_flag_alloc();
 	btn_drv.st = stm32f_gpio_stat(PUSH_BTN) ? 0 : 1;
 	btn_drv.fsm = BTN_FSM_IDLE;
-
-	tracef("%s(): flag=%d...", __func__, btn_drv.flag);
 }
 
 
@@ -352,9 +348,6 @@ static void io_timer_init(uint32_t freq)
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
 	n = (div * 2 + pre) / (2 * pre);
-
-	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
-	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;

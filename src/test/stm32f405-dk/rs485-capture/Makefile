@@ -22,7 +22,7 @@
 
 PROG = rs485-capture
 
-CFILES = rs485-capture.c
+CFILES = io.c rs485-capture.c
 
 SDK = ../../../sdk
 
