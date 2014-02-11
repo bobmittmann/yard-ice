@@ -591,6 +591,8 @@ int stm32f_usart_init(struct stm32f_usart * us);
 
 int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
 
+unsigned int stm32f_usart_baudrate_get(struct stm32f_usart * us);
+
 int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
 
 void stm32f_usart_enable(struct stm32f_usart * us);

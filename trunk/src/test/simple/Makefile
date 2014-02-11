@@ -46,7 +46,7 @@ CDEFS += STM32F100 "HCLK_HZ=22579200"
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDSCRIPT = simple.ld  
+LDFLAGS = -nostdlib -T simple.ld
 
 include ../../mk/prog.mk
 

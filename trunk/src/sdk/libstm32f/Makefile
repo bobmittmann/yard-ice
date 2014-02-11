@@ -26,7 +26,8 @@ include ../../mk/config.mk
 LIB_STATIC = stm32f
 
 USART_CFILES = stm32f-usart.c stm32f-usart_init.c\
-			   stm32f-usart_baudrate_set.c stm32f-usart_mode_set.c\
+			   stm32f-usart_baudrate_set.c stm32f-usart_baudrate_get.c\
+			   stm32f-usart_mode_set.c\
 			   stm32f-usart_enable.c stm32f-usart_disable.c\
 			   stm32f-usart_power_off.c stm32f-usart_flush.c\
 			   stm32f-usart_getc.c stm32f-usart_putc.c\
