@@ -257,13 +257,232 @@ void rs485_putc(int c)
   USB
  *****************************************************************************/
 
+//#define CLT_RAND_MAX 0xfffffffffffffLL
+#define CLT_RAND_MAX 0x7fffffffLL
+
+/* Random number generator
+   Aproximation of Normal Distribution using Center Limit Theorem. */
+int32_t clt_rand(uint64_t * seedp, int32_t max) 
+{
+	uint64_t randseed  = *seedp;
+	uint64_t val = 0;
+	int i;
+
+	for (i = 0; i < 16; ++i) {
+		randseed = (randseed * 6364136223846793005LL) + 1LL;
+		val += (randseed >> 16) & CLT_RAND_MAX;
+	}
+
+	*seedp = randseed;
+	val = (val * (int64_t)max) / (16LL * (CLT_RAND_MAX + 1));
+
+	return val;
+}
+
+static struct {
+	int flag;
+	volatile bool en;
+	uint64_t seed;
+} loopback;
+
+int loopback_task(FILE * f)
+{
+	unsigned int seq = 0;
+	unsigned int delay = 0;
+
+	for (;;) {
+		do {
+			thinkos_flag_wait(loopback.flag);
+			__thinkos_flag_clr(loopback.flag);
+		} while (!loopback.en);
+
+		fprintf(f, "Loopback test start.\n");
+
+		while (loopback.en) {
+//			delay = (rand() & 0x3f) + 1;
+			delay = clt_rand(&loopback.seed, 100) + 1;
+			led_flash(LED_I2S, 50);
+			rs485_putc((seq & 0x7f) | 0x80);
+			thinkos_sleep(delay);
+			rs485_putc(seq & 0x7f);
+			seq++;
+	//		thinkos_sleep(100 - delay);
+			thinkos_sleep(1);
+		}
+
+		__thinkos_flag_clr(loopback.flag);
+
+		fprintf(f, "Loopback test stop.\n");
+	};
+
+	return 0;
+}
+
+
+void loopback_start(void)
+{
+	loopback.en = true;
+	thinkos_flag_set(loopback.flag);
+}
+
+void loopback_stop(void)
+{
+	if (loopback.en)  {
+	loopback.en = false;
+	thinkos_flag_set(loopback.flag);
+	}
+}
+
+#define BIN_RES 100
+#define BIN_CNT 5000
+
+struct {
+	uint32_t error;
+	uint32_t match;
+	int32_t dt_max;
+	int32_t dt_min;
+	int32_t dt_avg;
+	int64_t dt_sum;
+	uint32_t bin[BIN_CNT];
+} stat;
+
+void stat_clear(void)
+{
+	int i;
+
+	stat.error = 0;
+	stat.match = 0;
+	stat.dt_min = 100000000;
+	stat.dt_max = 0;
+	stat.dt_avg = 0;
+	stat.dt_sum = 0;
+
+	for (i =0; i < BIN_CNT; ++i) {
+		stat.bin[i] = 0;
+	}
+}
+
+void stat_show(FILE * f)
+{
+	if (stat.match > 0) {
+		stat.dt_avg = (int64_t)(stat.dt_sum / (int64_t)stat.match);
+	}
+
+	fprintf(f, "---- Statistics ----------\n");
+	fprintf(f, "  Error: %d\n", stat.error);
+	fprintf(f, "  Match: %d\n", stat.match);
+	fprintf(f, "    Min: %d\n", stat.dt_min);
+	fprintf(f, "    Max: %d\n", stat.dt_max);
+	fprintf(f, "    Avg: %d\n", stat.dt_avg);
+}
+
+void stat_hist_show(FILE * f)
+{
+	int l;
+	int h;
+	int i;
+	int j;
+	int range;
+	int step;
+	int n;
+	int32_t t;
+	uint32_t sum;
+	uint32_t max;
+	uint32_t bin[80];
+	char s[128];
+
+	for (l = 0; l < BIN_CNT; ++l) {
+		if (stat.bin[l] > 0)
+			break;
+	}
+
+	for (h = BIN_CNT - 2; h >= 0; --h) {
+		if (stat.bin[h] > 0)
+			break;
+	}
+
+	range = h - l + 1;
+	n = 40;
+	step = (range + n - 1) / n;
+	range = n * step;
+	/* adjust high limit */
+	h = l + range;
+	fprintf(f, "Lo=%d Hi=%d Step=%d Range=%d\n", l, h, step, range);
+	if (h >= BIN_CNT) {
+		fprintf(f, "FIXME: adjust range!!!!\n");
+		return;
+	}
+
+	fprintf(f, "---- Histogram ----------\n");
+
+	max = 0;
+	for (i = 0; i < n; ++i) {
+		sum = 0;
+		t = l + i * step;
+		for (j = 0; j < step; ++j) {
+			sum += stat.bin[t + j];
+		}
+		bin[i] = sum;
+		if (sum > max)
+			max = sum;
+	}
+
+	for (i = 0; i < n; ++i) {
+		t = l + i * step;
+		for (j = 0; j < (bin[i] * 64) / max; ++j)
+			s[j] = '#';
+		s[j] = '\0';
+
+		fprintf(f, "%d.%d %s\n", t / 10, t % 10, s);
+	}
+}
+
+void show_menu(FILE * f)
+{
+	fprintf(f, "\n");
+	fprintf(f, " Options:\n");
+	fprintf(f, " --------\n");
+	fprintf(f, "   l    - Run loopback test\n");
+	fprintf(f, "   s    - Show statistics\n");
+	fprintf(f, "   c    - Clear statistics\n");
+
+	fprintf(f, "\n");
+}
+
 int input_task(FILE * f)
 {
+	FILE * f_raw;
 	unsigned int n;
+	int c;
+
+	if (isfatty(f)) {
+		f_raw = ftty_lowlevel(f);
+	} else {
+		f_raw = f;
+	}
 
 	for (n = 0; ; ++n) {
-		thinkos_sleep(500);
-	};
+		thinkos_sleep(100);
+		c = fgetc(f_raw);
+		loopback_stop();
+		switch (c) {
+		case '\r':
+			show_menu(f);
+			break;
+		case 'l':
+			loopback_start();
+			break;
+		case 's':
+			stat_show(f);
+			break;
+		case 'c':
+			stat_clear();
+			break;
+		case 'h':
+			stat_hist_show(f);
+			break;
+		}
+	}
 
 	return 0;
 }
@@ -273,7 +492,7 @@ int ui_task(FILE * f)
 	int event;
 	int c = 0;
 
-	while (1) {
+	for (;;) {
 
 		/* wait for a push buton event */
 		event = btn_event_wait();
@@ -301,6 +520,8 @@ int ui_task(FILE * f)
 			break;
 		}
 	}
+
+	return 0;
 }
 
 int monitor_task(void * arg)
@@ -326,9 +547,11 @@ int monitor_task(void * arg)
 }
 
 #define STACK_SIZE 512
-uint32_t input_stack[STACK_SIZE / 4];
+#define INPUT_STACK_SIZE 2048
+uint32_t input_stack[INPUT_STACK_SIZE / 4];
 uint32_t monitor_stack[STACK_SIZE / 4];
 uint32_t ui_stack[STACK_SIZE / 4];
+uint32_t loopback_stack[STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
@@ -370,16 +593,23 @@ int main(int argc, char ** argv)
 	f = tty_fopen(tty);
 
 	thinkos_thread_create((void *)input_task, (void *)f, 
-						  input_stack, STACK_SIZE, 1);
+						  input_stack, sizeof(input_stack), 1);
 
 	thinkos_thread_create((void *)monitor_task, (void *)NULL, 
 						  monitor_stack, STACK_SIZE, 2);
 
 	printf("4. rs485_init()...\n");
-	rs485_init(110000000 / (13 * 16));
+//	rs485_init(110000000 / (13 * 16));
+	rs485_init(500000);
 
 	thinkos_thread_create((void *)ui_task, (void *)f, 
 						  ui_stack, STACK_SIZE, 3);
+
+	loopback.flag = thinkos_flag_alloc();
+	loopback.en = false;
+	loopback.seed = 1LL;
+	thinkos_thread_create((void *)loopback_task, (void *)f, 
+						  loopback_stack, STACK_SIZE, 4);
 
 	thinkos_sleep(100);
 	led_off(LED_NET);
@@ -387,17 +617,19 @@ int main(int argc, char ** argv)
 	led_off(LED_S1);
 	led_off(LED_S2);
 
+	stat_clear();
+
 	ts[0] = timer_ts();
 	c[0] = 0;
-	fprintf(f, "------------------------------------\n");
-	fprintf(f, "RS485 capture");
-	fprintf(f, "------------------------------------\n");
+	fprintf(f, "\n------------------------------------\n");
+	fprintf(f, "RS485 capture\n");
+	fprintf(f, "------------------------------------\n\n");
 	for (i = 0; ;i++) {
 		while (fifo_is_empty(&rs485.rx_fifo)) {
 			thinkos_flag_wait(rs485.rx_flag);
 			__thinkos_flag_clr(rs485.rx_flag);
 		}
-		led_flash(LED_NET, 100);
+		led_flash(LED_NET, 50);
 
 		ts[1] = ts[0];
 		c[1] = c[0];
@@ -406,21 +638,37 @@ int main(int argc, char ** argv)
 		if (!(c[0] & 0x80)) {
 			if (c[1] & 0x80) {
 				if ((c[0] & 0x7f) == (c[1] & 0x7f)) {
+					int idx;
 //					printf("%4d %8d %02x\n", i, dt, c[0]);
-					fprintf(f, "%4d %8d %02x\n", i, dt, c[0]);
-					led_flash(LED_S2, 100);
+					stat.match++;
+					fprintf(f, "%4d %3d %8d\n", 
+							stat.match, c[0] & 0x7f, dt);
+	
+					idx = dt / BIN_RES;
+					if (idx >= BIN_CNT)
+						idx = BIN_CNT - 1;
+					stat.bin[idx]++;
+					stat.dt_sum += dt;
+					if (dt > stat.dt_max)
+						stat.dt_max = dt;
+					if (dt < stat.dt_min)
+						stat.dt_min = dt;
+					led_flash(LED_S2, 50);
 				} else {
 					/* Numbers do not match!!! */
-					led_flash(LED_S1, 100);
+					led_flash(LED_S1, 50);
+					stat.error++;
 				}
 			} else {
 				/* previous was not master ??? */
-				led_flash(LED_S1, 100);
+				led_flash(LED_S1, 50);
+				stat.error++;
 			}
 		} else {
 			if (c[1] & 0x80) {
 				/* master repeated */
 				led_flash(LED_S1, 50);
+				stat.error++;
 			}
 		}
 	}
