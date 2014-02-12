@@ -40,7 +40,8 @@ endif
 ifdef HSE_HZ
 CDEFS += "HSE_HZ=$(HSE_HZ)" 
 endif
-OPTIONS	= -mcpu=$(CPU) -mfpu=vfp -mfloat-abi=hard -mthumb -mthumb-interwork 
+#OPTIONS	= -mcpu=$(CPU) -mfpu=vfp -mfloat-abi=hard -mthumb -mthumb-interwork 
+OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
 LDFLAGS = -nostdlib -T $(MACH).ld

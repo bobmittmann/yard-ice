@@ -265,9 +265,9 @@ $(PROG_BIN): $(PROG_ELF)
 else
 %.bin: %.elf
 	$(ACTION) "BIN: $@"
-	$(Q)$(OBJCOPY) -j .init -j .text -j .data --output-target binary $< $@
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data \
+					  --output-target binary $< $@
 endif
-
 
 #------------------------------------------------------------------------------ 
 # Build tree

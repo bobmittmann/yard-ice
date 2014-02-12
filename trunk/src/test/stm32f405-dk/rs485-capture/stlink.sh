@@ -26,7 +26,8 @@ STLINKCLI=ST-LINK_CLI.exe
 #echo ${WINPROGDIR}
 #echo ${STLINKDIR}
 
-make -j 4 || exit 1;
+#make -j 4 || exit 1;
+make || exit 1;
 
 UNIX_BINFILE=`make bin_path`
 
@@ -41,7 +42,6 @@ else
 fi
 
 #${STLINKCLI} -c SWD UR -P "${BINFILE}" 0x08000000 -Rst
-echo ${STLINKCLI} -P "${BINFILE}" 0x08000000 
-${STLINKCLI} -P "${BINFILE}" 0x08000000 
-#-Rst
+#echo ${STLINKCLI} -P "${BINFILE}" 0x08000000 
+${STLINKCLI} -P "${BINFILE}" 0x08000000 -Rst
 

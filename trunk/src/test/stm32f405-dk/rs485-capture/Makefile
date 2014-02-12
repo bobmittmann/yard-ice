@@ -30,7 +30,7 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty
+LIBS = gcc stm32f cm3 util thinkos c ice-comm drv cdc-acm tty
 
 INCPATH = $(SDK)/include 
 
