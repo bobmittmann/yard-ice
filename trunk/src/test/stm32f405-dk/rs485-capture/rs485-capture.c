@@ -74,6 +74,8 @@ void stdio_init(void)
 	stdout = stdin;
 }
 
+int console_mutex;
+
 /*****************************************************************************
   Timer
  *****************************************************************************/
@@ -296,7 +298,9 @@ int loopback_task(FILE * f)
 			__thinkos_flag_clr(loopback.flag);
 		} while (!loopback.en);
 
+		thinkos_mutex_lock(console_mutex);
 		fprintf(f, "Loopback test start.\n");
+		thinkos_mutex_unlock(console_mutex);
 
 		while (loopback.en) {
 //			delay = (rand() & 0x3f) + 1;
@@ -312,7 +316,9 @@ int loopback_task(FILE * f)
 
 		__thinkos_flag_clr(loopback.flag);
 
+		thinkos_mutex_lock(console_mutex);
 		fprintf(f, "Loopback test stop.\n");
+		thinkos_mutex_unlock(console_mutex);
 	};
 
 	return 0;
@@ -333,10 +339,11 @@ void loopback_stop(void)
 	}
 }
 
-#define BIN_RES 100
-#define BIN_CNT 5000
+#define BIN_RES 50
+#define BIN_CNT 10000
 
 struct {
+	int mutex;
 	uint32_t error;
 	uint32_t match;
 	int32_t dt_max;
@@ -350,6 +357,8 @@ void stat_clear(void)
 {
 	int i;
 
+	thinkos_mutex_lock(stat.mutex);
+
 	stat.error = 0;
 	stat.match = 0;
 	stat.dt_min = 100000000;
@@ -357,23 +366,37 @@ void stat_clear(void)
 	stat.dt_avg = 0;
 	stat.dt_sum = 0;
 
-	for (i =0; i < BIN_CNT; ++i) {
+	for (i = 0; i < BIN_CNT; ++i) {
 		stat.bin[i] = 0;
 	}
+
+	thinkos_mutex_unlock(stat.mutex);
+}
+
+void stat_init(void)
+{
+	stat.mutex = thinkos_mutex_alloc();
+	stat_clear();
 }
 
 void stat_show(FILE * f)
 {
-	if (stat.match > 0) {
-		stat.dt_avg = (int64_t)(stat.dt_sum / (int64_t)stat.match);
-	}
-
+	thinkos_mutex_lock(console_mutex);
 	fprintf(f, "---- Statistics ----------\n");
+
+//	if (stat.match > 0) {
+//		stat.dt_avg = (int64_t)(stat.dt_sum / (int64_t)stat.match);
+//	}
+
+	thinkos_mutex_lock(stat.mutex);
 	fprintf(f, "  Error: %d\n", stat.error);
 	fprintf(f, "  Match: %d\n", stat.match);
 	fprintf(f, "    Min: %d\n", stat.dt_min);
 	fprintf(f, "    Max: %d\n", stat.dt_max);
 	fprintf(f, "    Avg: %d\n", stat.dt_avg);
+	thinkos_mutex_unlock(stat.mutex);
+
+	thinkos_mutex_unlock(console_mutex);
 }
 
 void stat_hist_show(FILE * f)
@@ -385,12 +408,16 @@ void stat_hist_show(FILE * f)
 	int range;
 	int step;
 	int n;
-	int32_t t;
 	uint32_t sum;
 	uint32_t max;
 	uint32_t bin[80];
 	char s[128];
 
+	thinkos_mutex_lock(console_mutex);
+	fprintf(f, "---- Histogram ----------\n");
+	thinkos_mutex_unlock(console_mutex);
+
+	thinkos_mutex_lock(stat.mutex);
 	for (l = 0; l < BIN_CNT; ++l) {
 		if (stat.bin[l] > 0)
 			break;
@@ -402,51 +429,96 @@ void stat_hist_show(FILE * f)
 	}
 
 	range = h - l + 1;
-	n = 40;
+
+	if (range < 1) {
+		thinkos_mutex_unlock(stat.mutex);
+		return;
+	}
+
+	n = 50;
 	step = (range + n - 1) / n;
 	range = n * step;
 	/* adjust high limit */
 	h = l + range;
-	fprintf(f, "Lo=%d Hi=%d Step=%d Range=%d\n", l, h, step, range);
+//	fprintf(f, "Lo=%d Hi=%d Step=%d Range=%d\n", l, h, step, range);
 	if (h >= BIN_CNT) {
 		fprintf(f, "FIXME: adjust range!!!!\n");
+		thinkos_mutex_unlock(stat.mutex);
 		return;
 	}
 
-	fprintf(f, "---- Histogram ----------\n");
-
 	max = 0;
 	for (i = 0; i < n; ++i) {
+		int k;
 		sum = 0;
-		t = l + i * step;
+		k = l + i * step;
 		for (j = 0; j < step; ++j) {
-			sum += stat.bin[t + j];
+			sum += stat.bin[k + j];
 		}
 		bin[i] = sum;
 		if (sum > max)
 			max = sum;
 	}
+	thinkos_mutex_unlock(stat.mutex);
 
+	thinkos_mutex_lock(console_mutex);
 	for (i = 0; i < n; ++i) {
-		t = l + i * step;
+		int32_t dt;
+		dt = (l + i * step) * BIN_RES;
 		for (j = 0; j < (bin[i] * 64) / max; ++j)
 			s[j] = '#';
 		s[j] = '\0';
 
-		fprintf(f, "%d.%d %s\n", t / 10, t % 10, s);
+		fprintf(f, "%3d.%03d %s\n", dt / 1000, dt % 1000, s);
 	}
+	thinkos_mutex_unlock(console_mutex);
+}
+
+void stat_dist_show(FILE * f)
+{
+	int l;
+	int h;
+	int i;
+	int32_t dt;
+	uint32_t sum;
+
+	thinkos_mutex_lock(stat.mutex);
+	for (l = 0; l < BIN_CNT; ++l) {
+		if (stat.bin[l] > 0)
+			break;
+	}
+
+	for (h = BIN_CNT - 1; h >= 0; --h) {
+		if (stat.bin[h] > 0)
+			break;
+	}
+
+	thinkos_mutex_lock(console_mutex);
+	fprintf(f, "---- Distribution ----------\n");
+	for (i = l; i <= h; ++i) {
+		dt = i * BIN_RES;
+		sum = stat.bin[i];
+		if (sum > 0) {
+			fprintf(f, "%4d.%03d, %5d\n", dt / 1000, dt % 1000, sum);
+		}
+	}
+	thinkos_mutex_unlock(console_mutex);
+	thinkos_mutex_unlock(stat.mutex);
 }
 
 void show_menu(FILE * f)
 {
+	thinkos_mutex_lock(console_mutex);
 	fprintf(f, "\n");
 	fprintf(f, " Options:\n");
 	fprintf(f, " --------\n");
+	fprintf(f, "   c    - Clear statistics\n");
+	fprintf(f, "   d    - Show distribution\n");
+	fprintf(f, "   h    - Show histogram\n");
 	fprintf(f, "   l    - Run loopback test\n");
 	fprintf(f, "   s    - Show statistics\n");
-	fprintf(f, "   c    - Clear statistics\n");
-
 	fprintf(f, "\n");
+	thinkos_mutex_unlock(console_mutex);
 }
 
 int input_task(FILE * f)
@@ -475,7 +547,13 @@ int input_task(FILE * f)
 		case 's':
 			stat_show(f);
 			break;
+		case 'd':
+			stat_dist_show(f);
+			break;
 		case 'c':
+			thinkos_mutex_lock(console_mutex);
+			fprintf(f, "---- Clear Statistics --------\n");
+			thinkos_mutex_unlock(console_mutex);
 			stat_clear();
 			break;
 		case 'h':
@@ -532,7 +610,7 @@ int monitor_task(void * arg)
 
 	for (;;) {
 		thinkos_sleep(1000);
-		led_flash(LED_I2S, 100);
+		led_flash(LED_I2S, 250);
 		if (++sec == 60) {
 			sec = 0;
 			if (++min == 60) {
@@ -592,6 +670,8 @@ int main(int argc, char ** argv)
 	printf("3. tty_fopen()...\n");
 	f = tty_fopen(tty);
 
+	console_mutex = thinkos_mutex_alloc();
+
 	thinkos_thread_create((void *)input_task, (void *)f, 
 						  input_stack, sizeof(input_stack), 1);
 
@@ -599,7 +679,6 @@ int main(int argc, char ** argv)
 						  monitor_stack, STACK_SIZE, 2);
 
 	printf("4. rs485_init()...\n");
-//	rs485_init(110000000 / (13 * 16));
 	rs485_init(500000);
 
 	thinkos_thread_create((void *)ui_task, (void *)f, 
@@ -617,7 +696,7 @@ int main(int argc, char ** argv)
 	led_off(LED_S1);
 	led_off(LED_S2);
 
-	stat_clear();
+	stat_init();
 
 	ts[0] = timer_ts();
 	c[0] = 0;
@@ -640,10 +719,8 @@ int main(int argc, char ** argv)
 				if ((c[0] & 0x7f) == (c[1] & 0x7f)) {
 					int idx;
 //					printf("%4d %8d %02x\n", i, dt, c[0]);
+					thinkos_mutex_lock(stat.mutex);
 					stat.match++;
-					fprintf(f, "%4d %3d %8d\n", 
-							stat.match, c[0] & 0x7f, dt);
-	
 					idx = dt / BIN_RES;
 					if (idx >= BIN_CNT)
 						idx = BIN_CNT - 1;
@@ -653,21 +730,27 @@ int main(int argc, char ** argv)
 						stat.dt_max = dt;
 					if (dt < stat.dt_min)
 						stat.dt_min = dt;
+					thinkos_mutex_unlock(stat.mutex);
+
 					led_flash(LED_S2, 50);
+					thinkos_mutex_lock(console_mutex);
+					fprintf(f, "%4d, %3d, %4d.%03d\n", 
+							stat.match, c[0] & 0x7f, dt / 1000, dt % 1000);
+					thinkos_mutex_unlock(console_mutex);
 				} else {
 					/* Numbers do not match!!! */
-					led_flash(LED_S1, 50);
+					led_flash(LED_S1, 100);
 					stat.error++;
 				}
 			} else {
 				/* previous was not master ??? */
-				led_flash(LED_S1, 50);
+				led_flash(LED_S1, 100);
 				stat.error++;
 			}
 		} else {
 			if (c[1] & 0x80) {
 				/* master repeated */
-				led_flash(LED_S1, 50);
+				led_flash(LED_S1, 100);
 				stat.error++;
 			}
 		}
