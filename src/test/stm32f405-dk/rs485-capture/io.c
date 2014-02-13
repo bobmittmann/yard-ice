@@ -31,7 +31,7 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-#define POLL_PERIOD_MS 32
+#define POLL_PERIOD_MS 16
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -76,10 +76,10 @@ void led_off(int id)
 
 void led_flash(int id, int ms)
 {
-	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
-		return;
+//	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+//		return;
 
-	led_drv.tmr[id] = ms / POLL_PERIOD_MS;
+	led_drv.tmr[id] = (ms * (65536 / POLL_PERIOD_MS) + 32768) / 65536;
 	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
@@ -87,8 +87,8 @@ void leds_all_off(void)
 {
 	int i;
 
-	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
-		return;
+//	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+//		return;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i)
 		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
@@ -109,11 +109,11 @@ void leds_all_flash(int ms)
 {
 	int i;
 
-	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
-		return;
+//	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
+//		return;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
-		led_drv.tmr[i] = ms / POLL_PERIOD_MS;
+		led_drv.tmr[i] = (ms * (65536 / POLL_PERIOD_MS) + 32768) / 65536;
 		stm32f_gpio_set(led_io[i].gpio, led_io[i].pin);
 	}
 }
@@ -177,7 +177,7 @@ enum {
 
 struct btn_drv {
 	uint8_t st;
-	volatile uint8_t tmr;
+	volatile uint16_t tmr;
 	uint8_t fsm;
 	int8_t event;
 	int flag;
@@ -238,7 +238,7 @@ int btn_event_wait(void)
 		} else if (irq_ev == BTN_TIMEOUT) {
 			btn_drv.fsm = BTN_FSM_IDLE;
 			/* hold and click timer */
-			btn_drv.tmr = 500 / POLL_PERIOD_MS;;
+			btn_drv.tmr = 500 / POLL_PERIOD_MS;
 			btn_drv.fsm = BTN_FSM_CLICK_N_HOLD_TIME_WAIT;
 		}
 		break;
@@ -253,7 +253,7 @@ int btn_event_wait(void)
 		} else if (irq_ev == BTN_TIMEOUT) {
 			event = EVENT_HOLD1;
 			/* long hold timer */
-			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
+			btn_drv.tmr = 3500 / POLL_PERIOD_MS;
 			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
 		}
 		break;
@@ -267,7 +267,7 @@ int btn_event_wait(void)
 		} else if (irq_ev == BTN_TIMEOUT) {
 			event = EVENT_CLICK_N_HOLD;
 			/* long hold timer */
-			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
+			btn_drv.tmr = 3500 / POLL_PERIOD_MS;
 			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
 		}
 		break;
@@ -333,6 +333,13 @@ void stm32f_tim2_isr(void)
 	}
 }
 
+void __attribute__((noreturn)) io_task(void * arg)
+{
+	for (;;) {
+		thinkos_irq_wait(STM32F_IRQ_TIM2);
+		stm32f_tim2_isr();
+	}
+}
 
 static void io_timer_init(uint32_t freq)
 {
@@ -361,12 +368,14 @@ static void io_timer_init(uint32_t freq)
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
 	tim->ccr1 = tim->arr / 2;
 
-	cm3_irq_pri_set(STM32F_IRQ_TIM2, IRQ_PRIORITY_REGULAR);
+	cm3_irq_pri_set(STM32F_IRQ_TIM2, IRQ_PRIORITY_LOW);
 	/* Enable interrupt */
-	cm3_irq_enable(STM32F_IRQ_TIM2);
+//	cm3_irq_enable(STM32F_IRQ_TIM2);
 
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
+
+uint32_t io_stack[64];
 
 void io_init(void)
 {
@@ -382,6 +391,9 @@ void io_init(void)
 
 	btn_init();
 	leds_init();
+
+	thinkos_thread_create((void *)io_task, (void *)NULL, 
+						  io_stack, sizeof(io_stack), 15);
 
 	io_timer_init(1000 / POLL_PERIOD_MS);
 }

@@ -157,11 +157,11 @@ SECTIONS
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
+		. = ALIGN(8);
 	} >flash = 0xffffffff
 
 	.ARM.extab : 
 	{ 
-		. = ALIGN(4);
 		*(.ARM.extab* .gnu.linkonce.armextab.*) 
 	} >flash = 0xffffffff
 	PROVIDE_HIDDEN (__exidx_start = .);
