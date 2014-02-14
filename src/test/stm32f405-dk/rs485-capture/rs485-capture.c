@@ -361,7 +361,7 @@ void stat_clear(void)
 
 	stat.error = 0;
 	stat.match = 0;
-	stat.dt_min = 100000000;
+	stat.dt_min = 9000000;
 	stat.dt_max = 0;
 	stat.dt_avg = 0;
 	stat.dt_sum = 0;
@@ -381,19 +381,36 @@ void stat_init(void)
 
 void stat_show(FILE * f)
 {
+	uint32_t peak;
+	int32_t dt;
+	int i;
+	div_t x;
+	
+
 	thinkos_mutex_lock(console_mutex);
 	fprintf(f, "---- Statistics ----------\n");
 
-//	if (stat.match > 0) {
+	if (stat.match > 0) {
 //		stat.dt_avg = (int64_t)(stat.dt_sum / (int64_t)stat.match);
-//	}
+		x = div(stat.dt_sum, stat.match);
+		stat.dt_avg = x.quot;
+	}
 
 	thinkos_mutex_lock(stat.mutex);
-	fprintf(f, "  Error: %d\n", stat.error);
-	fprintf(f, "  Match: %d\n", stat.match);
-	fprintf(f, "    Min: %d\n", stat.dt_min);
-	fprintf(f, "    Max: %d\n", stat.dt_max);
-	fprintf(f, "    Avg: %d\n", stat.dt_avg);
+	fprintf(f, "  Error: %6d\n", stat.error);
+	fprintf(f, "  Match: %6d\n", stat.match);
+	fprintf(f, "    Min: %4d.%03d\n", stat.dt_min / 1000, stat.dt_min % 1000);
+	fprintf(f, "    Max: %4d.%03d\n", stat.dt_max / 1000, stat.dt_max % 1000);
+	fprintf(f, "    Avg: %4d.%03d\n", stat.dt_avg / 1000, stat.dt_avg % 1000);
+	peak = 0;
+	dt = 0;
+	for (i = 0; i < BIN_CNT; ++i) {
+		if (stat.bin[i] > peak) {
+			peak = stat.bin[i];
+			dt = i * BIN_RES;
+		}
+	}
+	fprintf(f, "   Peak: %4d.%03d (%d)\n", dt / 1000, dt % 1000, peak);
 	thinkos_mutex_unlock(stat.mutex);
 
 	thinkos_mutex_unlock(console_mutex);
@@ -495,6 +512,7 @@ void stat_dist_show(FILE * f)
 
 	thinkos_mutex_lock(console_mutex);
 	fprintf(f, "---- Distribution ----------\n");
+	
 	for (i = l; i <= h; ++i) {
 		dt = i * BIN_RES;
 		sum = stat.bin[i];
