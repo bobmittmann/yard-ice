@@ -140,6 +140,7 @@ architecture structure of yard_ice is
 	---------------------------------------------------------------------------
 	-- internal memory bus
 	signal s_mem_addr : std_logic_vector(MEM_ADDR_BITS downto 1);
+	signal s_mem_addr_reg : std_logic_vector(DATA_WIDTH downto 1);
 
 	signal s_mem_wr_stb : std_logic;
 	signal s_mem_wr_sel : std_logic_vector(MEM_SEL_BITS - 1 downto 0);
@@ -521,7 +522,7 @@ begin
 	process(s_clk_main)
 	begin
 		if rising_edge(s_clk_main) then
-			s_irq_out <= not is_zero(s_irq_en and s_irq);
+			s_irq_out <= not is_zero(s_irq_en(IRQ_BITS - 1 downto 0) and s_irq);
 		end if;
 	end process;
 
@@ -625,6 +626,8 @@ begin
 			-- data out
 			q => s_r3);
 
+	s_mem_addr_reg <= "000" & s_mem_addr & "0";
+
 	-- capture the memory write address
 	mem_wr_addr : entity jtag_reg
 		generic map (DATA_WIDTH => DATA_WIDTH, REG_BITS => MEM_ADDR_BITS) 
@@ -636,7 +639,7 @@ begin
 			-- read signal 
 			ld => s_dbg_mem_wr,
 			-- data in
-			d => "000" & s_mem_addr & "0",
+			d => s_mem_addr_reg,
 			-- data out
 			q => s_mem_wr_addr);
 
@@ -651,7 +654,7 @@ begin
 			-- read signal 
 			ld => s_dbg_mem_rd,
 			-- data in
-			d => "000" & s_mem_addr & "0",
+			d => s_mem_addr_reg,
 			-- data out
 			q => s_mem_rd_addr);
 
