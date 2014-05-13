@@ -57,6 +57,9 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
 	int rem;
 	int n;
 
+	DCC_LOG2(LOG_TRACE, "thread=%d tp=0x%08x init...", 
+			thinkos_thread_self(), (int)tp);
+
 	for (;;) {
 		/* receive data form network */
 		if ((len = tcp_recv(tp, net_buf, 128)) <= 0) {
@@ -91,9 +94,7 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
 
 	ice_comm_close(comm);
 
-
-	DCC_LOG(LOG_TRACE, "done..."); 
-
+	DCC_LOG(LOG_TRACE, "done.");
 
 	return 0;
 }
@@ -122,6 +123,8 @@ int comm_tcp_read_task(ice_comm_t * comm)
 
 		tcp_bind(mux, INADDR_ANY, htons(port));
 
+		tracef("COMM TCP: waiting for incomming connections... ");
+
 		if (tcp_listen(mux, 1) != 0) {
 			DCC_LOG(LOG_WARNING, "tcp_listen() failed!");
 			break;
@@ -134,6 +137,7 @@ int comm_tcp_read_task(ice_comm_t * comm)
 
 		tcp_close(mux);
 
+		tracef("COMM TCP: connection accepted. ");
 		DCC_LOG(LOG_TRACE, "connection accepted...");
 	
 		ice_comm_open(comm);
@@ -153,6 +157,8 @@ int comm_tcp_read_task(ice_comm_t * comm)
 //					 tp->t_faddr, ntohs(tp->t_fport));
 			break;
 		}
+
+		DCC_LOG1(LOG_TRACE, "Comm write thread=%d.", th);
 
 		for (;;) {
 			if ((n = ice_comm_read(comm, buf, sizeof(buf), 500)) < 0) {
@@ -196,6 +202,7 @@ int comm_tcp_start(ice_comm_t * comm)
 							__OS_PRIORITY_LOWEST);
 
 	tracef("comm_tcp_start th=%d", th);
+	DCC_LOG1(LOG_TRACE, "thread %d", th);
 
 	return 0;
 }

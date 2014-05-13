@@ -162,6 +162,10 @@ int cmd_var(FILE *f, int argc, char ** argv);
 
 int cmd_sleep(FILE *f, int argc, char ** argv);
 
+int cmd_os(FILE *f, int argc, char ** argv);
+
+int cmd_thread(FILE * f, int argc, char ** argv);
+
 int cmd_bb_scan(FILE *f, int argc, char ** argv);
 
 int cmd_scrub(FILE * f, int argc, char ** argv);

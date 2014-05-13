@@ -53,6 +53,7 @@ int tcp_close(struct tcp_pcb * __tp)
 			/* TODO: close all pending connections in the backlog */ 
 			__os_sem_free(tlp->t_sem);
 			pcb_release((struct pcb *)tlp, &__tcp__.listen);
+			tcpip_net_unlock();
 			return 0;
 		}
 

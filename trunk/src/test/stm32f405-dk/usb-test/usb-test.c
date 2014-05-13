@@ -426,6 +426,38 @@ uint32_t printer_stack2[STACK_SIZE / 4];
 uint32_t echo_stack1[STACK_SIZE / 4];
 uint32_t echo_stack2[STACK_SIZE / 4];
 
+int xmodem_recv(int (*__getc)(int), int (*__putc)(int), int max);
+static struct usb_cdc_class * __cdc;
+
+static int __getc(int tmo) 
+{
+	uint8_t buf[1];
+	int ret;
+
+	if ((ret = usb_cdc_read(__cdc, buf, 1, tmo)) < 0) {
+		if (ret == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_TRACE, "timeout!");
+		}
+		return -1;
+	}
+
+	return buf[0];
+}
+
+static int __putc(int c) 
+{
+	uint8_t buf[1] = { c };
+
+	return usb_cdc_write(__cdc, buf, 1);
+}
+
+int usb_xmodem_recv(struct usb_cdc_class * cdc)
+{
+	__cdc = cdc;
+
+	return xmodem_recv(__getc, __putc, 100 * 1024 * 1024);
+}
+
 int main(int argc, char ** argv)
 {
 	usb_cdc_class_t * cdc;
@@ -447,6 +479,9 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "usb_cdc_init()");
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, *((uint64_t *)STM32F_UID));
+
+	for (;;)
+		usb_xmodem_recv(cdc);
 
 	while (0) {
 		thinkos_sleep(5000);
