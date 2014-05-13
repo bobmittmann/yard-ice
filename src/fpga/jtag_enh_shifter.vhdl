@@ -179,7 +179,7 @@ architecture structure of jtag_enh_shifter is
 
 begin 
 	-- split the pointer descriptor into fields
-	s_desc_len <= ptr_data(PTR_DATA_BITS - DESC_ADDR_BITS - 1 downto 0);
+	s_desc_len <= ptr_data(DESC_ADDR_BITS - 1 downto 0);
 	s_desc_base <= ptr_data(PTR_DATA_BITS - 1 downto 
 							PTR_DATA_BITS - DESC_ADDR_BITS);
 
