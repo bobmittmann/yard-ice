@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = cm3ice
 
 CFILES = armv7m-dbg.c mod_cm3ice.c cm3ice.c cm3ice-info.c cm3-fmt.c
