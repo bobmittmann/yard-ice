@@ -38,7 +38,7 @@
 #include <arch/stm32f303.h>
 #endif
 
-#ifdef STM32F103
+#if defined(STM32F103) || defined(STM32F103X6)
 #include <arch/stm32f103.h>
 #endif
 

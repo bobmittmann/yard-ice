@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = jtag3drv
 
 CFILES = jtag3ctrl.c jtag3drv.c jtag-arm.c jtag-adi.c

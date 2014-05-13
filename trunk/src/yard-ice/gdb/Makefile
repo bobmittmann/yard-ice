@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = gdb
 
 CFILES = $(wildcard *.c) 

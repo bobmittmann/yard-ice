@@ -31,9 +31,21 @@
 #ifndef __STM32F103_H__
 #define __STM32F103_H__
 
+#ifndef STM32F
 #define STM32F
+#endif
+
+#ifndef STM32F1X
 #define STM32F1X
+#endif
+
+#ifndef STM32F10X
 #define STM32F10X
+#endif
+
+#ifndef STM32F103
+#define STM32F103
+#endif
 
 #include <stm32f/stm32f-pwr.h>
 #include <stm32f/stm32f-syscfg.h>

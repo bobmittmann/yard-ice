@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = targets
 
 AT91X40_CFILES = at91x40.c a7e10x2.c jtagtool3.c 
