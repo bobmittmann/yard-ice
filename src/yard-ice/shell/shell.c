@@ -255,6 +255,12 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 
+	{ cmd_os, "sys", "os", 
+		"", "show OS status" },
+
+	{ cmd_thread, "thread", "th", 
+		"[ID]", "show thread status" },
+
 #if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
@@ -267,6 +273,7 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
+
 #if 0
 	{ cmd_arp, "arp", "arp", 
 		"", "show / manipulate the system ARP cache" },

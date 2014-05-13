@@ -22,7 +22,7 @@
 
 PROG = usb-test
 
-CFILES = usb-test.c
+CFILES = xmodem_recv.c usb-test.c
 
 SDK = ../../../sdk
 
