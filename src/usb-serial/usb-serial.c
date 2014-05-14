@@ -318,6 +318,67 @@ int button_task(void)
 	return 0;
 }
 
+struct xmodem_rcv rx;
+char xbuf[XMODEM_CRC_BUF_SIZE];
+
+int vcom_xmodem_recv(struct vcom * vcom)
+{
+//	struct serial_dev * serial1 = vcom[0].serial;
+	struct serial_dev * serial2 = vcom[1].serial;
+	usb_cdc_class_t * cdc = vcom[0].cdc;
+	char buf[VCOM_BUF_SIZE];
+	int len;
+	int pos;
+	int ret;
+	int c;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	xmodem_rcv_init(&rx, xbuf, XMODEM_MODE_CRC); 
+
+	for (;;) {
+		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, XMODEM_TMOUT_TICK_MS);
+		if (len > 0) {
+//			led1_flash(1);
+			DCC_LOG1(LOG_INFO, "USB RX: %d bytes.", len);
+//			serial_write(serial1, buf, len);
+//			serial_write(serial2, buf, len);
+			pos = 0;
+			c = buf[0];
+		} else {
+			len = 0;
+			pos = 0;
+			c = -1;
+		}
+
+		do {
+			ret = xmodem_rcv(&rx, &c);
+
+			if (ret == XMODEM_RCV_EOT) {
+				DCC_LOG(LOG_TRACE, "XModem EOT.");
+				xmodem_rcv_init(&rx, xbuf, XMODEM_MODE_CRC); 
+				break;
+			}
+
+			if (ret > 16) {
+				serial_write(serial2, xbuf, ret);
+			}
+
+			DCC_LOG1(LOG_INFO, "XModem ret=%d", ret);
+		
+			if (c != -1) {
+				xbuf[0] = c;
+				usb_cdc_write(cdc, xbuf, 1);
+				DCC_LOG1(LOG_INFO, "XModem send %02x", xbuf[0]);
+			}
+
+			c = buf[++pos];
+		} while (pos < len);
+	}
+
+	return 0;
+}
+
 int usb_recv_task(struct vcom vcom[])
 {
 //	struct serial_dev * serial1 = vcom[0].serial;
@@ -331,7 +392,7 @@ int usb_recv_task(struct vcom vcom[])
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
 		if (len > 0) {
-			led1_flash(1);
+//			led1_flash(1);
 			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
 //			serial_write(serial1, buf, len);
 			serial_write(serial2, buf, len);
@@ -354,63 +415,6 @@ int usb_echo(usb_cdc_class_t * cdc)
 		led1_flash(1);
 		if (len > 0)
 			usb_cdc_write(cdc, buf, len);
-	}
-
-	return 0;
-}
-
-struct xmodem_rcv rx;
-char xbuf[XMODEM_CRC_BUF_SIZE];
-
-int vcom_xmodem_recv(struct vcom * vcom)
-{
-	struct serial_dev * serial1 = vcom[0].serial;
-	struct serial_dev * serial2 = vcom[1].serial;
-	usb_cdc_class_t * cdc = vcom[0].cdc;
-	char buf[VCOM_BUF_SIZE];
-	int len;
-	int pos;
-	int ret;
-	int c;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	xmodem_rcv_init(&rx, xbuf, XMODEM_MODE_CRC); 
-
-	for (;;) {
-		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, XMODEM_TMOUT_TICK_MS);
-		if (len > 0) {
-//			led1_flash(1);
-			DCC_LOG1(LOG_INFO, "USB RX: %d bytes.", len);
-			serial_write(serial1, buf, len);
-			serial_write(serial2, buf, len);
-			pos = 0;
-			c = buf[0];
-		} else {
-			len = 0;
-			pos = 0;
-			c = -1;
-		}
-
-		do {
-			ret = xmodem_rcv(&rx, &c);
-
-			if (ret == XMODEM_RCV_EOT) {
-				DCC_LOG(LOG_TRACE, "XModem EOT.");
-				xmodem_rcv_init(&rx, xbuf, XMODEM_MODE_CRC); 
-				break;
-			}
-
-			DCC_LOG1(LOG_INFO, "XModem ret=%d", ret);
-		
-			if (c != -1) {
-				xbuf[0] = c;
-				usb_cdc_write(cdc, xbuf, 1);
-				DCC_LOG1(LOG_INFO, "XModem send %02x", xbuf[0]);
-			}
-
-			c = buf[++pos];
-		} while (pos < len);
 	}
 
 	return 0;
@@ -474,12 +478,11 @@ int serial_ctrl_task(struct vcom * vcom)
 
 
 uint32_t button_stack[40];
-
-uint32_t serial1_ctrl_stack[80];
-uint32_t serial2_ctrl_stack[80];
-uint32_t serial1_recv_stack[(VCOM_BUF_SIZE / 4) + 80];
-uint32_t serial2_recv_stack[(VCOM_BUF_SIZE / 4) + 80];
-uint32_t usb_recv_stack[((VCOM_BUF_SIZE + XMODEM_CRC_BUF_SIZE) / 4) + 80];
+uint32_t serial1_ctrl_stack[64];
+uint32_t serial2_ctrl_stack[64];
+uint32_t serial1_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
+uint32_t serial2_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
+uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 
 int main(int argc, char ** argv)
 {
@@ -506,10 +509,8 @@ int main(int argc, char ** argv)
 
 	leds_init();
 
-#if 1
 	vcom[0].serial = serial2_open();
 	vcom[1].serial = serial3_open();
-#endif
 
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
@@ -518,7 +519,7 @@ int main(int argc, char ** argv)
 	vcom[1].cdc = vcom[0].cdc;
 
 
-#if 0
+#if 1
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
@@ -528,6 +529,8 @@ int main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
 #endif
+
+#if 0
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
@@ -535,6 +538,7 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
+#endif
 
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[1],
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
@@ -544,7 +548,7 @@ int main(int argc, char ** argv)
 						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 
-#if 0
+#if 1
 	led_flash_all(3);
 #endif
 
@@ -552,7 +556,7 @@ int main(int argc, char ** argv)
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(1000);
-		vcom_xmodem_recv(vcom);
+//		vcom_xmodem_recv(vcom);
 		DCC_LOG1(LOG_TRACE, "tick %d.", i);
 	}
 
