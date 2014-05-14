@@ -89,7 +89,7 @@ void thinkos_cancel_svc(int32_t * arg)
 #endif
 #endif
 
-#ifndef THINKOS_ENABLE_THREAD_STAT
+#if (THINKOS_ENABLE_THREAD_STAT == 0)
 #error "thinkos_cancel() depends on THINKOS_ENABLE_THREAD_STAT"	
 #endif
 	stat = thinkos_rt.th_stat[th];
@@ -152,7 +152,7 @@ void thinkos_resume_svc(int32_t * arg)
 		return;
 	}
 
-#ifndef THINKOS_ENABLE_THREAD_STAT
+#if (THINKOS_ENABLE_THREAD_STAT == 0)
 #error "thinkos_resume() depends on THINKOS_ENABLE_THREAD_STAT"	
 #endif
 	/* remove from the paused queue */
@@ -170,6 +170,7 @@ void thinkos_resume_svc(int32_t * arg)
 void thinkos_pause_svc(int32_t * arg)
 {
 	unsigned int th = arg[0];
+	int stat;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (th >= THINKOS_THREADS_MAX) {
@@ -185,10 +186,17 @@ void thinkos_pause_svc(int32_t * arg)
 #endif
 #endif
 
+#if (THINKOS_ENABLE_THREAD_STAT == 0)
+#error "thinkos_pause() depends on THINKOS_ENABLE_THREAD_STAT"	
+#endif
+
 	/* insert into the paused queue */
 	bmp_bit_set(&thinkos_rt.wq_paused, th);  
-	/* possibly remove from the ready queue */
-	bmp_bit_clr(&thinkos_rt.wq_ready, th);  
+
+	/* remove the thread from a waiting queue, including ready  */
+	stat = thinkos_rt.th_stat[th];
+	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], th);  
+
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
 	bmp_bit_clr(&thinkos_rt.wq_tmshare, th);  
@@ -237,6 +245,16 @@ void thinkos_thread_create_svc(int32_t * arg)
 	if (th >= THINKOS_THREADS_MAX)
 		th = THINKOS_THREADS_MAX - 1;
 #endif
+
+	/* initialize stack */
+	{
+		uint32_t * ptr = (uint32_t *)init->stack_ptr;
+		int i;
+
+		for (i = 0; i < init->stack_size / 4; ++i)
+			ptr[i] = 0xfacade44;
+	}
+
 
 	sp = (uint32_t)init->stack_ptr + init->stack_size;
 	sp &= 0xfffffff8; /* 64bits alignemnt */

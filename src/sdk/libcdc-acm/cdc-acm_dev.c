@@ -78,7 +78,7 @@ int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
-	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
+	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 	__thinkos_flag_signal(dev->rx_flag);
 	return 0;
 }

@@ -49,15 +49,15 @@ void led_unlock(void)
 
 void led1_flash(unsigned int cnt)
 {
-	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
 	led1_flash_head = led1_flash_tail + cnt;
+	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
 	thinkos_flag_set(led_flag);
 }
 
 void led2_flash(unsigned int cnt)
 {
-	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
 	led2_flash_head = led2_flash_tail + cnt;
+	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
 	thinkos_flag_set(led_flag);
 }
 
@@ -128,7 +128,7 @@ int led_task(void)
 	}
 }
 
-static uint32_t led_stack[40];
+static uint32_t led_stack[64];
 
 #define TIMER_PWM_FREQ 8000
 
@@ -185,5 +185,5 @@ void leds_init(void)
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
-
 }
+
