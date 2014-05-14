@@ -206,6 +206,7 @@ void thinkos_flag_set_svc(int32_t * arg)
 		__thinkos_defer_sched();
 	}
 
+	arg[0] = 0;
 }
 
 void thinkos_flag_clr_svc(int32_t * arg)

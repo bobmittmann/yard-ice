@@ -346,6 +346,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if	(THINKOS_IRQ_MAX > 0)
 	int irq;
 #endif
+	int i;
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -406,6 +407,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
+	/* initialize exception stack */
+	for (i = 0; i < (THINKOS_EXCEPT_STACK_SIZE / 4 - IDLE_UNUSED_REGS); ++i)
+		thinkos_idle.except_stack[i] = 0xfacade44;
+
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
 #if THINKOS_ENABLE_TIMESHARE
@@ -413,6 +418,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.sched_idle_pri = 0;
 #endif
 //	thinkos_idle.ctx.ret = CM3_EXC_RET_THREAD_PSP;
+
+
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 #if THINKOS_ENABLE_CLOCK

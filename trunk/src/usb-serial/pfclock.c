@@ -33,6 +33,13 @@
 
 static uint16_t clock;
 
+#define PFCLOCK_FREQ 20000
+
+uint32_t pfdt2us(uint32_t dt)
+{
+	return (1000000 / PFCLOCK_FREQ) * dt;
+}
+
 uint32_t pfdt(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM2;
@@ -52,8 +59,6 @@ uint32_t pfclock(void)
 
 	return tim->cnt;
 }
-
-#define PFCLOCK_FREQ 10000
 
 void pfclock_init(void)
 {

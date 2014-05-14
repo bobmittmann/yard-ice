@@ -324,8 +324,8 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	if (epr & USB_EP_DBL_BUF) {
 		/* double buffer */
 		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
-		DCC_LOG3(LOG_INFO, "ep_id=%d: dbl buf %d-%d", ep_id, 
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0 : 1];
+		DCC_LOG2(LOG_INFO, "RX dbl buf DOTG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_RX) ? 1 : 0, (epr & USB_SWBUF_RX) ? 1 : 0);
 	} else {
 		/* single buffer */
@@ -780,14 +780,11 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		/* OUT */
 		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
 
-		/* prepare to receive on other buffer */
-		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
-
 		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1: 0];
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0: 1];
 
-		DCC_LOG3(LOG_INFO, "ep%d: RX double buffer DOTG=%d SW_BUF=%d", 
-				 ep_id, (epr & USB_DTOG_RX) ? 1: 0, 
+		DCC_LOG2(LOG_INFO, "RX double buffer DOTG=%d SW_BUF=%d", 
+				 (epr & USB_DTOG_RX) ? 1: 0, 
 				 (epr & USB_SWBUF_RX) ? 1: 0);
 
 		/* call class endpoint callback */

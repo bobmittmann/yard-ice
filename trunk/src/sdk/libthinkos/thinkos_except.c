@@ -128,7 +128,6 @@ static void __dump_bfsr(void)
 	if (bfsr & BFSR_IBUSERR)  
 		fprintf(stderr, " IBUSERR");
 
-
 	if (bfsr & BFSR_BFARVALID)  {
 		fprintf(stderr, "\n * ADDR = 0x%08x", (int)scb->bfar);
 	}
@@ -161,10 +160,10 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
 	cm3_faultmask_set(1);
 
+	DCC_LOG(LOG_ERROR, "Bus fault!");
+
 	fprintf(stderr, "---\n");
 	fprintf(stderr, "Bus fault:");
-
-	DCC_LOG(LOG_ERROR, "Bus fault!");
 
 	__dump_bfsr();
 
@@ -177,10 +176,11 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
 	cm3_faultmask_set(1);
 
+	DCC_LOG(LOG_ERROR, "Usage fault!");
+
 	fprintf(stderr, "---\n");
 	fprintf(stderr, "Usage fault:");
 
-	DCC_LOG(LOG_ERROR, "Usage fault!");
 
 	__dump_ufsr();
 
@@ -191,12 +191,104 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 
 void thinkos_exception_dsr(struct thinkos_context * ctx);
 
-void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+void hard_fault(struct thinkos_context * ctx, uint32_t msp, 
+				uint32_t psp, uint32_t lr)
 {
-	struct thinkos_context * ctx;
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
 	uint32_t sp;
+
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
+
+	hfsr = scb->hfsr;
+
+	DCC_LOG3(LOG_ERROR, "Hard fault:%s%s%s", 
+			 (hfsr & SCB_HFSR_DEBUGEVT) ? " DEBUGEVT" : "",
+			 (hfsr & SCB_HFSR_FORCED) ?  " FORCED" : "",
+			 (hfsr & SCB_HFSR_VECTTBL) ? " VECTTBL" : "");
+
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			ctx->xpsr, msp, psp, lr);
+
+	DCC_LOG1(LOG_ERROR, "HFSR=%08x", scb->hfsr);
+	DCC_LOG1(LOG_ERROR, "CFSR=%08x", scb->cfsr);
+	DCC_LOG1(LOG_ERROR, "BFAR=%08x", scb->bfar);
+
+	if (hfsr & SCB_HFSR_FORCED) {
+		uint32_t bfsr;
+		uint32_t ufsr;
+
+		bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
+		ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
+		(void)bfsr;
+		(void)ufsr;
+
+		DCC_LOG1(LOG_ERROR, "BFSR=%08X", bfsr);
+		if (bfsr) {
+			DCC_LOG7(LOG_ERROR, "    %s%s%s%s%s%s%s", 
+					 (bfsr & BFSR_BFARVALID) ? " BFARVALID" : "",
+					 (bfsr & BFSR_LSPERR) ? " LSPERR" : "",
+					 (bfsr & BFSR_STKERR) ? " STKERR" : "",
+					 (bfsr & BFSR_UNSTKERR) ?  " INVPC" : "",
+					 (bfsr & BFSR_IMPRECISERR) ?  " IMPRECISERR" : "",
+					 (bfsr & BFSR_PRECISERR) ?  " PRECISERR" : "",
+					 (bfsr & BFSR_IBUSERR)  ?  " IBUSERR" : "");
+		}
+
+		DCC_LOG1(LOG_ERROR, "UFSR=%08X", ufsr);
+		if (ufsr) {
+			DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
+					 (ufsr & UFSR_DIVBYZERO)  ? " DIVBYZERO" : "",
+					 (ufsr & UFSR_UNALIGNED)  ? " UNALIGNED" : "",
+					 (ufsr & UFSR_NOCP)  ? " NOCP" : "",
+					 (ufsr & UFSR_INVPC)  ? " INVPC" : "",
+					 (ufsr & UFSR_INVSTATE)  ? " INVSTATE" : "",
+					 (ufsr & UFSR_UNDEFINSTR)  ? " UNDEFINSTR" : "");
+		}
+	}
+
+
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Hard fault:");
+
+	if (hfsr & SCB_HFSR_DEBUGEVT)  
+		fprintf(stderr, " DEBUGEVT");
+	if (hfsr & SCB_HFSR_FORCED)  
+		fprintf(stderr, " FORCED");
+	if (hfsr & SCB_HFSR_VECTTBL)  
+		fprintf(stderr, " VECTTBL");
+
+	if (hfsr & SCB_HFSR_DEBUGEVT)  
+		fprintf(stderr, " DEBUGEVT");
+
+	fprintf(stderr, "\n");
+
+	if (hfsr & SCB_HFSR_FORCED) {
+		__dump_bfsr();
+		fprintf(stderr, "\n");
+		__dump_ufsr();
+		fprintf(stderr, "\n");
+	}
+
+	for(;;);
+
+	thinkos_context_show(ctx, sp, msp, psp);
+}
+
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+{
+	struct thinkos_context * ctx;
 	uint32_t msp;
 	uint32_t psp;
 	uint32_t lr;
@@ -208,40 +300,9 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 	msp = cm3_msp_get();
 	psp = cm3_psp_get();
 
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
 	cm3_faultmask_set(1);
 
-	fprintf(stderr, "---\n");
-	fprintf(stderr, "Hard fault:");
-
-	hfsr = scb->hfsr;
-
-	if (hfsr & SCB_HFSR_DEBUGEVT)  
-		fprintf(stderr, " DEBUGEVT");
-	if (hfsr & SCB_HFSR_FORCED)  
-		fprintf(stderr, " FORCED");
-	if (hfsr & SCB_HFSR_VECTTBL)  
-		fprintf(stderr, " VECTTBL");
-
-	fprintf(stderr, "\n");
-
-	if (hfsr & SCB_HFSR_FORCED) {
-		__dump_bfsr();
-		fprintf(stderr, "\n");
-		__dump_ufsr();
-		fprintf(stderr, "\n");
-	}
-
-	thinkos_context_show(ctx, sp, msp, psp);
-
-	DCC_LOG(LOG_ERROR, "Hard fault!");
-	DCC_LOG1(LOG_ERROR, "HFSR=0x%08x", scb->hfsr);
-	DCC_LOG1(LOG_ERROR, "CFSR=0x%08x", scb->cfsr);
-	DCC_LOG1(LOG_ERROR, "BFAR=0x%08x", scb->bfar);
+	hard_fault(ctx, msp, psp, lr);
 
 	thinkos_exception_dsr(ctx);
 

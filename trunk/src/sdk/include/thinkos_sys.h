@@ -480,7 +480,7 @@ struct thinkos_idle {
 } __attribute__ ((aligned (8)));
 
 struct thinkos_except_and_idle {
-	uint32_t res1[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
+	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
 	union {
 		struct thinkos_context ctx;
 		struct {
