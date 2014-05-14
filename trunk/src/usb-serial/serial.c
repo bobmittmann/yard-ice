@@ -38,7 +38,7 @@
 
 #include <sys/dcclog.h>
 
-#define UART_TX_FIFO_BUF_LEN 256
+#define UART_TX_FIFO_BUF_LEN 64
 #define UART_RX_FIFO_BUF_LEN 64
 
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
