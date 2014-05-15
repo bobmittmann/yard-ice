@@ -27,9 +27,9 @@ CFILES = usb-serial.c serial.c pfclock.c leds.c xmodem_rcv.c xmodem_snd.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv ../sdk/libcdc-acm
+		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm
+LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty
 
 INCPATH = ../sdk/include 
 

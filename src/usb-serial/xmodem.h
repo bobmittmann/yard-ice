@@ -23,6 +23,17 @@
 #ifndef __XMODEM_H__
 #define __XMODEM_H__
 
+
+struct comm_ops {
+	int  (* send)(void *, const void *, unsigned int);
+	int  (* recv)(void *, void *, unsigned int, unsigned int);
+};
+
+struct comm_dev {
+	void * arg;
+	struct comm_ops op;
+};
+
 #ifndef XMODEM_TMOUT_TICK_MS 
 #define XMODEM_TMOUT_TICK_MS 250
 #endif
@@ -36,9 +47,6 @@ enum {
 	XMODEM_STD = 0,
 	XMODEM_1K = 1
 };
-
-#define XMODEM_CKS_BUF_SIZE 128
-#define XMODEM_CRC_BUF_SIZE 1024
 
 enum {
 	XMODEM_RCV_IDLE = 0,
@@ -55,9 +63,13 @@ enum {
 };
 
 struct xmodem_rcv {
+	struct comm_dev comm;
+
 	char * buf;
 
 	signed char mode;
+	unsigned char sync;
+
 	unsigned char state;
 	unsigned char pktno;
 	unsigned char cks;
@@ -72,6 +84,14 @@ struct xmodem_rcv {
 
 	signed short tmout;
 	unsigned short pos;	
+
+	unsigned short data_len;
+	unsigned short data_pos;
+	struct { 
+		unsigned char hdr[3];
+		unsigned char data[1024];
+		unsigned char crc[2];
+	} pkt;
 };
 
 #define XMODEM_INIT_ERR -5
@@ -92,18 +112,8 @@ enum {
 	XMODEM_SND_CKS = 2
 };
 
-struct comm_ops {
-	int  (* send)(void *, const void *, unsigned int);
-	int  (* recv)(void *, void *, unsigned int, unsigned int);
-};
-
-struct xmodem_comm {
-	void * arg;
-	struct comm_ops op;
-};
-
 struct xmodem_snd {
-	struct xmodem_comm comm;
+	struct comm_dev comm;
 
 	unsigned char seq;
 	unsigned char state;
@@ -116,23 +126,26 @@ struct xmodem_snd {
 		unsigned char data[1024];
 		unsigned char crc[2];
 	} pkt;
-
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int xmodem_rcv_init(struct xmodem_rcv * xp, char * buf, int mode);
+int xmodem_rcv_init(struct xmodem_rcv * xp, const struct comm_dev * comm, 
+					int mode);
+
+int xmodem_rcv_loop(struct xmodem_rcv * rx, void * data, int len);
+
+int xmodem_rcv_cancel(struct xmodem_rcv * rx);
+
 
 int xmodem_rcv(struct xmodem_rcv * xp, int * cp);
 
-int xmodem_rcv_cancel(struct xmodem_rcv * xp);
 
 
-
-int xmodem_snd_init(struct xmodem_snd * sx, 
-					const struct xmodem_comm * comm, unsigned int mode);
+int xmodem_snd_init(struct xmodem_snd * sx, const struct comm_dev * comm, 
+					unsigned int mode);
 
 int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len);
 
