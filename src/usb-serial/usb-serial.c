@@ -442,6 +442,33 @@ int serial_recv_task(struct vcom * vcom)
 	return 0;
 }
 
+
+struct xmodem_snd sx;
+
+int serial_xmodem_send(struct serial_dev * serial)
+{
+	struct xmodem_comm xc;
+	char data[8] = "Hello!";
+	int ret;
+	int i;
+
+	xc.arg = serial;
+	xc.op.send = (int (*)(void *, const void *, unsigned int))serial_write;
+	xc.op.recv = (int (*)(void *, void *, 
+						  unsigned int, unsigned int))serial_read;
+
+	DCC_LOG(LOG_TRACE, "........................");
+
+	xmodem_snd_init(&sx, &xc, XMODEM_1K);
+
+	for (i = 0; i < 8192; ++i) {
+		if ((ret = xmodem_snd_loop(&sx, data, 8)) < 0)
+			return ret;
+	}
+
+	return xmodem_snd_eot(&sx);
+}
+
 int serial_ctrl_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
@@ -538,12 +565,12 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
-#endif
 
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[1],
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(2));
 
+#endif
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[1],
 						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
@@ -555,9 +582,12 @@ int main(int argc, char ** argv)
 	usb_vbus(true);
 
 	for (i = 0; ; ++i) {
-		thinkos_sleep(1000);
+		thinkos_sleep(5000);
 //		vcom_xmodem_recv(vcom);
+
 		DCC_LOG1(LOG_TRACE, "tick %d.", i);
+
+		serial_xmodem_send(vcom[1].serial);
 	}
 
 	return 0;

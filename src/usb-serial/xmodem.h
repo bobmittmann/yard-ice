@@ -29,7 +29,12 @@
 
 enum {
 	XMODEM_MODE_CKS = 0,
-	XMODEM_MODE_CRC = 1
+	XMODEM_MODE_CRC = 1,
+};
+
+enum {
+	XMODEM_STD = 0,
+	XMODEM_1K = 1
 };
 
 #define XMODEM_CKS_BUF_SIZE 128
@@ -52,7 +57,7 @@ enum {
 struct xmodem_rcv {
 	char * buf;
 
-	unsigned char mode;
+	signed char mode;
 	unsigned char state;
 	unsigned char pktno;
 	unsigned char cks;
@@ -76,38 +81,43 @@ struct xmodem_rcv {
 #define XMODEM_CANCEL -1
 #define XMODEM_OK 0
 
-
-struct xmodem_snd {
-	char * buf;
-
-	char mode;
-	char state;
-	unsigned char pktno;
-	unsigned char cks;
-	
-	unsigned char seq;
-	unsigned char nseq;
-	signed char retry;
-	signed char again;
-
-	unsigned short crc;
-	unsigned short count;
-
-	unsigned short tmout;
-	unsigned short pos;	
+enum {
+	XMODEM_AGAIN = -1,
+	XMODEM_EOT = 0
 };
 
-#define XMODEM_SND_IDLE 0
-#define XMODEM_SND_DATA 1
-#define XMODEM_SND_EOT 2 
-#define XMODEM_SND_START 3
-#define XMODEM_SND_STX 4
-#define XMODEM_SND_SEQ 5
-#define XMODEM_SND_NSEQ 6
-#define XMODEM_SND_CKS 7
-#define XMODEM_SND_CRC1 8
-#define XMODEM_SND_CRC2 9
-#define XMODEM_SND_ABORT 10
+enum {
+	XMODEM_SND_IDLE = 0,
+	XMODEM_SND_CRC = 1,
+	XMODEM_SND_CKS = 2
+};
+
+struct comm_ops {
+	int  (* send)(void *, const void *, unsigned int);
+	int  (* recv)(void *, void *, unsigned int, unsigned int);
+};
+
+struct xmodem_comm {
+	void * arg;
+	struct comm_ops op;
+};
+
+struct xmodem_snd {
+	struct xmodem_comm comm;
+
+	unsigned char seq;
+	unsigned char state;
+	unsigned char mode;
+	unsigned short data_len;
+	unsigned short data_max;
+
+	struct { 
+		unsigned char hdr[3];
+		unsigned char data[1024];
+		unsigned char crc[2];
+	} pkt;
+
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,11 +130,16 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp);
 int xmodem_rcv_cancel(struct xmodem_rcv * xp);
 
 
-int xmodem_snd_init(struct xmodem_snd * xp, char * buf, int mode);
 
-int xmodem_snd(struct xmodem_snd * xp, int * cp);
+int xmodem_snd_init(struct xmodem_snd * sx, 
+					const struct xmodem_comm * comm, unsigned int mode);
 
-int xmodem_snd_cancel(struct xmodem_snd * xp);
+int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len);
+
+int xmodem_snd_cancel(struct xmodem_snd * sx);
+
+int xmodem_snd_eot(struct xmodem_snd * sx);
+
 
 #ifdef __cplusplus
 }
