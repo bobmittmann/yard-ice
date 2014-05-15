@@ -98,17 +98,19 @@ struct serial_dev {
 int serial_read(struct serial_dev * dev, char * buf, 
 				unsigned int len, unsigned int msec)
 {
-
 	char * cp = (char *)buf;
 	int n = 0;
 	int c;
+	int ret;
 
 	DCC_LOG(LOG_INFO, "read");
 
 	__thinkos_flag_clr(dev->rx_flag);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_INFO, "wait...");
-		thinkos_flag_wait(dev->rx_flag);
+		ret = thinkos_flag_timedwait(dev->rx_flag, msec);
+		if (ret < 0)
+			return ret;
 		__thinkos_flag_clr(dev->rx_flag);
 		DCC_LOG(LOG_INFO, "wakeup.");
 	}

@@ -21,11 +21,15 @@
  */
 
 
+#include <sys/param.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 #include <xmodem.h>
 #include <crc.h>
 #include <errno.h>
-#include <sys/param.h>
-#include <stdlib.h>
+
+#include <sys/dcclog.h>
 
 #define SOH  0x01
 #define STX  0x02
@@ -34,18 +38,15 @@
 #define NAK  0x15
 #define CAN  0x18
 
-#include <sys/dcclog.h>
-
 #define XMODEM_SND_TMOUT_MS 2000
 
 int xmodem_snd_init(struct xmodem_snd * sx, 
-					const struct xmodem_comm * comm, unsigned int mode)
+					const struct comm_dev * comm, unsigned int mode)
 {
-	sx->comm = *comm;
-
 	if ((sx == NULL) || (comm == NULL) || (mode > XMODEM_1K))
 		return -EINVAL;
 
+	sx->comm = *comm;
 	sx->mode = mode;
 	sx->data_max = (sx->mode == XMODEM_1K) ? 1024 : 128;
 	sx->data_len = 0;
@@ -53,6 +54,8 @@ int xmodem_snd_init(struct xmodem_snd * sx,
 	sx->state = XMODEM_SND_IDLE;
 
 	DCC_LOG(LOG_TRACE, "[IDLE]");
+
+	printf("%s: [IDLE]\n", __func__);
 
 	return 0;
 }
@@ -63,6 +66,7 @@ int xmodem_snd_cancel(struct xmodem_snd * sx)
 	int ret;
 
 	DCC_LOG(LOG_TRACE, "[CAN]");
+	printf("%s: [CAN]\n", __func__);
 
 	buf[0] = CAN;
 	
@@ -88,15 +92,24 @@ static int xmodem_send_pkt(struct xmodem_snd * sx)
 	int c;
 
 	if (sx->state == XMODEM_SND_IDLE) {
+
+		printf("%s: idle\n", __func__);
+
 		for (;;) {
 			DCC_LOG(LOG_TRACE, "waiting");
+		
+			printf("%s: waiting\n", __func__);
 
 			// Wait for NAK or 'C'
 			if ((ret = sx->comm.op.recv(sx->comm.arg, buf, 
 										1, XMODEM_SND_TMOUT_MS)) < 0) {
+			
+				printf("%s: comm err: %d\n", __func__, ret);
 				return ret;
 			}
 			c = buf[0];
+
+			printf("%s: c=%02x\n", __func__, c);
 
 			if (c == CAN) {
 				DCC_LOG(LOG_TRACE, "[CAN]");
@@ -193,12 +206,15 @@ int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
 	if ((src == NULL) || (len < 0))
 		return -EINVAL;
 
+//	printf("%s: len=%d\n", __func__, len);
+
 	do {
 		unsigned char * dst;
 		int ret;
 		int rem;
 		int n;
 		int i;
+
 
 		dst = &sx->pkt.data[sx->data_len];
 		rem = sx->data_max - sx->data_len;
@@ -210,6 +226,7 @@ int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
 		sx->data_len += n;
 
 		if (sx->data_len == sx->data_max) {
+			printf("%s: xmit\n", __func__);
 			if ((ret = xmodem_send_pkt(sx)) < 0)
 				return ret;
 		}

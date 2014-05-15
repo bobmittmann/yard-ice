@@ -21,6 +21,10 @@
  */
 
 
+#include <sys/param.h>
+#include <stdlib.h>
+#include <errno.h>
+
 #include <xmodem.h>
 #include <crc.h>
 
@@ -35,27 +39,7 @@
 
 #define XMODEM_RCV_TMOUT_MS 2000
 
-int xmodem_rcv_init(struct xmodem_rcv * xp, char * buf, int mode)
-{
-	xp->state = XMODEM_RCV_IDLE;
-	xp->mode = mode;
-	xp->buf = buf;
-	xp->pktno = 1;
-
-	return 0;
-}
-
-int xmodem_rcv_cancel(struct xmodem_rcv * xp)
-{
-	xp->again = 3;
-	xp->state = XMODEM_RCV_ABORT;
-	/* the retry field is used to store the return error code */
-	xp->retry = XMODEM_CANCEL;
-
-	return 0;
-}
-
-const char rx_state_name[][4] = {
+static const char rx_state_name[][4] = {
 	"IDL",
 	"DAT",
 	"EOT",
@@ -68,6 +52,35 @@ const char rx_state_name[][4] = {
 	"CR2",
 	"ABT"
 };
+
+int xmodem_rcv_init(struct xmodem_rcv * rx, const struct comm_dev * comm, 
+					int mode)
+{
+	if ((rx == NULL) || (comm == NULL) || (mode > XMODEM_1K))
+		return -EINVAL;
+
+	rx->comm = *comm;
+
+	rx->state = XMODEM_RCV_IDLE;
+	rx->mode = mode;
+	rx->pktno = 1;
+	rx->sync = (rx->mode) ? 'C' : NAK;
+	rx->retry = 10;
+	rx->data_len = 0;
+	rx->data_pos = 0;
+
+	return 0;
+}
+
+int xmodem_rcv_cancel(struct xmodem_rcv * rx)
+{
+	rx->again = 3;
+	rx->state = XMODEM_RCV_ABORT;
+	/* the retry field is used to store the return error code */
+	rx->retry = XMODEM_CANCEL;
+
+	return 0;
+}
 
 int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 {
@@ -95,7 +108,7 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 			printf("\nSTX ");
 #endif
 			xp->tmout = XMODEM_RCV_TMOUT_MS;
-			xp->count = XMODEM_CRC_BUF_SIZE;
+			xp->count = 1024;
 			xp->state = XMODEM_RCV_SEQ;
 			DCC_LOG1(LOG_INFO, "[%s]", rx_state_name[xp->state]);
 			return XMODEM_RCV_SYNC;
@@ -106,7 +119,7 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 			printf("\nSOH ");
 #endif
 			xp->tmout = XMODEM_RCV_TMOUT_MS;
-			xp->count = XMODEM_CKS_BUF_SIZE;
+			xp->count = 128;
 			xp->state = XMODEM_RCV_SEQ;
 			DCC_LOG1(LOG_INFO, "[%s]", rx_state_name[xp->state]);
 			return XMODEM_RCV_SYNC;
@@ -143,7 +156,7 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 			printf("\nSTX ");
 #endif
 			xp->tmout = XMODEM_RCV_TMOUT_MS;
-			xp->count = XMODEM_CRC_BUF_SIZE;
+			xp->count = 1024;
 			xp->cks = 0;
 			xp->crc = 0;
 			xp->pos = 0;
@@ -157,7 +170,7 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 			printf("\nSOH ");
 #endif
 			xp->tmout = XMODEM_RCV_TMOUT_MS;
-			xp->count = XMODEM_CKS_BUF_SIZE;
+			xp->count = 128;
 			xp->cks = 0;
 			xp->crc = 0;
 			xp->pos = 0;
@@ -365,4 +378,193 @@ int xmodem_rcv(struct xmodem_rcv * xp, int * cp)
 
 	return XMODEM_OK;
 }
+
+int xmodem_rcv_pkt(struct xmodem_rcv * rx)
+{
+	unsigned char * pkt = rx->pkt.hdr;
+	unsigned char * cp;
+	int ret = 0;
+	int cnt = 0;
+	int nseq;
+	int seq;
+	int rem;
+
+	for (;;) {
+		DCC_LOG(LOG_INFO,"SYN");
+
+		if ((ret = rx->comm.op.send(rx->comm.arg, &rx->sync, 1)) < 0) {
+			return ret;
+		}
+
+		for (;;) {
+			int c;
+
+			ret = rx->comm.op.recv(rx->comm.arg, pkt, 1, 2000);
+
+			if (ret == -ETIMEDOUT)
+				goto timeout;
+
+			if (ret < 0)
+				return ret;
+
+			c = pkt[0];
+
+			if (c == STX) {
+				DCC_LOG(LOG_INFO,"STX");
+				cnt = 1024;
+				break;
+			}
+
+			if (c == SOH) {
+				DCC_LOG(LOG_INFO,"SOH");
+				cnt = 128;
+				break;
+			}
+
+			if (c == EOT) {
+				DCC_LOG(LOG_INFO,"EOT");
+				/* end of transmission */
+				pkt[0] = ACK;
+				if ((ret = rx->comm.op.send(rx->comm.arg, pkt, 1)) < 0)
+					return ret;
+				return 0;
+			}
+		}
+
+		rem = cnt + (rx->mode) ? 4 : 3;
+		cp = pkt + 1;
+
+		/* receive the packet */
+		while (rem) {
+
+			ret = rx->comm.op.recv(rx->comm.arg, cp, rem, 500);
+			if (ret == 	-ETIMEDOUT)
+				goto timeout;
+			if (ret < 0)
+				return ret;
+
+			rem -= ret;
+			cp += ret;
+		}
+
+		/* sequence */
+		seq = pkt[1];
+		/* inverse sequence */
+		nseq = pkt[2];
+
+		if (seq != ((~nseq) & 0xff)) {
+			DCC_LOG2(LOG_WARNING, "SEQ: %d != NSEQ: %d", seq, nseq);
+			goto error;
+		}
+
+		cp = &pkt[3];
+
+		if (rx->mode) {
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+				crc = CRC16CCITT(crc, cp[i]);
+
+			cmp = cp[i] << 8 | cp[i + 1];
+
+			if (cmp != crc)
+				goto error;
+
+		} else {
+			unsigned char cks = 0;
+			int i;
+
+			for (i = 0; i < rx->data_len; ++i)
+				cks += cp[i];
+
+			if (cp[i] != cks)
+				goto error;
+		}
+
+
+		if (seq == ((rx->pktno - 1) & 0xff)) {
+			/* retransmission */
+			DCC_LOG(LOG_TRACE, "RET");
+			rx->sync = ACK;
+			continue;
+		}
+
+		if (seq != rx->pktno) {
+			DCC_LOG2(LOG_TRACE, "SEQ: %d != %d", seq, rx->pktno);
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+		rx->retry = 10;
+		rx->sync = ACK;
+		rx->data_len = cnt;
+		rx->data_pos = 0;
+		DCC_LOG(LOG_INFO, "ACK");
+
+		return cnt;
+
+error:
+		/* flush */
+		while (rx->comm.op.recv(rx->comm.arg, pkt, 1024, 200) > 0);
+		rx->sync = NAK;
+		DCC_LOG(LOG_TRACE, "NACK");
+
+timeout:
+		if ((--rx->retry) == 0) {
+			/* too many errors */
+			ret = -1;
+			break;
+		}
+	}
+
+	DCC_LOG(LOG_TRACE, "ABT!");
+
+	pkt[0] = CAN;
+	pkt[1] = CAN;
+	pkt[2] = CAN;
+
+	rx->comm.op.send(rx->comm.arg, pkt, 3);
+
+	return ret;
+}
+
+
+
+int xmodem_rcv_loop(struct xmodem_rcv * rx, void * data, int len)
+{
+	unsigned char * dst = (unsigned char *)data;
+	int rem;
+	int ret;
+
+	if ((dst == NULL) || (len <= 0))
+		return -EINVAL;
+
+	//	printf("%s: len=%d\n", __func__, len);
+
+	do {
+		if ((rem = (rx->data_len - rx->data_pos)) > 0) {
+			unsigned char * src;
+			int n;
+			int i;
+
+			n = MIN(rem, len);
+			src = &rx->pkt.data[rx->data_pos];
+
+			for (i = 0; i < n; ++i)
+				dst[i] = src[i];
+
+			rx->data_pos += n;
+
+			return n;
+		}
+
+		ret = xmodem_rcv_pkt(rx);
+
+	} while (ret > 0);
+
+	return ret;
+}
+
 

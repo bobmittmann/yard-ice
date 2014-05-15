@@ -22,11 +22,12 @@ ifndef TOOLSDIR
   $(error TOOLSDIR undefined!)
 endif	
 
-TFTPLOAD = $(TOOLSDIR)/tftp_load.sh 
+TFTPLOAD = $(TOOLSDIR)/tftp_load.py
+TFTRESET = $(TOOLSDIR)/tftp_reset.py
 DCCLOGVIEW = $(TOOLSDIR)/dcclog
 
 ifndef JTAGTOOL_ADDR
-  JTAGTOOL_ADDR = "192.168.1.30"
+  JTAGTOOL_ADDR = "192.168.0.128"
 endif
 
 ifndef LOAD_ADDR
@@ -35,15 +36,15 @@ endif
 
 jtagload: $(PROG_BIN) $(TFTPLOAD)
 	$(ACTION) "Loading: $@"
-	$(Q)$(TFTPLOAD) -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) -r $(PROG_BIN) 
+	$(Q)$(TFTPLOAD) -q -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) -r $(PROG_BIN) 
 
 jtagreset: $(TFTPRESET)
 	$(ACTION) "Reseting target..."
-	$(Q)$(TFTPRESET) -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) 
+	$(Q)$(TFTPRESET) -q -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) 
 
 jtagrun: $(TFTPRUN)
 	$(ACTION) "Running ..."
-	$(Q)$(TFTPRUN) -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) 
+	$(Q)$(TFTPRUN) -q -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) 
 
 logview: $(PROG_ELF)
 	$(ACTION) "DCC Logview: $@"
