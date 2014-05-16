@@ -34,86 +34,35 @@ struct comm_dev {
 	struct comm_ops op;
 };
 
-#ifndef XMODEM_TMOUT_TICK_MS 
-#define XMODEM_TMOUT_TICK_MS 250
-#endif
-
 enum {
-	XMODEM_MODE_CKS = 0,
-	XMODEM_MODE_CRC = 1,
-};
-
-enum {
-	XMODEM_STD = 0,
-	XMODEM_1K = 1
-};
-
-enum {
-	XMODEM_RCV_IDLE = 0,
-	XMODEM_RCV_DATA,
-	XMODEM_RCV_EOT,
-	XMODEM_RCV_SYNC,
-	XMODEM_RCV_STX,
-	XMODEM_RCV_SEQ,
-	XMODEM_RCV_NSEQ,
-	XMODEM_RCV_CKS,
-	XMODEM_RCV_CRC1,
-	XMODEM_RCV_CRC2,
-	XMODEM_RCV_ABORT
+	XMODEM_RCV_CKS = 0,
+	XMODEM_RCV_CRC = 1,
 };
 
 struct xmodem_rcv {
-	struct comm_dev comm;
-
-	char * buf;
+	const struct comm_dev * comm;
 
 	signed char mode;
 	unsigned char sync;
-
-	unsigned char state;
 	unsigned char pktno;
-	unsigned char cks;
-	
-	unsigned char seq;
-	unsigned char nseq;
-	signed char retry;
-	signed char again;
-
-	unsigned short crc;
-	unsigned short count;
-
-	signed short tmout;
-	unsigned short pos;	
+	unsigned char retry;
 
 	unsigned short data_len;
 	unsigned short data_pos;
 	struct { 
 		unsigned char hdr[3];
 		unsigned char data[1024];
-		unsigned char crc[2];
+		unsigned char fcs[2];
 	} pkt;
 };
 
-#define XMODEM_INIT_ERR -5
-#define XMODEM_RETRANS_ERR -4
-#define XMODEM_RETRY_ERR -3
-#define XMODEM_SYNC_ERR -2
-#define XMODEM_CANCEL -1
-#define XMODEM_OK 0
-
 enum {
-	XMODEM_AGAIN = -1,
-	XMODEM_EOT = 0
-};
-
-enum {
-	XMODEM_SND_IDLE = 0,
-	XMODEM_SND_CRC = 1,
-	XMODEM_SND_CKS = 2
+	XMODEM_SND_STD = 0,
+	XMODEM_SND_1K = 1
 };
 
 struct xmodem_snd {
-	struct comm_dev comm;
+	const struct comm_dev * comm;
 
 	unsigned char seq;
 	unsigned char state;
@@ -124,7 +73,6 @@ struct xmodem_snd {
 	struct { 
 		unsigned char hdr[3];
 		unsigned char data[1024];
-		unsigned char crc[2];
 	} pkt;
 };
 
