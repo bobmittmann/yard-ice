@@ -272,7 +272,11 @@ struct stm32f_flash {
 	volatile uint32_t optkeyr;  /* option key register */
 	volatile uint32_t sr;       /* status register */
 	volatile uint32_t cr;       /* control register */
+#if defined(STM32F1X) || defined(STM32F3X)
+	volatile uint32_t ar;    /* flash address register */
+#else
 	volatile uint32_t optcr;    /* option control register */
+#endif
 };
 
 #endif /* __ASSEMBLER__ */

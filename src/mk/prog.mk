@@ -88,7 +88,10 @@ INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
 #$(info OS = '$(OS)')
 #$(info OSTYPE = '$(OSTYPE)')
 #$(info HOST = '$(HOST)')
+#$(info CC = '$(CC)')
+#$(info SRCDIR = '$(SRCDIR)')
 #$(info DIRMODE = '$(DIRMODE)')
+#$(info INCPATH = '$(INCPATH)')
 #$(info LIBDIRS = '$(LIBDIRS)')
 #$(info DDIRS = '$(DDIRS)')
 #$(info INCPATH = '$(INCPATH)')
@@ -278,7 +281,7 @@ $(ODIRS):
 ifeq ($(HOST),Windows)
 	$(Q)$(MKDIR) $(subst /,\,$@)
 else
-	-$(Q)$(MKDIR) $@
+	$(Q)$(MKDIR) $@
 endif
 
 $(DDIRS):
@@ -286,8 +289,7 @@ $(DDIRS):
 ifeq ($(HOST),Windows)
 	$(Q)$(MKDIR) $(subst /,\,$@)
 else
-	echo $(Q)$(MKDIR) $@ 
-	-$(Q)$(MKDIR) $@ 
+	$(Q)$(MKDIR) $@ 
 endif
 
 $(LIBDIRS_ALL): | $(ODIRS)
@@ -302,6 +304,10 @@ ifdef VERSION_MAJOR
   include $(SCRPTDIR)/version.mk
 endif
 
+include $(SCRPTDIR)/cc.mk
+
+include $(SCRPTDIR)/jtag.mk
+
 #
 # FIXME: automatic dependencies are NOT included in Cygwin.
 # The dependencie files must have the paths converted
@@ -312,7 +318,4 @@ ifneq ($(HOST),Cygwin)
 endif
 
 
-include $(SCRPTDIR)/cc.mk
-
-include $(SCRPTDIR)/jtag.mk
 

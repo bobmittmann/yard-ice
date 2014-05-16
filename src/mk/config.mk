@@ -28,17 +28,17 @@ ifndef SCRPTDIR
 endif	
 
 ifndef TOOLSDIR
-  TOOLSDIR := $(realpath $(THISDIR)/../../tools)
+  TOOLSDIR := $(realpath $(BASEDIR)/../tools)
 endif	
-
-export LDDIR TOOLSDIR
 
 #------------------------------------------------------------------------------ 
 # ld scripts
 #------------------------------------------------------------------------------ 
 ifndef LDDIR
-  LDDIR := $(realpath $(THISDIR)/../ld)
+  LDDIR := $(realpath $(BASEDIR)/ld)
 endif	
+
+SRCDIR := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))
 
 #------------------------------------------------------------------------------ 
 # default output directories
@@ -150,7 +150,7 @@ ifeq ($(HOST),Windows)
  RMALL := del /F /Q 
  CP := copy 
  MV := ren
- MKDIR := mkdir
+ MKDIR := -mkdir
  ECHO := echo
  DEVNULL := NUL:
 else

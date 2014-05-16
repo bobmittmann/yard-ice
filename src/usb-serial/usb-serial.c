@@ -482,6 +482,17 @@ int usb_console(struct usb_cdc_class * cdc)
 			pin5_sel_input();
 			break;
 
+		case 'e':
+			printf("Erasing memory\n");
+			stm32f_flash_erase(32768, 32768);
+			break;
+
+		case 'p':
+			printf("Programming memory\n");
+			stm32f_flash_write(32768, "Hello world!", 12);
+			break;
+
+
 		default:
 			printf("-------------\n");
 		}

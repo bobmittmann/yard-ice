@@ -26,6 +26,131 @@
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <arch/cortex-m3.h>
+#include <sys/dcclog.h>
+
+#ifdef STM32F1X
+
+#define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
+
+const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
+const uint32_t __flash_size;
+
+int __attribute__((section (".data#"))) 
+	stm32f10x_flash_blk_erase(struct stm32f_flash * flash, uint32_t addr)
+{
+	uint32_t pri;
+	uint32_t sr;
+	int again;
+	int ret = -1;
+
+	pri = cm3_basepri_get();
+	cm3_basepri_set(0x01);
+
+	flash->cr = FLASH_SER;
+	flash->ar = addr;
+	flash->cr = FLASH_STRT | FLASH_SER;
+
+	for (again = 4096 * 32; again > 0; again--) {
+		sr = flash->sr;
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
+			break;
+		}
+	}
+
+	cm3_basepri_set(pri);
+
+	return ret;
+}
+
+int stm32f_flash_erase(unsigned int offs, int len)
+{
+	struct stm32f_flash * flash = STM32F_FLASH;
+	uint32_t addr;
+	uint32_t cr;
+
+	addr = __flash_base + offs;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
+
+	cr = flash->cr;
+	if (cr & FLASH_LOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+		flash->keyr = FLASH_KEY2;
+	}
+
+	stm32f10x_flash_blk_erase(flash, addr);
+
+	return len;
+}
+
+int __attribute__((section (".data#"))) 
+	stm32f10x_flash_wr16(struct stm32f_flash * flash,
+						 uint16_t volatile * addr, uint16_t data)
+{
+	uint32_t pri;
+	uint32_t sr;
+	int again;
+	int ret = -1;
+
+	pri = cm3_basepri_get();
+	cm3_basepri_set(0x01);
+
+	flash->cr = FLASH_PG;
+	*addr = data;
+	
+	for (again = 4096 * 32; again > 0; again--) {
+		sr = flash->sr;
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
+			break;
+		}
+	}
+
+	cm3_basepri_set(pri);
+
+	return ret;
+}
+
+int stm32f_flash_write(uint32_t offs, const void * buf, int len)
+{
+	struct stm32f_flash * flash = STM32F_FLASH;
+	uint16_t data;
+	uint32_t addr;
+	uint8_t * ptr;
+	uint32_t cr;
+	int n;
+	int i;
+
+	n = (len + 1) / 2;
+
+	ptr = (uint8_t *)buf;
+	addr = __flash_base + offs;
+
+	cr = flash->cr;
+	if (cr & FLASH_LOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+		flash->keyr = FLASH_KEY2;
+	}
+
+
+	DCC_LOG2(LOG_TRACE, "0x%08x len=%d", addr, len);
+
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8);
+		stm32f10x_flash_wr16(flash, (void *)addr, data);
+		ptr += 2;
+		addr += 2;
+	}
+	
+	return n * 2;
+}
+
+#endif
 
 #if 0
 int stm32f_flash_erase(cm3ice_ctrl_t * ctrl, uint32_t base, 
