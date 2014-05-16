@@ -63,7 +63,7 @@ $(OUTDIR)/%.o : $(OUTDIR)/%.s $(DEPDIR)/%.d
 # The make uses UNIX paths but the compiler uses Windows paths ????
 #
 
-$(DEPDIR)/%.d : %.c
+$(DEPDIR)/%.d : $(SRCDIR)/%.c
 	$(ACTION) "DEP .c 1: $@"
 ifeq ($(HOST),Cygwin)
 	$(Q)$(compile) -MT $(subst \,\\,$(shell cygpath -w $@)) -MD -MP -MM -c -o $(subst \,\\,$(shell cygpath -w $@)) $<
@@ -79,7 +79,7 @@ $(DEPDIR)/%.d : %.s
 	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
-$(OUTDIR)/%.o : %.c $(DEPDIR)/%.d
+$(OUTDIR)/%.o : $(SRCDIR)/%.c $(DEPDIR)/%.d
 	$(ACTION) "CC 1: $@"
 ifeq ($(HOST),Cygwin)
 	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<

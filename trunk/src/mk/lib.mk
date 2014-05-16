@@ -113,7 +113,9 @@ ifeq (Windows,$(HOST))
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
-#$(info ODIRS= '$(ODIRS)')
+#$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
+#$(info SRCDIR = '$(firstword $(SRCDIR))')
+#$(info ODIRS = '$(ODIRS)')
 #$(info OS = '$(OS)')
 #$(info OSTYPE = '$(OSTYPE)')
 #$(info HOST = '$(HOST)')

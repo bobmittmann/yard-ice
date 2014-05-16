@@ -27,8 +27,7 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
-#define LED1_IO STM32F_GPIOA, 6
-#define LED2_IO STM32F_GPIOA, 7
+#include "board.h"
 
 int8_t led_flag;
 volatile uint8_t led1_flash_head;

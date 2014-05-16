@@ -261,6 +261,15 @@ void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
 		struct usb_descriptor_endpoint * desc);
 #endif
 
+/*---------------------------------------------------------------------
+ * Flash Memory
+ *---------------------------------------------------------------------*/
+
+int stm32f_flash_erase(unsigned int offs, int len);
+
+int stm32f_flash_write(uint32_t offs, const void * buf, int len);
+
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __SYS_STM32F_H__ */

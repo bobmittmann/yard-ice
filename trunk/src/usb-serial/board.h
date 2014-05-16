@@ -59,6 +59,10 @@
 #define USART2_TX STM32F_GPIOA, 2
 #define USART1_TX STM32F_GPIOA, 9
 
+/* LEDs */
+#define LED1_IO STM32F_GPIOA, 6
+#define LED2_IO STM32F_GPIOA, 7
+
 
 #ifdef __cplusplus
 extern "C" {
