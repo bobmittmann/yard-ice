@@ -28,6 +28,7 @@
 #include <xmodem.h>
 #include <crc.h>
 #include <errno.h>
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
@@ -40,22 +41,30 @@
 
 #define XMODEM_SND_TMOUT_MS 2000
 
+enum {
+	XMODEM_SND_IDLE = 0,
+	XMODEM_SND_CRC = 1,
+	XMODEM_SND_CKS = 2
+};
+
+
 int xmodem_snd_init(struct xmodem_snd * sx, 
 					const struct comm_dev * comm, unsigned int mode)
 {
-	if ((sx == NULL) || (comm == NULL) || (mode > XMODEM_1K))
+	if ((sx == NULL) || (comm == NULL) || (mode > XMODEM_SND_1K))
 		return -EINVAL;
 
-	sx->comm = *comm;
+	sx->comm = comm;
 	sx->mode = mode;
-	sx->data_max = (sx->mode == XMODEM_1K) ? 1024 : 128;
+	sx->data_max = (sx->mode == XMODEM_SND_1K) ? 1024 : 128;
 	sx->data_len = 0;
 	sx->seq = 1;
 	sx->state = XMODEM_SND_IDLE;
 
-	DCC_LOG(LOG_TRACE, "[IDLE]");
+	/* flush */
+	while (sx->comm->op.recv(sx->comm->arg, sx->pkt.data, 1024, 200) > 0); 
 
-	printf("%s: [IDLE]\n", __func__);
+	DCC_LOG(LOG_TRACE, "[IDLE]");
 
 	return 0;
 }
@@ -66,13 +75,12 @@ int xmodem_snd_cancel(struct xmodem_snd * sx)
 	int ret;
 
 	DCC_LOG(LOG_TRACE, "[CAN]");
-	printf("%s: [CAN]\n", __func__);
 
 	buf[0] = CAN;
 	
-	ret = sx->comm.op.send(sx->comm.arg, buf, 1);
+	ret = sx->comm->op.send(sx->comm->arg, buf, 1);
 
-	sx->data_max = (sx->mode == XMODEM_1K) ? 1024 : 128;
+	sx->data_max = (sx->mode == XMODEM_SND_1K) ? 1024 : 128;
 	sx->data_len = 0;
 	sx->seq = 1;
 	sx->state = XMODEM_SND_IDLE;
@@ -82,34 +90,35 @@ int xmodem_snd_cancel(struct xmodem_snd * sx)
 	return ret;
 }
 
-static int xmodem_send_pkt(struct xmodem_snd * sx)
+static int xmodem_send_pkt(struct xmodem_snd * sx, 
+						   unsigned char * data, int data_len)
 {
-	unsigned char buf[4];
-	unsigned char * pkt;
+	unsigned char * pkt = data - 3; 
+	unsigned char * cp;
+	unsigned char fcs[2];
 	int retry = 0;
-	int len;
+	int fcs_len;
 	int ret;
 	int c;
 
-	if (sx->state == XMODEM_SND_IDLE) {
+	DCC_LOG1(LOG_INFO, "len=%d", data_len);
 
-		printf("%s: idle\n", __func__);
+	if (sx->state == XMODEM_SND_IDLE) {
 
 		for (;;) {
 			DCC_LOG(LOG_TRACE, "waiting");
-		
-			printf("%s: waiting\n", __func__);
 
 			// Wait for NAK or 'C'
-			if ((ret = sx->comm.op.recv(sx->comm.arg, buf, 
+			if ((ret = sx->comm->op.recv(sx->comm->arg, pkt, 
 										1, XMODEM_SND_TMOUT_MS)) < 0) {
-			
-				printf("%s: comm err: %d\n", __func__, ret);
+				if (ret == THINKOS_ETIMEDOUT) {
+					DCC_LOG(LOG_WARNING, "TMO");
+					if (++retry < 20) 
+						continue;
+				}
 				return ret;
 			}
-			c = buf[0];
-
-			printf("%s: c=%02x\n", __func__, c);
+			c = *pkt;
 
 			if (c == CAN) {
 				DCC_LOG(LOG_TRACE, "[CAN]");
@@ -132,9 +141,7 @@ static int xmodem_send_pkt(struct xmodem_snd * sx)
 		}
 	}
 
-	pkt = sx->pkt.hdr;
-
-	if (sx->data_len == 1024) {
+	if (data_len == 1024) {
 		pkt[0] = STX;
 	} else {
 		pkt[0] = SOH;
@@ -142,61 +149,93 @@ static int xmodem_send_pkt(struct xmodem_snd * sx)
 
 	pkt[1] = sx->seq;
 	pkt[2] = ~sx->seq;
+	cp = &pkt[3];
 
 	if (sx->state == XMODEM_SND_CRC) {
-		unsigned char * cp = sx->pkt.data;
 		unsigned short crc = 0;
 		int i;
 
-		for (i = 0; i < sx->data_len; ++i)
+		for (i = 0; i < data_len; ++i)
 			crc = CRC16CCITT(crc, cp[i]);
-		cp[i] = crc >> 8;
-		cp[i + 1] = crc & 0xff;
-		len = i + 5;
+
+		fcs[0] = crc >> 8;
+		fcs[1] = crc & 0xff;
+		fcs_len = 2;
 	} else {
-		unsigned char * cp = sx->pkt.data;
 		unsigned char cks = 0;
 		int i;
 
-		for (i = 0; i < sx->data_len; ++i)
+		for (i = 0; i < data_len; ++i)
 			cks += cp[i];
 
-		cp[i] = cks;
-		len = i + 4;
+		fcs[0] = cks;
+		fcs_len = 1;
 	}
 
 	for (;;) {
 
-		DCC_LOG2(LOG_TRACE, "Xmit seq=%d retry=%d", sx->seq, retry);
+		DCC_LOG2(LOG_INFO, "Xmit seq=%d retry=%d", sx->seq, retry);
 
-		// Send packet 
-		if ((ret = sx->comm.op.send(sx->comm.arg, pkt, len)) < 0)
-			return ret;
-
-		// Wait for ACK
-		if ((ret = sx->comm.op.recv(sx->comm.arg, buf, 
-									1, XMODEM_SND_TMOUT_MS)) < 0) {
+		// Send packet less FCS 
+		if ((ret = sx->comm->op.send(sx->comm->arg, pkt, data_len + 3)) < 0) {
+			DCC_LOG(LOG_WARNING, "comm->op.send() failed!");
 			return ret;
 		}
 
-		c = buf[0];
+		// Send FCS (checksum or CRC)
+		if ((ret = sx->comm->op.send(sx->comm->arg, fcs, fcs_len)) < 0) {
+			DCC_LOG(LOG_WARNING, "comm->op.send() failed!");
+			return ret;
+		}
 
-		if (c == ACK) 
+		// Wait for ACK
+		if ((ret = sx->comm->op.recv(sx->comm->arg, pkt, 
+									1, XMODEM_SND_TMOUT_MS)) <= 0) {
+			if (ret == THINKOS_ETIMEDOUT) {
+				DCC_LOG(LOG_TRACE, "[TMO]");
+				if (++retry < 10)
+					continue;
+			}
+			DCC_LOG(LOG_WARNING, "comm->op.recv() failed!");
+			return ret;
+		}
+
+		c = *pkt;
+
+		if (c == ACK) {
+			DCC_LOG(LOG_TRACE, "[ACK]");
 			break;
+		}
 
-		if (c == CAN) 
-			return -ECANCELED;
+		if (c == CAN) {
+			DCC_LOG(LOG_TRACE, "[CAN]");
+			ret = -ECANCELED;
+			goto error;
+		}
 
-		if (c != NAK) 
-			return -EBADMSG;
+		if (c != NAK) {
+			DCC_LOG1(LOG_WARNING, "rx=%02x", c);
+			ret = -EBADMSG;
+			goto error;
+		}
 
-		retry++;
+		DCC_LOG(LOG_WARNING, "[NAK]");
+		
+		if (++retry == 10) {
+			ret = -ECANCELED;
+			goto error;
+		}
 	}
 
 	sx->seq++;
-	sx->data_len = 0;
 
 	return 0;
+
+error:
+	/* flush */
+	while (sx->comm->op.recv(sx->comm->arg, sx->pkt.data, 1024, 200) > 0); 
+
+	return ret;
 }
 
 int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
@@ -206,15 +245,12 @@ int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
 	if ((src == NULL) || (len < 0))
 		return -EINVAL;
 
-//	printf("%s: len=%d\n", __func__, len);
-
 	do {
 		unsigned char * dst;
 		int ret;
 		int rem;
 		int n;
 		int i;
-
 
 		dst = &sx->pkt.data[sx->data_len];
 		rem = sx->data_max - sx->data_len;
@@ -226,11 +262,14 @@ int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
 		sx->data_len += n;
 
 		if (sx->data_len == sx->data_max) {
-			printf("%s: xmit\n", __func__);
-			if ((ret = xmodem_send_pkt(sx)) < 0)
-				return ret;
-		}
 
+			if ((ret = xmodem_send_pkt(sx, sx->pkt.data, sx->data_len)) < 0) {
+				return ret;
+			}
+		
+			sx->data_len = 0;
+		}
+	
 		src += n;
 		len -= n;
 	} while (len);
@@ -241,25 +280,45 @@ int xmodem_snd_loop(struct xmodem_snd * sx, const void * data, int len)
 int xmodem_snd_eot(struct xmodem_snd * sx)
 {
 	unsigned char buf[4];
+	unsigned char * data;
+	int data_len;
+	int data_max;
 	int ret;
 
-	if (sx->data_len > 0) {
+
+	if ((data_len = sx->data_len) <= (1024 - 128))
+		data_max = 128;
+	else
+		data_max =  sx->data_max;
+
+	data = sx->pkt.data;
+
+	while (data_len > 0) {
+		int len;
 		int i;
 
-		if ((sx->data_max == 1024) && (sx->data_len < 128))
-			sx->data_max = 128;
+		len = MIN(data_len, data_max);
 
-		for (i = sx->data_len; i < sx->data_max; ++i)
-			sx->pkt.data[i] = '\0';
+		/* padding */
+		for (i = len; i < data_max; ++i)
+			data[i] = '\0';
 
-		if ((ret = xmodem_send_pkt(sx)) < 0)
+		DCC_LOG1(LOG_INFO, "len=%d", len);
+
+		if ((ret = xmodem_send_pkt(sx, data, data_max)) < 0) {
 			return ret;
+		}
+
+		data_len -= len;
+		data += len;
 	}
 
-	buf[0] = EOT;
-	ret = sx->comm.op.send(sx->comm.arg, buf, 1);
+	DCC_LOG(LOG_TRACE, "[EOT]");
 
-	sx->data_max = (sx->mode == XMODEM_1K) ? 1024 : 128;
+	buf[0] = EOT;
+	ret = sx->comm->op.send(sx->comm->arg, buf, 1);
+
+	sx->data_max = (sx->mode == XMODEM_SND_1K) ? 1024 : 128;
 	sx->data_len = 0;
 	sx->seq = 1;
 	sx->state = XMODEM_SND_IDLE;

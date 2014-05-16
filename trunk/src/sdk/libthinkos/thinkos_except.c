@@ -35,6 +35,7 @@
 
 #if THINKOS_ENABLE_EXCEPTIONS
 
+#if 0
 void __show_ctrl(uint32_t ctrl)
 {
 	fprintf(stderr, "[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
@@ -85,23 +86,6 @@ void thinkos_context_show(const struct thinkos_context * ctx,
 	fprintf(stderr, "   r7=%08x",  ctx->r7);
 	fprintf(stderr, "  r11=%08x",  ctx->r11);
 	fprintf(stderr, "   pc=%08x\n",  ctx->pc);
-}
-
-static inline struct thinkos_context * __attribute__((always_inline)) __get_context(void) {
-	register struct thinkos_context * ctx;
-	asm volatile ("push {r4-r11}\n"
-				  "mov  %0, sp\n" : "=r" (ctx));
-	return ctx;
-}
-
-static inline uint32_t __attribute__((always_inline)) __get_stack(void) {
-	register uint32_t sp;
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq r0, MSP\n" 
-				  "mrsne r0, PSP\n" 
-				  : "=r" (sp));
-	return sp;
 }
 
 static void __dump_bfsr(void)
@@ -156,37 +140,23 @@ static void __dump_ufsr(void)
 		fprintf(stderr, " UNDEFINSTR");
 }
 
-void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
-{
-	cm3_faultmask_set(1);
-
-	DCC_LOG(LOG_ERROR, "Bus fault!");
-
-	fprintf(stderr, "---\n");
-	fprintf(stderr, "Bus fault:");
-
-	__dump_bfsr();
-
-	fprintf(stderr, "\n");
-
-	for(;;);
+static inline uint32_t __attribute__((always_inline)) __get_stack(void) {
+	register uint32_t sp;
+	asm volatile ("tst lr, #4\n" 
+				  "ite eq\n" 
+				  "mrseq r0, MSP\n" 
+				  "mrsne r0, PSP\n" 
+				  : "=r" (sp));
+	return sp;
 }
+#endif
 
-void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
-{
-	cm3_faultmask_set(1);
-
-	DCC_LOG(LOG_ERROR, "Usage fault!");
-
-	fprintf(stderr, "---\n");
-	fprintf(stderr, "Usage fault:");
-
-
-	__dump_ufsr();
-
-	fprintf(stderr, "\n");
-
-	for(;;);
+static inline struct thinkos_context * 
+	__attribute__((always_inline)) __get_context(void) {
+	register struct thinkos_context * ctx;
+	asm volatile ("push {r4-r11}\n"
+				  "mov  %0, sp\n" : "=r" (ctx));
+	return ctx;
 }
 
 void thinkos_exception_dsr(struct thinkos_context * ctx);
@@ -197,6 +167,7 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
 	uint32_t sp;
+	(void)sp;
 
 	if (lr & (1 << 4))
 		sp = psp;
@@ -258,7 +229,7 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 		}
 	}
 
-
+#if 0
 	fprintf(stderr, "---\n");
 	fprintf(stderr, "Hard fault:");
 
@@ -281,10 +252,124 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 		fprintf(stderr, "\n");
 	}
 
-	for(;;);
-
 	thinkos_context_show(ctx, sp, msp, psp);
+#endif
 }
+
+void bus_fault(struct thinkos_context * ctx, uint32_t msp, 
+			   uint32_t psp, uint32_t lr)
+{
+	uint32_t sp;
+	(void)sp;
+
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
+
+	DCC_LOG(LOG_ERROR, "Bus fault!");
+
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			ctx->xpsr, msp, psp, lr);
+
+#if 0
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Bus fault:");
+
+	__dump_bfsr();
+
+	fprintf(stderr, "\n");
+#endif
+}
+
+void usage_fault(struct thinkos_context * ctx, uint32_t msp, 
+				 uint32_t psp, uint32_t lr)
+{
+	uint32_t sp;
+	(void)sp;
+
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
+
+	DCC_LOG(LOG_ERROR, "Usage fault!");
+
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			ctx->xpsr, msp, psp, lr);
+
+#if 0
+	fprintf(stderr, "---\n");
+	fprintf(stderr, "Usage fault:");
+
+	__dump_ufsr();
+
+	fprintf(stderr, "\n");
+#endif
+}
+
+void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
+{
+	struct thinkos_context * ctx;
+	uint32_t msp;
+	uint32_t psp;
+	uint32_t lr;
+
+	/* save the context */
+	ctx = __get_context();
+
+	lr = cm3_lr_get();
+	msp = cm3_msp_get();
+	psp = cm3_psp_get();
+
+	cm3_faultmask_set(1);
+
+	bus_fault(ctx, msp, psp, lr);
+
+	thinkos_exception_dsr(ctx);
+
+	for(;;);
+}
+
+void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
+{
+	struct thinkos_context * ctx;
+	uint32_t msp;
+	uint32_t psp;
+	uint32_t lr;
+
+	/* save the context */
+	ctx = __get_context();
+
+	lr = cm3_lr_get();
+	msp = cm3_msp_get();
+	psp = cm3_psp_get();
+
+	cm3_faultmask_set(1);
+
+	usage_fault(ctx, msp, psp, lr);
+
+	thinkos_exception_dsr(ctx);
+
+	for(;;);
+}
+
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {

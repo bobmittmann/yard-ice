@@ -277,6 +277,120 @@
 #define ITM_LSR_ACCESS (1 << 1)
 #define ITM_LSR_PRESENT (1 << 0)
 
+/****************************************************************************
+  CM3 DWT (Data Watchpoint and Trace Unit)
+ ****************************************************************************/
+
+/* DWT Control Register */
+
+#define DWT_CTRL_NUMCOMP (0x0f << 28) 
+/* Number of comparators implemented. 
+   A value of zero indicates no comparator support. */
+
+#define DWT_CTRL_NOTRCPKT (1 << 27) 
+/* Shows whether the implementation supports trace sampling 
+   and exception tracing:
+   0 = Trace sampling and exception tracing supported.
+   1 = Trace sampling and exception tracing not supported.
+   If this bit is RAZ, the NOCYCCNT bit must also RAZ. */
+
+#define DWT_CTRL_NOEXTTRIG (1 << 26)
+/* Shows whether the implementation includes external match signals, 
+   CMPMATCH[N]:
+   0 = CMPMATCH[N] supported.
+   1 = CMPMATCH[N] not supported. */
+
+#define DWT_CTRL_NOCYCCNT (1 << 25) 
+/* Shows whether the implementation supports a cycle counter:
+   0 = Cycle counter supported.
+   1 = Cycle counter not supported. */
+
+#define DWT_CTRL_NOPRFCNT (1 << 24) 
+/* Shows whether the implementation supports the profiling counters:
+   0 = Supported.
+   1 = Not supported. */
+
+#define DWT_CTRL_CYCEVTENA (1 << 22) 
+/* Enables POSTCNT underflow Event counter packets generation:
+   0 = No POSTCNT underflow packets generated.
+   1 = POSTCNT underflow packets generated, if PCSAMPLENA set to 0. 
+   This bit is UNK/SBZP if the NOTRCPKT bit is RAO or the
+   NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_FOLDEVTENA  (1 << 21) 
+/* Enables generation of the Folded-instruction counter overflow event:
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOPRFCNT bit is RAO. */
+
+#define DWT_CTRL_LSUEVTENA  (1 << 20) 
+/* Enables generation of the LSU counter overflow event.
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOPRFCNT bit is RAO. */
+
+#define DWT_CTRL_SLEEPEVTENA  (1 << 19) 
+/* Enables generation of the Sleep counter overflow event.
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOPRFCNT bit is RAO. */
+
+#define DWT_CTRL_EXCEVTENA  (1 << 18) 
+/* Enables generation of the Exception overhead counter overflow event:
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOPRFCNT bit is RAO. */
+
+#define DWT_CTRL_CPIEVTENA (1 << 17) 
+/* Enables generation of the CPI counter overflow event:
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOPRFCNT bit is RAO. */
+
+#define DWT_CTRL_EXCTRCENA (1 << 16) 
+/* Enables generation of exception trace:
+   0 = Disabled.
+   1 = Enabled.
+   This bit is UNK/SBZP if the NOTRCPKT bit is RAO. */
+
+#define DWT_CTRL_PCSAMPLENA (1 << 12)
+/* Enables use of POSTCNT counter as a timer for Periodic PC sample 
+   packet generation:
+   0 = No Periodic PC sample packets generated.
+   1 = Periodic PC sample packets generated.
+   This bit is UNK/SBZP if the NOTRCPKT bit is RAO or 
+   the NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_SYNCTAP (0x03 << 10) 
+/* Selects the position of the synchronization packet counter tap
+   on the CYCCNT counter. This determines the
+   Synchronization packet rate:
+   00 = Disabled. No Synchronization packets.
+   01 = Synchronization counter tap at CYCCNT[24]
+   10 = Synchronization counter tap at CYCCNT[26]
+   11 = Synchronization counter tap at CYCCNT[28]
+   This field is UNK/SBZP if the NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_CYCTAP (1 << 9) 
+/*  Selects the position of the POSTCNT tap on the CYCCNT counter:
+	0 = POSTCNT tap at CYCCNT[6]
+	1 = POSTCNT tap at CYCCNT[10]
+	This bit is UNK/SBZP if the NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_POSTINIT (0x0f << 5)
+/* Initial value for the POSTCNT counter. 
+   This field is UNK/SBZP if the NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_POSTPRESET (0x07 << 1)
+/* Reload value for the POSTCNT counter. 
+   This field is UNK/SBZP if the NOCYCCNT bit is RAO. */
+
+#define DWT_CTRL_CYCCNTENA (1 << 0) 
+/* Enables CYCCNT:
+   0 = Disabled
+   1 = Enabled
+   This bit is UNK/SBZP if the NOCYCCNT bit is RAO. */
+
 
 /****************************************************************************
   CM3 Base addresses
@@ -285,10 +399,15 @@
 #define CM3_SCS_BASE     (0xe000e000) /* System Control Space Base Address */
 #define CM3_ITM_BASE     (0xe0000000) /* ITM Base Address */
 #define CM3_DCB_BASE     (0xe000edf0) /* Core Debug Base Address */
+#define CM3_DWT_BASE     (0xe0001000) /* DWT Base Address */
 #define CM3_SYSTICK_BASE (CM3_SCS_BASE + 0x0010)
 #define CM3_NVIC_BASE    (CM3_SCS_BASE + 0x0100)
 #define CM3_SCB_BASE     (CM3_SCS_BASE + 0x0d00)
 #define CM3_MPU_BASE     (CM3_SCS_BASE + 0x0d90) 
+
+/****************************************************************************
+  CM3 ROM Table
+ ****************************************************************************/
 
 /****************************************************************************
   CM3 Exception Numbers
@@ -480,7 +599,48 @@ struct cm3_itm {
 	volatile uint32_t cid3; /* Component Identification Register #3 */
 }; 
 
+/****************************************************************************
+  CM3 DWT (Data Watchpoint and Trace Unit)
+ ****************************************************************************/
 
+struct cm3_dwt {
+	volatile uint32_t ctrl; /* RW See a Control Register */
+	volatile uint32_t cyccnt; /* RW 0x00000000 Cycle Count Register */
+	volatile uint32_t cpicnt; /* RW - CPI Count Register */
+	volatile uint32_t exccnt; /* RW - Exception Overhead Count Register */
+	volatile uint32_t sleepcnt; /* RW - Sleep Count Register */
+	volatile uint32_t lsucnt; /* RW - LSU Count Register */
+	volatile uint32_t foldcnt; /* RW - Folded-instruction Count Register */
+	volatile uint32_t pcsr; /* RO - Program Counter Sample Register */
+	volatile uint32_t comp0; /* RW - Comparator Register0 */
+	volatile uint32_t mask0; /* RW - Mask Register0 */
+	volatile uint32_t function0; /* RW 0x00000000 Function Register0 */
+	uint32_t reserved0; 
+	volatile uint32_t comp1; /* RW - Comparator Register1 */
+	volatile uint32_t mask1; /* RW - Mask Register1 */
+	volatile uint32_t function1; /* RW 0x00000000 Function Register1 */
+	uint32_t reserved1; 
+	volatile uint32_t comp2; /* RW - Comparator Register2 */
+	volatile uint32_t mask2; /* RW - Mask Register2 */
+	volatile uint32_t function2; /* RW 0x00000000 Function Register2 */
+	uint32_t reserved2; 
+	volatile uint32_t comp3; /* RW - Comparator Register3 */
+	volatile uint32_t mask3; /* RW - Mask Register3 */
+	volatile uint32_t function3; /* RW 0x00000000 Function Register3 */
+	uint32_t reserved3[(0xfd0 - 0x05c) / 4]; 
+	volatile uint32_t pid4; /* Peripheral Identification Register #4 */
+	volatile uint32_t pid5; /* Peripheral Identification Register #5 */
+	volatile uint32_t pid6; /* Peripheral Identification Register #6 */
+	volatile uint32_t pid7; /* Peripheral Identification Register #7 */
+	volatile uint32_t pid0; /* Peripheral Identification Register #0 */
+	volatile uint32_t pid1; /* Peripheral Identification Register #1 */
+	volatile uint32_t pid2; /* Peripheral Identification Register #2 */
+	volatile uint32_t pid3; /* Peripheral Identification Register #3 */
+	volatile uint32_t cid0; /* Component Identification Register #0 */
+	volatile uint32_t cid1; /* Component Identification Register #1 */
+	volatile uint32_t cid2; /* Component Identification Register #2 */
+	volatile uint32_t cid3; /* Component Identification Register #3 */
+}; 
 
 #define CM3_SYSTICK ((struct cm3_systick *) CM3_SYSTICK_BASE) 
 #define CM3_SCB ((struct cm3_scb *) CM3_SCB_BASE) 
@@ -488,6 +648,7 @@ struct cm3_itm {
 #define CM3_DCB ((struct cm3_dcb *) CM3_DCB_BASE) 
 #define CM3_ITM ((struct cm3_itm *) CM3_ITM_BASE) 
 #define CM3_MPU ((struct cm3_mpu *) CM3_MPU_BASE) 
+#define CM3_DWT ((struct cm3_dwt *) CM3_DWT_BASE) 
 
 /* this constant must be privided by the BSP */
 extern const uint32_t cm3_systick_load_1ms;

@@ -223,15 +223,15 @@ void thinkos_thread_create_svc(int32_t * arg)
 #if THINKOS_ENABLE_THREAD_ALLOC
 	if (init->opt.id >= THINKOS_THREADS_MAX) {
 		th = thinkos_alloc_hi(&thinkos_rt.th_alloc, THINKOS_THREADS_MAX);
-		DCC_LOG2(LOG_TRACE, "thinkos_alloc_hi() %d -> %d.", init->opt.id, th);
-		DCC_LOG1(LOG_TRACE, "thinkos_rt.th_alloc=0x%08x", thinkos_rt.th_alloc);
+		DCC_LOG2(LOG_INFO, "thinkos_alloc_hi() %d -> %d.", init->opt.id, th);
+		DCC_LOG1(LOG_INFO, "thinkos_rt.th_alloc=0x%08x", thinkos_rt.th_alloc);
 	} else {
 		/* Look for the next available slot */
 		th = thinkos_alloc_lo(&thinkos_rt.th_alloc, init->opt.id);
-		DCC_LOG2(LOG_TRACE, "thinkos_alloc_lo() %d -> %d.", init->opt.id, th);
+		DCC_LOG2(LOG_INFO, "thinkos_alloc_lo() %d -> %d.", init->opt.id, th);
 		if (th < 0) {
 			th = thinkos_alloc_hi(&thinkos_rt.th_alloc, init->opt.id);
-			DCC_LOG2(LOG_TRACE, "thinkos_alloc_hi() %d -> %d.", 
+			DCC_LOG2(LOG_INFO, "thinkos_alloc_hi() %d -> %d.", 
 					init->opt.id, th);
 		}
 	}
@@ -246,24 +246,39 @@ void thinkos_thread_create_svc(int32_t * arg)
 		th = THINKOS_THREADS_MAX - 1;
 #endif
 
-	/* initialize stack */
-	{
-		uint32_t * ptr = (uint32_t *)init->stack_ptr;
-		int i;
-
-		for (i = 0; i < init->stack_size / 4; ++i)
-			ptr[i] = 0xfacade44;
-	}
-
-
 	sp = (uint32_t)init->stack_ptr + init->stack_size;
+
+	DCC_LOG2(LOG_INFO, "stack ptr=%08x size=%d", 
+			 init->stack_ptr, init->stack_size);
+
 	sp &= 0xfffffff8; /* 64bits alignemnt */
 	sp -= sizeof(struct thinkos_context);
+
+	DCC_LOG1(LOG_INFO, "sp=%08x", sp);
+
+	/* initialize stack */
+	{
+		uint32_t * ptr;
+		for (ptr = init->stack_ptr; ptr < (uint32_t *)sp; ++ptr)
+			*ptr = 0xfacade44;
+	}
 
 	ctx = (struct thinkos_context *)sp;
 
 //	ctx->ret = CM3_EXC_RET_THREAD_PSP;
 	ctx->r0 = (uint32_t)init->arg;
+	ctx->r1 = 0;
+	ctx->r2 = 0;
+	ctx->r3 = 0;
+	ctx->r4 = 0;
+	ctx->r5 = 0;
+	ctx->r6 = 0;
+	ctx->r7 = 0;
+	ctx->r8 = 0;
+	ctx->r9 = 0;
+	ctx->r10 = 0;
+	ctx->r11 = 0;
+	ctx->r12 = 0;
 	ctx->lr = (uint32_t)thinkos_thread_exit;
 	ctx->pc = (uint32_t)init->task;
 	ctx->xpsr = 0x01000000;

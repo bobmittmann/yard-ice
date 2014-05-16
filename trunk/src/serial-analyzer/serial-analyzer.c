@@ -41,11 +41,7 @@
 #include <sys/dcclog.h>
 #include <sys/usb-cdc.h>
 
-#include <xmodem.h>
-
-void pfclock_init(void);
-uint32_t pfclock(void);
-uint32_t pfdt(void);
+#include "pfclock.h"
 
 struct serial_dev * serial2_open(void);
 
@@ -87,12 +83,6 @@ void leds_init(void);
 #endif
 #endif
 
-struct vcom {
-	struct serial_dev * serial;
-	usb_cdc_class_t * cdc;
-	struct serial_status ser_stat;
-};
-
 #define VCOM_BUF_SIZE 128
 
 #define USB_FS_DP STM32F_GPIOA, 12
@@ -125,14 +115,6 @@ void io_sel_usart3(void)
 	stm32f_gpio_mode(USART3_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 }
 
-void io_sel_i2c(void)
-{
-}
-
-void io_sel_rts(void)
-{
-}
-
 /* USART1 and USART2 pins are connected together.
    Only one TX pin must be enable at any time */
 
@@ -152,11 +134,6 @@ void io_sel_usart1(void)
 
 void usb_vbus(bool on)
 {
-//	if (on)
-//		stm32f_gpio_set(USB_FS_VBUS);
-//	else
-//		stm32f_gpio_clr(USB_FS_VBUS);
-
 	if (on)
 		stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
 	else
@@ -319,86 +296,12 @@ void __attribute__((noreturn)) button_task(void)
 //	return 0;
 }
 
-struct xmodem_snd sx;
-struct xmodem_rcv rx;
-
-int vcom_xmodem_recv(struct vcom * vcom)
-{
-	usb_cdc_class_t * cdc = vcom[0].cdc;
-	struct comm_dev comm;
-	uint8_t buf[8];
-	int ret;
-	int cnt;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	comm.arg = cdc;
-	comm.op.send = (int (*)(void *, const void *, unsigned int))usb_cdc_write;
-	comm.op.recv = (int (*)(void *, void *, 
-						  unsigned int, unsigned int))usb_cdc_read;
-	
-	xmodem_rcv_init(&rx, &comm, XMODEM_RCV_CRC);
-
-	cnt = 0;
-	do {
-		if ((ret = xmodem_rcv_loop(&rx, buf, 8)) < 0) {
-			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
-			return ret;
-		}
-		cnt += ret;
-	} while (ret > 0);
-
-	return cnt;
-}
-
-int usb_recv_task(struct vcom vcom[])
-{
-//	struct serial_dev * serial1 = vcom[0].serial;
-	struct serial_dev * serial2 = vcom[1].serial;
-	usb_cdc_class_t * cdc = vcom[0].cdc;
-	char buf[VCOM_BUF_SIZE];
-	int len;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	for (;;) {
-		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
-		if (len > 0) {
-//			led1_flash(1);
-			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
-//			serial_write(serial1, buf, len);
-			serial_write(serial2, buf, len);
-		}
-
-	}
-
-	return 0;
-}
-
-#define ECHO_BUF_SIZE 128
-
-int usb_echo(usb_cdc_class_t * cdc)
-{
-	char buf[ECHO_BUF_SIZE];
-	int len;
-
-	for (;;) {
-		len = usb_cdc_read(cdc, buf, ECHO_BUF_SIZE, 10000);
-		led1_flash(1);
-		if (len > 0)
-			usb_cdc_write(cdc, buf, len);
-	}
-
-	return 0;
-}
-
 struct serial_dev * serial1;
 struct serial_dev * serial2;
+struct usb_cdc_class * cdc;
 
-int serial_recv_task(struct vcom * vcom)
+int serial_recv_task(struct serial_dev * serial)
 {
-	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_class * cdc = vcom->cdc;
 	char buf[VCOM_BUF_SIZE];
 	int len;
 
@@ -417,67 +320,11 @@ int serial_recv_task(struct vcom * vcom)
 	return 0;
 }
 
-
-int serial_xmodem_send(struct serial_dev * serial)
+void __attribute__((noreturn)) serial_ctrl_task(struct usb_cdc_class * cdc)
 {
-	struct comm_dev comm;
-	char data[32] = "Hello world!";
-	int ret;
-	int i;
-
-	comm.arg = serial;
-	comm.op.send = (int (*)(void *, const void *, unsigned int))serial_write;
-	comm.op.recv = (int (*)(void *, void *, 
-						  unsigned int, unsigned int))serial_read;
-
-	DCC_LOG(LOG_TRACE, "........................");
-
-	xmodem_snd_init(&sx, &comm, XMODEM_SND_1K);
-
-	for (i = 0; i < 32451; ++i) {
-		if ((ret = xmodem_snd_loop(&sx, data, 32)) < 0) {
-			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
-			return ret;
-		}
-	}
-
-	return xmodem_snd_eot(&sx);
-}
-
-int serial_xmodem_recv(struct serial_dev * serial)
-{
-	struct comm_dev comm;
-	uint8_t buf[8];
-	int ret;
-	int cnt;
-
-	comm.arg = serial;
-	comm.op.send = (int (*)(void *, const void *, unsigned int))serial_write;
-	comm.op.recv = (int (*)(void *, void *, 
-						  unsigned int, unsigned int))serial_read;
-
-	DCC_LOG(LOG_TRACE, ".................................");
-
-	xmodem_rcv_init(&rx, &comm, XMODEM_RCV_CRC);
-
-	cnt = 0;
-	do {
-		if ((ret = xmodem_rcv_loop(&rx, buf, 8)) < 0) {
-			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
-			return ret;
-		}
-		cnt += ret;
-	} while (ret > 0);
-
-	return cnt;
-}
-
-void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
-{
-	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_class * cdc = vcom->cdc;
 	struct usb_cdc_state prev_state;
 	struct usb_cdc_state state;
+	struct serial_status ser_stat;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
@@ -489,13 +336,14 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			(state.cfg.databits != prev_state.cfg.databits) ||
 			(state.cfg.parity != prev_state.cfg.parity) ||
 			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
-			serial_config_set(serial, &state.cfg);
+			serial_config_set(serial1, &state.cfg);
+			serial_config_set(serial2, &state.cfg);
 			prev_state.cfg = state.cfg;
 		}
 
 		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
-			vcom->ser_stat.dsr = state.ctrl.dtr;
-			usb_cdc_status_set(cdc, &vcom->ser_stat);
+			ser_stat.dsr = state.ctrl.dtr;
+			usb_cdc_status_set(cdc, &ser_stat);
 			prev_state.ctrl = state.ctrl;
 		}
 
@@ -515,51 +363,8 @@ void show_menu(FILE * f)
 	fprintf(f, "\n");
 }
 
-int usb_console(struct usb_cdc_class * cdc)
-{
-	struct tty_dev * tty;
-	FILE * f_raw;
-	unsigned int n;
-	int c;
-
-	f_raw = usb_cdc_fopen(cdc);
-	tty = tty_attach(f_raw);
-	stdout = tty_fopen(tty);
-	stdin = f_raw;
-
-	for (n = 0; ; ++n) {
-		thinkos_sleep(100);
-		c = fgetc(stdin);
-		switch (c) {
-		case '\r':
-			show_menu(stdout);
-			break;
-
-		case 's':
-			printf("\nXMODEM send...\n");
-			serial_xmodem_send(serial1);
-			printf(".\n");
-			break;
-
-		case 'r':
-			printf("\nXMODEM receive...\n");
-			serial_xmodem_recv(serial1);
-			printf(".\n");
-			break;
-
-		default:
-			printf("-------------\n");
-			serial_write(serial1, "Hello\r\n", 7);
-			serial_write(serial2, "Hello\r\n", 7);
-		}
-	}
-
-	return 0;
-}
-
 uint32_t __attribute__((aligned(8))) button_stack[32];
-uint32_t __attribute__((aligned(8))) serial1_ctrl_stack[64];
-uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
+uint32_t __attribute__((aligned(8))) serial_ctrl_stack[64];
 //uint32_t serial1_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 //uint32_t serial2_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
 //uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
@@ -567,18 +372,18 @@ uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
 int main(int argc, char ** argv)
 {
 	uint64_t esn;
-	struct vcom vcom[2];
-	unsigned int i;
+	struct tty_dev * tty;
+	FILE * f_raw;
+	unsigned int n;
+	int c;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	stdout = null_fopen("");
-	stderr = stdout;
-	stdin = stdout;
-
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
+
+	profclk_init();
 
 	DCC_LOG(LOG_TRACE, "1. io_init()");
 	io_init();
@@ -591,59 +396,64 @@ int main(int argc, char ** argv)
 	serial1 = serial2_open();
 	serial2 = serial3_open();
 
-	vcom[0].serial = serial1;
-	vcom[1].serial = serial2;
-
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 
-	vcom[0].cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
-	vcom[1].cdc = vcom[0].cdc;
+	cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
+
+	f_raw = usb_cdc_fopen(cdc);
+	tty = tty_attach(f_raw);
+	stdout = tty_fopen(tty);
+	stderr = stdout;
+	stdin = f_raw;
 
 
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
-#if 0
-	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
-						  usb_recv_stack, sizeof(usb_recv_stack),
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
-
-#endif
-
+	thinkos_thread_create((void *)serial_ctrl_task, (void *)cdc,
+						  serial_ctrl_stack, sizeof(serial_ctrl_stack),
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 #if 0
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
 #endif
-	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
-						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 #if 0
-	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[1],
+	thinkos_thread_create((void *)serial_recv_task, (void *)serial2,
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(2));
-
 #endif
-	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[1],
-						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 
-#if 1
 	led_flash_all(3);
-#endif
 
 	usb_vbus(true);
 
-	usb_console(vcom[0].cdc);
+	for (n = 0; ; ++n) {
+		thinkos_sleep(100);
+		c = fgetc(stdin);
+		switch (c) {
+		case '\r':
+			show_menu(stdout);
+			break;
 
-	for (i = 0; ; ++i) {
-		thinkos_sleep(5000);
-//		vcom_xmodem_recv(vcom);
+		case 's':
+			printf("\nXMODEM send...\n");
+			printf(".\n");
+			break;
 
-		DCC_LOG1(LOG_TRACE, "tick %d.", i);
+		case 'r':
+			printf("\nXMODEM receive...\n");
+			printf(".\n");
+			break;
+
+		default:
+			printf("-------------\n");
+			serial_write(serial1, "Hello\r\n", 7);
+			serial_write(serial2, "Hello\r\n", 7);
+		}
 	}
 
 	return 0;
