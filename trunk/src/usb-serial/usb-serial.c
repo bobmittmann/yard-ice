@@ -38,54 +38,17 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
+#include <sys/serial.h>
 #include <sys/dcclog.h>
 #include <sys/usb-cdc.h>
 
 #include <xmodem.h>
 
-void pfclock_init(void);
-uint32_t pfclock(void);
-uint32_t pfdt(void);
+#include "board.h"
+#include "led.h"
 
 struct serial_dev * serial2_open(void);
-
 struct serial_dev * serial3_open(void);
-
-int serial_write(struct serial_dev * dev, const void * buf, 
-				 unsigned int len);
-
-int serial_read(struct serial_dev * dev, char * buf, 
-				unsigned int len, unsigned int msec);
-
-void led_lock(void);
-void led_unlock(void);
-void led1_flash(unsigned int cnt);
-void led2_flash(unsigned int cnt);
-void led_flash_all(unsigned int cnt);
-void led1_on(void);
-void led1_off(void);
-void led2_on(void);
-void led2_off(void);
-void leds_init(void);
-
-#define SERIAL_DEBUG 1
-#define USB_DEBUG 0
-
-#ifndef USB_DEBUG
-#ifdef DEBUG
-#define USB_DEBUG 1
-#else
-#define USB_DEBUG 0
-#endif
-#endif
-
-#ifndef SERIAL_DEBUG
-#ifdef DEBUG
-#define SERIAL_DEBUG 1
-#else
-#define SERIAL_DEBUG 0
-#endif
-#endif
 
 struct vcom {
 	struct serial_dev * serial;
@@ -94,116 +57,6 @@ struct vcom {
 };
 
 #define VCOM_BUF_SIZE 128
-
-#define USB_FS_DP STM32F_GPIOA, 12
-#define USB_FS_DM STM32F_GPIOA, 11
-
-#define USB_FS_VBUS STM32F_GPIOB, 6 /* PB6 */
-
-#define PUSHBTN_IO STM32F_GPIOB, 8
-#define EXTRST0_IO STM32F_GPIOB, 0 
-#define EXTRST1_IO STM32F_GPIOA, 5 /* PA5 (connected to USART2_CK/ USART3_TX) */
-
-#define USART1_TX STM32F_GPIOA, 9
-#define USART1_RX STM32F_GPIOA, 10
-
-#define USART2_TX STM32F_GPIOA, 2
-#define USART2_RX STM32F_GPIOA, 3
-
-#define USART3_TX STM32F_GPIOB, 10
-#define USART3_RX STM32F_GPIOB, 11
-
-void io2_sel_pa5(void)
-{
-	stm32f_gpio_mode(USART3_TX, INPUT, 0);
-	stm32f_gpio_mode(EXTRST1_IO, OUTPUT, OPEN_DRAIN | PULL_UP);
-}
-
-void io_sel_usart3(void)
-{
-	stm32f_gpio_mode(EXTRST1_IO, INPUT, 0);
-	stm32f_gpio_mode(USART3_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-}
-
-void io_sel_i2c(void)
-{
-}
-
-void io_sel_rts(void)
-{
-}
-
-/* USART1 and USART2 pins are connected together.
-   Only one TX pin must be enable at any time */
-
-/* Select USART2 TX */
-void io_sel_usart2(void)
-{
-	stm32f_gpio_mode(USART1_TX, INPUT, 0);
-	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-}
-
-/* Select USART1 TX */
-void io_sel_usart1(void)
-{
-	stm32f_gpio_mode(USART2_TX, INPUT, 0);
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-}
-
-void usb_vbus(bool on)
-{
-//	if (on)
-//		stm32f_gpio_set(USB_FS_VBUS);
-//	else
-//		stm32f_gpio_clr(USB_FS_VBUS);
-
-	if (on)
-		stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
-	else
-		stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
-}
-
-void io_init(void)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-
-	/* Enable Alternate Functions IO clock */
-	rcc->apb2enr |= RCC_AFIOEN;
-
-	/* UART1 TX (disabled) */
-	stm32f_gpio_mode(USART1_TX, INPUT, 0);
-	/* UART1 RX */
-	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
-
-	/* Primary UART TX */
-	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	/* Primary UART RX */
-	stm32f_gpio_mode(USART2_RX, INPUT, PULL_UP);
-
-	/* Secondary UART TX */
-	stm32f_gpio_mode(USART3_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	/* Secondary UART RX */
-	stm32f_gpio_mode(USART3_RX, INPUT, PULL_UP);
-
-	/* Push button */
-	stm32f_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
-
-	/* External Reset pins */
-	stm32f_gpio_mode(EXTRST0_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_set(EXTRST0_IO);
-
-	stm32f_gpio_mode(EXTRST1_IO, INPUT, 0);
-	stm32f_gpio_set(EXTRST1_IO);
-
-//	stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
-//	stm32f_gpio_clr(USB_FS_VBUS);
-
-	stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
-	stm32f_gpio_set(USB_FS_VBUS);
-}
 
 void system_reset(void)
 {
@@ -319,6 +172,83 @@ void __attribute__((noreturn)) button_task(void)
 //	return 0;
 }
 
+
+void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
+{
+	struct serial_dev * serial1 = vcom[0].serial;
+//	struct serial_dev * serial2 = vcom[1].serial;
+	usb_cdc_class_t * cdc = vcom[0].cdc;
+	char buf[VCOM_BUF_SIZE];
+	int len;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	for (;;) {
+		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
+		if (len > 0) {
+			led1_flash(1);
+			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
+			serial_write(serial1, buf, len);
+//			serial_write(serial2, buf, len);
+		}
+
+	}
+}
+
+void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
+{
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_class * cdc = vcom->cdc;
+	char buf[VCOM_BUF_SIZE];
+	int len;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	for (;;) {
+		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
+		if (len > 0) {
+			DCC_LOG5(LOG_INFO, "len=%d [%c%c%c%c]", 
+					 len, buf[0], buf[1], buf[2], buf[3]);
+			led2_flash(1);
+			usb_cdc_write(cdc, buf, len);
+		}
+	}
+}
+
+void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
+{
+	struct serial_dev * serial = vcom->serial;
+	struct usb_cdc_class * cdc = vcom->cdc;
+	struct usb_cdc_state prev_state;
+	struct usb_cdc_state state;
+
+	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	memset(&prev_state, 0, sizeof(struct usb_cdc_state));
+
+	while (1) {
+		usb_cdc_state_get(cdc, &state);
+		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
+			(state.cfg.databits != prev_state.cfg.databits) ||
+			(state.cfg.parity != prev_state.cfg.parity) ||
+			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
+			serial_config_set(serial, &state.cfg);
+			prev_state.cfg = state.cfg;
+		}
+
+		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
+			vcom->ser_stat.dsr = state.ctrl.dtr;
+			usb_cdc_status_set(cdc, &vcom->ser_stat);
+			prev_state.ctrl = state.ctrl;
+		}
+
+		DCC_LOG1(LOG_TRACE, "[%d] sleep!", thinkos_thread_self());
+		usb_cdc_ctl_wait(cdc, 0);
+		DCC_LOG1(LOG_TRACE, "[%d] wakeup!", thinkos_thread_self());
+	}
+}
+
+
 struct xmodem_snd sx;
 struct xmodem_rcv rx;
 
@@ -351,30 +281,6 @@ int vcom_xmodem_recv(struct vcom * vcom)
 	return cnt;
 }
 
-int usb_recv_task(struct vcom vcom[])
-{
-//	struct serial_dev * serial1 = vcom[0].serial;
-	struct serial_dev * serial2 = vcom[1].serial;
-	usb_cdc_class_t * cdc = vcom[0].cdc;
-	char buf[VCOM_BUF_SIZE];
-	int len;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	for (;;) {
-		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
-		if (len > 0) {
-//			led1_flash(1);
-			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
-//			serial_write(serial1, buf, len);
-			serial_write(serial2, buf, len);
-		}
-
-	}
-
-	return 0;
-}
-
 #define ECHO_BUF_SIZE 128
 
 int usb_echo(usb_cdc_class_t * cdc)
@@ -394,29 +300,6 @@ int usb_echo(usb_cdc_class_t * cdc)
 
 struct serial_dev * serial1;
 struct serial_dev * serial2;
-
-int serial_recv_task(struct vcom * vcom)
-{
-	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_class * cdc = vcom->cdc;
-	char buf[VCOM_BUF_SIZE];
-	int len;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	for (;;) {
-		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
-		if (len > 0) {
-			DCC_LOG5(LOG_INFO, "len=%d [%c%c%c%c]", 
-					 len, buf[0], buf[1], buf[2], buf[3]);
-//			led2_flash(1);
-			usb_cdc_write(cdc, buf, len);
-		}
-	}
-
-	return 0;
-}
-
 
 int serial_xmodem_send(struct serial_dev * serial)
 {
@@ -472,46 +355,16 @@ int serial_xmodem_recv(struct serial_dev * serial)
 	return cnt;
 }
 
-void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
-{
-	struct serial_dev * serial = vcom->serial;
-	struct usb_cdc_class * cdc = vcom->cdc;
-	struct usb_cdc_state prev_state;
-	struct usb_cdc_state state;
-
-	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
-
-	memset(&prev_state, 0, sizeof(struct usb_cdc_state));
-
-	while (1) {
-		usb_cdc_state_get(cdc, &state);
-		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
-			(state.cfg.databits != prev_state.cfg.databits) ||
-			(state.cfg.parity != prev_state.cfg.parity) ||
-			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
-			serial_config_set(serial, &state.cfg);
-			prev_state.cfg = state.cfg;
-		}
-
-		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
-			vcom->ser_stat.dsr = state.ctrl.dtr;
-			usb_cdc_status_set(cdc, &vcom->ser_stat);
-			prev_state.ctrl = state.ctrl;
-		}
-
-		DCC_LOG1(LOG_TRACE, "[%d] sleep!", thinkos_thread_self());
-		usb_cdc_ctl_wait(cdc, 0);
-		DCC_LOG1(LOG_TRACE, "[%d] wakeup!", thinkos_thread_self());
-	}
-}
-
 void show_menu(FILE * f)
 {
 	fprintf(f, "\n");
 	fprintf(f, " Options:\n");
 	fprintf(f, " --------\n");
-	fprintf(f, "   r    - xmodem receive\n");
-	fprintf(f, "   s    - xmodem send\n");
+	fprintf(f, "   r - xmodem receive\n");
+	fprintf(f, "   s  - xmodem send\n");
+	fprintf(f, "   1  - turn on TX2 PIN\n");
+	fprintf(f, "   0  - turn off TX2 PIN\n");
+	fprintf(f, "   d  - default pin assignment.\n");
 	fprintf(f, "\n");
 }
 
@@ -536,33 +389,115 @@ int usb_console(struct usb_cdc_class * cdc)
 			break;
 
 		case 's':
-			printf("\nXMODEM send...\n");
+			printf("XMODEM send...\n");
 			serial_xmodem_send(serial1);
-			printf(".\n");
+			printf("...\n");
 			break;
 
 		case 'r':
-			printf("\nXMODEM receive...\n");
+			printf("XMODEM receive...\n");
 			serial_xmodem_recv(serial1);
-			printf(".\n");
+			printf("...\n");
+			break;
+
+		case 'y':
+			printf("PIN1 -> GND\n");
+			pin1_sel_gnd();
+			printf("PIN2 -> VCC\n");
+			pin2_sel_vcc();
+			printf("PIN4 -> UART2.RX\n");
+			pin4_sel_usart2_rx();
+			printf("PIN5 -> UART2.TX\n");
+			pin5_sel_usart2_tx();
+			break;
+
+		case 'x':
+			printf("PIN1 -> UART3.RX\n");
+			pin1_sel_usart3_rx();
+			printf("PIN2 -> UART3.TX\n");
+			pin2_sel_usart3_tx();
+			printf("PIN4 -> UART2.RX\n");
+			pin4_sel_usart2_rx();
+			printf("PIN5 -> UART2.TX\n");
+			pin5_sel_usart2_tx();
+			break;
+
+		case '0':
+			printf("PIN1 -> GND\n");
+			pin1_sel_gnd();
+			break;
+
+		case '1':
+			printf("PIN1 -> VCC\n");
+			pin1_sel_vcc();
+			break;
+
+		case '2':
+			printf("PIN1 <- input\n");
+			pin1_sel_input();
+			break;
+
+		case '3':
+			printf("PIN2 -> GND\n");
+			pin2_sel_gnd();
+			break;
+
+		case '4':
+			printf("PIN2 -> VCC\n");
+			pin2_sel_vcc();
+			break;
+
+		case '5':
+			printf("PIN2 <- input\n");
+			pin2_sel_input();
+			break;
+
+		case '6':
+			printf("PIN4 -> GND\n");
+			pin4_sel_gnd();
+			break;
+
+		case '7':
+			printf("PIN4 -> VCC\n");
+			pin4_sel_vcc();
+			break;
+
+		case '8':
+			printf("PIN4 <- input\n");
+			pin4_sel_input();
+			break;
+
+		case 'a':
+			printf("PIN5 -> GND\n");
+			pin5_sel_gnd();
+			break;
+
+		case 'b':
+			printf("PIN5 -> VCC\n");
+			pin5_sel_vcc();
+			break;
+
+		case 'c':
+			printf("PIN5 <- input\n");
+			pin5_sel_input();
 			break;
 
 		default:
 			printf("-------------\n");
-			serial_write(serial1, "Hello\r\n", 7);
-			serial_write(serial2, "Hello\r\n", 7);
 		}
 	}
 
 	return 0;
 }
 
+#define RECV_STACK_SIZE (VCOM_BUF_SIZE + 256)
+
 uint32_t __attribute__((aligned(8))) button_stack[32];
 uint32_t __attribute__((aligned(8))) serial1_ctrl_stack[64];
 uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
-//uint32_t serial1_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
-//uint32_t serial2_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
-//uint32_t usb_recv_stack[(VCOM_BUF_SIZE / 4) + 64];
+uint32_t __attribute__((aligned(8))) serial1_recv_stack[RECV_STACK_SIZE / 4];
+uint32_t __attribute__((aligned(8))) serial2_recv_stack[RECV_STACK_SIZE / 4];
+uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
@@ -605,19 +540,14 @@ int main(int argc, char ** argv)
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
-#if 0
 	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
-#endif
-
-#if 0
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
-#endif
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
@@ -626,18 +556,18 @@ int main(int argc, char ** argv)
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(2));
 
-#endif
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[1],
 						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
-
-#if 1
-	led_flash_all(3);
 #endif
+
+	led_flash_all(3);
 
 	usb_vbus(true);
 
-	usb_console(vcom[0].cdc);
+	pin1_sel_gnd();
+	pin2_sel_vcc();
+//	usb_console(vcom[0].cdc);
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);

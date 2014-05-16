@@ -22,19 +22,21 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c pfclock.c leds.c xmodem_rcv.c xmodem_snd.c
+CFILES = usb-serial.c serial.c profclk.c board.c leds.c 
 
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty
+		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty ../sdk/libxmodem
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty
+LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem
 
 INCPATH = ../sdk/include 
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O1
+
+JTAGTOOL_ADDR = 192.168.10.128 
 
 MACH = stm32f103x6
 include ../mk/stm32f103.mk
