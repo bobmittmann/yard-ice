@@ -551,6 +551,7 @@ int main(int argc, char ** argv)
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
+#if 0
 	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
@@ -562,7 +563,6 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
-#if 0
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[1],
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(2));
@@ -578,7 +578,7 @@ int main(int argc, char ** argv)
 
 	pin1_sel_gnd();
 	pin2_sel_vcc();
-//	usb_console(vcom[0].cdc);
+	usb_console(vcom[0].cdc);
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
