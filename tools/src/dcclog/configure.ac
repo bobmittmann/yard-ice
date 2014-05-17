@@ -12,10 +12,13 @@ AC_PROG_CC
 AM_PROG_CC_STDC
 AC_HEADER_STDC
 
-
-
-
-
+AC_CANONICAL_HOST
+dnl Special check for windows
+case "$host_os" in
+	*mingw*)
+		AC_CHECK_LIB(wsock32, main, , AC_MSG_ERROR(Winsock is needed for a Win32 build.))
+		;;
+esac
 
 
 AC_OUTPUT([
