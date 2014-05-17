@@ -28,16 +28,17 @@
 #define __ARM_ELF_H__
 
 #include <elf.h>
+#include <stdio.h>
 
 void arm_elf_show_program_headers(Elf32_Ehdr * ehdr, Elf32_Phdr * phdr);
 
-Elf32_Phdr * arm_elf_read_program_headers(int fd, Elf32_Ehdr * ehdr);
+Elf32_Phdr * arm_elf_read_program_headers(FILE * f, Elf32_Ehdr * ehdr);
 
-Elf32_Shdr * arm_elf_read_section_headers(int fd, Elf32_Ehdr * ehdr);
+Elf32_Shdr * arm_elf_read_section_headers(FILE * f, Elf32_Ehdr * ehdr);
 
-void * arm_elf_load_program(int fd, Elf32_Ehdr * ehdr, Elf32_Phdr * phdr);
+void * arm_elf_load_program(FILE * f, Elf32_Ehdr * ehdr, Elf32_Phdr * phdr);
 
-int arm_elf_open(const char * pathname, Elf32_Ehdr * ehdr);
+FILE * arm_elf_open(const char * pathname, Elf32_Ehdr * ehdr);
 
 void arm_elf_show_section_headers(Elf32_Ehdr * ehdr, Elf32_Shdr * shdr, 
 								  char * strtab);
@@ -45,9 +46,9 @@ void arm_elf_show_section_headers(Elf32_Ehdr * ehdr, Elf32_Shdr * shdr,
 void arm_elf_show_symbols(Elf32_Shdr * shdr, char * shstr, 
 						  Elf32_Sym * sym, char * symstr, int num);
 
-char * arm_elf_load_strings(int fd, Elf32_Shdr * shdr);
+char * arm_elf_load_strings(FILE * f, Elf32_Shdr * shdr);
 
-Elf32_Sym * arm_elf_load_symbols(int fd, Elf32_Shdr * shdr, int * num);
+Elf32_Sym * arm_elf_load_symbols(FILE * f, Elf32_Shdr * shdr, int * num);
 
 #endif
 

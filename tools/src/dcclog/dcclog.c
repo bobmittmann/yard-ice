@@ -37,6 +37,8 @@
 #if defined(WIN32)
   #include <winsock2.h>
   #include <ws2tcpip.h>
+  #include <io.h>
+  #include <fcntl.h>
   #ifndef in_addr_t
     #define in_addr_t uint32_t
   #endif
@@ -210,7 +212,7 @@ char * log_level(struct log_def * log)
 	int level;
 
 	if (log == NULL) {
-		fprintf(stderr, "%s:%s log is NULL.\n", prog, __FUNCTION__);
+		fprintf(stderr, "%s:%s log is NULL.\n", prog, __func__);
 		return NULL;
 	}
 
@@ -218,7 +220,7 @@ char * log_level(struct log_def * log)
 
 	if ((level < LVL_PANIC) && (level > LVL_MSG)) {
 		fprintf(stderr, "%s:%s invalid level: %d.\n", 
-				__FILE__, __FUNCTION__, level);
+				__FILE__, __func__, level);
 		return NULL;
 	}
 
@@ -320,7 +322,7 @@ void * image_ptr(uint32_t addr)
 	}
 
 	fprintf(stderr, "ERROR: %s(): can't translate pointer %08x\n",
-			__FUNCTION__, addr);
+			__func__, addr);
 	return NULL;
 }
 
@@ -678,6 +680,322 @@ int dcc_log_expand(FILE * f)
 	return 0;
 }
 
+#ifdef _WIN32
+uint32_t net_dcc_u32(SOCKET sock)
+#else
+uint32_t net_dcc_u32(int sock);
+#endif
+{
+	uint32_t val;
+
+	if (recv(sock, (char *)&val, 4, 0) != 4)
+		return 0;
+
+	return val;
+}
+
+#ifdef _WIN32
+void * net_dcc_ptr(SOCKET sock)
+#else
+void * net_dcc_ptr(int sock);
+#endif
+{
+	uint32_t addr;
+
+	if (recv(sock, (char *)&addr, 4, 0) != 4)
+		return NULL;
+
+	return image_ptr(addr);
+}
+
+#ifdef _WIN32
+int net_logprintf(SOCKET sock, const char *fmt)
+#else
+int net_logprintf(int sock, const char *fmt)
+#endif
+{
+	char c;
+	char flags;
+	char sign = 0;
+	int width = 0;
+	char buf[32];
+	union {
+		char * cp;
+		uint32_t n;
+		uint8_t b[4];
+	} val;
+	int n = 0;
+	int m = 0;
+
+	flags = 0;
+	for (;(c = *fmt++);) {
+
+		if (!flags) {
+			if (c == '%') {
+				flags = GOT_PERCENT;
+				width = 0;
+				sign = 0;
+				fflush(stdout);
+			} else {
+				putchar(c);
+				n++;
+			}
+			continue;
+		}
+		switch (c) {
+
+		case 'c':
+			c = net_dcc_u32(sock);
+			m++;
+		default:
+			putchar(c);
+			n++;
+			flags = 0;
+			width = 0;
+			continue;
+
+		case 's':
+			m++;
+			if ((val.cp = net_dcc_ptr(sock)) == NULL) {
+				printf("[INVALID POINTER]");
+				flags = 0;
+				continue;
+			}
+
+			width -= (int)strlen(val.cp);
+			if (!(flags & JUST_LEFT)) {
+				for(; width > 0; width--) {
+					putchar(' ');
+					n++;
+				}
+			}
+			while ((c = *(val.cp)++)) {
+				putchar(c);
+				n++;
+			}
+			if ((flags & JUST_LEFT)) {
+				for(; width > 0; width--) {
+					putchar(' ');
+					n++;
+				}
+			}
+			flags = 0;
+			continue;
+
+		case 'l':
+			continue;
+
+		case '0':
+			if (width == 0)
+				flags |= ZERO_FILL;
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			width = (width * 10) + (c - '0');
+			continue;
+
+		case '-':
+			flags |= JUST_LEFT;
+			continue;
+
+		case '+':
+			sign = '+';
+			continue;
+
+		case 'd':
+		case 'i':
+			val.n = net_dcc_u32(sock);
+			if (((int32_t)val.n) < 0) {
+				val.n = - val.n;
+				sign = '-';
+			}
+			if (sign)
+				width--;
+			val.n = sprintf(buf, "%d", (int)val.n);
+			m++;
+			break;
+
+		case 'u':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%u", val.n);
+			m++;
+			break;
+
+		/* IPV4 address */			
+		case 'I':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%d.%d.%d.%d", 
+				IP4_ADDR1(val.n), IP4_ADDR2(val.n), 
+				IP4_ADDR3(val.n), IP4_ADDR4(val.n));
+			m++;
+			break;
+
+		/* Network byte order short */			
+		case 'S':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%d", ntohs(val.n)); 
+			m++;
+			break;
+
+		/* Network byte order long */			
+		case 'L':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%lu", ntohl(val.n)); 
+			m++;
+			break;
+
+		/* Memory dump */			
+		case 'M':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%02x %02x %02x %02x", val.b[0],
+							val.b[1], val.b[2], val.b[3]); 
+			m++;
+			break;
+
+		case 'p':
+			width = 8;
+			flags |= ZERO_FILL;
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%x", val.n);
+			m++;
+			break;
+
+		case 'x':
+		case 'X':
+			val.n = net_dcc_u32(sock);
+			val.n = sprintf(buf, "%x", val.n);
+			m++;
+			break;
+		}
+
+		if (flags & ZERO_FILL) {
+			c = '0';
+			if (sign) {
+				putchar(sign);
+				n++;
+			}
+			sign = 0; 
+			flags &= ~JUST_LEFT;
+		} else
+			c = ' ';
+
+		width -= (int)val.n;
+		if (!(flags & JUST_LEFT)) {
+			for(; width > 0; width--) {
+				putchar(c);
+				n++;
+			}
+		}
+
+		if (sign) {
+			putchar(sign);
+			n++;
+		}
+
+		val.cp = buf;
+		while ((c = *(val.cp)++)) {
+			putchar(c);
+			n++;
+		}
+
+		if (flags & JUST_LEFT) {
+			for(; width > 0; width--) {
+				putchar(' ');
+				n++;				
+			}
+		}
+
+		flags = 0;
+
+		fflush(stdout);
+	}
+
+	return m;
+}
+
+#ifdef _WIN32
+int net_dcc_log_expand(SOCKET sock)
+#else
+int net_dcc_log_expand(int sock)
+#endif
+{
+	struct log_def * log;
+	unsigned int n;
+	unsigned int m = 0;
+	uint32_t addr;
+	char * lvl;
+	char * fmt;
+	int sync;
+	int i;
+
+	n = 0;
+	sync = 0;
+	for (;;) {
+		if (recv(sock, (char *)&addr, 4, 0) != 4)
+			break;
+	
+		fmt = NULL;
+		lvl = NULL;
+		for (i = 0; i < dcc_count; i++) {
+			log = &dcc[i];
+
+			if (log->addr == addr) {
+				lvl = log_level(log);
+				fmt = log->fmt;
+				break;
+			}
+		}
+
+		if (fmt == NULL) {
+			if (sync) {
+				printf("%d\n", m);
+				m = 0;
+				sync = 0;
+			}
+			printf(".");
+			continue;
+		}
+
+		if (!sync) {
+			sync = 1;
+			printf("\n");
+		}
+
+		m++;
+
+		if (verbose > 0) {
+			printf("%6d %7s: ", n, lvl);
+			if (verbose > 1) {
+				printf("%s:%4d ", log->file, log->line);
+			}
+			printf("%s: ", log->function);
+		} else {
+			printf("%7s: %s: ", lvl, log->function);
+		}
+
+//		fflush(stdout);
+		net_logprintf(sock, log->fmt);
+		putchar('\n');
+		fflush(stdout);
+		n++;
+	}
+
+#ifdef _WIN32
+	closesocket(sock);
+#else
+	close(sock);
+#endif
+
+	return 0;
+}
+
+
 void usage(char * prog)
 {
 	fprintf(stderr, "Usage: %s [OPTION...] [ELF APPS]\n", prog);
@@ -825,10 +1143,14 @@ void sig_quit(int signo)
 
 int net_connect(char * host, int port)
 {
-	int fd;
 	struct hostent * hp;
 	struct sockaddr_in sa;
 	in_addr_t addr;
+#if defined(WIN32)
+	SOCKET sock;
+#else
+	int sock;
+#endif
 	int opt;
 
 #if defined(WIN32)
@@ -844,8 +1166,8 @@ int net_connect(char * host, int port)
 #endif
 
 	/* Configuracao do Socket como TCP */
-	fd = socket(AF_INET, SOCK_STREAM, 0); 
-	if (fd < 0) {
+	sock = socket(AF_INET, SOCK_STREAM, 0); 
+	if (sock < 0) {
 		fprintf(stderr, "%s: socket(): %s\n", prog, strerror(errno));
 		return -1;
 	}
@@ -866,18 +1188,26 @@ int net_connect(char * host, int port)
 
 	sa.sin_port = htons(port);
 
-	if (connect(fd, (struct sockaddr *)&sa, sizeof(sa))) { 
+	if (connect(sock, (struct sockaddr *)&sa, sizeof(sa))) { 
 		fprintf(stderr, "%s: connect(): %s\n", prog, strerror(errno));
 		return -1;
 	}
 
 	opt = 1;
-	setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&opt, sizeof(int));
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&opt, sizeof(int));
 #if 0
-	setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (void *)&opt, sizeof(int));
-	send(fd, "\r", 1, 0);
+	setsockopt(sock, IPPROTO_TCP, TCP_QUICKACK, (void *)&opt, sizeof(int));
+	send(, "\r", 1, 0);
 #endif
-	return fd;
+#if defined(WIN32)
+//	if ((fd = _open_osfhandle(sock, O_RDWR | O_BINARY)) < 0) {
+//		fprintf(stderr, "%s: _open_osfhandle(): %s\n", prog, strerror(errno));
+//		return -1;
+//	}
+#endif
+
+
+	return sock;
 }
 
 int load_elf(char * pathname)
@@ -890,19 +1220,19 @@ int load_elf(char * pathname)
 	Elf32_Sym * sym = NULL;
 	char * section;
 	char * name;
-	int fd;
+	FILE * f;
 	int i;
 	int n;
 
 	ehdr = malloc(sizeof(Elf32_Ehdr));
 
 	/* load binary data and symbols from elf file */
-	if ((fd = arm_elf_open(pathname, ehdr)) < 0) {
-		return fd;
+	if ((f = arm_elf_open(pathname, ehdr)) == NULL) {
+		return -1;
 	}
 
-	if ((phdr = arm_elf_read_program_headers(fd, ehdr)) == NULL) {
-		printf(" #error: %s: arm_elf_read_program_headers()\n", __FUNCTION__);
+	if ((phdr = arm_elf_read_program_headers(f, ehdr)) == NULL) {
+		printf(" #error: %s: arm_elf_read_program_headers()\n", __func__);
 		return -6;
 	}
 
@@ -913,26 +1243,34 @@ int load_elf(char * pathname)
 
 	for (i = 0; i < ehdr->e_phnum; i++) {
 		if (phdr[i].p_offset > 0) {
-			mem[mem_count].image = arm_elf_load_program(fd, ehdr, &phdr[i]);
+			mem[mem_count].image = arm_elf_load_program(f, ehdr, &phdr[i]);
+			if (mem[mem_count].image == NULL) {
+				printf(" #error: %s: arm_elf_load_program() failed!\n", 
+					   __func__);
+				printf("         program header(%d): "
+					   "offset=%d memsz=%d vaddr=%08x\n",  
+					   i, phdr[i].p_offset, phdr[i].p_memsz, phdr[i].p_vaddr);
+				return -5;
+			}
 			mem[mem_count].size = phdr[i].p_memsz;
 			mem[mem_count].addr = phdr[i].p_vaddr;
 			mem_count++;
 		}
 	}
 
-	if ((shdr = arm_elf_read_section_headers(fd, ehdr))  == NULL) {
-		printf(" #error: %s: arm_elf_read_section_headers()\n", __FUNCTION__);
+	if ((shdr = arm_elf_read_section_headers(f, ehdr))  == NULL) {
+		printf(" #error: %s: arm_elf_read_section_headers()\n", __func__);
 		return -7;
 	}
 
-//	printf(" 2. %s: image_size=%ld\n", __FUNCTION__, image_size);
+//	printf(" 2. %s: image_size=%ld\n", __func__, image_size);
 //	fflush(stdout);
 
 	if ((ehdr->e_shstrndx > 0) && (ehdr->e_shstrndx < ehdr->e_shnum)) {
 		/* load section headers string table */
-		shstrtab = arm_elf_load_strings(fd, &shdr[ehdr->e_shstrndx]);
+		shstrtab = arm_elf_load_strings(f, &shdr[ehdr->e_shstrndx]);
 	} else {
-		printf(" #error: %s: no section headers string table\n", __FUNCTION__);
+		printf(" #error: %s: no section headers string table\n", __func__);
 		return -1;
 	};
 	
@@ -944,21 +1282,21 @@ int load_elf(char * pathname)
 	for (i = 0; i < ehdr->e_shnum; i++) {
 		/* look for the symbol table section */
 		if (shdr[i].sh_type == SHT_SYMTAB) {
-			sym = arm_elf_load_symbols(fd, &shdr[i], &n);
+			sym = arm_elf_load_symbols(f, &shdr[i], &n);
 			if ((shdr[i].sh_link > 0) && (shdr[i].sh_link < ehdr->e_shnum)) {
 				/* load section headers string table */
-				symstrtab = arm_elf_load_strings(fd, &shdr[shdr[i].sh_link]);
+				symstrtab = arm_elf_load_strings(f, &shdr[shdr[i].sh_link]);
 				break;
 			}
-			printf(" #error: %s: no symbol string table\n", __FUNCTION__);
+			printf(" #error: %s: no symbol string table\n", __func__);
 			return -1;
 		}
 	}
 
-	close(fd);
+	fclose(f);
 
 	if (sym == NULL) {
-		printf(" #error: %s: no symbol table\n", __FUNCTION__);
+		printf(" #error: %s: no symbol table\n", __func__);
 		return -1;
 	}
 
@@ -1001,7 +1339,7 @@ int main(int argc, char *argv[])
 	int host_set = 0;
 	int log_set = 0;
 	int c;
-	int fd;
+	int sock;
 	FILE * f;
 
 	/* the prog name start just after the last lash */
@@ -1095,12 +1433,28 @@ int main(int argc, char *argv[])
 		}
 	} else {
 		if (host_set) {
+
 			printf(" - host: %s:%d\n", host, port);
-			if ((fd = net_connect(host, port)) < 0) {
+			if ((sock = net_connect(host, port)) < 0) {
+				fprintf(stderr, "%s: can't connect to '%s'\n", prog, host);
 				return 5;
 			}
-			f = fdopen(fd, "r");
+	
+			printf("\n");
+
+			if (net_dcc_log_expand(sock) < 0) {
+				cleanup();
+				return 3;
+			}
+			cleanup();
+			return 0;
+
+			if ((f = fdopen(sock, "r")) == NULL) { 
+				fprintf(stderr, "%s: fdopen() failed!\n", prog);
+				return 5;
 //			pipe_start(fdopen(fd, "w"));
+			}
+
 		} else {
 			f = stdin;
 		}

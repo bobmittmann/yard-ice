@@ -54,13 +54,13 @@ class TftpPacket(object):
 	"""Abstract parent class of TFTP packet classes."""
 	def __init__(self, opc):
 		self.opc = opc 
-		self.buf = None
+		self.buf = bytearray()
 
 	def encode(self):
-		raise NotImplementedError, "Abstract method"
+		raise NotImplementedError("Abstract method")
 
 	def decode(self):
-		raise NotImplementedError, "Abstract method"
+		raise NotImplementedError("Abstract method")
 
 
 class TftpPacketRRQ(TftpPacket):
@@ -71,20 +71,20 @@ class TftpPacketRRQ(TftpPacket):
 class TftpPacketWRQ(TftpPacket):
 	def __init__(self, fname=None, mode=None, opt={}):
 		TftpPacket.__init__(self, 2)
-		self.fname = fname
+		self.fname = fname.encode('ascii')
 		self.mode = mode
 		self.opt = opt
 	
 		self.mode_str = { 
-			TFTP_MODE_NETASCII: "netascii", 
-			TFTP_MODE_OCTET: "octet" 
+			TFTP_MODE_NETASCII: b'netascii', 
+			TFTP_MODE_OCTET: b'octet'
 			}
 
 	def encode(self):
 		"""Encode the packet's buffer from the instance variables."""
 		mode_str = self.mode_str[self.mode]
-		fmt = "!H%dsx%dsx" % (len(self.fname), len(mode_str))
-		self.buf = struct.pack(fmt, self.opc, self.fname, mode_str) 
+		fmt = "!H{0:d}sx{1:d}sx".format(len(self.fname), len(mode_str))
+		self.buf = struct.pack(fmt, int(self.opc), self.fname, mode_str) 
 		return self.buf
 
 
@@ -96,8 +96,8 @@ class TftpPacketDATA(TftpPacket):
 
 	def encode(self):
 		"""Encode the DATA packet"""
-		fmt = "!HH%ds" % len(self.data)
-		self.buf = struct.pack(fmt, self.opc, self.blkno, self.data)
+		fmt = "!HH{0:d}s".format(len(self.data))
+		self.buf = struct.pack(fmt, int(self.opc), int(self.blkno), self.data)
 		return self.buf
 
 
@@ -137,10 +137,10 @@ class TftpPacketERR(TftpPacket):
 			(self.err,) = struct.unpack(fmt, self.buf[2:])
 			self.msg = self.errmsgs[self.err]
 		else:
-			fmt = "!H%dsx" % (buflen - 5)
+			fmt = "!H{0:d}sx".format(buflen - 5)
 			(self.err, self.msg) = struct.unpack(fmt, self.buf[2:])
 
-		raise TftpException, "TFTP Error: %d - '%s'" % (self.err, self.msg)
+		raise TftpException("TFTP Error: {0:d} - '{1:s}'".format(self.err, self.msg))
 
 
 class TftpPacketOACK(TftpPacket):
@@ -211,7 +211,6 @@ class TftpClientSession(object):
 				else:
 					addr = self.server_addr
 
-
 				self.sock.sendto(buf, addr)
 				while (1):
 					(buf, raddr) = self.sock.recvfrom(TFTP_MAX_BLKSIZE)
@@ -230,7 +229,7 @@ class TftpClientSession(object):
 				if (retry_count >= TFTP_TIMEOUT_RETRIES):
 					retry_count += 1
 				else:
-					raise TftpException, "hit max retries, giving up"
+					raise TftpException("hit max retries, giving up")
 
 		# Record the last sent packet
 		self.last_pkt = pkt
@@ -266,12 +265,13 @@ class TftpClient(object):
 		self.options = options
 		self.session = TftpClientSession(self.host, self.port)
 
-		if self.options.has_key('blksize'):
-			size = self.options['blksize']
-			if size < TFTP_MIN_BLKSIZE or size > TFTP_MAX_BLKSIZE:
-				raise TftpException, "Invalid blksize: %d" % size
-		else:
-		 	size = TFTP_DEF_BLKSIZE
+#		if self.options.has_key('blksize'):
+#			size = self.options['blksize']
+#			if size < TFTP_MIN_BLKSIZE or size > TFTP_MAX_BLKSIZE:
+#				raise TftpException("Invalid blksize: {0}".format(size))
+#		else:
+#		 	size = TFTP_DEF_BLKSIZE
+		size = TFTP_DEF_BLKSIZE
 
 		# FIXME: negotiate block size
 		self.blksize = size 
@@ -281,9 +281,12 @@ class TftpClient(object):
 		self.session.timeout(timeout)
 
 		if (mode == TFTP_MODE_NETASCII): 
-			data = data.replace('\n', '\r\n')
+			s = data.replace('\n', '\r\n')
+			bin_data = s.encode('ascii')
+		else:
+			bin_data = data
 
-		data_len = len(data)
+		data_len = len(bin_data)
 		data_rem = data_len
 		data_pos = 0
 		blkno = 0
@@ -297,11 +300,11 @@ class TftpClient(object):
 
 		# we should receive ACK
 		if not isinstance(pkt, TftpPacketACK):
-			raise TftpException, "Invalid response."
+			raise TftpException("Invalid response.")
 		
 		# the block number must match our initial block number
 		if (pkt.blkno != blkno):
-			raise TftpException, "Invalid block number %d." % pkt.blkno
+			raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
 
 		# connect to the remote host
 		self.session.connect()
@@ -318,7 +321,7 @@ class TftpClient(object):
 				n = self.blksize
 
 			# get next chunk from data buffer 
-			buf = data[data_pos:data_pos + n]
+			buf = bin_data[data_pos:data_pos + n]
 			data_pos += n;
 			data_rem -= n;
 			
@@ -328,11 +331,11 @@ class TftpClient(object):
 			pkt = self.session.cycle(pktData)
 
 			if not isinstance(pkt, TftpPacketACK):
-				raise TftpException, "Invalid response."
+				raise TftpException("Invalid response.")
 
 			# FIXME: retransmit lost packet
 			if (pkt.blkno != blkno):
-				raise TftpException, "Invalid block number %d." % pkt.blkno
+				raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
 
 		# disconnect from the remote host
 		self.session.disconnect()
