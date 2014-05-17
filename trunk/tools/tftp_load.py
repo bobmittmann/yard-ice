@@ -67,7 +67,7 @@ tgt_reset_quiet = 'rst\n'\
 	'run\n'\
 	'connect\n'
 
-tgt_init = 'target %s\n'\
+tgt_init = 'target {0}\n'\
 	'connect\n'\
 	'halt\n'\
 	'init\n'
@@ -95,32 +95,32 @@ error_power_off = 'release\n'\
 
 
 def show_usage():
-	print >> sys.stderr, "Usage: %s [OPTION] FILE" % progname
-	print >> sys.stderr, "Transfer FILE using the TFTP protocol"
-	print >> sys.stderr, ""
-	print >> sys.stderr, "  -a, --addr     upload address."\
-		" Default to: 0x%08x" % def_addr
-	print >> sys.stderr, "  -h, --host     remote host addr."\
-		" Default to: '%s'" % def_host
-	print >> sys.stderr, "  -t, --target   target platform."\
-		" Default to: '%s'" % def_target
-	print >> sys.stderr, "  -r, --reset    exec the reset script"
-	print >> sys.stderr, "  -q, --quiet    silent mode (no beeps)"
-	print >> sys.stderr, "      --help     display this help and exit"
-	print >> sys.stderr, "  -V, --version  output version information and exit"
-	print >> sys.stderr, ""
+	print("Usage: {0} [OPTION] FILE".format(progname))
+	print("Transfer FILE using the TFTP protocol")
+	print("")
+	print("  -a, --addr     upload address."\
+		" Default to: 0x{0:08x}".format(def_addr))
+	print("  -h, --host     remote host addr."\
+		" Default to: '{0}'".format(def_host))
+	print("  -t, --target   target platform."\
+		" Default to: '{0}'".format(def_target))
+	print("  -r, --reset    exec the reset script")
+	print("  -q, --quiet    silent mode (no beeps)")
+	print("      --help     display this help and exit")
+	print("  -V, --version  output version information and exit")
+	print("")
 
 def show_version():
-	print "%s - version %d.%d" % (progname, ver_major, ver_minor)
-	print ""
-	print "Writen by Bob Mittmann - bobmittmann@gmail.com"
-	print "(C) Cpyright 2014 - Bob Mittmann"
-	print ""
+	print("{0} - version {1:d}.{2:d}".format(progname, ver_major, ver_minor))
+	print("")
+	print("Writen by Bob Mittmann - bobmittmann@gmail.com")
+	print("(C) Cpyright 2014 - Bob Mittmann")
+	print("")
 
 def error(msg):
-	print >> sys.stderr, ""
-	print >> sys.stderr, "%s: error: %s" % (progname, msg)
-	print >> sys.stderr, ""
+	print("")
+	print("{0}: error: {1}".format(progname, msg))
+	print("")
 	sys.exit(2)
 
 def main():
@@ -137,7 +137,7 @@ def main():
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "?rqva:h:t:", \
 			["help", "reset", "quiet", "version", "addr=", "host=", "target="])
-	except GetoptError, err:
+	except err:
 		error(str(err))
 
 	for o, a in opts:
@@ -180,11 +180,11 @@ def main():
 
 	fsize = len(bin_data)
 
-	print " - File: '%s'" % fname
-	print " - Size: %d bytes" % fsize
-	print " - Remote host: %s" % host
-	print " - Target: '%s'" % target
-	print " - Upload address: 0x%08x" % addr
+	print(" - File: '{0}'".format(fname))
+	print(" - Size: {0:d} bytes".format(fsize))
+	print(" - Remote host: {0}".format(host))
+	print(" - Target: '{0}'".format(target))
+	print(" - Upload address: 0x{0:08x}".format(addr))
 	sys.stdout.flush()
 
 	options = {}
@@ -207,36 +207,40 @@ def main():
 #		error(err)
 
 	try:
-		print " - Initializing remote target"
+		print(" - Initializing remote target")
 		sys.stdout.flush()
-		script = tgt_init % target
-		tclient.put(script, 'script', tftp.TFTP_MODE_NETASCII)
+		script = tgt_init.format(target)
+		tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 	except Exception as err:
-		error(err)
+		raise
+#			error(err)
 
 	try:
-		print " - Erasing 0x%08x (%d bytes)" % (addr, fsize)
+		print(" - Erasing 0x{0:08x} ({1:d} bytes)".format(addr, fsize))
 		sys.stdout.flush()
-		script = "erase 0x%08x %d\n" % (addr, fsize)
+		script = "erase 0x{0:08x} {1:d}\n".format(addr, fsize)
 		tclient.put(script, 'script', tftp.TFTP_MODE_NETASCII)
 	except Exception as err:
-		error(err)
+		raise
+#		error(err)
 
 	try:
-		print " - Loading binary file..."
+		print(" - Loading binary file...")
 		sys.stdout.flush()
 		t0 = time.time()
-		tclient.put(bin_data, '0x%08x' % addr, tftp.TFTP_MODE_OCTET, timeout)
+		tclient.put(bin_data, "0x{0:08x}".format(addr), \
+					tftp.TFTP_MODE_OCTET, timeout)
 		dt = time.time() - t0
-		print " - %d bytes transferred in %.2f seconds (%.0f bytes/sec)" % \
-			(fsize, dt, fsize/dt)
+		print(" - {0:d} bytes transferred in {1:.2f} seconds"\
+			  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))
 		sys.stdout.flush()
 	except Exception as err:
-		error(err)
+		raise
+#		error(err)
 
 	if reset:
 		try:
-			print " - Reseting remote target"
+			print(" - Reseting remote target")
 			tclient.put(tgt_reset, 'script', tftp.TFTP_MODE_NETASCII)
 			sys.stdout.flush()
 		except Exception as err:

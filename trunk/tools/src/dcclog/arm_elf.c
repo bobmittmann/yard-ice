@@ -32,9 +32,6 @@
 
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 
 #include <elf.h>
 
@@ -179,20 +176,28 @@ void arm_elf_show_program_headers(Elf32_Ehdr * ehdr, Elf32_Phdr * phdr)
 	}
 }
 
-void * arm_elf_load_program(int fd, Elf32_Ehdr * ehdr, Elf32_Phdr * phdr)
+void * arm_elf_load_program(FILE * f, Elf32_Ehdr * ehdr, Elf32_Phdr * phdr)
 {
-	void * ptr;
-	int ret;
+	uint8_t * ptr;
+	ssize_t ret;
 
 	//ffs(p->p_align) - 1,
 	/* TODO: alignement */
-	ptr = malloc(phdr->p_memsz);
-	lseek(fd, phdr->p_offset, SEEK_SET);
+	fseek(f, phdr->p_offset, SEEK_SET);
 
-	ret = read(fd, ptr, phdr->p_filesz);
-	if (ret != phdr->p_filesz) {
-		fprintf(stderr, "ERROR: %s: read(): %s.\n",
-				__FUNCTION__, strerror(errno));
+	if (ftell(f) != phdr->p_offset) {
+		fprintf(stderr, "ERROR: %s: ftell()=%ld != %d\n",
+				__func__, ftell(f), phdr->p_offset);
+		return NULL;
+	}
+
+	ptr = malloc(phdr->p_memsz);
+
+	if ((ret = fread(ptr, phdr->p_memsz, 1, f)) != 1) {
+		fprintf(stderr, "ERROR: %s: fread(%d): %s.\n",
+				__func__, phdr->p_memsz, strerror(errno));
+		fprintf(stderr, "ERROR: %s: ftell()=%ld != %d\n",
+				__func__, ftell(f), phdr->p_offset);
 		free(ptr);
 		return NULL;
 	}
@@ -200,21 +205,23 @@ void * arm_elf_load_program(int fd, Elf32_Ehdr * ehdr, Elf32_Phdr * phdr)
 	return ptr;
 }
 
-char * arm_elf_load_strings(int fd, Elf32_Shdr * shdr)
+char * arm_elf_load_strings(FILE * f, Elf32_Shdr * shdr)
 {
 	char * str;
 	int ret;
 
-	if (lseek(fd, shdr->sh_offset, SEEK_SET) != shdr->sh_offset) {
-		fprintf(stderr, "ERROR: %s: lseek()...\n", __FUNCTION__);
+	fseek(f, shdr->sh_offset, SEEK_SET);
+
+	if (ftell(f) != shdr->sh_offset) {
+		fprintf(stderr, "ERROR: %s: fseek()...\n", __func__);
 		return NULL;
 	}
 
 	str = malloc(shdr->sh_size);
-	ret = read(fd, str, shdr->sh_size);
-	if (ret != shdr->sh_size) {
-		fprintf(stderr, "ERROR: %s: read(): %s.\n",
-				__FUNCTION__, strerror(errno));
+
+	if ((ret = fread(str, shdr->sh_size, 1, f)) != 1) {
+		fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+				__func__, strerror(errno));
 		free(str);
 		return NULL;
 	}
@@ -369,7 +376,7 @@ void arm_elf_show_symbols(Elf32_Shdr * shdr, char * shstr,
 	}
 }
 
-Elf32_Phdr * arm_elf_read_program_headers(int fd, Elf32_Ehdr * ehdr)
+Elf32_Phdr * arm_elf_read_program_headers(FILE * f, Elf32_Ehdr * ehdr)
 {
 	int off = ehdr->e_phoff;
 	Elf32_Phdr * phdr;
@@ -379,12 +386,11 @@ Elf32_Phdr * arm_elf_read_program_headers(int fd, Elf32_Ehdr * ehdr)
 	phdr = malloc(ehdr->e_phnum * sizeof(Elf32_Phdr));
 
 	for (i = 0; i < ehdr->e_phnum; i++) {
-		lseek(fd, off, SEEK_SET);
-		ret = read(fd, &phdr[i], sizeof(Elf32_Phdr));
 
-		if (ret != sizeof(Elf32_Phdr)) {
-			fprintf(stderr, "ERROR: %s: read(): %s.\n",
-					__FUNCTION__, strerror(errno));
+		fseek(f, off, SEEK_SET);
+		if ((ret = fread(&phdr[i], sizeof(Elf32_Phdr), 1, f)) != 1) {
+			fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+					__func__, strerror(errno));
 			free(phdr);
 			return NULL;
 		}
@@ -395,7 +401,7 @@ Elf32_Phdr * arm_elf_read_program_headers(int fd, Elf32_Ehdr * ehdr)
 	return phdr;
 }
 
-Elf32_Shdr * arm_elf_read_section_headers(int fd, Elf32_Ehdr * ehdr)
+Elf32_Shdr * arm_elf_read_section_headers(FILE * f, Elf32_Ehdr * ehdr)
 {
 	int off = ehdr->e_shoff;
 	Elf32_Shdr * shdr;
@@ -405,23 +411,21 @@ Elf32_Shdr * arm_elf_read_section_headers(int fd, Elf32_Ehdr * ehdr)
 	shdr = malloc(sizeof(Elf32_Shdr) * ehdr->e_shnum);
 
 	for (i = 0; i < ehdr->e_shnum; i++) {
-		lseek(fd, off, SEEK_SET);
-		ret = read(fd, &shdr[i], sizeof(Elf32_Shdr));
 
-		if (ret != sizeof(Elf32_Shdr)) {
-			fprintf(stderr, "ERROR: %s: read(): %s.\n",
-					__FUNCTION__, strerror(errno));
+		fseek(f, off, SEEK_SET);
+		if ((ret = fread(&shdr[i], sizeof(Elf32_Shdr), 1, f)) != 1) {
+			fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+					__func__, strerror(errno));
 			free(shdr);
 			return NULL;
 		}
-
 		off += ehdr->e_shentsize;
 	}
 
 	return shdr;
 }
 
-Elf32_Sym * arm_elf_load_symbols(int fd, Elf32_Shdr * shdr, int * num)
+Elf32_Sym * arm_elf_load_symbols(FILE * f, Elf32_Shdr * shdr, int * num)
 {
 	Elf32_Sym * sym;
 	int ret;
@@ -429,27 +433,28 @@ Elf32_Sym * arm_elf_load_symbols(int fd, Elf32_Shdr * shdr, int * num)
 	if (shdr->sh_type != SHT_SYMTAB) {
 		fprintf(stderr, 
 				"%s(): ASSERT: shdr->sh_type != SHT_SYMTAB\n",
-				__FUNCTION__);
+				__func__);
 		return NULL;
 	}
 
 	if (shdr->sh_entsize != sizeof(Elf32_Sym)) {
 		fprintf(stderr, 
 				"%s(): ASSERT: shdr->sh_entsize != sizeof(Elf32_Sym)\n",
-				__FUNCTION__);
+				__func__);
 		return NULL;
 	}
-/*
+
 	printf(" - symbols off: %08x  size: %d  entsize: %d link %08x\n", 
 		   shdr->sh_offset, shdr->sh_size, shdr->sh_entsize,
 		   shdr->sh_link);
-*/
+
+	fseek(f, shdr->sh_offset, SEEK_SET);
+
 	sym = malloc(shdr->sh_size);
-	lseek(fd, shdr->sh_offset, SEEK_SET);
-	ret = read(fd, sym, shdr->sh_size);
-	if (ret != shdr->sh_size) {
-		fprintf(stderr, "ERROR: %s: read(): %s.\n",
-				__FUNCTION__, strerror(errno));
+
+	if ((ret = fread(sym, shdr->sh_size, 1, f)) != 1) {
+		fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+				__func__, strerror(errno));
 		free(sym);
 		return NULL;
 	}
@@ -460,64 +465,68 @@ Elf32_Sym * arm_elf_load_symbols(int fd, Elf32_Shdr * shdr, int * num)
 	return sym;
 }
 
-int arm_elf_open(const char * pathname, Elf32_Ehdr * ehdr)
+FILE * arm_elf_open(const char * pathname, Elf32_Ehdr * ehdr)
 {
-	int fd;
+	FILE * f;
 	int ret;
 
 	if ((pathname== NULL) || (ehdr == NULL)) {
-		fprintf(stderr, "ERROR: %s: invalid arguments.\n", __FUNCTION__);
-		return -1;
+		fprintf(stderr, "ERROR: %s: invalid arguments.\n", __func__);
+		return NULL;
 	}
 
-	if (!(fd = open(pathname, O_RDONLY)) < 0) {
+	if ((f = fopen(pathname, "rb")) == NULL) {
 		fprintf(stderr, "ERROR: %s: open(): %s.\n",
-				__FUNCTION__, strerror(errno));
-		return fd;
+				__func__, strerror(errno));
+		return f;
 	}
 
-	ret = read(fd, ehdr, sizeof(Elf32_Ehdr));
-	if (ret != sizeof(Elf32_Ehdr)) {
-		fprintf(stderr, "ERROR: %s: read(): %s.\n",
-				__FUNCTION__, strerror(errno));
-		return -2;
+	if ((ret = fread(ehdr, sizeof(Elf32_Ehdr), 1, f)) != 1) {
+		fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+				__func__, strerror(errno));
+		fclose(f);
+		return NULL;
 	}
 
 	if ((ehdr->e_ident[EI_MAG0] != ELFMAG0) ||
 		(ehdr->e_ident[EI_MAG1] != ELFMAG1) ||
 		(ehdr->e_ident[EI_MAG2] != ELFMAG2) ||
 		(ehdr->e_ident[EI_MAG3] != ELFMAG3)) {
-		fprintf(stderr, "ERROR: %s: not an ELF file.\n", __FUNCTION__);
+		fprintf(stderr, "ERROR: %s: not an ELF file.\n", __func__);
 		/* Not ELF */
-		return -3;
+		fclose(f);
+		return NULL;
 	}
 
 	if (ehdr->e_type != ET_EXEC) {
-		fprintf(stderr, "ERROR: %s: not an executable file.\n", __FUNCTION__);
+		fprintf(stderr, "ERROR: %s: not an executable file.\n", __func__);
 		/* Not executable */
-		return -4;
+		fclose(f);
+		return NULL;
 	}
 
 	if (ehdr->e_machine != EM_ARM) {
-		fprintf(stderr, "ERROR: %s: not an ARM machine file.\n", __FUNCTION__);
+		fprintf(stderr, "ERROR: %s: not an ARM machine file.\n", __func__);
 		/* Not executable */
-		return -4;
+		fclose(f);
+		return NULL;
 	}
 
 	if ((ehdr->e_ident[EI_DATA] != ELFDATA2MSB) &&
 		(ehdr->e_ident[EI_DATA] != ELFDATA2LSB)) {
 		fprintf(stderr, "ERROR: %s: invalid data enconding.\n", 
-				__FUNCTION__);
-		return -5;
+				__func__);
+		fclose(f);
+		return NULL;
 	}
 
-	return fd;
+	return f;
 }
 
 #if 0
 int load_elf(char * pathname)
 {
-	int fd;
+	FILE * f;
 	int i;
 	char * shstrtab;
 	char * symstrtab = NULL;
@@ -534,33 +543,33 @@ int load_elf(char * pathname)
 		return fd;
 	}
 
-	printf(" - %s: %s endian.\n", __FUNCTION__, 
+	printf(" - %s: %s endian.\n", __func__, 
 		   (ehdr->e_ident[EI_DATA] == ELFDATA2MSB) ? "big" : "little");
 
 	printf(" - %s: program header table: off=%08x entsize=%d num=%d\n", 
-		   __FUNCTION__, ehdr->e_phoff, ehdr->e_phentsize, ehdr->e_phnum);
+		   __func__, ehdr->e_phoff, ehdr->e_phentsize, ehdr->e_phnum);
 	printf(" - %s: section header table: off=%08x entsize=%d num=%d\n", 
-		   __FUNCTION__, ehdr->e_shoff, ehdr->e_shentsize, ehdr->e_shnum);
+		   __func__, ehdr->e_shoff, ehdr->e_shentsize, ehdr->e_shnum);
 
 	if ((phdr = arm_elf_read_program_headers(fd, ehdr)) == NULL) {
-		printf(" #error: %s: arm_elf_read_program_headers()\n", __FUNCTION__);
+		printf(" #error: %s: arm_elf_read_program_headers()\n", __func__);
 		return -6;
 	}
 
-	printf(" - %s 0.\n", __FUNCTION__);
+	printf(" - %s 0.\n", __func__);
 	fflush(stdout);
 
 	if ((shdr = arm_elf_read_section_headers(fd, ehdr))  == NULL) {
-		printf(" #error: %s: arm_elf_read_section_headers()\n", __FUNCTION__);
+		printf(" #error: %s: arm_elf_read_section_headers()\n", __func__);
 		return -7;
 	}
 
-	printf(" - %s 1.\n", __FUNCTION__);
+	printf(" - %s 1.\n", __func__);
 	fflush(stdout);
 
 	arm_elf_show_program_headers(ehdr, phdr);
 
-	printf(" - %s 2.\n", __FUNCTION__);
+	printf(" - %s 2.\n", __func__);
 	fflush(stdout);
 
 	if (ehdr->e_shstrndx > 0) {
@@ -570,7 +579,7 @@ int load_elf(char * pathname)
 
 	arm_elf_show_section_headers(ehdr, shdr, shstrtab);
 
-	printf(" - %s 3.\n", __FUNCTION__);
+	printf(" - %s 3.\n", __func__);
 	fflush(stdout);
 
 	for (i = 0; i < ehdr->e_shnum; i++) {
@@ -597,7 +606,7 @@ int load_elf(char * pathname)
 #endif
 
 /*
-int arm_elf_read_sections(int fd, Elf32_Ehdr * ehdr, 
+int arm_elf_read_sections(FILE * f, Elf32_Ehdr * ehdr, 
 						  Elf32_Shdr * shdr)
 {
 	int off = ehdr->e_shoff;
