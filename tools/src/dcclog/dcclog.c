@@ -34,12 +34,19 @@
 #include <ctype.h>
 #include <errno.h>
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#include <netinet/tcp.h>
-#include <netdb.h>
+#if defined(WIN32)
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #ifndef in_addr_t
+    #define in_addr_t uint32_t
+  #endif
+#else
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <netinet/tcp.h>
+  #include <netdb.h>
+#endif
 
 #include <pthread.h>
 
@@ -48,13 +55,13 @@
 #define VERSION_MAJOR 2
 #define VERSION_MINOR 0
 
-#define PANIC   1
-#define EXCEPT  2
-#define ERROR   3
-#define WARNING 4
-#define TRACE   5
-#define INFO    6
-#define MSG     7
+#define LVL_PANIC   1
+#define LVL_EXCEPT  2
+#define LVL_ERROR   3
+#define LVL_WARNING 4
+#define LVL_TRACE   5
+#define LVL_INFO    6
+#define LVL_MSG     7
 
 const char * level_tab[] = {
 	"NONE",
@@ -210,7 +217,7 @@ char * log_level(struct log_def * log)
 
 	level = log->level;
 
-	if ((level < PANIC) && (level > MSG)) {
+	if ((level < LVL_PANIC) && (level > LVL_MSG)) {
 		fprintf(stderr, "%s:%s invalid level: %d.\n", 
 				__FILE__, __FUNCTION__, level);
 		return NULL;
@@ -525,7 +532,7 @@ int logprintf(FILE *stream, const char *fmt)
 		/* Network byte order long */			
 		case 'L':
 			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%u", ntohl(val.n)); 
+			val.n = sprintf(buf, "%lu", ntohl(val.n)); 
 			m++;
 			break;
 
@@ -759,7 +766,7 @@ int net_connect(char * host, int port)
 	in_addr_t addr;
 	int opt;
 
-#ifdef WIN32
+#if defined(WIN32)
 	WSADATA wsaData;
 
 	/* initialize windows sockets */
@@ -991,10 +998,13 @@ int main(int argc, char *argv[])
 		optind++;
 	}
 
+#if defined(WIN32)
+#else
 	signal(SIGINT, sig_quit);
 	signal(SIGTERM, sig_quit);
 	signal(SIGQUIT, sig_quit);
 	signal(SIGABRT, sig_quit);
+#endif
 
 	if (fix_log() < 0) {
 		cleanup();

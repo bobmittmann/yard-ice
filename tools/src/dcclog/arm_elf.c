@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <string.h>
 #include <stdint.h>
 
@@ -36,6 +37,10 @@
 #include <unistd.h>
 
 #include <elf.h>
+
+#if defined(WIN32)
+int ffs(int i);
+#endif
 
 static const char * p_type_tab[] = {
 	/* Program header table entry unused */
