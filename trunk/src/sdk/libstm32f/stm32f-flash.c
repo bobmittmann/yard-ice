@@ -50,7 +50,7 @@ int __attribute__((section (".data#")))
 	flash->ar = addr;
 	flash->cr = FLASH_STRT | FLASH_SER;
 
-	for (again = 4096 * 32; again > 0; again--) {
+	for (again = 4096 * 1024; again > 0; again--) {
 		sr = flash->sr;
 		if ((sr & FLASH_BSY) == 0) {
 			ret = 0;
@@ -81,7 +81,10 @@ int stm32f_flash_erase(unsigned int offs, int len)
 		flash->keyr = FLASH_KEY2;
 	}
 
-	stm32f10x_flash_blk_erase(flash, addr);
+	if (stm32f10x_flash_blk_erase(flash, addr) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
+		return -1;
+	}
 
 	return len;
 }
@@ -101,7 +104,7 @@ int __attribute__((section (".data#")))
 	flash->cr = FLASH_PG;
 	*addr = data;
 	
-	for (again = 4096 * 32; again > 0; again--) {
+	for (again = 4096 * 1024; again > 0; --again) {
 		sr = flash->sr;
 		if ((sr & FLASH_BSY) == 0) {
 			ret = 0;
@@ -118,7 +121,7 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint16_t data;
-	uint32_t addr;
+	uint16_t * addr;
 	uint8_t * ptr;
 	uint32_t cr;
 	int n;
@@ -127,7 +130,7 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 	n = (len + 1) / 2;
 
 	ptr = (uint8_t *)buf;
-	addr = __flash_base + offs;
+	addr = (uint16_t *)(__flash_base + offs);
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -137,14 +140,19 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 		flash->keyr = FLASH_KEY2;
 	}
 
-
 	DCC_LOG2(LOG_TRACE, "0x%08x len=%d", addr, len);
 
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8);
-		stm32f10x_flash_wr16(flash, (void *)addr, data);
+		DCC_LOG2(LOG_TRACE, "0x%08x data=0x%04x", addr, data);
+		if (stm32f10x_flash_wr16(flash, addr, data) < 0) {
+			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
+			return -1;
+		} else {
+			DCC_LOG2(LOG_TRACE, "0x%08x data=0x%04x", addr, *addr);
+		}
 		ptr += 2;
-		addr += 2;
+		addr++;
 	}
 	
 	return n * 2;

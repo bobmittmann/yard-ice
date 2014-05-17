@@ -492,6 +492,9 @@ int usb_console(struct usb_cdc_class * cdc)
 			stm32f_flash_write(32768, "Hello world!", 12);
 			break;
 
+		case 'q':
+			printf("quit\n");
+			return 0;
 
 		default:
 			printf("-------------\n");
@@ -556,6 +559,8 @@ int main(int argc, char ** argv)
 						  usb_recv_stack, sizeof(usb_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
+#endif
+
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
@@ -563,6 +568,8 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
+
+#if 0
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[1],
 						  serial2_recv_stack, sizeof(serial2_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(2));
@@ -579,6 +586,8 @@ int main(int argc, char ** argv)
 	pin1_sel_gnd();
 	pin2_sel_vcc();
 	usb_console(vcom[0].cdc);
+
+	usb_recv_task(vcom);
 
 	for (i = 0; ; ++i) {
 		thinkos_sleep(5000);
