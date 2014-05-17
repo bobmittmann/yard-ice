@@ -46,9 +46,8 @@
   #include <arpa/inet.h>
   #include <netinet/tcp.h>
   #include <netdb.h>
+  #include <pthread.h>
 #endif
-
-#include <pthread.h>
 
 #include "arm_elf.h"
 
@@ -723,20 +722,86 @@ static int stdin_pipe_proc(FILE * stream)
 	return 0;
 }
 
-pthread_t * pipe_thread = NULL;
+#ifdef _WIN32
+typedef HANDLE __thread_t;
+#else
+typedef pthread_t * __thread_t;
+#endif
+
+int __thread_create(__thread_t * pthread, void *(* task)(void*), void * arg)
+{
+	__thread_t thread;
+	int ret;
+
+#ifdef _WIN32
+	unsigned threadId;
+	unsigned ( __stdcall *func)(void *);
+	
+	func = (unsigned (__stdcall *)(void *))task;
+
+	thread = (HANDLE)_beginthreadex(NULL, 0, func, arg, 0, &threadId);
+	ret = (thread == (HANDLE)-1L) ? -1 : 0;
+#else
+	assert(pthread != NULL);	
+	thread = malloc(sizeof(pthread_t));
+
+	if ((ret = pthread_create(thread, NULL,
+							  (void * (*)(void *))task,
+							  (void *)arg)) < 0) {
+		fprintf(stderr, "%s: pthread_create() failed: %s.\n",
+				__func__, strerror(ret));
+		fflush(stderr);
+	}
+#endif
+
+	*pthread = thread;
+
+	return ret;
+}
+
+int __thread_cancel(__thread_t thread)
+{
+#ifdef _WIN32
+	TerminateThread(thread, 0);
+	return 0;
+#else
+	return pthread_cancel(thread);
+#endif
+}
+
+int __thread_join(__thread_t thread, void ** value_ptr)
+{
+#ifdef _WIN32
+	WaitForSingleObject(thread, INFINITE);
+	return 0;
+#else
+	return pthread_join(thread, value_ptr);
+#endif
+}
+
+int __thread_destroy(__thread_t thread)
+{
+#ifdef _WIN32
+	return 0;
+#else
+	free(thread);
+	return 0;
+#endif
+}
+
+__thread_t pipe_thread;
 
 int pipe_start(FILE * stream)
 {
-	pipe_thread = (pthread_t *)malloc(sizeof(pthread_t));
+	int ret;
 
-	if (pthread_create(pipe_thread, NULL, 
-				   (void * (*)(void *))stdin_pipe_proc, 
-				   (void *)stream) != 0) {
-		perror("pipe_open");
-		return -1;
+	if ((ret = __thread_create(&pipe_thread,
+							   (void * (*)(void *))stdin_pipe_proc,
+							   (void *)stream)) < 0) {
+		perror("__thread_create() failed.");
 	}
 
-	return 0;
+	return ret;
 }
 
 void cleanup(void)
@@ -744,8 +809,8 @@ void cleanup(void)
 //	printf("cleanup...\n");
 //	fflush(stdout);
 	if (pipe_thread) {
-		pthread_cancel(*pipe_thread);
-		free(pipe_thread);
+		__thread_cancel(pipe_thread);
+		__thread_destroy(pipe_thread);
 		pipe_thread = NULL;
 	}
 }
