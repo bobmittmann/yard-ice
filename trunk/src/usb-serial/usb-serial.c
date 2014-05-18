@@ -127,8 +127,9 @@ void __attribute__((noreturn)) button_task(void)
 				ext_rst_tmr = 500 / LOOP_TIME;
 				/* start system reset timer */
 				sys_rst_tmr = 5000 / LOOP_TIME;
-				stm32f_gpio_set(EXTRST1_IO);
 				stm32f_gpio_set(EXTRST0_IO);
+//				stm32f_gpio_set(EXTRST1_IO);
+				pin2_sel_gnd();
 				led_lock();
 				led2_on();
 				ext_rst_st = EXT_RST_ON;
@@ -147,7 +148,8 @@ void __attribute__((noreturn)) button_task(void)
 		case EVENT_EXT_RST_TIMEOUT:
 			DCC_LOG(LOG_TRACE, "EXT_RST_TIMEOUT");
 			stm32f_gpio_clr(EXTRST0_IO);
-			stm32f_gpio_clr(EXTRST1_IO);
+//			stm32f_gpio_clr(EXTRST1_IO);
+			pin2_sel_vcc();
 			led2_off();
 			led_unlock();
 			ext_rst_st = EXT_RST_OFF;
@@ -510,8 +512,8 @@ uint32_t __attribute__((aligned(8))) button_stack[32];
 uint32_t __attribute__((aligned(8))) serial1_ctrl_stack[64];
 uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
 uint32_t __attribute__((aligned(8))) serial1_recv_stack[RECV_STACK_SIZE / 4];
-uint32_t __attribute__((aligned(8))) serial2_recv_stack[RECV_STACK_SIZE / 4];
-uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
+//uint32_t __attribute__((aligned(8))) serial2_recv_stack[RECV_STACK_SIZE / 4];
+//uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
@@ -585,7 +587,7 @@ int main(int argc, char ** argv)
 
 	pin1_sel_gnd();
 	pin2_sel_vcc();
-	usb_console(vcom[0].cdc);
+//	usb_console(vcom[0].cdc);
 
 	usb_recv_task(vcom);
 
