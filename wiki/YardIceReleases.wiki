@@ -1,0 +1,17 @@
+#summary Firmware Releases
+
+= Introduction =
+
+This page contains periodic firmware releases binaries.
+
+= YARD-ICE Application =
+
+The application should be loaded ata adress 0x08000000 of the flash memory.
+
+= FPGA Program =
+
+The FPGA program should be loaded at adress 0x08060000 of the flash memory.
+
+
+  * [YardIceWindowsUsbFirmwareUpdate YARD-ICE Firmware Upgrade]
+  * [YardIceWindowsUsbTeraTerm Using YARD-ICE with Tera Term]
