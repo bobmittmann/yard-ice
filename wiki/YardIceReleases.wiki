@@ -18,10 +18,10 @@ The FPGA program should be loaded at address 0x08060000 of the flash memory.
 There is a difference in the pin assignments between revision 0.1 and 0.2 of the boards. Each board revision have it's own binary (RBF) program.
 
 == Hardware 0.1 ==
-  * [https://yard-ice.googlecode.com/files/yard_ice-0.1.rbf Altera RBF (Release 0.1)]
+  * [https://yard-ice.googlecode.com/files/yard_ice-0.1.rbf Altera  Release 0.1 (RBF)]
 
 == Hardware 0.2 ==
-  * [https://yard-ice.googlecode.com/svn/trunk/src/fpga/release/yard_ice-0.2.rbf Altera RBF (Release 0.2)]
+  * [https://yard-ice.googlecode.com/svn/trunk/src/fpga/release/yard_ice-0.2.rbf Altera Release 0.2 (RBF)]
 
 
 = Combined Application+FPGA =
@@ -29,8 +29,7 @@ There is a difference in the pin assignments between revision 0.1 and 0.2 of the
 These files are single .FDU packages which combine both the YARD-ICE Application and FPGA program.
 
 == Hardware 0.1 ==
-  * [https://yard-ice.googlecode.com/svn/branches/rev0.1/src/release/yard-ice-r0.1-v0.2.22.dfu YARD-ICE-0.1 Version 0.2.22]
+  * [https://yard-ice.googlecode.com/svn/branches/rev0.1/src/release/yard-ice-r0.1-v0.2.22.dfu YARD-ICE-0.1 Version 0.2.22 (FDU)]
 
 == Hardware 0.2 ==
-  * [https://yard-ice.googlecode.com/svn/branches/rev0.2/src/release/yard-ice-r0.2-v0.2.22.dfu YARD-ICE-0.2 Version 0.2.22]
-
+  * [https://yard-ice.googlecode.com/svn/branches/rev0.2/src/release/yard-ice-r0.2-v0.2.22.dfu YARD-ICE-0.2 Version 0.2.22 (FDU)]
