@@ -14,7 +14,9 @@ Hardware revisions 0.1 and 0.2 share the same IO so the same firmware applies.
 The FPGA program should be loaded at address 0x08060000 of the flash memory.
 There is a difference in the pin assignments from revision 0.1 and 0.2 so two different programs should be used.
 
+== Hardware 0.1 ==
+  * [https://yard-ice.googlecode.com/svn/trunk/src/fpga/release/yard_ice-0.1.rbf Altera RBF (Release 0.1)]
 
+== Hardware 0.2 ==
 
-  * [YardIceWindowsUsbFirmwareUpdate YARD-ICE Firmware Upgrade]
-  * [YardIceWindowsUsbTeraTerm Using YARD-ICE with Tera Term]
+  * [https://yard-ice.googlecode.com/svn/trunk/src/fpga/release/yard_ice-0.2.rbf Altera RBF (Release 0.2)]
