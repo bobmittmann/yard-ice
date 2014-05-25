@@ -9,6 +9,9 @@ This page contains periodic firmware releases binaries.
 The application should be loaded at address 0x08000000 of the flash memory.
 Hardware revisions 0.1 and 0.2 share the same IO so the same firmware applies. 
 
+  * [https://yard-ice.googlecode.com/svn/trunk/src/release/yard-ice-0.2.22.bin Version 0.2.22]
+
+
 = FPGA Program =
 
 The FPGA program should be loaded at address 0x08060000 of the flash memory.
