@@ -34,9 +34,15 @@ ifndef LOAD_ADDR
   LOAD_ADDR = 0x08000000
 endif
 
+ifdef JTAG_TARGET
+  TARGET = -t $(JTAG_TARGET)
+else
+  TARGET = 
+endif
+
 jtagload: $(PROG_BIN) $(TFTPLOAD)
 	$(ACTION) "Loading: $@"
-	$(Q)$(TFTPLOAD) -q -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) -r $(PROG_BIN) 
+	$(Q)$(TFTPLOAD) -q -e -r -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) $(PROG_BIN) 
 
 jtagreset: $(TFTPRESET)
 	$(ACTION) "Reseting target..."

@@ -67,7 +67,7 @@ tgt_reset_quiet = 'rst\n'\
 	'run\n'\
 	'connect\n'
 
-tgt_init = 'target {0}\n'\
+tgt_init = 'target {0} force\n'\
 	'connect\n'\
 	'halt\n'\
 	'init\n'
@@ -105,6 +105,7 @@ def show_usage():
 	print("  -t, --target   target platform."\
 		" Default to: '{0}'".format(def_target))
 	print("  -r, --reset    exec the reset script")
+	print("  -i, --init     exec init script")
 	print("  -q, --quiet    silent mode (no beeps)")
 	print("      --help     display this help and exit")
 	print("  -V, --version  output version information and exit")
@@ -132,11 +133,17 @@ def main():
 	addr = def_addr
 	reset = False
 	quiet = False
+	init = False
+	erase = False
+	verbose = False
+	power = False
 	target = def_target
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "?rqva:h:t:", \
-			["help", "reset", "quiet", "version", "addr=", "host=", "target="])
+		opts, args = getopt.getopt(sys.argv[1:], "?rqivVpea:h:t:", \
+			["help", "reset", "quiet", "init" , "verbose", "version", \
+			"power", "erase", \
+			"addr=", "host=", "target="])
 	except err:
 		error(str(err))
 
@@ -144,13 +151,21 @@ def main():
 		if o in ("-?", "--help"):
 			show_usage()
 			sys.exit()
-		elif o in ("-v", "--version"):
+		elif o in ("-V", "--version"):
 			show_version()
 			sys.exit()
 		elif o in ("-r", "--reset"):
 			reset = True
 		elif o in ("-q", "--quiet"):
 			quiet = True
+		elif o in ("-i", "--init"):
+			init = True
+		elif o in ("-v", "--verbose"):
+			verbose = True
+		elif o in ("-e", "--erase"):
+			erase = True
+		elif o in ("-p", "--power"):
+			power = True
 		elif o in ("-a", "--addr"):
 			addr = int(a, 0)
 		elif o in ("-h", "--host"):
@@ -199,30 +214,38 @@ def main():
 	else:
 		power_on = power_on_noisy
 		tgt_reset = tgt_reset_noisy
-#
-#	try:
-#		print " - Power on"
-#		tclient.put(power_on, 'script', tftp.TFTP_MODE_NETASCII)
-#	except Exception as err:
-#		error(err)
 
-	try:
-		print(" - Initializing remote target")
-		sys.stdout.flush()
-		script = tgt_init.format(target)
-		tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
-	except Exception as err:
-		raise
-#			error(err)
+	if power:
+		try:
+			print(" - Power on")
+			sys.stdout.flush()
+			script = tgt_init.format(power_on)
+			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
+		except Exception as err:
+			error(err)
 
-	try:
-		print(" - Erasing 0x{0:08x} ({1:d} bytes)".format(addr, fsize))
-		sys.stdout.flush()
-		script = "erase 0x{0:08x} {1:d}\n".format(addr, fsize)
-		tclient.put(script, 'script', tftp.TFTP_MODE_NETASCII)
-	except Exception as err:
-		raise
-#		error(err)
+	if init:
+		try:
+			print(" - Initializing remote target")
+			sys.stdout.flush()
+			script = tgt_init.format(target)
+			if verbose:
+				print("   \"{0}\"".format(script))
+			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
+		except Exception as err:
+				error(err)
+
+	if erase:
+		try:
+			print(" - Erasing 0x{0:08x} ({1:d} bytes)".format(addr, fsize))
+			sys.stdout.flush()
+			script = "erase 0x{0:08x} {1:d}\n".format(addr, fsize)
+			if verbose:
+				print("   \"{0}\"".format(script))
+			tclient.put(script, 'script', tftp.TFTP_MODE_NETASCII, \
+						4 + (fsize / 16384))
+		except Exception as err:
+			error(err)
 
 	try:
 		print(" - Loading binary file...")
@@ -235,8 +258,7 @@ def main():
 			  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))
 		sys.stdout.flush()
 	except Exception as err:
-		raise
-#		error(err)
+		error(err)
 
 	if reset:
 		try:

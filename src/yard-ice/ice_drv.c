@@ -456,6 +456,7 @@ int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 				 e->blk.size, addr, blk_start, n);
 
 		for (; blk < e->blk.count; blk++) {
+
 			DCC_LOG3(LOG_INFO, "blk:%d n:%d rem:%d", blk, n, rem);
 
 			/* adjust n to fit in the remaining bytes */
@@ -486,10 +487,17 @@ int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 				return len + (ret - rem);
 			}
 
+			n = e->blk.size;
+			while (ret > n) {
+				blk++;
+				rem -= n;
+				addr += n;
+				ref.offs += n;
+				ret -= n;
+			}
 			rem -= ret;
 			addr += ret;
 			ref.offs += ret;
-			n = e->blk.size;
 		}
 
 		/* TODO: check code generation erro with GCC-4.4.4 !! */
