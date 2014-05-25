@@ -6,11 +6,14 @@ This page contains periodic firmware releases binaries.
 
 = YARD-ICE Application =
 
-The application should be loaded ata adress 0x08000000 of the flash memory.
+The application should be loaded at address 0x08000000 of the flash memory.
+Hardware revisions 0.1 and 0.2 share the same IO so the same firmware applies. 
 
 = FPGA Program =
 
-The FPGA program should be loaded at adress 0x08060000 of the flash memory.
+The FPGA program should be loaded at address 0x08060000 of the flash memory.
+There is a difference in the pin assignments from revision 0.1 and 0.2 so two different programs should be used.
+
 
 
   * [YardIceWindowsUsbFirmwareUpdate YARD-ICE Firmware Upgrade]
