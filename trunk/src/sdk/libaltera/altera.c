@@ -123,8 +123,6 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 	altera_io_init();
 	
 	stm32f_spi_init(STM32F_SPI3, &spi3_io, 2000000, SPI_MSTR | SPI_LSBFIRST);
-//	stm32f_spi_init(STM32F_SPI3, &spi3_io, 500000, SPI_MSTR | SPI_LSBFIRST);
-//	stm32f_spi_init(STM32F_SPI3, &spi3_io, 125000, SPI_MSTR | SPI_LSBFIRST);
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
 
