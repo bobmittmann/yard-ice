@@ -33,3 +33,17 @@ These files are single .FDU packages which combine both the YARD-ICE Application
 
 == Hardware 0.2 ==
   * [https://yard-ice.googlecode.com/svn/branches/rev0.2/src/release/yard-ice-r0.2-v0.2.22.dfu YARD-ICE-0.2 Version 0.2.22 (FDU)]
+
+== DFU File Upgrade - How-To ==
+
+  * Disconnect the power and USB from the YARD-ICE
+  * Insert the P2 jumper in YARD-ICE board
+  * Connect the USB cable
+  * Run the {{{STMicroelectronics->DfuSe->DfuSe Demonstration}}}
+  * The *{{{DfuSe Demo}}}* application should show {{{STM Device in DFU Mode}}} under the {{{Available DFU Devices}}}
+  * Under "Upgrade or Veriy Action" press the {{{[Choose...]}}} button
+  * Select the *yard-yce.dfu* firmware file. See the next section on how to create the DFU file.
+  * Press the {{{[Upgrade]}}} button
+  * After writing the firmware, power cycle the system without jumper P2.
+
+https://yard-ice.googlecode.com/svn/trunk/doc/png/DfuSe-Demo-Yard-ICE-Upgrade.png
