@@ -21,7 +21,7 @@
 
 FPGA_PROJ = yard_ice
 
-FPGA_RBF_ADDR = 0x08070000
+FPGA_RBF_ADDR = 0x08060000
 
 VHDL_FILES = cyc_pll.vhd \
 			jtag_clk_scaler.vhdl\
@@ -62,8 +62,8 @@ ifndef TFTPLOAD
 endif
 
 rbf: $(FPGA_RBF)
-	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $(FPGA_RBF)
+	$(Q)$(TFTPLOAD) -e -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) $(FPGA_RBF)
 
 load:
-	$(Q)$(TFTPLOAD) -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) -r $(FPGA_RBF)
+	$(Q)$(TFTPLOAD) -e -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) $(FPGA_RBF)
 

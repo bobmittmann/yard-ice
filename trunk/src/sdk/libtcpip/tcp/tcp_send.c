@@ -62,7 +62,7 @@ int tcp_send(struct tcp_pcb * __tp, const void * __buf,
 	}
 #endif
 
-	DCC_LOG3(LOG_TRACE, "<%05x> buf=%05x len=%d", (int)__tp, (int)__buf, __len);
+	DCC_LOG3(LOG_INFO, "<%05x> buf=%05x len=%d", (int)__tp, (int)__buf, __len);
 
 	src = (uint8_t *)__buf;
 	rem = __len;
