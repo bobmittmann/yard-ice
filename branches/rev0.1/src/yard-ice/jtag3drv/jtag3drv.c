@@ -41,7 +41,7 @@
 #include "armice.h"
 
 #ifndef FPGA_RBF_ADDR 
-#define FPGA_RBF_ADDR 0x01070000
+#define FPGA_RBF_ADDR 0x08060000
 #endif
 
 const uint8_t * jtag3ctrl_rbf = (uint8_t *)(FPGA_RBF_ADDR);
@@ -275,7 +275,6 @@ int jtag_drv_init(void)
 	DCC_LOG1(LOG_TRACE, "RBF=0x%08x", jtag3ctrl_rbf);
 
 	stm32f_dac_init();
-
 	stm32f_dac_vout_set(3300);
 
 	if (jtag3ctrl_init(jtag3ctrl_rbf, 64 * 1024) < 0) {

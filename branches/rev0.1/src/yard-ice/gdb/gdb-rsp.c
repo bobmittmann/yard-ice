@@ -220,7 +220,7 @@ static int  rsp_offsets(struct tcp_pcb * tp, unsigned int text,
 }
 #endif
 
-static int rsp_thread_get_first(struct tcp_pcb * tp)
+int rsp_thread_get_first(struct tcp_pcb * tp)
 {
 	char pkt[32];
 	int sum;;
@@ -237,7 +237,7 @@ static int rsp_thread_get_first(struct tcp_pcb * tp)
 	return tcp_send(tp, pkt, 6, TCP_SEND_NOWAIT);
 }
 
-static int rsp_thread_get_next(struct tcp_pcb * tp)
+int rsp_thread_get_next(struct tcp_pcb * tp)
 {
 	char pkt[32];
 	int sum;;
@@ -455,27 +455,27 @@ static int rsp_query(struct tcp_pcb * tp, char * pkt, int len)
 	}
 
 	if (strstr(pkt, "qCRC:")) {
-		DCC_LOG(LOG_TRACE, "qCRC");
+		DCC_LOG(LOG_TRACE, "qCRC (not implemented!)");
 		return rsp_empty(tp);
 	}
 
 	if (strstr(pkt, "qC")) {
-		DCC_LOG(LOG_TRACE, "qC");
+		DCC_LOG(LOG_TRACE, "qC (not implemented!)");
 		return rsp_empty(tp);
 	}
 
 	if (strstr(pkt, "qAttached")) {
-		DCC_LOG(LOG_TRACE, "qAttached");
+		DCC_LOG(LOG_TRACE, "qAttached (not implemented!)");
 		return rsp_empty(tp);
 	}
 
 	if (strstr(pkt, "qOffsets")) {
-		DCC_LOG(LOG_TRACE, "qOffsets");
+		DCC_LOG(LOG_TRACE, "qOffsets (not implemented!)");
 		return rsp_empty(tp);
 	}
 
 	if (strstr(pkt, "qSymbol")) {
-		DCC_LOG(LOG_TRACE, "qSymbol");
+		DCC_LOG(LOG_TRACE, "qSymbol (not implemented!)");
 		return rsp_empty(tp);
 	}
 
@@ -546,6 +546,8 @@ static int rsp_all_registers_get(struct tcp_pcb * tp, char * pkt, int len)
 	/* all integer registers */
 	for (r = 0; r < 16; r++) {
 		target_register_get(r, &val);
+	
+		DCC_LOG2(LOG_TRACE, "R%d = 0x%08x", r, val);
 
 		sum += pkt[n++] = hextab[((val >> 4) & 0xf)];
 		sum += pkt[n++] = hextab[(val & 0xf)];

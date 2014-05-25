@@ -398,6 +398,18 @@ struct thinkos_rt {
 
 #define THINKOS_WQ_READY 0
 
+#define THINKOS_WQ_TMSHARE ((offsetof(struct thinkos_rt, wq_tmshare) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_WQ_CANCELED ((offsetof(struct thinkos_rt, wq_canceled) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_WQ_PAUSED ((offsetof(struct thinkos_rt, wq_paused) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
 #define THINKOS_WQ_CLOCK ((offsetof(struct thinkos_rt, wq_clock) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
@@ -425,6 +437,10 @@ struct thinkos_rt {
 #define THINKOS_JOIN_BASE ((offsetof(struct thinkos_rt, wq_join) \
 						   - offsetof(struct thinkos_rt, wq_lst)) \
 						  / sizeof(uint32_t))
+
+#define THINKOS_WQ_LST_END ((offsetof(struct thinkos_rt, wq_end) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
 
 /* -------------------------------------------------------------------------- 
  * Thread initialization 
@@ -464,7 +480,7 @@ struct thinkos_idle {
 } __attribute__ ((aligned (8)));
 
 struct thinkos_except_and_idle {
-	uint32_t res1[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
+	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
 	union {
 		struct thinkos_context ctx;
 		struct {
@@ -685,6 +701,8 @@ static volatile inline uint32_t __attribute__((always_inline))
 #error "__thinkos_ticks() depends on THINKOS_ENABLE_CLOCK"
 #endif
 }
+
+void thinkos_rt_snapshot(struct thinkos_rt * rt);
 
 #ifdef __cplusplus
 }

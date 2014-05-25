@@ -1370,6 +1370,56 @@ int target_nand_bb_check(uint32_t block)
 	return ret;
 }
 
+int target_nand_block_erase(uint32_t block, bool force)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	nand_dev_t * nand;
+	int ret;
+	
+	DCC_LOG1(LOG_INFO, "block=%d", block);
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state < DBG_ST_CONNECTED) {
+		DCC_LOG(LOG_WARNING, "invalid state"); 
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	/* stop polling */
+	poll_stop(dbg);
+
+	if ((ret = ice_mem_lock(ice)) < 0) {
+		DCC_LOG(LOG_WARNING, "drv->mem_lock() fail");
+	} else {
+		bool badblock = false;
+		nand = nand_dev_select(0);
+
+		if (!force) {
+			if ((ret = nand_bb_check(nand, block)) < 0) {
+				DCC_LOG(LOG_WARNING, "nand_bb_check(), fail");
+				badblock = true;
+			}
+		}
+
+		if (!badblock) {
+			if ((ret = nand_block_erase(nand, block)) < 0) {
+				DCC_LOG(LOG_WARNING, "nand_block_erase(), fail");
+			}
+		}
+
+		ice_mem_unlock(ice);
+	}
+
+	poll_start(dbg);
+
+	__os_mutex_unlock(dbg->busy);
+
+	return ret;
+}
+
+
 int target_nand_dev_get(int dev_id, nand_dev_t ** nandp)
 {
 	struct debugger * dbg = &debugger;
@@ -1931,6 +1981,7 @@ int target_probe(FILE * f)
 int target_tap_trst(unsigned int mode)
 {
 	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
 	DCC_LOG(LOG_INFO, ".");
@@ -1939,7 +1990,14 @@ int target_tap_trst(unsigned int mode)
 
 	/* release the target */
 	poll_stop(dbg);
-	ice_release(&dbg->ice);
+	if ((ret = ice_release(ice)) < 0) {
+		DCC_LOG(LOG_WARNING, "drv->release() fail");
+		dbg->state = DBG_ST_OUTOFSYNC;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+	} else {
+		dbg->state = DBG_ST_UNCONNECTED;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	}
 
 	switch (mode) {
 	case TARGET_IO_CLR:
@@ -1966,6 +2024,7 @@ int target_tap_trst(unsigned int mode)
 int target_nrst(unsigned int mode, unsigned int ms)
 {
 	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 
 	DCC_LOG(LOG_INFO, ".");
@@ -1974,7 +2033,14 @@ int target_nrst(unsigned int mode, unsigned int ms)
 
 	/* release the target */
 	poll_stop(dbg);
-	ice_release(&dbg->ice);
+	if ((ret = ice_release(ice)) < 0) {
+		DCC_LOG(LOG_WARNING, "drv->release() fail");
+		dbg->state = DBG_ST_OUTOFSYNC;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+	} else {
+		dbg->state = DBG_ST_UNCONNECTED;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	}
 
 	switch (mode) {
 	case 0:
@@ -2010,9 +2076,10 @@ int target_tap_reset(void)
 	return 0;
 }
 
-int target_power(int on)
+int target_power_ctl(bool on)
 {
 	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret = 0;
 
 	DCC_LOG(LOG_INFO, ".");
@@ -2025,12 +2092,23 @@ int target_power(int on)
 	} else {
 		/* release the target */
 		poll_stop(dbg);
-		ice_release(&dbg->ice);
+
+		if ((ret = ice_release(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "drv->release() fail");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_OUTOFSYNC]");
+		} else {
+			dbg->state = DBG_ST_UNCONNECTED;
+			DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+		}
+
 		/* force 0 on trst */
 		jtag_trst(true);
 		/* force 0 in TMS and TDI */
 		jtag_run_test(1, JTAG_TAP_IDLE);
+
 		ext_pwr_off();
+
 		dbg->ext_pwr = 0;
 	}	
 
@@ -2038,6 +2116,38 @@ int target_power(int on)
 
 	return ret;
 }
+
+int target_power_stat(FILE * f)
+{
+	int ovr = ext_pwr_mon();
+
+	if (ovr)
+		fprintf(f, "Trbl\n");
+	else
+		fprintf(f, "%s\n", ext_pwr_stat() ? "On" : "Off");
+
+	return 0;
+}
+
+
+int target_relay(bool on)
+{
+	struct debugger * dbg = &debugger;
+
+	DCC_LOG(LOG_INFO, ".");
+
+	__os_mutex_lock(dbg->busy);
+
+	if (on)
+		relay_on();
+	else
+		relay_off();
+
+	__os_mutex_unlock(dbg->busy);
+
+	return 0;
+}
+
 
 struct target_info * get_target_info(void)
 {

@@ -21,11 +21,13 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = jtag3drv
 
 CFILES = jtag3ctrl.c jtag3drv.c jtag-arm.c jtag-adi.c
 
-INCPATH = ../include
+#INCPATH = ../include
 
 include ../../mk/lib.mk
 

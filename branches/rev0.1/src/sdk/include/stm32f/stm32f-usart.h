@@ -103,6 +103,7 @@
 	flag in case of Multi Buffer communication if the EIE bit is set. */
 
 #define USART_NF (1 << 2) /* Bit 2 - Noise detected flag */
+#define USART_NE (1 << 2) /* Bit 2 - Noise detected flag */
 /* This bit is set by hardware when noise is detected on a received frame. It is cleared by a software sequence (an read to the USART_SR register followed by a read to the USART_DR register).
 0: No noise is detected
 1: Noise is detected
@@ -589,6 +590,8 @@ int stm32f_usart_flush(struct stm32f_usart * usart);
 int stm32f_usart_init(struct stm32f_usart * us);
 
 int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
+
+unsigned int stm32f_usart_baudrate_get(struct stm32f_usart * us);
 
 int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
 

@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-struct ifnet * ethif_init(in_addr_t ip_addr, in_addr_t netmask);
+struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, in_addr_t netmask);
 
 void ethif_stats_show(FILE * f, int clear);
 

@@ -1,5 +1,5 @@
 /* 
- * File:	 usb-cdc.c
+ * File:	 tty_dev.c
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:

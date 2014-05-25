@@ -265,21 +265,15 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	int idx = thinkos_rt.active;
 	int j;
 
-	cm3_cpsid_i();
-
-#if 0
-	printf("%s(): <%d> code=%d\n", __func__, idx, code); 
-#endif
-
-#if THINKOS_ENABLE_THREAD_ALLOC
-	/* Releases the thread block */
-	bmp_bit_clr(&thinkos_rt.th_alloc, idx);
-#endif
+	DCC_LOG2(LOG_TRACE, "<%d> code=%d", idx, code); 
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
 	bmp_bit_clr(&thinkos_rt.wq_tmshare, idx);  
 #endif
+
+	/* disable interrupts */
+	cm3_cpsid_i();
 
 #ifdef THINKOS_ENABLE_CANCEL
 #if THINKOS_ENABLE_THREAD_STAT
@@ -325,10 +319,16 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 
 #if !THINKOS_ENABLE_THREAD_ALLOC && THINKOS_ENABLE_TIMESHARE
 	/* clear the schedule priority. In case the thread allocations
-	 is disabled, the schedule limit reevalution may produce inconsistent
+	 is disabled, the schedule limit reevaluation may produce inconsistent
 	 results ... */
 	thinkos_rt.sched_pri[idx] = 0;
 #endif
+
+#if THINKOS_ENABLE_THREAD_ALLOC
+	/* Releases the thread block */
+	bmp_bit_clr(&thinkos_rt.th_alloc, idx);
+#endif
+
 	/* wait forever */
 	__thinkos_wait();
 	cm3_cpsie_i();
@@ -346,6 +346,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if	(THINKOS_IRQ_MAX > 0)
 	int irq;
 #endif
+	int i;
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -406,6 +407,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* configure to use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
+	/* initialize exception stack */
+	for (i = 0; i < (THINKOS_EXCEPT_STACK_SIZE / 4 - IDLE_UNUSED_REGS); ++i)
+		thinkos_idle.except_stack[i] = 0xfacade44;
+
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
 #if THINKOS_ENABLE_TIMESHARE
@@ -413,6 +418,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.sched_idle_pri = 0;
 #endif
 //	thinkos_idle.ctx.ret = CM3_EXC_RET_THREAD_PSP;
+
+
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 #if THINKOS_ENABLE_CLOCK
@@ -432,16 +439,13 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.sem_alloc = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
 #endif
 
-#if !THINKOS_ENABLE_MUTEX_ALLOC
 #if (THINKOS_MUTEX_MAX > 0)
-	/* initialize the mutex locks */
 	{
 		int i;
-
+		/* initialize the mutex locks */
 		for (i = 0; i < THINKOS_MUTEX_MAX; i++) 
 			thinkos_rt.lock[i] = -1;
 	}
-#endif
 #endif
 
 	/* initialize the main thread */ 

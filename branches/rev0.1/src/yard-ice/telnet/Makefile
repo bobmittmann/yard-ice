@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = telnet
 
 CFILES = telnet_svc.c telnet_fops.c telnetd.c

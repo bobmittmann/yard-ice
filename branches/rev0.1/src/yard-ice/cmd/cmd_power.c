@@ -36,18 +36,22 @@ int cmd_power(FILE * f, int argc, char ** argv)
 	int err;
 	int ms;
 
-	if ((argc < 2) || (argc > 3)) {
+	if ((argc < 1) || (argc > 3)) {
 //		printf(msg_reset_usage);
 		return -1;
 	}
 
+	if (argc == 1) {
+		return target_power_stat(f);
+	}
+
 	if ((strcmp(argv[1], "on") == 0) || (strcmp(argv[1], "1") == 0)) {
 		fprintf(f, "Target power on...\n");
-		err = target_power(1);
+		err = target_power_ctl(1);
 	} else {
 		if ((strcmp(argv[1], "off") == 0) || (strcmp(argv[1], "0") == 0)) {
 			fprintf(f, "Target power off...\n");
-			err = target_power(0);
+			err = target_power_ctl(0);
 		} else {
 			if ((strcmp(argv[1], "cycle") == 0) || 
 				(strcmp(argv[1], "cyc") == 0)) {
@@ -57,9 +61,9 @@ int cmd_power(FILE * f, int argc, char ** argv)
 					ms = 250;
 				}
 				fprintf(f, "Target power cycle...\n");
-				if ((err = target_power(0)) == 0) {
+				if ((err = target_power_ctl(0)) == 0) {
 					__os_sleep(ms);
-					err = target_power(1);
+					err = target_power_ctl(1);
 				}
 			} else {
 				printf("ERROR: invalid argument %s\n", argv[1]);

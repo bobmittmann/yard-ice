@@ -197,7 +197,7 @@ void checksum_check(struct tcp_pcb * tp, struct iphdr * iph,
 	if (sum != 0xffff)
 		DCC_LOG1(LOG_WARNING, "<%05x> checksum ERROR!", (int)tp);
 	else
-		DCC_LOG1(LOG_TRACE, "<%05x> checksum OK.", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> checksum OK.", (int)tp);
 }
 #endif
 
@@ -269,7 +269,7 @@ again:
 		 */
 		len = 0;
 		if (win == 0) {
-			DCC_LOG(LOG_TRACE, "window closed, stop rxmt tmr");
+			DCC_LOG(LOG_INFO, "window closed, stop rxmt tmr");
 			tp->t_rxmt_tmr = 0;
 			snd_nxt = snd_una;
 			tp->snd_off = 0;
@@ -294,16 +294,16 @@ again:
 	   Ref.: TCP/IP Ilustrated Voume 2, pg. 859 */
 	if (len) {
 		if (len == tp->t_maxseg) {
-			DCC_LOG1(LOG_TRACE, "len == maxseg (%d), send...", len); 
+			DCC_LOG1(LOG_INFO, "len == maxseg (%d), send...", len); 
 			goto send;
 		}
 		
 		if ((idle || (tp->t_flags & TF_NODELAY)) && 
 			(len + off >= tp->snd_q.len)) {
 			if (idle) {
-				DCC_LOG(LOG_TRACE, "idle, send..."); 
+				DCC_LOG(LOG_INFO, "idle, send..."); 
 			} else  {
-				DCC_LOG(LOG_TRACE, "no delay, send..."); 
+				DCC_LOG(LOG_INFO, "no delay, send..."); 
 			}
 			goto send;
 		} 
@@ -322,13 +322,13 @@ again:
 #if 0
 		/* small output buffer */
 		if (len >= (tp->snd_q.len / 2)) {
-			DCC_LOG(LOG_TRACE,"small buffer"); 
+			DCC_LOG(LOG_INFO,"small buffer"); 
 			goto send;
 		}
 #endif
 
 		if (SEQ_LT(snd_nxt, snd_max)) {
-			DCC_LOG(LOG_TRACE, "retransmission, send..."); 
+			DCC_LOG(LOG_INFO, "retransmission, send..."); 
 			goto send;
 		}
 	}
@@ -344,13 +344,13 @@ again:
 
 		if (adv >= (2 * tp->t_maxseg)) {
 			DCC_LOG2(LOG_INFO, "<%05x> adv=%d >= 2 * maxseg", (int)tp, adv);
-			DCC_LOG(LOG_TRACE,"adv >= 2 * maxseg, send..."); 
+			DCC_LOG(LOG_INFO,"adv >= 2 * maxseg, send..."); 
 			goto send;
 		}
 
 		if (2 * adv >= tcp_maxrcv) {
 			DCC_LOG2(LOG_INFO, "<%05x> adv=%d >= maxrcv/2", (int)tp, adv);
-			DCC_LOG(LOG_TRACE, "adv >= maxrcv/2, send...");
+			DCC_LOG(LOG_INFO, "adv >= maxrcv/2, send...");
 			goto send;
 		}
 	}
@@ -369,7 +369,7 @@ again:
 	}
 
 	if (flags & (TH_SYN | TH_RST)) {
-		DCC_LOG(LOG_TRACE, "SYN | RST, send...");
+		DCC_LOG(LOG_INFO, "SYN | RST, send...");
 		goto send;
 	}
 
@@ -381,9 +381,9 @@ again:
 	if ((flags & TH_FIN) && 
 		(((tp->t_flags & TF_SENTFIN) == 0) || (snd_nxt == snd_una))) {
 		if (len) {
-			DCC_LOG(LOG_TRACE, "data, FIN, send...");
+			DCC_LOG(LOG_INFO, "data, FIN, send...");
 		} else {
-			DCC_LOG(LOG_TRACE, "FIN, send...");
+			DCC_LOG(LOG_INFO, "FIN, send...");
 		}
 		goto send;
 	}

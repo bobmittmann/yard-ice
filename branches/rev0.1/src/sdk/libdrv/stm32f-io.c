@@ -29,7 +29,7 @@
 
 #define RELAY_GPIO STM32F_GPIOB, 9
 #define PWR_EN_GPIO STM32F_GPIOD, 12 
-#define PWR_ST_GPIO STM32F_GPIOD, 11
+#define PWR_MON_GPIO STM32F_GPIOD, 11
 
 void bsp_io_ini(void)
 {
@@ -38,7 +38,7 @@ void bsp_io_ini(void)
 
 	stm32f_gpio_mode(PWR_EN_GPIO, OUTPUT, SPEED_LOW);
 	stm32f_gpio_mode(RELAY_GPIO, OUTPUT, SPEED_LOW);
-	stm32f_gpio_mode(PWR_ST_GPIO, INPUT, SPEED_LOW);
+	stm32f_gpio_mode(PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
 
 	stm32f_gpio_clr(RELAY_GPIO);
 	stm32f_gpio_clr(PWR_EN_GPIO);
@@ -54,6 +54,11 @@ void relay_off(void)
 	stm32f_gpio_clr(RELAY_GPIO);
 }
 
+int relay_stat(void)
+{
+	return stm32f_gpio_stat(RELAY_GPIO);
+}
+
 void ext_pwr_on(void)
 {
 	stm32f_gpio_set(PWR_EN_GPIO);
@@ -66,6 +71,11 @@ void ext_pwr_off(void)
 
 int ext_pwr_stat(void)
 {
-	return stm32f_gpio_stat(PWR_ST_GPIO);
+	return stm32f_gpio_stat(PWR_EN_GPIO);
+}
+
+int ext_pwr_mon(void)
+{
+	return stm32f_gpio_stat(PWR_MON_GPIO) ? 0 : 1;
 }
 

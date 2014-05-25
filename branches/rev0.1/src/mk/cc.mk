@@ -20,8 +20,13 @@
 
 .SUFFIXES:
 
-compile = $(CC) $(addprefix -I,$(INCPATH)) $(DEFINES) $(CFLAGS)
-assemble = $(AS) $(addprefix -I,$(INCPATH)) $(DEFINES) $(SFLAGS)
+ifneq (,$(INCPATH_WIN))
+ compile = $(CC) $(addprefix -I,$(INCPATH_WIN)) $(DEFINES) $(CFLAGS)
+ assemble = $(AS) $(addprefix -I,$(INCPATH_WIN)) $(DEFINES) $(SFLAGS)
+else
+ compile = $(CC) $(addprefix -I,$(INCPATH)) $(DEFINES) $(CFLAGS)
+ assemble = $(AS) $(addprefix -I,$(INCPATH)) $(DEFINES) $(SFLAGS)
+endif
 
 #------------------------------------------------------------------------------ 
 # Automatically generated source code files
@@ -53,9 +58,18 @@ $(OUTDIR)/%.o : $(OUTDIR)/%.s $(DEPDIR)/%.d
 
 #------------------------------------------------------------------------------ 
 
-$(DEPDIR)/%.d : %.c
+#
+# Cygwin hosts with Native Linux compilers are particularly problematic
+# The make uses UNIX paths but the compiler uses Windows paths ????
+#
+
+$(DEPDIR)/%.d : $(SRCDIR)/%.c
 	$(ACTION) "DEP .c 1: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(compile) -MT $(subst \,\\,$(shell cygpath -w $@)) -MD -MP -MM -c -o $(subst \,\\,$(shell cygpath -w $@)) $<
+else
 	$(Q)$(compile) -MT $@ -MD -MP -MM -c -o $@ $<
+endif
 
 $(DEPDIR)/%.d : %.S
 	$(ACTION) "DEP .S 1: $@"
@@ -65,9 +79,13 @@ $(DEPDIR)/%.d : %.s
 	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
-$(OUTDIR)/%.o : %.c $(DEPDIR)/%.d
+$(OUTDIR)/%.o : $(SRCDIR)/%.c $(DEPDIR)/%.d
 	$(ACTION) "CC 1: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+else
 	$(Q)$(compile) -o $@ -c $<
+endif
 
 $(OUTDIR)/%.o : %.S $(DEPDIR)/%.d
 	$(ACTION) "AS: $@"

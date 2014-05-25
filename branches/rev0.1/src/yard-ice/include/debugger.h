@@ -243,7 +243,11 @@ int target_tap_trst(unsigned int mode);
 
 int target_nrst(unsigned int mode, unsigned int ms);
 
-int target_power(int on);
+int target_power_ctl(bool on);
+
+int target_power_stat(FILE * f);
+
+int target_relay(bool on);
 
 //int context_register_get(struct ice_context * ct, int reg, uint32_t * val);
 
@@ -281,6 +285,8 @@ int target_ice_info(FILE * f, uint32_t which);
 /* NAND operations */
 
 int target_nand_bb_check(uint32_t block);
+
+int target_nand_block_erase(uint32_t block, bool force);
 
 int target_nand_dev_get(int dev_id, nand_dev_t ** nandp);
 

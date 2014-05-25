@@ -51,7 +51,7 @@ void dm36x_pinmux(const struct ice_drv * ice, int offs,
 }
 
 
-void dm365_psc_init(const ice_drv_t * ice)
+int dm365_psc_init(FILE * f, const ice_drv_t * ice)
 {
 
 	unsigned char i = 0;
@@ -60,12 +60,13 @@ void dm365_psc_init(const ice_drv_t * ice)
 	int group;
 	int min;
 	int max;
+	int again;
 	uint32_t  PdNum = 0; 
 
 	min = 0;
 	max = 2;
 
-	for(group = min; group <= max; group++) {
+	for (group = min; group <= max; group++) {
 		if (group == 0) {
 			start = 0; /* Enabling LPSC 3 to 28 SCR first */
 			end = 28;
@@ -79,24 +80,34 @@ void dm365_psc_init(const ice_drv_t * ice)
 			}
 		}
 
- /* NEXT = 0x3, Enable LPSC's */
+		/* NEXT = 0x3, Enable LPSC's */
 		for (i = start; i <= end; i++) {
- /* CSL_FINS(CSL_PSC_0_REGS->MDCTL[i], PSC_MDCTL_NEXT, 0x3);	   */
+			/* CSL_FINS(CSL_PSC_0_REGS->MDCTL[i], PSC_MDCTL_NEXT, 0x3);	   */
 			PSC_REG_WR(PSC_MDCTL(i), PSC_REG_RD(PSC_MDCTL(i)) | 0x3); 
 		}
 
- /* Program goctl to start transition sequence for LPSCs */
+		/* Program goctl to start transition sequence for LPSCs */
 		/* Kick off Power Domain 0 Modules*/
 		PSC_REG_WR(PSC_PTCMD, (1 << PdNum)); 
 
- /* Wait for GOSTAT = NO TRANSITION from PSC for Powerdomain 0 */
-		while (!(((PSC_REG_RD(PSC_PTSTAT) >> PdNum) & 0x00000001) == 0)); 
+		/* Wait for GOSTAT = NO TRANSITION from PSC for Powerdomain 0 */
+		again = 100;	
+		while (!(((PSC_REG_RD(PSC_PTSTAT) >> PdNum) & 0x00000001) == 0)) {
+			if (--again <= 0)
+				return -1;
+		}
 
- /* Wait for MODSTAT = ENABLE from LPSC's */
+		/* Wait for MODSTAT = ENABLE from LPSC's */
 		for (i = start; i <= end; i++) {
-			while(!((PSC_REG_RD(PSC_MDSTAT(i)) &  0x0000001f) == 0x3));   
+			again = 100;	
+			while (!((PSC_REG_RD(PSC_MDSTAT(i)) &  0x0000001f) == 0x3)) {
+				if (--again <= 0)
+					return -1;
+			}
 		}	
 	}	  
+
+	return 0;
 }
 
 #define FOSC_HZ 24000000
@@ -106,6 +117,7 @@ void dm365_psc_init(const ice_drv_t * ice)
 int dm365_pll1_init(const ice_drv_t * ice)
 {
 	uint32_t pll_cfg;
+	int again;
 
 	/* Power up the PLL*/
 	PLL1_REG_CLR(PLL_PLLCTL, PLLCTL_PLLPWRDN);		
@@ -174,8 +186,11 @@ int dm365_pll1_init(const ice_drv_t * ice)
 
 	udelay(300);
 
+	again = 10000;
 	do {
 		pll_cfg = SYS_REG_RD(SYS_PLLC1_CONFIG);
+		if (--again <= 0)
+			return -1;
 	} while((pll_cfg & PLLC1_CONFIG_LOCK) != PLLC1_CONFIG_LOCK);
 
 	/* Enable the PLL Bit of PLLCTL */
@@ -292,12 +307,12 @@ int dm365_ddr2_init(const ice_drv_t * ice)
 	/* Disable power down control, Clear VTP flops, 
 	   Unlock impedance, Disable power down */ 
 	SYS_REG_CLR(SYS_VTPIOCR, VTPIOCR_IOPWRDN | VTPIOCR_CLRZ | 
-				 VTPIOCR_LOCK | VTPIOCR_PWRDN);
-//	SYS_REG_WR(SYS_VTPIOCR, vtpiocr & 0xffff9f3f);
+				VTPIOCR_LOCK | VTPIOCR_PWRDN);
+	//	SYS_REG_WR(SYS_VTPIOCR, vtpiocr & 0xffff9f3f);
 
 	/* VTP clear = 1. Enable VTP flops. */
 	SYS_REG_SET(SYS_VTPIOCR, VTPIOCR_CLRZ);
-//	SYS_REG_WR(SYS_VTPIOCR, (SYS_REG_RD(SYS_VTPIOCR)) | 0x00002000);
+	//	SYS_REG_WR(SYS_VTPIOCR, (SYS_REG_RD(SYS_VTPIOCR)) | 0x00002000);
 
 	/*  Check VTP READY Status */
 	while (!(SYS_REG_RD(SYS_VTPIOCR) & VTPIOCR_READY));
@@ -306,8 +321,8 @@ int dm365_ddr2_init(const ice_drv_t * ice)
 	/* SYS_REG_WR(SYS_VTPIOCR, SYS_REG_RD(SYS_VTPIOCR) | 0x00004000); */
 
 	/*  Set bit LOCK(bit7) and PWRSAVE (bit8) */
-//	SYS_REG_WR(SYS_VTPIOCR, SYS_REG_RD(SYS_VTPIOCR) | 0x00000080);     
-   	/* Lock VTP impedance */
+	//	SYS_REG_WR(SYS_VTPIOCR, SYS_REG_RD(SYS_VTPIOCR) | 0x00000080);     
+	/* Lock VTP impedance */
 	SYS_REG_SET(SYS_VTPIOCR, VTPIOCR_LOCK);
 
 	/*  Powerdown VTP as it is locked (bit 6) */
@@ -360,8 +375,8 @@ int dm365_emif_init(const ice_drv_t * ice)
 	DCC_LOG1(LOG_TRACE, "AEMIF_AWCCR=%08x", awccr);
 
 	acr = ACR_EW | ACR_W_SETUP(1) | ACR_W_STROBE(5) | ACR_W_HOLD(1) |
-	               ACR_R_SETUP(1) | ACR_R_STROBE(5) | ACR_R_HOLD(1) |
-	               ACR_TA(2) | ACR_ASIZE_8BITS;
+		ACR_R_SETUP(1) | ACR_R_STROBE(5) | ACR_R_HOLD(1) |
+		ACR_TA(2) | ACR_ASIZE_8BITS;
 
 	/* for 121.5 MHZ */
 	AEMIF_REG_WR(AEMIF_A1CR, acr);
@@ -372,8 +387,8 @@ int dm365_emif_init(const ice_drv_t * ice)
 	AEMIF_REG_SET(AEMIF_NANDFCR, DM365_CE0_BASE);
 
 	acr = ACR_W_SETUP(1) | ACR_W_STROBE(11) | ACR_W_HOLD(1) |
-	      ACR_R_SETUP(1) | ACR_R_STROBE(11) | ACR_R_HOLD(1) |
-	      ACR_TA(2) | ACR_ASIZE_16BITS;
+		ACR_R_SETUP(1) | ACR_R_STROBE(11) | ACR_R_HOLD(1) |
+		ACR_TA(2) | ACR_ASIZE_16BITS;
 
 	AEMIF_REG_WR(AEMIF_A2CR, acr);
 
@@ -410,6 +425,7 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 	uint8_t rtc_ctrl[1];
 	uint32_t data;
 	uint32_t clkctl;
+	int again;
 
 	fprintf(f, "- Mask all interrupts\n");
 	/*  Mask all interrupts */
@@ -444,7 +460,11 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 
 	if (*rtc_ctrl & CTRL_WEN) {
 		fprintf(f, "- PRTCSS WDT enabled, disabling it...\n");
+		again = 1000;
 		while (*rtc_ctrl & CTRL_WDTBUSY) {
+			if (--again <= 0) {
+				return -1;
+			}
 			davinci_prtcss_rd(ice, PRTCSS_RTC_CTRL, rtc_ctrl, 1);
 		}
 		*rtc_ctrl &= ~CTRL_WEN; 
@@ -453,7 +473,8 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 
 	fprintf(f, "- System PSC setup...\n");
 	/*  System PSC setup - enable all */
-	dm365_psc_init(ice);
+	if (dm365_psc_init(f, ice) < 0)
+		return -1;
 
 	fprintf(f, "- Setup IO pins...\n");
 	dm36x_pinmux(ice, 0, 0xffffffff, 0x00fd0000); /* All Video Inputs */
@@ -508,7 +529,7 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 		fprintf(f, "- NAND init...\n");
 
 		if ((nand = nand_dev_register(ice, 0, DM365_CE0_BASE, NAND_BUS_8_BITS,
-								 &dm365_nand_io8, &dm365_nand_ecc)) == NULL) {
+									  &dm365_nand_io8, &dm365_nand_ecc)) == NULL) {
 			fprintf(f, " # nand_dev_register() fail!!!\n");
 			ret = -1;
 		} else {
@@ -537,7 +558,7 @@ int dm365_on_init(FILE * f, const ice_drv_t * ice, ice_mem_entry_t * mem)
 
 
 int dm365_jtag_setup(FILE * f, const ice_drv_t * drv,
-						const target_info_t * target)
+					 const target_info_t * target)
 {
 	jtag_tap_t * tap;
 	int has_arm = 0;

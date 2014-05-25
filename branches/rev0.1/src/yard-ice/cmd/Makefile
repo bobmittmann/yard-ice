@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = cmd
 
 CFILES = show_asm.c cmd_beep.c \
@@ -37,7 +39,8 @@ CFILES = show_asm.c cmd_beep.c \
 	  cmd_var.c cmd_ice_test.c cmd_test.c\
 	  cmd_ice_info.c cmd_bb_scan.c cmd_sleep.c cmd_runtest.c \
 	  cmd_irpause.c cmd_drpause.c cmd_i2c.c cmd_en_dis.c \
-	  cmd_trace.c
+	  cmd_trace.c cmd_relay.c cmd_scrub.c \
+	  cmd_os.c
 
 include ../../mk/lib.mk
 

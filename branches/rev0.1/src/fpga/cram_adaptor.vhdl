@@ -115,6 +115,9 @@ architecture rtl of cram_adaptor is
 	signal s_reg_wr_stb : std_logic;
 	signal s_reg_rd_data : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
+
+	signal s_fifo_wr_stb : std_logic;
+
 	-----------------------
 	signal s_op_mem_rd : std_logic;
 	signal s_op_mem_wr : std_logic;
@@ -228,6 +231,9 @@ begin
 	-- memory block read selector
 	mem_rd_sel <= s_cram_mem_rd_addr(MEM_SEL_TOP downto MEM_SEL_BOT);
 
+
+	s_fifo_wr_stb <= s_cram_wr and s_cram_wr_addr(REG_SEL);
+
 	---------------------------------------------------------------------------
 	-- Registers write address/data fifo 
 	reg_wr_fifo : entity syncfifo 
@@ -241,7 +247,7 @@ begin
 			in_clk => cram_clk,
 			in_data => cram_d,
 			in_addr => s_cram_wr_addr(REG_SEL_BITS - 1 downto 0),
-			in_put => s_cram_wr and s_cram_wr_addr(REG_SEL),
+			in_put => s_fifo_wr_stb,
 
 			out_clk => clk,
 			out_data => reg_wr_data,
