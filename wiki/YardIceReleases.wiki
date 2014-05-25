@@ -12,10 +12,10 @@ Hardware revisions 0.1 and 0.2 share the same IO so the same firmware applies.
 = FPGA Program =
 
 The FPGA program should be loaded at address 0x08060000 of the flash memory.
-There is a difference in the pin assignments from revision 0.1 and 0.2 so two different programs should be used.
+There is a difference in the pin assignments between revision 0.1 and 0.2 of the boards. Each board revision have it's own binary (RBF) program.
 
 == Hardware 0.1 ==
-  * [https://yard-ice.googlecode.com/svn/trunk/src/fpga/release/yard_ice-0.1.rbf Altera RBF (Release 0.1)]
+  * [https://yard-ice.googlecode.com/files/yard_ice-0.1.rbf Altera RBF (Release 0.1)]
 
 == Hardware 0.2 ==
 
