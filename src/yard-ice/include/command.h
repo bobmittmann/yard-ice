@@ -132,6 +132,8 @@ int cmd_tap(FILE * f, int argc, char ** argv);
 
 int cmd_power(FILE * f, int argc, char ** argv);
 
+int cmd_relay(FILE * f, int argc, char ** argv);
+
 int cmd_irscan(FILE * f, int argc, char ** argv);
 
 int cmd_drscan(FILE * f, int argc, char ** argv);
@@ -160,7 +162,13 @@ int cmd_var(FILE *f, int argc, char ** argv);
 
 int cmd_sleep(FILE *f, int argc, char ** argv);
 
+int cmd_os(FILE *f, int argc, char ** argv);
+
+int cmd_thread(FILE * f, int argc, char ** argv);
+
 int cmd_bb_scan(FILE *f, int argc, char ** argv);
+
+int cmd_scrub(FILE * f, int argc, char ** argv);
 
 int cmd_runtest(FILE * f, int argc, char ** argv);
 

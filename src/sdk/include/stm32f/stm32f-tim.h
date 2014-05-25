@@ -532,6 +532,14 @@
 #define TIM_OC2M_SET(VAL) (((VAL) << 12) & OC2M_MSK)
 #define TIM_OC2M_GET(REG) (((REG) & OC2M_MSK) >> 12)
 
+#define TIM_OC2M_ACTIVE_ON_MATCH (1 << 12)
+#define TIM_OC2M_INACTIVE_ON_MATCH (2 << 12)
+#define TIM_OC2M_TOGGLE (3 << 12)
+#define TIM_OC2M_FORCE_INACTIVE (4 << 12)
+#define TIM_OC2M_FORCE_ACTIVE (5 << 12)
+#define TIM_OC2M_PWM_MODE1 (6 << 12)
+#define TIM_OC2M_PWM_MODE2 (7 << 12)
+
 /* Bit 11 - Output compare 2 preload enable */
 #define TIM_OC2PE (1 << 11)
 
@@ -542,6 +550,10 @@
 #define TIM_CC2S_MSK (((1 << (1 + 1)) - 1) << 8)
 #define TIM_CC2S_SET(VAL) (((VAL) << 8) & CC2S_MSK)
 #define TIM_CC2S_GET(REG) (((REG) & CC2S_MSK) >> 8)
+#define TIM_CC2S_OUT (0x0 << 8)
+#define TIM_CC2S_TI1 (0x1 << 8)
+#define TIM_CC2S_TI2 (0x2 << 8)
+#define TIM_CC2S_TRC (0x3 << 8)
 /* This bit-field defines the direction of the channel (input/output) as 
    well as the used input.
    00: CC2 channel is configured as output
@@ -564,6 +576,7 @@
 #define TIM_OC1M_MSK (((1 << (2 + 1)) - 1) << 4)
 #define TIM_OC1M_SET(VAL) (((VAL) << 12) & OC1M_MSK)
 #define TIM_OC1M_GET(REG) (((REG) & OC1M_MSK) >> 4)
+
 #define TIM_OC1M_ACTIVE_ON_MATCH (1 << 4)
 #define TIM_OC1M_INACTIVE_ON_MATCH (2 << 4)
 #define TIM_OC1M_TOGGLE (3 << 4)

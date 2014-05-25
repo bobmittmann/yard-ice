@@ -104,10 +104,21 @@ This bit can be written only when the I cache is disabled.*/
 
 
 
+
 /* Flash status register */
 #define STM32F_FLASH_SR 0x0c
 /* The Flash status register gives information on ongoing program and 
    erase operations. */
+
+#if defined(STM32F10X)
+
+#define FLASH_EOP      (1 << 5)
+#define FLASH_WRPRTERR (1 << 4)
+#define FLASH_PGPERR   (1 << 2)
+#define FLASH_BSY      (1 << 0)
+
+#else /* STM32F10X */
+
 
 #define FLASH_BSY (1 << 16)
 /* Busy. This bit indicates that a Flash memory operation is in progress. 
@@ -152,11 +163,24 @@ This bit can be written only when the I cache is disabled.*/
    enabled (EOPIE = 1).
    Cleared by writing a 1. */
 
+#endif /* STM32F10X */
 
 /* Flash control register */
 #define STM32F_FLASH_CR 0x10
 /* The Flash control register is used to configure and start 
    Flash memory operations. */
+
+#if defined(STM32F10X)
+
+#define FLASH_EOPIE  (1 << 12)
+#define FLASH_ERRIE  (1 << 10)
+#define FLASH_OPTWRE (1 << 9)
+#define FLASH_LOCK   (1 << 7)
+#define FLASH_STRT   (1 << 6)
+#define FLASH_OPTER  (1 << 5)
+#define FLASH_OPTPG  (1 << 4)
+
+#else /* STM32F10X */
 
 #define FLASH_LOCK (1 << 31)
 /* Lock. Write to 1 only. When it is set, this bit indicates that the 
@@ -199,6 +223,8 @@ This bit can be written only when the I cache is disabled.*/
 1011 sector 11
 Others not allowed*/
 
+#endif /* STM32F10X */
+
 #define FLASH_MER (1 << 2)
 /* Mass Erase. Erase activated for all user sectors.*/
 
@@ -207,7 +233,6 @@ Others not allowed*/
 
 #define FLASH_PG (1 << 0)
 /* Programming. Flash programming activated. */
-
 
 
 /* Flash option control register */
@@ -272,7 +297,11 @@ struct stm32f_flash {
 	volatile uint32_t optkeyr;  /* option key register */
 	volatile uint32_t sr;       /* status register */
 	volatile uint32_t cr;       /* control register */
+#if defined(STM32F1X) || defined(STM32F3X)
+	volatile uint32_t ar;    /* flash address register */
+#else
 	volatile uint32_t optcr;    /* option control register */
+#endif
 };
 
 #endif /* __ASSEMBLER__ */

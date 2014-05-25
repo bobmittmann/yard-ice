@@ -18,14 +18,15 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-ifndef MKDIR
-  MKDIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+THISDIR:= $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+
+ifndef BASEDIR
+  BASEDIR := $(realpath $(THISDIR)/..)
+endif
+
+ifndef TOOLSDIR 
+  TOOLSDIR = $(BASEDIR)/../tools
 endif	
-
-BASEDIR := $(realpath $(MKDIR)/..)
-TOOLSDIR = $(BASEDIR)/../tools
-
-export MKDIR TOOLSDIR
 
 MKCODELET = $(TOOLSDIR)/mkcodelet.py
 

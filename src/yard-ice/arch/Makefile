@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = arch
 
 ARM_CFILES = arm7.c arm9.c arm-ram.c arm-pn.c

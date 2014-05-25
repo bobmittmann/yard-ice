@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = cdc-acm
 
 CFILES = cdc-acm_desc.c cdc-acm_dev.c cdc-acm_fops.c

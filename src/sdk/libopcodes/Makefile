@@ -21,11 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = opcodes
 
 CFILES = arm-dis.c
-
-INCPATH = include
 
 include ../../mk/lib.mk
 

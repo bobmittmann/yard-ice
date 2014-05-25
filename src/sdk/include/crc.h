@@ -26,6 +26,17 @@
 #ifndef __CRC_H__
 #define __CRC_H__
 
+static inline unsigned int __crc16ccitt(unsigned int crc, int c) {
+	crc = (crc >> 8) | ((crc & 0xff) << 8);
+	crc ^= c;
+	crc ^= (crc & 0xff) >> 4;
+	crc ^= (crc & 0x0f) << 12;
+	crc ^= (crc & 0xff) << 5;
+	return crc;
+}
+
+#define CRC16CCITT(CRC, C) __crc16ccitt(CRC, C)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -24,16 +24,27 @@
  */ 
 
 /* 
-   High-density performance line ARM-based 32-bit MCU with 256 to
-   512KB Flash, USB, CAN, 11 timers, 3 ADCs, 13 communication interfaces
-*/
+ 
+ */
 
 #ifndef __STM32F103_H__
 #define __STM32F103_H__
 
+#ifndef STM32F
 #define STM32F
+#endif
+
+#ifndef STM32F1X
 #define STM32F1X
+#endif
+
+#ifndef STM32F10X
 #define STM32F10X
+#endif
+
+#ifndef STM32F103
+#define STM32F103
+#endif
 
 #include <stm32f/stm32f-pwr.h>
 #include <stm32f/stm32f-syscfg.h>
@@ -209,7 +220,6 @@
 #define STM32F_ADC3 ((struct stm32f_adc *)STM32F_BASE_ADC3)
 
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
-#define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
 #define STM32F_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
 #define STM32F_USART2 ((struct stm32f_usart *)STM32F_BASE_USART2)

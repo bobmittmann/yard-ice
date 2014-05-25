@@ -49,7 +49,6 @@ int cmd_beep(FILE * f, int argc, char ** argv)
 		} 
 	}
 
-
 	tone_play(tone, time);
 
 	return 0;

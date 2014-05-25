@@ -19,51 +19,6 @@
 # http://www.gnu.org/
 
 #------------------------------------------------------------------------------ 
-# default output directories
-#------------------------------------------------------------------------------ 
-RELEASE_DIR = release
-DEBUG_DIR = debug
-
-#------------------------------------------------------------------------------ 
-# parameters 
-#------------------------------------------------------------------------------ 
-ifdef V
-  verbose = $(V)
-else
-  verbose = 0
-endif
-
-ifdef D
-  dbg_level = $(D)
-else
-  dbg_level = 0
-endif
-
-ifdef O
-  OUTDIR = $(abspath $(O))
-else
-  ifneq ($(dbg_level),0)
-    OUTDIR = $(abspath $(DEBUG_DIR))
-  else
-    OUTDIR = $(abspath $(RELEASE_DIR))
-  endif
-endif
-
-ifeq ($(verbose),0) 
-  Q = @
-  ACTION = @echo
-  ECHO = @\#
-else
-  Q =
-  ACTION = @\#
-  ECHO = @echo
-endif
-
-DEPDIR=$(OUTDIR)/.deps
-
-export OUTDIR DEPDIR Q ACTION
-
-#------------------------------------------------------------------------------ 
 # Cross compiler configuration
 #------------------------------------------------------------------------------ 
 
@@ -71,21 +26,45 @@ ifndef CROSS_COMPILE
   $(warning CROSS_COMPILE undefined!)
 endif	# CROSS_COMPILE
 
-export CROSS_COMPILE
+#------------------------------------------------------------------------------ 
+# Shared object file extensions
+#------------------------------------------------------------------------------ 
+
+#------------------------------------------------------------------------------ 
+# Warning: This discovery method is very poor.
+# The assumption is if your host is Msys or Windows shell and the
+# CROSS_COMPILE is empty then most probably your tring to produce a DLL
+#
+
+ifeq ($(strip $(CROSS_COMPILE)),)
+  # Cross compiling is set to an empty string (assuming host=target)
+  ifeq ($(HOST),Windows)
+    SOEXT := dll
+  else 
+    ifeq ($(HOST),Msys)
+      SOEXT := dll
+    else
+      SOEXT := so
+    endif
+  endif
+else
+  # cross compiling (assuming *NIX shared objects)
+  SOEXT := so
+endif
 
 #------------------------------------------------------------------------------ 
 # gcc toolchain
 #------------------------------------------------------------------------------ 
-CC = $(CROSS_COMPILE)gcc
-LD = $(CROSS_COMPILE)gcc
-AS = $(CROSS_COMPILE)gcc
-AR = $(CROSS_COMPILE)ar
-NM = $(CROSS_COMPILE)nm
-CXX = $(CROSS_COMPILE)g++
-RANLIB = $(CROSS_COMPILE)ranlib
-OBJCOPY = $(CROSS_COMPILE)objcopy
-OBJDUMP = $(CROSS_COMPILE)objdump
-STRIP = $(CROSS_COMPILE)strip
+CC := $(strip $(CROSS_COMPILE))gcc
+LD := $(strip $(CROSS_COMPILE))gcc
+AS := $(strip $(CROSS_COMPILE))gcc
+AR := $(strip $(CROSS_COMPILE))ar
+NM := $(strip $(CROSS_COMPILE))nm
+CXX := $(strip $(CROSS_COMPILE))g++
+RANLIB := $(strip $(CROSS_COMPILE))ranlib
+OBJCOPY := $(strip $(CROSS_COMPILE))objcopy
+OBJDUMP := $(strip $(CROSS_COMPILE))objdump
+STRIP := $(strip $(CROSS_COMPILE))strip
 
 #------------------------------------------------------------------------------ 
 # compiler flags
@@ -93,11 +72,12 @@ STRIP = $(CROSS_COMPILE)strip
 
 ifneq ($(dbg_level),0) 
   CDEFS := $(CDEFS) DEBUG=$(dbg_level)
-  CFLAGS += -g
+#  CFLAGS += -g
 endif
 
-INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))
+#INCPATH	:= $(OUTDIR) $(abspath $(INCPATH))
+#INCPATH += $(OUTDIR)
 SFLAGS := $(OPTIONS) -Wall $(SFLAGS) $(addprefix -D,$(CDEFS))
 CFLAGS := $(OPTIONS) -Wall $(CFLAGS) $(addprefix -D,$(CDEFS))
-LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+LDFLAGS := $(OPTIONS) $(LDFLAGS)
 

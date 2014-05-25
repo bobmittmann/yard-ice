@@ -132,6 +132,7 @@ int thinkos_flag_clr(int flag);
 
 int thinkos_flag_set(int flag);
 
+
 int thinkos_irq_wait(int irq);
 
 #ifdef __cplusplus

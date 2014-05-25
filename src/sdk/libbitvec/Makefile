@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = bitvec
 
 CFILES = vec_cat.c vec_cmp.c vec_fmt.c vec_lshift.c vec_rshift.c \

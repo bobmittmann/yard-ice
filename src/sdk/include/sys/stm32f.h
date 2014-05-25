@@ -38,7 +38,7 @@
 #include <arch/stm32f303.h>
 #endif
 
-#ifdef STM32F103
+#if defined(STM32F103) || defined(STM32F103X6)
 #include <arch/stm32f103.h>
 #endif
 
@@ -198,6 +198,8 @@ void stm32f_exti_init(struct stm32f_gpio * gpio, unsigned int pin,
  *---------------------------------------------------------------------*/
 
 void stm32f_mco2_init(void);
+void stm32f_mco2_disable(void);
+void stm32f_mco2_enable(void);
 
 /*---------------------------------------------------------------------
  * USB Device
@@ -258,6 +260,15 @@ void stm32f_usb_ep0_init(struct stm32f_usb * usb, int mxpktsz);
 void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
 		struct usb_descriptor_endpoint * desc);
 #endif
+
+/*---------------------------------------------------------------------
+ * Flash Memory
+ *---------------------------------------------------------------------*/
+
+int stm32f_flash_erase(unsigned int offs, int len);
+
+int stm32f_flash_write(uint32_t offs, const void * buf, int len);
+
 
 #endif /* __ASSEMBLER__ */
 

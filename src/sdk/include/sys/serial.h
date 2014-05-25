@@ -73,15 +73,16 @@
 
 /* character encoding and baud rate */
 struct serial_config {
-	uint32_t baud_rate;
-	uint8_t data_bits;
+	uint32_t baudrate;
+	uint8_t databits;
 	uint8_t parity;
-	uint8_t stop_bits;
+	uint8_t stopbits;
+	uint8_t flowctrl;
 };
 
 /* Convert from the config structure to de encoded flag bits */
-#define CFG_TO_FLAGS(CFG) ((CFG)->data_bits + (CFG)->parity +\
-						  ((CFG)->stop_bits << 8))
+#define CFG_TO_FLAGS(CFG) ((CFG)->databits + (CFG)->parity +\
+						  ((CFG)->stopbits << 8))
 
 /* modem control bits */
 struct serial_control {

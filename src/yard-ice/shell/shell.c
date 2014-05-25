@@ -172,6 +172,9 @@ const struct shell_cmd cmd_tab[] = {
 #if (ENABLE_NAND)
 	{ cmd_bb_scan, "bbscan", "bbs", 
 		"", "NAND bad block scan" },
+
+	{ cmd_scrub, "scrub", "scb", 
+		"", "NAND block forced erase" },
 #endif
 
 	{ cmd_reboot, "reboot", "rb", 
@@ -200,6 +203,9 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_power, "power", "pwr", 
 		"[on | off | cycle]", "control the target power ..." },
+
+	{ cmd_relay, "relay", "rly", 
+		"[on | off | cycle]", "control on board relay..." },
 
 	{ cmd_mem_write, "write", "mw", 
 		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
@@ -249,6 +255,12 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 
+	{ cmd_os, "sys", "os", 
+		"", "show OS status" },
+
+	{ cmd_thread, "thread", "th", 
+		"[ID]", "show thread status" },
+
 #if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
@@ -261,6 +273,7 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
+
 #if 0
 	{ cmd_arp, "arp", "arp", 
 		"", "show / manipulate the system ARP cache" },

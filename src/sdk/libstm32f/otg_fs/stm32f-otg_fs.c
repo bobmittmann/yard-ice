@@ -96,7 +96,7 @@ void stm32f_otg_fs_ep_disable(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 	int ep_id = addr & 0x7f;
 	int input = addr & 0x80;
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d %s", ep_id, input ? "IN" : "OUT");
+	DCC_LOG2(LOG_INFO, "ep_id=%d %s", ep_id, input ? "IN" : "OUT");
 
 	/* Diable endpoint interrupt */
 	otg_fs->daintmsk &= ~OTG_FS_IEPM(ep_id);
@@ -170,7 +170,7 @@ int stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs,
 		xfrsiz = 0;
 	}
 
-	DCC_LOG3(LOG_TRACE, "ep_id=%d pktcnt=%d xfrsiz=%d", ep_id, pktcnt, xfrsiz);
+	DCC_LOG3(LOG_INFO, "ep_id=%d pktcnt=%d xfrsiz=%d", ep_id, pktcnt, xfrsiz);
 
 	otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
 		OTG_FS_XFRSIZ_SET(xfrsiz); 
@@ -180,7 +180,7 @@ int stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs,
 	deptsiz = otg_fs->inep[ep_id].dieptsiz;
 	(void)deptsiz;
 
-	DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
+	DCC_LOG2(LOG_INFO, "PKTCNT=%d XFRSIZ=%d", OTG_FS_PKTCNT_GET(deptsiz), 
 			 OTG_FS_XFRSIZ_GET(deptsiz));
 
 	return xfrsiz;
@@ -258,7 +258,7 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	uint32_t depctl;
 	int i;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_INFO, "1.");
 
 	/* Disable global interrupts */
 	otg_fs->gahbcfg &= ~OTG_FS_GINTMSK; 
@@ -271,7 +271,7 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	/* Reset after a PHY select and set Device mode */
 	stm32f_otg_fs_core_reset(otg_fs);
 
-	DCC_LOG(LOG_TRACE, "2.");
+	DCC_LOG(LOG_INFO, "2.");
 
 	/* Restart the Phy Clock */
 	otg_fs->pcgcctl = 0;
@@ -343,7 +343,7 @@ void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 	/* Enable global interrupts */
 	otg_fs->gahbcfg |= OTG_FS_PTXFELVL | OTG_FS_TXFELVL | OTG_FS_GINTMSK; 
 
-	DCC_LOG(LOG_TRACE, "3.");
+	DCC_LOG(LOG_INFO, "3.");
 }
 
 #ifdef DEBUG
@@ -374,20 +374,20 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		eptfsav = eptfsav * 4;
 		(void)mpsiz;
 
-		DCC_LOG5(LOG_TRACE, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
+		DCC_LOG5(LOG_INFO, "EP%d IN %s TXFNUM=%d STALL=%d NAKSTS=%d",
 				 ep_id, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
 				 OTG_FS_TXFNUM_GET(depctl),
 				 (depctl & OTG_FS_STALL) ? 1 : 0,
 				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
 
-		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
+		DCC_LOG4(LOG_INFO, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
 				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
 				 (depctl & OTG_FS_DPID) ? 1 : 0,
 				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
 				 mpsiz);
 
 
-		DCC_LOG3(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d FSAVAIL=%d",
+		DCC_LOG3(LOG_INFO, "PKTCNT=%d XFRSIZ=%d FSAVAIL=%d",
 				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz), 
 				 eptfsav);
 	} else {
@@ -403,19 +403,19 @@ void stm32f_otg_fs_ep_dump(struct stm32f_otg_fs * otg_fs, unsigned int addr)
 		mpsiz = (ep_id == 0) ? OTGFS_EP0_MPSIZ_GET(depctl) : OTG_FS_MPSIZ_GET(depctl);
 		(void)mpsiz;
 
-		DCC_LOG5(LOG_TRACE, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
+		DCC_LOG5(LOG_INFO, "EP%d OUT %s SNPM=%d STALL=%d NAKSTS=%d",
 				 ep_id, eptyp_nm[OTG_FS_EPTYP_GET(depctl)],
 				 (depctl & OTG_FS_SNPM) ? 1 : 0,
 				 (depctl & OTG_FS_STALL) ? 1 : 0,
 				 (depctl & OTG_FS_NAKSTS) ? 1 : 0);
 
-		DCC_LOG4(LOG_TRACE, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
+		DCC_LOG4(LOG_INFO, "EONUM=%s DPID=%d USBAEP=%d MPSIZ=%d", 
 				 (depctl & OTG_FS_EONUM) ? "EVEN" : "ODD",
 				 (depctl & OTG_FS_DPID) ? 1 : 0,
 				 (depctl & OTG_FS_USBAEP) ? 1 : 0,
 				 mpsiz);
 
-		DCC_LOG2(LOG_TRACE, "PKTCNT=%d XFRSIZ=%d",
+		DCC_LOG2(LOG_INFO, "PKTCNT=%d XFRSIZ=%d",
 				 OTG_FS_PKTCNT_GET(eptsiz), OTG_FS_XFRSIZ_GET(eptsiz));
 	}
 
@@ -436,22 +436,22 @@ void otg_fs_fifo(struct stm32f_otg_fs * otg_fs,
 	r = n - q;
 
 	for (; i < q; i += 4) {
-		DCC_LOG5(LOG_TRACE, "%04x: %08x %08x %08x %08x", i * 4, 
+		DCC_LOG5(LOG_INFO, "%04x: %08x %08x %08x %08x", i * 4, 
 				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
 				 otg_fs->ram[i + 2], otg_fs->ram[i + 3]);
 	}
 
 	switch (r) {
 	case 1:
-		DCC_LOG2(LOG_TRACE, "%04x: %08x ", i * 4, 
+		DCC_LOG2(LOG_INFO, "%04x: %08x ", i * 4, 
 				 otg_fs->ram[i + 0]);
 		break;
 	case 2:
-		DCC_LOG3(LOG_TRACE, "%04x: %08x %08x", i * 4, 
+		DCC_LOG3(LOG_INFO, "%04x: %08x %08x", i * 4, 
 				 otg_fs->ram[i + 0], otg_fs->ram[i + 1]);
 		break;
 	case 3:
-		DCC_LOG4(LOG_TRACE, "%04x: %08x %08x %08x", i * 4, 
+		DCC_LOG4(LOG_INFO, "%04x: %08x %08x %08x", i * 4, 
 				 otg_fs->ram[i + 0], otg_fs->ram[i + 1],
 				 otg_fs->ram[i + 2]);
 		break;

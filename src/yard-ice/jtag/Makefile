@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = jtag
 
 CFILES = jtag_chain_init.c jtag_chain_probe.c  jtag_tap_api.c \

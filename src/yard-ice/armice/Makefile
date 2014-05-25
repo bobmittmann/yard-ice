@@ -21,13 +21,15 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = armice
 
 CFILES = mod_armice.c armice.c armice-test.c armice-info.c arm-wp.c\
 		 arm7.c arm9-safe.c arm926ejs.c armice_cfi16_2.c arm-fmt.c\
 		 arm-cfi16.c codelet.c
 
-INCPATH = ../include ../../sdk/include
+#INCPATH = ../include ../../sdk/include
 
 include ../../mk/lib.mk
 

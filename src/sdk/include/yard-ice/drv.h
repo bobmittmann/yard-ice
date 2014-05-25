@@ -52,9 +52,15 @@ void relay_on(void);
 
 void relay_off(void);
 
+int relay_stat(void);
+
 void ext_pwr_on(void);
 
 void ext_pwr_off(void);
+
+int ext_pwr_stat(void);
+
+int ext_pwr_mon(void);
 
 void tone_play(unsigned int tone, unsigned int ms);
 

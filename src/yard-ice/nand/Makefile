@@ -21,6 +21,8 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
+include ../../mk/config.mk
+
 LIB_STATIC = nand
 
 CFILES = mod_nand.c nand-bb-check.c nand-block-erase.c\
