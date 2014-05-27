@@ -22,7 +22,7 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c profclk.c board.c leds.c 
+CFILES = usb-serial.c serial.c profclk.c board.c io.c leds.c 
 
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
@@ -37,6 +37,7 @@ CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
 JTAGTOOL_ADDR = 192.168.10.128 
+#JTAG_TARGET = stm32
 
 MACH = stm32f103x6
 include ../mk/stm32f103.mk
