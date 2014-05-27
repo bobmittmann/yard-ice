@@ -46,6 +46,7 @@
 
 #include "board.h"
 #include "led.h"
+#include "io.h"
 
 struct serial_dev * serial2_open(void);
 struct serial_dev * serial3_open(void);
@@ -65,21 +66,30 @@ void system_reset(void)
 	for(;;);
 }
 
-#define LOOP_TIME 50 
-#define BUSY_TIME (5000 / LOOP_TIME)
+int mode = 0;
 
-static int push_btn_stat(void)
+void toggle_mode(void)
 {
-	return stm32f_gpio_stat(PUSHBTN_IO) ? 1 : 0;
+	switch (mode) {
+	case 0:
+		pin1_sel_gnd();
+		pin2_sel_vcc();
+		led2_flash(2);
+		led1_flash(2);
+		mode = 1;
+		break;
+	case 1:
+		pin1_sel_input();
+		pin2_sel_input();
+		led2_flash(1);
+		led1_flash(1);
+		mode = 0;
+		break;
+	}
 }
 
-enum {
-	EVENT_NONE,
-	EVENT_BTN_PRESSED,
-	EVENT_BTN_RELEASED,
-	EVENT_EXT_RST_TIMEOUT,
-	EVENT_SYS_RST_TIMEOUT
-};
+#define LOOP_TIME 50 
+#define BUSY_TIME (5000 / LOOP_TIME)
 
 enum {
 	EXT_RST_OFF,
@@ -89,74 +99,61 @@ enum {
 
 void __attribute__((noreturn)) button_task(void)
 {
-	int btn_st[2];
-	int sys_rst_tmr = 0;
-	int ext_rst_tmr = 0;
-	int ext_rst_st = EXT_RST_OFF;
 	int event;
 	int i;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
-	btn_st[0] = push_btn_stat();
-
 	while (1) {
-		thinkos_sleep(LOOP_TIME);
-
-		btn_st[1] = push_btn_stat();
-		if (btn_st[1] != btn_st[0]) {
-			/* process push button */
-			event = btn_st[1] ? EVENT_BTN_PRESSED : EVENT_BTN_RELEASED;
-			btn_st[0] = btn_st[1];
-		} else if (ext_rst_tmr) {
-			/* process external reset timer */
-			event = (--ext_rst_tmr == 0) ? EVENT_EXT_RST_TIMEOUT: EVENT_NONE;
-		} else if (sys_rst_tmr) {
-			/* process system reset timer */
-			event = (--sys_rst_tmr == 0) ? EVENT_SYS_RST_TIMEOUT: EVENT_NONE;
-		} else {
-			event = EVENT_NONE;
-		}
+		event  = btn_event_wait();
 
 		switch (event) {
+	
 
-		case EVENT_BTN_PRESSED:
-			DCC_LOG(LOG_TRACE, "BTN_PRESSED");
-			if (ext_rst_st == EXT_RST_OFF) {
-				/* start external reset timer */
-				ext_rst_tmr = 500 / LOOP_TIME;
-				/* start system reset timer */
-				sys_rst_tmr = 5000 / LOOP_TIME;
-				stm32f_gpio_set(EXTRST0_IO);
-//				stm32f_gpio_set(EXTRST1_IO);
-				pin2_sel_gnd();
-				led_lock();
-				led2_on();
-				ext_rst_st = EXT_RST_ON;
-			}
+		case EVENT_CLICK:
+			DCC_LOG(LOG_TRACE, "EVENT_CLICK");
 			break;
 
-		case EVENT_BTN_RELEASED:
-			DCC_LOG(LOG_TRACE, "BTN_RELEASED");
+		case EVENT_DBL_CLICK:
+			DCC_LOG(LOG_TRACE, "EVENT_DBL_CLICK");
+			toggle_mode();
+			break;
+
+		case EVENT_HOLD1:
+			DCC_LOG(LOG_TRACE, "EVENT_HOLD1");
+//			if (ext_rst_st == EXT_RST_OFF) {
+				/* start external reset timer */
+//				ext_rst_tmr = 500 / LOOP_TIME;
+				/* start system reset timer */
+//				sys_rst_tmr = 5000 / LOOP_TIME;
+//				stm32f_gpio_set(EXTRST0_IO);
+//				stm32f_gpio_set(EXTRST1_IO);
+//				pin2_sel_gnd();
+//				led_lock();
+//				led2_on();
+//				ext_rst_st = EXT_RST_ON;
+//			}
+			break;
+
+//			DCC_LOG(LOG_TRACE, "BTN_RELEASED");
 //			if (ext_rst_st == EXT_RST_WAIT) {
 //				ext_rst_st = EXT_RST_OFF;
 //			}
 			/* reset system reset timer */
-			sys_rst_tmr = 0;
-			break;
+//			sys_rst_tmr = 0;
 
-		case EVENT_EXT_RST_TIMEOUT:
-			DCC_LOG(LOG_TRACE, "EXT_RST_TIMEOUT");
+		case EVENT_CLICK_N_HOLD:
+			DCC_LOG(LOG_TRACE, "EVENT_CLICK_N_HOLD");
 			stm32f_gpio_clr(EXTRST0_IO);
 //			stm32f_gpio_clr(EXTRST1_IO);
-			pin2_sel_vcc();
-			led2_off();
-			led_unlock();
-			ext_rst_st = EXT_RST_OFF;
+//			pin2_sel_vcc();
+//			led2_off();
+//			led_unlock();
+//			ext_rst_st = EXT_RST_OFF;
 			break;
 
-		case EVENT_SYS_RST_TIMEOUT:
-			DCC_LOG(LOG_TRACE, "SYS_RST_TIMEOUT");
+		case EVENT_HOLD2:
+			DCC_LOG(LOG_TRACE, "EVENT_HOLD2");
 			led_lock();
 
 			for (i = 0; i < 10; ++i) {
@@ -551,6 +548,7 @@ int main(int argc, char ** argv)
 	vcom[0].cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
 	vcom[1].cdc = vcom[0].cdc;
 
+	ui_init();
 
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
@@ -585,8 +583,12 @@ int main(int argc, char ** argv)
 
 	usb_vbus(true);
 
-	pin1_sel_gnd();
-	pin2_sel_vcc();
+	pin1_sel_input();
+	pin2_sel_input();
+	mode = 0;
+
+//	pin1_sel_gnd();
+//	pin2_sel_vcc();
 //	usb_console(vcom[0].cdc);
 
 	usb_recv_task(vcom);
