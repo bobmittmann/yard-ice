@@ -49,6 +49,7 @@
   #include <netinet/tcp.h>
   #include <netdb.h>
   #include <pthread.h>
+  #include <assert.h>
 #endif
 
 #include "arm_elf.h"
@@ -533,7 +534,7 @@ int logprintf(FILE *stream, const char *fmt)
 		/* Network byte order long */			
 		case 'L':
 			val.n = dcc_uint(stream);
-			val.n = sprintf(buf, "%lu", ntohl(val.n)); 
+			val.n = sprintf(buf, "%lu", (long int)ntohl(val.n)); 
 			m++;
 			break;
 
@@ -683,7 +684,7 @@ int dcc_log_expand(FILE * f)
 #ifdef _WIN32
 uint32_t net_dcc_u32(SOCKET sock)
 #else
-uint32_t net_dcc_u32(int sock);
+uint32_t net_dcc_u32(int sock)
 #endif
 {
 	uint32_t val;
@@ -697,7 +698,7 @@ uint32_t net_dcc_u32(int sock);
 #ifdef _WIN32
 void * net_dcc_ptr(SOCKET sock)
 #else
-void * net_dcc_ptr(int sock);
+void * net_dcc_ptr(int sock)
 #endif
 {
 	uint32_t addr;
@@ -846,7 +847,7 @@ int net_logprintf(int sock, const char *fmt)
 		/* Network byte order long */			
 		case 'L':
 			val.n = net_dcc_u32(sock);
-			val.n = sprintf(buf, "%lu", ntohl(val.n)); 
+			val.n = sprintf(buf, "%lu", (long int)ntohl(val.n)); 
 			m++;
 			break;
 
@@ -1083,7 +1084,7 @@ int __thread_cancel(__thread_t thread)
 	TerminateThread(thread, 0);
 	return 0;
 #else
-	return pthread_cancel(thread);
+	return pthread_cancel(*thread);
 #endif
 }
 
@@ -1093,7 +1094,7 @@ int __thread_join(__thread_t thread, void ** value_ptr)
 	WaitForSingleObject(thread, INFINITE);
 	return 0;
 #else
-	return pthread_join(thread, value_ptr);
+	return pthread_join(*thread, value_ptr);
 #endif
 }
 
