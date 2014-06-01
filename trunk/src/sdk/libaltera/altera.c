@@ -109,10 +109,8 @@ static void conf_wr(int c)
 
 	stm32f_spi_putc(spi, c);
 
-	if ((c = stm32f_spi_getc(spi)) >= 0) {
-//		if (c != 0xff)
-//			printf("%02x", c);
-	}
+	c = stm32f_spi_getc(spi);
+	(void)c;
 }
 
 int altera_configure(const uint8_t * buf, unsigned int max)
@@ -122,7 +120,7 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 
 	altera_io_init();
 	
-	stm32f_spi_init(STM32F_SPI3, &spi3_io, 2000000, SPI_MSTR | SPI_LSBFIRST);
+	stm32f_spi_init(STM32F_SPI3, &spi3_io, 500000, SPI_MSTR | SPI_LSBFIRST);
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
 
@@ -152,6 +150,6 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 		}
 	}
 
-	return 0;
+	return n;
 }
 

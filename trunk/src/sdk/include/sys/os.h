@@ -250,11 +250,13 @@ static inline uint32_t __attribute__((always_inline)) __os_ms_ticks() {
  */
 
 static inline int __os_thread_create(int (* task)(void *), void * arg, 
-									  void * stack_ptr, unsigned int stack_size,
+									  void * stack_ptr, 
+									  unsigned int stack_size,
 									  int priority) {
+	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
 	return thinkos_thread_create(task, arg, stack_ptr, stack_size, 
 								 THINKOS_OPT_PRIORITY(priority) |
-								 THINKOS_OPT_ID(32));
+								 THINKOS_OPT_ID(id));
 }
 
 static inline int __os_thread_self(void) {

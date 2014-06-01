@@ -28,9 +28,9 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-#ifdef STM32F1X
-
 #define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
+
+#ifdef STM32F1X
 
 const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
 const uint32_t __flash_size;
@@ -63,7 +63,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_erase(unsigned int offs, int len)
+int stm32f_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t addr;
@@ -117,7 +117,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_write(uint32_t offs, const void * buf, int len)
+int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint16_t data;
@@ -126,6 +126,11 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 	uint32_t cr;
 	int n;
 	int i;
+
+	if (offs & 0x00000001) {
+		DCC_LOG(LOG_ERROR, "offset must be 16bits aligned!");
+		return -1;
+	}
 
 	n = (len + 1) / 2;
 
@@ -140,16 +145,14 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 		flash->keyr = FLASH_KEY2;
 	}
 
-	DCC_LOG2(LOG_TRACE, "0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_INFO, "0x%08x len=%d", addr, len);
 
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8);
-		DCC_LOG2(LOG_TRACE, "0x%08x data=0x%04x", addr, data);
+		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
 		if (stm32f10x_flash_wr16(flash, addr, data) < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
 			return -1;
-		} else {
-			DCC_LOG2(LOG_TRACE, "0x%08x data=0x%04x", addr, *addr);
 		}
 		ptr += 2;
 		addr++;
@@ -160,94 +163,157 @@ int stm32f_flash_write(uint32_t offs, const void * buf, int len)
 
 #endif
 
-#if 0
-int stm32f_flash_erase(cm3ice_ctrl_t * ctrl, uint32_t base, 
-						  uint32_t offs, int len)
+
+#ifdef STM32F2X
+
+const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
+const uint32_t __flash_size;
+
+int __attribute__((section (".data#"))) 
+	stm32f10x_flash_sect_erase(struct stm32f_flash * flash, unsigned int sect)
 {
+	uint32_t pri;
 	uint32_t sr;
 	int again;
-	int page;
-	int sect;
-	int size;
+	int ret = -1;
 
-	page = (base + offs) >> 14;
-	switch (page) {
-	case 0 ... 3:
-		sect = page;
-		size = 16384;
-		break;
-	case 4 ... 7:
-		sect = 4;
-		size = 65536;
-		break;
-	default:
-		sect = ((page - 1) / 8) + 5;
-		size = 131072;
-		break;
-	}
+	pri = cm3_basepri_get();
+	cm3_basepri_set(0x01);
 
-	DCC_LOG4(LOG_TRACE, "len=%d page=%d sect=%d size=%d", 
-			 len, page, sect, size);
+	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect) ;
 
-	cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_CR, SER | SNB(sect) | STRT);
-
-	for (again = 4096 * 32; ; again--) {
-		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
-		if ((sr & BSY) == 0)
+	for (again = 4096 * 1024; again > 0; again--) {
+		sr = flash->sr;
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
 			break;
-		if (again == 0) {
-			DCC_LOG(LOG_WARNING, "flash not ready!");
-			return -1;
 		}
 	}
 
-	return size;
+	cm3_basepri_set(pri);
+
+	return ret;
 }
 
-int stm32f_flash_wr32(cm3ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
+int stm32f_flash_erase(unsigned int offs, unsigned int len)
 {
-	uint32_t sr;
-	int again;
+	struct stm32f_flash * flash = STM32F_FLASH;
+	uint32_t cr;
+	unsigned int page;
+	unsigned int sect;
+	unsigned int size;
+	unsigned int cnt;
 
-	DCC_LOG2(LOG_TRACE, "0x%08x <-- 0x%08x", addr, data);
+	cr = flash->cr;
+	if (cr & FLASH_LOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+		flash->keyr = FLASH_KEY2;
+	}
 
-	cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_CR, PSIZE_32  | PG);
-	cm3ice_wr32(ctrl, addr, data);
+	page = offs >> 14;
 	
-	for (again = 4096; ; again--) {
-		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
-		if ((sr & BSY) == 0)
+	if ((page << 14) != (offs)) {
+		DCC_LOG(LOG_ERROR, "offset must be a aligned to a sector boundary.");
+		return -1;
+	};
+
+	cnt = 0;
+	while (cnt < len) {
+		switch (page) {
+		case 0 ... 3:
+			sect = page;
+			size = 16384;
 			break;
-		if (again == 0) {
-			DCC_LOG(LOG_WARNING, "flash not ready!");
+		case 4 ... 7:
+			sect = 4;
+			size = 65536;
+			break;
+		default:
+			sect = ((page - 7) / 8) + 5;
+			size = 131072;
+			break;
+		}
+
+		if (stm32f10x_flash_sect_erase(flash, sect) < 0) {
+			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
 			return -1;
+		}
+
+		cnt += size;
+	}
+
+	return cnt;
+}
+
+int __attribute__((section (".data#"))) 
+	stm32f_flash_wr32(struct stm32f_flash * flash,
+						 uint32_t volatile * addr, uint32_t data)
+{
+	uint32_t pri;
+	uint32_t sr;
+	int again;
+	int ret = -1;
+
+	pri = cm3_basepri_get();
+	cm3_basepri_set(0x01);
+
+	flash->cr = FLASH_PG | FLASH_PSIZE_32;
+	*addr = data;
+	
+	for (again = 4096 * 1024; again > 0; --again) {
+		sr = flash->sr;
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
+			break;
 		}
 	}
 
-	return 0;
+	cm3_basepri_set(pri);
+
+	return ret;
 }
 
-int stm32f_flash_write(cm3ice_ctrl_t * ctrl, uint32_t base, 
-						  uint32_t offs, const void * buf, int len)
+int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
+	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t data;
-	uint32_t addr;
+	uint32_t * addr;
 	uint8_t * ptr;
+	uint32_t cr;
 	int n;
 	int i;
 
+	if (offs & 0x00000003) {
+		DCC_LOG(LOG_ERROR, "offset must be 32bits aligned!");
+		return -1;
+	}
+
 	n = (len + 3) / 4;
 
-	DCC_LOG2(LOG_INFO, "0x%08x len=%d", base + offs, len);
-
 	ptr = (uint8_t *)buf;
-	addr = base + offs;
+	addr = (uint32_t *)(__flash_base + offs);
+
+	cr = flash->cr;
+	if (cr & FLASH_LOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+		flash->keyr = FLASH_KEY2;
+	}
+
+	DCC_LOG2(LOG_INFO, "0x%08x len=%d", addr, len);
 
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
-		stm32f_flash_wr32(ctrl, addr, data);
+		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
+		if (stm32f_flash_wr32(flash, addr, data) < 0) {
+			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
+			return -1;
+		}
 		ptr += 4;
-		addr += 4;
+		addr++;
 	}
 	
 	return n * 4;

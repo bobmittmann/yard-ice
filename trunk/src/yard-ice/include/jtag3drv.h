@@ -395,6 +395,10 @@ void jtag3ctrl_rtck(bool enable);
 
 void jtag3ctrl_aux_uart(bool enable);
 
+bool jtag3ctrl_irq_status(void);
+
+bool jtag3ctrl_fpga_probe(void);
+
 #ifdef __cplusplus
 }
 #endif

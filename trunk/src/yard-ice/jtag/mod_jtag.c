@@ -101,8 +101,15 @@ int jtag_drv_done(void);
 
 int mod_jtag_init(void * jtag, int mod_id)
 {
+	int ret;
+
 	DCC_LOG(LOG_TRACE, "...");
-	jtag_drv_init();
+
+	if ((ret = jtag_drv_init()) < 0) {
+		DCC_LOG(LOG_WARNING, "jtag_drv_init() failed!");
+		return ret;
+	}
+
 	jtag_tck_freq_set(100000);
 	jtag_rtck_freq_set(100000);
 	/* force 0 on TRST */

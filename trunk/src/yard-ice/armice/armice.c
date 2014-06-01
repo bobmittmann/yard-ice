@@ -178,6 +178,7 @@ static int core_resume_prepare(armice_ctrl_t * ctrl)
 		   configuration, then we should mark the single step
 		   as not initializad */
 		ctrl->flags &= ~ARMICE_SSTEP_INIT;
+		DCC_LOG(LOG_TRACE, "single step disable ------");
 		if ((ret = arm_wp_set(ctrl->tap, 1, &ctrl->wp[1])) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "jtag_arm_wp1_restore()");
 			return ret;
@@ -196,7 +197,12 @@ static int core_resume_prepare(armice_ctrl_t * ctrl)
 
 	/* restore/disable watchpoint 0 */
 	if (ctrl->flags & ARMICE_WP0_SET) {
-			DCC_LOG(LOG_TRACE, "restoring WP0...");
+		DCC_LOG(LOG_TRACE, "restoring WP0...");
+		/* when the WP1 is set it will destroy the single step 
+		   configuration, then we should mark the single step
+		   as not initializad */
+		ctrl->flags &= ~ARMICE_SSTEP_INIT;
+		DCC_LOG(LOG_TRACE, "single step disable ------");
 		if ((ret = arm_wp_set(ctrl->tap, 0, &ctrl->wp[0])) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "jtag_arm_wp1_restore()");
 			return ret;
@@ -299,6 +305,7 @@ void armice_signal(armice_ctrl_t * ctrl, ice_sig_t sig)
 		ctrl->poll.enabled = false;
 		break;
 	case ICE_SIG_POLL_START:
+		ctrl->poll.status = -1;
 		ctrl->poll.enabled = true;
 		ctrl->polling = true;
 		break;
@@ -315,7 +322,9 @@ int armice_status(armice_ctrl_t * ctrl)
 		DCC_LOG(LOG_MSG, "poll status!!!!");
 		if ((dbg_status = ctrl->poll.status) < 0) {
 			DCC_LOG1(LOG_MSG, "ctrl->poll.status: %d", dbg_status);
-			return dbg_status;
+//			return dbg_status;
+			/* get the cached debug status */
+			dbg_status = ctrl->dbg_status;
 		}
 	} else {
 		/* get the status of the ICE driver */
@@ -323,6 +332,8 @@ int armice_status(armice_ctrl_t * ctrl)
 			DCC_LOG1(LOG_ERROR, "jtag_arm_dbg_status(): %d", dbg_status);
 			return dbg_status;
 		}
+		/* Cache the status */
+		ctrl->poll.status = dbg_status;
 	}
 
 	DCC_LOG5(LOG_TRACE, " THUMB:%d nMREQ:%d IFEN:%d DBGRQ:%d DBGACK:%d", 
@@ -504,15 +515,21 @@ int armice_run(armice_ctrl_t * ctrl)
 
 	core_state_restore(ctrl, &ctrl->context);
 
+	DCC_LOG(LOG_TRACE, "1.");
+
 	if ((ret = core_resume_prepare(ctrl)) != JTAG_OK) {
 		DCC_LOG(LOG_ERROR, "core_resume()");
 		return ret;
 	}
 
+	DCC_LOG(LOG_TRACE, "2.");
+
 	if ((ret = core_resume(ctrl)) != JTAG_OK) {
 		DCC_LOG(LOG_ERROR, "core_resume()");
 		return ret;
 	}
+
+	DCC_LOG(LOG_TRACE, "3.");
 
 	return ICE_OK;
 }
@@ -562,7 +579,7 @@ int armice_step(armice_ctrl_t * ctrl)
 	core_state_save(ctrl, ct);
 
 	if (!(ctrl->flags & ARMICE_SSTEP_INIT)) {
-		DCC_LOG(LOG_TRACE, "single step enable.....");
+		DCC_LOG(LOG_TRACE, "single step enable +++++++");
 		arm_sstp_init(ctrl->tap);
 		ctrl->flags |= ARMICE_SSTEP_INIT;
 	}
@@ -647,7 +664,7 @@ int armice_mem_lock(armice_ctrl_t * ctrl)
 
 	if (ctrl->mem_lock) {
 		ctrl->mem_lock++;
-		DCC_LOG1(LOG_TRACE, "# LOCK(%d) #", ctrl->mem_lock);
+		DCC_LOG1(LOG_INFO, "# LOCK(%d) #", ctrl->mem_lock);
 		return ICE_ERR_LOCKED;
 	}
 
@@ -657,7 +674,7 @@ int armice_mem_lock(armice_ctrl_t * ctrl)
 	}
 
 	if ((ctrl->dbg_status & ARMICE_ST_DBGACK) == 0) {
-		DCC_LOG(LOG_TRACE, "core RUNNING..."); 
+		DCC_LOG(LOG_INFO, "core RUNNING..."); 
 		/* break the core */
 		if ((dbg_status = core_break_req(ctrl)) < 0) {
 			DCC_LOG(LOG_ERROR, "core_break_req() failed!");
@@ -672,10 +689,10 @@ int armice_mem_lock(armice_ctrl_t * ctrl)
 		   on unlock */
 		ctrl->flags |= ARMICE_RESUME;
 	} else {
-		DCC_LOG(LOG_TRACE, "core HALTED..."); 
+		DCC_LOG(LOG_INFO, "core HALTED..."); 
 		/* clearing the single step execution */
 		if (ctrl->flags & ARMICE_SSTEP_EN) {
-			DCC_LOG(LOG_TRACE, "setting WP0 break condition ...");
+			DCC_LOG(LOG_INFO, "setting WP0 break condition ...");
 			if ((ret = arm_wp_brk_req(ctrl->tap)) != JTAG_OK) {
 				return ret;
 			}
@@ -688,7 +705,7 @@ int armice_mem_lock(armice_ctrl_t * ctrl)
 	core_state_save(ctrl, ct);
 
 	ctrl->mem_lock++;
-	DCC_LOG1(LOG_TRACE, "# LOCK(%d) #", ctrl->mem_lock);
+	DCC_LOG1(LOG_INFO, "# LOCK(%d) #", ctrl->mem_lock);
 
 	return 0;
 }
@@ -704,7 +721,7 @@ int armice_mem_unlock(armice_ctrl_t * ctrl)
 		return -1;
 	}
 
-	DCC_LOG1(LOG_TRACE, "# UNLOCK(%d) #", ctrl->mem_lock);
+	DCC_LOG1(LOG_INFO, "# UNLOCK(%d) #", ctrl->mem_lock);
 	ctrl->mem_lock--;
 
 	if (ctrl->mem_lock > 0) {
@@ -726,20 +743,20 @@ int armice_mem_unlock(armice_ctrl_t * ctrl)
 			   now but we have no context stored, 
 			   this situation can occur if the
 			   exec() function was called between lock()/unlock() */
-			DCC_LOG(LOG_TRACE, "# UNLOCKED # exec()!!!"); 
+			DCC_LOG(LOG_INFO, "# UNLOCKED # exec()!!!"); 
 			return ICE_OK;
 		}
 
 		if (ctrl->flags & ARMICE_CTX_SAVED) {
 			/* clearing context flag */
-			DCC_LOG(LOG_TRACE, "clearing CONTEXT"); 
+			DCC_LOG(LOG_INFO, "clearing CONTEXT"); 
 			ctrl->flags &= ~ARMICE_CTX_SAVED;
 		}
 
 		/* The core was running before lock, and is running
 		   now, but the context is probably wrong. Keep it running... */
 		if (ctrl->flags & ARMICE_RESUME) {
-			DCC_LOG(LOG_TRACE, "# UNLOCKED # running"); 
+			DCC_LOG(LOG_INFO, "# UNLOCKED # running"); 
 			ctrl->flags &= ~ARMICE_RESUME;
 		}
 
@@ -747,7 +764,7 @@ int armice_mem_unlock(armice_ctrl_t * ctrl)
 	} 
 
 	if (!(ctrl->flags & ARMICE_RESUME)) {
-		DCC_LOG(LOG_TRACE, "halted, # UNLOCKED #"); 
+		DCC_LOG(LOG_INFO, "halted, # UNLOCKED #"); 
 		return ICE_OK;
 	}
 	ctrl->flags &= ~ARMICE_RESUME;
@@ -755,12 +772,12 @@ int armice_mem_unlock(armice_ctrl_t * ctrl)
 	core_state_restore(ctrl, ct);
 
 	if ((ret = core_resume_prepare(ctrl)) != JTAG_OK) {
-		DCC_LOG(LOG_ERROR, "core_resume()");
+		DCC_LOG(LOG_INFO, "core_resume()");
 		return ret;
 	}
 
 	if ((ret = core_resume(ctrl)) != JTAG_OK) {
-		DCC_LOG(LOG_ERROR, "core_resume()");
+		DCC_LOG(LOG_INFO, "core_resume()");
 		return ret;
 	}
 
@@ -772,7 +789,7 @@ int armice_mem_unlock(armice_ctrl_t * ctrl)
 
 	core_status_update(ctrl, dbg_status);
 
-	DCC_LOG(LOG_TRACE, "running, # UNLOCKED #"); 
+	DCC_LOG(LOG_INFO, "running, # UNLOCKED #"); 
 
 	return ICE_OK;
 }
@@ -1430,12 +1447,13 @@ int armice_bp_set(armice_ctrl_t * ctrl, uint32_t addr,
 	wp->ctrl_mask = ~ARMICE_WP_NOPC & 0xff;
 
 	if ((ctrl->dbg_status & ARMICE_ST_DBGACK) == 0) {
-		if (id == 1) {
+//		if (id == 1) {
 			/* when the WP1 is set it will destroy the single step 
 			   configuration, then we should mark the single step
 			   as not initializad */
 			ctrl->flags &= ~ARMICE_SSTEP_INIT;
-		}
+			DCC_LOG(LOG_TRACE, "single step disable ------");
+//		}
 		if ((ret = arm_wp_set(ctrl->tap, id, wp)) != JTAG_OK) {
 			DCC_LOG(LOG_ERROR, "arm_wp_set()");
 			return ret;

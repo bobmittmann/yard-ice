@@ -46,6 +46,7 @@ typedef enum {
 
 /* target state */
 typedef enum {
+	DBG_ST_FAULT = -4,
 	DBG_ST_ERROR = -3,
 	DBG_ST_OUTOFSYNC = -2,
 	DBG_ST_BUSY = -1,
@@ -295,6 +296,10 @@ int target_nand_chip_get(int dev_id, int chip_id, nand_chip_t ** chipp);
 int target_enable_ice_poll(bool flag);
 
 int target_enable_comm(bool flag);
+
+void debugger_init(void);
+
+void debugger_except(const char * msg);
 
 #ifdef __cplusplus
 	}

@@ -31,21 +31,21 @@ CFILES = yard-ice.c yard-ice/debugger.c yard-ice/ice_drv.c yard-ice/mod_mem.c\
 LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 		  sdk/libice-comm sdk/libtcpip sdk/libdrv sdk/libbitvec\
 		  sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes\
-		  sdk/libtrace sdk/libcdc-acm sdk/libtty\
+		  sdk/libtrace sdk/libcdc-acm sdk/libtty sdk/libxmodem\
 		  yard-ice/arch yard-ice/jtag yard-ice/script yard-ice/cmd\
 		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice yard-ice/cm3ice\
 		  yard-ice/targets yard-ice/comm yard-ice/tftp yard-ice/shell\
 		  yard-ice/gdb yard-ice/vcom yard-ice/telnet
 
-LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump crc \
+LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
-	targets comm tftp shell cdc-acm tty gdb vcom telnet
+	targets comm tftp shell cdc-acm tty gdb vcom telnet crc xmodem
 
-CFLAGS = -g -O2 
+CFLAGS = -g -O2
 
-VERSION_DATE = "2014-05-25"
+VERSION_DATE = "2014-05-27"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "2"
+VERSION_MINOR = "3"
 
 CDEFS = CONFIG_H
 

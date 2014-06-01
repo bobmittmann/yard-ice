@@ -19,6 +19,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+include ../mk/config.mk
+
 FPGA_PROJ = yard_ice
 
 FPGA_RBF_ADDR = 0x08060000
@@ -65,5 +67,6 @@ rbf: $(FPGA_RBF)
 	$(Q)$(TFTPLOAD) -e -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) $(FPGA_RBF)
 
 load:
+	$(ECHO) $(FPGA_RBF)
 	$(Q)$(TFTPLOAD) -e -a $(FPGA_RBF_ADDR) -h $(JTAGTOOL_ADDR) $(FPGA_RBF)
 

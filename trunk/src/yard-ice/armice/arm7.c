@@ -205,9 +205,11 @@ void arm7_context_restore(jtag_tap_t * tap, armice_context_t * ct)
 	jtag_arm7_step(tap, 1, ARM_LDM(ARM_R0_PC, ARM_PC), NULL);
 	jtag_arm7_step(tap, 2, ct->cpsr, NULL); 
 	jtag_arm7_step(tap, 2, ARM_NOP, NULL);
-	for (i = 0; i < 15; i++) {
+	for (i = 0; i < 13; i++) {
 		jtag_arm7_step(tap, 1, ct->r[i], NULL);
 	}
+	jtag_arm7_step(tap, 1, ct->sp, NULL);
+	jtag_arm7_step(tap, 1, ct->lr, NULL);
 	jtag_arm7_step(tap, 1, ct->pc, NULL);
 	jtag_arm7_step(tap, 2, ARM_NOP, NULL);
 }

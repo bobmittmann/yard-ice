@@ -261,6 +261,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
 
+	{ cmd_fpga, "fpga", "rbf", 
+		"[erase] [load]", "update FPGA program." },
+
 #if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
@@ -306,14 +309,15 @@ const char yard_ice_greeting[] = "\n"
 	"(c) Copyright 2013 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
 
 const char * const prompt_tab[] = {
-	"[JTAGTOOL ERR]$ ",
-	"[JTAGTOOL <!>]$ ",
-	"[JTAGTOOL ...]$ ",
-	"[JTAGTOOL (?)]$ ",
-	"[JTAGTOOL < >]$ ",
-	"[JTAGTOOL <->]$ ",
-	"[JTAGTOOL RUN]$ ",
-	"[JTAGTOOL BRK]$ "
+	"[YARD-ICE <!>]$ ", /* DBG_ST_FAULT */
+	"[YARD-ICE ERR]$ ", /* DBG_ST_ERROR */
+	"[YARD-ICE SYN]$ ", /* DBG_ST_OUTOFSYNC */
+	"[YARD-ICE ...]$ ", /* DBG_ST_BUSY */
+	"[YARD-ICE (?)]$ ", /* DBG_ST_UNDEF */
+	"[YARD-ICE < >]$ ", /* DBG_ST_UNCONNECTED */
+	"[YARD-ICE <->]$ ", /* DBG_ST_CONNECTED */
+	"[YARD-ICE RUN]$ ", /* DBG_ST_RUNNING */
+	"[YARD-ICE BRK]$ "  /* DBG_ST_HALTED */
 };
 
 void show_uint32(FILE * f, uint32_t val)
@@ -940,7 +944,7 @@ const char * yard_ice_get_prompt(void)
 
 	status = target_status();
 
-	return (char * )prompt_tab[status + 3];
+	return (char * )prompt_tab[status + 4];
 }
 
 int console_shell(void)

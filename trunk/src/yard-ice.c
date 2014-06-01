@@ -132,7 +132,7 @@ void stdio_init(void)
 FILE * monitor_stream;
 bool monitor_auto_flush;
 
-int supervisor_task(void)
+void __attribute__((noreturn)) supervisor_task(void)
 {
 	int opt;
 
@@ -163,9 +163,6 @@ void supervisor_init(void)
 						  supervisor_stack, sizeof(supervisor_stack), 
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
-
-/* TODO: The MAC address should be taken from the OTP FLASH */
-static const uint8_t def_ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x81};
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
 {
@@ -234,7 +231,8 @@ int network_config(void)
 	if ((env = getenv("ETHADDR")) != NULL) {
 		eth_strtomac(ethaddr, env);
 	} else {
-		tracef("Ethernet MAC address not set, using defaults!\n");
+		tracef("Ethernet MAC address not set, using defaults!");
+		DCC_LOG(LOG_WARNING, "Ethernet MAC address not set.");
 	}
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
@@ -280,13 +278,9 @@ int network_config(void)
 }
 #endif
 
-void debugger_init(void);
-
-int init_debugger(void) 
+int init_target(void) 
 {
 	struct target_info * target;
-
-	debugger_init();
 
 	target = target_lookup(getenv("TARGET"));
 
@@ -328,46 +322,40 @@ int main(int argc, char ** argv)
 	printf("\n---\n");
 
 	cm3_udelay_calibrate();
-	printf(".1");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-	printf(".2");
 	trace_init();
-	printf(".3");
+
+	tracef("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
+
 	env_init();
-	printf(".4");
 
 	bsp_io_ini();
 
 	supervisor_init();
-
-	printf(".5");
+	__os_sleep(10);
 
 #if ENABLE_NETWORK
 	DCC_LOG(LOG_TRACE, "network_config().");
 	network_config();
 #endif
 
-	printf(".6");
-
 	DCC_LOG(LOG_TRACE, "modules_init().");
 	modules_init();
-
-	printf(".7");
 
 	tracef("* Starting system module ...");
 	DCC_LOG(LOG_TRACE, "sys_start().");
 	sys_start();
 
-	printf(".8");
+	tracef("* Initializing YARD-ICE debugger...");
+	DCC_LOG(LOG_TRACE, "debugger_init().");
+	debugger_init();
 
 	tracef("* Initializing JTAG module ...");
+	DCC_LOG(LOG_TRACE, "jtag_start().");
 	if ((ret = jtag_start()) < 0) {
-		printf("[%d]", ret);
-		tracef("jtag_start() failed!");
-		__os_sleep(1000);
+		tracef("jtag_start() failed! [ret=%d]", ret);
+		debugger_except("JTAG driver fault");
 	}
-
-	printf(".9");
 
 #if (ENABLE_NAND)
 	tracef("* Initializing NAND module...");
@@ -382,7 +370,8 @@ int main(int argc, char ** argv)
 	i2c_init();
 #endif
 
-	init_debugger();
+	tracef("* configuring initial target ... ");
+	init_target();
 
 #if (ENABLE_TFTP)
 	tracef("* starting TFTP server ... ");
@@ -415,6 +404,9 @@ int main(int argc, char ** argv)
 	tracef("* starting TELNET server ... ");
 	telnet_shell();
 #endif
+
+
+//	__os_sleep(500);
 
 	return console_shell();
 }

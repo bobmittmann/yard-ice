@@ -35,7 +35,7 @@
 
 int arm_wp_brk_req(jtag_tap_t * tap)
 {
-	DCC_LOG(LOG_INFO, ".");
+	DCC_LOG(LOG_TRACE, ".");
 
 	jtag_arm_ice_rt_wr(tap, ARMICE_WP0_ADDR_MASK, 0xffffffff);
 	jtag_arm_ice_rt_wr(tap, ARMICE_WP0_DATA_MASK, 0xffffffff);
@@ -45,7 +45,7 @@ int arm_wp_brk_req(jtag_tap_t * tap)
 
 int arm_wp_clr(jtag_tap_t * tap, int id)
 {
-	DCC_LOG1(LOG_INFO, "id=%d", id);
+	DCC_LOG1(LOG_TRACE, "id=%d", id);
 
 	if (id == 0)
 		return jtag_arm_ice_rt_wr(tap, ARMICE_WP0_CTRL_VALUE, 0);
@@ -88,8 +88,9 @@ int arm_sstp_init(jtag_tap_t * tap)
 {
 	int ret;
 
-	DCC_LOG(LOG_INFO, ".");
+	DCC_LOG(LOG_TRACE, ".");
 
+	jtag_arm_ice_rt_wr(tap, ARMICE_WP0_ADDR_MASK, 0xffffffff);
 	jtag_arm_ice_rt_wr(tap, ARMICE_WP1_ADDR_MASK, 0x00000000);
 	jtag_arm_ice_rt_wr(tap, ARMICE_WP1_DATA_MASK, 0xffffffff);
 	jtag_arm_ice_rt_wr(tap, ARMICE_WP1_CTRL_VALUE, 0x00000000);
@@ -101,7 +102,7 @@ int arm_sstp_init(jtag_tap_t * tap)
 
 int arm_sstp_disable(jtag_tap_t * tap)
 {
-	DCC_LOG(LOG_INFO, ".");
+	DCC_LOG(LOG_TRACE, ".");
 
 	return jtag_arm_ice_rt_wr(tap, ARMICE_WP0_CTRL_MASK, 
 							  ~ARMICE_WP_NOPC & 0xff);

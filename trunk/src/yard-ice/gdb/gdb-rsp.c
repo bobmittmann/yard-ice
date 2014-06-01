@@ -188,7 +188,7 @@ static int rsp_break_signal(struct tcp_pcb * tp, char * pkt)
 		return rsp_signal(tp, pkt, SIGTRAP);
 	}
 
-	return rsp_msg(tp, pkt, "JTAGTOOL: target_halt failed!");
+	return rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
 #endif
 }
 
@@ -268,13 +268,13 @@ static int rsp_last_signal(struct tcp_pcb * tp, char * pkt, int len)
 
 		if ((state = target_halt(0)) < 0) {
 			DCC_LOG(LOG_WARNING, "target_halt() failed!");
-			rsp_msg(tp, pkt, "JTAGTOOL: halt fail\n");
+			rsp_msg(tp, pkt, "YARD-ICE: halt fail\n");
 			return rsp_error(tp, 1);
 		}
 
 		if ((state = target_halt_wait(500)) == ERR_TIMEOUT) {
 			DCC_LOG(LOG_TRACE, "timeout...");
-			rsp_msg(tp, pkt, "JTAGTOOL: target_halt failed!");
+			rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
 			return rsp_error(tp, 1);
 		}
 	 } 
@@ -286,34 +286,34 @@ static int rsp_last_signal(struct tcp_pcb * tp, char * pkt, int len)
 
 	switch (state) {
 	case DBG_ST_ERROR:
-		rsp_msg(tp, pkt, "JTAGTOOL: error state\n");
+		rsp_msg(tp, pkt, "YARD-ICE: error state\n");
 		break;
 	case DBG_ST_OUTOFSYNC:
 		DCC_LOG(LOG_TRACE, "out of sync");
-		rsp_msg(tp, pkt, "JTAGTOOL: Out of sync\n");
+		rsp_msg(tp, pkt, "YARD-ICE: Out of sync\n");
 		break;
 	case DBG_ST_BUSY:
 		DCC_LOG(LOG_TRACE, "busy...");
-		rsp_msg(tp, pkt, "JTAGTOOL: busy ... \n");
+		rsp_msg(tp, pkt, "YARD-ICE: busy ... \n");
 		break;
 	case DBG_ST_UNDEF:
-		rsp_msg(tp, pkt, "JTAGTOOL: undefined state\n");
+		rsp_msg(tp, pkt, "YARD-ICE: undefined state\n");
 		break;
 	case DBG_ST_UNCONNECTED:
 		DCC_LOG(LOG_TRACE, "unconnected");
-		rsp_msg(tp, pkt, "JTAGTOOL: unconnected ?\n");
+		rsp_msg(tp, pkt, "YARD-ICE: unconnected ?\n");
 		break;
 	case DBG_ST_CONNECTED:
 		DCC_LOG(LOG_TRACE, "connected");
-		rsp_msg(tp, pkt, "JTAGTOOL: connected (busy)\n");
+		rsp_msg(tp, pkt, "YARD-ICE: connected (busy)\n");
 		break;
 	case DBG_ST_RUNNING:
 		DCC_LOG(LOG_TRACE, "running");
-		rsp_msg(tp, pkt, "JTAGTOOL: running\n");
+		rsp_msg(tp, pkt, "YARD-ICE: running\n");
 		break;
 	default:
 		DCC_LOG1(LOG_WARNING, "unknown state: %d", state);
-		rsp_msg(tp, pkt, "JTAGTOOL: unknown state, bailing out!\n");
+		rsp_msg(tp, pkt, "YARD-ICE: unknown state, bailing out!\n");
 		return -1;
 	}
 
@@ -396,18 +396,23 @@ int rsp_read(struct tcp_pcb * tp, const void * buf, int len)
 	return 0;
 }
 
-const struct fileop rsp_fileop = {
+static const struct fileop rsp_fileop = {
 	.write = (void *)rsp_write,
 	.read = (void *)rsp_read,
 	.close = (void *)null_close,
 	.flush = (void *)null_flush,
 };
 
-struct file * rsp_fopen(struct tcp_pcb * tp)
+static struct file * rsp_fopen(struct tcp_pcb * tp)
 {
 	return file_alloc(tp, &rsp_fileop);
 }
 
+static int rsp_fclose(struct file * f)
+{
+	fclose(f);
+	return file_free(f);
+}
 
 int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 {
@@ -419,11 +424,12 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 	int i;
 
 	if ((f = rsp_fopen(tp)) == NULL) {
+		DCC_LOG(LOG_ERROR, "rsp_fopen() failed!");
 		return rsp_error(tp, -1);
 	}
 
 	len -= 6;
-	DCC_LOG1(LOG_INFO, "len=%d", len);
+	DCC_LOG1(LOG_TRACE, "len=%d", len);
 
 	for (i = 0; i < (len / 2); i++) {
 		c = tochar(cp);
@@ -432,13 +438,15 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 	}
 	s[i] = '\0';
 
+	tracef("%s(): \"%s\"", __func__, s);
+
 	if ((ret = exec(f, s)) < 0) {
 		DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
-		fclose(f);
+		rsp_fclose(f);
 		return rsp_error(tp, -ret);
 	}
 
-	fclose(f);
+	rsp_fclose(f);
 	return rsp_ok(tp);
 }
 
@@ -702,7 +710,7 @@ static int rsp_memory_read(struct tcp_pcb * tp, char * pkt, int len)
 	cp++;
 	size = strtoul(cp, NULL, 16);
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
@@ -872,7 +880,7 @@ static int rsp_h_packet(struct tcp_pcb * tp, char * pkt, int len)
 		DCC_LOG(LOG_TRACE, "unconnected");
 		if (target_connect(1) < 0) {
 			DCC_LOG(LOG_WARNING, "target_connect() failed!");
-			rsp_msg(tp, pkt, "JTAGTOOL: unconnect fail");
+			rsp_msg(tp, pkt, "YARD-ICE: unconnect fail");
 			return -1;
 		}
 		state = target_status();
@@ -887,7 +895,7 @@ static int rsp_h_packet(struct tcp_pcb * tp, char * pkt, int len)
 
 		if ((state = target_halt_wait(500)) == ERR_TIMEOUT) {
 			DCC_LOG(LOG_TRACE, "timeout...");
-			rsp_msg(tp, pkt, "JTAGTOOL: target_halt failed!");
+			rsp_msg(tp, pkt, "YARD-ICE: target_halt failed!");
 			return rsp_error(tp, 1);
 		}
 	}
@@ -1106,7 +1114,7 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 				break;
 			}
 		
-			tracef("%s(): tcp_recv: %d", __func__, len);
+		//	tracef("%s(): tcp_recv: %d", __func__, len);
 
 			c = buf[0];
 

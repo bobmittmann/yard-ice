@@ -31,7 +31,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-
+#include <trace.h>
 #include <yard-ice/drv.h>
 
 #include "var.h"
@@ -2215,6 +2215,11 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 		return ERR_PARM;
 	}
 
+	if (dbg->state == DBG_ST_FAULT ) {
+		DCC_LOG(LOG_ERROR, "Invalid state!");
+		return ERR_STATE;
+	}
+
 	if ((info = target->ice_drv) == NULL) {
 		DCC_LOG(LOG_ERROR, "NULL ice driver info!");
 		return ERR_PARM;
@@ -2272,6 +2277,8 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 
 		fprintf(f, " - ICE driver: %s - %s - %s\n",
 				ice->info->name, ice->info->version, ice->info->vendor);
+		tracef("- ICE driver: %s - %s - %s",
+			   ice->info->name, ice->info->version, ice->info->vendor);
 	} 
 
 	/* cache of frequently accessed structures ... */
@@ -2643,6 +2650,26 @@ char * target_strerror(int errno)
 	return (char *)dbg_errtab[-errno];
 }
 
+void debugger_except(const char * msg)
+{
+	struct debugger * dbg = &debugger;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (dbg->state > DBG_ST_UNCONNECTED) {
+		/* FIXME: if the target is connected a proper shutdown sohuld be 
+		   performed prior to flag a fault */
+		DCC_LOG(LOG_ERROR, "undefined behavior"); 
+	}
+
+	tracef("EXCEPTION: %s", msg);
+
+	dbg->state = DBG_ST_FAULT;
+	DCC_LOG(LOG_TRACE, "[DBG_ST_FAULT]");
+
+	__os_mutex_unlock(dbg->busy);
+}
+
 uint32_t dbg_poll_stack[80];
 
 void debugger_init(void)
@@ -2657,8 +2684,8 @@ void debugger_init(void)
 
 	/* open the NULL ICE driver */
 	ice_open(&dbg->ice, &ice_drv_null, &dbg_ice_ctrl_buf.ctrl);
-	dbg->state = DBG_ST_UNCONNECTED;
-	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	dbg->state = DBG_ST_UNDEF;
+	DCC_LOG(LOG_TRACE, "[DBG_ST_UNDEF]");
 
 	dbg->cfg.enable_ice_polling = true;
 
