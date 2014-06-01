@@ -42,7 +42,7 @@ endif
 
 jtagload: $(PROG_BIN) $(TFTPLOAD)
 	$(ACTION) "Loading: $@"
-	$(Q)$(TFTPLOAD) -q -e -r -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) $(PROG_BIN) 
+	$(Q)$(TFTPLOAD) -q -i -e -r $(TARGET) -a $(LOAD_ADDR) -h $(JTAGTOOL_ADDR) $(PROG_BIN) 
 
 jtagreset: $(TFTPRESET)
 	$(ACTION) "Reseting target..."

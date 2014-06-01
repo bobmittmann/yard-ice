@@ -318,18 +318,16 @@ int jtag3ctrl_init(const void * rbf, int size)
 	/* Initialize clock output */
 	stm32f_mco2_init();
 
-	while ((ret = altera_configure(rbf, 60000)) < 0) {
+	if ((ret = altera_configure(rbf, 65536)) < 0) {
 		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
 		tracef(" # altera_configure() failed: %d!", ret);
-		
-//		__os_sleep(500);
-		return ret;
-	};
+//		return ret;
+	} else {
+		tracef("- FPGA configuration done (%d bytes)", ret);
+	}
 
 	/* Enable clock output */
 	stm32f_mco2_enable();
-
-	tracef("- FPGA configuration done...");
 
 	/* wait for the FPGA initialize */
 	__os_sleep(20);
@@ -339,4 +337,53 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 	return 0;
 }
+
+bool jtag3ctrl_irq_status(void)
+{
+	return stm32f_gpio_stat(STM32F_GPIOD, 6) ? true : false;
+}
+
+bool jtag3ctrl_fpga_probe(void)
+{
+	int cnt;
+	int j;
+
+	/* check whether the interrupts are working or not */
+	reg_wr(REG_TMR, 0);
+	/* enable timer interrupts */
+	reg_wr(REG_INT_EN, IRQ_TMR);
+
+	for (j = 0; j < 64; ++j) {
+		cnt = 100;
+		while (jtag3ctrl_irq_status()) {
+			/* clear interrupts */
+			reg_wr(REG_INT_ST, 0xffff);
+			if (--cnt == 0) {
+				DCC_LOG1(LOG_WARNING, "IRQ line stuck at high! %d", j);
+				tracef("- FPGA IRQ probe failed. Stuck at high!");
+				return false;
+			}
+		}
+
+		reg_wr(REG_TMR, 4);
+
+		cnt = 100;
+		while (!jtag3ctrl_irq_status()) {
+			if (--cnt == 0) {
+				DCC_LOG(LOG_WARNING, "IRQ line stuck at low!");
+				tracef("- FPGA IRQ probe failed. Stuck at low.");
+				return false;
+			}
+		}
+
+		/* clear interrupts */
+		reg_wr(REG_TMR, 0);
+		reg_wr(REG_INT_ST, 0xffff);
+	}
+
+	tracef("- FPGA IRQ probe OK.");
+
+	return true;
+}
+
 

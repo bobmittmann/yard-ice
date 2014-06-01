@@ -30,11 +30,16 @@
 
 #include "version.h"
 
+void version_fprint(FILE * f)
+{
+	fprintf(f, "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n" 
+			"(c) Copyright 2013-" VERSION_YEAR 
+			",  Bob Mittmann (bobmittmann@gmail.com)\n\n");
+}
+
 int cmd_version(FILE *f, int argc, char ** argv)
 {
-	fprintf(f, "%s %s - %s\n", "YARD-ICE", VERSION_NUM, VERSION_DATE);
-	fprintf(f, "(c) Copyright 2012 - Bob Mittmann\n");
-
+	version_fprint(f);
 #if 0
 	int n;
 	uint8_t ver[4];

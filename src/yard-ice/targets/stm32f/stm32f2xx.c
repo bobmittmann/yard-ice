@@ -33,9 +33,9 @@
 #define STM32F2X
 #include "stm32f_defs.h"
 
-int stm32f2_flash_erase(cm3ice_ctrl_t * ctrl, 
-					   ice_mem_ref_t * addr, 
-					   ice_size_t len)
+int stm32f2xx_flash_erase(cm3ice_ctrl_t * ctrl, 
+						  ice_mem_ref_t * addr, 
+						  ice_size_t len)
 {
 	uint32_t sr;
 	uint32_t acr;
@@ -96,7 +96,7 @@ int stm32f2_flash_erase(cm3ice_ctrl_t * ctrl,
 	return size;
 }
 
-int stm32f_flash_wr32(cm3ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
+int stm32f2_flash_wr32(cm3ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
 {
 	uint32_t sr;
 	int again;
@@ -119,7 +119,7 @@ int stm32f_flash_wr32(cm3ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
 	return 0;
 }
 
-int stm32f2_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem, 
+int stm32f2xx_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem, 
 					 const void * buf, ice_size_t len)
 {
 	uint32_t data;
@@ -146,7 +146,7 @@ int stm32f2_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem,
 
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
-		stm32f_flash_wr32(ctrl, addr, data);
+		stm32f2_flash_wr32(ctrl, addr, data);
 		ptr += 4;
 		addr += 4;
 	}
@@ -159,8 +159,8 @@ int stm32f2_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem,
  */
 const struct ice_mem_oper flash_stm32f2_oper = {
 	.read = (ice_mem_read_t)cm3ice_mem_read,
-	.write = (ice_mem_write_t)stm32f2_flash_write, 
-	.erase = (ice_mem_erase_t)stm32f2_flash_erase
+	.write = (ice_mem_write_t)stm32f2xx_flash_write, 
+	.erase = (ice_mem_erase_t)stm32f2xx_flash_erase
 };
 
 int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice, 

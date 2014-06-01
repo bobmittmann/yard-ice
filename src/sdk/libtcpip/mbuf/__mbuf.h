@@ -29,7 +29,7 @@
 #include <stdlib.h>
 
 #ifndef __MBUF_SIZE
-#define __MBUF_SIZE 80
+#define __MBUF_SIZE 128
 #endif
 
 #define MBUF_DATA_SIZE (__MBUF_SIZE - 4)

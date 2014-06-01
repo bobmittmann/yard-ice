@@ -27,7 +27,7 @@ ifndef VERSION_MINOR
 endif
 
 ifndef VERSION_DATE
-  VERSION_DATE = "2012-10-14"
+  VERSION_DATE = "2014-05-29"
 endif
 
 ifndef PRODUCT
@@ -45,6 +45,7 @@ endif
 $(VERSION_H):
 	$(ACTION) "Creating: $@"
 	@NOW=`date -u +"%F %T"`; \
+	YEAR=`date -u +"%Y"`; \
 	S=$$((`date -d "$$NOW" +%s` - `date -d $(VERSION_DATE) +%s`));\
 	H=$$(($$S / (60 * 60))); \
 	VERSION_BUILD=$${H}$(VERSION_BUILD_EXTRA); \
@@ -54,7 +55,7 @@ $(VERSION_H):
 	echo " * Project: YARD-ICE" >> $@; \
     echo " * Author:  Robinson Mittmann (bobmittmann@gmail.com)" >> $@; \
 	echo " * Comment: Automatically generated. DO NOT edit!" >> $@; \
-    echo " * Copyright(c) 2012 Bob Mittmann. All Rights Reserved." >> $@; \
+    echo " * Copyright(c) 2012-$(VERSION_YEAR) Bob Mittmann. All Rights Reserved." >> $@; \
 	echo " */" >> $@; \
 	echo  >> $@; \
 	echo "#ifndef __VERSION_H__" >> $@; \
@@ -69,6 +70,7 @@ $(VERSION_H):
 	echo "#define VERSION_ARCH \"$(ARCH)\"" >> $@; \
 	echo "#define VERSION_CPU \"$(CPU)\"" >> $@; \
 	echo "#define VERSION_STR \"$(PROG)-$(VERSION_MAJOR).$(VERSION_MINOR).$$VERSION_BUILD\"" >> $@; \
+	echo "#define VERSION_YEAR \"$$YEAR\"" >> $@; \
 	echo "#define VERSION_DATE \"$$NOW\"" >> $@; \
 	echo >> $@; \
 	if [ "$(PRODUCT)" != "" ]; then \

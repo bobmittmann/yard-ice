@@ -806,6 +806,17 @@ int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t val)
 
 int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t val)
 {
+	uint32_t dbg_ctrl;
+	int status;
+
+	if ((status = ctrl->jtag_arm_dbg_status(ctrl->tap)) < 0) {
+		return status;
+	}
+
+	fprintf(f, " - DBG status: %08x\n", status);
+	jtag_arm_dbg_ctrl_rd(ctrl->tap, &dbg_ctrl);
+	fprintf(f, " - DBG ctrl: %08x\n", dbg_ctrl);
+
 	return 0;
 }
 

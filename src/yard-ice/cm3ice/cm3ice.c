@@ -413,12 +413,12 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 		return 0;
 	}
 
-	DCC_LOG1(LOG_INFO, "COMM=0x%08x", ctrl->comm_addr);
+	DCC_LOG1(LOG_TRACE, "COMM=0x%08x", ctrl->comm_addr);
 
 	/* get the state of the device's COMM buffer */
 	jtag_mem_ap_read(tap, ctrl->comm_addr, &ctrl->cc, 8);
 
-	DCC_LOG4(LOG_INFO, "COMM: dbg=%d dev=%d tx_tail=%d tx_head=%d", 
+	DCC_LOG4(LOG_TRACE, "COMM: dbg=%d dev=%d tx_tail=%d tx_head=%d", 
 			 ctrl->cc.rw.dbg, ctrl->cc.ro.dev, 
 			 ctrl->cc.rw.tx_tail, ctrl->cc.ro.tx_head);
 
@@ -431,7 +431,7 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			DCC_LOG1(LOG_WARNING, 
 					 "DEV=CONNECTED, DBG!=(SYNC|CONNECTED) %02x??", 
 					 ctrl->cc.rw.dbg);
-		//	__os_sleep(100);
+			__os_sleep(100);
 			return 0;
 		}
 		DCC_LOG(LOG_TRACE, "COMM: [CONNECTED]"); 

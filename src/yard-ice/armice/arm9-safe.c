@@ -260,9 +260,11 @@ void arm9_context_restore(jtag_tap_t * tap, armice_context_t * ct)
 	jtag_arm9_step(tap, 1, ARM_LDM(ARM_R0_LR, ARM_PC));
 	jtag_arm9_step(tap, 2, ARM_NOP);
 
-	for (i = 0; i < 15; i++) {
+	for (i = 0; i < 13; i++) {
 		jtag_arm9_step_wr(tap, 1, ct->r[i]);
 	}
+	jtag_arm9_step_wr(tap, 1, ct->sp);
+	jtag_arm9_step_wr(tap, 1, ct->lr);
 	jtag_arm9_step(tap, 4, ARM_NOP);
 
 	jtag_arm9_step(tap, 1, ARM_LDM((1 << ARM_PC), ARM_PC));
@@ -329,9 +331,11 @@ int arm9_insn_step(jtag_tap_t * tap, struct armice_context * ct)
 	DCC_LOG(LOG_INFO, "restoring registers");
 	jtag_arm9_step(tap, 1, ARM_LDM(ARM_R0_LR, ARM_PC));
 	jtag_arm9_step(tap, 2, ARM_NOP);
-	for (i = 0; i < 15; i++) {
+	for (i = 0; i < 13; i++) {
 		jtag_arm9_step_wr(tap, 1, ct->r[i]);
 	}
+	jtag_arm9_step_wr(tap, 1, ct->sp);
+	jtag_arm9_step_wr(tap, 1, ct->lr);
 	jtag_arm9_step(tap, 1, ARM_LDM((1 << ARM_PC), ARM_PC));
 	jtag_arm9_step(tap, 2, ARM_NOP);
 	jtag_arm9_step_wr(tap, 1, ct->pc);
@@ -398,8 +402,8 @@ void arm9_code_exec(jtag_tap_t * tap, uint32_t addr,
 void arm9_thumb_context_save(jtag_tap_t * tap, unsigned int flags,
 							 armice_context_t * ct)
 {
-	int i;
 	uint32_t cpsr;
+	int i;
 
 	DCC_LOG(LOG_INFO, "changing to ARM");
 
@@ -452,8 +456,8 @@ void arm9_thumb_context_save(jtag_tap_t * tap, unsigned int flags,
 
 void arm9_thumb_context_restore(jtag_tap_t * tap, armice_context_t * ct)
 {
-	int i;
 	uint32_t cpsr;
+	int i;
 
 	DCC_LOG1(LOG_INFO, "restoring cpsr=0x%08x", ct->cpsr);
 
@@ -475,9 +479,11 @@ void arm9_thumb_context_restore(jtag_tap_t * tap, armice_context_t * ct)
 	jtag_arm9_step(tap, 2, ARM_NOP);
 	/* R0 = PC */
 	jtag_arm9_step_wr(tap, 1, (ct->pc - (2 * 2)) | 1);
-	for (i = 1; i < 15; i++) {
+	for (i = 1; i < 13; i++) {
 		jtag_arm9_step_wr(tap, 1, ct->r[i]);
 	}
+	jtag_arm9_step_wr(tap, 1, ct->sp);
+	jtag_arm9_step_wr(tap, 1, ct->lr);
 
 	/* thumb state switch (6 cycles) */
 	jtag_arm9_step(tap, 1, ARM_BX(ARM_R0));

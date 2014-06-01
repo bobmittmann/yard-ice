@@ -76,13 +76,17 @@ int module_register(const struct module_def * def, void * ptr)
 
 	DCC_LOG2(LOG_INFO, "module='%s' id=%d", def->name, id);
 
+	if (def->init != NULL) {
+		int ret;
+		if ((ret = def->init(ptr, id)) < 0) {
+			DCC_LOG(LOG_ERROR, "module initialization failed!");
+			return ret;
+		}
+	}
+
 	module_free = q->free.next;
 	q->rec.def = (struct module_def *)def;
 	q->rec.ptr = ptr;
-
-	if (def->init != NULL) {
-		def->init(ptr, id);
-	}
 
 	return id;
 }

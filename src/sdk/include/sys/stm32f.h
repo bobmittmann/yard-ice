@@ -236,6 +236,8 @@ void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
 
 extern const struct fileop stm32f_usart_fops;
 
+extern const struct fileop stm32f_usart_fops_raw;
+
 extern const struct file stm32f_usart5_file;
 
 #ifdef __cplusplus
@@ -265,9 +267,9 @@ void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
  * Flash Memory
  *---------------------------------------------------------------------*/
 
-int stm32f_flash_erase(unsigned int offs, int len);
+int stm32f_flash_erase(unsigned int offs, unsigned int len);
 
-int stm32f_flash_write(uint32_t offs, const void * buf, int len);
+int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len);
 
 
 #endif /* __ASSEMBLER__ */

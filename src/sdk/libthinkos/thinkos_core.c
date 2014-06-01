@@ -307,9 +307,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 
 #if THINKOS_ENABLE_JOIN
 		if (__bit_mem_rd(&thinkos_rt.wq_join[idx], j) != 0) {
-#if 0
-			printf("%s(): wakeup <%d>\n", __func__, j);
-#endif
+			DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
 			bmp_bit_set((void *)&thinkos_rt.wq_ready, j);  
 			bmp_bit_clr((void *)&thinkos_rt.wq_join[idx], j);  
 			thinkos_rt.ctx[j]->r0 = code;

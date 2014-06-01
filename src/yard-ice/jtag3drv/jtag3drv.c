@@ -272,19 +272,27 @@ int jtag_tap_select(jtag_tap_t * tap)
 
 int jtag_drv_init(void)
 {
-	DCC_LOG1(LOG_TRACE, "RBF=0x%08x", jtag3ctrl_rbf);
-
 	stm32f_dac_init();
 	stm32f_dac_vout_set(3300);
 
+	DCC_LOG1(LOG_TRACE, "FPGA init: RBF=0x%08x", jtag3ctrl_rbf);
+
 	if (jtag3ctrl_init(jtag3ctrl_rbf, 64 * 1024) < 0) {
-		return JTAG_ERR_HARDWARE;
+		DCC_LOG(LOG_WARNING, "jtag3ctrl_init() failed!");
+		return JTAG_ERR_FPGA_PROGRAM;
 	}
 
-	/* enable TAP interrupts */
-	reg_wr(REG_INT_EN, IRQ_TAP);
+	DCC_LOG(LOG_TRACE, "IRQ probe...");
+
+	if (!jtag3ctrl_fpga_probe()) {
+		DCC_LOG(LOG_WARNING, "jtag3ctrl_fpga_probe() failed!");
+		return JTAG_ERR_FPGA_TEST;
+	}
+
 	/* clear interrupts */
 	reg_wr(REG_INT_ST, 0xffff);
+	/* enable TAP interrupts */
+	reg_wr(REG_INT_EN, IRQ_TAP);
 
 	return 0;
 }

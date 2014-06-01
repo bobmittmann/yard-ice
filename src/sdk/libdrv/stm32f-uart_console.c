@@ -138,13 +138,17 @@ static int uart_console_read(struct uart_console_dev * dev, char * buf,
 	char * cp = (char *)buf;
 	int n = 0;
 	int c;
+	int ret;
 
 	DCC_LOG(LOG_MSG, "read");
 
 	__thinkos_flag_clr(dev->rx_flag);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_MSG, "wait...");
-		thinkos_flag_wait(dev->rx_flag);
+		if ((ret = thinkos_flag_timedwait(dev->rx_flag, msec)) < 0) {
+			DCC_LOG(LOG_MSG, "timeout.");
+			return ret;
+		}	
 		__thinkos_flag_clr(dev->rx_flag);
 		DCC_LOG(LOG_MSG, "wakeup.");
 	}

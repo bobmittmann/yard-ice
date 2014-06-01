@@ -33,7 +33,7 @@ USART_CFILES = stm32f-usart.c stm32f-usart_init.c\
 			   stm32f-usart_getc.c stm32f-usart_putc.c\
 			   stm32f-usart_read.c stm32f-usart_write.c\
 			   stm32f-usart_canon_write.c\
-			   stm32f-usart_fops.c stm32f-usart_legacy.c
+			   stm32f-usart_fops.c stm32f-usart_fops_raw.c stm32f-usart_legacy.c
 
 USB_FS_CFILES = stm32f-usb_fs.c stm32f-usb_fs_dev.c
 

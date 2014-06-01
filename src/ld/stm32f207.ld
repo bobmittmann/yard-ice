@@ -216,3 +216,4 @@ SECTIONS
 	PROVIDE (__bss_end = . );
 	PROVIDE (__heap_start = . );
 }
+

@@ -57,6 +57,11 @@ struct file * ftty_lowlevel(struct file * f)
 {
 	struct tty_dev * dev;
 
+	if (f->op != &tty_ops) {
+		DCC_LOG(LOG_WARNING, "not a tty!");
+		return NULL;
+	}
+
 	dev = (struct tty_dev *)f->data;
 
 	return tty_lowlevel(dev);
