@@ -50,9 +50,13 @@
 #define RSP_BUFFER_LEN 512
 #endif
 
-int8_t gdb_noack_mode = 0;
-int gdb_target_run_sem;
-
+struct gdb_rspd {
+	int8_t noack_mode;
+	int8_t run_flag;
+	int8_t con_flag;
+	struct tcp_pcb * svc;
+	struct tcp_pcb * volatile tp;
+};
 
 static const char hextab[] = { 
 	'0', '1', '2', '3', '4', '5', '6', '7',
@@ -174,9 +178,6 @@ static int rsp_break_signal(struct tcp_pcb * tp, char * pkt)
 		return rsp_error(tp, 1);
 	}
 
-	/* signal that we are now running */
-	__os_sem_post(gdb_target_run_sem);
-
 	return 0;
 #if 0
 	if ((state = target_halt_wait(500)) == ERR_TIMEOUT) {
@@ -253,7 +254,8 @@ int rsp_thread_get_next(struct tcp_pcb * tp)
 	return tcp_send(tp, pkt, 5, TCP_SEND_NOWAIT);
 }
 
-static int rsp_last_signal(struct tcp_pcb * tp, char * pkt, int len)
+static int rsp_last_signal(struct gdb_rspd * gdb, struct tcp_pcb * tp, 
+						   char * pkt, int len)
 {
 	int state;
 
@@ -281,6 +283,7 @@ static int rsp_last_signal(struct tcp_pcb * tp, char * pkt, int len)
 	
 	if (state == DBG_ST_HALTED) {
 		DCC_LOG(LOG_TRACE, "halted");
+		thinkos_flag_clr(gdb->run_flag);
 		return rsp_signal(tp, pkt, SIGTRAP);
 	}
 
@@ -310,6 +313,7 @@ static int rsp_last_signal(struct tcp_pcb * tp, char * pkt, int len)
 	case DBG_ST_RUNNING:
 		DCC_LOG(LOG_TRACE, "running");
 		rsp_msg(tp, pkt, "YARD-ICE: running\n");
+		thinkos_flag_set(gdb->run_flag);
 		break;
 	default:
 		DCC_LOG1(LOG_WARNING, "unknown state: %d", state);
@@ -450,7 +454,8 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 	return rsp_ok(tp);
 }
 
-static int rsp_query(struct tcp_pcb * tp, char * pkt, int len)
+static int rsp_query(struct gdb_rspd * gdb, struct tcp_pcb * tp,
+					 char * pkt, int len)
 {
 	char s[128];
 	int n;
@@ -528,7 +533,7 @@ static int rsp_query(struct tcp_pcb * tp, char * pkt, int len)
 
 	if (strstr(pkt, "QStartNoAckMode")) {
 		DCC_LOG(LOG_TRACE, "QStartNoAckMode");
-		gdb_noack_mode = 1;
+		gdb->noack_mode = 1;
 		return rsp_ok(tp);
 	}
 
@@ -846,7 +851,8 @@ static int rsp_step(struct tcp_pcb * tp, char * pkt, int len)
 	return tcp_send(tp, pkt, n, TCP_SEND_NOWAIT);
 }
 
-static int rsp_continue(struct tcp_pcb * tp, char * pkt, int len)
+static int rsp_continue(struct gdb_rspd * gdb, struct tcp_pcb * tp, 
+						char * pkt, int len)
 {
 	unsigned int addr;
 
@@ -864,7 +870,8 @@ static int rsp_continue(struct tcp_pcb * tp, char * pkt, int len)
 	} 
 
 	/* signal that we are now running */
-	__os_sem_post(gdb_target_run_sem);
+//	__os_flag_set(gdb->run_flag);
+	thinkos_flag_set(gdb->run_flag);
 
 	return tcp_send(tp, "+", 1, TCP_SEND_NOWAIT);
 }
@@ -1037,8 +1044,9 @@ static inline void log_pkt(char * pkt, int len)
 }
 #endif
 
-int __attribute__((noreturn)) gdb_brk_task(struct tcp_pcb * tp)
+int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
 {
+	struct tcp_pcb * tp;
 	char pkt[32];
 	int sum;;
 	int sig = 5;
@@ -1048,41 +1056,51 @@ int __attribute__((noreturn)) gdb_brk_task(struct tcp_pcb * tp)
 	tracef("%s(): <%d>", __func__, __os_thread_self());
 
 	for (;;) {
-		do {
-			/* wait for a 'target run' indication */
-			DCC_LOG(LOG_TRACE, "waiting run...");
-			__os_sem_wait(gdb_target_run_sem);
+		/* wait for a connection */
+		DCC_LOG(LOG_TRACE, "waiting connect...");
+		thinkos_flag_wait(gdb->con_flag);
 
-			DCC_LOG(LOG_TRACE, "waiting halt...");
-			while ((state = target_halt_wait(5000)) == ERR_TIMEOUT) {
-				DCC_LOG(LOG_TRACE, "waiting...");
+		/* wait for a 'target run' indication */
+		DCC_LOG(LOG_TRACE, "waiting run...");
+
+		/* wait for a target run */
+		thinkos_flag_wait(gdb->run_flag);
+
+		DCC_LOG(LOG_TRACE, "waiting halt...");
+
+		while ((state = target_halt_wait(5000)) == ERR_TIMEOUT) {
+			DCC_LOG(LOG_TRACE, "waiting...");
+		}
+
+		if (state == DBG_ST_HALTED) {
+			DCC_LOG(LOG_TRACE, "halted");
+
+			thinkos_flag_clr(gdb->run_flag);
+
+			if ((tp = gdb->tp) != NULL) {
+				pkt[0] = '$';
+				pkt[1] = sum = 'S';
+				sum += pkt[2] = hextab[((sig >> 4) & 0xf)];
+				sum += pkt[3] = hextab[(sig & 0xf)];
+				pkt[4] = '#';
+				pkt[5] = hextab[((sum >> 4) & 0xf)];
+				pkt[6] = hextab[sum & 0xf];
+				tcp_send(tp, pkt, 8, TCP_SEND_NOWAIT);
 			}
-		} while (state != DBG_ST_HALTED);
-
-		DCC_LOG(LOG_TRACE, "halted");
-		pkt[0] = '$';
-		pkt[1] = sum = 'S';
-		sum += pkt[2] = hextab[((sig >> 4) & 0xf)];
-		sum += pkt[3] = hextab[(sig & 0xf)];
-		pkt[4] = '#';
-		pkt[5] = hextab[((sum >> 4) & 0xf)];
-		pkt[6] = hextab[sum & 0xf];
-
-		tcp_send(tp, pkt, 8, TCP_SEND_NOWAIT);
+		}
 	}
 }
 
-uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
-
-int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
+int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 {
+	struct tcp_pcb * svc = gdb->svc;
 	struct tcp_pcb * tp;
 	char buf[RSP_BUFFER_LEN];
 	char * pkt = buf;
 	int len;
 	int ret;
 	int c;
-	int brk_th;
+	int state;
 
 	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
 	tracef("%s(): <%d>", __func__, __os_thread_self());
@@ -1092,20 +1110,22 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 			DCC_LOG(LOG_ERROR, "tcp_accept().");
 			break;
 		}
+		gdb->tp = tp;
+		gdb->noack_mode = 0;
 
 		tracef("%s(): accepted: %08x", __func__, (int)tp);
-
-		gdb_noack_mode = 0;
-
 		DCC_LOG(LOG_TRACE, "accepted.");
 
-		gdb_target_run_sem = __os_sem_alloc(0);
+		state = target_status();
+		if (state == DBG_ST_RUNNING) {
+			DCC_LOG(LOG_TRACE, "running");
+			/* wakeup the break wait thread */
+			thinkos_flag_set(gdb->run_flag);
+		} else {
+			thinkos_flag_clr(gdb->run_flag);
+		} 
 
-		brk_th = __os_thread_create((void *)gdb_brk_task, (void *)tp, 
-									gdb_brk_stack, sizeof(gdb_brk_stack), 
-									__OS_PRIORITY_LOWEST);
-
-		DCC_LOG1(LOG_TRACE, "brk_th=%d", brk_th);
+		thinkos_flag_set(gdb->con_flag);
 
 		for (;;) {
 			if ((len = tcp_recv(tp, buf, 1)) <= 0) {
@@ -1148,7 +1168,7 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 				break;
 			}
 
-			if (!gdb_noack_mode)
+			if (!gdb->noack_mode)
 				rsp_ack(tp);
 
 #ifdef ENABLE_LOG_PKT
@@ -1161,7 +1181,7 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 				break;
 			case 'q':
 			case 'Q':
-				ret = rsp_query(tp, pkt, len);
+				ret = rsp_query(gdb, tp, pkt, len);
 				break; 
 			case 'g':
 				ret = rsp_all_registers_get(tp, pkt, len);
@@ -1190,7 +1210,7 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 				ret = rsp_breakpoint_insert(tp, pkt, len);
 				break;
 			case '?':
-				ret = rsp_last_signal(tp, pkt, len);
+				ret = rsp_last_signal(gdb, tp, pkt, len);
 				break;
 			case 'i':
 			case 's':
@@ -1198,7 +1218,7 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 				break;
 			case 'c':
 				/* continue */
-				ret = rsp_continue(tp, pkt, len);
+				ret = rsp_continue(gdb, tp, pkt, len);
 				break;
 			case 'v':
 				ret = rsp_v_packet(tp, pkt, len);
@@ -1243,16 +1263,18 @@ int __attribute__((noreturn)) gdb_task(struct tcp_pcb * svc)
 		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
-
-		__os_sem_free(gdb_target_run_sem);
-		__os_thread_cancel(brk_th, 0);
-		__os_thread_join(brk_th);
+		gdb->tp = NULL;
+		thinkos_flag_clr(gdb->con_flag);
+		/* wakeup the brk signaling thread */
+		thinkos_flag_set(gdb->run_flag);
 	}
 
 	for (;;);
 }
 
 uint32_t gdb_stack[1024];
+uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
+struct gdb_rspd gdb_rspd;
 
 int gdb_rspd_start(void)
 {  
@@ -1268,11 +1290,21 @@ int gdb_rspd_start(void)
 		return -1;
 	}
 
-	th = __os_thread_create((void *)gdb_task, (void *)svc, 
+	gdb_rspd.svc = svc;
+	gdb_rspd.tp = NULL;
+	gdb_rspd.run_flag = thinkos_flag_alloc();
+	gdb_rspd.con_flag = thinkos_flag_alloc();
+
+	th = __os_thread_create((void *)gdb_task, (void *)&gdb_rspd, 
 							gdb_stack, sizeof(gdb_stack), 
 							__OS_PRIORITY_LOWEST);
 
 	tracef("GDB server started th=%d", th);
+
+	th = __os_thread_create((void *)gdb_brk_task, (void *)&gdb_rspd, 
+								gdb_brk_stack, sizeof(gdb_brk_stack), 
+								__OS_PRIORITY_LOWEST);
+
 
 	return 0;
 }

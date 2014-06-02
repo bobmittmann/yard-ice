@@ -227,7 +227,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	idx = thinkos_rt.active;
 
 	/* write the schedule bit into the ready bitmap */
-//	if (idx != THINKOS_IDLE_IDX) {
+//	if (idx != THINKOS_THREAD_IDLE) {
 		thinkos_rt.sched_val[idx] -= thinkos_rt.sched_pri[idx];
 		if (thinkos_rt.sched_val[idx] < 0) {
 			thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
@@ -327,13 +327,14 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	bmp_bit_clr(&thinkos_rt.th_alloc, idx);
 #endif
 
+	/* FIXME: clear context. The scheduler will override this value...  */
+	thinkos_rt.ctx[idx] = 0;
+
 	/* wait forever */
 	__thinkos_wait();
 	cm3_cpsie_i();
 
 	for(;;);
-
-	(void)idx;
 }
 
 int thinkos_init(struct thinkos_thread_opt opt)

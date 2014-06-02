@@ -115,7 +115,7 @@ static int thinkos_obj_type_get(int oid)
 		return THINKOS_OBJ_JOIN;
 #endif 
 
-#if THINKOS_ENABLE_JOIN
+#if THINKOS_FLAG_MAX > 0
 	if (oid >= THINKOS_FLAG_BASE)
 		return THINKOS_OBJ_FLAG;
 #endif 

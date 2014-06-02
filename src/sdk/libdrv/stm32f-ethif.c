@@ -470,17 +470,27 @@ void stm32f_eth_isr(void)
 
 	if (dmasr & ETH_AIS) {
 		if (dmasr & ETH_RBUS) {
+			/* RBUS: Receive buffer unavailable status
+			   This bit indicates that the next descriptor in the receive list 
+			   is owned by the host and cannot be acquired by the DMA. Receive 
+			   process is suspended. To resume processing receive descriptors, 
+			   the host should change the ownership of the descriptor and 
+			   issue a Receive Poll Demand command. If no Receive Poll Demand 
+			   is issued, receive process resumes when the next recognized 
+			   incoming frame is received. ETH_DMASR [7] is set only when the 
+			   previous receive descriptor was owned by the DMA. */
+		} else {
+			DCC_LOG9(LOG_WARNING, "AIS:%s%s%s%s%s%s%s%s%s",
+					 (dmasr & ETH_FBES) ? " FBES" : "",
+					 (dmasr & ETH_ETS) ? " ETS" : "",
+					 (dmasr & ETH_RPSS) ? " RPSS" : "",
+					 (dmasr & ETH_RWTS) ? " RWTS" : "",
+					 (dmasr & ETH_RBUS) ? " RBUS" : "",
+					 (dmasr & ETH_TUS) ? " TUS" : "",
+					 (dmasr & ETH_ROS) ? " ROS" : "",
+					 (dmasr & ETH_TJTS) ? " TJTS" : "",
+					 (dmasr & ETH_TPSS) ? " TPSS" : "");
 		}
-		DCC_LOG9(LOG_WARNING, "AIS:%s%s%s%s%s%s%s%s%s",
-				 (dmasr & ETH_FBES) ? " FBES" : "",
-				 (dmasr & ETH_ETS) ? " ETS" : "",
-				 (dmasr & ETH_RPSS) ? " RPSS" : "",
-				 (dmasr & ETH_RWTS) ? " RWTS" : "",
-				 (dmasr & ETH_RBUS) ? " RBUS" : "",
-				 (dmasr & ETH_TUS) ? " TUS" : "",
-				 (dmasr & ETH_ROS) ? " ROS" : "",
-				 (dmasr & ETH_TJTS) ? " TJTS" : "",
-				 (dmasr & ETH_TPSS) ? " TPSS" : "");
 	}
 
 	/* clear interrupt bits */
