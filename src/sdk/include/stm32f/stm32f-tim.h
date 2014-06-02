@@ -739,6 +739,14 @@
 /* Bits [14..12] - Output compare 4 mode */
 #define TIM_OC4M ((14 - 12) << 12)
 
+#define TIM_OC4M_ACTIVE_ON_MATCH (1 << 12)
+#define TIM_OC4M_INACTIVE_ON_MATCH (2 << 12)
+#define TIM_OC4M_TOGGLE (3 << 12)
+#define TIM_OC4M_FORCE_INACTIVE (4 << 12)
+#define TIM_OC4M_FORCE_ACTIVE (5 << 12)
+#define TIM_OC4M_PWM_MODE1 (6 << 12)
+#define TIM_OC4M_PWM_MODE2 (7 << 12)
+
 /* Bit 11 - Output compare 4 preload enable */
 #define TIM_OC4PE (1 << 11)
 
@@ -758,11 +766,24 @@
    Note: CC4S bits are writable only when the channel is OFF 
    (CC4E = 0 in TIMx_CCER). */
 
+#define TIM_CC4S_OUT (0x0 << 8)
+#define TIM_CC4S_TI3 (0x1 << 8)
+#define TIM_CC4S_TI4 (0x2 << 8)
+#define TIM_CC4S_TRC (0x3 << 8)
+
 /* Bit 7 - Output compare 3 clear enable */
 #define TIM_OC3CE (1 << 7)
 
 /* Bits [6..4] - Output compare 3 mode */
 #define TIM_OC3M ((6 - 4) << 4)
+
+#define TIM_OC3M_ACTIVE_ON_MATCH (1 << 4)
+#define TIM_OC3M_INACTIVE_ON_MATCH (2 << 4)
+#define TIM_OC3M_TOGGLE (3 << 4)
+#define TIM_OC3M_FORCE_INACTIVE (4 << 4)
+#define TIM_OC3M_FORCE_ACTIVE (5 << 4)
+#define TIM_OC3M_PWM_MODE1 (6 << 4)
+#define TIM_OC3M_PWM_MODE2 (7 << 4)
 
 /* Bit 3 - Output compare 3 preload enable */
 #define TIM_OC3PE (1 << 3)
@@ -772,6 +793,10 @@
 
 /* Bits [1..0] - Capture/Compare 3 selection */
 #define TIM_CC3S ((1 - 0) << 0)
+#define TIM_CC3S_OUT (0x0 << 0)
+#define TIM_CC3S_TI3 (0x1 << 0)
+#define TIM_CC3S_TI4 (0x2 << 0)
+#define TIM_CC3S_TRC (0x3 << 0)
 /* This bit-field defines the direction of the channel (input/output) as 
    well as the used input.
    00: CC3 channel is configured as output

@@ -20,25 +20,22 @@
 # 
 
 
-PROG = usb-test
+PROG = freqgen
 
-CFILES = usb-test.c
+CFILES = freqgen.c io.c
 
 SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty \
-		  $(SDK)/libxmodem
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil 
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem
+LIBS = gcc stm32f cm3 c util 
 
 INCPATH = $(SDK)/include 
 
 JTAGTOOL_ADDR = 192.168.10.50
 
-CDEFS = CONFIG_H
 CFLAGS = -g -O1
 
 MACH = stm32f405
 include ../../../mk/stm32f4xx.mk
+
