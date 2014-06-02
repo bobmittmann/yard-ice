@@ -233,8 +233,7 @@ void target_poll(void);
 
 int target_tap_reset(void);
 
-int target_ice_test(FILE * f, uint32_t val);
-
+int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[]);
 
 #define TARGET_IO_CLR 0
 #define TARGET_IO_SET 1

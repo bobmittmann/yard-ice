@@ -431,7 +431,6 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 			DCC_LOG1(LOG_WARNING, 
 					 "DEV=CONNECTED, DBG!=(SYNC|CONNECTED) %02x??", 
 					 ctrl->cc.rw.dbg);
-			__os_sleep(100);
 			return 0;
 		}
 		DCC_LOG(LOG_TRACE, "COMM: [CONNECTED]"); 
@@ -448,7 +447,7 @@ static int cm3ice_comm_sync(cm3ice_ctrl_t * ctrl, ice_comm_t * comm)
 
 	if (ctrl->cc.ro.dev == DEV_SYNC) {
 		if (ctrl->cc.rw.dbg == DBG_SYNC) {
-			DCC_LOG(LOG_INFO, "DEV=SYNC, DBG=SYNC, wating ....");
+			DCC_LOG(LOG_TRACE, "DEV=SYNC, DBG=SYNC, wating ....");
 			return 0;
 		}	
 		if (ctrl->cc.rw.dbg == DBG_CONNECTED) {
@@ -1461,6 +1460,8 @@ int cm3ice_close(cm3ice_ctrl_t * ctrl)
 }
 
 int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which);
+int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req, 
+				uint32_t argc, uint32_t argv[]);
 
 const struct ice_oper cm3ice_oper = {
 
@@ -1511,7 +1512,7 @@ const struct ice_oper cm3ice_oper = {
 	.fifo_rd8 = (ice_fifo_rd8_t)NULL,
 	.fifo_wr8 = (ice_fifo_wr8_t)NULL,
 
-	.test = (ice_test_t)NULL,
+	.test = (ice_test_t)cm3ice_test,
 	.info = (ice_info_t)cm3ice_info,
 
 	.core_reset = (ice_core_reset_t)cm3ice_core_reset,

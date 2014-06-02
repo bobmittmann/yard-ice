@@ -221,7 +221,8 @@ typedef int (* ice_context_show_t)(ice_ctrl_t * ctrl, FILE * f);
 typedef int (* ice_print_insn_t)(ice_ctrl_t * ctrl, uint32_t addr, 
 								 struct disassemble_info * info);
 
-typedef int (* ice_test_t)(ice_ctrl_t * ctrl, FILE * f, uint32_t val);
+typedef int (* ice_test_t)(ice_ctrl_t * ctrl, FILE * f, 
+						   uint32_t req, uint32_t argc, uint32_t argv[]);
 
 typedef int (* ice_info_t)(ice_ctrl_t * ctrl, FILE * f, uint32_t which);
 
@@ -577,9 +578,10 @@ extern inline int ice_info(const ice_drv_t * ice, FILE * f, uint32_t which)
 	return ice->op.info(ice->ctrl, f, which);
 }
 
-extern inline int ice_test(const ice_drv_t * ice, FILE * f, uint32_t val)
+extern inline int ice_test(const ice_drv_t * ice, FILE * f, 
+						   uint32_t req, uint32_t argc, uint32_t argv[])
 {
-	return ice->op.test(ice->ctrl, f, val);
+	return ice->op.test(ice->ctrl, f, req, argc, argv);
 }
 
 extern inline int ice_print_insn(const ice_drv_t * ice, uint32_t addr, 
