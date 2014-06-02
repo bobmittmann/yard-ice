@@ -72,7 +72,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	eth->dmaomr |= ETH_SR;
 
 	for (;;) {
-		desc = &drv->rx.desc[cnt++ & 1];
+		desc = &drv->rx.desc[cnt++ & (STM32F_ETH_RX_NDESC - 1)];
 
 		for (;;) {
 			st = desc->st;
@@ -215,7 +215,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	eth->dmabmr = ETH_EDFE;
 
 	DCC_LOG(LOG_TRACE, "DMA RX descriptors ...");
-	for (i = 0; i < 2; ++i) {
+	for (i = 0; i < STM32F_ETH_RX_NDESC; ++i) {
 		/* configure recevie descriptors */
 		rxdesc = &drv->rx.desc[i];
 		rxdesc->rdes0 = ETH_RXDMA_OWN;
@@ -246,22 +246,28 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* setup the source address in the ethernet header 
 	   of the  transmit buffer */
 	stm32f_eth_mac_get(eth, 0, (uint8_t *)drv->tx.hdr.eth_src);
-	/* configure transmit descriptors */
-	txdesc = &drv->tx.desc;
-	/* Transmit buffer 1 size */
-	txdesc->tbs1 = 14;
-	/* Transmit buffer 2 size */
-	txdesc->tbs2 = 0;
-	/* Transmit buffer 1 addr */
-	txdesc->tbap1 = (void *)&drv->tx.hdr;
-	/* Transmit buffer 2 addr */
-	txdesc->tbap2 = drv->tx.buf;
-	/* Transmit end of ring */
-	txdesc->tdes0 = ETH_TXDMA_TER;
-	/* DMA receive descriptor list address */
-	eth->dmatdlar = (uint32_t)txdesc;
+
+	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
+		/* configure transmit descriptors */
+		txdesc = &drv->tx.desc[i];
+		/* Transmit buffer 1 size */
+		txdesc->tbs1 = 14;
+		/* Transmit buffer 2 size */
+		txdesc->tbs2 = 0;
+		/* Transmit buffer 1 addr */
+		txdesc->tbap1 = (void *)&drv->tx.hdr;
+		/* Transmit buffer 2 addr */
+		txdesc->tbap2 = drv->tx.buf[i];
+		/* Transmit end of ring */
+		txdesc->tdes0 = ETH_TXDMA_TER;
+	}
+
+	/* DMA transmit descriptor list address */
+	eth->dmatdlar = (uint32_t)&drv->tx.desc[0];
+
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
+	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
@@ -296,7 +302,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 	struct txdma_enh_desc * txdesc;
 	struct txdma_st st;
 
-	txdesc = &drv->tx.desc;
+	txdesc = &drv->tx.desc[0];
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
@@ -360,7 +366,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 		return -1;
 	}
 
-	txdesc = &drv->tx.desc;
+	txdesc = &drv->tx.desc[0];
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
