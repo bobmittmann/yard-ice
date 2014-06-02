@@ -45,8 +45,9 @@ void ice_comm_connect(void)
 	cm3_cpsid_f(); /* disable interrupts and faults */
 	ice_comm_blk.dev = DEV_SYNC;
 	while (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC)
+		if (ice_comm_blk.dbg == DBG_SYNC) {
 			ice_comm_blk.dev = DEV_CONNECTED;
+		}
 	}
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }
