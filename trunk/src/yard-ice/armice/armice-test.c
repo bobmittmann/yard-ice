@@ -764,7 +764,8 @@ int armice_wp_dump(armice_ctrl_t * ctrl, FILE * f)
 
 void armice_context_update(armice_ctrl_t * ctrl, armice_context_t * ct);
 
-int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t val)
+int armice_test(armice_ctrl_t * ctrl, FILE * f, uint32_t req, 
+				uint32_t argc, uint32_t argv[])
 {
 //	struct armice_context * ct = &ctrl->context;
 

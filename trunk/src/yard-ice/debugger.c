@@ -2532,7 +2532,7 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 	return ret;
 }
 
-int target_ice_test(FILE * f, uint32_t val)
+int target_ice_test(FILE * f, uint32_t req, uint32_t argc, uint32_t argv[])
 {
 	struct debugger * dbg = &debugger;
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
@@ -2545,7 +2545,7 @@ int target_ice_test(FILE * f, uint32_t val)
 	/* stop polling */
 	poll_stop(dbg);
 
-	ret = ice_test(ice, f, val);
+	ret = ice_test(ice, f, req, argc, argv);
 
 	if (dbg->state > DBG_ST_CONNECTED) {
 		/* force a status update */

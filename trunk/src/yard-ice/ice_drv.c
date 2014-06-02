@@ -707,7 +707,7 @@ const struct ice_oper null_ice_oper = {
 	.fifo_rd8 = (ice_fifo_rd8_t)null_ice_fail,
 
 	.test = (ice_test_t)null_ice_success,
-	.info = (ice_test_t)null_ice_success,
+	.info = (ice_info_t)null_ice_success,
 
 	.core_reset = (ice_core_reset_t)null_ice_success,
 

@@ -47,7 +47,7 @@ int cmd_mem_write(FILE * f, int argc, char ** argv)
 	argv++;
 
 	if (argc < 1) {
-		printf("usage: write ADDR W1 [W2 ... Wn]\n");
+		fprintf(f, "usage: write ADDR W1 [W2 ... Wn]\n");
 		return -1;
 	}
 

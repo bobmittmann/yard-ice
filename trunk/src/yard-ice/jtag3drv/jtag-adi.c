@@ -994,7 +994,7 @@ int jtag_mem_ap_wr16(jtag_tap_t * tap, uint32_t addr, uint16_t din)
 	return ack;
 }
 
-
+#if 0
 int jtag_mem_ap_rd32(jtag_tap_t * tap, uint32_t addr, uint32_t * dout)
 {
 	uint32_t diff;
@@ -1002,9 +1002,8 @@ int jtag_mem_ap_rd32(jtag_tap_t * tap, uint32_t addr, uint32_t * dout)
 	uint32_t base;
 	int ack;
 
-	DCC_LOG1(LOG_MSG, "addr=0x%08x", addr);
-
 	base = addr & 0xfffffff0;
+	DCC_LOG1(LOG_MSG, "addr=0x%08x", base);
 
 	if (adi_mem_ap_tar != base) {
 		if ((diff = DP_APBANKSEL(ADI_AP_TAR ^ adi_dp_reg_select))) {
@@ -1054,16 +1053,63 @@ int jtag_mem_ap_rd32(jtag_tap_t * tap, uint32_t addr, uint32_t * dout)
 
 	ack = jtag_adi_dpacc_rd(tap, ADI_DP_CTRL_STAT, 0, dout);
 
-#if 0
-	if (ack == JTAG_ADI_ACK_WAIT) {
-		adi_dp_ctrl_stat_ready = 0;
-	}
-#endif
-
 	adi_dp_ctrl_stat_ready = 1;
 
 	return ack;
 }
+#endif
+
+int jtag_mem_ap_rd32(jtag_tap_t * tap, uint32_t addr, uint32_t * dout)
+{
+	uint32_t diff;
+	uint32_t base;
+	int ack;
+
+	base = addr & 0xfffffffc;
+	DCC_LOG1(LOG_TRACE, "addr=0x%08x", base);
+
+	/* check whether the bank of the TAR and select registers are
+	   different */
+	diff = DP_APBANKSEL(ADI_AP_TAR ^ adi_dp_reg_select);
+
+	if (diff) {
+		/* update the DP SELECT register */
+		adi_dp_reg_select ^= diff;
+		DCC_LOG1(LOG_TRACE, "1. DP SELECT=0x%08x", adi_dp_reg_select);
+		jtag_adi_dpacc_wr(tap, ADI_DP_SELECT, adi_dp_reg_select, NULL);
+	}
+
+	/* select 32bits transfer size, auto increment  */
+	if (((adi_mem_ap_csw & CSW_SIZE) != CSW_WORD) || 
+		((adi_mem_ap_csw & CSW_ADDR_INC) != CSW_INC_SINGLE)) {
+		adi_mem_ap_csw = (adi_mem_ap_csw & ~(CSW_SIZE | CSW_ADDR_INC)) | 
+			CSW_WORD | CSW_INC_SINGLE;
+		jtag_mem_ap_reg_wr(tap, ADI_AP_CSW, adi_mem_ap_csw);
+		DCC_LOG1(LOG_TRACE, "2. AP CSW=0x%08x", adi_mem_ap_csw);
+	}
+
+	if ((adi_mem_ap_tar != base) || ((base & 0x00000fff) == 0)) {
+		/* update the AP TAR register */
+		DCC_LOG1(LOG_TRACE, "3. AP TAR=0x%08x", base);
+		ack = jtag_adi_apacc_wr(tap, ADI_AP_TAR, base, NULL);
+		if (ack == JTAG_ADI_ACK_WAIT) {
+			DCC_LOG(LOG_PANIC, "jtag_adi_apacc_wr(TAR) return ACK_WAIT!");
+		}
+	}
+
+	jtag_adi_apacc_rd(tap, ADI_AP_DRW, 0, NULL);
+	ack = jtag_adi_dpacc_rd(tap, ADI_DP_CTRL_STAT, 0, dout);
+
+	if (ack >= 0) { 
+		adi_mem_ap_tar = base + 4;
+		adi_dp_ctrl_stat_ready = 1;
+	} else {
+		DCC_LOG1(LOG_ERROR, "jtag_adi_dpacc_rd(STAT) failed: %d!", ack);
+	}
+
+	return ack;
+}
+
 
 int jtag_mem_ap_wr32(jtag_tap_t * tap, uint32_t addr, uint32_t data)
 {
@@ -1134,7 +1180,7 @@ int jtag_mem_ap_read(jtag_tap_t * tap, uint32_t addr, void * buf, int len)
 	uint8_t * ptr = (uint8_t *)buf;
 	int cnt = 0;
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
 	if (len == 0)
 		return 0;
@@ -1165,58 +1211,75 @@ int jtag_mem_ap_read(jtag_tap_t * tap, uint32_t addr, void * buf, int len)
 		uint32_t data;
 		int i;
 		int n;
+
 		/* check whether the bank of the TAR and select registers are
 		   different */
 		diff = DP_APBANKSEL(ADI_AP_TAR ^ adi_dp_reg_select);
-
-		if ((adi_mem_ap_tar != addr) || (diff)) {
-			if (diff) {
-				/* update the DP SELECT register */
-				adi_dp_reg_select ^= diff;
-				DCC_LOG1(LOG_INFO, "DP SELECT=0x%08x", adi_dp_reg_select);
-				jtag_adi_dpacc_wr(tap, ADI_DP_SELECT, adi_dp_reg_select, NULL);
-			}
-			/* update the AP TAR register */
-			DCC_LOG1(LOG_INFO, "AP TAR=0x%08x", addr);
-			jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
-			adi_mem_ap_tar = addr;
+		if (diff) {
+			/* update the DP SELECT register */
+			adi_dp_reg_select ^= diff;
+			DCC_LOG1(LOG_TRACE, "1. DP SELECT=0x%08x", adi_dp_reg_select);
+			jtag_adi_dpacc_wr(tap, ADI_DP_SELECT, adi_dp_reg_select, NULL);
 		}
 
-		if ((adi_mem_ap_csw & CSW_SIZE) != CSW_WORD) {
-			adi_mem_ap_csw = (adi_mem_ap_csw & ~CSW_SIZE) | CSW_WORD;
+		if (((adi_mem_ap_csw & CSW_SIZE) != CSW_WORD) || 
+			((adi_mem_ap_csw & CSW_ADDR_INC) != CSW_INC_SINGLE)) {
+			adi_mem_ap_csw = (adi_mem_ap_csw & ~(CSW_SIZE | CSW_ADDR_INC)) | 
+							 CSW_WORD | CSW_INC_SINGLE;
 			jtag_mem_ap_reg_wr(tap, ADI_AP_CSW, adi_mem_ap_csw);
+			DCC_LOG1(LOG_TRACE, "2. AP CSW=0x%08x", adi_mem_ap_csw);
 		}
 
-		if (!(adi_mem_ap_csw & CSW_INC_SINGLE)) {
-			adi_mem_ap_csw = (adi_mem_ap_csw & ~CSW_ADDR_INC) | CSW_INC_SINGLE;
-			jtag_mem_ap_reg_wr(tap, ADI_AP_CSW, adi_mem_ap_csw); 
-			DCC_LOG1(LOG_TRACE, "AP CSW=0x%08x", adi_mem_ap_csw);
-		}	
+//
+//      XXX: some problem accessing the memory when crossing 4K boundaries 
+//
+		if ((adi_mem_ap_tar != addr) || ((addr & 0x00000fff) == 0)) {
+			/* update the AP TAR register */
+			DCC_LOG1(LOG_TRACE, "3. AP TAR=0x%08x", addr);
+			jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
+		}
+
 		n = len / 4;
 		ptr = (uint8_t *)buf;
 
 		jtag_adi_apacc_rd(tap, ADI_AP_DRW, 0, NULL);
 		for (i = 1; i < n; i++) {
-			jtag_adi_apacc_rd(tap, ADI_AP_DRW, 0, &data);
+			addr += 4;
+			/* 4K boundary cross */
+			if ((addr & 0x00000fff) == 0) {
+				jtag_adi_dpacc_rd(tap, ADI_DP_CTRL_STAT, 0, &data);
+				/* update the AP TAR register */
+				DCC_LOG1(LOG_TRACE, "4. AP TAR=0x%08x", addr);
+				jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
+				jtag_adi_apacc_rd(tap, ADI_AP_DRW, 0, NULL);
+			} else {
+				jtag_adi_apacc_rd(tap, ADI_AP_DRW, 0, &data);
+			}
+
 			ptr[0] = data;
 			ptr[1] = data >> 8;
 			ptr[2] = data >> 16;
 			ptr[3] = data >> 24;
 			ptr += 4;
+			DCC_LOG2(LOG_INFO, "[0x%08x]->0x%08x", addr - 4, data);
 		}
+
+
 		jtag_adi_dpacc_rd(tap, ADI_DP_CTRL_STAT, 0, &data);
 		ptr[0] = data;
 		ptr[1] = data >> 8;
 		ptr[2] = data >> 16;
 		ptr[3] = data >> 24;
 		ptr += 4;
-	
+
+		DCC_LOG2(LOG_INFO, "[0x%08x]->0x%08x", addr, data);
+		addr += 4;
 		adi_dp_ctrl_stat_ready = 1;
 
-		adi_mem_ap_tar += n * 4;
-		len -= n *4;
-		addr += n *4;
-		cnt += n *4;
+		len -= n * 4;
+		cnt += n * 4;
+		/* update the MEM-AP address cache register */
+		adi_mem_ap_tar = addr;
 	}
 
 	/* get the last word */
@@ -1251,7 +1314,8 @@ int jtag_mem_ap_write(jtag_tap_t * tap, uint32_t addr,
 	if (len == 0)
 		return 0;
 
-	/* write the first byte, if the address is not half-word (16bits) aligned */
+	/* write the first byte, if the address is not 
+	   half-word (16bits) aligned */
 	if (addr & 0x01) {
 		jtag_mem_ap_wr8(tap, addr, *ptr);
 		ptr++;
@@ -1280,42 +1344,53 @@ int jtag_mem_ap_write(jtag_tap_t * tap, uint32_t addr,
 		   different */
 		diff = DP_APBANKSEL(ADI_AP_TAR ^ adi_dp_reg_select);
 
-		if ((adi_mem_ap_tar != addr) || (diff)) {
-			if (diff) {
-				/* update the DP SELECT register */
-				adi_dp_reg_select ^= diff;
-				DCC_LOG1(LOG_INFO, "DP SELECT=0x%08x", adi_dp_reg_select);
-				jtag_adi_dpacc_wr(tap, ADI_DP_SELECT, adi_dp_reg_select, NULL);
-			}
-			/* update the AP TAR register */
-			DCC_LOG1(LOG_INFO, "AP TAR=0x%08x", addr);
-			jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
-			adi_mem_ap_tar = addr;
+		if (diff) {
+			/* update the DP SELECT register */
+			adi_dp_reg_select ^= diff;
+			DCC_LOG1(LOG_TRACE, "1. DP SELECT=0x%08x", adi_dp_reg_select);
+			jtag_adi_dpacc_wr(tap, ADI_DP_SELECT, adi_dp_reg_select, NULL);
 		}
 
-		if ((adi_mem_ap_csw & CSW_SIZE) != CSW_WORD) {
-			adi_mem_ap_csw = (adi_mem_ap_csw & ~CSW_SIZE) | CSW_WORD;
+		if (((adi_mem_ap_csw & CSW_SIZE) != CSW_WORD) || 
+			!(adi_mem_ap_csw & CSW_INC_SINGLE)) {
+			adi_mem_ap_csw = (adi_mem_ap_csw & ~(CSW_SIZE | CSW_ADDR_INC)) | 
+							 CSW_WORD | CSW_INC_SINGLE;
 			jtag_mem_ap_reg_wr(tap, ADI_AP_CSW, adi_mem_ap_csw);
+			DCC_LOG1(LOG_TRACE, "2. AP CSW=0x%08x", adi_mem_ap_csw);
 		}
 
-		if (!(adi_mem_ap_csw & CSW_INC_SINGLE)) {
-			adi_mem_ap_csw = (adi_mem_ap_csw & ~CSW_ADDR_INC) | CSW_INC_SINGLE;
-			jtag_mem_ap_reg_wr(tap, ADI_AP_CSW, adi_mem_ap_csw); 
-			DCC_LOG1(LOG_TRACE, "AP CSW=0x%08x", adi_mem_ap_csw);
-		}	
+		if ((adi_mem_ap_tar != addr) || ((addr & 0x00000fff) == 0)) {
+			/* update the AP TAR register */
+			DCC_LOG1(LOG_TRACE, "3. AP TAR=0x%08x", addr);
+			jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
+		}
+
 		n = (len + 3) / 4;
 
-		for (i = 0; i < n; i++) {
+		for (i = 1; i < n; i++) {
 			data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 			jtag_adi_apacc_wr(tap, ADI_AP_DRW, data, NULL);
+			addr += 4;
+
+			/* 4K boundary cross */
+			if ((addr & 0x00000fff) == 0) {
+				/* update the AP TAR register */
+				DCC_LOG1(LOG_TRACE, "4. AP TAR=0x%08x", addr);
+				jtag_adi_apacc_wr(tap, ADI_AP_TAR, addr, NULL);
+			} 
+			
 			ptr += 4;
 		}
 
-		adi_dp_ctrl_stat_ready = 0;
+		/* read last 32bits word */
+		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+		jtag_adi_apacc_wr(tap, ADI_AP_DRW, data, NULL);
+		addr += 4;
 
-		adi_mem_ap_tar += n * 4;
+		adi_dp_ctrl_stat_ready = 0;
+		adi_mem_ap_tar = addr;
+
 		len -= n *4;
-		addr += n *4;
 		cnt += n *4;
 	}
 

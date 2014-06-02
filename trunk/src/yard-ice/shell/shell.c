@@ -187,7 +187,7 @@ const struct shell_cmd cmd_tab[] = {
 		"", "perform target test" },
 
 	{ cmd_ice_test, "icetest", "icet", 
-		"", "perform ICE tests" },
+		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
 
 	{ cmd_ice_info, "ice_info", "ice", 
 		"", "show ICE details" },

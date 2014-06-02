@@ -29,16 +29,51 @@
 #include <string.h>
 
 #include "debugger.h"
+#include "eval.h"
+
+#define ICET_ARGMAX 16
 
 int cmd_ice_test(FILE *f, int argc, char ** argv)
 {
-	uint32_t val;
+	uint32_t parm[ICET_ARGMAX];
+	value_t val;
+	uint32_t req;
+	int cnt;
+	int n;
 
-	if (argc > 1)
-		val = strtoul(argv[1], NULL, 0);
-	else
-		val = 0;
+	argc--;
+	argv++;
 
-	return target_ice_test(f, val);
+	if (argc < 1) {
+		fprintf(f, "usage: icetst REQ [ARG1 ... ARGn]\n");
+		return -1;
+	}
+
+	if ((n = eval_uint32(&val, argc, argv)) < 0) {
+		DCC_LOG(LOG_WARNING, "eval_uint32(), addr");
+		return n;
+	}
+	argc -= n;
+	argv += n;
+	req = val.uint32;
+	DCC_LOG1(LOG_INFO, "req=%d", req);
+
+	for (cnt = 0; cnt < ICET_ARGMAX ; ++cnt)
+		parm[cnt] = 0;
+
+	cnt = 0;
+	while (argc) {
+		if ((n = eval_uint32(&val, argc, argv)) < 0) {
+			DCC_LOG(LOG_WARNING, "eval_uint32(), size");
+			return n;
+		}
+
+		DCC_LOG2(LOG_INFO, "arg[%d]=0x%08x", cnt, val.uint32);
+		parm[cnt++] = val.uint32;
+		argc -= n;
+		argv += n;
+	} 
+
+	return target_ice_test(f, req, cnt, parm);
 }
 
