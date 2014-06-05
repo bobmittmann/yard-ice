@@ -44,11 +44,9 @@ int cmd_meminfo(FILE * f, int argc, char ** argv)
 //		return show_cmd_usage(argv[0]);
 		return -1;
 
-	e = (ice_mem_entry_t *)dbg->mem;
-
 	fprintf(f, "MEM:       FROM:    TO:      SIZE:     ACCESS:\n");
 
-	while (e->op != NULL) {
+	for (e = (ice_mem_entry_t *)dbg->mem; e->op != NULL; ++e) {
 
 		if ((size = e->blk.count * e->blk.size) == 0) {
 			/* skip empty blocks */
@@ -73,7 +71,7 @@ int cmd_meminfo(FILE * f, int argc, char ** argv)
 
 		fprintf(f, "  %2d bits", 8 << (e->flags & MEM_BUS_MASK));
 		fprintf(f, " %s\n", (e->flags & MEM_RO) ? "RO" : "R/W");
-		e++;
+
 	}
 
 	return 0;

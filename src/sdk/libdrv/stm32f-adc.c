@@ -29,7 +29,7 @@
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
 
-#define ADC6_GPIO STM32F_GPIOA
+#define ADC6_GPIO STM32_GPIOA
 #define ADC6_PORT 6
 
 #ifdef STM32F2X
@@ -39,7 +39,7 @@
  ***********************************************************/
 static void adc_dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_dma * dma = STM32F_DMA2;
 
 	/* DMA clock enable */
@@ -69,7 +69,7 @@ static void adc_dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt
  ***********************************************************/
 static void adc_tim2_init(uint32_t freq)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_tim * tim2 = STM32F_TIM2;
 	uint32_t div;
 	uint32_t pre;
@@ -103,8 +103,8 @@ static void adc_tim2_init(uint32_t freq)
 static void adc_gpio_init(void)
 {
 	/* ADC Input pins */
-	stm32f_gpio_clock_en(ADC6_GPIO);
-	stm32f_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
+	stm32_gpio_clock_en(ADC6_GPIO);
+	stm32_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
 }
 
 #define ADC_CHANS 3
@@ -126,7 +126,7 @@ static int adc_dma_sync;
  ***********************************************************/
 void stm32f_adc_init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_adc * adc = STM32F_ADC1;
 	const uint8_t adc_chan_seq[] = {6, 18, 6};
 

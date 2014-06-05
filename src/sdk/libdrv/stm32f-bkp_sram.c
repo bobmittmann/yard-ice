@@ -41,7 +41,7 @@
 void stm32f_bkp_sram_init(void)
 {
 	struct stm32f_pwr * pwr = STM32F_PWR;
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	uint32_t apb1enr;
 
 	/* ● Access to the backup SRAM */

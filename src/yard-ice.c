@@ -105,19 +105,19 @@ const struct file stm32f_uart_file = {
 	.op = &stm32f_usart_fops 
 };
 
-#define UART_TX STM32F_GPIOC, 12
-#define UART_RX STM32F_GPIOD, 2
+#define UART_TX STM32_GPIOC, 12
+#define UART_RX STM32_GPIOD, 2
 
 void stdio_init(void)
 {
 	struct stm32f_usart * uart = STM32F_UART5;
 
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-	stm32f_gpio_clock_en(STM32F_GPIOD);
-	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(UART_RX, GPIO_AF8);
-	stm32f_gpio_af(UART_TX, GPIO_AF8);
+	stm32_gpio_clock_en(STM32_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOD);
+	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART_RX, GPIO_AF8);
+	stm32_gpio_af(UART_TX, GPIO_AF8);
 
 	stm32f_usart_init(uart);
 	stm32f_usart_baudrate_set(uart, 115200);

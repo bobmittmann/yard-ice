@@ -490,35 +490,35 @@ int stm32f_otg_dev_ep_disable(struct stm32f_otg_drv * drv,  int ep_id)
 }
 
 
-#define OTG_FS_DP STM32F_GPIOA, 12
-#define OTG_FS_DM STM32F_GPIOA, 11
-#define OTG_FS_VBUS STM32F_GPIOA, 9
-#define OTG_FS_ID STM32F_GPIOA, 10
+#define OTG_FS_DP STM32_GPIOA, 12
+#define OTG_FS_DM STM32_GPIOA, 11
+#define OTG_FS_VBUS STM32_GPIOA, 9
+#define OTG_FS_ID STM32_GPIOA, 10
 
 static void otg_fs_io_init(void)
 {
 	DCC_LOG(LOG_MSG, "Enabling GPIO clock...");
-	stm32f_gpio_clock_en(STM32F_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOA);
 
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
 
-	stm32f_gpio_af(OTG_FS_DP, GPIO_AF10);
-	stm32f_gpio_af(OTG_FS_DM, GPIO_AF10);
-	stm32f_gpio_af(OTG_FS_VBUS, GPIO_AF10);
-	stm32f_gpio_af(OTG_FS_ID, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+	stm32_gpio_af(OTG_FS_ID, GPIO_AF10);
 
-	stm32f_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
-	stm32f_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+	stm32_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
 void otg_fs_vbus_connect(bool connect)
 {
 	if (connect)
-		stm32f_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+		stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 	else
-		stm32f_gpio_mode(OTG_FS_VBUS, INPUT, 0);
+		stm32_gpio_mode(OTG_FS_VBUS, INPUT, 0);
 }
 
 void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
@@ -536,7 +536,7 @@ void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
 
 void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 	otg_fs_vbus_connect(true);
 
@@ -554,7 +554,7 @@ void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 
 void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 //	usb->cntr = USB_FRES;
 	/* Removing any spurious pending interrupts */
@@ -568,8 +568,8 @@ void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 	rcc->ahb2enr &= ~RCC_OTGFSEN;
 
 	/* disabling IO pins */
-	stm32f_gpio_mode(OTG_FS_DP, INPUT, 0);
-	stm32f_gpio_mode(OTG_FS_DM, INPUT, 0);
+	stm32_gpio_mode(OTG_FS_DP, INPUT, 0);
+	stm32_gpio_mode(OTG_FS_DM, INPUT, 0);
 
 }
 

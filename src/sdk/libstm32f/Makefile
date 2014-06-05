@@ -39,6 +39,16 @@ USB_FS_CFILES = stm32f-usb_fs.c stm32f-usb_fs_dev.c
 
 OTG_FS_CFILES = stm32f-otg_fs.c stm32f-otg_fs_dev.c
 
+
+ifeq ($(STM32), stm32l)
+
+SFILES = stm32l-crt0.S
+
+CFILES = stm32l-init.c stm32f-gpio.c \
+		 stm32f-dma.c 
+
+else
+
 SFILES = stm32f-crt0.S
 
 CFILES = stm32f-init.c stm32f-gpio.c stm32f-eth.c\
@@ -47,6 +57,10 @@ CFILES = stm32f-init.c stm32f-gpio.c stm32f-eth.c\
 		 $(addprefix usart/,$(USART_CFILES))\
 		 $(addprefix usb_fs/,$(USB_FS_CFILES))\
 		 $(addprefix otg_fs/,$(OTG_FS_CFILES))
+
+endif
+
+
 
 
 include ../../mk/lib.mk

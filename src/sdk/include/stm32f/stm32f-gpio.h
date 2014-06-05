@@ -303,7 +303,7 @@
 
 
 #if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
-struct stm32f_gpio {
+struct stm32_gpio {
 	volatile uint32_t moder;
 	volatile uint32_t otyper;
 	volatile uint32_t ospeedr;
@@ -320,7 +320,7 @@ struct stm32f_gpio {
 #endif
 
 #if defined(STM32F1X)
-struct stm32f_gpio {
+struct stm32_gpio {
 	volatile uint32_t crl;
 	volatile uint32_t crh;
 	volatile uint32_t idr;
@@ -330,7 +330,31 @@ struct stm32f_gpio {
 	volatile uint32_t lckr;
 };
 
-struct stm32f_afio {
+struct stm32_afio {
+	volatile uint32_t evcr;
+	volatile uint32_t mapr;
+	volatile uint32_t exticr1;
+	volatile uint32_t exticr2;
+
+	volatile uint32_t exticr3;
+	volatile uint32_t exticr4;
+	volatile uint32_t mapr2;
+};
+
+#endif /* defined(STM32F1X) */
+
+#if defined(STM32L1X)
+struct stm32_gpio {
+	volatile uint32_t crl;
+	volatile uint32_t crh;
+	volatile uint32_t idr;
+	volatile uint32_t odr;
+	volatile uint32_t bsr;
+	volatile uint32_t brr;
+	volatile uint32_t lckr;
+};
+
+struct stm32_afio {
 	volatile uint32_t evcr;
 	volatile uint32_t mapr;
 	volatile uint32_t exticr1;
@@ -362,34 +386,34 @@ extern "C" {
 #endif
 
 /* set pin */
-static inline void stm32f_gpio_set(struct stm32f_gpio *__gpio, int __pin) {
+static inline void stm32_gpio_set(struct stm32_gpio *__gpio, int __pin) {
 	__gpio->bsr = GPIO_SET(__pin);
 }
 
 /* clear pin */
-static inline void stm32f_gpio_clr(struct stm32f_gpio *__gpio, int __pin) {
+static inline void stm32_gpio_clr(struct stm32_gpio *__gpio, int __pin) {
 	__gpio->brr = GPIO_RESET(__pin);
 }
 
 /* get pin status */
-static inline int stm32f_gpio_stat(struct stm32f_gpio *__gpio, int __pin) {
+static inline int stm32_gpio_stat(struct stm32_gpio *__gpio, int __pin) {
 	return __gpio->idr & (1 << __pin);
 }
 
-int stm32f_gpio_id(struct stm32f_gpio * gpio);
+int stm32_gpio_id(struct stm32_gpio * gpio);
 
-void stm32f_gpio_clock_en(struct stm32f_gpio * gpio);
+void stm32_gpio_clock_en(struct stm32_gpio * gpio);
 
 /* Output mode */
-void stm32f_gpio_output(struct stm32f_gpio * gpio, unsigned int pin,
+void stm32_gpio_output(struct stm32_gpio * gpio, unsigned int pin,
 						int type, int speed);
 
 /* mode */
-void stm32f_gpio_mode(struct stm32f_gpio * gpio, unsigned int pin,
+void stm32_gpio_mode(struct stm32_gpio * gpio, unsigned int pin,
 					  unsigned int mode, unsigned int opt);
 
 /* Alternate function selection */
-void stm32f_gpio_af(struct stm32f_gpio * gpio, int port, int af);
+void stm32_gpio_af(struct stm32_gpio * gpio, int port, int af);
 
 #ifdef __cplusplus
 }

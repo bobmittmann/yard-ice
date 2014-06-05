@@ -34,10 +34,10 @@
 
 #ifdef STM32F2X
 
-#define DAC1_GPIO STM32F_GPIOA
+#define DAC1_GPIO STM32_GPIOA
 #define DAC1_PORT 4
 
-#define DAC2_GPIO STM32F_GPIOA
+#define DAC2_GPIO STM32_GPIOA
 #define DAC2_PORT 5
 
 #define DAC1_DMA 5
@@ -99,15 +99,15 @@ void stm32f_dac_vout_set(unsigned int mv)
 
 void stm32f_dac_init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_dac * dac = STM32F_DAC;
 	struct stm32f_tim * tim2 = STM32F_TIM2;
 	struct stm32f_dma * dma = STM32F_DMA1;
 
 	/* I/O pins config */
-	stm32f_gpio_clock_en(DAC2_GPIO);
-	stm32f_gpio_mode(DAC2_GPIO, DAC2_PORT, ANALOG, 0);
-	stm32f_gpio_mode(DAC1_GPIO, DAC1_PORT, ANALOG, 0);
+	stm32_gpio_clock_en(DAC2_GPIO);
+	stm32_gpio_mode(DAC2_GPIO, DAC2_PORT, ANALOG, 0);
+	stm32_gpio_mode(DAC1_GPIO, DAC1_PORT, ANALOG, 0);
 
 	/* DAC clock enable */
 	rcc->apb1enr |= RCC_DACEN;

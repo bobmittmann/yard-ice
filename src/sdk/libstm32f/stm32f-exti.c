@@ -29,22 +29,22 @@
 
 #if defined(STM32F2X)
 
-void stm32f_exti_init(struct stm32f_gpio * gpio, unsigned int pin, 
+void stm32f_exti_init(struct stm32_gpio * gpio, unsigned int pin, 
 					  unsigned int opt)
 {
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 	struct stm32f_exti * exti = STM32F_EXTI;
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	int port;
 
 	/* IRQ PIN */
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, pin, INPUT, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_clock_en(gpio);
+	stm32_gpio_mode(gpio, pin, INPUT, PUSH_PULL | SPEED_HIGH);
 
 	/* System configuration controller clock enable */
 	rcc->apb2enr |= RCC_SYSCFGEN;
 
-	port = stm32f_gpio_id(gpio);
+	port = stm32_gpio_id(gpio);
 
 	/* Select PD6 for EXTI6 */
 	syscfg->exticr[pin >> 2] = port << ((pin & 0x3) * 4);

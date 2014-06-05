@@ -22,21 +22,21 @@
 
 #include "usart-priv.h"
 
-static void io_rxd_cfg(struct stm32f_gpio * gpio, int port, int af)
+static void io_rxd_cfg(struct stm32_gpio * gpio, int port, int af)
 {
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, port, ALT_FUNC, PULL_UP);
+	stm32_gpio_clock_en(gpio);
+	stm32_gpio_mode(gpio, port, ALT_FUNC, PULL_UP);
 #ifdef STM32F2X
-	stm32f_gpio_af(gpio, port, af);
+	stm32_gpio_af(gpio, port, af);
 #endif
 }
 
-static void io_txd_cfg(struct stm32f_gpio * gpio, int port, int af)
+static void io_txd_cfg(struct stm32_gpio * gpio, int port, int af)
 {
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, port, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_clock_en(gpio);
+	stm32_gpio_mode(gpio, port, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 #ifdef STM32F2X
-	stm32f_gpio_af(gpio, port, af);
+	stm32_gpio_af(gpio, port, af);
 #endif
 }
 
@@ -81,8 +81,8 @@ struct file * stm32f_usart_open(struct stm32f_usart * us,
 		return NULL;
 	}
 
-	io_rxd_cfg(STM32F_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
-	io_txd_cfg(STM32F_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
+	io_rxd_cfg(STM32_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
+	io_txd_cfg(STM32_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
 
 	stm32f_usart_baudrate_set(us, baudrate);
 	stm32f_usart_mode_set(us, flags);

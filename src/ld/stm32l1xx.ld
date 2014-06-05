@@ -20,7 +20,7 @@
  */
 
 
-_stack = ORIGIN(sram0) + LENGTH(sram0);
+_stack = ORIGIN(sram) + LENGTH(sram);
 
 EXTERN(_stack)
 EXTERN(_reset)
@@ -163,7 +163,7 @@ SECTIONS
 		/* define a global symbol marking the end of the .data section  */
 		. = ALIGN(4);
 		PROVIDE (__data_end = . );
-	} >sram0 AT >flash
+	} >sram AT >flash
 
 	PROVIDE(__image_size = SIZEOF(.init) + SIZEOF(.text) + SIZEOF(.data));
 
@@ -173,7 +173,7 @@ SECTIONS
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
 		*(.bss)
-	} >sram0
+	} >sram
 
 	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);

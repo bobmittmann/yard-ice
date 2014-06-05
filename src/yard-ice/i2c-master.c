@@ -50,21 +50,21 @@ struct i2c_xfer {
 
 struct i2c_xfer xfer;
 
-#define I2C1_SCL STM32F_GPIOB, 6
-#define I2C1_SDA STM32F_GPIOB, 7
+#define I2C1_SCL STM32_GPIOB, 6
+#define I2C1_SDA STM32_GPIOB, 7
 #define I2C_IRQ_PRIORITY IRQ_PRIORITY_VERY_HIGH 
 
 void i2c_master_init(unsigned int scl_freq)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	uint32_t pclk = stm32f_apb1_hz;
 
-	stm32f_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
-	stm32f_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
+	stm32_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
+	stm32_gpio_mode(I2C1_SDA, ALT_FUNC, OPEN_DRAIN);
 
-	stm32f_gpio_af(I2C1_SCL, GPIO_AF4);
-	stm32f_gpio_af(I2C1_SDA, GPIO_AF4);
+	stm32_gpio_af(I2C1_SCL, GPIO_AF4);
+	stm32_gpio_af(I2C1_SDA, GPIO_AF4);
 
 	/* Enable I2C clock */
 	rcc->apb1enr |= RCC_I2C1EN;

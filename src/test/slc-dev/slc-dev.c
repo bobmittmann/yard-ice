@@ -2,21 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <sys/serial.h>
 
 #include "board.h"
 
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
-
-#define TIM4_CH3 STM32F_GPIOB, 8
-#define TIM4_CH4 STM32F_GPIOB, 9
-
-
+#if 0
 struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
+	.data = STM32_USART1, 
 	.op = &stm32f_usart_fops 
 };
 
@@ -87,6 +80,7 @@ void stdio_init(void)
 	stdout = stdin;
 }
 
+#endif
 
 int main(int argc, char ** argv)
 {
@@ -95,17 +89,17 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 	cm3_cpsie_i();
 
-	stdio_init();
-	io_init();
-	freq_gen_init(32768);
+//	stdio_init();
+//	io_init();
+//	freq_gen_init(32768);
 
 	for (i = 0; ;i++) {
-		led_flash(2, 200);
+//		led_flash(2, 200);
 //		printf("[%d] hello world...\n", i);
 		udelay(500000);
-		led_flash(3, 200);
+//		led_flash(3, 200);
 //		leds_all_off();
-		udelay(500000);
+//		udelay(500000);
 	}
 
 

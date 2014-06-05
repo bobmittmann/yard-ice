@@ -2345,7 +2345,7 @@ again in case of a new switch is required)
 #include <stdint.h>
 
 #if defined(STM32F2X) || defined(STM32F4X)
-struct stm32f_rcc {
+struct stm32_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t pllcfgr; 
 	volatile uint32_t cfgr; 
@@ -2389,7 +2389,7 @@ struct stm32f_rcc {
 #endif /* STM32F2X || STM32F4X  */
 
 #if defined(STM32F1X) || defined(STM32F3X)
-struct stm32f_rcc {
+struct stm32_rcc {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t cfgr; 
 	volatile uint32_t cir; 
@@ -2427,7 +2427,7 @@ extern "C" {
 }
 #endif
 
-static inline void stm32f_clk_enable(struct stm32f_rcc * rcc, 
+static inline void stm32f_clk_enable(struct stm32_rcc * rcc, 
 									 struct stm32f_clk clk) {
 	if (clk.apb == STM32F_APB2)
 		rcc->apb2enr |= 1 << (clk.bit);
@@ -2435,7 +2435,7 @@ static inline void stm32f_clk_enable(struct stm32f_rcc * rcc,
 		rcc->apb1enr |= 1 << (clk.bit);
 }
 
-static inline void stm32f_clk_disable(struct stm32f_rcc * rcc,
+static inline void stm32f_clk_disable(struct stm32_rcc * rcc,
 									  struct stm32f_clk clk) {
 	if (clk.apb == STM32F_APB2)
 		rcc->apb2enr &= ~(1 << (clk.bit));

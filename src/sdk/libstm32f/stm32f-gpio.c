@@ -23,50 +23,72 @@
 
 #include <sys/stm32f.h>
 
-const struct stm32f_gpio * const stm32f_gpio_lut[] = {
-	STM32F_GPIOA,
-	STM32F_GPIOB,
-	STM32F_GPIOC,
-	STM32F_GPIOD,
-	STM32F_GPIOE,
-	STM32F_GPIOF,
+#if defined(STM32L1X)
+
+const struct stm32_gpio * const stm32_gpio_lut[] = {
+	STM32_GPIOA,
+	STM32_GPIOB,
+	STM32_GPIOC,
+	STM32_GPIOD,
+	STM32_GPIOE,
+	STM32_GPIOH,
+	STM32_GPIOF,
+	STM32_GPIOG,
+};
+
+#else
+
+const struct stm32_gpio * const stm32_gpio_lut[] = {
+	STM32_GPIOA,
+	STM32_GPIOB,
+	STM32_GPIOC,
+	STM32_GPIOD,
+	STM32_GPIOE,
+	STM32_GPIOF,
 #ifdef STM32F_GPIOG
-	STM32F_GPIOG,
+	STM32_GPIOG,
 #endif
 #ifdef STM32F_GPIOH
-	STM32F_GPIOH,
+	STM32_GPIOH,
 #endif
 #ifdef STM32F_GPIOI
-	STM32F_GPIOI
+	STM32_GPIOI
 #endif
 };
 
-int stm32f_gpio_id(struct stm32f_gpio * gpio)
+#endif
+
+
+int stm32_gpio_id(struct stm32_gpio * gpio)
 {
 	uint32_t base = (uint32_t)gpio;
 
-	return (base - STM32F_BASE_GPIOA) / 0x400;
+	return (base - STM32_BASE_GPIOA) / 0x400;
 }
 
-void stm32f_gpio_clock_en(struct stm32f_gpio * gpio)
+void stm32_gpio_clock_en(struct stm32_gpio * gpio)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 #if defined(STM32F2X) || defined(STM32F4X)
-	rcc->ahb1enr |= 1 << stm32f_gpio_id(gpio);
+	rcc->ahb1enr |= 1 << stm32_gpio_id(gpio);
 #endif
 
 #if defined(STM32F3X) 
-	rcc->ahbenr |= 1 << (stm32f_gpio_id(gpio) + 17);
+	rcc->ahbenr |= 1 << (stm32_gpio_id(gpio) + 17);
 #endif
 	
 #if defined(STM32F1X)
-	rcc->apb2enr |= 1 << (stm32f_gpio_id(gpio) + 2);
+	rcc->apb2enr |= 1 << (stm32_gpio_id(gpio) + 2);
+#endif
+
+#if defined(STM32L1X)
+	rcc->apb2enr |= 1 << (stm32_gpio_id(gpio) + 2);
 #endif
 
 }
 
-void stm32f_gpio_mode(struct stm32f_gpio * gpio, 
+void stm32_gpio_mode(struct stm32_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
 #if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
@@ -172,7 +194,7 @@ void stm32f_gpio_mode(struct stm32f_gpio * gpio,
 }
 
 #if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
-void stm32f_gpio_af(struct stm32f_gpio * gpio, int pin, int af)
+void stm32_gpio_af(struct stm32_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;
 

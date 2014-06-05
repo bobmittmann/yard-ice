@@ -70,6 +70,7 @@
 #define SERIAL_9N1 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
 #define SERIAL_9N2 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
 
+#include <stdint.h>
 
 /* character encoding and baud rate */
 struct serial_config {
