@@ -203,16 +203,16 @@
 #define STM32_TIM10 ((struct stm32f_tim *)STM32_BASE_TIM10)
 #define STM32_TIM11 ((struct stm32f_tim *)STM32_BASE_TIM11)
 
-#define STM32_GPIOA ((struct stm32f_gpio *)STM32_BASE_GPIOA)
-#define STM32_GPIOB ((struct stm32f_gpio *)STM32_BASE_GPIOB)
-#define STM32_GPIOC ((struct stm32f_gpio *)STM32_BASE_GPIOC)
-#define STM32_GPIOD ((struct stm32f_gpio *)STM32_BASE_GPIOD)
-#define STM32_GPIOE ((struct stm32f_gpio *)STM32_BASE_GPIOE)
-#define STM32_GPIOH ((struct stm32f_gpio *)STM32_BASE_GPIOH)
-#define STM32_GPIOF ((struct stm32f_gpio *)STM32_BASE_GPIOF)
-#define STM32_GPIOG ((struct stm32f_gpio *)STM32_BASE_GPIOG)
+#define STM32_GPIOA ((struct stm32_gpio *)STM32_BASE_GPIOA)
+#define STM32_GPIOB ((struct stm32_gpio *)STM32_BASE_GPIOB)
+#define STM32_GPIOC ((struct stm32_gpio *)STM32_BASE_GPIOC)
+#define STM32_GPIOD ((struct stm32_gpio *)STM32_BASE_GPIOD)
+#define STM32_GPIOE ((struct stm32_gpio *)STM32_BASE_GPIOE)
+#define STM32_GPIOH ((struct stm32_gpio *)STM32_BASE_GPIOH)
+#define STM32_GPIOF ((struct stm32_gpio *)STM32_BASE_GPIOF)
+#define STM32_GPIOG ((struct stm32_gpio *)STM32_BASE_GPIOG)
 
-#define STM32_GPIO(N) ((struct stm32f_gpio *)(STM32_BASE_GPIOA + (N)*0x400))
+#define STM32_GPIO(N) ((struct stm32_gpio *)(STM32_BASE_GPIOA + (N)*0x400))
 
 #define STM32_AFIO ((struct stm32f_afio *)STM32_BASE_AFIO)
 

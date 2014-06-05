@@ -88,26 +88,26 @@ void debug_init(void)
 {
 	int i;
 
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_mode(STM32F_GPIOB, 9, OUTPUT, SPEED_MED);
-	stm32f_gpio_clr(STM32F_GPIOB, 9);
+	stm32_gpio_clock_en(STM32F_GPIOB);
+	stm32_gpio_mode(STM32F_GPIOB, 9, OUTPUT, SPEED_MED);
+	stm32_gpio_clr(STM32F_GPIOB, 9);
 
-	stm32f_gpio_set(STM32F_GPIOB, 9);
+	stm32_gpio_set(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
-	stm32f_gpio_clr(STM32F_GPIOB, 9);
+	stm32_gpio_clr(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
-	stm32f_gpio_set(STM32F_GPIOB, 9);
+	stm32_gpio_set(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
-	stm32f_gpio_clr(STM32F_GPIOB, 9);
+	stm32_gpio_clr(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
-	stm32f_gpio_set(STM32F_GPIOB, 9);
+	stm32_gpio_set(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
-	stm32f_gpio_clr(STM32F_GPIOB, 9);
+	stm32_gpio_clr(STM32F_GPIOB, 9);
 	for (i = 0; i < 400000; i++)
 		__NOP();
 

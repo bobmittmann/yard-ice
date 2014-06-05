@@ -40,6 +40,10 @@ USB_FS_CFILES = stm32f-usb_fs.c stm32f-usb_fs_dev.c
 OTG_FS_CFILES = stm32f-otg_fs.c stm32f-otg_fs_dev.c
 
 
+$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+$(info STM32 = '$(STM32)')
+$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+
 ifeq ($(STM32), stm32l)
 
 SFILES = stm32l-crt0.S

@@ -4,6 +4,7 @@
 
 #include <sys/delay.h>
 #include <sys/serial.h>
+#include <sys/dcclog.h>
 
 #include "board.h"
 
@@ -86,7 +87,12 @@ int main(int argc, char ** argv)
 {
 	int i;
 
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
+	DCC_LOG(LOG_TRACE, "2. enabling interrupts");
 	cm3_cpsie_i();
 
 //	stdio_init();
