@@ -92,16 +92,22 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
-	DCC_LOG(LOG_TRACE, "2. enabling interrupts");
+
+	DCC_LOG(LOG_TRACE, "2. io_init()");
+	io_init();
+
+	DCC_LOG(LOG_TRACE, "3. enabling interrupts");
 	cm3_cpsie_i();
 
-//	stdio_init();
-//	io_init();
 //	freq_gen_init(32768);
 
 	for (i = 0; ;i++) {
 //		led_flash(2, 200);
 //		printf("[%d] hello world...\n", i);
+		led_on(LED1);
+		udelay(500000);
+
+		led_off(LED1);
 		udelay(500000);
 //		led_flash(3, 200);
 //		leds_all_off();
