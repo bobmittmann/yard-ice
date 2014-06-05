@@ -60,17 +60,17 @@
 #define STM32F_BASE_DMA1    0x40026000
 #define STM32F_BASE_BKPSRAM 0x40024000
 #define STM32F_BASE_FLASH   0x40023c00
-#define STM32F_BASE_RCC     0x40023800
+#define STM32_BASE_RCC     0x40023800
 #define STM32F_BASE_CRC     0x40023000
-#define STM32F_BASE_GPIOI   0x40022000
-#define STM32F_BASE_GPIOH   0x40021c00
-#define STM32F_BASE_GPIOG   0x40021800
-#define STM32F_BASE_GPIOF   0x40021400
-#define STM32F_BASE_GPIOE   0x40021000
-#define STM32F_BASE_GPIOD   0x40020c00
-#define STM32F_BASE_GPIOC   0x40020800
-#define STM32F_BASE_GPIOB   0x40020400
-#define STM32F_BASE_GPIOA   0x40020000
+#define STM32_BASE_GPIOI   0x40022000
+#define STM32_BASE_GPIOH   0x40021c00
+#define STM32_BASE_GPIOG   0x40021800
+#define STM32_BASE_GPIOF   0x40021400
+#define STM32_BASE_GPIOE   0x40021000
+#define STM32_BASE_GPIOD   0x40020c00
+#define STM32_BASE_GPIOC   0x40020800
+#define STM32_BASE_GPIOB   0x40020400
+#define STM32_BASE_GPIOA   0x40020000
 #define STM32F_BASE_TIM11   0x40014800
 #define STM32F_BASE_TIM10   0x40014400
 #define STM32F_BASE_TIM9    0x40014000
@@ -214,7 +214,7 @@
 #ifndef __ASSEMBLER__
 
 #define STM32F_PWR ((struct stm32f_pwr *)STM32F_BASE_PWR)
-#define STM32F_RCC ((struct stm32f_rcc *)STM32F_BASE_RCC)
+#define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)
 #define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
@@ -263,29 +263,29 @@
 #define STM32F_TIM13 ((struct stm32f_tim *)STM32F_BASE_TIM13)
 #define STM32F_TIM14 ((struct stm32f_tim *)STM32F_BASE_TIM14)
 
-#define STM32F_GPIOA ((struct stm32f_gpio *)STM32F_BASE_GPIOA)
-#define STM32F_GPIOB ((struct stm32f_gpio *)STM32F_BASE_GPIOB)
-#define STM32F_GPIOC ((struct stm32f_gpio *)STM32F_BASE_GPIOC)
-#define STM32F_GPIOD ((struct stm32f_gpio *)STM32F_BASE_GPIOD)
-#define STM32F_GPIOE ((struct stm32f_gpio *)STM32F_BASE_GPIOE)
-#define STM32F_GPIOF ((struct stm32f_gpio *)STM32F_BASE_GPIOF)
-#define STM32F_GPIOG ((struct stm32f_gpio *)STM32F_BASE_GPIOG)
-#define STM32F_GPIOH ((struct stm32f_gpio *)STM32F_BASE_GPIOH)
-#define STM32F_GPIOI ((struct stm32f_gpio *)STM32F_BASE_GPIOI)
-#define STM32F_GPIO(N) ((struct stm32f_gpio *)(STM32F_BASE_GPIOA + (N)*0x400))
+#define STM32_GPIOA ((struct stm32_gpio *)STM32_BASE_GPIOA)
+#define STM32_GPIOB ((struct stm32_gpio *)STM32_BASE_GPIOB)
+#define STM32_GPIOC ((struct stm32_gpio *)STM32_BASE_GPIOC)
+#define STM32_GPIOD ((struct stm32_gpio *)STM32_BASE_GPIOD)
+#define STM32_GPIOE ((struct stm32_gpio *)STM32_BASE_GPIOE)
+#define STM32_GPIOF ((struct stm32_gpio *)STM32_BASE_GPIOF)
+#define STM32_GPIOG ((struct stm32_gpio *)STM32_BASE_GPIOG)
+#define STM32_GPIOH ((struct stm32_gpio *)STM32_BASE_GPIOH)
+#define STM32_GPIOI ((struct stm32_gpio *)STM32_BASE_GPIOI)
+#define STM32_GPIO(N) ((struct stm32_gpio *)(STM32_BASE_GPIOA + (N)*0x400))
 
 #define STM32F_UID ((uint32_t *)STM32F_BASE_UID)
 
 typedef enum {
-	STM32F_GPIOA_ID = 0,
-	STM32F_GPIOB_ID,
-	STM32F_GPIOC_ID,
-	STM32F_GPIOD_ID,
-	STM32F_GPIOE_ID,
-	STM32F_GPIOF_ID,
-	STM32F_GPIOG_ID,
-	STM32F_GPIOH_ID,
-	STM32F_GPIOI_ID
+	STM32_GPIOA_ID = 0,
+	STM32_GPIOB_ID,
+	STM32_GPIOC_ID,
+	STM32_GPIOD_ID,
+	STM32_GPIOE_ID,
+	STM32_GPIOF_ID,
+	STM32_GPIOG_ID,
+	STM32_GPIOH_ID,
+	STM32_GPIOI_ID
 } stmf32_gpio_id_t;
 
 typedef enum {

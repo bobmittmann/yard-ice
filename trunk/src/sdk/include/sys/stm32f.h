@@ -76,49 +76,49 @@ enum {
 	ANALOG
 };
 
-#define GPIOA STM32F_GPIOA_ID
-#define GPIOB STM32F_GPIOB_ID
-#define GPIOC STM32F_GPIOC_ID
-#define GPIOD STM32F_GPIOD_ID
-#define GPIOE STM32F_GPIOE_ID
-#define GPIOF STM32F_GPIOF_ID
-#define GPIOG STM32F_GPIOG_ID
-#define GPIOH STM32F_GPIOH_ID
-#define GPIOI STM32F_GPIOI_ID
+#define GPIOA STM32_GPIOA_ID
+#define GPIOB STM32_GPIOB_ID
+#define GPIOC STM32_GPIOC_ID
+#define GPIOD STM32_GPIOD_ID
+#define GPIOE STM32_GPIOE_ID
+#define GPIOF STM32_GPIOF_ID
+#define GPIOG STM32_GPIOG_ID
+#define GPIOH STM32_GPIOH_ID
+#define GPIOI STM32_GPIOI_ID
 
-extern const struct stm32f_gpio * const stm32f_gpio_lut[];
+extern const struct stm32_gpio * const stm32_gpio_lut[];
 
-struct stm32f_gpio_io {
+struct stm32_gpio_io {
 	uint8_t pin:4;
 	uint8_t port:4;
 } __attribute__((__packed__));
 
-typedef struct stm32f_gpio_io gpio_io_t;
+typedef struct stm32_gpio_io gpio_io_t;
 
-#define GPIO(PORT, PIN) (struct stm32f_gpio_io){ .port = PORT, .pin = PIN }
+#define GPIO(PORT, PIN) (struct stm32_gpio_io){ .port = PORT, .pin = PIN }
 
 /* set output */
 static inline void gpio_set(gpio_io_t __io) {
-	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+	struct stm32_gpio * gpio = STM32_GPIO(__io.port);
 	gpio->bsr = GPIO_SET(__io.pin);
 };
 
 /* clear output */
 static inline void gpio_clr(gpio_io_t __io) {
-	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+	struct stm32_gpio * gpio = STM32_GPIO(__io.port);
 	gpio->brr = GPIO_RESET(__io.pin);
 };
 
 /* pin status */
 static inline int gpio_status(gpio_io_t __io) {
-	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+	struct stm32_gpio * gpio = STM32_GPIO(__io.port);
 	return (gpio->idr & (1 << __io.pin));
 };
 
 struct stm32f_spi_io {
-	struct stm32f_gpio_io miso;
-	struct stm32f_gpio_io mosi;
-	struct stm32f_gpio_io sck;
+	struct stm32_gpio_io miso;
+	struct stm32_gpio_io mosi;
+	struct stm32_gpio_io sck;
 } __attribute__((__packed__));
 
 /*---------------------------------------------------------------------
@@ -174,10 +174,10 @@ extern "C" {
 
 static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
 								 unsigned int __opt) {
-	struct stm32f_gpio * gpio = STM32F_GPIO(__io.port);
+	struct stm32_gpio * gpio = STM32_GPIO(__io.port);
 
-	stm32f_gpio_clock_en(gpio);
-	stm32f_gpio_mode(gpio, __io.pin, __mode, __opt);
+	stm32_gpio_clock_en(gpio);
+	stm32_gpio_mode(gpio, __io.pin, __mode, __opt);
 }
 
 /*---------------------------------------------------------------------
@@ -194,7 +194,7 @@ void stm32f_fsmc_speed(int div);
 
 #define EXTI_EDGE_RISING 1
 
-void stm32f_exti_init(struct stm32f_gpio * gpio, unsigned int pin, 
+void stm32f_exti_init(struct stm32_gpio * gpio, unsigned int pin, 
 					  unsigned int opt);
 
 /*---------------------------------------------------------------------

@@ -230,19 +230,19 @@ void stm32f_usart6_isr(void)
 
 }
 
-#define UART_TX STM32F_GPIOC, 6
-#define UART_RX STM32F_GPIOC, 7
+#define UART_TX STM32_GPIOC, 6
+#define UART_RX STM32_GPIOC, 7
 
 static void io_init(void)
 {
-	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOC);
 
 	/* UART TX */
-	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(UART_TX, GPIO_AF8);
+	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_af(UART_TX, GPIO_AF8);
 	/* UART RX */
-	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(UART_RX, GPIO_AF8);
+	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART_RX, GPIO_AF8);
 }
 
 struct serial_dev * serial_open(void)

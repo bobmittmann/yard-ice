@@ -48,21 +48,21 @@ static int altera_io_init(void)
 {
 	gpio_io_t io;
 
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-	stm32f_gpio_clock_en(STM32F_GPIOE);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOE);
 
 	io = n_config;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
 
 	io = conf_done;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, INPUT, SPEED_MED);
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, SPEED_MED);
 
 	io = n_status;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, INPUT, SPEED_MED);
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, SPEED_MED);
 
 	gpio_set(n_config);
 	udelay(40);

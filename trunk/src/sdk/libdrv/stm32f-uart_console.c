@@ -68,8 +68,8 @@
 #define UART_RX_FIFO_BUF_LEN 8
 
 #define UART STM32F_UART5
-#define UART_TX STM32F_GPIOC, 12
-#define UART_RX STM32F_GPIOD, 2
+#define UART_TX STM32_GPIOC, 12
+#define UART_RX STM32_GPIOD, 2
 #define UART_ISR stm32f_uart5_isr
 #define UART_IRQ_NUM STM32F_IRQ_UART5
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
@@ -299,28 +299,28 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
 
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-	stm32f_gpio_clock_en(STM32F_GPIOD);
+	stm32_gpio_clock_en(STM32_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOD);
 
 	/* USART1_TX */
-	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 
 	DCC_LOG1(LOG_TRACE, "UART=0x%08x", uart);
 
 	dev->uart = uart;
 #if defined(STM32F1X)
 	/* USART1_RX */
-	stm32f_gpio_mode(UART_RX, INPUT, PULL_UP);
+	stm32_gpio_mode(UART_RX, INPUT, PULL_UP);
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
 #elif defined(STM32F4X)
-	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(UART_RX, GPIO_AF7);
-	stm32f_gpio_af(UART_TX, GPIO_AF7);
+	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART_RX, GPIO_AF7);
+	stm32_gpio_af(UART_TX, GPIO_AF7);
 #elif defined(STM32F2X)
-	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(UART_RX, GPIO_AF8);
-	stm32f_gpio_af(UART_TX, GPIO_AF8);
+	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART_RX, GPIO_AF8);
+	stm32_gpio_af(UART_TX, GPIO_AF8);
 #endif
 
 	DCC_LOG(LOG_MSG, "...");

@@ -62,7 +62,7 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 					const struct stm32f_spi_io * spi_io, 
 					unsigned int freq, unsigned int opt)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	gpio_io_t io;
 	uint32_t div;
 	int br;
@@ -75,22 +75,22 @@ int stm32f_spi_init(struct stm32f_spi * spi,
 
 	/* Configure IO pins */
 	io = spi_io->miso;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, ALT_FUNC, 
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, ALT_FUNC, 
 					 PULL_UP | SPEED_MED);
-	stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, spi_cfg[id].af);
+	stm32_gpio_af(STM32_GPIO(io.port), io.pin, spi_cfg[id].af);
 
 	io = spi_io->mosi;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, ALT_FUNC, 
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, ALT_FUNC, 
 					 PUSH_PULL | SPEED_MED);
-	stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, spi_cfg[id].af);
+	stm32_gpio_af(STM32_GPIO(io.port), io.pin, spi_cfg[id].af);
 
 	io = spi_io->sck;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, ALT_FUNC, 
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, ALT_FUNC, 
 					 PUSH_PULL | SPEED_MED);
-	stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, spi_cfg[id].af);
+	stm32_gpio_af(STM32_GPIO(io.port), io.pin, spi_cfg[id].af);
 
 	/* Enable peripheral clock */
 	if (spi_cfg[id].apb2) {

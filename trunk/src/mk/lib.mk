@@ -132,6 +132,7 @@ endif
 #$(info HOME = '$(HOME)')
 #$(info HOMEPATH = '$(HOMEPATH)')
 #$(info CLEAN_FILES = '$(CLEAN_FILES)')
+#$(info CFILES = '$(CFILES)')
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
 
 all: $(LIB_OUT)

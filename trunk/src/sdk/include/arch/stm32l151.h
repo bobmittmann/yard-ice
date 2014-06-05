@@ -140,7 +140,7 @@
 #define STM32_IRQ_DAC 21 /* DAC Interrupt */
 #define STM32_IRQ_COMP 22 /* Comparator wakeup through EXTI 
 							  line (21 and 22) Interrupt */
-#define STM32_IRQ_TSC 22 /* iTouch Sense Interrupt */
+#define STM32_IRQ_TSC 22 /* Touch Sense Interrupt */
 #define STM32_IRQ_EXTI9_5 23 /* External Line[9:5] Interrupts */
 
 #define STM32_IRQ_LCD 24 /* LCD global interrupt  */
@@ -170,7 +170,7 @@
 #ifndef __ASSEMBLER__
 
 #define STM32_PWR ((struct stm32f_pwr *)STM32_BASE_PWR)
-#define STM32_RCC ((struct stm32f_rcc *)STM32_BASE_RCC)
+#define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
 #define STM32_RTC ((struct stm32f_rtc *)STM32_BASE_RTC)
 #define STM32_USB ((struct stm32f_usb_fs *)STM32_BASE_USB_FS)
 #define STM32_FLASH ((struct stm32f_flash *)STM32_BASE_FLASH)
@@ -208,26 +208,28 @@
 #define STM32_GPIOC ((struct stm32f_gpio *)STM32_BASE_GPIOC)
 #define STM32_GPIOD ((struct stm32f_gpio *)STM32_BASE_GPIOD)
 #define STM32_GPIOE ((struct stm32f_gpio *)STM32_BASE_GPIOE)
+#define STM32_GPIOH ((struct stm32f_gpio *)STM32_BASE_GPIOH)
 #define STM32_GPIOF ((struct stm32f_gpio *)STM32_BASE_GPIOF)
 #define STM32_GPIOG ((struct stm32f_gpio *)STM32_BASE_GPIOG)
-#define STM32_GPIOH ((struct stm32f_gpio *)STM32_BASE_GPIOH)
+
+#define STM32_GPIO(N) ((struct stm32f_gpio *)(STM32_BASE_GPIOA + (N)*0x400))
 
 #define STM32_AFIO ((struct stm32f_afio *)STM32_BASE_AFIO)
 
 #define STM32_UID ((uint32_t *)STM32_BASE_UID)
 
-typedef enum {
+enum {
 	STM32_GPIOA_ID = 0,
 	STM32_GPIOB_ID,
 	STM32_GPIOC_ID,
 	STM32_GPIOD_ID,
 	STM32_GPIOE_ID,
-	STM32_GPIOF_ID,
-	STM32_GPIOG_ID,
 	STM32_GPIOH_ID,
+	STM32_GPIOF_ID,
+	STM32_GPIOG_ID
 };
 
-typedef enum {
+enum {
 	STM32_UART1_ID = 0,
 	STM32_UART2_ID, 
 	STM32_UART3_ID,

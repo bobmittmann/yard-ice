@@ -22,15 +22,16 @@
 
 PROG = slc-dev
 
-CFILES = slc-dev.c serial.c board.c 
+CFILES = slc-dev.c 
+#serial.c board.c 
 
 SDK = ../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil 
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
+		  $(SDK)/libice-comm
 
-LIBS = gcc stm32f cm3 c util 
-
-LIBS = stm32f cm3 util thinkos c ice-comm 
+LIBS = gcc stm32f cm3 util c ice-comm 
+#thinkos 
 
 INCPATH = $(SDK)/include 
 

@@ -27,55 +27,55 @@
 #include <stdint.h>
 #include <sys/stm32f.h>
 
-#define RELAY_GPIO STM32F_GPIOB, 9
-#define PWR_EN_GPIO STM32F_GPIOD, 12 
-#define PWR_MON_GPIO STM32F_GPIOD, 11
+#define RELAY_GPIO STM32_GPIOB, 9
+#define PWR_EN_GPIO STM32_GPIOD, 12 
+#define PWR_MON_GPIO STM32_GPIOD, 11
 
 void bsp_io_ini(void)
 {
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOD);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOD);
 
-	stm32f_gpio_mode(PWR_EN_GPIO, OUTPUT, SPEED_LOW);
-	stm32f_gpio_mode(RELAY_GPIO, OUTPUT, SPEED_LOW);
-	stm32f_gpio_mode(PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
+	stm32_gpio_mode(PWR_EN_GPIO, OUTPUT, SPEED_LOW);
+	stm32_gpio_mode(RELAY_GPIO, OUTPUT, SPEED_LOW);
+	stm32_gpio_mode(PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
 
-	stm32f_gpio_clr(RELAY_GPIO);
-	stm32f_gpio_clr(PWR_EN_GPIO);
+	stm32_gpio_clr(RELAY_GPIO);
+	stm32_gpio_clr(PWR_EN_GPIO);
 }
 
 void relay_on(void)
 {
-	stm32f_gpio_set(RELAY_GPIO);
+	stm32_gpio_set(RELAY_GPIO);
 }
 
 void relay_off(void)
 {
-	stm32f_gpio_clr(RELAY_GPIO);
+	stm32_gpio_clr(RELAY_GPIO);
 }
 
 int relay_stat(void)
 {
-	return stm32f_gpio_stat(RELAY_GPIO);
+	return stm32_gpio_stat(RELAY_GPIO);
 }
 
 void ext_pwr_on(void)
 {
-	stm32f_gpio_set(PWR_EN_GPIO);
+	stm32_gpio_set(PWR_EN_GPIO);
 }
 
 void ext_pwr_off(void)
 {
-	stm32f_gpio_clr(PWR_EN_GPIO);
+	stm32_gpio_clr(PWR_EN_GPIO);
 }
 
 int ext_pwr_stat(void)
 {
-	return stm32f_gpio_stat(PWR_EN_GPIO);
+	return stm32_gpio_stat(PWR_EN_GPIO);
 }
 
 int ext_pwr_mon(void)
 {
-	return stm32f_gpio_stat(PWR_MON_GPIO) ? 0 : 1;
+	return stm32_gpio_stat(PWR_MON_GPIO) ? 0 : 1;
 }
 

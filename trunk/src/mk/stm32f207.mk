@@ -32,6 +32,7 @@ ifeq ($(findstring $(MACH), stm32f207),)
 endif
 
 ARCH = cm3
+STM32 = stm32f
 CPU = cortex-m3
 CDEFS += $(call uc,$(MACH))
 ifdef HCLK_HZ

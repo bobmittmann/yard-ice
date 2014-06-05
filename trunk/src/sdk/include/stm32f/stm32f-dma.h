@@ -913,7 +913,7 @@ struct stm32f_dma {
 };
 #endif
 
-#if defined(STM32F1X) || defined(STM32F3X)
+#if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)
 struct stm32f_dma_channel {
 	volatile uint32_t ccr;
 	volatile uint32_t cndtr;

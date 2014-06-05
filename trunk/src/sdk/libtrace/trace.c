@@ -90,7 +90,7 @@ static inline uint32_t __timer_ts(void)
 
 static void __timer_init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_tim * tim = STM32F_TIM5;
 	uint32_t div;
 

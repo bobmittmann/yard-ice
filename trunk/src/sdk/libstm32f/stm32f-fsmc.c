@@ -67,7 +67,7 @@ void stm32f_fsmc_speed(int div)
 void stm32f_fsmc_init(void)
 {
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	gpio_io_t io;
 	int i;
 
@@ -77,17 +77,17 @@ void stm32f_fsmc_init(void)
 	rcc->ahb3enr |= RCC_FSMCEN;
 
 	/* Configur IO pins */
-	stm32f_gpio_clock_en(STM32F_GPIO(GPIOD));
-	stm32f_gpio_clock_en(STM32F_GPIO(GPIOE));
+	stm32_gpio_clock_en(STM32_GPIO(GPIOD));
+	stm32_gpio_clock_en(STM32_GPIO(GPIOE));
 
 	for (i = 0; i < sizeof(fsmc_io) / sizeof(gpio_io_t); i++) {
 		io = fsmc_io[i];
-		stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, 
+		stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
 						 ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32f_gpio_af(STM32F_GPIO(io.port), io.pin, GPIO_AF12);
+		stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF12);
 	}
 
-	stm32f_gpio_mode(STM32F_GPIO(GPIOD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(STM32_GPIO(GPIOD), 6, INPUT, PUSH_PULL | SPEED_HIGH);
 
 	fsmc->bcr1 = FSMC_CBURSTRW |	
 		FSMC_WREN | 

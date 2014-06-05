@@ -28,31 +28,30 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
-#define ETH_MII_TX_CLK STM32F_GPIOC, 3
-#define ETH_MII_TX_EN STM32F_GPIOB, 11
-#define ETH_MII_TXD0 STM32F_GPIOB, 12
-#define ETH_MII_TXD1 STM32F_GPIOB, 13
-#define ETH_MII_TXD2 STM32F_GPIOC, 2
-#define ETH_MII_TXD3 STM32F_GPIOB, 8
-#define ETH_MII_RX_CLK STM32F_GPIOA, 1
-#define ETH_MII_RX_DV STM32F_GPIOA, 7
-#define ETH_MII_RXD0 STM32F_GPIOC, 4
-#define ETH_MII_RXD1 STM32F_GPIOC, 5
-#define ETH_MII_RXD2 STM32F_GPIOB, 0
-#define ETH_MII_RXD3 STM32F_GPIOB, 1
-#define ETH_MII_RX_ER STM32F_GPIOB, 10
-#define ETH_MII_CRS STM32F_GPIOA, 0
-#define ETH_MII_COL STM32F_GPIOA, 3
-#define ETH_MDC STM32F_GPIOC, 1 
-#define ETH_MDIO STM32F_GPIOA, 2
-
-#define EXT_RST STM32F_GPIOE, 2
+#define ETH_MII_TX_CLK STM32_GPIOC, 3
+#define ETH_MII_TX_EN  STM32_GPIOB, 11
+#define ETH_MII_TXD0   STM32_GPIOB, 12
+#define ETH_MII_TXD1   STM32_GPIOB, 13
+#define ETH_MII_TXD2   STM32_GPIOC, 2
+#define ETH_MII_TXD3   STM32_GPIOB, 8
+#define ETH_MII_RX_CLK STM32_GPIOA, 1
+#define ETH_MII_RX_DV  STM32_GPIOA, 7
+#define ETH_MII_RXD0   STM32_GPIOC, 4
+#define ETH_MII_RXD1   STM32_GPIOC, 5
+#define ETH_MII_RXD2   STM32_GPIOB, 0
+#define ETH_MII_RXD3   STM32_GPIOB, 1
+#define ETH_MII_RX_ER  STM32_GPIOB, 10
+#define ETH_MII_CRS    STM32_GPIOA, 0
+#define ETH_MII_COL    STM32_GPIOA, 3
+#define ETH_MDC        STM32_GPIOC, 1 
+#define ETH_MDIO       STM32_GPIOA, 2
+#define EXT_RST        STM32_GPIOE, 2
 
 #ifdef STM32F2X
 
 void stm32f_eth_init(struct stm32f_eth * eth)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 
 	DCC_LOG(LOG_TRACE, "Selecting MII interface...");
@@ -62,52 +61,52 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
 
 	DCC_LOG(LOG_TRACE, "Enabling GPIO clocks...");
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOC);
-	stm32f_gpio_clock_en(STM32F_GPIOE);
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOE);
 
 
 	DCC_LOG(LOG_TRACE, "Configuring GPIO pins...");
-	stm32f_gpio_mode(EXT_RST, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_clr(EXT_RST);
+	stm32_gpio_mode(EXT_RST, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_clr(EXT_RST);
 
-	stm32f_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_TXD0, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_TXD1, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_TXD2, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_TXD3, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RX_CLK, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RX_DV, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RXD0, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RXD1, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RXD2, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RXD3, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_RX_ER, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_CRS, GPIO_AF11);
-	stm32f_gpio_af(ETH_MII_COL, GPIO_AF11);
-	stm32f_gpio_af(ETH_MDC, GPIO_AF11);
-	stm32f_gpio_af(ETH_MDIO, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TXD0, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TXD1, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TXD2, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_TXD3, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RX_CLK, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RX_DV, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RXD0, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RXD1, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RXD2, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RXD3, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_RX_ER, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_CRS, GPIO_AF11);
+	stm32_gpio_af(ETH_MII_COL, GPIO_AF11);
+	stm32_gpio_af(ETH_MDC, GPIO_AF11);
+	stm32_gpio_af(ETH_MDIO, GPIO_AF11);
 
-	stm32f_gpio_mode(ETH_MII_TX_CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_TXD0, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_TXD1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_TXD2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_TXD3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(ETH_MII_RX_CLK, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RX_DV, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RXD0, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RXD1, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RXD2, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RXD3, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_RX_ER, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_CRS, ALT_FUNC, 0);
-	stm32f_gpio_mode(ETH_MII_COL, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_TX_CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_TXD0, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_TXD1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_TXD2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_TXD3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_MII_RX_CLK, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RX_DV, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RXD0, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RXD1, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RXD2, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RXD3, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_RX_ER, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_CRS, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_MII_COL, ALT_FUNC, 0);
 
-	stm32f_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_LOW);
 
 	/* disable MAC interrupts */
 	eth->macimr = 0;
@@ -123,7 +122,7 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 
 	DCC_LOG(LOG_TRACE, "PHY reset...");
 	udelay(1000);
-	stm32f_gpio_set(EXT_RST);
+	stm32_gpio_set(EXT_RST);
 	udelay(9000);
 };
 

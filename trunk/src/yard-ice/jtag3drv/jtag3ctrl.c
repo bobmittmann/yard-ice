@@ -314,7 +314,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 	stm32f_fsmc_init();
 		
 	/* Configure external interrupt ... */
-	stm32f_exti_init(STM32F_GPIOD, 6, EXTI_EDGE_RISING);
+	stm32f_exti_init(STM32_GPIOD, 6, EXTI_EDGE_RISING);
 	/* Initialize clock output */
 	stm32f_mco2_init();
 
@@ -340,7 +340,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 bool jtag3ctrl_irq_status(void)
 {
-	return stm32f_gpio_stat(STM32F_GPIOD, 6) ? true : false;
+	return stm32_gpio_stat(STM32_GPIOD, 6) ? true : false;
 }
 
 bool jtag3ctrl_fpga_probe(void)
