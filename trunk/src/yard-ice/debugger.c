@@ -1218,7 +1218,7 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
 	int ret;
 	
-	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
 	if (len == 0)
 		return 0;

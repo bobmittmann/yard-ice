@@ -232,13 +232,17 @@ int ice_mem_read(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 	int ret;
 	int blk;
 
-	e = (ice_mem_entry_t *)mem_map;
-
 	DCC_LOG2(LOG_INFO, "addr:%08x len:%d", addr, len);
 
 	ptr = (uint8_t *)dst;
 	rem = len;
-	for (; (size = e->blk.count * e->blk.size) > 0; e++) {
+	for (e = (ice_mem_entry_t *)mem_map; e->op != NULL; e++) {
+
+		if ((size = e->blk.count * e->blk.size) == 0) {
+			/* skip empty blocks */
+			continue;
+		}
+
 		/* get the memory block start address */
 		mem_start = e->addr.base + e->addr.offs;
 		/* get the memory block end address */
@@ -325,13 +329,18 @@ int ice_mem_write(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 	int ret;
 	int blk;
 
-	e = (ice_mem_entry_t *)mem_map;
-
 	DCC_LOG2(LOG_INFO, "addr:%08x len:%d", addr, len);
 
 	ptr = (uint8_t *)src;
 	rem = len;
-	for (; (size = e->blk.count * e->blk.size) > 0; e++) {
+
+	for (e = (ice_mem_entry_t *)mem_map; e->op != NULL; e++) {
+
+		if ((size = e->blk.count * e->blk.size) == 0) {
+			/* skip empty blocks */
+			continue;
+		}
+
 		/* get the memory block start address */
 		mem_start = e->addr.base + e->addr.offs;
 		/* get the memory block end address */
@@ -411,12 +420,16 @@ int ice_mem_erase(const ice_drv_t * ice, const ice_mem_entry_t * mem_map,
 	int ret;
 	int blk;
 
-	e = (ice_mem_entry_t *)mem_map;
-
 	DCC_LOG2(LOG_TRACE, "addr:%08x len:%d", addr, len);
 
 	rem = len;
-	for (; (size = e->blk.count * e->blk.size) > 0; e++) {
+
+	for (e = (ice_mem_entry_t *)mem_map; e->op != NULL; e++) {
+
+		if ((size = e->blk.count * e->blk.size) == 0) {
+			/* skip empty blocks */
+			continue;
+		}
 		/* get the memory block start address */
 		mem_start = e->addr.base + e->addr.offs;
 		/* get the memory block end address */
@@ -514,7 +527,8 @@ int ice_mem_lookup(const ice_drv_t * ice,
 {
 	int i;
 
-	for (i = 0; mem[i].blk.count > 0; i++) {
+	for (i = 0; mem[i].op != NULL; i++) {
+		
 		DCC_LOG1(LOG_INFO, "'%s'", mem[i].name);
 		if (strcmp(mem[i].name, name) == 0)
 			return i;

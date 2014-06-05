@@ -1,5 +1,7 @@
 #
-# Copyright(c) 2006-2012 BORESTE (www.boreste.com). All Rights Reserved.
+# stm32l1xx.mk 
+#
+# Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
 # 
 # This file is part of the YARD-ICE.
 #
@@ -15,22 +17,33 @@
 # 
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
-#
 
-#
-# File:   Makefile
-# Author: Robinson Mittmann <bobmittmann@gmail.com>
-# 
+THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-include ../../mk/config.mk
+include $(THISDIR)/config.mk
+include $(THISDIR)/common.mk
 
-LIB_STATIC = drv
+ifndef MACH 
+MACH = stm32l151xb
+endif
 
-CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c \
-		 stm32f-bkp_sram.c stm32f-io.c stm32f-rtc.c
+ifeq ($(findstring $(MACH), stm32l151x6, stm32l151x8, stm32l151xb),)
+  $(error "Unsupported machine type: MACH=$(MACH)")
+endif
 
-override INCPATH += ./include ../libtcpip/include
+ARCH = cm3
+CPU = cortex-m3
+CDEFS += $(call uc,$(MACH))
+ifdef HCLK_HZ
+CDEFS += "HCLK_HZ=$(HCLK_HZ)" 
+endif
+ifdef HSE_HZ
+CDEFS += "HSE_HZ=$(HSE_HZ)" 
+endif
+OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
+CROSS_COMPILE = arm-none-eabi-
 
-include ../../mk/lib.mk
+LDFLAGS = -nostdlib -T $(MACH).ld
 
+include $(THISDIR)/prog.mk
 

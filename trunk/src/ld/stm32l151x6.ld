@@ -1,7 +1,9 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * stm32f103xb.ld
+ *
+ * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
  * 
- * This file is part of the YARD-ICE.
+ * This file is part of the ThinkOS library.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,11 +19,23 @@
  * http://www.gnu.org/
  */
 
-/** 
- * @file stm32f-rtc.c
- * @brief STM32F
- * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
+/* 
+   Medium-density performance line ARM-based 32-bit MCU with 64
+   or 128 KB Flash, USB, CAN, 7 timers, 2 ADCs, 9 com. interfaces
+*/
 
-#include <sys/stm32f.h>
+OUTPUT_FORMAT ("elf32-littlearm")
+ENTRY(_reset)
+SEARCH_DIR(.)
+
+MEMORY
+{
+	vectors(r) : ORIGIN = 0x00000000, LENGTH = 1K
+	flash (rx) : ORIGIN = 0x08000000, LENGTH = 32K
+	eeprom (rx) : ORIGIN = 0x08080000, LENGTH = 4K
+	sram (rw) : ORIGIN = 0x20000000, LENGTH = 10K
+	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
+}
+
+INCLUDE stm32l1xx.ld
 

@@ -42,6 +42,8 @@ extern const struct ice_mem_entry stm32f20xxe_mem[];
 
 extern const struct ice_mem_oper flash_stm32f1_oper;
 
+extern const struct ice_mem_oper flash_stm32l1_oper;
+
 extern const struct ice_mem_oper flash_stm32f2_oper;
 
 extern const struct cm3ice_cfg stm32f_cfg;
@@ -57,6 +59,9 @@ extern const struct target_info stm32f207ve;
 extern struct target_info stm32f;
 
 int stm32f1xx_on_init(FILE * f, const ice_drv_t * ice, 
+					 ice_mem_entry_t * mem);
+
+int stm32l1xx_on_init(FILE * f, const ice_drv_t * ice, 
 					 ice_mem_entry_t * mem);
 
 int stm32f2xx_on_init(FILE * f, const ice_drv_t * ice, 

@@ -36,7 +36,8 @@
 #include "stm32f_defs.h"
 
 #define FLASH 1
-#define SRAM 2
+#define EEPROM 2
+#define SRAM 3
 
 int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 					  target_info_t * target)
@@ -60,41 +61,27 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, low-density\n"); 
 		break;
+
 	case 0x410:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, medium-density\n"); 
 		break;
+
 	case 0x414:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, high-density\n"); 
 		break;
+
 	case 0x430:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, XL-density\n"); 
 		break;
+
 	case 0x418:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, connectivity\n"); 
 		break;
-	case 0x411:
-		ice_rd16(ice, 0x1fff7a22, &memsz);
-		fprintf(f, "STM32F2XX\n"); 
-		target->on_init = (target_script_t)stm32f2xx_on_init,
-		mem[FLASH].op = &flash_stm32f2_oper;
-		mem[FLASH].blk.size = MEM_KiB(16);
-		mem[FLASH].blk.count = memsz / 16;
-		mem[SRAM].blk.count = 128;
-		break;
-	case 0x413:
-		ice_rd16(ice, 0x1fff7a22, &memsz);
-		fprintf(f, "STM32F4XX\n"); 
-		target->on_init = (target_script_t)stm32f2xx_on_init,
-		mem[FLASH].op = &flash_stm32f2_oper;
-		mem[FLASH].blk.size = MEM_KiB(16);
-		mem[FLASH].blk.count = memsz / 16;
-		mem[SRAM].blk.count = 192;
-		DCC_LOG1(LOG_TRACE, "on_init=0x%p", target->on_init);
-		break;
+
 	case 0x420:
 		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F100\n"); 
@@ -107,6 +94,97 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		else if ((memsz == 64) || (memsz == 128))
 			mem[SRAM].blk.count = 8;
 		break;
+
+	case 0x411:
+		ice_rd16(ice, 0x1fff7a22, &memsz);
+		fprintf(f, "STM32F2XX\n"); 
+		target->on_init = (target_script_t)stm32f2xx_on_init,
+		mem[FLASH].op = &flash_stm32f2_oper;
+		mem[FLASH].blk.size = MEM_KiB(16);
+		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 128;
+		break;
+
+	case 0x413:
+		ice_rd16(ice, 0x1fff7a22, &memsz);
+		fprintf(f, "STM32F4XX\n"); 
+		target->on_init = (target_script_t)stm32f2xx_on_init,
+		mem[FLASH].op = &flash_stm32f2_oper;
+		mem[FLASH].blk.size = MEM_KiB(16);
+		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 192;
+		break;
+
+	case 0x416:
+		ice_rd16(ice, 0x1ff8004c, &memsz);
+		fprintf(f, "STM32L1XX Cat.1\n"); 
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = 256;
+		mem[FLASH].blk.count = memsz * 4;
+		mem[EEPROM].blk.count = 1024;
+		if ((memsz == 32) || (memsz == 64))
+			mem[SRAM].blk.count = 10;
+		else if (memsz == 128)
+			mem[SRAM].blk.count = 16;
+		break;
+
+	case 0x429:
+		ice_rd16(ice, 0x1ff8004c, &memsz);
+		/* Note: For DEV_ID = 0x429, only LSB part of F_SIZE: F_SIZE[7:0] is 
+		   valid. The MSB part F_SIZE[15:8] is reserved and must be ignored. */
+		memsz &= 0xff;
+		fprintf(f, "STM32L1XX Cat.2\n"); 
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = 256;
+		mem[FLASH].blk.count = memsz * 4;
+		mem[EEPROM].blk.count = 1024;
+		/* FIXME: configure SRAM */
+		mem[SRAM].blk.count = 16;
+		break;
+
+	case 0x427:
+		ice_rd16(ice, 0x1ff800cc, &memsz);
+		fprintf(f, "STM32L1XX Cat.3\n"); 
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = 256;
+		mem[FLASH].blk.count = memsz * 4;
+		mem[EEPROM].blk.count = 2048;
+		/* FIXME: configure SRAM */
+		mem[SRAM].blk.count = 16;
+		break;
+
+	case 0x436:
+		ice_rd16(ice, 0x1ff800cc, &memsz);
+		/* For DEV_ID = 0x436, the field value can be ‘0’ or ‘1’, with ‘0’ 
+		   for 384 Kbytes and ‘1’ for 256 Kbytes. */
+		memsz = memsz == 0 ? 384 : 256;
+		fprintf(f, "STM32L1XX Cat.4\n"); 
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = 256;
+		mem[FLASH].blk.count = memsz * 4;
+		mem[EEPROM].blk.count = 3072;
+		/* FIXME: configure SRAM */
+		mem[SRAM].blk.count = 16;
+		break;
+
+	case 0x437:
+		ice_rd16(ice, 0x1ff800cc, &memsz);
+		fprintf(f, "STM32L1XX Cat.5\n"); 
+		target->on_init = (target_script_t)stm32l1xx_on_init,
+		mem[FLASH].op = &flash_stm32l1_oper;
+		mem[FLASH].blk.size = MEM_KiB(16);
+		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 4096;
+		/* FIXME: configure SRAM */
+		mem[SRAM].blk.count = 16;
+		break;
+
 	default:
 		fprintf(f, "Unknown device: 0x%03x!\n", dev_id); 
 		return -1;
@@ -141,6 +219,11 @@ struct ice_mem_entry stm32f_mem[] = {
 	{ .name = "flash", .flags = MEM_32_BITS,
 		.addr = { .base = 0x08000000, .offs = 0 }, 
 		.blk = {.count = 128, .size = MEM_KiB(1)},
+		.op = &flash_stm32f1_oper
+	},
+	{ .name = "eeprom", .flags = 0, 
+		.addr = { .base = 0x08080000, .offs = 0 }, 
+		.blk = {.count = 0, .size = 4},
 		.op = &flash_stm32f1_oper
 	},
 	{ .name = "sram", .flags = MEM_32_BITS,

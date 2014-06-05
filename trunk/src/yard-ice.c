@@ -129,6 +129,11 @@ void stdio_init(void)
 	stdin = stdout;
 }
 
+void rtc_init(void)
+{
+	stm32f_rtc_init();
+}
+
 FILE * monitor_stream;
 bool monitor_auto_flush;
 
@@ -330,6 +335,8 @@ int main(int argc, char ** argv)
 	env_init();
 
 	bsp_io_ini();
+
+	rtc_init();
 
 	supervisor_init();
 	__os_sleep(10);
