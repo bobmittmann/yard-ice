@@ -25,42 +25,30 @@
 
 #include <sys/stm32f.h>
 
-#define LED1 STM32_GPIOB, 10
-#define LED2 STM32_GPIOB, 11
+#define LED1      STM32_GPIOB, 10
+#define LED2      STM32_GPIOB, 11
+#define LED3      STM32_GPIOB, 0
+#define LED4      STM32_GPIOB, 1
+#define LED5      STM32_GPIOA, 6
+#define LED6      STM32_GPIOA, 7
 
-/* ---------------------------------------------------------------------------
- * PIN1 -  PA1 (USART2_RTS) | PB11 (USART3_RX) |      |
- * PIN2 -  PA4 (USART2_CK)  | PB10 (USART3_TX) | PA5  | 
- * PIN3 -  GND              |                  |      |
- * PIN4 -  PA3 (USART2_RX)  | PA10 (USART1_RX) |      |
- * PIN5 -  PA2 (USART2_TX)  |  PA9 (USART1_TX) |      |
- * ---------------------------------------------------------------------------
- */
+#define ADDR0     STM32_GPIOA, 8
+#define ADDR1     STM32_GPIOA, 9
+#define ADDR2     STM32_GPIOA, 10
+#define ADDR3     STM32_GPIOA, 11
 
-/* Pin 1 */
-#define USART2_RTS STM32_GPIOA, 1
-#define USART3_RX STM32_GPIOB, 11
+#define ADDR4     STM32_GPIOA, 12
+#define ADDR5     STM32_GPIOC, 13
+#define ADDR6     STM32_GPIOC, 14
+#define ADDR7     STM32_GPIOC, 15
 
-/* Pin 2 */
-#define USART2_CK STM32_GPIOA, 4
-#define USART3_TX STM32_GPIOB, 10
-#define EXTRST1_IO STM32_GPIOA, 5 /* PA5 */
-
-/* Pin 4 */
-#define USART2_RX STM32_GPIOA, 3
-#define USART1_RX STM32_GPIOA, 10
-
-/* Pin 5 */
 #define USART2_TX STM32_GPIOA, 2
-#define USART1_TX STM32_GPIOA, 9
+#define USART2_RX STM32_GPIOA, 3
 
-/* LEDs */
-#define LED1_IO STM32_GPIOA, 6
-#define LED2_IO STM32_GPIOA, 7
+#define COMP1     STM32_GPIOA, 0
+#define COMP2     STM32_GPIOB, 5
 
-#define TIM4_CH3 STM32_GPIOB, 8
-#define TIM4_CH4 STM32_GPIOB, 9
-
+#define TRIG      STM32_GPIOB, 2
 
 #ifdef __cplusplus
 extern "C" {

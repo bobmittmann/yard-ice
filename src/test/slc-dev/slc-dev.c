@@ -102,6 +102,7 @@ int main(int argc, char ** argv)
 //	freq_gen_init(32768);
 
 	for (i = 0; ;i++) {
+		DCC_LOG1(LOG_TRACE, "%d...", i);
 //		led_flash(2, 200);
 //		printf("[%d] hello world...\n", i);
 		led_on(LED1);
