@@ -25,13 +25,8 @@
 
 #include <sys/stm32f.h>
 
-#define USB_FS_DP STM32F_GPIOA, 12
-#define USB_FS_DM STM32F_GPIOA, 11
-
-#define USB_FS_VBUS STM32F_GPIOB, 6 /* PB6 */
-
-#define PUSHBTN_IO STM32F_GPIOB, 8
-#define EXTRST0_IO STM32F_GPIOB, 0 
+#define LED1 STM32_GPIOB, 10
+#define LED2 STM32_GPIOB, 11
 
 /* ---------------------------------------------------------------------------
  * PIN1 -  PA1 (USART2_RTS) | PB11 (USART3_RX) |      |
@@ -71,66 +66,16 @@
 extern "C" {
 #endif
 
-/* Pin 1 */
-
-void pin1_sel_input(void);
-
-void pin1_sel_vcc(void);
-
-void pin1_sel_gnd(void);
-
-void pin1_sel_usart3_rx(void);
-
-void pin1_sel_i2c_sda(void);
-
-/* Pin 2 */
-
-void pin2_sel_input(void);
-
-void pin2_sel_open_drain(void);
-
-void pin2_sel_vcc(void);
-
-void pin2_sel_gnd(void);
-
-void pin2_sel_usart3_tx(void);
-
-void pin2_sel_i2c_scl(void);
-
-/* Pin 4 */
-
-void pin4_sel_input(void);
-
-void pin4_sel_vcc(void);
-
-void pin4_sel_gnd(void);
-
-void pin4_sel_usart2_rx(void);
-
-/* Pin 5 */
-
-void pin5_sel_input(void);
-
-void pin5_sel_vcc(void);
-
-void pin5_sel_gnd(void);
-
-void pin5_sel_usart2_tx(void);
-
-void pin5_sel_usart1_tx(void);
-
-/* USART1 and USART2 pins are connected together.
-   Only one TX pin must be enable at any time */
-
-/* Select USART2 TX */
-void io_sel_usart2(void);
-
-/* Select USART1 TX */
-void io_sel_usart1(void);
-
-void usb_vbus(bool on);
-
 void io_init(void);
+
+static inline void led_on(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_clr(__gpio, __pin);
+}
+
+static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_set(__gpio, __pin);
+}
+
 
 #ifdef __cplusplus
 }

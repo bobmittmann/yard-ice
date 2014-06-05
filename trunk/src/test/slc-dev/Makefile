@@ -22,8 +22,8 @@
 
 PROG = slc-dev
 
-CFILES = slc-dev.c 
-#serial.c board.c 
+CFILES = slc-dev.c board.c 
+#serial.c 
 
 SDK = ../../sdk
 
