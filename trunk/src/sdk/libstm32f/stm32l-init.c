@@ -50,7 +50,6 @@ void _init(void)
 	struct stm32_rcc * rcc = STM32_RCC;
 //	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t cr;
-	uint32_t ws;
 	int again;
 
 	/* Make sure we are using the internal oscillator */
@@ -83,11 +82,7 @@ void _init(void)
 	}
 #endif
 
-	ws = HCLK_HZ / 30000000;
-	(void)ws;
-
-	/* switch to pll oscillator */
-	/* select PLL as MCO output */
-	rcc->cfgr = RCC_MCO_HSE;
+	/* select HSE as system clock */
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
 }
 

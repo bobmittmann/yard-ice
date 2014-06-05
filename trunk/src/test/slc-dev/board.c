@@ -24,13 +24,45 @@
 
 void io_init(void)
 {
+//	struct stm32_afio * afio = STM32_AFIO;
+
 	stm32_gpio_clock_en(STM32_GPIOA);
 	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOC);
 
 	stm32_gpio_mode(LED1, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_set(LED1);
-
 	stm32_gpio_mode(LED2, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_set(LED2);
+	stm32_gpio_mode(LED3, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LED4, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LED5, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LED6, OUTPUT, PUSH_PULL | SPEED_LOW);
+
+	stm32_gpio_mode(TRIG, OUTPUT, PUSH_PULL | SPEED_LOW);
+
+	stm32_gpio_mode(ADDR0, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR1, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR2, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR3, INPUT, PULL_UP);
+
+	stm32_gpio_mode(ADDR4, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR5, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR6, INPUT, PULL_UP);
+	stm32_gpio_mode(ADDR7, INPUT, PULL_UP);
+
+
+	/* USART2_TX */
+	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	/* USART1_RX */
+	stm32f_gpio_mode(USART2_RX, INPUT, 0);
+	/* Use alternate pins for USART2 */
+//	afio->mapr |= AFIO_USART2_REMAP;
+
+
+	stm32_gpio_clr(LED1);
+	stm32_gpio_clr(LED2);
+	stm32_gpio_clr(LED3);
+	stm32_gpio_clr(LED4);
+	stm32_gpio_clr(LED5);
+	stm32_gpio_clr(LED6);
 }
 
