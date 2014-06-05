@@ -46,6 +46,10 @@
 #include <arch/stm32f100.h>
 #endif
 
+#if defined(STM32L151X6) || defined(STM32L151X8) || defined(STM32L151XB)
+#include <arch/stm32l151.h>
+#endif
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
@@ -271,6 +275,11 @@ int stm32f_flash_erase(unsigned int offs, unsigned int len);
 
 int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len);
 
+/*---------------------------------------------------------------------
+ * RTC
+ *---------------------------------------------------------------------*/
+
+int stm32f_rtc_init(void);
 
 #endif /* __ASSEMBLER__ */
 

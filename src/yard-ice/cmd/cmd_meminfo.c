@@ -48,7 +48,13 @@ int cmd_meminfo(FILE * f, int argc, char ** argv)
 
 	fprintf(f, "MEM:       FROM:    TO:      SIZE:     ACCESS:\n");
 
-	while ((size = e->blk.count * e->blk.size) > 0) {
+	while (e->op != NULL) {
+
+		if ((size = e->blk.count * e->blk.size) == 0) {
+			/* skip empty blocks */
+			continue;
+		}
+
 		start = e->addr.base + e->addr.offs;
 		end = e->addr.base + e->addr.offs + size - 1;
 

@@ -31,9 +31,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-FILE * stdout = (FILE *)&stm32f_usart5_file;
+#include <sys/dcclog.h>
 
-int rtc_init(void)
+int stm32f_rtc_init(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_pwr * pwr = STM32F_PWR;
@@ -43,28 +43,28 @@ int rtc_init(void)
 /* ● Access to the RTC and RTC backup registers */
 /* 1. Enable the power interface clock by setting the PWREN bits in 
    the RCC APB1 peripheral clock enable register (RCC_APB1ENR) */
-	printf(" - Enabling power interface clock...\n");
+	DCC_LOG(LOG_TRACE, " - Enabling power interface clock...\n");
 	rcc->apb1enr |= RCC_PWREN;
 
 /* 2. Set the DBP bit in the PWR power control register (PWR_CR) 
    to enable access to the backup domain */
-	printf(" - Enabling access to the backup domain...\n");
+	DCC_LOG(LOG_TRACE, " - Enabling access to the backup domain...\n");
 	pwr->cr |= PWR_DBP;
 
-	printf(" - Reseting the backup domain!\n");
+	DCC_LOG(LOG_TRACE, " - Reseting the backup domain!\n");
 	rcc->bdcr = RCC_BDRST;
 	bdcr = 0;
 
 /* 3. Select the RTC clock source: see Section 5.2.8: RTC/AWU clock */
-	printf(" - Selecting RTC clock source...\n");
+	DCC_LOG(LOG_TRACE, " - Selecting RTC clock source...\n");
 	bdcr |= RCC_RTCSEL_LSE;
 
 /* 4. Enable the RTC clock by programming the RTCEN [15] bit in the RCC 
    Backup domain control register (RCC_BDCR) */
-	printf(" - Enabling RTC clock...\n");
+	DCC_LOG(LOG_TRACE, " - Enabling RTC clock...\n");
 	bdcr |= RCC_RTCEN;
 
-	printf(" - Enabling LSE...\n");
+	DCC_LOG(LOG_TRACE, " - Enabling LSE...\n");
 	bdcr |= RCC_LSEON;
 
 	/* Updating BDCR */
@@ -72,7 +72,7 @@ int rtc_init(void)
 
 	while (!((bdcr = rcc->bdcr) & RCC_LSERDY)) {
 	}
-	printf(" - LSE clock ready.\n");
+	DCC_LOG(LOG_TRACE, " - LSE clock ready.\n");
 
 /* After power-on reset, all the RTC registers are write-protected. 
    Writing to the RTC registers is enabled by writing a key into the 
@@ -83,13 +83,32 @@ int rtc_init(void)
    2. Write ‘0x53’ into the RTC_WPR register.
    Writing a wrong key reactivates the write protection.
    The protection mechanism is not affected by system reset. */
-	printf(" - Unlocking the write protection cell...\n");
+	DCC_LOG(LOG_TRACE, " - Unlocking the write protection cell...\n");
 	rtc->wpr = 0xca;
 	rtc->wpr = 0x53;
 
 	return 0;
 }
 
+void rtc_time_get(struct stm32f_rtc * rtc)
+{
+	uint32_t tr;
+	int pm;
+	int hour;
+	int min;
+	int sec;
+
+	tr = rtc->tr;
+
+	pm = tr & RTC_PM ? 1 : 0;
+	hour = RTC_HT_GET(tr) * 10 + RTC_HU_GET(tr);
+	min = RTC_MNT_GET(tr) * 10 + RTC_MNU_GET(tr);
+	sec = RTC_ST_GET(tr) * 10 + RTC_SU_GET(tr);
+
+	printf("%02d:%02d:%02d %s\n", hour, min, sec, pm ? "PM" : "AM");
+}
+
+#if 0
 bool rtc_sanity_check(void)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -119,25 +138,6 @@ bool rtc_sanity_check(void)
 
 	return true;
 }
-
-void rtc_time_get(struct stm32f_rtc * rtc)
-{
-	uint32_t tr;
-	int pm;
-	int hour;
-	int min;
-	int sec;
-
-	tr = rtc->tr;
-
-	pm = tr & RTC_PM ? 1 : 0;
-	hour = RTC_HT_GET(tr) * 10 + RTC_HU_GET(tr);
-	min = RTC_MNT_GET(tr) * 10 + RTC_MNU_GET(tr);
-	sec = RTC_ST_GET(tr) * 10 + RTC_SU_GET(tr);
-
-	printf("%02d:%02d:%02d %s\n", hour, min, sec, pm ? "PM" : "AM");
-}
-
 int main(int argc, char ** argv)
 {
 	struct stm32f_usart * us = STM32F_USART5;
@@ -169,4 +169,4 @@ int main(int argc, char ** argv)
 
 	return 0;
 }
-
+#endif

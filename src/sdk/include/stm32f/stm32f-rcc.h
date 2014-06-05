@@ -1340,6 +1340,12 @@
 #define RCC_RTCSEL_MSK (((1 << (1 + 1)) - 1) << 8)
 #define RCC_RTCSEL_SET(VAL) (((VAL) << 8) & RTCSEL_MSK)
 #define RCC_RTCSEL_GET(REG) (((REG) & RTCSEL_MSK) >> 8)
+
+#define RCC_RTCSEL_NONE (0 << 8)
+#define RCC_RTCSEL_LSE  (1 << 8)
+#define RCC_RTCSEL_LSI  (2 << 8)
+#define RCC_RTCSEL_HSE  (3 << 8)
+
 /* Set by software to select the clock source for the RTC. Once the RTC 
    clock source has been selected, it cannot be changed anymore unless the 
    Backup domain is reset. The BDRST bit can be used to reset them.
@@ -1349,10 +1355,6 @@
    11: HSE oscillator clock divided by a programmable prescaler (selection 
    through the RTCPRE[4:0] bits in the RCC clock configuration register 
    (RCC_CFGR)) used as the RTC clock */
-
-#define RCC_RTCSEL_MSK (((1 << (1 + 1)) - 1) << 8)
-#define RCC_RTCSEL_SET(VAL) (((VAL) << 8) & RTCSEL_MSK)
-#define RCC_RTCSEL_GET(REG) (((REG) & RTCSEL_MSK) >> 8)
 
 /* Bit 2 - External low-speed oscillator bypass */
 #define RCC_LSEBYP (1 << 2)
@@ -1969,6 +1971,12 @@ Set and cleared by software.
 #define RCC_RTCSEL_MSK (((1 << (1 + 1)) - 1) << 8)
 #define RCC_RTCSEL_SET(VAL) (((VAL) << 8) & RTCSEL_MSK)
 #define RCC_RTCSEL_GET(REG) (((REG) & RTCSEL_MSK) >> 8)
+
+#define RCC_RTCSEL_NONE (0 << 8)
+#define RCC_RTCSEL_LSE  (1 << 8)
+#define RCC_RTCSEL_LSI  (2 << 8)
+#define RCC_RTCSEL_HSE  (3 << 8)
+
 /* Set by software to select the clock source for the RTC. Once the RTC clock source has been
 selected, it cannot be changed anymore unless the Backup domain is reset. The BDRST bit
 can be used to reset them.
