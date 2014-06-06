@@ -23,6 +23,7 @@
 
 #include <sys/stm32f.h>
 
+/*
 #if defined(STM32L1X)
 
 const struct stm32_gpio * const stm32_gpio_lut[] = {
@@ -87,11 +88,14 @@ void stm32_gpio_clock_en(struct stm32_gpio * gpio)
 #endif
 
 }
+*/
 
 void stm32_gpio_mode(struct stm32_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)
 {
-#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X) || \
+	defined(STM32L1X)
+
 	uint32_t tmp;
 	uint32_t moder; 
 
@@ -193,7 +197,8 @@ void stm32_gpio_mode(struct stm32_gpio * gpio,
 
 }
 
-#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X) || \
+	defined(STM32L1X)
 void stm32_gpio_af(struct stm32_gpio * gpio, int pin, int af)
 {
 	uint32_t tmp;

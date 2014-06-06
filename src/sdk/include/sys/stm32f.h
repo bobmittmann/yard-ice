@@ -176,7 +176,6 @@ static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode,
 								 unsigned int __opt) {
 	struct stm32_gpio * gpio = STM32_GPIO(__io.port);
 
-	stm32_gpio_clock_en(gpio);
 	stm32_gpio_mode(gpio, __io.pin, __mode, __opt);
 }
 

@@ -50,6 +50,24 @@
 
 #define TRIG      STM32_GPIOB, 2
 
+#define SW3A      STM32_GPIOB, 15
+#define SW3B      STM32_GPIOB, 14
+#define SW4A      STM32_GPIOB, 13
+#define SW4B      STM32_GPIOB, 12
+
+#define VNEG_SW   STM32_GPIOA, 1 
+
+#define CHRG_EN   STM32_GPIOB, 6
+
+#define SINK1     STM32_GPIOB, 7
+#define SINK2     STM32_GPIOB, 8
+#define SINK3     STM32_GPIOB, 9
+#define SINK4     STM32_GPIOA, 4
+#define IRATE     STM32_GPIOA, 5
+
+#define COMP1     STM32_GPIOA, 0
+#define COMP2     STM32_GPIOB, 5
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -57,11 +75,11 @@ extern "C" {
 void io_init(void);
 
 static inline void led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_clr(__gpio, __pin);
+	stm32_gpio_mode_af(__gpio, __pin);
 }
 
 static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_set(__gpio, __pin);
+	stm32_gpio_mode_out(__gpio, __pin);
 }
 
 
