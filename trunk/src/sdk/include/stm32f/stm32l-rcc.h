@@ -449,11 +449,6 @@ struct stm32_rcc {
 #define STM32_APB1 1
 #define STM32_APB2 2
 
-struct stm32_clk {
-	uint8_t apb:3;
-	uint8_t bit:5;
-} __attribute__((packed))__;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -508,24 +503,25 @@ extern "C" {
 #endif
 
 static inline void stm32_clk_enable(struct stm32_rcc * rcc, 
-									struct stm32_clk clk) {
-	if (clk.apb == STM32_APB2)
-		rcc->apb2enr |= 1 << (clk.bit);
-	else if (clk.apb == STM32_APB1)
-		rcc->apb1enr |= 1 << (clk.bit);
+									int bus, int bit) {
+	if (bus == STM32_APB2)
+		rcc->apb2enr |= 1 << bit;
+	else if (bus == STM32_APB1)
+		rcc->apb1enr |= 1 << bit;
 	else
-		rcc->ahbenr |= 1 << (clk.bit);
+		rcc->ahbenr |= 1 << bit;
 }
 
-static inline void stm32_clk_disable(struct stm32_rcc * rcc,
-									 struct stm32_clk clk) {
-	if (clk.apb == STM32_APB2)
-		rcc->apb2enr &= ~(1 << (clk.bit));
-	else if (clk.apb == STM32_APB1)
-		rcc->apb1enr &= ~(1 << (clk.bit));
+static inline void stm32_clk_disable(struct stm32_rcc * rcc, 
+									 int bus, int bit) {
+	if (bus == STM32_APB2)
+		rcc->apb2enr &= ~(1 << bit);
+	else if (bus == STM32_APB1)
+		rcc->apb1enr &= ~(1 << bit);
 	else
-		rcc->ahbenr &= ~(1 << (clk.bit));
+		rcc->ahbenr &= ~(1 << bit);
 }
+
 
 #endif /* __ASSEMBLER__ */
 

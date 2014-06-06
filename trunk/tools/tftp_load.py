@@ -234,6 +234,17 @@ def main():
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 		except Exception as err:
 				error(err)
+	else:
+		try:
+			print(" - Connecting to remote target")
+			sys.stdout.flush()
+			script = "connect\n halt\n"
+			if verbose:
+				print("   \"{0}\"".format(script))
+			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
+		except Exception as err:
+				error(err)
+
 
 	if erase:
 		try:

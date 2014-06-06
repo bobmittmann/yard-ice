@@ -84,6 +84,9 @@
 #define GPIO_AFRH_SET(P, F) ((F) << (4 * ((P) - 8)))
 #define GPIO_AFRH_MASK(P) ((0xf) << (4 * ((P) - 8)))
 
+/* GPIO bit reset register */
+#define GPIO_BRR 0x28
+
 #define GPIO_AF0 0
 #define GPIO_AF1 1
 #define GPIO_AF2 2
@@ -302,7 +305,8 @@
 #include <stdint.h>
 
 
-#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X)
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X) || \
+	defined(STM32L1X)
 struct stm32_gpio {
 	volatile uint32_t moder;
 	volatile uint32_t otyper;
@@ -320,30 +324,6 @@ struct stm32_gpio {
 #endif
 
 #if defined(STM32F1X)
-struct stm32_gpio {
-	volatile uint32_t crl;
-	volatile uint32_t crh;
-	volatile uint32_t idr;
-	volatile uint32_t odr;
-	volatile uint32_t bsr;
-	volatile uint32_t brr;
-	volatile uint32_t lckr;
-};
-
-struct stm32_afio {
-	volatile uint32_t evcr;
-	volatile uint32_t mapr;
-	volatile uint32_t exticr1;
-	volatile uint32_t exticr2;
-
-	volatile uint32_t exticr3;
-	volatile uint32_t exticr4;
-	volatile uint32_t mapr2;
-};
-
-#endif /* defined(STM32F1X) */
-
-#if defined(STM32L1X)
 struct stm32_gpio {
 	volatile uint32_t crl;
 	volatile uint32_t crh;
@@ -385,6 +365,27 @@ struct stm32_afio {
 extern "C" {
 #endif
 
+#if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X) || \
+	defined(STM32L1X)
+static inline void stm32_gpio_mode_out(struct stm32_gpio * __gpio, 
+									   unsigned int __pin) {
+	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
+	__gpio->moder = tmp | GPIO_MODE_INPUT(__pin);
+}
+
+static inline void stm32_gpio_mode_in(struct stm32_gpio * __gpio, 
+									  unsigned int __pin) {
+	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
+	__gpio->moder = tmp | GPIO_MODE_OUTPUT(__pin);
+}
+
+static inline void stm32_gpio_mode_af(struct stm32_gpio * __gpio, 
+									  unsigned int __pin) {
+	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
+	__gpio->moder = tmp | GPIO_MODE_ALT_FUNC(__pin);
+}
+#endif
+
 /* set pin */
 static inline void stm32_gpio_set(struct stm32_gpio *__gpio, int __pin) {
 	__gpio->bsr = GPIO_SET(__pin);
@@ -399,14 +400,6 @@ static inline void stm32_gpio_clr(struct stm32_gpio *__gpio, int __pin) {
 static inline int stm32_gpio_stat(struct stm32_gpio *__gpio, int __pin) {
 	return __gpio->idr & (1 << __pin);
 }
-
-int stm32_gpio_id(struct stm32_gpio * gpio);
-
-void stm32_gpio_clock_en(struct stm32_gpio * gpio);
-
-/* Output mode */
-void stm32_gpio_output(struct stm32_gpio * gpio, unsigned int pin,
-						int type, int speed);
 
 /* mode */
 void stm32_gpio_mode(struct stm32_gpio * gpio, unsigned int pin,

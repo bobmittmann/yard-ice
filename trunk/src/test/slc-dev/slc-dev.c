@@ -106,10 +106,16 @@ int main(int argc, char ** argv)
 //		led_flash(2, 200);
 //		printf("[%d] hello world...\n", i);
 		led_on(LED1);
-		udelay(500000);
-
+		udelay(200000);
 		led_off(LED1);
-		udelay(500000);
+
+		udelay(200000);
+
+		led_on(LED2);
+		udelay(200000);
+		led_off(LED2);
+
+		udelay(400000);
 //		led_flash(3, 200);
 //		leds_all_off();
 //		udelay(500000);
