@@ -42,12 +42,13 @@
 #include "dbglog.h"
 #include "ice_comm.h"
 
-struct comm_tcp_parm {
-	struct tcp_pcb * tp;
+struct comm_tcp {
+	int con_flag;
 	ice_comm_t * comm;
+	struct tcp_pcb * volatile tp;
 };
 
-int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
+void __attribute__((noreturn)) comm_tcp_write_task(struct comm_tcp * parm)
 {
 	struct tcp_pcb * tp = parm->tp;
 	ice_comm_t * comm = parm->comm;
@@ -57,61 +58,64 @@ int comm_tcp_write_task(struct comm_tcp_parm * parm, int id)
 	int rem;
 	int n;
 
-	DCC_LOG2(LOG_TRACE, "thread=%d tp=0x%08x init...", 
-			thinkos_thread_self(), (int)tp);
+	DCC_LOG1(LOG_TRACE, "thread=%d init...", thinkos_thread_self());
 
 	for (;;) {
-		/* receive data form network */
-		if ((len = tcp_recv(tp, net_buf, 128)) <= 0) {
-			DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
-			break;
-		}
+		/* wait for a connection */
+		DCC_LOG(LOG_TRACE, "waiting connect...");
+		thinkos_flag_wait(parm->con_flag);
 
-//		DCC_LOG3(LOG_TRACE, "%I:%d recv: %d", tp->t_faddr, 
-//				 ntohs(tp->t_fport), len);
+		while ((tp = parm->tp) != NULL) {
 
-#if 0
-		ptr = net_buf;
-		for (n = 0; n < len; n++) {
-			DCC_LOG1(LOG_INFO, "rx: %c", 
-					 (*ptr < ' ') || (*ptr > 127) ? '.' : *ptr);
+			DCC_LOG1(LOG_TRACE, "tp=0x%08x, connected.", (int)tp);
 
-			ptr++;
-		}
-#endif
-
-		rem = len;
-		ptr = net_buf;
-		while (rem) {
-			if ((n = ice_comm_write(comm, ptr, len, 500)) < 0) {
-				DCC_LOG1(LOG_WARNING, "ice_comm_write(): %d", n); 
+			/* receive data form network */
+			if ((len = tcp_recv(tp, net_buf, 128)) <= 0) {
+				DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
+				parm->tp = NULL;
+				thinkos_flag_clr(parm->con_flag);
 				break;
 			}
-			ptr += n;
-			rem -= n;
+
+			//		DCC_LOG3(LOG_TRACE, "%I:%d recv: %d", tp->t_faddr, 
+			//				 ntohs(tp->t_fport), len);
+
+#if 0
+			ptr = net_buf;
+			for (n = 0; n < len; n++) {
+				DCC_LOG1(LOG_INFO, "rx: %c", 
+						 (*ptr < ' ') || (*ptr > 127) ? '.' : *ptr);
+
+				ptr++;
+			}
+#endif
+
+			rem = len;
+			ptr = net_buf;
+			while (rem) {
+				if ((n = ice_comm_write(comm, ptr, len, 500)) < 0) {
+					DCC_LOG1(LOG_WARNING, "ice_comm_write(): %d", n); 
+					break;
+				}
+				ptr += n;
+				rem -= n;
+			}
 		}
+
+		ice_comm_close(comm);
 	} 
-
-	ice_comm_close(comm);
-
-	DCC_LOG(LOG_TRACE, "done.");
-
-	return 0;
 }
-
-uint32_t comm_write_stack[512 + 128];
 
 #define COMM_TCP_BUF_SIZE 512
 
-int comm_tcp_read_task(ice_comm_t * comm)
+void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 {
-	struct comm_tcp_parm tcp_parm;
 	uint32_t buf[COMM_TCP_BUF_SIZE / sizeof(uint32_t)];
+	ice_comm_t * comm = parm->comm;
 	struct tcp_pcb * tp;
 	struct tcp_pcb * mux;
-	int th;
-	int n;
 	int port = 1001;
+	int n;
 
 	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
 
@@ -135,30 +139,16 @@ int comm_tcp_read_task(ice_comm_t * comm)
 			break;
 		}
 
-		tcp_close(mux);
-
 		tracef("COMM TCP: connection accepted. ");
 		DCC_LOG(LOG_TRACE, "connection accepted...");
 	
+		DCC_LOG(LOG_TRACE, "closing TCP mux............");
+		tcp_close(mux);
+
 		ice_comm_open(comm);
+		parm->tp = tp;
 
-		tcp_parm.tp = tp;
-		tcp_parm.comm = comm;
-
-		th = __os_thread_create((void *)comm_tcp_write_task, (void *)&tcp_parm, 
-								comm_write_stack, sizeof(comm_write_stack), 
-								__OS_PRIORITY_LOWEST);
-
-		if (th < 0) {
-			DCC_LOG(LOG_ERROR, "__os_thread_create() fail!"); 
-			ice_comm_close(comm);
-			tcp_close(tp);
-//			DCC_LOG2(LOG_TRACE, "%I:%d closed.", 
-//					 tp->t_faddr, ntohs(tp->t_fport));
-			break;
-		}
-
-		DCC_LOG1(LOG_TRACE, "Comm write thread=%d.", th);
+		thinkos_flag_set(parm->con_flag);
 
 		for (;;) {
 			if ((n = ice_comm_read(comm, buf, sizeof(buf), 500)) < 0) {
@@ -178,31 +168,46 @@ int comm_tcp_read_task(ice_comm_t * comm)
 			}
 		} 
 
+		parm->tp = NULL;
+		thinkos_flag_clr(parm->con_flag);
+
 		ice_comm_close(comm);
 
 //		DCC_LOG2(LOG_TRACE, "%I:%d closed.", tp->t_faddr, ntohs(tp->t_fport));
 
 		tcp_close(tp);
-
-		DCC_LOG1(LOG_TRACE, "joining thread %d...", th);
-		__os_thread_join(th);
 	}
 
-	for(;;);
+	for (;;);
 }
 
+uint32_t comm_write_stack[512 + 128];
 uint32_t comm_read_stack[512 + (COMM_TCP_BUF_SIZE / 4)];
+struct comm_tcp comm_tcp;
 
 int comm_tcp_start(ice_comm_t * comm)
 {
 	int th;
 
-	th = __os_thread_create((void *)comm_tcp_read_task, (void *)comm, 
+	comm_tcp.comm = comm;
+	comm_tcp.tp = NULL;
+	comm_tcp.con_flag = thinkos_flag_alloc();
+
+	DCC_LOG1(LOG_TRACE, "flag=%d", comm_tcp.con_flag);
+
+	th = __os_thread_create((void *)comm_tcp_read_task, (void *)&comm_tcp, 
 							comm_read_stack, sizeof(comm_read_stack), 
 							__OS_PRIORITY_LOWEST);
 
 	tracef("comm_tcp_start th=%d", th);
-	DCC_LOG1(LOG_TRACE, "thread %d", th);
+	DCC_LOG1(LOG_TRACE, "Comm read thread %d", th);
+
+	th = __os_thread_create((void *)comm_tcp_write_task, (void *)&comm_tcp, 
+							comm_write_stack, sizeof(comm_write_stack), 
+							__OS_PRIORITY_LOWEST);
+
+	tracef("comm_tcp_write_task th=%d", th);
+	DCC_LOG1(LOG_TRACE, "Comm write thread=%d.", th);
 
 	return 0;
 }

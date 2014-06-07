@@ -23,19 +23,7 @@
 
 #include <sys/stm32f.h>
 
-/*
 #if defined(STM32L1X)
-
-const struct stm32_gpio * const stm32_gpio_lut[] = {
-	STM32_GPIOA,
-	STM32_GPIOB,
-	STM32_GPIOC,
-	STM32_GPIOD,
-	STM32_GPIOE,
-	STM32_GPIOH,
-	STM32_GPIOF,
-	STM32_GPIOG,
-};
 
 #else
 
@@ -56,9 +44,6 @@ const struct stm32_gpio * const stm32_gpio_lut[] = {
 	STM32_GPIOI
 #endif
 };
-
-#endif
-
 
 int stm32_gpio_id(struct stm32_gpio * gpio)
 {
@@ -83,12 +68,8 @@ void stm32_gpio_clock_en(struct stm32_gpio * gpio)
 	rcc->apb2enr |= 1 << (stm32_gpio_id(gpio) + 2);
 #endif
 
-#if defined(STM32L1X)
-	rcc->apb2enr |= 1 << (stm32_gpio_id(gpio) + 2);
-#endif
-
 }
-*/
+#endif
 
 void stm32_gpio_mode(struct stm32_gpio * gpio, 
 					  unsigned int pin, unsigned int mode, unsigned int opt)

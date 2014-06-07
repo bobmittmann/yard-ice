@@ -186,9 +186,17 @@ static inline int __os_sem_alloc(int val) {
 #endif
 }
 
+static inline int __os_sem_init(int sem, unsigned int val) {
+#if ENABLE_THINKOS
+	return thinkos_sem_init(sem, val);
+#else
+	return 0;
+#endif
+}
+
 static inline int __os_sem_free(int sem) {
 #if ENABLE_THINKOS
-	return thinkos_sem_alloc(sem);
+	return thinkos_sem_free(sem);
 #else
 	return 0;
 #endif
