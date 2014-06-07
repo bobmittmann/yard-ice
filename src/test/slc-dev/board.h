@@ -42,6 +42,8 @@
 #define ADDR6     STM32_GPIOC, 14
 #define ADDR7     STM32_GPIOC, 15
 
+#define MODSW     STM32_GPIOB, 4
+
 #define USART2_TX STM32_GPIOA, 2
 #define USART2_RX STM32_GPIOA, 3
 

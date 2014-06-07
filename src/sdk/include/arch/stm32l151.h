@@ -60,6 +60,7 @@
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>
 #include <stm32f/stm32f-exti.h>
+#include <stm32f/stm32-comp.h>
 
 #define STM32_BASE_UID		0x1ff80050
 #define STM32_BASE_FSMC    0xa0000000
@@ -110,8 +111,6 @@
 #define STM32_BASE_TIM4    0x40000800
 #define STM32_BASE_TIM3    0x40000400
 #define STM32_BASE_TIM2    0x40000000
-
-
 
 
 #define STM32_IRQ_WWDG 0 /* Window WatchDog Interrupt */
@@ -179,6 +178,7 @@
 #define STM32_ADC ((struct stm32f_adc *)STM32_BASE_ADC)
 
 #define STM32_EXTI ((struct stm32f_exti *)STM32_BASE_EXTI)
+#define STM32_COMP ((struct stm32_comp *)STM32_BASE_COMP)
 
 #define STM32_USART1 ((struct stm32f_usart *)STM32_BASE_USART1)
 #define STM32_USART2 ((struct stm32f_usart *)STM32_BASE_USART2)
