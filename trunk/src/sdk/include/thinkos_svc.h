@@ -256,8 +256,8 @@ static inline int __attribute__((always_inline)) thinkos_sem_free(int sem) {
 }
 
 static inline int __attribute__((always_inline)) 
-thinkos_sem_init(int sem, unsigned int value) {
-	return THINKOS_SVC2(THINKOS_SEM_FREE, sem, value);
+	thinkos_sem_init(int sem, unsigned int value) {
+	return THINKOS_SVC2(THINKOS_SEM_INIT, sem, value);
 }
 
 static inline int __attribute__((always_inline)) thinkos_sem_wait(int sem) {

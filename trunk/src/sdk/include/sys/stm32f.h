@@ -172,6 +172,10 @@ extern "C" {
  * GPIO
  *---------------------------------------------------------------------*/
 
+void stm32_gpio_clock_en(struct stm32_gpio * gpio);
+
+int stm32_gpio_id(struct stm32_gpio * gpio);
+
 static inline void gpio_mode_set(gpio_io_t __io, unsigned int __mode, 
 								 unsigned int __opt) {
 	struct stm32_gpio * gpio = STM32_GPIO(__io.port);

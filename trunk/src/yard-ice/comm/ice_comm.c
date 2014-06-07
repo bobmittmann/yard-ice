@@ -43,6 +43,8 @@ int ice_comm_open(ice_comm_t * comm)
 		/* Reset the queue */
 //		comm->tx_head = comm->tx_tail;
 //		comm->rx_head = comm->rx_tail;
+		__os_sem_init(comm->rx_sem, 0);
+		DCC_LOG(LOG_TRACE, "semaphore initialized...");
 		comm->open = 1;
 	}
 
@@ -54,6 +56,7 @@ int ice_comm_close(ice_comm_t * comm)
 	DCC_LOG(LOG_TRACE, ".");
 
 	if (comm->open) {
+		__os_sem_post(comm->rx_sem);
 //		comm->tx_head = 0;
 //		comm->tx_tail = 0;
 //		comm->rx_head = 0;

@@ -63,31 +63,35 @@ int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 		return -EADDRINUSE;
 	}
 
-	if (tp->t_state == TCPS_CLOSED) {
-		/* Move from the closed pcb list to
-		the listen list */
-		pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.listen);
-	} else {
-		/* XXX: check this condition */
-		DCC_LOG1(LOG_ERROR, "<%04x> state != TCPS_CLOSED", (int)tp);
-		/* insert into the listen list */
-		pcb_insert((struct pcb *)tp, &__tcp__.listen);
-	}
-
 	/* For preinitialized PCB's we don't write into the PCB structure
 	 because it may not be stored in RAM. We expect that this PCB
 	 have its state already set to LISTEN, otherwise we change the state. */
-	if (tp->t_state != TCPS_LISTEN) {
+	if (tp->t_state == TCPS_CLOSED) {
+		int sem;
+
+		if ((sem = __os_sem_alloc(0)) < 0) {
+			DCC_LOG1(LOG_WARNING, "<%04x> __os_sem_alloc() failed!", (int)tp);
+			tcpip_net_unlock();
+			return -ENOMEM;
+		}
+
 		tp->t_state = TCPS_LISTEN;
 		/* backlog */
 	 	tp->t_max = __backlog;
 		tp->t_tail = 0;
 		tp->t_head = 0;
-		tp->t_sem = __os_sem_alloc(0);
+		tp->t_sem = sem;
+		/* Move from the closed pcb list to
+		the listen list */
+		pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.listen);
+	} else if (tp->t_state == TCPS_LISTEN) {
+		/* XXX: check this condition */
+		DCC_LOG1(LOG_WARNING, "<%04x> state == TCPS_LISTEN", (int)tp);
+		/* insert into the listen list */
+		pcb_insert((struct pcb *)tp, &__tcp__.listen);
+	} else {
+		tcpip_net_unlock();
 	}
-
-	DCC_LOG2(LOG_TRACE, "<%04x> port:%d [LISTEN]", (int)tp, 
-		ntohs(tp->t_lport));
 
 	DCC_LOG2(LOG_TRACE, "<%04x> port:%d [LISTEN]", (int)tp, 
 		ntohs(tp->t_lport));

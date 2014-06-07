@@ -148,7 +148,7 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 	}
 #endif
 
-	DCC_LOG2(LOG_INFO, "<%05x> state=%s", (int)tp, __tcp_state[tp->t_state]);
+	DCC_LOG2(LOG_TRACE, "<%05x> state=%s", (int)tp, __tcp_state[tp->t_state]);
 
 	if (tp->t_state == TCPS_LISTEN) {
 		struct tcp_listen_pcb * mux = (struct tcp_listen_pcb *)tp;
@@ -161,10 +161,10 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 				mux->t_head = 0;
 		}
 
-		/* listening sockets do not have receiving or trasmmit queues,
-		and the conditional variable is shared, 
-		so we don't release this structures */
+		__os_sem_free(mux->t_sem);
 
+		/* listening sockets do not have receiving or trasmmit queues,
+		so we don't release this structures */
 		DCC_LOG1(LOG_TRACE, "<%05x> release LISTEN", (int)tp);
 		return pcb_release((struct pcb *)tp, &__tcp__.listen);
 	}
