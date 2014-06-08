@@ -8,12 +8,12 @@
 
 #include "board.h"
 
-#if 0
-struct file stm32f_uart1_file = {
-	.data = STM32_USART1, 
+struct file stm32f_uart2_file = {
+	.data = STM32_USART2, 
 	.op = &stm32f_usart_fops 
 };
 
+#if 0
 void freq_gen_init(uint32_t freq)
 {
 	struct stm32f_rcc * rcc = STM32F_RCC;
@@ -59,29 +59,22 @@ void freq_gen_init(uint32_t freq)
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
+#endif
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32F_USART1;
-
-	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+	struct stm32f_usart * uart = STM32_USART2;
 
 	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
+	stm32f_usart_baudrate_set(uart, 9600);
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 
-	stderr = &stm32f_uart1_file;
+	stderr = &stm32f_uart2_file;
 	stdin = stderr;
 	stdout = stdin;
 }
 
-#endif
 
 int main(int argc, char ** argv)
 {
@@ -96,7 +89,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. io_init()");
 	io_init();
 
-	DCC_LOG(LOG_TRACE, "3. enabling interrupts");
+	DCC_LOG(LOG_TRACE, "3. stdio_init()");
+	stdio_init();
+
+	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
 //	freq_gen_init(32768);
@@ -104,18 +100,25 @@ int main(int argc, char ** argv)
 	for (i = 0; ;i++) {
 		DCC_LOG1(LOG_TRACE, "%d...", i);
 //		led_flash(2, 200);
-//		printf("[%d] hello world...\n", i);
+
+		printf("UU");
+
 		led_on(LED1);
 		udelay(200000);
 		led_off(LED1);
 
+		printf("UU");
 		udelay(200000);
 
+		printf("UU");
 		led_on(LED2);
 		udelay(200000);
 		led_off(LED2);
 
-		udelay(400000);
+		printf("UU");
+		udelay(200000);
+		printf("UU");
+		udelay(200000);
 //		led_flash(3, 200);
 //		leds_all_off();
 //		udelay(500000);

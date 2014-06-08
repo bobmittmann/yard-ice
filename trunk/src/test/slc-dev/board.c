@@ -495,16 +495,17 @@ void io_init(void)
 	stm32_gpio_mode(SW4A, INPUT, PULL_UP | SPEED_LOW);
 	stm32_gpio_mode(SW4B, INPUT, PULL_UP | SPEED_LOW);
 
+#if 0
 	/* JTAG TRST Pin */
 	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
+#endif
 
 	/* USART2_TX */
 	stm32_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	/* USART1_RX */
+	stm32_gpio_af(USART2_TX, GPIO_AF7);
+	/* USART2_RX */
 	stm32_gpio_mode(USART2_RX, INPUT, 0);
-	/* Use alternate pins for USART2 */
-//	afio->mapr |= AFIO_USART2_REMAP;
-
+	stm32_gpio_af(USART2_RX, GPIO_AF7);
 
 	stm32_gpio_clr(TRIG);
 	stm32_gpio_mode(TRIG, OUTPUT, PUSH_PULL | SPEED_LOW);

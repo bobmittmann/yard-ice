@@ -247,7 +247,7 @@ static void io_init(void)
 
 struct serial_dev * serial_open(void)
 {
-	struct stm32f_usart * uart = STM32F_USART6;
+	struct stm32f_usart * uart = STM32_USART6;
 	struct serial_dev * dev = &serial_dev;
 
 	DCC_LOG(LOG_INFO, "...");
@@ -266,8 +266,8 @@ struct serial_dev * serial_open(void)
 	stm32f_usart_mode_set(uart, SERIAL_8N1);
 	stm32f_usart_enable(uart);
 
-	cm3_irq_pri_set(STM32F_IRQ_USART6, UART_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_USART6);
+	cm3_irq_pri_set(STM32_IRQ_USART6, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32_IRQ_USART6);
 
 	/* enable RX interrupt */
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;

@@ -29,6 +29,7 @@
 #include "target.h"
 #include "script.h"
 #include "cm3ice.h"
+#include "trace.h"
 #include "target/stm32f.h"
 
 #define STM32L1XX
@@ -36,14 +37,40 @@
 
 #define ERR (RDERR | OPTVERRUSR | OPTVERR | SIZERR | PGAERR | WRPERR)
 
+int stm32l1xx_flash_bsy_wait(cm3ice_ctrl_t * ctrl)
+{
+	int ret = -1;
+	uint32_t sr;
+	int again;
+
+	for (again = 4096; again > 0; again--) {
+		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
+		if (sr & ERR) {
+			DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
+					 sr & RDERR ? "RDERR" : "",
+					 sr & OPTVERRUSR ? "OPTVERRUSR" : "",
+					 sr & OPTVERR ? "OPTVERR " : "",
+					 sr & SIZERR ? "SIZERR " : "",
+					 sr & PGAERR ? "PGAERR" : "",
+					 sr & WRPERR ? "WRPERR" : "");
+			break;
+		}
+		if ((sr & BSY) == 0) {
+			ret = 0;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+
 int stm32l1_flash_erase(cm3ice_ctrl_t * ctrl, 
 					   ice_mem_ref_t * mem, 
 					   ice_size_t len)
 {
 	uint32_t pecr;
-	uint32_t sr;
 	uint32_t addr;
-	int again;
 
 	addr = mem->base + mem->offs;
 
@@ -65,80 +92,34 @@ int stm32l1_flash_erase(cm3ice_ctrl_t * ctrl,
 
 	cm3ice_wr32(ctrl, addr, 0x00000000);
 
-	for (again = 4096 * 32; ; again--) {
-		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
-		if ((sr & BSY) == 0)
-			if (sr & ERR) {
-				DCC_LOG1(LOG_WARNING, "SR=0x%08x!", sr);
-				DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
-						 sr & RDERR ? "RDERR" : "",
-						 sr & OPTVERRUSR ? "OPTVERRUSR" : "",
-						 sr & OPTVERR ? "OPTVERR " : "",
-						 sr & SIZERR ? "SIZERR " : "",
-						 sr & PGAERR ? "PGAERR" : "",
-						 sr & WRPERR ? "WRPERR" : "")
-				return -1;
-			}
-			break;
-		if (again == 0) {
-			DCC_LOG(LOG_WARNING, "flash not ready!");
-			return -1;
-		}
-	}
+	if (stm32l1xx_flash_bsy_wait(ctrl) < 0)
+		len = -1;
 
 	cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_PECR, 0);
 
 	return len;
 }
 
-int stm32l1xx_flash_wr32(cm3ice_ctrl_t * ctrl, uint32_t addr, uint32_t data)
-{
-	uint32_t sr;
-	int again;
-
-	DCC_LOG2(LOG_INFO, "0x%08x <-- 0x%08x", addr, data);
-
-	cm3ice_wr32(ctrl, addr, data);
-	
-	for (again = 4096; ; again--) {
-		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
-		if ((sr & BSY) == 0)
-			if (sr & ERR) {
-				DCC_LOG1(LOG_WARNING, "SR=0x%08x!", sr);
-				DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
-						 sr & RDERR ? "RDERR" : "",
-						 sr & OPTVERRUSR ? "OPTVERRUSR" : "",
-						 sr & OPTVERR ? "OPTVERR " : "",
-						 sr & SIZERR ? "SIZERR " : "",
-						 sr & PGAERR ? "PGAERR" : "",
-						 sr & WRPERR ? "WRPERR" : "");
-				return -1;
-			}
-			break;
-		if (again == 0) {
-			DCC_LOG(LOG_WARNING, "flash not ready!");
-			return -1;
-		}
-	}
-
-	return 0;
-}
 
 int stm32l1_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem, 
 					 const void * buf, ice_size_t len)
 {
 	uint32_t pecr;
 	uint32_t data;
-	uint32_t addr;
 	uint8_t * ptr;
-	int n;
-	int i;
-
-	n = (len + 3) / 4;
+	uint32_t offs;
+	uint32_t base;
+	int rem;
+	int ret;
+#if 0
+	uint32_t ts;
+	int32_t dt;
+#endif
 
 	ptr = (uint8_t *)buf;
-	addr = mem->base + mem->offs;
-
+	offs = mem->offs;
+	base = mem->base;
+	
 	cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_PECR, &pecr);
 	DCC_LOG1(LOG_TRACE, "PECR=0x%08x", pecr);
 	if (pecr & PRGLOCK) {
@@ -151,20 +132,45 @@ int stm32l1_flash_write(cm3ice_ctrl_t * ctrl, ice_mem_ref_t * mem,
 		cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_PRGKEYR, PRGKEYR2);
 	}
 
-	DCC_LOG2(LOG_TRACE, "0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_TRACE, "0x%08x len=%d", base + offs, len);
 
-	for (i = 0; i < n; i++) {
-		int ret;
+#if 0
+	ts = trace_timestamp();
+#endif
 
-		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16)| (ptr[3] << 24);
-		if ((ret = stm32l1xx_flash_wr32(ctrl, addr, data)) < 0) {
+	len = (len + 3) & ~0x00000003;
+	rem = len;
+
+#if 0
+	if ((offs & 0x7f) != 0) {
+		if ((ret = stm32l1xx_flash_bsy_wait(ctrl)) < 0)
 			return ret;
-		}
-		ptr += 4;
-		addr += 4;
 	}
-	
-	return n * 4;
+#endif
+	while (rem > 0) {
+		if ((offs & 0x7f) == 0) { 
+			if (rem >= 128) {
+				/* start half page write */
+				DCC_LOG(LOG_TRACE, "Half-Page write start...");
+				cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_PECR, FPRG | PROG);
+			} else {
+				DCC_LOG(LOG_TRACE, "Partial block start...");
+				cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_PECR, 0);
+			}
+			if ((ret = stm32l1xx_flash_bsy_wait(ctrl)) < 0)
+				return ret;
+		}
+		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16)| (ptr[3] << 24);
+		cm3ice_wr32(ctrl, base + offs, data);
+		ptr += 4;
+		offs += 4;
+		rem -= 4;
+	}
+
+	/* Clear flash program operation */
+	cm3ice_wr32(ctrl, STM32F_BASE_FLASH + FLASH_PECR, 0);
+
+	return len;
 }
 
 /*

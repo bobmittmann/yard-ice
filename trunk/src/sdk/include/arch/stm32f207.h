@@ -156,9 +156,9 @@
 #define STM32F_IRQ_I2C2_ER 34 /* I2C2 Error Interrupt */
 #define STM32F_IRQ_SPI1 35 /* SPI1 global Interrupt */
 #define STM32F_IRQ_SPI2 36 /* SPI2 global Interrupt */
-#define STM32F_IRQ_USART1 37 /* USART1 global Interrupt */
-#define STM32F_IRQ_USART2 38 /* USART2 global Interrupt */
-#define STM32F_IRQ_USART3 39 /* USART3 global Interrupt */
+#define STM32_IRQ_USART1 37 /* USART1 global Interrupt */
+#define STM32_IRQ_USART2 38 /* USART2 global Interrupt */
+#define STM32_IRQ_USART3 39 /* USART3 global Interrupt */
 #define STM32F_IRQ_EXTI15_10 40 /* External Line[15:10] Interrupts */
 #define STM32F_IRQ_RTC_ALARM 41 /* RTC Alarm (A and B) through EXTI Line Interrupt */
 #define STM32F_IRQ_OTG_FS_WKUP 42 /* USB OTG FS Wakeup through EXTI line interrupt */
@@ -177,8 +177,8 @@
 #define STM32F_IRQ_SDIO 49 /* SDIO global Interrupt */
 #define STM32F_IRQ_TIM5 50 /* TIM5 global Interrupt */
 #define STM32F_IRQ_SPI3 51 /* SPI3 global Interrupt */
-#define STM32F_IRQ_UART4 52 /* UART4 global Interrupt */
-#define STM32F_IRQ_UART5 53 /* UART5 global Interrupt */
+#define STM32_IRQ_UART4 52 /* UART4 global Interrupt */
+#define STM32_IRQ_UART5 53 /* UART5 global Interrupt */
 
 /* TIM6 global and DAC1&2 underrun error */
 #define STM32F_IRQ_TIM6 54 /* TIM6 global Interrupt */
@@ -200,7 +200,7 @@
 #define STM32F_IRQ_DMA2_STREAM5 68 /* DMA2 Stream 5 global interrupt */
 #define STM32F_IRQ_DMA2_STREAM6 69 /* DMA2 Stream 6 global interrupt */
 #define STM32F_IRQ_DMA2_STREAM7 70 /* DMA2 Stream 7 global interrupt */
-#define STM32F_IRQ_USART6 71 /* USART6 global interrupt */
+#define STM32_IRQ_USART6 71 /* USART6 global interrupt */
 #define STM32F_IRQ_I2C3_EV 72 /* I2C3 event interrupt */
 #define STM32F_IRQ_I2C3_ER 73 /* I2C3 error interrupt */
 #define STM32F_IRQ_OTG_HS_EP1_OUT 74 /* USB OTG HS End Point 1 Out global interrupt */
@@ -230,12 +230,12 @@
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
-#define STM32F_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
-#define STM32F_USART2 ((struct stm32f_usart *)STM32F_BASE_USART2)
-#define STM32F_USART3 ((struct stm32f_usart *)STM32F_BASE_USART3)
-#define STM32F_UART4 ((struct stm32f_usart *)STM32F_BASE_UART4)
-#define STM32F_UART5 ((struct stm32f_usart *)STM32F_BASE_UART5)
-#define STM32F_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
+#define STM32_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
+#define STM32_USART2 ((struct stm32f_usart *)STM32F_BASE_USART2)
+#define STM32_USART3 ((struct stm32f_usart *)STM32F_BASE_USART3)
+#define STM32_UART4 ((struct stm32f_usart *)STM32F_BASE_UART4)
+#define STM32_UART5 ((struct stm32f_usart *)STM32F_BASE_UART5)
+#define STM32_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)

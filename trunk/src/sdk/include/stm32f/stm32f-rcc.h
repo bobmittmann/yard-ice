@@ -2340,6 +2340,11 @@ again in case of a new switch is required)
 
 #endif /* defined(STM32F3X) */
 
+#define STM32_AHB  0
+#define STM32_APB1 1
+#define STM32_APB2 2
+#define STM32_AHB2 3
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
@@ -2410,11 +2415,8 @@ struct stm32_rcc {
 };
 #endif /* STM32F1X || STM32F3X */
 
-#define STM32F_APB1 0
-#define STM32F_APB2 1
-
-struct stm32f_clk {
-	uint8_t apb:3;
+struct stm32_clk {
+	uint8_t bus:3;
 	uint8_t bit:5;
 } __attribute__((packed))__;
 
@@ -2422,27 +2424,42 @@ struct stm32f_clk {
 extern "C" {
 #endif
 
+static inline void stm32_clk_enable(struct stm32_rcc * rcc, 
+									int bus, int bit) {
+	if (bus == STM32_APB2)
+		rcc->apb2enr |= 1 << bit;
+	else if (bus == STM32_APB1)
+		rcc->apb1enr |= 1 << bit;
+	else if (bus == STM32_AHB2)
+		rcc->ahb2enr |= 1 << bit;
+	else
+#if defined(STM32F1X) || defined(STM32F3X)
+		rcc->ahbenr |= 1 << bit;
+#else
+		rcc->ahb1enr |= 1 << bit;
+#endif
+}
+
+static inline void stm32_clk_disable(struct stm32_rcc * rcc, 
+									 int bus, int bit) {
+	if (bus == STM32_APB2)
+		rcc->apb2enr &= ~(1 << bit);
+	else if (bus == STM32_APB1)
+		rcc->apb1enr &= ~(1 << bit);
+	else if (bus == STM32_AHB2)
+		rcc->ahb2enr &= ~(1 << bit);
+	else
+#if defined(STM32F1X) || defined(STM32F3X)
+		rcc->ahbenr &= ~(1 << bit);
+#else
+		rcc->ahb1enr &= ~(1 << bit);
+#endif
+}
+
 
 #ifdef __cplusplus
 }
 #endif
-
-static inline void stm32f_clk_enable(struct stm32_rcc * rcc, 
-									 struct stm32f_clk clk) {
-	if (clk.apb == STM32F_APB2)
-		rcc->apb2enr |= 1 << (clk.bit);
-	else
-		rcc->apb1enr |= 1 << (clk.bit);
-}
-
-static inline void stm32f_clk_disable(struct stm32_rcc * rcc,
-									  struct stm32f_clk clk) {
-	if (clk.apb == STM32F_APB2)
-		rcc->apb2enr &= ~(1 << (clk.bit));
-	else
-		rcc->apb1enr &= ~(1 << (clk.bit));
-}
-
 #endif /* __ASSEMBLER__ */
 
 #endif /* __STM32F_RCC_H__ */

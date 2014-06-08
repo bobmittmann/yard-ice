@@ -73,7 +73,10 @@ class TftpPacketWRQ(TftpPacket):
 		TftpPacket.__init__(self, 2)
 		self.fname = fname.encode('ascii')
 		self.mode = mode
-		self.opt = opt
+		if (opt == None):
+			self.opt = {}
+		else:
+			self.opt = opt
 	
 		self.mode_str = { 
 			TFTP_MODE_NETASCII: b'netascii', 
@@ -84,7 +87,18 @@ class TftpPacketWRQ(TftpPacket):
 		"""Encode the packet's buffer from the instance variables."""
 		mode_str = self.mode_str[self.mode]
 		fmt = "!H{0:d}sx{1:d}sx".format(len(self.fname), len(mode_str))
-		self.buf = struct.pack(fmt, int(self.opc), self.fname, mode_str) 
+
+		# Add options.
+		opt_lst = []
+		for key in self.opt:
+			# Populate the option name
+			fmt += "%dsx" % len(key)
+			opt_lst.append(key)
+			# Populate the option value
+			fmt += "%dsx" % len(str(self.opt[key]))
+			opt_lst.append(str(self.opt[key]))
+
+		self.buf = struct.pack(fmt, int(self.opc), self.fname, mode_str, *opt_lst) 
 		return self.buf
 
 
@@ -146,6 +160,39 @@ class TftpPacketERR(TftpPacket):
 class TftpPacketOACK(TftpPacket):
 	def __init__(self):
 		TftpPacket.__init__(self, 6)
+
+	def decode_options(self, buf):
+		"""This method decodes the section of the buf that contains an
+		unknown number of options. It returns a dictionary of option names and
+		values."""
+		fmt = "!"
+		opt = {}
+
+		if len(buf) == 0:
+			return {}
+
+		# Count the nulls in the buf. Each one terminates a string.
+		length = 0
+		for c in buf:
+			if ord(c) == 0:
+				if length > 0:
+					fmt += "%dsx" % length
+					length = -1
+				else:
+					raise TftpException, "Invalid options in buf"
+			length += 1
+
+		mystruct = struct.unpack(fmt, buf)
+
+		for i in range(0, len(mystruct), 2):
+			opt[mystruct[i]] = mystruct[i + 1]
+
+		return opt
+
+	def decode(self):
+		self.options = self.decode_options(self.buf[2:])
+		return self
+
 
 # ----------------------------------------------------------------------
 # TFTP Packet Factory
@@ -257,26 +304,13 @@ class TftpClientSession(object):
 
 class TftpClient(object):
 
-	def __init__(self, host, port=69, options={}):
+	def __init__(self, host, port=69):
 
-		self.options = options
 		self.host = host
 		self.port = port 
-		self.options = options
 		self.session = TftpClientSession(self.host, self.port)
 
-#		if self.options.has_key('blksize'):
-#			size = self.options['blksize']
-#			if size < TFTP_MIN_BLKSIZE or size > TFTP_MAX_BLKSIZE:
-#				raise TftpException("Invalid blksize: {0}".format(size))
-#		else:
-#		 	size = TFTP_DEF_BLKSIZE
-		size = TFTP_DEF_BLKSIZE
-
-		# FIXME: negotiate block size
-		self.blksize = size 
-
-	def put(self, data, filename, mode, timeout=2):
+	def put(self, data, filename, mode, timeout=2, options={}):
 
 		self.session.timeout(timeout)
 
@@ -286,6 +320,14 @@ class TftpClient(object):
 		else:
 			bin_data = data
 
+		if options.has_key('blksize'):
+			size = options['blksize']
+			if size < TFTP_MIN_BLKSIZE or size > TFTP_MAX_BLKSIZE:
+				raise TftpException, "Invalid blksize: %d" % size
+		else:
+		 	size = TFTP_DEF_BLKSIZE
+
+		self.blksize = size
 		data_len = len(bin_data)
 		data_rem = data_len
 		data_pos = 0
@@ -293,18 +335,18 @@ class TftpClient(object):
 		last_data = False
 
 		# prepare a write request
-		wrq = TftpPacketWRQ(filename, mode, timeout)
+		wrq = TftpPacketWRQ(filename, mode, options)
 
 		# send and receive 
 		pkt = self.session.cycle(wrq)
 
-		# we should receive ACK
-		if not isinstance(pkt, TftpPacketACK):
-			raise TftpException("Invalid response.")
-		
-		# the block number must match our initial block number
-		if (pkt.blkno != blkno):
-			raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
+		if not isinstance(pkt, TftpPacketOACK):
+			# we should receive ACK
+			if not isinstance(pkt, TftpPacketACK):
+				raise TftpException("Invalid response.")		
+			# the block number must match our initial block number
+			if (pkt.blkno != blkno):
+				raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
 
 		# connect to the remote host
 		self.session.connect()

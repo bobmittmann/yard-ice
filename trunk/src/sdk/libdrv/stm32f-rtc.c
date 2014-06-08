@@ -43,28 +43,28 @@ int stm32f_rtc_init(void)
 /* ● Access to the RTC and RTC backup registers */
 /* 1. Enable the power interface clock by setting the PWREN bits in 
    the RCC APB1 peripheral clock enable register (RCC_APB1ENR) */
-	DCC_LOG(LOG_TRACE, " - Enabling power interface clock...\n");
+	DCC_LOG(LOG_INFO, " - Enabling power interface clock...");
 	rcc->apb1enr |= RCC_PWREN;
 
 /* 2. Set the DBP bit in the PWR power control register (PWR_CR) 
    to enable access to the backup domain */
-	DCC_LOG(LOG_TRACE, " - Enabling access to the backup domain...\n");
+	DCC_LOG(LOG_TRACE, " - Enabling access to the backup domain...");
 	pwr->cr |= PWR_DBP;
 
-	DCC_LOG(LOG_TRACE, " - Reseting the backup domain!\n");
+	DCC_LOG(LOG_INFO, " - Reseting the backup domain!");
 	rcc->bdcr = RCC_BDRST;
 	bdcr = 0;
 
 /* 3. Select the RTC clock source: see Section 5.2.8: RTC/AWU clock */
-	DCC_LOG(LOG_TRACE, " - Selecting RTC clock source...\n");
+	DCC_LOG(LOG_INFO, " - Selecting RTC clock source...");
 	bdcr |= RCC_RTCSEL_LSE;
 
 /* 4. Enable the RTC clock by programming the RTCEN [15] bit in the RCC 
    Backup domain control register (RCC_BDCR) */
-	DCC_LOG(LOG_TRACE, " - Enabling RTC clock...\n");
+	DCC_LOG(LOG_INFO, " - Enabling RTC clock...");
 	bdcr |= RCC_RTCEN;
 
-	DCC_LOG(LOG_TRACE, " - Enabling LSE...\n");
+	DCC_LOG(LOG_INFO, " - Enabling LSE...");
 	bdcr |= RCC_LSEON;
 
 	/* Updating BDCR */
@@ -72,7 +72,7 @@ int stm32f_rtc_init(void)
 
 	while (!((bdcr = rcc->bdcr) & RCC_LSERDY)) {
 	}
-	DCC_LOG(LOG_TRACE, " - LSE clock ready.\n");
+	DCC_LOG(LOG_INFO, " - LSE clock ready.");
 
 /* After power-on reset, all the RTC registers are write-protected. 
    Writing to the RTC registers is enabled by writing a key into the 
@@ -83,7 +83,7 @@ int stm32f_rtc_init(void)
    2. Write ‘0x53’ into the RTC_WPR register.
    Writing a wrong key reactivates the write protection.
    The protection mechanism is not affected by system reset. */
-	DCC_LOG(LOG_TRACE, " - Unlocking the write protection cell...\n");
+	DCC_LOG(LOG_INFO, " - Unlocking the write protection cell...");
 	rtc->wpr = 0xca;
 	rtc->wpr = 0x53;
 

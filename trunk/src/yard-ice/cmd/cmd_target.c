@@ -92,10 +92,11 @@ static struct target_info * target_select_tool(FILE *f)
 
 int cmd_target(FILE *f, int argc, char ** argv)
 {
-	struct target_info * target;
+	struct target_info * target = NULL;
 	int force = 0;
 	int probe = 0;
 	int scan = 0;
+	int config = 0;
 	value_t val;
 	int ret;
 	int i;
@@ -106,65 +107,61 @@ int cmd_target(FILE *f, int argc, char ** argv)
 
 	if (argc == 0) {
 		target = target_select_tool(f);
+		config = 1;
 	} else {
 		if ((target = target_lookup(*argv)) != NULL) {
 			DCC_LOG(LOG_TRACE, "target_lookup() success.");
 			argc--;
 			argv++;
 		} else {
-			if ((n = eval_uint32(&val, argc, argv)) < 0) {
-				fprintf(f, "usage: target <NAME | ID> <force>\n");
-				return n;
+			if ((n = eval_uint32(&val, argc, argv)) >= 0) {
+				argc -= n;
+				argv += n;
+				n = val.uint32;
+
+				DCC_LOG(LOG_TRACE, "searching the target list...");
+
+				target = target_first();
+				for (i = 0; (i < n) && (target != NULL); i++)
+					target = target_next(target);
 			}
-
-			argc -= n;
-			argv += n;
-			n = val.uint32;
-
-			DCC_LOG(LOG_TRACE, "searching the target list...");
-
-			target = target_first();
-			for (i = 0; (i < n) && (target != NULL); i++)
-				target = target_next(target);
 		} 
 
 		while (argc) {
 			if ((strcmp(*argv, "force") == 0) || 
 				(strcmp(*argv, "f") == 0)) {
 				force = 1;
-			} else {
-				if ((strcmp(*argv, "probe") == 0) 
+			} else if ((strcmp(*argv, "probe") == 0) 
 					|| (strcmp(*argv, "p") == 0)) {
 					probe = 1;
-				} else {
-					if ((strcmp(*argv, "scan") == 0) 
-						|| (strcmp(*argv, "s") == 0)) {
-						scan = 1;
-					} else {
-						fprintf(f, "Invalid argument: %s...\n", *argv);
-						return -1;
-					}
-				}
+			} else if ((strcmp(*argv, "scan") == 0) 
+					   || (strcmp(*argv, "s") == 0)) {
+				scan = 1;
+			} else if ((strcmp(*argv, "config") == 0) 
+					   || (strcmp(*argv, "c") == 0)) {
+				config = 1;
+			} else {
+				fprintf(f, "Invalid argument: %s...\n", *argv);
+				fprintf(f, "usage: target <NAME|ID> "
+						"<force|probe|scan|config>\n");
+				return -1;
 			}
 			argc--;
 			argv++;
 		}
-
 	}
 
 	/* FIXME */
 	(void)scan;
 
-	if (target == NULL) {
-		fprintf(f, "invalid target...\n");
-		return -1;
-	}
+	if (target != NULL) {
+		fprintf(f, " - Target: '%s'\n", target->name);
 
-	fprintf(f, " - Target: '%s'\n", target->name);
-
-	if (target_configure(f, target, force) < 0) {
-		fprintf(f, "ERROR: target_configure()!\n");
-		return -1;
+		if ((ret = target_ice_configure(f, target, force)) < 0) {
+			fprintf(f, " # ICE configuration ERROR!\n");
+			fprintf(f, "ERROR: target_ice_configure()!\n");
+			return ret;
+		}
 	}
 
 	if (probe) {
@@ -178,6 +175,13 @@ int cmd_target(FILE *f, int argc, char ** argv)
 			fprintf(f, " - probe Ok.\n");
 		}
 	} 
+
+	if (config) {
+		if ((ret = target_config(f)) < 0) {
+			fprintf(f, " # Target configuration ERROR!\n");
+			return ret;
+		} 
+	}
 
 	return 0;
 }

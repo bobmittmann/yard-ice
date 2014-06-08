@@ -23,48 +23,61 @@
 #include "usart-priv.h"
 
 const struct stm32f_usart * const stm32f_usart_lut[] = {
-	STM32F_USART1,
-	STM32F_USART2,
-	STM32F_USART3,
-	STM32F_UART4,
-	STM32F_UART5,
+	STM32_USART1,
+	STM32_USART2,
+	STM32_USART3,
+	STM32_UART4,
+	STM32_UART5,
 #ifdef STM32F_USART6
-	STM32F_USART6
+	STM32_USART6
 #endif
 };
 
 const uint8_t stm32f_usart_irq_lut[] = {
-	STM32F_IRQ_USART1,
-	STM32F_IRQ_USART2,
-	STM32F_IRQ_USART3,
-	STM32F_IRQ_UART4,
-	STM32F_IRQ_UART5,
-#ifdef STM32F_USART6
-	STM32F_IRQ_USART6
+	STM32_IRQ_USART1,
+	STM32_IRQ_USART2,
+	STM32_IRQ_USART3,
+#ifdef STM32_IRQ_UART4
+	STM32_IRQ_UART4,
+#endif
+#ifdef STM32_IRQ_UART4
+	STM32_IRQ_UART5,
+#endif
+#ifdef STM32F_IRQ_USART6
+	STM32_IRQ_USART6
 #endif
 };
 
 #if defined(STM32F2X) || defined(STM32F4X)
-const struct stm32f_clk stm32f_usart_clk_lut[] = {  
-	{ STM32F_APB2,  4}, 
-	{ STM32F_APB1, 17}, 
-	{ STM32F_APB1, 18}, 
-	{ STM32F_APB1, 19}, 
-	{ STM32F_APB1, 20}, 
-	{ STM32F_APB2,  5}
+const struct stm32_clk stm32_usart_clk_lut[] = {  
+	{ STM32_APB2,  4}, 
+	{ STM32_APB1, 17}, 
+	{ STM32_APB1, 18}, 
+	{ STM32_APB1, 19}, 
+	{ STM32_APB1, 20}, 
+	{ STM32_APB2,  5}
 };
 #endif
 
 #if defined(STM32F1X) || defined(STM32F3X)
-const struct stm32f_clk stm32f_usart_clk_lut[] = {  
-	{ STM32F_APB2, 14}, 
-	{ STM32F_APB1, 17}, 
-	{ STM32F_APB1, 18}, 
-	{ STM32F_APB1, 19}, 
-	{ STM32F_APB1, 20}
+const struct stm32_clk stm32_usart_clk_lut[] = {  
+	{ STM32_APB2, 14}, 
+	{ STM32_APB1, 17}, 
+	{ STM32_APB1, 18}, 
+	{ STM32_APB1, 19}, 
+	{ STM32_APB1, 20}
 };
 #endif
 
+#if defined(STM32L1X)
+const struct stm32_clk stm32_usart_clk_lut[] = {  
+	{ STM32_CLK_USART1 }, 
+	{ STM32_CLK_USART2 }, 
+	{ STM32_CLK_USART3 }, 
+	{ STM32_CLK_UART4 }, 
+	{ STM32_CLK_UART5 }
+};
+#endif
 
 int stm32f_usart_lookup(struct stm32f_usart * usart)
 {

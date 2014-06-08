@@ -37,7 +37,8 @@ int stm32f_usart_init(struct stm32f_usart * us)
 	us->cr1 = 0;
 
 	/* Enable peripheral clock */
-	stm32f_clk_enable(STM32_RCC, stm32f_usart_clk_lut[id]);
+	stm32_clk_enable(STM32_RCC, stm32_usart_clk_lut[id].bus, 
+					 stm32_usart_clk_lut[id].bit);
 
 	/* output drain */
 //	while (!(us->sr & USART_TXE));

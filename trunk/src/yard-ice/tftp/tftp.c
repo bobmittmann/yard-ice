@@ -419,7 +419,7 @@ int tftp_req_parse(char * hdr, struct tftp_req * req)
 	return 0;
 }
 
-int tftp_daemon_task(struct debugger * dbg)
+void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
@@ -439,12 +439,12 @@ int tftp_daemon_task(struct debugger * dbg)
 
 	if ((udp = udp_alloc()) == NULL) {
 		DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
-		return -1;
+		abort();
 	}
 
 	if (udp_bind(udp, INADDR_ANY, htons(IPPORT_TFTP)) < 0) {
 		DCC_LOG(LOG_WARNING, "udp_bind() fail!");
-		return -1;
+		abort();
 	}
 
 	for (;;) {
@@ -763,8 +763,6 @@ send_data:
 		DCC_LOG(LOG_TRACE, "disconnecting.");
 		udp_connect(udp, INADDR_ANY, 0);
 	}
-
-	return 0;
 }
 
 uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
@@ -775,7 +773,7 @@ int tftpd_start(void)
 
 	th = __os_thread_create((void *)tftp_daemon_task, (void *)&debugger, 
 							tftp_stack, sizeof(tftp_stack), 
-							__OS_PRIORITY_LOWEST);
+							__OS_PRIORITY_HIGH);
 
 	tracef("TFTP started th=%d", th);
 

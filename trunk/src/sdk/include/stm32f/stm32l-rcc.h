@@ -419,39 +419,10 @@ is cleared, LSIRDY goes low after 3 LSI oscillator clock cycles.
 0: LSI oscillator OFF
 1: LSI oscillator ON */
 
-#ifndef __ASSEMBLER__
-
-#include <stdint.h>
-
-#if defined(STM32L1X)
-struct stm32_rcc {
-	volatile uint32_t cr;
-	volatile uint32_t icscr; 
-	volatile uint32_t cfgr; 
-	volatile uint32_t cir; 
-
-	volatile uint32_t ahbrstr;
-	volatile uint32_t apb2rstr;
-	volatile uint32_t apb1rstr;
-	volatile uint32_t ahbenr;
-
-	volatile uint32_t apb2enr;
-	volatile uint32_t apb1enr;
-	volatile uint32_t ahblpenr;
-	volatile uint32_t apb2lpenr;
-
-	volatile uint32_t apb1lpenr;
-	volatile uint32_t csr;
-};
-#endif /* STM32L1X */
 
 #define STM32_AHB  0
 #define STM32_APB1 1
 #define STM32_APB2 2
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define STM32_CLK_FSMC   STM32_AHB, RCC_FSMC
 #define STM32_CLK_AES    STM32_AHB, RCC_AES
@@ -498,8 +469,37 @@ extern "C" {
 #define STM32_CLK_TIM3   STM32_APB1, RCC_TIM3
 #define STM32_CLK_TIM2   STM32_APB1, RCC_TIM2
 
+#ifndef __ASSEMBLER__
+
+#include <stdint.h>
+
+struct stm32_rcc {
+	volatile uint32_t cr;
+	volatile uint32_t icscr; 
+	volatile uint32_t cfgr; 
+	volatile uint32_t cir; 
+
+	volatile uint32_t ahbrstr;
+	volatile uint32_t apb2rstr;
+	volatile uint32_t apb1rstr;
+	volatile uint32_t ahbenr;
+
+	volatile uint32_t apb2enr;
+	volatile uint32_t apb1enr;
+	volatile uint32_t ahblpenr;
+	volatile uint32_t apb2lpenr;
+
+	volatile uint32_t apb1lpenr;
+	volatile uint32_t csr;
+};
+
+struct stm32_clk {
+	uint8_t bus:3;
+	uint8_t bit:5;
+} __attribute__((packed))__;
+
 #ifdef __cplusplus
-}
+extern "C" {
 #endif
 
 static inline void stm32_clk_enable(struct stm32_rcc * rcc, 
@@ -521,6 +521,10 @@ static inline void stm32_clk_disable(struct stm32_rcc * rcc,
 	else
 		rcc->ahbenr &= ~(1 << bit);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* __ASSEMBLER__ */
