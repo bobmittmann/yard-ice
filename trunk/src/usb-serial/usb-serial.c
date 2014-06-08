@@ -144,7 +144,7 @@ void __attribute__((noreturn)) button_task(void)
 
 		case EVENT_CLICK_N_HOLD:
 			DCC_LOG(LOG_TRACE, "EVENT_CLICK_N_HOLD");
-			stm32f_gpio_clr(EXTRST0_IO);
+			stm32_gpio_clr(EXTRST0_IO);
 //			stm32f_gpio_clr(EXTRST1_IO);
 //			pin2_sel_vcc();
 //			led2_off();
@@ -512,6 +512,14 @@ uint32_t __attribute__((aligned(8))) serial1_recv_stack[RECV_STACK_SIZE / 4];
 //uint32_t __attribute__((aligned(8))) serial2_recv_stack[RECV_STACK_SIZE / 4];
 //uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
 
+void busy(void)
+{
+	for (;;) {
+		thinkos_sleep(1000);
+		DCC_LOG(LOG_TRACE, "....");
+	}
+}
+
 int main(int argc, char ** argv)
 {
 	uint64_t esn;
@@ -545,10 +553,13 @@ int main(int argc, char ** argv)
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 
+	ui_init();
+
+	led_flash_all(3);
+
 	vcom[0].cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
 	vcom[1].cdc = vcom[0].cdc;
 
-	ui_init();
 
 	thinkos_thread_create((void *)button_task, (void *)NULL,
 						  button_stack, sizeof(button_stack),
@@ -560,6 +571,7 @@ int main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
 #endif
+
 
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
@@ -578,8 +590,6 @@ int main(int argc, char ** argv)
 						  serial2_ctrl_stack, sizeof(serial2_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 #endif
-
-	led_flash_all(3);
 
 	usb_vbus(true);
 

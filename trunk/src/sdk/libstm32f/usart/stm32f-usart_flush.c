@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_flush(struct stm32f_usart * usart)
+int stm32_usart_flush(struct stm32_usart * usart)
 {
 	int c;
 

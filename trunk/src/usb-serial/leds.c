@@ -133,17 +133,17 @@ static uint32_t __attribute__((aligned(8))) led_stack[32];
 
 void leds_init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_tim * tim = STM32F_TIM3;
-	struct stm32f_afio * afio = STM32F_AFIO;
+	struct stm32_afio * afio = STM32_AFIO;
 	uint32_t div;
 	uint32_t pre;
 	uint32_t n;
 
 	afio->mapr |= AFIO_SPI1_REMAP;
 
-	stm32f_gpio_mode(LED1_IO, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(LED2_IO, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(LED1_IO, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(LED2_IO, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 
 	/* get the total divisior */
 	div = ((2 * stm32f_apb1_hz) + (TIMER_PWM_FREQ / 2)) / TIMER_PWM_FREQ;

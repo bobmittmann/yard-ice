@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-const struct stm32f_usart * const stm32f_usart_lut[] = {
+const struct stm32_usart * const stm32_usart_lut[] = {
 	STM32_USART1,
 	STM32_USART2,
 	STM32_USART3,
@@ -33,7 +33,7 @@ const struct stm32f_usart * const stm32f_usart_lut[] = {
 #endif
 };
 
-const uint8_t stm32f_usart_irq_lut[] = {
+const uint8_t stm32_usart_irq_lut[] = {
 	STM32_IRQ_USART1,
 	STM32_IRQ_USART2,
 	STM32_IRQ_USART3,
@@ -79,11 +79,11 @@ const struct stm32_clk stm32_usart_clk_lut[] = {
 };
 #endif
 
-int stm32f_usart_lookup(struct stm32f_usart * usart)
+int stm32_usart_lookup(struct stm32_usart * usart)
 {
-	int id = sizeof(stm32f_usart_lut) / sizeof(struct stm32f_usart *);
+	int id = sizeof(stm32_usart_lut) / sizeof(struct stm32_usart *);
 
-	while ((--id >= 0) && (usart != stm32f_usart_lut[id]));
+	while ((--id >= 0) && (usart != stm32_usart_lut[id]));
 
 	return id;
 }

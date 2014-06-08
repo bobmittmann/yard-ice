@@ -34,8 +34,6 @@ extern const struct stm32_clk stm32_usart_clk_lut[];
 extern "C" {
 #endif
 
-int stm32f_usart_lookup(struct stm32f_usart * us);
-
 #ifdef __cplusplus
 }
 #endif	

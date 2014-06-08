@@ -25,13 +25,13 @@
 
 #include <sys/stm32f.h>
 
-#define USB_FS_DP STM32F_GPIOA, 12
-#define USB_FS_DM STM32F_GPIOA, 11
+#define USB_FS_DP STM32_GPIOA, 12
+#define USB_FS_DM STM32_GPIOA, 11
 
-#define USB_FS_VBUS STM32F_GPIOB, 6 /* PB6 */
+#define USB_FS_VBUS STM32_GPIOB, 6 /* PB6 */
 
-#define PUSHBTN_IO STM32F_GPIOB, 8
-#define EXTRST0_IO STM32F_GPIOB, 0 
+#define PUSHBTN_IO STM32_GPIOB, 8
+#define EXTRST0_IO STM32_GPIOB, 0 
 
 /* ---------------------------------------------------------------------------
  * PIN1 -  PA1 (USART2_RTS) | PB11 (USART3_RX) |      |
@@ -43,25 +43,25 @@
  */
 
 /* Pin 1 */
-#define USART2_RTS STM32F_GPIOA, 1
-#define USART3_RX STM32F_GPIOB, 11
+#define USART2_RTS STM32_GPIOA, 1
+#define USART3_RX STM32_GPIOB, 11
 
 /* Pin 2 */
-#define USART2_CK STM32F_GPIOA, 4
-#define USART3_TX STM32F_GPIOB, 10
-#define EXTRST1_IO STM32F_GPIOA, 5 /* PA5 */
+#define USART2_CK STM32_GPIOA, 4
+#define USART3_TX STM32_GPIOB, 10
+#define EXTRST1_IO STM32_GPIOA, 5 /* PA5 */
 
 /* Pin 4 */
-#define USART2_RX STM32F_GPIOA, 3
-#define USART1_RX STM32F_GPIOA, 10
+#define USART2_RX STM32_GPIOA, 3
+#define USART1_RX STM32_GPIOA, 10
 
 /* Pin 5 */
-#define USART2_TX STM32F_GPIOA, 2
-#define USART1_TX STM32F_GPIOA, 9
+#define USART2_TX STM32_GPIOA, 2
+#define USART1_TX STM32_GPIOA, 9
 
 /* LEDs */
-#define LED1_IO STM32F_GPIOA, 6
-#define LED2_IO STM32F_GPIOA, 7
+#define LED1_IO STM32_GPIOA, 6
+#define LED2_IO STM32_GPIOA, 7
 
 
 #ifdef __cplusplus

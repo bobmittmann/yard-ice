@@ -22,10 +22,10 @@
 
 #include "usart-priv.h"
 
-const struct fileop stm32f_usart_fops_raw = {
-	.write = (void *)stm32f_usart_write,
-	.read = (void *)stm32f_usart_read,
-	.flush = (void *)stm32f_usart_flush,
-	.close = (void *)stm32f_usart_power_off
+const struct fileop stm32_usart_fops_raw = {
+	.write = (void *)stm32_usart_write,
+	.read = (void *)stm32_usart_read,
+	.flush = (void *)stm32_usart_flush,
+	.close = (void *)stm32_usart_power_off
 };
 

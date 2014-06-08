@@ -62,31 +62,31 @@ static const struct {
 };
 
 const struct file stm32f_uart_file[] = {
-	{ .data = STM32_USART1, .op = &stm32f_usart_fops },
-	{ .data = STM32_USART2, .op = &stm32f_usart_fops },
-	{ .data = STM32_USART3, .op = &stm32f_usart_fops },
-	{ .data = STM32_UART4, .op = &stm32f_usart_fops },
-	{ .data = STM32_UART5, .op = &stm32f_usart_fops },
+	{ .data = STM32_USART1, .op = &stm32_usart_fops },
+	{ .data = STM32_USART2, .op = &stm32_usart_fops },
+	{ .data = STM32_USART3, .op = &stm32_usart_fops },
+	{ .data = STM32_UART4, .op = &stm32_usart_fops },
+	{ .data = STM32_UART5, .op = &stm32_usart_fops },
 #ifdef STM32F_USART6
-	{ .data = STM32F_USART6, .op = &stm32f_usart_fops }
+	{ .data = STM32F_USART6, .op = &stm32_usart_fops }
 #endif
 };
 
-struct file * stm32f_usart_open(struct stm32f_usart * us,
+struct file * stm32_usart_open(struct stm32_usart * us,
 								unsigned int baudrate, unsigned int flags)
 {
 	int id;
 
-	if ((id = stm32f_usart_init(us)) < 0) {
+	if ((id = stm32_usart_init(us)) < 0) {
 		return NULL;
 	}
 
 	io_rxd_cfg(STM32_GPIO(cfg[id].rx.port), cfg[id].rx.pin, cfg[id].af);
 	io_txd_cfg(STM32_GPIO(cfg[id].tx.port), cfg[id].tx.pin, cfg[id].af);
 
-	stm32f_usart_baudrate_set(us, baudrate);
-	stm32f_usart_mode_set(us, flags);
-	stm32f_usart_enable(us);
+	stm32_usart_baudrate_set(us, baudrate);
+	stm32_usart_mode_set(us, flags);
+	stm32_usart_enable(us);
 
 	return (struct file *)&stm32f_uart_file[id];
 }

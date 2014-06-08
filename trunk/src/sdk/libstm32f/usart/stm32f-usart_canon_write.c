@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_canon_write(struct stm32f_usart * usart, const void * buf,
+int stm32_usart_canon_write(struct stm32_usart * usart, const void * buf,
 							 unsigned int len)
 {
 	char * cp = (char *)buf;
@@ -32,8 +32,8 @@ int stm32f_usart_canon_write(struct stm32f_usart * usart, const void * buf,
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		if (c == '\n')
-			stm32f_usart_putc(usart, '\r');
-		stm32f_usart_putc(usart, c);
+			stm32_usart_putc(usart, '\r');
+		stm32_usart_putc(usart, c);
 	}
 
 	return n;

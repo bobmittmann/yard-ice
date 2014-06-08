@@ -92,7 +92,7 @@ struct serial_dev {
 	struct uart_fifo rx_fifo;
 	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
 	uint32_t * txie;
-	struct stm32f_usart * uart;
+	struct stm32_usart * uart;
 };
 
 int serial_read(struct serial_dev * dev, char * buf, 
@@ -169,7 +169,7 @@ int serial_write(struct serial_dev * dev, const void * buf,
 
 int serial_config_get(struct serial_dev * dev, struct serial_config * cfg)
 {
-//	struct stm32f_usart * uart = dev->uart;
+//	struct stm32_usart * uart = dev->uart;
 
 	return 0;
 }
@@ -177,23 +177,23 @@ int serial_config_get(struct serial_dev * dev, struct serial_config * cfg)
 int serial_config_set(struct serial_dev * dev, 
 					  const struct serial_config * cfg)
 {
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * uart = dev->uart;
 	uint32_t flags;
 
 	DCC_LOG(LOG_INFO, "...");
 
-	stm32f_usart_baudrate_set(uart, cfg->baudrate);
+	stm32_usart_baudrate_set(uart, cfg->baudrate);
 
 	flags = CFG_TO_FLAGS(cfg);
 
-	stm32f_usart_mode_set(uart, flags);
+	stm32_usart_mode_set(uart, flags);
 
 	return 0;
 }
 
 void serial_isr(struct serial_dev * dev)
 {
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * uart = dev->uart;
 	uint32_t sr;
 	int c;
 	
@@ -272,9 +272,9 @@ void stm32f_usart2_isr(void)
 struct serial_dev * serial2_open(void)
 {
 	struct serial_dev * dev = &serial2_dev;
-	struct stm32f_usart * uart = STM32F_USART2;
+	struct stm32_usart * uart = STM32_USART2;
 
-	DCC_LOG2(LOG_INFO, "dev=%p uart=%p...", dev, uart);
+	DCC_LOG2(LOG_TRACE, "dev=%p uart=%p...", dev, uart);
 	dev->rx_flag = thinkos_flag_alloc(); 
 	dev->tx_flag = thinkos_flag_alloc(); 
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
@@ -283,13 +283,13 @@ struct serial_dev * serial2_open(void)
 	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	dev->uart = uart;
 
-	cm3_irq_pri_set(STM32F_IRQ_USART2, UART_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_USART2);
+	cm3_irq_pri_set(STM32_IRQ_USART2, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32_IRQ_USART2);
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 9600);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 9600);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
 	__thinkos_flag_clr(dev->tx_flag);
 
@@ -311,7 +311,7 @@ void stm32f_usart3_isr(void)
 struct serial_dev * serial3_open(void)
 {
 	struct serial_dev * dev = &serial3_dev;
-	struct stm32f_usart * uart = STM32F_USART3;
+	struct stm32_usart * uart = STM32_USART3;
 
 	DCC_LOG2(LOG_INFO, "dev=%p uart=%p...", dev, uart);
 	dev->rx_flag = thinkos_flag_alloc(); 
@@ -322,13 +322,13 @@ struct serial_dev * serial3_open(void)
 	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	dev->uart = uart;
 
-	cm3_irq_pri_set(STM32F_IRQ_USART3, UART_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_USART3);
+	cm3_irq_pri_set(STM32_IRQ_USART3, UART_IRQ_PRIORITY);
+	cm3_irq_enable(STM32_IRQ_USART3);
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 9600);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 9600);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
 	__thinkos_flag_clr(dev->tx_flag);
 

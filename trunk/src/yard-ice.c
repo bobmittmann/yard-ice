@@ -100,9 +100,9 @@
 void tcpip_init(void);
 void env_init(void);
 
-const struct file stm32f_uart_file = {
+const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
-	.op = &stm32f_usart_fops 
+	.op = &stm32_usart_fops 
 };
 
 #define UART_TX STM32_GPIOC, 12
@@ -110,7 +110,7 @@ const struct file stm32f_uart_file = {
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32_UART5;
+	struct stm32_usart * uart = STM32_UART5;
 
 	stm32_gpio_clock_en(STM32_GPIOC);
 	stm32_gpio_clock_en(STM32_GPIOD);
@@ -119,12 +119,12 @@ void stdio_init(void)
 	stm32_gpio_af(UART_RX, GPIO_AF8);
 	stm32_gpio_af(UART_TX, GPIO_AF8);
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 115200);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
-	stderr = (struct file *)&stm32f_uart_file;
+	stderr = (struct file *)&stm32_uart_file;
 	stdout = stderr;
 	stdin = stdout;
 }

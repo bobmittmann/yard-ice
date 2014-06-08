@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_putc(struct stm32f_usart * usart, int c)
+int stm32_usart_putc(struct stm32_usart * usart, int c)
 {
 	while (!(usart->isr & USART_TXE));
 

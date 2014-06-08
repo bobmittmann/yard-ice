@@ -180,11 +180,11 @@
 #define STM32_EXTI ((struct stm32f_exti *)STM32_BASE_EXTI)
 #define STM32_COMP ((struct stm32_comp *)STM32_BASE_COMP)
 
-#define STM32_USART1 ((struct stm32f_usart *)STM32_BASE_USART1)
-#define STM32_USART2 ((struct stm32f_usart *)STM32_BASE_USART2)
-#define STM32_USART3 ((struct stm32f_usart *)STM32_BASE_USART3)
-#define STM32_UART4 ((struct stm32f_usart *)STM32_BASE_UART4)
-#define STM32_UART5 ((struct stm32f_usart *)STM32_BASE_UART5)
+#define STM32_USART1 ((struct stm32_usart *)STM32_BASE_USART1)
+#define STM32_USART2 ((struct stm32_usart *)STM32_BASE_USART2)
+#define STM32_USART3 ((struct stm32_usart *)STM32_BASE_USART3)
+#define STM32_UART4 ((struct stm32_usart *)STM32_BASE_UART4)
+#define STM32_UART5 ((struct stm32_usart *)STM32_BASE_UART5)
 
 #define STM32_SPI1 ((struct stm32f_spi *)STM32_BASE_SPI1)
 #define STM32_SPI2 ((struct stm32f_spi *)STM32_BASE_SPI2)

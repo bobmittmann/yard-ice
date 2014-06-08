@@ -216,7 +216,7 @@ void stm32f_mco2_enable(void);
  * USART 
  *---------------------------------------------------------------------*/
 
-struct file * stm32f_usart_open(struct stm32f_usart * us,
+struct file * stm32_usart_open(struct stm32_usart * us,
 								unsigned int baudrate, unsigned int flags);
 
 
@@ -241,11 +241,11 @@ void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac);
 
 #include <sys/file.h>
 
-extern const struct fileop stm32f_usart_fops;
+extern const struct fileop stm32_usart_fops;
 
-extern const struct fileop stm32f_usart_fops_raw;
+extern const struct fileop stm32_usart_fops_raw;
 
-extern const struct file stm32f_usart5_file;
+extern const struct file stm32_usart5_file;
 
 #ifdef __cplusplus
 }

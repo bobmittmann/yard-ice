@@ -39,7 +39,7 @@
 #if 0
 /* GPIO pin description */ 
 struct stm32f_io {
-	struct stm32f_gpio * gpio;
+	struct stm32_gpio * gpio;
 	uint8_t pin;
 };
 
@@ -67,7 +67,7 @@ void led_on(int id)
 	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
 		return;
 
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
@@ -75,7 +75,7 @@ void led_off(int id)
 	if ((led_drv.lock != UNLOCKED) && (led_drv.lock != thinkos_thread_self()))
 		return;
 
-	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_flash(int id, int ms)
@@ -84,7 +84,7 @@ void led_flash(int id, int ms)
 		return;
 
 	led_drv.tmr[id] = ms / POLL_PERIOD_MS;
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_all_off(void)
@@ -95,7 +95,7 @@ void leds_all_off(void)
 		return;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i)
-		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 }
 
 void leds_all_on(void)
@@ -106,7 +106,7 @@ void leds_all_on(void)
 		return;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i)
-		stm32f_gpio_set(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_set(led_io[i].gpio, led_io[i].pin);
 }
 
 void leds_all_flash(int ms)
@@ -118,7 +118,7 @@ void leds_all_flash(int ms)
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
 		led_drv.tmr[i] = ms / POLL_PERIOD_MS;
-		stm32f_gpio_set(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_set(led_io[i].gpio, led_io[i].pin);
 	}
 }
 
@@ -146,10 +146,10 @@ void leds_init(void)
 	led_drv.lock = UNLOCKED;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+		stm32_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
-		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
 }
 
@@ -293,10 +293,10 @@ int btn_event_wait(void)
 
 static void btn_init(void)
 {
-	stm32f_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
+	stm32_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
 
 	btn_drv.flag = thinkos_flag_alloc();
-	btn_drv.st = stm32f_gpio_stat(PUSHBTN_IO) ? 1 : 0;
+	btn_drv.st = stm32_gpio_stat(PUSHBTN_IO) ? 1 : 0;
 	btn_drv.fsm = BTN_FSM_IDLE;
 }
 
@@ -321,7 +321,7 @@ void stm32f_tim2_isr(void)
 		if (led_drv.tmr[i] == 0)
 			continue;
 		if (--led_drv.tmr[i] == 0) 
-			stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+			stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
 #endif
 
@@ -331,7 +331,7 @@ void stm32f_tim2_isr(void)
 		__thinkos_flag_signal(btn_drv.flag);
 	} else {
 		/* process push button */
-		st = stm32f_gpio_stat(PUSHBTN_IO) ? 1 : 0;
+		st = stm32_gpio_stat(PUSHBTN_IO) ? 1 : 0;
 		if (btn_drv.st != st) {
 			btn_drv.st = st;
 			btn_drv.event = st ? BTN_PRESSED : BTN_RELEASED;
@@ -342,7 +342,7 @@ void stm32f_tim2_isr(void)
 
 void ui_init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_tim * tim = STM32F_TIM2;
 	uint32_t div;
 	uint32_t pre;
@@ -360,7 +360,7 @@ void ui_init(void)
 	n = (div * 2 + pre) / (2 * pre);
 
 	DCC_LOG3(LOG_TRACE, "freq=%dHz pre=%d n=%d", freq, pre, n);
-	DCC_LOG1(LOG_TRACE, "real freq=%dHz\n", (2 * stm32f_apb1_hz) / pre / n);
+	DCC_LOG1(LOG_TRACE, "real freq=%dHz", (2 * stm32f_apb1_hz) / pre / n);
 
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM2EN;

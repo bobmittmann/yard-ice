@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-void stm32f_usart_enable(struct stm32f_usart * us)
+void stm32_usart_enable(struct stm32_usart * us)
 {
 	/* enable TX and RX */
 	us->cr1 |= USART_UE | USART_TE | USART_RE;

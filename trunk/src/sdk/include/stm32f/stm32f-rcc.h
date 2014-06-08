@@ -2430,12 +2430,13 @@ static inline void stm32_clk_enable(struct stm32_rcc * rcc,
 		rcc->apb2enr |= 1 << bit;
 	else if (bus == STM32_APB1)
 		rcc->apb1enr |= 1 << bit;
+#if defined(STM32F1X) || defined(STM32F3X)
+	else
+		rcc->ahbenr |= 1 << bit;
+#else
 	else if (bus == STM32_AHB2)
 		rcc->ahb2enr |= 1 << bit;
 	else
-#if defined(STM32F1X) || defined(STM32F3X)
-		rcc->ahbenr |= 1 << bit;
-#else
 		rcc->ahb1enr |= 1 << bit;
 #endif
 }
@@ -2446,12 +2447,13 @@ static inline void stm32_clk_disable(struct stm32_rcc * rcc,
 		rcc->apb2enr &= ~(1 << bit);
 	else if (bus == STM32_APB1)
 		rcc->apb1enr &= ~(1 << bit);
+#if defined(STM32F1X) || defined(STM32F3X)
+	else
+		rcc->ahbenr &= ~(1 << bit);
+#else
 	else if (bus == STM32_AHB2)
 		rcc->ahb2enr &= ~(1 << bit);
 	else
-#if defined(STM32F1X) || defined(STM32F3X)
-		rcc->ahbenr &= ~(1 << bit);
-#else
 		rcc->ahb1enr &= ~(1 << bit);
 #endif
 }

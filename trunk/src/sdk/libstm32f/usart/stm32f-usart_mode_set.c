@@ -23,7 +23,7 @@
 #include "usart-priv.h"
 #include <sys/serial.h>
 
-int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
+int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 {
 	uint32_t cr1;
 	uint32_t cr2;
@@ -31,7 +31,7 @@ int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags)
 	int bits;
 	int id;
 
-	if ((id = stm32f_usart_lookup(us)) < 0) {
+	if ((id = stm32_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
 		return id;
 	}

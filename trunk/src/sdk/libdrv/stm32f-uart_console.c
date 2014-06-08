@@ -128,7 +128,7 @@ struct uart_console_dev {
 	struct uart_fifo rx_fifo;
 	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
 	uint32_t * txie;
-	struct stm32f_usart * uart;
+	struct stm32_usart * uart;
 };
 
 static int uart_console_read(struct uart_console_dev * dev, char * buf, 
@@ -244,7 +244,7 @@ struct uart_console_dev uart_console_dev;
 void UART_ISR(void)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * uart = dev->uart;
 	uint32_t sr;
 	int c;
 	
@@ -294,9 +294,9 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 											unsigned int flags)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
-	struct stm32f_usart * uart = UART;
+	struct stm32_usart * uart = UART;
 #if defined(STM32F1X)
-	struct stm32f_afio * afio = STM32F_AFIO;
+	struct stm32_afio * afio = STM32_AFIO;
 #endif
 
 	stm32_gpio_clock_en(STM32_GPIOC);
@@ -337,10 +337,10 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	dev->uart = uart;
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 115200);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
 	/* enable RX interrupt */
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
