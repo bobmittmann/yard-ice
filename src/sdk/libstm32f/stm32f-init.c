@@ -139,7 +139,7 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 
 void _init(void)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t sr;
 	uint32_t cr;

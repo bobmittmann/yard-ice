@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
+int stm32_usart_baudrate_set(struct stm32_usart * us, unsigned int baudrate)
 {
 	uint32_t div;
 	uint32_t f;
@@ -31,7 +31,7 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 	uint32_t f_pclk;
 	int id;
 
-	if ((id = stm32f_usart_lookup(us)) < 0) {
+	if ((id = stm32_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
 		return id;
 	}

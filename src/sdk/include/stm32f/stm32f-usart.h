@@ -524,7 +524,7 @@ An interrupt is generated if PEIE = 1 in the USART_CR1 register.
 
 #include <stdint.h>
 
-struct stm32f_usart {
+struct stm32_usart {
 #if defined(STM32F3X)
 	volatile uint32_t cr1;
 	volatile uint32_t cr2;
@@ -560,51 +560,51 @@ struct stm32f_usart {
 #endif
 };
 
-extern const uint8_t stm32f_usart_irq_lut[];
+extern const uint8_t stm32_usart_irq_lut[];
 
-extern const struct stm32f_usart * const stm32f_usart_lut[];
+extern const struct stm32_usart * const stm32_usart_lut[];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int stm32f_usart_lookup(struct stm32f_usart * usart);
+int stm32_usart_lookup(struct stm32_usart * usart);
 
-int stm32f_usart_putc(struct stm32f_usart * usart, int c);
+int stm32_usart_putc(struct stm32_usart * usart, int c);
 
-int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec);
+int stm32_usart_getc(struct stm32_usart * usart, unsigned int msec);
 
-int stm32f_usart_read(struct stm32f_usart * usart, char * buf,
+int stm32_usart_read(struct stm32_usart * usart, char * buf,
 					  unsigned int len, unsigned int msec);
 
-int stm32f_usart_write(struct stm32f_usart * usart, const void * buf,
+int stm32_usart_write(struct stm32_usart * usart, const void * buf,
 					   unsigned int len);
 
-int stm32f_usart_canon_write(struct stm32f_usart * usart, const void * buf,
+int stm32_usart_canon_write(struct stm32_usart * usart, const void * buf,
 							 unsigned int len);
 
-int stm32f_usart_power_off(struct stm32f_usart * us);
+int stm32_usart_power_off(struct stm32_usart * us);
 
-int stm32f_usart_flush(struct stm32f_usart * usart);
+int stm32_usart_flush(struct stm32_usart * usart);
 
-int stm32f_usart_init(struct stm32f_usart * us);
+int stm32_usart_init(struct stm32_usart * us);
 
-int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate);
+int stm32_usart_baudrate_set(struct stm32_usart * us, unsigned int baudrate);
 
-unsigned int stm32f_usart_baudrate_get(struct stm32f_usart * us);
+unsigned int stm32_usart_baudrate_get(struct stm32_usart * us);
 
-int stm32f_usart_mode_set(struct stm32f_usart * us, unsigned int flags);
+int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags);
 
-void stm32f_usart_enable(struct stm32f_usart * us);
+void stm32_usart_enable(struct stm32_usart * us);
 
-void stm32f_usart_disable(struct stm32f_usart * us);
+void stm32_usart_disable(struct stm32_usart * us);
 
 #ifdef __cplusplus
 }
 #endif
 
-static inline int stm32f_usart_irq_lookup(struct stm32f_usart * usart) {
-	return stm32f_usart_irq_lut[stm32f_usart_lookup(usart)];
+static inline int stm32_usart_irq_lookup(struct stm32_usart * usart) {
+	return stm32_usart_irq_lut[stm32_usart_lookup(usart)];
 }
 
 #endif /* __ASSEMBLER__ */

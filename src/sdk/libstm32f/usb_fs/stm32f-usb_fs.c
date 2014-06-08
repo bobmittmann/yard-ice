@@ -34,29 +34,29 @@
 
 #if defined(STM32F103) || defined(STM32F30X)
 
-#define USB_FS_DP STM32F_GPIOA, 12
-#define USB_FS_DM STM32F_GPIOA, 11
-#define USB_FS_VBUS STM32F_GPIOB, 12
+#define USB_FS_DP STM32_GPIOA, 12
+#define USB_FS_DM STM32_GPIOA, 11
+#define USB_FS_VBUS STM32_GPIOB, 12
 
 void stm32f_usb_io_init(void)
 {
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOB);
 
-	stm32f_gpio_mode(USB_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32f_gpio_mode(USB_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(USB_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(USB_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 
 	/* PB12: External Pull-up */
-	stm32f_gpio_mode(USB_FS_VBUS, INPUT, 0);
-	stm32f_gpio_set(USB_FS_VBUS);
+	stm32_gpio_mode(USB_FS_VBUS, INPUT, 0);
+	stm32_gpio_set(USB_FS_VBUS);
 }
 
 void stm32f_usb_vbus_connect(bool connect)
 {
 	if (connect)
-		stm32f_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
+		stm32_gpio_mode(USB_FS_VBUS, OUTPUT, PUSH_PULL | SPEED_LOW);
 	else
-		stm32f_gpio_mode(USB_FS_VBUS, INPUT, SPEED_LOW);
+		stm32_gpio_mode(USB_FS_VBUS, INPUT, SPEED_LOW);
 #if 0
 	if (connect)
 		stm32f_gpio_mode(USB_FS_VBUS, ALT_FUNC, SPEED_LOW);
@@ -67,7 +67,7 @@ void stm32f_usb_vbus_connect(bool connect)
 
 void stm32f_usb_power_on(struct stm32f_usb * usb)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 	DCC_LOG(LOG_TRACE, "Enabling USB device clock...");
 
@@ -94,7 +94,7 @@ void stm32f_usb_power_on(struct stm32f_usb * usb)
 
 void stm32f_usb_power_off(struct stm32f_usb * usb)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 	usb->cntr = USB_FRES;
 	/* Removing any spurious pending interrupts */
@@ -108,8 +108,8 @@ void stm32f_usb_power_off(struct stm32f_usb * usb)
 	rcc->apb1enr &= ~RCC_USBEN;
 
 	/* disabling IO pins */
-	stm32f_gpio_mode(USB_FS_DP, INPUT, 0);
-	stm32f_gpio_mode(USB_FS_DM, INPUT, 0);
+	stm32_gpio_mode(USB_FS_DP, INPUT, 0);
+	stm32_gpio_mode(USB_FS_DM, INPUT, 0);
 
 }
 

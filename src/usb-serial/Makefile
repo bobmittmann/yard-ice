@@ -34,9 +34,9 @@ LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem
 INCPATH = ../sdk/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O1
+CFLAGS = -g -O2
 
-JTAGTOOL_ADDR = 192.168.10.128 
+JTAGTOOL_ADDR = 192.168.0.128 
 #JTAG_TARGET = stm32
 
 MACH = stm32f103x6

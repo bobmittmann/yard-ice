@@ -230,12 +230,12 @@
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
-#define STM32_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
-#define STM32_USART2 ((struct stm32f_usart *)STM32F_BASE_USART2)
-#define STM32_USART3 ((struct stm32f_usart *)STM32F_BASE_USART3)
-#define STM32_UART4 ((struct stm32f_usart *)STM32F_BASE_UART4)
-#define STM32_UART5 ((struct stm32f_usart *)STM32F_BASE_UART5)
-#define STM32_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
+#define STM32_USART1 ((struct stm32_usart *)STM32F_BASE_USART1)
+#define STM32_USART2 ((struct stm32_usart *)STM32F_BASE_USART2)
+#define STM32_USART3 ((struct stm32_usart *)STM32F_BASE_USART3)
+#define STM32_UART4 ((struct stm32_usart *)STM32F_BASE_UART4)
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+#define STM32_USART6 ((struct stm32_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)

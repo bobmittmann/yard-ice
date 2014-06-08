@@ -22,7 +22,7 @@
 
 #include "usart-priv.h"
 
-void stm32f_usart_disable(struct stm32f_usart * us)
+void stm32_usart_disable(struct stm32_usart * us)
 {
 	/* disable TX, RX and all interrupts */
 	us->cr1 = 0;

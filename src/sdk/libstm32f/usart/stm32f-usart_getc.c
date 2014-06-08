@@ -23,7 +23,7 @@
 #include "usart-priv.h"
 #include <sys/delay.h>
 
-int stm32f_usart_getc(struct stm32f_usart * usart, unsigned int msec)
+int stm32_usart_getc(struct stm32_usart * usart, unsigned int msec)
 {
 	int tm;
 

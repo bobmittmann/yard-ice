@@ -92,7 +92,7 @@ struct serial_dev {
 	struct uart_fifo rx_fifo;
 	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
 	uint32_t * txie;
-	struct stm32f_usart * uart;
+	struct stm32_usart * uart;
 };
 
 int serial_read(struct serial_dev * dev, char * buf, 
@@ -171,16 +171,16 @@ int serial_config_get(struct serial_dev * dev, struct serial_config * cfg)
 int serial_config_set(struct serial_dev * dev, 
 					  const struct serial_config * cfg)
 {
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * uart = dev->uart;
 	uint32_t flags;
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	stm32f_usart_baudrate_set(uart, cfg->baudrate);
+	stm32_usart_baudrate_set(uart, cfg->baudrate);
 
 	flags = CFG_TO_FLAGS(cfg);
 
-	stm32f_usart_mode_set(uart, flags);
+	stm32_usart_mode_set(uart, flags);
 
 	return 0;
 }
@@ -191,7 +191,7 @@ struct serial_dev serial_dev;
 void stm32f_usart6_isr(void)
 {
 	struct serial_dev * dev = &serial_dev;
-	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * uart = dev->uart;
 	uint32_t sr;
 	int c;
 	
@@ -247,7 +247,7 @@ static void io_init(void)
 
 struct serial_dev * serial_open(void)
 {
-	struct stm32f_usart * uart = STM32_USART6;
+	struct stm32_usart * uart = STM32_USART6;
 	struct serial_dev * dev = &serial_dev;
 
 	DCC_LOG(LOG_INFO, "...");
@@ -261,10 +261,10 @@ struct serial_dev * serial_open(void)
 
 	io_init();
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 115200);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
 	cm3_irq_pri_set(STM32_IRQ_USART6, UART_IRQ_PRIORITY);
 	cm3_irq_enable(STM32_IRQ_USART6);

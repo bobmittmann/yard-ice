@@ -8,9 +8,9 @@
 
 #include "board.h"
 
-struct file stm32f_uart2_file = {
+struct file stm32_uart2_file = {
 	.data = STM32_USART2, 
-	.op = &stm32f_usart_fops 
+	.op = &stm32_usart_fops 
 };
 
 #if 0
@@ -63,14 +63,14 @@ void freq_gen_init(uint32_t freq)
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32_USART2;
+	struct stm32_usart * uart = STM32_USART2;
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 9600);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 38400);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
-	stderr = &stm32f_uart2_file;
+	stderr = &stm32_uart2_file;
 	stdin = stderr;
 	stdout = stdin;
 }

@@ -22,13 +22,13 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_read(struct stm32f_usart * usart, char * buf, 
+int stm32_usart_read(struct stm32_usart * usart, char * buf, 
 					  unsigned int len, unsigned int msec)
 {
 	char * cp = (char *)buf;
 	int c;
 
-	c = stm32f_usart_getc(usart, msec);
+	c = stm32_usart_getc(usart, msec);
 
 	if (c < 0)
 		return 0;

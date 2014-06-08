@@ -22,11 +22,11 @@
 
 #include "usart-priv.h"
 
-int stm32f_usart_power_off(struct stm32f_usart * us)
+int stm32_usart_power_off(struct stm32_usart * us)
 {
 	int id;
 
-	if ((id = stm32f_usart_lookup(us)) < 0) {
+	if ((id = stm32_usart_lookup(us)) < 0) {
 		/* invalid UART ??? */
 		return id;
 	}
