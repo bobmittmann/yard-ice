@@ -2193,7 +2193,9 @@ union {
 	cm3ice_ctrl_t cm3ice_ctrl;
 } dbg_ice_ctrl_buf;
 
-int target_configure(FILE * f, const struct target_info * target, int force)
+
+int target_ice_configure(FILE * f, const struct target_info * target, 
+						 int force)
 {
 	struct debugger * dbg = &debugger;
 	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
@@ -2515,8 +2517,48 @@ int target_configure(FILE * f, const struct target_info * target, int force)
 	dbg->state = DBG_ST_UNCONNECTED;
 	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
 
+	__os_mutex_unlock(dbg->busy);
 
-	/* Finally execute the target specific configuration */
+	return 0;
+}
+
+int target_config(FILE * f)
+{
+	struct debugger * dbg = &debugger;
+	const struct target_info * target;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if ((target = dbg->target) == NULL) {
+		DCC_LOG(LOG_ERROR, "NULL target!");
+		__os_mutex_unlock(dbg->busy);
+		return ERR_NULL_TARGET;
+	}
+
+	if (dbg->state < DBG_ST_UNCONNECTED) {
+		DCC_LOG(LOG_ERROR, "Invalid state!");
+		__os_mutex_unlock(dbg->busy);
+		return ERR_STATE;
+	}
+
+	if (dbg->state >= DBG_ST_CONNECTED) {
+		poll_stop(dbg);
+
+		if ((ret = ice_release(ice)) < 0) {
+			DCC_LOG(LOG_WARNING, "drv->release() failed! [DBG_ST_OUTOFSYNC]");
+			dbg->state = DBG_ST_OUTOFSYNC;
+			__os_mutex_unlock(dbg->busy);
+			return ERR_OUTOFSYNC;
+		} 
+		
+		dbg->state = DBG_ST_UNCONNECTED;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+	}
+
+
+	/* Execute the target specific configuration */
 	if (target->pos_config) {
 		DCC_LOG(LOG_TRACE, "Target pos config callback...");
 		if ((ret = target->pos_config(f, ice, target)) < 0) {

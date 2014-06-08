@@ -101,7 +101,7 @@ void tcpip_init(void);
 void env_init(void);
 
 const struct file stm32f_uart_file = {
-	.data = STM32F_UART5, 
+	.data = STM32_UART5, 
 	.op = &stm32f_usart_fops 
 };
 
@@ -110,7 +110,7 @@ const struct file stm32f_uart_file = {
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32F_UART5;
+	struct stm32f_usart * uart = STM32_UART5;
 
 	stm32_gpio_clock_en(STM32_GPIOC);
 	stm32_gpio_clock_en(STM32_GPIOD);
@@ -298,15 +298,20 @@ int init_target(void)
 	trace("* target select...");
 
 	/* TODO: ice driver selection */
-	if (target_configure(stdout, target, 1) < 0) {
-		tracef("ERROR: target_configure()!");
-		return 0;
+	if (target_ice_configure(stdout, target, 1) < 0) {
+		tracef("ERROR: target_ice_configure()!");
+		return -1;
 	}
 
 	tracef("* target: %s [%s-%s-%s %s-%s-%s]", target->name, 
 		   target->arch->name, target->arch->model, target->arch->vendor,
 		   target->arch->cpu->family, target->arch->cpu->model, 
 		   target->arch->cpu->vendor);
+
+	if (target_config(stdout) < 0) {
+		tracef("ERROR: target_config()!");
+		return -1;
+	}
 
 	return 0;
 }
@@ -380,21 +385,6 @@ int main(int argc, char ** argv)
 	tracef("* configuring initial target ... ");
 	init_target();
 
-#if (ENABLE_TFTP)
-	tracef("* starting TFTP server ... ");
-	tftpd_start();
-#endif
-
-#if (ENABLE_GDB)
-	tracef("* starting GDB daemon ... ");
-	gdb_rspd_start();
-#endif
-
-#if (ENABLE_COMM)
-	tracef("* starting COMM daemon ... ");
-	comm_tcp_start(&debugger.comm);
-#endif
-
 #if (ENABLE_VCOM)
 	tracef("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
@@ -410,6 +400,21 @@ int main(int argc, char ** argv)
 #if ENABLE_TELNET
 	tracef("* starting TELNET server ... ");
 	telnet_shell();
+#endif
+
+#if (ENABLE_COMM)
+	tracef("* starting COMM daemon ... ");
+	comm_tcp_start(&debugger.comm);
+#endif
+
+#if (ENABLE_TFTP)
+	tracef("* starting TFTP server ... ");
+	tftpd_start();
+#endif
+
+#if (ENABLE_GDB)
+	tracef("* starting GDB daemon ... ");
+	gdb_rspd_start();
 #endif
 
 

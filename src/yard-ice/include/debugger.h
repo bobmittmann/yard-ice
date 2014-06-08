@@ -41,7 +41,9 @@ typedef enum {
 	ERR_BUSY = -3,
 	ERR_STATE = -4,
 	ERR_DRV_FAIL = -5,
-	ERR_TIMEOUT = -6
+	ERR_TIMEOUT = -6,
+	ERR_NULL_TARGET = -7,
+	ERR_OUTOFSYNC = -8
 } dbg_errno_t;
 
 /* target state */
@@ -154,7 +156,10 @@ extern "C" {
 
 int target_status(void);
 
-int target_configure(FILE * f, const struct target_info * target, int force);
+int target_ice_configure(FILE * f, const struct target_info * target, 
+						 int force);
+
+int target_config(FILE * f);
 
 int target_mem_write(uint32_t addr, const void * ptr, int len);
 

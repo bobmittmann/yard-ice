@@ -41,7 +41,7 @@ int stm32f_usart_baudrate_set(struct stm32f_usart * us, unsigned int baudrate)
 	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE | USART_TXEIE | 
 					  USART_TCIE | USART_IDLEIE | USART_RXNEIE);
 
-	if (stm32f_usart_clk_lut[id].apb == STM32F_APB2)
+	if (stm32_usart_clk_lut[id].bus == STM32_APB2)
 		f_pclk = stm32f_apb2_hz;
 	else 
 		f_pclk = stm32f_apb1_hz;

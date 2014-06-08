@@ -28,7 +28,7 @@
 
 #include <sys/dcclog.h>
 
-extern const struct stm32f_clk stm32f_usart_clk_lut[];
+extern const struct stm32_clk stm32_usart_clk_lut[];
 
 #ifdef __cplusplus
 extern "C" {

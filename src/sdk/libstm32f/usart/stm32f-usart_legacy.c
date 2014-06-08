@@ -62,11 +62,11 @@ static const struct {
 };
 
 const struct file stm32f_uart_file[] = {
-	{ .data = STM32F_USART1, .op = &stm32f_usart_fops },
-	{ .data = STM32F_USART2, .op = &stm32f_usart_fops },
-	{ .data = STM32F_USART3, .op = &stm32f_usart_fops },
-	{ .data = STM32F_UART4, .op = &stm32f_usart_fops },
-	{ .data = STM32F_UART5, .op = &stm32f_usart_fops },
+	{ .data = STM32_USART1, .op = &stm32f_usart_fops },
+	{ .data = STM32_USART2, .op = &stm32f_usart_fops },
+	{ .data = STM32_USART3, .op = &stm32f_usart_fops },
+	{ .data = STM32_UART4, .op = &stm32f_usart_fops },
+	{ .data = STM32_UART5, .op = &stm32f_usart_fops },
 #ifdef STM32F_USART6
 	{ .data = STM32F_USART6, .op = &stm32f_usart_fops }
 #endif

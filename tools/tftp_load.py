@@ -67,7 +67,7 @@ tgt_reset_quiet = 'rst\n'\
 	'run\n'\
 	'connect\n'
 
-tgt_init = 'target {0} force\n'\
+tgt_config = 'target {0} force\n'\
 	'connect\n'\
 	'halt\n'\
 	'init\n'
@@ -203,10 +203,10 @@ def main():
 	sys.stdout.flush()
 
 	options = {}
-	options['blksize'] = 512
+	options['blksize'] = 1428
 	timeout = 2
 	port = 69
-	tclient = tftp.TftpClient(host, port, options)
+	tclient = tftp.TftpClient(host, port)
 
 	if quiet:
 		power_on = power_on_quiet 
@@ -219,16 +219,16 @@ def main():
 		try:
 			print(" - Power on")
 			sys.stdout.flush()
-			script = tgt_init.format(power_on)
+			script = power_on
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 		except Exception as err:
 			error(err)
 
 	if init:
 		try:
-			print(" - Initializing remote target")
+			print(" - Configuring remote target")
 			sys.stdout.flush()
-			script = tgt_init.format(target)
+			script = tgt_config.format(target)
 			if verbose:
 				print("   \"{0}\"".format(script))
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
@@ -263,7 +263,7 @@ def main():
 		sys.stdout.flush()
 		t0 = time.time()
 		tclient.put(bin_data, "0x{0:08x}".format(addr), \
-					tftp.TFTP_MODE_OCTET, timeout)
+					tftp.TFTP_MODE_OCTET, timeout, options)
 		dt = time.time() - t0
 		print(" - {0:d} bytes transferred in {1:.2f} seconds"\
 			  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))

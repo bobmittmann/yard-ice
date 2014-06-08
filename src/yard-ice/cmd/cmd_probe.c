@@ -51,7 +51,7 @@ int cmd_probe(FILE * f, int argc, char ** argv)
 
 		fprintf(f, " %2d - '%s' ... ", i, target->name);
 
-		if (target_configure(f, target, 0) < 0) {
+		if (target_ice_configure(f, target, 0) < 0) {
 			fprintf(f, "config error\n");
 		} else {
 			if (target_connect(1) < 0) {
@@ -81,7 +81,7 @@ int cmd_probe(FILE * f, int argc, char ** argv)
 		target = target_first();
 	}
 
-	if ((err = target_configure(f, target, 0)) < 0) {
+	if ((err = target_ice_configure(f, target, 0)) < 0) {
 		fprintf(f, "ERROR: target_configure()!\n");
 	}
 

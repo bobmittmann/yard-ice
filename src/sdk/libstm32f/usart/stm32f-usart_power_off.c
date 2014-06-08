@@ -35,7 +35,8 @@ int stm32f_usart_power_off(struct stm32f_usart * us)
 	us->cr1 = 0;
 
 	/* Disable peripheral clock */
-	stm32f_clk_disable(STM32_RCC, stm32f_usart_clk_lut[id]);
+	stm32_clk_disable(STM32_RCC, stm32_usart_clk_lut[id].bus,
+					  stm32_usart_clk_lut[id].bit);
 
 	return 0;
 }
