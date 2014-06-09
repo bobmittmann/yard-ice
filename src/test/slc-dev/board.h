@@ -84,6 +84,9 @@ static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_mode_out(__gpio, __pin);
 }
 
+void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
+
+void irate_set(unsigned int mv);
 
 #ifdef __cplusplus
 }
