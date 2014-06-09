@@ -13,60 +13,12 @@ struct file stm32_uart2_file = {
 	.op = &stm32_usart_fops 
 };
 
-#if 0
-void freq_gen_init(uint32_t freq)
-{
-	struct stm32f_rcc * rcc = STM32F_RCC;
-	struct stm32f_tim * tim = STM32F_TIM4;
-	uint32_t div;
-	uint32_t pre;
-	uint32_t n;
-
-
-	/* USART1_TX */
-	stm32f_gpio_mode(TIM4_CH3, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(TIM4_CH4, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(TIM4_CH3, GPIO_AF2);
-	stm32f_gpio_af(TIM4_CH4, GPIO_AF2);
-
-
-	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
-	/* get the minimum pre scaler */
-	pre = (div / 65536) + 1;
-	/* get the reload register value */
-	n = (div * 2 + pre) / (2 * pre);
-
-	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM4EN;
-	
-	/* Timer configuration */
-	tim->psc = pre - 1;
-	tim->arr = n - 1;
-	tim->cnt = 0;
-	tim->egr = 0;
-	tim->dier = 0; 
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1 | TIM_OC2M_PWM_MODE1;
-	tim->ccmr2 = TIM_OC3M_PWM_MODE1 | TIM_OC4M_PWM_MODE1;
-
-	tim->ccer = TIM_CC1E | TIM_CC2E | TIM_CC3E | TIM_CC4E;
-
-	tim->ccr1 = tim->arr / 2;
-	tim->ccr2 = tim->arr / 2;
-	tim->ccr3 = tim->arr / 2;
-	tim->ccr4 = tim->arr / 2;
-
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
-}
-
-#endif
-
 void stdio_init(void)
 {
 	struct stm32_usart * uart = STM32_USART2;
 
 	stm32_usart_init(uart);
-	stm32_usart_baudrate_set(uart, 38400);
+	stm32_usart_baudrate_set(uart, 9600);
 	stm32_usart_mode_set(uart, SERIAL_8N1);
 	stm32_usart_enable(uart);
 
@@ -74,7 +26,6 @@ void stdio_init(void)
 	stdin = stderr;
 	stdout = stdin;
 }
-
 
 int main(int argc, char ** argv)
 {
@@ -95,30 +46,49 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
-//	freq_gen_init(32768);
-
 	for (i = 0; ;i++) {
-		DCC_LOG1(LOG_TRACE, "%d...", i);
-//		led_flash(2, 200);
-
-		printf("UU");
-
+//		DCC_LOG1(LOG_TRACE, "%d...", i);
 		led_on(LED1);
-		udelay(200000);
+#if 0
+//		isink_start(0, 100, 300);
+//		udelay(400);
+//		isink_start(1, 100, 300);
+//		udelay(400);
+//		isink_start(2, 100, 300);
+//		udelay(400);
+		isink_start(3, 100, 300);
+		udelay(500);
+//		isink_start(4, 100, 300);
+//		udelay(400);
+//		isink_start(5, 100, 300);
+		isink_start(6, 100, 300);
+		udelay(500);
+//		isink_start(7, 100, 300);
+//		udelay(400);
+//		isink_start(8, 100, 300);
+//		udelay(400);
+		isink_start(9, 100, 300);
+		udelay(500);
+//		isink_start(10, 100, 300);
+//		udelay(500);
 		led_off(LED1);
+#endif
+		irate_set(0);
+		isink_start(9, 35, 300);
 
-		printf("UU");
-		udelay(200000);
+		udelay(700);
 
-		printf("UU");
-		led_on(LED2);
-		udelay(200000);
-		led_off(LED2);
+		irate_set(8191);
+		isink_start(9, 35, 300);
 
-		printf("UU");
-		udelay(200000);
-		printf("UU");
-		udelay(200000);
+		udelay(10000);
+
+//		led_on(LED2);
+//		udelay(200000);
+//		led_off(LED2);
+
+//		udelay(200000);
+//		udelay(200000);
 //		led_flash(3, 200);
 //		leds_all_off();
 //		udelay(500000);
