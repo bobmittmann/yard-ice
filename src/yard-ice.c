@@ -131,7 +131,7 @@ void stdio_init(void)
 
 void rtc_init(void)
 {
-	stm32f_rtc_init();
+//	stm32f_rtc_init();
 }
 
 FILE * monitor_stream;
@@ -416,9 +416,6 @@ int main(int argc, char ** argv)
 	tracef("* starting GDB daemon ... ");
 	gdb_rspd_start();
 #endif
-
-
-//	__os_sleep(500);
 
 	return console_shell();
 }
