@@ -243,11 +243,12 @@ int stm32f_ethif_init(struct ifnet * __if)
 	DCC_LOG1(LOG_TRACE, "rx.sem=%d", drv->rx.sem);
 
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
-	/* setup the source address in the ethernet header 
-	   of the  transmit buffer */
-	stm32f_eth_mac_get(eth, 0, (uint8_t *)drv->tx.hdr.eth_src);
 
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
+		/* setup the source address in the ethernet header 
+		   of the  transmit buffer */
+		stm32f_eth_mac_get(eth, 0, (uint8_t *)drv->tx.hdr[i].eth_src);
+
 		/* configure transmit descriptors */
 		txdesc = &drv->tx.desc[i];
 		/* Transmit buffer 1 size */
@@ -255,7 +256,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 		/* Transmit buffer 2 size */
 		txdesc->tbs2 = 0;
 		/* Transmit buffer 1 addr */
-		txdesc->tbap1 = (void *)&drv->tx.hdr;
+		txdesc->tbap1 = (void *)&drv->tx.hdr[i];
 		/* Transmit buffer 2 addr */
 		txdesc->tbap2 = drv->tx.buf[i];
 		/* Transmit end of ring */
@@ -267,14 +268,12 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
-	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	__os_thread_create((void *)stm32f_ethif_input, (void *)__if, 
 					   drv->stack, STM32F_ETH_INPUT_STACK_SIZE, 
 					   __OS_PRIORITY_LOWEST);
-
 
 	/* set the interrupt priority */
 	__thinkos_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);
@@ -357,6 +356,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct txdma_enh_desc * txdesc;
 	struct txdma_st st;
+	struct eth_hdr * hdr;
 
 	DCC_LOG1(LOG_INFO, "len=%d", __len);
 
@@ -367,6 +367,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	}
 
 	txdesc = &drv->tx.desc[0];
+	hdr = &drv->tx.hdr[0];
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
@@ -395,22 +396,22 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	DCC_LOG7(LOG_MSG, "to: %02x:%02x:%02x:%02x:%02x:%02x (%d)",
 			 __dst[0], __dst[1], __dst[2], __dst[3], __dst[4], __dst[5], __len);
 
-	drv->tx.hdr.eth_type = __proto;
+	hdr->eth_type = __proto;
 
 	/* ethernet destination address */
-	drv->tx.hdr.eth_dst[0] = __dst[0];
-	drv->tx.hdr.eth_dst[1] = __dst[1];
-	drv->tx.hdr.eth_dst[2] = __dst[2];
-	drv->tx.hdr.eth_dst[3] = __dst[3];
-	drv->tx.hdr.eth_dst[4] = __dst[4];
-	drv->tx.hdr.eth_dst[5] = __dst[5];
+	hdr->eth_dst[0] = __dst[0];
+	hdr->eth_dst[1] = __dst[1];
+	hdr->eth_dst[2] = __dst[2];
+	hdr->eth_dst[3] = __dst[3];
+	hdr->eth_dst[4] = __dst[4];
+	hdr->eth_dst[5] = __dst[5];
 
 	/* Transmit buffer 1 size */
 	txdesc->tbs1 = 14;
 	/* Transmit buffer 2 size */
 	txdesc->tbs2 = __len;
 	/* Transmit buffer 1 addr */
-	txdesc->tbap1 = (void *)&drv->tx.hdr;
+	txdesc->tbap1 = (void *)hdr;
 	/* Transmit buffer 2 addr */
 	txdesc->tbap2 = (void *)__buf;
 	/* set the DMA descriptor ownership and end of ring */

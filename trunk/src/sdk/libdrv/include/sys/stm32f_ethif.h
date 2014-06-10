@@ -45,7 +45,7 @@
 #include <sys/dcclog.h>
 
 #ifndef STM32F_ETH_PAYLOAD_MAX
-#define STM32F_ETH_PAYLOAD_MAX 1504
+#define STM32F_ETH_PAYLOAD_MAX 1500
 #endif
 
 #ifndef STM32F_ETH_RX_BUF_SIZE
@@ -72,19 +72,18 @@ struct stm32f_eth_drv {
 	struct ifnet * ifn;
 	struct stm32f_eth * eth;
 	struct {
-		uint32_t buf[STM32F_ETH_RX_NDESC][STM32F_ETH_RX_BUF_SIZE / sizeof(uint32_t)];
+		uint32_t buf[STM32F_ETH_RX_NDESC][(STM32F_ETH_RX_BUF_SIZE + 3) / 4];
 		struct rxdma_enh_desc desc[STM32F_ETH_RX_NDESC];
 		int sem;
 	} rx;
 	struct {
-		struct eth_hdr hdr;
-		uint32_t buf[STM32F_ETH_TX_NDESC][STM32F_ETH_TX_BUF_SIZE / sizeof(uint32_t)];
+		struct eth_hdr hdr[STM32F_ETH_TX_NDESC];
+		uint32_t buf[STM32F_ETH_TX_NDESC][(STM32F_ETH_TX_BUF_SIZE + 3) / 4];
 		struct txdma_enh_desc desc[STM32F_ETH_TX_NDESC];
-		int sem;
 		int flag;
 	} tx;
 	uint32_t stack[STM32F_ETH_INPUT_STACK_SIZE / sizeof(uint32_t)];
-} __attribute__ ((aligned (16)));
+} __attribute__ ((aligned (8)));
 
 extern const struct ifnet_operations stm32f_eth_ifnet_op;
 

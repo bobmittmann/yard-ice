@@ -320,8 +320,6 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
  	tim->cnt = pulse + pre;
 	/* trigger the timer */
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
-//	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_UP | TIM_OPM | TIM_URS | TIM_CEN; 
-//	tim->egr = TIM_TG | TIM_UG;
 }
 
 void isink_init(void)
