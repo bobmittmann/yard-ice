@@ -211,8 +211,7 @@ is stable, OFF if not) */
 #define RCC_PPRE1_4  (0x5 << 8)
 #define RCC_PPRE1_8  (0x6 << 8)
 #define RCC_PPRE1_16 (0x7 << 8)
-/* APB low-speed prescaler (APB1) 
- */
+/* APB low-speed prescaler (APB1) */
 
 #define RCC_HPRE (0xf << 4)
 #define RCC_HPRE_1 (0x0 << 4)

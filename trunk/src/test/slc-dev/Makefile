@@ -22,7 +22,7 @@
 
 PROG = slc-dev
 
-CFILES = slc-dev.c board.c 
+CFILES = slc-dev.c board.c isink.c
 #serial.c 
 
 SDK = ../../sdk
