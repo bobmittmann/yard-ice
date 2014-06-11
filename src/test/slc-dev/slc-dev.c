@@ -111,6 +111,7 @@ int main(int argc, char ** argv)
 
 
 	isink_init();
+	isink_slewrate_set(2400);
 	for (i = 0; ; ++i) {
 		
 		if ((event = dev_event) != 0) {
@@ -128,7 +129,7 @@ int main(int argc, char ** argv)
 //		isink_start(6, 35, 300);
 //		}
 
-//		isink_start(9, 35, 300);
+		isink_pulse(35, 300);
 		udelay(10000);
 
 //		DCC_LOG1(LOG_TRACE, "%d...", i);
