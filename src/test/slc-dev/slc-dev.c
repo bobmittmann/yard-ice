@@ -97,26 +97,38 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
+	udelay(50000);
+
 	DCC_LOG(LOG_TRACE, "2. io_init()");
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "3. stdio_init()");
 	stdio_init();
 
+	udelay(50000);
+
+	isink_init();
+
+	udelay(50000);
+
 	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
-	DCC_LOG(LOG_TRACE, "5. disabling current sink");
-//	isink_stop();
+	isink_slewrate_set(1200);
 
-
-	isink_init();
-	isink_slewrate_set(2400);
 	for (i = 0; ; ++i) {
 		
 		if ((event = dev_event) != 0) {
 			process_events(event);
 		}
+
+//		isink_pulse(35, 300);
+//		udelay(1000);
+
+//		trig_out_set();
+//		udelay(50000);
+//		trig_out_clr();
+//		udelay(500000);
 
 //		for (j = 1; j <= 12; ++j) {
 //			isink_start(j, 35, 300);
@@ -129,8 +141,8 @@ int main(int argc, char ** argv)
 //		isink_start(6, 35, 300);
 //		}
 
-		isink_pulse(35, 300);
-		udelay(10000);
+//		isink_pulse(35, 300);
+//		udelay(10000);
 
 //		DCC_LOG1(LOG_TRACE, "%d...", i);
 //		led_on(LED1);

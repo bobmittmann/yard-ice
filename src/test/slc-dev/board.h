@@ -50,7 +50,7 @@
 #define COMP1     STM32_GPIOA, 0
 #define COMP2     STM32_GPIOB, 5
 
-#define TRIG      STM32_GPIOB, 2
+#define TRIG_OUT  STM32_GPIOB, 2
 
 #define SW3A      STM32_GPIOB, 15
 #define SW3B      STM32_GPIOB, 14
@@ -112,6 +112,15 @@ static inline void led_on(struct stm32_gpio *__gpio, int __pin) {
 
 static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_mode_out(__gpio, __pin);
+}
+
+
+static inline void trig_out_clr(void) {
+	stm32_gpio_clr(TRIG_OUT);
+}
+
+static inline void trig_out_set(void) {
+	stm32_gpio_set(TRIG_OUT);
 }
 
 static inline void dev_event_clr(unsigned int __flag) {
