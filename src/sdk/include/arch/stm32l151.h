@@ -48,10 +48,10 @@
 
 #include <stm32f/stm32f-pwr.h>
 #include <stm32f/stm32l-rcc.h>
+#include <stm32f/stm32l-flash.h>
 #include <stm32f/stm32f-syscfg.h>
 #include <stm32f/stm32f-usart.h>
 #include <stm32f/stm32f-gpio.h>
-#include <stm32f/stm32f-flash.h>
 #include <stm32f/stm32f-dac.h>
 #include <stm32f/stm32f-adc.h>
 #include <stm32f/stm32f-rtc.h>
@@ -172,7 +172,7 @@
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
 #define STM32_RTC ((struct stm32f_rtc *)STM32_BASE_RTC)
 #define STM32_USB ((struct stm32f_usb_fs *)STM32_BASE_USB_FS)
-#define STM32_FLASH ((struct stm32f_flash *)STM32_BASE_FLASH)
+#define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
 #define STM32_FSMC ((struct stm32f_fsmc *)STM32_BASE_FSMC)
 #define STM32_DAC ((struct stm32f_dac *)STM32_BASE_DAC)
 #define STM32_ADC ((struct stm32f_adc *)STM32_BASE_ADC)

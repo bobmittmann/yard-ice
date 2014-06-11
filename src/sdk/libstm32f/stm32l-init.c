@@ -21,18 +21,31 @@
  */
 
 #include <sys/stm32f.h>
+#include <sys/halt.h>
+
+#ifndef STM32_HSI_AS_HCLK
+#define STM32_HSI_AS_HCLK 1
+#endif
 
 /* Set default values for system clocks */
 
 #if defined(STM32L1X)
 
-  #ifndef HSE_HZ
-    #define HSE_HZ 8000000
-  #endif
+#ifndef HSE_HZ
+  #define HSE_HZ 8000000
+#endif
 
-  #ifndef HCLK_HZ
-    #define HCLK_HZ 8000000
+#ifndef HSI_HZ
+  #define HSI_HZ 16000000
+#endif
+
+#ifndef HCLK_HZ
+  #if STM32_HSI_AS_HCLK
+    #define HCLK_HZ HSI_HZ
+  #else
+    #define HCLK_HZ HSE_HZ
   #endif
+#endif
 
 /* This constant is used to calibrate the systick timer */
 const uint32_t cm3_systick_load_1ms = ((HCLK_HZ / 8) / 1000) - 1;
@@ -48,17 +61,43 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 void _init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
-//	struct stm32f_flash * flash = STM32F_FLASH;
+	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t cr;
+	uint32_t acr;
 	int again;
-
-	/* Make sure we are using the internal oscillator */
-	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
 
 	/* Enable external oscillator */
 	cr = rcc->cr;
+
+#if STM32_HSI_AS_HCLK
+	cr |= RCC_HSION;
+	rcc->cr = cr;
+
+	for (again = 8192; ; again--) {
+		cr = rcc->cr;
+		if (cr & RCC_HSIRDY)
+			break;
+		if (again == 0) {
+			/* internal clock startup fail! */
+			halt();
+		}
+	}
+
+	/* configure flash access and wait states */
+	flash->acr = FLASH_ACC64;
+	acr = flash->acr;
+	
+	if ((acr & FLASH_ACC64) == 0) 
+		halt();
+	
+	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
+
+
+	/* select HSI as system clock */
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
+#else
 	cr |= RCC_HSEON;
-	rcc->cr = cr;;
+	rcc->cr = cr;
 
 	for (again = 8192; ; again--) {
 		cr = rcc->cr;
@@ -70,19 +109,9 @@ void _init(void)
 		}
 	}
 
-#if 0
-	for (again = 4096; ; again--) {
-		sr = flash->sr;
-		if ((sr & FLASH_BSY) == 0)
-			break;
-		if (again == 0) {
-			/* flash not ready! */
-			return;
-		}
-	}
-#endif
-
 	/* select HSE as system clock */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
+#endif
+
 }
 

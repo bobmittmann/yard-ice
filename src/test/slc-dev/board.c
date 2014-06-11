@@ -21,18 +21,16 @@
  */
 
 #include "board.h"
+#include "isink.h"
+#include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-
-enum {
-	TRIG_VSLC = 0,
-	TRIG_BIT,
-	TRIG_ADDR
-};
-
 volatile unsigned int dev_addr;
+volatile unsigned int scan_addr;
 volatile unsigned int dev_sw;
-volatile unsigned int trig_mode = TRIG_VSLC;
+volatile bool addr_match;
+volatile unsigned int trig_mode = TRIG_ADDR;
+volatile uint32_t dev_event;
 
 const uint8_t addr_sw_lut[] = {
 /*  00, 01, 02, 03, 04, 05, 06, 07, 08, 09, 0a, 0b, 0c, 0d,  e, 0f */
@@ -57,6 +55,7 @@ const uint8_t addr_sw_lut[] = {
 	 9, 19, 92, 59, 29, 39, 69, 79, 89, 99,  0,  0,  0,  0,  0, 0
 };
 
+
 void stm32_tim9_isr(void)
 {
 	struct stm32f_tim * tim = STM32_TIM9;
@@ -67,6 +66,7 @@ void stm32_tim9_isr(void)
 	static unsigned int sw_prev;
 	unsigned int addr;
 	unsigned int sw;
+	unsigned int d;
 	uint32_t pa;
 	uint32_t pb;
 	uint32_t pc;
@@ -79,51 +79,48 @@ void stm32_tim9_isr(void)
 	pb = gpiob->idr; 
 	pc = gpioc->idr; 
 
+	/* Rotatory switches decoder */
 	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
 	/* Sensor/Module Switch */
 	mod = (pb >> 5) & 1;
-//	mod = 1;
+	mod = 1;
 	addr |= mod << 8;
 
 	if (addr != addr_prev) {
+		/* Debouncing */
+		addr_prev = addr;
+	} else if (addr != dev_addr) {
+		/* State change */
 		dev_addr = addr;
-		DCC_LOG1(LOG_TRACE, "Addr=%d", addr);
+		dev_event_set(EV_ADDR);  
+		DCC_LOG1(LOG_INFO, "Addr=%d", addr);
 	}
-	addr_prev = addr;
 
+	/* Lever switches */
 	sw = (~pb >> 12) & 0xf; 
+
 	if (sw != sw_prev) {
+		/* Debouncing */
+		sw_prev = sw;
+	} if ((d = sw ^ dev_sw) != 0) {
+		/* State change */
 		dev_sw = sw;
-		DCC_LOG1(LOG_TRACE, "SW=%d", sw);
 
-		if ((sw & (3 << 0)) == 0) {
-			trig_mode = TRIG_VSLC;
-			led_off(LED3);
-			led_off(LED4);
-		} else if (sw & (1 << 0)) {
-			led_on(LED3);
-			trig_mode = TRIG_BIT;
-		} else if (sw & (1 << 1)) {
-			led_on(LED4);
-			trig_mode = TRIG_ADDR;
-		}
+		DCC_LOG1(LOG_INFO, "SW=%d", sw);
 
-		if (sw & (1 << 2))
-			led_on(LED5);
-		else
-			led_off(LED5);
+		if ((d & SW1_MSK) != 0)
+			dev_event_set(EV_SW1);  
 
-		if (sw & (1 << 3))
-			led_on(LED6);
-		else
-			led_off(LED6);
+		if ((d & SW2_MSK) != 0)
+			dev_event_set(EV_SW2);  
 	}
-	sw_prev = sw;
 
 //	DCC_LOG(LOG_TRACE, "TMR");
 }
 
-static void io_timer_init(uint32_t freq)
+#define IO_POLL_FREQ 100
+
+static void io_timer_init(void)
 {
 	struct stm32f_tim * tim = STM32_TIM9;
 	uint32_t div;
@@ -131,7 +128,7 @@ static void io_timer_init(uint32_t freq)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((16 * stm32f_apb2_hz) + (freq / 2)) / freq;
+	div = (stm32f_tim1_hz + (IO_POLL_FREQ / 2)) / IO_POLL_FREQ;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
@@ -151,8 +148,10 @@ static void io_timer_init(uint32_t freq)
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
+#define PWM_FREQ 100000
 
-void io_leds_init(uint32_t freq)
+
+void io_leds_init(void)
 {
 	struct stm32f_tim * tim;
 	uint32_t div;
@@ -160,16 +159,16 @@ void io_leds_init(uint32_t freq)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
+	div = (stm32f_tim1_hz + (PWM_FREQ / 2)) / PWM_FREQ;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
 	n = (div * 2 + pre) / (2 * pre);
 
-	stm32_gpio_mode(LED3, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED4, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED5, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED6, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED5, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED6, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_af(LED3, GPIO_AF2);
 	stm32_gpio_af(LED4, GPIO_AF2);
 	stm32_gpio_af(LED5, GPIO_AF2);
@@ -195,8 +194,8 @@ void io_leds_init(uint32_t freq)
 	tim->ccr4 = (tim->arr * 15) / 16;
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 
-	stm32_gpio_mode(LED1, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED2, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_af(LED1, GPIO_AF1);
 	stm32_gpio_af(LED2, GPIO_AF1);
 	stm32_gpio_set(LED1);
@@ -219,153 +218,10 @@ void io_leds_init(uint32_t freq)
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 
 	/* Negative voltage supply */
-	stm32_gpio_mode(VNEG_SW, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(VNEG_SW, ALT_FUNC, PUSH_PULL | SPEED_MED);
 	stm32_gpio_af(VNEG_SW, GPIO_AF1);
 }
 
-#define FREQ_1MHZ 1000000
-
-void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
-{
-	struct stm32f_tim * tim = STM32_TIM4;
-
-	tim->arr = pre;
-
-	switch (mode) {
-	case 0:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
-		break;
-	case 1:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pre;
-		break;
-	case 2:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
-		break;
-	case 3:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pulse;
-		break;
-	case 4:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
-		break;
-	case 5:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		break;
-	case 6:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		break;
-	case 7:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr4 = pulse;
-		break;
-	case 8:
-		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr4 = pre;
-		break;
-	case 9:
-		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
-		break;
-	case 10:
-		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-//		stm32_gpio_mode(SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
-		break;
-	}
-
- 	tim->cnt = pulse + pre;
-	/* trigger the timer */
-	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
-}
-
-void isink_init(void)
-{
-	struct stm32f_tim * tim = STM32_TIM4;
-	uint32_t div;
-
-	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-//	stm32_gpio_mode(SINK2, INPUT, 0);
-	stm32_gpio_mode(SINK1, INPUT, 0);
-	stm32_gpio_mode(SINK2, INPUT, 0);
-	stm32_gpio_mode(SINK3, INPUT, 0);
-	stm32_gpio_mode(SINK4, INPUT, 0);
-//	stm32_gpio_mode(SINK4, ANALOG, 0);
-	stm32_gpio_af(SINK1, GPIO_AF2);
-	stm32_gpio_af(SINK2, GPIO_AF2);
-	stm32_gpio_af(SINK3, GPIO_AF2);
-	stm32_gpio_clr(SINK1);
-	stm32_gpio_clr(SINK2);
-	stm32_gpio_clr(SINK3);
-	stm32_gpio_clr(SINK4);
-
-	/* Timer clock enable */
-	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM4);
-	
-	/* get the total divisior */
-	div = (stm32f_tim1_hz + (FREQ_1MHZ / 2)) / FREQ_1MHZ;
-	/* Timer configuration */
-	tim->psc = div - 1;
-	tim->arr = 100;
-	tim->ccmr1 = TIM_OC1M_PWM_MODE2 | TIM_OC2M_PWM_MODE2;
-	tim->ccmr2 = TIM_OC3M_PWM_MODE2 | TIM_OC4M_PWM_MODE2;
-	tim->ccer = TIM_CC1E | TIM_CC2E | TIM_CC3E | TIM_CC4E;
-	//	TIM_CC1P | TIM_CC2P | TIM_CC3P | TIM_CC4P;
-	tim->ccr1 = 0;
-	tim->ccr2 = 0;
-	tim->ccr3 = 0;
-	tim->ccr4 = 0;
-
-	tim->cnt = 0;
-	/* trigger the timer */
-//	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
-}
 
 #define COMP1_EXTI (1 << 21)
 #define COMP2_EXTI (1 << 22)
@@ -416,12 +272,7 @@ void stm32_tim10_isr(void)
 	if (csr & COMP_CMP1OUT) {
 		/* Power */
 //		DCC_LOG(LOG_TRACE, "PWR [IDLE]");
-		if (trig_mode == TRIG_ADDR)
-			stm32_gpio_clr(TRIG);
-		dev_state = DEV_IDLE;
-		/* adjust timeout */
-		tim->arr = 150;
-		return;
+		goto idle;
 	} 
 	
 	bit = (csr & COMP_CMP2OUT) ? 1 : 0;
@@ -438,6 +289,7 @@ void stm32_tim10_isr(void)
 		dev_state = DEV_MSG;
 		dev_msg = bit;
 		bit_cnt = 1;
+		addr_match = false;
 		break;
 	case DEV_MSG:
 #if 0
@@ -461,12 +313,12 @@ void stm32_tim10_isr(void)
 				mod = msg & 1;
 				addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
 					addr_lut[(msg >> 5) & 0xf];
-				DCC_LOG2(LOG_TRACE, "%s=%d", mod ? "MODULE" : "SENSOR",
+				DCC_LOG2(LOG_INFO, "%s=%d", mod ? "MODULE" : "SENSOR",
 						 addr);
 				addr = addr + (mod << 8);
+				scan_addr = addr;
 				if (addr == dev_addr) {
-					if (trig_mode == TRIG_ADDR)
-						stm32_gpio_set(TRIG);
+					addr_match = true;
 				}
 			} else {
 				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
@@ -477,16 +329,30 @@ void stm32_tim10_isr(void)
 		}
 		break;
 	case DEV_PW1:
+		DCC_LOG(LOG_TRACE, "PW1 TMO");
+		goto idle;
 	case DEV_PW2:
+		DCC_LOG(LOG_TRACE, "PW2 TMO");
+		goto idle;
 	case DEV_PW3:
+		DCC_LOG(LOG_TRACE, "PW3 TMO");
+		goto idle;
 	case DEV_PW4:
+		DCC_LOG(LOG_TRACE, "PW4 TMO");
+		goto idle;
 	case DEV_PW5:
-		DCC_LOG(LOG_TRACE, "TMO");
-		dev_state = DEV_IDLE;
-		/* adjust timeout */
-		tim->arr = 150;
-		break;
+		DCC_LOG(LOG_TRACE, "PW5 TMO");
+		goto idle;
 	}
+
+	return;
+
+idle:
+	dev_state = DEV_IDLE;
+	/* adjust timeout */
+	tim->arr = 150;
+	if (trig_mode == TRIG_ADDR)
+		stm32_gpio_clr(TRIG);
 
 }
 
@@ -512,47 +378,83 @@ void stm32_comp_tsc_isr(void)
 
 		/* disable the timer */
 		tim->cnt = 0;
-		/* trigger the timer */
-		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 
 		switch (dev_state) {
 		case DEV_PW1:
 			//		DCC_LOG1(LOG_TRACE, "PW1: %d", tim->arr);
 			/* Reference Pulse Width */
 			dev_state = DEV_PW2;
-			tim->arr = 1000;
+			if (addr_match) {
+				isink_pulse(35, 300);
+				if (trig_mode == TRIG_ADDR)
+					stm32_gpio_set(TRIG);
+				tim->arr = 1000;
+			} else {
+				tim->arr = 1000;
+			}
 			break;
 		case DEV_PW2:
 			//		DCC_LOG1(LOG_TRACE, "PW2: %d", tim->arr);
 			/* Remote Test Status */
 			dev_state = DEV_PW3;
-			tim->arr = 1000;
+			if (addr_match) {
+				isink_pulse(35, 300);
+				tim->arr = 1000;
+			} else {
+				tim->arr = 1000;
+			}
 			break;
 		case DEV_PW3:
 			//		DCC_LOG1(LOG_TRACE, "PW3: %d", tim->arr);
 			/* Manufacturer Code */
 			dev_state = DEV_PW4;
-			tim->arr = 4000;
+			if (addr_match) {
+				isink_pulse(35, 900);
+				tim->arr = 4000;
+			} else {
+				tim->arr = 4000;
+			}
 			break;
 		case DEV_PW4:
 			/* Analog */
-			DCC_LOG(LOG_TRACE, "Got PW4");
+			DCC_LOG1(LOG_TRACE, "%d: Got PW4", scan_addr & 0xff);
 			dev_state = DEV_PW5;
-			tim->arr = 4000;
+			if (addr_match) {
+				isink_pulse(35, 2200);
+				tim->arr = 2200 + 500;
+			} else {
+				tim->arr = 4000;
+			}
+
 			break;
 		case DEV_PW5:
 			/* Type Id */
-			DCC_LOG(LOG_TRACE, "Got PW5");
-			dev_state = DEV_IDLE;
+			DCC_LOG1(LOG_TRACE, "%d: Got PW5", scan_addr & 0xff);
 			/* adjust timeout */
-			tim->arr = 150;
+			if (addr_match) {
+				isink_pulse(35, 300);
+				tim->arr = 300 + 150;
+			} else {
+				tim->arr = 150;
+			}
 			break;
 		default:
 			break;
 		}
+
+		/* trigger the timer */
+		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	} else {
 		if (trig_mode == TRIG_VSLC)
 			stm32_gpio_set(TRIG);
+
+		if (dev_state >= DEV_PW2) {
+			/* disable the timer */
+//			tim->cnt = 0;
+//			tim->arr = 50;
+			/* trigger the timer */
+//			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+		}
 	}
 }
 
@@ -604,34 +506,6 @@ void slc_sense_init(void)
 	cm3_irq_enable(STM32_IRQ_TIM10);
 }
 
-void irate_set(unsigned int mv)
-{
-	struct stm32f_dac * dac = STM32_DAC;
-
-	dac->dhr12r2 = mv;
-}
-
-void irate_init(void)
-{
-	struct stm32f_dac * dac = STM32_DAC;
-
-	/* I/O pins config */
-	stm32_gpio_mode(IRATE, ANALOG, 0);
-	stm32_gpio_clr(IRATE);
-
-	/* DAC clock enable */
-	stm32_clk_enable(STM32_RCC, STM32_CLK_DAC);
-
-	/* DAC disable */
-	dac->cr = 0;
-	/* DAC configure */
-	dac->cr = DAC_EN2 | DAC_EN1;
-	/* DAC channel 2 initial value */
-	dac->dhr12r2 = 0;
-	/* DAC channel 1 initial value */
-	dac->dhr12r1 = 0;
-}
-
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
@@ -668,10 +542,8 @@ void io_init(void)
 	stm32_gpio_clr(TRIG);
 	stm32_gpio_mode(TRIG, OUTPUT, PUSH_PULL | SPEED_LOW);
 
-	io_timer_init(100);
-	io_leds_init(100000);
-	irate_init();
-	isink_init();
+	io_timer_init();
+	io_leds_init();
 	slc_sense_init();
 }
 

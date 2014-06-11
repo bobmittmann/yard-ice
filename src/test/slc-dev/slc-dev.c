@@ -7,6 +7,7 @@
 #include <sys/dcclog.h>
 
 #include "board.h"
+#include "isink.h"
 
 struct file stm32_uart2_file = {
 	.data = STM32_USART2, 
@@ -27,8 +28,67 @@ void stdio_init(void)
 	stdout = stdin;
 }
 
+void process_events(uint32_t event)
+{
+	unsigned int sw = dev_sw;
+
+	if (event & (1 << EV_SW1)) {
+		dev_event_clr(EV_SW1);  
+		
+		switch (sw & SW1_MSK) {
+		case SW1_OFF:
+			DCC_LOG(LOG_TRACE, "SW1 OFF");
+			led_off(LED3);
+			led_off(LED4);
+			break;
+
+		case SW1_A:
+			DCC_LOG(LOG_TRACE, "SW1 A");
+			led_on(LED3);
+			break;
+
+		case SW1_B:
+			DCC_LOG(LOG_TRACE, "SW1 B");
+			led_on(LED4);
+		}
+	}
+
+	if (event & (1 << EV_SW2)) {
+		DCC_LOG(LOG_TRACE, "SW2");
+		dev_event_clr(EV_SW2);  
+
+		switch (sw & SW2_MSK) {
+
+		case SW2_OFF:
+			DCC_LOG(LOG_TRACE, "SW2 OFF");
+			trig_mode = TRIG_ADDR;
+			led_off(LED5);
+			led_off(LED6);
+			break;
+
+		case SW2_A:
+			DCC_LOG(LOG_TRACE, "SW2 A");
+			led_on(LED5);
+			trig_mode = TRIG_BIT;
+			break;
+
+		case SW2_B:
+			DCC_LOG(LOG_TRACE, "SW2 B");
+			led_on(LED6);
+			trig_mode = TRIG_VSLC;
+		}
+	}
+
+	if (event & (1 << EV_ADDR)) {
+		DCC_LOG(LOG_TRACE, "ADDR");
+		dev_event_clr(EV_ADDR);  
+	}
+
+}
+
 int main(int argc, char ** argv)
 {
+	uint32_t event;
 	int i;
 
 	DCC_LOG_INIT();
@@ -46,9 +106,33 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
-	for (i = 0; ;i++) {
+	DCC_LOG(LOG_TRACE, "5. disabling current sink");
+//	isink_stop();
+
+
+	isink_init();
+	for (i = 0; ; ++i) {
+		
+		if ((event = dev_event) != 0) {
+			process_events(event);
+		}
+
+//		for (j = 1; j <= 12; ++j) {
+//			isink_start(j, 35, 300);
+//			isink_slewrate_set(200 * j);
+//			udelay(50);
+//			isink_pulse(35, 35);
+//			udelay(50);
+//		isink_start(4, 35, 300);
+//			udelay(500);
+//		isink_start(6, 35, 300);
+//		}
+
+//		isink_start(9, 35, 300);
+		udelay(10000);
+
 //		DCC_LOG1(LOG_TRACE, "%d...", i);
-		led_on(LED1);
+//		led_on(LED1);
 #if 0
 //		isink_start(0, 100, 300);
 //		udelay(400);
@@ -56,32 +140,30 @@ int main(int argc, char ** argv)
 //		udelay(400);
 //		isink_start(2, 100, 300);
 //		udelay(400);
-		isink_start(3, 100, 300);
-		udelay(500);
+//		isink_start(3, 35, 300);
 //		isink_start(4, 100, 300);
 //		udelay(400);
 //		isink_start(5, 100, 300);
-		isink_start(6, 100, 300);
-		udelay(500);
+//		isink_start(6, 100, 300);
+//		udelay(500);
 //		isink_start(7, 100, 300);
 //		udelay(400);
 //		isink_start(8, 100, 300);
 //		udelay(400);
-		isink_start(9, 100, 300);
-		udelay(500);
+//		isink_start(9, 100, 300);
+//		udelay(500);
 //		isink_start(10, 100, 300);
 //		udelay(500);
-		led_off(LED1);
-#endif
-		irate_set(0);
-		isink_start(9, 35, 300);
+//		irate_set(0);
+//		isink_start(9, 35, 300);
 
-		udelay(700);
+//		udelay(700);
 
-		irate_set(8191);
-		isink_start(9, 35, 300);
+//		irate_set(8191);
+//		isink_start(9, 35, 300);
 
 		udelay(10000);
+#endif
 
 //		led_on(LED2);
 //		udelay(200000);
