@@ -25,8 +25,60 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
+struct clip_device {
+	uint8_t addr;
+	uint8_t enabled;
+	uint16_t pw1;
+	uint16_t pw2;
+	uint16_t pw3;
+	uint16_t pw4;
+	uint16_t pw5;
+};
+
+#define CLIP_DEV_MAX 200
+
+struct clip_device clip_dev_tab[CLIP_DEV_MAX];
+
+struct {
+	volatile unsigned int addr;
+	struct clip_device * dev;
+} scan;
+
+const struct clip_device null_dev = {
+	.enabled = false,
+	.pw1 = 0,
+	.pw2 = 0,
+	.pw3 = 0,
+	.pw4 = 0,
+	.pw5 = 0
+};
+
+void dev_sim_init(void)
+{
+	struct clip_device * dev;
+	int i;
+
+	for (i = 0; i < CLIP_DEV_MAX; ++i) {
+		dev = &clip_dev_tab[i];
+		dev->enabled = false;
+		dev->pw1 = 300;
+		dev->pw2 = 300;
+		dev->pw3 = 900;
+		dev->pw4 = 2200;
+		dev->pw5 = 300;
+	}
+
+	scan.dev = (struct clip_device *)&null_dev;
+	scan.addr = 0;
+
+	clip_dev_tab[102].enabled = true;
+	clip_dev_tab[103].enabled = true;
+	clip_dev_tab[104].enabled = true;
+	clip_dev_tab[105].enabled = true;
+	clip_dev_tab[106].enabled = true;
+}
+
 volatile unsigned int dev_addr;
-volatile unsigned int scan_addr;
 volatile unsigned int dev_sw;
 volatile bool addr_match;
 volatile unsigned int trig_mode = TRIG_ADDR;
@@ -84,7 +136,7 @@ void stm32_tim9_isr(void)
 	/* Sensor/Module Switch */
 	mod = (pb >> 5) & 1;
 	mod = 1;
-	addr |= mod << 8;
+	addr += mod * 100;
 
 	if (addr != addr_prev) {
 		/* Debouncing */
@@ -266,7 +318,7 @@ void stm32_tim10_isr(void)
 	tim->sr = 0;
 
 	if (trig_mode == TRIG_BIT)
-		stm32_gpio_set(TRIG);
+		trig_out_set();
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
@@ -290,6 +342,8 @@ void stm32_tim10_isr(void)
 		dev_msg = bit;
 		bit_cnt = 1;
 		addr_match = false;
+		scan.dev = (struct clip_device *)&null_dev;
+
 		break;
 	case DEV_MSG:
 #if 0
@@ -313,12 +367,15 @@ void stm32_tim10_isr(void)
 				mod = msg & 1;
 				addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
 					addr_lut[(msg >> 5) & 0xf];
-				DCC_LOG2(LOG_INFO, "%s=%d", mod ? "MODULE" : "SENSOR",
-						 addr);
-				addr = addr + (mod << 8);
-				scan_addr = addr;
+				addr = addr + (mod * 100);
+				scan.addr = addr;
+				scan.dev = &clip_dev_tab[addr];
+
 				if (addr == dev_addr) {
 					addr_match = true;
+					/* */
+					DCC_LOG2(LOG_TRACE, "Match %s=%d", 
+							 mod ? "MODULE" : "SENSOR", addr);
 				}
 			} else {
 				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
@@ -352,12 +409,12 @@ idle:
 	/* adjust timeout */
 	tim->arr = 150;
 	if (trig_mode == TRIG_ADDR)
-		stm32_gpio_clr(TRIG);
+		trig_out_clr();
 
 }
-
 void stm32_comp_tsc_isr(void)
 {
+	struct clip_device * dev = scan.dev;
 	struct stm32f_exti * exti = STM32_EXTI;
 	struct stm32f_tim * tim = STM32_TIM10;
 	uint32_t ftsr;
@@ -374,66 +431,73 @@ void stm32_comp_tsc_isr(void)
 	if (ftsr & COMP1_EXTI) {
 		/* Falling Edge */
 		if (trig_mode <= TRIG_BIT)
-			stm32_gpio_clr(TRIG);
+			trig_out_clr();
 
 		/* disable the timer */
 		tim->cnt = 0;
+
+		dev->enabled = true;
+		dev->pw2 = 300;
+		dev->pw3 = 900;
+		dev->pw4 = 2200;
+		dev->pw5 = 300;
+
 
 		switch (dev_state) {
 		case DEV_PW1:
 			//		DCC_LOG1(LOG_TRACE, "PW1: %d", tim->arr);
 			/* Reference Pulse Width */
-			dev_state = DEV_PW2;
-			if (addr_match) {
-				isink_pulse(35, 300);
-				if (trig_mode == TRIG_ADDR)
-					stm32_gpio_set(TRIG);
+			if ((addr_match) && (trig_mode == TRIG_ADDR))
+				trig_out_set();
+
+			if (dev->enabled) {
+				isink_pulse(35, dev->pw1); /* reference pulse */
 				tim->arr = 1000;
 			} else {
 				tim->arr = 1000;
 			}
+			dev_state = DEV_PW2;
 			break;
 		case DEV_PW2:
 			//		DCC_LOG1(LOG_TRACE, "PW2: %d", tim->arr);
 			/* Remote Test Status */
-			dev_state = DEV_PW3;
-			if (addr_match) {
-				isink_pulse(35, 300);
+			if (dev->enabled) {
+				isink_pulse(35, dev->pw2);
 				tim->arr = 1000;
 			} else {
 				tim->arr = 1000;
 			}
+			dev_state = DEV_PW3;
 			break;
 		case DEV_PW3:
 			//		DCC_LOG1(LOG_TRACE, "PW3: %d", tim->arr);
 			/* Manufacturer Code */
-			dev_state = DEV_PW4;
-			if (addr_match) {
-				isink_pulse(35, 900);
+			if (dev->enabled) {
+				isink_pulse(35, dev->pw3);
 				tim->arr = 4000;
 			} else {
 				tim->arr = 4000;
 			}
+			dev_state = DEV_PW4;
 			break;
 		case DEV_PW4:
 			/* Analog */
 			DCC_LOG1(LOG_TRACE, "%d: Got PW4", scan_addr & 0xff);
-			dev_state = DEV_PW5;
-			if (addr_match) {
-				isink_pulse(35, 2200);
-				tim->arr = 2200 + 500;
+			if (dev->enabled) {
+				isink_pulse(35, dev->pw4);
+				tim->arr = dev->pw5 + 500;
 			} else {
 				tim->arr = 4000;
 			}
-
+			dev_state = DEV_PW5;
 			break;
 		case DEV_PW5:
 			/* Type Id */
 			DCC_LOG1(LOG_TRACE, "%d: Got PW5", scan_addr & 0xff);
 			/* adjust timeout */
-			if (addr_match) {
-				isink_pulse(35, 300);
-				tim->arr = 300 + 150;
+			if (dev->enabled) {
+				isink_pulse(35, dev->pw5);
+				tim->arr = dev->pw5 + 150;
 			} else {
 				tim->arr = 150;
 			}
@@ -446,7 +510,7 @@ void stm32_comp_tsc_isr(void)
 		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	} else {
 		if (trig_mode == TRIG_VSLC)
-			stm32_gpio_set(TRIG);
+			trig_out_set();
 
 		if (dev_state >= DEV_PW2) {
 			/* disable the timer */
@@ -539,11 +603,12 @@ void io_init(void)
 	stm32_gpio_mode(USART2_RX, INPUT, 0);
 	stm32_gpio_af(USART2_RX, GPIO_AF7);
 
-	stm32_gpio_clr(TRIG);
-	stm32_gpio_mode(TRIG, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_clr(TRIG_OUT);
+	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
 
 	io_timer_init();
 	io_leds_init();
 	slc_sense_init();
+	dev_sim_init();
 }
 
