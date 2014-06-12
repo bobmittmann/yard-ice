@@ -70,7 +70,7 @@
 #define COMP1     STM32_GPIOA, 0
 #define COMP2     STM32_GPIOB, 5
 
-extern volatile uint8_t dev_addr;
+
 
 #define SW1_OFF (0 << 0)
 #define SW1_A   (1 << 0)
@@ -82,15 +82,20 @@ extern volatile uint8_t dev_addr;
 #define SW2_B   (2 << 2)
 #define SW2_MSK (3 << 2)
 
-extern volatile uint8_t dev_sw;
-
 enum {
 	EV_SW1 = 0,
 	EV_SW2,
 	EV_ADDR,
 };
 
-extern volatile uint32_t dev_event;
+struct io_drv {
+	int8_t flag;
+	volatile uint8_t sw;
+	volatile uint8_t addr;
+	volatile uint32_t event;
+};
+
+extern struct io_drv io_drv;
 
 #ifdef __cplusplus
 extern "C" {
@@ -107,20 +112,14 @@ static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
 }
 
 
-static inline void trig_out_clr(void) {
-	stm32_gpio_clr(TRIG_OUT);
-}
-
-static inline void trig_out_set(void) {
-	stm32_gpio_set(TRIG_OUT);
-}
+uint32_t io_event_wait(void);
 
 static inline void dev_event_clr(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&dev_event, __flag, 0);  
+	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 0);  
 }
 
 static inline void dev_event_set(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&dev_event, __flag, 1);
+	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 1);
 }
 
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);

@@ -27,14 +27,15 @@ CFILES = slc-dev.c board.c isink.c slcdev-drv.c
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
-		  $(SDK)/libice-comm
+		  $(SDK)/libthinkos  $(SDK)/libice-comm
 
-LIBS = gcc stm32f cm3 util c ice-comm 
+LIBS = gcc stm32f cm3 util c thinkos ice-comm 
 #thinkos 
 
 INCPATH = $(SDK)/include 
 
-CFLAGS = -g -O1
+CDEFS = CONFIG_H
+CFLAGS = -g -O2
 
 MACH = stm32l151xb
 include ../../mk/stm32l1xx.mk

@@ -6,6 +6,8 @@
 #include <sys/serial.h>
 #include <sys/dcclog.h>
 
+#include <thinkos.h>
+
 #include "board.h"
 #include "isink.h"
 #include "slcdev.h"
@@ -31,7 +33,7 @@ void stdio_init(void)
 
 void process_events(uint32_t event)
 {
-	unsigned int sw = dev_sw;
+	unsigned int sw = io_drv.sw;
 
 	if (event & (1 << EV_SW1)) {
 		dev_event_clr(EV_SW1);  
@@ -83,7 +85,7 @@ void process_events(uint32_t event)
 	if (event & (1 << EV_ADDR)) {
 		DCC_LOG(LOG_TRACE, "ADDR");
 		dev_event_clr(EV_ADDR);  
-		trig_addr_set(dev_addr);
+		trig_addr_set(io_drv.addr);
 	}
 }
 
@@ -91,12 +93,21 @@ void isink_pulse_test(void)
 {
 	int j;
 
-	isink_slewrate_set(100);
+	isink_slewrate_set(2500);
 
 	for (j = 1; j <= 17; ++j) {
 		isink_start(j, 35, 300);
 		udelay(500);
 	}
+}
+
+void isink_delay_test(void)
+{
+	trig_out_set();
+	isink_pulse(35, 300);
+	udelay(100);
+	trig_out_clr();
+	udelay(900);
 }
 
 
@@ -111,32 +122,35 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
-	udelay(100000);
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
+	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
-	DCC_LOG(LOG_TRACE, "2. io_init()");
+	thinkos_sleep(100);
+
+	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
 
-	DCC_LOG(LOG_TRACE, "3. stdio_init()");
+	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
 
-	udelay(50000);
-
+	DCC_LOG(LOG_TRACE, "5. isink_init()");
 	isink_init();
+	thinkos_sleep(100);
 
-	udelay(50000);
 
-	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
-	cm3_cpsie_i();
+	slcdev_init();
+	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
+	isink_slewrate_set(1000);
 
 	for (i = 0; ; ++i) {
-		
-		if ((event = dev_event) != 0) {
-			process_events(event);
-		}
-
-		isink_pulse_test();
 	
-		udelay(500000);
+		event = io_event_wait();
+		process_events(event);
+
+//		isink_pulse_test();
+	
+//		isink_delay_test();
+//		udelay(500000);
 	}
 
 

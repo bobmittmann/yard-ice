@@ -23,6 +23,8 @@
 #ifndef __SLCDEV_H__
 #define __SLCDEV_H__
 
+#include "board.h"
+
 enum {
 	TRIG_MODE_VSLC = 0,
 	TRIG_MODE_BIT,
@@ -34,9 +36,19 @@ enum {
 extern "C" {
 #endif
 
+static inline void trig_out_clr(void) {
+	stm32_gpio_clr(TRIG_OUT);
+}
+
+static inline void trig_out_set(void) {
+	stm32_gpio_set(TRIG_OUT);
+}
+
 void trig_addr_set(unsigned int addr);
 
 void trig_mode_set(unsigned int mode);
+
+void slcdev_init(void);
 
 #ifdef __cplusplus
 }

@@ -181,14 +181,10 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 
 void isink_stop(void)
 {
-	stm32_gpio_mode(SINK1, INPUT, 0);
-	stm32_gpio_mode(SINK2, INPUT, 0);
-	stm32_gpio_mode(SINK3, INPUT, 0);
-	stm32_gpio_mode(SINK4, INPUT, 0);
-	stm32_gpio_clr(SINK1);
-	stm32_gpio_clr(SINK2);
-	stm32_gpio_clr(SINK3);
-	stm32_gpio_clr(SINK4);
+	struct stm32f_tim * tim = STM32_TIM4;
+
+	tim->cr1 = 0;
+
 	stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_MED);
 	stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_MED);
 	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_MED);
@@ -209,38 +205,97 @@ void isink_mode_set(unsigned int mode)
 {
 	struct stm32f_dac * dac = STM32_DAC;
 
+#if 0
 	switch (mode & 0x3) {
 	case ISINK_CURRENT_LOW:
+		DCC_LOG(LOG_TRACE, "current low");
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		break;
 
 	case ISINK_CURRENT_NOM:
+		DCC_LOG(LOG_TRACE, "current nominal");
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		break;
 
 	case ISINK_CURRENT_HIGH:
+		DCC_LOG(LOG_TRACE, "current high");
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		break;
 
 	case ISINK_CURRENT_DOUBLE:
+		DCC_LOG(LOG_TRACE, "current double");
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		break;
 	}
+#endif
 
 	dac->dhr12r2 = slewrate_dac_lut[(mode >> 4) & 0x3];
+
+	DCC_LOG1(LOG_TRACE, "irate DAC=%d", dac->dhr12r2);
 }
+
+#define ISINK_DELAY_COMPENASTION 4
 
 void isink_pulse(unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
+
+	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+
+	tim->ccr2 = pulse - pre;
+	tim->ccr3 = 1;
+	tim->arr = 1;
+ 	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
+	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
+}
+
+void isink_pulse_low(unsigned int pre, unsigned int pulse)
+{
+	struct stm32f_tim * tim = STM32_TIM4;
+
+	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+
+	tim->ccr2 = pulse - pre;
+	tim->ccr3 = 1;
+	tim->arr = 1;
+ 	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
+	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
+}
+
+void isink_pulse_high(unsigned int pre, unsigned int pulse)
+{
+	struct stm32f_tim * tim = STM32_TIM4;
+
+	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+
+	tim->ccr2 = pulse;
+	tim->ccr3 = pre;
+	tim->arr = pre;
+ 	tim->cnt = pulse + pre;
+	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
+}
+
+void isink_pulse_double(unsigned int pre, unsigned int pulse)
+{
+	struct stm32f_tim * tim = STM32_TIM4;
+
+	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
 
 	tim->ccr2 = pulse;
 	tim->ccr3 = pre;
@@ -286,6 +341,12 @@ void isink_init(void)
 	tim->ccr3 = 0;
 	tim->ccr4 = 0;
 
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	cm3_irq_pri_set(STM32_IRQ_TIM4, (4 << 5));
+	/* Enable interrupt */
+	cm3_irq_enable(STM32_IRQ_TIM4);
+
+
 
 	/* I/O pins config */
 	stm32_gpio_mode(IRATE, ANALOG, 0);
@@ -315,7 +376,7 @@ void isink_slewrate_set(unsigned int rate)
 		rate = SLEWRATE_MAX;
 
 	dac_val = (4095 * (rate - SLEWRATE_MIN)) / (SLEWRATE_MAX - SLEWRATE_MIN); 
-//	DCC_LOG2(LOG_TRACE, "rate=%dmA/us DAC=%d", rate, dac_val);
+	DCC_LOG2(LOG_TRACE, "rate=%dmA/us DAC=%d", rate, dac_val);
 
 	dac->dhr12r2 = dac_val;
 }
