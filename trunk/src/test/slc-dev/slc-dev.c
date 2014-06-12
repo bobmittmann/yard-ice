@@ -8,6 +8,7 @@
 
 #include "board.h"
 #include "isink.h"
+#include "slcdev.h"
 
 struct file stm32_uart2_file = {
 	.data = STM32_USART2, 
@@ -61,30 +62,43 @@ void process_events(uint32_t event)
 
 		case SW2_OFF:
 			DCC_LOG(LOG_TRACE, "SW2 OFF");
-			trig_mode = TRIG_ADDR;
 			led_off(LED5);
 			led_off(LED6);
+			trig_mode_set(TRIG_MODE_MATCH);
 			break;
 
 		case SW2_A:
 			DCC_LOG(LOG_TRACE, "SW2 A");
 			led_on(LED5);
-			trig_mode = TRIG_BIT;
+			trig_mode_set(TRIG_MODE_BIT);
 			break;
 
 		case SW2_B:
 			DCC_LOG(LOG_TRACE, "SW2 B");
 			led_on(LED6);
-			trig_mode = TRIG_VSLC;
+			trig_mode_set(TRIG_MODE_VSLC);
 		}
 	}
 
 	if (event & (1 << EV_ADDR)) {
 		DCC_LOG(LOG_TRACE, "ADDR");
 		dev_event_clr(EV_ADDR);  
+		trig_addr_set(dev_addr);
 	}
-
 }
+
+void isink_pulse_test(void)
+{
+	int j;
+
+	isink_slewrate_set(100);
+
+	for (j = 1; j <= 17; ++j) {
+		isink_start(j, 35, 300);
+		udelay(500);
+	}
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -97,7 +111,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
-	udelay(50000);
+	udelay(100000);
 
 	DCC_LOG(LOG_TRACE, "2. io_init()");
 	io_init();
@@ -114,84 +128,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
-	isink_slewrate_set(200);
-
 	for (i = 0; ; ++i) {
 		
 		if ((event = dev_event) != 0) {
 			process_events(event);
 		}
 
-//		isink_pulse(35, 300);
-//		udelay(1000);
-
-//		trig_out_set();
-//		udelay(50000);
-//		trig_out_clr();
-//		udelay(500000);
-
-//		for (j = 1; j <= 12; ++j) {
-//			isink_start(j, 35, 300);
-//			isink_slewrate_set(200 * j);
-//			udelay(50);
-//			isink_pulse(35, 35);
-//			udelay(50);
-//		isink_start(4, 35, 300);
-//			udelay(500);
-//		isink_start(6, 35, 300);
-//		}
-
-		isink_pulse_dual(35, 300);
-		trig_out_set();
-		udelay(300);
-		trig_out_clr();
-		udelay(700);
-
-//		isink_pulse(35, 300);
-//		udelay(10000);
-//		DCC_LOG1(LOG_TRACE, "%d...", i);
-//		led_on(LED1);
-#if 0
-//		isink_start(0, 100, 300);
-//		udelay(400);
-//		isink_start(1, 100, 300);
-//		udelay(400);
-//		isink_start(2, 100, 300);
-//		udelay(400);
-//		isink_start(3, 35, 300);
-//		isink_start(4, 100, 300);
-//		udelay(400);
-//		isink_start(5, 100, 300);
-//		isink_start(6, 100, 300);
-//		udelay(500);
-//		isink_start(7, 100, 300);
-//		udelay(400);
-//		isink_start(8, 100, 300);
-//		udelay(400);
-//		isink_start(9, 100, 300);
-//		udelay(500);
-//		isink_start(10, 100, 300);
-//		udelay(500);
-//		irate_set(0);
-//		isink_start(9, 35, 300);
-
-//		udelay(700);
-
-//		irate_set(8191);
-//		isink_start(9, 35, 300);
-
-		udelay(10000);
-#endif
-
-//		led_on(LED2);
-//		udelay(200000);
-//		led_off(LED2);
-
-//		udelay(200000);
-//		udelay(200000);
-//		led_flash(3, 200);
-//		leds_all_off();
-//		udelay(500000);
+		isink_pulse_test();
+	
+		udelay(500000);
 	}
 
 

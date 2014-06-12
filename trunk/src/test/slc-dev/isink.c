@@ -30,13 +30,6 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 
-	if (trig_mode == TRIG_ADDR) {
-		stm32_gpio_mode(SINK1, INPUT, 0);
-		stm32_gpio_mode(SINK2, INPUT, 0);
-		stm32_gpio_mode(SINK3, INPUT, 0);
-		return;
-	}
-
 	tim->arr = pre;
 
 	switch (mode) {
@@ -130,6 +123,55 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 		tim->ccr3 = pulse;
 		tim->ccr4 = pre;
 		break;
+
+	case 12:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		tim->ccr2 = pre;
+		tim->ccr3 = pulse;
+		tim->ccr4 = pre;
+		break;
+	case 13:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		tim->ccr2 = pulse;
+		tim->ccr3 = pre;
+		tim->ccr4 = pre;
+		break;
+	case 14:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		tim->ccr2 = pre;
+		tim->ccr3 = pre;
+		tim->ccr4 = pulse;
+		break;
+	case 15:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		tim->ccr2 = pulse;
+		tim->ccr3 = pre;
+		tim->ccr4 = pre;
+		break;
+	case 16:
+		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		tim->ccr2 = pre;
+		tim->ccr3 = pre;
+		tim->ccr4 = pulse;
+		break;
+	case 17:
+		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		tim->ccr2 = pre;
+		tim->ccr3 = pulse;
+		tim->ccr4 = pre;
+		break;
 	}
 
  	tim->cnt = pulse + pre;
@@ -153,31 +195,55 @@ void isink_stop(void)
 	stm32_gpio_mode(SINK4, OUTPUT, PUSH_PULL | SPEED_MED);
 }
 
+#define SLEWRATE_DAC_VAL(X) ((4095 * ((X) - SLEWRATE_MIN)) / \
+							 (SLEWRATE_MAX - SLEWRATE_MIN))
+
+const uint16_t slewrate_dac_lut[4] = {
+	[ISINK_RATE_VERY_SLOW >> 4] = SLEWRATE_DAC_VAL(100),
+	[ISINK_RATE_SLOW >> 4]      = SLEWRATE_DAC_VAL(625),
+	[ISINK_RATE_NORMAL >> 4]    = SLEWRATE_DAC_VAL(1250),
+	[ISINK_RATE_FAST >> 4]      = SLEWRATE_DAC_VAL(2500)
+};
+
+void isink_mode_set(unsigned int mode)
+{
+	struct stm32f_dac * dac = STM32_DAC;
+
+	switch (mode & 0x3) {
+	case ISINK_CURRENT_LOW:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		break;
+
+	case ISINK_CURRENT_NOM:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		break;
+
+	case ISINK_CURRENT_HIGH:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		break;
+
+	case ISINK_CURRENT_DOUBLE:
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		break;
+	}
+
+	dac->dhr12r2 = slewrate_dac_lut[(mode >> 4) & 0x3];
+}
+
 void isink_pulse(unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 
-	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-
 	tim->ccr2 = pulse;
 	tim->ccr3 = pre;
-	tim->arr = pre;
- 	tim->cnt = pulse + pre;
-	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
-}
-
-void isink_pulse_dual(unsigned int pre, unsigned int pulse)
-{
-	struct stm32f_tim * tim = STM32_TIM4;
-
-	stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-
-	tim->ccr2 = pre;
-	tim->ccr4 = pulse;
 	tim->arr = pre;
  	tim->cnt = pulse + pre;
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 

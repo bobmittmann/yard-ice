@@ -70,7 +70,7 @@
 #define COMP1     STM32_GPIOA, 0
 #define COMP2     STM32_GPIOB, 5
 
-extern volatile unsigned int dev_addr;
+extern volatile uint8_t dev_addr;
 
 #define SW1_OFF (0 << 0)
 #define SW1_A   (1 << 0)
@@ -82,7 +82,7 @@ extern volatile unsigned int dev_addr;
 #define SW2_B   (2 << 2)
 #define SW2_MSK (3 << 2)
 
-extern volatile unsigned int dev_sw;
+extern volatile uint8_t dev_sw;
 
 enum {
 	EV_SW1 = 0,
@@ -91,14 +91,6 @@ enum {
 };
 
 extern volatile uint32_t dev_event;
-
-enum {
-	TRIG_VSLC = 0,
-	TRIG_BIT,
-	TRIG_ADDR
-};
-
-extern volatile unsigned int trig_mode;
 
 #ifdef __cplusplus
 extern "C" {
@@ -130,15 +122,6 @@ static inline void dev_event_clr(unsigned int __flag) {
 static inline void dev_event_set(unsigned int __flag) {
 	__bit_mem_wr((uint32_t *)&dev_event, __flag, 1);
 }
-
-static inline void trig_out_set(void) {
-	stm32_gpio_mode_out(TRIG_OUT);
-}
-
-static inline void trig_out_clr(void) {
-	stm32_gpio_mode_in(TRIG_OUT);
-}
-
 
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);
