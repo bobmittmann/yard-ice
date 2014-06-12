@@ -24,10 +24,11 @@
 #include "isink.h"
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
+#include <thinkos.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
-volatile uint8_t dev_addr;
-volatile uint8_t dev_sw;
-volatile uint32_t dev_event;
+struct io_drv io_drv;
 
 const uint8_t addr_sw_lut[] = {
 /*  00, 01, 02, 03, 04, 05, 06, 07, 08, 09, 0a, 0b, 0c, 0d,  e, 0f */
@@ -86,11 +87,12 @@ void stm32_tim9_isr(void)
 	if (addr != addr_prev) {
 		/* Debouncing */
 		addr_prev = addr;
-	} else if (addr != dev_addr) {
+	} else if (addr != io_drv.addr) {
 		/* State change */
-		dev_addr = addr;
+		io_drv.addr = addr;
 		dev_event_set(EV_ADDR);  
 		DCC_LOG1(LOG_INFO, "Addr=%d", addr);
+		__thinkos_flag_signal(io_drv.flag);
 	}
 
 	/* Lever switches */
@@ -99,9 +101,9 @@ void stm32_tim9_isr(void)
 	if (sw != sw_prev) {
 		/* Debouncing */
 		sw_prev = sw;
-	} if ((d = sw ^ dev_sw) != 0) {
+	} if ((d = sw ^ io_drv.sw) != 0) {
 		/* State change */
-		dev_sw = sw;
+		io_drv.sw = sw;
 
 		DCC_LOG1(LOG_INFO, "SW=%d", sw);
 
@@ -110,6 +112,9 @@ void stm32_tim9_isr(void)
 
 		if ((d & SW2_MSK) != 0)
 			dev_event_set(EV_SW2);  
+
+		if ((d & (SW2_MSK | SW1_MSK)) != 0)
+			__thinkos_flag_signal(io_drv.flag);
 	}
 
 //	DCC_LOG(LOG_TRACE, "TMR");
@@ -254,5 +259,22 @@ void io_init(void)
 
 	io_timer_init();
 	io_leds_init();
+
+	io_drv.flag = thinkos_flag_alloc();
+}
+
+uint32_t io_event_wait(void)
+{
+	uint32_t event;
+
+//	tracef("%s(): wait...", __func__);
+
+	do {
+		thinkos_flag_wait(io_drv.flag);
+		thinkos_flag_clr(io_drv.flag);
+		event = io_drv.event;
+	} while (event == 0);
+
+	return event;
 }
 
