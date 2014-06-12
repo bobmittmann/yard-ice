@@ -131,6 +131,15 @@ static inline void dev_event_set(unsigned int __flag) {
 	__bit_mem_wr((uint32_t *)&dev_event, __flag, 1);
 }
 
+static inline void trig_out_set(void) {
+	stm32_gpio_mode_out(TRIG_OUT);
+}
+
+static inline void trig_out_clr(void) {
+	stm32_gpio_mode_in(TRIG_OUT);
+}
+
+
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);
 

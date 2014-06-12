@@ -114,7 +114,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. enabling interrupts");
 	cm3_cpsie_i();
 
-	isink_slewrate_set(1200);
+	isink_slewrate_set(200);
 
 	for (i = 0; ; ++i) {
 		
@@ -141,9 +141,14 @@ int main(int argc, char ** argv)
 //		isink_start(6, 35, 300);
 //		}
 
+		isink_pulse_dual(35, 300);
+		trig_out_set();
+		udelay(300);
+		trig_out_clr();
+		udelay(700);
+
 //		isink_pulse(35, 300);
 //		udelay(10000);
-
 //		DCC_LOG1(LOG_TRACE, "%d...", i);
 //		led_on(LED1);
 #if 0

@@ -370,13 +370,13 @@ extern "C" {
 static inline void stm32_gpio_mode_out(struct stm32_gpio * __gpio, 
 									   unsigned int __pin) {
 	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
-	__gpio->moder = tmp | GPIO_MODE_INPUT(__pin);
+	__gpio->moder = tmp | GPIO_MODE_OUTPUT(__pin);
 }
 
 static inline void stm32_gpio_mode_in(struct stm32_gpio * __gpio, 
 									  unsigned int __pin) {
 	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
-	__gpio->moder = tmp | GPIO_MODE_OUTPUT(__pin);
+	__gpio->moder = tmp | GPIO_MODE_INPUT(__pin);
 }
 
 static inline void stm32_gpio_mode_af(struct stm32_gpio * __gpio, 
