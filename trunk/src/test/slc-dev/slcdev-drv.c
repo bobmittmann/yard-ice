@@ -131,33 +131,37 @@ enum {
 	DEV_IDLE = 0,
 	DEV_MSG,
 
-	DEV_WAIT_FOR_PW1,
-	DEV_PW1_GUARD,
+	DEV_PW1_START_WAIT,
+	DEV_PW1_RESPONSE_TIME,
 	DEV_PW1_PULSE,
 	DEV_PW1_END_WAIT,
 
-	DEV_WAIT_FOR_PW2,
-	DEV_PW2_GUARD,
+	DEV_PW2_START_WAIT,
+	DEV_PW2_RESPONSE_TIME,
 	DEV_PW2_PULSE,
 	DEV_PW2_END_WAIT,
 
-	DEV_WAIT_FOR_PW3,
-	DEV_PW3_GUARD,
+	DEV_PW3_START_WAIT,
+	DEV_PW3_RESPONSE_TIME,
 	DEV_PW3_PULSE,
 	DEV_PW3_END_WAIT,
 
-	DEV_WAIT_FOR_PW4,
-	DEV_PW4_GUARD,
+	DEV_PW4_START_WAIT,
+	DEV_PW4_RESPONSE_TIME,
 	DEV_PW4_PULSE,
 	DEV_PW4_END_WAIT,
 
-	DEV_WAIT_FOR_PW5,
-	DEV_PW5_GUARD,
+	DEV_PW5_START_WAIT,
+	DEV_PW5_RESPONSE_TIME,
 	DEV_PW5_PULSE,
 	DEV_PW5_END_WAIT,
+	DEV_RECOVER_TIME,
 
-	DEV_WAIT_START,
-	DEV_WAIT_STOP
+	DEV_INACTIVE_START_WAIT,
+	DEV_INACTIVE_STOP_WAIT,
+
+	DEV_PARITY_ERROR,
+	DEV_PW_ABORT
 
 };
 
@@ -184,7 +188,7 @@ static const uint8_t addr_lut[16] = {
 	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
 };
 
-/* Current sink pulse */
+/* Current sink pulse timer */
 void stm32_tim4_isr(void)
 {
 	struct stm32f_tim * tim4 = STM32_TIM4;
@@ -192,51 +196,42 @@ void stm32_tim4_isr(void)
 
 	/* Clear timer interrupt flags */
 	tim4->sr = 0;
-
 	switch (slcdev.state) {
 	case DEV_PW1_PULSE:
-		/* trigger the gaurd timer */
-		tim10->arr = 300;
-		tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 		slcdev.state = DEV_PW1_END_WAIT;
 		DCC_LOG(LOG_TRACE, "[PW1 END WAIT]");
 		break;
 
 	case DEV_PW2_PULSE:
-		tim10->arr = 300;
-		tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 		slcdev.state = DEV_PW2_END_WAIT;
 		DCC_LOG(LOG_TRACE, "[PW2 END WAIT]");
 		break;
 
 	case DEV_PW3_PULSE:
-		tim10->arr = 300;
-		tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 		slcdev.state = DEV_PW3_END_WAIT;
 		DCC_LOG(LOG_TRACE, "[PW3 END WAIT]");
 		break;
 
 	case DEV_PW4_PULSE:
-		tim10->arr = 300;
-		tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 		slcdev.state = DEV_PW4_END_WAIT;
 		DCC_LOG(LOG_TRACE, "[PW4 END WAIT]");
 		break;
 
 	case DEV_PW5_PULSE:
-		/* trigger the gaurd timer */
-		tim10->arr = 300;
-		tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-		slcdev.state++;
-		DCC_LOG(LOG_TRACE, "...");
+		slcdev.state = DEV_PW5_END_WAIT;
+		DCC_LOG(LOG_TRACE, "[PW5 END WAIT]");
 		break;
+
 	default:
 		DCC_LOG1(LOG_WARNING, "Invalid state [%d]!!!", slcdev.state);
-		break;
+		return;
 	}
 
+	tim10->arr = 4000; /* trigger the end wait timer */
+	tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 }
 
+/* This is the 1us resolution timer... */
 void stm32_tim10_isr(void)
 {
 	struct stm32_comp * comp = STM32_COMP;
@@ -253,9 +248,32 @@ void stm32_tim10_isr(void)
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
+
+		if (trig.state == TRIG_ADDR_MATCH)
+			trig_out_clr();
+
 		/* Power */
-//		DCC_LOG(LOG_TRACE, "PWR [IDLE]");
-		goto idle;
+		DCC_LOG(LOG_TRACE, "[IDLE]");
+		slcdev.state = DEV_IDLE;
+
+		/* reset the trigger module */
+		switch (trig.mode) {
+		case TRIG_MODE_MATCH:
+			trig.state = TRIG_ADDR_WAIT;
+			break;
+		case TRIG_MODE_VSLC:
+			trig.state = TRIG_VSLC;
+			break;
+		case TRIG_MODE_BIT:
+			trig.state = TRIG_BIT;
+			break;
+		case TRIG_MODE_PW:
+			trig.state = TRIG_PW_WAIT;
+			break;
+		default: 
+			trig.state = TRIG_IDLE;
+			break;
+		}
 	} 
 	
 	bit = (csr & COMP_CMP2OUT) ? 1 : 0;
@@ -277,6 +295,7 @@ void stm32_tim10_isr(void)
 		scan.dev = (struct clip_device *)&null_dev;
 
 		break;
+
 	case DEV_MSG:
 #if 0
 		if (bit) {
@@ -290,9 +309,11 @@ void stm32_tim10_isr(void)
 		if (++slcdev.bit_cnt == 13) {
 			unsigned int msg = slcdev.msg;
 			unsigned int parity;
+
 			parity = parity_lut[msg & 0xf] ^ 
 				parity_lut[(msg >> 4) & 0xf] ^ 
 				parity_lut[(msg >> 8) & 0xf];
+
 			if (parity == (msg >> 12)) {
 				unsigned int addr;
 				unsigned int mod;
@@ -313,101 +334,53 @@ void stm32_tim10_isr(void)
 				if (scan.dev->enabled) {
 					DCC_LOG2(LOG_TRACE, "Simulating %s=%d", 
 							 mod ? "MODULE" : "SENSOR", addr);
-					slcdev.state = DEV_WAIT_FOR_PW1;
+					slcdev.state = DEV_PW1_START_WAIT;
 					DCC_LOG(LOG_TRACE, "[DEV WAIT FOR PW1]");
 				} else {
-					slcdev.state = DEV_WAIT_START;
+					slcdev.state = DEV_INACTIVE_START_WAIT;
 					DCC_LOG(LOG_TRACE, "[WAIT START]");
 				}
 			} else {
 				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
-				slcdev.state = DEV_WAIT_START;
-				DCC_LOG(LOG_TRACE, "[WAIT START]");
+				slcdev.state = DEV_PARITY_ERROR;
+				DCC_LOG(LOG_TRACE, "[PARITY ERR]");
 			}
-			/* adjust timeout */
-			tim->arr = 500;
 		}
 		break;
 
-	case DEV_PW1_GUARD:
+	case DEV_PW1_RESPONSE_TIME:
 		/* Reference Pulse Width */
 		isink_pulse(35, dev->pw1); 
 		slcdev.state = DEV_PW1_PULSE;
 		DCC_LOG1(LOG_TRACE, "[PW1 PULSE %d us]", dev->pw1);
 		break;
 
-	case DEV_PW2_GUARD:
+	case DEV_PW2_RESPONSE_TIME:
 		/* Remote Test Status */
 		isink_pulse(35, dev->pw2);
 		slcdev.state = DEV_PW2_PULSE;
 		DCC_LOG1(LOG_TRACE, "[PW2 PULSE %d us]", dev->pw2);
 		break;
 
-	case DEV_PW3_GUARD:
+	case DEV_PW3_RESPONSE_TIME:
 		/* Manufacturer Code */
 		isink_pulse(35, dev->pw3); 
 		slcdev.state = DEV_PW3_PULSE;
 		DCC_LOG1(LOG_TRACE, "[PW3 PULSE %d us]", dev->pw3);
 		break;
 
-	case DEV_PW4_GUARD:
+	case DEV_PW4_RESPONSE_TIME:
 		/* Analog */
 		isink_pulse(35, dev->pw4); 
-		DCC_LOG1(LOG_TRACE, "[PW4 PULSE %d us]", dev->pw4);
 		slcdev.state = DEV_PW4_PULSE;
+		DCC_LOG1(LOG_TRACE, "[PW4 PULSE %d us]", dev->pw4);
 		break;
 
-	case DEV_PW5_GUARD:
+	case DEV_PW5_RESPONSE_TIME:
 		/* Type Id */
-		DCC_LOG1(LOG_TRACE, "PW5: %d", dev->pw5);
 		isink_pulse(35, dev->pw5); 
-		DCC_LOG(LOG_TRACE, "PW5 END");
 		slcdev.state = DEV_PW5_PULSE;
-		break;;
-
-	case DEV_PW1_END_WAIT:
-		DCC_LOG(LOG_TRACE, "PW1 TMO");
-		goto idle;
-	case DEV_PW2_END_WAIT:
-		DCC_LOG(LOG_TRACE, "PW2 TMO");
-		goto idle;
-	case DEV_PW3_END_WAIT:
-		DCC_LOG(LOG_TRACE, "PW3 TMO");
-		goto idle;
-	case DEV_PW4_END_WAIT:
-		DCC_LOG(LOG_TRACE, "PW4 TMO");
-		goto idle;
-	case DEV_PW5_END_WAIT:
-		DCC_LOG(LOG_TRACE, "PW5 TMO");
-		goto idle;
-	}
-
-	return;
-
-idle:
-	slcdev.state = DEV_IDLE;
-	/* adjust timeout */
-	tim->arr = 150;
-
-	if (trig.state == TRIG_ADDR_MATCH)
-		trig_out_clr();
-
-	/* reset the trigger module */
-	switch (trig.mode) {
-	case TRIG_MODE_MATCH:
-		trig.state = TRIG_ADDR_WAIT;
-		break;
-	case TRIG_MODE_VSLC:
-		trig.state = TRIG_VSLC;
-		break;
-	case TRIG_MODE_BIT:
-		trig.state = TRIG_BIT;
-		break;
-	case TRIG_MODE_PW:
-		trig.state = TRIG_PW_WAIT;
-		break;
-	default: 
-		trig.state = TRIG_IDLE;
+		DCC_LOG1(LOG_TRACE, "[PW5 PULSE %d us]", dev->pw5);
 		break;
 	}
 }
@@ -431,58 +404,58 @@ void stm32_comp_tsc_isr(void)
 	exti->pr = COMP1_EXTI;
 
 	if (ftsr & COMP1_EXTI) {
-		/* Falling Edge */
+		/* ********************************************************
+		 *  VSLC Falling Edge 
+		 *********************************************************/
+
 		if (trig.state <= TRIG_BIT)
 			trig_out_clr();
 
-		/* disable the timer */
-		tim->cnt = 0;
-
 		switch (slcdev.state) {
-		case DEV_WAIT_FOR_PW1:
+		case DEV_PW1_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
-			slcdev.state = DEV_PW1_GUARD;
-			DCC_LOG(LOG_TRACE, "[PW1 GUARD]");
+			slcdev.state = DEV_PW1_RESPONSE_TIME;
+			DCC_LOG(LOG_TRACE, "[PW1 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
-		case DEV_WAIT_FOR_PW2:
+		case DEV_PW2_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
-			slcdev.state = DEV_PW2_GUARD;
-			DCC_LOG(LOG_TRACE, "[PW2 GUARD]");
+			slcdev.state = DEV_PW2_RESPONSE_TIME;
+			DCC_LOG(LOG_TRACE, "[PW2 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
-		case DEV_WAIT_FOR_PW3:
+		case DEV_PW3_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
-			slcdev.state = DEV_PW3_GUARD;
-			DCC_LOG(LOG_TRACE, "[PW3 GUARD]");
+			slcdev.state = DEV_PW3_RESPONSE_TIME;
+			DCC_LOG(LOG_TRACE, "[PW3 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
-		case DEV_WAIT_FOR_PW4:
+		case DEV_PW4_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
-			slcdev.state = DEV_PW4_GUARD;
-			DCC_LOG(LOG_TRACE, "[PW4 GUARD]");
+			slcdev.state = DEV_PW4_RESPONSE_TIME;
+			DCC_LOG(LOG_TRACE, "[PW4 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
-		case DEV_WAIT_FOR_PW5:
+		case DEV_PW5_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
-			slcdev.state = DEV_PW5_GUARD;
-			DCC_LOG(LOG_TRACE, "[PW5 GUARD]");
+			slcdev.state = DEV_PW5_RESPONSE_TIME;
+			DCC_LOG(LOG_TRACE, "[PW5 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
-		case DEV_WAIT_START:
-			tim->arr = 1000;
-			slcdev.state = DEV_WAIT_STOP;
-			DCC_LOG(LOG_TRACE, "[WAIT STTOP]");
+		case DEV_INACTIVE_START_WAIT:
+			tim->arr = 4000; /* Inactive PW window */
+			slcdev.state = DEV_INACTIVE_STOP_WAIT;
+			DCC_LOG(LOG_TRACE, "[INACTIVE STOP WAIT]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -495,8 +468,9 @@ void stm32_comp_tsc_isr(void)
 		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	} else {
 
-		/* disable the timer */
-		tim->cnt = 0;
+		/* ********************************************************
+		 *  VSLC Rising Edge 
+		 *********************************************************/
 
 		/* Rising Edge */
 		if (trig.state == TRIG_VSLC)
@@ -504,8 +478,7 @@ void stm32_comp_tsc_isr(void)
 
 		switch (slcdev.state) {
 
-		case DEV_WAIT_STOP:
-			tim->cr1 = 0;
+		case DEV_INACTIVE_STOP_WAIT:
 			slcdev.state = DEV_IDLE;
 			DCC_LOG(LOG_TRACE, "[IDLE]");
 			break;
@@ -513,74 +486,91 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW1_END_WAIT:
 			tim->arr = 500;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_WAIT_FOR_PW2;
-			DCC_LOG(LOG_TRACE, "[WAIT FOR PW2]");
+			slcdev.state = DEV_PW2_START_WAIT;
+			DCC_LOG(LOG_TRACE, "[PW2 START WAIT]");
 			break;
 
 		case DEV_PW2_END_WAIT:
 			tim->arr = 500;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_WAIT_FOR_PW3;
-			DCC_LOG(LOG_TRACE, "[WAIT FOR PW3]");
+			slcdev.state = DEV_PW3_START_WAIT;
+			DCC_LOG(LOG_TRACE, "[PW3 START WAIT]");
 			break;
 
 		case DEV_PW3_END_WAIT:
 			tim->arr = 500;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_WAIT_FOR_PW4;
-			DCC_LOG(LOG_TRACE, "[WAIT FOR PW4]");
+			slcdev.state = DEV_PW4_START_WAIT;
+			DCC_LOG(LOG_TRACE, "[PW4 START WAIT]");
 			break;
 
 		case DEV_PW4_END_WAIT:
 			tim->arr = 500;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_WAIT_FOR_PW5;
-			DCC_LOG(LOG_TRACE, "[WAIT FOR PW5]");
+			slcdev.state = DEV_PW5_START_WAIT;
+			DCC_LOG(LOG_TRACE, "[PW5 START WAIT]");
 			break;
 
 		case DEV_PW5_END_WAIT:
-			/* disable the timer */
-			tim->cr1 = 0;
-			slcdev.state = DEV_IDLE;
-			DCC_LOG(LOG_TRACE, "[IDLE]");
-//			tim->arr = 50;
-			/* trigger the timer */
-//			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_TRACE, "[RECOVER TIME]");
 			break;
 
 		case DEV_PW1_PULSE:
-			DCC_LOG(LOG_WARNING, "PW1 pulse abort!");
-			slcdev.state = DEV_IDLE;
 			isink_stop();
-			break;
-		case DEV_PW2_PULSE:
-			DCC_LOG(LOG_WARNING, "PW2 pulse abort!");
-			slcdev.state = DEV_IDLE;
-			isink_stop();
-			break;
-		case DEV_PW3_PULSE:
-			DCC_LOG(LOG_WARNING, "PW3 pulse abort!");
-			slcdev.state = DEV_IDLE;
-			isink_stop();
-			break;
-		case DEV_PW4_PULSE:
-			DCC_LOG(LOG_WARNING, "PW4 pulse abort!");
-			slcdev.state = DEV_IDLE;
-			isink_stop();
-			break;
-		case DEV_PW5_PULSE:
-			DCC_LOG(LOG_WARNING, "PW5 pulse abort!");
-			slcdev.state = DEV_IDLE;
-			isink_stop();
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW1 abort! [RECOVER TIME]");
 			break;
 
-		case DEV_PW1_GUARD:
-		case DEV_PW2_GUARD:
-		case DEV_PW3_GUARD:
-		case DEV_PW4_GUARD:
-		case DEV_PW5_GUARD:
-			DCC_LOG(LOG_WARNING, "PW guard abort!");
-			slcdev.state = DEV_IDLE;
+		case DEV_PW2_PULSE:
+			isink_stop();
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW2 abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW3_PULSE:
+			isink_stop();
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW3 abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW4_PULSE:
+			isink_stop();
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW4 abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW5_PULSE:
+			isink_stop();
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW5 abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW1_RESPONSE_TIME:
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW1 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW2_RESPONSE_TIME:
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW2 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW3_RESPONSE_TIME:
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW3 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW4_RESPONSE_TIME:
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW4 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PW5_RESPONSE_TIME:
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "PW5 guard abort! [RECOVER TIME]");
 			break;
 		}
 
