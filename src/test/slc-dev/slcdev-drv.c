@@ -25,6 +25,8 @@
 #include "slcdev.h"
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 struct clip_device {
 	uint8_t addr;
@@ -248,12 +250,13 @@ void stm32_tim10_isr(void)
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
+		/* VSLC at 24V (Power Level) */
 
 		if (trig.state == TRIG_ADDR_MATCH)
 			trig_out_clr();
 
 		/* Power */
-		DCC_LOG(LOG_TRACE, "[IDLE]");
+		DCC_LOG(LOG_INFO, "[IDLE]");
 		slcdev.state = DEV_IDLE;
 
 		/* reset the trigger module */
@@ -274,6 +277,8 @@ void stm32_tim10_isr(void)
 			trig.state = TRIG_IDLE;
 			break;
 		}
+
+		return;
 	} 
 	
 	bit = (csr & COMP_CMP2OUT) ? 1 : 0;
@@ -335,10 +340,10 @@ void stm32_tim10_isr(void)
 					DCC_LOG2(LOG_TRACE, "Simulating %s=%d", 
 							 mod ? "MODULE" : "SENSOR", addr);
 					slcdev.state = DEV_PW1_START_WAIT;
-					DCC_LOG(LOG_TRACE, "[DEV WAIT FOR PW1]");
+					DCC_LOG(LOG_TRACE, "[PW1 START WAIT]");
 				} else {
 					slcdev.state = DEV_INACTIVE_START_WAIT;
-					DCC_LOG(LOG_TRACE, "[WAIT START]");
+					DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
 				}
 			} else {
 				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
@@ -385,7 +390,7 @@ void stm32_tim10_isr(void)
 	}
 }
 
-#define PW_RESPONSE_TIME 100
+#define PW_RESPONSE_TIME (100 - 20)
 
 void stm32_comp_tsc_isr(void)
 {
@@ -410,6 +415,8 @@ void stm32_comp_tsc_isr(void)
 
 		if (trig.state <= TRIG_BIT)
 			trig_out_clr();
+
+		tim->cnt = 0;
 
 		switch (slcdev.state) {
 		case DEV_PW1_START_WAIT:
@@ -455,12 +462,13 @@ void stm32_comp_tsc_isr(void)
 		case DEV_INACTIVE_START_WAIT:
 			tim->arr = 4000; /* Inactive PW window */
 			slcdev.state = DEV_INACTIVE_STOP_WAIT;
-			DCC_LOG(LOG_TRACE, "[INACTIVE STOP WAIT]");
+			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
 
 		default:
+			tim->arr = 150;
 			break;
 		}
 
@@ -472,41 +480,33 @@ void stm32_comp_tsc_isr(void)
 		 *  VSLC Rising Edge 
 		 *********************************************************/
 
+		tim->cnt = 0;
+
 		/* Rising Edge */
 		if (trig.state == TRIG_VSLC)
 			trig_out_set();
 
+		if (trig.state == TRIG_ADDR_MATCH)
+			trig_out_clr();
+
 		switch (slcdev.state) {
 
-		case DEV_INACTIVE_STOP_WAIT:
-			slcdev.state = DEV_IDLE;
-			DCC_LOG(LOG_TRACE, "[IDLE]");
-			break;
-
 		case DEV_PW1_END_WAIT:
-			tim->arr = 500;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_PW2_START_WAIT;
 			DCC_LOG(LOG_TRACE, "[PW2 START WAIT]");
 			break;
 
 		case DEV_PW2_END_WAIT:
-			tim->arr = 500;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_PW3_START_WAIT;
 			DCC_LOG(LOG_TRACE, "[PW3 START WAIT]");
 			break;
 
 		case DEV_PW3_END_WAIT:
-			tim->arr = 500;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_PW4_START_WAIT;
 			DCC_LOG(LOG_TRACE, "[PW4 START WAIT]");
 			break;
 
 		case DEV_PW4_END_WAIT:
-			tim->arr = 500;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_PW5_START_WAIT;
 			DCC_LOG(LOG_TRACE, "[PW5 START WAIT]");
 			break;
@@ -520,20 +520,31 @@ void stm32_comp_tsc_isr(void)
 
 		case DEV_PW1_PULSE:
 			isink_stop();
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW1 abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW2_PULSE:
 			isink_stop();
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW2 abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW3_PULSE:
 			isink_stop();
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW3 abort! [RECOVER TIME]");
+			break;
+
+		case DEV_INACTIVE_STOP_WAIT:
+			slcdev.state = DEV_INACTIVE_START_WAIT;
+			DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
 			break;
 
 		case DEV_PW4_PULSE:
@@ -544,33 +555,53 @@ void stm32_comp_tsc_isr(void)
 
 		case DEV_PW5_PULSE:
 			isink_stop();
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW5 abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW1_RESPONSE_TIME:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW1 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW2 guard abort! [RECOVER TIME]");
+			DCC_LOG(LOG_WARNING, "PW2 response abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW3 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW4 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW5 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_PARITY_ERROR:
+			tim->cnt = 0;
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			slcdev.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 		}
 
@@ -605,7 +636,7 @@ static void slc_sense_init(void)
 	/* Unmask interrupt */
 	exti->imr |= COMP1_EXTI;
 
-	cm3_irq_pri_set(STM32_IRQ_COMP, (4 << 5));
+	cm3_irq_pri_set(STM32_IRQ_COMP, IRQ_PRIORITY_HIGHEST);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_COMP);
 
@@ -620,7 +651,7 @@ static void slc_sense_init(void)
 	tim->dier = TIM_UIE; /* Update interrupt enable */
 	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
 
-	cm3_irq_pri_set(STM32_IRQ_TIM10, (4 << 5));
+	cm3_irq_pri_set(STM32_IRQ_TIM10, IRQ_PRIORITY_VERY_HIGH);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_TIM10);
 }

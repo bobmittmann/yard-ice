@@ -143,7 +143,7 @@ static void io_timer_init(void)
 	tim->psc = pre - 1;
 	tim->arr = n - 1;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	cm3_irq_pri_set(STM32_IRQ_TIM9, (4 << 5));
+	cm3_irq_pri_set(STM32_IRQ_TIM9, IRQ_PRIORITY_LOW);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_TIM9);
 
