@@ -23,6 +23,8 @@
 #include "board.h"
 #include "isink.h"
 #include <sys/dcclog.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 #define FREQ_1MHZ 1000000
 
@@ -342,10 +344,9 @@ void isink_init(void)
 	tim->ccr4 = 0;
 
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	cm3_irq_pri_set(STM32_IRQ_TIM4, (4 << 5));
+	cm3_irq_pri_set(STM32_IRQ_TIM4, IRQ_PRIORITY_HIGH);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_TIM4);
-
 
 
 	/* I/O pins config */
