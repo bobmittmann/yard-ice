@@ -1,20 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/dcclog.h>
 
 #include "jsmn.h"
 
-#define TOK_MAX 1024
-#define STR_LEN_MAX 128
+#define JSON_STR_LEN_MAX 128
 
 char * json_token_tostr(char *js, jsmntok_t *t)
 {
-	static char s[STR_LEN_MAX + 1];
+	static char s[JSON_STR_LEN_MAX + 1];
 	int n;
 
 	n = t->end - t->start;
-	if (n > STR_LEN_MAX)
-		n = STR_LEN_MAX;
+	if (n > JSON_STR_LEN_MAX)
+		n = JSON_STR_LEN_MAX;
 
 	memcpy(s, js + t->start, t->end - t->start);
 	s[n] = '\0';
