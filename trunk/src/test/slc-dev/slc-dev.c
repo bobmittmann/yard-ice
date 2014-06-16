@@ -12,6 +12,8 @@
 #include "isink.h"
 #include "slcdev.h"
 
+int device_db_init(void);
+
 struct file stm32_uart2_file = {
 	.data = STM32_USART2, 
 	.op = &stm32_usart_fops 
@@ -141,6 +143,8 @@ int main(int argc, char ** argv)
 	slcdev_init();
 	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
 	isink_slewrate_set(1000);
+
+	device_db_init();
 
 	for (i = 0; ; ++i) {
 	

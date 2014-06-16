@@ -19,15 +19,16 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-
 PROG = slc-dev
 
-CFILES = slc-dev.c board.c isink.c slcdev-drv.c
+CFILES_GEN = device_db.c
+CFILES = jsmn.c slc-dev.c board.c isink.c slcdev-drv.c slcdev-db.c json-dump.c
 
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
 		  $(SDK)/libthinkos  $(SDK)/libice-comm
+
 
 LIBS = gcc stm32f cm3 util c thinkos ice-comm 
 #thinkos 
@@ -38,5 +39,10 @@ CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
 MACH = stm32l151xb
+
 include ../../mk/stm32l1xx.mk
+
+$(OUTDIR)/device_db.c: device_db.js
+	$(ACTION) "BIN2HEX: $@"
+	$(Q)../../../tools/bin2hex.py -n device_db_js $< > $@ 
 
