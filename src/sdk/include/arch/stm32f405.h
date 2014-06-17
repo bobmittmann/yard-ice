@@ -63,15 +63,15 @@
 #define STM32F_BASE_FLASH   0x40023c00
 #define STM32F_BASE_RCC     0x40023800
 #define STM32F_BASE_CRC     0x40023000
-#define STM32F_BASE_GPIOI   0x40022000
-#define STM32F_BASE_GPIOH   0x40021c00
-#define STM32F_BASE_GPIOG   0x40021800
-#define STM32F_BASE_GPIOF   0x40021400
-#define STM32F_BASE_GPIOE   0x40021000
-#define STM32F_BASE_GPIOD   0x40020c00
-#define STM32F_BASE_GPIOC   0x40020800
-#define STM32F_BASE_GPIOB   0x40020400
-#define STM32F_BASE_GPIOA   0x40020000
+#define STM32_BASE_GPIOI   0x40022000
+#define STM32_BASE_GPIOH   0x40021c00
+#define STM32_BASE_GPIOG   0x40021800
+#define STM32_BASE_GPIOF   0x40021400
+#define STM32_BASE_GPIOE   0x40021000
+#define STM32_BASE_GPIOD   0x40020c00
+#define STM32_BASE_GPIOC   0x40020800
+#define STM32_BASE_GPIOB   0x40020400
+#define STM32_BASE_GPIOA   0x40020000
 #define STM32F_BASE_TIM11   0x40014800
 #define STM32F_BASE_TIM10   0x40014400
 #define STM32F_BASE_TIM9    0x40014000
@@ -160,9 +160,9 @@
 #define STM32F_IRQ_I2C2_ER 34 /* I2C2 Error Interrupt */
 #define STM32F_IRQ_SPI1 35 /* SPI1 global Interrupt */
 #define STM32F_IRQ_SPI2 36 /* SPI2 global Interrupt */
-#define STM32F_IRQ_USART1 37 /* USART1 global Interrupt */
-#define STM32F_IRQ_USART2 38 /* USART2 global Interrupt */
-#define STM32F_IRQ_USART3 39 /* USART3 global Interrupt */
+#define STM32_IRQ_USART1 37 /* USART1 global Interrupt */
+#define STM32_IRQ_USART2 38 /* USART2 global Interrupt */
+#define STM32_IRQ_USART3 39 /* USART3 global Interrupt */
 #define STM32F_IRQ_EXTI15_10 40 /* External Line[15:10] Interrupts */
 #define STM32F_IRQ_RTC_ALARM 41 /* RTC Alarm (A and B) through EXTI Line Interrupt */
 #define STM32F_IRQ_OTG_FS_WKUP 42 /* USB OTG FS Wakeup through EXTI line interrupt */
@@ -181,8 +181,8 @@
 #define STM32F_IRQ_SDIO 49 /* SDIO global Interrupt */
 #define STM32F_IRQ_TIM5 50 /* TIM5 global Interrupt */
 #define STM32F_IRQ_SPI3 51 /* SPI3 global Interrupt */
-#define STM32F_IRQ_UART4 52 /* UART4 global Interrupt */
-#define STM32F_IRQ_UART5 53 /* UART5 global Interrupt */
+#define STM32_IRQ_UART4 52 /* UART4 global Interrupt */
+#define STM32_IRQ_UART5 53 /* UART5 global Interrupt */
 
 /* TIM6 global and DAC1&2 underrun error */
 #define STM32F_IRQ_TIM6 54 /* TIM6 global Interrupt */
@@ -204,7 +204,7 @@
 #define STM32F_IRQ_DMA2_STREAM5 68 /* DMA2 Stream 5 global interrupt */
 #define STM32F_IRQ_DMA2_STREAM6 69 /* DMA2 Stream 6 global interrupt */
 #define STM32F_IRQ_DMA2_STREAM7 70 /* DMA2 Stream 7 global interrupt */
-#define STM32F_IRQ_USART6 71 /* USART6 global interrupt */
+#define STM32_IRQ_USART6 71 /* USART6 global interrupt */
 #define STM32F_IRQ_I2C3_EV 72 /* I2C3 event interrupt */
 #define STM32F_IRQ_I2C3_ER 73 /* I2C3 error interrupt */
 #define STM32F_IRQ_OTG_HS_EP1_OUT 74 /* USB OTG HS End Point 1 Out global interrupt */
@@ -218,7 +218,7 @@
 #ifndef __ASSEMBLER__
 
 #define STM32F_PWR ((struct stm32f_pwr *)STM32F_BASE_PWR)
-#define STM32F_RCC ((struct stm32f_rcc *)STM32F_BASE_RCC)
+#define STM32_RCC ((struct stm32_rcc *)STM32F_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)
 #define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
@@ -234,12 +234,12 @@
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
 #define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
-#define STM32F_USART1 ((struct stm32f_usart *)STM32F_BASE_USART1)
-#define STM32F_USART2 ((struct stm32f_usart *)STM32F_BASE_USART2)
-#define STM32F_USART3 ((struct stm32f_usart *)STM32F_BASE_USART3)
-#define STM32F_UART4 ((struct stm32f_usart *)STM32F_BASE_UART4)
-#define STM32F_UART5 ((struct stm32f_usart *)STM32F_BASE_UART5)
-#define STM32F_USART6 ((struct stm32f_usart *)STM32F_BASE_USART6)
+#define STM32_USART1 ((struct stm32_usart *)STM32F_BASE_USART1)
+#define STM32_USART2 ((struct stm32_usart *)STM32F_BASE_USART2)
+#define STM32_USART3 ((struct stm32_usart *)STM32F_BASE_USART3)
+#define STM32_UART4 ((struct stm32_usart *)STM32F_BASE_UART4)
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+#define STM32_USART6 ((struct stm32_usart *)STM32F_BASE_USART6)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
@@ -271,39 +271,39 @@
 #define STM32F_TIM13 ((struct stm32f_tim *)STM32F_BASE_TIM13)
 #define STM32F_TIM14 ((struct stm32f_tim *)STM32F_BASE_TIM14)
 
-#define STM32F_GPIOA ((struct stm32f_gpio *)STM32F_BASE_GPIOA)
-#define STM32F_GPIOB ((struct stm32f_gpio *)STM32F_BASE_GPIOB)
-#define STM32F_GPIOC ((struct stm32f_gpio *)STM32F_BASE_GPIOC)
-#define STM32F_GPIOD ((struct stm32f_gpio *)STM32F_BASE_GPIOD)
-#define STM32F_GPIOE ((struct stm32f_gpio *)STM32F_BASE_GPIOE)
-#define STM32F_GPIOF ((struct stm32f_gpio *)STM32F_BASE_GPIOF)
-#define STM32F_GPIOG ((struct stm32f_gpio *)STM32F_BASE_GPIOG)
-#define STM32F_GPIOH ((struct stm32f_gpio *)STM32F_BASE_GPIOH)
-#define STM32F_GPIOI ((struct stm32f_gpio *)STM32F_BASE_GPIOI)
-#define STM32F_GPIO(N) ((struct stm32f_gpio *)(STM32F_BASE_GPIOA + (N)*0x400))
+#define STM32_GPIOA ((struct stm32_gpio *)STM32_BASE_GPIOA)
+#define STM32_GPIOB ((struct stm32_gpio *)STM32_BASE_GPIOB)
+#define STM32_GPIOC ((struct stm32_gpio *)STM32_BASE_GPIOC)
+#define STM32_GPIOD ((struct stm32_gpio *)STM32_BASE_GPIOD)
+#define STM32_GPIOE ((struct stm32_gpio *)STM32_BASE_GPIOE)
+#define STM32_GPIOF ((struct stm32_gpio *)STM32_BASE_GPIOF)
+#define STM32_GPIOG ((struct stm32_gpio *)STM32_BASE_GPIOG)
+#define STM32_GPIOH ((struct stm32_gpio *)STM32_BASE_GPIOH)
+#define STM32_GPIOI ((struct stm32_gpio *)STM32_BASE_GPIOI)
+#define STM32_GPIO(N) ((struct stm32_gpio *)(STM32_BASE_GPIOA + (N)*0x400))
 
 #define STM32F_UID ((uint32_t *)STM32F_BASE_UID)
 
-typedef enum {
-	STM32F_GPIOA_ID = 0,
-	STM32F_GPIOB_ID,
-	STM32F_GPIOC_ID,
-	STM32F_GPIOD_ID,
-	STM32F_GPIOE_ID,
-	STM32F_GPIOF_ID,
-	STM32F_GPIOG_ID,
-	STM32F_GPIOH_ID,
-	STM32F_GPIOI_ID
-} stmf32_gpio_id_t;
+enum {
+	STM32_GPIOA_ID = 0,
+	STM32_GPIOB_ID,
+	STM32_GPIOC_ID,
+	STM32_GPIOD_ID,
+	STM32_GPIOE_ID,
+	STM32_GPIOF_ID,
+	STM32_GPIOG_ID,
+	STM32_GPIOH_ID,
+	STM32_GPIOI_ID
+};
 
-typedef enum {
-	STM32F_UART1_ID = 0,
-	STM32F_UART2_ID, 
-	STM32F_UART3_ID,
-	STM32F_UART4_ID,
-	STM32F_UART5_ID,
-	STM32F_UART6_ID
-} stmf32_uart_id_t;
+enum {
+	STM32_UART1_ID = 0,
+	STM32_UART2_ID, 
+	STM32_UART3_ID,
+	STM32_UART4_ID,
+	STM32_UART5_ID,
+	STM32_UART6_ID
+};
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
