@@ -37,15 +37,15 @@ def dumpgen(f):
     yield line
   
 def bin2hex(f, name):
-  print '#include <stdint.h>'
-  print ''
-  print 'const uint8_t ' + name + '[] = {'
+  print('#include <stdint.h>')
+  print('')
+  print('const uint8_t ' + name + '[] = {')
   gen = dumpgen(f)
   for line in gen:
     print(line)
-  print '};'
-  print ''
-  print 'unsigned int sizeof_' + name + ' = sizeof(' + name + ');' 
+  print('};')
+  print('')
+  print('unsigned int sizeof_' + name + ' = sizeof(' + name + ');')
 
 if __name__ == '__main__':
   from optparse import OptionParser
