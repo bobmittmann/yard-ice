@@ -31,6 +31,170 @@
 #include <thinkos_irq.h>
 #include <thinkos.h>
 
+/* DMA Mapping 
+USART2_RX: Channel 6 
+USART2_TX: Channel 7 
+ */
+
+#define DMA_CHAN6 5
+#define DMA_CHAN7 6
+
+#define UART2_TX_DMA_CHAN DMA_CHAN7
+#define UART2_RX_DMA_CHAN DMA_CHAN6
+
+static struct {
+	uint32_t * ifcr;
+	uint32_t * isr;
+} tx;
+
+static struct {
+	uint32_t * ifcr;
+	uint32_t * isr;
+} rx;
+
+
+/*********************************************
+ * RX DMA ISR
+ *********************************************/
+void stm32f_dma1_channel6_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA1;
+	struct stm32f_dma_channel * ch = &dma->ch[UART2_RX_DMA_CHAN];
+	uint32_t ccr;
+
+
+	if (dma->isr & DMA_TCIF6) {
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF6;
+
+		/* disable DMA and Interrupts */
+		ch->ccr &= ~(DMA_EN | DMA_TCIE);
+		/* Wait for the channel to be ready .. */
+		while ((ccr = ch->ccr) & DMA_EN);
+		/* Memory address */
+		ch->cmar = dac_chan[0].wave;
+		/* Number of data items to transfer */
+		ch->cndtr = dac_chan[0].len;
+		/* enable interrupt */
+		ch->ccr = ccr | DMA_EN;
+	}
+}
+
+/*********************************************
+ * TX DMA ISR
+ *********************************************/
+void stm32f_dma1_channel7_isr(void)
+{
+	struct stm32f_dma * dma = STM32F_DMA1;
+	struct stm32f_dma_channel * ch = &dma->ch[UART2_TX_DMA_CHAN];
+	uint32_t ccr;
+
+	if (dma->isr & DMA_TCIF7) {
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF7;
+
+		/* disable DMA and Interrupts */
+		ch->ccr &= ~(DMA_EN | DMA_TCIE);
+		/* Wait for the channel to be ready .. */
+		while ((ccr = ch->ccr) & DMA_EN);
+		/* Memory address */
+		ch->cmar = dac_chan[1].wave;
+		/* Number of data items to transfer */
+		ch->cndtr = dac_chan[1].len;
+		/* enable interrupt */
+		ch->ccr = ccr | DMA_EN;
+	}
+}
+
+void serial_init(unsigned int speed)
+{
+	struct stm32_usart * uart = STM32_USART2;
+	struct stm32f_dma * dma = STM32_DMA1;
+	struct stm32f_dma_channel * tx_dma_chan;
+	struct stm32f_dma_channel * rx_dma_chan;
+
+	/* clock enable */
+	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_USART2);
+
+	/*********************************************
+	 * TX DMA 
+	 *********************************************/
+	tx_dma_chan = dma->ch[DMA_CHAN7];
+
+	/* DMA Disable */
+	dma->ch[UART2_TX_DMA_CHAN].ccr = 0;
+	/* Wait for the channel to be ready .. */
+	while (dma->ch[UART2_TX_DMA_CHAN].ccr & DMA_EN);
+
+	/*  DMA Configuration */
+	/* Peripheral address */
+	dma->ch[UART2_TX_DMA_CHAN].cpar = &dac->dhr12r1;
+	/* Memory pointer */
+	dma->ch[UART2_TX_DMA_CHAN].cmar = (void *)wave_lut[0].buf;
+	/* Number of data items to transfer */
+	dma->ch[UART2_TX_DMA_CHAN].cndtr = wave_lut[0].len;
+	/* Configuration single buffer circular */
+	dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
+		DMA_CIRC | DMA_DIR_MTP | DMA_EN;
+
+	/*********************************************
+	 * RX DMA 
+	 *********************************************/
+
+	/* DMA Disable */
+	dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
+	/* Wait for the channel to be ready .. */
+	while (dma->ch[UART2_RX_DMA_CHAN].ccr & DMA_EN);
+
+	/*  DMA Configuration */
+	/* Peripheral address */
+	dma->ch[UART2_RX_DMA_CHAN].cpar = &dac->dhr12r1;
+	/* Memory pointer */
+	dma->ch[UART2_RX_DMA_CHAN].cmar = (void *)wave_lut[0].buf;
+	/* Number of data items to transfer */
+	dma->ch[UART2_RX_DMA_CHAN].cndtr = wave_lut[0].len;
+	/* Configuration single buffer circular */
+	dma->ch[UART2_RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
+		DMA_CIRC | DMA_DIR_MTP | DMA_EN;
+
+	/*********************************************
+	 * USART 
+	 *********************************************/
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, speed);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+
+	/* 3 characters IDLE time:
+	   - 1 char in the TX holding buffer
+	   - 1 char in the TX shift register
+	   - 1 idle char */
+	lnk->idle_tm = ((30 * 1000) / speed) + 1;
+
+	printf("idle_tm = %d\n", lnk->idle_tm);
+
+	/* Enable DMA for transmission and reception */
+	uart->cr3 |= USART_DMAT | USART_DMAR;
+
+	/* enable idle line interrupt */
+	uart->cr1 |= USART_IDLEIE;
+
+	stm32_usart_enable(uart);
+
+	cm3_irq_pri_set(STM32_IRQ_DMA1_CHANNEL6, IRQ_PRIORITY_LOW);
+	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL6);
+
+	cm3_irq_pri_set(STM32_IRQ_DMA1_CHANNEL7, IRQ_PRIORITY_LOW);
+	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL7);
+
+	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);
+	cm3_irq_enable(STM32_IRQ_USART2);
+}
+
+
+
+
+#if 0
 #include "rs485lnk.h"
 
 void rs485_init(struct rs485_link * lnk, 
@@ -319,3 +483,5 @@ void * _rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 
 	return pkt;
 }
+#endif
+
