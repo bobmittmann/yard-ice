@@ -45,7 +45,7 @@
 
 /* GPIO pin description */ 
 struct stm32f_io {
-	struct stm32f_gpio * gpio;
+	struct stm32_gpio * gpio;
 	uint8_t pin;
 };
 
@@ -55,20 +55,20 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ STM32F_GPIOC, 1 },
-	{ STM32F_GPIOC, 14 },
-	{ STM32F_GPIOC, 7 },
-	{ STM32F_GPIOC, 8 }
+	{ STM32_GPIOC, 1 },
+	{ STM32_GPIOC, 14 },
+	{ STM32_GPIOC, 7 },
+	{ STM32_GPIOC, 8 }
 };
 
 void led_on(int id)
 {
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
 {
-	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_init(void)
@@ -76,20 +76,20 @@ void leds_init(void)
 	int i;
 
 	for (i = 0; i < sizeof(led_io) / sizeof(struct stm32f_io); ++i) {
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+		stm32_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
-		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
 }
 
 struct rs485_link link;
 
-#define USART2_TX STM32F_GPIOA, 2
-#define USART2_RX STM32F_GPIOA, 3
+#define USART2_TX STM32_GPIOA, 2
+#define USART2_RX STM32_GPIOA, 3
 
-#define LINK_TXEN STM32F_GPIOA, 1
-#define LINK_LOOP STM32F_GPIOA, 0 
+#define LINK_TXEN STM32_GPIOA, 1
+#define LINK_LOOP STM32_GPIOA, 0 
 
 #define USART2_DMA_STRM_RX 5
 #define USART2_DMA_CHAN_RX 4
@@ -109,16 +109,16 @@ void net_init(void)
 	printf("%s():...\n", __func__);
 
 	/* IO init */
-	stm32f_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(USART2_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART2_RX, GPIO_AF7);
-	stm32f_gpio_af(USART2_TX, GPIO_AF7);
+	stm32_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(USART2_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(USART2_RX, GPIO_AF7);
+	stm32_gpio_af(USART2_TX, GPIO_AF7);
 
-	stm32f_gpio_mode(LINK_TXEN, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_mode(LINK_LOOP, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LINK_TXEN, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(LINK_LOOP, OUTPUT, PUSH_PULL | SPEED_LOW);
 
-	stm32f_gpio_set(LINK_LOOP);
-	stm32f_gpio_set(LINK_TXEN);
+	stm32_gpio_set(LINK_LOOP);
+	stm32_gpio_set(LINK_TXEN);
 
 	/* initialize the packet buffer pool */
 	pktbuf_pool_init();
@@ -129,11 +129,11 @@ void net_init(void)
 	 */
 
 	/* Link init */
-	rs485_init(&link, STM32F_USART2, 1000, STM32F_DMA1, 
+	rs485_init(&link, STM32_USART2, 1000, STM32F_DMA1, 
 			   USART2_DMA_STRM_RX, USART2_DMA_CHAN_RX,
 			   USART2_DMA_STRM_TX, USART2_DMA_CHAN_TX);
 
-	cm3_irq_enable(STM32F_IRQ_USART2);
+	cm3_irq_enable(STM32_IRQ_USART2);
 }
 
 int net_send(const void * buf, int len)
@@ -192,17 +192,17 @@ int net_recv(void * buf, int len)
  * ----------------------------------------------------------------------
  */
 
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
+#define USART1_TX STM32_GPIOB, 6
+#define USART1_RX STM32_GPIOB, 7
 
-struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
+struct file stm32_uart1_file = {
+	.data = STM32_USART1, 
+	.op = &stm32_usart_fops 
 };
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32F_USART1;
+	struct stm32_usart * uart = STM32_USART1;
 #if defined(STM32F1X)
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
@@ -210,7 +210,7 @@ void stdio_init(void)
 	DCC_LOG(LOG_TRACE, "...");
 
 	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 
 #if defined(STM32F1X)
 	/* USART1_RX */
@@ -218,19 +218,19 @@ void stdio_init(void)
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
 #elif defined(STM32F4X)
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+	stm32_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(USART1_RX, GPIO_AF7);
+	stm32_gpio_af(USART1_TX, GPIO_AF7);
 #endif
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 115200);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
-	stdin = &stm32f_uart1_file;
-	stdout = &stm32f_uart1_file;
-	stderr = &stm32f_uart1_file;
+	stdin = &stm32_uart1_file;
+	stdout = &stm32_uart1_file;
+	stderr = &stm32_uart1_file;
 }
 
 /* ----------------------------------------------------------------------
@@ -241,9 +241,9 @@ void io_init(void)
 {
 	DCC_LOG(LOG_MSG, "Configuring GPIO ports...");
 
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOC);
 }
 
 /* ----------------------------------------------------------------------

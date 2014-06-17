@@ -34,7 +34,7 @@
 #include "rs485lnk.h"
 
 void rs485_init(struct rs485_link * lnk, 
-				struct stm32f_usart * uart,
+				struct stm32_usart * uart,
 				unsigned int speed,
 				struct stm32f_dma * dma,
 				int rx_dma_strm_id, int rx_dma_chan_id, 
@@ -42,7 +42,7 @@ void rs485_init(struct rs485_link * lnk,
 {
 	struct stm32f_dma_stream * tx_dma_strm;
 	struct stm32f_dma_stream * rx_dma_strm;
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_rcc * rcc = STM32_RCC;
 
 	lnk->uart = uart;
 	lnk->dma = dma;
@@ -122,9 +122,9 @@ void rs485_init(struct rs485_link * lnk,
 	rx_dma_strm->par = &uart->dr;
 	rx_dma_strm->fcr = DMA_DMDIS | DMA_FTH_FULL;
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, speed);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, speed);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
 
 	/* 3 characters IDLE time:
 	   - 1 char in the TX holding buffer
@@ -140,13 +140,13 @@ void rs485_init(struct rs485_link * lnk,
 	/* enable idle line interrupt */
 	uart->cr1 |= USART_IDLEIE;
 
-	stm32f_usart_enable(uart);
+	stm32_usart_enable(uart);
 }
 
 
 void rs485_link_isr(struct rs485_link * lnk)
 {
-	struct stm32f_usart * uart = lnk->uart;
+	struct stm32_usart * uart = lnk->uart;
 	uint32_t sr;
 	int c;	
 	
@@ -166,7 +166,7 @@ void rs485_link_isr(struct rs485_link * lnk)
 int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 {
 	struct stm32f_dma_stream * dma_strm = lnk->rx.dma_strm;
-	struct stm32f_usart * uart = lnk->uart;
+	struct stm32_usart * uart = lnk->uart;
 	void * rcvd_pkt;
 	uint32_t sr;
 	int len;
@@ -229,7 +229,7 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 
 void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 {
-	struct stm32f_usart * uart = lnk->uart;
+	struct stm32_usart * uart = lnk->uart;
 	struct stm32f_dma_stream * dma_strm = lnk->tx.dma_strm;
 	uint32_t sr;
 //	uint32_t cr;
@@ -298,7 +298,7 @@ int _rs485_pkt_receive(struct rs485_link * lnk, void ** pkt, int max_len)
 	int i;
 
 	for (i = 0; i < max_len; ++i) {
-		while ((c = stm32f_usart_getc(lnk->uart, 0)) < 0) {
+		while ((c = stm32_usart_getc(lnk->uart, 0)) < 0) {
 			thinkos_sleep(1);
 		}
 		s[i] = c;
@@ -313,7 +313,7 @@ void * _rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 	uint8_t * s = (uint8_t *)pkt;
 
 	for (i = 0; i < len; ++i) {
-		stm32f_usart_putc(lnk->uart, s[i]);
+		stm32_usart_putc(lnk->uart, s[i]);
 		thinkos_sleep(10);
 	}
 

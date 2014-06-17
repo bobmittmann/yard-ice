@@ -27,7 +27,7 @@
 
 struct rs485_link {
 	/* USART */
-	struct stm32f_usart * uart;
+	struct stm32_usart * uart;
 	/* DMA controller */
 	struct stm32f_dma * dma;
 	struct {
@@ -63,7 +63,7 @@ extern "C" {
 #endif
 
 void rs485_init(struct rs485_link * lnk, 
-				struct stm32f_usart * uart,
+				struct stm32_usart * uart,
 				unsigned int speed,
 				struct stm32f_dma * dma,
 				int rx_dma_strm_id, int rx_dma_chan_id, 
