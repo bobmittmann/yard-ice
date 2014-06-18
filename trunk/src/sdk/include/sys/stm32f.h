@@ -274,9 +274,9 @@ void stm32f_usb_ep_init(struct stm32f_usb * usb, int ep_id,
  * Flash Memory
  *---------------------------------------------------------------------*/
 
-int stm32f_flash_erase(unsigned int offs, unsigned int len);
+int stm32_flash_erase(unsigned int offs, unsigned int len);
 
-int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len);
+int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len);
 
 /*---------------------------------------------------------------------
  * RTC

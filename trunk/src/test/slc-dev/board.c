@@ -254,7 +254,7 @@ void io_init(void)
 	stm32_gpio_mode(USART2_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(USART2_TX, GPIO_AF7);
 	/* USART2_RX */
-	stm32_gpio_mode(USART2_RX, INPUT, 0);
+	stm32_gpio_mode(USART2_RX, ALT_FUNC, 0);
 	stm32_gpio_af(USART2_RX, GPIO_AF7);
 
 	io_timer_init();
