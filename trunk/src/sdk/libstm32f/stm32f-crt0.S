@@ -73,7 +73,7 @@ __rom_vectors:
 	.word	stm32f_dma1_stream6_isr /* 17 DMA1 Stream 6 */
 	.word	stm32f_adc_isr          /* 18 ADC1, ADC2 and ADC3s */
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 	.word	stm32f_can1_tx_isr         /* 19 CAN1 TX */
 	.word	stm32f_can1_rx0_isr        /* 20 CAN1 RX0 */
 	.word	stm32f_can1_rx1_isr        /* 21 CAN1 RX1 */
@@ -93,7 +93,7 @@ __rom_vectors:
 
 	.word	stm32f_exti9_5_isr         /* 23 External Lines [9:5] */
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 	.word	stm32f_tim1_brk_tim9_isr      /* 24 TIM1 Break and TIM9 */
 	.word	stm32f_tim1_up_tim10_isr      /* 25 TIM1 Update and TIM10 */
 	.word	stm32f_tim1_trg_com_tim11_isr /* 26 TIM1 Trigger and Commutation 
@@ -142,7 +142,7 @@ __rom_vectors:
 	.word	stm32f_exti15_10_isr      /* 40 External Line[15:10]s */
 	.word	stm32f_rtc_alarm_isr      /* 41 RTC Alarm (A and B) 
 										 through EXTI Line */
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 	.word	stm32f_otg_fs_wkup_isr    /* 42 USB OTG FS Wakeup 
 	                                     through EXTI line */
 #elif defined(STM32F10X) || defined(STM32F3X)
@@ -191,7 +191,7 @@ __rom_vectors:
 
 #if defined(STM32F100)
 	.word	stm32f_dma2_stream4_isr   /* 60 DMA2 Stream 4 */
-#elif defined(STM32F2X)
+#elif defined(STM32F2X) || defined(STM32F4X)
 	.word	stm32f_dma2_stream4_isr   /* 60 DMA2 Stream 4 */
 	.word	stm32f_eth_isr            /* 61 Ethernet */
 	.word	stm32f_eth_wkup_isr       /* 62 Ethernet Wakeup through EXTI line */
@@ -427,7 +427,7 @@ _void:
 	.weak       stm32f_adc_isr
 	.thumb_set  stm32f_adc_isr,_isr
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 	.weak       stm32f_can1_tx_isr
 	.thumb_set  stm32f_can1_tx_isr,_isr
 
@@ -611,7 +611,7 @@ _void:
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 	.weak       stm32f_eth_isr
 	.thumb_set  stm32f_eth_isr,_isr
 

@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the libstm32f.
  *
@@ -18,13 +18,13 @@
  */
 
 /** 
- * @file stm32f405.h
+ * @file stm32f407.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __STM32F405_H__
-#define __STM32F405_H__
+#ifndef __STM32F407_H__
+#define __STM32F407_H__
 
 #define STM32F
 #define STM32F4X
@@ -310,5 +310,5 @@ enum {
 
 #endif /* __ASSEMBLER__ */
 
-#endif /* __STM32F405_H__ */
+#endif /* __STM32F407_H__ */
 

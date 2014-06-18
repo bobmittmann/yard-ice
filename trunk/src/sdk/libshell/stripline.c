@@ -1,6 +1,6 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,41 +18,37 @@
  */
 
 /** 
- * @file sys/shell.h
- * @brief YARD-ICE libshell
+ * @file stripline.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
-
-#ifndef __SYS_SHELL_H__
-#define __SYS_SHELL_H__
+ */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/shell.h>
 
-typedef int (* shell_callback_t)(FILE * f, int argc, char ** argv);
+char * shell_stripline(char * line)
+{
+	register char *s, *cp;
 
-struct shell_cmd {
-	shell_callback_t callback;
-	char name[11];
-	char alias[5];
-	char * const usage;
-	char * const desc;
-};
+	if ((cp = line) == NULL)
+		return line;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	for (; isspace(*cp); cp++);
 
-struct shell_cmd * cmd_lookup(const char * s, 
-							  const struct shell_cmd * cmd_tab);
+	if (*cp == '\0')
+		return NULL;
 
-int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
+	s = cp;
 
-int shell(FILE * f, const char * (* get_prompt)(void), 
-		  const char * greeting, const struct shell_cmd * cmd_tab);
+	cp += strlen(cp) - 1;
+	for (; (cp > s) && isspace(*cp); cp--);
 
-#ifdef __cplusplus
+	*++cp = '\0';
+
+	return s;
 }
-#endif
-
-#endif /* __SYS_SHELL_H__ */
 
