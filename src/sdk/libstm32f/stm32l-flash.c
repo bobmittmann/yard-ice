@@ -1,0 +1,254 @@
+/* 
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
+ */
+
+/** 
+ * @file stm32l-flash.c
+ * @brief STM32L flash access API
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+#include <sys/stm32f.h>
+#include <sys/delay.h>
+#include <arch/cortex-m3.h>
+#include <sys/dcclog.h>
+
+#define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
+
+const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
+const uint32_t __flash_size;
+
+#define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
+				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
+
+static int __attribute__((section (".data#"))) 
+	stm32l_flash_bsy_wait(struct stm32_flash * flash)
+{
+	uint32_t sr;
+	int ret = -1;
+	int again;
+
+	for (again = 4096; again > 0; again--) {
+		sr = flash->sr;
+		if (sr & FLASH_ERR) {
+			DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
+					 sr & FLASH_RDERR ? "RDERR" : "",
+					 sr & FLASH_OPTVERRUSR ? "OPTVERRUSR" : "",
+					 sr & FLASH_OPTVERR ? "OPTVERR " : "",
+					 sr & FLASH_SIZERR ? "SIZERR " : "",
+					 sr & FLASH_PGAERR ? "PGAERR" : "",
+					 sr & FLASH_WRPERR ? "WRPERR" : "");
+			break;
+		}
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
+			break;
+		}
+	}
+
+	flash->pecr = 0 ;
+
+	return ret;
+}
+
+int __attribute__((section (".data#"))) 
+	stm32l_flash_blk_erase(struct stm32_flash * flash, uint32_t volatile * addr)
+{
+	flash->pecr = FLASH_ERASE | FLASH_PROG;
+	*addr = 0x00000000;
+
+	return stm32l_flash_bsy_wait(flash);
+}
+
+#define FLASH_SECTOR_SIZE 4096
+
+int stm32_flash_erase(unsigned int offs, unsigned int len)
+{
+	struct stm32_flash * flash = STM32_FLASH;
+	uint32_t addr;
+	uint32_t pecr;
+	int ret;
+	int rem = len;
+	int cnt;
+
+//	uint32_t cr;
+
+	offs &= ~(FLASH_SECTOR_SIZE - 1);
+
+	addr = __flash_base + offs;
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
+
+	pecr = flash->pecr;
+	DCC_LOG1(LOG_TRACE, "PECR=0x%08x", pecr);
+	if (pecr & FLASH_PRGLOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		if (pecr & FLASH_PELOCK) {
+			flash->pekeyr = FLASH_PEKEY1;
+			flash->pekeyr = FLASH_PEKEY2;
+		}
+		flash->prgkeyr= FLASH_PRGKEYR1;
+		flash->prgkeyr= FLASH_PRGKEYR2;
+	}
+
+	cnt = 0;
+	rem = len;
+	while (rem) {
+		uint32_t pri;
+
+		pri = cm3_basepri_get();
+		cm3_basepri_set(1);
+		ret = stm32l_flash_blk_erase(flash, (uint32_t *)addr);
+		cm3_basepri_set(pri);
+
+		if (ret < 0) {
+			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
+			cnt = ret;
+			break;
+		}
+		addr += FLASH_SECTOR_SIZE;
+		rem -= FLASH_SECTOR_SIZE;
+		cnt += FLASH_SECTOR_SIZE;
+	}
+
+	return cnt;
+}
+
+int __attribute__((section (".data#"))) 
+	stm32l_flash_pg_wr(struct stm32_flash * flash, uint32_t volatile * addr, 
+					   uint8_t buf[])
+{
+	uint32_t data;
+	uint32_t sr;
+	int again;
+	int i;
+
+	/* start half page write */
+	flash->pecr = FLASH_FPRG | FLASH_PROG;
+
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+
+	if (sr & FLASH_ERR) {
+		return -1;
+	}
+
+	for (i = 0; i < (128 / 4); ++i) {
+		data = buf[0] | (buf[1] << 8) | (buf[2] << 16)| (buf[3] << 24);
+		addr[i] = data;
+		buf += 4;
+	}	
+
+#if 0
+	for (again = 4096 * 4096; again > 0; again--) {
+		sr = flash->sr;
+		if (sr & FLASH_ERR) {
+			break;
+		}
+		if ((sr & FLASH_BSY) == 0) {
+			ret = 0;
+			break;
+		}
+	}
+#endif
+
+
+//	do {
+//		sr = flash->sr;
+//	} while (sr & FLASH_BSY);
+
+
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+
+	flash->pecr = 0;
+
+	if (sr & FLASH_ERR) {
+		return -1;
+	}
+
+
+	return 0;
+}
+
+int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
+{
+	struct stm32_flash * flash = STM32_FLASH;
+	uint32_t base = __flash_base ;
+	uint8_t * ptr;
+	uint32_t pecr;
+	int rem;
+	int ret;
+
+	if (offs & 0x00000003) {
+		DCC_LOG(LOG_ERROR, "offset must be 32bits aligned!");
+		return -1;
+	}
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", base + offs, len);
+
+	pecr = flash->pecr;
+	DCC_LOG1(LOG_INFO, "PECR=0x%08x", pecr);
+	if (pecr & FLASH_PRGLOCK) {
+		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		if (pecr & FLASH_PELOCK) {
+			flash->pekeyr = FLASH_PEKEY1;
+			flash->pekeyr = FLASH_PEKEY2;
+		}
+		flash->prgkeyr= FLASH_PRGKEYR1;
+		flash->prgkeyr= FLASH_PRGKEYR2;
+	}
+
+	ptr = (uint8_t *)buf;
+	rem = len;
+	while (rem > 0) {
+		uint32_t pri;
+		int n;
+
+		if (((offs & 0x7f) == 0) && (rem >= 128)) {
+			/* start half page write */
+			DCC_LOG(LOG_TRACE, "Half-Page write start...");
+			pri = cm3_basepri_get();
+			cm3_basepri_set(1);
+			ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), ptr);
+			cm3_basepri_set(pri);
+			n = 128;
+		} else {
+			DCC_LOG(LOG_WARNING, "Partial page write...");
+			pri = cm3_basepri_get();
+			cm3_basepri_set(1);
+			ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), ptr);
+			cm3_basepri_set(pri);
+			n = 128;
+		}
+
+		if (ret < 0) {
+			DCC_LOG(LOG_WARNING, "Flash write failed!");
+			return ret;
+		}
+
+		ptr += n;
+		offs += n;
+		rem -= n;
+	}
+
+	return len;
+}
+

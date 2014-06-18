@@ -57,7 +57,7 @@ int device_db_init(void)
 		}
 #endif
 
-	json_dump(stdout, js, tok);
+//	json_dump(stdout, js, tok);
 
 	return 0;
 }
