@@ -1245,4 +1245,5 @@ const struct usb_dev stm32f_otg_fs_dev = {
 	.op = &stm32f_otg_fs_ops
 };
 
-#endif /* STM32F2X */
+#endif /* STM32F_OTG_FS */
+
