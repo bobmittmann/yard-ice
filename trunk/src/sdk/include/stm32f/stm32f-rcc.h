@@ -512,6 +512,26 @@
 /* RCC AHB1 peripheral clock register */
 #define STM32F_RCC_AHB1ENR 0x30
 
+#define RCC_OTGHSULPI 30
+#define RCC_OTGHS 29
+#define RCC_ETHMACPTP 28
+#define RCC_ETHMACRX 27
+#define RCC_ETHMACTX 26
+#define RCC_ETHMAC 25
+#define RCC_DMA2 22
+#define RCC_DMA1 21
+#define RCC_BKPSRAM 18
+#define RCC_CRC 12
+#define RCC_GPIOI 8
+#define RCC_GPIOH 7
+#define RCC_GPIOG 6
+#define RCC_GPIOF 5
+#define RCC_GPIOE 4
+#define RCC_GPIOD 3
+#define RCC_GPIOC 2
+#define RCC_GPIOB 1
+#define RCC_GPIOA 0
+
 /* USB OTG HSULPI clock enable */
 #define RCC_OTGHSULPIEN (1 << 30)
 /* Set and cleared by software.
@@ -639,6 +659,12 @@
 /* RCC AHB2 peripheral clock enable register */
 #define STM32F_RCC_AHB2ENR 0x34
 
+#define RCC_OTGFS 7
+#define RCC_RNG 6
+#define RCC_HASH 5
+#define RCC_CRYP 4
+#define RCC_DCMI 0
+
 /* Bit 7 - USB OTG FS clock enable */
 #define RCC_OTGFSEN (1 << 7)
 /* Set and cleared by software.
@@ -674,6 +700,7 @@
 /* RCC AHB3 peripheral clock enable register */
 #define STM32F_RCC_AHB3ENR 0x38
 
+#define RCC_FSMC 0
 
 /* Bit 0 - Flexible static memory controller module clock enable */
 #define RCC_FSMCEN (1 << 0)
@@ -685,6 +712,30 @@
 /* ------------------------------------------------------------------------- */
 /* RCC APB1 peripheral clock enable register */
 #define STM32F_RCC_APB1ENR 0x40
+
+#define RCC_DAC 29
+#define RCC_PWR 28
+#define RCC_CAN2 26
+#define RCC_CAN1 25
+#define RCC_I2C3 23
+#define RCC_I2C2 22
+#define RCC_I2C1 21
+#define RCC_UART5 20
+#define RCC_UART4 19
+#define RCC_USART3 18
+#define RCC_USART2 17
+#define RCC_SPI3 15
+#define RCC_SPI2 14
+#define RCC_WWDG 11
+#define RCC_TIM14 8
+#define RCC_TIM13 7
+#define RCC_TIM12 6
+#define RCC_TIM7 5
+#define RCC_TIM6 4
+#define RCC_TIM5 3
+#define RCC_TIM4 2
+#define RCC_TIM3 1
+#define RCC_TIM2 0
 
 /* Bit 29 - DAC interface clock enable */
 #define RCC_DACEN (1 << 29)
@@ -828,6 +879,20 @@
 /* ------------------------------------------------------------------------- */
 /* RCC APB2 peripheral clock enable register */
 #define STM32F_RCC_APB2ENR 0x44
+
+#define RCC_TIM11 18
+#define RCC_TIM10 17
+#define RCC_TIM9 16
+#define RCC_SYSCFG 14
+#define RCC_SPI1 12
+#define RCC_SDIO 11
+#define RCC_ADC3 10
+#define RCC_ADC2 9
+#define RCC_ADC1 8
+#define RCC_USART6 5
+#define RCC_USART1 4
+#define RCC_TIM8 1
+#define RCC_TIM1 0
 
 
 /* Bit 18 - TIM11 clock enable */
@@ -1558,6 +1623,14 @@
 /* AHB peripheral clock enable register */
 #define STM32F_RCC_AHBENR 0x14
 
+#define RCC_SDIO 10
+#define RCC_FSMC 8
+#define RCC_CRC 6
+#define RCC_FLITF 4
+#define RCC_SRAM 2
+#define RCC_DMA2 1
+#define RCC_DMA1 0
+
 /* Bit 10 - SDIO clock enable */
 #define RCC_SDIOEN (1 << 10)
 /* 
@@ -1619,6 +1692,28 @@ Set and cleared by software.
 
 /* APB2 peripheral clock enable register */
 #define STM32F_RCC_APB2ENR 0x18
+
+#define RCC_TIM11 21
+#define RCC_TIM10 20
+#define RCC_TIM9 19
+#define RCC_TIM17 18
+#define RCC_TIM16 17
+#define RCC_TIM15 16
+#define RCC_ADC3 15
+#define RCC_USART1 14
+#define RCC_TIM8 13
+#define RCC_SPI1 12
+#define RCC_TIM1 11
+#define RCC_ADC2 10
+#define RCC_ADC1 9
+#define RCC_IOPG 8
+#define RCC_IOPF 7
+#define RCC_IOPE 6
+#define RCC_IOPD 5
+#define RCC_IOPC 4
+#define RCC_IOPB 3
+#define RCC_IOPA 2
+#define RCC_AFIO 0
 
 /* [31..22] Reserved, must be kept at reset value. */
 
@@ -1766,6 +1861,31 @@ Set and cleared by software.
 
 /* APB1 peripheral clock enable register */
 #define STM32F_RCC_APB1ENR 0x1c
+
+#define RCC_CEC 30
+#define RCC_DAC 29
+#define RCC_PWR 28
+#define RCC_BKP 27
+#define RCC_CAN 25
+#define RCC_USB 23
+#define RCC_I2C2 22
+#define RCC_I2C1 21
+#define RCC_UART5 20
+#define RCC_UART4 19
+#define RCC_USART3 18
+#define RCC_USART2 17
+#define RCC_SPI3 15
+#define RCC_SPI2 14
+#define RCC_WWDG 11
+#define RCC_TIM14 8
+#define RCC_TIM13 7
+#define RCC_TIM12 6
+#define RCC_TIM7 5
+#define RCC_TIM6 4
+#define RCC_TIM5 3
+#define RCC_TIM4 2
+#define RCC_TIM3 1
+#define RCC_TIM2 0
 
 
 /* Bit 30 - CEC  clock enable */
@@ -2341,9 +2461,141 @@ again in case of a new switch is required)
 #endif /* defined(STM32F3X) */
 
 #define STM32_AHB  0
+#define STM32_AHB1 0
 #define STM32_APB1 1
 #define STM32_APB2 2
 #define STM32_AHB2 3
+#define STM32_AHB3 4
+
+#if defined(STM32F2X) || defined(STM32F4X)
+
+#define STM32_CLK_OTGHSULPI STM32_AHB1, RCC_OTGHSULPI
+#define STM32_CLK_OTGHS     STM32_AHB1, RCC_OTGHS
+#define STM32_CLK_ETHMACPTP STM32_AHB1, RCC_ETHMACPTP
+#define STM32_CLK_ETHMACRX  STM32_AHB1, RCC_ETHMACRX
+#define STM32_CLK_ETHMACTX  STM32_AHB1, RCC_ETHMACTX
+#define STM32_CLK_ETHMAC    STM32_AHB1, RCC_ETHMAC
+#define STM32_CLK_DMA2      STM32_AHB1, RCC_DMA2
+#define STM32_CLK_DMA1      STM32_AHB1, RCC_DMA1
+#define STM32_CLK_BKPSRAM   STM32_AHB1, RCC_BKPSRAM
+#define STM32_CLK_CRC       STM32_AHB1, RCC_CRC
+#define STM32_CLK_GPIOI     STM32_AHB1, RCC_GPIOI
+#define STM32_CLK_GPIOH     STM32_AHB1, RCC_GPIOH
+#define STM32_CLK_GPIOG     STM32_AHB1, RCC_GPIOG
+#define STM32_CLK_GPIOF     STM32_AHB1, RCC_GPIOF
+#define STM32_CLK_GPIOE     STM32_AHB1, RCC_GPIOE
+#define STM32_CLK_GPIOD     STM32_AHB1, RCC_GPIOD
+#define STM32_CLK_GPIOC     STM32_AHB1, RCC_GPIOC
+#define STM32_CLK_GPIOB     STM32_AHB1, RCC_GPIOB
+#define STM32_CLK_GPIOA     STM32_AHB1, RCC_GPIOA
+
+#define STM32_CLK_OTGFS     STM32_AHB2, RCC_OTGFS
+#define STM32_CLK_RNG       STM32_AHB2, RCC_RNG
+#define STM32_CLK_HASH      STM32_AHB2, RCC_HASH
+#define STM32_CLK_CRYP      STM32_AHB2, RCC_CRYP
+#define STM32_CLK_DCMI      STM32_AHB2, RCC_DCMI
+
+#define STM32_CLK_FSMC      STM32_AHB3, RCC_FSMC
+
+#define STM32_CLK_DAC       STM32_APB1, RCC_DAC
+#define STM32_CLK_PWR       STM32_APB1, RCC_PWR
+#define STM32_CLK_CAN2      STM32_APB1, RCC_CAN2
+#define STM32_CLK_CAN1      STM32_APB1, RCC_CAN1
+#define STM32_CLK_I2C3      STM32_APB1, RCC_I2C3
+#define STM32_CLK_I2C2      STM32_APB1, RCC_I2C2
+#define STM32_CLK_I2C1      STM32_APB1, RCC_I2C1
+#define STM32_CLK_UART5     STM32_APB1, RCC_UART5
+#define STM32_CLK_UART4     STM32_APB1, RCC_UART4
+#define STM32_CLK_USART3    STM32_APB1, RCC_USART3
+#define STM32_CLK_USART2    STM32_APB1, RCC_USART2
+#define STM32_CLK_SPI3      STM32_APB1, RCC_SPI3
+#define STM32_CLK_SPI2      STM32_APB1, RCC_SPI2
+#define STM32_CLK_WWDG      STM32_APB1, RCC_WWDG
+#define STM32_CLK_TIM14     STM32_APB1, RCC_TIM14
+#define STM32_CLK_TIM13     STM32_APB1, RCC_TIM13
+#define STM32_CLK_TIM12     STM32_APB1, RCC_TIM12
+#define STM32_CLK_TIM7      STM32_APB1, RCC_TIM7
+#define STM32_CLK_TIM6      STM32_APB1, RCC_TIM6
+#define STM32_CLK_TIM5      STM32_APB1, RCC_TIM5
+#define STM32_CLK_TIM4      STM32_APB1, RCC_TIM4
+#define STM32_CLK_TIM3      STM32_APB1, RCC_TIM3
+#define STM32_CLK_TIM2      STM32_APB1, RCC_TIM2
+
+#define STM32_CLK_TIM11     STM32_APB2, RCC_TIM11
+#define STM32_CLK_TIM10     STM32_APB2, RCC_TIM10
+#define STM32_CLK_TIM9      STM32_APB2, RCC_TIM9
+#define STM32_CLK_SYSCFG    STM32_APB2, RCC_SYSCFG
+#define STM32_CLK_SPI1      STM32_APB2, RCC_SPI1
+#define STM32_CLK_SDIO      STM32_APB2, RCC_SDIO
+#define STM32_CLK_ADC3      STM32_APB2, RCC_ADC3
+#define STM32_CLK_ADC2      STM32_APB2, RCC_ADC2
+#define STM32_CLK_ADC1      STM32_APB2, RCC_ADC1
+#define STM32_CLK_USART6    STM32_APB2, RCC_USART6
+#define STM32_CLK_USART1    STM32_APB2, RCC_USART1
+#define STM32_CLK_TIM8      STM32_APB2, RCC_TIM8
+#define STM32_CLK_TIM1      STM32_APB2, RCC_TIM1
+
+#endif /* STM32F2X || STM32F4X  */
+
+
+#if defined(STM32F1X) || defined(STM32F3X)
+
+#define STM32_CLK_SDIO    STM32_AHB, RCC_SDIO
+#define STM32_CLK_FSMC    STM32_AHB, RCC_FSMC
+#define STM32_CLK_CRC     STM32_AHB, RCC_CRC
+#define STM32_CLK_FLITF   STM32_AHB, RCC_FLITF
+#define STM32_CLK_SRAM    STM32_AHB, RCC_SRAM
+#define STM32_CLK_DMA2    STM32_AHB, RCC_DMA2
+#define STM32_CLK_DMA1    STM32_AHB, RCC_DMA1
+
+#define STM32_CLK_TIM11   STM32_APB2, RCC_TIM11
+#define STM32_CLK_TIM10   STM32_APB2, RCC_TIM10
+#define STM32_CLK_TIM9    STM32_APB2, RCC_TIM9
+#define STM32_CLK_TIM17   STM32_APB2, RCC_TIM17
+#define STM32_CLK_TIM16   STM32_APB2, RCC_TIM16
+#define STM32_CLK_TIM15   STM32_APB2, RCC_TIM15
+#define STM32_CLK_ADC3    STM32_APB2, RCC_ADC3
+#define STM32_CLK_USART1  STM32_APB2, RCC_USART1
+#define STM32_CLK_TIM8    STM32_APB2, RCC_TIM8
+#define STM32_CLK_SPI1    STM32_APB2, RCC_SPI1
+#define STM32_CLK_TIM1    STM32_APB2, RCC_TIM1
+#define STM32_CLK_ADC2    STM32_APB2, RCC_ADC2
+#define STM32_CLK_ADC1    STM32_APB2, RCC_ADC1
+#define STM32_CLK_IOPG    STM32_APB2, RCC_IOPG
+#define STM32_CLK_IOPF    STM32_APB2, RCC_IOPF
+#define STM32_CLK_IOPE    STM32_APB2, RCC_IOPE
+#define STM32_CLK_IOPD    STM32_APB2, RCC_IOPD
+#define STM32_CLK_IOPC    STM32_APB2, RCC_IOPC
+#define STM32_CLK_IOPB    STM32_APB2, RCC_IOPB
+#define STM32_CLK_IOPA    STM32_APB2, RCC_IOPA
+#define STM32_CLK_AFIO    STM32_APB2, RCC_AFIO
+
+#define STM32_CLK_CEC     STM32_APB1, RCC_CEC
+#define STM32_CLK_DAC     STM32_APB1, RCC_DAC
+#define STM32_CLK_PWR     STM32_APB1, RCC_PWR
+#define STM32_CLK_BKP     STM32_APB1, RCC_BKP
+#define STM32_CLK_CAN     STM32_APB1, RCC_CAN
+#define STM32_CLK_USB     STM32_APB1, RCC_USB
+#define STM32_CLK_I2C2    STM32_APB1, RCC_I2C2
+#define STM32_CLK_I2C1    STM32_APB1, RCC_I2C1
+#define STM32_CLK_UART5   STM32_APB1, RCC_UART5
+#define STM32_CLK_UART4   STM32_APB1, RCC_UART4
+#define STM32_CLK_USART3  STM32_APB1, RCC_USART3
+#define STM32_CLK_USART2  STM32_APB1, RCC_USART2
+#define STM32_CLK_SPI3    STM32_APB1, RCC_SPI3
+#define STM32_CLK_SPI2    STM32_APB1, RCC_SPI2
+#define STM32_CLK_WWDG    STM32_APB1, RCC_WWDG
+#define STM32_CLK_TIM14   STM32_APB1, RCC_TIM14
+#define STM32_CLK_TIM13   STM32_APB1, RCC_TIM13
+#define STM32_CLK_TIM12   STM32_APB1, RCC_TIM12
+#define STM32_CLK_TIM7    STM32_APB1, RCC_TIM7
+#define STM32_CLK_TIM6    STM32_APB1, RCC_TIM6
+#define STM32_CLK_TIM5    STM32_APB1, RCC_TIM5
+#define STM32_CLK_TIM4    STM32_APB1, RCC_TIM4
+#define STM32_CLK_TIM3    STM32_APB1, RCC_TIM3
+#define STM32_CLK_TIM2    STM32_APB1, RCC_TIM2
+
+#endif /* STM32F1X || STM32F3X */
 
 #ifndef __ASSEMBLER__
 
@@ -2436,6 +2688,8 @@ static inline void stm32_clk_enable(struct stm32_rcc * rcc,
 #else
 	else if (bus == STM32_AHB2)
 		rcc->ahb2enr |= 1 << bit;
+	else if (bus == STM32_AHB3)
+		rcc->ahb3enr |= 1 << bit;
 	else
 		rcc->ahb1enr |= 1 << bit;
 #endif
@@ -2453,6 +2707,8 @@ static inline void stm32_clk_disable(struct stm32_rcc * rcc,
 #else
 	else if (bus == STM32_AHB2)
 		rcc->ahb2enr &= ~(1 << bit);
+	else if (bus == STM32_AHB3)
+		rcc->ahb3enr &= ~(1 << bit);
 	else
 		rcc->ahb1enr &= ~(1 << bit);
 #endif

@@ -39,6 +39,7 @@
 #define SPI3_MOSI STM32_GPIOB, 5
 #define SPI3_NSS  STM32_GPIOE, 1
 
+#define FPGA_EXTI STM32_GPIOD, 6
 
 #ifdef __cplusplus
 extern "C" {

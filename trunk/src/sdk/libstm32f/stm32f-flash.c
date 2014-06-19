@@ -164,7 +164,7 @@ int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len)
 #endif
 
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
 
 const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
 const uint32_t __flash_size;
