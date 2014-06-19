@@ -26,9 +26,12 @@
 #include <stdbool.h>
 
 #include <sys/shell.h>
+#include <sys/tty.h>
+#include <sys/usb-cdc.h>
 
-#include <xmodem.h>
+#include <sys/dcclog.h>
 
+#include <sys/serial.h>
 #include <thinkos.h>
 
 extern const struct shell_cmd cmd_tab[];
@@ -60,8 +63,66 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_set(FILE * f, int argc, char ** argv)
+{
+	char * val;
+	char * env;
+	int i;
+
+	if (argc > 1) {
+		if (argc < 3) {
+			fprintf(f, "Argument invalid or missing!\n");
+			fprintf(f, "usage: %s [VAR VALUE]\n", argv[0]);
+			return -1;
+		}
+
+		val = argv[2];
+
+		fprintf(f, "%s=%s\n", argv[1], val);
+	
+		if (setenv(argv[1], val, 1) < 0) {
+			fprintf(f, "setenv(): fail!\n");
+			return -1;
+		};
+
+		return 0;
+	}
+
+	for (i = 0; (env =  environ[i]) != NULL; i++) {
+		fprintf(f, "%s\n", env);
+	};
+
+	return 0;
+}
+
+int cmd_get(FILE * f, int argc, char ** argv)
+{
+	char * env;
+
+	if (argc != 2) {
+		fprintf(f, "Argument invalid or missing!\n");
+		fprintf(f, "usage: %s VAR\n", argv[0]);
+		return -1;
+	}
+
+	if ((env = getenv(argv[1])) == NULL) {
+		fprintf(f, "getenv() fail!\n");
+		return -1;
+	};
+
+	fprintf(f, "%s\n", env);
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
+
+	{ cmd_get, "get", "", 
+		"VAR", "get environement variable" },
+
+	{ cmd_set, "set", "", 
+		"VAR EXPR", "set environement variable" },
 
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
@@ -83,28 +144,23 @@ const char * get_prompt(void)
 	return (char *)"[HUB]$ ";
 }
 
-int console_shell(void)
+int stdio_shell(void)
 {
+	DCC_LOG(LOG_TRACE, "...");
+
 	return shell(stdout, get_prompt, shell_greeting, cmd_tab);
 }
 
-#if 0
-int console_shell(void)
+int usb_shell(usb_cdc_class_t * cdc)
 {
-	struct uart_console_dev * dev;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	dev = uart_console_init(115200, SERIAL_8N1);
-	f_raw = uart_console_fopen(dev);
+	f_raw = usb_cdc_fopen(cdc);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
-	stdout = f_tty;
-	stdin = stdout;
-
-	return shell(f_tty, get_prompt, shell_greeting);
+	return shell(f_tty, get_prompt, shell_greeting, cmd_tab);
 }
-#endif
 

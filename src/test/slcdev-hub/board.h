@@ -1,5 +1,5 @@
 /* 
- * File:	 led.h
+ * File:	 board.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -25,107 +25,24 @@
 
 #include <sys/stm32f.h>
 
-#define LED1      STM32_GPIOB, 10
-#define LED2      STM32_GPIOB, 11
-#define LED3      STM32_GPIOB, 0
-#define LED4      STM32_GPIOB, 1
-#define LED5      STM32_GPIOA, 6
-#define LED6      STM32_GPIOA, 7
+#define UART5_TX  STM32_GPIOC, 12
+#define UART5_RX  STM32_GPIOD, 2
 
-#define ADDR0     STM32_GPIOA, 8
-#define ADDR1     STM32_GPIOA, 9
-#define ADDR2     STM32_GPIOA, 10
-#define ADDR3     STM32_GPIOA, 11
+#define UART1_TX  STM32_GPIOB, 6
+#define UART1_RX  STM32_GPIOB, 7
 
-#define ADDR4     STM32_GPIOA, 12
-#define ADDR5     STM32_GPIOC, 13
-#define ADDR6     STM32_GPIOC, 14
-#define ADDR7     STM32_GPIOC, 15
+#define UART6_TX  STM32_GPIOC, 6
+#define UART6_RX  STM32_GPIOD, 7
 
-#define MODSW     STM32_GPIOB, 4
+#define SPI3_SCK  STM32_GPIOC, 10
+#define SPI3_MISO STM32_GPIOC, 11
+#define SPI3_MOSI STM32_GPIOB, 5
+#define SPI3_NSS  STM32_GPIOE, 1
 
-#define USART2_TX STM32_GPIOA, 2
-#define USART2_RX STM32_GPIOA, 3
-
-#define COMP1     STM32_GPIOA, 0
-#define COMP2     STM32_GPIOB, 5
-
-#define TRIG_OUT  STM32_GPIOB, 2
-
-#define SW3A      STM32_GPIOB, 15
-#define SW3B      STM32_GPIOB, 14
-#define SW4A      STM32_GPIOB, 13
-#define SW4B      STM32_GPIOB, 12
-
-#define VNEG_SW   STM32_GPIOA, 1 
-
-#define CHRG_EN   STM32_GPIOB, 6
-
-#define SINK1     STM32_GPIOB, 7
-#define SINK2     STM32_GPIOB, 8
-#define SINK3     STM32_GPIOB, 9
-#define SINK4     STM32_GPIOA, 4
-#define IRATE     STM32_GPIOA, 5
-
-#define COMP1     STM32_GPIOA, 0
-#define COMP2     STM32_GPIOB, 5
-
-
-
-#define SW1_OFF (0 << 0)
-#define SW1_A   (1 << 0)
-#define SW1_B   (2 << 0)
-#define SW1_MSK (3 << 0)
-
-#define SW2_OFF (0 << 2)
-#define SW2_A   (1 << 2)
-#define SW2_B   (2 << 2)
-#define SW2_MSK (3 << 2)
-
-enum {
-	EV_SW1 = 0,
-	EV_SW2,
-	EV_ADDR,
-};
-
-struct io_drv {
-	int8_t flag;
-	volatile uint8_t sw;
-	volatile uint8_t addr;
-	volatile uint32_t event;
-};
-
-extern struct io_drv io_drv;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-void io_init(void);
-
-static inline void led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_af(__gpio, __pin);
-}
-
-static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_out(__gpio, __pin);
-}
-
-
-uint32_t io_event_wait(void);
-
-static inline void dev_event_clr(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 0);  
-}
-
-static inline void dev_event_set(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 1);
-}
-
-void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
-void isink_stop(void);
-
-void irate_set(unsigned int mv);
 
 #ifdef __cplusplus
 }

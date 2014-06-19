@@ -76,6 +76,8 @@
 
 void history_init(cmd_history_t * ht)
 {
+	DCC_LOG1(LOG_TRACE, "sizeof(cmd_history_t)=%d", sizeof(cmd_history_t));
+
 	ht->pos = 0;
 	ht->head = 0;
 	ht->tail = 0;
