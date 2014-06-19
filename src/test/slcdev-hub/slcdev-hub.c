@@ -182,6 +182,22 @@ void io_init(void)
 
 }
 
+void external_bus_init(void)
+{
+	/* Configure memory controller ... */
+	stm32f_fsmc_init();
+		
+	/* Configure external interrupt ... */
+	stm32f_exti_init(FPGA_EXTI, EXTI_EDGE_RISING);
+
+	/* Initialize clock output */
+	stm32f_mco2_init();
+
+	/* Enable clock output */
+	stm32f_mco2_enable();
+}
+
+
 int main(int argc, char ** argv)
 {
 	usb_cdc_class_t * cdc;
@@ -196,6 +212,7 @@ int main(int argc, char ** argv)
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
 	io_init();
+	external_bus_init();
 
 	DCC_LOG(LOG_TRACE, "1. stdio_init()");
 	stdio_init();

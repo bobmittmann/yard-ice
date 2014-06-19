@@ -27,7 +27,30 @@
 
 #include <sys/dcclog.h>
 
-#ifdef STM32F2X
+#if defined(STM32F2X) || defined(STM32F4X)
+
+#define FSMC_D0	   STM32_GPIOD, 14
+#define FSMC_D1    STM32_GPIOD, 15
+#define FSMC_D2    STM32_GPIOD, 0
+#define FSMC_D3    STM32_GPIOD, 1
+#define FSMC_D4    STM32_GPIOE, 7
+#define FSMC_D5    STM32_GPIOE, 8
+#define FSMC_D6    STM32_GPIOE, 9
+#define FSMC_D7    STM32_GPIOE, 10
+#define FSMC_D8    STM32_GPIOE, 11
+#define FSMC_D9    STM32_GPIOE, 12
+#define FSMC_D10   STM32_GPIOE, 13
+#define FSMC_D11   STM32_GPIOE, 14
+#define FSMC_D12   STM32_GPIOE, 15
+#define FSMC_D13   STM32_GPIOD, 8
+#define FSMC_D14   STM32_GPIOD, 9
+#define FSMC_D15   STM32_GPIOD, 10
+#define FSMC_CLK   STM32_GPIOD, 3
+#define FSMC_NOE   STM32_GPIOD, 4
+#define FSMC_NWE   STM32_GPIOD, 5
+#define FSMC_NE1   STM32_GPIOD, 7
+#define FSMC_NWAIT STM32_GPIOD, 6
+#define FSMC_NL    STM32_GPIOB, 7
 
 const gpio_io_t fsmc_io[] = {
 	GPIO(GPIOD, 14), /* D0 */
@@ -67,21 +90,19 @@ void stm32f_fsmc_speed(int div)
 void stm32f_fsmc_init(void)
 {
 	struct stm32f_fsmc * fsmc = STM32F_FSMC;
-	struct stm32_rcc * rcc = STM32_RCC;
-	gpio_io_t io;
 	int i;
 
 	DCC_LOG(LOG_TRACE, ".");
 
 	/* Flexible static memory controller module clock enable */
-	rcc->ahb3enr |= RCC_FSMCEN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_FSMC);
 
-	/* Configur IO pins */
-	stm32_gpio_clock_en(STM32_GPIO(GPIOD));
-	stm32_gpio_clock_en(STM32_GPIO(GPIOE));
+	/* Configure IO pins */
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 
 	for (i = 0; i < sizeof(fsmc_io) / sizeof(gpio_io_t); i++) {
-		io = fsmc_io[i];
+		gpio_io_t io = fsmc_io[i];
 		stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
 						 ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF12);

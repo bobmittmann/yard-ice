@@ -27,14 +27,13 @@
 
 #include <sys/dcclog.h>
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 void stm32f_exti_init(struct stm32_gpio * gpio, unsigned int pin, 
 					  unsigned int opt)
 {
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 	struct stm32f_exti * exti = STM32F_EXTI;
-	struct stm32_rcc * rcc = STM32_RCC;
 	int port;
 
 	/* IRQ PIN */
@@ -42,7 +41,7 @@ void stm32f_exti_init(struct stm32_gpio * gpio, unsigned int pin,
 	stm32_gpio_mode(gpio, pin, INPUT, PUSH_PULL | SPEED_HIGH);
 
 	/* System configuration controller clock enable */
-	rcc->apb2enr |= RCC_SYSCFGEN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_SYSCFG);
 
 	port = stm32_gpio_id(gpio);
 
