@@ -68,8 +68,6 @@
 #define UART_RX_FIFO_BUF_LEN 8
 
 #define UART STM32_UART5
-#define UART_TX STM32_GPIOC, 12
-#define UART_RX STM32_GPIOD, 2
 #define UART_ISR stm32f_uart5_isr
 #define UART_IRQ_NUM STM32_IRQ_UART5
 #define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
@@ -202,7 +200,7 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 	int c;
 	int n;
 
-	DCC_LOG1(LOG_MSG, "len=%d", len);
+	DCC_LOG1(LOG_INFO, "len=%d", len);
 
 #if ENABLE_UART_TX_MUTEX
 	 thinkos_mutex_lock(dev->tx_mutex); 
@@ -248,6 +246,8 @@ void UART_ISR(void)
 	uint32_t sr;
 	int c;
 	
+	DCC_LOG(LOG_MSG, "...");
+
 	sr = uart->sr & uart->cr1;
 
 	if (sr & USART_RXNE) {
@@ -295,41 +295,18 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 {
 	struct uart_console_dev * dev = &uart_console_dev;
 	struct stm32_usart * uart = UART;
-#if defined(STM32F1X)
-	struct stm32_afio * afio = STM32_AFIO;
-#endif
-
-	stm32_gpio_clock_en(STM32_GPIOC);
-	stm32_gpio_clock_en(STM32_GPIOD);
-
-	/* USART1_TX */
-	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 
 	DCC_LOG1(LOG_TRACE, "UART=0x%08x", uart);
 
 	dev->uart = uart;
-#if defined(STM32F1X)
-	/* USART1_RX */
-	stm32_gpio_mode(UART_RX, INPUT, PULL_UP);
-	/* Use alternate pins for USART1 */
-	afio->mapr |= AFIO_USART1_REMAP;
-#elif defined(STM32F4X)
-	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART_RX, GPIO_AF7);
-	stm32_gpio_af(UART_TX, GPIO_AF7);
-#elif defined(STM32F2X)
-	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART_RX, GPIO_AF8);
-	stm32_gpio_af(UART_TX, GPIO_AF8);
-#endif
 
-	DCC_LOG(LOG_MSG, "...");
 	dev->rx_flag = thinkos_flag_alloc(); 
 #if ENABLE_UART_TX_BLOCK
 	dev->tx_flag = thinkos_flag_alloc(); 
 #endif
 #if ENABLE_UART_TX_MUTEX
 	dev->tx_mutex = thinkos_mutex_alloc(); 
+	DCC_LOG1(LOG_TRACE, "tx_mutex=%d", dev->tx_mutex);
 #endif
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
 	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);

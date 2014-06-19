@@ -114,10 +114,13 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 	int ret = 0;
 	cmd_history_t history;
 
+	DCC_LOG(LOG_TRACE, "history_init()");
 	history_init(&history);
 
 	if (greeting)
 		fprintf(f, greeting);
+
+	DCC_LOG(LOG_TRACE, "1.");
 
 	for (;;) {
 		prompt = (char *)get_prompt();
