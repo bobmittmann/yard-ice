@@ -483,12 +483,12 @@ int usb_console(struct usb_cdc_class * cdc)
 
 		case 'e':
 			printf("Erasing memory\n");
-			stm32f_flash_erase(32768, 32768);
+			stm32_flash_erase(32768, 32768);
 			break;
 
 		case 'p':
 			printf("Programming memory\n");
-			stm32f_flash_write(32768, "Hello world!", 12);
+			stm32_flash_write(32768, "Hello world!", 12);
 			break;
 
 		case 'q':
@@ -593,7 +593,7 @@ int main(int argc, char ** argv)
 
 	usb_vbus(true);
 
-	pin1_sel_input();
+	pin1_sel_vcc();
 	pin2_sel_input();
 	mode = 0;
 

@@ -25,11 +25,11 @@
 
 #include <sys/stm32f.h>
 
-#define UART5_TX  STM32_GPIOC, 12
-#define UART5_RX  STM32_GPIOD, 2
-
-#define UART6_TX  STM32_GPIOC, 6
-#define UART6_RX  STM32_GPIOD, 7
+/**************************************************************************
+ * Sebug serial
+ **************************************************************************/
+#define UART5_TX       STM32_GPIOC, 12
+#define UART5_RX       STM32_GPIOD, 2
 
 /**************************************************************************
  * Lattice FPGA (iCE40LP384) connections
@@ -45,7 +45,8 @@
 
 #define RS485_TX       STM32_GPIOB, 6
 #define RS485_RX       STM32_GPIOB, 7
-#define RS485_CK       STM32_GPIOA, 8
+//#define RS485_CK       STM32_GPIOA, 8
+#define RS485_TRG      STM32_GPIOA, 8
 #define RS485_MODE     STM32_GPIOD, 6
 #define RS485_USART    STM32_USART1
 
@@ -53,7 +54,10 @@
  * Altera Cyclone FPGA connections
  **************************************************************************/
 
-#define FPGA_EXTI STM32_GPIOB, 15
+#define FPGA_EXTI      STM32_GPIOB, 15
+
+#define UART6_TX       STM32_GPIOC, 6
+#define UART6_RX       STM32_GPIOD, 7
 
 #ifdef __cplusplus
 extern "C" {
