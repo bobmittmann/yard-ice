@@ -135,7 +135,7 @@ int __attribute__((section (".data#")))
 {
 	uint32_t data;
 	uint32_t sr;
-	int again;
+//	int again;
 	int i;
 
 	/* start half page write */
