@@ -22,7 +22,7 @@
 
 PROG = slcdev-hub
 
-CFILES = slcdev-hub.c console.c
+CFILES = slcdev-hub.c console.c lattice.c pktbuf.c sndbuf.c rs485lnk.c net.c
 
 SDK = ../../sdk
 
@@ -30,9 +30,10 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty \
 		  $(SDK)/libxmodem $(SDK)/libshell $(SDK)/libcrc \
-		  $(SDK)/libtrace
+		  $(SDK)/libtrace $(SDK)/libhexdump
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty crc xmodem shell trace
+LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty crc xmodem \
+	   shell trace hexdump
 
 INCPATH = $(SDK)/include 
 

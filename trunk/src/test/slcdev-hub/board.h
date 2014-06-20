@@ -28,18 +28,32 @@
 #define UART5_TX  STM32_GPIOC, 12
 #define UART5_RX  STM32_GPIOD, 2
 
-#define UART1_TX  STM32_GPIOB, 6
-#define UART1_RX  STM32_GPIOB, 7
-
 #define UART6_TX  STM32_GPIOC, 6
 #define UART6_RX  STM32_GPIOD, 7
 
-#define SPI3_SCK  STM32_GPIOC, 10
-#define SPI3_MISO STM32_GPIOC, 11
-#define SPI3_MOSI STM32_GPIOB, 5
-#define SPI3_NSS  STM32_GPIOE, 1
+/**************************************************************************
+ * Lattice FPGA (iCE40LP384) connections
+ **************************************************************************/
 
-#define FPGA_EXTI STM32_GPIOD, 6
+#define ICE40_SPI_SCK  STM32_GPIOC, 10
+#define ICE40_SPI_SDO  STM32_GPIOC, 11
+#define ICE40_SPI_SDI  STM32_GPIOB, 5
+#define ICE40_SPI_SS   STM32_GPIOE, 1
+
+#define ICE40_CRESET   STM32_GPIOE, 0
+#define ICE40_CDONE    STM32_GPIOB, 9
+
+#define RS485_TX       STM32_GPIOB, 6
+#define RS485_RX       STM32_GPIOB, 7
+#define RS485_CK       STM32_GPIOA, 8
+#define RS485_MODE     STM32_GPIOD, 6
+#define RS485_USART    STM32_USART1
+
+/**************************************************************************
+ * Altera Cyclone FPGA connections
+ **************************************************************************/
+
+#define FPGA_EXTI STM32_GPIOB, 15
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,5 +64,4 @@ extern "C" {
 #endif
 
 #endif /* __BOARD_H__ */
-
 

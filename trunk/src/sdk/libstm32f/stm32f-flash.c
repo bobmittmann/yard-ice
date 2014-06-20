@@ -63,7 +63,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_erase(unsigned int offs, unsigned int len)
+int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t addr;
@@ -117,7 +117,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len)
+int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint16_t data;
@@ -195,7 +195,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_erase(unsigned int offs, unsigned int len)
+int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t cr;
@@ -275,7 +275,7 @@ int __attribute__((section (".data#")))
 	return ret;
 }
 
-int stm32f_flash_write(uint32_t offs, const void * buf, unsigned int len)
+int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
 	struct stm32f_flash * flash = STM32F_FLASH;
 	uint32_t data;
