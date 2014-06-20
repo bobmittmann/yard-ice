@@ -35,6 +35,7 @@
 #include <thinkos.h>
 
 #include "board.h"
+#include "net.h"
 
 int console_shell(void);
 void env_init(void);
@@ -44,7 +45,7 @@ void __attribute__((noreturn)) watchdog_task(void)
 	unsigned int i;
 
 	for (i = 0; ;++i) {
-		thinkos_sleep(1000);
+		thinkos_sleep(5000);
 		DCC_LOG1(LOG_TRACE, "tick %d", i);
 	}
 }
@@ -166,13 +167,6 @@ void io_init(void)
 	stm32_gpio_af(UART5_RX, GPIO_AF8);
 	stm32_gpio_af(UART5_TX, GPIO_AF8);
 
-	/* USART1_TX */
-	stm32_gpio_mode(UART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(UART1_TX, GPIO_AF7);
-	/* USART1_RX */
-	stm32_gpio_mode(UART1_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART1_RX, GPIO_AF7);
-
 	/* USART6_TX */
 	stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(UART6_TX, GPIO_AF7);
@@ -205,39 +199,45 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate()");
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
+	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
+	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
+
+	DCC_LOG(LOG_TRACE, "4. external_bus_init()");
 	external_bus_init();
 
-	DCC_LOG(LOG_TRACE, "1. stdio_init()");
+	DCC_LOG(LOG_TRACE, "5. stdio_init()");
 	stdio_init();
 	printf("\n---\n");
 
-	DCC_LOG(LOG_TRACE, "4. trace_init()");
+	DCC_LOG(LOG_TRACE, "6. trace_init()");
 	trace_init();
 
-	DCC_LOG(LOG_TRACE, "5. env_init()");
+	DCC_LOG(LOG_TRACE, "7. env_init()");
 	env_init();
 
 	/* create some threads */
-	DCC_LOG(LOG_TRACE, "6. monitor_init()");
+	DCC_LOG(LOG_TRACE, "8. monitor_init()");
 	monitor_init();
 
-	DCC_LOG(LOG_TRACE, "7. watchdog_init()");
+	DCC_LOG(LOG_TRACE, "9. watchdog_init()");
 	watchdog_init();
 
-	DCC_LOG(LOG_TRACE, "7. console_shell_init()");
+	DCC_LOG(LOG_TRACE, "10. console_shell_init()");
 	console_shell_init();
 
-	DCC_LOG(LOG_TRACE, "8. usb_cdc_init()");
+	DCC_LOG(LOG_TRACE, "11. net_init()");
+	net_init();
+
+	DCC_LOG(LOG_TRACE, "12. usb_cdc_init()");
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, *((uint64_t *)STM32F_UID));
 
-	DCC_LOG(LOG_TRACE, "9. usb_shell()");
+	DCC_LOG(LOG_TRACE, "13. usb_shell()");
 
 	for (;;) {
 		usb_shell(cdc);

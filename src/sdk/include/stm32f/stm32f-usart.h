@@ -599,13 +599,13 @@ void stm32_usart_enable(struct stm32_usart * us);
 
 void stm32_usart_disable(struct stm32_usart * us);
 
-#ifdef __cplusplus
-}
-#endif
-
 static inline int stm32_usart_irq_lookup(struct stm32_usart * usart) {
 	return stm32_usart_irq_lut[stm32_usart_lookup(usart)];
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __ASSEMBLER__ */
 

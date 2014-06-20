@@ -2597,6 +2597,7 @@ again in case of a new switch is required)
 
 #endif /* STM32F1X || STM32F3X */
 
+
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
@@ -2672,6 +2673,12 @@ struct stm32_clk {
 	uint8_t bit:5;
 } __attribute__((packed))__;
 
+extern const uint32_t stm32f_apb1_hz;
+extern const uint32_t stm32f_apb2_hz;
+extern const uint32_t stm32f_ahb_hz;
+extern const uint32_t stm32f_tim2_hz;
+extern const uint32_t stm32f_tim1_hz;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2714,6 +2721,13 @@ static inline void stm32_clk_disable(struct stm32_rcc * rcc,
 #endif
 }
 
+static inline uint32_t stm32_clk_hz(int bus, int bit) {
+	if (bus == STM32_APB2)
+		return stm32f_apb2_hz;
+	if (bus == STM32_APB1)
+		return stm32f_apb2_hz;
+	return stm32f_ahb_hz;
+}
 
 #ifdef __cplusplus
 }

@@ -25,16 +25,28 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include <sys/stm32f.h>
+
 #include <sys/shell.h>
 #include <sys/tty.h>
 #include <sys/usb-cdc.h>
+#include <sys/serial.h>
+#include <xmodem.h>
+#include <hexdump.h>
+
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
-#include <sys/serial.h>
-#include <thinkos.h>
+#include "lattice.h"
+#include "net.h"
 
+extern const uint8_t * ice40lp384_bin;
 extern const struct shell_cmd cmd_tab[];
+
+/*****************************************************************************
+ * Help
+ *****************************************************************************/
 
 int cmd_help(FILE *f, int argc, char ** argv)
 {
@@ -62,6 +74,10 @@ int cmd_help(FILE *f, int argc, char ** argv)
 
 	return 0;
 }
+
+/*****************************************************************************
+ * Environment 
+ *****************************************************************************/
 
 int cmd_set(FILE * f, int argc, char ** argv)
 {
@@ -115,6 +131,198 @@ int cmd_get(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+/*****************************************************************************
+ * RS485 Network
+ *****************************************************************************/
+
+const char net_msg[] = "The qick brown fox jumps over the lazy dog!";
+const uint8_t net_pattern[] = { 0x54, 0x38, 0x54, 0x38 };
+
+int cmd_net(FILE * f, int argc, char ** argv)
+{
+	char msg[256];
+	bool test = false;
+	bool flood = false;
+	bool conf = false;
+	bool probe = false;
+	bool normal = false;
+	bool init = false;
+	bool pattern = false;
+	(void)conf;
+
+	if (argc > 1) {
+		int i = 1;
+		do {
+			if ((strcmp(argv[i], "test") == 0) || 
+				(strcmp(argv[i], "t") == 0)) {
+				test = true;
+			} else if ((strcmp(argv[i], "flood") == 0) || 
+					   (strcmp(argv[i], "f") == 0)) {
+				flood = true;
+			} else if ((strcmp(argv[i], "pat") == 0) || 
+					   (strcmp(argv[i], "p") == 0)) {
+				pattern = true;
+			} else if ((strcmp(argv[i], "conf") == 0) || 
+					   (strcmp(argv[i], "c") == 0)) {
+				conf = true;
+			} else if ((strcmp(argv[i], "sup") == 0) || 
+					   (strcmp(argv[i], "s") == 0)) {
+				probe = true;
+			} else if ((strcmp(argv[i], "auto") == 0) || 
+					   (strcmp(argv[i], "a") == 0)) {
+				normal = true;
+			} else if ((strcmp(argv[i], "init") == 0) || 
+					   (strcmp(argv[i], "i") == 0)) {
+				init = true;
+			} else {
+				fprintf(f, "Invalid argument: %s\n", argv[i]);
+				return -1;
+			}
+		} while (++i < argc);
+	} else {
+		fprintf(f, "\n=== RS485 network ===\n");
+		return 0;
+	}
+
+	if (init) {
+		fprintf(f, "RS845 network init.\n");
+		net_init();
+	};
+
+	if (pattern) {
+		fprintf(f, "RS845 network pattern test.\n");
+		net_send(net_pattern, sizeof(net_pattern));
+	};
+
+	if (test) {
+		fprintf(f, "RS845 network message test.\n");
+		net_send(net_msg, sizeof(net_msg));
+	};
+
+	if (flood) {
+		int i;
+		int n;
+		fprintf(f, "RS845 network flooding test.\n");
+		for (i = 0; i < 150; ++i) {
+			thinkos_sleep(100);
+			n = sprintf(msg, "%3d - %s", i, net_msg);
+			net_send(msg, n);
+		}
+	};
+
+	if (probe) {
+		fprintf(f, "RS845 supervisory mode. (A: RX, B: TX)\n");
+		net_probe_enable();
+	};
+
+	if (normal) {
+		fprintf(f, "RS845 automatic mode.\n");
+		net_probe_disable();
+	};
+
+	return 0;
+}
+
+/*****************************************************************************
+ * FPGA
+ *****************************************************************************/
+
+union {
+	struct xmodem_rcv rx;
+	struct xmodem_snd sx;
+} xmodem;
+
+int flash_xmodem_recv(FILE * f, uint32_t offs)
+{
+	struct comm_dev comm;
+	struct file * raw;
+	uint8_t buf[128];
+	int ret;
+	int cnt;
+
+	raw = ftty_lowlevel(f);
+
+	comm.arg = raw->data;
+	comm.op.send = (int (*)(void *, const void *, unsigned int))raw->op->write;
+	comm.op.recv = (int (*)(void *, void *, 
+						  unsigned int, unsigned int))raw->op->read;
+
+	DCC_LOG(LOG_TRACE, ".................................");
+
+	xmodem_rcv_init(&xmodem.rx, &comm, XMODEM_RCV_CRC);
+
+	cnt = 0;
+	do {
+		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 128)) < 0) {
+			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
+			return ret;
+		}
+		stm32_flash_write(offs, buf, ret);
+		cnt += ret;
+		offs += ret;
+	} while (ret > 0);
+
+	return cnt;
+}
+
+int cmd_fpga(FILE * f, int argc, char ** argv)
+{
+	uint8_t * bin = (uint8_t *)ice40lp384_bin;
+	uint32_t flash_offs = (uint8_t *)bin - STM32_FLASH_MEM;
+	bool erase = false;
+	bool load = false;
+	bool conf = false;
+
+	if (argc > 1) {
+		int i = 1;
+		do {
+			if ((strcmp(argv[i], "erase") == 0) || 
+				(strcmp(argv[i], "e") == 0)) {
+				erase = true;
+			} else if ((strcmp(argv[i], "load") == 0) || 
+					   (strcmp(argv[i], "l") == 0)) {
+				load = true;
+			} else if ((strcmp(argv[i], "conf") == 0) || 
+					   (strcmp(argv[i], "c") == 0)) {
+				conf = true;
+			} else {
+				fprintf(f, "Invalid argument: %s\n", argv[i]);
+				return -1;
+			}
+		} while (++i < argc);
+	} else {
+		fprintf(f, "FPGA sector: 0x%08x\n", (uint32_t)bin);
+		show_hex8(f, (uint32_t)bin, bin, 1024);
+		return 0;
+	}
+
+	if (erase) {
+		fprintf(f, "Erasing sector: 0x%08x...\n", (uint32_t)bin);
+		if (stm32_flash_erase(flash_offs, 0x20000) < 0) {
+			fprintf(f, "stm32f_flash_erase() failed!\n");
+			return -1;
+		}
+	};
+
+	if (load) {
+		fprintf(f, "Loading FPGA file at 0x%08x...\n", (uint32_t)bin);
+		if (flash_xmodem_recv(f, flash_offs) < 0) {
+			fprintf(f, "fpga_xmodem_recv() failed!\n");
+			return -1;
+		}
+	};
+
+	if (conf) {
+		fprintf(f, "Configuring FPGA ...\n");
+		if (lattice_ice40_configure(bin, 32768) < 0) {
+			fprintf(f, "lattice_ice40_configure() failed!\n");
+			return -1;
+		}
+	};
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -127,6 +335,11 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
+	{ cmd_fpga, "fpga", "f", 
+		"[erase] [load] [conf]", "update FPGA program." },
+
+	{ cmd_net, "net", "n", 
+		"[test]", "RS485 network." },
 
 	{ NULL, "", "", NULL, NULL }
 };

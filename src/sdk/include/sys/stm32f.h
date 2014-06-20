@@ -60,12 +60,6 @@
 #include <stdbool.h>
 #include <arch/cortex-m3.h>
 
-extern const uint32_t stm32f_apb1_hz;
-extern const uint32_t stm32f_tim1_hz;
-extern const uint32_t stm32f_apb2_hz;
-extern const uint32_t stm32f_tim2_hz;
-extern const uint32_t stm32f_ahb_hz;
-
 /*---------------------------------------------------------------------
  * USB Device
  *---------------------------------------------------------------------*/
