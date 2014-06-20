@@ -161,6 +161,10 @@ int net_init(void)
 	stm32_gpio_af(RS485_CK, GPIO_AF7);
 #endif
 
+#ifdef RS485_TRIG
+	stm32_gpio_mode(RS485_TRIG, INPUT, PULL_UP);
+#endif
+
 #ifdef RS485_TXEN
 	stm32_gpio_mode(RS485_TXEN, OUTPUT, PUSH_PULL | SPEED_MED);
 	stm32_gpio_set(RS485_TXEN);

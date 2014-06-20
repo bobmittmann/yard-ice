@@ -148,6 +148,7 @@ int cmd_net(FILE * f, int argc, char ** argv)
 	bool normal = false;
 	bool init = false;
 	bool pattern = false;
+	unsigned int val;
 	(void)conf;
 
 	if (argc > 1) {
@@ -175,6 +176,9 @@ int cmd_net(FILE * f, int argc, char ** argv)
 					   (strcmp(argv[i], "i") == 0)) {
 				init = true;
 			} else {
+				if ((strcmp(argv[i], "flood") == 0) || 
+					   (strcmp(argv[i], "f") == 0)) {
+				flood = true;
 				fprintf(f, "Invalid argument: %s\n", argv[i]);
 				return -1;
 			}
@@ -373,6 +377,9 @@ int usb_shell(usb_cdc_class_t * cdc)
 	f_raw = usb_cdc_fopen(cdc);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
+
+	stdout = f_tty;
+	stdin = f_tty;
 
 	return shell(f_tty, get_prompt, shell_greeting, cmd_tab);
 }

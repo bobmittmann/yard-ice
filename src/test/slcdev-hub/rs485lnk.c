@@ -241,15 +241,15 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 		trace("ERROR: DMA enabled!");
 	}
 
+	lnk->rx.pend_pkt = *ppkt;
+	lnk->rx.max_len = max_len;
+
 	/* set DMA memory address */
-	dma_strm->m0ar = (void *)lnk->rx.pend_pkt;
+	dma_strm->m0ar = (void *)*ppkt;
 	/* set DMA number of data items to transfer */
 	dma_strm->ndtr = max_len;
 	/* enable DMA */
 	dma_strm->cr |= DMA_EN;
-
-	lnk->rx.pend_pkt = *ppkt;
-	lnk->rx.max_len = max_len;
 
 	/* return previous pending packet */
 	*ppkt = rcvd_pkt;

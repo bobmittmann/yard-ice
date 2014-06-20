@@ -162,10 +162,12 @@ void io_init(void)
 	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
 #endif
 
+	/* USART5 TX */
 	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_af(UART5_TX, GPIO_AF8);
+	/* USART5 RX */
 	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART5_RX, GPIO_AF8);
-	stm32_gpio_af(UART5_TX, GPIO_AF8);
 
 	/* USART6_TX */
 	stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
