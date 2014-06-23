@@ -43,8 +43,8 @@ int __attribute__((section (".data#")))
 	int again;
 	int ret = -1;
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	flash->cr = FLASH_SER;
 	flash->ar = addr;
@@ -58,7 +58,7 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 
 	return ret;
 }
@@ -98,8 +98,8 @@ int __attribute__((section (".data#")))
 	int again;
 	int ret = -1;
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	flash->cr = FLASH_PG;
 	*addr = data;
@@ -112,7 +112,7 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 
 	return ret;
 }
@@ -177,8 +177,8 @@ int __attribute__((section (".data#")))
 	int again;
 	int ret = -1;
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect) ;
 
@@ -190,7 +190,7 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 
 	return ret;
 }
@@ -256,8 +256,8 @@ int __attribute__((section (".data#")))
 	int again;
 	int ret = -1;
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	flash->cr = FLASH_PG | FLASH_PSIZE_32;
 	*addr = data;
@@ -270,7 +270,7 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 
 	return ret;
 }

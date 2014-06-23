@@ -27,6 +27,7 @@
 #include <sys/delay.h>
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
+#include <sys/param.h>
 
 #define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
 
@@ -111,10 +112,10 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	while (rem) {
 		uint32_t pri;
 
-		pri = cm3_basepri_get();
-		cm3_basepri_set(1);
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
 		ret = stm32l_flash_blk_erase(flash, (uint32_t *)addr);
-		cm3_basepri_set(pri);
+		cm3_primask_set(pri);
 
 		if (ret < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
@@ -130,12 +131,10 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 }
 
 int __attribute__((section (".data#"))) 
-	stm32l_flash_pg_wr(struct stm32_flash * flash, uint32_t volatile * addr, 
-					   uint8_t buf[])
+	stm32l_flash_pg_wr(struct stm32_flash * flash, 
+					   uint32_t volatile dst[], uint32_t src[])
 {
-	uint32_t data;
 	uint32_t sr;
-//	int again;
 	int i;
 
 	/* start half page write */
@@ -149,30 +148,8 @@ int __attribute__((section (".data#")))
 		return -1;
 	}
 
-	for (i = 0; i < (128 / 4); ++i) {
-		data = buf[0] | (buf[1] << 8) | (buf[2] << 16)| (buf[3] << 24);
-		addr[i] = data;
-		buf += 4;
-	}	
-
-#if 0
-	for (again = 4096 * 4096; again > 0; again--) {
-		sr = flash->sr;
-		if (sr & FLASH_ERR) {
-			break;
-		}
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
-#endif
-
-
-//	do {
-//		sr = flash->sr;
-//	} while (sr & FLASH_BSY);
-
+	for (i = 0; i < (128 / 4); ++i)
+		dst[i] = src[i];
 
 	do {
 		sr = flash->sr;
@@ -183,7 +160,6 @@ int __attribute__((section (".data#")))
 	if (sr & FLASH_ERR) {
 		return -1;
 	}
-
 
 	return 0;
 }
@@ -196,11 +172,6 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	uint32_t pecr;
 	int rem;
 	int ret;
-
-	if (offs & 0x00000003) {
-		DCC_LOG(LOG_ERROR, "offset must be 32bits aligned!");
-		return -1;
-	}
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", base + offs, len);
 
@@ -219,25 +190,52 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	ptr = (uint8_t *)buf;
 	rem = len;
 	while (rem > 0) {
+		uint32_t blk[128 / 4];
 		uint32_t pri;
 		int n;
+		int i;
 
-		if (((offs & 0x7f) == 0) && (rem >= 128)) {
+		if (((offs & 0x7f) != 0) || (rem < 128)) {
+			uint32_t pos;
+			uint32_t * src;
+			uint8_t * dst;
+
+			DCC_LOG(LOG_WARNING, "Partial page write...");
+
+			/* get the position inside the flash block where the 
+			   writing should start */
+			pos = offs - (offs & ~0x7f);
+			offs -= pos;
+
+			/* copy a full block from flash to buffer */
+			src = (uint32_t *)(base + offs);
+			for (i = 0; i < (128 / 4); ++i)
+				blk[i] = src[i];
+
+			/* partially override the buffer with input data */
+			n = MIN(128 - pos, rem);
+			dst = (uint8_t *)(blk) + pos;
+			for (i = 0; i < n; ++i)
+				dst[i] = ptr[i];
+
+		} else {
+			uint8_t * src;
+			uint32_t data;
 			/* start half page write */
 			DCC_LOG(LOG_TRACE, "Half-Page write start...");
-			pri = cm3_basepri_get();
-			cm3_basepri_set(1);
-			ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), ptr);
-			cm3_basepri_set(pri);
 			n = 128;
-		} else {
-			DCC_LOG(LOG_WARNING, "Partial page write...");
-			pri = cm3_basepri_get();
-			cm3_basepri_set(1);
-			ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), ptr);
-			cm3_basepri_set(pri);
-			n = 128;
+			src = ptr;
+			for (i = 0; i < (128 / 4); ++i) {
+				data = src[0] | (src[1] << 8) | (src[2] << 16)| (src[3] << 24);
+				blk[i] = data;
+				src += 4;
+			}	
 		}
+
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), blk);
+		cm3_primask_set(pri);
 
 		if (ret < 0) {
 			DCC_LOG(LOG_WARNING, "Flash write failed!");
@@ -245,8 +243,8 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 		}
 
 		ptr += n;
-		offs += n;
 		rem -= n;
+		offs += 128;
 	}
 
 	return len;

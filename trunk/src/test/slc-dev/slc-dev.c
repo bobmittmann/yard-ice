@@ -43,7 +43,7 @@ union {
 int flash_xmodem_recv(struct serdrv * pdrv, uint32_t offs)
 {
 	struct comm_dev comm;
-	uint8_t buf[128];
+	uint8_t buf[512];
 	int ret;
 	int cnt;
 
@@ -58,7 +58,7 @@ int flash_xmodem_recv(struct serdrv * pdrv, uint32_t offs)
 
 	cnt = 0;
 	do {
-		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 128)) < 0) {
+		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 512)) < 0) {
 			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
 			return ret;
 		}

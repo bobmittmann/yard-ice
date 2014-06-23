@@ -165,8 +165,8 @@ int tracef(const char *fmt, ... )
 
 	now = __timer_ts();
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	head = trace_ring.head;
 	if ((head - trace_ring.tail) != TRACE_RING_SIZE) {
@@ -188,7 +188,7 @@ int tracef(const char *fmt, ... )
 	} else
 		n = -1;
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 
 	return n;
 }
@@ -201,8 +201,8 @@ void trace(const char * msg)
 
 	now = __timer_ts();
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
 	head = trace_ring.head;
 	if ((head - trace_ring.tail) != TRACE_RING_SIZE) {
@@ -211,7 +211,7 @@ void trace(const char * msg)
 		trace_ring.head = head + 1;
 	}
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 }
 
 int trace_fprint(FILE * f, unsigned int opt)
