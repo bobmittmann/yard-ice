@@ -30,12 +30,12 @@
 
 void thinkos_rt_snapshot(struct thinkos_rt * rt)
 {
-	uint32_t pri = cm3_basepri_get();
+	uint32_t pri = cm3_primask_get();
 	uint32_t * src;
 	uint32_t * dst;
 	int i;
 
-	cm3_basepri_set(0x01);
+	cm3_primask_set(1);
 
 	src = (uint32_t *)&thinkos_rt;
 	dst = (uint32_t *)rt;
@@ -43,7 +43,7 @@ void thinkos_rt_snapshot(struct thinkos_rt * rt)
 	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
 		dst[i] = src[i];
 
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 }
 
 

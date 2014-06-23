@@ -80,7 +80,7 @@ void * pktbuf_alloc(void)
 
 	/* critical section enter */
 	primask = cm3_primask_get();
-	cm3_basepri_set(1);
+	cm3_primask_set(1);
 
 	if ((buf = pktbuf_pool.free) != NULL) {
 		pktbuf_pool.free = buf->next;
@@ -113,7 +113,7 @@ void pktbuf_free(void * ptr)
 
 	/* critical section enter */
 	primask = cm3_primask_get();
-	cm3_basepri_set(1);
+	cm3_primask_set(1);
 
 	buf->next = pktbuf_pool.free;
 	pktbuf_pool.free = buf;

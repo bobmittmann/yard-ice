@@ -61,7 +61,7 @@ sndbuf_t * sndbuf_alloc(void)
 
 	/* critical section enter */
 	primask = cm3_primask_get();
-	cm3_basepri_set(1);
+	cm3_primask_set(1);
 
 	if ((blk = sndbuf_pool.free) != NULL) {
 		sndbuf_pool.free = blk->next;
@@ -157,7 +157,7 @@ sndbuf_t * sndbuf_use(sndbuf_t * buf)
 
 	/* critical section enter */
 	primask = cm3_primask_get();
-	cm3_basepri_set(1);
+	cm3_primask_set(1);
 
 	/* check whether the buffer is valid or not */
 	if (buf == NULL) {
@@ -185,7 +185,7 @@ void sndbuf_free(sndbuf_t * buf)
 
 	/* critical section enter */
 	primask = cm3_primask_get();
-	cm3_basepri_set(1);
+	cm3_primask_set(1);
 
 	if (buf == NULL) {
 		DCC_LOG(LOG_PANIC, "NULL pointer!");
