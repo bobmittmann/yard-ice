@@ -39,6 +39,7 @@
 #include <sys/os.h>
 
 #include <trace.h>
+#include "command.h"
 
 int telnetd_task(void * arg)
 {
@@ -55,7 +56,7 @@ int telnetd_task(void * arg)
 	f_tty = tty_fopen(tty);
 
 	for (;;) {
-		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting);
+		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
 	}
 }
 

@@ -31,16 +31,19 @@
 #include <stdio.h> 
 #include <sys/shell.h>
 
+extern const char yard_ice_greeting[];
+extern const struct shell_cmd yard_ice_cmd_tab[];
+
 struct lt_entry_int {
 	const char * name;
 	int val;
 };
 
-extern const struct shell_cmd cmd_tab[];
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+const char * yard_ice_get_prompt(void);
 
 int cmd_beep(FILE * f, int argc, char ** argv);
 
@@ -186,10 +189,11 @@ int cmd_trace(FILE * f, int argc, char ** argv);
 
 int cmd_fpga(FILE * f, int argc, char ** argv);
 
-int exec(FILE * f, char * line);
+
+
+int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
 
 void show_val(FILE * f, uint32_t val);
-
 
 int lookup_int_val(const struct lt_entry_int * table, int val);
 
