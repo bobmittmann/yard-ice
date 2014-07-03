@@ -77,7 +77,7 @@
 #endif
 #endif
 
-struct shell_cmd * shell_lookup(const char * s, 
+struct shell_cmd * cmd_lookup(const char * s, 
 								const struct shell_cmd * cmd_tab)
 {
 	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
@@ -91,218 +91,6 @@ struct shell_cmd * shell_lookup(const char * s,
 
 	return NULL;
 }
-
-const struct shell_cmd cmd_tab[] = {
-
-	{ cmd_beep, "beep", "", 
-		"[tone [time]]", "play a tone" },
-
-	{ cmd_cfgerase, "cfgerase", "ce", 
-		"", "restore default configuration" },
-
-	{ cmd_close, "close", "quit", 
-		"", "cause the shell to close" },
-
-	{ cmd_connect, "connect", "con", 
-		"", "connect to target" },
-
-	{ cmd_breakpoint, "breakpt", "bp", 
-		"", "set/modify breakpoint" },
-#if 0
-	{ cmd_dint, "dint", "di", 
-		"", "disable interrupts" },
-#endif
-	{ cmd_disassemble, "dasm", "d", 
-		"", "disassemble" },
-#if 0
-	{ cmd_eint, "eint", "ei", 
-		"", "enable interrupts" },
-#endif
-	{ cmd_mem_erase, "erase", "er", 
-		"ADDR [SIZE]", "erase a memory region" },
-
-	{ cmd_get, "get", "", 
-		"VAR", "get environement variable" },
-
-	{ cmd_goto, "goto", "g", 
-		"", "move the program counter" },
-
-	{ cmd_halt, "halt", "h", 
-		"", "halt (break) the target" },
-
-	{ cmd_help, "help", "?", 
-		"[COMMAND]", "show command usage (help [CMD])" },
-
-	{ cmd_info, "info", "inf", 
-		"", "show Target and ICE information" },
-
-	{ cmd_init, "init", "ini", 
-		"", "perform target initialization" },
-
-	{ cmd_let, "let", "@", 
-		"VAR EXPR", "assign a value to variable" },
-
-	{ cmd_meminfo, "meminfo", "mi", 
-		"", "show memory info" },
-
-	{ cmd_probe, "probe", "pb", 
-		"", "probe for target" },
-
-	{ cmd_release, "release", "rel", 
-		"", "release/disconnect from target" },
-
-	{ cmd_reset, "reset", "rst", 
-		"[auto|soft|hard|core|dbg]", "reset the target" },
-
-	{ cmd_show_context, "context", "cpu", 
-		"", "show target context" },
-
-	{ cmd_step, "step", "s", 
-		"", "single step execution" },
-
-	{ cmd_target, "target", "tgt", 
-		"", "configure the target system" },
-
-	{ cmd_run, "run", "r", 
-		"", "resume target execution" },
-
-	{ cmd_mem_read, "read", "mr", 
-		"ADDR [SIZE]", "read a memory region" },
-
-#if (ENABLE_NAND)
-	{ cmd_bb_scan, "bbscan", "bbs", 
-		"", "NAND bad block scan" },
-
-	{ cmd_scrub, "scrub", "scb", 
-		"", "NAND block forced erase" },
-#endif
-
-	{ cmd_reboot, "reboot", "rb", 
-		"", "system restart" },
-
-	{ cmd_set, "set", "", 
-		"VAR EXPR", "set environement variable" },
-
-	{ cmd_test, "test", "tst", 
-		"", "perform target test" },
-
-	{ cmd_ice_test, "icetest", "icet", 
-		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
-
-	{ cmd_ice_info, "ice_info", "ice", 
-		"", "show ICE details" },
-
-	{ cmd_unset, "unset", "", 
-		"VAR", "clear environement variable" },
-
-	{ cmd_version, "version", "ver", 
-		"", "show version" },
-
-	{ cmd_watchpoint, "watchpt", "wp", 
-		"", "set/modify watchpoint" },
-
-	{ cmd_power, "power", "pwr", 
-		"[on | off | cycle]", "control the target power ..." },
-
-	{ cmd_relay, "relay", "rly", 
-		"[on | off | cycle]", "control on board relay..." },
-
-	{ cmd_mem_write, "write", "mw", 
-		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
-
-	{ cmd_tap, "tap", "", 
-		"[reset | info | probe | select N]", "JTAG TAP operations." },
-
-	{ cmd_i2c, "i2c", "", 
-		"[reset | info | probe | select N]", "I2C operations." },
-
-	{ cmd_enable, "enable", "en", 
-		"[poll | comm ]", "enable feature." },
-
-	{ cmd_disable, "disable", "dis", 
-		"[poll | comm ]", "disable feature." },
-
-	{ cmd_trst, "trst", "tr", 
-		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
-
-	{ cmd_nrst, "nrst", "nr", 
-		"[set | clr | [pulse TIME(ms)]]", "assert the nRST signal ..." },
-
-	{ cmd_irscan, "irscan", "ir", 
-		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
-
-	{ cmd_drscan, "drscan", "dr", 
-		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
-
-	{ cmd_irpause, "irpause", "ip", 
-		"COUNT", "" },
-
-	{ cmd_drpause, "drpause", "dp", 
-		"COUNT", "" },
-
-	{ cmd_runtest, "runtest", "idle", 
-		"COUNT", "cycle the JTAG TCK <COUNT> times" },
-
-	{ cmd_idcode, "idcode", "id", 
-		"[TAP]", "get the JTAG IDCODE for a device in the chain" },
-
-	{ cmd_var, "variable", "var", 
-		"", "show global variables" },
-
-	{ cmd_trace, "trace", "tc", 
-		"[monitor | flush]", "handle the trace ring..." },
-
-	{ cmd_sleep, "sleep", "", 
-		"", "delay for a specific amount of time" },
-
-	{ cmd_os, "sys", "os", 
-		"", "show OS status" },
-
-	{ cmd_thread, "thread", "th", 
-		"[ID]", "show thread status" },
-
-	{ cmd_fpga, "fpga", "rbf", 
-		"[erase] [load]", "update FPGA program." },
-
-#if (ENABLE_NETWORK)
-	{ cmd_ifconfig, "ifconfig", "if", 
-		"", "configure a network interface" },
-
-	{ cmd_ipcfg, "ipcfg", "ipcf", 
-		"", "ip configuration utility" },
-
-	{ cmd_ping, "ping", "", 
-		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
-
-	{ cmd_netstat, "netstat", "n", 
-		"", "print network connections" },
-
-#if 0
-	{ cmd_arp, "arp", "arp", 
-		"", "show / manipulate the system ARP cache" },
-#endif
-	{ cmd_route, "route", "rt", 
-		"", "show / manipulate the IP routing table" },
-
-#if 0
-	{ cmd_tcpstat, "tcpstat", "ts", 
-		"", "print TCP stack info" },
-#endif
-#endif
-
-#if (ENABLE_NETWORK)
-#if (ENABLE_TCP_RECV)
-	{ cmd_tcp_recv, "rcvnet", "rn", 
-		"[ADDR] [PORT]", "receive file trough network" },
-#endif
-#if (ENABLE_TCP_SEND)
-	{ cmd_tcp_send, "sndnet", "sn", 
-		"[ADDR] [SIZE] [PORT]", "send a memory block trough network" },
-#endif
-#endif
-
-	{ NULL, "", "", NULL, NULL }
-};
 
 const char yard_ice_greeting[] = "\n"
 	"YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
@@ -334,7 +122,10 @@ void show_uint32(FILE * f, uint32_t val)
 				fprintf(f, "0x%08x (%d)\n", val, val);
 }
 
-int exec(FILE * f, char * line)
+int shell_parseline(char * line, char ** argv, int argmax);
+char * shell_stripline(char * line);
+
+int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 {
 	char * argv[SHELL_ARG_MAX];
 	struct shell_cmd * cmd;
@@ -365,9 +156,9 @@ int exec(FILE * f, char * line)
 		}
 	}
 
-	if ((cmd = shell_lookup(argv[0], cmd_tab)) == NULL) {
+	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
 
-		DCC_LOG(LOG_TRACE, "shell_lookup() == NULL");
+		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
 
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			DCC_LOG(LOG_WARNING, "eval_uint32()");
@@ -839,7 +630,7 @@ struct shell_context {
 int shell_exec_task(struct shell_context * shell, uthread_id_t id)
 {
 		fprintf(shell->f, "Line='%s'\n", shell->line);
-		return exec(shell->f, shell->line);
+		return exec(shell->f, shell->line, cmd_tab);
 }
 
 int shell_thread;
@@ -878,7 +669,7 @@ static char * get_cmd_next(char ** linep)
 }
 
 int shell(FILE * f, const char * (* get_prompt)(void), 
-			  const char * greeting)
+		  const char * greeting, const struct shell_cmd * cmd_tab)
 {
 	char line[SHELL_LINE_MAX];
 	char * cp;
@@ -928,7 +719,7 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 		cp = line;
 
 		while ((cmd = get_cmd_next(&cp)) != NULL) {
-			if ((ret = exec(f, cmd)) < 0) {
+			if ((ret = exec(f, cmd, cmd_tab)) < 0) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;
 			}
@@ -947,6 +738,218 @@ const char * yard_ice_get_prompt(void)
 	return (char * )prompt_tab[status + 4];
 }
 
+const struct shell_cmd yard_ice_cmd_tab[] = {
+
+	{ cmd_beep, "beep", "", 
+		"[tone [time]]", "play a tone" },
+
+	{ cmd_cfgerase, "cfgerase", "ce", 
+		"", "restore default configuration" },
+
+	{ cmd_close, "close", "quit", 
+		"", "cause the shell to close" },
+
+	{ cmd_connect, "connect", "con", 
+		"", "connect to target" },
+
+	{ cmd_breakpoint, "breakpt", "bp", 
+		"", "set/modify breakpoint" },
+#if 0
+	{ cmd_dint, "dint", "di", 
+		"", "disable interrupts" },
+#endif
+	{ cmd_disassemble, "dasm", "d", 
+		"", "disassemble" },
+#if 0
+	{ cmd_eint, "eint", "ei", 
+		"", "enable interrupts" },
+#endif
+	{ cmd_mem_erase, "erase", "er", 
+		"ADDR [SIZE]", "erase a memory region" },
+
+	{ cmd_get, "get", "", 
+		"VAR", "get environement variable" },
+
+	{ cmd_goto, "goto", "g", 
+		"", "move the program counter" },
+
+	{ cmd_halt, "halt", "h", 
+		"", "halt (break) the target" },
+
+	{ cmd_help, "help", "?", 
+		"[COMMAND]", "show command usage (help [CMD])" },
+
+	{ cmd_info, "info", "inf", 
+		"", "show Target and ICE information" },
+
+	{ cmd_init, "init", "ini", 
+		"", "perform target initialization" },
+
+	{ cmd_let, "let", "@", 
+		"VAR EXPR", "assign a value to variable" },
+
+	{ cmd_meminfo, "meminfo", "mi", 
+		"", "show memory info" },
+
+	{ cmd_probe, "probe", "pb", 
+		"", "probe for target" },
+
+	{ cmd_release, "release", "rel", 
+		"", "release/disconnect from target" },
+
+	{ cmd_reset, "reset", "rst", 
+		"[auto|soft|hard|core|dbg]", "reset the target" },
+
+	{ cmd_show_context, "context", "cpu", 
+		"", "show target context" },
+
+	{ cmd_step, "step", "s", 
+		"", "single step execution" },
+
+	{ cmd_target, "target", "tgt", 
+		"", "configure the target system" },
+
+	{ cmd_run, "run", "r", 
+		"", "resume target execution" },
+
+	{ cmd_mem_read, "read", "mr", 
+		"ADDR [SIZE]", "read a memory region" },
+
+#if (ENABLE_NAND)
+	{ cmd_bb_scan, "bbscan", "bbs", 
+		"", "NAND bad block scan" },
+
+	{ cmd_scrub, "scrub", "scb", 
+		"", "NAND block forced erase" },
+#endif
+
+	{ cmd_reboot, "reboot", "rb", 
+		"", "system restart" },
+
+	{ cmd_set, "set", "", 
+		"VAR EXPR", "set environement variable" },
+
+	{ cmd_test, "test", "tst", 
+		"", "perform target test" },
+
+	{ cmd_ice_test, "icetest", "icet", 
+		"REQ [ARG1 .. ARGn]", "perform ICE tests" },
+
+	{ cmd_ice_info, "ice_info", "ice", 
+		"", "show ICE details" },
+
+	{ cmd_unset, "unset", "", 
+		"VAR", "clear environement variable" },
+
+	{ cmd_version, "version", "ver", 
+		"", "show version" },
+
+	{ cmd_watchpoint, "watchpt", "wp", 
+		"", "set/modify watchpoint" },
+
+	{ cmd_power, "power", "pwr", 
+		"[on | off | cycle]", "control the target power ..." },
+
+	{ cmd_relay, "relay", "rly", 
+		"[on | off | cycle]", "control on board relay..." },
+
+	{ cmd_mem_write, "write", "mw", 
+		"ADDR W0 [W1 .. Wn]", "write into a memory region" },
+
+	{ cmd_tap, "tap", "", 
+		"[reset | info | probe | select N]", "JTAG TAP operations." },
+
+	{ cmd_i2c, "i2c", "", 
+		"[reset | info | probe | select N]", "I2C operations." },
+
+	{ cmd_enable, "enable", "en", 
+		"[poll | comm ]", "enable feature." },
+
+	{ cmd_disable, "disable", "dis", 
+		"[poll | comm ]", "disable feature." },
+
+	{ cmd_trst, "trst", "tr", 
+		"[set | clr | [pulse TIME(ms)]]", "assert the TRST signal ..." },
+
+	{ cmd_nrst, "nrst", "nr", 
+		"[set | clr | [pulse TIME(ms)]]", "assert the nRST signal ..." },
+
+	{ cmd_irscan, "irscan", "ir", 
+		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
+
+	{ cmd_drscan, "drscan", "dr", 
+		"VECTOR LEN", "scan a vector int the JTAG instruction register" },
+
+	{ cmd_irpause, "irpause", "ip", 
+		"COUNT", "" },
+
+	{ cmd_drpause, "drpause", "dp", 
+		"COUNT", "" },
+
+	{ cmd_runtest, "runtest", "idle", 
+		"COUNT", "cycle the JTAG TCK <COUNT> times" },
+
+	{ cmd_idcode, "idcode", "id", 
+		"[TAP]", "get the JTAG IDCODE for a device in the chain" },
+
+	{ cmd_var, "variable", "var", 
+		"", "show global variables" },
+
+	{ cmd_trace, "trace", "tc", 
+		"[monitor | flush]", "handle the trace ring..." },
+
+	{ cmd_sleep, "sleep", "", 
+		"", "delay for a specific amount of time" },
+
+	{ cmd_os, "sys", "os", 
+		"", "show OS status" },
+
+	{ cmd_thread, "thread", "th", 
+		"[ID]", "show thread status" },
+
+	{ cmd_fpga, "fpga", "rbf", 
+		"[erase] [load]", "update FPGA program." },
+
+#if (ENABLE_NETWORK)
+	{ cmd_ifconfig, "ifconfig", "if", 
+		"", "configure a network interface" },
+
+	{ cmd_ipcfg, "ipcfg", "ipcf", 
+		"", "ip configuration utility" },
+
+	{ cmd_ping, "ping", "", 
+		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
+
+	{ cmd_netstat, "netstat", "n", 
+		"", "print network connections" },
+
+#if 0
+	{ cmd_arp, "arp", "arp", 
+		"", "show / manipulate the system ARP cache" },
+#endif
+	{ cmd_route, "route", "rt", 
+		"", "show / manipulate the IP routing table" },
+
+#if 0
+	{ cmd_tcpstat, "tcpstat", "ts", 
+		"", "print TCP stack info" },
+#endif
+#endif
+
+#if (ENABLE_NETWORK)
+#if (ENABLE_TCP_RECV)
+	{ cmd_tcp_recv, "rcvnet", "rn", 
+		"[ADDR] [PORT]", "receive file trough network" },
+#endif
+#if (ENABLE_TCP_SEND)
+	{ cmd_tcp_send, "sndnet", "sn", 
+		"[ADDR] [SIZE] [PORT]", "send a memory block trough network" },
+#endif
+#endif
+
+	{ NULL, "", "", NULL, NULL }
+};
+
 int console_shell(void)
 {
 	struct uart_console_dev * dev;
@@ -962,6 +965,8 @@ int console_shell(void)
 	stdout = f_tty;
 	stdin = stdout;
 
-	return shell(f_tty, yard_ice_get_prompt, yard_ice_greeting);
+	return shell(f_tty, yard_ice_get_prompt, 
+				 yard_ice_greeting, yard_ice_cmd_tab);
 }
+
 

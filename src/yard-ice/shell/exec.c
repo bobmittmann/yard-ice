@@ -33,6 +33,9 @@
 #define SHELL_ARG_MAX 8
 #endif
 
+int shell_parseline(char * line, char ** argv, int argmax);
+char * shell_stripline(char * line);
+
 int shell_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 {
 	char * argv[SHELL_ARG_MAX];
@@ -48,7 +51,7 @@ int shell_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 		return 0;
 	}
 
-	if ((cmd = shell_lookup(argv[0], cmd_tab)) == NULL) {
+	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
 //		fprintf(f, "Command invalid. Type 'help'\n");
 		return -1;
 	}

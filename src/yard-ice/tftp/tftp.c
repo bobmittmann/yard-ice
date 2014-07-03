@@ -318,7 +318,7 @@ int tftp_recv_netascii(struct udp_pcb * udp, struct sockaddr_in * sin,
 			buf[i] = '\0';
 
 
-		if ((ret = exec(f, line)) < 0) {
+		if ((ret = exec(f, line, yard_ice_cmd_tab)) < 0) {
 			DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
 			break;
 		}

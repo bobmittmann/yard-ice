@@ -163,16 +163,15 @@ __thinkos_flag_signal(int flag) {
 	/* set the flag */
 	__thinkos_flag_set(flag);
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
-
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
 		__thinkos_wakeup(flag, th);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 }
 
 
@@ -183,8 +182,8 @@ __thinkos_flag_signal_all(int flag) {
 	/* set the flag */
 	__thinkos_flag_set(flag);
 
-	pri = cm3_basepri_get();
-	cm3_basepri_set(0x01);
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
 		__thinkos_wakeup(flag, th);
@@ -194,7 +193,7 @@ __thinkos_flag_signal_all(int flag) {
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
-	cm3_basepri_set(pri);
+	cm3_primask_set(pri);
 }
 
 static inline void __attribute__((always_inline)) 

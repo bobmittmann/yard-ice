@@ -40,6 +40,8 @@
 
 #include <sys/dcclog.h>
 
+#include "command.h"
+
 int usb_task(void * arg)
 {
 	uint64_t  esn = *((uint64_t *)STM32F_UID);
@@ -56,7 +58,7 @@ int usb_task(void * arg)
 	f_tty = tty_fopen(tty);
 
 	for (;;) {
-		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting);
+		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
 	}
 }
 

@@ -66,7 +66,7 @@ int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 
 	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
 
-		DCC_LOG(LOG_TRACE, "shell_lookup() == NULL");
+		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
 
 		return 0;
 	}

@@ -66,7 +66,7 @@ int flash_xmodem_recv(FILE * f, uint32_t offs)
 			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
 			return ret;
 		}
-		stm32f_flash_write(offs, buf, ret);
+		stm32_flash_write(offs, buf, ret);
 		cnt += ret;
 		offs += ret;
 	} while (ret > 0);
@@ -78,6 +78,7 @@ int flash_xmodem_recv(FILE * f, uint32_t offs)
 int cmd_fpga(FILE * f, int argc, char ** argv)
 {
 	uint8_t * rbf = (uint8_t *)0x08060000;
+	uint32_t flash_offs = (uint8_t *)rbf - STM32_FLASH_MEM;
 	bool erase = false;
 	bool load = false;
 
@@ -105,7 +106,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 	if (erase) {
 		fprintf(f, "Erasing sector: 0x%08x...\n", (uint32_t)rbf);
-		if (stm32f_flash_erase(0x60000, 0x20000) < 0) {
+		if (stm32_flash_erase(flash_offs, 0x20000) < 0) {
 			fprintf(f, "stm32f_flash_erase() failed!\n");
 			return -1;
 		}
@@ -113,7 +114,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 	if (load) {
 		fprintf(f, "Loading FPGA .rbf file at 0x%08x...\n", (uint32_t)rbf);
-		if (flash_xmodem_recv(f, 0x60000) < 0) {
+		if (flash_xmodem_recv(f, flash_offs) < 0) {
 			fprintf(f, "fpga_xmodem_recv() failed!\n");
 			return -1;
 		}

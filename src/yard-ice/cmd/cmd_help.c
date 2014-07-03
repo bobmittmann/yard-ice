@@ -37,7 +37,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 		return -1;
 
 	if (argc > 1) {
-		if ((cmd = shell_lookup(argv[1], cmd_tab)) == NULL) {
+		if ((cmd = cmd_lookup(argv[1], yard_ice_cmd_tab)) == NULL) {
 			fprintf(f, " Not found: '%s'\n", argv[1]);
 			return -1;
 		}
@@ -49,7 +49,8 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	}
 
 	fprintf(f, "\n COMMAND:   ALIAS:  DESCIPTION: \n");
-	for (cmd = (struct shell_cmd *)cmd_tab; cmd->callback != NULL; cmd++) {
+	for (cmd = (struct shell_cmd *)yard_ice_cmd_tab; 
+		 cmd->callback != NULL; cmd++) {
 		fprintf(f, "  %-10s %-4s   %s\n", cmd->name, cmd->alias, cmd->desc);
 	}
 
