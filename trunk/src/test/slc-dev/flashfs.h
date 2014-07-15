@@ -1,5 +1,5 @@
 /* 
- * File:	 serdev.h
+ * File:	 flashfs.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,27 +20,27 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __SERDRV_H__
-#define __SERDRV_H__
+#ifndef __FLASHFS_H__
+#define __FLASHFS_H__
 
-struct serdrv;
+struct fs_dirent {
+	char name[9];
+	uint8_t mode;
+	uint16_t size;
+	uint16_t max_size;
+	void * addr;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct serdrv * serdrv_init(unsigned int speed);
-
-int serdrv_send(struct serdrv * drv, const void * buf, int len);
-
-int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo);
-
-FILE * serdrv_tty_fopen(struct serdrv * drv);
+bool fs_lookup(const char * name, struct fs_dirent * entry);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SERDRV_H__ */
+#endif /* __FLASHFS_H__ */
 
 

@@ -97,6 +97,32 @@ struct io_drv {
 
 extern struct io_drv io_drv;
 
+/*****************************************************************************
+ * FLASH memory map
+ *****************************************************************************/
+/*
+ | Start      | End        |   Size | Description                   |
+ +------------+------------+--------+-------------------------------+
+ | 0x08000000 | 0x0800ffff |  64KiB | Firmware                      |
+ | 0x08010000 | 0x08017fff |  32KiB | Simulator Config File (JSON)  |  
+ | 0x08018000 | 0x0801dfff |  24KiB | Device Database File (JSON)   |  
+ | 0x0801e000 | 0x0801ffff |   8KiB | Xmodem Firmware Loader        |  
+ +------------+------------+--------+-------------------------------+
+*/
+
+#define DEV_DB_JSON_ADDR  0x08018000
+#define DEV_DB_JSON_SIZE  (24 * 1024)
+
+#define SIM_CFG_JSON_ADDR 0x08018000
+#define SIM_CFG_JSON_SIZE (32 * 1024)
+
+#define XFLASH_ADDR       0x0801e000
+#define XFLASH_SIZE       (8 * 1024)
+
+extern const uint8_t * dev_db_json;
+extern const uint8_t * sim_cfg_json;
+extern const void (* xflash)(void *, int);
+
 #ifdef __cplusplus
 extern "C" {
 #endif

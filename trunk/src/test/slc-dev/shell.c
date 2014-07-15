@@ -1,0 +1,193 @@
+/* 
+ * File:	 usb-test.c
+ * Author:   Robinson Mittmann (bobmittmann@gmail.com)
+ * Target:
+ * Comment:
+ * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+
+#include <sys/stm32f.h>
+
+#include <sys/shell.h>
+#include <sys/tty.h>
+#include <sys/usb-cdc.h>
+#include <sys/serial.h>
+#include <sys/param.h>
+#include <xmodem.h>
+#include <hexdump.h>
+
+#include <sys/dcclog.h>
+
+#include "flashfs.h"
+
+extern const struct shell_cmd cmd_tab[];
+
+/*****************************************************************************
+ * Help
+ *****************************************************************************/
+
+int cmd_help(FILE *f, int argc, char ** argv)
+{
+	struct shell_cmd * cmd;
+
+	if (argc > 2)
+		return -1;
+
+	if (argc > 1) {
+		if ((cmd = cmd_lookup(argv[1], cmd_tab)) == NULL) {
+			fprintf(f, " Not found: '%s'\n", argv[1]);
+			return -1;
+		}
+
+		fprintf(f, "  %s, %s - %s\n", cmd->name, cmd->alias, cmd->desc);
+		fprintf(f, "  usage: %s %s\n\n", argv[1], cmd->usage);
+
+		return 0;
+	}
+
+	fprintf(f, "\n Command:   Alias:  Desciption: \n");
+	for (cmd = (struct shell_cmd *)cmd_tab; cmd->callback != NULL; cmd++) {
+		fprintf(f, "  %-10s %-4s   %s\n", cmd->name, cmd->alias, cmd->desc);
+	}
+
+	return 0;
+}
+
+/*****************************************************************************
+ * FPGA
+ *****************************************************************************/
+
+union {
+	struct xmodem_rcv rx;
+	struct xmodem_snd sx;
+} xmodem;
+
+int flash_xmodem_recv(FILE * f, uint32_t offs, unsigned int size)
+{
+	struct comm_dev comm;
+	struct file * raw;
+	uint8_t buf[128];
+	unsigned int cnt;
+	unsigned int rem;
+	int ret;
+
+	raw = ftty_lowlevel(f);
+
+	comm.arg = raw->data;
+	comm.op.send = (int (*)(void *, const void *, unsigned int))raw->op->write;
+	comm.op.recv = (int (*)(void *, void *, 
+						  unsigned int, unsigned int))raw->op->read;
+
+	DCC_LOG(LOG_TRACE, ".................................");
+
+	xmodem_rcv_init(&xmodem.rx, &comm, XMODEM_RCV_CRC);
+
+	cnt = 0;
+	rem = size;
+	do {
+		unsigned int n;
+
+		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 128)) < 0) {
+			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
+			return ret;
+		}
+
+		if (rem == 0) {
+			xmodem_rcv_cancel(&xmodem.rx);
+			break;
+		}
+
+		n = MIN(rem, ret); 
+		stm32_flash_write(offs, buf, n);
+		cnt += n;
+		offs += n;
+		rem -= n;
+	} while (ret > 0);
+
+	return cnt;
+}
+
+int cmd_rx(FILE * f, int argc, char ** argv)
+{
+	uint32_t blk_offs;
+	uint32_t blk_size;
+	struct fs_dirent entry;
+
+	if (argc < 1)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (!fs_lookup(argv[1], &entry))
+		return SHELL_ERR_ARG_INVALID;
+
+	blk_offs = (uint8_t *)entry.addr - STM32_FLASH_MEM;
+	blk_size = entry.max_size;
+
+	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
+	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
+		fprintf(f, "stm32f_flash_erase() failed!\n");
+		return -1;
+	};
+
+	fprintf(f, "RX waiting to receive.");
+
+	if (flash_xmodem_recv(f, blk_offs, blk_size) < 0) {
+		fprintf(f, "flash_xmodem_recv() failed!\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+const struct shell_cmd cmd_tab[] = {
+
+	{ cmd_help, "help", "?", 
+		"[COMMAND]", "show command usage (help [CMD])" },
+
+	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
+
+	{ NULL, "", "", NULL, NULL }
+};
+
+
+#define VERSION_NUM "0.1"
+#define VERSION_DATE "Jun, 2014"
+
+const char shell_greeting[] = "\n"
+	"SIMDEV" VERSION_NUM " - " VERSION_DATE "\n"
+	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+
+const char * get_prompt(void)
+{
+	return (char *)"[HUB]$ ";
+}
+
+int stdio_shell(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+
+	return shell(stdout, get_prompt, shell_greeting, cmd_tab);
+}
+

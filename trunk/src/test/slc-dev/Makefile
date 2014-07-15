@@ -23,16 +23,15 @@ PROG = slc-dev
 
 CFILES_GEN = device_db.c
 CFILES = jsmn.c slc-dev.c board.c isink.c slcdev-drv.c \
-		 serdrv.c slcdev-db.c json-dump.c
+		 serdrv.c slcdev-db.c json-dump.c flashfs.c shell.c
 
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
 		  $(SDK)/libthinkos  $(SDK)/libice-comm $(SDK)/libxmodem \
-		  $(SDK)/libcrc
+		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell
 
-
-LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc
+LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell
 #thinkos 
 
 INCPATH = $(SDK)/include 

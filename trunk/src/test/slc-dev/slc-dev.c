@@ -35,6 +35,7 @@ void stdio_init(void)
 	stdout = stdin;
 }
 
+#if 0
 union {
 	struct xmodem_rcv rx;
 	struct xmodem_snd sx;
@@ -69,7 +70,7 @@ int flash_xmodem_recv(struct serdrv * pdrv, uint32_t offs)
 
 	return cnt;
 }
-
+#endif
 
 
 void __attribute__((noreturn)) event_task(void)
@@ -205,21 +206,22 @@ int main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
 	sdrv = serdrv_init(115200);
+	serdrv_tty_fopen(sdrv);
 
 	for (i = 0; ; ++i) {
 
-//		printf("U %4d\n", i);
-//		thinkos_sleep(500);
+		printf("U %4d\n", i);
+		thinkos_sleep(500);
 
 	//	ser_send(device_db_js, sizeof_device_db_js);
 //		n = serdrv_recv(sdrv, buf, 2, 200);
 //		DCC_LOG1(LOG_TRACE, "n=%d", n);
 
-		serdrv_send(sdrv, str_loop_config_xfer, sizeof(str_loop_config_xfer));
-		if (flash_xmodem_recv(sdrv, 0x10000) < 0) 
-			serdrv_send(sdrv, str_xmodem_err, sizeof(str_xmodem_err));
-		else
-			serdrv_send(sdrv, str_xmodem_done, sizeof(str_xmodem_done));
+//		serdrv_send(sdrv, str_loop_config_xfer, sizeof(str_loop_config_xfer));
+//		if (flash_xmodem_recv(sdrv, 0x10000) < 0) 
+//			serdrv_send(sdrv, str_xmodem_err, sizeof(str_xmodem_err));
+//		else
+//			serdrv_send(sdrv, str_xmodem_done, sizeof(str_xmodem_done));
 
 //		isink_pulse_test();
 	
