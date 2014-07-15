@@ -28,6 +28,13 @@
 
 #include <stdio.h>
 
+enum {
+	SHELL_ERR_GENERAL = -1,
+	SHELL_ERR_ARG_MISSING = -2,
+	SHELL_ERR_ARG_INVALID = -3,
+	SHELL_ERR_EXTRA_ARGS = -4,
+};
+
 typedef int (* shell_callback_t)(FILE * f, int argc, char ** argv);
 
 struct shell_cmd {

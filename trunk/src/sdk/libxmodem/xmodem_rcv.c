@@ -63,6 +63,16 @@ int xmodem_rcv_init(struct xmodem_rcv * rx, const struct comm_dev * comm,
 
 int xmodem_rcv_cancel(struct xmodem_rcv * rx)
 {
+	unsigned char * pkt = rx->pkt.hdr;
+
+	DCC_LOG(LOG_TRACE, "ABT!");
+
+	pkt[0] = CAN;
+	pkt[1] = CAN;
+	pkt[2] = CAN;
+
+	rx->comm->op.send(rx->comm->arg, pkt, 3);
+
 	return 0;
 }
 
