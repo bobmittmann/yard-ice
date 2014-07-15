@@ -241,6 +241,8 @@ enum {
 #define STM32L_FLASH  ((uint32_t *)0x08000000)
 #define STM32L_SRAM   ((uint32_t *)0x20000000)
 
+#define STM32_FLASH_MEM (uint8_t *)STM32L_FLASH
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __STM32L151_H__ */
