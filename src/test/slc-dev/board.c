@@ -277,4 +277,3 @@ uint32_t io_event_wait(void)
 
 	return event;
 }
-

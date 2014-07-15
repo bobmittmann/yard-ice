@@ -34,10 +34,11 @@
 
 #include "board.h"
 
-/* DMA Mapping 
-USART2_RX: Channel 6 
-USART2_TX: Channel 7 
- */
+/* 
+   DMA Mapping 
+   USART2_RX: Channel 6 
+   USART2_TX: Channel 7 
+*/
 
 #define DMA_CHAN6 5
 #define DMA_CHAN7 6
@@ -45,8 +46,9 @@ USART2_TX: Channel 7
 #define UART2_TX_DMA_CHAN DMA_CHAN7
 #define UART2_RX_DMA_CHAN DMA_CHAN6
 
-#define SERIAL_RX_BUF_LEN 8
-#define SERIAL_TX_BUF_LEN 64
+/* serial driver structure definition */
+#define SERIAL_RX_BUF_LEN 16
+#define SERIAL_TX_BUF_LEN 16
 
 struct serdrv {
 	int8_t rx_flag;
@@ -54,9 +56,10 @@ struct serdrv {
 	int8_t rx_pos;
 	uint8_t tx_buf[SERIAL_TX_BUF_LEN];
 	uint8_t rx_buf[SERIAL_RX_BUF_LEN];
-} ;
+};
 
-struct serdrv serial2_dev;
+/* static serial driver object */
+static struct serdrv serial2_dev;
 
 /*********************************************
  * RX DMA ISR
@@ -136,22 +139,24 @@ struct serdrv * serdrv_init(unsigned int speed)
 	struct serdrv * drv  = &serial2_dev;
 	struct stm32_usart * uart = STM32_USART2;
 	struct stm32f_dma * dma = STM32_DMA1;
-//	unsigned int idle_tm;
 
+	/* alloc kernel objects */
 	drv->rx_flag = thinkos_flag_alloc();
 	drv->tx_flag = thinkos_flag_alloc();
-	thinkos_flag_set(drv->tx_flag);
 	drv->rx_pos = 0;
+	/* signal the TX flag, indicates the 
+	   transmitter is ready to start transmitting */
+	thinkos_flag_set(drv->tx_flag);
+
+	DCC_LOG1(LOG_TRACE, "speed=%d", speed);
 
 	/* clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_USART2);
 
 	/*********************************************
-	 * TX DMA 
+	 * TX DMA configuration
 	 *********************************************/
-
-	DCC_LOG1(LOG_TRACE, "speed=%d", speed);
 
 	/* DMA Disable */
 	dma->ch[UART2_TX_DMA_CHAN].ccr = 0;
@@ -165,7 +170,7 @@ struct serdrv * serdrv_init(unsigned int speed)
 	dma->ch[UART2_TX_DMA_CHAN].cmar = (void *)drv->tx_buf;
 
 	/*********************************************
-	 * RX DMA 
+	 * RX DMA configuration
 	 *********************************************/
 	/* DMA Disable */
 	dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
@@ -191,30 +196,22 @@ struct serdrv * serdrv_init(unsigned int speed)
 	stm32_usart_baudrate_set(uart, speed);
 	stm32_usart_mode_set(uart, SERIAL_8N1);
 
-#if 0
-	/* 3 characters IDLE time:
-	   - 1 char in the TX holding buffer
-	   - 1 char in the TX shift register
-	   - 1 idle char */
-	idle_tm = ((30 * 1000) / speed) + 1;
-
-	DCC_LOG1(DCC_TRACE, "idle_tm = %d\n", lnk->idle_tm);
-#endif
-
 	/* Enable DMA for transmission and reception */
 	uart->cr3 |= USART_DMAT | USART_DMAR;
 	/* enable idle line interrupt */
 	uart->cr1 |= USART_IDLEIE;
 
+	/* enable UART */
 	stm32_usart_enable(uart);
 
+	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CHANNEL6, IRQ_PRIORITY_LOW);
-	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL6);
-
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CHANNEL7, IRQ_PRIORITY_LOW);
-	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL7);
-
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);
+
+	/* enable interrupts */
+	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL6);
+	cm3_irq_enable(STM32_IRQ_DMA1_CHANNEL7);
 	cm3_irq_enable(STM32_IRQ_USART2);
 
 	return drv;
@@ -310,4 +307,31 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 	return n;
 }
 
+
+/* ----------------------------------------------------------------------
+ * Serial driver file operations 
+ * ----------------------------------------------------------------------
+ */
+
+#include <sys/tty.h>
+
+const struct fileop serdrv_ops = {
+	.write = (void *)serdrv_send,
+	.read = (void *)serdrv_recv,
+	.flush = (void *)NULL,
+	.close = (void *)NULL
+};
+
+FILE * serdrv_tty_fopen(struct serdrv * drv)
+{
+	struct tty_dev * tty;
+	FILE * f_raw;
+	FILE * f_tty;
+
+	f_raw = file_alloc(drv, &serdrv_ops);
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
+
+	return f_tty;
+}
 
