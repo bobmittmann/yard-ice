@@ -32,6 +32,11 @@ enum {
 	TRIG_MODE_MATCH
 };
 
+enum {
+	SLC_EV_NONE = 0,
+	SLC_EV_TRIG,
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,12 +53,19 @@ void trig_addr_set(unsigned int addr);
 
 void trig_mode_set(unsigned int mode);
 
+unsigned int trig_addr_get(void);
+
 void slcdev_init(void);
+
+uint32_t slcdev_event_wait(void);
+
+void dev_sim_enable(unsigned int addr);
+
+void dev_sim_disable(unsigned int addr);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __SLCDEV_H__ */
-
 

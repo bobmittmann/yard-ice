@@ -30,6 +30,30 @@
 
 struct io_drv io_drv;
 
+const struct {
+	struct stm32_gpio * gpio;
+	int pin;
+} led_io[] = {
+	{ LED1 },
+	{ LED2 },
+	{ LED3 },
+	{ LED4 },
+	{ LED5 },
+	{ LED6 }
+};
+
+struct {
+	uint8_t tmr[6];
+} led_drv;
+
+#define IO_POLL_PERIOD_MS 16
+
+void led_flash(unsigned int id, unsigned int ms)
+{
+	led_drv.tmr[id] = ms / IO_POLL_PERIOD_MS;
+	led_on(led_io[id].gpio, led_io[id].pin);
+}
+
 const uint8_t addr_sw_lut[] = {
 /*  00, 01, 02, 03, 04, 05, 06, 07, 08, 09, 0a, 0b, 0c, 0d,  e, 0f */
 	 0, 10, 40, 50, 20, 30, 60, 70, 80, 90,  0,  0,  0,  0,  0, 0,
@@ -69,6 +93,7 @@ void stm32_tim9_isr(void)
 	uint32_t pb;
 	uint32_t pc;
 	unsigned int mod;
+	int i;
 
 	/* Clear interrupt flags */
 	tim->sr = 0;
@@ -80,8 +105,8 @@ void stm32_tim9_isr(void)
 	/* Rotatory switches decoder */
 	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
 	/* Sensor/Module Switch */
-	mod = (pb >> 5) & 1;
-	mod = 1;
+	mod = (pb >> 4) & 1;
+//	mod = 1;
 	addr += mod * 100;
 
 	if (addr != addr_prev) {
@@ -90,7 +115,7 @@ void stm32_tim9_isr(void)
 	} else if (addr != io_drv.addr) {
 		/* State change */
 		io_drv.addr = addr;
-		dev_event_set(EV_ADDR);  
+		io_event_set(EV_ADDR);  
 		DCC_LOG1(LOG_INFO, "Addr=%d", addr);
 		__thinkos_flag_signal(io_drv.flag);
 	}
@@ -108,19 +133,25 @@ void stm32_tim9_isr(void)
 		DCC_LOG1(LOG_INFO, "SW=%d", sw);
 
 		if ((d & SW1_MSK) != 0)
-			dev_event_set(EV_SW1);  
+			io_event_set(EV_SW1);  
 
 		if ((d & SW2_MSK) != 0)
-			dev_event_set(EV_SW2);  
+			io_event_set(EV_SW2);  
 
 		if ((d & (SW2_MSK | SW1_MSK)) != 0)
 			__thinkos_flag_signal(io_drv.flag);
 	}
 
 //	DCC_LOG(LOG_TRACE, "TMR");
-}
 
-#define IO_POLL_FREQ 100
+	/* process led timers */
+	for (i = 0; i < 6; ++i) {
+		if (led_drv.tmr[i] == 0)
+			continue;
+		if (--led_drv.tmr[i] == 0) 
+			led_off(led_io[i].gpio, led_io[i].pin);
+	}
+}
 
 static void io_timer_init(void)
 {
@@ -130,7 +161,7 @@ static void io_timer_init(void)
 	uint32_t n;
 
 	/* get the total divisior */
-	div = (stm32f_tim1_hz + (IO_POLL_FREQ / 2)) / IO_POLL_FREQ;
+	div = ((stm32f_tim1_hz * IO_POLL_PERIOD_MS) + 500) / 1000;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
@@ -245,7 +276,7 @@ void io_init(void)
 	stm32_gpio_mode(SW4A, INPUT, PULL_UP | SPEED_LOW);
 	stm32_gpio_mode(SW4B, INPUT, PULL_UP | SPEED_LOW);
 
-#if 0
+#ifndef DEBUG
 	/* JTAG TRST Pin */
 	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
 #endif

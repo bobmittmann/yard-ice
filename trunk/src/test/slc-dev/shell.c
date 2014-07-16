@@ -25,15 +25,12 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include <sys/stm32f.h>
-
 #include <sys/shell.h>
 #include <sys/tty.h>
-#include <sys/usb-cdc.h>
-#include <sys/serial.h>
 #include <sys/param.h>
 #include <xmodem.h>
-#include <hexdump.h>
+
+#include <slcdev.h>
 
 #include <sys/dcclog.h>
 
@@ -160,6 +157,28 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_trig(FILE * f, int argc, char ** argv)
+{
+	unsigned int addr;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (argc == 2) {
+		addr = strtoul(argv[1], NULL, 0);
+		if (addr > 199)
+			return SHELL_ERR_ARG_INVALID;
+
+		trig_addr_set(addr);
+	}
+
+	addr = trig_addr_get();
+
+	fprintf(f, "Trigger address: %d\n", addr);
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -168,26 +187,9 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
 
+	{ cmd_trig, "trig", "t", "[ADDR]", "Trigger module address get/set" },
+
 	{ NULL, "", "", NULL, NULL }
 };
 
-
-#define VERSION_NUM "0.1"
-#define VERSION_DATE "Jun, 2014"
-
-const char shell_greeting[] = "\n"
-	"SIMDEV" VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
-
-const char * get_prompt(void)
-{
-	return (char *)"[HUB]$ ";
-}
-
-int stdio_shell(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-
-	return shell(stdout, get_prompt, shell_greeting, cmd_tab);
-}
 
