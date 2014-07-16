@@ -25,6 +25,7 @@
 #include "slcdev.h"
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
+#include <thinkos.h>
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
@@ -64,6 +65,11 @@ struct {
 void trig_addr_set(unsigned int addr)
 {
 	trig.addr = addr;
+}
+
+unsigned int trig_addr_get(void)
+{
+	return trig.addr;
 }
 
 void trig_mode_set(unsigned int mode)
@@ -116,12 +122,22 @@ void dev_sim_init(void)
 
 	scan.dev = (struct clip_device *)&null_dev;
 	scan.addr = 0;
+}
 
-	clip_dev_tab[102].enabled = true;
-//	clip_dev_tab[103].enabled = true;
-//	clip_dev_tab[104].enabled = true;
-//	clip_dev_tab[105].enabled = true;
-//	clip_dev_tab[106].enabled = true;
+void dev_sim_enable(unsigned int addr)
+{
+	if (addr > 199) 
+		return;
+
+	clip_dev_tab[addr].enabled = true;
+}
+
+void dev_sim_disable(unsigned int addr)
+{
+	if (addr > 199) 
+		return;
+
+	clip_dev_tab[addr].enabled = false;
 }
 
 
@@ -168,6 +184,8 @@ enum {
 };
 
 struct {
+	int8_t flag;
+	uint32_t event;
 	uint8_t state;
 	uint8_t bit_cnt;
 	uint16_t msg;
@@ -201,27 +219,27 @@ void stm32_tim4_isr(void)
 	switch (slcdev.state) {
 	case DEV_PW1_PULSE:
 		slcdev.state = DEV_PW1_END_WAIT;
-		DCC_LOG(LOG_TRACE, "[PW1 END WAIT]");
+		DCC_LOG(LOG_INFO, "[PW1 END WAIT]");
 		break;
 
 	case DEV_PW2_PULSE:
 		slcdev.state = DEV_PW2_END_WAIT;
-		DCC_LOG(LOG_TRACE, "[PW2 END WAIT]");
+		DCC_LOG(LOG_INFO, "[PW2 END WAIT]");
 		break;
 
 	case DEV_PW3_PULSE:
 		slcdev.state = DEV_PW3_END_WAIT;
-		DCC_LOG(LOG_TRACE, "[PW3 END WAIT]");
+		DCC_LOG(LOG_INFO, "[PW3 END WAIT]");
 		break;
 
 	case DEV_PW4_PULSE:
 		slcdev.state = DEV_PW4_END_WAIT;
-		DCC_LOG(LOG_TRACE, "[PW4 END WAIT]");
+		DCC_LOG(LOG_INFO, "[PW4 END WAIT]");
 		break;
 
 	case DEV_PW5_PULSE:
 		slcdev.state = DEV_PW5_END_WAIT;
-		DCC_LOG(LOG_TRACE, "[PW5 END WAIT]");
+		DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
 		break;
 
 	default:
@@ -287,9 +305,9 @@ void stm32_tim10_isr(void)
 	case DEV_IDLE:
 #if 0
 		if (bit) {
-			DCC_LOG(LOG_TRACE, "HIGH");
+			DCC_LOG(LOG_INFO, "HIGH");
 		} else {
-			DCC_LOG(LOG_TRACE, "LOW");
+			DCC_LOG(LOG_INFO, "LOW");
 		}
 #endif
 		/* reset the device state */
@@ -304,9 +322,9 @@ void stm32_tim10_isr(void)
 	case DEV_MSG:
 #if 0
 		if (bit) {
-			DCC_LOG(LOG_TRACE, "HIGH");
+			DCC_LOG(LOG_INFO, "HIGH");
 		} else {
-			DCC_LOG(LOG_TRACE, "LOW");
+			DCC_LOG(LOG_INFO, "LOW");
 		}
 #endif
 		slcdev.msg |= bit << slcdev.bit_cnt;
@@ -331,16 +349,18 @@ void stm32_tim10_isr(void)
 
 				if ((addr == trig.addr) && (trig.state = TRIG_ADDR_WAIT)) {
 					trig.state = TRIG_ADDR_MATCH;
+					slcdev.event = SLC_EV_TRIG;
+					__thinkos_flag_signal(slcdev.flag);
 					/* */
-					DCC_LOG2(LOG_TRACE, "Match %s=%d", 
+					DCC_LOG2(LOG_INFO, "Match %s=%d", 
 							 mod ? "MODULE" : "SENSOR", addr);
 				}
 
 				if (scan.dev->enabled) {
-					DCC_LOG2(LOG_TRACE, "Simulating %s=%d", 
+					DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 							 mod ? "MODULE" : "SENSOR", addr);
 					slcdev.state = DEV_PW1_START_WAIT;
-					DCC_LOG(LOG_TRACE, "[PW1 START WAIT]");
+					DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
 				} else {
 					slcdev.state = DEV_INACTIVE_START_WAIT;
 					DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
@@ -348,7 +368,7 @@ void stm32_tim10_isr(void)
 			} else {
 				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
 				slcdev.state = DEV_PARITY_ERROR;
-				DCC_LOG(LOG_TRACE, "[PARITY ERR]");
+				DCC_LOG(LOG_INFO, "[PARITY ERR]");
 			}
 		}
 		break;
@@ -357,35 +377,35 @@ void stm32_tim10_isr(void)
 		/* Reference Pulse Width */
 		isink_pulse(35, dev->pw1); 
 		slcdev.state = DEV_PW1_PULSE;
-		DCC_LOG1(LOG_TRACE, "[PW1 PULSE %d us]", dev->pw1);
+		DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
 		break;
 
 	case DEV_PW2_RESPONSE_TIME:
 		/* Remote Test Status */
 		isink_pulse(35, dev->pw2);
 		slcdev.state = DEV_PW2_PULSE;
-		DCC_LOG1(LOG_TRACE, "[PW2 PULSE %d us]", dev->pw2);
+		DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
 		break;
 
 	case DEV_PW3_RESPONSE_TIME:
 		/* Manufacturer Code */
 		isink_pulse(35, dev->pw3); 
 		slcdev.state = DEV_PW3_PULSE;
-		DCC_LOG1(LOG_TRACE, "[PW3 PULSE %d us]", dev->pw3);
+		DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
 		break;
 
 	case DEV_PW4_RESPONSE_TIME:
 		/* Analog */
 		isink_pulse(35, dev->pw4); 
 		slcdev.state = DEV_PW4_PULSE;
-		DCC_LOG1(LOG_TRACE, "[PW4 PULSE %d us]", dev->pw4);
+		DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
 		break;
 
 	case DEV_PW5_RESPONSE_TIME:
 		/* Type Id */
 		isink_pulse(35, dev->pw5); 
 		slcdev.state = DEV_PW5_PULSE;
-		DCC_LOG1(LOG_TRACE, "[PW5 PULSE %d us]", dev->pw5);
+		DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
 		break;
 	}
 }
@@ -422,7 +442,7 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW1_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW1_RESPONSE_TIME;
-			DCC_LOG(LOG_TRACE, "[PW1 RESPONSE_TIME]");
+			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -430,7 +450,7 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW2_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW2_RESPONSE_TIME;
-			DCC_LOG(LOG_TRACE, "[PW2 RESPONSE_TIME]");
+			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -438,7 +458,7 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW3_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW3_RESPONSE_TIME;
-			DCC_LOG(LOG_TRACE, "[PW3 RESPONSE_TIME]");
+			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -446,7 +466,7 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW4_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW4_RESPONSE_TIME;
-			DCC_LOG(LOG_TRACE, "[PW4 RESPONSE_TIME]");
+			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -454,7 +474,7 @@ void stm32_comp_tsc_isr(void)
 		case DEV_PW5_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW5_RESPONSE_TIME;
-			DCC_LOG(LOG_TRACE, "[PW5 RESPONSE_TIME]");
+			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
 			break;
@@ -493,29 +513,29 @@ void stm32_comp_tsc_isr(void)
 
 		case DEV_PW1_END_WAIT:
 			slcdev.state = DEV_PW2_START_WAIT;
-			DCC_LOG(LOG_TRACE, "[PW2 START WAIT]");
+			DCC_LOG(LOG_INFO, "[PW2 START WAIT]");
 			break;
 
 		case DEV_PW2_END_WAIT:
 			slcdev.state = DEV_PW3_START_WAIT;
-			DCC_LOG(LOG_TRACE, "[PW3 START WAIT]");
+			DCC_LOG(LOG_INFO, "[PW3 START WAIT]");
 			break;
 
 		case DEV_PW3_END_WAIT:
 			slcdev.state = DEV_PW4_START_WAIT;
-			DCC_LOG(LOG_TRACE, "[PW4 START WAIT]");
+			DCC_LOG(LOG_INFO, "[PW4 START WAIT]");
 			break;
 
 		case DEV_PW4_END_WAIT:
 			slcdev.state = DEV_PW5_START_WAIT;
-			DCC_LOG(LOG_TRACE, "[PW5 START WAIT]");
+			DCC_LOG(LOG_INFO, "[PW5 START WAIT]");
 			break;
 
 		case DEV_PW5_END_WAIT:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_TRACE, "[RECOVER TIME]");
+			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 
 		case DEV_PW1_PULSE:
@@ -656,9 +676,27 @@ static void slc_sense_init(void)
 	cm3_irq_enable(STM32_IRQ_TIM10);
 }
 
+uint32_t slcdev_event_wait(void)
+{
+	uint32_t event;
+
+//	tracef("%s(): wait...", __func__);
+
+	do {
+		thinkos_flag_wait(slcdev.flag);
+		thinkos_flag_clr(slcdev.flag);
+		/* FIXME: event queue */
+		event = slcdev.event;
+	} while (event == 0);
+
+	return event;
+}
+
 void slcdev_init(void)
 {
 	slcdev.state = DEV_IDLE;
+	slcdev.event = 0;
+	slcdev.flag = thinkos_flag_alloc();
 
 	trig_init();
 

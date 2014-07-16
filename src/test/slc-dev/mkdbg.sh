@@ -6,7 +6,7 @@ else
 	LVL=$1
 fi
 
-#export JTAGTOOL_ADDR=192.168.10.128
+export JTAGTOOL_ADDR=192.168.10.50
 
 make D=$LVL jtagload && ../../../tools/dcclog -h 192.168.10.50 debug/slc-dev.elf
 

@@ -137,14 +137,15 @@ static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_mode_out(__gpio, __pin);
 }
 
+void led_flash(unsigned int id, unsigned int ms);
 
 uint32_t io_event_wait(void);
 
-static inline void dev_event_clr(unsigned int __flag) {
+static inline void io_event_clr(unsigned int __flag) {
 	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 0);  
 }
 
-static inline void dev_event_set(unsigned int __flag) {
+static inline void io_event_set(unsigned int __flag) {
 	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 1);
 }
 
