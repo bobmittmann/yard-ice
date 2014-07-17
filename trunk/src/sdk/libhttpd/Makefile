@@ -23,11 +23,9 @@ include ../../mk/config.mk
 
 LIB_STATIC = libhttpd
 
-CFILES = u16-list.c 200.c 
-
-#400.c 401.c 403.c 404.c 405.c 408.c 409.c 410.c \
-#411.c 413.c 414.c 415.c 500.c 501.c 503.c 505.c
-#		 base64.c dirlist.c get.c httpd.c nvparse.c post.c 
+CFILES = u16-list.c 200.c 400.c 401.c 403.c 404.c 405.c 408.c 409.c 410.c \
+		411.c 413.c 414.c 415.c 500.c 501.c 503.c 505.c \
+		base64.c nvparse.c httpd.c #dirlist.c get.c post.c 
 
 override INCPATH += ../include ./include
 

@@ -1,16 +1,27 @@
-/* $Id: base64.c,v 2.1 2006/04/06 18:16:26 bob Exp $ 
+/*
+ * Copyright(c) 2004-2014 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * File:	bas64.c
- * Module:  
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:
- * Comment: Base64 Data Encodings - RFC3548
- * Copyright(c) 2004-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * This file is part of the libhttpd.
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#include <base64.h>
+/** 
+ * @file base64.c
+ * @brief HTTPD library
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
 const signed char _base64_[128] = {
 /* x00 x01 x02 x03 x04 x05 x06 x07 */
@@ -46,5 +57,4 @@ const signed char _base64_[128] = {
 /*	 x   y   z  {   |   }   ~   ¦ */
 	49, 50, 51, -1, -1, -1, -1, -1
 };
-
 
