@@ -61,8 +61,9 @@ struct tcp_pcb;
 #define TCP_FLUSH_ALL 3
 
 /*
- * tcp send flags
+ * TCP send flags
  */
+
 /* The data is to be considered read-only and no copy will be made
 	to memory buffers, a pointer to the data will be use instead. */
 #define TCP_SEND_NOCOPY 0x0001
@@ -74,7 +75,7 @@ struct tcp_pcb;
 #define TCP_SEND_NOATOMIC 0x0002
 
 /* Disable the Nagle algorithm. This cause the data to be sent as soon as
- possible. */
+   possible. */
 #define TCP_SEND_NOWAIT 0x0004
 
 /* the maximum number of retransmissions before droping the connection */

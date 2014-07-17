@@ -30,13 +30,22 @@
 #include "config.h"
 #endif
 
-#include <mime.h>
 #include <stdint.h>
 #include <tcpip/tcp.h>
 
-#ifndef HTTPD_URI_MAX_LEN
-#define HTTPD_URI_MAX_LEN 64
-#endif
+/* Mime types */
+enum {
+	APPLICATION_JAVASCRIPT = 0,
+	APPLICATION_XML,
+	IMAGE_GIF,
+	IMAGE_JPEG,
+	IMAGE_PNG,
+	TEXT_CSS,
+	TEXT_HTML,
+	TEXT_PLAIN,
+	VIDEO_MPEG,
+	MIME_END_MARK
+};
 
 /*
  * HTTP server control structure
@@ -46,32 +55,12 @@ struct httpd {
 	/* server root directory */
 	char * root;
 	/* authentication data */
-//	uint8_t * auth_data_buf;
-	/* size of authentication data */
-//	uint8_t auth_data_size;
-	/* one-behind cache */
-//	uint8_t auth_last;
-	/* user id of the server */
-//	uint8_t uid;
-//	unsigned char mem_bmp;
-//	unsigned char mem_pool[HTTPD_MAX_CONNECT][HTTPD_MEM_BLK_SIZE];
 };
 
 /* 
  * HTTP connection control structure
  */
-struct httpctl {
-	struct tcp_pcb * tp;
-	uint8_t method;
-	uint16_t version;
-	uint8_t auth;
-	uint8_t ctype;
-	uint8_t ctbound;
-	uint8_t ctlen;
-	char * usr;
-	char * pwd;
-	char uri[HTTPD_URI_MAX_LEN];
-};
+struct httpctl;
 
 typedef int (* httpd_cgi_t)(struct tcp_pcb * tp, char * opt, 
 							int content_type, int content_len); 
@@ -118,21 +107,11 @@ int httpd_dirlist(struct httpd * httpd, struct httpctl * ctl);
  */
 void * httpd_cgi_attach(struct tcp_pcb * __tp, cgi_callback_t __callback); 
 
-int httpd_contenttype(struct tcp_pcb * __tp, mimetype_t __type);
+int httpd_contenttype(struct tcp_pcb * __tp, unsigned int __type);
 
 /* 200 OK */
-int httpd_200(struct tcp_pcb * __tp, mimetype_t __type);
-//int httpd_200(struct tcp_pcb * __tp);
-int httpd_200_binary(struct tcp_pcb * __tp);
-int httpd_200_css(struct tcp_pcb * __tp);
-int httpd_200_gif(struct tcp_pcb * __tp);
+int httpd_200(struct tcp_pcb * __tp, unsigned int __type);
 int httpd_200_html(struct tcp_pcb * __tp);
-int httpd_200_jpeg(struct tcp_pcb * __tp);
-int httpd_200_mpeg(struct tcp_pcb * __tp);
-int httpd_200_png(struct tcp_pcb * __tp);
-int httpd_200_text(struct tcp_pcb * __tp);
-int httpd_200_xml(struct tcp_pcb * __tp);
-int httpd_200_javascript(struct tcp_pcb * __tp);
 
 /* 400 Bad Request */
 int httpd_400(struct tcp_pcb * __tp);

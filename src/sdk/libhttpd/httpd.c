@@ -1,33 +1,29 @@
-/* 
- * File:	httpd.c
- * Module:  
- * Project:
- * Author:	Robinson Mittmann (bob@boreste.com, bobmittmann@gmail.com)
- * Target:
- * Comment:
- * Copyright(c) 2004-2008 BORESTE (www.boreste.com). All Rights Reserved.
+/*
+ * Copyright(c) 2004-2014 BORESTE (www.boreste.com). All Rights Reserved.
  *
+ * This file is part of the libhttpd.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
  */
 
-#ifdef __CONFIG__
-#include "config.h"
-#endif
+/** 
+ * @file httpd.c
+ * @brief HTTPD library
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
 
-#include <stdlib.h>
-#include <string.h>
-
-#include <crc.h>
-#include <base64.h>
-#include <arpa/inet.h>
-
-#include <tcpip/httpd.h>
-
-#include "httpdefs.h"
-
-#include <debug.h>
-
-const char httpd_page_default[] = HTTPD_DFT_PAGE;
-const char httpd_root[] = HTTPD_ROOT;
+#include "httpd-i.h"
 
 /* 
  * hash values for http tokens
@@ -92,7 +88,7 @@ static int get_method(struct tcp_pcb * tp)
 		if ((c = *cp) == ' ')
 			break;
 
-		DBG(DBG_MSG, "'%c'", c);
+		DCC_LOG1(LOG_MSG, "'%c'", c);
 
 		hash = CRC8(hash, c);
 	}
@@ -121,7 +117,7 @@ static int get_uri(struct tcp_pcb * tp, char * uri, int max)
 			return n;
 		}
 
-		DBG(DBG_MSG, "'%c'", c);
+		DCC_LOG(DCC_MSG, "'%c'", c);
 
 		cp++;
 	}
@@ -144,7 +140,7 @@ static int get_version(struct tcp_pcb * tp)
 		if ((c = *cp) == '\r')
 			break;
 
-		DBG(DBG_MSG, "'%c'", c);
+		DCC_LOG(DCC_MSG, "'%c'", c);
 
 		if ((c >= '0') && (c <= '9'))
 			version = (version * 10) + c - '0';
@@ -170,7 +166,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 	int c;
 	int n;
 
-	DBG(DBG_INFO, "----------------");
+	DCC_LOG(DCC_INFO, "----------------");
 	hash = 0;
 	cp = buf;
 	/*
@@ -204,7 +200,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 					return ret;
 
 				c = *cp;
-				DBG(DBG_INFO, "'%c'", c);
+				DCC_LOG(DCC_INFO, "'%c'", c);
 			}
 
 			/* append zero */
@@ -216,7 +212,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 		if (c == '\r')
 			break;
 
-		DBG(DBG_INFO, "'%c'", c);
+		DCC_LOG(DCC_INFO, "'%c'", c);
 
 		hash = CRC8(hash, c);
 	}
@@ -245,91 +241,91 @@ static int parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 		switch (opt) {
 		/* Request Header Fields */
 		case HTTPHDR_AUTHORIZATION:
-			DBG(DBG_TRACE, "Authorization: %s", val);
+			DCC_LOG(DCC_TRACE, "Authorization: %s", val);
 			break;
 		case HTTPHDR_CONTENT_TYPE:
 			/* hash the content type */
 			ctl->ctype = crc8(0, val, strlen(val));
-			DBG(DBG_TRACE, "Content-Type: %s", val);
+			DCC_LOG(DCC_TRACE, "Content-Type: %s", val);
 			break;
 		case HTTPHDR_CONTENT_LENGTH:
-			DBG(DBG_TRACE, "Content-Length: %s", val);
+			DCC_LOG(DCC_TRACE, "Content-Length: %s", val);
 			ctl->ctlen = atoi(val);
 			break;			
 		case HTTPHDR_ACCEPT:
-			DBG(DBG_TRACE, "Accept: %s", val);
+			DCC_LOG(DCC_TRACE, "Accept: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_CHARSET:
-			DBG(DBG_TRACE, "Accept-Charset: %s", val);
+			DCC_LOG(DCC_TRACE, "Accept-Charset: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_ENCODING:
-			DBG(DBG_TRACE, "Accept-Encoding: %s", val);
+			DCC_LOG(DCC_TRACE, "Accept-Encoding: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_LANGUAGE:
-			DBG(DBG_TRACE, "Accept-Language: %s", val);
+			DCC_LOG(DCC_TRACE, "Accept-Language: %s", val);
 			break;
 		case HTTPHDR_EXPECT:
-			DBG(DBG_TRACE, "Expect: %s", val);
+			DCC_LOG(DCC_TRACE, "Expect: %s", val);
 			break;
 		case HTTPHDR_HOST:
-			DBG(DBG_TRACE, "Host: %s", val);
+			DCC_LOG(DCC_TRACE, "Host: %s", val);
 			break;
 		case HTTPHDR_IF_MATCH:
-			DBG(DBG_TRACE, "If-Match: %s", val);
+			DCC_LOG(DCC_TRACE, "If-Match: %s", val);
 			break;
 		case HTTPHDR_IF_MODIFIED_SINCE:
-			DBG(DBG_TRACE, "If-Modified-Since: %s", val);
+			DCC_LOG(DCC_TRACE, "If-Modified-Since: %s", val);
 			break;
 		case HTTPHDR_IF_NONE_MATCH:
-			DBG(DBG_TRACE, "If-None-Match: %s", val);
+			DCC_LOG(DCC_TRACE, "If-None-Match: %s", val);
 			break;
 		case HTTPHDR_IF_RANGE:
-			DBG(DBG_TRACE, "If-Range: %s", val);
+			DCC_LOG(DCC_TRACE, "If-Range: %s", val);
 			break;
 		case HTTPHDR_IF_UNMODIFIED_SINCE:
-			DBG(DBG_TRACE, "If-Unmodified-Since: %s", val);
+			DCC_LOG(DCC_TRACE, "If-Unmodified-Since: %s", val);
 			break;
 		case HTTPHDR_MAX_FORWARDS:
-			DBG(DBG_TRACE, "Max-Forwards: %s", val);
+			DCC_LOG(DCC_TRACE, "Max-Forwards: %s", val);
 			break;
 		case HTTPHDR_PROXY_AUTHORIZATION:
-			DBG(DBG_TRACE, "Proxy-Authorization: %s", val);
+			DCC_LOG(DCC_TRACE, "Proxy-Authorization: %s", val);
 			break;
 		case HTTPHDR_RANGE:
-			DBG(DBG_TRACE, "Range: %s", val);
+			DCC_LOG(DCC_TRACE, "Range: %s", val);
 			break;
 		case HTTPHDR_REFERER:
-			DBG(DBG_TRACE, "Referer: %s", val);
+			DCC_LOG(DCC_TRACE, "Referer: %s", val);
 			break;
 		case HTTPHDR_TE:
-			DBG(DBG_TRACE, "Te: %s", val);
+			DCC_LOG(DCC_TRACE, "Te: %s", val);
 			break;
 		case HTTPHDR_USER_AGENT:
-			DBG(DBG_TRACE, "User-Agent: %s", val);
+			DCC_LOG(DCC_TRACE, "User-Agent: %s", val);
 			break;
 		/* Hop-by-Hop Headers */
 		case HTTPHDR_CONNECTION:
-			DBG(DBG_TRACE, "Connection: %s", val);
+			DCC_LOG(DCC_TRACE, "Connection: %s", val);
 			break;
 		case HTTPHDR_KEEP_ALIVE:
-			DBG(DBG_TRACE, "keep-Alive: %s", val);
+			DCC_LOG(DCC_TRACE, "keep-Alive: %s", val);
 			break;
 		case HTTPHDR_TRAILERS:
-			DBG(DBG_TRACE, "Trailers: %s", val);
+			DCC_LOG(DCC_TRACE, "Trailers: %s", val);
 			break;
 		case HTTPHDR_PROXY_AUTHENTICATE:
-			DBG(DBG_TRACE, "Proxy-Authenticate: %s", val);
+			DCC_LOG(DCC_TRACE, "Proxy-Authenticate: %s", val);
 			break;
 		case HTTPHDR_TRANSFER_ENCODING:
-			DBG(DBG_TRACE, "Transfer-Encoding: %s", val);
+			DCC_LOG(DCC_TRACE, "Transfer-Encoding: %s", val);
 			break;
 		case HTTPHDR_UPGRADE:
-			DBG(DBG_TRACE, "Upgrade: %s", val);
+			DCC_LOG(DCC_TRACE, "Upgrade: %s", val);
 		case HTTPHDR_CACHE_CONTROL:
-			DBG(DBG_TRACE, "Cache-Control: %s", val);
+			DCC_LOG(DCC_TRACE, "Cache-Control: %s", val);
 			break;
 		default:
-			DBG(DBG_TRACE, "opt=%02x: %s", opt, val);
+			DCC_LOG(DCC_TRACE, "opt=%02x: %s", opt, val);
 		}
 	}
 
@@ -341,22 +337,22 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	struct tcp_pcb * tp;
 
 	if ((tp = tcp_accept(httpd->tp)) == NULL) {
-		DBG(DBG_ERROR, "tcp_accept().");
+		DCC_LOG(DCC_ERROR, "tcp_accept().");
 		return -1;
 	}
 
-	DBG(DBG_TRACE, "%d.%d.%d.%d:%d accepted.", 
+	DCC_LOG(DCC_TRACE, "%d.%d.%d.%d:%d accepted.", 
 		IP4_ADDR1(tp->t_faddr), IP4_ADDR2(tp->t_faddr), 
 		IP4_ADDR3(tp->t_faddr), IP4_ADDR4(tp->t_faddr), ntohs(tp->t_fport));
 
 	ctl->method = get_method(tp);
-	DBG(DBG_TRACE, "method=0x%02x", ctl->method);
+	DCC_LOG(DCC_TRACE, "method=0x%02x", ctl->method);
 
 	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
-	DBG(DBG_TRACE, "uri='%s'", ctl->uri);
+	DCC_LOG(DCC_TRACE, "uri='%s'", ctl->uri);
 
 	ctl->version = get_version(tp);
-	DBG(DBG_TRACE, "version=%d", ctl->version);
+	DCC_LOG(DCC_TRACE, "version=%d", ctl->version);
 
 	if (parse_hdr(tp, ctl) < 0) {
 		/* Malformed request line, respond with: 400 Bad Request */
@@ -373,11 +369,11 @@ int http_process(struct httpd * httpd, struct httpctl * ctl)
 {
 	switch (ctl->method) {
 	case HTTPMETHOD_GET:
-		DBG(DBG_TRACE, "GET");
+		DCC_LOG(DCC_TRACE, "GET");
 		http_get(httpd, ctl);
 		break;
 	case HTTPMETHOD_POST:
-		DBG(DBG_TRACE, "POST");
+		DCC_LOG(DCC_TRACE, "POST");
 		http_post(httpd, ctl);
 		break;
 	}
@@ -393,19 +389,19 @@ struct tcp_pcb * httpd_start(struct httpd * httpd,
 	struct tcp_pcb * tp;
 
 	if (httpd == NULL) {
-		DBG(DBG_ERROR, "Invalid parameter!\n");
+		DCC_LOG(DCC_ERROR, "Invalid parameter!\n");
 		return NULL;
 	}
 
 	if ((tp = tcp_alloc()) == NULL) {
-		DBG(DBG_ERROR, "Can't alloc TCP PCB!\n");
+		DCC_LOG(DCC_ERROR, "Can't alloc TCP PCB!\n");
 		return NULL;
 	}
 
 	tcp_bind(tp, INADDR_ANY, htons(port));
 
 	if (tcp_listen(tp, backlog) != 0) {
-		DBG(DBG_ERROR, "Can't register the TCP listner!\n");
+		DCC_LOG(DCC_ERROR, "Can't register the TCP listner!\n");
 		return NULL;
 	}
 
