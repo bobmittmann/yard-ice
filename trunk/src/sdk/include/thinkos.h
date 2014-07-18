@@ -61,6 +61,8 @@ int const thinkos_thread_self(void);
 
 int thinkos_cancel(unsigned int thread_id, int code);
 
+int thinkos_exit(int code);
+
 int thinkos_join(unsigned int thread_id);
 
 int thinkos_pause(unsigned int thread_id);

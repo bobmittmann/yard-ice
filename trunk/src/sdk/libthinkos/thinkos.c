@@ -22,6 +22,7 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #include <thinkos.h>
+#include <sys/delay.h>
 
 #if THINKOS_ENABLE_JOIN
 void thinkos_join_svc(int32_t * arg)
@@ -124,6 +125,36 @@ void thinkos_cancel_svc(int32_t * arg)
 	arg[0] = 0;
 }
 #endif
+
+
+#if THINKOS_ENABLE_EXIT
+void thinkos_exit_svc(int32_t * arg)
+{
+	int self = thinkos_rt.active;
+	int code = arg[0];
+	unsigned int wq;
+
+#if THINKOS_ENABLE_JOIN
+	/* insert into the canceled wait queue and wait for a join call */ 
+	wq = __wq_idx(&thinkos_rt.wq_canceled);
+#else /* THINKOS_ENABLE_JOIN */
+	/* if join is not enabled insert into the ready queue */
+	wq = __wq_idx(&thinkos_rt.wq_ready);
+#endif /* THINKOS_ENABLE_JOIN */
+
+	__thinkos_wq_insert(wq, self);
+
+	DCC_LOG2(LOG_TRACE, "<%d> exit with code %d!", self, code); 
+
+	/* adjust PC */
+	arg[6] = (uint32_t)thinkos_thread_exit;
+	/* set the return code at R0 */
+	arg[0] = code;
+
+	__thinkos_defer_sched();
+}
+#endif
+
 
 #if THINKOS_ENABLE_PAUSE
 void thinkos_resume_svc(int32_t * arg)
@@ -320,8 +351,8 @@ void thinkos_thread_create_svc(int32_t * arg)
 
 void thinkos_sleep_svc(int32_t * arg)
 {
-#if THINKOS_ENABLE_CLOCK
 	uint32_t ms = (uint32_t)arg[0];
+#if THINKOS_ENABLE_CLOCK
 	int self = thinkos_rt.active;
 
 	/* set the clock */
@@ -338,6 +369,10 @@ void thinkos_sleep_svc(int32_t * arg)
 
 	/* wait for event */
 	__thinkos_wait();
+#else
+	DCC_LOG1(LOG_TRACE, "busy wait: %d milliseconds...", ms);
+	udelay(1000 * ms);
 #endif
+	
 }
 

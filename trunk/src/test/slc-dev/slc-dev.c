@@ -155,7 +155,6 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
-
 	thinkos_sleep(100);
 
 	DCC_LOG(LOG_TRACE, "3. io_init()");
@@ -194,6 +193,8 @@ int main(int argc, char ** argv)
 	stdout = f;
 
 	shell(f, shell_prompt, shell_greeting, cmd_tab);
+
+	DCC_LOG(LOG_WARNING, "bye bye !!!!!!!!!!");
 
 	return 0;
 }

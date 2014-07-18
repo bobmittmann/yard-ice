@@ -171,31 +171,40 @@ is stable, OFF if not) */
 #define RCC_MCO_LSI    (0x6 << 24)
 #define RCC_MCO_LSE    (0x7 << 24)
 
+#define RCC_PLLDIV     (0x3 << 22)
 #define RCC_PLLDIV_2   (0x1 << 22)
 #define RCC_PLLDIV_3   (0x2 << 22)
 #define RCC_PLLDIV_4   (0x3 << 22)
 
-#define RCC_PLLMUL_MASK   (0x0f << 18)
-#define RCC_PLLMUL(M) ((((M) - 2) & 0x0f) << 18)
+#define RCC_PLLMUL     (0xf << 18)
+#define RCC_PLLMUL_3   (0x0 << 18)
+#define RCC_PLLMUL_4   (0x1 << 18)
+#define RCC_PLLMUL_6   (0x2 << 18)
+#define RCC_PLLMUL_8   (0x3 << 18)
+#define RCC_PLLMUL_12  (0x4 << 18)
+#define RCC_PLLMUL_16  (0x5 << 18)
+#define RCC_PLLMUL_24  (0x6 << 18)
+#define RCC_PLLMUL_32  (0x7 << 18)
+#define RCC_PLLMUL_48  (0x8 << 18)
 
-#define RCC_PLLXTPRE      (1 << 17)
+#define RCC_PLLXTPRE   (1 << 17)
 
 #define RCC_PLLSRC     (1 << 16)
 #define RCC_PLLSRC_HSI (0 << 16)
 #define RCC_PLLSRC_HSE (1 << 16)
 
-#define RCC_ADCPRE   (0x3 << 14)
-#define RCC_ADCPRE_2 (0x0 << 14)
-#define RCC_ADCPRE_4 (0x1 << 14)
-#define RCC_ADCPRE_6 (0x2 << 14)
-#define RCC_ADCPRE_8 (0x3 << 14)
+#define RCC_ADCPRE     (0x3 << 14)
+#define RCC_ADCPRE_2   (0x0 << 14)
+#define RCC_ADCPRE_4   (0x1 << 14)
+#define RCC_ADCPRE_6   (0x2 << 14)
+#define RCC_ADCPRE_8   (0x3 << 14)
 
-#define RCC_PPRE2    (0x7 << 11)
-#define RCC_PPRE2_1  (0x0 << 11)
-#define RCC_PPRE2_2  (0x4 << 11)
-#define RCC_PPRE2_4  (0x5 << 11)
-#define RCC_PPRE2_8  (0x6 << 11)
-#define RCC_PPRE2_16 (0x7 << 11)
+#define RCC_PPRE2      (0x7 << 11)
+#define RCC_PPRE2_1    (0x0 << 11)
+#define RCC_PPRE2_2    (0x4 << 11)
+#define RCC_PPRE2_4    (0x5 << 11)
+#define RCC_PPRE2_8    (0x6 << 11)
+#define RCC_PPRE2_16   (0x7 << 11)
 /* APB high-speed prescaler (APB2) 
    These bits are set and cleared by software to control the division 
    factor of the APB high- speed clock (PCLK2).
@@ -246,10 +255,10 @@ is used.
 #define RCC_SWS_PLL (0x3 << 2)
 /* System clock switch status. Set and cleared by hardware to indicate which 
    clock source is used as the system clock.
-00: HSI oscillator used as the system clock
-01: HSE oscillator used as the system clock
-10: PLL used as the system clock
-11: not applicable */
+00: MSI oscillator used as system clock
+01: HSI oscillator used as system clock
+10: HSE oscillator used as system clock
+11: PLL used as system clock */
 
 #define RCC_SW (0x3 << 0)
 #define RCC_SW_MSI (0x0 << 0)
@@ -258,12 +267,14 @@ is used.
 #define RCC_SW_PLL (0x3 << 0)
 
 /* System clock switch
-   Set and cleared by software to select the system clock source.
-   Set by hardware to force the HSI selection when leaving the Stop or Standby mode or in case of failure of the HSE oscillator used directly or indirectly as the system clock.
-00: HSI oscillator selected as system clock
-01: HSE oscillator selected as system clock
-10: PLL selected as system clock
-11: not allowed
+
+These bits are set and cleared by software to select SYSCLK source.
+Set by hardware to force MSI selection when leaving Stop and Standby mode or in case of failure of the HSE oscillator used directly or indirectly as system clock (if the Clock Security
+System is enabled).
+00: MSI oscillator used as system clock
+01: HSI oscillator used as system clock
+10: HSE oscillator used as system clock
+11: PLL used as system clock
  */
 
 /* ------------------------------------------------------------------------- */

@@ -175,6 +175,8 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	__sched_exit(ctx);
 }
 
+#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
+
 void __attribute__((aligned(16))) cm3_systick_isr(void)
 {
 	int sched = 0;
@@ -259,6 +261,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	if (sched)
 		__thinkos_defer_sched();
 }
+#endif /* THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE */
 
 void __attribute__((noreturn)) thinkos_thread_exit(int code)
 {
@@ -327,7 +330,8 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	bmp_bit_clr(&thinkos_rt.th_alloc, idx);
 #endif
 
-	/* FIXME: clear context. The scheduler will override this value...  */
+	/* FIXME: clear context. The way is implemented th scheduler will 
+	   override this value...  */
 	thinkos_rt.ctx[idx] = 0;
 
 	/* wait forever */
@@ -395,15 +399,14 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_psp_set(cm3_sp_get());
 	/* configure the main stack */
 #if 0
-	cm3_msp_set((uint32_t)&thinkos_except_stack + 
-				sizeof(thinkos_except_stack));
+	msp = (uint32_t)&thinkos_except_stack + sizeof(thinkos_except_stack);
 #endif
 	msp = (uint32_t)&thinkos_idle.stack.r12;
 	cm3_msp_set(msp);
 
 	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
-	/* configure to use of PSP in thread mode */
+	/* configure the use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
 	/* initialize exception stack */
@@ -488,7 +491,11 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* initialize the SysTick module */
 	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
 	systick->val = 0;
+#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
 	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
+#else
+	systick->ctrl = SYSTICK_CTRL_ENABLE;
+#endif
 
 #if THINKOS_ENABLE_PAUSE
 	if (opt.f_paused) {
@@ -498,6 +505,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		__thinkos_defer_sched();
 	} else
 #endif
+
+	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 
 	/* enable interrupts */
 	cm3_cpsie_i();
