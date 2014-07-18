@@ -263,16 +263,18 @@ void stm32_tim10_isr(void)
 	/* Clear timer interrupt flags */
 	tim->sr = 0;
 
+#if 0
 	if (trig.state == TRIG_BIT)
 		trig_out_set();
+#endif
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
 		/* VSLC at 24V (Power Level) */
-
+/*
 		if (trig.state == TRIG_ADDR_MATCH)
 			trig_out_clr();
-
+*/
 		/* Power */
 		DCC_LOG(LOG_INFO, "[IDLE]");
 		slcdev.state = DEV_IDLE;
@@ -295,119 +297,122 @@ void stm32_tim10_isr(void)
 			trig.state = TRIG_IDLE;
 			break;
 		}
+	} else { 
 
-		return;
-	} 
-	
-	bit = (csr & COMP_CMP2OUT) ? 1 : 0;
+		bit = (csr & COMP_CMP2OUT) ? 1 : 0;
 
-	switch (slcdev.state) {
-	case DEV_IDLE:
+		switch (slcdev.state) {
+		case DEV_IDLE:
 #if 0
-		if (bit) {
-			DCC_LOG(LOG_INFO, "HIGH");
-		} else {
-			DCC_LOG(LOG_INFO, "LOW");
-		}
-#endif
-		/* reset the device state */
-		slcdev.state = DEV_MSG;
-		slcdev.msg = bit;
-		slcdev.bit_cnt = 1;
-		/* reset the simultaor module */
-		scan.dev = (struct clip_device *)&null_dev;
-
-		break;
-
-	case DEV_MSG:
-#if 0
-		if (bit) {
-			DCC_LOG(LOG_INFO, "HIGH");
-		} else {
-			DCC_LOG(LOG_INFO, "LOW");
-		}
-#endif
-		slcdev.msg |= bit << slcdev.bit_cnt;
-
-		if (++slcdev.bit_cnt == 13) {
-			unsigned int msg = slcdev.msg;
-			unsigned int parity;
-
-			parity = parity_lut[msg & 0xf] ^ 
-				parity_lut[(msg >> 4) & 0xf] ^ 
-				parity_lut[(msg >> 8) & 0xf];
-
-			if (parity == (msg >> 12)) {
-				unsigned int addr;
-				unsigned int mod;
-				mod = msg & 1;
-				addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
-					addr_lut[(msg >> 5) & 0xf];
-				addr = addr + (mod * 100);
-				scan.addr = addr;
-				scan.dev = &clip_dev_tab[addr];
-
-				if ((addr == trig.addr) && (trig.state = TRIG_ADDR_WAIT)) {
-					trig.state = TRIG_ADDR_MATCH;
-					slcdev.event = SLC_EV_TRIG;
-					__thinkos_flag_signal(slcdev.flag);
-					/* */
-					DCC_LOG2(LOG_INFO, "Match %s=%d", 
-							 mod ? "MODULE" : "SENSOR", addr);
-				}
-
-				if (scan.dev->enabled) {
-					DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
-							 mod ? "MODULE" : "SENSOR", addr);
-					slcdev.state = DEV_PW1_START_WAIT;
-					DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
-				} else {
-					slcdev.state = DEV_INACTIVE_START_WAIT;
-					DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-				}
+			if (bit) {
+				DCC_LOG(LOG_INFO, "HIGH");
 			} else {
-				DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
-				slcdev.state = DEV_PARITY_ERROR;
-				DCC_LOG(LOG_INFO, "[PARITY ERR]");
+				DCC_LOG(LOG_INFO, "LOW");
 			}
+#endif
+			/* reset the device state */
+			slcdev.state = DEV_MSG;
+			slcdev.msg = bit;
+			slcdev.bit_cnt = 1;
+			/* reset the simultaor module */
+			scan.dev = (struct clip_device *)&null_dev;
+
+			break;
+
+		case DEV_MSG:
+#if 0
+			if (bit) {
+				DCC_LOG(LOG_INFO, "HIGH");
+			} else {
+				DCC_LOG(LOG_INFO, "LOW");
+			}
+#endif
+			slcdev.msg |= bit << slcdev.bit_cnt;
+
+			if (++slcdev.bit_cnt == 13) {
+				unsigned int msg = slcdev.msg;
+				unsigned int parity;
+
+				parity = parity_lut[msg & 0xf] ^ 
+					parity_lut[(msg >> 4) & 0xf] ^ 
+					parity_lut[(msg >> 8) & 0xf];
+
+				if (parity == (msg >> 12)) {
+					unsigned int addr;
+					unsigned int mod;
+					mod = msg & 1;
+					addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
+						addr_lut[(msg >> 5) & 0xf];
+					addr = addr + (mod * 100);
+					scan.addr = addr;
+					scan.dev = &clip_dev_tab[addr];
+
+					if ((addr == trig.addr) && (trig.state = TRIG_ADDR_WAIT)) {
+						trig.state = TRIG_ADDR_MATCH;
+						slcdev.event = SLC_EV_TRIG;
+						trig_out_set();
+						__thinkos_flag_signal(slcdev.flag);
+						trig_out_clr();
+						/* */
+						DCC_LOG2(LOG_INFO, "Match %s=%d", 
+								 mod ? "MODULE" : "SENSOR", addr);
+					}
+
+					if (scan.dev->enabled) {
+						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
+								 mod ? "MODULE" : "SENSOR", addr);
+						slcdev.state = DEV_PW1_START_WAIT;
+						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
+					} else {
+						slcdev.state = DEV_INACTIVE_START_WAIT;
+						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
+					}
+				} else {
+					DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
+					slcdev.state = DEV_PARITY_ERROR;
+					DCC_LOG(LOG_INFO, "[PARITY ERR]");
+				}
+			}
+			break;
+
+		case DEV_PW1_RESPONSE_TIME:
+			/* Reference Pulse Width */
+			isink_pulse(35, dev->pw1); 
+			slcdev.state = DEV_PW1_PULSE;
+			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
+			break;
+
+		case DEV_PW2_RESPONSE_TIME:
+			/* Remote Test Status */
+			isink_pulse(35, dev->pw2);
+			slcdev.state = DEV_PW2_PULSE;
+			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
+			break;
+
+		case DEV_PW3_RESPONSE_TIME:
+			/* Manufacturer Code */
+			isink_pulse(35, dev->pw3); 
+			slcdev.state = DEV_PW3_PULSE;
+			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
+			break;
+
+		case DEV_PW4_RESPONSE_TIME:
+			/* Analog */
+			isink_pulse(35, dev->pw4); 
+			slcdev.state = DEV_PW4_PULSE;
+			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
+			break;
+
+		case DEV_PW5_RESPONSE_TIME:
+			/* Type Id */
+			isink_pulse(35, dev->pw5); 
+			slcdev.state = DEV_PW5_PULSE;
+			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
+			break;
 		}
-		break;
-
-	case DEV_PW1_RESPONSE_TIME:
-		/* Reference Pulse Width */
-		isink_pulse(35, dev->pw1); 
-		slcdev.state = DEV_PW1_PULSE;
-		DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
-		break;
-
-	case DEV_PW2_RESPONSE_TIME:
-		/* Remote Test Status */
-		isink_pulse(35, dev->pw2);
-		slcdev.state = DEV_PW2_PULSE;
-		DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
-		break;
-
-	case DEV_PW3_RESPONSE_TIME:
-		/* Manufacturer Code */
-		isink_pulse(35, dev->pw3); 
-		slcdev.state = DEV_PW3_PULSE;
-		DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
-		break;
-
-	case DEV_PW4_RESPONSE_TIME:
-		/* Analog */
-		isink_pulse(35, dev->pw4); 
-		slcdev.state = DEV_PW4_PULSE;
-		DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
-		break;
-
-	case DEV_PW5_RESPONSE_TIME:
-		/* Type Id */
-		isink_pulse(35, dev->pw5); 
-		slcdev.state = DEV_PW5_PULSE;
-		DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
-		break;
 	}
+
+	trig_out_clr();
 }
 
 #define PW_RESPONSE_TIME (100 - 20)
@@ -433,8 +438,10 @@ void stm32_comp_tsc_isr(void)
 		 *  VSLC Falling Edge 
 		 *********************************************************/
 
+#if 0
 		if (trig.state <= TRIG_BIT)
 			trig_out_clr();
+#endif
 
 		tim->cnt = 0;
 
@@ -443,48 +450,60 @@ void stm32_comp_tsc_isr(void)
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW1_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
+/*
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+*/
 			break;
 
 		case DEV_PW2_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW2_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
+/*
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+*/
 			break;
 
 		case DEV_PW3_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW3_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
+/*			
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+*/
 			break;
 
 		case DEV_PW4_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW4_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
+#if 0
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+#endif
 			break;
 
 		case DEV_PW5_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW5_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
+#if 0
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+#endif
 			break;
 
 		case DEV_INACTIVE_START_WAIT:
 			tim->arr = 4000; /* Inactive PW window */
 			slcdev.state = DEV_INACTIVE_STOP_WAIT;
 			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
+#if 0
 			if (trig.state == TRIG_ADDR_MATCH)
 				trig_out_set();
+#endif
 			break;
 
 		default:
@@ -502,12 +521,14 @@ void stm32_comp_tsc_isr(void)
 
 		tim->cnt = 0;
 
+#if 0
 		/* Rising Edge */
 		if (trig.state == TRIG_VSLC)
 			trig_out_set();
 
 		if (trig.state == TRIG_ADDR_MATCH)
 			trig_out_clr();
+#endif
 
 		switch (slcdev.state) {
 
@@ -626,6 +647,7 @@ void stm32_comp_tsc_isr(void)
 		}
 
 	}
+
 }
 
 #define SLC_TMR_FREQ 1000000

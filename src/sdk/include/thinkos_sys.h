@@ -117,6 +117,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_CANCEL 1
 #endif
 
+#ifndef THINKOS_ENABLE_EXIT
+#define THINKOS_ENABLE_EXIT 1
+#endif
+
 #ifndef THINKOS_SCHED_LIMIT_MAX
 #define THINKOS_SCHED_LIMIT_MAX 32
 #endif
@@ -183,6 +187,10 @@ struct thinkos_context {
 
 #ifndef THINKOS_ENABLE_TIMED_CALLS
 #define THINKOS_ENABLE_TIMED_CALLS 1
+#endif
+
+#ifndef THINKOS_ENABLE_TIMER
+#define THINKOS_ENABLE_TIMER 1
 #endif
 
 #ifndef THINKOS_ENABLE_IRQ_SVC_CALL
@@ -609,6 +617,7 @@ __thinkos_wq_insert(unsigned int wq, unsigned int th) {
 #endif
 }
 
+#if THINKOS_ENABLE_TIMED_CALLS
 static void inline __attribute__((always_inline)) 
 __thinkos_tmdwq_insert(unsigned int wq, unsigned int th, unsigned int ms) {
 	/* set the clock */
@@ -622,6 +631,7 @@ __thinkos_tmdwq_insert(unsigned int wq, unsigned int th, unsigned int ms) {
 	thinkos_rt.th_stat[th] = (wq << 1) + 1;
 #endif
 }
+#endif
 
 static void inline __attribute__((always_inline)) 
 __thinkos_wq_remove(unsigned int wq, unsigned int th) {
@@ -651,6 +661,7 @@ __thinkos_wakeup(unsigned int wq, unsigned int th) {
 #endif
 }
 
+#if THINKOS_ENABLE_TIMER
 static void inline __attribute__((always_inline))
 __thinkos_timer_set(unsigned int ms) {
 	int self = thinkos_rt.active;
@@ -701,6 +712,8 @@ static volatile inline uint32_t __attribute__((always_inline))
 #error "__thinkos_ticks() depends on THINKOS_ENABLE_CLOCK"
 #endif
 }
+
+#endif /* THINKOS_ENABLE_TIMER */
 
 void thinkos_rt_snapshot(struct thinkos_rt * rt);
 

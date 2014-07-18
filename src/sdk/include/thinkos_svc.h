@@ -75,6 +75,8 @@
 
 #define THINKOS_IRQ_WAIT 38
 
+#define THINKOS_EXIT 39
+
 #ifndef __ASSEMBLER__
 
 /* -------------------------------------------------------------------------- 
@@ -161,6 +163,11 @@ static inline int __attribute__((always_inline))
 static inline int 
 __attribute__((always_inline)) thinkos_cancel(unsigned int id, int code) {
 	return THINKOS_SVC2(THINKOS_CANCEL, id, code);
+}
+
+static inline int 
+__attribute__((always_inline)) thinkos_exit(int code) {
+	return THINKOS_SVC1(THINKOS_EXIT, code);
 }
 
 static inline int 

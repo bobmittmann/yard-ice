@@ -34,6 +34,8 @@ void thinkos_join_svc(int32_t * arg);
 
 void thinkos_cancel_svc(int32_t * arg);
 
+void thinkos_exit_svc(int32_t * arg);
+
 void thinkos_sleep_svc(int32_t * arg);
 
 
@@ -333,7 +335,14 @@ void cm3_svc_isr(void)
 		break;
 #endif /* THINKOS_IRQ_MAX > 0 */
 
+#if THINKOS_ENABLE_EXIT
+	case THINKOS_EXIT:
+		thinkos_exit_svc(arg);
+		break;
+#endif
+
 	default:
+		DCC_LOG1(LOG_WARNING, "Invalid System call: %d", svc);
 		arg[0] = THINKOS_ENOSYS;
 		break;
 	}

@@ -23,12 +23,20 @@
 #include <sys/stm32f.h>
 #include <sys/halt.h>
 
-#ifndef STM32_HSI_AS_HCLK
-#define STM32_HSI_AS_HCLK 1
+#ifndef STM32_ENABLE_HSI
+#define STM32_ENABLE_HSI 1
 #endif
 
-/* Set default values for system clocks */
+#ifndef STM32_ENABLE_HSE
+#define STM32_ENABLE_HSE 0
+#endif
 
+#ifndef STM32_ENABLE_PLL
+#define STM32_ENABLE_PLL 0
+#endif
+
+
+/* Set default values for system clocks */
 #if defined(STM32L1X)
 
 #ifndef HSE_HZ
@@ -39,22 +47,59 @@
   #define HSI_HZ 16000000
 #endif
 
+#ifndef PLL_HZ
+  #define PLL_HZ 32000000
+#endif
+
 #ifndef HCLK_HZ
-  #if STM32_HSI_AS_HCLK
+  #if STM32_ENABLE_PLL
+    #define HCLK_HZ PLL_HZ
+  #elif STM32_ENABLE_HSI
     #define HCLK_HZ HSI_HZ
-  #else
+  #elif STM32_ENABLE_HSE
     #define HCLK_HZ HSE_HZ
+  #else
+	#error "HCLK_HZ undefined!"
   #endif
+#endif
+
+
+#ifndef STM32_APB1_HZ
+  #if STM32_ENABLE_PLL
+    #define STM32_APB1_HZ (HCLK_HZ / 4)
+  #else 
+    #define STM32_APB1_HZ HCLK_HZ
+  #endif
+#endif
+
+#ifndef STM32_APB2_HZ
+  #if STM32_ENABLE_PLL
+    #define STM32_APB2_HZ (HCLK_HZ / 4)
+  #else 
+    #define STM32_APB2_HZ HCLK_HZ
+  #endif
+#endif
+
+#if STM32_APB1_HZ == HCLK_HZ
+#define STM32_TIM1_HZ STM32_APB1_HZ
+#else
+#define STM32_TIM1_HZ (2 * STM32_APB1_HZ)
+#endif
+
+#if STM32_APB2_HZ == HCLK_HZ
+#define STM32_TIM2_HZ STM32_APB2_HZ
+#else
+#define STM32_TIM2_HZ (2 * STM32_APB2_HZ)
 #endif
 
 /* This constant is used to calibrate the systick timer */
 const uint32_t cm3_systick_load_1ms = ((HCLK_HZ / 8) / 1000) - 1;
 
 /* Hardware initialization */
-const uint32_t stm32f_apb1_hz = HCLK_HZ;
-const uint32_t stm32f_apb2_hz = HCLK_HZ;
-const uint32_t stm32f_tim1_hz = HCLK_HZ;
-const uint32_t stm32f_tim2_hz = HCLK_HZ;
+const uint32_t stm32f_apb1_hz = STM32_APB1_HZ;
+const uint32_t stm32f_apb2_hz = STM32_APB2_HZ;
+const uint32_t stm32f_tim1_hz = STM32_TIM1_HZ;
+const uint32_t stm32f_tim2_hz = STM32_TIM2_HZ;
 
 #endif
 
@@ -65,11 +110,17 @@ void _init(void)
 	uint32_t cr;
 	uint32_t acr;
 	int again;
+#if STM32_ENABLE_PLL
+	uint32_t cfg;
+#endif
 
-	/* Enable external oscillator */
-	cr = rcc->cr;
+	rcc->cr = cr = RCC_MSION;
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_MSI;
 
-#if STM32_HSI_AS_HCLK
+#if STM32_ENABLE_HSI
+	/*******************************************************************
+	 * Enable internal oscillator 
+	 *******************************************************************/
 	cr |= RCC_HSION;
 	rcc->cr = cr;
 
@@ -82,20 +133,12 @@ void _init(void)
 			halt();
 		}
 	}
+#endif
 
-	/* configure flash access and wait states */
-	flash->acr = FLASH_ACC64;
-	acr = flash->acr;
-	
-	if ((acr & FLASH_ACC64) == 0) 
-		halt();
-	
-	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
-
-
-	/* select HSI as system clock */
-	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
-#else
+#if STM32_ENABLE_HSE
+	/*******************************************************************
+	 * Enable external oscillator 
+	 *******************************************************************/
 	cr |= RCC_HSEON;
 	rcc->cr = cr;
 
@@ -105,13 +148,82 @@ void _init(void)
 			break;
 		if (again == 0) {
 			/* external clock startup fail! */
-			return;
+			halt();
 		}
 	}
-
-	/* select HSE as system clock */
-	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
 #endif
 
+
+#if STM32_ENABLE_PLL
+	/*******************************************************************
+	 * Configure PLL
+	 *******************************************************************/
+#if STM32_ENABLE_HSI
+	/* F_HSI = 16 MHz
+	   VCOCLK = 64 MHz
+	   PLLCLK = 32 MHz
+	   SYSCLK = 32 MHz
+	   PCLK1 = 8 MHz
+	   PCLK2 = 8 MHz */
+	cfg = RCC_PLLDIV_2 | RCC_PLLMUL_4 | RCC_PLLSRC_HSI | 
+		RCC_PPRE2_4 | RCC_PPRE1_4 | RCC_HPRE_1 | RCC_SW_MSI;
+#else
+
+	/* F_HSE = 8 MHz
+	   VCOCLK = 32 MHz
+	   PLLCLK = 64 MHz
+	   SYSCLK = 32 MHz
+	   PCLK1 = 8 MHz
+	   PCLK2 = 8 MHz */
+	cfg = RCC_PLLDIV_2 | RCC_PLLMUL_8 | RCC_PLLSRC_HSE | 
+		RCC_PPRE2_4 | RCC_PPRE1_4 | RCC_HPRE_1 | RCC_SW_MSI;
+#endif
+	rcc->cfgr = cfg;
+
+	/* enable PLL */
+	cr |= RCC_PLLON;
+	rcc->cr = cr;
+
+	for (again = 8192; ; again--) {
+		cr = rcc->cr;
+		if (cr & RCC_PLLRDY)
+			break;
+		if (again == 0) {
+			/* PLL lock fail */
+			halt();
+		}
+	}
+#endif /* STM32_ENABLE_PLL */
+
+	/*******************************************************************
+	 * Configure flash access and wait states 
+	 *******************************************************************/
+	flash->acr = FLASH_ACC64;
+	
+	for (again = 8192; ; again--) {
+		acr = flash->acr;
+		if (acr & FLASH_ACC64)
+			break;
+		if (again == 0) {
+			/* PLL lock fail */
+			halt();
+		}
+	}
+	
+	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
+
+#if STM32_ENABLE_PLL
+	/* switch to PLL oscillator */
+	rcc->cfgr = (cfg & ~RCC_SW) | RCC_SW_PLL;
+	rcc->cr = cr & ~RCC_MSION;
+#elif STM32_ENABLE_HSI
+	/* select HSI as system clock */
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
+	rcc->cr = cr & ~RCC_MSION;
+#elif STM32_ENABLE_HSE
+	/* select HSE as system clock */
+	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
+	rcc->cr = cr & ~RCC_MSION;
+#endif
 }
 
