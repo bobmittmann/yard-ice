@@ -46,7 +46,7 @@
 #define STM32L151
 #endif
 
-#include <stm32f/stm32f-pwr.h>
+#include <stm32f/stm32l-pwr.h>
 #include <stm32f/stm32l-rcc.h>
 #include <stm32f/stm32l-flash.h>
 #include <stm32f/stm32f-syscfg.h>
@@ -168,7 +168,7 @@
 
 #ifndef __ASSEMBLER__
 
-#define STM32_PWR ((struct stm32f_pwr *)STM32_BASE_PWR)
+#define STM32_PWR ((struct stm32_pwr *)STM32_BASE_PWR)
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
 #define STM32_RTC ((struct stm32f_rtc *)STM32_BASE_RTC)
 #define STM32_USB ((struct stm32f_usb_fs *)STM32_BASE_USB_FS)

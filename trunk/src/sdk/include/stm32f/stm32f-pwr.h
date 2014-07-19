@@ -172,7 +172,7 @@ Note: An additional wakeup event is detected if the WKUP pin is enabled
 
 #include <stdint.h>
 
-struct stm32f_pwr {
+struct stm32_pwr {
 	volatile uint32_t cr; /* Control Register */
 	volatile uint32_t csr; /* control/status register */
 };
