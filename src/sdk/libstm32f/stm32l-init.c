@@ -106,8 +106,10 @@ const uint32_t stm32f_tim2_hz = STM32_TIM2_HZ;
 void _init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
+	struct stm32_pwr * pwr = STM32_PWR;
 	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t cr;
+	uint32_t csr;
 	uint32_t acr;
 	int again;
 #if STM32_ENABLE_PLL
@@ -116,6 +118,30 @@ void _init(void)
 
 	rcc->cr = cr = RCC_MSION;
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_MSI;
+
+	/*******************************************************************
+	 * Adjust core voltage regulator
+	 *******************************************************************/
+	for (again = 8192; ; again--) {
+		csr = pwr->csr;
+		if ((csr & PWR_VOSF) == 0)
+			break;
+		if (again == 0) {
+			/* internal clock startup fail! */
+			halt();
+		}
+	}
+	pwr->cr = PWR_VOS_1_8V;
+	/* wait for voltage to stabilize */
+	for (again = 8192; ; again--) {
+		csr = pwr->csr;
+		if ((csr & PWR_VOSF) == 0)
+			break;
+		if (again == 0) {
+			/* internal clock startup fail! */
+			halt();
+		}
+	}
 
 #if STM32_ENABLE_HSI
 	/*******************************************************************
@@ -210,7 +236,11 @@ void _init(void)
 		}
 	}
 	
+#if STM32_ENABLE_PLL
 	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
+#else
+	flash->acr = FLASH_ACC64 | FLASH_PRFTEN;
+#endif
 
 #if STM32_ENABLE_PLL
 	/* switch to PLL oscillator */
