@@ -240,30 +240,54 @@ int cmd_slewrate(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-extern const uint8_t xflash_pic[];
-extern unsigned int sizeof_xflash_pic;
+
+int xflash(void * uart, uint32_t addr, unsigned int size);
+
 
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
-	uint32_t code[(sizeof_xflash_pic + 3) / 4];
-	int (* xflash)(void * uart, uint32_t addr, int len);
+//	struct cm3_systick * systick = CM3_SYSTICK;
 	struct stm32_usart * uart = STM32_USART2;
-	uint32_t pri;
-	int ret;
+	uint32_t offs = 0x00000000;
+	uint32_t len = 32768;
 
-	if (argc > 1)
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 3)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	memcpy(code, xflash_pic, sizeof_xflash_pic);
-	xflash = (void *)code;
+	offs = strtoul(argv[1], NULL, 0);
 
+	if (argc > 2)
+		len = strtoul(argv[2], NULL, 0);
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-	ret = xflash(uart, 0x08010000, 32768);
-	cm3_primask_set(pri);
+	DCC_LOG2(LOG_TRACE, "offs=%08x len=%d", offs, len);
 
-	fprintf(f, "xflash() returned with code %d.\n", ret);
+	if (offs > 0x20000)
+		return SHELL_ERR_ARG_INVALID;
+
+	if (len == 0)
+		return SHELL_ERR_ARG_INVALID;
+
+	if ((offs + len) > 0x20000)
+		return SHELL_ERR_ARG_INVALID;
+
+	/* disable interrupts */	
+	cm3_cpsid_i();
+
+#if 0
+	for (;;) {
+		int cnt = 1000;
+		while (cnt > 0) {
+			if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG)
+				cnt--;
+		}
+		DCC_LOG(LOG_TRACE, "tick.");
+	}
+#endif
+
+	xflash(uart, offs, len);
 
 	return 0;
 }
@@ -284,9 +308,8 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
-	{ cmd_xflash, "xflash", "xf", "[ADDR]", "Firmware update" },
+	{ cmd_xflash, "xflash", "xf", "OFFS [LEN]", "Firmware update" },
 
 	{ NULL, "", "", NULL, NULL }
 };
-
 

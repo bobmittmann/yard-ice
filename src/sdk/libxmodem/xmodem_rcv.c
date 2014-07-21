@@ -179,7 +179,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 			unsigned char cks = 0;
 			int i;
 
-			for (i = 0; i < rx->data_len; ++i)
+			for (i = 0; i < cnt; ++i)
 				cks += cp[i];
 
 			if (cp[i] != cks)

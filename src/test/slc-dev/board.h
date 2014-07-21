@@ -121,7 +121,7 @@ extern struct io_drv io_drv;
 
 extern const uint8_t * dev_db_json;
 extern const uint8_t * sim_cfg_json;
-extern const void (* xflash)(void *, int);
+extern const void (* xflash_bin)(void *, int);
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,6 +159,8 @@ void isink_stop(void);
 void irate_set(unsigned int mv);
 
 void lamp_test(void);
+
+void system_reset(void);
 
 #ifdef __cplusplus
 }

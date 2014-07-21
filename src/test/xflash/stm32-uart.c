@@ -29,15 +29,14 @@ static int stm32_uart_getc(struct stm32_usart * usart, unsigned int msec)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 
-	(void)systick->ctrl;
-
 	for (;;) {		
 		if (usart->isr & USART_RXNE) {
 			return usart->rdr;
 		}
 		if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
-			if (--msec == 0)
+			if (msec == 0)
 				return -1;
+			msec--;
 		}
 	}
 }
@@ -51,7 +50,7 @@ int uart_recv(struct stm32_usart * usart, char * buf,
 	c = stm32_uart_getc(usart, msec);
 
 	if (c < 0)
-		return 0;
+		return c;
 
 	*cp = c;
 		
@@ -78,5 +77,20 @@ int uart_send(struct stm32_usart * usart, const void * buf,
 	}
 
 	return n;
+}
+
+
+void uart_reset(struct stm32_usart * usart)
+{
+	/* disable all interrupts */
+	usart->cr1 &= ~(USART_TXEIE | USART_TCIE | USART_IDLEIE | USART_RXNEIE);
+
+	/* Disable DMA */
+	usart->cr3 &= ~(USART_DMAT | USART_DMAR);
+}
+
+void uart_drain(struct stm32_usart * usart)
+{
+	while (!(usart->isr & USART_TC));
 }
 

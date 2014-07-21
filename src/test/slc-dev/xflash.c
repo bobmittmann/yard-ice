@@ -20,27 +20,25 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#include <stdint.h>
+#include <string.h>
+
+#if 0
 #include <arch/cortex-m3.h>
 #include <sys/param.h>
-#include <stdint.h>
 #include <crc.h>
+#include <sys/dcclog.h>
 
 #define FLASH_WR_BLK_SIZE 128
 
 void flash_unlock(void);
 int flash_write(uint32_t offs, const void * buf, unsigned int len);
-int flash_erase(uint32_t offs, unsigned int len);
+int flash_erase(unsigned int offs, unsigned int len);
 
 void uart_reset(void * uart);
 void uart_drain(void * uart);
 int uart_send(void * uart, const void * buf, unsigned int len);
 int uart_recv(void * uart, void * buf, unsigned int len, unsigned int msec);
-
-static void reset(void)
-{
-	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-	for(;;);
-}
 
 #ifndef ENABLE_XMODEM_CKS
 #define ENABLE_XMODEM_CKS 1
@@ -88,12 +86,12 @@ static int xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
 #else
 	rx->sync = 'C';
 #endif
-	rx->retry = 15;
+	rx->retry = 10;
 
 	return 0;
 }
 
-int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
+static int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
 	unsigned char * cp;
@@ -104,6 +102,8 @@ int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 	int rem;
 
 	for (;;) {
+
+		DCC_LOG1(LOG_TRACE, "uart_send() -> %c", rx->sync);
 
 		if ((ret = uart_send(uart, &rx->sync, 1)) < 0) {
 			return ret;
@@ -120,16 +120,19 @@ int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 			c = pkt[0];
 
 			if (c == STX) {
+				DCC_LOG(LOG_TRACE, "STX");
 				cnt = 1024;
 				break;
 			}
 
 			if (c == SOH) {
+				DCC_LOG(LOG_TRACE, "SOH");
 				cnt = 128;
 				break;
 			}
 
 			if (c == EOT) {
+				DCC_LOG(LOG_TRACE, "EOT");
 				/* end of transmission */
 				pkt[0] = ACK;
 				pkt[1] = ACK;
@@ -137,6 +140,8 @@ int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 					return ret;
 				return 0;
 			}
+
+			DCC_LOG1(LOG_WARNING, "uart_recv() <- %02x", c);
 		}
 
 #ifndef ENABLE_XMODEM_CKS
@@ -146,25 +151,36 @@ int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 #endif
 		cp = pkt + 1;
 
+		DCC_LOG1(LOG_TRACE, "rem=%d", rem);
+
 		/* receive the packet */
 		while (rem) {
 
 			ret = uart_recv(uart, cp, rem, 500);
-			if (ret <= 0)
+			if (ret <= 0) {
+				DCC_LOG1(LOG_WARNING, "Timeout: rem=%d", rem);
 				goto timeout;
+			}
+
+//			DCC_LOG3(LOG_TRACE, "c=%02x ret=%d rem=%d", *cp, ret, rem);
 
 			rem -= ret;
 			cp += ret;
 		}
+
 
 		/* sequence */
 		seq = pkt[1];
 		/* inverse sequence */
 		nseq = pkt[2];
 
+		DCC_LOG2(LOG_TRACE, "seq=%d cnt=%d", seq, cnt);
+
 		if (seq != ((~nseq) & 0xff)) {
+			DCC_LOG2(LOG_ERROR, "seq=%02x nseq=%02x", seq, nseq);
 			goto error;
 		}
+
 
 		cp = &pkt[3];
 
@@ -216,11 +232,14 @@ int xmodem_rcv_pkt(void * uart, struct xmodem_rcv * rx)
 		return cnt;
 
 error:
+		DCC_LOG(LOG_TRACE, "ERROR");
+
 		/* flush */
 		while (uart_recv(uart, pkt, 1024, 200) > 0);
 		rx->sync = NAK;
 
 timeout:
+		DCC_LOG(LOG_TRACE, "TIMEOUT");
 
 		if ((--rx->retry) == 0) {
 			/* too many errors */
@@ -238,61 +257,79 @@ timeout:
 	return ret;
 }
 
-int __attribute__((section (".init"))) xflash(void * uart, 
-											  uint32_t blk_offs, 
-											  unsigned int blk_size)
+static void reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+}
+
+int xflash(void * uart, uint32_t offs, unsigned int size)
 {
 	struct xmodem_rcv rx;
-	unsigned int cnt;
-	uint32_t offs;
+	unsigned int cnt = 0;
 	int ret;
 
-	flash_unlock();
 	uart_reset(uart);
 
-	do {
-		uart_send(uart, "\r\nErasing...", 12);
+	xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
 
-		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+	DCC_LOG2(LOG_TRACE, "offs=%08x size=%d", offs, size);
 
-			uart_send(uart, "\r\nXmodem... ", 12);
+	ret = xmodem_rcv_pkt(uart, &rx);
+	if (ret <= 0)
+		return ret;
 
-			xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
-			offs = blk_offs;
-			cnt = 0;
+	DCC_LOG1(LOG_TRACE, "xmodem_rcv_pkt() -> %d", ret);
+	flash_erase(offs, size);
 
-			ret = xmodem_rcv_pkt(uart, &rx);
+	while (ret > 0) {
+		unsigned char * src = rx.pkt.data;
+		int rem = ret;
 
-			while (ret > 0) {
-				unsigned char * src = rx.pkt.data;
-				int rem = ret;
+		while (rem > 0) {
+			int n;
 
-				while (rem > 0) {
-					int n;
+			n = MIN(rem, FLASH_WR_BLK_SIZE);
+			n = MIN(n, size - cnt);
+			if (n == 0)
+				break;
 
-					n = MIN(rem, FLASH_WR_BLK_SIZE);
-					n = MIN(n, blk_size - cnt);
-					if (n == 0)
-						break;
+			DCC_LOG1(LOG_TRACE, "flash_write() -> %d", ret);
+			flash_write(offs, src, n);
 
-					flash_write(offs, src, n);
-
-					offs += n;
-					src += n;
-					cnt += n;
-					rem -= n;
-				}
-
-				ret = xmodem_rcv_pkt(uart, &rx);
-			} 
-
-			uart_drain(uart);
+			offs += n;
+			cnt += n;
+			rem -= n;
 		}
 
-	} while (ret < 0);
+		ret = xmodem_rcv_pkt(uart, &rx);
+		DCC_LOG1(LOG_TRACE, "xmodem_rcv_pkt() -> %d", ret);
+	} 
+
+	uart_drain(uart);
 
 	reset();
 
 	return 0;
 }
+
+#else
+
+extern const uint8_t xflash_pic[];
+extern const unsigned int sizeof_xflash_pic;
+
+#define PIC_CODE_SIZE_MAX (1024 + 128)
+
+int xflash(void * uart, uint32_t offs, uint32_t len)
+{
+	uint32_t text[PIC_CODE_SIZE_MAX / 4];
+	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)text) + 1;
+
+	memcpy(text, xflash_pic, sizeof_xflash_pic);
+
+	return xflash_ram(uart, offs, len);
+}
+
+#endif
 

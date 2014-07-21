@@ -34,7 +34,7 @@ LDSCRIPT = cm3-pic.ld
 INCPATH	:= $(INCPATH) $(realpath .) $(realpath $(BASEDIR)/sdk/include) 
 
 override SFLAGS :=  -Wall $(OPTIONS)
-override CFLAGS :=  -Wall $(OPTIONS) -O2 -g
+override CFLAGS :=  -Wall $(OPTIONS) -Os -g
 override LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
 override CROSS_COMPILE = arm-none-eabi-
 
@@ -54,11 +54,13 @@ CODELIB_C = $(CODELIB).c
 CODELIB_H = $(CODELIB).h
 
 all: $(CODELIB_C) $(CODELIB_LST)
-#	cp $(CODELIB_C) ..
 
 clean: 
 	@rm -f $(OFILES) $(CODELIB_ELF) $(CODELIB_LST) $(CODELIB_BIN) \
 		$(CODELIB_C) $(CODELIB_H) 
+
+install: $(CODELIB_C) $(CODELIB_LST)
+	cp $(CODELIB_C) ../slc-dev
 
 elf: $(CODELIB_ELF)
 
