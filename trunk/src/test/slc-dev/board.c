@@ -308,3 +308,30 @@ uint32_t io_event_wait(void)
 
 	return event;
 }
+
+void lamp_test(void)
+{
+	uint32_t state = 0;
+	int i;
+
+	for (i = 0; i < 6; ++i) {
+		state = is_led_on(led_io[i].gpio, led_io[i].pin) ? (1 << i) : 0;
+		led_off(led_io[i].gpio, led_io[i].pin);
+	}
+
+	led_flash(0, 64);
+	led_flash(1, 64);
+	thinkos_sleep(100);
+	led_flash(2, 64);
+	led_flash(3, 64);
+	thinkos_sleep(100);
+	led_flash(4, 64);
+	led_flash(5, 64);
+	thinkos_sleep(100);
+
+	for (i = 0; i < 6; ++i) {
+		if (state & (1 << i))
+			led_on(led_io[i].gpio, led_io[i].pin);
+	}
+}
+

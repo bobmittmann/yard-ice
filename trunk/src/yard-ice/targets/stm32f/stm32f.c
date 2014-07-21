@@ -39,6 +39,25 @@
 #define EEPROM 2
 #define SRAM 3
 
+uint16_t stm32f10xxx_config(const ice_drv_t * ice, 
+							target_info_t * target)
+{
+	ice_mem_entry_t * mem = (ice_mem_entry_t *)target->mem;
+	uint16_t memsz;
+	
+	target->on_init = (target_script_t)stm32f1xx_on_init,
+	ice_rd16(ice, 0x1ffff7e0, &memsz);
+	mem[FLASH].op = &flash_stm32f1_oper;
+	mem[FLASH].blk.size = MEM_KiB(1);
+	mem[FLASH].blk.count = memsz;
+	if ((memsz == 16) || (memsz == 32))
+		mem[SRAM].blk.count = 4;
+	else if ((memsz == 64) || (memsz == 128))
+		mem[SRAM].blk.count = 8;
+
+	return memsz;
+}
+
 int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 					  target_info_t * target)
 {
@@ -58,41 +77,33 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 
 	switch (dev_id) {
 	case 0x412:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, low-density\n"); 
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x410:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, medium-density\n"); 
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x414:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, high-density\n"); 
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x430:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, XL-density\n"); 
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x418:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F10X, connectivity\n"); 
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x420:
-		ice_rd16(ice, 0x1ffff7e0, &memsz);
 		fprintf(f, "STM32F100\n"); 
-		target->on_init = (target_script_t)stm32f1xx_on_init,
-		mem[FLASH].op = &flash_stm32f1_oper;
-		mem[FLASH].blk.size = MEM_KiB(1);
-		mem[FLASH].blk.count = memsz;
-		if ((memsz == 16) || (memsz == 32))
-			mem[SRAM].blk.count = 4;
-		else if ((memsz == 64) || (memsz == 128))
-			mem[SRAM].blk.count = 8;
+		memsz = stm32f10xxx_config(ice, target);
 		break;
 
 	case 0x411:

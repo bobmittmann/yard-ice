@@ -329,7 +329,7 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 			__thinkos_flag_clr(dev->ctl_flag);
 		}
 
-		DCC_LOG2(LOG_INFO, "len=%d rem=%d", len, rem);
+		DCC_LOG2(LOG_TRACE, "len=%d rem=%d", len, rem);
 
 		__thinkos_flag_clr(dev->tx_flag);
 

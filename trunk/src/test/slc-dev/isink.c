@@ -27,103 +27,107 @@
 #include <thinkos_irq.h>
 
 #define FREQ_1MHZ 1000000
+#define ISINK_DELAY_COMPENASTION 4
+
 
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 
-	tim->arr = pre;
+//	tim->arr = pre;
+//	tim->ccr2 = pulse - pre;
+//	tim->ccr3 = 1;
 
 	switch (mode) {
 	case 0:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = 1;
 		break;
 	case 1:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 	case 2:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 3:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 	case 4:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 5:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 6:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
 		break;
 	case 7:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
 		break;
 	case 8:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 9:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 	case 10:
 		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 11:
 		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 
 	case 12:
@@ -176,8 +180,8 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 		break;
 	}
 
- 	tim->cnt = pulse + pre;
-	/* trigger the timer */
+	tim->arr = 1;
+ 	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
 }
 
@@ -243,8 +247,6 @@ void isink_mode_set(unsigned int mode)
 
 	DCC_LOG1(LOG_TRACE, "irate DAC=%d", dac->dhr12r2);
 }
-
-#define ISINK_DELAY_COMPENASTION 4
 
 void isink_pulse(unsigned int pre, unsigned int pulse)
 {

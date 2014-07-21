@@ -108,7 +108,7 @@ void _init(void)
 	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32_pwr * pwr = STM32_PWR;
 	struct stm32_flash * flash = STM32_FLASH;
-	uint32_t cr;
+	uint32_t rcc_cr;
 	uint32_t csr;
 	uint32_t acr;
 	int again;
@@ -116,48 +116,45 @@ void _init(void)
 	uint32_t cfg;
 #endif
 
-	rcc->cr = cr = RCC_MSION;
+	rcc->cr = rcc_cr = RCC_MSION;
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_MSI;
+
+	/*******************************************************************
+	 * Wait for voltage rises to 3.1 volts enabling full power
+	 * operation.
+	 *******************************************************************/
+	pwr->cr = PWR_VOS_1_5V | PWR_PLS_3_1V | PWR_PVDE;
+	for (again = 8192; ; again--) {
+		if (((csr = pwr->csr) & PWR_PVDO) == 0)
+			break;
+		if (again == 0)
+			halt(); /* voltage regulator failed! */
+	}
 
 	/*******************************************************************
 	 * Adjust core voltage regulator
 	 *******************************************************************/
-	for (again = 8192; ; again--) {
-		csr = pwr->csr;
-		if ((csr & PWR_VOSF) == 0)
-			break;
-		if (again == 0) {
-			/* internal clock startup fail! */
-			halt();
-		}
-	}
 	pwr->cr = PWR_VOS_1_8V;
 	/* wait for voltage to stabilize */
 	for (again = 8192; ; again--) {
-		csr = pwr->csr;
-		if ((csr & PWR_VOSF) == 0)
+		if (((csr = pwr->csr) & PWR_VOSF) == 0)
 			break;
-		if (again == 0) {
-			/* internal clock startup fail! */
-			halt();
-		}
+		if (again == 0)
+			halt(); /* voltage regulator failed! */
 	}
 
 #if STM32_ENABLE_HSI
 	/*******************************************************************
 	 * Enable internal oscillator 
 	 *******************************************************************/
-	cr |= RCC_HSION;
-	rcc->cr = cr;
+	rcc_cr |= RCC_HSION;
+	rcc->cr = rcc_cr;
 
 	for (again = 8192; ; again--) {
-		cr = rcc->cr;
-		if (cr & RCC_HSIRDY)
+		if ((rcc_cr = rcc->cr) & RCC_HSIRDY)
 			break;
-		if (again == 0) {
-			/* internal clock startup fail! */
-			halt();
-		}
+		if (again == 0)
+			halt(); /* internal clock startup failed! */
 	}
 #endif
 
@@ -165,17 +162,14 @@ void _init(void)
 	/*******************************************************************
 	 * Enable external oscillator 
 	 *******************************************************************/
-	cr |= RCC_HSEON;
-	rcc->cr = cr;
+	rcc_cr |= RCC_HSEON;
+	rcc->cr = rcc_cr;
 
 	for (again = 8192; ; again--) {
-		cr = rcc->cr;
-		if (cr & RCC_HSERDY)
+		if ((rcc_cr = rcc->cr) & RCC_HSERDY)
 			break;
-		if (again == 0) {
-			/* external clock startup fail! */
-			halt();
-		}
+		if (again == 0)
+			halt(); /* external clock startup failed! */
 	}
 #endif
 
@@ -207,17 +201,14 @@ void _init(void)
 	rcc->cfgr = cfg;
 
 	/* enable PLL */
-	cr |= RCC_PLLON;
-	rcc->cr = cr;
+	rcc_cr |= RCC_PLLON;
+	rcc->cr = rcc_cr;
 
 	for (again = 8192; ; again--) {
-		cr = rcc->cr;
-		if (cr & RCC_PLLRDY)
+		if ((rcc_cr = rcc->cr) & RCC_PLLRDY)
 			break;
-		if (again == 0) {
-			/* PLL lock fail */
-			halt();
-		}
+		if (again == 0)
+			halt(); /* PLL lock failed! */
 	}
 #endif /* STM32_ENABLE_PLL */
 
@@ -245,15 +236,15 @@ void _init(void)
 #if STM32_ENABLE_PLL
 	/* switch to PLL oscillator */
 	rcc->cfgr = (cfg & ~RCC_SW) | RCC_SW_PLL;
-	rcc->cr = cr & ~RCC_MSION;
+	rcc->cr = rcc_cr & ~RCC_MSION;
 #elif STM32_ENABLE_HSI
 	/* select HSI as system clock */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
-	rcc->cr = cr & ~RCC_MSION;
+	rcc->cr = rcc_cr & ~RCC_MSION;
 #elif STM32_ENABLE_HSE
 	/* select HSE as system clock */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
-	rcc->cr = cr & ~RCC_MSION;
+	rcc->cr = rcc_cr & ~RCC_MSION;
 #endif
 }
 

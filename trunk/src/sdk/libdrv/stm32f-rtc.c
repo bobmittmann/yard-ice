@@ -36,7 +36,7 @@
 int stm32f_rtc_init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
-	struct stm32f_pwr * pwr = STM32F_PWR;
+	struct stm32_pwr * pwr = STM32_PWR;
 	struct stm32f_rtc * rtc = STM32F_RTC;
 	uint32_t bdcr;
 
