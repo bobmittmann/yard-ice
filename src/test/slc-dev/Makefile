@@ -23,7 +23,7 @@ PROG = slc-dev
 
 CFILES_GEN = device_db.c
 CFILES = jsmn.c slc-dev.c board.c isink.c slcdev-drv.c \
-		 serdrv.c slcdev-db.c json-dump.c flashfs.c shell.c
+		 serdrv.c slcdev-db.c json-dump.c flashfs.c shell.c xflash_pic.c
 
 SDK = ../../sdk
 
