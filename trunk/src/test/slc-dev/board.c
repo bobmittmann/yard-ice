@@ -335,3 +335,10 @@ void lamp_test(void)
 	}
 }
 
+void system_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+	for(;;);
+}
+

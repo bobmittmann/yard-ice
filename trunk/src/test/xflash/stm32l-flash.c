@@ -30,68 +30,58 @@
 #define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
 
 #define STM32_FLASH_ADDR 0x08000000
-#define FLASH_SECTOR_SIZE 4096
+#define FLASH_PAGE_SIZE 256
 
 
 #define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
 				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
 
-static int stm32l_flash_bsy_wait(struct stm32_flash * flash)
-{
-	uint32_t sr;
-	int ret = -1;
-	int again;
-
-	for (again = 4096; again > 0; again--) {
-		sr = flash->sr;
-		if (sr & FLASH_ERR) {
-			break;
-		}
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
-
-	flash->pecr = 0 ;
-
-	return ret;
-}
-
-static int stm32l_flash_blk_erase(struct stm32_flash * flash, 
+static int stm32l_flash_page_erase(struct stm32_flash * flash, 
 								  uint32_t volatile * addr)
 {
+	uint32_t sr;
+
 	flash->pecr = FLASH_ERASE | FLASH_PROG;
 	*addr = 0x00000000;
 
-	return stm32l_flash_bsy_wait(flash);
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+
+	flash->pecr = 0;
+
+	if (sr & FLASH_ERR)
+		return -1;
+
+	return 0;
 }
 
-int flash_erase(unsigned int offs, unsigned int len)
+int flash_erase(uint32_t offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t addr;
+	uint32_t pg_offs;
 	int ret;
-	int rem = len;
+	int rem;
 	int cnt;
 
-	offs &= ~(FLASH_SECTOR_SIZE - 1);
-
-	addr = STM32_FLASH_ADDR + offs;
+	pg_offs = offs & ~(FLASH_PAGE_SIZE - 1);
+	addr = STM32_FLASH_ADDR + pg_offs;
 
 	cnt = 0;
-	rem = len;
-	while (rem) {
+	rem = len + (offs - pg_offs);
 
-		ret = stm32l_flash_blk_erase(flash, (uint32_t *)addr);
+	while (rem > 0) {
+
+		ret = stm32l_flash_page_erase(flash, (uint32_t *)addr);
 
 		if (ret < 0) {
 			cnt = ret;
 			break;
 		}
-		addr += FLASH_SECTOR_SIZE;
-		rem -= FLASH_SECTOR_SIZE;
-		cnt += FLASH_SECTOR_SIZE;
+		addr += FLASH_PAGE_SIZE;
+		rem -= FLASH_PAGE_SIZE;
+		cnt += FLASH_PAGE_SIZE;
 	}
 
 	return cnt;
@@ -106,13 +96,12 @@ static int stm32l_flash_pg_wr(struct stm32_flash * flash,
 	/* start half page write */
 	flash->pecr = FLASH_FPRG | FLASH_PROG;
 
-	do {
+/*	do {
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);
 
-	if (sr & FLASH_ERR) {
-		return -1;
-	}
+	if (sr & FLASH_ERR)
+		return -1; */
 
 	for (i = 0; i < (128 / 4); ++i)
 		dst[i] = src[i];
@@ -123,9 +112,8 @@ static int stm32l_flash_pg_wr(struct stm32_flash * flash,
 
 	flash->pecr = 0;
 
-	if (sr & FLASH_ERR) {
+	if (sr & FLASH_ERR)
 		return -1;
-	}
 
 	return 0;
 }

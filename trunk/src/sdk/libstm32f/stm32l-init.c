@@ -230,8 +230,19 @@ void _init(void)
 #if STM32_ENABLE_PLL
 	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
 #else
-	flash->acr = FLASH_ACC64 | FLASH_PRFTEN;
+//	flash->acr = FLASH_ACC64 | FLASH_PRFTEN;
+	flash->acr = FLASH_ACC64 | FLASH_PRFTEN | FLASH_LATENCY;
 #endif
+
+	for (again = 8192; ; again--) {
+		acr = flash->acr;
+		if (acr & FLASH_LATENCY)
+			break;
+		if (again == 0) {
+			/* FLASH WS configuration failed */
+			halt();
+		}
+	}
 
 #if STM32_ENABLE_PLL
 	/* switch to PLL oscillator */
