@@ -22,7 +22,7 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c profclk.c board.c io.c leds.c 
+CFILES = usb-serial.c serial.c test-mod.c profclk.c board.c io.c leds.c 
 
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \

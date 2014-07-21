@@ -165,7 +165,10 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "5. isink_init()");
 	isink_init();
-	thinkos_sleep(100);
+
+	/* perform a lamp test while the current sink 
+	   negative voltage stabilizes */
+	lamp_test();
 
 	slcdev_init();
 	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);

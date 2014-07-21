@@ -213,7 +213,7 @@
 
 #ifndef __ASSEMBLER__
 
-#define STM32F_PWR ((struct stm32f_pwr *)STM32F_BASE_PWR)
+#define STM32_PWR ((struct stm32_pwr *)STM32F_BASE_PWR)
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)

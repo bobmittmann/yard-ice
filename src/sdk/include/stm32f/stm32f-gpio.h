@@ -37,6 +37,7 @@
 #define GPIO_MODE_ALT_FUNC(P) (2 << (2 * (P)))
 #define GPIO_MODE_ANALOG(P) (3 << (2 * (P)))
 #define GPIO_MODE_MASK(P) (3 << (2 * (P)))
+#define GPIO_MODE_GET(R, P) (((R) >> (2 * (P))) & 3)
 
 /* GPIO port output type register */
 #define GPIO_OTYPER 0x04
@@ -303,7 +304,7 @@
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
-
+#include <stdbool.h>
 
 #if defined(STM32F2X) || defined(STM32F3X) || defined(STM32F4X) || \
 	defined(STM32L1X)
@@ -373,10 +374,20 @@ static inline void stm32_gpio_mode_out(struct stm32_gpio * __gpio,
 	__gpio->moder = tmp | GPIO_MODE_OUTPUT(__pin);
 }
 
+static inline bool stm32_gpio_is_mode_out(struct stm32_gpio * __gpio, 
+										 unsigned int __pin) {
+	return (__gpio->moder & GPIO_MODE_MASK(__pin)) == GPIO_MODE_OUTPUT(__pin);
+}
+
 static inline void stm32_gpio_mode_in(struct stm32_gpio * __gpio, 
 									  unsigned int __pin) {
 	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
 	__gpio->moder = tmp | GPIO_MODE_INPUT(__pin);
+}
+
+static inline bool stm32_gpio_is_mode_in(struct stm32_gpio * __gpio, 
+										 unsigned int __pin) {
+	return (__gpio->moder & GPIO_MODE_MASK(__pin)) == GPIO_MODE_INPUT(__pin);
 }
 
 static inline void stm32_gpio_mode_af(struct stm32_gpio * __gpio, 
@@ -384,6 +395,17 @@ static inline void stm32_gpio_mode_af(struct stm32_gpio * __gpio,
 	uint32_t tmp = __gpio->moder & ~GPIO_MODE_MASK(__pin);
 	__gpio->moder = tmp | GPIO_MODE_ALT_FUNC(__pin);
 }
+
+static inline bool stm32_gpio_is_mode_af(struct stm32_gpio * __gpio, 
+										 unsigned int __pin) {
+	return (__gpio->moder & GPIO_MODE_MASK(__pin)) == GPIO_MODE_ALT_FUNC(__pin);
+}
+
+static inline uint32_t stm32_gpio_mode_get(struct stm32_gpio * __gpio, 
+										   unsigned int __pin) {
+	return GPIO_MODE_GET(__gpio->moder, __pin);
+}
+
 #endif
 
 /* set pin */

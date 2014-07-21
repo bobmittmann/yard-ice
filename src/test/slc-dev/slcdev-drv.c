@@ -243,8 +243,7 @@ void stm32_tim4_isr(void)
 		break;
 
 	default:
-		DCC_LOG1(LOG_WARNING, "Invalid state [%d]!!!", slcdev.state);
-		return;
+		DCC_LOG1(LOG_MSG, "Invalid state [%d]!!!", slcdev.state);
 	}
 
 	tim10->arr = 4000; /* trigger the end wait timer */

@@ -140,23 +140,20 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 
 	len = MIN(ep->xfr_rem, ep->mxpktsz);
 
-	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
 
-	if (len > 0) {
-		__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
-		tx_pktbuf->count = len;
-		ep->xfr_rem -= len;
-		ep->xfr_ptr += len;
-	}
+	__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
+	ep->xfr_rem -= len;
+	ep->xfr_ptr += len;
 
 	if ((ep->xfr_rem == 0) && (len != ep->mxpktsz)) {
 		/* if we put all data into the TX packet buffer but the data
 		 * didn't filled the whole packet, this is the last packet,
 		 * otherwise we need to send a ZLP to finish the transaction */
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 		ep->state = EP_IN_DATA_LAST;
 	} else {
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA]", ep_id);
+		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA]", ep_id);
 		ep->state = EP_IN_DATA;
 	}
 
@@ -268,7 +265,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	struct stm32f_usb * usb = STM32F_USB;
 	uint32_t epr;
 
-	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
+	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 
@@ -285,7 +282,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 
 	epr = usb->epr[ep_id];
 	if (epr & USB_EP_DBL_BUF) {
-		DCC_LOG2(LOG_INFO, "double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG2(LOG_TRACE, "double buffer: DTOG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 		/* select the descriptor according to the data toggle bit */
@@ -295,7 +292,11 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 		tx_pktbuf = &pktbuf[ep_id].tx;
 	}
 
-	__ep_pkt_send(usb, ep_id, ep, tx_pktbuf);
+	if (__ep_pkt_send(usb, ep_id, ep, tx_pktbuf) > 0) {
+		DCC_LOG(LOG_TRACE, "__ep_pkt_send() > 0");
+	} else {
+		DCC_LOG(LOG_TRACE, "__ep_pkt_send() <= 0");
+	}
 
 	if (epr & USB_EP_DBL_BUF) {
 		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
@@ -795,18 +796,21 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		/* IN */
 		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
 
-		DCC_LOG3(LOG_INFO, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG3(LOG_TRACE, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
 				 ep_id, (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
-		/* select the descriptor according to the data toggle bit */
-		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
-		if (__ep_pkt_send(usb, ep_id, ep, tx_pktbuf) > 0) {
-			/* release the previous buffer */
-			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-		} else {
+
+		if ((ep->state == EP_IN_DATA_LAST) && (ep->xfr_rem == 0)) {
 			ep->state = EP_IDLE;
 			/* call class endpoint callback */
 			ep->on_in(drv->cl, ep_id);
+		} else {
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+			/* send the next data chunk */
+			__ep_pkt_send(usb, ep_id, ep, tx_pktbuf);
+			/* release the previous buffer */
+			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
 		}
 	}
 }

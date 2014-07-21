@@ -179,6 +179,42 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_self_test(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	lamp_test();
+
+	return 0;
+}
+
+int cmd_isink(FILE * f, int argc, char ** argv)
+{
+	unsigned int mode = 0;
+	unsigned int pre = 40;
+	unsigned int pulse = 100;
+
+	if (argc > 4)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (argc > 1) {
+		mode = strtoul(argv[1], NULL, 0);
+		if (mode > 20)
+			return SHELL_ERR_ARG_INVALID;
+		if (argc > 2) {
+			pre = strtoul(argv[2], NULL, 0);
+			if (argc > 3) {
+				pulse = strtoul(argv[3], NULL, 0);
+			}
+		}
+	}
+	
+	isink_start(mode, pre, pulse);
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -188,6 +224,10 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
 
 	{ cmd_trig, "trig", "t", "[ADDR]", "Trigger module address get/set" },
+
+	{ cmd_self_test, "selftest", "st", "", "Self test" },
+
+	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
 
 	{ NULL, "", "", NULL, NULL }
 };

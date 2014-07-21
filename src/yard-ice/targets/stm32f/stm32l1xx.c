@@ -230,7 +230,7 @@ int stm32l1xx_on_init(FILE * f, const ice_drv_t * ice,
 				if (cr & HSIRDY)
 					break;
 				if (again == 0) {
-					fprintf(f, " %s: internal oscillator startup fail!\n", 
+					fprintf(f, " %s: HSI oscillator startup fail!\n", 
 							__func__);
 					DCC_LOG(LOG_WARNING, "internal oscillator fail!");
 					return -1;
@@ -244,11 +244,30 @@ int stm32l1xx_on_init(FILE * f, const ice_drv_t * ice,
 		DCC_LOG(LOG_TRACE, "swithed to internal oscillator.");
 	} else {
 		if (!(cr & HSIRDY)) {
-			fprintf(f, " %s: internal oscillator not ready!\n", 
+			fprintf(f, " %s: HSI oscillator not ready!\n", 
 					__func__);
 			DCC_LOG(LOG_WARNING, "internal oscillator not ready!");
 			return -1;
 		}	
+	}
+
+
+	/*******************************************************************
+	 * Adjust core voltage regulator
+	 *******************************************************************/
+	ice_wr32(ice, STM32F_BASE_PWR + PWR_CR, VOS_1_8V);
+	/* wait for voltage to stabilize */
+	for (again = 8192; ; again--) {
+		uint32_t csr;
+
+		ice_rd32(ice, STM32F_BASE_PWR + PWR_CSR, &csr);
+		if ((csr & VOSF) == 0)
+			break;
+		if (again == 0) {
+			fprintf(f, " %s: voltage regulator fail!\n", __func__);
+			DCC_LOG(LOG_WARNING, "voltage regulator fail!");
+			return -1;
+		}
 	}
 
 	ice_rd32(ice, STM32F_BASE_FLASH + FLASH_PECR, &pecr);

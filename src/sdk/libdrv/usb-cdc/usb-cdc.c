@@ -1348,7 +1348,8 @@ int usb_cdc_write(struct usb_cdc_dev * dev,
 
 	/* Wait until all the data is transfered to the TX queue */
 	__thinkos_critical_enter_level(OTG_FS_IRQ_LVL);
-	while (((rem = dev->ep2_tx.len) > 0) && (dev->cdc.control & CDC_DTE_PRESENT)) {
+	while (((rem = dev->ep2_tx.len) > 0) && 
+		   (dev->cdc.control & CDC_DTE_PRESENT)) {
 		DCC_LOG(LOG_TRACE, "wait .....................");
 		__thinkos_critical_ev_wait(dev->tx_ev, OTG_FS_IRQ_LVL);
 		DCC_LOG(LOG_TRACE, "..................... wakeup");
