@@ -29,12 +29,15 @@
 #include <sys/tty.h>
 #include <sys/param.h>
 #include <xmodem.h>
+#include <thinkos.h>
 
 #include <slcdev.h>
 
 #include <sys/dcclog.h>
+#include <sys/delay.h>
 
 #include "flashfs.h"
+#include "isink.h"
 
 extern const struct shell_cmd cmd_tab[];
 
@@ -192,15 +195,15 @@ int cmd_self_test(FILE * f, int argc, char ** argv)
 int cmd_isink(FILE * f, int argc, char ** argv)
 {
 	unsigned int mode = 0;
-	unsigned int pre = 40;
-	unsigned int pulse = 100;
+	unsigned int pre = 50;
+	unsigned int pulse = 200;
 
 	if (argc > 4)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	if (argc > 1) {
 		mode = strtoul(argv[1], NULL, 0);
-		if (mode > 20)
+		if (mode > 40)
 			return SHELL_ERR_ARG_INVALID;
 		if (argc > 2) {
 			pre = strtoul(argv[2], NULL, 0);
@@ -208,12 +211,35 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 				pulse = strtoul(argv[3], NULL, 0);
 			}
 		}
+
+		isink_start(mode, pre, pulse);
+	} else {
+		for (mode = 0; mode < 18; ++mode) {
+			isink_start(mode, pre, pulse);
+			udelay(250);
+		}
 	}
 	
-	isink_start(mode, pre, pulse);
+	return 0;
+}
+
+int cmd_slewrate(FILE * f, int argc, char ** argv)
+{
+	unsigned int rate = 0;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	rate = strtoul(argv[1], NULL, 0);
+
+	isink_slewrate_set(rate);
 
 	return 0;
 }
+
 
 
 const struct shell_cmd cmd_tab[] = {
@@ -228,6 +254,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_self_test, "selftest", "st", "", "Self test" },
 
 	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
+
+	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
 	{ NULL, "", "", NULL, NULL }
 };

@@ -34,9 +34,234 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 
+	switch (mode) {
+
+	case 0:
+		/* 130mA, 48mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		break;
+
+	case 1:
+		/* 160mA, 58mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = 1;
+		break;
+
+	case 2:
+		/* 180mA, 48mA */
+		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 3:
+		/* 200mA, 54mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 4:
+		/* 214mA, 78mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		break;
+
+	case 5:
+		/* 216mA, 85mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 6:
+		/* 230mA, 90mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 7:
+		/* 260mA, 48mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 8:
+		/* 260mA, 85mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 9:
+		/* 260mA, 131mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_clr(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 10:
+		/* 298mA, 78mA */
+		stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 11:
+		/* 320mA, 114mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = 1;
+		break;
+
+	case 12:
+		/* 360mA, 140mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 13:
+		/* 380mA, 96mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 14:
+		/* 408mA, 156mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 15:
+		/* 440mA, 78mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 16:
+		/* 440mA, 144mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 17:
+		/* 440mA, 200mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
+		break;
+
+	case 18:
+		/* 440mA, 220mA */
+		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
+		break;
+
+	}
+
+	tim->arr = 1;
+ 	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
+	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
+}
+
+void _isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
+{
+	struct stm32f_tim * tim = STM32_TIM4;
+
 //	tim->arr = pre;
 //	tim->ccr2 = pulse - pre;
 //	tim->ccr3 = 1;
+
+	if (mode >= 20) {
+//		stm32_gpio_mode(SINK4, INPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_set(SINK4);
+		mode -= 20;
+	} else {
+		stm32_gpio_clr(SINK4);
+//		stm32_gpio_mode(SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+	}
 
 	switch (mode) {
 	case 0:
@@ -134,49 +359,49 @@ void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse)
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 	case 13:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = 1;
 		break;
 	case 14:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 15:
 		stm32_gpio_mode(SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pulse;
-		tim->ccr3 = pre;
-		tim->ccr4 = pre;
+		tim->ccr2 = pulse - pre;
+		tim->ccr3 = 1;
+		tim->ccr4 = 1;
 		break;
 	case 16:
 		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pre;
-		tim->ccr4 = pulse;
+		tim->ccr2 = 1;
+		tim->ccr3 = 1;
+		tim->ccr4 = pulse - pre;
 		break;
 	case 17:
 		stm32_gpio_mode(SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		tim->ccr2 = pre;
-		tim->ccr3 = pulse;
-		tim->ccr4 = pre;
+		tim->ccr2 = 1;
+		tim->ccr3 = pulse - pre;
+		tim->ccr4 = 1;
 		break;
 	}
 
@@ -321,11 +546,10 @@ void isink_init(void)
 	stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(SINK4, OUTPUT, OPEN_DRAIN | SPEED_HIGH);
 	stm32_gpio_af(SINK1, GPIO_AF2);
 	stm32_gpio_af(SINK2, GPIO_AF2);
 	stm32_gpio_af(SINK3, GPIO_AF2);
-	stm32_gpio_af(SINK4, GPIO_AF2);
 
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM4);
@@ -361,7 +585,7 @@ void isink_init(void)
 	/* DAC disable */
 	dac->cr = 0;
 	/* DAC configure */
-	dac->cr = DAC_EN2 | DAC_EN1;
+	dac->cr = DAC_EN2;
 	/* DAC channel 2 initial value */
 	dac->dhr12r2 = 0;
 	/* DAC channel 1 initial value */
