@@ -240,6 +240,33 @@ int cmd_slewrate(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+extern const uint8_t xflash_pic[];
+extern unsigned int sizeof_xflash_pic;
+
+int cmd_xflash(FILE * f, int argc, char ** argv)
+{
+	uint32_t code[(sizeof_xflash_pic + 3) / 4];
+	int (* xflash)(void * uart, uint32_t addr, int len);
+	struct stm32_usart * uart = STM32_USART2;
+	uint32_t pri;
+	int ret;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	memcpy(code, xflash_pic, sizeof_xflash_pic);
+	xflash = (void *)code;
+
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+	ret = xflash(uart, 0x08010000, 32768);
+	cm3_primask_set(pri);
+
+	fprintf(f, "xflash() returned with code %d.\n", ret);
+
+	return 0;
+}
 
 
 const struct shell_cmd cmd_tab[] = {
@@ -256,6 +283,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
 
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
+
+	{ cmd_xflash, "xflash", "xf", "[ADDR]", "Firmware update" },
 
 	{ NULL, "", "", NULL, NULL }
 };
