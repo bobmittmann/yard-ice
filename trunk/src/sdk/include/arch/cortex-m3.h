@@ -825,6 +825,10 @@ static inline uint32_t __attribute__((always_inline)) cm3_sp_get(void) {
 	return sp;
 }
 
+static inline void __attribute__((always_inline)) cm3_sp_set(uint32_t sp) {
+	asm volatile ("mov sp, %0\n" : "=r" (sp));
+}
+
 static inline uint32_t __attribute__((always_inline)) cm3_lr_get(void) {
 	register uint32_t lr;
 	asm volatile ("mov %0, lr\n" : "=r" (lr));

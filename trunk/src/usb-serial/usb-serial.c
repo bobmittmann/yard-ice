@@ -245,13 +245,12 @@ uint32_t __attribute__((aligned(8))) serial1_ctrl_stack[64];
 //uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
 uint32_t __attribute__((aligned(8))) serial1_recv_stack[RECV_STACK_SIZE / 4];
 //uint32_t __attribute__((aligned(8))) serial2_recv_stack[RECV_STACK_SIZE / 4];
-//uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
+uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
 	uint64_t esn;
 	struct vcom vcom[2];
-	unsigned int i;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -292,14 +291,6 @@ int main(int argc, char ** argv)
 						  button_stack, sizeof(button_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
-#if 0
-	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
-						  usb_recv_stack, sizeof(usb_recv_stack),
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
-
-#endif
-
-
 	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
@@ -318,7 +309,6 @@ int main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(4));
 #endif
 
-	test_mod_init(&vcom[0]);
 
 	usb_vbus(true);
 
@@ -330,12 +320,11 @@ int main(int argc, char ** argv)
 //	pin2_sel_vcc();
 //	usb_console(vcom[0].cdc);
 
-	usb_recv_task(vcom);
+	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
+						  usb_recv_stack, sizeof(usb_recv_stack),
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
-	for (i = 0; ; ++i) {
-		thinkos_sleep(5000);
-		DCC_LOG1(LOG_TRACE, "tick %d.", i);
-	}
+	test_main(&vcom[0]);
 
 	return 0;
 }

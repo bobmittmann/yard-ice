@@ -74,16 +74,22 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
 #define EP_IN_ADDR  2
 int usb_xflash(uint32_t blk_offs, unsigned int blk_size);
 
+extern uint32_t _stack;
+
 void xflash_test(void)
 {
+//	uint32_t stack = (uint32_t)&_stack;
 //	char buf[128];
 //	int n;
+//	DCC_LOG1(LOG_TRACE, "stack=%08x...", stack);
 
-	DCC_LOG(LOG_TRACE, "xflash_test...");
+	led1_on();
+	led2_on();
 
 	cm3_cpsid_i();
+//	cm3_sp_set(stack);
 
-	usb_xflash(0x10000, 65536);
+	usb_xflash(0x00000, 65536);
 /*
 	usb_send(EP_IN_ADDR, "--------------\r\n", 16);
 
@@ -125,17 +131,12 @@ void __attribute__((noreturn)) test_mod_task(struct vcom * vcom)
 	}
 }
 
-uint32_t __attribute__((aligned(8))) test_mod_stack[256];
-
-void test_mod_init(struct vcom * vcom)
+void test_main(struct vcom * vcom)
 {
 	test_mod.flag  = thinkos_flag_alloc();
 	test_mod.req = TEST_NONE;
 
-	thinkos_thread_create((void *)test_mod_task, (void *)vcom,
-						  test_mod_stack, sizeof(test_mod_stack),
-						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(4));
-
+	test_mod_task(vcom);
 }
 
 struct xmodem_snd sx;

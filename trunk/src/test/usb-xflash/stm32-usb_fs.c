@@ -167,15 +167,17 @@ int usb_send(int ep_id, void * buf, unsigned int len)
 	}
 
 	if (pktsz == mxpktsz) {
-
+		if (epr & USB_EP_DBL_BUF) {
+			/* select the descriptor according to the data toggle bit */
+			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
+			tx_pktbuf->count = 0;
+			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
+		} else {
+			__set_ep_txstat(usb, ep_id, USB_TX_NAK);
+		}
 	}	
 
-	if (epr & USB_EP_DBL_BUF) {
-		/* select the descriptor according to the data toggle bit */
-		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
-		tx_pktbuf->count = 0;
-		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-	} else {
+	if (!(epr & USB_EP_DBL_BUF)) {
 		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
 	}
 
@@ -210,4 +212,51 @@ void usb_drain(int ep_id)
 	}
 }
 
+#if 0
+int uint2hex(char * s, unsigned int val)
+{
+	int n;
+	int c;
+	int i;
+
+	/* value is zero ? */
+	if (!val) {
+		*s++ = '0';
+		*s = '\0';
+		return 1;
+	}
+
+	n = 0;
+	for (i = 0; i < (sizeof(unsigned int) * 2); i++) {
+		c = val >> ((sizeof(unsigned int) * 8) - 4);
+		val <<= 4;
+		if ((c != 0) || (n != 0)) {
+			s[n++] = c < 10 ? c + '0' : c + ('a' - 10);
+		}
+	}
+
+	s[n] = '\0';
+
+	return n;
+}
+
+void usb_send_hex(int ep_id, unsigned int val)
+{
+	char buf[16];
+	char * cp = buf;;
+	int n;
+
+	*cp++ = ' ';
+	*cp++ = '0';
+	*cp++ = 'x';
+	n = uint2hex(cp, val);
+	cp += n;
+	*cp++ = '\r';
+	*cp++ = '\n';
+	n += 5;
+
+	usb_send(ep_id, buf, n);
+}
+
+#endif
 

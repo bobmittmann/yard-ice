@@ -53,7 +53,7 @@ extern "C" {
 struct serial_dev * serial2_open(void);
 struct serial_dev * serial3_open(void);
 
-void test_mod_init(struct vcom * vcom);
+void test_main(struct vcom * vcom);
 void test_sched(int test);
 
 #ifdef __cplusplus

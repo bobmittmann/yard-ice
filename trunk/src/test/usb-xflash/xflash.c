@@ -46,6 +46,15 @@ static void reset(void)
 	for(;;);
 }
 
+static void delay(unsigned int msec)
+{
+	while (msec > 0) {
+		if (CM3_SYSTICK->ctrl & SYSTICK_CTRL_COUNTFLAG)
+			msec--;
+	}
+}
+
+
 #ifndef ENABLE_XMODEM_CKS
 #define ENABLE_XMODEM_CKS 1
 #endif
@@ -83,7 +92,7 @@ enum {
 
 #define XMODEM_RCV_TMOUT_MS 2000
 
-static int _xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
+static int usb_xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
 {
 	rx->mode = mode;
 	rx->pktno = 1;
@@ -269,24 +278,24 @@ timeout:
 	return ret;
 }
 
-int usb_xflash(uint32_t blk_offs, unsigned int blk_size)
+int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
+												  unsigned int blk_size)
 {
 	struct xmodem_rcv rx;
 	unsigned int cnt;
 	uint32_t offs;
 	int ret;
 
-	//	flash_unlock();
+	flash_unlock();
 
 	do {
 		usb_send(CDC_TX_EP, "\r\nErasing...", 12);
 
-		//		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
-		{
+		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
 
 			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
 
-			_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
 			offs = blk_offs;
 			cnt = 0;
 
@@ -304,7 +313,7 @@ int usb_xflash(uint32_t blk_offs, unsigned int blk_size)
 					if (n == 0)
 						break;
 
-					//					flash_write(offs, src, n);
+					flash_write(offs, src, n);
 
 					offs += n;
 					src += n;
@@ -322,6 +331,8 @@ int usb_xflash(uint32_t blk_offs, unsigned int blk_size)
 	usb_send(CDC_TX_EP, "\r\nDone.", 7);
 
 	usb_drain(CDC_TX_EP);
+
+	delay(3000);
 
 	reset();
 

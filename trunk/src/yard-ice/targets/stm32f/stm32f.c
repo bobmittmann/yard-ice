@@ -47,13 +47,28 @@ uint16_t stm32f10xxx_config(const ice_drv_t * ice,
 	
 	target->on_init = (target_script_t)stm32f1xx_on_init,
 	ice_rd16(ice, 0x1ffff7e0, &memsz);
+
 	mem[FLASH].op = &flash_stm32f1_oper;
-	mem[FLASH].blk.size = MEM_KiB(1);
-	mem[FLASH].blk.count = memsz;
-	if ((memsz == 16) || (memsz == 32))
-		mem[SRAM].blk.count = 4;
-	else if ((memsz == 64) || (memsz == 128))
-		mem[SRAM].blk.count = 8;
+	if (memsz <= 128) {
+		mem[FLASH].blk.size = MEM_KiB(1);
+		mem[FLASH].blk.count = memsz;
+	} else {
+		mem[FLASH].blk.size = MEM_KiB(2);
+		mem[FLASH].blk.count = memsz / 2;
+	}
+
+	if (memsz == 16) 
+		mem[SRAM].blk.count = 6;
+	else if (memsz == 32)
+		mem[SRAM].blk.count = 10;
+	else if (memsz == 64) 
+		mem[SRAM].blk.count = 20;
+	else if (memsz == 128) 
+		mem[SRAM].blk.count = 20;
+	else if (memsz == 256) 
+		mem[SRAM].blk.count = 48;
+	else 
+		mem[SRAM].blk.count = 64;
 
 	return memsz;
 }

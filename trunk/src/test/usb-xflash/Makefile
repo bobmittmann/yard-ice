@@ -23,7 +23,7 @@
 
 CODELIB = xflash_pic
 
-CFILES = xflash.c crc16ccitt.c stm32l-flash.c stm32-usb_fs.c
+CFILES = xflash.c crc16ccitt.c stm32f1xx-flash.c stm32-usb_fs.c
 
 include cm3-pic.mk
 
