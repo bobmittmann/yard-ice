@@ -39,6 +39,7 @@ struct vcom {
 enum {
 	TEST_NONE = 0,
 	TEST_USB,
+	TEST_XFLASH,
 };
 
 extern struct serial_dev * serial1;

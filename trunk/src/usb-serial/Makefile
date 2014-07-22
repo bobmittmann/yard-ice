@@ -22,8 +22,8 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c test-mod.c profclk.c board.c io.c leds.c 
-
+CFILES = usb-serial.c serial.c test-mod.c profclk.c board.c io.c leds.c \
+		 stm32-usb_fs.c xflash.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
