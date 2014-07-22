@@ -702,6 +702,6 @@ static inline int __pktbuf_rx_mxpktsz(struct stm32f_usb_rx_pktbuf * rx) {
 	return (rx->blsize) ? (rx->num_block + 1) * 32 : rx->num_block * 2;
 }
 
-#endif				/* __ASSEMBLER__ */
+#endif /* __ASSEMBLER__ */
 
-#endif				/* __STM32F_USB_H__ */
+#endif /* __STM32F_USB_H__ */

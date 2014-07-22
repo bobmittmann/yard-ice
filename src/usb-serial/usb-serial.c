@@ -133,6 +133,7 @@ void __attribute__((noreturn)) button_task(void)
 
 		case EVENT_CLICK_N_HOLD:
 			DCC_LOG(LOG_TRACE, "EVENT_CLICK_N_HOLD");
+			test_sched(TEST_XFLASH);
 //			stm32_gpio_clr(EXTRST0_IO);
 //			stm32f_gpio_clr(EXTRST1_IO);
 //			pin2_sel_vcc();

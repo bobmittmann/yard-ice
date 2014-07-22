@@ -68,6 +68,34 @@ static void usb_test(usb_cdc_class_t * cdc)
 	usb_cdc_write(cdc, buf, 64);
 }
 
+int usb_send(int ep_id, const void * buf, unsigned int len);
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
+#define EP_OUT_ADDR 1
+#define EP_IN_ADDR  2
+int usb_xflash(uint32_t blk_offs, unsigned int blk_size);
+
+void xflash_test(void)
+{
+//	char buf[128];
+//	int n;
+
+	DCC_LOG(LOG_TRACE, "xflash_test...");
+
+	cm3_cpsid_i();
+
+	usb_xflash(0x10000, 65536);
+/*
+	usb_send(EP_IN_ADDR, "--------------\r\n", 16);
+
+	while ((n = usb_recv(EP_OUT_ADDR, buf, 128, 2000)) > 0) {
+		usb_send(EP_IN_ADDR, buf, n);
+	}
+
+	usb_send(EP_IN_ADDR, "--------------\r\n", 16);
+*/
+	cm3_cpsie_i();
+}
+
 void test_sched(int test)
 {
 	test_mod.req = test;
@@ -89,6 +117,9 @@ void __attribute__((noreturn)) test_mod_task(struct vcom * vcom)
 		switch (test) {
 		case TEST_USB:
 			usb_test(cdc);
+			break;
+		case TEST_XFLASH:
+			xflash_test();
 			break;
 		}
 	}
