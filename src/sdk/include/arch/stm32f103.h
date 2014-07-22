@@ -212,7 +212,7 @@
 #define STM32_RCC ((struct stm32_rcc *)STM32F_BASE_RCC)
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_USB ((struct stm32f_usb *)STM32F_BASE_USB)
-#define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
+#define STM32_FLASH ((struct stm32_flash *)STM32F_BASE_FLASH)
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
 #define STM32F_ADC1 ((struct stm32f_adc *)STM32F_BASE_ADC1)
@@ -283,6 +283,7 @@ enum {
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)
+#define STM32_FLASH_MEM ((uint8_t *)0x08000000)
 
 #define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
 

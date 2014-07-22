@@ -28,15 +28,13 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-#define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
-
 #ifdef STM32F1X
 
-const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
+const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 const uint32_t __flash_size;
 
 int __attribute__((section (".data#"))) 
-	stm32f10x_flash_blk_erase(struct stm32f_flash * flash, uint32_t addr)
+	stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
 {
 	uint32_t pri;
 	uint32_t sr;
@@ -65,7 +63,7 @@ int __attribute__((section (".data#")))
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
-	struct stm32f_flash * flash = STM32F_FLASH;
+	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t addr;
 	uint32_t cr;
 
@@ -90,7 +88,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 }
 
 int __attribute__((section (".data#"))) 
-	stm32f10x_flash_wr16(struct stm32f_flash * flash,
+	stm32f10x_flash_wr16(struct stm32_flash * flash,
 						 uint16_t volatile * addr, uint16_t data)
 {
 	uint32_t pri;
@@ -119,7 +117,7 @@ int __attribute__((section (".data#")))
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
-	struct stm32f_flash * flash = STM32F_FLASH;
+	struct stm32_flash * flash = STM32_FLASH;
 	uint16_t data;
 	uint16_t * addr;
 	uint8_t * ptr;
@@ -166,11 +164,11 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 
 #if defined(STM32F2X) || defined(STM32F4X)
 
-const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
+const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 const uint32_t __flash_size;
 
 int __attribute__((section (".data#"))) 
-	stm32f10x_flash_sect_erase(struct stm32f_flash * flash, unsigned int sect)
+	stm32f10x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
 {
 	uint32_t pri;
 	uint32_t sr;
@@ -197,7 +195,7 @@ int __attribute__((section (".data#")))
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
-	struct stm32f_flash * flash = STM32F_FLASH;
+	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t cr;
 	unsigned int page;
 	unsigned int sect;
@@ -248,7 +246,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 }
 
 int __attribute__((section (".data#"))) 
-	stm32f_flash_wr32(struct stm32f_flash * flash,
+	stm32_flash_wr32(struct stm32_flash * flash,
 						 uint32_t volatile * addr, uint32_t data)
 {
 	uint32_t pri;
@@ -277,7 +275,7 @@ int __attribute__((section (".data#")))
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
-	struct stm32f_flash * flash = STM32F_FLASH;
+	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t data;
 	uint32_t * addr;
 	uint8_t * ptr;
@@ -308,7 +306,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
-		if (stm32f_flash_wr32(flash, addr, data) < 0) {
+		if (stm32_flash_wr32(flash, addr, data) < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
 			return -1;
 		}
