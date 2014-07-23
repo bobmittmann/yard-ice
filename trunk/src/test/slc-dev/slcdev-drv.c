@@ -32,9 +32,13 @@
 struct clip_device {
 	uint8_t addr;
 	uint8_t enabled;
+	uint8_t ctl;
+	uint8_t icfg; /* current sink configuration */
 	uint16_t pw1;
+
 	uint16_t pw2;
 	uint16_t pw3;
+
 	uint16_t pw4;
 	uint16_t pw5;
 };

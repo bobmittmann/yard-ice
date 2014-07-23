@@ -192,6 +192,8 @@ int cmd_self_test(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+void isink_test(unsigned int pre, unsigned int pulse);
+
 int cmd_isink(FILE * f, int argc, char ** argv)
 {
 	unsigned int mode = 0;
@@ -214,10 +216,11 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 
 		isink_start(mode, pre, pulse);
 	} else {
-		for (mode = 0; mode < 18; ++mode) {
-			isink_start(mode, pre, pulse);
-			udelay(250);
-		}
+//		for (mode = 0; mode < 18; ++mode) {
+//			isink_start(mode, pre, pulse);
+//			udelay(250);
+//		}
+		isink_test(pre, pulse);
 	}
 	
 	return 0;
