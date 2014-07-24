@@ -29,11 +29,6 @@
 #include <sys/dcclog.h>
 #include <sys/param.h>
 
-#define STM32F_FLASH_MEM ((uint32_t *)0x08000000)
-
-const uint32_t __flash_base = (uint32_t)STM32F_FLASH_MEM;
-const uint32_t __flash_size;
-
 #define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
 				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
 
@@ -91,7 +86,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 
 	offs &= ~(FLASH_SECTOR_SIZE - 1);
 
-	addr = __flash_base + offs;
+	addr = (uint32_t)STM32_MEM_FLASH + offs;
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
@@ -167,7 +162,7 @@ int __attribute__((section (".data#")))
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
-	uint32_t base = __flash_base ;
+	uint32_t base = (uint32_t)STM32_MEM_FLASH;
 	uint8_t * ptr;
 	uint32_t pecr;
 	int rem;

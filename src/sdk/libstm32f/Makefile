@@ -45,7 +45,8 @@ ifeq ($(STM32), stm32l)
 
 SFILES = stm32l-crt0.S
 
-CFILES = stm32l-init.c stm32l-flash.c stm32f-gpio.c stm32f-dma.c \
+CFILES = stm32l-init.c stm32l-flash.c stm32f-gpio.c stm32l-eeprom.c \
+		 stm32f-dma.c \
 		 $(addprefix usart/,$(USART_CFILES))
 
 else
