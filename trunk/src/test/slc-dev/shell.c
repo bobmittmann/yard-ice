@@ -141,7 +141,7 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	if (!fs_lookup(argv[1], &entry))
 		return SHELL_ERR_ARG_INVALID;
 
-	blk_offs = (uint8_t *)entry.addr - STM32_FLASH_MEM;
+	blk_offs = (uint8_t *)entry.addr - (uint8_t *)STM32_MEM_FLASH;
 	blk_size = entry.max_size;
 
 	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
@@ -151,7 +151,6 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	};
 
 	fprintf(f, "RX waiting to receive.");
-
 	if (flash_xmodem_recv(f, blk_offs, blk_size) < 0) {
 		fprintf(f, "flash_xmodem_recv() failed!\n");
 		return -1;
@@ -182,6 +181,57 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_enable(FILE * f, int argc, char ** argv)
+{
+	unsigned int addr;
+	int i;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	for (i = 1; i < argc; ++i) {
+		addr = strtoul(argv[i], NULL, 0);
+		if ((addr < 1) || (addr > 199))
+			return SHELL_ERR_ARG_INVALID;
+
+		fprintf(f, "Device enabled: %d\n", addr);
+		dev_sim_enable(addr);
+	}
+
+	return 0;
+}
+
+int cmd_disable(FILE * f, int argc, char ** argv)
+{
+	unsigned int addr;
+	int i;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc == 2) {
+		if (strcmp(argv[1], "all") == 0) {
+			for (addr = 1; addr < 200; ++addr) {
+				dev_sim_disable(addr);
+			}
+			fprintf(f, "All devices are disabled\n");
+		}
+
+		return 0;
+	}
+
+	for (i = 1; i < argc; ++i) {
+		addr = strtoul(argv[i], NULL, 0);
+		if ((addr < 1) || (addr > 199))
+			return SHELL_ERR_ARG_INVALID;
+
+		fprintf(f, "Device disable: %d\n", addr);
+		dev_sim_disable(addr);
+	}
+
+	return 0;
+}
+
 int cmd_self_test(FILE * f, int argc, char ** argv)
 {
 	if (argc > 1)
@@ -192,35 +242,37 @@ int cmd_self_test(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-void isink_test(unsigned int pre, unsigned int pulse);
+void isink_test(void);
 
 int cmd_isink(FILE * f, int argc, char ** argv)
 {
 	unsigned int mode = 0;
+	unsigned int rate = 0;
 	unsigned int pre = 50;
 	unsigned int pulse = 200;
 
-	if (argc > 4)
+	if (argc > 5)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	if (argc > 1) {
 		mode = strtoul(argv[1], NULL, 0);
-		if (mode > 40)
+		if (mode > 25)
 			return SHELL_ERR_ARG_INVALID;
 		if (argc > 2) {
-			pre = strtoul(argv[2], NULL, 0);
+			rate = strtoul(argv[2], NULL, 0);
+			if (rate > 3)
+				return SHELL_ERR_ARG_INVALID;
 			if (argc > 3) {
 				pulse = strtoul(argv[3], NULL, 0);
+				if (argc > 4)
+					pre = strtoul(argv[4], NULL, 0);
 			}
 		}
 
-		isink_start(mode, pre, pulse);
+		isink_mode_set(mode | (rate << 5));
+		isink_pulse(pre, pulse);
 	} else {
-//		for (mode = 0; mode < 18; ++mode) {
-//			isink_start(mode, pre, pulse);
-//			udelay(250);
-//		}
-		isink_test(pre, pulse);
+		isink_test();
 	}
 	
 	return 0;
@@ -295,6 +347,26 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_eeprom(FILE * f, int argc, char ** argv)
+{
+	unsigned int offs;
+	unsigned int data;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "Testing EEPROM...\n");
+	stm32_eeprom_unlock();
+
+	data = rand();
+	for (offs = 0; offs < 4096; offs += 4) {
+		stm32_eeprom_wr32(offs, data);
+		data++;
+	}
+		
+
+	return 0;
+}
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -305,6 +377,10 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_trig, "trig", "t", "[ADDR]", "Trigger module address get/set" },
 
+	{ cmd_enable, "enable", "e", "ADDR0 .. ADDR7", "Device enable" },
+
+	{ cmd_disable, "disable", "d", "ADDR0 .. ADDR7", "Device disable" },
+
 	{ cmd_self_test, "selftest", "st", "", "Self test" },
 
 	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
@@ -312,6 +388,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
 	{ cmd_xflash, "xflash", "xf", "OFFS [LEN]", "Firmware update" },
+
+	{ cmd_eeprom, "eeprom", "ee", "", "EEPROM test" },
 
 	{ NULL, "", "", NULL, NULL }
 };

@@ -276,6 +276,10 @@ int stm32_flash_erase(unsigned int offs, unsigned int len);
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len);
 
+void stm32_eeprom_unlock(void);
+
+int stm32_eeprom_wr32(uint32_t offs, uint32_t val);
+
 /*---------------------------------------------------------------------
  * RTC
  *---------------------------------------------------------------------*/

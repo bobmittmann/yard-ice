@@ -35,6 +35,7 @@ enum {
 enum {
 	SLC_EV_NONE = 0,
 	SLC_EV_TRIG,
+	SLC_EV_SIM,
 };
 
 #ifdef __cplusplus

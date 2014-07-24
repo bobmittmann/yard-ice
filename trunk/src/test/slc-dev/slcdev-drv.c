@@ -32,8 +32,9 @@
 struct clip_device {
 	uint8_t addr;
 	uint8_t enabled;
-	uint8_t ctl;
+
 	uint8_t icfg; /* current sink configuration */
+	uint8_t pre; /* preenphasis time */
 	uint16_t pw1;
 
 	uint16_t pw2;
@@ -51,18 +52,8 @@ struct clip_device clip_dev_tab[CLIP_DEV_MAX];
  * Trigger module
  * ------------------------------------------------------------------------- */
 
-enum {
-	TRIG_IDLE = 0,
-	TRIG_VSLC,
-	TRIG_BIT,
-	TRIG_ADDR_MATCH,
-	TRIG_PW_WAIT,
-	TRIG_ADDR_WAIT
-};
-
 struct {
-	uint8_t mode;
-	uint8_t state;
+	uint8_t enabled;
 	uint8_t addr;
 } trig;
 
@@ -76,16 +67,10 @@ unsigned int trig_addr_get(void)
 	return trig.addr;
 }
 
-void trig_mode_set(unsigned int mode)
-{
-	trig.mode = mode;
-}
-
 static void trig_init(void)
 {
-	trig.mode = TRIG_MODE_MATCH;
 	trig.addr = 0xff;
-	trig.state = TRIG_IDLE;
+	trig.enabled = true;
 
 	stm32_gpio_clr(TRIG_OUT);
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
@@ -102,6 +87,8 @@ struct {
 
 const struct clip_device null_dev = {
 	.enabled = false,
+	.pre = 0,
+	.icfg = 0,
 	.pw1 = 0,
 	.pw2 = 0,
 	.pw3 = 0,
@@ -117,6 +104,8 @@ void dev_sim_init(void)
 	for (i = 0; i < CLIP_DEV_MAX; ++i) {
 		dev = &clip_dev_tab[i];
 		dev->enabled = false;
+		dev->pre = 35; /* preenphasis time */
+		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
 		dev->pw1 = 300;
 		dev->pw2 = 300;
 		dev->pw3 = 900;
@@ -189,7 +178,8 @@ enum {
 
 struct {
 	int8_t flag;
-	uint32_t event;
+	bool trig_event;
+	bool sim_event;
 	uint8_t state;
 	uint8_t bit_cnt;
 	uint16_t msg;
@@ -266,40 +256,13 @@ void stm32_tim10_isr(void)
 	/* Clear timer interrupt flags */
 	tim->sr = 0;
 
-#if 0
-	if (trig.state == TRIG_BIT)
-		trig_out_set();
-#endif
-
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
 		/* VSLC at 24V (Power Level) */
-/*
-		if (trig.state == TRIG_ADDR_MATCH)
-			trig_out_clr();
-*/
 		/* Power */
 		DCC_LOG(LOG_INFO, "[IDLE]");
+		/* */
 		slcdev.state = DEV_IDLE;
-
-		/* reset the trigger module */
-		switch (trig.mode) {
-		case TRIG_MODE_MATCH:
-			trig.state = TRIG_ADDR_WAIT;
-			break;
-		case TRIG_MODE_VSLC:
-			trig.state = TRIG_VSLC;
-			break;
-		case TRIG_MODE_BIT:
-			trig.state = TRIG_BIT;
-			break;
-		case TRIG_MODE_PW:
-			trig.state = TRIG_PW_WAIT;
-			break;
-		default: 
-			trig.state = TRIG_IDLE;
-			break;
-		}
 	} else { 
 
 		bit = (csr & COMP_CMP2OUT) ? 1 : 0;
@@ -350,9 +313,8 @@ void stm32_tim10_isr(void)
 					scan.addr = addr;
 					scan.dev = &clip_dev_tab[addr];
 
-					if ((addr == trig.addr) && (trig.state = TRIG_ADDR_WAIT)) {
-						trig.state = TRIG_ADDR_MATCH;
-						slcdev.event = SLC_EV_TRIG;
+					if ((addr == trig.addr) && (trig.enabled)) {
+						slcdev.trig_event = true;
 						trig_out_set();
 						__thinkos_flag_signal(slcdev.flag);
 						trig_out_clr();
@@ -365,7 +327,10 @@ void stm32_tim10_isr(void)
 						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 								 mod ? "MODULE" : "SENSOR", addr);
 						slcdev.state = DEV_PW1_START_WAIT;
+						slcdev.sim_event = true;
+						__thinkos_flag_signal(slcdev.flag);
 						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
+						isink_mode_set(scan.dev->icfg);
 					} else {
 						slcdev.state = DEV_INACTIVE_START_WAIT;
 						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
@@ -380,35 +345,35 @@ void stm32_tim10_isr(void)
 
 		case DEV_PW1_RESPONSE_TIME:
 			/* Reference Pulse Width */
-			isink_pulse(35, dev->pw1); 
+			isink_pulse(dev->pre, dev->pw1); 
 			slcdev.state = DEV_PW1_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
 			/* Remote Test Status */
-			isink_pulse(35, dev->pw2);
+			isink_pulse(dev->pre, dev->pw2);
 			slcdev.state = DEV_PW2_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
 			/* Manufacturer Code */
-			isink_pulse(35, dev->pw3); 
+			isink_pulse(dev->pre, dev->pw3); 
 			slcdev.state = DEV_PW3_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
 			/* Analog */
-			isink_pulse(35, dev->pw4); 
+			isink_pulse(dev->pre, dev->pw4); 
 			slcdev.state = DEV_PW4_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
 			/* Type Id */
-			isink_pulse(35, dev->pw5); 
+			isink_pulse(dev->pre, dev->pw5); 
 			slcdev.state = DEV_PW5_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
 			break;
@@ -419,6 +384,10 @@ void stm32_tim10_isr(void)
 }
 
 #define PW_RESPONSE_TIME (100 - 20)
+
+/* **************************************************************************
+ * voltage comparator interrupt handler
+ ****************************************************************************/
 
 void stm32_comp_tsc_isr(void)
 {
@@ -441,11 +410,6 @@ void stm32_comp_tsc_isr(void)
 		 *  VSLC Falling Edge 
 		 *********************************************************/
 
-#if 0
-		if (trig.state <= TRIG_BIT)
-			trig_out_clr();
-#endif
-
 		tim->cnt = 0;
 
 		switch (slcdev.state) {
@@ -453,60 +417,36 @@ void stm32_comp_tsc_isr(void)
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW1_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
-/*
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-*/
 			break;
 
 		case DEV_PW2_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW2_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
-/*
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-*/
 			break;
 
 		case DEV_PW3_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW3_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
-/*			
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-*/
 			break;
 
 		case DEV_PW4_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW4_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
-#if 0
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-#endif
 			break;
 
 		case DEV_PW5_START_WAIT:
 			tim->arr = PW_RESPONSE_TIME;
 			slcdev.state = DEV_PW5_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
-#if 0
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-#endif
 			break;
 
 		case DEV_INACTIVE_START_WAIT:
 			tim->arr = 4000; /* Inactive PW window */
 			slcdev.state = DEV_INACTIVE_STOP_WAIT;
 			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
-#if 0
-			if (trig.state == TRIG_ADDR_MATCH)
-				trig_out_set();
-#endif
 			break;
 
 		default:
@@ -523,15 +463,6 @@ void stm32_comp_tsc_isr(void)
 		 *********************************************************/
 
 		tim->cnt = 0;
-
-#if 0
-		/* Rising Edge */
-		if (trig.state == TRIG_VSLC)
-			trig_out_set();
-
-		if (trig.state == TRIG_ADDR_MATCH)
-			trig_out_clr();
-#endif
 
 		switch (slcdev.state) {
 
@@ -703,15 +634,23 @@ static void slc_sense_init(void)
 
 uint32_t slcdev_event_wait(void)
 {
-	uint32_t event;
+	uint32_t event = 0;
 
 //	tracef("%s(): wait...", __func__);
 
 	do {
 		thinkos_flag_wait(slcdev.flag);
-		thinkos_flag_clr(slcdev.flag);
 		/* FIXME: event queue */
-		event = slcdev.event;
+		if (slcdev.trig_event) {
+			event = SLC_EV_TRIG;
+			slcdev.trig_event = false;
+		} else {
+			if (slcdev.sim_event) {
+				event = SLC_EV_SIM;
+				slcdev.sim_event = false;
+			}
+			thinkos_flag_clr(slcdev.flag);
+		} 
 	} while (event == 0);
 
 	return event;
@@ -720,7 +659,8 @@ uint32_t slcdev_event_wait(void)
 void slcdev_init(void)
 {
 	slcdev.state = DEV_IDLE;
-	slcdev.event = 0;
+	slcdev.sim_event = false;
+	slcdev.trig_event = false;
 	slcdev.flag = thinkos_flag_alloc();
 
 	trig_init();

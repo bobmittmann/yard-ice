@@ -105,8 +105,7 @@ void stm32_tim9_isr(void)
 	/* Rotatory switches decoder */
 	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
 	/* Sensor/Module Switch */
-	mod = (pb >> 4) & 1;
-//	mod = 1;
+	mod = (pb & (1 << 4)) ? 0 : 1;
 	addr += mod * 100;
 
 	if (addr != addr_prev) {

@@ -107,29 +107,12 @@ void __attribute__((noreturn)) sim_event_task(void)
 			DCC_LOG(LOG_TRACE, "trigger");
 			led_flash(0, 64);
 			break;
+		case SLC_EV_SIM:
+			DCC_LOG(LOG_TRACE, "simulation");
+			led_flash(1, 64);
+			break;
 		}
 	}
-}
-
-void isink_pulse_test(void)
-{
-	int j;
-
-	isink_slewrate_set(2500);
-
-	for (j = 1; j <= 17; ++j) {
-		isink_start(j, 35, 300);
-		udelay(500);
-	}
-}
-
-void isink_delay_test(void)
-{
-	trig_out_set();
-	isink_pulse(35, 300);
-	udelay(100);
-	trig_out_clr();
-	udelay(900);
 }
 
 uint32_t __attribute__((aligned(8))) io_event_stack[32];
@@ -148,20 +131,19 @@ int main(int argc, char ** argv)
 	FILE * f;
 
 	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
+//	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
-	thinkos_sleep(100);
 
-	DCC_LOG(LOG_TRACE, "3. io_init()");
+	DCC_LOG(LOG_TRACE, "3. ...");
+	thinkos_sleep(1000);
+
+	DCC_LOG(LOG_TRACE, "4. io_init()");
 	io_init();
-
-//	DCC_LOG(LOG_TRACE, "4. stdio_init()");
-//	stdio_init();
 
 	DCC_LOG(LOG_TRACE, "5. isink_init()");
 	isink_init();

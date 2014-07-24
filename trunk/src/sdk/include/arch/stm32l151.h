@@ -237,11 +237,9 @@ enum {
 	STM32_UART5_ID
 };
 
-#define STM32L_EEPROM ((uint32_t *)0x08080000)
-#define STM32L_FLASH  ((uint32_t *)0x08000000)
-#define STM32L_SRAM   ((uint32_t *)0x20000000)
-
-#define STM32_FLASH_MEM (uint8_t *)STM32L_FLASH
+#define STM32_MEM_FLASH  (uint32_t *)(0x08000000)
+#define STM32_MEM_EEPROM (uint32_t *)(0x08080000)
+#define STM32_MEM_SRAM   (uint32_t *)(0x20000000)
 
 #endif /* __ASSEMBLER__ */
 
