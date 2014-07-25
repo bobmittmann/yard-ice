@@ -64,6 +64,10 @@ void dev_sim_enable(unsigned int addr);
 
 void dev_sim_disable(unsigned int addr);
 
+int device_db_init(void);
+int device_db_erase(void);
+int device_db_compile(void);
+
 #ifdef __cplusplus
 }
 #endif

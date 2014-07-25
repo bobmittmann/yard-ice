@@ -101,27 +101,27 @@ extern struct io_drv io_drv;
  * FLASH memory map
  *****************************************************************************/
 /*
+ | Block      | Block      |        |                               |
  | Start      | End        |   Size | Description                   |
  +------------+------------+--------+-------------------------------+
- | 0x08000000 | 0x0800ffff |  64KiB | Firmware                      |
- | 0x08010000 | 0x08017fff |  32KiB | Simulator Config File (JSON)  |  
- | 0x08018000 | 0x0801dfff |  24KiB | Device Database File (JSON)   |  
- | 0x0801e000 | 0x0801ffff |   8KiB | Xmodem Firmware Loader        |  
+ | 0x08000000 | 0x0800bfff |  48KiB | Firmware                      |
+ | 0x0800c000 | 0x08011fff |  24KiB | Device Database Compiled      |  
+ | 0x08012000 | 0x08017fff |  24KiB | Device Database File (JSON)   |  
+ | 0x08018000 | 0x0801ffff |  32KiB | Simulator Config File (JSON)  |  
  +------------+------------+--------+-------------------------------+
 */
 
-#define DEV_DB_JSON_ADDR  0x08018000
-#define DEV_DB_JSON_SIZE  (24 * 1024)
+#define FLASH_BLK_FIRMWARE_OFFS     0x00000000
+#define FLASH_BLK_FIRMWARE_SIZE     (48 * 1024)
 
-#define SIM_CFG_JSON_ADDR 0x08018000
-#define SIM_CFG_JSON_SIZE (32 * 1024)
+#define FLASH_BLK_DEV_DB_BIN_OFFS   0x0000c000
+#define FLASH_BLK_DEV_DB_BIN_SIZE   (16 * 1024)
 
-#define XFLASH_ADDR       0x0801e000
-#define XFLASH_SIZE       (8 * 1024)
+#define FLASH_BLK_DEV_DB_JSON_OFFS  0x00010000
+#define FLASH_BLK_DEV_DB_JSON_SIZE  (32 * 1024)
 
-extern const uint8_t * dev_db_json;
-extern const uint8_t * sim_cfg_json;
-extern const void (* xflash_bin)(void *, int);
+#define FLASH_BLK_SIM_CFG_JSON_OFFS 0x00018000
+#define FLASH_BLK_SIM_CFG_JSON_SIZE (32 * 1024)
 
 #ifdef __cplusplus
 extern "C" {

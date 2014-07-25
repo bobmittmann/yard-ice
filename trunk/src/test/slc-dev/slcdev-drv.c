@@ -29,24 +29,38 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-struct clip_device {
+/* -------------------------------------------------------------------------
+ * Sysem Sensor device
+ * ------------------------------------------------------------------------- */
+
+struct ss_device {
+	uint8_t enabled: 1;
+	uint8_t poll_flash : 1;
+	uint8_t advanced_protocol : 1;
+
 	uint8_t addr;
-	uint8_t enabled;
+	uint8_t device_type; /* reference to a device from the database */
+	uint8_t time_bias; /* time accuracy multiplicative factor */
+	uint8_t isink_cfg; /* current sink configuration */
 
-	uint8_t icfg; /* current sink configuration */
-	uint8_t pre; /* preenphasis time */
-	uint16_t pw1;
+	union {
+		struct { /* clip device */
+			uint8_t isink_pre;       /* preenphasis time */
+			uint8_t isink_latency;   /* PW reponse time */
+			uint16_t pw1;
 
-	uint16_t pw2;
-	uint16_t pw3;
+			uint16_t pw2;
+			uint16_t pw3;
 
-	uint16_t pw4;
-	uint16_t pw5;
+			uint16_t pw4;
+			uint16_t pw5;
+		}; 
+	};
 };
 
-#define CLIP_DEV_MAX 200
+#define SS_DEVICES_MAX 320
 
-struct clip_device clip_dev_tab[CLIP_DEV_MAX];
+struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
 /* -------------------------------------------------------------------------
  * Trigger module
@@ -82,13 +96,21 @@ static void trig_init(void)
 
 struct {
 	volatile unsigned int addr;
-	struct clip_device * dev;
+	struct ss_device * dev;
 } scan;
 
-const struct clip_device null_dev = {
-	.enabled = false,
-	.pre = 0,
-	.icfg = 0,
+#define PW_RESPONSE_TIME (100 - 20)
+
+const struct ss_device null_dev = {
+	.enabled = 0,
+	.poll_flash = 0,
+	.advanced_protocol = 0,
+	.addr = 0,
+	.device_type = 0,
+	.time_bias = 128,
+	.isink_cfg = 0,
+	.isink_pre = 0,
+	.isink_latency = PW_RESPONSE_TIME,
 	.pw1 = 0,
 	.pw2 = 0,
 	.pw3 = 0,
@@ -98,14 +120,20 @@ const struct clip_device null_dev = {
 
 void dev_sim_init(void)
 {
-	struct clip_device * dev;
+	struct ss_device * dev;
 	int i;
 
-	for (i = 0; i < CLIP_DEV_MAX; ++i) {
-		dev = &clip_dev_tab[i];
-		dev->enabled = false;
-		dev->pre = 35; /* preenphasis time */
-		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
+	for (i = 0; i < SS_DEVICES_MAX; ++i) {
+		dev = &ss_dev_tab[i];
+		dev->enabled = 0;
+		dev->poll_flash = 1,
+		dev->advanced_protocol = 0,
+		dev->addr = i,
+		dev->device_type = 0,
+		dev->time_bias = 128,
+		dev->isink_cfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
+		dev->isink_pre = 35; /* preenphasis time */
+		dev->isink_latency = PW_RESPONSE_TIME,
 		dev->pw1 = 300;
 		dev->pw2 = 300;
 		dev->pw3 = 900;
@@ -113,7 +141,7 @@ void dev_sim_init(void)
 		dev->pw5 = 300;
 	}
 
-	scan.dev = (struct clip_device *)&null_dev;
+	scan.dev = (struct ss_device *)&null_dev;
 	scan.addr = 0;
 }
 
@@ -122,7 +150,7 @@ void dev_sim_enable(unsigned int addr)
 	if (addr > 199) 
 		return;
 
-	clip_dev_tab[addr].enabled = true;
+	ss_dev_tab[addr].enabled = true;
 }
 
 void dev_sim_disable(unsigned int addr)
@@ -130,7 +158,7 @@ void dev_sim_disable(unsigned int addr)
 	if (addr > 199) 
 		return;
 
-	clip_dev_tab[addr].enabled = false;
+	ss_dev_tab[addr].enabled = false;
 }
 
 
@@ -249,7 +277,7 @@ void stm32_tim10_isr(void)
 {
 	struct stm32_comp * comp = STM32_COMP;
 	struct stm32f_tim * tim = STM32_TIM10;
-	struct clip_device * dev = scan.dev;
+	struct ss_device * dev = scan.dev;
 	uint32_t csr;
 	int bit;
 
@@ -281,7 +309,7 @@ void stm32_tim10_isr(void)
 			slcdev.msg = bit;
 			slcdev.bit_cnt = 1;
 			/* reset the simultaor module */
-			scan.dev = (struct clip_device *)&null_dev;
+			scan.dev = (struct ss_device *)&null_dev;
 
 			break;
 
@@ -311,7 +339,7 @@ void stm32_tim10_isr(void)
 						addr_lut[(msg >> 5) & 0xf];
 					addr = addr + (mod * 100);
 					scan.addr = addr;
-					scan.dev = &clip_dev_tab[addr];
+					scan.dev = &ss_dev_tab[addr];
 
 					if ((addr == trig.addr) && (trig.enabled)) {
 						slcdev.trig_event = true;
@@ -330,7 +358,7 @@ void stm32_tim10_isr(void)
 						slcdev.sim_event = true;
 						__thinkos_flag_signal(slcdev.flag);
 						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
-						isink_mode_set(scan.dev->icfg);
+						isink_mode_set(scan.dev->isink_cfg);
 					} else {
 						slcdev.state = DEV_INACTIVE_START_WAIT;
 						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
@@ -345,35 +373,35 @@ void stm32_tim10_isr(void)
 
 		case DEV_PW1_RESPONSE_TIME:
 			/* Reference Pulse Width */
-			isink_pulse(dev->pre, dev->pw1); 
+			isink_pulse(dev->isink_pre, dev->pw1); 
 			slcdev.state = DEV_PW1_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
 			/* Remote Test Status */
-			isink_pulse(dev->pre, dev->pw2);
+			isink_pulse(dev->isink_pre, dev->pw2);
 			slcdev.state = DEV_PW2_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
 			/* Manufacturer Code */
-			isink_pulse(dev->pre, dev->pw3); 
+			isink_pulse(dev->isink_pre, dev->pw3); 
 			slcdev.state = DEV_PW3_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
 			/* Analog */
-			isink_pulse(dev->pre, dev->pw4); 
+			isink_pulse(dev->isink_pre, dev->pw4); 
 			slcdev.state = DEV_PW4_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
 			/* Type Id */
-			isink_pulse(dev->pre, dev->pw5); 
+			isink_pulse(dev->isink_pre, dev->pw5); 
 			slcdev.state = DEV_PW5_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
 			break;
@@ -383,17 +411,15 @@ void stm32_tim10_isr(void)
 	trig_out_clr();
 }
 
-#define PW_RESPONSE_TIME (100 - 20)
-
 /* **************************************************************************
  * voltage comparator interrupt handler
  ****************************************************************************/
 
 void stm32_comp_tsc_isr(void)
 {
-//	struct clip_device * dev = scan.dev;
 	struct stm32f_exti * exti = STM32_EXTI;
 	struct stm32f_tim * tim = STM32_TIM10;
+	struct ss_device * dev = scan.dev;
 	uint32_t ftsr;
 
 	/* get the falling edge sensing configuration */
@@ -414,31 +440,31 @@ void stm32_comp_tsc_isr(void)
 
 		switch (slcdev.state) {
 		case DEV_PW1_START_WAIT:
-			tim->arr = PW_RESPONSE_TIME;
+			tim->arr = dev->isink_latency;
 			slcdev.state = DEV_PW1_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW2_START_WAIT:
-			tim->arr = PW_RESPONSE_TIME;
+			tim->arr = dev->isink_latency;
 			slcdev.state = DEV_PW2_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW3_START_WAIT:
-			tim->arr = PW_RESPONSE_TIME;
+			tim->arr = dev->isink_latency;
 			slcdev.state = DEV_PW3_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW4_START_WAIT:
-			tim->arr = PW_RESPONSE_TIME;
+			tim->arr = dev->isink_latency;
 			slcdev.state = DEV_PW4_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW5_START_WAIT:
-			tim->arr = PW_RESPONSE_TIME;
+			tim->arr = dev->isink_latency;
 			slcdev.state = DEV_PW5_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
 			break;

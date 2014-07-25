@@ -141,7 +141,7 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	if (!fs_lookup(argv[1], &entry))
 		return SHELL_ERR_ARG_INVALID;
 
-	blk_offs = (uint8_t *)entry.addr - (uint8_t *)STM32_MEM_FLASH;
+	blk_offs = entry.offs;
 	blk_size = entry.max_size;
 
 	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
@@ -368,6 +368,21 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_dbase(FILE * f, int argc, char ** argv)
+{
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc == 2) {
+		if ((strcmp(argv[1], "compile") == 0) || 
+			(strcmp(argv[1], "c") == 0)) {
+			device_db_compile();
+		}
+	}
+
+	return 0;
+}
+
 const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
@@ -390,6 +405,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_xflash, "xflash", "xf", "OFFS [LEN]", "Firmware update" },
 
 	{ cmd_eeprom, "eeprom", "ee", "", "EEPROM test" },
+
+	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
 
 	{ NULL, "", "", NULL, NULL }
 };

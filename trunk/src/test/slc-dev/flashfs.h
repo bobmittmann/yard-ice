@@ -24,11 +24,10 @@
 #define __FLASHFS_H__
 
 struct fs_dirent {
-	char name[9];
-	uint8_t mode;
+	char name[10];
 	uint16_t size;
 	uint16_t max_size;
-	void * addr;
+	uint32_t offs;
 };
 
 #ifdef __cplusplus
