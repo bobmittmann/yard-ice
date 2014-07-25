@@ -15,8 +15,6 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-int device_db_init(void);
-
 #define VERSION_NUM "0.1"
 #define VERSION_DATE "Jun, 2014"
 

@@ -23,14 +23,15 @@
 
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
+#include <string.h>
 
 #include "board.h"
 #include "flashfs.h"
 
 struct dir_entry {
-	char name[8];
+	char name[10];
 	uint16_t size;
-	uint16_t offs;
+	uint32_t offs;
 };
 
 #define FLASH_FS_BASE_ADDR 0x08010000
@@ -40,18 +41,18 @@ struct dir_entry {
  *****************************************************************************/
 
 const struct dir_entry flash_fs_dir[] = {
+	{ .name = "dev.db", 
+	  .offs = FLASH_BLK_DEV_DB_BIN_OFFS,
+	  .size = FLASH_BLK_DEV_DB_BIN_SIZE  
+	},
 	{ .name = "devdb.js", 
-	  .offs = DEV_DB_JSON_ADDR - FLASH_FS_BASE_ADDR,
-	  .size = DEV_DB_JSON_SIZE  
+	  .offs = FLASH_BLK_DEV_DB_JSON_OFFS,
+	  .size = FLASH_BLK_DEV_DB_JSON_SIZE  
 	},
 	{ .name = "cfg.js", 
-	  .offs = SIM_CFG_JSON_ADDR - FLASH_FS_BASE_ADDR,
-	  .size = SIM_CFG_JSON_SIZE  
-	},
-	{ .name = "xflash", 
-	  .offs = XFLASH_ADDR - FLASH_FS_BASE_ADDR,
-	  .size = XFLASH_SIZE
-	},
+	  .offs = FLASH_BLK_SIM_CFG_JSON_OFFS,
+	  .size = FLASH_BLK_SIM_CFG_JSON_SIZE  
+	}
 };
 
 #define FLASH_FS_DIR_COUNT (sizeof(flash_fs_dir) / sizeof(struct dir_entry)) 
@@ -62,6 +63,17 @@ uint16_t flash_fs_file_size[FLASH_FS_DIR_COUNT] = {
 
 bool fs_lookup(const char * name, struct fs_dirent * entry)
 {
+	int i;
+
+	for (i = 0; i < sizeof(flash_fs_dir) / sizeof(struct dir_entry); ++i) {
+		if (strcmp(flash_fs_dir[i].name, name) == 0) {
+			strcpy(entry->name, flash_fs_dir[i].name);
+			entry->max_size = flash_fs_dir[i].size;
+			entry->size = flash_fs_dir[i].size;
+			entry->offs = flash_fs_dir[i].offs;
+			return true;
+		}
+	}
 	return false;
 }
 
