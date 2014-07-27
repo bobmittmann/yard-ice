@@ -156,16 +156,57 @@ void leds_init(void)
 #endif
 
 /* ----------------------------------------------------------------------
- * Push button
+ * Events
  * ----------------------------------------------------------------------
  */
 
-/* Button internal events */
-enum {
-	BTN_PRESSED = 1,
-	BTN_RELEASED,
-	BTN_TIMEOUT
-};
+struct event_drv {
+	volatile uint32_t bmp;
+	uint32_t msk;
+	int flag;
+} event_drv;
+
+void event_drv_init(void)
+{
+	event_drv.flag = thinkos_flag_alloc();
+	event_drv.msk = 0;
+	event_drv.bmp = 0;
+}
+
+void event_raise(int event)
+{
+	if (event) {
+		DCC_LOG1(LOG_MSG, "event=%d", event);
+		/* set the event bit */
+		__bit_mem_wr((uint32_t *)&event_drv.bmp, event - 1, 1);  
+		/* signal the flag */
+		__thinkos_flag_signal(event_drv.flag);
+	}
+}
+
+int event_wait(void)
+{
+	int idx;
+
+	DCC_LOG1(LOG_INFO, "bmp=0x%08x", event_drv.bmp);
+	/* get a thread from the ready bitmap */
+	while ((idx = __clz(__rbit(event_drv.bmp))) == 32) {
+		/* wait for the flag to be set */
+		thinkos_flag_wait(event_drv.flag);
+	}
+
+	DCC_LOG1(LOG_INFO, "2. idx=%d", idx);
+	__bit_mem_wr((uint32_t *)&event_drv.bmp, idx, 0);  
+
+	__thinkos_flag_clr(event_drv.flag);
+
+	return idx + 1;
+}
+
+/* ----------------------------------------------------------------------
+ * Push button
+ * ----------------------------------------------------------------------
+ */
 
 /* Button FSM states */
 enum {
@@ -186,19 +227,16 @@ struct btn_drv {
 	int flag;
 } btn_drv;
 
-int btn_event_wait(void)
+/* Button internal events */
+enum {
+	BTN_PRESSED = 1,
+	BTN_RELEASED,
+	BTN_TIMEOUT
+};
+
+static void btn_drv_fsm(int irq_ev)
 {
 	int event = EVENT_NONE;
-	int irq_ev;
-
-//	tracef("%s(): wait...", __func__);
-	thinkos_flag_wait(btn_drv.flag);
-
-	/* FIXME: possible race condition on this variable */
-	irq_ev = btn_drv.event;
-	btn_drv.event = 0;
-
-	thinkos_flag_clr(btn_drv.flag);
 
 	switch (btn_drv.fsm) {
 	case BTN_FSM_IDLE:
@@ -212,7 +250,7 @@ int btn_event_wait(void)
 	case BTN_FSM_CLICK1_WAIT:
 		/* wait for button release after first press */
 		if (irq_ev == BTN_RELEASED) {
-			event = EVENT_CLICK;
+			event = EVENT_BTN_CLICK;
 			btn_drv.fsm = BTN_FSM_PRE_WAIT1;
 		} else if (irq_ev == BTN_TIMEOUT) {
 			/* hold timer */
@@ -235,7 +273,7 @@ int btn_event_wait(void)
 		/* wait for button release after press/release/press
 		 inside the double click timer */
 		if (irq_ev == BTN_RELEASED) {
-			event = EVENT_DBL_CLICK;
+			event = EVENT_BTN_DBL_CLICK;
 			btn_drv.tmr = 0;
 			btn_drv.fsm = BTN_FSM_IDLE;
 		} else if (irq_ev == BTN_TIMEOUT) {
@@ -254,7 +292,7 @@ int btn_event_wait(void)
 			btn_drv.tmr = 0;
 			btn_drv.fsm = BTN_FSM_IDLE;
 		} else if (irq_ev == BTN_TIMEOUT) {
-			event = EVENT_HOLD1;
+			event = EVENT_BTN_HOLD1;
 			/* long hold timer */
 			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
 			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
@@ -268,7 +306,7 @@ int btn_event_wait(void)
 			btn_drv.tmr = 0;
 			btn_drv.fsm = BTN_FSM_IDLE;
 		} else if (irq_ev == BTN_TIMEOUT) {
-			event = EVENT_CLICK_N_HOLD;
+			event = EVENT_BTN_CLICK_N_HOLD;
 			/* long hold timer */
 			btn_drv.tmr = 3500 / POLL_PERIOD_MS;;
 			btn_drv.fsm = BTN_FSM_HOLD_RELEASE_WAIT;
@@ -281,17 +319,19 @@ int btn_event_wait(void)
 			btn_drv.tmr = 0;
 			btn_drv.fsm = BTN_FSM_IDLE;
 		} else if (irq_ev == BTN_TIMEOUT) {
-			event = EVENT_HOLD2;
+			event = EVENT_BTN_HOLD2;
 			btn_drv.fsm = BTN_FSM_IDLE;
 		}
 		break;
 	};
 
-	return event;
+	if (event) {
+		event_raise(event);
+	}
 }
 
 
-static void btn_init(void)
+static void btn_drv_init(void)
 {
 	stm32_gpio_mode(PUSHBTN_IO, INPUT, PULL_UP);
 
@@ -299,7 +339,6 @@ static void btn_init(void)
 	btn_drv.st = stm32_gpio_stat(PUSHBTN_IO) ? 1 : 0;
 	btn_drv.fsm = BTN_FSM_IDLE;
 }
-
 
 /* ----------------------------------------------------------------------
  * I/O 
@@ -327,15 +366,13 @@ void stm32f_tim2_isr(void)
 
 	if ((btn_drv.tmr) && (--btn_drv.tmr == 0)) {
 		/* process button timer */
-		btn_drv.event = BTN_TIMEOUT;
-		__thinkos_flag_signal(btn_drv.flag);
+		btn_drv_fsm(BTN_TIMEOUT);
 	} else {
 		/* process push button */
 		st = stm32_gpio_stat(PUSHBTN_IO) ? 1 : 0;
 		if (btn_drv.st != st) {
 			btn_drv.st = st;
-			btn_drv.event = st ? BTN_PRESSED : BTN_RELEASED;
-			__thinkos_flag_signal(btn_drv.flag);
+			btn_drv_fsm(st ? BTN_PRESSED : BTN_RELEASED);
 		}
 	}
 }
@@ -349,8 +386,11 @@ void ui_init(void)
 	uint32_t n;
 	uint32_t freq = 1000 / POLL_PERIOD_MS;
 
-	/* Enable IO clocks */
-	btn_init();
+	/* Initialize button driver */
+	btn_drv_init();
+
+	/* Initialize event driver */
+	event_drv_init();
 
 	/* get the total divisior */
 	div = ((2 * stm32f_apb1_hz) + (freq / 2)) / freq;
@@ -374,10 +414,11 @@ void ui_init(void)
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
 	tim->ccr1 = tim->arr / 2;
 
-	cm3_irq_pri_set(STM32F_IRQ_TIM2, IRQ_PRIORITY_REGULAR);
+	cm3_irq_pri_set(STM32F_IRQ_TIM2, IRQ_PRIORITY_LOW);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32F_IRQ_TIM2);
 
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+
 }
 

@@ -74,9 +74,10 @@
 #define MODE_ESC_VAL2 3
 #define MODE_ESC_O 4
 
-void history_init(cmd_history_t * ht)
+void history_init(struct cmd_history * ht)
 {
-	DCC_LOG1(LOG_TRACE, "sizeof(cmd_history_t)=%d", sizeof(cmd_history_t));
+	DCC_LOG1(LOG_TRACE, "sizeof(struct cmd_history)=%d", 
+			 sizeof(struct cmd_history));
 
 	ht->pos = 0;
 	ht->head = 0;
@@ -84,7 +85,7 @@ void history_init(cmd_history_t * ht)
 	ht->max = SHELL_HISTORY_MAX;
 }
 
-char * history_prev(cmd_history_t * ht)
+char * history_prev(struct cmd_history * ht)
 {
 	char * cp;
 
@@ -104,7 +105,7 @@ char * history_prev(cmd_history_t * ht)
 	return cp;
 }
 
-char * history_next(cmd_history_t * ht)
+char * history_next(struct cmd_history * ht)
 {
 	char * cp;
 
@@ -124,7 +125,7 @@ char * history_next(cmd_history_t * ht)
 	return cp;
 }
 
-void history_add(cmd_history_t * ht, char * s)
+void history_add(struct cmd_history * ht, char * s)
 {
 	if ((s == NULL) || (*s == '\0'))
 		return;
@@ -165,7 +166,7 @@ void history_add(cmd_history_t * ht, char * s)
 	ht->pos = ht->head;
 }
 
-char * history_readline(cmd_history_t * ht, FILE * f, 
+char * history_readline(struct cmd_history * ht, FILE * f, 
 						char * buf, int max)
 {
 	int mode;

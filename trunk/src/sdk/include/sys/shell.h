@@ -54,8 +54,8 @@ struct shell_cmd * cmd_lookup(const char * s,
 
 int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
 
-int shell(FILE * f, const char * (* get_prompt)(void), 
-		  const char * greeting, const struct shell_cmd * cmd_tab);
+int shell(FILE * f, const char * (* prompt)(void), 
+		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab);
 
 #ifdef __cplusplus
 }

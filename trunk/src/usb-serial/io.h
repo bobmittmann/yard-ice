@@ -32,11 +32,11 @@ enum {
 
 enum {
 	EVENT_NONE,
-	EVENT_CLICK,
-	EVENT_DBL_CLICK,
-	EVENT_HOLD1,
-	EVENT_CLICK_N_HOLD,
-	EVENT_HOLD2
+	EVENT_BTN_CLICK,
+	EVENT_BTN_DBL_CLICK,
+	EVENT_BTN_HOLD1,
+	EVENT_BTN_CLICK_N_HOLD,
+	EVENT_BTN_HOLD2
 };
 
 #ifdef __cplusplus
@@ -54,7 +54,7 @@ void ui_init(void);
  * ----------------------------------------------------------------------
  */
 
-int btn_event_wait(void);
+int event_wait(void);
 
 /* ----------------------------------------------------------------------
  * LEDs 

@@ -47,10 +47,6 @@
 #define SHELL_ARG_MAX 16
 #endif
 
-#ifndef SHELL_CMD_MAX 
-#define SHELL_CMD_MAX 16
-#endif
-
 #ifndef SHELL_HISTORY_MAX
 #define SHELL_HISTORY_MAX 32
 #endif
@@ -63,17 +59,15 @@ struct cmd_history {
 	char buf[SHELL_HISTORY_MAX][SHELL_LINE_MAX];
 };
 
-typedef struct cmd_history cmd_history_t;
+void history_init(struct cmd_history * ht);
 
-void history_init(cmd_history_t * ht);
+char * history_prev(struct cmd_history * ht);
 
-char * history_prev(cmd_history_t * ht);
+char * history_next(struct cmd_history * ht);
 
-char * history_next(cmd_history_t * ht);
+void history_add(struct cmd_history * ht, char * s);
 
-void history_add(cmd_history_t * ht, char * s);
-
-char * history_readline(cmd_history_t * ht, FILE * f, 
+char * history_readline(struct cmd_history * ht, FILE * f, 
 						char * buf, int max);
 
 int shell_parseline(char * line, char ** argv, int argmax);

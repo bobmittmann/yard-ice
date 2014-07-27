@@ -160,6 +160,7 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 		thinkos_rt.wq_tmshare = 0;
 	}
 #endif
+
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;

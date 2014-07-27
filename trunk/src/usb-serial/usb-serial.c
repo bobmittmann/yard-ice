@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/tty.h>
+#include <sys/shell.h>
 
 #include <thinkos.h>
 #define __THINKOS_SYS__
@@ -46,9 +47,39 @@
 #include "led.h"
 #include "io.h"
 
-struct serial_dev * serial1;
-struct serial_dev * serial2;
-int mode = 0;
+#define VERSION_NUM "0.3"
+#define VERSION_DATE "Jun, 2014"
+
+extern const struct shell_cmd shell_cmd_tab[];
+
+const char * shell_greeting(void)
+{
+	return "\nUSB-Serial Converter " VERSION_NUM " - " VERSION_DATE "\n"
+	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+}
+
+const char * shell_prompt(void)
+{
+	return "[USB-SERIAL]$ ";
+}
+
+int8_t usb_recv_th = -1;
+int8_t serial_recv_th = -1;
+int8_t serial_ctrl_th = -1;
+
+struct usb_serial_ctrl {
+	uint8_t io_mode;
+	uint8_t mode;
+	int8_t flag;
+	struct {
+		struct serial_dev * dev;
+		struct serial_status stat;
+	} serial[2];
+	struct {
+		struct usb_cdc_class * dev;
+		FILE * f;
+	} usb;
+} usb_serial;
 
 void system_reset(void)
 {
@@ -57,36 +88,38 @@ void system_reset(void)
 	for(;;);
 }
 
-void toggle_mode(void)
+void io_mode_set(int mode)
 {
 	switch (mode) {
 	case 0:
 		pin1_sel_gnd();
 		pin2_sel_vcc();
-		led2_flash(2);
-		led1_flash(2);
-		mode = 1;
 		break;
 	case 1:
 		pin1_sel_input();
 		pin2_sel_input();
+		break;
+	}
+	usb_serial.io_mode = mode;
+}
+
+void io_mode_toggle(void)
+{
+	switch (usb_serial.io_mode) {
+	case 0:
+		io_mode_set(1);
+		led2_flash(2);
+		led1_flash(2);
+		break;
+	case 1:
+		io_mode_set(0);
 		led2_flash(1);
 		led1_flash(1);
-		mode = 0;
 		break;
 	}
 }
 
-#define LOOP_TIME 50 
-#define BUSY_TIME (5000 / LOOP_TIME)
-
-enum {
-	EXT_RST_OFF,
-	EXT_RST_ON,
-	EXT_RST_WAIT
-};
-
-void __attribute__((noreturn)) button_task(void)
+void __attribute__((noreturn)) event_task(void)
 {
 	int event;
 	int i;
@@ -94,55 +127,29 @@ void __attribute__((noreturn)) button_task(void)
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
 	while (1) {
-		event  = btn_event_wait();
+		event  = event_wait();
 
 		switch (event) {
 	
-		case EVENT_CLICK:
+		case EVENT_BTN_CLICK:
 			DCC_LOG(LOG_TRACE, "EVENT_CLICK");
-//			test_sched(TEST_USB);
 			break;
 
-		case EVENT_DBL_CLICK:
+		case EVENT_BTN_DBL_CLICK:
 			DCC_LOG(LOG_TRACE, "EVENT_DBL_CLICK");
-			toggle_mode();
+			io_mode_toggle();
 			break;
 
-		case EVENT_HOLD1:
+		case EVENT_BTN_HOLD1:
 			DCC_LOG(LOG_TRACE, "EVENT_HOLD1");
-//			if (ext_rst_st == EXT_RST_OFF) {
-				/* start external reset timer */
-//				ext_rst_tmr = 500 / LOOP_TIME;
-				/* start system reset timer */
-//				sys_rst_tmr = 5000 / LOOP_TIME;
-//				stm32f_gpio_set(EXTRST0_IO);
-//				stm32f_gpio_set(EXTRST1_IO);
-//				pin2_sel_gnd();
-//				led_lock();
-//				led2_on();
-//				ext_rst_st = EXT_RST_ON;
-//			}
 			break;
 
-//			DCC_LOG(LOG_TRACE, "BTN_RELEASED");
-//			if (ext_rst_st == EXT_RST_WAIT) {
-//				ext_rst_st = EXT_RST_OFF;
-//			}
-			/* reset system reset timer */
-//			sys_rst_tmr = 0;
-
-		case EVENT_CLICK_N_HOLD:
+		case EVENT_BTN_CLICK_N_HOLD:
 			DCC_LOG(LOG_TRACE, "EVENT_CLICK_N_HOLD");
-			test_sched(TEST_XFLASH);
-//			stm32_gpio_clr(EXTRST0_IO);
-//			stm32f_gpio_clr(EXTRST1_IO);
-//			pin2_sel_vcc();
-//			led2_off();
-//			led_unlock();
-//			ext_rst_st = EXT_RST_OFF;
+			thinkos_flag_set(usb_serial.flag);
 			break;
 
-		case EVENT_HOLD2:
+		case EVENT_BTN_HOLD2:
 			DCC_LOG(LOG_TRACE, "EVENT_HOLD2");
 			led_lock();
 
@@ -157,14 +164,12 @@ void __attribute__((noreturn)) button_task(void)
 			break;
 		}
 	}
-
-//	return 0;
 }
 
 
 void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 {
-	struct serial_dev * serial1 = vcom[0].serial;
+	struct serial_dev * serial = vcom[0].serial;
 //	struct serial_dev * serial2 = vcom[1].serial;
 	usb_cdc_class_t * cdc = vcom[0].cdc;
 	char buf[VCOM_BUF_SIZE];
@@ -177,7 +182,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 		if (len > 0) {
 			led1_flash(1);
 			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
-			serial_write(serial1, buf, len);
+			serial_write(serial, buf, len);
 //			serial_write(serial2, buf, len);
 		}
 
@@ -240,7 +245,7 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 
 #define RECV_STACK_SIZE (VCOM_BUF_SIZE + 256)
 
-uint32_t __attribute__((aligned(8))) button_stack[32];
+uint32_t __attribute__((aligned(8))) event_stack[32];
 uint32_t __attribute__((aligned(8))) serial1_ctrl_stack[64];
 //uint32_t __attribute__((aligned(8))) serial2_ctrl_stack[64];
 uint32_t __attribute__((aligned(8))) serial1_recv_stack[RECV_STACK_SIZE / 4];
@@ -249,8 +254,14 @@ uint32_t __attribute__((aligned(8))) usb_recv_stack[RECV_STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
+	struct usb_cdc_class * cdc;
+	struct serial_dev * serial1;
+	struct serial_dev * serial2;
 	uint64_t esn;
 	struct vcom vcom[2];
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -270,32 +281,41 @@ int main(int argc, char ** argv)
 
 	leds_init();
 
+	ui_init();
+	io_mode_set(0);
+
+	led_flash_all(3);
+
+
 	serial1 = serial2_open();
 	serial2 = serial3_open();
-
-	vcom[0].serial = serial1;
-	vcom[1].serial = serial2;
 
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 
-	ui_init();
+	cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
+	f_raw = usb_cdc_fopen(cdc);
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
 
-	led_flash_all(3);
+	vcom[0].serial = serial1;
+	vcom[1].serial = serial2;
 
-	vcom[0].cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
+	vcom[0].cdc = cdc;
 	vcom[1].cdc = vcom[0].cdc;
 
 
-	thinkos_thread_create((void *)button_task, (void *)NULL,
-						  button_stack, sizeof(button_stack),
+	thinkos_thread_create((void *)event_task, (void *)NULL,
+						  event_stack, sizeof(event_stack),
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
-	thinkos_thread_create((void *)serial_recv_task, (void *)&vcom[0],
+	serial_recv_th = thinkos_thread_create((void *)serial_recv_task, 
+										  (void *)&vcom[0],
 						  serial1_recv_stack, sizeof(serial1_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
-	thinkos_thread_create((void *)serial_ctrl_task, (void *)&vcom[0],
+	serial_ctrl_th = thinkos_thread_create((void *)serial_ctrl_task, 
+										  (void *)&vcom[0],
 						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 
@@ -312,20 +332,28 @@ int main(int argc, char ** argv)
 
 	usb_vbus(true);
 
-	pin1_sel_vcc();
-	pin2_sel_input();
-	mode = 0;
-
-//	pin1_sel_gnd();
-//	pin2_sel_vcc();
-//	usb_console(vcom[0].cdc);
-
-	thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
+	usb_recv_th = thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
 						  usb_recv_stack, sizeof(usb_recv_stack),
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
-	test_main(&vcom[0]);
+	usb_serial.usb.dev = cdc;
+	usb_serial.usb.f = f_tty;
+	usb_serial.serial[0].dev = serial1;
+	usb_serial.serial[1].dev = serial2;
+	usb_serial.flag = thinkos_flag_alloc();
 
-	return 0;
+	while (1) {
+		thinkos_flag_wait(usb_serial.flag);
+
+		led1_flash(4);
+		thinkos_pause(serial_recv_th);
+		thinkos_pause(usb_recv_th);
+		shell(f_tty, shell_prompt, shell_greeting, shell_cmd_tab);
+
+		led2_flash(4);
+		thinkos_flag_clr(usb_serial.flag);
+		thinkos_resume(usb_recv_th);
+		thinkos_resume(serial_recv_th);
+	}
 }
 

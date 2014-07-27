@@ -104,28 +104,23 @@ static char * get_cmd_next(char ** linep)
 	return cmd;
 }
 
-int shell(FILE * f, const char * (* get_prompt)(void), 
-		  const char * greeting, const struct shell_cmd * cmd_tab)
+int shell(FILE * f, const char * (* prompt)(void), 
+		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
 {
 	char line[SHELL_LINE_MAX];
 	char * cp;
 	char * cmd;
-	char * prompt;
 	int ret = 0;
-	cmd_history_t history;
+	struct cmd_history history;
 
 	DCC_LOG(LOG_TRACE, "history_init()");
 	history_init(&history);
 
-	if (greeting)
-		fprintf(f, greeting);
-
-	DCC_LOG(LOG_TRACE, "1.");
+	if (greeting != NULL)
+		fprintf(f, greeting());
 
 	for (;;) {
-		prompt = (char *)get_prompt();
-
-		fprintf(f, "%s", prompt);
+		fprintf(f, "%s", prompt());
 
 		if (history_readline(&history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;

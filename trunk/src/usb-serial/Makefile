@@ -22,14 +22,15 @@
 
 PROG = usb-serial
 
-CFILES = usb-serial.c serial.c test-mod.c profclk.c board.c io.c leds.c \
-		 xflash.c xflash_pic.c
+CFILES = usb-serial.c serial.c profclk.c board.c io.c leds.c \
+		 xflash.c xflash_pic.c shell.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty ../sdk/libxmodem
+		  ../sdk/libdrv ../sdk/libcdc-acm ../sdk/libtty ../sdk/libxmodem \
+		  ../sdk/libshell
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem
+LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty xmodem shell
 
 INCPATH = ../sdk/include 
 

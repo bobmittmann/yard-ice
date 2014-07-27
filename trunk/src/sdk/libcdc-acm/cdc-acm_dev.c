@@ -363,10 +363,11 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	};
 
 	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
+
 	if ((ret = thinkos_flag_timedwait(dev->rx_flag, msec)) < 0) {
-//		if (ret == THINKOS_ETIMEDOUT) {
-//			DCC_LOG(LOG_TRACE, "timeout!!");
-//		}
+		if (ret == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_TRACE, "timeout!!");
+		}
 		return ret;
 	}
 	__thinkos_flag_clr(dev->rx_flag);
