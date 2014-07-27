@@ -56,6 +56,8 @@ struct serial_dev * serial3_open(void);
 void test_main(struct vcom * vcom);
 void test_sched(int test);
 
+void usb_cdc_shell(struct usb_cdc_class * dev);
+
 #ifdef __cplusplus
 }
 #endif

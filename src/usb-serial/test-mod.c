@@ -113,8 +113,6 @@ void __attribute__((noreturn)) test_mod_task(struct vcom * vcom)
 	struct usb_cdc_class * cdc = vcom->cdc;
 	int test;
 
-	test_mod.flag  = thinkos_flag_alloc();
-
 	while (1) {
 		thinkos_flag_wait(test_mod.flag);
 		test = test_mod.req;
@@ -135,10 +133,12 @@ void test_main(struct vcom * vcom)
 {
 	test_mod.flag  = thinkos_flag_alloc();
 	test_mod.req = TEST_NONE;
+	test_mod.flag  = thinkos_flag_alloc();
 
 	test_mod_task(vcom);
 }
 
+#if 0
 struct xmodem_snd sx;
 struct xmodem_rcv rx;
 
@@ -390,4 +390,4 @@ int usb_console(struct usb_cdc_class * cdc)
 
 	return 0;
 }
-
+#endif

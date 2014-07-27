@@ -160,6 +160,7 @@ void thinkos_exit_svc(int32_t * arg)
 void thinkos_resume_svc(int32_t * arg)
 {
 	unsigned int th = arg[0];
+	unsigned int wq;
 	int stat;
 
 #if THINKOS_ENABLE_ARG_CHECK
@@ -176,6 +177,8 @@ void thinkos_resume_svc(int32_t * arg)
 #endif
 #endif
 
+	DCC_LOG1(LOG_TRACE, "thread=%d", th);
+
 	arg[0] = 0;
 
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) == 0) {
@@ -190,10 +193,13 @@ void thinkos_resume_svc(int32_t * arg)
 	bmp_bit_clr(&thinkos_rt.wq_paused, th);  
 	/* reinsert the thread into a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
-	bmp_bit_set(&thinkos_rt.wq_lst[stat >> 1], th);  
-#ifndef THINKOS_ENABLE_CLOCK
+	wq = stat >> 1;
+	DCC_LOG2(LOG_TRACE, "stat=0x%02x wq=%d", stat, wq);
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+
+#if THINKOS_ENABLE_CLOCK
 	/* reenable the clock according to the thread status */
-	bmp_bit_set(&thinkos_rt.wq_clock, stat);
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 1);
 #endif
 	__thinkos_defer_sched();
 }
@@ -201,6 +207,7 @@ void thinkos_resume_svc(int32_t * arg)
 void thinkos_pause_svc(int32_t * arg)
 {
 	unsigned int th = arg[0];
+	unsigned int wq;
 	int stat;
 
 #if THINKOS_ENABLE_ARG_CHECK
@@ -221,25 +228,35 @@ void thinkos_pause_svc(int32_t * arg)
 #error "thinkos_pause() depends on THINKOS_ENABLE_THREAD_STAT"	
 #endif
 
+	DCC_LOG1(LOG_TRACE, "thread=%d", th);
+
+	arg[0] = 0;
+
+	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) != 0) {
+		/* paused */
+		return;
+	}
+
 	/* insert into the paused queue */
-	bmp_bit_set(&thinkos_rt.wq_paused, th);  
+	__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);
 
 	/* remove the thread from a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
-	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], th);  
+	wq = stat >> 1;
+	DCC_LOG2(LOG_TRACE, "stat=0x%02x wq=%d", stat, wq);
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	bmp_bit_clr(&thinkos_rt.wq_tmshare, th);  
+	__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0);
 #endif
-#ifndef THINKOS_ENABLE_CLOCK
+
+#if THINKOS_ENABLE_CLOCK
 	/* disable the clock */
-	bmp_bit_clr(&thinkos_rt.wq_clock, th);  
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);
 #endif
 
 	__thinkos_defer_sched();
-
-	arg[0] = 0;
 }
 #endif /* THINKOS_ENABLE_PAUSE */
 

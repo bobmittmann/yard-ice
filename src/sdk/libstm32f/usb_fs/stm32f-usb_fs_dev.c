@@ -263,19 +263,26 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
 	struct stm32f_usb_tx_pktbuf * tx_pktbuf;
 	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t pri;
 	uint32_t epr;
 
 	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 
-	if (ep->state == EP_DISABLED) {
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+
+	if (ep->state != EP_IDLE) {
 		DCC_LOG1(LOG_WARNING, "ep_id=%d invalid endpoint state!", ep_id);
+		cm3_primask_set(pri);
 		return -1;
 	}
 
-	if (len == 0)
+	if (len == 0) {
+		cm3_primask_set(pri);
 		return 0;
+	}
 
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = len;
@@ -303,6 +310,8 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	} else {
 		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
 	}
+
+	cm3_primask_set(pri);
 
 	return len;
 }
@@ -759,6 +768,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 	uint32_t epr;
 	int ep_id;
 	uint32_t sr;
+	int len;
 
 	sr = usb->istr;
 
@@ -800,17 +810,49 @@ void stm32f_can1_tx_usb_hp_isr(void)
 				 ep_id, (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 
-		if ((ep->state == EP_IN_DATA_LAST) && (ep->xfr_rem == 0)) {
+		switch (ep->state) {
+		case EP_IDLE:
+			DCC_LOG1(LOG_WARNING, "ep%d: IDLE!!!", ep_id);
+			break;
+
+		case EP_IN_DATA_LAST:
+			DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IDLE]", ep_id);
 			ep->state = EP_IDLE;
 			/* call class endpoint callback */
 			ep->on_in(drv->cl, ep_id);
-		} else {
+			break;
+
+		case EP_IN_DATA: 
 			/* select the descriptor according to the data toggle bit */
 			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
 			/* send the next data chunk */
-			__ep_pkt_send(usb, ep_id, ep, tx_pktbuf);
-			/* release the previous buffer */
+			len = MIN(ep->xfr_rem, ep->mxpktsz);
+
+			DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
+
+			/* copy to packet buffer */
+			__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
+
+			/* release the previous packet buffer */
 			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
+
+			ep->xfr_rem -= len;
+			ep->xfr_ptr += len;
+
+			if ((ep->xfr_rem == 0) && (len != ep->mxpktsz)) {
+				/* if we put all data into the TX packet buffer but the data
+				 * didn't filled the whole packet, this is the last packet,
+				 * otherwise we need to send a ZLP to finish the transaction */
+				DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+				ep->state = EP_IN_DATA_LAST;
+			}
+
+			break;
+
+		default:
+			DCC_LOG1(LOG_ERROR, "ep%d: invalid state!!!", ep_id);
+			break;
+
 		}
 	}
 }
