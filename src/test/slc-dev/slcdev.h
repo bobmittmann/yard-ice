@@ -24,6 +24,7 @@
 #define __SLCDEV_H__
 
 #include "board.h"
+#include <stdio.h>
 
 enum {
 	TRIG_MODE_VSLC = 0,
@@ -67,6 +68,7 @@ void dev_sim_disable(unsigned int addr);
 int device_db_init(void);
 int device_db_erase(void);
 int device_db_compile(void);
+int device_db_dump(FILE * f);
 
 #ifdef __cplusplus
 }

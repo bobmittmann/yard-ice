@@ -1,5 +1,5 @@
 {
-	"type": { 
+	"sensor": { 
 		"id" : 1, 
 		"tag" : "2251TM", 
 		"desc" : "Multicriteria Photoelectric Smoke Detector", 
@@ -27,7 +27,7 @@
 		"pw5" : [1910, 2240]
 	},
 
-	"type": { 
+	"sensor": { 
 		"id" : 2, 
 		"tag" : "2251 COPTIR", 
 		"desc" : "Multicriteria Smoke Detector", 
@@ -59,7 +59,7 @@
 		"pw5" : [1995, 2205]
 	},
 
-	"type": { 
+	"sensor": { 
 		"id" : 3, 
 		"tag" : "1251", 
 		"desc" : "Ionization Smoke Detector", 
@@ -89,7 +89,7 @@
 		"pw5" : [540, 660]
 	},
 
-	"type": { 
+	"module": { 
 		"id": 4, 
 		"tag": "M500S", 
 		"desc": "Supervised Control Module", 
@@ -126,7 +126,7 @@
 		}
 	},
 
-	"type": { 
+	"module": { 
 		"id": 5, 
 		"tag": "M501M", 
 		"desc": "Freestanding Minimod", 
@@ -167,7 +167,7 @@
 		}
 	},
 
-	"type": { 
+	"module": { 
 		"id": 6, 
 		"tag": "M500M", 
 		"desc": "Monitor Module", 
@@ -210,7 +210,7 @@
 		}
 	},
 
-	"type": { 
+	"module": { 
 		"id": 7, 
 		"tag": "M500R", 
 		"desc": "Relay Control Module", 

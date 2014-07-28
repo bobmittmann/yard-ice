@@ -370,8 +370,12 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 
 int cmd_dbase(FILE * f, int argc, char ** argv)
 {
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
+//	if (argc < 2)
+//		return SHELL_ERR_ARG_MISSING;
+
+	if (argc == 1) {
+		device_db_dump(f);
+	}
 
 	if (argc == 2) {
 		if ((strcmp(argv[1], "compile") == 0) || 
