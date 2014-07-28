@@ -119,7 +119,7 @@ void stm32_usart2_isr(void)
 	int c;
 	
 	sr = uart->sr;
-	DCC_LOG1(LOG_TRACE, "sr=%04x", sr);
+	DCC_LOG1(LOG_INFO, "sr=%04x", sr);
 
 	if (sr & USART_IDLE) {
 		/* clear IDLE flag */
@@ -127,10 +127,10 @@ void stm32_usart2_isr(void)
 		(void)c;
 		/* stop DMA */
 		dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
-		DCC_LOG(LOG_TRACE, "IDLE");
+		DCC_LOG(LOG_INFO, "IDLE");
 		__thinkos_flag_signal(serial2_dev.rx_flag);
 	} else {
-		DCC_LOG1(LOG_TRACE, "sr=%04x", sr);
+		DCC_LOG1(LOG_INFO, "sr=%04x", sr);
 	}
 }
 
@@ -148,7 +148,7 @@ struct serdrv * serdrv_init(unsigned int speed)
 	   transmitter is ready to start transmitting */
 	thinkos_flag_set(drv->tx_flag);
 
-	DCC_LOG1(LOG_TRACE, "speed=%d", speed);
+	DCC_LOG1(LOG_INFO, "speed=%d", speed);
 
 	/* clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
@@ -226,7 +226,7 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 	int i;
 
 	while (rem > 0) {
-		DCC_LOG(LOG_TRACE, "TX wait...");
+		DCC_LOG(LOG_INFO, "TX wait...");
 		/* wait for pending DMA xfer to complete */
 		thinkos_flag_wait(drv->tx_flag);
 
@@ -245,7 +245,7 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 		dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
 			DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
 
-		DCC_LOG1(LOG_TRACE, "n=%d", n);
+		DCC_LOG1(LOG_INFO, "n=%d", n);
 		rem -= n;
 		src += n;
 	}

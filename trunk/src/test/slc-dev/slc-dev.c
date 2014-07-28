@@ -15,18 +15,21 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-#define VERSION_NUM "0.1"
-#define VERSION_DATE "Jun, 2014"
+#define VERSION_NUM "0.2"
+#define VERSION_DATE "Jul, 2014"
 
 extern const struct shell_cmd cmd_tab[];
 
-const char shell_greeting[] = "\n"
+const char * shell_greeting(void) 
+{
+	return "\n"
 	"Clip Device Simulator " VERSION_NUM " - " VERSION_DATE "\n"
 	"(c) Copyright 2014 - Mircom Group (bmittmann@mircomgroup.com)\n\n";
+}
 
 const char * shell_prompt(void)
 {
-	return (char *)"[DEV]$ ";
+	return "[DEV]$ ";
 }
 
 

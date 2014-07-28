@@ -8,6 +8,25 @@
 #include "jsmn.h"
 #include "board.h"
 
+char * json_token_tostr(char *js, jsmntok_t *t);
+int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl);
+
+#define JSON_STR_LEN_MAX 128
+
+char * json_string(char * s, unsigned int max, char * js, jsmntok_t *t)
+{
+	int n;
+
+	n = t->end - t->start;
+	if (n > (max - 1))
+		n = (max - 1);
+
+	memcpy(s, js + t->start, n);
+	s[n] = '\0';
+
+	return s;
+}
+
 extern const uint8_t device_db_js[];
 extern unsigned int sizeof_device_db_js;
 int json_dump(FILE * f, char * js, jsmntok_t *t);
@@ -157,6 +176,111 @@ int device_db_init(void)
 #endif
 
 //	json_dump(stdout, js, tok);
+
+	return 0;
+}
+
+
+int device_db_dump(FILE * f)
+{
+	jsmn_parser p;
+	jsmntok_t tok[TOK_MAX];
+	jsmntok_t * t;
+	char * js = (char *)device_db_js;
+	int len = sizeof_device_db_js;
+	int r;
+	int n;
+	int i;
+
+
+	jsmn_init(&p);
+
+	r = jsmn_parse(&p, js, len, tok, TOK_MAX);
+
+	if (r == JSMN_ERROR_NOMEM) {
+		fprintf(f, "Err: Not enough tokens were provided!\n");
+		DCC_LOG(LOG_ERROR, "Not enough tokens were provided!");
+		return 1;
+	}
+
+	if (r == JSMN_ERROR_INVAL) {
+		fprintf(f, "Err: Invalid character!\n");
+		DCC_LOG(LOG_ERROR, "Invalid character!");
+		return 1;
+	}
+
+	if (r == JSMN_ERROR_PART) {
+		fprintf(f, "Err: not a full JSON packet!\n");
+		DCC_LOG(LOG_ERROR, "not a full JSON packet!");
+		return 1;
+	}
+
+	if (r == 0) {
+		fprintf(f, "Warn: empty JSON packet!\n");
+		DCC_LOG(LOG_ERROR, "empty JSON packet!");
+		return 1;
+	}
+
+	t = tok;
+
+	/* Should never reach uninitialized tokens */
+	if (t->start == JSMN_NULL || t->end == JSMN_NULL) {
+		DCC_LOG(LOG_ERROR, "parameter invalid!");
+		return -1;
+	}
+
+	if (t->type != JSMN_OBJECT) {
+		DCC_LOG(LOG_ERROR, "root element must be an object.");
+		return -1;
+	}
+
+	n = t->size;
+
+	if (n % 2 != 0) {
+		DCC_LOG(LOG_ERROR, "object must have even number of children.");
+		return -1;
+	}
+
+	if (n == 0)
+		return 0;
+
+	DCC_LOG1(LOG_TRACE, "n=%d", n);
+
+	t++;
+
+	for (i = 0; i < n; i += 2) {
+		char s[16];;
+		int r;
+
+		if (t->type != JSMN_STRING) {
+			DCC_LOG(LOG_ERROR, "object keys must be strings.");
+			return -1;
+		}
+
+		json_string(s, sizeof(s), js, t);
+		t++;
+
+		if (strcmp(s, "sensor") == 0) {
+//			db_decode_sensor(f, js, t, 0);
+			r = json_walk_node(f, js, t, 0);
+		} else if (strcmp(s, "module") == 0) {
+//			db_decode_module(f, js, t, 0);
+			r = json_walk_node(f, js, t, 0);
+		} else {
+			fprintf(f, "invalid object: \"%s\".\n", s);
+			return -1;
+		}
+
+
+		if (r < 0) {
+			DCC_LOG(LOG_ERROR, "json_walk_node() failed.");
+			return r;
+		}
+
+		t += r;
+	}
+
+	printf("\n");
 
 	return 0;
 }

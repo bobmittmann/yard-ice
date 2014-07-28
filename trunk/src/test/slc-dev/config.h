@@ -75,5 +75,9 @@
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
+#define SHELL_LINE_MAX 32
+#define SHELL_ARG_MAX 4
+#define SHELL_HISTORY_MAX 4
+
 #endif /* __CONFIG_H__ */
 
