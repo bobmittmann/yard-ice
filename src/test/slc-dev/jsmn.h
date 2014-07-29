@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #ifndef JSMN_COMPACT
-#define JSMN_COMPACT 1
+#define JSMN_COMPACT 0
 #endif
 
 /**
@@ -72,14 +72,14 @@ typedef struct {
 #define JSMN_NULL 0xffff
 
 typedef struct {
-	unsigned short type: 2;
 	unsigned short size: 14; /* up to 8192 elements per object/array */
+	unsigned short type: 2;
 	unsigned short start; /* up to 64K JSON file */
 	unsigned short end;
 #ifdef JSMN_PARENT_LINKS
 	short parent;
 #endif
-} jsmntok_t;
+} __attribute__((packed)) jsmntok_t;
 
 #endif
 
