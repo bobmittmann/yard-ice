@@ -761,3 +761,331 @@ int ice_open(ice_drv_t * ice, const ice_drv_info_t * info, ice_ctrl_t * ctrl)
 	return ice->op.open(ice->ctrl);
 }
 
+
+#if 0
+int target_ice_select(const struct target_info * target, const char * name)
+{
+	struct debugger * dbg = &debugger;
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	const ice_drv_info_t * info;
+	uint8_t irlen[32];
+	jtag_tap_t * tap;
+	ice_val_t jtag_clk;
+	jtag_idcode_t idcode;
+	int tap_pos;
+	uint8_t * irpath;
+	unsigned int cnt;
+	char s[16];
+
+	int ret;
+	int i;
+
+	if (dbg->state == DBG_ST_FAULT ) {
+		DCC_LOG(LOG_ERROR, "Invalid state!");
+		return ERR_STATE;
+	}
+
+	if ((info = target->ice_drv) == NULL) {
+		DCC_LOG(LOG_ERROR, "NULL ice driver info!");
+		return ERR_PARM;
+	}
+
+	if (!dbg->ext_pwr) { 
+		ext_pwr_on();
+		/* FIXME: configurable power on time */
+		__os_sleep(200);
+		dbg->ext_pwr = 1;
+	}
+
+	__os_mutex_lock(dbg->busy);
+
+	if ((target == dbg->target) && (!force)) {
+		DCC_LOG1(LOG_TRACE, "Keeping target: '%s'", target->name);
+		__os_mutex_unlock(dbg->busy);
+		return 0;
+	}
+
+	DCC_LOG1(LOG_TRACE, "Changing target: '%s'", target->name);
+
+	if (dbg->mem_mod_id != -1) {
+		DCC_LOG(LOG_TRACE, "Memory module unregister...");
+		module_unregister(dbg->mem_mod_id); 
+		dbg->mem_mod_id = -1;
+	}
+
+	/* release the target */
+	poll_stop(dbg);
+	ice_release(ice);
+
+	dbg->target = &target_null;
+	dbg->mem = target_null.mem;
+
+	if (ice->info != info) {
+		DCC_LOG(LOG_TRACE, "ICE driver change...");
+
+		if (ice_close(ice) < 0) {
+			/* closing the ICE controller driver */
+			DCC_LOG(LOG_WARNING, "ICE controller close fail!");
+		}
+
+		dbg->state = DBG_ST_UNDEF;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_UNDEF]");
+
+		memset(&dbg_ice_ctrl_buf, 0, sizeof(dbg_ice_ctrl_buf));
+
+		/* load the ICE controller driver */
+		if ((ret = ice_open(ice, info, &dbg_ice_ctrl_buf.ctrl)) < 0) {
+			DCC_LOG(LOG_ERROR, "ICE controller open fail!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+
+		fprintf(f, " - ICE driver: %s - %s - %s\n",
+				ice->info->name, ice->info->version, ice->info->vendor);
+		tracef("- ICE driver: %s - %s - %s",
+			   ice->info->name, ice->info->version, ice->info->vendor);
+	} 
+
+	/* cache of frequently accessed structures ... */
+	dbg->target = target;
+	dbg->mem = target->mem;
+	dbg->tcp_port = 9;
+
+	/* TODO: modular link layer  to support other
+	   access ports than JTAG... */
+
+	if (target->clk_slow_on_connect)
+		jtag_clk = target->jtag_clk_slow;
+	else
+		jtag_clk = target->jtag_clk_def;
+
+	fprintf(f, " - Slow clock: %s.\n", fmt_freq(s, target->jtag_clk_slow));
+	fprintf(f, " - Fast clock: %s.\n", fmt_freq(s, target->jtag_clk_def));
+
+	jtag_rtck_freq_set(target->jtag_clk_slow);
+
+	if (target->has_rtck) {
+		jtag_tck_freq_set(target->jtag_clk_max);
+		/* The preferred clock method is adaptive (RTCK) */
+		if (target->prefer_rtck) {
+			fprintf(f, " - RTCK enabled.\n");
+			DCC_LOG(LOG_TRACE, "enabling RTCK.");
+			jtag_rtck_enable();
+		} else {
+			jtag_rtck_disable();
+		}
+	} else {
+		/* adjust the JTAG TCK frequency */
+		if ((ret = jtag_tck_freq_set(jtag_clk)) != JTAG_OK) {
+			DCC_LOG(LOG_ERROR, "jtag_clk_set()!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+
+		jtag_rtck_disable();
+	}
+
+	if (target->reset_on_config) {
+
+#if 0
+		switch (target->reset_mode) {
+		case RST_HARD:
+			fprintf(f, " - Hardware reset on config...\n");
+			DCC_LOG(LOG_TRACE, "hardware reset...");
+			if ((ret = hw_reset(ice, target)) < 0) {
+				DCC_LOG(LOG_WARNING, "hardware reset failed!");
+			}
+			break;
+		case RST_CORE:
+			fprintf(f, " - Core reset on config...\n");
+			DCC_LOG(LOG_TRACE, "core reset...");
+			if ((ret = core_reset(ice, target)) < 0) {
+				DCC_LOG(LOG_WARNING, "core reset failed!");
+			}
+			break;
+		case RST_SOFT:
+		case RST_DBG:
+			fprintf(f, " - Debug reset on config...\n");
+			DCC_LOG(LOG_TRACE, "debug reset...");
+			if ((ret = dbg_reset(ice, target)) < 0) {
+				DCC_LOG(LOG_WARNING, "debug reset failed!");
+			}
+			break;
+		}
+#endif
+		fprintf(f, " - Hardware reset on config...\n");
+		DCC_LOG(LOG_TRACE, "hardware reset...");
+		if ((ret = hw_reset(ice, target)) < 0) {
+			DCC_LOG(LOG_WARNING, "hardware reset failed!");
+		}
+	}
+
+	/* configure the scan path */
+	if (target->jtag_probe) {
+
+		fprintf(f, " - JTAG probe...\n");
+
+#if 0
+		DCC_LOG(LOG_MSG, "TAP reset...");
+		/* assert the JTAG TRST signal (low) */
+		jtag_trst(true);
+		jtag_run_test(1, JTAG_TAP_IDLE);
+		/* deasser the JTAG TRST signal (high) */
+		jtag_trst(false);
+
+		jtag_tap_reset();
+#endif
+		DCC_LOG(LOG_TRACE, "Dynamic JTAC config ...");
+
+		/* dynamic configuration */
+		if (jtag_chain_probe(irlen, 32, &cnt) != JTAG_OK) {
+			if (target->arch->cpu->irlength == 0) {
+				DCC_LOG(LOG_ERROR, "IR length !");
+				__os_mutex_unlock(dbg->busy);
+				return -1;
+			} 
+			irlen[0] = target->arch->cpu->irlength;
+			cnt = 1;
+		}
+		irpath = irlen;
+		(void)irpath;
+		tap_pos = -1;
+	} else {
+		/* TODO: preconfigured scan chain */
+		fprintf(f, " #NOTICE: target->jtag_probe flag not set!!!.\n");
+		cnt = 0;
+	}
+
+	DCC_LOG1(LOG_TRACE, "TAPS: %d", cnt);
+
+	if (cnt == 0) {
+		DCC_LOG(LOG_WARNING, "No TAPs defined!");
+		__os_mutex_unlock(dbg->busy);
+		return 0;
+	}
+
+	/* reset the TAPs to put the IDCODE in the DR scan */
+	jtag_tap_reset();
+
+	/* initializing the jtag chain */
+	if ((ret = jtag_chain_init(irlen, cnt)) != JTAG_OK) {
+		DCC_LOG(LOG_ERROR, "JTAG chain fail!");
+		__os_mutex_unlock(dbg->busy);
+		return ret;
+	}
+
+	if (target->pre_config) {
+		DCC_LOG(LOG_TRACE, "Target pre config callback...");
+		if ((ret = target->pre_config(f, ice, target)) < 0) {
+			DCC_LOG(LOG_ERROR, "target->pre_config() fail!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+		cnt = jtag_tap_tell();
+	} else {
+		DCC_LOG(LOG_TRACE, "target->pre_config callback undefined!");
+	}
+
+	if (tap_pos < 0) {
+		DCC_LOG(LOG_TRACE, "Detecting the TAP position...");
+
+		for (i = 0; i < cnt; i++) {
+			if ((ret = jtag_tap_get(&tap, i)) != JTAG_OK) {
+				DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
+				__os_mutex_unlock(dbg->busy);
+				return ret;
+			}
+
+			if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
+				DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
+				__os_mutex_unlock(dbg->busy);
+				return ret;
+			}
+
+			if ((idcode & target->arch->cpu->idmask) == 
+				target->arch->cpu->idcomp) {
+				DCC_LOG1(LOG_TRACE, "match, idcode:%08x", idcode);
+
+				fprintf(f, " - JTAG IDCODE: 0x%08x\n", idcode); 
+				tap_pos = i;
+				break;
+			}
+		}
+
+		if (tap_pos < 0) {
+			DCC_LOG(LOG_WARNING, "no suitable CPU found()!");
+			__os_mutex_unlock(dbg->busy);
+			return -1;
+		}
+	} else {
+		if (tap_pos > cnt) {
+			DCC_LOG1(LOG_ERROR, "TAP position (%d) is out of bounds!", tap_pos);
+			__os_mutex_unlock(dbg->busy);
+			/* XXX: this is a JTAG error and shuld not be used in
+			   a high level function... */
+			return JTAG_ERR_INVALID_TAP;
+		}
+
+		if ((ret = jtag_tap_get(&tap, tap_pos)) != JTAG_OK) {
+			DCC_LOG(LOG_ERROR, "jtag_tap_get()!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+		if ((ret = jtag_tap_idcode(tap, &idcode)) != JTAG_OK) {
+			DCC_LOG(LOG_ERROR, "jtag_tap_idcode()!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+
+		DCC_LOG1(LOG_TRACE, "IDCODE:%08x", idcode);
+		fprintf(f, " - JTAG IDCODE: 0x%08x\n", idcode); 
+
+		if ((idcode & target->arch->cpu->idmask) != target->arch->cpu->idcomp) {
+			DCC_LOG(LOG_TRACE, "invalid IDCODE");
+			__os_mutex_unlock(dbg->busy);
+			return -1;
+		}
+
+		DCC_LOG1(LOG_TRACE, "match, idcode:%08x", idcode);
+	}
+
+	tap->idmask = target->arch->cpu->idmask;
+	tap->idcomp = target->arch->cpu->idcomp;
+
+	memset(&ice->opt, 0, sizeof(ice_opt_t));
+
+	if (ice_configure(ice, tap, &ice->opt, target->ice_cfg) < 0) {
+		DCC_LOG(LOG_ERROR, "ICE controller configurarion fail!");
+		__os_mutex_unlock(dbg->busy);
+		return -1;
+	}
+
+	DCC_LOG(LOG_TRACE, "Memory module register...");
+	dbg->mem_mod_id = mod_mem_register(target->mem);
+
+#if 0
+	for (i = 0; i < DBG_BREAKPOINT_MAX; i++) {
+		dbg->bp[i].addr = 0;
+		dbg->bp[i].size = 0;
+	}
+	for (i = 0; i < DBG_WATCHPOINT_MAX; i++) {
+		dbg->wp[i].addr = 0;
+		dbg->wp[i].mask = 0xffffffff;
+	}
+	dbg->bp_cnt = 0;
+#endif
+	dbg->dasm.base = dbg->target->start_addr;
+	dbg->transf.base = dbg->target->start_addr;
+
+	dbg->state = DBG_ST_UNCONNECTED;
+	DCC_LOG(LOG_TRACE, "[DBG_ST_UNCONNECTED]");
+
+	__os_mutex_unlock(dbg->busy);
+
+	return 0;
+}
+
+#endif
+
+
+

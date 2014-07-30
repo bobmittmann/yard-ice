@@ -92,9 +92,11 @@ struct shell_cmd * cmd_lookup(const char * s,
 	return NULL;
 }
 
-const char yard_ice_greeting[] = "\n"
-	"YARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
+const char * yard_ice_greeting(void) 
+{
+	return "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
 	"(c) Copyright 2013 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+}
 
 const char * const prompt_tab[] = {
 	"[YARD-ICE <!>]$ ", /* DBG_ST_FAULT */
@@ -669,7 +671,7 @@ static char * get_cmd_next(char ** linep)
 }
 
 int shell(FILE * f, const char * (* get_prompt)(void), 
-		  const char * greeting, const struct shell_cmd * cmd_tab)
+		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
 {
 	char line[SHELL_LINE_MAX];
 	char * cp;
@@ -683,7 +685,7 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 #endif
 
 	if (greeting)
-		fprintf(f, greeting);
+		fprintf(f, greeting());
 
 	for (;;) {
 		prompt = (char *)get_prompt();

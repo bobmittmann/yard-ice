@@ -35,6 +35,7 @@ const struct type_def * const type_def_tab[] = {
 	&type_def_uint32,
 	&type_def_bool,
 	&type_def_string,
+	&type_def_tag,
 	&type_def_range32
 };
 

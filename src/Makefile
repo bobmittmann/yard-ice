@@ -25,8 +25,7 @@ PROG = yard-ice
 
 CFILES = yard-ice.c yard-ice/debugger.c yard-ice/ice_drv.c yard-ice/mod_mem.c\
 		 yard-ice/fmt_freq.c yard-ice/mem_hexdump.c yard-ice/targets.c\
-		 yard-ice/usb.c\
-		 yard-ice/i2c-master.c
+		 yard-ice/usb.c yard-ice/i2c-master.c yard-ice/mod_ice.c
 
 LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
 		  sdk/libice-comm sdk/libtcpip sdk/libdrv sdk/libbitvec\
