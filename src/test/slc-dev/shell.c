@@ -76,11 +76,6 @@ int cmd_help(FILE *f, int argc, char ** argv)
  * FPGA
  *****************************************************************************/
 
-union {
-	struct xmodem_rcv rx;
-	struct xmodem_snd sx;
-} xmodem;
-
 int flash_xmodem_recv(FILE * f, uint32_t offs, unsigned int size)
 {
 	struct comm_dev comm;
@@ -89,6 +84,11 @@ int flash_xmodem_recv(FILE * f, uint32_t offs, unsigned int size)
 	unsigned int cnt;
 	unsigned int rem;
 	int ret;
+
+	union {
+		struct xmodem_rcv rx;
+		struct xmodem_snd sx;
+	} xmodem;
 
 	raw = ftty_lowlevel(f);
 

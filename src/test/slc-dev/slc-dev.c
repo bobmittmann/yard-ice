@@ -157,7 +157,7 @@ int main(int argc, char ** argv)
 	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
 	isink_slewrate_set(1000);
 
-	device_db_init();
+//	device_db_init();
 
 	thinkos_thread_create((void *)io_event_task, (void *)NULL,
 						  io_event_stack, sizeof(io_event_stack),
