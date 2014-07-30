@@ -77,6 +77,188 @@ int cm3ice_test_ap_rd32(FILE * f, jtag_tap_t * tap,
 	return 0;
 }
 
+
+int cortex_system_reset(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t dhcsr;
+	bool halt = false;
+
+	DCC_LOG(LOG_TRACE, ".");
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+		fprintf(f, "%s: jtag_mem_ap_rd32() failed!\n", __func__); 
+		return ICE_ERR_JTAG;
+	}
+
+	if (dhcsr & DHCSR_S_HALT) { 
+		fprintf(f, "%s: core halted\n", __func__);
+		halt = true;
+	}
+
+	if (jtag_mem_ap_wr32(tap, ARMV7M_AIRCR, AIRCR_VECTKEY | 
+						 AIRCR_SYSRESETREQ ) != JTAG_ADI_ACK_OK_FAULT) {
+		fprintf(f, "%s: jtag_mem_ap_wr32() failed!\n", __func__); 
+		return ICE_ERR_JTAG;
+	}
+
+	if (!halt)
+		return ICE_OK;
+
+	do {
+		fprintf(f, "halt 2. ...");
+
+		/* halt the core */
+		if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | DHCSR_C_HALT | 
+							 DHCSR_C_DEBUGEN) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "%s: jtag_mem_ap_wr32() failed!\n", __func__); 
+			return ICE_ERR_JTAG;
+		}
+
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
+							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "%s: jtag_mem_ap_rd32() failed!\n", __func__); 
+			return ICE_ERR_JTAG;
+		}
+		fprintf(f, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+				 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_HALT) ? 1 : 0);
+	} while ((dhcsr & DHCSR_S_HALT) == 0);
+
+	return ICE_OK;
+}
+
+int cortex_core_reset(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t dhcsr;
+	uint32_t demcr;
+	bool halt = false;
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+		fprintf(f, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	if (jtag_mem_ap_rd32(tap, ARMV7M_DEMCR, &demcr) != JTAG_ADI_ACK_OK_FAULT) {
+		fprintf(f, "jtag_mem_ap_rd32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	if (dhcsr & DHCSR_S_HALT) { 
+		fprintf(f, "core halted");
+		halt = true;
+
+		if ((demcr & DEMCR_VC_CORERESET) == 0) { 
+			if (jtag_mem_ap_wr32(tap, ARMV7M_DEMCR, demcr |
+								 DEMCR_VC_CORERESET) != JTAG_ADI_ACK_OK_FAULT) {
+				fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+				return ICE_ERR_JTAG;
+			}
+		}
+
+		if ((dhcsr & DHCSR_C_DEBUGEN) == 0) { 
+			if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | dhcsr | 
+								 DHCSR_C_DEBUGEN) != JTAG_ADI_ACK_OK_FAULT) {
+				fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+				return ICE_ERR_JTAG;
+			}
+		}
+
+	} else {
+		fprintf(f, "halting...");
+		/* halt the core but leave the C_DEBUGEN set
+		   To force the processor to enter Debug state as soon as it comes 
+		   out of reset, a debugger set DHCSR.C_DEBUGEN to 1, to enable 
+		   halting debut, and sets DEMCR.VC_CORERESET to 1 to enable vector 
+		   catch on the Reset exception. When the processor comes out 
+		   of reset it sets DHCSR.C_HALT to 1,
+		   and enters Debug state.
+		 */
+		if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | DHCSR_C_HALT | 
+							 DHCSR_C_DEBUGEN) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+			return ICE_ERR_JTAG;
+		}
+
+		if (demcr & DEMCR_VC_CORERESET) { 
+			if (jtag_mem_ap_wr32(tap, ARMV7M_DEMCR, 
+					 demcr & ~DEMCR_VC_CORERESET) != JTAG_ADI_ACK_OK_FAULT) {
+				fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+				return ICE_ERR_JTAG;
+			}
+		}
+
+		halt = false;
+	}
+
+	/* Local reset */
+	if (jtag_mem_ap_wr32(tap, ARMV7M_AIRCR, AIRCR_VECTKEY | AIRCR_VECTRESET |
+						 AIRCR_VECTCLRACTIVE) != JTAG_ADI_ACK_OK_FAULT) {
+		fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+		return ICE_ERR_JTAG;
+	}
+
+	return ICE_OK;
+
+	do {
+		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
+							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "jtag_mem_ap_rd32() failed!"); 
+			return ICE_ERR_JTAG;
+		}
+		fprintf(f, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+				 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_HALT) ? 1 : 0);
+	} while ((dhcsr & DHCSR_S_RESET_ST) == 0);
+
+	if (!halt)
+		return ICE_OK;
+
+	
+	do {
+		fprintf(f, "halt 2. ...");
+
+		/* halt the core */
+		if (jtag_mem_ap_wr32(tap, ARMV7M_DHCSR, DHCSR_DBGKEY | DHCSR_C_HALT | 
+							 DHCSR_C_DEBUGEN) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "jtag_mem_ap_wr32() failed!"); 
+			return ICE_ERR_JTAG;
+		}
+
+
+		if (jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, 
+							 &dhcsr) != JTAG_ADI_ACK_OK_FAULT) {
+			fprintf(f, "jtag_mem_ap_rd32() failed!"); 
+			return ICE_ERR_JTAG;
+		}
+		fprintf(f, "S_RESET_ST=%d S_RETIRE_ST=%d S_LOCKUP=%d "\
+				 "S_SLEEP=%d S_HALT=%d", (dhcsr & DHCSR_S_RESET_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_RETIRE_ST) ? 1 : 0,
+				 (dhcsr & DHCSR_S_LOCKUP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_SLEEP) ? 1 : 0,
+				 (dhcsr & DHCSR_S_HALT) ? 1 : 0);
+	} while ((dhcsr & DHCSR_S_HALT) == 0);
+
+	return ICE_OK;
+
+}
+
+
+int cm3ice_test_3(FILE * f, jtag_tap_t * tap)
+{
+
+	cortex_system_reset(f, tap);
+		
+	return 0;
+}
+
+
 int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req, 
 				uint32_t argc, uint32_t argv[])
 {
@@ -90,12 +272,16 @@ int cm3ice_test(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t req,
 	case 2:
 		cm3ice_test_ap_rd32(f, tap, argv[0], argv[1]);
 		break;
+	case 3:
+		cm3ice_test_3(f, tap);
+		break;
 	default:
 		fprintf(f, " +----- Cortex M3 ICE Tests ----------------+\n");
 		fprintf(f, " | Test # | Parameters | Description        |\n");
 		fprintf(f, " +--------+------------+--------------------+\n");
 		fprintf(f, " |      1 | ADDR LEN   | Memory read        |\n");
 		fprintf(f, " |      2 | ADDR LEN   | 32 bits mem access |\n");
+		fprintf(f, " |      3 | none       | ...                |\n");
 		fprintf(f, " +--------+------------+--------------------+\n");
 	}
 

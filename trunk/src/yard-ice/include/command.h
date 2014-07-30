@@ -31,7 +31,7 @@
 #include <stdio.h> 
 #include <sys/shell.h>
 
-extern const char yard_ice_greeting[];
+const char * yard_ice_greeting(void);
 extern const struct shell_cmd yard_ice_cmd_tab[];
 
 struct lt_entry_int {

@@ -2194,6 +2194,43 @@ union {
 } dbg_ice_ctrl_buf;
 
 
+int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
+{
+	ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
+	int ret;
+
+	__os_mutex_lock(dbg->busy);
+
+	if (ice->info != info) {
+		DCC_LOG(LOG_TRACE, "ICE driver change...");
+
+		if (ice_close(ice) < 0) {
+			/* closing the ICE controller driver */
+			DCC_LOG(LOG_WARNING, "ICE controller close fail!");
+		}
+
+		dbg->state = DBG_ST_UNDEF;
+		DCC_LOG(LOG_TRACE, "[DBG_ST_UNDEF]");
+
+		memset(&dbg_ice_ctrl_buf, 0, sizeof(dbg_ice_ctrl_buf));
+
+		/* load the ICE controller driver */
+		if ((ret = ice_open(ice, info, &dbg_ice_ctrl_buf.ctrl)) < 0) {
+			DCC_LOG(LOG_ERROR, "ICE controller open fail!");
+			__os_mutex_unlock(dbg->busy);
+			return ret;
+		}
+
+		tracef("- ICE driver: %s - %s - %s",
+			   ice->info->name, ice->info->version, ice->info->vendor);
+	} 
+
+	__os_mutex_unlock(dbg->busy);
+
+	return 0;
+
+}
+
 int target_ice_configure(FILE * f, const struct target_info * target, 
 						 int force)
 {
@@ -2714,6 +2751,8 @@ void debugger_except(const char * msg)
 
 uint32_t dbg_poll_stack[80];
 
+int mod_ice_register(struct debugger * dbg);
+
 void debugger_init(void)
 {
 	struct debugger * dbg = &debugger;
@@ -2763,6 +2802,8 @@ void debugger_init(void)
 							__OS_PRIORITY_LOWEST);
 
 	DCC_LOG1(LOG_TRACE, "__os_thread_create()=%d", dbg->poll_thread);
+
+	mod_ice_register(dbg);
 }
 
 int target_enable_ice_poll(bool flag)

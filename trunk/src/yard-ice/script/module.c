@@ -58,6 +58,11 @@ char * module_name(int mod_id)
 	return module_tab[mod_id].def->name;
 }
 
+char * module_ptr(int mod_id) 
+{
+	return module_tab[mod_id].ptr;
+}
+
 int module_register(const struct module_def * def, void * ptr)
 {
 	struct module_node * q;

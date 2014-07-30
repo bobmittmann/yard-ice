@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file val.c
+ * @file tag.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -29,14 +29,25 @@
 #include <string.h>
 #include "val.h"
 
-int val_encode(const struct type_def * def, value_t * val, const char * s)
+int val_tag_encode(value_t * val, const char * s)
 {
-	return def->encode(val, s);
+	val->uint64 = 0;
+	strncpy(val->tag, s, 8);
+	
+	return 0;
 }
 
-char * val_decode(const struct type_def * def, const value_t * val, char * s)
+int val_tag_decode(const value_t * val, char * s)
 {
-	def->decode(val, s);
-	return s; 
+	strncpy(s, val->tag, 8);
+	s[8] = '\0';
+
+	return 0;
 }
+
+const struct type_def type_def_tag = {
+	.name = "tag",
+	.encode = (val_encode_t)val_tag_encode,
+	.decode = (val_decode_t)val_tag_decode
+};
 

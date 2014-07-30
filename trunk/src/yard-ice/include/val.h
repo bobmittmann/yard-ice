@@ -36,6 +36,7 @@ enum {
 	TYPE_UINT32,
 	TYPE_BOOL,
 	TYPE_STRING,
+	TYPE_TAG,
 	TYPE_RANGE32,
 	TYPE_INT64,
 	TYPE_UINT64,
@@ -65,7 +66,7 @@ struct dblock32 {
 };
 
 /**
- * struct value - a generic container for yard values
+ * struct value - a generic container for yard variable values
  */
 struct value {
 	union {
@@ -76,13 +77,12 @@ struct value {
 		int64_t int64;
 		uint64_t uint64;
 		char * string;
+		char tag[8];
 		struct dblock32 dblock32;
 	};
 };
 
 typedef struct value value_t;
-
-
 
 typedef int (* val_encode_t)(value_t * val, const char * s);
 typedef int (* val_decode_t)(const value_t * val, char * s);
@@ -112,6 +112,7 @@ extern const struct type_def type_def_bool;
 extern const struct type_def type_def_string;
 extern const struct type_def type_def_range32;
 extern const struct type_def type_def_freq;
+extern const struct type_def type_def_tag;
 
 /*
  * standard type definitions 
@@ -133,7 +134,7 @@ extern "C" {
  *  @returns Return the size of the encoded data on success, 
  *  or -1 if an error occurred.
  */
-int val_encode(type_def_t * def, value_t * val, const char * s);
+int val_encode(const struct type_def * def, value_t * val, const char * s);
 
 /**
  *  val_decode - Convert from val_t to string 
@@ -141,7 +142,7 @@ int val_encode(type_def_t * def, value_t * val, const char * s);
  *  @param s An string to hold the decoded value
  *  @returns Return the decoded string
  */
-char * val_decode(type_def_t * def, const value_t * val, char * s);
+char * val_decode(const struct type_def * def, const value_t * val, char * s);
 
 
 char * type_name(int type);
