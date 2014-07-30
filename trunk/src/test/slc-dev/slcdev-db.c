@@ -30,7 +30,7 @@ char * json_string(char * s, unsigned int max, char * js, jsmntok_t *t)
 }
 
 struct json_string {
-	uint16_t idx;
+	uint16_t pos;
 	uint16_t len;
 };
 
@@ -139,9 +139,9 @@ int json_parse_string(char * js, jsmntok_t * t, void * ptr)
 		return -JSON_ERR_NULL_POINTER;
 
 	s->len = t->end - t->start;
-	s->idx = t->start;
+	s->pos = t->start;
 
-	DCC_LOG2(LOG_TRACE, "idx=%d len=%d", s->idx, s->len);
+	DCC_LOG2(LOG_TRACE, "idx=%d len=%d", s->pos, s->len);
 
 	return 1;
 }
@@ -241,14 +241,17 @@ struct pw_range {
 };
 
 struct pw_list {
-	uint16_t ptr;
+	uint16_t pos;
 	uint16_t len;
 };
 
 struct pw_entry {
-	struct json_string desc;
-	struct pw_range range;
-};
+	uint8_t len;
+	uint16_t min;
+	uint16_t max;
+	char desc[128 - 7]; /* The description string */
+} __attribute__((packed));
+
 
 struct ic_mode {
 	struct json_string desc;
@@ -278,20 +281,11 @@ void json_string_print(char * js, struct json_string * str)
 	if (n > 127)
 		n = 127;
 
-	memcpy(s, js + str->idx, n);
+	memcpy(s, js + str->pos, n);
 	s[n] = '\0';
 	printf("\"%s\"", s);
 }
 
-
-struct pw_entry * pw_list_ptr;
-
-int pw_list_write(struct pw_entry * list, unsigned int len)
-{
-	int ptr = 0;
-
-	return ptr;
-}
 
 int device_db_erase(void)
 {
@@ -371,63 +365,6 @@ int device_db_init(void)
 	return 0;
 }
 
-int json_parse_pw(char * js, jsmntok_t * t, struct pw_list * pw) 
-{
-
-	struct json_string s;
-	int min;
-	int max;
-	int ret;
-	int len;
-	int cnt;
-
-	if (t->type != JSMN_ARRAY)
-		return -JSON_ERR_NOT_ARRAY;
-
-	if ((cnt = t->size) == 0)
-		return -JSON_ERR_EMPTY_ARRAY;
-
-	t++;
-	len = 1;
-
-	if (t->type == JSMN_STRING) {
-		if ((ret = json_parse_string(js, t, &s)) < 0)
-			return ret;
-		t += ret;
-		len += ret;
-		cnt--;
-	}
-
-	if (cnt == 0) {
-		DCC_LOG(LOG_ERROR, "missing PW value");
-		return -JSON_ERR_MISSING_VALUE;
-	} 
-	
-	if ((ret = json_parse_int(js, t, &min)) < 0)
-		return ret;
-
-	t += ret;
-	len += ret;
-	cnt--;
-
-	if (cnt > 1) {
-		DCC_LOG(LOG_ERROR, "extra value in PW array");
-		return -JSON_ERR_EXTRA_VALUE;
-	}
-
-	if (cnt == 1) {
-		if ((ret = json_parse_int(js, t, &max)) < 0)
-			return ret;
-		len++; 
-	} else {
-		max = min;
-	}
-
-	DCC_LOG2(LOG_TRACE, "min=%d max=%d", min, max);
-
-	return len;
-}
-
 int json_parse_ic_mode(char * js, jsmntok_t * t, void * ptr) 
 {
 	struct ic_mode * ic  = (struct ic_mode *)ptr;
@@ -470,9 +407,101 @@ int json_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 	return len;
 }
 
+int json_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw) 
+{
+
+	struct json_string s;
+	int min;
+	int max;
+	int ret;
+	int len;
+	int cnt;
+
+	if (t->type != JSMN_ARRAY)
+		return -JSON_ERR_NOT_ARRAY;
+
+	if ((cnt = t->size) == 0)
+		return -JSON_ERR_EMPTY_ARRAY;
+
+	t++;
+	len = 1;
+
+	if (t->type == JSMN_STRING) {
+		if ((ret = json_parse_string(js, t, &s)) < 0)
+			return ret;
+		t += ret;
+		len += ret;
+		cnt--;
+	} else {
+		s.len = 0;
+		s.pos = 0;
+	}
+
+	if (cnt == 0) {
+		DCC_LOG(LOG_ERROR, "missing PW value");
+		return -JSON_ERR_MISSING_VALUE;
+	} 
+	
+	if ((ret = json_parse_int(js, t, &min)) < 0)
+		return ret;
+
+	t += ret;
+	len += ret;
+	cnt--;
+
+	if (cnt > 1) {
+		DCC_LOG(LOG_ERROR, "extra value in PW array");
+		return -JSON_ERR_EXTRA_VALUE;
+	}
+
+	if (cnt == 1) {
+		if ((ret = json_parse_int(js, t, &max)) < 0)
+			return ret;
+		len++; 
+	} else {
+		max = min;
+	}
+
+	DCC_LOG2(LOG_TRACE, "min=%d max=%d", min, max);
+	pw->min = min;
+	pw->max = max;
+	memcpy(pw->desc, js + s.pos, s.len);
+	pw->desc[s.len] = '\0';
+	pw->len = 6 + s.len;
+
+	return len;
+}
+
+uint16_t pw_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+
+int pw_list_add(char * js, struct pw_list * lst, struct pw_entry * pw)
+{
+	uint32_t offs;
+	int ret;
+
+	lst->pos = pw_stack - pw->len;
+	lst->len = 0;
+
+	offs = FLASH_BLK_DEV_DB_BIN_OFFS + lst->pos;
+
+	if ((ret = stm32_flash_write(offs, pw, pw->len)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return ret;
+	}
+
+	lst->len++;
+	pw_stack = lst->pos;
+	/* check for colision */
+
+	DCC_LOG2(LOG_TRACE, "offs=0x%0x cnt=%d", offs, lst->len);
+
+	return 0;
+}
+
 int json_parse_pw_list(char * js, jsmntok_t * t, void * ptr) 
 {
-	struct pw_list * pw  = (struct pw_list *)ptr;
+	struct pw_list * lst  = (struct pw_list *)ptr;
+	struct pw_entry pw;
 	int cnt;
 	int len;
 	int ret;
@@ -485,8 +514,13 @@ int json_parse_pw_list(char * js, jsmntok_t * t, void * ptr)
 		return -JSON_ERR_EMPTY_ARRAY;
 
 	/* try to decode a single element */
-	if ((ret = json_parse_pw(js, t, pw)) > 0) {
-		return ret;
+	if ((ret = json_parse_pw(js, t, &pw)) > 0) {
+		len = ret;
+		if ((ret = pw_list_add(js, lst, &pw)) < 0) {
+			DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
+			return ret;
+		}
+		return len;
 	}
 
 	t++;
@@ -494,14 +528,18 @@ int json_parse_pw_list(char * js, jsmntok_t * t, void * ptr)
 
 	for (i = 0; i < cnt; ++i) {
 
-		if ((ret = json_parse_pw(js, t, pw)) < 0) {
+		if ((ret = json_parse_pw(js, t, &pw)) < 0) {
 			DCC_LOG(LOG_ERROR, "json_parse_pw() failed!");
-			return -1;
+			return ret;
 		}
 
 		t += ret;
 		len += ret;
-		pw++;
+
+		if ((ret = pw_list_add(js, lst, &pw)) < 0) {
+			DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
+			return ret;
+		}
 	}
 
 	return len;
@@ -627,7 +665,6 @@ int device_db_dump(FILE * f)
 	int n;
 	int i;
 
-
 	jsmn_init(&p);
 
 	r = jsmn_parse(&p, js, len, tok, TOK_MAX);
@@ -679,6 +716,16 @@ int device_db_dump(FILE * f)
 
 	DCC_LOG1(LOG_TRACE, "n=%d", n);
 
+	/* erase flash block */
+	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
+						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
+		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
+		return -1;
+	};
+	/* initialise PW descriptor stack */
+	pw_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+
+
 	t++;
 
 	for (i = 0; i < n; i += 2) {
@@ -705,7 +752,6 @@ int device_db_dump(FILE * f)
 			fprintf(f, "invalid object: \"%s\".\n", s);
 			return -1;
 		}
-
 
 		if (r < 0) {
 			DCC_LOG(LOG_ERROR, "json_walk_node() failed.");
