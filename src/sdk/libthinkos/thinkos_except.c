@@ -35,7 +35,15 @@
 
 #if THINKOS_ENABLE_EXCEPTIONS
 
-#if 0
+#ifndef THINKOS_SYSRST_ONFAULT
+#define THINKOS_SYSRST_ONFAULT 0
+#endif
+
+#ifndef THINKOS_STDERR_FAULT_DUMP
+#define THINKOS_STDERR_FAULT_DUMP 0
+#endif
+
+#if THINKOS_STDERR_FAULT_DUMP
 void __show_ctrl(uint32_t ctrl)
 {
 	fprintf(stderr, "[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
@@ -139,7 +147,9 @@ static void __dump_ufsr(void)
 	if (ufsr & UFSR_UNDEFINSTR)  
 		fprintf(stderr, " UNDEFINSTR");
 }
+#endif
 
+#if 0
 static inline uint32_t __attribute__((always_inline)) __get_stack(void) {
 	register uint32_t sp;
 	asm volatile ("tst lr, #4\n" 
@@ -159,7 +169,8 @@ static inline struct thinkos_context *
 	return ctx;
 }
 
-void thinkos_exception_dsr(struct thinkos_context * ctx);
+void __attribute__((noreturn)) 
+	thinkos_exception_dsr(struct thinkos_context * ctx);
 
 void hard_fault(struct thinkos_context * ctx, uint32_t msp, 
 				uint32_t psp, uint32_t lr)
@@ -229,8 +240,8 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 		}
 	}
 
-#if 0
-	fprintf(stderr, "---\n");
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Hard fault:");
 
 	if (hfsr & SCB_HFSR_DEBUGEVT)  
@@ -253,6 +264,8 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 	}
 
 	thinkos_context_show(ctx, sp, msp, psp);
+	fprintf(stderr, "\n");
+	fflush(stderr);
 #endif
 }
 
@@ -280,13 +293,15 @@ void bus_fault(struct thinkos_context * ctx, uint32_t msp,
 	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
 			ctx->xpsr, msp, psp, lr);
 
-#if 0
-	fprintf(stderr, "---\n");
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Bus fault:");
 
 	__dump_bfsr();
 
+	thinkos_context_show(ctx, sp, msp, psp);
 	fprintf(stderr, "\n");
+	fflush(stderr);
 #endif
 }
 
@@ -314,13 +329,15 @@ void usage_fault(struct thinkos_context * ctx, uint32_t msp,
 	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
 			ctx->xpsr, msp, psp, lr);
 
-#if 0
-	fprintf(stderr, "---\n");
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Usage fault:");
 
 	__dump_ufsr();
 
+	thinkos_context_show(ctx, sp, msp, psp);
 	fprintf(stderr, "\n");
+	fflush(stderr);
 #endif
 }
 
@@ -343,8 +360,6 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 	bus_fault(ctx, msp, psp, lr);
 
 	thinkos_exception_dsr(ctx);
-
-	for(;;);
 }
 
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
@@ -366,8 +381,6 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 	usage_fault(ctx, msp, psp, lr);
 
 	thinkos_exception_dsr(ctx);
-
-	for(;;);
 }
 
 
@@ -390,18 +403,22 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 	hard_fault(ctx, msp, psp, lr);
 
 	thinkos_exception_dsr(ctx);
-
-	for(;;);
 }
 
-void thinkos_default_exception_dsr(struct thinkos_context * ctx)
+void __attribute__((noreturn)) 
+	thinkos_default_exception_dsr(struct thinkos_context * ctx)
 {
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
+	for(;;);
+#endif
 }
 
 void thinkos_exception_dsr(struct thinkos_context *) 
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
-const char const thinkos_except_nm[] = "EXCEPT";
+const char const thinkos_except_nm[] = "EXT";
 
-#endif /* THINKOS_ENABLE_EXCEPT */
+#endif /* THINKOS_ENABLE_EXCEPTIONS */
 

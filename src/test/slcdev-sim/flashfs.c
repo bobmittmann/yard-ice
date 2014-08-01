@@ -28,7 +28,8 @@
 #include "board.h"
 #include "flashfs.h"
 
-struct dir_entry {
+/* Filesystem block descriptor */
+struct fs_blk {
 	char name[10];
 	uint16_t size;
 	uint32_t offs;
@@ -38,7 +39,7 @@ struct dir_entry {
  * Pseudo filesystem directory 
  *****************************************************************************/
 
-const struct dir_entry flash_fs_dir[] = {
+const struct fs_blk flash_fs_dir[] = {
 	{ .name = "dev.db", 
 	  .offs = FLASH_BLK_DEV_DB_BIN_OFFS,
 	  .size = FLASH_BLK_DEV_DB_BIN_SIZE  
@@ -53,22 +54,23 @@ const struct dir_entry flash_fs_dir[] = {
 	}
 };
 
-#define FLASH_FS_DIR_COUNT (sizeof(flash_fs_dir) / sizeof(struct dir_entry)) 
+#define FLASH_FS_BLK_COUNT (sizeof(flash_fs_dir) / sizeof(struct fs_blk)) 
 
-uint16_t flash_fs_file_size[FLASH_FS_DIR_COUNT] = {
+uint16_t flash_fs_file_size[FLASH_FS_BLK_COUNT] = {
 	0, 0, 0
 };
 
-bool fs_lookup(const char * name, struct fs_dirent * entry)
+/* look up for a directory entry by name */
+bool fs_dirent_lookup(const char * name, struct fs_dirent * ep)
 {
 	int i;
 
-	for (i = 0; i < sizeof(flash_fs_dir) / sizeof(struct dir_entry); ++i) {
+	for (i = 0; i < FLASH_FS_BLK_COUNT; ++i) {
 		if (strcmp(flash_fs_dir[i].name, name) == 0) {
-			strcpy(entry->name, flash_fs_dir[i].name);
-			entry->max_size = flash_fs_dir[i].size;
-			entry->size = flash_fs_dir[i].size;
-			entry->offs = flash_fs_dir[i].offs;
+			strcpy(ep->name, flash_fs_dir[i].name);
+			ep->blk_size = flash_fs_dir[i].size;
+			ep->size = flash_fs_dir[i].size;
+			ep->offs = flash_fs_dir[i].offs;
 			return true;
 		}
 	}
@@ -76,6 +78,29 @@ bool fs_lookup(const char * name, struct fs_dirent * entry)
 	DCC_LOG(LOG_ERROR, "file not found!");
 
 	return false;
+}
+
+/* get the next directory entry from the one provided */
+bool fs_dirent_get_next(struct fs_dirent * ep)
+{
+	int i = 0;
+
+	if (ep->blk_size != 0) {
+		do {
+			/* if we are pointing to the one last element, 
+			   there is no next in the list, bail out */
+			if (i == FLASH_FS_BLK_COUNT - 1)
+				return false;
+
+		} while (flash_fs_dir[i++].offs != ep->offs);
+	}
+
+	strcpy(ep->name, flash_fs_dir[i].name);
+	ep->blk_size = flash_fs_dir[i].size;
+	ep->size = flash_fs_dir[i].size;
+	ep->offs = flash_fs_dir[i].offs;
+
+	return ep;
 }
 
 /*****************************************************************************

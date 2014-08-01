@@ -893,6 +893,8 @@ static inline void __attribute__((always_inline)) __clrx(void) {
 
 void cm3_udelay_calibrate(void);
 
+void __attribute__((noreturn)) cm3_sysrst(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -3,29 +3,13 @@
 #include <string.h>
 #include <sys/dcclog.h>
 
-#include "jsmn.h"
+#include "json.h"
 
 #define JSON_STR_LEN_MAX 128
 
-char * json_token_tostr(char *js, jsmntok_t *t)
-{
-	static char s[JSON_STR_LEN_MAX + 1];
-	int n;
-
-	n = t->end - t->start;
-	if (n > JSON_STR_LEN_MAX)
-		n = JSON_STR_LEN_MAX;
-
-	memcpy(s, js + t->start, t->end - t->start);
-	s[n] = '\0';
-
-	return s;
-}
-
-int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl);
-
 int json_walk_object(FILE * f, char * js, jsmntok_t *t, int lvl)
 {
+	static char s[JSON_STR_LEN_MAX + 1];
 	int len;
 	int n;
 	int i;
@@ -67,7 +51,8 @@ int json_walk_object(FILE * f, char * js, jsmntok_t *t, int lvl)
 		for (j = 0; j < lvl; ++j)
 			printf("  ");
 
-		printf("\"%s\": ", json_token_tostr(js, t));
+		json_token_tostr(s, JSON_STR_LEN_MAX, js, t);
+		printf("\"%s\": ", s);
 		t++;
 		len++;
 
@@ -133,6 +118,8 @@ int json_walk_array(FILE * f, char * js, jsmntok_t *t, int lvl)
 
 int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl)
 {
+	static char s[JSON_STR_LEN_MAX + 1];
+
 	if(t->start == JSMN_NULL || t->end == JSMN_NULL) {
 		DCC_LOG(LOG_ERROR, "parameter invalid!");
 		return -1;
@@ -146,11 +133,13 @@ int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl)
 		return json_walk_array(f, js, t, lvl);
 
 	case JSMN_STRING:
-		fprintf(f, "\"%s\"", json_token_tostr(js, t));
+		json_token_tostr(s, JSON_STR_LEN_MAX, js, t);
+		fprintf(f, "\"%s\"", s);
 		return 1;
 		
 	case JSMN_PRIMITIVE:
-		fprintf(f, "%s", json_token_tostr(js, t));
+		json_token_tostr(s, JSON_STR_LEN_MAX, js, t);
+		fprintf(f, "%s", s);
 		return 1;
 	}
 
@@ -180,5 +169,36 @@ int json_dump(FILE * f, char * js, jsmntok_t *t)
 	printf("\n");
 
 	return ret;
+}
+
+int json_parse_dump(char * js, jsmntok_t * t, void * ptr) 
+{
+	static char s[JSON_STR_LEN_MAX + 1];
+
+	if (t->start == JSMN_NULL || t->end == JSMN_NULL)
+		return -JSON_ERR_INVALID_TOKEN;
+
+	if (ptr == NULL)
+		return -JSON_ERR_NULL_POINTER;
+
+	switch (t->type) {
+	case JSMN_OBJECT:
+		return json_walk_object(stdout, js, t, 1);
+
+	case JSMN_ARRAY:
+		return json_walk_array(stdout, js, t, 1);
+
+	case JSMN_STRING:
+		json_token_tostr(s, JSON_STR_LEN_MAX, js, t);
+		fprintf(stdout, "\"%s\"", s);
+		return 1;
+		
+	case JSMN_PRIMITIVE:
+		json_token_tostr(s, JSON_STR_LEN_MAX, js, t);
+		fprintf(stdout, "%s", s);
+		return 1;
+	}
+
+	return -JSON_ERR_INVALID_TYPE;
 }
 

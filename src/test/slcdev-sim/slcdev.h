@@ -26,12 +26,93 @@
 #include "board.h"
 #include <stdio.h>
 
-enum {
-	TRIG_MODE_VSLC = 0,
-	TRIG_MODE_BIT,
-	TRIG_MODE_PW,
-	TRIG_MODE_MATCH
+/***************************************************************************
+  Device  Database
+ ***************************************************************************/
+
+#define SLCDEV_DESC_LEN_MAX 64
+
+struct pw_entry {
+	uint16_t min;
+	uint16_t max;
+	char desc[SLCDEV_DESC_LEN_MAX]; /* The description string */
 };
+
+struct ic_entry {
+	uint8_t mode;
+	uint8_t flags;
+	char desc[SLCDEV_DESC_LEN_MAX]; /* The description string */
+};
+
+#define SLCDEV_PW_LIST_LEN_MAX 24
+
+struct pw_list {
+	uint16_t cnt;
+	struct pw_entry * pw[SLCDEV_PW_LIST_LEN_MAX];
+};
+
+struct db_obj {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+};
+
+struct obj_module {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+	const char * tag;	
+	const char * desc;	
+	struct pw_list * pw1;
+	struct pw_list * pw2;
+	struct pw_list * pw3;
+	struct pw_list * pw4;
+	struct pw_list * pw5;
+	struct ic_entry * ic1;
+	struct ic_entry * ic2;
+	struct ic_entry * ic3;
+};
+
+struct obj_sensor {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+	const char * tag;	
+	const char * desc;	
+	struct pw_list * pw1;
+	struct pw_list * pw2;
+	struct pw_list * pw3;
+	struct pw_list * pw4;
+	struct pw_list * pw5;
+};
+
+struct obj_db_info {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+	uint16_t json_crc;
+	uint16_t json_len;
+	struct db_obj * obj[];
+};
+
+
+enum {
+	DB_OBJ_DB_INFO = 0,
+	DB_OBJ_SENSOR,
+	DB_OBJ_MODULE
+};
+
+/***************************************************************************
+  Events
+ ***************************************************************************/
 
 enum {
 	SLC_EV_NONE = 0,

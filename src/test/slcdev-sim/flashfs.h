@@ -26,7 +26,7 @@
 struct fs_dirent {
 	char name[10];
 	uint16_t size;
-	uint16_t max_size;
+	uint16_t blk_size;
 	uint32_t offs;
 };
 
@@ -34,7 +34,9 @@ struct fs_dirent {
 extern "C" {
 #endif
 
-bool fs_lookup(const char * name, struct fs_dirent * entry);
+bool fs_dirent_lookup(const char * name, struct fs_dirent * ep);
+
+bool fs_dirent_get_next(struct fs_dirent * ep);
 
 #ifdef __cplusplus
 }
