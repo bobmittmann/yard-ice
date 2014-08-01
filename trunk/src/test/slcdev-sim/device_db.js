@@ -18,10 +18,10 @@
 			["Maintenance Alert", 410, 485],
 			["Level 1 Alarm - 1% ft", 1308, 1494],
 			["Level 2 Alarm - Acclimate 1% - 2%", 1680, 1920],
-			["Level 3 Alarm 3 â€“ 2%/ft.", 2052, 2346,],
+			["Level 3 Alarm 3% 2%/ft.", 2052, 2346,],
 			["Level 4 Alarm - Acclimate 2% - 4%", 2427, 2774],
 			["Level 5 Alarm 4%/ft", 2800, 3200],
-			["Level 6 Alarm â€“ Thermal Alarm (60Â°C, 135Â° Heat)", 
+			["Level 6 Alarm - Thermal Alarm (60°C, 135° Heat)", 
 			3250, 3600],
 		],
 		"pw5" : [1910, 2240]
@@ -100,8 +100,26 @@
 		],
 		"pw3" : [540, 660],
 		"pw4" : [
-			["Normal, 25*C", 1070, 1400],
-			["Normal, 57.2*C", 1895, 2110],
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
+	},
+
+	"sensor": { 
+		"id" : 10, 
+		"tag" : "5251T", 
+		"desc" : "Heat Detector", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
 			["Remote Test", 3250, 3330]
 		],
 		"pw5" : [270, 330]

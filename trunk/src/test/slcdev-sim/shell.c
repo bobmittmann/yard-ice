@@ -138,13 +138,13 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	if (!fs_lookup(argv[1], &entry)) {
+	if (!fs_dirent_lookup(argv[1], &entry)) {
 		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
 	}
 
 	blk_offs = entry.offs;
-	blk_size = entry.max_size;
+	blk_size = entry.blk_size;
 
 	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
 	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
@@ -172,7 +172,7 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	if (!fs_lookup(argv[1], &entry)) {
+	if (!fs_dirent_lookup(argv[1], &entry)) {
 		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
 	}
@@ -184,6 +184,24 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 
 	return 0;
 }
+
+int cmd_ls(FILE * f, int argc, char ** argv)
+{
+	struct fs_dirent entry;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	memset(&entry, 0, sizeof(entry));
+
+	while (fs_dirent_get_next(&entry)) {
+		fprintf(f, "0x%06x %6d %6d %s\n", entry.offs, 
+				entry.blk_size, entry.size, entry.name);
+	}
+
+	return 0;
+}
+
 
 int cmd_trig(FILE * f, int argc, char ** argv)
 {
@@ -441,7 +459,9 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
 
-	{ cmd_cat, "cat", "rem", "<filename>", "display file content" },
+	{ cmd_cat, "cat", "", "<filename>", "display file content" },
+
+	{ cmd_ls, "ls", "", "<filename>", "list files" },
 
 	{ NULL, "", "", NULL, NULL }
 };
