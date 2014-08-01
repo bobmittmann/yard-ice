@@ -5,23 +5,6 @@ import sys
 import os
 import re
 
-UBL_MAGIC_SAFE=0xA1ACED00 # Safe boot mode
-UBL_MAGIC_DMA=0xA1ACED11 # DMA boot mode
-UBL_MAGIC_IC=0xA1ACED22 # Instruction Cache boot mode
-UBL_MAGIC_FAST=0xA1ACED33 # Fast EMIF boot mode
-UBL_MAGIC_DMA_IC=0xA1ACED44 # DMA +Instruction Cache boot mode
-UBL_MAGIC_DMA_IC_FAST=0xA1ACED55 # DMA +Instruction Cache+ Fast EMIF boot mode
-UBL_MAGIC_PLL=0xA1ACED66 # With PLL enabled to have higher ARM/DMA clocks
-UBL_MAGIC_PLL_DMA=0xA1ACED77 # With PLL enabled +DMA
-UBL_MAGIC_PLL_IC=0xA1ACED88 # With PLL enabled +Instruction Cache
-UBL_MAGIC_PLL_FAST=0xA1ACED99 # With PLL enabled +Fast EMIF
-UBL_MAGIC_PLL_DMA_IC=0xA1ACEDAA # With PLL enabled +DMA+Instruction Cache
-UBL_MAGIC_PLL_DMA_IC_FAST=0xA1ACEDBB # With PLL enabled +DMA+Instruction Cache+ Fast EMIF
-UBL_MAGIC_SAFE_LEGACY=0xA1ACEDCC # Safe boot mode with legacy
-
-NAND_PG_SIZE = 512
-NAND_BLK_SIZE = (32 * NAND_PG_SIZE)
-
 def usage():
 	global progname
 	print >> sys.stderr, ""

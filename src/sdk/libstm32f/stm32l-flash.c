@@ -71,7 +71,7 @@ int __attribute__((section (".data#")))
 	return stm32l_flash_bsy_wait(flash);
 }
 
-#define FLASH_SECTOR_SIZE 4096
+#define FLASH_SECTOR_SIZE 256
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
@@ -91,9 +91,9 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
 	pecr = flash->pecr;
-	DCC_LOG1(LOG_TRACE, "PECR=0x%08x", pecr);
+	DCC_LOG1(LOG_INFO, "PECR=0x%08x", pecr);
 	if (pecr & FLASH_PRGLOCK) {
-		DCC_LOG(LOG_TRACE, "unlocking flash...");
+		DCC_LOG(LOG_INFO, "unlocking flash...");
 		if (pecr & FLASH_PELOCK) {
 			flash->pekeyr = FLASH_PEKEY1;
 			flash->pekeyr = FLASH_PEKEY2;
@@ -106,6 +106,8 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	rem = len;
 	while (rem) {
 		uint32_t pri;
+
+		DCC_LOG1(LOG_INFO, "addr=0x%08x", addr);
 
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
@@ -120,6 +122,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		addr += FLASH_SECTOR_SIZE;
 		rem -= FLASH_SECTOR_SIZE;
 		cnt += FLASH_SECTOR_SIZE;
+
 	}
 
 	return cnt;
@@ -195,8 +198,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 			uint32_t * src;
 			uint8_t * dst;
 
-			DCC_LOG(LOG_WARNING, "Partial page write...");
-
+			DCC_LOG(LOG_INFO, "Partial page write...");
 			/* get the position inside the flash block where the 
 			   writing should start */
 			pos = offs - (offs & ~0x7f);
@@ -217,7 +219,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 			uint8_t * src;
 			uint32_t data;
 			/* start half page write */
-			DCC_LOG(LOG_TRACE, "Half-Page write start...");
+			DCC_LOG(LOG_INFO, "Half-Page write start...");
 			n = 128;
 			src = ptr;
 			for (i = 0; i < (128 / 4); ++i) {

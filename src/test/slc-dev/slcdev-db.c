@@ -34,10 +34,6 @@ struct json_string {
 	uint16_t len;
 };
 
-extern const uint8_t device_db_js[];
-extern unsigned int sizeof_device_db_js;
-int json_dump(FILE * f, char * js, jsmntok_t *t);
-
 enum {
 	JSON_ERR_GENERAL = 1,
 	JSON_ERR_INVALID_TOKEN,
@@ -58,20 +54,15 @@ enum {
 	JSON_ERR_NULL_POINTER,
 	JSON_ERR_INVALID_BOOLEAN,
 	JSON_ERR_MISSING_VALUE,
-	JSON_ERR_EXTRA_VALUE
+	JSON_ERR_EXTRA_VALUE,
+	JSON_ERR_INVALID_OBJECT,
+	JSON_ERR_STACK_OVERFLOW
 };
 
 
 /*
 [JSON_ERR_KEY_TYPE_INVALID] = "object keys must be strings.",
 */
-
-struct obj_desc {
-	char key[12];
-	int (* parser)(char * js, jsmntok_t * t, void * ptr);
-	unsigned int offs;	
-};
-
 
 int json_parse_int(char * js, jsmntok_t * t, void * ptr)
 {
@@ -174,6 +165,15 @@ int json_parse_any(char * js, jsmntok_t * t, void * ptr)
 }
 
 
+
+
+struct obj_desc {
+	char key[12];
+	int (* parser)(char * js, jsmntok_t * t, void * ptr);
+	unsigned int offs;	
+};
+
+
 int json_parse_object(char * js, jsmntok_t * t, 
 					  const struct obj_desc * desc, void * obj)
 {
@@ -235,42 +235,22 @@ int json_parse_object(char * js, jsmntok_t * t,
 	return len;
 }
 
-struct pw_range {
+struct pw_entry {
 	uint16_t min;
 	uint16_t max;
+	char desc[128 - 4]; /* The description string */
 };
 
 struct pw_list {
-	uint16_t pos;
-	uint16_t len;
+	uint16_t cnt;
+	struct pw_entry * pw[24];
 };
 
-struct pw_entry {
-	uint8_t len;
-	uint16_t min;
-	uint16_t max;
-	char desc[128 - 7]; /* The description string */
-} __attribute__((packed));
-
-
-struct ic_mode {
-	struct json_string desc;
-	int mode;
-};
-
-
-struct dev_entry {
-	uint8_t id;
+struct ic_entry {
+	uint8_t mode;
 	uint8_t flags;
-	char tag[12];        /* 16 */
-	struct pw_range pw1; /* 4 */
-	struct pw_list  pw2; /* 4 */
-	struct pw_range pw3; /* 4 */
-	struct pw_list  pw4; /* 4 */
-	struct pw_range pw5; /* 4 */
-	uint32_t res[3];     /* 12 */
+	char desc[128 - 2]; /* The description string */
 };
-
 
 void json_string_print(char * js, struct json_string * str)
 {
@@ -291,125 +271,216 @@ int device_db_erase(void)
 {
 	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
 	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
+	int ret;
 
-	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
+	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return -1;
+		return ret;
 	};
 
-	return 0;
-}
+	DCC_LOG(LOG_TRACE, "device database erased!");
 
-int device_db_compile(void)
-{
-	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
-	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
-
-	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
-		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return -1;
-	};
-
-	return 0;
+	return ret;
 }
 
 
 #define TOK_MAX 1024
 #define STR_LEN_MAX 128
 
-int device_db_init(void)
+struct db_obj {
+	uint8_t len;
+	uint8_t type;
+};
+
+struct obj_module {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t ap;
+	const char * tag;	
+	const char * desc;	
+	struct pw_list * pw1;
+	struct pw_list * pw2;
+	struct pw_list * pw3;
+	struct pw_list * pw4;
+	struct pw_list * pw5;
+	struct ic_entry * ic1;
+	struct ic_entry * ic2;
+	struct ic_entry * ic3;
+};
+
+struct obj_sensor {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t ap;
+	const char * tag;	
+	const char * desc;	
+	struct pw_list * pw1;
+	struct pw_list * pw2;
+	struct pw_list * pw3;
+	struct pw_list * pw4;
+	struct pw_list * pw5;
+};
+
+enum {
+	DB_OBJ_SENSOR = 0,
+	DB_OBJ_MODULE
+};
+
+static void pw_list_dump(FILE * f, struct pw_list * lst)
 {
-	jsmn_parser p;
-	jsmntok_t tok[TOK_MAX];
-	char * js = (char *)device_db_js;
-	int len = sizeof_device_db_js;
-	int r;
+	int i;
 
-	jsmn_init(&p);
-
-	r = jsmn_parse(&p, js, len, tok, TOK_MAX);
-
-	if (r == JSMN_ERROR_NOMEM) {
-//		fprintf(stderr, "Err: Not enough tokens were provided!\n");
-		DCC_LOG(LOG_ERROR, "Not enough tokens were provided!");
-		return 1;
+	if (lst == NULL) {
+		DCC_LOG(LOG_WARNING, "lst == NULL!");
+		return;
 	}
 
-	if (r == JSMN_ERROR_INVAL) {
-//		fprintf(stderr, "Err: Invalid character!\n");
-		DCC_LOG(LOG_ERROR, "Invalid character!");
-		return 1;
+	DCC_LOG1(LOG_TRACE, "lst=0x%08x", lst);
+
+	for (i = 0; i < lst->cnt; ++i) {
+		struct pw_entry * pw = lst->pw[i];
+
+		DCC_LOG2(LOG_TRACE, "lst->pw[%d]=0x%08x", i, pw);
+		fprintf(f, "\t[%4d %4d] %s\n", pw->min, pw->max, pw->desc);	
+	}
+}
+
+static void ic_mode_dump(FILE * f, struct ic_entry * ic)
+{
+	if (ic == NULL) {
+		DCC_LOG(LOG_WARNING, "ic == NULL!");
+		return;
 	}
 
-	if (r == JSMN_ERROR_PART) {
-//		fprintf(stderr, "Err: not a full JSON packet!\n");
-		DCC_LOG(LOG_ERROR, "not a full JSON packet!");
-		return 1;
-	}
+	DCC_LOG1(LOG_TRACE, "ic=0x%08x", ic);
+	fprintf(f, "\t\"%s\": %d\n", ic->desc, ic->mode);	
+}
 
-	if (r == 0) {
-//		fprintf(stderr, "Warn: empty JSON packet!\n");
-		DCC_LOG(LOG_ERROR, "empty JSON packet!");
-		return 1;
-	}
-
-#if 0
-		if (json_traverse(js, tok) <= 0) {
-			fprintf(stderr, "Err: tree traversal failed!\n");
-			return 1;
-		}
-#endif
-
-//	json_dump(stdout, js, tok);
+static int sensor_dump(FILE * f, struct obj_sensor * sens)
+{
+	fprintf(f, "id=%d \"%s\" \"%s\"\n", sens->id, sens->tag, sens->desc);
+	fprintf(f, "PW1:");
+	pw_list_dump(f, sens->pw1);
+	fprintf(f, "PW2:");
+	pw_list_dump(f, sens->pw2);
+	fprintf(f, "PW3:");
+	pw_list_dump(f, sens->pw3);
+	fprintf(f, "PW4:");
+	pw_list_dump(f, sens->pw4);
+	fprintf(f, "PW5:");
+	pw_list_dump(f, sens->pw5);
 
 	return 0;
 }
 
-int json_parse_ic_mode(char * js, jsmntok_t * t, void * ptr) 
+static int module_dump(FILE * f, struct obj_module * mod)
 {
-	struct ic_mode * ic  = (struct ic_mode *)ptr;
-	int ret;
-	int len;
-	int cnt;
+	fprintf(f, "id=%d \"%s\" \"%s\"\n", mod->id, mod->tag, mod->desc);
+	fprintf(f, "PW1:");
+	pw_list_dump(f, mod->pw1);
+	fprintf(f, "PW2:");
+	pw_list_dump(f, mod->pw2);
+	fprintf(f, "PW3:");
+	pw_list_dump(f, mod->pw3);
+	fprintf(f, "PW4:");
+	pw_list_dump(f, mod->pw4);
+	fprintf(f, "PW5:");
+	pw_list_dump(f, mod->pw5);
+	fprintf(f, "IC1:");
+	ic_mode_dump(f, mod->ic1);
+	fprintf(f, "IC2:");
+	ic_mode_dump(f, mod->ic2);
+	fprintf(f, "IC3:");
+	ic_mode_dump(f, mod->ic3);
 
-	if (t->type != JSMN_ARRAY)
-		return -JSON_ERR_NOT_ARRAY;
-
-	if ((cnt = t->size) == 0)
-		return -JSON_ERR_EMPTY_ARRAY;
-
-	t++;
-	len = 1;
-
-	if (t->type == JSMN_STRING) {
-		if ((ret = json_parse_string(js, t, &ic->desc)) < 0)
-			return ret;
-		t += ret;
-		len += ret;
-		cnt--;
-	}
-
-	if (cnt > 1) {
-		DCC_LOG(LOG_ERROR, "extra value in IC array");
-		return -JSON_ERR_EXTRA_VALUE;
-	}
-
-	if (cnt == 1) {
-		if ((ret = json_parse_int(js, t, &ic->mode)) < 0)
-			return ret;
-		len++; 
-	} else {
-		ic->mode = 0;
-	}
-
-	DCC_LOG1(LOG_TRACE, "ic.mode=%d", ic->mode);
-
-	return len;
+	return 0;
 }
 
-int json_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw) 
-{
+uint16_t db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+uint16_t db_heap = 0;
 
+int db_stack_push(void * buf, unsigned int len, void ** ptr)
+{
+	uint32_t pos;
+	uint32_t offs;
+	int ret;
+
+	pos = (db_stack - len) & ~3;
+	offs = FLASH_BLK_DEV_DB_BIN_OFFS + pos;
+
+	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return ret;
+	}
+
+	/* update stack */
+	db_stack = pos;
+
+	/* check for collision */
+	if (db_stack <= db_heap) {
+		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
+				db_stack, db_heap);
+		ret = -JSON_ERR_STACK_OVERFLOW;
+	}
+
+	*ptr = (void *)(STM32_MEM_FLASH + offs);
+
+	return ret;
+}
+
+
+int db_parse_string(char * js, jsmntok_t * t, void * ptr) 
+{
+	struct json_string s;
+	char buf[128];
+	int ret;
+	int size;
+
+	if (t->start == JSMN_NULL || t->end == JSMN_NULL)
+		return -JSON_ERR_INVALID_TOKEN;
+
+	if (t->type != JSMN_STRING)
+		return -JSON_ERR_NOT_STRING;
+
+	if (ptr == NULL)
+		return -JSON_ERR_NULL_POINTER;
+
+	if ((size = json_parse_string(js, t, &s)) < 0)
+		return size;
+
+	memcpy(buf, js + s.pos, s.len);
+	buf[s.len] = '\0';
+
+	if ((ret = db_stack_push(buf, s.len + 1, ptr)) < 0)
+		return ret;
+
+	return size;
+}
+
+/********************************************************************** 
+ *  add a PW range into a list 
+ ***********************************************************************/
+static int pw_list_add(struct pw_list * lst, struct pw_entry * pw)
+{
+	int ret;
+
+	if ((ret = db_stack_push(pw, 5 + strlen(pw->desc), 
+							 (void **)&lst->pw[lst->cnt])) < 0)
+		return ret;
+
+	/* update list */
+	lst->cnt++;
+
+	return 0;
+}
+
+/********************************************************************** 
+ * decode a single PW range
+ ***********************************************************************/
+int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw) 
+{
 	struct json_string s;
 	int min;
 	int max;
@@ -467,44 +538,20 @@ int json_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw)
 	pw->max = max;
 	memcpy(pw->desc, js + s.pos, s.len);
 	pw->desc[s.len] = '\0';
-	pw->len = 6 + s.len;
 
 	return len;
 }
 
-uint16_t pw_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
-
-int pw_list_add(char * js, struct pw_list * lst, struct pw_entry * pw)
+/********************************************************************** 
+ * decode a list of PW ranges
+ ***********************************************************************/
+int db_parse_pw_list(char * js, jsmntok_t * t, void * ptr) 
 {
-	uint32_t offs;
-	int ret;
-
-	lst->pos = pw_stack - pw->len;
-	lst->len = 0;
-
-	offs = FLASH_BLK_DEV_DB_BIN_OFFS + lst->pos;
-
-	if ((ret = stm32_flash_write(offs, pw, pw->len)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return ret;
-	}
-
-	lst->len++;
-	pw_stack = lst->pos;
-	/* check for colision */
-
-	DCC_LOG2(LOG_TRACE, "offs=0x%0x cnt=%d", offs, lst->len);
-
-	return 0;
-}
-
-int json_parse_pw_list(char * js, jsmntok_t * t, void * ptr) 
-{
-	struct pw_list * lst  = (struct pw_list *)ptr;
+	struct pw_list lst;
 	struct pw_entry pw;
 	int cnt;
-	int len;
 	int ret;
+	int size;
 	int i;
 
 	if (t->type != JSMN_ARRAY)
@@ -513,77 +560,114 @@ int json_parse_pw_list(char * js, jsmntok_t * t, void * ptr)
 	if ((cnt = t->size) == 0)
 		return -JSON_ERR_EMPTY_ARRAY;
 
+	if (ptr == NULL)
+		return -JSON_ERR_NULL_POINTER;
+
+	lst.cnt = 0;
+
 	/* try to decode a single element */
-	if ((ret = json_parse_pw(js, t, &pw)) > 0) {
-		len = ret;
-		if ((ret = pw_list_add(js, lst, &pw)) < 0) {
+	if ((size = db_parse_pw(js, t, &pw)) > 0) {
+		if ((ret = pw_list_add(&lst, &pw)) < 0) {
 			DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
 			return ret;
 		}
-		return len;
+	} else {
+		/* try to decode an array of arrays */
+		t++;
+		size = 1;
+
+		for (i = 0; i < cnt; ++i) {
+
+			if ((ret = db_parse_pw(js, t, &pw)) < 0) {
+				DCC_LOG(LOG_ERROR, "db_parse_pw() failed!");
+				return ret;
+			}
+
+			t += ret;
+			size += ret;
+
+			if ((ret = pw_list_add(&lst, &pw)) < 0) {
+				DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
+				return ret;
+			}
+		}
 	}
 
-	t++;
-	len = 1;
+	if ((ret = db_stack_push(&lst, 2 + lst.cnt * 
+							 sizeof(struct pw_entry *), ptr)) < 0)
+		return ret;
 
-	for (i = 0; i < cnt; ++i) {
-
-		if ((ret = json_parse_pw(js, t, &pw)) < 0) {
-			DCC_LOG(LOG_ERROR, "json_parse_pw() failed!");
-			return ret;
-		}
-
-		t += ret;
-		len += ret;
-
-		if ((ret = pw_list_add(js, lst, &pw)) < 0) {
-			DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
-			return ret;
-		}
-	}
-
-	return len;
+	return size;
 }
 
-struct obj_sensor {
-	int id;
-	bool ap;
-	struct json_string tag;
-	struct json_string desc;
-	struct pw_list pw1;
-	struct pw_list pw2;
-	struct pw_list pw3;
-	struct pw_list pw4;
-	struct pw_list pw5;
-};
+int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr) 
+{
+	struct json_string s;
+	struct ic_entry ic;
+	int ret;
+	int size;
+	int cnt;
+
+	if (t->type != JSMN_ARRAY)
+		return -JSON_ERR_NOT_ARRAY;
+
+	if ((cnt = t->size) == 0)
+		return -JSON_ERR_EMPTY_ARRAY;
+
+	if (ptr == NULL)
+		return -JSON_ERR_NULL_POINTER;
+
+	t++;
+	size = 1;
+
+	if (t->type == JSMN_STRING) {
+		if ((ret = json_parse_string(js, t, &s)) < 0)
+			return ret;
+		memcpy(ic.desc, js + s.pos, s.len);
+		ic.desc[s.len] = '\0';
+		t += ret;
+		size += ret;
+		cnt--;
+	} else {
+		s.len = 0;
+		ic.desc[0] = '\0';
+	}
+
+	if (cnt > 1) {
+		DCC_LOG(LOG_ERROR, "extra value in IC array");
+		return -JSON_ERR_EXTRA_VALUE;
+	}
+
+	if (cnt == 1) {
+		if ((ret = json_parse_int(js, t, &ic.mode)) < 0)
+			return ret;
+		size++; 
+	} else {
+		ic.mode = 0;
+	}
+
+	DCC_LOG1(LOG_TRACE, "ic.mode=%d", ic.mode);
+
+	if ((ret = db_stack_push(&ic, s.len + 3, ptr)) < 0)
+		return ret;
+
+	return size;
+}
+
 
 const struct obj_desc sensor_obj_desc[] = {
 	{ "id", json_parse_int, offsetof(struct obj_sensor, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_sensor, ap) },
-	{ "tag", json_parse_string, offsetof(struct obj_sensor, tag) },
-	{ "desc", json_parse_string, offsetof(struct obj_sensor, desc) },
-	{ "pw1", json_parse_pw_list, offsetof(struct obj_sensor, pw1) },
-	{ "pw2", json_parse_pw_list, offsetof(struct obj_sensor, pw2) },
-	{ "pw3", json_parse_pw_list, offsetof(struct obj_sensor, pw3) },
-	{ "pw4", json_parse_pw_list, offsetof(struct obj_sensor, pw4) },
-	{ "pw5", json_parse_pw_list, offsetof(struct obj_sensor, pw5) },
+	{ "tag", db_parse_string, offsetof(struct obj_sensor, tag) },
+	{ "desc", db_parse_string, offsetof(struct obj_sensor, desc) },
+	{ "pw1", db_parse_pw_list, offsetof(struct obj_sensor, pw1) },
+	{ "pw2", db_parse_pw_list, offsetof(struct obj_sensor, pw2) },
+	{ "pw3", db_parse_pw_list, offsetof(struct obj_sensor, pw3) },
+	{ "pw4", db_parse_pw_list, offsetof(struct obj_sensor, pw4) },
+	{ "pw5", db_parse_pw_list, offsetof(struct obj_sensor, pw5) },
 	{ "", NULL, 0},
 };
 
-struct obj_module {
-	int id;
-	bool ap;
-	struct json_string tag;
-	struct json_string desc;
-	struct pw_list pw1;
-	struct pw_list pw2;
-	struct pw_list pw3;
-	struct pw_list pw4;
-	struct pw_list pw5;
-	struct ic_mode ic1;
-	struct ic_mode ic2;
-	struct ic_mode ic3;
-};
 /*	"PW1 - Reference Pulsewidth", 
 	"PW2 - Class A Fix Status", 
 	"PW3 - Supervisory Latch", 
@@ -594,101 +678,214 @@ struct obj_module {
 const struct obj_desc module_obj_desc[] = {
 	{ "id", json_parse_int, offsetof(struct obj_module, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_module, ap) },
-	{ "tag", json_parse_string, offsetof(struct obj_module, tag) },
-	{ "desc", json_parse_string, offsetof(struct obj_module, desc) },
-	{ "pw1", json_parse_pw_list, offsetof(struct obj_module, pw1) },
-	{ "pw2", json_parse_pw_list, offsetof(struct obj_module, pw2) },
-	{ "pw3", json_parse_pw_list, offsetof(struct obj_module, pw3) },
-	{ "pw4", json_parse_pw_list, offsetof(struct obj_module, pw4) },
-	{ "pw5", json_parse_pw_list, offsetof(struct obj_module, pw5) },
-	{ "ic1", json_parse_ic_mode, offsetof(struct obj_module, ic1) },
-	{ "ic2", json_parse_ic_mode, offsetof(struct obj_module, ic2) },
-	{ "ic3", json_parse_ic_mode, offsetof(struct obj_module, ic3) },
+	{ "tag", db_parse_string, offsetof(struct obj_module, tag) },
+	{ "desc", db_parse_string, offsetof(struct obj_module, desc) },
+	{ "pw1", db_parse_pw_list, offsetof(struct obj_module, pw1) },
+	{ "pw2", db_parse_pw_list, offsetof(struct obj_module, pw2) },
+	{ "pw3", db_parse_pw_list, offsetof(struct obj_module, pw3) },
+	{ "pw4", db_parse_pw_list, offsetof(struct obj_module, pw4) },
+	{ "pw5", db_parse_pw_list, offsetof(struct obj_module, pw5) },
+	{ "ic1", db_parse_ic_mode, offsetof(struct obj_module, ic1) },
+	{ "ic2", db_parse_ic_mode, offsetof(struct obj_module, ic2) },
+	{ "ic3", db_parse_ic_mode, offsetof(struct obj_module, ic3) },
 	{ "", NULL, 0},
 };
-
 
 int json_parse_sensor(char * js, jsmntok_t *t)
 {
 	struct obj_sensor sensor;
+	unsigned int len;
+	uint32_t offs;
 	int ret;
+	int cnt;
 
-	ret = json_parse_object(js, t, sensor_obj_desc, &sensor);
+	memset(&sensor, 0, sizeof(struct obj_sensor));
+	sensor.len = sizeof(struct obj_sensor);
+	sensor.type = DB_OBJ_SENSOR;
 
-	if (ret < 0) {
+	if ((cnt = json_parse_object(js, t, sensor_obj_desc, &sensor)) < 0) {
 		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
-		return ret;
+		return cnt;
 	}
 
 	DCC_LOG1(LOG_TRACE, "id=%d", sensor.id); 
 
-	printf("id=%d ", sensor.id); 
-	json_string_print(js, &sensor.tag);
-	printf(" "); 
-	json_string_print(js, &sensor.desc);
-	printf("\n"); 
+//	sensor_dump(stdout, &sensor);
 
-	return ret;
+	DCC_LOG(LOG_TRACE, "1.");
+
+	offs = FLASH_BLK_DEV_DB_BIN_OFFS + db_heap;
+	len = sizeof(struct obj_sensor);
+
+	if ((ret = stm32_flash_write(offs, &sensor, len)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return ret;
+	}
+
+	/* update heap */
+	db_heap += len;
+	/* check for collision */
+	if (db_stack <= db_heap) {
+		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
+				db_stack, db_heap);
+		return -1;
+	}
+
+	return cnt;
 }
 
 int json_parse_module(char * js, jsmntok_t *t)
 {
 	struct obj_module module;
+	unsigned int len;
+	uint32_t offs;
 	int ret;
+	int cnt;
 
-	ret = json_parse_object(js, t, module_obj_desc, &module);
+	memset(&module, 0, sizeof(struct obj_module));
+	module.len = sizeof(struct obj_module);
+	module.type = DB_OBJ_MODULE;
 
-	if (ret < 0) {
+	if ((cnt = json_parse_object(js, t, module_obj_desc, &module)) < 0) {
 		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
-		return ret;
+		return cnt;
 	}
 
 	DCC_LOG1(LOG_TRACE, "id=%d", module.id); 
 
-	printf("id=%d ", module.id); 
-	json_string_print(js, &module.tag);
-	printf(" "); 
-	json_string_print(js, &module.desc);
-	printf("\n"); 
+//	module_dump(stdout, &module);
 
-	return ret;
+	DCC_LOG(LOG_TRACE, "1.");
+
+	offs = FLASH_BLK_DEV_DB_BIN_OFFS + db_heap;
+	len = sizeof(struct obj_module);
+
+	if ((ret = stm32_flash_write(offs, &module, len)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return ret;
+	}
+
+	DCC_LOG(LOG_TRACE, "2.");
+
+	/* update heap */
+	db_heap += len;
+	/* check for collision */
+	if (db_stack <= db_heap) {
+		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
+				db_stack, db_heap);
+		return -1;
+	}
+
+	DCC_LOG(LOG_TRACE, "3.");
+
+	return cnt;
+
 }
 
-int device_db_dump(FILE * f)
+void jsmn_dump_line(int ln, char * lp)
+{
+	char * cp;
+	int c;
+
+	if (lp == NULL)
+		return;
+
+	printf("%4d: ", ln);
+	for (cp = lp; (c = *cp) != '\0'; ++cp) {
+		if ((c == '\r') || (c == '\n'))
+			break;
+		printf("%c", c);
+	}
+	printf("\n");
+}
+
+void jsmn_dump_err(jsmn_parser * p, char * js)
+{
+	char * lp[5];
+	int ln;
+	int c;
+	int i;
+	int pos = p->pos;
+
+	lp[4] = NULL;
+	lp[3] = NULL;
+	lp[2] = NULL;
+	lp[1] = NULL;
+	lp[0] = js;
+	ln = 1;
+	for (i = 0; (c = js[i]) != '\0'; ++i) {
+		if (js[i - 1] == '\n') {
+			lp[4] = lp[3];
+			lp[3] = lp[2];
+			lp[2] = lp[1];
+			lp[1] = lp[0];
+			lp[0] = &js[i];
+			ln++;
+		}
+		if (i == pos) {
+			jsmn_dump_line(ln - 4, lp[4]);
+			jsmn_dump_line(ln - 3, lp[3]);
+			jsmn_dump_line(ln - 2, lp[2]);
+			jsmn_dump_line(ln - 1, lp[1]);
+			jsmn_dump_line(ln - 0, lp[0]);
+			break;
+		}
+	}
+}
+
+int json_len(char * js)
+{
+	char * cp;
+	char * ep;
+	int c;
+
+	ep = js;
+	for (cp = js; (c = *cp) != '\0'; ++cp) {
+		if (c == '}')
+			ep = cp;
+	}
+
+	return (ep - js) + 1; 
+}
+
+int device_db_compile(void)
 {
 	jsmn_parser p;
 	jsmntok_t tok[TOK_MAX];
 	jsmntok_t * t;
-	char * js = (char *)device_db_js;
-	int len = sizeof_device_db_js;
-	int r;
+	char * js;
+	int len;
+	int ret;
 	int n;
 	int i;
 
+	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
+	len = json_len(js);
+
+	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, len);
+
 	jsmn_init(&p);
 
-	r = jsmn_parse(&p, js, len, tok, TOK_MAX);
+	ret = jsmn_parse(&p, js, len, tok, TOK_MAX);
 
-	if (r == JSMN_ERROR_NOMEM) {
-		fprintf(f, "Err: Not enough tokens were provided!\n");
+	if (ret == JSMN_ERROR_NOMEM) {
 		DCC_LOG(LOG_ERROR, "Not enough tokens were provided!");
 		return -JSON_ERR_NOMEM;
 	}
 
-	if (r == JSMN_ERROR_INVAL) {
-		fprintf(f, "Err: Invalid character!\n");
-		DCC_LOG(LOG_ERROR, "Invalid character!");
+	if (ret == JSMN_ERROR_INVAL) {
+		DCC_LOG1(LOG_ERROR, "Invalid character at: %d", p.pos);
+		jsmn_dump_err(&p, js);
 		return -JSON_ERR_INVALID_CHAR;
 	}
 
-	if (r == JSMN_ERROR_PART) {
-		fprintf(f, "Err: not a full JSON packet!\n");
+	if (ret == JSMN_ERROR_PART) {
 		DCC_LOG(LOG_ERROR, "not a full JSON packet!");
+		jsmn_dump_err(&p, js);
 		return -JSON_ERR_INCOMPLETE;
 	}
 
-	if (r == 0) {
-		fprintf(f, "Warn: empty JSON packet!\n");
+	if (ret == 0) {
 		DCC_LOG(LOG_ERROR, "empty JSON packet!");
 		return -JSON_ERR_PKT_EMPTY;
 	}
@@ -722,9 +919,10 @@ int device_db_dump(FILE * f)
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
 		return -1;
 	};
-	/* initialise PW descriptor stack */
-	pw_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
 
+	/* initialise PW descriptor stack */
+	db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+	db_heap = 0;
 
 	t++;
 
@@ -741,27 +939,49 @@ int device_db_dump(FILE * f)
 		t++;
 
 		if (strcmp(s, "sensor") == 0) {
-//			db_decode_sensor(f, js, t, 0);
-			printf("\n- sensor ---------------\n");
 			r = json_parse_sensor(js, t);
 		} else if (strcmp(s, "module") == 0) {
-//			db_decode_module(f, js, t, 0);
-			printf("\n- module ---------------\n");
 			r = json_parse_module(js, t);
 		} else {
-			fprintf(f, "invalid object: \"%s\".\n", s);
-			return -1;
+			r = -JSON_ERR_INVALID_OBJECT;
+			DCC_LOG(LOG_ERROR, "invalid object.");
 		}
 
-		if (r < 0) {
-			DCC_LOG(LOG_ERROR, "json_walk_node() failed.");
+		if (r < 0)
 			return r;
-		}
 
 		t += r;
 	}
 
-	printf("\n");
+	printf("Device databse compiled.\n");
+	printf("Free memory: %d.%02d KiB.\n", (db_stack - db_heap) / 1024, 
+		   (((db_stack - db_heap) % 1024) * 100) / 1024);
+
+	return 0;
+}
+
+int device_db_dump(FILE * f)
+{
+	struct db_obj * obj;
+	uint32_t offs = FLASH_BLK_DEV_DB_BIN_OFFS; 
+
+	obj = (struct db_obj *)(STM32_MEM_FLASH + offs);
+	while (obj->len > 0) {
+		switch (obj->type) {
+		case DB_OBJ_SENSOR:
+			sensor_dump(f, (struct obj_sensor *)obj);
+			break;
+
+		case DB_OBJ_MODULE:
+			module_dump(f, (struct obj_module *)obj);
+			break;
+		}
+
+		offs += obj->len;
+		obj = (struct db_obj *)(STM32_MEM_FLASH + offs);
+	}
+
+	DCC_LOG(LOG_TRACE, "device database erased!");
 
 	return 0;
 }

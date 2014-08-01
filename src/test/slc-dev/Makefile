@@ -21,7 +21,7 @@
 
 PROG = slc-dev
 
-CFILES_GEN = device_db.c
+#CFILES_GEN = device_db.c
 CFILES = jsmn.c slc-dev.c board.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c json-dump.c flashfs.c shell.c\
 		 xflash.c xflash_pic.c slcdev-sim.c
@@ -40,7 +40,7 @@ LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CFLAGS = -g -Os
 
 MACH = stm32l151xb
 
