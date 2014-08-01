@@ -132,14 +132,16 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	uint32_t blk_size;
 	struct fs_dirent entry;
 
-	if (argc < 1)
+	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
-	if (argc > 1)
+	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	if (!fs_lookup(argv[1], &entry))
+	if (!fs_lookup(argv[1], &entry)) {
+		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
+	}
 
 	blk_offs = entry.offs;
 	blk_size = entry.max_size;
@@ -155,6 +157,30 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 		fprintf(f, "flash_xmodem_recv() failed!\n");
 		return -1;
 	}
+
+	return 0;
+}
+
+int cmd_cat(FILE * f, int argc, char ** argv)
+{
+	struct fs_dirent entry;
+	char * cp;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (!fs_lookup(argv[1], &entry)) {
+		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
+		return SHELL_ERR_ARG_INVALID;
+	}
+
+	cp = (char *)(STM32_MEM_FLASH + entry.offs);
+	DCC_LOG2(LOG_TRACE, "cp=0x%08x len=%d", cp, strlen(cp));
+
+	fprintf(f, "%s\n", cp);
 
 	return 0;
 }
@@ -381,6 +407,9 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		if ((strcmp(argv[1], "compile") == 0) || 
 			(strcmp(argv[1], "c") == 0)) {
 			device_db_compile();
+		} else if ((strcmp(argv[1], "erase") == 0) || 
+			(strcmp(argv[1], "e") == 0)) {
+			device_db_erase();
 		}
 	}
 
@@ -411,6 +440,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_eeprom, "eeprom", "ee", "", "EEPROM test" },
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
+
+	{ cmd_cat, "cat", "rem", "<filename>", "display file content" },
 
 	{ NULL, "", "", NULL, NULL }
 };

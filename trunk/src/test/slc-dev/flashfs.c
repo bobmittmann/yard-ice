@@ -34,8 +34,6 @@ struct dir_entry {
 	uint32_t offs;
 };
 
-#define FLASH_FS_BASE_ADDR 0x08010000
-
 /*****************************************************************************
  * Pseudo filesystem directory 
  *****************************************************************************/
@@ -74,6 +72,9 @@ bool fs_lookup(const char * name, struct fs_dirent * entry)
 			return true;
 		}
 	}
+
+	DCC_LOG(LOG_ERROR, "file not found!");
+
 	return false;
 }
 

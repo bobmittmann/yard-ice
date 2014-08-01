@@ -89,6 +89,24 @@
 		"pw5" : [540, 660]
 	},
 
+	"sensor": { 
+		"id" : 10, 
+		"tag" : "5251P", 
+		"desc" : "Heat Detector", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25*C", 1070, 1400],
+			["Normal, 57.2*C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
+	},
+
 	"module": { 
 		"id": 4, 
 		"tag": "M500S", 
@@ -178,5 +196,27 @@
 		"ic2": ["Relay select"],
 		"ic3": ["LED control"],
 	}
+
+	"module": { 
+		"id": 8, 
+		"tag": "M500FP", 
+		"desc": "AOM-Tel Firephone Module", 
+		"pw1": [240, 360],
+		"pw2": [
+			["Reset(Normal)", 240, 360],
+			["Set", 560, 630]
+		],
+		"pw3": [
+			["Trouble (Short or Open)", 560, 630],
+			["Normal", 240, 360],
+			["Off-Hook", 860, 940]
+		],
+		"pw4": [0, 300],
+		"pw5": [1750, 2025],
+		"ic1": ["Relay Pulse"],
+		"ic2": ["Relay select"],
+		"ic3": ["LED control"]
+	}
+
 }
 
