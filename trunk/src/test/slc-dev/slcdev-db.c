@@ -8,13 +8,6 @@
 #include "jsmn.h"
 #include "board.h"
 
-char * json_token_tostr(char *js, jsmntok_t *t);
-int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl);
-int json_walk_object(FILE * f, char * js, jsmntok_t *t, int lvl);
-int json_walk_array(FILE * f, char * js, jsmntok_t *t, int lvl);
-
-#define JSON_STR_LEN_MAX 128
-
 char * json_string(char * s, unsigned int max, char * js, jsmntok_t *t)
 {
 	int n;
@@ -264,23 +257,6 @@ void json_string_print(char * js, struct json_string * str)
 	memcpy(s, js + str->pos, n);
 	s[n] = '\0';
 	printf("\"%s\"", s);
-}
-
-
-int device_db_erase(void)
-{
-	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
-	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
-	int ret;
-
-	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
-		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return ret;
-	};
-
-	DCC_LOG(LOG_TRACE, "device database erased!");
-
-	return ret;
 }
 
 
@@ -981,8 +957,23 @@ int device_db_dump(FILE * f)
 		obj = (struct db_obj *)(STM32_MEM_FLASH + offs);
 	}
 
-	DCC_LOG(LOG_TRACE, "device database erased!");
-
 	return 0;
 }
+
+int device_db_erase(void)
+{
+	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
+	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
+	int ret;
+
+	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
+		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
+		return ret;
+	};
+
+	DCC_LOG(LOG_TRACE, "device database erased!");
+
+	return ret;
+}
+
 
