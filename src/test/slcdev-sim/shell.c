@@ -408,7 +408,6 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 		data++;
 	}
 		
-
 	return 0;
 }
 
@@ -428,6 +427,28 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[1], "erase") == 0) || 
 			(strcmp(argv[1], "e") == 0)) {
 			device_db_erase();
+		}
+	}
+
+	return 0;
+}
+
+int cmd_config(FILE * f, int argc, char ** argv)
+{
+//	if (argc < 2)
+//		return SHELL_ERR_ARG_MISSING;
+
+	if (argc == 1) {
+		config_dump(f);
+	}
+
+	if (argc == 2) {
+		if ((strcmp(argv[1], "compile") == 0) || 
+			(strcmp(argv[1], "c") == 0)) {
+			config_compile();
+		} else if ((strcmp(argv[1], "erase") == 0) || 
+			(strcmp(argv[1], "e") == 0)) {
+			config_erase();
 		}
 	}
 
@@ -458,6 +479,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_eeprom, "eeprom", "ee", "", "EEPROM test" },
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
+
+	{ cmd_config, "config", "cfg", "[compile|stat]", 
+		"simulator configuration" },
 
 	{ cmd_cat, "cat", "", "<filename>", "display file content" },
 

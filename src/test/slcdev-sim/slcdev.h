@@ -120,6 +120,70 @@ enum {
 	SLC_EV_SIM,
 };
 
+/***************************************************************************
+  Configuration
+ ***************************************************************************/
+
+struct cfg_slcdev {
+	uint32_t device_type : 7;
+	uint32_t advanced_protocol : 1;
+
+	uint32_t enabled : 1;
+	uint32_t poll_flash : 1;
+	uint32_t isink_pulse_level : 4;
+	uint32_t isink_slewrate : 2;
+
+	uint32_t isink_width_err : 3;
+	uint32_t isink_latency : 5;  /* tm = (x + 1) * 5 ( 5us .. 160us) */
+
+	uint32_t isink_pulse_pre : 5; /* tm = (x + 1) * 5 ( 5us .. 160us) */
+};
+
+enum {
+	SIM_NOP,
+	SIM_ENABLE,
+	SIM_WR_PW2,
+	SIM_SEL_PW2,
+	SIM_WR_PW3,
+	SIM_SEL_PW3
+};
+
+struct sim_insn {
+	uint16_t opc: 7;
+	uint16_t addr: 9;
+	uint16_t val;
+};
+
+#define CFG_SW_INSN_MAX 16
+
+struct cfg_sw {
+	struct sim_insn up[CFG_SW_INSN_MAX];
+	struct sim_insn down[CFG_SW_INSN_MAX];
+	struct sim_insn off[CFG_SW_INSN_MAX];
+};
+
+struct cfg_info {
+	uint16_t json_crc;
+	uint16_t json_len;
+};
+
+struct devsim_cfg {
+	struct cfg_info info;
+
+	struct cfg_slcdev sensor[160];
+
+	struct cfg_slcdev module[160];
+
+	struct cfg_sw sw1;
+
+	struct cfg_sw sw2;
+
+	struct {
+		uint32_t opt;
+		struct sim_insn insn[32];
+	} zone[16];
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -150,6 +214,10 @@ int device_db_init(void);
 int device_db_erase(void);
 int device_db_compile(void);
 int device_db_dump(FILE * f);
+
+int config_dump(FILE * f);
+int config_erase(void);
+int config_compile(void);
 
 #ifdef __cplusplus
 }
