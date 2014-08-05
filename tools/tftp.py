@@ -127,39 +127,10 @@ class TftpPacketACK(TftpPacket):
 		return self
 
 
-class TftpPacketERR(TftpPacket):
-	def __init__(self):
-		TftpPacket.__init__(self, 5)
-		self.err = 0
-		self.msg = None
-
-		self.errmsgs = {
-			1: "File not found",
-			2: "Access violation",
-			3: "Disk full or allocation exceeded",
-			4: "Illegal TFTP operation",
-			5: "Unknown transfer ID",
-			6: "File already exists",
-			7: "No such user",
-			8: "Failed to negotiate options"
-			}
-
-	def decode(self):
-		buflen = len(self.buf)
-		if buflen == 4:
-			fmt = "!H"
-			(self.err,) = struct.unpack(fmt, self.buf[2:])
-			self.msg = self.errmsgs[self.err]
-		else:
-			fmt = "!H{0:d}sx".format(buflen - 5)
-			(self.err, self.msg) = struct.unpack(fmt, self.buf[2:])
-
-		raise TftpException("TFTP Error: {0:d} - '{1:s}'".format(self.err, self.msg))
-
-
 class TftpPacketOACK(TftpPacket):
 	def __init__(self):
 		TftpPacket.__init__(self, 6)
+		self.blkno = 0
 
 	def decode_options(self, buf):
 		"""This method decodes the section of the buf that contains an
@@ -192,6 +163,36 @@ class TftpPacketOACK(TftpPacket):
 	def decode(self):
 		self.options = self.decode_options(self.buf[2:])
 		return self
+
+class TftpPacketERR(TftpPacket):
+	def __init__(self):
+		TftpPacket.__init__(self, 5)
+		self.err = 0
+		self.msg = None
+
+		self.errmsgs = {
+			1: "File not found",
+			2: "Access violation",
+			3: "Disk full or allocation exceeded",
+			4: "Illegal TFTP operation",
+			5: "Unknown transfer ID",
+			6: "File already exists",
+			7: "No such user",
+			8: "Failed to negotiate options"
+			}
+
+	def decode(self):
+		buflen = len(self.buf)
+		if buflen == 4:
+			fmt = "!H"
+			(self.err,) = struct.unpack(fmt, self.buf[2:])
+			self.msg = self.errmsgs[self.err]
+		else:
+			fmt = "!H{0:d}sx".format(buflen - 5)
+			(self.err, self.msg) = struct.unpack(fmt, self.buf[2:])
+
+		raise TftpException("TFTP Error: {0:d} - '{1:s}'".format(self.err, self.msg))
+
 
 
 # ----------------------------------------------------------------------
@@ -321,13 +322,13 @@ class TftpClient(object):
 			bin_data = data
 
 		if options.has_key('blksize'):
-			size = options['blksize']
-			if size < TFTP_MIN_BLKSIZE or size > TFTP_MAX_BLKSIZE:
-				raise TftpException, "Invalid blksize: %d" % size
+			opt_blksize = options['blksize']
+			if opt_blksize < TFTP_MIN_BLKSIZE or opt_blksize > TFTP_MAX_BLKSIZE:
+				raise TftpException("Invalid blksize: {:d}".format(opt_blksize))
 		else:
-		 	size = TFTP_DEF_BLKSIZE
+			opt_blksize = TFTP_DEF_BLKSIZE
 
-		self.blksize = size
+		self.blksize = TFTP_DEF_BLKSIZE
 		data_len = len(bin_data)
 		data_rem = data_len
 		data_pos = 0
@@ -340,13 +341,16 @@ class TftpClient(object):
 		# send and receive 
 		pkt = self.session.cycle(wrq)
 
-		if not isinstance(pkt, TftpPacketOACK):
+		if isinstance(pkt, TftpPacketOACK):
+			self.blksize = opt_blksize
+		else:
 			# we should receive ACK
 			if not isinstance(pkt, TftpPacketACK):
 				raise TftpException("Invalid response.")		
-			# the block number must match our initial block number
-			if (pkt.blkno != blkno):
-				raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
+
+		# the block number must match our initial block number
+		if (pkt.blkno != blkno):
+			raise TftpException("Invalid block number {0:d}.".format(pkt.blkno))
 
 		# connect to the remote host
 		self.session.connect()

@@ -125,6 +125,13 @@ def error(msg):
 	print("")
 	sys.exit(2)
 
+def script_error(msg, script):
+	print("")
+	print("{0}: error: {1}".format(progname, msg))
+	print("")
+	print("\"{:s}\"".format(script))
+	sys.exit(2)
+
 def main():
 	global progname 
 
@@ -223,7 +230,7 @@ def main():
 			script = power_on
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 		except Exception as err:
-			error(err)
+			script_error(err, script)
 
 	if init:
 		try:
@@ -234,7 +241,7 @@ def main():
 				print("   \"{0}\"".format(script))
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 		except Exception as err:
-				error(err)
+			script_error(err, script)
 	else:
 		try:
 			print(" - Connecting to remote target")
@@ -244,7 +251,7 @@ def main():
 				print("   \"{0}\"".format(script))
 			tclient.put(script, "script", tftp.TFTP_MODE_NETASCII)
 		except Exception as err:
-				error(err)
+			script_error(err, script)
 
 
 	if erase:
@@ -257,7 +264,7 @@ def main():
 			tclient.put(script, 'script', tftp.TFTP_MODE_NETASCII, \
 						4 + (fsize / 16384))
 		except Exception as err:
-			error(err)
+			script_error(err, script)
 
 	try:
 		print(" - Loading binary file...")
@@ -278,7 +285,7 @@ def main():
 			tclient.put(tgt_reset, 'script', tftp.TFTP_MODE_NETASCII)
 			sys.stdout.flush()
 		except Exception as err:
-			error(err)
+			script_error(err, script)
 
 if __name__ == "__main__":
 	main()
