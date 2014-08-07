@@ -139,7 +139,7 @@ int main(int argc, char ** argv)
 	FILE * f;
 
 	DCC_LOG_INIT();
-//	DCC_LOG_CONNECT();
+	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	/* calibrate the delay loop fo udelay() and friends. */

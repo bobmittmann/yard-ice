@@ -274,8 +274,10 @@ struct thinkos_rt {
 	/* This fields must be at the beginning of this structure 
 	   and their order and sizes must not be changed.
 	   This is critical for the scheduler operation. */
+
 	/* Thread context pointers */
-	struct thinkos_context * ctx[32]; 
+	struct thinkos_context * ctx[THINKOS_THREADS_MAX]; 
+	/* Idle thread context pointer */
 	struct thinkos_context * idle_ctx; 
 
 	int32_t active; /* current active thread */
@@ -584,19 +586,30 @@ static void inline __attribute__((always_inline)) __thinkos_wait(void) {
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
 	cm3_cpsid_i();
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
 	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
 		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
 		thinkos_rt.wq_tmshare = 0;
-	}
+	} 
+#endif
 	cm3_cpsie_i();
 #endif
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 }
 
-#define THINKOS_IDX_NULL 32
-#define THINKOS_THREAD_NULL THINKOS_IDX_NULL
-#define THINKOS_THREAD_IDLE THINKOS_IDX_NULL
+#define THINKOS_THREAD_NULL 32
+#define THINKOS_THREAD_IDLE THINKOS_THREADS_MAX
 
 static int inline __attribute__((always_inline)) __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;

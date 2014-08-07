@@ -27,18 +27,22 @@
 #include <sys/file.h>
 #include <sys/null.h>
 
-#ifndef FILE_MAX
-#define FILE_MAX 8
+#ifdef CONFIG_H
+#include "config.h"
 #endif
 
-static struct file __file[FILE_MAX];
+#ifndef FILE_DEV_MAX
+#define FILE_DEV_MAX 8
+#endif
+
+static struct file __file[FILE_DEV_MAX];
 
 struct file * file_alloc(void * dev, const struct fileop * op)
 {
 	struct file * f;
 	int i;
 
-	for (i = 0; i < FILE_MAX; ++i) {
+	for (i = 0; i < FILE_DEV_MAX; ++i) {
 		f = &__file[i];
 		if (f->data == NULL) {
 			f->data = dev;

@@ -212,7 +212,7 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 
 	if (argc == 2) {
 		addr = strtoul(argv[1], NULL, 0);
-		if (addr > 199)
+		if (addr > 319)
 			return SHELL_ERR_ARG_INVALID;
 
 		trig_addr_set(addr);
@@ -233,9 +233,16 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
+	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
+		for (addr = 1; addr < 320; ++addr)
+			dev_sim_enable(addr);
+		fprintf(f, "All devices are enabled\n");
+		return 0;
+	}
+
 	for (i = 1; i < argc; ++i) {
 		addr = strtoul(argv[i], NULL, 0);
-		if ((addr < 1) || (addr > 199))
+		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
 
 		fprintf(f, "Device enabled: %d\n", addr);
@@ -253,20 +260,16 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
-	if (argc == 2) {
-		if (strcmp(argv[1], "all") == 0) {
-			for (addr = 1; addr < 200; ++addr) {
-				dev_sim_disable(addr);
-			}
-			fprintf(f, "All devices are disabled\n");
-		}
-
+	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
+		for (addr = 1; addr < 320; ++addr)
+			dev_sim_disable(addr);
+		fprintf(f, "All devices are disabled\n");
 		return 0;
 	}
 
 	for (i = 1; i < argc; ++i) {
 		addr = strtoul(argv[i], NULL, 0);
-		if ((addr < 1) || (addr > 199))
+		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
 
 		fprintf(f, "Device disable: %d\n", addr);
@@ -455,6 +458,35 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int device_dump(FILE * f, int addr);
+int device_attr_set(int addr, const char * name, const char * val);
+int device_attr_print(FILE * f, int addr, const char * name);
+
+int cmd_dev(FILE * f, int argc, char ** argv)
+{
+	int addr;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 4)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	addr = strtoul(argv[1], NULL, 0);
+	if (addr > 319)
+		return SHELL_ERR_ARG_INVALID;
+
+	if (argc > 2) {
+		if (argc > 3)
+			return device_attr_set(addr, argv[2], argv[3]);
+		return device_attr_print(f, addr, argv[2]);
+	} else {
+		device_dump(f, addr);
+	}
+
+	return 0;
+}
+
 const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
@@ -484,6 +516,8 @@ const struct shell_cmd cmd_tab[] = {
 		"simulator configuration" },
 
 	{ cmd_cat, "cat", "", "<filename>", "display file content" },
+
+	{ cmd_dev, "dev", "", "<addr> [attr [VAL]]", "get/set device attribute" },
 
 	{ cmd_ls, "ls", "", "<filename>", "list files" },
 

@@ -28,18 +28,20 @@
 
 #include <sys/tty.h>
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
+#ifndef TTY_INBUF_LEN 
 #define TTY_INBUF_LEN 64
-#define TTY_EDITBUF_SIZE 79
+#endif
 
 struct tty_dev {
 	struct file f;
 
+	uint8_t inpos;
+	uint8_t inlen;
 	char inbuf[TTY_INBUF_LEN];
-	int inpos;
-	int inlen;
-
-	char editbuf[TTY_EDITBUF_SIZE + 1];
-	int editpos;
 };
 
 int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
@@ -180,11 +182,11 @@ int tty_flush(struct tty_dev * tty)
 	return tty->f.op->flush(tty->f.data);
 }
 
-#ifndef TTY_MAX
-#define TTY_MAX 4
+#ifndef TTY_DEV_MAX
+#define TTY_DEV_MAX 4
 #endif
 
-static struct tty_dev __tty[TTY_MAX];
+static struct tty_dev __tty[TTY_DEV_MAX];
 
 int tty_release(struct tty_dev * tty)
 {
@@ -200,12 +202,11 @@ struct tty_dev * tty_attach(struct file * f)
 	struct tty_dev * tty;
 	int i;
 
-	for (i = 0; i < TTY_MAX; ++i) {
+	for (i = 0; i < TTY_DEV_MAX; ++i) {
 		tty = &__tty[i];
 		if (tty->f.data == NULL) {
 			tty->inpos = 0;
 			tty->inlen = 0;
-			tty->editpos = 0;
 			tty->f.op = f->op;
 			tty->f.data = f->data;
 			return tty;

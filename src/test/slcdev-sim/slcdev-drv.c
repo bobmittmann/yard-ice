@@ -29,37 +29,6 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-/* -------------------------------------------------------------------------
- * Sysem Sensor device
- * ------------------------------------------------------------------------- */
-
-struct ss_device {
-	uint8_t enabled: 1;
-	uint8_t poll_flash : 1;
-	uint8_t advanced_protocol : 1;
-
-	uint8_t addr;
-	uint8_t device_type; /* reference to a device from the database */
-	uint8_t time_bias; /* time accuracy multiplicative factor */
-	uint8_t isink_cfg; /* current sink configuration */
-
-	union {
-		struct { /* clip device */
-			uint8_t isink_pre;       /* preenphasis time */
-			uint8_t isink_latency;   /* PW reponse time */
-			uint16_t pw1;
-
-			uint16_t pw2;
-			uint16_t pw3;
-
-			uint16_t pw4;
-			uint16_t pw5;
-		}; 
-	};
-};
-
-#define SS_DEVICES_MAX 320
-
 struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
 /* -------------------------------------------------------------------------
@@ -106,11 +75,11 @@ const struct ss_device null_dev = {
 	.poll_flash = 0,
 	.advanced_protocol = 0,
 	.addr = 0,
-	.device_type = 0,
-	.time_bias = 128,
-	.isink_cfg = 0,
-	.isink_pre = 0,
-	.isink_latency = PW_RESPONSE_TIME,
+	.dev = 0,
+	.tbias = 128,
+	.icfg = 0,
+	.ipre = 0,
+	.ilat = PW_RESPONSE_TIME,
 	.pw1 = 0,
 	.pw2 = 0,
 	.pw3 = 0,
@@ -129,11 +98,11 @@ void dev_sim_init(void)
 		dev->poll_flash = 1,
 		dev->advanced_protocol = 0,
 		dev->addr = i,
-		dev->device_type = 0,
-		dev->time_bias = 128,
-		dev->isink_cfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
-		dev->isink_pre = 35; /* preenphasis time */
-		dev->isink_latency = PW_RESPONSE_TIME,
+		dev->dev = 0,
+		dev->tbias = 128,
+		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
+		dev->ipre = 35; /* preenphasis time */
+		dev->ilat = PW_RESPONSE_TIME,
 		dev->pw1 = 300;
 		dev->pw2 = 300;
 		dev->pw3 = 900;
@@ -358,7 +327,7 @@ void stm32_tim10_isr(void)
 						slcdev.sim_event = true;
 						__thinkos_flag_signal(slcdev.flag);
 						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
-						isink_mode_set(scan.dev->isink_cfg);
+						isink_mode_set(scan.dev->icfg);
 					} else {
 						slcdev.state = DEV_INACTIVE_START_WAIT;
 						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
@@ -373,35 +342,35 @@ void stm32_tim10_isr(void)
 
 		case DEV_PW1_RESPONSE_TIME:
 			/* Reference Pulse Width */
-			isink_pulse(dev->isink_pre, dev->pw1); 
+			isink_pulse(dev->ipre, dev->pw1); 
 			slcdev.state = DEV_PW1_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
 			/* Remote Test Status */
-			isink_pulse(dev->isink_pre, dev->pw2);
+			isink_pulse(dev->ipre, dev->pw2);
 			slcdev.state = DEV_PW2_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
 			/* Manufacturer Code */
-			isink_pulse(dev->isink_pre, dev->pw3); 
+			isink_pulse(dev->ipre, dev->pw3); 
 			slcdev.state = DEV_PW3_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
 			/* Analog */
-			isink_pulse(dev->isink_pre, dev->pw4); 
+			isink_pulse(dev->ipre, dev->pw4); 
 			slcdev.state = DEV_PW4_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
 			/* Type Id */
-			isink_pulse(dev->isink_pre, dev->pw5); 
+			isink_pulse(dev->ipre, dev->pw5); 
 			slcdev.state = DEV_PW5_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
 			break;
@@ -440,31 +409,31 @@ void stm32_comp_tsc_isr(void)
 
 		switch (slcdev.state) {
 		case DEV_PW1_START_WAIT:
-			tim->arr = dev->isink_latency;
+			tim->arr = dev->ilat;
 			slcdev.state = DEV_PW1_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW2_START_WAIT:
-			tim->arr = dev->isink_latency;
+			tim->arr = dev->ilat;
 			slcdev.state = DEV_PW2_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW3_START_WAIT:
-			tim->arr = dev->isink_latency;
+			tim->arr = dev->ilat;
 			slcdev.state = DEV_PW3_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW4_START_WAIT:
-			tim->arr = dev->isink_latency;
+			tim->arr = dev->ilat;
 			slcdev.state = DEV_PW4_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW5_START_WAIT:
-			tim->arr = dev->isink_latency;
+			tim->arr = dev->ilat;
 			slcdev.state = DEV_PW5_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
 			break;
@@ -694,5 +663,7 @@ void slcdev_init(void)
 	slc_sense_init();
 
 	dev_sim_init();
+
+	DCC_LOG1(LOG_TRACE, "sizeof(ss_dev_tab) = %d bytes.", sizeof(ss_dev_tab));
 }
 
