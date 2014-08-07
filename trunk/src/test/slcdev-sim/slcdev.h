@@ -59,6 +59,21 @@ struct db_obj {
 	struct db_obj * next;
 };
 
+struct obj_device {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+	const char * tag;	
+	const char * desc;	
+	struct pw_list * pw1;
+	struct pw_list * pw2;
+	struct pw_list * pw3;
+	struct pw_list * pw4;
+	struct pw_list * pw5;
+};
+
 struct obj_module {
 	uint8_t len;
 	uint8_t type;
@@ -198,9 +213,9 @@ struct ss_device {
 		struct {
 			uint32_t enabled: 1;
 			uint32_t addr: 9; /* reverse lookup address */
-			uint32_t poll_flash : 1;
-			uint32_t advanced_protocol : 1;
+			uint32_t ap: 1;
 			uint32_t type: 6;   /* reference to an object type */
+			uint32_t poll_flash : 1;
 		}; 
 		uint32_t opt;	
 	};

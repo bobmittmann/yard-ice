@@ -132,6 +132,9 @@ const struct cfg_type cfg_type_lut[] = {
 const struct cfg_attr dev_attr_lut[] = {
 	{ "enabled", CFG_BIT,    0, offsetof(struct ss_device, opt) },
 	{ "addr",    CFG_BFIELD, BFIELD(9, 1), offsetof(struct ss_device, opt) },
+	{ "ap",      CFG_BIT,    10, offsetof(struct ss_device, opt) },
+	{ "type",    CFG_BFIELD, BFIELD(6, 11), offsetof(struct ss_device, opt) },
+	{ "poll",    CFG_BIT,    17, offsetof(struct ss_device, opt) },
 	{ "dev",     CFG_UINT8,  0, offsetof(struct ss_device, dev) },
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
 	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
@@ -214,7 +217,7 @@ int object_attr_get(void * obj, const struct cfg_attr attr[],
 }
 
 
-int device_dump(FILE * f, int addr)
+int device_dump(FILE * f, unsigned int addr)
 {
 	return object_dump(&ss_dev_tab[addr], dev_attr_lut, f);
 }
@@ -224,7 +227,7 @@ int device_attr_set(int addr, const char * name, const char * val)
 	return object_attr_set(&ss_dev_tab[addr], dev_attr_lut, name, val);
 }
 
-int device_attr_print(FILE * f, int addr, const char * name)
+int device_attr_print(FILE * f, unsigned int addr, const char * name)
 {
 	char val[16];
 	int ret;
@@ -236,6 +239,16 @@ int device_attr_print(FILE * f, int addr, const char * name)
 
 	return ret;
 }
+
+int device_pw3_lookup(unsigned int addr, unsigned int sel)
+{
+	struct ss_device * dev;
+	struct obj_device * obj;
+
+//	return object_attr_set(&ss_dev_tab[addr], dev_attr_lut, name, val);
+	return 0;
+}
+
 
 #if 0
 int cmd_eeprom(FILE * f, int argc, char ** argv)
