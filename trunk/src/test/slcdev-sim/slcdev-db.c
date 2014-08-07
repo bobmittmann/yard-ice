@@ -318,7 +318,7 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 }
 
 
-const struct obj_desc sensor_obj_desc[] = {
+const struct json_obj sensor_json_obj[] = {
 	{ "id", json_parse_uint16, offsetof(struct obj_sensor, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_sensor, flags) },
 	{ "tag", db_parse_string, offsetof(struct obj_sensor, tag) },
@@ -338,7 +338,7 @@ const struct obj_desc sensor_obj_desc[] = {
 	"PW5 - Type ID", */
 
 
-const struct obj_desc module_obj_desc[] = {
+const struct json_obj module_json_obj[] = {
 	{ "id", json_parse_uint16, offsetof(struct obj_module, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_module, flags) },
 	{ "tag", db_parse_string, offsetof(struct obj_module, tag) },
@@ -354,7 +354,7 @@ const struct obj_desc module_obj_desc[] = {
 	{ "", NULL, 0},
 };
 
-int json_parse_sensor(char * js, jsmntok_t *t, struct db_obj ** objp)
+int db_parse_sensor(char * js, jsmntok_t *t, struct db_obj ** objp)
 {
 	struct obj_sensor sensor;
 	int ret;
@@ -365,7 +365,7 @@ int json_parse_sensor(char * js, jsmntok_t *t, struct db_obj ** objp)
 	sensor.type = DB_OBJ_SENSOR;
 	sensor.next = *objp;
 
-	if ((cnt = json_parse_object(js, t, sensor_obj_desc, &sensor)) < 0) {
+	if ((cnt = json_parse_object(js, t, sensor_json_obj, &sensor)) < 0) {
 		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
 		return cnt;
 	}
@@ -381,7 +381,7 @@ int json_parse_sensor(char * js, jsmntok_t *t, struct db_obj ** objp)
 	return cnt;
 }
 
-int json_parse_module(char * js, jsmntok_t *t, struct db_obj ** objp)
+int db_parse_module(char * js, jsmntok_t *t, struct db_obj ** objp)
 {
 	struct obj_module module;
 	int ret;
@@ -392,7 +392,7 @@ int json_parse_module(char * js, jsmntok_t *t, struct db_obj ** objp)
 	module.type = DB_OBJ_MODULE;
 	module.next = *objp;
 
-	if ((cnt = json_parse_object(js, t, module_obj_desc, &module)) < 0) {
+	if ((cnt = json_parse_object(js, t, module_json_obj, &module)) < 0) {
 		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
 		return cnt;
 	}
@@ -550,9 +550,9 @@ int device_db_compile(void)
 		err_tok = t;
 
 		if (strcmp(s, "sensor") == 0) {
-			ret = json_parse_sensor(js, t, &obj);
+			ret = db_parse_sensor(js, t, &obj);
 		} else if (strcmp(s, "module") == 0) {
-			ret = json_parse_module(js, t, &obj);
+			ret = db_parse_module(js, t, &obj);
 		} else {
 			ret = -JSON_ERR_INVALID_OBJECT;
 			DCC_LOG(LOG_ERROR, "invalid object.");

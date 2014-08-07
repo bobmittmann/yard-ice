@@ -184,6 +184,52 @@ struct devsim_cfg {
 	} zone[16];
 };
 
+
+/***************************************************************************
+  Runtime
+ ***************************************************************************/
+
+/* -------------------------------------------------------------------------
+ * Sysem Sensor device
+ * ------------------------------------------------------------------------- */
+
+struct ss_device {
+	union {
+		struct {
+			uint32_t enabled: 1;
+			uint32_t addr: 9; /* reverse lookup address */
+			uint32_t poll_flash : 1;
+			uint32_t advanced_protocol : 1;
+			uint32_t type: 6;   /* reference to an object type */
+		}; 
+		uint32_t opt;	
+	};
+
+	uint8_t dev;   /* reference to a device type */
+
+    uint8_t tbias;  /* time accuracy multiplication factor */
+	uint8_t icfg;   /* current sink configuration */
+	uint8_t ipre;   /* current sink preenphasis time */
+	uint8_t ilat;   /* Current sink latency (PW reponse time) */
+
+	uint16_t pw1;
+
+	uint16_t pw2;
+	uint16_t pw3;
+
+	uint16_t pw4;
+	uint16_t pw5;
+
+	uint16_t usr1;
+	uint16_t usr2;
+	uint16_t usr3;
+	uint16_t usr4;
+};
+
+#define SS_DEVICES_MAX 320
+
+extern struct ss_device ss_dev_tab[SS_DEVICES_MAX];
+
 #ifdef __cplusplus
 extern "C" {
 #endif

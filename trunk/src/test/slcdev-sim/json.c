@@ -111,7 +111,7 @@ int json_parse_string(char * js, jsmntok_t * t, void * ptr)
 jsmntok_t * err_tok = NULL;
 
 int json_parse_object(char * js, jsmntok_t * t, 
-					  const struct obj_desc * desc, void * obj)
+					  const struct json_obj * desc, void * obj)
 {
 //	uint8_t * ptr = (uint8_t * ptr);
 	int len;

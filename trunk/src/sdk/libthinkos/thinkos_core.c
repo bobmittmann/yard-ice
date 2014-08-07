@@ -52,7 +52,6 @@ uint32_t thinkos_idle_val(void)
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
-
 static inline void __attribute__((always_inline)) 
 __dump_context(struct thinkos_context * __ctx) {
 	DCC_LOG4(LOG_TRACE, "  r0=%08x  r1=%08x  r2=%08x  r3=%08x", 
@@ -71,7 +70,16 @@ void test_call(struct thinkos_context * ctx)
 {
 	__dump_context(ctx);
 }
+
+static inline void __attribute__((always_inline)) __wait(void) {
+	asm volatile ("mov    r3, #1\n"
+				  "0:\n"
+				  "cbz	r3, 1f\n"
+				  "b.n  0b\n"
+				  "1:\n" : : : "r3"); 
+}
 #endif
+
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
@@ -118,34 +126,18 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  : : "r" (r0) : "r3"); 
 }
 
-static inline void __attribute__((always_inline)) __wait(void) {
-	asm volatile ("mov    r3, #1\n"
-				  "0:\n"
-				  "cbz	r3, 1f\n"
-				  "b.n  0b\n"
-				  "1:\n" : : : "r3"); 
-}
-
-#include <sys/delay.h>
-
-int sched_busy = 0;
-
 /* THinkOS - scheduler */
 void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 {
 	struct thinkos_context * ctx;
 	uint32_t idx;
 
-//	sched_busy = 1;
-
 //	DCC_LOG(LOG_TRACE, "...");
 
 	/* save the context */
 	ctx = __sched_entry();
 
-//	udelay(2000);
-
-	/* get the active thread and schedule bit */	
+	/* get the active (current) thread */	
 	idx = thinkos_rt.active;
 
 	/* save SP */
@@ -154,22 +146,20 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	/* get a thread from the ready bitmap */
 	idx = __clz(__rbit(thinkos_rt.wq_ready));
 
-	/* update the current thread */
+	/* update the active thread */
 	thinkos_rt.active = idx;
 
 	ctx = thinkos_rt.ctx[idx];
 
 #if THINKOS_ENABLE_SCHED_DEBUG
 	if (thinkos_rt.sched_trace_req) {
-//		DCC_LOG1(LOG_TRACE, "active=%d", idx);
-//		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
-//		__dump_context(ctx);
-//		__wait();
+		DCC_LOG1(LOG_TRACE, "active=%d", idx);
+		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
+		__dump_context(ctx);
+		__wait();
 		thinkos_rt.sched_trace_req = 0;
 	}
 #endif
-
-//	sched_busy = 0;
 
 	/* restore the context */
 	__sched_exit(ctx);
@@ -184,9 +174,6 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	uint32_t ticks;
 	uint32_t wq;
 	int j;
-
-//	if (sched_busy)
-//		__wait();
 
 	ticks = thinkos_rt.ticks; 
 	ticks++;
@@ -240,12 +227,22 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 //			printf(" w%x", thinkos_rt.wq_tmshare);
 			bmp_bit_clr(&thinkos_rt.wq_ready, idx);
 			cm3_cpsid_i();
+#if (THINKOS_THREADS_MAX < 32) 
+			if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+				/* No more threads into the ready queue,
+				 move the timeshare queue to the ready queue.
+				 Keep the IDLE bit set */
+				thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+				thinkos_rt.wq_tmshare = 0;
+			} 
+#else
 			if (thinkos_rt.wq_ready == 0) {
 				/* no more threads into the ready queue,
 				 move the timeshare queue to the ready queue */
 				thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
 				thinkos_rt.wq_tmshare = 0;
 			} 
+#endif
 			cm3_cpsie_i();
 			sched++;
 		} else {
@@ -487,6 +484,14 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* set the active thread */
 	thinkos_rt.active = self;
 	bmp_bit_set(&thinkos_rt.wq_ready, self);
+
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	bmp_bit_set(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX);
+#endif
+
+	DCC_LOG2(LOG_TRACE, "threads_max=%d ready=%08x", 
+			 THINKOS_THREADS_MAX, thinkos_rt.wq_ready);
 
 	/* initialize the SysTick module */
 	systick->load = cm3_systick_load_1ms; /* 1ms tick period */

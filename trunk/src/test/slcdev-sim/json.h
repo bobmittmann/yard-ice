@@ -61,7 +61,7 @@ enum {
 };
 
 
-struct obj_desc {
+struct json_obj {
 	char key[12];
 	int (* parser)(char * js, jsmntok_t * t, void * ptr);
 	unsigned int offs;	
@@ -99,7 +99,7 @@ int json_parse_boolean(char * js, jsmntok_t * t, void * ptr);
 int json_parse_string(char * js, jsmntok_t * t, void * ptr);
 
 int json_parse_object(char * js, jsmntok_t * t, 
-					  const struct obj_desc * desc, void * obj);
+					  const struct json_obj * desc, void * obj);
 
 #ifdef __cplusplus
 }

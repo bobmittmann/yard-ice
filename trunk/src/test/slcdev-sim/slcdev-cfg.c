@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include <sys/dcclog.h>
 
@@ -12,7 +13,229 @@
 uint16_t cfg_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
 uint16_t cfg_heap = 0;
 
-struct devsim_cfg * cfg = (struct devsim_cfg *)STM32_MEM_EEPROM;
+/* Basic field (attribute) types */
+enum {
+	CFG_VOID,
+	CFG_BIT,
+	CFG_BFIELD,
+	CFG_UINT8,
+	CFG_UINT16
+};
+
+#define BFIELD(BITS, POS) ((((BITS - 1) & 0x1f) << 5) | (POS & 0x1f))
+
+struct cfg_type {
+	int (* encode)(const char * s, int opt, void * ptr); /* encode string into 
+												   attribute */
+	int (* decode)(char * s, int opt, void * ptr); /* serialize into string */
+};
+
+struct cfg_attr {
+	char name[11];
+	uint8_t type;
+	uint16_t opt;
+	uint16_t offs;
+};
+
+int cfg_bit_encode(const char * s, int bit, void * ptr)
+{
+	uint32_t * bfield = (uint32_t *)ptr;
+
+	if ((strcmp(s, "yes") == 0) || (strcmp(s, "true") == 0) || 
+		(strcmp(s, "1") == 0))
+		*bfield |= 1 << bit;
+	else if ((strcmp(s, "no") == 0) || (strcmp(s, "false") == 0) || 
+			 (strcmp(s, "0") == 0))
+		*bfield &= ~(1 << bit);
+	else
+		return -EINVAL;
+
+	return 0;
+} 
+
+int cfg_bit_decode(char * s, int bit, void * ptr)
+{
+	uint32_t * val = (uint32_t *)ptr;
+
+	return sprintf(s, "%s", (*val & (1 << bit)) ? "yes" : "no");
+} 
+
+int cfg_bfield_encode(const char * s, int opt, void * ptr)
+{
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	int shift = opt & 0x1f;
+	uint32_t * bfield = (uint32_t *)ptr;
+	uint32_t val;
+
+	val = strtoul(s, NULL, 0);
+
+	*bfield = (*bfield & ~(mask << shift)) | ((val & mask) << shift);
+
+	return 0;
+} 
+
+int cfg_bfield_decode(char * s, int opt, void * ptr)
+{
+	uint32_t * bfield = (uint32_t *)ptr;
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	int shift = opt & 0x1f;
+
+	return sprintf(s, "%d", (*bfield >> shift) & mask);
+} 
+
+int cfg_uint8_encode(const char * s, int opt, void * ptr)
+{
+	uint8_t * val = (uint8_t *)ptr;
+
+	*val = strtoul(s, NULL, 0);
+
+	return 0;
+} 
+
+int cfg_uint8_decode(char * s, int hex, void * ptr)
+{
+	uint8_t * val = (uint8_t *)ptr;
+
+	if (hex)
+		return sprintf(s, "0x%02x", *val);
+
+	return sprintf(s, "%d", *val);
+} 
+
+int cfg_uint16_encode(const char * s, int opt, void * ptr)
+{
+	uint16_t * val = (uint16_t *)ptr;
+
+	*val = strtoul(s, NULL, 0);
+
+	return 0;
+} 
+
+int cfg_uint16_decode(char * s, int hex, void * ptr)
+{
+	uint16_t * val = (uint16_t *)ptr;
+
+	if (hex)
+		return sprintf(s, "0x%04x", *val);
+
+	return sprintf(s, "%d", *val);
+} 
+
+const struct cfg_type cfg_type_lut[] = {
+	{ NULL, NULL }, /* VOID */
+	{ cfg_bit_encode, cfg_bit_decode },      /* BIT */
+	{ cfg_bfield_encode, cfg_bfield_decode }, /* BFIELD */
+	{ cfg_uint8_encode, cfg_uint8_decode },  /* UINT8 */
+	{ cfg_uint16_encode, cfg_uint16_decode } /* UINT16 */
+};
+
+const struct cfg_attr dev_attr_lut[] = {
+	{ "enabled", CFG_BIT,    0, offsetof(struct ss_device, opt) },
+	{ "addr",    CFG_BFIELD, BFIELD(9, 1), offsetof(struct ss_device, opt) },
+	{ "dev",     CFG_UINT8,  0, offsetof(struct ss_device, dev) },
+	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
+	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
+	{ "ipre",    CFG_UINT8,  0, offsetof(struct ss_device, ipre) },
+	{ "ilat",    CFG_UINT8,  0, offsetof(struct ss_device, ilat) },
+	{ "pw1",     CFG_UINT16, 0, offsetof(struct ss_device, pw1) },
+	{ "pw2",     CFG_UINT16, 0, offsetof(struct ss_device, pw2) },
+	{ "pw3",     CFG_UINT16, 0, offsetof(struct ss_device, pw3) },
+	{ "pw4",     CFG_UINT16, 0, offsetof(struct ss_device, pw4) },
+	{ "pw5",     CFG_UINT16, 0, offsetof(struct ss_device, pw5) },
+	{ "usr1",    CFG_UINT16, 0, offsetof(struct ss_device, usr1) },
+	{ "usr2",    CFG_UINT16, 0, offsetof(struct ss_device, usr2) },
+	{ "usr3",    CFG_UINT16, 0, offsetof(struct ss_device, usr3) },
+	{ "usr4",    CFG_UINT16, 0, offsetof(struct ss_device, usr4) },
+	{ "", CFG_VOID, 0}
+};
+
+
+int object_dump(void * obj, const struct cfg_attr attr[], FILE * f)
+{
+	int i;
+
+	if (obj == NULL)
+		return -1;
+
+	for (i = 0; (attr[i].type != CFG_VOID); ++i) {
+		const struct cfg_attr * a = &attr[i];
+		char s[16];
+
+		cfg_type_lut[a->type].decode(s, a->opt, obj + a->offs);
+		fprintf(f, "%s = %s\n", a->name, s);
+	}
+
+	return 0;
+}
+
+static const struct cfg_attr * attr_lookup(const struct cfg_attr attr[], 
+										   const char * name)
+{
+	int i;
+
+	if (name == NULL)
+		return NULL;
+
+	for (i = 0; (attr[i].type != CFG_VOID); ++i) {
+		const struct cfg_attr * a = &attr[i];
+		if (strcmp(a->name, name) == 0)
+			return a;
+	}
+
+	return NULL;
+}
+
+int object_attr_set(void * obj, const struct cfg_attr attr[], 
+					const char * name, const char * val) 
+{
+	const struct cfg_attr * a;
+
+	if ((obj == NULL) | (val == NULL))
+		return -EINVAL;
+
+	if ((a = attr_lookup(attr, name)) == NULL)
+		return -EINVAL;
+
+	return cfg_type_lut[a->type].encode(val, a->opt, obj + a->offs);
+}
+
+int object_attr_get(void * obj, const struct cfg_attr attr[], 
+					const char * name, char * val) 
+{
+	const struct cfg_attr * a;
+
+	if ((obj == NULL) | (val == NULL))
+		return -EINVAL;
+
+	if ((a = attr_lookup(attr, name)) == NULL)
+		return -EINVAL;
+
+	return cfg_type_lut[a->type].decode(val, a->opt, obj + a->offs);
+}
+
+
+int device_dump(FILE * f, int addr)
+{
+	return object_dump(&ss_dev_tab[addr], dev_attr_lut, f);
+}
+
+int device_attr_set(int addr, const char * name, const char * val)
+{
+	return object_attr_set(&ss_dev_tab[addr], dev_attr_lut, name, val);
+}
+
+int device_attr_print(FILE * f, int addr, const char * name)
+{
+	char val[16];
+	int ret;
+
+	if ((ret = object_attr_get(&ss_dev_tab[addr], dev_attr_lut, 
+							  name, val)) > 0) {
+		fprintf(f, "dev[%d].%s = %s\n", addr, name, val);
+	}
+
+	return ret;
+}
 
 #if 0
 int cmd_eeprom(FILE * f, int argc, char ** argv)
@@ -39,6 +262,10 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 int config_dump(FILE * f)
 {
 	DCC_LOG(LOG_TRACE, "...");
+
+
+	device_dump(f, 1);
+	device_dump(f, 33);
 
 	return 0;
 }
