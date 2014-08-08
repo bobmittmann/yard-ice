@@ -244,8 +244,23 @@ int device_pw3_lookup(unsigned int addr, unsigned int sel)
 {
 	struct ss_device * dev;
 	struct obj_device * obj;
+	uint32_t avg;
+	uint32_t min;
+	uint32_t max;
 
-//	return object_attr_set(&ss_dev_tab[addr], dev_attr_lut, name, val);
+	dev = &ss_dev_tab[addr];
+	obj = device_db_lookup(dev->type);
+
+	if (sel >= obj->pw3->cnt)
+		sel = obj->pw3->cnt - 1;
+
+	max = obj->pw3->pw[sel]->max;
+	min = obj->pw3->pw[sel]->min;
+	avg = (max + min) / 2;
+	dev->pw3 = (avg * dev->tbias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d val=%d", 
+			 min, max, avg, dev->pw3);
+
 	return 0;
 }
 
@@ -275,7 +290,6 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 int config_dump(FILE * f)
 {
 	DCC_LOG(LOG_TRACE, "...");
-
 
 	device_dump(f, 1);
 	device_dump(f, 33);

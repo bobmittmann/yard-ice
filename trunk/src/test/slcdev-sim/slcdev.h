@@ -47,7 +47,7 @@ struct ic_entry {
 #define SLCDEV_PW_LIST_LEN_MAX 24
 
 struct pw_list {
-	uint16_t cnt;
+	uint32_t cnt;
 	struct pw_entry * pw[SLCDEV_PW_LIST_LEN_MAX];
 };
 
@@ -115,9 +115,9 @@ struct obj_db_info {
 	struct db_obj * next;
 	uint16_t json_crc;
 	uint16_t json_len;
+	uint32_t obj_cnt;
 	struct db_obj * obj[];
 };
-
 
 enum {
 	DB_OBJ_DB_INFO = 0,
@@ -279,6 +279,8 @@ int device_db_dump(FILE * f);
 int config_dump(FILE * f);
 int config_erase(void);
 int config_compile(void);
+
+struct obj_device * device_db_lookup(unsigned int id);
 
 #ifdef __cplusplus
 }

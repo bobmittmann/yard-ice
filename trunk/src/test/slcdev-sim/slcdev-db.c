@@ -411,25 +411,48 @@ int db_parse_module(char * js, jsmntok_t *t, struct db_obj ** objp)
 
 }
 
+#define DB_DEV_TYPE_MAX 32
+
 int db_info_write(unsigned int crc, unsigned int len, 
 				  struct db_obj ** objp)
 {
-	struct obj_db_info info;
+
+	uint32_t buf[(sizeof(struct obj_db_info) + 
+		DB_DEV_TYPE_MAX * sizeof(struct db_obj *)) / sizeof(uint32_t)];
+	struct obj_db_info * info = (struct obj_db_info *)buf;
+	struct db_obj * obj;
 	int ret;
+	int cnt;
 
-	memset(&info, 0, sizeof(struct obj_db_info));
-	info.len = sizeof(struct obj_db_info);
-	info.type = DB_OBJ_DB_INFO;
-	info.flags = 0;
-	info.id = 0xaa;
-	info.next = *objp;
-	info.json_crc = crc;
-	info.json_len = len;
+	memset(info, 0, sizeof(struct obj_db_info));
 
-//	info.obj = *objp;
+	cnt = 0;
+	/* collect all sesnsors */
+	obj = (struct db_obj *)*objp;
+	while (obj != NULL) {
+		if (obj->type == DB_OBJ_SENSOR) 
+			info->obj[cnt++] = obj;
+		obj = obj->next;
+	}
+			
+	/* collect all modules */
+	obj = (struct db_obj *)*objp;
+	while (obj != NULL) {
+		if (obj->type == DB_OBJ_MODULE) 
+			info->obj[cnt++] = obj;
+		obj = obj->next;
+	}
+			
+	info->len = sizeof(struct obj_db_info) + cnt * sizeof(struct db_obj *);
+	info->type = DB_OBJ_DB_INFO;
+	info->flags = 0;
+	info->id = 0xaa;
+	info->next = *objp;
+	info->json_crc = crc;
+	info->json_len = len;
+	info->obj_cnt = cnt;
 
-	if ((ret = db_heap_push(&info, sizeof(struct obj_db_info), 
-							(void **)objp)) < 0)
+	if ((ret = db_heap_push(info, info->len, (void **)objp)) < 0)
 		return ret;
 
 	DCC_LOG1(LOG_TRACE, "obj=%08x ...................", *objp);
@@ -584,6 +607,16 @@ compile_error:
 
 }
 
+struct obj_device * device_db_lookup(unsigned int id)
+{
+	struct obj_db_info * inf;
+
+	inf = (struct obj_db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	if (id >= inf->obj_cnt)
+		return NULL;
+
+	return (struct obj_device *)inf->obj[id];
+}
 
 static void pw_list_dump(FILE * f, struct pw_list * lst)
 {
@@ -656,6 +689,7 @@ static void db_info_dump(FILE * f, struct obj_db_info * inf)
 	fprintf(f, "Device database: id=%d, json crc=0x%04x\n", inf->id, 
 			inf->json_crc);
 }
+
 int device_db_dump(FILE * f)
 {
 	struct db_obj * obj;
