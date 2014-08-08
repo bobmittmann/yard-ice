@@ -9,7 +9,7 @@
 
 int json_walk_object(FILE * f, char * js, jsmntok_t *t, int lvl)
 {
-	static char s[JSON_STR_LEN_MAX + 1];
+	char s[JSON_STR_LEN_MAX + 1];
 	int len;
 	int n;
 	int i;
@@ -118,7 +118,7 @@ int json_walk_array(FILE * f, char * js, jsmntok_t *t, int lvl)
 
 int json_walk_node(FILE * f, char * js, jsmntok_t *t, int lvl)
 {
-	static char s[JSON_STR_LEN_MAX + 1];
+	char s[JSON_STR_LEN_MAX + 1];
 
 	if(t->start == JSMN_NULL || t->end == JSMN_NULL) {
 		DCC_LOG(LOG_ERROR, "parameter invalid!");
@@ -173,7 +173,7 @@ int json_dump(FILE * f, char * js, jsmntok_t *t)
 
 int json_parse_dump(char * js, jsmntok_t * t, void * ptr) 
 {
-	static char s[JSON_STR_LEN_MAX + 1];
+	char s[JSON_STR_LEN_MAX + 1];
 
 	if (t->start == JSMN_NULL || t->end == JSMN_NULL)
 		return -JSON_ERR_INVALID_TOKEN;

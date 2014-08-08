@@ -83,10 +83,10 @@
 #define SHELL_ARG_MAX 4
 #define SHELL_HISTORY_MAX 4
 
-#define TTY_INBUF_LEN 16
-#define TTY_DEV_MAX 4
+#define TTY_INBUF_LEN 8
+#define TTY_DEV_MAX 1
 
-#define FILE_DEV_MAX 4
+#define FILE_DEV_MAX 2
 
 #endif /* __CONFIG_H__ */
 

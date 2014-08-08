@@ -87,4 +87,5 @@ const uint8_t xflash_pic[] = {
 	0x6d, 0x6f, 0x64, 0x65, 0x6d, 0x2e, 0x2e, 0x2e, 0x20, 0x00,
 };
 
-unsigned int sizeof_xflash_pic = sizeof(xflash_pic);
+const unsigned int sizeof_xflash_pic = sizeof(xflash_pic);
+

@@ -487,6 +487,46 @@ int cmd_dev(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int device_pw3_lookup(unsigned int addr, unsigned int sel);
+
+int cmd_pw2(FILE * f, int argc, char ** argv)
+{
+	return 0;
+}
+
+int cmd_pw3(FILE * f, int argc, char ** argv)
+{
+	int addr;
+	int sel;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 3)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	addr = strtoul(argv[1], NULL, 0);
+	if (addr > 319)
+		return SHELL_ERR_ARG_INVALID;
+
+	sel = strtoul(argv[1], NULL, 0);
+	if (sel > 10)
+		return SHELL_ERR_ARG_INVALID;
+
+	return device_pw3_lookup(addr, sel);
+}
+
+int cmd_pw4(FILE * f, int argc, char ** argv)
+{
+	return 0;
+}
+
+int cmd_pw5(FILE * f, int argc, char ** argv)
+{
+	return 0;
+}
+
+
 const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
@@ -520,6 +560,18 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_dev, "dev", "", "<addr> [attr [VAL]]", "get/set device attribute" },
 
 	{ cmd_ls, "ls", "", "<filename>", "list files" },
+
+	{ cmd_pw2, "pw2", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
+		"get set PW2 value" },
+
+	{ cmd_pw3, "pw3", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
+		"get set PW3 value" },
+
+	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
+		"get set PW4 value" },
+
+	{ cmd_pw5, "pw5", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
+		"get set PW4 value" },
 
 	{ NULL, "", "", NULL, NULL }
 };
