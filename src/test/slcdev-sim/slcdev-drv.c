@@ -73,7 +73,7 @@ struct {
 const struct ss_device null_dev = {
 	.enabled = 0,
 	.poll_flash = 0,
-	.advanced_protocol = 0,
+	.ap = 0,
 	.addr = 0,
 	.dev = 0,
 	.tbias = 128,
@@ -96,7 +96,7 @@ void dev_sim_init(void)
 		dev = &ss_dev_tab[i];
 		dev->enabled = 0;
 		dev->poll_flash = 1,
-		dev->advanced_protocol = 0,
+		dev->ap = 0,
 		dev->addr = i,
 		dev->dev = 0,
 		dev->tbias = 128,
