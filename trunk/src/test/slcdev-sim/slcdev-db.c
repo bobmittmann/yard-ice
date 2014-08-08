@@ -492,8 +492,10 @@ int device_db_compile(void)
 		return 0;
 	}
 
+	DCC_LOG(LOG_TRACE, "1. initialising jsm parser");
 	jsmn_init(&p);
 
+	DCC_LOG(LOG_TRACE, "2. parsing jason file");
 	ret = jsmn_parse(&p, js, json_len, tok, TOK_MAX);
 
 	if (ret == JSMN_ERROR_NOMEM) {
@@ -541,14 +543,15 @@ int device_db_compile(void)
 		return -JSON_ERR_NUM_CHILDREN;
 	}
 
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
-
+	DCC_LOG(LOG_TRACE, "3. erasing database.");
 	/* erase flash block */
 	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
 						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
 		return -1;
 	};
+
+	DCC_LOG(LOG_TRACE, "4. compiling database.");
 
 	/* initialise PW descriptor stack */
 	db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;

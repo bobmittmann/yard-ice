@@ -32,43 +32,21 @@
 #define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
 				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
 
-static int __attribute__((section (".data#"))) 
-	stm32l_flash_bsy_wait(struct stm32_flash * flash)
-{
-	uint32_t sr;
-	int ret = -1;
-	int again;
-
-	for (again = 4096; again > 0; again--) {
-		sr = flash->sr;
-		if (sr & FLASH_ERR) {
-			DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
-					 sr & FLASH_RDERR ? "RDERR" : "",
-					 sr & FLASH_OPTVERRUSR ? "OPTVERRUSR" : "",
-					 sr & FLASH_OPTVERR ? "OPTVERR " : "",
-					 sr & FLASH_SIZERR ? "SIZERR " : "",
-					 sr & FLASH_PGAERR ? "PGAERR" : "",
-					 sr & FLASH_WRPERR ? "WRPERR" : "");
-			break;
-		}
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
-
-	flash->pecr = 0 ;
-
-	return ret;
-}
-
 int __attribute__((section (".data#"))) 
 	stm32l_flash_blk_erase(struct stm32_flash * flash, uint32_t volatile * addr)
 {
+	uint32_t sr = flash->sr;
+
 	flash->pecr = FLASH_ERASE | FLASH_PROG;
 	*addr = 0x00000000;
 
-	return stm32l_flash_bsy_wait(flash);
+	do {
+		sr = flash->sr;
+	} while (sr & FLASH_BSY);
+
+	flash->pecr = 0;
+
+	return (sr & FLASH_ERR) ? -1 : 0;
 }
 
 #define FLASH_SECTOR_SIZE 256
@@ -115,7 +93,16 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		cm3_primask_set(pri);
 
 		if (ret < 0) {
-			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
+#if DEBUG
+			uint32_t sr = flash->sr;
+			DCC_LOG6(LOG_WARNING, "erase failed: %s%s%s%s%s%s", 
+					 sr & FLASH_RDERR ? "RDERR" : "",
+					 sr & FLASH_OPTVERRUSR ? "OPTVERRUSR" : "",
+					 sr & FLASH_OPTVERR ? "OPTVERR " : "",
+					 sr & FLASH_SIZERR ? "SIZERR " : "",
+					 sr & FLASH_PGAERR ? "PGAERR" : "",
+					 sr & FLASH_WRPERR ? "WRPERR" : "");
+#endif
 			cnt = ret;
 			break;
 		}

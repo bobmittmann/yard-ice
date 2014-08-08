@@ -35,10 +35,14 @@ struct {
 	uint32_t s1;
 	uint32_t s2;
 	uint32_t s3;
-} isink;
+} isink_drv;
 
 static void isink_io_cfg(unsigned int mode)
 {
+	uint32_t s1;
+	uint32_t s2;
+	uint32_t s3;
+
 	switch (mode) {
 
 	case 0:
@@ -47,9 +51,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 0;
+		s1 = 1;
+		s2 = 0;
+		s3 = 0;
 		break;
 
 	case 1:
@@ -58,9 +62,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 2:
@@ -70,9 +74,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 0;
+		s1 = 1;
+		s2 = 0;
+		s3 = 0;
 		break;
 
 	case 3:
@@ -81,9 +85,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 4:
@@ -92,9 +96,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 5:
@@ -103,9 +107,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 6:
@@ -114,9 +118,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 7:
@@ -125,9 +129,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 0;
+		s1 = 1;
+		s2 = 0;
+		s3 = 0;
 		break;
 
 	case 8:
@@ -136,9 +140,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 9:
@@ -147,9 +151,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 1;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 1;
+		s3 = 1;
 		break;
 
 	case 10:
@@ -158,9 +162,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 11:
@@ -169,9 +173,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 12:
@@ -180,9 +184,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 1;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 1;
+		s3 = 1;
 		break;
 
 	case 13:
@@ -191,9 +195,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_clr(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 14:
@@ -202,9 +206,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 15:
@@ -213,9 +217,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 16:
@@ -224,9 +228,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 0;
+		s1 = 1;
+		s2 = 0;
+		s3 = 0;
 		break;
 
 	case 17:
@@ -235,9 +239,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 1;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 1;
+		s3 = 1;
 		break;
 
 	case 18:
@@ -246,9 +250,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 19:
@@ -257,9 +261,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 20:
@@ -268,9 +272,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 21:
@@ -279,9 +283,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 1;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 1;
+		s3 = 1;
 		break;
 
 	case 22:
@@ -290,9 +294,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 23:
@@ -301,9 +305,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 1;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 1;
+		s2 = 0;
+		s3 = 1;
 		break;
 
 	case 24:
@@ -312,9 +316,9 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 1;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 1;
+		s3 = 1;
 		break;
 
 	case 25:
@@ -323,12 +327,15 @@ static void isink_io_cfg(unsigned int mode)
 		stm32_gpio_mode(SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_set(SINK4);
-		isink.s1 = 0;
-		isink.s2 = 0;
-		isink.s3 = 1;
+		s1 = 0;
+		s2 = 0;
+		s3 = 1;
 		break;
-
 	}
+
+	isink_drv.s1 = s1 * 0xffff;
+	isink_drv.s2 = s2 * 0xffff;
+	isink_drv.s3 = s3 * 0xffff;
 }
 
 void isink_pulse(unsigned int pre, unsigned int pulse)
@@ -336,9 +343,9 @@ void isink_pulse(unsigned int pre, unsigned int pulse)
 	struct stm32f_tim * tim = STM32_TIM4;
 	unsigned int t1 = pulse - pre;	
 
-	tim->ccr2 = isink.s1 * t1 + 1;
-	tim->ccr3 = isink.s2 * t1 + 1;
-	tim->ccr4 = isink.s3 * t1 + 1;
+	tim->ccr2 = (isink_drv.s1 & t1) + 1;
+	tim->ccr3 = (isink_drv.s2 & t1) + 1;
+	tim->ccr4 = (isink_drv.s3 & t1) + 1;
 	tim->arr = 1;
  	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 

@@ -67,11 +67,11 @@ struct obj_device {
 	struct db_obj * next;
 	const char * tag;	
 	const char * desc;	
-	struct pw_list * pw1;
-	struct pw_list * pw2;
-	struct pw_list * pw3;
-	struct pw_list * pw4;
-	struct pw_list * pw5;
+	struct pw_list * pw1; /* Reference Pulse Width */
+	struct pw_list * pw2; /* Remote Test Status */
+	struct pw_list * pw3; /* Manufacturer Code */
+	struct pw_list * pw4; /* Analog */
+	struct pw_list * pw5; /* Type Id */
 };
 
 struct obj_module {
