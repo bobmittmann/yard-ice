@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#include <microjs.h>
 
 #include <sys/dcclog.h>
 
@@ -316,6 +317,13 @@ int config_erase(void)
 #endif
 	return 0;
 }
+
+int config_compile(void)
+{
+	microjs_parser p;
+};
+
+
 
 #define TOK_MAX 1024
 

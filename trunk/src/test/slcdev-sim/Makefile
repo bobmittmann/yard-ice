@@ -32,9 +32,9 @@ SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
 		  $(SDK)/libthinkos  $(SDK)/libice-comm $(SDK)/libxmodem \
-		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell
+		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshelli $(SDK)/libmicrojs
 
-LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell
+LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell microjs
 #thinkos 
 
 INCPATH = $(SDK)/include 

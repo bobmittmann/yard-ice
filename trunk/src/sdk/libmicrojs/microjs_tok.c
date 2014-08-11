@@ -50,11 +50,21 @@ const char microjs_keyword[11][9] = {
 	"while",
 };
 
-int microjs(struct microjs_parser * p, const char * js, unsigned int len)
+int microjs_init(struct microjs_parser * p, uint8_t * tok, unsigned int size)
+{
+	p->cnt = 0;
+	p->size = size;
+	p->tok = tok;
+
+	return 0;
+}
+
+
+int microjs_parse(struct microjs_parser * p, 
+				  const char * js, unsigned int len)
 {
 	int tok;
 	int qt;
-	int n;
 	int c;
 	int i;
 	
@@ -404,6 +414,6 @@ int microjs(struct microjs_parser * p, const char * js, unsigned int len)
 			(TOK_BUF_LEN - tok_sp) + tok_idx);
 	DCC_LOG(LOG_INFO, "parse done.");
 
-	return n;
+	return p->cnt;
 }
 
