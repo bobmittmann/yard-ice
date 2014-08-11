@@ -9,14 +9,14 @@ AM_CFLAGS =\
 	 -Wall\
 	 -g
 
-bin_PROGRAMS = basic
+bin_PROGRAMS = microjs
 
-basic_SOURCES = \
-	script.c tokenizer.c
+microjs_SOURCES = \
+	microjs.c tokenizer.c
 
-basic_CFLAGS = \
+microjs_CFLAGS = \
 	-O2 -Wall
 
-basic_LDADD =  \
+microjs_LDADD =  \
 	-lpthread
 
