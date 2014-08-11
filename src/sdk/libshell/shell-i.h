@@ -32,7 +32,7 @@
 #define __SHELL_I_H__
 
 #ifndef __SHELL_I__
-#error "Never use <chime-i.h> directly; include <chime.h> instead."
+#error "Never use <shell-i.h> directly; include <shell.h> instead."
 #endif
 
 #ifdef CONFIG_H
@@ -58,6 +58,10 @@ struct cmd_history {
 	uint8_t max;
 	char buf[SHELL_HISTORY_MAX][SHELL_LINE_MAX];
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void history_init(struct cmd_history * ht);
 
