@@ -1,22 +1,10 @@
 ## Process this file with automake to produce Makefile.in
 
-## Created by Anjuta
+AM_CPPFLAGS = -DPACKAGE_DATA_DIR=\""$(datadir)"\" 
 
-AM_CPPFLAGS = \
-	-DPACKAGE_DATA_DIR=\""$(datadir)"\" 
-
-AM_CFLAGS =\
-	 -Wall\
-	 -g
+AM_CFLAGS = -O1 -Wall -g
 
 bin_PROGRAMS = microjs
 
-microjs_SOURCES = \
-	microjs.c tokenizer.c
-
-microjs_CFLAGS = \
-	-O2 -Wall
-
-microjs_LDADD =  \
-	-lpthread
+microjs_SOURCES = microjs.c js_tokens.c
 
