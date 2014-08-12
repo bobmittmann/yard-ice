@@ -1,7 +1,41 @@
 {
-	"group": { 
-		"id" : 1,
-		"type" : "2251TM",
+	"sensor" : { 
+		"model" : "2251TM",
+		"enabled" : true,
+		"tag" : "smoke1",
+		"addr" : [ 
+			     1,  2,  3,  4,  5,  6,  7,  8,  9 
+			10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+		] 
+	},
+
+	"sensor" : { 
+		"model" : "2251TM",
+		"enabled" : false,
+		"tag" : "smoke2",
+		"addr" : [ 
+			20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+			30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+		] 
+	},
+
+	"sensor" : { 
+		"model" : "5251P",
+		"enabled" : false,
+		"tag" : "Heat 1",
+		"addr" : [ 
+			40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+			50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+			60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+			70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+			80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+			90, 91, 92, 93, 94, 95, 96, 97, 98, 99 
+		] 
+	},
+
+	"module" : { 
+		"model" : "M500R",
+		"enabled" : true,
 		"addr" : [ 
 			     1,  2,  3,  4,  5,  6,  7,  8,  9 
 			10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -16,112 +50,65 @@
 		] 
 	},
 
-	"group": { 
-		"id" : 2,
-		"type" : "M500R",
-		"addr" : [ 
-			     1,  2,  3,  4,  5,  6,  7,  8,  9 
-			10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-			20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-			30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-			40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-			50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
-			60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
-			70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
-			80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
-			90, 91, 92, 93, 94, 95, 96, 97, 98, 99 
-		] 
-	},
-
-	"sw1": {
+	"sw1": { 
 		"up" : [ 
-			{ "addr": [1, 2, 3, 4, 5],
-				"pw3": 1, 
-				"pw4": 6 
-			}, 
-			{ "addr": [11, 12, 13, 14, 15],
-				"pw3": 1, 
-				"pw4": 6 
-			}, 
+			"goto disable_all"
 		],
 
 		"off" : [ 
-			{ "addr": [1, 2, 3, 4, 5],
-				"pw3": 1, 
-				"pw4": 1 
-			}, 
-			{ "addr": [11, 12, 13, 14, 15],
-				"pw3": 1, 
-				"pw4": 1 
-			}, 
+			"goto enable_all"
 		],
 
 		"down" : [
-			{ "addr": [1, 2, 3, 4, 5],
-				"pw3": 2, 
-				"pw4": 2 
-			}, 
-			{ "addr": [11, 12, 13, 14, 15],
-				"pw3": 2, 
-				"pw4": 2 
-			}, 
+			"sensor[1].alarm = true"
 		],
 	},
 
-	"sw2": {
+	"sw2": { 
 		"up" : [ 
-			{ "addr": [25],
-				"enable": false, 
-			}, 
-			{ "addr": [50],
-				"pw3": 1, 
-				"pw4": 6 
-			}, 
+			"goto disable_all"
 		],
 
 		"off" : [ 
-			{ "addr": [25],
-				"enable": true, 
-			}, 
-			{ "addr": [50],
-				"pw3": 1, 
-				"pw4": 1 
-			}, 
+			"goto enable_all"
 		],
 
 		"down" : [
-			{ "addr": [25],
-				"enable": false, 
-			}, 
-			{ "addr": [50],
-				"pw3": 2, 
-				"pw4": 2 
-			}, 
+			"sensor[1].alarm = true"
 		],
-		"sw1_off" : [
-			"sensor[32].enabled = yes",
-			"sensor[31].enabled = yes",
-			"sensor[33].pw1 = sensor[33].type.pw1[2]",
-			"goto sw_on"
-			"lookup 33 6",
-			"enable 31",
-			"set sensor[31].pw1 45",
-			"lookup 34 6",
-		],
+	},
 
-		"sw1_off" : [
-			[ "enable", 33],
-			[ "lookup", 33, 6],
-			[ "set",  33, "pw1" 45],
-			[ "goto", "ic1_set"],
-			[ "gosub", "ic1_set"],
+	"script": {
+		"enable_all" : [
+			"var i",
+			"for (i = 0; i < 160; ++i) {",
+			"	sensor[i].enabled = true",
+			"	module[i].enabled = true",
+			"}"
 		],
+	},
 
-		"ic1_set" : [
-			[ "enable", 33 ],
-			[ "lookup", 33, 6],
-			[ "set",  33, "pw1" 45],
-			[ "return"],
+	"script": {
+		"alarm1" : [
+			'var i = 0',
+			'while (i < 20) {',
+			'	if (sensor[i].type == "2251TM") {',
+			'		sensor[i].enabled = yes',
+			'		sensor[i].pw2.lookup(2)',
+			'	}',
+			'	i = i + 1',
+			'}',
+		],
+	}
+
+	"script": {
+		"smoke1_alm" : [
+			'var i = 0',
+			'while (i < 20) {',
+			'	sensor[i].pw4.lookup(4)',
+			'	sensor[i].enabled = yes',
+			'	i = i + 1',
+			'}',
 		],
 	},
 }
