@@ -104,6 +104,39 @@ struct microjs_parser {
 
 extern const char microjs_keyword[11][9];
 
+#define MICROJS_VM_STACK_SIZE 256 
+
+#define LIT   (0 << 13) /* 000x xxxx xxxx xxxx */
+#define LOD   (1 << 13) /* 001x xxxx xxxx xxxx */
+#define STO   (2 << 13) /* 100x xxxx xxxx xxxx */ 
+#define CAL   (3 << 13) /* 101x xxxx xxxx xxxx */     
+#define INT   (4 << 13) /* 101x xxxx xxxx xxxx */ 
+#define JMP   (5 << 13) /* 110x xxxx xxxx xxxx */ 
+#define JPC   (6 << 13) /* 110x xxxx xxxx xxxx */ 
+#define OPR   (7 << 13) /* 111x xxxx xxxx xxxx */ 
+
+#define NEG   (OPR + 1)
+#define ADD   (OPR + 2)
+#define SUB   (OPR + 3)
+#define MUL   (OPR + 4)
+#define DIV   (OPR + 5)
+#define BIT   (OPR + 6)
+#define EQ    (OPR + 7)
+#define NEQ   (OPR + 8)
+#define LT    (OPR + 9)
+#define GTE   (OPR + 10)
+#define GT    (OPR + 11)
+#define LTE   (OPR + 12)
+
+struct microjs_vm {
+	uint16_t ip;
+	uint16_t sp;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+	uint8_t stack[MICROJS_VM_STACK_SIZE];
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
