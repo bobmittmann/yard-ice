@@ -115,6 +115,8 @@ endif
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
 #$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
 #$(info SRCDIR = '$(firstword $(SRCDIR))')
+#$(info LIB_STATIC = '$(LIB_STATIC)')
+#$(info LIB_STATIC_OUT = '$(LIB_STATIC_OUT)')
 #$(info ODIRS = '$(ODIRS)')
 #$(info OS = '$(OS)')
 #$(info OSTYPE = '$(OSTYPE)')
