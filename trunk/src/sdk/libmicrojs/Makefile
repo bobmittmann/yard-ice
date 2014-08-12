@@ -23,7 +23,7 @@
 
 include ../../mk/config.mk
 
-LIB_STATIC = microjs 
+LIB_STATIC = microjs
 
 CFILES = microjs_tok.c microjs_dbg.c
 

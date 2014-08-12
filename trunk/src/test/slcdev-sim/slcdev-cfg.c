@@ -318,9 +318,16 @@ int config_erase(void)
 	return 0;
 }
 
-int config_compile(void)
+int script_compile(const char * js, unsigned int len)
 {
-	microjs_parser p;
+	struct microjs_parser p;
+	uint8_t tok[1024];
+
+	microjs_init(&p, tok, 1024);
+
+	microjs_parse(&p, js, len);
+
+	return 0;
 };
 
 

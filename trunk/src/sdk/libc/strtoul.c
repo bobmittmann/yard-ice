@@ -27,9 +27,9 @@
 
 unsigned long strtoul(const char * __s, char ** __endp, int base)
 {
-	char c;
+	unsigned long val = 0;
 	char * cp = (char *)__s;
-	int val = 0;
+	char c;
 
 	for (; ((c = *cp) == ' '); cp++);
 

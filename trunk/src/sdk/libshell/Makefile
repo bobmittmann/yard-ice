@@ -25,5 +25,7 @@ LIB_STATIC = shell
 
 CFILES = shell.c history.c parseline.c stripline.c
 
+INCPATH = ../include
+
 include ../../mk/lib.mk
 

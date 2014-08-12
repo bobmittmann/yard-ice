@@ -98,6 +98,31 @@
 				"pw4": 2 
 			}, 
 		],
+		"sw1_off" : [
+			"sensor[32].enabled = yes",
+			"sensor[31].enabled = yes",
+			"sensor[33].pw1 = sensor[33].type.pw1[2]",
+			"goto sw_on"
+			"lookup 33 6",
+			"enable 31",
+			"set sensor[31].pw1 45",
+			"lookup 34 6",
+		],
+
+		"sw1_off" : [
+			[ "enable", 33],
+			[ "lookup", 33, 6],
+			[ "set",  33, "pw1" 45],
+			[ "goto", "ic1_set"],
+			[ "gosub", "ic1_set"],
+		],
+
+		"ic1_set" : [
+			[ "enable", 33 ],
+			[ "lookup", 33, 6],
+			[ "set",  33, "pw1" 45],
+			[ "return"],
+		],
 	},
 }
 

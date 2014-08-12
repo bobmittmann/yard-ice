@@ -32,6 +32,14 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#ifndef MICROJS_ENABLE_INCDEC
+#define MICROJS_ENABLE_INCDEC 0
+#endif
+
+#ifndef MICROJS_ENABLE_STRING
+#define MICROJS_ENABLE_STRING 0
+#endif
+
 #include <sys/dcclog.h>
 
 const char microjs_keyword[11][9] = {
@@ -319,6 +327,7 @@ int microjs_parse(struct microjs_parser * p,
 			continue;
 		}
 
+#if MICROJS_ENABLE_INCDEC
 		if (c == '+') {
 			if ((++i < len) && ((c = js[i]) == '+')) {
 				p->tok[p->cnt++] = TOK_INC;
@@ -336,6 +345,7 @@ int microjs_parse(struct microjs_parser * p,
 				p->tok[p->cnt++] = TOK_MINUS;
 			continue;
 		}
+#endif
 
 		if (c == '|') {
 			if ((++i < len) && ((c = js[i]) == '|')) {
@@ -400,6 +410,14 @@ int microjs_parse(struct microjs_parser * p,
 		case '%':
 			tok = TOK_MOD;
 			break;
+#if (!MICROJS_ENABLE_INCDEC)
+		case '+':
+			tok = TOK_PLUS;
+			break;
+		case '-':
+			tok = TOK_MINUS;
+			break;
+#endif
 		default:
 			DCC_LOG1(LOG_WARNING, "invalid character: '%c'.", c);
 			return -1;
