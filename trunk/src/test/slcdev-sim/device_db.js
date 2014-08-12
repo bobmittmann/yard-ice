@@ -1,7 +1,7 @@
 {
 	"sensor": { 
 		"id" : 1, 
-		"tag" : "2251TM", 
+		"model" : "2251TM", 
 		"desc" : "Multicriteria Photoelectric Smoke Detector", 
 		"pw1" : [280, 320],
 		"pw2" : [
@@ -29,7 +29,7 @@
 
 	"sensor": { 
 		"id" : 2, 
-		"tag" : "2251 COPTIR", 
+		"model" : "2251 COPTIR", 
 		"desc" : "Multicriteria Smoke Detector", 
 		"pw1" : ["Reference", 285, 315],
 		"pw2" : [
@@ -61,7 +61,7 @@
 
 	"sensor": { 
 		"id" : 3, 
-		"tag" : "1251", 
+		"model" : "1251", 
 		"desc" : "Ionization Smoke Detector", 
 		"pw1" : [270, 330],
 		"pw2" : [
@@ -90,8 +90,8 @@
 	},
 
 	"sensor": { 
-		"id" : 10, 
-		"tag" : "5251P", 
+		"id" : 4, 
+		"model" : "5251P", 
 		"desc" : "Heat Detector", 
 		"pw1" : [270, 330],
 		"pw2" : [
@@ -108,8 +108,8 @@
 	},
 
 	"sensor": { 
-		"id" : 10, 
-		"tag" : "5251T", 
+		"id" : 5, 
+		"model" : "5251T", 
 		"desc" : "Heat Detector", 
 		"pw1" : [270, 330],
 		"pw2" : [
@@ -126,10 +126,10 @@
 	},
 
 	"module": { 
-		"id": 4, 
-		"tag": "M500S", 
+		"id": 6, 
+		"model": "M500S", 
 		"desc": "Supervised Control Module", 
-		"pw1": ["Reference", 240, 360], 
+		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
 			["Set", 480, 720] 
@@ -151,10 +151,10 @@
 	},
 
 	"module": { 
-		"id": 5, 
-		"tag": "M501M", 
+		"id": 7, 
+		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
-		"pw1": ["Reference", 240, 360], 
+		"pw1": [240, 360], 
 		"pw2": ["Normal", 240, 360 ],
 		"pw3": [
 			["Open", 480, 720],
@@ -173,8 +173,8 @@
 	},
 
 	"module": { 
-		"id": 6, 
-		"tag": "M500M", 
+		"id": 8, 
+		"model": "M500M", 
 		"ap": false,
 		"desc": "Monitor Module", 
 		"pw1": ["Reference Pulsewidth", 240, 360], 
@@ -199,8 +199,8 @@
 	},
 
 	"module": { 
-		"id": 7, 
-		"tag": "M500R", 
+		"id": 9, 
+		"model": "M500R", 
 		"desc": "Relay Control Module", 
 		"pw1": [240, 360],
 		"pw2": [
@@ -216,8 +216,8 @@
 	}
 
 	"module": { 
-		"id": 8, 
-		"tag": "M500FP", 
+		"id": 10, 
+		"model": "M500FP", 
 		"desc": "AOM-Tel Firephone Module", 
 		"pw1": [240, 360],
 		"pw2": [
