@@ -53,7 +53,7 @@ int json_parse_uint16(char * js, jsmntok_t * t, void * ptr)
 
 	*pval = strtol(s, NULL, 10); 
 
-	DCC_LOG2(LOG_TRACE, "val=%d ptr=%08x", *pval, pval);
+	DCC_LOG2(LOG_INFO, "val=%d ptr=%08x", *pval, pval);
 
 	return 1;
 }
@@ -103,7 +103,7 @@ int json_parse_string(char * js, jsmntok_t * t, void * ptr)
 	s->len = t->end - t->start;
 	s->pos = t->start;
 
-	DCC_LOG2(LOG_TRACE, "idx=%d len=%d", s->pos, s->len);
+	DCC_LOG2(LOG_INFO, "idx=%d len=%d", s->pos, s->len);
 
 	return 1;
 }
@@ -166,7 +166,7 @@ int json_parse_object(char * js, jsmntok_t * t,
 				break;
 		}
 
-		DCC_LOG3(LOG_TRACE, "obj=%08x offs=%d ptr=%08x", 
+		DCC_LOG3(LOG_INFO, "obj=%08x offs=%d ptr=%08x", 
 				 obj, desc[j].offs, obj + desc[j].offs); 
 
 		if ((ret = desc[j].parser(js, t, obj + desc[j].offs)) < 0)

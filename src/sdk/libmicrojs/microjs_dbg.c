@@ -33,7 +33,7 @@
 
 #include <sys/dcclog.h>
 
-const char tok_str[][4] = {
+const char microjs_tok_str[][4] = {
 	"",   /* TOK_NULL */
 	">>", /* TOK_ASR */
 	"<<", /* TOK_ASL */
@@ -82,10 +82,15 @@ int microjs_dump(struct microjs_parser * p)
 	for (idx = 0; idx < p->cnt; ) {
 		tok = p->tok[idx++];
 		if (tok & TOK_STRING) {
+			unsigned int offs;
+			char buf[128];
 			len = tok & ~TOK_STRING;
-			s = (char *)&p->tok[idx];
-			printf("\"%s\" ", s);
-			idx += len;
+			offs = p->tok[idx++];
+			offs |= p->tok[idx++] << 8;
+			s = (char *)p->js + offs;
+			memcpy(buf, s, len);
+			buf[len] = '\0';
+			printf("\"%s\" ", buf);
 		} else if ((tok & TOK_SYMBOL) == TOK_SYMBOL) {
 			len = tok & ~TOK_SYMBOL;
 			s = (char *)&p->tok[idx];
@@ -124,7 +129,7 @@ int microjs_dump(struct microjs_parser * p)
 			s = (char *)microjs_keyword[tok - TOK_BREAK];
 			printf("%s ", s);
 		} else {
-			printf("%s ", tok_str[tok]);
+			printf("%s ", microjs_tok_str[tok]);
 //			if ((tok == TOK_SEMICOLON) || (tok == TOK_LEFTBRACE) 
 			if ((tok == TOK_LEFTBRACE) || (tok == TOK_RIGHTBRACE)) {
 				printf("\n");
@@ -147,5 +152,69 @@ int dump_js(char * script, unsigned int len)
 	printf("\n");
 
 	return 0;
+}
+
+
+static void js_dump_line(int ln, char * lp)
+{
+	char * cp;
+	int c;
+
+	if (lp == NULL)
+		return;
+
+	printf("%4d: ", ln);
+	for (cp = lp; (c = *cp) != '\0'; ++cp) {
+		if ((c == '\r') || (c == '\n'))
+			break;
+		printf("%c", c);
+	}
+	printf("\n");
+}
+
+static const char * const err_tab[] = {
+	"Ok", 
+	"unexpected char",
+	"token buffer overflow",
+	"unclosed string",
+	"unclosed comment",
+	"invalid literal",
+	"strings unsuported"
+};
+
+void js_dump_err(struct microjs_parser * p)
+{
+	char * js = (char *)p->js;
+	char * lp[5];
+	int ln;
+	int c;
+	int i;
+
+	printf("error: %s: ", err_tab[p->err_code]);
+
+	lp[4] = NULL;
+	lp[3] = NULL;
+	lp[2] = NULL;
+	lp[1] = NULL;
+	lp[0] = js;
+	ln = 1;
+	for (i = 0; (c = js[i]) != '\0'; ++i) {
+		if (js[i - 1] == '\n') {
+			lp[4] = lp[3];
+			lp[3] = lp[2];
+			lp[2] = lp[1];
+			lp[1] = lp[0];
+			lp[0] = &js[i];
+			ln++;
+		}
+		if (i == p->err_offs) {
+			js_dump_line(ln - 4, lp[4]);
+			js_dump_line(ln - 3, lp[3]);
+			js_dump_line(ln - 2, lp[2]);
+			js_dump_line(ln - 1, lp[1]);
+			js_dump_line(ln - 0, lp[0]);
+			break;
+		}
+	}
 }
 

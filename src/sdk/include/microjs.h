@@ -29,11 +29,33 @@
 
 #include <stdint.h>
 
-struct microjs_parser {
-	uint16_t cnt;
-	uint16_t size;
-	uint8_t * tok;
+enum {
+	MICROJS_ERR_NONE = 0,
+	MICROJS_UNEXPECTED_CHAR,
+	MICROJS_TOKEN_BUF_OVF,
+	MICROJS_UNCLOSED_STRING,
+	MICROJS_UNCLOSED_COMMENT,
+	MICROJS_INVALID_LITERAL,
+	MICROJS_STRINGS_UNSUPORTED,
 };
+
+struct microjs_parser {
+	uint16_t cnt;  /* token count */
+	uint16_t size; /* token buffer size */
+	uint16_t err_offs; /* parser error offset */
+	uint16_t err_code; /* parser error code */
+	uint8_t * tok; /* token buffer */
+	const char * js;   /* base pointer (original js file) */
+};
+
+struct microjs_str_pool {
+	uint16_t * offs; /* point to the offset table */
+	char * base;     /* base pointer */
+	char * top;      /* top pointer */
+};
+
+extern const struct microjs_str_pool microjs_str_const;
+extern const struct microjs_str_pool microjs_str_var;
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +65,17 @@ int microjs_init(struct microjs_parser * p, uint8_t * tok, unsigned int size);
 
 int microjs_parse(struct microjs_parser * p, 
 				  const char * js, unsigned int len);
+
+int microjs_str_lookup(const struct microjs_str_pool * pool, 
+					   const char * s, int len);
+
+int const_str_lookup(const char * s, int len);
+
+char * const_str(int idx);
+
+int microjs_dump(struct microjs_parser * p);
+
+int microjs_str_pool_dump(const struct microjs_str_pool * pool);
 
 #ifdef __cplusplus
 }

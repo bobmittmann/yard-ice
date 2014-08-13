@@ -39,7 +39,29 @@
 #include "config.h"
 #endif
 
+#ifndef MICROJS_ENABLE_INCDEC
+#define MICROJS_ENABLE_INCDEC 0
+#endif
+
+#ifndef MICROJS_ENABLE_STRING
+#define MICROJS_ENABLE_STRING 1
+#endif
+
+#ifndef MICROJS_ENABLE_DECODE_STRING
+#define MICROJS_ENABLE_DECODE_STRING 0
+#endif
+
+#ifndef MICROJS_SYMBOL_LEN_MAX 
+#define MICROJS_SYMBOL_LEN_MAX 15
+#endif
+
 #include <stdint.h>
+#include <microjs.h>
+
+#if MICROJS_SYMBOL_LEN_MAX > 31
+#error "MICROJS_SYMBOL_LEN_MAX should be less than 32"
+#endif
+
 
 #define TOK_STRING     0x80
 #define TOK_SYMBOL     0x60
@@ -96,13 +118,8 @@
 #define TOK_INT24        47
 #define TOK_INT32        48
 
-struct microjs_parser {
-	uint16_t cnt;
-	uint16_t size;
-	uint8_t * tok;
-};
-
 extern const char microjs_keyword[11][9];
+extern const char microjs_tok_str[][4];
 
 #define MICROJS_VM_STACK_SIZE 256 
 

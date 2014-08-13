@@ -280,6 +280,10 @@ void stm32_eeprom_unlock(void);
 
 int stm32_eeprom_wr32(uint32_t offs, uint32_t val);
 
+int stm32_eeprom_rd32(uint32_t offs, uint32_t * val);
+
+int stm32_eeprom_wr16(uint32_t offs, uint16_t val);
+
 /*---------------------------------------------------------------------
  * RTC
  *---------------------------------------------------------------------*/

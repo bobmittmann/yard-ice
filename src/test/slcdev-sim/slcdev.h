@@ -35,20 +35,20 @@
 struct pw_entry {
 	uint16_t min;
 	uint16_t max;
-	char desc[SLCDEV_DESC_LEN_MAX]; /* The description string */
+	uint16_t desc;	/* The description string */
 };
 
 struct ic_entry {
 	uint8_t mode;
 	uint8_t flags;
-	char desc[SLCDEV_DESC_LEN_MAX]; /* The description string */
+	uint16_t desc; /* The description string */
 };
 
 #define SLCDEV_PW_LIST_LEN_MAX 24
 
 struct pw_list {
 	uint32_t cnt;
-	struct pw_entry * pw[SLCDEV_PW_LIST_LEN_MAX];
+	struct pw_entry pw[SLCDEV_PW_LIST_LEN_MAX]; 
 };
 
 struct db_obj {
@@ -65,8 +65,8 @@ struct obj_device {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	const char * tag;	
-	const char * desc;	
+	uint16_t tag;	
+	uint16_t desc;	
 	struct pw_list * pw1; /* Reference Pulse Width */
 	struct pw_list * pw2; /* Remote Test Status */
 	struct pw_list * pw3; /* Manufacturer Code */
@@ -80,8 +80,8 @@ struct obj_module {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	const char * tag;	
-	const char * desc;	
+	uint16_t tag;	
+	uint16_t desc;	
 	struct pw_list * pw1;
 	struct pw_list * pw2;
 	struct pw_list * pw3;
@@ -98,8 +98,8 @@ struct obj_sensor {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	const char * tag;	
-	const char * desc;	
+	uint16_t tag;	
+	uint16_t desc;	
 	struct pw_list * pw1;
 	struct pw_list * pw2;
 	struct pw_list * pw3;
@@ -281,6 +281,9 @@ int config_erase(void);
 int config_compile(void);
 
 struct obj_device * device_db_lookup(unsigned int id);
+
+int slcdev_const_str_purge(void);
+int slcdev_const_str_write(const char * s, unsigned int len);
 
 #ifdef __cplusplus
 }

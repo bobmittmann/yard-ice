@@ -4,6 +4,9 @@
 
 #include <sys/dcclog.h>
 
+#include <microjs.h>
+#include <thinkos.h>
+
 #include "json.h"
 #include "crc.h"
 #include "slcdev.h"
@@ -105,8 +108,8 @@ int db_heap_push(void * buf, unsigned int len, void ** ptr)
 
 int db_parse_string(char * js, jsmntok_t * t, void * ptr) 
 {
+	uint8_t * idx = (uint8_t *)ptr;
 	struct json_string s;
-	char buf[128];
 	int ret;
 	int size;
 
@@ -116,31 +119,14 @@ int db_parse_string(char * js, jsmntok_t * t, void * ptr)
 	if ((size = json_parse_string(js, t, &s)) < 0)
 		return size;
 
-	memcpy(buf, js + s.pos, s.len);
-	buf[s.len] = '\0';
-
-	if ((ret = db_stack_push(buf, s.len + 1, ptr)) < 0)
+	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
 		return ret;
+
+	*idx = ret;
 
 	return size;
 }
 
-/********************************************************************** 
- *  add a PW range into a list 
- ***********************************************************************/
-static int pw_list_add(struct pw_list * lst, struct pw_entry * pw)
-{
-	int ret;
-
-	if ((ret = db_stack_push(pw, 5 + strlen(pw->desc), 
-							 (void **)&lst->pw[lst->cnt])) < 0)
-		return ret;
-
-	/* update list */
-	lst->cnt++;
-
-	return 0;
-}
 
 /********************************************************************** 
  * decode a single PW range
@@ -148,8 +134,8 @@ static int pw_list_add(struct pw_list * lst, struct pw_entry * pw)
 int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw) 
 {
 	struct json_string s;
-	int min;
-	int max;
+	uint16_t min;
+	uint16_t max;
 	int ret;
 	int len;
 	int cnt;
@@ -202,8 +188,14 @@ int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw)
 	DCC_LOG2(LOG_TRACE, "min=%d max=%d", min, max);
 	pw->min = min;
 	pw->max = max;
-	memcpy(pw->desc, js + s.pos, s.len);
-	pw->desc[s.len] = '\0';
+
+	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
+		return ret;
+
+	pw->desc = ret;
+
+//	memcpy(pw->desc, js + s.pos, s.len);
+//	pw->desc[s.len] = '\0';
 
 	return len;
 }
@@ -211,10 +203,11 @@ int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw)
 /********************************************************************** 
  * decode a list of PW ranges
  ***********************************************************************/
+
 int db_parse_pw_list(char * js, jsmntok_t * t, void * ptr) 
 {
 	struct pw_list lst;
-	struct pw_entry pw;
+	struct pw_entry * pw;
 	int cnt;
 	int ret;
 	int size;
@@ -230,13 +223,12 @@ int db_parse_pw_list(char * js, jsmntok_t * t, void * ptr)
 		return -JSON_ERR_NULL_POINTER;
 
 	lst.cnt = 0;
+	pw = &lst.pw[0];
 
 	/* try to decode a single element */
-	if ((size = db_parse_pw(js, t, &pw)) > 0) {
-		if ((ret = pw_list_add(&lst, &pw)) < 0) {
-			DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
-			return ret;
-		}
+	if ((size = db_parse_pw(js, t, pw)) > 0) {
+		lst.cnt++;
+		pw++;
 	} else {
 		/* try to decode an array of arrays */
 		t++;
@@ -244,23 +236,21 @@ int db_parse_pw_list(char * js, jsmntok_t * t, void * ptr)
 
 		for (i = 0; i < cnt; ++i) {
 
-			if ((ret = db_parse_pw(js, t, &pw)) < 0) {
+			if ((ret = db_parse_pw(js, t, pw)) < 0) {
 				DCC_LOG(LOG_ERROR, "db_parse_pw() failed!");
 				return ret;
 			}
 
+			lst.cnt++;
+			pw++;
+
 			t += ret;
 			size += ret;
-
-			if ((ret = pw_list_add(&lst, &pw)) < 0) {
-				DCC_LOG(LOG_ERROR, "pw_list_add() failed!");
-				return ret;
-			}
 		}
 	}
 
-	if ((ret = db_stack_push(&lst, 2 + lst.cnt * 
-							 sizeof(struct pw_entry *), ptr)) < 0)
+	if ((ret = db_stack_push(&lst, sizeof(uint32_t) + lst.cnt * 
+							 sizeof(struct pw_entry), ptr)) < 0)
 		return ret;
 
 	return size;
@@ -286,14 +276,12 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 	if (t->type == JSMN_STRING) {
 		if ((ret = json_parse_string(js, t, &s)) < 0)
 			return ret;
-		memcpy(ic.desc, js + s.pos, s.len);
-		ic.desc[s.len] = '\0';
 		t += ret;
 		size += ret;
 		cnt--;
 	} else {
+		s.pos = 0;
 		s.len = 0;
-		ic.desc[0] = '\0';
 	}
 
 	if (cnt > 1) {
@@ -311,7 +299,10 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 
 	DCC_LOG1(LOG_TRACE, "ic.mode=%d", ic.mode);
 
-	if ((ret = db_stack_push(&ic, s.len + 3, ptr)) < 0)
+	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
+		return ret;
+
+	if ((ret = db_stack_push(&ic, 3, ptr)) < 0)
 		return ret;
 
 	return size;
@@ -321,7 +312,7 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 const struct json_obj sensor_json_obj[] = {
 	{ "id", json_parse_uint16, offsetof(struct obj_sensor, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_sensor, flags) },
-	{ "tag", db_parse_string, offsetof(struct obj_sensor, tag) },
+	{ "model", db_parse_string, offsetof(struct obj_sensor, tag) },
 	{ "desc", db_parse_string, offsetof(struct obj_sensor, desc) },
 	{ "pw1", db_parse_pw_list, offsetof(struct obj_sensor, pw1) },
 	{ "pw2", db_parse_pw_list, offsetof(struct obj_sensor, pw2) },
@@ -341,7 +332,7 @@ const struct json_obj sensor_json_obj[] = {
 const struct json_obj module_json_obj[] = {
 	{ "id", json_parse_uint16, offsetof(struct obj_module, id) },
 	{ "ap", json_parse_boolean, offsetof(struct obj_module, flags) },
-	{ "tag", db_parse_string, offsetof(struct obj_module, tag) },
+	{ "model", db_parse_string, offsetof(struct obj_module, tag) },
 	{ "desc", db_parse_string, offsetof(struct obj_module, desc) },
 	{ "pw1", db_parse_pw_list, offsetof(struct obj_module, pw1) },
 	{ "pw2", db_parse_pw_list, offsetof(struct obj_module, pw2) },
@@ -461,7 +452,7 @@ int db_info_write(unsigned int crc, unsigned int len,
 }
 
 
-#define TOK_MAX 1024
+#define TOK_MAX 800
 
 int device_db_compile(void)
 {
@@ -477,11 +468,16 @@ int device_db_compile(void)
 	int n;
 	int i;
 
+	DCC_LOG(LOG_TRACE, "....................................");
+
 	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
+
 	json_len = json_root_len(js);
 	json_crc = crc16ccitt(0, js, json_len);
 
 	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, json_len);
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x", cm3_sp_get());
 
 	/* check database integrity */
 	inf = (struct obj_db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
@@ -522,6 +518,9 @@ int device_db_compile(void)
 		goto parse_error;
 	}
 
+	DCC_LOG1(LOG_TRACE, "token stream length=%d", 
+			 p.toknext * sizeof(jsmntok_t));
+
 	t = tok;
 
 	/* Should never reach uninitialized tokens */
@@ -548,6 +547,12 @@ int device_db_compile(void)
 	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
 						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
+		return -1;
+	};
+
+	DCC_LOG(LOG_TRACE, "3. erasing constant strings pool.");
+	if (slcdev_const_str_purge() < 0) {
+		DCC_LOG(LOG_ERROR, "slcdev_const_str_purge() failed!");
 		return -1;
 	};
 
@@ -630,13 +635,13 @@ static void pw_list_dump(FILE * f, struct pw_list * lst)
 		return;
 	}
 
-	DCC_LOG1(LOG_TRACE, "lst=0x%08x", lst);
+	DCC_LOG1(LOG_INFO, "lst=0x%08x", lst);
 
 	for (i = 0; i < lst->cnt; ++i) {
-		struct pw_entry * pw = lst->pw[i];
+		struct pw_entry * pw = &lst->pw[i];
 
-		DCC_LOG2(LOG_TRACE, "lst->pw[%d]=0x%08x", i, pw);
-		fprintf(f, "\t[%4d %4d] %s\n", pw->min, pw->max, pw->desc);	
+		DCC_LOG2(LOG_INFO, "lst->pw[%d]=0x%08x", i, pw);
+		fprintf(f, "\t[%4d %4d] %s\n", pw->min, pw->max, const_str(pw->desc));	
 	}
 }
 
@@ -648,12 +653,13 @@ static void ic_mode_dump(FILE * f, struct ic_entry * ic)
 	}
 
 	DCC_LOG1(LOG_TRACE, "ic=0x%08x", ic);
-	fprintf(f, "\t\"%s\": %d\n", ic->desc, ic->mode);	
+	fprintf(f, "\t\"%s\": %d\n", const_str(ic->desc), ic->mode);	
 }
 
 static void sensor_dump(FILE * f, struct obj_sensor * sens)
 {
-	fprintf(f, "id=%d \"%s\" \"%s\"\n", sens->id, sens->tag, sens->desc);
+	fprintf(f, "id=%d \"%s\" \"%s\"\n", sens->id, 
+		const_str(sens->tag), const_str(sens->desc));
 	fprintf(f, "PW1:");
 	pw_list_dump(f, sens->pw1);
 	fprintf(f, "PW2:");
@@ -668,7 +674,8 @@ static void sensor_dump(FILE * f, struct obj_sensor * sens)
 
 static void module_dump(FILE * f, struct obj_module * mod)
 {
-	fprintf(f, "id=%d \"%s\" \"%s\"\n", mod->id, mod->tag, mod->desc);
+	fprintf(f, "id=%d \"%s\" \"%s\"\n", mod->id, 
+			const_str(mod->tag), const_str(mod->desc));
 	fprintf(f, "PW1:");
 	pw_list_dump(f, mod->pw1);
 	fprintf(f, "PW2:");
@@ -736,5 +743,39 @@ int device_db_erase(void)
 	DCC_LOG(LOG_TRACE, "device database erased!");
 
 	return ret;
+}
+
+#define JS_TOK_MAX (4096 + 2048)
+
+int _device_db_compile(void)
+{
+	struct microjs_parser p;
+	unsigned int json_crc;
+	int json_len;
+	uint8_t tok[JS_TOK_MAX];
+	char * js;
+	int ret;
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+
+	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
+
+	json_len = json_root_len(js);
+	json_crc = crc16ccitt(0, js, json_len);
+	(void)json_crc;
+
+	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, json_len);
+
+	microjs_init(&p, tok, JS_TOK_MAX);
+
+	if ((ret = microjs_parse(&p, js, json_len)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
+		return ret;
+	}
+
+	microjs_dump(&p);
+
+	return ret;
+
 }
 

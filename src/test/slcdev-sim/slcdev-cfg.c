@@ -255,8 +255,8 @@ int device_pw3_lookup(unsigned int addr, unsigned int sel)
 	if (sel >= obj->pw3->cnt)
 		sel = obj->pw3->cnt - 1;
 
-	max = obj->pw3->pw[sel]->max;
-	min = obj->pw3->pw[sel]->min;
+	max = obj->pw3->pw[sel].max;
+	min = obj->pw3->pw[sel].min;
 	avg = (max + min) / 2;
 	dev->pw3 = (avg * dev->tbias) / 128;
 	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d val=%d", 
@@ -329,8 +329,6 @@ int script_compile(const char * js, unsigned int len)
 
 	return 0;
 };
-
-
 
 #define TOK_MAX 1024
 
