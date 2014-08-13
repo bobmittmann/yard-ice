@@ -42,17 +42,18 @@
 
 #include <sys/dcclog.h>
 
-const char microjs_keyword[11][9] = {
+const char microjs_keyword[12][9] = {
 	"break",
 	"case",
 	"continue",
-	"false",
+	"const",
 
+	"false",
 	"for",
 	"function",
 	"return",
-	"switch",
 
+	"switch",
 	"true",
 	"var",
 	"while",
@@ -106,11 +107,16 @@ int microjs_str_decode(struct microjs_parser * p,
 	return 0;
 }
 
+#define MICROJS_BRACKET_STACK_SIZE 32
+
 int microjs_parse(struct microjs_parser * p, 
 				  const char * js, unsigned int len)
 {
-	unsigned int i;
+	uint8_t bkt_tok[MICROJS_BRACKET_STACK_SIZE];
+	unsigned int bkt_sp;
+	unsigned int ltok;
 	unsigned int tok;
+	unsigned int i;
 	int err;
 	int c;
 	
@@ -122,6 +128,8 @@ int microjs_parse(struct microjs_parser * p,
 	DCC_LOG(LOG_TRACE, "parse start");
 	DCC_LOG1(LOG_TRACE, "script length = %d bytes.", len);
 
+	/* initialize bracket matching stack pointer */
+	bkt_sp = 0;
 	for (i = 0; i < len; ) {
 
 		c = js[i];
@@ -154,6 +162,12 @@ int microjs_parse(struct microjs_parser * p,
 					break;
 				}
 				j++;
+			}
+
+			if (j > MICROJS_STRING_LEN_MAX) {
+				DCC_LOG(LOG_WARNING, "string too large!");
+				err = MICROJS_STRING_TOOLARGE;
+				goto error;
 			}
 
 			if ((p->size - p->cnt) < 3) {
@@ -207,7 +221,7 @@ int microjs_parse(struct microjs_parser * p,
 			if (k > (TOK_WHILE - TOK_BREAK)) {
 				/* symbol */
 				DCC_LOG(LOG_INFO, "Symbol");
-				p->tok[p->cnt++] = TOK_SYMBOL + j;
+				p->tok[p->cnt++] = TOK_SYMBOL + j - 1;
 				p->cnt += j;
 			}
 
@@ -400,18 +414,30 @@ int microjs_parse(struct microjs_parser * p,
 
 #if MICROJS_ENABLE_INCDEC
 		if (c == '+') {
-			if ((++i < len) && ((c = js[i]) == '+')) {
-				tok = TOK_INC;
-				goto inc_push;
+			if (++i < len)	{
+				if  (c == '+') {
+					tok = TOK_INC;
+					goto inc_push;
+				}
+				if  (c == '=') {
+					tok = TOK_PLUS_LET;
+					goto inc_push;
+				}
 			}
 			tok = TOK_PLUS;
 			goto push;
 		}
 
 		if (c == '-') {
-			if ((++i < len) && ((c = js[i]) == '-')) {
-				tok = TOK_DEC;
-				goto inc_push;
+			if (++i < len)	{
+				if  (c == '-') {
+					tok = TOK_DEC;
+					goto inc_push;
+				}
+				if  (c == '=') {
+					tok = TOK_MINUS_LET;
+					goto inc_push;
+				}
 			}
 			tok = TOK_MINUS;
 			goto push;
@@ -419,18 +445,34 @@ int microjs_parse(struct microjs_parser * p,
 #endif
 
 		if (c == '|') {
-			if ((++i < len) && ((c = js[i]) == '|')) {
-				tok = TOK_OR;
-				goto inc_push;
+			if (++i < len)	{
+				if  (c == '|') {
+					tok = TOK_OR;
+					goto inc_push;
+				}
+#if MICROJS_ENABLE_INCDEC
+				if  (c == '=') {
+					tok = TOK_OR_LET;
+					goto inc_push;
+				}
+#endif
 			}
 			tok = TOK_BITOR;
 			goto push;
 		}
 
 		if (c == '&') {
-			if ((++i < len) && ((c = js[i]) == '&')) {
-				tok = TOK_AND;
-				goto inc_push;
+			if (++i < len)	{
+				if  (c == '&') {
+					tok = TOK_AND;
+					goto inc_push;
+				}
+#if MICROJS_ENABLE_INCDEC
+				if  (c == '=') {
+					tok = TOK_AND_LET;
+					goto inc_push;
+				}
+#endif
 			}
 			tok = TOK_BITAND;
 			goto push;
@@ -454,22 +496,25 @@ int microjs_parse(struct microjs_parser * p,
 			break;
 		case '[':
 			tok = TOK_LEFTBRACKET;
-			break;
+			goto bkt_push;
 		case ']':
 			tok = TOK_RIGHTBRACKET;
-			break;
+			ltok = TOK_LEFTBRACKET;
+			goto bkt_pop;
 		case '(':
 			tok = TOK_LEFTPAREN;
-			break;
+			goto bkt_push;
 		case ')':
 			tok = TOK_RIGHTPAREN;
-			break;
+			ltok = TOK_LEFTPAREN;
+			goto bkt_pop;
 		case '{':
 			tok = TOK_LEFTBRACE;
-			break;
+			goto bkt_push;
 		case '}':
 			tok = TOK_RIGHTBRACE;
-			break;
+			ltok = TOK_LEFTBRACE;
+			goto bkt_pop;
 		case '^':
 			tok = TOK_XOR;
 			break;
@@ -497,8 +542,10 @@ int microjs_parse(struct microjs_parser * p,
 		}
 
 inc_push:
+		/* increment the index pointer and push a token into the buffer */
 		i++;
 push:
+		/* push a token into the buffer */
 		if ((p->size - p->cnt) < 1) {
 			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
@@ -509,6 +556,13 @@ push:
 		DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 	}
 
+	/* the matching bracket stack must be empty at this point */
+	if (bkt_sp != 0) {
+		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
+		err = MICROJS_BRACKET_MISMATCH;
+		goto error;
+	}
+
 	DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 
 	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", p->cnt);
@@ -516,9 +570,29 @@ push:
 
 	return p->cnt;
 
+bkt_push:
+	/* insert a brakcet into the stack */
+	if (bkt_sp == MICROJS_BRACKET_STACK_SIZE) {
+		DCC_LOG(LOG_WARNING, "maximum nesting level exceeded!");
+		err = MICROJS_MAX_NEST_LEVEL;
+		goto error;
+	}
+	bkt_tok[bkt_sp++] = tok;
+	goto inc_push;
+
+bkt_pop:
+	/* push a brakcet from the stack and check for matching pair */
+	if ((bkt_sp == 0) || (bkt_tok[--bkt_sp] != ltok)) {
+		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
+		err = MICROJS_BRACKET_MISMATCH;
+		goto error;
+	}
+	goto inc_push;
+
 error:
 	p->err_offs = i;
 	p->err_code = err;
 	return -1;
+
 }
 

@@ -213,7 +213,7 @@
 		"ic1": ["Relay Pulse"],
 		"ic2": ["Relay select"],
 		"ic3": ["LED control"],
-	}
+	},
 
 	"module": { 
 		"id": 10, 

@@ -52,19 +52,22 @@
 #endif
 
 #ifndef MICROJS_SYMBOL_LEN_MAX 
-#define MICROJS_SYMBOL_LEN_MAX 15
+#define MICROJS_SYMBOL_LEN_MAX 16
+#endif
+
+#ifndef MICROJS_STRING_LEN_MAX 
+#define MICROJS_STRING_LEN_MAX 176
 #endif
 
 #include <stdint.h>
 #include <microjs.h>
 
-#if MICROJS_SYMBOL_LEN_MAX > 31
-#error "MICROJS_SYMBOL_LEN_MAX should be less than 32"
+#if MICROJS_SYMBOL_LEN_MAX >= 32
+#error "MICROJS_SYMBOL_LEN_MAX should be less or equal than 32"
 #endif
 
-
-#define TOK_STRING     0x80
-#define TOK_SYMBOL     0x60
+#define TOK_STRING       (256 - MICROJS_STRING_LEN_MAX - 1)
+#define TOK_SYMBOL       (TOK_STRING - MICROJS_SYMBOL_LEN_MAX)
 
 #define TOK_NULL          0
 #define TOK_ASR           1 
@@ -98,27 +101,50 @@
 #define TOK_NOT          29
 #define TOK_BITNOT       30
 #define TOK_LET          31
-#define TOK_INC          32 
-#define TOK_DEC          33
 
-#define TOK_BREAK        34
-#define TOK_CASE         35
-#define TOK_CONTINUE     36
-#define TOK_FALSE        37
-#define TOK_FOR          38
-#define TOK_FUNCTION     39
-#define TOK_RETURN       40
-#define TOK_SWITCH       41
-#define TOK_TRUE         42
-#define TOK_VAR          43
-#define TOK_WHILE        44
+#define TOK_INC          32 /* ++ */
+#define TOK_DEC          33 /* -- */
+#define TOK_NOT_LET      34 /* ~= */
+#define TOK_ADD_LET      35 /* += */
+#define TOK_SUB_LET      36 /* -= */
+#define TOK_MUL_LET      37 /* *= */
+#define TOK_DIV_LET      38 /* /= */
+#define TOK_MOD_LET      39 /* %= */
+#define TOK_ASR_LET      40 /* >>= */
+#define TOK_SHL_LET      41 /* <<= */
+#define TOK_OR_LET       42 /* |= */
+#define TOK_AND_LET      43 /* &= */
+#define TOK_XOR_LET      44 /* ^= */
 
-#define TOK_INT8         45
-#define TOK_INT16        46
-#define TOK_INT24        47
-#define TOK_INT32        48
+#define TOK_BREAK        45
+#define TOK_CASE         46
+#define TOK_CONTINUE     47
+#define TOK_CONST        48
+#define TOK_FALSE        49
+#define TOK_FOR          50
+#define TOK_FUNCTION     51
+#define TOK_RETURN       52
+#define TOK_SWITCH       53
+#define TOK_TRUE         54
+#define TOK_VAR          55
+#define TOK_WHILE        56
 
-extern const char microjs_keyword[11][9];
+#define TOK_INT8         57
+#define TOK_INT16        58
+#define TOK_INT24        59
+#define TOK_INT32        60
+
+#define TOK_INT64        61
+#define TOK_FLOAT        62
+#define TOK_DOUBLE       63
+
+#define TOK_LAST         TOK_DOUBLE
+
+#if (MICROJS_SYMBOL_LEN_MAX + MICROJS_STRING_LEN_MAX + TOK_LAST) > 255
+#error "(MICROJS_SYMBOL_LEN_MAX + MICROJS_STRING_LEN_MAX + TOK_LAST) > 255"
+#endif
+
+extern const char microjs_keyword[12][9];
 extern const char microjs_tok_str[][4];
 
 #define MICROJS_VM_STACK_SIZE 256 

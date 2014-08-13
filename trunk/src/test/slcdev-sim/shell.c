@@ -570,8 +570,6 @@ int cmd_str(FILE * f, int argc, char ** argv)
 
 int cmd_reboot(FILE * f, int argc, char ** argv)
 {
-	unsigned int rate = 0;
-
 	if (argc > 1)
 		return SHELL_ERR_EXTRA_ARGS;
 
