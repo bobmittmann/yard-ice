@@ -49,7 +49,7 @@ int __attribute__((section (".data#")))
 	return (sr & FLASH_ERR) ? -1 : 0;
 }
 
-#define FLASH_SECTOR_SIZE 256
+#define FLASH_PAGE_SIZE 256
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
@@ -62,11 +62,11 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 
 //	uint32_t cr;
 
-	offs &= ~(FLASH_SECTOR_SIZE - 1);
+	offs &= ~(FLASH_PAGE_SIZE - 1);
 
 	addr = (uint32_t)STM32_MEM_FLASH + offs;
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
 
 	pecr = flash->pecr;
 	DCC_LOG1(LOG_INFO, "PECR=0x%08x", pecr);
@@ -106,19 +106,27 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 			cnt = ret;
 			break;
 		}
-		addr += FLASH_SECTOR_SIZE;
-		rem -= FLASH_SECTOR_SIZE;
-		cnt += FLASH_SECTOR_SIZE;
+		addr += FLASH_PAGE_SIZE;
+		rem -= FLASH_PAGE_SIZE;
+		cnt += FLASH_PAGE_SIZE;
 
 	}
 
 	return cnt;
 }
 
+/* 
+   write half flash page .
+   offs must be half page aligned.
+ */
+
 int __attribute__((section (".data#"))) 
-	stm32l_flash_pg_wr(struct stm32_flash * flash, 
-					   uint32_t volatile dst[], uint32_t src[])
+	stm32l_flash_pg_wr(uint32_t offs, uint8_t * src,  
+					   uint32_t pos, uint32_t cnt)
 {
+	struct stm32_flash * flash = STM32_FLASH;
+	uint32_t base = (uint32_t)STM32_MEM_FLASH;
+	uint32_t * dst;
 	uint32_t sr;
 	int i;
 
@@ -133,8 +141,20 @@ int __attribute__((section (".data#")))
 		return -1;
 	}
 
-	for (i = 0; i < (128 / 4); ++i)
-		dst[i] = src[i];
+	dst = (uint32_t *)(base + offs);
+
+	/* zero the initial words */
+	for (i = 0; i < (pos / 4); ++i)
+		*dst++ = 0;
+
+	/* adjust counter to count words */
+	for (; i < ((pos + cnt) / 4); ++i) {
+		*dst++ = src[0] | (src[1] << 8) | (src[2] << 16)| (src[3] << 24);
+		src += 4;
+	}
+
+	for (; i < ((FLASH_PAGE_SIZE / 2) / 4); ++i)
+		*dst++ = 0;
 
 	do {
 		sr = flash->sr;
@@ -146,19 +166,22 @@ int __attribute__((section (".data#")))
 		return -1;
 	}
 
-	return 0;
+	return cnt;
 }
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
-	uint32_t base = (uint32_t)STM32_MEM_FLASH;
 	uint8_t * ptr;
 	uint32_t pecr;
 	int rem;
-	int ret;
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", base + offs, len);
+	DCC_LOG2(LOG_INFO, "offs=0x%06x len=%d", offs, len);
+
+	if (offs & 3) {
+		DCC_LOG(LOG_ERROR, "offset must be word aligned!");
+		return -1;
+	}
 
 	pecr = flash->pecr;
 	DCC_LOG1(LOG_INFO, "PECR=0x%08x", pecr);
@@ -174,51 +197,28 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 
 	ptr = (uint8_t *)buf;
 	rem = len;
-	while (rem > 0) {
-		uint32_t blk[128 / 4];
+	while (rem > 3) {
+		uint32_t pos;
+		uint32_t cnt;
 		uint32_t pri;
-		int n;
-		int i;
+		int ret;
 
-		if (((offs & 0x7f) != 0) || (rem < 128)) {
-			uint32_t pos;
-			uint32_t * src;
-			uint8_t * dst;
+		/* adjust offset for half page alignement */
+		pos = offs - (offs & ~((FLASH_PAGE_SIZE / 2) - 1));
+		offs -= pos;
 
-			DCC_LOG(LOG_INFO, "Partial page write...");
-			/* get the position inside the flash block where the 
-			   writing should start */
-			pos = offs - (offs & ~0x7f);
-			offs -= pos;
+		/* make sure we don't exceed the page boundary */
+		cnt = MIN((FLASH_PAGE_SIZE / 2) - pos, rem);
 
-			/* copy a full block from flash to buffer */
-			src = (uint32_t *)(base + offs);
-			for (i = 0; i < (128 / 4); ++i)
-				blk[i] = src[i];
+		DCC_LOG3(LOG_INFO, "1. offs=0x%06x pos=%d cnt=%d", offs, pos, cnt);
 
-			/* partially override the buffer with input data */
-			n = MIN(128 - pos, rem);
-			dst = (uint8_t *)(blk) + pos;
-			for (i = 0; i < n; ++i)
-				dst[i] = ptr[i];
-
-		} else {
-			uint8_t * src;
-			uint32_t data;
-			/* start half page write */
-			DCC_LOG(LOG_INFO, "Half-Page write start...");
-			n = 128;
-			src = ptr;
-			for (i = 0; i < (128 / 4); ++i) {
-				data = src[0] | (src[1] << 8) | (src[2] << 16)| (src[3] << 24);
-				blk[i] = data;
-				src += 4;
-			}	
-		}
+		/* adjust counter to count words */
+		cnt &= ~3;
 
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
-		ret = stm32l_flash_pg_wr(flash, (uint32_t *)(base + offs), blk);
+		/* start half page write */
+		ret = stm32l_flash_pg_wr(offs, ptr, pos, cnt);
 		cm3_primask_set(pri);
 
 		if (ret < 0) {
@@ -226,10 +226,44 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 			return ret;
 		}
 
-		ptr += n;
-		rem -= n;
-		offs += 128;
+		ptr += cnt;
+		rem -= cnt;
+		offs += pos + cnt;
 	}
+
+	if (rem) {
+		uint32_t pos;
+		uint32_t pri;
+		uint8_t data[4];
+		int ret;
+		int i;
+
+		/* FIXME: single word writing.... */
+
+		/* adjust offset for half page alignement */
+		pos = offs - (offs & ~((FLASH_PAGE_SIZE / 2) - 1));
+		offs -= pos;
+
+		/* copy data to temporary buffer */ 
+		for (i = 0; i < rem; ++i)
+			data[i] = ptr[i];
+		/* fill the remaining buffer */
+		for (; i < 4; ++i)
+			data[i] = 0;
+
+		DCC_LOG3(LOG_INFO, "2. offs=0x%06x pos=%d cnt=%d", offs, pos, 4);
+
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		/* start half page write */
+		ret = stm32l_flash_pg_wr(offs, data, pos, 4);
+		cm3_primask_set(pri);
+
+		if (ret < 0) {
+			DCC_LOG(LOG_WARNING, "Flash write failed!");
+			return ret;
+		}
+	};
 
 	return len;
 }

@@ -24,7 +24,8 @@ PROG = slc-dev
 #CFILES_GEN = device_db.c
 CFILES = jsmn.c slc-dev.c board.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c json-dump.c flashfs.c shell.c\
-		 xflash.c xflash_pic.c slcdev-sim.c json.c slcdev-cfg.c
+		 xflash.c xflash_pic.c slcdev-sim.c json.c slcdev-cfg.c\
+		 slcdev-str.c
 #		 stm32l-flash.c stm32-uart.c
 		 
 

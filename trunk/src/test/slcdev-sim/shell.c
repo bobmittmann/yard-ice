@@ -36,6 +36,8 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
+#include <microjs.h>
+
 #include "flashfs.h"
 #include "isink.h"
 
@@ -165,6 +167,7 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
 	char * cp;
+	int cnt;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -180,7 +183,18 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 	cp = (char *)(STM32_MEM_FLASH + entry.offs);
 	DCC_LOG2(LOG_TRACE, "cp=0x%08x len=%d", cp, strlen(cp));
 
-	fprintf(f, "%s\n", cp);
+	for (cnt = 0; cnt < entry.size; ) { 
+		int n;
+
+		n = strlen(cp);
+		if (n > 0) {
+			fprintf(f, "%s\n", cp);
+		} else
+			n = 1;
+
+		cnt += n;
+		cp += n;
+	}
 
 	return 0;
 }
@@ -399,17 +413,29 @@ int cmd_eeprom(FILE * f, int argc, char ** argv)
 	unsigned int offs;
 	unsigned int data;
 
-	if (argc > 2)
+	if (argc > 3)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	fprintf(f, "Testing EEPROM...\n");
 	stm32_eeprom_unlock();
 
-	data = rand();
-	for (offs = 0; offs < 4096; offs += 4) {
-		stm32_eeprom_wr32(offs, data);
-		data++;
+	if (argc == 2) {
+		if ((strcmp(argv[1], "test") == 0) || 
+			(strcmp(argv[1], "t") == 0)) {
+			fprintf(f, "Testing EEPROM...\n");
+			data = rand();
+			for (offs = 0; offs < 4096; offs += 4) {
+				stm32_eeprom_wr32(offs, data);
+				data++;
+			}
+
+		} else if ((strcmp(argv[1], "erase") == 0) || 
+			(strcmp(argv[1], "e") == 0)) {
+			fprintf(f, "Erasing EEPROM...\n");
+			for (offs = 0; offs < 4096; offs += 4)
+				stm32_eeprom_wr32(offs, 0);
+		}
 	}
+
 		
 	return 0;
 }
@@ -526,6 +552,34 @@ int cmd_pw5(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_str(FILE * f, int argc, char ** argv)
+{
+	int ret = 0;
+	int i;
+
+	if (argc == 1)
+		return microjs_str_pool_dump(&microjs_str_const);
+
+	for (i = 1; i < argc; ++i) {
+		if ((ret = slcdev_const_str_write(argv[i], strlen(argv[i]))) < 0)
+			break;
+	}
+
+	return ret;
+}
+
+int cmd_reboot(FILE * f, int argc, char ** argv)
+{
+	unsigned int rate = 0;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	cm3_sysrst();
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -572,6 +626,10 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_pw5, "pw5", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
+
+	{ cmd_str, "str", "", "", "dump string pool" },
+
+	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 
 	{ NULL, "", "", NULL, NULL }
 };

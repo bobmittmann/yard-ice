@@ -27,15 +27,16 @@
 
 int strncmp(const char *s1, const char *s2, size_t n)
 {
-	if (n == 0)
-		return 0;
+	unsigned int c1 = '\0';
+	unsigned int c2 = '\0';
 
-	while (n-- != 0 && *s1 == *s2) {
-		if (n == 0 || *s1 == '\0')
+	while (n > 0) {
+		c1 = (unsigned int)*s1++;
+		c2 = (unsigned int)*s2++;
+		if (c1 == '\0' || c1 != c2)
 			break;
-		s1++;
-		s2++;
+		n--;
 	}
 
-	return (*(unsigned char *) s1) - (*(unsigned char *) s2);
+	return c1 - c2;
 }
