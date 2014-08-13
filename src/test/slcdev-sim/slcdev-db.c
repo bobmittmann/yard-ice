@@ -454,7 +454,7 @@ int db_info_write(unsigned int crc, unsigned int len,
 
 #define TOK_MAX 800
 
-int device_db_compile(void)
+int _device_db_compile(void)
 {
 	struct obj_db_info * inf;
 	unsigned int json_crc;
@@ -745,12 +745,13 @@ int device_db_erase(void)
 	return ret;
 }
 
-#define JS_TOK_MAX (4096 + 2048)
+#define JS_TOK_MAX (4096)
 
-int _device_db_compile(void)
+int device_db_compile(void)
 {
 	struct microjs_parser p;
 	unsigned int json_crc;
+	struct obj_db_info * inf;
 	int json_len;
 	uint8_t tok[JS_TOK_MAX];
 	char * js;
@@ -764,14 +765,27 @@ int _device_db_compile(void)
 	json_crc = crc16ccitt(0, js, json_len);
 	(void)json_crc;
 
-	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, json_len);
+	DCC_LOG3(LOG_TRACE, "js=0x%08x len=%d crc=0x%04x", 
+			 js, json_len, json_crc);
+
+	/* check database integrity */
+	inf = (struct obj_db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	if ((inf->len == sizeof(struct obj_db_info)) && 
+		(inf->type == DB_OBJ_DB_INFO) && 
+		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
+		printf("Database is up-to-date.\n");
+		return 0;
+	}
 
 	microjs_init(&p, tok, JS_TOK_MAX);
 
+	/* parse the JASON file with the microjs tokenizer */
 	if ((ret = microjs_parse(&p, js, json_len)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
 		return ret;
 	}
+
+	/* decode the :e*/
 
 	microjs_dump(&p);
 

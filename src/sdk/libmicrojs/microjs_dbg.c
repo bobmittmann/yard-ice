@@ -34,40 +34,51 @@
 #include <sys/dcclog.h>
 
 const char microjs_tok_str[][4] = {
-	"",   /* TOK_NULL */
-	">>", /* TOK_ASR */
-	"<<", /* TOK_ASL */
-	"<=", /* TOK_LTE */
-	"<",  /* TOK_LT */
-	">=", /* TOK_GTE */
-	">",  /* TOK_GT */
-	"==", /* TOK_EQ */
-	"!=", /* TOK_NEQ */
-	"+",  /* TOK_PLUS */
-	"-",  /* TOK_MINUS */
-	"*",  /* TOK_MUL */
-	"/",  /* TOK_DIV */
-	"%",  /* TOK_MOD */
-	".",  /* TOK_DOT */
-	",",  /* TOK_COMMA */
-	";",  /* TOK_SEMICOLON */
-	":",  /* TOK_COLON */
-	"[",  /* TOK_LEFTBRACKET */
-	"]",  /* TOK_RIGHTBRACKET */
-	"(",  /* TOK_LEFTPAREN */
-	")",  /* TOK_RIGHTPAREN */
-	"{",  /* TOK_LEFTBRACE */
-	"}",  /* TOK_RIGHTBRACE */
-	"|",  /* TOK_OR */
-	"||", /* TOK_BITOR */
-	"&",  /* TOK_AND */
-	"&&", /* TOK_BITAND */
-	"^",  /* TOK_XOR */
-	"!",  /* TOK_NOT */
-	"~",  /* TOK_BITNOT */
-	"=",  /* TOK_LET */
-	"++", /* TOK_INC */
-	"--", /* TOK_DEC */
+	"",    /* TOK_NULL */
+	">>",  /* TOK_ASR */
+	"<<",  /* TOK_ASL */
+	"<=",  /* TOK_LTE */
+	"<",   /* TOK_LT */
+	">=",  /* TOK_GTE */
+	">",   /* TOK_GT */
+	"==",  /* TOK_EQ */
+	"!=",  /* TOK_NEQ */
+	"+",   /* TOK_PLUS */
+	"-",   /* TOK_MINUS */
+	"*",   /* TOK_MUL */
+	"/",   /* TOK_DIV */
+	"%",   /* TOK_MOD */
+	".",   /* TOK_DOT */
+	",",   /* TOK_COMMA */
+	";",   /* TOK_SEMICOLON */
+	":",   /* TOK_COLON */
+	"[",   /* TOK_LEFTBRACKET */
+	"]",   /* TOK_RIGHTBRACKET */
+	"(",   /* TOK_LEFTPAREN */
+	")",   /* TOK_RIGHTPAREN */
+	"{",   /* TOK_LEFTBRACE */
+	"}",   /* TOK_RIGHTBRACE */
+	"|",   /* TOK_OR */
+	"||",  /* TOK_BITOR */
+	"&",   /* TOK_AND */
+	"&&",  /* TOK_BITAND */
+	"^",   /* TOK_XOR */
+	"!",   /* TOK_NOT */
+	"~",   /* TOK_BITNOT */
+	"=",   /* TOK_LET */
+	"++",  /* TOK_INC */
+	"--",  /* TOK_DEC */
+	"~=",  /* TOK_NOT_LET */
+	"+=",  /* TOK_ADD_LET */
+	"-=",  /* TOK_SUB_LET */
+	"*=",  /* TOK_MUL_LET */
+	"/=",  /* TOK_DIV_LET */
+	"%=",  /* TOK_MOD_LET */
+	">>=", /* TOK_ASR_LET */
+	"<<=", /* TOK_SHL_LET */
+	"|=",  /* TOK_OR_LET */
+	"&=",  /* TOK_AND_LET */
+	"^="   /* TOK_XOR_LET */
 };
 
 int microjs_dump(struct microjs_parser * p)
@@ -81,18 +92,18 @@ int microjs_dump(struct microjs_parser * p)
 
 	for (idx = 0; idx < p->cnt; ) {
 		tok = p->tok[idx++];
-		if (tok & TOK_STRING) {
+		if (tok >= TOK_STRING) {
 			unsigned int offs;
 			char buf[128];
-			len = tok & ~TOK_STRING;
+			len = tok - TOK_STRING;
 			offs = p->tok[idx++];
 			offs |= p->tok[idx++] << 8;
 			s = (char *)p->js + offs;
 			memcpy(buf, s, len);
 			buf[len] = '\0';
 			printf("\"%s\" ", buf);
-		} else if ((tok & TOK_SYMBOL) == TOK_SYMBOL) {
-			len = tok & ~TOK_SYMBOL;
+		} else if (tok >= TOK_SYMBOL) {
+			len = tok - TOK_SYMBOL + 1;
 			s = (char *)&p->tok[idx];
 			printf("__%s__ ", s);
 	//		idx += strlen(s) + 1;
