@@ -18,12 +18,16 @@ uint16_t cfg_heap = 0;
 enum {
 	CFG_VOID,
 	CFG_BIT,
-	CFG_BFIELD,
+	CFG_BFIELD8,
+	CFG_BFIELD16,
+	CFG_BFIELD32,
 	CFG_UINT8,
-	CFG_UINT16
+	CFG_UINT16,
+	CFG_UINT32
 };
 
-#define BFIELD(BITS, POS) ((((BITS - 1) & 0x1f) << 5) | (POS & 0x1f))
+#define BFIELD_OPT(BITS, POS) ((((BITS - 1) & 0x1f) << 5) | (POS & 0x1f))
+
 
 struct cfg_type {
 	int (* encode)(const char * s, int opt, void * ptr); /* encode string into 
@@ -37,6 +41,18 @@ struct cfg_attr {
 	uint16_t opt;
 	uint16_t offs;
 };
+
+#define BFIELD32(NM, OBJ, FIELD, POS, BITS) \
+	 { NM, CFG_BFIELD32, BFIELD_OPT(BITS, POS), offsetof(OBJ, FIELD) }
+
+#define BFIELD16(NM, OBJ, FIELD, POS, BITS) \
+	 { NM, CFG_BFIELD16, BFIELD_OPT(BITS, POS), offsetof(OBJ, FIELD) }
+
+#define BFIELD8(NM, OBJ, FIELD, POS, BITS) \
+	 { NM, CFG_BFIELD8, BFIELD_OPT(BITS, POS), offsetof(OBJ, FIELD) }
+
+#define BIT(NM, OBJ, FIELD, POS) \
+	 { NM, CFG_BIT, POS, offsetof(OBJ, FIELD) }
 
 int cfg_bit_encode(const char * s, int bit, void * ptr)
 {
@@ -61,11 +77,11 @@ int cfg_bit_decode(char * s, int bit, void * ptr)
 	return sprintf(s, "%s", (*val & (1 << bit)) ? "yes" : "no");
 } 
 
-int cfg_bfield_encode(const char * s, int opt, void * ptr)
+int cfg_bfield8_encode(const char * s, int opt, void * ptr)
 {
 	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint8_t * bfield = (uint8_t *)ptr;
 	int shift = opt & 0x1f;
-	uint32_t * bfield = (uint32_t *)ptr;
 	uint32_t val;
 
 	val = strtoul(s, NULL, 0);
@@ -75,14 +91,64 @@ int cfg_bfield_encode(const char * s, int opt, void * ptr)
 	return 0;
 } 
 
-int cfg_bfield_decode(char * s, int opt, void * ptr)
+int cfg_bfield8_decode(char * s, int opt, void * ptr)
 {
-	uint32_t * bfield = (uint32_t *)ptr;
 	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint8_t * bfield = (uint8_t *)ptr;
 	int shift = opt & 0x1f;
 
 	return sprintf(s, "%d", (*bfield >> shift) & mask);
 } 
+
+
+int cfg_bfield16_encode(const char * s, int opt, void * ptr)
+{
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint16_t * bfield = (uint16_t *)ptr;
+	int shift = opt & 0x1f;
+	uint32_t val;
+
+	val = strtoul(s, NULL, 0);
+
+	*bfield = (*bfield & ~(mask << shift)) | ((val & mask) << shift);
+
+	return 0;
+} 
+
+int cfg_bfield16_decode(char * s, int opt, void * ptr)
+{
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint16_t * bfield = (uint16_t *)ptr;
+	int shift = opt & 0x1f;
+
+	return sprintf(s, "%d", (*bfield >> shift) & mask);
+} 
+
+
+int cfg_bfield32_encode(const char * s, int opt, void * ptr)
+{
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint32_t * bfield = (uint32_t *)ptr;
+	int shift = opt & 0x1f;
+	uint32_t val;
+
+	val = strtoul(s, NULL, 0);
+
+	*bfield = (*bfield & ~(mask << shift)) | ((val & mask) << shift);
+
+	return 0;
+} 
+
+int cfg_bfield32_decode(char * s, int opt, void * ptr)
+{
+	uint32_t mask = 0xffffffff >> (31 - ((opt >> 5) & 0x1f));
+	uint32_t * bfield = (uint32_t *)ptr;
+	int shift = opt & 0x1f;
+
+	return sprintf(s, "%d", (*bfield >> shift) & mask);
+} 
+
+
 
 int cfg_uint8_encode(const char * s, int opt, void * ptr)
 {
@@ -122,19 +188,42 @@ int cfg_uint16_decode(char * s, int hex, void * ptr)
 	return sprintf(s, "%d", *val);
 } 
 
+int cfg_uint32_encode(const char * s, int opt, void * ptr)
+{
+	uint16_t * val = (uint16_t *)ptr;
+
+	*val = strtoul(s, NULL, 0);
+
+	return 0;
+} 
+
+int cfg_uint32_decode(char * s, int hex, void * ptr)
+{
+	uint16_t * val = (uint16_t *)ptr;
+
+	if (hex)
+		return sprintf(s, "0x%04x", *val);
+
+	return sprintf(s, "%d", *val);
+} 
+
+
 const struct cfg_type cfg_type_lut[] = {
 	{ NULL, NULL }, /* VOID */
 	{ cfg_bit_encode, cfg_bit_decode },      /* BIT */
-	{ cfg_bfield_encode, cfg_bfield_decode }, /* BFIELD */
+	{ cfg_bfield8_encode, cfg_bfield8_decode }, /* BFIELD8 */
+	{ cfg_bfield16_encode, cfg_bfield16_decode }, /* BFIELD16 */
+	{ cfg_bfield32_encode, cfg_bfield32_decode }, /* BFIELD32 */
 	{ cfg_uint8_encode, cfg_uint8_decode },  /* UINT8 */
-	{ cfg_uint16_encode, cfg_uint16_decode } /* UINT16 */
+	{ cfg_uint16_encode, cfg_uint16_decode }, /* UINT16 */
+	{ cfg_uint32_encode, cfg_uint32_decode } /* UINT32 */
 };
 
 const struct cfg_attr dev_attr_lut[] = {
-	{ "enabled", CFG_BIT,    0, offsetof(struct ss_device, opt) },
-	{ "addr",    CFG_BFIELD, BFIELD(9, 1), offsetof(struct ss_device, opt) },
-	{ "ap",      CFG_BIT,    10, offsetof(struct ss_device, opt) },
-	{ "type",    CFG_BFIELD, BFIELD(6, 11), offsetof(struct ss_device, opt) },
+	BIT(  "enabled", struct ss_device, opt,  0),
+	BFIELD32("addr", struct ss_device, opt,  1, 9),
+	BIT(       "ap", struct ss_device, opt, 10),
+	BFIELD32("type", struct ss_device, opt, 11, 6),
 	{ "poll",    CFG_BIT,    17, offsetof(struct ss_device, opt) },
 	{ "dev",     CFG_UINT8,  0, offsetof(struct ss_device, dev) },
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
