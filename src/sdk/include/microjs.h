@@ -28,6 +28,7 @@
 #define __MICROJS_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 enum {
 	MICROJS_ERR_NONE = 0,
@@ -63,6 +64,7 @@ struct microjs_tok_val {
 		} str;
 		uint32_t u32;	
 		int32_t i32;	
+		bool logic;
 	};
 };
 
@@ -75,6 +77,9 @@ struct microjs_tok_val {
 #define MICROJS_JSON_ARRAY 2
 #define MICROJS_JSON_LABEL 3
 #define MICROJS_JSON_NUMBER 4
+#define MICROJS_JSON_STRING 5
+#define MICROJS_JSON_BOOLEAN 6
+
 
 struct microjs_json_parser {
 	struct microjs_tokenizer * tkn;
@@ -111,10 +116,12 @@ int microjs_tok_dump(FILE * f, struct microjs_tokenizer * tkn);
 int microjs_json_init(struct microjs_json_parser * jsn, 
 					  struct microjs_tokenizer * tkn);
 
-int microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
+bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
+
+int microjs_json_parse_val(struct microjs_json_parser * jsn,
+						   struct microjs_tok_val * val);
 
 int microjs_json_parse_obj(struct microjs_json_parser * jsn);
-
 
 int microjs_str_lookup(const struct microjs_str_pool * pool, 
 					   const char * s, int len);

@@ -8,20 +8,6 @@
 
 #include <sys/dcclog.h>
 
-struct __json_obj {
-	char key[12];
-	int (* parser)(char * js, jsmntok_t * t, void * ptr);
-	unsigned int offs;	
-};
-
-#define MICROJS_JSON_INVALID 0
-#define MICROJS_JSON_OBJECT 1
-#define MICROJS_JSON_ARRAY 2
-#define MICROJS_JSON_LABEL 3
-#define MICROJS_JSON_NUMBER 4
-#define MICROJS_JSON_STRING 5
-#define MICROJS_JSON_BOOL 6
-
 int microjs_json_init(struct microjs_json_parser * jsn, 
 					  struct microjs_tokenizer * tkn)
 {
@@ -31,23 +17,17 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 	return 0;
 }
 
-int microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type)
+bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type)
 {
-	unsigned int offs;
 	int idx = jsn->idx;
-	uint32_t x;
+	bool ret = false;
 	int tok;
-	int len;
-	(void)len;
 
 	tok = jsn->tkn->tok[idx++];
 	if (tok >= TOK_STRING)  {
-		len = tok - TOK_STRING;
-		offs = p->tok[idx++];
-		offs |= p->tok[idx++] << 8;
-		if (jsn->tkn->tok[idx++] == TOK_COLON) {
+		idx += 2;
+		if (jsn->tkn->tok[idx] == TOK_COLON) {
 			if (type == MICROJS_JSON_LABEL) {
-				idx++;
 				ret = true;
 			}
 		} else if (type == MICROJS_JSON_STRING) {
@@ -77,12 +57,12 @@ int microjs_json_parse_val(struct microjs_json_parser * jsn,
 	int ret;
 
 	idx = jsn->idx;
-	tok = p->tok[idx++];
+	tok = jsn->tkn->tok[idx++];
 	if (tok >= TOK_STRING) {
 		len = tok - TOK_STRING;
-		offs = p->tok[idx++];
-		offs |= p->tok[idx++] << 8;
-		val->str.dat = (char *)p->js + offs;
+		offs = jsn->tkn->tok[idx++];
+		offs |= jsn->tkn->tok[idx++] << 8;
+		val->str.dat = (char *)jsn->tkn->js + offs;
 		val->str.len = len;
 		if (jsn->tkn->tok[idx] == TOK_COLON) {
 			idx++;
@@ -91,19 +71,19 @@ int microjs_json_parse_val(struct microjs_json_parser * jsn,
 			ret = MICROJS_JSON_STRING;
 	} else if (tok >= TOK_SYMBOL) {
 		len = tok - TOK_SYMBOL + 1;
-		val->str.dat = (char *)&p->tok[idx];
+		val->str.dat = (char *)&jsn->tkn->tok[idx];
 		val->str.len = len;
 		idx += len;
 		ret = 
 		tok = MICROJS_JSON_INVALID;
 	} else if (tok >= TOK_INT8) {
-		x = p->tok[idx++];
+		x = jsn->tkn->tok[idx++];
 		if (tok >= TOK_INT16) {
-			x |= p->tok[idx++] << 8;
+			x |= jsn->tkn->tok[idx++] << 8;
 			if (tok == TOK_INT24) {
-				x |= p->tok[idx++] << 16;
+				x |= jsn->tkn->tok[idx++] << 16;
 				if (tok >= TOK_INT32)
-					x |= p->tok[idx++] << 24;
+					x |= jsn->tkn->tok[idx++] << 24;
 			}
 		} 
 		val->u32 = x;
@@ -127,7 +107,6 @@ int microjs_json_parse_val(struct microjs_json_parser * jsn,
 	return ret;
 }
 
-}
 
 int microjs_json_parse_obj(struct microjs_json_parser * jsn)
 {
