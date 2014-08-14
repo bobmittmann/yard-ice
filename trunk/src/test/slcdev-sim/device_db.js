@@ -235,6 +235,43 @@
 		"ic2": ["Relay select"],
 		"ic3": ["LED control"]
 	}
-
+	"sensor": { 
+		"id": 11, 
+		"model": "BEAM200", 
+		"desc": "200 Series Beam Detector",
+		"pw1": [300],
+		"pw2": [
+			["Remote test disabled", 300],
+			["Remote test enabled", 600],
+			["Remote test with features", 900],
+		],
+		"pw3" : [600],
+		"pw4": [
+			["(Normal)	Analog Beam", 900],
+			["(Trouble, Beam Blockage)  95 to 100 % obscuration", 30],
+			["(Trouble, Beam signal over range)", 150],
+			["(Alignment mode)", 300],
+			["(Initialization and Obscuration test modes)", 750],
+			[">10% of total drift compensation range used", 945],
+			[">20% of total drift compensation range used", 990],
+			[">30% of total drift compensation range used", 1035],
+			[">40% of total drift compensation range used", 1080],
+			[">50% of total drift compensation range used", 1125],
+			[">60% of total drift compensation range used", 1170],
+			[">70% of total drift compensation range used", 1215],
+			[">80% of total drift compensation range used", 1260],
+			[">90% of total drift compensation range used", 1305],
+			[">100% of total drift compensation range used", 150],
+			["Remote Test and Alarm 25% sensitivity setting", 2700], 
+			["Remote Test and Alarm 30% sensitivity setting", 2790],
+			["Remote Test and Alarm 40% sensitivity setting", 2880],
+			["Remote Test and Alarm 50% sensitivity setting", 2970],
+			["Remote Test and Alarm Acclimate level 1 (30% to 50%)", 3060],
+			["Remote Test and Alarm Acclimate level 2 (40% to 50%)", 3150],
+		],
+		"pw5": [900],
+		"cmd": ["Reset", "0x0", "1x0", "0x1", "0x0", "1x0"],
+		"cmd": ["Obscuration Test", "0x0", "0x1", "0x1", "0x0", "1x0"],
+	}
 }
 
