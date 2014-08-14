@@ -39,18 +39,52 @@ enum {
 	MICROJS_STRINGS_UNSUPORTED,
 	MICROJS_MAX_NEST_LEVEL,
 	MICROJS_BRACKET_MISMATCH,
-	MICROJS_STRING_TOOLARGE
+	MICROJS_STRING_TOO_LONG
 };
 
-struct microjs_parser {
+/**********************************************************************
+  Tokenizer
+ **********************************************************************/
+
+struct microjs_tokenizer {
 	uint16_t cnt;  /* token count */
 	uint16_t size; /* token buffer size */
-	uint16_t err_offs; /* parser error offset */
-	uint16_t err_code; /* parser error code */
+	uint16_t offs; /* parser offset */
+	uint16_t err; /* parser error code */
 	uint8_t * tok; /* token buffer */
 	const char * js;   /* base pointer (original js file) */
 };
 
+struct microjs_tok_val {
+	union {
+		struct {
+			uint16_t len;
+			char * dat;
+		} str;
+		uint32_t u32;	
+		int32_t i32;	
+	};
+};
+
+/**********************************************************************
+  JSON
+ **********************************************************************/
+
+#define MICROJS_JSON_INVALID 0
+#define MICROJS_JSON_OBJECT 1
+#define MICROJS_JSON_ARRAY 2
+#define MICROJS_JSON_LABEL 3
+#define MICROJS_JSON_NUMBER 4
+
+struct microjs_json_parser {
+	struct microjs_tokenizer * tkn;
+	uint16_t idx;  /* token index */
+};
+
+
+/**********************************************************************
+  Strings
+ **********************************************************************/
 struct microjs_str_pool {
 	uint16_t * offs; /* point to the offset table */
 	char * base;     /* base pointer */
@@ -64,10 +98,23 @@ extern const struct microjs_str_pool microjs_str_var;
 extern "C" {
 #endif
 
-int microjs_init(struct microjs_parser * p, uint8_t * tok, unsigned int size);
+int microjs_tok_init(struct microjs_tokenizer * tkn, 
+					 uint8_t * tok, unsigned int size);
 
-int microjs_parse(struct microjs_parser * p, 
+int microjs_tokenize(struct microjs_tokenizer * tkn, 
 				  const char * js, unsigned int len);
+
+int microjs_tok_dump(FILE * f, struct microjs_tokenizer * tkn);
+
+
+
+int microjs_json_init(struct microjs_json_parser * jsn, 
+					  struct microjs_tokenizer * tkn);
+
+int microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
+
+int microjs_json_parse_obj(struct microjs_json_parser * jsn);
+
 
 int microjs_str_lookup(const struct microjs_str_pool * pool, 
 					   const char * s, int len);
@@ -75,8 +122,6 @@ int microjs_str_lookup(const struct microjs_str_pool * pool,
 int const_str_lookup(const char * s, int len);
 
 char * const_str(int idx);
-
-int microjs_dump(struct microjs_parser * p);
 
 int microjs_str_pool_dump(const struct microjs_str_pool * pool);
 

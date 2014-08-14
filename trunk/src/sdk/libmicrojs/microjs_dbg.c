@@ -81,71 +81,68 @@ const char microjs_tok_str[][4] = {
 	"^="   /* TOK_XOR_LET */
 };
 
-int microjs_dump(struct microjs_parser * p)
+int microjs_tok_dump(FILE * f, struct microjs_tokenizer * p)
 {
+	uint32_t val;
 	int idx = 0;
 	int tok;
 	int len;
 	char * s;
-
-	(void)len;
+	int lvl = 0;
+	int i;
 
 	for (idx = 0; idx < p->cnt; ) {
 		tok = p->tok[idx++];
 		if (tok >= TOK_STRING) {
 			unsigned int offs;
-			char buf[128];
+			char buf[MICROJS_STRING_LEN_MAX + 1];
 			len = tok - TOK_STRING;
 			offs = p->tok[idx++];
 			offs |= p->tok[idx++] << 8;
 			s = (char *)p->js + offs;
 			memcpy(buf, s, len);
 			buf[len] = '\0';
-			printf("\"%s\" ", buf);
+			fprintf(f, "\"%s\" ", buf);
 		} else if (tok >= TOK_SYMBOL) {
 			len = tok - TOK_SYMBOL + 1;
 			s = (char *)&p->tok[idx];
-			printf("__%s__ ", s);
+			fprintf(f, "__%s__ ", s);
 	//		idx += strlen(s) + 1;
 			idx += len;
 		} else if (tok == TOK_INT8) {
-			uint32_t val;
-
 			val = p->tok[idx++];
-			printf("%d ", val);
+			fprintf(f, "%d ", val);
 		} else if (tok == TOK_INT16) {
-			uint32_t val;
-
 			val = p->tok[idx++];
 			val |= p->tok[idx++] << 8;
-			printf("%d ", val);
+			fprintf(f, "%d ", val);
 		} else if (tok == TOK_INT24) {
-			uint32_t val;
-			
 			val = p->tok[idx++];
 			val |= p->tok[idx++] << 8;
 			val |= p->tok[idx++] << 16;
-
-			printf("%d ", val);
+			fprintf(f, "%d ", val);
 		} else if (tok == TOK_INT32) {
-			uint32_t val;
-			
 			val = p->tok[idx++];
 			val |= p->tok[idx++] << 8;
 			val |= p->tok[idx++] << 16;
 			val |= p->tok[idx++] << 24;
 
-			printf("%d ", val);
+			fprintf(f, "%d ", val);
 		} else if (tok >= TOK_BREAK) {
 			s = (char *)microjs_keyword[tok - TOK_BREAK];
-			printf("%s ", s);
-		} else {
-			printf("%s ", microjs_tok_str[tok]);
-//			if ((tok == TOK_SEMICOLON) || (tok == TOK_LEFTBRACE) 
-			if ((tok == TOK_LEFTBRACE) || (tok == TOK_RIGHTBRACE)) {
-				printf("\n");
-			}
-		}
+			fprintf(f, "%s ", s);
+		} else if (tok == TOK_LEFTBRACE) {
+			fprintf(f, "%s\n", microjs_tok_str[tok]);
+			lvl++;
+			for (i = 0; i < lvl; ++i)
+				fprintf(f, "    ");
+		} else if (tok == TOK_RIGHTBRACE) {
+			fprintf(f, "}%s\n", microjs_tok_str[tok]);
+			lvl--;
+			for (i = 0; i < lvl; ++i)
+				fprintf(f, "    ");
+		} else
+			fprintf(f, "%s ", microjs_tok_str[tok]);
 	}
 
 	return 0;
@@ -193,7 +190,7 @@ static const char * const err_tab[] = {
 	"strings unsuported"
 };
 
-void js_dump_err(struct microjs_parser * p)
+void microjs_tok_err(struct microjs_tokenizer * p)
 {
 	char * js = (char *)p->js;
 	char * lp[5];
@@ -201,7 +198,7 @@ void js_dump_err(struct microjs_parser * p)
 	int c;
 	int i;
 
-	printf("error: %s: ", err_tab[p->err_code]);
+	printf("error: %s: ", err_tab[p->err]);
 
 	lp[4] = NULL;
 	lp[3] = NULL;
@@ -218,7 +215,7 @@ void js_dump_err(struct microjs_parser * p)
 			lp[0] = &js[i];
 			ln++;
 		}
-		if (i == p->err_offs) {
+		if (i == p->offs) {
 			js_dump_line(ln - 4, lp[4]);
 			js_dump_line(ln - 3, lp[3]);
 			js_dump_line(ln - 2, lp[2]);

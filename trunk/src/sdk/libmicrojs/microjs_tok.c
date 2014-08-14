@@ -59,58 +59,25 @@ const char microjs_keyword[12][9] = {
 	"while",
 };
 
-int microjs_init(struct microjs_parser * p, uint8_t * tok, unsigned int size)
+int microjs_tok_init(struct microjs_tokenizer * tkn, 
+					 uint8_t * tok, unsigned int size)
 {
-	p->cnt = 0;
-	p->size = size;
-	p->tok = tok;
-	p->js = NULL;
+	tkn->cnt = 0;
+	tkn->offs = 0;
+	tkn->err = 0;
+	tkn->size = size;
+	tkn->tok = tok;
+	tkn->js = NULL;
 
 	DCC_LOG2(LOG_TRACE, "tok=0x%08x size=%d", tok, size);
 
 	return 0;
 }
 
-int microjs_str_decode(struct microjs_parser * p, 
-					   const char * js, unsigned int len, 
-					   unsigned int offs)
-{
-#if MICROJS_ENABLE_DECODE_STRING
-	uint16_t offs;
-	char * s;
-	int qt;
-	int j;
-
-	qt = c;
-	j = 0;
-	DCC_LOG(LOG_TRACE, "string");
-	s = (char *)&p->tok[p->cnt + 1];
-	/* string offset in the file */
-	offs = i + 1;
-	for (;;) {
-		if (++i == len) {
-			/* parse error, unclosed quotes */
-			DCC_LOG(LOG_WARNING, "unclosed quotes");
-			return -1;
-		}
-		c = js[i];
-		if (c == qt) {
-			i++;
-			break;
-		}
-		s[j++] = c;
-	}
-	s[j++] = '\0';
-	p->tok[p->cnt++] = TOK_STRING + j;
-	p->cnt += j;
-#endif
-	return 0;
-}
-
 #define MICROJS_BRACKET_STACK_SIZE 32
 
-int microjs_parse(struct microjs_parser * p, 
-				  const char * js, unsigned int len)
+int microjs_tokenize(struct microjs_tokenizer * tkn, 
+					 const char * js, unsigned int len)
 {
 	uint8_t bkt_tok[MICROJS_BRACKET_STACK_SIZE];
 	unsigned int bkt_sp;
@@ -121,9 +88,9 @@ int microjs_parse(struct microjs_parser * p,
 	int c;
 	
 	/* initialize token list */
-	p->cnt = 0;
+	tkn->cnt = 0;
 	/* set the base javascript file reference */
-	p->js = js;
+	tkn->js = js;
 
 	DCC_LOG(LOG_TRACE, "parse start");
 	DCC_LOG1(LOG_TRACE, "script length = %d bytes.", len);
@@ -165,20 +132,20 @@ int microjs_parse(struct microjs_parser * p,
 			}
 
 			if (j > MICROJS_STRING_LEN_MAX) {
-				DCC_LOG(LOG_WARNING, "string too large!");
-				err = MICROJS_STRING_TOOLARGE;
+				DCC_LOG(LOG_WARNING, "string too long!");
+				err = MICROJS_STRING_TOO_LONG;
 				goto error;
 			}
 
-			if ((p->size - p->cnt) < 3) {
+			if ((tkn->size - tkn->cnt) < 3) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
-			p->tok[p->cnt++] = TOK_STRING + j;
-			p->tok[p->cnt++] = offs;
-			p->tok[p->cnt++] = (offs >> 8);
+			tkn->tok[tkn->cnt++] = TOK_STRING + j;
+			tkn->tok[tkn->cnt++] = offs;
+			tkn->tok[tkn->cnt++] = (offs >> 8);
 			continue;
 #else
 			DCC_LOG(LOG_WARNING, "unsupported string!");
@@ -193,14 +160,14 @@ int microjs_parse(struct microjs_parser * p,
 			char * s;
 			int k;
 
-			if ((p->size - p->cnt) < MICROJS_SYMBOL_LEN_MAX) {
+			if ((tkn->size - tkn->cnt) < MICROJS_SYMBOL_LEN_MAX) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			j = 0;
-			s = (char *)&p->tok[p->cnt + 1];
+			s = (char *)&tkn->tok[tkn->cnt + 1];
 			do {
 				s[j++] = c;
 				if (++i == len)	
@@ -213,7 +180,7 @@ int microjs_parse(struct microjs_parser * p,
 			for (k = 0; k <= (TOK_WHILE - TOK_BREAK); ++k) {
 				if (strcmp(microjs_keyword[k], s) == 0) {
 					DCC_LOG(LOG_INFO, "Keyword");
-					p->tok[p->cnt++] = k + TOK_BREAK;
+					tkn->tok[tkn->cnt++] = k + TOK_BREAK;
 					break;
 				}
 			}
@@ -221,8 +188,8 @@ int microjs_parse(struct microjs_parser * p,
 			if (k > (TOK_WHILE - TOK_BREAK)) {
 				/* symbol */
 				DCC_LOG(LOG_INFO, "Symbol");
-				p->tok[p->cnt++] = TOK_SYMBOL + j - 1;
-				p->cnt += j;
+				tkn->tok[tkn->cnt++] = TOK_SYMBOL + j - 1;
+				tkn->cnt += j;
 			}
 
 			continue;
@@ -281,38 +248,38 @@ int microjs_parse(struct microjs_parser * p,
 				} while (isdigit(c));
 			}
 		
-			if ((p->size - p->cnt) < 5) {
+			if ((tkn->size - tkn->cnt) < 5) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			if ((val & 0xffffff00) == 0) {
-				p->tok[p->cnt++] = TOK_INT8;
-				p->tok[p->cnt++] = val;
+				tkn->tok[tkn->cnt++] = TOK_INT8;
+				tkn->tok[tkn->cnt++] = val;
 				continue;
 			} 
 			
 			if ((val & 0xffff0000) == 0) {
-				p->tok[p->cnt++] = TOK_INT16;
-				p->tok[p->cnt++] = val;
-				p->tok[p->cnt++] = val >> 8;
+				tkn->tok[tkn->cnt++] = TOK_INT16;
+				tkn->tok[tkn->cnt++] = val;
+				tkn->tok[tkn->cnt++] = val >> 8;
 				continue;
 			}
 
 			if ((val & 0xffffff00) == 0) {
-				p->tok[p->cnt++] = TOK_INT24;
-				p->tok[p->cnt++] = val;
-				p->tok[p->cnt++] = val >> 8;
-				p->tok[p->cnt++] = val >> 16;
+				tkn->tok[tkn->cnt++] = TOK_INT24;
+				tkn->tok[tkn->cnt++] = val;
+				tkn->tok[tkn->cnt++] = val >> 8;
+				tkn->tok[tkn->cnt++] = val >> 16;
 				continue;
 			}
 
-			p->tok[p->cnt++] = TOK_INT32;
-			p->tok[p->cnt++] = val;
-			p->tok[p->cnt++] = val >> 8;
-			p->tok[p->cnt++] = val >> 16;
-			p->tok[p->cnt++] = val >> 24;
+			tkn->tok[tkn->cnt++] = TOK_INT32;
+			tkn->tok[tkn->cnt++] = val;
+			tkn->tok[tkn->cnt++] = val >> 8;
+			tkn->tok[tkn->cnt++] = val >> 16;
+			tkn->tok[tkn->cnt++] = val >> 24;
 			continue;
 		}
 	
@@ -546,12 +513,12 @@ inc_push:
 		i++;
 push:
 		/* push a token into the buffer */
-		if ((p->size - p->cnt) < 1) {
+		if ((tkn->size - tkn->cnt) < 1) {
 			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
 			goto error;
 		}
-		p->tok[p->cnt++] = tok;
+		tkn->tok[tkn->cnt++] = tok;
 
 		DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 	}
@@ -565,10 +532,10 @@ push:
 
 	DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 
-	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", p->cnt);
+	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", tkn->cnt);
 	DCC_LOG(LOG_INFO, "parse done.");
 
-	return p->cnt;
+	return tkn->cnt;
 
 bkt_push:
 	/* insert a brakcet into the stack */
@@ -590,9 +557,53 @@ bkt_pop:
 	goto inc_push;
 
 error:
-	p->err_offs = i;
-	p->err_code = err;
-	return -1;
+	tkn->offs = i;
+	tkn->err = err;
 
+	return -1;
+}
+
+int microjs_token_get(struct microjs_tokenizer * tkn, 
+					  struct microjs_tok_val * val)
+{
+	unsigned int offs;
+	int idx = 0;
+	uint32_t x;
+	int tok;
+	int len;
+	(void)len;
+
+//	idx = tkn->idx;
+	tok = tkn->tok[idx++];
+	if (tok >= TOK_STRING) {
+		len = tok - TOK_STRING;
+		offs = tkn->tok[idx++];
+		offs |= tkn->tok[idx++] << 8;
+		val->str.dat = (char *)tkn->js + offs;
+		val->str.len = len;
+		tok = TOK_STRING;
+	} else if (tok >= TOK_SYMBOL) {
+		len = tok - TOK_SYMBOL + 1;
+		val->str.dat = (char *)&tkn->tok[idx];
+		val->str.len = len;
+		idx += len;
+		tok = TOK_SYMBOL;
+	} else if (tok >= TOK_INT8) {
+		x = tkn->tok[idx++];
+		if (tok >= TOK_INT16) {
+			x |= tkn->tok[idx++] << 8;
+			if (tok == TOK_INT24) {
+				x |= tkn->tok[idx++] << 16;
+				if (tok >= TOK_INT32)
+					x |= tkn->tok[idx++] << 24;
+			}
+		} 
+		val->u32 = x;
+		tok = TOK_INT32;
+	} 
+
+//	tkn->idx = idx;
+
+	return tok;
 }
 
