@@ -407,6 +407,7 @@ int config_erase(void)
 	return 0;
 }
 
+/*
 int script_compile(const char * js, unsigned int len)
 {
 	struct microjs_parser p;
@@ -418,9 +419,47 @@ int script_compile(const char * js, unsigned int len)
 
 	return 0;
 };
+*/
 
-#define TOK_MAX 1024
+#define JS_TOK_BUF_MAX 4096
 
+int config_compile(void)
+{
+	struct microjs_tokenizer tkn;
+	unsigned int json_crc;
+	int json_len;
+	uint8_t tok_buf[JS_TOK_BUF_MAX];
+	char * js;
+	int ret;
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+
+	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
+
+	json_len = json_root_len(js);
+	json_crc = crc16ccitt(0, js, json_len);
+	(void)json_crc;
+
+	DCC_LOG3(LOG_TRACE, "js=0x%08x len=%d crc=0x%04x", 
+			 js, json_len, json_crc);
+
+	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
+
+	/* parse the JASON file with the microjs tokenizer */
+	if ((ret = microjs_tokenize(&tkn, js, json_len)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
+		return ret;
+	}
+
+	/* decode the :e*/
+
+	microjs_tok_dump(stdout, &tkn);
+
+	return ret;
+
+}
+
+#if 0
 int config_compile(void)
 {
 	unsigned int json_crc;
@@ -571,4 +610,5 @@ compile_error:
 
 }
 
+#endif
 

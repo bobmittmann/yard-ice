@@ -745,15 +745,15 @@ int device_db_erase(void)
 	return ret;
 }
 
-#define JS_TOK_MAX (4096)
+#define JS_TOK_BUF_MAX (4096)
 
 int device_db_compile(void)
 {
-	struct microjs_parser p;
+	uint8_t tok_buf[JS_TOK_BUF_MAX];
+	struct microjs_tokenizer tkn;
 	unsigned int json_crc;
 	struct obj_db_info * inf;
 	int json_len;
-	uint8_t tok[JS_TOK_MAX];
 	char * js;
 	int ret;
 
@@ -777,17 +777,17 @@ int device_db_compile(void)
 		return 0;
 	}
 
-	microjs_init(&p, tok, JS_TOK_MAX);
+	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
 
 	/* parse the JASON file with the microjs tokenizer */
-	if ((ret = microjs_parse(&p, js, json_len)) < 0) {
+	if ((ret = microjs_tokenize(&tkn, js, json_len)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
 		return ret;
 	}
 
 	/* decode the :e*/
 
-	microjs_dump(&p);
+	microjs_tok_dump(stdout, &tkn);
 
 	return ret;
 
