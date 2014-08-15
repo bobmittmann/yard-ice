@@ -564,7 +564,7 @@ error:
 }
 
 int microjs_token_get(struct microjs_tokenizer * tkn, 
-					  struct microjs_tok_val * val)
+					  struct microjs_val * val)
 {
 	unsigned int offs;
 	int idx = 0;

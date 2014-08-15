@@ -47,7 +47,7 @@ bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type)
 }
 
 int microjs_json_parse_val(struct microjs_json_parser * jsn,
-						   struct microjs_tok_val * val)
+						   struct microjs_val * val)
 {
 	unsigned int offs;
 	uint32_t x;
@@ -107,15 +107,91 @@ int microjs_json_parse_val(struct microjs_json_parser * jsn,
 	return ret;
 }
 
-
-int microjs_json_parse_obj(struct microjs_json_parser * jsn)
+int microjs_json_parse_obj(struct microjs_json_parser * jsn,
+						   const struct microjs_attr_desc desc[],
+						   void * ptr)
 {
-	struct microjs_tok_val val;
+	struct microjs_val val;
+	uint8_t * p;
+	int cnt = 0;
 	int type;
+	int tok;
 
-	while ((type = microjs_json_parse_val(jsn, &val)) != MICROJS_JSON_INVALID) {
+	while (microjs_json_parse_val(jsn, &val) == MICROJS_JSON_LABEL) {
+		int i;
+
+		for (i = 0; desc[i].parse != NULL; ++i) {
+			/* look for a decoder that matches the label */ 
+			if (strcmp(desc[i].key, val.str.dat) == 0) {
+				type = microjs_json_parse_val(jsn, &val);
+				if (type != desc[i].type) {
+					/* the attribute type do not matches the decoder */
+					return -1;
+				}
+				p = (uint8_t *)ptr + desc[i].offs;
+				if (desc[i].parse(jsn, &val, desc[i].opt, p) < 0) {
+					return -1;
+				}
+
+				break;
+			}
+		}
+
+		cnt++;
+
+		tok = jsn->tkn->tok[jsn->idx++];
+		if (tok == TOK_COMMA)  {
+			continue;
+		} 
+		
+		if (tok == TOK_RIGHTBRACE) {
+			return 0;
+		}
 	}
 
 	return 0;
 }
+
+#if 0
+int microjs_json_parse_array(struct microjs_json_parser * jsn,
+						   const struct microjs_attr_desc * desc[],
+						   void * ptr)
+{
+	struct microjs_tok_val val;
+	uint8_t * p;
+	int cnt = 0;
+	int type;
+
+	while (microjs_json_parse_val(jsn, &val) != MICROJS_INVALID) {
+		int i;
+
+		for (i = 0; desc[i].parser != NULL; ++i) {
+			/* look for a decoder that matches the label */ 
+			if (strcmp(desc[i].key, val.str.dat) == 0) {
+				type = microjs_json_parse_val(jsn, &val);
+				if (type != desc[i].type) {
+					/* the attribute type do not matches the decoder */
+					return -1;
+				}
+				p = (uint8_t *)ptr + desc[i].offs;
+				if (desc[i].parse(jsn, &val, desc[i].opt, p) < 0) {
+					return -1;
+				}
+			}
+		}
+
+		tok = jsn->tkn->tok[jsn->idx++];
+		if (tok == TOK_COMMA)  {
+			continue;
+		} 
+		
+		if (tok == TOK_RIGHTBRACE) {
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
+#endif
 
