@@ -421,10 +421,55 @@ int script_compile(const char * js, unsigned int len)
 };
 */
 
+int microjs_u16_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int opt, void * ptr)
+{
+	uint16_t * pval = (uint16_t *)ptr;
+	*pval = val->u32;
+	DCC_LOG2(LOG_INFO, "val=%d ptr=%08x", *pval, pval);
+	return 0;
+}
+
+int microjs_bit_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int bit, void * ptr)
+{
+	uint32_t * bfield = (uint32_t *)ptr;
+
+	*bfield &= ~(1 << bit);
+	*bfield |= (val->logic ? 1 : 0) << bit;
+
+	DCC_LOG1(LOG_INFO, "val=%d", val->logic ? 1 : 0);
+	return 0;
+}
+
+int microjs_str_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int bit, void * ptr)
+{
+//	uint32_t * bfield = (uint32_t *)ptr;
+
+//	*bfield &= ~(1 << bit);
+//	*bfield |= (val->logic ? 1 : 0) << bit;
+
+	DCC_LOG1(LOG_INFO, "val=%s", val->str.dat);
+	return 0;
+}
+
+const struct microjs_attr_desc sensor_desc[] = {
+	{ "id", MICROJS_JSON_NUMBER, 0, offsetof(struct ss_device, pw1),
+		microjs_u16_enc },
+	{ "ap", MICROJS_JSON_BOOLEAN, 10, offsetof(struct ss_device, opt),
+		microjs_bit_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
 #define JS_TOK_BUF_MAX 4096
 
 int config_compile(void)
 {
+	struct microjs_json_parser jsn;
 	struct microjs_tokenizer tkn;
 	unsigned int json_crc;
 	int json_len;
@@ -451,164 +496,16 @@ int config_compile(void)
 		return ret;
 	}
 
-	/* decode the :e*/
+	microjs_json_init(&jsn, &tkn);
+
+	/* decode the token stream */
+	if ((ret = microjs_json_parse_obj(&jsn, sensor_desc, NULL)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
 
 	microjs_tok_dump(stdout, &tkn);
 
 	return ret;
-
 }
-
-#if 0
-int config_compile(void)
-{
-	unsigned int json_crc;
-	int json_len;
-	jsmn_parser p;
-	jsmntok_t tok[TOK_MAX];
-//	struct db_obj * obj;
-	jsmntok_t * t;
-	char * js;
-	int ret;
-	int n;
-	int i;
-
-	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
-	json_len = json_root_len(js);
-	json_crc = crc16ccitt(0, js, json_len);
-
-	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, json_len);
-	(void)json_crc;
-#if 0
-	/* check database integrity */
-	inf = (struct obj_db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
-	if ((inf->len == sizeof(struct obj_db_info)) && 
-		(inf->type == DB_OBJ_DB_INFO) && 
-		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
-		printf("Database is up-to-date.\n");
-		return 0;
-	}
-#endif
-
-	jsmn_init(&p);
-
-	ret = jsmn_parse(&p, js, json_len, tok, TOK_MAX);
-
-	if (ret == JSMN_ERROR_NOMEM) {
-		DCC_LOG(LOG_ERROR, "Not enough tokens were provided!");
-		ret = -JSON_ERR_NOMEM;
-		goto parse_error;
-	}
-
-	if (ret == JSMN_ERROR_INVAL) {
-		DCC_LOG1(LOG_ERROR, "Invalid character at: %d", p.pos);
-		ret = -JSON_ERR_INVALID_CHAR;
-		goto parse_error;
-	}
-
-	if (ret == JSMN_ERROR_PART) {
-		DCC_LOG(LOG_ERROR, "not a full JSON packet!");
-		ret = -JSON_ERR_INCOMPLETE;
-		goto parse_error;
-	}
-
-	if (ret == 0) {
-		DCC_LOG(LOG_ERROR, "empty JSON packet!");
-		ret = -JSON_ERR_PKT_EMPTY;
-		goto parse_error;
-	}
-
-	t = tok;
-
-	/* Should never reach uninitialized tokens */
-	if (t->start == JSMN_NULL || t->end == JSMN_NULL) {
-		DCC_LOG(LOG_ERROR, "parameter invalid!");
-		return -JSON_ERR_INVALID_TOKEN;
-	}
-
-	if (t->type != JSMN_OBJECT) {
-		DCC_LOG(LOG_ERROR, "root element must be an object.");
-		return -JSON_ERR_NOT_OBJECT;
-	}
-
-	if ((n = t->size) == 0)
-		return -JSON_ERR_EMPTY_OBJECT;
-
-	if (n % 2 != 0) {
-		DCC_LOG(LOG_ERROR, "object must have even number of children.");
-		return -JSON_ERR_NUM_CHILDREN;
-	}
-
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
-
-#if 0
-	/* erase flash block */
-	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
-						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
-		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return -1;
-	};
-#endif
-
-	/* initialise PW descriptor stack */
-	cfg_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
-	cfg_heap = 0;
-	err_tok = t;
-
-	t++;
-
-//	obj = NULL;
-	for (i = 0; i < n; i += 2) {
-		char s[16];;
-
-		if (t->type != JSMN_STRING) {
-			DCC_LOG(LOG_ERROR, "object keys must be strings.");
-			ret = -JSON_ERR_KEY_TYPE_INVALID;
-			goto compile_error;
-		}
-
-		json_token_tostr(s, sizeof(s), js, t);
-		t++;
-
-		err_tok = t;
-/*
-		if (strcmp(s, "sw1") == 0) {
-			ret = cfg_parse_sw(js, t, &obj);
-		} else if (strcmp(s, "sw2") == 0) {
-			ret = cfg_parse_sw(js, t, &obj);
-		} else if (strcmp(s, "group") == 0) {
-			ret = cfg_parse_group(js, t, &obj);
-		} else {
-			ret = -JSON_ERR_INVALID_OBJECT;
-			DCC_LOG(LOG_ERROR, "invalid object.");
-		}
-*/
-		if (ret < 0)
-			goto compile_error;
-
-		t += ret;
-	}
-
-
-//	cfg_info_write(json_crc, json_len, &obj);
-
-	printf("Configuration databse compiled.\n");
-	printf("Free memory: %d.%02d KiB.\n", (cfg_stack - cfg_heap) / 1024, 
-		   (((cfg_stack - cfg_heap) % 1024) * 100) / 1024);
-
-	return 0;
-
-parse_error:
-	printf("Parse error %d.\n", -ret);
-	json_dump_err(js, p.pos);
-	return ret;
-
-compile_error:
-	printf("Compile error %d.\n", -ret);
-	json_dump_err(js, err_tok->start);
-	return ret;
-
-}
-
-#endif
 
