@@ -225,7 +225,7 @@ const struct cfg_attr dev_attr_lut[] = {
 	BIT(       "ap", struct ss_device, opt, 10),
 	BFIELD32("type", struct ss_device, opt, 11, 6),
 	{ "poll",    CFG_BIT,    17, offsetof(struct ss_device, opt) },
-	{ "dev",     CFG_UINT8,  0, offsetof(struct ss_device, dev) },
+	{ "model",     CFG_UINT8,  0, offsetof(struct ss_device, model) },
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
 	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
 	{ "ipre",    CFG_UINT8,  0, offsetof(struct ss_device, ipre) },
@@ -235,10 +235,6 @@ const struct cfg_attr dev_attr_lut[] = {
 	{ "pw3",     CFG_UINT16, 0, offsetof(struct ss_device, pw3) },
 	{ "pw4",     CFG_UINT16, 0, offsetof(struct ss_device, pw4) },
 	{ "pw5",     CFG_UINT16, 0, offsetof(struct ss_device, pw5) },
-	{ "usr1",    CFG_UINT16, 0, offsetof(struct ss_device, usr1) },
-	{ "usr2",    CFG_UINT16, 0, offsetof(struct ss_device, usr2) },
-	{ "usr3",    CFG_UINT16, 0, offsetof(struct ss_device, usr3) },
-	{ "usr4",    CFG_UINT16, 0, offsetof(struct ss_device, usr4) },
 	{ "", CFG_VOID, 0}
 };
 
@@ -421,47 +417,89 @@ int script_compile(const char * js, unsigned int len)
 };
 */
 
-int microjs_u16_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int opt, void * ptr)
+/* This is an auxiliarly structure for device configuration */
+struct cfg_device {
+	union {
+		struct {
+			uint32_t enabled: 1;
+		}; 
+		uint32_t bf_opt;	
+	};
+
+	uint8_t si_model;   /* reference to a device model */
+};
+
+
+/* Encode the model id of the device. This is an index into 
+   the devices database. */
+int cfg_device_model_enc(struct microjs_json_parser * jsn, 
+						  struct microjs_val * val, 
+						  unsigned int bit, void * ptr)
 {
-	uint16_t * pval = (uint16_t *)ptr;
-	*pval = val->u32;
-	DCC_LOG2(LOG_INFO, "val=%d ptr=%08x", *pval, pval);
+	DCC_LOG(LOG_TRACE, "...");
+
 	return 0;
 }
 
-int microjs_bit_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr)
+/* Encode the array of address. This effectivelly write the configuration 
+   into the device objects. */
+int cfg_device_addr_enc(struct microjs_json_parser * jsn, 
+						struct microjs_val * val, 
+						unsigned int bit, void * ptr)
 {
-	uint32_t * bfield = (uint32_t *)ptr;
+	DCC_LOG(LOG_TRACE, "...");
 
-	*bfield &= ~(1 << bit);
-	*bfield |= (val->logic ? 1 : 0) << bit;
-
-	DCC_LOG1(LOG_INFO, "val=%d", val->logic ? 1 : 0);
-	return 0;
-}
-
-int microjs_str_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr)
-{
-//	uint32_t * bfield = (uint32_t *)ptr;
-
-//	*bfield &= ~(1 << bit);
-//	*bfield |= (val->logic ? 1 : 0) << bit;
-
-	DCC_LOG1(LOG_INFO, "val=%s", val->str.dat);
 	return 0;
 }
 
 const struct microjs_attr_desc sensor_desc[] = {
-	{ "id", MICROJS_JSON_NUMBER, 0, offsetof(struct ss_device, pw1),
-		microjs_u16_enc },
-	{ "ap", MICROJS_JSON_BOOLEAN, 10, offsetof(struct ss_device, opt),
+	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, si_model),
+		microjs_const_str_enc },
+	{ "enabled", MICROJS_JSON_BOOLEAN, 0, offsetof(struct cfg_device, bf_opt),
 		microjs_bit_enc },
+	{ "addr", MICROJS_JSON_ARRAY, 0, 0, cfg_device_addr_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+/* Encode a sensor list */
+int cfg_sensor_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int bit, void * ptr)
+{
+	struct cfg_device cdev;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	return 0;
+}
+
+/* Encode a module list */
+int cfg_module_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int bit, void * ptr)
+{
+	struct cfg_device cdev;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	return 0;
+}
+
+const struct microjs_attr_desc cfg_desc[] = {
+	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_sensor_enc },
+	{ "module", MICROJS_JSON_OBJECT, 0, 0, cfg_module_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -496,15 +534,20 @@ int config_compile(void)
 		return ret;
 	}
 
+	microjs_tok_dump(stdout, &tkn);
+
 	microjs_json_init(&jsn, &tkn);
+
+	if (microjs_json_parse_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
+		DCC_LOG(LOG_ERROR, "root must be an object!");
+		return -1;
+	}
 
 	/* decode the token stream */
 	if ((ret = microjs_json_parse_obj(&jsn, sensor_desc, NULL)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
-
-	microjs_tok_dump(stdout, &tkn);
 
 	return ret;
 }
