@@ -561,7 +561,7 @@ int cmd_str(FILE * f, int argc, char ** argv)
 		return microjs_str_pool_dump(&microjs_str_const);
 
 	for (i = 1; i < argc; ++i) {
-		if ((ret = slcdev_const_str_write(argv[i], strlen(argv[i]))) < 0)
+		if ((ret = const_str_write(argv[i], strlen(argv[i]))) < 0)
 			break;
 	}
 

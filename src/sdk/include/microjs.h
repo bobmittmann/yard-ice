@@ -104,7 +104,8 @@ struct microjs_str_pool {
 	uint16_t * offs; /* point to the offset table */
 	char * base;     /* base pointer */
 	char * top;      /* top pointer */
-	int (* write)(struct microjs_str_pool *, const char *, unsigned int);
+	int (* write)(const struct microjs_str_pool *, 
+				  const char *, unsigned int);
 };
 
 extern const struct microjs_str_pool microjs_str_const;
@@ -129,7 +130,7 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 
 bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
 
-int microjs_json_parse_val(struct microjs_json_parser * jsn,
+int microjs_json_get_val(struct microjs_json_parser * jsn,
 						   struct microjs_val * val);
 
 int microjs_json_parse_obj(struct microjs_json_parser * jsn,

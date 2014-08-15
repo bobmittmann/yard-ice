@@ -39,11 +39,26 @@ int const_str_lookup(const char * s, int len)
 
 int const_str_write(const char * s, unsigned int len)
 {
+	char buf[MICROJS_STRING_LEN_MAX];
 	struct microjs_str_pool * pool;
+	int idx;
 	
 	pool = (struct microjs_str_pool *)&microjs_str_const;
 
-	return pool->write(pool, s, len);
+	if (len == 0) {
+		DCC_LOG(LOG_WARNING, "empty string!");
+	} 
+
+	if ((idx = microjs_str_lookup(pool, s, len)) >= 0) {
+		DCC_LOG2(LOG_TRACE, "match idx=%d len=%d", idx, len);
+		return idx;
+	}
+
+	/* NULL terminate the string */
+	memcpy(buf, s, len);
+	buf[len] = '\0';
+
+	return pool->write(pool, buf, len + 1);
 }
 
 int microjs_str_pool_dump(const struct microjs_str_pool * pool)
