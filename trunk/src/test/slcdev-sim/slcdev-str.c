@@ -10,6 +10,12 @@
 #include "crc.h"
 #include "slcdev.h"
 
+/****************************************************************************
+ * This file implement the constant string pool
+ * The strings are stored in a flash block
+ * the string index is stored in the EEPROM
+ ****************************************************************************/
+
 int slcdev_const_str_write(const struct microjs_str_pool * pool, 
 						   const char * s, unsigned int len);
 
@@ -99,9 +105,6 @@ int slcdev_const_str_purge(void)
 	const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
 	const_str_heap = 0;
 
-	stm32_eeprom_wr32(const_str_heap, 0);
-	stm32_eeprom_wr32(const_str_heap + 4, 0);
-
 	/* initialize string pool with a zero length string */
 	return flash_str_write("", 0);
 }
@@ -109,22 +112,6 @@ int slcdev_const_str_purge(void)
 int slcdev_const_str_write(const struct microjs_str_pool * pool, 
 						   const char * s, unsigned int len)
 {
-	char buf[128];
-	int idx;
-
-	if (len == 0) {
-		DCC_LOG(LOG_WARNING, "empty string!");
-	} 
-
-	if ((idx = const_str_lookup(s, len)) >= 0) {
-		DCC_LOG2(LOG_TRACE, "match idx=%d len=%d", idx, len);
-		return idx;
-	}
-
-	/* NULL terminate the string */
-	memcpy(buf, s, len);
-	buf[len] = '\0';
-
-	return flash_str_write(buf, len);
+	return flash_str_write(s, len);
 }
 

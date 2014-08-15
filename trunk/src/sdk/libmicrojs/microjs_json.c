@@ -46,7 +46,7 @@ bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type)
 	return ret;
 }
 
-int microjs_json_parse_val(struct microjs_json_parser * jsn,
+int microjs_json_get_val(struct microjs_json_parser * jsn,
 						   struct microjs_val * val)
 {
 	unsigned int offs;
@@ -129,13 +129,13 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	while (microjs_json_parse_val(jsn, &val) == MICROJS_JSON_LABEL) {
+	while (microjs_json_get_val(jsn, &val) == MICROJS_JSON_LABEL) {
 		int i;
 
 		for (i = 0; desc[i].parse != NULL; ++i) {
 			/* look for a decoder that matches the label */ 
-			if (strcmp(desc[i].key, val.str.dat) == 0) {
-				type = microjs_json_parse_val(jsn, &val);
+			if (strncmp(desc[i].key, val.str.dat, val.str.len) == 0) {
+				type = microjs_json_get_val(jsn, &val);
 				if (type != desc[i].type) {
 					/* the attribute type do not matches the decoder */
 					DCC_LOG(LOG_WARNING, "attribute type mismatch");

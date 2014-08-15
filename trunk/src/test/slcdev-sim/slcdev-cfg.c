@@ -422,6 +422,7 @@ struct cfg_device {
 	union {
 		struct {
 			uint32_t enabled: 1;
+			uint32_t module: 1;
 		}; 
 		uint32_t bf_opt;	
 	};
@@ -447,9 +448,44 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 						struct microjs_val * val, 
 						unsigned int bit, void * ptr)
 {
+	struct cfg_device * pdev = (struct cfg_device *)ptr;
+	uint8_t * p;
+	int cnt = 0;
+	int type;
+	int tok;
+	int addr;
+
 	DCC_LOG(LOG_TRACE, "...");
 
-	return 0;
+	while (microjs_json_get_val(jsn, val) == MICROJS_JSON_NUMBER) {
+		int i;
+
+		addr = val->u32;
+		DCC_LOG1(LOG_TRACE, "addr=%d", addr);
+
+		if ((addr < 1) || (addr > 159)) {
+			DCC_LOG1(LOG_WARNING, "invalid address addr=%d", addr);
+			return -1;
+		}
+
+		if (pdev->module)
+			addr += 160;
+		
+		cnt++;
+
+		tok = jsn->tkn->tok[jsn->idx++];
+		if (tok == TOK_COMMA)  {
+			DCC_LOG(LOG_TRACE, ",");
+			continue;
+		} 
+		
+		if (tok == TOK_RIGHTBRACKET) {
+			DCC_LOG(LOG_TRACE, "]");
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 const struct microjs_attr_desc sensor_desc[] = {
@@ -470,6 +506,9 @@ int cfg_sensor_enc(struct microjs_json_parser * jsn,
 	int ret;
 
 	DCC_LOG(LOG_TRACE, "...");
+	cdev.enabled = 0;
+	cdev.model = 0;
+	cdev.module = 0;
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -488,6 +527,9 @@ int cfg_module_enc(struct microjs_json_parser * jsn,
 	int ret;
 
 	DCC_LOG(LOG_TRACE, "...");
+	cdev.enabled = 0;
+	cdev.model = 0;
+	cdev.module = 1;
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -538,7 +580,7 @@ int config_compile(void)
 
 	microjs_json_init(&jsn, &tkn);
 
-	if (microjs_json_parse_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
+	if (microjs_json_get_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
 		DCC_LOG(LOG_ERROR, "root must be an object!");
 		return -1;
 	}
