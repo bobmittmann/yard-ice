@@ -119,7 +119,7 @@ int db_parse_string(char * js, jsmntok_t * t, void * ptr)
 	if ((size = json_parse_string(js, t, &s)) < 0)
 		return size;
 
-	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
+	if ((ret = const_str_write(js + s.pos, s.len)) < 0)
 		return ret;
 
 	*idx = ret;
@@ -189,7 +189,7 @@ int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw)
 	pw->min = min;
 	pw->max = max;
 
-	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
+	if ((ret = const_str_write(js + s.pos, s.len)) < 0)
 		return ret;
 
 	pw->desc = ret;
@@ -299,7 +299,7 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 
 	DCC_LOG1(LOG_TRACE, "ic.mode=%d", ic.mode);
 
-	if ((ret = slcdev_const_str_write(js + s.pos, s.len)) < 0)
+	if ((ret = const_str_write(js + s.pos, s.len)) < 0)
 		return ret;
 
 	if ((ret = db_stack_push(&ic, 3, ptr)) < 0)

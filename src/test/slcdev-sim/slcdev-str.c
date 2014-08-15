@@ -10,10 +10,16 @@
 #include "crc.h"
 #include "slcdev.h"
 
+int slcdev_const_str_write(const struct microjs_str_pool * pool, 
+						   const char * s, unsigned int len);
+
 const struct microjs_str_pool microjs_str_const = {
 //	.offs = (uint16_t *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS),
 	.offs = (uint16_t *)(STM32_MEM_EEPROM),
-	.base = (char *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS)
+	.base = (char *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS),
+	.top = (char *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS +
+					FLASH_BLK_CONST_STRING_SIZE),
+	.write = slcdev_const_str_write
 };
 
 uint16_t const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
@@ -100,7 +106,8 @@ int slcdev_const_str_purge(void)
 	return flash_str_write("", 0);
 }
 
-int slcdev_const_str_write(const char * s, unsigned int len)
+int slcdev_const_str_write(const struct microjs_str_pool * pool, 
+						   const char * s, unsigned int len)
 {
 	char buf[128];
 	int idx;

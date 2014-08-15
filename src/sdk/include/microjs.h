@@ -104,6 +104,7 @@ struct microjs_str_pool {
 	uint16_t * offs; /* point to the offset table */
 	char * base;     /* base pointer */
 	char * top;      /* top pointer */
+	int (* write)(struct microjs_str_pool *, const char *, unsigned int);
 };
 
 extern const struct microjs_str_pool microjs_str_const;
@@ -140,9 +141,28 @@ int microjs_str_lookup(const struct microjs_str_pool * pool,
 
 int const_str_lookup(const char * s, int len);
 
+int const_str_write(const char * s, unsigned int len);
+
+
 char * const_str(int idx);
 
 int microjs_str_pool_dump(const struct microjs_str_pool * pool);
+
+
+/* Encode a 16bit integral value */
+int microjs_u16_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int opt, void * ptr);
+
+/* Encode a boolean as a single bit */
+int microjs_bit_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int bit, void * ptr);
+
+/* Encode a string as a index to the constant string pool */
+int microjs_const_str_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int bit, void * ptr);
 
 #ifdef __cplusplus
 }

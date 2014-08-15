@@ -37,6 +37,15 @@ int const_str_lookup(const char * s, int len)
 	return microjs_str_lookup(&microjs_str_const, s, len);
 }
 
+int const_str_write(const char * s, unsigned int len)
+{
+	struct microjs_str_pool * pool;
+	
+	pool = (struct microjs_str_pool *)&microjs_str_const;
+
+	return pool->write(pool, s, len);
+}
+
 int microjs_str_pool_dump(const struct microjs_str_pool * pool)
 {
 	char * base = (char *)pool->base;

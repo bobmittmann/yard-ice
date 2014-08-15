@@ -220,26 +220,36 @@ struct ss_device {
 		uint32_t opt;	
 	};
 
-	uint8_t dev;   /* reference to a device type */
+	uint8_t model;   /* reference to a device model */
 
     uint8_t tbias;  /* time accuracy multiplication factor */
 	uint8_t icfg;   /* current sink configuration */
 	uint8_t ipre;   /* current sink preenphasis time */
 	uint8_t ilat;   /* Current sink latency (PW reponse time) */
 
-	uint16_t pw1;
+	uint16_t pw1;   /* Reference Pulse Width */
+	uint16_t pw2;   /* Remote Test Status */
+	uint16_t pw3;   /* Manufacturer Code */
 
-	uint16_t pw2;
-	uint16_t pw3;
+	uint16_t pw4;   /* Analog */
+	uint16_t pw5;   /* Type Id */
 
-	uint16_t pw4;
-	uint16_t pw5;
-
-	uint16_t usr1;
-	uint16_t usr2;
-	uint16_t usr3;
-	uint16_t usr4;
+	uint16_t ctln;   /* non consecutive polling control bit pattern */
+	uint16_t ctls;   /* consecutive polling sequence control bit pattern */
 };
+
+/* Control bits simulation trigger:
+ 
+   The control bit pattern triggers works by ...
+
+   Each bit control sequence (3 bits) is shifted in to the "ctln" and "ctls"
+   shift registers.
+   The difference between them is that "ctln" will shift in all incoming 
+   control bits regardless of the polling sequence, whereas the "ctls" will
+   shift only consecutive polling for the same device. The "ctls" will be 
+   cleared whenever a different device is addressed.
+ 
+ */
 
 #define SS_DEVICES_MAX 320
 
@@ -283,7 +293,6 @@ int config_compile(void);
 struct obj_device * device_db_lookup(unsigned int id);
 
 int slcdev_const_str_purge(void);
-int slcdev_const_str_write(const char * s, unsigned int len);
 
 #ifdef __cplusplus
 }

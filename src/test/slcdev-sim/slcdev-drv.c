@@ -75,7 +75,7 @@ const struct ss_device null_dev = {
 	.poll_flash = 0,
 	.ap = 0,
 	.addr = 0,
-	.dev = 0,
+	.model = 0,
 	.tbias = 128,
 	.icfg = 0,
 	.ipre = 0,
@@ -98,7 +98,7 @@ void dev_sim_init(void)
 		dev->poll_flash = 1,
 		dev->ap = 0,
 		dev->addr = i,
-		dev->dev = 0,
+		dev->model = 0,
 		dev->tbias = 128,
 		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
 		dev->ipre = 35; /* preenphasis time */
