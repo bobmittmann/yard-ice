@@ -34,7 +34,7 @@
 #include <sys/dcclog.h>
 
 const char microjs_tok_str[][4] = {
-	"",    /* TOK_NULL */
+	"EOF", /* TOK_EOF */
 	">>",  /* TOK_ASR */
 	"<<",  /* TOK_ASL */
 	"<=",  /* TOK_LTE */

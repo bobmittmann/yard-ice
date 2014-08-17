@@ -446,9 +446,6 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 		}
 
 		switch (c) {
-		case '\0':
-			tok = TOK_NULL;
-			break;
 		case '.':
 			tok = TOK_DOT;
 			break;
@@ -531,6 +528,14 @@ push:
 	}
 
 	DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
+
+	/* push a token into the buffer */
+	if ((tkn->size - tkn->cnt) < 1) {
+		DCC_LOG(LOG_WARNING, "token buffer overflow!");
+		err = MICROJS_TOKEN_BUF_OVF;
+		goto error;
+	}
+	tkn->tok[tkn->cnt++] = TOK_EOF;
 
 	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", tkn->cnt);
 	DCC_LOG(LOG_INFO, "parse done.");

@@ -77,9 +77,13 @@ enum {
 	MICROJS_JSON_OBJECT,
 	MICROJS_JSON_ARRAY,
 	MICROJS_JSON_LABEL,
-	MICROJS_JSON_NUMBER,
+	MICROJS_JSON_INTEGER,
+	MICROJS_JSON_FLOAT,
 	MICROJS_JSON_STRING,
-	MICROJS_JSON_BOOLEAN
+	MICROJS_JSON_BOOLEAN,
+	MICROJS_JSON_COMMA,
+	MICROJS_JSON_END_ARRAY,
+	MICROJS_JSON_END_OBJECT
 };
 
 struct microjs_json_parser {
@@ -129,6 +133,8 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 					  struct microjs_tokenizer * tkn);
 
 bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
+
+int microjs_json_root_len(const char * js);
 
 int microjs_json_get_val(struct microjs_json_parser * jsn,
 						   struct microjs_val * val);

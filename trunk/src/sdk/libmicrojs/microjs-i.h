@@ -69,7 +69,7 @@
 #define TOK_STRING       (256 - MICROJS_STRING_LEN_MAX - 1)
 #define TOK_SYMBOL       (TOK_STRING - MICROJS_SYMBOL_LEN_MAX)
 
-#define TOK_NULL          0
+#define TOK_EOF           0
 #define TOK_ASR           1 
 #define TOK_SHL           2
 #define TOK_LTE           3
