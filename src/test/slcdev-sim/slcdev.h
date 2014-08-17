@@ -65,7 +65,7 @@ struct obj_device {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	uint16_t tag;	
+	uint16_t model;	
 	uint16_t desc;	
 	struct pw_list * pw1; /* Reference Pulse Width */
 	struct pw_list * pw2; /* Remote Test Status */
@@ -80,7 +80,7 @@ struct obj_module {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	uint16_t tag;	
+	uint16_t model;	
 	uint16_t desc;	
 	struct pw_list * pw1;
 	struct pw_list * pw2;
@@ -98,7 +98,7 @@ struct obj_sensor {
 	uint8_t id;
 	uint8_t flags;
 	struct db_obj * next;
-	uint16_t tag;	
+	uint16_t model;	
 	uint16_t desc;	
 	struct pw_list * pw1;
 	struct pw_list * pw2;
@@ -293,6 +293,8 @@ int config_compile(void);
 struct obj_device * device_db_lookup(unsigned int id);
 
 int slcdev_const_str_purge(void);
+
+struct obj_device * device_db_model_lookup(unsigned int id);
 
 #ifdef __cplusplus
 }

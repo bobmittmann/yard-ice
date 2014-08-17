@@ -77,7 +77,7 @@ int stm32_eeprom_wr32(uint32_t offs, uint32_t val)
 	}
 
 	pos = offs >> 2;
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x val=%08x", &eeprom[pos], val);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x val=%08x", &eeprom[pos], val);
 	eeprom[pos] = val;
 
 	return 0;

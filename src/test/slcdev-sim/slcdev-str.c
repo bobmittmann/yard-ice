@@ -6,7 +6,6 @@
 
 #include <microjs.h>
 
-#include "json.h"
 #include "crc.h"
 #include "slcdev.h"
 
@@ -20,7 +19,6 @@ int slcdev_const_str_write(const struct microjs_str_pool * pool,
 						   const char * s, unsigned int len);
 
 const struct microjs_str_pool microjs_str_const = {
-//	.offs = (uint16_t *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS),
 	.offs = (uint16_t *)(STM32_MEM_EEPROM),
 	.base = (char *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS),
 	.top = (char *)(STM32_MEM_FLASH + FLASH_BLK_CONST_STRING_OFFS +
@@ -44,7 +42,7 @@ static int flash_str_write(const char * s, unsigned int len)
 
 	if ((ret = stm32_flash_write(flash_offs, s, len)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -JSON_ERR_FLASH_WRITE;
+		return -1;
 	}
 
 	/* update stack */

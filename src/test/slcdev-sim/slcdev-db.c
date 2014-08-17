@@ -7,7 +7,6 @@
 #include <microjs.h>
 #include <thinkos.h>
 
-#include "json.h"
 #include "crc.h"
 #include "slcdev.h"
 
@@ -15,7 +14,7 @@
 {
 	"sensor": { 
 		"id" : 1, 
-		"tag" : "2251TM", 
+		"model" : "2251TM", 
 		"desc" : "Multicriteria Photoelectric Smoke Detector", 
 		"pw1" : [280, 320],
 		"pw2" : [
@@ -57,7 +56,7 @@ int db_stack_push(void * buf, unsigned int len, void ** ptr)
 
 	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -JSON_ERR_FLASH_WRITE;
+		return -1;
 	}
 
 	/* update stack */
@@ -67,7 +66,7 @@ int db_stack_push(void * buf, unsigned int len, void ** ptr)
 	if (db_stack <= db_heap) {
 		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
 				db_stack, db_heap);
-		return -JSON_ERR_STACK_OVERFLOW;
+		return -1;
 	}
 
 	*ptr = (void *)(STM32_MEM_FLASH + offs);
@@ -88,7 +87,7 @@ int db_heap_push(void * buf, unsigned int len, void ** ptr)
 
 	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -JSON_ERR_FLASH_WRITE;
+		return -1;
 	}
 
 	db_heap += len; /* update heap */
@@ -97,7 +96,7 @@ int db_heap_push(void * buf, unsigned int len, void ** ptr)
 	if (db_stack <= db_heap) {
 		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
 				db_stack, db_heap);
-		return -JSON_ERR_HEAP_OVERFLOW;
+		return -1;
 	}
 
 	*ptr = (void *)(STM32_MEM_FLASH + offs);
@@ -105,157 +104,7 @@ int db_heap_push(void * buf, unsigned int len, void ** ptr)
 	return len;
 }
 
-
-int db_parse_string(char * js, jsmntok_t * t, void * ptr) 
-{
-	uint8_t * idx = (uint8_t *)ptr;
-	struct json_string s;
-	int ret;
-	int size;
-
-	if (t->type != JSMN_STRING)
-		return -JSON_ERR_NOT_STRING;
-
-	if ((size = json_parse_string(js, t, &s)) < 0)
-		return size;
-
-	if ((ret = const_str_write(js + s.pos, s.len)) < 0)
-		return ret;
-
-	*idx = ret;
-
-	return size;
-}
-
-
-/********************************************************************** 
- * decode a single PW range
- ***********************************************************************/
-int db_parse_pw(char * js, jsmntok_t * t, struct pw_entry * pw) 
-{
-	struct json_string s;
-	uint16_t min;
-	uint16_t max;
-	int ret;
-	int len;
-	int cnt;
-
-	if (t->type != JSMN_ARRAY)
-		return -JSON_ERR_NOT_ARRAY;
-
-	if ((cnt = t->size) == 0)
-		return -JSON_ERR_EMPTY_ARRAY;
-
-	t++;
-	len = 1;
-
-	if (t->type == JSMN_STRING) {
-		if ((ret = json_parse_string(js, t, &s)) < 0)
-			return ret;
-		t += ret;
-		len += ret;
-		cnt--;
-	} else {
-		s.len = 0;
-		s.pos = 0;
-	}
-
-	if (cnt == 0) {
-		DCC_LOG(LOG_ERROR, "missing PW value");
-		return -JSON_ERR_MISSING_VALUE;
-	} 
-	
-	if ((ret = json_parse_uint16(js, t, &min)) < 0)
-		return ret;
-
-	t += ret;
-	len += ret;
-	cnt--;
-
-	if (cnt > 1) {
-		DCC_LOG(LOG_ERROR, "extra value in PW array");
-		return -JSON_ERR_EXTRA_VALUE;
-	}
-
-	if (cnt == 1) {
-		if ((ret = json_parse_uint16(js, t, &max)) < 0)
-			return ret;
-		len++; 
-	} else {
-		max = min;
-	}
-
-	DCC_LOG2(LOG_TRACE, "min=%d max=%d", min, max);
-	pw->min = min;
-	pw->max = max;
-
-	if ((ret = const_str_write(js + s.pos, s.len)) < 0)
-		return ret;
-
-	pw->desc = ret;
-
-//	memcpy(pw->desc, js + s.pos, s.len);
-//	pw->desc[s.len] = '\0';
-
-	return len;
-}
-
-/********************************************************************** 
- * decode a list of PW ranges
- ***********************************************************************/
-
-int db_parse_pw_list(char * js, jsmntok_t * t, void * ptr) 
-{
-	struct pw_list lst;
-	struct pw_entry * pw;
-	int cnt;
-	int ret;
-	int size;
-	int i;
-
-	if (t->type != JSMN_ARRAY)
-		return -JSON_ERR_NOT_ARRAY;
-
-	if ((cnt = t->size) == 0)
-		return -JSON_ERR_EMPTY_ARRAY;
-
-	if (ptr == NULL)
-		return -JSON_ERR_NULL_POINTER;
-
-	lst.cnt = 0;
-	pw = &lst.pw[0];
-
-	/* try to decode a single element */
-	if ((size = db_parse_pw(js, t, pw)) > 0) {
-		lst.cnt++;
-		pw++;
-	} else {
-		/* try to decode an array of arrays */
-		t++;
-		size = 1;
-
-		for (i = 0; i < cnt; ++i) {
-
-			if ((ret = db_parse_pw(js, t, pw)) < 0) {
-				DCC_LOG(LOG_ERROR, "db_parse_pw() failed!");
-				return ret;
-			}
-
-			lst.cnt++;
-			pw++;
-
-			t += ret;
-			size += ret;
-		}
-	}
-
-	if ((ret = db_stack_push(&lst, sizeof(uint32_t) + lst.cnt * 
-							 sizeof(struct pw_entry), ptr)) < 0)
-		return ret;
-
-	return size;
-}
-
+#if 0
 int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr) 
 {
 	struct json_string s;
@@ -307,100 +156,7 @@ int db_parse_ic_mode(char * js, jsmntok_t * t, void * ptr)
 
 	return size;
 }
-
-
-const struct json_obj sensor_json_obj[] = {
-	{ "id", json_parse_uint16, offsetof(struct obj_sensor, id) },
-	{ "ap", json_parse_boolean, offsetof(struct obj_sensor, flags) },
-	{ "model", db_parse_string, offsetof(struct obj_sensor, tag) },
-	{ "desc", db_parse_string, offsetof(struct obj_sensor, desc) },
-	{ "pw1", db_parse_pw_list, offsetof(struct obj_sensor, pw1) },
-	{ "pw2", db_parse_pw_list, offsetof(struct obj_sensor, pw2) },
-	{ "pw3", db_parse_pw_list, offsetof(struct obj_sensor, pw3) },
-	{ "pw4", db_parse_pw_list, offsetof(struct obj_sensor, pw4) },
-	{ "pw5", db_parse_pw_list, offsetof(struct obj_sensor, pw5) },
-	{ "", NULL, 0},
-};
-
-/*	"PW1 - Reference Pulsewidth", 
-	"PW2 - Class A Fix Status", 
-	"PW3 - Supervisory Latch", 
-	"PW4 - Supervisory (analog)", 
-	"PW5 - Type ID", */
-
-
-const struct json_obj module_json_obj[] = {
-	{ "id", json_parse_uint16, offsetof(struct obj_module, id) },
-	{ "ap", json_parse_boolean, offsetof(struct obj_module, flags) },
-	{ "model", db_parse_string, offsetof(struct obj_module, tag) },
-	{ "desc", db_parse_string, offsetof(struct obj_module, desc) },
-	{ "pw1", db_parse_pw_list, offsetof(struct obj_module, pw1) },
-	{ "pw2", db_parse_pw_list, offsetof(struct obj_module, pw2) },
-	{ "pw3", db_parse_pw_list, offsetof(struct obj_module, pw3) },
-	{ "pw4", db_parse_pw_list, offsetof(struct obj_module, pw4) },
-	{ "pw5", db_parse_pw_list, offsetof(struct obj_module, pw5) },
-	{ "ic1", db_parse_ic_mode, offsetof(struct obj_module, ic1) },
-	{ "ic2", db_parse_ic_mode, offsetof(struct obj_module, ic2) },
-	{ "ic3", db_parse_ic_mode, offsetof(struct obj_module, ic3) },
-	{ "", NULL, 0},
-};
-
-int db_parse_sensor(char * js, jsmntok_t *t, struct db_obj ** objp)
-{
-	struct obj_sensor sensor;
-	int ret;
-	int cnt;
-
-	memset(&sensor, 0, sizeof(struct obj_sensor));
-	sensor.len = sizeof(struct obj_sensor);
-	sensor.type = DB_OBJ_SENSOR;
-	sensor.next = *objp;
-
-	if ((cnt = json_parse_object(js, t, sensor_json_obj, &sensor)) < 0) {
-		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
-		return cnt;
-	}
-
-//	sensor_dump(stdout, &sensor);
-
-	if ((ret = db_stack_push(&sensor, sizeof(struct obj_sensor), 
-							(void **)objp)) < 0)
-		return ret;
-
-	DCC_LOG1(LOG_TRACE, "obj=%08x ...................", *objp);
-
-	return cnt;
-}
-
-int db_parse_module(char * js, jsmntok_t *t, struct db_obj ** objp)
-{
-	struct obj_module module;
-	int ret;
-	int cnt;
-
-	memset(&module, 0, sizeof(struct obj_module));
-	module.len = sizeof(struct obj_module);
-	module.type = DB_OBJ_MODULE;
-	module.next = *objp;
-
-	if ((cnt = json_parse_object(js, t, module_json_obj, &module)) < 0) {
-		DCC_LOG(LOG_ERROR, "json_parse_object() failed!");
-		return cnt;
-	}
-
-	DCC_LOG1(LOG_TRACE, "id=%d", module.id); 
-
-//	module_dump(stdout, &module);
-
-	if ((ret = db_stack_push(&module, sizeof(struct obj_module), 
-							(void **)objp)) < 0)
-		return ret;
-
-	DCC_LOG1(LOG_TRACE, "obj=%08x ...................", *objp);
-
-	return cnt;
-
-}
+#endif
 
 #define DB_DEV_TYPE_MAX 32
 
@@ -451,33 +207,230 @@ int db_info_write(unsigned int crc, unsigned int len,
 	return ret;
 }
 
+/********************************************************************** 
+ * encode a single PW range
+ ***********************************************************************/
 
-#define TOK_MAX 800
-
-int _device_db_compile(void)
+int db_pw_enc(struct microjs_json_parser * jsn, 
+			  int typ, struct microjs_val * val, 
+			  struct pw_entry * pw)
 {
+	int desc = 0;
+	uint16_t min;
+	uint16_t max;
+	int ret;
+
+	if (typ == MICROJS_JSON_STRING) {
+		DCC_LOG(LOG_MSG, "string!");
+		if ((ret = const_str_write(val->str.dat, val->str.len)) < 0)
+			return ret;
+		desc = ret;
+		typ = microjs_json_get_val(jsn, val);
+	} 
+	
+	if (typ != MICROJS_JSON_INTEGER) {
+		DCC_LOG(LOG_ERROR, "expecting integer!");
+		return -1;
+	}
+
+	min = val->u32;
+	max = min;
+
+	DCC_LOG1(LOG_MSG, "min=%d", min);
+
+	if ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
+		max = val->u32;
+		DCC_LOG1(LOG_MSG, "max=%d", max);
+		typ = microjs_json_get_val(jsn, val);
+	}
+
+	if (typ != MICROJS_JSON_END_ARRAY) {
+		DCC_LOG(LOG_ERROR, "expecting array closing!");
+		return -1;
+	}
+
+	pw->min = min;
+	pw->max = max;
+	pw->desc = desc;
+
+	return 0;
+}
+
+
+/********************************************************************** 
+ * encode a list of PW ranges
+ ***********************************************************************/
+
+int db_pw_list_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr)
+{
+	struct pw_list lst;
+	struct pw_entry * pw;
+	int ret;
+	int typ;
+
+	lst.cnt = 0;
+	pw = &lst.pw[0];
+
+	if ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_ARRAY) {
+		/* list of PWs */
+		do {
+			DCC_LOG1(LOG_MSG, "PW[%d]", lst.cnt);
+			typ = microjs_json_get_val(jsn, val);
+			if ((ret = db_pw_enc(jsn, typ, val, pw)) < 0) {
+				DCC_LOG(LOG_ERROR, "db_parse_pw() failed!");
+				return ret;
+			}
+			DCC_LOG3(LOG_TRACE, "PW[%d]: min=%d max=%d", 
+					 lst.cnt, pw->min, pw->max);
+			lst.cnt++;
+			pw++;
+		} while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_ARRAY);
+	
+		if (typ != MICROJS_JSON_END_ARRAY) {
+			DCC_LOG(LOG_ERROR, "expecting array closing!");
+			return -1;
+		}
+	} else {
+		/* single PW */
+		if ((ret = db_pw_enc(jsn, typ, val, pw)) < 0) {
+			DCC_LOG(LOG_ERROR, "db_parse_pw() failed!");
+			return ret;
+		}
+		DCC_LOG2(LOG_TRACE, "PW: min=%d max=%d", pw->min, pw->max);
+		lst.cnt++;
+		pw++;
+	} 
+
+	return db_stack_push(&lst, sizeof(uint32_t) + lst.cnt * 
+						 sizeof(struct pw_entry), ptr);
+}
+
+
+static const struct microjs_attr_desc sensor_desc[] = {
+	{ "id", MICROJS_JSON_INTEGER, 0, offsetof(struct obj_module, id),
+		microjs_u16_enc },
+	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct obj_module, flags),
+		microjs_bit_enc },
+	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, model),
+		microjs_const_str_enc },
+	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, desc),
+		microjs_const_str_enc },
+	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw1),
+		db_pw_list_enc},
+	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw2),
+		db_pw_list_enc},
+	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw3),
+		db_pw_list_enc},
+	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw4),
+		db_pw_list_enc},
+	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw5),
+		db_pw_list_enc},
+	{ "", 0, 0, 0, NULL},
+};
+
+
+/* Encode a sensor list */
+int db_sensor_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr)
+{
+	struct db_obj ** objp = (struct db_obj **)ptr;
+	struct obj_sensor sensor;
+	int ret;
+
+	memset(&sensor, 0, sizeof(struct obj_sensor));
+	sensor.len = sizeof(struct obj_sensor);
+	sensor.type = DB_OBJ_SENSOR;
+	sensor.next = *objp;
+
+	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &sensor)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	return db_stack_push(&sensor, sizeof(struct obj_sensor), (void **)objp);
+
+	DCC_LOG1(LOG_TRACE, "obj=%08x ...................", *objp);
+
+}
+
+static const struct microjs_attr_desc module_desc[] = {
+	{ "id", MICROJS_JSON_INTEGER, 0, offsetof(struct obj_module, id),
+		microjs_u16_enc },
+	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct obj_module, flags),
+		microjs_bit_enc },
+	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, model),
+		microjs_const_str_enc },
+	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, desc),
+		microjs_const_str_enc },
+	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw1),
+		db_pw_list_enc},
+	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw2),
+		db_pw_list_enc},
+	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw3),
+		db_pw_list_enc},
+	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw4),
+		db_pw_list_enc},
+	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw5),
+		db_pw_list_enc},
+	{ "", 0, 0, 0, NULL},
+};
+
+
+/* Encode a module list */
+int db_module_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int bit, void * ptr)
+{
+	struct db_obj ** objp = (struct db_obj **)ptr;
+	struct obj_module module;
+	int ret;
+
+	memset(&module, 0, sizeof(struct obj_module));
+	module.len = sizeof(struct obj_module);
+	module.type = DB_OBJ_MODULE;
+	module.next = *objp;
+
+	if ((ret = microjs_json_parse_obj(jsn, module_desc, &module)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	return db_stack_push(&module, sizeof(struct obj_module), (void **)objp);
+}
+
+static const struct microjs_attr_desc db_desc[] = {
+	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, db_sensor_enc },
+	{ "module", MICROJS_JSON_OBJECT, 0, 0, db_module_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+#define JS_TOK_BUF_MAX (4096)
+
+int device_db_compile(void)
+{
+	struct microjs_json_parser jsn;
+	struct microjs_tokenizer tkn;
+	uint8_t tok_buf[JS_TOK_BUF_MAX];
 	struct obj_db_info * inf;
 	unsigned int json_crc;
-	int json_len;
-	jsmn_parser p;
-	jsmntok_t tok[TOK_MAX];
 	struct db_obj * obj;
-	jsmntok_t * t;
+	int json_len;
 	char * js;
 	int ret;
-	int n;
-	int i;
 
-	DCC_LOG(LOG_TRACE, "....................................");
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
 
 	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
 
-	json_len = json_root_len(js);
+	json_len = microjs_json_root_len(js);
 	json_crc = crc16ccitt(0, js, json_len);
+	(void)json_crc;
 
-	DCC_LOG2(LOG_TRACE, "js=0x%08x len=%d", js, json_len);
-
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x", cm3_sp_get());
+	DCC_LOG3(LOG_TRACE, "js=0x%08x len=%d crc=0x%04x", 
+			 js, json_len, json_crc);
 
 	/* check database integrity */
 	inf = (struct obj_db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
@@ -488,61 +441,17 @@ int _device_db_compile(void)
 		return 0;
 	}
 
-	DCC_LOG(LOG_TRACE, "1. initialising jsm parser");
-	jsmn_init(&p);
+	DCC_LOG(LOG_TRACE, "1. parsing JSON file.");
 
-	DCC_LOG(LOG_TRACE, "2. parsing jason file");
-	ret = jsmn_parse(&p, js, json_len, tok, TOK_MAX);
+	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
 
-	if (ret == JSMN_ERROR_NOMEM) {
-		DCC_LOG(LOG_ERROR, "Not enough tokens were provided!");
-		ret = -JSON_ERR_NOMEM;
-		goto parse_error;
+	/* parse the JASON file with the microjs tokenizer */
+	if ((ret = microjs_tokenize(&tkn, js, json_len)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
+		return ret;
 	}
 
-	if (ret == JSMN_ERROR_INVAL) {
-		DCC_LOG1(LOG_ERROR, "Invalid character at: %d", p.pos);
-		ret = -JSON_ERR_INVALID_CHAR;
-		goto parse_error;
-	}
-
-	if (ret == JSMN_ERROR_PART) {
-		DCC_LOG(LOG_ERROR, "not a full JSON packet!");
-		ret = -JSON_ERR_INCOMPLETE;
-		goto parse_error;
-	}
-
-	if (ret == 0) {
-		DCC_LOG(LOG_ERROR, "empty JSON packet!");
-		ret = -JSON_ERR_PKT_EMPTY;
-		goto parse_error;
-	}
-
-	DCC_LOG1(LOG_TRACE, "token stream length=%d", 
-			 p.toknext * sizeof(jsmntok_t));
-
-	t = tok;
-
-	/* Should never reach uninitialized tokens */
-	if (t->start == JSMN_NULL || t->end == JSMN_NULL) {
-		DCC_LOG(LOG_ERROR, "parameter invalid!");
-		return -JSON_ERR_INVALID_TOKEN;
-	}
-
-	if (t->type != JSMN_OBJECT) {
-		DCC_LOG(LOG_ERROR, "root element must be an object.");
-		return -JSON_ERR_NOT_OBJECT;
-	}
-
-	if ((n = t->size) == 0)
-		return -JSON_ERR_EMPTY_OBJECT;
-
-	if (n % 2 != 0) {
-		DCC_LOG(LOG_ERROR, "object must have even number of children.");
-		return -JSON_ERR_NUM_CHILDREN;
-	}
-
-	DCC_LOG(LOG_TRACE, "3. erasing database.");
+	DCC_LOG(LOG_TRACE, "2. erasing database.");
 	/* erase flash block */
 	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
 						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
@@ -558,61 +467,26 @@ int _device_db_compile(void)
 
 	DCC_LOG(LOG_TRACE, "4. compiling database.");
 
-	/* initialise PW descriptor stack */
-	db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
-	db_heap = 0;
-	err_tok = t;
+	microjs_json_init(&jsn, &tkn);
 
-	t++;
-
-	obj = NULL;
-	for (i = 0; i < n; i += 2) {
-		char s[16];;
-
-		if (t->type != JSMN_STRING) {
-			DCC_LOG(LOG_ERROR, "object keys must be strings.");
-			ret = -JSON_ERR_KEY_TYPE_INVALID;
-			goto compile_error;
-		}
-
-		json_token_tostr(s, sizeof(s), js, t);
-		t++;
-
-		err_tok = t;
-
-		if (strcmp(s, "sensor") == 0) {
-			ret = db_parse_sensor(js, t, &obj);
-		} else if (strcmp(s, "module") == 0) {
-			ret = db_parse_module(js, t, &obj);
-		} else {
-			ret = -JSON_ERR_INVALID_OBJECT;
-			DCC_LOG(LOG_ERROR, "invalid object.");
-		}
-
-		if (ret < 0)
-			goto compile_error;
-
-		t += ret;
+	if (microjs_json_get_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
+		DCC_LOG(LOG_ERROR, "root must be an object!");
+		return -1;
 	}
 
-	db_info_write(json_crc, json_len, &obj);
+	/* decode the token stream */
+	if ((ret = microjs_json_parse_obj(&jsn, db_desc, &obj)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	ret = db_info_write(json_crc, json_len, &obj);
 
 	printf("Device databse compiled.\n");
 	printf("Free memory: %d.%02d KiB.\n", (db_stack - db_heap) / 1024, 
 		   (((db_stack - db_heap) % 1024) * 100) / 1024);
 
-	return 0;
-
-parse_error:
-	printf("Parse error %d.\n", -ret);
-	json_dump_err(js, p.pos);
 	return ret;
-
-compile_error:
-	printf("Compile error %d.\n", -ret);
-	json_dump_err(js, err_tok->start);
-	return ret;
-
 }
 
 struct obj_device * device_db_lookup(unsigned int id)
@@ -625,6 +499,26 @@ struct obj_device * device_db_lookup(unsigned int id)
 
 	return (struct obj_device *)inf->obj[id];
 }
+
+struct obj_device * device_db_model_lookup(unsigned int model)
+{
+	struct obj_db_info * inf;
+	int i;
+
+	inf = (struct obj_db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+
+	for (i = 0 ; i < inf->obj_cnt; ++i) {
+		struct obj_device * obj = (struct obj_device *)inf->obj[i];
+		if (obj->model == model)
+			return obj;
+	}
+
+	return NULL;
+}
+
+/********************************************************************** 
+ * Diagnostics and debug
+ ***********************************************************************/
 
 static void pw_list_dump(FILE * f, struct pw_list * lst)
 {
@@ -659,7 +553,7 @@ static void ic_mode_dump(FILE * f, struct ic_entry * ic)
 static void sensor_dump(FILE * f, struct obj_sensor * sens)
 {
 	fprintf(f, "id=%d \"%s\" \"%s\"\n", sens->id, 
-		const_str(sens->tag), const_str(sens->desc));
+		const_str(sens->model), const_str(sens->desc));
 	fprintf(f, "PW1:");
 	pw_list_dump(f, sens->pw1);
 	fprintf(f, "PW2:");
@@ -675,7 +569,7 @@ static void sensor_dump(FILE * f, struct obj_sensor * sens)
 static void module_dump(FILE * f, struct obj_module * mod)
 {
 	fprintf(f, "id=%d \"%s\" \"%s\"\n", mod->id, 
-			const_str(mod->tag), const_str(mod->desc));
+			const_str(mod->model), const_str(mod->desc));
 	fprintf(f, "PW1:");
 	pw_list_dump(f, mod->pw1);
 	fprintf(f, "PW2:");
@@ -745,51 +639,6 @@ int device_db_erase(void)
 	return ret;
 }
 
-#define JS_TOK_BUF_MAX (4096)
 
-int device_db_compile(void)
-{
-	uint8_t tok_buf[JS_TOK_BUF_MAX];
-	struct microjs_tokenizer tkn;
-	unsigned int json_crc;
-	struct obj_db_info * inf;
-	int json_len;
-	char * js;
-	int ret;
 
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
-
-	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
-
-	json_len = json_root_len(js);
-	json_crc = crc16ccitt(0, js, json_len);
-	(void)json_crc;
-
-	DCC_LOG3(LOG_TRACE, "js=0x%08x len=%d crc=0x%04x", 
-			 js, json_len, json_crc);
-
-	/* check database integrity */
-	inf = (struct obj_db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
-	if ((inf->len == sizeof(struct obj_db_info)) && 
-		(inf->type == DB_OBJ_DB_INFO) && 
-		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
-		printf("Database is up-to-date.\n");
-		return 0;
-	}
-
-	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
-
-	/* parse the JASON file with the microjs tokenizer */
-	if ((ret = microjs_tokenize(&tkn, js, json_len)) < 0) {
-		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
-		return ret;
-	}
-
-	/* decode the :e*/
-
-	microjs_tok_dump(stdout, &tkn);
-
-	return ret;
-
-}
 

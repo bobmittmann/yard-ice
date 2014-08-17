@@ -7,7 +7,6 @@
 
 #include <sys/dcclog.h>
 
-#include "json.h"
 #include "crc.h"
 #include "slcdev.h"
 
@@ -225,7 +224,7 @@ const struct cfg_attr dev_attr_lut[] = {
 	BIT(       "ap", struct ss_device, opt, 10),
 	BFIELD32("type", struct ss_device, opt, 11, 6),
 	{ "poll",    CFG_BIT,    17, offsetof(struct ss_device, opt) },
-	{ "model",     CFG_UINT8,  0, offsetof(struct ss_device, model) },
+	{ "model",   CFG_UINT8,  0, offsetof(struct ss_device, model) },
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
 	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
 	{ "ipre",    CFG_UINT8,  0, offsetof(struct ss_device, ipre) },
@@ -326,16 +325,53 @@ int device_attr_print(FILE * f, unsigned int addr, const char * name)
 	return ret;
 }
 
-int device_pw3_lookup(unsigned int addr, unsigned int sel)
+int device_pw1_lookup(struct obj_device * obj, unsigned int sel,
+					  unsigned int bias)
 {
-	struct ss_device * dev;
-	struct obj_device * obj;
 	uint32_t avg;
 	uint32_t min;
 	uint32_t max;
+	uint32_t pw;
 
-	dev = &ss_dev_tab[addr];
-	obj = device_db_lookup(dev->type);
+	if (sel >= obj->pw1->cnt)
+		sel = obj->pw1->cnt - 1;
+
+	max = obj->pw1->pw[sel].max;
+	min = obj->pw1->pw[sel].min;
+	avg = (max + min) / 2;
+	pw = (avg * bias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+
+	return pw;
+}
+
+int device_pw2_lookup(struct obj_device * obj, unsigned int sel,
+					  unsigned int bias)
+{
+	uint32_t avg;
+	uint32_t min;
+	uint32_t max;
+	uint32_t pw;
+
+	if (sel >= obj->pw2->cnt)
+		sel = obj->pw2->cnt - 1;
+
+	max = obj->pw2->pw[sel].max;
+	min = obj->pw2->pw[sel].min;
+	avg = (max + min) / 2;
+	pw = (avg * bias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+
+	return pw;
+}
+
+int device_pw3_lookup(struct obj_device * obj, unsigned int sel,
+					  unsigned int bias)
+{
+	uint32_t avg;
+	uint32_t min;
+	uint32_t max;
+	uint32_t pw;
 
 	if (sel >= obj->pw3->cnt)
 		sel = obj->pw3->cnt - 1;
@@ -343,42 +379,55 @@ int device_pw3_lookup(unsigned int addr, unsigned int sel)
 	max = obj->pw3->pw[sel].max;
 	min = obj->pw3->pw[sel].min;
 	avg = (max + min) / 2;
-	dev->pw3 = (avg * dev->tbias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d val=%d", 
-			 min, max, avg, dev->pw3);
+	pw = (avg * bias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
-	return 0;
+	return pw;
 }
 
-
-#if 0
-int cmd_eeprom(FILE * f, int argc, char ** argv)
+int device_pw4_lookup(struct obj_device * obj, unsigned int sel,
+					  unsigned int bias)
 {
-	unsigned int offs;
-	unsigned int data;
+	uint32_t avg;
+	uint32_t min;
+	uint32_t max;
+	uint32_t pw;
 
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
+	if (sel >= obj->pw4->cnt)
+		sel = obj->pw4->cnt - 1;
 
-	fprintf(f, "Testing EEPROM...\n");
-	stm32_eeprom_unlock();
+	max = obj->pw4->pw[sel].max;
+	min = obj->pw4->pw[sel].min;
+	avg = (max + min) / 2;
+	pw = (avg * bias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
-	data = rand();
-	for (offs = 0; offs < 4096; offs += 4) {
-		stm32_eeprom_wr32(offs, data);
-		data++;
-	}
-		
-	return 0;
+	return pw;
 }
-#endif
+
+int device_pw5_lookup(struct obj_device * obj, unsigned int sel,
+					  unsigned int bias)
+{
+	uint32_t avg;
+	uint32_t min;
+	uint32_t max;
+	uint32_t pw;
+
+	if (sel >= obj->pw5->cnt)
+		sel = obj->pw5->cnt - 1;
+
+	max = obj->pw5->pw[sel].max;
+	min = obj->pw5->pw[sel].min;
+	avg = (max + min) / 2;
+	pw = (avg * bias) / 128;
+	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+
+	return pw;
+}
 
 int config_dump(FILE * f)
 {
 	DCC_LOG(LOG_TRACE, "...");
-
-	device_dump(f, 1);
-	device_dump(f, 33);
 
 	return 0;
 }
@@ -403,20 +452,6 @@ int config_erase(void)
 	return 0;
 }
 
-/*
-int script_compile(const char * js, unsigned int len)
-{
-	struct microjs_parser p;
-	uint8_t tok[1024];
-
-	microjs_init(&p, tok, 1024);
-
-	microjs_parse(&p, js, len);
-
-	return 0;
-};
-*/
-
 /* This is an auxiliarly structure for device configuration */
 struct cfg_device {
 	union {
@@ -427,7 +462,8 @@ struct cfg_device {
 		uint32_t bf_opt;	
 	};
 
-	uint8_t si_model;   /* reference to a device model */
+	uint8_t model;   /* reference to a device model */
+	uint8_t tbias;
 };
 
 
@@ -448,18 +484,22 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 						struct microjs_val * val, 
 						unsigned int bit, void * ptr)
 {
-	struct cfg_device * pdev = (struct cfg_device *)ptr;
-	uint8_t * p;
+	struct cfg_device * cdev = (struct cfg_device *)ptr;
+	struct ss_device * dev;
+	struct obj_device * obj;
+	int bias = cdev->tbias;
 	int cnt = 0;
-	int type;
-	int tok;
+	int typ;
 	int addr;
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	while (microjs_json_get_val(jsn, val) == MICROJS_JSON_NUMBER) {
-		int i;
+	if ((obj = device_db_model_lookup(cdev->model)) == NULL) {
+		DCC_LOG1(LOG_WARNING, "invalid model: %d", cdev->model);
+		return -1;
+	}
 
+	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
 		addr = val->u32;
 		DCC_LOG1(LOG_TRACE, "addr=%d", addr);
 
@@ -468,28 +508,33 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 			return -1;
 		}
 
-		if (pdev->module)
+		if (cdev->module)
 			addr += 160;
-		
-		cnt++;
+	
+		dev = &ss_dev_tab[addr];
+		/* disable the device prior to configuration */
+		dev->enabled = 0;
 
-		tok = jsn->tkn->tok[jsn->idx++];
-		if (tok == TOK_COMMA)  {
-			DCC_LOG(LOG_TRACE, ",");
-			continue;
-		} 
-		
-		if (tok == TOK_RIGHTBRACKET) {
-			DCC_LOG(LOG_TRACE, "]");
-			return 0;
-		}
+		dev->pw1 = device_pw1_lookup(obj, 0, bias);
+		dev->pw2 = device_pw2_lookup(obj, 0, bias);
+		dev->pw3 = device_pw3_lookup(obj, 0, bias);
+		dev->pw4 = device_pw4_lookup(obj, 0, bias);
+		dev->pw5 = device_pw5_lookup(obj, 0, bias);
+
+		/* enable the device per configuration */
+		dev->enabled = cdev->enabled;
+		cnt++;
 	}
 
-	return -1;
+	if (typ != MICROJS_JSON_END_ARRAY) {
+		return -1;
+	}
+
+	return cnt;
 }
 
-const struct microjs_attr_desc sensor_desc[] = {
-	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, si_model),
+static const struct microjs_attr_desc sensor_desc[] = {
+	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, model),
 		microjs_const_str_enc },
 	{ "enabled", MICROJS_JSON_BOOLEAN, 0, offsetof(struct cfg_device, bf_opt),
 		microjs_bit_enc },
@@ -509,6 +554,7 @@ int cfg_sensor_enc(struct microjs_json_parser * jsn,
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 0;
+	cdev.tbias = 128;
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -530,6 +576,7 @@ int cfg_module_enc(struct microjs_json_parser * jsn,
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 1;
+	cdev.tbias = 128;
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -539,7 +586,7 @@ int cfg_module_enc(struct microjs_json_parser * jsn,
 	return 0;
 }
 
-const struct microjs_attr_desc cfg_desc[] = {
+static const struct microjs_attr_desc cfg_desc[] = {
 	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_sensor_enc },
 	{ "module", MICROJS_JSON_OBJECT, 0, 0, cfg_module_enc },
 	{ "", 0, 0, 0, NULL},
@@ -551,9 +598,9 @@ int config_compile(void)
 {
 	struct microjs_json_parser jsn;
 	struct microjs_tokenizer tkn;
+	uint8_t tok_buf[JS_TOK_BUF_MAX];
 	unsigned int json_crc;
 	int json_len;
-	uint8_t tok_buf[JS_TOK_BUF_MAX];
 	char * js;
 	int ret;
 
@@ -561,7 +608,7 @@ int config_compile(void)
 
 	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
 
-	json_len = json_root_len(js);
+	json_len = microjs_json_root_len(js);
 	json_crc = crc16ccitt(0, js, json_len);
 	(void)json_crc;
 
@@ -576,7 +623,7 @@ int config_compile(void)
 		return ret;
 	}
 
-	microjs_tok_dump(stdout, &tkn);
+	//microjs_tok_dump(stdout, &tkn);
 
 	microjs_json_init(&jsn, &tkn);
 
@@ -586,7 +633,7 @@ int config_compile(void)
 	}
 
 	/* decode the token stream */
-	if ((ret = microjs_json_parse_obj(&jsn, sensor_desc, NULL)) < 0) {
+	if ((ret = microjs_json_parse_obj(&jsn, cfg_desc, NULL)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}

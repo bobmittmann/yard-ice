@@ -234,7 +234,8 @@
 		"ic1": ["Relay Pulse"],
 		"ic2": ["Relay select"],
 		"ic3": ["LED control"]
-	}
+	},
+
 	"sensor": { 
 		"id": 11, 
 		"model": "BEAM200", 
