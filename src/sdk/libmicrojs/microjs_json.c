@@ -144,7 +144,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		for (i = 0; desc[i].parse != NULL; ++i) {
 			/* look for a decoder that matches the label */ 
 			if (strncmp(desc[i].key, val.str.dat, val.str.len) == 0) {
-				DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
+				DCC_LOG1(LOG_TRACE, "%s:", desc[i].key);
 				typ = microjs_json_get_val(jsn, &val);
 				if (typ != desc[i].type) {
 					/* the attribute type do not matches the decoder */
