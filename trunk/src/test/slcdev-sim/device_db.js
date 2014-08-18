@@ -271,8 +271,24 @@
 			["Remote Test and Alarm Acclimate level 2 (40% to 50%)", 3150],
 		],
 		"pw5": [900],
-		"cmd": ["Reset", "0x0", "1x0", "0x1", "0x0", "1x0"],
-		"cmd": ["Obscuration Test", "0x0", "0x1", "0x1", "0x0", "1x0"],
+		"cmd": [
+			{
+				"tag": "Reset",
+				"seq": ["0x0", "1x0", "0x1", "0x0", "1x0"],
+				"js": [
+					"dev.pw2 = mdl.pw2[0];",
+					"dev.pw4 = mdl.pw4[0];"
+					]
+			},
+			{
+				"tag": "Obscuration Test",
+				"seq": ["0x0", "0x1", "0x1", "0x0", "1x0"],
+				"js": [
+					"dev.pw2 = mdl.pw2[1];",
+					"dev.pw4 = mdl.pw4[4];"
+					]
+			}
+		]
 	}
 }
 

@@ -513,8 +513,6 @@ int cmd_dev(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int device_pw3_lookup(unsigned int addr, unsigned int sel);
-
 int cmd_pw2(FILE * f, int argc, char ** argv)
 {
 	return 0;
@@ -522,6 +520,8 @@ int cmd_pw2(FILE * f, int argc, char ** argv)
 
 int cmd_pw3(FILE * f, int argc, char ** argv)
 {
+	struct ss_device * dev;
+	struct db_dev_model * mod;
 	int addr;
 	int sel;
 
@@ -536,10 +536,19 @@ int cmd_pw3(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_ARG_INVALID;
 
 	sel = strtoul(argv[1], NULL, 0);
-	if (sel > 10)
+	if (sel > 16)
 		return SHELL_ERR_ARG_INVALID;
 
-	return device_pw3_lookup(addr, sel);
+	dev = &ss_dev_tab[addr];
+
+	if ((mod = db_dev_model_by_index(dev->mod_idx)) == NULL) {
+		DCC_LOG1(LOG_WARNING, "invalid model: %d", dev->mod_idx);
+		return SHELL_ERR_ARG_INVALID;
+	}
+
+	dev->pw3 = device_db_pw3_lookup(mod, sel, dev->tbias);
+
+	return 0;
 }
 
 int cmd_pw4(FILE * f, int argc, char ** argv)

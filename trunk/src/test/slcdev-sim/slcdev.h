@@ -35,13 +35,7 @@
 struct pw_entry {
 	uint16_t min;
 	uint16_t max;
-	uint16_t desc;	/* The description string */
-};
-
-struct ic_entry {
-	uint8_t mode;
-	uint8_t flags;
-	uint16_t desc; /* The description string */
+	uint8_t desc;	/* The description string */
 };
 
 #define SLCDEV_PW_LIST_LEN_MAX 24
@@ -49,6 +43,24 @@ struct ic_entry {
 struct pw_list {
 	uint32_t cnt;
 	struct pw_entry pw[SLCDEV_PW_LIST_LEN_MAX]; 
+};
+
+struct cmd_seq {
+	uint16_t msk;
+	uint16_t val;
+} seq;
+
+struct cmd_entry {
+	struct cmd_seq seq;
+	uint8_t tag; /* The tag string */
+	uint8_t js[7]; /* The javascript lines */
+};
+
+#define SLCDEV_CMD_LIST_LEN_MAX 12
+
+struct cmd_list {
+	uint32_t cnt;
+	struct cmd_entry cmd[SLCDEV_CMD_LIST_LEN_MAX]; 
 };
 
 struct db_obj {
@@ -59,7 +71,19 @@ struct db_obj {
 	struct db_obj * next;
 };
 
-struct obj_device {
+struct db_info {
+	uint8_t len;
+	uint8_t type;
+	uint8_t id;
+	uint8_t flags;
+	struct db_obj * next;
+	uint16_t json_crc;
+	uint16_t json_len;
+	uint32_t obj_cnt;
+	struct db_obj * obj[];
+};
+
+struct db_dev_model {
 	uint8_t len;
 	uint8_t type;
 	uint8_t id;
@@ -72,6 +96,7 @@ struct obj_device {
 	struct pw_list * pw3; /* Manufacturer Code */
 	struct pw_list * pw4; /* Analog */
 	struct pw_list * pw5; /* Type Id */
+	struct cmd_list * cmd;
 };
 
 struct obj_module {
@@ -87,9 +112,7 @@ struct obj_module {
 	struct pw_list * pw3;
 	struct pw_list * pw4;
 	struct pw_list * pw5;
-	struct ic_entry * ic1;
-	struct ic_entry * ic2;
-	struct ic_entry * ic3;
+	struct cmd_list * cmd;
 };
 
 struct obj_sensor {
@@ -105,18 +128,7 @@ struct obj_sensor {
 	struct pw_list * pw3;
 	struct pw_list * pw4;
 	struct pw_list * pw5;
-};
-
-struct obj_db_info {
-	uint8_t len;
-	uint8_t type;
-	uint8_t id;
-	uint8_t flags;
-	struct db_obj * next;
-	uint16_t json_crc;
-	uint16_t json_len;
-	uint32_t obj_cnt;
-	struct db_obj * obj[];
+	struct cmd_list * cmd;
 };
 
 enum {
@@ -214,7 +226,7 @@ struct ss_device {
 			uint32_t enabled: 1;
 			uint32_t addr: 9; /* reverse lookup address */
 			uint32_t ap: 1;
-			uint32_t type: 6;   /* reference to an object type */
+			uint32_t mod_idx: 6;   /* reference to an model */
 			uint32_t poll_flash : 1;
 		}; 
 		uint32_t opt;	
@@ -290,11 +302,28 @@ int config_dump(FILE * f);
 int config_erase(void);
 int config_compile(void);
 
-struct obj_device * device_db_lookup(unsigned int id);
+struct db_dev_model * device_db_lookup(unsigned int id);
 
 int slcdev_const_str_purge(void);
 
-struct obj_device * device_db_model_lookup(unsigned int id);
+int db_dev_model_index_by_name(unsigned int str_id);
+
+struct db_dev_model * db_dev_model_by_index(unsigned int idx);
+
+int device_db_pw1_lookup(struct db_dev_model * obj, unsigned int sel,
+						 unsigned int bias);
+
+int device_db_pw2_lookup(struct db_dev_model * obj, unsigned int sel,
+						 unsigned int bias);
+
+int device_db_pw3_lookup(struct db_dev_model * obj, unsigned int sel,
+						 unsigned int bias);
+
+int device_db_pw4_lookup(struct db_dev_model * obj, unsigned int sel,
+						 unsigned int bias);
+
+int device_db_pw5_lookup(struct db_dev_model * obj, unsigned int sel,
+						 unsigned int bias);
 
 #ifdef __cplusplus
 }

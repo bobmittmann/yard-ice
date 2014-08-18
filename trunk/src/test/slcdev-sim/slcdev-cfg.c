@@ -325,106 +325,6 @@ int device_attr_print(FILE * f, unsigned int addr, const char * name)
 	return ret;
 }
 
-int device_pw1_lookup(struct obj_device * obj, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= obj->pw1->cnt)
-		sel = obj->pw1->cnt - 1;
-
-	max = obj->pw1->pw[sel].max;
-	min = obj->pw1->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_pw2_lookup(struct obj_device * obj, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= obj->pw2->cnt)
-		sel = obj->pw2->cnt - 1;
-
-	max = obj->pw2->pw[sel].max;
-	min = obj->pw2->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_pw3_lookup(struct obj_device * obj, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= obj->pw3->cnt)
-		sel = obj->pw3->cnt - 1;
-
-	max = obj->pw3->pw[sel].max;
-	min = obj->pw3->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_pw4_lookup(struct obj_device * obj, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= obj->pw4->cnt)
-		sel = obj->pw4->cnt - 1;
-
-	max = obj->pw4->pw[sel].max;
-	min = obj->pw4->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_pw5_lookup(struct obj_device * obj, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= obj->pw5->cnt)
-		sel = obj->pw5->cnt - 1;
-
-	max = obj->pw5->pw[sel].max;
-	min = obj->pw5->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
 int config_dump(FILE * f)
 {
 	DCC_LOG(LOG_TRACE, "...");
@@ -452,7 +352,8 @@ int config_erase(void)
 	return 0;
 }
 
-/* This is an auxiliarly structure for device configuration */
+/* This is an auxiliarly structure for parsing the device 
+   configuration JSON file */
 struct cfg_device {
 	union {
 		struct {
@@ -466,18 +367,6 @@ struct cfg_device {
 	uint8_t tbias;
 };
 
-
-/* Encode the model id of the device. This is an index into 
-   the devices database. */
-int cfg_device_model_enc(struct microjs_json_parser * jsn, 
-						  struct microjs_val * val, 
-						  unsigned int bit, void * ptr)
-{
-	DCC_LOG(LOG_TRACE, "...");
-
-	return 0;
-}
-
 /* Encode the array of address. This effectivelly write the configuration 
    into the device objects. */
 int cfg_device_addr_enc(struct microjs_json_parser * jsn, 
@@ -486,18 +375,21 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 {
 	struct cfg_device * cdev = (struct cfg_device *)ptr;
 	struct ss_device * dev;
-	struct obj_device * obj;
+	struct db_dev_model * mod;
 	int bias = cdev->tbias;
 	int cnt = 0;
 	int typ;
 	int addr;
+	int mod_idx;
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	if ((obj = device_db_model_lookup(cdev->model)) == NULL) {
+	if ((mod_idx = db_dev_model_index_by_name(cdev->model)) < 0) {
 		DCC_LOG1(LOG_WARNING, "invalid model: %d", cdev->model);
 		return -1;
 	}
+
+	mod = db_dev_model_by_index(mod_idx);
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
 		addr = val->u32;
@@ -515,11 +407,12 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 		/* disable the device prior to configuration */
 		dev->enabled = 0;
 
-		dev->pw1 = device_pw1_lookup(obj, 0, bias);
-		dev->pw2 = device_pw2_lookup(obj, 0, bias);
-		dev->pw3 = device_pw3_lookup(obj, 0, bias);
-		dev->pw4 = device_pw4_lookup(obj, 0, bias);
-		dev->pw5 = device_pw5_lookup(obj, 0, bias);
+		dev->mod_idx = mod_idx;
+		dev->pw1 = device_db_pw1_lookup(mod, 0, bias);
+		dev->pw2 = device_db_pw2_lookup(mod, 0, bias);
+		dev->pw3 = device_db_pw3_lookup(mod, 0, bias);
+		dev->pw4 = device_db_pw4_lookup(mod, 0, bias);
+		dev->pw5 = device_db_pw5_lookup(mod, 0, bias);
 
 		/* enable the device per configuration */
 		dev->enabled = cdev->enabled;
