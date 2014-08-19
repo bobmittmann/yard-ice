@@ -25,57 +25,46 @@
 #include "slcdev.h"
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
-#include <thinkos.h>
+
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+struct slcdev_drv slcdev_drv;
 struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
 /* -------------------------------------------------------------------------
  * Trigger module
  * ------------------------------------------------------------------------- */
 
-struct {
-	uint8_t enabled;
-	uint8_t addr;
-} trig;
-
 void trig_addr_set(unsigned int addr)
 {
-	trig.addr = addr;
+	slcdev_drv.trig_addr = addr;
 }
 
 unsigned int trig_addr_get(void)
 {
-	return trig.addr;
+	return slcdev_drv.trig_addr;
 }
 
 static void trig_init(void)
 {
-	trig.addr = 0xff;
-	trig.enabled = true;
+	slcdev_drv.trig_addr = 0x00;
+	slcdev_drv.trig_en = 1;
 
 	stm32_gpio_clr(TRIG_OUT);
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
 }
 
-/* -------------------------------------------------------------------------
- * SLC Device Simulator
- * ------------------------------------------------------------------------- */
-
-struct {
-	volatile unsigned int addr;
-	struct ss_device * dev;
-} scan;
-
 #define PW_RESPONSE_TIME (100 - 20)
 
 const struct ss_device null_dev = {
-	.enabled = 0,
-	.poll_flash = 0,
-	.ap = 0,
-	.addr = 0,
-	.model = 0,
+	.addr = 0, /* reverse lookup address */
+	.model = 0, /* reference to a device model */
+	.enabled = 0, /* enable device simulation */
+	.ap = 0, /* advanced protocol */
+	.led = 0, /* LED status */
+	.pw5en = 0, /* PW5 (Type ID) enabled */
+	.tst = 0, /* Remote test mode */
 	.tbias = 128,
 	.icfg = 0,
 	.ipre = 0,
@@ -94,11 +83,13 @@ void dev_sim_init(void)
 
 	for (i = 0; i < SS_DEVICES_MAX; ++i) {
 		dev = &ss_dev_tab[i];
-		dev->enabled = 0;
-		dev->poll_flash = 1,
-		dev->ap = 0,
-		dev->addr = i,
-		dev->model = 0,
+		dev->addr = i, /* reverse lookup address */
+		dev->model = 0, /* reference to a device model */
+		dev->enabled = 0, /* enable device simulation */
+		dev->ap = 0, /* advanced protocol */
+		dev->led = 0, /* LED status */
+		dev->pw5en = 0, /* PW5 (Type ID) enabled */
+		dev->tst = 0, /* Remote test mode */
 		dev->tbias = 128,
 		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
 		dev->ipre = 35; /* preenphasis time */
@@ -110,8 +101,8 @@ void dev_sim_init(void)
 		dev->pw5 = 300;
 	}
 
-	scan.dev = (struct ss_device *)&null_dev;
-	scan.addr = 0;
+	slcdev_drv.dev = (struct ss_device *)&null_dev;
+	slcdev_drv.addr = 0;
 }
 
 void dev_sim_enable(unsigned int addr)
@@ -130,58 +121,6 @@ void dev_sim_disable(unsigned int addr)
 	ss_dev_tab[addr].enabled = false;
 }
 
-
-/* -------------------------------------------------------------------------
- * SLC Device 
- * ------------------------------------------------------------------------- */
-
-enum {
-	DEV_IDLE = 0,
-	DEV_MSG,
-
-	DEV_PW1_START_WAIT,
-	DEV_PW1_RESPONSE_TIME,
-	DEV_PW1_PULSE,
-	DEV_PW1_END_WAIT,
-
-	DEV_PW2_START_WAIT,
-	DEV_PW2_RESPONSE_TIME,
-	DEV_PW2_PULSE,
-	DEV_PW2_END_WAIT,
-
-	DEV_PW3_START_WAIT,
-	DEV_PW3_RESPONSE_TIME,
-	DEV_PW3_PULSE,
-	DEV_PW3_END_WAIT,
-
-	DEV_PW4_START_WAIT,
-	DEV_PW4_RESPONSE_TIME,
-	DEV_PW4_PULSE,
-	DEV_PW4_END_WAIT,
-
-	DEV_PW5_START_WAIT,
-	DEV_PW5_RESPONSE_TIME,
-	DEV_PW5_PULSE,
-	DEV_PW5_END_WAIT,
-	DEV_RECOVER_TIME,
-
-	DEV_INACTIVE_START_WAIT,
-	DEV_INACTIVE_STOP_WAIT,
-
-	DEV_PARITY_ERROR,
-	DEV_PW_ABORT
-
-};
-
-struct {
-	int8_t flag;
-	bool trig_event;
-	bool sim_event;
-	uint8_t state;
-	uint8_t bit_cnt;
-	uint16_t msg;
-} slcdev;
-
 #define COMP1_EXTI (1 << 21)
 #define COMP2_EXTI (1 << 22)
 
@@ -199,7 +138,8 @@ static const uint8_t addr_lut[16] = {
 	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
 };
 
-/* Current sink pulse timer */
+/* Current sink pulse timer 
+   This ISR is invoked at the end of the current pulse */
 void stm32_tim4_isr(void)
 {
 	struct stm32f_tim * tim4 = STM32_TIM4;
@@ -207,46 +147,47 @@ void stm32_tim4_isr(void)
 
 	/* Clear timer interrupt flags */
 	tim4->sr = 0;
-	switch (slcdev.state) {
+	switch (slcdev_drv.state) {
 	case DEV_PW1_PULSE:
-		slcdev.state = DEV_PW1_END_WAIT;
+		slcdev_drv.state = DEV_PW1_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW1 END WAIT]");
 		break;
 
 	case DEV_PW2_PULSE:
-		slcdev.state = DEV_PW2_END_WAIT;
+		slcdev_drv.state = DEV_PW2_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW2 END WAIT]");
 		break;
 
 	case DEV_PW3_PULSE:
-		slcdev.state = DEV_PW3_END_WAIT;
+		slcdev_drv.state = DEV_PW3_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW3 END WAIT]");
 		break;
 
 	case DEV_PW4_PULSE:
-		slcdev.state = DEV_PW4_END_WAIT;
+		slcdev_drv.state = DEV_PW4_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW4 END WAIT]");
 		break;
 
 	case DEV_PW5_PULSE:
-		slcdev.state = DEV_PW5_END_WAIT;
+		slcdev_drv.state = DEV_PW5_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
 		break;
 
 	default:
-		DCC_LOG1(LOG_MSG, "Invalid state [%d]!!!", slcdev.state);
+		DCC_LOG1(LOG_MSG, "Invalid state [%d]!!!", slcdev_drv.state);
 	}
 
 	tim10->arr = 4000; /* trigger the end wait timer */
 	tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 }
 
-/* This is the 1us resolution timer... */
+/* Device timer 
+	This is the 1us resolution timer ISR */
 void stm32_tim10_isr(void)
 {
 	struct stm32_comp * comp = STM32_COMP;
 	struct stm32f_tim * tim = STM32_TIM10;
-	struct ss_device * dev = scan.dev;
+	struct ss_device * dev = slcdev_drv.dev;
 	uint32_t csr;
 	int bit;
 
@@ -259,12 +200,12 @@ void stm32_tim10_isr(void)
 		/* Power */
 		DCC_LOG(LOG_INFO, "[IDLE]");
 		/* */
-		slcdev.state = DEV_IDLE;
+		slcdev_drv.state = DEV_IDLE;
 	} else { 
 
 		bit = (csr & COMP_CMP2OUT) ? 1 : 0;
 
-		switch (slcdev.state) {
+		switch (slcdev_drv.state) {
 		case DEV_IDLE:
 #if 0
 			if (bit) {
@@ -274,11 +215,11 @@ void stm32_tim10_isr(void)
 			}
 #endif
 			/* reset the device state */
-			slcdev.state = DEV_MSG;
-			slcdev.msg = bit;
-			slcdev.bit_cnt = 1;
+			slcdev_drv.state = DEV_MSG;
+			slcdev_drv.msg = bit;
+			slcdev_drv.bit_cnt = 1;
 			/* reset the simultaor module */
-			scan.dev = (struct ss_device *)&null_dev;
+			slcdev_drv.dev = (struct ss_device *)&null_dev;
 
 			break;
 
@@ -290,10 +231,10 @@ void stm32_tim10_isr(void)
 				DCC_LOG(LOG_INFO, "LOW");
 			}
 #endif
-			slcdev.msg |= bit << slcdev.bit_cnt;
+			slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
 
-			if (++slcdev.bit_cnt == 13) {
-				unsigned int msg = slcdev.msg;
+			if (++slcdev_drv.bit_cnt == 13) {
+				unsigned int msg = slcdev_drv.msg;
 				unsigned int parity;
 
 				parity = parity_lut[msg & 0xf] ^ 
@@ -307,34 +248,61 @@ void stm32_tim10_isr(void)
 					addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
 						addr_lut[(msg >> 5) & 0xf];
 					addr = addr + (mod * 100);
-					scan.addr = addr;
-					scan.dev = &ss_dev_tab[addr];
 
-					if ((addr == trig.addr) && (trig.enabled)) {
-						slcdev.trig_event = true;
+					/* trigger module */
+					if ((addr == slcdev_drv.trig_addr) && 
+						(slcdev_drv.trig_en)) {
+						slcdev_drv.ev_bmp |= SLC_EV_TRIG;
 						trig_out_set();
-						__thinkos_flag_signal(slcdev.flag);
+						__thinkos_flag_signal(slcdev_drv.ev_flag);
 						trig_out_clr();
 						/* */
 						DCC_LOG2(LOG_INFO, "Match %s=%d", 
 								 mod ? "MODULE" : "SENSOR", addr);
 					}
 
-					if (scan.dev->enabled) {
+					/* */
+					if (addr != slcdev_drv.addr) {
+						dev = &ss_dev_tab[addr];
+						slcdev_drv.addr = addr;
+						slcdev_drv.dev = dev;
+						/* clear the control sequence */
+						dev->ctls = 0;
+					} else {
+						DCC_LOG(LOG_INFO, "Consecutive pooling");
+					}
+
+					if (dev->enabled) {
+						unsigned int ctl = slcdev_drv.msg & 0x7;
+						/* shift the control bits into the sequence register */
+						dev->ctls <<= 3;
+						dev->ctls |= ctl;
+						/* update the PW5 request bit */
+						/* This is a hardwired protocol rule,
+						   the other control bit sequences are treated in
+						   the simulation loop */
+						dev->pw5en = (ctl >> 1) & 1;
+
 						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 								 mod ? "MODULE" : "SENSOR", addr);
-						slcdev.state = DEV_PW1_START_WAIT;
-						slcdev.sim_event = true;
-						__thinkos_flag_signal(slcdev.flag);
+
+						/* program the current sink */ 
+						isink_mode_set(slcdev_drv.dev->icfg);
+
+						/* signal the simulator */
+						slcdev_drv.ev_bmp |= SLC_EV_SIM;
+						__thinkos_flag_signal(slcdev_drv.ev_flag);
+
+						/* update the state machine */
+						slcdev_drv.state = DEV_PW1_START_WAIT;
 						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
-						isink_mode_set(scan.dev->icfg);
 					} else {
-						slcdev.state = DEV_INACTIVE_START_WAIT;
+						slcdev_drv.state = DEV_INACTIVE_START_WAIT;
 						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
 					}
 				} else {
 					DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
-					slcdev.state = DEV_PARITY_ERROR;
+					slcdev_drv.state = DEV_PARITY_ERROR;
 					DCC_LOG(LOG_INFO, "[PARITY ERR]");
 				}
 			}
@@ -343,35 +311,35 @@ void stm32_tim10_isr(void)
 		case DEV_PW1_RESPONSE_TIME:
 			/* Reference Pulse Width */
 			isink_pulse(dev->ipre, dev->pw1); 
-			slcdev.state = DEV_PW1_PULSE;
+			slcdev_drv.state = DEV_PW1_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
 			/* Remote Test Status */
 			isink_pulse(dev->ipre, dev->pw2);
-			slcdev.state = DEV_PW2_PULSE;
+			slcdev_drv.state = DEV_PW2_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
 			/* Manufacturer Code */
 			isink_pulse(dev->ipre, dev->pw3); 
-			slcdev.state = DEV_PW3_PULSE;
+			slcdev_drv.state = DEV_PW3_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
 			/* Analog */
 			isink_pulse(dev->ipre, dev->pw4); 
-			slcdev.state = DEV_PW4_PULSE;
+			slcdev_drv.state = DEV_PW4_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
-			/* Type Id */
+			/* respond with PW5 by request only */
 			isink_pulse(dev->ipre, dev->pw5); 
-			slcdev.state = DEV_PW5_PULSE;
+			slcdev_drv.state = DEV_PW5_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
 			break;
 		}
@@ -380,7 +348,7 @@ void stm32_tim10_isr(void)
 	trig_out_clr();
 }
 
-/* **************************************************************************
+/****************************************************************************
  * voltage comparator interrupt handler
  ****************************************************************************/
 
@@ -388,7 +356,7 @@ void stm32_comp_tsc_isr(void)
 {
 	struct stm32f_exti * exti = STM32_EXTI;
 	struct stm32f_tim * tim = STM32_TIM10;
-	struct ss_device * dev = scan.dev;
+	struct ss_device * dev = slcdev_drv.dev;
 	uint32_t ftsr;
 
 	/* get the falling edge sensing configuration */
@@ -407,40 +375,47 @@ void stm32_comp_tsc_isr(void)
 
 		tim->cnt = 0;
 
-		switch (slcdev.state) {
+		switch (slcdev_drv.state) {
 		case DEV_PW1_START_WAIT:
 			tim->arr = dev->ilat;
-			slcdev.state = DEV_PW1_RESPONSE_TIME;
+			slcdev_drv.state = DEV_PW1_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW2_START_WAIT:
 			tim->arr = dev->ilat;
-			slcdev.state = DEV_PW2_RESPONSE_TIME;
+			slcdev_drv.state = DEV_PW2_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW3_START_WAIT:
 			tim->arr = dev->ilat;
-			slcdev.state = DEV_PW3_RESPONSE_TIME;
+			slcdev_drv.state = DEV_PW3_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW4_START_WAIT:
 			tim->arr = dev->ilat;
-			slcdev.state = DEV_PW4_RESPONSE_TIME;
+			slcdev_drv.state = DEV_PW4_RESPONSE_TIME;
 			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
 			break;
 
 		case DEV_PW5_START_WAIT:
-			tim->arr = dev->ilat;
-			slcdev.state = DEV_PW5_RESPONSE_TIME;
-			DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
+			/* Type Id */
+			if (dev->pw5en) { 
+				tim->arr = dev->ilat;
+				slcdev_drv.state = DEV_PW5_RESPONSE_TIME;
+				DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
+			} else {
+				tim->arr = 4000; /* Inactive PW window */
+				slcdev_drv.state = DEV_PW5_END_WAIT;
+				DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
+			}
 			break;
 
 		case DEV_INACTIVE_START_WAIT:
 			tim->arr = 4000; /* Inactive PW window */
-			slcdev.state = DEV_INACTIVE_STOP_WAIT;
+			slcdev_drv.state = DEV_INACTIVE_STOP_WAIT;
 			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
 			break;
 
@@ -459,110 +434,110 @@ void stm32_comp_tsc_isr(void)
 
 		tim->cnt = 0;
 
-		switch (slcdev.state) {
+		switch (slcdev_drv.state) {
+
+		case DEV_INACTIVE_STOP_WAIT:
+			slcdev_drv.state = DEV_INACTIVE_START_WAIT;
+			DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
+			break;
 
 		case DEV_PW1_END_WAIT:
-			slcdev.state = DEV_PW2_START_WAIT;
+			slcdev_drv.state = DEV_PW2_START_WAIT;
 			DCC_LOG(LOG_INFO, "[PW2 START WAIT]");
 			break;
 
 		case DEV_PW2_END_WAIT:
-			slcdev.state = DEV_PW3_START_WAIT;
+			slcdev_drv.state = DEV_PW3_START_WAIT;
 			DCC_LOG(LOG_INFO, "[PW3 START WAIT]");
 			break;
 
 		case DEV_PW3_END_WAIT:
-			slcdev.state = DEV_PW4_START_WAIT;
+			slcdev_drv.state = DEV_PW4_START_WAIT;
 			DCC_LOG(LOG_INFO, "[PW4 START WAIT]");
 			break;
 
 		case DEV_PW4_END_WAIT:
-			slcdev.state = DEV_PW5_START_WAIT;
+			slcdev_drv.state = DEV_PW5_START_WAIT;
 			DCC_LOG(LOG_INFO, "[PW5 START WAIT]");
 			break;
 
 		case DEV_PW5_END_WAIT:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 
-		case DEV_PW1_PULSE:
+		case DEV_PW1_PULSE: /* aborted */
 			isink_stop();
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW1 abort! [RECOVER TIME]");
 			break;
 
-		case DEV_PW2_PULSE:
+		case DEV_PW2_PULSE: /* aborted */
 			isink_stop();
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW2 abort! [RECOVER TIME]");
 			break;
 
-		case DEV_PW3_PULSE:
+		case DEV_PW3_PULSE: /* aborted */
 			isink_stop();
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW3 abort! [RECOVER TIME]");
 			break;
 
-		case DEV_INACTIVE_STOP_WAIT:
-			slcdev.state = DEV_INACTIVE_START_WAIT;
-			DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-			break;
-
-		case DEV_PW4_PULSE:
+		case DEV_PW4_PULSE: /* aborted */
 			isink_stop();
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW4 abort! [RECOVER TIME]");
 			break;
 
-		case DEV_PW5_PULSE:
+		case DEV_PW5_PULSE: /* aborted */
 			isink_stop();
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW5 abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW1_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW1 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW2_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW2 response abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW3_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW3 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW4_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW4 guard abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW5 guard abort! [RECOVER TIME]");
 			break;
 
@@ -570,7 +545,7 @@ void stm32_comp_tsc_isr(void)
 			tim->cnt = 0;
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev.state = DEV_RECOVER_TIME;
+			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 		}
@@ -627,36 +602,12 @@ static void slc_sense_init(void)
 	cm3_irq_enable(STM32_IRQ_TIM10);
 }
 
-uint32_t slcdev_event_wait(void)
-{
-	uint32_t event = 0;
-
-//	tracef("%s(): wait...", __func__);
-
-	do {
-		thinkos_flag_wait(slcdev.flag);
-		/* FIXME: event queue */
-		if (slcdev.trig_event) {
-			event = SLC_EV_TRIG;
-			slcdev.trig_event = false;
-		} else {
-			if (slcdev.sim_event) {
-				event = SLC_EV_SIM;
-				slcdev.sim_event = false;
-			}
-			thinkos_flag_clr(slcdev.flag);
-		} 
-	} while (event == 0);
-
-	return event;
-}
-
 void slcdev_init(void)
 {
-	slcdev.state = DEV_IDLE;
-	slcdev.sim_event = false;
-	slcdev.trig_event = false;
-	slcdev.flag = thinkos_flag_alloc();
+	slcdev_drv.state = DEV_IDLE;
+	slcdev_drv.dev = (struct ss_device *)&null_dev;
+	slcdev_drv.ev_flag = thinkos_flag_alloc();
+	slcdev_drv.ev_bmp = 0;
 
 	trig_init();
 

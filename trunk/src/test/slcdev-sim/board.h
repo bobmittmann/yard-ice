@@ -91,7 +91,7 @@ enum {
 struct io_drv {
 	int8_t flag;
 	volatile uint8_t sw;
-	volatile uint8_t addr;
+	volatile uint16_t addr;
 	volatile uint32_t event;
 };
 
@@ -133,18 +133,6 @@ extern "C" {
 
 void io_init(void);
 
-static inline void led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_af(__gpio, __pin);
-}
-
-static inline void led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_out(__gpio, __pin);
-}
-
-static inline bool is_led_on(struct stm32_gpio *__gpio, int __pin) {
-	return stm32_gpio_is_mode_af(__gpio, __pin);
-}
-
 void led_flash(unsigned int id, unsigned int ms);
 
 uint32_t io_event_wait(void);
@@ -163,6 +151,10 @@ void isink_stop(void);
 void irate_set(unsigned int mv);
 
 void lamp_test(void);
+
+void led_on(unsigned int id);
+
+void led_off(unsigned int id);
 
 void system_reset(void);
 

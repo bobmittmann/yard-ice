@@ -541,8 +541,8 @@ int cmd_pw3(FILE * f, int argc, char ** argv)
 
 	dev = &ss_dev_tab[addr];
 
-	if ((mod = db_dev_model_by_index(dev->mod_idx)) == NULL) {
-		DCC_LOG1(LOG_WARNING, "invalid model: %d", dev->mod_idx);
+	if ((mod = db_dev_model_by_index(dev->model)) == NULL) {
+		DCC_LOG1(LOG_WARNING, "invalid model: %d", dev->model);
 		return SHELL_ERR_ARG_INVALID;
 	}
 

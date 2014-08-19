@@ -37,9 +37,8 @@ void __attribute__((noreturn)) io_event_task(void)
 {
 	uint32_t event;
 	unsigned int sw;
-
-	for (;;) {
 	
+	for (;;) {
 		event = io_event_wait();
 
 		sw = io_drv.sw;
@@ -50,18 +49,18 @@ void __attribute__((noreturn)) io_event_task(void)
 			switch (sw & SW1_MSK) {
 			case SW1_OFF:
 				DCC_LOG(LOG_TRACE, "SW1 OFF");
-				led_off(LED3);
-				led_off(LED4);
+				led_off(2);
+				led_off(3);
 				break;
 
 			case SW1_A:
 				DCC_LOG(LOG_TRACE, "SW1 A");
-				led_on(LED3);
+				led_on(2);
 				break;
 
 			case SW1_B:
 				DCC_LOG(LOG_TRACE, "SW1 B");
-				led_on(LED4);
+				led_on(3);
 			}
 		}
 
@@ -73,18 +72,18 @@ void __attribute__((noreturn)) io_event_task(void)
 
 			case SW2_OFF:
 				DCC_LOG(LOG_TRACE, "SW2 OFF");
-				led_off(LED5);
-				led_off(LED6);
+				led_off(4);
+				led_off(5);
 				break;
 
 			case SW2_A:
 				DCC_LOG(LOG_TRACE, "SW2 A");
-				led_on(LED5);
+				led_on(4);
 				break;
 
 			case SW2_B:
 				DCC_LOG(LOG_TRACE, "SW2 B");
-				led_on(LED6);
+				led_on(5);
 			}
 		}
 
@@ -92,26 +91,6 @@ void __attribute__((noreturn)) io_event_task(void)
 			DCC_LOG1(LOG_TRACE, "ADDR=%d", io_drv.addr);
 			io_event_clr(EV_ADDR);  
 			trig_addr_set(io_drv.addr);
-		}
-	}
-}
-
-void __attribute__((noreturn)) sim_event_task(void)
-{
-	uint32_t event;
-
-	for (;;) {
-		event = slcdev_event_wait();
-		DCC_LOG1(LOG_TRACE, "event=%d", event);
-		switch (event) {
-		case SLC_EV_TRIG:
-			DCC_LOG(LOG_TRACE, "trigger");
-			led_flash(0, 64);
-			break;
-		case SLC_EV_SIM:
-			DCC_LOG(LOG_TRACE, "simulation");
-			led_flash(1, 64);
-			break;
 		}
 	}
 }

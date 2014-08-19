@@ -1,6 +1,101 @@
 {
 	"sensor": { 
+		"id" : 0, 
+		"model" : "Photo", 
+		"desc" : "Photoelectric Smoke Detector", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 618, 1068],
+			["Trouble", 120, 660],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Thermal Alarm (57°C)", 2800, 3220],
+			["Remote Test", 2800, 3200]
+		],
+		"pw5" : [810, 990]
+	},
+
+	"sensor": { 
 		"id" : 1, 
+		"model" : "Ion", 
+		"desc" : "Ionization Smoke Detector", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 870, 930],
+			["Low Chamber", 120, 180],
+			["High Chamber", 260, 330],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 2130, 2880]
+		],
+		"pw5" : [570, 630]
+	},
+
+	"sensor": { 
+		"id" : 2, 
+		"model" : "Heat", 
+		"desc" : "Heat Detector", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Heat Alarm 57.2°C", 2110],
+			["Remote Test", 3270, 3330]
+		],
+		"pw5" : [270, 330],
+		"cmd": [
+			{
+				"tag": "LED on",
+				"seq": ["0xx"],
+				"js": [ "dev.led_on = true;" ]
+			},
+			{
+				"tag": "LED off",
+				"seq": ["1x0"],
+				"js": [ "dev.led_on = false;" ]
+			},
+			{
+				"tag": "LED blink",
+				"seq": ["1x1"],
+				"js": [ "dev.led_blink = true;" ]
+			},
+			{
+				"tag": "Enable Type ID",
+				"seq": ["x1x"],
+				"js": [ "dev.pw5_en = true;" ]
+			},
+			{
+				"tag": "Remote Test on",
+				"seq": ["0x0", "0x0"],
+				"js": [ "dev.test = true;" ]
+			},
+			{
+				"tag": "Remote Test off",
+				"seq": ["1x1", "1x1"],
+				"js": [ "dev.test = false;" ]
+			}
+		]
+	},
+
+	"sensor": { 
+		"id" : 3, 
 		"model" : "2251TM", 
 		"desc" : "Multicriteria Photoelectric Smoke Detector", 
 		"pw1" : [280, 320],
@@ -28,7 +123,7 @@
 	},
 
 	"sensor": { 
-		"id" : 2, 
+		"id" : 4, 
 		"model" : "2251 COPTIR", 
 		"desc" : "Multicriteria Smoke Detector", 
 		"pw1" : ["Reference", 285, 315],
@@ -60,7 +155,7 @@
 	},
 
 	"sensor": { 
-		"id" : 3, 
+		"id" : 5, 
 		"model" : "1251", 
 		"desc" : "Ionization Smoke Detector", 
 		"pw1" : [270, 330],
@@ -90,7 +185,7 @@
 	},
 
 	"sensor": { 
-		"id" : 4, 
+		"id" : 6, 
 		"model" : "5251P", 
 		"desc" : "Heat Detector", 
 		"pw1" : [270, 330],
@@ -108,7 +203,7 @@
 	},
 
 	"sensor": { 
-		"id" : 5, 
+		"id" : 7, 
 		"model" : "5251T", 
 		"desc" : "Heat Detector", 
 		"pw1" : [270, 330],
@@ -126,7 +221,7 @@
 	},
 
 	"module": { 
-		"id": 6, 
+		"id": 8, 
 		"model": "M500S", 
 		"desc": "Supervised Control Module", 
 		"pw1": [240, 360], 
@@ -144,14 +239,11 @@
 			["Normal", 670, 1430],
 			["Short", 1619, 4000]
 		],
-		"pw5": ["Type ID", 480, 720],
-		"ic1": [ "Relay pulse" ],
-		"ic2": [ "Relay select" ],
-		"ic3": [ "LED control" ]
+		"pw5": ["Type ID", 480, 720]
 	},
 
 	"module": { 
-		"id": 7, 
+		"id": 9, 
 		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
 		"pw1": [240, 360], 
@@ -166,14 +258,11 @@
 			["Normal", 756, 1364],
 			["Short", 1613, 4000] 
 		],
-		"pw5": [ "Type ID", 240, 360],
-		"ic1": [ "reset PW3 latch" ],
-		"ic2": [ "force PW5 = 0" ],
-		"ic3": [ "Unused" ]
+		"pw5": [ "Type ID", 240, 360]
 	},
 
 	"module": { 
-		"id": 8, 
+		"id": 10, 
 		"model": "M500M", 
 		"ap": false,
 		"desc": "Monitor Module", 
@@ -192,14 +281,11 @@
 			["Normal", 670, 1430],
 			["Short", 1619, 4000]
 		],
-		"pw5": ["Type ID", 240, 360],
-		"ic1": ["reset PW3 latch", 1],
-		"ic2": ["force PW5 = 0", 1 ],
-		"ic3": ["Unused", 0]
+		"pw5": ["Type ID", 240, 360]
 	},
 
 	"module": { 
-		"id": 9, 
+		"id": 11, 
 		"model": "M500R", 
 		"desc": "Relay Control Module", 
 		"pw1": [240, 360],
@@ -209,14 +295,11 @@
 		],
 		"pw3": ["Open", 480, 720],
 		"pw4": ["Open", 0, 343],
-		"pw5": [480, 720],
-		"ic1": ["Relay Pulse"],
-		"ic2": ["Relay select"],
-		"ic3": ["LED control"],
+		"pw5": [480, 720]
 	},
 
 	"module": { 
-		"id": 10, 
+		"id": 12, 
 		"model": "M500FP", 
 		"desc": "AOM-Tel Firephone Module", 
 		"pw1": [240, 360],
@@ -230,14 +313,11 @@
 			["Off-Hook", 860, 940]
 		],
 		"pw4": [0, 300],
-		"pw5": [1750, 2025],
-		"ic1": ["Relay Pulse"],
-		"ic2": ["Relay select"],
-		"ic3": ["LED control"]
+		"pw5": [1750, 2025]
 	},
 
 	"sensor": { 
-		"id": 11, 
+		"id": 13, 
 		"model": "BEAM200", 
 		"desc": "200 Series Beam Detector",
 		"pw1": [300],
