@@ -42,7 +42,7 @@
 
 #include <sys/dcclog.h>
 
-const char microjs_keyword[12][9] = {
+const char microjs_keyword[13][9] = {
 	"break",
 	"case",
 	"continue",
@@ -51,11 +51,13 @@ const char microjs_keyword[12][9] = {
 	"false",
 	"for",
 	"function",
-	"return",
+	"null",
 
+	"return",
 	"switch",
 	"true",
 	"var",
+
 	"while",
 };
 

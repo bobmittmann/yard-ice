@@ -18,7 +18,7 @@ int microjs_str_lookup(const struct microjs_str_pool * pool,
 	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
 		char * cstr = base + offs;
 
-		if (strncmp(cstr, s, len) == 0)
+		if ((strncmp(cstr, s, len) == 0) && (strlen(cstr) == len))
 			return i;
 	}
 

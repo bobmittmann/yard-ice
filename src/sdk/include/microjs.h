@@ -41,7 +41,8 @@ enum {
 	MICROJS_MAX_NEST_LEVEL,
 	MICROJS_BRACKET_MISMATCH,
 	MICROJS_STRING_TOO_LONG,
-	MICROJS_INVALID_SYMBOL
+	MICROJS_INVALID_SYMBOL,
+	MICROJS_EMPTY_LABEL
 };
 
 /**********************************************************************
@@ -88,8 +89,13 @@ enum {
 };
 
 struct microjs_json_parser {
-	struct microjs_tokenizer * tkn;
-	uint16_t idx;  /* token index */
+	uint16_t cnt;  /* token count */
+	uint16_t idx;  /* token parser index */
+	uint16_t offs; /* lexer text offset */
+	uint16_t err; /* lexer error code */
+	uint16_t size; /* token buffer size */
+	uint8_t * tok; /* token buffer reference */
+	const char * js;   /* base pointer (original js file) */
 };
 
 struct microjs_attr_desc {
@@ -131,7 +137,10 @@ int microjs_tok_dump(FILE * f, struct microjs_tokenizer * tkn);
 
 
 int microjs_json_init(struct microjs_json_parser * jsn, 
-					  struct microjs_tokenizer * tkn);
+					 uint8_t * tok, unsigned int size);
+
+int microjs_json_scan(struct microjs_json_parser * jsn, 
+					 const char * js, unsigned int len);
 
 bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
 
