@@ -40,7 +40,8 @@ enum {
 	MICROJS_STRINGS_UNSUPORTED,
 	MICROJS_MAX_NEST_LEVEL,
 	MICROJS_BRACKET_MISMATCH,
-	MICROJS_STRING_TOO_LONG
+	MICROJS_STRING_TOO_LONG,
+	MICROJS_INVALID_SYMBOL
 };
 
 /**********************************************************************
