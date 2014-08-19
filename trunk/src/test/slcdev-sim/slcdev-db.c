@@ -10,151 +10,99 @@
 #include "crc.h"
 #include "slcdev.h"
 
-/* 
-   {
-   "sensor": { 
-   "id" : 1, 
-   "model" : "2251TM", 
-   "desc" : "Multicriteria Photoelectric Smoke Detector", 
-   "pw1" : [280, 320],
-   "pw2" : [
-   ["Not In Remote Test", 280, 320],
-   ["In Remote Test", 560, 640],
-   ["Level 6 / Maintenance Alert Enabled", 840, 960],
-   ["Level 6 / Maintenance Alert Disabled", 1120, 1280],
-   ],
-   "pw3" : [560, 640],
-   "pw4" : [
-   ["Normal Photo", 748, 854],
-   ["Low Chamber Trouble", 140, 150],
-   ["Maintenance Urgent/Drift Limit", 280, 320],
-   ["Maintenance Alert", 410, 485],
-   ["Level 1 Alarm - 1% ft", 1308, 1494],
-   ["Level 2 Alarm - Acclimate 1% - 2%", 1680, 1920],
-   ["Level 3 Alarm 3 2%/ft.", 2052, 2346,],
-   ["Level 4 Alarm - Acclimate 2% - 4%", 2427, 2774],
-   ["Level 5 Alarm 4%/ft", 2800, 3200],
-   ["Level 6 Alarm Thermal Alarm (60°C, 135° Heat)", 
-   3250, 3600],
-   ],
-   "pw5" : [1910, 2240]
-   },
- */
-
-/*
-   "sensor": { 
-   "id" : 0, 
-   "model" : "Photo", 
-   "desc" : "Photoelectric Smoke Detector", 
-   "pw1" : [270, 330],
-   "pw2" : [
-   ["Remote test disabled", 270, 330],
-   ["Remote test enabled", 540, 660]
-   ],
-   "pw3" : [540, 660],
-   "pw4" : [
-   ["Normal", 618, 1068],
-   ["Trouble", 120, 660],
-   ["Smoke Alarm 1", 1260, 1775],
-   ["Smoke Alarm 2", 1775, 2395],
-   ["Smoke Alarm 3", 2395, 2800],
-   ["Thermal Alarm (57°C)", 2800, 3220],
-   ["Remote Test", 2800, 3200]
-   ],
-   "pw5" : [810, 990]
-   }, */
-
-static const struct pw_list db_photo_pw1 = {
-	.cnt = 1,
-	.pw = { 
-		[0] = {
-			.min = 270,
-			.max = 330,
-			.desc = 0
-		}
-	}
-};
-
-static const struct pw_list db_photo_pw2 = {
-	.cnt = 2,
-	.pw = { 
-		[0] = {
-			.min = 270,
-			.max = 330,
-			.desc = 3
-		}, 
-		[1] = {
-			.min = 540,
-			.max = 660,
-			.desc = 4
-		}
-	}
-};
-
-static const struct pw_list db_photo_pw3 = {
-	.cnt = 1,
-	.pw = { 
-		[0] = {
-			.min = 540,
-			.max = 660,
-			.desc = 0
-		}
-	}
-};
-
-static const struct pw_list db_photo_pw4 = {
-	.cnt = 4,
-	.pw = { 
-		[0] = {
-			.min = 618,
-			.max = 1068,
-			.desc = 5
-		},
-		[1] = {
-			.min = 120,
-			.max = 660,
-			.desc = 6
-		},
-		[2] = {
-			.min = 1260,
-			.max = 2880,
-			.desc = 7
-		},
-		[3] = { 
-			.min = 2880,
-			.max = 3220,
-			.desc = 8
-		}
-	}
-};
-
-static const struct pw_list db_photo_pw5 = {
-	.cnt = 1,
-	.pw = { 
-		[0] = {
-			.min = 810,
-			.max = 990,
-			.desc = 0
-		}
-	}
-};
-
-static const struct db_dev_model db_dev_photo = {
-	.len = sizeof(struct db_dev_model),
-	.type = DB_OBJ_SENSOR,
-	.id = 0,
-	.flags = 0,
-	.next = NULL,
-	.model = 1,
-	.desc = 2,
-	.pw1 = &db_photo_pw1, /* Reference Pulse Width */
-	.pw2 = &db_photo_pw2, /* Remote Test Status */
-	.pw3 = &db_photo_pw3, /* Manufacturer Code */
-	.pw4 = &db_photo_pw4, /* Analog */
-	.pw5 = &db_photo_pw5, /* Type Id */
-	.cmd = NULL,
-};
-
+const char db_default[] =
+	"\"sensor\": { \n"
+	" \"id\" : 0, \n"
+	" \"model\" : \"Photo\", \n"
+	" \"desc\" : \"Photoelectric Smoke Detector\", \n"
+	" \"pw1\" : [270, 330],\n"
+	" \"pw2\" : [\n"
+	"  [\"Remote test disabled\", 270, 330],\n"
+	"  [\"Remote test enabled\", 540, 660]\n"
+	" ],\n"
+	" \"pw3\" : [540, 660],\n"
+	" \"pw4\" : [\n"
+	"  [\"Normal\", 618, 1068],\n"
+	"  [\"Trouble\", 120, 660],\n"
+	"  [\"Smoke Alarm 1\", 1260, 1775],\n"
+	"  [\"Smoke Alarm 2\", 1775, 2395],\n"
+	"  [\"Smoke Alarm 3\", 2395, 2800],\n"
+	"  [\"Thermal Alarm (57°C)\", 2800, 3220],\n"
+	"  [\"Remote Test\", 2800, 3200]\n"
+	" ],\n"
+	" \"pw5\" : [810, 990]\n"
+	"},\n"
+	"\"sensor\": { \n"
+	" \"id\" : 1, \n"
+	" \"model\" : \"Ion\", \n"
+	" \"desc\" : \"Ionization Smoke Detector\", \n"
+	" \"pw1\" : [270, 330],\n"
+	" \"pw2\" : [\n"
+	"  [\"Remote test disabled\", 270, 330],\n"
+	"  [\"Remote test enabled\", 540, 660]\n"
+	" ],\n"
+	" \"pw3\" : [540, 660],\n"
+	" \"pw4\" : [\n"
+	"  [\"Normal\", 870, 930],\n"
+	"  [\"Low Chamber\", 120, 180],\n"
+	"  [\"High Chamber\", 260, 330],\n"
+	"  [\"Smoke Alarm 1\", 1260, 1775],\n"
+	"  [\"Smoke Alarm 2\", 1775, 2395],\n"
+	"  [\"Smoke Alarm 3\", 2395, 2800],\n"
+	"  [\"Remote Test\", 2130, 2880]\n"
+	" ],\n"
+	" \"pw5\" : [570, 630]\n"
+	"},\n"
+	"\"sensor\": { \n"
+	" \"id\" : 2, \n"
+	" \"model\" : \"Heat\", \n"
+	" \"desc\" : \"Heat Detector\", \n"
+	" \"pw1\" : [270, 330],\n"
+	" \"pw2\" : [\n"
+	"  [\"Remote test disabled\", 270, 330],\n"
+	"  [\"Remote test enabled\", 540, 660]\n"
+	" ],\n"
+	" \"pw3\" : [540, 660],\n"
+	" \"pw4\" : [\n"
+	"  [\"Normal, 25°C\", 1070, 1400],\n"
+	"  [\"Normal, 57.2°C\", 1895, 2110],\n"
+	"  [\"Heat Alarm 57.2°C\", 2110],\n"
+	"  [\"Remote Test\", 3270, 3330]\n"
+	" ],\n"
+	" \"pw5\" : [270, 330],\n"
+	" \"cmd\": [\n"
+	"  {\n"
+	"   \"tag\": \"LED on\",\n"
+	"   \"seq\": [\"0xx\"],\n"
+	"   \"js\": [ \"dev.led_on = true;\" ]\n"
+	"  },\n"
+	"  {\n"
+	"   \"tag\": \"LED off\",\n"
+	"   \"seq\": [\"1x0\"],\n"
+	"   \"js\": [ \"dev.led_on = false;\" ]\n"
+	"  },\n"
+	"  {\n"
+	"   \"tag\": \"LED blink\",\n"
+	"   \"seq\": [\"1x1\"],\n"
+	"   \"js\": [ \"dev.led_blink = true;\" ]\n"
+	"  },\n"
+	"  {\n"
+	"   \"tag\": \"Enable Type ID\",\n"
+	"   \"seq\": [\"x1x\"],\n"
+	"   \"js\": [ \"dev.pw5_en = true;\" ]\n"
+	"  },\n"
+	"  {\n"
+	"   \"tag\": \"Remote Test on\",\n"
+	"   \"seq\": [\"0x0\", \"0x0\"],\n"
+	"   \"js\": [ \"dev.test = true;\" ]\n"
+	"  },\n"
+	"  {\n"
+	"   \"tag\": \"Remote Test off\",\n"
+	"   \"seq\": [\"1x1\", \"1x1\"],\n"
+	"   \"js\": [ \"dev.test = false;\" ]\n"
+	"  }\n"
+	" ]\n"
+	"}\n";
 
 uint16_t db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
 uint16_t db_heap = 0;
@@ -593,22 +541,21 @@ static const struct microjs_attr_desc db_desc[] = {
 	{ "", 0, 0, 0, NULL},
 };
 
-#define JS_TOK_BUF_MAX (4096)
+#define JSON_TOK_BUF_MAX (4096)
 
-static struct db_obj * db_json_parse(const char * json, unsigned int len)
+static struct db_obj * db_json_parse(const char * text, unsigned int len)
 {
 	struct microjs_json_parser jsn;
-	struct microjs_tokenizer tkn;
-	uint8_t tok_buf[JS_TOK_BUF_MAX];
+	uint8_t tok_buf[JSON_TOK_BUF_MAX];
 	struct db_obj * root;
 
 	DCC_LOG(LOG_TRACE, "1. JSON tokenizer.");
 
-	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
+	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX);
 
 	/* parse the JASON file with the microjs tokenizer */
-	if (microjs_tokenize(&tkn, json, len) < 0) {
-		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
+	if (microjs_json_scan(&jsn, text, len) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
 		return NULL;
 	}
 
@@ -630,25 +577,8 @@ static struct db_obj * db_json_parse(const char * json, unsigned int len)
 		return NULL;
 	};
 
-#if 1
-	/* Initialize string table */
-	const_str_write("Smoke", sizeof("Smoke") - 1);
-	const_str_write("Photoelectric Smoke Detector", 
-					sizeof("Photoelectric Smoke Detector") - 1);
-	const_str_write("Remote test disabled", 
-					sizeof("Remote test disabled") - 1);
-	const_str_write("Remote test enabled", 
-					sizeof("Remote test enabled") - 1);
-	const_str_write("Normal", sizeof("Normal") - 1);
-	const_str_write("Trouble", sizeof("Trouble") - 1);
-	const_str_write("Alarm", sizeof("Alarm") - 1);
-	const_str_write("Remote Test", sizeof("Remote Test") - 1);
-
-#endif
 	/* initialize the database with default devices */
-	root = (struct db_obj *)&db_dev_photo;
-
-	microjs_json_init(&jsn, &tkn);
+	root = NULL;
 
 	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
 
@@ -837,11 +767,6 @@ int db_dev_model_index_by_name(unsigned int str_id)
 	}
 
 	return -1;
-}
-
-struct db_dev_model * db_dev_model_photo(void)
-{
-	return (struct db_dev_model *)&db_dev_photo;
 }
 
 struct db_dev_model * db_dev_model_by_index(unsigned int idx)
@@ -1035,19 +960,6 @@ static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 		fprintf(f, "CMD[%d]: \"%s\" %s\n", i, const_str(cmd->tag), s);	
 	}
 }
-
-/*
-static void ic_mode_dump(FILE * f, struct ic_entry * ic)
-{
-	if (ic == NULL) {
-		DCC_LOG(LOG_WARNING, "ic == NULL!");
-		return;
-	}
-
-	DCC_LOG1(LOG_TRACE, "ic=0x%08x", ic);
-	fprintf(f, "\t\"%s\": %d\n", const_str(ic->desc), ic->mode);	
-}
-*/
 
 static void sensor_dump(FILE * f, struct obj_sensor * sens)
 {

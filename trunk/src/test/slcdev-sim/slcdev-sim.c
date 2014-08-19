@@ -44,25 +44,21 @@ int slcdev_sim_set(void)
 	return 0;
 }
 
-#if 0
-/*
-	"tag": "LED on", "seq": ["0xx"],
-	"tag": "LED off", "seq": ["1x0"],
-	"tag": "LED blink", "seq": ["1x1"],
-	"tag": "Enable Type ID", "seq": ["x1x"],
-	"tag": "Remote Test on", "seq": ["0x0 0x0"],
-	"tag": "Remote Test off", "seq": ["1x1 1x1"],
-						if ((ctl & 0x4) == 0) {
-							dev->led = 1;
-						} else if ((ctl & 0x5) == 4) {
-							dev->led = 0;
-						}
-*/
-#endif
+void cmd_exec(struct ss_device * dev, struct db_dev_model * model, 
+			  struct microjs_script * cmd)
+{
+
+}
 
 static void simulate(struct ss_device * dev, struct db_dev_model * model)
 {
 	uint32_t ctl = dev->ctls;
+	struct cmd_list * lst;
+
+	if (model == NULL) {
+		DCC_LOG(LOG_TRACE, "Invalid model");
+		return;
+	}
 
 	/* LED state */
 	if ((ctl & 0x4) == 0) {
@@ -87,6 +83,18 @@ static void simulate(struct ss_device * dev, struct db_dev_model * model)
 		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
 		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
 	}
+
+	/* execute commands from the device model */
+	if ((lst = model->cmd) != NULL) {
+		int i;
+		for (i = 0; i < lst->cnt; ++i) {
+			struct cmd_entry * cmd = &lst->cmd[i];
+			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
+				DCC_LOG1(LOG_TRACE, "CMD[%d]", i);
+				cmd_exec(dev, model, cmd->script);
+			}
+		}
+	}
 }
 
 void __attribute__((noreturn)) sim_event_task(void)
@@ -96,14 +104,10 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct db_dev_model * model;
 
 	for (;;) {
-
 		event = slcdev_event_wait();
 		dev = slcdev_drv.dev;
 		/* get the model for this device */
-		if ((model = db_dev_model_by_index(dev->model)) == NULL) {
-			/* default to smoke detector */
-			model = db_dev_model_photo();
-		}
+		model = db_dev_model_by_index(dev->model);
 
 		if (event & SLC_EV_TRIG) {
 			DCC_LOG(LOG_TRACE, "trigger");

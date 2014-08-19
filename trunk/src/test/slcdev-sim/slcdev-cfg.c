@@ -486,40 +486,34 @@ static const struct microjs_attr_desc cfg_desc[] = {
 	{ "", 0, 0, 0, NULL},
 };
 
-#define JS_TOK_BUF_MAX 4096
+#define JSON_TOK_BUF_MAX 4096
 
 int config_compile(void)
 {
 	struct microjs_json_parser jsn;
-	struct microjs_tokenizer tkn;
-	uint8_t tok_buf[JS_TOK_BUF_MAX];
+	uint8_t tok_buf[JSON_TOK_BUF_MAX];
 	unsigned int json_crc;
 	int json_len;
-	char * js;
+	char * json_txt;
 	int ret;
 
 	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
 
-	js = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
-
-	json_len = microjs_json_root_len(js);
-	json_crc = crc16ccitt(0, js, json_len);
+	json_txt = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
+	json_len = microjs_json_root_len(json_txt);
+	json_crc = crc16ccitt(0, json_txt, json_len);
 	(void)json_crc;
 
-	DCC_LOG3(LOG_TRACE, "js=0x%08x len=%d crc=0x%04x", 
-			 js, json_len, json_crc);
+	DCC_LOG3(LOG_TRACE, "txt=0x%08x len=%d crc=0x%04x", 
+			 json_txt, json_len, json_crc);
 
-	microjs_tok_init(&tkn, tok_buf, JS_TOK_BUF_MAX);
+	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX);
 
 	/* parse the JASON file with the microjs tokenizer */
-	if ((ret = microjs_tokenize(&tkn, js, json_len)) < 0) {
+	if ((ret = microjs_json_scan(&jsn, json_txt, json_len)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
 		return ret;
 	}
-
-	//microjs_tok_dump(stdout, &tkn);
-
-	microjs_json_init(&jsn, &tkn);
 
 	if (microjs_json_get_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
 		DCC_LOG(LOG_ERROR, "root must be an object!");
