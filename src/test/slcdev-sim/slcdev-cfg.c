@@ -219,12 +219,13 @@ const struct cfg_type cfg_type_lut[] = {
 };
 
 const struct cfg_attr dev_attr_lut[] = {
-	BIT(  "enabled", struct ss_device, opt,  0),
-	BFIELD32("addr", struct ss_device, opt,  1, 9),
-	BIT(       "ap", struct ss_device, opt, 10),
-	BFIELD32("type", struct ss_device, opt, 11, 6),
-	{ "poll",    CFG_BIT,    17, offsetof(struct ss_device, opt) },
-	{ "model",   CFG_UINT8,  0, offsetof(struct ss_device, model) },
+	BFIELD32( "addr", struct ss_device, opt,  0, 9),
+	BFIELD32("model", struct ss_device, opt,  9, 6),
+	BIT(   "enabled", struct ss_device, opt, 15),
+	BIT(        "ap", struct ss_device, opt, 16),
+	BIT(       "led", struct ss_device, opt, 17),
+	BIT(     "pw5en", struct ss_device, opt, 18),
+	BIT(       "tst", struct ss_device, opt, 19),
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
 	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
 	{ "ipre",    CFG_UINT8,  0, offsetof(struct ss_device, ipre) },
@@ -407,7 +408,7 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 		/* disable the device prior to configuration */
 		dev->enabled = 0;
 
-		dev->mod_idx = mod_idx;
+		dev->model = mod_idx;
 		dev->pw1 = device_db_pw1_lookup(mod, 0, bias);
 		dev->pw2 = device_db_pw2_lookup(mod, 0, bias);
 		dev->pw3 = device_db_pw3_lookup(mod, 0, bias);

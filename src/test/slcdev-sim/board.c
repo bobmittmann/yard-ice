@@ -30,6 +30,18 @@
 
 struct io_drv io_drv;
 
+static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_mode_af(__gpio, __pin);
+}
+
+static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_mode_out(__gpio, __pin);
+}
+
+static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
+	return stm32_gpio_is_mode_af(__gpio, __pin);
+}
+
 const struct {
 	struct stm32_gpio * gpio;
 	int pin;
@@ -48,10 +60,22 @@ struct {
 
 #define IO_POLL_PERIOD_MS 16
 
+void led_on(unsigned int id)
+{
+	__led_on(led_io[id].gpio, led_io[id].pin);
+}
+
+void led_off(unsigned int id)
+{
+	__led_off(led_io[id].gpio, led_io[id].pin);
+}
+
+
+
 void led_flash(unsigned int id, unsigned int ms)
 {
 	led_drv.tmr[id] = ms / IO_POLL_PERIOD_MS;
-	led_on(led_io[id].gpio, led_io[id].pin);
+	__led_on(led_io[id].gpio, led_io[id].pin);
 }
 
 const uint8_t addr_sw_lut[] = {
@@ -106,7 +130,7 @@ void stm32_tim9_isr(void)
 	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
 	/* Sensor/Module Switch */
 	mod = (pb & (1 << 4)) ? 0 : 1;
-	addr += mod * 100;
+	addr += mod * 160;
 
 	if (addr != addr_prev) {
 		/* Debouncing */
@@ -148,7 +172,7 @@ void stm32_tim9_isr(void)
 		if (led_drv.tmr[i] == 0)
 			continue;
 		if (--led_drv.tmr[i] == 0) 
-			led_off(led_io[i].gpio, led_io[i].pin);
+			__led_off(led_io[i].gpio, led_io[i].pin);
 	}
 }
 
@@ -314,8 +338,8 @@ void lamp_test(void)
 	int i;
 
 	for (i = 0; i < 6; ++i) {
-		state = is_led_on(led_io[i].gpio, led_io[i].pin) ? (1 << i) : 0;
-		led_off(led_io[i].gpio, led_io[i].pin);
+		state = __is_led_on(led_io[i].gpio, led_io[i].pin) ? (1 << i) : 0;
+		__led_off(led_io[i].gpio, led_io[i].pin);
 	}
 
 	led_flash(0, 64);
@@ -330,7 +354,7 @@ void lamp_test(void)
 
 	for (i = 0; i < 6; ++i) {
 		if (state & (1 << i))
-			led_on(led_io[i].gpio, led_io[i].pin);
+			__led_on(led_io[i].gpio, led_io[i].pin);
 	}
 }
 

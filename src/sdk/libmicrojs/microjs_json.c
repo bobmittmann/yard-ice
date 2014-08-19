@@ -39,7 +39,7 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		}
 		if (jsn->tkn->tok[idx] == TOK_COLON) {
 			jsn->idx = ++idx;
-			DCC_LOG1(LOG_INFO, "<%d> :",idx);
+			DCC_LOG1(LOG_INFO, "<%d>:",idx);
 			return MICROJS_JSON_LABEL;
 		} else {
 			ret = MICROJS_JSON_STRING;
@@ -74,12 +74,12 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		if (val != NULL)
 			val->logic = true;
 		ret = MICROJS_JSON_BOOLEAN;
-		DCC_LOG(LOG_TRACE, "true");
+		DCC_LOG(LOG_INFO, "true");
 	} else if (tok >= TOK_FALSE) {
 		if (val != NULL)
 			val->logic = false;
 		ret = MICROJS_JSON_BOOLEAN;
-		DCC_LOG(LOG_TRACE, "false");
+		DCC_LOG(LOG_INFO, "false");
 	} else if (tok == TOK_RIGHTBRACE) {
 		ret = MICROJS_JSON_END_OBJECT;
 		DCC_LOG(LOG_INFO, "}");
@@ -87,7 +87,7 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		ret = MICROJS_JSON_END_ARRAY;
 		DCC_LOG(LOG_INFO, "]");
 	} else {
-		DCC_LOG(LOG_TRACE, "INVALID");
+		DCC_LOG(LOG_INFO, "INVALID");
 		return MICROJS_JSON_INVALID;
 	}
 
@@ -98,7 +98,7 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 	} else if ((tok != TOK_RIGHTBRACE) && 
 			   (tok != TOK_RIGHTBRACKET) && 
 			   (tok != TOK_EOF) ) {
-		DCC_LOG(LOG_TRACE, "INVALID");
+		DCC_LOG(LOG_INFO, "INVALID");
 		return MICROJS_JSON_INVALID;
 	} 
 
@@ -139,12 +139,13 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	DCC_LOG(LOG_INFO, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
+
 		int i;
 
 		for (i = 0; desc[i].parse != NULL; ++i) {
 			/* look for a decoder that matches the label */ 
 			if (strncmp(desc[i].key, val.str.dat, val.str.len) == 0) {
-				DCC_LOG1(LOG_TRACE, "%s:", desc[i].key);
+				DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
 				typ = microjs_json_get_val(jsn, &val);
 				if (typ != desc[i].type) {
 					/* the attribute type do not matches the decoder */
@@ -152,15 +153,18 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 					return -1;
 				}
 				p = (uint8_t *)ptr + desc[i].offs;
+
+				DCC_LOG1(LOG_INFO, "parse(p=0x%08x)", p);
+
 				if (desc[i].parse(jsn, &val, desc[i].opt, p) < 0) {
 					DCC_LOG(LOG_WARNING, "attribute parse error");
 					return -1;
 				}
-
+		
 				break;
 			}
 		}
-
+	
 		if (desc[i].parse == NULL) {
 			if (val.str.len == 1) {
 				DCC_LOG1(LOG_WARNING, "unsupported attribute: %c", 
@@ -186,7 +190,10 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		}
 
 		cnt++;
+	
+		DCC_LOG1(LOG_INFO, "3. cnt=%d", cnt);
 	}
+
 
 	if (typ == MICROJS_JSON_END_OBJECT) {
 		DCC_LOG(LOG_INFO, "}");
@@ -236,7 +243,7 @@ int microjs_const_str_enc(struct microjs_json_parser * jsn,
 
 	*sip = ret;
 
-	DCC_LOG1(LOG_TRACE, "<%d>", ret);
+	DCC_LOG1(LOG_INFO, "<%d>", ret);
 
 	return 0;
 }
