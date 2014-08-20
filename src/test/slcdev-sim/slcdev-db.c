@@ -555,7 +555,8 @@ static const struct microjs_attr_desc db_desc[] = {
 	{ "", 0, 0, 0, NULL},
 };
 
-#define JSON_TOK_BUF_MAX (4096)
+//#define JSON_TOK_BUF_MAX (4096)
+#define JSON_TOK_BUF_MAX 384
 
 const char * const db_label[] = {
 	"sensor",
@@ -581,14 +582,14 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 	struct microjs_json_parser jsn;
 	uint8_t tok_buf[JSON_TOK_BUF_MAX];
 	struct db_obj * root;
+	int ret;
 
 	DCC_LOG(LOG_TRACE, "1. JSON tokenizer.");
 
 	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, db_label);
 
-	/* parse the JASON file with the microjs tokenizer */
-	if (microjs_json_scan(&jsn, text, len) < 0) {
-		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
+	if (microjs_json_open(&jsn, text, len) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_open() failed!");
 		return NULL;
 	}
 
@@ -615,16 +616,46 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 
 	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
 
+#if 0
 	if (microjs_json_get_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
 		DCC_LOG(LOG_ERROR, "root must be an object!");
 		return NULL;
 	}
+
+	/* parse the JASON file with the microjs tokenizer */
+	if (microjs_json_scan(&jsn) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
+		return NULL;
+	}
+
+	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
 
 	/* decode the token stream */
 	if (microjs_json_parse_obj(&jsn, db_desc, &root) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return NULL;
 	}
+#else
+
+	/* skip to the object oppening to allow object by object parsing */
+	microjs_json_flush(&jsn);
+
+	/* parse the JASON file with the microjs tokenizer */
+	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
+		/* decode the token stream */
+		if (microjs_json_parse_obj(&jsn, db_desc, &root) < 0) {
+			DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+			return NULL;
+		}
+		microjs_json_flush(&jsn);
+	}
+
+	if (ret != MICROJS_EMPTY_STACK) {
+		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
+		return NULL;
+	}
+
+#endif
 
 	DCC_LOG2(LOG_TRACE, "5. done, root=0x%08x sp=0x%08x.", root, cm3_sp_get());
 
@@ -757,7 +788,9 @@ int device_db_compile(void)
 	DCC_LOG(LOG_TRACE, "1. compiling JSON file.");
 
 	if ((root = db_json_parse(json_txt, json_len)) == NULL) {
-		DCC_LOG(LOG_TRACE, "5. updating database info.");
+		DCC_LOG(LOG_ERROR, "db_json_parse() failed.");
+		printf("JSON file parse error!\n");
+		return -1;
 	}
 
 	DCC_LOG(LOG_TRACE, "5. updating database info.");

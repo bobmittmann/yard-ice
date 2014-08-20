@@ -669,9 +669,10 @@ int config_compile(void)
 	printf("Parsing JSON file...\n");
 
 	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, cfg_labels);
+	microjs_json_open(&jsn, json_txt, json_len);
 
 	/* parse the JASON file with the microjs tokenizer */
-	if ((ret = microjs_json_scan(&jsn, json_txt, json_len)) < 0) {
+	if ((ret = microjs_json_scan(&jsn)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
 		return ret;
 	}
