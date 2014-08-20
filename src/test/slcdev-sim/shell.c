@@ -464,31 +464,43 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 int cmd_config(FILE * f, int argc, char ** argv)
 {
-//	if (argc < 2)
-//		return SHELL_ERR_ARG_MISSING;
+	int ret = SHELL_ERR_ARG_INVALID;
 
-	if (argc == 1) {
-		config_dump(f);
-	}
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (argc == 1) 
+		return config_show_info(f);
 
 	if (argc == 2) {
 		if ((strcmp(argv[1], "compile") == 0) || 
 			(strcmp(argv[1], "c") == 0)) {
-			config_compile();
+			slcdev_stop();
+			ret = config_compile();
+			slcdev_resume();
 		} else if ((strcmp(argv[1], "erase") == 0) || 
 			(strcmp(argv[1], "e") == 0)) {
+			ret = config_erase();
+		} else if ((strcmp(argv[1], "load") == 0) || 
+			(strcmp(argv[1], "l") == 0)) {
+			slcdev_stop();
+			ret = config_load();
+			slcdev_resume();
+		} else if ((strcmp(argv[1], "save") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
 			config_erase();
+			ret = config_save();
 		}
 	}
 
-	return 0;
+	return ret;
 }
 
 int device_dump(FILE * f, int addr);
 int device_attr_set(int addr, const char * name, const char * val);
 int device_attr_print(FILE * f, int addr, const char * name);
 
-int cmd_dev(FILE * f, int argc, char ** argv)
+int cmd_module(FILE * f, int argc, char ** argv)
 {
 	int addr;
 
@@ -499,7 +511,34 @@ int cmd_dev(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	addr = strtoul(argv[1], NULL, 0);
-	if (addr > 319)
+	if (addr > 160)
+		return SHELL_ERR_ARG_INVALID;
+
+	addr += 160;
+
+	if (argc > 2) {
+		if (argc > 3)
+			return device_attr_set(addr, argv[2], argv[3]);
+		return device_attr_print(f, addr, argv[2]);
+	} else {
+		device_dump(f, addr);
+	}
+
+	return 0;
+}
+
+int cmd_sensor(FILE * f, int argc, char ** argv)
+{
+	int addr;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 4)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	addr = strtoul(argv[1], NULL, 0);
+	if (addr > 160)
 		return SHELL_ERR_ARG_INVALID;
 
 	if (argc > 2) {
@@ -613,12 +652,16 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
 
-	{ cmd_config, "config", "cfg", "[compile|stat]", 
-		"simulator configuration" },
+	{ cmd_config, "config", "cfg", "[compile|erase|load|save]", 
+		"configuration options" },
 
 	{ cmd_cat, "cat", "", "<filename>", "display file content" },
 
-	{ cmd_dev, "dev", "", "<addr> [attr [VAL]]", "get/set device attribute" },
+	{ cmd_module, "module", "mod", "<addr> [attr [VAL]]", 
+		"get/set module attribute" },
+
+	{ cmd_sensor, "sensor", "sens", "<addr> [attr [VAL]]", 
+		"get/set sensor attribute" },
 
 	{ cmd_ls, "ls", "", "<filename>", "list files" },
 

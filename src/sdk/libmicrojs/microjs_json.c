@@ -7,17 +7,18 @@
 #include "microjs-i.h"
 
 #include <sys/dcclog.h>
+#include <arch/cortex-m3.h>
 
-#ifndef JSON_LABEL_LEN_MAX 
-#define JSON_LABEL_LEN_MAX 20
+#ifndef JSON_LABEL_LST_MAX 
+#define JSON_LABEL_LST_MAX 40
 #endif
 
 #ifndef JSON_STRING_LEN_MAX 
-#define JSON_STRING_LEN_MAX 222
+#define JSON_STRING_LEN_MAX 200
 #endif
 
 #define JSON_TOK_STRING       (256 - JSON_STRING_LEN_MAX - 1)
-#define JSON_TOK_LABEL       (JSON_TOK_STRING - JSON_LABEL_LEN_MAX)
+#define JSON_TOK_LABEL       (JSON_TOK_STRING - JSON_LABEL_LST_MAX)
 
 #define JSON_TOK_EOF           0
 #define JSON_TOK_COMMA         1
@@ -31,31 +32,35 @@
 #define JSON_TOK_NULL          8
 #define JSON_TOK_TRUE          9
 
-#define JSON_TOK_INT8         10
-#define JSON_TOK_INT16        11 
-#define JSON_TOK_INT24        12
-#define JSON_TOK_INT32        13
+#define JSON_TOK_ZERO         10
+#define JSON_TOK_ONE          11
+
+#define JSON_TOK_INT8         12
+#define JSON_TOK_INT16        13 
+#define JSON_TOK_INT24        14
+#define JSON_TOK_INT32        15
 
 #define JSON_TOK_LAST         JSON_TOK_INT32
 
-#if (JSON_LABEL_LEN_MAX + JSON_STRING_LEN_MAX + JSON_TOK_LAST) > 255
-#error "(JSON_LABEL_LEN_MAX + JSON_STRING_LEN_MAX + JSON_TOK_LAST) > 255"
+#if (JSON_LABEL_LST_MAX + JSON_STRING_LEN_MAX + JSON_TOK_LAST) > 255
+#error "(JSON_LABEL_LST_MAX + JSON_STRING_LEN_MAX + JSON_TOK_LAST) > 255"
 #endif
 
-int microjs_json_init(struct microjs_json_parser * tkn, 
-					 uint8_t * tok, unsigned int size)
+int microjs_json_init(struct microjs_json_parser * jsn, 
+					 uint8_t * tok, unsigned int size,
+					 const char * const label[])
 {
-	tkn->cnt = 0;
-	tkn->offs = 0;
-	tkn->err = 0;
-	tkn->idx = 0;
-	tkn->size = size;
-	tkn->tok = tok;
-	tkn->js = NULL;
+	jsn->cnt = 0;
+	jsn->offs = 0;
+	jsn->err = 0;
+	jsn->idx = 0;
+	jsn->sp = size;
+	jsn->top = size;
+	jsn->tok = tok;
+	jsn->js = NULL;
+	jsn->lbl = label;
 
-	DCC_LOG2(LOG_TRACE, "tok=0x%08x size=%d", tok, size);
-
-	return 0;
+	DCC_LOG2(LOG_INFO, "tok=0x%08x size=%d", tok, size);
 
 	return 0;
 }
@@ -64,27 +69,28 @@ int microjs_json_init(struct microjs_json_parser * tkn,
 #define MICROJS_BRACKET_STACK_SIZE 32
 
 /* JSON lexer (scanner) */
-int microjs_json_scan(struct microjs_json_parser * tkn, 
+int microjs_json_scan(struct microjs_json_parser * jsn, 
 					 const char * js, unsigned int len)
 {
-	uint8_t bkt_tok[MICROJS_BRACKET_STACK_SIZE];
-	unsigned int bkt_sp;
-	unsigned int ltok;
 	unsigned int tok = JSON_TOK_NULL;
+	unsigned int ltok;
 	unsigned int i;
+	unsigned int cnt;
+	unsigned int sp;
 	int err;
 	int c;
 	
 	/* initialize token list */
-	tkn->cnt = 0;
-	/* set the base javascript file reference */
-	tkn->js = js;
-
-	DCC_LOG(LOG_TRACE, "parse start");
-	DCC_LOG1(LOG_TRACE, "script length = %d bytes.", len);
-
+	cnt = jsn->cnt;
 	/* initialize bracket matching stack pointer */
-	bkt_sp = 0;
+	sp = jsn->sp;
+
+	/* set the base javascript file reference */
+	jsn->js = js;
+
+	DCC_LOG(LOG_INFO, "parse start");
+	DCC_LOG1(LOG_INFO, "script length = %d bytes.", len);
+
 	for (i = 0; i < len; ) {
 
 		c = js[i];
@@ -94,7 +100,7 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 			continue;
 		}
 
-		DCC_LOG1(LOG_MSG, "c=0x%02x", c);
+		DCC_LOG1(LOG_INFO, "'%c'", c);
 
 		/* Quotes: copy verbatim */
 		if ((c == '\'') || (c == '\"')) {
@@ -124,16 +130,16 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 				goto error;
 			}
 
-			if ((tkn->size - tkn->cnt) < 3) {
+			if ((sp - cnt) < 3) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			tok = JSON_TOK_STRING;
-			tkn->tok[tkn->cnt++] = tok + j;
-			tkn->tok[tkn->cnt++] = offs;
-			tkn->tok[tkn->cnt++] = (offs >> 8);
+			jsn->tok[cnt++] = tok + j;
+			jsn->tok[cnt++] = offs;
+			jsn->tok[cnt++] = (offs >> 8);
 			continue;
 		}
 
@@ -144,14 +150,14 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 
 			/* check wether we have room to copy the symbol 
 			   to token buffer or not */
-			if ((tkn->size - tkn->cnt) < 8) {
+			if ((sp - cnt) < 8) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			j = 0;
-			s = (char *)&tkn->tok[tkn->cnt + 1];
+			s = (char *)&jsn->tok[cnt + 1];
 			do {
 				s[j++] = c;
 				if (++i == len)	
@@ -184,7 +190,7 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 		}
 
 		/* Number */
-		if (isdigit(c) || (c == '-'))  {
+		if (((c >= '0') && (c <= '9')) || (c == '-'))  {
 			int32_t val = 0;
 			bool neg = false;
 			if (c == '-') {
@@ -214,7 +220,7 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 				val = -val;
 			}	
 		
-			if ((tkn->size - tkn->cnt) < 5) {
+			if ((sp - cnt) < 5) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
@@ -222,51 +228,72 @@ int microjs_json_scan(struct microjs_json_parser * tkn,
 
 			if ((val & 0xffffff00) == 0) {
 				tok = JSON_TOK_INT8;
-				tkn->tok[tkn->cnt++] = tok;
-				tkn->tok[tkn->cnt++] = val;
+				jsn->tok[cnt++] = tok;
+				jsn->tok[cnt++] = val;
 				continue;
 			} 
 			
 			if ((val & 0xffff0000) == 0) {
 				tok = JSON_TOK_INT16;
-				tkn->tok[tkn->cnt++] = tok;
-				tkn->tok[tkn->cnt++] = val;
-				tkn->tok[tkn->cnt++] = val >> 8;
+				jsn->tok[cnt++] = tok;
+				jsn->tok[cnt++] = val;
+				jsn->tok[cnt++] = val >> 8;
 				continue;
 			}
 
 			if ((val & 0xffffff00) == 0) {
 				tok = JSON_TOK_INT24;
-				tkn->tok[tkn->cnt++] = tok;
-				tkn->tok[tkn->cnt++] = val;
-				tkn->tok[tkn->cnt++] = val >> 8;
-				tkn->tok[tkn->cnt++] = val >> 16;
+				jsn->tok[cnt++] = tok;
+				jsn->tok[cnt++] = val;
+				jsn->tok[cnt++] = val >> 8;
+				jsn->tok[cnt++] = val >> 16;
 				continue;
 			}
 
 			tok = JSON_TOK_INT32;
-			tkn->tok[tkn->cnt++] = tok;
-			tkn->tok[tkn->cnt++] = val;
-			tkn->tok[tkn->cnt++] = val >> 8;
-			tkn->tok[tkn->cnt++] = val >> 16;
-			tkn->tok[tkn->cnt++] = val >> 24;
+			jsn->tok[cnt++] = tok;
+			jsn->tok[cnt++] = val;
+			jsn->tok[cnt++] = val >> 8;
+			jsn->tok[cnt++] = val >> 16;
+			jsn->tok[cnt++] = val >> 24;
 			continue;
 		}
 	
 		switch (c) {
 		case ':':
 			if (tok == JSON_TOK_STRING) {
-				int len = tkn->tok[tkn->cnt - 3] - JSON_TOK_STRING;
-				if (len == 0) {
-					DCC_LOG(LOG_WARNING, "empty label");
-					err = MICROJS_EMPTY_LABEL;
-					goto error;
+				int n = jsn->tok[cnt - 3] - JSON_TOK_STRING;
+				int o = jsn->tok[cnt - 2] | (jsn->tok[cnt - 1] << 8);
+				char * lbl = (char *)jsn->js + o;
+				const char * cp;
+				int j;
+
+				DCC_LOG1(LOG_INFO, "label: %d", n);
+
+				for (j = 0; (cp = jsn->lbl[j]) != NULL; ++j) {
+					if ((strncmp(cp, lbl, n) == 0) && (strlen(cp) == n)) {
+						break;
+					}
 				}
-				tok = JSON_TOK_LABEL;
-				tkn->tok[tkn->cnt - 3] = tok + len - 1;
+
+				if (cp != NULL) {
+					DCC_LOG1(LOG_INFO, "%s:", cp);
+				} else {
+					/* not in the list of labels !!! */
+					DCC_LOG2(LOG_WARNING, "unlisted label: %c%c...", 
+							lbl[0], lbl[1]);
+				}
+
+				cnt -= 2; /* remove the string */
+				tok = JSON_TOK_LABEL; /* insert the label */
+				jsn->tok[cnt - 1] = tok + j;
+				i++;
+				continue;
+				
 			}
-			i++;
-			continue;
+			DCC_LOG(LOG_WARNING, "invalid label");
+			err = MICROJS_INVALID_LABEL;
+			goto error;
 		case ',':
 			i++;
 			continue;
@@ -295,43 +322,33 @@ inc_push:
 		i++;
 push:
 		/* push a token into the buffer */
-		if ((tkn->size - tkn->cnt) < 1) {
+		if ((sp - cnt) < 1) {
 			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
 			goto error;
 		}
-		tkn->tok[tkn->cnt++] = tok;
-
-		DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
+		jsn->tok[cnt++] = tok;
 	}
 
 	/* the matching bracket stack must be empty at this point */
-	if (bkt_sp != 0) {
+	if (sp != jsn->top) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
 	}
 
-	DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
-
-	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", tkn->cnt);
-	DCC_LOG(LOG_INFO, "parse done.");
-
-	return tkn->cnt;
+	DCC_LOG2(LOG_TRACE, "End Scan! (cnt=%d sp=0x%08x).", cnt, cm3_sp_get());
+	jsn->cnt = cnt;
+	jsn->sp = sp;
+	return cnt;
 
 bkt_push:
-	/* insert a brakcet into the stack */
-	if (bkt_sp == MICROJS_BRACKET_STACK_SIZE) {
-		DCC_LOG(LOG_WARNING, "maximum nesting level exceeded!");
-		err = MICROJS_MAX_NEST_LEVEL;
-		goto error;
-	}
-	bkt_tok[bkt_sp++] = tok;
+	jsn->tok[--sp] = tok;
 	goto inc_push;
 
 bkt_pop:
 	/* push a brakcet from the stack and check for matching pair */
-	if ((bkt_sp == 0) || (bkt_tok[--bkt_sp] != ltok)) {
+	if ((sp == jsn->top) || (jsn->tok[sp++] != ltok)) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
@@ -339,8 +356,8 @@ bkt_pop:
 	goto inc_push;
 
 error:
-	tkn->offs = i;
-	tkn->err = err;
+	jsn->offs = i;
+	jsn->err = err;
 
 	return -1;
 }
@@ -369,12 +386,11 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		ret = MICROJS_JSON_STRING;
 		DCC_LOG(LOG_INFO, "STRING");
 	} else if (tok >= JSON_TOK_LABEL) {
-		len = tok - JSON_TOK_LABEL + 1;
-		offs = jsn->tok[idx++];
-		offs |= jsn->tok[idx++] << 8;
+		int j = tok - JSON_TOK_LABEL;
+		const char * cp = jsn->lbl[j];
 		if (val != NULL) {
-			val->str.dat = (char *)jsn->js + offs;
-			val->str.len = len;
+			val->lbl.sz = cp;
+			val->lbl.id = j;
 		}
 		ret = MICROJS_JSON_LABEL;
 		DCC_LOG(LOG_INFO, "LABEL");
@@ -451,54 +467,42 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 						   void * ptr)
 {
 	struct microjs_val val;
-	uint8_t * p;
 	int cnt = 0;
 	int typ;
 
 	DCC_LOG(LOG_INFO, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
-
+		microjs_attr_parser_t parse = NULL;
 		int i;
 
-		for (i = 0; desc[i].parse != NULL; ++i) {
-			/* look for a decoder that matches the label */ 
-			if (strncmp(desc[i].key, val.str.dat, val.str.len) == 0) {
-				DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
-				typ = microjs_json_get_val(jsn, &val);
-				if (typ != desc[i].type) {
-					/* the attribute type do not matches the decoder */
-					DCC_LOG(LOG_WARNING, "attribute type mismatch");
-					return -1;
+		if (val.lbl.sz != NULL) {
+			for (i = 0; (parse = desc[i].parse) != NULL; ++i) {
+				/* look for a decoder that matches the label */ 
+				if (strcmp(desc[i].key, val.lbl.sz) == 0) {
+					break;
 				}
-				p = (uint8_t *)ptr + desc[i].offs;
-
-				DCC_LOG1(LOG_INFO, "parse(p=0x%08x)", p);
-
-				if (desc[i].parse(jsn, &val, desc[i].opt, p) < 0) {
-					DCC_LOG(LOG_WARNING, "attribute parse error");
-					return -1;
-				}
-		
-				break;
 			}
 		}
-	
-		if (desc[i].parse == NULL) {
-			if (val.str.len == 1) {
-				DCC_LOG1(LOG_WARNING, "unsupported attribute: %c", 
-						 val.str.dat[0]);
-			} else if (val.str.len == 2) {
-				DCC_LOG2(LOG_WARNING, "unsupported attribute: %c%c", 
-					 	val.str.dat[0], val.str.dat[1]);
-			} else if (val.str.len == 3) {
-				DCC_LOG3(LOG_WARNING, "unsupported attribute: %c%c%c", 
-					 	val.str.dat[0], val.str.dat[1], val.str.dat[2]);
-			} else {
-				DCC_LOG4(LOG_WARNING, "unsupported attribute: %c%c%c%c", 
-						 val.str.dat[0], val.str.dat[1],
-						 val.str.dat[2], val.str.dat[3]);
+
+		if (parse != NULL) {
+			uint8_t * p;
+
+			DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
+			typ = microjs_json_get_val(jsn, &val);
+			if (typ != desc[i].type) {
+				/* the attribute type do not matches the decoder */
+				DCC_LOG(LOG_WARNING, "attribute type mismatch");
+				return -1;
 			}
+
+			p = (uint8_t *)ptr + desc[i].offs;
+
+			if (desc[i].parse(jsn, &val, desc[i].opt, p) < 0) {
+				DCC_LOG(LOG_WARNING, "attribute parse error");
+				return -1;
+			}
+		} else {
 			/* skip unsupported attribute */
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ == MICROJS_JSON_ARRAY) {
@@ -509,8 +513,6 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		}
 
 		cnt++;
-	
-		DCC_LOG1(LOG_INFO, "3. cnt=%d", cnt);
 	}
 
 
@@ -523,14 +525,24 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	return -1;
 }
 
-/* Encode a 16bit integral value */
+/* Encode a 16 bits integral value */
 int microjs_u16_enc(struct microjs_json_parser * jsn, 
 					struct microjs_val * val, 
 					unsigned int opt, void * ptr)
 {
 	uint16_t * pval = (uint16_t *)ptr;
 	*pval = val->u32;
+	DCC_LOG2(LOG_INFO, "val=%d ptr=%08x", *pval, pval);
+	return 0;
+}
 
+/* Encode a 8 bits integral value */
+int microjs_u8_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int opt, void * ptr)
+{
+	uint8_t * pval = (uint8_t *)ptr;
+	*pval = val->u32;
 	DCC_LOG2(LOG_INFO, "val=%d ptr=%08x", *pval, pval);
 	return 0;
 }

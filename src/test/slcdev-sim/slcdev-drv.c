@@ -55,20 +55,19 @@ static void trig_init(void)
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
 }
 
-#define PW_RESPONSE_TIME (100 - 20)
-
 const struct ss_device null_dev = {
 	.addr = 0, /* reverse lookup address */
 	.model = 0, /* reference to a device model */
-	.enabled = 0, /* enable device simulation */
 	.ap = 0, /* advanced protocol */
+	.module = 0, /* sensor/module */
+	.enabled = 0, /* enable device simulation */
 	.led = 0, /* LED status */
 	.pw5en = 0, /* PW5 (Type ID) enabled */
 	.tst = 0, /* Remote test mode */
 	.tbias = 128,
 	.icfg = 0,
 	.ipre = 0,
-	.ilat = PW_RESPONSE_TIME,
+	.ilat = ILAT_DEFAULT,
 	.pw1 = 0,
 	.pw2 = 0,
 	.pw3 = 0,
@@ -80,20 +79,31 @@ void dev_sim_init(void)
 {
 	struct ss_device * dev;
 	int i;
+	int addr;
 
 	for (i = 0; i < SS_DEVICES_MAX; ++i) {
 		dev = &ss_dev_tab[i];
-		dev->addr = i, /* reverse lookup address */
-		dev->model = 0, /* reference to a device model */
-		dev->enabled = 0, /* enable device simulation */
-		dev->ap = 0, /* advanced protocol */
-		dev->led = 0, /* LED status */
-		dev->pw5en = 0, /* PW5 (Type ID) enabled */
-		dev->tst = 0, /* Remote test mode */
-		dev->tbias = 128,
+		if (i >= SS_MODULES_IDX) {
+			addr = i - SS_MODULES_IDX; /* reverse lookup address */
+			dev->module = 1; /* is a module */
+		} else {
+			addr = i;
+			dev->module = 0; /* is a sensor */
+		}
+		dev->addr = addr; /* reverse lookup address */
+		if (addr >= 100)
+			dev->ap = 1; /* force AP for higher addresses */
+		else
+			dev->ap = 0;
+		dev->model = 0; /* reference to a device model */
+		dev->enabled = 0; /* enable device simulation */
+		dev->led = 0; /* LED status */
+		dev->pw5en = 0; /* PW5 (Type ID) enabled */
+		dev->tst = 0; /* Remote test mode */
+		dev->tbias = 128;
 		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
-		dev->ipre = 35; /* preenphasis time */
-		dev->ilat = PW_RESPONSE_TIME,
+		dev->ipre = IPRE_DEFAULT; /* preenphasis time */
+		dev->ilat = ILAT_DEFAULT;
 		dev->pw1 = 300;
 		dev->pw2 = 300;
 		dev->pw3 = 900;
@@ -101,24 +111,6 @@ void dev_sim_init(void)
 		dev->pw5 = 300;
 	}
 
-	slcdev_drv.dev = (struct ss_device *)&null_dev;
-	slcdev_drv.addr = 0;
-}
-
-void dev_sim_enable(unsigned int addr)
-{
-	if (addr > 199) 
-		return;
-
-	ss_dev_tab[addr].enabled = true;
-}
-
-void dev_sim_disable(unsigned int addr)
-{
-	if (addr > 199) 
-		return;
-
-	ss_dev_tab[addr].enabled = false;
 }
 
 #define COMP1_EXTI (1 << 21)
@@ -583,8 +575,6 @@ static void slc_sense_init(void)
 	exti->imr |= COMP1_EXTI;
 
 	cm3_irq_pri_set(STM32_IRQ_COMP, IRQ_PRIORITY_HIGHEST);
-	/* Enable interrupt */
-	cm3_irq_enable(STM32_IRQ_COMP);
 
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM10);
@@ -598,16 +588,22 @@ static void slc_sense_init(void)
 	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
 
 	cm3_irq_pri_set(STM32_IRQ_TIM10, IRQ_PRIORITY_VERY_HIGH);
-	/* Enable interrupt */
-	cm3_irq_enable(STM32_IRQ_TIM10);
+}
+
+static void slcdev_reset(void)
+{
+	slcdev_drv.state = DEV_IDLE;
+	slcdev_drv.ev_bmp = 0;
+	slcdev_drv.dev = (struct ss_device *)&null_dev;
+	slcdev_drv.addr = 0;
 }
 
 void slcdev_init(void)
 {
-	slcdev_drv.state = DEV_IDLE;
-	slcdev_drv.dev = (struct ss_device *)&null_dev;
 	slcdev_drv.ev_flag = thinkos_flag_alloc();
-	slcdev_drv.ev_bmp = 0;
+
+	/* reset the driver state */
+	slcdev_reset();
 
 	trig_init();
 
@@ -616,5 +612,26 @@ void slcdev_init(void)
 	dev_sim_init();
 
 	DCC_LOG1(LOG_TRACE, "sizeof(ss_dev_tab) = %d bytes.", sizeof(ss_dev_tab));
+}
+
+void slcdev_stop(void)
+{
+	/* Enable interrupt */
+	cm3_irq_disable(STM32_IRQ_COMP);
+	/* Enable interrupt */
+	cm3_irq_disable(STM32_IRQ_TIM10);
+
+	thinkos_flag_clr(slcdev_drv.ev_flag);
+
+	/* reset the driver state */
+	slcdev_reset();
+}
+
+void slcdev_resume(void)
+{
+	/* Enable interrupt */
+	cm3_irq_enable(STM32_IRQ_COMP);
+	/* Enable interrupt */
+	cm3_irq_enable(STM32_IRQ_TIM10);
 }
 

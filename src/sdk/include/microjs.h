@@ -42,7 +42,7 @@ enum {
 	MICROJS_BRACKET_MISMATCH,
 	MICROJS_STRING_TOO_LONG,
 	MICROJS_INVALID_SYMBOL,
-	MICROJS_EMPTY_LABEL
+	MICROJS_INVALID_LABEL
 };
 
 /**********************************************************************
@@ -61,9 +61,13 @@ struct microjs_tokenizer {
 struct microjs_val {
 	union {
 		struct {
-			uint16_t len;
 			char * dat;
+			uint16_t len;
 		} str;
+		struct {
+			const char * sz;
+			uint8_t id;
+		} lbl;
 		uint32_t u32;	
 		int32_t i32;	
 		bool logic;
@@ -89,23 +93,30 @@ enum {
 };
 
 struct microjs_json_parser {
-	uint16_t cnt;  /* token count */
 	uint16_t idx;  /* token parser index */
+	uint16_t cnt;  /* token count */
+
 	uint16_t offs; /* lexer text offset */
-	uint16_t err; /* lexer error code */
-	uint16_t size; /* token buffer size */
+	uint16_t err;  /* lexer error code */
+
+	uint16_t sp;   /* token buffer stack pointer */
+	uint16_t top;  /* token buffer top pointer */
+
 	uint8_t * tok; /* token buffer reference */
 	const char * js;   /* base pointer (original js file) */
+	const char * const * lbl;   /* label table */
 };
+
+typedef int (* microjs_attr_parser_t)(struct microjs_json_parser * jsn, 
+									  struct microjs_val * val, 
+									  unsigned int opt, void * ptr);
 
 struct microjs_attr_desc {
 	char key[13];
 	uint8_t type;	
 	uint8_t opt;	
 	uint16_t offs;	
-	int (* parse)(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int opt, void * ptr);
+	microjs_attr_parser_t parse;
 };
 
 /**********************************************************************
@@ -136,11 +147,13 @@ int microjs_tok_dump(FILE * f, struct microjs_tokenizer * tkn);
 
 
 
+
 int microjs_json_init(struct microjs_json_parser * jsn, 
-					 uint8_t * tok, unsigned int size);
+					 uint8_t * tok, unsigned int size,
+					 const char * const label[]);
 
 int microjs_json_scan(struct microjs_json_parser * jsn, 
-					 const char * js, unsigned int len);
+					 const char * txt, unsigned int len);
 
 bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
 
@@ -166,10 +179,15 @@ char * const_str(int idx);
 int microjs_str_pool_dump(const struct microjs_str_pool * pool);
 
 
-/* Encode a 16bit integral value */
+/* Encode a 16 bits integral value */
 int microjs_u16_enc(struct microjs_json_parser * jsn, 
 					struct microjs_val * val, 
 					unsigned int opt, void * ptr);
+
+/* Encode an 8 bits integral value */
+int microjs_u8_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr);
 
 /* Encode a boolean as a single bit */
 int microjs_bit_enc(struct microjs_json_parser * jsn, 

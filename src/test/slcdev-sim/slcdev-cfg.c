@@ -9,6 +9,7 @@
 
 #include "crc.h"
 #include "slcdev.h"
+#include "isink.h"
 
 uint16_t cfg_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
 uint16_t cfg_heap = 0;
@@ -219,10 +220,11 @@ const struct cfg_type cfg_type_lut[] = {
 };
 
 const struct cfg_attr dev_attr_lut[] = {
-	BFIELD32( "addr", struct ss_device, opt,  0, 9),
-	BFIELD32("model", struct ss_device, opt,  9, 6),
-	BIT(   "enabled", struct ss_device, opt, 15),
-	BIT(        "ap", struct ss_device, opt, 16),
+	BFIELD32( "addr", struct ss_device, opt,  0, 8), /* RO */
+	BFIELD32("model", struct ss_device, opt,  8, 6), /* RO */
+	BIT(        "ap", struct ss_device, opt, 14),    /* RO */
+	BIT(    "module", struct ss_device, opt, 15),    /* RO */
+	BIT(   "enabled", struct ss_device, opt, 16),
 	BIT(       "led", struct ss_device, opt, 17),
 	BIT(     "pw5en", struct ss_device, opt, 18),
 	BIT(       "tst", struct ss_device, opt, 19),
@@ -332,11 +334,21 @@ int config_dump(FILE * f)
 
 	return 0;
 }
+/*
+#define CFG_MAGIC 0x90f93e9a
 
-int config_erase(void)
+struct cfg_info {
+	uint32_t magic;
+	uint16_t json_crc;
+	uint16_t json_len;
+	uint16_t dev_offs;
+	uint16_t dev_crc;
+};
+*/
+
+#if 0
 {
 	DCC_LOG1(LOG_TRACE, "configuration size = %d.", sizeof(struct devsim_cfg));
-#if 0
 	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
 	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
 	int ret;
@@ -349,8 +361,24 @@ int config_erase(void)
 	DCC_LOG(LOG_TRACE, "configuration erased!");
 
 	return ret;
-#endif
 	return 0;
+}
+#endif
+
+int config_erase(void)
+{
+	uint32_t blk_offs = FLASH_BLK_CFG_BIN_OFFS;
+	uint32_t blk_size = FLASH_BLK_CFG_BIN_SIZE;
+	int ret;
+
+	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
+		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
+		return ret;
+	};
+
+	DCC_LOG(LOG_TRACE, "configuration erased!");
+
+	return ret;
 }
 
 /* This is an auxiliarly structure for parsing the device 
@@ -364,6 +392,10 @@ struct cfg_device {
 		uint32_t bf_opt;	
 	};
 
+	uint8_t ilat;
+	uint8_t ipre;
+	uint8_t imode;
+	uint8_t irate;
 	uint8_t model;   /* reference to a device model */
 	uint8_t tbias;
 };
@@ -377,7 +409,8 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 	struct cfg_device * cdev = (struct cfg_device *)ptr;
 	struct ss_device * dev;
 	struct db_dev_model * mod;
-	int bias = cdev->tbias;
+	int tbias;
+	int icfg;
 	int cnt = 0;
 	int typ;
 	int addr;
@@ -391,6 +424,8 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 	}
 
 	mod = db_dev_model_by_index(mod_idx);
+	tbias = (cdev->tbias * 128) / 100;
+	icfg = (cdev->irate << 5) + (cdev->imode & 0x1f);
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
 		addr = val->u32;
@@ -409,11 +444,16 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 		dev->enabled = 0;
 
 		dev->model = mod_idx;
-		dev->pw1 = device_db_pw1_lookup(mod, 0, bias);
-		dev->pw2 = device_db_pw2_lookup(mod, 0, bias);
-		dev->pw3 = device_db_pw3_lookup(mod, 0, bias);
-		dev->pw4 = device_db_pw4_lookup(mod, 0, bias);
-		dev->pw5 = device_db_pw5_lookup(mod, 0, bias);
+		dev->pw1 = device_db_pw1_lookup(mod, 0, tbias);
+		dev->pw2 = device_db_pw2_lookup(mod, 0, tbias);
+		dev->pw3 = device_db_pw3_lookup(mod, 0, tbias);
+		dev->pw4 = device_db_pw4_lookup(mod, 0, tbias);
+		dev->pw5 = device_db_pw5_lookup(mod, 0, tbias);
+
+		dev->ilat = cdev->ilat;
+		dev->ipre = cdev->ipre;
+		dev->icfg = icfg;
+		dev->tbias = tbias;
 
 		/* enable the device per configuration */
 		dev->enabled = cdev->enabled;
@@ -432,6 +472,16 @@ static const struct microjs_attr_desc sensor_desc[] = {
 		microjs_const_str_enc },
 	{ "enabled", MICROJS_JSON_BOOLEAN, 0, offsetof(struct cfg_device, bf_opt),
 		microjs_bit_enc },
+	{ "ilat", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ilat),
+		microjs_u8_enc },
+	{ "ipre", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ipre),
+		microjs_u8_enc },
+	{ "irate", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, irate),
+		microjs_u8_enc },
+	{ "imode", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, imode),
+		microjs_u8_enc },
+	{ "tbias", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, tbias),
+		microjs_u8_enc },
 	{ "addr", MICROJS_JSON_ARRAY, 0, 0, cfg_device_addr_enc },
 	{ "", 0, 0, 0, NULL},
 };
@@ -448,7 +498,11 @@ int cfg_sensor_enc(struct microjs_json_parser * jsn,
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 0;
-	cdev.tbias = 128;
+	cdev.ilat = ILAT_DEFAULT;
+	cdev.ipre = IPRE_DEFAULT;
+	cdev.irate = ISINK_RATE_NORMAL >> 5;
+	cdev.imode = ISINK_CURRENT_NOM;
+	cdev.tbias = 100; /* 100 % */
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -470,7 +524,11 @@ int cfg_module_enc(struct microjs_json_parser * jsn,
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 1;
-	cdev.tbias = 128;
+	cdev.ilat = ILAT_DEFAULT;
+	cdev.ipre = IPRE_DEFAULT;
+	cdev.irate = ISINK_RATE_NORMAL >> 5;
+	cdev.imode = ISINK_CURRENT_NOM;
+	cdev.tbias = 100; /* 100 % */
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -488,6 +546,98 @@ static const struct microjs_attr_desc cfg_desc[] = {
 
 #define JSON_TOK_BUF_MAX 4096
 
+const char * const cfg_labels[] = {
+	"sensor",
+	"module",
+	"model",
+	"enabled",
+	"addr",
+	"pw1",
+	"pw2",
+	"pw3",
+	"pw4",
+	"pw5",
+	"irate",
+	"imode",
+
+	"ilat",
+	"ipre",
+	"tbias",
+	"tag",
+	"sw1",
+	"sw2",
+	"on",
+	"off",
+	"up",
+	"down",
+	"script",
+	NULL	
+};
+
+#define CFG_MAGIC 0xc01fe9da
+
+struct cfg_info {
+	uint32_t magic;
+	const char * json_txt;
+	uint16_t json_crc;
+	uint16_t json_len;
+	const void * tab_ptr;
+	uint16_t tab_size;
+	uint16_t tab_crc;
+};
+
+
+int dev_tab_save(struct cfg_info * inf)
+{
+	const void * ptr;
+	int offs;
+	int size;
+	int ret;
+
+	/* wrtie device table */
+	size = (sizeof(ss_dev_tab) + 3) & ~3;
+	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
+
+	if ((ret = stm32_flash_write(offs, ss_dev_tab, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return -1;
+	}
+
+	ptr = (const void *)(STM32_MEM_FLASH + offs);
+	inf->tab_crc = crc16ccitt(0, ptr, size);
+	inf->tab_size = size;
+	inf->tab_ptr = ptr;
+
+	return ret;
+}
+
+int cfg_info_write(const char * txt, unsigned int crc, unsigned int len)
+	
+{
+	struct cfg_info inf;
+	int offs;
+	int size;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	inf.magic = CFG_MAGIC;
+	inf.json_txt = txt;
+	inf.json_crc = crc;
+	inf.json_len = len;
+	if ((ret = dev_tab_save(&inf)) < 0)
+		return ret;
+
+	size = sizeof(struct cfg_info);
+	offs = FLASH_BLK_CFG_BIN_OFFS;
+
+	if ((ret = stm32_flash_write(offs, &inf, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+	}
+
+	return ret;
+}
+
 int config_compile(void)
 {
 	struct microjs_json_parser jsn;
@@ -495,6 +645,7 @@ int config_compile(void)
 	unsigned int json_crc;
 	int json_len;
 	char * json_txt;
+	struct cfg_info * inf;
 	int ret;
 
 	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
@@ -507,7 +658,17 @@ int config_compile(void)
 	DCC_LOG3(LOG_TRACE, "txt=0x%08x len=%d crc=0x%04x", 
 			 json_txt, json_len, json_crc);
 
-	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX);
+	/* check database integrity */
+	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
+	if ((inf->magic == CFG_MAGIC) && (inf->json_txt == json_txt) && 
+		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
+		printf("Configuration is up-to-date.\n");
+		return 0;
+	}
+
+	printf("Parsing JSON file...\n");
+
+	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, cfg_labels);
 
 	/* parse the JASON file with the microjs tokenizer */
 	if ((ret = microjs_json_scan(&jsn, json_txt, json_len)) < 0) {
@@ -526,6 +687,84 @@ int config_compile(void)
 		return ret;
 	}
 
-	return ret;
+	printf("Erasing old configuration ...\n");
+
+	if ((ret = config_erase()) < 0) {
+		DCC_LOG(LOG_ERROR, "config_erase() failed!");
+		return ret;
+	}
+
+	printf("Saving new configuration ...\n");
+
+	if ((ret = cfg_info_write(json_txt, json_crc, json_len)) < 0) {
+		DCC_LOG(LOG_ERROR, "cfg_info_write() failed!");
+		return ret;
+	}
+
+	return 0;
 }
 
+int config_load(void)
+{
+	struct cfg_info * inf;
+	unsigned int offs;
+	unsigned int size;
+	unsigned int crc;
+	const void * ptr;
+
+	/* check configuration integrity */
+	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
+	/* wrtie device table */
+	size = (sizeof(ss_dev_tab) + 3) & ~3;
+	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
+	ptr = (const void *)(STM32_MEM_FLASH + offs);
+	crc = crc16ccitt(0, ptr, size);
+
+	if ((inf->magic == CFG_MAGIC) && (inf->tab_ptr == ptr) && 
+		(inf->tab_crc == crc) && (inf->tab_size == size)) {
+		memcpy(ss_dev_tab, ptr, sizeof(ss_dev_tab));
+		return 0;
+	}
+
+	return -1;
+}
+
+int config_save(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return cfg_info_write(NULL, 0, 0);
+}
+
+int config_show_info(FILE * f)
+{
+	struct cfg_info * inf;
+	unsigned int offs;
+	unsigned int size;
+	unsigned int crc;
+	const void * ptr;
+
+	/* check configuration integrity */
+	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
+	/* wrtie device table */
+	size = (sizeof(ss_dev_tab) + 3) & ~3;
+	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
+	ptr = (const void *)(STM32_MEM_FLASH + offs);
+	crc = crc16ccitt(0, ptr, size);
+
+	fprintf(f, " Info: magic=0x%08x size=%d crc=0x%04x\n", inf->magic,
+			inf->tab_size, inf->tab_crc);
+	fprintf(f, " JSON: txt=0x%08x len=%d crc=0x%04x\n", 
+			(uint32_t)inf->json_txt, inf->json_len, inf->json_crc);
+
+	if ((inf->magic == CFG_MAGIC) && (inf->tab_ptr == ptr) && 
+		(inf->tab_crc == crc) && (inf->tab_size == size)) {
+		fprintf(f, "Ok.\n");
+		return 0;
+	}
+
+	fprintf(f, "Invalid configuration!\n");
+	fprintf(f, "Table: magic=0x%08x size=%d crc=0x%04x\n", 
+			(uint32_t)CFG_MAGIC, size, crc);
+
+	return -1;
+}

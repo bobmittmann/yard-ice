@@ -50,7 +50,7 @@ int const_str_write(const char * s, unsigned int len)
 	} 
 
 	if ((idx = microjs_str_lookup(pool, s, len)) >= 0) {
-		DCC_LOG2(LOG_TRACE, "match idx=%d len=%d", idx, len);
+		DCC_LOG2(LOG_INFO, "match idx=%d len=%d", idx, len);
 		return idx;
 	}
 
@@ -65,13 +65,17 @@ int microjs_str_pool_dump(const struct microjs_str_pool * pool)
 {
 	char * base = (char *)pool->base;
 	int offs;
+	int size = pool->top - base;
+	int free = size;
 	int i;
 
 	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
+		if (offs < free)
+			free = offs;
 		char * cstr = base + offs;
 		printf("%2d (%04x) \"%s\"\n", i, offs, cstr);
-
 	}
+	printf("- pool: size=%d free=%d\n", size, free);
 
 	return i;
 }

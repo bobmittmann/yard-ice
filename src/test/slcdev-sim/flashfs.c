@@ -44,6 +44,10 @@ const struct fs_blk flash_fs_dir[] = {
 	  .offs = FLASH_BLK_DEV_DB_BIN_OFFS,
 	  .size = FLASH_BLK_DEV_DB_BIN_SIZE  
 	},
+	{ .name = "cfg.bin", 
+	  .offs = FLASH_BLK_CFG_BIN_OFFS,
+	  .size = FLASH_BLK_CFG_BIN_SIZE  
+	},
 	{ .name = "devdb.js", 
 	  .offs = FLASH_BLK_DEV_DB_JSON_OFFS,
 	  .size = FLASH_BLK_DEV_DB_JSON_SIZE  
