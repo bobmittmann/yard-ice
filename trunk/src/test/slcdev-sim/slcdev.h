@@ -27,6 +27,14 @@
 #include <stdio.h>
 #include <thinkos.h>
 
+/* default current source (PW) latency */
+#define ILAT_DEFAULT (100 - 20)
+#define IPRE_DEFAULT 35
+
+/***************************************************************************
+  Simulation models 
+ ***************************************************************************/
+
 /***************************************************************************
   Device  Database
  ***************************************************************************/
@@ -55,6 +63,7 @@ struct cmd_entry {
 	struct cmd_seq seq;
 	uint8_t tag; /* The tag string */
 	uint8_t js[7]; /* The javascript lines */
+	void * script; /* Compiled javascrit bytecodes */
 };
 
 #define SLCDEV_CMD_LIST_LEN_MAX 12
@@ -65,37 +74,41 @@ struct cmd_list {
 };
 
 struct db_obj {
-	uint8_t len;
-	uint8_t type;
-	uint8_t id;
-	uint8_t flags;
+	uint16_t len;
+	uint16_t type;
 	struct db_obj * next;
 };
 
 struct db_info {
 	struct {
-		uint8_t len;
-		uint8_t type;
-		uint8_t id;
-		uint8_t flags;
+		uint16_t len;
+		uint16_t type;
 		struct db_obj * next;
 	};
-	uint16_t json_crc;
+	const char * json_txt;
 	uint16_t json_len;
+	uint16_t json_crc;
 	uint32_t obj_cnt;
 	struct db_obj * obj[];
 };
 
 struct db_dev_model {
 	struct {
-		uint8_t len;
-		uint8_t type;
-		uint8_t id;
-		uint8_t flags;
+		uint16_t len;
+		uint16_t type;
 		struct db_obj * next;
 	};
-	uint16_t model;	
-	uint16_t desc;	
+	union {
+		uint32_t opt;
+		struct {
+			uint32_t ap: 1;
+			uint32_t module: 1;
+		};
+	};
+	uint8_t model;	
+	uint8_t desc;	
+	uint8_t sim; /* Simulation algorithm */
+	uint8_t res;
 	const struct pw_list * pw1; /* Reference Pulse Width */
 	const struct pw_list * pw2; /* Remote Test Status */
 	const struct pw_list * pw3; /* Manufacturer Code */
@@ -106,14 +119,21 @@ struct db_dev_model {
 
 struct obj_module {
 	struct {
-		uint8_t len;
-		uint8_t type;
-		uint8_t id;
-		uint8_t flags;
+		uint16_t len;
+		uint16_t type;
 		struct db_obj * next;
 	};
-	uint16_t model;	
-	uint16_t desc;	
+	union {
+		uint32_t opt;
+		struct {
+			uint32_t ap: 1;
+			uint32_t module: 1;
+		};
+	};
+	uint8_t model;	
+	uint8_t desc;	
+	uint8_t sim; /* Simulation algorithm */
+	uint8_t res;
 	struct pw_list * pw1;
 	struct pw_list * pw2;
 	struct pw_list * pw3;
@@ -124,14 +144,21 @@ struct obj_module {
 
 struct obj_sensor {
 	struct {
-		uint8_t len;
-		uint8_t type;
-		uint8_t id;
-		uint8_t flags;
+		uint16_t len;
+		uint16_t type;
 		struct db_obj * next;
 	};
-	uint16_t model;	
-	uint16_t desc;	
+	union {
+		uint32_t opt;
+		struct {
+			uint32_t ap: 1;
+			uint32_t module: 1;
+		};
+	};
+	uint8_t model;	
+	uint8_t desc;	
+	uint8_t sim; /* Simulation algorithm */
+	uint8_t res;
 	struct pw_list * pw1;
 	struct pw_list * pw2;
 	struct pw_list * pw3;
@@ -155,23 +182,75 @@ enum {
 #define SLC_EV_TRIG (1 << 1)
 
 /***************************************************************************
-  Configuration
+  Runtime
  ***************************************************************************/
 
-struct cfg_slcdev {
-	uint32_t device_type : 7;
-	uint32_t advanced_protocol : 1;
+/* -------------------------------------------------------------------------
+ * Sysem Sensor device
+ * ------------------------------------------------------------------------- */
 
-	uint32_t enabled : 1;
-	uint32_t poll_flash : 1;
-	uint32_t isink_pulse_level : 4;
-	uint32_t isink_slewrate : 2;
+struct ss_device {
+	union {
+		struct {
+			uint32_t addr: 8;   /* reverse lookup address */
+			uint32_t model: 6; /* reference to a device model */
+			uint32_t ap : 1;    /* advanced protocol */
+			uint32_t module : 1; /* 1 = module, 0 = sensor */
 
-	uint32_t isink_width_err : 3;
-	uint32_t isink_latency : 5;  /* tm = (x + 1) * 5 ( 5us .. 160us) */
+			uint32_t enabled : 1; /* enable device simulation */
+			uint32_t led : 1; /* LED status */
+			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
+			uint32_t tst : 1; /* Remote test mode */
 
-	uint32_t isink_pulse_pre : 5; /* tm = (x + 1) * 5 ( 5us .. 160us) */
+			uint32_t f1 : 1; /* User flag */
+			uint32_t f2 : 1; /* User flag */
+			uint32_t f3 : 1; /* User flag */
+			uint32_t f4 : 1; /* User flag */
+
+			uint32_t usr3: 8;  /* User variable */
+		}; 
+		uint32_t opt;	
+	};
+
+    uint8_t tbias;  /* time accuracy multiplication factor */
+	uint8_t icfg;   /* current sink configuration */
+	uint8_t ipre;   /* current sink preenphasis time */
+	uint8_t ilat;   /* Current sink latency (PW reponse time) */
+
+	uint16_t pw1;   /* Reference Pulse Width */
+	uint16_t pw2;   /* Remote Test Status */
+
+	uint16_t pw3;   /* Manufacturer Code */
+	uint16_t pw4;   /* Analog */
+
+	uint16_t pw5;   /* Type Id */
+	uint16_t ctls;   /* consecutive polling sequence control bit pattern */
+
+	uint16_t usr1;  /* User variable */
+	uint16_t usr2;  /* User variable */
 };
+
+/* Control bits simulation trigger:
+ 
+   The control bit pattern triggers works by ...
+
+   Each bit control sequence (3 bits) is shifted in to the "ctln" and "ctls"
+   shift registers.
+   The difference between them is that "ctln" will shift in all incoming 
+   control bits regardless of the polling sequence, whereas the "ctls" will
+   shift only consecutive polling for the same device. The "ctls" will be 
+   cleared whenever a different device is addressed.
+ 
+ */
+
+#define SS_MODULES_IDX 160
+#define SS_DEVICES_MAX 320
+
+extern struct ss_device ss_dev_tab[SS_DEVICES_MAX];
+
+/***************************************************************************
+  Configuration
+ ***************************************************************************/
 
 enum {
 	SIM_NOP,
@@ -196,84 +275,6 @@ struct cfg_sw {
 	struct sim_insn off[CFG_SW_INSN_MAX];
 };
 
-struct cfg_info {
-	uint16_t json_crc;
-	uint16_t json_len;
-};
-
-struct devsim_cfg {
-	struct cfg_info info;
-
-	struct cfg_slcdev sensor[160];
-
-	struct cfg_slcdev module[160];
-
-	struct cfg_sw sw1;
-
-	struct cfg_sw sw2;
-
-	struct {
-		uint32_t opt;
-		struct sim_insn insn[32];
-	} zone[16];
-};
-
-
-/***************************************************************************
-  Runtime
- ***************************************************************************/
-
-/* -------------------------------------------------------------------------
- * Sysem Sensor device
- * ------------------------------------------------------------------------- */
-
-struct ss_device {
-	union {
-		struct {
-			uint32_t addr: 9; /* reverse lookup address */
-			uint32_t model : 6; /* reference to a device model */
-			uint32_t enabled : 1; /* enable device simulation */
-			uint32_t ap : 1; /* advanced protocol */
-			uint32_t led : 1; /* LED status */
-			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
-			uint32_t tst : 1; /* Remote test mode */
-		}; 
-		uint32_t opt;	
-	};
-
-
-    uint8_t tbias;  /* time accuracy multiplication factor */
-	uint8_t icfg;   /* current sink configuration */
-	uint8_t ipre;   /* current sink preenphasis time */
-	uint8_t ilat;   /* Current sink latency (PW reponse time) */
-
-	uint16_t pw1;   /* Reference Pulse Width */
-	uint16_t pw2;   /* Remote Test Status */
-	uint16_t pw3;   /* Manufacturer Code */
-
-	uint16_t pw4;   /* Analog */
-	uint16_t pw5;   /* Type Id */
-
-	uint16_t ctln;   /* non consecutive polling control bit pattern */
-	uint16_t ctls;   /* consecutive polling sequence control bit pattern */
-};
-
-/* Control bits simulation trigger:
- 
-   The control bit pattern triggers works by ...
-
-   Each bit control sequence (3 bits) is shifted in to the "ctln" and "ctls"
-   shift registers.
-   The difference between them is that "ctln" will shift in all incoming 
-   control bits regardless of the polling sequence, whereas the "ctls" will
-   shift only consecutive polling for the same device. The "ctls" will be 
-   cleared whenever a different device is addressed.
- 
- */
-
-#define SS_DEVICES_MAX 320
-
-extern struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
 /* -------------------------------------------------------------------------
  * SLC Device Driver 
@@ -352,17 +353,13 @@ static inline uint32_t slcdev_event_wait(void) {
 	return events;
 }
 
-void trig_addr_set(unsigned int addr);
-
-void trig_mode_set(unsigned int mode);
-
-unsigned int trig_addr_get(void);
-
 void slcdev_init(void);
+void slcdev_stop(void);
+void slcdev_resume(void);
 
-void dev_sim_enable(unsigned int addr);
-
-void dev_sim_disable(unsigned int addr);
+void trig_addr_set(unsigned int addr);
+void trig_mode_set(unsigned int mode);
+unsigned int trig_addr_get(void);
 
 int device_db_init(void);
 int device_db_erase(void);
@@ -370,8 +367,12 @@ int device_db_compile(void);
 int device_db_dump(FILE * f);
 
 int config_dump(FILE * f);
+
 int config_erase(void);
+int config_load(void);
+int config_save(void);
 int config_compile(void);
+int config_show_info(FILE * f);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
 
@@ -400,6 +401,20 @@ int device_db_pw5_lookup(struct db_dev_model * obj, unsigned int sel,
 						 unsigned int bias);
 
 void __attribute__((noreturn)) sim_event_task(void);
+
+int sensor_sim_lookup(const char * name, unsigned int len);
+
+int module_sim_lookup(const char * name, unsigned int len);
+
+int sensor_sim_default(void);
+
+int module_sim_default(void);
+
+const char * model_sim_name(unsigned int idx);
+
+void dev_sim_enable(unsigned int addr);
+
+void dev_sim_disable(unsigned int addr);
 
 #ifdef __cplusplus
 }

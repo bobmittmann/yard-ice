@@ -155,6 +155,8 @@ int main(int argc, char ** argv)
 	/* initilice the SLC device driver */
 	slcdev_init();
 
+	/* load configuration */
+	config_load();
 
 	/* create a thread to handle IO events like switches and
 	   address selection */
@@ -184,6 +186,8 @@ int main(int argc, char ** argv)
 #else
 	stderr = f;
 #endif
+
+	slcdev_resume();
 
 	/* start a shell on the serial TTY */
 	shell(f, shell_prompt, shell_greeting, cmd_tab);

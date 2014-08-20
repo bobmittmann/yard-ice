@@ -1,12 +1,28 @@
 {
 	"sensor" : { 
 		"model" : "2251TM",
-		"enabled" : true,
+		"enabled" : false,
 		"tag" : "smoke1",
+		"ilat" : 80,
+		"ipre" : 50,
+		"imode" : 3,
+		"irate" : 0,
 		"addr" : [ 
-			     1,  2,  3,  4,  5,  6,  7,  8,  9, 
+			     3,  4,  5,  6,  7,  8,  9, 
 			10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 		] 
+	},
+
+	"sensor" : { 
+		"model" : "2251TM",
+		"enabled" : true,
+		"tag" : "smoke1",
+		"ilat" : 80,
+		"ipre" : 50,
+		"imode" : 3,
+		"irate" : 0,
+		"tbias" : 125,
+		"addr" : [ 1 ] 
 	},
 
 	"sensor" : { 
@@ -35,9 +51,10 @@
 
 	"module" : { 
 		"model" : "M500R",
-		"enabled" : true,
+		"enabled" : false,
+		"tag" : "Relay 1",
 		"addr" : [ 
-			     1,  2,  3,  4,  5,  6,  7,  8,  9, 
+			     2,  3,  4,  5,  6,  7,  8,  9, 
 			10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
 			20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 			30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
@@ -49,6 +66,18 @@
 			90, 91, 92, 93, 94, 95, 96, 97, 98, 99 
 		] 
 	},
+
+	"module" : { 
+		"model" : "M500R",
+		"enabled" : true,
+		"tag" : "Relay 2",
+		"ilat" : 200,
+		"ipre" : 50,
+		"imode" : 0,
+		"irate" : 4,
+		"addr" : [ 1 ] 
+	},
+
 
 	"sw1": { 
 		"up" : [ 

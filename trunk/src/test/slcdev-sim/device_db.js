@@ -1,8 +1,8 @@
 {
 	"sensor": { 
-		"id" : 0, 
 		"model" : "Photo", 
 		"desc" : "Photoelectric Smoke Detector", 
+		"sim" : "photo", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -22,9 +22,9 @@
 	},
 
 	"sensor": { 
-		"id" : 1, 
 		"model" : "Ion", 
 		"desc" : "Ionization Smoke Detector", 
+		"sim" : "ion", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -44,9 +44,9 @@
 	},
 
 	"sensor": { 
-		"id" : 2, 
 		"model" : "Heat", 
 		"desc" : "Heat Detector", 
+		"sim" : "heat", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -95,9 +95,9 @@
 	},
 
 	"sensor": { 
-		"id" : 3, 
 		"model" : "2251TM", 
 		"desc" : "Multicriteria Photoelectric Smoke Detector", 
+		"sim" : "acclimate", 
 		"pw1" : [280, 320],
 		"pw2" : [
 			["Not In Remote Test", 280, 320],
@@ -123,8 +123,8 @@
 	},
 
 	"sensor": { 
-		"id" : 4, 
 		"model" : "2251 COPTIR", 
+		"sim" : "coptir", 
 		"desc" : "Multicriteria Smoke Detector", 
 		"pw1" : ["Reference", 285, 315],
 		"pw2" : [
@@ -155,9 +155,9 @@
 	},
 
 	"sensor": { 
-		"id" : 5, 
 		"model" : "1251", 
 		"desc" : "Ionization Smoke Detector", 
+		"sim" : "ion", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -185,9 +185,9 @@
 	},
 
 	"sensor": { 
-		"id" : 6, 
 		"model" : "5251P", 
 		"desc" : "Heat Detector", 
+		"sim" : "heat", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -203,9 +203,9 @@
 	},
 
 	"sensor": { 
-		"id" : 7, 
 		"model" : "5251T", 
 		"desc" : "Heat Detector", 
+		"sim" : "heat", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -221,9 +221,9 @@
 	},
 
 	"module": { 
-		"id": 8, 
 		"model": "M500S", 
 		"desc": "Supervised Control Module", 
+		"sim" : "control", 
 		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
@@ -243,9 +243,9 @@
 	},
 
 	"module": { 
-		"id": 9, 
 		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
+		"sim" : "mini", 
 		"pw1": [240, 360], 
 		"pw2": ["Normal", 240, 360 ],
 		"pw3": [
@@ -262,10 +262,10 @@
 	},
 
 	"module": { 
-		"id": 10, 
 		"model": "M500M", 
 		"ap": false,
 		"desc": "Monitor Module", 
+		"sim" : "monitor", 
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Normal", 240, 360],
@@ -285,8 +285,8 @@
 	},
 
 	"module": { 
-		"id": 11, 
 		"model": "M500R", 
+		"sim" : "relay", 
 		"desc": "Relay Control Module", 
 		"pw1": [240, 360],
 		"pw2": [
@@ -299,8 +299,8 @@
 	},
 
 	"module": { 
-		"id": 12, 
 		"model": "M500FP", 
+		"sim" : "phone", 
 		"desc": "AOM-Tel Firephone Module", 
 		"pw1": [240, 360],
 		"pw2": [
@@ -317,8 +317,8 @@
 	},
 
 	"sensor": { 
-		"id": 13, 
 		"model": "BEAM200", 
+		"sim" : "beam", 
 		"desc": "200 Series Beam Detector",
 		"pw1": [300],
 		"pw2": [
