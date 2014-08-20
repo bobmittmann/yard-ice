@@ -21,19 +21,17 @@
 #define JSON_TOK_LABEL       (JSON_TOK_STRING - JSON_LABEL_LST_MAX)
 
 #define JSON_TOK_EOF           0
-#define JSON_TOK_COMMA         1
-#define JSON_TOK_COLON         2
-#define JSON_TOK_LEFTBRACKET   3 
-#define JSON_TOK_RIGHTBRACKET  4
-#define JSON_TOK_LEFTBRACE     5
-#define JSON_TOK_RIGHTBRACE    6
+#define JSON_TOK_STOP          1
+#define JSON_TOK_NULL          2
+#define JSON_TOK_LEFTBRACE     3
+#define JSON_TOK_LEFTBRACKET   4 
+#define JSON_TOK_RIGHTBRACE    5
+#define JSON_TOK_RIGHTBRACKET  6
 
 #define JSON_TOK_FALSE         7
-#define JSON_TOK_NULL          8
-#define JSON_TOK_TRUE          9
+#define JSON_TOK_TRUE          8
 
-#define JSON_TOK_ZERO         10
-#define JSON_TOK_ONE          11
+#define JSON_TOK_ZERO          9
 
 #define JSON_TOK_INT8         12
 #define JSON_TOK_INT16        13 
@@ -51,32 +49,73 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 					 const char * const label[])
 {
 	jsn->cnt = 0;
-	jsn->offs = 0;
-	jsn->err = 0;
+	jsn->off = 0;
 	jsn->idx = 0;
 	jsn->sp = size;
 	jsn->top = size;
 	jsn->tok = tok;
-	jsn->js = NULL;
+	jsn->txt  = NULL;
+	jsn->len = 0;
 	jsn->lbl = label;
 
+	memset(jsn->tok, JSON_TOK_EOF, jsn->top);
 	DCC_LOG2(LOG_INFO, "tok=0x%08x size=%d", tok, size);
 
 	return 0;
 }
 
+int microjs_json_open(struct microjs_json_parser * jsn, 
+					  const char * txt, unsigned int len)
+{
+	int ret = MICROJS_EMPTY_FILE;
+	int c;
+	int i;
 
-#define MICROJS_BRACKET_STACK_SIZE 32
+	/* set the base javascript file reference */
+	jsn->txt = txt;
+	jsn->len = len;
+
+	/* search for the initial oppening braces */
+	for (i = 0; i < len; i++) {
+		c = txt[i];
+		if (isspace(c)) /* Remove lead blanks */
+			continue;
+
+		if (c != '{') {
+			DCC_LOG(LOG_WARNING, "left brace expected");
+			ret = MICROJS_OBJECT_EXPECTED;
+		} else {
+			i++;
+			/* insert oppening brace into heap */
+			jsn->tok[jsn->cnt++] = JSON_TOK_LEFTBRACE;
+			/* push closing brace into stack */
+			jsn->tok[--jsn->sp] = JSON_TOK_RIGHTBRACE;
+			ret = MICROJS_OK;
+		}
+		break;
+	}
+
+	jsn->off = i;
+
+	return ret;
+}
+
+void microjs_json_flush(struct microjs_json_parser * jsn)
+{
+	jsn->cnt = 0;
+	jsn->sp = jsn->top;
+	jsn->idx = 0;
+}
 
 /* JSON lexer (scanner) */
-int microjs_json_scan(struct microjs_json_parser * jsn, 
-					 const char * js, unsigned int len)
+int microjs_json_scan(struct microjs_json_parser * jsn)
 {
 	unsigned int tok = JSON_TOK_NULL;
-	unsigned int ltok;
-	unsigned int i;
 	unsigned int cnt;
 	unsigned int sp;
+	unsigned int i;
+	unsigned int len;
+	const char * txt;
 	int err;
 	int c;
 	
@@ -84,16 +123,15 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 	cnt = jsn->cnt;
 	/* initialize bracket matching stack pointer */
 	sp = jsn->sp;
-
-	/* set the base javascript file reference */
-	jsn->js = js;
+	txt = jsn->txt;
+	len = jsn->len;
 
 	DCC_LOG(LOG_INFO, "parse start");
 	DCC_LOG1(LOG_INFO, "script length = %d bytes.", len);
 
-	for (i = 0; i < len; ) {
+	for (i = jsn->off; i < len; ) {
 
-		c = js[i];
+		c = txt[i];
 		/* Remove lead blanks */
 		if (isspace(c)) {
 			i++;
@@ -116,7 +154,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 					err = MICROJS_UNCLOSED_STRING;
 					goto error;
 				}
-				c = js[i];
+				c = txt[i];
 				if (c == qt) {
 					i++;
 					break;
@@ -162,7 +200,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 				s[j++] = c;
 				if (++i == len)	
 					break;
-				c = js[i];
+				c = txt[i];
 			} while (isalnum(c) || (c == '_'));
 			s[j++] = '\0';
 
@@ -199,7 +237,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 					goto error;
 				}	
 				neg = true;
-				c = js[i];
+				c = txt[i];
 				if (!isdigit(c))  { 
 					err = MICROJS_UNEXPECTED_CHAR;
 					goto error;
@@ -213,7 +251,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 				val += c - '0';
 				if (++i == len)	
 					break;
-				c = js[i];
+				c = txt[i];
 			} while (isdigit(c));
 
 			if (neg) {
@@ -264,7 +302,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 			if (tok == JSON_TOK_STRING) {
 				int n = jsn->tok[cnt - 3] - JSON_TOK_STRING;
 				int o = jsn->tok[cnt - 2] | (jsn->tok[cnt - 1] << 8);
-				char * lbl = (char *)jsn->js + o;
+				char * lbl = (char *)txt + o;
 				const char * cp;
 				int j;
 
@@ -299,17 +337,19 @@ int microjs_json_scan(struct microjs_json_parser * jsn,
 			continue;
 		case '[':
 			tok = JSON_TOK_LEFTBRACKET;
-			goto bkt_push;
-		case ']':
-			tok = JSON_TOK_RIGHTBRACKET;
-			ltok = JSON_TOK_LEFTBRACKET;
-			goto bkt_pop;
+			/* push closing bracket into stack */
+			jsn->tok[--sp] = JSON_TOK_RIGHTBRACKET;
+			break;
 		case '{':
 			tok = JSON_TOK_LEFTBRACE;
-			goto bkt_push;
+			/* push closing brace into stack */
+			jsn->tok[--sp] = JSON_TOK_RIGHTBRACE;
+			break;
+		case ']':
+			tok = JSON_TOK_RIGHTBRACKET;
+			goto bkt_pop;
 		case '}':
 			tok = JSON_TOK_RIGHTBRACE;
-			ltok = JSON_TOK_LEFTBRACE;
 			goto bkt_pop;
 		default:
 			DCC_LOG1(LOG_WARNING, "invalid character: '%c'.", c);
@@ -337,29 +377,49 @@ push:
 		goto error;
 	}
 
+end:
 	DCC_LOG2(LOG_TRACE, "End Scan! (cnt=%d sp=0x%08x).", cnt, cm3_sp_get());
 	jsn->cnt = cnt;
 	jsn->sp = sp;
-	return cnt;
+	jsn->off = i;
 
-bkt_push:
-	jsn->tok[--sp] = tok;
-	goto inc_push;
+	return MICROJS_OK;
 
 bkt_pop:
 	/* push a brakcet from the stack and check for matching pair */
-	if ((sp == jsn->top) || (jsn->tok[sp++] != ltok)) {
+	if (sp == jsn->top) {
+		DCC_LOG(LOG_WARNING, "bracket stack empty!");
+		err = MICROJS_EMPTY_STACK;
+		goto error;
+	}
+
+	if (jsn->tok[sp++] != tok) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
 	}
+
+	if (sp == jsn->top) {
+		DCC_LOG(LOG_TRACE, "topmost object end!");
+		i++;
+
+		/* push a token into the buffer */
+		if ((sp - cnt) < 2) {
+			DCC_LOG(LOG_WARNING, "token buffer overflow!");
+			err = MICROJS_TOKEN_BUF_OVF;
+			goto error;
+		}
+		jsn->tok[cnt++] = tok;
+		jsn->tok[cnt++] = JSON_TOK_STOP;
+		goto end;
+	}
+
 	goto inc_push;
 
 error:
-	jsn->offs = i;
-	jsn->err = err;
+	jsn->off = i;
 
-	return -1;
+	return err;
 }
 
 /* JSON Parser */
@@ -367,7 +427,7 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 						 struct microjs_val * val)
 {
 	unsigned int offs;
-	uint32_t x;
+	int32_t x;
 	int idx;
 	int tok;
 	int len;
@@ -380,11 +440,10 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		offs = jsn->tok[idx++];
 		offs |= jsn->tok[idx++] << 8;
 		if (val != NULL) {
-			val->str.dat = (char *)jsn->js + offs;
+			val->str.dat = (char *)jsn->txt + offs;
 			val->str.len = len;
 		}
 		ret = MICROJS_JSON_STRING;
-		DCC_LOG(LOG_INFO, "STRING");
 	} else if (tok >= JSON_TOK_LABEL) {
 		int j = tok - JSON_TOK_LABEL;
 		const char * cp = jsn->lbl[j];
@@ -393,7 +452,6 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 			val->lbl.id = j;
 		}
 		ret = MICROJS_JSON_LABEL;
-		DCC_LOG(LOG_INFO, "LABEL");
 	} else if (tok >= JSON_TOK_INT8) {
 		x = jsn->tok[idx++];
 		if (tok >= JSON_TOK_INT16) {
@@ -407,35 +465,16 @@ int microjs_json_get_val(struct microjs_json_parser * jsn,
 		if (val != NULL)
 			val->u32 = x;
 		ret = MICROJS_JSON_INTEGER;
-		DCC_LOG(LOG_INFO, "int");
-	} else if (tok == JSON_TOK_LEFTBRACE) {
-		DCC_LOG1(LOG_INFO, "<%d> {",idx);
-		jsn->idx = idx;
-		return MICROJS_JSON_OBJECT;
-	} else if (tok == JSON_TOK_LEFTBRACKET) {
-		DCC_LOG(LOG_INFO, "[");
-		jsn->idx = idx;
-		return MICROJS_JSON_ARRAY;
 	} else if (tok >= JSON_TOK_TRUE) {
 		if (val != NULL)
 			val->logic = true;
 		ret = MICROJS_JSON_BOOLEAN;
-		DCC_LOG(LOG_INFO, "true");
 	} else if (tok >= JSON_TOK_FALSE) {
 		if (val != NULL)
 			val->logic = false;
 		ret = MICROJS_JSON_BOOLEAN;
-		DCC_LOG(LOG_INFO, "false");
-	} else if (tok == JSON_TOK_RIGHTBRACE) {
-		ret = MICROJS_JSON_END_OBJECT;
-		DCC_LOG(LOG_INFO, "}");
-	} else if (tok == JSON_TOK_RIGHTBRACKET) {
-		ret = MICROJS_JSON_END_ARRAY;
-		DCC_LOG(LOG_INFO, "]");
-	} else {
-		DCC_LOG(LOG_INFO, "INVALID");
-		return MICROJS_JSON_INVALID;
-	}
+	} else
+		ret = tok;
 
 	jsn->idx = idx;
 
@@ -470,7 +509,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	int cnt = 0;
 	int typ;
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
 		microjs_attr_parser_t parse = NULL;
@@ -503,6 +542,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 				return -1;
 			}
 		} else {
+			DCC_LOG(LOG_WARNING, "unsupported attribute");
 			/* skip unsupported attribute */
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ == MICROJS_JSON_ARRAY) {
@@ -515,9 +555,13 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		cnt++;
 	}
 
-
 	if (typ == MICROJS_JSON_END_OBJECT) {
 		DCC_LOG(LOG_INFO, "}");
+		return cnt;
+	}
+
+	if (typ == MICROJS_JSON_STOP) {
+		DCC_LOG(LOG_INFO, ".");
 		return cnt;
 	}
 
@@ -592,4 +636,73 @@ int microjs_json_root_len(const char * js)
 
 	return (ep - js) + 1; 
 }
+
+#if 0
+int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn)
+{
+	unsigned int offs;
+	int lvl = 0;
+	int idx;
+	int tok;
+	int len;
+	int j;
+
+	for (idx = 0; idx < jsn->cnt; ) {
+		tok = jsn->tok[idx++];
+		if (tok >= JSON_TOK_STRING) {
+			char buf[JSON_STRING_LEN_MAX + 1];
+			len = tok - JSON_TOK_STRING;
+			offs = jsn->tok[idx++];
+			offs |= jsn->tok[idx++] << 8;
+			memcpy(buf, (char *)jsn->txt + offs, len);
+			buf[len] = '\0';
+			fprintf(f, "\"%s\" ", buf);
+		} else if (tok >= JSON_TOK_LABEL) {
+			const char * cp = jsn->lbl[tok - JSON_TOK_LABEL];
+			fprintf(f, "\"%s\":", cp);
+		} else if (tok >= JSON_TOK_INT8) {
+			int32_t x;
+			x = jsn->tok[idx++];
+			if (tok >= JSON_TOK_INT16) {
+				x |= jsn->tok[idx++] << 8;
+				if (tok == JSON_TOK_INT24) {
+					x |= jsn->tok[idx++] << 16;
+					if (tok >= JSON_TOK_INT32)
+						x |= jsn->tok[idx++] << 24;
+				}
+			} 
+			fprintf(f, "%d ", x);
+		} else if (tok == JSON_TOK_LEFTBRACE) {
+			fprintf(f, "{\n");
+			lvl++;
+			for (j = 0; j < lvl; ++j)
+				fprintf(f, "    ");
+		} else if (tok == JSON_TOK_RIGHTBRACE) {
+			fprintf(f, "}\n");
+			lvl--;
+			for (j = 0; j < lvl; ++j)
+				fprintf(f, "    ");
+		} else if (tok == JSON_TOK_LEFTBRACKET) {
+			fprintf(f, "[ ");
+		} else if (tok == JSON_TOK_RIGHTBRACKET) {
+			fprintf(f, "] ");
+		} else if (tok >= JSON_TOK_TRUE) {
+			fprintf(f, "true ");
+		} else if (tok >= JSON_TOK_FALSE) {
+			fprintf(f, "false ");
+		} else if (tok >= JSON_TOK_NULL) {
+			fprintf(f, "null ");
+		} else if (tok >= JSON_TOK_STOP) {
+			fprintf(f, "<STOP>\n");
+		} else if (tok >= JSON_TOK_EOF) {
+			fprintf(f, "<EOF>\n");
+		} else {
+			fprintf(f, "<<ERROR>>>\n");
+			return -1;
+		}
+	}
+
+	return 0;
+}
+#endif
 

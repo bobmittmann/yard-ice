@@ -31,18 +31,21 @@
 #include <stdbool.h>
 
 enum {
-	MICROJS_ERR_NONE = 0,
-	MICROJS_UNEXPECTED_CHAR,
-	MICROJS_TOKEN_BUF_OVF,
-	MICROJS_UNCLOSED_STRING,
-	MICROJS_UNCLOSED_COMMENT,
-	MICROJS_INVALID_LITERAL,
-	MICROJS_STRINGS_UNSUPORTED,
-	MICROJS_MAX_NEST_LEVEL,
-	MICROJS_BRACKET_MISMATCH,
-	MICROJS_STRING_TOO_LONG,
-	MICROJS_INVALID_SYMBOL,
-	MICROJS_INVALID_LABEL
+	MICROJS_OK                 = 0,
+	MICROJS_UNEXPECTED_CHAR    = -1,
+	MICROJS_TOKEN_BUF_OVF      = -3,
+	MICROJS_UNCLOSED_STRING    = -4,
+	MICROJS_UNCLOSED_COMMENT   = -5,
+	MICROJS_INVALID_LITERAL    = -6,
+	MICROJS_STRINGS_UNSUPORTED = -7,
+	MICROJS_MAX_NEST_LEVEL     = -8,
+	MICROJS_BRACKET_MISMATCH   = -9,
+	MICROJS_STRING_TOO_LONG    = -10,
+	MICROJS_INVALID_SYMBOL     = -11,
+	MICROJS_INVALID_LABEL      = -12,
+	MICROJS_OBJECT_EXPECTED    = -13,
+	MICROJS_EMPTY_FILE         = -14,
+	MICROJS_EMPTY_STACK        = -15
 };
 
 /**********************************************************************
@@ -79,31 +82,32 @@ struct microjs_val {
  **********************************************************************/
 
 enum {
-	MICROJS_JSON_INVALID = 0,
-	MICROJS_JSON_OBJECT,
-	MICROJS_JSON_ARRAY,
-	MICROJS_JSON_LABEL,
-	MICROJS_JSON_INTEGER,
-	MICROJS_JSON_FLOAT,
-	MICROJS_JSON_STRING,
-	MICROJS_JSON_BOOLEAN,
-	MICROJS_JSON_COMMA,
-	MICROJS_JSON_END_ARRAY,
-	MICROJS_JSON_END_OBJECT
+	MICROJS_JSON_EOF        = 0,
+	MICROJS_JSON_STOP       = 1,
+	MICROJS_JSON_NULL       = 2,
+	MICROJS_JSON_OBJECT     = 3,
+	MICROJS_JSON_ARRAY      = 4,
+	MICROJS_JSON_END_OBJECT = 5,
+	MICROJS_JSON_END_ARRAY  = 6,
+	MICROJS_JSON_BOOLEAN    = 7,
+	MICROJS_JSON_INTEGER    = 8,
+	MICROJS_JSON_LABEL      = 9,
+	MICROJS_JSON_STRING     = 10,
+	MICROJS_JSON_INVALID    = 11
 };
 
 struct microjs_json_parser {
 	uint16_t idx;  /* token parser index */
 	uint16_t cnt;  /* token count */
 
-	uint16_t offs; /* lexer text offset */
-	uint16_t err;  /* lexer error code */
-
 	uint16_t sp;   /* token buffer stack pointer */
-	uint16_t top;  /* token buffer top pointer */
+	uint16_t top;  /* token buffer top pointer (size of the token buufer) */
+	uint8_t * tok; /* token buffer */
 
-	uint8_t * tok; /* token buffer reference */
-	const char * js;   /* base pointer (original js file) */
+	uint16_t off;  /* lexer text offset */
+	uint16_t len;  /* lexer text length */
+	const char * txt;   /* base pointer (original json txt file) */
+
 	const char * const * lbl;   /* label table */
 };
 
@@ -152,8 +156,20 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 					 uint8_t * tok, unsigned int size,
 					 const char * const label[]);
 
-int microjs_json_scan(struct microjs_json_parser * jsn, 
+int _microjs_json_scan(struct microjs_json_parser * jsn, 
 					 const char * txt, unsigned int len);
+
+int microjs_json_open(struct microjs_json_parser * jsn, 
+					  const char * txt, unsigned int len);
+
+int microjs_json_skip(struct microjs_json_parser * jsn, const char * s);
+
+int microjs_json_scan(struct microjs_json_parser * jsn);
+
+/* flushes the token buffer, but keep track of the file scanning */
+void microjs_json_flush(struct microjs_json_parser * jsn);
+
+int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn);
 
 bool microjs_json_expect(struct microjs_json_parser * jsn, unsigned int type);
 
