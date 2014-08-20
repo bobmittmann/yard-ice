@@ -227,7 +227,17 @@ void stm32_tim10_isr(void)
 
 			if (++slcdev_drv.bit_cnt == 13) {
 				unsigned int msg = slcdev_drv.msg;
+				unsigned int lo;
+				unsigned int hi;
 				unsigned int parity;
+
+				lo = (msg >> 5) & 0xf;
+				hi = (msg >> 1) & 0xf;
+				
+				if ((lo == 0x03) || (lo == 0x0d)) {
+					/* AP protocol */
+					slcdev_drv.state = DEV_MSG_AP;
+				}
 
 				parity = parity_lut[msg & 0xf] ^ 
 					parity_lut[(msg >> 4) & 0xf] ^ 
@@ -236,9 +246,9 @@ void stm32_tim10_isr(void)
 				if (parity == (msg >> 12)) {
 					unsigned int addr;
 					unsigned int mod;
+
 					mod = msg & 1;
-					addr = 10 * addr_lut[(msg >> 1) & 0xf] + 
-						addr_lut[(msg >> 5) & 0xf];
+					addr = 10 * addr_lut[hi] + addr_lut[lo];
 					addr = addr + (mod * 100);
 
 					/* trigger module */
@@ -265,7 +275,7 @@ void stm32_tim10_isr(void)
 					}
 
 					if (dev->enabled) {
-						unsigned int ctl = slcdev_drv.msg & 0x7;
+						unsigned int ctl = (msg >> 9) & 0x7;
 						/* shift the control bits into the sequence register */
 						dev->ctls <<= 3;
 						dev->ctls |= ctl;
@@ -297,6 +307,13 @@ void stm32_tim10_isr(void)
 					slcdev_drv.state = DEV_PARITY_ERROR;
 					DCC_LOG(LOG_INFO, "[PARITY ERR]");
 				}
+			}
+			break;
+
+		case DEV_MSG_AP:
+			slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
+			if (++slcdev_drv.bit_cnt == 17) {
+				DCC_LOG(LOG_TRACE, "[AP]");
 			}
 			break;
 
@@ -412,7 +429,13 @@ void stm32_comp_tsc_isr(void)
 			break;
 
 		default:
-			tim->arr = 150;
+			/* 150 us time for bit decoding. The bit time specified
+			 by System Sensor is a minimum of 250us and a maximum of
+			 2000us. The recomended bit value is 300us.
+			 Reading the bit at 150us seems to be a good compromise.
+			 Although reading a little further could help 
+			 with slow or noisy lines...*/
+			tim->arr = 150; 
 			break;
 		}
 

@@ -314,21 +314,22 @@ enum {
 	DEV_INACTIVE_STOP_WAIT,
 
 	DEV_PARITY_ERROR,
-	DEV_PW_ABORT
+	DEV_PW_ABORT,
 
+	DEV_MSG_AP
 };
 
 struct slcdev_drv {
-	int8_t ev_flag;
-	uint8_t ev_bmp;
-	uint8_t trig_en;
-	uint8_t bit_cnt;
-	uint16_t msg;
-	uint16_t trig_addr;
-	unsigned int state;
-	unsigned int addr;
+	uint16_t addr; /* current polled device address */
+	uint16_t trig_addr; /* trigger module address */
+	uint8_t trig_en; /* trigger mudule enabled status */
+	int8_t ev_flag; /*event flag */
+	uint8_t ev_bmp; /* event bitmap */
+	uint8_t bit_cnt; /* message bit count */
+	uint32_t msg; /* message data from the pannel */
+	unsigned int state; /* decoder state */
 	struct ss_device * volatile dev;
-} ;
+};
 
 extern struct slcdev_drv slcdev_drv;
 
