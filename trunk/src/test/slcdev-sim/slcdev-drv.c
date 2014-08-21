@@ -130,6 +130,34 @@ static const uint8_t addr_lut[16] = {
 	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
 };
 
+static unsigned int ap_chksum(unsigned int msg)
+{
+	unsigned int x;
+	unsigned int y;
+
+	x = (msg << 1) & 0xfffe;
+	y = (x >> 2) & 0x3333;
+	x &= 0x3333;
+	x += y;
+	x &= 0x3333;
+	y = x >> 8;
+	x += y;
+	x &= 0x0033;
+	y = x >> 4;
+	x += y;
+
+	return x & 0x0003;
+}
+
+/* default latency for current sink in AP mode */
+#define DEV_AP_ILAT_DEFAULT 50
+/* default current sink preenphasys time in AP mode */
+#define DEV_AP_IPRE_DEFAULT 35
+/* default current sink pulse time in AP mode */
+#define DEV_AP_IPULSE_DEFAULT 200 
+/* default current sink mode */
+#define DEV_AP_ICFG_DEFAULT (ISINK_CURRENT_NOM | ISINK_RATE_NORMAL)
+
 /* Current sink pulse timer 
    This ISR is invoked at the end of the current pulse */
 void stm32_tim4_isr(void)
@@ -163,6 +191,11 @@ void stm32_tim4_isr(void)
 	case DEV_PW5_PULSE:
 		slcdev_drv.state = DEV_PW5_END_WAIT;
 		DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
+		break;
+
+	case DEV_AP_ERR_PULSE:
+		slcdev_drv.state = DEV_AP_ERR_END_WAIT;
+		DCC_LOG(LOG_WARNING, "[AP ERR END WAIT]");
 		break;
 
 	default:
@@ -236,7 +269,7 @@ void stm32_tim10_isr(void)
 				
 				if ((lo == 0x03) || (lo == 0x0d)) {
 					/* AP protocol */
-					slcdev_drv.state = DEV_MSG_AP;
+					slcdev_drv.state = DEV_AP_HDR;
 				}
 
 				parity = parity_lut[msg & 0xf] ^ 
@@ -289,7 +322,7 @@ void stm32_tim10_isr(void)
 								 mod ? "MODULE" : "SENSOR", addr);
 
 						/* program the current sink */ 
-						isink_mode_set(slcdev_drv.dev->icfg);
+						isink_mode_set(dev->icfg);
 
 						/* signal the simulator */
 						slcdev_drv.ev_bmp |= SLC_EV_SIM;
@@ -310,10 +343,93 @@ void stm32_tim10_isr(void)
 			}
 			break;
 
-		case DEV_MSG_AP:
+		case DEV_AP_HDR:
+			/* AP header decoder */
 			slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
 			if (++slcdev_drv.bit_cnt == 17) {
+				unsigned int msg = slcdev_drv.msg;
+				unsigned int sum;
+
 				DCC_LOG(LOG_TRACE, "[AP]");
+				sum = ap_chksum(msg);
+				if (sum == (msg >> 15)) {
+					unsigned int lo;
+					unsigned int hi;
+					unsigned int pm;
+					unsigned int addr;
+					unsigned int mod;
+
+					pm = (msg >> 8) & 0xf;
+					lo = (msg >> 8) & 0xf;
+					hi = (msg >> 2) & 0xf;
+				
+					if (pm == 0x03) {
+						/* direct poll */
+					} else if (pm == 0x0d) {
+					}
+
+					mod = msg & 1;
+					addr = 10 * addr_lut[hi] + addr_lut[lo];
+					addr = addr + (mod * 100);
+
+					DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
+
+					/* trigger module */
+					if ((addr == slcdev_drv.trig_addr) && 
+						(slcdev_drv.trig_en)) {
+						slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+						trig_out_set();
+						__thinkos_flag_signal(slcdev_drv.ev_flag);
+						trig_out_clr();
+						/* */
+						DCC_LOG2(LOG_INFO, "Match %s=%d", 
+								 mod ? "MODULE" : "SENSOR", addr);
+					}
+
+					/* */
+					if (addr != slcdev_drv.addr) {
+						dev = &ss_dev_tab[addr];
+						slcdev_drv.addr = addr;
+						slcdev_drv.dev = dev;
+					} else {
+						DCC_LOG(LOG_INFO, "Consecutive pooling");
+					}
+
+					if ((dev->enabled) && (dev->ap)) {
+						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
+								 mod ? "MODULE" : "SENSOR", addr);
+
+						/* program the current sink */ 
+						isink_mode_set(slcdev_drv.dev->icfg);
+
+						/* signal the simulator */
+						slcdev_drv.ev_bmp |= SLC_EV_SIM;
+						__thinkos_flag_signal(slcdev_drv.ev_flag);
+
+						/* skip error report bit */
+						slcdev_drv.state = DEV_AP_HDR_OK;
+					} else {
+						slcdev_drv.state = DEV_INACTIVE_START_WAIT;
+						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
+					}
+				} else {
+					DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
+					slcdev_drv.state = DEV_AP_CHECKSUM_ERROR;
+					DCC_LOG(LOG_INFO, "[AP CHECKSUM ERR]");
+					/* FIXME: program the current sink */ 
+					isink_mode_set(DEV_AP_ICFG_DEFAULT);
+				}
+			}
+			break;
+
+		case DEV_AP_HDR_OK:
+			if (dev->alm) {
+				/* send the alarm bit */
+				slcdev_drv.state = DEV_AP_ALARM_START_WAIT;
+				DCC_LOG(LOG_INFO, "[AP ALARM WAIT START]");
+			} else {
+				slcdev_drv.state = DEV_INACTIVE_START_WAIT;
+				DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
 			}
 			break;
 
@@ -346,10 +462,16 @@ void stm32_tim10_isr(void)
 			break;
 
 		case DEV_PW5_RESPONSE_TIME:
-			/* respond with PW5 by request only */
+			/* PW5 */
 			isink_pulse(dev->ipre, dev->pw5); 
 			slcdev_drv.state = DEV_PW5_PULSE;
 			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
+			break;
+
+		case DEV_AP_ERR_LATENCY:
+			isink_pulse(DEV_AP_IPRE_DEFAULT, DEV_AP_IPULSE_DEFAULT); 
+			slcdev_drv.state = DEV_AP_ERR_PULSE;
+			DCC_LOG1(LOG_INFO, "[AP ERR PULSE %d us]", DEV_AP_IPULSE_DEFAULT);
 			break;
 		}
 	}
@@ -428,6 +550,14 @@ void stm32_comp_tsc_isr(void)
 			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
 			break;
 
+		case DEV_AP_CHECKSUM_ERROR:
+			/* FIXME: make AP ilat programable */
+			tim->arr = DEV_AP_ILAT_DEFAULT;
+			/* Error report latency */
+			slcdev_drv.state = DEV_AP_ERR_LATENCY;
+			DCC_LOG(LOG_INFO, "[AP ERR LATENCY]");
+			break;
+
 		default:
 			/* 150 us time for bit decoding. The bit time specified
 			 by System Sensor is a minimum of 250us and a maximum of
@@ -483,6 +613,13 @@ void stm32_comp_tsc_isr(void)
 			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 
+		case DEV_AP_ERR_END_WAIT:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			slcdev_drv.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
+			break;
+
 		case DEV_PW1_PULSE: /* aborted */
 			isink_stop();
 			tim->arr = 10;
@@ -521,6 +658,14 @@ void stm32_comp_tsc_isr(void)
 			DCC_LOG(LOG_WARNING, "PW5 abort! [RECOVER TIME]");
 			break;
 
+		case DEV_AP_ERR_PULSE:
+			isink_stop();
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			slcdev_drv.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "AP error pulse abort! [RECOVER TIME]");
+			break;
+
 		case DEV_PW1_RESPONSE_TIME:
 			tim->arr = 10;
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
@@ -554,6 +699,13 @@ void stm32_comp_tsc_isr(void)
 			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 			slcdev_drv.state = DEV_RECOVER_TIME;
 			DCC_LOG(LOG_WARNING, "PW5 guard abort! [RECOVER TIME]");
+			break;
+
+		case DEV_AP_CHECKSUM_ERROR:
+			tim->arr = 10;
+			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+			slcdev_drv.state = DEV_RECOVER_TIME;
+			DCC_LOG(LOG_WARNING, "AP checksum error abort! [RECOVER TIME]");
 			break;
 
 		case DEV_PARITY_ERROR:

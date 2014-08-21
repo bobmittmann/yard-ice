@@ -202,10 +202,10 @@ struct ss_device {
 			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
 			uint32_t tst : 1; /* Remote test mode */
 
-			uint32_t f1 : 1; /* User flag */
-			uint32_t f2 : 1; /* User flag */
-			uint32_t f3 : 1; /* User flag */
-			uint32_t f4 : 1; /* User flag */
+			uint32_t alm : 1; /* Alarm flag */
+			uint32_t tbl : 1; /* Trouble flag */
+			uint32_t sup : 1; /* Supervisory flag */
+			uint32_t mon : 1; /* Monitor flag */
 
 			uint32_t usr3: 8;  /* User variable */
 		}; 
@@ -316,7 +316,14 @@ enum {
 	DEV_PARITY_ERROR,
 	DEV_PW_ABORT,
 
-	DEV_MSG_AP
+	DEV_AP_HDR,
+	DEV_AP_HDR_OK,
+	DEV_AP_CHECKSUM_ERROR,
+	DEV_AP_ERR_LATENCY,
+	DEV_AP_ERR_PULSE,
+	DEV_AP_ERR_END_WAIT,
+
+	DEV_AP_ALARM_START_WAIT,
 };
 
 struct slcdev_drv {
