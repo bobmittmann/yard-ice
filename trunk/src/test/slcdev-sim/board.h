@@ -91,8 +91,11 @@ enum {
 struct io_drv {
 	int8_t flag;
 	volatile uint8_t sw;
-	volatile uint16_t addr;
-	volatile uint32_t event;
+	volatile uint8_t addr;
+	volatile uint8_t event;
+	uint8_t addr_prev;
+	uint8_t sw_prev;
+	uint8_t led_tmr[6];
 };
 
 extern struct io_drv io_drv;

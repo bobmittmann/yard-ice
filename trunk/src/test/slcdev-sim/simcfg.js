@@ -2,13 +2,13 @@
 	"sensor" : { 
 		"model" : "2251TM",
 		"enabled" : false,
-		"tag" : "smoke1",
+		"tag" : "smoke0",
 		"ilat" : 80,
 		"ipre" : 50,
 		"imode" : 3,
 		"irate" : 0,
 		"addr" : [ 
-			     3,  4,  5,  6,  7,  8,  9, 
+			     4,  5,  6,  7,  8,  9, 
 			10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 		] 
 	},
@@ -17,18 +17,36 @@
 		"model" : "2251TM",
 		"enabled" : true,
 		"tag" : "smoke1",
-		"ilat" : 80,
-		"ipre" : 50,
-		"imode" : 3,
-		"irate" : 0,
-		"tbias" : 125,
+		"ilat" : 50,
+		"ipre" : 35,
+		"imode" : 2,
+		"irate" : 3,
+		"tbias" : 100
 		"addr" : [ 1 ] 
 	},
 
 	"sensor" : { 
 		"model" : "2251TM",
-		"enabled" : false,
+		"enabled" : true,
 		"tag" : "smoke2",
+		"ilat" : 100,
+		"ipre" : 70,
+		"imode" : 3,
+		"irate" : 0,
+		"tbias" : 105,
+		"addr" : [ 2 ] 
+	},
+
+	"sensor" : { 
+		"model" : "Photo",
+		"enabled" : true,
+		"addr" : [ 3 ]
+	},
+
+	"sensor" : { 
+		"model" : "2251TM",
+		"enabled" : false,
+		"tag" : "smoke3",
 		"addr" : [ 
 			20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
 			30, 31, 32, 33, 34, 35, 36, 37, 38, 39,

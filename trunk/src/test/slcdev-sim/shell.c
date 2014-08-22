@@ -220,6 +220,7 @@ int cmd_ls(FILE * f, int argc, char ** argv)
 int cmd_trig(FILE * f, int argc, char ** argv)
 {
 	unsigned int addr;
+	bool mod = false;
 
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
@@ -229,7 +230,12 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 		if (addr > 319)
 			return SHELL_ERR_ARG_INVALID;
 
-		trig_addr_set(addr);
+		if (addr >= 160) {
+			mod = true;
+			addr -= 160;
+		}
+
+		trig_addr_set(mod, addr);
 	}
 
 	addr = trig_addr_get();
@@ -244,8 +250,25 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 	unsigned int addr;
 	int i;
 
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
+	if (argc == 1) {
+		struct ss_device * dev;
+
+		fprintf(f, "Sensosrs:");
+		for (i = 1; i < 160; ++i) {
+			dev = dev_sim_sensor_lookup(i);
+			if (dev->enabled)
+				fprintf(f, " %3d", i);
+		}
+
+		fprintf(f, "\nModules:");
+		for (i = 1; i < 160; ++i) {
+			dev = dev_sim_module_lookup(i);
+			if (dev->enabled)
+				fprintf(f, " %3d", i);
+		}
+		fprintf(f, "\n");
+	}
+
 
 	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
 		for (addr = 1; addr < 320; ++addr)
@@ -310,7 +333,7 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 	unsigned int mode = 0;
 	unsigned int rate = 0;
 	unsigned int pre = 50;
-	unsigned int pulse = 200;
+	unsigned int pulse = 1000;
 
 	if (argc > 5)
 		return SHELL_ERR_EXTRA_ARGS;
@@ -332,6 +355,8 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 
 		isink_mode_set(mode | (rate << 5));
 		isink_pulse(pre, pulse);
+		udelay(pulse / 2);
+		isink_stop();
 	} else {
 		isink_test();
 	}

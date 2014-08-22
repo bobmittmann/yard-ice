@@ -54,10 +54,6 @@ const struct {
 	{ LED6 }
 };
 
-struct {
-	uint8_t tmr[6];
-} led_drv;
-
 #define IO_POLL_PERIOD_MS 16
 
 void led_on(unsigned int id)
@@ -74,7 +70,7 @@ void led_off(unsigned int id)
 
 void led_flash(unsigned int id, unsigned int ms)
 {
-	led_drv.tmr[id] = ms / IO_POLL_PERIOD_MS;
+	io_drv.led_tmr[id] = ms / IO_POLL_PERIOD_MS;
 	__led_on(led_io[id].gpio, led_io[id].pin);
 }
 
@@ -108,8 +104,6 @@ void stm32_tim9_isr(void)
 	struct stm32_gpio * gpioa = STM32_GPIOA;
 	struct stm32_gpio * gpiob = STM32_GPIOB;
 	struct stm32_gpio * gpioc = STM32_GPIOC;
-	static unsigned int addr_prev;
-	static unsigned int sw_prev;
 	unsigned int addr;
 	unsigned int sw;
 	unsigned int d;
@@ -129,12 +123,12 @@ void stm32_tim9_isr(void)
 	/* Rotatory switches decoder */
 	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
 	/* Sensor/Module Switch */
-	mod = (pb & (1 << 4)) ? 0 : 1;
-	addr += mod * 160;
+	mod = (pb & (1 << 4)) ? 0 : 0x80;
+	addr |= mod;
 
-	if (addr != addr_prev) {
+	if (addr != io_drv.addr_prev) {
 		/* Debouncing */
-		addr_prev = addr;
+		io_drv.addr_prev = addr;
 	} else if (addr != io_drv.addr) {
 		/* State change */
 		io_drv.addr = addr;
@@ -146,9 +140,9 @@ void stm32_tim9_isr(void)
 	/* Lever switches */
 	sw = (~pb >> 12) & 0xf; 
 
-	if (sw != sw_prev) {
+	if (sw != io_drv.sw_prev) {
 		/* Debouncing */
-		sw_prev = sw;
+		io_drv.sw_prev = sw;
 	} if ((d = sw ^ io_drv.sw) != 0) {
 		/* State change */
 		io_drv.sw = sw;
@@ -169,9 +163,9 @@ void stm32_tim9_isr(void)
 
 	/* process led timers */
 	for (i = 0; i < 6; ++i) {
-		if (led_drv.tmr[i] == 0)
+		if (io_drv.led_tmr[i] == 0)
 			continue;
-		if (--led_drv.tmr[i] == 0) 
+		if (--io_drv.led_tmr[i] == 0) 
 			__led_off(led_io[i].gpio, led_io[i].pin);
 	}
 }

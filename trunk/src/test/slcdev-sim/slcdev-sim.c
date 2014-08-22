@@ -60,6 +60,23 @@ void dev_sim_disable(unsigned int addr)
 	ss_dev_tab[addr].enabled = 0;
 }
 
+struct ss_device * dev_sim_sensor_lookup(unsigned int addr)
+{
+	if (addr > 160) 
+		return NULL;
+
+	return &ss_dev_tab[addr];
+}
+
+struct ss_device * dev_sim_module_lookup(unsigned int addr)
+{
+	if (addr > 160) 
+		return NULL;
+
+	return &ss_dev_tab[addr + 160];
+}
+
+
 struct microjs_script {
 	int x;
 };
