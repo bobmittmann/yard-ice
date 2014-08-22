@@ -193,6 +193,7 @@ struct ss_device {
 	union {
 		struct {
 			uint32_t addr: 8;   /* reverse lookup address */
+
 			uint32_t model: 6; /* reference to a device model */
 			uint32_t ap : 1;    /* advanced protocol */
 			uint32_t module : 1; /* 1 = module, 0 = sensor */
@@ -201,13 +202,13 @@ struct ss_device {
 			uint32_t led : 1; /* LED status */
 			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
 			uint32_t tst : 1; /* Remote test mode */
-
 			uint32_t alm : 1; /* Alarm flag */
 			uint32_t tbl : 1; /* Trouble flag */
 			uint32_t sup : 1; /* Supervisory flag */
 			uint32_t mon : 1; /* Monitor flag */
 
-			uint32_t usr3: 8;  /* User variable */
+			uint32_t irq : 1;  /* Interrupt request */
+			uint32_t usr3: 7;  /* User variable */
 		}; 
 		uint32_t opt;	
 	};
@@ -282,8 +283,8 @@ struct cfg_sw {
 
 struct slcdev_drv {
 	uint16_t addr; /* current polled device address */
-	uint16_t trig_addr; /* trigger module address */
-	uint8_t trig_en; /* trigger mudule enabled status */
+	uint16_t trig_msk; /* trigger module bitmask */
+	uint16_t trig_cmp; /* trigger mudule compare value */
 	int8_t ev_flag; /*event flag */
 	uint8_t ev_bmp; /* event bitmap */
 	uint8_t bit_cnt; /* message bit count */

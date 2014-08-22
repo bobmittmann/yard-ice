@@ -38,21 +38,22 @@ struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
 void trig_addr_set(bool module, unsigned int addr)
 {
+	slcdev_drv.trig_msk = 0x1ff;
 	if (module)
-		slcdev_drv.trig_addr = addr + 160;
+		slcdev_drv.trig_cmp = addr + 160;
 	else
-		slcdev_drv.trig_addr = addr;
+		slcdev_drv.trig_cmp = addr;
 }
 
 unsigned int trig_addr_get(void)
 {
-	return slcdev_drv.trig_addr;
+	return slcdev_drv.trig_cmp;
 }
 
 static void trig_init(void)
 {
-	slcdev_drv.trig_addr = 0x00;
-	slcdev_drv.trig_en = 1;
+	slcdev_drv.trig_msk = 0xff;
+	slcdev_drv.trig_cmp = 0x00;
 
 	stm32_gpio_clr(TRIG_OUT);
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
@@ -181,34 +182,46 @@ enum {
 	DEV_IDLE = 0,
 	DEV_RST,
 	DEV_MSG,
-	DEV_CLIP, /* clip mode active device */
 
+	DEV_CLIP, /* clip mode active device */
 	DEV_PW1_ISINK,
 	DEV_PW2_ISINK,
 	DEV_PW3_ISINK,
 	DEV_PW4_ISINK,
 	DEV_PW5_ISINK,
 
-	DEV_INACTIVE_START_WAIT,
-	DEV_RESET_WAIT,
-
 	DEV_AP_HDR,
 	DEV_AP_HDR_OK,
-	DEV_AP_CHECKSUM_ERROR,
-	DEV_AP_ERR_LATENCY,
-	DEV_AP_ERR_PULSE,
-	DEV_AP_ERR_END_WAIT,
-
-	DEV_AP_ALARM_START_WAIT,
-
-	DEV_AP_ERR_ISINK,
-	DEV_AP_ALM_ISINK,
-	DEV_AP_BIT_ISINK
+	DEV_AP_HDR_ERR,
+	DEV_AP_ERR_BIT,
+	DEV_AP_INT_BIT,
+	DEV_AP_CMD,
 };
 
 /* -------------------------------------------------------------------------
    Advanced Protocol (200 Series)
    ------------------------------------------------------------------------- */
+
+#define AP_POLL_MODE_MASK   0x01e0
+#define AP_POLL_MODE_DIRCET 0x0060
+#define AP_POLL_MODE_GROUP  0x01a0
+
+/* mttt t111 1uuu u110 */
+#define AP_DIRECT_POLL_MASK 0x61e0 /* 0000 0111 1000 0110 */
+#define AP_DIRECT_POLL      0x01e0 /* 0000 0111 1000 0000 */
+
+#define AP_RD_UNITS_MASK    0x7fe0 /* 0000 0111 1111 1110 */
+#define AP_RD_PRESENCE      0x5ec0 /* 0000 0110 0111 1010 */
+#define AP_RD_ALM_LATCH_U   0x2ec0 /* 0000 0110 0111 0100 */
+#define AP_RD_TBL_LATCH_U   0x6ec0 /* 0000 0110 0111 0110 */
+
+#define AP_GROUP_POLL_MASK  0x03fe /* 0111 1111 1100 0000 */
+#define AP_GROUP_POLL       0x01be /* 0111 1101 1000 0000 */
+
+#define AP_RD_TENS_MASK     0x7ffe /* 0111 1111 1111 1110 */
+#define AP_RD_ALM_LATCH_T   0x7fbe /* 0111 1101 1111 1110 */   
+#define AP_RD_TBL_LATCH_T   0x3fbe /* 0111 1101 1111 1100 */
+#define AP_NULL             0x5fbe /* 0111 1101 1111 1010 */
 
 static void ap_hdr_decode(unsigned int msg)
 {
@@ -216,7 +229,6 @@ static void ap_hdr_decode(unsigned int msg)
 	unsigned int sum;
 	unsigned int lo;
 	unsigned int hi;
-	unsigned int pm;
 	unsigned int addr;
 	unsigned int mod;
 
@@ -225,40 +237,78 @@ static void ap_hdr_decode(unsigned int msg)
 
 	if (sum != (msg >> 15)) {
 		DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
-		slcdev_drv.state = DEV_AP_CHECKSUM_ERROR;
-		DCC_LOG(LOG_INFO, "[AP CHECKSUM ERR]");
-		/* FIXME: program the current sink */ 
+
+		/* prepare for sinking current */
+		/* FIXME: configurable current sink parameters for AP */ 
 		isink_mode_set(DEV_AP_ICFG_DEFAULT);
+		slcdev_drv.isink.pre = DEV_AP_IPRE_DEFAULT;
+		slcdev_drv.isink.pulse = DEV_AP_IPULSE_DEFAULT;
+
+		slcdev_drv.state = DEV_AP_HDR_ERR;
+		DCC_LOG(LOG_INFO, "[AP HDR ERR]");
 		return;
 	}
 
-	pm = (msg >> 8) & 0xf;
-	lo = (msg >> 8) & 0xf;
-	hi = (msg >> 2) & 0xf;
-
-	if (pm == 0x03) {
-		/* direct poll */
-	} else if (pm == 0x0d) {
-		/* group poll */
-	}
-
-	mod = msg & 1;
-	addr = 10 * addr_lut[hi] + addr_lut[lo];
-	addr = addr + (mod * 100);
-
-	DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
-
 	/* trigger module */
-	if ((addr == slcdev_drv.trig_addr) && 
-		(slcdev_drv.trig_en)) {
+	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
 		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
 //		trig_out_set();
 		__thinkos_flag_signal(slcdev_drv.ev_flag);
 //		trig_out_clr();
 		/* */
-		DCC_LOG2(LOG_INFO, "Match %s=%d", 
+		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
 				 mod ? "MODULE" : "SENSOR", addr);
 	}
+
+	mod = msg & 1; /* Module or sensor */
+
+	if ((msg & AP_DIRECT_POLL_MASK) == AP_DIRECT_POLL) {
+		hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
+		lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
+		addr = 10 * addr_lut[hi] + addr_lut[lo];
+		addr = addr + (mod * 160);
+		DCC_LOG1(LOG_TRACE, "[AP Direct %d]", addr);
+	} else if ((msg & AP_GROUP_POLL_MASK) == AP_GROUP_POLL) {
+		DCC_LOG(LOG_TRACE, "[AP Group]");
+	} else {
+		do {
+			switch (msg & AP_RD_TENS_MASK) {
+			case AP_NULL:
+				DCC_LOG(LOG_TRACE, "[AP Null]");
+				continue;
+			case AP_RD_ALM_LATCH_T:
+				DCC_LOG(LOG_TRACE, "[AP Read Alarm Latch Tens]");
+				continue;
+			case AP_RD_TBL_LATCH_T:
+				DCC_LOG(LOG_TRACE, "[AP Read Trouble Latch Tens]");
+				continue;
+			}
+			switch (msg & AP_RD_UNITS_MASK) {
+			case AP_RD_PRESENCE:
+				DCC_LOG(LOG_TRACE, "[AP Read Presence]");
+				continue;
+			case AP_RD_ALM_LATCH_U:
+				DCC_LOG(LOG_TRACE, "[AP Read Alarm Latch Units]");
+				continue;
+			case AP_RD_TBL_LATCH_U:
+				DCC_LOG(LOG_TRACE, "[AP Read Trouble Latch Units]");
+				continue;
+			}
+			DCC_LOG(LOG_WARNING, "[AP command invalid]");
+			slcdev_drv.state = DEV_AP_HDR_ERR;
+			DCC_LOG(LOG_INFO, "[AP HDR ERR]");
+			return;
+		} while (false);
+	}
+
+	hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
+	lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
+
+	addr = 10 * addr_lut[hi] + addr_lut[lo];
+	addr = addr + (mod * 160);
+
+	DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
+
 
 	/* */
 	if (addr != slcdev_drv.addr) {
@@ -273,15 +323,18 @@ static void ap_hdr_decode(unsigned int msg)
 		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 				 mod ? "MODULE" : "SENSOR", addr);
 
+		/* prepare for sinking current */
 		/* program the current sink */ 
-		isink_mode_set(slcdev_drv.dev->icfg);
+		isink_mode_set(dev->icfg);
+		slcdev_drv.isink.pre = dev->ipre;
+
+		/* skip error report bit */
+		slcdev_drv.state = DEV_AP_HDR_OK;
 
 		/* signal the simulator */
 		slcdev_drv.ev_bmp |= SLC_EV_SIM;
 		__thinkos_flag_signal(slcdev_drv.ev_flag);
 
-		/* skip error report bit */
-		slcdev_drv.state = DEV_AP_HDR_OK;
 	} else {
 		slcdev_drv.state = DEV_IDLE;
 		DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
@@ -327,12 +380,11 @@ static void clip_msg_decode(unsigned int msg)
 	addr = addr + (mod * 160);
 
 	/* trigger module */
-	if ((addr == slcdev_drv.trig_addr) && 
-		(slcdev_drv.trig_en)) {
+	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
 		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
-		trig_out_set();
+//		trig_out_set();
 		__thinkos_flag_signal(slcdev_drv.ev_flag);
-		trig_out_clr();
+//		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
 				 mod ? "MODULE" : "SENSOR", addr);
@@ -365,9 +417,9 @@ static void clip_msg_decode(unsigned int msg)
 		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 				 mod ? "MODULE" : "SENSOR", addr);
 
+		/* prepare for sinking current */
 		/* program the current sink */ 
 		isink_mode_set(dev->icfg);
-		/* prepare for sinking current */
 		slcdev_drv.isink.pre = dev->ipre;
 
 		/* start clip mode response */
@@ -393,7 +445,7 @@ void stm32_tim10_isr(void)
 {
 	struct stm32_comp * comp = STM32_COMP;
 	struct stm32f_tim * tim = STM32_TIM10;
-	struct ss_device * dev = slcdev_drv.dev;
+//	struct ss_device * dev = slcdev_drv.dev;
 	uint32_t csr;
 	int bit;
 
@@ -402,22 +454,20 @@ void stm32_tim10_isr(void)
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
+		/* VSLC at 24V (Power Level) */
 		if (slcdev_drv.state == DEV_IDLE) {
-			DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");
-			slcdev_drv.state = DEV_RST;
-			return;
+			DCC_LOG1(LOG_WARNING, "unexpected state: %d", slcdev_drv.state);
 		}
 
+		DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");
+		slcdev_drv.state = DEV_RST;
+
+		/* XXX: sanity check. Reset the current sink state machine */
 		if (slcdev_drv.isink.state != ISINK_IDLE) {
 			slcdev_drv.isink.state = ISINK_IDLE;
 			DCC_LOG(LOG_INFO, "<ISINK IDLE>");
 		}
 
-		/* VSLC at 24V (Power Level) */
-		/* Power */
-		DCC_LOG(LOG_WARNING, "Invalid state [IDLE]");
-		/* */
-		slcdev_drv.state = DEV_IDLE;
 		return;
 	}
 
@@ -431,12 +481,14 @@ void stm32_tim10_isr(void)
 //		trig_out_set();
 		slcdev_drv.isink.state = ISINK_PULSE;
 		DCC_LOG1(LOG_INFO, "<ISINK PULSE %d us>", slcdev_drv.isink.pulse);
-	} else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
+	}
+#if 0	
+	else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
 		/* after a valid pulse the line does not return high !!!! */
 		slcdev_drv.isink.state = ISINK_IDLE;
 		DCC_LOG(LOG_INFO, "<ISINK IDLE>");
 	}
-
+#endif
 	/* ----------------------------------------------------------------
 	   Input
 	   ---------------------------------------------------------------- */
@@ -469,16 +521,6 @@ void stm32_tim10_isr(void)
 			ap_hdr_decode(slcdev_drv.msg);
 		break;
 
-	case DEV_AP_HDR_OK:
-		if (dev->alm) {
-			/* send the alarm bit */
-			slcdev_drv.state = DEV_AP_ALARM_START_WAIT;
-			DCC_LOG(LOG_INFO, "[AP ALARM WAIT START]");
-		} else {
-			slcdev_drv.state = DEV_IDLE;
-			DCC_LOG(LOG_INFO, "[IDLE]");
-		}
-		break;
 	}
 }
 
@@ -602,11 +644,15 @@ void stm32_comp_tsc_isr(void)
 				slcdev_drv.state = DEV_IDLE;
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
-			case DEV_AP_ERR_ISINK:
+			case DEV_AP_ERR_BIT:
+				slcdev_drv.isink.state = ISINK_IDLE;
+				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				slcdev_drv.state = DEV_IDLE;
+				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
-			case DEV_AP_ALM_ISINK:
-				break;
-			case DEV_AP_BIT_ISINK:
+			case DEV_AP_INT_BIT:
+				slcdev_drv.state = DEV_AP_CMD;
+				DCC_LOG(LOG_INFO, "[AP CMD]");
 				break;
 			}
 			break;
@@ -615,8 +661,6 @@ void stm32_comp_tsc_isr(void)
 			switch (slcdev_drv.state) {
 			case DEV_IDLE:
 //				trig_out_clr();
-				tim->arr = 4500; /* Wait for software reset */
-				tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 				DCC_LOG(LOG_MSG, "wait reset 4.5ms");
 				break;
 			case DEV_CLIP:
@@ -627,12 +671,41 @@ void stm32_comp_tsc_isr(void)
 				slcdev_drv.state = DEV_PW1_ISINK;
 				DCC_LOG(LOG_INFO, "[PW1 ISINK]");
 				break;
+			case DEV_AP_HDR_ERR:
+				/* AP header checksum error respnse bit */
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_AP_ERR_BIT;
+				DCC_LOG(LOG_INFO, "[AP ERR BIT]");
+				break;
+			case DEV_AP_HDR_OK:
+				/* AP header ok. Skip the checksum error respnse bit */
+				slcdev_drv.state = DEV_AP_ERR_BIT;
+				DCC_LOG(LOG_INFO, "[AP ERR BIT]");
+				break;
+			case DEV_AP_ERR_BIT:
+				/* AP interrupt bit */
+				if (dev->irq) {
+					/* send the interrupt bit */
+					slcdev_drv.isink.state = ISINK_START_WAIT;
+					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				}
+				slcdev_drv.state = DEV_AP_INT_BIT;
+				DCC_LOG(LOG_INFO, "[AP INT BIT]");
+				break;
+			case DEV_AP_INT_BIT:
+				slcdev_drv.state = DEV_AP_CMD;
+				DCC_LOG(LOG_INFO, "[AP CMD]");
+				break;
 			}
 
 			break;
 		}
 
-		tim->arr = 4500; /* Wait for software reset */
+		/* set a timer for 4.5ms which will trigger a 
+		   software reset if no other event happen before 
+		   it times out. */
+		tim->arr = 4500; 
 		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	}
 }
