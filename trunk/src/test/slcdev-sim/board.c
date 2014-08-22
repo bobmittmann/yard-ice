@@ -295,7 +295,7 @@ void io_init(void)
 
 #ifndef DEBUG
 	/* JTAG TRST Pin */
-	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
+//	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
 #endif
 
 	/* USART2_TX */
