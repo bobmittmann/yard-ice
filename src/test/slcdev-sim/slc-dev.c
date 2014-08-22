@@ -88,9 +88,10 @@ void __attribute__((noreturn)) io_event_task(void)
 		}
 
 		if (event & (1 << EV_ADDR)) {
-			DCC_LOG1(LOG_TRACE, "ADDR=%d", io_drv.addr);
+			DCC_LOG2(LOG_TRACE, "ADDR=%c%d", 
+					 io_drv.addr & 0x80 ? 'M' : 'S', io_drv.addr & 0x7f);
 			io_event_clr(EV_ADDR);  
-			trig_addr_set(io_drv.addr);
+			trig_addr_set(io_drv.addr >> 7, io_drv.addr & 0x7f);
 		}
 	}
 }
@@ -118,7 +119,7 @@ int main(int argc, char ** argv)
 	FILE * f;
 
 	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
+//	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	/* calibrate the delay loop fo udelay() and friends. */

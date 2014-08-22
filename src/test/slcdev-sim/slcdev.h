@@ -280,52 +280,6 @@ struct cfg_sw {
  * SLC Device Driver 
  * ------------------------------------------------------------------------- */
 
-enum {
-	DEV_IDLE = 0,
-	DEV_MSG,
-
-	DEV_PW1_START_WAIT,
-	DEV_PW1_RESPONSE_TIME,
-	DEV_PW1_PULSE,
-	DEV_PW1_END_WAIT,
-
-	DEV_PW2_START_WAIT,
-	DEV_PW2_RESPONSE_TIME,
-	DEV_PW2_PULSE,
-	DEV_PW2_END_WAIT,
-
-	DEV_PW3_START_WAIT,
-	DEV_PW3_RESPONSE_TIME,
-	DEV_PW3_PULSE,
-	DEV_PW3_END_WAIT,
-
-	DEV_PW4_START_WAIT,
-	DEV_PW4_RESPONSE_TIME,
-	DEV_PW4_PULSE,
-	DEV_PW4_END_WAIT,
-
-	DEV_PW5_START_WAIT,
-	DEV_PW5_RESPONSE_TIME,
-	DEV_PW5_PULSE,
-	DEV_PW5_END_WAIT,
-	DEV_RECOVER_TIME,
-
-	DEV_INACTIVE_START_WAIT,
-	DEV_INACTIVE_STOP_WAIT,
-
-	DEV_PARITY_ERROR,
-	DEV_PW_ABORT,
-
-	DEV_AP_HDR,
-	DEV_AP_HDR_OK,
-	DEV_AP_CHECKSUM_ERROR,
-	DEV_AP_ERR_LATENCY,
-	DEV_AP_ERR_PULSE,
-	DEV_AP_ERR_END_WAIT,
-
-	DEV_AP_ALARM_START_WAIT,
-};
-
 struct slcdev_drv {
 	uint16_t addr; /* current polled device address */
 	uint16_t trig_addr; /* trigger module address */
@@ -335,6 +289,11 @@ struct slcdev_drv {
 	uint8_t bit_cnt; /* message bit count */
 	uint32_t msg; /* message data from the pannel */
 	unsigned int state; /* decoder state */
+	struct {
+		unsigned int state; /* decoder state */
+		unsigned int pulse; /* pulse width (microsseconds) */
+		unsigned int pre; /* pulse preenphasis width (microsseconds) */
+	} isink;
 	struct ss_device * volatile dev;
 };
 
@@ -365,7 +324,7 @@ void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
 
-void trig_addr_set(unsigned int addr);
+void trig_addr_set(bool module, unsigned int addr);
 void trig_mode_set(unsigned int mode);
 unsigned int trig_addr_get(void);
 
@@ -423,6 +382,10 @@ const char * model_sim_name(unsigned int idx);
 void dev_sim_enable(unsigned int addr);
 
 void dev_sim_disable(unsigned int addr);
+
+
+struct ss_device * dev_sim_sensor_lookup(unsigned int addr);
+struct ss_device * dev_sim_module_lookup(unsigned int addr);
 
 #ifdef __cplusplus
 }

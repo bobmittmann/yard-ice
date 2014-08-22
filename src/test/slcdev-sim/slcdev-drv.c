@@ -36,9 +36,12 @@ struct ss_device ss_dev_tab[SS_DEVICES_MAX];
  * Trigger module
  * ------------------------------------------------------------------------- */
 
-void trig_addr_set(unsigned int addr)
+void trig_addr_set(bool module, unsigned int addr)
 {
-	slcdev_drv.trig_addr = addr;
+	if (module)
+		slcdev_drv.trig_addr = addr + 160;
+	else
+		slcdev_drv.trig_addr = addr;
 }
 
 unsigned int trig_addr_get(void)
@@ -158,56 +161,234 @@ static unsigned int ap_chksum(unsigned int msg)
 /* default current sink mode */
 #define DEV_AP_ICFG_DEFAULT (ISINK_CURRENT_NOM | ISINK_RATE_NORMAL)
 
-/* Current sink pulse timer 
-   This ISR is invoked at the end of the current pulse */
-void stm32_tim4_isr(void)
+
+/* -------------------------------------------------------------------------
+   Current sink state machine
+   ------------------------------------------------------------------------- */
+
+enum {
+	ISINK_IDLE = 0,
+	ISINK_START_WAIT,
+	ISINK_LATENCY,
+	ISINK_PULSE,
+	ISINK_END_WAIT
+};
+
+/* -------------------------------------------------------------------------
+   Device driver state machine
+   ------------------------------------------------------------------------- */
+enum {
+	DEV_IDLE = 0,
+	DEV_RST,
+	DEV_MSG,
+	DEV_CLIP, /* clip mode active device */
+
+	DEV_PW1_ISINK,
+	DEV_PW2_ISINK,
+	DEV_PW3_ISINK,
+	DEV_PW4_ISINK,
+	DEV_PW5_ISINK,
+
+	DEV_INACTIVE_START_WAIT,
+	DEV_RESET_WAIT,
+
+	DEV_AP_HDR,
+	DEV_AP_HDR_OK,
+	DEV_AP_CHECKSUM_ERROR,
+	DEV_AP_ERR_LATENCY,
+	DEV_AP_ERR_PULSE,
+	DEV_AP_ERR_END_WAIT,
+
+	DEV_AP_ALARM_START_WAIT,
+
+	DEV_AP_ERR_ISINK,
+	DEV_AP_ALM_ISINK,
+	DEV_AP_BIT_ISINK
+};
+
+/* -------------------------------------------------------------------------
+   Advanced Protocol (200 Series)
+   ------------------------------------------------------------------------- */
+
+static void ap_hdr_decode(unsigned int msg)
 {
-	struct stm32f_tim * tim4 = STM32_TIM4;
-	struct stm32f_tim * tim10 = STM32_TIM10;
+	struct ss_device * dev = slcdev_drv.dev;
+	unsigned int sum;
+	unsigned int lo;
+	unsigned int hi;
+	unsigned int pm;
+	unsigned int addr;
+	unsigned int mod;
 
-	/* Clear timer interrupt flags */
-	tim4->sr = 0;
-	switch (slcdev_drv.state) {
-	case DEV_PW1_PULSE:
-		slcdev_drv.state = DEV_PW1_END_WAIT;
-		DCC_LOG(LOG_INFO, "[PW1 END WAIT]");
-		break;
+	DCC_LOG(LOG_INFO, "[AP]");
+	sum = ap_chksum(msg);
 
-	case DEV_PW2_PULSE:
-		slcdev_drv.state = DEV_PW2_END_WAIT;
-		DCC_LOG(LOG_INFO, "[PW2 END WAIT]");
-		break;
-
-	case DEV_PW3_PULSE:
-		slcdev_drv.state = DEV_PW3_END_WAIT;
-		DCC_LOG(LOG_INFO, "[PW3 END WAIT]");
-		break;
-
-	case DEV_PW4_PULSE:
-		slcdev_drv.state = DEV_PW4_END_WAIT;
-		DCC_LOG(LOG_INFO, "[PW4 END WAIT]");
-		break;
-
-	case DEV_PW5_PULSE:
-		slcdev_drv.state = DEV_PW5_END_WAIT;
-		DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
-		break;
-
-	case DEV_AP_ERR_PULSE:
-		slcdev_drv.state = DEV_AP_ERR_END_WAIT;
-		DCC_LOG(LOG_WARNING, "[AP ERR END WAIT]");
-		break;
-
-	default:
-		DCC_LOG1(LOG_MSG, "Invalid state [%d]!!!", slcdev_drv.state);
+	if (sum != (msg >> 15)) {
+		DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
+		slcdev_drv.state = DEV_AP_CHECKSUM_ERROR;
+		DCC_LOG(LOG_INFO, "[AP CHECKSUM ERR]");
+		/* FIXME: program the current sink */ 
+		isink_mode_set(DEV_AP_ICFG_DEFAULT);
+		return;
 	}
 
-	tim10->arr = 4000; /* trigger the end wait timer */
-	tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+	pm = (msg >> 8) & 0xf;
+	lo = (msg >> 8) & 0xf;
+	hi = (msg >> 2) & 0xf;
+
+	if (pm == 0x03) {
+		/* direct poll */
+	} else if (pm == 0x0d) {
+		/* group poll */
+	}
+
+	mod = msg & 1;
+	addr = 10 * addr_lut[hi] + addr_lut[lo];
+	addr = addr + (mod * 100);
+
+	DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
+
+	/* trigger module */
+	if ((addr == slcdev_drv.trig_addr) && 
+		(slcdev_drv.trig_en)) {
+		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+//		trig_out_set();
+		__thinkos_flag_signal(slcdev_drv.ev_flag);
+//		trig_out_clr();
+		/* */
+		DCC_LOG2(LOG_INFO, "Match %s=%d", 
+				 mod ? "MODULE" : "SENSOR", addr);
+	}
+
+	/* */
+	if (addr != slcdev_drv.addr) {
+		dev = &ss_dev_tab[addr];
+		slcdev_drv.addr = addr;
+		slcdev_drv.dev = dev;
+	} else {
+		DCC_LOG(LOG_INFO, "Consecutive pooling");
+	}
+
+	if ((dev->enabled) && (dev->ap)) {
+		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
+				 mod ? "MODULE" : "SENSOR", addr);
+
+		/* program the current sink */ 
+		isink_mode_set(slcdev_drv.dev->icfg);
+
+		/* signal the simulator */
+		slcdev_drv.ev_bmp |= SLC_EV_SIM;
+		__thinkos_flag_signal(slcdev_drv.ev_flag);
+
+		/* skip error report bit */
+		slcdev_drv.state = DEV_AP_HDR_OK;
+	} else {
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
+	}
 }
 
-/* Device timer 
-	This is the 1us resolution timer ISR */
+/* -------------------------------------------------------------------------
+   Clip Protocol (500 Series)
+   ------------------------------------------------------------------------- */
+
+static void clip_msg_decode(unsigned int msg)
+{
+	struct ss_device * dev = slcdev_drv.dev;
+	unsigned int parity;
+	unsigned int addr;
+	unsigned int mod;
+	unsigned int lo;
+	unsigned int hi;
+
+	lo = (msg >> 5) & 0xf;
+	hi = (msg >> 1) & 0xf;
+
+	if ((lo == 0x03) || (lo == 0x0d)) {
+		/* AP protocol */
+		slcdev_drv.state = DEV_AP_HDR;
+		DCC_LOG(LOG_INFO, "[AP HDR]");
+		return;
+	}
+
+	parity = parity_lut[msg & 0xf] ^ 
+		parity_lut[(msg >> 4) & 0xf] ^ 
+		parity_lut[(msg >> 8) & 0xf];
+
+	if (parity != (msg >> 12)) {
+		DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		return;
+	}
+
+	mod = msg & 1;
+	addr = 10 * addr_lut[hi] + addr_lut[lo];
+	addr = addr + (mod * 160);
+
+	/* trigger module */
+	if ((addr == slcdev_drv.trig_addr) && 
+		(slcdev_drv.trig_en)) {
+		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+		trig_out_set();
+		__thinkos_flag_signal(slcdev_drv.ev_flag);
+		trig_out_clr();
+		/* */
+		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
+				 mod ? "MODULE" : "SENSOR", addr);
+	}
+
+	/* */
+	if (addr != slcdev_drv.addr) {
+		dev = &ss_dev_tab[addr];
+		slcdev_drv.addr = addr;
+		slcdev_drv.dev = dev;
+		/* clear the control sequence */
+		dev->ctls = 0;
+	} else {
+		DCC_LOG(LOG_INFO, "Consecutive pooling");
+	}
+
+	if (dev->enabled) {
+		unsigned int ctl = (msg >> 9) & 0x7;
+
+		/* shift the control bits into the sequence register */
+		dev->ctls <<= 3;
+		dev->ctls |= ctl;
+
+		/* update the PW5 request bit */
+		/* This is a hardwired protocol rule,
+		   the other control bit sequences are treated in
+		   the simulation loop */
+		dev->pw5en = (ctl & 2) ? 0 : 1;
+
+		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
+				 mod ? "MODULE" : "SENSOR", addr);
+
+		/* program the current sink */ 
+		isink_mode_set(dev->icfg);
+		/* prepare for sinking current */
+		slcdev_drv.isink.pre = dev->ipre;
+
+		/* start clip mode response */
+		slcdev_drv.state = DEV_CLIP;
+		DCC_LOG(LOG_INFO, "[CLIP]");
+
+		/* signal the simulator */
+		slcdev_drv.ev_bmp |= SLC_EV_SIM;
+		__thinkos_flag_signal(slcdev_drv.ev_flag);
+
+	} else {
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
+	}
+}
+
+/* -------------------------------------------------------------------------
+   Device timer interrupt handler
+   This is the 1us resolution timer ISR 
+   ------------------------------------------------------------------------- */
+
 void stm32_tim10_isr(void)
 {
 	struct stm32_comp * comp = STM32_COMP;
@@ -221,262 +402,84 @@ void stm32_tim10_isr(void)
 
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
+		if (slcdev_drv.state == DEV_IDLE) {
+			DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");
+			slcdev_drv.state = DEV_RST;
+			return;
+		}
+
+		if (slcdev_drv.isink.state != ISINK_IDLE) {
+			slcdev_drv.isink.state = ISINK_IDLE;
+			DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+		}
+
 		/* VSLC at 24V (Power Level) */
 		/* Power */
-		DCC_LOG(LOG_INFO, "[IDLE]");
+		DCC_LOG(LOG_WARNING, "Invalid state [IDLE]");
 		/* */
 		slcdev_drv.state = DEV_IDLE;
-	} else { 
-
-		bit = (csr & COMP_CMP2OUT) ? 1 : 0;
-
-		switch (slcdev_drv.state) {
-		case DEV_IDLE:
-#if 0
-			if (bit) {
-				DCC_LOG(LOG_INFO, "HIGH");
-			} else {
-				DCC_LOG(LOG_INFO, "LOW");
-			}
-#endif
-			/* reset the device state */
-			slcdev_drv.state = DEV_MSG;
-			slcdev_drv.msg = bit;
-			slcdev_drv.bit_cnt = 1;
-			/* reset the simultaor module */
-			slcdev_drv.dev = (struct ss_device *)&null_dev;
-
-			break;
-
-		case DEV_MSG:
-#if 0
-			if (bit) {
-				DCC_LOG(LOG_INFO, "HIGH");
-			} else {
-				DCC_LOG(LOG_INFO, "LOW");
-			}
-#endif
-			slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
-
-			if (++slcdev_drv.bit_cnt == 13) {
-				unsigned int msg = slcdev_drv.msg;
-				unsigned int lo;
-				unsigned int hi;
-				unsigned int parity;
-
-				lo = (msg >> 5) & 0xf;
-				hi = (msg >> 1) & 0xf;
-				
-				if ((lo == 0x03) || (lo == 0x0d)) {
-					/* AP protocol */
-					slcdev_drv.state = DEV_AP_HDR;
-				}
-
-				parity = parity_lut[msg & 0xf] ^ 
-					parity_lut[(msg >> 4) & 0xf] ^ 
-					parity_lut[(msg >> 8) & 0xf];
-
-				if (parity == (msg >> 12)) {
-					unsigned int addr;
-					unsigned int mod;
-
-					mod = msg & 1;
-					addr = 10 * addr_lut[hi] + addr_lut[lo];
-					addr = addr + (mod * 100);
-
-					/* trigger module */
-					if ((addr == slcdev_drv.trig_addr) && 
-						(slcdev_drv.trig_en)) {
-						slcdev_drv.ev_bmp |= SLC_EV_TRIG;
-						trig_out_set();
-						__thinkos_flag_signal(slcdev_drv.ev_flag);
-						trig_out_clr();
-						/* */
-						DCC_LOG2(LOG_INFO, "Match %s=%d", 
-								 mod ? "MODULE" : "SENSOR", addr);
-					}
-
-					/* */
-					if (addr != slcdev_drv.addr) {
-						dev = &ss_dev_tab[addr];
-						slcdev_drv.addr = addr;
-						slcdev_drv.dev = dev;
-						/* clear the control sequence */
-						dev->ctls = 0;
-					} else {
-						DCC_LOG(LOG_INFO, "Consecutive pooling");
-					}
-
-					if (dev->enabled) {
-						unsigned int ctl = (msg >> 9) & 0x7;
-						/* shift the control bits into the sequence register */
-						dev->ctls <<= 3;
-						dev->ctls |= ctl;
-						/* update the PW5 request bit */
-						/* This is a hardwired protocol rule,
-						   the other control bit sequences are treated in
-						   the simulation loop */
-						dev->pw5en = (ctl >> 1) & 1;
-
-						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
-								 mod ? "MODULE" : "SENSOR", addr);
-
-						/* program the current sink */ 
-						isink_mode_set(dev->icfg);
-
-						/* signal the simulator */
-						slcdev_drv.ev_bmp |= SLC_EV_SIM;
-						__thinkos_flag_signal(slcdev_drv.ev_flag);
-
-						/* update the state machine */
-						slcdev_drv.state = DEV_PW1_START_WAIT;
-						DCC_LOG(LOG_INFO, "[PW1 START WAIT]");
-					} else {
-						slcdev_drv.state = DEV_INACTIVE_START_WAIT;
-						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-					}
-				} else {
-					DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
-					slcdev_drv.state = DEV_PARITY_ERROR;
-					DCC_LOG(LOG_INFO, "[PARITY ERR]");
-				}
-			}
-			break;
-
-		case DEV_AP_HDR:
-			/* AP header decoder */
-			slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
-			if (++slcdev_drv.bit_cnt == 17) {
-				unsigned int msg = slcdev_drv.msg;
-				unsigned int sum;
-
-				DCC_LOG(LOG_TRACE, "[AP]");
-				sum = ap_chksum(msg);
-				if (sum == (msg >> 15)) {
-					unsigned int lo;
-					unsigned int hi;
-					unsigned int pm;
-					unsigned int addr;
-					unsigned int mod;
-
-					pm = (msg >> 8) & 0xf;
-					lo = (msg >> 8) & 0xf;
-					hi = (msg >> 2) & 0xf;
-				
-					if (pm == 0x03) {
-						/* direct poll */
-					} else if (pm == 0x0d) {
-					}
-
-					mod = msg & 1;
-					addr = 10 * addr_lut[hi] + addr_lut[lo];
-					addr = addr + (mod * 100);
-
-					DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
-
-					/* trigger module */
-					if ((addr == slcdev_drv.trig_addr) && 
-						(slcdev_drv.trig_en)) {
-						slcdev_drv.ev_bmp |= SLC_EV_TRIG;
-						trig_out_set();
-						__thinkos_flag_signal(slcdev_drv.ev_flag);
-						trig_out_clr();
-						/* */
-						DCC_LOG2(LOG_INFO, "Match %s=%d", 
-								 mod ? "MODULE" : "SENSOR", addr);
-					}
-
-					/* */
-					if (addr != slcdev_drv.addr) {
-						dev = &ss_dev_tab[addr];
-						slcdev_drv.addr = addr;
-						slcdev_drv.dev = dev;
-					} else {
-						DCC_LOG(LOG_INFO, "Consecutive pooling");
-					}
-
-					if ((dev->enabled) && (dev->ap)) {
-						DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
-								 mod ? "MODULE" : "SENSOR", addr);
-
-						/* program the current sink */ 
-						isink_mode_set(slcdev_drv.dev->icfg);
-
-						/* signal the simulator */
-						slcdev_drv.ev_bmp |= SLC_EV_SIM;
-						__thinkos_flag_signal(slcdev_drv.ev_flag);
-
-						/* skip error report bit */
-						slcdev_drv.state = DEV_AP_HDR_OK;
-					} else {
-						slcdev_drv.state = DEV_INACTIVE_START_WAIT;
-						DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-					}
-				} else {
-					DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
-					slcdev_drv.state = DEV_AP_CHECKSUM_ERROR;
-					DCC_LOG(LOG_INFO, "[AP CHECKSUM ERR]");
-					/* FIXME: program the current sink */ 
-					isink_mode_set(DEV_AP_ICFG_DEFAULT);
-				}
-			}
-			break;
-
-		case DEV_AP_HDR_OK:
-			if (dev->alm) {
-				/* send the alarm bit */
-				slcdev_drv.state = DEV_AP_ALARM_START_WAIT;
-				DCC_LOG(LOG_INFO, "[AP ALARM WAIT START]");
-			} else {
-				slcdev_drv.state = DEV_INACTIVE_START_WAIT;
-				DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-			}
-			break;
-
-		case DEV_PW1_RESPONSE_TIME:
-			/* Reference Pulse Width */
-			isink_pulse(dev->ipre, dev->pw1); 
-			slcdev_drv.state = DEV_PW1_PULSE;
-			DCC_LOG1(LOG_INFO, "[PW1 PULSE %d us]", dev->pw1);
-			break;
-
-		case DEV_PW2_RESPONSE_TIME:
-			/* Remote Test Status */
-			isink_pulse(dev->ipre, dev->pw2);
-			slcdev_drv.state = DEV_PW2_PULSE;
-			DCC_LOG1(LOG_INFO, "[PW2 PULSE %d us]", dev->pw2);
-			break;
-
-		case DEV_PW3_RESPONSE_TIME:
-			/* Manufacturer Code */
-			isink_pulse(dev->ipre, dev->pw3); 
-			slcdev_drv.state = DEV_PW3_PULSE;
-			DCC_LOG1(LOG_INFO, "[PW3 PULSE %d us]", dev->pw3);
-			break;
-
-		case DEV_PW4_RESPONSE_TIME:
-			/* Analog */
-			isink_pulse(dev->ipre, dev->pw4); 
-			slcdev_drv.state = DEV_PW4_PULSE;
-			DCC_LOG1(LOG_INFO, "[PW4 PULSE %d us]", dev->pw4);
-			break;
-
-		case DEV_PW5_RESPONSE_TIME:
-			/* PW5 */
-			isink_pulse(dev->ipre, dev->pw5); 
-			slcdev_drv.state = DEV_PW5_PULSE;
-			DCC_LOG1(LOG_INFO, "[PW5 PULSE %d us]", dev->pw5);
-			break;
-
-		case DEV_AP_ERR_LATENCY:
-			isink_pulse(DEV_AP_IPRE_DEFAULT, DEV_AP_IPULSE_DEFAULT); 
-			slcdev_drv.state = DEV_AP_ERR_PULSE;
-			DCC_LOG1(LOG_INFO, "[AP ERR PULSE %d us]", DEV_AP_IPULSE_DEFAULT);
-			break;
-		}
+		return;
 	}
 
-	trig_out_clr();
+	/* ----------------------------------------------------------------
+	   Output:
+	   ---------------------------------------------------------------- */
+
+	/* Process the current sink state machine  */
+	if (slcdev_drv.isink.state == ISINK_LATENCY) {
+		isink_pulse(slcdev_drv.isink.pre, slcdev_drv.isink.pulse); 
+//		trig_out_set();
+		slcdev_drv.isink.state = ISINK_PULSE;
+		DCC_LOG1(LOG_INFO, "<ISINK PULSE %d us>", slcdev_drv.isink.pulse);
+	} else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
+		/* after a valid pulse the line does not return high !!!! */
+		slcdev_drv.isink.state = ISINK_IDLE;
+		DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+	}
+
+	/* ----------------------------------------------------------------
+	   Input
+	   ---------------------------------------------------------------- */
+
+	/* read the bit level comparator */
+	bit = (csr & COMP_CMP2OUT) ? 1 : 0;
+
+	switch (slcdev_drv.state) {
+	case DEV_RST:
+		/* reset the device state */
+		slcdev_drv.state = DEV_MSG;
+		DCC_LOG(LOG_INFO, "[MSG]");
+		slcdev_drv.msg = bit;
+		slcdev_drv.bit_cnt = 1;
+		/* reset the simultaor module */
+		slcdev_drv.dev = (struct ss_device *)&null_dev;
+		break;
+
+	case DEV_MSG:
+		slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
+
+		if (++slcdev_drv.bit_cnt == 13)
+			clip_msg_decode(slcdev_drv.msg);
+		break;
+
+	case DEV_AP_HDR:
+		/* AP header decoder */
+		slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
+		if (++slcdev_drv.bit_cnt == 17)
+			ap_hdr_decode(slcdev_drv.msg);
+		break;
+
+	case DEV_AP_HDR_OK:
+		if (dev->alm) {
+			/* send the alarm bit */
+			slcdev_drv.state = DEV_AP_ALARM_START_WAIT;
+			DCC_LOG(LOG_INFO, "[AP ALARM WAIT START]");
+		} else {
+			slcdev_drv.state = DEV_IDLE;
+			DCC_LOG(LOG_INFO, "[IDLE]");
+		}
+		break;
+	}
 }
 
 /****************************************************************************
@@ -499,226 +502,161 @@ void stm32_comp_tsc_isr(void)
 	/* clear interrupt flag */
 	exti->pr = COMP1_EXTI;
 
+	tim->cnt = 0;
+
 	if (ftsr & COMP1_EXTI) {
-		/* ********************************************************
-		 *  VSLC Falling Edge 
-		 *********************************************************/
+		/*----------------------------------------------------------------
+		  VSLC Falling Edge 
+		  ---------------------------------------------------------------- */
 
-		tim->cnt = 0;
+		/*-----------------------------------------------------------------
+		  Output
+		  -----------------------------------------------------------------*/
 
-		switch (slcdev_drv.state) {
-		case DEV_PW1_START_WAIT:
+
+		/* Process the current sink state machine  */
+		if (slcdev_drv.isink.state == ISINK_START_WAIT) {
 			tim->arr = dev->ilat;
-			slcdev_drv.state = DEV_PW1_RESPONSE_TIME;
-			DCC_LOG(LOG_INFO, "[PW1 RESPONSE_TIME]");
-			break;
+			slcdev_drv.isink.state = ISINK_LATENCY;
+			DCC_LOG(LOG_INFO, "<ISINK LATENCY>");
+		} else {
 
-		case DEV_PW2_START_WAIT:
-			tim->arr = dev->ilat;
-			slcdev_drv.state = DEV_PW2_RESPONSE_TIME;
-			DCC_LOG(LOG_INFO, "[PW2 RESPONSE_TIME]");
-			break;
-
-		case DEV_PW3_START_WAIT:
-			tim->arr = dev->ilat;
-			slcdev_drv.state = DEV_PW3_RESPONSE_TIME;
-			DCC_LOG(LOG_INFO, "[PW3 RESPONSE_TIME]");
-			break;
-
-		case DEV_PW4_START_WAIT:
-			tim->arr = dev->ilat;
-			slcdev_drv.state = DEV_PW4_RESPONSE_TIME;
-			DCC_LOG(LOG_INFO, "[PW4 RESPONSE_TIME]");
-			break;
-
-		case DEV_PW5_START_WAIT:
-			/* Type Id */
-			if (dev->pw5en) { 
-				tim->arr = dev->ilat;
-				slcdev_drv.state = DEV_PW5_RESPONSE_TIME;
-				DCC_LOG(LOG_INFO, "[PW5 RESPONSE_TIME]");
-			} else {
-				tim->arr = 4000; /* Inactive PW window */
-				slcdev_drv.state = DEV_PW5_END_WAIT;
-				DCC_LOG(LOG_INFO, "[PW5 END WAIT]");
+			/*-------------------------------------------------------------
+			  Input
+			  -------------------------------------------------------------*/
+			if (slcdev_drv.state == DEV_IDLE) {
+				DCC_LOG(LOG_INFO, "......");
+				return;
 			}
-			break;
 
-		case DEV_INACTIVE_START_WAIT:
-			tim->arr = 4000; /* Inactive PW window */
-			slcdev_drv.state = DEV_INACTIVE_STOP_WAIT;
-			DCC_LOG(LOG_INFO, "[INACTIVE STOP WAIT]");
-			break;
-
-		case DEV_AP_CHECKSUM_ERROR:
-			/* FIXME: make AP ilat programable */
-			tim->arr = DEV_AP_ILAT_DEFAULT;
-			/* Error report latency */
-			slcdev_drv.state = DEV_AP_ERR_LATENCY;
-			DCC_LOG(LOG_INFO, "[AP ERR LATENCY]");
-			break;
-
-		default:
 			/* 150 us time for bit decoding. The bit time specified
-			 by System Sensor is a minimum of 250us and a maximum of
-			 2000us. The recomended bit value is 300us.
-			 Reading the bit at 150us seems to be a good compromise.
-			 Although reading a little further could help 
-			 with slow or noisy lines...*/
+			   by System Sensor is a minimum of 250us and a maximum of
+			   2000us. The recomended bit value is 300us.
+			   Reading the bit at 150us seems to be a good compromise.
+			   Although reading a little further could help 
+			   with slow or noisy lines...*/
 			tim->arr = 150; 
-			break;
 		}
 
 		/* trigger the timer */
 		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	} else {
 
-		/* ********************************************************
-		 *  VSLC Rising Edge 
-		 *********************************************************/
+		/*----------------------------------------------------------------
+		  VSLC Rising Edge 
+		  ---------------------------------------------------------------- */
 
-		tim->cnt = 0;
+		switch (slcdev_drv.isink.state) {
 
-		switch (slcdev_drv.state) {
-
-		case DEV_INACTIVE_STOP_WAIT:
-			slcdev_drv.state = DEV_INACTIVE_START_WAIT;
-			DCC_LOG(LOG_INFO, "[INACTIVE WAIT START]");
-			break;
-
-		case DEV_PW1_END_WAIT:
-			slcdev_drv.state = DEV_PW2_START_WAIT;
-			DCC_LOG(LOG_INFO, "[PW2 START WAIT]");
-			break;
-
-		case DEV_PW2_END_WAIT:
-			slcdev_drv.state = DEV_PW3_START_WAIT;
-			DCC_LOG(LOG_INFO, "[PW3 START WAIT]");
-			break;
-
-		case DEV_PW3_END_WAIT:
-			slcdev_drv.state = DEV_PW4_START_WAIT;
-			DCC_LOG(LOG_INFO, "[PW4 START WAIT]");
-			break;
-
-		case DEV_PW4_END_WAIT:
-			slcdev_drv.state = DEV_PW5_START_WAIT;
-			DCC_LOG(LOG_INFO, "[PW5 START WAIT]");
-			break;
-
-		case DEV_PW5_END_WAIT:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
-			break;
-
-		case DEV_AP_ERR_END_WAIT:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
-			break;
-
-		case DEV_PW1_PULSE: /* aborted */
+		case ISINK_PULSE: /* pulse aborted */
 			isink_stop();
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW1 abort! [RECOVER TIME]");
+			/* fall through */
+		case ISINK_LATENCY: /* pulse aborted */
+//			trig_out_clr();
+			slcdev_drv.isink.state = ISINK_IDLE;
+			DCC_LOG(LOG_WARNING, "<ISINK IDLE>");
+			slcdev_drv.state = DEV_IDLE;
+			DCC_LOG(LOG_WARNING, "Pulse aborted! [IDLE]");
 			break;
 
-		case DEV_PW2_PULSE: /* aborted */
-			isink_stop();
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW2 abort! [RECOVER TIME]");
+		case ISINK_END_WAIT:
+			switch (slcdev_drv.state) {
+			case DEV_PW1_ISINK:
+				slcdev_drv.isink.pulse = dev->pw2;
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_PW2_ISINK;
+				DCC_LOG(LOG_INFO, "[PW2 ISINK]");
+				break;
+			case DEV_PW2_ISINK:
+				slcdev_drv.isink.pulse = dev->pw3;
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_PW3_ISINK;
+				DCC_LOG(LOG_INFO, "[PW3 ISINK]");
+				break;
+			case DEV_PW3_ISINK:
+				slcdev_drv.isink.pulse = dev->pw4;
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_PW4_ISINK;
+				DCC_LOG(LOG_INFO, "[PW4 ISINK]");
+				break;
+			case DEV_PW4_ISINK:
+				if (dev->pw5en) {
+					slcdev_drv.isink.pulse = dev->pw5;
+					slcdev_drv.isink.state = ISINK_START_WAIT;
+					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+					slcdev_drv.state = DEV_PW5_ISINK;
+					DCC_LOG(LOG_INFO, "[PW5 ISINK]");
+				} else {
+					slcdev_drv.isink.state = ISINK_IDLE;
+					DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+					slcdev_drv.state = DEV_IDLE;
+					DCC_LOG1(LOG_INFO, "[%d IDLE]", dev->addr);
+				}
+				break;
+			case DEV_PW5_ISINK:
+				slcdev_drv.isink.state = ISINK_IDLE;
+				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				slcdev_drv.state = DEV_IDLE;
+				DCC_LOG(LOG_INFO, "[IDLE]");
+				break;
+			case DEV_AP_ERR_ISINK:
+				break;
+			case DEV_AP_ALM_ISINK:
+				break;
+			case DEV_AP_BIT_ISINK:
+				break;
+			}
 			break;
 
-		case DEV_PW3_PULSE: /* aborted */
-			isink_stop();
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW3 abort! [RECOVER TIME]");
-			break;
+		case ISINK_IDLE:
+			switch (slcdev_drv.state) {
+			case DEV_IDLE:
+//				trig_out_clr();
+				tim->arr = 4500; /* Wait for software reset */
+				tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+				DCC_LOG(LOG_MSG, "wait reset 4.5ms");
+				break;
+			case DEV_CLIP:
+				/* respond with PW1 */
+				slcdev_drv.isink.pulse = dev->pw1;
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_PW1_ISINK;
+				DCC_LOG(LOG_INFO, "[PW1 ISINK]");
+				break;
+			}
 
-		case DEV_PW4_PULSE: /* aborted */
-			isink_stop();
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW4 abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW5_PULSE: /* aborted */
-			isink_stop();
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW5 abort! [RECOVER TIME]");
-			break;
-
-		case DEV_AP_ERR_PULSE:
-			isink_stop();
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "AP error pulse abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW1_RESPONSE_TIME:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW1 guard abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW2_RESPONSE_TIME:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW2 response abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW3_RESPONSE_TIME:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW3 guard abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW4_RESPONSE_TIME:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW4 guard abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PW5_RESPONSE_TIME:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "PW5 guard abort! [RECOVER TIME]");
-			break;
-
-		case DEV_AP_CHECKSUM_ERROR:
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_WARNING, "AP checksum error abort! [RECOVER TIME]");
-			break;
-
-		case DEV_PARITY_ERROR:
-			tim->cnt = 0;
-			tim->arr = 10;
-			tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-			slcdev_drv.state = DEV_RECOVER_TIME;
-			DCC_LOG(LOG_INFO, "[RECOVER TIME]");
 			break;
 		}
 
+		tim->arr = 4500; /* Wait for software reset */
+		tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 	}
+}
 
+/* Current sink pulse timer 
+   This ISR is invoked at the end of the current pulse */
+void stm32_tim4_isr(void)
+{
+	struct stm32f_tim * tim4 = STM32_TIM4;
+//	struct stm32f_tim * tim10 = STM32_TIM10;
+
+	/* Clear timer interrupt flags */
+	tim4->sr = 0;
+
+//	trig_out_clr();
+
+	/* End of current pulse. wait for the SLC line to go up */
+	slcdev_drv.isink.state = ISINK_END_WAIT;
+
+	DCC_LOG(LOG_INFO, "<ISINK END WAIT>");
+
+	/* Start a timeout timer */
+//	tim10->arr = 4500; 
+//	tim10->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
 }
 
 #define SLC_TMR_FREQ 1000000
@@ -771,6 +709,7 @@ static void slcdev_reset(void)
 	slcdev_drv.ev_bmp = 0;
 	slcdev_drv.dev = (struct ss_device *)&null_dev;
 	slcdev_drv.addr = 0;
+	slcdev_drv.isink.state = ISINK_IDLE;
 }
 
 void slcdev_init(void)

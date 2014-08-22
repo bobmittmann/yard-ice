@@ -80,7 +80,7 @@
 #define THINKOS_STDERR_FAULT_DUMP 1
 
 #define SHELL_LINE_MAX 32
-#define SHELL_ARG_MAX 4
+#define SHELL_ARG_MAX 5
 #define SHELL_HISTORY_MAX 4
 
 #define TTY_INBUF_LEN 8
