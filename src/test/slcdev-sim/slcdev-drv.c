@@ -36,13 +36,18 @@ struct ss_device ss_dev_tab[SS_DEVICES_MAX];
  * Trigger module
  * ------------------------------------------------------------------------- */
 
+static const uint8_t rev_addr_lut[16] = {
+	0x0, 0x2, 0x6, 0xe, 0x1, 0x8, 0xa, 0x4,
+	0xc, 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,   
+};
+
 void trig_addr_set(bool module, unsigned int addr)
 {
+	DCC_LOG2(LOG_TRACE, "%s %d", module ? "Module" : "Sensor", addr);
 	slcdev_drv.trig_msk = 0x1ff;
-	if (module)
-		slcdev_drv.trig_cmp = addr + 160;
-	else
-		slcdev_drv.trig_cmp = addr;
+	slcdev_drv.trig_cmp = module ? 1 : 0;
+	slcdev_drv.trig_cmp = rev_addr_lut[(addr >> 4) & 0xf] << 1; 
+	slcdev_drv.trig_cmp = rev_addr_lut[addr & 0xf] << 5; 
 }
 
 unsigned int trig_addr_get(void)
@@ -52,8 +57,8 @@ unsigned int trig_addr_get(void)
 
 static void trig_init(void)
 {
-	slcdev_drv.trig_msk = 0xff;
-	slcdev_drv.trig_cmp = 0x00;
+	slcdev_drv.trig_msk = 0x1ff;
+	slcdev_drv.trig_cmp = 0x000;
 
 	stm32_gpio_clr(TRIG_OUT);
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
@@ -179,23 +184,23 @@ enum {
    Device driver state machine
    ------------------------------------------------------------------------- */
 enum {
-	DEV_IDLE = 0,
-	DEV_RST,
-	DEV_MSG,
+	DEV_IDLE       = 0,
+	DEV_RST        = 1,
+	DEV_MSG        = 2,
 
-	DEV_CLIP, /* clip mode active device */
-	DEV_PW1_ISINK,
-	DEV_PW2_ISINK,
-	DEV_PW3_ISINK,
-	DEV_PW4_ISINK,
-	DEV_PW5_ISINK,
+	DEV_CLIP       = 3, /* clip mode active device */
+	DEV_PW1_ISINK  = 4,
+	DEV_PW2_ISINK  = 5,
+	DEV_PW3_ISINK  = 6,
+	DEV_PW4_ISINK  = 7,
+	DEV_PW5_ISINK  = 8,
 
-	DEV_AP_HDR,
-	DEV_AP_HDR_OK,
-	DEV_AP_HDR_ERR,
-	DEV_AP_ERR_BIT,
-	DEV_AP_INT_BIT,
-	DEV_AP_CMD,
+	DEV_AP_HDR     = 10,
+	DEV_AP_HDR_OK  = 11,
+	DEV_AP_HDR_ERR = 12,
+	DEV_AP_ERR_BIT = 13,
+	DEV_AP_INT_BIT = 14,
+	DEV_AP_CMD     = 15
 };
 
 /* -------------------------------------------------------------------------
@@ -271,34 +276,34 @@ static void ap_hdr_decode(unsigned int msg)
 	} else if ((msg & AP_GROUP_POLL_MASK) == AP_GROUP_POLL) {
 		DCC_LOG(LOG_TRACE, "[AP Group]");
 	} else {
-		do {
-			switch (msg & AP_RD_TENS_MASK) {
-			case AP_NULL:
-				DCC_LOG(LOG_TRACE, "[AP Null]");
-				continue;
-			case AP_RD_ALM_LATCH_T:
-				DCC_LOG(LOG_TRACE, "[AP Read Alarm Latch Tens]");
-				continue;
-			case AP_RD_TBL_LATCH_T:
-				DCC_LOG(LOG_TRACE, "[AP Read Trouble Latch Tens]");
-				continue;
-			}
+		switch (msg & AP_RD_TENS_MASK) {
+		case AP_NULL:
+			DCC_LOG(LOG_TRACE, "AP Null");
+			break;
+		case AP_RD_ALM_LATCH_T:
+			DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Tens");
+			break;
+		case AP_RD_TBL_LATCH_T:
+			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens");
+			break;
+		default:
 			switch (msg & AP_RD_UNITS_MASK) {
 			case AP_RD_PRESENCE:
-				DCC_LOG(LOG_TRACE, "[AP Read Presence]");
-				continue;
+				DCC_LOG(LOG_TRACE, "AP Read Presence");
+				break;
 			case AP_RD_ALM_LATCH_U:
-				DCC_LOG(LOG_TRACE, "[AP Read Alarm Latch Units]");
-				continue;
+				DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Units");
+				break;
 			case AP_RD_TBL_LATCH_U:
-				DCC_LOG(LOG_TRACE, "[AP Read Trouble Latch Units]");
-				continue;
+				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units");
+				break;
+			default:
+				DCC_LOG(LOG_WARNING, "AP command invalid");
+				slcdev_drv.state = DEV_IDLE;
+				DCC_LOG(LOG_INFO, "[IDLE]");
+				return;
 			}
-			DCC_LOG(LOG_WARNING, "[AP command invalid]");
-			slcdev_drv.state = DEV_AP_HDR_ERR;
-			DCC_LOG(LOG_INFO, "[AP HDR ERR]");
-			return;
-		} while (false);
+		}
 	}
 
 	hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
@@ -379,17 +384,6 @@ static void clip_msg_decode(unsigned int msg)
 	addr = 10 * addr_lut[hi] + addr_lut[lo];
 	addr = addr + (mod * 160);
 
-	/* trigger module */
-	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
-		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
-//		trig_out_set();
-		__thinkos_flag_signal(slcdev_drv.ev_flag);
-//		trig_out_clr();
-		/* */
-		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
-				 mod ? "MODULE" : "SENSOR", addr);
-	}
-
 	/* */
 	if (addr != slcdev_drv.addr) {
 		dev = &ss_dev_tab[addr];
@@ -399,6 +393,17 @@ static void clip_msg_decode(unsigned int msg)
 		dev->ctls = 0;
 	} else {
 		DCC_LOG(LOG_INFO, "Consecutive pooling");
+	}
+
+	/* trigger module */
+	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
+		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+		trig_out_set();
+		__thinkos_flag_signal(slcdev_drv.ev_flag);
+		trig_out_clr();
+		/* */
+		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
+				 mod ? "MODULE" : "SENSOR", addr);
 	}
 
 	if (dev->enabled) {
@@ -455,7 +460,7 @@ void stm32_tim10_isr(void)
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
 		/* VSLC at 24V (Power Level) */
-		if (slcdev_drv.state == DEV_IDLE) {
+		if (slcdev_drv.state != DEV_IDLE) {
 			DCC_LOG1(LOG_WARNING, "unexpected state: %d", slcdev_drv.state);
 		}
 
@@ -554,7 +559,6 @@ void stm32_comp_tsc_isr(void)
 		/*-----------------------------------------------------------------
 		  Output
 		  -----------------------------------------------------------------*/
-
 
 		/* Process the current sink state machine  */
 		if (slcdev_drv.isink.state == ISINK_START_WAIT) {

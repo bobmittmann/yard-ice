@@ -398,7 +398,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 		ctl = dev->ctls;
 
 		if (event & SLC_EV_TRIG) {
-			DCC_LOG(LOG_TRACE, "trigger");
+			DCC_LOG1(LOG_TRACE, "trigger %d", dev->addr);
 			led_flash(0, 64);
 		}
 

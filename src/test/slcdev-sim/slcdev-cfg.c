@@ -416,14 +416,19 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 	int addr;
 	int mod_idx;
 
-	DCC_LOG(LOG_TRACE, "...");
+	printf("Encoding device. Model \"%s\"\n", const_str(cdev->model));
+
+	DCC_LOG1(LOG_TRACE, "model=%d", cdev->model);
 
 	if ((mod_idx = db_dev_model_index_by_name(cdev->model)) < 0) {
 		DCC_LOG1(LOG_WARNING, "invalid model: %d", cdev->model);
 		return -1;
 	}
+	DCC_LOG1(LOG_TRACE, "mod_idx=%d", mod_idx);
 
 	mod = db_dev_model_by_index(mod_idx);
+	printf("\"%s\" %s\n", const_str(mod->model), const_str(mod->desc));
+
 	tbias = (cdev->tbias * 128) / 100;
 	icfg = (cdev->irate << 5) + (cdev->imode & 0x1f);
 
