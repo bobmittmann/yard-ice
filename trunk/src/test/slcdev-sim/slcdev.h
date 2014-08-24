@@ -26,6 +26,7 @@
 #include "board.h"
 #include <stdio.h>
 #include <thinkos.h>
+#include <microjs.h>
 
 /* default current source (PW) latency */
 #define ILAT_DEFAULT (100 - 20)
@@ -283,13 +284,16 @@ struct cfg_sw {
 
 struct slcdev_drv {
 	uint16_t addr; /* current polled device address */
-	uint16_t trig_msk; /* trigger module bitmask */
-	uint16_t trig_cmp; /* trigger mudule compare value */
-	int8_t ev_flag; /*event flag */
 	uint8_t ev_bmp; /* event bitmap */
 	uint8_t bit_cnt; /* message bit count */
 	uint32_t msg; /* message data from the pannel */
 	unsigned int state; /* decoder state */
+	struct {
+		uint16_t msk; /* bitmask */
+		uint16_t cmp; /* compare value */
+		uint16_t ap_msk; /* AP mode bitmask */
+		uint16_t ap_cmp; /* AP mode compare value */
+	} trig; /* trigger module  */
 	struct {
 		unsigned int state; /* decoder state */
 		unsigned int pulse; /* pulse width (microsseconds) */
@@ -314,10 +318,10 @@ static inline void trig_out_set(void) {
 
 static inline uint32_t slcdev_event_wait(void) {
 	uint32_t events;
-	thinkos_flag_wait(slcdev_drv.ev_flag);
+	thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
 	events = slcdev_drv.ev_bmp;
 	slcdev_drv.ev_bmp= 0;
-	thinkos_flag_clr(slcdev_drv.ev_flag);
+	thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
 	return events;
 }
 
@@ -331,15 +335,16 @@ unsigned int trig_addr_get(void);
 
 int device_db_init(void);
 int device_db_erase(void);
-int device_db_compile(void);
+int device_db_compile(struct json_file * json);
 int device_db_dump(FILE * f);
 
 int config_dump(FILE * f);
 
 int config_erase(void);
 int config_load(void);
-int config_save(void);
-int config_compile(void);
+int config_save(struct json_file * json);
+int config_compile(struct json_file * json);
+bool config_sanity_check(struct json_file * json);
 int config_show_info(FILE * f);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
@@ -387,6 +392,8 @@ void dev_sim_disable(unsigned int addr);
 
 struct ss_device * dev_sim_sensor_lookup(unsigned int addr);
 struct ss_device * dev_sim_module_lookup(unsigned int addr);
+
+bool device_db_sanity_check(struct json_file * json);
 
 #ifdef __cplusplus
 }

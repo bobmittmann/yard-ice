@@ -40,33 +40,35 @@ struct fs_blk {
  *****************************************************************************/
 
 const struct fs_blk flash_fs_dir[] = {
-	{ .name = "dev.db", 
-	  .offs = FLASH_BLK_DEV_DB_BIN_OFFS,
-	  .size = FLASH_BLK_DEV_DB_BIN_SIZE  
+	{ .name = "strings", 
+	  .offs = FLASH_BLK_CONST_STRING_OFFS,
+	  .size = FLASH_BLK_CONST_STRING_SIZE
+	},
+	{ .name = "db.bin", 
+	  .offs = FLASH_BLK_DB_BIN_OFFS,
+	  .size = FLASH_BLK_DB_BIN_SIZE  
 	},
 	{ .name = "cfg.bin", 
 	  .offs = FLASH_BLK_CFG_BIN_OFFS,
 	  .size = FLASH_BLK_CFG_BIN_SIZE  
 	},
-	{ .name = "devdb.js", 
-	  .offs = FLASH_BLK_DEV_DB_JSON_OFFS,
-	  .size = FLASH_BLK_DEV_DB_JSON_SIZE  
-	},
-	{ .name = "strings", 
-	  .offs = FLASH_BLK_CONST_STRING_OFFS,
-	  .size = FLASH_BLK_CONST_STRING_SIZE
+	{ .name = "db.js", 
+	  .offs = FLASH_BLK_DB_JSON_OFFS,
+	  .size = FLASH_BLK_DB_JSON_SIZE  
 	},
 	{ .name = "cfg.js", 
-	  .offs = FLASH_BLK_SIM_CFG_JSON_OFFS,
-	  .size = FLASH_BLK_SIM_CFG_JSON_SIZE  
+	  .offs = FLASH_BLK_CFG_JSON_OFFS,
+	  .size = FLASH_BLK_CFG_JSON_SIZE  
 	}
 };
 
 #define FLASH_FS_BLK_COUNT (sizeof(flash_fs_dir) / sizeof(struct fs_blk)) 
 
+#if 0
 uint16_t flash_fs_file_size[FLASH_FS_BLK_COUNT] = {
 	0, 0, 0
 };
+#endif
 
 /* look up for a directory entry by name */
 bool fs_dirent_lookup(const char * name, struct fs_dirent * ep)
@@ -111,10 +113,18 @@ bool fs_dirent_get_next(struct fs_dirent * ep)
 	return ep;
 }
 
-/*****************************************************************************
- * FLASH memory objects
- *****************************************************************************/
-//const uint8_t * dev_db_json = (uint8_t *)DEV_DB_JSON_ADDR;
-//const uint8_t * sim_cfg_json = (uint8_t *)SIM_CFG_JSON_ADDR;
-//const void (* xflash)(void *, int) = (void (*)(void *, int))XFLASH_ADDR;
+// FIXME: move this elsewhere...
+#include <crc.h>
+
+int json_file_get(unsigned int offs, struct json_file * json)
+{
+	json->txt = (char *)(STM32_MEM_FLASH + offs);
+	json->len = microjs_json_root_len(json->txt);
+	json->crc = crc16ccitt(0, json->txt, json->len);
+
+	DCC_LOG3(LOG_TRACE, "   json: txt=0x%08x len=%d crc=0x%04x", 
+			 json->txt, json->len, json->crc);
+
+	return 0;
+}
 

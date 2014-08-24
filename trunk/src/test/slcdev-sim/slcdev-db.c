@@ -104,7 +104,7 @@ const char db_default[] =
 	" ]\n"
 	"}\n";
 
-uint16_t db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+uint16_t db_stack = FLASH_BLK_DB_BIN_SIZE;
 uint16_t db_heap = 0;
 
 static int db_stack_push(void * buf, unsigned int len, void ** ptr)
@@ -116,7 +116,7 @@ static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 	DCC_LOG2(LOG_INFO, "1. buf=0x%08x len=%d", buf, len);
 
 	pos = (db_stack - len) & ~3;
-	offs = FLASH_BLK_DEV_DB_BIN_OFFS + pos;
+	offs = FLASH_BLK_DB_BIN_OFFS + pos;
 
 	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
@@ -144,7 +144,7 @@ static int db_heap_push(void * buf, unsigned int len, void ** ptr)
 	uint32_t offs;
 	int ret;
 
-	offs = FLASH_BLK_DEV_DB_BIN_OFFS + db_heap;
+	offs = FLASH_BLK_DB_BIN_OFFS + db_heap;
 
 	/* 32 bits alignement!! */
 	if (len != ((len + 3) & ~3))
@@ -577,11 +577,13 @@ const char * const db_label[] = {
 	NULL	
 };
 
-static struct db_obj * db_json_parse(const char * text, unsigned int len)
+static struct db_obj * db_json_parse(struct json_file * json)
 {
 	struct microjs_json_parser jsn;
 	uint8_t tok_buf[JSON_TOK_BUF_MAX];
 	struct db_obj * root;
+	const char * text = json->txt;
+	unsigned int len = json->len;
 	int ret;
 
 	DCC_LOG(LOG_TRACE, "1. JSON tokenizer.");
@@ -595,14 +597,14 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 
 	DCC_LOG(LOG_TRACE, "2. erasing database.");
 	/* erase flash block */
-	if (stm32_flash_erase(FLASH_BLK_DEV_DB_BIN_OFFS, 
-						  FLASH_BLK_DEV_DB_BIN_SIZE) < 0) {
+	if (stm32_flash_erase(FLASH_BLK_DB_BIN_OFFS, 
+						  FLASH_BLK_DB_BIN_SIZE) < 0) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
 		return NULL;
 	};
 
 	/* initialize database */
-	db_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
+	db_stack = FLASH_BLK_DB_BIN_SIZE;
 	db_heap = 0;
 
 	DCC_LOG(LOG_TRACE, "3. erasing constant strings pool.");
@@ -615,27 +617,6 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 	root = NULL;
 
 	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
-
-#if 0
-	if (microjs_json_get_val(&jsn, NULL) != MICROJS_JSON_OBJECT) {
-		DCC_LOG(LOG_ERROR, "root must be an object!");
-		return NULL;
-	}
-
-	/* parse the JASON file with the microjs tokenizer */
-	if (microjs_json_scan(&jsn) < 0) {
-		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
-		return NULL;
-	}
-
-	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
-
-	/* decode the token stream */
-	if (microjs_json_parse_obj(&jsn, db_desc, &root) < 0) {
-		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
-		return NULL;
-	}
-#else
 
 	/* skip to the object oppening to allow object by object parsing */
 	microjs_json_flush(&jsn);
@@ -655,8 +636,6 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 		return NULL;
 	}
 
-#endif
-
 	DCC_LOG2(LOG_TRACE, "5. done, root=0x%08x sp=0x%08x.", root, cm3_sp_get());
 
 	return root;
@@ -668,12 +647,11 @@ static struct db_obj * db_json_parse(const char * text, unsigned int len)
 
 #define DB_PTR_IS_VALID(PTR) \
 	(((void *)(PTR) >= (void *)(STM32_MEM_FLASH + \
-								FLASH_BLK_DEV_DB_BIN_OFFS)) && \
-	 ((void *)(PTR) < (void *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS + \
-						 FLASH_BLK_DEV_DB_BIN_SIZE))) 
+								FLASH_BLK_DB_BIN_OFFS)) && \
+	 ((void *)(PTR) < (void *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS + \
+						 FLASH_BLK_DB_BIN_SIZE))) 
 
-int db_info_write(const char * txt, unsigned int crc, 
-				  unsigned int len, struct db_obj * root)
+int db_info_write(struct json_file * json, struct db_obj * root)
 {
 
 	uint32_t buf[(sizeof(struct db_info) + 
@@ -744,9 +722,9 @@ int db_info_write(const char * txt, unsigned int crc,
 	info->len = sizeof(struct db_info) + cnt * sizeof(struct db_obj *);
 	info->type = DB_OBJ_DB_INFO;
 	info->next = root;
-	info->json_txt= txt;
-	info->json_crc = crc;
-	info->json_len = len;
+	info->json_txt= json->txt;
+	info->json_crc = json->crc;
+	info->json_len = json->len;
 	info->obj_cnt = cnt;
 
 	DCC_LOG(LOG_TRACE, "5. flash write");
@@ -754,57 +732,54 @@ int db_info_write(const char * txt, unsigned int crc,
 	return db_heap_push(info, info->len, NULL);
 }
 
-
-int device_db_compile(void)
+int device_db_compile(struct json_file * json)
 {
-	struct db_info * inf;
 	struct db_obj * root;
-	unsigned int json_crc;
-	int json_len;
-	char * json_txt;
 	int ret;
 
 	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
 
-	json_txt = (char *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_JSON_OFFS);
-	json_len = microjs_json_root_len(json_txt);
-	json_crc = crc16ccitt(0, json_txt, json_len);
-
-	DCC_LOG3(LOG_TRACE, "   json: txt=0x%08x len=%d crc=0x%04x", 
-			 json_txt, json_len, json_crc);
-
-	/* check database integrity */
-	inf = (struct db_info *)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
-	if ((inf->len >= sizeof(struct db_info)) && 
-		(inf->type == DB_OBJ_DB_INFO) && (inf->json_txt == json_txt) && 
-		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
-		printf("Database is up-to-date.\n");
-		return 0;
-	}
-
-	DCC_LOG3(LOG_TRACE, "db_info: txt=0x%08x len=%d crc=0x%04x", 
-			 inf->json_txt, inf->json_len, inf->json_crc);
 
 	DCC_LOG(LOG_TRACE, "1. compiling JSON file.");
 
-	if ((root = db_json_parse(json_txt, json_len)) == NULL) {
+	if ((root = db_json_parse(json)) == NULL) {
 		DCC_LOG(LOG_ERROR, "db_json_parse() failed.");
-		printf("JSON file parse error!\n");
 		return -1;
 	}
 
 	DCC_LOG(LOG_TRACE, "5. updating database info.");
 
-	if ((ret = db_info_write(json_txt, json_crc, json_len, root)) < 0) {
+	if ((ret = db_info_write(json, root)) < 0) {
 		return ret;
 	}
 
-	printf("Device databse compiled.\n");
-	printf(" - %d devices.\n", inf->obj_cnt);
-	printf(" - Free memory: %d.%02d KiB.\n", (db_stack - db_heap) / 1024, 
-		   (((db_stack - db_heap) % 1024) * 100) / 1024);
+//	struct db_info * inf;
+//	printf("Device databse compiled.\n");
+//	printf(" - %d devices.\n", inf->obj_cnt);
+//	printf(" - Free memory: %d.%02d KiB.\n", (db_stack - db_heap) / 1024, 
+//		   (((db_stack - db_heap) % 1024) * 100) / 1024);
 
 	return ret;
+}
+
+bool device_db_sanity_check(struct json_file * json)
+{
+	struct db_info * inf;
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+
+	/* check database integrity */
+	inf = (struct db_info *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	if ((inf->len >= sizeof(struct db_info)) && 
+		(inf->type == DB_OBJ_DB_INFO) && (inf->json_txt == json->txt) && 
+		(inf->json_crc == json->crc) && (inf->json_len == json->len)) {
+		return true;
+	}
+
+	DCC_LOG3(LOG_TRACE, "db_info: txt=0x%08x len=%d crc=0x%04x", 
+			 inf->json_txt, inf->json_len, inf->json_crc);
+
+	return false;
 }
 
 /********************************************************************** 
@@ -815,7 +790,7 @@ struct db_dev_model * device_db_lookup(unsigned int id)
 {
 	struct db_info * inf;
 
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
 	if (id >= inf->obj_cnt)
 		return NULL;
 
@@ -827,7 +802,7 @@ int db_dev_model_index_by_name(unsigned int str_id)
 	struct db_info * inf;
 	int i;
 
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
 
 	for (i = 0 ; i < inf->obj_cnt; ++i) {
 		struct db_dev_model * obj = (struct db_dev_model *)inf->obj[i];
@@ -842,7 +817,7 @@ struct db_dev_model * db_dev_model_by_index(unsigned int idx)
 {
 	struct db_info * inf;
 
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
 
 	if (idx >= inf->obj_cnt) {
 		return NULL;
@@ -1079,7 +1054,7 @@ int device_db_dump(FILE * f)
 	struct db_info * inf;
 	int i;
 
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DEV_DB_BIN_OFFS);
+	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
 	db_info_dump(f, inf);
 
 	for (i = 0 ; i < inf->obj_cnt; ++i) {
@@ -1104,8 +1079,8 @@ int device_db_dump(FILE * f)
 
 int device_db_erase(void)
 {
-	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
-	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
+	uint32_t blk_offs = FLASH_BLK_DB_BIN_OFFS;
+	uint32_t blk_size = FLASH_BLK_DB_BIN_SIZE;
 	int ret;
 
 	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {

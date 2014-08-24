@@ -381,106 +381,42 @@ int cmd_slewrate(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-
-int xflash(void * uart, uint32_t addr, unsigned int size);
-
-
-int cmd_xflash(FILE * f, int argc, char ** argv)
-{
-//	struct cm3_systick * systick = CM3_SYSTICK;
-	struct stm32_usart * uart = STM32_USART2;
-	uint32_t offs = 0x00000000;
-	uint32_t len = 32768;
-
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 3)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	offs = strtoul(argv[1], NULL, 0);
-
-	if (argc > 2)
-		len = strtoul(argv[2], NULL, 0);
-
-	DCC_LOG2(LOG_TRACE, "offs=%08x len=%d", offs, len);
-
-	if (offs > 0x20000)
-		return SHELL_ERR_ARG_INVALID;
-
-	if (len == 0)
-		return SHELL_ERR_ARG_INVALID;
-
-	if ((offs + len) > 0x20000)
-		return SHELL_ERR_ARG_INVALID;
-
-	/* disable interrupts */	
-	cm3_cpsid_i();
-
-#if 0
-	for (;;) {
-		int cnt = 1000;
-		while (cnt > 0) {
-			if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG)
-				cnt--;
-		}
-		DCC_LOG(LOG_TRACE, "tick.");
-	}
-#endif
-
-	xflash(uart, offs, len);
-
-	return 0;
-}
-
-int cmd_eeprom(FILE * f, int argc, char ** argv)
-{
-	unsigned int offs;
-	unsigned int data;
-
-	if (argc > 3)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	stm32_eeprom_unlock();
-
-	if (argc == 2) {
-		if ((strcmp(argv[1], "test") == 0) || 
-			(strcmp(argv[1], "t") == 0)) {
-			fprintf(f, "Testing EEPROM...\n");
-			data = rand();
-			for (offs = 0; offs < 4096; offs += 4) {
-				stm32_eeprom_wr32(offs, data);
-				data++;
-			}
-
-		} else if ((strcmp(argv[1], "erase") == 0) || 
-			(strcmp(argv[1], "e") == 0)) {
-			fprintf(f, "Erasing EEPROM...\n");
-			for (offs = 0; offs < 4096; offs += 4)
-				stm32_eeprom_wr32(offs, 0);
-		}
-	}
-
-		
-	return 0;
-}
-
 int cmd_dbase(FILE * f, int argc, char ** argv)
 {
-//	if (argc < 2)
-//		return SHELL_ERR_ARG_MISSING;
+	struct json_file json;
+	bool erase = false;
+	bool compile = false;
+	int i;
 
-	if (argc == 1) {
+	if (argc == 1)
 		device_db_dump(f);
+
+	for (i = 1; i < argc; ++i) {
+		if ((strcmp(argv[i], "compile") == 0) || 
+			(strcmp(argv[i], "c") == 0)) {
+			compile = true;
+		} else if ((strcmp(argv[i], "erase") == 0) || 
+			(strcmp(argv[i], "e") == 0)) {
+			erase = true;
+		} else
+			return SHELL_ERR_ARG_INVALID;
 	}
 
-	if (argc == 2) {
-		if ((strcmp(argv[1], "compile") == 0) || 
-			(strcmp(argv[1], "c") == 0)) {
-			device_db_compile();
-		} else if ((strcmp(argv[1], "erase") == 0) || 
-			(strcmp(argv[1], "e") == 0)) {
-			device_db_erase();
+	if (erase) {
+		fprintf(f, "Erasing...\n");
+		device_db_erase();
+	}
+
+	if (compile) {
+		json_file_get(FLASH_BLK_DB_JSON_OFFS, &json);
+		if (device_db_sanity_check(&json)) {
+			fprintf(f, "Up-to-date.\n");
+		} else {
+			fprintf(f, "Compiling...\n");
+			if (device_db_compile(&json) < 0) {
+				printf("Parse error!\n");
+				return -1;
+			}
 		}
 	}
 
@@ -489,36 +425,68 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 int cmd_config(FILE * f, int argc, char ** argv)
 {
-	int ret = SHELL_ERR_ARG_INVALID;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
+	struct json_file json;
+	bool erase = false;
+	bool compile = false;
+	bool load = false;
+	bool save = false;
+	int i;
 
 	if (argc == 1) 
 		return config_show_info(f);
 
-	if (argc == 2) {
+	for (i = 1; i < argc; ++i) {
 		if ((strcmp(argv[1], "compile") == 0) || 
 			(strcmp(argv[1], "c") == 0)) {
-			slcdev_stop();
-			ret = config_compile();
-			slcdev_resume();
-		} else if ((strcmp(argv[1], "erase") == 0) || 
+			compile = true;
+		} else if ((strcmp(argv[i], "erase") == 0) || 
 			(strcmp(argv[1], "e") == 0)) {
-			ret = config_erase();
-		} else if ((strcmp(argv[1], "load") == 0) || 
+			erase = true;
+		} else if ((strcmp(argv[i], "load") == 0) || 
 			(strcmp(argv[1], "l") == 0)) {
-			slcdev_stop();
-			ret = config_load();
-			slcdev_resume();
-		} else if ((strcmp(argv[1], "save") == 0) || 
+			load = true;
+		} else if ((strcmp(argv[i], "save") == 0) || 
 			(strcmp(argv[1], "s") == 0)) {
-			config_erase();
-			ret = config_save();
+			save = true;
+		} else
+			return SHELL_ERR_ARG_INVALID;
+	}
+
+	if (erase) {
+		fprintf(f, "Erasing...\n");
+		config_erase();
+	}
+
+	json_file_get(FLASH_BLK_CFG_JSON_OFFS, &json);
+
+	slcdev_stop();
+
+	if (compile) {
+		if (config_sanity_check(&json)) {
+			fprintf(f, "Up-to-date.\n");
+		} else {
+			fprintf(f, "Compiling...\n");
+			if (config_compile(&json) < 0) {
+				printf("Parse error!\n");
+				return -1;
+			}
+
 		}
 	}
 
-	return ret;
+	if (save) {
+		printf("Saving...\n");
+		config_save(&json);
+	}
+
+	if (load) {
+		printf("Loading...\n");
+		config_save(&json);
+	}
+
+	slcdev_resume();
+
+	return 0;
 }
 
 int device_dump(FILE * f, int addr);
@@ -670,10 +638,6 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
 
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
-
-	{ cmd_xflash, "xflash", "xf", "OFFS [LEN]", "Firmware update" },
-
-	{ cmd_eeprom, "eeprom", "ee", "", "EEPROM test" },
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
 

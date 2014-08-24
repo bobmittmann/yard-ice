@@ -11,9 +11,6 @@
 #include "slcdev.h"
 #include "isink.h"
 
-uint16_t cfg_stack = FLASH_BLK_DEV_DB_BIN_SIZE;
-uint16_t cfg_heap = 0;
-
 /* Basic field (attribute) types */
 enum {
 	CFG_VOID,
@@ -549,8 +546,6 @@ static const struct microjs_attr_desc cfg_desc[] = {
 	{ "", 0, 0, 0, NULL},
 };
 
-#define JSON_TOK_BUF_MAX 4096
-
 const char * const cfg_labels[] = {
 	"sensor",
 	"module",
@@ -616,66 +611,22 @@ int dev_tab_save(struct cfg_info * inf)
 	return ret;
 }
 
-int cfg_info_write(const char * txt, unsigned int crc, unsigned int len)
-	
-{
-	struct cfg_info inf;
-	int offs;
-	int size;
-	int ret;
+#define JSON_TOK_BUF_MAX 384
 
-	DCC_LOG(LOG_TRACE, "...");
-
-	inf.magic = CFG_MAGIC;
-	inf.json_txt = txt;
-	inf.json_crc = crc;
-	inf.json_len = len;
-	if ((ret = dev_tab_save(&inf)) < 0)
-		return ret;
-
-	size = sizeof(struct cfg_info);
-	offs = FLASH_BLK_CFG_BIN_OFFS;
-
-	if ((ret = stm32_flash_write(offs, &inf, size)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-	}
-
-	return ret;
-}
-
-int config_compile(void)
+int config_compile(struct json_file * json)
 {
 	struct microjs_json_parser jsn;
 	uint8_t tok_buf[JSON_TOK_BUF_MAX];
-	unsigned int json_crc;
-	int json_len;
-	char * json_txt;
-	struct cfg_info * inf;
 	int ret;
 
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, cfg_labels);
 
-	json_txt = (char *)(STM32_MEM_FLASH + FLASH_BLK_SIM_CFG_JSON_OFFS);
-	json_len = microjs_json_root_len(json_txt);
-	json_crc = crc16ccitt(0, json_txt, json_len);
-	(void)json_crc;
-
-	DCC_LOG3(LOG_TRACE, "txt=0x%08x len=%d crc=0x%04x", 
-			 json_txt, json_len, json_crc);
-
-	/* check database integrity */
-	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
-	if ((inf->magic == CFG_MAGIC) && (inf->json_txt == json_txt) && 
-		(inf->json_crc == json_crc) && (inf->json_len == json_len)) {
-		printf("Configuration is up-to-date.\n");
-		return 0;
+	if ((ret = microjs_json_open(&jsn, json->txt, json->len)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_open() failed!");
+		return ret;
 	}
 
-	printf("Parsing JSON file...\n");
-
-	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, cfg_labels);
-	microjs_json_open(&jsn, json_txt, json_len);
-
+#if 0
 	/* parse the JASON file with the microjs tokenizer */
 	if ((ret = microjs_json_scan(&jsn)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_parse() failed!");
@@ -692,18 +643,25 @@ int config_compile(void)
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
+#endif
 
-	printf("Erasing old configuration ...\n");
+	DCC_LOG(LOG_TRACE, "Parsing JSON.");
 
-	if ((ret = config_erase()) < 0) {
-		DCC_LOG(LOG_ERROR, "config_erase() failed!");
-		return ret;
+	/* skip to the object oppening to allow object by object parsing */
+	microjs_json_flush(&jsn);
+
+	/* parse the JASON file with the microjs tokenizer */
+	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
+		/* decode the token stream */
+		if ((ret = microjs_json_parse_obj(&jsn, cfg_desc, NULL)) < 0) {
+			DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+			return ret;
+		}
+		microjs_json_flush(&jsn);
 	}
 
-	printf("Saving new configuration ...\n");
-
-	if ((ret = cfg_info_write(json_txt, json_crc, json_len)) < 0) {
-		DCC_LOG(LOG_ERROR, "cfg_info_write() failed!");
+	if (ret != MICROJS_EMPTY_STACK) {
+		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
 		return ret;
 	}
 
@@ -735,10 +693,56 @@ int config_load(void)
 	return -1;
 }
 
-int config_save(void)
+int config_save(struct json_file * json)
 {
+	struct cfg_info inf;
+	int offs;
+	int size;
+	int ret;
+
 	DCC_LOG(LOG_TRACE, "...");
-	return cfg_info_write(NULL, 0, 0);
+
+	inf.magic = CFG_MAGIC;
+	if (json == NULL) {
+		inf.json_txt = NULL;
+		inf.json_crc = 0;
+		inf.json_len = 0;
+	} else {
+		inf.json_txt = json->txt;
+		inf.json_crc = json->crc;
+		inf.json_len = json->len;
+	}
+	if ((ret = dev_tab_save(&inf)) < 0)
+		return ret;
+
+	size = sizeof(struct cfg_info);
+	offs = FLASH_BLK_CFG_BIN_OFFS;
+
+	if ((ret = stm32_flash_write(offs, &inf, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+	}
+
+	return ret;
+}
+
+
+bool config_sanity_check(struct json_file * json)
+{
+	struct cfg_info * inf;
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+
+	/* check configuration integrity */
+	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
+	if ((inf->magic == CFG_MAGIC) && (inf->json_txt == json->txt) && 
+		(inf->json_crc == json->crc) && (inf->json_len == json->len)) {
+		return true;
+	}
+
+	DCC_LOG3(LOG_TRACE, "cfg_info: txt=0x%08x len=%d crc=0x%04x", 
+			 inf->json_txt, inf->json_len, inf->json_crc);
+
+	return false;
 }
 
 int config_show_info(FILE * f)

@@ -26,10 +26,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
-#include <thinkos.h>
-
 #include <sys/dcclog.h>
 
 #include "board.h"
@@ -51,8 +47,12 @@
 #define SERIAL_TX_BUF_LEN 16
 
 struct serdrv {
+#ifndef SERDRV_RX_FLAG 
 	int8_t rx_flag;
+#endif
+#ifndef SERDRV_TX_FLAG 
 	int8_t tx_flag;
+#endif
 	int8_t rx_pos;
 	uint8_t tx_buf[SERIAL_TX_BUF_LEN];
 	uint8_t rx_buf[SERIAL_RX_BUF_LEN];
@@ -74,8 +74,11 @@ void stm32_dma1_channel6_isr(void)
 		/* stop DMA */
 		dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
 		DCC_LOG(LOG_INFO, "DMA RX complete...");
+#ifdef SERDRV_RX_FLAG 
+		__thinkos_flag_signal(SERDRV_RX_FLAG);
+#else
 		__thinkos_flag_signal(serial2_dev.rx_flag);
-
+#endif
 	}
 	if (dma->isr & DMA_TEIF6) {
 		/* clear the DMA error flag */
@@ -98,7 +101,11 @@ void stm32_dma1_channel7_isr(void)
 		/* stop DMA */
 		dma->ch[UART2_TX_DMA_CHAN].ccr = 0;
 		DCC_LOG(LOG_INFO, "DMA TX complete...");
+#ifdef SERDRV_TX_FLAG 
+		__thinkos_flag_signal(SERDRV_TX_FLAG);
+#else
 		__thinkos_flag_signal(serial2_dev.tx_flag);
+#endif
 
 	}
 	if (dma->isr & DMA_TEIF7) {
@@ -128,7 +135,11 @@ void stm32_usart2_isr(void)
 		/* stop DMA */
 		dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
 		DCC_LOG(LOG_INFO, "IDLE");
+#ifdef SERDRV_RX_FLAG 
+		__thinkos_flag_signal(SERDRV_RX_FLAG);
+#else
 		__thinkos_flag_signal(serial2_dev.rx_flag);
+#endif
 	} else {
 		DCC_LOG1(LOG_INFO, "sr=%04x", sr);
 	}
@@ -140,13 +151,21 @@ struct serdrv * serdrv_init(unsigned int speed)
 	struct stm32_usart * uart = STM32_USART2;
 	struct stm32f_dma * dma = STM32_DMA1;
 
-	/* alloc kernel objects */
-	drv->rx_flag = thinkos_flag_alloc();
-	drv->tx_flag = thinkos_flag_alloc();
 	drv->rx_pos = 0;
+	/* alloc kernel objects */
+#ifndef SERDRV_RX_FLAG 
+	drv->rx_flag = thinkos_flag_alloc();
+#endif
+#ifndef SERDRV_TX_FLAG 
+	drv->tx_flag = thinkos_flag_alloc();
+#endif
 	/* signal the TX flag, indicates the 
 	   transmitter is ready to start transmitting */
+#ifdef SERDRV_TX_FLAG 
+	thinkos_flag_set(SERDRV_TX_FLAG);
+#else
 	thinkos_flag_set(drv->tx_flag);
+#endif
 
 	DCC_LOG1(LOG_INFO, "speed=%d", speed);
 
@@ -227,11 +246,16 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 
 	while (rem > 0) {
 		DCC_LOG(LOG_INFO, "TX wait...");
-		/* wait for pending DMA xfer to complete */
-		thinkos_flag_wait(drv->tx_flag);
 
+#ifdef SERDRV_TX_FLAG 
+		/* wait for pending DMA xfer to complete */
+		thinkos_flag_wait(SERDRV_TX_FLAG);
 		/* clear idle flag */
+		thinkos_flag_clr(SERDRV_TX_FLAG);
+#else
+		thinkos_flag_wait(drv->tx_flag);
 		thinkos_flag_clr(drv->tx_flag);
+#endif
 
 		n = MIN(rem, SERIAL_TX_BUF_LEN);
 
@@ -267,7 +291,11 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 	DCC_LOG(LOG_INFO, "RX wait...");
 
 	/* wait for DMA xfer to complete */
+#ifdef SERDRV_RX_FLAG 
+	if ((ret = thinkos_flag_timedwait(SERDRV_RX_FLAG, tmo)) < 0) {
+#else 
 	if ((ret = thinkos_flag_timedwait(drv->rx_flag, tmo)) < 0) {
+#endif
 		DCC_LOG(LOG_INFO, "Timeout!");
 		return ret;
 	}
@@ -292,7 +320,11 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 		/* reset buffer position index */
 		drv->rx_pos = 0;
 		/* clear flag */
+#ifdef SERDRV_RX_FLAG 
+		thinkos_flag_clr(SERDRV_RX_FLAG);
+#else
 		thinkos_flag_clr(drv->rx_flag);
+#endif
 		/* Number of data items to transfer */
 		dma->ch[UART2_RX_DMA_CHAN].cndtr = SERIAL_RX_BUF_LEN;
 		/* Configure and enable DMA */

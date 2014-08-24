@@ -24,6 +24,11 @@
 #define __BOARD_H__
 
 #include <sys/stm32f.h>
+#include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 #define LED1      STM32_GPIOB, 10
 #define LED2      STM32_GPIOB, 11
@@ -82,24 +87,6 @@
 #define SW2_B   (2 << 2)
 #define SW2_MSK (3 << 2)
 
-enum {
-	EV_SW1 = 0,
-	EV_SW2,
-	EV_ADDR,
-};
-
-struct io_drv {
-	int8_t flag;
-	volatile uint8_t sw;
-	volatile uint8_t addr;
-	volatile uint8_t event;
-	uint8_t addr_prev;
-	uint8_t sw_prev;
-	uint8_t led_tmr[6];
-};
-
-extern struct io_drv io_drv;
-
 /*****************************************************************************
  * FLASH memory map
  *****************************************************************************/
@@ -115,41 +102,52 @@ extern struct io_drv io_drv;
 */
 
 #define FLASH_BLK_FIRMWARE_OFFS     0x00000000
-#define FLASH_BLK_FIRMWARE_SIZE     (48 * 1024)
+#define FLASH_BLK_FIRMWARE_SIZE     (52 * 1024)
 
-#define FLASH_BLK_DEV_DB_BIN_OFFS   0x0000c000
-#define FLASH_BLK_DEV_DB_BIN_SIZE   (8 * 1024)
+#define FLASH_BLK_CONST_STRING_OFFS 0x0000d000
+#define FLASH_BLK_CONST_STRING_SIZE (12 * 1024)
 
-#define FLASH_BLK_CFG_BIN_OFFS      0x0000e000
-#define FLASH_BLK_CFG_BIN_SIZE      (8 * 1024)
+#define FLASH_BLK_DB_BIN_OFFS       0x00010000
+#define FLASH_BLK_DB_BIN_SIZE       (12 * 1024)
 
-#define FLASH_BLK_CONST_STRING_OFFS 0x00010000
-#define FLASH_BLK_CONST_STRING_SIZE (16 * 1024)
+#define FLASH_BLK_CFG_BIN_OFFS      0x00013000
+#define FLASH_BLK_CFG_BIN_SIZE      (12 * 1024)
 
-#define FLASH_BLK_DEV_DB_JSON_OFFS  0x00014000
-#define FLASH_BLK_DEV_DB_JSON_SIZE  (24 * 1024)
+#define FLASH_BLK_DB_JSON_OFFS      0x00016000
+#define FLASH_BLK_DB_JSON_SIZE      (20 * 1024)
 
-#define FLASH_BLK_SIM_CFG_JSON_OFFS 0x00018000
-#define FLASH_BLK_SIM_CFG_JSON_SIZE (24 * 1024)
+#define FLASH_BLK_CFG_JSON_OFFS     0x0001b000
+#define FLASH_BLK_CFG_JSON_SIZE     (20 * 1024)
 
+/* -------------------------------------------------------------------------
+ * ThinkOS flags assignements
+ * ------------------------------------------------------------------------- */
+
+#define SLCDEV_DRV_EV_FLAG (THINKOS_FLAG_BASE + 0)
+#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 1)
+#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 2)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* low level led on/off functions */
+static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_mode_af(__gpio, __pin);
+}
+
+static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_mode_out(__gpio, __pin);
+}
+
+static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
+	return stm32_gpio_is_mode_af(__gpio, __pin);
+}
+
+void __attribute__((noreturn)) io_event_task(void);
 void io_init(void);
 
 void led_flash(unsigned int id, unsigned int ms);
-
-uint32_t io_event_wait(void);
-
-static inline void io_event_clr(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 0);  
-}
-
-static inline void io_event_set(unsigned int __flag) {
-	__bit_mem_wr((uint32_t *)&io_drv.event, __flag, 1);
-}
 
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);

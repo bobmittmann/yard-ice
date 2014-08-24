@@ -20,27 +20,19 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "board.h"
-#include "isink.h"
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 #include <thinkos.h>
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-struct io_drv io_drv;
+#include "board.h"
+#include "isink.h"
+#include "slcdev.h"
 
-static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_af(__gpio, __pin);
-}
-
-static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_out(__gpio, __pin);
-}
-
-static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
-	return stm32_gpio_is_mode_af(__gpio, __pin);
-}
+struct {
+	uint8_t led_tmr[6];
+} io_drv;
 
 const struct {
 	struct stm32_gpio * gpio;
@@ -66,14 +58,13 @@ void led_off(unsigned int id)
 	__led_off(led_io[id].gpio, led_io[id].pin);
 }
 
-
-
 void led_flash(unsigned int id, unsigned int ms)
 {
 	io_drv.led_tmr[id] = ms / IO_POLL_PERIOD_MS;
 	__led_on(led_io[id].gpio, led_io[id].pin);
 }
 
+/* rotary switch address decoding */
 const uint8_t addr_sw_lut[] = {
 /*  00, 01, 02, 03, 04, 05, 06, 07, 08, 09, 0a, 0b, 0c, 0d,  e, 0f */
 	 0, 10, 40, 50, 20, 30, 60, 70, 80, 90,  0,  0,  0,  0,  0, 0,
@@ -97,7 +88,7 @@ const uint8_t addr_sw_lut[] = {
 	 9, 19, 92, 59, 29, 39, 69, 79, 89, 99,  0,  0,  0,  0,  0, 0
 };
 
-
+#if 0
 void stm32_tim9_isr(void)
 {
 	struct stm32f_tim * tim = STM32_TIM9;
@@ -197,11 +188,12 @@ static void io_timer_init(void)
 
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
+#endif
 
 #define PWM_FREQ 100000
 
 
-void io_leds_init(void)
+static void io_leds_init(void)
 {
 	struct stm32f_tim * tim;
 	uint32_t div;
@@ -305,25 +297,108 @@ void io_init(void)
 	stm32_gpio_mode(USART2_RX, ALT_FUNC, 0);
 	stm32_gpio_af(USART2_RX, GPIO_AF7);
 
-	io_timer_init();
+//	io_timer_init();
 	io_leds_init();
-
-	io_drv.flag = thinkos_flag_alloc();
 }
 
-uint32_t io_event_wait(void)
+void __attribute__((noreturn)) io_event_task(void)
 {
-	uint32_t event;
+	struct stm32_gpio * gpioa = STM32_GPIOA;
+	struct stm32_gpio * gpiob = STM32_GPIOB;
+	struct stm32_gpio * gpioc = STM32_GPIOC;
+	unsigned int addr0 = 0;
+	unsigned int addr1 = 0;
+	unsigned int sw0 = 0;
+	unsigned int sw1 = 0;
 
-//	tracef("%s(): wait...", __func__);
+	for (;;) {
+		unsigned int addr;
+		unsigned int sw;
+		unsigned int mod;
+		unsigned int d;
+		uint32_t pa;
+		uint32_t pb;
+		uint32_t pc;
+		int i;
 
-	do {
-		thinkos_flag_wait(io_drv.flag);
-		thinkos_flag_clr(io_drv.flag);
-		event = io_drv.event;
-	} while (event == 0);
+		thinkos_sleep(IO_POLL_PERIOD_MS);
 
-	return event;
+		/* process led timers */
+		for (i = 0; i < 6; ++i) {
+			if (io_drv.led_tmr[i] == 0)
+				continue;
+			if (--io_drv.led_tmr[i] == 0) 
+				__led_off(led_io[i].gpio, led_io[i].pin);
+		}
+
+		pa = gpioa->idr; 
+		pb = gpiob->idr; 
+		pc = gpioc->idr; 
+
+		/* Rotatory switches decoder */
+		addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
+		/* Sensor/Module Switch */
+		mod = (pb & (1 << 4)) ? 0 : 0x80;
+		addr |= mod;
+
+		if (addr != addr0) {
+			/* Debouncing */
+			addr0 = addr;
+		} else if (addr != addr1) {
+			/* State change */
+			addr1 = addr;
+
+			DCC_LOG1(LOG_INFO, "Addr=%d", addr);
+			trig_addr_set(addr >> 7, addr & 0x7f);
+		}
+
+		/* Lever switches */
+		sw = (~pb >> 12) & 0xf; 
+		if (sw != sw0) {
+			/* Debouncing */
+			sw0 = sw;
+		} if ((d = sw ^ sw1) != 0) {
+			/* State change */
+			sw1 = sw;
+
+			DCC_LOG1(LOG_INFO, "SW=%d", sw);
+
+			switch (sw & SW1_MSK) {
+			case SW1_OFF:
+				DCC_LOG(LOG_TRACE, "SW1 OFF");
+				led_off(2);
+				led_off(3);
+				break;
+
+			case SW1_A:
+				DCC_LOG(LOG_TRACE, "SW1 A");
+				led_on(2);
+				break;
+
+			case SW1_B:
+				DCC_LOG(LOG_TRACE, "SW1 B");
+				led_on(3);
+			}
+
+			switch (sw & SW2_MSK) {
+			case SW2_OFF:
+				DCC_LOG(LOG_TRACE, "SW2 OFF");
+				led_off(4);
+				led_off(5);
+				break;
+
+			case SW2_A:
+				DCC_LOG(LOG_TRACE, "SW2 A");
+				led_on(4);
+				break;
+
+			case SW2_B:
+				DCC_LOG(LOG_TRACE, "SW2 B");
+				led_on(5);
+			}
+		}
+
+	}
 }
 
 void lamp_test(void)

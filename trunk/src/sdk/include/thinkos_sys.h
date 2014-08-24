@@ -295,6 +295,7 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_PAUSE
+#warning "THINKOS_ENABLE_PAUSE"
 	uint32_t wq_paused;
 #endif
 
@@ -303,18 +304,22 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
+#warning "THINKOS_MUTEX_MAX > 0"
 	uint32_t wq_mutex[THINKOS_MUTEX_MAX];
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
 #if THINKOS_COND_MAX > 0
+#warning "THINKOS_COND_MAX > 0"
 	uint32_t wq_cond[THINKOS_COND_MAX];
 #endif /* THINKOS_COND_MAX > 0 */
 
 #if THINKOS_SEMAPHORE_MAX > 0
+#warning "THINKOS_SEMAPHORE_MAX > 0"
 	uint32_t wq_sem[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 #if THINKOS_EVENT_MAX > 0
+#warning "THINKOS_EVENT_MAX > 0"
 	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
@@ -323,6 +328,7 @@ struct thinkos_rt {
 #endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_ENABLE_JOIN
+#warning "THINKOS_ENABLE_JOIN"
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
 
@@ -333,11 +339,12 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
+#warning "THINKOS_ENABLE_TIMESHARE"
 	/* This fields are used for time sharing (round robin) schedule only */
 	struct {
-		int8_t sched_val[32]; /* Thread schedule value */
+		int8_t sched_val[THINKOS_THREADS_MAX]; /* Thread schedule value */
 		int8_t sched_idle_val;
-		uint8_t sched_pri[32]; /* Thread schedule priority */
+		uint8_t sched_pri[THINKOS_THREADS_MAX]; /* Thread schedule priority */
 		int8_t sched_idle_pri;
 		uint32_t sched_limit; /* Limiting time for an active thread */
 	};
@@ -365,7 +372,7 @@ struct thinkos_rt {
 
 #if THINKOS_FLAG_MAX > 0
 	uint32_t flag; /* event flags */
-#endif /* THINKOS_EVENT_MAX > 0 */
+#endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_IRQ_MAX > 0
 	int8_t irq_th[THINKOS_IRQ_MAX];
