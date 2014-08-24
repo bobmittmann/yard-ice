@@ -30,6 +30,8 @@ struct fs_dirent {
 	uint32_t offs;
 };
 
+#include <microjs.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,6 +39,8 @@ extern "C" {
 bool fs_dirent_lookup(const char * name, struct fs_dirent * ep);
 
 bool fs_dirent_get_next(struct fs_dirent * ep);
+
+int json_file_get(uint32_t offs, struct json_file * json);
 
 #ifdef __cplusplus
 }

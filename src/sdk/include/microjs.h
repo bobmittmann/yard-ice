@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 enum {
 	MICROJS_OK                 = 0,
@@ -80,6 +81,12 @@ struct microjs_val {
 /**********************************************************************
   JSON
  **********************************************************************/
+
+struct json_file { 
+	const char * txt;
+	uint16_t len;
+	uint16_t crc;
+};
 
 enum {
 	MICROJS_JSON_EOF        = 0,

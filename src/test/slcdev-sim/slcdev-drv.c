@@ -32,37 +32,79 @@
 struct slcdev_drv slcdev_drv;
 struct ss_device ss_dev_tab[SS_DEVICES_MAX];
 
+static const uint8_t parity_lut[16] = {
+/*	0000 0001 0010 0011 0100 0101 0110 0111 */
+	   0,   1,   1,   0,   1,   0,   0,   1,
+/*	1000 1001 1010 1011 1100 1101 1110 1111 */
+	   1,   0,   0,   1,   0,   1,   1,   0,   
+};
+
 /* -------------------------------------------------------------------------
- * Trigger module
+ * Address encoding decoding tables
  * ------------------------------------------------------------------------- */
 
-static const uint8_t rev_addr_lut[16] = {
+static const uint8_t addr_dec_lut[16] = {
+/*	0000 0001 0010 0011 0100 0101 0110 0111 */
+	 0x0, 0x4, 0x1, 0x0, 0x7, 0x0, 0x2, 0x0,
+/*	1000 1001 1010 1011 1100 1101 1110 1111 */
+	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
+};
+
+static const uint8_t addr_enc_lut[16] = {
 	0x0, 0x2, 0x6, 0xe, 0x1, 0x8, 0xa, 0x4,
 	0xc, 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,   
 };
 
+
+/* -------------------------------------------------------------------------
+ * Trigger module
+ * ------------------------------------------------------------------------- */
+
 void trig_addr_set(bool module, unsigned int addr)
 {
 	DCC_LOG2(LOG_TRACE, "%s %d", module ? "Module" : "Sensor", addr);
-	slcdev_drv.trig_msk = 0x1ff;
-	slcdev_drv.trig_cmp = module ? 1 : 0;
-	slcdev_drv.trig_cmp = rev_addr_lut[(addr >> 4) & 0xf] << 1; 
-	slcdev_drv.trig_cmp = rev_addr_lut[addr & 0xf] << 5; 
+	
+	/* Adjust the trigger mask and compare values for CLIP mode */
+	slcdev_drv.trig.msk = 0x1ff;
+	slcdev_drv.trig.cmp = module ? 1 : 0;
+	slcdev_drv.trig.cmp = addr_enc_lut[(addr >> 4) & 0xf] << 1; 
+	slcdev_drv.trig.cmp = addr_enc_lut[addr & 0xf] << 5; 
+
+	/* Adjust the trigger mask and compare values for AP mode */
+	/* AP direct poll trigger : MTTT T111 1UUU U11S SCI 
+	      M - Module/Sensor
+	   TTTT - Tens address
+	   UUUU - Units address 
+	     SS - Sequence checksum
+	      C - Checksum error 
+	      I - Interrupt */
+	slcdev_drv.trig.ap_msk = 0x7fff;
+	slcdev_drv.trig.ap_cmp = module ? 1 : 0;
+	slcdev_drv.trig.ap_cmp |= 0x61e0;
+	slcdev_drv.trig.ap_cmp = addr_enc_lut[(addr >> 4) & 0xf] << 1; 
+	slcdev_drv.trig.ap_cmp = addr_enc_lut[addr & 0xf] << 9; 
 }
 
 unsigned int trig_addr_get(void)
 {
-	return slcdev_drv.trig_cmp;
+	return slcdev_drv.trig.cmp;
 }
 
 static void trig_init(void)
 {
-	slcdev_drv.trig_msk = 0x1ff;
-	slcdev_drv.trig_cmp = 0x000;
+	slcdev_drv.trig.msk = 0x0000;
+	slcdev_drv.trig.cmp = 0xffff;
+
+	slcdev_drv.trig.ap_msk = 0x0000;
+	slcdev_drv.trig.ap_cmp = 0xffff;
 
 	stm32_gpio_clr(TRIG_OUT);
 	stm32_gpio_mode(TRIG_OUT, OUTPUT, PUSH_PULL | SPEED_MED);
 }
+
+/* -------------------------------------------------------------------------
+ * Default device
+ * ------------------------------------------------------------------------- */
 
 const struct ss_device null_dev = {
 	.addr = 0, /* reverse lookup address */
@@ -124,20 +166,6 @@ void dev_sim_init(void)
 
 #define COMP1_EXTI (1 << 21)
 #define COMP2_EXTI (1 << 22)
-
-static const uint8_t parity_lut[16] = {
-/*	0000 0001 0010 0011 0100 0101 0110 0111 */
-	   0,   1,   1,   0,   1,   0,   0,   1,
-/*	1000 1001 1010 1011 1100 1101 1110 1111 */
-	   1,   0,   0,   1,   0,   1,   1,   0,   
-};
-
-static const uint8_t addr_lut[16] = {
-/*	0000 0001 0010 0011 0100 0101 0110 0111 */
-	 0x0, 0x4, 0x1, 0x0, 0x7, 0x0, 0x2, 0x0,
-/*	1000 1001 1010 1011 1100 1101 1110 1111 */
-	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
-};
 
 static unsigned int ap_chksum(unsigned int msg)
 {
@@ -255,11 +283,11 @@ static void ap_hdr_decode(unsigned int msg)
 	}
 
 	/* trigger module */
-	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
+	if ((msg & slcdev_drv.trig.ap_msk) == slcdev_drv.trig.ap_cmp) {
 		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
-//		trig_out_set();
-		__thinkos_flag_signal(slcdev_drv.ev_flag);
-//		trig_out_clr();
+		trig_out_set();
+		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
 				 mod ? "MODULE" : "SENSOR", addr);
@@ -270,7 +298,7 @@ static void ap_hdr_decode(unsigned int msg)
 	if ((msg & AP_DIRECT_POLL_MASK) == AP_DIRECT_POLL) {
 		hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
 		lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
-		addr = 10 * addr_lut[hi] + addr_lut[lo];
+		addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 		addr = addr + (mod * 160);
 		DCC_LOG1(LOG_TRACE, "[AP Direct %d]", addr);
 	} else if ((msg & AP_GROUP_POLL_MASK) == AP_GROUP_POLL) {
@@ -309,7 +337,7 @@ static void ap_hdr_decode(unsigned int msg)
 	hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
 	lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
 
-	addr = 10 * addr_lut[hi] + addr_lut[lo];
+	addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 	addr = addr + (mod * 160);
 
 	DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
@@ -338,7 +366,7 @@ static void ap_hdr_decode(unsigned int msg)
 
 		/* signal the simulator */
 		slcdev_drv.ev_bmp |= SLC_EV_SIM;
-		__thinkos_flag_signal(slcdev_drv.ev_flag);
+		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 	} else {
 		slcdev_drv.state = DEV_IDLE;
@@ -381,7 +409,7 @@ static void clip_msg_decode(unsigned int msg)
 	}
 
 	mod = msg & 1;
-	addr = 10 * addr_lut[hi] + addr_lut[lo];
+	addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 	addr = addr + (mod * 160);
 
 	/* */
@@ -396,10 +424,10 @@ static void clip_msg_decode(unsigned int msg)
 	}
 
 	/* trigger module */
-	if ((msg & slcdev_drv.trig_msk) == slcdev_drv.trig_cmp) {
+	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
 		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
 		trig_out_set();
-		__thinkos_flag_signal(slcdev_drv.ev_flag);
+		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
@@ -433,7 +461,7 @@ static void clip_msg_decode(unsigned int msg)
 
 		/* signal the simulator */
 		slcdev_drv.ev_bmp |= SLC_EV_SIM;
-		__thinkos_flag_signal(slcdev_drv.ev_flag);
+		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 	} else {
 		slcdev_drv.state = DEV_IDLE;
@@ -791,8 +819,6 @@ static void slcdev_reset(void)
 
 void slcdev_init(void)
 {
-	slcdev_drv.ev_flag = thinkos_flag_alloc();
-
 	/* reset the driver state */
 	slcdev_reset();
 
@@ -812,7 +838,7 @@ void slcdev_stop(void)
 	/* Enable interrupt */
 	cm3_irq_disable(STM32_IRQ_TIM10);
 
-	thinkos_flag_clr(slcdev_drv.ev_flag);
+	thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
 
 	/* reset the driver state */
 	slcdev_reset();
