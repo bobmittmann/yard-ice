@@ -208,8 +208,7 @@ struct ss_device {
 			uint32_t sup : 1; /* Supervisory flag */
 			uint32_t mon : 1; /* Monitor flag */
 
-			uint32_t irq : 1;  /* Interrupt request */
-			uint32_t usr3: 7;  /* User variable */
+			uint32_t usr3: 8;  /* User variable */
 		}; 
 		uint32_t opt;	
 	};
@@ -228,7 +227,7 @@ struct ss_device {
 	uint16_t pw5;   /* Type Id */
 	uint16_t ctls;   /* consecutive polling sequence control bit pattern */
 
-	uint16_t usr1;  /* User variable */
+	uint16_t ap_pw; /* AP current pulse width */
 	uint16_t usr2;  /* User variable */
 };
 
@@ -289,6 +288,14 @@ struct slcdev_drv {
 	uint32_t msg; /* message data from the pannel */
 	unsigned int state; /* decoder state */
 	struct {
+		uint8_t insn; /* AP instruction */
+		uint8_t irq;  /* Interrupt request */
+		uint8_t icfg; /* pulse preenphasis width (microsseconds) */
+		uint8_t ipre; /* pulse preenphasis width (microsseconds) */
+		uint8_t ilat; /* pulse latency (microsseconds) */
+		uint16_t ipw; /* pulse width (microsseconds) */
+	} ap; /* AP specific options */
+	struct {
 		uint16_t msk; /* bitmask */
 		uint16_t cmp; /* compare value */
 		uint16_t ap_msk; /* AP mode bitmask */
@@ -296,8 +303,9 @@ struct slcdev_drv {
 	} trig; /* trigger module  */
 	struct {
 		unsigned int state; /* decoder state */
-		unsigned int pulse; /* pulse width (microsseconds) */
-		unsigned int pre; /* pulse preenphasis width (microsseconds) */
+		uint8_t pre; /* pulse preenphasis width (microsseconds) */
+		uint8_t lat; /* pulse latency (microsseconds) */
+		uint16_t pw; /* pulse width (microsseconds) */
 	} isink;
 	struct ss_device * volatile dev;
 };

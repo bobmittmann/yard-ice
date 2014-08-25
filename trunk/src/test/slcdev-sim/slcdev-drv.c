@@ -191,7 +191,7 @@ static unsigned int ap_chksum(unsigned int msg)
 /* default current sink preenphasys time in AP mode */
 #define DEV_AP_IPRE_DEFAULT 35
 /* default current sink pulse time in AP mode */
-#define DEV_AP_IPULSE_DEFAULT 200 
+#define DEV_AP_IPW_DEFAULT 200 
 /* default current sink mode */
 #define DEV_AP_ICFG_DEFAULT (ISINK_CURRENT_NOM | ISINK_RATE_NORMAL)
 
@@ -228,7 +228,11 @@ enum {
 	DEV_AP_HDR_ERR = 12,
 	DEV_AP_ERR_BIT = 13,
 	DEV_AP_INT_BIT = 14,
-	DEV_AP_CMD     = 15
+	DEV_AP_CMD     = 15,
+	DEV_AP_PA_BIT  = 16,
+	DEV_AP_CMD_ERR = 17,
+	DEV_AP_ACK_BIT = 18,
+	DEV_AP_DATA    = 19
 };
 
 /* -------------------------------------------------------------------------
@@ -240,30 +244,49 @@ enum {
 #define AP_POLL_MODE_GROUP  0x01a0
 
 /* mttt t111 1uuu u110 */
-#define AP_DIRECT_POLL_MASK 0x61e0 /* 0000 0111 1000 0110 */
-#define AP_DIRECT_POLL      0x01e0 /* 0000 0111 1000 0000 */
+#define AP_OPC_DIRECT_POLL_MASK 0x61e0 /* 0000 0111 1000 0110 */
+#define AP_OPC_DIRECT_POLL      0x01e0 /* 0000 0111 1000 0000 */
 
-#define AP_RD_UNITS_MASK    0x7fe0 /* 0000 0111 1111 1110 */
-#define AP_RD_PRESENCE      0x5ec0 /* 0000 0110 0111 1010 */
-#define AP_RD_ALM_LATCH_U   0x2ec0 /* 0000 0110 0111 0100 */
-#define AP_RD_TBL_LATCH_U   0x6ec0 /* 0000 0110 0111 0110 */
+#define AP_OPC_RD_UNITS_MASK    0x7fe0 /* 0000 0111 1111 1110 */
+#define AP_OPC_RD_PRESENCE      0x5ec0 /* 0000 0110 0111 1010 */
+#define AP_OPC_RD_ALM_LATCH_U   0x2ec0 /* 0000 0110 0111 0100 */
+#define AP_OPC_RD_TBL_LATCH_U   0x6ec0 /* 0000 0110 0111 0110 */
 
-#define AP_GROUP_POLL_MASK  0x03fe /* 0111 1111 1100 0000 */
-#define AP_GROUP_POLL       0x01be /* 0111 1101 1000 0000 */
+#define AP_OPC_GROUP_POLL_MASK  0x03fe /* 0111 1111 1100 0000 */
+#define AP_OPC_GROUP_POLL       0x01be /* 0111 1101 1000 0000 */
 
-#define AP_RD_TENS_MASK     0x7ffe /* 0111 1111 1111 1110 */
-#define AP_RD_ALM_LATCH_T   0x7fbe /* 0111 1101 1111 1110 */   
-#define AP_RD_TBL_LATCH_T   0x3fbe /* 0111 1101 1111 1100 */
-#define AP_NULL             0x5fbe /* 0111 1101 1111 1010 */
+#define AP_OPC_RD_TENS_MASK     0x7ffe /* 0111 1111 1111 1110 */
+#define AP_OPC_RD_ALM_LATCH_T   0x7fbe /* 0111 1101 1111 1110 */   
+#define AP_OPC_RD_TBL_LATCH_T   0x3fbe /* 0111 1101 1111 1100 */
+#define AP_OPC_NULL             0x5fbe /* 0111 1101 1111 1010 */
+
+enum {
+	AP_DIRECT_POLL,
+	AP_RD_PRESENCE,
+	AP_RD_ALM_LATCH_U,
+	AP_RD_TBL_LATCH_U,
+	AP_GROUP_POLL,
+	AP_RD_ALM_LATCH_T,
+	AP_RD_TBL_LATCH_T,
+	AP_NULL             
+};
 
 static void ap_hdr_decode(unsigned int msg)
 {
 	struct ss_device * dev = slcdev_drv.dev;
 	unsigned int sum;
-	unsigned int lo;
-	unsigned int hi;
 	unsigned int addr;
-	unsigned int mod;
+	unsigned int icfg;
+	unsigned int ipre;
+	unsigned int ipw;
+	unsigned int ilat;
+	unsigned int irq;
+
+	icfg = DEV_AP_ICFG_DEFAULT;
+	ipre = DEV_AP_IPRE_DEFAULT;
+	ipw = DEV_AP_IPW_DEFAULT;
+	ilat = DEV_AP_ILAT_DEFAULT;
+	irq = 0;
 
 	DCC_LOG(LOG_INFO, "[AP]");
 	sum = ap_chksum(msg);
@@ -273,10 +296,10 @@ static void ap_hdr_decode(unsigned int msg)
 
 		/* prepare for sinking current */
 		/* FIXME: configurable current sink parameters for AP */ 
-		isink_mode_set(DEV_AP_ICFG_DEFAULT);
-		slcdev_drv.isink.pre = DEV_AP_IPRE_DEFAULT;
-		slcdev_drv.isink.pulse = DEV_AP_IPULSE_DEFAULT;
-
+		isink_mode_set(icfg);
+		slcdev_drv.isink.pre = ipre;
+		slcdev_drv.isink.pw = ipw;
+		slcdev_drv.isink.lat = ilat;
 		slcdev_drv.state = DEV_AP_HDR_ERR;
 		DCC_LOG(LOG_INFO, "[AP HDR ERR]");
 		return;
@@ -288,42 +311,83 @@ static void ap_hdr_decode(unsigned int msg)
 		trig_out_set();
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
-		/* */
-		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
-				 mod ? "MODULE" : "SENSOR", addr);
 	}
 
-	mod = msg & 1; /* Module or sensor */
+	if ((msg & AP_OPC_DIRECT_POLL_MASK) == AP_OPC_DIRECT_POLL) {
+		unsigned int lo;
+		unsigned int hi;
+		unsigned int mod;
 
-	if ((msg & AP_DIRECT_POLL_MASK) == AP_DIRECT_POLL) {
+		mod = msg & 1; /* Module or sensor */
+
 		hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
 		lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
 		addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 		addr = addr + (mod * 160);
 		DCC_LOG1(LOG_TRACE, "[AP Direct %d]", addr);
-	} else if ((msg & AP_GROUP_POLL_MASK) == AP_GROUP_POLL) {
+
+		/* */
+		if (addr != slcdev_drv.addr) {
+			dev = &ss_dev_tab[addr];
+			slcdev_drv.addr = addr;
+			slcdev_drv.dev = dev;
+		} else {
+			DCC_LOG(LOG_INFO, "Consecutive pooling");
+		}
+
+		if ((dev->enabled) && (dev->ap)) {
+			DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
+					 mod ? "MODULE" : "SENSOR", addr);
+
+			/* prepare for sinking current */
+			/* program the current sink */ 
+			icfg = dev->icfg;
+			ilat = dev->ilat;
+			ipre = dev->ipre;
+			ipw = dev->ap_pw;
+			irq = dev->alm | dev->tbl;
+
+			/* signal the simulator */
+			slcdev_drv.ev_bmp |= SLC_EV_SIM;
+			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+
+			/* AP opcode */
+			slcdev_drv.ap.insn = AP_DIRECT_POLL;
+		} else {
+			slcdev_drv.state = DEV_IDLE;
+			DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
+			return;
+		}
+	} else if ((msg & AP_OPC_GROUP_POLL_MASK) == AP_OPC_GROUP_POLL) {
 		DCC_LOG(LOG_TRACE, "[AP Group]");
+		slcdev_drv.ap.insn = AP_GROUP_POLL;
 	} else {
-		switch (msg & AP_RD_TENS_MASK) {
-		case AP_NULL:
+		switch (msg & AP_OPC_RD_TENS_MASK) {
+		case AP_OPC_NULL:
 			DCC_LOG(LOG_TRACE, "AP Null");
+			slcdev_drv.ap.insn = AP_NULL;
 			break;
-		case AP_RD_ALM_LATCH_T:
+		case AP_OPC_RD_ALM_LATCH_T:
 			DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Tens");
+			slcdev_drv.ap.insn = AP_RD_ALM_LATCH_T;
 			break;
-		case AP_RD_TBL_LATCH_T:
+		case AP_OPC_RD_TBL_LATCH_T:
 			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens");
+			slcdev_drv.ap.insn = AP_RD_TBL_LATCH_T;
 			break;
 		default:
-			switch (msg & AP_RD_UNITS_MASK) {
-			case AP_RD_PRESENCE:
+			switch (msg & AP_OPC_RD_UNITS_MASK) {
+			case AP_OPC_RD_PRESENCE:
 				DCC_LOG(LOG_TRACE, "AP Read Presence");
+				slcdev_drv.ap.insn = AP_RD_PRESENCE;
 				break;
-			case AP_RD_ALM_LATCH_U:
+			case AP_OPC_RD_ALM_LATCH_U:
 				DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Units");
+				slcdev_drv.ap.insn = AP_RD_ALM_LATCH_U;
 				break;
-			case AP_RD_TBL_LATCH_U:
+			case AP_OPC_RD_TBL_LATCH_U:
 				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units");
+				slcdev_drv.ap.insn = AP_RD_TBL_LATCH_U;
 				break;
 			default:
 				DCC_LOG(LOG_WARNING, "AP command invalid");
@@ -334,44 +398,103 @@ static void ap_hdr_decode(unsigned int msg)
 		}
 	}
 
-	hi = (msg >> 1) & 0xf; /* Upper nibble address bits */
-	lo = (msg >> 9) & 0xf; /* Lower nibble address bits. */
+	isink_mode_set(icfg);
+	slcdev_drv.isink.pre = ipre;
+	slcdev_drv.isink.pw = ipw;
+	slcdev_drv.isink.lat = ilat;
+	slcdev_drv.ap.irq = irq; 
+	/* skip error report bit */
+	slcdev_drv.state = DEV_AP_HDR_OK;
+}
 
-	addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
-	addr = addr + (mod * 160);
-
-	DCC_LOG(LOG_INFO, "[AP CHECKSUM OK]");
-
-
-	/* */
-	if (addr != slcdev_drv.addr) {
-		dev = &ss_dev_tab[addr];
-		slcdev_drv.addr = addr;
-		slcdev_drv.dev = dev;
-	} else {
-		DCC_LOG(LOG_INFO, "Consecutive pooling");
-	}
-
-	if ((dev->enabled) && (dev->ap)) {
-		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
-				 mod ? "MODULE" : "SENSOR", addr);
-
-		/* prepare for sinking current */
-		/* program the current sink */ 
-		isink_mode_set(dev->icfg);
-		slcdev_drv.isink.pre = dev->ipre;
-
-		/* skip error report bit */
-		slcdev_drv.state = DEV_AP_HDR_OK;
-
-		/* signal the simulator */
-		slcdev_drv.ev_bmp |= SLC_EV_SIM;
-		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
-
-	} else {
+static void ap_2nd_phase(void)
+{
+	switch (slcdev_drv.ap.insn) {
+	case AP_DIRECT_POLL:
+		slcdev_drv.state = DEV_AP_CMD;
+		DCC_LOG(LOG_INFO, "[AP CMD]");
+		break;
+	case AP_GROUP_POLL:
 		slcdev_drv.state = DEV_IDLE;
-		DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_NULL:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_ALM_LATCH_T:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_TBL_LATCH_T:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_ALM_LATCH_U:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_TBL_LATCH_U:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
 	}
+}
+
+static void ap_3rd_phase(void)
+{
+	switch (slcdev_drv.ap.insn) {
+	case AP_DIRECT_POLL:
+		slcdev_drv.state = DEV_AP_DATA;
+		DCC_LOG(LOG_INFO, "[AP DATA]");
+		break;
+	case AP_GROUP_POLL:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_NULL:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_ALM_LATCH_T:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_TBL_LATCH_T:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_ALM_LATCH_U:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	case AP_RD_TBL_LATCH_U:
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		break;
+	}
+}
+
+
+static void ap_cmd_decode(unsigned int msg)
+{
+//	struct ss_device * dev = slcdev_drv.dev;
+	unsigned int cmd;
+	unsigned int parity;
+
+	cmd = (msg >> 17) & 0xff;
+
+	parity = parity_lut[msg & 0xf] ^ parity_lut[(cmd >> 4) & 0xf];
+
+	if (parity != (msg >> 26)) {
+		DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		return;
+	}
+
+	slcdev_drv.state = DEV_AP_PA_BIT;
+	DCC_LOG(LOG_INFO, "[AP PA BIT]");
 }
 
 /* -------------------------------------------------------------------------
@@ -454,6 +577,7 @@ static void clip_msg_decode(unsigned int msg)
 		/* program the current sink */ 
 		isink_mode_set(dev->icfg);
 		slcdev_drv.isink.pre = dev->ipre;
+		slcdev_drv.isink.lat = dev->ilat;
 
 		/* start clip mode response */
 		slcdev_drv.state = DEV_CLIP;
@@ -510,10 +634,10 @@ void stm32_tim10_isr(void)
 
 	/* Process the current sink state machine  */
 	if (slcdev_drv.isink.state == ISINK_LATENCY) {
-		isink_pulse(slcdev_drv.isink.pre, slcdev_drv.isink.pulse); 
+		isink_pulse(slcdev_drv.isink.pre, slcdev_drv.isink.pw); 
 //		trig_out_set();
 		slcdev_drv.isink.state = ISINK_PULSE;
-		DCC_LOG1(LOG_INFO, "<ISINK PULSE %d us>", slcdev_drv.isink.pulse);
+		DCC_LOG1(LOG_INFO, "<ISINK PULSE %d us>", slcdev_drv.isink.pw);
 	}
 #if 0	
 	else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
@@ -554,6 +678,12 @@ void stm32_tim10_isr(void)
 			ap_hdr_decode(slcdev_drv.msg);
 		break;
 
+	case DEV_AP_CMD:
+		/* AP header decoder */
+		slcdev_drv.msg |= bit << slcdev_drv.bit_cnt;
+		if (++slcdev_drv.bit_cnt == 26)
+			ap_cmd_decode(slcdev_drv.msg);
+		break;
 	}
 }
 
@@ -590,7 +720,7 @@ void stm32_comp_tsc_isr(void)
 
 		/* Process the current sink state machine  */
 		if (slcdev_drv.isink.state == ISINK_START_WAIT) {
-			tim->arr = dev->ilat;
+			tim->arr = slcdev_drv.isink.lat;
 			slcdev_drv.isink.state = ISINK_LATENCY;
 			DCC_LOG(LOG_INFO, "<ISINK LATENCY>");
 		} else {
@@ -636,21 +766,21 @@ void stm32_comp_tsc_isr(void)
 		case ISINK_END_WAIT:
 			switch (slcdev_drv.state) {
 			case DEV_PW1_ISINK:
-				slcdev_drv.isink.pulse = dev->pw2;
+				slcdev_drv.isink.pw = dev->pw2;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW2_ISINK;
 				DCC_LOG(LOG_INFO, "[PW2 ISINK]");
 				break;
 			case DEV_PW2_ISINK:
-				slcdev_drv.isink.pulse = dev->pw3;
+				slcdev_drv.isink.pw = dev->pw3;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW3_ISINK;
 				DCC_LOG(LOG_INFO, "[PW3 ISINK]");
 				break;
 			case DEV_PW3_ISINK:
-				slcdev_drv.isink.pulse = dev->pw4;
+				slcdev_drv.isink.pw = dev->pw4;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW4_ISINK;
@@ -658,7 +788,7 @@ void stm32_comp_tsc_isr(void)
 				break;
 			case DEV_PW4_ISINK:
 				if (dev->pw5en) {
-					slcdev_drv.isink.pulse = dev->pw5;
+					slcdev_drv.isink.pw = dev->pw5;
 					slcdev_drv.isink.state = ISINK_START_WAIT;
 					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 					slcdev_drv.state = DEV_PW5_ISINK;
@@ -683,8 +813,15 @@ void stm32_comp_tsc_isr(void)
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
 			case DEV_AP_INT_BIT:
-				slcdev_drv.state = DEV_AP_CMD;
-				DCC_LOG(LOG_INFO, "[AP CMD]");
+				slcdev_drv.isink.state = ISINK_IDLE;
+				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				ap_2nd_phase();
+				break;
+			case DEV_AP_ACK_BIT:
+				slcdev_drv.isink.state = ISINK_IDLE;
+				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				slcdev_drv.state = DEV_IDLE;
+				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
 			}
 			break;
@@ -697,7 +834,7 @@ void stm32_comp_tsc_isr(void)
 				break;
 			case DEV_CLIP:
 				/* respond with PW1 */
-				slcdev_drv.isink.pulse = dev->pw1;
+				slcdev_drv.isink.pw = dev->pw1;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW1_ISINK;
@@ -717,7 +854,7 @@ void stm32_comp_tsc_isr(void)
 				break;
 			case DEV_AP_ERR_BIT:
 				/* AP interrupt bit */
-				if (dev->irq) {
+				if (slcdev_drv.ap.irq) {
 					/* send the interrupt bit */
 					slcdev_drv.isink.state = ISINK_START_WAIT;
 					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
@@ -726,8 +863,17 @@ void stm32_comp_tsc_isr(void)
 				DCC_LOG(LOG_INFO, "[AP INT BIT]");
 				break;
 			case DEV_AP_INT_BIT:
-				slcdev_drv.state = DEV_AP_CMD;
-				DCC_LOG(LOG_INFO, "[AP CMD]");
+				ap_2nd_phase();
+				break;
+			case DEV_AP_PA_BIT:
+				/* AP command parity error respnse bit */
+				slcdev_drv.isink.state = ISINK_START_WAIT;
+				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				slcdev_drv.state = DEV_AP_ACK_BIT;
+				DCC_LOG(LOG_INFO, "[AP PA BIT]");
+				break;
+			case DEV_AP_ACK_BIT:
+				ap_3rd_phase();
 				break;
 			}
 
@@ -815,6 +961,12 @@ static void slcdev_reset(void)
 	slcdev_drv.dev = (struct ss_device *)&null_dev;
 	slcdev_drv.addr = 0;
 	slcdev_drv.isink.state = ISINK_IDLE;
+
+	/* AP configuration */
+	slcdev_drv.ap.icfg = DEV_AP_ICFG_DEFAULT;
+	slcdev_drv.ap.ilat = DEV_AP_ILAT_DEFAULT;
+	slcdev_drv.ap.ipre = DEV_AP_IPRE_DEFAULT;
+	slcdev_drv.ap.ipw = DEV_AP_IPW_DEFAULT;
 }
 
 void slcdev_init(void)
