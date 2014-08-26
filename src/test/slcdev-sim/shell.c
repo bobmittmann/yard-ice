@@ -148,6 +148,8 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 	blk_offs = entry.offs;
 	blk_size = entry.blk_size;
 
+	slcdev_stop();
+
 	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
 	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
 		fprintf(f, "stm32f_flash_erase() failed!\n");
@@ -159,6 +161,8 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 		fprintf(f, "flash_xmodem_recv() failed!\n");
 		return -1;
 	}
+
+	slcdev_resume();
 
 	return 0;
 }
@@ -272,15 +276,19 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 		fprintf(f, "\n");
 	}
 
-	if (argc == 2) {
-		if (strcmp(argv[1], "all") == 0) {
-			all = true;
-		} else if ((strcmp(argv[1], "sens") == 0) || 
-			(strcmp(argv[1], "s") == 0)) {
+	i = 1;
+	if (argc > 1) {
+		if ((strcmp(argv[i], "sens") == 0) || 
+			(strcmp(argv[i], "s") == 0)) {
 			sens = true;
-		} else if (strcmp(argv[1], "mod") == 0) {
+			i++;
+		} if ((strcmp(argv[i], "mod") == 0) ||
+			(strcmp(argv[i], "m") == 0)) {
 			mod = true;
+			i++;
 		}
+		if ((i < argc) && (strcmp(argv[i], "all")) == 0)
+			all = true;
 	}
 
 	if (all) {
@@ -304,7 +312,7 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 		return 0;
 	}
 
-	for (i = 1; i < argc; ++i) {
+	for (; i < argc; ++i) {
 		addr = strtoul(argv[i], NULL, 0);
 		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
@@ -333,15 +341,19 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
-	if (argc == 2) {
-		if (strcmp(argv[1], "all") == 0) {
-			all = true;
-		} else if ((strcmp(argv[1], "sens") == 0) || 
-			(strcmp(argv[1], "s") == 0)) {
+	i = 1;
+	if (argc > 1) {
+		if ((strcmp(argv[i], "sens") == 0) || 
+			(strcmp(argv[i], "s") == 0)) {
 			sens = true;
-		} else if (strcmp(argv[1], "mod") == 0) {
+			i++;
+		} if ((strcmp(argv[i], "mod") == 0) ||
+			(strcmp(argv[i], "m") == 0)) {
 			mod = true;
+			i++;
 		}
+		if ((i < argc) && (strcmp(argv[i], "all")) == 0)
+			all = true;
 	}
 
 	if (all) {
@@ -365,7 +377,7 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 		return 0;
 	}
 
-	for (i = 1; i < argc; ++i) {
+	for (; i < argc; ++i) {
 		addr = strtoul(argv[i], NULL, 0);
 		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
@@ -469,6 +481,8 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 			return SHELL_ERR_ARG_INVALID;
 	}
 
+	slcdev_stop();
+
 	if (erase) {
 		fprintf(f, "Erasing...\n");
 		device_db_erase();
@@ -486,6 +500,8 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 			}
 		}
 	}
+
+	slcdev_resume();
 
 	return 0;
 }
