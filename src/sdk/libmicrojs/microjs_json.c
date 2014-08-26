@@ -377,7 +377,7 @@ push:
 	}
 
 end:
-	DCC_LOG2(LOG_TRACE, "End Scan! (cnt=%d sp=0x%08x).", cnt, cm3_sp_get());
+	DCC_LOG2(LOG_INFO, "End Scan! (cnt=%d sp=0x%08x).", cnt, cm3_sp_get());
 	jsn->cnt = cnt;
 	jsn->sp = sp;
 	jsn->off = i;
@@ -397,7 +397,7 @@ bkt_pop:
 		goto error;
 	}
 	if (sp == jsn->top) {
-		DCC_LOG(LOG_TRACE, "topmost object end!");
+		DCC_LOG(LOG_INFO, "topmost object end!");
 		i++;
 
 		/* push a token into the buffer */
@@ -508,7 +508,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	int cnt = 0;
 	int typ;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
 		microjs_attr_parser_t parse = NULL;
@@ -600,7 +600,8 @@ int microjs_bit_enc(struct microjs_json_parser * jsn,
 	*bfield &= ~(1 << bit);
 	*bfield |= (val->logic ? 1 : 0) << bit;
 
-	DCC_LOG1(LOG_INFO, "val=%d", val->logic ? 1 : 0);
+	DCC_LOG2(LOG_TRACE, "val=%d bfield=0x%08x", 
+			 val->logic ? 1 : 0, *bfield);
 	return 0;
 }
 
