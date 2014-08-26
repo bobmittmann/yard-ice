@@ -536,15 +536,15 @@ static void clip_msg_decode(unsigned int msg)
 	addr = addr + (mod * 160);
 
 	/* */
+	dev = &ss_dev_tab[addr];
 	if (addr != slcdev_drv.addr) {
-		dev = &ss_dev_tab[addr];
 		slcdev_drv.addr = addr;
-		slcdev_drv.dev = dev;
 		/* clear the control sequence */
 		dev->ctls = 0;
 	} else {
 		DCC_LOG(LOG_INFO, "Consecutive pooling");
 	}
+	slcdev_drv.dev = dev;
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {

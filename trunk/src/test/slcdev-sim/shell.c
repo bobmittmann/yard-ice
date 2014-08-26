@@ -248,6 +248,9 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 int cmd_enable(FILE * f, int argc, char ** argv)
 {
 	unsigned int addr;
+	bool sens = false;
+	bool mod = false;
+	bool all = false;
 	int i;
 
 	if (argc == 1) {
@@ -269,11 +272,35 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 		fprintf(f, "\n");
 	}
 
+	if (argc == 2) {
+		if (strcmp(argv[1], "all") == 0) {
+			all = true;
+		} else if ((strcmp(argv[1], "sens") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
+			sens = true;
+		} else if (strcmp(argv[1], "mod") == 0) {
+			mod = true;
+		}
+	}
 
-	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
-		for (addr = 1; addr < 320; ++addr)
-			dev_sim_enable(addr);
-		fprintf(f, "All devices are enabled\n");
+	if (all) {
+		if ((!mod) && (!sens)) {
+			mod = true;
+			sens = true;
+		}
+
+		if (sens) {
+			for (addr = 1; addr < 160; ++addr)
+				dev_sim_enable(false, addr);
+			fprintf(f, "All sensors enabled\n");
+		}
+
+		if (mod) {
+			for (addr = 1; addr < 160; ++addr)
+				dev_sim_enable(true, addr);
+			fprintf(f, "All modules enabled\n");
+		}
+
 		return 0;
 	}
 
@@ -282,8 +309,14 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
 
-		fprintf(f, "Device enabled: %d\n", addr);
-		dev_sim_enable(addr);
+		if (sens) {
+			fprintf(f, "Sensor %d enabled\n", addr);
+			dev_sim_enable(false, addr);
+		} 
+		if (mod) {
+			fprintf(f, "Module %d enabled\n", addr);
+			dev_sim_enable(true, addr);
+		}
 	}
 
 	return 0;
@@ -292,15 +325,43 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 int cmd_disable(FILE * f, int argc, char ** argv)
 {
 	unsigned int addr;
+	bool sens = false;
+	bool mod = false;
+	bool all = false;
 	int i;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
-	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
-		for (addr = 1; addr < 320; ++addr)
-			dev_sim_disable(addr);
-		fprintf(f, "All devices are disabled\n");
+	if (argc == 2) {
+		if (strcmp(argv[1], "all") == 0) {
+			all = true;
+		} else if ((strcmp(argv[1], "sens") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
+			sens = true;
+		} else if (strcmp(argv[1], "mod") == 0) {
+			mod = true;
+		}
+	}
+
+	if (all) {
+		if ((!mod) && (!sens)) {
+			mod = true;
+			sens = true;
+		}
+
+		if (sens) {
+			for (addr = 1; addr < 160; ++addr)
+				dev_sim_disable(false, addr);
+			fprintf(f, "All sensors disabled\n");
+		}
+
+		if (mod) {
+			for (addr = 1; addr < 160; ++addr)
+				dev_sim_disable(true, addr);
+			fprintf(f, "All modules disabled\n");
+		}
+
 		return 0;
 	}
 
@@ -309,8 +370,14 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 		if ((addr < 1) || (addr > 319))
 			return SHELL_ERR_ARG_INVALID;
 
-		fprintf(f, "Device disable: %d\n", addr);
-		dev_sim_disable(addr);
+		if (sens) {
+			fprintf(f, "Sensor %d disabled\n", addr);
+			dev_sim_disable(false, addr);
+		} 
+		if (mod) {
+			fprintf(f, "Module %d disabled\n", addr);
+			dev_sim_disable(true, addr);
+		}
 	}
 
 	return 0;
@@ -436,25 +503,21 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		return config_show_info(f);
 
 	for (i = 1; i < argc; ++i) {
-		if ((strcmp(argv[1], "compile") == 0) || 
-			(strcmp(argv[1], "c") == 0)) {
+		if ((strcmp(argv[i], "compile") == 0) || 
+			(strcmp(argv[i], "c") == 0)) {
 			compile = true;
 		} else if ((strcmp(argv[i], "erase") == 0) || 
-			(strcmp(argv[1], "e") == 0)) {
+			(strcmp(argv[i], "e") == 0)) {
 			erase = true;
 		} else if ((strcmp(argv[i], "load") == 0) || 
-			(strcmp(argv[1], "l") == 0)) {
+			(strcmp(argv[i], "l") == 0)) {
 			load = true;
 		} else if ((strcmp(argv[i], "save") == 0) || 
-			(strcmp(argv[1], "s") == 0)) {
+			(strcmp(argv[i], "s") == 0)) {
 			save = true;
+			erase = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
-	}
-
-	if (erase) {
-		fprintf(f, "Erasing...\n");
-		config_erase();
 	}
 
 	json_file_get(FLASH_BLK_CFG_JSON_OFFS, &json);
@@ -472,6 +535,11 @@ int cmd_config(FILE * f, int argc, char ** argv)
 			}
 
 		}
+	}
+
+	if (erase) {
+		fprintf(f, "Erasing...\n");
+		config_erase();
 	}
 
 	if (save) {
@@ -583,6 +651,27 @@ int cmd_pw3(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_dev(FILE * f, int argc, char ** argv)
+{
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((strcmp(argv[1], "stop") == 0) || 
+		(strcmp(argv[1], "s") == 0)) {
+		slcdev_stop();
+	} else if ((strcmp(argv[1], "resume") == 0) || 
+		(strcmp(argv[1], "r") == 0)) {
+		slcdev_resume();
+	} else
+		return SHELL_ERR_ARG_INVALID;
+
+	return 0;
+}
+
+
 int cmd_pw4(FILE * f, int argc, char ** argv)
 {
 	return 0;
@@ -667,6 +756,8 @@ const struct shell_cmd cmd_tab[] = {
 		"get set PW4 value" },
 
 	{ cmd_str, "str", "", "", "dump string pool" },
+
+	{ cmd_dev, "dev", "", "[start|stop]", "dump string pool" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 

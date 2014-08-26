@@ -6,58 +6,20 @@
 #include <sys/dcclog.h>
 #include "slcdev.h"
 
-struct slcdev_obj {
-	uint32_t device_type : 7;
-	uint32_t advanced_protocol : 1;
-
-	uint32_t enabled : 1;
-	uint32_t poll_flash : 1;
-	uint32_t isink_pulse_level : 4;
-	uint32_t isink_slewrate : 2;
-
-	uint32_t isink_width_err : 3;
-	uint32_t isink_latency : 5;  /* tm = (x + 1) * 5 ( 5us .. 160us) */
-
-	uint32_t isink_pulse_pre : 5; /* tm = (x + 1) * 5 ( 5us .. 160us) */
-};
-
-
-struct ratio_u16 {
-	int16_t num;
-	uint16_t den;
-};
-
-const struct ratio_u16 sim_err_ltu[] = {
-	{    1,     1 }, /*   0 % */
-	{  1020, 1000 }, /*   2 % */
-	{  1040, 1000 }, /*   4 % */
-	{  1080, 1000 }, /*   8 % */
-	{   840, 1000 }, /* -16 % */
-	{   920, 1000 }, /*  -8 % */
-	{   960, 1000 }, /*  -4 % */
-	{   920, 1000 }  /*  -2 % */
-};
-
-int slcdev_sim_set(void)
+void dev_sim_enable(bool module, unsigned int addr)
 {
-
-	return 0;
-}
-
-void dev_sim_enable(unsigned int addr)
-{
-	if (addr > SS_DEVICES_MAX) 
+	if (addr > 160) 
 		return;
 
-	ss_dev_tab[addr].enabled = 1;
+	ss_dev_tab[addr + (module ? 160 : 0)].enabled = 1;
 }
 
-void dev_sim_disable(unsigned int addr)
+void dev_sim_disable(bool module, unsigned int addr)
 {
-	if (addr > SS_DEVICES_MAX) 
+	if (addr > 160) 
 		return;
 
-	ss_dev_tab[addr].enabled = 0;
+	ss_dev_tab[addr + (module ? 160 : 0)].enabled = 0;
 }
 
 struct ss_device * dev_sim_sensor_lookup(unsigned int addr)
@@ -87,24 +49,38 @@ void sim_js_exec(struct ss_device * dev, struct db_dev_model * model,
 
 }
 
+#define REMOTE_TEST_MSK 0x2d /* 101101 */
+#define REMOTE_TEST_ON  0x00 
+#define REMOTE_TEST_OFF 0x2d 
+
+/* Default control bits processing for sensors */
+void sensor_ctl_default(struct ss_device * dev, 
+					   struct db_dev_model * model, uint32_t ctl)
+{
+	/* Remote test */
+	switch (ctl & REMOTE_TEST_MSK) {
+	case REMOTE_TEST_ON:
+		DCC_LOG(LOG_TRACE, "Remote test enabled");
+		dev->tst = 1;
+		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
+		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
+		break;
+	case REMOTE_TEST_OFF:
+		DCC_LOG(LOG_TRACE, "Remote test disabled");
+		dev->tst = 0;
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
+		break;
+	}
+}
+
 /* simulate a custom sensor */
 void sensor_sim_custom(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	struct cmd_list * lst;
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 
 	/* execute commands from the device model */
 	if ((lst = model->cmd) != NULL) {
@@ -119,25 +95,13 @@ void sensor_sim_custom(struct ss_device * dev,
 	}
 }
 
-
 /* simulate a photodetector smoke sensor */
 void sensor_sim_photo(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate a ion smoke detector */
@@ -146,18 +110,7 @@ void sensor_sim_ion(struct ss_device * dev,
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate a heat detector sensor */
@@ -166,18 +119,7 @@ void sensor_sim_heat(struct ss_device * dev,
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate an Acclimate Photoelectric Smoke Sensor */
@@ -186,18 +128,7 @@ void sensor_sim_acclimate(struct ss_device * dev,
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate an Beam Smoke Sensor */
@@ -206,23 +137,7 @@ void sensor_sim_beam(struct ss_device * dev,
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	} else if ((ctl & 0x5b6d) == 0x0844) {
-		/* Reset */
-		DCC_LOG(LOG_TRACE, "Reset");
-	} else if ((ctl & 0x5b6d) == 0x0244) {
-		DCC_LOG(LOG_TRACE, "Obscuration test enabled");
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate a COPTIR Smoke Detector Sensor */
@@ -231,19 +146,10 @@ void sensor_sim_coptir(struct ss_device * dev,
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	/* Remote test */
-	if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
-	} else if ((ctl & 0x2d) == 0x00) {
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
-		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
-	}
+	sensor_ctl_default(dev, model, ctl);
 }
+
+
 
 /* simulate a custom module */
 void module_sim_custom(struct ss_device * dev, 
@@ -271,17 +177,45 @@ void module_sim_relay(struct ss_device * dev,
 	DCC_LOG(LOG_TRACE, "...");
 }
 
+#define CONTROL_OUT_MSK 0x2d /* 101101 */
+#define CONTROL_OUT_ON  0x00 
+#define CONTROL_OUT_OFF 0x2d 
+
 /* simulate a supervised cntrol module */
 void module_sim_control(struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
+	switch (ctl & CONTROL_OUT_MSK) {
+	case CONTROL_OUT_ON:
+		DCC_LOG(LOG_TRACE, "Control ON");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		break;
+	case CONTROL_OUT_OFF:
+		DCC_LOG(LOG_TRACE, "Control Off");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		break;
+	}
 	DCC_LOG(LOG_TRACE, "...");
 }
+
+#define CLASS_A_MSK      0x2d /* 101101 */
+#define CLASS_A_SWITCHED 0x00 
+#define CLASS_A_NORMAL   0x2d 
 
 /* simulate a monitor module */
 void module_sim_monitor(struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
+	switch (ctl & CLASS_A_MSK) {
+	case CLASS_A_SWITCHED:
+		DCC_LOG(LOG_TRACE, "Class A switched");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		break;
+	case CLASS_A_NORMAL:
+		DCC_LOG(LOG_TRACE, "Class A normal");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		break;
+	}
 	DCC_LOG(LOG_TRACE, "...");
 }
 
@@ -390,6 +324,10 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct db_dev_model * model;
 	uint32_t ctl;
 
+	thinkos_sleep(3000);
+
+	slcdev_resume();
+
 	for (;;) {
 		event = slcdev_event_wait();
 		dev = slcdev_drv.dev;
@@ -398,7 +336,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 		ctl = dev->ctls;
 
 		if (event & SLC_EV_TRIG) {
-			DCC_LOG1(LOG_TRACE, "trigger %d", dev->addr);
+			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
 			led_flash(0, 64);
 		}
 
@@ -406,7 +344,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 			const struct sim_model * sim;
 			sim = &sim_model_lut[model->sim];
 
-			DCC_LOG1(LOG_TRACE, "simulation %d", dev->addr);
+			DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
 
 			/* Poll LED state */
 			if ((ctl & 0x4) == 0) {

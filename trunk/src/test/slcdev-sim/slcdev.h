@@ -393,9 +393,9 @@ int module_sim_default(void);
 
 const char * model_sim_name(unsigned int idx);
 
-void dev_sim_enable(unsigned int addr);
+void dev_sim_enable(bool mod, unsigned int addr);
 
-void dev_sim_disable(unsigned int addr);
+void dev_sim_disable(bool mod, unsigned int addr);
 
 
 struct ss_device * dev_sim_sensor_lookup(unsigned int addr);

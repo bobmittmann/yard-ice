@@ -117,8 +117,6 @@ int main(int argc, char ** argv)
 	stderr = f;
 #endif
 
-	slcdev_resume();
-
 	/* start a shell on the serial TTY */
 	shell(f, shell_prompt, shell_greeting, cmd_tab);
 
