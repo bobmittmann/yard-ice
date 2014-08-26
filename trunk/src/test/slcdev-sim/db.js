@@ -1,6 +1,6 @@
 {
 	"sensor": { 
-		"model" : "Photo", 
+		"model" : "2251", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
 		"pw1" : [270, 330],
@@ -15,16 +15,15 @@
 			["Smoke Alarm 1", 1260, 1775],
 			["Smoke Alarm 2", 1775, 2395],
 			["Smoke Alarm 3", 2395, 2800],
-			["Thermal Alarm (57°C)", 2800, 3220],
-			["Remote Test", 2800, 3200]
+			["Remote Test", 3100, 3825]
 		],
 		"pw5" : [810, 990]
 	},
 
 	"sensor": { 
-		"model" : "Ion", 
-		"desc" : "Ionization Smoke Detector", 
-		"sim" : "ion", 
+		"model" : "2251T", 
+		"desc" : "Photoelectric Smoke Detector", 
+		"sim" : "photo", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -32,66 +31,51 @@
 		],
 		"pw3" : [540, 660],
 		"pw4" : [
-			["Normal", 870, 930],
-			["Low Chamber", 120, 180],
-			["High Chamber", 260, 330],
+			["Normal", 525, 975],
+			["Trouble", 120, 660],
 			["Smoke Alarm 1", 1260, 1775],
 			["Smoke Alarm 2", 1775, 2395],
 			["Smoke Alarm 3", 2395, 2800],
-			["Remote Test", 2130, 2880]
+			["Thermal Alarm (60°C)", 2800, 3840],
+			["Remote Test", 3100, 3840]
 		],
-		"pw5" : [570, 630]
+		"pw5" : [810, 990]
 	},
 
 	"sensor": { 
-		"model" : "Heat", 
+		"model" : "5251P", 
 		"desc" : "Heat Detector", 
 		"sim" : "heat", 
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
-			["Remote test enabled", 540, 660]
+			["Remote test enabled", 540 , 660],
 		],
 		"pw3" : [540, 660],
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
-			["Heat Alarm 57.2°C", 2110],
-			["Remote Test", 3270, 3330]
+			["Remote Test", 3250, 3330]
 		],
-		"pw5" : [270, 330],
-		"cmd": [
-			{
-				"tag": "LED on",
-				"seq": ["0xx"],
-				"js": [ "dev.led_on = true;" ]
-			},
-			{
-				"tag": "LED off",
-				"seq": ["1x0"],
-				"js": [ "dev.led_on = false;" ]
-			},
-			{
-				"tag": "LED blink",
-				"seq": ["1x1"],
-				"js": [ "dev.led_blink = true;" ]
-			},
-			{
-				"tag": "Enable Type ID",
-				"seq": ["x1x"],
-				"js": [ "dev.pw5_en = true;" ]
-			},
-			{
-				"tag": "Remote Test on",
-				"seq": ["0x0", "0x0"],
-				"js": [ "dev.test = true;" ]
-			},
-			{
-				"tag": "Remote Test off",
-				"seq": ["1x1", "1x1"],
-				"js": [ "dev.test = false;" ]
-			}
-		]
+		"pw5" : [270, 330]
+	},
+
+	"sensor": { 
+		"model" : "5251T", 
+		"desc" : "Heat Detector", 
+		"sim" : "heat", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
 	},
 
 	"sensor": { 
@@ -182,42 +166,6 @@
 			["Remote Test / Magnet Test", 2850, 3150]
 		],
 		"pw5" : [540, 660]
-	},
-
-	"sensor": { 
-		"model" : "5251P", 
-		"desc" : "Heat Detector", 
-		"sim" : "heat", 
-		"pw1" : [270, 330],
-		"pw2" : [
-			["Remote test disabled", 270, 330],
-			["Remote test enabled", 540 , 660],
-		],
-		"pw3" : [540, 660],
-		"pw4" : [
-			["Normal, 25°C", 1070, 1400],
-			["Normal, 57.2°C", 1895, 2110],
-			["Remote Test", 3250, 3330]
-		],
-		"pw5" : [270, 330]
-	},
-
-	"sensor": { 
-		"model" : "5251T", 
-		"desc" : "Heat Detector", 
-		"sim" : "heat", 
-		"pw1" : [270, 330],
-		"pw2" : [
-			["Remote test disabled", 270, 330],
-			["Remote test enabled", 540 , 660],
-		],
-		"pw3" : [540, 660],
-		"pw4" : [
-			["Normal, 25°C", 1070, 1400],
-			["Normal, 57.2°C", 1895, 2110],
-			["Remote Test", 3250, 3330]
-		],
-		"pw5" : [270, 330]
 	},
 
 
@@ -342,6 +290,21 @@
 			["Short", 1619, 4000]
 		],
 		"pw5": ["Type ID", 240, 360]
+	},
+
+	"module": { 
+		"model": "M500M-4-20", 
+		"ap": false,
+		"desc": "500 Series 4-20mA Input Device", 
+		"sim" : "4-20mA", 
+		"pw1": [280, 320], 
+		"pw2": [280, 320],
+		"pw3": [280, 320],
+		"pw4": [
+			["Normal", 0, 3825],
+			["Power < 12V", 0, 100]
+		],
+		"pw5": [280, 320]
 	},
 
 	"module": { 

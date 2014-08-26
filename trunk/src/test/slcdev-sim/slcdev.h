@@ -337,9 +337,8 @@ void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
 
-void trig_addr_set(bool module, unsigned int addr);
-void trig_mode_set(unsigned int mode);
-unsigned int trig_addr_get(void);
+bool trig_addr_set(bool module, unsigned int addr);
+bool trig_addr_get(bool * module, unsigned int * addr);
 
 int device_db_init(void);
 int device_db_erase(void);
