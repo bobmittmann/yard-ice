@@ -78,7 +78,7 @@ void thinkos_context_show(const struct thinkos_context * ctx,
 	fprintf(stderr, "  r12=%08x", ctx->r12);
 	fprintf(stderr, " xpsr=%08x\n", ctx->xpsr);
 
-	fprintf(stderr, "   r1=%08x", ctx->r0);
+	fprintf(stderr, "   r1=%08x", ctx->r1);
 	fprintf(stderr, "   r5=%08x", ctx->r5);
 	fprintf(stderr, "   r9=%08x", ctx->r9);
 	fprintf(stderr, "   sp=%08x", sp);
@@ -164,7 +164,17 @@ static inline uint32_t __attribute__((always_inline)) __get_stack(void) {
 static inline struct thinkos_context * 
 	__attribute__((always_inline)) __get_context(void) {
 	register struct thinkos_context * ctx;
-	asm volatile ("push {r4-r11}\n"
+	asm volatile ("tst   lr, #0x4\n" /* Test EXC_RETURN bit 2 */
+				  "it    ne\n"
+				  "subne sp, #32\n"  /* Make room in the stack... */ 
+				  "push  {r4-r11}\n"
+				  "tst   lr, #0x4\n"
+				  "beq   0f\n"
+				  "mrs   r0, PSP\n" 
+				  "add   r1, sp, #32\n" 
+				  "ldmia r0, {r2-r9}\n"
+				  "stmia r1, {r2-r9}\n"
+				  "0:\n"
 				  "mov  %0, sp\n" : "=r" (ctx));
 	return ctx;
 }
@@ -195,7 +205,7 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
 			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
 	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
 	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
 			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
 	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
@@ -393,7 +403,7 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 
 	/* save the context */
 	ctx = __get_context();
-
+	
 	lr = cm3_lr_get();
 	msp = cm3_msp_get();
 	psp = cm3_psp_get();

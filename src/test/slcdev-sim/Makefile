@@ -41,7 +41,7 @@ LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell microjs
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -Os
+CFLAGS = -g -Os -fomit-frame-pointer
 
 MACH = stm32l151xb
 

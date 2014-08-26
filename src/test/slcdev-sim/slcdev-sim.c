@@ -99,7 +99,7 @@ void sensor_sim_custom(struct ss_device * dev,
 void sensor_sim_photo(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -108,7 +108,7 @@ void sensor_sim_photo(struct ss_device * dev,
 void sensor_sim_ion(struct ss_device * dev, 
 					struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -117,7 +117,7 @@ void sensor_sim_ion(struct ss_device * dev,
 void sensor_sim_heat(struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -126,7 +126,7 @@ void sensor_sim_heat(struct ss_device * dev,
 void sensor_sim_acclimate(struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -135,7 +135,7 @@ void sensor_sim_acclimate(struct ss_device * dev,
 void sensor_sim_beam(struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -144,7 +144,7 @@ void sensor_sim_beam(struct ss_device * dev,
 void sensor_sim_coptir(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -174,7 +174,7 @@ void module_sim_custom(struct ss_device * dev,
 void module_sim_relay(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG1(LOG_TRACE, "addr=%d", dev->addr);
 }
 
 #define CONTROL_OUT_MSK 0x2d /* 101101 */
@@ -195,7 +195,7 @@ void module_sim_control(struct ss_device * dev,
 		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
 		break;
 	}
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 }
 
 #define CLASS_A_MSK      0x2d /* 101101 */
@@ -216,7 +216,7 @@ void module_sim_monitor(struct ss_device * dev,
 		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
 		break;
 	}
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 }
 
 /* simulate a mini-module */
@@ -236,6 +236,13 @@ void module_sim_2wire(struct ss_device * dev,
 /* simulate a firefighter telephone module */
 void module_sim_phone(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
+{
+	DCC_LOG(LOG_TRACE, "...");
+}
+
+/* simulate a 4-20ma input device */
+void module_sim_4_20ma(struct ss_device * dev, 
+					   struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG(LOG_TRACE, "...");
 }
@@ -264,7 +271,8 @@ const struct sim_model sim_model_lut[] = {
 	[10] = { .name = "monitor", .run = module_sim_monitor },
 	[11] = { .name = "mini", .run = module_sim_mini },
 	[12] = { .name = "2wire", .run = module_sim_2wire },
-	[13] = { .name = "phone", .run = module_sim_phone }
+	[13] = { .name = "phone", .run = module_sim_phone },
+	[14] = { .name = "4-20mA", .run = module_sim_4_20ma }
 };
 
 #define SENSOR_SIM_CUSTOM 0

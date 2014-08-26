@@ -43,16 +43,18 @@ static const uint8_t parity_lut[16] = {
  * Address encoding decoding tables
  * ------------------------------------------------------------------------- */
 
+/* System sensor rotary switch decoding table */
 static const uint8_t addr_dec_lut[16] = {
 /*	0000 0001 0010 0011 0100 0101 0110 0111 */
-	 0x0, 0x4, 0x1, 0x0, 0x7, 0x0, 0x2, 0x0,
+	 0x0, 0x4, 0x1, 0xc, 0x7, 0xf, 0x2, 0xa,
 /*	1000 1001 1010 1011 1100 1101 1110 1111 */
-	 0x5, 0x9, 0x6, 0x0, 0x8, 0x0, 0x3, 0x0,   
+	 0x5, 0x9, 0x6, 0xe, 0x8, 0xd, 0x3, 0xb,   
 };
 
+/* System sensor rotary switch reverse decoding (encoding) table */
 static const uint8_t addr_enc_lut[16] = {
 	0x0, 0x2, 0x6, 0xe, 0x1, 0x8, 0xa, 0x4,
-	0xc, 0x9, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,   
+	0xc, 0x9, 0x7, 0xf, 0x3, 0xd, 0xb, 0x5,   
 };
 
 
@@ -60,15 +62,24 @@ static const uint8_t addr_enc_lut[16] = {
  * Trigger module
  * ------------------------------------------------------------------------- */
 
-void trig_addr_set(bool module, unsigned int addr)
+bool trig_addr_set(bool module, unsigned int addr)
 {
-	DCC_LOG2(LOG_TRACE, "%s %d", module ? "Module" : "Sensor", addr);
-	
-	/* Adjust the trigger mask and compare values for CLIP mode */
-	slcdev_drv.trig.msk = 0x1ff;
-	slcdev_drv.trig.cmp = module ? 1 : 0;
-	slcdev_drv.trig.cmp = addr_enc_lut[(addr >> 4) & 0xf] << 1; 
-	slcdev_drv.trig.cmp = addr_enc_lut[addr & 0xf] << 5; 
+	DCC_LOG2(LOG_TRACE, "%s %d", module ? "module" : "sensor", addr);
+
+	if (addr >= 160)
+		return false;
+
+	if (addr >= 100) {
+		/* disable CLIP trigger for invalid addresses */
+		slcdev_drv.trig.msk = 0x000;
+	} else {
+		/* Adjust the trigger mask for CLIP mode */
+		slcdev_drv.trig.msk = 0x1ff;
+		/* Adjust the compare values for CLIP mode.*/
+		slcdev_drv.trig.cmp = module ? 1 : 0;
+		slcdev_drv.trig.cmp |= addr_enc_lut[(addr >> 4) & 0xf] << 1; 
+		slcdev_drv.trig.cmp |= addr_enc_lut[addr & 0xf] << 5; 
+	}
 
 	/* Adjust the trigger mask and compare values for AP mode */
 	/* AP direct poll trigger : MTTT T111 1UUU U11S SCI 
@@ -81,14 +92,34 @@ void trig_addr_set(bool module, unsigned int addr)
 	slcdev_drv.trig.ap_msk = 0x7fff;
 	slcdev_drv.trig.ap_cmp = module ? 1 : 0;
 	slcdev_drv.trig.ap_cmp |= 0x61e0;
-	slcdev_drv.trig.ap_cmp = addr_enc_lut[(addr >> 4) & 0xf] << 1; 
-	slcdev_drv.trig.ap_cmp = addr_enc_lut[addr & 0xf] << 9; 
+	slcdev_drv.trig.ap_cmp |= addr_enc_lut[(addr >> 4) & 0xf] << 1; 
+	slcdev_drv.trig.ap_cmp |= addr_enc_lut[addr & 0xf] << 9; 
+
+	return true;
 }
 
-unsigned int trig_addr_get(void)
+bool trig_addr_get(bool * module, unsigned int * addr)
 {
-	return slcdev_drv.trig.cmp;
+	unsigned int lo;
+	unsigned int hi;
+
+	/* Get the address from the AP Direct poll trigger 
+	   configuration (mask and compare values) */
+	if (slcdev_drv.trig.ap_msk == 0x7fff &&
+		(slcdev_drv.trig.ap_cmp & 0x61e0) == 0x61e0) {
+		/* Address mode */
+		*module = (slcdev_drv.trig.ap_cmp & 1) ? true : false;
+		/* Upper nibble address bits */
+		hi = (slcdev_drv.trig.ap_cmp >> 1) & 0xf; 
+		/* Lower nibble address bits. */
+		lo = (slcdev_drv.trig.ap_cmp >> 9) & 0xf; 
+		*addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
+		return true;
+	}	
+
+	return false;
 }
+
 
 static void trig_init(void)
 {

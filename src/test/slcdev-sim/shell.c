@@ -226,25 +226,32 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 	unsigned int addr;
 	bool mod = false;
 
-	if (argc > 2)
+	if (argc > 3)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	if (argc == 2) {
-		addr = strtoul(argv[1], NULL, 0);
-		if (addr > 319)
+	if (argc > 1) {
+		if (argc == 2)
+			return SHELL_ERR_ARG_MISSING;
+
+		if ((strcmp(argv[1], "sens") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
+			mod = false;
+		} else if ((strcmp(argv[1], "mod") == 0) ||
+			  (strcmp(argv[1], "m") == 0)) {
+			mod = true;
+		} else
 			return SHELL_ERR_ARG_INVALID;
 
-		if (addr >= 160) {
-			mod = true;
-			addr -= 160;
-		}
+		addr = strtoul(argv[2], NULL, 0);
+		if (addr > 159)
+			return SHELL_ERR_ARG_INVALID;
 
 		trig_addr_set(mod, addr);
+	} else {
+		trig_addr_get(&mod, &addr);
 	}
 
-	addr = trig_addr_get();
-
-	fprintf(f, "Trigger address: %d\n", addr);
+	fprintf(f, "Trigger: %s %d\n", mod ? "module" : "sensor", addr);
 
 	return 0;
 }
@@ -255,7 +262,7 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 	bool sens = false;
 	bool mod = false;
 	bool all = false;
-	int i;
+	int i = 1;
 
 	if (argc == 1) {
 		struct ss_device * dev;
@@ -274,41 +281,39 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 				fprintf(f, " %3d", i);
 		}
 		fprintf(f, "\n");
+
+		return 0;
 	}
 
-	i = 1;
-	if (argc > 1) {
-		if ((strcmp(argv[i], "sens") == 0) || 
-			(strcmp(argv[i], "s") == 0)) {
+	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
+		all = true;
+		mod = true;
+		sens = true;
+	} else {
+		if ((strcmp(argv[1], "sens") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
 			sens = true;
 			i++;
-		} if ((strcmp(argv[i], "mod") == 0) ||
-			(strcmp(argv[i], "m") == 0)) {
+		} else if ((strcmp(argv[1], "mod") == 0) ||
+			(strcmp(argv[1], "m") == 0)) {
 			mod = true;
 			i++;
-		}
-		if ((i < argc) && (strcmp(argv[i], "all")) == 0)
+		} 
+		if ((argc == 3) && (strcmp(argv[2], "all") == 0))
 			all = true;
 	}
 
 	if (all) {
-		if ((!mod) && (!sens)) {
-			mod = true;
-			sens = true;
-		}
-
 		if (sens) {
 			for (addr = 1; addr < 160; ++addr)
 				dev_sim_enable(false, addr);
 			fprintf(f, "All sensors enabled\n");
 		}
-
 		if (mod) {
 			for (addr = 1; addr < 160; ++addr)
 				dev_sim_enable(true, addr);
 			fprintf(f, "All modules enabled\n");
 		}
-
 		return 0;
 	}
 
@@ -336,44 +341,40 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 	bool sens = false;
 	bool mod = false;
 	bool all = false;
-	int i;
+	int i = 1;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
 
-	i = 1;
-	if (argc > 1) {
-		if ((strcmp(argv[i], "sens") == 0) || 
-			(strcmp(argv[i], "s") == 0)) {
+	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
+		all = true;
+		mod = true;
+		sens = true;
+	} else {
+		if ((strcmp(argv[1], "sens") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
 			sens = true;
 			i++;
-		} if ((strcmp(argv[i], "mod") == 0) ||
-			(strcmp(argv[i], "m") == 0)) {
+		} else if ((strcmp(argv[1], "mod") == 0) ||
+			(strcmp(argv[1], "m") == 0)) {
 			mod = true;
 			i++;
-		}
-		if ((i < argc) && (strcmp(argv[i], "all")) == 0)
+		} 
+		if ((argc == 3) && (strcmp(argv[2], "all") == 0))
 			all = true;
 	}
 
 	if (all) {
-		if ((!mod) && (!sens)) {
-			mod = true;
-			sens = true;
-		}
-
 		if (sens) {
 			for (addr = 1; addr < 160; ++addr)
 				dev_sim_disable(false, addr);
 			fprintf(f, "All sensors disabled\n");
 		}
-
 		if (mod) {
 			for (addr = 1; addr < 160; ++addr)
 				dev_sim_disable(true, addr);
 			fprintf(f, "All modules disabled\n");
 		}
-
 		return 0;
 	}
 
