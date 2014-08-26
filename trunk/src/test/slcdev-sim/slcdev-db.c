@@ -843,7 +843,7 @@ int device_db_pw1_lookup(struct db_dev_model * mod, unsigned int sel,
 	min = mod->pw1->pw[sel].min;
 	avg = (max + min) / 2;
 	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
 	return pw;
 }
@@ -863,7 +863,7 @@ int device_db_pw2_lookup(struct db_dev_model * mod, unsigned int sel,
 	min = mod->pw2->pw[sel].min;
 	avg = (max + min) / 2;
 	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
 	return pw;
 }
@@ -883,7 +883,7 @@ int device_db_pw3_lookup(struct db_dev_model * mod, unsigned int sel,
 	min = mod->pw3->pw[sel].min;
 	avg = (max + min) / 2;
 	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
 	return pw;
 }
@@ -903,7 +903,7 @@ int device_db_pw4_lookup(struct db_dev_model * mod, unsigned int sel,
 	min = mod->pw4->pw[sel].min;
 	avg = (max + min) / 2;
 	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
 
 	return pw;
 }

@@ -386,7 +386,7 @@ struct cfg_device {
 			uint32_t enabled: 1;
 			uint32_t module: 1;
 		}; 
-		uint32_t bf_opt;	
+		uint32_t opt;	
 	};
 
 	uint8_t ilat;
@@ -394,6 +394,7 @@ struct cfg_device {
 	uint8_t imode;
 	uint8_t irate;
 	uint8_t model;   /* reference to a device model */
+	uint8_t tag; 
 	uint8_t tbias;
 };
 
@@ -406,42 +407,68 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 	struct cfg_device * cdev = (struct cfg_device *)ptr;
 	struct ss_device * dev;
 	struct db_dev_model * mod;
+	int mod_idx;
 	int tbias;
 	int icfg;
 	int cnt = 0;
 	int typ;
-	int addr;
-	int mod_idx;
-
-	printf("Encoding device. Model \"%s\"\n", const_str(cdev->model));
 
 	DCC_LOG1(LOG_TRACE, "model=%d", cdev->model);
 
 	if ((mod_idx = db_dev_model_index_by_name(cdev->model)) < 0) {
 		DCC_LOG1(LOG_WARNING, "invalid model: %d", cdev->model);
+		printf("Invalid model: \"%s\"\n", const_str(cdev->model));
 		return -1;
 	}
 	DCC_LOG1(LOG_TRACE, "mod_idx=%d", mod_idx);
 
 	mod = db_dev_model_by_index(mod_idx);
-	printf("\"%s\" %s\n", const_str(mod->model), const_str(mod->desc));
+	printf("%c \"%s\" \"%s\":", cdev->enabled ? '+' : '-', 
+		   const_str(mod->model), const_str(mod->desc));
+
+	if (mod->module != cdev->module) {
+		DCC_LOG(LOG_WARNING, "mod->module != cdev->module");
+		printf(" not a %s!\n", cdev->module ? "module" : "sensor");
+		return -1;
+	}
 
 	tbias = (cdev->tbias * 128) / 100;
 	icfg = (cdev->irate << 5) + (cdev->imode & 0x1f);
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
+		unsigned int addr;
+		unsigned int idx;
+
 		addr = val->u32;
-		DCC_LOG1(LOG_TRACE, "addr=%d", addr);
+
+		DCC_LOG1(LOG_INFO, "addr=%d", addr);
+
+		printf(" %d", addr);
 
 		if ((addr < 1) || (addr > 159)) {
 			DCC_LOG1(LOG_WARNING, "invalid address addr=%d", addr);
+			printf("Invalid address: %d\n", addr);
 			return -1;
 		}
 
-		if (cdev->module)
-			addr += 160;
-	
-		dev = &ss_dev_tab[addr];
+		idx = addr + (cdev->module ? 160 : 0);
+
+		dev = &ss_dev_tab[idx];
+
+		if (dev->addr != addr) {
+			DCC_LOG2(LOG_WARNING, "addr(%d) != dev->addr", 
+					 addr, dev->addr);
+			printf("Internal error!\n");
+			return -1;
+		};
+
+		if (dev->module != cdev->module) {
+			DCC_LOG2(LOG_WARNING, "module(%d) != dev->module", 
+					 addr, dev->addr);
+			printf("Internal error!\n");
+			return -1;
+		};
+
 		/* disable the device prior to configuration */
 		dev->enabled = 0;
 
@@ -458,9 +485,15 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 		dev->tbias = tbias;
 
 		/* enable the device per configuration */
-		dev->enabled = cdev->enabled;
+		dev->enabled = cdev->enabled ? 1 : 0;
 		cnt++;
+
+		DCC_LOG4(LOG_TRACE, "%s %d: dev=%08x enabled=%d", 
+				 dev->module ? "module" : "sensor", dev->addr,
+				 dev, dev->enabled);
 	}
+
+	printf("\n");
 
 	if (typ != MICROJS_JSON_END_ARRAY) {
 		return -1;
@@ -472,7 +505,9 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 static const struct microjs_attr_desc sensor_desc[] = {
 	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, model),
 		microjs_const_str_enc },
-	{ "enabled", MICROJS_JSON_BOOLEAN, 0, offsetof(struct cfg_device, bf_opt),
+	{ "tag", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, tag),
+		microjs_const_str_enc },
+	{ "enabled", MICROJS_JSON_BOOLEAN, 0, offsetof(struct cfg_device, opt),
 		microjs_bit_enc },
 	{ "ilat", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ilat),
 		microjs_u8_enc },
@@ -496,7 +531,8 @@ int cfg_sensor_enc(struct microjs_json_parser * jsn,
 	struct cfg_device cdev;
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG1(LOG_TRACE, "cdev=0x%08x", &cdev);
+	cdev.opt = 0;
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 0;
@@ -505,6 +541,7 @@ int cfg_sensor_enc(struct microjs_json_parser * jsn,
 	cdev.irate = ISINK_RATE_NORMAL >> 5;
 	cdev.imode = ISINK_CURRENT_NOM;
 	cdev.tbias = 100; /* 100 % */
+	cdev.tag = 0;
 
 	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
@@ -522,7 +559,9 @@ int cfg_module_enc(struct microjs_json_parser * jsn,
 	struct cfg_device cdev;
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG1(LOG_TRACE, "cdev=0x%08x", &cdev);
+
+	cdev.opt = 0;
 	cdev.enabled = 0;
 	cdev.model = 0;
 	cdev.module = 1;
@@ -585,7 +624,6 @@ struct cfg_info {
 	uint16_t tab_size;
 	uint16_t tab_crc;
 };
-
 
 int dev_tab_save(struct cfg_info * inf)
 {
@@ -730,7 +768,7 @@ bool config_sanity_check(struct json_file * json)
 {
 	struct cfg_info * inf;
 
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
+	DCC_LOG1(LOG_INFO, "sp=0x%08x ..........................", cm3_sp_get());
 
 	/* check configuration integrity */
 	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
@@ -739,7 +777,7 @@ bool config_sanity_check(struct json_file * json)
 		return true;
 	}
 
-	DCC_LOG3(LOG_TRACE, "cfg_info: txt=0x%08x len=%d crc=0x%04x", 
+	DCC_LOG3(LOG_INFO, "cfg_info: txt=0x%08x len=%d crc=0x%04x", 
 			 inf->json_txt, inf->json_len, inf->json_crc);
 
 	return false;
