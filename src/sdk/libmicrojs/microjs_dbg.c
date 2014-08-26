@@ -35,6 +35,16 @@
 
 const char microjs_tok_str[][4] = {
 	"EOF", /* TOK_EOF */
+	".",   /* TOK_DOT */
+	",",   /* TOK_COMMA */
+	";",   /* TOK_SEMICOLON */
+	":",   /* TOK_COLON */
+	"[",   /* TOK_LEFTBRACKET */
+	"]",   /* TOK_RIGHTBRACKET */
+	"(",   /* TOK_LEFTPAREN */
+	")",   /* TOK_RIGHTPAREN */
+	"{",   /* TOK_LEFTBRACE */
+	"}",   /* TOK_RIGHTBRACE */
 	">>",  /* TOK_ASR */
 	"<<",  /* TOK_ASL */
 	"<=",  /* TOK_LTE */
@@ -48,16 +58,6 @@ const char microjs_tok_str[][4] = {
 	"*",   /* TOK_MUL */
 	"/",   /* TOK_DIV */
 	"%",   /* TOK_MOD */
-	".",   /* TOK_DOT */
-	",",   /* TOK_COMMA */
-	";",   /* TOK_SEMICOLON */
-	":",   /* TOK_COLON */
-	"[",   /* TOK_LEFTBRACKET */
-	"]",   /* TOK_RIGHTBRACKET */
-	"(",   /* TOK_LEFTPAREN */
-	")",   /* TOK_RIGHTPAREN */
-	"{",   /* TOK_LEFTBRACE */
-	"}",   /* TOK_RIGHTBRACE */
 	"|",   /* TOK_OR */
 	"||",  /* TOK_BITOR */
 	"&",   /* TOK_AND */
@@ -65,23 +65,10 @@ const char microjs_tok_str[][4] = {
 	"^",   /* TOK_XOR */
 	"!",   /* TOK_NOT */
 	"~",   /* TOK_BITNOT */
-	"=",   /* TOK_LET */
-	"++",  /* TOK_INC */
-	"--",  /* TOK_DEC */
-	"~=",  /* TOK_NOT_LET */
-	"+=",  /* TOK_ADD_LET */
-	"-=",  /* TOK_SUB_LET */
-	"*=",  /* TOK_MUL_LET */
-	"/=",  /* TOK_DIV_LET */
-	"%=",  /* TOK_MOD_LET */
-	">>=", /* TOK_ASR_LET */
-	"<<=", /* TOK_SHL_LET */
-	"|=",  /* TOK_OR_LET */
-	"&=",  /* TOK_AND_LET */
-	"^="   /* TOK_XOR_LET */
+	"="   /* TOK_LET */
 };
 
-int microjs_tok_dump(FILE * f, struct microjs_tokenizer * p)
+int microjs_tok_dump(FILE * f, struct microjs_parser * p)
 {
 	uint32_t val;
 	int idx = 0;
@@ -99,7 +86,7 @@ int microjs_tok_dump(FILE * f, struct microjs_tokenizer * p)
 			len = tok - TOK_STRING;
 			offs = p->tok[idx++];
 			offs |= p->tok[idx++] << 8;
-			s = (char *)p->js + offs;
+			s = (char *)p->txt + offs;
 			memcpy(buf, s, len);
 			buf[len] = '\0';
 			fprintf(f, "\"%s\" ", buf);
@@ -190,15 +177,15 @@ static const char * const err_tab[] = {
 	"strings unsuported"
 };
 
-void microjs_tok_err(struct microjs_tokenizer * p)
+void microjs_tok_err(struct microjs_parser * p, int err)
 {
-	char * js = (char *)p->js;
+	char * js = (char *)p->txt;
 	char * lp[5];
 	int ln;
 	int c;
 	int i;
 
-	printf("error: %s: ", err_tab[p->err]);
+	printf("error: %s: ", err_tab[-err]);
 
 	lp[4] = NULL;
 	lp[3] = NULL;
@@ -215,7 +202,7 @@ void microjs_tok_err(struct microjs_tokenizer * p)
 			lp[0] = &js[i];
 			ln++;
 		}
-		if (i == p->offs) {
+		if (i == p->off) {
 			js_dump_line(ln - 4, lp[4]);
 			js_dump_line(ln - 3, lp[3]);
 			js_dump_line(ln - 2, lp[2]);

@@ -39,16 +39,8 @@
 #include "config.h"
 #endif
 
-#ifndef MICROJS_ENABLE_INCDEC
-#define MICROJS_ENABLE_INCDEC 0
-#endif
-
 #ifndef MICROJS_ENABLE_STRING
 #define MICROJS_ENABLE_STRING 1
-#endif
-
-#ifndef MICROJS_ENABLE_DECODE_STRING
-#define MICROJS_ENABLE_DECODE_STRING 0
 #endif
 
 #ifndef MICROJS_SYMBOL_LEN_MAX 
@@ -56,7 +48,7 @@
 #endif
 
 #ifndef MICROJS_STRING_LEN_MAX 
-#define MICROJS_STRING_LEN_MAX 176
+#define MICROJS_STRING_LEN_MAX 191
 #endif
 
 #include <stdint.h>
@@ -70,29 +62,31 @@
 #define TOK_SYMBOL       (TOK_STRING - MICROJS_SYMBOL_LEN_MAX)
 
 #define TOK_EOF           0
-#define TOK_ASR           1 
-#define TOK_SHL           2
-#define TOK_LTE           3
-#define TOK_LT            4
-#define TOK_GTE           5
-#define TOK_GT            6
-#define TOK_EQ            7
-#define TOK_NEQ           8
-#define TOK_PLUS          9
-#define TOK_MINUS        10
-#define TOK_MUL          11
-#define TOK_DIV          12
-#define TOK_MOD          13
-#define TOK_DOT          14
-#define TOK_COMMA        15
-#define TOK_SEMICOLON    16
-#define TOK_COLON        17
-#define TOK_LEFTBRACKET  18
-#define TOK_RIGHTBRACKET 19
-#define TOK_LEFTPAREN    20
-#define TOK_RIGHTPAREN   21
-#define TOK_LEFTBRACE    22
-#define TOK_RIGHTBRACE   23
+/* puctuation */
+#define TOK_DOT           1
+#define TOK_COMMA         2
+#define TOK_SEMICOLON     3 
+#define TOK_COLON         4
+#define TOK_LEFTBRACKET   5
+#define TOK_RIGHTBRACKET  6
+#define TOK_LEFTPAREN     7
+#define TOK_RIGHTPAREN    8
+#define TOK_LEFTBRACE     9
+#define TOK_RIGHTBRACE   10
+/* operators */
+#define TOK_ASR          11 
+#define TOK_SHL          12
+#define TOK_LTE          13
+#define TOK_LT           14
+#define TOK_GTE          15
+#define TOK_GT           16
+#define TOK_EQ           17
+#define TOK_NEQ          18
+#define TOK_PLUS         19
+#define TOK_MINUS        20
+#define TOK_MUL          21
+#define TOK_DIV          22
+#define TOK_MOD          23
 #define TOK_OR           24
 #define TOK_BITOR        25
 #define TOK_AND          26
@@ -101,43 +95,25 @@
 #define TOK_NOT          29
 #define TOK_BITNOT       30
 #define TOK_LET          31
-
-#define TOK_INC          32 /* ++ */
-#define TOK_DEC          33 /* -- */
-#define TOK_NOT_LET      34 /* ~= */
-#define TOK_ADD_LET      35 /* += */
-#define TOK_SUB_LET      36 /* -= */
-#define TOK_MUL_LET      37 /* *= */
-#define TOK_DIV_LET      38 /* /= */
-#define TOK_MOD_LET      39 /* %= */
-#define TOK_ASR_LET      40 /* >>= */
-#define TOK_SHL_LET      41 /* <<= */
-#define TOK_OR_LET       42 /* |= */
-#define TOK_AND_LET      43 /* &= */
-#define TOK_XOR_LET      44 /* ^= */
-
-#define TOK_BREAK        45
-#define TOK_CASE         46
-#define TOK_CONTINUE     47
-#define TOK_CONST        48
-#define TOK_FALSE        49
-#define TOK_FOR          50
-#define TOK_FUNCTION     51
-#define TOK_NULL         52
-#define TOK_RETURN       53
-#define TOK_SWITCH       54
-#define TOK_TRUE         55
-#define TOK_VAR          56
-#define TOK_WHILE        57
-
-#define TOK_INT8         58
-#define TOK_INT16        59
-#define TOK_INT24        60
-#define TOK_INT32        61
-
-#define TOK_INT64        62
-#define TOK_FLOAT        63
-#define TOK_DOUBLE       64
+/* keywords */
+#define TOK_BREAK        32
+#define TOK_CASE         33
+#define TOK_CONTINUE     34
+#define TOK_CONST        35
+#define TOK_FALSE        36
+#define TOK_FOR          37
+#define TOK_FUNCTION     38
+#define TOK_NULL         39
+#define TOK_RETURN       40
+#define TOK_SWITCH       41
+#define TOK_TRUE         42
+#define TOK_VAR          43
+#define TOK_WHILE        44
+/* integral values */
+#define TOK_INT8         45
+#define TOK_INT16        46
+#define TOK_INT24        47
+#define TOK_INT32        48
 
 #define TOK_LAST         TOK_INT32
 
