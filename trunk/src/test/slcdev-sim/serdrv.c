@@ -46,6 +46,10 @@
 #define SERIAL_RX_BUF_LEN 16
 #define SERIAL_TX_BUF_LEN 16
 
+#ifndef SERDRV_DOUBLE_BUFFER
+#define SERDRV_DOUBLE_BUFFER 0
+#endif
+
 struct serdrv {
 #ifndef SERDRV_RX_FLAG 
 	int8_t rx_flag;
@@ -53,21 +57,42 @@ struct serdrv {
 #ifndef SERDRV_TX_FLAG 
 	int8_t tx_flag;
 #endif
+
 	uint8_t rx_pos;
+#if SERDRV_DOUBLE_BUFFER
 	uint8_t rx_sel;
 	uint8_t rx_dma;
 	volatile uint8_t rx_cnt[2];
 	uint8_t rx_buf[2][SERIAL_RX_BUF_LEN];
+#else
+	uint8_t rx_cnt;
+	uint8_t rx_buf[1][SERIAL_RX_BUF_LEN];
+#endif
 
+#if SERDRV_DOUBLE_BUFFER
 	uint8_t tx_sel;
 	uint8_t tx_dma;
 	volatile uint8_t tx_cnt[2];
 	uint8_t tx_buf[2][SERIAL_TX_BUF_LEN];
+#else
+	uint8_t tx_buf[1][SERIAL_TX_BUF_LEN];
+#endif
 };
 
 /* static serial driver object */
 static struct serdrv serial2_dev;
 
+#ifdef SERDRV_TX_FLAG 
+#define TX_FLAG SERDRV_TX_FLAG
+#else
+#define TX_FLAG serial2_dev.tx_flag
+#endif
+
+#ifdef SERDRV_RX_FLAG 
+#define RX_FLAG SERDRV_RX_FLAG
+#else
+#define RX_FLAG serial2_dev.rx_flag
+#endif
 
 /*********************************************
  * TX DMA ISR
@@ -75,16 +100,19 @@ static struct serdrv serial2_dev;
 void stm32_dma1_channel7_isr(void)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
+#if SERDRV_DOUBLE_BUFFER
 	unsigned int sel;
 	unsigned int cnt;
+#endif
 
 	if (dma->isr & DMA_TCIF7) {
 		/* clear the DMA transfer complete flag */
 		dma->ifcr = DMA_CTCIF7;
 		/* stop DMA */
 		dma->ch[UART2_TX_DMA_CHAN].ccr = 0;
-		DCC_LOG(LOG_TRACE, "DMA TX complete...");
+		DCC_LOG(LOG_MSG, "DMA TX complete...");
 
+#if SERDRV_DOUBLE_BUFFER
 		sel = serial2_dev.tx_dma;
 		serial2_dev.tx_cnt[sel] = 0;
 		sel = 1 - sel;
@@ -96,16 +124,10 @@ void stm32_dma1_channel7_isr(void)
 			dma->ch[UART2_TX_DMA_CHAN].cndtr = cnt;
 			dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 				DMA_MINC | DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
-			DCC_LOG(LOG_TRACE, "DMA TX restart...");
-		} else {
-
-#ifdef SERDRV_TX_FLAG 
-			__thinkos_flag_signal(SERDRV_TX_FLAG);
-#else
-			__thinkos_flag_signal(serial2_dev.tx_flag);
-#endif
-
-		}
+			DCC_LOG(LOG_INFO, "DMA TX restart...");
+		} else 
+#endif /* SERDRV_DOUBLE_BUFFER */
+			__thinkos_flag_signal(TX_FLAG);
 	}
 
 	if (dma->isr & DMA_TEIF7) {
@@ -117,6 +139,14 @@ void stm32_dma1_channel7_isr(void)
 
 static inline void rx_dma_xfer(struct stm32f_dma * dma, unsigned int cnt)
 {
+#if SERDRV_DOUBLE_BUFFER
+	unsigned int sel;
+#endif
+
+	/* stop DMA */
+	dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
+
+#if SERDRV_DOUBLE_BUFFER
 	unsigned int sel;
 
 	sel = serial2_dev.rx_dma;
@@ -129,34 +159,12 @@ static inline void rx_dma_xfer(struct stm32f_dma * dma, unsigned int cnt)
 	if (serial2_dev.rx_cnt[sel] == 0) {
 		dma->ch[UART2_RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
 			DMA_DIR_PTM | DMA_TCIE | DMA_TEIE | DMA_EN;
-		DCC_LOG(LOG_TRACE, "DMA RX restart...");
+		DCC_LOG(LOG_INFO, "DMA RX restart...");
 	}
-
-#ifdef SERDRV_RX_FLAG 
-	__thinkos_flag_signal(SERDRV_RX_FLAG);
-#else
-	__thinkos_flag_signal(serial2_dev.rx_flag);
-#endif
-
-#if 0
-		head = serial2_dev.rx_head;
-		cnt = serial2_dev.rx_size - dma->ch[UART2_RX_DMA_CHAN].cndtr;
-		head += cnt;
-		head &= (SERIAL_RX_BUF_LEN - 1);
-		serial2_dev.rx_head = head;
-		cnt = SERIAL_RX_BUF_LEN - head;
-		if (cnt > (SERIAL_RX_BUF_LEN / 2))
-			cnt = SERIAL_RX_BUF_LEN / 2;
-// cnt = (cnt + 1) / 2;
-		serial2_dev.rx_size = cnt;
-
-		/* Configure and enable DMA */
-		dma->ch[UART2_RX_DMA_CHAN].cmar = (void *)&serial2_dev.rx_buf[head];
-		dma->ch[UART2_RX_DMA_CHAN].cndtr = cnt;
-		dma->ch[UART2_RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-			DMA_DIR_PTM | DMA_TCIE | DMA_TEIE | DMA_EN;
-#endif
-
+#else  /* SERDRV_DOUBLE_BUFFER */
+	serial2_dev.rx_cnt = cnt;
+#endif /* SERDRV_DOUBLE_BUFFER */
+	__thinkos_flag_signal(RX_FLAG);
 }
 
 /*********************************************
@@ -169,14 +177,8 @@ void stm32_dma1_channel6_isr(void)
 	if (dma->isr & DMA_TCIF6) {
 		/* clear the DMA transfer complete flag */
 		dma->ifcr = DMA_CTCIF6;
-
-		DCC_LOG(LOG_TRACE, "DMA RX complete...");
-
-		/* stop DMA */
-		dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
-
+		DCC_LOG(LOG_INFO, "DMA RX complete...");
 		rx_dma_xfer(dma, SERIAL_RX_BUF_LEN);
-
 	}
 	if (dma->isr & DMA_TEIF6) {
 		/* clear the DMA error flag */
@@ -192,27 +194,21 @@ void stm32_usart2_isr(void)
 {
 	struct stm32_usart * uart = STM32_USART2;
 	struct stm32f_dma * dma = STM32_DMA1;
-	unsigned int cnt;
 	uint32_t sr;
-	int c;
 	
 	sr = uart->sr;
 	DCC_LOG1(LOG_MSG, "sr=%04x", sr);
 
 	if (sr & USART_IDLE) {
-		/* clear IDLE flag */
-		c = uart->dr;
+		unsigned int cnt;
+		int c = uart->dr; /* clear IDLE flag */
 		(void)c;
 
-		DCC_LOG(LOG_TRACE, "IDLE");
+		DCC_LOG(LOG_INFO, "IDLE");
 
 		cnt = SERIAL_RX_BUF_LEN - dma->ch[UART2_RX_DMA_CHAN].cndtr;
-
-		if (cnt != 0) {
-			/* stop DMA */
-			dma->ch[UART2_RX_DMA_CHAN].ccr = 0;
+		if (cnt != 0)
 			rx_dma_xfer(dma, cnt);
-		}
 
 	} else {
 		DCC_LOG1(LOG_MSG, "sr=%04x", sr);
@@ -226,15 +222,21 @@ struct serdrv * serdrv_init(unsigned int speed)
 	struct stm32f_dma * dma = STM32_DMA1;
 
 	drv->rx_pos = 0;
+#if SERDRV_DOUBLE_BUFFER
 	drv->rx_sel = 0;
 	drv->rx_dma = 0;
 	drv->rx_cnt[0] = 0;
 	drv->rx_cnt[1] = 0;
+#else
+	drv->rx_cnt = 0;
+#endif
 
+#if SERDRV_DOUBLE_BUFFER
 	drv->tx_sel = 0;
 	drv->tx_dma = 0;
 	drv->tx_cnt[0] = 0;
 	drv->tx_cnt[1] = 0;
+#endif
 
 	/* alloc kernel objects */
 #ifndef SERDRV_RX_FLAG 
@@ -243,13 +245,12 @@ struct serdrv * serdrv_init(unsigned int speed)
 #ifndef SERDRV_TX_FLAG 
 	drv->tx_flag = thinkos_flag_alloc();
 #endif
-	/* signal the TX flag, indicates the 
+
+#if !SERDRV_DOUBLE_BUFFER
+	/* signal the TX flag to indicate the 
 	   transmitter is ready to start transmitting */
-#ifdef SERDRV_TX_FLAG 
-//	thinkos_flag_set(SERDRV_TX_FLAG);
-#else
-//	thinkos_flag_set(drv->tx_flag);
-#endif
+	thinkos_flag_set(TX_FLAG);
+#endif /* SERDRV_DOUBLE_BUFFER */
 
 	DCC_LOG1(LOG_MSG, "speed=%d", speed);
 
@@ -325,30 +326,24 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 	struct stm32f_dma * dma = STM32_DMA1;
 	uint8_t * src = (uint8_t *)buf;
 	unsigned int rem = len;
-	unsigned int sel;
 	unsigned int n;
 	int i;
-
-	sel = serial2_dev.tx_sel;
+#if SERDRV_DOUBLE_BUFFER
+	unsigned int sel = serial2_dev.tx_sel;
+#endif
 
 	while (rem) { 
+#if SERDRV_DOUBLE_BUFFER
 		while (serial2_dev.tx_cnt[sel] != 0) {
 			DCC_LOG(LOG_MSG, "TX wait...");
-#ifdef SERDRV_TX_FLAG 
 			/* wait for pending DMA xfer to complete */
-			thinkos_flag_wait(SERDRV_TX_FLAG);
-			/* clear idle flag */
-			thinkos_flag_clr(SERDRV_TX_FLAG);
-#else
-			thinkos_flag_wait(drv->tx_flag);
-			thinkos_flag_clr(drv->tx_flag);
-#endif
-			DCC_LOG(LOG_TRACE, "TX...");
+			thinkos_flag_wait(TX_FLAG);
+			thinkos_flag_clr(TX_FLAG); /* clear idle flag */
 		}
 
 		n = MIN(rem, SERIAL_TX_BUF_LEN);
 
-		DCC_LOG2(LOG_TRACE, "sel=%d cnt=%d", sel, n);
+		DCC_LOG2(LOG_INFO, "sel=%d cnt=%d", sel, n);
 
 		/* Copy data to buffer */
 		for (i = 0; i < n; ++i)
@@ -362,15 +357,29 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 			/* Configure and enable DMA */
 			dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 				DMA_MINC | DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
-			DCC_LOG(LOG_TRACE, "TX DMA start...");
+			DCC_LOG(LOG_INFO, "TX DMA start...");
 		}
+#else /* SERDRV_DOUBLE_BUFFER */
+		thinkos_flag_wait(TX_FLAG);
+		thinkos_flag_clr(TX_FLAG);
 
-		DCC_LOG1(LOG_MSG, "n=%d", n);
+		/* Copy data to buffer */
+		n = MIN(rem, SERIAL_TX_BUF_LEN);
+		for (i = 0; i < n; ++i)
+			drv->tx_buf[0][i] = src[i];
+
+		/* Configure and enable DMA */
+		dma->ch[UART2_TX_DMA_CHAN].cndtr = n;
+		dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
+			DMA_MINC | DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
+#endif /* SERDRV_DOUBLE_BUFFER */
 		rem -= n;
 		src += n;
 	}
 
+#if SERDRV_DOUBLE_BUFFER
 	serial2_dev.tx_sel = sel;
+#endif
 
 	return len;
 }
@@ -380,72 +389,42 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 //	struct stm32f_dma * dma = STM32_DMA1;
 	uint8_t * dst = (uint8_t *)buf;
 	uint8_t * src;
-	unsigned int sel;
-	unsigned int cnt;
 	unsigned int rem;
 	int ret;
 	int n;
 	int i;
 
+#if SERDRV_DOUBLE_BUFFER
+	unsigned int sel;
+	unsigned int cnt;
 
 	sel = drv->rx_sel;
 	cnt = drv->rx_cnt[sel];
 
-	DCC_LOG3(LOG_TRACE, "sel=%d pos=%d cnt=%d", sel, drv->rx_pos, cnt);
+	DCC_LOG3(LOG_INFO, "sel=%d pos=%d cnt=%d", sel, drv->rx_pos, cnt);
 
-	/* Number of data items transfered... */
 	while ((rem = cnt - drv->rx_pos) == 0) {
-
 		/* wait for DMA xfer to complete */
 		DCC_LOG(LOG_MSG, "RX wait...");
-#ifdef SERDRV_RX_FLAG 
-		if ((ret = thinkos_flag_timedwait(SERDRV_RX_FLAG, tmo)) < 0) {
-#else 
-		if ((ret = thinkos_flag_timedwait(drv->rx_flag, tmo)) < 0) {
-#endif
+		if ((ret = thinkos_flag_timedwait(RX_FLAG, tmo)) < 0) {
 			DCC_LOG(LOG_MSG, "Timeout!");
 			return ret;
 		}
-		/* clear flag */
-#ifdef SERDRV_RX_FLAG 
-		thinkos_flag_clr(SERDRV_RX_FLAG);
-#else
-		thinkos_flag_clr(drv->rx_flag);
-#endif
+		thinkos_flag_clr(RX_FLAG); /* clear flag */
 		cnt = drv->rx_cnt[sel];
 	}
 
-//	rem = (rem + SERIAL_RX_BUF_LEN) & (SERIAL_RX_BUF_LEN - 1);
-//	if (rem < 0)
-//		rem += SERIAL_RX_BUF_LEN;
-
-	DCC_LOG3(LOG_TRACE, "sel=%d pos=%d rem=%d", 
+	DCC_LOG3(LOG_INFO, "sel=%d pos=%d rem=%d", 
 			 drv->rx_sel, drv->rx_pos, rem);
 
 	n = MIN(rem, len);
-
 	src = &drv->rx_buf[sel][drv->rx_pos];
 
 	/* Copy data to buffer */
 	for (i = 0; i < n; ++i)
 		dst[i] = src[i];
 
-//	rem -= n;
-
-//	if (rem == 0) {
-		/* reset buffer position index */
-//		drv->rx_tail = 0;
-		/* Number of data items to transfer */
-//		dma->ch[UART2_RX_DMA_CHAN].cndtr = SERIAL_RX_BUF_LEN;
-		/* Configure and enable DMA */
-//		dma->ch[UART2_RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-//			DMA_DIR_PTM | DMA_TCIE | DMA_TEIE | DMA_EN;
-
-//		DCC_LOG(LOG_TRACE, "DMA RX enabled.");
-//	}
-
 	drv->rx_pos += n;
-//	drv->rx_tail &= (SERIAL_RX_BUF_LEN - 1);
 	if (drv->rx_pos == cnt) {
 		struct stm32f_dma * dma = STM32_DMA1;
 
@@ -459,9 +438,46 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 		}
 	}
 
+#else /* SERDRV_DOUBLE_BUFFER */
+
+	/* wait for DMA xfer to complete */
+	DCC_LOG(LOG_MSG, "RX wait...");
+	if ((ret = thinkos_flag_timedwait(RX_FLAG, tmo)) < 0) {
+		DCC_LOG(LOG_MSG, "Timeout!");
+		return ret;
+	}
+
+	rem = drv->rx_cnt - drv->rx_pos;
+
+	n = MIN(rem, len);
+	src = &drv->rx_buf[0][drv->rx_pos];
+
+	/* Copy data to buffer */
+	for (i = 0; i < n; ++i)
+		dst[i] = src[i];
+
+	drv->rx_pos += n;
+
+	if (drv->rx_pos == drv->rx_cnt) {
+		struct stm32f_dma * dma = STM32_DMA1;
+		drv->rx_pos = 0;
+		drv->rx_cnt = 0;
+		thinkos_flag_clr(RX_FLAG); /* clear flag */
+		dma->ch[UART2_RX_DMA_CHAN].cndtr = SERIAL_RX_BUF_LEN;
+		dma->ch[UART2_RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
+			DMA_MINC | DMA_DIR_PTM | DMA_TCIE | DMA_TEIE | DMA_EN;
+		DCC_LOG(LOG_MSG, "RX DMA restart...");
+	}
+
+
+#endif /* SERDRV_DOUBLE_BUFFER */
+
 	return n;
 }
 
+void serdrv_flush(struct serdrv * drv)
+{
+}
 
 /* ----------------------------------------------------------------------
  * Serial driver file operations 
@@ -473,7 +489,7 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 const struct fileop serdrv_ops = {
 	.write = (void *)serdrv_send,
 	.read = (void *)serdrv_recv,
-	.flush = (void *)NULL,
+	.flush = (void *)serdrv_flush,
 	.close = (void *)NULL
 };
 

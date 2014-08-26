@@ -65,10 +65,8 @@ int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 	}
 
 	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
-
 		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
-
-		return 0;
+		return SHELL_ERR_CMD_INVALID;
 	}
 
 	return cmd->callback(f, argc, argv);
@@ -96,6 +94,18 @@ static char * get_cmd_next(char ** linep)
 		}
 
 		cp++;
+
+		/* Quotes */
+		if ((c == '\'') || (c == '\"')) {
+			int qt = c;
+			for (; ((c = *cp) != '\0'); cp++) {
+				if (c == qt) {
+					cp++;
+					break;
+				}	
+			}
+		}
+
 		c = *cp;
 	} while (c != '\0');
 

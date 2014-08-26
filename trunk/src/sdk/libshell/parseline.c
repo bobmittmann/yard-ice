@@ -29,6 +29,11 @@
 #include <string.h>
 #include <ctype.h>
 
+#ifndef SHELL_ENABLE_OPERATORS 
+#define SHELL_ENABLE_OPERATORS 0
+#endif
+
+#if SHELL_ENABLE_OPERATORS
 static const char punct_str[][2] = {
 	"!", "\"", "#", "$", "%", "&", "'", 
 	"(", ")", "*", "+", ",", "-", ".", "/", 
@@ -41,15 +46,18 @@ static const char punct_str[][2] = {
 	"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", 
 	"{", "|", "}", "~"
 };
+#endif
 
 int shell_parseline(char * line, char ** argv, int argmax)
 {
+	char * tok;
+	int qt;
 	int n;
 	int c;
-	char * tok;
-	char * punct;
-	int qt;
 	char * cp = line;
+#if SHELL_ENABLE_OPERATORS
+	char * punct;
+#endif
 
 	for (n = 0; (c = *cp) && (n < argmax); ) {
 		/* Remove lead blanks */
@@ -85,6 +93,7 @@ int shell_parseline(char * line, char ** argv, int argmax)
 				return n;
 			}
 
+#if SHELL_ENABLE_OPERATORS
 			if (ispunct(c) && (c != '.') && (c != '_')) {
 				if ((c == '<') && (cp[1] == '<')) {
 					*cp++ = '\0';
@@ -108,6 +117,7 @@ int shell_parseline(char * line, char ** argv, int argmax)
 
 				break;
 			} 
+#endif
 
 			if (isspace(c)) {
 				*cp++ = '\0';

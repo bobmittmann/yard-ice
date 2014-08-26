@@ -61,47 +61,59 @@ const char microjs_keyword[13][9] = {
 	"while",
 };
 
-int microjs_tok_init(struct microjs_tokenizer * tkn, 
+int microjs_init(struct microjs_parser * jp, 
 					 uint8_t * tok, unsigned int size)
 {
-	tkn->cnt = 0;
-	tkn->offs = 0;
-	tkn->err = 0;
-	tkn->size = size;
-	tkn->tok = tok;
-	tkn->js = NULL;
+	jp->cnt = 0;
+	jp->off = 0;
+	jp->top = size;
+	jp->sp = size;
+	jp->tok = tok;
+	jp->len = 0;
+	jp->txt = NULL;
 
 	DCC_LOG2(LOG_TRACE, "tok=0x%08x size=%d", tok, size);
 
-	return 0;
+	return MICROJS_OK;
 }
 
-#define MICROJS_BRACKET_STACK_SIZE 32
-
-int microjs_tokenize(struct microjs_tokenizer * tkn, 
-					 const char * js, unsigned int len)
+int microjs_open(struct microjs_parser * jp, 
+				 const char * txt, unsigned int len)
 {
-	uint8_t bkt_tok[MICROJS_BRACKET_STACK_SIZE];
-	unsigned int bkt_sp;
-	unsigned int ltok;
+	/* set the base javascript file reference */
+	jp->txt = txt;
+	jp->len = len;
+	jp->off = 0;
+
+	if (len == 0)
+		return MICROJS_EMPTY_FILE;
+
+	return MICROJS_OK;
+}
+
+int microjs_scan(struct microjs_parser * jp)
+{
+	unsigned int sp;
+	unsigned int cnt;
 	unsigned int tok;
 	unsigned int i;
+	const char * txt;
+	unsigned int len;
 	int err;
 	int c;
 	
-	/* initialize token list */
-	tkn->cnt = 0;
-	/* set the base javascript file reference */
-	tkn->js = js;
+	/* initialize variables */
+	cnt = jp->cnt;
+	sp = jp->sp;
+	txt = jp->txt;
+	len = jp->len;
 
 	DCC_LOG(LOG_TRACE, "parse start");
 	DCC_LOG1(LOG_TRACE, "script length = %d bytes.", len);
 
-	/* initialize bracket matching stack pointer */
-	bkt_sp = 0;
-	for (i = 0; i < len; ) {
+	for (i = jp->off; i < len; ) {
 
-		c = js[i];
+		c = txt[i];
 		/* Remove lead blanks */
 		if (isspace(c)) {
 			i++;
@@ -125,7 +137,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 					err = MICROJS_UNCLOSED_STRING;
 					goto error;
 				}
-				c = js[i];
+				c = txt[i];
 				if (c == qt) {
 					i++;
 					break;
@@ -139,15 +151,15 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 				goto error;
 			}
 
-			if ((tkn->size - tkn->cnt) < 3) {
+			if ((jp->sp - cnt) < 3) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
-			tkn->tok[tkn->cnt++] = TOK_STRING + j;
-			tkn->tok[tkn->cnt++] = offs;
-			tkn->tok[tkn->cnt++] = (offs >> 8);
+			jp->tok[cnt++] = TOK_STRING + j;
+			jp->tok[cnt++] = offs;
+			jp->tok[cnt++] = (offs >> 8);
 			continue;
 #else
 			DCC_LOG(LOG_WARNING, "unsupported string!");
@@ -162,19 +174,19 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 			char * s;
 			int k;
 
-			if ((tkn->size - tkn->cnt) < MICROJS_SYMBOL_LEN_MAX) {
+			if ((jp->sp - cnt) < MICROJS_SYMBOL_LEN_MAX) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			j = 0;
-			s = (char *)&tkn->tok[tkn->cnt + 1];
+			s = (char *)&jp->tok[cnt + 1];
 			do {
 				s[j++] = c;
 				if (++i == len)	
 					break;
-				c = js[i];
+				c = txt[i];
 			} while (isalnum(c) || (c == '_'));
 			s[j++] = '\0';
 
@@ -182,7 +194,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 			for (k = 0; k <= (TOK_WHILE - TOK_BREAK); ++k) {
 				if (strcmp(microjs_keyword[k], s) == 0) {
 					DCC_LOG(LOG_INFO, "Keyword");
-					tkn->tok[tkn->cnt++] = k + TOK_BREAK;
+					jp->tok[cnt++] = k + TOK_BREAK;
 					break;
 				}
 			}
@@ -190,8 +202,8 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 			if (k > (TOK_WHILE - TOK_BREAK)) {
 				/* symbol */
 				DCC_LOG(LOG_INFO, "Symbol");
-				tkn->tok[tkn->cnt++] = TOK_SYMBOL + j - 1;
-				tkn->cnt += j;
+				jp->tok[cnt++] = TOK_SYMBOL + j - 1;
+				cnt += j;
 			}
 
 			continue;
@@ -203,7 +215,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 
 			DCC_LOG(LOG_INFO, "Number");
 			if ((c == '0') && ((i + 1) < len) && 
-				((js[i + 1] == 'x') || (js[i + 1] == 'X'))) {
+				((txt[i + 1] == 'x') || (txt[i + 1] == 'X'))) {
 
 				/* Hexadecimal */
 
@@ -216,7 +228,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 				}
 
 				/* Next digit should be kex digit */
-				if (!isxdigit(c = js[i])) {
+				if (!isxdigit(c = txt[i])) {
 					DCC_LOG(LOG_WARNING, "invalid constant");
 					err = MICROJS_INVALID_LITERAL;
 					goto error;
@@ -235,7 +247,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 					val += c;
 					if (++i == len)	
 						break;
-					c = js[i];
+					c = txt[i];
 				} while (isxdigit(c));
 
 				DCC_LOG(LOG_INFO, "Hexadecimal");
@@ -246,54 +258,54 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 					val += c - '0';
 					if (++i == len)	
 						break;
-					c = js[i];
+					c = txt[i];
 				} while (isdigit(c));
 			}
 		
-			if ((tkn->size - tkn->cnt) < 5) {
+			if ((jp->sp - cnt) < 5) {
 				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
 
 			if ((val & 0xffffff00) == 0) {
-				tkn->tok[tkn->cnt++] = TOK_INT8;
-				tkn->tok[tkn->cnt++] = val;
+				jp->tok[cnt++] = TOK_INT8;
+				jp->tok[cnt++] = val;
 				continue;
 			} 
 			
 			if ((val & 0xffff0000) == 0) {
-				tkn->tok[tkn->cnt++] = TOK_INT16;
-				tkn->tok[tkn->cnt++] = val;
-				tkn->tok[tkn->cnt++] = val >> 8;
+				jp->tok[cnt++] = TOK_INT16;
+				jp->tok[cnt++] = val;
+				jp->tok[cnt++] = val >> 8;
 				continue;
 			}
 
 			if ((val & 0xffffff00) == 0) {
-				tkn->tok[tkn->cnt++] = TOK_INT24;
-				tkn->tok[tkn->cnt++] = val;
-				tkn->tok[tkn->cnt++] = val >> 8;
-				tkn->tok[tkn->cnt++] = val >> 16;
+				jp->tok[cnt++] = TOK_INT24;
+				jp->tok[cnt++] = val;
+				jp->tok[cnt++] = val >> 8;
+				jp->tok[cnt++] = val >> 16;
 				continue;
 			}
 
-			tkn->tok[tkn->cnt++] = TOK_INT32;
-			tkn->tok[tkn->cnt++] = val;
-			tkn->tok[tkn->cnt++] = val >> 8;
-			tkn->tok[tkn->cnt++] = val >> 16;
-			tkn->tok[tkn->cnt++] = val >> 24;
+			jp->tok[cnt++] = TOK_INT32;
+			jp->tok[cnt++] = val;
+			jp->tok[cnt++] = val >> 8;
+			jp->tok[cnt++] = val >> 16;
+			jp->tok[cnt++] = val >> 24;
 			continue;
 		}
 	
 		/* Comments */
 		if ((c == '/') && (++i < len)) {
 
-			c = js[i];
+			c = txt[i];
 			if  (c == '/') {
 				DCC_LOG(LOG_INFO, "Single line comment");
 				/* Single line comment */
 				while ((c != '\n') && (++i < len)) {
-					c = js[i];
+					c = txt[i];
 				}
 				continue;
 			} 
@@ -308,7 +320,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 						err = MICROJS_UNCLOSED_COMMENT;
 						goto error;
 					}
-					c = js[i];
+					c = txt[i];
 
 					if (c == '*') {
 						if (++i == len)	{
@@ -316,7 +328,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 							err = MICROJS_UNCLOSED_COMMENT;
 							goto error;
 						}
-						c = js[i];
+						c = txt[i];
 						if (c == '/') {
 							i++;
 							break;
@@ -333,7 +345,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 		/* Punctuation */
 		if (c == '<') {
 			if (++i < len)	{
-				c = js[i];
+				c = txt[i];
 				if  (c == '<') {
 					tok = TOK_SHL;
 					goto inc_push;
@@ -349,7 +361,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 
 		if (c == '>') {
 			if (++i < len)	{
-				c = js[i];
+				c = txt[i];
 				if  (c == '>') {
 					tok = TOK_ASR;
 					goto inc_push;
@@ -364,7 +376,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 		}
 
 		if (c == '=') {
-			if ((++i < len) && ((c = js[i]) == '=')) {
+			if ((++i < len) && ((c = txt[i]) == '=')) {
 				tok = TOK_EQ;
 				goto inc_push;
 			}
@@ -373,7 +385,7 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 		}
 
 		if (c == '!') {
-			if ((++i < len) && ((c = js[i]) == '=')) {
+			if ((++i < len) && ((c = txt[i]) == '=')) {
 				tok = TOK_NEQ;
 				goto inc_push;
 			}
@@ -381,50 +393,12 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 			goto push;
 		}
 
-#if MICROJS_ENABLE_INCDEC
-		if (c == '+') {
-			if (++i < len)	{
-				if  (c == '+') {
-					tok = TOK_INC;
-					goto inc_push;
-				}
-				if  (c == '=') {
-					tok = TOK_PLUS_LET;
-					goto inc_push;
-				}
-			}
-			tok = TOK_PLUS;
-			goto push;
-		}
-
-		if (c == '-') {
-			if (++i < len)	{
-				if  (c == '-') {
-					tok = TOK_DEC;
-					goto inc_push;
-				}
-				if  (c == '=') {
-					tok = TOK_MINUS_LET;
-					goto inc_push;
-				}
-			}
-			tok = TOK_MINUS;
-			goto push;
-		}
-#endif
-
 		if (c == '|') {
 			if (++i < len)	{
 				if  (c == '|') {
 					tok = TOK_OR;
 					goto inc_push;
 				}
-#if MICROJS_ENABLE_INCDEC
-				if  (c == '=') {
-					tok = TOK_OR_LET;
-					goto inc_push;
-				}
-#endif
 			}
 			tok = TOK_BITOR;
 			goto push;
@@ -436,12 +410,6 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 					tok = TOK_AND;
 					goto inc_push;
 				}
-#if MICROJS_ENABLE_INCDEC
-				if  (c == '=') {
-					tok = TOK_AND_LET;
-					goto inc_push;
-				}
-#endif
 			}
 			tok = TOK_BITAND;
 			goto push;
@@ -462,24 +430,27 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 			break;
 		case '[':
 			tok = TOK_LEFTBRACKET;
-			goto bkt_push;
+			/* push closing bracket into stack */
+			jp->tok[--sp] = TOK_RIGHTBRACKET;
+			break;
 		case ']':
 			tok = TOK_RIGHTBRACKET;
-			ltok = TOK_LEFTBRACKET;
 			goto bkt_pop;
 		case '(':
 			tok = TOK_LEFTPAREN;
-			goto bkt_push;
+			/* push closing paren into stack */
+			jp->tok[--sp] = TOK_RIGHTPAREN;
+			break;
 		case ')':
 			tok = TOK_RIGHTPAREN;
-			ltok = TOK_LEFTPAREN;
 			goto bkt_pop;
 		case '{':
 			tok = TOK_LEFTBRACE;
-			goto bkt_push;
+			/* push closing brace into stack */
+			jp->tok[--sp] = TOK_RIGHTBRACE;
+			break;
 		case '}':
 			tok = TOK_RIGHTBRACE;
-			ltok = TOK_LEFTBRACE;
 			goto bkt_pop;
 		case '^':
 			tok = TOK_XOR;
@@ -493,14 +464,12 @@ int microjs_tokenize(struct microjs_tokenizer * tkn,
 		case '%':
 			tok = TOK_MOD;
 			break;
-#if (!MICROJS_ENABLE_INCDEC)
 		case '+':
 			tok = TOK_PLUS;
 			break;
 		case '-':
 			tok = TOK_MINUS;
 			break;
-#endif
 		default:
 			DCC_LOG1(LOG_WARNING, "invalid character: '%c'.", c);
 			err = MICROJS_UNEXPECTED_CHAR;
@@ -512,18 +481,18 @@ inc_push:
 		i++;
 push:
 		/* push a token into the buffer */
-		if ((tkn->size - tkn->cnt) < 1) {
+		if ((sp - cnt) < 1) {
 			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
 			goto error;
 		}
-		tkn->tok[tkn->cnt++] = tok;
+		jp->tok[cnt++] = tok;
 
 		DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 	}
 
 	/* the matching bracket stack must be empty at this point */
-	if (bkt_sp != 0) {
+	if (sp != jp->top) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
@@ -532,31 +501,29 @@ push:
 	DCC_LOG1(LOG_INFO, "%s", microjs_tok_str[tok]);
 
 	/* push a token into the buffer */
-	if ((tkn->size - tkn->cnt) < 1) {
+	if ((sp - cnt) < 1) {
 		DCC_LOG(LOG_WARNING, "token buffer overflow!");
 		err = MICROJS_TOKEN_BUF_OVF;
 		goto error;
 	}
-	tkn->tok[tkn->cnt++] = TOK_EOF;
+	jp->tok[cnt++] = TOK_EOF;
 
-	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", tkn->cnt);
+	DCC_LOG1(LOG_TRACE, "token stream length = %d bytes.", cnt);
 	DCC_LOG(LOG_INFO, "parse done.");
 
-	return tkn->cnt;
-
-bkt_push:
-	/* insert a brakcet into the stack */
-	if (bkt_sp == MICROJS_BRACKET_STACK_SIZE) {
-		DCC_LOG(LOG_WARNING, "maximum nesting level exceeded!");
-		err = MICROJS_MAX_NEST_LEVEL;
-		goto error;
-	}
-	bkt_tok[bkt_sp++] = tok;
-	goto inc_push;
+	jp->cnt = cnt;
+	jp->sp = sp;
+	jp->off = i;
+	return MICROJS_OK;
 
 bkt_pop:
-	/* push a brakcet from the stack and check for matching pair */
-	if ((bkt_sp == 0) || (bkt_tok[--bkt_sp] != ltok)) {
+	/* get a brakcet from the stack and check for matching pair */
+	if (sp == jp->top) {
+		DCC_LOG(LOG_WARNING, "bracket stack empty!");
+		err = MICROJS_EMPTY_STACK;
+		goto error;
+	}
+	if (jp->tok[sp++] != tok) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
@@ -564,13 +531,14 @@ bkt_pop:
 	goto inc_push;
 
 error:
-	tkn->offs = i;
-	tkn->err = err;
+	jp->cnt = cnt;
+	jp->sp = sp;
+	jp->off = i;
 
-	return -1;
+	return err;
 }
 
-int microjs_token_get(struct microjs_tokenizer * tkn, 
+int microjs_token_get(struct microjs_parser * jp, 
 					  struct microjs_val * val)
 {
 	unsigned int offs;
@@ -580,37 +548,226 @@ int microjs_token_get(struct microjs_tokenizer * tkn,
 	int len;
 	(void)len;
 
-//	idx = tkn->idx;
-	tok = tkn->tok[idx++];
+//	idx = jp->idx;
+	tok = jp->tok[idx++];
 	if (tok >= TOK_STRING) {
 		len = tok - TOK_STRING;
-		offs = tkn->tok[idx++];
-		offs |= tkn->tok[idx++] << 8;
-		val->str.dat = (char *)tkn->js + offs;
+		offs = jp->tok[idx++];
+		offs |= jp->tok[idx++] << 8;
+		val->str.dat = (char *)jp->txt + offs;
 		val->str.len = len;
 		tok = TOK_STRING;
 	} else if (tok >= TOK_SYMBOL) {
 		len = tok - TOK_SYMBOL + 1;
-		val->str.dat = (char *)&tkn->tok[idx];
+		val->str.dat = (char *)&jp->tok[idx];
 		val->str.len = len;
 		idx += len;
 		tok = TOK_SYMBOL;
 	} else if (tok >= TOK_INT8) {
-		x = tkn->tok[idx++];
+		x = jp->tok[idx++];
 		if (tok >= TOK_INT16) {
-			x |= tkn->tok[idx++] << 8;
+			x |= jp->tok[idx++] << 8;
 			if (tok == TOK_INT24) {
-				x |= tkn->tok[idx++] << 16;
+				x |= jp->tok[idx++] << 16;
 				if (tok >= TOK_INT32)
-					x |= tkn->tok[idx++] << 24;
+					x |= jp->tok[idx++] << 24;
 			}
 		} 
 		val->u32 = x;
 		tok = TOK_INT32;
 	} 
 
-//	tkn->idx = idx;
+//	jp->idx = idx;
 
 	return tok;
+}
+
+static bool labeled_stat(struct microjs_parser * p, unsigned int tok)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+
+/*
+const_exp		: conditional_exp
+*/
+
+/*
+logical_and_exp		: inclusive_or_exp
+			| logical_and_exp '&&' inclusive_or_exp
+*/
+/*
+inclusive_or_exp	: exclusive_or_exp
+			| inclusive_or_exp '|' exclusive_or_exp
+*/
+/*
+exclusive_or_exp	: and_exp
+			| exclusive_or_exp '^' and_exp
+*/
+/*
+and_exp			: equality_exp
+			| and_exp '&' equality_exp
+*/
+/*
+equality_exp		: relational_exp
+			| equality_exp '==' relational_exp
+			| equality_exp '!=' relational_exp
+*/
+/*
+relational_exp		: shift_expression
+			| relational_exp '<' shift_expression
+			| relational_exp '>' shift_expression
+			| relational_exp '<=' shift_expression
+			| relational_exp '>=' shift_expression
+*/
+/*
+shift_expression	: additive_exp
+			| shift_expression '<<' additive_exp
+			| shift_expression '>>' additive_exp
+*/
+/*
+additive_exp		: mult_exp
+			| additive_exp '+' mult_exp
+			| additive_exp '-' mult_exp
+*/
+/*
+mult_exp		: unary_exp
+			| mult_exp '*' unary_exp
+			| mult_exp '/' unary_exp
+			| mult_exp '%' unary_exp
+*/
+/*
+
+unary_exp		: postfix_exp
+			| unary_operator unary_exp
+*/
+
+/*
+unary_operator		: '&' | '+' | '-' | '~' | '!'
+*/
+
+/*
+postfix_exp		: primary_exp
+			| postfix_exp '[' exp ']'
+			| postfix_exp '(' argument_exp_list ')'
+			| postfix_exp '('			')'
+			| postfix_exp '.' id
+*/
+
+static bool conditional_exp(struct microjs_parser * p, unsigned int tok)
+{
+/*
+conditional_exp		: logical_or_exp
+			| logical_or_exp '?' exp ':' conditional_exp
+*/
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+
+static bool assignment_exp(struct microjs_parser * p, unsigned int tok)
+{
+/*
+assignment_exp		: conditional_exp
+			| unary_exp assignment_operator assignment_exp
+*/
+	DCC_LOG(LOG_TRACE, "...");
+	if (tok == TOK_SEMICOLON)
+		return true;
+
+	if (conditional_exp(p, tok) && (tok = p->tok[p->cnt++]) == TOK_SEMICOLON) {
+		return true;
+	}
+
+	return false;
+}
+
+static bool __exp(struct microjs_parser * p, unsigned int tok)
+{
+/*
+exp			: assignment_exp
+			| exp ',' assignment_exp
+			;
+*/
+	DCC_LOG(LOG_TRACE, "...");
+
+	if (assignment_exp(p, tok)) {
+		return true;
+	}
+
+	if (__exp(p, tok) && (tok = p->tok[p->cnt++]) == TOK_COLON &&
+		assignment_exp(p, p->tok[p->cnt++])) {
+		return true;
+	}
+
+	return false;
+}
+
+static bool exp_stat(struct microjs_parser * p, unsigned int tok)
+{
+/*
+exp_stat		: exp ';'
+			|	';'
+			;
+*/
+	DCC_LOG(LOG_TRACE, "...");
+	if (tok == TOK_SEMICOLON)
+		return true;
+
+	if (__exp(p, tok) && (tok = p->tok[p->cnt++]) == TOK_SEMICOLON) {
+		return true;
+	}
+	return false;
+}
+
+static bool compound_stat(struct microjs_parser * p, unsigned int tok)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+static bool selection_stat(struct microjs_parser * p, unsigned int tok)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+
+static bool iteration_stat(struct microjs_parser * p, unsigned int tok)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+
+static bool jump_stat(struct microjs_parser * p, unsigned int tok)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return false;
+}
+
+int microjs_compile(struct microjs_parser * p, 
+					uint8_t code[], unsigned int size)
+{
+	unsigned int tok;
+
+	p->idx = 0;
+
+	while ((tok = p->tok[p->idx++]) != TOK_EOF) {
+/*
+stat	: labeled_stat
+			| exp_stat
+			| compound_stat
+			| selection_stat
+			| iteration_stat
+			| jump_stat
+   */
+		if (!(labeled_stat(p, tok) |
+			exp_stat(p, tok) |
+			compound_stat(p, tok) |
+			selection_stat(p, tok) |
+			iteration_stat(p, tok) |
+			jump_stat(p, tok))) {
+			return -1;
+		}
+	}
+
+	return 0;
 }
 

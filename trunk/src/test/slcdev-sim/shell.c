@@ -724,6 +724,34 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_js(FILE * f, int argc, char ** argv)
+{
+	struct microjs_parser jsp;
+	uint8_t tok_buf[32];
+	uint8_t code[32];
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	microjs_init(&jsp, tok_buf, sizeof(tok_buf));
+
+	fprintf(f, "\"%s\"\n", argv[1]);
+	microjs_open(&jsp, argv[1], strlen(argv[1]));
+
+	microjs_scan(&jsp);
+
+	microjs_tok_dump(f, &jsp);
+
+	microjs_compile(&jsp, code, sizeof(code));
+
+	fprintf(f, "\n");
+
+	return 0;
+
+}
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -774,6 +802,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_str, "str", "", "", "dump string pool" },
 
 	{ cmd_dev, "dev", "", "[start|stop]", "dump string pool" },
+	
+	{ cmd_js, "js", "", "script", "javascript" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 

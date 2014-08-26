@@ -119,9 +119,8 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 	int err;
 	int c;
 	
-	/* initialize token list */
+	/* initialize variables */
 	cnt = jsn->cnt;
-	/* initialize bracket matching stack pointer */
 	sp = jsn->sp;
 	txt = jsn->txt;
 	len = jsn->len;
@@ -228,7 +227,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 		}
 
 		/* Number */
-		if (((c >= '0') && (c <= '9')) || (c == '-'))  {
+		if (isdigit(c) || (c == '-'))  {
 			int32_t val = 0;
 			bool neg = false;
 			if (c == '-') {
@@ -386,19 +385,17 @@ end:
 	return MICROJS_OK;
 
 bkt_pop:
-	/* push a brakcet from the stack and check for matching pair */
+	/* get a brakcet from the stack and check for matching pair */
 	if (sp == jsn->top) {
 		DCC_LOG(LOG_WARNING, "bracket stack empty!");
 		err = MICROJS_EMPTY_STACK;
 		goto error;
 	}
-
 	if (jsn->tok[sp++] != tok) {
 		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
 	}
-
 	if (sp == jsn->top) {
 		DCC_LOG(LOG_TRACE, "topmost object end!");
 		i++;
@@ -417,6 +414,8 @@ bkt_pop:
 	goto inc_push;
 
 error:
+	jsn->cnt = cnt;
+	jsn->sp = sp;
 	jsn->off = i;
 
 	return err;

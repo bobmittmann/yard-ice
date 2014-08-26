@@ -662,6 +662,18 @@ static char * get_cmd_next(char ** linep)
 		}
 
 		cp++;
+
+		/* Quotes */
+		if ((c == '\'') || (c == '\"')) {
+			int qt = c;
+			for (; ((c = *cp) != '\0'); cp++) {
+				if (c == qt) {
+					cp++;
+					break;
+				}	
+			}
+		}
+
 		c = *cp;
 	} while (c != '\0');
 
