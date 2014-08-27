@@ -170,21 +170,110 @@ void module_sim_custom(struct ss_device * dev,
 	}
 }
 
+#define CONTROL_OUT_MSK 0x2d /* 101101 */
+#define CONTROL_OUT_ON  0x00 
+#define CONTROL_OUT_OFF 0x2d 
+
+
+void module_contorl_seq(struct ss_device * dev, 
+						struct db_dev_model * model, uint32_t ctl)
+{
+	switch (ctl & 0x7) {
+	case 0:/* 0 0 0 */
+		/* Outputs:         1  2  3  5 */
+		dev->out1 = 1; /* Pulse */
+		dev->out2 = 1; 
+		dev->out3 = 1;
+		dev->out5 = 1;
+		DCC_LOG(LOG_MSG, "Pu 1  1  1");
+		break;
+	case 4: /* 0 0 1 */
+		dev->out1 = 1; /* Pulse */
+		dev->out3 = 1;
+		dev->out5 = 1;
+		DCC_LOG(LOG_MSG, "Pu NC 1  1");
+		break;
+	case 2: /* 0 1 0 */
+		dev->out1 = 0;
+		dev->out2 = 1;
+		dev->out3 = 1;
+		dev->out5 = 1;
+		DCC_LOG(LOG_MSG, "0  1  1  1");
+		break;
+	case 6: /* 0 1 1 */
+		dev->out1 = 0;
+		dev->out3 = 1;
+		dev->out5 = 1;
+		DCC_LOG(LOG_MSG, "0  NC 1  1");
+		break;
+	case 1: /* 1 0 0 */
+		dev->out1 = 1; /* Pulse */
+		dev->out3 = 0;
+		dev->out5 = 0;
+		DCC_LOG(LOG_MSG, "Pu NC 0  0");
+		break;
+	case 5: /* 1 0 1 */
+		dev->out1 = 0; /* Pulse */
+		dev->out2 = 0;
+		dev->out3 = 1; /* Pulse */
+		dev->out5 = 1; /* Pulse */
+		DCC_LOG(LOG_MSG, "Pu 0  Pu Pu");
+		break;
+	case 3: /* 1 1 0 */
+		dev->out1 = 0;
+		dev->out2 = 0;
+		dev->out5 = 0;
+		DCC_LOG(LOG_MSG, "0  NC 0  0");
+		break;
+	case 7: /* 1 1 1 */
+		dev->out1 = 0;
+		dev->out2 = 0;
+		dev->out3 = 1; /* Pulse */
+		dev->out5 = 1; /* Pulse */
+		DCC_LOG(LOG_MSG, "0  0  Pu Pu");
+		break;
+	}
+
+	DCC_LOG4(LOG_TRACE, "%d %d %d %d",
+			 dev->out1, dev->out2, dev->out3, dev->out5);
+}
+
+
 /* simulate a relay module */
 void module_sim_relay(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG1(LOG_TRACE, "addr=%d", dev->addr);
-}
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
-#define CONTROL_OUT_MSK 0x2d /* 101101 */
-#define CONTROL_OUT_ON  0x00 
-#define CONTROL_OUT_OFF 0x2d 
+	module_contorl_seq(dev, model, ctl);
+
+	if ((ctl & 0x81) == 0) {
+		/* 1.	Bit 10 = 0,  sent two consecutive times, 
+		   will reset PW3 latches */
+		DCC_LOG(LOG_TRACE, "Reset PW3 latches.");
+	}
+
+	switch (ctl & CONTROL_OUT_MSK) {
+	case CONTROL_OUT_ON:
+		DCC_LOG(LOG_TRACE, "Set");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		break;
+
+	case CONTROL_OUT_OFF:
+		DCC_LOG(LOG_TRACE, "Reset");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		break;
+	}
+}
 
 /* simulate a supervised cntrol module */
 void module_sim_control(struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
+	module_contorl_seq(dev, model, ctl);
+
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_TRACE, "Control ON");
@@ -195,7 +284,27 @@ void module_sim_control(struct ss_device * dev,
 		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
 		break;
 	}
-	DCC_LOG(LOG_INFO, "...");
+}
+
+/* simulate a firefighter telephone module */
+void module_sim_phone(struct ss_device * dev, 
+					  struct db_dev_model * model, uint32_t ctl)
+{
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
+	module_contorl_seq(dev, model, ctl);
+
+	switch (ctl & CONTROL_OUT_MSK) {
+	case CONTROL_OUT_ON:
+		DCC_LOG(LOG_TRACE, "Set");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		break;
+
+	case CONTROL_OUT_OFF:
+		DCC_LOG(LOG_TRACE, "Reset");
+		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		break;
+	}
 }
 
 #define CLASS_A_MSK      0x2d /* 101101 */
@@ -206,6 +315,8 @@ void module_sim_control(struct ss_device * dev,
 void module_sim_monitor(struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
 		DCC_LOG(LOG_TRACE, "Class A switched");
@@ -216,35 +327,27 @@ void module_sim_monitor(struct ss_device * dev,
 		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
 		break;
 	}
-	DCC_LOG(LOG_INFO, "...");
 }
 
 /* simulate a mini-module */
 void module_sim_mini(struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 2 wire module */
 void module_sim_2wire(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
-}
-
-/* simulate a firefighter telephone module */
-void module_sim_phone(struct ss_device * dev, 
-					  struct db_dev_model * model, uint32_t ctl)
-{
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 4-20ma input device */
 void module_sim_4_20ma(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 #define SIM_MODEL_NAME_MAX 12
@@ -339,9 +442,9 @@ void __attribute__((noreturn)) sim_event_task(void)
 	for (;;) {
 		event = slcdev_event_wait();
 		dev = slcdev_drv.dev;
+		ctl = slcdev_drv.ctls;
 		/* get the model for this device */
 		model = db_dev_model_by_index(dev->model);
-		ctl = dev->ctls;
 
 		if (event & SLC_EV_TRIG) {
 			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);

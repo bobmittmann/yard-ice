@@ -1001,7 +1001,8 @@ static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 		char s[20];
 
 		cmd_seq_dec(s, &cmd->seq);
-		fprintf(f, "CMD[%d]: \"%s\" %s\n", i, const_str(cmd->tag), s);	
+		fprintf(f, "CMD[%d]: \"%s\" %s [%04x %04x]\n", 
+				i, const_str(cmd->tag), s, cmd->seq.msk, cmd->seq.val);	
 	}
 }
 

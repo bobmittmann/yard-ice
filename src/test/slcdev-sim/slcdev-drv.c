@@ -43,20 +43,37 @@ static const uint8_t parity_lut[16] = {
  * Address encoding decoding tables
  * ------------------------------------------------------------------------- */
 
+/*	0000  0 
+	0100  1 
+	0110  2
+	0111  3 
+	1000  4
+	0001  5 
+	0101  6
+	0010  7
+	0011  8
+	1001  9 */
+
 /* System sensor rotary switch decoding table */
 static const uint8_t addr_dec_lut[16] = {
 /*	0000 0001 0010 0011 0100 0101 0110 0111 */
 	 0x0, 0x4, 0x1, 0xc, 0x7, 0xf, 0x2, 0xa,
 /*	1000 1001 1010 1011 1100 1101 1110 1111 */
-	 0x5, 0x9, 0x6, 0xe, 0x8, 0xd, 0x3, 0xb,   
+	 0x5, 0x9, 0x6, 0xe, 0x8, 0xd, 0x3, 0xb   
 };
 
 /* System sensor rotary switch reverse decoding (encoding) table */
 static const uint8_t addr_enc_lut[16] = {
+/*	  0    1    2    3    4    5    6    7 */
 	0x0, 0x2, 0x6, 0xe, 0x1, 0x8, 0xa, 0x4,
-	0xc, 0x9, 0x7, 0xf, 0x3, 0xd, 0xb, 0x5,   
+/*	  8    9    a    b    c    d    e    f */
+	0xc, 0x9, 0x7, 0xf, 0x3, 0xd, 0xb, 0x5
 };
 
+static inline const char * __ms(bool module)
+{
+	return module ? "module" : "sensor";
+}
 
 /* -------------------------------------------------------------------------
  * Trigger module
@@ -64,21 +81,26 @@ static const uint8_t addr_enc_lut[16] = {
 
 bool trig_addr_set(bool module, unsigned int addr)
 {
-	DCC_LOG2(LOG_TRACE, "%s %d", module ? "module" : "sensor", addr);
+	unsigned int lo;
+	unsigned int hi;
 
 	if (addr >= 160)
 		return false;
 
+	hi = addr_enc_lut[(addr / 10) & 0xf];
+	lo = addr_enc_lut[(addr % 10) & 0xf];
+
 	if (addr >= 100) {
 		/* disable CLIP trigger for invalid addresses */
-		slcdev_drv.trig.msk = 0x000;
+		slcdev_drv.trig.msk = 0x0000;
+		slcdev_drv.trig.cmp = 0xffff; 
 	} else {
 		/* Adjust the trigger mask for CLIP mode */
-		slcdev_drv.trig.msk = 0x1ff;
+		slcdev_drv.trig.msk = 0x01ff;
 		/* Adjust the compare values for CLIP mode.*/
 		slcdev_drv.trig.cmp = module ? 1 : 0;
-		slcdev_drv.trig.cmp |= addr_enc_lut[(addr >> 4) & 0xf] << 1; 
-		slcdev_drv.trig.cmp |= addr_enc_lut[addr & 0xf] << 5; 
+		slcdev_drv.trig.cmp |= hi << 1; 
+		slcdev_drv.trig.cmp |= lo << 5; 
 	}
 
 	/* Adjust the trigger mask and compare values for AP mode */
@@ -90,10 +112,13 @@ bool trig_addr_set(bool module, unsigned int addr)
 	      C - Checksum error 
 	      I - Interrupt */
 	slcdev_drv.trig.ap_msk = 0x7fff;
-	slcdev_drv.trig.ap_cmp = module ? 1 : 0;
-	slcdev_drv.trig.ap_cmp |= 0x61e0;
-	slcdev_drv.trig.ap_cmp |= addr_enc_lut[(addr >> 4) & 0xf] << 1; 
-	slcdev_drv.trig.ap_cmp |= addr_enc_lut[addr & 0xf] << 9; 
+	slcdev_drv.trig.ap_cmp = 0x61e0;
+	slcdev_drv.trig.ap_cmp |= module ? 1 : 0;
+	slcdev_drv.trig.ap_cmp |= hi << 1; 
+	slcdev_drv.trig.ap_cmp |= lo << 9; 
+
+	DCC_LOG3(LOG_TRACE, "code=0x%02x %s %d", (hi << 4) + lo, 
+			 __ms(module), addr);
 
 	return true;
 }
@@ -105,8 +130,8 @@ bool trig_addr_get(bool * module, unsigned int * addr)
 
 	/* Get the address from the AP Direct poll trigger 
 	   configuration (mask and compare values) */
-	if (slcdev_drv.trig.ap_msk == 0x7fff &&
-		(slcdev_drv.trig.ap_cmp & 0x61e0) == 0x61e0) {
+	if ((slcdev_drv.trig.ap_msk == 0x7fff) &&
+		((slcdev_drv.trig.ap_cmp & 0x61e0) == 0x61e0)) {
 		/* Address mode */
 		*module = (slcdev_drv.trig.ap_cmp & 1) ? true : false;
 		/* Upper nibble address bits */
@@ -114,8 +139,13 @@ bool trig_addr_get(bool * module, unsigned int * addr)
 		/* Lower nibble address bits. */
 		lo = (slcdev_drv.trig.ap_cmp >> 9) & 0xf; 
 		*addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
+	
+		DCC_LOG3(LOG_TRACE, "code=0x%02x %s %d", (hi << 4) + lo, 
+				 __ms(*module), *addr);
 		return true;
 	}	
+
+	DCC_LOG(LOG_WARNING, "not a valid address trigger.");
 
 	return false;
 }
@@ -140,7 +170,7 @@ static void trig_init(void)
 const struct ss_device null_dev = {
 	.addr = 0, /* reverse lookup address */
 	.model = 0, /* reference to a device model */
-	.ap = 0, /* advanced protocol */
+	.apen = 0, /* advanced protocol */
 	.module = 0, /* sensor/module */
 	.enabled = 0, /* enable device simulation */
 	.led = 0, /* LED status */
@@ -174,9 +204,9 @@ void dev_sim_init(void)
 		}
 		dev->addr = addr; /* reverse lookup address */
 		if (addr >= 100)
-			dev->ap = 1; /* force AP for higher addresses */
+			dev->apen = 1; /* force AP for higher addresses */
 		else
-			dev->ap = 0;
+			dev->apen = 0;
 		dev->model = 0; /* reference to a device model */
 		dev->enabled = 0; /* enable device simulation */
 		dev->led = 0; /* LED status */
@@ -366,7 +396,7 @@ static void ap_hdr_decode(unsigned int msg)
 			DCC_LOG(LOG_INFO, "Consecutive pooling");
 		}
 
-		if ((dev->enabled) && (dev->ap)) {
+		if ((dev->enabled) && (dev->apen)) {
 			DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 					 mod ? "MODULE" : "SENSOR", addr);
 
@@ -376,7 +406,7 @@ static void ap_hdr_decode(unsigned int msg)
 			ilat = dev->ilat;
 			ipre = dev->ipre;
 			ipw = dev->ap_pw;
-			irq = dev->alm | dev->tbl;
+			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
 			slcdev_drv.ev_bmp |= SLC_EV_SIM;
@@ -571,9 +601,9 @@ static void clip_msg_decode(unsigned int msg)
 	if (addr != slcdev_drv.addr) {
 		slcdev_drv.addr = addr;
 		/* clear the control sequence */
-		dev->ctls = 0;
+		slcdev_drv.ctls = 0;
 	} else {
-		DCC_LOG(LOG_INFO, "Consecutive pooling");
+		DCC_LOG1(LOG_INFO, "ctls=0x%04x", slcdev_drv.ctls);
 	}
 	slcdev_drv.dev = dev;
 
@@ -592,8 +622,8 @@ static void clip_msg_decode(unsigned int msg)
 		unsigned int ctl = (msg >> 9) & 0x7;
 
 		/* shift the control bits into the sequence register */
-		dev->ctls <<= 3;
-		dev->ctls |= ctl;
+		slcdev_drv.ctls <<= 3;
+		slcdev_drv.ctls |= ctl;
 
 		/* update the PW5 request bit */
 		/* This is a hardwired protocol rule,
@@ -643,8 +673,13 @@ void stm32_tim10_isr(void)
 	csr = comp->csr;
 	if (csr & COMP_CMP1OUT) {
 		/* VSLC at 24V (Power Level) */
-		if (slcdev_drv.state != DEV_IDLE) {
-			DCC_LOG1(LOG_WARNING, "unexpected state: %d", slcdev_drv.state);
+
+
+		/* XXX: this is for debug only */
+		if ((slcdev_drv.state != DEV_IDLE) &&
+			(slcdev_drv.state != DEV_PW5_ISINK)) {
+			DCC_LOG2(LOG_WARNING, "%d: unexpected state: %d", 
+					 slcdev_drv.addr, slcdev_drv.state);
 		}
 
 		DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");

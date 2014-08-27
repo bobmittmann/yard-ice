@@ -195,20 +195,22 @@ struct ss_device {
 		struct {
 			uint32_t addr: 8;   /* reverse lookup address */
 
-			uint32_t model: 6; /* reference to a device model */
-			uint32_t ap : 1;    /* advanced protocol */
+			uint32_t model: 6;  /* reference to a device model */
+			uint32_t apen : 1;  /* advanced protocol */
 			uint32_t module : 1; /* 1 = module, 0 = sensor */
 
 			uint32_t enabled : 1; /* enable device simulation */
 			uint32_t led : 1; /* LED status */
 			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
 			uint32_t tst : 1; /* Remote test mode */
-			uint32_t alm : 1; /* Alarm flag */
-			uint32_t tbl : 1; /* Trouble flag */
-			uint32_t sup : 1; /* Supervisory flag */
-			uint32_t mon : 1; /* Monitor flag */
 
-			uint32_t usr3: 8;  /* User variable */
+			uint32_t out1: 1;  
+			uint32_t out2: 1;  
+			uint32_t out3: 1;  
+			uint32_t out5: 1;  
+
+			uint32_t alm : 4; /* Alarm level */
+			uint32_t tbl : 4; /* Trouble level */
 		}; 
 		uint32_t opt;	
 	};
@@ -225,24 +227,10 @@ struct ss_device {
 	uint16_t pw4;   /* Analog */
 
 	uint16_t pw5;   /* Type Id */
-	uint16_t ctls;   /* consecutive polling sequence control bit pattern */
-
 	uint16_t ap_pw; /* AP current pulse width */
-	uint16_t usr2;  /* User variable */
+
+	uint8_t lvl[4]; /* Internal variable levels */
 };
-
-/* Control bits simulation trigger:
- 
-   The control bit pattern triggers works by ...
-
-   Each bit control sequence (3 bits) is shifted in to the "ctln" and "ctls"
-   shift registers.
-   The difference between them is that "ctln" will shift in all incoming 
-   control bits regardless of the polling sequence, whereas the "ctls" will
-   shift only consecutive polling for the same device. The "ctls" will be 
-   cleared whenever a different device is addressed.
- 
- */
 
 #define SS_MODULES_IDX 160
 #define SS_DEVICES_MAX 320
@@ -282,22 +270,23 @@ struct cfg_sw {
  * ------------------------------------------------------------------------- */
 
 struct slcdev_drv {
-	uint16_t addr; /* current polled device address */
-	uint8_t ev_bmp; /* event bitmap */
-	uint8_t bit_cnt; /* message bit count */
-	uint32_t msg; /* message data from the pannel */
+	uint16_t addr;      /* current polled device address */
+	uint8_t ev_bmp;     /* event bitmap */
+	uint8_t bit_cnt;    /* message bit count */
+	uint32_t msg;       /* message data from the pannel */
+	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	unsigned int state; /* decoder state */
 	struct {
-		uint8_t insn; /* AP instruction */
-		uint8_t irq;  /* Interrupt request */
-		uint8_t icfg; /* pulse preenphasis width (microsseconds) */
-		uint8_t ipre; /* pulse preenphasis width (microsseconds) */
-		uint8_t ilat; /* pulse latency (microsseconds) */
-		uint16_t ipw; /* pulse width (microsseconds) */
+		uint8_t insn;   /* AP instruction */
+		uint8_t irq;    /* Interrupt request */
+		uint8_t icfg;   /* pulse preenphasis width (microsseconds) */
+		uint8_t ipre;   /* pulse preenphasis width (microsseconds) */
+		uint8_t ilat;   /* pulse latency (microsseconds) */
+		uint16_t ipw;   /* pulse width (microsseconds) */
 	} ap; /* AP specific options */
 	struct {
-		uint16_t msk; /* bitmask */
-		uint16_t cmp; /* compare value */
+		uint16_t msk;    /* bitmask */
+		uint16_t cmp;    /* compare value */
 		uint16_t ap_msk; /* AP mode bitmask */
 		uint16_t ap_cmp; /* AP mode compare value */
 	} trig; /* trigger module  */
@@ -309,6 +298,17 @@ struct slcdev_drv {
 	} isink;
 	struct ss_device * volatile dev;
 };
+
+/* Control bits simulation trigger:
+ 
+   The control bit pattern triggers works by ...
+
+   Each bit control sequence (3 bits) is shifted in to the "ctls"
+   shift registers.
+   "ctls" will shift only consecutive polling for the same device. 
+   The "ctls" will be cleared whenever a different device is addressed.
+ 
+ */
 
 extern struct slcdev_drv slcdev_drv;
 
