@@ -225,6 +225,12 @@ const struct cfg_attr dev_attr_lut[] = {
 	BIT(       "led", struct ss_device, opt, 17),
 	BIT(     "pw5en", struct ss_device, opt, 18),
 	BIT(       "tst", struct ss_device, opt, 19),
+	BIT(      "out1", struct ss_device, opt, 20),
+	BIT(      "out2", struct ss_device, opt, 21),
+	BIT(      "out3", struct ss_device, opt, 22),
+	BIT(      "out5", struct ss_device, opt, 23),
+	BFIELD32(  "alm", struct ss_device, opt, 24, 4), /* RW */
+	BFIELD32(  "tbl", struct ss_device, opt, 28, 4), /* RW */
 	{ "tbias",   CFG_UINT8,  0, offsetof(struct ss_device, tbias) },
 	{ "icfg",    CFG_UINT8,  1, offsetof(struct ss_device, icfg) },
 	{ "ipre",    CFG_UINT8,  0, offsetof(struct ss_device, ipre) },

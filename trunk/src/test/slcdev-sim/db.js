@@ -168,66 +168,6 @@
 		"pw5" : [540, 660]
 	},
 
-
-	"module": { 
-		"model": "Control", 
-		"desc": "Supervised Control Module", 
-		"sim" : "control", 
-		"pw1": [240, 360], 
-		"pw2": [ 
-			["Reset(Normal)", 240, 360],
-			["Set", 480, 720] 
-		],
-		"pw3": [
-			["Open", 480, 720],
-			["Normal", 240, 360],
-			["Short", 720, 1080]
-		],
-		"pw4": [
-			["Open", 0, 243],
-			["Normal", 670, 1430],
-			["Short", 1619, 4000]
-		],
-		"pw5": ["Type ID", 480, 720]
-	},
-
-	"module": { 
-		"model": "Relay", 
-		"sim" : "relay", 
-		"desc": "Relay Control Module", 
-		"pw1": [240, 360],
-		"pw2": [
-			["Reset(Normal)", 240, 360],
-			["Set", 480, 720]
-		],
-		"pw3": ["Open", 480, 720],
-		"pw4": ["Open", 0, 343],
-		"pw5": [480, 720]
-	},
-
-	"module": { 
-		"model": "Monitor", 
-		"desc": "Monitor Module", 
-		"sim" : "monitor", 
-		"pw1": [240, 360], 
-		"pw2": [
-			["Class A Normal", 240, 360],
-			["Class A Fixed", 480, 720]
-		],
-		"pw3": [
-			["Open", 480, 720],
-			["Normal", 240, 360],
-			["Short,Alarm", 720, 1080]
-		],
-		"pw4": [
-			["Open", 0, 243],
-			["Normal", 670, 1430],
-			["Short", 1619, 4000]
-		],
-		"pw5": ["Type ID", 240, 360]
-	},
-
-
 	"module": { 
 		"model": "M500S", 
 		"desc": "Supervised Control Module", 
@@ -238,16 +178,16 @@
 			["Set", 480, 720] 
 		],
 		"pw3": [
-			["Open", 480, 720],
 			["Normal", 240, 360],
+			["Open", 480, 720],
 			["Short", 720, 1080]
 		],
 		"pw4": [
-			["Open", 0, 243],
 			["Normal", 670, 1430],
+			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": ["Type ID", 480, 720]
+		"pw5": [480, 720]
 	},
 
 	"module": { 
@@ -262,11 +202,11 @@
 			["Short,Alarm", 720, 1080]
 		],
 		"pw4": [
-			["Open", 0, 220],
 			["Normal", 756, 1364],
+			["Open", 0, 220],
 			["Short", 1613, 4000] 
 		],
-		"pw5": [ "Type ID", 240, 360]
+		"pw5": [240, 360]
 	},
 
 	"module": { 
@@ -280,16 +220,16 @@
 			["Class A Fixed", 480, 720]
 		],
 		"pw3": [
-			["Open", 480, 720],
 			["Normal", 240, 360],
+			["Open", 480, 720],
 			["Short,Alarm", 720, 1080]
 		],
 		"pw4": [
-			["Open", 0, 243],
 			["Normal", 670, 1430],
+			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": ["Type ID", 240, 360]
+		"pw5": [240, 360]
 	},
 
 	"module": { 
@@ -331,8 +271,8 @@
 			["Set", 560, 630]
 		],
 		"pw3": [
-			["Trouble (Short or Open)", 560, 630],
 			["Normal", 240, 360],
+			["Trouble (Short or Open)", 560, 630],
 			["Off-Hook", 860, 940]
 		],
 		"pw4": [0, 300],
