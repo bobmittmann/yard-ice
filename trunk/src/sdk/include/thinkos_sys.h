@@ -213,6 +213,9 @@ struct thinkos_context {
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 #endif
 
+#ifndef THINKOS_ENABLE_THREAD_INFO
+#define THINKOS_ENABLE_THREAD_NAME 0
+#endif
 
 /* -------------------------------------------------------------------------- 
  * Sanity check
@@ -295,7 +298,6 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_PAUSE
-#warning "THINKOS_ENABLE_PAUSE"
 	uint32_t wq_paused;
 #endif
 
@@ -304,22 +306,18 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
-#warning "THINKOS_MUTEX_MAX > 0"
 	uint32_t wq_mutex[THINKOS_MUTEX_MAX];
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
 #if THINKOS_COND_MAX > 0
-#warning "THINKOS_COND_MAX > 0"
 	uint32_t wq_cond[THINKOS_COND_MAX];
 #endif /* THINKOS_COND_MAX > 0 */
 
 #if THINKOS_SEMAPHORE_MAX > 0
-#warning "THINKOS_SEMAPHORE_MAX > 0"
 	uint32_t wq_sem[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 #if THINKOS_EVENT_MAX > 0
-#warning "THINKOS_EVENT_MAX > 0"
 	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
@@ -328,7 +326,6 @@ struct thinkos_rt {
 #endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_ENABLE_JOIN
-#warning "THINKOS_ENABLE_JOIN"
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
 
@@ -339,7 +336,6 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
-#warning "THINKOS_ENABLE_TIMESHARE"
 	/* This fields are used for time sharing (round robin) schedule only */
 	struct {
 		int8_t sched_val[THINKOS_THREADS_MAX]; /* Thread schedule value */
@@ -406,6 +402,10 @@ struct thinkos_rt {
 	uint32_t sched_trace_req;
 #endif
 
+#if THINKOS_ENABLE_THREAD_INFO
+	struct thinkos_thread_info * th_inf[THINKOS_THREADS_MAX]; 
+#endif
+
 } __attribute__ ((aligned (8)));
 
 
@@ -464,18 +464,18 @@ struct thinkos_rt {
  * --------------------------------------------------------------------------*/
 
 struct thinkos_thread_opt {
+	uint16_t stack_size;
 	uint8_t priority;
-	uint8_t id;
+	uint8_t id: 7;
 	uint8_t f_paused: 1;
-	uint8_t reserved;
 };
 
 struct thinkos_thread_init {
 	void * task;
 	void * arg;
 	void * stack_ptr;
-	uint32_t stack_size;
 	struct thinkos_thread_opt opt;
+	struct thinkos_thread_info * inf;
 };
 
 

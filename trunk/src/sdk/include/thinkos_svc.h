@@ -154,10 +154,10 @@ static inline int const __attribute__((always_inline))
 static inline int __attribute__((always_inline)) 
 	thinkos_thread_create(int (* task)(void *), 
 						  void * arg, void * stack_ptr,
-						  unsigned int stack_size,
-						  unsigned int opt) {
+						  unsigned int opt,
+						  struct thinkos_thread_info * inf) {
 	return THINKOS_SVC5(THINKOS_THREAD_CREATE, task, arg, 
-						stack_ptr, stack_size, opt);
+						stack_ptr, opt, inf);
 }
 
 static inline int 

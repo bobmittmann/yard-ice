@@ -165,8 +165,8 @@ void supervisor_init(void)
 	monitor_stream = stdout;
 
 	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
-						  supervisor_stack, sizeof(supervisor_stack), 
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+						  supervisor_stack, sizeof(supervisor_stack) |
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), NULL);
 }
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
