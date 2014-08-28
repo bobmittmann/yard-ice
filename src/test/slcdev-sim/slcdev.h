@@ -214,20 +214,26 @@ struct ss_device {
 		}; 
 		uint32_t opt;	
 	};
+	
+	uint8_t tbias;     /* time accuracy multiplication factor */
+	uint8_t ilat;      /* Current sink latency (PW reponse time) */
+	uint8_t icfg;      /* current sink configuration */
+	uint8_t ipre;      /* current sink preenphasis time */
 
-    uint8_t tbias;  /* time accuracy multiplication factor */
-	uint8_t icfg;   /* current sink configuration */
-	uint8_t ipre;   /* current sink preenphasis time */
-	uint8_t ilat;   /* Current sink latency (PW reponse time) */
+	uint32_t grp;      /* Group membership */
 
-	uint16_t pw1;   /* Reference Pulse Width */
-	uint16_t pw2;   /* Remote Test Status */
-
-	uint16_t pw3;   /* Manufacturer Code */
-	uint16_t pw4;   /* Analog */
-
-	uint16_t pw5;   /* Type Id */
-	uint16_t ap_pw; /* AP current pulse width */
+	union {
+		struct {
+			uint16_t pw1;   /* Reference Pulse Width */
+			uint16_t pw2;   /* Remote Test Status */
+			uint16_t pw3;   /* Manufacturer Code */
+			uint16_t pw4;   /* Analog */
+			uint16_t pw5;   /* Type Id */
+		};
+		struct {
+			uint16_t pw;   /* AP bit response pulse width */
+		} ap;
+	};
 
 	uint8_t lvl[4]; /* Internal variable levels */
 };
@@ -355,6 +361,7 @@ bool config_sanity_check(struct json_file * json);
 int config_show_info(FILE * f);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
+bool device_db_sanity_check(struct json_file * json);
 
 int slcdev_const_str_purge(void);
 
@@ -365,20 +372,7 @@ struct db_dev_model * db_dev_model_by_index(unsigned int idx);
 /* default photodetector sensor */ 
 struct db_dev_model * db_dev_model_photo(void);
 
-int device_db_pw1_lookup(struct db_dev_model * obj, unsigned int sel,
-						 unsigned int bias);
-
-int device_db_pw2_lookup(struct db_dev_model * obj, unsigned int sel,
-						 unsigned int bias);
-
-int device_db_pw3_lookup(struct db_dev_model * obj, unsigned int sel,
-						 unsigned int bias);
-
-int device_db_pw4_lookup(struct db_dev_model * obj, unsigned int sel,
-						 unsigned int bias);
-
-int device_db_pw5_lookup(struct db_dev_model * obj, unsigned int sel,
-						 unsigned int bias);
+int device_db_pw_lookup(const struct pw_list * lst, unsigned int sel);
 
 void __attribute__((noreturn)) sim_event_task(void);
 
@@ -392,15 +386,29 @@ int module_sim_default(void);
 
 const char * model_sim_name(unsigned int idx);
 
+struct ss_device * dev_sim_lookup(bool mod, unsigned int addr); 
+
 void dev_sim_enable(bool mod, unsigned int addr);
 
 void dev_sim_disable(bool mod, unsigned int addr);
 
+void dev_sim_multiple_disable(uint32_t s[], uint32_t m[]);
 
-struct ss_device * dev_sim_sensor_lookup(unsigned int addr);
-struct ss_device * dev_sim_module_lookup(unsigned int addr);
+void dev_sim_multiple_enable(uint32_t s[], uint32_t m[]);
 
-bool device_db_sanity_check(struct json_file * json);
+void dev_sim_multiple_alarm_set(uint32_t s[], uint32_t m[], 
+								unsigned int lvl);
+
+void dev_sim_multiple_trouble_set(uint32_t s[], uint32_t m[], 
+								  unsigned int lvl);
+
+int device_dump(FILE * f, bool mod, unsigned int addr);
+
+int device_attr_set(bool mod, unsigned int addr, 
+					const char * name, const char * val);
+
+int device_attr_print(FILE * f, bool mod, 
+					  unsigned int addr, const char * name);
 
 #ifdef __cplusplus
 }
