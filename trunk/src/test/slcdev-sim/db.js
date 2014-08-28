@@ -1,5 +1,27 @@
 {
 	"sensor": { 
+		"model" : "1251", 
+		"desc" : "Ionization Smoke Detector", 
+		"sim" : "ion", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 870, 930],
+			["Low Chamber", 120, 180],
+			["High Chamber", 260, 330],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 2130, 2880]
+		],
+		"pw5" : [540, 660]
+	},
+
+	"sensor": { 
 		"model" : "2251", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
@@ -136,36 +158,6 @@
 			["Remote Test / Magnet Test", 2850, 3150]
 		],
 		"pw5" : [1995, 2205]
-	},
-
-	"sensor": { 
-		"model" : "1251", 
-		"desc" : "Ionization Smoke Detector", 
-		"sim" : "ion", 
-		"pw1" : [270, 330],
-		"pw2" : [
-			["Remote test disabled", 270, 330],
-			["Remote test enabled", 540 , 660],
-		],
-		"pw3" : [540, 660],
-		"pw4" : [
-			["Normal, clean", 760, 840],
-			["CO trouble (sensor life has expired)", 0, 30],
-			["Low Chamber/Thermistor/CO/IR/Freeze Warning", 140, 160],
-			["Maintenance Urgent / Drift Limit", 285, 315],
-			["Maintenance Alert: 80% drift limit", 425, 475],
-			["CO trouble (6 months of sensor life remaining)", 570, 630],
-			["IR light saturation condition", 665, 735],
-			["99% drift (80% drift limit disabled)", 1140, 1260],
-			["Alarm 1 1%/ft no delays", 1330, 1470],
-			["Alarm 2 2%/ft no delays", 1710, 1890],
-			["Alarm 3 3%/ft no delays", 2090, 2310],
-			["Alarm 4 3%/ft with 10 minutes delay", 2470, 2730],
-			["Alarm 5 4%/ft with 10 minutes delay", 2850, 3150],
-			["Alarm 6 Heat", 3230, 3570],
-			["Remote Test / Magnet Test", 2850, 3150]
-		],
-		"pw5" : [540, 660]
 	},
 
 	"module": { 

@@ -6,38 +6,94 @@
 #include <sys/dcclog.h>
 #include "slcdev.h"
 
-void dev_sim_enable(bool module, unsigned int addr)
+void dev_sim_enable(bool mod, unsigned int addr)
 {
 	if (addr > 160) 
 		return;
 
-	ss_dev_tab[addr + (module ? 160 : 0)].enabled = 1;
+	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 1;
 }
 
-void dev_sim_disable(bool module, unsigned int addr)
+void dev_sim_disable(bool mod, unsigned int addr)
 {
 	if (addr > 160) 
 		return;
 
-	ss_dev_tab[addr + (module ? 160 : 0)].enabled = 0;
+	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 0;
 }
 
-struct ss_device * dev_sim_sensor_lookup(unsigned int addr)
+void dev_sim_multiple_disable(uint32_t s[], uint32_t m[])
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* disable sensors */
+		if ((s != NULL) && (s[j] & (1 << i))) {
+			ss_dev_tab[n].enabled = 0;
+		}
+		/* disable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].enabled = 0;
+	}
+}
+
+void dev_sim_multiple_enable(uint32_t s[], uint32_t m[])
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].enabled = 1;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].enabled = 1;
+	}
+}
+
+void dev_sim_multiple_alarm_set(uint32_t s[], uint32_t m[], unsigned int lvl)
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].alm = lvl;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].alm = lvl;
+	}
+}
+
+void dev_sim_multiple_trouble_set(uint32_t s[], uint32_t m[], unsigned int lvl)
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].tbl = lvl;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].tbl = lvl;
+	}
+}
+
+struct ss_device * dev_sim_lookup(bool mod, unsigned int addr) 
 {
 	if (addr > 160) 
 		return NULL;
 
-	return &ss_dev_tab[addr];
+	return &ss_dev_tab[addr + (mod ? 160 : 0)];
 }
-
-struct ss_device * dev_sim_module_lookup(unsigned int addr)
-{
-	if (addr > 160) 
-		return NULL;
-
-	return &ss_dev_tab[addr + 160];
-}
-
 
 struct microjs_script {
 	int x;
@@ -62,14 +118,14 @@ void sensor_ctl_default(struct ss_device * dev,
 	case REMOTE_TEST_ON:
 		DCC_LOG(LOG_TRACE, "Remote test enabled");
 		dev->tst = 1;
-		dev->pw2 = device_db_pw2_lookup(model, 1, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 3, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
+		dev->pw4 = device_db_pw_lookup(model->pw4, 3);
 		break;
 	case REMOTE_TEST_OFF:
 		DCC_LOG(LOG_TRACE, "Remote test disabled");
 		dev->tst = 0;
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
-		dev->pw4 = device_db_pw4_lookup(model, 0, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
 		break;
 	}
 }
@@ -108,18 +164,41 @@ void sensor_sim_photo(struct ss_device * dev,
 void sensor_sim_ion(struct ss_device * dev, 
 					struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	int lvl;
 
 	sensor_ctl_default(dev, model, ctl);
+
+	if ((lvl = dev->alm) > 0) {
+		if (lvl > 3)
+			lvl = 3;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + 2);
+	} else if ((lvl = dev->tbl) > 0) {
+		if (lvl > 2)
+			lvl = 2;
+		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+	} else {
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+	}
 }
 
 /* simulate a heat detector sensor */
 void sensor_sim_heat(struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	int lvl;
 
 	sensor_ctl_default(dev, model, ctl);
+
+	if ((lvl = dev->alm) > 0) {
+		if (lvl > 2)
+			lvl = 2;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+	} else {
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+	}
 }
 
 /* simulate an Acclimate Photoelectric Smoke Sensor */
@@ -256,12 +335,12 @@ void module_sim_relay(struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_TRACE, "Set");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_TRACE, "Reset");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
 }
@@ -277,11 +356,11 @@ void module_sim_control(struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_TRACE, "Control ON");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_TRACE, "Control Off");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
 }
@@ -297,12 +376,12 @@ void module_sim_phone(struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_TRACE, "Set");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_TRACE, "Reset");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
 }
@@ -320,11 +399,11 @@ void module_sim_monitor(struct ss_device * dev,
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
 		DCC_LOG(LOG_TRACE, "Class A switched");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias) * 2;
+		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 	case CLASS_A_NORMAL:
 		DCC_LOG(LOG_TRACE, "Class A normal");
-		dev->pw2 = device_db_pw2_lookup(model, 0, dev->tbias);
+		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
 }

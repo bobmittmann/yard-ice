@@ -826,107 +826,23 @@ struct db_dev_model * db_dev_model_by_index(unsigned int idx)
 	return (struct db_dev_model *)inf->obj[idx];
 }
 
-
-
-int device_db_pw1_lookup(struct db_dev_model * mod, unsigned int sel,
-					  unsigned int bias)
+int device_db_pw_lookup(const struct pw_list * lst, unsigned int sel)
 {
-	uint32_t avg;
 	uint32_t min;
 	uint32_t max;
 	uint32_t pw;
 
-	if (sel >= mod->pw1->cnt)
-		sel = mod->pw1->cnt - 1;
+	if (sel >= lst->cnt)
+		sel = lst->cnt - 1;
 
-	max = mod->pw1->pw[sel].max;
-	min = mod->pw1->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_db_pw2_lookup(struct db_dev_model * mod, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= mod->pw2->cnt)
-		sel = mod->pw2->cnt - 1;
-
-	max = mod->pw2->pw[sel].max;
-	min = mod->pw2->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
+	max = lst->pw[sel].max;
+	min = lst->pw[sel].min;
+	pw = (max + min) / 2;
+	DCC_LOG3(LOG_INFO, "min=%d max=%d pw=%d", min, max, pw);
 
 	return pw;
 }
 
-int device_db_pw3_lookup(struct db_dev_model * mod, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= mod->pw3->cnt)
-		sel = mod->pw3->cnt - 1;
-
-	max = mod->pw3->pw[sel].max;
-	min = mod->pw3->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_db_pw4_lookup(struct db_dev_model * mod, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= mod->pw4->cnt)
-		sel = mod->pw4->cnt - 1;
-
-	max = mod->pw4->pw[sel].max;
-	min = mod->pw4->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_INFO, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
-
-int device_db_pw5_lookup(struct db_dev_model * mod, unsigned int sel,
-					  unsigned int bias)
-{
-	uint32_t avg;
-	uint32_t min;
-	uint32_t max;
-	uint32_t pw;
-
-	if (sel >= mod->pw5->cnt)
-		sel = mod->pw5->cnt - 1;
-
-	max = mod->pw5->pw[sel].max;
-	min = mod->pw5->pw[sel].min;
-	avg = (max + min) / 2;
-	pw = (avg * bias) / 128;
-	DCC_LOG4(LOG_TRACE, "min=%d max=%d avg=%d pw=%d", min, max, avg, pw);
-
-	return pw;
-}
 
 /********************************************************************** 
  * Diagnostics and debug

@@ -405,7 +405,7 @@ static void ap_hdr_decode(unsigned int msg)
 			icfg = dev->icfg;
 			ilat = dev->ilat;
 			ipre = dev->ipre;
-			ipw = dev->ap_pw;
+			ipw = dev->ap.pw;
 			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
@@ -832,21 +832,21 @@ void stm32_comp_tsc_isr(void)
 		case ISINK_END_WAIT:
 			switch (slcdev_drv.state) {
 			case DEV_PW1_ISINK:
-				slcdev_drv.isink.pw = dev->pw2;
+				slcdev_drv.isink.pw = (dev->pw2 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW2_ISINK;
 				DCC_LOG(LOG_INFO, "[PW2 ISINK]");
 				break;
 			case DEV_PW2_ISINK:
-				slcdev_drv.isink.pw = dev->pw3;
+				slcdev_drv.isink.pw = (dev->pw3 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW3_ISINK;
 				DCC_LOG(LOG_INFO, "[PW3 ISINK]");
 				break;
 			case DEV_PW3_ISINK:
-				slcdev_drv.isink.pw = dev->pw4;
+				slcdev_drv.isink.pw = (dev->pw4 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW4_ISINK;
@@ -854,7 +854,7 @@ void stm32_comp_tsc_isr(void)
 				break;
 			case DEV_PW4_ISINK:
 				if (dev->pw5en) {
-					slcdev_drv.isink.pw = dev->pw5;
+					slcdev_drv.isink.pw = (dev->pw5 * dev->tbias) / 128;
 					slcdev_drv.isink.state = ISINK_START_WAIT;
 					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 					slcdev_drv.state = DEV_PW5_ISINK;
@@ -900,7 +900,7 @@ void stm32_comp_tsc_isr(void)
 				break;
 			case DEV_CLIP:
 				/* respond with PW1 */
-				slcdev_drv.isink.pw = dev->pw1;
+				slcdev_drv.isink.pw = (dev->pw1 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
 				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW1_ISINK;
