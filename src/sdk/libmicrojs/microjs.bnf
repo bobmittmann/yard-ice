@@ -21,27 +21,11 @@ type_spec		: 'void' | 'char' | 'short' | 'int' | 'long' | 'float'
 			| 'double' | 'signed' | 'unsigned'
 type_qualifier		: 'const' | 'var'
 			;
-struct_decl_list	: struct_decl
-			| struct_decl_list struct_decl
-			;
 init_declarator_list	: init_declarator
 			| init_declarator_list ',' init_declarator
 			;
 init_declarator		: declarator
 			| declarator '=' initializer
-			;
-struct_decl		: spec_qualifier_list struct_declarator_list ';'
-			;
-spec_qualifier_list	: 
-			| type_qualifier spec_qualifier_list
-			| type_qualifier
-			;
-struct_declarator_list	: struct_declarator
-			| struct_declarator_list ',' struct_declarator
-			;
-struct_declarator	: declarator
-			| declarator ':' const_exp
-			|		':' const_exp
 			;
 enumerator_list		: enumerator
 			| enumerator_list ',' enumerator
@@ -134,11 +118,7 @@ jump_stat		: 'goto' id ';'
 exp			: assignment_exp
 			| exp ',' assignment_exp
 			;
-assignment_exp		: conditional_exp
-			| unary_exp assignment_operator assignment_exp
-			;
-assignment_operator	: '=' | '*=' | '/=' | '%=' | '+=' | '-=' | '<<='
-			| '>>=' | '&=' | '^=' | '|='
+assignment_exp		: unary_exp '=' conditional_exp
 			;
 conditional_exp		: logical_or_exp
 			| logical_or_exp '?' exp ':' conditional_exp

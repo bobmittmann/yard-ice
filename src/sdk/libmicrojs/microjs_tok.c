@@ -667,8 +667,7 @@ conditional_exp		: logical_or_exp
 static bool assignment_exp(struct microjs_parser * p, unsigned int tok)
 {
 /*
-assignment_exp		: conditional_exp
-			| unary_exp assignment_operator assignment_exp
+assignment_exp : unary_exp '=' conditional_exp
 */
 	DCC_LOG(LOG_TRACE, "...");
 	if (tok == TOK_SEMICOLON)
