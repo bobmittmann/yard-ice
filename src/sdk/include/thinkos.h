@@ -23,7 +23,6 @@
 #ifndef __THINKOS_H__
 #define __THINKOS_H__
 
-#include <thinkos_svc.h>
 #include <arch/cortex-m3.h>
 
 #define THINKOS_ERROR -1
@@ -34,11 +33,23 @@
 #define THINKOS_EPERM -6
 #define THINKOS_ENOSYS -7
 
-#define THINKOS_OPT_PRIORITY(VAL) ((VAL) & 0xff)
-#define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 8)
-#define THINKOS_OPT_PAUSED (1 << 16)
+#define THINKOS_OPT_PRIORITY(VAL) (((VAL) & 0x7f) << 16)
+#define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 24)
+#define THINKOS_OPT_PAUSED (1 << 31) /* don't run at startup */
+#define THINKOS_OPT_STACK_SIZE(VAL) ((VAL) & 0xffff)
 
 #ifndef __ASSEMBLER__
+
+struct thinkos_thread_info {
+	struct {
+		void * top;
+		void * bottom;
+	} stack;
+	uint8_t priority;
+	uint8_t id;
+};
+
+#include <thinkos_svc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,8 +64,8 @@ int thinkos_init(unsigned int opt);
 
 int thinkos_thread_create(int (* task)(void *), 
 						  void * arg, void * stack_ptr,
-						  unsigned int stack_size,
-						  unsigned int opt);
+						  unsigned int opt, 
+						  struct thinkos_thread_info * inf);
 
 int const thinkos_thread_self(void);
 

@@ -285,7 +285,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	}
 
 	if (th < 0) {
-		arg[0] = th;
+		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #else
@@ -294,10 +294,16 @@ void thinkos_thread_create_svc(int32_t * arg)
 		th = THINKOS_THREADS_MAX - 1;
 #endif
 
-	sp = (uint32_t)init->stack_ptr + init->stack_size;
+	sp = (uint32_t)init->stack_ptr + init->opt.stack_size;
+
+	if (init->opt.stack_size < sizeof(struct thinkos_context)) {
+		DCC_LOG1(LOG_ERROR, "stack too small. size=%d", init->opt.stack_size);
+		arg[0] = th;
+		return;
+	}
 
 	DCC_LOG2(LOG_INFO, "stack ptr=%08x size=%d", 
-			 init->stack_ptr, init->stack_size);
+			 init->stack_ptr, init->opt.stack_size);
 
 	sp &= 0xfffffff8; /* 64bits alignemnt */
 	sp -= sizeof(struct thinkos_context);
@@ -332,6 +338,10 @@ void thinkos_thread_create_svc(int32_t * arg)
 	ctx->xpsr = 0x01000000;
 
 	thinkos_rt.ctx[th] = ctx;
+
+#if THINKOS_ENABLE_THREAD_INFO
+	thinkos_rt.th_inf[th] = init->inf;
+#endif
 
 #if THINKOS_ENABLE_TIMESHARE
 	thinkos_rt.sched_pri[th] = init->opt.priority;
