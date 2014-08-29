@@ -86,6 +86,9 @@ int main(int argc, char ** argv)
 	/* initilice the SLC device driver */
 	slcdev_init();
 
+	/* initialize database */
+	device_db_init();
+
 	/* load configuration */
 	config_load();
 

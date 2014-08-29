@@ -408,7 +408,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 	/* initialize exception stack */
 	for (i = 0; i < (THINKOS_EXCEPT_STACK_SIZE / 4 - IDLE_UNUSED_REGS); ++i)
-		thinkos_idle.except_stack[i] = 0xfacade44;
+		thinkos_idle.except_stack[i] = 0xdeadbeef;
 
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;

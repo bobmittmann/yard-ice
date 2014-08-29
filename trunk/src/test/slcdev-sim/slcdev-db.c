@@ -10,102 +10,8 @@
 #include "crc.h"
 #include "slcdev.h"
 
-const char db_default[] =
-	"\"sensor\": { \n"
-	" \"id\" : 0, \n"
-	" \"model\" : \"Photo\", \n"
-	" \"desc\" : \"Photoelectric Smoke Detector\", \n"
-	" \"pw1\" : [270, 330],\n"
-	" \"pw2\" : [\n"
-	"  [\"Remote test disabled\", 270, 330],\n"
-	"  [\"Remote test enabled\", 540, 660]\n"
-	" ],\n"
-	" \"pw3\" : [540, 660],\n"
-	" \"pw4\" : [\n"
-	"  [\"Normal\", 618, 1068],\n"
-	"  [\"Trouble\", 120, 660],\n"
-	"  [\"Smoke Alarm 1\", 1260, 1775],\n"
-	"  [\"Smoke Alarm 2\", 1775, 2395],\n"
-	"  [\"Smoke Alarm 3\", 2395, 2800],\n"
-	"  [\"Thermal Alarm (57°C)\", 2800, 3220],\n"
-	"  [\"Remote Test\", 2800, 3200]\n"
-	" ],\n"
-	" \"pw5\" : [810, 990]\n"
-	"},\n"
-	"\"sensor\": { \n"
-	" \"id\" : 1, \n"
-	" \"model\" : \"Ion\", \n"
-	" \"desc\" : \"Ionization Smoke Detector\", \n"
-	" \"pw1\" : [270, 330],\n"
-	" \"pw2\" : [\n"
-	"  [\"Remote test disabled\", 270, 330],\n"
-	"  [\"Remote test enabled\", 540, 660]\n"
-	" ],\n"
-	" \"pw3\" : [540, 660],\n"
-	" \"pw4\" : [\n"
-	"  [\"Normal\", 870, 930],\n"
-	"  [\"Low Chamber\", 120, 180],\n"
-	"  [\"High Chamber\", 260, 330],\n"
-	"  [\"Smoke Alarm 1\", 1260, 1775],\n"
-	"  [\"Smoke Alarm 2\", 1775, 2395],\n"
-	"  [\"Smoke Alarm 3\", 2395, 2800],\n"
-	"  [\"Remote Test\", 2130, 2880]\n"
-	" ],\n"
-	" \"pw5\" : [570, 630]\n"
-	"},\n"
-	"\"sensor\": { \n"
-	" \"id\" : 2, \n"
-	" \"model\" : \"Heat\", \n"
-	" \"desc\" : \"Heat Detector\", \n"
-	" \"pw1\" : [270, 330],\n"
-	" \"pw2\" : [\n"
-	"  [\"Remote test disabled\", 270, 330],\n"
-	"  [\"Remote test enabled\", 540, 660]\n"
-	" ],\n"
-	" \"pw3\" : [540, 660],\n"
-	" \"pw4\" : [\n"
-	"  [\"Normal, 25°C\", 1070, 1400],\n"
-	"  [\"Normal, 57.2°C\", 1895, 2110],\n"
-	"  [\"Heat Alarm 57.2°C\", 2110],\n"
-	"  [\"Remote Test\", 3270, 3330]\n"
-	" ],\n"
-	" \"pw5\" : [270, 330],\n"
-	" \"cmd\": [\n"
-	"  {\n"
-	"   \"tag\": \"LED on\",\n"
-	"   \"seq\": [\"0xx\"],\n"
-	"   \"js\": [ \"dev.led_on = true;\" ]\n"
-	"  },\n"
-	"  {\n"
-	"   \"tag\": \"LED off\",\n"
-	"   \"seq\": [\"1x0\"],\n"
-	"   \"js\": [ \"dev.led_on = false;\" ]\n"
-	"  },\n"
-	"  {\n"
-	"   \"tag\": \"LED blink\",\n"
-	"   \"seq\": [\"1x1\"],\n"
-	"   \"js\": [ \"dev.led_blink = true;\" ]\n"
-	"  },\n"
-	"  {\n"
-	"   \"tag\": \"Enable Type ID\",\n"
-	"   \"seq\": [\"x1x\"],\n"
-	"   \"js\": [ \"dev.pw5_en = true;\" ]\n"
-	"  },\n"
-	"  {\n"
-	"   \"tag\": \"Remote Test on\",\n"
-	"   \"seq\": [\"0x0\", \"0x0\"],\n"
-	"   \"js\": [ \"dev.test = true;\" ]\n"
-	"  },\n"
-	"  {\n"
-	"   \"tag\": \"Remote Test off\",\n"
-	"   \"seq\": [\"1x1\", \"1x1\"],\n"
-	"   \"js\": [ \"dev.test = false;\" ]\n"
-	"  }\n"
-	" ]\n"
-	"}\n";
-
 uint16_t db_stack = FLASH_BLK_DB_BIN_SIZE;
-uint16_t db_heap = 0;
+#define DB_STACK_LIMIT 256
 
 static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 {
@@ -127,40 +33,9 @@ static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 	db_stack = pos;
 
 	/* check for collision */
-	if (db_stack <= db_heap) {
-		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
-				db_stack, db_heap);
-		return -1;
-	}
-
-	if (ptr != NULL)
-		*ptr = (void *)(STM32_MEM_FLASH + offs);
-
-	return len;
-}
-
-static int db_heap_push(void * buf, unsigned int len, void ** ptr)
-{
-	uint32_t offs;
-	int ret;
-
-	offs = FLASH_BLK_DB_BIN_OFFS + db_heap;
-
-	/* 32 bits alignement!! */
-	if (len != ((len + 3) & ~3))
-		DCC_LOG(LOG_WARNING, "unaligned structure size!");
-
-	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -1;
-	}
-
-	db_heap += len; /* update heap */
-
-	/* check for collision */
-	if (db_stack <= db_heap) {
-		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
-				db_stack, db_heap);
+	if (db_stack <= DB_STACK_LIMIT) {
+		DCC_LOG2(LOG_ERROR, "no memory stack=%d limit=%d!", 
+				db_stack, DB_STACK_LIMIT);
 		return -1;
 	}
 
@@ -603,10 +478,6 @@ static struct db_obj * db_json_parse(struct json_file * json)
 		return NULL;
 	};
 
-	/* initialize database */
-	db_stack = FLASH_BLK_DB_BIN_SIZE;
-	db_heap = 0;
-
 	DCC_LOG(LOG_TRACE, "3. erasing constant strings pool.");
 	if (slcdev_const_str_purge() < 0) {
 		DCC_LOG(LOG_ERROR, "slcdev_const_str_purge() failed!");
@@ -642,7 +513,6 @@ static struct db_obj * db_json_parse(struct json_file * json)
 }
 
 
-
 #define DB_OBJ_MODEL_MAX 64
 
 #define DB_PTR_IS_VALID(PTR) \
@@ -653,18 +523,19 @@ static struct db_obj * db_json_parse(struct json_file * json)
 
 int db_info_write(struct json_file * json, struct db_obj * root)
 {
-
 	uint32_t buf[(sizeof(struct db_info) + 
 		DB_OBJ_MODEL_MAX * sizeof(struct db_obj *)) / sizeof(uint32_t)];
 	struct db_info * info = (struct db_info *)buf;
 	struct db_obj * obj;
+	unsigned int size;
+	const void * ptr;
+	int ret;
 	int cnt;
 	int i;
 
 	DCC_LOG(LOG_TRACE, "1. clear info");
 
 	memset(info, 0, sizeof(struct db_info));
-
 
 	cnt = 0;
 
@@ -726,10 +597,19 @@ int db_info_write(struct json_file * json, struct db_obj * root)
 	info->json_crc = json->crc;
 	info->json_len = json->len;
 	info->obj_cnt = cnt;
+	info->stack_ptr = db_stack;
+	ptr = (void *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	size = db_stack - FLASH_BLK_DB_BIN_SIZE;
+	info->stack_crc = crc16ccitt(0, ptr, size);
 
 	DCC_LOG(LOG_TRACE, "5. flash write");
 
-	return db_heap_push(info, info->len, NULL);
+	if ((ret = stm32_flash_write(FLASH_BLK_DB_BIN_OFFS, info, info->len)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return -1;
+	}
+
+	return 0;
 }
 
 int device_db_compile(struct json_file * json)
@@ -741,6 +621,9 @@ int device_db_compile(struct json_file * json)
 
 
 	DCC_LOG(LOG_TRACE, "1. compiling JSON file.");
+
+	/* initialize database stack */
+	db_stack = FLASH_BLK_DB_BIN_SIZE;
 
 	if ((root = db_json_parse(json)) == NULL) {
 		DCC_LOG(LOG_ERROR, "db_json_parse() failed.");
@@ -762,24 +645,62 @@ int device_db_compile(struct json_file * json)
 	return ret;
 }
 
-bool device_db_sanity_check(struct json_file * json)
+/* check database integrity */
+bool device_db_is_sane(void)
 {
 	struct db_info * inf;
+	void * ptr;
+	int size;
 
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x ..........................", cm3_sp_get());
-
-	/* check database integrity */
 	inf = (struct db_info *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
-	if ((inf->len >= sizeof(struct db_info)) && 
-		(inf->type == DB_OBJ_DB_INFO) && (inf->json_txt == json->txt) && 
-		(inf->json_crc == json->crc) && (inf->json_len == json->len)) {
+	size = db_stack - FLASH_BLK_DB_BIN_SIZE;
+	if ((inf->len < sizeof(struct db_info)) || (inf->type != DB_OBJ_DB_INFO) ||
+		(size == 0) || (inf->stack_ptr != db_stack)) {
+		return false;
+	}
+
+	ptr = (void *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	if (inf->stack_crc != crc16ccitt(0, ptr, size)) {
+		return false;
+	}
+
+	return true;
+}
+
+/* check JSON file against database */
+bool device_db_need_update(struct json_file * json)
+{
+	struct db_info * inf;
+	int size;
+
+	inf = (struct db_info *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	size = db_stack - FLASH_BLK_DB_BIN_SIZE;
+	if ((inf->len < sizeof(struct db_info)) || (inf->type != DB_OBJ_DB_INFO) ||
+		(size == 0) || (inf->stack_ptr != db_stack)) {
 		return true;
 	}
 
-	DCC_LOG3(LOG_TRACE, "db_info: txt=0x%08x len=%d crc=0x%04x", 
-			 inf->json_txt, inf->json_len, inf->json_crc);
+	if ((inf->json_txt != json->txt) ||
+		(inf->json_crc != json->crc) ||
+		(inf->json_len != json->len)) {
+		return true;
+	}
 
 	return false;
+}
+
+void device_db_init(void)
+{
+	struct db_info * inf;
+
+	inf = (struct db_info *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+
+	/* check database integrity */
+	if ((inf->len >= sizeof(struct db_info)) && 
+		(inf->type == DB_OBJ_DB_INFO)) {
+		/* set the stack pointer */
+		db_stack = inf->stack_ptr;
+	}
 }
 
 /********************************************************************** 
@@ -972,6 +893,10 @@ int device_db_dump(FILE * f)
 	int i;
 
 	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	if (inf->type != DB_OBJ_DB_INFO) {
+		return -1;
+	}
+
 	db_info_dump(f, inf);
 
 	for (i = 0 ; i < inf->obj_cnt; ++i) {
@@ -993,12 +918,14 @@ int device_db_dump(FILE * f)
 	return 0;
 } 
 
-
 int device_db_erase(void)
 {
 	uint32_t blk_offs = FLASH_BLK_DB_BIN_OFFS;
 	uint32_t blk_size = FLASH_BLK_DB_BIN_SIZE;
 	int ret;
+
+	/* reset the stack pointer */
+	db_stack = FLASH_BLK_DB_BIN_SIZE;
 
 	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");

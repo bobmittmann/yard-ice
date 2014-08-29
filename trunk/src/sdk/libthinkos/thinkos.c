@@ -314,7 +314,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	{
 		uint32_t * ptr;
 		for (ptr = init->stack_ptr; ptr < (uint32_t *)sp; ++ptr)
-			*ptr = 0xfacade44;
+			*ptr = 0xdeadbeef;
 	}
 
 	ctx = (struct thinkos_context *)sp;
