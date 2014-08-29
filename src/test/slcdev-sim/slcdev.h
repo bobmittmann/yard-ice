@@ -86,10 +86,17 @@ struct db_info {
 		uint16_t type;
 		struct db_obj * next;
 	};
+	uint8_t desc; /* Description string */
+	uint8_t version[3]; /* version info */
 	const char * json_txt;
 	uint16_t json_len;
 	uint16_t json_crc;
-	uint32_t obj_cnt;
+
+	uint16_t stack_ptr;
+	uint16_t stack_crc;
+
+	uint16_t obj_crc;
+	uint16_t obj_cnt;
 	struct db_obj * obj[];
 };
 
@@ -104,6 +111,8 @@ struct db_dev_model {
 		struct {
 			uint32_t ap: 1;
 			uint32_t module: 1;
+			uint8_t alm_lvl: 4;
+			uint8_t tbl_lvl: 4;
 		};
 	};
 	uint8_t model;	
@@ -200,8 +209,8 @@ struct ss_device {
 			uint32_t module : 1; /* 1 = module, 0 = sensor */
 
 			uint32_t enabled : 1; /* enable device simulation */
+			uint32_t cfg : 1; /* Device configured */
 			uint32_t led : 1; /* LED status */
-			uint32_t pw5en : 1; /* PW5 (Type ID) enabled */
 			uint32_t tst : 1; /* Remote test mode */
 
 			uint32_t out1: 1;  
@@ -220,7 +229,7 @@ struct ss_device {
 	uint8_t icfg;      /* current sink configuration */
 	uint8_t ipre;      /* current sink preenphasis time */
 
-	uint32_t grp;      /* Group membership */
+	uint8_t grp[4];    /* Group membership */
 
 	union {
 		struct {
@@ -282,6 +291,7 @@ struct slcdev_drv {
 	uint32_t msg;       /* message data from the pannel */
 	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	unsigned int state; /* decoder state */
+	uint8_t pw5en;      /* PW5 (Type ID) requested */
 	struct {
 		uint8_t insn;   /* AP instruction */
 		uint8_t irq;    /* Interrupt request */
@@ -346,7 +356,7 @@ void slcdev_resume(void);
 bool trig_addr_set(bool module, unsigned int addr);
 bool trig_addr_get(bool * module, unsigned int * addr);
 
-int device_db_init(void);
+void device_db_init(void);
 int device_db_erase(void);
 int device_db_compile(struct json_file * json);
 int device_db_dump(FILE * f);
@@ -357,11 +367,13 @@ int config_erase(void);
 int config_load(void);
 int config_save(struct json_file * json);
 int config_compile(struct json_file * json);
-bool config_sanity_check(struct json_file * json);
+bool config_need_update(struct json_file * json);
+bool config_is_sane(void);
 int config_show_info(FILE * f);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
-bool device_db_sanity_check(struct json_file * json);
+bool device_db_need_update(struct json_file * json);
+bool device_db_is_sane(void);
 
 int slcdev_const_str_purge(void);
 
@@ -387,6 +399,8 @@ int module_sim_default(void);
 const char * model_sim_name(unsigned int idx);
 
 struct ss_device * dev_sim_lookup(bool mod, unsigned int addr); 
+
+void dev_sim_uncofigure_all(void);
 
 void dev_sim_enable(bool mod, unsigned int addr);
 

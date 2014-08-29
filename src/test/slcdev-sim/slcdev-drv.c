@@ -173,8 +173,8 @@ const struct ss_device null_dev = {
 	.apen = 0, /* advanced protocol */
 	.module = 0, /* sensor/module */
 	.enabled = 0, /* enable device simulation */
+	.cfg = 0, 
 	.led = 0, /* LED status */
-	.pw5en = 0, /* PW5 (Type ID) enabled */
 	.tst = 0, /* Remote test mode */
 	.tbias = 128,
 	.icfg = 0,
@@ -209,8 +209,8 @@ void dev_sim_init(void)
 			dev->apen = 0;
 		dev->model = 0; /* reference to a device model */
 		dev->enabled = 0; /* enable device simulation */
+		dev->cfg = 0, /* Unconfigured */
 		dev->led = 0; /* LED status */
-		dev->pw5en = 0; /* PW5 (Type ID) enabled */
 		dev->tst = 0; /* Remote test mode */
 		dev->tbias = 128;
 		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
@@ -223,6 +223,21 @@ void dev_sim_init(void)
 		dev->pw5 = 300;
 	}
 
+}
+
+void dev_sim_uncofigure_all(void)
+{
+	struct ss_device * dev;
+	int addr;
+
+	for (addr = 0; addr < 160; ++addr) {
+		dev = &ss_dev_tab[addr];
+		dev->cfg = 0;
+		dev->enabled = 0;
+		dev = &ss_dev_tab[addr + 160];
+		dev->cfg = 0;
+		dev->enabled = 0;
+	}
 }
 
 #define COMP1_EXTI (1 << 21)
@@ -625,12 +640,6 @@ static void clip_msg_decode(unsigned int msg)
 		slcdev_drv.ctls <<= 3;
 		slcdev_drv.ctls |= ctl;
 
-		/* update the PW5 request bit */
-		/* This is a hardwired protocol rule,
-		   the other control bit sequences are treated in
-		   the simulation loop */
-		dev->pw5en = (ctl & 2) ? 0 : 1;
-
 		DCC_LOG2(LOG_INFO, "Simulating %s=%d", 
 				 mod ? "MODULE" : "SENSOR", addr);
 
@@ -853,7 +862,8 @@ void stm32_comp_tsc_isr(void)
 				DCC_LOG(LOG_INFO, "[PW4 ISINK]");
 				break;
 			case DEV_PW4_ISINK:
-				if (dev->pw5en) {
+				/* Get the PW5 request info from the control bits */
+				if ((slcdev_drv.ctls & 2) == 0) {
 					slcdev_drv.isink.pw = (dev->pw5 * dev->tbias) / 128;
 					slcdev_drv.isink.state = ISINK_START_WAIT;
 					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");

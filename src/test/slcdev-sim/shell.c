@@ -256,6 +256,22 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+/* remove uncofigured devices from the list */
+void dev_lst_remove_unconfigured(uint32_t sb[], uint32_t mb[])
+{
+	struct ss_device * dev;
+	unsigned int addr;
+
+	for (addr = 0; addr < 160; ++addr) {
+		dev = dev_sim_lookup(false, addr);
+		if (!dev->cfg)
+			sb[addr / 32] &= ~1;
+		dev = dev_sim_lookup(true, addr);
+		if (!dev->cfg)
+			mb[addr / 32] &= ~1;
+	}
+}
+
 int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 					  uint32_t sb[], uint32_t mb[])
 {
@@ -267,7 +283,6 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 	unsigned int addr;
 	int k;
 	int i;
-	int j;
 
 	memset(sb, 0, 160 / 8);
 	memset(mb, 0, 160 / 8);
@@ -320,33 +335,40 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 	if (grp) {
 		DCC_LOG(LOG_TRACE, "5.");
 
-		uint32_t gmsk;
-
 		if (all) {
-			gmsk = 0xfffffff;
+			for (addr = 0; addr < 160; ++addr) {
+				dev = dev_sim_lookup(false, addr);
+				if ((dev->grp[0] != 0) || (dev->grp[1] != 0) ||
+					(dev->grp[2] != 0) || (dev->grp[3] != 0))
+					sb[addr / 32] |= 1 << (addr % 32);
+
+				dev = dev_sim_lookup(true, addr);
+				if ((dev->grp[0] != 0) || (dev->grp[1] != 0) ||
+					(dev->grp[2] != 0) || (dev->grp[3] != 0))
+					mb[addr / 32] |= 1 << (addr % 32);
+			}
 			fprintf(f, "  All groups\n");
 		} else {
-			gmsk = 0;
 			for (k = 2; k < argc; ++k) {
-				unsigned int n = strtoul(argv[k], NULL, 0);
-				if ((n < 1) || (n > 32))
+				unsigned int g = strtoul(argv[k], NULL, 0);
+
+				if ((g < 1) || (g > 256))
 					return SHELL_ERR_ARG_INVALID;
-				gmsk |= 1 << (n - 1);
-				fprintf(f, "  Group %d\n", n);
+
+				for (addr = 0; addr < 160; ++addr) {
+					dev = dev_sim_lookup(false, addr);
+					if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+						(dev->grp[2] == g) || (dev->grp[3] == g))
+						sb[addr / 32] |= 1 << (addr % 32);
+
+					dev = dev_sim_lookup(true, addr);
+					if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+						(dev->grp[2] == g) || (dev->grp[3] == g))
+						mb[addr / 32] |= 1 << (addr % 32);
+				}
+				fprintf(f, "  Group %d\n", g);
 			}
 		}
-
-		for (addr = 0; addr < 160; ++addr) {
-			j = addr / 32; 
-			i = addr % 32; 
-
-			dev = dev_sim_lookup(false, addr);
-			sb[j] |= (dev->grp & gmsk) ? (1 << i) : 0;
-
-			dev = dev_sim_lookup(true, addr);
-			mb[j] |= (dev->grp & gmsk) ? (1 << i) : 0;
-		}
-
 		return 0;
 	}
 
@@ -356,16 +378,13 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 		if ((addr < 0) || (addr > 159))
 			return SHELL_ERR_ARG_INVALID;
 
-		j = addr / 32; 
-		i = addr % 32; 
-
 		if (sens) {
-			sb[j] |= (1 << i);
+			sb[addr / 32] |= (1 << (addr % 32));
 			fprintf(f, "  Sensor %d\n", addr);
 		}
 
 		if (mod) {
-			mb[j] |= (1 << i);
+			mb[addr / 32] |= (1 << (addr % 32));
 			fprintf(f, "  Module %d\n", addr);
 		}
 	}
@@ -386,7 +405,7 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 
 		/* Print enabled status flag of all the devices */
 
-		fprintf(f, "Sensosrs:");
+		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
 			dev = dev_sim_lookup(false, addr);
 			if (dev->enabled)
@@ -406,6 +425,8 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 
 	if ((ret = dev_lst_cmd_parse(f, argc, argv, sb, mb)) < 0)
 		return ret;
+
+	dev_lst_remove_unconfigured(sb, mb);
 
 	DCC_LOG5(LOG_TRACE, "sensors: %08x %08x %08x %08x %08x",
 			 sb[0], sb[1], sb[2], sb[3], sb[4]);
@@ -429,6 +450,8 @@ int cmd_disable(FILE * f, int argc, char ** argv)
 	if ((ret = dev_lst_cmd_parse(f, argc, argv, sb, mb)) < 0)
 		return ret;
 
+	dev_lst_remove_unconfigured(sb, mb);
+
 	dev_sim_multiple_disable(sb, mb);
 
 	fprintf(f, "Disabled.\n");
@@ -449,7 +472,7 @@ int cmd_alarm(FILE * f, int argc, char ** argv)
 
 		/* Print enabled status flag of all the devices */
 
-		fprintf(f, "Sensosrs:");
+		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
 			dev = dev_sim_lookup(false, addr);
 			if (dev->alm)
@@ -480,6 +503,8 @@ int cmd_alarm(FILE * f, int argc, char ** argv)
 	if ((ret = dev_lst_cmd_parse(f, argc, argv, sb, mb)) < 0)
 		return ret;
 
+	dev_lst_remove_unconfigured(sb, mb);
+
 	/* set the alarm level for the selected devices */
 	dev_sim_multiple_alarm_set(sb, mb, lvl);
 
@@ -501,7 +526,7 @@ int cmd_trouble(FILE * f, int argc, char ** argv)
 
 		/* Print enabled status flag of all the devices */
 
-		fprintf(f, "Sensosrs:");
+		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
 			dev = dev_sim_lookup(false, addr);
 			if (dev->tbl)
@@ -631,11 +656,13 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	if (erase) {
 		fprintf(f, "Erasing...\n");
 		device_db_erase();
+		/* uncofigure all devices */
+		dev_sim_uncofigure_all();
 	}
 
 	if (compile) {
 		json_file_get(FLASH_BLK_DB_JSON_OFFS, &json);
-		if (device_db_sanity_check(&json)) {
+		if (device_db_is_sane() && !device_db_need_update(&json)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
 			fprintf(f, "Compiling...\n");
@@ -686,7 +713,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	slcdev_stop();
 
 	if (compile) {
-		if (config_sanity_check(&json)) {
+		if (config_is_sane() && !config_need_update(&json)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
 			fprintf(f, "Compiling...\n");
@@ -775,16 +802,18 @@ int cmd_group(FILE * f, int argc, char ** argv)
 	if (argc > 1)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	for (g = 0; g < 32; ++g) {
+	for (g = 1; g < 256; ++g) {
 		struct ss_device * dev;
 		int addr;
 		int n = 0;
 		int k = 0;
+
 		for (addr = 0; addr < 160; ++addr) {
 			dev = dev_sim_lookup(false, addr);
-			if (dev->grp & (1 << g)) {
+			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+				(dev->grp[2] == g) || (dev->grp[3] == g)) {
 				if (n++ == 0)
-					fprintf(f, "\nGroup %d:", g + 1);
+					fprintf(f, "\nGroup %d:", g);
 				if (k++ == 0)
 					fprintf(f, "\n  Sensors:");
 				fprintf(f, "%4d", addr);
@@ -794,9 +823,10 @@ int cmd_group(FILE * f, int argc, char ** argv)
 		k = 0;
 		for (addr = 0; addr < 160; ++addr) {
 			dev = dev_sim_lookup(true, addr);
-			if (dev->grp & (1 << g)) {
+			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+				(dev->grp[2] == g) || (dev->grp[3] == g)) {
 				if (n++ == 0)
-					fprintf(f, "\nGroup %d:", g + 1);
+					fprintf(f, "\nGroup %d:", g);
 				if (k++ == 0)
 					fprintf(f, "\n  Modules:");
 				fprintf(f, "%4d", addr);
@@ -812,26 +842,23 @@ int cmd_group(FILE * f, int argc, char ** argv)
 
 static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
 {
-	struct ss_device * dev;
 	struct db_dev_model * mod;
+	struct ss_device * dev;
 	int addr;
 	int sel;
 
-	if (argc < 2)
+	if (argc < 3)
 		return SHELL_ERR_ARG_MISSING;
 
-	if (argc > 3)
-		return SHELL_ERR_EXTRA_ARGS;
-
 	addr = strtoul(argv[1], NULL, 0);
-	if (addr > 319)
+	if (addr > 160)
 		return SHELL_ERR_ARG_INVALID;
 
-	sel = strtoul(argv[1], NULL, 0);
+	sel = strtoul(argv[2], NULL, 0);
 	if (sel > 16)
 		return SHELL_ERR_ARG_INVALID;
 
-	dev = &ss_dev_tab[addr];
+	dev = dev_sim_lookup(false, addr);
 
 	if ((mod = db_dev_model_by_index(dev->model)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "invalid model: %d", dev->model);

@@ -203,6 +203,12 @@ int microjs_u8_enc(struct microjs_json_parser * jsn,
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr);
 
+/* Encode an array of 8 bits integral values.
+  The option parameter indicates the maximum length of the array */
+int microjs_array_u8_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int len, void * ptr);
+
 /* Encode a boolean as a single bit */
 int microjs_bit_enc(struct microjs_json_parser * jsn, 
 					struct microjs_val * val, 

@@ -116,13 +116,13 @@ void sensor_ctl_default(struct ss_device * dev,
 	/* Remote test */
 	switch (ctl & REMOTE_TEST_MSK) {
 	case REMOTE_TEST_ON:
-		DCC_LOG(LOG_TRACE, "Remote test enabled");
+		DCC_LOG(LOG_INFO, "Remote test enabled");
 		dev->tst = 1;
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		dev->pw4 = device_db_pw_lookup(model->pw4, 3);
 		break;
 	case REMOTE_TEST_OFF:
-		DCC_LOG(LOG_TRACE, "Remote test disabled");
+		DCC_LOG(LOG_INFO, "Remote test disabled");
 		dev->tst = 0;
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
@@ -144,7 +144,7 @@ void sensor_sim_custom(struct ss_device * dev,
 		for (i = 0; i < lst->cnt; ++i) {
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
-				DCC_LOG1(LOG_TRACE, "CMD[%d]", i);
+				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
 				sim_js_exec(dev, model, cmd->script);
 			}
 		}
@@ -155,8 +155,26 @@ void sensor_sim_custom(struct ss_device * dev,
 void sensor_sim_photo(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	int tbl_max = 1;
+	int alm_max = 3;
+	int lvl;
 
+	DCC_LOG1(LOG_TRACE, "ctl=%04x", ctl);
+	sensor_ctl_default(dev, model, ctl);
+
+	if ((lvl = dev->alm) > 0) {
+		if (lvl > alm_max)
+			lvl = alm_max;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
+	} else if ((lvl = dev->tbl) > 0) {
+		if (lvl > tbl_max)
+			lvl = tbl_max;
+		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->tbl);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+	} else {
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+	}
 	sensor_ctl_default(dev, model, ctl);
 }
 
@@ -171,12 +189,12 @@ void sensor_sim_ion(struct ss_device * dev,
 	if ((lvl = dev->alm) > 0) {
 		if (lvl > 3)
 			lvl = 3;
-		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
 		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + 2);
 	} else if ((lvl = dev->tbl) > 0) {
 		if (lvl > 2)
 			lvl = 2;
-		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->alm);
+		DCC_LOG1(LOG_INFO, "Trouble %d", dev->alm);
 		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
 	} else {
 		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
@@ -194,7 +212,7 @@ void sensor_sim_heat(struct ss_device * dev,
 	if ((lvl = dev->alm) > 0) {
 		if (lvl > 2)
 			lvl = 2;
-		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
 		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
 	} else {
 		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
@@ -223,12 +241,26 @@ void sensor_sim_beam(struct ss_device * dev,
 void sensor_sim_coptir(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	int tbl_max = 7;
+	int alm_max = 7;
+	int lvl;
 
 	sensor_ctl_default(dev, model, ctl);
+
+	if ((lvl = dev->alm) > 0) {
+		if (lvl > alm_max)
+			lvl = alm_max;
+		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
+	} else if ((lvl = dev->tbl) > 0) {
+		if (lvl > tbl_max)
+			lvl = tbl_max;
+		DCC_LOG1(LOG_INFO, "Trouble %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+	} else {
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+	}
 }
-
-
 
 /* simulate a custom module */
 void module_sim_custom(struct ss_device * dev, 
@@ -242,7 +274,7 @@ void module_sim_custom(struct ss_device * dev,
 		for (i = 0; i < lst->cnt; ++i) {
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
-				DCC_LOG1(LOG_TRACE, "CMD[%d]", i);
+				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
 				sim_js_exec(dev, model, cmd->script);
 			}
 		}
@@ -313,7 +345,7 @@ void module_contorl_seq(struct ss_device * dev,
 		break;
 	}
 
-	DCC_LOG4(LOG_TRACE, "%d %d %d %d",
+	DCC_LOG4(LOG_INFO, "%d %d %d %d",
 			 dev->out1, dev->out2, dev->out3, dev->out5);
 }
 
@@ -322,24 +354,24 @@ void module_contorl_seq(struct ss_device * dev,
 void module_sim_relay(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	module_contorl_seq(dev, model, ctl);
 
 	if ((ctl & 0x81) == 0) {
 		/* 1.	Bit 10 = 0,  sent two consecutive times, 
 		   will reset PW3 latches */
-		DCC_LOG(LOG_TRACE, "Reset PW3 latches.");
+		DCC_LOG(LOG_INFO, "Reset PW3 latches.");
 	}
 
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
-		DCC_LOG(LOG_TRACE, "Set");
+		DCC_LOG(LOG_INFO, "Set");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 
 	case CONTROL_OUT_OFF:
-		DCC_LOG(LOG_TRACE, "Reset");
+		DCC_LOG(LOG_INFO, "Reset");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
@@ -355,11 +387,11 @@ void module_sim_control(struct ss_device * dev,
 
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
-		DCC_LOG(LOG_TRACE, "Control ON");
+		DCC_LOG(LOG_INFO, "Control ON");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 	case CONTROL_OUT_OFF:
-		DCC_LOG(LOG_TRACE, "Control Off");
+		DCC_LOG(LOG_INFO, "Control Off");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
@@ -369,18 +401,18 @@ void module_sim_control(struct ss_device * dev,
 void module_sim_phone(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	module_contorl_seq(dev, model, ctl);
 
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
-		DCC_LOG(LOG_TRACE, "Set");
+		DCC_LOG(LOG_INFO, "Set");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 
 	case CONTROL_OUT_OFF:
-		DCC_LOG(LOG_TRACE, "Reset");
+		DCC_LOG(LOG_INFO, "Reset");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
@@ -398,11 +430,11 @@ void module_sim_monitor(struct ss_device * dev,
 
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
-		DCC_LOG(LOG_TRACE, "Class A switched");
+		DCC_LOG(LOG_INFO, "Class A switched");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 	case CLASS_A_NORMAL:
-		DCC_LOG(LOG_TRACE, "Class A normal");
+		DCC_LOG(LOG_INFO, "Class A normal");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
 	}
@@ -412,21 +444,21 @@ void module_sim_monitor(struct ss_device * dev,
 void module_sim_mini(struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 2 wire module */
 void module_sim_2wire(struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 4-20ma input device */
 void module_sim_4_20ma(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG2(LOG_TRACE, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 #define SIM_MODEL_NAME_MAX 12

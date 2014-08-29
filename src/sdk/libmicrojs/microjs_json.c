@@ -590,6 +590,25 @@ int microjs_u8_enc(struct microjs_json_parser * jsn,
 	return 0;
 }
 
+
+int microjs_array_u8_enc(struct microjs_json_parser * jsn, 
+					struct microjs_val * val, 
+					unsigned int len, void * ptr)
+{
+	uint8_t * p = (uint8_t *)ptr;
+	int n = 0;
+	int typ;
+
+	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
+		if (n < len) /* maximum of 4 groups per device */
+			p[n++] = val->u32;
+	}
+
+	return (typ == MICROJS_JSON_END_ARRAY) ? n : -1;
+}
+
+
+
 /* Encode a boolean as a single bit */
 int microjs_bit_enc(struct microjs_json_parser * jsn, 
 					struct microjs_val * val, 

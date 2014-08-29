@@ -1,4 +1,9 @@
 {
+	"info": {
+		"version" : [0, 1]
+		"desc" : "Mircom SLC Device Simulator", 
+	},
+
 	"sensor": { 
 		"model" : "1251", 
 		"desc" : "Ionization Smoke Detector", 
@@ -25,6 +30,12 @@
 		"model" : "2251", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 3
+		},
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
