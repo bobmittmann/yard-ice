@@ -34,6 +34,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <microjs.h>
 
 #if defined(WIN32)
   #include <io.h>
@@ -153,7 +154,24 @@ void sig_quit(int signo)
 	exit(3);
 }
 
-int microjs(char * script, unsigned int len);
+int microjs_compile(const char * txt, unsigned int len)
+{
+	uint8_t tok_buf[8192];
+	struct microjs_parser jp;
+	int err;
+
+	microjs_init(&jp, tok_buf, sizeof(tok_buf));
+
+	microjs_open(&jp, txt, len);
+
+	if ((err = microjs_scan(&jp)) != MICROJS_OK) {
+		fprintf(stderr, "Lexical analisys failed.\n");
+		microjs_print_err(stderr, &jp, err);
+		return err;
+	}
+
+	return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -236,7 +254,7 @@ int main(int argc, char *argv[])
 		f = stdout;
 	}
 
-	microjs(script, len);
+	microjs_compile(script, len);
 
 	printf("\n");
 

@@ -122,11 +122,11 @@ function log2(v)
 
 	var x;
 
-	v |= v >> 1; // first round down to power of 2 
-	v |= v >> 2;
-	v |= v >> 4;
-	v |= v >> 8;
-	v |= v >> 16;
+	v = v | v >> 1; // first round down to power of 2 
+	v = v | v >> 2;
+	v = v | v >> 4;
+	v = v | v >> 8;
+	v = v | v >> 16;
 	v = (v >> 1) + 1;
 
 	x = (v * 0x077cb531) >> 27;
