@@ -170,8 +170,12 @@ int microjs_compile(const char * txt, unsigned int len)
 		return err;
 	}
 
+	microjs_tok_dump(stdout, &jp);
+
 	return 0;
 }
+
+int microjs_test(void);
 
 int main(int argc, char *argv[])
 {
@@ -193,7 +197,7 @@ int main(int argc, char *argv[])
 		prog++;
 
 	/* parse the command line options */
-	while ((c = getopt(argc, argv, "V?vo:")) > 0) {
+	while ((c = getopt(argc, argv, "V?vto:")) > 0) {
 		switch (c) {
 			case 'V':
 				version(prog);
@@ -211,6 +215,10 @@ int main(int argc, char *argv[])
 				strcpy(output, optarg);
 				output_set = true;
 				break;
+
+			case 't':
+				microjs_test();
+				return 0;
 
 			default:
 				parse_err(prog, optarg);

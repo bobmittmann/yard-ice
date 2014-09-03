@@ -78,8 +78,17 @@ int microjs_tok_dump(FILE * f, struct microjs_parser * p)
 	char * s;
 	int lvl = 0;
 	int i;
+	bool nl = true;
 
 	for (idx = 0; idx < p->cnt; ) {
+
+		if (nl) {
+			fprintf(f, "\n");
+			for (i = 0; i < lvl; ++i)
+				fprintf(f, "    ");
+			nl = false;
+		}
+
 		tok = p->tok[idx++];
 		if (tok >= TOK_STRING) {
 			unsigned int offs;
@@ -94,7 +103,7 @@ int microjs_tok_dump(FILE * f, struct microjs_parser * p)
 		} else if (tok >= TOK_ID) {
 			len = tok - TOK_ID + 1;
 			s = (char *)&p->tok[idx];
-			fprintf(f, "__%s__ ", s);
+			fprintf(f, "%s ", s);
 	//		idx += strlen(s) + 1;
 			idx += len;
 		} else if (tok == TOK_INT8) {
@@ -120,15 +129,16 @@ int microjs_tok_dump(FILE * f, struct microjs_parser * p)
 			s = (char *)microjs_keyword[tok - TOK_BREAK];
 			fprintf(f, "%s ", s);
 		} else if (tok == TOK_LEFTBRACE) {
-			fprintf(f, "%s\n", microjs_tok_str[tok]);
+			fprintf(f, "%s", microjs_tok_str[tok]);
 			lvl++;
-			for (i = 0; i < lvl; ++i)
-				fprintf(f, "    ");
+			nl = true;
 		} else if (tok == TOK_RIGHTBRACE) {
-			fprintf(f, "}%s\n", microjs_tok_str[tok]);
+			fprintf(f, "%s", microjs_tok_str[tok]);
 			lvl--;
-			for (i = 0; i < lvl; ++i)
-				fprintf(f, "    ");
+			nl = true;
+		} else if (tok == TOK_SEMICOLON) {
+			fprintf(f, ";");
+			nl = true;
 		} else
 			fprintf(f, "%s ", microjs_tok_str[tok]);
 	}
@@ -175,12 +185,14 @@ static const char * const err_tab[] = {
 	"unclosed string",
 	"unclosed comment",
 	"invalid literal",
-	"strings unsuported",
-	"invalid literal",
+	"invalid identifier",
 	"bracket mismatch",
-	"string too long",
 	"empty source file",
 	"empty token stack",
+	"strings unsuported",
+	"string too long",
+	"invalid label",
+	"object expected"
 };
 
 void microjs_print_err(FILE * f, struct microjs_parser * p, int err)
