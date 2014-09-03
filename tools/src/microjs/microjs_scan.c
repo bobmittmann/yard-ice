@@ -558,7 +558,7 @@ int microjs_token_get(struct microjs_parser * jp,
 		x = jp->tok[idx++];
 		if (tok >= TOK_INT16) {
 			x |= jp->tok[idx++] << 8;
-			if (tok == TOK_INT24) {
+			if (tok >= TOK_INT24) {
 				x |= jp->tok[idx++] << 16;
 				if (tok >= TOK_INT32)
 					x |= jp->tok[idx++] << 24;
