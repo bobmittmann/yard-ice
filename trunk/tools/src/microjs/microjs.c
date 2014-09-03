@@ -157,6 +157,7 @@ void sig_quit(int signo)
 int microjs_compile(const char * txt, unsigned int len)
 {
 	uint8_t tok_buf[8192];
+	uint8_t code_buf[8192];
 	struct microjs_parser jp;
 	int err;
 
@@ -171,6 +172,11 @@ int microjs_compile(const char * txt, unsigned int len)
 	}
 
 	microjs_tok_dump(stdout, &jp);
+
+	if ((err = microjs_parse(&jp, code_buf, sizeof(code_buf))) != MICROJS_OK) {
+		fprintf(stderr, "Syntax analisys failed.\n");
+		return err;
+	}
 
 	return 0;
 }

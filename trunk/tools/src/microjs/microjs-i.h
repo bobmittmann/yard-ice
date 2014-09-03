@@ -50,7 +50,7 @@
 #endif
 
 #ifndef MICROJS_STRING_LEN_MAX 
-#define MICROJS_STRING_LEN_MAX 189
+#define MICROJS_STRING_LEN_MAX 188
 #endif
 
 #include <stdint.h>
@@ -104,7 +104,7 @@
 #define TOK_CONST        35
 #define TOK_ELSE         36
 #define TOK_FALSE        37
-#define TOK_FOR          39
+#define TOK_FOR          38
 #define TOK_FUNCTION     39
 #define TOK_IF           40
 #define TOK_NULL         41
@@ -165,6 +165,7 @@ struct microjs_vm {
 extern "C" {
 #endif
 
+int microjs_tok_print(FILE * f, struct microjs_parser * p, int idx);
 
 #ifdef __cplusplus
 }
