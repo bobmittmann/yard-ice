@@ -32,22 +32,24 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-const char microjs_keyword[13][9] = {
+const char microjs_keyword[15][9] = {
 	"break",
 	"case",
 	"continue",
 	"const",
 
+	"else",
 	"false",
 	"for",
 	"function",
-	"null",
 
+	"if",
+	"null",
 	"return",
 	"switch",
+
 	"true",
 	"var",
-
 	"while",
 };
 

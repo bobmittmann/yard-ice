@@ -2,6 +2,16 @@
    This is a Java Script comment
  */
 
+function set_pw5_all(val)
+{
+	var i;
+
+	i = 0;
+	while (i < 160) {
+		sens[i].pw5 = val * sens[i].tbias / 128;
+	}
+}
+
 function f1(x)
 {
 	var x0 = 0, x1 = 0;
@@ -20,5 +30,17 @@ function f1(x)
 	}
 
 	return y;
+}
+
+function main()
+{
+	var x[10];
+	var y[10];
+
+	x = { 1, 0, 0, 1, 0, 0, 1, 1, 0, 0};
+
+	y = f1(x);
+
+	set_pw5_all(1700);
 }
 
