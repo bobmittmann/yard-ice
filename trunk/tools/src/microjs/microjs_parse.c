@@ -1022,12 +1022,16 @@ member_exp		: primary_exp
 				| primary_exp '[' exp ']'
 				| primary_exp '(' arg_list_opt ')'
 */
-	if (js_primary_exp(p, t, n)) {
+	for (;;) {
+
+		if (!js_primary_exp(p, t, n))
+			return false;
+
 		switch (lookahead(p)) {
 		case TOK_DOT:
 			printf(" '.'");
 			term(p, TOK_DOT);
-			return js_member_exp(p, t, n);
+			break;
 
 		case TOK_LEFTBRACKET:
 			printf(" '['");
@@ -1050,11 +1054,11 @@ member_exp		: primary_exp
 				}
 			}
 			return false;
-		}
 
-		return true;
+		default:
+			return true;
+		}
 	} 
-	return false;
 }
 
 static bool js_arg_list_opt(struct microjs_parser * p, 
