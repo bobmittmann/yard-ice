@@ -264,7 +264,13 @@ int print_tree(struct tree * t)
 /* is a terminal */
 static bool term(struct microjs_parser * p, unsigned int tok)
 {
-	unsigned int lokahead = p->tok[p->next++];
+	unsigned int lokahead = p->tok[p->next];
+
+	printf("_");
+	microjs_tok_print(stdout, p, p->next);
+	printf("_");
+
+	p->next++;
 
 	if (lokahead >= TOK_STRING) {
 		p->next += 2;
@@ -278,11 +284,11 @@ static bool term(struct microjs_parser * p, unsigned int tok)
 
 	if (lokahead >= TOK_INT8) {
 		p->next++;
-		if (tok >= TOK_INT16) {
+		if (lokahead >= TOK_INT16) {
 			p->next++;
-			if (tok == TOK_INT24) {
+			if (lokahead >= TOK_INT24) {
 				p->next++;
-				if (tok >= TOK_INT32)
+				if (lokahead >= TOK_INT32)
 					p->next++;
 			}
 		} 
@@ -323,6 +329,7 @@ int microjs_parse(struct microjs_parser * p,
 	struct tree my_tree;
 	struct tree * t = &my_tree;
 	int root;
+	int cnt = 0;
 
 	p->idx = 0;
 	p->next = 0;
@@ -334,9 +341,14 @@ program			: <empty>
 				| element program
 */
 
-	while (p->tok[p->next] != TOK_EOF) {
-	   if (!js_element(p, t, root))
-		   return MICROJS_SYNTAX_ERROR;
+	while (lookahead(p) != TOK_EOF) {
+		printf("\n %3d:", cnt);
+
+		if (!js_element(p, t, root))
+			return MICROJS_SYNTAX_ERROR;
+		cnt++;
+		if (cnt > 10)
+			return MICROJS_SYNTAX_ERROR;
 	}
 
 	return MICROJS_OK;
@@ -351,14 +363,17 @@ static bool js_element(struct microjs_parser * p,
 element 		: 'function' id '(' param_list_opt ')' compound_stat
 				| stat
 */
-	printf("\n%s", __func__);
+//	printf("%s", __func__);
 
 	if (match(p, TOK_FUNCTION)) {
 		if (term(p, TOK_ID) && term(p, TOK_LEFTPAREN)
-			&& js_param_list_opt(p, t, n) && term(p, TOK_LEFTPAREN)
+			&& js_param_list_opt(p, t, n) && term(p, TOK_RIGHTPAREN)
 			&& js_compound_stat(p, t, n)) {
 			printf("function definition!\n");
+			return true;
 		};
+		printf("\n#error: in function definition!\n");
+		return false;
 	}
 
 	return js_stat(p, t, n);
@@ -401,12 +416,15 @@ static bool js_compound_stat(struct microjs_parser * p,
 /*
 compound_stat	: '{' stat_list '}'
 */
-	printf(" %s", __func__);
-
+//		printf(" %s", __func__);
 	if (match(p, TOK_LEFTBRACE)) {
-		printf(" {");
-		if (js_stat_list(p, t, n) && match(p, TOK_RIGHTBRACE)) {
-			printf("}\n");
+		printf("\n BLOCK {\n");
+		if (js_stat_list(p, t, n)) {
+			if (match(p, TOK_RIGHTBRACE)) {
+				printf("}\n");
+				return true;
+			}
+			printf("\n#error: expecting '}'\n");
 		}
 	}
 
@@ -422,10 +440,14 @@ stat_list		: <empty>
 				| stat stat_list
 */
 
-	if (!js_stat(p, t, n))
-		return false;
+	printf(" %s START ----------\n", __func__);
+
+//	if (!js_stat(p, t, n))
+//		return true;
 
 	while (js_stat(p, t, n));
+
+	printf(" %s END ---------- ", __func__);
 
 	return true;
 }
@@ -444,12 +466,13 @@ stat			: ';'
 				| compound_stat
 				| var_list_or_exp ';'
 */
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	switch (lookahead(p)) {
 	case TOK_SEMICOLON:
-		printf(" ;");
-		return term(p, TOK_SEMICOLON); 
+		printf(" ;\n");
+		term(p, TOK_SEMICOLON); 
+		return true;
 
 	case TOK_IF:
 		term(p, TOK_IF); 
@@ -457,8 +480,13 @@ stat			: ';'
 		if (js_condition(p, t, n) && js_stat(p, t, n)) {
 			if (match(p, TOK_ELSE)) {
 				printf(" ELSE");
-				return js_stat(p, t, n);
+				if (js_stat(p, t, n)) {
+					printf(" ENDIF");
+					return true;
+				}	
+				return false;
 			}
+			printf(" ENDIF");
 			return true;
 		}
 		return false;
@@ -482,7 +510,22 @@ stat			: ';'
 		return js_exp_opt(p, t, n) && term(p, TOK_SEMICOLON);
 	}
 	
-	return js_compound_stat(p, t, n) || js_var_or_exp(p, t, n);
+	printf(" %s 1.\n", __func__);
+	if (js_compound_stat(p, t, n))
+		return true;
+	
+	printf(" %s 2.\n", __func__);
+	if (js_var_or_exp(p, t, n)) {
+		printf(" %s 3.\n", __func__);
+		if (term(p, TOK_SEMICOLON)) {
+			printf(" %s 4.\n", __func__);
+			return true;
+		}
+
+		printf("\n#error: expecting ';'\n");
+	}
+
+	return false;
 }
 
 static bool js_condition(struct microjs_parser * p, 
@@ -495,10 +538,10 @@ condition 		: '(' exp ')'
 	printf(" %s", __func__);
 
 	if (match(p, TOK_LEFTPAREN)) {
-		printf(" (");
+		printf(" '('");
 		if (js_exp(p, t, n)) {
 			if (term(p, TOK_RIGHTPAREN)) {
-				printf(" )");
+				printf(" ')'");
 				return true;
 			}
 			printf("\n#error: expecting ')' got: '");
@@ -517,10 +560,10 @@ static bool js_var_or_exp(struct microjs_parser * p, struct tree * t,
 var_list_or_exp	:  'var' var_list
 				| exp
 */
-	printf(" %s", __func__);
-
-	if (match(p, TOK_VAR))
+	if (match(p, TOK_VAR)) {
+		printf(" 'VAR'");
 		return js_var_list(p, t, parent);
+	}
 
 	return js_exp(p, t, parent);
 }
@@ -535,7 +578,7 @@ var_list 		: var
 				| var ',' var_list
 */
 
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_var(p, t, n))
 		return false;
@@ -557,13 +600,15 @@ var				: <id>
 				| <id> '=' assignment_exp
 
 */
-	printf(" %s", __func__);
-
 	if (!match(p, TOK_ID))
 		return false;
 
+//	printf(" %s", __func__);
+
 	if (!match(p, TOK_ASSIGN)) 
 		return true;
+
+	printf(" '='");
 
 	return js_assignment_exp(p, t, n);
 }
@@ -590,7 +635,7 @@ exp 			: assignment_exp
 				| assignment_exp ',' exp 
 */
 
-	printf(" %s", __func__);
+	printf(" %s -<", __func__);
 
 	if (!js_assignment_exp(p, t, n))
 		return false;
@@ -599,6 +644,8 @@ exp 			: assignment_exp
 		if (!js_assignment_exp(p, t, n))
 			return false;
 	}
+
+	printf(" >-\n");
 
 	return true;
 }
@@ -611,12 +658,15 @@ static bool js_assignment_exp(struct microjs_parser * p,
 assignment_exp	: logical_or_exp
 				| logical_or_exp '=' assignment_exp
 */
-	printf(" %s", __func__);
-
 	if (!js_logical_or_exp(p, t, n))
 		return false;
 
+//	printf(" %s", __func__);
+
 	while (match(p, TOK_ASSIGN)) {
+
+		printf(" :=");
+
 		if (!js_logical_or_exp(p, t, n))
 			return false;
 	}
@@ -636,6 +686,8 @@ logical_or_exp	: logical_and_exp
 		return false;
 
 	while (match(p, TOK_OR)) {
+		printf(" ||");
+
 		if (!js_logical_and_exp(p, t, n))
 			return false;
 	}
@@ -651,10 +703,15 @@ static bool js_logical_and_exp(struct microjs_parser * p,
 logical_and_exp	: bitwise_or_exp
 				| bitwise_or_exp '&&' logical_and_exp 
 */
+	printf(" %s", __func__);
+
 	if (!js_bitwise_or_exp(p, t, n))
 		return false;
 
 	while (match(p, TOK_AND)) {
+
+		printf(" &&");
+
 		if (!js_bitwise_or_exp(p, t, n))
 			return false;
 	}
@@ -670,10 +727,15 @@ static bool js_bitwise_or_exp(struct microjs_parser * p,
 bitwise_or_exp	: bitwise_xor_exp
 				| bitwise_xor_exp '|' bitwise_or_exp
 */
+//	printf(" %s", __func__);
+
 	if (!js_bitwise_xor_exp(p, t, n))
 		return false;
 
 	while (match(p, TOK_BITOR)) {
+
+		printf(" ||");
+
 		if (!js_bitwise_xor_exp(p, t, n))
 			return false;
 	}
@@ -693,6 +755,9 @@ bitwise_xor_exp : bitwise_and_exp
 		return false;
 
 	while (match(p, TOK_XOR)) {
+
+		printf(" XOR");
+
 		if (!js_bitwise_and_exp(p, t, n))
 			return false;
 	}
@@ -712,6 +777,9 @@ bitwise_and_exp : equality_exp
 		return false;
 
 	while (match(p, TOK_BITAND)) {
+
+		printf(" AND");
+
 		if (!js_equality_exp(p, t, n))
 			return false;
 	}
@@ -763,7 +831,7 @@ relational_exp	: shift_exp
 				| shift_exp '<=' relational_exp
 				| shift_exp '>=' relational_exp
 */
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_shift_exp(p, t, n))
 		return false;
@@ -783,8 +851,9 @@ relational_exp	: shift_exp
 		} else if (tok == TOK_GTE) {
 			term(p, TOK_GTE);
 			printf(" >=");
-		} else 
+		} else {
 			break;
+		}
 
 		if (!js_shift_exp(p, t, n))
 			return false;
@@ -803,6 +872,8 @@ shift_exp	: additive_exp
 			| additive_exp '>>' shift_expression 
 */
 
+	printf(" %s", __func__);
+
 	if (!js_additive_exp(p, t, n))
 		return false;
 
@@ -810,9 +881,15 @@ shift_exp	: additive_exp
 		unsigned int tok = lookahead(p);
 
 		if (tok == TOK_SHL) {
+
+			printf(" <<");
 			term(p, TOK_SHL);
+
 		} else if (tok == TOK_ASR) {
+
+			printf(" >>");
 			term(p, TOK_ASR);
+
 		} else 
 			break;
 
@@ -839,8 +916,12 @@ additive_exp	: mult_exp
 		unsigned int tok = lookahead(p);
 
 		if (tok == TOK_PLUS) {
+
+			printf(" +");
 			term(p, TOK_PLUS);
 		} else if (tok == TOK_MINUS) {
+
+			printf(" -");
 			term(p, TOK_MINUS);
 		} else 
 			break;
@@ -863,6 +944,8 @@ mult_exp		: unary_exp
 				| unary_exp '%' mult_exp
 */
 
+	printf(" %s", __func__);
+
 	if (!js_unary_exp(p, t, n))
 		return false;
 
@@ -870,10 +953,13 @@ mult_exp		: unary_exp
 		unsigned int tok = lookahead(p);
 
 		if (tok == TOK_MUL) {
+			printf(" '*'");
 			term(p, TOK_MUL);
 		} else if (tok == TOK_DIV) {
+			printf(" '//'");
 			term(p, TOK_DIV);
 		} else if (tok == TOK_MOD) {
+			printf(" '%%'");
 			term(p, TOK_MOD);
 		} else 
 			break;
@@ -905,12 +991,16 @@ unary_exp		: member_exp
 		unsigned int tok = lookahead(p);
 
 		if (tok == TOK_BITINV) {
+			printf(" ~");
 			term(p, TOK_BITINV);
 		} else if (tok == TOK_NOT) {
+			printf(" !");
 			term(p, TOK_NOT);
 		} else if (tok == TOK_PLUS) {
+			printf(" +");
 			term(p, TOK_PLUS);
 		} else if (tok == TOK_MINUS) {
+			printf(" -");
 			term(p, TOK_MINUS);
 		} else 
 			break;
@@ -919,7 +1009,7 @@ unary_exp		: member_exp
 			return false;
 	}
 
-	return true;
+	return false;
 }
 
 static bool js_member_exp(struct microjs_parser * p,
@@ -935,16 +1025,31 @@ member_exp		: primary_exp
 	if (js_primary_exp(p, t, n)) {
 		switch (lookahead(p)) {
 		case TOK_DOT:
+			printf(" '.'");
 			term(p, TOK_DOT);
 			return js_member_exp(p, t, n);
 
 		case TOK_LEFTBRACKET:
+			printf(" '['");
 			term(p, TOK_LEFTBRACKET); 
-			return js_exp(p, t, n) && term(p, TOK_RIGHTBRACKET);
+			if (js_exp(p, t, n)) {
+				if (term(p, TOK_RIGHTBRACKET)) {
+					printf(" ']'");
+					return true;
+				}
+			}
+			return false;
 
 		case TOK_LEFTPAREN:
+			printf(" '('");
 			term(p, TOK_LEFTPAREN); 
-			return js_arg_list_opt(p, t, n) && term(p, TOK_RIGHTPAREN); 
+			if (js_arg_list_opt(p, t, n)) {
+				if (term(p, TOK_RIGHTPAREN)) {
+					printf(" ')'");
+					return true;
+				}
+			}
+			return false;
 		}
 
 		return true;
@@ -998,13 +1103,20 @@ primary_exp		: '(' exp ')'
 				| <true> 
 				| <null> 
 */
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	switch (lookahead(p)) {
-	case TOK_LEFTPAREN:
-		return term(p, TOK_LEFTPAREN) 
-			&& js_exp(p, t, n)
-			&& term(p, TOK_RIGHTPAREN);
+	case TOK_LEFTPAREN: 
+		printf(" (");
+		term(p, TOK_LEFTPAREN);
+		if (js_exp(p, t, n)) {
+			if (term(p, TOK_RIGHTPAREN)) {
+				printf(" )");
+				return true;
+			}
+			printf("\n#error: expecting ')'\n");
+		}
+		return false;
 	case TOK_ID:
 		term(p, TOK_ID);
 		printf(" <id>");
