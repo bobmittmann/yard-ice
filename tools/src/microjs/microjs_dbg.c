@@ -69,6 +69,62 @@ const char microjs_tok_str[][4] = {
 	"="   /* TOK_ASSIGN */
 };
 
+int microjs_tok_print(FILE * f, struct microjs_parser * p, int idx)
+{
+	uint32_t val;
+	int tok;
+	int len;
+	char * s;
+
+	tok = p->tok[idx++];
+	if (tok >= TOK_STRING) {
+		unsigned int offs;
+		char buf[MICROJS_STRING_LEN_MAX + 1];
+		len = tok - TOK_STRING;
+		offs = p->tok[idx++];
+		offs |= p->tok[idx++] << 8;
+		s = (char *)p->txt + offs;
+		memcpy(buf, s, len);
+		buf[len] = '\0';
+		fprintf(f, "\"%s\" ", buf);
+	} else if (tok >= TOK_ID) {
+		len = tok - TOK_ID + 1;
+		s = (char *)&p->tok[idx];
+		fprintf(f, "%s ", s);
+		idx += len;
+	} else if (tok == TOK_INT8) {
+		val = p->tok[idx++];
+		fprintf(f, "%d ", val);
+	} else if (tok == TOK_INT16) {
+		val = p->tok[idx++];
+		val |= p->tok[idx++] << 8;
+		fprintf(f, "%d ", val);
+	} else if (tok == TOK_INT24) {
+		val = p->tok[idx++];
+		val |= p->tok[idx++] << 8;
+		val |= p->tok[idx++] << 16;
+		fprintf(f, "%d ", val);
+	} else if (tok == TOK_INT32) {
+		val = p->tok[idx++];
+		val |= p->tok[idx++] << 8;
+		val |= p->tok[idx++] << 16;
+		val |= p->tok[idx++] << 24;
+		fprintf(f, "%d ", val);
+	} else if (tok >= TOK_BREAK) {
+		s = (char *)microjs_keyword[tok - TOK_BREAK];
+		fprintf(f, "%s ", s);
+	} else if (tok == TOK_LEFTBRACE) {
+		fprintf(f, "%s", microjs_tok_str[tok]);
+	} else if (tok == TOK_RIGHTBRACE) {
+		fprintf(f, "%s", microjs_tok_str[tok]);
+	} else if (tok == TOK_SEMICOLON) {
+		fprintf(f, ";");
+	} else
+		fprintf(f, "%s ", microjs_tok_str[tok]);
+
+	return 0;
+}
+
 int microjs_tok_dump(FILE * f, struct microjs_parser * p)
 {
 	uint32_t val;

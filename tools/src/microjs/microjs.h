@@ -46,6 +46,7 @@ enum {
 	MICROJS_STRING_TOO_LONG    = -12,
 	MICROJS_INVALID_LABEL      = -13,
 	MICROJS_OBJECT_EXPECTED    = -14,
+	MICROJS_SYNTAX_ERROR       = -15
 };
 
 /**********************************************************************
