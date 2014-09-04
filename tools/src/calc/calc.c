@@ -319,9 +319,6 @@ int main(int argc, char *argv[])
 	else
 		compile(script, len);
 
-	printf("\n");
-
-
 	return 0;
 }
 

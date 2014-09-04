@@ -25,16 +25,11 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
 #include "config.h"
 #include "calc.h"
-
-#define DEBUG 1
-
-#include "debug.h"
 
 const char lexer_keyword[15][9] = {
 	"break",
@@ -63,7 +58,6 @@ int lexer_open(struct lexer * lex, const char * txt, unsigned int len)
 	lex->txt = txt;
 	lex->len = len;
 	lex->off = 0;
-	DBG("len=%d", lex->len);
 	return 0;
 }
 
@@ -83,13 +77,8 @@ struct token lexer_scan(struct lexer * lex)
 	txt = lex->txt;
 	len = lex->len;
 
-	DBG1("off=%d", lex->off);
 	for (off = lex->off; off < len; ) {
 		c = txt[off];
-
-		DBG1("0x%02x", c);
-//		printf("%c", c);
-//		fflush(stdout);
 
 		/* Remove lead blanks */
 		if (isspace(c)) {
@@ -144,8 +133,6 @@ struct token lexer_scan(struct lexer * lex)
 			n = off - k;
 			s = (char *)&txt[k];
 
-			DBG1("off=%d n=%d", off, n);
-
 			qlf = n;
 			typ = TOK_ID;
 			tok.s = (char *)&txt[k];
@@ -166,9 +153,6 @@ struct token lexer_scan(struct lexer * lex)
 		/* number */
 		if (isdigit(c)) {
 			uint32_t val = 0;
-
-			DBG1("NUMBER");
-
 			
 			if ((c == '0') && ((off + 1) < len) && 
 				((txt[off + 1] == 'x') || (txt[off + 1] == 'X'))) {
@@ -397,7 +381,6 @@ struct token lexer_scan(struct lexer * lex)
 			typ = TOK_MINUS;
 			break;
 		default:
-			ERR("unexpected char: '%c'", c);
 			typ = TOK_ERR;
 			qlf = ERR_UNEXPECTED_CHAR;
 			goto ret;
@@ -413,57 +396,9 @@ inc_ret:
 	off++;
 
 ret:
-	if (typ == TOK_ERR)
-		ERR("err=%d", qlf);
 	lex->off = off;
 	tok.typ = typ;
 	tok.qlf = qlf;
 	return tok;
 }
-
-#if 0
-int lexer_token_get(struct lexer_parser * lex, 
-					  struct lexer_val * val)
-{
-	unsigned int offs;
-	int idx = 0;
-	uint32_t x;
-	int tok;
-	int len;
-	(void)len;
-
-//	idx = lex->idx;
-	tok = lex->tok[idx++];
-	if (tok >= TOK_STRING) {
-		len = tok - TOK_STRING;
-		offs = lex->tok[idx++];
-		offs |= lex->tok[idx++] << 8;
-		val->str.dat = (char *)lex->txt + offs;
-		val->str.len = len;
-		tok = TOK_STRING;
-	} else if (tok >= TOK_ID) {
-		len = tok - TOK_ID + 1;
-		val->str.dat = (char *)&lex->tok[idx];
-		val->str.len = len;
-		idx += len;
-		tok = TOK_ID;
-	} else if (tok >= TOK_INT8) {
-		x = lex->tok[idx++];
-		if (tok >= TOK_INT16) {
-			x |= lex->tok[idx++] << 8;
-			if (tok >= TOK_INT24) {
-				x |= lex->tok[idx++] << 16;
-				if (tok >= TOK_INT32)
-					x |= lex->tok[idx++] << 24;
-			}
-		} 
-		val->u32 = x;
-		tok = TOK_INT32;
-	} 
-
-//	lex->idx = idx;
-
-	return tok;
-}
-#endif
 

@@ -32,17 +32,6 @@
 
 const char token_nm[][4] = {
 	"---", /* TOK_NULL */
-	"EOF", /* TOK_EOF */
-	".",   /* TOK_DOT */
-	",",   /* TOK_COMMA */
-	";",   /* TOK_SEMICOLON */
-	":",   /* TOK_COLON */
-	"[",   /* TOK_LEFTBRACKET */
-	"]",   /* TOK_RIGHTBRACKET */
-	"(",   /* TOK_LEFTPAREN */
-	")",   /* TOK_RIGHTPAREN */
-	"{",   /* TOK_LEFTBRACE */
-	"}",   /* TOK_RIGHTBRACE */
 	">>",  /* TOK_ASR */
 	"<<",  /* TOK_ASL */
 	"<=",  /* TOK_LTE */
@@ -63,7 +52,18 @@ const char token_nm[][4] = {
 	"^",   /* TOK_XOR */
 	"!",   /* TOK_NOT */
 	"~",   /* TOK_BITNOT */
-	"="   /* TOK_ASSIGN */
+	"=",   /* TOK_ASSIGN */
+	".",   /* TOK_DOT */
+	",",   /* TOK_COMMA */
+	";",   /* TOK_SEMICOLON */
+	":",   /* TOK_COLON */
+	"[",   /* TOK_LEFTBRACKET */
+	"]",   /* TOK_RIGHTBRACKET */
+	"(",   /* TOK_LEFTPAREN */
+	")",   /* TOK_RIGHTPAREN */
+	"{",   /* TOK_LEFTBRACE */
+	"}",   /* TOK_RIGHTBRACE */
+	"EOF", /* TOK_EOF */
 };
 
 static const char * const err_tab[] = {

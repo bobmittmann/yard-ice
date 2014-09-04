@@ -845,6 +845,9 @@ static bool _unary_exp(struct parser * p,
 						   struct tree * t, int parent)
 {
 	unsigned int n = tree_add_node(t, parent, UNARY_EXP);
+	int op;
+	int stack[32];
+	int i = 0;
 /*
 unary_exp		: primary_exp
 				| '~' unary_exp
@@ -854,11 +857,41 @@ unary_exp		: primary_exp
 
 */
 
-	for (;;) {
-		if (_primary_exp(p, t, n))
-			return true;
+	if (_primary_exp(p, t, n))
+		return true;
 
-		switch (lookahead(p)) {
+	do {
+		switch (op = lookahead(p)) {
+		case TOK_BITINV:
+			stack[i++] = op;
+			fetch(p);
+			DBG2("'~'");
+			continue;
+		case TOK_NOT:
+			DBG2("'!'");
+			stack[i++] = op;
+			fetch(p);
+			continue;
+		case TOK_PLUS:
+			stack[i++] = op;
+			DBG2("'+'");
+			fetch(p);
+			continue;
+		case TOK_MINUS:
+			stack[i++] = op;
+			DBG2("'-'");
+			fetch(p);
+			continue;
+		}
+		break;
+	} while (1);
+
+	if (!_primary_exp(p, t, n))
+		return false;
+
+	while (i) {
+		op = stack[--i];
+		switch (op) {
 		case TOK_BITINV:
 			DBG("'~'");
 			break;
@@ -871,11 +904,11 @@ unary_exp		: primary_exp
 		case TOK_MINUS:
 			DBG("'-'");
 			break;
-		default:
-			return true;
-		}
-		fetch(p);
-	} 
+
+		} 
+	}
+
+	return true;
 }
 
 static bool _primary_exp(struct parser * p,
