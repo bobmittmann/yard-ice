@@ -36,14 +36,14 @@ var_list 		: var
 var				: <id>
 				| <id> '=' assignment_exp
 
-expression_opt	: empty
+expression_opt	: <empty>
 				| exp
 
 exp 			: assignment_exp
 				| assignment_exp ',' exp 
 
 assignment_exp	: logical_or_exp
-				| logical_or_exp '=' assignment_exp
+				| member_exp '=' assignment_exp
 
 logical_or_exp	: logical_and_exp
 				| logical_and_exp '||' logical_or_exp
@@ -108,4 +108,5 @@ primary_exp		: '(' exp ')'
 				| <false> 
 				| <true> 
 				| <null> 
+
 
