@@ -182,7 +182,7 @@ int compile(const char * txt, unsigned int len)
 }
 */
 
-int compile(const char * txt, unsigned int len)
+int do_test(const char * txt, unsigned int len)
 {
 	struct lexer lex;
 	struct token tok;
@@ -193,9 +193,7 @@ int compile(const char * txt, unsigned int len)
 	for (;;) {
 		tok = lexer_scan(&lex);
 
-		printf("'");
-		token_print(stdout, tok);
-		printf("' ");
+		printf("'%s' ", tok2str(tok));
 		fflush(stdout);
 
 		if (tok.typ == TOK_ERR) {
@@ -212,6 +210,23 @@ int compile(const char * txt, unsigned int len)
 	return 0;
 }
 
+int compile(const char * txt, unsigned int len)
+{
+	struct parser calc; 
+	uint8_t code_buf[8192];
+	int err;
+
+	calc_open(&calc, txt, len);
+
+	err = calc_parse(&calc, code_buf, sizeof(code_buf));
+
+	if (err != OK) {
+		lexer_print_err(stderr, &calc.lex, err);
+	}
+
+	return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -222,6 +237,7 @@ int main(int argc, char *argv[])
 	unsigned int len = 0;
 	char output[1024];
 	int verbose = 0;
+	int test = 0;
 	char * prog;
 	FILE * f;
 	int c;
@@ -253,7 +269,8 @@ int main(int argc, char *argv[])
 				break;
 
 			case 't':
-				return 0;
+				test++;
+				break;
 
 			default:
 				parse_err(prog, optarg);
@@ -297,7 +314,10 @@ int main(int argc, char *argv[])
 		f = stdout;
 	}
 
-	compile(script, len);
+	if (test)
+		do_test(script, len);
+	else
+		compile(script, len);
 
 	printf("\n");
 

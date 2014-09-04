@@ -2,6 +2,10 @@
    This is a Java Script comment
  */
 
+//
+// Single line comments
+//
+
 function test1(c1, c2, c3)
 {
 	var x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
@@ -17,3 +21,5 @@ function test1(c1, c2, c3)
 
 test(1, 2);
 
+a = 34;
+b = 34 + 49;
