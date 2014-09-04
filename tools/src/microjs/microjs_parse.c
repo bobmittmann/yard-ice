@@ -347,7 +347,7 @@ program			: <empty>
 		if (!js_element(p, t, root))
 			return MICROJS_SYNTAX_ERROR;
 		cnt++;
-		if (cnt > 10)
+		if (cnt > 20)
 			return MICROJS_SYNTAX_ERROR;
 	}
 
@@ -658,15 +658,16 @@ static bool js_assignment_exp(struct microjs_parser * p,
 assignment_exp	: logical_or_exp
 				| logical_or_exp '=' assignment_exp
 */
-	if (!js_logical_or_exp(p, t, n))
-		return false;
+//	if (js_logical_or_exp(p, t, n))
+//		return true;
 
 //	printf(" %s", __func__);
 
+	if (!js_logical_or_exp(p, t, n))
+		return false;
+
 	while (match(p, TOK_ASSIGN)) {
-
 		printf(" :=");
-
 		if (!js_logical_or_exp(p, t, n))
 			return false;
 	}
@@ -703,7 +704,7 @@ static bool js_logical_and_exp(struct microjs_parser * p,
 logical_and_exp	: bitwise_or_exp
 				| bitwise_or_exp '&&' logical_and_exp 
 */
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_bitwise_or_exp(p, t, n))
 		return false;
@@ -796,7 +797,7 @@ equality_exp	: relational_exp
 				| relational_exp '==' equality_exp 
 				| relational_exp '!=' equality_exp 
 */
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_relational_exp(p, t, n))
 		return false;
@@ -872,7 +873,7 @@ shift_exp	: additive_exp
 			| additive_exp '>>' shift_expression 
 */
 
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_additive_exp(p, t, n))
 		return false;
@@ -944,7 +945,7 @@ mult_exp		: unary_exp
 				| unary_exp '%' mult_exp
 */
 
-	printf(" %s", __func__);
+//	printf(" %s", __func__);
 
 	if (!js_unary_exp(p, t, n))
 		return false;
