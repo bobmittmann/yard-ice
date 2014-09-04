@@ -33,7 +33,8 @@
 #include <stdint.h>
 
 enum {
-	TOK_EOF = 0,
+	TOK_VOID = 0,
+	TOK_EOF,
 /* puctuation */
 	TOK_DOT,
 	TOK_COMMA,
@@ -94,7 +95,6 @@ enum {
 #define STRING_LEN_MAX 255
 
 extern const char keyword[15][9];
-extern const char token_str[][4];
 
 struct token {
 	uint8_t typ; /* token type (class) */
@@ -127,14 +127,6 @@ enum {
 struct tree;
 
 struct lexer {
-	struct token tok; /* token buffer */
-	uint16_t cnt;  /* token count */
-	uint16_t idx;  /* token pointer */
-	uint16_t next;  /* token pointer */
-
-	uint16_t sp; /* stack pointer */
-	uint16_t top; /* parser error code */
-
 	uint16_t off;  /* lexer text offset */
 	uint16_t len;  /* lexer text length */
 	const char * txt;   /* base pointer (original js txt file) */
@@ -143,18 +135,8 @@ struct lexer {
 
 struct parser {
 	struct lexer lex;
+	struct token tok; /* lookahead token */
 	uint16_t cnt;  /* token count */
-	uint16_t idx;  /* token pointer */
-	uint16_t next;  /* token pointer */
-
-	uint16_t sp; /* stack pointer */
-	uint16_t top; /* parser error code */
-	struct token * tok; /* token buffer */
-
-	uint16_t off;  /* lexer text offset */
-	uint16_t len;  /* lexer text length */
-	const char * txt;   /* base pointer (original js txt file) */
-
 	struct tree * t;
 };
 
@@ -173,6 +155,12 @@ int lexer_test(struct lexer * lex);
 void lexer_print_err(FILE * f, struct lexer * lex, int err);
 
 void dump_src(const char * txt, unsigned int len);
+
+int calc_open(struct parser * p, const char * txt, unsigned int len);
+
+int calc_parse(struct parser * p, uint8_t code[], unsigned int size);
+
+char * tok2str(struct token tok);
 
 #ifdef __cplusplus
 }

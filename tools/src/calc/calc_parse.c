@@ -29,126 +29,105 @@
 #include <string.h>
 #include <ctype.h>
 
-#define __MICROJS_I__
-#include "microjs-i.h"
+#include "config.h"
+#include "calc.h"
+
+#define DEBUG 1
+
+#include "debug.h"
 
 enum {
-	JS_PROGRAM,
-	JS_ELEMENT,
-	JS_PARAM_LIST,
-	JS_EXP_STAT,
-	JS_EXP,
-	JS_BLOCK,
-	JS_DECL_LIST,
-	JS_STAT_LIST,
-	JS_STAT,
-	JS_CONDITION,
-	JS_EXPRESSION,
-	JS_VAR_LIST,
-	JS_VAR,
-	JS_ASSIGNMENT_EXP,
-	JS_CONDITIONAL_EXP,
-	JS_LOGICAL_OR_EXP,
-	JS_LOGICAL_AND_EXP,
-	JS_BITWISE_OR_EXP,
-	JS_BITWISE_XOR_EXP,
-	JS_BITWISE_AND_EXP,
-	JS_EQUALITY_EXP,
-	JS_RELATIONAL_EXP,
-	JS_SHIFT_EXP,
-	JS_ADDITIVE_EXP,
-	JS_MULT_EXP,
-	JS_UNARY_EXP,
-	JS_MEMBER_EXP,
-	JS_ARG_LIST,
-	JS_PRIMARY_EXP
+	PROGRAM,
+	ELEMENT,
+	PARAM_LIST,
+	EXP_STAT,
+	EXP,
+	BLOCK,
+	DECL_LIST,
+	STAT_LIST,
+	STAT,
+	CONDITION,
+	EXPRESSION,
+	VAR_LIST,
+	VAR,
+	ASSIGNMENT_EXP,
+	CONDITIONAL_EXP,
+	LOGICAL_OR_EXP,
+	LOGICAL_AND_EXP,
+	BITWISE_OR_EXP,
+	BITWISE_XOR_EXP,
+	BITWISE_AND_EXP,
+	EQUALITY_EXP,
+	RELATIONAL_EXP,
+	SHIFT_EXP,
+	ADDITIVE_EXP,
+	MULT_EXP,
+	UNARY_EXP,
+	MEMBER_EXP,
+	ARG_LIST,
+	PRIMARY_EXP
 };
 
-static bool js_element(struct microjs_parser * p, 
+static bool _element(struct parser * p, 
 					   struct tree * t, int parent);
 
-static bool js_param_list_opt(struct microjs_parser * p, 
+static bool _param_list_opt(struct parser * p, 
 							  struct tree * t, int parent);
 
-static bool js_exp_opt(struct microjs_parser * p, 
+static bool _exp_opt(struct parser * p, 
 					   struct tree * t, int parent);
 
-static bool js_exp(struct microjs_parser * p, 
+static bool _exp(struct parser * p, 
 				   struct tree * t, int parent);
 
-static bool js_stat(struct microjs_parser * p, 
+static bool _stat(struct parser * p, 
 					struct tree * t, int parent);
 
-static bool js_stat_list(struct microjs_parser * p, 
+static bool _stat_list(struct parser * p, 
 						 struct tree * t, int parent);
 
-static bool js_condition(struct microjs_parser * p, 
+static bool _condition(struct parser * p, 
 						 struct tree * t, int parent);
 
-static bool js_assignment_exp(struct microjs_parser * p, 
-							  struct tree * t, int parent);
-
-static bool js_var(struct microjs_parser * p, 
+static bool _var(struct parser * p, 
 				   struct tree * t, int parent);
 
-static bool js_var_list(struct microjs_parser * p, 
+static bool _var_list(struct parser * p, 
 					   struct tree * t, int parent);
 
-static bool js_var_or_exp(struct microjs_parser * p, 
-						  struct tree * t, int parent);
-
-static bool js_stat(struct microjs_parser * p, 
+static bool _stat(struct parser * p, 
 					struct tree * t, int parent);
 
-static bool js_compound_stat(struct microjs_parser * p, 
+static bool _compound_stat(struct parser * p, 
 							 struct tree * t, int parent);
 
-static bool js_param_list(struct microjs_parser * p, 
+static bool _param_list(struct parser * p, 
 						  struct tree * t, int parent);
-
-static bool js_logical_or_exp(struct microjs_parser * p, 
-							  struct tree * t, int parent);
-
-static bool js_logical_and_exp(struct microjs_parser * p, 
-							   struct tree * t, int parent);
-
-static bool js_bitwise_or_exp(struct microjs_parser * p, 
-							  struct tree * t, int parent);
-
-static bool js_bitwise_xor_exp(struct microjs_parser * p, 
-							   struct tree * t, int parent);
-
-static bool js_bitwise_and_exp(struct microjs_parser * p, 
-							   struct tree * t, int parent);
-
-static bool js_equality_exp(struct microjs_parser * p, 
-							struct tree * t, int parent);
-
-static bool js_relational_exp(struct microjs_parser * p, 
-							  struct tree * t, int parent);
-
-static bool js_shift_exp(struct microjs_parser * p, 
+static bool _shift_exp(struct parser * p, 
 						 struct tree * t, int parent);
 
-static bool js_additive_exp(struct microjs_parser * p,
+static bool _additive_exp(struct parser * p,
 							struct tree * t, int parent);
 
-static bool js_mult_exp(struct microjs_parser * p,
+static bool _mult_exp(struct parser * p,
 						struct tree * t, int parent);
 
-static bool js_unary_exp(struct microjs_parser * p,
+static bool _unary_exp(struct parser * p,
 						 struct tree * t, int parent);
 
-static bool js_member_exp(struct microjs_parser * p,
+static bool _method_or_attr(struct parser * p,
 						  struct tree * t, int parent);
 
-static bool js_arg_list_opt(struct microjs_parser * p, 
+static bool _arg_list_opt(struct parser * p, 
 							struct tree * t, int parent);
 
-static bool js_arg_list(struct microjs_parser * p, 
+static bool _arg_list(struct parser * p, 
 						struct tree * t, int parent);
 
-static bool js_primary_exp(struct microjs_parser * p,
+static bool _primary_exp(struct parser * p,
+						   struct tree * t, int parent);
+
+static bool _assign_or_call(struct parser * p,
 						   struct tree * t, int parent);
 
 struct node {
@@ -259,228 +238,118 @@ int print_tree(struct tree * t)
 }
 
 
-/* recursive descent parser */
+static void fetch(struct parser * p)
+{
+	p->tok = lexer_scan(&p->lex);
+	p->cnt++;
+}
 
 /* is a terminal */
-static bool term(struct microjs_parser * p, unsigned int tok)
+static unsigned int lookahead(struct parser * p)
 {
-	unsigned int lokahead = p->tok[p->next];
-
-	printf("_");
-	microjs_tok_print(stdout, p, p->next);
-	printf("_");
-
-	p->next++;
-
-	if (lokahead >= TOK_STRING) {
-		p->next += 2;
-		return (tok == TOK_STRING);
-	} 
-
-	if (lokahead >= TOK_ID) {
-		p->next += lokahead - TOK_ID + 1;
-		return (tok == TOK_ID);
-	} 
-
-	if (lokahead >= TOK_INT8) {
-		p->next++;
-		if (lokahead >= TOK_INT16) {
-			p->next++;
-			if (lokahead >= TOK_INT24) {
-				p->next++;
-				if (lokahead >= TOK_INT32)
-					p->next++;
-			}
-		} 
-		
-		return (tok == TOK_INT32);
-	} 
-
-	return (tok == lokahead);
+	return p->tok.typ;
 }
 
-static unsigned int lookahead(struct microjs_parser * p)
+static bool match(struct parser * p, unsigned int tok)
 {
-	unsigned int tok = p->tok[p->next];
-
-	if (tok >= TOK_STRING)
-		return TOK_STRING;
-
-	if (tok >= TOK_ID)
-		return TOK_ID;
-
-	if (tok >= TOK_INT8)
-		return TOK_INT32;
-
-	return tok;
-}
-
-static bool match(struct microjs_parser * p, unsigned int tok)
-{
-	if (lookahead(p) != tok)
+	if (p->tok.typ != tok)
 		return false;
 
-	return term(p, tok);
+	fetch(p);
+
+	return true;
 }
 
-int microjs_parse(struct microjs_parser * p, 
-				  uint8_t code[], unsigned int size)
+/* recursive descent parser */
+
+int calc_open(struct parser * p, const char * txt, unsigned int len)
+{
+	p->cnt = 0;
+	p->tok.typ = TOK_VOID;
+	return lexer_open(&p->lex, txt, len);
+}
+
+int calc_parse(struct parser * p, uint8_t code[], unsigned int size)
 {
 	struct tree my_tree;
 	struct tree * t = &my_tree;
 	int root;
 	int cnt = 0;
 
-	p->idx = 0;
-	p->next = 0;
+	root = tree_init(t, PROGRAM);
 	p->t = t;
-	root = tree_init(t, JS_PROGRAM);
 
 /*
 program			: <empty>
 				| element program
 */
 
+	fetch(p);
 	while (lookahead(p) != TOK_EOF) {
-		printf("\n %3d:", cnt);
-
-		if (!js_element(p, t, root))
-			return MICROJS_SYNTAX_ERROR;
+		if (!_element(p, t, root))
+			return ERR_SYNTAX_ERROR;
 		cnt++;
-		if (cnt > 20)
-			return MICROJS_SYNTAX_ERROR;
+		if (cnt > 200)
+			return ERR_SYNTAX_ERROR;
 	}
 
-	return MICROJS_OK;
+	return OK;
 }
 
-static bool js_element(struct microjs_parser * p, 
+static bool _element(struct parser * p, 
 					   struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_ELEMENT);
+	unsigned int n = tree_add_node(t, parent, ELEMENT);
 
 /*
-element 		: 'function' id '(' param_list_opt ')' compound_stat
+element 		: 'function' <id> '(' param_list_opt ')' compound_stat
 				| stat
 */
-//	printf("%s", __func__);
-
 	if (match(p, TOK_FUNCTION)) {
-		if (term(p, TOK_ID) && term(p, TOK_LEFTPAREN)
-			&& js_param_list_opt(p, t, n) && term(p, TOK_RIGHTPAREN)
-			&& js_compound_stat(p, t, n)) {
-			printf("function definition!\n");
-			return true;
+		DBG("function");
+		if (!(match(p, TOK_ID) && match(p, TOK_LEFTPAREN)
+			&& _param_list_opt(p, t, n) && match(p, TOK_RIGHTPAREN)
+			&& _compound_stat(p, t, n))) {
+			WARN("function definition");
+			return false;
 		};
-		printf("\n#error: in function definition!\n");
-		return false;
+		return true;
 	}
 
-	return js_stat(p, t, n);
+	return _stat(p, t, n);
 }
 
-
-static bool js_param_list_opt(struct microjs_parser * p, 
-							  struct tree * t, int parent)
+static bool _stat(struct parser * p, struct tree * t, int parent)
 {
-/*
-param_list_opt	: <empty>
-				| param_list 
-*/
-	js_param_list(p, t, parent);
-
-	return true;
-}
-
-static bool js_param_list(struct microjs_parser * p, 
-					  struct tree * t, int parent)
-{
-//	unsigned int n = tree_add_node(t, parent, JS_PARAM_LIST);
-/*
-param_list 		: <id> 
-				| <id> ',' param_list
-*/
-	if (lookahead(p) == TOK_ID) {
-		do {
-			if (!term(p, TOK_ID))
-				return false;
-		} while (match(p, TOK_COMMA));
-	}
-	return false;
-}
-
-static bool js_compound_stat(struct microjs_parser * p, 
-						  struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_BLOCK);
-/*
-compound_stat	: '{' stat_list '}'
-*/
-//		printf(" %s", __func__);
-	if (match(p, TOK_LEFTBRACE)) {
-		printf("\n BLOCK {\n");
-		if (js_stat_list(p, t, n)) {
-			if (match(p, TOK_RIGHTBRACE)) {
-				printf("}\n");
-				return true;
-			}
-			printf("\n#error: expecting '}'\n");
-		}
-	}
-
-	return false;
-}
-
-static bool js_stat_list(struct microjs_parser * p, 
-						 struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_STAT_LIST);
-/*
-stat_list		: <empty>
-				| stat stat_list
-*/
-
-	printf(" %s START ----------\n", __func__);
-
-//	if (!js_stat(p, t, n))
-//		return true;
-
-	while (js_stat(p, t, n));
-
-	printf(" %s END ---------- ", __func__);
-
-	return true;
-}
-
-static bool js_stat(struct microjs_parser * p, struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_STAT);
+	unsigned int n = tree_add_node(t, parent, STAT);
 /*
 stat			: ';'
-				| 'if' condition stat 
-				| 'if' condition stat 'else' stat 
-				| 'while' condition stat 
+				| 'if' condition compound_stat
+				| 'if' condition compound_stat 'else' compound_stat
+				| 'while' condition compound_stat
 				| 'break' ';'
 				| 'continue' ';'
 				| 'return' expression_opt ';'
+				| 'var' var_list ';'
 				| compound_stat
-				| var_list_or_exp ';'
+				| assign_or_call ';'
+
 */
 //	printf(" %s", __func__);
 
 	switch (lookahead(p)) {
 	case TOK_SEMICOLON:
-		printf(" ;\n");
-		term(p, TOK_SEMICOLON); 
+		fetch(p);
+		DBG("';'");
 		return true;
 
 	case TOK_IF:
-		term(p, TOK_IF); 
-		printf(" IF");
-		if (js_condition(p, t, n) && js_stat(p, t, n)) {
+		fetch(p);
+		DBG("<IF>");
+		if (_condition(p, t, n) && _stat(p, t, n)) {
 			if (match(p, TOK_ELSE)) {
 				printf(" ELSE");
-				if (js_stat(p, t, n)) {
+				if (_stat(p, t, n)) {
 					printf(" ENDIF");
 					return true;
 				}	
@@ -492,601 +361,282 @@ stat			: ';'
 		return false;
 
 	case TOK_WHILE:
-		term(p, TOK_WHILE); 
-		printf(" WHILE");
-		return js_condition(p, t, n) && js_stat(p, t, n);
+		fetch(p);
+		DBG("<WHILE>");
+		return _condition(p, t, n) && _stat(p, t, n);
 
 	case TOK_BREAK:
-		printf(" BREAK");
-		return term(p, TOK_BREAK) && term(p, TOK_SEMICOLON);
+		fetch(p);
+		DBG("<BREAK>");
+		return match(p, TOK_BREAK) && match(p, TOK_SEMICOLON);
 
 	case TOK_CONTINUE:
-		printf(" CONTINUE");
-		return term(p, TOK_CONTINUE) && term(p, TOK_SEMICOLON);
+		fetch(p);
+		DBG("<CONTINUE>");
+		return match(p, TOK_CONTINUE) && match(p, TOK_SEMICOLON);
 
 	case TOK_RETURN:
-		term(p, TOK_RETURN); 
-		printf(" RETURN");
-		return js_exp_opt(p, t, n) && term(p, TOK_SEMICOLON);
+		fetch(p);
+		DBG("<RETURN>");
+		return _exp_opt(p, t, n) && match(p, TOK_SEMICOLON);
+
+	case TOK_VAR:
+		fetch(p);
+		DBG("<VAR>");
+		return _var_list(p, t, parent);
 	}
 	
-	printf(" %s 1.\n", __func__);
-	if (js_compound_stat(p, t, n))
+	if (_compound_stat(p, t, n))
 		return true;
-	
-	printf(" %s 2.\n", __func__);
-	if (js_var_or_exp(p, t, n)) {
-		printf(" %s 3.\n", __func__);
-		if (term(p, TOK_SEMICOLON)) {
-			printf(" %s 4.\n", __func__);
+
+	if (_assign_or_call(p, t, n)) {
+		if (match(p, TOK_SEMICOLON)) {
 			return true;
 		}
-
-		printf("\n#error: expecting ';'\n");
+		WARN("expecting ';'");
 	}
 
 	return false;
 }
 
-static bool js_condition(struct microjs_parser * p, 
+static bool _compound_stat(struct parser * p, 
+						  struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, BLOCK);
+/*
+compound_stat	: '{' stat_list '}'
+
+*/
+	if (match(p, TOK_LEFTBRACE)) {
+		DBG("'{'");
+		if (!(_stat_list(p, t, n) && match(p, TOK_RIGHTBRACE))) {
+			WARN("expecting '}'");
+			return false;
+		}
+		DBG("'}'");
+		return true;
+	}
+
+	return false;
+}
+
+static bool _stat_list(struct parser * p, 
 						 struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_CONDITION);
+	unsigned int n = tree_add_node(t, parent, STAT_LIST);
+/*
+stat_list		: <empty>
+				| stat stat_list
+*/
+
+	while (_stat(p, t, n));
+
+	return true;
+}
+
+static bool _param_list_opt(struct parser * p, 
+							  struct tree * t, int parent)
+{
+/*
+param_list_opt	: <empty>
+				| param_list 
+*/
+	_param_list(p, t, parent);
+
+	return true;
+}
+
+static bool _param_list(struct parser * p, 
+					  struct tree * t, int parent)
+{
+//	unsigned int n = tree_add_node(t, parent, PARAM_LIST);
+/*
+param_list 		: <id> 
+				| <id> ',' param_list
+*/
+	if (lookahead(p) == TOK_ID) {
+		do {
+			if (!match(p, TOK_ID))
+				return false;
+		} while (match(p, TOK_COMMA));
+	}
+	return false;
+}
+
+static bool _condition(struct parser * p, 
+						 struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, CONDITION);
 /*
 condition 		: '(' exp ')'
 */
-	printf(" %s", __func__);
-
 	if (match(p, TOK_LEFTPAREN)) {
-		printf(" '('");
-		if (js_exp(p, t, n)) {
-			if (term(p, TOK_RIGHTPAREN)) {
-				printf(" ')'");
-				return true;
-			}
-			printf("\n#error: expecting ')' got: '");
-			microjs_tok_print(stdout, p, p->next - 1);
-			printf("'\n");
+		DBG("'('");
+		if (!(_exp(p, t, n) && match(p, TOK_RIGHTPAREN))) {
+			WARN("expecting ')'");
+			return false;
 		}
+		DBG("')'");
+		return true;
 	}
 
 	return false;
 }
 
-static bool js_var_or_exp(struct microjs_parser * p, struct tree * t, 
-						  int parent)
-{
-/*
-var_list_or_exp	:  'var' var_list
-				| exp
-*/
-	if (match(p, TOK_VAR)) {
-		printf(" 'VAR'");
-		return js_var_list(p, t, parent);
-	}
 
-	return js_exp(p, t, parent);
-}
-
-
-static bool js_var_list(struct microjs_parser * p, 
+static bool _var_list(struct parser * p, 
 					  struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_VAR_LIST);
+	unsigned int n = tree_add_node(t, parent, VAR_LIST);
 /*
 var_list 		: var
 				| var ',' var_list
 */
-
-//	printf(" %s", __func__);
-
-	if (!js_var(p, t, n))
+	if (!_var(p, t, n))
 		return false;
 
 	while (match(p, TOK_COMMA)) {
-		if (!js_var(p, t, n))
+		if (!_var(p, t, n))
 			return false;
 	}
 
 	return true;
 }
 
-static bool js_var(struct microjs_parser * p, 
+static bool _var(struct parser * p, 
 				   struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_VAR);
+	unsigned int n = tree_add_node(t, parent, VAR);
+	struct token tok = p->tok;
 /*
 var				: <id>
-				| <id> '=' assignment_exp
+				| <id> '=' exp
 
 */
-	if (!match(p, TOK_ID))
+	if (!match(p, TOK_ID)) {
+		WARN("unexpected: %s", tok2str(p->tok));
 		return false;
+	}
 
-//	printf(" %s", __func__);
+	DBG("%s", tok2str(tok));
 
 	if (!match(p, TOK_ASSIGN)) 
 		return true;
 
-	printf(" '='");
+	DBG("'='");
 
-	return js_assignment_exp(p, t, n);
+	return _exp(p, t, n);
 }
 
-static bool js_exp_opt(struct microjs_parser * p, 
+static bool _exp_opt(struct parser * p, 
 					   struct tree * t, int parent)
 {
 /*
 expression_opt 	: <empty>
-				| expresssion
+				| exp
 */
-	js_exp(p, t, parent);
+	_exp(p, t, parent);
 
 	return true;
 }
 
-
-static bool js_exp(struct microjs_parser * p, 
-				   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_EXP);
-/*
-exp 			: assignment_exp
-				| assignment_exp ',' exp 
-*/
-
-	printf(" %s -<", __func__);
-
-	if (!js_assignment_exp(p, t, n))
-		return false;
-
-	while (match(p, TOK_COMMA)) {
-		if (!js_assignment_exp(p, t, n))
-			return false;
-	}
-
-	printf(" >-\n");
-
-	return true;
-}
-
-static bool js_assignment_exp(struct microjs_parser * p, 
+static bool _assign_or_call(struct parser * p,
 						   struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_ASSIGNMENT_EXP);
+	unsigned int n = tree_add_node(t, parent, PRIMARY_EXP);
+	struct token tok;
+
 /*
-assignment_exp	: logical_or_exp
-				| logical_or_exp '=' assignment_exp
+assign_or_call  : <id> '=' exp
+				| <id> '.' assign_or_call 
+				| <id> '[' exp ']' '=' exp
+				| <id> '[' exp ']' '.' assign_or_call
+				| <id> '(' arg_list_opt ')'
+				| <id> '(' arg_list_opt ')' '.' assign_or_call
 */
-//	if (js_logical_or_exp(p, t, n))
-//		return true;
 
-//	printf(" %s", __func__);
-
-	if (!js_logical_or_exp(p, t, n))
+	if (lookahead(p) != TOK_ID)
 		return false;
 
-	while (match(p, TOK_ASSIGN)) {
-		printf(" :=");
-		if (!js_logical_or_exp(p, t, n))
-			return false;
-	}
+	tok = p->tok;
 
-	return true;
-}
+	while (match(p, TOK_ID)) {
+		DBG("%s", tok2str(tok));
 
-static bool js_logical_or_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_LOGICAL_OR_EXP);
-/*
-logical_or_exp	: logical_and_exp
-				| logical_and_exp '||' logical_or_exp
-*/
-	if (!js_logical_and_exp(p, t, n))
-		return false;
+		switch (lookahead(p)) {
+		case TOK_ASSIGN:
+			fetch(p);
+			DBG("'='");
+			return _exp(p, t, n);
 
-	while (match(p, TOK_OR)) {
-		printf(" ||");
-
-		if (!js_logical_and_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_logical_and_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_LOGICAL_AND_EXP);
-/*
-logical_and_exp	: bitwise_or_exp
-				| bitwise_or_exp '&&' logical_and_exp 
-*/
-//	printf(" %s", __func__);
-
-	if (!js_bitwise_or_exp(p, t, n))
-		return false;
-
-	while (match(p, TOK_AND)) {
-
-		printf(" &&");
-
-		if (!js_bitwise_or_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_bitwise_or_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_BITWISE_OR_EXP);
-/*
-bitwise_or_exp	: bitwise_xor_exp
-				| bitwise_xor_exp '|' bitwise_or_exp
-*/
-//	printf(" %s", __func__);
-
-	if (!js_bitwise_xor_exp(p, t, n))
-		return false;
-
-	while (match(p, TOK_BITOR)) {
-
-		printf(" ||");
-
-		if (!js_bitwise_xor_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_bitwise_xor_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_BITWISE_XOR_EXP);
-/*
-bitwise_xor_exp : bitwise_and_exp
-				| bitwise_and_exp '^' bitwise_xor_exp
-*/
-	if (!js_bitwise_and_exp(p, t, n))
-		return false;
-
-	while (match(p, TOK_XOR)) {
-
-		printf(" XOR");
-
-		if (!js_bitwise_and_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_bitwise_and_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_BITWISE_AND_EXP);
-/*
-bitwise_and_exp : equality_exp
-				| equality_exp '&' bitwise_and_exp
-*/
-	if (!js_equality_exp(p, t, n))
-		return false;
-
-	while (match(p, TOK_BITAND)) {
-
-		printf(" AND");
-
-		if (!js_equality_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_equality_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_EQUALITY_EXP);
-/*
-equality_exp	: relational_exp
-				| relational_exp '==' equality_exp 
-				| relational_exp '!=' equality_exp 
-*/
-//	printf(" %s", __func__);
-
-	if (!js_relational_exp(p, t, n))
-		return false;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_EQ) {
-			term(p, TOK_EQ);
-			printf(" ==");
-		} else if (tok == TOK_NEQ) {
-			term(p, TOK_NEQ);
-			printf(" !=");
-		} else 
+		case TOK_DOT:
+			fetch(p);
 			break;
 
-		if (!js_relational_exp(p, t, n))
-			return false;
-	}
+		case TOK_LEFTBRACKET:
+			fetch(p);
 
-	return true;
-}
+			DBG("'['");
+			if (!(_exp(p, t, n) && match(p, TOK_RIGHTBRACKET))) 
+				return false;
+			DBG("']'");
 
-static bool js_relational_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_RELATIONAL_EXP);
-/*
-relational_exp	: shift_exp
-				| shift_exp '<' relational_exp
-				| shift_exp '>' relational_exp
-				| shift_exp '<=' relational_exp
-				| shift_exp '>=' relational_exp
-*/
-//	printf(" %s", __func__);
+			if (match(p, TOK_ASSIGN)) {
+				DBG("'='");
+				return _exp(p, t, n);
+			}
 
-	if (!js_shift_exp(p, t, n))
-		return false;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_LT) {
-			term(p, TOK_LT);
-			printf(" <");
-		} else if (tok == TOK_GT) {
-			term(p, TOK_GT);
-			printf(" >");
-		} else if (tok == TOK_LTE) {
-			term(p, TOK_LTE);
-			printf(" <=");
-		} else if (tok == TOK_GTE) {
-			term(p, TOK_GTE);
-			printf(" >=");
-		} else {
+			if (!match(p, TOK_DOT))
+				return false;
 			break;
+
+		case TOK_LEFTPAREN: 
+			fetch(p);
+
+			DBG("'('");
+			if (!(_arg_list_opt(p, t, n) && match(p, TOK_RIGHTPAREN)))
+				return false;
+			DBG("')'");
+
+			if (!match(p, TOK_DOT))
+				return true;
+			break;
+
 		}
-
-		if (!js_shift_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_shift_exp(struct microjs_parser * p, 
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_SHIFT_EXP);
-/*
-shift_exp	: additive_exp
-			| additive_exp '<<' shift_expression 
-			| additive_exp '>>' shift_expression 
-*/
-
-//	printf(" %s", __func__);
-
-	if (!js_additive_exp(p, t, n))
-		return false;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_SHL) {
-
-			printf(" <<");
-			term(p, TOK_SHL);
-
-		} else if (tok == TOK_ASR) {
-
-			printf(" >>");
-			term(p, TOK_ASR);
-
-		} else 
-			break;
-
-		if (!js_additive_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_additive_exp(struct microjs_parser * p,
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_ADDITIVE_EXP);
-/*
-additive_exp	: mult_exp
-				| mult_exp '+' additive_exp 
-				| mult_exp '-' additive_exp 
-*/
-	if (!js_mult_exp(p, t, n))
-		return false;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_PLUS) {
-
-			printf(" +");
-			term(p, TOK_PLUS);
-		} else if (tok == TOK_MINUS) {
-
-			printf(" -");
-			term(p, TOK_MINUS);
-		} else 
-			break;
-
-		if (!js_mult_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-static bool js_mult_exp(struct microjs_parser * p,
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_MULT_EXP);
-/*
-mult_exp		: unary_exp
-				| unary_exp '*' mult_exp
-				| unary_exp '/' mult_exp
-				| unary_exp '%' mult_exp
-*/
-
-//	printf(" %s", __func__);
-
-	if (!js_unary_exp(p, t, n))
-		return false;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_MUL) {
-			printf(" '*'");
-			term(p, TOK_MUL);
-		} else if (tok == TOK_DIV) {
-			printf(" '//'");
-			term(p, TOK_DIV);
-		} else if (tok == TOK_MOD) {
-			printf(" '%%'");
-			term(p, TOK_MOD);
-		} else 
-			break;
-
-		if (!js_unary_exp(p, t, n))
-			return false;
-	}
-
-	return true;
-}
-
-
-static bool js_unary_exp(struct microjs_parser * p,
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_UNARY_EXP);
-/*
-unary_exp		: member_exp
-				| '~' unary_exp
-				| '!' unary_exp
-				| '+' unary_exp
-				| '-' unary_exp
-*/
-
-	if (js_member_exp(p, t, n))
-		return true;
-
-	for (;;) {
-		unsigned int tok = lookahead(p);
-
-		if (tok == TOK_BITINV) {
-			printf(" ~");
-			term(p, TOK_BITINV);
-		} else if (tok == TOK_NOT) {
-			printf(" !");
-			term(p, TOK_NOT);
-		} else if (tok == TOK_PLUS) {
-			printf(" +");
-			term(p, TOK_PLUS);
-		} else if (tok == TOK_MINUS) {
-			printf(" -");
-			term(p, TOK_MINUS);
-		} else 
-			break;
-
-		if (!js_member_exp(p, t, n))
-			return false;
+		DBG("'.'");
+		tok = p->tok;
 	}
 
 	return false;
 }
 
-static bool js_member_exp(struct microjs_parser * p,
-						   struct tree * t, int parent)
-{
-	unsigned int n = tree_add_node(t, parent, JS_MEMBER_EXP);
-/*
-member_exp		: primary_exp
-				| primary_exp '.' member_exp
-				| primary_exp '[' exp ']'
-				| primary_exp '(' arg_list_opt ')'
-*/
-	for (;;) {
 
-		if (!js_primary_exp(p, t, n))
-			return false;
-
-		switch (lookahead(p)) {
-		case TOK_DOT:
-			printf(" '.'");
-			term(p, TOK_DOT);
-			break;
-
-		case TOK_LEFTBRACKET:
-			printf(" '['");
-			term(p, TOK_LEFTBRACKET); 
-			if (js_exp(p, t, n)) {
-				if (term(p, TOK_RIGHTBRACKET)) {
-					printf(" ']'");
-					return true;
-				}
-			}
-			return false;
-
-		case TOK_LEFTPAREN:
-			printf(" '('");
-			term(p, TOK_LEFTPAREN); 
-			if (js_arg_list_opt(p, t, n)) {
-				if (term(p, TOK_RIGHTPAREN)) {
-					printf(" ')'");
-					return true;
-				}
-			}
-			return false;
-
-		default:
-			return true;
-		}
-	} 
-}
-
-static bool js_arg_list_opt(struct microjs_parser * p, 
+static bool _arg_list_opt(struct parser * p, 
 							struct tree * t, int parent)
 {
 /*
 arg_list_opt	: empty
 				| arg_list
 */
-	js_arg_list(p, t, parent);
+	_arg_list(p, t, parent);
 
 	return true;
 }
 
-static bool js_arg_list(struct microjs_parser * p, 
+static bool _arg_list(struct parser * p, 
 							struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_ARG_LIST);
+	unsigned int n = tree_add_node(t, parent, ARG_LIST);
 /*
-arg_list		: assignment_exp
-				| assignment_exp ',' arg_list
+arg_list		: exp  
+				| exp ',' arg_list
+
 */
-	if (!js_assignment_exp(p, t, n)) 
+	if (!_exp(p, t, n)) 
 		return false;
 
 	while (match(p, TOK_COMMA)) {
-		if (!js_assignment_exp(p, t, n)) 
+		if (!_exp(p, t, n)) 
 			return false;
 	}
 
@@ -1094,60 +644,348 @@ arg_list		: assignment_exp
 }
 
 
-static bool js_primary_exp(struct microjs_parser * p,
+
+static bool _exp(struct parser * p, 
+				   struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, EXP);
+/*
+exp 			: '[' arg_list_opt ']'
+				| shift_exp
+				| shift_exp '<' relational_exp
+				| shift_exp '>' relational_exp
+				| shift_exp '<=' relational_exp
+				| shift_exp '>=' relational_exp
+				| shift_exp '==' relational_exp
+				| shift_exp '!=' relational_exp
+*/
+
+	if (lookahead(p) == TOK_LEFTBRACKET) {
+		fetch(p);
+		DBG("'['");
+		if (!(_arg_list_opt(p, t, n) && match(p, TOK_RIGHTBRACKET))) 
+			return false;
+		DBG("']'");
+		return true;
+	}
+
+	while (_shift_exp(p, t, n)) {
+		switch (lookahead(p)) {
+		case TOK_LT:
+			DBG("'<'");
+			break;
+		case TOK_GT:
+			DBG("'>'");
+			break;
+		case TOK_LTE:
+			DBG("'<='");
+			break;
+		case TOK_GTE:
+			DBG("'>='");
+			break;
+		case TOK_EQ:
+			DBG("'=='");
+			break;
+		case TOK_NEQ:
+			DBG("'!='");
+			break;
+		default:
+			return true;
+		}
+		fetch(p);
+	} 
+
+	return false;
+}
+
+static bool _shift_exp(struct parser * p, 
 						   struct tree * t, int parent)
 {
-	unsigned int n = tree_add_node(t, parent, JS_PRIMARY_EXP);
+	unsigned int n = tree_add_node(t, parent, SHIFT_EXP);
+/*
+shift_exp		: additive_exp
+				| additive_exp '<<' shift_exp
+				| additive_exp '>>' shift_exp
+
+*/
+
+//	printf(" %s", __func__);
+
+	while (_additive_exp(p, t, n)) {
+		switch (lookahead(p)) {
+		case TOK_SHL:
+			DBG("'<<'");
+			break;
+		case TOK_ASR:
+			DBG("'>>'");
+			break;
+		default:
+			return true;
+		}
+		fetch(p);
+	} 
+
+	return false;
+}
+
+static bool _additive_exp(struct parser * p,
+						   struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, ADDITIVE_EXP);
+	int op;
+/*
+additive_exp 	: mult_exp
+				| mult_exp '+' additive_exp 
+				| mult_exp '-' additive_exp 
+				| mult_exp '|' additive_exp 
+				| mult_exp '^' additive_exp 
+				| mult_exp '||' additive_exp 
+*/
+	if (!_mult_exp(p, t, n))
+		return false;
+
+	for (;;) {
+		switch (op = lookahead(p)) {
+		case TOK_PLUS:
+			break;
+		case TOK_MINUS:
+			break;
+		case TOK_BITOR:
+			break;
+		case TOK_XOR:
+			break;
+		case TOK_OR:
+			break;
+		default:
+			return true;
+		}
+		fetch(p);
+		if (!_mult_exp(p, t, n))
+			return false;
+
+		switch (op) {
+		case TOK_PLUS:
+			DBG("'+'");
+			break;
+		case TOK_MINUS:
+			DBG("'-'");
+			break;
+		case TOK_BITOR:
+			DBG("'|'");
+			break;
+		case TOK_XOR:
+			DBG("'^'");
+			break;
+		case TOK_OR:
+			DBG("'||'");
+			break;
+		}
+	}
+}
+
+static bool _mult_exp(struct parser * p,
+						   struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, MULT_EXP);
+	int op;
+/*
+mult_exp		: unary_exp
+				| unary_exp '*' mult_exp
+				| unary_exp '/' mult_exp
+				| unary_exp '%' mult_exp
+				| unary_exp '&' mult_exp
+				| unary_exp '&&' mult_exp
+
+*/
+	if (!_unary_exp(p, t, n))
+		return false;
+
+	for (;;) {
+		switch (op = lookahead(p)) {
+		case TOK_MUL:
+			break;
+		case TOK_DIV:
+			break;
+		case TOK_MOD:
+			break;
+		case TOK_AND:
+			break;
+		case TOK_BITAND:
+			break;
+		default:
+			return true;
+		}
+		fetch(p);
+
+		if (!_unary_exp(p, t, n))
+			return false;
+
+		switch (op) {
+		case TOK_MUL:
+			DBG("'*'");
+			break;
+		case TOK_DIV:
+			DBG("'/'");
+			break;
+		case TOK_MOD:
+			DBG("'%%'");
+			break;
+		case TOK_AND:
+			DBG("'&'");
+			break;
+		case TOK_BITAND:
+			DBG("'&&'");
+			break;
+		}
+	}
+}
+
+
+static bool _unary_exp(struct parser * p,
+						   struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, UNARY_EXP);
+/*
+unary_exp		: primary_exp
+				| '~' unary_exp
+				| '!' unary_exp
+				| '+' unary_exp
+				| '-' unary_exp
+
+*/
+
+	for (;;) {
+		if (_primary_exp(p, t, n))
+			return true;
+
+		switch (lookahead(p)) {
+		case TOK_BITINV:
+			DBG("'~'");
+			break;
+		case TOK_NOT:
+			DBG("'!'");
+			break;
+		case TOK_PLUS:
+			DBG("'+'");
+			break;
+		case TOK_MINUS:
+			DBG("'-'");
+			break;
+		default:
+			return true;
+		}
+		fetch(p);
+	} 
+}
+
+static bool _primary_exp(struct parser * p,
+						   struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, PRIMARY_EXP);
+	struct token tok;
 /*
 primary_exp		: '(' exp ')'
-				| <id> 
 				| <int_literal> 
 				| <float_literal> 
 				| <string_literal> 
 				| <false> 
 				| <true> 
 				| <null> 
+				| method_or_attr
+
 */
 //	printf(" %s", __func__);
 
+	tok = p->tok;
+
 	switch (lookahead(p)) {
 	case TOK_LEFTPAREN: 
-		printf(" (");
-		term(p, TOK_LEFTPAREN);
-		if (js_exp(p, t, n)) {
-			if (term(p, TOK_RIGHTPAREN)) {
-				printf(" )");
-				return true;
-			}
-			printf("\n#error: expecting ')'\n");
-		}
-		return false;
-	case TOK_ID:
-		term(p, TOK_ID);
-		printf(" <id>");
+		DBG("'('");
+		fetch(p);
+		if (!(_exp(p, t, n) && match(p, TOK_RIGHTPAREN)))
+			return false;
+		DBG("')'");
 		return true;
-	case TOK_INT32:
-		term(p, TOK_INT32);
-		printf(" <int>");
+	case TOK_INT:
+		DBG("%s", tok2str(tok));
+		fetch(p);
 		return true;
 	case TOK_FALSE:
-		term(p, TOK_FALSE);
-		printf(" <false>");
+		printf("false");
+		fetch(p);
 		return true;
 	case TOK_TRUE:
-		term(p, TOK_TRUE);
-		printf(" <true>");
+		fetch(p);
+		printf("true");
 		return true;
 	case TOK_NULL:
-		term(p, TOK_NULL);
-		printf(" <null>");
+		printf("null");
+		fetch(p);
 		return true;
+	}
+
+	return _method_or_attr(p, t, n);
+}
+
+static bool _method_or_attr(struct parser * p,
+							struct tree * t, int parent)
+{
+	unsigned int n = tree_add_node(t, parent, MEMBER_EXP);
+	struct token tok;
+
+/*
+method_or_attr	: <id> 
+				| <id> '.' method_or_attr
+				| <id> '[' exp ']'
+				| <id> '[' exp ']' '.' method_or_attr
+				| <id> '(' arg_list_opt ')'
+				| <id> '(' arg_list_opt ')' '.' method_or_attr
+*/
+
+	if (lookahead(p) != TOK_ID)
+		return false;
+
+	tok = p->tok;
+
+	while (match(p, TOK_ID)) {
+
+		DBG("%s", tok2str(tok));
+
+		switch (lookahead(p)) {
+
+		case TOK_LEFTBRACKET:
+			fetch(p);
+			DBG("'['");
+			if (!(_exp(p, t, n) && match(p, TOK_RIGHTBRACKET))) 
+				return false;
+			DBG("']'");
+
+			if (!match(p, TOK_DOT))
+				return true;
+			break;
+
+		case TOK_LEFTPAREN: 
+			fetch(p);
+			DBG("'('");
+			if (!(_arg_list_opt(p, t, n) && match(p, TOK_RIGHTPAREN)))
+				return false;
+			DBG("')'");
+
+			break;
+		}
+
+		if (!match(p, TOK_DOT))
+			return true;
+
+		DBG("'.'");
+		tok = p->tok;
 	}
 
 	return false;
 }
 
-int microjs_test(void)
+
+int test(void)
 {
 	struct tree my_tree;
 	struct tree * t = &my_tree;

@@ -31,6 +31,7 @@
 #include "calc.h"
 
 const char token_nm[][4] = {
+	"---", /* TOK_NULL */
 	"EOF", /* TOK_EOF */
 	".",   /* TOK_DOT */
 	",",   /* TOK_COMMA */
@@ -78,31 +79,31 @@ static const char * const err_tab[] = {
 	"syntax error",
 };
 
-int token_print(FILE * f, struct token tok)
+char * tok2str(struct token tok)
 {
-	char buf[STRING_LEN_MAX + 1];
+	static char buf[STRING_LEN_MAX + 3];
 	unsigned int typ = tok.typ;
 
 	if (typ == TOK_ERR) {
-		fprintf(f, "ERR: %s\n", err_tab[tok.qlf]);
+		sprintf(buf, "ERR: %s", err_tab[tok.qlf]);
 	} else if (typ == TOK_STRING) {
 		unsigned int n = tok.qlf;
-		memcpy(buf, tok.s, n);
-		buf[n] = '\0';
-		fprintf(f, "\"%s\"", buf);
+		buf[0] = '"';
+		memcpy(&buf[1], tok.s, n);
+		buf[n + 1] = '"';
+		buf[n + 2] = '\0';
 	} else if (typ == TOK_ID) {
 		unsigned int n = tok.qlf;
 		memcpy(buf, tok.s, n);
 		buf[n] = '\0';
-		fprintf(f, "%s", buf);
 	} else if (typ == TOK_INT) {
-		fprintf(f, "%d", tok.u32);
+		sprintf(buf, "%d", tok.u32);
 	} else if (typ >= TOK_BREAK) {
-		fprintf(f, "%s", tok.s);
+		sprintf(buf, "%s", tok.s);
 	} else
-		fprintf(f, "%s", token_nm[typ]);
+		sprintf(buf, "%s", token_nm[typ]);
 
-	return 0;
+	return buf;
 }
 
 static void js_dump_line(FILE * f, int ln, char * lp)
