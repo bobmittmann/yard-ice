@@ -125,6 +125,8 @@ typedef struct _symbol {	    /* Description of grammar symbol */
 	BITVEC 	first;
 	BITVEC 	follow;
 	char 	*symtext;	        /* text of symbol */
+	unsigned int r_offs;		/* offset in the rules table */
+	unsigned int r_cnt;			/* number of rules */
 } SYM, *SYMPTR; 
 
 typedef struct _rule {	        /* Description of a production rule */
@@ -151,6 +153,7 @@ int	conflict = NO_CONFLICT;
 int	listing = FALSE;
 int	dump_sets = FALSE;
 int	tables = FALSE;
+int	code = FALSE;
 
 int nextch = ' ';
 
@@ -310,7 +313,7 @@ void SyntaxError(char * str)
 
 static void scanComment()
 {
-	/* PRE:  "/*" recognised */
+	/* PRE: comment recognised */
     char prev = 0;	
 	while(1) { /* eat */		
 		nextch  = getc(infile);			
@@ -662,7 +665,7 @@ SYMPTR  ParseGroup(SYMPTR lhsp, int pos)
 			match(QUEST); 
 			newlhsp->rextype = OPTION;					
 			/* we have name_$ ->  (group)?,  and we want to have: */
-			/*      name_$ -> empty | group,  
+			/*      name_$ -> empty | group,  */
 			/* so, add empty production  but only if it is not in the group*/			
 			if(has_empty == FALSE)
 				RegisterRule(newlhsp, 0, 0, FALSE);		
@@ -701,7 +704,7 @@ SYMPTR  ParseGroup(SYMPTR lhsp, int pos)
 			   or: 
 					name_$ -> group name_$_rest, 
 					name_$_rest -> empty | name_$ , 			
-			so we must: 
+			so we must:  */
 			/* 1. make new symbol name_$_rest (NONTERM, GROUP)
 			   2. append name_$_rest to rhs of name_$
 			   3. add production, name_$_rest -> group name_$_rest, 
@@ -1035,6 +1038,144 @@ void WriteLLTable(FILE *fp)
 	fprintf(fp,"\n");
 }
 
+
+void WriteLLTableCode(FILE *fp)
+{	
+	RULEPTR rp;
+	SYMPTR sp,tp; 
+	BITVEC  set = BitVecNew();
+	unsigned int pos = 0;
+	unsigned int off = 0;
+	unsigned int size = 0;
+
+	#define SIZEOF_RULE 2
+	#define SIZEOF_PROD 4
+
+	/* dont write table if conflict*/
+	if(conflict) return;
+	
+	fprintf(fp, "/* LL(1) Table */\n\n");
+
+	fprintf(fp, "#include <stdint.h>\n\n");
+
+	fprintf(fp, "struct rule {\n");
+	fprintf(fp, "\tuint8_t t;\n");
+	fprintf(fp, "\tuint8_t r;\n");
+	fprintf(fp, "};\n\n");
+
+	fprintf(fp, "struct prod {\n");
+	fprintf(fp, "\tuint16_t off;\n");
+	fprintf(fp, "\tuint8_t cnt;\n");
+	fprintf(fp, "};\n\n");
+
+	size = 0;
+	fprintf(fp, "struct rule rule_lut[] = {");
+
+	/* for all nonterminal write  */
+	forall_symbols(sp) {
+		unsigned int i;
+
+		if (sp->kind != NONTERM)  
+			continue;   
+
+		off = pos;
+		fprintf(fp, "\n\t/* %3d (%s) */", sp->sym_no, sp->symtext);
+		/* look for rules begining with nonterminal sp*/
+		/* and print predict set (terminal,prod.no)*/
+		BitVecClear(set);
+		i = 0;
+		forall_rules( rp ) {
+			if (rp->lhs->sym_no == sp->sym_no) {				
+				forall_symbols( tp ) {
+					if (BitVecTest(rp->predict, tp->sym_no)) {
+//						fprintf(fp,"(T:%d,R:%d) ", 
+//								tp->sym_no, rp->rule_no);
+						if (i == 0)
+							fprintf(fp,"\n\t");
+						fprintf(fp,"{%3d,%3d}, ", 
+								tp->sym_no, rp->rule_no);
+						pos++;
+
+						if (++i == 6)
+							i = 0;
+					}
+				}					
+			}
+		}
+		sp->r_offs = off;
+		sp->r_cnt = pos - off;
+		size += sp->r_cnt * SIZEOF_RULE;
+
+//		fprintf(fp, "\n/* offs=%d cnt=%d */\n", off, pos - off);
+	}
+
+	fprintf(fp, "\n};\n\n");
+
+	fprintf(fp, "/* %d bytes; */\n\n", size);
+
+	size = 0;
+	fprintf(fp, "struct prod prod_lut[] = {");
+	/* for all nonterminal write  */
+	forall_symbols(sp) {
+		if (sp->kind != NONTERM)  
+			continue;   
+		fprintf(fp,"\n\t{%4d,%3d},", sp->r_offs, sp->r_cnt);
+		size += SIZEOF_PROD;
+	}
+
+	fprintf(fp, "\n};\n\n");
+
+	fprintf(fp, "/* %d bytes; */\n\n", size);
+
+	free(set);
+}
+
+void upcase(char * dst, const char * s)
+{
+	char * cp;
+
+	for (cp = (char *)s; *cp != '\0'; cp++)
+		*dst++ = toupper(*cp);
+
+	*dst = '\0';
+}
+
+void WriteSymAndGrmCode(FILE * fp) 
+{    
+	char s[256];
+    int j;
+    RULEPTR rp;
+    SYMPTR sp;       
+    
+	fprintf(fp, "/* LL(1) Table */\n\n");
+	fprintf(fp, "#include <stdint.h>\n\n");
+
+    fprintf(fp, "/* Last symbol num:%d  Num rules:%d */\n\n", 
+			lastsymnum, num_rules);	
+    forall_symbols( sp ) {
+		upcase(s, sp->symtext);
+		fprintf(fp, "#define %c_%-20s %3d\n", 
+		sp->kind==TERM? 'T':'N', s, sp->sym_no);
+	}
+	
+	fprintf(fp, "\n\n");
+    fprintf(fp, "/* Rules -- num:LHS name(num RHS symbols)-> RHS symbols */\n");	
+    forall_rules( rp ) {		
+		fprintf(fp, "/* %2d:%s(%d) ->", 
+				rp->rule_no,rp->lhs->symtext, rp->nrhs ); 		
+		for( j=0; j<rp->nrhs; j++ )
+			fprintf(fp, " %s", rp->rhs[j]->symtext );		
+		fprintf(fp, " */\n");
+    }    
+
+	fprintf(fp, "/*  */\n\n");
+}
+
+
+
+
+
+
 void WritePredictCases(FILE *fp, RULEPTR rp)
 {
  /* used in WriteRecursiveParser(FILE *fp) for cases of predictng alternate productions*/
@@ -1104,7 +1245,7 @@ void TabNL(FILE *fp, int tab)
   fprintf(fp, "\n"); while(tab--) fprintf(fp, "\t");
 }
 
-DoExpandGroupingRules(SYMPTR sp, FILE *fp, int errorcode, int tab)
+void DoExpandGroupingRules(SYMPTR sp, FILE *fp, int errorcode, int tab)
 {
 	int j,startalt, numalt, nrhs;	
 	SYMPTR tp;
@@ -1147,15 +1288,19 @@ DoExpandGroupingRules(SYMPTR sp, FILE *fp, int errorcode, int tab)
 				else
 					nrhs = rp->nrhs;				
 				
-				if(numalt > 1)
-				if (startalt){
-					TabNL(fp, tab+1); 
-					fprintf(fp, "if (");  WritePredictPredicates(fp, rp); fprintf(fp, ") {"); 
-					startalt = 0;
-				}
-				else {
-					TabNL(fp, tab+1); 
-					fprintf(fp, "else if (");  WritePredictPredicates(fp, rp); fprintf(fp, ") {"); 
+				if(numalt > 1) {
+					if (startalt){
+						TabNL(fp, tab+1); 
+						fprintf(fp, "if (");  
+						WritePredictPredicates(fp, rp); 
+						fprintf(fp, ") {"); 
+						startalt = 0;
+					} else {
+						TabNL(fp, tab+1); 
+						fprintf(fp, "else if (");  
+						WritePredictPredicates(fp, rp); 
+						fprintf(fp, ") {"); 
+					}
 				}
 				for(j=0; j<nrhs; j++)
 				{
@@ -1388,6 +1533,7 @@ void PrintUsage()
 	fprintf(stdout,"Options:  -l  : print symbols and BNF grammar rules to stdout\n");
 	fprintf(stdout,"          -s  : print first, follow and predict sets to stdout\n");
 	fprintf(stdout,"          -t  : print predictive table to stdout\n");
+	fprintf(stdout,"          -c  : generate tables as compact C code\n");
 	exit(1);
 
 }
@@ -1396,7 +1542,8 @@ int main(int argc,  char **argv)
 {
    int i;
    char *cp;
-   FILE *fout, *fhd;
+   FILE *fout;
+   FILE *fhd = NULL;
    char outname[128];
    char outheader[128];
 
@@ -1408,6 +1555,7 @@ int main(int argc,  char **argv)
 			if (*cp == 's') {dump_sets = TRUE; continue;   }
 			if (*cp == 'l') {listing = TRUE;   continue;   }
 			if (*cp == 't') {tables = TRUE;    continue;   }
+			if (*cp == 'c') {code = TRUE;    continue;   }
 			fprintf(stderr, "unknown option (-%s)\n", cp);	continue;
 		}
 		if (filename != NULL) {
@@ -1428,14 +1576,24 @@ int main(int argc,  char **argv)
 		PrintUsage();
 	}
     
-	if(tables) {                      /* predictive LL(1) parse table generation */
+	if (tables) { /* predictive LL(1) parse table generation */
 		if (filename != NULL) {
 			strcpy( outname, filename );
 			strcat( outname, ".tbl" );
 		} else
 			strcpy( outname, "llparser.tbl" );
-	}
-	else {                             /* recursive descent parser generation */
+	} else if (code) { 
+		/* predictive LL(1) parse table driven code generation */
+		if (filename != NULL) {
+			strcpy(outname, filename );
+			strcpy(outheader, filename );
+			strcat(outname, "_tab.c" );
+			strcat(outheader, "_tab.h" );
+		} else {
+			strcpy( outname, "ll_tab.c" );
+			strcpy( outname, "ll_tab.h" );
+		}
+	} else {   /* recursive descent parser generation */
 		if (filename != NULL) {
 			strcpy( outname, filename );
 			strcpy( outheader, filename );
@@ -1453,8 +1611,7 @@ int main(int argc,  char **argv)
 		exit(1);		
 	}
 	
-	if(!tables) 
-	{
+	if (!tables) {
 		fhd = fopen( outheader, "w");    /*open output file */
 		if (fhd == NULL) {
 			fprintf(stderr, "cannot create %s\n", outheader);  
@@ -1480,24 +1637,25 @@ int main(int argc,  char **argv)
     
 	TestLL1conflict(fout);
 	
-	if(conflict)	
-	{		
+	if(conflict)	{		
 		DumpPredictSets(fout);
 
 		if (!(conflict & LR_CONFLICT))
 			WriteRecursiveParser(fout,outname, fhd, outheader);		
-	}
-	else {  
-		if(tables) {
+	} else {  
+		if (tables) {
 			WriteSymAndGrm(fout); 
 			WriteLLTable(fout);
-		}
-		else
+		} else if (code) {
+			WriteSymAndGrmCode(fhd); 
+			WriteLLTableCode(fout);
+		} else
 			WriteRecursiveParser(fout,outname, fhd, outheader);
 	}
 	
-	if(!tables) 
-		fclose( fhd );    
+	if (!tables) 
+		fclose(fhd);    
+
 	fclose( fout );    
 
 	if(conflict & LR_CONFLICT)	
