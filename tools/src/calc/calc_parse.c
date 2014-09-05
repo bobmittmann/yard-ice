@@ -652,12 +652,12 @@ static bool _exp(struct parser * p,
 /*
 exp 			: '[' arg_list_opt ']'
 				| shift_exp
-				| shift_exp '<' relational_exp
-				| shift_exp '>' relational_exp
-				| shift_exp '<=' relational_exp
-				| shift_exp '>=' relational_exp
-				| shift_exp '==' relational_exp
-				| shift_exp '!=' relational_exp
+				| shift_exp '<' exp
+				| shift_exp '>' exp
+				| shift_exp '<=' exp
+				| shift_exp '>=' exp
+				| shift_exp '==' exp
+				| shift_exp '!=' exp
 */
 
 	if (lookahead(p) == TOK_LEFTBRACKET) {
