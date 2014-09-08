@@ -83,663 +83,20 @@ To-do-list:
 - ebnf implementation, but retain possibility of predictive parser table generation
 */
 
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <errno.h>
 
-#define FALSE	 0
-#define TRUE     1
-/* symbol -> kind */
-#define TERM     0
-#define NONTERM  1
-#define ACTION 	 2
-/* symbol -> regex ( generate using regular expresion) */
-#define SINGLE	 0
-#define GROUP	 1
-#define OPTION 	 2
-#define REPEAT	 4
-#define REPEAT1	 8
-#define REST	 16
-
-/* for LL1 conflicts */
-#define NO_CONFLICT    0
-#define LR_CONFLICT    1
-#define CLP_CONFLICT   2
-
-
-void WriteRecursiveParser(FILE *fp,char *pname, FILE *fh, char *hname);
-
-typedef int *BITVEC;
-int	bitvecsize;		    /* number of elements in a BITVEC */
-
-typedef struct _symbol {	    /* Description of grammar symbol */
-	struct  _symbol *next_sym;  /* a link */
-	int 	sym_no;		        /* symbol number */
-	int  	kind;		        /* terminal or non-terminal */
-	int 	rextype;            /* regex type - GROUP, REPEAT, OPTION */
-	int 	nullable;           /* if can generate empty string*/
-	int 	numalt;
-	struct  _rule *firstalt;    /* ptr to first of alternate rules */	
-	BITVEC 	first;
-	BITVEC 	follow;
-	char 	*symtext;	        /* text of symbol */
-	unsigned int r_offs;		/* offset in the rules table */
-	unsigned int r_cnt;			/* number of rules */
-} SYM, *SYMPTR; 
-
-typedef struct _rule {	        /* Description of a production rule */
-	struct _rule *next_rule;
-	int	rule_no;	            /* production number */
-	int	nrhs;		            /* number of symbols on RHS - empty pr. has nrhs=0*/		
-	int 	conflict;
-	int 	lineno;
-	BITVEC	predict;            /* prediction set */
-	SYMPTR	lhs;	            /* symbol on LHS */
-	SYMPTR	rhs[1];		        /* symbols on right-hand side */
-} RULE, *RULEPTR;
-
-RULEPTR  first_rule, last_rule;
-int	num_rules = 0;
-
-SYMPTR	first_sym = NULL, last_sym = NULL;
-int	lastsymnum = 0;
-
-char	*filename;		/* name of grammar input file */
-FILE	*infile;		/* the input file itself */
+#include "ell.h"
 
 int	conflict = NO_CONFLICT;
-int	listing = FALSE;
-int	dump_sets = FALSE;
-int	tables = FALSE;
-int	code = FALSE;
+int verbose = 0;
 
-int nextch = ' ';
-
-/* Define looping constructs for the main lists in the program */
-
-#define forall_rules(r)   for(r=first_rule;r!=NULL;r=r->next_rule)
-#define forall_symbols(s) for(s=first_sym;s!=NULL;s=s->next_sym)
-
-/* Package of bit vector routines */
-BITVEC BitVecNew() 
-{
-    BITVEC vp = (BITVEC ) calloc( (unsigned)bitvecsize, sizeof(int) );
-	if(vp == NULL) {fprintf(stderr, "\nMemory error\n"); exit(1);}
-	/* bitvecsize = (lastsymnum + 31) >> 5; */
-    return( vp );
-}
-
-void BitVecSetSize() 
-{        
-    bitvecsize = (lastsymnum + 31) >> 5;    
-}
-
-int BitVecUnion(BITVEC x,  BITVEC y)
-{
-    int i,old, changed=FALSE;
-    for( i=0; i < bitvecsize; i++ )
-	{ 
-		old = x[i];
-		x[i]  |=  y[i];
-		if(!changed)
-			changed = (x[i] != old);
-	}
-	return changed;
-}
-
-int BitVecEmpty(BITVEC x)
-{
-    int i;
-    for( i=0; i < bitvecsize; i++ )
-	{ 		
-		if (x[i])
-			return FALSE;
-	}
-	return TRUE;
-}
-
-int BitVecHasIntersection(BITVEC x,  BITVEC y)
-{
-    int i;
-    for( i=0; i < bitvecsize; i++ )
-	{ 		
-		if (x[i]  & y[i])
-			return TRUE;
-	}
-	return FALSE;
-}
-
-void BitVecClear(BITVEC x)
-{
-    int i;
-    for( i=0; i < bitvecsize; i++ )	
-		x[i] =0;
-	
-}
-
-int BitVecTest(BITVEC x, int pos)
-{
-	return ( x[pos >> 5] & (1 << (pos & 31)) );
-}
-
-int BitVecNumEl(BITVEC x)
-{
-	int i,num;
-	num=0;
-	for( i=0; i < lastsymnum; i++ )	
-	{
-		if( BitVecTest(x, i) ) 
-		  num++;
-	}
-	return num;
-}
-
-/* x >> 5 is iqual to x/32 */
-/* 31 is equal to 0x1F */
-/* return true if change */
-
-int BitVecAdd(BITVEC x, int pos)
-{
-    int old = BitVecTest(x, pos);
-	x[pos >> 5] |= (1 << (pos & 31));
-	return old != BitVecTest(x, pos);
-}
-
-/* look up symbol s and return pointer to symbol table entry */
-SYMPTR Lookup(char *s)
-{
-    SYMPTR sp;
-    
-	/* if exist return sp*/
-	forall_symbols( sp ) {
-		if (sp->symtext[0] != s[0]) continue;
-		if (strcmp(sp->symtext, s) == 0)
-			return( sp );
-    }
-	/* else insert */
-    sp = (SYMPTR) calloc( 1, (unsigned)( sizeof(*sp)) );
-	if(sp == NULL) {fprintf(stderr, "\nMemory error\n"); exit(1);}
-    sp->symtext = (char *)malloc(strlen(s)+1);
-	if(sp->symtext == NULL) {fprintf(stderr, "\nMemory error\n"); exit(1);}
-	strcpy(sp->symtext,s);
-    sp->next_sym = NULL;
-    sp->kind = TERM;     /* assume: terminal */
-	sp->rextype = SINGLE;
-    sp->nullable = FALSE;	/* assume: not nullable */
-	sp->numalt = 0;
-	sp->firstalt = NULL;    
-    sp->sym_no = lastsymnum++;
-    sp->first = sp->follow = NULL;
-    if (first_sym == NULL)
-		first_sym = sp;
-    else
-		last_sym->next_sym = sp;
-    last_sym = sp;
-    return( sp );
-}
-
-/* the scanner */
-
-#define BAD_TOKEN   -1
-#define T_EOF         0
-#define ID          256
-#define TOKEN_SPEC  257
-#define END_SPEC    258
-#define CHR_LIT     259
-#define STR_LIT     260
-#define STAR         '*'
-#define QUEST        '?'
-#define PLUS         '+'
-#define LPAREN       '('
-#define RPAREN       ')'
-#define SEMI         ';'
-#define COLON        ':'
-#define BAR          '|'
-#define NL          '\n'
-
-#define  MAXLENGTH   255
-
-char lexeme[MAXLENGTH +1];  
-int lineno = 1;
-int parse_error = 0; /*unused */
-
-void SyntaxError(char * str)
-{
-	fprintf(stderr, "\nError: %s in line %d\n", str, lineno);
-	exit(1);
-}
-
-static void scanComment()
-{
-	/* PRE: comment recognised */
-    char prev = 0;	
-	while(1) { /* eat */		
-		nextch  = getc(infile);			
-		if(nextch == EOF || nextch  == '\0') {
-			SyntaxError("End of file in comment");
-			return;
-		}
-		if (nextch == '\n') lineno++;
-		if(nextch  == '*'  && prev == '/') 				
-			SyntaxError("Nested comment");
-		else if(nextch  == '/'  && prev == '*') 			
-				break; /*  end of comment found */
-		else 
-			prev = nextch;
-	}		
-}
-
-/*
-   Returns next token with  string of token in lexeme[]   
-   A token is: grammar-symbol or '|' or  '\n' ':' ';'  EOF		
-*/
-
-int GetToken() 
-{
-	/* skip white space and comment */
-    while( isspace(nextch)  || ('/' == nextch)) {
-		if (nextch == '\n') {			
-			lineno++;
-		}
-		/* skip comment */
-		if( nextch == '/') {			
-		    nextch=getc(infile);
-			if(nextch == '/')
-			{ /* eat to end of line */
-				do { nextch=getc(infile); 
-					} while(nextch != '\n');
-					lineno++;
-			}
-			else if(nextch == '*')
-				scanComment();
-			else  {				
-				return('/');
-			}
-		}			
-		nextch = getc(infile);
-    }
-		
-    if (nextch == EOF) 	return( T_EOF);
-   		
-	if (isalpha (nextch) || nextch == '_' ) /*scan identifier */
-	{	char *s = lexeme;        
-		do {
-				*s = nextch; s++;
-				nextch = getc(infile);				
-		} while( isalpha(nextch) || isdigit( nextch ) || (nextch == '_' ) );
-		*s = '\0';
-		return ID;
-	}
-
-	switch (nextch)
-	{
-		case  ':'  :  nextch = getc(infile); return COLON;
-		case  ';'  :  nextch = getc(infile); return SEMI;
-		case  '|'  :  nextch = getc(infile); return BAR;
-		case  '('  :  nextch = getc(infile); return LPAREN;
-		case  ')'  :  nextch = getc(infile); return RPAREN;		
-		case  '*'  :  nextch = getc(infile); return STAR;		
-		case  '?'  :  nextch = getc(infile); return QUEST;						
-		case  '+'  :  nextch = getc(infile); return PLUS;						
-
-		case  '%'  :  nextch = getc(infile);
-					  if(nextch == '%') {
-						nextch = getc(infile);
-						strcpy(lexeme, "%%" );
-						return END_SPEC;
-					  }
-					  else if(isalpha(nextch)) {
-						char *s = lexeme;    			
-						do {
-							*s++ = nextch;
-							nextch = getc(infile);				
-						} while(isalpha(nextch));
-						*s = '\0';			
-						if(strcmp(lexeme, "token") == 0)
-							return TOKEN_SPEC;
-						else { 
-							SyntaxError("Unknown directive");
-							return( BAD_TOKEN );
-						}
-					  } else
-					  return( BAD_TOKEN );
-		
-		case '\"': /*multichar token "token" or single char "c" */
-			{
-			char *s = &lexeme[2];        			
-			lexeme[0]='T'; lexeme[1]='_';
-			while(nextch != EOF) {
-				nextch = toupper(getc(infile));				
-				while (nextch <= ' ' )
-					nextch = toupper(getc(infile));				
-				if(nextch == '\"'){
-					nextch=getc(infile); 
-					break;
-				}
-				*s = nextch; s++;				
-			};				
-			*s = '\0';
-			if(strlen(lexeme) == 3) { /*single char*/
-				lexeme[0]=lexeme[2]; lexeme[1]='\0';
-				return CHR_LIT;
-			}
-			else
-			  return ID;	
-			} 
-		/* single char token 'c'*/
-		case '\'': 
-			nextch = getc(infile);
-			lexeme[0] = nextch; lexeme[1] = '\0';
-			nextch = getc(infile);
-			if(nextch != '\'') {
-				SyntaxError("Single char token must be terminated with \'.");				
-				return(BAD_TOKEN);
-			}	
-			else {
-				nextch = getc(infile);
-				return CHR_LIT;
-			}
-	}						
-    return( BAD_TOKEN );
-}
-
-
-int lookahead;
-
-void match(int t) 
-{
-	 if(lookahead == t) lookahead = GetToken();
-	 else SyntaxError("bad token");
-}
-
-void RegisterRule(SYMPTR lhsp, int numrhs, SYMPTR rhs[], int first_alternate);
-SYMPTR  ParseGroup(SYMPTR lhsp, int pos); 
-void elemenlist (SYMPTR lhsp, int first_alternate); 
-void productionrule (SYMPTR lhsp, int first_alternate); 
-void grammar_rules();
-void tokenlist();
-void tokenspec() ;
-
-void ParseGrammar() 
-{	
-	lookahead = GetToken();
-	switch (lookahead) {
-	case T_EOF: case TOKEN_SPEC: case ID: 
-		if( TOKEN_SPEC == lookahead) {
-			match(TOKEN_SPEC); 
-			tokenlist(); 
-			match(END_SPEC); 
-		}	
-		grammar_rules(); 
-		match(T_EOF); 
-	break;
-	default:
-		SyntaxError("start with grammar rule");
-	}
-} /* end of grammar*/
-
-void tokenlist() 
-{
-	SYMPTR lhsp;
-	switch (lookahead) 
-	{
-	case END_SPEC: case CHR_LIT: case ID: 
-		while (lookahead == CHR_LIT || lookahead == ID ) { 			
-				lhsp = Lookup( lexeme );			
-				if (lhsp != last_sym) {
-					fprintf(stderr,"token %s declared twice\n", lexeme );
-				}
-				match(lookahead); 
-		}
-		break;
-	default:
-		SyntaxError("bad tokenlist");
-	}
-} /* end of tokenlist*/
-
-
-void grammar_rules() 
-{
-	SYMPTR lhsp;
-	int first_alternate;
-	switch (lookahead) {
-	case T_EOF: case ID: 
-		while (lookahead == ID ) 
-		{ 			
-			lhsp = Lookup(lexeme);			
-			if (lhsp->kind == NONTERM) {
-				/* non-terminal is defined before*/
-				first_alternate = FALSE;
-			}
-			else {
-				/* register non-terminal */
-				lhsp->kind = NONTERM;				
-				first_alternate = TRUE;
-			}
-			match(ID); 
-			match(COLON); 
-			productionrule(lhsp,  first_alternate); 
-			match(SEMI); 
-		}
-		break;
-	default:
-		SyntaxError("production must start with identifier");
-	}
-	
-} /* end of grammar_rules*/
-
-
-void productionrule(SYMPTR lhsp, int first_alternate) 
-{
-	switch (lookahead) {
-	case CHR_LIT: case ID: case SEMI: case BAR: case LPAREN: case RPAREN: 
-		elemenlist(lhsp,  first_alternate); 
-		while (lookahead == BAR ) { 
-				match(BAR); 
-				first_alternate = FALSE;
-				elemenlist(lhsp,  first_alternate); 
-		}
-		break;
-
-	default:
-		SyntaxError("productionrule");
-	}
-} /* end of productionrule*/
-
-
-void elemenlist(SYMPTR lhsp, int first_alternate) 
-{
-	SYMPTR newsym,temprhs[128];
-	int numrhs = 0;
-	
-	switch (lookahead) {
-		case CHR_LIT: case ID: case SEMI: case BAR: case LPAREN: case RPAREN:  
-		while (lookahead == CHR_LIT || lookahead == ID || lookahead == LPAREN ) 
-		{ 
-			if (lookahead == CHR_LIT || lookahead == ID ) {
-				temprhs[numrhs++] = Lookup(lexeme);
-				match(lookahead); 
-			}						
-			else if(lookahead == LPAREN ) {
-				newsym = ParseGroup(lhsp, numrhs+1); 
-				temprhs[numrhs++] = newsym;
-			}
-		}
-		RegisterRule(lhsp, numrhs, temprhs, first_alternate);
-		break;
-
-	default:
-		SyntaxError("bad rhs symbol ");
-	}
-} /* end of elemenlist*/
-
-void RegisterRule(SYMPTR lhsp, int numrhs, SYMPTR rhs[], int first_alternate)
-{
-	
-	/* get memory for numrhs symbols + one symbol that will be apennded later,
-	   if regex group is repetition */
-	RULEPTR rp = (RULEPTR)calloc( 1, (unsigned)( sizeof(*rp)+ (numrhs+1)*sizeof(rp->rhs[0]) ) );
-		
-	rp->rule_no = num_rules++;
-	rp->lhs = lhsp;
-	rp->nrhs = numrhs;
-	rp->next_rule = NULL;
-	rp->lineno = lineno;
-	/* copy rhs */	
-	while( numrhs-- > 0 )	rp->rhs[numrhs] = rhs[numrhs];
-		
-	/* put at end of rule list */
-	if (last_rule == NULL)	
-		first_rule = rp;
-	else
-		last_rule->next_rule = rp;
-	last_rule = rp;
-		
-	/* register alternate productions */
-	if (first_alternate) {
-		lhsp->firstalt = rp;
-		lhsp->numalt=1;
-	}
-	else
-		lhsp->numalt++;
-}
-
-
-SYMPTR  ParseGroup(SYMPTR lhsp, int pos) 
-{
-	char *name, strpos[12];	
-	SYMPTR newlhsp;
-	RULEPTR rp;
-	int has_empty;
-	
-	/* Algorithm:
-		1. make name by adding (_$+rhs_pos+numalt) to name of lhs symbol
-		2. generate new nonterminal - newlhsp with GROUP attribute
-		3. Parse inside group
-		4. if group ends with )? or )*.
-		      1. change atribute to OPTION or REPEAT
-	          2. generate sub rules for these regex
-	*/
-	
-	sprintf(strpos, "%d%d",pos, lhsp->numalt);
-	name = malloc(strlen(lhsp->symtext) + strlen(strpos)+ 3);
-	strcpy(name, lhsp->symtext);
-	strcat(name,"$");strcat(name,strpos);
-	
-	newlhsp = Lookup(name);
-	if (newlhsp->kind == NONTERM) {
-				/* non-terminal is defined before*/
-				fprintf(stderr, "Do not use symbol with sufix _$");
-				exit(1);
-	}
-	/* register non-terminal as GROUP */
-	newlhsp->kind = NONTERM;				
-	newlhsp->rextype = GROUP;
-
-	/* start scanning inside parentheses */	
-	/*******************************************************/
-	match(LPAREN); 
-	
-	/* start scanning inside group with first alternative of newlhsp */
-	
-	productionrule(newlhsp, /*first_alternate*/  TRUE); 
-	
-	match(RPAREN); 
-	
-	/* first check if the group has no an empty production */
-	
-	has_empty=FALSE;
-	
-	forall_rules(rp)
-	{
-		if(rp->lhs->sym_no != newlhsp->sym_no) continue;
-		if(rp->nrhs == 0 ){
-			has_empty = TRUE; 
-			break;
-		}
-	}		
-	
-	if (QUEST == lookahead) {
-			match(QUEST); 
-			newlhsp->rextype = OPTION;					
-			/* we have name_$ ->  (group)?,  and we want to have: */
-			/*      name_$ -> empty | group,  */
-			/* so, add empty production  but only if it is not in the group*/			
-			if(has_empty == FALSE)
-				RegisterRule(newlhsp, 0, 0, FALSE);		
-	}
-	else if (STAR == lookahead ) {
-			match(STAR); 
-			newlhsp->rextype = REPEAT;					
-			/* we have name_$ -> (group)*,  and we want to have */
-			/*      name_$ -> empty | group name_$,     */
-			/* 1. add production name_$ -> group name_$ to nonempty production */
-			/* 2. add empty production,( but only if it is not in the group */
-			/*    - this way everything is ok even if group has empty prod. ) */
-			
-			forall_rules(rp)
-			{
-				if(rp->lhs->sym_no != newlhsp->sym_no) continue;			
-				if(rp->nrhs != 0 ) /*not empty*/ 
-				{	/* concat newlhs - we reserved place for it  before*/
-					rp->rhs[rp->nrhs] = newlhsp;
-					rp->nrhs++;
-				}				
-			}
-			/* add empty production */
-			if(has_empty == FALSE)
-				RegisterRule(newlhsp, 0, 0, FALSE);		
-	}	
-	else if (PLUS == lookahead) { /* repeat one or more times*/ 
-			SYMPTR restsp;
-			SYMPTR restRhs[1];
-			newlhsp->rextype = REPEAT1;					
-			match(PLUS); 
-
-			/* we have name_$ -> (group)+,  and we want to have bnf
-			        name_$ -> group name_$_rest, 
-					name_$_rest -> empty | group name_$_rest, 
-			   or: 
-					name_$ -> group name_$_rest, 
-					name_$_rest -> empty | name_$ , 			
-			so we must:  */
-			/* 1. make new symbol name_$_rest (NONTERM, GROUP)
-			   2. append name_$_rest to rhs of name_$
-			   3. add production, name_$_rest -> group name_$_rest, 
-			      and set it as first alternative
-			   4. add empty production name_$_rest ->  
-				   (LL1 problem if group is empty)
-			   5. make warning if group has empty
-		    */
-			name = malloc(strlen(newlhsp->symtext) + 5);
-			strcpy(name, newlhsp->symtext);	strcat(name,"rest");
-			restsp = Lookup(name);
-			/* register non-terminal as REST - we do not generate  code for REST */
-			restsp->kind = NONTERM;				
-			restsp->rextype = REST;
-			restRhs[0]=newlhsp;
-			/* register  name_$ | empty */ 			
-			RegisterRule(restsp, 1, restRhs, /*first_alt*/ TRUE);		
-			RegisterRule(restsp, 0, /*empty*/ 0, /*first_alt*/ FALSE);		
-			
-			/* append name_$_rest to rhs of name_$ */
-			forall_rules(rp)
-			{
-				if(rp->lhs->sym_no != newlhsp->sym_no) continue;			
-				if(rp->nrhs != 0 ) /*not empty*/ 
-				{	/* concat newlhs - we reserved place for it  before*/
-					rp->rhs[rp->nrhs] = restsp;
-					rp->nrhs++;
-				}				
-			}
-		}  
-	
-	return newlhsp;	
-	
-} /* end of group*/
-
+void WriteRecursiveParser(FILE *fp, char * pname, FILE * fh, char *hname);
 
 void WriteGrammar(FILE *fp) 
 {
@@ -775,12 +132,12 @@ void FindNullableSymbols()
 	SYMPTR sp;
 	int changed;
 	
-	forall_symbols( sp ) 	sp->nullable = FALSE;      
+	forall_symbols( sp ) 	sp->nullable = false;      
 	
 	/* this version assume that there is no epsilon symbol, but */
 	/* pure null productions have rp->nrhs =0 */	
 	
-	forall_rules( rp ) 	if( rp->nrhs == 0) 	rp->lhs->nullable = TRUE;
+	forall_rules( rp ) 	if( rp->nrhs == 0) 	rp->lhs->nullable = true;
 	
 	/* find all productions that generate empty string */
 	do
@@ -788,15 +145,15 @@ void FindNullableSymbols()
 		changed = 0;		
 		forall_rules( rp ) 
 		{
-			if( rp->lhs->nullable == TRUE) continue;
+			if( rp->lhs->nullable == true) continue;
 			
 			for(i=0; i<rp->nrhs; i++)
 			{
-				if( rp->rhs[i]->nullable == FALSE) break;
+				if( rp->rhs[i]->nullable == false) break;
 			}			
 			if( i==rp->nrhs ) /* means that all are nullable - this also cover empty*/
 			{
-				rp->lhs->nullable = TRUE;
+				rp->lhs->nullable = true;
 				changed = 1;
 			}
 		}		
@@ -812,42 +169,36 @@ void ComputeFIRST()
 	int changed;
 	
 	/* first set of terminal symbol contains only that terminal symbol */
-    forall_symbols( sp ) {
+    forall_symbols(sp) {
 		sp->first = BitVecNew();
-		if(sp->kind==TERM)
+		if(sp->kind == TERM)
 			BitVecAdd(sp->first, sp->sym_no );
     }
 	
 	/* Now compute all first sets for nonterminals*/
-	do
-	{
+	do {
 		SYM *s1, *s2;
 		changed = 0;
 		
-		forall_rules( rp ) 
-		{    
+		forall_rules(rp) {
 			s1 = rp->lhs; 
-			for(i=0; i<rp->nrhs; i++)
-			{
+			for(i = 0; i < rp->nrhs; i++) {
 				s2 = rp->rhs[i]; 
 				
-				if( s2->kind == TERM )
-				{          
+				if (s2->kind == TERM) {          
 					changed += BitVecAdd(s1->first, s2->sym_no);
 					break;
-				}
-				else if( s1==s2 )
-				{
-					if( s1->nullable== FALSE) break;
-				}
-				else
-				{ 
+				} else if (s1 == s2) {
+					if (s1->nullable == false) 
+						break;
+				} else { 
 					changed += BitVecUnion(s1->first, s2->first);			  
-					if( s2->nullable== FALSE ) break;
+					if (s2->nullable == false) 
+						break;
 				}
 			}
 		}
-	}while( changed );    
+	} while(changed);    
 }
 
 void ComputeFOLLOW() 
@@ -858,21 +209,20 @@ void ComputeFOLLOW()
 	
     forall_symbols( sp ) sp->follow = BitVecNew();
     
-	do 
-	{		
+	do {		
 		changed = 0;
-		forall_rules( rp ) 
-		{									             
-			for( i = 0;   i<rp->nrhs; i++ ) 
-			{
+		forall_rules( rp ) {									             
+			for( i = 0;   i<rp->nrhs; i++ ) {
 				sp = rp->rhs[i];
-				if(sp->kind == TERM) continue;
+
+				if(sp->kind != NONTERM) 
+					continue;
 				
 				for( j=i+1; j < rp->nrhs; j++ ) 
 				{
 					tp = rp->rhs[j];
 					
-					if(tp->nullable == TRUE) {
+					if(tp->nullable == true) {
 						changed += BitVecUnion(sp->follow, tp->first);			  
 						continue;
 					}
@@ -910,15 +260,15 @@ void ComputePREDICT()
 	
 	forall_rules( rp ) 
 	{		
-		all_nullable = TRUE;
+		all_nullable = true;
 		
 		for(i=0; i <rp->nrhs; i++)
 		{
 			sp = rp->rhs[i];		   			
 			BitVecUnion(rp->predict, sp->first);
 			
-			if(sp->nullable == FALSE) {
-				all_nullable = FALSE;
+			if(sp->nullable == false) {
+				all_nullable = false;
 				break;
 			}
 		}		
@@ -959,7 +309,8 @@ int TestLL1conflict(FILE *fp)
 	{
 		if(rp->nrhs > 1)
 		if(rp->lhs->sym_no == rp->rhs[0]->sym_no) {
-				fprintf(fp,"\nLeft recursion in rule:%d, line:%d ", rp->rule_no, rp->lineno);
+				fprintf(fp,"\nLeft recursion in rule:%d, line:%d ", 
+						rp->rule_no, rp->lineno);
 				conflict = conflict | LR_CONFLICT;
 				rp->conflict = conflict;
 		}
@@ -967,9 +318,9 @@ int TestLL1conflict(FILE *fp)
 
 	forall_symbols( sp ) /* for all nonterminal test LL(1) conflict */
 	{
-		if(sp->kind != NONTERM)  continue;   
-		if(sp->kind == NONTERM)
-		{
+		if(sp->kind != NONTERM)  
+			continue;   
+		if(sp->kind == NONTERM) {
 			/* look for rules begining with nonterminal sp*/
 			BitVecClear(set);			
 			forall_rules( rp ) 
@@ -979,14 +330,15 @@ int TestLL1conflict(FILE *fp)
 					/* 1st condition  - usually result of left recursion*/
 					if(BitVecEmpty(rp->predict)) 
 					{
-						fprintf(fp,"\nCan\'t predict rule:%d, line:%d", rp->rule_no, rp->lineno);
+						fprintf(fp,"\nCan\'t predict rule:%d, line:%d", 
+								rp->rule_no, rp->lineno);
 						conflict = conflict | LR_CONFLICT;
 						rp->conflict = conflict;
 					}
 					/* 2nd condition - result of common left prefixes*/
-					if (BitVecHasIntersection(set, rp->predict ))
-					{
-						fprintf(fp,"\nConflict in rule:%d, line:%d", rp->rule_no, rp->lineno);
+					if (BitVecHasIntersection(set, rp->predict)) {
+						fprintf(fp,"\nConflict in rule:%d, line:%d", 
+								rp->rule_no, rp->lineno);
 						conflict = conflict | CLP_CONFLICT;
 						rp->conflict = conflict;
 					}
@@ -1038,153 +390,13 @@ void WriteLLTable(FILE *fp)
 	fprintf(fp,"\n");
 }
 
-
-void WriteLLTableCode(FILE *fp)
-{	
-	RULEPTR rp;
-	SYMPTR sp,tp; 
-	BITVEC  set = BitVecNew();
-	unsigned int pos = 0;
-	unsigned int off = 0;
-	unsigned int size = 0;
-
-	#define SIZEOF_RULE 2
-	#define SIZEOF_PROD 4
-
-	/* dont write table if conflict*/
-	if(conflict) return;
-	
-	fprintf(fp, "/* LL(1) Table */\n\n");
-
-	fprintf(fp, "#include <stdint.h>\n\n");
-
-	fprintf(fp, "struct rule {\n");
-	fprintf(fp, "\tuint8_t t;\n");
-	fprintf(fp, "\tuint8_t r;\n");
-	fprintf(fp, "};\n\n");
-
-	fprintf(fp, "struct prod {\n");
-	fprintf(fp, "\tuint16_t off;\n");
-	fprintf(fp, "\tuint8_t cnt;\n");
-	fprintf(fp, "};\n\n");
-
-	size = 0;
-	fprintf(fp, "struct rule rule_lut[] = {");
-
-	/* for all nonterminal write  */
-	forall_symbols(sp) {
-		unsigned int i;
-
-		if (sp->kind != NONTERM)  
-			continue;   
-
-		off = pos;
-		fprintf(fp, "\n\t/* %3d (%s) */", sp->sym_no, sp->symtext);
-		/* look for rules begining with nonterminal sp*/
-		/* and print predict set (terminal,prod.no)*/
-		BitVecClear(set);
-		i = 0;
-		forall_rules( rp ) {
-			if (rp->lhs->sym_no == sp->sym_no) {				
-				forall_symbols( tp ) {
-					if (BitVecTest(rp->predict, tp->sym_no)) {
-//						fprintf(fp,"(T:%d,R:%d) ", 
-//								tp->sym_no, rp->rule_no);
-						if (i == 0)
-							fprintf(fp,"\n\t");
-						fprintf(fp,"{%3d,%3d}, ", 
-								tp->sym_no, rp->rule_no);
-						pos++;
-
-						if (++i == 6)
-							i = 0;
-					}
-				}					
-			}
-		}
-		sp->r_offs = off;
-		sp->r_cnt = pos - off;
-		size += sp->r_cnt * SIZEOF_RULE;
-
-//		fprintf(fp, "\n/* offs=%d cnt=%d */\n", off, pos - off);
-	}
-
-	fprintf(fp, "\n};\n\n");
-
-	fprintf(fp, "/* %d bytes; */\n\n", size);
-
-	size = 0;
-	fprintf(fp, "struct prod prod_lut[] = {");
-	/* for all nonterminal write  */
-	forall_symbols(sp) {
-		if (sp->kind != NONTERM)  
-			continue;   
-		fprintf(fp,"\n\t{%4d,%3d},", sp->r_offs, sp->r_cnt);
-		size += SIZEOF_PROD;
-	}
-
-	fprintf(fp, "\n};\n\n");
-
-	fprintf(fp, "/* %d bytes; */\n\n", size);
-
-	free(set);
-}
-
-void upcase(char * dst, const char * s)
-{
-	char * cp;
-
-	for (cp = (char *)s; *cp != '\0'; cp++)
-		*dst++ = toupper(*cp);
-
-	*dst = '\0';
-}
-
-void WriteSymAndGrmCode(FILE * fp) 
-{    
-	char s[256];
-    int j;
-    RULEPTR rp;
-    SYMPTR sp;       
-    
-	fprintf(fp, "/* LL(1) Table */\n\n");
-	fprintf(fp, "#include <stdint.h>\n\n");
-
-    fprintf(fp, "/* Last symbol num:%d  Num rules:%d */\n\n", 
-			lastsymnum, num_rules);	
-    forall_symbols( sp ) {
-		upcase(s, sp->symtext);
-		fprintf(fp, "#define %c_%-20s %3d\n", 
-		sp->kind==TERM? 'T':'N', s, sp->sym_no);
-	}
-	
-	fprintf(fp, "\n\n");
-    fprintf(fp, "/* Rules -- num:LHS name(num RHS symbols)-> RHS symbols */\n");	
-    forall_rules( rp ) {		
-		fprintf(fp, "/* %2d:%s(%d) ->", 
-				rp->rule_no,rp->lhs->symtext, rp->nrhs ); 		
-		for( j=0; j<rp->nrhs; j++ )
-			fprintf(fp, " %s", rp->rhs[j]->symtext );		
-		fprintf(fp, " */\n");
-    }    
-
-	fprintf(fp, "/*  */\n\n");
-}
-
-
-
-
-
-
 void WritePredictCases(FILE *fp, RULEPTR rp)
 {
  /* used in WriteRecursiveParser(FILE *fp) for cases of predictng alternate productions*/
 
     SYMPTR sp; 			
-	forall_symbols( sp ) 
-	{
-		if ( BitVecTest( rp->predict, sp->sym_no ) )
-		{
+	forall_symbols(sp) {
+		if (BitVecTest( rp->predict, sp->sym_no )) {
 			if(strlen(sp->symtext) == 1)
 				fprintf(fp, "case \'%s\': ", sp->symtext );
 			else
@@ -1368,11 +580,10 @@ void WriteRecursiveParser(FILE *fp,char *pname, FILE *fh, char *hname)
 	   To skip conflict with operator values add 255 to symbol-no
 	*/
 	
-	forall_symbols( sp ) /* for all terminal*/
-	{
-		if(sp->kind == TERM)
-		{
-			if(strlen(sp->symtext) >1) /* skip single char operators*/
+	/* for all terminal*/
+	forall_symbols(sp) {
+		if(sp->kind == TERM) {
+			if (strlen(sp->symtext) > 1) /* skip single char operators*/
 			fprintf(fh, "\n#define %s  %d", sp->symtext, sp->sym_no+256);		
 		}
 	}
@@ -1527,146 +738,289 @@ void WriteSymAndGrm(FILE *tbl)
     }    
 }
 
-void PrintUsage()
+void usage(FILE * f, char * prog)
 {
-	fprintf(stdout,"Usage: ell  [-l]  [-f] [-t]  <grammar-file>\n");
-	fprintf(stdout,"Options:  -l  : print symbols and BNF grammar rules to stdout\n");
-	fprintf(stdout,"          -s  : print first, follow and predict sets to stdout\n");
-	fprintf(stdout,"          -t  : print predictive table to stdout\n");
-	fprintf(stdout,"          -c  : generate tables as compact C code\n");
-	exit(1);
-
+	fprintf(f, "Usage: %s [OPTION...] grammar\n", prog);
+	fprintf(f, "LL(1) Predictive Parser Generator.\n");
+	fprintf(f, "\n");
+	fprintf(f, "  -?     \tShow this help message\n");
+	fprintf(f, "  -o FILE\toutput\n");
+	fprintf(f, "  -v[v]  \tVerbosity level\n");
+	fprintf(f, "  -V     \tPrint version\n");
+	fprintf(f, "  -l     \tprint symbols and BNF grammar rules to stdout\n");
+	fprintf(f, "  -s     \tprint first, follow and predict sets to stdout\n");
+	fprintf(f, "  -t     \twrite predictive table\n");
+	fprintf(f, "  -c     \twrite .c file\n");
+	fprintf(f, "  -h     \twrite .h file\n");
+	fprintf(f, "  -r     \trecursive descent parser\n");
+	fprintf(f, "  -e     \tembedded predictive parser tables\n");
+	fprintf(f, "\n");
 }
+
+void version(char * prog)
+{
+	fprintf(stderr, "%s\n", PACKAGE_STRING);
+	fprintf(stderr, "(C)Copyright, Ivo Mateljan.\n");
+	exit(1);
+}
+
 
 int main(int argc,  char **argv)
 {
-   int i;
-   char *cp;
-   FILE *fout;
-   FILE *fhd = NULL;
-   char outname[128];
-   char outheader[128];
+	extern char *optarg;	/* getopt */
+	extern int optind;	/* getopt */
+	char * prog;
+
+	char basename[256];
+	char outname[256];
+
+	FILE * cf = NULL;
+	bool cgen = false;
+	char cfname[256];
+
+	FILE * hf = NULL;
+	bool hgen = false;
+	char hfname[256];
+
+	FILE * tf = NULL;
+	bool tgen = false;
+	char tfname[256];
+
+	bool rdp = true; /* default, generate a RD parser */
+	bool output_set = false;
+
+	char * filename; /* name of grammar input file */
+
+	int c;
+
+	int	listing = false;
+	int	dump_sets = false;
+
+	/* the prog name start just after the last lash */
+	if ((prog = (char *)strrchr(argv[0], '/')) == NULL)
+		prog = argv[0];
+	else
+		prog++;
+
+	/* parse the command line options */
+	while ((c = getopt(argc, argv, "V?vretchlso:")) > 0) {
+		switch (c) {
+		case 'V':
+			version(prog);
+			break;
+
+		case '?':
+			usage(stdout, prog);
+			return 0;
+
+		case 'v':
+			verbose++;
+			break;
+
+		case 'r':
+			rdp = true;
+			break;
+
+		case 'e':
+			rdp = false;
+			break;
+
+		case 't':
+			tgen = true;
+			break;
+
+		case 'c':
+			cgen = true;
+			break;
+
+		case 'h':
+			hgen = true;
+			break;
+
+		case 'l':
+			listing = true;
+			break;
+
+		case 's':
+			dump_sets = true;
+			break;
+
+		case 'o':
+			strcpy(outname, optarg);
+			output_set = true;
+			break;
 
 
-	for( i=1; i<argc; i++ ) { /* get command line arguments */
-		cp = argv[i];
-		if (*cp == '-') {	/* an option */
-			cp++;
-			if (*cp == 's') {dump_sets = TRUE; continue;   }
-			if (*cp == 'l') {listing = TRUE;   continue;   }
-			if (*cp == 't') {tables = TRUE;    continue;   }
-			if (*cp == 'c') {code = TRUE;    continue;   }
-			fprintf(stderr, "unknown option (-%s)\n", cp);	continue;
-		}
-		if (filename != NULL) {
-			fprintf(stderr, "only one file argument permitted\n");
-			continue;
-		}
-		filename = cp;
-	}
-	
-	if (filename != NULL) {
-		infile = fopen( filename, "rt" );
-		if (infile == NULL) {
-			fprintf(stderr,"cannot read %s\n", filename);
-			exit(1);
+		default:
+			fprintf(stderr, "%s: invalid option %s\n", prog, optarg);
+			return 1;
 		}
 	}
-	else {
-		PrintUsage();
+
+	if (optind != (argc - 1)) {
+		fprintf(stderr, "%s: missing grammar.\n\n", prog);
+		usage(stderr, prog);
+		return 2;
 	}
-    
-	if (tables) { /* predictive LL(1) parse table generation */
-		if (filename != NULL) {
-			strcpy( outname, filename );
-			strcat( outname, ".tbl" );
-		} else
-			strcpy( outname, "llparser.tbl" );
-	} else if (code) { 
-		/* predictive LL(1) parse table driven code generation */
-		if (filename != NULL) {
-			strcpy(outname, filename );
-			strcpy(outheader, filename );
-			strcat(outname, "_tab.c" );
-			strcat(outheader, "_tab.h" );
+
+	filename = argv[optind];
+
+	if (output_set) {
+		if (cgen && hgen) {
+			fprintf(stderr, "incompatible options: -o -c -h\n");
+			return 1;
+		}
+
+		if (cgen && tgen) {
+			fprintf(stderr, "incompatible options: -o -c -t\n");
+			return 1;
+		}
+
+		if (hgen && tgen) {
+			fprintf(stderr, "incompatible options: -o -h -t\n");
+			return 1;
+		}
+
+		if (tgen) 
+			strcpy(tfname, outname);
+
+		if (hgen) 
+			strcpy(hfname, outname);
+
+		if (cgen)  {
+			char * cp;
+			strcpy(cfname, outname);
+			/* strip the file extension */
+			strcpy(basename, outname);
+			if ((cp = strrchr(basename, '.')) != NULL)
+				*cp = '\0';
+			strcpy(hfname, basename);
+			strcat(hfname, ".h" );
+		}
+	} else { 
+		char * cp;
+		/* strip the file extension */
+		strcpy(basename, filename);
+		if ((cp = strrchr(basename, '.')) != NULL)
+			*cp = '\0';
+
+		if (rdp) { 
+			strcpy(cfname, basename);
+			strcat(cfname, "_par.c" );
+			strcpy(hfname, basename);
+			strcat(hfname, "_par.h" );
 		} else {
-			strcpy( outname, "ll_tab.c" );
-			strcpy( outname, "ll_tab.h" );
+			strcpy(cfname, basename);
+			strcat(cfname, "_ll.c" );
+			strcpy(hfname, basename);
+			strcat(hfname, "_ll.h" );
 		}
-	} else {   /* recursive descent parser generation */
-		if (filename != NULL) {
-			strcpy( outname, filename );
-			strcpy( outheader, filename );
-			strcat( outname, "_par.c" );
-			strcat( outheader, "_par.h" );
-		} else {
-			strcpy( outname, "llparser.c" );
-		    strcpy( outname, "llparser.h" );
+		strcpy(tfname, basename);
+		strcat(tfname, ".tbl" );
+	}
+
+	if (rdp) {
+		if (verbose)
+			printf("%s: recursive descent parser generation.\n", prog);
+		cgen = true;
+		hgen = true;
+	} else {
+		if (verbose)
+			printf("%s: embedded predictive parser tebales generation.\n", 
+				   prog);
+	}
+
+	if (tgen) {
+		if (verbose)
+			printf(" - creating table file: \"%s\"\n", tfname);
+		if ((tf = fopen(tfname, "w")) == NULL) {
+			fprintf(stderr, "ERROR: creating file \"%s\": %s\n", 
+					tfname, strerror(errno));  
+			return 1;
 		}
 	}
 
-	fout = fopen( outname, "w");    /*open output file */
-	if (fout == NULL) {
-		fprintf(stderr, "cannot create %s\n", outname);  
-		exit(1);		
+	if (cgen) {
+		if (verbose)
+			printf(" - creating C file: \"%s\"\n", cfname);
+		if ((cf = fopen(cfname, "w")) == NULL) {
+			fprintf(stderr, "ERROR: creating file \"%s\": %s\n", 
+					cfname, strerror(errno));  
+			return 1;
+		}
+	}
+
+	if (hgen) {
+		if (verbose)
+			printf(" - creating C header file: \"%s\"\n", hfname);
+		if ((cf = fopen(hfname, "w")) == NULL) {
+			fprintf(stderr, "ERROR: creating file \"%s\": %s\n", 
+					hfname, strerror(errno));  
+			return 1;
+		}
 	}
 	
-	if (!tables) {
-		fhd = fopen( outheader, "w");    /*open output file */
-		if (fhd == NULL) {
-			fprintf(stderr, "cannot create %s\n", outheader);  
-			exit(-1);		
-		}	
-	}
-	
-	ParseGrammar();
-	fclose(infile);
-	
+	parse_grammar(filename);
+
 	BitVecSetSize();
 	FindNullableSymbols();
 	ComputeFIRST();
 	ComputeFOLLOW();
 	ComputePREDICT();
-    
+
 	if (listing) 
 		WriteGrammar(stdout);
+
 	if (dump_sets) {
 		DumpFFSets(stdout);
 		DumpPredictSets(stdout);
 	}
-    
-	TestLL1conflict(fout);
-	
-	if(conflict)	{		
-		DumpPredictSets(fout);
 
-		if (!(conflict & LR_CONFLICT))
-			WriteRecursiveParser(fout,outname, fhd, outheader);		
+	TestLL1conflict(stderr);
+
+	if (conflict)	{		
+		DumpPredictSets(stderr);
+		if (!(conflict & LR_CONFLICT) && rdp) {
+			WriteRecursiveParser(cf, cfname, hf, hfname);
+		}
+
+		if (conflict & LR_CONFLICT)	{
+			fprintf(stderr, "\nFinished with severe errors - see %s\n", 
+					outname);
+		} else if(conflict & CLP_CONFLICT) {	
+			fprintf(stderr, "\nFinished with errors!\n");
+//			fprintf(stderr, "\nUsing default choice - see %s\n", outname);
+		} 
 	} else {  
-		if (tables) {
-			WriteSymAndGrm(fout); 
-			WriteLLTable(fout);
-		} else if (code) {
-			WriteSymAndGrmCode(fhd); 
-			WriteLLTableCode(fout);
-		} else
-			WriteRecursiveParser(fout,outname, fhd, outheader);
-	}
-	
-	if (!tables) 
-		fclose(fhd);    
+		if (verbose)
+			fprintf(stdout, " - finished without errors.\n");
 
-	fclose( fout );    
+		if (tgen) {
+			/* create table file */
+			WriteSymAndGrm(tf); 
+			WriteLLTable(tf);
+		} 
 
-	if(conflict & LR_CONFLICT)	
-		fprintf(stderr, "\nFinished with severe errors - see %s\n", outname);
-	
-	else if(conflict & CLP_CONFLICT) {	
-		fprintf(stderr, "\nFinished with errors!\n");
-		fprintf(stderr, "\nUsing default choice - see %s\n", outname);
+		if (rdp) {
+			WriteRecursiveParser(cf, cfname, hf, hfname);
+		} else {
+			if (hgen)
+				write_compact_h(hf, hfname); 
+
+			if (cgen)
+				write_compact_c(cf, hfname);
+		}
 	}
-	else
-		fprintf(stderr, "\nFinished without errors - see %s\n", outname);
-	exit( conflict );
-    return 0;
+
+	if (tgen)
+		fclose(tf);    
+
+	if (hgen)
+		fclose(hf);    
+
+	if (cgen)
+		fclose(cf);    
+
+	return 0;
 }
+
