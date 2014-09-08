@@ -123,43 +123,45 @@ void WriteGrammar(FILE *fp)
 	fprintf(fp, "\n");
 }
 
-void FindNullableSymbols() 
+void FindNullableSymbols(void) 
 { 
 	int i;
 	RULEPTR rp;
 	SYMPTR sp;
 	int changed;
 	
-	forall_symbols( sp ) 	sp->nullable = false;      
+	forall_symbols(sp) 	
+		sp->nullable = false;      
 	
 	/* this version assume that there is no epsilon symbol, but */
 	/* pure null productions have rp->nrhs =0 */	
 	
-	forall_rules( rp ) 	if( rp->nrhs == 0) 	rp->lhs->nullable = true;
+	forall_rules(rp) 	
+		if (rp->nrhs == 0)
+			rp->lhs->nullable = true;
 	
 	/* find all productions that generate empty string */
-	do
-	{
+	do {
 		changed = 0;		
-		forall_rules( rp ) 
-		{
-			if( rp->lhs->nullable == true) continue;
+		forall_rules( rp ) {
+			if ( rp->lhs->nullable == true) 
+				continue;
 			
-			for(i=0; i<rp->nrhs; i++)
-			{
-				if( rp->rhs[i]->nullable == false) break;
+			for (i=0; i<rp->nrhs; i++) {
+				if( rp->rhs[i]->nullable == false) 
+					break;
 			}			
-			if( i==rp->nrhs ) /* means that all are nullable - this also cover empty*/
-			{
+			if (i == rp->nrhs) {
+				/* means that all are nullable - this also cover empty*/
 				rp->lhs->nullable = true;
 				changed = 1;
 			}
 		}		
-	} while( changed );	
+	} while (changed);	
 }
 
 
-void ComputeFIRST() 
+void ComputeFIRST(void) 
 {
 	int i;
 	RULEPTR rp;
@@ -199,45 +201,42 @@ void ComputeFIRST()
 	} while(changed);    
 }
 
-void ComputeFOLLOW() 
+void ComputeFOLLOW(void) 
 {
     int i, j, changed;
     RULEPTR rp;
     SYMPTR sp, tp;
 	
-    forall_symbols( sp ) sp->follow = BitVecNew();
+    forall_symbols(sp) 
+		sp->follow = BitVecNew();
     
 	do {		
 		changed = 0;
-		forall_rules( rp ) {									             
+		forall_rules( rp ) {					          
 			for( i = 0;   i<rp->nrhs; i++ ) {
 				sp = rp->rhs[i];
 
 				if(sp->kind != NONTERM) 
 					continue;
 				
-				for( j=i+1; j < rp->nrhs; j++ ) 
-				{
+				for( j=i+1; j < rp->nrhs; j++ ) {
 					tp = rp->rhs[j];
-					
 					if(tp->nullable == true) {
-						changed += BitVecUnion(sp->follow, tp->first);			  
+						changed += BitVecUnion(sp->follow, tp->first);
 						continue;
-					}
-					else {
-						changed += BitVecUnion(sp->follow, tp->first);			  
+					} else {
+						changed += BitVecUnion(sp->follow, tp->first);
 						break;
 					}
 				}
 				
-				if(j == rp->nrhs) /* means all nullable after i*/
-				{
+				if (j == rp->nrhs) {
+					/* means all nullable after i*/
 					changed += BitVecUnion(sp->follow, rp->lhs->follow);			  
 				}						
 			}		
 		}
-		
-	}while (changed);
+	} while (changed);
 }
 
 

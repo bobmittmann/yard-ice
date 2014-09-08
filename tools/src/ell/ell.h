@@ -56,7 +56,7 @@ typedef int *BITVEC;
 typedef struct _symbol {	    /* Description of grammar symbol */
 	struct  _symbol *next_sym;  /* a link */
 	int 	sym_no;		        /* symbol number */
-	int  	kind;		        /* terminal or non-terminal */
+	int  	kind;		        /* terminal, non-terminal or action */
 	int 	rextype;            /* regex type - GROUP, REPEAT, OPTION */
 	int 	nullable;           /* if can generate empty string*/
 	int 	numalt;
@@ -135,10 +135,10 @@ int BitVecTest(BITVEC x, int pos);
 int BitVecNumEl(BITVEC x);
 int BitVecAdd(BITVEC x, int pos);
 
+void WriteRecursiveParser(FILE *fp, char * pname, FILE * fh, char *hname);
+
 void write_compact_c(FILE * fp, char * hname);
 void write_compact_h(FILE * fp, char * hname); 
-
-void WriteRecursiveParser(FILE *fp, char * pname, FILE * fh, char *hname);
 
 
 #ifdef __cplusplus
