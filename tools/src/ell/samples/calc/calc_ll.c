@@ -61,9 +61,9 @@ const uint8_t rule_vec[] = {
 	/*  2:stat(1) -> */
 	T_SEMICOLON, 
 	/*  3:stat(4) -> */
-	T_VAR, T_ID, T_SEMICOLON, A_OP_VAR_DECL, 
-	/*  4:stat(5) -> */
-	T_ID, T_ASSIGN, N_EXP, T_SEMICOLON, A_OP_ASSIGN, 
+	T_VAR, T_ID, A_OP_VAR_DECL, T_SEMICOLON, 
+	/*  4:stat(6) -> */
+	T_ID, A_OP_LOOKUP_ID, T_ASSIGN, N_EXP, T_SEMICOLON, A_OP_ASSIGN, 
 	/*  5:stat(4) -> */
 	T_PRINT, N_EXP, T_SEMICOLON, A_OP_PRINT, 
 	/*  6:exp(2) -> */
@@ -108,10 +108,10 @@ const uint8_t rule_vec[] = {
 	T_LPAREN, N_EXP, T_RPAREN, 
 	/* 26:primary_exp(2) -> */
 	T_INT, A_OP_PUSH_INT, 
-	/* 27:primary_exp(2) -> */
-	T_ID, A_OP_PUSH_ID, 
+	/* 27:primary_exp(3) -> */
+	T_ID, A_OP_LOOKUP_ID, A_OP_PUSH_ID, 
 };
-/* 67 bytes */
+/* 69 bytes */
 
 static const struct {
 	uint8_t off;
@@ -121,34 +121,34 @@ static const struct {
 	{   1,  2},
 	{   3,  1},
 	{   4,  4},
-	{   8,  5},
-	{  13,  4},
-	{  17,  2},
-	{  19,  0},
-	{  19,  3},
-	{  22,  3},
-	{  25,  2},
-	{  27,  0},
-	{  27,  3},
-	{  30,  3},
-	{  33,  3},
-	{  36,  3},
-	{  39,  2},
-	{  41,  0},
-	{  41,  3},
-	{  44,  3},
-	{  47,  3},
-	{  50,  3},
-	{  53,  1},
-	{  54,  3},
-	{  57,  3},
-	{  60,  3},
-	{  63,  2},
-	{  65,  2},
+	{   8,  6},
+	{  14,  4},
+	{  18,  2},
+	{  20,  0},
+	{  20,  3},
+	{  23,  3},
+	{  26,  2},
+	{  28,  0},
+	{  28,  3},
+	{  31,  3},
+	{  34,  3},
+	{  37,  3},
+	{  40,  2},
+	{  42,  0},
+	{  42,  3},
+	{  45,  3},
+	{  48,  3},
+	{  51,  3},
+	{  54,  1},
+	{  55,  3},
+	{  58,  3},
+	{  61,  3},
+	{  64,  2},
+	{  66,  3},
 };
 /* 56 bytes */
 
-/* Total: 255 bytes */
+/* Total: 257 bytes */
 
 
 int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
@@ -242,6 +242,7 @@ const const char * const ll_sym_tab[] = {
  	"mult_exp1",
  	"primary_exp",
  	"op_var_decl",
+ 	"op_lookup_id",
  	"op_assign",
  	"op_print",
  	"op_shl",

@@ -6,8 +6,8 @@ program 		: EOF
 				;
 
 stat			: SEMICOLON
-				| VAR ID SEMICOLON { op_var_decl }
-				| ID ASSIGN exp SEMICOLON { op_assign }
+				| VAR ID { op_var_decl } SEMICOLON 
+				| ID { op_lookup_id } ASSIGN exp SEMICOLON { op_assign }
 				| PRINT exp SEMICOLON { op_print }
 				;
 
@@ -46,6 +46,6 @@ unary_exp		: primary_exp
 
 primary_exp		: LPAREN exp RPAREN
 				| INT { op_push_int }
-				| ID { op_push_id }
+				| ID { op_lookup_id, op_push_id }
 				;
 

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Last symbol num:49  Num rules:28 */
+/* Last symbol num:50  Num rules:28 */
 
 #define T_EOF                    0
 #define T_ASR                    1
@@ -42,22 +42,23 @@
 
 #define ACTION_BASE             32
 #define A_OP_VAR_DECL           32
-#define A_OP_ASSIGN             33
-#define A_OP_PRINT              34
-#define A_OP_SHL                35
-#define A_OP_ASR                36
-#define A_OP_ADD                37
-#define A_OP_SUB                38
-#define A_OP_XOR                39
-#define A_OP_OR                 40
-#define A_OP_MUL                41
-#define A_OP_DIV                42
-#define A_OP_MOD                43
-#define A_OP_AND                44
-#define A_OP_INV                45
-#define A_OP_MINUS              46
-#define A_OP_PUSH_INT           47
-#define A_OP_PUSH_ID            48
+#define A_OP_LOOKUP_ID          33
+#define A_OP_ASSIGN             34
+#define A_OP_PRINT              35
+#define A_OP_SHL                36
+#define A_OP_ASR                37
+#define A_OP_ADD                38
+#define A_OP_SUB                39
+#define A_OP_XOR                40
+#define A_OP_OR                 41
+#define A_OP_MUL                42
+#define A_OP_DIV                43
+#define A_OP_MOD                44
+#define A_OP_AND                45
+#define A_OP_INV                46
+#define A_OP_MINUS              47
+#define A_OP_PUSH_INT           48
+#define A_OP_PUSH_ID            49
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE
