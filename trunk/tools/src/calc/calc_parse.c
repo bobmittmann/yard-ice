@@ -79,7 +79,6 @@ int op_assign(struct calc * calc)
 	return 0;
 }
 
-
 int op_add(struct calc * calc)
 {
 	int32_t x = pop(calc);
@@ -142,12 +141,6 @@ int op_inv(struct calc * calc)
 	return push(calc, ~x);
 }
 
-int op_not(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	return push(calc, ~x);
-}
-
 int op_minus(struct calc * calc)
 {
 	int32_t x;
@@ -159,23 +152,22 @@ int op_minus(struct calc * calc)
 
 int op_shl(struct calc * calc)
 {
-	DBG("_");
-	return 0;
+	int32_t x = pop(calc);
+	int32_t y = pop(calc);
+	return push(calc, x << y);
 }
 
 int op_asr(struct calc * calc)
 {
-	DBG("_");
-	return 0;
+	int32_t x = pop(calc);
+	int32_t y = pop(calc);
+	return push(calc, x >> y);
 }
 
 int op_push_int(struct calc * calc)
 {
-	int32_t x;
-
-	x = calc->tok.u32;
-	push(calc, x);
-	return 0;
+	int32_t x = calc->tok.u32;
+	return push(calc, x);
 }
 
 int op_var_decl(struct calc * calc)
