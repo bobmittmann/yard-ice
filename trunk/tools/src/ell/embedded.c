@@ -57,30 +57,31 @@ void write_compact_c(FILE * fp, char * hname)
 	RULEPTR rp;
 	SYMPTR sp,tp; 
 	BITVEC  set = BitVecNew();
-
-	unsigned int pos = 0;
-	unsigned int off = 0;
-	unsigned int size = 0;
-	unsigned int cnt = 0;
+	unsigned int pos;
+	unsigned int off;
+	unsigned int size;
+	unsigned int cnt;
 	unsigned int sum = 0;
-	struct tr_pair tr_vec[1024]; 
+	unsigned int idx_sz;
+	struct tr_pair tr_vec[1024]; /* FIXME: dynamic allocation */
+	char s[256];
 
-	#define SIZEOF_TR_PAIR 2
-	#define SIZEOF_PROD_IDX_ENTRY 4
-	#define SIZEOF_RULE_IDX_ENTRY 2
-
-	fprintf(fp, "/* LL(1) Table */\n\n");
+	fprintf(fp, "/* LL(1) Embeddedd Nonrecursive Predictive Parser */\n\n");
 
 	fprintf(fp, "#include \"%s\"\n\n", hname);
 
+    fprintf(fp, "/* Token-Rule pair (predict set) */\n");	
 	fprintf(fp, "struct tr_pair {\n");
 	fprintf(fp, "\tuint8_t t;\n");
 	fprintf(fp, "\tuint8_t r;\n");
 	fprintf(fp, "};\n\n");
 
-    fprintf(fp, "/* Productions vectors table */\n");	
+	#define SIZEOF_TR_PAIR 2
+
+	pos = 0;
 	size = 0;
-	fprintf(fp, "const struct tr_pair prod_vec[] = {");
+    fprintf(fp, "/* Predict sets */\n");	
+	fprintf(fp, "const struct tr_pair predict_vec[] = {");
 	/* for all nonterminal write  */
 	forall_symbols(sp) {
 		unsigned int i;
@@ -90,12 +91,12 @@ void write_compact_c(FILE * fp, char * hname)
 
 		off = pos;
 		cnt = 0;
-		/* look for rules begining with nonterminal sp*/
+		/* look for rules begining with nonterminal sp */
 		/* and print predict set (terminal,prod.no)*/
 		BitVecClear(set);
-		forall_rules( rp ) {
+		forall_rules(rp) {
 			if (rp->lhs->sym_no == sp->sym_no) {				
-				forall_symbols( tp ) {
+				forall_symbols(tp) {
 					if (BitVecTest(rp->predict, tp->sym_no)) {
 						tr_vec[cnt].sym_no = tp->sym_no;
 						tr_vec[cnt].rule_no = rp->rule_no;
@@ -124,27 +125,32 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "/* %d bytes; */\n\n", size);
 	sum += size;
 
-
 	size = 0;
 	fprintf(fp, "static const struct {\n");
-	fprintf(fp, "\tuint16_t off;\n");
+	if (pos >= 256) {
+		idx_sz = 4;
+		fprintf(fp, "\tuint16_t off;\n");
+	} else {
+		idx_sz = 2;
+		fprintf(fp, "\tuint8_t off;\n");
+	}
 	fprintf(fp, "\tuint8_t cnt;\n");
-	fprintf(fp, "} prod_idx[] = {");
+	fprintf(fp, "} predict_idx[] = {");
 	/* for all nonterminal write  */
 	forall_symbols(sp) {
 		if (sp->kind != NONTERM)  
 			continue;   
 		fprintf(fp,"\n\t{%4d,%3d},", sp->r_offs, sp->r_cnt);
-		size += SIZEOF_PROD_IDX_ENTRY; 
+		size += idx_sz; 
 	}
 	fprintf(fp, "\n};\n");
 	fprintf(fp, "/* %d bytes */\n\n", size);
 	sum += size;
 
 
-    fprintf(fp, "/* Rules vectors table */\n");	
 	pos = 0;
 	size = 0;
+    fprintf(fp, "/* Rules vectors table */\n");	
 	fprintf(fp, "const uint8_t rule_vec[] = {");
     forall_rules(rp) {		
     	int j;
@@ -168,12 +174,18 @@ void write_compact_c(FILE * fp, char * hname)
 
 	size = 0;
 	fprintf(fp, "static const struct {\n");
-	fprintf(fp, "\tuint8_t off;\n");
+	if (pos >= 256) {
+		idx_sz = 4;
+		fprintf(fp, "\tuint16_t off;\n");
+	} else {
+		idx_sz = 2;
+		fprintf(fp, "\tuint8_t off;\n");
+	}
 	fprintf(fp, "\tuint8_t cnt;\n");
 	fprintf(fp, "} rule_idx[] = {");
     forall_rules(rp) {		
 		fprintf(fp,"\n\t{%4d,%3d},", rp->offs, rp->nrhs);
-		size += SIZEOF_RULE_IDX_ENTRY; 
+		size += idx_sz; 
     }    
 	fprintf(fp, "\n};\n");
 	fprintf(fp, "/* %d bytes */\n\n", size);
@@ -185,7 +197,7 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "int ll_rule_push(uint8_t * sp, unsigned int sym,"
 			" unsigned int tok)\n");
 	fprintf(fp, "{\n");
-	fprintf(fp, "\tstruct tr_pair * vec;\n");
+	fprintf(fp, "\tconst struct tr_pair * vec;\n");
 	fprintf(fp, "\tuint8_t * p;\n");
 	fprintf(fp, "\tint imax;\n");
 	fprintf(fp, "\tint imin;\n");
@@ -195,8 +207,8 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "\ti = sym - NONTERM_BASE;\n");
 	fprintf(fp, "\tif (i < 0) /* Shuld be nonterminal */\n");
 	fprintf(fp, "\t\treturn -1;\n");
-	fprintf(fp, "\tvec = (struct tr_pair *)&prod_vec[prod_idx[i].off];\n");
-	fprintf(fp, "\timax = prod_idx[i].cnt;\n");
+	fprintf(fp, "\tvec = &predict_vec[predict_idx[i].off];\n");
+	fprintf(fp, "\timax = predict_idx[i].cnt;\n");
 	fprintf(fp, "\timin = 1;\n\n");
 	fprintf(fp, "\t/* Is the production list empty ? !!! \n");
 	fprintf(fp, "\tif (imax < 0)\n");
@@ -223,6 +235,28 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "\t\tsp[i] = p[i];\n\n");
 	fprintf(fp, "\t/* Return the lenght of the production */\n");
 	fprintf(fp, "\treturn n;\n");
+	fprintf(fp, "}\n\n");
+
+	fprintf(fp, "int ll_start(uint8_t * sp)\n");
+	fprintf(fp, "{\n");
+	fprintf(fp, "\tsp[-1] = ");
+	forall_symbols(sp) {
+		if (sp->kind == TERM) {
+			fprintf(fp, "%c_%s;\n", kind_prefix(sp->kind), 
+					strupper(s, sp->symtext));
+			break;
+		}
+	}
+	fprintf(fp, "\tsp[-2] = ");
+	forall_symbols(sp) {
+		if (sp->kind == NONTERM) {
+			fprintf(fp, "%c_%s;\n\n", kind_prefix(sp->kind), 
+					strupper(s, sp->symtext));
+			break;
+		}
+	}
+
+	fprintf(fp, "\treturn 2;\n");
 	fprintf(fp, "}\n\n");
 
 	write_sym_tab(fp);

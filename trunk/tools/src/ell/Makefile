@@ -93,7 +93,7 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_ell_OBJECTS = parser.$(OBJEXT) bitvec.$(OBJEXT) compact.$(OBJEXT) \
+am_ell_OBJECTS = parser.$(OBJEXT) bitvec.$(OBJEXT) embedded.$(OBJEXT) \
 	rdp.$(OBJEXT) ell.$(OBJEXT)
 ell_OBJECTS = $(am_ell_OBJECTS)
 ell_LDADD = $(LDADD)
@@ -208,15 +208,15 @@ OBJEXT = o
 PACKAGE = ell
 PACKAGE_BUGREPORT = 
 PACKAGE_NAME = ell
-PACKAGE_STRING = ell 0.1
+PACKAGE_STRING = ell 0.3
 PACKAGE_TARNAME = ell
 PACKAGE_URL = 
-PACKAGE_VERSION = 0.1
+PACKAGE_VERSION = 0.3
 PATH_SEPARATOR = :
 SET_MAKE = 
 SHELL = /bin/bash
 STRIP = 
-VERSION = 0.1
+VERSION = 0.3
 abs_builddir = /home/bob/devel/yard-ice/tools/src/ell
 abs_srcdir = /home/bob/devel/yard-ice/tools/src/ell
 abs_top_builddir = /home/bob/devel/yard-ice/tools/src/ell
@@ -261,7 +261,7 @@ top_builddir = .
 top_srcdir = .
 AM_CPPFLAGS = -DPACKAGE_DATA_DIR=\""$(datadir)"\" 
 AM_CFLAGS = -O1 -Wall -g
-ell_SOURCES = parser.c bitvec.c compact.c rdp.c ell.c
+ell_SOURCES = parser.c bitvec.c embedded.c rdp.c ell.c
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -370,8 +370,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 include ./$(DEPDIR)/bitvec.Po
-include ./$(DEPDIR)/compact.Po
 include ./$(DEPDIR)/ell.Po
+include ./$(DEPDIR)/embedded.Po
 include ./$(DEPDIR)/parser.Po
 include ./$(DEPDIR)/rdp.Po
 
