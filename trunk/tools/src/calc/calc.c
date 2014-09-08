@@ -153,35 +153,6 @@ void sig_quit(int signo)
 	exit(3);
 }
 
-/*
-int compile(const char * txt, unsigned int len)
-{
-	uint8_t tok_buf[8192];
-	uint8_t code_buf[8192];
-	struct microjs_parser jp;
-	int err;
-
-	microjs_init(&jp, tok_buf, sizeof(tok_buf));
-
-	microjs_open(&jp, txt, len);
-
-	if ((err = microjs_scan(&jp)) != MICROJS_OK) {
-		fprintf(stderr, "Lexical analisys failed.\n");
-		microjs_print_err(stderr, &jp, err);
-		return err;
-	}
-
-	microjs_tok_dump(stdout, &jp);
-
-	if ((err = microjs_parse(&jp, code_buf, sizeof(code_buf))) != MICROJS_OK) {
-		fprintf(stderr, "Syntax analisys failed.\n");
-		return err;
-	}
-
-	return 0;
-}
-*/
-
 int do_test(const char * txt, unsigned int len)
 {
 	struct lexer lex;
@@ -196,13 +167,13 @@ int do_test(const char * txt, unsigned int len)
 		printf("'%s' ", tok2str(tok));
 		fflush(stdout);
 
-		if (tok.typ == TOK_ERR) {
+		if (tok.typ == T_ERR) {
 			fprintf(stderr, "\nLexical analisys failed.\n");
 			lexer_print_err(stderr, &lex, tok.qlf);
 			return 0;
 		}
 
-		if (tok.typ == TOK_EOF) {
+		if (tok.typ == T_EOF) {
 			return 0;
 		}
 	}
@@ -212,13 +183,13 @@ int do_test(const char * txt, unsigned int len)
 
 int compile(const char * txt, unsigned int len)
 {
-	struct parser calc; 
-	uint8_t code_buf[8192];
+	struct calc calc; 
+	int32_t stack[128];
 	int err;
 
-	calc_open(&calc, txt, len);
+	calc_init(&calc, stack, sizeof(stack));
 
-	err = calc_parse(&calc, code_buf, sizeof(code_buf));
+	err = calc_parse(&calc, txt, len);
 
 	if (err != OK) {
 		lexer_print_err(stderr, &calc.lex, err);

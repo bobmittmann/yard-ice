@@ -1,5 +1,4 @@
-%token EOF ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR NOT INV ASSIGN COMMA SEMICOLON LPAREN RPAREN VAR INT ID ERR
-%start program
+%token EOF ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN VAR INT ID ERR
 %%
 
 program 		: EOF
@@ -12,10 +11,10 @@ stat			: SEMICOLON
 				| PRINT exp SEMICOLON { op_print }
 				;
 
-exp 			: additive_exp shift_exp
+exp 			: additive_exp shift_exp1
 				;
 
-shift_exp		: 
+shift_exp1		: 
 				| SHL exp { op_shl }
 				| ASR exp { op_asr }
 				;
@@ -34,7 +33,7 @@ mult_exp		: unary_exp mult_exp1
 				;
 
 mult_exp1		: 
-				| MUL mult_exp { op_mult }
+				| MUL mult_exp { op_mul }
 				| DIV mult_exp { op_div }
 				| MOD mult_exp { op_mod }
 				| AND mult_exp { op_and }
@@ -42,7 +41,6 @@ mult_exp1		:
 
 unary_exp		: primary_exp
 				| INV unary_exp { op_inv }
-				| NOT unary_exp { op_not }
 				| MINUS unary_exp { op_minus }
 				;
 

@@ -31,27 +31,6 @@
 #include "config.h"
 #include "calc.h"
 
-const char lexer_keyword[15][9] = {
-	"break",
-	"case",
-	"continue",
-	"const",
-
-	"else",
-	"false",
-	"for",
-	"function",
-
-	"if",
-	"null",
-	"return",
-	"switch",
-
-	"true",
-	"var",
-	"while",
-};
-
 int lexer_open(struct lexer * lex, const char * txt, unsigned int len)
 {
 	/* set the base javascript file reference */
@@ -73,7 +52,7 @@ struct token lexer_scan(struct lexer * lex)
 	
 	/* initialize variables */
 	qlf = 0;
-	typ = TOK_ERR;
+	typ = T_ERR;
 	txt = lex->txt;
 	len = lex->len;
 
@@ -84,40 +63,6 @@ struct token lexer_scan(struct lexer * lex)
 		if (isspace(c)) {
 			off++;
 			continue;
-		}
-
-		/* Quotes: copy verbatim */
-		if ((c == '\'') || (c == '\"')) {
-			unsigned int k;
-			unsigned int n; /* length of the string */
-			int qt = c; /* quote character */
-			
-			k = off + 1;
-			for (;;) {
-				if (++off == len) {
-					/* end of text, parse error, unclosed quotes */
-					
-					qlf = ERR_UNCLOSED_STRING;
-					goto ret;
-				}
-				c = txt[off];
-				if (c == qt) {
-					off++;
-					break;
-				}
-			}
-			n = off - k;
-
-			if (n > STRING_LEN_MAX) {
-				
-				qlf = ERR_STRING_TOO_LONG;
-				goto ret;
-			}
-
-			typ = TOK_STRING;
-			qlf = n;
-			tok.s = (char *)&txt[k];
-			goto ret;
 		}
 
 		/* keywork or identifier */
@@ -134,17 +79,20 @@ struct token lexer_scan(struct lexer * lex)
 			s = (char *)&txt[k];
 
 			qlf = n;
-			typ = TOK_ID;
+			typ = T_ID;
 			tok.s = (char *)&txt[k];
 
-			/* look up in the kwywords table */
-			for (k = 0; k <= (TOK_WHILE - TOK_BREAK); ++k) {
-				if (strncmp(lexer_keyword[k], s, n) == 0 &&
-					lexer_keyword[k][n] == '\0') {
-					typ = k + TOK_BREAK;
-					tok.s = (char *)lexer_keyword[k];
-					break;
-				}
+			/* kwywords */
+			if (strncmp("var", s, n) == 0) {
+				typ = T_VAR;
+				tok.s = (char *)"var";
+				goto inc_ret;
+			}
+
+			if (strncmp("print", s, n) == 0) {
+				typ = T_PRINT;
+				tok.s = (char *)"print";
+				goto inc_ret;
 			}
 
 			goto ret;
@@ -207,7 +155,7 @@ struct token lexer_scan(struct lexer * lex)
 				goto ret;
 			}
 		
-			typ = TOK_INT;
+			typ = T_INT;
 			tok.u32 = val;
 			goto ret;
 		}
@@ -253,7 +201,7 @@ struct token lexer_scan(struct lexer * lex)
 				continue;
 			} 
 			
-			typ = TOK_DIV;
+			typ = T_DIV;
 			goto ret;
 		}
 
@@ -262,133 +210,71 @@ struct token lexer_scan(struct lexer * lex)
 			if (++off < len)	{
 				c = txt[off];
 				if  (c == '<') {
-					typ = TOK_SHL;
+					typ = T_SHL;
 					goto inc_ret;
 				} 
-				if  (c == '=') {
-					typ = TOK_LTE;
-					goto inc_ret;
-				}
 			} 
-			typ = TOK_LT;
-			goto ret;
 		}
 
 		if (c == '>') {
 			if (++off < len)	{
 				c = txt[off];
 				if  (c == '>') {
-					typ = TOK_ASR;
+					typ = T_ASR;
 					goto inc_ret;
 				} 
-				if  (c == '=') {
-					typ = TOK_GTE;
-					goto inc_ret;
-				}
 			} 
-			typ = TOK_GT;
-			goto ret;
-		}
-
-		if (c == '=') {
-			if ((++off < len) && ((c = txt[off]) == '=')) {
-				typ = TOK_EQ;
-				goto inc_ret;
-			}
-			typ = TOK_ASSIGN;
-			goto ret;
-		}
-
-		if (c == '!') {
-			if ((++off < len) && ((c = txt[off]) == '=')) {
-				typ = TOK_NEQ;
-				goto inc_ret;
-			}
-			typ = TOK_NOT;
-			goto ret;
-		}
-
-		if (c == '|') {
-			if (++off < len)	{
-				if  (c == '|') {
-					typ = TOK_OR;
-					goto inc_ret;
-				}
-			}
-			typ = TOK_BITOR;
-			goto ret;
-		}
-
-		if (c == '&') {
-			if (++off < len)	{
-				if  (c == '&') {
-					typ = TOK_AND;
-					goto inc_ret;
-				}
-			}
-			typ = TOK_BITAND;
-			goto ret;
 		}
 
 		switch (c) {
-		case '.':
-			typ = TOK_DOT;
-			break;
 		case ',':
-			typ = TOK_COMMA;
+			typ = T_COMMA;
 			break;
 		case ';':
-			typ = TOK_SEMICOLON;
-			break;
-		case ':':
-			typ = TOK_COLON;
-			break;
-		case '[':
-			typ = TOK_LEFTBRACKET;
-			break;
-			break;
-		case ']':
-			typ = TOK_RIGHTBRACKET;
-			break;
-		case '(':
-			typ = TOK_LEFTPAREN;
-			break;
-		case ')':
-			typ = TOK_RIGHTPAREN;
-			break;
-		case '{':
-			typ = TOK_LEFTBRACE;
-			break;
-		case '}':
-			typ = TOK_RIGHTBRACE;
+			typ = T_SEMICOLON;
 			break;
 		case '^':
-			typ = TOK_XOR;
+			typ = T_XOR;
 			break;
 		case '~':
-			typ = TOK_BITINV;
+			typ = T_INV;
 			break;
 		case '*':
-			typ = TOK_MUL;
+			typ = T_MUL;
 			break;
 		case '%':
-			typ = TOK_MOD;
+			typ = T_MOD;
 			break;
 		case '+':
-			typ = TOK_PLUS;
+			typ = T_PLUS;
 			break;
 		case '-':
-			typ = TOK_MINUS;
+			typ = T_MINUS;
+			break;
+		case '=':
+			typ = T_ASSIGN;
+			break;
+		case '|':
+			typ = T_OR;
+			break;
+		case '&':
+			typ = T_AND;
+			break;
+		case '(':
+			typ = T_LPAREN;
+			break;
+		case ')':
+			typ = T_RPAREN;
 			break;
 		default:
-			typ = TOK_ERR;
+			typ = T_ERR;
 			qlf = ERR_UNEXPECTED_CHAR;
 			goto ret;
 		}
 
 		goto inc_ret;
 	}
-	typ = TOK_EOF;
+	typ = T_EOF;
 	goto ret;
 
 inc_ret:

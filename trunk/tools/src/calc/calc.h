@@ -31,71 +31,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
-
-enum {
-	TOK_VOID = 0,
-/* operators */
-	TOK_ASR,
-	TOK_SHL,
-	TOK_LTE,
-	TOK_LT,
-	TOK_GTE,
-	TOK_GT,
-	TOK_EQ,
-	TOK_NEQ,
-	TOK_PLUS,
-	TOK_MINUS,
-	TOK_MUL,
-	TOK_DIV,
-	TOK_MOD,
-	TOK_OR,
-	TOK_BITOR,
-	TOK_AND,
-	TOK_BITAND,
-	TOK_XOR,
-	TOK_NOT,
-	TOK_BITINV,
-	TOK_ASSIGN,
-/* puctuation */
-	TOK_DOT,
-	TOK_COMMA,
-	TOK_SEMICOLON,
-	TOK_COLON,
-	TOK_LEFTBRACKET,
-	TOK_RIGHTBRACKET,
-	TOK_LEFTPAREN,
-	TOK_RIGHTPAREN,
-	TOK_LEFTBRACE,
-	TOK_RIGHTBRACE,
-/* keywords */
-	TOK_BREAK,
-	TOK_CASE,
-	TOK_CONTINUE,
-	TOK_CONST,
-	TOK_ELSE,
-	TOK_FALSE,
-	TOK_FOR,
-	TOK_FUNCTION,
-	TOK_IF,
-	TOK_NULL,
-	TOK_RETURN,
-	TOK_SWITCH,
-	TOK_TRUE,
-	TOK_VAR,
-	TOK_WHILE,
-/* integral values */
-	TOK_INT,
-	TOK_ID,
-	TOK_STRING,
-/* end of stream */
-	TOK_EOF,
-/* errors */
-	TOK_ERR,
-};
+#include "calc_ll.h"
 
 #define STRING_LEN_MAX 255
-
-extern const char keyword[15][9];
 
 struct token {
 	uint8_t typ; /* token type (class) */
@@ -125,21 +63,27 @@ enum {
   Lexical Analyzer
  **********************************************************************/
 
-struct tree;
-
 struct lexer {
 	uint16_t off;  /* lexer text offset */
 	uint16_t len;  /* lexer text length */
 	const char * txt;   /* base pointer (original js txt file) */
 };
 
-
 struct parser {
-	struct lexer lex;
-	struct token tok; /* lookahead token */
-	uint16_t cnt;  /* token count */
-	struct tree * t;
+	uint8_t * sym; /* current symbol (stack pointer) */
+	uint8_t * top; /* stack top */
+	uint8_t * bottom; /* stack bottom */
 };
+
+struct calc {
+	struct lexer lex;
+	struct parser par;
+	struct token tok;
+	int32_t * sp;
+	int32_t * sl;
+	int32_t * sf;
+};
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -157,9 +101,9 @@ void lexer_print_err(FILE * f, struct lexer * lex, int err);
 
 void dump_src(const char * txt, unsigned int len);
 
-int calc_open(struct parser * p, const char * txt, unsigned int len);
+int calc_init(struct calc * p, int32_t stack[], unsigned int size);
 
-int calc_parse(struct parser * p, uint8_t code[], unsigned int size);
+int calc_parse(struct calc * p, const char * txt, unsigned int len);
 
 char * tok2str(struct token tok);
 
