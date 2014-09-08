@@ -34,44 +34,314 @@
 
 #include "calc.h"
 
-int calc_init(struct calc * calc, int32_t stack[], unsigned int size)
-{
-	calc->sp = stack;
-	calc->sf = stack;
-	calc->sl = &stack[size / sizeof(uint32_t)];
+/* --------------------------------------------------------------------------
+   Symbol table
+   -------------------------------------------------------------------------- */
+struct sym_tab {
+	unsigned int cnt;
+	unsigned int len;
+	char * buf;
+	uint16_t offs[256];
+	int16_t addr[256];
+};
 
-	return 0;
+void sym_tab_init(struct sym_tab * tab, char * buf, unsigned int len)
+{
+	tab->buf = buf;
+	tab->len = len;
+	/* Add null string */
+	buf[0] = '\0';
+	tab->offs[0] = 0;
+	tab->addr[0] = -1;
+	tab->cnt = 1;
+}
+
+int sym_lookup(struct sym_tab * tab, const char * s, unsigned int len)
+{
+	char *buf = (char *)tab->buf;
+	int i;
+
+	for (i = 0; i < tab->cnt; ++i) {
+		char * cstr = buf + tab->offs[i];
+		if ((strncmp(cstr, s, len) == 0) && (strlen(cstr) == len))
+			return i;
+	}
+
+	return -1;
+}
+
+int sym_add(struct sym_tab * tab, const char * s, unsigned int len)
+{
+	char * dst;
+	int idx;
+	int offs;
+
+	if ((idx = sym_lookup(tab, s, len)) >= 0) {
+		return idx;
+	}
+
+	offs = (tab->cnt > 0) ? tab->offs[tab->cnt - 1] : 0;
+	dst = tab->buf + offs;
+	dst += strlen(dst) + 1;
+
+	idx = tab->cnt++;
+	/* NULL terminate the string */
+	memcpy(dst, s, len);
+	dst[len] = '\0';
+	tab->offs[idx] = dst - tab->buf;
+
+	return idx;
+}
+
+const char * sym_name(struct sym_tab * tab, int idx)
+{
+	return tab->buf + tab->offs[idx];
+}
+
+int sym_addr_get(struct sym_tab * tab, int idx)
+{
+	return tab->addr[idx];
+}
+
+void sym_addr_set(struct sym_tab * tab, int idx, int addr)
+{
+	tab->addr[idx] = addr;
+}
+
+int alloc32(struct calc * calc)
+{
+	unsigned int addr;
+
+	/* ensure memory alignment */
+	addr = (calc->heap + 3) & ~3;
+	calc->heap = addr + 4;
+
+	if (calc->heap > calc->sp) {
+		fprintf(stderr, "heap overflow!\n");
+		return 0;
+	}
+
+	return addr;
+}
+
+/* --------------------------------------------------------------------------
+   Memory operations
+   -------------------------------------------------------------------------- */
+
+int32_t mem_rd32(struct calc * calc, unsigned int addr)
+{
+	return calc->mem[addr >> 2];
+}
+
+void mem_wr32(struct calc * calc, unsigned int addr, int32_t val)
+{
+	calc->mem[addr >> 2] = val;
 }
 
 int push(struct calc * calc, int32_t x)
 {
-	if (calc->sp == calc->sl)
-		return -1;
+	calc->sp -= 4;
+	calc->mem[calc->sp >> 2] = x;	
 
-	*calc->sp++ = x;	
+	if (calc->sp < calc->heap) {
+		fprintf(stderr, "stack overflow!\n");
+		return -1;
+	}
 	return 0;
 }
 
 int32_t pop(struct calc * calc)
 {
-	if (calc->sp == calc->sf) {
+	int32_t x;
+
+	if (calc->sp == calc->stack) {
 		return 0;
 	}
 
-	calc->sp--;
-	return calc->sp[0];
+	x = calc->mem[calc->sp >> 2];
+	calc->sp += 4;
+
+	return x;
 }
+
+/* --------------------------------------------------------------------------
+   Virtual machine
+   -------------------------------------------------------------------------- */
+
+#define OPC_ASR      0
+#define OPC_SHL      1
+#define OPC_ADD      2
+#define OPC_SUB      3
+#define OPC_MUL      4
+#define OPC_DIV      5
+#define OPC_MOD      6
+#define OPC_OR       7
+#define OPC_AND      8
+#define OPC_XOR      9
+#define OPC_INV      10
+#define OPC_NEG      11
+#define OPC_IMM      12
+#define OPC_LD       13
+#define OPC_ST       14
+#define OPC_PRINT    15
+
+struct calc_vm {
+	uint16_t ip;
+	uint16_t sp;
+	uint32_t * data;
+};
+
+static int32_t vm_rd32(struct calc_vm * vm, unsigned int addr)
+{
+	return vm->data[addr >> 2];
+}
+
+static void vm_wr32(struct calc_vm * vm, unsigned int addr, int32_t val)
+{
+	vm->data[addr >> 2] = val;
+}
+
+static void vm_push(struct calc_vm * vm, int32_t x)
+{
+	vm->sp -= 4;
+	vm->data[vm->sp >> 2] = x;	
+}
+
+static int32_t vm_pop(struct calc_vm * vm)
+{
+	int32_t x;
+
+	x = vm->data[vm->sp >> 2];
+	vm->sp += 4;
+
+	return x;
+}
+
+int calc_run(struct calc_vm * vm, uint8_t code[], unsigned int len)
+{
+	int32_t r0;
+	int32_t r1;
+	int opc;
+	int pc;
+
+	printf("\n");
+
+	pc = 0; 
+	r0 = 0;
+	r1 = 0;
+	while (pc < len) {
+		/* fetch */
+		opc = code[pc++];
+		switch (opc) {
+		case OPC_IMM:
+			r0 = code[pc++];
+			r0 |= code[pc++] << 8;
+			r0 |= code[pc++] << 16;
+			r0 |= code[pc++] << 24;
+			vm_push(vm, r0);
+			break;
+
+		case OPC_LD:
+			r1 = vm_pop(vm);
+			r0 = vm_rd32(vm, r1);
+			vm_push(vm, r0);
+			break;
+
+		case OPC_ST:
+			r1 = vm_pop(vm);
+			r0 = vm_pop(vm);
+			vm_wr32(vm, r1, r0);
+			break;
+
+		case OPC_ASR:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 >> r1);
+			break;
+
+		case OPC_SHL:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 << r1);
+			break;
+
+		case OPC_ADD:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 + r1);
+			break;
+
+		case OPC_SUB:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 - r1);
+			break;
+
+		case OPC_MUL:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 * r1);
+			break;
+
+		case OPC_DIV:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 / r1);
+			break;
+
+		case OPC_MOD:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 % r1);
+			break;
+
+		case OPC_OR:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 | r1);
+			break;
+
+		case OPC_AND:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 & r1);
+			break;
+
+		case OPC_XOR:
+			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
+			vm_push(vm, r0 ^ r1);
+			break;
+
+		case OPC_INV:
+			r0 = vm_pop(vm);
+			vm_push(vm, ~r0);
+			break;
+
+		case OPC_NEG:
+			r0 = vm_pop(vm);
+			vm_push(vm, -r0);
+			break;
+
+		case OPC_PRINT:
+			r0 = vm_pop(vm);
+			printf("%d\n", r0);
+			break;
+		
+		default:
+			fprintf(stderr, "Invalid OPC: %d\n", opc);
+			return -1;
+		}
+	} 
+
+	return 0;
+}
+
 
 int op_print(struct calc * calc)
 {
 	int32_t x = pop(calc);
-	printf("%d\n", x);
-	return 0;
-}
 
-int op_assign(struct calc * calc)
-{
-	int32_t x = pop(calc);
 	printf("%d\n", x);
 	return 0;
 }
@@ -167,14 +437,78 @@ int op_push_int(struct calc * calc)
 	return push(calc, x);
 }
 
+int op_lookup_id(struct calc * calc)
+{
+	int addr;
+	int id;
+
+	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
+
+	if (id < 0) {
+		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
+		return -1;
+	}
+
+	addr = sym_addr_get(calc->tab, id);
+
+//	printf("%s: var=\"%s\" id=%d\n", __func__, sym_name(calc->tab, id), id);
+
+	return push(calc, addr);
+}
+
+
 int op_var_decl(struct calc * calc)
 {
+	int id;
+	int addr;
+
+	id = sym_add(calc->tab, calc->tok.s, calc->tok.qlf);
+
+	if (id < 0) {
+		fprintf(stderr, "can't create symbol.\n");
+		return -1;
+	}
+
+	if ((addr = alloc32(calc)) < 0) {
+		return -1;
+	}
+
+	/* bind address to symol */
+	sym_addr_set(calc->tab, id, addr);
+	/* initialize variable */
+	mem_wr32(calc, addr, 0);
+
 	return 0;
 }
+
 int op_push_id(struct calc * calc)
 {
+	unsigned int addr = pop(calc);
+
+	if (addr > 256) {
+		fprintf(stderr, "invalid address.\n");
+		return -1;
+	}
+
+	return push(calc, mem_rd32(calc, addr));
+}
+
+int op_assign(struct calc * calc)
+{
+	int32_t x = pop(calc);
+	int addr = pop(calc);
+
+	if (addr > 256) {
+		fprintf(stderr, "invalid address.\n");
+		return -1;
+	}
+//	printf("%s: %s id=%d\n", __func__, sym_name(calc->tab, id), id);
+
+	mem_wr32(calc, addr, x);
+
 	return 0;
 }
+
 
 int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
@@ -194,6 +528,7 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_MINUS)] = op_minus,
  	[ACTION(A_OP_PUSH_INT)] = op_push_int,
  	[ACTION(A_OP_PUSH_ID)] = op_push_id,
+ 	[ACTION(A_OP_LOOKUP_ID)] = op_lookup_id,
 };
 
 /* Nonrecursive predictive parser */
@@ -204,36 +539,44 @@ int calc_parse(struct calc * calc, const char * txt, unsigned int len)
 {
 	uint8_t parser_stack[STACK_SIZE];
 	struct token tok;
+	int lookahead;
 	uint8_t * pp_sp;
 	uint8_t * pp_sl;
+	uint8_t * pp_top;
 	int sym;
 	int k;
 
 	lexer_open(&calc->lex, txt, len);
 	pp_sp = parser_stack + STACK_SIZE;
 	pp_sl = parser_stack;
-	if ((k = ll_start(pp_sp)) < 0) {
-		return ERR_SYNTAX_ERROR;
-	}
-	pp_sp -= k;
-	
-	tok = lexer_scan(&calc->lex);
-	while (tok.typ != T_EOF) {
+	pp_top = pp_sp;
+	pp_sp -= ll_start(pp_sp);
+
+	/* */
+	lookahead = (tok = lexer_scan(&calc->lex)).typ;
+	while (pp_sp != pp_top) {
 		/* pop the stack */
 		sym = *pp_sp++;
-		if (sym == tok.typ) {
-			/* matching terminal */
+		if IS_A_TERMINAL(sym) {
+			/* terminal */
+			if (sym != lookahead) {
+				fprintf(stderr, "unexpected symbol!\n");
+				return ERR_SYNTAX_ERROR;
+			}
+			/* save the lookahead token */
 			calc->tok = tok;
-			tok = lexer_scan(&calc->lex);
+			/* get next token */
+			lookahead = (tok = lexer_scan(&calc->lex)).typ;
 		} else if IS_AN_ACTION(sym) {
+			/* action */
 			int ret;
 			if ((ret = op[ACTION(sym)](calc)) < 0) {
 				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
 				return ret;
 			}
 		} else {
-			//printf("%s\n", sym_nm[sym]);
-			if ((k = ll_rule_push(pp_sp, sym, tok.typ)) < 0) {
+			/* non terminal */
+			if ((k = ll_rule_push(pp_sp, sym, lookahead)) < 0) {
 				fprintf(stderr, "ll_rule_push() failed!\n");
 				return k;
 			}
@@ -249,8 +592,19 @@ int calc_parse(struct calc * calc, const char * txt, unsigned int len)
 	return OK;
 }
 
+int calc_init(struct calc * calc, struct sym_tab * tab, 
+			  int32_t mem[], unsigned int size)
+{
+	calc->tab = tab;
+	calc->mem = mem;
+	calc->heap = 0;
+	calc->stack = size;
+	calc->sp = size;
 
-int load_script(const char * pathname, char ** cpp, unsigned int * lp)
+	return 0;
+}
+
+int load_script(const char * pathname, char ** cpp, unsigned int * lenp)
 {
 	char * cp;
 	FILE * f;
@@ -266,13 +620,15 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lp)
 	fseek(f, 0, SEEK_END);
 	len = ftell(f);
 
-	if ((cp = realloc(*cpp, *lp + len)) == NULL) {
+	if ((cp = realloc(*cpp, *lenp + len)) == NULL) {
 		fprintf(stderr, "ERROR: %s: frealloc(): %s.\n",
 				__func__, strerror(errno));
 		fclose(f);
 		return -1;
 	}
-	cp += *lp;
+	*cpp = cp;
+
+	cp += *lenp;
 
 	fseek(f, 0, SEEK_SET);
 
@@ -285,20 +641,20 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lp)
 
 	fclose(f);
 
-	*cpp = cp;
-	*lp += len;
+	*lenp += len;
 
 	return len;
 }
 
 int main(int argc, char *argv[])
 {
-	int32_t stack[128];
+	int32_t mem[128];
+	char strings[512];
 	struct calc calc; 
-	int err;
+	struct sym_tab sym_tab;
 
-	calc_init(&calc, stack, sizeof(stack));
-
+	sym_tab_init(&sym_tab, strings, sizeof(strings));
+	calc_init(&calc, &sym_tab, mem, sizeof(mem));
 
 	if (argc > 1) {
 		char * script = NULL;
@@ -309,7 +665,7 @@ int main(int argc, char *argv[])
 			if (load_script(argv[i], &script, &len) < 0)
 				return 1;
 		}
-	
+
 		if (calc_parse(&calc, script, len) < 0)
 			return 1;
 	}

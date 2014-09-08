@@ -71,12 +71,16 @@ struct lexer {
  Calculator
  **********************************************************************/
 
+struct sym_tab;
+
 struct calc {
 	struct lexer lex;
 	struct token tok;
-	int32_t * sp;
-	int32_t * sl;
-	int32_t * sf;
+	int32_t * mem;
+	uint16_t heap;
+	uint16_t stack;
+	uint16_t sp;
+	struct sym_tab * tab;
 };
 
 
@@ -90,7 +94,8 @@ struct token lexer_scan(struct lexer * lex);
 
 void lexer_print_err(FILE * f, struct lexer * lex, int err);
 
-int calc_init(struct calc * p, int32_t stack[], unsigned int size);
+int calc_init(struct calc * calc, struct sym_tab * tab, 
+			  int32_t stack[], unsigned int size);
 
 int calc_parse(struct calc * p, const char * txt, unsigned int len);
 
