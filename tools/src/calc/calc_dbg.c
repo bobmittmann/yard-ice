@@ -1,6 +1,6 @@
-/* $Id: dcclog.c,v 1.10 2006/09/28 19:31:45 bob Exp $ 
+/* $Id: calc_dbg.c,v 1.10 2006/09/28 19:31:45 bob Exp $ 
  *
- * File:	tokenizer.c
+ * File:	calc_dbg.c
  * Module:
  * Project:	ARM-DCC logger expander
  * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
@@ -31,39 +31,21 @@
 #include "calc.h"
 
 const char token_nm[][4] = {
-	"---", /* TOK_NULL */
-	">>",  /* TOK_ASR */
-	"<<",  /* TOK_ASL */
-	"<=",  /* TOK_LTE */
-	"<",   /* TOK_LT */
-	">=",  /* TOK_GTE */
-	">",   /* TOK_GT */
-	"==",  /* TOK_EQ */
-	"!=",  /* TOK_NEQ */
-	"+",   /* TOK_PLUS */
-	"-",   /* TOK_MINUS */
-	"*",   /* TOK_MUL */
-	"/",   /* TOK_DIV */
-	"%",   /* TOK_MOD */
-	"|",   /* TOK_OR */
-	"||",  /* TOK_BITOR */
-	"&",   /* TOK_AND */
-	"&&",  /* TOK_BITAND */
-	"^",   /* TOK_XOR */
-	"!",   /* TOK_NOT */
-	"~",   /* TOK_BITNOT */
-	"=",   /* TOK_ASSIGN */
-	".",   /* TOK_DOT */
-	",",   /* TOK_COMMA */
-	";",   /* TOK_SEMICOLON */
-	":",   /* TOK_COLON */
-	"[",   /* TOK_LEFTBRACKET */
-	"]",   /* TOK_RIGHTBRACKET */
-	"(",   /* TOK_LEFTPAREN */
-	")",   /* TOK_RIGHTPAREN */
-	"{",   /* TOK_LEFTBRACE */
-	"}",   /* TOK_RIGHTBRACE */
-	"EOF", /* TOK_EOF */
+	"EOF", /* T_EOF */
+	">>",  /* T_ASR */
+	"<<",  /* T_ASL */
+	"+",   /* T_PLUS */
+	"-",   /* T_MINUS */
+	"*",   /* T_MUL */
+	"/",   /* T_DIV */
+	"%",   /* T_MOD */
+	"|",   /* T_OR */
+	"&",   /* T_AND */
+	"^",   /* T_XOR */
+	"!",   /* T_NOT */
+	"~",   /* T_BITNOT */
+	"=",   /* T_ASSIGN */
+	";",   /* T_SEMICOLON */
 };
 
 static const char * const err_tab[] = {
@@ -84,22 +66,14 @@ char * tok2str(struct token tok)
 	static char buf[STRING_LEN_MAX + 3];
 	unsigned int typ = tok.typ;
 
-	if (typ == TOK_ERR) {
+	if (typ == T_ERR) {
 		sprintf(buf, "ERR: %s", err_tab[tok.qlf]);
-	} else if (typ == TOK_STRING) {
-		unsigned int n = tok.qlf;
-		buf[0] = '"';
-		memcpy(&buf[1], tok.s, n);
-		buf[n + 1] = '"';
-		buf[n + 2] = '\0';
-	} else if (typ == TOK_ID) {
+	} else if (typ == T_ID) {
 		unsigned int n = tok.qlf;
 		memcpy(buf, tok.s, n);
 		buf[n] = '\0';
-	} else if (typ == TOK_INT) {
+	} else if (typ == T_INT) {
 		sprintf(buf, "%d", tok.u32);
-	} else if (typ >= TOK_BREAK) {
-		sprintf(buf, "%s", tok.s);
 	} else
 		sprintf(buf, "%s", token_nm[typ]);
 
@@ -186,82 +160,3 @@ void dump_src(const char * txt, unsigned int len)
 	fflush(stdout);
 }
 
-#if 0
-int microjs_tok_dump(FILE * f, struct microjs_parser * p)
-{
-	uint32_t val;
-	int idx = 0;
-	int tok;
-	int len;
-	char * s;
-	int lvl = 0;
-	int i;
-	bool nl = true;
-
-	for (idx = 0; idx < p->cnt; ) {
-
-		if (nl) {
-			fprintf(f, "\n");
-			for (i = 0; i < lvl; ++i)
-				fprintf(f, "    ");
-			nl = false;
-		}
-
-		tok = p->tok[idx++];
-		if (tok >= TOK_STRING) {
-			unsigned int offs;
-			char buf[MICROJS_STRING_LEN_MAX + 1];
-			len = tok - TOK_STRING;
-			offs = p->tok[idx++];
-			offs |= p->tok[idx++] << 8;
-			s = (char *)p->txt + offs;
-			memcpy(buf, s, len);
-			buf[len] = '\0';
-			fprintf(f, "\"%s\" ", buf);
-		} else if (tok >= TOK_ID) {
-			len = tok - TOK_ID + 1;
-			s = (char *)&p->tok[idx];
-			fprintf(f, "%s ", s);
-	//		idx += strlen(s) + 1;
-			idx += len;
-		} else if (tok == TOK_INT8) {
-			val = p->tok[idx++];
-			fprintf(f, "%d ", val);
-		} else if (tok == TOK_INT16) {
-			val = p->tok[idx++];
-			val |= p->tok[idx++] << 8;
-			fprintf(f, "%d ", val);
-		} else if (tok == TOK_INT24) {
-			val = p->tok[idx++];
-			val |= p->tok[idx++] << 8;
-			val |= p->tok[idx++] << 16;
-			fprintf(f, "%d ", val);
-		} else if (tok == TOK_INT32) {
-			val = p->tok[idx++];
-			val |= p->tok[idx++] << 8;
-			val |= p->tok[idx++] << 16;
-			val |= p->tok[idx++] << 24;
-
-			fprintf(f, "%d ", val);
-		} else if (tok >= TOK_BREAK) {
-			s = (char *)microjs_keyword[tok - TOK_BREAK];
-			fprintf(f, "%s ", s);
-		} else if (tok == TOK_LEFTBRACE) {
-			fprintf(f, "%s", microjs_tok_str[tok]);
-			lvl++;
-			nl = true;
-		} else if (tok == TOK_RIGHTBRACE) {
-			fprintf(f, "%s", microjs_tok_str[tok]);
-			lvl--;
-			nl = true;
-		} else if (tok == TOK_SEMICOLON) {
-			fprintf(f, ";");
-			nl = true;
-		} else
-			fprintf(f, "%s ", microjs_tok_str[tok]);
-	}
-
-	return 0;
-}
-
-#endif
