@@ -6,5 +6,5 @@ AM_CFLAGS = -O1 -Wall -g
 
 bin_PROGRAMS = ell
 
-ell_SOURCES = parser.c bitvec.c compact.c ell.c
+ell_SOURCES = parser.c bitvec.c compact.c rdp.c ell.c
 

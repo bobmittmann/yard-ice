@@ -94,7 +94,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_ell_OBJECTS = parser.$(OBJEXT) bitvec.$(OBJEXT) compact.$(OBJEXT) \
-	ell.$(OBJEXT)
+	rdp.$(OBJEXT) ell.$(OBJEXT)
 ell_OBJECTS = $(am_ell_OBJECTS)
 ell_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_$(V))
@@ -261,7 +261,7 @@ top_builddir = .
 top_srcdir = .
 AM_CPPFLAGS = -DPACKAGE_DATA_DIR=\""$(datadir)"\" 
 AM_CFLAGS = -O1 -Wall -g
-ell_SOURCES = parser.c bitvec.c compact.c ell.c
+ell_SOURCES = parser.c bitvec.c compact.c rdp.c ell.c
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -373,6 +373,7 @@ include ./$(DEPDIR)/bitvec.Po
 include ./$(DEPDIR)/compact.Po
 include ./$(DEPDIR)/ell.Po
 include ./$(DEPDIR)/parser.Po
+include ./$(DEPDIR)/rdp.Po
 
 .c.o:
 	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
