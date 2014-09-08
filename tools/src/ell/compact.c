@@ -295,9 +295,11 @@ void write_compact_h(FILE * fp, char * hname)
 	fprintf(fp, "#define IS_A_NONTERMINAL(_X) ((_X) >= NONTERM_BASE && "
 			"(_X) < ACTION_BASE)\n");
 	fprintf(fp, "#define IS_AN_ACTION(_X) ((_X) >= ACTION_BASE)\n");
+	fprintf(fp, "#define ACTION(_X) ((_X) - ACTION_BASE)\n");
 	fprintf(fp, "#else\n");
 	fprintf(fp, "#define IS_A_NONTERMINAL(_X) ((_X) >= NONTERM_BASE)\n");
 	fprintf(fp, "#define IS_AN_ACTION(_X) (0)\n");
+	fprintf(fp, "#define ACTION(_X) (0)\n");
 	fprintf(fp, "#endif\n\n");
 
 	fprintf(fp, "extern const const char * const ll_sym_tab[];\n\n");
