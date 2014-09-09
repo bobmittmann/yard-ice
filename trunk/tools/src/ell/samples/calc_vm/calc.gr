@@ -19,7 +19,6 @@ stat			: SEMICOLON
 				| PRINT exp SEMICOLON { op_print }
 				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
 				| IF { op_if_begin } condition { op_if_cond } compound_stat else_opt { op_if_end }
-
 				;
 
 else_opt		: 

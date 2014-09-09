@@ -27,7 +27,6 @@ LIBS =
 
 # Generated files
 CFILES_GEN = calc_ll.c
-
 HFILES_GEN = calc_ll.h
 
 include cross.mk
@@ -37,6 +36,6 @@ ll: calc_ll.c calc_ll.h
 calc_ll.h: calc.gr Makefile
 	../../ell -e -h $<
 
-calc_ll.c: calc.gr Makefile
+calc_ll.c: calc.gr calc_ll.h Makefile
 	../../ell -e -c $<
 
