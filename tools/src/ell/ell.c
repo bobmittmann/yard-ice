@@ -1,5 +1,31 @@
 /*
-*/
+ * LL(1) Predictive Parser Table Generator and RDP Generator
+ * 
+ * This file is part of Ell.
+ *
+ * Ell is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+
+/*! 
+ * \file      ell.c
+ * \brief     Ell application main
+ * \author    Ivo Mateljan
+ * \author    Robinson Mittmann <bobmittmann@gmail.com>
+ * \copyright 2003-2014, Ivo Mateljan
+ */ 
 
 #include <unistd.h>
 #include <stdio.h>
@@ -89,7 +115,7 @@ void ComputeFIRST(void)
 	/* first set of terminal symbol contains only that terminal symbol */
     forall_symbols(sp) {
 		sp->first = BitVecNew();
-		if(sp->kind == TERM)
+		if (sp->kind == TERM)
 			BitVecAdd(sp->first, sp->sym_no );
     }
 	
@@ -130,28 +156,29 @@ void ComputeFOLLOW(void)
     
 	do {		
 		changed = 0;
-		forall_rules( rp ) {					          
-			for( i = 0;   i<rp->nrhs; i++ ) {
+		forall_rules(rp) {					          
+			for (i = 0; i < rp->nrhs; i++) {
 				sp = rp->rhs[i];
 
-				if(sp->kind != NONTERM) 
+				if (sp->kind != NONTERM) 
 					continue;
 				
-				for( j=i+1; j < rp->nrhs; j++ ) {
+				for (j = i + 1; j < rp->nrhs; j++) {
 					tp = rp->rhs[j];
-					if(tp->nullable == true) {
-						changed += BitVecUnion(sp->follow, tp->first);
-						continue;
-					} else {
-						changed += BitVecUnion(sp->follow, tp->first);
+
+					if (tp->kind == ACTION)  
+						continue;   
+
+					changed += BitVecUnion(sp->follow, tp->first);
+
+					if (!tp->nullable)
 						break;
-					}
 				}
 				
 				if (j == rp->nrhs) {
 					/* means all nullable after i*/
-					changed += BitVecUnion(sp->follow, rp->lhs->follow);			  
-				}						
+					changed += BitVecUnion(sp->follow, rp->lhs->follow);
+				}
 			}		
 		}
 	} while (changed);
@@ -171,23 +198,23 @@ void ComputePREDICT()
 	SYMPTR sp; 
 	int i, all_nullable;
 	
-	forall_rules( rp ) rp->predict = BitVecNew();
+	forall_rules(rp) 
+		rp->predict = BitVecNew();
 	
-	forall_rules( rp ) 
-	{		
+	forall_rules(rp) {		
 		all_nullable = true;
 		
-		for(i=0; i <rp->nrhs; i++)
-		{
+		for (i = 0; i < rp->nrhs; i++) {
 			sp = rp->rhs[i];		   			
+
 			BitVecUnion(rp->predict, sp->first);
 			
-			if(sp->nullable == false) {
+			if (sp->nullable == false) {
 				all_nullable = false;
 				break;
 			}
 		}		
-		if(all_nullable)		
+		if (all_nullable)		
 			BitVecUnion(rp->predict, rp->lhs->follow);
 	}	
 }
@@ -220,50 +247,48 @@ int TestLL1conflict(FILE *fp)
 	conflict = NO_CONFLICT;	
 	
 	/* test imedite left recursion */
-	forall_rules( rp ) 
-	{
-		if(rp->nrhs > 1)
-		if(rp->lhs->sym_no == rp->rhs[0]->sym_no) {
-				fprintf(fp,"\nLeft recursion in rule:%d, line:%d ", 
+	forall_rules(rp) {
+		if (rp->nrhs > 1) {
+			if (rp->lhs->sym_no == rp->rhs[0]->sym_no) {
+				fprintf(fp,"\nLeft recursion in rule:%d, line:%d\n", 
 						rp->rule_no, rp->lineno);
 				conflict = conflict | LR_CONFLICT;
 				rp->conflict = conflict;
+			}
 		}
 	}
 
-	forall_symbols( sp ) /* for all nonterminal test LL(1) conflict */
-	{
-		if(sp->kind != NONTERM)  
+	/* for all nonterminal test LL(1) conflict */
+	forall_symbols(sp) {
+
+		if (sp->kind != NONTERM)  
 			continue;   
-		if(sp->kind == NONTERM) {
-			/* look for rules begining with nonterminal sp*/
-			BitVecClear(set);			
-			forall_rules( rp ) 
-			{				
-				if(rp->lhs->sym_no == sp->sym_no)
-				{				
-					/* 1st condition  - usually result of left recursion*/
-					if(BitVecEmpty(rp->predict)) 
-					{
-						fprintf(fp,"\nCan\'t predict rule:%d, line:%d", 
-								rp->rule_no, rp->lineno);
-						conflict = conflict | LR_CONFLICT;
-						rp->conflict = conflict;
-					}
-					/* 2nd condition - result of common left prefixes*/
-					if (BitVecHasIntersection(set, rp->predict)) {
-						fprintf(fp,"\nConflict in rule:%d, line:%d", 
-								rp->rule_no, rp->lineno);
-						conflict = conflict | CLP_CONFLICT;
-						rp->conflict = conflict;
-					}
-					BitVecUnion(set, rp->predict);					
+
+		/* look for rules begining with nonterminal sp*/
+		BitVecClear(set);			
+		forall_rules(rp) {				
+			if (rp->lhs->sym_no == sp->sym_no) {				
+				/* 1st condition  - usually result of left recursion*/
+				if (BitVecEmpty(rp->predict)) {
+					fprintf(fp,"\nCan\'t predict rule:%d, line:%d\n", 
+							rp->rule_no, rp->lineno);
+					conflict = conflict | LR_CONFLICT;
+					rp->conflict = conflict;
 				}
-			}			
-		}
+				/* 2nd condition - result of common left prefixes*/
+				if (BitVecHasIntersection(set, rp->predict)) {
+					fprintf(fp,"\nConflict in rule:%d, line:%d\n", 
+							rp->rule_no, rp->lineno);
+					conflict = conflict | CLP_CONFLICT;
+					rp->conflict = conflict;
+				}
+				BitVecUnion(set, rp->predict);					
+			}
+		}			
 	}
 	
 	free(set);	
+
 	return conflict;
 }
 
@@ -343,11 +368,15 @@ void DumpPredictSets(FILE *fp)
 		
 	forall_rules( rp ) 	{		
 		fprintf(fp, "%3d.\t%s ->", rp->rule_no, rp->lhs->symtext );
-		for( j=0; j < rp->nrhs; j++ ) 
-			fprintf(fp, " %s", rp->rhs[j]->symtext );		
+		for (j = 0; j < rp->nrhs; j++ )  {
+			sp = rp->rhs[j];		   			
+			if (sp->kind == ACTION)  
+				continue;   
+			fprintf(fp, " %s", sp->symtext);		
+		}
 		fprintf(fp, "    Predict: { "); 
 		forall_symbols( sp ) {
-			if ( BitVecTest( rp->predict, sp->sym_no ) )
+			if (BitVecTest(rp->predict, sp->sym_no) )
 				fprintf(fp, " %s", sp->symtext );
 		}
 		fprintf(fp, " } \n" );		
@@ -419,7 +448,6 @@ int main(int argc,  char **argv)
 	bool hgen = false;
 	char hfname[256];
 
-	FILE * tf = NULL;
 	bool tgen = false;
 	char tfname[256];
 
@@ -561,15 +589,6 @@ int main(int argc,  char **argv)
 		strcat(tfname, ".tbl" );
 	}
 
-	if (rdp) {
-		if (verbose)
-			printf("%s: recursive descent parser generation.\n", prog);
-	} else {
-		if (verbose)
-			printf("%s: embedded predictive parser tebales generation.\n", 
-				   prog);
-	}
-
 	parse_grammar(filename);
 
 	BitVecSetSize();
@@ -589,6 +608,8 @@ int main(int argc,  char **argv)
 	TestLL1conflict(stderr);
 
 	if (conflict & LR_CONFLICT)	{
+		if (verbose)
+			WriteGrammar(stderr);
 		fprintf(stderr, "\nFinished with severe errors!\n");
 		return 1;
 	}
@@ -596,10 +617,11 @@ int main(int argc,  char **argv)
 	if (conflict & CLP_CONFLICT) {	
 		fprintf(stderr, "\nFinished with errors!\n");
 		fprintf(stderr, "\nUsing default choice.\n");
-//			WriteRecursiveParser(cf, cfname, hf, hfname);
 	}
 
 	if (tgen) {
+		FILE * tf;
+
 		if (verbose)
 			printf(" - creating table file: \"%s\"\n", tfname);
 		if ((tf = fopen(tfname, "w")) == NULL) {
@@ -607,6 +629,12 @@ int main(int argc,  char **argv)
 					tfname, strerror(errno));  
 			return 1;
 		}
+
+		/* create table file */
+		WriteSymAndGrm(tf); 
+		WriteLLTable(tf);
+
+		fclose(tf);    
 	}
 
 	if (cgen) {
@@ -629,14 +657,13 @@ int main(int argc,  char **argv)
 		}
 	}
 
-	if (verbose)
-		fprintf(stdout, " - finished without errors.\n");
-
-	if (tgen) {
-		/* create table file */
-		WriteSymAndGrm(tf); 
-		WriteLLTable(tf);
-	} 
+	if (rdp) {
+		if (verbose)
+			printf(" - recursive descent parser generation.\n");
+	} else {
+		if (verbose)
+			printf(" - embedded predictive parser tebales generation.\n");
+	}
 
 	if (rdp) {
 		WriteRecursiveParser(cf, cfname, hf, hfname);
@@ -648,14 +675,14 @@ int main(int argc,  char **argv)
 			write_compact_c(cf, hfname);
 	}
 
-	if (tgen)
-		fclose(tf);    
-
 	if (hgen)
 		fclose(hf);    
 
 	if (cgen)
 		fclose(cf);    
+
+	if (verbose)
+		fprintf(stdout, " - finished without errors.\n");
 
 	return 0;
 }

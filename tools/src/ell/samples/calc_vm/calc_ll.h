@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Last symbol num:83  Num rules:46 */
+/* Last symbol num:90  Num rules:48 */
 
 #define T_EOF                    0
 #define T_EQU                    1
@@ -39,59 +39,66 @@
 #define T_ID                    31
 #define T_TRUE                  32
 #define T_FALSE                 33
-#define T_ERR                   34
-#define T_NOT                   35
+#define T_IF                    34
+#define T_ELSE                  35
+#define T_ERR                   36
+#define T_NOT                   37
 
-#define NONTERM_BASE            36
-#define N_PROGRAM               36
-#define N_STAT                  37
-#define N_COMPOUND              38
-#define N_STAT_LIST             39
-#define N_EXP                   40
-#define N_CONDITION             41
-#define N_SHIFT_EXP             42
-#define N_RELATIONAL_EXP        43
-#define N_ADDITIVE_EXP          44
-#define N_SHIFT_EXP1            45
-#define N_MULT_EXP              46
-#define N_ADDITIVE_EXP1         47
-#define N_UNARY_EXP             48
-#define N_MULT_EXP1             49
-#define N_PRIMARY_EXP           50
+#define NONTERM_BASE            38
+#define N_PROGRAM               38
+#define N_STAT                  39
+#define N_COMPOUND_STAT         40
+#define N_STAT_LIST             41
+#define N_EXP                   42
+#define N_CONDITION             43
+#define N_ELSE_OPT              44
+#define N_SHIFT_EXP             45
+#define N_RELATIONAL_EXP        46
+#define N_ADDITIVE_EXP          47
+#define N_SHIFT_EXP1            48
+#define N_MULT_EXP              49
+#define N_ADDITIVE_EXP1         50
+#define N_UNARY_EXP             51
+#define N_MULT_EXP1             52
+#define N_PRIMARY_EXP           53
 
-#define ACTION_BASE             51
-#define A_OP_VAR_DECL           51
-#define A_OP_LOOKUP_ID          52
-#define A_OP_ASSIGN             53
-#define A_OP_PRINT              54
-#define A_OP_WHILE_BEGIN        55
-#define A_OP_WHILE_COND         56
-#define A_OP_WHILE_END          57
-#define A_OP_EQU                58
-#define A_OP_NEQ                59
-#define A_OP_LT                 60
-#define A_OP_GT                 61
-#define A_OP_GTE                62
-#define A_OP_LTE                63
-#define A_OP_SHL                64
-#define A_OP_ASR                65
-#define A_OP_ADD                66
-#define A_OP_SUB                67
-#define A_OP_XOR                68
-#define A_OP_OR                 69
-#define A_OP_LOGIC_OR           70
-#define A_OP_MUL                71
-#define A_OP_DIV                72
-#define A_OP_MOD                73
-#define A_OP_AND                74
-#define A_OP_LOGIC_AND          75
-#define A_OP_INV                76
-#define A_OP_MINUS              77
-#define A_OP_NOT                78
-#define A_OP_PUSH_INT           79
-#define A_OP_PUSH_ID            80
-#define A_OP_PUSH_TRUE          81
-#define A_OP_PUSH_FALSE         82
+#define ACTION_BASE             54
+#define A_OP_VAR_DECL           54
+#define A_OP_LOOKUP_ID          55
+#define A_OP_ASSIGN             56
+#define A_OP_PRINT              57
+#define A_OP_WHILE_BEGIN        58
+#define A_OP_WHILE_COND         59
+#define A_OP_WHILE_END          60
+#define A_OP_IF_BEGIN           61
+#define A_OP_IF_COND            62
+#define A_OP_IF_END             63
+#define A_OP_IF_ELSE            64
+#define A_OP_EQU                65
+#define A_OP_NEQ                66
+#define A_OP_LT                 67
+#define A_OP_GT                 68
+#define A_OP_GTE                69
+#define A_OP_LTE                70
+#define A_OP_SHL                71
+#define A_OP_ASR                72
+#define A_OP_ADD                73
+#define A_OP_SUB                74
+#define A_OP_XOR                75
+#define A_OP_OR                 76
+#define A_OP_LOGIC_OR           77
+#define A_OP_MUL                78
+#define A_OP_DIV                79
+#define A_OP_MOD                80
+#define A_OP_AND                81
+#define A_OP_LOGIC_AND          82
+#define A_OP_INV                83
+#define A_OP_MINUS              84
+#define A_OP_NOT                85
+#define A_OP_PUSH_INT           86
+#define A_OP_PUSH_ID            87
+#define A_OP_PUSH_TRUE          88
+#define A_OP_PUSH_FALSE         89
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE

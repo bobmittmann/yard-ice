@@ -10,72 +10,77 @@ struct tr_pair {
 
 /* Predict sets */
 const struct tr_pair predict_vec[] = {
-	/*  36 (program) */
+	/*  38 (program) */
 	{  0,  0}, { 22,  1}, { 27,  1}, { 28,  1}, { 29,  1}, { 31,  1}, 
-	/*  37 (stat) */
-	{ 22,  5}, { 27,  6}, { 28,  8}, { 29,  9}, { 31,  7}, 
-	/*  38 (compound) */
+	{ 34,  1}, 
+	/*  39 (stat) */
+	{ 22,  5}, { 27,  6}, { 28,  8}, { 29,  9}, { 31,  7}, { 34, 10}, 
+	/*  40 (compound_stat) */
 	{ 25,  2}, 
-	/*  39 (stat_list) */
+	/*  41 (stat_list) */
 	{ 22,  4}, { 26,  3}, { 27,  4}, { 28,  4}, { 29,  4}, { 31,  4}, 
-	/*  40 (exp) */
-	{ 12, 11}, { 19, 11}, { 23, 11}, { 30, 11}, { 31, 11}, { 32, 11}, 
-	{ 33, 11}, { 35, 11}, 
-	/*  41 (condition) */
-	{ 23, 10}, 
-	/*  42 (shift_exp) */
-	{ 12, 19}, { 19, 19}, { 23, 19}, { 30, 19}, { 31, 19}, { 32, 19}, 
-	{ 33, 19}, { 35, 19}, 
-	/*  43 (relational_exp) */
-	{  1, 13}, {  2, 14}, {  3, 15}, {  4, 16}, {  5, 17}, {  6, 18}, 
-	{ 22, 12}, { 24, 12}, 
-	/*  44 (additive_exp) */
-	{ 12, 23}, { 19, 23}, { 23, 23}, { 30, 23}, { 31, 23}, { 32, 23}, 
-	{ 33, 23}, { 35, 23}, 
-	/*  45 (shift_exp1) */
-	{  1, 20}, {  2, 20}, {  3, 20}, {  4, 20}, {  5, 20}, {  6, 20}, 
-	{  9, 22}, { 10, 21}, { 22, 20}, { 24, 20}, 
-	/*  46 (mult_exp) */
-	{ 12, 30}, { 19, 30}, { 23, 30}, { 30, 30}, { 31, 30}, { 32, 30}, 
-	{ 33, 30}, { 35, 30}, 
-	/*  47 (additive_exp1) */
-	{  1, 24}, {  2, 24}, {  3, 24}, {  4, 24}, {  5, 24}, {  6, 24}, 
-	{  7, 29}, {  9, 24}, { 10, 24}, { 11, 25}, { 12, 26}, { 16, 28}, 
-	{ 18, 27}, { 22, 24}, { 24, 24}, 
-	/*  48 (unary_exp) */
-	{ 12, 39}, { 19, 38}, { 23, 37}, { 30, 37}, { 31, 37}, { 32, 37}, 
-	{ 33, 37}, { 35, 40}, 
-	/*  49 (mult_exp1) */
-	{  1, 31}, {  2, 31}, {  3, 31}, {  4, 31}, {  5, 31}, {  6, 31}, 
-	{  7, 31}, {  8, 36}, {  9, 31}, { 10, 31}, { 11, 31}, { 12, 31}, 
-	{ 13, 32}, { 14, 33}, { 15, 34}, { 16, 31}, { 17, 35}, { 18, 31}, 
-	{ 22, 31}, { 24, 31}, 
-	/*  50 (primary_exp) */
-	{ 23, 41}, { 30, 42}, { 31, 43}, { 32, 44}, { 33, 45}, 
+	{ 34,  4}, 
+	/*  42 (exp) */
+	{ 12, 13}, { 19, 13}, { 23, 13}, { 30, 13}, { 31, 13}, { 32, 13}, 
+	{ 33, 13}, { 37, 13}, 
+	/*  43 (condition) */
+	{ 23, 12}, 
+	/*  44 (else_opt) */
+	{ 35, 11}, 
+	/*  45 (shift_exp) */
+	{ 12, 21}, { 19, 21}, { 23, 21}, { 30, 21}, { 31, 21}, { 32, 21}, 
+	{ 33, 21}, { 37, 21}, 
+	/*  46 (relational_exp) */
+	{  1, 15}, {  2, 16}, {  3, 17}, {  4, 18}, {  5, 19}, {  6, 20}, 
+	{ 22, 14}, { 24, 14}, 
+	/*  47 (additive_exp) */
+	{ 12, 25}, { 19, 25}, { 23, 25}, { 30, 25}, { 31, 25}, { 32, 25}, 
+	{ 33, 25}, { 37, 25}, 
+	/*  48 (shift_exp1) */
+	{  1, 22}, {  2, 22}, {  3, 22}, {  4, 22}, {  5, 22}, {  6, 22}, 
+	{  9, 24}, { 10, 23}, { 22, 22}, { 24, 22}, 
+	/*  49 (mult_exp) */
+	{ 12, 32}, { 19, 32}, { 23, 32}, { 30, 32}, { 31, 32}, { 32, 32}, 
+	{ 33, 32}, { 37, 32}, 
+	/*  50 (additive_exp1) */
+	{  1, 26}, {  2, 26}, {  3, 26}, {  4, 26}, {  5, 26}, {  6, 26}, 
+	{  7, 31}, {  9, 26}, { 10, 26}, { 11, 27}, { 12, 28}, { 16, 30}, 
+	{ 18, 29}, { 22, 26}, { 24, 26}, 
+	/*  51 (unary_exp) */
+	{ 12, 41}, { 19, 40}, { 23, 39}, { 30, 39}, { 31, 39}, { 32, 39}, 
+	{ 33, 39}, { 37, 42}, 
+	/*  52 (mult_exp1) */
+	{  1, 33}, {  2, 33}, {  3, 33}, {  4, 33}, {  5, 33}, {  6, 33}, 
+	{  7, 33}, {  8, 38}, {  9, 33}, { 10, 33}, { 11, 33}, { 12, 33}, 
+	{ 13, 34}, { 14, 35}, { 15, 36}, { 16, 33}, { 17, 37}, { 18, 33}, 
+	{ 22, 33}, { 24, 33}, 
+	/*  53 (primary_exp) */
+	{ 23, 43}, { 30, 44}, { 31, 45}, { 32, 46}, { 33, 47}, 
 };
-/* 234 bytes; */
+/* 242 bytes; */
 
 static const struct {
 	uint8_t off;
 	uint8_t cnt;
 } predict_idx[] = {
-	{   0,  6},
-	{   6,  5},
-	{  11,  1},
-	{  12,  6},
-	{  18,  8},
-	{  26,  1},
-	{  27,  8},
-	{  35,  8},
-	{  43,  8},
-	{  51, 10},
-	{  61,  8},
-	{  69, 15},
-	{  84,  8},
-	{  92, 20},
-	{ 112,  5},
+	{   0,  7},
+	{   7,  6},
+	{  13,  1},
+	{  14,  7},
+	{  21,  8},
+	{  29,  1},
+	{  30,  1},
+	{  31,  8},
+	{  39,  8},
+	{  47,  8},
+	{  55, 10},
+	{  65,  8},
+	{  73, 15},
+	{  88,  8},
+	{  96, 20},
+	{ 116,  5},
 };
-/* 30 bytes */
+/* 32 bytes */
 
 /* Rules vectors table */
 const uint8_t rule_vec[] = {
@@ -83,7 +88,7 @@ const uint8_t rule_vec[] = {
 	T_EOF, 
 	/*  1:program(2) -> */
 	N_STAT, N_PROGRAM, 
-	/*  2:compound(3) -> */
+	/*  2:compound_stat(3) -> */
 	T_LBRACE, N_STAT_LIST, T_RBRACE, 
 	/*  3:stat_list(0) -> */
 	
@@ -98,81 +103,85 @@ const uint8_t rule_vec[] = {
 	/*  8:stat(4) -> */
 	T_PRINT, N_EXP, T_SEMICOLON, A_OP_PRINT, 
 	/*  9:stat(6) -> */
-	T_WHILE, A_OP_WHILE_BEGIN, N_CONDITION, A_OP_WHILE_COND, N_COMPOUND, A_OP_WHILE_END, 
-	/* 10:condition(3) -> */
+	T_WHILE, A_OP_WHILE_BEGIN, N_CONDITION, A_OP_WHILE_COND, N_COMPOUND_STAT, A_OP_WHILE_END, 
+	/* 10:stat(7) -> */
+	T_IF, A_OP_IF_BEGIN, N_CONDITION, A_OP_IF_COND, N_COMPOUND_STAT, N_ELSE_OPT, A_OP_IF_END, 
+	/* 11:else_opt(3) -> */
+	T_ELSE, A_OP_IF_ELSE, N_COMPOUND_STAT, 
+	/* 12:condition(3) -> */
 	T_LPAREN, N_EXP, T_RPAREN, 
-	/* 11:exp(2) -> */
+	/* 13:exp(2) -> */
 	N_SHIFT_EXP, N_RELATIONAL_EXP, 
-	/* 12:relational_exp(0) -> */
+	/* 14:relational_exp(0) -> */
 	
-	/* 13:relational_exp(3) -> */
-	T_EQU, N_EXP, A_OP_EQU, 
-	/* 14:relational_exp(3) -> */
-	T_NEQ, N_EXP, A_OP_NEQ, 
 	/* 15:relational_exp(3) -> */
-	T_LT, N_EXP, A_OP_LT, 
+	T_EQU, N_EXP, A_OP_EQU, 
 	/* 16:relational_exp(3) -> */
-	T_GT, N_EXP, A_OP_GT, 
+	T_NEQ, N_EXP, A_OP_NEQ, 
 	/* 17:relational_exp(3) -> */
-	T_GTE, N_EXP, A_OP_GTE, 
+	T_LT, N_EXP, A_OP_LT, 
 	/* 18:relational_exp(3) -> */
+	T_GT, N_EXP, A_OP_GT, 
+	/* 19:relational_exp(3) -> */
+	T_GTE, N_EXP, A_OP_GTE, 
+	/* 20:relational_exp(3) -> */
 	T_LTE, N_EXP, A_OP_LTE, 
-	/* 19:shift_exp(2) -> */
+	/* 21:shift_exp(2) -> */
 	N_ADDITIVE_EXP, N_SHIFT_EXP1, 
-	/* 20:shift_exp1(0) -> */
+	/* 22:shift_exp1(0) -> */
 	
-	/* 21:shift_exp1(3) -> */
+	/* 23:shift_exp1(3) -> */
 	T_SHL, N_SHIFT_EXP, A_OP_SHL, 
-	/* 22:shift_exp1(3) -> */
+	/* 24:shift_exp1(3) -> */
 	T_ASR, N_SHIFT_EXP, A_OP_ASR, 
-	/* 23:additive_exp(2) -> */
+	/* 25:additive_exp(2) -> */
 	N_MULT_EXP, N_ADDITIVE_EXP1, 
-	/* 24:additive_exp1(0) -> */
+	/* 26:additive_exp1(0) -> */
 	
-	/* 25:additive_exp1(3) -> */
-	T_PLUS, N_ADDITIVE_EXP, A_OP_ADD, 
-	/* 26:additive_exp1(3) -> */
-	T_MINUS, N_ADDITIVE_EXP, A_OP_SUB, 
 	/* 27:additive_exp1(3) -> */
-	T_XOR, N_ADDITIVE_EXP, A_OP_XOR, 
+	T_PLUS, N_ADDITIVE_EXP, A_OP_ADD, 
 	/* 28:additive_exp1(3) -> */
-	T_OR, N_ADDITIVE_EXP, A_OP_OR, 
+	T_MINUS, N_ADDITIVE_EXP, A_OP_SUB, 
 	/* 29:additive_exp1(3) -> */
+	T_XOR, N_ADDITIVE_EXP, A_OP_XOR, 
+	/* 30:additive_exp1(3) -> */
+	T_OR, N_ADDITIVE_EXP, A_OP_OR, 
+	/* 31:additive_exp1(3) -> */
 	T_LOR, N_ADDITIVE_EXP, A_OP_LOGIC_OR, 
-	/* 30:mult_exp(2) -> */
+	/* 32:mult_exp(2) -> */
 	N_UNARY_EXP, N_MULT_EXP1, 
-	/* 31:mult_exp1(0) -> */
+	/* 33:mult_exp1(0) -> */
 	
-	/* 32:mult_exp1(3) -> */
-	T_MUL, N_MULT_EXP, A_OP_MUL, 
-	/* 33:mult_exp1(3) -> */
-	T_DIV, N_MULT_EXP, A_OP_DIV, 
 	/* 34:mult_exp1(3) -> */
-	T_MOD, N_MULT_EXP, A_OP_MOD, 
+	T_MUL, N_MULT_EXP, A_OP_MUL, 
 	/* 35:mult_exp1(3) -> */
-	T_AND, N_MULT_EXP, A_OP_AND, 
+	T_DIV, N_MULT_EXP, A_OP_DIV, 
 	/* 36:mult_exp1(3) -> */
+	T_MOD, N_MULT_EXP, A_OP_MOD, 
+	/* 37:mult_exp1(3) -> */
+	T_AND, N_MULT_EXP, A_OP_AND, 
+	/* 38:mult_exp1(3) -> */
 	T_LAND, N_MULT_EXP, A_OP_LOGIC_AND, 
-	/* 37:unary_exp(1) -> */
+	/* 39:unary_exp(1) -> */
 	N_PRIMARY_EXP, 
-	/* 38:unary_exp(3) -> */
-	T_INV, N_UNARY_EXP, A_OP_INV, 
-	/* 39:unary_exp(3) -> */
-	T_MINUS, N_UNARY_EXP, A_OP_MINUS, 
 	/* 40:unary_exp(3) -> */
+	T_INV, N_UNARY_EXP, A_OP_INV, 
+	/* 41:unary_exp(3) -> */
+	T_MINUS, N_UNARY_EXP, A_OP_MINUS, 
+	/* 42:unary_exp(3) -> */
 	T_NOT, N_UNARY_EXP, A_OP_NOT, 
-	/* 41:primary_exp(3) -> */
-	T_LPAREN, N_EXP, T_RPAREN, 
-	/* 42:primary_exp(2) -> */
-	T_INT, A_OP_PUSH_INT, 
 	/* 43:primary_exp(3) -> */
-	T_ID, A_OP_LOOKUP_ID, A_OP_PUSH_ID, 
+	T_LPAREN, N_EXP, T_RPAREN, 
 	/* 44:primary_exp(2) -> */
+	T_INT, A_OP_PUSH_INT, 
+	/* 45:primary_exp(3) -> */
+	T_ID, A_OP_LOOKUP_ID, A_OP_PUSH_ID, 
+	/* 46:primary_exp(2) -> */
 	T_TRUE, A_OP_PUSH_TRUE, 
-	/* 45:primary_exp(2) -> */
+	/* 47:primary_exp(2) -> */
 	T_FALSE, A_OP_PUSH_FALSE, 
 };
-/* 116 bytes */
+/* 126 bytes */
 
 static const struct {
 	uint8_t off;
@@ -188,46 +197,48 @@ static const struct {
 	{  13,  6},
 	{  19,  4},
 	{  23,  6},
-	{  29,  3},
-	{  32,  2},
-	{  34,  0},
-	{  34,  3},
-	{  37,  3},
-	{  40,  3},
-	{  43,  3},
-	{  46,  3},
-	{  49,  3},
-	{  52,  2},
-	{  54,  0},
-	{  54,  3},
-	{  57,  3},
-	{  60,  2},
-	{  62,  0},
-	{  62,  3},
-	{  65,  3},
-	{  68,  3},
-	{  71,  3},
-	{  74,  3},
-	{  77,  2},
-	{  79,  0},
-	{  79,  3},
-	{  82,  3},
-	{  85,  3},
-	{  88,  3},
-	{  91,  3},
-	{  94,  1},
+	{  29,  7},
+	{  36,  3},
+	{  39,  3},
+	{  42,  2},
+	{  44,  0},
+	{  44,  3},
+	{  47,  3},
+	{  50,  3},
+	{  53,  3},
+	{  56,  3},
+	{  59,  3},
+	{  62,  2},
+	{  64,  0},
+	{  64,  3},
+	{  67,  3},
+	{  70,  2},
+	{  72,  0},
+	{  72,  3},
+	{  75,  3},
+	{  78,  3},
+	{  81,  3},
+	{  84,  3},
+	{  87,  2},
+	{  89,  0},
+	{  89,  3},
+	{  92,  3},
 	{  95,  3},
 	{  98,  3},
 	{ 101,  3},
-	{ 104,  3},
-	{ 107,  2},
-	{ 109,  3},
-	{ 112,  2},
-	{ 114,  2},
+	{ 104,  1},
+	{ 105,  3},
+	{ 108,  3},
+	{ 111,  3},
+	{ 114,  3},
+	{ 117,  2},
+	{ 119,  3},
+	{ 122,  2},
+	{ 124,  2},
 };
-/* 92 bytes */
+/* 96 bytes */
 
-/* Total: 472 bytes */
+/* Total: 496 bytes */
 
 
 int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
@@ -322,14 +333,17 @@ const const char * const ll_sym_tab[] = {
  	"ID",
  	"TRUE",
  	"FALSE",
+ 	"IF",
+ 	"ELSE",
  	"ERR",
  	"NOT",
  	"program",
  	"stat",
- 	"compound",
+ 	"compound_stat",
  	"stat_list",
  	"exp",
  	"condition",
+ 	"else_opt",
  	"shift_exp",
  	"relational_exp",
  	"additive_exp",
@@ -346,6 +360,10 @@ const const char * const ll_sym_tab[] = {
  	"op_while_begin",
  	"op_while_cond",
  	"op_while_end",
+ 	"op_if_begin",
+ 	"op_if_cond",
+ 	"op_if_end",
+ 	"op_if_else",
  	"op_equ",
  	"op_neq",
  	"op_lt",
