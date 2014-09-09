@@ -1,0 +1,79 @@
+%token EOF EQU NEQ LT GT GTE LTE LOR LAND ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN LBRACE RBRACE VAR PRINT WHILE INT ID TRUE FALSE ERR
+%%
+
+program 		: EOF
+				| stat program
+				;
+
+compound		: LBRACE stat_list RBRACE
+				;
+
+stat_list		:
+				| stat stat_list
+				;
+
+stat			: SEMICOLON
+				| VAR ID { op_var_decl } SEMICOLON 
+				| ID { op_lookup_id } ASSIGN exp SEMICOLON { op_assign }
+				| PRINT exp SEMICOLON { op_print }
+				| WHILE { op_while_begin } condition { op_while_cond } compound { op_while_end }
+				;
+
+condition		: LPAREN exp RPAREN
+				;
+
+exp 			: shift_exp	relational_exp
+				;
+
+relational_exp	:
+				| EQU exp { op_equ }
+				| NEQ exp { op_neq }
+				| LT  exp { op_lt }
+				| GT  exp { op_gt }
+				| GTE exp { op_gte }
+				| LTE exp { op_lte }
+				;
+
+shift_exp		: additive_exp shift_exp1
+				;
+
+shift_exp1		: 
+				| SHL shift_exp	{ op_shl }
+				| ASR shift_exp	{ op_asr }
+				;
+
+additive_exp 	: mult_exp additive_exp1
+				;
+
+additive_exp1 	: 
+				| PLUS additive_exp { op_add }
+				| MINUS additive_exp { op_sub }
+				| XOR additive_exp { op_xor }
+				| OR additive_exp { op_or }
+				| LOR additive_exp { op_logic_or }
+				;
+
+mult_exp		: unary_exp mult_exp1		
+				;
+
+mult_exp1		: 
+				| MUL mult_exp { op_mul }
+				| DIV mult_exp { op_div }
+				| MOD mult_exp { op_mod }
+				| AND mult_exp { op_and }
+				| LAND mult_exp { op_logic_and }
+				;
+
+unary_exp		: primary_exp
+				| INV unary_exp { op_inv }
+				| MINUS unary_exp { op_minus }
+				| NOT unary_exp { op_not }
+				;
+
+primary_exp		: LPAREN exp RPAREN
+				| INT { op_push_int }
+				| ID { op_lookup_id, op_push_id }
+				| TRUE { op_push_true }
+				| FALSE { op_push_false }
+				;
+

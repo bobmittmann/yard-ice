@@ -1,0 +1,13 @@
+var i;
+var j;
+
+i = 0;
+j = 0;
+
+while (i < 2 && j == 0) {
+	print i;
+	i = i + 1;
+}
+
+print true;
+
