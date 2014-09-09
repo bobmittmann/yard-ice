@@ -19,11 +19,16 @@
 
 PROG = calc
 
-CFILES = calc.c calc_vm.c calc_lex.c calc_ll.c calc_dbg.c
+CFILES = calc.c calc_vm.c calc_lex.c calc_dbg.c
 
 INCPATH = ../include
 
 LIBS =
+
+# Generated files
+CFILES_GEN = calc_ll.c
+
+HFILES_GEN = calc_ll.h
 
 include cross.mk
 
@@ -34,3 +39,4 @@ calc_ll.h: calc.gr Makefile
 
 calc_ll.c: calc.gr Makefile
 	../../ell -e -c $<
+

@@ -1,8 +1,8 @@
-# File:    	cross.mk 
+# File:    	prog.mk 
 # Author:   Robinson Mittmann (bobmittmann@gmail.com)
 # Target:
 # Comment:  
-# Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
+# Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -59,13 +59,21 @@ STRIP = $(CROSS_COMPILE)strip
 
 INCPATH	:= $(SDKDIR)/include $(OUTDIR) $(INCPATH)
 SFLAGS := $(SFLAGS) -Wall $(addprefix -D,$(CDEFS))
-CFLAGS := $(CFLAGS) -O2 -g -Wall $(addprefix -D,$(CDEFS))
-LDFLAGS	:= $(OPTIONS) $(LDFLAGS) -Wl,--sort-common $(addprefix -L,$(LIBPATH))
+CFLAGS := $(CFLAGS) -Wall $(addprefix -D,$(CDEFS))
+LDFLAGS	:= $(OPTIONS) $(LDFLAGS) -Wl,--print-map -Wl,--cref -Wl,--sort-common $(addprefix -L,$(LIBPATH))
+
+#------------------------------------------------------------------------------ 
+# update generated files list
+#------------------------------------------------------------------------------ 
+
+HFILES_OUT = $(addprefix $(OUTDIR)/, $(HFILES_GEN))
+CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
+SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 
 #------------------------------------------------------------------------------ 
 # object files
 #------------------------------------------------------------------------------ 
-OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES:.c=.o) $(SFILES:.S=.o)))
+OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_GEN:.c=.o) $(SFILES_GEN:.S=.o) $(CFILES:.c=.o) $(SFILES:.S=.o)))
 
 #
 # Extract the directory list from input file list
@@ -75,39 +83,21 @@ vpath %.c $(abspath $(sort $(dir $(CFILES))))
 #------------------------------------------------------------------------------ 
 # Program output files
 #------------------------------------------------------------------------------ 
-ifdef PROG
-  PROG_OUT = $(OUTDIR)/$(PROG)
-  PROG_ELF = $(OUTDIR)/$(PROG).elf
-  OUT = $(PROG_OUT)
-endif
+PROG_OUT = $(OUTDIR)/$(PROG)
+PROG_MAP = $(OUTDIR)/$(PROG).map
+PROG_ELF = $(OUTDIR)/$(PROG).elf
+PROG_LST = $(OUTDIR)/$(PROG).lst
 
-#------------------------------------------------------------------------------ 
-# library output files
-#------------------------------------------------------------------------------ 
-ifdef LIB_STATIC
-  LIB_STATIC_OUT = $(OUTDIR)/lib$(LIB_STATIC).a
-  OUT = $(LIB_STATIC_OUT)
-endif
-
-ifdef LIB_SHARED
-  LIB_SHARED_OUT = $(OUTDIR)/lib$(LIB_SHARED).so
-  OUT = $(LIB_SHARED_OUT)
-endif
-
-all: $(OUT)
+all: $(PROG_OUT) $(PROG_LST)
 
 clean:
-	$(Q)rm -f $(OFILES) $(PROG_OUT) $(PROG_ELF) $(LIB_STATIC_OUT)
+	$(Q)rm -f $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(PROG_OUT) $(PROG_ELF) $(PROG_LST) $(PROG_MAP)
 
 prog: $(PROG_OUT)
 
 elf: $(PROG_ELF)
 
-lib: $(LIB_STATIC_OUT)
-
-#------------------------------------------------------------------------------ 
-# App
-#------------------------------------------------------------------------------ 
+lst: $(PROG_LST)
 
 $(PROG_OUT): $(PROG_ELF)
 	$(ACTION) "STRIP: $@"
@@ -115,16 +105,7 @@ $(PROG_OUT): $(PROG_ELF)
 
 $(PROG_ELF): $(OFILES) 
 	$(ACTION) "LD: $@"
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(addprefix -l,$(LIBS)) -o $@ 
-
-#------------------------------------------------------------------------------ 
-# Lib
-#------------------------------------------------------------------------------ 
-
-$(LIB_STATIC_OUT): $(OFILES)
-	$(ACTION) "AR: $@"
-	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) $(LIBDEPS) 1> /dev/null
-
+	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(addprefix -l,$(LIBS)) -o $@ > $(PROG_MAP)
 #------------------------------------------------------------------------------ 
 # Build tree
 #------------------------------------------------------------------------------ 
@@ -133,7 +114,13 @@ $(OUTDIR):
 	$(ACTION) "Creating: $@"
 	$(Q) mkdir $(OUTDIR)
 
-.PHONY: all clean prog elf lib
+$(HFILES_OUT): | $(OUTDIR)
+
+$(CFILES_OUT) $(SFILES_OUT): | $(HFILES_OUT) $(OUTDIR)
+
+$(OFILES): $(CFILES_OUT) $(SFILES_OUT) 
+
+.PHONY: all clean prog elf lst 
 
 .SUFFIXES:
 
@@ -149,7 +136,7 @@ $(OUTDIR)/%.o : %.S
 	$(Q)$(assemble) -o $@ -c $<
 
 #------------------------------------------------------------------------------ 
-# generated source code files
+# Automatically generated source code files
 #------------------------------------------------------------------------------ 
 
 $(OUTDIR)/%.o : $(OUTDIR)/%.c
@@ -168,3 +155,26 @@ $(OUTDIR)/%.o : $(OUTDIR)/%.S
 	$(ACTION) "LST: $@"
 	$(Q)$(OBJDUMP) -w -d -t -S -r -z $< | sed '/^[0-9,a-f]\{8\} .[ ]*d[f]\?.*$$/d' > $@
 
+%.bin: %.elf
+	$(ACTION) "BIN: $@"
+	$(Q)$(OBJCOPY) --output-target binary $< $@
+
+$(OUTDIR)/%_svc.c: %.x $(OUTDIR)/%.h 
+	$(ACTION) "RPCGEN: $@"
+	$(Q)rm -f $@ 
+	$(Q)rpcgen -M -C -m -o $@ $<
+
+$(OUTDIR)/%_xdr.c: %.x
+	$(ACTION) "RPCGEN: $@"
+	$(Q)rm -f $@ 
+	$(Q)rpcgen -M -C -c -o $@ $<
+
+$(OUTDIR)/%_clnt.c: %.x
+	$(ACTION) "RPCGEN: $@"
+	$(Q)rm -f $@ 
+	$(Q)rpcgen -M -C -l -o $@ $<
+
+$(OUTDIR)/%.h: %.x
+	$(ACTION) "RPCGEN: $@"
+	$(Q)rm -f $@ 
+	$(Q)rpcgen -M -C -h -o $@ $<
