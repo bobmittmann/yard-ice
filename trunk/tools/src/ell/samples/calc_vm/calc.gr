@@ -1,11 +1,12 @@
-%token EOF EQU NEQ LT GT GTE LTE LOR LAND ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN LBRACE RBRACE VAR PRINT WHILE INT ID TRUE FALSE ERR
+%token EOF EQU NEQ LT GT GTE LTE LOR LAND ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN LBRACE RBRACE VAR PRINT WHILE INT ID TRUE FALSE IF ELSE ERR
 %%
 
 program 		: EOF
 				| stat program
 				;
 
-compound		: LBRACE stat_list RBRACE
+
+compound_stat	: LBRACE stat_list RBRACE
 				;
 
 stat_list		:
@@ -16,7 +17,13 @@ stat			: SEMICOLON
 				| VAR ID { op_var_decl } SEMICOLON 
 				| ID { op_lookup_id } ASSIGN exp SEMICOLON { op_assign }
 				| PRINT exp SEMICOLON { op_print }
-				| WHILE { op_while_begin } condition { op_while_cond } compound { op_while_end }
+				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
+				| IF { op_if_begin } condition { op_if_cond } compound_stat else_opt { op_if_end }
+
+				;
+
+else_opt		: 
+				| ELSE { op_if_else } compound_stat
 				;
 
 condition		: LPAREN exp RPAREN

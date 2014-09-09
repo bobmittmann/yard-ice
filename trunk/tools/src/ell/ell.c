@@ -1,86 +1,4 @@
-/**************************************************************
-	LL(1) Predictive Parser Table Generator and RDP Generator
- **************************************************************
-
-Author: Ivo Mateljan 
-
-This is simple recursive descent parser generator. It also can be used to build
-LL(1) predictive parsing tables. I have made it for my students.
-
-Version 0.2.			1 September 2003.
-
-
-USAGE:
-  ell  [-l]  [-f] [-t]  [file]
-	  
-OPTIONS:
-		
--t :	generate output of machine-readable parsing tables.
-		this disable generation of recursive descent parser code,
-		which is a default action
-
--l :	generate listing of terminals, nonterminals and grammar 
-		on the standard output.
-	  
--s :	generate listing of `first', 'follow' and 'predict' sets
-		as computed for the grammar.	
-		
-			  
-file :	the name of the file containing the grammar.  If this
-		argument is absent, the grammar is read from the
-		standard input.
-			
-RESULT:				  
-	If the grammar is free of errors and if the `-t' flag is not
-	given, ll(1) recursive descent parser code is generated in a file named
-	`file.c', where `file' is the name of the input file holding
-	the grammar. 
-	If the grammar was read from the standard input, the tables are written 
-	to a file named: `llparse.c'.
-
-	If the grammar is free of errors and if the `-t' flag is given, 
-	ll(1) parsing tables are generated in a file named
-	`file.tbl', where `file' is the name of the input file holding
-	the grammar. If the grammar was read from the standard input, the 
-	tables are written to a file named: `llparse.tbl'.
-					
-	If the grammar contains errors, diagnostic information is given.
-	
-Gramar file format is extremly simple:
-----------------------------------------------------------------------
-%token  list_of_token
-%%
-list_of_production_rules
-
-Every production start in a new line and have the form:
-
-LHS : RHS1               or  LHS : RHS1 | RHS2| ...| RHSn ;
-	| RHS2
-	|  ....
-    ;
-
-LHS is single nonterminal. It is defined with alternate RHSi. One RHSi can be empty. 
-RHSi contain series of tokens and nonterminals which can be grouped, 
-as regular expressions:
-    
-	()  - group                              i.e. sign : ('+' | '-' |  ) 
-	()? - group is optional                  i.e. sign : ('+' | '-')? 
-	()* - group repeats zero or more times,  i.e. expr : term ( ('+' | '-') term )*
-	()+ - group repeats one or more times,   i.e. expr : (statement )+
-
-Rule is terminated with semicolon.
-
-Nonternimals and tokens are designates with : (alpha|_)(alpha|digit|_)*
-Tokens can also be are designated with single quoted char (i..e '+', '\n' )
-
-Coments are in C++ style  
-	 multiline comments  -  can not be nested
-	// to end of line comment
-
-To-do-list:
-- proper error recovery
-- semantic actions
-- ebnf implementation, but retain possibility of predictive parser table generation
+/*
 */
 
 #include <unistd.h>
@@ -652,6 +570,35 @@ int main(int argc,  char **argv)
 				   prog);
 	}
 
+	parse_grammar(filename);
+
+	BitVecSetSize();
+	FindNullableSymbols();
+	ComputeFIRST();
+	ComputeFOLLOW();
+	ComputePREDICT();
+
+	if (listing) 
+		WriteGrammar(stdout);
+
+	if (dump_sets) {
+		DumpFFSets(stdout);
+		DumpPredictSets(stdout);
+	}
+
+	TestLL1conflict(stderr);
+
+	if (conflict & LR_CONFLICT)	{
+		fprintf(stderr, "\nFinished with severe errors!\n");
+		return 1;
+	}
+
+	if (conflict & CLP_CONFLICT) {	
+		fprintf(stderr, "\nFinished with errors!\n");
+		fprintf(stderr, "\nUsing default choice.\n");
+//			WriteRecursiveParser(cf, cfname, hf, hfname);
+	}
+
 	if (tgen) {
 		if (verbose)
 			printf(" - creating table file: \"%s\"\n", tfname);
@@ -681,57 +628,24 @@ int main(int argc,  char **argv)
 			return 1;
 		}
 	}
-	
-	parse_grammar(filename);
 
-	BitVecSetSize();
-	FindNullableSymbols();
-	ComputeFIRST();
-	ComputeFOLLOW();
-	ComputePREDICT();
+	if (verbose)
+		fprintf(stdout, " - finished without errors.\n");
 
-	if (listing) 
-		WriteGrammar(stdout);
+	if (tgen) {
+		/* create table file */
+		WriteSymAndGrm(tf); 
+		WriteLLTable(tf);
+	} 
 
-	if (dump_sets) {
-		DumpFFSets(stdout);
-		DumpPredictSets(stdout);
-	}
+	if (rdp) {
+		WriteRecursiveParser(cf, cfname, hf, hfname);
+	} else {
+		if (hgen)
+			write_compact_h(hf, hfname); 
 
-	TestLL1conflict(stderr);
-
-	if (conflict)	{		
-		DumpPredictSets(stderr);
-		if (!(conflict & LR_CONFLICT) && rdp) {
-			WriteRecursiveParser(cf, cfname, hf, hfname);
-		}
-
-		if (conflict & LR_CONFLICT)	{
-			fprintf(stderr, "\nFinished with severe errors - see %s\n", 
-					outname);
-		} else if(conflict & CLP_CONFLICT) {	
-			fprintf(stderr, "\nFinished with errors!\n");
-//			fprintf(stderr, "\nUsing default choice - see %s\n", outname);
-		} 
-	} else {  
-		if (verbose)
-			fprintf(stdout, " - finished without errors.\n");
-
-		if (tgen) {
-			/* create table file */
-			WriteSymAndGrm(tf); 
-			WriteLLTable(tf);
-		} 
-
-		if (rdp) {
-			WriteRecursiveParser(cf, cfname, hf, hfname);
-		} else {
-			if (hgen)
-				write_compact_h(hf, hfname); 
-
-			if (cgen)
-				write_compact_c(cf, hfname);
-		}
+		if (cgen)
+			write_compact_c(cf, hfname);
 	}
 
 	if (tgen)
