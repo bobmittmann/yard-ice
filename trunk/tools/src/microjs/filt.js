@@ -16,7 +16,7 @@ function f1(x)
 {
 	var x0 = 0, x1 = 0;
 	var y0 = 0, y1 = 0;
-	var y[10];
+	var y = [];
 	var i;
 
 	i = 0;
@@ -34,10 +34,8 @@ function f1(x)
 
 function main()
 {
-	var x[10];
-	var y[10];
-
-	x = { 1, 0, 0, 1, 0, 0, 1, 1, 0, 0};
+	var x = [1, 0, 0, 1, 0, 0, 1, 1, 0, 0];
+	var y = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 	y = f1(x);
 

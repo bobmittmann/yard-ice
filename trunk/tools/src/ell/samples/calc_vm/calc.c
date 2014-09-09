@@ -470,11 +470,13 @@ int op_while_cond(struct calc * calc)
 		return id;
 	}
 
-	/* save current location on a temporary variable */
-	sym_addr_set(calc->tab, id, calc->pc);
 	printf("%s:\n%04x\tJEQ xxxx\n", s, calc->pc);
-	/* reserve 3 positions for jump calculation */
-	calc->pc += 3;
+
+	/* save current location on a temporary variable */
+	calc->code[calc->pc++] = OPC_JEQ;
+	sym_addr_set(calc->tab, id, calc->pc);
+	/* reserve 2 positions for jump address */
+	calc->pc += 2;
 	return 0;
 }
 
@@ -491,9 +493,8 @@ int op_while_end(struct calc * calc)
 	n = sprintf(s, ".L%d", --calc->nest);
 	id = sym_lookup(calc->tab, s, n);
 	addr = sym_addr_get(calc->tab, id);
-	offs = calc->pc - addr;
-	printf("\tfix %04x -> JEQ %04x (%s)\n", addr, calc->pc + 3, s);
-	calc->code[addr++] = OPC_JEQ;
+	offs = calc->pc - (addr - 1);
+	printf("\tfix %04x -> JEQ %04x (%s)\n", addr - 1, calc->pc + 3, s);
 	calc->code[addr++] = offs;
 	calc->code[addr++] = offs >> 8;
 
@@ -501,7 +502,7 @@ int op_while_end(struct calc * calc)
 	n = sprintf(s, ".L%d", --calc->nest);
 	id = sym_lookup(calc->tab, s, n);
 	addr = sym_addr_get(calc->tab, id);
-	offs = addr - calc->pc;
+	offs = addr - (calc->pc + 3);
 	printf("%04x\tJMP %04x (%s offs=%d)\n", calc->pc, addr, s, offs);
 	calc->code[calc->pc++] = OPC_JMP;
 	calc->code[calc->pc++] = offs;
@@ -509,6 +510,79 @@ int op_while_end(struct calc * calc)
 
 	return 0;
 }
+
+int op_if_cond(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+
+	n = sprintf(s, ".L%d", calc->nest++);
+	if ((id = sym_add(calc->tab, s, n)) < 0) {
+		fprintf(stderr, "can't create symbol.\n");
+		return id;
+	}
+
+	printf("%s:\n%04x\tJEQ xxxx\n", s, calc->pc);
+
+	/* save current location on a temporary variable */
+	calc->code[calc->pc++] = OPC_JEQ;
+	sym_addr_set(calc->tab, id, calc->pc);
+	/* reserve 2 positions for jump address */
+	calc->pc += 2;
+
+	return 0;
+}
+
+int op_if_else(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+	int addr;
+	int offs;
+
+	/* Get the the conditinal jump variable */
+	n = sprintf(s, ".L%d", calc->nest - 1);
+	id = sym_lookup(calc->tab, s, n);
+	addr = sym_addr_get(calc->tab, id);
+
+	offs = calc->pc - (addr - 1);
+	printf("\tfix %04x -> JEQ %04x (%s)\n", addr - 1, calc->pc + 3, s);
+	calc->code[addr++] = offs;
+	calc->code[addr++] = offs >> 8;
+
+	printf("%s:\n%04x\tJMP xxxx\n", s, calc->pc);
+	/* save current location on the same temporary variable */
+	calc->code[calc->pc++] = OPC_JMP;
+	sym_addr_set(calc->tab, id, calc->pc);
+	/* reserve 2 positions for jump address */
+	calc->pc += 2;
+
+	return 0;
+}
+
+int op_if_end(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+	int addr;
+	int offs;
+
+	/* Adjust the conditinal jump */
+	n = sprintf(s, ".L%d", --calc->nest);
+	id = sym_lookup(calc->tab, s, n);
+	addr = sym_addr_get(calc->tab, id);
+
+	offs = (calc->pc - 3) - (addr - 1);
+	printf("\tfix %04x -> Jxx %04x (%s)\n", addr - 1, calc->pc, s);
+	calc->code[addr++] = offs;
+	calc->code[addr++] = offs >> 8;
+
+	return 0;
+}
+
 
 
 int (* op[])(struct calc * calc) = {
@@ -544,6 +618,9 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_WHILE_BEGIN)] = op_while_begin,
  	[ACTION(A_OP_WHILE_COND)] = op_while_cond,
  	[ACTION(A_OP_WHILE_END)] = op_while_end,
+ 	[ACTION(A_OP_IF_COND)] = op_if_cond,
+ 	[ACTION(A_OP_IF_ELSE)] = op_if_else,
+ 	[ACTION(A_OP_IF_END)] = op_if_end,
 
 };
 
@@ -687,6 +764,7 @@ int main(int argc, char *argv[])
 	sym_tab_init(&sym_tab, strings, sizeof(strings));
 	calc_init(&calc, &sym_tab, data, sizeof(data));
 	calc_vm_init(&vm, data, sizeof(data));
+	vm.trace = false;
 
 	if (argc > 1) {
 		char * script = NULL;
