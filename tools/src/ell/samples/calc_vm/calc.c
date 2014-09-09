@@ -164,124 +164,9 @@ int32_t pop(struct calc * calc)
 	return x;
 }
 
-int op_print(struct calc * calc)
-{
-	int32_t x = pop(calc);
-
-	printf("%d\n", x);
-	return 0;
-}
-
-int op_add(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x + y);
-}
-
-int op_sub(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x - y);
-}
-
-int op_or(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x | y);
-}
-
-int op_xor(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x ^ y);
-}
-
-int op_mul(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x * y);
-}
-
-int op_div(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x / y);
-}
-
-int op_mod(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x % y);
-}
-
-int op_and(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x & y);
-}
-
-int op_inv(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	return push(calc, ~x);
-}
-
-int op_minus(struct calc * calc)
-{
-	int32_t x;
-
-	x = pop(calc);
-	push(calc, -x);
-	return 0;
-}
-
-int op_shl(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x << y);
-}
-
-int op_asr(struct calc * calc)
-{
-	int32_t x = pop(calc);
-	int32_t y = pop(calc);
-	return push(calc, x >> y);
-}
-
-int op_push_int(struct calc * calc)
-{
-	int32_t x = calc->tok.u32;
-	return push(calc, x);
-}
-
-int op_lookup_id(struct calc * calc)
-{
-	int addr;
-	int id;
-
-	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
-
-	if (id < 0) {
-		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
-		return -1;
-	}
-
-	addr = sym_addr_get(calc->tab, id);
-
-//	printf("%s: var=\"%s\" id=%d\n", __func__, sym_name(calc->tab, id), id);
-
-	return push(calc, addr);
-}
-
+/* --------------------------------------------------------------------------
+   Code generation
+   -------------------------------------------------------------------------- */
 
 int op_var_decl(struct calc * calc)
 {
@@ -301,36 +186,326 @@ int op_var_decl(struct calc * calc)
 
 	/* bind address to symol */
 	sym_addr_set(calc->tab, id, addr);
-	/* initialize variable */
-	mem_wr32(calc, addr, 0);
+
+	return 0;
+}
+
+
+int op_print(struct calc * calc)
+{
+	printf("%04x\tPRINT\n", calc->pc);
+	calc->code[calc->pc++] = OPC_PRINT;
+	return 0;
+}
+
+int op_equ(struct calc * calc)
+{
+	printf("%04x\tEQ\n", calc->pc);
+	calc->code[calc->pc++] = OPC_EQ;
+	return 0;
+}
+
+int op_neq(struct calc * calc)
+{
+	printf("%04x\tNE\n", calc->pc);
+	calc->code[calc->pc++] = OPC_NE;
+	return 0;
+}
+
+int op_gt(struct calc * calc)
+{
+	printf("%04x\tGT\n", calc->pc);
+	calc->code[calc->pc++] = OPC_GT;
+	return 0;
+}
+
+int op_lt(struct calc * calc)
+{
+	printf("%04x\tLT\n", calc->pc);
+	calc->code[calc->pc++] = OPC_LT;
+	return 0;
+}
+
+int op_gte(struct calc * calc)
+{
+	printf("%04x\tGE\n", calc->pc);
+	calc->code[calc->pc++] = OPC_GE;
+	return 0;
+}
+
+int op_lte(struct calc * calc)
+{
+	printf("%04x\tLE\n", calc->pc);
+	calc->code[calc->pc++] = OPC_LE;
+	return 0;
+}
+
+int op_logic_or(struct calc * calc)
+{
+	printf("%04x\tOR\n", calc->pc);
+	calc->code[calc->pc++] = OPC_OR;
+	return 0;
+}
+
+int op_logic_and(struct calc * calc)
+{
+	printf("%04x\tAND\n", calc->pc);
+	calc->code[calc->pc++] = OPC_AND;
+	return 0;
+}
+
+int op_add(struct calc * calc)
+{
+	printf("%04x\tADD\n", calc->pc);
+	calc->code[calc->pc++] = OPC_ADD;
+	return 0;
+}
+
+int op_sub(struct calc * calc)
+{
+	printf("%04x\tSUB\n", calc->pc);
+	calc->code[calc->pc++] = OPC_SUB;
+	return 0;
+}
+
+int op_or(struct calc * calc)
+{
+	printf("%04x\tOR\n", calc->pc);
+	calc->code[calc->pc++] = OPC_OR;
+	return 0;
+}
+
+int op_xor(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_XOR;
+	return 0;
+}
+
+int op_mul(struct calc * calc)
+{
+	printf("%04x\tMUL\n", calc->pc);
+	calc->code[calc->pc++] = OPC_MUL;
+	return 0;
+}
+
+int op_div(struct calc * calc)
+{
+	printf("%04x\tDIV\n", calc->pc);
+	calc->code[calc->pc++] = OPC_DIV;
+	return 0;
+}
+
+int op_mod(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_MOD;
+	return 0;
+}
+
+int op_and(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_AND;
+	return 0;
+}
+
+int op_inv(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_INV;
+	return 0;
+}
+
+int op_minus(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_NEG;
+	return 0;
+}
+
+int op_not(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_NEG;
+	return 0;
+}
+
+int op_shl(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_SHL;
+	return 0;
+}
+
+int op_asr(struct calc * calc)
+{
+	calc->code[calc->pc++] = OPC_ASR;
+	return 0;
+}
+
+int op_push_false(struct calc * calc)
+{
+	printf("%04x\tI8 %d\n", calc->pc, 0);
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = 0;
+	return 0;
+}
+
+int op_push_true(struct calc * calc)
+{
+	printf("%04x\tI8 %d\n", calc->pc, 1);
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = 1;
+	return 0;
+}
+
+int op_push_int(struct calc * calc)
+{
+	int32_t x = calc->tok.u32;
+
+	printf("%04x\t", calc->pc);
+
+	if (x >= 0) {
+		if (x < 32768) {
+			if (x < 128) {
+				printf("I8 %d\n", x);
+				calc->code[calc->pc++] = OPC_I8;
+				calc->code[calc->pc++] = x;
+			} else {
+				printf("I16 %d\n", x);
+				calc->code[calc->pc++] = OPC_I16;
+				calc->code[calc->pc++] = x;
+				calc->code[calc->pc++] = x >> 8;
+			}
+		} else {
+			printf("I32 %d\n", x);
+			calc->code[calc->pc++] = OPC_I32;
+			calc->code[calc->pc++] = x;
+			calc->code[calc->pc++] = x >> 8;
+			calc->code[calc->pc++] = x >> 16;
+			calc->code[calc->pc++] = x >> 24;
+		}
+	} else {
+		if (x >= -32768) {
+			if (x >= -128) {
+				printf("I8 %d\n", x);
+				calc->code[calc->pc++] = OPC_I8;
+				calc->code[calc->pc++] = x;
+			} else {
+				printf("I16 %d\n", x);
+				calc->code[calc->pc++] = OPC_I16;
+				calc->code[calc->pc++] = x;
+				calc->code[calc->pc++] = x >> 8;
+			}
+		} else {
+			printf("I32 %d\n", x);
+			calc->code[calc->pc++] = OPC_I32;
+			calc->code[calc->pc++] = x;
+			calc->code[calc->pc++] = x >> 8;
+			calc->code[calc->pc++] = x >> 16;
+			calc->code[calc->pc++] = x >> 24;
+		}
+	}
+
+	return 0;
+}
+
+int op_lookup_id(struct calc * calc)
+{
+	int addr;
+	int id;
+
+	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
+
+	if (id < 0) {
+		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
+		return -1;
+	}
+
+	addr = sym_addr_get(calc->tab, id);
+	printf("%04x\tI16 0x%04x\n", calc->pc, addr);
+
+	calc->code[calc->pc++] = OPC_I16;
+	calc->code[calc->pc++] = addr;
+	calc->code[calc->pc++] = addr >> 8;
 
 	return 0;
 }
 
 int op_push_id(struct calc * calc)
 {
-	unsigned int addr = pop(calc);
-
-	if (addr > 256) {
-		fprintf(stderr, "invalid address.\n");
-		return -1;
-	}
-
-	return push(calc, mem_rd32(calc, addr));
+	printf("%04x\tLD\n", calc->pc);
+	calc->code[calc->pc++] = OPC_LD;
+	return 0;
 }
 
 int op_assign(struct calc * calc)
 {
-	int32_t x = pop(calc);
-	int addr = pop(calc);
+	printf("%04x\tST\n", calc->pc);
+	calc->code[calc->pc++] = OPC_ST;
+	return 0;
+}
 
-	if (addr > 256) {
-		fprintf(stderr, "invalid address.\n");
-		return -1;
+int op_while_begin(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+
+	n = sprintf(s, ".L%d", calc->nest++);
+	if ((id = sym_add(calc->tab, s, n)) < 0) {
+		fprintf(stderr, "can't create symbol.\n");
+		return id;
 	}
-//	printf("%s: %s id=%d\n", __func__, sym_name(calc->tab, id), id);
 
-	mem_wr32(calc, addr, x);
+	/* save current location on a temporary variable */
+	sym_addr_set(calc->tab, id, calc->pc);
+	printf("%s:\n", s);
+	return 0;
+}
+
+int op_while_cond(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+
+	n = sprintf(s, ".L%d", calc->nest++);
+	if ((id = sym_add(calc->tab, s, n)) < 0) {
+		fprintf(stderr, "can't create symbol.\n");
+		return id;
+	}
+
+	/* save current location on a temporary variable */
+	sym_addr_set(calc->tab, id, calc->pc);
+	printf("%s:\n%04x\tJEQ xxxx\n", s, calc->pc);
+	/* reserve 3 positions for jump calculation */
+	calc->pc += 3;
+	return 0;
+}
+
+
+int op_while_end(struct calc * calc)
+{
+	char s[8];
+	int n;
+	int id;
+	int addr;
+	int offs;
+
+	/* Adjust the conditinal jump */
+	n = sprintf(s, ".L%d", --calc->nest);
+	id = sym_lookup(calc->tab, s, n);
+	addr = sym_addr_get(calc->tab, id);
+	offs = calc->pc - addr;
+	printf("\tfix %04x -> JEQ %04x (%s)\n", addr, calc->pc + 3, s);
+	calc->code[addr++] = OPC_JEQ;
+	calc->code[addr++] = offs;
+	calc->code[addr++] = offs >> 8;
+
+	/* Repeat */
+	n = sprintf(s, ".L%d", --calc->nest);
+	id = sym_lookup(calc->tab, s, n);
+	addr = sym_addr_get(calc->tab, id);
+	offs = addr - calc->pc;
+	printf("%04x\tJMP %04x (%s offs=%d)\n", calc->pc, addr, s, offs);
+	calc->code[calc->pc++] = OPC_JMP;
+	calc->code[calc->pc++] = offs;
+	calc->code[calc->pc++] = offs >> 8;
 
 	return 0;
 }
@@ -340,6 +515,12 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
  	[ACTION(A_OP_ASSIGN)] = op_assign,
  	[ACTION(A_OP_PRINT)] = op_print,
+ 	[ACTION(A_OP_EQU)] = op_equ,
+ 	[ACTION(A_OP_NEQ)] = op_neq,
+ 	[ACTION(A_OP_LT)] = op_lt,
+ 	[ACTION(A_OP_GT)] = op_gt,
+ 	[ACTION(A_OP_GTE)] = op_gte,
+ 	[ACTION(A_OP_LTE)] = op_lte,
  	[ACTION(A_OP_SHL)] = op_shl,
  	[ACTION(A_OP_ASR)] = op_asr,
 	[ACTION(A_OP_ADD)] = op_add,
@@ -351,19 +532,31 @@ int (* op[])(struct calc * calc) = {
 	[ACTION(A_OP_MOD)] = op_mod,
 	[ACTION(A_OP_AND)] = op_and,
 	[ACTION(A_OP_INV)] = op_inv,
+	[ACTION(A_OP_NOT)] = op_not,
+	[ACTION(A_OP_LOGIC_AND)] = op_logic_and,
+	[ACTION(A_OP_LOGIC_OR)] = op_logic_or,
  	[ACTION(A_OP_MINUS)] = op_minus,
  	[ACTION(A_OP_PUSH_INT)] = op_push_int,
+ 	[ACTION(A_OP_PUSH_TRUE)] = op_push_true,
+ 	[ACTION(A_OP_PUSH_FALSE)] = op_push_false,
  	[ACTION(A_OP_PUSH_ID)] = op_push_id,
  	[ACTION(A_OP_LOOKUP_ID)] = op_lookup_id,
+ 	[ACTION(A_OP_WHILE_BEGIN)] = op_while_begin,
+ 	[ACTION(A_OP_WHILE_COND)] = op_while_cond,
+ 	[ACTION(A_OP_WHILE_END)] = op_while_end,
+
 };
 
+/* Syntax-directed translator */
 /* Nonrecursive predictive parser */
 
 #define STACK_SIZE 512
 
-int calc_parse(struct calc * calc, const char * txt, unsigned int len)
+int calc_compile(struct calc * calc, uint8_t code[],
+				 const char * txt, unsigned int len)
 {
 	uint8_t parser_stack[STACK_SIZE];
+	struct lexer lex;
 	struct token tok;
 	int lookahead;
 	uint8_t * pp_sp;
@@ -371,51 +564,61 @@ int calc_parse(struct calc * calc, const char * txt, unsigned int len)
 	uint8_t * pp_top;
 	int sym;
 	int k;
+	int err = ERR_SYNTAX_ERROR;
 
-	lexer_open(&calc->lex, txt, len);
+	lexer_open(&lex, txt, len);
 	pp_sp = parser_stack + STACK_SIZE;
 	pp_sl = parser_stack;
 	pp_top = pp_sp;
 	pp_sp -= ll_start(pp_sp);
+	calc->pc = 0;
+	calc->code = code;
+	calc->nest = 0;
 
 	/* */
-	lookahead = (tok = lexer_scan(&calc->lex)).typ;
+	lookahead = (tok = lexer_scan(&lex)).typ;
 	while (pp_sp != pp_top) {
 		/* pop the stack */
 		sym = *pp_sp++;
+//		printf("<%s>\n", ll_sym_tab[sym]);
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
 				fprintf(stderr, "unexpected symbol!\n");
-				return ERR_SYNTAX_ERROR;
+				goto error;
 			}
 			/* save the lookahead token */
 			calc->tok = tok;
 			/* get next token */
-			lookahead = (tok = lexer_scan(&calc->lex)).typ;
+			lookahead = (tok = lexer_scan(&lex)).typ;
+//			printf("[%s]\n", ll_sym_tab[lookahead]);
 		} else if IS_AN_ACTION(sym) {
 			/* action */
 			int ret;
 			if ((ret = op[ACTION(sym)](calc)) < 0) {
 				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
-				return ret;
+				goto error;
 			}
 		} else {
 			/* non terminal */
 			if ((k = ll_rule_push(pp_sp, sym, lookahead)) < 0) {
 				fprintf(stderr, "ll_rule_push() failed!\n");
-				return k;
+				goto error;
 			}
 			pp_sp -= k;
 			if (pp_sp < pp_sl) {
 				fprintf(stderr, "stack overflow!\n");
 				/* stack overflow */
-				return ERR_SYNTAX_ERROR;
+				goto error;
 			}
 		}
 	}
 
-	return OK;
+	return calc->pc;
+
+error:
+	lexer_print_err(stderr, &lex, err);
+	return -1;
 }
 
 int calc_init(struct calc * calc, struct sym_tab * tab, 
@@ -474,25 +677,32 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lenp)
 
 int main(int argc, char *argv[])
 {
-	int32_t mem[128];
+	int32_t data[128];
+	uint8_t code[128];
 	char strings[512];
 	struct calc calc; 
+	struct calc_vm vm; 
 	struct sym_tab sym_tab;
 
 	sym_tab_init(&sym_tab, strings, sizeof(strings));
-	calc_init(&calc, &sym_tab, mem, sizeof(mem));
+	calc_init(&calc, &sym_tab, data, sizeof(data));
+	calc_vm_init(&vm, data, sizeof(data));
 
 	if (argc > 1) {
 		char * script = NULL;
 		unsigned int len = 0;
 		int i;
+		int n;
 
 		for (i = 1; i < argc; ++i) {
 			if (load_script(argv[i], &script, &len) < 0)
 				return 1;
 		}
 
-		if (calc_parse(&calc, script, len) < 0)
+		if ((n = calc_compile(&calc, code, script, len)) < 0)
+			return 1;
+
+		if (calc_exec(&vm, code, n) < 0)
 			return 1;
 	}
 
