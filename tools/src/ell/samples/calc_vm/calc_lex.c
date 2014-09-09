@@ -30,6 +30,19 @@
 
 #include "calc.h"
 
+const struct {
+	uint8_t typ;
+	char nm[9];
+} lex_keyword[] = {
+	{ T_ELSE,  "else" },
+	{ T_FALSE, "false" },
+	{ T_IF,    "if" },
+	{ T_TRUE,  "true" },
+	{ T_VAR,   "var" },
+	{ T_WHILE, "while" },
+	{ T_PRINT, "print" },
+};
+
 int lexer_open(struct lexer * lex, const char * txt, unsigned int len)
 {
 	/* set the base javascript file reference */
@@ -81,35 +94,13 @@ struct token lexer_scan(struct lexer * lex)
 			typ = T_ID;
 			tok.s = (char *)&txt[k];
 
-			/* kwywords */
-			if (strncmp("var", s, n) == 0) {
-				typ = T_VAR;
-				tok.s = (char *)"var";
-				goto ret;
-			}
-
-			if (strncmp("print", s, n) == 0) {
-				typ = T_PRINT;
-				tok.s = (char *)"print";
-				goto ret;
-			}
-
-			if (strncmp("while", s, n) == 0) {
-				typ = T_WHILE;
-				tok.s = (char *)"while";
-				goto ret;
-			}
-
-			if (strncmp("true", s, n) == 0) {
-				typ = T_TRUE;
-				tok.s = (char *)"true";
-				goto ret;
-			}
-
-			if (strncmp("false", s, n) == 0) {
-				typ = T_FALSE;
-				tok.s = (char *)"false";
-				goto ret;
+			/* look up in the kwywords table */
+			for (k = 0; k <= (sizeof(lex_keyword) / 10); ++k) {
+				if ((strncmp(lex_keyword[k].nm, s, n) == 0) 
+					&& (lex_keyword[k].nm[n] == '\0')) {
+					typ = lex_keyword[k].typ;
+					tok.s = (char *)lex_keyword[k].nm;
+				}
 			}
 
 			goto ret;

@@ -1,0 +1,28 @@
+//
+// Expression evaluation example
+//
+
+var x;
+var i;
+var odd;
+var even;
+
+i = 30;
+x = 0;
+odd = 0;
+even = 0;
+
+while (i) {
+	if (x % 2) {
+		print x;
+		odd = odd + 1;
+	} else {
+		even = even + 2;
+	}
+	i = i - 1;
+	x = x + 1;
+}
+
+print odd;
+print even;
+

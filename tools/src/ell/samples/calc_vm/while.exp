@@ -1,13 +1,10 @@
 var i;
-var j;
 
 i = 0;
-j = 0;
 
-while (i < 2 && j == 0) {
-	print i;
+while (i < 2) {
 	i = i + 1;
 }
 
-print true;
+i = 2;
 

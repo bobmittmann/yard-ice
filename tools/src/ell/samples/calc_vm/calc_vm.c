@@ -76,6 +76,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 {
 	int32_t r0;
 	int32_t r1;
+	int32_t r2;
 	int opc;
 	int pc;
 	int i;
@@ -97,7 +98,8 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_JMP:
 			r0 = (int16_t)(code[pc] | code[pc + 1] << 8);
-			pc += r0 - 1;
+			pc += 2;
+			pc += r0;
 			if (vm->trace)
 				printf("JMP 0x%04x (offs=%d)\n", pc, r0);
 			break;
@@ -109,12 +111,12 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			if (vm->trace)
 				printf("JNE 0x%04x (%d)\n", pc + r0, r1);
 			if (r1 != 0)
-				pc += r0 - 3;
+				pc += r0;
 			break;
 
 		case OPC_JEQ:
-			r0 = code[pc++];
-			r0 |= code[pc++] << 8;
+			r0 = (int16_t)(code[pc] | code[pc + 1] << 8);
+			pc += 2;
 			r1 = vm_pop(vm);
 			if (vm->trace)
 				printf("JEQ 0x%04x (%d)\n", pc + r0, r1);
@@ -228,7 +230,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r1 = vm_pop(vm);
 			if (vm->trace)
 				printf("ADD %d %d\n", r0, r1);
-			vm_push(vm, r0 + r1);
+			vm_push(vm, r1 + r0);
 			break;
 
 		case OPC_SUB:
@@ -242,37 +244,44 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 		case OPC_MUL:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 * r1);
+			if (vm->trace)
+				printf("MUL %d %d\n", r0, r1);
+			vm_push(vm, r1 * r0);
 			break;
 
 		case OPC_DIV:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 / r1);
+			if (vm->trace)
+				printf("DIV %d %d\n", r0, r1);
+			vm_push(vm, r1 / r0);
 			break;
 
 		case OPC_MOD:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 % r1);
+			r2 = r1 % r0;
+			if (vm->trace)
+				printf("MOD %d %d -> %d\n", r1, r0, r2);
+			vm_push(vm, r2);
 			break;
 
 		case OPC_OR:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 | r1);
+			vm_push(vm, r1 | r0);
 			break;
 
 		case OPC_AND:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 & r1);
+			vm_push(vm, r1 & r0);
 			break;
 
 		case OPC_XOR:
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
-			vm_push(vm, r0 ^ r1);
+			vm_push(vm, r1 ^ r0);
 			break;
 
 		case OPC_INV:
@@ -287,6 +296,8 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_PRINT:
 			r0 = vm_pop(vm);
+			if (vm->trace)
+				printf("PRINT %d\n", r0);
 			printf("%d\n", r0);
 			break;
 		
