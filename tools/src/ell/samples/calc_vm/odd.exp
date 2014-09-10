@@ -7,22 +7,19 @@ var i;
 var odd;
 var even;
 
-i = 30;
+i = 100;
 x = 0;
 odd = 0;
 even = 0;
 
 while (i) {
 	if (x % 2) {
-		print x;
 		odd = odd + 1;
 	} else {
-		even = even + 2;
+		even = even + 1;
 	}
+	print x, odd, even;
 	i = i - 1;
 	x = x + 1;
 }
-
-print odd;
-print even;
 
