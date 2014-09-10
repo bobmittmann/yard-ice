@@ -1,0 +1,6 @@
+var x;
+
+x = rand();
+
+print x;
+

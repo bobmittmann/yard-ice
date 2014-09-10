@@ -1,4 +1,4 @@
-%token EOF EQU NEQ LT GT GTE LTE LOR LAND ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN LBRACE RBRACE VAR PRINT WHILE INT ID TRUE FALSE IF ELSE FOR ERR
+%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR IF PRINT TRUE VAR WHILE ID INT ERR
 %%
 
 program 		: EOF
@@ -62,6 +62,18 @@ assign_or_call  : ID { op_lookup_id } assign_or_call1
 				;
 
 assign_or_call1	: ASSIGN { op_push_id_addr } exp { op_assign }
+				| LPAREN arg_list_opt RPAREN
+				;
+
+arg_list_opt	: 
+				| arg_list 
+				;
+
+arg_list		: exp arg_list1 
+				;
+
+arg_list1		: 
+				| COMMA arg_list 
 				;
 
 exp_lst_opt		: 
@@ -125,8 +137,16 @@ unary_exp		: primary_exp
 
 primary_exp		: LPAREN exp RPAREN
 				| INT { op_push_int }
-				| ID { op_lookup_id, op_push_id_addr, op_load_var }
 				| TRUE { op_push_true }
 				| FALSE { op_push_false }
+				| met_or_attr
 				;
+
+met_or_attr		: ID { op_lookup_id } met_or_attr1
+				;
+
+met_or_attr1	: { op_push_id_addr, op_load_var }
+				| LPAREN arg_list_opt RPAREN 
+				;
+
 

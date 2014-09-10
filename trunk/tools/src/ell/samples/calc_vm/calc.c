@@ -34,6 +34,80 @@
 
 #include "calc.h"
 
+int32_t __rand(void * env, int32_t argv[]) 
+{
+	return rand();
+};
+
+int32_t __isqrt(void * env, int32_t argv[])
+{
+	uint32_t x = argv[0];
+	uint32_t rem = 0;
+	uint32_t root = 0;
+	int i;
+
+	for (i = 0; i < 16; ++i) {
+		root <<= 1;
+		rem = ((rem << 2) + (x >> 30));
+		x <<= 2;
+		root++;
+		if (root <= rem) {
+			rem -= root;
+			root++;
+		} else
+			root--;
+	}
+
+	return root >> 1;
+}	
+
+int32_t __ilog2(void * env, int32_t argv[])
+{
+	const uint8_t log2_debruijn_index[32] = {
+		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+	int32_t x = argv[0];
+
+	x |= x >> 1; 
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+	x = (x >> 1) + 1;
+	x = (x * 0x077cb531UL) >> 27;
+	return log2_debruijn_index[x];
+}	
+
+int32_t (* extern_call[])(void *, int32_t argv[]) = {
+	__rand,
+	__isqrt,
+	__ilog2,
+};
+
+struct ext_entry {
+	char nm[11];
+	uint8_t argc;
+};
+
+const struct ext_entry externals[] = {
+	{ .nm = "rand", .argc = 0 },
+	{ .nm = "sqrt", .argc = 1 },
+	{ .nm = "log2", .argc = 1 }
+};
+
+int external_lookup(const char * s, unsigned int len)
+{
+	int i;
+
+	for (i = 0; i < sizeof(externals) / sizeof(struct ext_entry); ++i) {
+		const struct ext_entry * e = &externals[i];
+		if ((strncmp(e->nm, s, len) == 0) && (e->nm[len] == '\0'))
+			return i;
+	}
+
+	return -1;
+}
+
 /* --------------------------------------------------------------------------
    Simple Strings Table
    -------------------------------------------------------------------------- */
@@ -135,6 +209,16 @@ struct sym_obj {
 	uint8_t flags;
 };
 
+#define SYM_EXTERN	(1 << 6)
+
+/* external function */
+struct sym_ext {
+	uint16_t addr;
+	uint16_t size;
+	uint8_t name;
+	uint8_t flags;
+};
+
 /* object reference */
 struct sym_ref {
 	uint16_t addr;
@@ -142,7 +226,6 @@ struct sym_ref {
 	uint8_t oid;
 	uint8_t flags;
 };
-
 
 struct sym_tab {
 	struct str_pool str;
@@ -190,12 +273,16 @@ int sym_dump(FILE * f, struct sym_tab * tab)
 		struct sym * sp = &tab->sym[i];
 		if (sp->flags & SYM_OBJECT) {
 			struct sym_obj * obj = (struct sym_obj *)sp;
-			fprintf(f, "%04x g O .data %04x    %s\n", obj->addr,
+			fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr,
 					obj->size, string(&tab->str, obj->name));
+		} else if (sp->flags & SYM_EXTERN) {
+			struct sym_ext * ext = (struct sym_ext *)sp;
+			fprintf(f, "%04x g F .extern %04x    %s\n", ext->addr,
+					ext->size, externals[ext->addr].nm);
 		} else {
 			struct sym_ref * ref = (struct sym_ref *)sp;
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
-			fprintf(f, "%04x r   .text %04x -> %s\n", ref->addr,
+			fprintf(f, "%04x r   .text   %04x -> %s\n", ref->addr,
 					ref->size, string(&tab->str, obj->name));
 		}
 	}
@@ -252,8 +339,37 @@ struct sym_ref * sym_ref_new(struct sym_tab * tab, int oid)
 
 const char * sym_ref_name(struct sym_tab * tab, struct sym_ref * ref)
 {
-	struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
-	return string(&tab->str, obj->name);
+	struct sym * sp = &tab->sym[ref->oid];
+	if (sp->flags & SYM_OBJECT) {
+		return string(&tab->str, ((struct sym_obj *)sp)->name);
+	}
+	if (sp->flags & SYM_EXTERN) {
+		return externals[((struct sym_ref *)sp)->addr].nm;
+	}
+	return "";
+}
+
+int sym_ext_new(struct sym_tab * tab, int exid)
+{
+	struct sym_ext * ext;
+
+	if (exid < 0)
+		return -1;
+
+	if (tab->global == tab->local)
+		return -1;
+
+	ext = (struct sym_ext *)&tab->sym[tab->global++];
+	ext->addr = exid;
+	ext->flags = SYM_EXTERN;
+	ext->size = 0;
+
+	return (struct sym *)ext - tab->sym;
+}
+
+int sym_ext_id(struct sym_tab * tab, struct sym_ext * ext)
+{
+	return (struct sym *)ext - tab->sym;
 }
 
 int sym_add_local(struct sym_tab * tab, const char * s, unsigned int len)
@@ -409,7 +525,7 @@ int mem_bind(struct calc * calc)
 	/* search in the global list */
 	for (i = 0; i < tab->global; ++i) {
 		struct sym_ref * ref = (struct sym_ref *)&tab->sym[i];
-		if (!(ref->flags & SYM_OBJECT)) {
+		if (!(ref->flags & (SYM_OBJECT | SYM_EXTERN))) {
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
 //			printf("ref=0x%04x --> obj=0x%04x\n", ref->addr, obj->addr);
 			calc->code[ref->addr] = obj->addr;
@@ -452,13 +568,15 @@ int op_lookup_id(struct calc * calc)
 	int id;
 
 	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
-
 	if (id < 0) {
-		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
-		return -1;
+		int exid = external_lookup(calc->tok.s, calc->tok.qlf);
+		if ((id = sym_ext_new(calc->tab, exid)) < 0) {
+			fprintf(stderr, "undefined symbol: %s.\n", tok2str(calc->tok));
+			return -1;
+		}
 	}
 
-	calc->id[0] = id;
+	calc->tmp[0] = id;
 
 	return 0;
 }
@@ -468,9 +586,8 @@ int op_push_id_addr(struct calc * calc)
 	struct sym_ref * ref;
 	int addr;
 
-	ref = sym_ref_new(calc->tab, calc->id[0]);
+	ref = sym_ref_new(calc->tab, calc->tmp[0]);
 
-//	addr = sym_addr_get(calc->tab, calc->id[0]);
 	addr = 0;
 	printf("%04x\tI16 \'%s\"\n", calc->pc, sym_ref_name(calc->tab, ref));
 
@@ -1069,13 +1186,15 @@ int calc_compile(struct calc * calc, uint8_t code[],
 			/* action */
 			int ret;
 			if ((ret = op[ACTION(sym)](calc)) < 0) {
-				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
+//				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
 				goto error;
 			}
 		} else {
 			/* non terminal */
 			if ((k = ll_rule_push(pp_sp, sym, lookahead)) < 0) {
 				fprintf(stderr, "ll_rule_push() failed!\n");
+				ll_stack_dump(stderr, pp_sp, pp_top - pp_sp);
+				fprintf(stderr, "lookahead = %s\n", ll_sym_tab[lookahead]);
 				goto error;
 			}
 			pp_sp -= k;
@@ -1098,6 +1217,9 @@ int calc_compile(struct calc * calc, uint8_t code[],
 	return calc->pc;
 
 error:
+	printf("\n");
+	fflush(stdout);
+	fflush(stderr);
 	lexer_print_err(stderr, &lex, err);
 	return -1;
 }

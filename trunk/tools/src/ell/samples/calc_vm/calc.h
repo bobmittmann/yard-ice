@@ -72,12 +72,13 @@ struct lexer {
  **********************************************************************/
 
 struct sym_tab;
+struct sym;
 
 struct calc {
 	struct token tok;
 	int32_t * mem;
 	uint8_t * code;
-	uint8_t id[8];
+	uint8_t tmp[8];
 	uint16_t pc;
 	uint16_t heap;
 	uint16_t stack;
@@ -148,6 +149,10 @@ int calc_compile(struct calc * p, uint8_t code[],
 void calc_vm_init(struct calc_vm * vm, int32_t data[], unsigned int len);
 
 int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len);
+
+char * tok2str(struct token tok);
+
+int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt);
 
 #ifdef __cplusplus
 }
