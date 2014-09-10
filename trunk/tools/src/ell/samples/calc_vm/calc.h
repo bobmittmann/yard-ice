@@ -77,11 +77,11 @@ struct calc {
 	struct token tok;
 	int32_t * mem;
 	uint8_t * code;
+	uint8_t id[8];
 	uint16_t pc;
 	uint16_t heap;
 	uint16_t stack;
 	uint16_t sp;
-	uint16_t nest;
 	struct sym_tab * tab;
 };
 
@@ -119,7 +119,8 @@ struct calc {
 #define OPC_GE       27
 #define OPC_LOR      28
 #define OPC_LAND     29
-#define OPC_PRINT    30
+#define OPC_PRINT_INT 30
+#define OPC_PRINT_CHAR 31
 
 struct calc_vm {
 	uint16_t sp;

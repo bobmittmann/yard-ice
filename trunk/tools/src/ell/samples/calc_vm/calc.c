@@ -35,78 +35,305 @@
 #include "calc.h"
 
 /* --------------------------------------------------------------------------
-   Symbol table
+   Simple Strings Table
    -------------------------------------------------------------------------- */
-struct sym_tab {
-	unsigned int cnt;
-	unsigned int len;
-	char * buf;
-	uint16_t offs[256];
-	int16_t addr[256];
+
+#define STRINGS_MAX 63
+#define STRINGS_POOL_SIZE (512 - (2 * (STRINGS_MAX + 1)))
+
+struct str_pool {
+	uint16_t cnt;
+	uint16_t offs[STRINGS_MAX];
+	char buf[STRINGS_POOL_SIZE];
 };
 
-void sym_tab_init(struct sym_tab * tab, char * buf, unsigned int len)
+void strings_init(struct str_pool * pool)
 {
-	tab->buf = buf;
-	tab->len = len;
 	/* Add null string */
-	buf[0] = '\0';
-	tab->offs[0] = 0;
-	tab->addr[0] = -1;
-	tab->cnt = 1;
+	pool->buf[0] = '\0';
+	pool->offs[0] = 0;
+	pool->cnt = 1;
 }
 
-int sym_lookup(struct sym_tab * tab, const char * s, unsigned int len)
+int str_lookup(struct str_pool * pool, const char * s, unsigned int len)
 {
-	char *buf = (char *)tab->buf;
+	char *buf = (char *)pool->buf;
 	int i;
 
-	for (i = 0; i < tab->cnt; ++i) {
-		char * cstr = buf + tab->offs[i];
-		if ((strncmp(cstr, s, len) == 0) && (strlen(cstr) == len))
+	for (i = 0; i < pool->cnt; ++i) {
+		char * cstr = buf + pool->offs[i];
+		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0'))
 			return i;
 	}
 
 	return -1;
 }
 
-int sym_add(struct sym_tab * tab, const char * s, unsigned int len)
+int str_add(struct str_pool * pool, const char * s, unsigned int len)
 {
 	char * dst;
 	int idx;
 	int offs;
 
-	if ((idx = sym_lookup(tab, s, len)) >= 0) {
+	if ((idx = str_lookup(pool, s, len)) >= 0)
 		return idx;
+
+	offs = (pool->cnt > 0) ? pool->offs[pool->cnt - 1] : 0;
+	offs += strlen(pool->buf + offs) + 1;
+
+	if ((idx = pool->cnt) > STRINGS_MAX) {
+		fprintf(stderr, "Too many strings.\n");
+		return -1;
 	}
 
-	offs = (tab->cnt > 0) ? tab->offs[tab->cnt - 1] : 0;
-	dst = tab->buf + offs;
-	dst += strlen(dst) + 1;
+	if ((offs + len + 1) >= STRINGS_POOL_SIZE) {
+		fprintf(stderr, "Strings buffer overflow.\n");
+		return -1;
+	}
 
-	idx = tab->cnt++;
-	/* NULL terminate the string */
+	/* Copy the string to the buffer */
+	dst = pool->buf + offs;
 	memcpy(dst, s, len);
+	/* NULL terminate the string */
 	dst[len] = '\0';
-	tab->offs[idx] = dst - tab->buf;
+	pool->offs[idx] = dst - pool->buf;
+	pool->cnt++;
 
 	return idx;
 }
 
-const char * sym_name(struct sym_tab * tab, int idx)
+const char * string(struct str_pool * str, int idx)
 {
-	return tab->buf + tab->offs[idx];
+	return str->buf + str->offs[idx];
 }
 
-int sym_addr_get(struct sym_tab * tab, int idx)
+/* --------------------------------------------------------------------------
+   Symbol table
+   -------------------------------------------------------------------------- */
+
+#define SYMBOLS_MAX 64
+
+#define SYM_GLOBAL    (1 << 7)
+
+#define SYM_REFERENCE (0x0 << 6)
+
+struct sym {
+	uint16_t addr;
+	uint16_t size;
+	uint8_t name;
+	uint8_t flags;
+};
+
+#define SYM_OBJECT    (1 << 7)
+#define SYM_ALLOC     (1 << 6)
+
+/* object */
+struct sym_obj {
+	uint16_t addr;
+	uint16_t size;
+	uint8_t name;
+	uint8_t flags;
+};
+
+/* object reference */
+struct sym_ref {
+	uint16_t addr;
+	uint16_t size;
+	uint8_t oid;
+	uint8_t flags;
+};
+
+
+struct sym_tab {
+	struct str_pool str;
+	uint16_t global;
+	uint16_t local;
+	struct sym sym[SYMBOLS_MAX];
+};
+
+void sym_tab_init(struct sym_tab * tab)
 {
-	return tab->addr[idx];
+	strings_init(&tab->str);
+	tab->global = 0;
+	tab->local = SYMBOLS_MAX;
 }
 
-void sym_addr_set(struct sym_tab * tab, int idx, int addr)
+int sym_by_name(struct sym_tab * tab, const char * s, unsigned int len)
 {
-	tab->addr[idx] = addr;
+	int name;
+	int i;
+
+	if ((name = str_lookup(&tab->str, s, len)) < 0)
+		return name;
+
+	/* search in the local list */
+	for (i = tab->local; i < SYMBOLS_MAX; ++i) {
+		if (tab->sym[i].name == name)
+			return i;
+	}
+
+	/* search in the global list */
+	for (i = 0; i < tab->global; ++i) {
+		if ((tab->sym[i].flags & SYM_OBJECT) && (tab->sym[i].name == name))
+			return i;
+	}
+
+	return -1;
 }
+
+int sym_dump(FILE * f, struct sym_tab * tab)
+{
+	int i;
+
+	/* search in the global list */
+	for (i = 0; i < tab->global; ++i) {
+		struct sym * sp = &tab->sym[i];
+		if (sp->flags & SYM_OBJECT) {
+			struct sym_obj * obj = (struct sym_obj *)sp;
+			fprintf(f, "%04x g O .data %04x    %s\n", obj->addr,
+					obj->size, string(&tab->str, obj->name));
+		} else {
+			struct sym_ref * ref = (struct sym_ref *)sp;
+			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
+			fprintf(f, "%04x r   .text %04x -> %s\n", ref->addr,
+					ref->size, string(&tab->str, obj->name));
+		}
+	}
+
+	return 0;
+}
+
+int sym_lookup(struct sym_tab * tab, const char * s, unsigned int len)
+{
+	return sym_by_name(tab, s, len);
+}
+
+
+struct sym_obj * sym_obj_new(struct sym_tab * tab, 
+							 const char * s, unsigned int len)
+{
+	struct sym_obj * obj;
+	int nm;
+	int id;
+
+	if ((id = sym_by_name(tab, s, len)) >= 0)
+		return NULL;
+
+	if (tab->global == tab->local)
+		return NULL;
+
+	if ((nm = str_add(&tab->str, s, len)) < 0)
+		return NULL;
+
+	obj = (struct sym_obj *)&tab->sym[tab->global++];
+	obj->name = nm;
+	obj->flags = SYM_OBJECT;
+	obj->addr = 0;
+	obj->size = 0;
+
+	return obj;
+}
+
+struct sym_ref * sym_ref_new(struct sym_tab * tab, int oid)
+{
+	struct sym_ref * ref;
+
+	if (tab->global == tab->local)
+		return NULL;
+
+	ref = (struct sym_ref *)&tab->sym[tab->global++];
+	ref->oid = oid;
+	ref->flags = 0;
+	ref->addr = 0;
+	ref->size = 0;
+
+	return ref;
+}
+
+const char * sym_ref_name(struct sym_tab * tab, struct sym_ref * ref)
+{
+	struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
+	return string(&tab->str, obj->name);
+}
+
+int sym_add_local(struct sym_tab * tab, const char * s, unsigned int len)
+{
+	struct sym * sp;
+	int nm;
+	int id;
+
+	if (tab->global == tab->local)
+		return -1;
+
+	if ((id = sym_by_name(tab, s, len)) >= 0)
+		return id;
+
+	if ((nm = str_add(&tab->str, s, len)) < 0)
+		return nm;
+
+	id = --tab->local;
+	sp = &tab->sym[id];
+
+	sp->name = nm;
+	sp->flags = 0;
+	sp->addr = 0;
+
+	return id;
+}
+
+int sym_anom_push(struct sym_tab * tab)
+{
+	struct sym * sp;
+	int id;
+
+	if (tab->global == tab->local)
+		return -1;
+
+	id = --tab->local;
+	sp = &tab->sym[id];
+
+	sp->name = 0;
+	sp->flags = 0;
+	sp->addr = 0;
+
+	return id;
+}
+
+int sym_anom_pop(struct sym_tab * tab)
+{
+	if (SYMBOLS_MAX == tab->local)
+		return -1;
+
+	return tab->local++;
+}
+
+int sym_anom_get(struct sym_tab * tab, int pos)
+{
+	if (SYMBOLS_MAX <= (tab->local + pos))
+		return -1;
+
+	return tab->local + pos;
+}
+
+
+const char * sym_name(struct sym_tab * tab, int id)
+{
+	return string(&tab->str, tab->sym[id].name);
+}
+
+int sym_addr_get(struct sym_tab * tab, int id)
+{
+	return tab->sym[id].addr;
+}
+
+void sym_addr_set(struct sym_tab * tab, int id, int addr)
+{
+	tab->sym[id].addr = addr;
+}
+
+/* --------------------------------------------------------------------------
+   Memory operations
+   -------------------------------------------------------------------------- */
 
 int alloc32(struct calc * calc)
 {
@@ -118,15 +345,12 @@ int alloc32(struct calc * calc)
 
 	if (calc->heap > calc->sp) {
 		fprintf(stderr, "heap overflow!\n");
-		return 0;
+		return -1;
 	}
 
 	return addr;
 }
 
-/* --------------------------------------------------------------------------
-   Memory operations
-   -------------------------------------------------------------------------- */
 
 int32_t mem_rd32(struct calc * calc, unsigned int addr)
 {
@@ -164,37 +388,156 @@ int32_t pop(struct calc * calc)
 	return x;
 }
 
+int mem_bind(struct calc * calc)
+{
+	struct sym_tab * tab = calc->tab;
+	int i;
+
+	/* search in the global list */
+	for (i = 0; i < tab->global; ++i) {
+		struct sym * sp = &tab->sym[i];
+		if (sp->flags & SYM_OBJECT) {
+			struct sym_obj * obj = (struct sym_obj *)sp;
+			int addr;
+			if ((addr = alloc32(calc)) < 0)
+				return -1;
+			obj->addr = addr;
+			obj->flags |= SYM_ALLOC;
+		}
+	}
+
+	/* search in the global list */
+	for (i = 0; i < tab->global; ++i) {
+		struct sym_ref * ref = (struct sym_ref *)&tab->sym[i];
+		if (!(ref->flags & SYM_OBJECT)) {
+			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
+//			printf("ref=0x%04x --> obj=0x%04x\n", ref->addr, obj->addr);
+			calc->code[ref->addr] = obj->addr;
+			calc->code[ref->addr + 1] = obj->addr >> 8;
+		}
+	}
+
+	return 0;
+}
+
+
+
+
 /* --------------------------------------------------------------------------
    Code generation
    -------------------------------------------------------------------------- */
 
 int op_var_decl(struct calc * calc)
 {
-	int id;
-	int addr;
+	struct sym_obj * obj;
+//	int addr;
 
-	id = sym_add(calc->tab, calc->tok.s, calc->tok.qlf);
-
-	if (id < 0) {
+	if ((obj = sym_obj_new(calc->tab, calc->tok.s, calc->tok.qlf)) == NULL) {
 		fprintf(stderr, "can't create symbol.\n");
 		return -1;
 	}
 
-	if ((addr = alloc32(calc)) < 0) {
-		return -1;
-	}
+//	if ((addr = alloc32(calc)) < 0)
+//		return -1;
 
-	/* bind address to symol */
-	sym_addr_set(calc->tab, id, addr);
+	obj->addr = 0;
+	/* initial variables are int */
+	obj->size = 4;
 
 	return 0;
 }
 
-
-int op_print(struct calc * calc)
+int op_lookup_id(struct calc * calc)
 {
-	printf("%04x\tPRINT\n", calc->pc);
-	calc->code[calc->pc++] = OPC_PRINT;
+	int id;
+
+	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
+
+	if (id < 0) {
+		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
+		return -1;
+	}
+
+	calc->id[0] = id;
+
+	return 0;
+}
+
+int op_push_id_addr(struct calc * calc)
+{
+	struct sym_ref * ref;
+	int addr;
+
+	ref = sym_ref_new(calc->tab, calc->id[0]);
+
+//	addr = sym_addr_get(calc->tab, calc->id[0]);
+	addr = 0;
+	printf("%04x\tI16 \'%s\"\n", calc->pc, sym_ref_name(calc->tab, ref));
+
+//	if (addr < 256) {
+	if (0) {
+		printf("I8 %d\n", addr);
+		calc->code[calc->pc++] = OPC_I8;
+		ref->size = 1;
+		ref->addr = calc->pc;
+		calc->code[calc->pc++] = addr;
+
+	} else {
+//		printf("I16 %d\n", addr);
+		calc->code[calc->pc++] = OPC_I16;
+		ref->size = 2;
+		ref->addr = calc->pc;
+		calc->code[calc->pc++] = addr;
+		calc->code[calc->pc++] = addr >> 8;
+	}
+
+	return 0;
+}
+
+int op_load_var(struct calc * calc)
+{
+	printf("%04x\tLD\n", calc->pc);
+	calc->code[calc->pc++] = OPC_LD;
+	return 0;
+}
+
+int op_assign(struct calc * calc)
+{
+	printf("%04x\tST\n", calc->pc);
+	calc->code[calc->pc++] = OPC_ST;
+	return 0;
+}
+
+int op_print_int(struct calc * calc)
+{
+	printf("%04x\tPRINTI\n", calc->pc);
+	calc->code[calc->pc++] = OPC_PRINT_INT;
+	return 0;
+}
+
+int op_print_end(struct calc * calc)
+{
+	printf("%04x\tI8 0x%02x\n", calc->pc, '\n');
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = '\n';
+	printf("%04x\tPRINTC\n", calc->pc);
+	calc->code[calc->pc++] = OPC_PRINT_CHAR;
+	return 0;
+}
+
+int op_print_comma(struct calc * calc)
+{
+	printf("%04x\tI8 0x%02x\n", calc->pc, ',');
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = ',';
+	printf("%04x\tPRINTC\n", calc->pc);
+	calc->code[calc->pc++] = OPC_PRINT_CHAR;
+
+	printf("%04x\tI8 0x%02x\n", calc->pc, ' ');
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = ' ';
+	printf("%04x\tPRINTC\n", calc->pc);
+	calc->code[calc->pc++] = OPC_PRINT_CHAR;
 	return 0;
 }
 
@@ -404,73 +747,27 @@ int op_push_int(struct calc * calc)
 	return 0;
 }
 
-int op_lookup_id(struct calc * calc)
-{
-	int addr;
-	int id;
-
-	id = sym_lookup(calc->tab, calc->tok.s, calc->tok.qlf);
-
-	if (id < 0) {
-		fprintf(stderr, "undefined symbol: %s.\n", calc->tok.s);
-		return -1;
-	}
-
-	addr = sym_addr_get(calc->tab, id);
-	printf("%04x\tI16 0x%04x\n", calc->pc, addr);
-
-	calc->code[calc->pc++] = OPC_I16;
-	calc->code[calc->pc++] = addr;
-	calc->code[calc->pc++] = addr >> 8;
-
-	return 0;
-}
-
-int op_push_id(struct calc * calc)
-{
-	printf("%04x\tLD\n", calc->pc);
-	calc->code[calc->pc++] = OPC_LD;
-	return 0;
-}
-
-int op_assign(struct calc * calc)
-{
-	printf("%04x\tST\n", calc->pc);
-	calc->code[calc->pc++] = OPC_ST;
-	return 0;
-}
-
 int op_while_begin(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 
-	n = sprintf(s, ".L%d", calc->nest++);
-	if ((id = sym_add(calc->tab, s, n)) < 0) {
-		fprintf(stderr, "can't create symbol.\n");
+	if ((id = sym_anom_push(calc->tab)) < 0)
 		return id;
-	}
 
+	printf(".L%d:\n", id);
 	/* save current location on a temporary variable */
 	sym_addr_set(calc->tab, id, calc->pc);
-	printf("%s:\n", s);
 	return 0;
 }
 
 int op_while_cond(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 
-	n = sprintf(s, ".L%d", calc->nest++);
-	if ((id = sym_add(calc->tab, s, n)) < 0) {
-		fprintf(stderr, "can't create symbol.\n");
+	if ((id = sym_anom_push(calc->tab)) < 0)
 		return id;
-	}
 
-	printf("%s:\n%04x\tJEQ xxxx\n", s, calc->pc);
+	printf(".L%d:\n%04x\tJEQ xxxx\n", id, calc->pc);
 
 	/* save current location on a temporary variable */
 	calc->code[calc->pc++] = OPC_JEQ;
@@ -483,27 +780,23 @@ int op_while_cond(struct calc * calc)
 
 int op_while_end(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 	int addr;
 	int offs;
 
 	/* Adjust the conditinal jump */
-	n = sprintf(s, ".L%d", --calc->nest);
-	id = sym_lookup(calc->tab, s, n);
+	id = sym_anom_pop(calc->tab);
 	addr = sym_addr_get(calc->tab, id);
 	offs = calc->pc - (addr - 1);
-	printf("\tfix %04x -> JEQ %04x (%s)\n", addr - 1, calc->pc + 3, s);
+	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, calc->pc + 3, id);
 	calc->code[addr++] = offs;
 	calc->code[addr++] = offs >> 8;
 
-	/* Repeat */
-	n = sprintf(s, ".L%d", --calc->nest);
-	id = sym_lookup(calc->tab, s, n);
+	/* Repeat jump */
+	id = sym_anom_pop(calc->tab);
 	addr = sym_addr_get(calc->tab, id);
 	offs = addr - (calc->pc + 3);
-	printf("%04x\tJMP %04x (%s offs=%d)\n", calc->pc, addr, s, offs);
+	printf("%04x\tJMP %04x (.L%d offs=%d)\n", calc->pc, addr, id, offs);
 	calc->code[calc->pc++] = OPC_JMP;
 	calc->code[calc->pc++] = offs;
 	calc->code[calc->pc++] = offs >> 8;
@@ -511,20 +804,15 @@ int op_while_end(struct calc * calc)
 	return 0;
 }
 
+
 int op_if_cond(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 
-	n = sprintf(s, ".L%d", calc->nest++);
-	if ((id = sym_add(calc->tab, s, n)) < 0) {
-		fprintf(stderr, "can't create symbol.\n");
+	if ((id = sym_anom_push(calc->tab)) < 0)
 		return id;
-	}
 
-	printf("%s:\n%04x\tJEQ xxxx\n", s, calc->pc);
-
+	printf(".L%d:\n%04x\tJEQ xxxx\n", id, calc->pc);
 	/* save current location on a temporary variable */
 	calc->code[calc->pc++] = OPC_JEQ;
 	sym_addr_set(calc->tab, id, calc->pc);
@@ -536,23 +824,19 @@ int op_if_cond(struct calc * calc)
 
 int op_if_else(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 	int addr;
 	int offs;
 
-	/* Get the the conditinal jump variable */
-	n = sprintf(s, ".L%d", calc->nest - 1);
-	id = sym_lookup(calc->tab, s, n);
+	id = sym_anom_get(calc->tab, 0);
 	addr = sym_addr_get(calc->tab, id);
 
 	offs = calc->pc - (addr - 1);
-	printf("\tfix %04x -> JEQ %04x (%s)\n", addr - 1, calc->pc + 3, s);
+	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, calc->pc + 3, id);
 	calc->code[addr++] = offs;
 	calc->code[addr++] = offs >> 8;
 
-	printf("%s:\n%04x\tJMP xxxx\n", s, calc->pc);
+	printf(".L%d:\n%04x\tJMP xxxx\n", id, calc->pc);
 	/* save current location on the same temporary variable */
 	calc->code[calc->pc++] = OPC_JMP;
 	sym_addr_set(calc->tab, id, calc->pc);
@@ -564,31 +848,140 @@ int op_if_else(struct calc * calc)
 
 int op_if_end(struct calc * calc)
 {
-	char s[8];
-	int n;
 	int id;
 	int addr;
 	int offs;
 
 	/* Adjust the conditinal jump */
-	n = sprintf(s, ".L%d", --calc->nest);
-	id = sym_lookup(calc->tab, s, n);
+	id = sym_anom_pop(calc->tab);
 	addr = sym_addr_get(calc->tab, id);
 
 	offs = (calc->pc - 3) - (addr - 1);
-	printf("\tfix %04x -> Jxx %04x (%s)\n", addr - 1, calc->pc, s);
+	printf("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, calc->pc, id);
 	calc->code[addr++] = offs;
 	calc->code[addr++] = offs >> 8;
 
 	return 0;
 }
 
+int op_for_init(struct calc * calc)
+{
+	int id;
+
+	/* allocate 4 anonymous symbols */
+	if ((id = sym_anom_push(calc->tab)) < 0)
+		return id;
+
+	printf(".L%d:\n", id);
+	/* save current location */
+	sym_addr_set(calc->tab, id, calc->pc);
+
+	if ((id = sym_anom_push(calc->tab)) < 0)
+		return id;
+	if ((id = sym_anom_push(calc->tab)) < 0)
+		return id;
+	if ((id = sym_anom_push(calc->tab)) < 0)
+		return id;
+
+	return 0;
+}
+
+int op_for_cond(struct calc * calc)
+{
+	int id;
+
+	id = sym_anom_get(calc->tab, 2);
+	/* Conditional jump to the body */
+	printf(".L%d:\n%04x\tJEQ xxxx\n", id, calc->pc);
+	/* save current location on a temporary variable */
+	calc->code[calc->pc++] = OPC_JEQ;
+	sym_addr_set(calc->tab, id, calc->pc);
+	/* reserve 2 positions for jump address */
+	calc->pc += 2;
+
+	id = sym_anom_get(calc->tab, 1);
+	/* Jump to the beginning of the body part */
+	printf(".L%d:\n%04x\tJMP xxxx\n", id, calc->pc);
+	/* save current location on a temporary variable */
+	calc->code[calc->pc++] = OPC_JMP;
+	sym_addr_set(calc->tab, id, calc->pc);
+	/* reserve 2 positions for jump address */
+	calc->pc += 2;
+
+	id = sym_anom_get(calc->tab, 0);
+	printf(".L%d:\n", id);
+	/* save current location */
+	sym_addr_set(calc->tab, id, calc->pc);
+
+	return 0;
+}
+
+int op_for_after(struct calc * calc)
+{
+	int id;
+	int addr;
+	int offs;
+
+	/* Adjust the jump to body */
+	id = sym_anom_get(calc->tab, 1);
+	addr = sym_addr_get(calc->tab, id);
+	offs = calc->pc - (addr - 1);
+	printf("\tfix %04x -> JMP %04x (.L%d)\n", addr - 1, calc->pc + 3, id);
+	calc->code[addr++] = offs;
+	calc->code[addr++] = offs >> 8;
+
+	/* Repeat jump */
+	id = sym_anom_get(calc->tab, 3);
+	addr = sym_addr_get(calc->tab, id);
+	offs = addr - (calc->pc + 3);
+	printf("%04x\tJMP %04x (.L%d offs=%d)\n", calc->pc, addr, id, offs);
+	calc->code[calc->pc++] = OPC_JMP;
+	calc->code[calc->pc++] = offs;
+	calc->code[calc->pc++] = offs >> 8;
+
+	return 0;
+}
+
+int op_for_end(struct calc * calc)
+{
+	int id;
+	int addr;
+	int offs;
+
+	/* Adjust the conditinal jump */
+	id = sym_anom_get(calc->tab, 2);
+	addr = sym_addr_get(calc->tab, id);
+
+	offs = calc->pc - (addr - 1);
+	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, calc->pc + 3, id);
+	calc->code[addr++] = offs;
+	calc->code[addr++] = offs >> 8;
+
+	/* jump to the afterthought part */
+	id = sym_anom_get(calc->tab, 0);
+	addr = sym_addr_get(calc->tab, id);
+	offs = addr - (calc->pc + 3);
+	printf("%04x\tJMP %04x (.L%d offs=%d)\n", calc->pc, addr, id, offs);
+	calc->code[calc->pc++] = OPC_JMP;
+	calc->code[calc->pc++] = offs;
+	calc->code[calc->pc++] = offs >> 8;
+
+	/* remove temp symbols */
+	sym_anom_pop(calc->tab);
+	sym_anom_pop(calc->tab);
+	sym_anom_pop(calc->tab);
+	sym_anom_pop(calc->tab);
+
+	return 0;
+}
 
 
 int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
  	[ACTION(A_OP_ASSIGN)] = op_assign,
- 	[ACTION(A_OP_PRINT)] = op_print,
+ 	[ACTION(A_OP_PRINT_END)] = op_print_end,
+ 	[ACTION(A_OP_PRINT_INT)] = op_print_int,
+ 	[ACTION(A_OP_PRINT_COMMA)] = op_print_comma,
  	[ACTION(A_OP_EQU)] = op_equ,
  	[ACTION(A_OP_NEQ)] = op_neq,
  	[ACTION(A_OP_LT)] = op_lt,
@@ -613,7 +1006,8 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_PUSH_INT)] = op_push_int,
  	[ACTION(A_OP_PUSH_TRUE)] = op_push_true,
  	[ACTION(A_OP_PUSH_FALSE)] = op_push_false,
- 	[ACTION(A_OP_PUSH_ID)] = op_push_id,
+ 	[ACTION(A_OP_LOAD_VAR)] = op_load_var,
+ 	[ACTION(A_OP_PUSH_ID_ADDR)] = op_push_id_addr,
  	[ACTION(A_OP_LOOKUP_ID)] = op_lookup_id,
  	[ACTION(A_OP_WHILE_BEGIN)] = op_while_begin,
  	[ACTION(A_OP_WHILE_COND)] = op_while_cond,
@@ -621,7 +1015,10 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_IF_COND)] = op_if_cond,
  	[ACTION(A_OP_IF_ELSE)] = op_if_else,
  	[ACTION(A_OP_IF_END)] = op_if_end,
-
+ 	[ACTION(A_OP_FOR_INIT)] = op_for_init,
+ 	[ACTION(A_OP_FOR_COND)] = op_for_cond,
+ 	[ACTION(A_OP_FOR_AFTER)] = op_for_after,
+ 	[ACTION(A_OP_FOR_END)] = op_for_end,
 };
 
 /* Syntax-directed translator */
@@ -650,7 +1047,6 @@ int calc_compile(struct calc * calc, uint8_t code[],
 	pp_sp -= ll_start(pp_sp);
 	calc->pc = 0;
 	calc->code = code;
-	calc->nest = 0;
 
 	/* */
 	lookahead = (tok = lexer_scan(&lex)).typ;
@@ -690,6 +1086,14 @@ int calc_compile(struct calc * calc, uint8_t code[],
 			}
 		}
 	}
+
+	if (mem_bind(calc) < 0)
+		return -1;
+
+	printf("\nSYMBOL TABLE:\n");
+	sym_dump(stdout, calc->tab);
+	printf("\n");
+	fflush(stdout);
 
 	return calc->pc;
 
@@ -755,24 +1159,27 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lenp)
 int main(int argc, char *argv[])
 {
 	int32_t data[128];
-	uint8_t code[128];
-	char strings[512];
+	uint8_t code[512];
 	struct calc calc; 
 	struct calc_vm vm; 
 	struct sym_tab sym_tab;
 
-	sym_tab_init(&sym_tab, strings, sizeof(strings));
+	sym_tab_init(&sym_tab);
 	calc_init(&calc, &sym_tab, data, sizeof(data));
 	calc_vm_init(&vm, data, sizeof(data));
-	vm.trace = false;
 
 	if (argc > 1) {
 		char * script = NULL;
 		unsigned int len = 0;
-		int i;
+		int i = 1;
 		int n;
 
-		for (i = 1; i < argc; ++i) {
+		if (strcmp(argv[i], "-t") == 0) {
+			vm.trace = true;
+			++i;
+		}
+
+		for (; i < argc; ++i) {
 			if (load_script(argv[i], &script, &len) < 0)
 				return 1;
 		}

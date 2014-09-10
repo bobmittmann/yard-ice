@@ -74,23 +74,25 @@ void calc_vm_init(struct calc_vm * vm, int32_t data[], unsigned int len)
 
 int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 {
+	FILE * f = stderr;
 	int32_t r0;
 	int32_t r1;
 	int32_t r2;
 	int opc;
 	int pc;
-	int i;
+	int icnt;
 
 	pc = 0; 
 	r0 = 0;
 	r1 = 0;
-	i = 0;
+	icnt = 0;
 	while (pc < len) {
-		if (++i == 1000)
-			return -1;
+		icnt++;
+//		if (icnt == 40)
+//			return -1;
 		/* fetch */
 		if (vm->trace) {
-			printf("%04x\t", pc);
+			fprintf(f, "%04x\t", pc);
 			fflush(stdout);
 		}
 		opc = code[pc++];
@@ -101,7 +103,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			pc += 2;
 			pc += r0;
 			if (vm->trace)
-				printf("JMP 0x%04x (offs=%d)\n", pc, r0);
+				fprintf(f, "JMP 0x%04x (offs=%d)\n", pc, r0);
 			break;
 
 		case OPC_JNE:
@@ -109,7 +111,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			pc += 2;
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("JNE 0x%04x (%d)\n", pc + r0, r1);
+				fprintf(f, "JNE 0x%04x (%d)\n", pc + r0, r1);
 			if (r1 != 0)
 				pc += r0;
 			break;
@@ -119,7 +121,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			pc += 2;
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("JEQ 0x%04x (%d)\n", pc + r0, r1);
+				fprintf(f, "JEQ 0x%04x (%d)\n", pc + r0, r1);
 			if (r1 == 0)
 				pc += r0;
 			break;
@@ -130,7 +132,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 |= code[pc++] << 16;
 			r0 |= code[pc++] << 24;
 			if (vm->trace)
-				printf("I32 %d\n", r0);
+				fprintf(f, "I32 %d\n", r0);
 			vm_push(vm, r0);
 			break;
 
@@ -138,14 +140,14 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = code[pc++];
 			r0 |= code[pc++] << 8;
 			if (vm->trace)
-				printf("I16 0x%04x\n", r0);
+				fprintf(f, "I16 0x%04x\n", r0);
 			vm_push(vm, r0);
 			break;
 
 		case OPC_I8:
 			r0 = code[pc++];
 			if (vm->trace)
-				printf("I8 %d\n", r0);
+				fprintf(f, "I8 %d\n", r0);
 			vm_push(vm, r0);
 			break;
 
@@ -153,7 +155,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r1 = vm_pop(vm);
 			r0 = vm_rd32(vm, r1);
 			if (vm->trace)
-				printf("LD 0x%04x -> %d\n", r1, r0);
+				fprintf(f, "LD 0x%04x -> %d\n", r1, r0);
 			vm_push(vm, r0);
 			break;
 
@@ -161,7 +163,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("ST 0x%04x <- %d\n", r1, r0);
+				fprintf(f, "ST 0x%04x <- %d\n", r1, r0);
 			vm_wr32(vm, r1, r0);
 			break;
 
@@ -169,7 +171,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("LT %d %d\n", r0, r1);
+				fprintf(f, "LT %d %d\n", r0, r1);
 			vm_push(vm, r1 < r0);
 			break;
 
@@ -177,7 +179,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("GT %d %d\n", r0, r1);
+				fprintf(f, "GT %d %d\n", r0, r1);
 			vm_push(vm, r1 > r0);
 			break;
 
@@ -185,7 +187,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("EQ %d %d\n", r0, r1);
+				fprintf(f, "EQ %d %d\n", r0, r1);
 			vm_push(vm, r1 == r0);
 			break;
 
@@ -193,7 +195,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("GT %d %d\n", r0, r1);
+				fprintf(f, "GT %d %d\n", r0, r1);
 			vm_push(vm, r1 != r0);
 			break;
 
@@ -201,7 +203,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("LE %d %d\n", r0, r1);
+				fprintf(f, "LE %d %d\n", r0, r1);
 			vm_push(vm, r1 <= r0);
 			break;
 
@@ -209,7 +211,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("GE %d %d\n", r0, r1);
+				fprintf(f, "GE %d %d\n", r0, r1);
 			vm_push(vm, r1 >= r0);
 			break;
 
@@ -229,7 +231,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("ADD %d %d\n", r0, r1);
+				fprintf(f, "ADD %d %d\n", r0, r1);
 			vm_push(vm, r1 + r0);
 			break;
 
@@ -237,7 +239,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("SUB %d %d\n", r0, r1);
+				fprintf(f, "SUB %d %d\n", r0, r1);
 			vm_push(vm, r1 - r0);
 			break;
 
@@ -245,7 +247,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("MUL %d %d\n", r0, r1);
+				fprintf(f, "MUL %d %d\n", r0, r1);
 			vm_push(vm, r1 * r0);
 			break;
 
@@ -253,7 +255,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r0 = vm_pop(vm);
 			r1 = vm_pop(vm);
 			if (vm->trace)
-				printf("DIV %d %d\n", r0, r1);
+				fprintf(f, "DIV %d %d\n", r0, r1);
 			vm_push(vm, r1 / r0);
 			break;
 
@@ -262,7 +264,7 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			r1 = vm_pop(vm);
 			r2 = r1 % r0;
 			if (vm->trace)
-				printf("MOD %d %d -> %d\n", r1, r0, r2);
+				fprintf(f, "MOD %d %d -> %d\n", r1, r0, r2);
 			vm_push(vm, r2);
 			break;
 
@@ -294,19 +296,28 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			vm_push(vm, -r0);
 			break;
 
-		case OPC_PRINT:
+		case OPC_PRINT_INT:
 			r0 = vm_pop(vm);
 			if (vm->trace)
-				printf("PRINT %d\n", r0);
-			printf("%d\n", r0);
+				fprintf(f, "PRINT %d\n", r0);
+			printf("%d", r0);
+			fflush(stdout);
+			break;
+
+		case OPC_PRINT_CHAR:
+			r0 = vm_pop(vm);
+			if (vm->trace)
+				fprintf(f, "PRINT 0x%02x\n", r0);
+			printf("%c", r0);
+			fflush(stdout);
 			break;
 		
 		default:
-			fprintf(stderr, "Invalid OPC: %d\n", opc);
+			fprintf(f, "Invalid OPC: %d\n", opc);
 			return -1;
 		}
 	} 
 
-	return 0;
+	return icnt;
 }
 

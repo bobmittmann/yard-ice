@@ -36,6 +36,7 @@ const struct {
 } lex_keyword[] = {
 	{ T_ELSE,  "else" },
 	{ T_FALSE, "false" },
+	{ T_FOR,   "for" },
 	{ T_IF,    "if" },
 	{ T_TRUE,  "true" },
 	{ T_VAR,   "var" },
