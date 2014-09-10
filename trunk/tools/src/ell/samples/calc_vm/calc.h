@@ -68,8 +68,86 @@ struct lexer {
 };
 
 /**********************************************************************
- Calculator
+ Compiler
  **********************************************************************/
+
+/* --------------------------------------------------------------------------
+   String pool
+   -------------------------------------------------------------------------- */
+
+#define STRINGS_MAX 63
+#define STRINGS_POOL_SIZE (512 - (2 * (STRINGS_MAX + 1)))
+
+struct str_pool {
+	char * buf;
+	uint16_t cnt;
+	uint16_t offs[];
+};
+
+#define CONST_STRINGS_MAX 64
+
+/* --------------------------------------------------------------------------
+   External objects/symbols/functions
+   -------------------------------------------------------------------------- */
+
+struct ext_entry {
+	uint8_t nm;
+	uint8_t argc;
+};
+
+#define EXT_RAND 0
+#define EXT_SQRT 1
+#define EXT_LOG2 2
+
+/* --------------------------------------------------------------------------
+   Symbol table 
+   -------------------------------------------------------------------------- */
+
+#define SYM_REFERENCE  (0 << 6)
+#define SYM_OBJECT     (1 << 7)
+#define SYM_EXTERN	   (1 << 6)
+
+struct sym {
+	uint8_t flags;
+	uint8_t nm;
+	uint16_t addr;
+	uint16_t size;
+};
+
+/* object */
+struct sym_obj {
+	uint8_t flags;
+	uint8_t nm;
+	uint16_t addr;
+	uint16_t size;
+};
+
+#define SYM_METHOD (1 << 0)
+#define SYM_IS_METHOD(SYM) ((SYM)->flags & SYM_METHOD)
+
+struct sym_tmp {
+	uint8_t flags;
+	uint8_t nm;
+//	uint16_t addr;
+	uint8_t oid;
+};
+
+
+/* external function */
+struct sym_ext {
+	uint8_t flags;
+	uint8_t nm;
+	uint16_t addr;
+	uint16_t size;
+};
+
+/* object reference, this represent a pointer to a 
+   target's memory location */
+struct sym_ref {
+	uint8_t flags;
+	uint8_t oid;
+	uint16_t addr;
+};
 
 struct sym_tab;
 struct sym;
@@ -84,6 +162,17 @@ struct calc {
 	uint16_t stack;
 	uint16_t sp;
 	struct sym_tab * tab;
+};
+
+#define SYMBOLS_MAX 64
+
+struct sym_tab {
+	struct str_pool str;
+	uint16_t offs[STRINGS_MAX];
+	char str_buf[STRINGS_POOL_SIZE];
+	uint16_t global;
+	uint16_t local;
+	struct sym sym[SYMBOLS_MAX];
 };
 
 /* --------------------------------------------------------------------------
@@ -122,6 +211,9 @@ struct calc {
 #define OPC_LAND     29
 #define OPC_PRINT_INT 30
 #define OPC_PRINT_CHAR 31
+#define OPC_EXT      32
+#define OPC_CALL     33
+#define OPC_RET      34
 
 struct calc_vm {
 	uint16_t sp;
@@ -153,6 +245,49 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len);
 char * tok2str(struct token tok);
 
 int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt);
+
+
+
+int sym_dump(FILE * f, struct sym_tab * tab);
+
+int sym_lookup(struct sym_tab * tab, const char * s, unsigned int len);
+
+
+struct sym_obj * sym_obj_new(struct sym_tab * tab, 
+							 const char * s, unsigned int len);
+
+struct sym_obj * sym_obj_lookup(struct sym_tab * tab, int nm);
+
+struct sym_ref * sym_ref_new(struct sym_tab * tab, void * sym);
+
+const char * sym_ref_name(struct sym_tab * tab, struct sym_ref * ref);
+
+struct sym_ext * sym_ext_new(struct sym_tab * tab, int nm);
+
+int sym_ext_id(struct sym_tab * tab, struct sym_ext * ext);
+
+int sym_add_local(struct sym_tab * tab, const char * s, unsigned int len);
+
+int sym_anom_push(struct sym_tab * tab);
+
+int sym_anom_pop(struct sym_tab * tab);
+
+int sym_anom_get(struct sym_tab * tab, int pos);
+
+struct sym_tmp * sym_tmp_push(struct sym_tab * tab, 
+							  const char * s, unsigned int len);
+
+const char * sym_name(struct sym_tab * tab, int nm);
+
+int sym_addr_get(struct sym_tab * tab, int id);
+
+void sym_addr_set(struct sym_tab * tab, int id, int addr);
+
+void sym_tab_init(struct sym_tab * tab);
+
+struct sym_tmp * sym_tmp_get(struct sym_tab * tab, int pos);
+
+void sym_pop(struct sym_tab * tab);
 
 #ifdef __cplusplus
 }

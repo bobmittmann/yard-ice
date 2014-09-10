@@ -19,7 +19,7 @@
 
 PROG = calc
 
-CFILES = calc.c calc_vm.c calc_lex.c calc_dbg.c
+CFILES = calc.c calc_vm.c calc_lex.c calc_dbg.c calc_sym.c
 
 INCPATH = ../include
 

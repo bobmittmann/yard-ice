@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Last symbol num:119  Num rules:77 */
+/* Last symbol num:120  Num rules:77 */
 
 #define T_EOF                    0
 #define T_DOT                    1
@@ -82,8 +82,8 @@
 #define N_UNARY_EXP             72
 #define N_MULT_EXP1             73
 #define N_PRIMARY_EXP           74
-#define N_MET_OR_ATTR           75
-#define N_MET_OR_ATTR1          76
+#define N_METH_OR_ATTR          75
+#define N_METH_OR_ATTR1         76
 
 #define ACTION_BASE             77
 #define A_OP_FOR_INIT           77
@@ -100,8 +100,8 @@
 #define A_OP_PRINT_COMMA        88
 #define A_OP_IF_ELSE            89
 #define A_OP_VAR_DECL           90
-#define A_OP_LOOKUP_ID          91
-#define A_OP_PUSH_ID_ADDR       92
+#define A_OP_PUSH_SYM           91
+#define A_OP_POP_SYM            92
 #define A_OP_ASSIGN             93
 #define A_OP_EQU                94
 #define A_OP_NEQ                95
@@ -127,7 +127,8 @@
 #define A_OP_PUSH_INT          115
 #define A_OP_PUSH_TRUE         116
 #define A_OP_PUSH_FALSE        117
-#define A_OP_LOAD_VAR          118
+#define A_OP_METH_OR_ATTR      118
+#define A_OP_METHOD            119
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE
