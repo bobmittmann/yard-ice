@@ -122,3 +122,71 @@ void dump_src(const char * txt, unsigned int len)
 	fflush(stdout);
 }
 
+#define STRING_LEN_MAX 64
+
+const char token_nm[][4] = {
+	[T_EOF] = "EOF",
+	[T_DOT] = ".",
+	[T_COMMA] = ",",
+	[T_SEMICOLON] = ";",
+	[T_COLON] = ":",
+	[T_LBRACKET] = "[",
+	[T_RBRACKET] = "]",
+	[T_LPAREN] = "(",
+	[T_RPAREN] = ")",
+	[T_LBRACE] = "{",
+	[T_RBRACE] = "}",
+	[T_ASR] = ">>",
+	[T_SHL] = "<<",
+	[T_LTE] = "<=",
+	[T_LT] = "<",
+	[T_GTE] = ">=",
+	[T_GT] = ">",
+	[T_EQU] = "==",
+	[T_NEQ] = "!=",
+	[T_PLUS] = "+",
+	[T_MINUS] = "-",
+	[T_MUL] = "*",
+	[T_DIV] = "/",
+	[T_MOD] = "%",
+	[T_OR] = "|",
+	[T_LOR] = "||",
+	[T_AND] = "&",
+	[T_LAND] = "&&",
+	[T_XOR] = "^",
+	[T_NOT] = "!",
+	[T_INV] = "~",
+	[T_QUEST] = "?",
+	[T_ASSIGN] = "=",
+};
+
+char * tok2str(struct token tok)
+{
+	static char buf[STRING_LEN_MAX + 3];
+	unsigned int typ = tok.typ;
+
+	if (typ == T_ERR) {
+		sprintf(buf, "ERR: %s", err_tab[tok.qlf]);
+	} else if (typ == T_ID) {
+		unsigned int n = tok.qlf;
+		memcpy(buf, tok.s, n);
+		buf[n] = '\0';
+	} else if (typ == T_INT) {
+		sprintf(buf, "%d", tok.u32);
+	} else
+		sprintf(buf, "%s", token_nm[typ]);
+
+	return buf;
+}
+
+int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
+{
+	int i;
+
+	for (i = cnt - 1; i >= 0; --i) {
+		fprintf(f, "\t%s\n", ll_sym_tab[sp[i]]);
+	};
+
+	return 0;
+}
+
