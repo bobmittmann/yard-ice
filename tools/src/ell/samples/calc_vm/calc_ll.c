@@ -92,9 +92,9 @@ const struct tr_pair predict_vec[] = {
 	{ 26, 63}, { 27, 64}, { 28, 59}, 
 	/*  74 (primary_exp) */
 	{  7, 69}, { 34, 72}, { 38, 71}, { 41, 73}, { 42, 70}, 
-	/*  75 (met_or_attr) */
+	/*  75 (meth_or_attr) */
 	{ 41, 74}, 
-	/*  76 (met_or_attr1) */
+	/*  76 (meth_or_attr1) */
 	{  2, 75}, {  3, 75}, {  7, 76}, {  8, 75}, { 11, 75}, { 12, 75}, 
 	{ 13, 75}, { 14, 75}, { 15, 75}, { 16, 75}, { 17, 75}, { 18, 75}, 
 	{ 19, 75}, { 20, 75}, { 21, 75}, { 22, 75}, { 23, 75}, { 24, 75}, 
@@ -190,16 +190,16 @@ const uint8_t rule_vec[] = {
 	
 	/* 22:var_list1(2) -> */
 	T_COMMA, N_VAR_LIST, 
-	/* 23:var(4) -> */
-	T_ID, A_OP_VAR_DECL, A_OP_LOOKUP_ID, N_VAR_ASSIGN_OPT, 
+	/* 23:var(5) -> */
+	T_ID, A_OP_VAR_DECL, A_OP_PUSH_SYM, N_VAR_ASSIGN_OPT, A_OP_POP_SYM, 
 	/* 24:var_assign_opt(0) -> */
 	
-	/* 25:var_assign_opt(4) -> */
-	T_ASSIGN, A_OP_PUSH_ID_ADDR, N_EXP, A_OP_ASSIGN, 
-	/* 26:assign_or_call(3) -> */
-	T_ID, A_OP_LOOKUP_ID, N_ASSIGN_OR_CALL1, 
-	/* 27:assign_or_call1(4) -> */
-	T_ASSIGN, A_OP_PUSH_ID_ADDR, N_EXP, A_OP_ASSIGN, 
+	/* 25:var_assign_opt(3) -> */
+	T_ASSIGN, N_EXP, A_OP_ASSIGN, 
+	/* 26:assign_or_call(4) -> */
+	T_ID, A_OP_PUSH_SYM, N_ASSIGN_OR_CALL1, A_OP_POP_SYM, 
+	/* 27:assign_or_call1(3) -> */
+	T_ASSIGN, N_EXP, A_OP_ASSIGN, 
 	/* 28:assign_or_call1(3) -> */
 	T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, 
 	/* 29:arg_list_opt(0) -> */
@@ -290,16 +290,16 @@ const uint8_t rule_vec[] = {
 	T_TRUE, A_OP_PUSH_TRUE, 
 	/* 72:primary_exp(2) -> */
 	T_FALSE, A_OP_PUSH_FALSE, 
-	/* 73:primary_exp(1) -> */
-	N_MET_OR_ATTR, 
-	/* 74:met_or_attr(5) -> */
-	T_ID, A_OP_LOOKUP_ID, A_OP_PUSH_ID_ADDR, A_OP_LOAD_VAR, N_MET_OR_ATTR1, 
-	/* 75:met_or_attr1(0) -> */
+	/* 73:primary_exp(3) -> */
+	N_METH_OR_ATTR, A_OP_METH_OR_ATTR, A_OP_POP_SYM, 
+	/* 74:meth_or_attr(3) -> */
+	T_ID, A_OP_PUSH_SYM, N_METH_OR_ATTR1, 
+	/* 75:meth_or_attr1(0) -> */
 	
-	/* 76:met_or_attr1(3) -> */
-	T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, 
+	/* 76:meth_or_attr1(4) -> */
+	T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, A_OP_METHOD, 
 };
-/* 178 bytes */
+/* 179 bytes */
 
 static const struct {
 	uint8_t off;
@@ -328,11 +328,11 @@ static const struct {
 	{  56,  2},
 	{  58,  0},
 	{  58,  2},
-	{  60,  4},
-	{  64,  0},
-	{  64,  4},
-	{  68,  3},
-	{  71,  4},
+	{  60,  5},
+	{  65,  0},
+	{  65,  3},
+	{  68,  4},
+	{  72,  3},
 	{  75,  3},
 	{  78,  0},
 	{  78,  1},
@@ -378,14 +378,14 @@ static const struct {
 	{ 163,  2},
 	{ 165,  2},
 	{ 167,  2},
-	{ 169,  1},
-	{ 170,  5},
+	{ 169,  3},
+	{ 172,  3},
 	{ 175,  0},
-	{ 175,  3},
+	{ 175,  4},
 };
 /* 154 bytes */
 
-/* Total: 828 bytes */
+/* Total: 829 bytes */
 
 
 int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
@@ -521,8 +521,8 @@ const const char * const ll_sym_tab[] = {
  	"unary_exp",
  	"mult_exp1",
  	"primary_exp",
- 	"met_or_attr",
- 	"met_or_attr1",
+ 	"meth_or_attr",
+ 	"meth_or_attr1",
  	"op_for_init",
  	"op_for_cond",
  	"op_for_after",
@@ -537,8 +537,8 @@ const const char * const ll_sym_tab[] = {
  	"op_print_comma",
  	"op_if_else",
  	"op_var_decl",
- 	"op_lookup_id",
- 	"op_push_id_addr",
+ 	"op_push_sym",
+ 	"op_pop_sym",
  	"op_assign",
  	"op_equ",
  	"op_neq",
@@ -564,6 +564,7 @@ const const char * const ll_sym_tab[] = {
  	"op_push_int",
  	"op_push_true",
  	"op_push_false",
- 	"op_load_var",
+ 	"op_meth_or_attr",
+ 	"op_method",
  };
 
