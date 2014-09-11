@@ -19,7 +19,7 @@
 
 PROG = calc
 
-CFILES = calc.c calc_vm.c calc_lex.c calc_dbg.c calc_sym.c
+CFILES = calc.c calc_vm.c calc_lex.c calc_dbg.c calc_sym.c calc_lib.c
 
 INCPATH = ../include
 
@@ -27,7 +27,7 @@ LIBS =
 
 # Generated files
 CFILES_GEN = calc_ll.c
-HFILES_GEN = calc_ll.h
+HFILES_GEN = calc_ll.h const_str.h
 
 include cross.mk
 
@@ -38,4 +38,7 @@ calc_ll.h: calc.gr Makefile
 
 calc_ll.c: calc.gr calc_ll.h Makefile
 	../../ell -e -c $<
+
+const_str.h: const_str.txt Makefile
+	./mkstr.py -n const_str $< > $@
 

@@ -47,7 +47,7 @@
    Simple Strings Table
    -------------------------------------------------------------------------- */
 
-void str_pool_init(struct str_pool * pool)
+static void str_pool_init(struct str_pool * pool)
 {
 	/* Add null string */
 	pool->buf[0] = '\0';
@@ -137,7 +137,10 @@ const struct ext_entry externals[] = {
 	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argmin = 0, .argmax = 0 },
 	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argmin = 1, .argmax = 1 },
 	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argmin = 1, .argmax = 1 },
-	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 }
+	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 },
+	[EXT_PRINT] = { .nm = CONST_NM + NM_PRINT, .argmin = 0, .argmax = 128 },
+	[EXT_SRAND] = { .nm = CONST_NM + NM_SRAND, .argmin = 1, .argmax = 1 },
+	[EXT_TIME] = { .nm = CONST_NM + NM_TIME, .argmin = 0, .argmax = 0 },
 };
 
 int extern_lookup(int nm)
@@ -162,10 +165,6 @@ struct ext_entry * extern_get(unsigned int exid)
 /* --------------------------------------------------------------------------
    Symbol table
    -------------------------------------------------------------------------- */
-
-#define SYM_GLOBAL     (1 << 7)
-#define SYM_ALLOC      (1 << 6)
-
 
 void sym_tab_init(struct sym_tab * tab)
 {
