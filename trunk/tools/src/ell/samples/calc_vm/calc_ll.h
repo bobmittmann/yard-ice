@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Last symbol num:120  Num rules:77 */
+/* Last symbol num:122  Num rules:77 */
 
 #define T_EOF                    0
 #define T_DOT                    1
@@ -103,32 +103,34 @@
 #define A_OP_PUSH_SYM           91
 #define A_OP_POP_SYM            92
 #define A_OP_ASSIGN             93
-#define A_OP_EQU                94
-#define A_OP_NEQ                95
-#define A_OP_LT                 96
-#define A_OP_GT                 97
-#define A_OP_GTE                98
-#define A_OP_LTE                99
-#define A_OP_SHL               100
-#define A_OP_ASR               101
-#define A_OP_ADD               102
-#define A_OP_SUB               103
-#define A_OP_XOR               104
-#define A_OP_OR                105
-#define A_OP_LOGIC_OR          106
-#define A_OP_MUL               107
-#define A_OP_DIV               108
-#define A_OP_MOD               109
-#define A_OP_AND               110
-#define A_OP_LOGIC_AND         111
-#define A_OP_INV               112
-#define A_OP_MINUS             113
-#define A_OP_NOT               114
-#define A_OP_PUSH_INT          115
-#define A_OP_PUSH_TRUE         116
-#define A_OP_PUSH_FALSE        117
-#define A_OP_METH_OR_ATTR      118
-#define A_OP_METHOD            119
+#define A_OP_METHOD             94
+#define A_OP_METH_OR_ATTR       95
+#define A_OP_RET_DISCARD        96
+#define A_OP_ARG                97
+#define A_OP_EQU                98
+#define A_OP_NEQ                99
+#define A_OP_LT                100
+#define A_OP_GT                101
+#define A_OP_GTE               102
+#define A_OP_LTE               103
+#define A_OP_SHL               104
+#define A_OP_ASR               105
+#define A_OP_ADD               106
+#define A_OP_SUB               107
+#define A_OP_XOR               108
+#define A_OP_OR                109
+#define A_OP_LOGIC_OR          110
+#define A_OP_MUL               111
+#define A_OP_DIV               112
+#define A_OP_MOD               113
+#define A_OP_AND               114
+#define A_OP_LOGIC_AND         115
+#define A_OP_INV               116
+#define A_OP_MINUS             117
+#define A_OP_NOT               118
+#define A_OP_PUSH_INT          119
+#define A_OP_PUSH_TRUE         120
+#define A_OP_PUSH_FALSE        121
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE

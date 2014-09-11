@@ -63,14 +63,14 @@ assign_or_call  : ID { op_push_sym } assign_or_call1 { op_pop_sym }
 				;
 
 assign_or_call1	: ASSIGN exp { op_assign }
-				| LPAREN arg_list_opt RPAREN
+				| LPAREN { op_method } arg_list_opt RPAREN { op_meth_or_attr, op_ret_discard }
 				;
 
 arg_list_opt	: 
 				| arg_list 
 				;
 
-arg_list		: exp arg_list1 
+arg_list		: exp { op_arg } arg_list1 
 				;
 
 arg_list1		: 
@@ -147,7 +147,7 @@ meth_or_attr	: ID { op_push_sym } meth_or_attr1
 				;
 
 meth_or_attr1	: 
-				| LPAREN arg_list_opt RPAREN { op_method }
+				| LPAREN { op_method } arg_list_opt RPAREN 
 				;
 
 

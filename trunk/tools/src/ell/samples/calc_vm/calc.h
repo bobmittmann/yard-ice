@@ -92,12 +92,14 @@ struct str_pool {
 
 struct ext_entry {
 	uint8_t nm;
-	uint8_t argc;
+	uint8_t argmin;
+	uint8_t argmax;
 };
 
 #define EXT_RAND 0
 #define EXT_SQRT 1
 #define EXT_LOG2 2
+#define EXT_WRITE 3
 
 /* --------------------------------------------------------------------------
    Symbol table 
@@ -128,8 +130,10 @@ struct sym_obj {
 struct sym_tmp {
 	uint8_t flags;
 	uint8_t nm;
-//	uint16_t addr;
-	uint8_t oid;
+	uint8_t xid;
+	uint8_t cnt;
+	uint8_t min;
+	uint8_t max;
 };
 
 
@@ -138,7 +142,6 @@ struct sym_ext {
 	uint8_t flags;
 	uint8_t nm;
 	uint16_t addr;
-	uint16_t size;
 };
 
 /* object reference, this represent a pointer to a 
@@ -214,6 +217,7 @@ struct sym_tab {
 #define OPC_EXT      32
 #define OPC_CALL     33
 #define OPC_RET      34
+#define OPC_POP      35
 
 struct calc_vm {
 	uint16_t sp;
@@ -260,8 +264,6 @@ struct sym_obj * sym_obj_lookup(struct sym_tab * tab, int nm);
 
 struct sym_ref * sym_ref_new(struct sym_tab * tab, void * sym);
 
-const char * sym_ref_name(struct sym_tab * tab, struct sym_ref * ref);
-
 struct sym_ext * sym_ext_new(struct sym_tab * tab, int nm);
 
 int sym_ext_id(struct sym_tab * tab, struct sym_ext * ext);
@@ -288,6 +290,10 @@ void sym_tab_init(struct sym_tab * tab);
 struct sym_tmp * sym_tmp_get(struct sym_tab * tab, int pos);
 
 void sym_pop(struct sym_tab * tab);
+
+int extern_lookup(int nm);
+
+struct ext_entry * extern_get(unsigned int exid);
 
 #ifdef __cplusplus
 }

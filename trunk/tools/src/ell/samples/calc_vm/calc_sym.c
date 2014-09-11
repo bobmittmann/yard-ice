@@ -34,7 +34,7 @@
 
 #include "calc.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #include "debug.h"
 
 #define __DEF_CONST_STR__
@@ -134,9 +134,10 @@ const char * string(struct str_pool * str, int idx)
    -------------------------------------------------------------------------- */
 
 const struct ext_entry externals[] = {
-	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argc = 0 },
-	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argc = 1 },
-	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argc = 1 }
+	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argmin = 0, .argmax = 0 },
+	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argmin = 1, .argmax = 1 },
+	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argmin = 1, .argmax = 1 },
+	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 }
 };
 
 int extern_lookup(int nm)
@@ -149,6 +150,13 @@ int extern_lookup(int nm)
 	}
 
 	return -1;
+}
+
+struct ext_entry * extern_get(unsigned int exid)
+{
+	if (exid >= sizeof(externals) / sizeof(struct ext_entry))
+		return NULL;
+	return(struct ext_entry *)&externals[exid];
 }
 
 /* --------------------------------------------------------------------------
@@ -208,7 +216,7 @@ int sym_dump(FILE * f, struct sym_tab * tab)
 		} else if (sp->flags & SYM_EXTERN) {
 			struct sym_ext * ext = (struct sym_ext *)sp;
 			fprintf(f, "%04x g F .extern %04x    %s\n", ext->addr,
-					ext->size, string(&tab->str, externals[ext->addr].nm));
+					0, string(&tab->str, externals[ext->addr].nm));
 		} else {
 			struct sym_ref * ref = (struct sym_ref *)sp;
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
@@ -287,20 +295,6 @@ struct sym_ref * sym_ref_new(struct sym_tab * tab, void * sym)
 	return ref;
 }
 
-const char * sym_ref_name(struct sym_tab * tab, struct sym_ref * ref)
-{
-	struct sym * sp = &tab->sym[ref->oid];
-	int nm = CONST_NM;
-
-	if (sp->flags & SYM_OBJECT) {
-		nm = ((struct sym_obj *)sp)->nm;
-	} else if (sp->flags & SYM_EXTERN) {
-		nm = externals[((struct sym_ref *)sp)->addr].nm;
-	}
-
-	return string(&tab->str, nm);
-}
-
 struct sym_ext * sym_ext_new(struct sym_tab * tab, int nm)
 {
 	struct sym_ext * ext;
@@ -315,7 +309,6 @@ struct sym_ext * sym_ext_new(struct sym_tab * tab, int nm)
 	ext = (struct sym_ext *)&tab->sym[tab->global++];
 	ext->addr = exid;
 	ext->flags = SYM_EXTERN;
-	ext->size = 0;
 
 	return ext;
 }
