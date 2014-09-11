@@ -1,24 +1,38 @@
-/* 
-   This is a Java Script comment
- */
+//
+// Expression evaluation example
+//
 
-function f1(x)
-{
-	var x0 = 0, x1 = 0;
-	var y0 = 0, y1 = 0;
-	var y[10];
-	var i;
+var x;
 
-	i = 0;
-	while (i < 10) {
-		y0 = y1;
-		x0 = x1;
-		x1 = x[i];
-		y1 = (4 * x0 + 3 * x1 - 7 * y0) / 10;
-		y[i] = y1;
-		i = i + 1;
-	}
+x = 1;
+x = true;;
 
-	return y;
+var y;
+var z;
+
+x = true;;
+x = 11;
+y = 22;
+
+z = (x + y) * 2;
+print z;
+
+z = z + 2;
+print z;
+
+print x;
+print y;
+print z;
+
+print (1 + 2) * 2;
+
+var i;
+
+i = 10;
+
+while (i) {
+	print i;
+	i = i - 2;
 }
 
+print i;

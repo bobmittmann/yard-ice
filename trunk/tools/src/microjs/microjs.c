@@ -24,16 +24,18 @@
  * 
  */
 
+
 #include <unistd.h>
-#include <inttypes.h>
 #include <stdbool.h>
-#include <sys/types.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <libgen.h>
+
+#include "config.h"
+
 #include <microjs.h>
 
 #if defined(WIN32)
@@ -43,20 +45,12 @@
   #include <assert.h>
 #endif
 
-#define VERSION_MAJOR 2
-#define VERSION_MINOR 0
-
-int load_script(const char * pathname, char ** cpp, unsigned int * lp)
+int load_script(const char * pathname, char ** cpp, unsigned int * lenp)
 {
 	char * cp;
 	FILE * f;
 	int ret;
 	int len;
-
-	if ((pathname== NULL) || (cpp == NULL) || (lp == NULL)) {
-		fprintf(stderr, "ERROR: %s: invalid arguments.\n", __func__);
-		return -EINVAL;
-	}
 
 	if ((f = fopen(pathname, "r")) == NULL) {
 		fprintf(stderr, "ERROR: %s: open(): %s.\n",
@@ -64,44 +58,20 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lp)
 		return -1;
 	}
 
-//	fprintf(stderr, "%s: 1.\n", __func__);
-//	fflush(stderr);
+	fseek(f, 0, SEEK_END);
+	len = ftell(f);
 
-	if ((ret = fseek(f, 0, SEEK_END)) < 0) {
-		fprintf(stderr, "ERROR: %s: fseek(): %s.\n",
-				__func__, strerror(errno));
-		fclose(f);
-		return ret;
-	}
-
-//	fprintf(stderr, "%s: 2.\n", __func__);
-//	fflush(stderr);
-
-	if ((len = ftell(f)) < 0) {
-		fprintf(stderr, "ERROR: %s: ftell(): %s.\n",
-				__func__, strerror(errno));
-		fclose(f);
-		return len;
-	}
-
-//	fprintf(stderr, "%s: 3. len=%d\n", __func__, len);
-//	fflush(stderr);
-
-	if ((ret = fseek(f, 0, SEEK_SET)) < 0) {
-		fprintf(stderr, "ERROR: %s: fseek(): %s.\n",
-				__func__, strerror(errno));
-		fclose(f);
-		return ret;
-	}
-
-	if ((cp = realloc(*cpp, *lp + len)) == NULL) {
+	if ((cp = realloc(*cpp, *lenp + len)) == NULL) {
 		fprintf(stderr, "ERROR: %s: frealloc(): %s.\n",
 				__func__, strerror(errno));
 		fclose(f);
 		return -1;
 	}
+	*cpp = cp;
 
-	cp += *lp;
+	cp += *lenp;
+
+	fseek(f, 0, SEEK_SET);
 
 	if ((ret = fread(cp, len, 1, f)) != 1) {
 		fprintf(stderr, "ERROR: %s: fread(): %s.\n",
@@ -112,167 +82,122 @@ int load_script(const char * pathname, char ** cpp, unsigned int * lp)
 
 	fclose(f);
 
-	*cpp = cp;
-	*lp += len;
+	*lenp += len;
 
 	return len;
 }
 
-void usage(char * prog)
+void usage(FILE * f, char * prog)
 {
-	fprintf(stderr, "Usage: %s [OPTION...] [SCRIPT...]\n", prog);
-	fprintf(stderr, "Parse a script....\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "  -?     \tShow this help message\n");
-	fprintf(stderr, "  -o FILE\toutput\n");
-	fprintf(stderr, "  -v[v]  \tVerbosity level\n");
-	fprintf(stderr, "  -V     \tPrint version\n");
-	fprintf(stderr, "\n");
-	exit(0);
+	fprintf(f, "Usage: %s [OPTION...] [SCRIPT...]\n", prog);
+	fprintf(f, "Parse a script....\n");
+	fprintf(f, "\n");
+	fprintf(f, "  -?     \tShow this help message\n");
+	fprintf(f, "  -o FILE\toutput\n");
+	fprintf(f, "  -v[v]  \tVerbosity level\n");
+	fprintf(f, "  -V     \tPrint version\n");
+	fprintf(f, "  -t     \tVirtual machine trace\n");
+	fprintf(f, "\n");
 }
 
 void version(char * prog)
 {
-	fprintf(stderr, "script %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
+	fprintf(stderr, "%s\n", PACKAGE_STRING);
 	fprintf(stderr, "(C)Copyright Bob Mittmann (bobmittmann@gmail.com)\n");
 	exit(1);
 }
 
-void parse_err(char * prog, char * opt)
+
+int main(int argc,  char **argv)
 {
-	fprintf(stderr, "%s: invalid option %s\n", prog, opt);
-	exit(1);
-}
+	int32_t data[128];
+	uint8_t code[512];
+	struct microjs_compiler microjs; 
+	struct microjs_vm vm; 
+	struct sym_tab sym_tab;
 
-void cleanup(void)
-{
-}
-
-void sig_quit(int signo)
-{
-	cleanup();
-	exit(3);
-}
-
-int microjs_compile(const char * txt, unsigned int len)
-{
-	uint8_t tok_buf[8192];
-	uint8_t code_buf[8192];
-	struct microjs_parser jp;
-	int err;
-
-	microjs_init(&jp, tok_buf, sizeof(tok_buf));
-
-	microjs_open(&jp, txt, len);
-
-	if ((err = microjs_scan(&jp)) != MICROJS_OK) {
-		fprintf(stderr, "Lexical analisys failed.\n");
-		microjs_print_err(stderr, &jp, err);
-		return err;
-	}
-
-	microjs_tok_dump(stdout, &jp);
-
-	if ((err = microjs_parse(&jp, code_buf, sizeof(code_buf))) != MICROJS_OK) {
-		fprintf(stderr, "Syntax analisys failed.\n");
-		return err;
-	}
-
-	return 0;
-}
-
-int microjs_test(void);
-
-int main(int argc, char *argv[])
-{
-	extern char *optarg;	/* getopt */
-	extern int optind;	/* getopt */
-	bool output_set = false;
+	char outfname[256];
+	bool trace = false;
+	bool outset = false;
+	FILE * ftrace = NULL;
+	char * prog;
 	char * script = NULL;
 	unsigned int len = 0;
-	char output[1024];
 	int verbose = 0;
-	char * prog;
-	FILE * f;
+	int i = 1;
+	int n;
 	int c;
 
 	/* the prog name start just after the last lash */
-	if ((prog = (char *)strrchr(argv[0], '/')) == NULL)
+	if ((prog = (char *)basename(argv[0])) == NULL)
 		prog = argv[0];
-	else
-		prog++;
 
 	/* parse the command line options */
 	while ((c = getopt(argc, argv, "V?vto:")) > 0) {
 		switch (c) {
-			case 'V':
-				version(prog);
-				break;
+		case 'V':
+			version(prog);
+			break;
 
-			case '?':
-				usage(prog);
-				break;
+		case '?':
+			usage(stdout, prog);
+			return 0;
 
-			case 'v':
-				verbose++;
-				break;
+		case 'v':
+			verbose++;
+			break;
 
-			case 'o':
-				strcpy(output, optarg);
-				output_set = true;
-				break;
+		case 't':
+			trace = true;
+			break;
 
-			case 't':
-				microjs_test();
-				return 0;
+		case 'o':
+			strcpy(outfname, optarg);
+			outset = true;
+			break;
 
-			default:
-				parse_err(prog, optarg);
-		}
-	}
 
-	if (optind >= argc) {
-		fprintf(stderr, "%s: missing input file.\n\n", prog);
-		usage(prog);
-	}
-	
-	while (optind < argc) {
-		char * input = argv[optind];
-
-		printf(" - script: %s\n", input);
-		fflush(stdout);
-
-		if (load_script(input, &script, &len) < 0) {
+		default:
+			fprintf(stderr, "%s: invalid option %s\n", prog, optarg);
 			return 1;
 		}
-
-		optind++;
 	}
 
-#if defined(WIN32)
-#else
-	signal(SIGINT, sig_quit);
-	signal(SIGTERM, sig_quit);
-	signal(SIGQUIT, sig_quit);
-	signal(SIGABRT, sig_quit);
-#endif
-
-	if (output_set) {
-		printf(" - output: %s\n", output);
-		printf("\n");
-		if ((f = fopen(output, "+w")) == NULL) { 
-			fprintf(stderr, "%s: fopen() failed!\n", prog);
-			return 5;
-		}
-	} else {
-		f = stdout;
+	if (optind == argc) {
+		fprintf(stderr, "%s: missing javascript source file.\n\n", prog);
+		usage(stderr, prog);
+		return 2;
 	}
 
-	microjs_compile(script, len);
+	if (trace) {
+		if (outset) {
+			if ((ftrace = fopen(outfname, "w")) == NULL) {
+				fprintf(stderr, "ERROR: creating file \"%s\": %s\n", 
+						outfname, strerror(errno));  
+				return 1;
+			}
+		} else
+			ftrace = stdout;
+	}
 
-	printf("\n");
+	sym_tab_init(&sym_tab);
+	microjs_compiler_init(&microjs, &sym_tab, data, sizeof(data));
 
+	for (i = optind; i < argc; ++i) {
+		if (load_script(argv[i], &script, &len) < 0)
+			return 1;
+	}
+
+	if ((n = microjs_compile(&microjs, code, script, len)) < 0)
+		return 1;
+
+	microjs_vm_init(&vm, data, sizeof(data));
+	vm.ftrace = ftrace;
+
+	if (microjs_exec(&vm, code, n) < 0)
+		return 1;
 
 	return 0;
+
 }
 

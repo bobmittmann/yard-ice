@@ -62,6 +62,8 @@ def mkstrings(words, name):
 		print('#define NM_%-12s %d' % (s.upper(), i))
 		i = i + 1
 	print('')
+	print('#define CONST_STRINGS_MAX %d' % (i))
+	print('')
 	print('#endif /* __' + name.upper() + '_H__ */')
 	print('')
 

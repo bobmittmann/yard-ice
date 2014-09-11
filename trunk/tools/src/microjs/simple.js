@@ -1,9 +1,5 @@
-var i = 0;
+var x, y;
 
-while (i < 160) {
-	if (i > 16)
-		i = i + 2;
-	else
-		i = i + 1;
-}
+x = 20;
+y = x;
 

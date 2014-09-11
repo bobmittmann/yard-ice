@@ -75,16 +75,13 @@ struct lexer {
    String pool
    -------------------------------------------------------------------------- */
 
-#define STRINGS_MAX 63
-#define STRINGS_POOL_SIZE (512 - (2 * (STRINGS_MAX + 1)))
-
 struct str_pool {
 	char * buf;
-	uint16_t cnt;
+	uint16_t len;
+	uint8_t cnt;
+	uint8_t max;
 	uint16_t offs[];
 };
-
-#define CONST_STRINGS_MAX 64
 
 /* --------------------------------------------------------------------------
    External objects/symbols/functions
@@ -103,14 +100,15 @@ struct ext_entry {
 #define EXT_TIME 4
 #define EXT_SRAND 5
 #define EXT_PRINT 6
+#define EXT_PRINTF 7
 
 /* --------------------------------------------------------------------------
    Symbol table 
    -------------------------------------------------------------------------- */
 
-#define SYM_REFERENCE  (0 << 6)
-#define SYM_OBJECT     (1 << 7)
-#define SYM_EXTERN	   (1 << 6)
+#define SYM_REFERENCE       (0 << 6)
+#define SYM_OBJECT          (1 << 7)
+#define SYM_EXTERN	        (1 << 6)
 
 struct sym {
 	uint8_t flags;
@@ -119,7 +117,18 @@ struct sym {
 	uint16_t size;
 };
 
-#define SYM_OBJ_ALLOC  (1 << 6)
+#define SYM_OBJ_ALLOC       (1 << 6)
+
+
+#define SYM_OBJ_INT         (0x0 << 4)
+#define SYM_OBJ_STR         (0x1 << 4)
+#define SYM_OBJ_INT_ARRAY   (0x2 << 4)
+#define SYM_OBJ_STR_ARRAY   (0x3 << 4)
+
+#define SYM_OBJ_TYPE_MASK   (0x3 << 4)
+#define SYM_OBJ_TYPE(SYM)   ((SYM)->flags & SYM_OBJ_TYPE_MASK) 
+#define SYM_OBJ_IS_STR(SYM) (SYM_OBJ_TYPE(SYM) == SYM_OBJ_STR)
+#define SYM_OBJ_IS_INT(SYM) (SYM_OBJ_TYPE(SYM) == SYM_OBJ_INT)
 
 /* object */
 struct sym_obj {
@@ -175,10 +184,15 @@ struct calc {
 
 #define SYMBOLS_MAX 64
 
+#define STRINGS_MAX 63
+#define STRINGS_POOL_LEN (512 - (2 * (STRINGS_MAX + 1)))
+
 struct sym_tab {
-	struct str_pool str;
-	uint16_t offs[STRINGS_MAX];
-	char str_buf[STRINGS_POOL_SIZE];
+	struct {
+		struct str_pool str;
+		uint16_t offs[STRINGS_MAX];
+		char str_buf[STRINGS_POOL_LEN];
+	};
 	uint16_t global;
 	uint16_t local;
 	struct sym sym[SYMBOLS_MAX];
@@ -302,6 +316,12 @@ void sym_pop(struct sym_tab * tab);
 int extern_lookup(int nm);
 
 struct ext_entry * extern_get(unsigned int exid);
+
+int str_add(const char * s, unsigned int len);
+
+const char * sfstr(int idx);
+
+int cstr_add(const char * s, unsigned int len);
 
 #ifdef __cplusplus
 }
