@@ -31,216 +31,100 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-enum {
-	MICROJS_OK                 = 0,
-	MICROJS_UNEXPECTED_CHAR    = -1,
-	MICROJS_TOKEN_BUF_OVF      = -3,
-	MICROJS_UNCLOSED_STRING    = -4,
-	MICROJS_UNCLOSED_COMMENT   = -5,
-	MICROJS_INVALID_LITERAL    = -6,
-	MICROJS_INVALID_ID         = -7,
-	MICROJS_BRACKET_MISMATCH   = -8,
-	MICROJS_EMPTY_FILE         = -9,
-	MICROJS_EMPTY_STACK        = -10,
-	MICROJS_STRINGS_UNSUPORTED = -11,
-	MICROJS_STRING_TOO_LONG    = -12,
-	MICROJS_INVALID_LABEL      = -13,
-	MICROJS_OBJECT_EXPECTED    = -14,
-	MICROJS_SYNTAX_ERROR       = -15
-};
-
-/**********************************************************************
-  Tokenizer
- **********************************************************************/
-
-struct tree;
-
-struct microjs_parser {
-	uint16_t cnt;  /* token count */
-	uint16_t idx;  /* token pointer */
-	uint16_t next;  /* token pointer */
-
-	uint16_t sp; /* stack pointer */
-	uint16_t top; /* parser error code */
-	uint8_t * tok; /* token buffer */
-
-	uint16_t off;  /* lexer text offset */
-	uint16_t len;  /* lexer text length */
-	const char * txt;   /* base pointer (original js txt file) */
-
-	struct tree * t;
-};
-
-struct microjs_val {
+struct token {
+	uint8_t typ; /* token type (class) */
+	uint8_t qlf; /* qualifier */
+	uint16_t off; /* offset */
 	union {
-		struct {
-			char * dat;
-			uint16_t len;
-		} str;
-		struct {
-			const char * sz;
-			uint8_t id;
-		} lbl;
+		char * s;
 		uint32_t u32;	
 		int32_t i32;	
-		bool logic;
 	};
 };
 
-/**********************************************************************
-  JSON
- **********************************************************************/
-
-struct json_file { 
-	const char * txt;
-	uint16_t len;
-	uint16_t crc;
-};
-
 enum {
-	MICROJS_JSON_EOF        = 0,
-	MICROJS_JSON_STOP       = 1,
-	MICROJS_JSON_NULL       = 2,
-	MICROJS_JSON_OBJECT     = 3,
-	MICROJS_JSON_ARRAY      = 4,
-	MICROJS_JSON_END_OBJECT = 5,
-	MICROJS_JSON_END_ARRAY  = 6,
-	MICROJS_JSON_BOOLEAN    = 7,
-	MICROJS_JSON_INTEGER    = 8,
-	MICROJS_JSON_LABEL      = 9,
-	MICROJS_JSON_STRING     = 10,
-	MICROJS_JSON_INVALID    = 11
+	OK = 0,
+	ERR_UNEXPECTED_CHAR,
+	ERR_UNCLOSED_STRING,
+	ERR_UNCLOSED_COMMENT,
+	ERR_INVALID_LITERAL,
+	ERR_INVALID_ID,
+	ERR_STRINGS_UNSUPORTED,
+	ERR_STRING_TOO_LONG,
+	ERR_BRACKET_MISMATCH,
+	ERR_SYNTAX_ERROR
 };
 
-struct microjs_json_parser {
-	uint16_t idx;  /* token parser index */
-	uint16_t cnt;  /* token count */
+/* --------------------------------------------------------------------------
+   String pool
+   -------------------------------------------------------------------------- */
 
-	uint16_t sp;   /* token buffer stack pointer */
-	uint16_t top;  /* token buffer top pointer (size of the token buufer) */
-	uint8_t * tok; /* token buffer */
-
-	uint16_t off;  /* lexer text offset */
-	uint16_t len;  /* lexer text length */
-	const char * txt;   /* base pointer (original json txt file) */
-
-	const char * const * lbl;   /* label table */
+struct str_pool {
+	char * buf;
+	uint16_t len;
+	uint8_t cnt;
+	uint8_t max;
+	uint16_t offs[];
 };
 
-typedef int (* microjs_attr_parser_t)(struct microjs_json_parser * jsn, 
-									  struct microjs_val * val, 
-									  unsigned int opt, void * ptr);
+#define SYMBOLS_MAX 64
 
-struct microjs_attr_desc {
-	char key[13];
-	uint8_t type;	
-	uint8_t opt;	
-	uint16_t offs;	
-	microjs_attr_parser_t parse;
+#define STRINGS_MAX 63
+#define STRINGS_POOL_LEN (512 - (2 * (STRINGS_MAX + 1)))
+
+
+struct sym {
+	uint8_t flags;
+	uint8_t nm;
+	uint16_t addr;
+	uint16_t size;
 };
 
-/**********************************************************************
-  Strings
- **********************************************************************/
-struct microjs_str_pool {
-	uint16_t * offs; /* point to the offset table */
-	char * base;     /* base pointer */
-	char * top;      /* top pointer */
-	int (* write)(const struct microjs_str_pool *, 
-				  const char *, unsigned int);
+struct sym_tab {
+	struct {
+		struct str_pool str;
+		uint16_t offs[STRINGS_MAX];
+		char str_buf[STRINGS_POOL_LEN];
+	};
+	uint16_t global;
+	uint16_t local;
+	struct sym sym[SYMBOLS_MAX];
 };
 
-extern const struct microjs_str_pool microjs_str_const;
-extern const struct microjs_str_pool microjs_str_var;
+struct microjs_compiler {
+	struct token tok;
+	int32_t * mem;
+	uint8_t * code;
+	uint16_t pc;
+	uint16_t heap;
+	uint16_t stack;
+	uint16_t sp;
+	struct sym_tab * tab;
+};
+
+struct microjs_vm {
+	FILE * ftrace;
+	uint16_t sp;
+	uint16_t sl;
+	int32_t * data;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int microjs_init(struct microjs_parser * jp, 
-				 uint8_t tok[], unsigned int size);
+int microjs_compiler_init(struct microjs_compiler * microjs, 
+						  struct sym_tab * tab, int32_t stack[], 
+						  unsigned int size);
 
-int microjs_open(struct microjs_parser * jp, 
+int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
 				 const char * txt, unsigned int len);
 
-int microjs_scan(struct microjs_parser * jp);
+void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
 
-int microjs_parse(struct microjs_parser * p, 
-					uint8_t code[], unsigned int size);
+int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 
-int microjs_compile(const char * txt, unsigned int len);
-
-int microjs_tok_dump(FILE * f, struct microjs_parser * jp);
-
-void microjs_print_err(FILE * f, struct microjs_parser * p, int err);
-
-
-/**********************************************************************
-  JSON
- **********************************************************************/
-
-int microjs_json_root_len(const char * js);
-
-int microjs_json_init(struct microjs_json_parser * jsn, 
-					 uint8_t * tok, unsigned int size,
-					 const char * const label[]);
-
-int microjs_json_open(struct microjs_json_parser * jsn, 
-					  const char * txt, unsigned int len);
-
-int microjs_json_scan(struct microjs_json_parser * jsn);
-
-/* flushes the token buffer, but keep track of the file scanning */
-void microjs_json_flush(struct microjs_json_parser * jsn);
-
-int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn);
-
-int microjs_json_get_val(struct microjs_json_parser * jsn,
-						   struct microjs_val * val);
-
-int microjs_json_parse_obj(struct microjs_json_parser * jsn,
-						   const struct microjs_attr_desc desc[],
-						   void * ptr);
-
-/* Encode a 16 bits integral value */
-int microjs_u16_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int opt, void * ptr);
-
-/* Encode an 8 bits integral value */
-int microjs_u8_enc(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int opt, void * ptr);
-
-/* Encode an array of 8 bits integral values.
-  The option parameter indicates the maximum length of the array */
-int microjs_array_u8_enc(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int len, void * ptr);
-
-/* Encode a boolean as a single bit */
-int microjs_bit_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr);
-
-/* Encode a string as a index to the constant string pool */
-int microjs_const_str_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr);
-/**********************************************************************
-  Strings
- **********************************************************************/
-
-char * const_str(int idx);
-
-int microjs_str_pool_dump(const struct microjs_str_pool * pool);
-
-int microjs_str_lookup(const struct microjs_str_pool * pool, 
-					   const char * s, int len);
-
-int const_str_lookup(const char * s, int len);
-
-int const_str_write(const char * s, unsigned int len);
+void sym_tab_init(struct sym_tab * tab);
 
 #ifdef __cplusplus
 }

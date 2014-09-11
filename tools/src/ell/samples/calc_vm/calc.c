@@ -471,6 +471,21 @@ int op_push_true(struct calc * calc)
 	return 0;
 }
 
+int op_push_string(struct calc * calc) 
+{
+	int isz;
+
+	if ((isz = cstr_add(calc->tok.s, calc->tok.qlf)) < 0) {
+		fprintf(stderr, "can't create string!\n");
+		return -1;
+	}
+	
+	printf("%04x\tI8 %d\n", calc->pc, isz);
+	calc->code[calc->pc++] = OPC_I8;
+	calc->code[calc->pc++] = isz;
+	return 0;
+}
+
 int op_push_int(struct calc * calc)
 {
 	int32_t x = calc->tok.u32;
@@ -794,6 +809,7 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_METHOD)] = op_method,
  	[ACTION(A_OP_ARG)] = op_arg,
  	[ACTION(A_OP_RET_DISCARD)] = op_ret_discard,
+ 	[ACTION(A_OP_PUSH_STRING)] = op_push_string,
 
 };
 
