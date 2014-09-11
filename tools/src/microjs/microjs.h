@@ -113,18 +113,20 @@ struct microjs_vm {
 extern "C" {
 #endif
 
+void sym_tab_init(struct sym_tab * tab);
+
 int microjs_compiler_init(struct microjs_compiler * microjs, 
 						  struct sym_tab * tab, int32_t stack[], 
 						  unsigned int size);
 
 int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
-				 const char * txt, unsigned int len);
+					const char * txt, unsigned int len);
+
 
 void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 
-void sym_tab_init(struct sym_tab * tab);
 
 #ifdef __cplusplus
 }

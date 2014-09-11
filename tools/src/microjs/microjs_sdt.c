@@ -157,8 +157,10 @@ int op_push_sym(struct microjs_compiler * microjs)
 {
 	struct sym_tmp * tmp;
 		
-	if ((tmp = sym_tmp_push(microjs->tab, microjs->tok.s, microjs->tok.qlf)) == NULL) {
-		fprintf(stderr, "cant create temp symbol: %s.\n", tok2str(microjs->tok));
+	if ((tmp = sym_tmp_push(microjs->tab, 
+							microjs->tok.s, microjs->tok.qlf)) == NULL) {
+		fprintf(stderr, "cant create temp symbol: %s.\n", 
+				tok2str(microjs->tok));
 		return -1;
 	}
 
@@ -193,7 +195,8 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 		printf("%04x\tI18 %d\n", microjs->pc, tmp->xid);
 		microjs->code[microjs->pc++] = OPC_I8;
 		microjs->code[microjs->pc++] = tmp->xid;
-		printf("%04x\tEXT \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
+		printf("%04x\tEXT \'%s\"\n", microjs->pc, 
+			   sym_name(microjs->tab, tmp->nm));
 		microjs->code[microjs->pc++] = OPC_EXT;
 	} else {
 		struct sym_obj * obj;
@@ -210,7 +213,8 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 			   ref->oid, obj->addr);
 		ref->addr = microjs->pc + 1;
 #endif
-		printf("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
+		printf("%04x\tI16 \'%s\"\n", microjs->pc, 
+			   sym_name(microjs->tab, tmp->nm));
 		microjs->code[microjs->pc++] = OPC_I16;
 		microjs->code[microjs->pc++] = obj->addr;
 		microjs->code[microjs->pc++] = obj->addr >> 8;
