@@ -1,8 +1,8 @@
 var i = 0;
 
 while (i < 20) {
-	print i;
+	write(i);
 	i = i + 1;
 }
 
-print;
+write();
