@@ -102,13 +102,13 @@ int mem_bind(struct calc * calc)
 	/* search in the global list */
 	for (i = 0; i < tab->global; ++i) {
 		struct sym * sp = &tab->sym[i];
-		if (sp->flags & SYM_OBJECT) {
+		if ((sp->flags & SYM_OBJECT) && !(sp->flags & SYM_OBJ_ALLOC)) {
 			struct sym_obj * obj = (struct sym_obj *)sp;
 			int addr;
 			if ((addr = alloc32(calc)) < 0)
 				return -1;
 			obj->addr = addr;
-//			obj->flags |= SYM_ALLOC;
+			obj->flags |= SYM_OBJ_ALLOC;
 		}
 	}
 
@@ -150,7 +150,8 @@ int op_var_decl(struct calc * calc)
 	obj->addr = addr;
 	/* initial variables are int */
 	obj->size = 4;
-
+	/* flag as allocated */
+	obj->flags |= SYM_OBJ_ALLOC;
 	return 0;
 }
 

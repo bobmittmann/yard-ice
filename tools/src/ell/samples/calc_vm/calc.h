@@ -100,6 +100,9 @@ struct ext_entry {
 #define EXT_SQRT 1
 #define EXT_LOG2 2
 #define EXT_WRITE 3
+#define EXT_TIME 4
+#define EXT_SRAND 5
+#define EXT_PRINT 6
 
 /* --------------------------------------------------------------------------
    Symbol table 
@@ -116,6 +119,8 @@ struct sym {
 	uint16_t size;
 };
 
+#define SYM_OBJ_ALLOC  (1 << 6)
+
 /* object */
 struct sym_obj {
 	uint8_t flags;
@@ -124,7 +129,8 @@ struct sym_obj {
 	uint16_t size;
 };
 
-#define SYM_METHOD (1 << 0)
+
+#define SYM_METHOD    (1 << 0)
 #define SYM_IS_METHOD(SYM) ((SYM)->flags & SYM_METHOD)
 
 struct sym_tmp {
@@ -225,6 +231,8 @@ struct calc_vm {
 	bool trace;
 	int32_t * data;
 };
+
+extern int32_t (* extern_call[])(void *, int32_t argv[], int argc);
 
 #ifdef __cplusplus
 extern "C" {
