@@ -1,1 +1,1 @@
-rand sqrt log2 x y z
+rand sqrt log2 print write writeln x y z

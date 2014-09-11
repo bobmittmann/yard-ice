@@ -32,7 +32,7 @@
 #include <string.h>
 #include <errno.h>
 
-#define DEBUG 1
+#define DEBUG 0
 #include "debug.h"
 
 #include "calc.h"
@@ -137,17 +137,17 @@ int mem_bind(struct calc * calc)
 int op_var_decl(struct calc * calc)
 {
 	struct sym_obj * obj;
-//	int addr;
+	int addr;
 
 	if ((obj = sym_obj_new(calc->tab, calc->tok.s, calc->tok.qlf)) == NULL) {
 		fprintf(stderr, "can't create symbol.\n");
 		return -1;
 	}
 
-//	if ((addr = alloc32(calc)) < 0)
-//		return -1;
+	if ((addr = alloc32(calc)) < 0)
+		return -1;
 
-	obj->addr = 0;
+	obj->addr = addr;
 	/* initial variables are int */
 	obj->size = 4;
 
@@ -170,26 +170,31 @@ int op_push_sym(struct calc * calc)
 int op_meth_or_attr(struct calc * calc)
 {
 	struct sym_tmp * tmp = sym_tmp_get(calc->tab, 0);
-	struct sym_ref * ref;
 
 	if (SYM_IS_METHOD(tmp)) {
-		struct sym_ext * ext;
+		DBG("method=\"%s\" (%d)", sym_name(calc->tab, tmp->nm), tmp->xid);
+		DBG("min=%d max=%d argc=%d", tmp->min, tmp->max, tmp->cnt);
 
-		DBG("method=\"%s\"", sym_name(calc->tab, tmp->nm));
-		if ((ext = sym_ext_new(calc->tab, tmp->nm)) == NULL) {
-			fprintf(stderr, "undefined external: %s.\n", 
+		if (tmp->cnt < tmp->min) {
+			fprintf(stderr, "argument missing: %s\n", 
 					sym_name(calc->tab, tmp->nm));
 			return -1;
 		}
-		ref = sym_ref_new(calc->tab, ext);
-		printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
-			   ref->oid, ext->addr);
-		printf("%04x\tI16 \'%s\"\n", calc->pc, sym_ref_name(calc->tab, ref));
-		calc->code[calc->pc++] = OPC_I16;
-		ref->addr = calc->pc;
-		calc->code[calc->pc++] = 0;
-		calc->code[calc->pc++] = 0;
-		printf("%04x\tEXT\n", calc->pc);
+		if (tmp->cnt > tmp->max) {
+			fprintf(stderr, "too many arguments to function: %s\n", 
+					sym_name(calc->tab, tmp->nm));
+			return -1;
+		}
+
+		/* number of arguments */
+		printf("%04x\tI18 %d\n", calc->pc, tmp->xid);
+		calc->code[calc->pc++] = OPC_I8;
+		calc->code[calc->pc++] = tmp->cnt;
+		/* external call number */
+		printf("%04x\tI18 %d\n", calc->pc, tmp->xid);
+		calc->code[calc->pc++] = OPC_I8;
+		calc->code[calc->pc++] = tmp->xid;
+		printf("%04x\tEXT \'%s\"\n", calc->pc, sym_name(calc->tab, tmp->nm));
 		calc->code[calc->pc++] = OPC_EXT;
 	} else {
 		struct sym_obj * obj;
@@ -199,14 +204,17 @@ int op_meth_or_attr(struct calc * calc)
 					sym_name(calc->tab, tmp->nm));
 			return -1;
 		}
+#if 0
+		struct sym_ref * ref;
 		ref = sym_ref_new(calc->tab, obj);
 		printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
 			   ref->oid, obj->addr);
-		printf("%04x\tI16 \'%s\"\n", calc->pc, sym_ref_name(calc->tab, ref));
+		ref->addr = calc->pc + 1;
+#endif
+		printf("%04x\tI16 \'%s\"\n", calc->pc, sym_name(calc->tab, tmp->nm));
 		calc->code[calc->pc++] = OPC_I16;
-		ref->addr = calc->pc;
-		calc->code[calc->pc++] = 0;
-		calc->code[calc->pc++] = 0;
+		calc->code[calc->pc++] = obj->addr;
+		calc->code[calc->pc++] = obj->addr >> 8;
 		printf("%04x\tLD\n", calc->pc);
 		calc->code[calc->pc++] = OPC_LD;
 	}
@@ -222,13 +230,45 @@ int op_pop_sym(struct calc * calc)
 
 int op_method(struct calc * calc)
 {
+	struct ext_entry * ext;
 	struct sym_tmp * tmp;
+	int xid;
 	tmp = sym_tmp_get(calc->tab, 0);
 	tmp->flags |= SYM_METHOD;
+
+	xid = extern_lookup(tmp->nm);
+	if ((ext = extern_get(xid)) == NULL) {
+		fprintf(stderr, "undefined external: %s.\n", 
+				sym_name(calc->tab, tmp->nm));
+		return -1;
+	}
+	DBG("method=\"%s\" (%d)", sym_name(calc->tab, tmp->nm), xid);
+	tmp->min = ext->argmin;
+	tmp->max = ext->argmax;
+	tmp->cnt = 0;
+	tmp->xid = xid;
+
 	/* prepare to call a function or method */
 	return 0;
 }
 
+int op_arg(struct calc * calc)
+{
+	struct sym_tmp * tmp;
+	tmp = sym_tmp_get(calc->tab, 0);
+	tmp->cnt++; /* increment the argument counter */
+	DBG("argc=%d", tmp->cnt);
+	return 0;
+}
+
+int op_ret_discard(struct calc * calc)
+{
+	printf("%04x\tPOP\n", calc->pc);
+	calc->code[calc->pc++] = OPC_POP;
+	return 0;
+}
+
+#if 0
 int op_assign(struct calc * calc)
 {
 	struct sym_tmp * tmp = sym_tmp_get(calc->tab, 0);
@@ -244,11 +284,32 @@ int op_assign(struct calc * calc)
 	ref = sym_ref_new(calc->tab, obj);
 	printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
 		   ref->oid, obj->addr);
-	printf("%04x\tI16 \'%s\"\n", calc->pc, sym_ref_name(calc->tab, ref));
+	printf("%04x\tI16 \'%s\"\n", calc->pc, sym_name(calc->tab, tmp->nm));
 	calc->code[calc->pc++] = OPC_I16;
 	ref->addr = calc->pc;
 	calc->code[calc->pc++] = 0;
 	calc->code[calc->pc++] = 0;
+	printf("%04x\tST\n", calc->pc);
+	calc->code[calc->pc++] = OPC_ST;
+	return 0;
+}
+#endif
+
+int op_assign(struct calc * calc)
+{
+	struct sym_tmp * tmp = sym_tmp_get(calc->tab, 0);
+	struct sym_obj * obj;
+
+	DBG("assign=\"%s\"", sym_name(calc->tab, tmp->nm));
+	if ((obj = sym_obj_lookup(calc->tab, tmp->nm)) == NULL) {
+		fprintf(stderr, "undefined symbol: %s.\n", 
+				sym_name(calc->tab, tmp->nm));
+		return -1;
+	}
+	printf("%04x\tI16 \'%s\"\n", calc->pc, sym_name(calc->tab, tmp->nm));
+	calc->code[calc->pc++] = OPC_I16;
+	calc->code[calc->pc++] = obj->addr;
+	calc->code[calc->pc++] = obj->addr >> 8;
 	printf("%04x\tST\n", calc->pc);
 	calc->code[calc->pc++] = OPC_ST;
 	return 0;
@@ -766,6 +827,8 @@ int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_PUSH_SYM)] = op_push_sym,
  	[ACTION(A_OP_POP_SYM)] = op_pop_sym,
  	[ACTION(A_OP_METHOD)] = op_method,
+ 	[ACTION(A_OP_ARG)] = op_arg,
+ 	[ACTION(A_OP_RET_DISCARD)] = op_ret_discard,
 
 };
 

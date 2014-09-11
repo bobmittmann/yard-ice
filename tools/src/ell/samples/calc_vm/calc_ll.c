@@ -200,14 +200,14 @@ const uint8_t rule_vec[] = {
 	T_ID, A_OP_PUSH_SYM, N_ASSIGN_OR_CALL1, A_OP_POP_SYM, 
 	/* 27:assign_or_call1(3) -> */
 	T_ASSIGN, N_EXP, A_OP_ASSIGN, 
-	/* 28:assign_or_call1(3) -> */
-	T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, 
+	/* 28:assign_or_call1(6) -> */
+	T_LPAREN, A_OP_METHOD, N_ARG_LIST_OPT, T_RPAREN, A_OP_METH_OR_ATTR, A_OP_RET_DISCARD, 
 	/* 29:arg_list_opt(0) -> */
 	
 	/* 30:arg_list_opt(1) -> */
 	N_ARG_LIST, 
-	/* 31:arg_list(2) -> */
-	N_EXP, N_ARG_LIST1, 
+	/* 31:arg_list(3) -> */
+	N_EXP, A_OP_ARG, N_ARG_LIST1, 
 	/* 32:arg_list1(0) -> */
 	
 	/* 33:arg_list1(2) -> */
@@ -297,9 +297,9 @@ const uint8_t rule_vec[] = {
 	/* 75:meth_or_attr1(0) -> */
 	
 	/* 76:meth_or_attr1(4) -> */
-	T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, A_OP_METHOD, 
+	T_LPAREN, A_OP_METHOD, N_ARG_LIST_OPT, T_RPAREN, 
 };
-/* 179 bytes */
+/* 183 bytes */
 
 static const struct {
 	uint8_t off;
@@ -333,59 +333,59 @@ static const struct {
 	{  65,  3},
 	{  68,  4},
 	{  72,  3},
-	{  75,  3},
-	{  78,  0},
-	{  78,  1},
-	{  79,  2},
+	{  75,  6},
 	{  81,  0},
-	{  81,  2},
-	{  83,  0},
-	{  83,  1},
-	{  84,  2},
-	{  86,  0},
-	{  86,  2},
+	{  81,  1},
+	{  82,  3},
+	{  85,  0},
+	{  85,  2},
+	{  87,  0},
+	{  87,  1},
 	{  88,  2},
 	{  90,  0},
-	{  90,  3},
-	{  93,  3},
-	{  96,  3},
-	{  99,  3},
-	{ 102,  3},
-	{ 105,  3},
-	{ 108,  2},
-	{ 110,  0},
-	{ 110,  3},
-	{ 113,  3},
-	{ 116,  2},
-	{ 118,  0},
-	{ 118,  3},
-	{ 121,  3},
-	{ 124,  3},
-	{ 127,  3},
-	{ 130,  3},
-	{ 133,  2},
-	{ 135,  0},
-	{ 135,  3},
-	{ 138,  3},
-	{ 141,  3},
-	{ 144,  3},
-	{ 147,  3},
-	{ 150,  1},
+	{  90,  2},
+	{  92,  2},
+	{  94,  0},
+	{  94,  3},
+	{  97,  3},
+	{ 100,  3},
+	{ 103,  3},
+	{ 106,  3},
+	{ 109,  3},
+	{ 112,  2},
+	{ 114,  0},
+	{ 114,  3},
+	{ 117,  3},
+	{ 120,  2},
+	{ 122,  0},
+	{ 122,  3},
+	{ 125,  3},
+	{ 128,  3},
+	{ 131,  3},
+	{ 134,  3},
+	{ 137,  2},
+	{ 139,  0},
+	{ 139,  3},
+	{ 142,  3},
+	{ 145,  3},
+	{ 148,  3},
 	{ 151,  3},
-	{ 154,  3},
-	{ 157,  3},
-	{ 160,  3},
-	{ 163,  2},
-	{ 165,  2},
+	{ 154,  1},
+	{ 155,  3},
+	{ 158,  3},
+	{ 161,  3},
+	{ 164,  3},
 	{ 167,  2},
-	{ 169,  3},
-	{ 172,  3},
-	{ 175,  0},
-	{ 175,  4},
+	{ 169,  2},
+	{ 171,  2},
+	{ 173,  3},
+	{ 176,  3},
+	{ 179,  0},
+	{ 179,  4},
 };
 /* 154 bytes */
 
-/* Total: 829 bytes */
+/* Total: 833 bytes */
 
 
 int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
@@ -540,6 +540,10 @@ const const char * const ll_sym_tab[] = {
  	"op_push_sym",
  	"op_pop_sym",
  	"op_assign",
+ 	"op_method",
+ 	"op_meth_or_attr",
+ 	"op_ret_discard",
+ 	"op_arg",
  	"op_equ",
  	"op_neq",
  	"op_lt",
@@ -564,7 +568,5 @@ const const char * const ll_sym_tab[] = {
  	"op_push_int",
  	"op_push_true",
  	"op_push_false",
- 	"op_meth_or_attr",
- 	"op_method",
  };
 

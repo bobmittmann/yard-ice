@@ -7,7 +7,7 @@ var x0 = 0, x1 = 1, x, i;
 i = 0;
 while (i < 45) {
 	x = x1 + x0;
-	print i, x;
+	write(i, x);
 	x0 = x1;
 	x1 = x;
 	i = i + 1;

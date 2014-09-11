@@ -34,6 +34,78 @@
 
 #include "calc.h"
 
+#define DEBUG 0
+#include "debug.h"
+
+int32_t __rand(void * env, int32_t argv[], int argc) 
+{
+	return rand();
+};
+
+int32_t __isqrt(void * env, int32_t argv[], int argc)
+{
+	uint32_t x = argv[0];
+	uint32_t rem = 0;
+	uint32_t root = 0;
+	int i;
+
+	for (i = 0; i < 16; ++i) {
+		root <<= 1;
+		rem = ((rem << 2) + (x >> 30));
+		x <<= 2;
+		root++;
+		if (root <= rem) {
+			rem -= root;
+			root++;
+		} else
+			root--;
+	}
+
+	return root >> 1;
+}	
+
+int32_t __ilog2(void * env, int32_t argv[], int argc)
+{
+	const uint8_t log2_debruijn_index[32] = {
+		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
+		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+	int32_t x = argv[0];
+
+	x |= x >> 1; 
+	x |= x >> 2;
+	x |= x >> 4;
+	x |= x >> 8;
+	x |= x >> 16;
+	x = (x >> 1) + 1;
+	x = (x * 0x077cb531UL) >> 27;
+	return log2_debruijn_index[x];
+}	
+
+int32_t __write(void * env, int32_t argv[], int argc)
+{
+	int i;
+
+	for(i = argc - 1; i >= 0; --i) {
+		if (i < argc - 1)
+			printf(", ");
+		printf("%d", argv[i]);
+	}
+	printf("\n");
+	return 0;
+}	
+
+
+/* --------------------------------------------------------------------------
+   Native (external) call table
+   -------------------------------------------------------------------------- */
+
+int32_t (* extern_call[])(void *, int32_t argv[], int argc) = {
+	[EXT_RAND] = __rand,
+	[EXT_SQRT] = __isqrt,
+	[EXT_LOG2] = __ilog2,
+	[EXT_WRITE] = __write,
+};
+
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
@@ -82,14 +154,17 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 	int pc;
 	int icnt;
 
+	if (vm->trace)
+		fprintf(f, "SP=0x%04x\n", vm->sp);
+
 	pc = 0; 
 	r0 = 0;
 	r1 = 0;
 	icnt = 0;
 	while (pc < len) {
 		icnt++;
-		if (icnt == 200)
-			return -1;
+//		if (icnt == 200)
+//			return -1;
 		/* fetch */
 		if (vm->trace) {
 			fprintf(f, "%04x\t", pc);
@@ -124,6 +199,10 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 				fprintf(f, "JEQ 0x%04x (%d)\n", pc + r0, r1);
 			if (r1 == 0)
 				pc += r0;
+			break;
+
+		case OPC_POP:
+			r0 = vm_pop(vm);
 			break;
 
 		case OPC_I32:
@@ -169,8 +248,12 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_EXT:
 			r0 = vm_pop(vm);
+			r1 = vm_pop(vm);
 			if (vm->trace)
-				fprintf(f, "EXT %d\n", r0);
+				fprintf(f, "EXT %d, %d\n", r0, r1);
+			r0 = extern_call[r0](vm, &vm->data[vm->sp >> 2], r1);
+			/* remove the stack frame */
+			vm->sp += 4 * r1;
 			vm_push(vm, r0);
 			break;
 
@@ -325,56 +408,9 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 		}
 	} 
 
+	if (vm->trace)
+		fprintf(f, "SP=0x%04x\n", vm->sp);
+
 	return icnt;
 }
-
-int32_t __rand(void * env, int32_t argv[]) 
-{
-	return rand();
-};
-
-int32_t __isqrt(void * env, int32_t argv[])
-{
-	uint32_t x = argv[0];
-	uint32_t rem = 0;
-	uint32_t root = 0;
-	int i;
-
-	for (i = 0; i < 16; ++i) {
-		root <<= 1;
-		rem = ((rem << 2) + (x >> 30));
-		x <<= 2;
-		root++;
-		if (root <= rem) {
-			rem -= root;
-			root++;
-		} else
-			root--;
-	}
-
-	return root >> 1;
-}	
-
-int32_t __ilog2(void * env, int32_t argv[])
-{
-	const uint8_t log2_debruijn_index[32] = {
-		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
-		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
-	int32_t x = argv[0];
-
-	x |= x >> 1; 
-	x |= x >> 2;
-	x |= x >> 4;
-	x |= x >> 8;
-	x |= x >> 16;
-	x = (x >> 1) + 1;
-	x = (x * 0x077cb531UL) >> 27;
-	return log2_debruijn_index[x];
-}	
-
-int32_t (* extern_call[])(void *, int32_t argv[]) = {
-	[EXT_RAND] = __rand,
-	[EXT_SQRT] = __isqrt,
-	[EXT_LOG2] = __ilog2,
-};
 
