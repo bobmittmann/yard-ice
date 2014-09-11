@@ -1,27 +1,26 @@
-/* $Id: dcclog.c,v 1.10 2006/09/28 19:31:45 bob Exp $ 
+/* 
+ * Copyright(C) 2014 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the MicroJs
  *
- * File:	dcclog.c
- * Module:
- * Project:	ARM-DCC logger expander
- * Author:	Robinson Mittmann (bob@boreste.com, bob@methafora.com.br)
- * Target:
- * Comment:
- * Copyright(C) 2005 Robinson Mittmann. All Rights Reserved.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
  * 
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
+ */
+
+/** 
+ * @file microjs.c
+ * @brief Simple command line interpreter
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 
