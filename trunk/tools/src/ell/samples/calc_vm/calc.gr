@@ -20,22 +20,9 @@ stat			: SEMICOLON
 
 				| IF condition { op_if_cond } compound_stat else_opt { op_if_end }
 
-				| PRINT print_list_opt SEMICOLON { op_print_end }
 				| VAR var_list SEMICOLON
 				| assign_or_call SEMICOLON
 				;
-
-print_list_opt	: 
-				| print_list
-				;
-
-print_list 		: exp { op_print_int } print_list1
-				;
-
-print_list1 	: 
-				| COMMA { op_print_comma } print_list
-				;
-
 
 else_opt		: 
 				| ELSE { op_if_else } compound_stat

@@ -18,7 +18,7 @@ while (i) {
 	} else {
 		even = even + 1;
 	}
-	print x, odd, even;
+	write(x, odd, even);
 	i = i - 1;
 	x = x + 1;
 }

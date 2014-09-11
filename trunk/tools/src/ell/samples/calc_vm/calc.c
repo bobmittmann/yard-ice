@@ -315,39 +315,6 @@ int op_assign(struct calc * calc)
 	return 0;
 }
 
-int op_print_int(struct calc * calc)
-{
-	printf("%04x\tPRINTI\n", calc->pc);
-	calc->code[calc->pc++] = OPC_PRINT_INT;
-	return 0;
-}
-
-int op_print_end(struct calc * calc)
-{
-	printf("%04x\tI8 0x%02x\n", calc->pc, '\n');
-	calc->code[calc->pc++] = OPC_I8;
-	calc->code[calc->pc++] = '\n';
-	printf("%04x\tPRINTC\n", calc->pc);
-	calc->code[calc->pc++] = OPC_PRINT_CHAR;
-	return 0;
-}
-
-int op_print_comma(struct calc * calc)
-{
-	printf("%04x\tI8 0x%02x\n", calc->pc, ',');
-	calc->code[calc->pc++] = OPC_I8;
-	calc->code[calc->pc++] = ',';
-	printf("%04x\tPRINTC\n", calc->pc);
-	calc->code[calc->pc++] = OPC_PRINT_CHAR;
-
-	printf("%04x\tI8 0x%02x\n", calc->pc, ' ');
-	calc->code[calc->pc++] = OPC_I8;
-	calc->code[calc->pc++] = ' ';
-	printf("%04x\tPRINTC\n", calc->pc);
-	calc->code[calc->pc++] = OPC_PRINT_CHAR;
-	return 0;
-}
-
 int op_equ(struct calc * calc)
 {
 	printf("%04x\tEQ\n", calc->pc);
@@ -786,9 +753,6 @@ int op_for_end(struct calc * calc)
 int (* op[])(struct calc * calc) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
  	[ACTION(A_OP_ASSIGN)] = op_assign,
- 	[ACTION(A_OP_PRINT_END)] = op_print_end,
- 	[ACTION(A_OP_PRINT_INT)] = op_print_int,
- 	[ACTION(A_OP_PRINT_COMMA)] = op_print_comma,
  	[ACTION(A_OP_EQU)] = op_equ,
  	[ACTION(A_OP_NEQ)] = op_neq,
  	[ACTION(A_OP_LT)] = op_lt,

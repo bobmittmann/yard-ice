@@ -386,22 +386,6 @@ int calc_exec(struct calc_vm * vm, uint8_t code[], unsigned int len)
 			vm_push(vm, -r0);
 			break;
 
-		case OPC_PRINT_INT:
-			r0 = vm_pop(vm);
-			if (vm->trace)
-				fprintf(f, "PRINT %d\n", r0);
-			printf("%d", r0);
-			fflush(stdout);
-			break;
-
-		case OPC_PRINT_CHAR:
-			r0 = vm_pop(vm);
-			if (vm->trace)
-				fprintf(f, "PRINT 0x%02x\n", r0);
-			printf("%c", r0);
-			fflush(stdout);
-			break;
-		
 		default:
 			fprintf(f, "Invalid OPC: %d\n", opc);
 			return -1;
