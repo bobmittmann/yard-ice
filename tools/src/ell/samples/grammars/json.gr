@@ -1,0 +1,45 @@
+%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR IF TRUE VAR WHILE ID INT STRING ERR
+%%
+
+script			: object EOF
+				;
+
+object			: LBRACE opt_attr_lst RBRACE
+				;
+
+opt_attr_lst    : 
+				| label attr_lst
+				;
+
+attr_lst		: object attr_lst_tail
+				| array attr_lst_tail
+				| literal attr_lst_tail
+				;
+
+attr_lst_tail	: 
+				| COMMA attr_lst
+				;
+
+
+array			: LBKT array_lst RBKT 
+				;
+
+array_lst		: 
+				| object array_lst_tail
+				| array array_lst_tail
+				| literal array_lst_tail
+				;
+
+array_lst_tail	: 
+				| COMMA array_lst
+				;
+
+literal			: STRING
+				| INT
+				| FALSE 
+				| TRUE 
+				| NULL 
+				;
+
+label			: STRING COLON
+				;

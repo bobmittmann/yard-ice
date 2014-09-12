@@ -37,16 +37,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #ifdef CONFIG_H
 #include "config.h"
 #endif
 
-#include "microjs_ll.h"
-
 #include <microjs.h>
+
+#include "microjs_ll.h"
 
 #ifndef MICROJS_ENABLE_STRING
 #define MICROJS_ENABLE_STRING 1

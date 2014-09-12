@@ -24,18 +24,11 @@
  */
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
-
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#define DEBUG 0
-
-#include "debug.h"
+#include <string.h>
+#include <time.h>
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
@@ -230,7 +223,7 @@ int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 	int i = argc;
 
 	fmt = str(argv[--i]);
-	#define va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
+	#define _va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
 
 	n = 0;
 	w = 0;
@@ -272,19 +265,19 @@ int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 		}
 
 		if (c == '*') {
-			w = va_arg(ap, int);
+			w = _va_arg(ap, int);
 			continue;
 		}
 
 		if (c == 'c') {
-			c = va_arg(ap, int);
+			c = _va_arg(ap, int);
 			goto print_char;
 		}
 
 		if (c == 'd') {
 			cp = buf;
 			{
-				val.i = va_arg(ap, int);
+				val.i = _va_arg(ap, int);
 				if (val.i < 0) {
 					buf[0] = '-';
 					val.i = -val.i;
@@ -299,20 +292,20 @@ int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 
 		if (c == 'x') {
 			cp = buf;
-			val.n = va_arg(ap, unsigned int);
+			val.n = _va_arg(ap, unsigned int);
 			n = uint2hex(cp, val.n);
 			goto print_buf;
 		}
 
 		if (c == 's') {
-			cp = (char *)str(va_arg(ap, char *));
+			cp = (char *)str(_va_arg(ap, char *));
 			n = strlen(cp);
 			goto print_buf;
 		}
 
 		if (c == 'u') {
 			cp = buf;
-			val.n = va_arg(ap, unsigned int);
+			val.n = _va_arg(ap, unsigned int);
 			n = uint2dec(cp, val.n);
 			goto print_buf;
 		}

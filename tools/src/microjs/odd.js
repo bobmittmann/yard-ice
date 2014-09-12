@@ -17,13 +17,14 @@ while (i) {
 	x = rand();
 	if (x % 2) {
 		odd = odd + 1;
-		printf("%d odd\n", x);
+		printf("%08x odd\n", x);
 	} else {
 		even = even + 1;
-		printf("%d even\n", x);
+		printf("%08x even\n", x);
 	}
 	i = i - 1;
 }
+
 printf("----------------------\n");
 printf("%d odd, %d even\n", odd, even);
 printf("----------------------\n");

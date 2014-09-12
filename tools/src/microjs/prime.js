@@ -12,7 +12,6 @@ for (j = 0; j < 100; ) {
 	n = rand();
 	if (n <= 3) {
 		prime = n > 1;
-		write(n, 3, 3);
 	} else {
 		if (n % 2 == 0 || n % 3 == 0) {
 			prime = false;
