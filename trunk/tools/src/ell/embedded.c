@@ -80,7 +80,7 @@ void write_sym_tab(FILE * fp)
 	fprintf(fp, "};\n\n");
 }
 
-void write_compact_c(FILE * fp, char * hname)
+void write_compact_c(FILE * fp, char * prefix, char * hname)
 {	
 	RULEPTR rp;
 	SYMPTR sp,tp; 
@@ -92,7 +92,6 @@ void write_compact_c(FILE * fp, char * hname)
 	unsigned int sum = 0;
 	unsigned int idx_sz;
 	struct tr_pair tr_vec[1024]; /* FIXME: dynamic allocation */
-	char s[256];
 
 	fprintf(fp, "/* LL(1) Embeddedd Nonrecursive Predictive Parser */\n\n");
 
@@ -109,7 +108,7 @@ void write_compact_c(FILE * fp, char * hname)
 	pos = 0;
 	size = 0;
     fprintf(fp, "/* Predict sets */\n");	
-	fprintf(fp, "const struct tr_pair predict_vec[] = {");
+	fprintf(fp, "static const struct tr_pair predict_vec[] = {");
 	/* for all nonterminal write  */
 	forall_symbols(sp) {
 		unsigned int i;
@@ -179,7 +178,7 @@ void write_compact_c(FILE * fp, char * hname)
 	pos = 0;
 	size = 0;
     fprintf(fp, "/* Rules vectors table */\n");	
-	fprintf(fp, "const uint8_t rule_vec[] = {");
+	fprintf(fp, "static const uint8_t rule_vec[] = {");
     forall_rules(rp) {		
     	int j;
 
@@ -222,8 +221,8 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "/* Total: %d bytes */\n\n", sum);
 	fprintf(fp, "\n");
 
-	fprintf(fp, "int ll_rule_push(uint8_t * sp, unsigned int sym,"
-			" unsigned int tok)\n");
+	fprintf(fp, "int %s_ll_push(uint8_t * sp, unsigned int sym,"
+			" unsigned int tok)\n", prefix);
 	fprintf(fp, "{\n");
 	fprintf(fp, "\tconst struct tr_pair * vec;\n");
 	fprintf(fp, "\tuint8_t * p;\n");
@@ -265,34 +264,33 @@ void write_compact_c(FILE * fp, char * hname)
 	fprintf(fp, "\treturn n;\n");
 	fprintf(fp, "}\n\n");
 
-	fprintf(fp, "int ll_start(uint8_t * sp)\n");
-	fprintf(fp, "{\n");
-	fprintf(fp, "\tsp[-1] = ");
-	forall_symbols(sp) {
-		if (sp->kind == TERM) {
+
+	if ((rp = first_rule) != NULL) {
+		int j;
+
+		fprintf(fp, "int %s_ll_start(uint8_t * sp)\n", prefix);
+		fprintf(fp, "{\n");
+
+		for(j = 0; j < rp->nrhs; ++j) {
+			char s[256];
+			sp = rp->rhs[j];
+			fprintf(fp, "\tsp[-%d] = ", j + 1);
 			fprintf(fp, "%c_%s;\n", kind_prefix(sp->kind), 
 					strupper(s, sp->symtext));
-			break;
 		}
-	}
-	fprintf(fp, "\tsp[-2] = ");
-	forall_symbols(sp) {
-		if (sp->kind == NONTERM) {
-			fprintf(fp, "%c_%s;\n\n", kind_prefix(sp->kind), 
-					strupper(s, sp->symtext));
-			break;
-		}
-	}
 
-	fprintf(fp, "\treturn 2;\n");
-	fprintf(fp, "}\n\n");
+		fprintf(fp, "\n");
+		fprintf(fp, "\treturn %d;\n", j);
+		fprintf(fp, "}\n\n");
+    }    
+
 
 	write_sym_tab(fp);
 
 	free(set);
 }
 
-void write_compact_h(FILE * fp, char * hname) 
+void write_compact_h(FILE * fp, char * prefix, char * hname) 
 {    
 	char s[256];
 	char h[256];
@@ -368,10 +366,10 @@ void write_compact_h(FILE * fp, char * hname)
 
 	fprintf(fp, "#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 
-	fprintf(fp, "int ll_rule_push(uint8_t * sp, unsigned int sym,"
-			" unsigned int tok);\n");
+	fprintf(fp, "int %s_ll_push(uint8_t * sp, unsigned int sym,"
+			" unsigned int tok);\n", prefix);
 
-	fprintf(fp, "int ll_start(uint8_t * sp);\n");
+	fprintf(fp, "int %s_ll_start(uint8_t * sp);\n", prefix);
 
 	fprintf(fp, "\n#ifdef __cplusplus\n}\n#endif\n\n");
 

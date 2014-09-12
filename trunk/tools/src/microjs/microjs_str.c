@@ -24,18 +24,13 @@
  */
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#define DEBUG 0
-#include "debug.h"
-
 #define __DEF_CONST_STRBUF__
 #include "const_str.h"
+
+#include <string.h>
 
 #define CONST_NM (256 - CONST_STRINGS_MAX)
 

@@ -24,16 +24,47 @@
  */
 
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#define DEBUG 0
-#include "debug.h"
+#define __DEF_CONST_STR__
+#include "const_str.h"
+
+#define CONST_NM (256 - CONST_STRINGS_MAX)
+
+/* --------------------------------------------------------------------------
+   External symbols
+   -------------------------------------------------------------------------- */
+
+const struct ext_entry externals[] = {
+	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argmin = 0, .argmax = 0 },
+	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argmin = 1, .argmax = 1 },
+	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argmin = 1, .argmax = 1 },
+	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 },
+	[EXT_PRINT] = { .nm = CONST_NM + NM_PRINT, .argmin = 0, .argmax = 128 },
+	[EXT_PRINTF] = { .nm = CONST_NM + NM_PRINTF, .argmin = 1, .argmax = 128 },
+	[EXT_SRAND] = { .nm = CONST_NM + NM_SRAND, .argmin = 1, .argmax = 1 },
+	[EXT_TIME] = { .nm = CONST_NM + NM_TIME, .argmin = 0, .argmax = 0 },
+};
+
+int extern_lookup(int nm)
+{
+	int i;
+
+	for (i = 0; i < sizeof(externals) / sizeof(struct ext_entry); ++i) {
+		if (externals[i].nm == nm)
+			return i;
+	}
+
+	return -1;
+}
+
+struct ext_entry * extern_get(unsigned int exid)
+{
+	if (exid >= sizeof(externals) / sizeof(struct ext_entry))
+		return NULL;
+	return(struct ext_entry *)&externals[exid];
+}
 
 /* --------------------------------------------------------------------------
    Memory operations
@@ -164,7 +195,6 @@ int op_push_sym(struct microjs_compiler * microjs)
 		return -1;
 	}
 
-	DBG("tmp=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	return 0;
 }
 
@@ -173,9 +203,6 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp = sym_tmp_get(microjs->tab, 0);
 
 	if (SYM_IS_METHOD(tmp)) {
-		DBG("method=\"%s\" (%d)", sym_name(microjs->tab, tmp->nm), tmp->xid);
-		DBG("min=%d max=%d argc=%d", tmp->min, tmp->max, tmp->cnt);
-
 		if (tmp->cnt < tmp->min) {
 			fprintf(stderr, "argument missing: %s\n", 
 					sym_name(microjs->tab, tmp->nm));
@@ -200,7 +227,6 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 		microjs->code[microjs->pc++] = OPC_EXT;
 	} else {
 		struct sym_obj * obj;
-		DBG("attribute=\"%s\"", sym_name(microjs->tab, tmp->nm));
 		if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 			fprintf(stderr, "undefined symbol: %s.\n", 
 					sym_name(microjs->tab, tmp->nm));
@@ -245,7 +271,6 @@ int op_method(struct microjs_compiler * microjs)
 				sym_name(microjs->tab, tmp->nm));
 		return -1;
 	}
-	DBG("method=\"%s\" (%d)", sym_name(microjs->tab, tmp->nm), xid);
 	tmp->min = ext->argmin;
 	tmp->max = ext->argmax;
 	tmp->cnt = 0;
@@ -260,7 +285,6 @@ int op_arg(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp;
 	tmp = sym_tmp_get(microjs->tab, 0);
 	tmp->cnt++; /* increment the argument counter */
-	DBG("argc=%d", tmp->cnt);
 	return 0;
 }
 
@@ -278,7 +302,6 @@ int op_assign(struct microjs_compiler * microjs)
 	struct sym_obj * obj;
 	struct sym_ref * ref;
 
-	DBG("assign=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 		fprintf(stderr, "undefined symbol: %s.\n", 
 				sym_name(microjs->tab, tmp->nm));
@@ -303,7 +326,6 @@ int op_assign(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp = sym_tmp_get(microjs->tab, 0);
 	struct sym_obj * obj;
 
-	DBG("assign=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 		fprintf(stderr, "undefined symbol: %s.\n", 
 				sym_name(microjs->tab, tmp->nm));

@@ -87,44 +87,6 @@ int alloc32(struct microjs_compiler * microjs)
 	return addr;
 }
 
-
-int32_t mem_rd32(struct microjs_compiler * microjs, unsigned int addr)
-{
-	return microjs->mem[addr >> 2];
-}
-
-void mem_wr32(struct microjs_compiler * microjs, unsigned int addr, int32_t val)
-{
-	microjs->mem[addr >> 2] = val;
-}
-
-#if 0
-int push(struct microjs_compiler * microjs, int32_t x)
-{
-	microjs->sp -= 4;
-	microjs->mem[microjs->sp >> 2] = x;	
-
-	if (microjs->sp < microjs->heap) {
-		return -ERR_STACK_OVERFLOW;
-	}
-	return 0;
-}
-
-int32_t pop(struct microjs_compiler * microjs)
-{
-	int32_t x;
-
-	if (microjs->sp == microjs->stack) {
-		return 0;
-	}
-
-	x = microjs->mem[microjs->sp >> 2];
-	microjs->sp += 4;
-
-	return x;
-}
-#endif
-
 int mem_bind(struct microjs_compiler * microjs)
 {
 	struct symtab * tab = microjs->tab;
@@ -158,9 +120,6 @@ int mem_bind(struct microjs_compiler * microjs)
 	return 0;
 }
 
-
-
-
 /* --------------------------------------------------------------------------
    Code generation
    -------------------------------------------------------------------------- */
@@ -170,7 +129,8 @@ int op_var_decl(struct microjs_compiler * microjs)
 	struct sym_obj * obj;
 	int addr;
 
-	if ((obj = sym_obj_new(microjs->tab, microjs->tok.s, microjs->tok.qlf)) == NULL) {
+	if ((obj = sym_obj_new(microjs->tab, microjs->tok.s, 
+						   microjs->tok.qlf)) == NULL) {
 		fprintf(stderr, "can't create symbol.\n");
 		return -1;
 	}
@@ -333,7 +293,8 @@ int op_assign(struct microjs_compiler * microjs)
 				sym_name(microjs->tab, tmp->nm));
 		return -1;
 	}
-	TRACEF("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
+	TRACEF("%04x\tI16 \'%s\"\n", microjs->pc, 
+		   sym_name(microjs->tab, tmp->nm));
 	microjs->code[microjs->pc++] = OPC_I16;
 	microjs->code[microjs->pc++] = obj->addr;
 	microjs->code[microjs->pc++] = obj->addr >> 8;

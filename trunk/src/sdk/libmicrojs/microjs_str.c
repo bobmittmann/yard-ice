@@ -105,38 +105,16 @@ int str_add(const char * s, unsigned int len)
 	return idx;
 }
 
-/* add a string to the var buffer translating the most 
-   common C scape sequences */
-int cstr_add(const char * s, unsigned int len)
+int decode_cstr(char * dst, const char * src, unsigned int len)
 {
-	char * dst;
 	bool esc;
-	int offs;
-	int idx;
-	int i;
 	int c;
-
-	if ((idx = str_lookup(s, len)) >= 0)
-		return idx;
-
-	offs = var_strbuf->pos - (len + 1);
-	idx = var_strbuf->cnt;
-	if (offs < ((idx + 1) * sizeof(uint16_t)))
-		return ERR_STRBUF_OVERFLOW;
-
-	/* Copy the string to the buffer */
-	dst = (char *)var_strbuf + offs;
-
-	/* FIXME: as the strings are allocated top-down converting from
-	   left to right leave some unused spaces in the end of the allocated
-	   string */
-
+	int i;
 	/* FIXME: octal and hexadecimal coded chars */
 
-	/* Copy the string to the buffer */
 	esc = false;
 	for (i = 0; i < len; ++i) {
-		c = s[i];
+		c = src[i];
 		if (esc) {
 			switch (c) {
 			case 'a': /* Alarm (Bell) */
@@ -170,6 +148,36 @@ int cstr_add(const char * s, unsigned int len)
 	}
 	/* NULL terminate the string */
 	*dst = '\0';
+
+	return -1;
+}
+
+/* add a string to the var buffer translating the most 
+   common C scape sequences */
+int cstr_add(const char * s, unsigned int len)
+{
+	char * dst;
+	int offs;
+	int idx;
+
+	if ((idx = str_lookup(s, len)) >= 0)
+		return idx;
+
+	offs = var_strbuf->pos - (len + 1);
+	idx = var_strbuf->cnt;
+	if (offs < ((idx + 1) * sizeof(uint16_t)))
+		return ERR_STRBUF_OVERFLOW;
+
+	/* Copy the string to the buffer */
+	dst = (char *)var_strbuf + offs;
+
+	/* FIXME: as the strings are allocated top-down converting from
+	   left to right leave some unused spaces in the end of the allocated
+	   string */
+
+	/* Copy the string to the buffer */
+	decode_cstr(dst, s, len);
+
 	var_strbuf->offs[idx] = offs;
 	var_strbuf->cnt++;
 	var_strbuf->pos -= len + 1;
@@ -193,82 +201,4 @@ const char * str(int idx)
 	return (char *)var_strbuf + var_strbuf->offs[idx];
 }
 
-
-#if 0
-
-#include <sys/dcclog.h>
-
-int microjs_str_lookup(const struct microjs_str_pool * pool, 
-					   const char * s, int len)
-{
-	char * base = (char *)pool->base;
-	int offs;
-	int i;
-
-	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
-		char * cstr = base + offs;
-
-		if ((strncmp(cstr, s, len) == 0) && (strlen(cstr) == len))
-			return i;
-	}
-
-	return -1;
-}
-
-char * const_str(int idx)
-{
-	const struct microjs_str_pool * p = &microjs_str_const;
-
-	return p->base + p->offs[idx];
-}
-
-int const_str_lookup(const char * s, int len)
-{
-	return microjs_str_lookup(&microjs_str_const, s, len);
-}
-
-int const_str_write(const char * s, unsigned int len)
-{
-	char buf[MICROJS_STRING_LEN_MAX];
-	struct microjs_str_pool * pool;
-	int idx;
-
-	pool = (struct microjs_str_pool *)&microjs_str_const;
-
-	if (len == 0) {
-		DCC_LOG(LOG_WARNING, "empty string!");
-	} 
-
-	if ((idx = microjs_str_lookup(pool, s, len)) >= 0) {
-		DCC_LOG2(LOG_INFO, "match idx=%d len=%d", idx, len);
-		return idx;
-	}
-
-	/* NULL terminate the string */
-	memcpy(buf, s, len);
-	buf[len] = '\0';
-
-	return pool->write(pool, buf, len + 1);
-}
-
-int microjs_str_pool_dump(const struct microjs_str_pool * pool)
-{
-	char * base = (char *)pool->base;
-	int offs;
-	int size = pool->top - base;
-	int free = size;
-	int i;
-
-	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
-		if (offs < free)
-			free = offs;
-		char * cstr = base + offs;
-		printf("%2d (%04x) \"%s\"\n", i, offs, cstr);
-	}
-	printf("- pool: size=%d free=%d\n", size, free);
-
-	return i;
-}
-
-#endif
 

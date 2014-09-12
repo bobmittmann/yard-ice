@@ -18,8 +18,8 @@
  */
 
 /** 
- * @file microjs-i.h
- * @brief Syntax-directed translation compiler
+ * @file microjs_dbg.c
+ * @brief Microjs debug functions
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
@@ -30,6 +30,20 @@
 
 #define __MICROJS_I__
 #include "microjs-i.h"
+
+int dump_js(char * script, unsigned int len)
+{
+	int i;
+
+	printf("\n");
+
+	for (i = 0; i < len; ++i)
+		printf("%c", script[i]);
+
+	printf("\n");
+
+	return 0;
+}
 
 static const char * const err_tab[] = {
 	"Ok", 

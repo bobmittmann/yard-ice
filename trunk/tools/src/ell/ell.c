@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <libgen.h>
 
 #include "ell.h"
 
@@ -437,7 +438,8 @@ int main(int argc,  char **argv)
 	extern int optind;	/* getopt */
 	char * prog;
 
-	char basename[256];
+	char prefix[256];
+
 	char outname[256];
 
 	FILE * cf = NULL;
@@ -462,10 +464,8 @@ int main(int argc,  char **argv)
 	int	dump_sets = false;
 
 	/* the prog name start just after the last lash */
-	if ((prog = (char *)strrchr(argv[0], '/')) == NULL)
+	if ((prog = (char *)basename(argv[0])) == NULL)
 		prog = argv[0];
-	else
-		prog++;
 
 	/* parse the command line options */
 	while ((c = getopt(argc, argv, "V?vretchlso:")) > 0) {
@@ -556,17 +556,17 @@ int main(int argc,  char **argv)
 			char * cp;
 			strcpy(cfname, outname);
 			/* strip the file extension */
-			strcpy(basename, outname);
-			if ((cp = strrchr(basename, '.')) != NULL)
+			strcpy(prefix, basename(outname));
+			if ((cp = strrchr(prefix, '.')) != NULL)
 				*cp = '\0';
-			strcpy(hfname, basename);
+			strcpy(hfname, prefix);
 			strcat(hfname, ".h" );
 		}
 	} else { 
 		char * cp;
 		/* strip the file extension */
-		strcpy(basename, filename);
-		if ((cp = strrchr(basename, '.')) != NULL)
+		strcpy(prefix, basename(filename));
+		if ((cp = strrchr(prefix, '.')) != NULL)
 			*cp = '\0';
 
 		if (!cgen && !hgen) {
@@ -575,17 +575,17 @@ int main(int argc,  char **argv)
 		}
 
 		if (rdp) { 
-			strcpy(cfname, basename);
+			strcpy(cfname, prefix);
 			strcat(cfname, "_par.c" );
-			strcpy(hfname, basename);
+			strcpy(hfname, prefix);
 			strcat(hfname, "_par.h" );
 		} else {
-			strcpy(cfname, basename);
+			strcpy(cfname, prefix);
 			strcat(cfname, "_ll.c" );
-			strcpy(hfname, basename);
+			strcpy(hfname, prefix);
 			strcat(hfname, "_ll.h" );
 		}
-		strcpy(tfname, basename);
+		strcpy(tfname, prefix);
 		strcat(tfname, ".tbl" );
 	}
 
@@ -669,10 +669,10 @@ int main(int argc,  char **argv)
 		WriteRecursiveParser(cf, cfname, hf, hfname);
 	} else {
 		if (hgen)
-			write_compact_h(hf, hfname); 
+			write_compact_h(hf, prefix, hfname); 
 
 		if (cgen)
-			write_compact_c(cf, hfname);
+			write_compact_c(cf, prefix, hfname);
 	}
 
 	if (hgen)

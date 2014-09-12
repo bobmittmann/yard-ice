@@ -28,15 +28,6 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#include <unistd.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <time.h>
-
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
