@@ -1,81 +1,193 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+/* 
+ * Copyright(C) 2014 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the MicroJs
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
+ */
+
+/** 
+ * @file microjs_str.c
+ * @brief Strings
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */
+
 
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#include <sys/dcclog.h>
+#define __DEF_CONST_STRBUF__
+#include "const_str.h"
 
-int microjs_str_lookup(const struct microjs_str_pool * pool, 
-					   const char * s, int len)
+#include <string.h>
+
+#define CONST_NM (256 - CONST_STRINGS_MAX)
+
+/* --------------------------------------------------------------------------
+   Strings Tables
+   -------------------------------------------------------------------------- */
+
+static const struct strbuf empty_strbuf= {
+	.cnt = 0,
+	.pos = 0
+};
+
+/* initialize the variables string buffer to the empty buffer for 
+   safety */
+struct strbuf * var_strbuf = (struct strbuf *)&empty_strbuf;
+
+void strbuf_init(uint16_t * buf, unsigned int len)
 {
-	char * base = (char *)pool->base;
-	int offs;
+	var_strbuf = (struct strbuf *)buf;
+	var_strbuf->pos = len; 
+	var_strbuf->cnt = 0; 
+	var_strbuf->offs[0] = 0;
+}
+
+int str_lookup(const char * s, unsigned int len)
+{
 	int i;
 
-	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
-		char * cstr = base + offs;
+	/* look in the constant pool first */
+	for (i = 0; i < const_strbuf.cnt; ++i) {
+		char * cstr = (char *)&const_strbuf + const_strbuf.offs[i];
+		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0'))
+			return i + CONST_NM;
+	}
 
-		if ((strncmp(cstr, s, len) == 0) && (strlen(cstr) == len))
+	for (i = 0; i < var_strbuf->cnt; ++i) {
+		char * cstr = (char *)var_strbuf + var_strbuf->offs[i];
+		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0'))
 			return i;
 	}
 
-	return -1;
+	return -ERR_STRING_NOT_FOUND;
 }
 
-char * const_str(int idx)
+int str_add(const char * s, unsigned int len)
 {
-	const struct microjs_str_pool * p = &microjs_str_const;
-
-	return p->base + p->offs[idx];
-}
-
-int const_str_lookup(const char * s, int len)
-{
-	return microjs_str_lookup(&microjs_str_const, s, len);
-}
-
-int const_str_write(const char * s, unsigned int len)
-{
-	char buf[MICROJS_STRING_LEN_MAX];
-	struct microjs_str_pool * pool;
+	char * dst;
 	int idx;
-	
-	pool = (struct microjs_str_pool *)&microjs_str_const;
-
-	if (len == 0) {
-		DCC_LOG(LOG_WARNING, "empty string!");
-	} 
-
-	if ((idx = microjs_str_lookup(pool, s, len)) >= 0) {
-		DCC_LOG2(LOG_INFO, "match idx=%d len=%d", idx, len);
-		return idx;
-	}
-
-	/* NULL terminate the string */
-	memcpy(buf, s, len);
-	buf[len] = '\0';
-
-	return pool->write(pool, buf, len + 1);
-}
-
-int microjs_str_pool_dump(const struct microjs_str_pool * pool)
-{
-	char * base = (char *)pool->base;
 	int offs;
-	int size = pool->top - base;
-	int free = size;
-	int i;
 
-	for (i = 0; (offs = pool->offs[i]) > 0; ++i) {
-		if (offs < free)
-			free = offs;
-		char * cstr = base + offs;
-		printf("%2d (%04x) \"%s\"\n", i, offs, cstr);
+	if ((idx = str_lookup(s, len)) >= 0)
+		return idx;
+
+	offs = var_strbuf->pos - (len + 1);
+
+	idx = var_strbuf->cnt;
+	if (offs < ((idx + 1) * sizeof(uint16_t))) {
+		return ERR_STRBUF_OVERFLOW;
 	}
-	printf("- pool: size=%d free=%d\n", size, free);
 
-	return i;
+	/* Copy the string to the buffer */
+	dst = (char *)var_strbuf + offs;
+	memcpy(dst, s, len);
+	/* NULL terminate the string */
+	dst[len] = '\0';
+	var_strbuf->offs[idx] = offs;
+	var_strbuf->cnt++;
+	var_strbuf->pos -= len + 1;
+
+	return idx;
 }
+
+/* add a string to the var buffer translating the most 
+   common C scape sequences */
+int cstr_add(const char * s, unsigned int len)
+{
+	char * dst;
+	bool esc;
+	int offs;
+	int idx;
+	int i;
+	int c;
+
+	if ((idx = str_lookup(s, len)) >= 0)
+		return idx;
+
+	offs = var_strbuf->pos - (len + 1);
+	idx = var_strbuf->cnt;
+	if (offs < ((idx + 1) * sizeof(uint16_t)))
+		return ERR_STRBUF_OVERFLOW;
+
+	/* Copy the string to the buffer */
+	dst = (char *)var_strbuf + offs;
+
+	/* FIXME: as the strings are allocated top-down converting from
+	   left to right leave some unused spaces in the end of the allocated
+	   string */
+
+	/* FIXME: octal and hexadecimal coded chars */
+
+	/* Copy the string to the buffer */
+	esc = false;
+	for (i = 0; i < len; ++i) {
+		c = s[i];
+		if (esc) {
+			switch (c) {
+			case 'a': /* Alarm (Bell) */
+				c = '\a';
+				break;
+			case 'b': /* Backspace */
+				c = '\b';
+				break;
+			case 'f': /* Formfeed */
+				c = '\f';
+				break;
+			case 'n': /* Newline */
+				c = '\n';
+				break;
+			case 'r': /* Carriage Return */
+				c = '\r';
+				break;
+			case 't': /* Horizontal Tab */
+				c = '\t';
+				break;
+			case 'v': /* Vertical Tab */
+				c = '\v';
+				break;
+			}
+			esc = false;
+		} else if (c == '\\') {
+			esc = true;
+			continue;
+		} 
+		*dst++ = c;
+	}
+	/* NULL terminate the string */
+	*dst = '\0';
+	var_strbuf->offs[idx] = offs;
+	var_strbuf->cnt++;
+	var_strbuf->pos -= len + 1;
+
+	return idx;
+}
+
+/* translate a string index to string value. If the index is invalid
+   returns the empty string */
+const char * str(int idx)
+{
+	if (idx >= CONST_NM) {
+		if (idx > 256)
+			idx = CONST_NM;
+		return (char *)&const_strbuf + const_strbuf.offs[idx - CONST_NM];
+	}
+
+	if (idx >= var_strbuf->cnt) 
+		return (char *)&const_strbuf + const_strbuf.offs[0];
+
+	return (char *)var_strbuf + var_strbuf->offs[idx];
+}
+

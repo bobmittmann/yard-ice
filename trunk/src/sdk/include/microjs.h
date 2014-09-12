@@ -48,22 +48,74 @@ enum {
 	MICROJS_OBJECT_EXPECTED    = -14,
 };
 
-/**********************************************************************
-  Tokenizer
- **********************************************************************/
 
-struct microjs_parser {
-	uint16_t cnt;  /* token count */
-	uint16_t idx;  /* token pointer */
-
-	uint16_t sp; /* stack pointer */
-	uint16_t top; /* parser error code */
-	uint8_t * tok; /* token buffer */
-
-	uint16_t off;  /* lexer text offset */
-	uint16_t len;  /* lexer text length */
-	const char * txt;   /* base pointer (original js txt file) */
+enum {
+	OK = 0,
+	ERR_UNEXPECTED_CHAR,
+	ERR_UNCLOSED_STRING,
+	ERR_UNCLOSED_COMMENT,
+	ERR_INVALID_LITERAL,
+	ERR_INVALID_ID,
+	ERR_STRINGS_UNSUPORTED,
+	ERR_STRING_TOO_LONG,
+	ERR_BRACKET_MISMATCH,
+	ERR_SYNTAX_ERROR,
+	ERR_STRBUF_OVERFLOW,
+	ERR_STRING_NOT_FOUND
 };
+
+/* --------------------------------------------------------------------------
+   Compiler 
+   -------------------------------------------------------------------------- */
+
+struct token {
+	uint8_t typ; /* token type (class) */
+	uint8_t qlf; /* qualifier */
+	uint16_t off; /* offset */
+	union {
+		char * s;
+		uint32_t u32;	
+		int32_t i32;	
+	};
+};
+
+struct symtab;
+
+struct microjs_compiler {
+	struct symtab * tab;
+	struct token tok;
+	int32_t * mem;
+	uint8_t * code;
+	uint16_t pc;
+	uint16_t heap;
+	uint16_t stack;
+	uint16_t sp;
+};
+
+/* --------------------------------------------------------------------------
+   Runtime Environement
+   -------------------------------------------------------------------------- */
+
+struct microjs_env {
+	FILE * fout;
+	FILE * fin;
+	FILE * ftrace;
+};
+
+/* --------------------------------------------------------------------------
+   Virtual Machine
+   -------------------------------------------------------------------------- */
+
+struct microjs_vm {
+	struct microjs_env env;
+	uint16_t sp;
+	uint16_t sl;
+	int32_t * data;
+};
+
+/**********************************************************************
+  JSON
+ **********************************************************************/
 
 struct microjs_val {
 	union {
@@ -80,10 +132,6 @@ struct microjs_val {
 		bool logic;
 	};
 };
-
-/**********************************************************************
-  JSON
- **********************************************************************/
 
 struct json_file { 
 	const char * txt;
@@ -150,19 +198,6 @@ extern const struct microjs_str_pool microjs_str_var;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-int microjs_init(struct microjs_parser * jp, 
-				 uint8_t tok[], unsigned int size);
-
-int microjs_open(struct microjs_parser * jp, 
-				 const char * txt, unsigned int len);
-
-int microjs_scan(struct microjs_parser * jp);
-
-int microjs_compile(struct microjs_parser * p, 
-					uint8_t code[], unsigned int size);
-
-int microjs_tok_dump(FILE * f, struct microjs_parser * jp);
 
 
 /**********************************************************************
@@ -231,6 +266,25 @@ int microjs_str_lookup(const struct microjs_str_pool * pool,
 int const_str_lookup(const char * s, int len);
 
 int const_str_write(const char * s, unsigned int len);
+
+
+
+struct symtab * symtab_init(uint32_t * buf, unsigned int len);
+
+int microjs_compiler_init(struct microjs_compiler * microjs, 
+						  struct symtab * tab, int32_t stack[], 
+						  unsigned int size);
+
+int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
+					const char * txt, unsigned int len);
+
+
+void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
+
+int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
+
+void strbuf_init(uint16_t * buf, unsigned int len);
+
 
 #ifdef __cplusplus
 }
