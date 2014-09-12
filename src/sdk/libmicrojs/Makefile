@@ -26,7 +26,8 @@ include ../../mk/config.mk
 LIB_STATIC = microjs
 
 CFILES = microjs_dbg.c microjs_str.c microjs_lib.c microjs_vm.c \
-		 microjs_lex.c microjs_sdt.c microjs_ll.c microjs_json.c
+		 microjs_lex.c microjs_sym.c microjs_ll.c microjs_sdt.c \
+		 microjs_json.c
 
 INCPATH = ../include
 
