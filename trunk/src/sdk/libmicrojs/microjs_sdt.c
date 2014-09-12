@@ -27,6 +27,45 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#define __DEF_CONST_STR__
+#include "const_str.h"
+
+#define CONST_NM (256 - CONST_STRINGS_MAX)
+
+/* --------------------------------------------------------------------------
+   External symbols
+   -------------------------------------------------------------------------- */
+
+const struct ext_entry externals[] = {
+	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argmin = 0, .argmax = 0 },
+	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argmin = 1, .argmax = 1 },
+	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argmin = 1, .argmax = 1 },
+	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 },
+	[EXT_PRINT] = { .nm = CONST_NM + NM_PRINT, .argmin = 0, .argmax = 128 },
+	[EXT_PRINTF] = { .nm = CONST_NM + NM_PRINTF, .argmin = 1, .argmax = 128 },
+	[EXT_SRAND] = { .nm = CONST_NM + NM_SRAND, .argmin = 1, .argmax = 1 },
+	[EXT_TIME] = { .nm = CONST_NM + NM_TIME, .argmin = 0, .argmax = 0 },
+};
+
+int extern_lookup(int nm)
+{
+	int i;
+
+	for (i = 0; i < sizeof(externals) / sizeof(struct ext_entry); ++i) {
+		if (externals[i].nm == nm)
+			return i;
+	}
+
+	return -1;
+}
+
+struct ext_entry * extern_get(unsigned int exid)
+{
+	if (exid >= sizeof(externals) / sizeof(struct ext_entry))
+		return NULL;
+	return(struct ext_entry *)&externals[exid];
+}
+
 /* --------------------------------------------------------------------------
    Memory operations
    -------------------------------------------------------------------------- */
