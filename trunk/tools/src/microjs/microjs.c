@@ -106,14 +106,17 @@ void version(char * prog)
 	exit(1);
 }
 
-
 int main(int argc,  char **argv)
 {
-	int32_t data[128];
-	uint8_t code[512];
+	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
+	uint8_t code[512]; /* compiled code */
+	int32_t data[64]; /* data area */
+	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
+						  the data buffer) */
+
 	struct microjs_compiler microjs; 
 	struct microjs_vm vm; 
-	struct sym_tab sym_tab;
+	struct symtab * symtab;
 
 	char outfname[256];
 	bool trace = false;
@@ -179,8 +182,12 @@ int main(int argc,  char **argv)
 			ftrace = stdout;
 	}
 
-	sym_tab_init(&sym_tab);
-	microjs_compiler_init(&microjs, &sym_tab, data, sizeof(data));
+	/* initialize string buffer */
+	strbuf_init(strbuf, sizeof(strbuf));
+	/* initialize symbol table */
+	symtab = symtab_init(symbuf, sizeof(symbuf));
+	/* initialize compiler */
+	microjs_compiler_init(&microjs, symtab, data, sizeof(data));
 
 	for (i = optind; i < argc; ++i) {
 		if (load_script(argv[i], &script, &len) < 0)
@@ -191,7 +198,7 @@ int main(int argc,  char **argv)
 		return 1;
 
 	microjs_vm_init(&vm, data, sizeof(data));
-	vm.ftrace = ftrace;
+	vm.env.ftrace = ftrace;
 
 	if (microjs_exec(&vm, code, n) < 0)
 		return 1;

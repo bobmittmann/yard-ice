@@ -37,18 +37,18 @@
 
 #include "debug.h"
 
-int32_t __rand(void * env, int32_t argv[], int argc) 
+int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
 	return rand();
 };
 
-int32_t __srand(void * env, int32_t argv[], int argc) 
+int32_t __srand(struct microjs_env * env, int32_t argv[], int argc) 
 {
 	srand(argv[0]);
 	return 0;
 };
 
-int32_t __isqrt(void * env, int32_t argv[], int argc)
+int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 {
 	uint32_t x = argv[0];
 	uint32_t rem = 0;
@@ -70,7 +70,7 @@ int32_t __isqrt(void * env, int32_t argv[], int argc)
 	return root >> 1;
 }	
 
-int32_t __ilog2(void * env, int32_t argv[], int argc)
+int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 {
 	const uint8_t log2_debruijn_index[32] = {
 		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
@@ -87,7 +87,7 @@ int32_t __ilog2(void * env, int32_t argv[], int argc)
 	return log2_debruijn_index[x];
 }	
 
-int32_t __write(void * env, int32_t argv[], int argc)
+int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 {
 	int i;
 
@@ -100,7 +100,7 @@ int32_t __write(void * env, int32_t argv[], int argc)
 	return 0;
 }	
 
-int32_t __time(void * env, int32_t argv[], int argc)
+int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 {
 	return (int32_t)time(NULL);
 }	
@@ -212,7 +212,7 @@ static int uint2hex(char * s, uint32_t val)
 }
 
 
-int32_t __printf(void * env, int32_t argv[], int argc)
+int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 {
 	char buf[BUF_LEN];
 	const char * fmt;
@@ -229,7 +229,7 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 	} val;
 	int i = argc;
 
-	fmt = sfstr(argv[--i]);
+	fmt = str(argv[--i]);
 	#define va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
 
 	n = 0;
@@ -242,7 +242,7 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 				w = 0;
 				flags = PERCENT;
 				if (n) {
-					write(STDOUT_FILENO, cp, n);
+					fwrite(cp, n, 1, env->fout);
 					cp = (char *)fmt;
 					cnt += n;;
 					n = 0;
@@ -305,7 +305,7 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 		}
 
 		if (c == 's') {
-			cp = (char *)sfstr(va_arg(ap, char *));
+			cp = (char *)str(va_arg(ap, char *));
 			n = strlen(cp);
 			goto print_buf;
 		}
@@ -330,25 +330,25 @@ print_buf:
 			if (flags & ZERO) {
 				if (flags & SIGN) {
 					flags &= ~SIGN;
-					write(STDOUT_FILENO, buf, 1);
+					fwrite(buf, 1, 1, env->fout);
 				}
-				write(STDOUT_FILENO, zeros, w - n);
+				fwrite(zeros, w - n, 1, env->fout);
 			} else {
-				write(STDOUT_FILENO, blanks, w - n);
+				fwrite(blanks, w - n, 1, env->fout);
 			}
 			cnt += w - n;
 		}
 
 		if (flags & SIGN) {
-			write(STDOUT_FILENO, buf, 1);
+			fwrite(buf, 1, 1, env->fout);
 			cnt++;
 		}
 
-		write(STDOUT_FILENO, cp, n);
+		fwrite(cp, n, 1, env->fout);
 		cnt += n;
 
 		if ((flags & LEFT) && (w > n)) {
-			write(STDOUT_FILENO, blanks, w - n);
+			fwrite(blanks, w - n, 1, env->fout);
 			cnt += w - n;
 		}
 
@@ -360,7 +360,7 @@ print_buf:
 	}
 
 	if (n) {
-		write(STDOUT_FILENO, cp, n);
+		fwrite(cp, n, 1, env->fout);
 		cnt+= n;;
 	}
 
@@ -371,7 +371,7 @@ print_buf:
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* extern_call[])(void *, int32_t argv[], int argc) = {
+int32_t (* extern_call[])(struct microjs_env *, int32_t argv[], int argc) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,

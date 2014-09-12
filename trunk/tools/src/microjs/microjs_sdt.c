@@ -94,7 +94,7 @@ int32_t pop(struct microjs_compiler * microjs)
 
 int mem_bind(struct microjs_compiler * microjs)
 {
-	struct sym_tab * tab = microjs->tab;
+	struct symtab * tab = microjs->tab;
 	int i;
 
 	/* search in the global list */
@@ -847,7 +847,7 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 	while (pp_sp != pp_top) {
 		/* pop the stack */
 		sym = *pp_sp++;
-//		printf("<%s>\n", ll_sym_tab[sym]);
+//		printf("<%s>\n", ll_symtab[sym]);
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
@@ -858,12 +858,12 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 			microjs->tok = tok;
 			/* get next token */
 			lookahead = (tok = lexer_scan(&lex)).typ;
-//			printf("[%s]\n", ll_sym_tab[lookahead]);
+//			printf("[%s]\n", ll_symtab[lookahead]);
 		} else if IS_AN_ACTION(sym) {
 			/* action */
 			int ret;
 			if ((ret = op[ACTION(sym)](microjs)) < 0) {
-//				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
+//				fprintf(stderr, "action(%s) failed!\n", ll_symtab[sym]);
 				goto error;
 			}
 		} else {
@@ -902,7 +902,7 @@ error:
 }
 
 int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct sym_tab * tab, 
+						  struct symtab * tab, 
 						  int32_t mem[], unsigned int size)
 {
 	microjs->tab = tab;

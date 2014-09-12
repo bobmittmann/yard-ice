@@ -52,46 +52,19 @@ enum {
 	ERR_STRINGS_UNSUPORTED,
 	ERR_STRING_TOO_LONG,
 	ERR_BRACKET_MISMATCH,
-	ERR_SYNTAX_ERROR
+	ERR_SYNTAX_ERROR,
+	ERR_STRBUF_OVERFLOW,
+	ERR_STRING_NOT_FOUND
 };
 
 /* --------------------------------------------------------------------------
    String pool
    -------------------------------------------------------------------------- */
 
-struct str_pool {
-	char * buf;
-	uint16_t len;
-	uint8_t cnt;
-	uint8_t max;
-	uint16_t offs[];
-};
-
-#define SYMBOLS_MAX 64
-
-#define STRINGS_MAX 63
-#define STRINGS_POOL_LEN (512 - (2 * (STRINGS_MAX + 1)))
-
-
-struct sym {
-	uint8_t flags;
-	uint8_t nm;
-	uint16_t addr;
-	uint16_t size;
-};
-
-struct sym_tab {
-	struct {
-		struct str_pool str;
-		uint16_t offs[STRINGS_MAX];
-		char str_buf[STRINGS_POOL_LEN];
-	};
-	uint16_t global;
-	uint16_t local;
-	struct sym sym[SYMBOLS_MAX];
-};
+struct symtab;
 
 struct microjs_compiler {
+	struct symtab * tab;
 	struct token tok;
 	int32_t * mem;
 	uint8_t * code;
@@ -99,11 +72,16 @@ struct microjs_compiler {
 	uint16_t heap;
 	uint16_t stack;
 	uint16_t sp;
-	struct sym_tab * tab;
+};
+
+struct microjs_env {
+	FILE * fout;
+	FILE * fin;
+	FILE * ftrace;
 };
 
 struct microjs_vm {
-	FILE * ftrace;
+	struct microjs_env env;
 	uint16_t sp;
 	uint16_t sl;
 	int32_t * data;
@@ -113,10 +91,10 @@ struct microjs_vm {
 extern "C" {
 #endif
 
-void sym_tab_init(struct sym_tab * tab);
+struct symtab * symtab_init(uint32_t * buf, unsigned int len);
 
 int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct sym_tab * tab, int32_t stack[], 
+						  struct symtab * tab, int32_t stack[], 
 						  unsigned int size);
 
 int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
@@ -127,6 +105,7 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 
+void strbuf_init(uint16_t * buf, unsigned int len);
 
 #ifdef __cplusplus
 }
