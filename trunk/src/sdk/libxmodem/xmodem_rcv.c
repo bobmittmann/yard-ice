@@ -89,7 +89,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 	DCC_LOG(LOG_INFO, "....");
 
 	for (;;) {
-		DCC_LOG(LOG_INFO, "SYN");
+		DCC_LOG1(LOG_TRACE, "SYN: %02x", rx->sync);
 
 		if ((ret = rx->comm->op.send(rx->comm->arg, &rx->sync, 1)) < 0) {
 			return ret;
@@ -133,13 +133,13 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		rem = cnt + ((rx->mode) ? 4 : 3);
 		cp = pkt + 1;
 
-		DCC_LOG2(LOG_INFO, "cnt=%d rem=%d", cnt, rem);
+		DCC_LOG2(LOG_TRACE, "cnt=%d rem=%d", cnt, rem);
 
 		/* receive the packet */
 		while (rem) {
 
 			ret = rx->comm->op.recv(rx->comm->arg, cp, rem, 500);
-			if (ret == 	THINKOS_ETIMEDOUT)
+			if (ret == THINKOS_ETIMEDOUT)
 				goto timeout;
 			if (ret < 0)
 				return ret;

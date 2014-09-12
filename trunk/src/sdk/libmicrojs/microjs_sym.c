@@ -51,9 +51,8 @@ int sym_by_name(struct symtab * tab, const char * s, unsigned int len)
 	int nm;
 	int i;
 
-	if ((nm = str_lookup(s, len)) < 0) {
+	if ((nm = str_lookup(s, len)) < 0)
 		return nm;
-	}
 
 	/* search in the local list */
 	for (i = tab->local; i < tab->top; ++i) {
@@ -90,7 +89,6 @@ int sym_dump(FILE * f, struct symtab * tab)
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
 			fprintf(f, "%04x r   .text   %04x -> %s\n", ref->addr, 
 					0, str(obj->nm));
-
 		}
 	}
 

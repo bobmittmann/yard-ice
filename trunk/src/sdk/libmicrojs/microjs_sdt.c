@@ -32,6 +32,8 @@
 
 #define CONST_NM (256 - CONST_STRINGS_MAX)
 
+#include <sys/dcclog.h>
+
 /* --------------------------------------------------------------------------
    External symbols
    -------------------------------------------------------------------------- */
@@ -79,8 +81,7 @@ int alloc32(struct microjs_compiler * microjs)
 	microjs->heap = addr + 4;
 
 	if (microjs->heap > microjs->sp) {
-		fprintf(stderr, "heap overflow!\n");
-		return -1;
+		return -ERR_HEAP_OVERFLOW;
 	}
 
 	return addr;
@@ -97,14 +98,14 @@ void mem_wr32(struct microjs_compiler * microjs, unsigned int addr, int32_t val)
 	microjs->mem[addr >> 2] = val;
 }
 
+#if 0
 int push(struct microjs_compiler * microjs, int32_t x)
 {
 	microjs->sp -= 4;
 	microjs->mem[microjs->sp >> 2] = x;	
 
 	if (microjs->sp < microjs->heap) {
-		fprintf(stderr, "stack overflow!\n");
-		return -1;
+		return -ERR_STACK_OVERFLOW;
 	}
 	return 0;
 }
@@ -122,6 +123,7 @@ int32_t pop(struct microjs_compiler * microjs)
 
 	return x;
 }
+#endif
 
 int mem_bind(struct microjs_compiler * microjs)
 {
@@ -146,7 +148,7 @@ int mem_bind(struct microjs_compiler * microjs)
 		struct sym_ref * ref = (struct sym_ref *)&tab->sym[i];
 		if (!(ref->flags & (SYM_OBJECT | SYM_EXTERN))) {
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
-			printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
+			TRACEF("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
 				   ref->oid, obj->addr);
 			microjs->code[ref->addr] = obj->addr;
 			microjs->code[ref->addr + 1] = obj->addr >> 8;
@@ -215,14 +217,14 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 		}
 
 		/* number of arguments */
-		printf("%04x\tI18 %d\n", microjs->pc, tmp->xid);
+		TRACEF("%04x\tI18 %d\n", microjs->pc, tmp->xid);
 		microjs->code[microjs->pc++] = OPC_I8;
 		microjs->code[microjs->pc++] = tmp->cnt;
 		/* external call number */
-		printf("%04x\tI18 %d\n", microjs->pc, tmp->xid);
+		TRACEF("%04x\tI18 %d\n", microjs->pc, tmp->xid);
 		microjs->code[microjs->pc++] = OPC_I8;
 		microjs->code[microjs->pc++] = tmp->xid;
-		printf("%04x\tEXT \'%s\"\n", microjs->pc, 
+		TRACEF("%04x\tEXT \'%s\"\n", microjs->pc, 
 			   sym_name(microjs->tab, tmp->nm));
 		microjs->code[microjs->pc++] = OPC_EXT;
 	} else {
@@ -235,16 +237,16 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 #if 0
 		struct sym_ref * ref;
 		ref = sym_ref_new(microjs->tab, obj);
-		printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
+		TRACEF("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
 			   ref->oid, obj->addr);
 		ref->addr = microjs->pc + 1;
 #endif
-		printf("%04x\tI16 \'%s\"\n", microjs->pc, 
+		TRACEF("%04x\tI16 \'%s\"\n", microjs->pc, 
 			   sym_name(microjs->tab, tmp->nm));
 		microjs->code[microjs->pc++] = OPC_I16;
 		microjs->code[microjs->pc++] = obj->addr;
 		microjs->code[microjs->pc++] = obj->addr >> 8;
-		printf("%04x\tLD\n", microjs->pc);
+		TRACEF("%04x\tLD\n", microjs->pc);
 		microjs->code[microjs->pc++] = OPC_LD;
 	}
 
@@ -290,7 +292,7 @@ int op_arg(struct microjs_compiler * microjs)
 
 int op_ret_discard(struct microjs_compiler * microjs)
 {
-	printf("%04x\tPOP\n", microjs->pc);
+	TRACEF("%04x\tPOP\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_POP;
 	return 0;
 }
@@ -308,14 +310,14 @@ int op_assign(struct microjs_compiler * microjs)
 		return -1;
 	}
 	ref = sym_ref_new(microjs->tab, obj);
-	printf("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
+	TRACEF("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
 		   ref->oid, obj->addr);
-	printf("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
+	TRACEF("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
 	microjs->code[microjs->pc++] = OPC_I16;
 	ref->addr = microjs->pc;
 	microjs->code[microjs->pc++] = 0;
 	microjs->code[microjs->pc++] = 0;
-	printf("%04x\tST\n", microjs->pc);
+	TRACEF("%04x\tST\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ST;
 	return 0;
 }
@@ -331,88 +333,88 @@ int op_assign(struct microjs_compiler * microjs)
 				sym_name(microjs->tab, tmp->nm));
 		return -1;
 	}
-	printf("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
+	TRACEF("%04x\tI16 \'%s\"\n", microjs->pc, sym_name(microjs->tab, tmp->nm));
 	microjs->code[microjs->pc++] = OPC_I16;
 	microjs->code[microjs->pc++] = obj->addr;
 	microjs->code[microjs->pc++] = obj->addr >> 8;
-	printf("%04x\tST\n", microjs->pc);
+	TRACEF("%04x\tST\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ST;
 	return 0;
 }
 
 int op_equ(struct microjs_compiler * microjs)
 {
-	printf("%04x\tEQ\n", microjs->pc);
+	TRACEF("%04x\tEQ\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_EQ;
 	return 0;
 }
 
 int op_neq(struct microjs_compiler * microjs)
 {
-	printf("%04x\tNE\n", microjs->pc);
+	TRACEF("%04x\tNE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NE;
 	return 0;
 }
 
 int op_gt(struct microjs_compiler * microjs)
 {
-	printf("%04x\tGT\n", microjs->pc);
+	TRACEF("%04x\tGT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GT;
 	return 0;
 }
 
 int op_lt(struct microjs_compiler * microjs)
 {
-	printf("%04x\tLT\n", microjs->pc);
+	TRACEF("%04x\tLT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LT;
 	return 0;
 }
 
 int op_gte(struct microjs_compiler * microjs)
 {
-	printf("%04x\tGE\n", microjs->pc);
+	TRACEF("%04x\tGE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GE;
 	return 0;
 }
 
 int op_lte(struct microjs_compiler * microjs)
 {
-	printf("%04x\tLE\n", microjs->pc);
+	TRACEF("%04x\tLE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LE;
 	return 0;
 }
 
 int op_logic_or(struct microjs_compiler * microjs)
 {
-	printf("%04x\tOR\n", microjs->pc);
+	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
 }
 
 int op_logic_and(struct microjs_compiler * microjs)
 {
-	printf("%04x\tAND\n", microjs->pc);
+	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
 }
 
 int op_add(struct microjs_compiler * microjs)
 {
-	printf("%04x\tADD\n", microjs->pc);
+	TRACEF("%04x\tADD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ADD;
 	return 0;
 }
 
 int op_sub(struct microjs_compiler * microjs)
 {
-	printf("%04x\tSUB\n", microjs->pc);
+	TRACEF("%04x\tSUB\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SUB;
 	return 0;
 }
 
 int op_or(struct microjs_compiler * microjs)
 {
-	printf("%04x\tOR\n", microjs->pc);
+	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
 }
@@ -425,14 +427,14 @@ int op_xor(struct microjs_compiler * microjs)
 
 int op_mul(struct microjs_compiler * microjs)
 {
-	printf("%04x\tMUL\n", microjs->pc);
+	TRACEF("%04x\tMUL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MUL;
 	return 0;
 }
 
 int op_div(struct microjs_compiler * microjs)
 {
-	printf("%04x\tDIV\n", microjs->pc);
+	TRACEF("%04x\tDIV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_DIV;
 	return 0;
 }
@@ -481,7 +483,7 @@ int op_asr(struct microjs_compiler * microjs)
 
 int op_push_false(struct microjs_compiler * microjs)
 {
-	printf("%04x\tI8 %d\n", microjs->pc, 0);
+	TRACEF("%04x\tI8 %d\n", microjs->pc, 0);
 	microjs->code[microjs->pc++] = OPC_I8;
 	microjs->code[microjs->pc++] = 0;
 	return 0;
@@ -489,7 +491,7 @@ int op_push_false(struct microjs_compiler * microjs)
 
 int op_push_true(struct microjs_compiler * microjs)
 {
-	printf("%04x\tI8 %d\n", microjs->pc, 1);
+	TRACEF("%04x\tI8 %d\n", microjs->pc, 1);
 	microjs->code[microjs->pc++] = OPC_I8;
 	microjs->code[microjs->pc++] = 1;
 	return 0;
@@ -504,7 +506,7 @@ int op_push_string(struct microjs_compiler * microjs)
 		return -1;
 	}
 	
-	printf("%04x\tI8 %d\n", microjs->pc, isz);
+	TRACEF("%04x\tI8 %d\n", microjs->pc, isz);
 	microjs->code[microjs->pc++] = OPC_I8;
 	microjs->code[microjs->pc++] = isz;
 	return 0;
@@ -514,22 +516,22 @@ int op_push_int(struct microjs_compiler * microjs)
 {
 	int32_t x = microjs->tok.u32;
 
-	printf("%04x\t", microjs->pc);
+	TRACEF("%04x\t", microjs->pc);
 
 	if (x >= 0) {
 		if (x < 32768) {
 			if (x < 128) {
-				printf("I8 %d\n", x);
+				TRACEF("I8 %d\n", x);
 				microjs->code[microjs->pc++] = OPC_I8;
 				microjs->code[microjs->pc++] = x;
 			} else {
-				printf("I16 %d\n", x);
+				TRACEF("I16 %d\n", x);
 				microjs->code[microjs->pc++] = OPC_I16;
 				microjs->code[microjs->pc++] = x;
 				microjs->code[microjs->pc++] = x >> 8;
 			}
 		} else {
-			printf("I32 %d\n", x);
+			TRACEF("I32 %d\n", x);
 			microjs->code[microjs->pc++] = OPC_I32;
 			microjs->code[microjs->pc++] = x;
 			microjs->code[microjs->pc++] = x >> 8;
@@ -539,17 +541,17 @@ int op_push_int(struct microjs_compiler * microjs)
 	} else {
 		if (x >= -32768) {
 			if (x >= -128) {
-				printf("I8 %d\n", x);
+				TRACEF("I8 %d\n", x);
 				microjs->code[microjs->pc++] = OPC_I8;
 				microjs->code[microjs->pc++] = x;
 			} else {
-				printf("I16 %d\n", x);
+				TRACEF("I16 %d\n", x);
 				microjs->code[microjs->pc++] = OPC_I16;
 				microjs->code[microjs->pc++] = x;
 				microjs->code[microjs->pc++] = x >> 8;
 			}
 		} else {
-			printf("I32 %d\n", x);
+			TRACEF("I32 %d\n", x);
 			microjs->code[microjs->pc++] = OPC_I32;
 			microjs->code[microjs->pc++] = x;
 			microjs->code[microjs->pc++] = x >> 8;
@@ -568,7 +570,7 @@ int op_while_begin(struct microjs_compiler * microjs)
 	if ((id = sym_anom_push(microjs->tab)) < 0)
 		return id;
 
-	printf(".L%d:\n", id);
+	TRACEF(".L%d:\n", id);
 	/* save current location on a temporary variable */
 	sym_addr_set(microjs->tab, id, microjs->pc);
 	return 0;
@@ -581,7 +583,7 @@ int op_while_cond(struct microjs_compiler * microjs)
 	if ((id = sym_anom_push(microjs->tab)) < 0)
 		return id;
 
-	printf(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
 
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JEQ;
@@ -602,7 +604,7 @@ int op_while_end(struct microjs_compiler * microjs)
 	id = sym_anom_pop(microjs->tab);
 	addr = sym_addr_get(microjs->tab, id);
 	offs = microjs->pc - (addr - 1);
-	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
+	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
@@ -610,7 +612,7 @@ int op_while_end(struct microjs_compiler * microjs)
 	id = sym_anom_pop(microjs->tab);
 	addr = sym_addr_get(microjs->tab, id);
 	offs = addr - (microjs->pc + 3);
-	printf("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
+	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -626,7 +628,7 @@ int op_if_cond(struct microjs_compiler * microjs)
 	if ((id = sym_anom_push(microjs->tab)) < 0)
 		return id;
 
-	printf(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JEQ;
 	sym_addr_set(microjs->tab, id, microjs->pc);
@@ -646,11 +648,11 @@ int op_if_else(struct microjs_compiler * microjs)
 	addr = sym_addr_get(microjs->tab, id);
 
 	offs = microjs->pc - (addr - 1);
-	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
+	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
-	printf(".L%d:\n%04x\tJMP xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJMP xxxx\n", id, microjs->pc);
 	/* save current location on the same temporary variable */
 	microjs->code[microjs->pc++] = OPC_JMP;
 	sym_addr_set(microjs->tab, id, microjs->pc);
@@ -671,7 +673,7 @@ int op_if_end(struct microjs_compiler * microjs)
 	addr = sym_addr_get(microjs->tab, id);
 
 	offs = (microjs->pc - 3) - (addr - 1);
-	printf("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, microjs->pc, id);
+	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, microjs->pc, id);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
@@ -686,7 +688,7 @@ int op_for_init(struct microjs_compiler * microjs)
 	if ((id = sym_anom_push(microjs->tab)) < 0)
 		return id;
 
-	printf(".L%d:\n", id);
+	TRACEF(".L%d:\n", id);
 	/* save current location */
 	sym_addr_set(microjs->tab, id, microjs->pc);
 
@@ -706,7 +708,7 @@ int op_for_cond(struct microjs_compiler * microjs)
 
 	id = sym_anom_get(microjs->tab, 2);
 	/* Conditional jump to the body */
-	printf(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", id, microjs->pc);
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JEQ;
 	sym_addr_set(microjs->tab, id, microjs->pc);
@@ -715,7 +717,7 @@ int op_for_cond(struct microjs_compiler * microjs)
 
 	id = sym_anom_get(microjs->tab, 1);
 	/* Jump to the beginning of the body part */
-	printf(".L%d:\n%04x\tJMP xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJMP xxxx\n", id, microjs->pc);
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JMP;
 	sym_addr_set(microjs->tab, id, microjs->pc);
@@ -723,7 +725,7 @@ int op_for_cond(struct microjs_compiler * microjs)
 	microjs->pc += 2;
 
 	id = sym_anom_get(microjs->tab, 0);
-	printf(".L%d:\n", id);
+	TRACEF(".L%d:\n", id);
 	/* save current location */
 	sym_addr_set(microjs->tab, id, microjs->pc);
 
@@ -740,7 +742,7 @@ int op_for_after(struct microjs_compiler * microjs)
 	id = sym_anom_get(microjs->tab, 1);
 	addr = sym_addr_get(microjs->tab, id);
 	offs = microjs->pc - (addr - 1);
-	printf("\tfix %04x -> JMP %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
+	TRACEF("\tfix %04x -> JMP %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
@@ -748,7 +750,7 @@ int op_for_after(struct microjs_compiler * microjs)
 	id = sym_anom_get(microjs->tab, 3);
 	addr = sym_addr_get(microjs->tab, id);
 	offs = addr - (microjs->pc + 3);
-	printf("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
+	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -767,7 +769,7 @@ int op_for_end(struct microjs_compiler * microjs)
 	addr = sym_addr_get(microjs->tab, id);
 
 	offs = microjs->pc - (addr - 1);
-	printf("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
+	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, microjs->pc + 3, id);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
@@ -775,7 +777,7 @@ int op_for_end(struct microjs_compiler * microjs)
 	id = sym_anom_get(microjs->tab, 0);
 	addr = sym_addr_get(microjs->tab, id);
 	offs = addr - (microjs->pc + 3);
-	printf("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
+	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, addr, id, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -869,7 +871,8 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 	while (pp_sp != pp_top) {
 		/* pop the stack */
 		sym = *pp_sp++;
-//		printf("<%s>\n", ll_symtab[sym]);
+//		TRACEF("<%s>\n", ll_sym_tab[sym]);
+		DCC_LOG1(LOG_INFO, "<%s>", ll_sym_tab[sym]);
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
@@ -880,12 +883,12 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 			microjs->tok = tok;
 			/* get next token */
 			lookahead = (tok = lexer_scan(&lex)).typ;
-//			printf("[%s]\n", ll_symtab[lookahead]);
+//			TRACEF("[%s]\n", ll_sym_tab[lookahead]);
 		} else if IS_AN_ACTION(sym) {
 			/* action */
 			int ret;
 			if ((ret = op[ACTION(sym)](microjs)) < 0) {
-//				fprintf(stderr, "action(%s) failed!\n", ll_symtab[sym]);
+//				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
 				goto error;
 			}
 		} else {
@@ -908,16 +911,14 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 	if (mem_bind(microjs) < 0)
 		return -1;
 
-	printf("\nSYMBOL TABLE:\n");
+#if MICROJS_TRACE_ENABLED
+	TRACEF("\nSYMBOL TABLE:\n");
 	sym_dump(stdout, microjs->tab);
-	printf("\n");
-	fflush(stdout);
-
+	TRACEF("\n");
+#endif
 	return microjs->pc;
 
 error:
-	printf("\n");
-	fflush(stdout);
 	fflush(stderr);
 	lexer_print_err(stderr, &lex, err);
 	return -1;
