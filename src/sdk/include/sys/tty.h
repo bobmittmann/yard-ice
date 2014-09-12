@@ -36,7 +36,7 @@ struct tty_dev;
 extern "C" {
 #endif
 
-struct tty_dev * tty_attach(struct file * f);
+struct tty_dev * tty_attach(const struct file * f);
 
 struct file * tty_fopen(struct tty_dev * tty);
 

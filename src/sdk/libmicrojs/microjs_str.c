@@ -27,12 +27,14 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#include <string.h>
+
 #define __DEF_CONST_STRBUF__
 #include "const_str.h"
 
-#include <string.h>
+//extern const struct strbuf const_strbuf;
 
-#define CONST_NM (256 - CONST_STRINGS_MAX)
+#define CONST_NM (256 - const_strbuf.cnt)
 
 /* --------------------------------------------------------------------------
    Strings Tables
@@ -192,6 +194,7 @@ const char * str(int idx)
 }
 
 
+#if 0
 
 #include <sys/dcclog.h>
 
@@ -266,3 +269,6 @@ int microjs_str_pool_dump(const struct microjs_str_pool * pool)
 
 	return i;
 }
+
+#endif
+

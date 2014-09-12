@@ -61,7 +61,9 @@ enum {
 	ERR_BRACKET_MISMATCH,
 	ERR_SYNTAX_ERROR,
 	ERR_STRBUF_OVERFLOW,
-	ERR_STRING_NOT_FOUND
+	ERR_STRING_NOT_FOUND,
+	ERR_HEAP_OVERFLOW,
+	ERR_STACK_OVERFLOW
 };
 
 /* --------------------------------------------------------------------------

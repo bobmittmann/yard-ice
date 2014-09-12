@@ -60,6 +60,22 @@
 #define MICROJS_STRING_LEN_MAX 128
 #endif
 
+#ifndef MICROJS_TRACE_ENABLED
+#define MICROJS_TRACE_ENABLED 0
+#endif
+
+#if (MICROJS_TRACE_ENABLED)
+#define	TRACEF(__FMT, ...) do { \
+	fprintf(stdout, __FMT, ## __VA_ARGS__); \
+	fflush(stdout); } while (0)
+
+#define	FTRACEF(__F, __FMT, ...) do { \
+	fprintf(__F, __FMT, ## __VA_ARGS__); \
+	fflush(__F); } while (0)
+#else 
+#define TRACEF(__FMT, ...) do { } while (0)
+#define	FTRACEF(__F, __FMT, ...) do { } while (0)
+#endif
 
 /* --------------------------------------------------------------------------
   Lexical Analyzer

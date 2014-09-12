@@ -28,10 +28,12 @@ int stm32_usart_read(struct stm32_usart * usart, char * buf,
 	char * cp = (char *)buf;
 	int c;
 
+	DCC_LOG1(LOG_MSG, "msec=%d", msec);
+
 	c = stm32_usart_getc(usart, msec);
 
 	if (c < 0)
-		return 0;
+		return c;
 
 	*cp = c;
 		

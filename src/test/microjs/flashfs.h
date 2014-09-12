@@ -1,9 +1,9 @@
 /* 
- * File:	 stm32f-usart_getc.c
+ * File:	 flashfs.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
- * Copyright(C) 2013 Bob Mittmann. All Rights Reserved.
+ * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,26 +20,40 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "usart-priv.h"
-#include <sys/delay.h>
+#ifndef __FLASHFS_H__
+#define __FLASHFS_H__
 
-int stm32_usart_getc(struct stm32_usart * usart, unsigned int msec)
-{
-	int tm;
+struct fs_file {
+	char name[12];
+	uint16_t size;
+	uint16_t crc;
+	uint8_t data[];
+};
 
-	tm = msec * 20;
+struct fs_dirent {
+	struct fs_file * fp;
+	uint16_t blk_size;
+	uint32_t blk_offs;
+};
 
-	DCC_LOG1(LOG_INFO, "msec=%d", msec);
+#include <microjs.h>
 
-	for (;;) {		
-		if (usart->isr & USART_RXNE) {
-			return usart->rdr;
-		}
-		if (tm == 0) {
-			return -2;
-		}
-		udelay(50);
-		tm--;
-	}
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+bool fs_dirent_lookup(const char * name, struct fs_dirent * ep);
+
+bool fs_dirent_get_next(struct fs_dirent * ep);
+
+bool fs_xmodem_recv(FILE * f, const char * name);
+
+bool fs_file_unlink(struct fs_dirent * ep);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __FLASHFS_H__ */
+
 
