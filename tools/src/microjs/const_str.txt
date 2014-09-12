@@ -1,1 +1,13 @@
-rand sqrt log2 print write writeln x y z srand time printf sleep
+rand 
+sqrt 
+log2 
+print 
+write 
+writeln 
+x 
+y 
+z 
+srand 
+time 
+printf 
+sleep

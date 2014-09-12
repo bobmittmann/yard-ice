@@ -6,6 +6,8 @@ var prime;
 
 srand(time()); // initialize random number generator
 
+printf("----------------------\n");
+
 for (j = 0; j < 100; ) {
 	n = rand();
 	if (n <= 3) {
@@ -28,7 +30,8 @@ for (j = 0; j < 100; ) {
 	}
 	if (prime) {
 		j = j + 1;
-		print(j, n, prime);
+		printf("%3d %12d\n", j, n);
 	}
 }
 
+printf("----------------------\n");

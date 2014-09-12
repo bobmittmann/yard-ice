@@ -71,6 +71,15 @@ struct lexer {
 	const char * txt;   /* base pointer (original js txt file) */
 };
 
+/* --------------------------------------------------------------------------
+   String Pool
+   -------------------------------------------------------------------------- */
+
+struct strbuf {
+	uint16_t cnt;
+	uint16_t pos;
+	uint16_t offs[];
+};
 
 /* --------------------------------------------------------------------------
    External objects/symbols/functions
@@ -94,6 +103,14 @@ struct ext_entry {
 /* --------------------------------------------------------------------------
    Symbol table 
    -------------------------------------------------------------------------- */
+
+
+struct sym {
+	uint8_t flags;
+	uint8_t nm;
+	uint16_t addr;
+	uint16_t size;
+};
 
 #define SYM_REFERENCE       (0 << 6)
 #define SYM_OBJECT          (1 << 7)
@@ -149,11 +166,16 @@ struct sym_ref {
 	uint16_t addr;
 };
 
+struct symtab {
+	uint16_t global;
+	uint16_t local;
+	uint16_t top;
+	struct sym sym[];
+};
 
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
-
 
 #define OPC_ASR      0
 #define OPC_SHL      1
@@ -191,7 +213,7 @@ struct sym_ref {
 #define OPC_RET      34
 #define OPC_POP      35
 
-extern int32_t (* extern_call[])(void *, int32_t argv[], int argc);
+extern int32_t (* extern_call[])(struct microjs_env *, int32_t [], int);
 
 #ifdef __cplusplus
 extern "C" {
@@ -207,50 +229,56 @@ char * tok2str(struct token tok);
 
 int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt);
 
-int sym_dump(FILE * f, struct sym_tab * tab);
+int sym_dump(FILE * f, struct symtab * tab);
 
-int sym_lookup(struct sym_tab * tab, const char * s, unsigned int len);
+int sym_lookup(struct symtab * tab, const char * s, unsigned int len);
 
 
-struct sym_obj * sym_obj_new(struct sym_tab * tab, 
+struct sym_obj * sym_obj_new(struct symtab * tab, 
 							 const char * s, unsigned int len);
 
-struct sym_obj * sym_obj_lookup(struct sym_tab * tab, int nm);
+struct sym_obj * sym_obj_lookup(struct symtab * tab, int nm);
 
-struct sym_ref * sym_ref_new(struct sym_tab * tab, void * sym);
+struct sym_ref * sym_ref_new(struct symtab * tab, void * sym);
 
-struct sym_ext * sym_ext_new(struct sym_tab * tab, int nm);
+struct sym_ext * sym_ext_new(struct symtab * tab, int nm);
 
-int sym_ext_id(struct sym_tab * tab, struct sym_ext * ext);
+int sym_ext_id(struct symtab * tab, struct sym_ext * ext);
 
-int sym_add_local(struct sym_tab * tab, const char * s, unsigned int len);
+int sym_add_local(struct symtab * tab, const char * s, unsigned int len);
 
-int sym_anom_push(struct sym_tab * tab);
+int sym_anom_push(struct symtab * tab);
 
-int sym_anom_pop(struct sym_tab * tab);
+int sym_anom_pop(struct symtab * tab);
 
-int sym_anom_get(struct sym_tab * tab, int pos);
+int sym_anom_get(struct symtab * tab, int pos);
 
-struct sym_tmp * sym_tmp_push(struct sym_tab * tab, 
+struct sym_tmp * sym_tmp_push(struct symtab * tab, 
 							  const char * s, unsigned int len);
 
-const char * sym_name(struct sym_tab * tab, int nm);
+const char * sym_name(struct symtab * tab, int nm);
 
-int sym_addr_get(struct sym_tab * tab, int id);
+int sym_addr_get(struct symtab * tab, int id);
 
-void sym_addr_set(struct sym_tab * tab, int id, int addr);
+void sym_addr_set(struct symtab * tab, int id, int addr);
 
-struct sym_tmp * sym_tmp_get(struct sym_tab * tab, int pos);
+struct sym_tmp * sym_tmp_get(struct symtab * tab, int pos);
 
-void sym_pop(struct sym_tab * tab);
+void sym_pop(struct symtab * tab);
 
 int extern_lookup(int nm);
 
 struct ext_entry * extern_get(unsigned int exid);
 
+/* --------------------------------------------------------------------------
+   Strings 
+   -------------------------------------------------------------------------- */
+
+const char * str(int idx);
+
 int str_add(const char * s, unsigned int len);
 
-const char * sfstr(int idx);
+int str_lookup(const char * s, unsigned int len);
 
 int cstr_add(const char * s, unsigned int len);
 

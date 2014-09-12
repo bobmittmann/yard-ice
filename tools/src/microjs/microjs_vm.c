@@ -72,13 +72,15 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	vm->data = data;
 	vm->sp = len;
 	vm->sl = 0;
-	vm->ftrace = NULL;
+	vm->env.ftrace = NULL;
+	vm->env.fin = stdin;
+	vm->env.fout = stdout;
 }
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 {
-	FILE * f = vm->ftrace;
-	bool trace = (vm->ftrace == NULL) ? false : true;
+	FILE * f = vm->env.ftrace;
+	bool trace = (f == NULL) ? false : true;
 	int32_t r0;
 	int32_t r1;
 	int32_t r2;
@@ -183,7 +185,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r1 = vm_pop(vm);
 			if (trace)
 				fprintf(f, "EXT %d, %d\n", r0, r1);
-			r0 = extern_call[r0](vm, &vm->data[vm->sp >> 2], r1);
+			r0 = extern_call[r0](&vm->env, &vm->data[vm->sp >> 2], r1);
 			/* remove the stack frame */
 			vm->sp += 4 * r1;
 			vm_push(vm, r0);
