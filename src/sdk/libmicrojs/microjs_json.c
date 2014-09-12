@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/dcclog.h>
+#include <arch/cortex-m3.h>
 
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-#include <sys/dcclog.h>
-#include <arch/cortex-m3.h>
 
 #ifndef JSON_LABEL_LST_MAX 
 #define JSON_LABEL_LST_MAX 40

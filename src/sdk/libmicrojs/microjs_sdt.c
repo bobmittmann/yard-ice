@@ -195,7 +195,6 @@ int op_push_sym(struct microjs_compiler * microjs)
 		return -1;
 	}
 
-	DBG("tmp=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	return 0;
 }
 
@@ -204,9 +203,6 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp = sym_tmp_get(microjs->tab, 0);
 
 	if (SYM_IS_METHOD(tmp)) {
-		DBG("method=\"%s\" (%d)", sym_name(microjs->tab, tmp->nm), tmp->xid);
-		DBG("min=%d max=%d argc=%d", tmp->min, tmp->max, tmp->cnt);
-
 		if (tmp->cnt < tmp->min) {
 			fprintf(stderr, "argument missing: %s\n", 
 					sym_name(microjs->tab, tmp->nm));
@@ -231,7 +227,6 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 		microjs->code[microjs->pc++] = OPC_EXT;
 	} else {
 		struct sym_obj * obj;
-		DBG("attribute=\"%s\"", sym_name(microjs->tab, tmp->nm));
 		if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 			fprintf(stderr, "undefined symbol: %s.\n", 
 					sym_name(microjs->tab, tmp->nm));
@@ -276,7 +271,6 @@ int op_method(struct microjs_compiler * microjs)
 				sym_name(microjs->tab, tmp->nm));
 		return -1;
 	}
-	DBG("method=\"%s\" (%d)", sym_name(microjs->tab, tmp->nm), xid);
 	tmp->min = ext->argmin;
 	tmp->max = ext->argmax;
 	tmp->cnt = 0;
@@ -291,7 +285,6 @@ int op_arg(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp;
 	tmp = sym_tmp_get(microjs->tab, 0);
 	tmp->cnt++; /* increment the argument counter */
-	DBG("argc=%d", tmp->cnt);
 	return 0;
 }
 
@@ -309,7 +302,6 @@ int op_assign(struct microjs_compiler * microjs)
 	struct sym_obj * obj;
 	struct sym_ref * ref;
 
-	DBG("assign=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 		fprintf(stderr, "undefined symbol: %s.\n", 
 				sym_name(microjs->tab, tmp->nm));
@@ -334,7 +326,6 @@ int op_assign(struct microjs_compiler * microjs)
 	struct sym_tmp * tmp = sym_tmp_get(microjs->tab, 0);
 	struct sym_obj * obj;
 
-	DBG("assign=\"%s\"", sym_name(microjs->tab, tmp->nm));
 	if ((obj = sym_obj_lookup(microjs->tab, tmp->nm)) == NULL) {
 		fprintf(stderr, "undefined symbol: %s.\n", 
 				sym_name(microjs->tab, tmp->nm));

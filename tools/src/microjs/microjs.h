@@ -31,17 +31,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-struct token {
-	uint8_t typ; /* token type (class) */
-	uint8_t qlf; /* qualifier */
-	uint16_t off; /* offset */
-	union {
-		char * s;
-		uint32_t u32;	
-		int32_t i32;	
-	};
-};
-
 enum {
 	OK = 0,
 	ERR_UNEXPECTED_CHAR,
@@ -58,8 +47,19 @@ enum {
 };
 
 /* --------------------------------------------------------------------------
-   String pool
+   Compiler 
    -------------------------------------------------------------------------- */
+
+struct token {
+	uint8_t typ; /* token type (class) */
+	uint8_t qlf; /* qualifier */
+	uint16_t off; /* offset */
+	union {
+		char * s;
+		uint32_t u32;	
+		int32_t i32;	
+	};
+};
 
 struct symtab;
 
@@ -74,11 +74,19 @@ struct microjs_compiler {
 	uint16_t sp;
 };
 
+/* --------------------------------------------------------------------------
+   Runtime Environement
+   -------------------------------------------------------------------------- */
+
 struct microjs_env {
 	FILE * fout;
 	FILE * fin;
 	FILE * ftrace;
 };
+
+/* --------------------------------------------------------------------------
+   Virtual Machine
+   -------------------------------------------------------------------------- */
 
 struct microjs_vm {
 	struct microjs_env env;

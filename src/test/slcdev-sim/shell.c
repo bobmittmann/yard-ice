@@ -949,9 +949,21 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
-	struct microjs_parser jsp;
-	uint8_t tok_buf[32];
-	uint8_t code[32];
+	uint16_t strbuf[64]; /*string buffer shuld be 16bits aligned */
+	uint8_t code[256]; /* compiled code */
+	uint32_t data[64]; /* data area */
+#if 0
+	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
+						  the data buffer) */
+#endif
+#define symbuf data
+
+	struct microjs_compiler microjs; 
+	struct microjs_vm vm; 
+	struct symtab * symtab;
+	char * script;
+	int len;
+	int n;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -959,16 +971,25 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	microjs_init(&jsp, tok_buf, sizeof(tok_buf));
+	/* initialize string buffer */
+	strbuf_init(strbuf, sizeof(strbuf));
+	/* initialize symbol table */
+	symtab = symtab_init(symbuf, sizeof(symbuf));
+	/* initialize compiler */
+	microjs_compiler_init(&microjs, symtab, (int32_t *)data, sizeof(data));
 
 	fprintf(f, "\"%s\"\n", argv[1]);
-	microjs_open(&jsp, argv[1], strlen(argv[1]));
+	script = argv[1];
+	len = strlen(argv[1]);
 
-	microjs_scan(&jsp);
+	if ((n = microjs_compile(&microjs, code, script, len)) < 0)
+		return 1;
 
-	microjs_tok_dump(f, &jsp);
+	microjs_vm_init(&vm, (int32_t *)data, sizeof(data));
+	vm.env.ftrace = stderr;
 
-	microjs_compile(&jsp, code, sizeof(code));
+	if (microjs_exec(&vm, code, n) < 0)
+		return 1;
 
 	fprintf(f, "\n");
 
