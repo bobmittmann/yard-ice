@@ -46,6 +46,31 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len)
 	return tab;
 }
 
+extern const struct ext_entry externals[];
+
+int sym_name_lookup(const char * s, unsigned int len)
+{
+	const struct ext_entry * ep;
+	int i;
+
+	/* look in the externals first */
+	for (ep = externals; ep->nm != NULL; ++ep) {
+		if ((strncmp(ep->nm, s, len) == 0) && (ep->nm[len] == '\0'))
+			return i + 0x80;
+	}
+
+#if 0
+	for (i = 0; i < var_strbuf->cnt; ++i) {
+		char * cstr = (char *)var_strbuf + var_strbuf->offs[i];
+		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0'))
+			return i;
+	}
+#endif
+
+	return -ERR_STRING_NOT_FOUND;
+}
+
+
 int sym_by_name(struct symtab * tab, const char * s, unsigned int len)
 {
 	int nm;
@@ -83,7 +108,7 @@ int sym_dump(FILE * f, struct symtab * tab)
 		} else if (sp->flags & SYM_EXTERN) {
 			struct sym_ext * ext = (struct sym_ext *)sp;
 			fprintf(f, "%04x g F .extern %04x    %s\n", ext->addr,
-					0, str(extern_get(ext->addr)->nm));
+					0, extern_get(ext->addr)->nm);
 		} else {
 			struct sym_ref * ref = (struct sym_ref *)sp;
 			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
@@ -93,11 +118,6 @@ int sym_dump(FILE * f, struct symtab * tab)
 	}
 
 	return 0;
-}
-
-int sym_lookup(struct symtab * tab, const char * s, unsigned int len)
-{
-	return sym_by_name(tab, s, len);
 }
 
 struct sym_obj * sym_obj_lookup(struct symtab * tab, int nm)

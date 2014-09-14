@@ -102,7 +102,7 @@ struct strbuf {
    -------------------------------------------------------------------------- */
 
 struct ext_entry {
-	uint8_t nm;
+	const char * nm;
 	uint8_t argmin;
 	uint8_t argmax;
 };
@@ -170,7 +170,7 @@ struct sym_tmp {
 /* external function */
 struct sym_ext {
 	uint8_t flags;
-	uint8_t nm;
+	uint8_t xid;
 	uint16_t addr;
 };
 
