@@ -9,7 +9,7 @@ struct tr_pair {
 };
 
 /* Predict sets */
-const struct tr_pair predict_vec[] = {
+static const struct tr_pair predict_vec[] = {
 	/*  44 (program) */
 	{  0,  0}, {  3,  1}, { 35,  1}, { 36,  1}, { 38,  1}, { 39,  1}, 
 	{ 40,  1}, 
@@ -148,7 +148,7 @@ static const struct {
 /* 68 bytes */
 
 /* Rules vectors table */
-const uint8_t rule_vec[] = {
+static const uint8_t rule_vec[] = {
 	/*  0:program(1) -> */
 	T_EOF, 
 	/*  1:program(2) -> */
@@ -390,7 +390,7 @@ static const struct {
 /* Total: 886 bytes */
 
 
-int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
+int microjs_ll_push(uint8_t * sp, unsigned int sym, unsigned int tok)
 {
 	const struct tr_pair * vec;
 	uint8_t * p;
@@ -439,7 +439,7 @@ int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok)
 	return n;
 }
 
-int ll_start(uint8_t * sp)
+int microjs_ll_start(uint8_t * sp)
 {
 	sp[-1] = T_EOF;
 	sp[-2] = N_PROGRAM;
@@ -447,7 +447,7 @@ int ll_start(uint8_t * sp)
 	return 2;
 }
 
-const const char * const ll_sym_tab[] = {
+const const char * const microjs_ll_sym[] = {
 	"EOF",
  	"DOT",
  	"COMMA",

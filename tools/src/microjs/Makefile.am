@@ -12,10 +12,10 @@ microjs_SOURCES = microjs_lex.c microjs_str.c microjs_sym.c microjs_dbg.c microj
 #CLEANFILES = microjs_ll.c microjs_ll.h const_str.h
 
 microjs_ll.h: microjs.gr Makefile
-	../ell/ell -e -h $<
+	../ell/ell -e -d -h $<
 
-#microjs_ll.c: microjs.gr Makefile
-#	../ell/ell -e -c $<
+microjs_ll.c: microjs.gr Makefile
+	../ell/ell -e -d -c $<
 
 const_str.h: const_str.txt Makefile
 	./mkstr.py -n const $< > $@

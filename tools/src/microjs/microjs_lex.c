@@ -32,6 +32,8 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#include <sys/dcclog.h>
+
 const struct {
 	uint8_t typ;
 	char nm[9];
@@ -349,9 +351,13 @@ struct token lexer_scan(struct lexer * lex)
 		case '}':
 			typ = T_RBRACE;
 			break;
+		case '\032': /* <SUB> Xmodem padding character */ 
+			typ = T_EOF;
+			break;
 		default:
 			typ = T_ERR;
 			qlf = ERR_UNEXPECTED_CHAR;
+			DCC_LOG1(LOG_WARNING, "invalid: 0x%02x", c);
 			goto ret;
 		}
 

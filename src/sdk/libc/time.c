@@ -18,31 +18,25 @@
  */
 
 /** 
- * @file time.h
+ * @file time.c
  * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __TIME_H__
-#define __TIME_H__
+#include <time.h>
+#include <stdlib.h>
+#include <sys/clock.h>
 
-#include <sys/types.h>
+time_t time(time_t * t)
+{
+	struct timespec tv;
 
-struct timespec {
-	time_t  tv_sec;   /* Seconds */
-	long    tv_nsec;  /* Nanoseconds */
-};
+//	clock_gettime(CLOCK_REALTIME, &tv);
+	tv.tv_sec = 0;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-	
-/* Return the current time and put it in *TIMER if TIMER is not NULL.  */
-time_t time(time_t * __timer);
+	if (t != NULL)
+		*t = tv.tv_sec;
 
-#ifdef __cplusplus
+	return tv.tv_sec;
 }
-#endif
-
-#endif /* __TIME_H__ */
 

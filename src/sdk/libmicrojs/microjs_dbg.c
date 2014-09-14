@@ -200,7 +200,7 @@ int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
 	int i;
 
 	for (i = cnt - 1; i >= 0; --i) {
-		fprintf(f, "\t%s\n", ll_sym_tab[sp[i]]);
+		fprintf(f, "\t%s\n", microjs_ll_sym[sp[i]]);
 	};
 
 	return 0;

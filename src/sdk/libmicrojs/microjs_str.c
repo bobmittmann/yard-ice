@@ -32,7 +32,6 @@
 #define __DEF_CONST_STRBUF__
 #include "const_str.h"
 
-//extern const struct strbuf const_strbuf;
 
 #define CONST_NM (256 - const_strbuf.cnt)
 

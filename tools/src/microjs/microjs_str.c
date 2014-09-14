@@ -27,12 +27,13 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#include <string.h>
+
 #define __DEF_CONST_STRBUF__
 #include "const_str.h"
 
-#include <string.h>
 
-#define CONST_NM (256 - CONST_STRINGS_MAX)
+#define CONST_NM (256 - const_strbuf.cnt)
 
 /* --------------------------------------------------------------------------
    Strings Tables
@@ -103,38 +104,16 @@ int str_add(const char * s, unsigned int len)
 	return idx;
 }
 
-/* add a string to the var buffer translating the most 
-   common C scape sequences */
-int cstr_add(const char * s, unsigned int len)
+int decode_cstr(char * dst, const char * src, unsigned int len)
 {
-	char * dst;
 	bool esc;
-	int offs;
-	int idx;
-	int i;
 	int c;
-
-	if ((idx = str_lookup(s, len)) >= 0)
-		return idx;
-
-	offs = var_strbuf->pos - (len + 1);
-	idx = var_strbuf->cnt;
-	if (offs < ((idx + 1) * sizeof(uint16_t)))
-		return ERR_STRBUF_OVERFLOW;
-
-	/* Copy the string to the buffer */
-	dst = (char *)var_strbuf + offs;
-
-	/* FIXME: as the strings are allocated top-down converting from
-	   left to right leave some unused spaces in the end of the allocated
-	   string */
-
+	int i;
 	/* FIXME: octal and hexadecimal coded chars */
 
-	/* Copy the string to the buffer */
 	esc = false;
 	for (i = 0; i < len; ++i) {
-		c = s[i];
+		c = src[i];
 		if (esc) {
 			switch (c) {
 			case 'a': /* Alarm (Bell) */
@@ -168,6 +147,36 @@ int cstr_add(const char * s, unsigned int len)
 	}
 	/* NULL terminate the string */
 	*dst = '\0';
+
+	return -1;
+}
+
+/* add a string to the var buffer translating the most 
+   common C scape sequences */
+int cstr_add(const char * s, unsigned int len)
+{
+	char * dst;
+	int offs;
+	int idx;
+
+	if ((idx = str_lookup(s, len)) >= 0)
+		return idx;
+
+	offs = var_strbuf->pos - (len + 1);
+	idx = var_strbuf->cnt;
+	if (offs < ((idx + 1) * sizeof(uint16_t)))
+		return ERR_STRBUF_OVERFLOW;
+
+	/* Copy the string to the buffer */
+	dst = (char *)var_strbuf + offs;
+
+	/* FIXME: as the strings are allocated top-down converting from
+	   left to right leave some unused spaces in the end of the allocated
+	   string */
+
+	/* Copy the string to the buffer */
+	decode_cstr(dst, s, len);
+
 	var_strbuf->offs[idx] = offs;
 	var_strbuf->cnt++;
 	var_strbuf->pos -= len + 1;
@@ -190,4 +199,5 @@ const char * str(int idx)
 
 	return (char *)var_strbuf + var_strbuf->offs[idx];
 }
+
 
