@@ -39,14 +39,15 @@
    -------------------------------------------------------------------------- */
 
 const struct ext_entry externals[] = {
-	[EXT_RAND] = { .nm = CONST_NM + NM_RAND, .argmin = 0, .argmax = 0 },
-	[EXT_SQRT] = { .nm = CONST_NM + NM_SQRT, .argmin = 1, .argmax = 1 },
-	[EXT_LOG2] = { .nm = CONST_NM + NM_LOG2, .argmin = 1, .argmax = 1 },
-	[EXT_WRITE] = { .nm = CONST_NM + NM_WRITE, .argmin = 0, .argmax = 128 },
-	[EXT_PRINT] = { .nm = CONST_NM + NM_PRINT, .argmin = 0, .argmax = 128 },
-	[EXT_PRINTF] = { .nm = CONST_NM + NM_PRINTF, .argmin = 1, .argmax = 128 },
-	[EXT_SRAND] = { .nm = CONST_NM + NM_SRAND, .argmin = 1, .argmax = 1 },
-	[EXT_TIME] = { .nm = CONST_NM + NM_TIME, .argmin = 0, .argmax = 0 },
+	[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
+	[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
+	[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
+	[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
+	[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
+	[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
+	[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
+	[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 },
+	{ .nm = NULL, .argmin = 0, .argmax = 0 },
 };
 
 int extern_lookup(int nm)
