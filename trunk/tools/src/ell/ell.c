@@ -421,6 +421,7 @@ void usage(FILE * f, char * prog)
 	fprintf(f, "  -h     \twrite .h file\n");
 	fprintf(f, "  -r     \trecursive descent parser\n");
 	fprintf(f, "  -e     \tembedded predictive parser tables\n");
+	fprintf(f, "  -d     \tcreate debug structures\n");
 	fprintf(f, "\n");
 }
 
@@ -462,13 +463,14 @@ int main(int argc,  char **argv)
 
 	int	listing = false;
 	int	dump_sets = false;
+	int	debug = false;
 
 	/* the prog name start just after the last lash */
 	if ((prog = (char *)basename(argv[0])) == NULL)
 		prog = argv[0];
 
 	/* parse the command line options */
-	while ((c = getopt(argc, argv, "V?vretchlso:")) > 0) {
+	while ((c = getopt(argc, argv, "V?vretchlsod:")) > 0) {
 		switch (c) {
 		case 'V':
 			version(prog);
@@ -496,6 +498,10 @@ int main(int argc,  char **argv)
 
 		case 'c':
 			cgen = true;
+			break;
+
+		case 'd':
+			debug = true;
 			break;
 
 		case 'h':
@@ -669,10 +675,10 @@ int main(int argc,  char **argv)
 		WriteRecursiveParser(cf, cfname, hf, hfname);
 	} else {
 		if (hgen)
-			write_compact_h(hf, prefix, hfname); 
+			write_compact_h(hf, prefix, hfname, debug); 
 
 		if (cgen)
-			write_compact_c(cf, prefix, hfname);
+			write_compact_c(cf, prefix, hfname, debug);
 	}
 
 	if (hgen)

@@ -142,14 +142,14 @@
 #define ACTION(_X) (0)
 #endif
 
-extern const const char * const ll_sym_tab[];
+extern const const char * const microjs_ll_sym[];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int ll_rule_push(uint8_t * sp, unsigned int sym, unsigned int tok);
-int ll_start(uint8_t * sp);
+int microjs_ll_push(uint8_t * sp, unsigned int sym, unsigned int tok);
+int microjs_ll_start(uint8_t * sp);
 
 #ifdef __cplusplus
 }

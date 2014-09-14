@@ -137,9 +137,9 @@ int BitVecAdd(BITVEC x, int pos);
 
 void WriteRecursiveParser(FILE *fp, char * pname, FILE * fh, char *hname);
 
-void write_compact_c(FILE * fp, char * prefix, char * hname);
+void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug);
 
-void write_compact_h(FILE * fp, char * prefix, char * hname); 
+void write_compact_h(FILE * fp, char * prefix, char * hname, bool debug); 
 
 
 #ifdef __cplusplus

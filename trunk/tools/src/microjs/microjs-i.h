@@ -60,6 +60,22 @@
 #define MICROJS_STRING_LEN_MAX 128
 #endif
 
+#ifndef MICROJS_TRACE_ENABLED
+#define MICROJS_TRACE_ENABLED 1
+#endif
+
+#if (MICROJS_TRACE_ENABLED)
+#define	TRACEF(__FMT, ...) do { \
+	fprintf(stdout, __FMT, ## __VA_ARGS__); \
+	fflush(stdout); } while (0)
+
+#define	FTRACEF(__F, __FMT, ...) do { \
+	fprintf(__F, __FMT, ## __VA_ARGS__); \
+	fflush(__F); } while (0)
+#else 
+#define TRACEF(__FMT, ...) do { } while (0)
+#define	FTRACEF(__F, __FMT, ...) do { } while (0)
+#endif
 
 /* --------------------------------------------------------------------------
   Lexical Analyzer
@@ -197,21 +213,16 @@ struct symtab {
 #define OPC_CMP      18
 #define OPC_JMP      19
 #define OPC_JEQ      20
-#define OPC_JNE      21
-#define OPC_LT       22
-#define OPC_GT       23
-#define OPC_EQ       24
-#define OPC_NE       25
-#define OPC_LE       26
-#define OPC_GE       27
-#define OPC_LOR      28
-#define OPC_LAND     29
-#define OPC_PRINT_INT 30
-#define OPC_PRINT_CHAR 31
-#define OPC_EXT      32
-#define OPC_CALL     33
-#define OPC_RET      34
-#define OPC_POP      35
+#define OPC_LT       21
+#define OPC_GT       22
+#define OPC_EQ       23
+#define OPC_NE       24
+#define OPC_LE       25
+#define OPC_GE       26
+#define OPC_EXT      27
+#define OPC_CALL     28
+#define OPC_RET      29
+#define OPC_POP      30
 
 extern int32_t (* extern_call[])(struct microjs_env *, int32_t [], int);
 
@@ -241,17 +252,18 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab, int nm);
 
 struct sym_ref * sym_ref_new(struct symtab * tab, void * sym);
 
+/* Push a reference into the stack */
+struct sym_ref * sym_ref_push(struct symtab * tab);
+
+/* Get a reference from the stack */
+struct sym_ref * sym_ref_get(struct symtab * tab, int pos);
+
+
+
 struct sym_ext * sym_ext_new(struct symtab * tab, int nm);
 
 int sym_ext_id(struct symtab * tab, struct sym_ext * ext);
 
-int sym_add_local(struct symtab * tab, const char * s, unsigned int len);
-
-int sym_anom_push(struct symtab * tab);
-
-int sym_anom_pop(struct symtab * tab);
-
-int sym_anom_get(struct symtab * tab, int pos);
 
 struct sym_tmp * sym_tmp_push(struct symtab * tab, 
 							  const char * s, unsigned int len);

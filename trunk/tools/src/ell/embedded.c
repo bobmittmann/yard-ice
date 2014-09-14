@@ -57,11 +57,11 @@ int tr_pair_cmp(const void * p1, const void * p2)
 	return ((struct tr_pair *)p1)->sym_no - ((struct tr_pair *)p2)->sym_no;
 }
 
-void write_sym_tab(FILE * fp) 
+void write_sym_tab(FILE * fp, char * prefix) 
 {    
     SYMPTR sp;       
 
-	fprintf(fp, "const const char * const ll_sym_tab[] = {\n");
+	fprintf(fp, "const const char * const %s_ll_sym[] = {\n", prefix);
 	forall_symbols(sp) {
 		if (sp->kind == TERM)
 			fprintf(fp, "\t\"%s\",\n ", sp->symtext);
@@ -80,7 +80,7 @@ void write_sym_tab(FILE * fp)
 	fprintf(fp, "};\n\n");
 }
 
-void write_compact_c(FILE * fp, char * prefix, char * hname)
+void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 {	
 	RULEPTR rp;
 	SYMPTR sp,tp; 
@@ -264,33 +264,36 @@ void write_compact_c(FILE * fp, char * prefix, char * hname)
 	fprintf(fp, "\treturn n;\n");
 	fprintf(fp, "}\n\n");
 
-
 	if ((rp = first_rule) != NULL) {
+		char s[256];
 		int j;
 
 		fprintf(fp, "int %s_ll_start(uint8_t * sp)\n", prefix);
 		fprintf(fp, "{\n");
 
 		for(j = 0; j < rp->nrhs; ++j) {
-			char s[256];
 			sp = rp->rhs[j];
 			fprintf(fp, "\tsp[-%d] = ", j + 1);
 			fprintf(fp, "%c_%s;\n", kind_prefix(sp->kind), 
 					strupper(s, sp->symtext));
 		}
 
+		fprintf(fp, "\tsp[-%d] = ", j + 1);
+		fprintf(fp, "%c_%s;\n", kind_prefix(rp->lhs->kind), 
+					strupper(s, rp->lhs->symtext));
+
 		fprintf(fp, "\n");
-		fprintf(fp, "\treturn %d;\n", j);
+		fprintf(fp, "\treturn %d;\n", j + 1);
 		fprintf(fp, "}\n\n");
     }    
 
-
-	write_sym_tab(fp);
+	if (debug)
+		write_sym_tab(fp, prefix);
 
 	free(set);
 }
 
-void write_compact_h(FILE * fp, char * prefix, char * hname) 
+void write_compact_h(FILE * fp, char * prefix, char * hname, bool debug) 
 {    
 	char s[256];
 	char h[256];
@@ -362,7 +365,9 @@ void write_compact_h(FILE * fp, char * prefix, char * hname)
 	fprintf(fp, "#define ACTION(_X) (0)\n");
 	fprintf(fp, "#endif\n\n");
 
-	fprintf(fp, "extern const const char * const ll_sym_tab[];\n\n");
+	if (debug)
+		fprintf(fp, "extern const const char * const %s_ll_sym[];\n\n", 
+				prefix);
 
 	fprintf(fp, "#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
 

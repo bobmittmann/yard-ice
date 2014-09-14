@@ -28,6 +28,7 @@
 #include "microjs-i.h"
 
 #include <string.h>
+#include <time.h>
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
@@ -94,8 +95,7 @@ int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 {
-//	return (int32_t)time(NULL);
-	return 0;
+	return (int32_t)time(NULL);
 }	
 
 #define BUF_LEN 12

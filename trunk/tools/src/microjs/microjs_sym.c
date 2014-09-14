@@ -160,6 +160,30 @@ struct sym_ref * sym_ref_new(struct symtab * tab, void * sym)
 	return ref;
 }
 
+struct sym_ref * sym_ref_push(struct symtab * tab) 
+{
+	struct sym_ref * ref;
+
+	if (tab->global == tab->local)
+		return NULL;
+
+	ref = (struct sym_ref *)&tab->sym[--tab->local];
+	ref->oid = (struct sym *)ref - tab->sym;
+	ref->flags = 0;
+	ref->addr = 0;
+
+	return ref;
+}
+
+struct sym_ref * sym_ref_get(struct symtab * tab, int pos)
+{
+	if (tab->top <= (tab->local + pos))
+		return NULL;
+
+	return (struct sym_ref *)&tab->sym[tab->local + pos];
+}
+
+
 struct sym_ext * sym_ext_new(struct symtab * tab, int nm)
 {
 	struct sym_ext * ext;
@@ -183,65 +207,6 @@ int sym_ext_id(struct symtab * tab, struct sym_ext * ext)
 	return (struct sym *)ext - tab->sym;
 }
 
-int sym_add_local(struct symtab * tab, const char * s, unsigned int len)
-{
-	struct sym * sp;
-	int nm;
-	int id;
-
-	if (tab->global == tab->local)
-		return -1;
-
-	if ((id = sym_by_name(tab, s, len)) >= 0)
-		return id;
-
-	if ((nm = str_add(s, len)) < 0)
-		return nm;
-
-	id = --tab->local;
-	sp = &tab->sym[id];
-
-	sp->nm = nm;
-	sp->flags = 0;
-	sp->addr = 0;
-
-	return id;
-}
-
-int sym_anom_push(struct symtab * tab)
-{
-	struct sym * sp;
-	int id;
-
-	if (tab->global == tab->local)
-		return -1;
-
-	id = --tab->local;
-	sp = &tab->sym[id];
-
-	sp->nm = 0;
-	sp->flags = 0;
-	sp->addr = 0;
-
-	return id;
-}
-
-int sym_anom_pop(struct symtab * tab)
-{
-	if (tab->top == tab->local)
-		return -1;
-
-	return tab->local++;
-}
-
-int sym_anom_get(struct symtab * tab, int pos)
-{
-	if (tab->top <= (tab->local + pos))
-		return -1;
-
-	return tab->local + pos;
-}
-
 void sym_pop(struct symtab * tab)
 {
 	if (tab->top > tab->local)
@@ -261,8 +226,12 @@ struct sym_tmp * sym_tmp_push(struct symtab * tab,
 		return NULL;
 
 	tmp = (struct sym_tmp *)&tab->sym[--tab->local];
-	tmp->nm = nm;
 	tmp->flags = 0;
+	tmp->nm = nm;
+	tmp->xid= 0;
+	tmp->cnt = 0;
+	tmp->min= 0;
+	tmp->max= 0;
 
 	return tmp;
 }

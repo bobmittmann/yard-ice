@@ -519,7 +519,7 @@ int op_while_begin(struct microjs_compiler * microjs)
 	/* Alloc a temporary reference for the loop jump */
 	if ((ref = sym_ref_push(microjs->tab)) == NULL)
 		return -ERR_REF_PUSH_FAIL;
-	TRACEF(".L%d:\n", ref->id);
+	TRACEF(".L%d:\n", ref->oid);
 	ref->addr = microjs->pc;
 
 	/* Alloc a secondary temporary reference for the condition jump */
@@ -533,7 +533,7 @@ int op_while_cond(struct microjs_compiler * microjs)
 {
 	struct sym_ref * ref = sym_ref_get(microjs->tab, 0);
 
-	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->oid, microjs->pc);
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JEQ;
 	ref->addr = microjs->pc;
@@ -552,15 +552,15 @@ int op_while_end(struct microjs_compiler * microjs)
 	ref = sym_ref_get(microjs->tab, 0);
 	offs = microjs->pc - (ref->addr - 1);
 	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", ref->addr - 1, 
-		   microjs->pc + 3, ref->id);
+		   microjs->pc + 3, ref->oid);
 	microjs->code[ref->addr] = offs;
 	microjs->code[ref->addr + 1] = offs >> 8;
 
 	/* Repeat jump */
-	ref = sym_ref_get(microjs->tab, 0);
+	ref = sym_ref_get(microjs->tab, 1);
 	offs = ref->addr - (microjs->pc + 3);
 	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, 
-		   ref->addr, ref->id, offs);
+		   ref->addr, ref->oid, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -579,7 +579,7 @@ int op_if_cond(struct microjs_compiler * microjs)
 	if ((ref = sym_ref_push(microjs->tab)) == NULL)
 		return -ERR_REF_PUSH_FAIL;
 
-	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->oid, microjs->pc);
 	/* save current location on a temporary variable */
 	microjs->code[microjs->pc++] = OPC_JEQ;
 	ref->addr = microjs->pc;
@@ -601,11 +601,11 @@ int op_if_else(struct microjs_compiler * microjs)
 
 	offs = microjs->pc - (addr - 1);
 	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", addr - 1, 
-		   microjs->pc + 3, ref->id);
+		   microjs->pc + 3, ref->oid);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 
-	TRACEF(".L%d:\n%04x\tJMP xxxx\n", ref->id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJMP xxxx\n", ref->oid, microjs->pc);
 	/* save current location on the same temporary reference */
 	microjs->code[microjs->pc++] = OPC_JMP;
 	ref->addr = microjs->pc;
@@ -626,7 +626,7 @@ int op_if_end(struct microjs_compiler * microjs)
 	addr = ref->addr;
 	offs = (microjs->pc - 3) - (addr - 1);
 
-	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, microjs->pc, ref->id);
+	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, microjs->pc, ref->oid);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
 	sym_pop(microjs->tab);
@@ -641,7 +641,7 @@ int op_for_init(struct microjs_compiler * microjs)
 	if ((ref = sym_ref_push(microjs->tab)) == NULL)
 		return -ERR_REF_PUSH_FAIL;
 
-	TRACEF(".L%d:\n", id);
+	TRACEF(".L%d:\n", ref->oid);
 	ref->addr = microjs->pc; /* save current location */
 
 	/* allocate 3 extra anonymous references */
@@ -661,20 +661,20 @@ int op_for_cond(struct microjs_compiler * microjs)
 
 	/* Conditional jump to the body */
 	ref = sym_ref_get(microjs->tab, 2);
-	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJEQ xxxx\n", ref->oid, microjs->pc);
 	microjs->code[microjs->pc++] = OPC_JEQ;
 	ref->addr = microjs->pc; /* save current location */
 	microjs->pc += 2; /* reserve space for jump address */
 
 	/* Jump to the beginning of the body part */
 	ref = sym_ref_get(microjs->tab, 1);
-	TRACEF(".L%d:\n%04x\tJMP xxxx\n", id, microjs->pc);
+	TRACEF(".L%d:\n%04x\tJMP xxxx\n", ref->oid, microjs->pc);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	ref->addr = microjs->pc; /* save current location */
 	microjs->pc += 2; /* reserve 2 positions for jump address */
 
 	ref = sym_ref_get(microjs->tab, 0);
-	TRACEF(".L%d:\n", id);
+	TRACEF(".L%d:\n", ref->oid);
 	ref->addr = microjs->pc; /* save current location */
 	return 0;
 }
@@ -685,10 +685,10 @@ int op_for_after(struct microjs_compiler * microjs)
 	int offs;
 
 	/* Adjust the jump to body */
-	ref = sym_ref_get(microjs->tab, 0);
+	ref = sym_ref_get(microjs->tab, 1);
 	offs = microjs->pc - (ref->addr - 1);
 	TRACEF("\tfix %04x -> JMP %04x (.L%d)\n", ref->addr - 1, 
-		   microjs->pc + 3, ref->id);
+		   microjs->pc + 3, ref->oid);
 	microjs->code[ref->addr] = offs;
 	microjs->code[ref->addr + 1] = offs >> 8;
 
@@ -696,7 +696,7 @@ int op_for_after(struct microjs_compiler * microjs)
 	ref = sym_ref_get(microjs->tab, 3);
 	offs = ref->addr - (microjs->pc + 3);
 	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, ref->addr, 
-		   ref->id, offs);
+		   ref->oid, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -713,7 +713,7 @@ int op_for_end(struct microjs_compiler * microjs)
 	ref = sym_ref_get(microjs->tab, 2);
 	offs = microjs->pc - (ref->addr - 1);
 	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", ref->addr - 1, 
-		   microjs->pc + 3, ref->id);
+		   microjs->pc + 3, ref->oid);
 	microjs->code[ref->addr] = offs;
 	microjs->code[ref->addr + 1] = offs >> 8;
 
@@ -721,7 +721,7 @@ int op_for_end(struct microjs_compiler * microjs)
 	ref = sym_ref_get(microjs->tab, 0);
 	offs = ref->addr - (microjs->pc + 3);
 	TRACEF("%04x\tJMP %04x (.L%d offs=%d)\n", microjs->pc, 
-		   ref->addr, ref->id, offs);
+		   ref->addr, ref->oid, offs);
 	microjs->code[microjs->pc++] = OPC_JMP;
 	microjs->code[microjs->pc++] = offs;
 	microjs->code[microjs->pc++] = offs >> 8;
@@ -805,7 +805,7 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 	pp_sp = parser_stack + STACK_SIZE;
 	pp_sl = parser_stack;
 	pp_top = pp_sp;
-	pp_sp -= ll_start(pp_sp);
+	pp_sp -= microjs_ll_start(pp_sp);
 	microjs->pc = 0;
 	microjs->code = code;
 
@@ -815,7 +815,7 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 		/* pop the stack */
 		sym = *pp_sp++;
 //		TRACEF("<%s>\n", ll_sym_tab[sym]);
-		DCC_LOG1(LOG_INFO, "<%s>", ll_sym_tab[sym]);
+		DCC_LOG1(LOG_INFO, "<%s>", microjs_ll_sym[sym]);
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
@@ -836,10 +836,10 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 			}
 		} else {
 			/* non terminal */
-			if ((k = ll_rule_push(pp_sp, sym, lookahead)) < 0) {
-				fprintf(stderr, "ll_rule_push() failed!\n");
+			if ((k = microjs_ll_push(pp_sp, sym, lookahead)) < 0) {
+				fprintf(stderr, "microjs_ll_push() failed!\n");
 				ll_stack_dump(stderr, pp_sp, pp_top - pp_sp);
-				fprintf(stderr, "lookahead = %s\n", ll_sym_tab[lookahead]);
+				fprintf(stderr, "lookahead = %s\n", microjs_ll_sym[lookahead]);
 				goto error;
 			}
 			pp_sp -= k;
