@@ -106,17 +106,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "JMP 0x%04x (offs=%d)\n", pc, r0);
 			break;
 
-		case OPC_JNE:
-			r0 = (int16_t)(code[pc] | code[pc + 1] << 8);
-			pc += 2;
-			r1 = vm_pop(vm);
-			if (trace)
-				FTRACEF(f, "JNE 0x%04x (%d)\n", pc + r0, r1);
-			if (r1 != 0)
-				pc += r0;
-			break;
-
-		case OPC_JEQ:
+		case OPC_JEQ: /* coniditional JMP */
 			r0 = (int16_t)(code[pc] | code[pc + 1] << 8);
 			pc += 2;
 			r1 = vm_pop(vm);
@@ -156,7 +146,8 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			break;
 
 		case OPC_LD:
-			r1 = vm_pop(vm);
+			r1 = code[pc++];
+			r1 |= code[pc++] << 8;
 			r0 = vm_rd32(vm, r1);
 			if (trace)
 				FTRACEF(f, "LD 0x%04x -> %d\n", r1, r0);
@@ -164,7 +155,8 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			break;
 
 		case OPC_ST:
-			r1 = vm_pop(vm);
+			r1 = code[pc++];
+			r1 |= code[pc++] << 8;
 			r0 = vm_pop(vm);
 			if (trace)
 				FTRACEF(f, "ST 0x%04x <- %d\n", r1, r0);
@@ -172,8 +164,8 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			break;
 
 		case OPC_EXT:
-			r0 = vm_pop(vm);
-			r1 = vm_pop(vm);
+			r0 = code[pc++];
+			r1 = code[pc++];
 			if (trace)
 				FTRACEF(f, "EXT %d, %d\n", r0, r1);
 			r0 = extern_call[r0](&vm->env, &vm->data[vm->sp >> 2], r1);
