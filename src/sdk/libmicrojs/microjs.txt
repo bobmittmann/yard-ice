@@ -1,0 +1,62 @@
+MicroJS - Micro JavaScript
+
+Memory Layout
+
+Integer Variable Descriptor
+
++---------+------------+
+| Data    | Name       |
+| Address | String     |<---+
++---------+------------+    |
+| 16      | 1 ... 255  |    |
++---------+------------+    |
+                            |
+ Integer Variable           |
+ Descriptor Pointer         |
++------+------+--------+    |
+| Id   | Type | Offset |    |
++------+------+--------+    |
+| 8    | 8    | 16     |----+
++------+------+--------+
+
+
+Const String Descriptor
+Constant strings are strings in the constant pool. The constant pool
+contains strings known by the compiler and the run time environment.
+Strings in the constant pool don't need to be embedded in the
+byde code stream.
++------+------+-------------+
+| Id   | Type | String Id   |
++------+------+-------------+
+
+Variable String Descriptor:
+Variable strings are strings not in the constant pool
+and may be unique to this program. It have to be embedded
+in a distributal byte code stream.
++------+------+-------------+
+| Id   | Type | String Id   |
++------+------+-------------+
+
+Code References
+Those are pointers to the code memory used for backpatching
++------+------+-------------+
+| Id   | Type | Code Adress |
++------+------+-------------+
+
+Temporary Variable Descriptor
++---------+------------+
+|         | Name       |
+| Options | String     |<---+
++---------+------------+    |
+| 16      | 1 ... 255  |    |
++---------+------------+    |
+                            |
+ Temporary Symbol           |
+ Descriptor Pointer         |
++------+------+--------+    |
+| Id   | Type | Offset |    |
++------+------+--------+    |
+| 8    | 8    | 16     |----+
++------+------+--------+
+
+
