@@ -33,3 +33,29 @@ INCPATH = ../include
 
 include ../../mk/lib.mk
 
+ifeq ($(HOST),Linux)
+	ELL = $(TOOLSDIR)/linux/ell
+else
+ifeq ($(HOST),Cygwin)
+	ELL = $(TOOLSDIR)/mingw/ell
+else
+ifeq ($(HOST),Msys)
+	ELL = $(TOOLSDIR)/mingw/ell
+else
+ifeq ($(HOST),Windows)
+	ELL = $(TOOLSDIR)/mingw/ell
+else
+ $(error Unsuported HOST)
+endif
+endif
+endif
+endif
+
+ll: microjs_ll.c microjs_ll.h
+
+microjs_ll.h: microjs.gr
+	echo $(ELL) -e -h $<
+
+microjs_ll.c: microjs.gr
+	echo $(ELL) -e -c $<
+	
