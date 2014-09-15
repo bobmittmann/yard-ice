@@ -2,22 +2,23 @@ MicroJS - Micro JavaScript
 
 Memory Layout
 
-Integer Variable Descriptor
+Id = Symbol Entry Id;
+NId = Name Id;
 
-+---------+------------+
-| Data    | Name       |
-| Address | String     |<---+
-+---------+------------+    |
-| 16      | 1 ... 255  |    |
-+---------+------------+    |
-                            |
- Integer Variable           |
- Descriptor Pointer         |
-+------+------+--------+    |
-| Id   | Type | Offset |    |
-+------+------+--------+    |
-| 8    | 8    | 16     |----+
-+------+------+--------+
+Name List Entry 
++------+------+---------+
+| Id   | Next | Name    |
++------+------+---------+
+| 8    |  8   | 1 .. 63 |  
++------+------+---------+ 
+                            
+ Integer Variable          
+ Descriptor Pointer        
++------+------+------+    
+| Id   | Type | Nid  |    
++------+------+------+    
+| 8    | 8    | 8    |
++------+------+------+
 
 
 Const String Descriptor
@@ -59,4 +60,14 @@ Temporary Variable Descriptor
 | 8    | 8    | 16     |----+
 +------+------+--------+
 
+Temporary Variable Descriptor
+
+struct sym_tmp {
+	uint8_t flags;
+	uint8_t nm;
+	uint8_t xid;
+	uint8_t cnt;
+	uint8_t min;
+	uint8_t max;
+};
 

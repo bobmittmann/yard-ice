@@ -126,7 +126,7 @@ struct sym {
 	uint8_t nm;
 	uint16_t addr;
 	uint16_t size;
-};
+} __attribute__((packed));
 
 #define SYM_REFERENCE       (0 << 6)
 #define SYM_OBJECT          (1 << 7)
@@ -151,7 +151,7 @@ struct sym_obj {
 	uint8_t nm;
 	uint16_t addr;
 	uint16_t size;
-};
+} __attribute__((packed));
 
 
 #define SYM_METHOD    (1 << 0)
@@ -164,7 +164,7 @@ struct sym_tmp {
 	uint8_t cnt;
 	uint8_t min;
 	uint8_t max;
-};
+} __attribute__((packed));
 
 
 /* external function */
@@ -172,7 +172,7 @@ struct sym_ext {
 	uint8_t flags;
 	uint8_t xid;
 	uint16_t addr;
-};
+} __attribute__((packed));
 
 /* object reference, this represent a pointer to a 
    target's memory location */
@@ -180,13 +180,24 @@ struct sym_ref {
 	uint8_t flags;
 	uint8_t oid;
 	uint16_t addr;
-};
+} __attribute__((packed));
+
+/* symbol name */
+struct sym_nm {
+	uint16_t next;
+	uint8_t id;
+	char s[1];
+} __attribute__((packed));
 
 struct symtab {
+	const struct ext_entry * extrn;
 	uint16_t global;
-	uint16_t local;
+	uint16_t sp;
+	uint16_t fp;
 	uint16_t top;
-	struct sym sym[];
+	uint16_t name;
+	uint8_t id;
+	uint8_t buf[];
 };
 
 /* --------------------------------------------------------------------------
@@ -276,7 +287,11 @@ void sym_addr_set(struct symtab * tab, int id, int addr);
 
 struct sym_tmp * sym_tmp_get(struct symtab * tab, int pos);
 
-void sym_pop(struct symtab * tab);
+void sym_ref_pop(struct symtab * tab);
+
+void sym_tmp_pop(struct symtab * tab);
+
+void sym_nm_pop(struct symtab * tab);
 
 int extern_lookup(int nm);
 

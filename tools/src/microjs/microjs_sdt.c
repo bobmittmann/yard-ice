@@ -55,7 +55,7 @@ int extern_lookup(int nm)
 	int i;
 
 	for (i = 0; i < sizeof(externals) / sizeof(struct ext_entry); ++i) {
-		if (externals[i].nm == nm)
+//		if (externals[i].nm == nm)
 			return i;
 	}
 
@@ -89,6 +89,7 @@ int alloc32(struct microjs_compiler * microjs)
 
 int mem_bind(struct microjs_compiler * microjs)
 {
+#if 0
 	struct symtab * tab = microjs->tab;
 	int i;
 
@@ -116,6 +117,7 @@ int mem_bind(struct microjs_compiler * microjs)
 			microjs->code[ref->addr + 1] = obj->addr >> 8;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -206,7 +208,7 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 
 int op_pop_sym(struct microjs_compiler * microjs)
 {
-	sym_pop(microjs->tab);
+	sym_tmp_pop(microjs->tab);
 	return 0;
 }
 
@@ -567,8 +569,8 @@ int op_while_end(struct microjs_compiler * microjs)
 	microjs->code[microjs->pc++] = offs >> 8;
 
 	/* remove temporary references from the stack */
-	sym_pop(microjs->tab);
-	sym_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
 	return 0;
 }
 
@@ -630,7 +632,7 @@ int op_if_end(struct microjs_compiler * microjs)
 	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", addr - 1, microjs->pc, ref->oid);
 	microjs->code[addr++] = offs;
 	microjs->code[addr++] = offs >> 8;
-	sym_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
 	return 0;
 }
 
@@ -728,10 +730,10 @@ int op_for_end(struct microjs_compiler * microjs)
 	microjs->code[microjs->pc++] = offs >> 8;
 
 	/* remove temp references */
-	sym_pop(microjs->tab);
-	sym_pop(microjs->tab);
-	sym_pop(microjs->tab);
-	sym_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
+	sym_ref_pop(microjs->tab);
 
 	return 0;
 }
