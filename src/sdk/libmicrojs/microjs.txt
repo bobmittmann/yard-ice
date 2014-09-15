@@ -62,12 +62,34 @@ Temporary Variable Descriptor
 
 Temporary Variable Descriptor
 
-struct sym_tmp {
-	uint8_t flags;
-	uint8_t nm;
-	uint8_t xid;
-	uint8_t cnt;
-	uint8_t min;
-	uint8_t max;
-};
+---------------------------------------------
+
+Object: 
+sym_obj_new()
+sym_obj_lookup()
++-------+-------+----------+-------+-----------+
+| Id    | Flags | Addr     | Size  | Name      |
++-------+-------+----------+-------+-----------+    
+| 8     | 8     | 16       | 8     | 1..32     |
++-------+-------+----------+-------+-----------+
+
+Temporary: 
+- sym_tmp_push()
+- sym_tmp_pop()
+- sym_tmp_get()
++-------+-------+-------+-------+-------+-------+-------+
+| Id    | Flags | Nid   | Xid   | Cnt   | Min   | Max   |
++-------+-------+-------+-------+-------+-------+-------+   
+| 8     | 8     | 8     | 8     | 8     | 8     | 8     |
++-------+-------+-------+-------+-------+-------+-------+
+
+Reference: 
+- sym_ref_push()
+- sym_ref_pop()
+- sym_ref_get()
++-------+---------+
+| Oid   | Addr    |
++-------+---------+
+| 8     | 16      |
++-------+---------+
 
