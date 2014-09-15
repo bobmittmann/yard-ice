@@ -1,15 +1,15 @@
 //
 // Print a list of 100 random prime numbers
 //
-var n, j;	
-var prime;
+var j;
 
 srand(time()); // initialize random number generator
 
 printf("----------------------\n");
 
 for (j = 0; j < 100; ) {
-	n = rand();
+	var n = rand();
+	var prime;
 	if (n <= 3) {
 		prime = n > 1;
 	} else {

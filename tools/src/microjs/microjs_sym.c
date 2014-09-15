@@ -29,31 +29,39 @@
 
 #include <string.h>
 
+#include <sys/dcclog.h>
+
 /* --------------------------------------------------------------------------
    Symbol table
    -------------------------------------------------------------------------- */
 
-struct symtab * symtab_init(uint32_t * buf, unsigned int len)
+struct symtab * symtab_init(uint32_t * buf, unsigned int len, 
+							const struct ext_libdef * libdef)
 {
 	struct symtab * tab = (struct symtab *)buf;
 
 	/* top of the symbol table */
-	tab->top = (len - sizeof(struct symtab)) / sizeof(struct symtab);
+	tab->top = len - sizeof(struct symtab);
 	/* locals are allocated top-down */
 	tab->sp = tab->top;
 	tab->fp = tab->top;
-	tab->name = 0;
-	/* locals are allocated bottom-up */
-	tab->global = 0;
+	/* symbols are allocated bottom-up */
+	tab->heap = 0;
+	/* initialize temporary labels */
+	tab->tmp_lbl = 0;
+
+	tab->libdef = libdef;
 	return tab;
 }
 
-bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
+static bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
+	
+	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len);
 
 	sp -= len;
 	if (tab->heap > sp)
@@ -68,12 +76,38 @@ bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 	return true;
 }
 
+static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
+{
+	int sp = tab->sp;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+	
+	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len + 1);
+
+	sp -= len + 1;
+	if (tab->heap > sp)
+		return false;
+
+	dst = (uint8_t *)&tab->buf + sp;
+	src = (uint8_t *)s;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+	dst[i] = '\0';
+
+	tab->sp = sp;
+
+	return true;
+}
+
 static bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
+
+	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len);
 
 	if (sp >= tab->fp)
 		return false;
@@ -86,44 +120,6 @@ static bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 	}
 
 	tab->sp = sp + len;
-
-	return true;
-}
-
-static bool sym_pick(struct symtab * tab, int pos, 
-					 void * ptr,  unsigned int len)
-{
-	int sp = tab->sp + pos * len;
-	uint8_t * dst;
-	uint8_t * src;
-	int i;
-
-	if (sp >= tab->fp)
-		return false;
-
-	src = (uint8_t *)&tab->buf + sp;
-	dst = (uint8_t *)ptr;
-	for(i = 0; i < len; ++i)
-		dst[i] = src[i];
-
-	return true;
-}
-
-static bool sym_poke(struct symtab * tab, int pos, 
-					 void * ptr,  unsigned int len)
-{
-	int sp = tab->sp + pos * len;
-	uint8_t * dst;
-	uint8_t * src;
-	int i;
-
-	if (sp >= tab->fp)
-		return false;
-
-	dst = (uint8_t *)&tab->buf + sp;
-	src = (uint8_t *)ptr;
-	for(i = 0; i < len; ++i)
-		dst[i] = src[i];
 
 	return true;
 }
@@ -181,16 +177,38 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 							 const char * s, unsigned int len)
 {
 	struct sym_obj * obj;
+	int heap = tab->heap;
+	int id;
+	int nm;
 
-	if (!sym_push(tab, s, len))
+	if ((obj = sym_obj_lookup(tab, s, len)) != NULL) {
+		/* reuse existing name */
+		nm = obj->nm;
+		DCC_LOG1(LOG_INFO, "reusing name: \"%s\"", (char *)&tab->buf + nm); 
+	} else {
+		if (!sym_push_str(tab, s, len)) {
+			DCC_LOG(LOG_WARNING, "sym_push_str() failed!");
+			return NULL;
+		}
+		nm = tab->sp;
+	}
+
+	if ((heap + sizeof(struct sym_obj)) > tab->sp) {
+		DCC_LOG(LOG_WARNING, "heap overflow!");
 		return NULL;
+	}
 
-	obj = &tab->buf[tab->heap / sizeof(struct sym_obj)];
-	obj->nm = tab->sp;
+	id = heap / sizeof(struct sym_obj);
+
+	DCC_LOG2(LOG_INFO, "heap=%d id=%d", heap, id);
+	DCC_LOG1(LOG_INFO, "nm=\"%s\"", (char *)&tab->buf + tab->sp); 
+
+	obj = &tab->buf[id];
+	obj->nm = nm;
 	obj->flags = SYM_OBJECT;
 	obj->addr = 0;
 	obj->size = 0;
-	tab->heap += sizeof(struct sym_obj);
+	tab->heap = heap + sizeof(struct sym_obj);
 
 	return obj;
 }
@@ -204,10 +222,15 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 
 	/* search in the local list */
 	for (i = (tab->heap / sizeof(struct sym_obj)) - 1; i >= 0; --i) {
-		obj = &tab->buf[tab->heap / sizeof(struct sym_obj)];
+		obj = &tab->buf[i];
 		nm = (char *)&tab->buf + obj->nm;
-		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0'))
+
+		DCC_LOG3(LOG_MSG, "id=%d nm=\"%s\" len=%d", i, nm, len);
+
+		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0')) {
+			DCC_LOG2(LOG_INFO, "id=%d nm=\"%s\"", i, nm);
 			return obj;
+		}
 	}
 
 	return NULL;
@@ -218,14 +241,17 @@ const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj)
 	return (char *)&tab->buf + obj->nm;
 }
 
+int sym_lbl_next(struct symtab * tab) 
+{
+	return tab->tmp_lbl++;
+}
+
 /* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- */
 
 bool sym_ref_push(struct symtab * tab, struct sym_ref * ref) 
 {
-	ref->lbl = tab->tmp_lbl++;
-
 	return sym_push(tab, ref, sizeof(struct sym_ref));
 }
 
@@ -234,14 +260,46 @@ bool sym_ref_pop(struct symtab * tab, struct sym_ref * ref)
 	return sym_pop(tab, ref, sizeof(struct sym_ref));
 }
 
-bool sym_ref_get(struct symtab * tab, int pos, struct sym_ref * ref)
+/* --------------------------------------------------------------------------
+   Loop descriptors
+   -------------------------------------------------------------------------- */
+
+bool sym_fld_push(struct symtab * tab, struct sym_fld * fld)
 {
-	return sym_pick(tab, pos, ref, sizeof(struct sym_ref));
+	return sym_push(tab, fld, sizeof(struct sym_fld));
 }
 
-bool sym_ref_set(struct symtab * tab, int pos, struct sym_ref * ref)
+bool sym_fld_pop(struct symtab * tab, struct sym_fld * fld)
 {
-	return sym_poke(tab, pos, ref, sizeof(struct sym_ref));
+	return sym_pop(tab, fld, sizeof(struct sym_fld));
+}
+
+/* --------------------------------------------------------------------------
+   While Loop Descriptor
+   -------------------------------------------------------------------------- */
+
+bool sym_wld_push(struct symtab * tab, struct sym_wld * wld)
+{
+	return sym_push(tab, wld, sizeof(struct sym_wld));
+}
+
+bool sym_wld_pop(struct symtab * tab, struct sym_wld * wld)
+{
+	return sym_pop(tab, wld, sizeof(struct sym_wld));
+}
+
+/* --------------------------------------------------------------------------
+   Function Descriptor
+   -------------------------------------------------------------------------- */
+
+bool sym_fnd_push(struct symtab * tab, struct sym_fnd * fnd)
+{
+	return sym_push(tab, fnd, sizeof(struct sym_fnd));
+}
+
+bool sym_fnd_pop(struct symtab * tab, struct sym_fnd * fnd)
+{
+	return sym_pop(tab, fnd, sizeof(struct sym_fnd));
 }
 
 /* --------------------------------------------------------------------------
@@ -255,12 +313,7 @@ bool sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp)
 
 bool sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp)
 {
-	return sym_pop(tab, tmp, sizeof(struct sym_ref));
-}
-
-bool sym_tmp_get(struct symtab * tab, int pos, struct sym_tmp * tmp)
-{
-	return sym_pick(tab, pos, tmp, sizeof(struct sym_tmp));
+	return sym_pop(tab, tmp, sizeof(struct sym_tmp));
 }
 
 /* --------------------------------------------------------------------------
@@ -269,125 +322,91 @@ bool sym_tmp_get(struct symtab * tab, int pos, struct sym_tmp * tmp)
 
 int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
 {
-	const struct ext_entry * ep = tab->extrn;
+	const struct ext_libdef * libdef = tab->libdef;
 	int i;
 
+	DCC_LOG1(LOG_INFO, "len=%d", len);
+
 	/* look in the externals first */
-	for (ep = tab->extrn, i = 0; ep->nm != NULL; ++ep, ++i) {
-		if ((strncmp(ep->nm, s, len) == 0) && (ep->nm[len] == '\0'))
+	for (i = 0; i < libdef->fncnt; ++i) {
+		const struct ext_fndef * fn = &libdef->fndef[i];
+		if ((strncmp(fn->nm, s, len) == 0) && (fn->nm[len] == '\0')) {
+			DCC_LOG2(LOG_INFO, "xid=%d nm=\"%s\"", i, fn->nm);
 			return i;
+		}
 	}
 
-	return -ERR_STRING_NOT_FOUND;
+	DCC_LOG(LOG_WARNING, "external symbol not found!");
+	return -1;
 }
 
-struct ext_entry * sym_extern_get(struct symtab * tab, unsigned int xid)
+struct ext_fndef * sym_extern_get(struct symtab * tab, unsigned int xid)
 {
-	return(struct ext_entry *)&tab->extrn[xid];
+	const struct ext_libdef * libdef = tab->libdef;
+
+	return (struct ext_fndef *)&libdef->fndef[xid];
 }
 
 const char * sym_extern_name(struct symtab * tab, unsigned int xid)
 {
-	return tab->extrn[xid].nm;
+	const struct ext_libdef * libdef = tab->libdef;
+
+	return libdef->fndef[xid].nm;
 }
-
-#if 0
-
-const char * sym_name(struct symtab * tab, int nm)
-{
-	return str(nm);
-}
-
-int sym_name_lookup(struct symtab * tab, const char * s, unsigned int len)
-{
-	const struct ext_entry * ep;
-//	struct sym_nm * nm;
-//	int offs;
-	int i = 0;
-
-	/* look in the externals first */
-	for (ep = tab->extrn; ep->nm != NULL; ++ep) {
-		if ((strncmp(ep->nm, s, len) == 0) && (ep->nm[len] == '\0'))
-			return i + 0x80;
-		i++;
-	}
-
-#if 0
-	for (offs = tab->name; offs != 0; offs = nm->next) {
-		nm = (struct sym_nm *)&tab->buf[offs];
-		if ((strncmp(nm->s, s, len) == 0) && (nm->s[len] == '\0'))
-			return nm->id;
-	}
-#endif
-
-	return -ERR_STRING_NOT_FOUND;
-}
-#endif
 
 int sym_dump(FILE * f, struct symtab * tab)
 {
-#if 0
+	struct sym_obj * obj;
+	char * nm;
 	int i;
 
-	/* search in the global list */
-	for (i = 0; i < tab->global; ++i) {
-		struct sym * sp = &tab->sym[i];
-		if (sp->flags & SYM_OBJECT) {
-			struct sym_obj * obj = (struct sym_obj *)sp;
-			fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr,
-					obj->size, str(obj->nm));
-		} else if (sp->flags & SYM_EXTERN) {
-			struct sym_ext * ext = (struct sym_ext *)sp;
-			fprintf(f, "%04x g F .extern %04x    %s\n", ext->addr,
-					0, extern_get(ext->addr)->nm);
-		} else {
-			struct sym_ref * ref = (struct sym_ref *)sp;
-			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
-			fprintf(f, "%04x r   .text   %04x -> %s\n", ref->addr, 
-					0, str(obj->nm));
-		}
+	/* search in the local list */
+	for (i = 0; i < tab->heap / sizeof(struct sym_obj); ++i) {
+		obj = &tab->buf[i];
+		nm = (char *)&tab->buf + obj->nm;
+		fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr, obj->size, nm);
 	}
-#endif
+
 	return 0;
 }
 
-#if 0
-/* Insert a name into the stack */
-bool sym_name_push(struct symtab * tab, const char * s, 
-							  unsigned int len)
-{
-	uint8_t n = len;
 
-	if (!sym_push(tab, s, len))
+#if 0
+static bool sym_pick(struct symtab * tab, int pos, 
+					 void * ptr,  unsigned int len)
+{
+	int sp = tab->sp + pos * len;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	if (sp >= tab->fp)
 		return false;
 
-	return sym_push(tab, &n, len);
+	src = (uint8_t *)&tab->buf + sp;
+	dst = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	return true;
 }
 
-
-struct sym_ext * sym_ext_new(struct symtab * tab, int nm)
+static bool sym_poke(struct symtab * tab, int pos, 
+					 void * ptr,  unsigned int len)
 {
-	struct sym_ext * ext;
-	int offs;
-	int exid;
+	int sp = tab->sp + pos * len;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
 
-	offs = tab->global;
-	if ((offs + sizeof(struct sym_obj)) >  tab->sp)
-		return NULL;
+	if (sp >= tab->fp)
+		return false;
 
-	if ((exid = extern_lookup(nm)) < 0)
-		return NULL;
+	dst = (uint8_t *)&tab->buf + sp;
+	src = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
 
-	ext = (struct sym_ext *)&tab->buf[offs];
-	ext->addr = exid;
-	ext->flags = SYM_EXTERN;
-	tab->global = offs + sizeof(struct sym_obj);
-
-	return ext;
-}
-
-int sym_ext_id(struct symtab * tab, struct sym_ext * ext)
-{
-	return (struct sym *)ext - (struct sym *)tab->buf;
+	return true;
 }
 #endif

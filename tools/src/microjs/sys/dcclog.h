@@ -45,14 +45,25 @@
 
 #define DCC_LOG(__LVL, __MSG) do { if (__LVL <= LOG_LEVEL) { \
 	fprintf(stderr, "%s: %s: %s\n", _TAG(__LVL), __func__, __MSG); \
+	fflush(stderr); \
     }} while (0)
 										 
 #define DCC_LOG1(__LVL, __FMT, __A) do { if (__LVL <= LOG_LEVEL) { \
 	fprintf(stderr, "%s: %s: " __FMT "\n", _TAG(__LVL), __func__, __A); \
+	fflush(stderr); \
     }} while (0)
 
-#define DCC_LOG2(__LVL, __FMT, __A, __B)
-#define DCC_LOG3(__LVL, __FMT, __A, __B, __C)
+#define DCC_LOG2(__LVL, __FMT, __A, __B) do { if (__LVL <= LOG_LEVEL) { \
+	fprintf(stderr, "%s: %s: " __FMT "\n", _TAG(__LVL), __func__, __A, __B); \
+	fflush(stderr); \
+    }} while (0)
+
+#define DCC_LOG3(__LVL, __FMT, __A, __B, __C) do { if (__LVL <= LOG_LEVEL) { \
+	fprintf(stderr, "%s: %s: " __FMT "\n", _TAG(__LVL), \
+			__func__, __A, __B, __C); \
+	fflush(stderr); \
+    }} while (0)
+
 #define DCC_LOG4(__LVL, __FMT, __A, __B, __C, __D)
 #define DCC_LOG5(__LVL, __FMT, __A, __B, __C, __D, __E)
 #define DCC_LOG6(__LVL, __FMT, __A, __B, __C, __D, __E, __F)
