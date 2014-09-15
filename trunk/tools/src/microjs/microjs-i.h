@@ -130,7 +130,6 @@ struct sym {
 
 #define SYM_REFERENCE       (0 << 6)
 #define SYM_OBJECT          (1 << 7)
-#define SYM_EXTERN	        (1 << 6)
 
 #define SYM_OBJ_ALLOC       (1 << 6)
 
@@ -148,23 +147,40 @@ struct sym {
 /* object */
 struct sym_obj {
 	uint8_t flags;
-	uint8_t nm;
+	uint8_t size;
+	uint16_t nm;
 	uint16_t addr;
-	uint16_t size;
-} __attribute__((packed));
+};
 
-
-#define SYM_METHOD    (1 << 0)
-#define SYM_IS_METHOD(SYM) ((SYM)->flags & SYM_METHOD)
+#define SYM_EXTERN    (1 << 0)
+#define SYM_METHOD    (1 << 1)
+#define SYM_IS_EXTERN(SYM) ((SYM).flags & SYM_EXTERN)
+#define SYM_IS_METHOD(SYM) ((SYM).flags & SYM_METHOD)
 
 struct sym_tmp {
+	union {
+		struct {
+			char * s;
+			uint8_t len;
+		};
+		struct {
+			uint8_t flags;
+			uint8_t xid;
+			uint8_t cnt;
+			uint8_t min;
+			uint8_t max;
+		};
+	};
+};
+
+struct sym_call {
 	uint8_t flags;
 	uint8_t nm;
 	uint8_t xid;
 	uint8_t cnt;
 	uint8_t min;
 	uint8_t max;
-} __attribute__((packed));
+};
 
 
 /* external function */
@@ -172,22 +188,14 @@ struct sym_ext {
 	uint8_t flags;
 	uint8_t xid;
 	uint16_t addr;
-} __attribute__((packed));
+};
 
 /* object reference, this represent a pointer to a 
    target's memory location */
 struct sym_ref {
-	uint8_t flags;
-	uint8_t oid;
+	uint16_t lbl;
 	uint16_t addr;
-} __attribute__((packed));
-
-/* symbol name */
-struct sym_nm {
-	uint16_t next;
-	uint8_t id;
-	char s[1];
-} __attribute__((packed));
+};
 
 struct symtab {
 	const struct ext_entry * extrn;
@@ -196,8 +204,10 @@ struct symtab {
 	uint16_t fp;
 	uint16_t top;
 	uint16_t name;
+	uint16_t heap;
+	uint16_t tmp_lbl;
 	uint8_t id;
-	uint8_t buf[];
+	struct sym_obj buf[];
 };
 
 /* --------------------------------------------------------------------------
@@ -256,28 +266,9 @@ int sym_dump(FILE * f, struct symtab * tab);
 int sym_lookup(struct symtab * tab, const char * s, unsigned int len);
 
 
-struct sym_obj * sym_obj_new(struct symtab * tab, 
-							 const char * s, unsigned int len);
-
-struct sym_obj * sym_obj_lookup(struct symtab * tab, int nm);
-
-struct sym_ref * sym_ref_new(struct symtab * tab, void * sym);
-
-/* Push a reference into the stack */
-struct sym_ref * sym_ref_push(struct symtab * tab);
-
-/* Get a reference from the stack */
-struct sym_ref * sym_ref_get(struct symtab * tab, int pos);
-
-
-
 struct sym_ext * sym_ext_new(struct symtab * tab, int nm);
 
 int sym_ext_id(struct symtab * tab, struct sym_ext * ext);
-
-
-struct sym_tmp * sym_tmp_push(struct symtab * tab, 
-							  const char * s, unsigned int len);
 
 const char * sym_name(struct symtab * tab, int nm);
 
@@ -285,17 +276,50 @@ int sym_addr_get(struct symtab * tab, int id);
 
 void sym_addr_set(struct symtab * tab, int id, int addr);
 
-struct sym_tmp * sym_tmp_get(struct symtab * tab, int pos);
+/* --------------------------------------------------------------------------
+   Objects
+   -------------------------------------------------------------------------- */
 
-void sym_ref_pop(struct symtab * tab);
+struct sym_obj * sym_obj_new(struct symtab * tab, 
+							 const char * s, unsigned int len);
 
-void sym_tmp_pop(struct symtab * tab);
+struct sym_obj * sym_obj_lookup(struct symtab * tab, 
+								const char * s, unsigned int len);
 
-void sym_nm_pop(struct symtab * tab);
+const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj);
 
-int extern_lookup(int nm);
+/* --------------------------------------------------------------------------
+   References 
+   -------------------------------------------------------------------------- */
 
-struct ext_entry * extern_get(unsigned int exid);
+/* Push a reference into the stack */
+bool sym_ref_push(struct symtab * tab, struct sym_ref * ref);
+
+bool sym_ref_pop(struct symtab * tab, struct sym_ref * ref);
+
+bool sym_ref_get(struct symtab * tab, int pos, struct sym_ref * ref);
+
+bool sym_ref_set(struct symtab * tab, int pos, struct sym_ref * ref);
+
+/* --------------------------------------------------------------------------
+   Temporary symbols
+   -------------------------------------------------------------------------- */
+
+bool sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp);
+
+bool sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp);
+
+bool sym_tmp_get(struct symtab * tab, int pos, struct sym_tmp * tmp);
+
+/* --------------------------------------------------------------------------
+   Externals (Library)
+   -------------------------------------------------------------------------- */
+
+int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len);
+
+struct ext_entry * sym_extern_get(struct symtab * tab, unsigned int xid);
+
+const char * sym_extern_name(struct symtab * tab, unsigned int xid);
 
 /* --------------------------------------------------------------------------
    Strings 

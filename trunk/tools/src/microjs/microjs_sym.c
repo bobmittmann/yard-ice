@@ -48,11 +48,261 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len)
 	return tab;
 }
 
+bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
+{
+	int sp = tab->sp;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	sp -= len;
+	if (tab->heap > sp)
+		return false;
+
+	dst = (uint8_t *)&tab->buf + sp;
+	src = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	tab->sp = sp;
+	return true;
+}
+
+static bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
+{
+	int sp = tab->sp;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	if (sp >= tab->fp)
+		return false;
+
+	if (ptr != NULL) {
+		src = (uint8_t *)&tab->buf + sp;
+		dst = (uint8_t *)ptr;
+		for(i = 0; i < len; ++i)
+			dst[i] = src[i];
+	}
+
+	tab->sp = sp + len;
+
+	return true;
+}
+
+static bool sym_pick(struct symtab * tab, int pos, 
+					 void * ptr,  unsigned int len)
+{
+	int sp = tab->sp + pos * len;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	if (sp >= tab->fp)
+		return false;
+
+	src = (uint8_t *)&tab->buf + sp;
+	dst = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	return true;
+}
+
+static bool sym_poke(struct symtab * tab, int pos, 
+					 void * ptr,  unsigned int len)
+{
+	int sp = tab->sp + pos * len;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	if (sp >= tab->fp)
+		return false;
+
+	dst = (uint8_t *)&tab->buf + sp;
+	src = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	return true;
+}
+
+struct sym_scope {
+	uint16_t prev;
+	uint16_t heap;
+};
+
+/* Push the stack frame */
+bool sym_scope_open(struct symtab * tab)
+{
+	struct sym_scope scope;
+
+	scope.prev = tab->fp;
+	scope.heap = tab->heap;
+
+	if (!sym_push(tab, &scope, sizeof(scope)))
+		return false;
+
+	tab->fp = tab->sp;
+
+	return true;
+}
+
+/* Pop the stack frame */
+bool sym_scope_close(struct symtab * tab)
+{
+	struct sym_scope scope;
+	int sp = tab->fp; /* use frame pointer as reference */
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	if (sp >= tab->top)
+		return false;
+
+	src = (uint8_t *)&tab->buf + sp;
+	dst = (uint8_t *)&scope;
+	for(i = 0; i < sizeof(scope); ++i)
+		dst[i] = src[i];
+
+	tab->sp = sp + sizeof(scope);
+	tab->fp = scope.prev;
+	tab->heap = scope.heap;
+
+	return true;
+}
+
+/* --------------------------------------------------------------------------
+   Objects
+   -------------------------------------------------------------------------- */
+
+struct sym_obj * sym_obj_new(struct symtab * tab, 
+							 const char * s, unsigned int len)
+{
+	struct sym_obj * obj;
+
+	if (!sym_push(tab, s, len))
+		return NULL;
+
+	obj = &tab->buf[tab->heap / sizeof(struct sym_obj)];
+	obj->nm = tab->sp;
+	obj->flags = SYM_OBJECT;
+	obj->addr = 0;
+	obj->size = 0;
+	tab->heap += sizeof(struct sym_obj);
+
+	return obj;
+}
+
+struct sym_obj * sym_obj_lookup(struct symtab * tab, 
+								const char * s, unsigned int len)
+{
+	struct sym_obj * obj;
+	char * nm;
+	int i;
+
+	/* search in the local list */
+	for (i = (tab->heap / sizeof(struct sym_obj)) - 1; i >= 0; --i) {
+		obj = &tab->buf[tab->heap / sizeof(struct sym_obj)];
+		nm = (char *)&tab->buf + obj->nm;
+		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0'))
+			return obj;
+	}
+
+	return NULL;
+}
+
+const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj)
+{
+	return (char *)&tab->buf + obj->nm;
+}
+
+/* --------------------------------------------------------------------------
+   References
+   -------------------------------------------------------------------------- */
+
+bool sym_ref_push(struct symtab * tab, struct sym_ref * ref) 
+{
+	ref->lbl = tab->tmp_lbl++;
+
+	return sym_push(tab, ref, sizeof(struct sym_ref));
+}
+
+bool sym_ref_pop(struct symtab * tab, struct sym_ref * ref)
+{
+	return sym_pop(tab, ref, sizeof(struct sym_ref));
+}
+
+bool sym_ref_get(struct symtab * tab, int pos, struct sym_ref * ref)
+{
+	return sym_pick(tab, pos, ref, sizeof(struct sym_ref));
+}
+
+bool sym_ref_set(struct symtab * tab, int pos, struct sym_ref * ref)
+{
+	return sym_poke(tab, pos, ref, sizeof(struct sym_ref));
+}
+
+/* --------------------------------------------------------------------------
+   Temporary symbols
+   -------------------------------------------------------------------------- */
+
+bool sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp) 
+{
+	return sym_push(tab, tmp, sizeof(struct sym_tmp));
+}
+
+bool sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp)
+{
+	return sym_pop(tab, tmp, sizeof(struct sym_ref));
+}
+
+bool sym_tmp_get(struct symtab * tab, int pos, struct sym_tmp * tmp)
+{
+	return sym_pick(tab, pos, tmp, sizeof(struct sym_tmp));
+}
+
+/* --------------------------------------------------------------------------
+   Externals (Library)
+   -------------------------------------------------------------------------- */
+
+int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
+{
+	const struct ext_entry * ep = tab->extrn;
+	int i;
+
+	/* look in the externals first */
+	for (ep = tab->extrn, i = 0; ep->nm != NULL; ++ep, ++i) {
+		if ((strncmp(ep->nm, s, len) == 0) && (ep->nm[len] == '\0'))
+			return i;
+	}
+
+	return -ERR_STRING_NOT_FOUND;
+}
+
+struct ext_entry * sym_extern_get(struct symtab * tab, unsigned int xid)
+{
+	return(struct ext_entry *)&tab->extrn[xid];
+}
+
+const char * sym_extern_name(struct symtab * tab, unsigned int xid)
+{
+	return tab->extrn[xid].nm;
+}
+
+#if 0
+
+const char * sym_name(struct symtab * tab, int nm)
+{
+	return str(nm);
+}
+
 int sym_name_lookup(struct symtab * tab, const char * s, unsigned int len)
 {
 	const struct ext_entry * ep;
-	struct sym_nm * nm;
-	int offs;
+//	struct sym_nm * nm;
+//	int offs;
 	int i = 0;
 
 	/* look in the externals first */
@@ -62,83 +312,15 @@ int sym_name_lookup(struct symtab * tab, const char * s, unsigned int len)
 		i++;
 	}
 
+#if 0
 	for (offs = tab->name; offs != 0; offs = nm->next) {
 		nm = (struct sym_nm *)&tab->buf[offs];
 		if ((strncmp(nm->s, s, len) == 0) && (nm->s[len] == '\0'))
 			return nm->id;
 	}
+#endif
 
 	return -ERR_STRING_NOT_FOUND;
-}
-
-/* Insert a name into the stack */
-struct sym_nm * sym_name_push(struct symtab * tab, const char * s, 
-							  unsigned int len)
-{
-	struct sym_nm * nm;
-	int sp = tab->sp;
-
-	nm = (struct sym_nm *)&tab->buf[sp];
-	sp -= len + sizeof(struct sym_nm);
-	if (tab->global > sp)
-		return NULL;
-
-	nm = (struct sym_nm *)&tab->buf[sp];
-	nm->next = tab->name;
-	nm->id = tab->id++;
-	memcpy(nm->s, s, len);
-	/* update stack */
-	tab->sp = sp;
-	/* update name list */
-	tab->name = sp;
-	return nm;
-}
-
-/* Push the stack frame */
-bool sym_fp_push(struct symtab * tab)
-{
-	int sp = tab->sp;
-
-	sp -= sizeof(uint16_t);
-	if (tab->global > sp)
-		return false;
-
-	*(uint16_t *)&tab->buf[sp] = tab->fp;
-	tab->sp = sp;
-	tab->fp = sp;
-
-	return true;
-}
-
-/* Pop the stack frame */
-void sym_fp_pop(struct symtab * tab)
-{
-	tab->sp = tab->fp;
-	tab->fp = *(uint16_t *)&tab->buf[tab->sp];
-}
-
-#if 0
-int sym_by_name(struct symtab * tab, const char * s, unsigned int len)
-{
-	int nm;
-	int i;
-
-	if ((nm = str_lookup(s, len)) < 0)
-		return nm;
-
-	/* search in the local list */
-	for (i = tab->local; i < tab->top; ++i) {
-		if (tab->sym[i].nm == nm)
-			return i;
-	}
-
-	/* search in the global list */
-	for (i = 0; i < tab->global; ++i) {
-		if ((tab->sym[i].flags & SYM_OBJECT) && (tab->sym[i].nm == nm))
-			return i;
-	}
-
-	return -1;
 }
 #endif
 
@@ -169,107 +351,19 @@ int sym_dump(FILE * f, struct symtab * tab)
 	return 0;
 }
 
-struct sym_obj * sym_obj_lookup(struct symtab * tab, int nm)
-{
 #if 0
-	int i;
-
-	/* search in the local list */
-	for (i = tab->local; i < tab->top; ++i) {
-		if ((tab->sym[i].flags & SYM_OBJECT) && (tab->sym[i].nm == nm))
-			return (struct sym_obj *)&tab->sym[i];
-	}
-
-	/* search in the global list */
-	for (i = 0; i < tab->global; ++i) {
-		if ((tab->sym[i].flags & SYM_OBJECT) && (tab->sym[i].nm == nm))
-			return (struct sym_obj *)&tab->sym[i];
-	}
-#endif
-	return NULL;
-}
-
-struct sym_obj * sym_obj_new(struct symtab * tab, 
-							 const char * s, unsigned int len)
+/* Insert a name into the stack */
+bool sym_name_push(struct symtab * tab, const char * s, 
+							  unsigned int len)
 {
-	struct sym_obj * obj;
-	int offs;
-	int nm;
-//	int id;
+	uint8_t n = len;
 
-//	if ((id = sym_by_name(tab, s, len)) >= 0)
-//		return NULL;
+	if (!sym_push(tab, s, len))
+		return false;
 
-	offs = tab->global;
-	if ((offs + sizeof(struct sym_obj)) >  tab->sp)
-		return NULL;
-
-	if ((nm = str_add(s, len)) < 0)
-		return NULL;
-
-	obj = (struct sym_obj *)&tab->buf[offs];
-	obj->nm = nm;
-	obj->flags = SYM_OBJECT;
-	obj->addr = 0;
-	obj->size = 0;
-	tab->global = offs + sizeof(struct sym_obj);
-
-	return obj;
+	return sym_push(tab, &n, len);
 }
 
-struct sym_ref * sym_ref_new(struct symtab * tab, void * sym)
-{
-	int oid = (struct sym *)sym - (struct sym *)(tab->buf);
-	struct sym_ref * ref;
-	int offs;
-
-	offs = tab->global;
-	if ((offs + sizeof(struct sym_obj)) >  tab->sp)
-		return NULL;
-
-	ref = (struct sym_ref *)&tab->buf[offs];
-	ref->oid = oid;
-	ref->flags = 0;
-	ref->addr = 0;
-	tab->global = offs + sizeof(struct sym_obj);
-
-	return ref;
-}
-
-struct sym_ref * sym_ref_push(struct symtab * tab) 
-{
-	struct sym_ref * ref;
-	int sp = tab->sp;
-
-	ref = (struct sym_ref *)&tab->buf[sp];
-	sp -= sizeof(struct sym_ref);
-	if (tab->global > sp)
-		return NULL;
-
-	ref = (struct sym_ref *)&tab->buf[sp];
-	ref->oid = (struct sym *)ref - (struct sym *)tab->buf;
-	ref->flags = 0;
-	ref->addr = 0;
-	/* update name list */
-	tab->name = sp;
-
-	return ref;
-}
-
-void sym_ref_pop(struct symtab * tab)
-{
-	tab->sp += sizeof(struct sym_ref);
-}
-
-struct sym_ref * sym_ref_get(struct symtab * tab, int pos)
-{
-	struct sym_ref * ref;
-
-	/* references are indexed by the frame pointer */
-	ref = (struct sym_ref *)&tab->buf[tab->fp];
-
-	return &ref[pos];
-}
 
 struct sym_ext * sym_ext_new(struct symtab * tab, int nm)
 {
@@ -296,51 +390,4 @@ int sym_ext_id(struct symtab * tab, struct sym_ext * ext)
 {
 	return (struct sym *)ext - (struct sym *)tab->buf;
 }
-
-struct sym_tmp * sym_tmp_push(struct symtab * tab, 
-							  const char * s, unsigned int len)
-{
-	struct sym_tmp * tmp;
-	int sp = tab->sp;
-	int nm;
-
-	tmp = (struct sym_tmp *)&tab->buf[sp];
-	sp -= sizeof(struct sym_tmp);
-	if (tab->global > sp)
-		return NULL;
-
-	if ((nm = str_add(s, len)) < 0)
-		return NULL;
-
-	tmp = (struct sym_tmp *)&tab->buf[sp];
-	tmp->flags = 0;
-	tmp->nm = nm;
-	tmp->xid= 0;
-	tmp->cnt = 0;
-	tmp->min= 0;
-	tmp->max= 0;
-
-	tab->name = sp;
-
-	return tmp;
-}
-
-void sym_tmp_pop(struct symtab * tab)
-{
-	tab->sp += sizeof(struct sym_tmp);
-}
-
-struct sym_tmp * sym_tmp_get(struct symtab * tab, int pos)
-{
-	struct sym_tmp * tmp;
-
-	tmp = (struct sym_tmp *)&tab->buf[tab->sp];
-
-	return &tmp[pos];
-}
-
-const char * sym_name(struct symtab * tab, int nm)
-{
-	return str(nm);
-}
-
+#endif
