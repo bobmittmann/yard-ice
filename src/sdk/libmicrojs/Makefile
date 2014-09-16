@@ -54,8 +54,8 @@ endif
 ll: microjs_ll.c microjs_ll.h
 
 microjs_ll.h: microjs.gr
-	echo $(ELL) -e -h $<
+	$(ELL) -e -h $<
 
 microjs_ll.c: microjs.gr
-	echo $(ELL) -e -c $<
+	$(ELL) -e -c $<
 	

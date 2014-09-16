@@ -124,7 +124,6 @@ int microjs_compiler_init(struct microjs_compiler * microjs,
 int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
 					const char * txt, unsigned int len);
 
-
 #ifdef __cplusplus
 }
 #endif

@@ -47,41 +47,6 @@ static int alloc32(struct microjs_compiler * microjs)
 	return addr;
 }
 
-#if 0
-int mem_bind(struct microjs_compiler * microjs)
-{
-	struct symtab * tab = microjs->tab;
-	int i;
-
-	/* search in the global list */
-	for (i = 0; i < tab->global; ++i) {
-		struct sym * sp = &tab->sym[i];
-		if ((sp->flags & SYM_OBJECT) && !(sp->flags & SYM_OBJ_ALLOC)) {
-			struct sym_obj * obj = (struct sym_obj *)sp;
-			int addr;
-			if ((addr = alloc32(microjs)) < 0)
-				return -1;
-			obj->addr = addr;
-			obj->flags |= SYM_OBJ_ALLOC;
-		}
-	}
-
-	/* search in the global list */
-	for (i = 0; i < tab->global; ++i) {
-		struct sym_ref * ref = (struct sym_ref *)&tab->sym[i];
-		if (!(ref->flags & (SYM_OBJECT | SYM_EXTERN))) {
-			struct sym_obj * obj = (struct sym_obj *)&tab->sym[ref->oid];
-			TRACEF("ref=0x%04x oid=%d --> obj=0x%04x\n", ref->addr, 
-				   ref->oid, obj->addr);
-			microjs->code[ref->addr] = obj->addr;
-			microjs->code[ref->addr + 1] = obj->addr >> 8;
-		}
-	}
-
-	return 0;
-}
-#endif
-
 /* --------------------------------------------------------------------------
    Code generation
    -------------------------------------------------------------------------- */
@@ -870,8 +835,10 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 			/* non terminal */
 			if ((k = microjs_ll_push(pp_sp, sym, lookahead)) < 0) {
 				fprintf(stderr, "microjs_ll_push() failed!\n");
+#if MICROJS_TRACE_ENABLED
 				ll_stack_dump(stderr, pp_sp, pp_top - pp_sp);
 				fprintf(stderr, "lookahead = %s\n", microjs_ll_sym[lookahead]);
+#endif
 				goto error;
 			}
 			pp_sp -= k;
@@ -883,8 +850,8 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 		}
 	}
 
-//	if (mem_bind(microjs) < 0)
-//		return -1;
+	TRACEF("%04x\tABT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_ABT;
 
 #if MICROJS_TRACE_ENABLED
 	TRACEF("\nSYMBOL TABLE:\n");

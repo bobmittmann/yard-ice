@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <microjs-rt.h>
 
 enum {
 	MICROJS_OK                 = 0,
@@ -64,8 +65,18 @@ enum {
 	ERR_STRING_NOT_FOUND,
 	ERR_HEAP_OVERFLOW,
 	ERR_STACK_OVERFLOW,
-	ERR_REF_PUSH_FAIL,
-	ERR_TMP_PUSH_FAIL
+	ERR_VAR_UNKNOWN,
+	ERR_INTERNAL_ERROR,
+	ERR_EXTERN_UNKNOWN,
+	ERR_ARG_MISSING,
+	ERR_TOO_MANY_ARGS,
+	ERR_TMP_PUSH_FAIL,
+	ERR_TMP_POP_FAIL,
+	ERR_TMP_GET_FAIL,
+	ERR_SYM_PUSH_FAIL,
+	ERR_SYM_POP_FAIL,
+	ERR_OBJ_NEW_FAIL,
+	ERR_ALOC32_FAIL,
 };
 
 /* --------------------------------------------------------------------------
@@ -85,6 +96,26 @@ struct token {
 
 struct symtab;
 
+/* --------------------------------------------------------------------------
+   External objects/symbols/functions
+   -------------------------------------------------------------------------- */
+
+struct ext_fndef {
+	const char * nm;
+	uint8_t argmin;
+	uint8_t argmax;
+};
+
+/* --------------------------------------------------------------------------
+   External library definition 
+   -------------------------------------------------------------------------- */
+
+struct ext_libdef {
+	const char * name;
+	uint8_t fncnt;
+	struct ext_fndef fndef[];
+};
+
 struct microjs_compiler {
 	struct symtab * tab;
 	struct token tok;
@@ -94,27 +125,6 @@ struct microjs_compiler {
 	uint16_t heap;
 	uint16_t stack;
 	uint16_t sp;
-};
-
-/* --------------------------------------------------------------------------
-   Runtime Environement
-   -------------------------------------------------------------------------- */
-
-struct microjs_env {
-	FILE * fout;
-	FILE * fin;
-	FILE * ftrace;
-};
-
-/* --------------------------------------------------------------------------
-   Virtual Machine
-   -------------------------------------------------------------------------- */
-
-struct microjs_vm {
-	struct microjs_env env;
-	uint16_t sp;
-	uint16_t sl;
-	int32_t * data;
 };
 
 /**********************************************************************
@@ -273,22 +283,15 @@ int const_str_write(const char * s, unsigned int len);
 
 
 
-struct symtab * symtab_init(uint32_t * buf, unsigned int len);
+struct symtab * symtab_init(uint32_t * buf, unsigned int len, 
+							const struct ext_libdef * libdef);
 
 int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct symtab * tab, int32_t stack[], 
-						  unsigned int size);
+						  struct symtab * tab, 
+						  unsigned int data_size);
 
 int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
 					const char * txt, unsigned int len);
-
-
-void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
-
-int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
-
-void strbuf_init(uint16_t * buf, unsigned int len);
-
 
 #ifdef __cplusplus
 }

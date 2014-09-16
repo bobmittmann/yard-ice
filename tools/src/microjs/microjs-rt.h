@@ -48,36 +48,34 @@
    Virtual machine
    -------------------------------------------------------------------------- */
 
-#define OPC_ASR      0
-#define OPC_SHL      1
-#define OPC_ADD      2
-#define OPC_SUB      3
-#define OPC_MUL      4
-#define OPC_DIV      5
-#define OPC_MOD      6
-#define OPC_OR       7
-#define OPC_AND      8
-#define OPC_XOR      9
-#define OPC_INV      10
-#define OPC_NEG      11
-#define OPC_I8       12
-#define OPC_I16      13
-#define OPC_I32      14
-#define OPC_LD       15
-#define OPC_ST       16
-#define OPC_CMP      18
-#define OPC_JMP      19
-#define OPC_JEQ      20
-#define OPC_LT       21
-#define OPC_GT       22
-#define OPC_EQ       23
-#define OPC_NE       24
-#define OPC_LE       25
-#define OPC_GE       26
-#define OPC_EXT      27
-#define OPC_CALL     28
-#define OPC_RET      29
-#define OPC_POP      30
+#define OPC_ABT      0
+#define OPC_ASR      1
+#define OPC_SHL      2
+#define OPC_ADD      3
+#define OPC_SUB      4
+#define OPC_MUL      5
+#define OPC_DIV      6
+#define OPC_MOD      7
+#define OPC_OR       8
+#define OPC_AND      9
+#define OPC_XOR      10
+#define OPC_INV      11
+#define OPC_NEG      12
+#define OPC_LT       13
+#define OPC_GT       14
+#define OPC_EQ       15
+#define OPC_NE       16
+#define OPC_LE       17
+#define OPC_GE       18
+#define OPC_I8       19
+#define OPC_I16      20
+#define OPC_I32      21
+#define OPC_LD       22
+#define OPC_ST       23
+#define OPC_JMP      24
+#define OPC_JEQ      25
+#define OPC_EXT      26
+#define OPC_POP      27
 
 /* --------------------------------------------------------------------------
    Runtime Environement
