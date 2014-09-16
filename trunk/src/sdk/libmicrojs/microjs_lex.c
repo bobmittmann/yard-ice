@@ -38,10 +38,14 @@ const struct {
 	uint8_t typ;
 	char nm[9];
 } lex_keyword[] = {
+	{ T_BREAK,  "break" },
+	{ T_CONTINUE,  "continue" },
 	{ T_ELSE,  "else" },
 	{ T_FALSE, "false" },
+	{ T_FUNCTION, "function" },
 	{ T_FOR,   "for" },
 	{ T_IF,    "if" },
+	{ T_RETURN,  "return" },
 	{ T_TRUE,  "true" },
 	{ T_VAR,   "var" },
 	{ T_WHILE, "while" },

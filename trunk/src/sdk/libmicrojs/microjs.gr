@@ -1,12 +1,11 @@
-%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR IF TRUE VAR WHILE ID INT STRING ERR
+%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR FUNCTION IF TRUE VAR WHILE CONTINUE BREAK RETURN ID INT STRING ERR
 %%
 
 program 		: EOF
 				| stat program
 				;
 
-
-compound_stat	: LBRACE stat_list RBRACE
+compound_stat	: LBRACE { op_blk_open } stat_list RBRACE { op_blk_close } 
 				;
 
 stat_list		:
@@ -22,7 +21,12 @@ stat			: SEMICOLON
 
 				| VAR var_list SEMICOLON
 				| assign_or_call SEMICOLON
+				| CONTINUE SEMICOLON
+				| BREAK SEMICOLON
+				| RETURN exp_opt SEMICOLON
+				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
 				;
+
 
 else_opt		: 
 				| ELSE { op_if_else } compound_stat
@@ -38,14 +42,14 @@ var_list1 		:
 				| COMMA var_list
 				;
 
-var				: ID { op_var_decl, op_push_sym } var_assign_opt { op_pop_sym }
+var				: ID { op_var_decl, op_push_tmp } var_assign_opt { op_pop_tmp }
 				;
 
 var_assign_opt  : 
 				| ASSIGN exp { op_assign }
 				;
 
-assign_or_call  : ID { op_push_sym } assign_or_call1 { op_pop_sym }
+assign_or_call  : ID { op_push_tmp } assign_or_call1 { op_pop_tmp }
 
 				;
 
@@ -73,6 +77,10 @@ exp_lst			: assign_or_call exp_lst1
 				
 exp_lst1		: 
 				| COMMA exp_lst
+				;
+
+exp_opt 		: 
+				| exp
 				;
 
 exp 			: and_exp or_exp
@@ -141,14 +149,25 @@ primary_exp		: LPAREN exp RPAREN
 				| TRUE { op_push_true }
 				| FALSE { op_push_false }
 				| STRING { op_push_string }
-				| meth_or_attr { op_meth_or_attr, op_pop_sym } 
+				| meth_or_attr { op_meth_or_attr, op_pop_tmp } 
 				;
 
-meth_or_attr	: ID { op_push_sym } meth_or_attr1
+meth_or_attr	: ID { op_push_tmp } meth_or_attr1
 				;
 
 meth_or_attr1	: 
 				| LPAREN { op_method } arg_list_opt RPAREN 
 				;
 
+
+param_list_opt	: 
+				| param_list 
+				;
+
+param_list		: ID param_list1 
+				;
+
+param_list1		: 
+				| COMMA param_list 
+				;
 

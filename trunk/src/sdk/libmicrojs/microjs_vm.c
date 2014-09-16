@@ -32,23 +32,24 @@
    Virtual machine
    -------------------------------------------------------------------------- */
 
-static int32_t vm_rd32(struct microjs_vm * vm, unsigned int addr)
+static inline int32_t vm_rd32(struct microjs_vm * vm, unsigned int addr)
 {
 	return vm->data[addr >> 2];
 }
 
-static void vm_wr32(struct microjs_vm * vm, unsigned int addr, int32_t val)
+static inline void vm_wr32(struct microjs_vm * vm, unsigned 
+						   int addr, int32_t val)
 {
 	vm->data[addr >> 2] = val;
 }
 
-static void vm_push(struct microjs_vm * vm, int32_t x)
+static inline void vm_push(struct microjs_vm * vm, int32_t x)
 {
 	vm->sp -= 4;
 	vm->data[vm->sp >> 2] = x;	
 }
 
-static int32_t vm_pop(struct microjs_vm * vm)
+static inline int32_t vm_pop(struct microjs_vm * vm)
 {
 	int32_t x;
 
@@ -77,7 +78,6 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 	int32_t r2;
 	int opc;
 	int pc;
-	int icnt;
 
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", vm->sp);
@@ -85,16 +85,11 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 	pc = 0; 
 	r0 = 0;
 	r1 = 0;
-	icnt = 0;
-	while (pc < len) {
-		icnt++;
-//		if (icnt == 200)
-//			return -1;
+	for (;;) {
 		/* fetch */
-		if (trace) {
+		if (trace)
 			FTRACEF(f, "%04x\t", pc);
-			fflush(stdout);
-		}
+
 		opc = code[pc++];
 		switch (opc) {
 
@@ -307,13 +302,22 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_INV:
 			r0 = vm_pop(vm);
+			if (trace)
+				FTRACEF(f, "INV %d\n", r0);
 			vm_push(vm, ~r0);
 			break;
 
 		case OPC_NEG:
 			r0 = vm_pop(vm);
+			if (trace)
+				FTRACEF(f, "NEG %d\n", r0);
 			vm_push(vm, -r0);
 			break;
+
+		case OPC_ABT:
+			if (trace)
+				FTRACEF(f, "ABT\n");
+			goto done;
 
 		default:
 			FTRACEF(f, "Invalid OPC: %d\n", opc);
@@ -321,9 +325,10 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 		}
 	} 
 
+done:
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", vm->sp);
 
-	return icnt;
+	return 0;
 }
 

@@ -138,6 +138,7 @@ void dump_src(const char * txt, unsigned int len)
 	fflush(stdout);
 }
 
+#if MICROJS_TRACE_ENABLED
 #define STRING_LEN_MAX 64
 
 const char token_nm[][4] = {
@@ -205,4 +206,5 @@ int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
 
 	return 0;
 }
+#endif
 

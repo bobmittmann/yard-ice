@@ -7,7 +7,7 @@ srand(time()); // initialize random number generator
 
 printf("----------------------\n");
 
-for (j = 0; j < 100; ) {
+for (j = 0; j < 1; ) {
 	var n = rand();
 	var prime;
 	if (n <= 3) {
