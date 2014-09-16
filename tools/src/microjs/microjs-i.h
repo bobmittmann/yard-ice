@@ -102,20 +102,7 @@ struct strbuf {
    Symbol table 
    -------------------------------------------------------------------------- */
 
-
-struct sym {
-	uint8_t flags;
-	uint8_t nm;
-	uint16_t addr;
-	uint16_t size;
-};
-
-#define SYM_REFERENCE       (0 << 6)
-#define SYM_OBJECT          (1 << 7)
-
-#define SYM_OBJ_ALLOC       (1 << 6)
-
-
+#define SYM_OBJ_ALLOC       (1 << 7)
 #define SYM_OBJ_INT         (0x0 << 4)
 #define SYM_OBJ_STR         (0x1 << 4)
 #define SYM_OBJ_INT_ARRAY   (0x2 << 4)
@@ -203,16 +190,21 @@ struct sym_fnd {
 	uint16_t ret; /* return list */
 };
 
-struct symtab {
-	const struct ext_libdef * libdef;
-	uint16_t tmp_lbl;
-	uint16_t sp;
-	uint16_t fp;
-	uint16_t top;
-	uint16_t heap;
-	struct sym_obj buf[];
+/* Stack frame */
+struct sym_sf {
+	uint16_t prev;
+	uint16_t bp;
 };
 
+struct symtab {
+	const struct ext_libdef * libdef;
+	uint16_t sp;
+	uint16_t fp;
+	uint16_t bp;
+	uint16_t top;
+	uint16_t tmp_lbl;
+	struct sym_obj buf[];
+};
 
 extern int32_t (* extern_call[])(struct microjs_env *, int32_t [], int);
 
@@ -232,11 +224,6 @@ int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt);
 
 int sym_dump(FILE * f, struct symtab * tab);
 
-
-bool sym_scope_open(struct symtab * tab);
-
-bool sym_scope_close(struct symtab * tab);
-
 /* --------------------------------------------------------------------------
    Objects
    -------------------------------------------------------------------------- */
@@ -250,6 +237,34 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj);
 
 int sym_lbl_next(struct symtab * tab);
+
+/* --------------------------------------------------------------------------
+   Symbol table stack
+   -------------------------------------------------------------------------- */
+
+bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len);
+
+bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len);
+
+bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len);
+
+/* --------------------------------------------------------------------------
+   Push/Pop addresses from/to stack
+   -------------------------------------------------------------------------- */
+static inline bool sym_addr_push(struct symtab * tab, uint16_t * addr) {
+	return sym_push(tab, addr, sizeof(uint16_t));
+}
+
+static inline bool sym_addr_pop(struct symtab * tab, uint16_t * addr) {
+	return sym_pop(tab, addr, sizeof(uint16_t));
+}
+
+/* --------------------------------------------------------------------------
+   Push/Pop a stack frame (used to open/close scopes or blocks)
+   -------------------------------------------------------------------------- */
+bool sym_sf_push(struct symtab * tab);
+
+bool sym_sf_pop(struct symtab * tab);
 
 /* --------------------------------------------------------------------------
    References 

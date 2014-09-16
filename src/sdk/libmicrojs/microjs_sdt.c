@@ -127,8 +127,8 @@ int op_assign(struct microjs_compiler * microjs)
 	TRACEF("%04x\tST \"%s\" (%04x)\n", microjs->pc, 
 		   sym_obj_name(microjs->tab, obj), obj->addr);
 	microjs->code[microjs->pc++] = OPC_ST;
-	microjs->code[microjs->pc++] = obj->addr;
-	microjs->code[microjs->pc++] = obj->addr >> 8;
+	microjs->code[microjs->pc++] = obj->addr >> 2;
+//	microjs->code[microjs->pc++] = obj->addr >> 8;
 
 	/* push back */
 	sym_tmp_push(microjs->tab, &tmp);
@@ -204,8 +204,8 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 		TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
 			   sym_obj_name(microjs->tab, obj), obj->addr);
 		microjs->code[microjs->pc++] = OPC_LD;
-		microjs->code[microjs->pc++] = obj->addr;
-		microjs->code[microjs->pc++] = obj->addr >> 8;
+		microjs->code[microjs->pc++] = obj->addr >> 2;
+//		microjs->code[microjs->pc++] = obj->addr >> 8;
 	}
 
 	/* push back; */
@@ -244,7 +244,10 @@ int op_blk_open(struct microjs_compiler * microjs)
 {
 	DCC_LOG(LOG_INFO, "{");
 
-	if (!sym_scope_open(microjs->tab))
+	/* save the heap state */
+	sym_addr_push(microjs->tab, &microjs->heap);
+	/* save the stack frame */
+	if (!sym_sf_push(microjs->tab))
 		return -1;
 
 	return 0;
@@ -254,7 +257,11 @@ int op_blk_close(struct microjs_compiler * microjs)
 {
 	DCC_LOG(LOG_INFO, "}");
 
-	if (!sym_scope_close(microjs->tab))
+	/* restore the stack frame */
+	if (!sym_sf_pop(microjs->tab))
+		return -1;
+	/* restore the heap state */
+	if (!sym_addr_pop(microjs->tab, &microjs->heap))
 		return -1;
 
 	return 0;

@@ -947,6 +947,26 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+/* --------------------------------------------------------------------------
+   External symbols
+   -------------------------------------------------------------------------- */
+
+struct ext_libdef externals = {
+	.name = "lib",
+	.fncnt = 8,
+	.fndef = {
+		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
+		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
+		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
+		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
+
+		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
+		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
+		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
+		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
+	}
+};
+
 int cmd_js(FILE * f, int argc, char ** argv)
 {
 	uint16_t strbuf[64]; /*string buffer shuld be 16bits aligned */
@@ -974,9 +994,9 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	/* initialize string buffer */
 	strbuf_init(strbuf, sizeof(strbuf));
 	/* initialize symbol table */
-	symtab = symtab_init(symbuf, sizeof(symbuf));
+	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
 	/* initialize compiler */
-	microjs_compiler_init(&microjs, symtab, (int32_t *)data, sizeof(data));
+	microjs_compiler_init(&microjs, symtab, sizeof(data));
 
 	fprintf(f, "\"%s\"\n", argv[1]);
 	script = argv[1];
