@@ -142,8 +142,9 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_LD:
 			r1 = code[pc++];
-			r1 |= code[pc++] << 8;
-			r0 = vm_rd32(vm, r1);
+//			r1 |= code[pc++] << 8;
+			r0 = vm->data[r1];
+//			r0 = vm_rd32(vm, r1);
 			if (trace)
 				FTRACEF(f, "LD 0x%04x -> %d\n", r1, r0);
 			vm_push(vm, r0);
@@ -151,11 +152,12 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_ST:
 			r1 = code[pc++];
-			r1 |= code[pc++] << 8;
+//			r1 |= code[pc++] << 8;
 			r0 = vm_pop(vm);
 			if (trace)
 				FTRACEF(f, "ST 0x%04x <- %d\n", r1, r0);
-			vm_wr32(vm, r1, r0);
+//			vm_wr32(vm, r1, r0);
+			vm->data[r1] = r0;
 			break;
 
 		case OPC_EXT:

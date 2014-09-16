@@ -36,7 +36,7 @@ LIBS = gcc stm32f cm3 util c ice-comm xmodem crc tty shell microjs
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O2 -fomit-frame-pointer
+CFLAGS = -g -Os -fomit-frame-pointer
 
 MACH = stm32l151xb
 

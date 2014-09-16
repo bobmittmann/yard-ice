@@ -46,7 +46,7 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	tab->sp = tab->top;
 	tab->fp = tab->top;
 	/* symbols are allocated bottom-up */
-	tab->heap = 0;
+	tab->bp = 0;
 	/* initialize temporary labels */
 	tab->tmp_lbl = 0;
 
@@ -54,17 +54,17 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	return tab;
 }
 
-static bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
+bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
 	
-	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len);
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len);
 
 	sp -= len;
-	if (tab->heap > sp)
+	if (tab->bp > sp)
 		return false;
 
 	dst = (uint8_t *)&tab->buf + sp;
@@ -76,17 +76,17 @@ static bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 	return true;
 }
 
-static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
+bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
 	
-	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len + 1);
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len + 1);
 
 	sp -= len + 1;
-	if (tab->heap > sp)
+	if (tab->bp > sp)
 		return false;
 
 	dst = (uint8_t *)&tab->buf + sp;
@@ -100,14 +100,14 @@ static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 	return true;
 }
 
-static bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
+bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
 
-	DCC_LOG3(LOG_INFO, "heap=%d sp=%d len=%d", tab->heap, tab->sp, len);
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len);
 
 	if (sp >= tab->fp)
 		return false;
@@ -124,20 +124,15 @@ static bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 	return true;
 }
 
-struct sym_scope {
-	uint16_t prev;
-	uint16_t heap;
-};
-
 /* Push the stack frame */
-bool sym_scope_open(struct symtab * tab)
+bool sym_sf_push(struct symtab * tab)
 {
-	struct sym_scope scope;
+	struct sym_sf sf;
 
-	scope.prev = tab->fp;
-	scope.heap = tab->heap;
+	sf.prev = tab->fp;
+	sf.bp = tab->bp;
 
-	if (!sym_push(tab, &scope, sizeof(scope)))
+	if (!sym_push(tab, &sf, sizeof(sf)))
 		return false;
 
 	tab->fp = tab->sp;
@@ -146,9 +141,9 @@ bool sym_scope_open(struct symtab * tab)
 }
 
 /* Pop the stack frame */
-bool sym_scope_close(struct symtab * tab)
+bool sym_sf_pop(struct symtab * tab)
 {
-	struct sym_scope scope;
+	struct sym_sf sf;
 	int sp = tab->fp; /* use frame pointer as reference */
 	uint8_t * dst;
 	uint8_t * src;
@@ -158,13 +153,13 @@ bool sym_scope_close(struct symtab * tab)
 		return false;
 
 	src = (uint8_t *)&tab->buf + sp;
-	dst = (uint8_t *)&scope;
-	for(i = 0; i < sizeof(scope); ++i)
+	dst = (uint8_t *)&sf;
+	for(i = 0; i < sizeof(sf); ++i)
 		dst[i] = src[i];
 
-	tab->sp = sp + sizeof(scope);
-	tab->fp = scope.prev;
-	tab->heap = scope.heap;
+	tab->sp = sp + sizeof(sf);
+	tab->fp = sf.prev;
+	tab->bp = sf.bp;
 
 	return true;
 }
@@ -177,7 +172,7 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 							 const char * s, unsigned int len)
 {
 	struct sym_obj * obj;
-	int heap = tab->heap;
+	int bp = tab->bp;
 	int id;
 	int nm;
 
@@ -193,22 +188,22 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 		nm = tab->sp;
 	}
 
-	if ((heap + sizeof(struct sym_obj)) > tab->sp) {
-		DCC_LOG(LOG_WARNING, "heap overflow!");
+	if ((bp + sizeof(struct sym_obj)) > tab->sp) {
+		DCC_LOG(LOG_WARNING, "bp overflow!");
 		return NULL;
 	}
 
-	id = heap / sizeof(struct sym_obj);
+	id = bp / sizeof(struct sym_obj);
 
-	DCC_LOG2(LOG_INFO, "heap=%d id=%d", heap, id);
+	DCC_LOG2(LOG_INFO, "bp=%d id=%d", bp, id);
 	DCC_LOG1(LOG_INFO, "nm=\"%s\"", (char *)&tab->buf + tab->sp); 
 
 	obj = &tab->buf[id];
 	obj->nm = nm;
-	obj->flags = SYM_OBJECT;
+	obj->flags = 0;
 	obj->addr = 0;
 	obj->size = 0;
-	tab->heap = heap + sizeof(struct sym_obj);
+	tab->bp = bp + sizeof(struct sym_obj);
 
 	return obj;
 }
@@ -221,7 +216,7 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 	int i;
 
 	/* search in the local list */
-	for (i = (tab->heap / sizeof(struct sym_obj)) - 1; i >= 0; --i) {
+	for (i = (tab->bp / sizeof(struct sym_obj)) - 1; i >= 0; --i) {
 		obj = &tab->buf[i];
 		nm = (char *)&tab->buf + obj->nm;
 
@@ -361,7 +356,7 @@ int sym_dump(FILE * f, struct symtab * tab)
 	int i;
 
 	/* search in the local list */
-	for (i = 0; i < tab->heap / sizeof(struct sym_obj); ++i) {
+	for (i = 0; i < tab->bp / sizeof(struct sym_obj); ++i) {
 		obj = &tab->buf[i];
 		nm = (char *)&tab->buf + obj->nm;
 		fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr, obj->size, nm);
