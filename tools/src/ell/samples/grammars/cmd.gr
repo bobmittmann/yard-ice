@@ -1,0 +1,69 @@
+%token EOF ASR SHL PLUS MINUS MUL DIV MOD OR AND XOR INV ASSIGN COMMA SEMICOLON LPAREN RPAREN VAR INT ID ERR
+%%
+
+program 		: EOF
+				| stat program
+				;
+
+stat			: VAR ID term
+				| PRINT exp term
+				| ID cmd_or_assign term
+				;
+
+term			: SEMICOLON
+				| EOL
+				;
+
+cmd_or_assign   : ASSIGN exp 
+				| exp_lst_opt
+				;
+
+exp_lst_opt		: 
+				| exp_lst
+				;
+
+exp_lst			: primary_exp exp_lst1
+				;
+				
+exp_lst1		: 
+				| exp_lst
+				;
+
+exp 			: mult_exp additive_exp
+				;
+
+additive_exp 	: 
+				| PLUS additive_exp 
+				| MINUS additive_exp 
+				| XOR additive_exp 
+				| OR additive_exp 
+				;
+
+mult_exp		: unary_exp	mult_exp1		
+				;
+
+mult_exp1		: 
+				| MUL mult_exp 
+				| DIV mult_exp 
+				| MOD mult_exp 
+				| AND mult_exp 
+				;
+
+unary_exp		: primary_exp
+				| MINUS unary_exp 
+				| NOT unary_exp 
+				;
+
+primary_exp		: LPAREN exp RPAREN
+				| INT 
+				| meth_or_attr 
+				;
+
+meth_or_attr    : ID meth_or_attr1
+                ;
+
+meth_or_attr1   :
+				| LPAREN RPAREN
+				;
+
+
