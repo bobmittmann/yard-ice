@@ -62,9 +62,15 @@ SYMPTR Lookup(char *s)
     }
 	/* else insert */
     sp = (SYMPTR) calloc( 1, (unsigned)( sizeof(*sp)) );
-	if(sp == NULL) {fprintf(stderr, "\nMemory error\n"); exit(1);}
+	if (sp == NULL) {
+		fprintf(stderr, "\nMemory error\n"); 
+		exit(1);
+	}
     sp->symtext = (char *)malloc(strlen(s)+1);
-	if(sp->symtext == NULL) {fprintf(stderr, "\nMemory error\n"); exit(1);}
+	if (sp->symtext == NULL) {
+		fprintf(stderr, "\nMemory error\n"); 
+		exit(1);
+	}
 	strcpy(sp->symtext,s);
     sp->next_sym = NULL;
     sp->kind = TERM;     /* assume: terminal */
@@ -88,7 +94,7 @@ void SyntaxError(char * str)
 	exit(1);
 }
 
-static void scanComment()
+static void scanComment(void)
 {
 	/* PRE: comment recognised */
     char prev = 0;	
@@ -113,7 +119,7 @@ static void scanComment()
    A token is: grammar-symbol or '|' or  '\n' ':' ';'  EOF		
 */
 
-int GetToken() 
+int GetToken(void) 
 {
 	/* skip white space and comment */
     while( isspace(nextch)  || ('/' == nextch)) {
@@ -186,8 +192,10 @@ int GetToken()
 		
 		case '\"': /*multichar token "token" or single char "c" */
 			{
-			char *s = &lexeme[2];        			
-			lexeme[0]='T'; lexeme[1]='_';
+			char *s = lexeme;
+			/* Prefix strings wit T_ */
+//			char *s = &lexeme[2];        			
+//			lexeme[0]='T'; lexeme[1]='_';
 			while(nextch != EOF) {
 				nextch = toupper(getc(infile));				
 				while (nextch <= ' ' )

@@ -104,7 +104,7 @@ int str_add(const char * s, unsigned int len)
 	return idx;
 }
 
-int decode_cstr(char * dst, const char * src, unsigned int len)
+int cstr_decode(char * dst, const char * src, unsigned int len)
 {
 	bool esc;
 	int c;
@@ -175,7 +175,7 @@ int cstr_add(const char * s, unsigned int len)
 	   string */
 
 	/* Copy the string to the buffer */
-	decode_cstr(dst, s, len);
+	cstr_decode(dst, s, len);
 
 	var_strbuf->offs[idx] = offs;
 	var_strbuf->cnt++;
@@ -199,5 +199,4 @@ const char * str(int idx)
 
 	return (char *)var_strbuf + var_strbuf->offs[idx];
 }
-
 

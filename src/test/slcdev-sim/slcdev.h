@@ -60,11 +60,13 @@ struct cmd_seq {
 	uint16_t val;
 } seq;
 
+#define SLCDEV_CMD_JS_LINE_MAX 11
+
 struct cmd_entry {
 	struct cmd_seq seq;
 	uint8_t tag; /* The tag string */
-	uint8_t js[7]; /* The javascript lines */
-	void * script; /* Compiled javascrit bytecodes */
+	uint8_t js[11]; /* The javascript lines */
+	uint8_t * code; /* Compiled javascrit bytecodes */
 };
 
 #define SLCDEV_CMD_LIST_LEN_MAX 12
@@ -328,6 +330,9 @@ struct slcdev_drv {
 
 extern struct slcdev_drv slcdev_drv;
 
+extern struct ext_libdef slcdev_lib;
+extern uint32_t slcdev_vm_data[64]; /* data area */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -374,6 +379,8 @@ int config_show_info(FILE * f);
 struct db_dev_model * device_db_lookup(unsigned int id);
 bool device_db_need_update(struct json_file * json);
 bool device_db_is_sane(void);
+
+uint8_t * db_js_lookup(const char * model, const char * jstag);
 
 int slcdev_const_str_purge(void);
 

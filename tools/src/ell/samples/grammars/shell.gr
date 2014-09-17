@@ -79,6 +79,7 @@ assign_or_call  : ID  assign_or_call1
 
 assign_or_call1	: ASSIGN exp 
 				| LPAREN arg_list_opt RPAREN 
+				| CMD cmd_arg_list
 				;
 
 arg_list_opt	: 
@@ -157,14 +158,29 @@ primary_exp		: LPAREN exp RPAREN
 				| TRUE 
 				| FALSE 
 				| STRING 
-//				| meth_or_attr  
+				| meth_or_attr  
 				;
 
-//meth_or_attr	: ID  meth_or_attr1
-//				;
+meth_or_attr	: ID meth_or_attr1
+				;
 
-//meth_or_attr1	: 
-//				| LPAREN  arg_list_opt RPAREN 
-//				;
+meth_or_attr1	: 
+				| LPAREN arg_list_opt RPAREN 
+				;
 
+ 
+cmd_arg_list 	: cmd_arg cmd_arg_list1
+				;
+
+cmd_arg_list1	: 
+				| cmd_arg_list
+				;
+
+cmd_arg 		: INT 
+				| TRUE 
+				| FALSE 
+				| STRING 
+				| ID
+				| LPAREN exp RPAREN
+				;
 

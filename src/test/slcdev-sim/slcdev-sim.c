@@ -6,6 +6,28 @@
 #include <sys/dcclog.h>
 #include "slcdev.h"
 
+/* --------------------------------------------------------------------------
+   External symbols
+   -------------------------------------------------------------------------- */
+
+struct ext_libdef slcdev_lib = {
+	.name = "lib",
+	.fncnt = 8,
+	.fndef = {
+		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
+		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
+		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
+		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
+
+		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
+		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
+		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
+		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
+	}
+};
+
+uint32_t slcdev_vm_data[64]; /* data area */
+
 void dev_sim_enable(bool mod, unsigned int addr)
 {
 	if (addr > 160) 
@@ -100,7 +122,7 @@ struct microjs_script {
 };
 
 void sim_js_exec(struct ss_device * dev, struct db_dev_model * model, 
-				 struct microjs_script * cmd)
+				 uint8_t code[])
 {
 
 }
@@ -145,7 +167,7 @@ void sensor_sim_custom(struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(dev, model, cmd->script);
+				sim_js_exec(dev, model, cmd->code);
 			}
 		}
 	}
@@ -275,7 +297,7 @@ void module_sim_custom(struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(dev, model, cmd->script);
+				sim_js_exec(dev, model, cmd->code);
 			}
 		}
 	}

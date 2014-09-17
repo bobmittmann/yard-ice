@@ -27,6 +27,7 @@ stat			: SEMICOLON
 				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
 				;
 
+
 else_opt		: 
 				| ELSE { op_if_else } compound_stat
 				;
@@ -49,28 +50,16 @@ var_assign_opt  :
 				;
 
 assign_or_call  : ID { op_push_tmp } assign_or_call1 { op_pop_tmp }
+
 				;
 
 assign_or_call1	: ASSIGN exp { op_assign }
 				| LPAREN { op_method } arg_list_opt RPAREN { op_meth_or_attr, op_ret_discard }
-				| CMD cmd_arg_opt
 				;
 
 arg_list_opt	: 
 				| arg_list 
 				;
-
-cmd_arg_opt		: primary_exp primary_exp
-//				| cmd_arg_list
-				;
-
-//cmd_arg_list	: primary_exp cmd_arg_list1	
-//				;
-
-//cmd_arg_list1	: 
-//				| COMMA cmd_arg_list
-//				;
-
 
 arg_list		: exp { op_arg } arg_list1 
 				;

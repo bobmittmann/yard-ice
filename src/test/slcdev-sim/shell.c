@@ -927,10 +927,10 @@ int cmd_str(FILE * f, int argc, char ** argv)
 	int i;
 
 	if (argc == 1)
-		return microjs_str_pool_dump(&microjs_str_const);
+		return const_strbuf_dump(f);
 
 	for (i = 1; i < argc; ++i) {
-		if ((ret = const_str_write(argv[i], strlen(argv[i]))) < 0)
+		if ((ret = const_str_add(argv[i], strlen(argv[i]))) < 0)
 			break;
 	}
 
@@ -947,38 +947,13 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-/* --------------------------------------------------------------------------
-   External symbols
-   -------------------------------------------------------------------------- */
-
-struct ext_libdef externals = {
-	.name = "lib",
-	.fncnt = 8,
-	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
-
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
-	}
-};
-
 int cmd_js(FILE * f, int argc, char ** argv)
 {
-	uint16_t strbuf[64]; /*string buffer shuld be 16bits aligned */
-	uint8_t code[256]; /* compiled code */
-	uint32_t data[64]; /* data area */
-#if 0
+	uint8_t code[512]; /* compiled code */
 	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
 						  the data buffer) */
-#endif
-#define symbuf data
-
-	struct microjs_compiler microjs; 
+	uint32_t sdtbuf[64]; /* compiler buffer */
+	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
 	struct symtab * symtab;
 	char * script;
@@ -991,21 +966,22 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	/* initialize string buffer */
-	strbuf_init(strbuf, sizeof(strbuf));
 	/* initialize symbol table */
-	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
+	symtab = symtab_init(symbuf, sizeof(symbuf), &slcdev_lib);
 	/* initialize compiler */
-	microjs_compiler_init(&microjs, symtab, sizeof(data));
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
+							  code, sizeof(code), sizeof(slcdev_vm_data));
+
 
 	fprintf(f, "\"%s\"\n", argv[1]);
 	script = argv[1];
 	len = strlen(argv[1]);
 
-	if ((n = microjs_compile(&microjs, code, script, len)) < 0)
-		return 1;
+	/* compile */
+	if ((n = microjs_compile(microjs, script, len)) < 0)
+		return -1;
 
-	microjs_vm_init(&vm, (int32_t *)data, sizeof(data));
+	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
 	vm.env.ftrace = stderr;
 
 	if (microjs_exec(&vm, code, n) < 0)
@@ -1014,7 +990,32 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	fprintf(f, "\n");
 
 	return 0;
+}
 
+
+int cmd_run(FILE * f, int argc, char ** argv)
+{
+	struct microjs_vm vm; 
+	uint8_t * code;
+
+	if (argc < 3)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 3)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((code = db_js_lookup(argv[1], argv[2])) == NULL)
+		return SHELL_ERR_ARG_INVALID;
+
+	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
+	vm.env.ftrace = f;
+
+	if (microjs_exec(&vm, code, 1024) < 0)
+		return 1;
+
+	fprintf(f, "\n");
+
+	return 0;
 }
 
 const struct shell_cmd cmd_tab[] = {
@@ -1074,6 +1075,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_dev, "dev", "", "[start|stop]", "dump string pool" },
 	
 	{ cmd_js, "js", "", "script", "javascript" },
+
+	{ cmd_run, "run", "", "script", "run compiled code" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 

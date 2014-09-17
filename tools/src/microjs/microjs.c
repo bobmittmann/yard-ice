@@ -129,13 +129,15 @@ struct ext_libdef externals = {
 
 int main(int argc,  char **argv)
 {
-	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
 	uint8_t code[512]; /* compiled code */
 	int32_t data[64]; /* data area */
+
+	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
 	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
 						  the data buffer) */
+	uint32_t sdtbuf[64]; /* compiler buffer */
 
-	struct microjs_compiler microjs; 
+	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
 	struct symtab * symtab;
 
@@ -208,19 +210,24 @@ int main(int argc,  char **argv)
 	/* initialize symbol table */
 	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
 	/* initialize compiler */
-	microjs_compiler_init(&microjs, symtab, sizeof(data));
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
+							  code, sizeof(code), sizeof(data));
 
+	/* load all scripts */
 	for (i = optind; i < argc; ++i) {
 		if (load_script(argv[i], &script, &len) < 0)
 			return 1;
 	}
 
-	if ((n = microjs_compile(&microjs, code, script, len)) < 0)
+	/* compile */
+	if ((n = microjs_compile(microjs, script, len)) < 0)
 		return 1;
 
+	/* initialize virtual machine */
 	microjs_vm_init(&vm, data, sizeof(data));
+	/* initialize run time environment */
 	vm.env.ftrace = ftrace;
-
+	/* run */
 	if (microjs_exec(&vm, code, n) < 0)
 		return 1;
 

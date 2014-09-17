@@ -49,8 +49,8 @@
 
 #include "microjs_ll.h"
 
-#ifndef MICROJS_ENABLE_STRING
-#define MICROJS_ENABLE_STRING 1
+#ifndef MICROJS_STRINGS_ENABLED
+#define MICROJS_STRINGS_ENABLED 1
 #endif
 
 #ifndef MICROJS_SYMBOL_LEN_MAX 
@@ -63,6 +63,10 @@
 
 #ifndef MICROJS_TRACE_ENABLED
 #define MICROJS_TRACE_ENABLED 1
+#endif
+
+#ifndef MICROJS_STRINGBUF_ENABLED
+#define MICROJS_STRINGBUF_ENABLED 1
 #endif
 
 #if (MICROJS_TRACE_ENABLED)
@@ -86,6 +90,38 @@ struct lexer {
 	uint16_t off;  /* lexer text offset */
 	uint16_t len;  /* lexer text length */
 	const char * txt;   /* base pointer (original js txt file) */
+};
+
+/* --------------------------------------------------------------------------
+   Compiler 
+   -------------------------------------------------------------------------- */
+
+struct token {
+	uint8_t typ; /* token type (class) */
+	uint8_t qlf; /* qualifier */
+	uint16_t off; /* offset */
+	union {
+		char * s;
+		uint32_t u32;	
+		int32_t i32;	
+	};
+};
+
+/* --------------------------------------------------------------------------
+   Syntax Directed Translator
+   -------------------------------------------------------------------------- */
+
+struct microjs_sdt {
+	struct lexer lex;
+	struct token tok;    /* token buffer */
+	struct symtab * tab; /* symbol table */
+	uint8_t * code;      /* compiled code */
+	uint16_t cdsz;       /* code buffer size */
+	uint16_t pc;         /* code pointer */
+	uint16_t tgt_sp;     /* target stack pointer (top of the data memory) */
+	uint16_t tgt_heap;  /* target data memory heap */
+	uint16_t size;       /* SDT stack size */
+	uint16_t ll_sp;      /* LL Parser stack pointer */
 };
 
 /* --------------------------------------------------------------------------
@@ -220,7 +256,7 @@ void lexer_print_err(FILE * f, struct lexer * lex, int err);
 
 char * tok2str(struct token tok);
 
-int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt);
+int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl);
 
 int sym_dump(FILE * f, struct symtab * tab);
 
@@ -318,17 +354,6 @@ struct ext_fndef * sym_extern_get(struct symtab * tab, unsigned int xid);
 
 const char * sym_extern_name(struct symtab * tab, unsigned int xid);
 
-/* --------------------------------------------------------------------------
-   Strings 
-   -------------------------------------------------------------------------- */
-
-const char * str(int idx);
-
-int str_add(const char * s, unsigned int len);
-
-int str_lookup(const char * s, unsigned int len);
-
-int cstr_add(const char * s, unsigned int len);
 
 #ifdef __cplusplus
 }
