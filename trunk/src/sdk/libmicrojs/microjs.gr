@@ -1,4 +1,4 @@
-%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR FUNCTION IF TRUE VAR WHILE CONTINUE BREAK RETURN ID INT STRING ERR
+%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR FUNCTION IF TRUE VAR WHILE TRY CATCH THROW FINALLY CONTINUE BREAK RETURN ID INT STRING ERR
 %%
 
 program 		: EOF
@@ -16,6 +16,8 @@ stat_list		:
 stat			: FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SEMICOLON exp_lst_opt { op_for_after } RPAREN compound_stat { op_for_end }
 				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
 				| IF condition { op_if_cond } compound_stat else_opt { op_if_end }
+				| TRY { op_try_begin } compound_stat catch_opt { op_try_end } 
+				| THROW exp { op_throw } SEMICOLON
 				| VAR var_list SEMICOLON
 				| assign_or_call SEMICOLON
 //				| CONTINUE SEMICOLON
@@ -41,6 +43,14 @@ stat			: FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SE
 
 else_opt		: 
 				| ELSE { op_if_else } compound_stat
+				;
+
+catch_opt		: 
+				| CATCH  LPAREN ID RPAREN { op_catch } compound_stat finally_opt
+				;
+
+finally_opt		: 
+				| FINALLY { op_finally } compound_stat
 				;
 
 condition		: LPAREN exp RPAREN

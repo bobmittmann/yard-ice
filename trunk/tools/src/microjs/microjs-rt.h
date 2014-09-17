@@ -76,6 +76,11 @@
 #define OPC_JEQ      25
 #define OPC_EXT      26
 #define OPC_POP      27
+#define OPC_LDR      28 /* BP relative load */
+#define OPC_STR      29 /* BP relative store */
+#define OPC_SBP      30 /* store base pointer */
+#define OPC_SXP      31 /* store exception pointer */
+#define OPC_XPT      32 /* exception */
 
 /* --------------------------------------------------------------------------
    Runtime Environement
@@ -93,8 +98,10 @@ struct microjs_env {
 
 struct microjs_vm {
 	struct microjs_env env;
-	uint16_t sp;
-	uint16_t sl;
+	uint16_t xp; /* exception handler pointer */
+	uint16_t bp; /* base pointer */
+	uint16_t sp; /* stack pointer */
+	uint16_t sl; /* stack limit */
 	int32_t * data;
 };
 

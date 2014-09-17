@@ -228,7 +228,7 @@ int main(int argc,  char **argv)
 		return 1;
 
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, data, n);
+	microjs_vm_init(&vm, data, sizeof(data));
 	/* initialize run time environment */
 	vm.env.ftrace = ftrace;
 	/* run */
