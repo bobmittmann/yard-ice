@@ -89,6 +89,36 @@ struct lexer {
 };
 
 /* --------------------------------------------------------------------------
+   Compiler 
+   -------------------------------------------------------------------------- */
+
+struct token {
+	uint8_t typ; /* token type (class) */
+	uint8_t qlf; /* qualifier */
+	uint16_t off; /* offset */
+	union {
+		char * s;
+		uint32_t u32;	
+		int32_t i32;	
+	};
+};
+
+/* --------------------------------------------------------------------------
+   Syntax Directed Translator
+   -------------------------------------------------------------------------- */
+
+struct microjs_sdt {
+	struct token tok;    /* token buffer */
+	struct symtab * tab; /* symbol table */
+	uint8_t * code;      /* compiled code */
+	uint16_t cdsz;       /* code buffer size */
+	uint16_t pc;         /* code pointer */
+	uint16_t sp;         /* stack pointer (top of the data memory) */
+	uint16_t heap;       /* data memory heap */
+	uint16_t size;       /* SDT stack size */
+};
+
+/* --------------------------------------------------------------------------
    String Pool
    -------------------------------------------------------------------------- */
 

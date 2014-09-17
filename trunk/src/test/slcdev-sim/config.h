@@ -91,6 +91,7 @@
 #define FILE_DEV_MAX 2
 
 #define MICROJS_TRACE_ENABLED 0
+#define MICROJS_STRINGBUF_ENABLED 0
 
 #endif /* __CONFIG_H__ */
 

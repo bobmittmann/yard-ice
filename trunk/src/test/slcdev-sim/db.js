@@ -319,19 +319,22 @@
 		"pw5": [900],
 		"cmd": [
 			{
-				"tag": "Reset",
+				"tag": "rst",
+				"desc": "Reset",
 				"seq": ["0x0", "1x0", "0x1", "0x0", "1x0"],
-				"js": [
-					"dev.pw2 = mdl.pw2[0];",
-					"dev.pw4 = mdl.pw4[0];"
-					]
+				"js": [ ] 
 			},
 			{
-				"tag": "Obscuration Test",
+				"tag": "tst",
+				"desc": "Obscuration Test",
 				"seq": ["0x0", "0x1", "0x1", "0x0", "1x0"],
 				"js": [
-					"dev.pw2 = mdl.pw2[1];",
-					"dev.pw4 = mdl.pw4[4];"
+						"var x0 = 0, x1 = 1, x, i;",
+						"for (i = 0; i < 46; i = i + 1) {",
+						"x = x1 + x0;",
+						"x0 = x1;",
+						"x1 = x;",
+						"printf('%2d | %10u\n', i, x);}"
 					]
 			}
 		]

@@ -632,7 +632,7 @@ int microjs_const_str_enc(struct microjs_json_parser * jsn,
 	uint8_t * sip = (uint8_t *)ptr;
 	int ret;
 
-	if ((ret = const_str_write(val->str.dat, val->str.len)) < 0)
+	if ((ret = const_str_add(val->str.dat, val->str.len)) < 0)
 		return ret;
 
 	*sip = ret;

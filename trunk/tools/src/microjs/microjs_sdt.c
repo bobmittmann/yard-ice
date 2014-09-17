@@ -33,7 +33,7 @@
    Memory operations
    -------------------------------------------------------------------------- */
 
-static int alloc32(struct microjs_compiler * microjs)
+static int alloc32(struct microjs_sdt * microjs)
 {
 	unsigned int addr;
 
@@ -56,7 +56,7 @@ static int alloc32(struct microjs_compiler * microjs)
 
  */
 
-int op_var_decl(struct microjs_compiler * microjs)
+int op_var_decl(struct microjs_sdt * microjs)
 {
 	struct sym_obj * obj;
 	int addr;
@@ -84,7 +84,7 @@ int op_var_decl(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_push_tmp(struct microjs_compiler * microjs)
+int op_push_tmp(struct microjs_sdt * microjs)
 {
 	struct sym_tmp tmp;
 
@@ -100,7 +100,7 @@ int op_push_tmp(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_pop_tmp(struct microjs_compiler * microjs)
+int op_pop_tmp(struct microjs_sdt * microjs)
 {
 	DCC_LOG(LOG_INFO, " >>> ...");
 
@@ -108,8 +108,7 @@ int op_pop_tmp(struct microjs_compiler * microjs)
 	return 0;
 }
 
-
-int op_assign(struct microjs_compiler * microjs)
+int op_assign(struct microjs_sdt * microjs)
 {
 	struct sym_tmp tmp;
 	struct sym_obj * obj;
@@ -135,7 +134,7 @@ int op_assign(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_method(struct microjs_compiler * microjs)
+int op_method(struct microjs_sdt * microjs)
 {
 	struct ext_fndef * fndef;
 	struct sym_tmp tmp;
@@ -167,7 +166,7 @@ int op_method(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_meth_or_attr(struct microjs_compiler * microjs)
+int op_meth_or_attr(struct microjs_sdt * microjs)
 {
 	struct sym_tmp tmp;
 
@@ -212,7 +211,7 @@ int op_meth_or_attr(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_arg(struct microjs_compiler * microjs)
+int op_arg(struct microjs_sdt * microjs)
 {
 	struct sym_tmp tmp;
 
@@ -231,14 +230,14 @@ int op_arg(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_ret_discard(struct microjs_compiler * microjs)
+int op_ret_discard(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tPOP\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_POP;
 	return 0;
 }
 
-int op_blk_open(struct microjs_compiler * microjs) 
+int op_blk_open(struct microjs_sdt * microjs) 
 {
 	DCC_LOG(LOG_INFO, "{");
 
@@ -251,7 +250,7 @@ int op_blk_open(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_blk_close(struct microjs_compiler * microjs) 
+int op_blk_close(struct microjs_sdt * microjs) 
 {
 	DCC_LOG(LOG_INFO, "}");
 
@@ -265,146 +264,146 @@ int op_blk_close(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_equ(struct microjs_compiler * microjs)
+int op_equ(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tEQ\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_EQ;
 	return 0;
 }
 
-int op_neq(struct microjs_compiler * microjs)
+int op_neq(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tNE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NE;
 	return 0;
 }
 
-int op_gt(struct microjs_compiler * microjs)
+int op_gt(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tGT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GT;
 	return 0;
 }
 
-int op_lt(struct microjs_compiler * microjs)
+int op_lt(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tLT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LT;
 	return 0;
 }
 
-int op_gte(struct microjs_compiler * microjs)
+int op_gte(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tGE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GE;
 	return 0;
 }
 
-int op_lte(struct microjs_compiler * microjs)
+int op_lte(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tLE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LE;
 	return 0;
 }
 
-int op_logic_or(struct microjs_compiler * microjs)
+int op_logic_or(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
 }
 
-int op_logic_and(struct microjs_compiler * microjs)
+int op_logic_and(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
 }
 
-int op_add(struct microjs_compiler * microjs)
+int op_add(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tADD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ADD;
 	return 0;
 }
 
-int op_sub(struct microjs_compiler * microjs)
+int op_sub(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tSUB\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SUB;
 	return 0;
 }
 
-int op_or(struct microjs_compiler * microjs)
+int op_or(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
 }
 
-int op_xor(struct microjs_compiler * microjs)
+int op_xor(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_XOR;
 	return 0;
 }
 
-int op_mul(struct microjs_compiler * microjs)
+int op_mul(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tMUL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MUL;
 	return 0;
 }
 
-int op_div(struct microjs_compiler * microjs)
+int op_div(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tDIV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_DIV;
 	return 0;
 }
 
-int op_mod(struct microjs_compiler * microjs)
+int op_mod(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_MOD;
 	return 0;
 }
 
-int op_and(struct microjs_compiler * microjs)
+int op_and(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
 }
 
-int op_inv(struct microjs_compiler * microjs)
+int op_inv(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_INV;
 	return 0;
 }
 
-int op_minus(struct microjs_compiler * microjs)
+int op_minus(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_NEG;
 	return 0;
 }
 
-int op_not(struct microjs_compiler * microjs)
+int op_not(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_NEG;
 	return 0;
 }
 
-int op_shl(struct microjs_compiler * microjs)
+int op_shl(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_SHL;
 	return 0;
 }
 
-int op_asr(struct microjs_compiler * microjs)
+int op_asr(struct microjs_sdt * microjs)
 {
 	microjs->code[microjs->pc++] = OPC_ASR;
 	return 0;
 }
 
-int op_push_false(struct microjs_compiler * microjs)
+int op_push_false(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tI8 %d\n", microjs->pc, 0);
 	microjs->code[microjs->pc++] = OPC_I8;
@@ -412,7 +411,7 @@ int op_push_false(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_push_true(struct microjs_compiler * microjs)
+int op_push_true(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tI8 %d\n", microjs->pc, 1);
 	microjs->code[microjs->pc++] = OPC_I8;
@@ -420,7 +419,7 @@ int op_push_true(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_push_string(struct microjs_compiler * microjs) 
+int op_push_string(struct microjs_sdt * microjs) 
 {
 	int isz;
 
@@ -435,7 +434,7 @@ int op_push_string(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_push_int(struct microjs_compiler * microjs)
+int op_push_int(struct microjs_sdt * microjs)
 {
 	int32_t x = microjs->tok.u32;
 
@@ -486,7 +485,7 @@ int op_push_int(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_if_cond(struct microjs_compiler * microjs)
+int op_if_cond(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 
@@ -508,7 +507,7 @@ int op_if_cond(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_if_else(struct microjs_compiler * microjs)
+int op_if_else(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 	int offs;
@@ -536,7 +535,7 @@ int op_if_else(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_if_end(struct microjs_compiler * microjs)
+int op_if_end(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 	int offs;
@@ -559,7 +558,7 @@ int op_if_end(struct microjs_compiler * microjs)
    While Loop 
    -------------------------------------------------------------------------- */
 
-int op_while_begin(struct microjs_compiler * microjs)
+int op_while_begin(struct microjs_sdt * microjs)
 {
 	struct sym_wld wld;
 
@@ -577,7 +576,7 @@ int op_while_begin(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_while_cond(struct microjs_compiler * microjs)
+int op_while_cond(struct microjs_sdt * microjs)
 {
 	struct sym_wld wld;
 
@@ -599,7 +598,7 @@ int op_while_cond(struct microjs_compiler * microjs)
 }
 
 
-int op_while_end(struct microjs_compiler * microjs)
+int op_while_end(struct microjs_sdt * microjs)
 {
 	struct sym_wld wld;
 	int offs;
@@ -631,7 +630,7 @@ int op_while_end(struct microjs_compiler * microjs)
    For Loop 
    -------------------------------------------------------------------------- */
 
-int op_for_init(struct microjs_compiler * microjs)
+int op_for_init(struct microjs_sdt * microjs)
 {
 	struct sym_fld fld;
 
@@ -647,7 +646,7 @@ int op_for_init(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_for_cond(struct microjs_compiler * microjs)
+int op_for_cond(struct microjs_sdt * microjs)
 {
 	struct sym_fld fld;
 
@@ -675,7 +674,7 @@ int op_for_cond(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_for_after(struct microjs_compiler * microjs)
+int op_for_after(struct microjs_sdt * microjs)
 {
 	struct sym_fld fld;
 	int offs;
@@ -706,7 +705,7 @@ int op_for_after(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int op_for_end(struct microjs_compiler * microjs)
+int op_for_end(struct microjs_sdt * microjs)
 {
 	struct sym_fld fld;
 	int offs;
@@ -735,7 +734,7 @@ int op_for_end(struct microjs_compiler * microjs)
 	return 0;
 }
 
-int (* op[])(struct microjs_compiler * microjs) = {
+int (* op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
  	[ACTION(A_OP_ASSIGN)] = op_assign,
  	[ACTION(A_OP_EQU)] = op_equ,
@@ -787,12 +786,9 @@ int (* op[])(struct microjs_compiler * microjs) = {
 /* Syntax-directed translator */
 /* Nonrecursive predictive parser */
 
-#define STACK_SIZE 512
-
-int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
-				 const char * txt, unsigned int len)
+int microjs_compile(struct microjs_sdt * microjs, 
+					const char * txt, unsigned int len)
 {
-	uint8_t parser_stack[STACK_SIZE];
 	struct lexer lex;
 	struct token tok;
 	int lookahead;
@@ -803,14 +799,14 @@ int microjs_compile(struct microjs_compiler * microjs, uint8_t code[],
 	int k;
 	int err = ERR_SYNTAX_ERROR;
 
-	lexer_open(&lex, txt, len);
-	pp_sp = parser_stack + STACK_SIZE;
-	pp_sl = parser_stack;
+	pp_sp = (uint8_t *)microjs + microjs->size;
+	pp_sl = (uint8_t *)microjs + sizeof(struct microjs_sdt);
 	pp_top = pp_sp;
 	pp_sp -= microjs_ll_start(pp_sp);
 	microjs->pc = 0;
-	microjs->code = code;
 
+	/* start the lexer */
+	lexer_open(&lex, txt, len);
 	/* */
 	lookahead = (tok = lexer_scan(&lex)).typ;
 	while (pp_sp != pp_top) {
@@ -871,14 +867,26 @@ error:
 	return -1;
 }
 
-int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct symtab * tab, 
-						  unsigned int dsize)
+struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
+									  unsigned int sdt_size,
+									  struct symtab * tab, 
+									  uint8_t code[],
+									  unsigned int code_size, 
+									  unsigned int data_size)
 {
-	microjs->tab = tab;
-	microjs->heap = 0;
-	microjs->stack = dsize;
-	microjs->sp = dsize;
+	struct microjs_sdt * microjs = (struct microjs_sdt *)sdt_buf;
 
-	return 0;
+	microjs->tab = tab;
+	/* data memory allocation info */
+	microjs->heap = 0;
+	microjs->sp = data_size;
+	/* code memory */
+	microjs->pc = 0;
+	microjs->cdsz = code_size;
+	microjs->code = code; /* code buffer */
+	/* size of the buffer provided for parsing */
+	microjs->size = sdt_size;
+
+	return microjs;
 }
+

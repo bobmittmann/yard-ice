@@ -61,22 +61,8 @@ enum {
 	ERR_ALOC32_FAIL,
 };
 
-/* --------------------------------------------------------------------------
-   Compiler 
-   -------------------------------------------------------------------------- */
-
-struct token {
-	uint8_t typ; /* token type (class) */
-	uint8_t qlf; /* qualifier */
-	uint16_t off; /* offset */
-	union {
-		char * s;
-		uint32_t u32;	
-		int32_t i32;	
-	};
-};
-
 struct symtab;
+struct microjs_sdt;
 
 /* --------------------------------------------------------------------------
    External objects/symbols/functions
@@ -98,30 +84,23 @@ struct ext_libdef {
 	struct ext_fndef fndef[];
 };
 
-struct microjs_compiler {
-	struct symtab * tab;
-	struct token tok;
-	int32_t * mem;
-	uint8_t * code;
-	uint16_t pc;
-	uint16_t heap;
-	uint16_t stack;
-	uint16_t sp;
-};
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct symtab * symtab_init(uint32_t * buf, unsigned int len, 
+struct symtab * symtab_init(uint32_t sym_buf[], 
+							unsigned int buf_len, 
 							const struct ext_libdef * libdef);
 
-int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct symtab * tab, 
-						  unsigned int data_size);
+struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
+									  unsigned int buf_size,
+									  struct symtab * tab, 
+									  uint8_t code[],
+									  unsigned int code_size, 
+									  unsigned int data_size);
 
-int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
+int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
 #ifdef __cplusplus

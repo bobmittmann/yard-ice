@@ -49,52 +49,35 @@ enum {
 	MICROJS_OBJECT_EXPECTED    = -14,
 };
 
-
 enum {
 	OK = 0,
+	ERR_UNEXPECED_EOF,
 	ERR_UNEXPECTED_CHAR,
+	ERR_UNEXPECTED_SYMBOL,
 	ERR_UNCLOSED_STRING,
 	ERR_UNCLOSED_COMMENT,
 	ERR_INVALID_LITERAL,
 	ERR_INVALID_ID,
 	ERR_STRINGS_UNSUPORTED,
 	ERR_STRING_TOO_LONG,
-	ERR_BRACKET_MISMATCH,
-	ERR_SYNTAX_ERROR,
-	ERR_STRBUF_OVERFLOW,
 	ERR_STRING_NOT_FOUND,
+	ERR_STRBUF_OVERFLOW,
+	ERR_SYNTAX_ERROR,
 	ERR_HEAP_OVERFLOW,
-	ERR_STACK_OVERFLOW,
 	ERR_VAR_UNKNOWN,
-	ERR_INTERNAL_ERROR,
 	ERR_EXTERN_UNKNOWN,
 	ERR_ARG_MISSING,
 	ERR_TOO_MANY_ARGS,
-	ERR_TMP_PUSH_FAIL,
-	ERR_TMP_POP_FAIL,
-	ERR_TMP_GET_FAIL,
 	ERR_SYM_PUSH_FAIL,
 	ERR_SYM_POP_FAIL,
 	ERR_OBJ_NEW_FAIL,
-	ERR_ALOC32_FAIL,
-};
-
-/* --------------------------------------------------------------------------
-   Compiler 
-   -------------------------------------------------------------------------- */
-
-struct token {
-	uint8_t typ; /* token type (class) */
-	uint8_t qlf; /* qualifier */
-	uint16_t off; /* offset */
-	union {
-		char * s;
-		uint32_t u32;	
-		int32_t i32;	
-	};
+	ERR_SDT_STACK_OVERFLOW,
+	ERR_GENERAL,
+	ERR_CODE_MEM_OVERFLOW,
 };
 
 struct symtab;
+struct microjs_sdt;
 
 /* --------------------------------------------------------------------------
    External objects/symbols/functions
@@ -114,17 +97,6 @@ struct ext_libdef {
 	const char * name;
 	uint8_t fncnt;
 	struct ext_fndef fndef[];
-};
-
-struct microjs_compiler {
-	struct symtab * tab;
-	struct token tok;
-	int32_t * mem;
-	uint8_t * code;
-	uint16_t pc;
-	uint16_t heap;
-	uint16_t stack;
-	uint16_t sp;
 };
 
 /**********************************************************************
@@ -195,20 +167,6 @@ struct microjs_attr_desc {
 	microjs_attr_parser_t parse;
 };
 
-/**********************************************************************
-  Strings
- **********************************************************************/
-struct microjs_str_pool {
-	uint16_t * offs; /* point to the offset table */
-	char * base;     /* base pointer */
-	char * top;      /* top pointer */
-	int (* write)(const struct microjs_str_pool *, 
-				  const char *, unsigned int);
-};
-
-extern const struct microjs_str_pool microjs_str_const;
-extern const struct microjs_str_pool microjs_str_var;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -266,32 +224,52 @@ int microjs_bit_enc(struct microjs_json_parser * jsn,
 int microjs_const_str_enc(struct microjs_json_parser * jsn, 
 					struct microjs_val * val, 
 					unsigned int bit, void * ptr);
-/**********************************************************************
-  Strings
- **********************************************************************/
 
-char * const_str(int idx);
+/* --------------------------------------------------------------------------
+   Strings 
+   -------------------------------------------------------------------------- */
 
-int microjs_str_pool_dump(const struct microjs_str_pool * pool);
+const char * str(unsigned int idx);
 
-int microjs_str_lookup(const struct microjs_str_pool * pool, 
-					   const char * s, int len);
+int str_add(const char * s, unsigned int len);
 
-int const_str_lookup(const char * s, int len);
+int str_lookup(const char * s, unsigned int len);
 
-int const_str_write(const char * s, unsigned int len);
+int cstr_decode(char * dst, const char * src, unsigned int len);
+
+int cstr_add(const char * s, unsigned int len);
 
 
+const char * const_str(unsigned int idx);
 
-struct symtab * symtab_init(uint32_t * buf, unsigned int len, 
+int const_str_add(const char * s, unsigned int len);
+
+int const_str_lookup(const char * s, unsigned int len);
+
+int const_strbuf_dump(FILE * f);
+
+int const_strbuf_purge(void);
+
+
+struct symtab * symtab_init(uint32_t sym_buf[], 
+							unsigned int buf_len, 
 							const struct ext_libdef * libdef);
 
-int microjs_compiler_init(struct microjs_compiler * microjs, 
-						  struct symtab * tab, 
-						  unsigned int data_size);
+struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
+									  unsigned int buf_size,
+									  struct symtab * tab, 
+									  uint8_t code[],
+									  unsigned int code_size, 
+									  unsigned int data_size);
 
-int microjs_compile(struct microjs_compiler * p, uint8_t code[], 
+int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
+
+void microjs_sdt_reset(struct microjs_sdt * microjs);
+
+int microjs_sdt_done(struct microjs_sdt * microjs);
+
+void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
 
 #ifdef __cplusplus
 }

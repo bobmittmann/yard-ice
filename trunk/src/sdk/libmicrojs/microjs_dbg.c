@@ -46,16 +46,30 @@ int dump_js(char * script, unsigned int len)
 }
 
 static const char * const err_tab[] = {
-	"Ok", 
-	"unexpected char",
-	"unclosed string",
-	"unclosed comment",
-	"invalid literal",
-	"invalid identifier",
-	"strings unsuported",
-	"string too long",
-	"bracket mismatch",
-	"syntax error",
+	[OK] = "Ok", 
+	[ERR_UNEXPECED_EOF] = "unexpected end of file",
+	[ERR_UNEXPECTED_CHAR] = "unexpected char",
+	[ERR_UNEXPECTED_SYMBOL] = "unexpected symbol",
+	[ERR_UNCLOSED_STRING] = "unclosed string",
+	[ERR_UNCLOSED_COMMENT] = "unclosed comment",
+	[ERR_INVALID_LITERAL] = "invalid literal",
+	[ERR_INVALID_ID] = "invalid identifier",
+	[ERR_STRINGS_UNSUPORTED] = "strings NOT suported",
+	[ERR_STRING_TOO_LONG] = "string too long",
+	[ERR_STRING_NOT_FOUND] = "string not found",
+	[ERR_STRBUF_OVERFLOW] = "string buffer overflow",
+	[ERR_SYNTAX_ERROR] = "syntax error",
+	[ERR_HEAP_OVERFLOW] = "target heap overvlow",
+	[ERR_VAR_UNKNOWN] = "unknown variable",
+	[ERR_EXTERN_UNKNOWN] = "unknown external",
+	[ERR_ARG_MISSING] = "argument missing",
+	[ERR_TOO_MANY_ARGS] = "too many arguments",
+	[ERR_SYM_PUSH_FAIL] = "symbol stack overflow",
+	[ERR_SYM_POP_FAIL] = "symbol stack sequence fail",
+	[ERR_OBJ_NEW_FAIL] = "symbol alloc fail",
+	[ERR_SDT_STACK_OVERFLOW] = "compiler stack overflow",
+	[ERR_GENERAL] = "general failure",
+	[ERR_CODE_MEM_OVERFLOW] = "code memory overflow",
 };
 
 static void js_dump_line(FILE * f, int ln, char * lp)
@@ -84,7 +98,7 @@ void lexer_print_err(FILE * f, struct lexer * lex, int err)
 	int c;
 	int i;
 
-	fprintf(f, "error: %s:\n", err_tab[err]);
+	fprintf(f, "error %d: %s:\n", err, err_tab[err]);
 
 	lp[4] = NULL;
 	lp[3] = NULL;
@@ -203,6 +217,19 @@ int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
 	for (i = cnt - 1; i >= 0; --i) {
 		fprintf(f, "\t%s\n", microjs_ll_sym[sp[i]]);
 	};
+
+	return 0;
+}
+
+#else
+
+int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl)
+{
+
+	while (sp < sl) {
+		fprintf(f, "\t%3d\n", *sp++);
+	};
+	fprintf(f, "\n");
 
 	return 0;
 }

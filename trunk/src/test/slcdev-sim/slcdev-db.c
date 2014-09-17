@@ -123,11 +123,13 @@ int db_cmd_js_enc(struct microjs_json_parser * jsn,
 	int ret;
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_STRING) {
-		if ((ret = const_str_write(val->str.dat, val->str.len)) < 0)
+		if ((ret = const_str_add(val->str.dat, val->str.len)) < 0)
 			return ret;
-		js[cnt] = ret;
-		DCC_LOG2(LOG_INFO, "js[%d] = %d...", cnt, js[cnt]);
-		cnt++;
+		if (cnt < SLCDEV_CMD_JS_LINE_MAX) {
+			js[cnt] = ret;
+			DCC_LOG2(LOG_INFO, "js[%d] = %d...", cnt, js[cnt]);
+			cnt++;
+		}
 	} 
 
 	if (typ != MICROJS_JSON_END_ARRAY) {
@@ -151,13 +153,18 @@ static const struct microjs_attr_desc command_desc[] = {
 /********************************************************************** 
  * encode a list of commands
  ***********************************************************************/
+
 int db_cmd_list_enc(struct microjs_json_parser * jsn, 
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr)
 {
+	struct symtab * symtab = (struct symtab *)slcdev_vm_data;
+	uint8_t code[256]; /* compiled code */
+	uint32_t sdtbuf[32]; /* compiler buffer */
 	struct cmd_list lst;
 	int ret;
 	int typ;
+	int i;
 
 	lst.cnt = 0;
 
@@ -183,7 +190,47 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 
 		lst.cnt++;
 	} 
-	
+
+	for (i = 0; i < lst.cnt; ++i) {
+		struct cmd_entry * cmd = &lst.cmd[i];
+		struct microjs_sdt * microjs; 
+		int cnt = 0;
+		int ret;
+		int j;
+
+		/* initialize compiler */
+		microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
+								   code, sizeof(code), sizeof(slcdev_vm_data));
+
+		microjs_sdt_reset(microjs);
+		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
+			const char * js = const_str(cmd->js[j]);
+//	printf("%3d \"%s\"\n", j, js);
+			if ((ret = microjs_compile(microjs, js, strlen(js))) < 0) {
+				if (ret != -ERR_UNEXPECED_EOF) {
+					DCC_LOG1(LOG_ERROR, "Javascript compile error %d!", -ret);
+					microjs_sdt_error(stdout, microjs, ret);
+					return -1;
+				}
+			}
+			if (ret > 0) {
+				cnt++;
+				microjs_sdt_reset(microjs);
+			}
+		}
+
+		if (cnt > 0) {
+			int len = 0;
+			if ((len = microjs_sdt_done(microjs)) < 0) {
+				microjs_sdt_error(stdout, microjs, len);
+				return -1;
+			}
+
+			if (db_stack_push(code, len, (void **)&cmd->code) < 0)
+				return -1;
+		}
+	}
+
 	if (typ != MICROJS_JSON_END_ARRAY) {
 		DCC_LOG(LOG_ERROR, "expecting array closing!");
 		return -1;
@@ -209,7 +256,7 @@ int db_pw_enc(struct microjs_json_parser * jsn,
 
 	if (typ == MICROJS_JSON_STRING) {
 		DCC_LOG(LOG_MSG, "string!");
-		if ((ret = const_str_write(val->str.dat, val->str.len)) < 0)
+		if ((ret = const_str_add(val->str.dat, val->str.len)) < 0)
 			return ret;
 		desc = ret;
 		typ = microjs_json_get_val(jsn, val);
@@ -479,8 +526,8 @@ static struct db_obj * db_json_parse(struct json_file * json)
 	};
 
 	DCC_LOG(LOG_TRACE, "3. erasing constant strings pool.");
-	if (slcdev_const_str_purge() < 0) {
-		DCC_LOG(LOG_ERROR, "slcdev_const_str_purge() failed!");
+	if (const_strbuf_purge() < 0) {
+		DCC_LOG(LOG_ERROR, "const_strbuf_purge() failed!");
 		return NULL;
 	};
 
@@ -489,8 +536,12 @@ static struct db_obj * db_json_parse(struct json_file * json)
 
 	DCC_LOG(LOG_TRACE, "4. parsing JSON.");
 
+	/* initialize compiler's symbol table */
+	symtab_init(slcdev_vm_data, sizeof(slcdev_vm_data), &slcdev_lib);
+
 	/* skip to the object oppening to allow object by object parsing */
 	microjs_json_flush(&jsn);
+
 
 	/* parse the JASON file with the microjs tokenizer */
 	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
@@ -707,15 +758,15 @@ void device_db_init(void)
  * Database query
  ***********************************************************************/
 
-struct db_dev_model * device_db_lookup(unsigned int id)
+struct db_dev_model * device_db_lookup(unsigned int idx)
 {
 	struct db_info * inf;
 
 	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
-	if (id >= inf->obj_cnt)
+	if (idx >= inf->obj_cnt)
 		return NULL;
 
-	return (struct db_dev_model *)inf->obj[id];
+	return (struct db_dev_model *)inf->obj[idx];
 }
 
 int db_dev_model_index_by_name(unsigned int str_id)
@@ -764,6 +815,46 @@ int device_db_pw_lookup(const struct pw_list * lst, unsigned int sel)
 	return pw;
 }
 
+uint8_t * db_js_lookup(const char * model, const char * jstag)
+{
+	struct db_dev_model * mdl;
+	struct cmd_list * lst;
+	int tagid;
+	int nmid;
+	int idx;
+	int j;
+
+	if ((tagid = str_lookup(jstag, strlen(jstag))) < 0) {
+		DCC_LOG(LOG_WARNING, "tag not found!");
+		return NULL;
+	}	
+
+	if ((nmid = str_lookup(model, strlen(model))) < 0) {
+		DCC_LOG(LOG_WARNING, "model name not found!");
+		return NULL;
+	}	
+
+	idx = db_dev_model_index_by_name(nmid);
+
+	if ((mdl = device_db_lookup(idx)) == NULL) {
+		DCC_LOG(LOG_WARNING, "device not found!");
+		return NULL;
+	}
+
+	if ((lst = mdl->cmd) == NULL) {
+		DCC_LOG(LOG_WARNING, "command list empty!");
+		return NULL;
+	}
+
+	for (j = 0; j < lst->cnt; ++j) {
+		struct cmd_entry * cmd = &lst->cmd[j];
+		if (cmd->tag == tagid)
+			return cmd->code;
+	}
+
+	DCC_LOG(LOG_WARNING, "command not found!");
+	return NULL;
+} 
 
 /********************************************************************** 
  * Diagnostics and debug
@@ -822,14 +913,14 @@ void cmd_seq_dec(char * s, struct cmd_seq * seq)
 	*cp = '\0';
 }
 
+
 static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 {
 	int i;
+	int j;
 
-	if (lst == NULL) {
-		DCC_LOG(LOG_WARNING, "lst == NULL!");
+	if (lst == NULL)
 		return;
-	}
 
 	DCC_LOG1(LOG_INFO, "lst=0x%08x", lst);
 
@@ -840,6 +931,11 @@ static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 		cmd_seq_dec(s, &cmd->seq);
 		fprintf(f, "CMD[%d]: \"%s\" %s [%04x %04x]\n", 
 				i, const_str(cmd->tag), s, cmd->seq.msk, cmd->seq.val);	
+	
+		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
+			if (cmd->js[j] > 0)
+				fprintf(f, "\"%s\"\n", const_str(cmd->js[j]));
+		}
 	}
 }
 

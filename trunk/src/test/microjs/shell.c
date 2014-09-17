@@ -181,12 +181,13 @@ struct ext_libdef externals = {
 int cmd_js(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
-	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
 	uint8_t code[512]; /* compiled code */
 	uint32_t data[64]; /* data area */
+	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
 	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
 						  the data buffer) */
-	struct microjs_compiler microjs; 
+	uint32_t sdtbuf[64]; /* compiler buffer */
+	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
 	struct symtab * symtab;
 	char * script;
@@ -204,7 +205,9 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	/* initialize symbol table */
 	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
 	/* initialize compiler */
-	microjs_compiler_init(&microjs, symtab, sizeof(data));
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
+							  code, sizeof(code), sizeof(data));
+
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
 		fprintf(f, "invalid file: \"%s\"\r\n", argv[1]);
@@ -215,12 +218,12 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	script = (char *)entry.fp->data;
 	len = entry.fp->size;
 
-	if ((n = microjs_compile(&microjs, code, script, len)) < 0)
-		return 1;
+	/* compile */
+	if ((n = microjs_compile(microjs, script, len)) < 0)
+		return -11;
 
 	microjs_vm_init(&vm, (int32_t *)data, sizeof(data));
 //	vm.env.ftrace = stderr;
-
 	if (microjs_exec(&vm, code, n) < 0)
 		return 1;
 
