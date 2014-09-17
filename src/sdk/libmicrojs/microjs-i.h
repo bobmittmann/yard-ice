@@ -270,6 +270,9 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 struct sym_obj * sym_obj_lookup(struct symtab * tab, 
 								const char * s, unsigned int len);
 
+struct sym_obj * sym_obj_scope_lookup(struct symtab * tab, 
+									  const char * s, unsigned int len);
+
 const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj);
 
 int sym_lbl_next(struct symtab * tab);

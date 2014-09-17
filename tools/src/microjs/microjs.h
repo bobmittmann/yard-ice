@@ -34,31 +34,29 @@
 
 enum {
 	OK = 0,
+	ERR_UNEXPECED_EOF,
 	ERR_UNEXPECTED_CHAR,
+	ERR_UNEXPECTED_SYMBOL,
 	ERR_UNCLOSED_STRING,
 	ERR_UNCLOSED_COMMENT,
 	ERR_INVALID_LITERAL,
 	ERR_INVALID_ID,
 	ERR_STRINGS_UNSUPORTED,
 	ERR_STRING_TOO_LONG,
-	ERR_BRACKET_MISMATCH,
-	ERR_SYNTAX_ERROR,
-	ERR_STRBUF_OVERFLOW,
 	ERR_STRING_NOT_FOUND,
+	ERR_STRBUF_OVERFLOW,
+	ERR_SYNTAX_ERROR,
 	ERR_HEAP_OVERFLOW,
-	ERR_STACK_OVERFLOW,
 	ERR_VAR_UNKNOWN,
-	ERR_INTERNAL_ERROR,
 	ERR_EXTERN_UNKNOWN,
 	ERR_ARG_MISSING,
 	ERR_TOO_MANY_ARGS,
-	ERR_TMP_PUSH_FAIL,
-	ERR_TMP_POP_FAIL,
-	ERR_TMP_GET_FAIL,
 	ERR_SYM_PUSH_FAIL,
 	ERR_SYM_POP_FAIL,
 	ERR_OBJ_NEW_FAIL,
-	ERR_ALOC32_FAIL,
+	ERR_SDT_STACK_OVERFLOW,
+	ERR_GENERAL,
+	ERR_CODE_MEM_OVERFLOW,
 };
 
 struct symtab;
@@ -89,6 +87,32 @@ struct ext_libdef {
 extern "C" {
 #endif
 
+/* --------------------------------------------------------------------------
+   Strings 
+   -------------------------------------------------------------------------- */
+
+const char * str(unsigned int idx);
+
+int str_add(const char * s, unsigned int len);
+
+int str_lookup(const char * s, unsigned int len);
+
+int cstr_decode(char * dst, const char * src, unsigned int len);
+
+int cstr_add(const char * s, unsigned int len);
+
+
+const char * const_str(unsigned int idx);
+
+int const_str_add(const char * s, unsigned int len);
+
+int const_str_lookup(const char * s, unsigned int len);
+
+int const_strbuf_dump(FILE * f);
+
+int const_strbuf_purge(void);
+
+
 struct symtab * symtab_init(uint32_t sym_buf[], 
 							unsigned int buf_len, 
 							const struct ext_libdef * libdef);
@@ -102,6 +126,12 @@ struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[],
 
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
+
+void microjs_sdt_reset(struct microjs_sdt * microjs);
+
+int microjs_sdt_done(struct microjs_sdt * microjs);
+
+void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
 
 #ifdef __cplusplus
 }

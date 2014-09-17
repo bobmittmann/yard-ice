@@ -219,13 +219,16 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	len = entry.fp->size;
 
 	/* compile */
-	if ((n = microjs_compile(microjs, script, len)) < 0)
-		return -11;
+	if (microjs_compile(microjs, script, len) < 0)
+		return -1;
+
+	if ((n = microjs_sdt_done(microjs)) < 0)
+		return -1;
 
 	microjs_vm_init(&vm, (int32_t *)data, sizeof(data));
 //	vm.env.ftrace = stderr;
 	if (microjs_exec(&vm, code, n) < 0)
-		return 1;
+		return -1;
 
 	fprintf(f, "\r\n");
 

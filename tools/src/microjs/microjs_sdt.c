@@ -30,18 +30,18 @@
 #include <sys/dcclog.h>
 
 /* --------------------------------------------------------------------------
-   Memory operations
+   Target memory operations
    -------------------------------------------------------------------------- */
 
-static int alloc32(struct microjs_sdt * microjs)
+static int tgt_alloc32(struct microjs_sdt * microjs)
 {
 	unsigned int addr;
 
 	/* ensure memory alignment */
-	addr = (microjs->heap + 3) & ~3;
-	microjs->heap = addr + 4;
+	addr = (microjs->tgt_heap + 3) & ~3;
+	microjs->tgt_heap = addr + 4;
 
-	if (microjs->heap > microjs->sp)
+	if (microjs->tgt_heap > microjs->tgt_sp)
 		return -ERR_HEAP_OVERFLOW;
 
 	return addr;
@@ -52,9 +52,7 @@ static int alloc32(struct microjs_sdt * microjs)
    -------------------------------------------------------------------------- */
 
 /* Variable declaration.
- Allocate a new symbol in the stack.
-
- */
+   Allocate a new integer in the target heap. */
 
 int op_var_decl(struct microjs_sdt * microjs)
 {
@@ -63,15 +61,21 @@ int op_var_decl(struct microjs_sdt * microjs)
 
 	DCC_LOG(LOG_MSG, " >>> ...");
 
+	if ((obj = sym_obj_scope_lookup(microjs->tab, microjs->tok.s, 
+						   microjs->tok.qlf)) != NULL) {
+		DCC_LOG(LOG_TRACE, "object exist in current scope!");
+		return 0;
+	}
+
 	if ((obj = sym_obj_new(microjs->tab, microjs->tok.s, 
 						   microjs->tok.qlf)) == NULL) {
 		DCC_LOG(LOG_WARNING, "sym_obj_new() failed!");
 		return -ERR_OBJ_NEW_FAIL;
 	}
 
-	if ((addr = alloc32(microjs)) < 0) {
-		DCC_LOG(LOG_WARNING, "alloc32() failed!");
-		return -ERR_ALOC32_FAIL;
+	if ((addr = tgt_alloc32(microjs)) < 0) {
+		DCC_LOG(LOG_WARNING, "tgt_alloc32() failed!");
+		return addr;
 	}
 
 	DCC_LOG1(LOG_MSG, "addr=0x%04x", addr);
@@ -116,7 +120,7 @@ int op_assign(struct microjs_sdt * microjs)
 	DCC_LOG(LOG_INFO, " >>> ...");
 
 	if (!sym_tmp_pop(microjs->tab, &tmp))
-		return -ERR_TMP_GET_FAIL;
+		return -ERR_SYM_POP_FAIL;
 
 	DCC_LOG1(LOG_INFO, "tmp.len=%d", tmp.len);
 
@@ -242,7 +246,7 @@ int op_blk_open(struct microjs_sdt * microjs)
 	DCC_LOG(LOG_INFO, "{");
 
 	/* save the heap state */
-	sym_addr_push(microjs->tab, &microjs->heap);
+	sym_addr_push(microjs->tab, &microjs->tgt_heap);
 	/* save the stack frame */
 	if (!sym_sf_push(microjs->tab))
 		return -1;
@@ -258,7 +262,7 @@ int op_blk_close(struct microjs_sdt * microjs)
 	if (!sym_sf_pop(microjs->tab))
 		return -1;
 	/* restore the heap state */
-	if (!sym_addr_pop(microjs->tab, &microjs->heap))
+	if (!sym_addr_pop(microjs->tab, &microjs->tgt_heap))
 		return -1;
 
 	return 0;
@@ -789,82 +793,108 @@ int (* op[])(struct microjs_sdt * microjs) = {
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len)
 {
-	struct lexer lex;
+	struct lexer * lex = &microjs->lex;
 	struct token tok;
 	int lookahead;
-	uint8_t * pp_sp;
-	uint8_t * pp_sl;
-	uint8_t * pp_top;
+	uint8_t * ll_sp;
+	uint8_t * ll_sl;
+	uint8_t * ll_top;
+	int err;
 	int sym;
 	int k;
-	int err = ERR_SYNTAX_ERROR;
 
-	pp_sp = (uint8_t *)microjs + microjs->size;
-	pp_sl = (uint8_t *)microjs + sizeof(struct microjs_sdt);
-	pp_top = pp_sp;
-	pp_sp -= microjs_ll_start(pp_sp);
-	microjs->pc = 0;
+	if (len == 0)
+		return 0;
+
+	ll_sp = (uint8_t *)microjs + microjs->ll_sp;
+	ll_sl = (uint8_t *)microjs + sizeof(struct microjs_sdt);
+	ll_top = (uint8_t *)microjs + microjs->size;
 
 	/* start the lexer */
-	lexer_open(&lex, txt, len);
+	lexer_open(lex, txt, len);
 	/* */
-	lookahead = (tok = lexer_scan(&lex)).typ;
-	while (pp_sp != pp_top) {
+	lookahead = (tok = lexer_scan(lex)).typ;
+	if (lookahead == T_ERR) {
+		err = -tok.qlf;
+		goto error;
+	}
+	while (ll_sp != ll_top) {
 		/* pop the stack */
-		sym = *pp_sp++;
-//		TRACEF("<%s>\n", ll_sym_tab[sym]);
+		sym = *ll_sp++;
+#if MICROJS_TRACE_ENABLED
 		DCC_LOG1(LOG_INFO, "<%s>", microjs_ll_sym[sym]);
+#else
+		DCC_LOG1(LOG_MSG, "<%d>", sym);
+#endif
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
-				fprintf(stderr, "unexpected symbol!\n");
+				err = ERR_UNEXPECTED_SYMBOL;
 				goto error;
 			}
 			/* save the lookahead token */
 			microjs->tok = tok;
 			/* get next token */
-			lookahead = (tok = lexer_scan(&lex)).typ;
-//			TRACEF("[%s]\n", ll_sym_tab[lookahead]);
+			lookahead = (tok = lexer_scan(lex)).typ;
+			if (lookahead == T_ERR) {
+				err = -tok.qlf;
+				goto error;
+			}
 		} else if IS_AN_ACTION(sym) {
 			/* action */
-			int ret;
-			if ((ret = op[ACTION(sym)](microjs)) < 0) {
-//				fprintf(stderr, "action(%s) failed!\n", ll_sym_tab[sym]);
+			if ((err = op[ACTION(sym)](microjs)) < 0) {
+				goto error;
+			}
+			/* FIXME: checking for the code buffer overflow at this
+			   point is dangerous because we may have corrupted the 
+			   mamory already!!!! */
+			if (microjs->pc >= microjs->cdsz) {
+				err = -ERR_CODE_MEM_OVERFLOW;
 				goto error;
 			}
 		} else {
 			/* non terminal */
-			if ((k = microjs_ll_push(pp_sp, sym, lookahead)) < 0) {
-				fprintf(stderr, "microjs_ll_push() failed!\n");
+			if ((k = microjs_ll_push(ll_sp, sym, lookahead)) < 0) {
+				DCC_LOG2(LOG_WARNING, "sym=%d lookahed=%d", sym, lookahead);
+				/* push the offending symbol back onto the stack */	
+				ll_sp--;
+				err = (lookahead == T_EOF) ? -ERR_UNEXPECED_EOF :
+					-ERR_SYNTAX_ERROR;
 #if MICROJS_TRACE_ENABLED
-				ll_stack_dump(stderr, pp_sp, pp_top - pp_sp);
+				fprintf(stderr, "microjs_ll_push() failed!\n");
 				fprintf(stderr, "lookahead = %s\n", microjs_ll_sym[lookahead]);
+				ll_stack_dump(stderr, ll_sp, ll_top);
 #endif
 				goto error;
 			}
-			pp_sp -= k;
-			if (pp_sp < pp_sl) {
-				fprintf(stderr, "stack overflow!\n");
+			ll_sp -= k;
+			if (ll_sp < ll_sl) {
+				err = -ERR_SDT_STACK_OVERFLOW;
 				/* stack overflow */
 				goto error;
 			}
 		}
 	}
 
-	TRACEF("%04x\tABT\n", microjs->pc);
-	microjs->code[microjs->pc++] = OPC_ABT;
+	microjs->ll_sp -= microjs_ll_start(ll_sp);
 
-#if MICROJS_TRACE_ENABLED
-	TRACEF("\nSYMBOL TABLE:\n");
-	sym_dump(stdout, microjs->tab);
-	TRACEF("\n");
-#endif
+	/* save the parser's stack pointer */
+	microjs->ll_sp = ll_sp - (uint8_t *)microjs;
 	return microjs->pc;
 
 error:
-	fflush(stderr);
-	lexer_print_err(stderr, &lex, err);
-	return -1;
+	/* save the parser's stack pointer */
+	microjs->ll_sp = ll_sp - (uint8_t *)microjs;
+	return err;
+}
+
+void microjs_sdt_reset(struct microjs_sdt * microjs)
+{
+	uint8_t * ll_sp;
+
+	microjs->ll_sp = microjs->size;
+	ll_sp = (uint8_t *)microjs + microjs->ll_sp;
+	microjs->ll_sp -= microjs_ll_start(ll_sp);
 }
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
@@ -878,15 +908,46 @@ struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf,
 
 	microjs->tab = tab;
 	/* data memory allocation info */
-	microjs->heap = 0;
-	microjs->sp = data_size;
+	microjs->tgt_heap = 0;
+	microjs->tgt_sp = data_size;
 	/* code memory */
 	microjs->pc = 0;
 	microjs->cdsz = code_size;
 	microjs->code = code; /* code buffer */
 	/* size of the buffer provided for parsing */
 	microjs->size = sdt_size;
+	microjs->ll_sp = sdt_size;
+
+	microjs_sdt_reset(microjs);
 
 	return microjs;
+}
+
+int microjs_sdt_done(struct microjs_sdt * microjs)
+{
+	if (microjs->pc + 1 > microjs->cdsz)
+		return -ERR_CODE_MEM_OVERFLOW;
+
+	/* code memory */
+	TRACEF("%04x\tABT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_ABT;
+
+#if MICROJS_TRACE_ENABLED
+	TRACEF("\nSYMBOL TABLE:\n");
+	sym_dump(stdout, microjs->tab);
+	TRACEF("\n");
+#endif
+	return microjs->pc;
+}
+
+void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err)
+{
+	struct lexer * lex = &microjs->lex;
+
+	if (err < 0)
+		err = -err;
+
+	fflush(f);
+	lexer_print_err(f, lex, err);
 }
 

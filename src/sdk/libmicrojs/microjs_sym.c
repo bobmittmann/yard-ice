@@ -164,6 +164,27 @@ bool sym_sf_pop(struct symtab * tab)
 	return true;
 }
 
+/* Pop the stack frame */
+bool sym_sf_get(struct symtab * tab, struct sym_sf * sf)
+{
+	if (tab->fp >= tab->top) {
+		sf->prev = 0;
+		sf->bp = 0;
+	} else {
+		uint8_t * dst;
+		uint8_t * src;
+		int i;
+
+		src = (uint8_t *)&tab->buf + tab->fp;
+		dst = (uint8_t *)sf;
+		for(i = 0; i < sizeof(sf); ++i)
+			dst[i] = src[i];
+	}
+
+	return true;
+}
+
+
 /* --------------------------------------------------------------------------
    Objects
    -------------------------------------------------------------------------- */
@@ -230,6 +251,37 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 
 	return NULL;
 }
+
+struct sym_obj * sym_obj_scope_lookup(struct symtab * tab, 
+									  const char * s, unsigned int len)
+{
+	struct sym_sf sf;
+	struct sym_obj * obj;
+	char * nm;
+	int i;
+	int begin;
+	int end;
+
+	sym_sf_get(tab, &sf);
+
+	begin = sf.bp / sizeof(struct sym_obj);
+	end = tab->bp / sizeof(struct sym_obj);
+
+	/* search in the current scope */
+	for (i = begin; i < end; ++i) {
+		obj = &tab->buf[i];
+		nm = (char *)&tab->buf + obj->nm;
+		DCC_LOG3(LOG_TRACE, "id=%d nm=\"%s\" len=%d", i, nm, len);
+
+		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0')) {
+			DCC_LOG2(LOG_INFO, "id=%d nm=\"%s\"", i, nm);
+			return obj;
+		}
+	}
+
+	return NULL;
+}
+
 
 const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj)
 {

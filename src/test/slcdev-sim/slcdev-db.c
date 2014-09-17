@@ -202,7 +202,6 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 		microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
 								   code, sizeof(code), sizeof(slcdev_vm_data));
 
-		microjs_sdt_reset(microjs);
 		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
 			const char * js = const_str(cmd->js[j]);
 //	printf("%3d \"%s\"\n", j, js);
