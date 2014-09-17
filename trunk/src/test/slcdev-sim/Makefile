@@ -45,6 +45,8 @@ CFLAGS = -g -Os -fomit-frame-pointer
 
 MACH = stm32l151xb
 
+JTAGTOOL_ADDR = 192.168.10.50
+
 include ../../mk/stm32l1xx.mk
 
 $(OUTDIR)/device_db.c: device_db.js
