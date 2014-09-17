@@ -210,14 +210,11 @@ char * tok2str(struct token tok)
 	return buf;
 }
 
-int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
+int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl)
 {
-	int i;
-
-	for (i = cnt - 1; i >= 0; --i) {
-		fprintf(f, "\t%s\n", microjs_ll_sym[sp[i]]);
+	while (sp < sl) {
+		fprintf(f, "\t%s\n", microjs_ll_sym[*sp++]);
 	};
-
 	return 0;
 }
 
@@ -225,12 +222,9 @@ int ll_stack_dump(FILE * f, uint8_t * sp, unsigned int cnt)
 
 int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl)
 {
-
 	while (sp < sl) {
 		fprintf(f, "\t%3d\n", *sp++);
 	};
-	fprintf(f, "\n");
-
 	return 0;
 }
 #endif

@@ -220,11 +220,15 @@ int main(int argc,  char **argv)
 	}
 
 	/* compile */
-	if ((n = microjs_compile(microjs, script, len)) < 0)
+	if (microjs_compile(microjs, script, len) < 0)
+		return 1;
+
+	/* insert an ABT opcode at the end of the code */
+	if ((n = microjs_sdt_done(microjs)) < 0)
 		return 1;
 
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, data, sizeof(data));
+	microjs_vm_init(&vm, data, n);
 	/* initialize run time environment */
 	vm.env.ftrace = ftrace;
 	/* run */

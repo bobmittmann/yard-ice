@@ -3,6 +3,7 @@
 
 program 		: EOF
 				| stat program
+				| compound_stat program
 				;
 
 compound_stat	: LBRACE { op_blk_open } stat_list RBRACE { op_blk_close } 
@@ -12,20 +13,30 @@ stat_list		:
 				| stat stat_list
 				;
 
-stat			: SEMICOLON
-				| FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SEMICOLON exp_lst_opt { op_for_after } RPAREN compound_stat { op_for_end }
-
+stat			: FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SEMICOLON exp_lst_opt { op_for_after } RPAREN compound_stat { op_for_end }
 				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
-
 				| IF condition { op_if_cond } compound_stat else_opt { op_if_end }
-
 				| VAR var_list SEMICOLON
 				| assign_or_call SEMICOLON
-				| CONTINUE SEMICOLON
-				| BREAK SEMICOLON
-				| RETURN exp_opt SEMICOLON
-				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
+//				| CONTINUE SEMICOLON
+//				| BREAK SEMICOLON
+//				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
+//				| RETURN exp_opt SEMICOLON
 				;
+
+//param_list_opt	: 
+//				| param_list 
+//				;
+//
+//param_list		: ID param_list1 
+//				;
+//
+//param_list1		: 
+//				| COMMA param_list 
+//				;
+//exp_opt 		: 
+//				| exp
+//				;
 
 
 else_opt		: 
@@ -77,10 +88,6 @@ exp_lst			: assign_or_call exp_lst1
 				
 exp_lst1		: 
 				| COMMA exp_lst
-				;
-
-exp_opt 		: 
-				| exp
 				;
 
 exp 			: and_exp or_exp
@@ -159,15 +166,4 @@ meth_or_attr1	:
 				| LPAREN { op_method } arg_list_opt RPAREN 
 				;
 
-
-param_list_opt	: 
-				| param_list 
-				;
-
-param_list		: ID param_list1 
-				;
-
-param_list1		: 
-				| COMMA param_list 
-				;
 

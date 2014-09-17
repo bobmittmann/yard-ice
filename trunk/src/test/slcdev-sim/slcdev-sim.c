@@ -117,14 +117,12 @@ struct ss_device * dev_sim_lookup(bool mod, unsigned int addr)
 	return &ss_dev_tab[addr + (mod ? 160 : 0)];
 }
 
-struct microjs_script {
-	int x;
-};
-
-void sim_js_exec(struct ss_device * dev, struct db_dev_model * model, 
-				 uint8_t code[])
+void sim_js_exec(void * ptr, struct ss_device * dev, 
+				 struct db_dev_model * model, uint8_t code[])
 {
+	struct microjs_vm * vm = (struct microjs_vm *)ptr;
 
+	microjs_exec(vm, code, 1024);
 }
 
 #define REMOTE_TEST_MSK 0x2d /* 101101 */
@@ -153,7 +151,7 @@ void sensor_ctl_default(struct ss_device * dev,
 }
 
 /* simulate a custom sensor */
-void sensor_sim_custom(struct ss_device * dev, 
+void sensor_sim_custom(void * ptr, struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	struct cmd_list * lst;
@@ -167,14 +165,14 @@ void sensor_sim_custom(struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(dev, model, cmd->code);
+				sim_js_exec(ptr, dev, model, cmd->code);
 			}
 		}
 	}
 }
 
 /* simulate a photodetector smoke sensor */
-void sensor_sim_photo(struct ss_device * dev, 
+void sensor_sim_photo(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	int tbl_max = 1;
@@ -201,7 +199,7 @@ void sensor_sim_photo(struct ss_device * dev,
 }
 
 /* simulate a ion smoke detector */
-void sensor_sim_ion(struct ss_device * dev, 
+void sensor_sim_ion(void * ptr, struct ss_device * dev, 
 					struct db_dev_model * model, uint32_t ctl)
 {
 	int lvl;
@@ -224,7 +222,7 @@ void sensor_sim_ion(struct ss_device * dev,
 }
 
 /* simulate a heat detector sensor */
-void sensor_sim_heat(struct ss_device * dev, 
+void sensor_sim_heat(void * ptr, struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
 	int lvl;
@@ -242,7 +240,7 @@ void sensor_sim_heat(struct ss_device * dev,
 }
 
 /* simulate an Acclimate Photoelectric Smoke Sensor */
-void sensor_sim_acclimate(struct ss_device * dev, 
+void sensor_sim_acclimate(void * ptr, struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG(LOG_INFO, "...");
@@ -251,7 +249,7 @@ void sensor_sim_acclimate(struct ss_device * dev,
 }
 
 /* simulate an Beam Smoke Sensor */
-void sensor_sim_beam(struct ss_device * dev, 
+void sensor_sim_beam(void * ptr, struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG(LOG_INFO, "...");
@@ -260,7 +258,7 @@ void sensor_sim_beam(struct ss_device * dev,
 }
 
 /* simulate a COPTIR Smoke Detector Sensor */
-void sensor_sim_coptir(struct ss_device * dev, 
+void sensor_sim_coptir(void * ptr, struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	int tbl_max = 7;
@@ -285,7 +283,7 @@ void sensor_sim_coptir(struct ss_device * dev,
 }
 
 /* simulate a custom module */
-void module_sim_custom(struct ss_device * dev, 
+void module_sim_custom(void * ptr, struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	struct cmd_list * lst;
@@ -297,7 +295,7 @@ void module_sim_custom(struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(dev, model, cmd->code);
+				sim_js_exec(ptr, dev, model, cmd->code);
 			}
 		}
 	}
@@ -373,7 +371,7 @@ void module_contorl_seq(struct ss_device * dev,
 
 
 /* simulate a relay module */
-void module_sim_relay(struct ss_device * dev, 
+void module_sim_relay(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -400,7 +398,7 @@ void module_sim_relay(struct ss_device * dev,
 }
 
 /* simulate a supervised cntrol module */
-void module_sim_control(struct ss_device * dev, 
+void module_sim_control(void * ptr, struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -420,7 +418,7 @@ void module_sim_control(struct ss_device * dev,
 }
 
 /* simulate a firefighter telephone module */
-void module_sim_phone(struct ss_device * dev, 
+void module_sim_phone(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -445,7 +443,7 @@ void module_sim_phone(struct ss_device * dev,
 #define CLASS_A_NORMAL   0x2d 
 
 /* simulate a monitor module */
-void module_sim_monitor(struct ss_device * dev, 
+void module_sim_monitor(void * ptr, struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -463,21 +461,21 @@ void module_sim_monitor(struct ss_device * dev,
 }
 
 /* simulate a mini-module */
-void module_sim_mini(struct ss_device * dev, 
+void module_sim_mini(void * ptr, struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 2 wire module */
-void module_sim_2wire(struct ss_device * dev, 
+void module_sim_2wire(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 }
 
 /* simulate a 4-20ma input device */
-void module_sim_4_20ma(struct ss_device * dev, 
+void module_sim_4_20ma(void * ptr, struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -487,7 +485,7 @@ void module_sim_4_20ma(struct ss_device * dev,
 
 struct sim_model {
 	const char name[SIM_MODEL_NAME_MAX]; 
-	void (* run)(struct ss_device * dev, 
+	void (* run)(void * ptr, struct ss_device * dev, 
 				 struct db_dev_model * model, 
 				 uint32_t ctl);
 };
@@ -563,10 +561,14 @@ const char * model_sim_name(unsigned int idx)
 
 void __attribute__((noreturn)) sim_event_task(void)
 {
-	uint32_t event;
-	struct ss_device * dev;
 	struct db_dev_model * model;
+	struct ss_device * dev;
+	struct microjs_vm vm; 
+	uint32_t event;
 	uint32_t ctl;
+
+	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
+	vm.env.ftrace = stdout;
 
 	thinkos_sleep(3000);
 
@@ -601,7 +603,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 				led_flash(1, 64);
 			}
 
-			sim->run(dev, model, ctl);
+			sim->run(&vm, dev, model, ctl);
 		}
 	}
 }
