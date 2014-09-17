@@ -268,6 +268,36 @@ int op_blk_close(struct microjs_sdt * microjs)
 	return 0;
 }
 
+int op_try_begin(struct microjs_sdt * microjs) 
+{
+	DCC_LOG(LOG_INFO, "<");
+	return 0;
+}
+
+int op_try_end(struct microjs_sdt * microjs) 
+{
+	DCC_LOG(LOG_INFO, ">");
+	return 0;
+}
+
+int op_throw(struct microjs_sdt * microjs) 
+{
+	DCC_LOG(LOG_INFO, "...");
+	return 0;
+}
+
+int op_catch(struct microjs_sdt * microjs) 
+{
+	DCC_LOG(LOG_INFO, "...");
+	return 0;
+}
+
+int op_finally(struct microjs_sdt * microjs) 
+{
+	DCC_LOG(LOG_INFO, "...");
+	return 0;
+}
+
 int op_equ(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tEQ\n", microjs->pc);
@@ -784,7 +814,11 @@ int (* op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_PUSH_STRING)] = op_push_string,
  	[ACTION(A_OP_BLK_OPEN)] = op_blk_open,
  	[ACTION(A_OP_BLK_CLOSE)] = op_blk_close,
-
+ 	[ACTION(A_OP_TRY_BEGIN)] = op_try_begin,
+ 	[ACTION(A_OP_TRY_END)] = op_try_end,
+ 	[ACTION(A_OP_CATCH)] = op_catch,
+ 	[ACTION(A_OP_THROW)] = op_throw,
+ 	[ACTION(A_OP_FINALLY)] = op_finally
 };
 
 /* Syntax-directed translator */
