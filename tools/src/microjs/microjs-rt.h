@@ -43,6 +43,7 @@
 #define EXT_SRAND   5
 #define EXT_PRINT   6
 #define EXT_PRINTF  7
+#define EXT_MEMRD	8
 
 /* --------------------------------------------------------------------------
    Virtual machine
@@ -80,7 +81,7 @@
 #define OPC_XPT      29 /* exception */
 #define OPC_PUHSX    30 /* Push exception frame */
 
-#define OPC_SBP      31 /* store base pointer */
+#define OPC_IBP      31 /* Increment SP */
 #define OPC_LDR      32 /* BP relative load */
 #define OPC_STR      33 /* BP relative store */
 
@@ -92,6 +93,7 @@ struct microjs_env {
 	FILE * fout;
 	FILE * fin;
 	FILE * ftrace;
+	int32_t * data;
 };
 
 /* --------------------------------------------------------------------------

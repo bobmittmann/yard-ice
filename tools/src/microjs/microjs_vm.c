@@ -37,8 +37,7 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	vm->data = data;
 	vm->sp = len;
 #if MICROJS_FUNCTIONS_ENABLED
-	/* FIXME: adjust base pointer according to heap allocation */
-	vm->bp = 0;
+	vm->bp = vm->sp;
 #endif
 	vm->sl = 0;
 	vm->env.ftrace = NULL;
@@ -67,6 +66,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 #endif
 	int32_t * xp = sp;
 	int opc;
+	vm->env.data = data;
 
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", (int)((int)(sp - data) * sizeof(int32_t)));
@@ -188,6 +188,8 @@ except:
 				r1 = -r0;
 				goto except;
 			}
+			/* adjust the stack pointer */
+			sp += r1 - r0;
 			break;
 
 #if MICROJS_FUNCTIONS_ENABLED
@@ -207,12 +209,11 @@ except:
 				FTRACEF(f, "STR 0x%04x <- %d\n", r1 * SIZEOF_WORD, r0);
 			break;
 
-		case OPC_SBP:
-			r0 = (uint16_t)(pc[0] | pc[1] << 8);
-			pc += 2;
-			bp = data + r0;
+		case OPC_IBP:
+			r0 = (int8_t)*pc++;
+			bp += r0;
 			if (trace)
-				FTRACEF(f, "SBP 0x%04x\n", r0);
+				FTRACEF(f, "ISP %d\n", r0);
 			break;
 #endif
 

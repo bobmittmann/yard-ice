@@ -143,6 +143,7 @@ struct strbuf {
    -------------------------------------------------------------------------- */
 
 #define SYM_OBJ_ALLOC       (1 << 7)
+#define SYM_OBJ_GLOBAL      (1 << 6)
 #define SYM_OBJ_INT         (0x0 << 4)
 #define SYM_OBJ_STR         (0x1 << 4)
 #define SYM_OBJ_INT_ARRAY   (0x2 << 4)
@@ -275,6 +276,8 @@ static inline int sym_lbl_next(struct symtab * tab) {
 int sym_push(struct symtab * tab, const void * ptr,  unsigned int len);
 
 int sym_pop(struct symtab * tab, void * ptr,  unsigned int len);
+
+void sym_pick(struct symtab * tab, int pos, void * ptr,  unsigned int len);
 
 /* --------------------------------------------------------------------------
    Push/Pop a stack frame (used to open/close scopes or blocks)

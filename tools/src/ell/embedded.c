@@ -105,6 +105,7 @@ void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 
 	#define SIZEOF_TR_PAIR 2
 
+	cnt = 0;
 	pos = 0;
 	size = 0;
     fprintf(fp, "/* Predict sets */\n");	
@@ -154,7 +155,7 @@ void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 
 	size = 0;
 	fprintf(fp, "static const struct {\n");
-	if (pos >= 256) {
+	if ((pos - cnt) >= 256) {
 		idx_sz = 4;
 		fprintf(fp, "\tuint16_t off;\n");
 	} else {
@@ -175,6 +176,7 @@ void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 	sum += size;
 
 
+	cnt = 0;
 	pos = 0;
 	size = 0;
     fprintf(fp, "/* Rules vectors table */\n");	
@@ -185,7 +187,8 @@ void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 		off = pos;
 		fprintf(fp, "\n\t/* %2d:%s(%d) -> */\n\t", rp->rule_no, 
 				rp->lhs->symtext, rp->nrhs); 		
-		for(j = 0; j < rp->nrhs; ++j) {
+		cnt = rp->nrhs;
+		for(j = 0; j < cnt; ++j) {
 			char s[256];
 			sp = rp->rhs[j];
 			fprintf(fp, "%c_%s, ", kind_prefix(sp->kind), 
@@ -201,7 +204,7 @@ void write_compact_c(FILE * fp, char * prefix, char * hname, bool debug)
 
 	size = 0;
 	fprintf(fp, "static const struct {\n");
-	if (pos >= 256) {
+	if ((pos - cnt) >= 256) {
 		idx_sz = 4;
 		fprintf(fp, "\tuint16_t off;\n");
 	} else {

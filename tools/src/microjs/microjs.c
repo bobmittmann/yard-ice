@@ -112,7 +112,7 @@ void version(char * prog)
 
 struct ext_libdef externals = {
 	.name = "lib",
-	.fncnt = 8,
+	.fncnt = 9,
 	.fndef = {
 		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
 		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1, .ret = 0 },
@@ -122,6 +122,7 @@ struct ext_libdef externals = {
 		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 32, .ret = 0 },
 		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
 		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
+		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
 	}
 };
 
