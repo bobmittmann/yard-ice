@@ -4,5 +4,13 @@ x = rand();
 y = log2(x);
 z = sqrt(y);
 
-writeln(x, y, z);
+print(x, y, z);
+
+{
+	var i = 0;
+}
+
+var err = 0;
+
+print(err);
 

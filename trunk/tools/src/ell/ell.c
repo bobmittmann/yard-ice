@@ -70,30 +70,46 @@ void WriteGrammar(FILE *fp)
 
 void FindNullableSymbols(void) 
 { 
-	int i;
 	RULEPTR rp;
 	SYMPTR sp;
 	int changed;
+	int i;
 	
-	forall_symbols(sp) 	
-		sp->nullable = false;      
+	forall_symbols(sp) {	
+		if (sp->kind == ACTION)
+			sp->nullable = true;      
+		else
+			sp->nullable = false;      
+	}
 	
 	/* this version assume that there is no epsilon symbol, but */
 	/* pure null productions have rp->nrhs =0 */	
 	
-	forall_rules(rp) 	
-		if (rp->nrhs == 0)
+	forall_rules(rp) {	
+		if (rp->nrhs == 0) {
 			rp->lhs->nullable = true;
+			continue;
+		}
+
+		rp->lhs->nullable = true;
+		for (i = 0; i < rp->nrhs; i++) {
+			sp = rp->rhs[i];
+			if (sp->kind != ACTION) {
+				rp->lhs->nullable = false;
+				break;
+			}
+		}		
+	}
 	
 	/* find all productions that generate empty string */
 	do {
 		changed = 0;		
-		forall_rules( rp ) {
-			if ( rp->lhs->nullable == true) 
+		forall_rules(rp) {
+			if (rp->lhs->nullable == true) 
 				continue;
 			
-			for (i=0; i<rp->nrhs; i++) {
-				if( rp->rhs[i]->nullable == false) 
+			for (i = 0; i < rp->nrhs; i++) {
+				if (rp->rhs[i]->nullable == false) 
 					break;
 			}			
 			if (i == rp->nrhs) {

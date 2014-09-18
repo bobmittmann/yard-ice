@@ -4,7 +4,7 @@
 
 var x0 = 0, x1 = 1, x, i;
 
-for (i = 0; i < 46; i = i + 1) {
+for (i = 1; i < 47; i = i + 1) {
 	x = x1 + x0;
 	x0 = x1;
 	x1 = x;

@@ -414,6 +414,8 @@ int sym_dump(FILE * f, struct symtab * tab)
 		fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr, obj->size, nm);
 	}
 
+	fprintf(f, "FP=%04x, SP=%04x\n", tab->fp, tab->sp);
+
 	return 0;
 }
 
