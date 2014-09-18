@@ -310,6 +310,7 @@ void productionrule(SYMPTR lhsp, int first_alternate)
 	case BAR: 
 	case LPAREN: 
 	case RPAREN: 
+	case LBRACE: 
 		elemenlist(lhsp,  first_alternate); 
 		while (lookahead == BAR ) { 
 				match(BAR); 
@@ -386,7 +387,7 @@ int ParseAction(SYMPTR lhsp, SYMPTR rhs[], int pos)
 	case RBRACE: 
 		break;
 	default:
-		SyntaxError("productionrule");
+		SyntaxError("syntax action");
 	}
 
 	match(RBRACE); 

@@ -59,7 +59,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 	int32_t * data = vm->data;
 	int32_t * sp = data + (vm->sp / sizeof(int32_t));
 	int32_t * bp = data + (vm->bp / sizeof(int32_t));
-	uint8_t * xp = code;
+	int32_t * xp = sp;
 	int opc;
 
 	if (trace)
@@ -89,12 +89,6 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "JEQ 0x%04x (%d)\n", (int)(pc - code) + r0, r1);
 			if (r1 == 0)
 				pc += r0;
-			break;
-
-		case OPC_XPT: 
-			if (trace)
-				FTRACEF(f, "XPT\n");
-			pc = xp;
 			break;
 
 		case OPC_POP:
@@ -131,7 +125,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = data[r1];
 			*(--sp) = r0;
 			if (trace)
-				FTRACEF(f, "LD 0x%04x -> %d\n", r1, r0);
+				FTRACEF(f, "LD 0x%04x -> %d\n", r1 * sizeof(int32_t), r0);
 			break;
 
 		case OPC_ST:
@@ -139,7 +133,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = *sp++;
 			data[r1] = r0;
 			if (trace)
-				FTRACEF(f, "ST 0x%04x <- %d\n", r1, r0);
+				FTRACEF(f, "ST 0x%04x <- %d\n", r1 * sizeof(int32_t), r0);
 			break;
 
 		case OPC_LDR:
@@ -147,7 +141,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = bp[r1];
 			*(--sp) = r0;
 			if (trace)
-				FTRACEF(f, "LDR 0x%04x -> %d\n", r1, r0);
+				FTRACEF(f, "LDR 0x%04x -> %d\n", r1 * sizeof(int32_t), r0);
 			break;
 
 		case OPC_STR:
@@ -155,7 +149,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = *sp++;
 			bp[r1] = r0;
 			if (trace)
-				FTRACEF(f, "STR 0x%04x <- %d\n", r1, r0);
+				FTRACEF(f, "STR 0x%04x <- %d\n", r1 * sizeof(int32_t), r0);
 			break;
 
 		case OPC_SBP:
@@ -166,12 +160,42 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "SBP 0x%04x\n", r0);
 			break;
 
-		case OPC_SXP:
+		case OPC_PUHSX:
+			/* get the exception relative jump address */
 			r0 = (uint16_t)(pc[0] | pc[1] << 8);
 			pc += 2;
-			xp = code + r0;
+			/* convert to absolute */
+			r0 += pc - code;
+			/* combine with the current exception frame pointer */
+			r0 |= ((xp - data) << 16);
+			*(--sp) = r0;
+			xp = sp; /* update the exception pointer */
 			if (trace)
-				FTRACEF(f, "SXP 0x%04x\n", r0);
+				FTRACEF(f, "PUHSX 0x%04x (XP=0x%04x->0x%04x) \n", 
+						r0 & 0xffff, (r0 >> 16) * sizeof(int32_t),
+						(int)((xp - data) * sizeof(int32_t)));
+			break;
+#if 0
+		case OPC_POPX:
+			sp = xp;
+			r0 = *sp++;
+			if (trace)
+				FTRACEF(f, "POPX 0x%04x (XP=0x%04x->0x%04x) \n", 
+						r0 & 0xffff, (int)((xp - data) * sizeof(int32_t)),
+						(r0 >> 16) * sizeof(int32_t));
+			xp = data + (r0 >> 16);
+			break;
+#endif
+		case OPC_XPT: 
+			r1 = *sp; /* get the exception code */
+			sp = xp;  /* set the stack pointer to the exception frame */
+			r0 = *sp; /* get the exception frame */
+			*sp = r1; /* push the exeption code */
+			pc = code + (r0 & 0xffff); /* go to the exception handler */
+			xp = data + (r0 >> 16); /* update the exception frame */
+			if (trace)
+				FTRACEF(f, "XPT (PC=0x%04x XP=0x%04x)\n", 
+						r0 & 0xffff, (r0 >> 16) * sizeof(int32_t));
 			break;
 
 		case OPC_EXT:

@@ -59,8 +59,6 @@ int op_var_decl(struct microjs_sdt * microjs)
 	struct sym_obj * obj;
 	int addr;
 
-	DCC_LOG(LOG_MSG, " >>> ...");
-
 	if ((obj = sym_obj_scope_lookup(microjs->tab, microjs->tok.s, 
 						   microjs->tok.qlf)) != NULL) {
 		DCC_LOG(LOG_TRACE, "object exist in current scope!");
@@ -78,13 +76,17 @@ int op_var_decl(struct microjs_sdt * microjs)
 		return addr;
 	}
 
-	DCC_LOG1(LOG_MSG, "addr=0x%04x", addr);
+	DCC_LOG1(LOG_TRACE, "addr=0x%04x", addr);
+
 
 	obj->addr = addr;
 	/* initial variables are int */
 	obj->size = 4;
 	/* flag as allocated */
 	obj->flags |= SYM_OBJ_ALLOC;
+
+	TRACEF(".WORD \"%s\" (%04x)\n", 
+		   sym_obj_name(microjs->tab, obj), obj->addr);
 	return 0;
 }
 
@@ -96,7 +98,7 @@ int op_push_tmp(struct microjs_sdt * microjs)
 	tmp.s = microjs->tok.s;
 	tmp.len = microjs->tok.qlf;
 
-	DCC_LOG1(LOG_INFO, " >>> tmp.len=%d", tmp.len);
+	DCC_LOG1(LOG_TRACE, "tmp.len=%d", tmp.len);
 
 	if (!sym_tmp_push(microjs->tab, &tmp))
 		return -ERR_SYM_PUSH_FAIL;
@@ -117,12 +119,10 @@ int op_assign(struct microjs_sdt * microjs)
 	struct sym_tmp tmp;
 	struct sym_obj * obj;
 
-	DCC_LOG(LOG_INFO, " >>> ...");
-
 	if (!sym_tmp_pop(microjs->tab, &tmp))
 		return -ERR_SYM_POP_FAIL;
 
-	DCC_LOG1(LOG_INFO, "tmp.len=%d", tmp.len);
+	DCC_LOG1(LOG_TRACE, "tmp.len=%d", tmp.len);
 
 	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
 		return -ERR_VAR_UNKNOWN;
@@ -131,9 +131,6 @@ int op_assign(struct microjs_sdt * microjs)
 		   sym_obj_name(microjs->tab, obj), obj->addr);
 	microjs->code[microjs->pc++] = OPC_ST;
 	microjs->code[microjs->pc++] = obj->addr >> 2;
-
-	/* push back */
-	sym_tmp_push(microjs->tab, &tmp);
 	
 	return 0;
 }
@@ -170,51 +167,6 @@ int op_method(struct microjs_sdt * microjs)
 	return 0;
 }
 
-int op_meth_or_attr(struct microjs_sdt * microjs)
-{
-	struct sym_tmp tmp;
-
-	DCC_LOG(LOG_INFO, " >>>>>>>>> ...");
-
-	if (!sym_tmp_pop(microjs->tab, &tmp))
-		return -ERR_SYM_POP_FAIL;
-
-	if (SYM_IS_EXTERN(tmp)) {
-	
-		DCC_LOG(LOG_INFO, " EXTERN ");
-
-		if (tmp.cnt < tmp.min)
-			return -ERR_ARG_MISSING;
-		if (tmp.cnt > tmp.max)
-			return -ERR_TOO_MANY_ARGS;
-
-		TRACEF("%04x\tEXT \'%s\"\n", microjs->pc, 
-			   sym_extern_name(microjs->tab, tmp.xid));
-		microjs->code[microjs->pc++] = OPC_EXT;
-		/* external call number */
-		microjs->code[microjs->pc++] = tmp.xid;
-		/* number of arguments */
-		microjs->code[microjs->pc++] = tmp.cnt;
-	} else {
-		struct sym_obj * obj;
-
-		DCC_LOG(LOG_INFO, " VAR");
-
-		if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
-			return -ERR_VAR_UNKNOWN;
-
-		TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
-			   sym_obj_name(microjs->tab, obj), obj->addr);
-		microjs->code[microjs->pc++] = OPC_LD;
-		microjs->code[microjs->pc++] = obj->addr >> 2;
-	}
-
-	/* push back; */
-	sym_tmp_push(microjs->tab, &tmp);
-
-	return 0;
-}
-
 int op_arg(struct microjs_sdt * microjs)
 {
 	struct sym_tmp tmp;
@@ -234,6 +186,55 @@ int op_arg(struct microjs_sdt * microjs)
 	return 0;
 }
 
+
+int op_call(struct microjs_sdt * microjs)
+{
+	struct sym_tmp tmp;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	if (!sym_tmp_pop(microjs->tab, &tmp))
+		return -ERR_SYM_POP_FAIL;
+
+	DCC_LOG(LOG_INFO, " EXTERN ");
+
+	if (tmp.cnt < tmp.min)
+		return -ERR_ARG_MISSING;
+	if (tmp.cnt > tmp.max)
+		return -ERR_TOO_MANY_ARGS;
+
+	TRACEF("%04x\tEXT \'%s\"\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, tmp.xid));
+	microjs->code[microjs->pc++] = OPC_EXT;
+	/* external call number */
+	microjs->code[microjs->pc++] = tmp.xid;
+	/* number of arguments */
+	microjs->code[microjs->pc++] = tmp.cnt;
+
+	return 0;
+}
+
+int op_attr(struct microjs_sdt * microjs)
+{
+	struct sym_tmp tmp;
+	struct sym_obj * obj;
+
+	DCC_LOG(LOG_INFO, " VAR");
+
+	if (!sym_tmp_pop(microjs->tab, &tmp))
+		return -ERR_SYM_POP_FAIL;
+
+	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
+		return -ERR_VAR_UNKNOWN;
+
+	TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
+		   sym_obj_name(microjs->tab, obj), obj->addr);
+	microjs->code[microjs->pc++] = OPC_LD;
+	microjs->code[microjs->pc++] = obj->addr >> 2;
+
+	return 0;
+}
+
 int op_ret_discard(struct microjs_sdt * microjs)
 {
 	TRACEF("%04x\tPOP\n", microjs->pc);
@@ -243,58 +244,28 @@ int op_ret_discard(struct microjs_sdt * microjs)
 
 int op_blk_open(struct microjs_sdt * microjs) 
 {
-	DCC_LOG(LOG_INFO, "{");
+	DCC_LOG(LOG_TRACE, "{");
 
 	/* save the heap state */
 	sym_addr_push(microjs->tab, &microjs->tgt_heap);
 	/* save the stack frame */
 	if (!sym_sf_push(microjs->tab))
-		return -1;
+		return -ERR_GENERAL;
 
 	return 0;
 }
 
 int op_blk_close(struct microjs_sdt * microjs) 
 {
-	DCC_LOG(LOG_INFO, "}");
+	DCC_LOG(LOG_TRACE, "}");
 
 	/* restore the stack frame */
 	if (!sym_sf_pop(microjs->tab))
-		return -1;
+		return -ERR_GENERAL;
 	/* restore the heap state */
 	if (!sym_addr_pop(microjs->tab, &microjs->tgt_heap))
-		return -1;
+		return -ERR_GENERAL;
 
-	return 0;
-}
-
-int op_try_begin(struct microjs_sdt * microjs) 
-{
-	DCC_LOG(LOG_INFO, "<");
-	return 0;
-}
-
-int op_try_end(struct microjs_sdt * microjs) 
-{
-	DCC_LOG(LOG_INFO, ">");
-	return 0;
-}
-
-int op_throw(struct microjs_sdt * microjs) 
-{
-	DCC_LOG(LOG_INFO, "...");
-	return 0;
-}
-
-int op_catch(struct microjs_sdt * microjs) 
-{
-	DCC_LOG(LOG_INFO, "...");
-	return 0;
-}
-
-int op_finally(struct microjs_sdt * microjs) 
-{
-	DCC_LOG(LOG_INFO, "...");
 	return 0;
 }
 
@@ -459,7 +430,7 @@ int op_push_string(struct microjs_sdt * microjs)
 
 	if ((isz = cstr_add(microjs->tok.s, microjs->tok.qlf)) < 0) {
 		fprintf(stderr, "can't create string!\n");
-		return -1;
+		return -ERR_GENERAL;
 	}
 	
 	TRACEF("%04x\tI8 %d\n", microjs->pc, isz);
@@ -516,6 +487,150 @@ int op_push_int(struct microjs_sdt * microjs)
 		}
 	}
 
+	return 0;
+}
+
+int op_try_begin(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref;
+
+	DCC_LOG(LOG_TRACE, "<<<<<<");
+
+	/* Push exception frame */
+	ref.lbl = sym_lbl_next(microjs->tab);
+	TRACEF(".L%d:\n%04x\tPUSHX xxxx\n", ref.lbl, microjs->pc);
+	/* save current location on a temporary reference */
+	microjs->code[microjs->pc++] = OPC_PUHSX;
+	ref.addr = microjs->pc;
+	/* reserve 2 positions for exception address */
+	microjs->pc += 2;
+	/* Alloc a temporary reference */
+	if (!sym_ref_push(microjs->tab, &ref)) {
+		DCC_LOG(LOG_ERROR, "sym_ref_push() failed!");
+		return -ERR_SYM_PUSH_FAIL;
+	}
+
+	return 0;
+}
+
+int op_try_end(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref;
+	int offs;
+	
+	DCC_LOG(LOG_TRACE, ">>>>>>");
+
+	/* get the temporary reference */
+	if (!sym_ref_pop(microjs->tab, &ref))
+		return -ERR_SYM_POP_FAIL;
+
+	/* skip the exception rethrow */
+	offs = 1;
+	TRACEF("%04x\tJMP %04x\n", microjs->pc, microjs->pc + offs + 3);
+	microjs->code[microjs->pc++] = OPC_JMP;
+	microjs->code[microjs->pc++] = offs;
+	microjs->code[microjs->pc++] = offs >> 8;
+
+	/* Adjust the exception handling pointer */
+	offs = (microjs->pc - 3) - (ref.addr - 1);
+	microjs->code[ref.addr] = offs;
+	microjs->code[ref.addr + 1] = offs >> 8;
+	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref.addr - 1, 
+		   microjs->pc, ref.lbl);
+
+	/* Rethrow the same exception */
+	TRACEF("%04x\tXPT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_XPT;
+
+	return 0;
+}
+
+int op_catch(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref1;
+	struct sym_ref ref2;
+	int offs;
+
+	DCC_LOG(LOG_TRACE, "-----");
+
+	/* get the try exception frame reference */
+	if (!sym_ref_pop(microjs->tab, &ref1))
+		return -ERR_SYM_POP_FAIL;
+
+	ref2.lbl = sym_lbl_next(microjs->tab);
+	TRACEF(".L%d:\n%04x\tJMP xxxx\n", ref2.lbl, microjs->pc);
+	/* save current location on the same temporary reference */
+	microjs->code[microjs->pc++] = OPC_JMP;
+	ref2.addr = microjs->pc;
+	/* reserve 2 positions for jump address */
+	microjs->pc += 2;
+	if (!sym_ref_push(microjs->tab, &ref2))
+		return -ERR_SYM_PUSH_FAIL;
+
+
+	/* Adjust the exception handling pointer */
+	offs = (microjs->pc - 3) - (ref1.addr - 1);
+	microjs->code[ref1.addr] = offs;
+	microjs->code[ref1.addr + 1] = offs >> 8;
+	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref1.addr - 1, 
+		   microjs->pc, ref1.lbl);
+
+	return 0;
+}
+
+/*
+ */
+int op_catch_end(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref;
+	int offs;
+	
+	DCC_LOG(LOG_TRACE, "-----");
+
+	/* get temporary reference */
+	if (!sym_ref_pop(microjs->tab, &ref))
+		return -ERR_SYM_POP_FAIL;
+
+	/* Adjust the jump */
+	offs = (microjs->pc - 3) - (ref.addr - 1);
+	microjs->code[ref.addr] = offs;
+	microjs->code[ref.addr + 1] = offs >> 8;
+
+	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", ref.addr - 1, 
+		   microjs->pc, ref.lbl);
+	return 0;
+}
+
+
+int op_finally(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref;
+	int offs;
+	
+	DCC_LOG(LOG_TRACE, ">>>>>>");
+
+	/* get the temporary reference */
+	if (!sym_ref_pop(microjs->tab, &ref))
+		return -ERR_SYM_POP_FAIL;
+
+	/* Adjust the exception handling pointer */
+	offs = (microjs->pc - 3) - (ref.addr - 1);
+	microjs->code[ref.addr] = offs;
+	microjs->code[ref.addr + 1] = offs >> 8;
+	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref.addr - 1, 
+		   microjs->pc, ref.lbl);
+
+	/* Rethrow the same exception */
+	TRACEF("%04x\tXPT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_XPT;
+
+	return 0;
+}
+
+int op_throw(struct microjs_sdt * microjs) 
+{
+	TRACEF("%04x\tXPT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_XPT;
 	return 0;
 }
 
@@ -578,7 +693,7 @@ int op_if_end(struct microjs_sdt * microjs)
 	if (!sym_ref_pop(microjs->tab, &ref))
 		return -ERR_SYM_POP_FAIL;
 
-	/* Adjust the conditinal jump */
+	/* Adjust the jump */
 	offs = (microjs->pc - 3) - (ref.addr - 1);
 	microjs->code[ref.addr] = offs;
 	microjs->code[ref.addr + 1] = offs >> 8;
@@ -805,10 +920,11 @@ int (* op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_FOR_COND)] = op_for_cond,
  	[ACTION(A_OP_FOR_AFTER)] = op_for_after,
  	[ACTION(A_OP_FOR_END)] = op_for_end,
- 	[ACTION(A_OP_METH_OR_ATTR)] = op_meth_or_attr,
  	[ACTION(A_OP_PUSH_TMP)] = op_push_tmp,
  	[ACTION(A_OP_POP_TMP)] = op_pop_tmp,
  	[ACTION(A_OP_METHOD)] = op_method,
+ 	[ACTION(A_OP_CALL)] = op_call,
+ 	[ACTION(A_OP_ATTR)] = op_attr,
  	[ACTION(A_OP_ARG)] = op_arg,
  	[ACTION(A_OP_RET_DISCARD)] = op_ret_discard,
  	[ACTION(A_OP_PUSH_STRING)] = op_push_string,
@@ -817,6 +933,7 @@ int (* op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_TRY_BEGIN)] = op_try_begin,
  	[ACTION(A_OP_TRY_END)] = op_try_end,
  	[ACTION(A_OP_CATCH)] = op_catch,
+ 	[ACTION(A_OP_CATCH_END)] = op_catch_end,
  	[ACTION(A_OP_THROW)] = op_throw,
  	[ACTION(A_OP_FINALLY)] = op_finally
 };
@@ -852,6 +969,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 		err = -tok.qlf;
 		goto error;
 	}
+
 	while (ll_sp != ll_top) {
 		/* pop the stack */
 		sym = *ll_sp++;
@@ -877,6 +995,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 		} else if IS_AN_ACTION(sym) {
 			/* action */
 			if ((err = op[ACTION(sym)](microjs)) < 0) {
+				DCC_LOG(LOG_WARNING, "syntax action failed!");
 				goto error;
 			}
 			/* FIXME: checking for the code buffer overflow at this
@@ -911,7 +1030,6 @@ int microjs_compile(struct microjs_sdt * microjs,
 	}
 
 	microjs->ll_sp -= microjs_ll_start(ll_sp);
-
 	/* save the parser's stack pointer */
 	microjs->ll_sp = ll_sp - (uint8_t *)microjs;
 	return microjs->pc;
@@ -919,6 +1037,12 @@ int microjs_compile(struct microjs_sdt * microjs,
 error:
 	/* save the parser's stack pointer */
 	microjs->ll_sp = ll_sp - (uint8_t *)microjs;
+
+#if MICROJS_TRACE_ENABLED
+	TRACEF("\nSYMBOL TABLE:\n");
+	sym_dump(stderr, microjs->tab);
+	TRACEF("\n");
+#endif
 	return err;
 }
 
@@ -954,13 +1078,37 @@ struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf,
 
 	microjs_sdt_reset(microjs);
 
+	/* create the default exception handler */
+	op_try_begin(microjs);
+	/* save initial symbol table stack frame */
+	sym_sf_push(microjs->tab);
+
 	return microjs;
 }
 
 int microjs_sdt_done(struct microjs_sdt * microjs)
 {
-	if (microjs->pc + 1 > microjs->cdsz)
+	struct sym_ref ref;
+	int offs;
+
+	if (microjs->pc + 2 > microjs->cdsz)
 		return -ERR_CODE_MEM_OVERFLOW;
+
+	/* restore the symbol table stack frame */
+	if (!sym_sf_pop(microjs->tab))
+		return -ERR_GENERAL;
+
+	/* close default exception handler */
+	/* get the temporary reference */
+	if (!sym_ref_pop(microjs->tab, &ref))
+		return -ERR_SYM_POP_FAIL;
+
+	/* Adjust the exception handling pointer */
+	offs = (microjs->pc - 3) - (ref.addr - 1);
+	microjs->code[ref.addr] = offs;
+	microjs->code[ref.addr + 1] = offs >> 8;
+	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref.addr - 1, 
+		   microjs->pc, ref.lbl);
 
 	/* code memory */
 	TRACEF("%04x\tABT\n", microjs->pc);

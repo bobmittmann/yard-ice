@@ -150,6 +150,7 @@ int main(int argc,  char **argv)
 	unsigned int len = 0;
 	int verbose = 0;
 	int i = 1;
+	int err;
 	int n;
 	int c;
 
@@ -220,8 +221,10 @@ int main(int argc,  char **argv)
 	}
 
 	/* compile */
-	if (microjs_compile(microjs, script, len) < 0)
+	if ((err = microjs_compile(microjs, script, len)) < 0) {
+		microjs_sdt_error(stderr, microjs, err);
 		return 1;
+	}
 
 	/* insert an ABT opcode at the end of the code */
 	if ((n = microjs_sdt_done(microjs)) < 0)

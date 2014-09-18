@@ -57,7 +57,7 @@ void strbuf_init(uint16_t * buf, unsigned int len)
 	var_strbuf->offs[0] = 0;
 }
 
-int __str_lookup(const char * s, unsigned int len)
+int str_lookup(const char * s, unsigned int len)
 {
 	int i;
 
@@ -77,7 +77,7 @@ int __str_lookup(const char * s, unsigned int len)
 	return -ERR_STRING_NOT_FOUND;
 }
 
-int __str_add(const char * s, unsigned int len)
+int str_add(const char * s, unsigned int len)
 {
 	char * dst;
 	int idx;
@@ -105,7 +105,7 @@ int __str_add(const char * s, unsigned int len)
 	return idx;
 }
 
-int __cstr_decode(char * dst, const char * src, unsigned int len)
+int cstr_decode(char * dst, const char * src, unsigned int len)
 {
 	bool esc;
 	int c;
@@ -154,7 +154,7 @@ int __cstr_decode(char * dst, const char * src, unsigned int len)
 
 /* add a string to the var buffer translating the most 
    common C scape sequences */
-int __cstr_add(const char * s, unsigned int len)
+int cstr_add(const char * s, unsigned int len)
 {
 	char * dst;
 	int offs;
@@ -187,7 +187,7 @@ int __cstr_add(const char * s, unsigned int len)
 
 /* translate a string index to string value. If the index is invalid
    returns the empty string */
-const char * __str(unsigned int idx)
+const char * str(unsigned int idx)
 {
 	if (idx >= CONST_NM) {
 		if (idx > 256)
@@ -200,22 +200,6 @@ const char * __str(unsigned int idx)
 
 	return (char *)var_strbuf + var_strbuf->offs[idx];
 }
-
-int str_lookup(const char * s, unsigned int len)
-	__attribute__((weak, alias("__str_lookup")));
-
-int str_add(const char * s, unsigned int len)
-	__attribute__((weak, alias("__str_add")));
-
-int cstr_decode(char * dst, const char * src, unsigned int len)
-	__attribute__((weak, alias("__cstr_decode")));
-
-int cstr_add(const char * s, unsigned int len)
-	__attribute__((weak, alias("__cstr_add")));
-
-const char * str(unsigned int idx)
-	__attribute__((weak, alias("__str")));
-
 
 #endif /* MICROJS_STRINGBUF_ENABLED */
 

@@ -16,7 +16,7 @@ stat_list		:
 stat			: FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SEMICOLON exp_lst_opt { op_for_after } RPAREN compound_stat { op_for_end }
 				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
 				| IF condition { op_if_cond } compound_stat else_opt { op_if_end }
-				| TRY { op_try_begin } compound_stat catch_opt { op_try_end } 
+				| TRY { op_try_begin } compound_stat catch_opt 
 				| THROW exp { op_throw } SEMICOLON
 				| VAR var_list SEMICOLON
 				| assign_or_call SEMICOLON
@@ -45,8 +45,8 @@ else_opt		:
 				| ELSE { op_if_else } compound_stat
 				;
 
-catch_opt		: 
-				| CATCH  LPAREN ID RPAREN { op_catch } compound_stat finally_opt
+catch_opt		: { op_try_end } finally_opt
+				| CATCH { op_catch, op_blk_open } LPAREN ID { op_var_decl, op_push_tmp, op_assign } RPAREN LBRACE stat_list RBRACE { op_blk_close, op_catch_end } finally_opt
 				;
 
 finally_opt		: 
@@ -63,19 +63,21 @@ var_list1 		:
 				| COMMA var_list
 				;
 
-var				: ID { op_var_decl, op_push_tmp } var_assign_opt { op_pop_tmp }
+var				: ID { op_var_decl, op_push_tmp } var_assign_opt
 				;
 
-var_assign_opt  : 
+var_assign_opt  : { op_pop_tmp }
 				| ASSIGN exp { op_assign }
 				;
 
-assign_or_call  : ID { op_push_tmp } assign_or_call1 { op_pop_tmp }
-
+assign_or_call  : ID { op_push_tmp } assign_or_call1
 				;
 
 assign_or_call1	: ASSIGN exp { op_assign }
-				| LPAREN { op_method } arg_list_opt RPAREN { op_meth_or_attr, op_ret_discard }
+				| function_call { op_ret_discard }
+				;
+
+function_call	: { op_method } LPAREN arg_list_opt RPAREN { op_call } 
 				;
 
 arg_list_opt	: 
@@ -166,14 +168,13 @@ primary_exp		: LPAREN exp RPAREN
 				| TRUE { op_push_true }
 				| FALSE { op_push_false }
 				| STRING { op_push_string }
-				| meth_or_attr { op_meth_or_attr, op_pop_tmp } 
+				| meth_or_attr 
 				;
 
 meth_or_attr	: ID { op_push_tmp } meth_or_attr1
 				;
 
-meth_or_attr1	: 
-				| LPAREN { op_method } arg_list_opt RPAREN 
+meth_or_attr1	: { op_attr }
+				| function_call
 				;
-
 

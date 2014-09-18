@@ -6,7 +6,7 @@ AM_CFLAGS = -Os -Wall
 
 bin_PROGRAMS = microjs
 
-microjs_SOURCES = microjs_lex.c microjs_str.c microjs_sym.c microjs_dbg.c microjs_sdt.c microjs_lib.c microjs_vm.c microjs_ll.c microjs.c 
+microjs_SOURCES = microjs_lex.c microjs_lib.c microjs_str.c microjs_sym.c microjs_dbg.c microjs_sdt.c microjs_vm.c microjs_ll.c microjs.c 
 
 #nodist_microjs_SOURCES = microjs_ll.c microjs_ll.h
 #CLEANFILES = microjs_ll.c microjs_ll.h const_str.h
