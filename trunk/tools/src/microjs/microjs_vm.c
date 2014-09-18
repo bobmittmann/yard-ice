@@ -36,8 +36,10 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 {
 	vm->data = data;
 	vm->sp = len;
-	/* FIXME: adjust bas pointer according to heap allocation */
+#if MICROJS_FUNCTIONS_ENABLED
+	/* FIXME: adjust base pointer according to heap allocation */
 	vm->bp = 0;
+#endif
 	vm->sl = 0;
 	vm->env.ftrace = NULL;
 	vm->env.fin = stdin;
@@ -47,6 +49,8 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	FTRACEF(stdout, "BP=0x%04x\n", vm->bp);
 	FTRACEF(stdout, "SL=0x%04x\n", vm->sl);
 }
+
+#define SIZEOF_WORD ((int)sizeof(int32_t))
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 {
@@ -58,7 +62,9 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 	uint8_t * pc = code;
 	int32_t * data = vm->data;
 	int32_t * sp = data + (vm->sp / sizeof(int32_t));
+#if MICROJS_FUNCTIONS_ENABLED
 	int32_t * bp = data + (vm->bp / sizeof(int32_t));
+#endif
 	int32_t * xp = sp;
 	int opc;
 
@@ -97,6 +103,13 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			sp++;
 			break;
 
+		case OPC_ISP:
+			r0 = (int8_t)*pc++;
+			sp += r0;
+			if (trace)
+				FTRACEF(f, "ISP %d\n", r0);
+			break;
+
 		case OPC_I32:
 			r0 = (int32_t)(pc[0] | pc[1] << 8 | pc[2] << 16 | pc[3] << 24);
 			pc += 4;
@@ -125,7 +138,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = data[r1];
 			*(--sp) = r0;
 			if (trace)
-				FTRACEF(f, "LD 0x%04x -> %d\n", r1 * sizeof(int32_t), r0);
+				FTRACEF(f, "LD 0x%04x -> %d\n", r1 * SIZEOF_WORD, r0);
 			break;
 
 		case OPC_ST:
@@ -133,31 +146,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r0 = *sp++;
 			data[r1] = r0;
 			if (trace)
-				FTRACEF(f, "ST 0x%04x <- %d\n", r1 * sizeof(int32_t), r0);
-			break;
-
-		case OPC_LDR:
-			r1 = *pc++;
-			r0 = bp[r1];
-			*(--sp) = r0;
-			if (trace)
-				FTRACEF(f, "LDR 0x%04x -> %d\n", r1 * sizeof(int32_t), r0);
-			break;
-
-		case OPC_STR:
-			r1 = *pc++;
-			r0 = *sp++;
-			bp[r1] = r0;
-			if (trace)
-				FTRACEF(f, "STR 0x%04x <- %d\n", r1 * sizeof(int32_t), r0);
-			break;
-
-		case OPC_SBP:
-			r0 = (uint16_t)(pc[0] | pc[1] << 8);
-			pc += 2;
-			bp = data + r0;
-			if (trace)
-				FTRACEF(f, "SBP 0x%04x\n", r0);
+				FTRACEF(f, "ST 0x%04x <- %d\n", r1 * SIZEOF_WORD, r0);
 			break;
 
 		case OPC_PUHSX:
@@ -172,22 +161,13 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			xp = sp; /* update the exception pointer */
 			if (trace)
 				FTRACEF(f, "PUHSX 0x%04x (XP=0x%04x->0x%04x) \n", 
-						r0 & 0xffff, (r0 >> 16) * sizeof(int32_t),
-						(int)((xp - data) * sizeof(int32_t)));
+						r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD, 
+						(int)(xp - data) * SIZEOF_WORD);
 			break;
-#if 0
-		case OPC_POPX:
-			sp = xp;
-			r0 = *sp++;
-			if (trace)
-				FTRACEF(f, "POPX 0x%04x (XP=0x%04x->0x%04x) \n", 
-						r0 & 0xffff, (int)((xp - data) * sizeof(int32_t)),
-						(r0 >> 16) * sizeof(int32_t));
-			xp = data + (r0 >> 16);
-			break;
-#endif
+
 		case OPC_XPT: 
 			r1 = *sp; /* get the exception code */
+except:
 			sp = xp;  /* set the stack pointer to the exception frame */
 			r0 = *sp; /* get the exception frame */
 			*sp = r1; /* push the exeption code */
@@ -195,7 +175,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			xp = data + (r0 >> 16); /* update the exception frame */
 			if (trace)
 				FTRACEF(f, "XPT (PC=0x%04x XP=0x%04x)\n", 
-						r0 & 0xffff, (r0 >> 16) * sizeof(int32_t));
+						r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD);
 			break;
 
 		case OPC_EXT:
@@ -204,10 +184,37 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			if (trace)
 				FTRACEF(f, "EXT %d, %d\n", r0, r1);
 			r0 = extern_call[r0](&vm->env, sp, r1);
-			/* remove the stack frame */
-			sp += r1;
-			*(--sp) = r0;
+			if (r0 < 0) {
+				r1 = -r0;
+				goto except;
+			}
 			break;
+
+#if MICROJS_FUNCTIONS_ENABLED
+		case OPC_LDR:
+			r1 = *pc++;
+			r0 = bp[r1];
+			*(--sp) = r0;
+			if (trace)
+				FTRACEF(f, "LDR 0x%04x -> %d\n", r1 * SIZEOF_WORD, r0);
+			break;
+
+		case OPC_STR:
+			r1 = *pc++;
+			r0 = *sp++;
+			bp[r1] = r0;
+			if (trace)
+				FTRACEF(f, "STR 0x%04x <- %d\n", r1 * SIZEOF_WORD, r0);
+			break;
+
+		case OPC_SBP:
+			r0 = (uint16_t)(pc[0] | pc[1] << 8);
+			pc += 2;
+			bp = data + r0;
+			if (trace)
+				FTRACEF(f, "SBP 0x%04x\n", r0);
+			break;
+#endif
 
 		case OPC_LT:
 			r0 = *sp++;
@@ -224,7 +231,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 > r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "GT %d %d\n", r0, r1);
+				FTRACEF(f, "GT %d %d -> %d\n", r0, r1, r2);
 			break;
 
 		case OPC_EQ:
@@ -242,7 +249,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 != r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "GT %d %d\n", r0, r1);
+				FTRACEF(f, "NE %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_LE:
@@ -251,7 +258,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 <= r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "LE %d %d\n", r0, r1);
+				FTRACEF(f, "LE %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_GE:
@@ -260,7 +267,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 >= r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "GE %d %d\n", r0, r1);
+				FTRACEF(f, "GE %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_ASR:
@@ -269,7 +276,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 >> r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "ASR %d %d\n", r0, r1);
+				FTRACEF(f, "ASR %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_SHL:
@@ -278,7 +285,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 << r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "SHL %d %d\n", r0, r1);
+				FTRACEF(f, "SHL %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_ADD:
@@ -287,7 +294,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 + r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "ADD %d %d\n", r0, r1);
+				FTRACEF(f, "ADD %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_SUB:
@@ -296,7 +303,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 - r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "SUB %d %d\n", r0, r1);
+				FTRACEF(f, "SUB %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_MUL:
@@ -305,7 +312,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 * r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "MUL %d %d\n", r0, r1);
+				FTRACEF(f, "MUL %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_DIV:
@@ -314,7 +321,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			r2 = r1 / r0;
 			*(--sp) = r2;
 			if (trace)
-				FTRACEF(f, "DIV %d %d\n", r0, r1);
+				FTRACEF(f, "DIV %d %d -> %d\n", r1, r0, r2);
 			break;
 
 		case OPC_MOD:
@@ -380,7 +387,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 done:
 	if (trace)
-		FTRACEF(f, "SP=0x%04x\n", (int)((sp - data) * sizeof(int32_t)));
+		FTRACEF(f, "SP=0x%04x\n", (int)(sp - data) * SIZEOF_WORD);
 
 	return 0;
 }

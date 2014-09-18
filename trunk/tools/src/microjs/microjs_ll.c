@@ -10,110 +10,107 @@ struct tr_pair {
 
 /* Predict sets */
 static const struct tr_pair predict_vec[] = {
-	/*  52 (program) */
-	{  0,  0}, {  9,  2}, { 35,  1}, { 37,  1}, { 39,  1}, { 40,  1}, 
-	{ 41,  1}, { 43,  1}, { 48,  1}, 
-	/*  53 (stat) */
-	{ 35,  6}, { 37,  8}, { 39, 11}, { 40,  7}, { 41,  9}, { 43, 10}, 
+	/*  53 (program) */
+	{  0,  0}, { 23,  2}, { 39,  1}, { 41,  1}, { 43,  1}, { 45,  1}, 
+	{ 46,  1}, { 47,  1}, { 48,  1}, 
+	/*  54 (stat) */
+	{ 39,  6}, { 41,  8}, { 43, 10}, { 45,  9}, { 46, 11}, { 47,  7}, 
 	{ 48, 12}, 
-	/*  54 (compound_stat) */
-	{  9,  3}, 
-	/*  55 (stat_list) */
-	{ 10,  4}, { 35,  5}, { 37,  5}, { 39,  5}, { 40,  5}, { 41,  5}, 
-	{ 43,  5}, { 48,  5}, 
-	/*  56 (exp_lst_opt) */
-	{  3, 35}, {  8, 35}, { 48, 36}, 
-	/*  57 (exp) */
-	{  7, 40}, { 20, 40}, { 29, 40}, { 30, 40}, { 34, 40}, { 38, 40}, 
-	{ 48, 40}, { 49, 40}, { 50, 40}, 
-	/*  58 (condition) */
-	{  7, 19}, 
-	/*  59 (else_opt) */
-	{  0, 13}, {  9, 13}, { 10, 13}, { 33, 14}, { 35, 13}, { 37, 13}, 
-	{ 39, 13}, { 40, 13}, { 41, 13}, { 43, 13}, { 48, 13}, 
-	/*  60 (catch_opt) */
-	{  0, 15}, {  9, 15}, { 10, 15}, { 35, 15}, { 37, 15}, { 39, 15}, 
-	{ 40, 15}, { 41, 15}, { 42, 16}, { 43, 15}, { 44, 15}, { 48, 15}, 
-	/*  61 (var_list) */
-	{ 48, 20}, 
-	/*  62 (assign_or_call) */
-	{ 48, 26}, 
-	/*  63 (finally_opt) */
-	{  0, 17}, {  9, 17}, { 10, 17}, { 35, 17}, { 37, 17}, { 39, 17}, 
-	{ 40, 17}, { 41, 17}, { 43, 17}, { 44, 18}, { 48, 17}, 
+	/*  55 (compound_stat) */
+	{ 23,  3}, 
+	/*  56 (stat_list) */
+	{ 24,  4}, { 39,  5}, { 41,  5}, { 43,  5}, { 45,  5}, { 46,  5}, 
+	{ 47,  5}, { 48,  5}, 
+	/*  57 (exp_lst_opt) */
+	{  3, 33}, { 22, 33}, { 48, 34}, 
+	/*  58 (exp) */
+	{  6, 38}, { 13, 38}, { 21, 38}, { 37, 38}, { 44, 38}, { 48, 38}, 
+	{ 49, 38}, { 50, 38}, { 52, 38}, 
+	/*  59 (condition) */
+	{ 21, 17}, 
+	/*  60 (else_opt) */
+	{  0, 13}, { 23, 13}, { 24, 13}, { 36, 14}, { 39, 13}, { 41, 13}, 
+	{ 43, 13}, { 45, 13}, { 46, 13}, { 47, 13}, { 48, 13}, 
+	/*  61 (catch_opt) */
+	{  0, 15}, { 23, 15}, { 24, 15}, { 34, 16}, { 39, 15}, { 41, 15}, 
+	{ 43, 15}, { 45, 15}, { 46, 15}, { 47, 15}, { 48, 15}, 
+	/*  62 (var_list) */
+	{ 48, 18}, 
+	/*  63 (assign_or_call) */
+	{ 48, 24}, 
 	/*  64 (var) */
-	{ 48, 23}, 
+	{ 48, 21}, 
 	/*  65 (var_list1) */
-	{  2, 22}, {  3, 21}, 
+	{  2, 20}, {  3, 19}, 
 	/*  66 (var_assign_opt) */
-	{  2, 24}, {  3, 24}, { 32, 25}, 
+	{  2, 22}, {  3, 22}, { 16, 23}, 
 	/*  67 (assign_or_call1) */
-	{  7, 28}, { 32, 27}, 
+	{ 16, 25}, { 21, 26}, 
 	/*  68 (function_call) */
-	{  7, 29}, 
+	{ 21, 27}, 
 	/*  69 (arg_list_opt) */
-	{  7, 31}, {  8, 30}, { 20, 31}, { 29, 31}, { 30, 31}, { 34, 31}, 
-	{ 38, 31}, { 48, 31}, { 49, 31}, { 50, 31}, 
+	{  6, 29}, { 13, 29}, { 21, 29}, { 22, 28}, { 37, 29}, { 44, 29}, 
+	{ 48, 29}, { 49, 29}, { 50, 29}, { 52, 29}, 
 	/*  70 (arg_list) */
-	{  7, 32}, { 20, 32}, { 29, 32}, { 30, 32}, { 34, 32}, { 38, 32}, 
-	{ 48, 32}, { 49, 32}, { 50, 32}, 
+	{  6, 30}, { 13, 30}, { 21, 30}, { 37, 30}, { 44, 30}, { 48, 30}, 
+	{ 49, 30}, { 50, 30}, { 52, 30}, 
 	/*  71 (arg_list1) */
-	{  2, 34}, {  8, 33}, 
+	{  2, 32}, { 22, 31}, 
 	/*  72 (exp_lst) */
-	{ 48, 37}, 
+	{ 48, 35}, 
 	/*  73 (exp_lst1) */
-	{  2, 39}, {  3, 38}, {  8, 38}, 
+	{  2, 37}, {  3, 36}, { 22, 36}, 
 	/*  74 (and_exp) */
-	{  7, 45}, { 20, 45}, { 29, 45}, { 30, 45}, { 34, 45}, { 38, 45}, 
-	{ 48, 45}, { 49, 45}, { 50, 45}, 
+	{  6, 43}, { 13, 43}, { 21, 43}, { 37, 43}, { 44, 43}, { 48, 43}, 
+	{ 49, 43}, { 50, 43}, { 52, 43}, 
 	/*  75 (or_exp) */
-	{  2, 41}, {  3, 41}, {  8, 41}, { 24, 42}, { 25, 43}, { 28, 44}, 
+	{  2, 39}, {  3, 39}, { 11, 40}, { 12, 42}, { 22, 39}, { 31, 41}, 
 	/*  76 (relational_exp) */
-	{  7, 49}, { 20, 49}, { 29, 49}, { 30, 49}, { 34, 49}, { 38, 49}, 
-	{ 48, 49}, { 49, 49}, { 50, 49}, 
+	{  6, 47}, { 13, 47}, { 21, 47}, { 37, 47}, { 44, 47}, { 48, 47}, 
+	{ 49, 47}, { 50, 47}, { 52, 47}, 
 	/*  77 (and_exp1) */
-	{  2, 46}, {  3, 46}, {  8, 46}, { 24, 46}, { 25, 46}, { 26, 47}, 
-	{ 27, 48}, { 28, 46}, 
+	{  2, 44}, {  3, 44}, { 10, 45}, { 11, 44}, { 12, 44}, { 22, 44}, 
+	{ 31, 44}, { 32, 46}, 
 	/*  78 (shift_exp) */
-	{  7, 57}, { 20, 57}, { 29, 57}, { 30, 57}, { 34, 57}, { 38, 57}, 
-	{ 48, 57}, { 49, 57}, { 50, 57}, 
+	{  6, 55}, { 13, 55}, { 21, 55}, { 37, 55}, { 44, 55}, { 48, 55}, 
+	{ 49, 55}, { 50, 55}, { 52, 55}, 
 	/*  79 (relational_exp1) */
-	{  2, 50}, {  3, 50}, {  8, 50}, { 13, 56}, { 14, 53}, { 15, 55}, 
-	{ 16, 54}, { 17, 51}, { 18, 52}, { 24, 50}, { 25, 50}, { 26, 50}, 
-	{ 27, 50}, { 28, 50}, 
+	{  2, 48}, {  3, 48}, { 10, 48}, { 11, 48}, { 12, 48}, { 17, 49}, 
+	{ 18, 50}, { 22, 48}, { 25, 53}, { 26, 54}, { 27, 51}, { 28, 52}, 
+	{ 31, 48}, { 32, 48}, 
 	/*  80 (additive_exp) */
-	{  7, 61}, { 20, 61}, { 29, 61}, { 30, 61}, { 34, 61}, { 38, 61}, 
-	{ 48, 61}, { 49, 61}, { 50, 61}, 
+	{  6, 59}, { 13, 59}, { 21, 59}, { 37, 59}, { 44, 59}, { 48, 59}, 
+	{ 49, 59}, { 50, 59}, { 52, 59}, 
 	/*  81 (shift_exp1) */
-	{  2, 58}, {  3, 58}, {  8, 58}, { 11, 60}, { 12, 59}, { 13, 58}, 
-	{ 14, 58}, { 15, 58}, { 16, 58}, { 17, 58}, { 18, 58}, { 24, 58}, 
-	{ 25, 58}, { 26, 58}, { 27, 58}, { 28, 58}, 
+	{  2, 56}, {  3, 56}, { 10, 56}, { 11, 56}, { 12, 56}, { 17, 56}, 
+	{ 18, 56}, { 22, 56}, { 25, 56}, { 26, 56}, { 27, 56}, { 28, 56}, 
+	{ 29, 58}, { 30, 57}, { 31, 56}, { 32, 56}, 
 	/*  82 (mult_exp) */
-	{  7, 65}, { 20, 65}, { 29, 65}, { 30, 65}, { 34, 65}, { 38, 65}, 
-	{ 48, 65}, { 49, 65}, { 50, 65}, 
+	{  6, 63}, { 13, 63}, { 21, 63}, { 37, 63}, { 44, 63}, { 48, 63}, 
+	{ 49, 63}, { 50, 63}, { 52, 63}, 
 	/*  83 (additive_exp1) */
-	{  2, 62}, {  3, 62}, {  8, 62}, { 11, 62}, { 12, 62}, { 13, 62}, 
-	{ 14, 62}, { 15, 62}, { 16, 62}, { 17, 62}, { 18, 62}, { 19, 63}, 
-	{ 20, 64}, { 24, 62}, { 25, 62}, { 26, 62}, { 27, 62}, { 28, 62}, 
+	{  2, 60}, {  3, 60}, {  5, 61}, {  6, 62}, { 10, 60}, { 11, 60}, 
+	{ 12, 60}, { 17, 60}, { 18, 60}, { 22, 60}, { 25, 60}, { 26, 60}, 
+	{ 27, 60}, { 28, 60}, { 29, 60}, { 30, 60}, { 31, 60}, { 32, 60}, 
 	/*  84 (unary_exp) */
-	{  7, 70}, { 20, 72}, { 29, 73}, { 30, 71}, { 34, 70}, { 38, 70}, 
-	{ 48, 70}, { 49, 70}, { 50, 70}, 
+	{  6, 70}, { 13, 69}, { 21, 68}, { 37, 68}, { 44, 68}, { 48, 68}, 
+	{ 49, 68}, { 50, 68}, { 52, 71}, 
 	/*  85 (mult_exp1) */
-	{  2, 66}, {  3, 66}, {  8, 66}, { 11, 66}, { 12, 66}, { 13, 66}, 
-	{ 14, 66}, { 15, 66}, { 16, 66}, { 17, 66}, { 18, 66}, { 19, 66}, 
-	{ 20, 66}, { 21, 67}, { 22, 68}, { 23, 69}, { 24, 66}, { 25, 66}, 
-	{ 26, 66}, { 27, 66}, { 28, 66}, 
+	{  2, 64}, {  3, 64}, {  5, 64}, {  6, 64}, {  7, 65}, {  8, 66}, 
+	{  9, 67}, { 10, 64}, { 11, 64}, { 12, 64}, { 17, 64}, { 18, 64}, 
+	{ 22, 64}, { 25, 64}, { 26, 64}, { 27, 64}, { 28, 64}, { 29, 64}, 
+	{ 30, 64}, { 31, 64}, { 32, 64}, 
 	/*  86 (primary_exp) */
-	{  7, 74}, { 34, 77}, { 38, 76}, { 48, 79}, { 49, 75}, { 50, 78}, 
+	{ 21, 72}, { 37, 76}, { 44, 75}, { 48, 77}, { 49, 73}, { 50, 74}, 
 	/*  87 (meth_or_attr) */
-	{ 48, 80}, 
+	{ 48, 78}, 
 	/*  88 (meth_or_attr1) */
-	{  2, 81}, {  3, 81}, {  7, 82}, {  8, 81}, { 11, 81}, { 12, 81}, 
-	{ 13, 81}, { 14, 81}, { 15, 81}, { 16, 81}, { 17, 81}, { 18, 81}, 
-	{ 19, 81}, { 20, 81}, { 21, 81}, { 22, 81}, { 23, 81}, { 24, 81}, 
-	{ 25, 81}, { 26, 81}, { 27, 81}, { 28, 81}, 
+	{  2, 79}, {  3, 79}, {  5, 79}, {  6, 79}, {  7, 79}, {  8, 79}, 
+	{  9, 79}, { 10, 79}, { 11, 79}, { 12, 79}, { 17, 79}, { 18, 79}, 
+	{ 21, 80}, { 22, 79}, { 25, 79}, { 26, 79}, { 27, 79}, { 28, 79}, 
+	{ 29, 79}, { 30, 79}, { 31, 79}, { 32, 79}, 
 };
-/* 548 bytes; */
+/* 524 bytes; */
 
 static const struct {
 	uint16_t off;
@@ -127,37 +124,36 @@ static const struct {
 	{  28,  9},
 	{  37,  1},
 	{  38, 11},
-	{  49, 12},
+	{  49, 11},
+	{  60,  1},
 	{  61,  1},
 	{  62,  1},
-	{  63, 11},
-	{  74,  1},
-	{  75,  2},
-	{  77,  3},
-	{  80,  2},
-	{  82,  1},
-	{  83, 10},
-	{  93,  9},
-	{ 102,  2},
-	{ 104,  1},
-	{ 105,  3},
-	{ 108,  9},
-	{ 117,  6},
-	{ 123,  9},
-	{ 132,  8},
-	{ 140,  9},
-	{ 149, 14},
-	{ 163,  9},
-	{ 172, 16},
-	{ 188,  9},
-	{ 197, 18},
-	{ 215,  9},
-	{ 224, 21},
-	{ 245,  6},
-	{ 251,  1},
-	{ 252, 22},
+	{  63,  2},
+	{  65,  3},
+	{  68,  2},
+	{  70,  1},
+	{  71, 10},
+	{  81,  9},
+	{  90,  2},
+	{  92,  1},
+	{  93,  3},
+	{  96,  9},
+	{ 105,  6},
+	{ 111,  9},
+	{ 120,  8},
+	{ 128,  9},
+	{ 137, 14},
+	{ 151,  9},
+	{ 160, 16},
+	{ 176,  9},
+	{ 185, 18},
+	{ 203,  9},
+	{ 212, 21},
+	{ 233,  6},
+	{ 239,  1},
+	{ 240, 22},
 };
-/* 148 bytes */
+/* 144 bytes */
 
 /* Rules vectors table */
 static const uint8_t rule_vec[] = {
@@ -191,144 +187,140 @@ static const uint8_t rule_vec[] = {
 	
 	/* 14:else_opt(3) -> */
 	T_ELSE, A_OP_IF_ELSE, N_COMPOUND_STAT, 
-	/* 15:catch_opt(2) -> */
-	A_OP_TRY_END, N_FINALLY_OPT, 
-	/* 16:catch_opt(15) -> */
-	T_CATCH, A_OP_CATCH, A_OP_BLK_OPEN, T_LPAREN, T_ID, A_OP_VAR_DECL, A_OP_PUSH_TMP, A_OP_ASSIGN, T_RPAREN, T_LBRACE, N_STAT_LIST, T_RBRACE, A_OP_BLK_CLOSE, A_OP_CATCH_END, N_FINALLY_OPT, 
-	/* 17:finally_opt(0) -> */
-	
-	/* 18:finally_opt(3) -> */
-	T_FINALLY, A_OP_FINALLY, N_COMPOUND_STAT, 
-	/* 19:condition(3) -> */
+	/* 15:catch_opt(1) -> */
+	A_OP_TRY_END, 
+	/* 16:catch_opt(14) -> */
+	T_CATCH, A_OP_CATCH, A_OP_BLK_OPEN, T_LPAREN, T_ID, A_OP_VAR_DECL, A_OP_PUSH_TMP, A_OP_ASSIGN, T_RPAREN, T_LBRACE, N_STAT_LIST, T_RBRACE, A_OP_BLK_CLOSE, A_OP_CATCH_END, 
+	/* 17:condition(3) -> */
 	T_LPAREN, N_EXP, T_RPAREN, 
-	/* 20:var_list(2) -> */
+	/* 18:var_list(2) -> */
 	N_VAR, N_VAR_LIST1, 
-	/* 21:var_list1(0) -> */
+	/* 19:var_list1(0) -> */
 	
-	/* 22:var_list1(2) -> */
+	/* 20:var_list1(2) -> */
 	T_COMMA, N_VAR_LIST, 
-	/* 23:var(4) -> */
+	/* 21:var(4) -> */
 	T_ID, A_OP_VAR_DECL, A_OP_PUSH_TMP, N_VAR_ASSIGN_OPT, 
-	/* 24:var_assign_opt(1) -> */
+	/* 22:var_assign_opt(1) -> */
 	A_OP_POP_TMP, 
-	/* 25:var_assign_opt(3) -> */
-	T_ASSIGN, N_EXP, A_OP_ASSIGN, 
-	/* 26:assign_or_call(3) -> */
+	/* 23:var_assign_opt(3) -> */
+	T_EQUALS, N_EXP, A_OP_ASSIGN, 
+	/* 24:assign_or_call(3) -> */
 	T_ID, A_OP_PUSH_TMP, N_ASSIGN_OR_CALL1, 
-	/* 27:assign_or_call1(3) -> */
-	T_ASSIGN, N_EXP, A_OP_ASSIGN, 
-	/* 28:assign_or_call1(2) -> */
+	/* 25:assign_or_call1(3) -> */
+	T_EQUALS, N_EXP, A_OP_ASSIGN, 
+	/* 26:assign_or_call1(2) -> */
 	N_FUNCTION_CALL, A_OP_RET_DISCARD, 
-	/* 29:function_call(5) -> */
+	/* 27:function_call(5) -> */
 	A_OP_METHOD, T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, A_OP_CALL, 
-	/* 30:arg_list_opt(0) -> */
+	/* 28:arg_list_opt(0) -> */
 	
-	/* 31:arg_list_opt(1) -> */
+	/* 29:arg_list_opt(1) -> */
 	N_ARG_LIST, 
-	/* 32:arg_list(3) -> */
+	/* 30:arg_list(3) -> */
 	N_EXP, A_OP_ARG, N_ARG_LIST1, 
-	/* 33:arg_list1(0) -> */
+	/* 31:arg_list1(0) -> */
 	
-	/* 34:arg_list1(2) -> */
+	/* 32:arg_list1(2) -> */
 	T_COMMA, N_ARG_LIST, 
-	/* 35:exp_lst_opt(0) -> */
+	/* 33:exp_lst_opt(0) -> */
 	
-	/* 36:exp_lst_opt(1) -> */
+	/* 34:exp_lst_opt(1) -> */
 	N_EXP_LST, 
-	/* 37:exp_lst(2) -> */
+	/* 35:exp_lst(2) -> */
 	N_ASSIGN_OR_CALL, N_EXP_LST1, 
-	/* 38:exp_lst1(0) -> */
+	/* 36:exp_lst1(0) -> */
 	
-	/* 39:exp_lst1(2) -> */
+	/* 37:exp_lst1(2) -> */
 	T_COMMA, N_EXP_LST, 
-	/* 40:exp(2) -> */
+	/* 38:exp(2) -> */
 	N_AND_EXP, N_OR_EXP, 
-	/* 41:or_exp(0) -> */
+	/* 39:or_exp(0) -> */
 	
+	/* 40:or_exp(3) -> */
+	T_BAR, N_EXP, A_OP_OR, 
+	/* 41:or_exp(3) -> */
+	T_LOGICOR, N_EXP, A_OP_LOGIC_OR, 
 	/* 42:or_exp(3) -> */
-	T_OR, N_EXP, A_OP_OR, 
-	/* 43:or_exp(3) -> */
-	T_LOR, N_EXP, A_OP_LOGIC_OR, 
-	/* 44:or_exp(3) -> */
-	T_XOR, N_EXP, A_OP_XOR, 
-	/* 45:and_exp(2) -> */
+	T_CARET, N_EXP, A_OP_XOR, 
+	/* 43:and_exp(2) -> */
 	N_RELATIONAL_EXP, N_AND_EXP1, 
-	/* 46:and_exp1(0) -> */
+	/* 44:and_exp1(0) -> */
 	
-	/* 47:and_exp1(3) -> */
-	T_AND, N_AND_EXP, A_OP_AND, 
-	/* 48:and_exp1(3) -> */
-	T_LAND, N_AND_EXP, A_OP_LOGIC_AND, 
-	/* 49:relational_exp(2) -> */
+	/* 45:and_exp1(3) -> */
+	T_AMPERSAND, N_AND_EXP, A_OP_AND, 
+	/* 46:and_exp1(3) -> */
+	T_LOGICAND, N_AND_EXP, A_OP_LOGIC_AND, 
+	/* 47:relational_exp(2) -> */
 	N_SHIFT_EXP, N_RELATIONAL_EXP1, 
-	/* 50:relational_exp1(0) -> */
+	/* 48:relational_exp1(0) -> */
 	
+	/* 49:relational_exp1(3) -> */
+	T_LESSTHEN, N_RELATIONAL_EXP, A_OP_LT, 
+	/* 50:relational_exp1(3) -> */
+	T_GREATTHEN, N_RELATIONAL_EXP, A_OP_GT, 
 	/* 51:relational_exp1(3) -> */
 	T_EQU, N_RELATIONAL_EXP, A_OP_EQU, 
 	/* 52:relational_exp1(3) -> */
 	T_NEQ, N_RELATIONAL_EXP, A_OP_NEQ, 
 	/* 53:relational_exp1(3) -> */
-	T_LT, N_RELATIONAL_EXP, A_OP_LT, 
-	/* 54:relational_exp1(3) -> */
-	T_GT, N_RELATIONAL_EXP, A_OP_GT, 
-	/* 55:relational_exp1(3) -> */
 	T_GTE, N_RELATIONAL_EXP, A_OP_GTE, 
-	/* 56:relational_exp1(3) -> */
+	/* 54:relational_exp1(3) -> */
 	T_LTE, N_RELATIONAL_EXP, A_OP_LTE, 
-	/* 57:shift_exp(2) -> */
+	/* 55:shift_exp(2) -> */
 	N_ADDITIVE_EXP, N_SHIFT_EXP1, 
-	/* 58:shift_exp1(0) -> */
+	/* 56:shift_exp1(0) -> */
 	
-	/* 59:shift_exp1(3) -> */
+	/* 57:shift_exp1(3) -> */
 	T_SHL, N_SHIFT_EXP, A_OP_SHL, 
-	/* 60:shift_exp1(3) -> */
+	/* 58:shift_exp1(3) -> */
 	T_ASR, N_SHIFT_EXP, A_OP_ASR, 
-	/* 61:additive_exp(2) -> */
+	/* 59:additive_exp(2) -> */
 	N_MULT_EXP, N_ADDITIVE_EXP1, 
-	/* 62:additive_exp1(0) -> */
+	/* 60:additive_exp1(0) -> */
 	
-	/* 63:additive_exp1(3) -> */
+	/* 61:additive_exp1(3) -> */
 	T_PLUS, N_ADDITIVE_EXP, A_OP_ADD, 
-	/* 64:additive_exp1(3) -> */
+	/* 62:additive_exp1(3) -> */
 	T_MINUS, N_ADDITIVE_EXP, A_OP_SUB, 
-	/* 65:mult_exp(2) -> */
+	/* 63:mult_exp(2) -> */
 	N_UNARY_EXP, N_MULT_EXP1, 
-	/* 66:mult_exp1(0) -> */
+	/* 64:mult_exp1(0) -> */
 	
+	/* 65:mult_exp1(3) -> */
+	T_STAR, N_MULT_EXP, A_OP_MUL, 
+	/* 66:mult_exp1(3) -> */
+	T_SLASH, N_MULT_EXP, A_OP_DIV, 
 	/* 67:mult_exp1(3) -> */
-	T_MUL, N_MULT_EXP, A_OP_MUL, 
-	/* 68:mult_exp1(3) -> */
-	T_DIV, N_MULT_EXP, A_OP_DIV, 
-	/* 69:mult_exp1(3) -> */
-	T_MOD, N_MULT_EXP, A_OP_MOD, 
-	/* 70:unary_exp(1) -> */
+	T_PERCENT, N_MULT_EXP, A_OP_MOD, 
+	/* 68:unary_exp(1) -> */
 	N_PRIMARY_EXP, 
-	/* 71:unary_exp(3) -> */
-	T_INV, N_UNARY_EXP, A_OP_INV, 
-	/* 72:unary_exp(3) -> */
+	/* 69:unary_exp(3) -> */
+	T_TILDE, N_UNARY_EXP, A_OP_INV, 
+	/* 70:unary_exp(3) -> */
 	T_MINUS, N_UNARY_EXP, A_OP_MINUS, 
-	/* 73:unary_exp(3) -> */
+	/* 71:unary_exp(3) -> */
 	T_NOT, N_UNARY_EXP, A_OP_NOT, 
-	/* 74:primary_exp(3) -> */
+	/* 72:primary_exp(3) -> */
 	T_LPAREN, N_EXP, T_RPAREN, 
-	/* 75:primary_exp(2) -> */
+	/* 73:primary_exp(2) -> */
 	T_INT, A_OP_PUSH_INT, 
-	/* 76:primary_exp(2) -> */
-	T_TRUE, A_OP_PUSH_TRUE, 
-	/* 77:primary_exp(2) -> */
-	T_FALSE, A_OP_PUSH_FALSE, 
-	/* 78:primary_exp(2) -> */
+	/* 74:primary_exp(2) -> */
 	T_STRING, A_OP_PUSH_STRING, 
-	/* 79:primary_exp(1) -> */
+	/* 75:primary_exp(2) -> */
+	T_TRUE, A_OP_PUSH_TRUE, 
+	/* 76:primary_exp(2) -> */
+	T_FALSE, A_OP_PUSH_FALSE, 
+	/* 77:primary_exp(1) -> */
 	N_METH_OR_ATTR, 
-	/* 80:meth_or_attr(3) -> */
+	/* 78:meth_or_attr(3) -> */
 	T_ID, A_OP_PUSH_TMP, N_METH_OR_ATTR1, 
-	/* 81:meth_or_attr1(1) -> */
+	/* 79:meth_or_attr1(1) -> */
 	A_OP_ATTR, 
-	/* 82:meth_or_attr1(1) -> */
-	N_FUNCTION_CALL, 
+	/* 80:meth_or_attr1(2) -> */
+	N_FUNCTION_CALL, A_OP_CALL_RET, 
 };
-/* 205 bytes */
+/* 201 bytes */
 
 static const struct {
 	uint8_t off;
@@ -349,78 +341,76 @@ static const struct {
 	{  48,  2},
 	{  50,  0},
 	{  50,  3},
-	{  53,  2},
-	{  55, 15},
-	{  70,  0},
-	{  70,  3},
-	{  73,  3},
-	{  76,  2},
-	{  78,  0},
-	{  78,  2},
-	{  80,  4},
-	{  84,  1},
-	{  85,  3},
-	{  88,  3},
-	{  91,  3},
-	{  94,  2},
-	{  96,  5},
-	{ 101,  0},
-	{ 101,  1},
-	{ 102,  3},
+	{  53,  1},
+	{  54, 14},
+	{  68,  3},
+	{  71,  2},
+	{  73,  0},
+	{  73,  2},
+	{  75,  4},
+	{  79,  1},
+	{  80,  3},
+	{  83,  3},
+	{  86,  3},
+	{  89,  2},
+	{  91,  5},
+	{  96,  0},
+	{  96,  1},
+	{  97,  3},
+	{ 100,  0},
+	{ 100,  2},
+	{ 102,  0},
+	{ 102,  1},
+	{ 103,  2},
 	{ 105,  0},
 	{ 105,  2},
-	{ 107,  0},
-	{ 107,  1},
-	{ 108,  2},
-	{ 110,  0},
-	{ 110,  2},
-	{ 112,  2},
-	{ 114,  0},
-	{ 114,  3},
-	{ 117,  3},
+	{ 107,  2},
+	{ 109,  0},
+	{ 109,  3},
+	{ 112,  3},
+	{ 115,  3},
+	{ 118,  2},
+	{ 120,  0},
 	{ 120,  3},
-	{ 123,  2},
-	{ 125,  0},
-	{ 125,  3},
+	{ 123,  3},
+	{ 126,  2},
+	{ 128,  0},
 	{ 128,  3},
-	{ 131,  2},
-	{ 133,  0},
-	{ 133,  3},
-	{ 136,  3},
-	{ 139,  3},
-	{ 142,  3},
-	{ 145,  3},
+	{ 131,  3},
+	{ 134,  3},
+	{ 137,  3},
+	{ 140,  3},
+	{ 143,  3},
+	{ 146,  2},
+	{ 148,  0},
 	{ 148,  3},
-	{ 151,  2},
-	{ 153,  0},
-	{ 153,  3},
+	{ 151,  3},
+	{ 154,  2},
+	{ 156,  0},
 	{ 156,  3},
-	{ 159,  2},
-	{ 161,  0},
-	{ 161,  3},
+	{ 159,  3},
+	{ 162,  2},
+	{ 164,  0},
 	{ 164,  3},
-	{ 167,  2},
-	{ 169,  0},
-	{ 169,  3},
-	{ 172,  3},
-	{ 175,  3},
-	{ 178,  1},
-	{ 179,  3},
-	{ 182,  3},
-	{ 185,  3},
-	{ 188,  3},
-	{ 191,  2},
-	{ 193,  2},
-	{ 195,  2},
-	{ 197,  2},
-	{ 199,  1},
-	{ 200,  3},
-	{ 203,  1},
-	{ 204,  1},
+	{ 167,  3},
+	{ 170,  3},
+	{ 173,  1},
+	{ 174,  3},
+	{ 177,  3},
+	{ 180,  3},
+	{ 183,  3},
+	{ 186,  2},
+	{ 188,  2},
+	{ 190,  2},
+	{ 192,  2},
+	{ 194,  1},
+	{ 195,  3},
+	{ 198,  1},
+	{ 199,  2},
 };
-/* 166 bytes */
+/* 162 bytes */
 
-/* Total: 1067 bytes */
+/* Total: 1031 bytes */
 
 
 int microjs_ll_push(uint8_t * sp, unsigned int sym, unsigned int tok)
@@ -486,53 +476,54 @@ const const char * const microjs_ll_sym[] = {
  	"COMMA",
  	"SEMICOLON",
  	"COLON",
+ 	"PLUS",
+ 	"MINUS",
+ 	"STAR",
+ 	"SLASH",
+ 	"PERCENT",
+ 	"AMPERSAND",
+ 	"BAR",
+ 	"CARET",
+ 	"TILDE",
+ 	"EXCLAM",
+ 	"QUEST",
+ 	"EQUALS",
+ 	"LESSTHEN",
+ 	"GREATTHEN",
  	"LBRACKET",
  	"RBRACKET",
  	"LPAREN",
  	"RPAREN",
  	"LBRACE",
  	"RBRACE",
- 	"ASR",
- 	"SHL",
- 	"LTE",
- 	"LT",
  	"GTE",
- 	"GT",
+ 	"LTE",
  	"EQU",
  	"NEQ",
- 	"PLUS",
- 	"MINUS",
- 	"MUL",
- 	"DIV",
- 	"MOD",
- 	"OR",
- 	"LOR",
- 	"AND",
- 	"LAND",
- 	"XOR",
- 	"NOT",
- 	"INV",
- 	"QUEST",
- 	"ASSIGN",
+ 	"ASR",
+ 	"SHL",
+ 	"LOGICOR",
+ 	"LOGICAND",
+ 	"BREAK",
+ 	"CATCH",
+ 	"CONTINUE",
  	"ELSE",
  	"FALSE",
+ 	"FINALLY",
  	"FOR",
  	"FUNCTION",
  	"IF",
+ 	"RETURN",
+ 	"THROW",
  	"TRUE",
+ 	"TRY",
  	"VAR",
  	"WHILE",
- 	"TRY",
- 	"CATCH",
- 	"THROW",
- 	"FINALLY",
- 	"CONTINUE",
- 	"BREAK",
- 	"RETURN",
  	"ID",
  	"INT",
  	"STRING",
  	"ERR",
+ 	"NOT",
  	"program",
  	"stat",
  	"compound_stat",
@@ -544,7 +535,6 @@ const const char * const microjs_ll_sym[] = {
  	"catch_opt",
  	"var_list",
  	"assign_or_call",
- 	"finally_opt",
  	"var",
  	"var_list1",
  	"var_assign_opt",
@@ -590,7 +580,6 @@ const const char * const microjs_ll_sym[] = {
  	"op_push_tmp",
  	"op_assign",
  	"op_catch_end",
- 	"op_finally",
  	"op_pop_tmp",
  	"op_ret_discard",
  	"op_method",
@@ -601,10 +590,10 @@ const const char * const microjs_ll_sym[] = {
  	"op_xor",
  	"op_and",
  	"op_logic_and",
- 	"op_equ",
- 	"op_neq",
  	"op_lt",
  	"op_gt",
+ 	"op_equ",
+ 	"op_neq",
  	"op_gte",
  	"op_lte",
  	"op_shl",
@@ -618,9 +607,10 @@ const const char * const microjs_ll_sym[] = {
  	"op_minus",
  	"op_not",
  	"op_push_int",
+ 	"op_push_string",
  	"op_push_true",
  	"op_push_false",
- 	"op_push_string",
  	"op_attr",
+ 	"op_call_ret",
  };
 

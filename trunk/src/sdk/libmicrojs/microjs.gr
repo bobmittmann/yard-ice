@@ -1,4 +1,4 @@
-%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR FUNCTION IF TRUE VAR WHILE TRY CATCH THROW FINALLY CONTINUE BREAK RETURN ID INT STRING ERR
+%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND BREAK CATCH CONTINUE ELSE FALSE FINALLY FOR FUNCTION IF RETURN THROW TRUE TRY VAR WHILE ID INT STRING ERR
 %%
 
 program 		: EOF
@@ -6,76 +6,55 @@ program 		: EOF
 				| compound_stat program
 				;
 
-compound_stat	: LBRACE { op_blk_open } stat_list RBRACE { op_blk_close } 
+compound_stat	: '{' { op_blk_open } stat_list '}' { op_blk_close } 
 				;
 
 stat_list		:
 				| stat stat_list
 				;
 
-stat			: FOR LPAREN exp_lst_opt SEMICOLON { op_for_init } exp { op_for_cond } SEMICOLON exp_lst_opt { op_for_after } RPAREN compound_stat { op_for_end }
-				| WHILE { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
-				| IF condition { op_if_cond } compound_stat else_opt { op_if_end }
-				| TRY { op_try_begin } compound_stat catch_opt { op_try_end } 
-				| THROW exp { op_throw } SEMICOLON
-				| VAR var_list SEMICOLON
-				| assign_or_call SEMICOLON
-//				| CONTINUE SEMICOLON
-//				| BREAK SEMICOLON
-//				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
-//				| RETURN exp_opt SEMICOLON
+stat			: "for" '(' exp_lst_opt ';' { op_for_init } exp { op_for_cond } ';' exp_lst_opt { op_for_after } ')' compound_stat { op_for_end }
+				| "while" { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
+				| "if" condition { op_if_cond } compound_stat else_opt { op_if_end }
+				| "try" { op_try_begin } compound_stat catch_opt 
+				| "throw" exp { op_throw } ';'
+				| "var" var_list ';'
+				| assign_or_call ';'
 				;
-
-//param_list_opt	: 
-//				| param_list 
-//				;
-//
-//param_list		: ID param_list1 
-//				;
-//
-//param_list1		: 
-//				| COMMA param_list 
-//				;
-//exp_opt 		: 
-//				| exp
-//				;
-
 
 else_opt		: 
-				| ELSE { op_if_else } compound_stat
+				| "else" { op_if_else } compound_stat
 				;
 
-catch_opt		: 
-				| CATCH  LPAREN ID RPAREN { op_catch } compound_stat finally_opt
+catch_opt		: { op_try_end }
+				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
 				;
 
-finally_opt		: 
-				| FINALLY { op_finally } compound_stat
-				;
-
-condition		: LPAREN exp RPAREN
+condition		: '(' exp ')'
 				;
 
 var_list 		: var var_list1
 				;
 
 var_list1 		: 
-				| COMMA var_list
+				| ',' var_list
 				;
 
-var				: ID { op_var_decl, op_push_tmp } var_assign_opt { op_pop_tmp }
+var				: ID { op_var_decl, op_push_tmp } var_assign_opt
 				;
 
-var_assign_opt  : 
-				| ASSIGN exp { op_assign }
+var_assign_opt  : { op_pop_tmp }
+				| '=' exp { op_assign }
 				;
 
-assign_or_call  : ID { op_push_tmp } assign_or_call1 { op_pop_tmp }
-
+assign_or_call  : ID { op_push_tmp } assign_or_call1
 				;
 
-assign_or_call1	: ASSIGN exp { op_assign }
-				| LPAREN { op_method } arg_list_opt RPAREN { op_meth_or_attr, op_ret_discard }
+assign_or_call1	: '=' exp { op_assign }
+				| function_call { op_ret_discard }
+				;
+
+function_call	: { op_method } '(' arg_list_opt ')' { op_call } 
 				;
 
 arg_list_opt	: 
@@ -86,7 +65,7 @@ arg_list		: exp { op_arg } arg_list1
 				;
 
 arg_list1		: 
-				| COMMA arg_list 
+				| ',' arg_list 
 				;
 
 exp_lst_opt		: 
@@ -97,7 +76,7 @@ exp_lst			: assign_or_call exp_lst1
 				;
 				
 exp_lst1		: 
-				| COMMA exp_lst
+				| ',' exp_lst
 				;
 
 exp 			: and_exp or_exp
@@ -105,27 +84,27 @@ exp 			: and_exp or_exp
 
 
 or_exp			: 
-				| OR exp { op_or }
-				| LOR exp { op_logic_or }
-				| XOR exp { op_xor }
+				| '|' exp { op_or }
+				| LOGICOR exp { op_logic_or }
+				| '^' exp { op_xor }
 				;
 
 and_exp			: relational_exp and_exp1
 				;
 
 and_exp1		: 
-				| AND and_exp { op_and }
-				| LAND and_exp { op_logic_and }
+				| '&' and_exp { op_and }
+				| LOGICAND and_exp { op_logic_and }
 				;
 
 relational_exp	: shift_exp	relational_exp1
 				;
 
 relational_exp1	:
+				| '<' relational_exp { op_lt }
+				| '>' relational_exp { op_gt }
 				| EQU relational_exp { op_equ }
 				| NEQ relational_exp { op_neq }
-				| LT  relational_exp { op_lt }
-				| GT  relational_exp { op_gt }
 				| GTE relational_exp { op_gte }
 				| LTE relational_exp { op_lte }
 				;
@@ -142,38 +121,37 @@ additive_exp 	: mult_exp additive_exp1
 				;
 
 additive_exp1 	: 
-				| PLUS additive_exp { op_add }
-				| MINUS additive_exp { op_sub }
+				| '+' additive_exp { op_add }
+				| '-' additive_exp { op_sub }
 				;
 
 mult_exp		: unary_exp mult_exp1		
 				;
 
 mult_exp1		: 
-				| MUL mult_exp { op_mul }
-				| DIV mult_exp { op_div }
-				| MOD mult_exp { op_mod }
+				| '*' mult_exp { op_mul }
+				| '/' mult_exp { op_div }
+				| '%' mult_exp { op_mod }
 				;
 
 unary_exp		: primary_exp
-				| INV unary_exp { op_inv }
-				| MINUS unary_exp { op_minus }
+				| '~' unary_exp { op_inv }
+				| '-' unary_exp { op_minus }
 				| NOT unary_exp { op_not }
 				;
 
-primary_exp		: LPAREN exp RPAREN
+primary_exp		: '(' exp ')'
 				| INT { op_push_int }
-				| TRUE { op_push_true }
-				| FALSE { op_push_false }
 				| STRING { op_push_string }
-				| meth_or_attr { op_meth_or_attr, op_pop_tmp } 
+				| "true" { op_push_true }
+				| "false" { op_push_false }
+				| meth_or_attr 
 				;
 
 meth_or_attr	: ID { op_push_tmp } meth_or_attr1
 				;
 
-meth_or_attr1	: 
-				| LPAREN { op_method } arg_list_opt RPAREN 
+meth_or_attr1	: { op_attr }
+				| function_call
 				;
-
 
