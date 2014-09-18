@@ -76,15 +76,13 @@
 #define OPC_JEQ      25
 #define OPC_EXT      26
 #define OPC_POP      27
-#define OPC_LDR      28 /* BP relative load */
-#define OPC_STR      29 /* BP relative store */
-#define OPC_SBP      30 /* store base pointer */
-#define OPC_XPT      31 /* exception */
-#define OPC_LXP      32 /* Load exception pointer */
-#define OPC_PUHSX    33 /* Push exception frame */
-#if 0
-#define OPC_POPX     34 /* Pop exception frame */
-#endif
+#define OPC_ISP      28 /* Increment SP */
+#define OPC_XPT      29 /* exception */
+#define OPC_PUHSX    30 /* Push exception frame */
+
+#define OPC_SBP      31 /* store base pointer */
+#define OPC_LDR      32 /* BP relative load */
+#define OPC_STR      33 /* BP relative store */
 
 /* --------------------------------------------------------------------------
    Runtime Environement

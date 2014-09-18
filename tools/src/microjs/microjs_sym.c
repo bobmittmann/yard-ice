@@ -54,7 +54,11 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	return tab;
 }
 
-bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
+/* --------------------------------------------------------------------------
+   Symbol table stack
+   -------------------------------------------------------------------------- */
+
+int sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
@@ -65,7 +69,7 @@ bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 
 	sp -= len;
 	if (tab->bp > sp)
-		return false;
+		return -ERR_SYM_PUSH_FAIL;
 
 	dst = (uint8_t *)&tab->buf + sp;
 	src = (uint8_t *)ptr;
@@ -73,10 +77,34 @@ bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 		dst[i] = src[i];
 
 	tab->sp = sp;
-	return true;
+	return 0;
 }
 
-bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
+int sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
+{
+	int sp = tab->sp;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len);
+
+	if (sp >= tab->fp)
+		return -ERR_SYM_POP_FAIL;
+
+	if (ptr != NULL) {
+		src = (uint8_t *)&tab->buf + sp;
+		dst = (uint8_t *)ptr;
+		for(i = 0; i < len; ++i)
+			dst[i] = src[i];
+	}
+
+	tab->sp = sp + len;
+
+	return 0;
+}
+
+static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 {
 	int sp = tab->sp;
 	uint8_t * dst;
@@ -100,48 +128,28 @@ bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 	return true;
 }
 
-bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
-{
-	int sp = tab->sp;
-	uint8_t * dst;
-	uint8_t * src;
-	int i;
 
-	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len);
-
-	if (sp >= tab->fp)
-		return false;
-
-	if (ptr != NULL) {
-		src = (uint8_t *)&tab->buf + sp;
-		dst = (uint8_t *)ptr;
-		for(i = 0; i < len; ++i)
-			dst[i] = src[i];
-	}
-
-	tab->sp = sp + len;
-
-	return true;
-}
+/* --------------------------------------------------------------------------
+   Stack frame
+   -------------------------------------------------------------------------- */
 
 /* Push the stack frame */
-bool sym_sf_push(struct symtab * tab)
+int sym_sf_push(struct symtab * tab)
 {
 	struct sym_sf sf;
+	int ret;
 
 	sf.prev = tab->fp;
 	sf.bp = tab->bp;
 
-	if (!sym_push(tab, &sf, sizeof(sf)))
-		return false;
+	if ((ret = sym_push(tab, &sf, sizeof(sf))) == 0)
+		tab->fp = tab->sp;
 
-	tab->fp = tab->sp;
-
-	return true;
+	return ret;
 }
 
 /* Pop the stack frame */
-bool sym_sf_pop(struct symtab * tab)
+int sym_sf_pop(struct symtab * tab)
 {
 	struct sym_sf sf;
 	int sp = tab->fp; /* use frame pointer as reference */
@@ -150,7 +158,7 @@ bool sym_sf_pop(struct symtab * tab)
 	int i;
 
 	if (sp >= tab->top)
-		return false;
+		return ERR_SYM_POP_FAIL;
 
 	src = (uint8_t *)&tab->buf + sp;
 	dst = (uint8_t *)&sf;
@@ -161,11 +169,11 @@ bool sym_sf_pop(struct symtab * tab)
 	tab->fp = sf.prev;
 	tab->bp = sf.bp;
 
-	return true;
+	return 0;
 }
 
-/* Pop the stack frame */
-bool sym_sf_get(struct symtab * tab, struct sym_sf * sf)
+/* Pick a stack frame */
+static bool sym_sf_get(struct symtab * tab, struct sym_sf * sf)
 {
 	if (tab->fp >= tab->top) {
 		sf->prev = 0;
@@ -271,7 +279,7 @@ struct sym_obj * sym_obj_scope_lookup(struct symtab * tab,
 	for (i = begin; i < end; ++i) {
 		obj = &tab->buf[i];
 		nm = (char *)&tab->buf + obj->nm;
-		DCC_LOG3(LOG_TRACE, "id=%d nm=\"%s\" len=%d", i, nm, len);
+		DCC_LOG3(LOG_INFO, "id=%d nm=\"%s\" len=%d", i, nm, len);
 
 		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0')) {
 			DCC_LOG2(LOG_INFO, "id=%d nm=\"%s\"", i, nm);
@@ -282,86 +290,6 @@ struct sym_obj * sym_obj_scope_lookup(struct symtab * tab,
 	return NULL;
 }
 
-
-const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj)
-{
-	return (char *)&tab->buf + obj->nm;
-}
-
-int sym_lbl_next(struct symtab * tab) 
-{
-	return tab->tmp_lbl++;
-}
-
-/* --------------------------------------------------------------------------
-   References
-   -------------------------------------------------------------------------- */
-
-bool sym_ref_push(struct symtab * tab, struct sym_ref * ref) 
-{
-	return sym_push(tab, ref, sizeof(struct sym_ref));
-}
-
-bool sym_ref_pop(struct symtab * tab, struct sym_ref * ref)
-{
-	return sym_pop(tab, ref, sizeof(struct sym_ref));
-}
-
-/* --------------------------------------------------------------------------
-   Loop descriptors
-   -------------------------------------------------------------------------- */
-
-bool sym_fld_push(struct symtab * tab, struct sym_fld * fld)
-{
-	return sym_push(tab, fld, sizeof(struct sym_fld));
-}
-
-bool sym_fld_pop(struct symtab * tab, struct sym_fld * fld)
-{
-	return sym_pop(tab, fld, sizeof(struct sym_fld));
-}
-
-/* --------------------------------------------------------------------------
-   While Loop Descriptor
-   -------------------------------------------------------------------------- */
-
-bool sym_wld_push(struct symtab * tab, struct sym_wld * wld)
-{
-	return sym_push(tab, wld, sizeof(struct sym_wld));
-}
-
-bool sym_wld_pop(struct symtab * tab, struct sym_wld * wld)
-{
-	return sym_pop(tab, wld, sizeof(struct sym_wld));
-}
-
-/* --------------------------------------------------------------------------
-   Function Descriptor
-   -------------------------------------------------------------------------- */
-
-bool sym_fnd_push(struct symtab * tab, struct sym_fnd * fnd)
-{
-	return sym_push(tab, fnd, sizeof(struct sym_fnd));
-}
-
-bool sym_fnd_pop(struct symtab * tab, struct sym_fnd * fnd)
-{
-	return sym_pop(tab, fnd, sizeof(struct sym_fnd));
-}
-
-/* --------------------------------------------------------------------------
-   Temporary symbols
-   -------------------------------------------------------------------------- */
-
-bool sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp) 
-{
-	return sym_push(tab, tmp, sizeof(struct sym_tmp));
-}
-
-bool sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp)
-{
-	return sym_pop(tab, tmp, sizeof(struct sym_tmp));
-}
 
 /* --------------------------------------------------------------------------
    Externals (Library)
@@ -418,7 +346,6 @@ int sym_dump(FILE * f, struct symtab * tab)
 
 	return 0;
 }
-
 
 #if 0
 static bool sym_pick(struct symtab * tab, int pos, 

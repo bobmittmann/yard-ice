@@ -10,7 +10,9 @@ print(x, y, z);
 	var i = 0;
 }
 
-var err = 0;
+var err = 32;
 
 print(err);
+
+x = 1;
 

@@ -245,7 +245,7 @@ struct token lexer_scan(struct lexer * lex)
 				continue;
 			} 
 			
-			typ = T_DIV;
+			typ = T_SLASH;
 			goto ret;
 		}
 
@@ -262,7 +262,7 @@ struct token lexer_scan(struct lexer * lex)
 					goto inc_ret;
 				}
 			} 
-			typ = T_LT;
+			typ = T_LESSTHEN;
 			goto ret;
 		}
 
@@ -278,7 +278,7 @@ struct token lexer_scan(struct lexer * lex)
 					goto inc_ret;
 				}
 			} 
-			typ = T_GT;
+			typ = T_GREATTHEN;
 			goto ret;
 		}
 
@@ -287,7 +287,7 @@ struct token lexer_scan(struct lexer * lex)
 				typ = T_EQU;
 				goto inc_ret;
 			}
-			typ = T_ASSIGN;
+			typ = T_EQUALS;
 			goto ret;
 		}
 
@@ -303,22 +303,22 @@ struct token lexer_scan(struct lexer * lex)
 		if (c == '|') {
 			if (++off < len)	{
 				if  (c == '|') {
-					typ = T_LOR;
+					typ = T_LOGICOR;
 					goto inc_ret;
 				}
 			}
-			typ = T_OR;
+			typ = T_BAR;
 			goto ret;
 		}
 
 		if (c == '&') {
 			if (++off < len)	{
 				if  (c == '&') {
-					typ = T_LAND;
+					typ = T_LOGICAND;
 					goto inc_ret;
 				}
 			}
-			typ = T_AND;
+			typ = T_AMPERSAND;
 			goto ret;
 		}
 
@@ -330,16 +330,16 @@ struct token lexer_scan(struct lexer * lex)
 			typ = T_SEMICOLON;
 			break;
 		case '^':
-			typ = T_XOR;
+			typ = T_CARET;
 			break;
 		case '~':
-			typ = T_INV;
+			typ = T_TILDE;
 			break;
 		case '*':
-			typ = T_MUL;
+			typ = T_STAR;
 			break;
 		case '%':
-			typ = T_MOD;
+			typ = T_PERCENT;
 			break;
 		case '+':
 			typ = T_PLUS;

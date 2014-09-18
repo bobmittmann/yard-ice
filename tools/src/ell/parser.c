@@ -114,6 +114,101 @@ static void scanComment(void)
 	}		
 }
 
+void expand_char(char * tok, int c)
+{
+	char * s;
+
+	switch (c) {
+	case '.':
+		s = "DOT";
+		break;
+	case ',':
+		s = "COMMA";
+		break;
+	case ';':
+		s = "SEMICOLON";
+		break;
+	case ':':
+		s = "COLON";
+		break;
+	case '*':
+		s = "STAR";
+		break;
+	case '+':
+		s = "PLUS";
+		break;
+	case '-':
+		s = "MINUS";
+		break;
+	case '|':
+		s = "BAR";
+		break;
+	case '?':
+		s = "QUEST";
+		break;
+	case '!':
+		s = "EXCLAM";
+		break;
+	case '=':
+		s = "EQUALS";
+		break; 
+	case '/':
+		s = "SLASH";
+		break; 
+	case '\\':
+		s = "BACKSLASH";
+		break; 
+	case '%':
+		s = "PERCENT";
+		break; 
+	case '&':
+		s = "AMPERSAND";
+		break; 
+	case '^':
+		s = "CARET";
+		break; 
+	case '~':
+		s = "TILDE";
+		break; 
+	case '@':
+		s = "AT";
+		break; 
+	case '#':
+		s = "HASH";
+		break; 
+	case '(':
+		s = "LPAREN";
+		break; 
+	case ')':
+		s = "RPAREN";
+		break; 
+	case '[':
+		s = "LBRACKET";
+		break; 
+	case ']':
+		s = "RBRACKET";
+		break; 
+	case '{':
+		s = "LBRACE";
+		break; 
+	case '}':
+		s = "RBRACE";
+		break; 
+	case '<':
+		s = "LESSTHEN";
+		break; 
+	case '>':
+		s = "GREATTHEN";
+		break; 
+	default:
+		tok[0] = c; 
+		tok[1] = '\0';
+		return;
+	}
+
+	strcpy(tok, s);
+}
+
 /*
    Returns next token with  string of token in lexeme[]   
    A token is: grammar-symbol or '|' or  '\n' ':' ';'  EOF		
@@ -193,22 +288,19 @@ int GetToken(void)
 		case '\"': /*multichar token "token" or single char "c" */
 			{
 			char *s = lexeme;
-			/* Prefix strings wit T_ */
-//			char *s = &lexeme[2];        			
-//			lexeme[0]='T'; lexeme[1]='_';
-			while(nextch != EOF) {
+			while (nextch != EOF) {
 				nextch = toupper(getc(infile));				
 				while (nextch <= ' ' )
 					nextch = toupper(getc(infile));				
-				if(nextch == '\"'){
-					nextch=getc(infile); 
+				if (nextch == '\"'){
+					nextch = getc(infile); 
 					break;
 				}
 				*s = nextch; s++;				
 			};				
 			*s = '\0';
-			if(strlen(lexeme) == 3) { /*single char*/
-				lexeme[0]=lexeme[2]; lexeme[1]='\0';
+			if (strlen(lexeme) == 1) { /*single char*/
+				expand_char(lexeme, lexeme[1]);
 				return CHR_LIT;
 			}
 			else
@@ -216,19 +308,17 @@ int GetToken(void)
 			} 
 		/* single char token 'c'*/
 		case '\'': 
+			expand_char(lexeme, getc(infile));
 			nextch = getc(infile);
-			lexeme[0] = nextch; lexeme[1] = '\0';
-			nextch = getc(infile);
-			if(nextch != '\'') {
-				SyntaxError("Single char token must be terminated with \'.");				
+			if (nextch != '\'') {
+				SyntaxError("Single char token must be terminated with \'.");	
 				return(BAD_TOKEN);
-			}	
-			else {
+			} else {
 				nextch = getc(infile);
 				return CHR_LIT;
 			}
 	}						
-    return( BAD_TOKEN );
+    return BAD_TOKEN;
 }
 
 
@@ -446,7 +536,8 @@ SYMPTR  ParseGroup(SYMPTR lhsp, int pos)
 	sprintf(strpos, "%d%d",pos, lhsp->numalt);
 	name = malloc(strlen(lhsp->symtext) + strlen(strpos)+ 3);
 	strcpy(name, lhsp->symtext);
-	strcat(name,"$");strcat(name,strpos);
+	strcat(name,"$");
+	strcat(name,strpos);
 	
 	newlhsp = Lookup(name);
 	if (newlhsp->kind == NONTERM) {

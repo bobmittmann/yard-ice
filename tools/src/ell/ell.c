@@ -410,7 +410,7 @@ void WriteSymAndGrm(FILE *tbl)
     fprintf(tbl, "Last symbol num:%d  Num rules:%d \n", lastsymnum, num_rules);	
     forall_symbols( sp )
 		fprintf(tbl, "%d\t %c\t %s\n", sp->sym_no, 
-		sp->kind==TERM? 'T':'N', sp->symtext );
+		sp->kind == TERM ? 'T' : 'N', sp->symtext );
 	
     fprintf(tbl, "Rules -- num:LHS name(num RHS symbols)-> RHS symbols \n");	
     forall_rules( rp ) {		
@@ -637,7 +637,6 @@ int main(int argc,  char **argv)
 	}
 
 	if (conflict & CLP_CONFLICT) {	
-		fprintf(stderr, "\nFinished with errors!\n");
 		fprintf(stderr, "\nUsing default choice.\n");
 	}
 
@@ -702,6 +701,11 @@ int main(int argc,  char **argv)
 
 	if (cgen)
 		fclose(cf);    
+
+	if (conflict) {	
+		fprintf(stderr, "\nFinished with errors!\n");
+		return 1;
+	}
 
 	if (verbose)
 		fprintf(stdout, " - finished without errors.\n");

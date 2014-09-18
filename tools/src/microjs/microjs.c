@@ -114,18 +114,16 @@ struct ext_libdef externals = {
 	.name = "lib",
 	.fncnt = 8,
 	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
-
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
+		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
+		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1, .ret = 0 },
+		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0, .ret = 1 },
+		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 32, .ret = 0 },
+		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
+		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
 	}
 };
-
 
 int main(int argc,  char **argv)
 {

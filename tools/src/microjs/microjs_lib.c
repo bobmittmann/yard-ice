@@ -32,7 +32,8 @@
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
-	return rand();
+	argv[0] = rand();
+	return 1;
 };
 
 int32_t __srand(struct microjs_env * env, int32_t argv[], int argc) 
@@ -60,7 +61,9 @@ int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 			root--;
 	}
 
-	return root >> 1;
+	argv[0] = root >> 1;
+
+	return 1;
 }	
 
 int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
@@ -77,7 +80,8 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 	x |= x >> 16;
 	x = (x >> 1) + 1;
 	x = (x * 0x077cb531UL) >> 27;
-	return log2_debruijn_index[x];
+	argv[0] = log2_debruijn_index[x];
+	return 1;
 }	
 
 int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
@@ -95,7 +99,8 @@ int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 {
-	return (int32_t)time(NULL);
+	argv[0] = (int32_t)time(NULL);
+	return 1;
 }	
 
 #define BUF_LEN 12
@@ -357,7 +362,7 @@ print_buf:
 		cnt+= n;;
 	}
 
-	return cnt;
+	return 0;
 }
 
 /* --------------------------------------------------------------------------

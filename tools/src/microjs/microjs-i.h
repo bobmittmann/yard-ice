@@ -53,6 +53,10 @@
 #define MICROJS_STRINGS_ENABLED 1
 #endif
 
+#ifndef MICROJS_FUNCTIONS_ENABLED
+#define MICROJS_FUNCTIONS_ENABLED 0
+#endif
+
 #ifndef MICROJS_SYMBOL_LEN_MAX 
 #define MICROJS_SYMBOL_LEN_MAX 16
 #endif
@@ -163,36 +167,8 @@ struct sym_obj {
 #define SYM_IS_METHOD(SYM) ((SYM).flags & SYM_METHOD)
 
 struct sym_tmp {
-	uint8_t flags;
 	uint8_t len;
-	union {
-		struct {
-			char * s;
-		};
-		struct {
-			uint8_t xid;
-			uint8_t cnt;
-			uint8_t min;
-			uint8_t max;
-		};
-	};
-};
-
-struct sym_call {
-	uint8_t flags;
-	uint8_t nm;
-	uint8_t xid;
-	uint8_t cnt;
-	uint8_t min;
-	uint8_t max;
-};
-
-
-/* external function */
-struct sym_ext {
-	uint8_t flags;
-	uint8_t xid;
-	uint16_t addr;
+	char * s;
 };
 
 /* object reference, this represent a pointer to a 
@@ -224,6 +200,15 @@ struct sym_fnd {
 	uint16_t nm;
 	uint16_t skip;
 	uint16_t ret; /* return list */
+};
+
+/* Function Call Descriptor */
+struct sym_call {
+	uint8_t xid;
+	uint8_t argcnt;
+	uint8_t argmin;
+	uint8_t argmax;
+	int8_t retcnt;
 };
 
 /* Stack frame */
@@ -273,79 +258,114 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 struct sym_obj * sym_obj_scope_lookup(struct symtab * tab, 
 									  const char * s, unsigned int len);
 
-const char * sym_obj_name(struct symtab * tab, struct sym_obj * obj);
 
-int sym_lbl_next(struct symtab * tab);
+static inline const char * sym_obj_name(struct symtab * tab, 
+										struct sym_obj * obj) {
+	return (char *)&tab->buf + obj->nm;
+}
+
+static inline int sym_lbl_next(struct symtab * tab) {
+	return tab->tmp_lbl++;
+}
 
 /* --------------------------------------------------------------------------
    Symbol table stack
    -------------------------------------------------------------------------- */
 
-bool sym_push(struct symtab * tab, const void * ptr,  unsigned int len);
+int sym_push(struct symtab * tab, const void * ptr,  unsigned int len);
 
-bool sym_pop(struct symtab * tab, void * ptr,  unsigned int len);
-
-bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len);
-
-/* --------------------------------------------------------------------------
-   Push/Pop addresses from/to stack
-   -------------------------------------------------------------------------- */
-static inline bool sym_addr_push(struct symtab * tab, uint16_t * addr) {
-	return sym_push(tab, addr, sizeof(uint16_t));
-}
-
-static inline bool sym_addr_pop(struct symtab * tab, uint16_t * addr) {
-	return sym_pop(tab, addr, sizeof(uint16_t));
-}
+int sym_pop(struct symtab * tab, void * ptr,  unsigned int len);
 
 /* --------------------------------------------------------------------------
    Push/Pop a stack frame (used to open/close scopes or blocks)
    -------------------------------------------------------------------------- */
-bool sym_sf_push(struct symtab * tab);
+int sym_sf_push(struct symtab * tab);
 
-bool sym_sf_pop(struct symtab * tab);
+int sym_sf_pop(struct symtab * tab);
 
 /* --------------------------------------------------------------------------
-   References 
+   Push/Pop addresses from/to stack
+   -------------------------------------------------------------------------- */
+static inline int sym_addr_push(struct symtab * tab, uint16_t * addr) {
+	return sym_push(tab, addr, sizeof(uint16_t));
+}
+
+static inline int sym_addr_pop(struct symtab * tab, uint16_t * addr) {
+	return sym_pop(tab, addr, sizeof(uint16_t));
+}
+
+/* --------------------------------------------------------------------------
+   References
    -------------------------------------------------------------------------- */
 
 /* Push a reference into the stack */
-bool sym_ref_push(struct symtab * tab, struct sym_ref * ref);
+static inline int sym_ref_push(struct symtab * tab, struct sym_ref * ref) {
+	return sym_push(tab, ref, sizeof(struct sym_ref));
+}
 
-bool sym_ref_pop(struct symtab * tab, struct sym_ref * ref);
+/* Pop a reference from the stack */
+static inline int sym_ref_pop(struct symtab * tab, struct sym_ref * ref) {
+	return sym_pop(tab, ref, sizeof(struct sym_ref));
+}
 
 /* --------------------------------------------------------------------------
    For Loop Descriptor
    -------------------------------------------------------------------------- */
 
-bool sym_fld_push(struct symtab * tab, struct sym_fld * fld);
+static inline int sym_fld_push(struct symtab * tab, struct sym_fld * fld) {
+	return sym_push(tab, fld, sizeof(struct sym_fld));
+}
 
-bool sym_fld_pop(struct symtab * tab, struct sym_fld * fld);
-
+static inline int sym_fld_pop(struct symtab * tab, struct sym_fld * fld) {
+	return sym_pop(tab, fld, sizeof(struct sym_fld));
+}
 
 /* --------------------------------------------------------------------------
    While Loop Descriptor
    -------------------------------------------------------------------------- */
 
-bool sym_wld_push(struct symtab * tab, struct sym_wld * wld);
+static inline int sym_wld_push(struct symtab * tab, struct sym_wld * wld) {
+	return sym_push(tab, wld, sizeof(struct sym_wld));
+}
 
-bool sym_wld_pop(struct symtab * tab, struct sym_wld * wld);
+static inline int sym_wld_pop(struct symtab * tab, struct sym_wld * wld) {
+	return sym_pop(tab, wld, sizeof(struct sym_wld));
+}
 
 /* --------------------------------------------------------------------------
    Function Descriptor
    -------------------------------------------------------------------------- */
 
-bool sym_fnd_push(struct symtab * tab, struct sym_fnd * fnd);
+static inline int sym_fnd_push(struct symtab * tab, struct sym_fnd * fnd) {
+	return sym_push(tab, fnd, sizeof(struct sym_fnd));
+}
 
-bool sym_fnd_pop(struct symtab * tab, struct sym_fnd * fnd);
+static inline int sym_fnd_pop(struct symtab * tab, struct sym_fnd * fnd) {
+	return sym_pop(tab, fnd, sizeof(struct sym_fnd));
+}
+
+/* --------------------------------------------------------------------------
+   Function Call Descriptor
+   -------------------------------------------------------------------------- */
+
+static inline int sym_call_push(struct symtab * tab, struct sym_call * call) {
+	return sym_push(tab, call, sizeof(struct sym_call));
+}
+
+static inline int sym_call_pop(struct symtab * tab, struct sym_call * call) {
+	return sym_pop(tab, call, sizeof(struct sym_call));
+}
 
 /* --------------------------------------------------------------------------
    Temporary symbols
    -------------------------------------------------------------------------- */
+static inline int sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp) {
+	return sym_push(tab, tmp, sizeof(struct sym_tmp));
+}
 
-bool sym_tmp_push(struct symtab * tab, struct sym_tmp * tmp);
-
-bool sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp);
+static inline int sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp) {
+	return sym_pop(tab, tmp, sizeof(struct sym_tmp));
+}
 
 /* --------------------------------------------------------------------------
    Externals (Library)

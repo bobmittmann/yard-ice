@@ -57,6 +57,7 @@ enum {
 	ERR_SDT_STACK_OVERFLOW,
 	ERR_GENERAL,
 	ERR_CODE_MEM_OVERFLOW,
+	ERR_RET_COUNT_MISMATCH,
 };
 
 struct symtab;
@@ -68,8 +69,9 @@ struct microjs_sdt;
 
 struct ext_fndef {
 	const char * nm;
-	uint8_t argmin;
-	uint8_t argmax;
+	uint8_t argmin; /* minimum number of arguments */
+	uint8_t argmax; /* maximum number of arguments */
+	int8_t ret; /* number of returned values */ 
 };
 
 /* --------------------------------------------------------------------------
