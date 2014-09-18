@@ -4,6 +4,8 @@ x = rand();
 y = log2(x);
 z = sqrt(y);
 
+sqrt(y);
+
 print(x, y, z);
 
 {

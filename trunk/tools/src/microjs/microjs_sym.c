@@ -80,6 +80,18 @@ int sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 	return 0;
 }
 
+void sym_pick(struct symtab * tab, int pos, void * ptr,  unsigned int len)
+{
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	src = (uint8_t *)&tab->buf + tab->fp - len;
+	dst = (uint8_t *)ptr;
+	for(i = 0; i < len; ++i)
+		dst[i] = src[i];
+}
+
 int sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 {
 	int sp = tab->sp;
@@ -229,7 +241,7 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 
 	obj = &tab->buf[id];
 	obj->nm = nm;
-	obj->flags = 0;
+	obj->flags = (tab->fp == tab->top) ? SYM_OBJ_GLOBAL : 0;
 	obj->addr = 0;
 	obj->size = 0;
 	tab->bp = bp + sizeof(struct sym_obj);
@@ -339,7 +351,9 @@ int sym_dump(FILE * f, struct symtab * tab)
 	for (i = 0; i < tab->bp / sizeof(struct sym_obj); ++i) {
 		obj = &tab->buf[i];
 		nm = (char *)&tab->buf + obj->nm;
-		fprintf(f, "%04x g O .data   %04x    %s\n", obj->addr, obj->size, nm);
+		fprintf(f, "%04x %c O .data   %04x    %s\n", obj->addr, 
+				(obj->flags & SYM_OBJ_GLOBAL) ? 'g' : 'l',
+				obj->size, nm);
 	}
 
 	fprintf(f, "FP=%04x, SP=%04x\n", tab->fp, tab->sp);
@@ -348,24 +362,6 @@ int sym_dump(FILE * f, struct symtab * tab)
 }
 
 #if 0
-static bool sym_pick(struct symtab * tab, int pos, 
-					 void * ptr,  unsigned int len)
-{
-	int sp = tab->sp + pos * len;
-	uint8_t * dst;
-	uint8_t * src;
-	int i;
-
-	if (sp >= tab->fp)
-		return false;
-
-	src = (uint8_t *)&tab->buf + sp;
-	dst = (uint8_t *)ptr;
-	for(i = 0; i < len; ++i)
-		dst[i] = src[i];
-
-	return true;
-}
 
 static bool sym_poke(struct symtab * tab, int pos, 
 					 void * ptr,  unsigned int len)

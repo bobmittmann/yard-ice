@@ -32,7 +32,10 @@
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
-	argv[0] = rand();
+	int32_t * retv = argv + argc - 1;
+
+	retv[0] = rand();
+
 	return 1;
 };
 
@@ -44,6 +47,7 @@ int32_t __srand(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 {
+	int32_t * retv = argv + argc - 1;
 	uint32_t x = argv[0];
 	uint32_t rem = 0;
 	uint32_t root = 0;
@@ -61,13 +65,27 @@ int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 			root--;
 	}
 
-	argv[0] = root >> 1;
+	retv[0] = root >> 1;
+
+	return 1;
+}	
+
+int32_t __memrd(struct microjs_env * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv + argc - 1;
+	uint32_t addr = argv[0];
+
+	if (addr >= 256)
+		return -1;
+
+	retv[0] = env->data[addr];
 
 	return 1;
 }	
 
 int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 {
+	int32_t * retv = argv + argc - 1;
 	const uint8_t log2_debruijn_index[32] = {
 		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
 		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
@@ -80,7 +98,7 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 	x |= x >> 16;
 	x = (x >> 1) + 1;
 	x = (x * 0x077cb531UL) >> 27;
-	argv[0] = log2_debruijn_index[x];
+	retv[0] = log2_debruijn_index[x];
 	return 1;
 }	
 
@@ -99,7 +117,8 @@ int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 {
-	argv[0] = (int32_t)time(NULL);
+	int32_t * retv = argv + argc - 1;
+	retv[0] = (int32_t)time(NULL);
 	return 1;
 }	
 
@@ -378,5 +397,6 @@ int32_t (* extern_call[])(struct microjs_env *, int32_t argv[], int argc) = {
 	[EXT_SRAND] = __srand,
 	[EXT_PRINT] = __write,
 	[EXT_PRINTF] = __printf,
+	[EXT_MEMRD] = __memrd,
 };
 

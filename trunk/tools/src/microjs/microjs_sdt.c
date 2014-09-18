@@ -72,13 +72,21 @@ int op_var_decl(struct microjs_sdt * microjs)
 		return -ERR_OBJ_NEW_FAIL;
 	}
 
+#if MICROJS_FUNCTIONS_ENABLED
+#error "functions not implemented!!!" 
+	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
+		/* FIXME stack allocation */
+		DCC_LOG(LOG_TRACE, "stack allocation!!!");
+		return 0;
+	}
+#endif
+
 	if ((addr = tgt_alloc32(microjs)) < 0) {
 		DCC_LOG(LOG_WARNING, "tgt_alloc32() failed!");
 		return addr;
 	}
 
 	DCC_LOG1(LOG_INFO, "addr=0x%04x", addr);
-
 
 	obj->addr = addr;
 	/* initial variables are int */
@@ -122,6 +130,16 @@ int op_assign(struct microjs_sdt * microjs)
 
 	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
 		return -ERR_VAR_UNKNOWN;
+
+#if MICROJS_FUNCTIONS_ENABLED
+	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
+		TRACEF("%04x\tSTR \"%s\" (%04x)\n", microjs->pc, 
+			   sym_obj_name(microjs->tab, obj), obj->addr);
+		microjs->code[microjs->pc++] = OPC_STR;
+		microjs->code[microjs->pc++] = obj->addr >> 2;
+		return 0;
+	}
+#endif
 
 	TRACEF("%04x\tST \"%s\" (%04x)\n", microjs->pc, 
 		   sym_obj_name(microjs->tab, obj), obj->addr);
@@ -179,7 +197,6 @@ int op_call(struct microjs_sdt * microjs)
 {
 	struct sym_call call;
 	int ret;
-	int n;
 
 	if ((ret = sym_call_pop(microjs->tab, &call)) < 0)
 		return ret;
@@ -191,14 +208,8 @@ int op_call(struct microjs_sdt * microjs)
 	if (call.argcnt > call.argmax)
 		return -ERR_TOO_MANY_ARGS;
 
-	if ((n = call.argcnt - call.retcnt) < 0) {
-		TRACEF("%04x\tISP %d\n", microjs->pc, n);
-		microjs->code[microjs->pc++] = OPC_ISP;
-		microjs->code[microjs->pc++] = n;
-	}
-
-	TRACEF("%04x\tEXT \'%s\"\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, call.xid));
+	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, call.xid), call.argcnt);
 
 	microjs->code[microjs->pc++] = OPC_EXT;
 	/* external call number */
@@ -221,7 +232,7 @@ int op_ret_discard(struct microjs_sdt * microjs)
 
 	DCC_LOG2(LOG_TRACE, "argcnt=%d, retcnt=%d", call.argcnt, call.retcnt);
 
-	if ((n = MAX(call.argcnt, call.retcnt)) > 0) {
+	if ((n = call.retcnt) > 0) {
 		if (n > 1) {
 			TRACEF("%04x\tISP %d\n", microjs->pc, n);
 			microjs->code[microjs->pc++] = OPC_ISP;
@@ -249,8 +260,8 @@ int op_call_ret(struct microjs_sdt * microjs)
 		return -ERR_RET_COUNT_MISMATCH;
 	}
 
-	/* discard all but one of the arguments */
-	if ((n = MAX(call.argcnt, call.retcnt) - 1) > 0) {
+	/* discard all but one of the returning values */
+	if ((n = call.retcnt - 1) > 0) {
 		if (n > 1) {
 			TRACEF("%04x\tISP %d\n", microjs->pc, n);
 			microjs->code[microjs->pc++] = OPC_ISP;
@@ -277,6 +288,16 @@ int op_attr(struct microjs_sdt * microjs)
 
 	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
 		return -ERR_VAR_UNKNOWN;
+
+#if MICROJS_FUNCTIONS_ENABLED
+	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
+		TRACEF("%04x\tLDR \'%s\" (%04x)\n", microjs->pc, 
+			   sym_obj_name(microjs->tab, obj), obj->addr);
+		microjs->code[microjs->pc++] = OPC_LDR;
+		microjs->code[microjs->pc++] = obj->addr >> 2;
+		return 0;
+	} 
+#endif
 
 	TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
 		   sym_obj_name(microjs->tab, obj), obj->addr);
@@ -1057,8 +1078,6 @@ struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf,
 
 	/* create the default exception handler */
 	op_try_begin(microjs);
-	/* save initial symbol table stack frame */
-	sym_sf_push(microjs->tab);
 
 	return microjs;
 }
@@ -1067,19 +1086,12 @@ int microjs_sdt_done(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 	int offs;
-	int ret;
 
 	if (microjs->pc + 2 > microjs->cdsz)
 		return -ERR_CODE_MEM_OVERFLOW;
 
-	/* restore the symbol table stack frame */
-	if ((ret = sym_sf_pop(microjs->tab)) < 0)
-		return ret;
-
-	/* close default exception handler */
-	/* get the temporary reference */
-	if ((ret = sym_ref_pop(microjs->tab, &ref)) < 0)
-		return ret;
+	/* get the default exception handler */
+	sym_pick(microjs->tab, 0, &ref, sizeof(struct sym_ref));
 
 	/* Adjust the exception handling pointer */
 	offs = (microjs->pc - 3) - (ref.addr - 1);
