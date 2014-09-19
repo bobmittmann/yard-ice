@@ -322,7 +322,15 @@
 				"tag": "rst",
 				"desc": "Reset",
 				"seq": ["0x0", "1x0", "0x1", "0x0", "1x0"],
-				"js": [ ] 
+				"js": [
+						"var x, i;",
+						"for (i = 0; i < 160; i = i + 1) {",
+						"  x = module_val(i, 1);",
+						"  if (x > 600) {",
+						"    sensor_alarm_set(1, 1);",
+						"  }",
+						"}"
+					] 
 			},
 			{
 				"tag": "tst",

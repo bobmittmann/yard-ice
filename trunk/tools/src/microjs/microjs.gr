@@ -129,9 +129,9 @@ mult_exp		: unary_exp mult_exp1
 				;
 
 mult_exp1		: 
-				| '*' mult_exp { op_mul }
 				| '/' mult_exp { op_div }
 				| '%' mult_exp { op_mod }
+				| '*' mult_exp { op_mul }
 				;
 
 unary_exp		: primary_exp

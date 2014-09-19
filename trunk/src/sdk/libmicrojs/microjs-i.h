@@ -69,6 +69,10 @@
 #define MICROJS_TRACE_ENABLED 1
 #endif
 
+#ifndef MICROJS_DEBUG_ENABLED 
+#define MICROJS_DEBUG_ENABLED 1
+#endif
+
 #ifndef MICROJS_STRINGBUF_ENABLED
 #define MICROJS_STRINGBUF_ENABLED 1
 #endif
@@ -143,6 +147,7 @@ struct strbuf {
    -------------------------------------------------------------------------- */
 
 #define SYM_OBJ_ALLOC       (1 << 7)
+#define SYM_OBJ_GLOBAL      (1 << 6)
 #define SYM_OBJ_INT         (0x0 << 4)
 #define SYM_OBJ_STR         (0x1 << 4)
 #define SYM_OBJ_INT_ARRAY   (0x2 << 4)
@@ -167,36 +172,8 @@ struct sym_obj {
 #define SYM_IS_METHOD(SYM) ((SYM).flags & SYM_METHOD)
 
 struct sym_tmp {
-	uint8_t flags;
 	uint8_t len;
-	union {
-		struct {
-			char * s;
-		};
-		struct {
-			uint8_t xid;
-			uint8_t cnt;
-			uint8_t min;
-			uint8_t max;
-		};
-	};
-};
-
-struct sym_call {
-	uint8_t flags;
-	uint8_t nm;
-	uint8_t xid;
-	uint8_t cnt;
-	uint8_t min;
-	uint8_t max;
-};
-
-
-/* external function */
-struct sym_ext {
-	uint8_t flags;
-	uint8_t xid;
-	uint16_t addr;
+	char * s;
 };
 
 /* object reference, this represent a pointer to a 
@@ -230,6 +207,15 @@ struct sym_fnd {
 	uint16_t ret; /* return list */
 };
 
+/* Function Call Descriptor */
+struct sym_call {
+	uint8_t xid;
+	uint8_t argcnt;
+	uint8_t argmin;
+	uint8_t argmax;
+	int8_t retcnt;
+};
+
 /* Stack frame */
 struct sym_sf {
 	uint16_t prev;
@@ -246,7 +232,7 @@ struct symtab {
 	struct sym_obj buf[];
 };
 
-extern int32_t (* extern_call[])(struct microjs_env *, int32_t [], int);
+extern int32_t (* const extern_call[])(struct microjs_env *, int32_t [], int);
 
 #ifdef __cplusplus
 extern "C" {
@@ -294,6 +280,8 @@ static inline int sym_lbl_next(struct symtab * tab) {
 int sym_push(struct symtab * tab, const void * ptr,  unsigned int len);
 
 int sym_pop(struct symtab * tab, void * ptr,  unsigned int len);
+
+void sym_pick(struct symtab * tab, int pos, void * ptr,  unsigned int len);
 
 /* --------------------------------------------------------------------------
    Push/Pop a stack frame (used to open/close scopes or blocks)
@@ -361,6 +349,18 @@ static inline int sym_fnd_push(struct symtab * tab, struct sym_fnd * fnd) {
 
 static inline int sym_fnd_pop(struct symtab * tab, struct sym_fnd * fnd) {
 	return sym_pop(tab, fnd, sizeof(struct sym_fnd));
+}
+
+/* --------------------------------------------------------------------------
+   Function Call Descriptor
+   -------------------------------------------------------------------------- */
+
+static inline int sym_call_push(struct symtab * tab, struct sym_call * call) {
+	return sym_push(tab, call, sizeof(struct sym_call));
+}
+
+static inline int sym_call_pop(struct symtab * tab, struct sym_call * call) {
+	return sym_pop(tab, call, sizeof(struct sym_call));
 }
 
 /* --------------------------------------------------------------------------

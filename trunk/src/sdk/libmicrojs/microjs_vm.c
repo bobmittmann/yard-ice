@@ -37,8 +37,7 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	vm->data = data;
 	vm->sp = len;
 #if MICROJS_FUNCTIONS_ENABLED
-	/* FIXME: adjust base pointer according to heap allocation */
-	vm->bp = 0;
+	vm->bp = vm->sp;
 #endif
 	vm->sl = 0;
 	vm->env.ftrace = NULL;
@@ -67,6 +66,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 #endif
 	int32_t * xp = sp;
 	int opc;
+	vm->env.data = data;
 
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", (int)((int)(sp - data) * sizeof(int32_t)));
@@ -101,6 +101,13 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			if (trace)
 				FTRACEF(f, "POP\n");
 			sp++;
+			break;
+
+		case OPC_ISP:
+			r0 = (int8_t)*pc++;
+			sp += r0;
+			if (trace)
+				FTRACEF(f, "ISP %d\n", r0);
 			break;
 
 		case OPC_I32:
@@ -160,6 +167,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 		case OPC_XPT: 
 			r1 = *sp; /* get the exception code */
+except:
 			sp = xp;  /* set the stack pointer to the exception frame */
 			r0 = *sp; /* get the exception frame */
 			*sp = r1; /* push the exeption code */
@@ -168,6 +176,20 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			if (trace)
 				FTRACEF(f, "XPT (PC=0x%04x XP=0x%04x)\n", 
 						r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD);
+			break;
+
+		case OPC_EXT:
+			r0 = *pc++;
+			r1 = *pc++;
+			if (trace)
+				FTRACEF(f, "EXT %d, %d\n", r0, r1);
+			r0 = extern_call[r0](&vm->env, sp, r1);
+			if (r0 < 0) {
+				r1 = -r0;
+				goto except;
+			}
+			/* adjust the stack pointer */
+			sp += r1 - r0;
 			break;
 
 #if MICROJS_FUNCTIONS_ENABLED
@@ -187,25 +209,13 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "STR 0x%04x <- %d\n", r1 * SIZEOF_WORD, r0);
 			break;
 
-		case OPC_SBP:
-			r0 = (uint16_t)(pc[0] | pc[1] << 8);
-			pc += 2;
-			bp = data + r0;
+		case OPC_IBP:
+			r0 = (int8_t)*pc++;
+			bp += r0;
 			if (trace)
-				FTRACEF(f, "SBP 0x%04x\n", r0);
+				FTRACEF(f, "ISP %d\n", r0);
 			break;
 #endif
-
-		case OPC_EXT:
-			r0 = *pc++;
-			r1 = *pc++;
-			if (trace)
-				FTRACEF(f, "EXT %d, %d\n", r0, r1);
-			r0 = extern_call[r0](&vm->env, sp, r1);
-			/* remove the stack frame */
-			sp += r1;
-			*(--sp) = r0;
-			break;
 
 		case OPC_LT:
 			r0 = *sp++;
