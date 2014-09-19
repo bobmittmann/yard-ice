@@ -106,11 +106,16 @@ struct token lexer_scan(struct lexer * lex)
 			} while (c != qt);
 
 			n = off - k;
+			if ((n == 1) && (qt == '\'')) {
+				typ = T_CHAR;
+				tok.i32 = txt[k];
+				goto inc_ret;
+			}
+
 			qlf = n;
 			typ = T_STRING;
 			tok.s = (char *)&txt[k];
-			off++;
-			goto ret;
+			goto inc_ret;
 		}
 
 		/* keywork or identifier */

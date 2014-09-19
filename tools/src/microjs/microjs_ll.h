@@ -139,9 +139,9 @@
 #define A_OP_ASR               127
 #define A_OP_ADD               128
 #define A_OP_SUB               129
-#define A_OP_MUL               130
-#define A_OP_DIV               131
-#define A_OP_MOD               132
+#define A_OP_DIV               130
+#define A_OP_MOD               131
+#define A_OP_MUL               132
 #define A_OP_INV               133
 #define A_OP_MINUS             134
 #define A_OP_NOT               135

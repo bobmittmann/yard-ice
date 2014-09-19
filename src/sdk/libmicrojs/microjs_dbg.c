@@ -31,6 +31,8 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#if MICROJS_DEBUG_ENABLED
+
 int dump_js(char * script, unsigned int len)
 {
 	int i;
@@ -70,6 +72,7 @@ static const char * const err_tab[] = {
 	[ERR_SDT_STACK_OVERFLOW] = "compiler stack overflow",
 	[ERR_GENERAL] = "general failure",
 	[ERR_CODE_MEM_OVERFLOW] = "code memory overflow",
+	[ERR_RET_COUNT_MISMATCH] = "function returns no value",
 };
 
 static void js_dump_line(FILE * f, int ln, char * lp)
@@ -228,4 +231,6 @@ int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl)
 	return 0;
 }
 #endif
+
+#endif /* MICROJS_DEBUG_ENABLED */
 

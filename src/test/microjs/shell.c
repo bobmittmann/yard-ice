@@ -164,28 +164,27 @@ int cmd_ls(FILE * f, int argc, char ** argv)
 
 struct ext_libdef externals = {
 	.name = "lib",
-	.fncnt = 8,
+	.fncnt = 9,
 	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
-
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
+		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
+		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1, .ret = 0 },
+		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0, .ret = 1 },
+		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 32, .ret = 0 },
+		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
+		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
+		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
 	}
 };
+
+uint8_t  vm_code[256];  /* compiled code */
+uint32_t vm_data[64];   /* data area */
+uint16_t vm_strbuf[64]; /*string buffer shuld be 16bits aligned */
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
-	uint8_t code[512]; /* compiled code */
-	uint32_t data[64]; /* data area */
-	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
-	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
-						  the data buffer) */
 	uint32_t sdtbuf[64]; /* compiler buffer */
 	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
@@ -201,80 +200,45 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	/* initialize string buffer */
-	strbuf_init(strbuf, sizeof(strbuf));
+	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
 	/* initialize symbol table */
-	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
+	symtab = symtab_init(vm_data, sizeof(vm_data), &externals);
 	/* initialize compiler */
 	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
-							  code, sizeof(code), sizeof(data));
+							  vm_code, sizeof(vm_code), sizeof(vm_data));
 
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
-		fprintf(f, "invalid file: \"%s\"\r\n", argv[1]);
+		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
 	}
 
-	fprintf(f, "\"%s\"\r\n", entry.fp->name);
+	fprintf(f, "\"%s\"\n", entry.fp->name);
 	script = (char *)entry.fp->data;
 	len = entry.fp->size;
 
 	/* compile */
-	if (microjs_compile(microjs, script, len) < 0)
+	if ((n = microjs_compile(microjs, script, len)) < 0) {
+		fprintf(f, "# compile error: %d\n", -n);
 		return -1;
-
-	if ((n = microjs_sdt_done(microjs)) < 0)
-		return -1;
-
-	microjs_vm_init(&vm, (int32_t *)data, sizeof(data));
-//	vm.env.ftrace = stderr;
-	if (microjs_exec(&vm, code, n) < 0)
-		return -1;
-
-	fprintf(f, "\r\n");
-
-	return 0;
-
-}
-
-int32_t isqrt(uint32_t x);
-
-int cmd_prime(FILE * f, int argc, char ** argv)
-{
-	int32_t n, j;
-	bool prime;
-
-	srand(0);
-
-	printf("----------------------\n");
-
-	for (j = 0; j < 100; ) {
-		n = rand();
-		if (n <= 3) {
-			prime = n > 1;
-		} else {
-			if (n % 2 == 0 || n % 3 == 0) {
-				prime = false;
-			} else {
-				int32_t i;
-				int32_t m;
-				m = isqrt(n) + 1;
-				prime = true;
-				for (i = 5; (i < m) && (prime); i = i + 6) {
-					if (n % i == 0 || n % (i + 2) == 0) {
-						prime = false;
-					}
-				}
-			}
-		}
-		if (prime) {
-			j = j + 1;
-			printf("%3d %12d\n", j, n);
-		}
 	}
 
-	printf("----------------------\n");
+	if ((n = microjs_sdt_done(microjs)) < 0) {
+		fprintf(f, "# compile error: %d\n", -n);
+		return -1;
+	}
+
+	fprintf(f, "Code: %d bytes.\n", n);
+	fprintf(f, "Data: %d bytes.\n", microjs_tgt_heap(microjs));
+	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+
+	if ((n = microjs_exec(&vm, vm_code, n)) < 0){
+		fprintf(f, "# exec error: %d\n", -n);
+		return -1;
+	}
 
 	return 0;
+
 }
 
 const struct shell_cmd cmd_tab[] = {
@@ -291,8 +255,6 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_rm, "rm", "", "<filename>", "remove files" },
 
 	{ cmd_js, "js", "", "script", "javascript" },
-
-	{ cmd_prime, "prime", "", "", "" },
 
 	{ NULL, "", "", NULL, NULL }
 };

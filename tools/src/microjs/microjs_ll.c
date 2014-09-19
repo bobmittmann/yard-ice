@@ -96,8 +96,8 @@ static const struct tr_pair predict_vec[] = {
 	{  6, 70}, { 13, 69}, { 21, 68}, { 37, 68}, { 44, 68}, { 48, 68}, 
 	{ 49, 68}, { 50, 68}, { 51, 68}, { 53, 71}, 
 	/*  86 (mult_exp1) */
-	{  2, 64}, {  3, 64}, {  5, 64}, {  6, 64}, {  7, 65}, {  8, 66}, 
-	{  9, 67}, { 10, 64}, { 11, 64}, { 12, 64}, { 17, 64}, { 18, 64}, 
+	{  2, 64}, {  3, 64}, {  5, 64}, {  6, 64}, {  7, 67}, {  8, 65}, 
+	{  9, 66}, { 10, 64}, { 11, 64}, { 12, 64}, { 17, 64}, { 18, 64}, 
 	{ 22, 64}, { 25, 64}, { 26, 64}, { 27, 64}, { 28, 64}, { 29, 64}, 
 	{ 30, 64}, { 31, 64}, { 32, 64}, 
 	/*  87 (primary_exp) */
@@ -289,11 +289,11 @@ static const uint8_t rule_vec[] = {
 	/* 64:mult_exp1(0) -> */
 	
 	/* 65:mult_exp1(3) -> */
-	T_STAR, N_MULT_EXP, A_OP_MUL, 
-	/* 66:mult_exp1(3) -> */
 	T_SLASH, N_MULT_EXP, A_OP_DIV, 
-	/* 67:mult_exp1(3) -> */
+	/* 66:mult_exp1(3) -> */
 	T_PERCENT, N_MULT_EXP, A_OP_MOD, 
+	/* 67:mult_exp1(3) -> */
+	T_STAR, N_MULT_EXP, A_OP_MUL, 
 	/* 68:unary_exp(1) -> */
 	N_PRIMARY_EXP, 
 	/* 69:unary_exp(3) -> */
@@ -605,9 +605,9 @@ const const char * const microjs_ll_sym[] = {
  	"op_asr",
  	"op_add",
  	"op_sub",
- 	"op_mul",
  	"op_div",
  	"op_mod",
+ 	"op_mul",
  	"op_inv",
  	"op_minus",
  	"op_not",

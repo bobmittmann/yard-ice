@@ -1,4 +1,4 @@
-%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND BREAK CATCH CONTINUE ELSE FALSE FINALLY FOR FUNCTION IF RETURN THROW TRUE TRY VAR WHILE ID INT STRING ERR
+%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND BREAK CATCH CONTINUE ELSE FALSE FINALLY FOR FUNCTION IF RETURN THROW TRUE TRY VAR WHILE ID INT CHAR STRING ERR
 %%
 
 program 		: EOF
@@ -129,9 +129,9 @@ mult_exp		: unary_exp mult_exp1
 				;
 
 mult_exp1		: 
-				| '*' mult_exp { op_mul }
 				| '/' mult_exp { op_div }
 				| '%' mult_exp { op_mod }
+				| '*' mult_exp { op_mul }
 				;
 
 unary_exp		: primary_exp
@@ -142,6 +142,7 @@ unary_exp		: primary_exp
 
 primary_exp		: '(' exp ')'
 				| INT { op_push_int }
+				| CHAR { op_push_int }
 				| STRING { op_push_string }
 				| "true" { op_push_true }
 				| "false" { op_push_false }
@@ -152,6 +153,6 @@ meth_or_attr	: ID { op_push_tmp } meth_or_attr1
 				;
 
 meth_or_attr1	: { op_attr }
-				| function_call
+				| function_call { op_call_ret }
 				;
 

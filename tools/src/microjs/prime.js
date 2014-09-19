@@ -1,7 +1,7 @@
 //
 // Print a list of 100 random prime numbers
 //
-var j;
+var j, cnt = 0;
 
 srand(time()); // initialize random number generator
 
@@ -31,6 +31,14 @@ for (j = 0; j < 100; ) {
 		j = j + 1;
 		printf("%3d %12d\n", j, n);
 	}
+	cnt = cnt + 1;
 }
 
 printf("----------------------\n");
+
+var x = (j * 10000) / cnt;
+
+printf("%d out of %d are prime, %d.%d %%.\n", 
+	   j, cnt, x / 100, x % 100);
+
+printf("---\n\n");
