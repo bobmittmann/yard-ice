@@ -234,8 +234,10 @@ int main(int argc,  char **argv)
 	/* initialize run time environment */
 	vm.env.ftrace = ftrace;
 	/* run */
-	if (microjs_exec(&vm, code, n) < 0)
+	if ((n = microjs_exec(&vm, code, n)) != 0) {
+		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", n);
 		return 1;
+	}
 
 	return 0;
 
