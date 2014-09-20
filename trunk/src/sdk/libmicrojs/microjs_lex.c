@@ -91,6 +91,7 @@ struct token lexer_scan(struct lexer * lex)
 
 		/* Quotes: copy verbatim */
 		if ((c == '\'') || (c == '\"')) {
+#if MICROJS_STRINGS_ENABLED 
 			unsigned int k;
 			unsigned int n; /* length of the symbol */
 			int qt = c; /* quote character */
@@ -116,6 +117,10 @@ struct token lexer_scan(struct lexer * lex)
 			typ = T_STRING;
 			tok.s = (char *)&txt[k];
 			goto inc_ret;
+#else
+			qlf = ERR_STRINGS_UNSUPORTED;
+			goto ret;
+#endif
 		}
 
 		/* keywork or identifier */

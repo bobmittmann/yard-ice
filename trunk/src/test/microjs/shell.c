@@ -36,6 +36,10 @@
 
 #include "board.h"
 #include "flashfs.h"
+#include "profclk.h"
+
+#define __TEST_LIB_DEF__
+#include "test_lib.h"
 
 extern const struct shell_cmd cmd_tab[];
 
@@ -162,36 +166,42 @@ int cmd_ls(FILE * f, int argc, char ** argv)
    External symbols
    -------------------------------------------------------------------------- */
 
-struct ext_libdef externals = {
-	.name = "lib",
-	.fncnt = 9,
-	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1, .ret = 0 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0, .ret = 1 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 32, .ret = 0 },
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
-		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
-	}
-};
-
 uint8_t  vm_code[256];  /* compiled code */
+uint16_t vm_strbuf[128]; /*string buffer shuld be 16bits aligned */
 uint32_t vm_data[64];   /* data area */
-uint16_t vm_strbuf[64]; /*string buffer shuld be 16bits aligned */
+uint32_t js_symbuf[64]; /*string buffer shuld be 16bits aligned */
+struct microjs_vm vm; 
+
+void vm_reset(void) 
+{
+	/* initialize string buffer */
+	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
+	/* initialize virtual machine */
+	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+	/* initialize symbol table */
+	symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
+}
+
+int cmd_vm(FILE * f, int argc, char ** argv)
+{
+	if (argc != 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	vm_reset();
+	return 0;
+}
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
+	struct microjs_sdt * microjs; 
+	struct symtab * symtab;
 	struct fs_dirent entry;
 	uint32_t sdtbuf[64]; /* compiler buffer */
-	struct microjs_sdt * microjs; 
-	struct microjs_vm vm; 
-	struct symtab * symtab;
 	char * script;
 	int len;
 	int n;
+	uint32_t start_clk;
+	uint32_t stop_clk;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -199,13 +209,12 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	/* initialize string buffer */
-	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
-	/* initialize symbol table */
-	symtab = symtab_init(vm_data, sizeof(vm_data), &externals);
+	profclk_init();
+
+	symtab = symtab_open(js_symbuf, sizeof(js_symbuf));
 	/* initialize compiler */
 	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
-							  vm_code, sizeof(vm_code), sizeof(vm_data));
+							   vm_code, sizeof(vm_code), sizeof(vm_data));
 
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
@@ -218,27 +227,93 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	len = entry.fp->size;
 
 	/* compile */
+	start_clk = profclk_get();
 	if ((n = microjs_compile(microjs, script, len)) < 0) {
 		fprintf(f, "# compile error: %d\n", -n);
+		microjs_sdt_error(stderr, microjs, n);
 		return -1;
 	}
 
 	if ((n = microjs_sdt_done(microjs)) < 0) {
 		fprintf(f, "# compile error: %d\n", -n);
+		microjs_sdt_error(stderr, microjs, n);
 		return -1;
 	}
+	stop_clk = profclk_get();
 
+	fprintf(f, "Comile time: %d us.\n", profclk_us(stop_clk - start_clk ));
 	fprintf(f, "Code: %d bytes.\n", n);
 	fprintf(f, "Data: %d bytes.\n", microjs_tgt_heap(microjs));
-	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
 
+	start_clk = profclk_get();
 	if ((n = microjs_exec(&vm, vm_code, n)) < 0){
 		fprintf(f, "# exec error: %d\n", -n);
 		return -1;
 	}
+	stop_clk = profclk_get();
+	fprintf(f, "Run time: %d us.\n", profclk_us(stop_clk - start_clk ));
 
 	return 0;
 
+}
+
+int32_t isqrt(uint32_t x);
+
+int cmd_prime(FILE * f, int argc, char ** argv)
+{
+	uint32_t start_clk;
+	uint32_t stop_clk;
+	int32_t n, j, x;
+	int cnt;
+	bool prime;
+
+	profclk_init();
+	start_clk = profclk_get();
+
+	srand(0);
+	cnt = 0;
+
+	printf("----------------------\n");
+
+	for (j = 0; j < 100; ) {
+		n = rand();
+		if (n <= 3) {
+			prime = n > 1;
+		} else {
+			if (n % 2 == 0 || n % 3 == 0) {
+				prime = false;
+			} else {
+				int32_t i;
+				int32_t m;
+				m = isqrt(n) + 1;
+				prime = true;
+				for (i = 5; (i < m) && (prime); i = i + 6) {
+					if (n % i == 0 || n % (i + 2) == 0) {
+						prime = false;
+					}
+				}
+			}
+		}
+		if (prime) {
+			j = j + 1;
+			printf("%3d %12d\n", j, n);
+		}
+		cnt = cnt + 1;
+	}
+
+	printf("----------------------\n");
+
+	x = (j * 10000) / cnt;
+
+	printf("%d out of %d are prime, %d.%d %%.\n",
+		   j, cnt, x / 100, x % 100);
+
+	printf("---\n\n");
+
+	stop_clk = profclk_get();
+	fprintf(f, "Run time: %d us.\n", profclk_us(stop_clk - start_clk ));
+
+	return 0;
 }
 
 const struct shell_cmd cmd_tab[] = {
@@ -255,6 +330,10 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_rm, "rm", "", "<filename>", "remove files" },
 
 	{ cmd_js, "js", "", "script", "javascript" },
+
+	{ cmd_vm, "vm", "", "", "reset virtual machine" },
+   
+	{ cmd_prime, "prime", "", "", "" },
 
 	{ NULL, "", "", NULL, NULL }
 };

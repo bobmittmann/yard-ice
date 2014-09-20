@@ -28,12 +28,15 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
+#include <sys/dcclog.h>
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
 
 void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 {
+	int i;
+
 	vm->data = data;
 	vm->sp = len;
 #if MICROJS_FUNCTIONS_ENABLED
@@ -43,6 +46,10 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	vm->env.ftrace = NULL;
 	vm->env.fin = stdin;
 	vm->env.fout = stdout;
+
+	/* initialize the VM's memory */
+	for (i = 0; i < len / sizeof(int32_t); ++i)
+		data[i] = 0;
 
 	FTRACEF(stdout, "SP=0x%04x\n", vm->sp);
 	FTRACEF(stdout, "BP=0x%04x\n", vm->bp);
@@ -67,6 +74,11 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 	int32_t * xp = sp;
 	int opc;
 	vm->env.data = data;
+
+	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
+			(int)((int)(sp - data) * sizeof(int32_t)),
+			(int)((int)(xp - data) * sizeof(int32_t)),
+			(int)(pc - code));
 
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", (int)((int)(sp - data) * sizeof(int32_t)));
@@ -183,7 +195,7 @@ except:
 			r1 = *pc++;
 			if (trace)
 				FTRACEF(f, "EXT %d, %d\n", r0, r1);
-			r0 = extern_call[r0](&vm->env, sp, r1);
+			r0 = microjs_extern[r0](&vm->env, sp, r1);
 			if (r0 < 0) {
 				r1 = -r0;
 				goto except;
@@ -389,6 +401,11 @@ except:
 done:
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", (int)(sp - data) * SIZEOF_WORD);
+
+	DCC_LOG3(LOG_TRACE, "end: SP=0x%04x XP=0x%04x PC=0x%04x", 
+			(int)((int)(sp - data) * sizeof(int32_t)),
+			(int)((int)(xp - data) * sizeof(int32_t)), 
+			(int)(pc - code));
 
 	return 0;
 }

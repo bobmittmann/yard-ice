@@ -257,6 +257,8 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 							unsigned int buf_len, 
 							const struct ext_libdef * libdef);
 
+struct symtab * symtab_open(uint32_t * buf, unsigned int len);
+
 struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
 									  unsigned int buf_size,
 									  struct symtab * tab, 
