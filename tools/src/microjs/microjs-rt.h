@@ -109,6 +109,8 @@ struct microjs_vm {
 	int32_t * data;
 };
 
+extern int32_t (* const microjs_extern[])(struct microjs_env *, int32_t [], int);
+
 #ifdef __cplusplus
 extern "C" {
 #endif

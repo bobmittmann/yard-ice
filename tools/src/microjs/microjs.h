@@ -33,31 +33,48 @@
 #include <microjs-rt.h>
 
 enum {
-	OK = 0,
-	ERR_UNEXPECED_EOF,
-	ERR_UNEXPECTED_CHAR,
-	ERR_UNEXPECTED_SYMBOL,
-	ERR_UNCLOSED_STRING,
-	ERR_UNCLOSED_COMMENT,
-	ERR_INVALID_LITERAL,
-	ERR_INVALID_ID,
-	ERR_STRINGS_UNSUPORTED,
-	ERR_STRING_TOO_LONG,
-	ERR_STRING_NOT_FOUND,
-	ERR_STRBUF_OVERFLOW,
-	ERR_SYNTAX_ERROR,
-	ERR_HEAP_OVERFLOW,
-	ERR_VAR_UNKNOWN,
-	ERR_EXTERN_UNKNOWN,
-	ERR_ARG_MISSING,
-	ERR_TOO_MANY_ARGS,
-	ERR_SYM_PUSH_FAIL,
-	ERR_SYM_POP_FAIL,
-	ERR_OBJ_NEW_FAIL,
-	ERR_SDT_STACK_OVERFLOW,
-	ERR_GENERAL,
-	ERR_CODE_MEM_OVERFLOW,
-	ERR_RET_COUNT_MISMATCH,
+	MICROJS_OK                 = 0,
+	MICROJS_UNEXPECTED_CHAR    = -1,
+	MICROJS_TOKEN_BUF_OVF      = -3,
+	MICROJS_UNCLOSED_STRING    = -4,
+	MICROJS_UNCLOSED_COMMENT   = -5,
+	MICROJS_INVALID_LITERAL    = -6,
+	MICROJS_BRACKET_MISMATCH   = -7,
+	MICROJS_STRING_TOO_LONG    = -8,
+	MICROJS_EMPTY_FILE         = -9,
+	MICROJS_EMPTY_STACK        = -10,
+	MICROJS_STRINGS_UNSUPORTED = -11,
+	MICROJS_INVALID_SYMBOL     = -12,
+	MICROJS_INVALID_LABEL      = -13,
+	MICROJS_OBJECT_EXPECTED    = -14,
+};
+
+enum {
+	OK                     = 0,
+	ERR_UNEXPECED_EOF      = 1,
+	ERR_UNEXPECTED_CHAR    = 2,
+	ERR_UNEXPECTED_SYMBOL  = 3,
+	ERR_UNCLOSED_STRING    = 4,
+	ERR_UNCLOSED_COMMENT   = 5,
+	ERR_INVALID_LITERAL    = 6,
+	ERR_INVALID_ID         = 7,
+	ERR_STRINGS_UNSUPORTED = 8,
+	ERR_STRING_TOO_LONG    = 9,
+	ERR_STRING_NOT_FOUND   = 10,
+	ERR_STRBUF_OVERFLOW    = 11,
+	ERR_SYNTAX_ERROR       = 12,
+	ERR_HEAP_OVERFLOW      = 13,
+	ERR_VAR_UNKNOWN        = 14,
+	ERR_EXTERN_UNKNOWN     = 15,
+	ERR_ARG_MISSING        = 16,
+	ERR_TOO_MANY_ARGS      = 17,
+	ERR_SYM_PUSH_FAIL      = 18,
+	ERR_SYM_POP_FAIL       = 19,
+	ERR_OBJ_NEW_FAIL       = 20,
+	ERR_SDT_STACK_OVERFLOW = 21,
+	ERR_GENERAL            = 22,
+	ERR_CODE_MEM_OVERFLOW  = 23,
+	ERR_RET_COUNT_MISMATCH = 24
 };
 
 struct symtab;
@@ -119,6 +136,8 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 							unsigned int buf_len, 
 							const struct ext_libdef * libdef);
 
+struct symtab * symtab_open(uint32_t * buf, unsigned int len);
+
 struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
 									  unsigned int buf_size,
 									  struct symtab * tab, 
@@ -134,6 +153,8 @@ void microjs_sdt_reset(struct microjs_sdt * microjs);
 int microjs_sdt_done(struct microjs_sdt * microjs);
 
 void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
+
+int microjs_tgt_heap(struct microjs_sdt * microjs);
 
 #ifdef __cplusplus
 }

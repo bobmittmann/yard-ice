@@ -31,10 +31,10 @@
 
 #if MICROJS_STRINGBUF_ENABLED
 
-#define __DEF_CONST_STRBUF__
-#include "const_str.h"
+//#define __DEF_CONST_STRBUF__
+//#include "const_str.h"
 
-#define CONST_NM (256 - const_strbuf.cnt)
+//#define CONST_NM (256 - const_strbuf.cnt)
 
 /* --------------------------------------------------------------------------
    Strings Tables
@@ -61,12 +61,14 @@ int str_lookup(const char * s, unsigned int len)
 {
 	int i;
 
+#if MICROJS_CONSTSTR_ENABLED
 	/* look in the constant pool first */
 	for (i = 0; i < const_strbuf.cnt; ++i) {
 		char * cstr = (char *)&const_strbuf + const_strbuf.offs[i];
 		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0'))
 			return i + CONST_NM;
 	}
+#endif
 
 	for (i = 0; i < var_strbuf->cnt; ++i) {
 		char * cstr = (char *)var_strbuf + var_strbuf->offs[i];
@@ -189,14 +191,16 @@ int cstr_add(const char * s, unsigned int len)
    returns the empty string */
 const char * str(unsigned int idx)
 {
+#if MICROJS_CONSTSTR_ENABLED
 	if (idx >= CONST_NM) {
 		if (idx > 256)
 			idx = CONST_NM;
 		return (char *)&const_strbuf + const_strbuf.offs[idx - CONST_NM];
 	}
+#endif
 
 	if (idx >= var_strbuf->cnt) 
-		return (char *)&const_strbuf + const_strbuf.offs[0];
+		return "";
 
 	return (char *)var_strbuf + var_strbuf->offs[idx];
 }
