@@ -11,7 +11,7 @@ var mod_trbl;
 
 try {
 	if (trbl != sens_trbl + mod_trbl) {
-		throw("TRUBLE");
+		throw("TROUBLE");
 	}
 	if (alrm != sens_alrm + mod_alrm) {
 		throw("ALARM");
@@ -22,6 +22,6 @@ try {
 	printf("%s: trbl=%d alrm=%d!\n", "total", trbl, alrm);
 
 } catch(err) {
-	printf("#error: inconsistent %d stats!\n", err);
+	printf("#error: inconsistent %s stats!\n", err);
 }
 
