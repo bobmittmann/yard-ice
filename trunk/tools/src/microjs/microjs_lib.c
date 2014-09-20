@@ -24,11 +24,17 @@
  */
 
 
-#define __MICROJS_I__
-#include "microjs-i.h"
-
+#include <microjs-stdlib.h>
+#include <microjs.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#ifndef MICROJS_STDLIB_ENABLED 
+#define MICROJS_STDLIB_ENABLED 1
+#endif
+
+#if MICROJS_STDLIB_ENABLED 
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
@@ -104,14 +110,6 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 {
-	int i;
-
-	for(i = argc - 1; i >= 0; --i) {
-		if (i < argc - 1)
-			printf(", ");
-		printf("%d", argv[i]);
-	}
-	printf("\n");
 	return 0;
 }	
 
@@ -121,6 +119,8 @@ int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 	retv[0] = (int32_t)time(NULL);
 	return 1;
 }	
+
+#if MICROJS_STRINGS_ENABLED 
 
 #define BUF_LEN 12
 #define PERCENT 0x01
@@ -228,9 +228,11 @@ static int uint2hex(char * s, uint32_t val)
 	return n;
 }
 
+#endif /* MICROJS_STRINGS_ENABLED */
 
 int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 {
+#if MICROJS_STRINGS_ENABLED 
 	char buf[BUF_LEN];
 	const char * fmt;
 	int flags;
@@ -382,13 +384,17 @@ print_buf:
 	}
 
 	return 0;
+#else
+	return -ERR_STRINGS_UNSUPORTED;
+#endif
 }
 
 /* --------------------------------------------------------------------------
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* extern_call[])(struct microjs_env *, int32_t argv[], int argc) = {
+int32_t (* const microjs_extern[])(struct microjs_env *, 
+								int32_t argv[], int argc) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
@@ -399,4 +405,7 @@ int32_t (* extern_call[])(struct microjs_env *, int32_t argv[], int argc) = {
 	[EXT_PRINTF] = __printf,
 	[EXT_MEMRD] = __memrd,
 };
+
+#endif /* MICROJS_STDLIB_ENABLED  */
+
 

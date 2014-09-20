@@ -483,6 +483,7 @@ int op_push_true(struct microjs_sdt * microjs)
 
 int op_push_string(struct microjs_sdt * microjs) 
 {
+#if MICROJS_STRINGS_ENABLED
 	int isz;
 
 	if ((isz = cstr_add(microjs->tok.s, microjs->tok.qlf)) < 0) {
@@ -495,6 +496,9 @@ int op_push_string(struct microjs_sdt * microjs)
 	microjs->code[microjs->pc++] = OPC_I8;
 	microjs->code[microjs->pc++] = isz;
 	return 0;
+#else
+	return -ERR_STRINGS_UNSUPORTED;
+#endif
 }
 
 int op_push_int(struct microjs_sdt * microjs)
@@ -880,7 +884,7 @@ int op_for_end(struct microjs_sdt * microjs)
 	return 0;
 }
 
-int (* op[])(struct microjs_sdt * microjs) = {
+int (* const op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
  	[ACTION(A_OP_ASSIGN)] = op_assign,
  	[ACTION(A_OP_EQU)] = op_equ,
@@ -1050,6 +1054,7 @@ void microjs_sdt_reset(struct microjs_sdt * microjs)
 
 	microjs->ll_sp = microjs->size;
 	ll_sp = (uint8_t *)microjs + microjs->ll_sp;
+	/* intialize the parser */
 	microjs->ll_sp -= microjs_ll_start(ll_sp);
 }
 
@@ -1076,7 +1081,7 @@ struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf,
 
 	microjs_sdt_reset(microjs);
 
-	/* create the default exception handler */
+	/* generate the default exception handler */
 	op_try_begin(microjs);
 
 	return microjs;
@@ -1090,17 +1095,21 @@ int microjs_sdt_done(struct microjs_sdt * microjs)
 	if (microjs->pc + 2 > microjs->cdsz)
 		return -ERR_CODE_MEM_OVERFLOW;
 
+	/* remove the exception handler frame from the stack */
+	TRACEF("%04x\tPOP\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_POP;
+
 	/* get the default exception handler */
 	sym_pick(microjs->tab, 0, &ref, sizeof(struct sym_ref));
 
-	/* Adjust the exception handling pointer */
+	/* patch the default exception handling pointer */
 	offs = (microjs->pc - 3) - (ref.addr - 1);
 	microjs->code[ref.addr] = offs;
 	microjs->code[ref.addr + 1] = offs >> 8;
 	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref.addr - 1, 
 		   microjs->pc, ref.lbl);
 
-	/* code memory */
+	/* stop execution */
 	TRACEF("%04x\tABT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ABT;
 
@@ -1114,6 +1123,7 @@ int microjs_sdt_done(struct microjs_sdt * microjs)
 
 void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err)
 {
+#if MICROJS_VERBOSE_ENABLED
 	struct lexer * lex = &microjs->lex;
 
 	if (err < 0)
@@ -1121,5 +1131,11 @@ void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err)
 
 	fflush(f);
 	lexer_print_err(f, lex, err);
+#endif
+}
+
+int microjs_tgt_heap(struct microjs_sdt * microjs)
+{
+	return microjs->tgt_heap;
 }
 

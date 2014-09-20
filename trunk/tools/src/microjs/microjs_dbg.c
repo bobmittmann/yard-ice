@@ -31,19 +31,7 @@
 #define __MICROJS_I__
 #include "microjs-i.h"
 
-int dump_js(char * script, unsigned int len)
-{
-	int i;
-
-	printf("\n");
-
-	for (i = 0; i < len; ++i)
-		printf("%c", script[i]);
-
-	printf("\n");
-
-	return 0;
-}
+#if MICROJS_VERBOSE_ENABLED
 
 static const char * const err_tab[] = {
 	[OK] = "Ok", 
@@ -127,6 +115,25 @@ void lexer_print_err(FILE * f, struct lexer * lex, int err)
 	}
 }
 
+#endif /* MICROJS_VERBOSE_ENABLED */
+
+
+#if MICROJS_DEBUG_ENABLED
+
+int dump_js(char * script, unsigned int len)
+{
+	int i;
+
+	printf("\n");
+
+	for (i = 0; i < len; ++i)
+		printf("%c", script[i]);
+
+	printf("\n");
+
+	return 0;
+}
+
 void dump_src(const char * txt, unsigned int len)
 {
 	bool crlf = false;
@@ -153,7 +160,6 @@ void dump_src(const char * txt, unsigned int len)
 	fflush(stdout);
 }
 
-#if MICROJS_TRACE_ENABLED
 #define STRING_LEN_MAX 64
 
 const char token_nm[][4] = {
@@ -228,5 +234,6 @@ int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl)
 	};
 	return 0;
 }
-#endif
+
+#endif /* MICROJS_DEBUG_ENABLED */
 
