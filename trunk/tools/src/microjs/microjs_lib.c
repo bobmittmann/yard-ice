@@ -386,7 +386,7 @@ print_buf:
 	return 0;
 #else
 	return -ERR_STRINGS_UNSUPORTED;
-#endif
+#endif /* MICROJS_STRINGS_ENABLED */
 }
 
 /* --------------------------------------------------------------------------
