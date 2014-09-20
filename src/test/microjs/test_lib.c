@@ -24,11 +24,11 @@
  */
 
 
-#include <microjs-stdlib.h>
+#include "test_lib.h"
+
 #include <string.h>
 #include <time.h>
-
-#if MICROJS_STDLIB_ENABLED 
+#include <stdlib.h>
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
 {
@@ -113,8 +113,6 @@ int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
 	retv[0] = (int32_t)time(NULL);
 	return 1;
 }	
-
-#if MICROJS_STRINGS_ENABLED 
 
 #define BUF_LEN 12
 #define PERCENT 0x01
@@ -222,11 +220,8 @@ static int uint2hex(char * s, uint32_t val)
 	return n;
 }
 
-#endif /* MICROJS_STRINGS_ENABLED */
-
 int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 {
-#if MICROJS_STRINGS_ENABLED 
 	char buf[BUF_LEN];
 	const char * fmt;
 	int flags;
@@ -378,16 +373,107 @@ print_buf:
 	}
 
 	return 0;
-#else
-	return -ERR_STRINGS_UNSUPORTED;
-#endif
+}
+
+uint8_t sensor[160];
+uint8_t module[160];
+
+int32_t __sens_state(struct microjs_env * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv + argc - 1;
+	unsigned int addr = argv[0];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	retv[0] = sensor[addr];
+
+	return 1; /* return the number of return values */
+}	
+
+int32_t __sens_alarm(struct microjs_env * env, int32_t argv[], int argc)
+{
+	unsigned int addr = argv[0];
+	unsigned int val = argv[1];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (val > 1)
+		return -EXCEPT_INVALID_ALARM_CODE;
+
+	sensor[addr] = (sensor[addr] & ~1) | val;
+
+	return 0; /* return the number of return values */
+}
+
+int32_t __sens_trouble(struct microjs_env * env, int32_t argv[], int argc)
+{
+	unsigned int addr = argv[0];
+	unsigned int val = argv[1];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (val > 1)
+		return -EXCEPT_INVALID_TROUBLE_CODE;
+
+	sensor[addr] = (sensor[addr] & ~2) | (val << 1);
+
+	return 0; /* return the number of return values */
+}
+
+
+int32_t __mod_state(struct microjs_env * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv + argc - 1;
+	unsigned int addr = argv[0];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	retv[0] = module[addr];
+
+	return 1; /* return the number of return values */
+}	
+
+int32_t __mod_alarm(struct microjs_env * env, int32_t argv[], int argc)
+{
+	unsigned int addr = argv[0];
+	unsigned int val = argv[1];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (val > 10)
+		return -EXCEPT_INVALID_ALARM_CODE;
+
+	module[addr] = (module[addr] & ~1) | val;
+
+	return 0; /* return the number of return values */
+}
+
+int32_t __mod_trouble(struct microjs_env * env, int32_t argv[], int argc)
+{
+	unsigned int addr = argv[0];
+	unsigned int val = argv[1];
+
+	if (addr > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (val > 10)
+		return -EXCEPT_INVALID_TROUBLE_CODE;
+
+	module[addr] = (module[addr] & ~2) | (val << 1);
+
+	return 0; /* return the number of return values */
 }
 
 /* --------------------------------------------------------------------------
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* const extern_call[])(struct microjs_env *, 
+int32_t (* const microjs_extern[])(struct microjs_env *, 
 								int32_t argv[], int argc) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
@@ -398,8 +484,11 @@ int32_t (* const extern_call[])(struct microjs_env *,
 	[EXT_PRINT] = __write,
 	[EXT_PRINTF] = __printf,
 	[EXT_MEMRD] = __memrd,
+	[EXT_SENS_STATE] = __sens_state,
+	[EXT_SENS_ALARM] = __sens_alarm,
+	[EXT_SENS_TROUBLE] = __sens_trouble,
+	[EXT_MOD_STATE] = __mod_state,
+	[EXT_MOD_ALARM] = __mod_alarm,
+	[EXT_MOD_TROUBLE] = __mod_trouble,
 };
-
-#endif /* MICROJS_STDLIB_ENABLED  */
-
 

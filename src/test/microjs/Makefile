@@ -22,7 +22,7 @@
 PROG = mjs-test
 
 #CFILES_GEN = device_db.c
-CFILES = mjs-test.c board.c flashfs.c shell.c
+CFILES = mjs-test.c board.c flashfs.c profclk.c shell.c test_lib.c
 
 SDK = ../../sdk
 

@@ -44,10 +44,6 @@ struct fs_blk {
  *****************************************************************************/
 
 const struct fs_blk flash_desc[] = {
-	{ 
-	  .offs = FLASH_BLK_CONST_STRING_OFFS,
-	  .size = FLASH_BLK_CONST_STRING_SIZE
-	},
 	{
 	  .offs = FLASH_BLK_SLOT1_OFFS,
 	  .size = FLASH_BLK_SLOT1_SIZE  
@@ -79,6 +75,38 @@ const struct fs_blk flash_desc[] = {
 	{ 
 	  .offs = FLASH_BLK_SLOT8_OFFS,
 	  .size = FLASH_BLK_SLOT8_SIZE  
+	},
+	{
+	  .offs = FLASH_BLK_SLOT9_OFFS,
+	  .size = FLASH_BLK_SLOT9_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT10_OFFS,
+	  .size = FLASH_BLK_SLOT10_SIZE  
+	},
+	{
+	  .offs = FLASH_BLK_SLOT11_OFFS,
+	  .size = FLASH_BLK_SLOT11_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT12_OFFS,
+	  .size = FLASH_BLK_SLOT12_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT13_OFFS,
+	  .size = FLASH_BLK_SLOT13_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT14_OFFS,
+	  .size = FLASH_BLK_SLOT14_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT15_OFFS,
+	  .size = FLASH_BLK_SLOT15_SIZE  
+	},
+	{ 
+	  .offs = FLASH_BLK_SLOT16_OFFS,
+	  .size = FLASH_BLK_SLOT16_SIZE  
 	},
 };
 

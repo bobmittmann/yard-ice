@@ -103,28 +103,52 @@
 #define FLASH_BLK_CONST_STRING_SIZE (12 * 1024)
 
 #define FLASH_BLK_SLOT1_OFFS        0x00010000
-#define FLASH_BLK_SLOT1_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT1_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT2_OFFS        0x00012000
-#define FLASH_BLK_SLOT2_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT2_OFFS        0x00011000
+#define FLASH_BLK_SLOT2_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT3_OFFS        0x00014000
-#define FLASH_BLK_SLOT3_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT3_OFFS        0x00012000
+#define FLASH_BLK_SLOT3_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT4_OFFS        0x00016000
-#define FLASH_BLK_SLOT4_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT4_OFFS        0x00013000
+#define FLASH_BLK_SLOT4_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT5_OFFS        0x00018000
-#define FLASH_BLK_SLOT5_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT5_OFFS        0x00014000
+#define FLASH_BLK_SLOT5_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT6_OFFS        0x0001a000
-#define FLASH_BLK_SLOT6_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT6_OFFS        0x00015000
+#define FLASH_BLK_SLOT6_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT7_OFFS        0x0001c000
-#define FLASH_BLK_SLOT7_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT7_OFFS        0x00016000
+#define FLASH_BLK_SLOT7_SIZE        (4 * 1024)
 
-#define FLASH_BLK_SLOT8_OFFS        0x0001e000
-#define FLASH_BLK_SLOT8_SIZE        (8 * 1024)
+#define FLASH_BLK_SLOT8_OFFS        0x00017000
+#define FLASH_BLK_SLOT8_SIZE        (4 * 1024)
+
+#define FLASH_BLK_SLOT9_OFFS        0x00018000
+#define FLASH_BLK_SLOT9_SIZE        (4 * 1024)
+
+#define FLASH_BLK_SLOT10_OFFS       0x00019000
+#define FLASH_BLK_SLOT10_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT11_OFFS       0x0001a000
+#define FLASH_BLK_SLOT11_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT12_OFFS       0x0001b000
+#define FLASH_BLK_SLOT12_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT13_OFFS       0x0001c000
+#define FLASH_BLK_SLOT13_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT14_OFFS       0x0001d000
+#define FLASH_BLK_SLOT14_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT15_OFFS       0x0001e000
+#define FLASH_BLK_SLOT15_SIZE       (4 * 1024)
+
+#define FLASH_BLK_SLOT16_OFFS       0x0001f000
+#define FLASH_BLK_SLOT16_SIZE       (4 * 1024)
 
 #ifdef __cplusplus
 extern "C" {
@@ -153,6 +177,7 @@ void system_reset(void);
 
 #ifdef __cplusplus
 }
+
 #endif
 
 #endif /* __BOARD_H__ */

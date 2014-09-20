@@ -51,6 +51,37 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	tab->tmp_lbl = 0;
 
 	tab->libdef = libdef;
+
+	DCC_LOG3(LOG_TRACE, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
+
+	return tab;
+}
+
+struct symtab * symtab_open(uint32_t * buf, unsigned int len)
+{
+	struct symtab * tab = (struct symtab *)buf;
+
+	DCC_LOG4(LOG_TRACE, "bp=%d sp=%d fp=%d top=%d", 
+			 tab->bp, tab->sp, tab->fp, tab->top);
+
+	if (tab->fp > tab->top)
+		DCC_LOG(LOG_ERROR, "fp > top !");
+
+	if (tab->sp > tab->fp)
+		DCC_LOG(LOG_ERROR, "sp > fp !");
+
+	if (tab->sp < tab->bp)
+		DCC_LOG(LOG_ERROR, "sp <= pp !");
+
+	/* remove all stach frames except the global one */
+	while (tab->fp != tab->top) {
+		sym_sf_pop(tab);
+		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
+	}
+
+	/* reset temporary labels */
+	tab->tmp_lbl = 0;
+
 	return tab;
 }
 

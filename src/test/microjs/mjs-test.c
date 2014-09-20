@@ -41,6 +41,7 @@ FILE * uart_tty_fopen(void)
 	return tty_fopen(tty);
 }
 
+void vm_reset(void); 
 
 int main(int argc, char ** argv)
 {
@@ -65,6 +66,8 @@ int main(int argc, char ** argv)
 	f = uart_tty_fopen();
 	stderr = f;
 	stdout = f;
+
+	vm_reset(); 
 
 	/* start a shell on the serial TTY */
 	shell(f, shell_prompt, shell_greeting, cmd_tab);

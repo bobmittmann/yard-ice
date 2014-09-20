@@ -77,6 +77,14 @@
 #define MICROJS_STRINGBUF_ENABLED 1
 #endif
 
+#ifndef MICROJS_VERBOSE_ENABLED 
+#define MICROJS_VERBOSE_ENABLED 1
+#endif
+
+#ifndef MICROJS_STDLIB_ENABLED 
+#define MICROJS_STDLIB_ENABLED 1
+#endif
+
 #if (MICROJS_TRACE_ENABLED)
 #define	TRACEF(__FMT, ...) do { \
 	fprintf(stdout, __FMT, ## __VA_ARGS__); \
@@ -231,8 +239,6 @@ struct symtab {
 	uint16_t tmp_lbl;
 	struct sym_obj buf[];
 };
-
-extern int32_t (* const extern_call[])(struct microjs_env *, int32_t [], int);
 
 #ifdef __cplusplus
 extern "C" {

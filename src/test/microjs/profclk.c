@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the YARD-ICE.
  *
@@ -18,26 +18,28 @@
  */
 
 /** 
- * @file config.h
- * @brief USB to Serial Converter configuration
+ * @file profclk.c
+ * @brief Real-time trace
  * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+#include "profclk.h"
+
+/* ---------------------------------------------------------------------------
+ * Profiling clock
+ * ---------------------------------------------------------------------------
  */
 
+uint32_t profclk_us(uint32_t clk)
+{
+	return clk / 16; 
+}
 
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
-
-#define TTY_INBUF_LEN 8
-#define TTY_DEV_MAX 1
-
-#define FILE_DEV_MAX 2
-
-#define MICROJS_TRACE_ENABLED 0
-#define MICROJS_DEBUG_ENABLED 0
-#define MICROJS_STRINGS_ENABLED 1
-#define MICROJS_STRINGBUF_ENABLED 1
-#define MICROJS_VERBOSE_ENABLED 1
-#define MICROJS_STDLIB_ENABLED 0
-
-#endif /* __CONFIG_H__ */
+void profclk_init(void)
+{
+	/* Enable trace */
+	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+	/* Enable cycle counter */
+	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+}
 
