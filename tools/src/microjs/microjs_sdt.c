@@ -1092,12 +1092,16 @@ int microjs_sdt_done(struct microjs_sdt * microjs)
 	struct sym_ref ref;
 	int offs;
 
-	if (microjs->pc + 2 > microjs->cdsz)
+	if (microjs->pc + 3 > microjs->cdsz)
 		return -ERR_CODE_MEM_OVERFLOW;
 
 	/* remove the exception handler frame from the stack */
 	TRACEF("%04x\tPOP\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_POP;
+
+	/* stop execution return 0 */
+	TRACEF("%04x\tABT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_ABT;
 
 	/* get the default exception handler */
 	sym_pick(microjs->tab, 0, &ref, sizeof(struct sym_ref));
@@ -1109,9 +1113,10 @@ int microjs_sdt_done(struct microjs_sdt * microjs)
 	TRACEF("\tfix %04x -> PUSHX %04x (.L%d)\n", ref.addr - 1, 
 		   microjs->pc, ref.lbl);
 
-	/* stop execution */
-	TRACEF("%04x\tABT\n", microjs->pc);
-	microjs->code[microjs->pc++] = OPC_ABT;
+	/* stop execution return exception error code */
+	TRACEF("%04x\tRET\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_RET;
+
 
 #if MICROJS_TRACE_ENABLED
 	TRACEF("\nSYMBOL TABLE:\n");

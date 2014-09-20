@@ -387,7 +387,16 @@ except:
 				FTRACEF(f, "NEG %d\n", r0);
 			break;
 
+		case OPC_RET:
+			r0 = *sp++;
+			if (r0 > 0)
+				r0 = - r0;
+			if (trace)
+				FTRACEF(f, "RET %d\n", r0);
+			goto done;
+
 		case OPC_ABT:
+			r0 = 0;
 			if (trace)
 				FTRACEF(f, "ABT\n");
 			goto done;
@@ -407,6 +416,6 @@ done:
 			(int)((int)(xp - data) * sizeof(int32_t)), 
 			(int)(pc - code));
 
-	return 0;
+	return r0;
 }
 

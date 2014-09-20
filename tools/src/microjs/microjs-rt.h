@@ -50,40 +50,41 @@
    -------------------------------------------------------------------------- */
 
 #define OPC_ABT      0
-#define OPC_ASR      1
-#define OPC_SHL      2
-#define OPC_ADD      3
-#define OPC_SUB      4
-#define OPC_MUL      5
-#define OPC_DIV      6
-#define OPC_MOD      7
-#define OPC_OR       8
-#define OPC_AND      9
-#define OPC_XOR      10
-#define OPC_INV      11
-#define OPC_NEG      12
-#define OPC_LT       13
-#define OPC_GT       14
-#define OPC_EQ       15
-#define OPC_NE       16
-#define OPC_LE       17
-#define OPC_GE       18
-#define OPC_I8       19
-#define OPC_I16      20
-#define OPC_I32      21
-#define OPC_LD       22
-#define OPC_ST       23
-#define OPC_JMP      24
-#define OPC_JEQ      25
-#define OPC_EXT      26
-#define OPC_POP      27
-#define OPC_ISP      28 /* Increment SP */
-#define OPC_XPT      29 /* exception */
-#define OPC_PUHSX    30 /* Push exception frame */
+#define OPC_RET      1
+#define OPC_INV      2
+#define OPC_NEG      3
+#define OPC_ASR      4
+#define OPC_SHL      5
+#define OPC_ADD      6
+#define OPC_SUB      7
+#define OPC_MUL      8
+#define OPC_DIV      9
+#define OPC_MOD      10
+#define OPC_OR       11
+#define OPC_AND      12
+#define OPC_XOR      13
+#define OPC_LT       14
+#define OPC_GT       15
+#define OPC_EQ       16
+#define OPC_NE       17
+#define OPC_LE       18
+#define OPC_GE       19
+#define OPC_I8       20
+#define OPC_I16      21
+#define OPC_I32      22
+#define OPC_LD       23
+#define OPC_ST       24
+#define OPC_JMP      25
+#define OPC_JEQ      26
+#define OPC_EXT      27
+#define OPC_POP      28
+#define OPC_ISP      29 /* Increment SP */
+#define OPC_XPT      30 /* exception */
+#define OPC_PUHSX    31 /* Push exception frame */
 
-#define OPC_IBP      31 /* Increment SP */
-#define OPC_LDR      32 /* BP relative load */
-#define OPC_STR      33 /* BP relative store */
+#define OPC_IBP      32 /* Increment SP */
+#define OPC_LDR      33 /* BP relative load */
+#define OPC_STR      34 /* BP relative store */
 
 /* --------------------------------------------------------------------------
    Runtime Environement
