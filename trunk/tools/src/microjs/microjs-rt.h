@@ -49,42 +49,57 @@
    Virtual machine
    -------------------------------------------------------------------------- */
 
+/* All the rest  */
 #define OPC_ABT      0
 #define OPC_RET      1
-#define OPC_INV      2
-#define OPC_NEG      3
-#define OPC_ASR      4
-#define OPC_SHL      5
-#define OPC_ADD      6
-#define OPC_SUB      7
-#define OPC_MUL      8
-#define OPC_DIV      9
-#define OPC_MOD      10
-#define OPC_OR       11
-#define OPC_AND      12
-#define OPC_XOR      13
-#define OPC_LT       14
-#define OPC_GT       15
-#define OPC_EQ       16
-#define OPC_NE       17
-#define OPC_LE       18
-#define OPC_GE       19
-#define OPC_I8       20
-#define OPC_I16      21
-#define OPC_I32      22
-#define OPC_LD       23
-#define OPC_ST       24
-#define OPC_JMP      25
-#define OPC_JEQ      26
-#define OPC_EXT      27
-#define OPC_POP      28
-#define OPC_ISP      29 /* Increment SP */
-#define OPC_XPT      30 /* exception */
-#define OPC_PUHSX    31 /* Push exception frame */
+#define OPC_XPT      2 /* exception */
+#define OPC_POP      3
+#define OPC_INV      4
+#define OPC_NEG      5
+#define OPC_I8       6
+#define OPC_I16      7
+#define OPC_I32      8
+#define OPC_EXT      9
+#define OPC_NOP0     10
+#define OPC_NOP1     11
+#define OPC_NOP2     12
+#define OPC_NOP3     13
+#define OPC_NOP4     14
+#define OPC_NOP5     15
 
-#define OPC_IBP      32 /* Increment SP */
-#define OPC_LDR      33 /* BP relative load */
-#define OPC_STR      34 /* BP relative store */
+/* Binary integer operations */
+#define INTOP        (2 << 4)
+#define OPC_ADD      (INTOP + 0)
+#define OPC_SUB      (INTOP + 1)
+#define OPC_MUL      (INTOP + 2)
+#define OPC_DIV      (INTOP + 3)
+#define OPC_MOD      (INTOP + 4)
+#define OPC_ASR      (INTOP + 5)
+#define OPC_SHL      (INTOP + 6)
+#define OPC_OR       (INTOP + 7)
+#define OPC_AND      (INTOP + 8)
+#define OPC_XOR      (INTOP + 9)
+#define OPC_LT       (INTOP + 10)
+#define OPC_GT       (INTOP + 11)
+#define OPC_EQ       (INTOP + 12)
+#define OPC_NE       (INTOP + 13)
+#define OPC_LE       (INTOP + 14)
+#define OPC_GE       (INTOP + 15)
+
+#define MISCOP       (0 << 4)
+#define OPC_I4       (1 << 4)
+#define INTOP        (2 << 4)
+#define FIXOP        (3 << 4)
+
+#define OPC_ISP      (4 << 4) /* Add SP */
+#define OPC_LD       (5 << 4)
+#define OPC_ST       (6 << 4)
+#define OPC_PUHSX    (7 << 4) /* Push exception frame */
+#define OPC_JMP      (8 << 4)
+#define OPC_JEQ      (9 << 4)
+#define OPC_IBP      (10 << 4) /* Increment PB */
+#define OPC_LDR      (11 << 4) /* BP relative load */
+#define OPC_STR      (12 << 4) /* BP relative store */
 
 /* --------------------------------------------------------------------------
    Runtime Environement

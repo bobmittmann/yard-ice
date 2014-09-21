@@ -9,11 +9,11 @@ try {
 		write(i, x);
 
 		if (x % 11 == 0){
-			throw 11; /* divisible by 11 */
+			throw 11; // divisible by 11
 		}
 
 		if (x % 23 == 0){
-			throw 23; /* divisible by 23 */
+			throw 23; /// divisible by 23 
 		}
 
 		i = i + 1;
@@ -21,6 +21,7 @@ try {
 			throw 20;
 		}
 	}
+	throw 20;
 } catch (err) {
 	printf("exception %d\n", err);
 }
