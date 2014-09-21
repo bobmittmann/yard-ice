@@ -34,6 +34,10 @@
 #define MICROJS_STDLIB_ENABLED 1
 #endif
 
+#ifndef MICROJS_STRINGS_ENABLED
+#define MICROJS_STRINGS_ENABLED 1
+#endif
+
 #if MICROJS_STDLIB_ENABLED 
 
 int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
@@ -110,6 +114,15 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 {
+	int i;
+	
+	for (i = argc - 1; i >= 0; --i) {
+		if (i != argc - 1)
+			fprintf(env->fout, ", ");
+		fprintf(env->fout, "%d", argv[i]);
+	}
+
+	fprintf(env->fout, "\n");
 	return 0;
 }	
 

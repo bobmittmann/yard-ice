@@ -1,8 +1,8 @@
-var i = 10;
+var i = 0;
 
 if (i) {
 	i = i - 1;
-	printf("\ti=%d\n", i);
+//	printf("\ti=%d\n", i);
 } else {
 	i = i + 1;
 }
