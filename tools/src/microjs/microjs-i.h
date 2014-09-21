@@ -233,11 +233,16 @@ struct sym_sf {
 struct symtab {
 	const struct ext_libdef * libdef;
 	uint16_t sp;
-	uint16_t fp;
 	uint16_t bp;
+	uint16_t fp;
 	uint16_t top;
 	uint16_t tmp_lbl;
 	struct sym_obj buf[];
+};
+
+struct tabst {
+	uint16_t sp;
+	uint16_t bp;
 };
 
 #ifdef __cplusplus
@@ -255,6 +260,10 @@ char * tok2str(struct token tok);
 int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl);
 
 int sym_dump(FILE * f, struct symtab * tab);
+
+struct tabst symtab_state_save(struct symtab * tab);
+
+void symtab_state_restore(struct symtab * tab, struct tabst st);
 
 /* --------------------------------------------------------------------------
    Objects
