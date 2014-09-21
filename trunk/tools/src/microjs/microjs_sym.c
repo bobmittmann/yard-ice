@@ -73,17 +73,34 @@ struct symtab * symtab_open(uint32_t * buf, unsigned int len)
 	if (tab->sp < tab->bp)
 		DCC_LOG(LOG_ERROR, "sp <= pp !");
 
-	/* remove all stach frames except the global one */
-	while (tab->fp != tab->top) {
-		sym_sf_pop(tab);
-		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
-	}
-
 	/* reset temporary labels */
 	tab->tmp_lbl = 0;
 
 	return tab;
 }
+
+struct tabst symtab_state_save(struct symtab * tab)
+{
+	struct tabst st;
+
+	st.sp = tab->sp;
+	st.bp = tab->bp;
+
+	return st;
+}
+
+void symtab_state_rollback(struct symtab * tab, struct tabst st)
+{
+	/* remove all stack frames except the global one */
+	while (tab->fp != tab->top) {
+		sym_sf_pop(tab);
+		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
+	}
+
+	tab->sp = st.sp;
+	tab->bp = st.bp;
+}
+
 
 /* --------------------------------------------------------------------------
    Symbol table stack
@@ -194,8 +211,8 @@ int sym_sf_push(struct symtab * tab)
 /* Pop the stack frame */
 int sym_sf_pop(struct symtab * tab)
 {
-	struct sym_sf sf;
 	int sp = tab->fp; /* use frame pointer as reference */
+	struct sym_sf sf;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
