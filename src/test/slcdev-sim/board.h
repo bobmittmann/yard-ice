@@ -102,10 +102,10 @@
 */
 
 #define FLASH_BLK_FIRMWARE_OFFS     0x00000000
-#define FLASH_BLK_FIRMWARE_SIZE     (52 * 1024)
+#define FLASH_BLK_FIRMWARE_SIZE     (56 * 1024)
 
-#define FLASH_BLK_CONST_STRING_OFFS 0x0000d000
-#define FLASH_BLK_CONST_STRING_SIZE (12 * 1024)
+#define FLASH_BLK_CONST_STRING_OFFS 0x0000e000
+#define FLASH_BLK_CONST_STRING_SIZE (8 * 1024)
 
 #define FLASH_BLK_DB_BIN_OFFS       0x00010000
 #define FLASH_BLK_DB_BIN_SIZE       (12 * 1024)
@@ -117,7 +117,19 @@
 #define FLASH_BLK_DB_JSON_SIZE      (20 * 1024)
 
 #define FLASH_BLK_CFG_JSON_OFFS     0x0001b000
-#define FLASH_BLK_CFG_JSON_SIZE     (20 * 1024)
+#define FLASH_BLK_CFG_JSON_SIZE     (16 * 1024)
+
+#define FLASH_BLK_1_JS_OFFS         0x0001f000
+#define FLASH_BLK_1_JS_SIZE         (1 * 1024)
+
+#define FLASH_BLK_2_JS_OFFS         0x0001f400
+#define FLASH_BLK_2_JS_SIZE         (1 * 1024)
+
+#define FLASH_BLK_3_JS_OFFS         0x0001f800
+#define FLASH_BLK_3_JS_SIZE         (1 * 1024)
+
+#define FLASH_BLK_4_JS_OFFS         0x0001fc00
+#define FLASH_BLK_4_JS_SIZE         (1 * 1024)
 
 /* -------------------------------------------------------------------------
  * ThinkOS flags assignements

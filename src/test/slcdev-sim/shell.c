@@ -41,11 +41,13 @@
 #include "flashfs.h"
 #include "isink.h"
 
+#include "slcdev-lib.h"
+
 extern const struct shell_cmd cmd_tab[];
 
-/*****************************************************************************
+/* -------------------------------------------------------------------------
  * Help
- *****************************************************************************/
+ * ------------------------------------------------------------------------- */
 
 int cmd_help(FILE *f, int argc, char ** argv)
 {
@@ -74,64 +76,30 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	return 0;
 }
 
-/*****************************************************************************
- * FPGA
- *****************************************************************************/
-
-int flash_xmodem_recv(FILE * f, uint32_t offs, unsigned int size)
-{
-	struct comm_dev comm;
-	struct file * raw;
-	uint8_t buf[128];
-	unsigned int cnt;
-	unsigned int rem;
-	int ret;
-
-	union {
-		struct xmodem_rcv rx;
-		struct xmodem_snd sx;
-	} xmodem;
-
-	raw = ftty_lowlevel(f);
-
-	comm.arg = raw->data;
-	comm.op.send = (int (*)(void *, const void *, unsigned int))raw->op->write;
-	comm.op.recv = (int (*)(void *, void *, 
-						  unsigned int, unsigned int))raw->op->read;
-
-	DCC_LOG(LOG_TRACE, ".................................");
-
-	xmodem_rcv_init(&xmodem.rx, &comm, XMODEM_RCV_CRC);
-
-	cnt = 0;
-	rem = size;
-	do {
-		unsigned int n;
-
-		if ((ret = xmodem_rcv_loop(&xmodem.rx, buf, 128)) < 0) {
-			DCC_LOG1(LOG_ERROR, "ret=%d", ret);
-			return ret;
-		}
-
-		if (rem == 0) {
-			xmodem_rcv_cancel(&xmodem.rx);
-			break;
-		}
-
-		n = MIN(rem, ret); 
-		stm32_flash_write(offs, buf, n);
-		cnt += n;
-		offs += n;
-		rem -= n;
-	} while (ret > 0);
-
-	return cnt;
-}
+/* -------------------------------------------------------------------------
+ * Filesystem
+ * ------------------------------------------------------------------------- */
 
 int cmd_rx(FILE * f, int argc, char ** argv)
 {
-	uint32_t blk_offs;
-	uint32_t blk_size;
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+
+	fprintf(f, "RX waiting to receive.");
+	if ((fs_xmodem_recv(f, argv[1])) < 0) {
+		fprintf(f, "fs_xmodem_recv() failed!\r\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int cmd_rm(FILE * f, int argc, char ** argv)
+{
 	struct fs_dirent entry;
 
 	if (argc < 2)
@@ -141,28 +109,11 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
-		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
+		fprintf(f, "invalid file: \"%s\"\r\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
 	}
 
-	blk_offs = entry.offs;
-	blk_size = entry.blk_size;
-
-	slcdev_stop();
-
-	fprintf(f, "Erasing block: 0x%06x, %d bytes...\n", blk_offs, blk_size);
-	if (stm32_flash_erase(blk_offs, blk_size) < 0) {
-		fprintf(f, "stm32f_flash_erase() failed!\n");
-		return -1;
-	};
-
-	fprintf(f, "RX waiting to receive.");
-	if (flash_xmodem_recv(f, blk_offs, blk_size) < 0) {
-		fprintf(f, "flash_xmodem_recv() failed!\n");
-		return -1;
-	}
-
-	slcdev_resume();
+	fs_file_unlink(&entry);
 
 	return 0;
 }
@@ -170,8 +121,8 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 int cmd_cat(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
-	char * cp;
-	int cnt;
+	struct fs_file * fp;
+	int i;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -180,24 +131,15 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
-		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
+		fprintf(f, "invalid file: \"%s\"\r\n", argv[1]);
 		return SHELL_ERR_ARG_INVALID;
 	}
 
-	cp = (char *)(STM32_MEM_FLASH + entry.offs);
-	DCC_LOG2(LOG_TRACE, "cp=0x%08x len=%d", cp, strlen(cp));
+	fp = entry.fp;
 
-	for (cnt = 0; cnt < entry.size; ) { 
-		int n;
-
-		n = strlen(cp);
-		if (n > 0) {
-			fprintf(f, "%s\n", cp);
-		} else
-			n = 1;
-
-		cnt += n;
-		cp += n;
+	for (i = 0; i < fp->size; ++i) { 
+		int c = fp->data[i];
+		fputc(c, f);
 	}
 
 	return 0;
@@ -213,13 +155,17 @@ int cmd_ls(FILE * f, int argc, char ** argv)
 	memset(&entry, 0, sizeof(entry));
 
 	while (fs_dirent_get_next(&entry)) {
-		fprintf(f, "0x%06x %6d %6d %s\n", entry.offs, 
-				entry.blk_size, entry.size, entry.name);
+		fprintf(f, "0x%06x %6d 0x%04x %6d %s\r\n", 
+				entry.blk_offs, entry.blk_size, 
+				entry.fp->crc, entry.fp->size, entry.name);
 	}
 
 	return 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Trigger
+ * ------------------------------------------------------------------------- */
 
 int cmd_trig(FILE * f, int argc, char ** argv)
 {
@@ -287,19 +233,13 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 	memset(sb, 0, 160 / 8);
 	memset(mb, 0, 160 / 8);
 
-	DCC_LOG(LOG_TRACE, "1.");
-
 	if ((argc == 2) && (strcmp(argv[1], "all") == 0)) {
-		DCC_LOG(LOG_TRACE, "2.");
 		all = true;
 		mod = true;
 		sens = true;
 	} else {
-		DCC_LOG(LOG_TRACE, "3.");
 		if (argc < 3)
 			return SHELL_ERR_ARG_MISSING;
-
-		DCC_LOG(LOG_TRACE, "4.");
 
 		if ((strcmp(argv[1], "sens") == 0) || 
 			(strcmp(argv[1], "s") == 0)) {
@@ -311,7 +251,6 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 			(strcmp(argv[1], "g") == 0)) {
 			grp = true;
 		} else {
-			DCC_LOG(LOG_WARNING, "must be one of sens,mod,grp");
 			return SHELL_ERR_ARG_INVALID;
 		}
 		if ((argc == 3) && (strcmp(argv[2], "all") == 0))
@@ -333,7 +272,6 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 	}
 
 	if (grp) {
-		DCC_LOG(LOG_TRACE, "5.");
 
 		if (all) {
 			for (addr = 0; addr < 160; ++addr) {
@@ -427,12 +365,6 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 		return ret;
 
 	dev_lst_remove_unconfigured(sb, mb);
-
-	DCC_LOG5(LOG_TRACE, "sensors: %08x %08x %08x %08x %08x",
-			 sb[0], sb[1], sb[2], sb[3], sb[4]);
-
-	DCC_LOG5(LOG_TRACE, "modules: %08x %08x %08x %08x %08x",
-			 mb[0], mb[1], mb[2], mb[3], mb[4]);
 
 	dev_sim_multiple_enable(sb, mb);
 
@@ -565,74 +497,9 @@ int cmd_trouble(FILE * f, int argc, char ** argv)
 }
 
 
-int cmd_self_test(FILE * f, int argc, char ** argv)
-{
-	if (argc > 1)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	lamp_test();
-
-	return 0;
-}
-
-void isink_test(void);
-
-int cmd_isink(FILE * f, int argc, char ** argv)
-{
-	unsigned int mode = 0;
-	unsigned int rate = 0;
-	unsigned int pre = 50;
-	unsigned int pulse = 1000;
-
-	if (argc > 5)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	if (argc > 1) {
-		mode = strtoul(argv[1], NULL, 0);
-		if (mode > 25)
-			return SHELL_ERR_ARG_INVALID;
-		if (argc > 2) {
-			rate = strtoul(argv[2], NULL, 0);
-			if (rate > 3)
-				return SHELL_ERR_ARG_INVALID;
-			if (argc > 3) {
-				pulse = strtoul(argv[3], NULL, 0);
-				if (argc > 4)
-					pre = strtoul(argv[4], NULL, 0);
-			}
-		}
-
-		isink_mode_set(mode | (rate << 5));
-		isink_pulse(pre, pulse);
-		udelay(pulse / 2);
-		isink_stop();
-	} else {
-		isink_test();
-	}
-	
-	return 0;
-}
-
-int cmd_slewrate(FILE * f, int argc, char ** argv)
-{
-	unsigned int rate = 0;
-
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	rate = strtoul(argv[1], NULL, 0);
-
-	isink_slewrate_set(rate);
-
-	return 0;
-}
-
 int cmd_dbase(FILE * f, int argc, char ** argv)
 {
-	struct json_file json;
+	struct fs_dirent entry;
 	bool erase = false;
 	bool compile = false;
 	int i;
@@ -654,19 +521,22 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	slcdev_stop();
 
 	if (erase) {
+
 		fprintf(f, "Erasing...\n");
-		device_db_erase();
+		fs_dirent_get(&entry, FLASHFS_DB_BIN);
+		fs_file_unlink(&entry);
 		/* uncofigure all devices */
 		dev_sim_uncofigure_all();
 	}
 
 	if (compile) {
-		json_file_get(FLASH_BLK_DB_JSON_OFFS, &json);
-		if (device_db_is_sane() && !device_db_need_update(&json)) {
+		fs_dirent_get(&entry, FLASHFS_DB_JSON);
+
+		if (!device_db_need_update(entry.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
 			fprintf(f, "Compiling...\n");
-			if (device_db_compile(&json) < 0) {
+			if (!device_db_compile(entry.fp)) {
 				printf("Parse error!\n");
 				return -1;
 			}
@@ -680,7 +550,7 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 int cmd_config(FILE * f, int argc, char ** argv)
 {
-	struct json_file json;
+	struct fs_dirent entry;
 	bool erase = false;
 	bool compile = false;
 	bool load = false;
@@ -708,16 +578,16 @@ int cmd_config(FILE * f, int argc, char ** argv)
 			return SHELL_ERR_ARG_INVALID;
 	}
 
-	json_file_get(FLASH_BLK_CFG_JSON_OFFS, &json);
+	fs_dirent_get(&entry, FLASHFS_CFG_JSON);
 
 	slcdev_stop();
 
 	if (compile) {
-		if (config_is_sane() && !config_need_update(&json)) {
+		if (config_is_sane() && !config_need_update(entry.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
 			fprintf(f, "Compiling...\n");
-			if (config_compile(&json) < 0) {
+			if (config_compile(entry.fp) < 0) {
 				printf("Parse error!\n");
 				return -1;
 			}
@@ -732,12 +602,12 @@ int cmd_config(FILE * f, int argc, char ** argv)
 
 	if (save) {
 		printf("Saving...\n");
-		config_save(&json);
+		config_save(entry.fp);
 	}
 
 	if (load) {
 		printf("Loading...\n");
-		config_save(&json);
+		config_save(entry.fp);
 	}
 
 	slcdev_resume();
@@ -860,10 +730,8 @@ static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
 
 	dev = dev_sim_lookup(false, addr);
 
-	if ((mod = db_dev_model_by_index(dev->model)) == NULL) {
-		DCC_LOG1(LOG_WARNING, "invalid model: %d", dev->model);
+	if ((mod = db_dev_model_by_index(dev->model)) == NULL)
 		return SHELL_ERR_ARG_INVALID;
-	}
 
 	switch (n) { 
 	case 1:
@@ -921,6 +789,103 @@ int cmd_dev(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_reboot(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	cm3_sysrst();
+
+	return 0;
+}
+
+int cmd_js(FILE * f, int argc, char ** argv)
+{
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf;
+	uint8_t code[512]; /* compiled code */
+	uint32_t sdtbuf[64]; /* compiler buffer */
+	struct microjs_sdt * microjs; 
+	struct microjs_vm vm; 
+	struct symstat symstat;
+	char * script;
+	int len;
+	int n;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	/* initialize compiler */
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), 
+							   symtab, sizeof(slcdev_vm_data));
+
+	script = argv[1];
+	len = strlen(argv[1]);
+
+	symstat = symtab_state_save(symtab);
+
+	microjs_sdt_begin(microjs, code, sizeof(code));
+
+	/* compile */
+	if ((n = microjs_compile(microjs, script, len)) < 0)
+		return -1;
+
+	if ((n = microjs_compile(microjs, script, len)) < 0) {
+		symtab_state_rollback(symtab, symstat);
+		fprintf(f, "# compile error: %d\n", -n);
+		microjs_sdt_error(stderr, microjs, n);
+		return -1;
+	}
+
+	if ((n = microjs_sdt_end(microjs)) < 0) {
+		symtab_state_rollback(symtab, symstat);
+		fprintf(f, "# compile error: %d\n", -n);
+		microjs_sdt_error(stderr, microjs, n);
+		return -1;
+	}
+
+	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
+	vm.env.ftrace = f;
+
+	if ((n = microjs_exec(&vm, code, n)) != 0){
+		fprintf(f, "# exec error: %d\n", n);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int cmd_run(FILE * f, int argc, char ** argv)
+{
+	struct microjs_vm vm; 
+	uint8_t * code;
+	int ret;
+
+	if (argc < 3)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 3)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((code = db_js_lookup(argv[1], argv[2])) == NULL)
+		return SHELL_ERR_ARG_INVALID;
+
+	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
+	vm.env.ftrace = f;
+
+	if ((ret = microjs_exec(&vm, code, 4096)) != 0) {
+		fprintf(f, "# exec error: %d\n", ret);
+		return -1;
+	}
+
+	fprintf(f, "\n");
+
+	return 0;
+}
+
 int cmd_str(FILE * f, int argc, char ** argv)
 {
 	int ret = 0;
@@ -936,29 +901,21 @@ int cmd_str(FILE * f, int argc, char ** argv)
 
 	return ret;
 }
+#if 0
 
-int cmd_reboot(FILE * f, int argc, char ** argv)
+int cmd_self_test(FILE * f, int argc, char ** argv)
 {
 	if (argc > 1)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	cm3_sysrst();
+	lamp_test();
 
 	return 0;
 }
 
-int cmd_js(FILE * f, int argc, char ** argv)
+int cmd_slewrate(FILE * f, int argc, char ** argv)
 {
-	uint8_t code[512]; /* compiled code */
-	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
-						  the data buffer) */
-	uint32_t sdtbuf[64]; /* compiler buffer */
-	struct microjs_sdt * microjs; 
-	struct microjs_vm vm; 
-	struct symtab * symtab;
-	char * script;
-	int len;
-	int n;
+	unsigned int rate = 0;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -966,78 +923,75 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	/* initialize symbol table */
-	symtab = symtab_init(symbuf, sizeof(symbuf), &slcdev_lib);
-	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
-							  code, sizeof(code), sizeof(slcdev_vm_data));
+	rate = strtoul(argv[1], NULL, 0);
 
-
-	fprintf(f, "\"%s\"\n", argv[1]);
-	script = argv[1];
-	len = strlen(argv[1]);
-
-	/* compile */
-	if ((n = microjs_compile(microjs, script, len)) < 0)
-		return -1;
-
-	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
-	vm.env.ftrace = stderr;
-
-	if (microjs_exec(&vm, code, n) < 0)
-		return 1;
-
-	fprintf(f, "\n");
+	isink_slewrate_set(rate);
 
 	return 0;
 }
 
+void isink_test(void);
 
-int cmd_run(FILE * f, int argc, char ** argv)
+int cmd_isink(FILE * f, int argc, char ** argv)
 {
-	struct microjs_vm vm; 
-	uint8_t * code;
+	unsigned int mode = 0;
+	unsigned int rate = 0;
+	unsigned int pre = 50;
+	unsigned int pulse = 1000;
 
-	if (argc < 3)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 3)
+	if (argc > 5)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	if ((code = db_js_lookup(argv[1], argv[2])) == NULL)
-		return SHELL_ERR_ARG_INVALID;
+	if (argc > 1) {
+		mode = strtoul(argv[1], NULL, 0);
+		if (mode > 25)
+			return SHELL_ERR_ARG_INVALID;
+		if (argc > 2) {
+			rate = strtoul(argv[2], NULL, 0);
+			if (rate > 3)
+				return SHELL_ERR_ARG_INVALID;
+			if (argc > 3) {
+				pulse = strtoul(argv[3], NULL, 0);
+				if (argc > 4)
+					pre = strtoul(argv[4], NULL, 0);
+			}
+		}
 
-	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
-	vm.env.ftrace = f;
-
-	if (microjs_exec(&vm, code, 1024) < 0)
-		return 1;
-
-	fprintf(f, "\n");
-
+		isink_mode_set(mode | (rate << 5));
+		isink_pulse(pre, pulse);
+		udelay(pulse / 2);
+		isink_stop();
+	} else {
+		isink_test();
+	}
+	
 	return 0;
 }
+
+#endif
 
 const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
-#if 1
+#if 0
 	{ cmd_self_test, "selftest", "st", "", "Self test" },
 
 	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
 
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
-	{ cmd_str, "str", "", "", "dump string pool" },
 #endif
+	{ cmd_str, "str", "", "", "dump string pool" },
 
 	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
 
 	{ cmd_cat, "cat", "", "<filename>", "display file content" },
 
 	{ cmd_ls, "ls", "", "<filename>", "list files" },
+
+	{ cmd_rm, "rm", "", "<filename>", "remove files" },
 
 	{ cmd_trig, "trig", "t", "[ADDR]", "Trigger module address get/set" },
 
@@ -1072,7 +1026,7 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
 
-	{ cmd_dev, "dev", "", "[start|stop]", "dump string pool" },
+	{ cmd_dev, "dev", "", "[start|stop]", "" },
 	
 	{ cmd_js, "js", "", "script", "javascript" },
 

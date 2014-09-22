@@ -81,10 +81,12 @@ int main(int argc, char ** argv)
 
 	/* configure the current sink driver to default values */
 	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
-	isink_slewrate_set(1000);
 
 	/* initilice the SLC device driver */
 	slcdev_init();
+
+	/* initialize constat string buffer */
+	const_strbuf_init();
 
 	/* initialize database */
 	device_db_init();

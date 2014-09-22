@@ -53,32 +53,32 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	bits = flags & SERIAL_DATABITS_MASK;
 	switch (bits) {
 	case SERIAL_DATABITS_7:
-		DCC_LOG(LOG_TRACE, "7 data bits");
+		DCC_LOG(LOG_INFO, "7 data bits");
 		break;
 	case SERIAL_DATABITS_9:
-		DCC_LOG(LOG_TRACE, "9 data bits");
+		DCC_LOG(LOG_INFO, "9 data bits");
 		break;
 	case SERIAL_DATABITS_8:
 	default:
-		DCC_LOG(LOG_TRACE, "8 data bits");
+		DCC_LOG(LOG_INFO, "8 data bits");
 		break;
 	}
 
 	/* parity and data bits */
 	switch (flags & SERIAL_PARITY_MASK) {
 	case SERIAL_PARITY_EVEN:
-		DCC_LOG(LOG_TRACE, "parity EVEN");
+		DCC_LOG(LOG_INFO, "parity EVEN");
 		cr1 |= USART_PCE | USART_PS_EVEN;
 		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
 		break;
 	case SERIAL_PARITY_ODD:
-		DCC_LOG(LOG_TRACE, "parity ODD");
+		DCC_LOG(LOG_INFO, "parity ODD");
 		cr1 |= USART_PCE | USART_PS_ODD;
 		cr1 |= (bits == SERIAL_DATABITS_8) ? USART_M9 : USART_M8;
 		break;
 	case SERIAL_PARITY_NONE:
 	default:
-		DCC_LOG(LOG_TRACE, "parity NONE");
+		DCC_LOG(LOG_INFO, "parity NONE");
 		cr1 |= (bits == SERIAL_DATABITS_9) ? USART_M9 : USART_M8;
 		break;
 	}
@@ -86,12 +86,12 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	/* stop bits */
 	switch (flags & SERIAL_STOPBITS_MASK) {
 	case SERIAL_STOPBITS_2:
-		DCC_LOG(LOG_TRACE, "2 stop bits");
+		DCC_LOG(LOG_INFO, "2 stop bits");
 		cr2 |= USART_STOP_2;
 		break;
 	case SERIAL_STOPBITS_1:
 	default:
-		DCC_LOG(LOG_TRACE, "1 stop bit");
+		DCC_LOG(LOG_INFO, "1 stop bit");
 		cr2 |= USART_STOP_1;
 		break;
 	}

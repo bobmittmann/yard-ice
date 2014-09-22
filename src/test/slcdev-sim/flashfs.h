@@ -23,14 +23,33 @@
 #ifndef __FLASHFS_H__
 #define __FLASHFS_H__
 
-struct fs_dirent {
-	char name[10];
+#include <stdio.h>
+#include <stdint.h>
+
+struct fs_file {
 	uint16_t size;
-	uint16_t blk_size;
-	uint32_t offs;
+	uint16_t crc;
+	const uint8_t data[];
 };
 
-#include <microjs.h>
+struct fs_dirent {
+	const char * name;
+	struct fs_file * fp;
+	uint32_t blk_offs;
+	uint16_t blk_size;
+};
+
+enum {
+	FLASHFS_STRINGS = 0,
+	FLASHFS_DB_BIN,
+	FLASHFS_CFG_BIN,
+	FLASHFS_DB_JSON,
+	FLASHFS_CFG_JSON,
+	FLASHFS_1_JS,
+	FLASHFS_2_JS,
+	FLASHFS_3_JS,
+	FLASHFS_4_JS,
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,12 +59,17 @@ bool fs_dirent_lookup(const char * name, struct fs_dirent * ep);
 
 bool fs_dirent_get_next(struct fs_dirent * ep);
 
-int json_file_get(uint32_t offs, struct json_file * json);
+bool fs_xmodem_recv(FILE * f, const char * name);
+
+bool fs_file_unlink(struct fs_dirent * ep);
+
+bool fs_dirent_get(struct fs_dirent * ep, unsigned int idx);
+
+bool fs_file_commit(struct fs_dirent * ep, unsigned int size);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __FLASHFS_H__ */
-
 
