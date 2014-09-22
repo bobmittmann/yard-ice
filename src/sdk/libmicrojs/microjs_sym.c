@@ -47,8 +47,11 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	tab->fp = tab->top;
 	/* symbols are allocated bottom-up */
 	tab->bp = 0;
+
+#if MICROJS_TRACE_ENABLED
 	/* initialize temporary labels */
 	tab->tmp_lbl = 0;
+#endif
 
 	tab->libdef = libdef;
 
@@ -57,32 +60,26 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	return tab;
 }
 
-struct symtab * symtab_open(uint32_t * buf, unsigned int len)
+struct symstat symtab_state_save(struct symtab * tab)
 {
-	struct symtab * tab = (struct symtab *)buf;
+	struct symstat st;
 
-	DCC_LOG4(LOG_TRACE, "bp=%d sp=%d fp=%d top=%d", 
-			 tab->bp, tab->sp, tab->fp, tab->top);
+	st.sp = tab->sp;
+	st.bp = tab->bp;
 
-	if (tab->fp > tab->top)
-		DCC_LOG(LOG_ERROR, "fp > top !");
+	return st;
+}
 
-	if (tab->sp > tab->fp)
-		DCC_LOG(LOG_ERROR, "sp > fp !");
-
-	if (tab->sp < tab->bp)
-		DCC_LOG(LOG_ERROR, "sp <= pp !");
-
-	/* remove all stach frames except the global one */
+void symtab_state_rollback(struct symtab * tab, struct symstat st)
+{
+	/* remove all stack frames except the global one */
 	while (tab->fp != tab->top) {
 		sym_sf_pop(tab);
 		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
 	}
 
-	/* reset temporary labels */
-	tab->tmp_lbl = 0;
-
-	return tab;
+	tab->sp = st.sp;
+	tab->bp = st.bp;
 }
 
 /* --------------------------------------------------------------------------
@@ -194,8 +191,8 @@ int sym_sf_push(struct symtab * tab)
 /* Pop the stack frame */
 int sym_sf_pop(struct symtab * tab)
 {
-	struct sym_sf sf;
 	int sp = tab->fp; /* use frame pointer as reference */
+	struct sym_sf sf;
 	uint8_t * dst;
 	uint8_t * src;
 	int i;
@@ -267,7 +264,7 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 
 	id = bp / sizeof(struct sym_obj);
 
-	DCC_LOG2(LOG_INFO, "bp=%d id=%d", bp, id);
+	DCC_LOG2(LOG_TRACE, "bp=%d id=%d", bp, id);
 	DCC_LOG1(LOG_INFO, "nm=\"%s\"", (char *)&tab->buf + tab->sp); 
 
 	obj = &tab->buf[id];

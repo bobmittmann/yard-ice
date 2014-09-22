@@ -429,42 +429,49 @@ int op_div(struct microjs_sdt * microjs)
 
 int op_mod(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tMOD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MOD;
 	return 0;
 }
 
 int op_and(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
 }
 
 int op_inv(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tINV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_INV;
 	return 0;
 }
 
 int op_minus(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tNEG\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NEG;
 	return 0;
 }
 
 int op_not(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tNOT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NEG;
 	return 0;
 }
 
 int op_shl(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tSHL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SHL;
 	return 0;
 }
 
 int op_asr(struct microjs_sdt * microjs)
 {
+	TRACEF("%04x\tASR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ASR;
 	return 0;
 }
