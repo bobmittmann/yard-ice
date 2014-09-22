@@ -6,27 +6,11 @@
 #include <sys/dcclog.h>
 #include "slcdev.h"
 
-/* --------------------------------------------------------------------------
-   External symbols
-   -------------------------------------------------------------------------- */
+#define __SLCDEV_LIB_DEF__
+#include "slcdev-lib.h"
 
-struct ext_libdef slcdev_lib = {
-	.name = "lib",
-	.fncnt = 8,
-	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 128 },
-
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 128 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 128 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0 }
-	}
-};
-
-uint32_t slcdev_vm_data[64]; /* data area */
+uint32_t slcdev_symbuf[64]; /* symbol table buffer */
+uint32_t slcdev_vm_data[32]; /* data area */
 
 void dev_sim_enable(bool mod, unsigned int addr)
 {
@@ -559,6 +543,12 @@ const char * model_sim_name(unsigned int idx)
 	return sim_model_lut[idx].name;
 }
 
+void sim_reset(void) 
+{
+	DCC_LOG(LOG_TRACE, "...");
+	symtab_init(slcdev_symbuf, sizeof(slcdev_symbuf), &slcdev_lib);
+}
+
 void __attribute__((noreturn)) sim_event_task(void)
 {
 	struct db_dev_model * model;
@@ -568,7 +558,10 @@ void __attribute__((noreturn)) sim_event_task(void)
 	uint32_t ctl;
 
 	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
+	microjs_clr_data(&vm);
 	vm.env.ftrace = stdout;
+
+	sim_reset(); 
 
 	thinkos_sleep(3000);
 

@@ -39,11 +39,11 @@ const struct fileop tty_ops = {
 FILE * tty_fopen(struct tty_dev * dev)
 {
 	if (dev == NULL) {
-		DCC_LOG(LOG_WARNING, "(dev == NULL)!");
+		DCC_LOG(LOG_INFO, "(dev == NULL)!");
 		return NULL;
 	}
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	return file_alloc(dev, &tty_ops);
 }
@@ -58,7 +58,7 @@ struct file * ftty_lowlevel(struct file * f)
 	struct tty_dev * dev;
 
 	if (f->op != &tty_ops) {
-		DCC_LOG(LOG_WARNING, "not a tty!");
+		DCC_LOG(LOG_INFO, "not a tty!");
 		return NULL;
 	}
 

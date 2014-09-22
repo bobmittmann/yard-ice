@@ -24,6 +24,10 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 #include <string.h>
+#include <crc.h>
+#include <xmodem.h>
+#include <sys/tty.h>
+#include <sys/param.h>
 
 #include "board.h"
 #include "flashfs.h"
@@ -39,36 +43,72 @@ struct fs_blk {
  * Pseudo filesystem directory 
  *****************************************************************************/
 
-const struct fs_blk flash_fs_dir[] = {
-	{ .name = "strings", 
-	  .offs = FLASH_BLK_CONST_STRING_OFFS,
-	  .size = FLASH_BLK_CONST_STRING_SIZE
+const struct fs_blk flash_desc[] = {
+	[FLASHFS_STRINGS] = { .name = "strings", 
+		.offs = FLASH_BLK_CONST_STRING_OFFS,
+		.size = FLASH_BLK_CONST_STRING_SIZE
 	},
-	{ .name = "db.bin", 
-	  .offs = FLASH_BLK_DB_BIN_OFFS,
-	  .size = FLASH_BLK_DB_BIN_SIZE  
+	[FLASHFS_DB_BIN] = { .name = "db.bin", 
+		.offs = FLASH_BLK_DB_BIN_OFFS,
+		.size = FLASH_BLK_DB_BIN_SIZE  
 	},
-	{ .name = "cfg.bin", 
-	  .offs = FLASH_BLK_CFG_BIN_OFFS,
-	  .size = FLASH_BLK_CFG_BIN_SIZE  
+	[FLASHFS_CFG_BIN] = { .name = "cfg.bin", 
+		.offs = FLASH_BLK_CFG_BIN_OFFS,
+		.size = FLASH_BLK_CFG_BIN_SIZE  
 	},
-	{ .name = "db.js", 
-	  .offs = FLASH_BLK_DB_JSON_OFFS,
-	  .size = FLASH_BLK_DB_JSON_SIZE  
+	[FLASHFS_DB_JSON] = { .name = "db.js", 
+		.offs = FLASH_BLK_DB_JSON_OFFS,
+		.size = FLASH_BLK_DB_JSON_SIZE  
 	},
-	{ .name = "cfg.js", 
-	  .offs = FLASH_BLK_CFG_JSON_OFFS,
-	  .size = FLASH_BLK_CFG_JSON_SIZE  
+	[FLASHFS_CFG_JSON] = { .name = "cfg.js", 
+		.offs = FLASH_BLK_CFG_JSON_OFFS,
+		.size = FLASH_BLK_CFG_JSON_SIZE  
+	},
+	[FLASHFS_1_JS] = { .name = "1.js", 
+		.offs = FLASH_BLK_1_JS_OFFS,
+		.size = FLASH_BLK_1_JS_SIZE  
+	},
+	[FLASHFS_2_JS] = { .name = "2.js", 
+		.offs = FLASH_BLK_2_JS_OFFS,
+		.size = FLASH_BLK_2_JS_SIZE  
+	},
+	[FLASHFS_3_JS] = { .name = "3.js", 
+		.offs = FLASH_BLK_3_JS_OFFS,
+		.size = FLASH_BLK_3_JS_SIZE  
+	},
+	[FLASHFS_4_JS] = { .name = "4.js", 
+		.offs = FLASH_BLK_4_JS_OFFS,
+		.size = FLASH_BLK_4_JS_SIZE  
 	}
 };
 
-#define FLASH_FS_BLK_COUNT (sizeof(flash_fs_dir) / sizeof(struct fs_blk)) 
+#define FLASH_FS_BLK_COUNT (sizeof(flash_desc) / sizeof(struct fs_blk)) 
 
-#if 0
-uint16_t flash_fs_file_size[FLASH_FS_BLK_COUNT] = {
-	0, 0, 0
+const struct fs_file null_fp = {
+	.size = 0,
+	.crc = 0
 };
-#endif
+
+bool fs_dirent_get(struct fs_dirent * ep, unsigned int idx)
+{
+	struct fs_file * fp;
+
+	if (idx >= FLASH_FS_BLK_COUNT)
+		return false;
+
+	fp = (struct fs_file *)(STM32_MEM_FLASH + flash_desc[idx].offs);
+	ep->name = flash_desc[idx].name;
+	ep->blk_size = flash_desc[idx].size;
+	ep->blk_offs = flash_desc[idx].offs;
+
+	if ((fp->size >= ep->blk_size) || 
+		(fp->crc != crc16ccitt(0, fp->data, fp->size)))
+		ep->fp = (struct fs_file *)&null_fp;
+	else
+		ep->fp = fp;
+
+	return true;
+}
 
 /* look up for a directory entry by name */
 bool fs_dirent_lookup(const char * name, struct fs_dirent * ep)
@@ -76,13 +116,8 @@ bool fs_dirent_lookup(const char * name, struct fs_dirent * ep)
 	int i;
 
 	for (i = 0; i < FLASH_FS_BLK_COUNT; ++i) {
-		if (strcmp(flash_fs_dir[i].name, name) == 0) {
-			strcpy(ep->name, flash_fs_dir[i].name);
-			ep->blk_size = flash_fs_dir[i].size;
-			ep->size = flash_fs_dir[i].size;
-			ep->offs = flash_fs_dir[i].offs;
-			return true;
-		}
+		if (strcmp(flash_desc[i].name, name) == 0)
+			return fs_dirent_get(ep, i);
 	}
 
 	DCC_LOG(LOG_ERROR, "file not found!");
@@ -102,29 +137,93 @@ bool fs_dirent_get_next(struct fs_dirent * ep)
 			if (i == FLASH_FS_BLK_COUNT - 1)
 				return false;
 
-		} while (flash_fs_dir[i++].offs != ep->offs);
+		} while (flash_desc[i++].offs != ep->blk_offs);
 	}
 
-	strcpy(ep->name, flash_fs_dir[i].name);
-	ep->blk_size = flash_fs_dir[i].size;
-	ep->size = flash_fs_dir[i].size;
-	ep->offs = flash_fs_dir[i].offs;
-
-	return ep;
+	return fs_dirent_get(ep, i);
 }
 
-// FIXME: move this elsewhere...
-#include <crc.h>
 
-int json_file_get(unsigned int offs, struct json_file * json)
+bool fs_file_unlink(struct fs_dirent * ep)
 {
-	json->txt = (char *)(STM32_MEM_FLASH + offs);
-	json->len = microjs_json_root_len(json->txt);
-	json->crc = crc16ccitt(0, json->txt, json->len);
+	if (stm32_flash_erase(ep->blk_offs, ep->blk_size) < 0) {
+		return false;
+	};
 
-	DCC_LOG3(LOG_TRACE, "   json: txt=0x%08x len=%d crc=0x%04x", 
-			 json->txt, json->len, json->crc);
+	return true;
+}
 
-	return 0;
+bool fs_file_commit(struct fs_dirent * ep, unsigned int size)
+{
+	struct fs_file file;
+	struct fs_file * fp;
+
+	DCC_LOG2(LOG_TRACE, "offs=%06x size=%d", ep->blk_offs, size);
+	
+	fp = (struct fs_file *)(STM32_MEM_FLASH + ep->blk_offs);
+	file.size = size;
+	file.crc = crc16ccitt(0, fp->data, size);
+
+	if (stm32_flash_write(ep->blk_offs, &file, sizeof(struct fs_file)) < 0) {
+		ep->fp = (struct fs_file *)&null_fp;
+		return false;
+	}
+
+	ep->fp = fp;
+	return true;
+}
+
+bool fs_xmodem_recv(FILE * f, const char * name)
+{
+	struct fs_dirent entry;
+	struct comm_dev comm;
+	struct file * raw;
+	uint8_t buf[128];
+	unsigned int cnt;
+	unsigned int rem;
+	unsigned int offs;
+	struct xmodem_rcv rx;
+	int ret;
+
+	if (!fs_dirent_lookup(name, &entry)) {
+		return false;
+	}
+
+	fs_file_unlink(&entry);
+
+	if ((raw = ftty_lowlevel(f)) == NULL)
+		raw = f;
+
+	comm.arg = raw->data;
+	comm.op.send = (int (*)(void *, const void *, unsigned int))raw->op->write;
+	comm.op.recv = (int (*)(void *, void *, 
+						  unsigned int, unsigned int))raw->op->read;
+
+	cnt = 0;
+	rem = entry.blk_size - sizeof(struct fs_file);
+	offs = entry.blk_offs + sizeof(struct fs_file);
+
+	xmodem_rcv_init(&rx, &comm, XMODEM_RCV_CRC);
+
+	do {
+		unsigned int n;
+	
+		if ((ret = xmodem_rcv_loop(&rx, buf, 128)) < 0) {
+			return ret;
+		}
+
+		if (rem == 0) {
+			xmodem_rcv_cancel(&rx);
+			break;
+		}
+
+		n = MIN(rem, ret); 
+		stm32_flash_write(offs, buf, n);
+		cnt += n;
+		offs += n;
+		rem -= n;
+	} while (ret > 0);
+
+	return fs_file_commit(&entry, cnt);
 }
 

@@ -24,6 +24,7 @@
 #define __SLCDEV_H__
 
 #include "board.h"
+#include "flashfs.h"
 #include <stdio.h>
 #include <thinkos.h>
 #include <microjs.h>
@@ -93,9 +94,6 @@ struct db_info {
 	const char * json_txt;
 	uint16_t json_len;
 	uint16_t json_crc;
-
-	uint16_t stack_ptr;
-	uint16_t stack_crc;
 
 	uint16_t obj_crc;
 	uint16_t obj_cnt;
@@ -329,9 +327,8 @@ struct slcdev_drv {
  */
 
 extern struct slcdev_drv slcdev_drv;
-
-extern struct ext_libdef slcdev_lib;
-extern uint32_t slcdev_vm_data[64]; /* data area */
+extern uint32_t slcdev_vm_data[32]; /* data area */
+extern uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 
 #ifdef __cplusplus
 extern "C" {
@@ -361,28 +358,27 @@ void slcdev_resume(void);
 bool trig_addr_set(bool module, unsigned int addr);
 bool trig_addr_get(bool * module, unsigned int * addr);
 
-void device_db_init(void);
-int device_db_erase(void);
-int device_db_compile(struct json_file * json);
+bool device_db_compile(struct fs_file * json);
 int device_db_dump(FILE * f);
+void device_db_init(void);
 
 int config_dump(FILE * f);
 
 int config_erase(void);
 int config_load(void);
-int config_save(struct json_file * json);
-int config_compile(struct json_file * json);
-bool config_need_update(struct json_file * json);
+int config_save(struct fs_file * json);
+int config_compile(struct fs_file * json);
+bool config_need_update(struct fs_file * json);
 bool config_is_sane(void);
 int config_show_info(FILE * f);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
-bool device_db_need_update(struct json_file * json);
+bool device_db_need_update(struct fs_file * json);
 bool device_db_is_sane(void);
 
 uint8_t * db_js_lookup(const char * model, const char * jstag);
 
-int slcdev_const_str_purge(void);
+int const_strbuf_init(void);
 
 int db_dev_model_index_by_name(unsigned int str_id);
 
@@ -430,6 +426,8 @@ int device_attr_set(bool mod, unsigned int addr,
 
 int device_attr_print(FILE * f, bool mod, 
 					  unsigned int addr, const char * name);
+
+void sim_reset(void);
 
 #ifdef __cplusplus
 }

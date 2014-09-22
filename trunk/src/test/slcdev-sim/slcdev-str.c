@@ -69,28 +69,6 @@ int flash_str_write(const char * s, unsigned int len)
 	idx = const_str_heap / sizeof(uint16_t);
 	const_str_heap += sizeof(uint16_t);
 
-
-#if 0
-	flash_offs = FLASH_BLK_CONST_STRING_OFFS + const_str_heap;
-
-	if ((ret = stm32_flash_write(flash_offs, &pos, sizeof(uint16_t))) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -JSON_ERR_FLASH_WRITE;
-	}
-
-	idx = const_str_heap / sizeof(uint16_t);
-	const_str_heap += sizeof(uint16_t);
-
-	/* check for collision */
-	if (const_str_stack <= const_str_heap) {
-		DCC_LOG2(LOG_ERROR, "no memory stack=%d heap=%d!", 
-				const_str_stack , const_str_heap);
-		return -1;
-	}
-
-	DCC_LOG3(LOG_TRACE, "idx=%d offs=%04x len=%d", idx, pos, len);
-#endif
-
 	return idx;
 }
 
@@ -102,7 +80,7 @@ int const_strbuf_purge(void)
 	int ret;
 
 	if ((ret = stm32_flash_erase(blk_offs, blk_size)) < 0) {
-		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
+		DCC_LOG(LOG_INFO, "stm32_flash_erase() failed!");
 		return ret;
 	};
 
@@ -113,6 +91,29 @@ int const_strbuf_purge(void)
 	buf[0] = '\0';
 
 	return flash_str_write(buf, 1);
+}
+
+int const_strbuf_init(void)
+{
+	const struct const_strbuf * p = &flash_strbuf;
+	char * base = (char *)p->base;
+	int free = p->top - base;
+	int offs;
+	int i;
+
+	const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
+	const_str_heap = 0;
+
+	for (i = 0; (offs = p->offs[i]) > 0; ++i) {
+		if (offs < free)
+			free = offs;
+		if (free <= 0)
+			return -1;
+	}
+	const_str_heap = i * sizeof(uint16_t);
+	const_str_stack = free;
+
+	return 0;
 }
 
 int const_strbuf_dump(FILE * f)
@@ -180,7 +181,35 @@ const char * str(unsigned int idx)
 	return p->base + p->offs[idx];
 }
 
-int cstr_decode(char * dst, const char * src, unsigned int len)
+static int cxlate(int c) 
+{
+	switch (c) {
+	case 'a': /* Alarm (Bell) */
+		c = '\a';
+		break;
+	case 'b': /* Backspace */
+		c = '\b';
+		break;
+	case 'f': /* Formfeed */
+		c = '\f';
+		break;
+	case 'n': /* Newline */
+		c = '\n';
+		break;
+	case 'r': /* Carriage Return */
+		c = '\r';
+		break;
+	case 't': /* Horizontal Tab */
+		c = '\t';
+		break;
+	case 'v': /* Vertical Tab */
+		c = '\v';
+		break;
+	}
+	return c;
+}
+
+int cstrncpy(char * dst, const char * src, unsigned int len)
 {
 	bool esc;
 	int c;
@@ -191,29 +220,7 @@ int cstr_decode(char * dst, const char * src, unsigned int len)
 	for (i = 0; i < len; ++i) {
 		c = src[i];
 		if (esc) {
-			switch (c) {
-			case 'a': /* Alarm (Bell) */
-				c = '\a';
-				break;
-			case 'b': /* Backspace */
-				c = '\b';
-				break;
-			case 'f': /* Formfeed */
-				c = '\f';
-				break;
-			case 'n': /* Newline */
-				c = '\n';
-				break;
-			case 'r': /* Carriage Return */
-				c = '\r';
-				break;
-			case 't': /* Horizontal Tab */
-				c = '\t';
-				break;
-			case 'v': /* Vertical Tab */
-				c = '\v';
-				break;
-			}
+			c = cxlate(c);
 			esc = false;
 		} else if (c == '\\') {
 			esc = true;
@@ -224,7 +231,44 @@ int cstr_decode(char * dst, const char * src, unsigned int len)
 	/* NULL terminate the string */
 	*dst = '\0';
 
-	return 0;
+	return -1;
+}
+
+bool cstrncmp(const char *s1, const char *czs, size_t n)
+{
+	int c1 = '\0';
+	int c2 = '\0';
+
+	while (n > 0) {
+		c1 = (int)*s1++;
+		c2 = (int)*czs++;
+		if (c2 == '\\') {
+			n--;
+			c2 = cxlate((int)*czs++);
+		}
+		if (c1 != c2)
+			return false;
+		n--;
+	}
+
+	return (*s1 == '\0') ? true : false;
+}
+
+int cstr_lookup(const char * cs, unsigned int len)
+{
+	const struct const_strbuf * p = &flash_strbuf;
+	char * base = (char *)p->base;
+	int offs;
+	int i;
+
+	for (i = 0; (offs = p->offs[i]) > 0; ++i) {
+		char * cstr = base + offs;
+		if (cstrncmp(cstr, cs, len)) {
+			return i;
+		}	
+	}
+
+	return -ERR_STRING_NOT_FOUND;
 }
 
 /* add a string to the var buffer translating the most 
@@ -234,15 +278,14 @@ int cstr_add(const char * s, unsigned int len)
 	char dst[MICROJS_STRING_LEN_MAX + 1];
 	int idx;
 
-	if ((idx = const_str_lookup(s, len)) >= 0) {
+	if ((idx = cstr_lookup(s, len)) >= 0)
 		return idx;
-	}
 
 	if (len > MICROJS_STRING_LEN_MAX)
 		return -ERR_STRING_TOO_LONG;
 
 	/* Convert and copy the string to the buffer */
-	cstr_decode(dst, s, len);
+	cstrncpy(dst, s, len);
 
 	return flash_str_write(dst, len + 1);
 }

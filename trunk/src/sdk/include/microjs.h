@@ -127,12 +127,6 @@ struct microjs_val {
 	};
 };
 
-struct json_file { 
-	const char * txt;
-	uint16_t len;
-	uint16_t crc;
-};
-
 enum {
 	MICROJS_JSON_EOF        = 0,
 	MICROJS_JSON_STOP       = 1,

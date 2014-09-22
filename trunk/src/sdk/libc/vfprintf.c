@@ -88,7 +88,7 @@ int ull2hex(char * s, unsigned long long val);
 #define PRINTF_ENABLE_LARGE_PADDING 1
 #endif
 
-static const char zeros[]  = {  
+const char __zeros[]  = {  
 #if (PRINTF_ENABLE_LARGE_PADDING)
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', '0', '0', '0', '0', 
@@ -97,7 +97,7 @@ static const char zeros[]  = {
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', };
 	
-static const char blanks[] = {
+const char __blanks[] = {
 #if (PRINTF_ENABLE_LARGE_PADDING)
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
@@ -300,9 +300,9 @@ print_buf:
 					flags &= ~SIGN;
 					f->op->write(f->data, buf, 1);
 				}
-				f->op->write(f->data, zeros, w - n);
+				f->op->write(f->data, __zeros, w - n);
 			} else {
-				f->op->write(f->data, blanks, w - n);
+				f->op->write(f->data, __blanks, w - n);
 			}
 			cnt += w - n;
 		}
@@ -318,7 +318,7 @@ print_buf:
 
 #if (PRINTF_ENABLE_LEFT_ALIGN)
 		if ((flags & LEFT) && (w > n)) {
-			f->op->write(f->data, blanks, w - n);
+			f->op->write(f->data, __blanks, w - n);
 			cnt += w - n;
 		}
 #endif

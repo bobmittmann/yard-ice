@@ -352,41 +352,11 @@ void isink_pulse(unsigned int pre, unsigned int pulse)
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 
 }
 
-void isink_test(void)
-{
-	unsigned int pre;
-	unsigned int pulse;
-	int mode;
-
-	pre = 500;
-	pulse = 1000;
-
-	/* disable interrupts */	
-	cm3_cpsid_i();
-	for (mode = 0; mode < 26; ++mode) {
-		isink_io_cfg(mode);
-		isink_pulse(pre, pulse);
-		udelay(pulse + 500);
-	}
-	cm3_cpsie_i();
-
-	isink_drv.mode = -1;
-}
-
-
 void isink_stop(void)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 
-//	tim->cr1 = 0;
  	tim->cnt = 0;
-
-#if 0
-	stm32_gpio_mode(SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_clr(SINK4);
-#endif
 }
 
 #define SLEWRATE_DAC_VAL(X) ((4095 * ((X) - SLEWRATE_MIN)) / \
@@ -475,6 +445,9 @@ void isink_init(void)
 	isink_drv.mode = -1;
 }
 
+
+#if 0
+
 void isink_slewrate_set(unsigned int rate)
 {
 	struct stm32f_dac * dac = STM32_DAC;
@@ -490,4 +463,27 @@ void isink_slewrate_set(unsigned int rate)
 
 	dac->dhr12r2 = dac_val;
 }
+
+void isink_test(void)
+{
+	unsigned int pre;
+	unsigned int pulse;
+	int mode;
+
+	pre = 500;
+	pulse = 1000;
+
+	/* disable interrupts */	
+	cm3_cpsid_i();
+	for (mode = 0; mode < 26; ++mode) {
+		isink_io_cfg(mode);
+		isink_pulse(pre, pulse);
+		udelay(pulse + 500);
+	}
+	cm3_cpsie_i();
+
+	isink_drv.mode = -1;
+}
+
+#endif
 

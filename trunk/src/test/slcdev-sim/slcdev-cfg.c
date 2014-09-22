@@ -232,10 +232,10 @@ int cfg_array_u8_decode(char * s, int opt, void * ptr)
 	int i;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	DCC_LOG1(LOG_INFO, "len=%d", len);
 
 	for (i = 0; i < len; ++i) {
-		DCC_LOG2(LOG_TRACE, "val[%d]=%d", i, val[i]);
+		DCC_LOG2(LOG_INFO, "val[%d]=%d", i, val[i]);
 		if (i > 0)
 			*cp++ = ' ';
 		if (opt & 0x8000)
@@ -400,7 +400,7 @@ int device_attr_print(FILE * f, bool mod, unsigned int addr,
 
 int config_dump(FILE * f)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	return 0;
 }
@@ -418,7 +418,7 @@ struct cfg_info {
 
 #if 0
 {
-	DCC_LOG1(LOG_TRACE, "configuration size = %d.", sizeof(struct devsim_cfg));
+	DCC_LOG1(LOG_INFO, "configuration size = %d.", sizeof(struct devsim_cfg));
 	uint32_t blk_offs = FLASH_BLK_DEV_DB_BIN_OFFS;
 	uint32_t blk_size = FLASH_BLK_DEV_DB_BIN_SIZE;
 	int ret;
@@ -428,7 +428,7 @@ struct cfg_info {
 		return ret;
 	};
 
-	DCC_LOG(LOG_TRACE, "configuration erased!");
+	DCC_LOG(LOG_INFO, "configuration erased!");
 
 	return ret;
 	return 0;
@@ -446,7 +446,7 @@ int config_erase(void)
 		return ret;
 	};
 
-	DCC_LOG(LOG_TRACE, "configuration erased!");
+	DCC_LOG(LOG_INFO, "configuration erased!");
 
 	return ret;
 }
@@ -535,7 +535,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		return mod_idx;
 	}
 
-	DCC_LOG2(LOG_TRACE, "model=%d idx=%d", cdev->model, mod_idx);
+	DCC_LOG2(LOG_INFO, "model=%d idx=%d", cdev->model, mod_idx);
 
 	mod = db_dev_model_by_index(mod_idx);
 	printf("%c \"%s\" \"%s\":", cdev->enabled ? '+' : '-', 
@@ -550,7 +550,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 	tbias = (cdev->tbias * 128) / 100;
 	icfg = (cdev->irate << 5) + (cdev->imode & 0x1f);
 
-	DCC_LOG4(LOG_TRACE, "grp={%d %d %d %d}", 
+	DCC_LOG4(LOG_INFO, "grp={%d %d %d %d}", 
 			 cdev->grp[0], cdev->grp[1], cdev->grp[2], cdev->grp[3]);
 
 	for (addr = 0; addr < 160; ++addr) {
@@ -596,7 +596,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		/* enable the device per configuration */
 		dev->enabled = cdev->enabled ? 1 : 0;
 
-		DCC_LOG3(LOG_TRACE, "%s %d: enabled=%d", 
+		DCC_LOG3(LOG_INFO, "%s %d: enabled=%d", 
 				 dev->module ? "module" : "sensor", dev->addr, dev->enabled);
 	}
 
@@ -703,7 +703,7 @@ const char * const cfg_labels[] = {
 	NULL	
 };
 
-int config_compile(struct json_file * json)
+int config_compile(struct fs_file * json)
 {
 	struct microjs_json_parser jsn;
 	uint8_t tok_buf[JSON_TOK_BUF_MAX];
@@ -711,7 +711,7 @@ int config_compile(struct json_file * json)
 
 	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, cfg_labels);
 
-	if ((ret = microjs_json_open(&jsn, json->txt, json->len)) < 0) {
+	if ((ret = microjs_json_open(&jsn, (char *)json->data, json->size)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_open() failed!");
 		return ret;
 	}
@@ -765,14 +765,14 @@ int config_load(void)
 	return -1;
 }
 
-int config_save(struct json_file * json)
+int config_save(struct fs_file * json)
 {
 	struct cfg_info inf;
 	int offs;
 	int size;
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	inf.magic = CFG_MAGIC;
 	if (json == NULL) {
@@ -780,9 +780,9 @@ int config_save(struct json_file * json)
 		inf.json_crc = 0;
 		inf.json_len = 0;
 	} else {
-		inf.json_txt = json->txt;
+		inf.json_txt = (char *)json->data;
 		inf.json_crc = json->crc;
-		inf.json_len = json->len;
+		inf.json_len = json->size;
 	}
 	if ((ret = dev_tab_save(&inf)) < 0)
 		return ret;
@@ -821,15 +821,15 @@ bool config_is_sane(void)
 	return false;
 }
 
-bool config_need_update(struct json_file * json)
+bool config_need_update(struct fs_file * json)
 {
 	struct cfg_info * inf;
 
 	/* check configuration integrity */
 	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
 
-	if (inf->magic != CFG_MAGIC || inf->json_txt != json->txt ||
-		inf->json_crc != json->crc || inf->json_len != json->len)
+	if (inf->magic != CFG_MAGIC || inf->json_txt != (char *)json->data ||
+		inf->json_crc != json->crc || inf->json_len != json->size)
 		return true;
 
 	return false;

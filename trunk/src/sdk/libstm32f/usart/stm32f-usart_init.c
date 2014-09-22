@@ -31,7 +31,7 @@ int stm32_usart_init(struct stm32_usart * us)
 		return id;
 	}
 
-	DCC_LOG2(LOG_TRACE, "USART %d -> 0x%08x.", id + 1, us);
+	DCC_LOG2(LOG_INFO, "USART %d -> 0x%08x.", id + 1, us);
 
 	/* disable all interrupts */
 	us->cr1 = 0;
@@ -48,7 +48,7 @@ int stm32_usart_init(struct stm32_usart * us)
 	us->cr3 = 0;
 	us->gtpr = 0;
 
-	DCC_LOG(LOG_TRACE, "done.");
+	DCC_LOG(LOG_INFO, "done.");
 
 	return id;
 }

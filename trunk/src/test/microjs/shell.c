@@ -171,21 +171,6 @@ uint16_t vm_strbuf[128]; /*string buffer shuld be 16bits aligned */
 uint32_t vm_data[64];   /* data area */
 uint32_t js_symbuf[64]; /*string buffer shuld be 16bits aligned */
 uint32_t js_sdtbuf[64]; /* compiler buffer */
-struct microjs_vm vm; 
-
-void vm_reset(void) 
-{
-	struct symtab * symtab;
-
-	/* initialize string buffer */
-	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
-	/* initialize virtual machine */
-	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
-	/* initialize symbol table */
-	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
-	/* initialize compiler */
-	microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab, sizeof(vm_data));
-}
 
 int cmd_vm(FILE * f, int argc, char ** argv)
 {
@@ -201,6 +186,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	struct microjs_sdt * microjs = (struct microjs_sdt *)js_sdtbuf;
 	struct symtab * symtab = (struct symtab *)js_symbuf;
 	struct fs_dirent entry;
+	struct microjs_vm vm; 
 	char * script;
 	int len;
 	int n;
@@ -215,6 +201,9 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	profclk_init();
+
+	/* initialize virtual machine */
+	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
 
 	symstat = symtab_state_save(symtab);
 
