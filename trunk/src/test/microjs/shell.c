@@ -170,16 +170,21 @@ uint8_t  vm_code[256];  /* compiled code */
 uint16_t vm_strbuf[128]; /*string buffer shuld be 16bits aligned */
 uint32_t vm_data[64];   /* data area */
 uint32_t js_symbuf[64]; /*string buffer shuld be 16bits aligned */
+uint32_t js_sdtbuf[64]; /* compiler buffer */
 struct microjs_vm vm; 
 
 void vm_reset(void) 
 {
+	struct symtab * symtab;
+
 	/* initialize string buffer */
 	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
 	/* initialize virtual machine */
 	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
 	/* initialize symbol table */
-	symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
+	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
+	/* initialize compiler */
+	microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab, sizeof(vm_data));
 }
 
 int cmd_vm(FILE * f, int argc, char ** argv)
@@ -187,21 +192,25 @@ int cmd_vm(FILE * f, int argc, char ** argv)
 	if (argc != 1)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	vm_reset();
+//	vm_reset();
+	/* initialize symbol table */
+//	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
+	symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
 	return 0;
 }
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
-	struct microjs_sdt * microjs; 
-	struct symtab * symtab;
+	struct microjs_sdt * microjs = (struct microjs_sdt *)js_sdtbuf;
+	struct symtab * symtab = (struct symtab *)js_symbuf;
 	struct fs_dirent entry;
-	uint32_t sdtbuf[64]; /* compiler buffer */
 	char * script;
 	int len;
 	int n;
 	uint32_t start_clk;
 	uint32_t stop_clk;
+	struct symstat symstat;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -211,11 +220,9 @@ int cmd_js(FILE * f, int argc, char ** argv)
 
 	profclk_init();
 
-	symtab = symtab_open(js_symbuf, sizeof(js_symbuf));
-	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
-							   vm_code, sizeof(vm_code), sizeof(vm_data));
+	symstat = symtab_state_save(symtab);
 
+	microjs_sdt_begin(microjs, vm_code, sizeof(vm_code));
 
 	if (!fs_dirent_lookup(argv[1], &entry)) {
 		fprintf(f, "invalid file: \"%s\"\n", argv[1]);
@@ -229,12 +236,14 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	/* compile */
 	start_clk = profclk_get();
 	if ((n = microjs_compile(microjs, script, len)) < 0) {
+		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -n);
 		microjs_sdt_error(stderr, microjs, n);
 		return -1;
 	}
 
-	if ((n = microjs_sdt_done(microjs)) < 0) {
+	if ((n = microjs_sdt_end(microjs)) < 0) {
+		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -n);
 		microjs_sdt_error(stderr, microjs, n);
 		return -1;

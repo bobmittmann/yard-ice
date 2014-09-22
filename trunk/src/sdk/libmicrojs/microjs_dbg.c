@@ -59,6 +59,8 @@ static const char * const err_tab[] = {
 	[ERR_GENERAL] = "general failure",
 	[ERR_CODE_MEM_OVERFLOW] = "code memory overflow",
 	[ERR_RET_COUNT_MISMATCH] = "function returns no value",
+	[ERR_INVALID_INSTRUCTION] = "invalid VM instruction",
+
 };
 
 static void js_dump_line(FILE * f, int ln, char * lp)

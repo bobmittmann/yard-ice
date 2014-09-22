@@ -25,8 +25,18 @@
 
 
 #include <microjs-stdlib.h>
+#include <microjs.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#ifndef MICROJS_STDLIB_ENABLED 
+#define MICROJS_STDLIB_ENABLED 1
+#endif
+
+#ifndef MICROJS_STRINGS_ENABLED
+#define MICROJS_STRINGS_ENABLED 1
+#endif
 
 #if MICROJS_STDLIB_ENABLED 
 
@@ -104,6 +114,15 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 
 int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
 {
+	int i;
+	
+	for (i = argc - 1; i >= 0; --i) {
+		if (i != argc - 1)
+			fprintf(env->fout, ", ");
+		fprintf(env->fout, "%d", argv[i]);
+	}
+
+	fprintf(env->fout, "\n");
 	return 0;
 }	
 
@@ -380,14 +399,14 @@ print_buf:
 	return 0;
 #else
 	return -ERR_STRINGS_UNSUPORTED;
-#endif
+#endif /* MICROJS_STRINGS_ENABLED */
 }
 
 /* --------------------------------------------------------------------------
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* const extern_call[])(struct microjs_env *, 
+int32_t (* const microjs_extern[])(struct microjs_env *, 
 								int32_t argv[], int argc) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,

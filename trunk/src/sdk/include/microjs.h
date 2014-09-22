@@ -50,31 +50,37 @@ enum {
 };
 
 enum {
-	OK                     = 0,
-	ERR_UNEXPECED_EOF      = 1,
-	ERR_UNEXPECTED_CHAR    = 2,
-	ERR_UNEXPECTED_SYMBOL  = 3,
-	ERR_UNCLOSED_STRING    = 4,
-	ERR_UNCLOSED_COMMENT   = 5,
-	ERR_INVALID_LITERAL    = 6,
-	ERR_INVALID_ID         = 7,
-	ERR_STRINGS_UNSUPORTED = 8,
-	ERR_STRING_TOO_LONG    = 9,
-	ERR_STRING_NOT_FOUND   = 10,
-	ERR_STRBUF_OVERFLOW    = 11,
-	ERR_SYNTAX_ERROR       = 12,
-	ERR_HEAP_OVERFLOW      = 13,
-	ERR_VAR_UNKNOWN        = 14,
-	ERR_EXTERN_UNKNOWN     = 15,
-	ERR_ARG_MISSING        = 16,
-	ERR_TOO_MANY_ARGS      = 17,
-	ERR_SYM_PUSH_FAIL      = 18,
-	ERR_SYM_POP_FAIL       = 19,
-	ERR_OBJ_NEW_FAIL       = 20,
-	ERR_SDT_STACK_OVERFLOW = 21,
-	ERR_GENERAL            = 22,
-	ERR_CODE_MEM_OVERFLOW  = 23,
-	ERR_RET_COUNT_MISMATCH = 24
+	OK                      = 0,
+	ERR_UNEXPECED_EOF       = 1,
+	ERR_UNEXPECTED_CHAR     = 2,
+	ERR_UNEXPECTED_SYMBOL   = 3,
+	ERR_UNCLOSED_STRING     = 4,
+	ERR_UNCLOSED_COMMENT    = 5,
+	ERR_INVALID_LITERAL     = 6,
+	ERR_INVALID_ID          = 7,
+	ERR_STRINGS_UNSUPORTED  = 8,
+	ERR_STRING_TOO_LONG     = 9,
+	ERR_STRING_NOT_FOUND    = 10,
+	ERR_STRBUF_OVERFLOW     = 11,
+	ERR_SYNTAX_ERROR        = 12,
+	ERR_HEAP_OVERFLOW       = 13,
+	ERR_VAR_UNKNOWN         = 14,
+	ERR_EXTERN_UNKNOWN      = 15,
+	ERR_ARG_MISSING         = 16,
+	ERR_TOO_MANY_ARGS       = 17,
+	ERR_SYM_PUSH_FAIL       = 18,
+	ERR_SYM_POP_FAIL        = 19,
+	ERR_OBJ_NEW_FAIL        = 20,
+	ERR_SDT_STACK_OVERFLOW  = 21,
+	ERR_GENERAL             = 22,
+	ERR_CODE_MEM_OVERFLOW   = 23,
+	ERR_RET_COUNT_MISMATCH  = 24,
+	ERR_INVALID_INSTRUCTION = 25,
+};
+
+struct symstat {
+	uint16_t sp;
+	uint16_t bp;
 };
 
 struct symtab;
@@ -259,19 +265,24 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 
 struct symtab * symtab_open(uint32_t * buf, unsigned int len);
 
-struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
-									  unsigned int buf_size,
+struct symstat symtab_state_save(struct symtab * tab);
+
+void symtab_state_rollback(struct symtab * tab, struct symstat st);
+
+struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
+									  unsigned int sdt_size,
 									  struct symtab * tab, 
-									  uint8_t code[],
-									  unsigned int code_size, 
 									  unsigned int data_size);
+
+int microjs_sdt_begin(struct microjs_sdt * microjs, 
+					  uint8_t code[], unsigned int code_size);
 
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-void microjs_sdt_reset(struct microjs_sdt * microjs);
+int microjs_sdt_end(struct microjs_sdt * microjs);
 
-int microjs_sdt_done(struct microjs_sdt * microjs);
+void microjs_sdt_reset(struct microjs_sdt * microjs);
 
 void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
 
