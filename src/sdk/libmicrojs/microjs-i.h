@@ -85,6 +85,10 @@
 #define MICROJS_STDLIB_ENABLED 1
 #endif
 
+#ifndef MICROJS_OPTIMIZATION_ENABLED 
+#define MICROJS_OPTIMIZATION_ENABLED 1
+#endif
+
 #if (MICROJS_TRACE_ENABLED)
 #define	TRACEF(__FMT, ...) do { \
 	fprintf(stdout, __FMT, ## __VA_ARGS__); \
@@ -138,6 +142,9 @@ struct microjs_sdt {
 	uint16_t tgt_heap;  /* target data memory heap */
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
+#if MICROJS_OPTIMIZATION_ENABLED
+	uint16_t spc;        /* saved code pointer */
+#endif
 };
 
 /* --------------------------------------------------------------------------

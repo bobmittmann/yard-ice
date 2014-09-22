@@ -52,6 +52,98 @@ static int tgt_alloc32(struct microjs_sdt * microjs)
    Code generation
    -------------------------------------------------------------------------- */
 
+static int encode_int(struct microjs_sdt * microjs, int32_t x)
+{
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+
+	TRACEF("%04x\t", microjs->pc);
+	if (x >= 0) {
+		if (x < 32768) {
+			if (x < 128) {
+				if (x < 8) {
+					TRACEF("I4 %d\n", x);
+					microjs->code[microjs->pc++] = OPC_I4 + x;
+				} else {
+					TRACEF("I8 %d\n", x);
+					microjs->code[microjs->pc++] = OPC_I8;
+					microjs->code[microjs->pc++] = x;
+				}
+			} else {
+				TRACEF("I16 %d\n", x);
+				microjs->code[microjs->pc++] = OPC_I16;
+				microjs->code[microjs->pc++] = x;
+				microjs->code[microjs->pc++] = x >> 8;
+			}
+		} else {
+			TRACEF("I32 %d\n", x);
+			microjs->code[microjs->pc++] = OPC_I32;
+			microjs->code[microjs->pc++] = x;
+			microjs->code[microjs->pc++] = x >> 8;
+			microjs->code[microjs->pc++] = x >> 16;
+			microjs->code[microjs->pc++] = x >> 24;
+		}
+	} else {
+		if (x >= -32768) {
+			if (x >= -128) {
+				if (x >= -8) {
+					TRACEF("I4 %d\n", x);
+					microjs->code[microjs->pc++] = OPC_I4 + (x & 0x0f);
+				} else {
+					TRACEF("I8 %d\n", x);
+					microjs->code[microjs->pc++] = OPC_I8;
+					microjs->code[microjs->pc++] = x;
+				}
+			} else {
+				TRACEF("I16 %d\n", x);
+				microjs->code[microjs->pc++] = OPC_I16;
+				microjs->code[microjs->pc++] = x;
+				microjs->code[microjs->pc++] = x >> 8;
+			}
+		} else {
+			TRACEF("I32 %d\n", x);
+			microjs->code[microjs->pc++] = OPC_I32;
+			microjs->code[microjs->pc++] = x;
+			microjs->code[microjs->pc++] = x >> 8;
+			microjs->code[microjs->pc++] = x >> 16;
+			microjs->code[microjs->pc++] = x >> 24;
+		}
+	}
+
+	return 0;
+}
+
+#define SIGNEXT4BIT(_X) ({ struct { int32_t x: 4; } s; \
+						  s.x = (_X); (int32_t)s.x; })
+
+static bool is_constant(struct microjs_sdt * microjs, 
+						unsigned int spc, int32_t * xp)
+{
+	do {
+		int opc;
+		int32_t val;
+		uint8_t * pc = &microjs->code[spc];
+
+		opc = *pc++;
+		if ((opc & 0xf0) == OPC_I4) {
+			val = SIGNEXT4BIT(opc & 0xf);
+		} else if (opc == OPC_I8) {
+			val = (int8_t)pc[0];
+		} else if (opc == OPC_I16) {
+			val = (int16_t)(pc[0] | pc[1] << 8);
+		} else if (opc == OPC_I32) {
+			val = (int32_t)(pc[0] | pc[1] << 8 | 
+							pc[2] << 16 | pc[3] << 24);
+		} else
+			break;
+		*xp = val;
+		return true;
+	} while (0);
+
+	return false;
+}
+
 /* Variable declaration.
    Allocate a new integer in the target heap. */
 
@@ -132,6 +224,10 @@ int op_assign(struct microjs_sdt * microjs)
 	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
 		return -ERR_VAR_UNKNOWN;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc;        /* save code pointer */
+#endif
+
 	addr = (obj->addr >> 2) & 0x0fff;
 #if MICROJS_FUNCTIONS_ENABLED
 	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
@@ -163,6 +259,10 @@ int op_attr(struct microjs_sdt * microjs)
 
 	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
 		return -ERR_VAR_UNKNOWN;
+
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc;        /* save code pointer */
+#endif
 
 	addr = (obj->addr >> 2) & 0x0fff;
 #if MICROJS_FUNCTIONS_ENABLED
@@ -242,14 +342,14 @@ int op_call(struct microjs_sdt * microjs)
 	if (call.argcnt > call.argmax)
 		return -ERR_TOO_MANY_ARGS;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
 		   sym_extern_name(microjs->tab, call.xid), call.argcnt);
-
 	microjs->code[microjs->pc++] = OPC_EXT;
-	/* external call number */
-	microjs->code[microjs->pc++] = call.xid;
-	/* stack size */
-	microjs->code[microjs->pc++] = call.argcnt;
+	microjs->code[microjs->pc++] = call.xid; /* external call number */
+	microjs->code[microjs->pc++] = call.argcnt; /* stack size */
 
 	/* push back; */
 	return sym_call_push(microjs->tab, &call);
@@ -267,6 +367,9 @@ int op_ret_discard(struct microjs_sdt * microjs)
 	DCC_LOG2(LOG_INFO, "argcnt=%d, retcnt=%d", call.argcnt, call.retcnt);
 
 	if ((n = call.retcnt) > 0) {
+#if MICROJS_OPTIMIZATION_ENABLED
+		microjs->spc = microjs->pc; /* save code pointer */
+#endif
 		if (n > 1) {
 			TRACEF("%04x\tISP %d\n", microjs->pc, n);
 			microjs->code[microjs->pc++] = OPC_ISP;
@@ -296,6 +399,9 @@ int op_call_ret(struct microjs_sdt * microjs)
 
 	/* discard all but one of the returning values */
 	if ((n = call.retcnt - 1) > 0) {
+#if MICROJS_OPTIMIZATION_ENABLED
+		microjs->spc = microjs->pc; /* save code pointer */
+#endif
 		if (n > 1) {
 			TRACEF("%04x\tISP %d\n", microjs->pc, n);
 			microjs->code[microjs->pc++] = OPC_ISP;
@@ -332,6 +438,16 @@ int op_blk_close(struct microjs_sdt * microjs)
 
 int op_equ(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	int32_t val;
+	if (is_constant(microjs, microjs->spc, &val) & (val == 0)) {
+		microjs->pc = microjs->spc; /* rollback */
+		TRACEF("%04x\tNOT (optimizing EQ 0)\n", microjs->pc);
+		microjs->code[microjs->pc++] = OPC_NOT;
+		return 0;
+	} 
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tEQ\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_EQ;
 	return 0;
@@ -339,6 +455,9 @@ int op_equ(struct microjs_sdt * microjs)
 
 int op_neq(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tNE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NE;
 	return 0;
@@ -346,6 +465,9 @@ int op_neq(struct microjs_sdt * microjs)
 
 int op_gt(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tGT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GT;
 	return 0;
@@ -353,6 +475,9 @@ int op_gt(struct microjs_sdt * microjs)
 
 int op_lt(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tLT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LT;
 	return 0;
@@ -360,6 +485,9 @@ int op_lt(struct microjs_sdt * microjs)
 
 int op_gte(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tGE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GE;
 	return 0;
@@ -367,6 +495,9 @@ int op_gte(struct microjs_sdt * microjs)
 
 int op_lte(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tLE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LE;
 	return 0;
@@ -374,6 +505,9 @@ int op_lte(struct microjs_sdt * microjs)
 
 int op_logic_or(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
@@ -381,6 +515,9 @@ int op_logic_or(struct microjs_sdt * microjs)
 
 int op_logic_and(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
@@ -388,6 +525,16 @@ int op_logic_and(struct microjs_sdt * microjs)
 
 int op_add(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	int32_t val;
+	if (is_constant(microjs, microjs->spc, &val) & (val == 1)) {
+		microjs->pc = microjs->spc; /* rollback */
+		TRACEF("%04x\tINC (optimizing ADD)\n", microjs->pc);
+		microjs->code[microjs->pc++] = OPC_INC;
+		return 0;
+	} 
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tADD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ADD;
 	return 0;
@@ -395,6 +542,16 @@ int op_add(struct microjs_sdt * microjs)
 
 int op_sub(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	int32_t val;
+	if (is_constant(microjs, microjs->spc, &val) & (val == 1)) {
+		microjs->pc = microjs->spc; /* rollback */
+		TRACEF("%04x\tDEC (optimizing SUB)\n", microjs->pc);
+		microjs->code[microjs->pc++] = OPC_SUB;
+		return 0;
+	} 
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tSUB\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SUB;
 	return 0;
@@ -402,6 +559,9 @@ int op_sub(struct microjs_sdt * microjs)
 
 int op_or(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
 	return 0;
@@ -409,12 +569,19 @@ int op_or(struct microjs_sdt * microjs)
 
 int op_xor(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tXOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_XOR;
 	return 0;
 }
 
 int op_mul(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tMUL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MUL;
 	return 0;
@@ -422,6 +589,9 @@ int op_mul(struct microjs_sdt * microjs)
 
 int op_div(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tDIV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_DIV;
 	return 0;
@@ -429,48 +599,87 @@ int op_div(struct microjs_sdt * microjs)
 
 int op_mod(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tMOD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MOD;
 	return 0;
 }
 
 int op_and(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
 	return 0;
 }
 
 int op_inv(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tINV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_INV;
 	return 0;
 }
 
 int op_minus(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	int32_t val;
+	if (is_constant(microjs, microjs->spc, &val)) {
+		/* rollback */
+		microjs->pc = microjs->spc;
+		TRACEF("%04x\tNEG (optimizing %d -> %d)\n", microjs->pc, val, -val);
+		return encode_int(microjs, -val);
+	} 
+
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tNEG\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NEG;
 	return 0;
 }
 
 int op_not(struct microjs_sdt * microjs)
 {
-	microjs->code[microjs->pc++] = OPC_NEG;
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tNOT\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_NOT;
 	return 0;
 }
 
 int op_shl(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tSHL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SHL;
 	return 0;
 }
 
 int op_asr(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tASR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ASR;
 	return 0;
 }
 
 int op_push_false(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tI4 %d\n", microjs->pc, 0);
 	microjs->code[microjs->pc++] = OPC_I4 + 0;
 	return 0;
@@ -478,6 +687,9 @@ int op_push_false(struct microjs_sdt * microjs)
 
 int op_push_true(struct microjs_sdt * microjs)
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tI4 %d\n", microjs->pc, 1);
 	microjs->code[microjs->pc++] = OPC_I4 + 1;
 	return 0;
@@ -494,6 +706,9 @@ int op_push_string(struct microjs_sdt * microjs)
 		return isz;
 	}
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	if (isz < 8) {
 		TRACEF("%04x\tI4 %d\n", microjs->pc, isz);
 		microjs->code[microjs->pc++] = OPC_I4 + isz;
@@ -511,71 +726,16 @@ int op_push_string(struct microjs_sdt * microjs)
 
 int op_push_int(struct microjs_sdt * microjs)
 {
-	int32_t x = microjs->tok.u32;
-
-	TRACEF("%04x\t", microjs->pc);
-
-	if (x >= 0) {
-		if (x < 32768) {
-			if (x < 128) {
-				if (x < 8) {
-					TRACEF("I4 %d\n", x);
-					microjs->code[microjs->pc++] = OPC_I4 + x;
-				} else {
-					TRACEF("I8 %d\n", x);
-					microjs->code[microjs->pc++] = OPC_I8;
-					microjs->code[microjs->pc++] = x;
-				}
-			} else {
-				TRACEF("I16 %d\n", x);
-				microjs->code[microjs->pc++] = OPC_I16;
-				microjs->code[microjs->pc++] = x;
-				microjs->code[microjs->pc++] = x >> 8;
-			}
-		} else {
-			TRACEF("I32 %d\n", x);
-			microjs->code[microjs->pc++] = OPC_I32;
-			microjs->code[microjs->pc++] = x;
-			microjs->code[microjs->pc++] = x >> 8;
-			microjs->code[microjs->pc++] = x >> 16;
-			microjs->code[microjs->pc++] = x >> 24;
-		}
-	} else {
-		if (x >= -32768) {
-			if (x >= -128) {
-				if (x >= -8) {
-					TRACEF("I4 %d\n", x);
-					microjs->code[microjs->pc++] = OPC_I4 + (x & 0x0f);
-				} else {
-					TRACEF("I8 %d\n", x);
-					microjs->code[microjs->pc++] = OPC_I8;
-					microjs->code[microjs->pc++] = x;
-				}
-			} else {
-				TRACEF("I16 %d\n", x);
-				microjs->code[microjs->pc++] = OPC_I16;
-				microjs->code[microjs->pc++] = x;
-				microjs->code[microjs->pc++] = x >> 8;
-			}
-		} else {
-			TRACEF("I32 %d\n", x);
-			microjs->code[microjs->pc++] = OPC_I32;
-			microjs->code[microjs->pc++] = x;
-			microjs->code[microjs->pc++] = x >> 8;
-			microjs->code[microjs->pc++] = x >> 16;
-			microjs->code[microjs->pc++] = x >> 24;
-		}
-	}
-
-	return 0;
+	return encode_int(microjs, (int32_t)microjs->tok.u32);
 }
 
 int op_try_begin(struct microjs_sdt * microjs) 
 {
 	struct sym_ref ref;
 
-	DCC_LOG(LOG_INFO, "<<<<<<");
-
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	/* save current location on a temporary reference */
 #if MICROJS_TRACE_ENABLED
 	ref.lbl = sym_lbl_next(microjs->tab);
@@ -594,15 +754,16 @@ int op_try_end(struct microjs_sdt * microjs)
 	struct sym_ref ref;
 	int offs;
 	int ret;
-	
-	DCC_LOG(LOG_INFO, ">>>>>>");
 
 	/* get the temporary reference */
 	if ((ret = sym_ref_pop(microjs->tab, &ref)) < 0)
 		return ret;
 
-	/* skip the exception rethrow */
-	offs = 1;
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+
+	offs = 1; /* skip the exception rethrow */
 	TRACEF("%04x\tJMP %04x\n", microjs->pc, microjs->pc + offs + 3);
 	microjs->code[microjs->pc++] = OPC_JMP + (offs & 0x0f);
 	microjs->code[microjs->pc++] = offs >> 4;
@@ -626,11 +787,13 @@ int op_catch(struct microjs_sdt * microjs)
 	struct sym_ref ref2;
 	int ret;
 
-	DCC_LOG(LOG_INFO, "-----");
-
 	/* get the try exception frame reference */
 	if ((ret = sym_ref_pop(microjs->tab, &ref1)) < 0)
 		return ret;
+
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 
 	/* save current location */
 #if MICROJS_TRACE_ENABLED
@@ -678,6 +841,9 @@ int op_patch_ref(struct microjs_sdt * microjs)
 
 int op_throw(struct microjs_sdt * microjs) 
 {
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF("%04x\tXPT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_XPT;
 	return 0;
@@ -687,6 +853,9 @@ int op_if_cond(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	/* save current location on a temporary variable */
 	ref.addr = microjs->pc;
 #if MICROJS_TRACE_ENABLED
@@ -711,6 +880,9 @@ int op_if_else(struct microjs_sdt * microjs)
 	if ((ret = sym_ref_pop(microjs->tab, &ref)) < 0)
 		return ret;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	/* Backpatch the jump */
 	offs = microjs->pc - ref.addr;
 	TRACEF("\tfix %04x -> JEQ %04x (.L%d)\n", ref.addr, 
@@ -760,8 +932,10 @@ int op_while_cond(struct microjs_sdt * microjs)
 	if ((ret = sym_wld_pop(microjs->tab, &wld)) < 0)
 		return ret;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	TRACEF(".L%d.1:\n%04x\tJEQ xxxx\n", wld.lbl, microjs->pc);
-
 	/* save current location (condition) */
 	wld.cond = microjs->pc;
 	/* reserve 2 positions for opcode + jump address */
@@ -789,6 +963,9 @@ int op_while_end(struct microjs_sdt * microjs)
 	microjs->code[wld.cond ] += offs & 0x0f;
 	microjs->code[wld.cond + 1] = offs >> 4;
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	/* Repeat jump */
 	offs = wld.loop - (microjs->pc + 2);
 	TRACEF("%04x\tJMP %04x (.L%d.0 offs=%d)\n", microjs->pc, 
@@ -835,6 +1012,9 @@ int op_for_cond(struct microjs_sdt * microjs)
 	microjs->code[microjs->pc] = OPC_JEQ;
 	microjs->pc += 2; /* reserve space for jump address */
 
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
 	/* Jump to the beginning of the body part */
 	TRACEF(".L%d.2:\n%04x\tJMP xxxx\n", fld.lbl, microjs->pc);
 	fld.addr[2] = microjs->pc; /* save current location */
@@ -866,8 +1046,10 @@ int op_for_after(struct microjs_sdt * microjs)
 	microjs->code[addr] += offs & 0x0f;
 	microjs->code[addr + 1] = offs >> 4;
 
-	/* Repeat jump */
-	addr = fld.addr[0];
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	addr = fld.addr[0]; /* Repeat jump */
 	offs = addr - (microjs->pc + 2);
 	TRACEF("%04x\tJMP %04x (.L%d.0 offs=%d)\n", microjs->pc, addr, 
 		   fld.lbl, offs);
@@ -888,8 +1070,10 @@ int op_for_end(struct microjs_sdt * microjs)
 	if ((ret = sym_fld_pop(microjs->tab, &fld)) < 0)
 		return ret;
 
-	/* Adjust the conditinal jump */
-	addr = fld.addr[1];
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	addr = fld.addr[1]; /* adjust the conditinal jump */
 	offs = microjs->pc - addr;
 	TRACEF("\tfix %04x -> JEQ %04x (.L%d.1)\n", addr, 
 		   microjs->pc + 2, fld.lbl);
@@ -1125,6 +1309,10 @@ int microjs_sdt_begin(struct microjs_sdt * microjs, uint8_t code[],
 		/* get the default exception handler */
 		sym_pick(microjs->tab, 0, &ref, sizeof(struct sym_ref));
 	}
+
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc;        /* save code pointer */
+#endif
 
 	TRACEF(".L%d:\n%04x\tPUSHX xxxx\n", ref.lbl, microjs->pc);
 	/* Insert the opcode, the address will be backpatched alter */

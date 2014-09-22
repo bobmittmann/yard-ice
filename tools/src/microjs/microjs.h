@@ -78,6 +78,11 @@ enum {
 	ERR_INVALID_INSTRUCTION = 25,
 };
 
+struct symstat {
+	uint16_t sp;
+	uint16_t bp;
+};
+
 struct symtab;
 struct microjs_sdt;
 
@@ -139,19 +144,24 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 
 struct symtab * symtab_open(uint32_t * buf, unsigned int len);
 
-struct microjs_sdt * microjs_sdt_init(uint32_t sdt_buf[], 
-									  unsigned int buf_size,
+struct symstat symtab_state_save(struct symtab * tab);
+
+void symtab_state_rollback(struct symtab * tab, struct symstat st);
+
+struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
+									  unsigned int sdt_size,
 									  struct symtab * tab, 
-									  uint8_t code[],
-									  unsigned int code_size, 
 									  unsigned int data_size);
+
+int microjs_sdt_begin(struct microjs_sdt * microjs, 
+					  uint8_t code[], unsigned int code_size);
 
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-void microjs_sdt_reset(struct microjs_sdt * microjs);
+int microjs_sdt_end(struct microjs_sdt * microjs);
 
-int microjs_sdt_done(struct microjs_sdt * microjs);
+void microjs_sdt_reset(struct microjs_sdt * microjs);
 
 void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
 

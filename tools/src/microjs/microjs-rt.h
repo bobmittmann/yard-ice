@@ -50,6 +50,7 @@
    -------------------------------------------------------------------------- */
 
 /* All the rest  */
+#define MISCOP       (0 << 4)
 #define OPC_ABT      0
 #define OPC_RET      1
 #define OPC_XPT      2 /* exception */
@@ -60,12 +61,14 @@
 #define OPC_I16      7
 #define OPC_I32      8
 #define OPC_EXT      9
-#define OPC_NOP0     10
-#define OPC_NOP1     11
-#define OPC_NOP2     12
+#define OPC_INC      10
+#define OPC_DEC      11
+#define OPC_NOT      12
 #define OPC_NOP3     13
 #define OPC_NOP4     14
 #define OPC_NOP5     15
+
+#define OPC_I4       (1 << 4)
 
 /* Binary integer operations */
 #define INTOP        (2 << 4)
@@ -86,17 +89,21 @@
 #define OPC_LE       (INTOP + 14)
 #define OPC_GE       (INTOP + 15)
 
-#define MISCOP       (0 << 4)
-#define OPC_I4       (1 << 4)
-#define INTOP        (2 << 4)
-#define FIXOP        (3 << 4)
+#define OPC_ISP      (3 << 4) /* Add SP */
+#define OPC_LD       (4 << 4)
+#define OPC_ST       (5 << 4)
+#define OPC_PUHSX    (6 << 4) /* Push exception frame */
+#define OPC_JMP      (7 << 4)
+#define OPC_JEQ      (8 << 4)
 
-#define OPC_ISP      (4 << 4) /* Add SP */
-#define OPC_LD       (5 << 4)
-#define OPC_ST       (6 << 4)
-#define OPC_PUHSX    (7 << 4) /* Push exception frame */
-#define OPC_JMP      (8 << 4)
-#define OPC_JEQ      (9 << 4)
+#define OPC_RES0     (9 << 4)
+#define OPC_RES1     (10 << 4)
+#define OPC_RES2     (11 << 4)
+#define OPC_RES3     (12 << 4)
+#define OPC_RES4     (13 << 4)
+#define OPC_RES5     (14 << 4)
+#define OPC_RES6     (15 << 4)
+
 #define OPC_IBP      (10 << 4) /* Increment PB */
 #define OPC_LDR      (11 << 4) /* BP relative load */
 #define OPC_STR      (12 << 4) /* BP relative store */

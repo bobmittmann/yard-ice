@@ -36,6 +36,8 @@
 #include "config.h"
 
 #include <microjs.h>
+#define __MICROJS_LIB_DEF__
+#include <microjs-stdlib.h>
 
 #if defined(WIN32)
   #include <io.h>
@@ -106,35 +108,15 @@ void version(char * prog)
 	exit(1);
 }
 
-/* --------------------------------------------------------------------------
-   External symbols
-   -------------------------------------------------------------------------- */
-
-struct ext_libdef externals = {
-	.name = "lib",
-	.fncnt = 9,
-	.fndef = {
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
-		[EXT_SRAND] = { .nm = "srand", .argmin = 1, .argmax = 1, .ret = 0 },
-		[EXT_TIME] = { .nm = "time", .argmin = 0, .argmax = 0, .ret = 1 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_WRITE] = { .nm = "write", .argmin = 0, .argmax = 32, .ret = 0 },
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
-		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
-	}
-};
-
 int main(int argc,  char **argv)
 {
-	uint8_t code[512]; /* compiled code */
-	int32_t data[64]; /* data area */
+	uint8_t vm_code[512]; /* compiled code */
+	int32_t vm_data[64]; /* data area */
 
 	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
-	uint32_t symbuf[64]; /* symbol table buffer (can be shared with 
+	uint32_t js_symbuf[64]; /* symbol table buffer (can be shared with 
 						  the data buffer) */
-	uint32_t sdtbuf[64]; /* compiler buffer */
+	uint32_t js_sdtbuf[64]; /* compiler buffer */
 
 	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
@@ -208,10 +190,12 @@ int main(int argc,  char **argv)
 	/* initialize string buffer */
 	strbuf_init(strbuf, sizeof(strbuf));
 	/* initialize symbol table */
-	symtab = symtab_init(symbuf, sizeof(symbuf), &externals);
+	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &microjs_lib);
 	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, 
-							  code, sizeof(code), sizeof(data));
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
+							   symtab, sizeof(vm_data));
+
+	microjs_sdt_begin(microjs, vm_code, sizeof(vm_code));
 
 	/* load all scripts */
 	for (i = optind; i < argc; ++i) {
@@ -226,15 +210,15 @@ int main(int argc,  char **argv)
 	}
 
 	/* insert an ABT opcode at the end of the code */
-	if ((n = microjs_sdt_done(microjs)) < 0)
+	if ((n = microjs_sdt_end(microjs)) < 0)
 		return 1;
 
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, data, sizeof(data));
+	microjs_vm_init(&vm, vm_data, sizeof(vm_data));
 	/* initialize run time environment */
 	vm.env.ftrace = ftrace;
 	/* run */
-	if ((n = microjs_exec(&vm, code, n)) != 0) {
+	if ((n = microjs_exec(&vm, vm_code, n)) != 0) {
 		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", n);
 		return 1;
 	}

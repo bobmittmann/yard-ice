@@ -47,41 +47,22 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 	tab->fp = tab->top;
 	/* symbols are allocated bottom-up */
 	tab->bp = 0;
+
+#if MICROJS_TRACE_ENABLED
 	/* initialize temporary labels */
 	tab->tmp_lbl = 0;
+#endif
 
 	tab->libdef = libdef;
 
-	DCC_LOG3(LOG_TRACE, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
 
 	return tab;
 }
 
-struct symtab * symtab_open(uint32_t * buf, unsigned int len)
+struct symstat symtab_state_save(struct symtab * tab)
 {
-	struct symtab * tab = (struct symtab *)buf;
-
-	DCC_LOG4(LOG_TRACE, "bp=%d sp=%d fp=%d top=%d", 
-			 tab->bp, tab->sp, tab->fp, tab->top);
-
-	if (tab->fp > tab->top)
-		DCC_LOG(LOG_ERROR, "fp > top !");
-
-	if (tab->sp > tab->fp)
-		DCC_LOG(LOG_ERROR, "sp > fp !");
-
-	if (tab->sp < tab->bp)
-		DCC_LOG(LOG_ERROR, "sp <= pp !");
-
-	/* reset temporary labels */
-	tab->tmp_lbl = 0;
-
-	return tab;
-}
-
-struct tabst symtab_state_save(struct symtab * tab)
-{
-	struct tabst st;
+	struct symstat st;
 
 	st.sp = tab->sp;
 	st.bp = tab->bp;
@@ -89,18 +70,17 @@ struct tabst symtab_state_save(struct symtab * tab)
 	return st;
 }
 
-void symtab_state_rollback(struct symtab * tab, struct tabst st)
+void symtab_state_rollback(struct symtab * tab, struct symstat st)
 {
 	/* remove all stack frames except the global one */
 	while (tab->fp != tab->top) {
 		sym_sf_pop(tab);
-		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
+		DCC_LOG2(LOG_INFO, "sp=%d fp=%d", tab->sp, tab->fp);
 	}
 
 	tab->sp = st.sp;
 	tab->bp = st.bp;
 }
-
 
 /* --------------------------------------------------------------------------
    Symbol table stack

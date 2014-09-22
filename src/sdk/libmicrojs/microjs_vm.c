@@ -301,16 +301,40 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t co
 
 			case OPC_INV:
 				r0 = *sp++;
-				*(--sp) = ~r0;
+				r1 = ~r0;
+				*(--sp) = r1;
 				if (trace)
-					FTRACEF(f, "INV %d\n", r0);
+					FTRACEF(f, "INV %d -> %d\n", r0, r1);
 				break;
 
 			case OPC_NEG:
 				r0 = *sp++;
-				*(--sp) = -r0;
+				r1 = -r0;
+				*(--sp) = r1;
 				if (trace)
-					FTRACEF(f, "NEG %d\n", r0);
+					FTRACEF(f, "NEG %d -> %d\n", r0, r1);
+				break;
+
+			case OPC_NOT:
+				r0 = *sp++;
+				r1 = !r0;
+				*(--sp) = r1;
+				if (trace)
+					FTRACEF(f, "NOT %d -> %d\n", r0, r1);
+				break;
+
+			case OPC_INC:
+				r0 = *sp++;
+				*(--sp) = r0 + 1;
+				if (trace)
+					FTRACEF(f, "INC %d\n", r0);
+				break;
+				
+			case OPC_DEC:
+				r0 = *sp++;
+				*(--sp) = r0 - 1;
+				if (trace)
+					FTRACEF(f, "DEC %d\n", r0);
 				break;
 
 			case OPC_POP:
@@ -383,9 +407,6 @@ except:
 					FTRACEF(f, "ABT\n");
 				goto done;
 
-			case OPC_NOP0:
-			case OPC_NOP1:
-			case OPC_NOP2:
 			case OPC_NOP3:
 			case OPC_NOP4:
 			case OPC_NOP5:

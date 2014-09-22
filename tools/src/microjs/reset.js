@@ -8,6 +8,8 @@ var mod_trbl = 0;
 var mod_alrm = 0;
 var sens_trbl = 0;
 var sens_alrm = 0;
+var alrm;
+var trbl;
 
 try {
 	var i;

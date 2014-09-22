@@ -85,6 +85,10 @@
 #define MICROJS_STDLIB_ENABLED 1
 #endif
 
+#ifndef MICROJS_OPTIMIZATION_ENABLED 
+#define MICROJS_OPTIMIZATION_ENABLED 1
+#endif
+
 #if (MICROJS_TRACE_ENABLED)
 #define	TRACEF(__FMT, ...) do { \
 	fprintf(stdout, __FMT, ## __VA_ARGS__); \
@@ -138,6 +142,9 @@ struct microjs_sdt {
 	uint16_t tgt_heap;  /* target data memory heap */
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
+#if MICROJS_OPTIMIZATION_ENABLED
+	uint16_t spc;        /* saved code pointer */
+#endif
 };
 
 /* --------------------------------------------------------------------------
@@ -180,32 +187,42 @@ struct sym_obj {
 #define SYM_IS_METHOD(SYM) ((SYM).flags & SYM_METHOD)
 
 struct sym_tmp {
-	uint8_t len;
 	char * s;
+	uint8_t len;
 };
 
 /* object reference, this represent a pointer to a 
    target's memory location */
 struct sym_ref {
+#if MICROJS_TRACE_ENABLED
 	uint16_t lbl;
+#endif
 	uint16_t addr;
 };
 
 /* For Loop Descriptor */
 struct sym_fld {
+#if MICROJS_TRACE_ENABLED
 	uint16_t lbl;
+#endif	
 	uint16_t addr[4];
+#if 0
 	uint16_t brk; /* break list */
 	uint16_t ctn; /* continue list */
+#endif
 };
 
 /* While Loop Descriptor */
 struct sym_wld {
+#if MICROJS_TRACE_ENABLED
 	uint16_t lbl;
+#endif
 	uint16_t loop;
 	uint16_t cond;
+#if 0
 	uint16_t brk; /* break list */
 	uint16_t ctn; /* continue list */
+#endif
 };
 
 /* Function Descriptor */
@@ -236,7 +253,9 @@ struct symtab {
 	uint16_t bp;
 	uint16_t fp;
 	uint16_t top;
+#if MICROJS_TRACE_ENABLED
 	uint16_t tmp_lbl;
+#endif
 	struct sym_obj buf[];
 };
 
@@ -261,10 +280,6 @@ int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl);
 
 int sym_dump(FILE * f, struct symtab * tab);
 
-struct tabst symtab_state_save(struct symtab * tab);
-
-void symtab_state_restore(struct symtab * tab, struct tabst st);
-
 /* --------------------------------------------------------------------------
    Objects
    -------------------------------------------------------------------------- */
@@ -279,14 +294,20 @@ struct sym_obj * sym_obj_scope_lookup(struct symtab * tab,
 									  const char * s, unsigned int len);
 
 
+static inline bool symtab_isempty(struct symtab * tab) {
+	return (tab->sp == tab->top) ? true : false;
+}
+
 static inline const char * sym_obj_name(struct symtab * tab, 
 										struct sym_obj * obj) {
 	return (char *)&tab->buf + obj->nm;
 }
 
+#if MICROJS_TRACE_ENABLED
 static inline int sym_lbl_next(struct symtab * tab) {
 	return tab->tmp_lbl++;
 }
+#endif
 
 /* --------------------------------------------------------------------------
    Symbol table stack

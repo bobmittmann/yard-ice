@@ -29,23 +29,16 @@
 #include "microjs-i.h"
 
 #include <sys/dcclog.h>
+
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
 
-int32_t signext4bit(int32_t x)
-{
-	struct { int32_t x: 4; } s;
+#define SIGNEXT4BIT(_X) ({ struct { int32_t x: 4; } s; \
+						  s.x = (_X); (int32_t)s.x; })
 
-	return s.x = x;
-}
-
-int32_t signext12bit(int32_t x)
-{
-	struct { int32_t x: 12; } s;
-
-	return s.x = x;
-}
+#define SIGNEXT12BIT(_X) ({ struct { int32_t x: 12; } s; \
+						  s.x = (_X); (int32_t)s.x; })
 
 
 void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
@@ -73,7 +66,7 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 
 #define SIZEOF_WORD ((int)sizeof(int32_t))
 
-int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
+int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 {
 	FILE * f = vm->env.ftrace;
 	bool trace = (f == NULL) ? false : true;
@@ -110,21 +103,21 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 
 		opc = *pc++;
 		opt = opc & 0xf;
-		opc &= 0xf0;
+		opc >>= 4;
 	
 		DCC_LOG2(LOG_MSG, "OPC=0x%02x OPT=0x%02x", opc, opt);
 
 		switch (opc) {
 			/* get the relative address */
-		case (OPC_JMP):
-			r0 = signext12bit((*pc++ << 4) + opt);
+		case (OPC_JMP >> 4):
+			r0 = SIGNEXT12BIT((*pc++ << 4) + opt);
 			pc += r0;
 			if (trace)
 				FTRACEF(f, "JMP 0x%04x (offs=%d)\n", (int)(pc - code), r0);
 			break;
 
-		case (OPC_JEQ): /* coniditional JMP */
-			r0 = signext12bit((*pc++ << 4) + opt);
+		case (OPC_JEQ >> 4): /* coniditional JMP */
+			r0 = SIGNEXT12BIT((*pc++ << 4) + opt);
 			r1 = *sp++;
 			if (trace)
 				FTRACEF(f, "JEQ 0x%04x (%d)\n", (int)(pc - code) + r0, r1);
@@ -132,7 +125,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				pc += r0;
 			break;
 
-		case (OPC_PUHSX):
+		case (OPC_PUHSX >> 4):
 			/* get the exception absolute jump address */
 			r0 = (*pc++ << 4) + opt;
 			/* combine with the current exception frame pointer */
@@ -145,14 +138,14 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 						(int)(xp - data) * SIZEOF_WORD);
 			break;
 
-		case (OPC_ISP):
-			r0 = signext12bit((*pc++ << 4) + opt);
+		case (OPC_ISP >> 4):
+			r0 = SIGNEXT12BIT((*pc++ << 4) + opt);
 			sp += r0;
 			if (trace)
 				FTRACEF(f, "ISP %d\n", r0);
 			break;
 
-		case (OPC_LD):
+		case (OPC_LD >> 4):
 			r1 = (*pc++ << 4) + opt;
 			r0 = data[r1];
 			*(--sp) = r0;
@@ -160,7 +153,7 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "LD 0x%04x -> %d\n", r1 * SIZEOF_WORD, r0);
 			break;
 
-		case (OPC_ST):
+		case (OPC_ST >> 4):
 			r1 = (*pc++ << 4) + opt;
 			r0 = *sp++;
 			data[r1] = r0;
@@ -192,18 +185,18 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 				FTRACEF(f, "ISP %d\n", r0);
 			break;
 #endif
-		case OPC_I4: 
-			r0 = signext4bit(opt);
+		case (OPC_I4 >> 4): 
+			r0 = SIGNEXT4BIT(opt);
 			*(--sp) = r0;
 			if (trace)
 				FTRACEF(f, "I4 %d\n", r0);
 			break;
 
-		case INTOP:
+		case (INTOP >> 4):
 			r0 = *sp++;
 			r1 = *sp++;
-			switch (opt) {
 
+			switch (opt) {
 			case OPC_LT - INTOP:
 				r2 = r1 < r0;
 				if (trace)
@@ -303,21 +296,45 @@ int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 			*(--sp) = r2;
 			break;
 
-		case MISCOP:
+		case (MISCOP >> 4):
 			switch (opt) {
 
 			case OPC_INV:
 				r0 = *sp++;
-				*(--sp) = ~r0;
+				r1 = ~r0;
+				*(--sp) = r1;
 				if (trace)
-					FTRACEF(f, "INV %d\n", r0);
+					FTRACEF(f, "INV %d -> %d\n", r0, r1);
 				break;
 
 			case OPC_NEG:
 				r0 = *sp++;
-				*(--sp) = -r0;
+				r1 = -r0;
+				*(--sp) = r1;
 				if (trace)
-					FTRACEF(f, "NEG %d\n", r0);
+					FTRACEF(f, "NEG %d -> %d\n", r0, r1);
+				break;
+
+			case OPC_NOT:
+				r0 = *sp++;
+				r1 = !r0;
+				*(--sp) = r1;
+				if (trace)
+					FTRACEF(f, "NOT %d -> %d\n", r0, r1);
+				break;
+
+			case OPC_INC:
+				r0 = *sp++;
+				*(--sp) = r0 + 1;
+				if (trace)
+					FTRACEF(f, "INC %d\n", r0);
+				break;
+				
+			case OPC_DEC:
+				r0 = *sp++;
+				*(--sp) = r0 - 1;
+				if (trace)
+					FTRACEF(f, "DEC %d\n", r0);
 				break;
 
 			case OPC_POP:
@@ -390,19 +407,43 @@ except:
 					FTRACEF(f, "ABT\n");
 				goto done;
 
-			default:
+			case OPC_NOP3:
+			case OPC_NOP4:
+			case OPC_NOP5:
 				r1 = ERR_INVALID_INSTRUCTION;
 				DCC_LOG1(LOG_ERROR, "Invalid instruction, MISC(%d)", opt);
-				return -1;
 				goto except;
 			}
 			break;
 
-		default:
-			DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-			r1 = ERR_INVALID_INSTRUCTION;
-			return -1;
-			goto except;
+		case (OPC_RES0 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION;
+			break;
+		case (OPC_RES1 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 1;
+			break;
+		case (OPC_RES2 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 2;
+			break;
+		case (OPC_RES3 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 3;
+			break;
+		case (OPC_RES4 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 4;
+			break;
+		case (OPC_RES5 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 5;
+			break;
+		case (OPC_RES6 >> 4):
+				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
+				r1 = ERR_INVALID_INSTRUCTION + 6;
+			break;
 		}
 	} 
 

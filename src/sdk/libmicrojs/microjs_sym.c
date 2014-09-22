@@ -55,7 +55,7 @@ struct symtab * symtab_init(uint32_t * buf, unsigned int len,
 
 	tab->libdef = libdef;
 
-	DCC_LOG3(LOG_TRACE, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
+	DCC_LOG3(LOG_INFO, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
 
 	return tab;
 }
@@ -75,7 +75,7 @@ void symtab_state_rollback(struct symtab * tab, struct symstat st)
 	/* remove all stack frames except the global one */
 	while (tab->fp != tab->top) {
 		sym_sf_pop(tab);
-		DCC_LOG2(LOG_TRACE, "sp=%d fp=%d", tab->sp, tab->fp);
+		DCC_LOG2(LOG_INFO, "sp=%d fp=%d", tab->sp, tab->fp);
 	}
 
 	tab->sp = st.sp;
@@ -264,7 +264,7 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 
 	id = bp / sizeof(struct sym_obj);
 
-	DCC_LOG2(LOG_TRACE, "bp=%d id=%d", bp, id);
+	DCC_LOG2(LOG_INFO, "bp=%d id=%d", bp, id);
 	DCC_LOG1(LOG_INFO, "nm=\"%s\"", (char *)&tab->buf + tab->sp); 
 
 	obj = &tab->buf[id];
