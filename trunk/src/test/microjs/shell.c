@@ -192,11 +192,7 @@ int cmd_vm(FILE * f, int argc, char ** argv)
 	if (argc != 1)
 		return SHELL_ERR_EXTRA_ARGS;
 
-//	vm_reset();
-	/* initialize symbol table */
-//	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
-	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
-	symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
+	vm_reset();
 	return 0;
 }
 

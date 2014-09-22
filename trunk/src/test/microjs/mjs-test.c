@@ -19,7 +19,7 @@ extern const struct shell_cmd cmd_tab[];
 const char * shell_greeting(void) 
 {
 	return "\n"
-	"Microjavascrip test" VERSION_NUM " - " VERSION_DATE "\n"
+	"MicroJS " VERSION_NUM " - " VERSION_DATE "\n"
 	"(c) Copyright 2014 - Mircom Group (bmittmann@mircomgroup.com)\n\n";
 }
 

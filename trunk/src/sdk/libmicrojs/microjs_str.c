@@ -56,7 +56,7 @@ void strbuf_init(uint16_t * buf, unsigned int len)
 	var_strbuf->pos = len; 
 	var_strbuf->cnt = 0; 
 	var_strbuf->offs[0] = 0;
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 }
 
 #if 0
@@ -76,7 +76,7 @@ int str_lookup(const char * s, unsigned int len)
 	for (i = 0; i < var_strbuf->cnt; ++i) {
 		char * cstr = (char *)var_strbuf + var_strbuf->offs[i];
 		if ((strncmp(cstr, s, len) == 0) && (cstr[len] == '\0')) {
-			DCC_LOG1(LOG_TRACE, "match idx=%d", i);
+			DCC_LOG1(LOG_INFO, "match idx=%d", i);
 			return i;
 		}	
 	}
@@ -93,7 +93,7 @@ int str_add(const char * s, unsigned int len)
 	int offs;
 
 	if ((idx = str_lookup(s, len)) >= 0) {
-		DCC_LOG1(LOG_TRACE, "match idx=%d", idx);
+		DCC_LOG1(LOG_INFO, "match idx=%d", idx);
 		return idx;
 	}
 
@@ -114,7 +114,7 @@ int str_add(const char * s, unsigned int len)
 	var_strbuf->cnt++;
 	var_strbuf->pos -= len + 1;
 
-	DCC_LOG(LOG_TRACE, "%d");
+	DCC_LOG(LOG_INFO, "%d");
 
 	return idx;
 }
@@ -200,12 +200,12 @@ int cstr_lookup(const char * cs, unsigned int len)
 	for (i = 0; i < var_strbuf->cnt; ++i) {
 		char * cstr = (char *)var_strbuf + var_strbuf->offs[i];
 		if (cstrncmp(cstr, cs, len)) {
-			DCC_LOG1(LOG_TRACE, "match idx=%d", i);
+			DCC_LOG1(LOG_INFO, "match idx=%d", i);
 			return i;
 		}	
 	}
 
-	DCC_LOG(LOG_WARNING, "not found!");
+	DCC_LOG(LOG_INFO, "not found!");
 
 	return -ERR_STRING_NOT_FOUND;
 }
