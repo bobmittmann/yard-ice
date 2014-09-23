@@ -44,6 +44,8 @@
 #define EXT_MEMRD	     4
 #define EXT_PRINT	     5
 
+#define EXT_MODEL_NAME   9
+
 #define EXT_SENS_STATE   10
 #define EXT_SENS_ALARM   11
 #define EXT_SENS_TROUBLE 12
@@ -62,10 +64,11 @@
 #define EXT_SENS_IMODE   25
 #define EXT_SENS_IRATE   26
 #define EXT_SENS_IPRE    27
-#define EXT_SENS_CLEAR    28
-#define EXT_SENS_INSERT   29
-#define EXT_SENS_REMOVE   30
-#define EXT_SENS_BELONG     31
+#define EXT_SENS_CLEAR   28
+#define EXT_SENS_INSERT  29
+#define EXT_SENS_REMOVE  30
+#define EXT_SENS_BELONG  31
+#define EXT_SENS_MODEL   32
 
 #define EXT_MOD_STATE    40
 #define EXT_MOD_ALARM    41
@@ -88,7 +91,8 @@
 #define EXT_MOD_CLEAR    58
 #define EXT_MOD_INSERT   59
 #define EXT_MOD_REMOVE   60
-#define EXT_MOD_BELONG     61
+#define EXT_MOD_BELONG   61
+#define EXT_MOD_MODEL    62
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -104,7 +108,7 @@
 
 struct ext_libdef slcdev_lib = {
 	.name = "lib",
-	.fncnt = 62,
+	.fncnt = 63,
 	.fndef = {
 		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
 		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
@@ -112,6 +116,9 @@ struct ext_libdef slcdev_lib = {
 		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
 		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
 		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
+
+		[EXT_MODEL_NAME] = { .nm = "model_name", 
+			.argmin = 1, .argmax = 1, .ret = 1 },
 
 		[EXT_SENS_STATE] = { .nm = "sens_state", 
 			.argmin = 1, .argmax = 1, .ret = 1 },
@@ -157,6 +164,8 @@ struct ext_libdef slcdev_lib = {
 			.argmin = 2, .argmax = 5, .ret = 0 },
 		[EXT_SENS_BELONG] = { .nm = "sens_belong",
 			.argmin = 2, .argmax = 5, .ret = 1 },
+		[EXT_SENS_MODEL] = { .nm = "sens_model",
+			.argmin = 1, .argmax = 1, .ret = 1 },
 
 		[EXT_MOD_STATE] = { .nm = "mod_state",
 			.argmin = 1, .argmax = 1, .ret = 1 },
@@ -202,6 +211,8 @@ struct ext_libdef slcdev_lib = {
 			.argmin = 2, .argmax = 5, .ret = 0 },
 		[EXT_MOD_BELONG] = { .nm = "mod_belong",
 			.argmin = 2, .argmax = 5, .ret = 1 },
+		[EXT_MOD_MODEL] = { .nm = "mod_model",
+			.argmin = 1, .argmax = 1, .ret = 1 },
 	}
 };
 
