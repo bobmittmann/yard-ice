@@ -816,6 +816,20 @@ static int32_t __belong(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
+static int32_t __model(struct microjs_env * env, int32_t argv[], int argc, 
+					   unsigned int offs)
+{
+	int32_t * retv = argv + argc - 1;
+	unsigned int idx = argv[argc - 1];
+
+	if (idx >= 160)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	idx += offs;
+
+	retv[0] = ss_dev_tab[idx].model;
+
+	return 1; /* return the number of return values */
+}
 
 /* --------------------------------------------------------------------------
    Sensors API
@@ -929,6 +943,11 @@ int32_t __sens_remove(struct microjs_env * env, int32_t argv[], int argc)
 int32_t __sens_belong(struct microjs_env * env, int32_t argv[], int argc)
 {
 	return __belong(env, argv, argc, 0);
+}
+
+int32_t __sens_model(struct microjs_env * env, int32_t argv[], int argc)
+{
+	return __model(env, argv, argc, 0);
 }
 
 
@@ -1046,6 +1065,19 @@ int32_t __mod_belong(struct microjs_env * env, int32_t argv[], int argc)
 	return __belong(env, argv, argc, 160);
 }
 
+int32_t __mod_model(struct microjs_env * env, int32_t argv[], int argc)
+{
+	return __model(env, argv, argc, 160);
+}
+
+/* --------------------------------------------------------------------------
+   Device models
+   -------------------------------------------------------------------------- */
+
+static int32_t __model_name(struct microjs_env * env, int32_t argv[], int argc) 
+{
+	return 0; /* return the number of return values */
+}
 
 /* --------------------------------------------------------------------------
    Native (external) call table
@@ -1059,6 +1091,9 @@ int32_t (* const microjs_extern[])(struct microjs_env *,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
 	[EXT_MEMRD] = __memrd,
+
+	[EXT_MODEL_NAME] = __model_name,
+
 	[EXT_SENS_STATE] = __sens_state,
 	[EXT_SENS_ALARM] = __sens_alarm,
 	[EXT_SENS_TROUBLE] = __sens_trouble,
@@ -1081,6 +1116,7 @@ int32_t (* const microjs_extern[])(struct microjs_env *,
 	[EXT_SENS_INSERT] = __sens_insert,
 	[EXT_SENS_REMOVE] = __sens_remove,
 	[EXT_SENS_BELONG] = __sens_belong,
+	[EXT_SENS_MODEL] = __sens_model,
 
 	[EXT_MOD_STATE] = __mod_state,
 	[EXT_MOD_ALARM] = __mod_alarm,
@@ -1104,5 +1140,6 @@ int32_t (* const microjs_extern[])(struct microjs_env *,
 	[EXT_MOD_INSERT] = __mod_insert,
 	[EXT_MOD_REMOVE] = __mod_remove,
 	[EXT_MOD_BELONG] = __mod_belong,
+	[EXT_MOD_MODEL] = __mod_model,
 };
 
