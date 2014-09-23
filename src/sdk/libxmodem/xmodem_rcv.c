@@ -1,23 +1,26 @@
 /* 
- * File:	 xmodem_rcv.c
- * Author:   Robinson Mittmann (bobmittmann@gmail.com)
- * Target:
- * Comment:
- * Copyright(c) 2003-2006 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(C) 2012-2014 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You can receive a copy of the GNU Lesser General Public License from 
+ * http://www.gnu.org/
+ */
+
+/** 
+ * @file xmodem_rcv.c
+ * @brief YARD-ICE
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 
@@ -36,8 +39,6 @@
 #define NAK  0x15
 #define CAN  0x18
 
-#include <sys/dcclog.h>
-
 #define XMODEM_RCV_TMOUT_MS 2000
 
 int xmodem_rcv_init(struct xmodem_rcv * rx, const struct comm_dev * comm, 
@@ -55,9 +56,6 @@ int xmodem_rcv_init(struct xmodem_rcv * rx, const struct comm_dev * comm,
 	rx->data_len = 0;
 	rx->data_pos = 0;
 
-	DCC_LOG1(LOG_TRACE, "mode=%s", 
-			 (rx->mode == XMODEM_RCV_CRC) ? "CRC" : "CKS");
-
 	return 0;
 }
 
@@ -65,8 +63,7 @@ int xmodem_rcv_cancel(struct xmodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
 
-	DCC_LOG(LOG_TRACE, "ABT!");
-
+	
 	pkt[0] = CAN;
 	pkt[1] = CAN;
 	pkt[2] = CAN;
@@ -86,11 +83,9 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 	int seq;
 	int rem;
 
-	DCC_LOG(LOG_INFO, "....");
-
+	
 	for (;;) {
-		DCC_LOG1(LOG_TRACE, "SYN: %02x", rx->sync);
-
+		
 		if ((ret = rx->comm->op.send(rx->comm->arg, &rx->sync, 1)) < 0) {
 			return ret;
 		}
@@ -109,20 +104,17 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 			c = pkt[0];
 
 			if (c == STX) {
-				DCC_LOG(LOG_TRACE, "<- STX");
-				cnt = 1024;
+								cnt = 1024;
 				break;
 			}
 
 			if (c == SOH) {
-				DCC_LOG(LOG_TRACE, "<- SOH");
-				cnt = 128;
+								cnt = 128;
 				break;
 			}
 
 			if (c == EOT) {
-				DCC_LOG(LOG_TRACE, "<- EOT");
-				/* end of transmission */
+								/* end of transmission */
 				pkt[0] = ACK;
 				if ((ret = rx->comm->op.send(rx->comm->arg, pkt, 1)) < 0)
 					return ret;
@@ -133,8 +125,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		rem = cnt + ((rx->mode) ? 4 : 3);
 		cp = pkt + 1;
 
-		DCC_LOG2(LOG_TRACE, "cnt=%d rem=%d", cnt, rem);
-
+		
 		/* receive the packet */
 		while (rem) {
 
@@ -154,8 +145,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		nseq = pkt[2];
 
 		if (seq != ((~nseq) & 0xff)) {
-			DCC_LOG2(LOG_WARNING, "SEQ: %d != NSEQ: %d", seq, nseq);
-			goto error;
+						goto error;
 		}
 
 		cp = &pkt[3];
@@ -171,8 +161,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 			cmp = (unsigned short)cp[i] << 8 | cp[i + 1];
 
 			if (cmp != crc) {
-				DCC_LOG2(LOG_WARNING, "crc: %04x != %04x", cmp, crc);
-				goto error;
+								goto error;
 			}
 
 		} else {
@@ -189,14 +178,12 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 
 		if (seq == ((rx->pktno - 1) & 0xff)) {
 			/* retransmission */
-			DCC_LOG(LOG_TRACE, "RET");
-			rx->sync = ACK;
+						rx->sync = ACK;
 			continue;
 		}
 
 		if (seq != rx->pktno) {
-			DCC_LOG2(LOG_TRACE, "SEQ: %d != %d", seq, rx->pktno);
-			goto error;
+						goto error;
 		}
 
 		rx->pktno = (rx->pktno + 1) & 0xff;
@@ -204,19 +191,16 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		rx->sync = ACK;
 		rx->data_len = cnt;
 		rx->data_pos = 0;
-		DCC_LOG(LOG_INFO, "ACK");
-
+		
 		return cnt;
 
 error:
 		/* flush */
 		while (rx->comm->op.recv(rx->comm->arg, pkt, 1024, 200) > 0);
 		rx->sync = NAK;
-		DCC_LOG(LOG_TRACE, "NACK");
-
+		
 timeout:
-		DCC_LOG(LOG_TRACE, "TMO");
-
+		
 		if ((--rx->retry) == 0) {
 			/* too many errors */
 			ret = -1;
@@ -224,8 +208,7 @@ timeout:
 		}
 	}
 
-	DCC_LOG(LOG_TRACE, "ABT!");
-
+	
 	pkt[0] = CAN;
 	pkt[1] = CAN;
 	pkt[2] = CAN;
@@ -260,8 +243,6 @@ int xmodem_rcv_loop(struct xmodem_rcv * rx, void * data, int len)
 				dst[i] = src[i];
 
 			rx->data_pos += n;
-
-			DCC_LOG1(LOG_INFO, "n=%d", n);
 
 			return n;
 		}
