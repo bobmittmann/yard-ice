@@ -35,16 +35,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define EXT_RAND    0
-#define EXT_SQRT    1
-#define EXT_LOG2    2
-#define EXT_WRITE   3
-#define EXT_TIME    4
-#define EXT_SRAND   5
-#define EXT_PRINT   6
-#define EXT_PRINTF  7
-#define EXT_MEMRD	8
-
 /* --------------------------------------------------------------------------
    Virtual machine
    -------------------------------------------------------------------------- */
@@ -139,6 +129,8 @@ extern "C" {
 #endif
 
 void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
+
+void microjs_clr_data(struct microjs_vm * vm);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 

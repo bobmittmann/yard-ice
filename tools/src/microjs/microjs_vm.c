@@ -43,8 +43,6 @@
 
 void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 {
-	int i;
-
 	vm->data = data;
 	vm->sp = len;
 #if MICROJS_FUNCTIONS_ENABLED
@@ -55,13 +53,18 @@ void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
 	vm->env.fin = stdin;
 	vm->env.fout = stdout;
 
-	/* initialize the VM's memory */
-	for (i = 0; i < len / sizeof(int32_t); ++i)
-		data[i] = 0;
-
 	FTRACEF(stdout, "SP=0x%04x\n", vm->sp);
 	FTRACEF(stdout, "BP=0x%04x\n", vm->bp);
 	FTRACEF(stdout, "SL=0x%04x\n", vm->sl);
+}
+
+void microjs_clr_data(struct microjs_vm * vm)
+{
+	int i;
+
+	/* initialize the VM's memory */
+	for (i = 0; i < vm->sp / sizeof(int32_t); ++i)
+		vm->data[i] = 0;
 }
 
 #define SIZEOF_WORD ((int)sizeof(int32_t))
@@ -374,6 +377,7 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t co
 					FTRACEF(f, "EXT %d, %d\n", r0, r1);
 				r0 = microjs_extern[r0](&vm->env, sp, r1);
 				if (r0 < 0) {
+					DCC_LOG1(LOG_INFO, "exception %d!", r0);
 					r1 = -r0;
 					goto except;
 				}
@@ -399,6 +403,7 @@ except:
 				r0 = *sp++;
 				if (trace)
 					FTRACEF(f, "RET %d\n", r0);
+				DCC_LOG1(LOG_INFO, "return %d!", r0);
 				goto done;
 
 			case OPC_ABT:
@@ -407,43 +412,17 @@ except:
 					FTRACEF(f, "ABT\n");
 				goto done;
 
-			case OPC_NOP3:
-			case OPC_NOP4:
-			case OPC_NOP5:
+			default:
 				r1 = ERR_INVALID_INSTRUCTION;
-				DCC_LOG1(LOG_ERROR, "Invalid instruction, MISC(%d)", opt);
+				DCC_LOG1(LOG_INFO, "Invalid instruction, MISC(%d)", opt);
 				goto except;
 			}
 			break;
 
-		case (OPC_RES0 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION;
-			break;
-		case (OPC_RES1 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 1;
-			break;
-		case (OPC_RES2 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 2;
-			break;
-		case (OPC_RES3 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 3;
-			break;
-		case (OPC_RES4 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 4;
-			break;
-		case (OPC_RES5 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 5;
-			break;
-		case (OPC_RES6 >> 4):
-				DCC_LOG1(LOG_ERROR, "Invalid instruction: %d", opc);
-				r1 = ERR_INVALID_INSTRUCTION + 6;
-			break;
+		default:
+			DCC_LOG1(LOG_INFO, "Invalid instruction: %d", opc);
+			r1 = ERR_INVALID_INSTRUCTION;
+			goto except;
 		}
 	} 
 
