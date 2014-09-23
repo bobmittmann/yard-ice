@@ -160,7 +160,7 @@ int op_var_decl(struct microjs_sdt * microjs)
 
 	if ((obj = sym_obj_new(microjs->tab, microjs->tok.s, 
 						   microjs->tok.qlf)) == NULL) {
-		DCC_LOG(LOG_WARNING, "sym_obj_new() failed!");
+		DCC_LOG(LOG_INFO, "sym_obj_new() failed!");
 		return -ERR_OBJ_NEW_FAIL;
 	}
 
@@ -168,13 +168,13 @@ int op_var_decl(struct microjs_sdt * microjs)
 #error "functions not implemented!!!" 
 	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
 		/* FIXME stack allocation */
-		DCC_LOG(LOG_TRACE, "stack allocation!!!");
+		DCC_LOG(LOG_INFO, "stack allocation!!!");
 		return 0;
 	}
 #endif
 
 	if ((addr = tgt_alloc32(microjs)) < 0) {
-		DCC_LOG(LOG_WARNING, "tgt_alloc32() failed!");
+		DCC_LOG(LOG_INFO, "tgt_alloc32() failed!");
 		return addr;
 	}
 
@@ -295,7 +295,7 @@ int op_method(struct microjs_sdt * microjs)
 		return ret;
 
 	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0) {
-		DCC_LOG(LOG_WARNING, "sym_extern_lookup() failed!");
+		DCC_LOG(LOG_INFO, "sym_extern_lookup() failed!");
 		return -ERR_EXTERN_UNKNOWN;
 	}	
 
@@ -547,7 +547,7 @@ int op_sub(struct microjs_sdt * microjs)
 	if (is_constant(microjs, microjs->spc, &val) & (val == 1)) {
 		microjs->pc = microjs->spc; /* rollback */
 		TRACEF("%04x\tDEC (optimizing SUB)\n", microjs->pc);
-		microjs->code[microjs->pc++] = OPC_SUB;
+		microjs->code[microjs->pc++] = OPC_DEC;
 		return 0;
 	} 
 	microjs->spc = microjs->pc; /* save code pointer */
@@ -1202,7 +1202,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 		} else if IS_AN_ACTION(sym) {
 			/* action */
 			if ((err = op[ACTION(sym)](microjs)) < 0) {
-				DCC_LOG(LOG_WARNING, "syntax action failed!");
+				DCC_LOG(LOG_INFO, "syntax action failed!");
 				goto error;
 			}
 			/* FIXME: checking for the code buffer overflow at this
@@ -1215,7 +1215,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 		} else {
 			/* non terminal */
 			if ((k = microjs_ll_push(ll_sp, sym, lookahead)) < 0) {
-				DCC_LOG2(LOG_WARNING, "sym=%d lookahed=%d", sym, lookahead);
+				DCC_LOG2(LOG_INFO, "sym=%d lookahed=%d", sym, lookahead);
 				/* push the offending symbol back onto the stack */	
 				ll_sp--;
 				err = (lookahead == T_EOF) ? -ERR_UNEXPECED_EOF :
