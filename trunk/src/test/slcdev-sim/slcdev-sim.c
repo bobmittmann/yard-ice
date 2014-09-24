@@ -10,7 +10,7 @@
 #include "slcdev-lib.h"
 
 uint32_t slcdev_symbuf[64]; /* symbol table buffer */
-uint32_t slcdev_vm_data[32]; /* data area */
+int32_t slcdev_vm_data[32]; /* data area */
 
 void dev_sim_enable(bool mod, unsigned int addr)
 {
@@ -553,13 +553,13 @@ void __attribute__((noreturn)) sim_event_task(void)
 {
 	struct db_dev_model * model;
 	struct ss_device * dev;
+	struct db_info * db;
 	struct microjs_vm vm; 
 	uint32_t event;
 	uint32_t ctl;
 
-	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
-	microjs_clr_data(&vm);
-	vm.env.ftrace = stdout;
+	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
+	microjs_vm_clr_data(&vm);
 
 	sim_reset(); 
 
@@ -567,18 +567,30 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 	slcdev_resume();
 
+	db = db_info_get();
+	DCC_LOG1(LOG_TRACE, "db=%08x", db);
+
 	for (;;) {
+		DCC_LOG(LOG_TRACE, ".1");
+
 		event = slcdev_event_wait();
 		dev = slcdev_drv.dev;
 		ctl = slcdev_drv.ctls;
-		/* get the model for this device */
-		model = db_dev_model_by_index(db_info_get(), dev->model);
 
+		DCC_LOG(LOG_TRACE, ".2");
+		/* get the model for this device */
+		model = db_dev_model_by_index(db, dev->model);
+
+		DCC_LOG(LOG_TRACE, ".3");
+
+		/* get the model for this device */
 		if (event & SLC_EV_TRIG) {
 			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
 			led_flash(0, 64);
 		}
 
+		DCC_LOG(LOG_TRACE, ".4");
+		
 		if ((event & SLC_EV_SIM) && (model != NULL)) {
 			const struct sim_model * sim;
 			sim = &sim_model_lut[model->sim];

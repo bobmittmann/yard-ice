@@ -846,8 +846,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return -1;
 	}
 
-	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
-	vm.env.ftrace = f;
+	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
 
 	if ((n = microjs_exec(&vm, code, n)) != 0){
 		fprintf(f, "# exec error: %d\n", n);
@@ -877,8 +876,7 @@ int cmd_run(FILE * f, int argc, char ** argv)
 
 	DCC_LOG1(LOG_TRACE, "code=%08x.", code);
 
-	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
-	vm.env.ftrace = f;
+	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
 
 	DCC_LOG(LOG_TRACE, "microjs_exec...");
 

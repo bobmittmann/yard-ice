@@ -41,52 +41,48 @@
 						  s.x = (_X); (int32_t)s.x; })
 
 
-void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
+void microjs_vm_init(struct microjs_vm * vm, const struct microjs_rt * rt,
+					 const void * env, int32_t data[], int32_t stack[])
 {
-	vm->data = data;
-	vm->sp = len;
-#if MICROJS_FUNCTIONS_ENABLED
-	vm->bp = vm->sp;
-#endif
-	vm->sl = 0;
-	vm->env.ftrace = NULL;
-	vm->env.fin = stdin;
-	vm->env.fout = stdout;
-
-	FTRACEF(stdout, "SP=0x%04x\n", vm->sp);
-	FTRACEF(stdout, "BP=0x%04x\n", vm->bp);
-	FTRACEF(stdout, "SL=0x%04x\n", vm->sl);
+	vm->bp = data;
+	if ((data == stack) || (stack == NULL)) {
+		vm->sp = data + (rt->data_sz / sizeof(int32_t));
+	} else {
+		vm->sp = stack + (rt->stack_sz / sizeof(int32_t));
+	}
+	vm->env = (void *)env;
 }
 
-void microjs_clr_data(struct microjs_vm * vm)
+void microjs_vm_clr_data(struct microjs_vm * vm, 
+						 const struct microjs_rt * rt)
 {
 	int i;
 
-	/* initialize the VM's memory */
-	for (i = 0; i < vm->sp / sizeof(int32_t); ++i)
-		vm->data[i] = 0;
+	/* initialize the VM's data memory */
+	for (i = 0; i < rt->data_sz / sizeof(int32_t); ++i)
+		vm->bp[i] = 0;
 }
 
 #define SIZEOF_WORD ((int)sizeof(int32_t))
 
-int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
+int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, 
+											  uint8_t code[], unsigned int len)
 {
-	FILE * f = vm->env.ftrace;
+	FILE * f = stdout;
+#if 0
 	bool trace = (f == NULL) ? false : true;
+#endif
+	bool trace = false;
 	int32_t r0;
 	int32_t r1;
 	int32_t r2;
 	uint8_t * pc = code;
-	int32_t * data = vm->data;
-	int32_t * sp = data + (vm->sp / sizeof(int32_t));
-#if MICROJS_FUNCTIONS_ENABLED
-	int32_t * bp = data + (vm->bp / sizeof(int32_t));
-#endif
+	int32_t * data = vm->bp;
+	int32_t * sp = vm->sp;
 	int32_t * xp = sp;
 	int opc;
 	int opt;
 //	int cnt = 0;
-	vm->env.data = data;
 
 	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
 			 (int)((int)(sp - data) * sizeof(int32_t)),

@@ -164,5 +164,74 @@
 			90, 91, 92, 93, 94, 95, 96, 97, 98, 99 
 		] 
 	},
+	
+	"sw1": { 
+		"up" : [ 
+			'/* enable all */',
+			'var i',
+			'for (i = 0; i < 160; ++i) {',
+			'	sens_en(i, true);',
+			'	mod_en(i, true);',
+			'}'
+		],
+
+		"off" : [ 
+			"goto enable_all"
+		],
+
+		"down" : [
+			"sensor[1].alarm = true"
+		],
+	},
+
+	"sw2": { 
+		"up" : [ 
+			"goto disable_all"
+		],
+
+		"off" : [ 
+			"goto enable_all"
+		],
+
+		"down" : [
+			"sensor[1].alarm = true"
+		],
+	},
+
+	"script": {
+		"tag" : "enable_all",
+		"js" : [
+			'var i",
+			'for (i = 0; i < 160; ++i) {',
+			'	sensor[i].enabled = true',
+			'	module[i].enabled = true',
+			'}"
+		],
+	},
+
+	"script": {
+		"tag" : "test",
+		"js" : [
+			'var i = 0',
+			'while (i < 20) {',
+			'	if (sensor[i].type == "2251TM") {',
+			'		sensor[i].enabled = true',
+			'		sensor[i].pw2.lookup(2)',
+			'	}',
+			'	i = i + 1',
+			'}',
+		],
+	},
+
+	"script": {
+		"smoke1_alm" : [
+			'var i = 0',
+			'while (i < 20) {',
+			'	sensor[i].pw4.lookup(4)',
+			'	sensor[i].enabled = yes',
+			'	i = i + 1',
+			'}',
+		],
+	},
 }
 

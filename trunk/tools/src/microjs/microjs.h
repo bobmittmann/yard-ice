@@ -90,23 +90,81 @@ struct microjs_sdt;
    External objects/symbols/functions
    -------------------------------------------------------------------------- */
 
-struct ext_fndef {
+struct classdef {
 	const char * nm;
-	uint8_t argmin; /* minimum number of arguments */
-	uint8_t argmax; /* maximum number of arguments */
-	int8_t ret; /* number of returned values */ 
+	uint8_t fst;
+	uint8_t lst;
 };
+
+/* external definition  */
+
+#define O_ARRAY    (1 << 0)
+#define O_MEMBER   (1 << 1)
+#define O_SIZEOFFS (1 << 2)
+#define O_READONLY (1 << 3)
+
+#define O_FUNCTION (0 << 6)
+#define O_INTEGER  (1 << 6)
+#define O_OBJECT   (2 << 6)
+#define O_CONST    (3 << 6)
+
+struct extdef {
+	const char * nm;
+	uint8_t opt;
+	union {
+		struct {
+			uint8_t argmin; /* minimum number of arguments */
+			uint8_t argmax; /* maximum number of arguments */
+			int8_t ret; /* number of returned values */ 
+		} f; /* function */
+
+		struct {
+			uint8_t cdef; /* class definition */
+			int16_t inst; /* object instance */
+		} o; /* object */
+
+		struct {
+			uint8_t cdef; /* class definition */
+		} ao; /* array of objects, require a lookup function to translate
+				 array index to object instance */
+		struct {
+			uint8_t cdef; /* class definition */
+			uint8_t size;
+			int16_t offs;
+		} aos; ; /* array of objects, uses an offset and an object size
+					to translate array index to object instance: 
+					INSTANCE = offs + (size * INDEX) */
+		struct {
+			int32_t val;
+		} ic; /* integer constant */
+
+		struct {
+		} i; /* integer variable */
+
+		struct {
+		} ai; /* array of integers */
+
+		struct {
+			uint8_t size;
+			int16_t offs;
+		} ais; /* array of integers */
+	};
+} __attribute__((packed));
 
 /* --------------------------------------------------------------------------
    External library definition 
    -------------------------------------------------------------------------- */
 
-struct ext_libdef {
-	const char * name;
-	uint8_t fncnt;
-	struct ext_fndef fndef[];
+struct ext_classtab {
+	uint8_t ccnt;
+	struct classdef cdef[];
 };
 
+struct ext_libdef {
+	const char * name;
+	uint8_t xcnt;
+	struct extdef xdef[];
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,7 +217,7 @@ int microjs_sdt_begin(struct microjs_sdt * microjs,
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-int microjs_sdt_end(struct microjs_sdt * microjs);
+int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt);
 
 void microjs_sdt_reset(struct microjs_sdt * microjs);
 

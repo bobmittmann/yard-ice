@@ -119,7 +119,10 @@ int main(int argc,  char **argv)
 	uint32_t js_sdtbuf[64]; /* compiler buffer */
 
 	struct microjs_sdt * microjs; 
+
 	struct microjs_vm vm; 
+	struct microjs_rt rt;
+
 	struct symtab * symtab;
 
 	char outfname[256];
@@ -210,13 +213,12 @@ int main(int argc,  char **argv)
 	}
 
 	/* insert an ABT opcode at the end of the code */
-	if ((n = microjs_sdt_end(microjs)) < 0)
+	if ((n = microjs_sdt_end(microjs, &rt)) < 0)
 		return 1;
 
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, vm_data, sizeof(vm_data));
-	/* initialize run time environment */
-	vm.env.ftrace = ftrace;
+	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_data);
+
 	/* run */
 	if ((n = microjs_exec(&vm, vm_code, n)) != 0) {
 		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", n);

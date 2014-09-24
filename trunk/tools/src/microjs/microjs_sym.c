@@ -35,13 +35,14 @@
    Symbol table
    -------------------------------------------------------------------------- */
 
-struct symtab * symtab_init(uint32_t * buf, unsigned int len, 
+struct symtab * symtab_init(uint32_t sym_buf[], 
+							unsigned int buf_len, 
 							const struct ext_libdef * libdef)
 {
-	struct symtab * tab = (struct symtab *)buf;
+	struct symtab * tab = (struct symtab *)sym_buf;
 
 	/* top of the symbol table */
-	tab->top = len - sizeof(struct symtab);
+	tab->top = buf_len - sizeof(struct symtab);
 	/* locals are allocated top-down */
 	tab->sp = tab->top;
 	tab->fp = tab->top;
@@ -343,8 +344,8 @@ int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
 	DCC_LOG1(LOG_INFO, "len=%d", len);
 
 	/* look in the externals first */
-	for (i = 0; i < libdef->fncnt; ++i) {
-		const struct ext_fndef * fn = &libdef->fndef[i];
+	for (i = 0; i < libdef->xcnt; ++i) {
+		const struct extdef * fn = &libdef->xdef[i];
 		if ((strncmp(fn->nm, s, len) == 0) && (fn->nm[len] == '\0')) {
 			DCC_LOG2(LOG_INFO, "xid=%d nm=\"%s\"", i, fn->nm);
 			return i;
@@ -355,18 +356,18 @@ int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
 	return -1;
 }
 
-struct ext_fndef * sym_extern_get(struct symtab * tab, unsigned int xid)
+struct extdef * sym_extern_get(struct symtab * tab, unsigned int xid)
 {
 	const struct ext_libdef * libdef = tab->libdef;
 
-	return (struct ext_fndef *)&libdef->fndef[xid];
+	return (struct extdef *)&libdef->xdef[xid];
 }
 
 const char * sym_extern_name(struct symtab * tab, unsigned int xid)
 {
 	const struct ext_libdef * libdef = tab->libdef;
 
-	return libdef->fndef[xid].nm;
+	return libdef->xdef[xid].nm;
 }
 
 #if MICROJS_DEBUG_ENABLED
