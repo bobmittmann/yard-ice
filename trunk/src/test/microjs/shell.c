@@ -172,6 +172,23 @@ uint32_t vm_data[64];   /* data area */
 uint32_t js_symbuf[64]; /*string buffer shuld be 16bits aligned */
 uint32_t js_sdtbuf[64]; /* compiler buffer */
 
+void vm_reset(void) 
+{
+	struct symtab * symtab;
+	struct microjs_vm vm; 
+
+	/* initialize string buffer */
+	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
+	/* initialize virtual machine */
+	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+	/* clear data */
+	microjs_clr_data(&vm);
+	/* initialize symbol table */
+	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
+	/* initialize compiler */
+	microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab, sizeof(vm_data));
+}
+
 int cmd_vm(FILE * f, int argc, char ** argv)
 {
 	if (argc != 1)

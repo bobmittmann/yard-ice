@@ -730,7 +730,7 @@ static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
 
 	dev = dev_sim_lookup(false, addr);
 
-	if ((mod = db_dev_model_by_index(dev->model)) == NULL)
+	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
 		return SHELL_ERR_ARG_INVALID;
 
 	switch (n) { 
@@ -870,11 +870,17 @@ int cmd_run(FILE * f, int argc, char ** argv)
 	if (argc > 3)
 		return SHELL_ERR_EXTRA_ARGS;
 
+	DCC_LOG(LOG_TRACE, "db_js_lookup()...");
+
 	if ((code = db_js_lookup(argv[1], argv[2])) == NULL)
 		return SHELL_ERR_ARG_INVALID;
 
+	DCC_LOG1(LOG_TRACE, "code=%08x.", code);
+
 	microjs_vm_init(&vm, (int32_t *)slcdev_vm_data, sizeof(slcdev_vm_data));
 	vm.env.ftrace = f;
+
+	DCC_LOG(LOG_TRACE, "microjs_exec...");
 
 	if ((ret = microjs_exec(&vm, code, 4096)) != 0) {
 		fprintf(f, "# exec error: %d\n", ret);

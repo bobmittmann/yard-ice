@@ -572,7 +572,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 		dev = slcdev_drv.dev;
 		ctl = slcdev_drv.ctls;
 		/* get the model for this device */
-		model = db_dev_model_by_index(dev->model);
+		model = db_dev_model_by_index(db_info_get(), dev->model);
 
 		if (event & SLC_EV_TRIG) {
 			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);

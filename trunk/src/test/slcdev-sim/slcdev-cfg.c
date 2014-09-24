@@ -363,7 +363,7 @@ int device_dump(FILE * f, bool mod, unsigned int addr)
 
 	dev = &ss_dev_tab[addr + (mod ? 160 : 0)];
 
-	db_model = db_dev_model_by_index(dev->model);
+	db_model = db_dev_model_by_index(db_info_get(), dev->model);
 	printf("\"%s\" \"%s\":\n", const_str(db_model->model), 
 		   const_str(db_model->desc));
 
@@ -529,7 +529,8 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 	int tbias;
 	int icfg;
 
-	if ((mod_idx = db_dev_model_index_by_name(cdev->model)) < 0) {
+	if ((mod_idx = db_dev_model_index_by_name(db_info_get(), 
+											  cdev->model)) < 0) {
 		DCC_LOG1(LOG_WARNING, "invalid model: %d", cdev->model);
 		printf("Invalid model: \"%s\"\n", const_str(cdev->model));
 		return mod_idx;
@@ -537,7 +538,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 
 	DCC_LOG2(LOG_INFO, "model=%d idx=%d", cdev->model, mod_idx);
 
-	mod = db_dev_model_by_index(mod_idx);
+	mod = db_dev_model_by_index(db_info_get(), mod_idx);
 	printf("%c \"%s\" \"%s\":", cdev->enabled ? '+' : '-', 
 		   const_str(mod->model), const_str(mod->desc));
 
