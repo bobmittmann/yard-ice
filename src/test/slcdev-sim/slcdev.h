@@ -380,9 +380,13 @@ uint8_t * db_js_lookup(const char * model, const char * jstag);
 
 int const_strbuf_init(void);
 
-int db_dev_model_index_by_name(unsigned int str_id);
+struct db_info * db_info_get(void);
 
-struct db_dev_model * db_dev_model_by_index(unsigned int idx);
+int db_dev_model_index_by_name(struct db_info * inf,
+							   unsigned int str_id);
+
+struct db_dev_model * db_dev_model_by_index(struct db_info * inf,
+											unsigned int idx);
 
 /* default photodetector sensor */ 
 struct db_dev_model * db_dev_model_photo(void);

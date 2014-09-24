@@ -14,6 +14,22 @@
 uint16_t db_stack = FLASH_BLK_DB_BIN_SIZE;
 #define DB_STACK_LIMIT 256
 
+struct db_info * db_info_get(void)
+{
+	struct fs_dirent entry;
+	struct db_info * inf;
+
+	fs_dirent_get(&entry, FLASHFS_DB_BIN);
+	if (entry.fp->size == 0)
+		return NULL;
+
+	inf = (struct db_info *)(entry.fp->data);
+	if (inf->type != DB_OBJ_DB_INFO)
+		return NULL;
+
+	return inf;
+}
+
 static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 {
 	uint32_t pos;
@@ -700,34 +716,15 @@ bool device_db_compile(struct fs_file * json)
 /* check database integrity */
 bool device_db_is_sane(void)
 {
-	struct fs_dirent entry;
-	struct db_info * inf;
-
-	fs_dirent_get(&entry, FLASHFS_DB_BIN);
-	if (entry.fp->size == 0)
-		return false;
-
-	inf = (struct db_info *)entry.fp->data;
-	if ((inf->len < sizeof(struct db_info)) || 
-		(inf->type != DB_OBJ_DB_INFO)) 
-		return false;
-
-	return true;
+	return (db_info_get() == NULL) ? false : true;
 }
 
 /* check JSON file against database */
 bool device_db_need_update(struct fs_file * json)
 {
-	struct fs_dirent entry;
 	struct db_info * inf;
 
-	fs_dirent_get(&entry, FLASHFS_DB_BIN);
-	if (entry.fp->size == 0)
-		return true;
-
-	inf = (struct db_info *)entry.fp->data;
-	if ((inf->len < sizeof(struct db_info)) || 
-		(inf->type != DB_OBJ_DB_INFO)) 
+	if ((inf = db_info_get()) == NULL)
 		return true;
 
 	if ((inf->json_txt != (const char *)json->data) ||
@@ -749,23 +746,13 @@ void device_db_init(void)
  * Database query
  ***********************************************************************/
 
-struct db_dev_model * device_db_lookup(unsigned int idx)
+int db_dev_model_index_by_name(struct db_info * inf,
+							   unsigned int str_id)
 {
-	struct db_info * inf;
-
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
-	if (idx >= inf->obj_cnt)
-		return NULL;
-
-	return (struct db_dev_model *)inf->obj[idx];
-}
-
-int db_dev_model_index_by_name(unsigned int str_id)
-{
-	struct db_info * inf;
 	int i;
 
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
+	if (inf == NULL)
+		return -1;
 
 	for (i = 0 ; i < inf->obj_cnt; ++i) {
 		struct db_dev_model * obj = (struct db_dev_model *)inf->obj[i];
@@ -776,15 +763,11 @@ int db_dev_model_index_by_name(unsigned int str_id)
 	return -1;
 }
 
-struct db_dev_model * db_dev_model_by_index(unsigned int idx)
+struct db_dev_model * db_dev_model_by_index(struct db_info * inf,
+											unsigned int idx)
 {
-	struct db_info * inf;
-
-	inf = (struct db_info*)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS);
-
-	if (idx >= inf->obj_cnt) {
+	if (inf == NULL)
 		return NULL;
-	}
 
 	return (struct db_dev_model *)inf->obj[idx];
 }
@@ -810,24 +793,34 @@ uint8_t * db_js_lookup(const char * model, const char * jstag)
 {
 	struct db_dev_model * mdl;
 	struct cmd_list * lst;
+	struct db_info * inf;
 	int tagid;
 	int nmid;
 	int idx;
 	int j;
+
+	if ((inf = db_info_get()) == NULL)
+		return NULL;
+
+	DCC_LOG(LOG_TRACE, "1. str_lookup()");
 
 	if ((tagid = str_lookup(jstag, strlen(jstag))) < 0) {
 		DCC_LOG(LOG_WARNING, "tag not found!");
 		return NULL;
 	}	
 
+	DCC_LOG(LOG_TRACE, "2. str_lookup()");
+
 	if ((nmid = str_lookup(model, strlen(model))) < 0) {
 		DCC_LOG(LOG_WARNING, "model name not found!");
 		return NULL;
 	}	
 
-	idx = db_dev_model_index_by_name(nmid);
+	DCC_LOG(LOG_TRACE, "3. db_dev_model_index_by_name()");
 
-	if ((mdl = device_db_lookup(idx)) == NULL) {
+	idx = db_dev_model_index_by_name(inf, nmid);
+
+	if ((mdl = db_dev_model_by_index(inf, idx)) == NULL) {
 		DCC_LOG(LOG_WARNING, "device not found!");
 		return NULL;
 	}
@@ -836,6 +829,8 @@ uint8_t * db_js_lookup(const char * model, const char * jstag)
 		DCC_LOG(LOG_WARNING, "command list empty!");
 		return NULL;
 	}
+
+	DCC_LOG(LOG_TRACE, "4. lookup...");
 
 	for (j = 0; j < lst->cnt; ++j) {
 		struct cmd_entry * cmd = &lst->cmd[j];
@@ -976,18 +971,11 @@ static void db_info_dump(FILE * f, struct db_info * inf)
 
 int device_db_dump(FILE * f)
 {
-	struct fs_dirent entry;
 	struct db_info * inf;
 	int i;
 
-	fs_dirent_get(&entry, FLASHFS_DB_BIN);
-	if (entry.fp->size == 0)
+	if ((inf = db_info_get()) == NULL)
 		return -1;
-
-	inf = (struct db_info *)(entry.fp->data);
-	if (inf->type != DB_OBJ_DB_INFO) {
-		return -1;
-	}
 
 	db_info_dump(f, inf);
 
