@@ -285,7 +285,7 @@ int op_attr(struct microjs_sdt * microjs)
 
 int op_method(struct microjs_sdt * microjs)
 {
-	struct ext_fndef * fndef;
+	struct extdef * fndef;
 	struct sym_call call;
 	struct sym_tmp tmp;
 	int xid;
@@ -305,9 +305,9 @@ int op_method(struct microjs_sdt * microjs)
 
 	/* prepare to call a function or method */
 	call.xid = xid;
-	call.retcnt = fndef->ret;
-	call.argmin = fndef->argmin;
-	call.argmax = fndef->argmax;
+	call.retcnt = fndef->f.ret;
+	call.argmin = fndef->f.argmin;
+	call.argmax = fndef->f.argmax;
 	call.argcnt = 0;
 
 	return sym_call_push(microjs->tab, &call);
@@ -1322,7 +1322,7 @@ int microjs_sdt_begin(struct microjs_sdt * microjs, uint8_t code[],
 	return 0;
 }
 
-int microjs_sdt_end(struct microjs_sdt * microjs)
+int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt)
 {
 	struct sym_ref ref;
 
@@ -1350,12 +1350,20 @@ int microjs_sdt_end(struct microjs_sdt * microjs)
 	TRACEF("%04x\tRET\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_RET;
 
-
 #if MICROJS_DEBUG_ENABLED
 	TRACEF("\nSYMBOL TABLE:\n");
 	sym_dump(stdout, microjs->tab);
 	TRACEF("\n");
 #endif
+
+	if (microjs->tgt_heap > microjs->tgt_sp)
+		return -ERR_HEAP_OVERFLOW;
+
+	if (rt != NULL) {
+		rt->data_sz = microjs->tgt_heap;
+		rt->stack_sz = microjs->tgt_sp;
+	}
+
 	return microjs->pc;
 }
 

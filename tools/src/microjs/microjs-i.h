@@ -416,7 +416,7 @@ static inline int sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp) {
 
 int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len);
 
-struct ext_fndef * sym_extern_get(struct symtab * tab, unsigned int xid);
+struct extdef * sym_extern_get(struct symtab * tab, unsigned int xid);
 
 const char * sym_extern_name(struct symtab * tab, unsigned int xid);
 

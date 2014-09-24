@@ -333,6 +333,9 @@ struct token lexer_scan(struct lexer * lex)
 		}
 
 		switch (c) {
+		case '.':
+			typ = T_DOT;
+			break;
 		case ',':
 			typ = T_COMMA;
 			break;
@@ -368,6 +371,12 @@ struct token lexer_scan(struct lexer * lex)
 			break;
 		case '}':
 			typ = T_RBRACE;
+			break;
+		case '[':
+			typ = T_LBRACKET;
+			break;
+		case ']':
+			typ = T_RBRACKET;
 			break;
 		case '\032': /* <SUB> Xmodem padding character */ 
 			typ = T_EOF;

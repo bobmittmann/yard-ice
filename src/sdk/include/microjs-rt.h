@@ -99,38 +99,26 @@
 #define OPC_STR      (12 << 4) /* BP relative store */
 
 /* --------------------------------------------------------------------------
-   Runtime Environement
-   -------------------------------------------------------------------------- */
-
-struct microjs_env {
-	FILE * fout;
-	FILE * fin;
-	FILE * ftrace;
-	int32_t * data;
-};
-
-/* --------------------------------------------------------------------------
    Virtual Machine
    -------------------------------------------------------------------------- */
 
 struct microjs_vm {
-	struct microjs_env env;
-	uint16_t xp; /* exception handler pointer */
-	uint16_t bp; /* base pointer */
 	uint16_t sp; /* stack pointer */
-	uint16_t sl; /* stack limit */
+	uint16_t bp; /* base pointer */
 	int32_t * data;
+	void * env;
 };
 
-extern int32_t (* const microjs_extern[])(struct microjs_env *, int32_t [], int);
+extern int32_t (* const microjs_extern[])(void *, int32_t [], int);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len);
+void microjs_vm_init(struct microjs_vm * vm, void * env,
+					 int32_t data[], unsigned int len);
 
-void microjs_clr_data(struct microjs_vm * vm);
+void microjs_vm_clr_data(struct microjs_vm * vm);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 

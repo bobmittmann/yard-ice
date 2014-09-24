@@ -327,7 +327,7 @@ struct slcdev_drv {
  */
 
 extern struct slcdev_drv slcdev_drv;
-extern uint32_t slcdev_vm_data[32]; /* data area */
+extern int32_t slcdev_vm_data[32]; /* data area */
 extern uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 
 #ifdef __cplusplus

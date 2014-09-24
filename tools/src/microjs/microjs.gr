@@ -52,6 +52,12 @@ assign_or_call  : ID { op_push_tmp } assign_or_call1
 
 assign_or_call1	: '=' exp { op_assign }
 				| function_call { op_ret_discard }
+				| '[' exp ']' array_assign
+				| '.' ID '=' exp { op_attr_assign }
+				;
+
+array_assign	: '=' exp { op_array_assign }
+				| '.' ID '=' exp { op_array_attr_assign }
 				;
 
 function_call	: { op_method } '(' arg_list_opt ')' { op_call } 
@@ -117,7 +123,7 @@ shift_exp1		:
 				| ASR shift_exp	{ op_asr }
 				;
 
-additive_exp 	: mult_exp additive_exp1
+additive_exp 	: div_exp additive_exp1
 				;
 
 additive_exp1 	: 
@@ -125,12 +131,19 @@ additive_exp1 	:
 				| '-' additive_exp { op_sub }
 				;
 
+
+div_exp			: mult_exp div_exp1		
+				;
+
+div_exp1		: 
+				| '/' div_exp { op_div }
+				| '%' div_exp { op_mod }
+				;
+
 mult_exp		: unary_exp mult_exp1		
 				;
 
 mult_exp1		: 
-				| '/' mult_exp { op_div }
-				| '%' mult_exp { op_mod }
 				| '*' mult_exp { op_mul }
 				;
 
@@ -154,5 +167,10 @@ meth_or_attr	: ID { op_push_tmp } meth_or_attr1
 
 meth_or_attr1	: { op_attr }
 				| function_call { op_call_ret }
+				| '[' exp ']' array_val
+				| '.' ID { op_obj_attr }
 				;
 
+array_val		: { op_array_val }
+				| '.' ID { op_array_attr_val }
+				;

@@ -21,18 +21,36 @@ stat			: "var"
 				| "cfg" cfg_cmd
 				| "str" str_cmd
 				| "trig" trig_cmd
+				| "alm" alm_cmd
+				| "tbl" tbl_cmd
+				| "grp" grp_cmd
 				| "rx" FNAME
 				| "cat" FNAME
 				| "rm" FNAME
+				| "run" FNAME
+				| "rst" 
 				| "set" set_var_opt
 				| "sens" '[' exp ']' '.' dev_attr '=' exp
 				| "mod" '[' exp ']' '.' dev_attr '=' exp
 				;
 
 trig_cmd		:
+				| "sens" exp
+				| "mod" exp
+				;
+
+tbl_cmd			:
 				| exp
 				;
 
+alm_cmd			:
+				| exp
+				;
+
+grp_cmd			:
+				| exp
+				;
+				
 db_cmd			:
 				| "compile"
 				| "stat"
@@ -70,6 +88,8 @@ dev_attr		: "pw1"
 				| "pw5"
 				| "en"
 				| "cfg"
+				| "alm"
+				| "tbl"
 				;
 
 exp				: additive_exp

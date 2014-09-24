@@ -32,7 +32,7 @@
 #include "slcdev-lib.h"
 #include <sys/dcclog.h>
 
-int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
+int32_t __rand(void * env, int32_t argv[], int argc) 
 {
 	int32_t * retv = argv + argc - 1;
 
@@ -41,7 +41,7 @@ int32_t __rand(struct microjs_env * env, int32_t argv[], int argc)
 	return 1;
 };
 
-int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __isqrt(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	uint32_t x = argv[0];
@@ -66,7 +66,7 @@ int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 	return 1;
 }	
 
-int32_t __memrd(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __memrd(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	uint32_t addr = argv[0];
@@ -74,12 +74,12 @@ int32_t __memrd(struct microjs_env * env, int32_t argv[], int argc)
 	if (addr >= 256)
 		return -1;
 
-	retv[0] = env->data[addr];
+	retv[0] = 0;
 
 	return 1;
 }	
 
-int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	const uint8_t log2_debruijn_index[32] = {
@@ -112,7 +112,7 @@ extern int uint2hex(char * s, uint32_t val);
 #define SIGN    0x10
 #define LONG    0x20
 
-int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __printf(void * env, int32_t argv[], int argc)
 {
 	char buf[BUF_LEN];
 	const char * fmt;
@@ -142,7 +142,7 @@ int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 				w = 0;
 				flags = PERCENT;
 				if (n) {
-					fwrite(cp, n, 1, env->fout);
+					fwrite(cp, n, 1, stdout);
 					cp = (char *)fmt;
 					cnt += n;;
 					n = 0;
@@ -230,25 +230,25 @@ print_buf:
 			if (flags & ZERO) {
 				if (flags & SIGN) {
 					flags &= ~SIGN;
-					fwrite(buf, 1, 1, env->fout);
+					fwrite(buf, 1, 1, stdout);
 				}
-				fwrite(__zeros, w - n, 1, env->fout);
+				fwrite(__zeros, w - n, 1, stdout);
 			} else {
-				fwrite(__blanks, w - n, 1, env->fout);
+				fwrite(__blanks, w - n, 1, stdout);
 			}
 			cnt += w - n;
 		}
 
 		if (flags & SIGN) {
-			fwrite(buf, 1, 1, env->fout);
+			fwrite(buf, 1, 1, stdout);
 			cnt++;
 		}
 
-		fwrite(cp, n, 1, env->fout);
+		fwrite(cp, n, 1, stdout);
 		cnt += n;
 
 		if ((flags & LEFT) && (w > n)) {
-			fwrite(__blanks, w - n, 1, env->fout);
+			fwrite(__blanks, w - n, 1, stdout);
 			cnt += w - n;
 		}
 
@@ -260,24 +260,24 @@ print_buf:
 	}
 
 	if (n) {
-		fwrite(cp, n, 1, env->fout);
+		fwrite(cp, n, 1, stdout);
 		cnt+= n;;
 	}
 
 	return 0;
 }
 
-int32_t __print(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __print(void * env, int32_t argv[], int argc)
 {
 	int i;
 	
 	for (i = argc - 1; i >= 0; --i) {
 		if (i != argc - 1)
-			fprintf(env->fout, ", ");
-		fprintf(env->fout, "%d", argv[i]);
+			fprintf(stdout, ", ");
+		fprintf(stdout, "%d", argv[i]);
 	}
 
-	fprintf(env->fout, "\n");
+	fprintf(stdout, "\n");
 	return 0;
 }	
 
@@ -286,7 +286,7 @@ int32_t __print(struct microjs_env * env, int32_t argv[], int argc)
    Devices API
    -------------------------------------------------------------------------- */
 
-static int32_t __state(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __state(void * env, int32_t argv[], int argc,
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -302,7 +302,7 @@ static int32_t __state(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __alarm(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __alarm(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -326,7 +326,7 @@ static int32_t __alarm(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __trouble(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __trouble(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -350,7 +350,7 @@ static int32_t __trouble(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __level(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __level(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -378,7 +378,7 @@ static int32_t __level(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw1(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __pw1(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -402,7 +402,7 @@ static int32_t __pw1(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw2(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __pw2(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -426,7 +426,7 @@ static int32_t __pw2(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw3(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __pw3(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -450,7 +450,7 @@ static int32_t __pw3(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw4(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __pw4(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -474,7 +474,7 @@ static int32_t __pw4(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw5(struct microjs_env * env, int32_t argv[], int argc,
+static int32_t __pw5(void * env, int32_t argv[], int argc,
 						 unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -498,7 +498,7 @@ static int32_t __pw5(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __enabled(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __enabled(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -522,7 +522,7 @@ static int32_t __enabled(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __tst(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __tst(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -547,7 +547,7 @@ static int32_t __tst(struct microjs_env * env, int32_t argv[], int argc,
 }
 
 
-static int32_t __tbias(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __tbias(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -571,7 +571,7 @@ static int32_t __tbias(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ilat(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __ilat(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -595,7 +595,7 @@ static int32_t __ilat(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __imode(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __imode(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -623,7 +623,7 @@ static int32_t __imode(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __irate(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __irate(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -651,7 +651,7 @@ static int32_t __irate(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ipre(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __ipre(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -675,7 +675,7 @@ static int32_t __ipre(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __cfg(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __cfg(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -690,7 +690,7 @@ static int32_t __cfg(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ap(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __ap(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -706,7 +706,7 @@ static int32_t __ap(struct microjs_env * env, int32_t argv[], int argc,
 }
 
 /* Clear group list */
-static int32_t __clear(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __clear(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	unsigned int idx = argv[argc - 1];
@@ -723,7 +723,7 @@ static int32_t __clear(struct microjs_env * env, int32_t argv[], int argc,
 }
 
 /* Insert device into groups */
-static int32_t __insert(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __insert(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	unsigned int idx = argv[argc - 1];
@@ -761,7 +761,7 @@ static int32_t __insert(struct microjs_env * env, int32_t argv[], int argc,
 	return 0; /* return the number of return values */
 }
 
-static int32_t __remove(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __remove(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	unsigned int idx = argv[argc - 1];
@@ -788,7 +788,7 @@ static int32_t __remove(struct microjs_env * env, int32_t argv[], int argc,
 	return 0; /* return the number of return values */
 }
 
-static int32_t __belong(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __belong(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -816,7 +816,7 @@ static int32_t __belong(struct microjs_env * env, int32_t argv[], int argc,
 	return 1; /* return the number of return values */
 }
 
-static int32_t __model(struct microjs_env * env, int32_t argv[], int argc, 
+static int32_t __model(void * env, int32_t argv[], int argc, 
 					   unsigned int offs)
 {
 	int32_t * retv = argv + argc - 1;
@@ -835,117 +835,117 @@ static int32_t __model(struct microjs_env * env, int32_t argv[], int argc,
    Sensors API
    -------------------------------------------------------------------------- */
 
-int32_t __sens_state(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
 	return __state(env, argv, argc, 0);
 }	
 
-int32_t __sens_alarm(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_alarm(void * env, int32_t argv[], int argc)
 {
 	return __alarm(env, argv, argc, 0);
 }
 
-int32_t __sens_trouble(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 {
 	return __trouble(env, argv, argc, 0);
 }
 
-int32_t __sens_level(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_level(void * env, int32_t argv[], int argc)
 {
 	return __level(env, argv, argc, 0);
 }
 
-int32_t __sens_pw1(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_pw1(void * env, int32_t argv[], int argc)
 {
 	return __pw1(env, argv, argc, 0);
 }
 
-int32_t __sens_pw2(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_pw2(void * env, int32_t argv[], int argc)
 {
 	return __pw2(env, argv, argc, 0);
 }
 
-int32_t __sens_pw3(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_pw3(void * env, int32_t argv[], int argc)
 {
 	return __pw3(env, argv, argc, 0);
 }
 
-int32_t __sens_pw4(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_pw4(void * env, int32_t argv[], int argc)
 {
 	return __pw4(env, argv, argc, 0);
 }
 
-int32_t __sens_pw5(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_pw5(void * env, int32_t argv[], int argc)
 {
 	return __pw5(env, argv, argc, 0);
 }
 
-int32_t __sens_en(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_en(void * env, int32_t argv[], int argc)
 {
 	return __enabled(env, argv, argc, 0);
 }	
 
-int32_t __sens_tst(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_tst(void * env, int32_t argv[], int argc)
 {
 	return __tst(env, argv, argc, 160);
 }	
 
-int32_t __sens_tbias(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_tbias(void * env, int32_t argv[], int argc)
 {
 	return __tbias(env, argv, argc, 0);
 }	
 
-int32_t __sens_ilat(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_ilat(void * env, int32_t argv[], int argc)
 {
 	return __ilat(env, argv, argc, 0);
 }	
 
-int32_t __sens_imode(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_imode(void * env, int32_t argv[], int argc)
 {
 	return __imode(env, argv, argc, 0);
 }	
 
-int32_t __sens_irate(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_irate(void * env, int32_t argv[], int argc)
 {
 	return __irate(env, argv, argc, 0);
 }
 
-int32_t __sens_ipre(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_ipre(void * env, int32_t argv[], int argc)
 {
 	return __ipre(env, argv, argc, 0);
 }
 
-int32_t __sens_cfg(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_cfg(void * env, int32_t argv[], int argc)
 {
 	return __cfg(env, argv, argc, 0);
 }
 
-int32_t __sens_ap(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_ap(void * env, int32_t argv[], int argc)
 {
 	return __ap(env, argv, argc, 0);
 }
 
-int32_t __sens_clear(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_clear(void * env, int32_t argv[], int argc)
 {
 	return __clear(env, argv, argc, 0);
 }
 
-int32_t __sens_insert(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_insert(void * env, int32_t argv[], int argc)
 {
 	return __insert(env, argv, argc, 0);
 }
 
-int32_t __sens_remove(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_remove(void * env, int32_t argv[], int argc)
 {
 	return __remove(env, argv, argc, 0);
 }
 
-int32_t __sens_belong(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_belong(void * env, int32_t argv[], int argc)
 {
 	return __belong(env, argv, argc, 0);
 }
 
-int32_t __sens_model(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_model(void * env, int32_t argv[], int argc)
 {
 	return __model(env, argv, argc, 0);
 }
@@ -955,117 +955,117 @@ int32_t __sens_model(struct microjs_env * env, int32_t argv[], int argc)
    Modules API
    -------------------------------------------------------------------------- */
 
-int32_t __mod_state(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_state(void * env, int32_t argv[], int argc)
 {
 	return __state(env, argv, argc, 160);
 }	
 
-int32_t __mod_alarm(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_alarm(void * env, int32_t argv[], int argc)
 {
 	return __alarm(env, argv, argc, 160);
 }
 
-int32_t __mod_trouble(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_trouble(void * env, int32_t argv[], int argc)
 {
 	return __trouble(env, argv, argc, 160);
 }
 
-int32_t __mod_level(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_level(void * env, int32_t argv[], int argc)
 {
 	return __level(env, argv, argc, 160);
 }
 
-int32_t __mod_pw1(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_pw1(void * env, int32_t argv[], int argc)
 {
 	return __pw1(env, argv, argc, 160);
 }
 
-int32_t __mod_pw2(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_pw2(void * env, int32_t argv[], int argc)
 {
 	return __pw2(env, argv, argc, 160);
 }
 
-int32_t __mod_pw3(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_pw3(void * env, int32_t argv[], int argc)
 {
 	return __pw3(env, argv, argc, 160);
 }
 
-int32_t __mod_pw4(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_pw4(void * env, int32_t argv[], int argc)
 {
 	return __pw4(env, argv, argc, 160);
 }
 
-int32_t __mod_pw5(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_pw5(void * env, int32_t argv[], int argc)
 {
 	return __pw5(env, argv, argc, 160);
 }
 
-int32_t __mod_en(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_en(void * env, int32_t argv[], int argc)
 {
 	return __enabled(env, argv, argc, 160);
 }	
 
-int32_t __mod_tst(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_tst(void * env, int32_t argv[], int argc)
 {
 	return __tst(env, argv, argc, 160);
 }	
 
-int32_t __mod_tbias(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_tbias(void * env, int32_t argv[], int argc)
 {
 	return __tbias(env, argv, argc, 160);
 }	
 
-int32_t __mod_ilat(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_ilat(void * env, int32_t argv[], int argc)
 {
 	return __ilat(env, argv, argc, 160);
 }	
 
-int32_t __mod_imode(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_imode(void * env, int32_t argv[], int argc)
 {
 	return __imode(env, argv, argc, 160);
 }	
 
-int32_t __mod_irate(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_irate(void * env, int32_t argv[], int argc)
 {
 	return __irate(env, argv, argc, 160);
 }
 
-int32_t __mod_ipre(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_ipre(void * env, int32_t argv[], int argc)
 {
 	return __ipre(env, argv, argc, 160);
 }
 
-int32_t __mod_cfg(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_cfg(void * env, int32_t argv[], int argc)
 {
 	return __cfg(env, argv, argc, 160);
 }
 
-int32_t __mod_ap(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_ap(void * env, int32_t argv[], int argc)
 {
 	return __ap(env, argv, argc, 160);
 }
 
-int32_t __mod_clear(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_clear(void * env, int32_t argv[], int argc)
 {
 	return __clear(env, argv, argc, 160);
 }
 
-int32_t __mod_insert(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_insert(void * env, int32_t argv[], int argc)
 {
 	return __insert(env, argv, argc, 160);
 }
 
-int32_t __mod_remove(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_remove(void * env, int32_t argv[], int argc)
 {
 	return __remove(env, argv, argc, 160);
 }
 
-int32_t __mod_belong(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_belong(void * env, int32_t argv[], int argc)
 {
 	return __belong(env, argv, argc, 160);
 }
 
-int32_t __mod_model(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_model(void * env, int32_t argv[], int argc)
 {
 	return __model(env, argv, argc, 160);
 }
@@ -1074,7 +1074,7 @@ int32_t __mod_model(struct microjs_env * env, int32_t argv[], int argc)
    Device models
    -------------------------------------------------------------------------- */
 
-static int32_t __model_name(struct microjs_env * env, int32_t argv[], int argc) 
+static int32_t __model_name(void * env, int32_t argv[], int argc) 
 {
 	return 0; /* return the number of return values */
 }
@@ -1083,8 +1083,7 @@ static int32_t __model_name(struct microjs_env * env, int32_t argv[], int argc)
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* const microjs_extern[])(struct microjs_env *, 
-								int32_t argv[], int argc) = {
+int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_PRINTF] = __printf,
 	[EXT_PRINT] = __print,
 	[EXT_RAND] = __rand,

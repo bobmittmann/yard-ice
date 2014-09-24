@@ -41,24 +41,21 @@
 						  s.x = (_X); (int32_t)s.x; })
 
 
-void microjs_vm_init(struct microjs_vm * vm, int32_t data[], unsigned int len)
+void microjs_vm_init(struct microjs_vm * vm, void * env,
+					 int32_t data[], unsigned int len)
 {
 	vm->data = data;
+	vm->env = env;
 	vm->sp = len;
 #if MICROJS_FUNCTIONS_ENABLED
 	vm->bp = vm->sp;
 #endif
-	vm->sl = 0;
-	vm->env.ftrace = NULL;
-	vm->env.fin = stdin;
-	vm->env.fout = stdout;
 
 	FTRACEF(stdout, "SP=0x%04x\n", vm->sp);
 	FTRACEF(stdout, "BP=0x%04x\n", vm->bp);
-	FTRACEF(stdout, "SL=0x%04x\n", vm->sl);
 }
 
-void microjs_clr_data(struct microjs_vm * vm)
+void microjs_vm_clr_data(struct microjs_vm * vm)
 {
 	int i;
 
@@ -71,7 +68,7 @@ void microjs_clr_data(struct microjs_vm * vm)
 
 int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len)
 {
-	FILE * f = vm->env.ftrace;
+	FILE * f = stdout;
 	bool trace = (f == NULL) ? false : true;
 	int32_t r0;
 	int32_t r1;
@@ -86,7 +83,6 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, uint8_t co
 	int opc;
 	int opt;
 //	int cnt = 0;
-	vm->env.data = data;
 
 	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
 			 (int)((int)(sp - data) * sizeof(int32_t)),

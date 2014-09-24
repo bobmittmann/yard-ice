@@ -40,7 +40,7 @@
 
 #if MICROJS_STDLIB_ENABLED 
 
-int32_t __rand(struct microjs_env * env, int32_t argv[], int argc) 
+int32_t __rand(void * env, int32_t argv[], int argc) 
 {
 	int32_t * retv = argv + argc - 1;
 
@@ -49,13 +49,13 @@ int32_t __rand(struct microjs_env * env, int32_t argv[], int argc)
 	return 1;
 };
 
-int32_t __srand(struct microjs_env * env, int32_t argv[], int argc) 
+int32_t __srand(void * env, int32_t argv[], int argc) 
 {
 	srand(argv[0]);
 	return 0;
 };
 
-int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __isqrt(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	uint32_t x = argv[0];
@@ -80,7 +80,7 @@ int32_t __isqrt(struct microjs_env * env, int32_t argv[], int argc)
 	return 1;
 }	
 
-int32_t __memrd(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __memrd(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	uint32_t addr = argv[0];
@@ -88,12 +88,12 @@ int32_t __memrd(struct microjs_env * env, int32_t argv[], int argc)
 	if (addr >= 256)
 		return -1;
 
-	retv[0] = env->data[addr];
+	retv[0] = 0;
 
 	return 1;
 }	
 
-int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	const uint8_t log2_debruijn_index[32] = {
@@ -112,21 +112,21 @@ int32_t __ilog2(struct microjs_env * env, int32_t argv[], int argc)
 	return 1;
 }	
 
-int32_t __write(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __write(void * env, int32_t argv[], int argc)
 {
 	int i;
 	
 	for (i = argc - 1; i >= 0; --i) {
 		if (i != argc - 1)
-			fprintf(env->fout, ", ");
-		fprintf(env->fout, "%d", argv[i]);
+			fprintf(stdout, ", ");
+		fprintf(stdout, "%d", argv[i]);
 	}
 
-	fprintf(env->fout, "\n");
+	fprintf(stdout, "\n");
 	return 0;
 }	
 
-int32_t __time(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __time(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	retv[0] = (int32_t)time(NULL);
@@ -243,7 +243,7 @@ static int uint2hex(char * s, uint32_t val)
 
 #endif /* MICROJS_STRINGS_ENABLED */
 
-int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __printf(void * env, int32_t argv[], int argc)
 {
 #if MICROJS_STRINGS_ENABLED 
 	char buf[BUF_LEN];
@@ -274,7 +274,7 @@ int32_t __printf(struct microjs_env * env, int32_t argv[], int argc)
 				w = 0;
 				flags = PERCENT;
 				if (n) {
-					fwrite(cp, n, 1, env->fout);
+					fwrite(cp, n, 1, stdout);
 					cp = (char *)fmt;
 					cnt += n;;
 					n = 0;
@@ -362,25 +362,25 @@ print_buf:
 			if (flags & ZERO) {
 				if (flags & SIGN) {
 					flags &= ~SIGN;
-					fwrite(buf, 1, 1, env->fout);
+					fwrite(buf, 1, 1, stdout);
 				}
-				fwrite(zeros, w - n, 1, env->fout);
+				fwrite(zeros, w - n, 1, stdout);
 			} else {
-				fwrite(blanks, w - n, 1, env->fout);
+				fwrite(blanks, w - n, 1, stdout);
 			}
 			cnt += w - n;
 		}
 
 		if (flags & SIGN) {
-			fwrite(buf, 1, 1, env->fout);
+			fwrite(buf, 1, 1, stdout);
 			cnt++;
 		}
 
-		fwrite(cp, n, 1, env->fout);
+		fwrite(cp, n, 1, stdout);
 		cnt += n;
 
 		if ((flags & LEFT) && (w > n)) {
-			fwrite(blanks, w - n, 1, env->fout);
+			fwrite(blanks, w - n, 1, stdout);
 			cnt += w - n;
 		}
 
@@ -392,7 +392,7 @@ print_buf:
 	}
 
 	if (n) {
-		fwrite(cp, n, 1, env->fout);
+		fwrite(cp, n, 1, stdout);
 		cnt+= n;;
 	}
 
@@ -405,7 +405,7 @@ print_buf:
 uint8_t sensor[160];
 uint8_t module[160];
 
-int32_t __sens_state(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	unsigned int addr = argv[0];
@@ -418,7 +418,7 @@ int32_t __sens_state(struct microjs_env * env, int32_t argv[], int argc)
 	return 1; /* return the number of return values */
 }	
 
-int32_t __sens_alarm(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_alarm(void * env, int32_t argv[], int argc)
 {
 	unsigned int addr = argv[0];
 	unsigned int val = argv[1];
@@ -434,7 +434,7 @@ int32_t __sens_alarm(struct microjs_env * env, int32_t argv[], int argc)
 	return 0; /* return the number of return values */
 }
 
-int32_t __sens_trouble(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 {
 	unsigned int addr = argv[0];
 	unsigned int val = argv[1];
@@ -451,7 +451,7 @@ int32_t __sens_trouble(struct microjs_env * env, int32_t argv[], int argc)
 }
 
 
-int32_t __mod_state(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_state(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
 	unsigned int addr = argv[0];
@@ -464,7 +464,7 @@ int32_t __mod_state(struct microjs_env * env, int32_t argv[], int argc)
 	return 1; /* return the number of return values */
 }	
 
-int32_t __mod_alarm(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_alarm(void * env, int32_t argv[], int argc)
 {
 	unsigned int addr = argv[0];
 	unsigned int val = argv[1];
@@ -480,7 +480,7 @@ int32_t __mod_alarm(struct microjs_env * env, int32_t argv[], int argc)
 	return 0; /* return the number of return values */
 }
 
-int32_t __mod_trouble(struct microjs_env * env, int32_t argv[], int argc)
+int32_t __mod_trouble(void * env, int32_t argv[], int argc)
 {
 	unsigned int addr = argv[0];
 	unsigned int val = argv[1];
@@ -501,8 +501,7 @@ int32_t __mod_trouble(struct microjs_env * env, int32_t argv[], int argc)
    Native (external) call table
    -------------------------------------------------------------------------- */
 
-int32_t (* const microjs_extern[])(struct microjs_env *, 
-								int32_t argv[], int argc) = {
+int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
