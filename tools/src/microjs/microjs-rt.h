@@ -82,7 +82,7 @@
 #define OPC_ISP      (3 << 4) /* Add SP */
 #define OPC_LD       (4 << 4)
 #define OPC_ST       (5 << 4)
-#define OPC_PUHSX    (6 << 4) /* Push exception frame */
+#define OPC_PUSHX    (6 << 4) /* Push exception frame */
 #define OPC_JMP      (7 << 4)
 #define OPC_JEQ      (8 << 4)
 

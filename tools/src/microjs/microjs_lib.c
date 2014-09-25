@@ -112,20 +112,6 @@ int32_t __ilog2(void * env, int32_t argv[], int argc)
 	return 1;
 }	
 
-int32_t __write(void * env, int32_t argv[], int argc)
-{
-	int i;
-	
-	for (i = argc - 1; i >= 0; --i) {
-		if (i != argc - 1)
-			fprintf(stdout, ", ");
-		fprintf(stdout, "%d", argv[i]);
-	}
-
-	fprintf(stdout, "\n");
-	return 0;
-}	
-
 int32_t __time(void * env, int32_t argv[], int argc)
 {
 	int32_t * retv = argv + argc - 1;
@@ -243,11 +229,10 @@ static int uint2hex(char * s, uint32_t val)
 
 #endif /* MICROJS_STRINGS_ENABLED */
 
-int32_t __printf(void * env, int32_t argv[], int argc)
+static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 {
 #if MICROJS_STRINGS_ENABLED 
 	char buf[BUF_LEN];
-	const char * fmt;
 	int flags;
 	int cnt;
 	int c;
@@ -261,7 +246,6 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 	} val;
 	int i = argc;
 
-	fmt = str(argv[--i]);
 	#define _va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
 
 	n = 0;
@@ -402,6 +386,31 @@ print_buf:
 #endif /* MICROJS_STRINGS_ENABLED */
 }
 
+int32_t __printf(void * env, int32_t argv[], int argc)
+{
+#if MICROJS_STRINGS_ENABLED 
+	const char * fmt = str(argv[--argc]);
+
+	return __vprintf(env, argv, argc, fmt);
+#else
+	return -ERR_STRINGS_UNSUPORTED;
+#endif /* MICROJS_STRINGS_ENABLED */
+}
+
+int32_t __print(void * env, int32_t argv[], int argc)
+{
+	int i;
+	
+	for (i = argc - 1; i >= 0; --i) {
+		if (i != argc - 1)
+			__vprintf(env, argv, 0, ", ");
+		__vprintf(env, &argv[i], 1, "%d");
+	}
+
+	__vprintf(env, argv, 0, "\n");
+	return 0;
+}	
+
 uint8_t sensor[160];
 uint8_t module[160];
 
@@ -505,10 +514,10 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
-	[EXT_WRITE] = __write,
+	[EXT_WRITE] = __print,
 	[EXT_TIME] = __time,
 	[EXT_SRAND] = __srand,
-	[EXT_PRINT] = __write,
+	[EXT_PRINT] = __print,
 	[EXT_PRINTF] = __printf,
 	[EXT_MEMRD] = __memrd,
 	[EXT_SENS_STATE] = __sens_state,

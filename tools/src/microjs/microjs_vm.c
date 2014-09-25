@@ -40,6 +40,13 @@
 #define SIGNEXT12BIT(_X) ({ struct { int32_t x: 12; } s; \
 						  s.x = (_X); (int32_t)s.x; })
 
+#define SIZEOF_WORD ((int)sizeof(int32_t))
+
+#if MICROJS_TRACE_ENABLED
+FILE * microjs_vm_tracef = NULL;
+#else
+#define microjs_vm_tracef NULL
+#endif
 
 void microjs_vm_init(struct microjs_vm * vm, const struct microjs_rt * rt,
 					 const void * env, int32_t data[], int32_t stack[])
@@ -63,16 +70,11 @@ void microjs_vm_clr_data(struct microjs_vm * vm,
 		vm->bp[i] = 0;
 }
 
-#define SIZEOF_WORD ((int)sizeof(int32_t))
-
 int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, 
 											  uint8_t code[], unsigned int len)
 {
-	FILE * f = stdout;
-#if 0
+	FILE * f = microjs_vm_tracef;
 	bool trace = (f == NULL) ? false : true;
-#endif
-	bool trace = false;
 	int32_t r0;
 	int32_t r1;
 	int32_t r2;
@@ -124,7 +126,7 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 				pc += r0;
 			break;
 
-		case (OPC_PUHSX >> 4):
+		case (OPC_PUSHX >> 4):
 			/* get the exception absolute jump address */
 			r0 = (*pc++ << 4) + opt;
 			/* combine with the current exception frame pointer */
@@ -132,7 +134,7 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 			*(--sp) = r0;
 			xp = sp; /* update the exception pointer */
 			if (trace)
-				FTRACEF(f, "PUHSX 0x%04x (XP=0x%04x->0x%04x) \n", 
+				FTRACEF(f, "PUSHX 0x%04x (XP=0x%04x->0x%04x) \n", 
 						r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD, 
 						(int)(xp - data) * SIZEOF_WORD);
 			break;

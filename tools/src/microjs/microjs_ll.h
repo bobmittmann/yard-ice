@@ -98,8 +98,8 @@
 #define N_UNARY_EXP             88
 #define N_MULT_EXP1             89
 #define N_PRIMARY_EXP           90
-#define N_METH_OR_ATTR          91
-#define N_METH_OR_ATTR1         92
+#define N_ID_EVAL               91
+#define N_ID_EVAL1              92
 #define N_ARRAY_VAL             93
 
 #define ACTION_BASE             94
@@ -121,14 +121,14 @@
 #define A_OP_CATCH             109
 #define A_OP_VAR_DECL          110
 #define A_OP_PUSH_TMP          111
-#define A_OP_ASSIGN            112
+#define A_OP_VAR_ASSIGN        112
 #define A_OP_CATCH_END         113
 #define A_OP_POP_TMP           114
 #define A_OP_RET_DISCARD       115
 #define A_OP_ATTR_ASSIGN       116
 #define A_OP_ARRAY_ASSIGN      117
 #define A_OP_ARRAY_ATTR_ASSIGN 118
-#define A_OP_METHOD            119
+#define A_OP_FUNCTION_LOOKUP   119
 #define A_OP_CALL              120
 #define A_OP_ARG               121
 #define A_OP_OR                122
@@ -156,11 +156,11 @@
 #define A_OP_PUSH_STRING       144
 #define A_OP_PUSH_TRUE         145
 #define A_OP_PUSH_FALSE        146
-#define A_OP_ATTR              147
+#define A_OP_VAR_EVAL          147
 #define A_OP_CALL_RET          148
-#define A_OP_OBJ_ATTR          149
-#define A_OP_ARRAY_VAL         150
-#define A_OP_ARRAY_ATTR_VAL    151
+#define A_OP_ATTR_EVAL         149
+#define A_OP_ARRAY_EVAL        150
+#define A_OP_ARRAY_ATTR_EVAL   151
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE

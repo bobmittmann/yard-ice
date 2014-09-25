@@ -108,10 +108,13 @@ void version(char * prog)
 	exit(1);
 }
 
+extern FILE * microjs_vm_tracef;
+
 int main(int argc,  char **argv)
 {
 	uint8_t vm_code[512]; /* compiled code */
 	int32_t vm_data[64]; /* data area */
+	int32_t vm_stack[64]; /* stack area */
 
 	uint16_t strbuf[128]; /*string buffer shuld be 16bits aligned */
 	uint32_t js_symbuf[64]; /* symbol table buffer (can be shared with 
@@ -196,7 +199,8 @@ int main(int argc,  char **argv)
 	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &microjs_lib);
 	/* initialize compiler */
 	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
-							   symtab, sizeof(vm_data));
+							   symtab, sizeof(vm_data), 
+							   sizeof(vm_stack));
 
 	microjs_sdt_begin(microjs, vm_code, sizeof(vm_code));
 
@@ -216,8 +220,9 @@ int main(int argc,  char **argv)
 	if ((n = microjs_sdt_end(microjs, &rt)) < 0)
 		return 1;
 
+	microjs_vm_tracef = ftrace;
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_data);
+	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_stack);
 
 	/* run */
 	if ((n = microjs_exec(&vm, vm_code, n)) != 0) {

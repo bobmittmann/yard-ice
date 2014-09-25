@@ -115,9 +115,9 @@ static const struct tr_pair predict_vec[] = {
 	/*  90 (primary_exp) */
 	{ 21, 78}, { 37, 83}, { 44, 82}, { 48, 84}, { 49, 79}, { 50, 80}, 
 	{ 51, 81}, 
-	/*  91 (meth_or_attr) */
+	/*  91 (id_eval) */
 	{ 48, 85}, 
-	/*  92 (meth_or_attr1) */
+	/*  92 (id_eval1) */
 	{  1, 89}, {  2, 86}, {  3, 86}, {  5, 86}, {  6, 86}, {  7, 86}, 
 	{  8, 86}, {  9, 86}, { 10, 86}, { 11, 86}, { 12, 86}, { 17, 86}, 
 	{ 18, 86}, { 19, 88}, { 20, 86}, { 21, 87}, { 22, 86}, { 25, 86}, 
@@ -213,7 +213,7 @@ static const uint8_t rule_vec[] = {
 	/* 15:catch_opt(1) -> */
 	A_OP_TRY_END, 
 	/* 16:catch_opt(14) -> */
-	T_CATCH, A_OP_CATCH, A_OP_BLK_OPEN, T_LPAREN, T_ID, A_OP_VAR_DECL, A_OP_PUSH_TMP, A_OP_ASSIGN, T_RPAREN, T_LBRACE, N_STAT_LIST, T_RBRACE, A_OP_BLK_CLOSE, A_OP_CATCH_END, 
+	T_CATCH, A_OP_CATCH, A_OP_BLK_OPEN, T_LPAREN, T_ID, A_OP_VAR_DECL, A_OP_PUSH_TMP, A_OP_VAR_ASSIGN, T_RPAREN, T_LBRACE, N_STAT_LIST, T_RBRACE, A_OP_BLK_CLOSE, A_OP_CATCH_END, 
 	/* 17:condition(3) -> */
 	T_LPAREN, N_EXP, T_RPAREN, 
 	/* 18:var_list(2) -> */
@@ -227,11 +227,11 @@ static const uint8_t rule_vec[] = {
 	/* 22:var_assign_opt(1) -> */
 	A_OP_POP_TMP, 
 	/* 23:var_assign_opt(3) -> */
-	T_EQUALS, N_EXP, A_OP_ASSIGN, 
+	T_EQUALS, N_EXP, A_OP_VAR_ASSIGN, 
 	/* 24:assign_or_call(3) -> */
 	T_ID, A_OP_PUSH_TMP, N_ASSIGN_OR_CALL1, 
 	/* 25:assign_or_call1(3) -> */
-	T_EQUALS, N_EXP, A_OP_ASSIGN, 
+	T_EQUALS, N_EXP, A_OP_VAR_ASSIGN, 
 	/* 26:assign_or_call1(2) -> */
 	N_FUNCTION_CALL, A_OP_RET_DISCARD, 
 	/* 27:assign_or_call1(4) -> */
@@ -243,7 +243,7 @@ static const uint8_t rule_vec[] = {
 	/* 30:array_assign(5) -> */
 	T_DOT, T_ID, T_EQUALS, N_EXP, A_OP_ARRAY_ATTR_ASSIGN, 
 	/* 31:function_call(5) -> */
-	A_OP_METHOD, T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, A_OP_CALL, 
+	A_OP_FUNCTION_LOOKUP, T_LPAREN, N_ARG_LIST_OPT, T_RPAREN, A_OP_CALL, 
 	/* 32:arg_list_opt(0) -> */
 	
 	/* 33:arg_list_opt(1) -> */
@@ -349,21 +349,21 @@ static const uint8_t rule_vec[] = {
 	/* 83:primary_exp(2) -> */
 	T_FALSE, A_OP_PUSH_FALSE, 
 	/* 84:primary_exp(1) -> */
-	N_METH_OR_ATTR, 
-	/* 85:meth_or_attr(3) -> */
-	T_ID, A_OP_PUSH_TMP, N_METH_OR_ATTR1, 
-	/* 86:meth_or_attr1(1) -> */
-	A_OP_ATTR, 
-	/* 87:meth_or_attr1(2) -> */
+	N_ID_EVAL, 
+	/* 85:id_eval(3) -> */
+	T_ID, A_OP_PUSH_TMP, N_ID_EVAL1, 
+	/* 86:id_eval1(1) -> */
+	A_OP_VAR_EVAL, 
+	/* 87:id_eval1(2) -> */
 	N_FUNCTION_CALL, A_OP_CALL_RET, 
-	/* 88:meth_or_attr1(4) -> */
+	/* 88:id_eval1(4) -> */
 	T_LBRACKET, N_EXP, T_RBRACKET, N_ARRAY_VAL, 
-	/* 89:meth_or_attr1(3) -> */
-	T_DOT, T_ID, A_OP_OBJ_ATTR, 
+	/* 89:id_eval1(3) -> */
+	T_DOT, T_ID, A_OP_ATTR_EVAL, 
 	/* 90:array_val(1) -> */
-	A_OP_ARRAY_VAL, 
+	A_OP_ARRAY_EVAL, 
 	/* 91:array_val(3) -> */
-	T_DOT, T_ID, A_OP_ARRAY_ATTR_VAL, 
+	T_DOT, T_ID, A_OP_ARRAY_ATTR_EVAL, 
 };
 /* 233 bytes */
 
@@ -618,8 +618,8 @@ const const char * const microjs_ll_sym[] = {
  	"unary_exp",
  	"mult_exp1",
  	"primary_exp",
- 	"meth_or_attr",
- 	"meth_or_attr1",
+ 	"id_eval",
+ 	"id_eval1",
  	"array_val",
  	"op_blk_open",
  	"op_blk_close",
@@ -639,14 +639,14 @@ const const char * const microjs_ll_sym[] = {
  	"op_catch",
  	"op_var_decl",
  	"op_push_tmp",
- 	"op_assign",
+ 	"op_var_assign",
  	"op_catch_end",
  	"op_pop_tmp",
  	"op_ret_discard",
  	"op_attr_assign",
  	"op_array_assign",
  	"op_array_attr_assign",
- 	"op_method",
+ 	"op_function_lookup",
  	"op_call",
  	"op_arg",
  	"op_or",
@@ -674,10 +674,10 @@ const const char * const microjs_ll_sym[] = {
  	"op_push_string",
  	"op_push_true",
  	"op_push_false",
- 	"op_attr",
+ 	"op_var_eval",
  	"op_call_ret",
- 	"op_obj_attr",
- 	"op_array_val",
- 	"op_array_attr_val",
+ 	"op_attr_eval",
+ 	"op_array_eval",
+ 	"op_array_attr_eval",
  };
 
