@@ -138,8 +138,14 @@ struct microjs_sdt {
 	uint8_t * code;      /* compiled code */
 	uint16_t cdsz;       /* code buffer size */
 	uint16_t pc;         /* code pointer */
-	uint16_t tgt_sp;     /* target stack pointer (top of the data memory) */
-	uint16_t tgt_heap;  /* target data memory heap */
+
+	uint16_t stack_size;
+	uint16_t stack_pos;
+	uint16_t stack_max;
+	uint16_t data_size;
+	uint16_t data_pos;
+	uint16_t data_max;
+
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
 #if MICROJS_OPTIMIZATION_ENABLED

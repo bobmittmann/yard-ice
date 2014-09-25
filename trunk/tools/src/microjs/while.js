@@ -10,4 +10,4 @@ while (i < 6) {
 	print(i);
 }
 
-//write();
+print();

@@ -63,7 +63,7 @@ enum {
 	ERR_STRING_NOT_FOUND    = 10,
 	ERR_STRBUF_OVERFLOW     = 11,
 	ERR_SYNTAX_ERROR        = 12,
-	ERR_HEAP_OVERFLOW       = 13,
+	ERR_DATA_OVERFLOW       = 13,
 	ERR_VAR_UNKNOWN         = 14,
 	ERR_EXTERN_UNKNOWN      = 15,
 	ERR_ARG_MISSING         = 16,
@@ -76,6 +76,8 @@ enum {
 	ERR_CODE_MEM_OVERFLOW   = 23,
 	ERR_RET_COUNT_MISMATCH  = 24,
 	ERR_INVALID_INSTRUCTION = 25,
+	ERR_STACK_OVERFLOW      = 26,
+	ERR_STACK_UNDERFLOW     = 27,
 };
 
 struct symstat {
@@ -209,7 +211,8 @@ void symtab_state_rollback(struct symtab * tab, struct symstat st);
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
 									  unsigned int sdt_size,
 									  struct symtab * tab, 
-									  unsigned int data_size);
+									  unsigned int data_size,
+									  unsigned int stack_size);
 
 int microjs_sdt_begin(struct microjs_sdt * microjs, 
 					  uint8_t code[], unsigned int code_size);
