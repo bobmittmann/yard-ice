@@ -62,6 +62,13 @@ static const char * const err_tab[] = {
 	[ERR_CODE_MEM_OVERFLOW] = "code memory overflow",
 	[ERR_RET_COUNT_MISMATCH] = "function returns no value",
 	[ERR_INVALID_INSTRUCTION] = "invalid VM instruction",
+	[ERR_EXTERN_NOT_FUNCTION] = "not a function",
+	[ERR_EXTERN_NOT_ARRAY] = "not an array",
+	[ERR_EXTERN_NOT_OBJECT] = "not an object",
+	[ERR_EXTERN_NOT_INTEGER] = "not an integer type",
+	[ERR_EXTERN_NOT_MEMBER] = "not a class member",
+	[ERR_EXTERN_READONLY] = "attribute is read-only",
+	[ERR_NOT_IMPLEMENTED] = "construct not implemented",
 
 };
 

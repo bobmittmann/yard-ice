@@ -396,16 +396,16 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 
 
 			case OPC_XPT: 
-				r1 = *sp; /* get the exception code */
+				r1 = STACK_POP(); /* get the exception code */
 except:
 				sp = xp;  /* set the stack pointer to the exception frame */
-				r0 = *sp; /* get the exception frame */
-				*sp = r1; /* push the exeption code */
+				r0 = STACK_POP(); /* get the exception frame */
+				STACK_PUSH(r1); /* push the exeption code */
 				pc = code + (r0 & 0xffff); /* go to the exception handler */
 				xp = data + (r0 >> 16); /* update the exception frame */
 				if (trace)
-					FTRACEF(f, "XPT (PC=0x%04x XP=0x%04x)\n", 
-							r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD);
+					FTRACEF(f, "XPT %d (PC=0x%04x XP=0x%04x)\n", 
+							r1, r0 & 0xffff, (r0 >> 16) * SIZEOF_WORD);
 				break;
 
 			case OPC_RET:

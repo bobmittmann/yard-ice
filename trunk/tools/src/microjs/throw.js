@@ -1,4 +1,4 @@
-var i, j = 10;
+var j = 9;
 
 throw j;
 
