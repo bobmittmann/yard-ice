@@ -136,9 +136,9 @@ int main(int argc,  char **argv)
 	char * script = NULL;
 	unsigned int len = 0;
 	int verbose = 0;
+	int code_sz;
 	int i = 1;
 	int err;
-	int n;
 	int c;
 
 	/* the prog name start just after the last lash */
@@ -198,9 +198,7 @@ int main(int argc,  char **argv)
 	/* initialize symbol table */
 	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &microjs_lib);
 	/* initialize compiler */
-	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
-							   symtab, sizeof(vm_data), 
-							   sizeof(vm_stack));
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab);
 
 	microjs_sdt_begin(microjs, vm_code, sizeof(vm_code));
 
@@ -217,16 +215,32 @@ int main(int argc,  char **argv)
 	}
 
 	/* insert an ABT opcode at the end of the code */
-	if ((n = microjs_sdt_end(microjs, &rt)) < 0)
+	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0)
 		return 1;
+
+	if (verbose) {
+		printf(" -  Code size = %d!\n", code_sz);
+		printf(" -  Data size = %d!\n", rt.data_sz);
+		printf(" - Stack size = %d!\n", rt.stack_sz);
+	}
+
+	if (rt.data_sz >= sizeof(vm_data)) {
+		fprintf(stderr, "\n#ERROR: data overflow!\n");
+		return 1;
+	}
+
+	if (rt.stack_sz >= sizeof(vm_stack)) {
+		fprintf(stderr, "\n#ERROR: stack overflow!\n");
+		return 1;
+	}
 
 	microjs_vm_tracef = ftrace;
 	/* initialize virtual machine */
 	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_stack);
 
 	/* run */
-	if ((n = microjs_exec(&vm, vm_code, n)) != 0) {
-		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", n);
+	if ((err = microjs_exec(&vm, vm_code, code_sz)) != 0) {
+		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", err);
 		return 1;
 	}
 

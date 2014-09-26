@@ -77,6 +77,7 @@ const struct ext_classtab microjs_class = {
 
 const struct ext_libdef microjs_lib = {
 	.name = "lib",
+	.classtab = &microjs_class,
 	.xcnt = 20,
 	.xdef = {
 		[EXT_RAND] = { .opt = O_FUNCTION, 
@@ -127,7 +128,7 @@ const struct ext_libdef microjs_lib = {
 			.nm = "mod_trouble", 
 			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
-		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT, 
 			.nm = "sensor", 
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
 

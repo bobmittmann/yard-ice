@@ -78,6 +78,13 @@ enum {
 	ERR_INVALID_INSTRUCTION = 25,
 	ERR_STACK_OVERFLOW      = 26,
 	ERR_STACK_UNDERFLOW     = 27,
+	ERR_EXTERN_NOT_FUNCTION = 28,
+	ERR_EXTERN_NOT_ARRAY    = 29,
+	ERR_EXTERN_NOT_OBJECT   = 30,
+	ERR_EXTERN_NOT_INTEGER  = 31,
+	ERR_EXTERN_NOT_MEMBER   = 32,
+	ERR_EXTERN_READONLY     = 33,
+	ERR_NOT_IMPLEMENTED     = 24,
 };
 
 struct symstat {
@@ -109,6 +116,9 @@ struct classdef {
 #define O_INTEGER  (1 << 6)
 #define O_OBJECT   (2 << 6)
 #define O_CONST    (3 << 6)
+
+#define EXTDEF_TYPE(_XP) ((_XP)->opt & (3 << 6))
+#define EXTDEF_FLAG(_XP, _O) ((_XP)->opt & (_O))
 
 struct extdef {
 	const char * nm;
@@ -164,6 +174,7 @@ struct ext_classtab {
 
 struct ext_libdef {
 	const char * name;
+	const struct ext_classtab * classtab;
 	uint8_t xcnt;
 	struct extdef xdef[];
 };
@@ -210,9 +221,7 @@ void symtab_state_rollback(struct symtab * tab, struct symstat st);
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
 									  unsigned int sdt_size,
-									  struct symtab * tab, 
-									  unsigned int data_size,
-									  unsigned int stack_size);
+									  struct symtab * tab);
 
 int microjs_sdt_begin(struct microjs_sdt * microjs, 
 					  uint8_t code[], unsigned int code_size);

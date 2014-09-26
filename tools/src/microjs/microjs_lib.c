@@ -416,8 +416,7 @@ int32_t __print(void * env, int32_t argv[], int argc)
 	return 0;
 }	
 
-uint8_t sensor[160];
-uint8_t module[160];
+uint8_t device[320];
 
 int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
@@ -427,7 +426,7 @@ int32_t __sens_state(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	retv[0] = sensor[addr];
+	retv[0] = device[addr];
 
 	return 1; /* return the number of return values */
 }	
@@ -443,7 +442,7 @@ int32_t __sens_alarm(void * env, int32_t argv[], int argc)
 	if (val > 1)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	sensor[addr] = (sensor[addr] & ~1) | val;
+	device[addr] = (device[addr] & ~1) | val;
 
 	return 0; /* return the number of return values */
 }
@@ -459,7 +458,7 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 	if (val > 1)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	sensor[addr] = (sensor[addr] & ~2) | (val << 1);
+	device[addr] = (device[addr] & ~2) | (val << 1);
 
 	return 0; /* return the number of return values */
 }
@@ -467,13 +466,15 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 
 int32_t __mod_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv;
+	int32_t * retv = argv;
 	unsigned int addr = argv[0];
 
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	retv[0] = module[addr];
+	addr += 160;
+
+	retv[0] = device[addr];
 
 	return 1; /* return the number of return values */
 }	
@@ -486,10 +487,12 @@ int32_t __mod_alarm(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
+	addr += 160;
+
 	if (val > 10)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	module[addr] = (module[addr] & ~1) | val;
+	device[addr] = (device[addr] & ~1) | val;
 
 	return 0; /* return the number of return values */
 }
@@ -502,14 +505,90 @@ int32_t __mod_trouble(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
+	addr += 160;
+
 	if (val > 10)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	module[addr] = (module[addr] & ~2) | (val << 1);
+	device[addr] = (device[addr] & ~2) | (val << 1);
 
 	return 0; /* return the number of return values */
 }
 
+
+/* Array index translator */
+int32_t __sensor(void * env, int32_t argv[], int argc)
+{
+	/* just check for bounds */
+	if ((uint32_t)argv[0] > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	return 1; /* return the number of return values */
+}	
+
+/* Array index translator */
+int32_t __module(void * env, int32_t argv[], int argc)
+{
+	if ((uint32_t)argv[0] > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	argv[0] = argv[0] + 160; /* add the offset */
+	return 1; /* return the number of return values */
+}	
+
+/* This is a read only atttribute */
+int32_t __dev_state(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	retv[0] = device[oid];
+
+	return 1; /* return the number of return values */
+}	
+
+/* This is a read/write atttribute */
+int32_t __dev_alarm(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	if (argc > 1) { /* set */
+		unsigned int val = argv[1];
+
+		if (val > 16)
+			return -EXCEPT_INVALID_ALARM_CODE;
+
+		device[oid] = (device[oid] & ~0xf) | val;
+
+		return 0; /* number of return values */
+	}
+
+	/* get */
+	retv[0] = device[oid] & 0xf;
+
+	return 1; /* number of return values */
+}
+
+int32_t __dev_trouble(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	if (argc > 1) { /* set */
+		unsigned int val = argv[1];
+
+		if (val > 16)
+			return -EXCEPT_INVALID_ALARM_CODE;
+
+		device[oid] = (device[oid] & ~0xf0) | (val << 4);
+
+		return 0; /* number of return values */
+	}
+
+	/* get */
+	retv[0] = (device[oid] >> 4) & 0xf;
+
+	return 1; /* number of return values */
+}
 
 /* --------------------------------------------------------------------------
    Native (external) call table
@@ -531,6 +610,13 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_MOD_STATE] = __mod_state,
 	[EXT_MOD_ALARM] = __mod_alarm,
 	[EXT_MOD_TROUBLE] = __mod_trouble,
+
+	[EXT_SENSOR] = __sensor,
+	[EXT_MODULE] = __module,
+
+	[EXT_DEV_STATE] = __dev_state,
+	[EXT_DEV_ALARM] = __dev_alarm,
+	[EXT_DEV_TROUBLE] = __dev_trouble,
 };
 
 #endif /* MICROJS_STDLIB_ENABLED  */
