@@ -138,8 +138,14 @@ struct microjs_sdt {
 	uint8_t * code;      /* compiled code */
 	uint16_t cdsz;       /* code buffer size */
 	uint16_t pc;         /* code pointer */
-	uint16_t tgt_sp;     /* target stack pointer (top of the data memory) */
-	uint16_t tgt_heap;  /* target data memory heap */
+
+//	uint16_t stack_size;
+	uint16_t stack_pos;
+	uint16_t stack_max;
+//	uint16_t data_size;
+	uint16_t data_pos;
+	uint16_t data_max;
+
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
 #if MICROJS_OPTIMIZATION_ENABLED
@@ -230,6 +236,12 @@ struct sym_fnd {
 	uint16_t nm;
 	uint16_t skip;
 	uint16_t ret; /* return list */
+};
+
+/* Class Descriptor */
+struct sym_cld {
+	uint8_t fst;
+	uint8_t lst;
 };
 
 /* Function Call Descriptor */
@@ -338,6 +350,26 @@ static inline int sym_addr_pop(struct symtab * tab, uint16_t * addr) {
 }
 
 /* --------------------------------------------------------------------------
+   Classes
+   -------------------------------------------------------------------------- */
+
+static inline struct classdef * ext_classdef_get(struct symtab * tab, 
+													   int cid) {
+	const struct ext_libdef * libdef = tab->libdef;
+	return (struct classdef *)&libdef->classtab->cdef[cid];
+}
+
+/* Push a clderence into the stack */
+static inline int sym_cld_push(struct symtab * tab, struct sym_cld * cld) {
+	return sym_push(tab, cld, sizeof(struct sym_cld));
+}
+
+/* Pop a clderence from the stack */
+static inline int sym_cld_pop(struct symtab * tab, struct sym_cld * cld) {
+	return sym_pop(tab, cld, sizeof(struct sym_cld));
+}
+
+/* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- */
 
@@ -416,7 +448,7 @@ static inline int sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp) {
 
 int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len);
 
-struct ext_fndef * sym_extern_get(struct symtab * tab, unsigned int xid);
+struct extdef * sym_extern_get(struct symtab * tab, unsigned int xid);
 
 const char * sym_extern_name(struct symtab * tab, unsigned int xid);
 

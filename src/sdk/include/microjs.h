@@ -33,23 +33,6 @@
 #include <microjs-rt.h>
 
 enum {
-	MICROJS_OK                 = 0,
-	MICROJS_UNEXPECTED_CHAR    = -1,
-	MICROJS_TOKEN_BUF_OVF      = -3,
-	MICROJS_UNCLOSED_STRING    = -4,
-	MICROJS_UNCLOSED_COMMENT   = -5,
-	MICROJS_INVALID_LITERAL    = -6,
-	MICROJS_BRACKET_MISMATCH   = -7,
-	MICROJS_STRING_TOO_LONG    = -8,
-	MICROJS_EMPTY_FILE         = -9,
-	MICROJS_EMPTY_STACK        = -10,
-	MICROJS_STRINGS_UNSUPORTED = -11,
-	MICROJS_INVALID_SYMBOL     = -12,
-	MICROJS_INVALID_LABEL      = -13,
-	MICROJS_OBJECT_EXPECTED    = -14,
-};
-
-enum {
 	OK                      = 0,
 	ERR_UNEXPECED_EOF       = 1,
 	ERR_UNEXPECTED_CHAR     = 2,
@@ -63,7 +46,7 @@ enum {
 	ERR_STRING_NOT_FOUND    = 10,
 	ERR_STRBUF_OVERFLOW     = 11,
 	ERR_SYNTAX_ERROR        = 12,
-	ERR_HEAP_OVERFLOW       = 13,
+	ERR_DATA_OVERFLOW       = 13,
 	ERR_VAR_UNKNOWN         = 14,
 	ERR_EXTERN_UNKNOWN      = 15,
 	ERR_ARG_MISSING         = 16,
@@ -76,6 +59,15 @@ enum {
 	ERR_CODE_MEM_OVERFLOW   = 23,
 	ERR_RET_COUNT_MISMATCH  = 24,
 	ERR_INVALID_INSTRUCTION = 25,
+	ERR_STACK_OVERFLOW      = 26,
+	ERR_STACK_UNDERFLOW     = 27,
+	ERR_EXTERN_NOT_FUNCTION = 28,
+	ERR_EXTERN_NOT_ARRAY    = 29,
+	ERR_EXTERN_NOT_OBJECT   = 30,
+	ERR_EXTERN_NOT_INTEGER  = 31,
+	ERR_EXTERN_NOT_MEMBER   = 32,
+	ERR_EXTERN_READONLY     = 33,
+	ERR_NOT_IMPLEMENTED     = 24,
 };
 
 struct symstat {
@@ -90,142 +82,89 @@ struct microjs_sdt;
    External objects/symbols/functions
    -------------------------------------------------------------------------- */
 
-struct ext_fndef {
+struct classdef {
 	const char * nm;
-	uint8_t argmin; /* minimum number of arguments */
-	uint8_t argmax; /* maximum number of arguments */
-	int8_t ret; /* number of returned values */ 
+	uint8_t fst;
+	uint8_t lst;
 };
+
+/* external definition  */
+
+#define O_ARRAY    (1 << 0)
+#define O_MEMBER   (1 << 1)
+#define O_SIZEOFFS (1 << 2)
+#define O_READONLY (1 << 3)
+
+#define O_FUNCTION (0 << 6)
+#define O_INTEGER  (1 << 6)
+#define O_OBJECT   (2 << 6)
+#define O_CONST    (3 << 6)
+
+#define EXTDEF_TYPE(_XP) ((_XP)->opt & (3 << 6))
+#define EXTDEF_FLAG(_XP, _O) ((_XP)->opt & (_O))
+
+struct extdef {
+	const char * nm;
+	uint8_t opt;
+	union {
+		struct {
+			uint8_t argmin; /* minimum number of arguments */
+			uint8_t argmax; /* maximum number of arguments */
+			int8_t ret; /* number of returned values */ 
+		} f; /* function */
+
+		struct {
+			uint8_t cdef; /* class definition */
+			int16_t inst; /* object instance */
+		} o; /* object */
+
+		struct {
+			uint8_t cdef; /* class definition */
+		} ao; /* array of objects, require a lookup function to translate
+				 array index to object instance */
+		struct {
+			uint8_t cdef; /* class definition */
+			uint8_t size;
+			int16_t offs;
+		} aos; ; /* array of objects, uses an offset and an object size
+					to translate array index to object instance: 
+					INSTANCE = offs + (size * INDEX) */
+		struct {
+			int32_t val;
+		} ic; /* integer constant */
+
+		struct {
+		} i; /* integer variable */
+
+		struct {
+		} ai; /* array of integers */
+
+		struct {
+			uint8_t size;
+			int16_t offs;
+		} ais; /* array of integers */
+	};
+} __attribute__((packed));
 
 /* --------------------------------------------------------------------------
    External library definition 
    -------------------------------------------------------------------------- */
 
+struct ext_classtab {
+	uint8_t ccnt;
+	struct classdef cdef[];
+};
+
 struct ext_libdef {
 	const char * name;
-	uint8_t fncnt;
-	struct ext_fndef fndef[];
-};
-
-/**********************************************************************
-  JSON
- **********************************************************************/
-
-struct microjs_val {
-	union {
-		struct {
-			char * dat;
-			uint16_t len;
-		} str;
-		struct {
-			const char * sz;
-			uint8_t id;
-		} lbl;
-		uint32_t u32;	
-		int32_t i32;	
-		bool logic;
-	};
-};
-
-enum {
-	MICROJS_JSON_EOF        = 0,
-	MICROJS_JSON_STOP       = 1,
-	MICROJS_JSON_NULL       = 2,
-	MICROJS_JSON_OBJECT     = 3,
-	MICROJS_JSON_ARRAY      = 4,
-	MICROJS_JSON_END_OBJECT = 5,
-	MICROJS_JSON_END_ARRAY  = 6,
-	MICROJS_JSON_BOOLEAN    = 7,
-	MICROJS_JSON_INTEGER    = 8,
-	MICROJS_JSON_LABEL      = 9,
-	MICROJS_JSON_STRING     = 10,
-	MICROJS_JSON_INVALID    = 11
-};
-
-struct microjs_json_parser {
-	uint16_t idx;  /* token parser index */
-	uint16_t cnt;  /* token count */
-
-	uint16_t sp;   /* token buffer stack pointer */
-	uint16_t top;  /* token buffer top pointer (size of the token buufer) */
-	uint8_t * tok; /* token buffer */
-
-	uint16_t off;  /* lexer text offset */
-	uint16_t len;  /* lexer text length */
-	const char * txt;   /* base pointer (original json txt file) */
-
-	const char * const * lbl;   /* label table */
-};
-
-typedef int (* microjs_attr_parser_t)(struct microjs_json_parser * jsn, 
-									  struct microjs_val * val, 
-									  unsigned int opt, void * ptr);
-
-struct microjs_attr_desc {
-	char key[13];
-	uint8_t type;	
-	uint8_t opt;	
-	uint16_t offs;	
-	microjs_attr_parser_t parse;
+	const struct ext_classtab * classtab;
+	uint8_t xcnt;
+	struct extdef xdef[];
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-/**********************************************************************
-  JSON
- **********************************************************************/
-
-int microjs_json_root_len(const char * js);
-
-int microjs_json_init(struct microjs_json_parser * jsn, 
-					 uint8_t * tok, unsigned int size,
-					 const char * const label[]);
-
-int microjs_json_open(struct microjs_json_parser * jsn, 
-					  const char * txt, unsigned int len);
-
-int microjs_json_scan(struct microjs_json_parser * jsn);
-
-/* flushes the token buffer, but keep track of the file scanning */
-void microjs_json_flush(struct microjs_json_parser * jsn);
-
-int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn);
-
-int microjs_json_get_val(struct microjs_json_parser * jsn,
-						   struct microjs_val * val);
-
-int microjs_json_parse_obj(struct microjs_json_parser * jsn,
-						   const struct microjs_attr_desc desc[],
-						   void * ptr);
-
-/* Encode a 16 bits integral value */
-int microjs_u16_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int opt, void * ptr);
-
-/* Encode an 8 bits integral value */
-int microjs_u8_enc(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int opt, void * ptr);
-
-/* Encode an array of 8 bits integral values.
-  The option parameter indicates the maximum length of the array */
-int microjs_array_u8_enc(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int len, void * ptr);
-
-/* Encode a boolean as a single bit */
-int microjs_bit_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr);
-
-/* Encode a string as a index to the constant string pool */
-int microjs_const_str_enc(struct microjs_json_parser * jsn, 
-					struct microjs_val * val, 
-					unsigned int bit, void * ptr);
 
 /* --------------------------------------------------------------------------
    Strings 
@@ -265,8 +204,7 @@ void symtab_state_rollback(struct symtab * tab, struct symstat st);
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
 									  unsigned int sdt_size,
-									  struct symtab * tab, 
-									  unsigned int data_size);
+									  struct symtab * tab);
 
 int microjs_sdt_begin(struct microjs_sdt * microjs, 
 					  uint8_t code[], unsigned int code_size);
@@ -274,7 +212,7 @@ int microjs_sdt_begin(struct microjs_sdt * microjs,
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-int microjs_sdt_end(struct microjs_sdt * microjs);
+int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt);
 
 void microjs_sdt_reset(struct microjs_sdt * microjs);
 

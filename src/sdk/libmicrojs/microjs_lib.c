@@ -30,6 +30,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <sys/dcclog.h>
+
 #ifndef MICROJS_STDLIB_ENABLED 
 #define MICROJS_STDLIB_ENABLED 1
 #endif
@@ -42,9 +44,10 @@
 
 int32_t __rand(void * env, int32_t argv[], int argc) 
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 
 	retv[0] = rand();
+	DCC_LOG1(LOG_MSG, "%d", retv[0]);
 
 	return 1;
 };
@@ -57,7 +60,7 @@ int32_t __srand(void * env, int32_t argv[], int argc)
 
 int32_t __isqrt(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	uint32_t x = argv[0];
 	uint32_t rem = 0;
 	uint32_t root = 0;
@@ -82,7 +85,7 @@ int32_t __isqrt(void * env, int32_t argv[], int argc)
 
 int32_t __memrd(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	uint32_t addr = argv[0];
 
 	if (addr >= 256)
@@ -95,7 +98,7 @@ int32_t __memrd(void * env, int32_t argv[], int argc)
 
 int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	const uint8_t log2_debruijn_index[32] = {
 		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
 		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
@@ -112,23 +115,9 @@ int32_t __ilog2(void * env, int32_t argv[], int argc)
 	return 1;
 }	
 
-int32_t __write(void * env, int32_t argv[], int argc)
-{
-	int i;
-	
-	for (i = argc - 1; i >= 0; --i) {
-		if (i != argc - 1)
-			fprintf(stdout, ", ");
-		fprintf(stdout, "%d", argv[i]);
-	}
-
-	fprintf(stdout, "\n");
-	return 0;
-}	
-
 int32_t __time(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	retv[0] = (int32_t)time(NULL);
 	return 1;
 }	
@@ -243,11 +232,10 @@ static int uint2hex(char * s, uint32_t val)
 
 #endif /* MICROJS_STRINGS_ENABLED */
 
-int32_t __printf(void * env, int32_t argv[], int argc)
+static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 {
 #if MICROJS_STRINGS_ENABLED 
 	char buf[BUF_LEN];
-	const char * fmt;
 	int flags;
 	int cnt;
 	int c;
@@ -259,10 +247,9 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 		uint32_t n;
 		int i;
 	} val;
-	int i = argc;
+	int i = 0;
 
-	fmt = str(argv[--i]);
-	#define _va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
+	#define _va_arg(AP, TYPE) ((i < argc) ? argv[i++] : 0)
 
 	n = 0;
 	w = 0;
@@ -402,18 +389,44 @@ print_buf:
 #endif /* MICROJS_STRINGS_ENABLED */
 }
 
-uint8_t sensor[160];
-uint8_t module[160];
+int32_t __printf(void * env, int32_t argv[], int argc)
+{
+#if MICROJS_STRINGS_ENABLED 
+	const char * fmt = str(argv[0]);
+
+	return __vprintf(env, &argv[1], argc - 1, fmt);
+#else
+	return -ERR_STRINGS_UNSUPORTED;
+#endif /* MICROJS_STRINGS_ENABLED */
+}
+
+int32_t __print(void * env, int32_t argv[], int argc)
+{
+	int i;
+
+	DCC_LOG1(LOG_MSG, "%d", argv[0]);
+	
+	for (i = 0; i < argc; ++i) {
+		if (i != 0)
+			__vprintf(env, argv, 0, ", ");
+		__vprintf(env, &argv[i], 1, "%d");
+	}
+
+	__vprintf(env, argv, 0, "\n");
+	return 0;
+}	
+
+uint8_t device[320];
 
 int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	unsigned int addr = argv[0];
 
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	retv[0] = sensor[addr];
+	retv[0] = device[addr];
 
 	return 1; /* return the number of return values */
 }	
@@ -429,7 +442,7 @@ int32_t __sens_alarm(void * env, int32_t argv[], int argc)
 	if (val > 1)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	sensor[addr] = (sensor[addr] & ~1) | val;
+	device[addr] = (device[addr] & ~1) | val;
 
 	return 0; /* return the number of return values */
 }
@@ -445,7 +458,7 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 	if (val > 1)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	sensor[addr] = (sensor[addr] & ~2) | (val << 1);
+	device[addr] = (device[addr] & ~2) | (val << 1);
 
 	return 0; /* return the number of return values */
 }
@@ -453,13 +466,15 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 
 int32_t __mod_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	unsigned int addr = argv[0];
 
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	retv[0] = module[addr];
+	addr += 160;
+
+	retv[0] = device[addr];
 
 	return 1; /* return the number of return values */
 }	
@@ -472,10 +487,12 @@ int32_t __mod_alarm(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
+	addr += 160;
+
 	if (val > 10)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	module[addr] = (module[addr] & ~1) | val;
+	device[addr] = (device[addr] & ~1) | val;
 
 	return 0; /* return the number of return values */
 }
@@ -488,14 +505,90 @@ int32_t __mod_trouble(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
+	addr += 160;
+
 	if (val > 10)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	module[addr] = (module[addr] & ~2) | (val << 1);
+	device[addr] = (device[addr] & ~2) | (val << 1);
 
 	return 0; /* return the number of return values */
 }
 
+
+/* Array index translator */
+int32_t __sensor(void * env, int32_t argv[], int argc)
+{
+	/* just check for bounds */
+	if ((uint32_t)argv[0] > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	return 1; /* return the number of return values */
+}	
+
+/* Array index translator */
+int32_t __module(void * env, int32_t argv[], int argc)
+{
+	if ((uint32_t)argv[0] > 159)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	argv[0] = argv[0] + 160; /* add the offset */
+	return 1; /* return the number of return values */
+}	
+
+/* This is a read only atttribute */
+int32_t __dev_state(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	retv[0] = device[oid];
+
+	return 1; /* return the number of return values */
+}	
+
+/* This is a read/write atttribute */
+int32_t __dev_alarm(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	if (argc > 1) { /* set */
+		unsigned int val = argv[1];
+
+		if (val > 16)
+			return -EXCEPT_INVALID_ALARM_CODE;
+
+		device[oid] = (device[oid] & ~0xf) | val;
+
+		return 0; /* number of return values */
+	}
+
+	/* get */
+	retv[0] = device[oid] & 0xf;
+
+	return 1; /* number of return values */
+}
+
+int32_t __dev_trouble(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+
+	if (argc > 1) { /* set */
+		unsigned int val = argv[1];
+
+		if (val > 16)
+			return -EXCEPT_INVALID_ALARM_CODE;
+
+		device[oid] = (device[oid] & ~0xf0) | (val << 4);
+
+		return 0; /* number of return values */
+	}
+
+	/* get */
+	retv[0] = (device[oid] >> 4) & 0xf;
+
+	return 1; /* number of return values */
+}
 
 /* --------------------------------------------------------------------------
    Native (external) call table
@@ -505,10 +598,10 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
-	[EXT_WRITE] = __write,
+	[EXT_WRITE] = __print,
 	[EXT_TIME] = __time,
 	[EXT_SRAND] = __srand,
-	[EXT_PRINT] = __write,
+	[EXT_PRINT] = __print,
 	[EXT_PRINTF] = __printf,
 	[EXT_MEMRD] = __memrd,
 	[EXT_SENS_STATE] = __sens_state,
@@ -517,6 +610,13 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_MOD_STATE] = __mod_state,
 	[EXT_MOD_ALARM] = __mod_alarm,
 	[EXT_MOD_TROUBLE] = __mod_trouble,
+
+	[EXT_SENSOR] = __sensor,
+	[EXT_MODULE] = __module,
+
+	[EXT_DEV_STATE] = __dev_state,
+	[EXT_DEV_ALARM] = __dev_alarm,
+	[EXT_DEV_TROUBLE] = __dev_trouble,
 };
 
 #endif /* MICROJS_STDLIB_ENABLED  */

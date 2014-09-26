@@ -19,10 +19,10 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-PROG = mjs-test
+PROG = microjs
 
 #CFILES_GEN = device_db.c
-CFILES = mjs-test.c board.c flashfs.c profclk.c shell.c test_lib.c
+CFILES = microjs.c board.c flashfs.c profclk.c shell.c test_lib.c
 
 SDK = ../../sdk
 
