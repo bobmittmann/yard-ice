@@ -30,6 +30,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <sys/dcclog.h>
+
 #ifndef MICROJS_STDLIB_ENABLED 
 #define MICROJS_STDLIB_ENABLED 1
 #endif
@@ -42,9 +44,10 @@
 
 int32_t __rand(void * env, int32_t argv[], int argc) 
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 
 	retv[0] = rand();
+	DCC_LOG1(LOG_MSG, "%d", retv[0]);
 
 	return 1;
 };
@@ -57,7 +60,7 @@ int32_t __srand(void * env, int32_t argv[], int argc)
 
 int32_t __isqrt(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	uint32_t x = argv[0];
 	uint32_t rem = 0;
 	uint32_t root = 0;
@@ -82,7 +85,7 @@ int32_t __isqrt(void * env, int32_t argv[], int argc)
 
 int32_t __memrd(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	uint32_t addr = argv[0];
 
 	if (addr >= 256)
@@ -95,7 +98,7 @@ int32_t __memrd(void * env, int32_t argv[], int argc)
 
 int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	const uint8_t log2_debruijn_index[32] = {
 		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
 		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
@@ -114,7 +117,7 @@ int32_t __ilog2(void * env, int32_t argv[], int argc)
 
 int32_t __time(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	retv[0] = (int32_t)time(NULL);
 	return 1;
 }	
@@ -244,9 +247,9 @@ static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 		uint32_t n;
 		int i;
 	} val;
-	int i = argc;
+	int i = 0;
 
-	#define _va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
+	#define _va_arg(AP, TYPE) ((i < argc) ? argv[i++] : 0)
 
 	n = 0;
 	w = 0;
@@ -389,9 +392,9 @@ print_buf:
 int32_t __printf(void * env, int32_t argv[], int argc)
 {
 #if MICROJS_STRINGS_ENABLED 
-	const char * fmt = str(argv[--argc]);
+	const char * fmt = str(argv[0]);
 
-	return __vprintf(env, argv, argc, fmt);
+	return __vprintf(env, &argv[1], argc - 1, fmt);
 #else
 	return -ERR_STRINGS_UNSUPORTED;
 #endif /* MICROJS_STRINGS_ENABLED */
@@ -400,9 +403,11 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 int32_t __print(void * env, int32_t argv[], int argc)
 {
 	int i;
+
+	DCC_LOG1(LOG_MSG, "%d", argv[0]);
 	
-	for (i = argc - 1; i >= 0; --i) {
-		if (i != argc - 1)
+	for (i = 0; i < argc; ++i) {
+		if (i != 0)
 			__vprintf(env, argv, 0, ", ");
 		__vprintf(env, &argv[i], 1, "%d");
 	}
@@ -416,7 +421,7 @@ uint8_t module[160];
 
 int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv = argv;
 	unsigned int addr = argv[0];
 
 	if (addr > 159)
@@ -462,7 +467,7 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 
 int32_t __mod_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
+	int32_t * retv;
 	unsigned int addr = argv[0];
 
 	if (addr > 159)
