@@ -34,18 +34,58 @@
    Target memory operations
    -------------------------------------------------------------------------- */
 
+#define SIZEOF_WORD ((int)sizeof(int32_t))
+
+#define SIGNEXT4BIT(_X) ({ struct { int32_t x: 4; } s; \
+						  s.x = (_X); (int32_t)s.x; })
+
 static int tgt_alloc32(struct microjs_sdt * microjs)
 {
 	unsigned int addr;
 
 	/* ensure memory alignment */
-	addr = (microjs->tgt_heap + 3) & ~3;
-	microjs->tgt_heap = addr + 4;
+	addr = (microjs->data_pos + SIZEOF_WORD - 1) & ~(SIZEOF_WORD - 1);
 
-	if (microjs->tgt_heap > microjs->tgt_sp)
-		return -ERR_HEAP_OVERFLOW;
+	microjs->data_pos = addr + SIZEOF_WORD;
+	DCC_LOG1(LOG_TRACE, "data_pos=%d", microjs->data_pos);
+
+	if (microjs->data_pos > microjs->data_max)
+		microjs->data_max = microjs->data_pos;
 
 	return addr;
+}
+
+static int tgt_stack_push(struct microjs_sdt * microjs)
+{
+	/* update stack usage */
+	microjs->stack_pos += SIZEOF_WORD;
+
+	if (microjs->stack_pos > microjs->stack_max)
+		microjs->stack_max = microjs->stack_pos;
+
+	return 0;
+}
+
+static int tgt_stack_pop(struct microjs_sdt * microjs)
+{
+	if (microjs->stack_pos == 0)
+		return -ERR_STACK_UNDERFLOW;
+
+	microjs->stack_pos -= SIZEOF_WORD;
+
+	return 0;
+}
+
+static int tgt_stack_adjust(struct microjs_sdt * microjs, int cnt)
+{
+	int addr = microjs->stack_pos + cnt * SIZEOF_WORD;
+
+	if (addr < 0)
+		return -ERR_STACK_UNDERFLOW;
+
+	microjs->stack_pos = addr;
+
+	return 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -114,9 +154,6 @@ static int encode_int(struct microjs_sdt * microjs, int32_t x)
 	return 0;
 }
 
-#define SIGNEXT4BIT(_X) ({ struct { int32_t x: 4; } s; \
-						  s.x = (_X); (int32_t)s.x; })
-
 static bool is_constant(struct microjs_sdt * microjs, 
 						unsigned int spc, int32_t * xp)
 {
@@ -143,6 +180,51 @@ static bool is_constant(struct microjs_sdt * microjs,
 
 	return false;
 }
+
+int op_push_tmp(struct microjs_sdt * microjs)
+{
+	struct sym_tmp tmp;
+
+	tmp.s = microjs->tok.s;
+	tmp.len = microjs->tok.qlf;
+
+	DCC_LOG1(LOG_INFO, "tmp.len=%d", tmp.len);
+
+	return sym_tmp_push(microjs->tab, &tmp);
+}
+
+int op_pop_tmp(struct microjs_sdt * microjs)
+{
+	DCC_LOG(LOG_INFO, " >>> ...");
+	return sym_tmp_pop(microjs->tab, NULL);
+}
+
+/* --------------------------------------------------------------------------
+   Scoping
+   -------------------------------------------------------------------------- */
+
+int op_blk_open(struct microjs_sdt * microjs) 
+{
+	/* save the heap state */
+	sym_addr_push(microjs->tab, &microjs->data_pos);
+	/* save the stack frame */
+	return sym_sf_push(microjs->tab);
+}
+
+int op_blk_close(struct microjs_sdt * microjs) 
+{
+	int ret;
+	/* restore the stack frame */
+	if ((ret = sym_sf_pop(microjs->tab)) < 0)
+		return ret;
+
+	/* restore the heap state */
+	return sym_addr_pop(microjs->tab, &microjs->data_pos);
+}
+
+/* --------------------------------------------------------------------------
+   Variables
+   -------------------------------------------------------------------------- */
 
 /* Variable declaration.
    Allocate a new integer in the target heap. */
@@ -191,25 +273,43 @@ int op_var_decl(struct microjs_sdt * microjs)
 	return 0;
 }
 
-int op_push_tmp(struct microjs_sdt * microjs)
+int op_var_eval(struct microjs_sdt * microjs)
 {
+	struct sym_obj * obj;
 	struct sym_tmp tmp;
+	uint16_t addr;
+	int ret;
 
-	tmp.s = microjs->tok.s;
-	tmp.len = microjs->tok.qlf;
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
 
-	DCC_LOG1(LOG_INFO, "tmp.len=%d", tmp.len);
+	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
+		return -ERR_VAR_UNKNOWN;
 
-	return sym_tmp_push(microjs->tab, &tmp);
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc;        /* save code pointer */
+#endif
+
+	addr = (obj->addr >> 2) & 0x0fff;
+#if MICROJS_FUNCTIONS_ENABLED
+	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
+		TRACEF("%04x\tLDR \'%s\" (%04x)\n", microjs->pc, 
+			   sym_obj_name(microjs->tab, obj), obj->addr);
+		microjs->code[microjs->pc++] = OPC_LDR;
+		microjs->code[microjs->pc++] = obj->addr >> 2;
+		return 0;
+	} 
+#endif
+
+	TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
+		   sym_obj_name(microjs->tab, obj), obj->addr);
+	microjs->code[microjs->pc++] = OPC_LD + (addr & 0x0f);
+	microjs->code[microjs->pc++] = addr >> 4;
+
+	return tgt_stack_push(microjs);
 }
 
-int op_pop_tmp(struct microjs_sdt * microjs)
-{
-	DCC_LOG(LOG_INFO, " >>> ...");
-	return sym_tmp_pop(microjs->tab, NULL);
-}
-
-int op_assign(struct microjs_sdt * microjs)
+int op_var_assign(struct microjs_sdt * microjs)
 {
 	struct sym_obj * obj;
 	struct sym_tmp tmp;
@@ -243,49 +343,190 @@ int op_assign(struct microjs_sdt * microjs)
 		   sym_obj_name(microjs->tab, obj), obj->addr);
 	microjs->code[microjs->pc++] = OPC_ST + (addr & 0x0f);
 	microjs->code[microjs->pc++] = addr >> 4;
-	
-	return 0;
+
+	return tgt_stack_pop(microjs);
 }
 
-int op_attr(struct microjs_sdt * microjs)
+/* --------------------------------------------------------------------------
+   Array index translation
+   -------------------------------------------------------------------------- */
+
+int op_array_xlat(struct microjs_sdt * microjs)
 {
-	struct sym_obj * obj;
+	struct extdef * xdef;
+	struct classdef * cdef;
+	struct sym_cld cld;
 	struct sym_tmp tmp;
-	uint16_t addr;
 	int ret;
+	int xid;
 
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((obj = sym_obj_lookup(microjs->tab, tmp.s, tmp.len)) == NULL)
-		return -ERR_VAR_UNKNOWN;
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
 
-#if MICROJS_OPTIMIZATION_ENABLED
-	microjs->spc = microjs->pc;        /* save code pointer */
-#endif
+	DCC_LOG1(LOG_TRACE, "array object xid=%d", xid);
 
-	addr = (obj->addr >> 2) & 0x0fff;
-#if MICROJS_FUNCTIONS_ENABLED
-	if ((obj->flags & SYM_OBJ_GLOBAL) == 0) {
-		TRACEF("%04x\tLDR \'%s\" (%04x)\n", microjs->pc, 
-			   sym_obj_name(microjs->tab, obj), obj->addr);
-		microjs->code[microjs->pc++] = OPC_LDR;
-		microjs->code[microjs->pc++] = obj->addr >> 2;
-		return 0;
-	} 
-#endif
+	xdef = sym_extern_get(microjs->tab, xid);
 
-	TRACEF("%04x\tLD \'%s\" (%04x)\n", microjs->pc, 
-		   sym_obj_name(microjs->tab, obj), obj->addr);
-	microjs->code[microjs->pc++] = OPC_LD + (addr & 0x0f);
-	microjs->code[microjs->pc++] = addr >> 4;
+	if (EXTDEF_TYPE(xdef) != O_OBJECT)
+		return -ERR_EXTERN_NOT_OBJECT;
+
+	if (!EXTDEF_FLAG(xdef, O_ARRAY))
+		return -ERR_EXTERN_NOT_ARRAY;
+
+	if (EXTDEF_FLAG(xdef, O_SIZEOFFS)) {
+		/* Array of objects with size and offset */
+		cdef = ext_classdef_get(microjs->tab, xdef->aos.cdef);
+		if (xdef->aos.size > 1) { /* multiply the index by the size */
+			encode_int(microjs, xdef->aos.size);
+			TRACEF("%04x\tMUL\n", microjs->pc);
+			microjs->code[microjs->pc++] = OPC_MUL;
+		}
+		if (xdef->aos.offs != 0) { /* add the offset */
+			encode_int(microjs, xdef->aos.offs);
+			TRACEF("%04x\tADD\n", microjs->pc);
+			microjs->code[microjs->pc++] = OPC_ADD;
+		}
+	} else {
+		/* Array of objects with index translator call */
+		cdef = ext_classdef_get(microjs->tab, xdef->ao.cdef);
+		/* XXX: the index translator has to accept a single argument 
+		   and return 1 value. This call could be optimized,
+		 since the stack size is allways one at the entry end exit! */
+		TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+			   sym_extern_name(microjs->tab, xid), 1);
+		microjs->code[microjs->pc++] = OPC_EXT;
+		microjs->code[microjs->pc++] = xid; /* external call number */
+		microjs->code[microjs->pc++] = 1; /* stack size (arguments) */
+	}
+
+	DCC_LOG3(LOG_TRACE, "class=\"%s\" fst=%d lst=%d",  
+			 cdef->nm, cdef->fst, cdef->lst);
+
+	cld.fst = cdef->fst;
+	cld.lst = cdef->lst;
+
+	return sym_cld_push(microjs->tab, &cld);
+}
+
+/* --------------------------------------------------------------------------
+   External object evaluation and assignement
+   -------------------------------------------------------------------------- */
+
+int op_object_eval(struct microjs_sdt * microjs)
+{
+	return -ERR_NOT_IMPLEMENTED;
+}
+
+int op_object_assign(struct microjs_sdt * microjs)
+{
+	return -ERR_NOT_IMPLEMENTED;
+}
+
+/* --------------------------------------------------------------------------
+   External Object attribute evaluation and assignement
+   -------------------------------------------------------------------------- */
+
+int op_attr_eval(struct microjs_sdt * microjs)
+{
+	struct extdef * xdef;
+	struct sym_cld cld;
+	struct sym_tmp tmp;
+	int ret;
+	int xid;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* get the member attribute name */
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
+
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
+
+	DCC_LOG1(LOG_TRACE, "attribute xid=%d", xid);
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	xdef = sym_extern_get(microjs->tab, xid);
+
+	if (EXTDEF_TYPE(xdef) != O_INTEGER)
+		return -ERR_EXTERN_NOT_INTEGER;
+
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst)) {
+		return -ERR_EXTERN_NOT_MEMBER;
+	}
+
+	/* XXX: This call could be optimized, attribute eval functions,
+	   should receive 1 prameter: (object_id) and return the 
+	   attribute value. */
+	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, xid), 1);
+	microjs->code[microjs->pc++] = OPC_EXT;
+	microjs->code[microjs->pc++] = xid; /* external call number */
+	microjs->code[microjs->pc++] = 1; /* stack size (arguments) */
 
 	return 0;
 }
 
-int op_method(struct microjs_sdt * microjs)
+int op_attr_assign(struct microjs_sdt * microjs)
 {
-	struct ext_fndef * fndef;
+	struct extdef * xdef;
+	struct sym_cld cld;
+	struct sym_tmp tmp;
+	int ret;
+	int xid;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* get the member attribute name */
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
+
+	xdef = sym_extern_get(microjs->tab, xid);
+
+	if (EXTDEF_TYPE(xdef) != O_INTEGER)
+		return -ERR_EXTERN_NOT_INTEGER;
+
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst)) {
+		return -ERR_EXTERN_NOT_MEMBER;
+	}
+
+	if (EXTDEF_FLAG(xdef, O_READONLY)) {
+		return -ERR_EXTERN_READONLY;
+	}
+
+	/* XXX: This call could be optimized, attribute assignement functions,
+	   should receive 2 prameters: (object_id, attr_val) and return nothing */
+	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, xid), 1);
+	microjs->code[microjs->pc++] = OPC_EXT;
+	microjs->code[microjs->pc++] = xid; /* external call number */
+	microjs->code[microjs->pc++] = 2; /* stack size (arguments) */
+
+	/* the call will consume the 2 values on the stack and 
+	   will not push back any value, inform the stack evaluator. */ 
+	return tgt_stack_adjust(microjs, -2);
+}
+
+/* --------------------------------------------------------------------------
+   External Function calls
+   -------------------------------------------------------------------------- */
+
+int op_function_lookup(struct microjs_sdt * microjs)
+{
+	struct extdef * xdef;
 	struct sym_call call;
 	struct sym_tmp tmp;
 	int xid;
@@ -294,20 +535,19 @@ int op_method(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0) {
-		DCC_LOG(LOG_INFO, "sym_extern_lookup() failed!");
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
-	}	
 
-	fndef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->tab, xid);
 
-	DCC_LOG1(LOG_INFO, "external \"%s\"", fndef->nm);
+	if (EXTDEF_TYPE(xdef) != O_FUNCTION)
+		return -ERR_EXTERN_NOT_FUNCTION;
 
 	/* prepare to call a function or method */
 	call.xid = xid;
-	call.retcnt = fndef->ret;
-	call.argmin = fndef->argmin;
-	call.argmax = fndef->argmax;
+	call.retcnt = xdef->f.ret;
+	call.argmin = xdef->f.argmin;
+	call.argmax = xdef->f.argmax;
 	call.argcnt = 0;
 
 	return sym_call_push(microjs->tab, &call);
@@ -351,6 +591,9 @@ int op_call(struct microjs_sdt * microjs)
 	microjs->code[microjs->pc++] = call.xid; /* external call number */
 	microjs->code[microjs->pc++] = call.argcnt; /* stack size */
 
+	if ((ret = tgt_stack_adjust(microjs, call.retcnt - call.argcnt)) < 0)
+		return ret;
+
 	/* push back; */
 	return sym_call_push(microjs->tab, &call);
 }
@@ -380,7 +623,7 @@ int op_ret_discard(struct microjs_sdt * microjs)
 		}
 	}
 
-	return 0;
+	return tgt_stack_adjust(microjs, -call.retcnt);
 }
 
 int op_call_ret(struct microjs_sdt * microjs)
@@ -410,6 +653,10 @@ int op_call_ret(struct microjs_sdt * microjs)
 			TRACEF("%04x\tPOP\n", microjs->pc);
 			microjs->code[microjs->pc++] = OPC_POP;
 		}
+	
+		if ((ret = tgt_stack_adjust(microjs, -n)) < 0)
+			return ret;
+
 	} else if (n < 0) {
 		return -ERR_GENERAL;
 	}
@@ -417,24 +664,9 @@ int op_call_ret(struct microjs_sdt * microjs)
 	return 0;
 }
 
-int op_blk_open(struct microjs_sdt * microjs) 
-{
-	/* save the heap state */
-	sym_addr_push(microjs->tab, &microjs->tgt_heap);
-	/* save the stack frame */
-	return sym_sf_push(microjs->tab);
-}
-
-int op_blk_close(struct microjs_sdt * microjs) 
-{
-	int ret;
-	/* restore the stack frame */
-	if ((ret = sym_sf_pop(microjs->tab)) < 0)
-		return ret;
-
-	/* restore the heap state */
-	return sym_addr_pop(microjs->tab, &microjs->tgt_heap);
-}
+/* --------------------------------------------------------------------------
+   Binary operations 
+   -------------------------------------------------------------------------- */
 
 int op_equ(struct microjs_sdt * microjs)
 {
@@ -450,7 +682,8 @@ int op_equ(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tEQ\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_EQ;
-	return 0;
+
+	return tgt_stack_pop(microjs);
 }
 
 int op_neq(struct microjs_sdt * microjs)
@@ -460,7 +693,7 @@ int op_neq(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tNE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_NE;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_gt(struct microjs_sdt * microjs)
@@ -470,7 +703,7 @@ int op_gt(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tGT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GT;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_lt(struct microjs_sdt * microjs)
@@ -480,7 +713,7 @@ int op_lt(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tLT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LT;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_gte(struct microjs_sdt * microjs)
@@ -490,7 +723,7 @@ int op_gte(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tGE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_GE;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_lte(struct microjs_sdt * microjs)
@@ -500,7 +733,7 @@ int op_lte(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tLE\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_LE;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_logic_or(struct microjs_sdt * microjs)
@@ -510,7 +743,7 @@ int op_logic_or(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_logic_and(struct microjs_sdt * microjs)
@@ -520,7 +753,7 @@ int op_logic_and(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_add(struct microjs_sdt * microjs)
@@ -531,13 +764,15 @@ int op_add(struct microjs_sdt * microjs)
 		microjs->pc = microjs->spc; /* rollback */
 		TRACEF("%04x\tINC (optimizing ADD)\n", microjs->pc);
 		microjs->code[microjs->pc++] = OPC_INC;
-		return 0;
+		/* the INC operation do change the stack but we have to remove the
+		   constant pushed to the stack that was optimized away */
+		return tgt_stack_pop(microjs);
 	} 
 	microjs->spc = microjs->pc; /* save code pointer */
 #endif
 	TRACEF("%04x\tADD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_ADD;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_sub(struct microjs_sdt * microjs)
@@ -548,13 +783,13 @@ int op_sub(struct microjs_sdt * microjs)
 		microjs->pc = microjs->spc; /* rollback */
 		TRACEF("%04x\tDEC (optimizing SUB)\n", microjs->pc);
 		microjs->code[microjs->pc++] = OPC_DEC;
-		return 0;
+		return tgt_stack_pop(microjs);
 	} 
 	microjs->spc = microjs->pc; /* save code pointer */
 #endif
 	TRACEF("%04x\tSUB\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_SUB;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_or(struct microjs_sdt * microjs)
@@ -564,7 +799,7 @@ int op_or(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_OR;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_xor(struct microjs_sdt * microjs)
@@ -574,7 +809,7 @@ int op_xor(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tXOR\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_XOR;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_mul(struct microjs_sdt * microjs)
@@ -584,7 +819,7 @@ int op_mul(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tMUL\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MUL;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_div(struct microjs_sdt * microjs)
@@ -594,7 +829,7 @@ int op_div(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tDIV\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_DIV;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_mod(struct microjs_sdt * microjs)
@@ -604,7 +839,7 @@ int op_mod(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tMOD\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_MOD;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_and(struct microjs_sdt * microjs)
@@ -614,8 +849,32 @@ int op_and(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tAND\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_AND;
-	return 0;
+	return tgt_stack_pop(microjs);
 }
+
+int op_shl(struct microjs_sdt * microjs)
+{
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tSHL\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_SHL;
+	return tgt_stack_pop(microjs);
+}
+
+int op_asr(struct microjs_sdt * microjs)
+{
+#if MICROJS_OPTIMIZATION_ENABLED
+	microjs->spc = microjs->pc; /* save code pointer */
+#endif
+	TRACEF("%04x\tASR\n", microjs->pc);
+	microjs->code[microjs->pc++] = OPC_ASR;
+	return tgt_stack_pop(microjs);
+}
+
+/* --------------------------------------------------------------------------
+   Unary operations 
+   -------------------------------------------------------------------------- */
 
 int op_inv(struct microjs_sdt * microjs)
 {
@@ -655,25 +914,9 @@ int op_not(struct microjs_sdt * microjs)
 	return 0;
 }
 
-int op_shl(struct microjs_sdt * microjs)
-{
-#if MICROJS_OPTIMIZATION_ENABLED
-	microjs->spc = microjs->pc; /* save code pointer */
-#endif
-	TRACEF("%04x\tSHL\n", microjs->pc);
-	microjs->code[microjs->pc++] = OPC_SHL;
-	return 0;
-}
-
-int op_asr(struct microjs_sdt * microjs)
-{
-#if MICROJS_OPTIMIZATION_ENABLED
-	microjs->spc = microjs->pc; /* save code pointer */
-#endif
-	TRACEF("%04x\tASR\n", microjs->pc);
-	microjs->code[microjs->pc++] = OPC_ASR;
-	return 0;
-}
+/* --------------------------------------------------------------------------
+   Constants 
+   -------------------------------------------------------------------------- */
 
 int op_push_false(struct microjs_sdt * microjs)
 {
@@ -682,7 +925,7 @@ int op_push_false(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tI4 %d\n", microjs->pc, 0);
 	microjs->code[microjs->pc++] = OPC_I4 + 0;
-	return 0;
+	return tgt_stack_push(microjs);
 }
 
 int op_push_true(struct microjs_sdt * microjs)
@@ -692,7 +935,7 @@ int op_push_true(struct microjs_sdt * microjs)
 #endif
 	TRACEF("%04x\tI4 %d\n", microjs->pc, 1);
 	microjs->code[microjs->pc++] = OPC_I4 + 1;
-	return 0;
+	return tgt_stack_push(microjs);
 }
 
 int op_push_string(struct microjs_sdt * microjs) 
@@ -718,7 +961,7 @@ int op_push_string(struct microjs_sdt * microjs)
 		microjs->code[microjs->pc++] = isz;
 	}
 
-	return 0;
+	return tgt_stack_push(microjs);
 #else
 	return -ERR_STRINGS_UNSUPORTED;
 #endif
@@ -726,12 +969,44 @@ int op_push_string(struct microjs_sdt * microjs)
 
 int op_push_int(struct microjs_sdt * microjs)
 {
-	return encode_int(microjs, (int32_t)microjs->tok.u32);
+	encode_int(microjs, (int32_t)microjs->tok.u32);
+	return tgt_stack_push(microjs);
 }
+
+/* --------------------------------------------------------------------------
+   Commom backpatch helper
+   -------------------------------------------------------------------------- */
+
+int op_patch_ref(struct microjs_sdt * microjs) 
+{
+	struct sym_ref ref;
+	int offs;
+	int ret;
+	
+	DCC_LOG(LOG_INFO, "-----");
+
+	/* get temporary reference */
+	if ((ret = sym_ref_pop(microjs->tab, &ref)) < 0)
+		return ret;
+
+	/* Backpatch the jump */
+	offs = (microjs->pc - 2) - ref.addr;
+	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", ref.addr, 
+		   microjs->pc, ref.lbl);
+	microjs->code[ref.addr ] += offs & 0x0f;
+	microjs->code[ref.addr + 1] = offs >> 4;
+
+	return 0;
+}
+
+/* --------------------------------------------------------------------------
+   Exception handling
+   -------------------------------------------------------------------------- */
 
 int op_try_begin(struct microjs_sdt * microjs) 
 {
 	struct sym_ref ref;
+	int ret;
 
 #if MICROJS_OPTIMIZATION_ENABLED
 	microjs->spc = microjs->pc; /* save code pointer */
@@ -743,8 +1018,11 @@ int op_try_begin(struct microjs_sdt * microjs)
 	ref.addr = microjs->pc;
 	TRACEF(".L%d:\n%04x\tPUSHX xxxx\n", ref.lbl, microjs->pc);
 	/* Insert the opcode, the address will be backpatched alter */
-	microjs->code[microjs->pc] = OPC_PUHSX;
+	microjs->code[microjs->pc] = OPC_PUSHX;
 	microjs->pc += 2;
+
+	if ((ret = tgt_stack_push(microjs)) < 0)
+		return ret;
 
 	return sym_ref_push(microjs->tab, &ref);
 }
@@ -778,7 +1056,7 @@ int op_try_end(struct microjs_sdt * microjs)
 	TRACEF("%04x\tXPT\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_XPT;
 
-	return 0;
+	return tgt_stack_pop(microjs);
 }
 
 int op_catch(struct microjs_sdt * microjs) 
@@ -815,30 +1093,6 @@ int op_catch(struct microjs_sdt * microjs)
 	return 0;
 }
 
-/*
- */
-int op_patch_ref(struct microjs_sdt * microjs) 
-{
-	struct sym_ref ref;
-	int offs;
-	int ret;
-	
-	DCC_LOG(LOG_INFO, "-----");
-
-	/* get temporary reference */
-	if ((ret = sym_ref_pop(microjs->tab, &ref)) < 0)
-		return ret;
-
-	/* Backpatch the jump */
-	offs = (microjs->pc - 2) - ref.addr;
-	TRACEF("\tfix %04x -> Jxx %04x (.L%d)\n", ref.addr, 
-		   microjs->pc, ref.lbl);
-	microjs->code[ref.addr ] += offs & 0x0f;
-	microjs->code[ref.addr + 1] = offs >> 4;
-
-	return 0;
-}
-
 int op_throw(struct microjs_sdt * microjs) 
 {
 #if MICROJS_OPTIMIZATION_ENABLED
@@ -848,6 +1102,10 @@ int op_throw(struct microjs_sdt * microjs)
 	microjs->code[microjs->pc++] = OPC_XPT;
 	return 0;
 }
+
+/* --------------------------------------------------------------------------
+   "if {} else {}" construct
+   -------------------------------------------------------------------------- */
 
 int op_if_cond(struct microjs_sdt * microjs)
 {
@@ -1092,8 +1350,21 @@ int op_for_end(struct microjs_sdt * microjs)
 }
 
 int (* const op[])(struct microjs_sdt * microjs) = {
+ 	[ACTION(A_OP_PUSH_TMP)] = op_push_tmp,
+ 	[ACTION(A_OP_POP_TMP)] = op_pop_tmp,
  	[ACTION(A_OP_VAR_DECL)] = op_var_decl,
- 	[ACTION(A_OP_ASSIGN)] = op_assign,
+ 	[ACTION(A_OP_VAR_EVAL)] = op_var_eval,
+ 	[ACTION(A_OP_VAR_ASSIGN)] = op_var_assign,
+ 	[ACTION(A_OP_ARRAY_XLAT)] = op_array_xlat,
+ 	[ACTION(A_OP_OBJECT_EVAL)] = op_object_eval,
+ 	[ACTION(A_OP_OBJECT_ASSIGN)] = op_object_assign,
+ 	[ACTION(A_OP_ATTR_EVAL)] = op_attr_eval,
+ 	[ACTION(A_OP_ATTR_ASSIGN)] = op_attr_assign,
+ 	[ACTION(A_OP_FUNCTION_LOOKUP)] = op_function_lookup,
+ 	[ACTION(A_OP_ARG)] = op_arg,
+ 	[ACTION(A_OP_CALL)] = op_call,
+ 	[ACTION(A_OP_CALL_RET)] = op_call_ret,
+ 	[ACTION(A_OP_RET_DISCARD)] = op_ret_discard,
  	[ACTION(A_OP_EQU)] = op_equ,
  	[ACTION(A_OP_NEQ)] = op_neq,
  	[ACTION(A_OP_LT)] = op_lt,
@@ -1128,14 +1399,6 @@ int (* const op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_FOR_COND)] = op_for_cond,
  	[ACTION(A_OP_FOR_AFTER)] = op_for_after,
  	[ACTION(A_OP_FOR_END)] = op_for_end,
- 	[ACTION(A_OP_PUSH_TMP)] = op_push_tmp,
- 	[ACTION(A_OP_POP_TMP)] = op_pop_tmp,
- 	[ACTION(A_OP_METHOD)] = op_method,
- 	[ACTION(A_OP_CALL)] = op_call,
- 	[ACTION(A_OP_ATTR)] = op_attr,
- 	[ACTION(A_OP_ARG)] = op_arg,
- 	[ACTION(A_OP_RET_DISCARD)] = op_ret_discard,
- 	[ACTION(A_OP_CALL_RET)] = op_call_ret,
  	[ACTION(A_OP_PUSH_STRING)] = op_push_string,
  	[ACTION(A_OP_BLK_OPEN)] = op_blk_open,
  	[ACTION(A_OP_BLK_CLOSE)] = op_blk_close,
@@ -1143,8 +1406,7 @@ int (* const op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_TRY_END)] = op_try_end,
  	[ACTION(A_OP_CATCH)] = op_catch,
  	[ACTION(A_OP_CATCH_END)] = op_patch_ref,
- 	[ACTION(A_OP_THROW)] = op_throw
-
+ 	[ACTION(A_OP_THROW)] = op_throw,
 };
 
 /* Syntax-directed translator */
@@ -1257,34 +1519,6 @@ error:
 	return err;
 }
 
-void microjs_sdt_reset(struct microjs_sdt * microjs)
-{
-	uint8_t * ll_sp;
-
-	microjs->ll_sp = microjs->size;
-	ll_sp = (uint8_t *)microjs + microjs->ll_sp;
-	/* intialize the parser */
-	microjs->ll_sp -= microjs_ll_start(ll_sp);
-}
-
-struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
-									  unsigned int sdt_size,
-									  struct symtab * tab, 
-									  unsigned int data_size)
-{
-	struct microjs_sdt * microjs = (struct microjs_sdt *)sdt_buf;
-
-	microjs->tab = tab;
-	/* data memory allocation info */
-	microjs->tgt_heap = 0;
-	microjs->tgt_sp = data_size;
-	/* size of the buffer provided for parsing */
-	microjs->size = sdt_size;
-	microjs->ll_sp = sdt_size;
-
-	return microjs;
-}
-
 int microjs_sdt_begin(struct microjs_sdt * microjs, uint8_t code[], 
 					  unsigned int code_size)
 {
@@ -1316,18 +1550,24 @@ int microjs_sdt_begin(struct microjs_sdt * microjs, uint8_t code[],
 
 	TRACEF(".L%d:\n%04x\tPUSHX xxxx\n", ref.lbl, microjs->pc);
 	/* Insert the opcode, the address will be backpatched alter */
-	microjs->code[microjs->pc] = OPC_PUHSX;
+	microjs->code[microjs->pc] = OPC_PUSHX;
 	microjs->pc += 2;
 
-	return 0;
+	/* the exception frame goes into the stack, record this */
+	return tgt_stack_push(microjs);
 }
 
-int microjs_sdt_end(struct microjs_sdt * microjs)
+int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt)
 {
 	struct sym_ref ref;
+	int ret;
 
+	/* we need 3 more bytes to encode the program end */
 	if (microjs->pc + 3 > microjs->cdsz)
 		return -ERR_CODE_MEM_OVERFLOW;
+
+	if ((ret = tgt_stack_pop(microjs)) < 0)
+		return ret;
 
 	/* remove the exception handler frame from the stack */
 	TRACEF("%04x\tPOP\n", microjs->pc);
@@ -1350,12 +1590,20 @@ int microjs_sdt_end(struct microjs_sdt * microjs)
 	TRACEF("%04x\tRET\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_RET;
 
-
 #if MICROJS_DEBUG_ENABLED
 	TRACEF("\nSYMBOL TABLE:\n");
 	sym_dump(stdout, microjs->tab);
 	TRACEF("\n");
 #endif
+
+	DCC_LOG2(LOG_TRACE, "data_max=%d stack_max=%d", 
+			 microjs->data_max, microjs->stack_max);
+
+	if (rt != NULL) {
+		rt->data_sz = microjs->data_max;
+		rt->stack_sz = microjs->stack_max;
+	}
+
 	return microjs->pc;
 }
 
@@ -1372,8 +1620,34 @@ void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err)
 #endif
 }
 
-int microjs_tgt_heap(struct microjs_sdt * microjs)
+
+void microjs_sdt_reset(struct microjs_sdt * microjs)
 {
-	return microjs->tgt_heap;
+	uint8_t * ll_sp;
+
+	microjs->ll_sp = microjs->size;
+	ll_sp = (uint8_t *)microjs + microjs->ll_sp;
+	/* intialize the parser */
+	microjs->ll_sp -= microjs_ll_start(ll_sp);
+}
+
+struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
+									  unsigned int sdt_size,
+									  struct symtab * tab)
+{
+	struct microjs_sdt * microjs = (struct microjs_sdt *)sdt_buf;
+
+	microjs->tab = tab;
+	/* data memory allocation info */
+	microjs->data_pos = 0;
+	microjs->data_max = 0;
+	microjs->stack_pos = 0;
+	microjs->stack_max = 0;
+
+	/* size of the buffer provided for parsing */
+	microjs->size = sdt_size;
+	microjs->ll_sp = sdt_size;
+
+	return microjs;
 }
 

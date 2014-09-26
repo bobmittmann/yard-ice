@@ -27,11 +27,15 @@ else_opt		:
 				;
 
 catch_opt		: { op_try_end }
-				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
+				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_var_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
 				;
 
 condition		: '(' exp ')'
 				;
+
+// --------------------------------------------------------------------------
+// Variables
+// -------------------------------------------------------------------------- 
 
 var_list 		: var var_list1
 				;
@@ -44,17 +48,30 @@ var				: ID { op_var_decl, op_push_tmp } var_assign_opt
 				;
 
 var_assign_opt  : { op_pop_tmp }
-				| '=' exp { op_assign }
+				| '=' exp { op_var_assign }
 				;
 
 assign_or_call  : ID { op_push_tmp } assign_or_call1
 				;
 
-assign_or_call1	: '=' exp { op_assign }
+assign_or_call1	: '=' exp { op_var_assign }
 				| function_call { op_ret_discard }
+				| '[' exp ']' { op_array_xlat } object_assign
+				| '.' attr_assign
 				;
 
-function_call	: { op_method } '(' arg_list_opt ')' { op_call } 
+object_assign	: '=' exp { op_object_assign }
+				| '.' attr_assign
+				;
+
+attr_assign		: ID { op_push_tmp } '=' exp { op_attr_assign }
+				;
+
+// --------------------------------------------------------------------------
+// Function calls
+// -------------------------------------------------------------------------- 
+
+function_call	: { op_function_lookup } '(' arg_list_opt ')' { op_call } 
 				;
 
 arg_list_opt	: 
@@ -67,6 +84,10 @@ arg_list		: exp { op_arg } arg_list1
 arg_list1		: 
 				| ',' arg_list 
 				;
+
+// --------------------------------------------------------------------------
+// Expressions
+// -------------------------------------------------------------------------- 
 
 exp_lst_opt		: 
 				| exp_lst
@@ -81,7 +102,6 @@ exp_lst1		:
 
 exp 			: and_exp or_exp
 				;
-
 
 or_exp			: 
 				| '|' exp { op_or }
@@ -117,7 +137,7 @@ shift_exp1		:
 				| ASR shift_exp	{ op_asr }
 				;
 
-additive_exp 	: mult_exp additive_exp1
+additive_exp 	: div_exp additive_exp1
 				;
 
 additive_exp1 	: 
@@ -125,12 +145,19 @@ additive_exp1 	:
 				| '-' additive_exp { op_sub }
 				;
 
+
+div_exp			: mult_exp div_exp1		
+				;
+
+div_exp1		: 
+				| '/' div_exp { op_div }
+				| '%' div_exp { op_mod }
+				;
+
 mult_exp		: unary_exp mult_exp1		
 				;
 
 mult_exp1		: 
-				| '/' mult_exp { op_div }
-				| '%' mult_exp { op_mod }
 				| '*' mult_exp { op_mul }
 				;
 
@@ -146,13 +173,22 @@ primary_exp		: '(' exp ')'
 				| STRING { op_push_string }
 				| "true" { op_push_true }
 				| "false" { op_push_false }
-				| meth_or_attr 
+				| id_eval
 				;
 
-meth_or_attr	: ID { op_push_tmp } meth_or_attr1
+id_eval 		: ID { op_push_tmp } id_eval1
 				;
 
-meth_or_attr1	: { op_attr }
+id_eval1		: { op_var_eval }
 				| function_call { op_call_ret }
+				| '[' exp ']' { op_array_xlat } object_eval
+				| '.' attr_eval		
+				;
+
+object_eval		: { op_object_eval }
+				| '.' attr_eval
+				;
+
+attr_eval		: ID { op_push_tmp, op_attr_eval }
 				;
 

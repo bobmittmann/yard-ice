@@ -82,7 +82,7 @@
 #define OPC_ISP      (3 << 4) /* Add SP */
 #define OPC_LD       (4 << 4)
 #define OPC_ST       (5 << 4)
-#define OPC_PUHSX    (6 << 4) /* Push exception frame */
+#define OPC_PUSHX    (6 << 4) /* Push exception frame */
 #define OPC_JMP      (7 << 4)
 #define OPC_JEQ      (8 << 4)
 
@@ -102,11 +102,15 @@
    Virtual Machine
    -------------------------------------------------------------------------- */
 
+struct microjs_rt {
+	uint16_t stack_sz; /* estimated maximum stack size */
+	uint16_t data_sz; /* initial data size */
+};
+
 struct microjs_vm {
-	uint16_t sp; /* stack pointer */
-	uint16_t bp; /* base pointer */
-	int32_t * data;
-	void * env;
+	int32_t * bp; /* host data pointer */
+	int32_t * sp; /* host stack pointer */
+	void * env; /* environment */
 };
 
 extern int32_t (* const microjs_extern[])(void *, int32_t [], int);
@@ -115,10 +119,13 @@ extern int32_t (* const microjs_extern[])(void *, int32_t [], int);
 extern "C" {
 #endif
 
-void microjs_vm_init(struct microjs_vm * vm, void * env,
-					 int32_t data[], unsigned int len);
+/* Initialize the microjs Virtual Machine  */
 
-void microjs_vm_clr_data(struct microjs_vm * vm);
+void microjs_vm_init(struct microjs_vm * vm, const struct microjs_rt * rt,
+					 const void * env, int32_t data[], int32_t stack[]);
+
+void microjs_vm_clr_data(struct microjs_vm * vm, 
+						 const struct microjs_rt * rt);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
 

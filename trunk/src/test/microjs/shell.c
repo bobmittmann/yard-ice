@@ -168,25 +168,28 @@ int cmd_ls(FILE * f, int argc, char ** argv)
 
 uint8_t  vm_code[256];  /* compiled code */
 uint16_t vm_strbuf[128]; /*string buffer shuld be 16bits aligned */
-uint32_t vm_data[64];   /* data area */
+int32_t vm_data[32];   /* data area */
+int32_t vm_stack[32];   /* data area */
 uint32_t js_symbuf[64]; /*string buffer shuld be 16bits aligned */
 uint32_t js_sdtbuf[64]; /* compiler buffer */
+
+struct microjs_rt rt;
+struct microjs_vm vm; 
 
 void vm_reset(void) 
 {
 	struct symtab * symtab;
-	struct microjs_vm vm; 
 
 	/* initialize string buffer */
 	strbuf_init(vm_strbuf, sizeof(vm_strbuf));
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_stack);
 	/* clear data */
-	microjs_clr_data(&vm);
+	microjs_vm_clr_data(&vm, &rt);
 	/* initialize symbol table */
 	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &test_lib);
 	/* initialize compiler */
-	microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab, sizeof(vm_data));
+	microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab);
 }
 
 int cmd_vm(FILE * f, int argc, char ** argv)
@@ -205,11 +208,13 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	struct fs_dirent entry;
 	struct microjs_vm vm; 
 	char * script;
-	int len;
-	int n;
 	uint32_t start_clk;
 	uint32_t stop_clk;
 	struct symstat symstat;
+	int code_sz;
+	int len;
+	int err;
+	int n;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -220,7 +225,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	profclk_init();
 
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, (int32_t *)vm_data, sizeof(vm_data));
+	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_stack);
 
 	symstat = symtab_state_save(symtab);
 
@@ -244,7 +249,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return -1;
 	}
 
-	if ((n = microjs_sdt_end(microjs)) < 0) {
+	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -n);
 		microjs_sdt_error(stderr, microjs, n);
@@ -252,17 +257,19 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	}
 	stop_clk = profclk_get();
 
-	fprintf(f, "Comile time: %d us.\n", profclk_us(stop_clk - start_clk ));
-	fprintf(f, "Code: %d bytes.\n", n);
-	fprintf(f, "Data: %d bytes.\n", microjs_tgt_heap(microjs));
+	printf(" - Comile time: %d us.\n", profclk_us(stop_clk - start_clk ));
+	printf(" -   Code size: %d\n", code_sz);
+	printf(" -   Data size: %d\n", rt.data_sz);
+	printf(" -  Stack size: %d\n", rt.stack_sz);
+
 
 	start_clk = profclk_get();
-	if ((n = microjs_exec(&vm, vm_code, n)) < 0){
-		fprintf(f, "# exec error: %d\n", -n);
+	if ((err = microjs_exec(&vm, vm_code, code_sz)) != 0) {
+		fprintf(f, "\n#exec error: code %d!\n", err);
 		return -1;
 	}
 	stop_clk = profclk_get();
-	fprintf(f, "Run time: %d us.\n", profclk_us(stop_clk - start_clk ));
+	fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk ));
 
 	return 0;
 
