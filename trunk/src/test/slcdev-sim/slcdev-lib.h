@@ -37,62 +37,51 @@
 #include <microjs.h>
 #include <microjs-rt.h>
 
-#define EXT_PRINTF       0
-#define EXT_RAND         1
-#define EXT_SQRT         2
-#define EXT_LOG2         3
-#define EXT_MEMRD	     4
-#define EXT_PRINT	     5
+#define EXT_PRINTF          0
+#define EXT_RAND            1
+#define EXT_SQRT            2
+#define EXT_LOG2            3
+#define EXT_MEMRD	        4
+#define EXT_PRINT	        5
 
-#define EXT_MODEL_NAME   9
+#define EXT_MODEL_NAME      6
+#define EXT_MODULE          10
+#define EXT_SENSOR          11
+#define EXT_GROUP           12
+#define EXT_LED				13
 
-#define EXT_SENS_STATE   10
-#define EXT_SENS_ALARM   11
-#define EXT_SENS_TROUBLE 12
-#define EXT_SENS_LEVEL   13
-#define EXT_SENS_PW1     14
-#define EXT_SENS_PW2     15
-#define EXT_SENS_PW3     16
-#define EXT_SENS_PW4     17
-#define EXT_SENS_PW5     18
-#define EXT_SENS_EN      19
-#define EXT_SENS_CFG     20
-#define EXT_SENS_AP      21
-#define EXT_SENS_TST     22
-#define EXT_SENS_TBIAS   23
-#define EXT_SENS_ILAT    24
-#define EXT_SENS_IMODE   25
-#define EXT_SENS_IRATE   26
-#define EXT_SENS_IPRE    27
-#define EXT_SENS_CLEAR   28
-#define EXT_SENS_INSERT  29
-#define EXT_SENS_REMOVE  30
-#define EXT_SENS_BELONG  31
-#define EXT_SENS_MODEL   32
+#define EXT_LED_ON			15
+#define EXT_GRP_CLEAR    	16
+#define EXT_GRP_INSERT      17
+#define EXT_GRP_REMOVE      18
+#define EXT_GRP_BELONG      19
 
-#define EXT_MOD_STATE    40
-#define EXT_MOD_ALARM    41
-#define EXT_MOD_TROUBLE  42
-#define EXT_MOD_LEVEL    43
-#define EXT_MOD_PW1      44
-#define EXT_MOD_PW2      45
-#define EXT_MOD_PW3      46
-#define EXT_MOD_PW4      47
-#define EXT_MOD_PW5      48
-#define EXT_MOD_EN       49
-#define EXT_MOD_CFG      50
-#define EXT_MOD_AP       51
-#define EXT_MOD_TST      52
-#define EXT_MOD_TBIAS    53
-#define EXT_MOD_ILAT     54
-#define EXT_MOD_IMODE    55
-#define EXT_MOD_IRATE    56
-#define EXT_MOD_IPRE     57
-#define EXT_MOD_CLEAR    58
-#define EXT_MOD_INSERT   59
-#define EXT_MOD_REMOVE   60
-#define EXT_MOD_BELONG   61
-#define EXT_MOD_MODEL    62
+#define EXT_DEV_STATE       20
+#define EXT_DEV_MODEL       21
+#define EXT_DEV_ADDR        22
+#define EXT_DEV_IS_MODULE   23
+#define EXT_DEV_AP          24
+#define EXT_DEV_EN          25
+#define EXT_DEV_CFG         26
+#define EXT_DEV_TST         27
+#define EXT_DEV_TBIAS       28
+#define EXT_DEV_ILAT        29
+#define EXT_DEV_IMODE       30
+#define EXT_DEV_IRATE       31
+#define EXT_DEV_IPRE        32
+#define EXT_DEV_ALARM       33
+#define EXT_DEV_TROUBLE     34
+#define EXT_DEV_LEVEL       35
+#define EXT_DEV_OUT1        36
+#define EXT_DEV_OUT2        37
+#define EXT_DEV_OUT3        38
+#define EXT_DEV_OUT5        39
+#define EXT_DEV_PW1         40
+#define EXT_DEV_PW2         41
+#define EXT_DEV_PW3         42
+#define EXT_DEV_PW4         43
+#define EXT_DEV_PW5         44
+#define EXT_DEV_GRP_CLEAR   45
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -103,116 +92,137 @@
 #define EXCEPT_INVALID_VALUE           106
 #define EXCEPT_TOO_MANY_GROUPS         107
 #define EXCEPT_INVALID_GROUP           108
+#define EXCEPT_INVALID_DEVICE          109
+
+#define CLASS_DEV 0
+#define CLASS_GRP 1
+#define CLASS_LED 2
 
 #ifdef __SLCDEV_LIB_DEF__
 
+const struct ext_classtab test_classtab = {
+	.ccnt = 2,
+	.cdef = {
+		[CLASS_DEV] = { .nm = "dev", 
+			.fst = EXT_DEV_STATE, .lst = EXT_DEV_GRP_CLEAR },
+		[CLASS_GRP] = { .nm = "grp", 
+			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
+		[CLASS_LED] = { .nm = "led", 
+			.fst = EXT_LED_ON, .lst = EXT_LED_ON },
+	}
+};
+
 struct ext_libdef slcdev_lib = {
 	.name = "lib",
-	.fncnt = 63,
-	.fndef = {
-		[EXT_PRINTF] = { .nm = "printf", .argmin = 1, .argmax = 32, .ret = 0 },
-		[EXT_PRINT] = { .nm = "print", .argmin = 0, .argmax = 32, .ret = 0 },
-		[EXT_RAND] = { .nm = "rand", .argmin = 0, .argmax = 0, .ret = 1 },
-		[EXT_SQRT] = { .nm = "sqrt", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_LOG2] = { .nm = "log2", .argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_MEMRD] = { .nm = "memrd", .argmin = 1, .argmax = 1, .ret = 1 },
+	.classtab = &test_classtab,
+	.xcnt = 20,
+	.xdef = {
+		[EXT_PRINTF] = { .opt = O_FUNCTION,  
+			.nm = "printf", 
+			.f = { .argmin = 1, .argmax = 32, .ret = 0 } },
+		[EXT_PRINT] = { .opt = O_FUNCTION,  
+			.nm = "print", 
+			.f = { .argmin = 0, .argmax = 32, .ret = 0 } },
+		[EXT_RAND] = { .opt = O_FUNCTION, 
+			.nm = "rand", 
+			.f = { .argmin = 0, .argmax = 0, .ret = 1 } },
+		[EXT_SQRT] = { .opt = O_FUNCTION,  
+			.nm = "sqrt", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+		[EXT_LOG2] = { .opt = O_FUNCTION,  
+			.nm = "log2", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+		[EXT_MEMRD] = { .opt = O_FUNCTION,  
+			.nm = "memrd", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
 
-		[EXT_MODEL_NAME] = { .nm = "model_name", 
-			.argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_MODEL_NAME] = { .opt = O_FUNCTION,  
+			.nm = "model_name", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
 
-		[EXT_SENS_STATE] = { .nm = "sens_state", 
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_SENS_ALARM] = { .nm = "sens_alarm", 
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_TROUBLE] = { .nm = "sens_trouble",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_LEVEL] = { .nm = "sens_level",
-			.argmin = 2, .argmax = 3, .ret = 1 },
-		[EXT_SENS_PW1] = { .nm = "sens_pw1",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_PW2] = { .nm = "sens_pw2",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_PW3] = { .nm = "sens_pw3",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_PW4] = { .nm = "sens_pw4",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_PW5] = { .nm = "sens_pw5",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_EN] = { .nm = "sens_en",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_TST] = { .nm = "sens_tst",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_TBIAS] = { .nm = "sens_tbias",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_ILAT] = { .nm = "sens_ilat",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_IMODE] = { .nm = "sens_imode",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_IRATE] = { .nm = "sens_irate",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_IPRE] = { .nm = "sens_ipre",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_SENS_CFG] = { .nm = "sens_cfg",
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_SENS_AP] = { .nm = "sens_ap",
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_SENS_CLEAR] = { .nm = "sens_clear",
-			.argmin = 1, .argmax = 1, .ret = 0 },
-		[EXT_SENS_INSERT] = { .nm = "sens_insert",
-			.argmin = 2, .argmax = 5, .ret = 0 },
-		[EXT_SENS_REMOVE] = { .nm = "sens_remove",
-			.argmin = 2, .argmax = 5, .ret = 0 },
-		[EXT_SENS_BELONG] = { .nm = "sens_belong",
-			.argmin = 2, .argmax = 5, .ret = 1 },
-		[EXT_SENS_MODEL] = { .nm = "sens_model",
-			.argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT, 
+			.nm = "sensor", 
+			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
 
-		[EXT_MOD_STATE] = { .nm = "mod_state",
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_MOD_ALARM] = { .nm = "mod_alarm",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_TROUBLE] = { .nm = "mod_trouble",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_LEVEL] = { .nm = "mod_level",
-			.argmin = 2, .argmax = 3, .ret = 1 },
-		[EXT_MOD_PW1] = { .nm = "mod_pw1",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_PW2] = { .nm = "mod_pw2",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_PW3] = { .nm = "mod_pw3",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_PW4] = { .nm = "mod_pw4",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_PW5] = { .nm = "mod_pw5",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_EN] = { .nm = "mod_en",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_TST] = { .nm = "mod_tst",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_TBIAS] = { .nm = "mod_tbias",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_ILAT] = { .nm = "mod_ilat",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_IMODE] = { .nm = "mod_imode",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_IRATE] = { .nm = "mod_irate",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_IPRE] = { .nm = "mod_ipre",
-			.argmin = 1, .argmax = 2, .ret = 1 },
-		[EXT_MOD_CFG] = { .nm = "mod_cfg",
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_MOD_AP] = { .nm = "mod_ap",
-			.argmin = 1, .argmax = 1, .ret = 1 },
-		[EXT_MOD_CLEAR] = { .nm = "mod_clear",
-			.argmin = 1, .argmax = 1, .ret = 0 },
-		[EXT_MOD_INSERT] = { .nm = "mod_insert",
-			.argmin = 2, .argmax = 5, .ret = 0 },
-		[EXT_MOD_REMOVE] = { .nm = "mod_remove",
-			.argmin = 2, .argmax = 5, .ret = 0 },
-		[EXT_MOD_BELONG] = { .nm = "mod_belong",
-			.argmin = 2, .argmax = 5, .ret = 1 },
-		[EXT_MOD_MODEL] = { .nm = "mod_model",
-			.argmin = 1, .argmax = 1, .ret = 1 },
+		[EXT_MODULE] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "module", 
+			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 160 } },
+
+		[EXT_GROUP] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "group", 
+			.aos = { .cdef = CLASS_GRP, .size = 1, .offs = 0 } },
+
+		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "led", 
+			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
+
+		/* device class members */
+		[EXT_DEV_STATE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
+			.nm = "state" },
+		[EXT_DEV_MODEL] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
+			.nm = "model" },
+		[EXT_DEV_ADDR] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
+			.nm = "addr" },
+		[EXT_DEV_IS_MODULE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
+			.nm = "is_module" },
+		[EXT_DEV_AP] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "ap" },
+		[EXT_DEV_EN] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "en" },
+		[EXT_DEV_CFG] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "cfg" },
+		[EXT_DEV_TST] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "tst" },
+		[EXT_DEV_TBIAS] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "tbias" },
+		[EXT_DEV_ILAT] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "ilat" },
+		[EXT_DEV_IMODE] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "imode" },
+		[EXT_DEV_IRATE] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "irate" },
+		[EXT_DEV_IPRE] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "ipre" },
+		[EXT_DEV_ALARM] = { .opt = O_INTEGER | O_MEMBER,  
+			.nm = "alarm" },
+		[EXT_DEV_TROUBLE] = { .opt = O_INTEGER | O_MEMBER,  
+			.nm = "trouble" },
+		[EXT_DEV_LEVEL] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "level" },
+		[EXT_DEV_OUT1] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "out1" },
+		[EXT_DEV_OUT2] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "out2" },
+		[EXT_DEV_OUT3] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "out3" },
+		[EXT_DEV_OUT5] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "out5" },
+		[EXT_DEV_PW1] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "pw1" },
+		[EXT_DEV_PW2] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "pw2" },
+		[EXT_DEV_PW3] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "pw3" },
+		[EXT_DEV_PW4] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "pw4" },
+		[EXT_DEV_PW5] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "pw5" },
+		[EXT_DEV_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,  
+			.nm = "grp_clear", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+
+		[EXT_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "clear",
+			.f = { .argmin = 1, .argmax = 1, .ret = 0 } },
+		[EXT_GRP_INSERT] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "insert",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+		[EXT_GRP_REMOVE] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "remove",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+		[EXT_GRP_BELONG] = {  .opt = O_FUNCTION | O_MEMBER,
+			.nm = "belong",
+			.f = { .argmin = 2, .argmax = 2, .ret = 1 } },
 	}
 };
 

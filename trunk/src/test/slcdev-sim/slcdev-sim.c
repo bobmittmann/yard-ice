@@ -551,6 +551,7 @@ void sim_reset(void)
 
 void __attribute__((noreturn)) sim_event_task(void)
 {
+	struct microjs_rt rt;
 	struct db_dev_model * model;
 	struct ss_device * dev;
 	struct db_info * db;
@@ -558,8 +559,11 @@ void __attribute__((noreturn)) sim_event_task(void)
 	uint32_t event;
 	uint32_t ctl;
 
-	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
-	microjs_vm_clr_data(&vm);
+	/* initialize virtual machine */
+	rt.data_sz = sizeof(slcdev_vm_data) / 2;
+	rt.stack_sz = sizeof(slcdev_vm_data) / 2;
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
+	microjs_vm_clr_data(&vm, &rt);
 
 	sim_reset(); 
 

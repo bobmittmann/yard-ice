@@ -799,6 +799,8 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+struct microjs_rt rt;
+
 int cmd_js(FILE * f, int argc, char ** argv)
 {
 	struct symtab * symtab = (struct symtab *)slcdev_symbuf;
@@ -807,6 +809,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	struct microjs_sdt * microjs; 
 	struct microjs_vm vm; 
 	struct symstat symstat;
+	int code_sz;
 	char * script;
 	int len;
 	int n;
@@ -818,8 +821,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), 
-							   symtab, sizeof(slcdev_vm_data));
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab);
 
 	script = argv[1];
 	len = strlen(argv[1]);
@@ -839,14 +841,15 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		return -1;
 	}
 
-	if ((n = microjs_sdt_end(microjs)) < 0) {
+	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
 		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -n);
-		microjs_sdt_error(stderr, microjs, n);
+		fprintf(f, "# compile error: %d\n", -code_sz);
+		microjs_sdt_error(stderr, microjs, code_sz);
 		return -1;
 	}
 
-	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
+	/* initialize virtual machine */
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
 
 	if ((n = microjs_exec(&vm, code, n)) != 0){
 		fprintf(f, "# exec error: %d\n", n);
@@ -876,7 +879,8 @@ int cmd_run(FILE * f, int argc, char ** argv)
 
 	DCC_LOG1(LOG_TRACE, "code=%08x.", code);
 
-	microjs_vm_init(&vm, NULL, slcdev_vm_data, sizeof(slcdev_vm_data));
+	/* initialize virtual machine */
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
 
 	DCC_LOG(LOG_TRACE, "microjs_exec...");
 

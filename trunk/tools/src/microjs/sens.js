@@ -3,7 +3,6 @@
 // Clear the troubles and alarms
 //
 
-var pass;
 var mod_trbl = 0;
 var mod_alrm = 0;
 var sens_trbl = 0;
@@ -39,13 +38,13 @@ try {
 			// clear alarm
 			mod_alarm(i, 0);
 			// count the alarms
-			mor_alrm = mor_alrm + 1;
+			mod_alrm = mod_alrm + 1;
 		} else {
 			if (mod_state(i) == 2) {
 				// clear the trouble 
 				mod_trouble(i, 0);
 				// count the trouble 
-				mor_trbl = mor_trbl + 1;
+				mod_trbl = mod_trbl + 1;
 			}
 		}
 	}
@@ -53,6 +52,9 @@ try {
 } catch (err) {
 	printf("Error: %d\n", err);
 }
+
+var trbl;
+var alrm;
 
 trbl = mod_trbl + sens_trbl;
 alrm = mod_alrm + sens_alrm;

@@ -540,7 +540,8 @@ int32_t __dev_state(void * env, int32_t argv[], int argc)
 	int32_t * retv = argv;
 	unsigned int oid = argv[0];
 
-	retv[0] = device[oid];
+	retv[0] = ((device[oid] & 0xf) ? 1 : 0) + 
+		(device[oid] & 0xf0 ? 2 : 0);
 
 	return 1; /* return the number of return values */
 }	
