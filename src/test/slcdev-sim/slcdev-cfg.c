@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <errno.h>
 #include <microjs.h>
+#include <microjs-json.h>
 
 #include <sys/dcclog.h>
 

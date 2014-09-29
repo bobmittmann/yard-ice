@@ -58,14 +58,13 @@
 #define EXT_DEV_ALARM    18
 #define EXT_DEV_TROUBLE  19
 
-
 #define EXCEPT_BAD_ADDR              100
 #define EXCEPT_INVALID_TROUBLE_CODE  101
 #define EXCEPT_INVALID_ALARM_CODE    102
 
-#ifdef __TEST_LIB_DEF__
-
 #define CLASS_DEV 0
+
+#ifdef __TEST_LIB_DEF__
 
 const struct ext_classtab test_classtab = {
 	.ccnt = 1,

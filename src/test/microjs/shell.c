@@ -251,8 +251,8 @@ int cmd_js(FILE * f, int argc, char ** argv)
 
 	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
 		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -n);
-		microjs_sdt_error(stderr, microjs, n);
+		fprintf(f, "# compile error: %d\n", -code_sz);
+		microjs_sdt_error(stderr, microjs, code_sz);
 		return -1;
 	}
 	stop_clk = profclk_get();

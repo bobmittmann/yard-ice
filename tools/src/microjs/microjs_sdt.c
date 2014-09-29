@@ -407,7 +407,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 
 	cld.fst = cdef->fst;
 	cld.lst = cdef->lst;
-
+	/* push  the class definition */
 	return sym_cld_push(microjs->tab, &cld);
 }
 
@@ -417,12 +417,20 @@ int op_array_xlat(struct microjs_sdt * microjs)
 
 int op_object_eval(struct microjs_sdt * microjs)
 {
-	return -ERR_NOT_IMPLEMENTED;
+	struct sym_cld cld;
+	int ret;
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	return 0;
 }
 
 int op_object_assign(struct microjs_sdt * microjs)
 {
 	return -ERR_NOT_IMPLEMENTED;
+//	return 0;
 }
 
 /* --------------------------------------------------------------------------

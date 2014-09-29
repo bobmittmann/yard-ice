@@ -4,8 +4,9 @@
 
 #include <sys/dcclog.h>
 
-#include <microjs.h>
 #include <thinkos.h>
+#include <microjs.h>
+#include <microjs-json.h>
 
 #include "crc.h"
 #include "slcdev.h"
@@ -177,10 +178,11 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 {
 //	struct symtab * symtab = (struct symtab *)slcdev_vm_data;
 	struct symtab * symtab = (struct symtab *)slcdev_symbuf;
-	struct microjs_sdt * microjs; 
+	struct microjs_sdt * microjs;
 	uint8_t code[256]; /* compiled code */
 	uint32_t js_sdtbuf[32]; /* compiler buffer */
 	struct cmd_list lst;
+	struct microjs_rt rt;
 	int ret;
 	int typ;
 	int i;
@@ -211,8 +213,7 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 	} 
 
 	/* initialize compiler */
-	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
-							   symtab, sizeof(slcdev_vm_data));
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab);
 
 //	symstat = symtab_state_save(symtab);
 
@@ -252,15 +253,16 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 		}
 
 		if (cnt > 0) {
-			int len = 0;
+			int code_sz = 0;
 			/* end compilation */
-			if ((len = microjs_sdt_end(microjs)) < 0) {
+			if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
 				symtab_state_rollback(symtab, symstat);
-				microjs_sdt_error(stdout, microjs, len);
+				fprintf(stderr, "# compile error: %d\n", -code_sz);
+				microjs_sdt_error(stderr, microjs, code_sz);
 				return -1;
 			}
 
-			if (db_stack_push(code, len, (void **)&cmd->code) < 0)
+			if (db_stack_push(code, code_sz, (void **)&cmd->code) < 0)
 				return -1;
 		}
 	}

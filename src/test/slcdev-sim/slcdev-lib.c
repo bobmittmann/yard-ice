@@ -34,16 +34,13 @@
 
 int32_t __rand(void * env, int32_t argv[], int argc) 
 {
-	int32_t * retv = argv + argc - 1;
-
-	retv[0] = rand();
+	argv[0] = rand();
 
 	return 1;
 };
 
 int32_t __isqrt(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
 	uint32_t x = argv[0];
 	uint32_t rem = 0;
 	uint32_t root = 0;
@@ -61,27 +58,25 @@ int32_t __isqrt(void * env, int32_t argv[], int argc)
 			root--;
 	}
 
-	retv[0] = root >> 1;
+	argv[0] = root >> 1;
 
 	return 1;
 }	
 
 int32_t __memrd(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
 	uint32_t addr = argv[0];
 
 	if (addr >= 256)
 		return -1;
 
-	retv[0] = 0;
+	argv[0] = 0;
 
 	return 1;
 }	
 
 int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
 	const uint8_t log2_debruijn_index[32] = {
 		0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 
 		31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
@@ -94,7 +89,7 @@ int32_t __ilog2(void * env, int32_t argv[], int argc)
 	x |= x >> 16;
 	x = (x >> 1) + 1;
 	x = (x * 0x077cb531UL) >> 27;
-	retv[0] = log2_debruijn_index[x];
+	argv[0] = log2_debruijn_index[x];
 	return 1;
 }	
 
@@ -112,10 +107,9 @@ extern int uint2hex(char * s, uint32_t val);
 #define SIGN    0x10
 #define LONG    0x20
 
-int32_t __printf(void * env, int32_t argv[], int argc)
+static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 {
 	char buf[BUF_LEN];
-	const char * fmt;
 	int flags;
 	int cnt;
 	int c;
@@ -129,8 +123,7 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 	} val;
 	int i = argc;
 
-	fmt = str(argv[--i]);
-	#define _va_arg(AP, TYPE) ((i > 0) ? argv[--i] : 0)
+	#define _va_arg(AP, TYPE) ((i < argc) ? argv[i++] : 0)
 
 	n = 0;
 	w = 0;
@@ -267,399 +260,258 @@ print_buf:
 	return 0;
 }
 
+int32_t __printf(void * env, int32_t argv[], int argc)
+{
+	const char * fmt = str(argv[0]);
+
+	return __vprintf(env, &argv[1], 0, fmt);
+}
+
 int32_t __print(void * env, int32_t argv[], int argc)
 {
 	int i;
-	
-	for (i = argc - 1; i >= 0; --i) {
-		if (i != argc - 1)
-			fprintf(stdout, ", ");
-		fprintf(stdout, "%d", argv[i]);
+
+	for (i = 0; i < argc; ++i) {
+		if (i != 0)
+			__vprintf(env, argv, 0, ", ");
+		__vprintf(env, &argv[i], 1, "%d");
 	}
 
-	fprintf(stdout, "\n");
+	__vprintf(env, argv, 0, "\n");
 	return 0;
 }	
 
+/* --------------------------------------------------------------------------
+   Device models
+   -------------------------------------------------------------------------- */
+
+int32_t __model_name(void * env, int32_t argv[], int argc) 
+{
+	return 0; /* return the number of return values */
+}
 
 /* --------------------------------------------------------------------------
    Devices API
    -------------------------------------------------------------------------- */
 
-static int32_t __state(void * env, int32_t argv[], int argc,
-					   unsigned int offs)
+int32_t __dev_state(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
 	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	retv[0] = ss_dev_tab[idx].alm ? 1 : 0 |
+	argv[0] = ss_dev_tab[idx].alm ? 1 : 0 |
 		ss_dev_tab[idx].tbl ? 2 : 0;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __alarm(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_model(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val > 15)
-			return -EXCEPT_INVALID_ALARM_CODE;
-	
-		ss_dev_tab[idx].alm = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].alm;
+	argv[0] = ss_dev_tab[idx].model;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __trouble(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
+int32_t __dev_addr(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val > 15)
-			return -EXCEPT_INVALID_TROUBLE_CODE;
-	
-		ss_dev_tab[idx].tbl = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].tbl;
+	argv[0] = ss_dev_tab[idx].addr;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __level(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
+int32_t __dev_is_module(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-	unsigned int lvl = argv[argc - 2];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	if (lvl >= 4)
-		return -EXCEPT_INVALID_LEVEL_VARIABLE; 
-
-	if (argc > 2) {
-		unsigned int val = argv[argc - 3];
-
-		if (val >= 256)
-			return -EXCEPT_INVALID_LEVEL_VALUE;
-	
-		ss_dev_tab[idx].lvl[lvl] = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].lvl[lvl];
+	argv[0] = ss_dev_tab[idx].module;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw1(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
+int32_t __dev_ap(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val >= 8000)
-			return -EXCEPT_INVALID_PW_VALUE;
-	
-		ss_dev_tab[idx].pw1 = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].pw1;
+	argv[0] = ss_dev_tab[idx].apen;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __pw2(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
+int32_t __dev_enabled(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val >= 8000)
-			return -EXCEPT_INVALID_PW_VALUE;
-	
-		ss_dev_tab[idx].pw2 = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].pw2;
-
-	return 1; /* return the number of return values */
-}
-
-static int32_t __pw3(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val >= 8000)
-			return -EXCEPT_INVALID_PW_VALUE;
-	
-		ss_dev_tab[idx].pw3 = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].pw3;
-
-	return 1; /* return the number of return values */
-}
-
-static int32_t __pw4(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val >= 8000)
-			return -EXCEPT_INVALID_PW_VALUE;
-	
-		ss_dev_tab[idx].pw4 = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].pw4;
-
-	return 1; /* return the number of return values */
-}
-
-static int32_t __pw5(void * env, int32_t argv[], int argc,
-						 unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	if (argc > 1) {
-		unsigned int val = argv[0];
-
-		if (val >= 8000)
-			return -EXCEPT_INVALID_PW_VALUE;
-	
-		ss_dev_tab[idx].pw5 = val;
-	}
-
-	retv[0] = ss_dev_tab[idx].pw5;
-
-	return 1; /* return the number of return values */
-}
-
-static int32_t __enabled(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 1)
 			return -EXCEPT_INVALID_VALUE;
 	
 		ss_dev_tab[idx].enabled = 1;
+		return 0;
 	}
 
-	retv[0] = ss_dev_tab[idx].enabled;
+	argv[0] = ss_dev_tab[idx].enabled;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __tst(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_cfg(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
+
+	argv[0] = ss_dev_tab[idx].cfg;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_tst(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 1)
 			return -EXCEPT_INVALID_VALUE;
 	
 		ss_dev_tab[idx].tst = 1;
+		return 0;
 	}
 
-	retv[0] = ss_dev_tab[idx].tst;
-
+	argv[0] = ss_dev_tab[idx].tst;
 	return 1; /* return the number of return values */
 }
 
-
-static int32_t __tbias(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_tbias(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val >= 200)
 			return -EXCEPT_INVALID_VALUE;
 	
 		ss_dev_tab[idx].tbias = (val * 128) / 100;
+		return 0;
 	}
 
-	retv[0] = (ss_dev_tab[idx].tbias * 100) / 128;
+	argv[0] = (ss_dev_tab[idx].tbias * 100) / 128;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ilat(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_ilat(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 250)
 			return -EXCEPT_INVALID_VALUE;
 	
 		ss_dev_tab[idx].ilat = 1;
+		return 0;
 	}
 
-	retv[0] = ss_dev_tab[idx].ilat;
+	argv[0] = ss_dev_tab[idx].ilat;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __imode(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_imode(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 	unsigned int icfg;
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	icfg = ss_dev_tab[idx].icfg;
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 25)
 			return -EXCEPT_INVALID_VALUE;
 
 		icfg = (icfg & ~(0x1f)) + val;
 		ss_dev_tab[idx].icfg = icfg;
+		return 0;
 	}
 
-	retv[0] = icfg & 0x1f;
+	argv[0] = icfg & 0x1f;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __irate(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_irate(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 	unsigned int icfg;
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	icfg = ss_dev_tab[idx].icfg;
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 3)
 			return -EXCEPT_INVALID_VALUE;
 	
 		icfg = (icfg & ~(0x07 << 5)) + (val << 5);
 		ss_dev_tab[idx].icfg = icfg;
+		return 0;
 	}
 
-	retv[0] = icfg >> 5;
+	argv[0] = icfg >> 5;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ipre(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_ipre(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	if (argc > 1) {
 		unsigned int val = argv[0];
@@ -668,53 +520,279 @@ static int32_t __ipre(void * env, int32_t argv[], int argc,
 			return -EXCEPT_INVALID_VALUE;
 	
 		ss_dev_tab[idx].ipre = val;
+		return 0;
 	}
 
-	retv[0] = ss_dev_tab[idx].ipre;
+	argv[0] = ss_dev_tab[idx].ipre;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __cfg(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
 
-	if (idx >= 160)
+int32_t __dev_alarm(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	retv[0] = ss_dev_tab[idx].cfg;
+	if (argc > 1) {
+		unsigned int val = argv[0];
+
+		if (val > 15)
+			return -EXCEPT_INVALID_ALARM_CODE;
+	
+		ss_dev_tab[idx].alm = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].alm;
 
 	return 1; /* return the number of return values */
 }
 
-static int32_t __ap(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_trouble(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
-	retv[0] = ss_dev_tab[idx].apen;
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val > 15)
+			return -EXCEPT_INVALID_TROUBLE_CODE;
+	
+		ss_dev_tab[idx].tbl = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].tbl;
 
 	return 1; /* return the number of return values */
 }
 
-/* Clear group list */
-static int32_t __clear(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+int32_t __dev_level(void * env, int32_t argv[], int argc)
 {
-	unsigned int idx = argv[argc - 1];
+	unsigned int idx = argv[0];
+	unsigned int lvl = argv[1];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (lvl >= 4)
+		return -EXCEPT_INVALID_LEVEL_VARIABLE; 
+
+	if (argc > 2) {
+		unsigned int val = argv[2];
+		if (val >= 256)
+			return -EXCEPT_INVALID_LEVEL_VALUE;
+		ss_dev_tab[idx].lvl[lvl] = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].lvl[lvl];
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_out1(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+		ss_dev_tab[idx].out1 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].out1;
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_out2(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+		ss_dev_tab[idx].out2 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].out2;
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_out3(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+		ss_dev_tab[idx].out3 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].out3;
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_out5(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+		ss_dev_tab[idx].out5 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].out5;
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_pw1(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val >= 8000)
+			return -EXCEPT_INVALID_PW_VALUE;
+	
+		ss_dev_tab[idx].pw1 = val;
+
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pw1;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_pw2(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val >= 8000)
+			return -EXCEPT_INVALID_PW_VALUE;
+	
+		ss_dev_tab[idx].pw2 = val;
+
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pw2;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_pw3(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val >= 8000)
+			return -EXCEPT_INVALID_PW_VALUE;
+	
+		ss_dev_tab[idx].pw3 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pw3;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_pw4(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[0];
+
+		if (val >= 8000)
+			return -EXCEPT_INVALID_PW_VALUE;
+	
+		ss_dev_tab[idx].pw4 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pw4;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_pw5(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[0];
+
+		if (val >= 8000)
+			return -EXCEPT_INVALID_PW_VALUE;
+	
+		ss_dev_tab[idx].pw5 = val;
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pw5;
+
+	return 1; /* return the number of return values */
+}
+
+/* Clear device's group list */
+int32_t __dev_grp_clear(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
 	int i;
 
-	if (idx >= 160)
+	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
 
 	for (i = 0; i < 4; ++i)
 		ss_dev_tab[idx].grp[i] = 0;
@@ -722,361 +800,105 @@ static int32_t __clear(void * env, int32_t argv[], int argc,
 	return 0; /* return the number of return values */
 }
 
-/* Insert device into groups */
-static int32_t __insert(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+
+/* --------------------------------------------------------------------------
+   Groups API
+   -------------------------------------------------------------------------- */
+
+/* Remove all devices form group */
+int32_t __grp_clear(void * env, int32_t argv[], int argc)
 {
-	unsigned int idx = argv[argc - 1];
+	unsigned int grp = argv[0];
+	int j;
 
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
+	if ((grp == 0) || (grp >= 256))
+		return -EXCEPT_INVALID_GROUP; /* Throw an exception */
 
-	while (--argc) {
-		unsigned int val = argv[argc];
-		int i;
+	/* remove all devices from group */
+	for (j = 0; j < 320; ++j) {
+		if (ss_dev_tab[j].grp[0] == grp);
+			ss_dev_tab[j].grp[0] = 0;
+		if (ss_dev_tab[j].grp[1] == grp);
+			ss_dev_tab[j].grp[1] = 0;
+		if (ss_dev_tab[j].grp[2] == grp);
+			ss_dev_tab[j].grp[2] = 0;
+		if (ss_dev_tab[j].grp[3] == grp);
+			ss_dev_tab[j].grp[3] = 0;
+	}
 
-		if (val >= 256)
-			return -EXCEPT_INVALID_GROUP;
+	return 0; /* return the number of return values */
+}
 
-		for (i = 0; i < 4; ++i) {
-			if (ss_dev_tab[idx].grp[i] == val)
-				break;
-		}
+/* Insert device into group */
+int32_t __grp_insert(void * env, int32_t argv[], int argc)
+{
+	unsigned int grp = argv[0];
+	unsigned int dev = argv[1];
+	int i;
+
+	if (dev >= 320)
+		return -EXCEPT_INVALID_DEVICE; /* Throw an exception */
+
+	if ((grp == 0) || (grp >= 256))
+		return -EXCEPT_INVALID_GROUP; /* Throw an exception */
+
+	for (i = 0; i < 4; ++i) {
+		if (ss_dev_tab[dev].grp[i] == grp)
+			return 0;
+	}
 		
-		if (i < 4)
-			continue;
-
-		for (i = 0; i < 4; ++i) {
-			if (ss_dev_tab[idx].grp[i] == 0) {
-				ss_dev_tab[idx].grp[i] = val;
-				break;
-			}
-		}
-
-		if (i == 4)
-			return -EXCEPT_TOO_MANY_GROUPS;
-	}
-
-	return 0; /* return the number of return values */
-}
-
-static int32_t __remove(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
-{
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	while (--argc) {
-		unsigned int val = argv[argc];
-		int i;
-
-		if (val >= 256)
-			return -EXCEPT_INVALID_GROUP;
-
-		for (i = 0; i < 4; ++i) {
-			if (ss_dev_tab[idx].grp[i] == val) {
-				ss_dev_tab[idx].grp[i] = 0;
-				break;
-			}
+	for (i = 0; i < 4; ++i) {
+		if (ss_dev_tab[dev].grp[i] == 0) {
+			ss_dev_tab[dev].grp[i] = grp;
+			return 0;
 		}
 	}
 
-	return 0; /* return the number of return values */
+	return -EXCEPT_TOO_MANY_GROUPS;
 }
 
-static int32_t __belong(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
+/* remove device form group */
+int32_t __grp_remove(void * env, int32_t argv[], int argc)
 {
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-	int cnt = 0;
+	unsigned int grp = argv[0];
+	unsigned int dev = argv[1];
+	int i;
 
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
+	if (dev >= 320)
+		return -EXCEPT_INVALID_DEVICE; /* Throw an exception */
 
-	while (--argc) {
-		unsigned int val = argv[argc];
-		int i;
+	if ((grp == 0) || (grp >= 256))
+		return -EXCEPT_INVALID_GROUP; /* Throw an exception */
 
-		if (val >= 256)
-			return -EXCEPT_INVALID_GROUP;
+	for (i = 0; i < 4; ++i) {
+		if (ss_dev_tab[dev].grp[i] == grp)
+			ss_dev_tab[dev].grp[i] = 0;
+	}
 
-		for (i = 0; i < 4; ++i) {
-			if (ss_dev_tab[idx].grp[i] == val)
-				cnt++;
+	return 0;
+}
+
+int32_t __grp_belong(void * env, int32_t argv[], int argc)
+{
+	unsigned int grp = argv[0];
+	unsigned int dev = argv[1];
+	int i;
+
+	if (dev >= 320)
+		return -EXCEPT_INVALID_DEVICE; /* Throw an exception */
+
+	if ((grp == 0) || (grp >= 256))
+		return -EXCEPT_INVALID_GROUP; /* Throw an exception */
+
+	for (i = 0; i < 4; ++i) {
+		if (ss_dev_tab[dev].grp[i] == grp) {
+			argv[0] = 1;
+			return 1;
 		}
 	}
 
-	retv[0] = cnt;
-	return 1; /* return the number of return values */
-}
-
-static int32_t __model(void * env, int32_t argv[], int argc, 
-					   unsigned int offs)
-{
-	int32_t * retv = argv + argc - 1;
-	unsigned int idx = argv[argc - 1];
-
-	if (idx >= 160)
-		return -EXCEPT_BAD_ADDR; /* Throw an exception */
-	idx += offs;
-
-	retv[0] = ss_dev_tab[idx].model;
-
-	return 1; /* return the number of return values */
-}
-
-/* --------------------------------------------------------------------------
-   Sensors API
-   -------------------------------------------------------------------------- */
-
-int32_t __sens_state(void * env, int32_t argv[], int argc)
-{
-	return __state(env, argv, argc, 0);
-}	
-
-int32_t __sens_alarm(void * env, int32_t argv[], int argc)
-{
-	return __alarm(env, argv, argc, 0);
-}
-
-int32_t __sens_trouble(void * env, int32_t argv[], int argc)
-{
-	return __trouble(env, argv, argc, 0);
-}
-
-int32_t __sens_level(void * env, int32_t argv[], int argc)
-{
-	return __level(env, argv, argc, 0);
-}
-
-int32_t __sens_pw1(void * env, int32_t argv[], int argc)
-{
-	return __pw1(env, argv, argc, 0);
-}
-
-int32_t __sens_pw2(void * env, int32_t argv[], int argc)
-{
-	return __pw2(env, argv, argc, 0);
-}
-
-int32_t __sens_pw3(void * env, int32_t argv[], int argc)
-{
-	return __pw3(env, argv, argc, 0);
-}
-
-int32_t __sens_pw4(void * env, int32_t argv[], int argc)
-{
-	return __pw4(env, argv, argc, 0);
-}
-
-int32_t __sens_pw5(void * env, int32_t argv[], int argc)
-{
-	return __pw5(env, argv, argc, 0);
-}
-
-int32_t __sens_en(void * env, int32_t argv[], int argc)
-{
-	return __enabled(env, argv, argc, 0);
-}	
-
-int32_t __sens_tst(void * env, int32_t argv[], int argc)
-{
-	return __tst(env, argv, argc, 160);
-}	
-
-int32_t __sens_tbias(void * env, int32_t argv[], int argc)
-{
-	return __tbias(env, argv, argc, 0);
-}	
-
-int32_t __sens_ilat(void * env, int32_t argv[], int argc)
-{
-	return __ilat(env, argv, argc, 0);
-}	
-
-int32_t __sens_imode(void * env, int32_t argv[], int argc)
-{
-	return __imode(env, argv, argc, 0);
-}	
-
-int32_t __sens_irate(void * env, int32_t argv[], int argc)
-{
-	return __irate(env, argv, argc, 0);
-}
-
-int32_t __sens_ipre(void * env, int32_t argv[], int argc)
-{
-	return __ipre(env, argv, argc, 0);
-}
-
-int32_t __sens_cfg(void * env, int32_t argv[], int argc)
-{
-	return __cfg(env, argv, argc, 0);
-}
-
-int32_t __sens_ap(void * env, int32_t argv[], int argc)
-{
-	return __ap(env, argv, argc, 0);
-}
-
-int32_t __sens_clear(void * env, int32_t argv[], int argc)
-{
-	return __clear(env, argv, argc, 0);
-}
-
-int32_t __sens_insert(void * env, int32_t argv[], int argc)
-{
-	return __insert(env, argv, argc, 0);
-}
-
-int32_t __sens_remove(void * env, int32_t argv[], int argc)
-{
-	return __remove(env, argv, argc, 0);
-}
-
-int32_t __sens_belong(void * env, int32_t argv[], int argc)
-{
-	return __belong(env, argv, argc, 0);
-}
-
-int32_t __sens_model(void * env, int32_t argv[], int argc)
-{
-	return __model(env, argv, argc, 0);
-}
-
-
-/* --------------------------------------------------------------------------
-   Modules API
-   -------------------------------------------------------------------------- */
-
-int32_t __mod_state(void * env, int32_t argv[], int argc)
-{
-	return __state(env, argv, argc, 160);
-}	
-
-int32_t __mod_alarm(void * env, int32_t argv[], int argc)
-{
-	return __alarm(env, argv, argc, 160);
-}
-
-int32_t __mod_trouble(void * env, int32_t argv[], int argc)
-{
-	return __trouble(env, argv, argc, 160);
-}
-
-int32_t __mod_level(void * env, int32_t argv[], int argc)
-{
-	return __level(env, argv, argc, 160);
-}
-
-int32_t __mod_pw1(void * env, int32_t argv[], int argc)
-{
-	return __pw1(env, argv, argc, 160);
-}
-
-int32_t __mod_pw2(void * env, int32_t argv[], int argc)
-{
-	return __pw2(env, argv, argc, 160);
-}
-
-int32_t __mod_pw3(void * env, int32_t argv[], int argc)
-{
-	return __pw3(env, argv, argc, 160);
-}
-
-int32_t __mod_pw4(void * env, int32_t argv[], int argc)
-{
-	return __pw4(env, argv, argc, 160);
-}
-
-int32_t __mod_pw5(void * env, int32_t argv[], int argc)
-{
-	return __pw5(env, argv, argc, 160);
-}
-
-int32_t __mod_en(void * env, int32_t argv[], int argc)
-{
-	return __enabled(env, argv, argc, 160);
-}	
-
-int32_t __mod_tst(void * env, int32_t argv[], int argc)
-{
-	return __tst(env, argv, argc, 160);
-}	
-
-int32_t __mod_tbias(void * env, int32_t argv[], int argc)
-{
-	return __tbias(env, argv, argc, 160);
-}	
-
-int32_t __mod_ilat(void * env, int32_t argv[], int argc)
-{
-	return __ilat(env, argv, argc, 160);
-}	
-
-int32_t __mod_imode(void * env, int32_t argv[], int argc)
-{
-	return __imode(env, argv, argc, 160);
-}	
-
-int32_t __mod_irate(void * env, int32_t argv[], int argc)
-{
-	return __irate(env, argv, argc, 160);
-}
-
-int32_t __mod_ipre(void * env, int32_t argv[], int argc)
-{
-	return __ipre(env, argv, argc, 160);
-}
-
-int32_t __mod_cfg(void * env, int32_t argv[], int argc)
-{
-	return __cfg(env, argv, argc, 160);
-}
-
-int32_t __mod_ap(void * env, int32_t argv[], int argc)
-{
-	return __ap(env, argv, argc, 160);
-}
-
-int32_t __mod_clear(void * env, int32_t argv[], int argc)
-{
-	return __clear(env, argv, argc, 160);
-}
-
-int32_t __mod_insert(void * env, int32_t argv[], int argc)
-{
-	return __insert(env, argv, argc, 160);
-}
-
-int32_t __mod_remove(void * env, int32_t argv[], int argc)
-{
-	return __remove(env, argv, argc, 160);
-}
-
-int32_t __mod_belong(void * env, int32_t argv[], int argc)
-{
-	return __belong(env, argv, argc, 160);
-}
-
-int32_t __mod_model(void * env, int32_t argv[], int argc)
-{
-	return __model(env, argv, argc, 160);
-}
-
-/* --------------------------------------------------------------------------
-   Device models
-   -------------------------------------------------------------------------- */
-
-static int32_t __model_name(void * env, int32_t argv[], int argc) 
-{
-	return 0; /* return the number of return values */
+	argv[0] = 0;
+	return 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -1093,52 +915,36 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 
 	[EXT_MODEL_NAME] = __model_name,
 
-	[EXT_SENS_STATE] = __sens_state,
-	[EXT_SENS_ALARM] = __sens_alarm,
-	[EXT_SENS_TROUBLE] = __sens_trouble,
-	[EXT_SENS_LEVEL] = __sens_level,
-	[EXT_SENS_PW1] = __sens_pw1,
-	[EXT_SENS_PW2] = __sens_pw2,
-	[EXT_SENS_PW3] = __sens_pw3,
-	[EXT_SENS_PW4] = __sens_pw4,
-	[EXT_SENS_PW5] = __sens_pw5,
-	[EXT_SENS_EN] = __sens_en,
-	[EXT_SENS_TST] = __sens_tst,
-	[EXT_SENS_TBIAS] = __sens_tbias,
-	[EXT_SENS_ILAT] = __sens_ilat,
-	[EXT_SENS_IMODE] = __sens_imode,
-	[EXT_SENS_IRATE] = __sens_irate,
-	[EXT_SENS_IPRE] = __sens_ipre,
-	[EXT_SENS_CFG] = __sens_cfg,
-	[EXT_SENS_AP] = __sens_ap,
-	[EXT_SENS_CLEAR] = __sens_clear,
-	[EXT_SENS_INSERT] = __sens_insert,
-	[EXT_SENS_REMOVE] = __sens_remove,
-	[EXT_SENS_BELONG] = __sens_belong,
-	[EXT_SENS_MODEL] = __sens_model,
+	[EXT_DEV_STATE] = __dev_state,
+	[EXT_DEV_MODEL] = __dev_model,
+	[EXT_DEV_ADDR] = __dev_addr,
+	[EXT_DEV_IS_MODULE] = __dev_is_module,
+	[EXT_DEV_AP] = __dev_ap,
+	[EXT_DEV_EN] = __dev_enabled,
+	[EXT_DEV_CFG] = __dev_cfg,
+	[EXT_DEV_TST] = __dev_tst,
+	[EXT_DEV_TBIAS] = __dev_tbias,
+	[EXT_DEV_ILAT] = __dev_ilat,
+	[EXT_DEV_IMODE] = __dev_imode,
+	[EXT_DEV_IRATE] = __dev_irate,
+	[EXT_DEV_IPRE] = __dev_ipre,
+	[EXT_DEV_ALARM] = __dev_alarm,
+	[EXT_DEV_TROUBLE] = __dev_trouble,
+	[EXT_DEV_LEVEL] = __dev_level,
+	[EXT_DEV_OUT1] = __dev_out1,
+	[EXT_DEV_OUT2] = __dev_out2,
+	[EXT_DEV_OUT3] = __dev_out3,
+	[EXT_DEV_OUT5] = __dev_out5,
+	[EXT_DEV_PW1] = __dev_pw1,
+	[EXT_DEV_PW2] = __dev_pw2,
+	[EXT_DEV_PW3] = __dev_pw3,
+	[EXT_DEV_PW4] = __dev_pw4,
+	[EXT_DEV_PW5] = __dev_pw5,
+	[EXT_DEV_GRP_CLEAR] = __dev_grp_clear,
 
-	[EXT_MOD_STATE] = __mod_state,
-	[EXT_MOD_ALARM] = __mod_alarm,
-	[EXT_MOD_TROUBLE] = __mod_trouble,
-	[EXT_MOD_LEVEL] = __mod_level,
-	[EXT_MOD_PW1] = __mod_pw1,
-	[EXT_MOD_PW2] = __mod_pw2,
-	[EXT_MOD_PW3] = __mod_pw3,
-	[EXT_MOD_PW4] = __mod_pw4,
-	[EXT_MOD_PW5] = __mod_pw5,
-	[EXT_MOD_EN] = __mod_en,
-	[EXT_MOD_TST] = __mod_tst,
-	[EXT_MOD_TBIAS] = __mod_tbias,
-	[EXT_MOD_ILAT] = __mod_ilat,
-	[EXT_MOD_IMODE] = __mod_imode,
-	[EXT_MOD_IRATE] = __mod_irate,
-	[EXT_MOD_IPRE] = __mod_ipre,
-	[EXT_MOD_CFG] = __mod_cfg,
-	[EXT_MOD_AP] = __mod_ap,
-	[EXT_MOD_CLEAR] = __mod_clear,
-	[EXT_MOD_INSERT] = __mod_insert,
-	[EXT_MOD_REMOVE] = __mod_remove,
-	[EXT_MOD_BELONG] = __mod_belong,
-	[EXT_MOD_MODEL] = __mod_model,
+	[EXT_GRP_CLEAR] = __grp_clear,
+	[EXT_GRP_INSERT] = __grp_insert,
+	[EXT_GRP_REMOVE] = __grp_remove,
+	[EXT_GRP_BELONG] = __grp_belong,
+
 };
-
