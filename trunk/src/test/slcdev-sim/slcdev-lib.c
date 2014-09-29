@@ -121,7 +121,7 @@ static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 		uint32_t n;
 		int i;
 	} val;
-	int i = argc;
+	int i = 0;
 
 	#define _va_arg(AP, TYPE) ((i < argc) ? argv[i++] : 0)
 
@@ -264,12 +264,13 @@ int32_t __printf(void * env, int32_t argv[], int argc)
 {
 	const char * fmt = str(argv[0]);
 
-	return __vprintf(env, &argv[1], 0, fmt);
+	return __vprintf(env, &argv[1], argc - 1, fmt);
 }
 
 int32_t __print(void * env, int32_t argv[], int argc)
 {
 	int i;
+
 
 	for (i = 0; i < argc; ++i) {
 		if (i != 0)
@@ -280,6 +281,7 @@ int32_t __print(void * env, int32_t argv[], int argc)
 	__vprintf(env, argv, 0, "\n");
 	return 0;
 }	
+
 
 /* --------------------------------------------------------------------------
    Device models
@@ -293,6 +295,25 @@ int32_t __model_name(void * env, int32_t argv[], int argc)
 /* --------------------------------------------------------------------------
    Devices API
    -------------------------------------------------------------------------- */
+
+/* Array index translator */
+int32_t __sensor(void * env, int32_t argv[], int argc)
+{
+	/* just check for bounds */
+	if ((uint32_t)argv[0] >= 160)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	return 1; /* return the number of return values */
+}	
+
+/* Array index translator */
+int32_t __module(void * env, int32_t argv[], int argc)
+{
+	/* just check for bounds */
+	if ((uint32_t)argv[0] >= 160)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	argv[0] += 160;
+	return 1; /* return the number of return values */
+}	
 
 int32_t __dev_state(void * env, int32_t argv[], int argc)
 {
@@ -514,7 +535,7 @@ int32_t __dev_ipre(void * env, int32_t argv[], int argc)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val > 250)
 			return -EXCEPT_INVALID_VALUE;
@@ -537,9 +558,9 @@ int32_t __dev_alarm(void * env, int32_t argv[], int argc)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
-		if (val > 15)
+		if (val >= 16)
 			return -EXCEPT_INVALID_ALARM_CODE;
 	
 		ss_dev_tab[idx].alm = val;
@@ -561,7 +582,7 @@ int32_t __dev_trouble(void * env, int32_t argv[], int argc)
 	if (argc > 1) {
 		unsigned int val = argv[1];
 
-		if (val > 15)
+		if (val >= 16)
 			return -EXCEPT_INVALID_TROUBLE_CODE;
 	
 		ss_dev_tab[idx].tbl = val;
@@ -902,6 +923,53 @@ int32_t __grp_belong(void * env, int32_t argv[], int argc)
 }
 
 /* --------------------------------------------------------------------------
+   LED
+   -------------------------------------------------------------------------- */
+
+int32_t js_led_on(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = argv[0];
+
+	if (id >= 6)
+		return -EXCEPT_INVALID_LED; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+
+		if (val)
+			led_on(id);
+		else
+			led_off(id);
+
+		return 0;
+	}
+
+	argv[0] = led_status(id);
+
+	return 1; /* return the number of return values */
+}
+
+int32_t js_led_flash(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = argv[0];
+	unsigned int ms = argv[1];
+
+
+	if (id >= 6)
+		return -EXCEPT_INVALID_LED; /* Throw an exception */
+
+	if (ms >= (256 * IO_POLL_PERIOD_MS))
+		return -EXCEPT_INVALID_VALUE;
+
+	led_flash(id, ms);
+
+	return 0; /* return no values */
+}
+
+/* --------------------------------------------------------------------------
    Native (external) call table
    -------------------------------------------------------------------------- */
 
@@ -914,6 +982,9 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_MEMRD] = __memrd,
 
 	[EXT_MODEL_NAME] = __model_name,
+
+	[EXT_SENSOR] = __sensor,
+	[EXT_MODULE] = __module,
 
 	[EXT_DEV_STATE] = __dev_state,
 	[EXT_DEV_MODEL] = __dev_model,
@@ -947,4 +1018,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_GRP_REMOVE] = __grp_remove,
 	[EXT_GRP_BELONG] = __grp_belong,
 
+	[EXT_LED_ON] = js_led_on,
+	[EXT_LED_FLASH] = js_led_flash,
 };
+

@@ -620,7 +620,7 @@ int microjs_bit_enc(struct microjs_json_parser * jsn,
 	*bfield &= ~(1 << bit);
 	*bfield |= (val->logic ? 1 : 0) << bit;
 
-	DCC_LOG2(LOG_TRACE, "val=%d bfield=0x%08x", 
+	DCC_LOG2(LOG_INFO, "val=%d bfield=0x%08x", 
 			 val->logic ? 1 : 0, *bfield);
 	return 0;
 }
@@ -655,6 +655,80 @@ int microjs_json_root_len(const char * js)
 	}
 
 	return (ep - js) + 1; 
+}
+
+/* -------------------------------------------------------------------------
+   javascript code embedded on JSON array
+   ------------------------------------------------------------------------- */
+
+int mcrojs_js_array_enc(struct microjs_json_parser * jsn, 
+						struct microjs_val * val, 
+						unsigned int opt, void * ptr) 
+{
+	struct json_js * jj = (struct json_js *)ptr;
+	struct microjs_sdt * microjs;
+	uint32_t js_sdtbuf[32]; /* compiler buffer */
+	struct symstat symstat;
+	int line = 0;
+	int typ;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* initialize compiler */
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), jj->symtab);
+
+	/* Save symbol table state. In case of a compilation error,
+	   the symbol table may have some invalid entries, saving
+	   the state allow us to roll back to a clean state without
+	   loosing the good symbols */
+	symstat = symtab_state_save(jj->symtab);
+
+	/* begin compilation */
+	microjs_sdt_begin(microjs, jj->code, jj->code_sz);
+
+	/* compile line by line */
+	ret = 0;
+	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_STRING) {
+
+		++line;
+		DCC_LOG1(LOG_TRACE, "line %d ...", line);
+
+		if ((ret = microjs_compile(microjs, val->str.dat, val->str.len)) < 0) {
+			DCC_LOG1(LOG_TRACE, "compile err %d", ret);
+			if (ret != -ERR_UNEXPECED_EOF)
+				goto compile_error;
+		} 
+		
+		DCC_LOG1(LOG_TRACE, "compile ret %d", ret);
+			
+		if (ret > 0)
+			microjs_sdt_reset(microjs);
+	} 
+
+	if (typ != MICROJS_JSON_END_ARRAY) {
+		ret = 0;
+		DCC_LOG1(LOG_ERROR, "expecting array closing, got %d!", typ);
+		goto compile_error;
+	}
+
+	if (ret > 0) {
+		/* finish compilation */
+		if ((ret = microjs_sdt_end(microjs, &jj->rt)) < 0) 
+			goto compile_error;
+
+	}
+
+	jj->code_sz = ret;
+
+	return 0;
+
+compile_error:
+	DCC_LOG1(LOG_ERROR, "Javascript compile error %d!", -ret);
+	symtab_state_rollback(jj->symtab, symstat);
+	microjs_sdt_error(stdout, microjs, ret);
+
+	return -1;
 }
 
 #if 0

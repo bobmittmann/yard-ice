@@ -52,33 +52,61 @@
 #define EXT_MOD_STATE    12
 #define EXT_MOD_ALARM    13
 #define EXT_MOD_TROUBLE  14
-#define EXT_MODULE       15
-#define EXT_SENSOR       16
-#define EXT_DEV_STATE    17
-#define EXT_DEV_ALARM    18
-#define EXT_DEV_TROUBLE  19
+
+#define EXT_LED          15
+#define EXT_GROUP        16
+#define EXT_MODULE       17
+#define EXT_SENSOR       18
+
+#define EXT_DEV_STATE    19
+#define EXT_DEV_ALARM    20
+#define EXT_DEV_TROUBLE  21
+#define EXT_DEV_LEVEL    22
+
+#define EXT_LED_ON       23
+#define EXT_LED_FLASH    24
+
+#define EXT_GRP_CLEAR    25
+#define EXT_GRP_INSERT   26
+#define EXT_GRP_REMOVE   27
+#define EXT_GRP_BELONG   28
 
 
-#define EXCEPT_BAD_ADDR              100
-#define EXCEPT_INVALID_TROUBLE_CODE  101
-#define EXCEPT_INVALID_ALARM_CODE    102
+
+#define EXCEPT_BAD_ADDR                100
+#define EXCEPT_INVALID_TROUBLE_CODE    101
+#define EXCEPT_INVALID_ALARM_CODE      102
+#define EXCEPT_INVALID_VALUE           106
+#define EXCEPT_TOO_MANY_GROUPS         107
+#define EXCEPT_INVALID_GROUP           108
+#define EXCEPT_INVALID_DEVICE          109
+#define EXCEPT_INVALID_LED             110
+#define EXCEPT_INVALID_LEVEL           111
+
+#define CLASS_DEV 0
+#define CLASS_GRP 1
+#define CLASS_LED 2
 
 #ifdef __MICROJS_LIB_DEF__
 
 #define CLASS_DEV 0
 
 const struct ext_classtab microjs_class = {
-	.ccnt = 1,
+	.ccnt = 3,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
-			.fst = EXT_DEV_STATE, .lst = EXT_DEV_TROUBLE },
+			.fst = EXT_DEV_STATE, .lst = EXT_DEV_LEVEL },
+		[CLASS_GRP] = { .nm = "grp", 
+			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
+		[CLASS_LED] = { .nm = "led", 
+			.fst = EXT_LED_ON, .lst = EXT_LED_FLASH },
 	}
 };
 
 const struct ext_libdef microjs_lib = {
 	.name = "lib",
 	.classtab = &microjs_class,
-	.xcnt = 20,
+	.xcnt = 25,
 	.xdef = {
 		[EXT_RAND] = { .opt = O_FUNCTION, 
 			.nm = "rand", 
@@ -136,6 +164,14 @@ const struct ext_libdef microjs_lib = {
 			.nm = "module", 
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 160 } },
 
+		[EXT_GROUP] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "group", 
+			.aos = { .cdef = CLASS_GRP, .size = 1, .offs = 0 } },
+
+		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "led", 
+			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
+
 		/* device class members */
 		[EXT_DEV_STATE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
 			.nm = "state" },
@@ -143,6 +179,27 @@ const struct ext_libdef microjs_lib = {
 			.nm = "alarm" },
 		[EXT_DEV_TROUBLE] = { .opt = O_INTEGER | O_MEMBER,  
 			.nm = "trouble" },
+		[EXT_DEV_LEVEL] = { .opt = O_ARRAY | O_INTEGER | O_MEMBER,  
+			.nm = "level" },
+
+		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "on" },
+		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "flash" ,
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+
+		[EXT_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "clear",
+			.f = { .argmin = 1, .argmax = 1, .ret = 0 } },
+		[EXT_GRP_INSERT] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "insert",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+		[EXT_GRP_REMOVE] = { .opt = O_FUNCTION | O_MEMBER,
+			.nm = "remove",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+		[EXT_GRP_BELONG] = {  .opt = O_FUNCTION | O_MEMBER,
+			.nm = "belong",
+			.f = { .argmin = 2, .argmax = 2, .ret = 1 } },
 	}
 };
 

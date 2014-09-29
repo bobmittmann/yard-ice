@@ -32,6 +32,8 @@
 #include <xmodem.h>
 #include <crc.h>
 
+#include <sys/dcclog.h>
+
 #define SOH  0x01
 #define STX  0x02
 #define EOT  0x04
@@ -63,7 +65,6 @@ int xmodem_rcv_cancel(struct xmodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
 
-	
 	pkt[0] = CAN;
 	pkt[1] = CAN;
 	pkt[2] = CAN;
@@ -83,9 +84,8 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 	int seq;
 	int rem;
 
-	
 	for (;;) {
-		
+
 		if ((ret = rx->comm->op.send(rx->comm->arg, &rx->sync, 1)) < 0) {
 			return ret;
 		}
@@ -104,20 +104,21 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 			c = pkt[0];
 
 			if (c == STX) {
-								cnt = 1024;
+				cnt = 1024;
 				break;
 			}
 
 			if (c == SOH) {
-								cnt = 128;
+				cnt = 128;
 				break;
 			}
 
 			if (c == EOT) {
-								/* end of transmission */
+				/* end of transmission */
 				pkt[0] = ACK;
 				if ((ret = rx->comm->op.send(rx->comm->arg, pkt, 1)) < 0)
 					return ret;
+
 				return 0;
 			}
 		}
@@ -125,7 +126,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		rem = cnt + ((rx->mode) ? 4 : 3);
 		cp = pkt + 1;
 
-		
+
 		/* receive the packet */
 		while (rem) {
 
@@ -145,7 +146,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		nseq = pkt[2];
 
 		if (seq != ((~nseq) & 0xff)) {
-						goto error;
+			goto error;
 		}
 
 		cp = &pkt[3];
@@ -161,7 +162,7 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 			cmp = (unsigned short)cp[i] << 8 | cp[i + 1];
 
 			if (cmp != crc) {
-								goto error;
+				goto error;
 			}
 
 		} else {
@@ -178,12 +179,12 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 
 		if (seq == ((rx->pktno - 1) & 0xff)) {
 			/* retransmission */
-						rx->sync = ACK;
+			rx->sync = ACK;
 			continue;
 		}
 
 		if (seq != rx->pktno) {
-						goto error;
+			goto error;
 		}
 
 		rx->pktno = (rx->pktno + 1) & 0xff;
@@ -191,16 +192,16 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		rx->sync = ACK;
 		rx->data_len = cnt;
 		rx->data_pos = 0;
-		
+
 		return cnt;
 
 error:
 		/* flush */
 		while (rx->comm->op.recv(rx->comm->arg, pkt, 1024, 200) > 0);
 		rx->sync = NAK;
-		
+
 timeout:
-		
+
 		if ((--rx->retry) == 0) {
 			/* too many errors */
 			ret = -1;
@@ -208,7 +209,7 @@ timeout:
 		}
 	}
 
-	
+
 	pkt[0] = CAN;
 	pkt[1] = CAN;
 	pkt[2] = CAN;
@@ -227,8 +228,6 @@ int xmodem_rcv_loop(struct xmodem_rcv * rx, void * data, int len)
 	if ((dst == NULL) || (len <= 0)) {
 		return -EINVAL;
 	}
-
-	//	printf("%s: len=%d\n", __func__, len);
 
 	do {
 		if ((rem = (rx->data_len - rx->data_pos)) > 0) {

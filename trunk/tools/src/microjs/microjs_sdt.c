@@ -430,7 +430,6 @@ int op_object_eval(struct microjs_sdt * microjs)
 int op_object_assign(struct microjs_sdt * microjs)
 {
 	return -ERR_NOT_IMPLEMENTED;
-//	return 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -481,6 +480,53 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	return 0;
 }
 
+int op_array_eval(struct microjs_sdt * microjs)
+{
+	struct extdef * xdef;
+	struct sym_cld cld;
+	struct sym_tmp tmp;
+	int ret;
+	int xid;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* get the member attribute name */
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
+
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
+
+	DCC_LOG1(LOG_TRACE, "attribute xid=%d", xid);
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	xdef = sym_extern_get(microjs->tab, xid);
+
+	if (EXTDEF_TYPE(xdef) != O_INTEGER)
+		return -ERR_EXTERN_NOT_INTEGER;
+
+	if (!EXTDEF_FLAG(xdef, O_ARRAY))
+		return -ERR_EXTERN_NOT_ARRAY;
+
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst))
+		return -ERR_EXTERN_NOT_MEMBER;
+
+	/* XXX: This call could be optimized, attribute eval functions,
+	   should receive 2 prameter: (object_id, array_idx) and return the 
+	   attribute value. */
+	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, xid), 1);
+	microjs->code[microjs->pc++] = OPC_EXT;
+	microjs->code[microjs->pc++] = xid; /* external call number */
+	microjs->code[microjs->pc++] = 2; /* stack size (arguments) */
+
+	return 0;
+}
+
+
 int op_attr_assign(struct microjs_sdt * microjs)
 {
 	struct extdef * xdef;
@@ -507,13 +553,11 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	if (EXTDEF_TYPE(xdef) != O_INTEGER)
 		return -ERR_EXTERN_NOT_INTEGER;
 
-	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst)) {
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst))
 		return -ERR_EXTERN_NOT_MEMBER;
-	}
 
-	if (EXTDEF_FLAG(xdef, O_READONLY)) {
+	if (EXTDEF_FLAG(xdef, O_READONLY))
 		return -ERR_EXTERN_READONLY;
-	}
 
 	/* XXX: This call could be optimized, attribute assignement functions,
 	   should receive 2 prameters: (object_id, attr_val) and return nothing */
@@ -526,6 +570,98 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	/* the call will consume the 2 values on the stack and 
 	   will not push back any value, inform the stack evaluator. */ 
 	return tgt_stack_adjust(microjs, -2);
+}
+
+int op_array_assign(struct microjs_sdt * microjs)
+{
+	struct extdef * xdef;
+	struct sym_cld cld;
+	struct sym_tmp tmp;
+	int ret;
+	int xid;
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	/* get the member attribute name */
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
+
+	xdef = sym_extern_get(microjs->tab, xid);
+
+	if (EXTDEF_TYPE(xdef) != O_INTEGER)
+		return -ERR_EXTERN_NOT_INTEGER;
+
+	if (!EXTDEF_FLAG(xdef, O_ARRAY))
+		return -ERR_EXTERN_NOT_ARRAY;
+
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst))
+		return -ERR_EXTERN_NOT_MEMBER;
+
+	if (EXTDEF_FLAG(xdef, O_READONLY))
+		return -ERR_EXTERN_READONLY;
+
+	/* XXX: This call could be optimized, attribute assignement functions,
+	   should receive 2 prameters: (object_id, array_idx, attr_val) 
+	   and return nothing */
+	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
+		   sym_extern_name(microjs->tab, xid), 1);
+	microjs->code[microjs->pc++] = OPC_EXT;
+	microjs->code[microjs->pc++] = xid; /* external call number */
+	microjs->code[microjs->pc++] = 3; /* stack size (arguments) */
+
+	/* the call will consume the 3 values from the stack and 
+	   will not push back any value, inform the stack evaluator. */ 
+	return tgt_stack_adjust(microjs, -3);
+}
+
+/* --------------------------------------------------------------------------
+   Object method calls
+   -------------------------------------------------------------------------- */
+
+int op_method_lookup(struct microjs_sdt * microjs)
+{
+	struct extdef * xdef;
+	struct sym_cld cld;
+	struct sym_call call;
+	struct sym_tmp tmp;
+	int xid;
+	int ret;
+
+	/* get the member method name */
+	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
+		return ret;
+
+	/* get the class definition */
+	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
+		return ret;
+
+	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+		return -ERR_EXTERN_UNKNOWN;
+
+	xdef = sym_extern_get(microjs->tab, xid);
+
+	if (EXTDEF_TYPE(xdef) != O_FUNCTION)
+		return -ERR_EXTERN_NOT_FUNCTION;
+
+	if (!EXTDEF_FLAG(xdef, O_MEMBER) || (xid > cld.lst) || (xid < cld.fst)) {
+		return -ERR_EXTERN_NOT_MEMBER;
+	}
+
+	/* prepare to call a method */
+	call.xid = xid;
+	call.retcnt = xdef->f.ret;
+	call.argmin = xdef->f.argmin;
+	call.argmax = xdef->f.argmax;
+	call.argcnt = 1;
+
+	return sym_call_push(microjs->tab, &call);
 }
 
 /* --------------------------------------------------------------------------
@@ -551,7 +687,7 @@ int op_function_lookup(struct microjs_sdt * microjs)
 	if (EXTDEF_TYPE(xdef) != O_FUNCTION)
 		return -ERR_EXTERN_NOT_FUNCTION;
 
-	/* prepare to call a function or method */
+	/* prepare to call a function */
 	call.xid = xid;
 	call.retcnt = xdef->f.ret;
 	call.argmin = xdef->f.argmin;
@@ -1367,7 +1503,10 @@ int (* const op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_OBJECT_EVAL)] = op_object_eval,
  	[ACTION(A_OP_OBJECT_ASSIGN)] = op_object_assign,
  	[ACTION(A_OP_ATTR_EVAL)] = op_attr_eval,
+ 	[ACTION(A_OP_ARRAY_EVAL)] = op_array_eval,
  	[ACTION(A_OP_ATTR_ASSIGN)] = op_attr_assign,
+ 	[ACTION(A_OP_ARRAY_ASSIGN)] = op_array_assign,
+ 	[ACTION(A_OP_METHOD_LOOKUP)] = op_method_lookup,
  	[ACTION(A_OP_FUNCTION_LOOKUP)] = op_function_lookup,
  	[ACTION(A_OP_ARG)] = op_arg,
  	[ACTION(A_OP_CALL)] = op_call,
@@ -1458,7 +1597,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 		if IS_A_TERMINAL(sym) {
 			/* terminal */
 			if (sym != lookahead) {
-				err = ERR_UNEXPECTED_SYMBOL;
+				err = -ERR_UNEXPECTED_SYMBOL;
 				goto error;
 			}
 			/* save the lookahead token */
@@ -1491,16 +1630,13 @@ int microjs_compile(struct microjs_sdt * microjs,
 				err = (lookahead == T_EOF) ? -ERR_UNEXPECED_EOF :
 					-ERR_SYNTAX_ERROR;
 #if MICROJS_TRACE_ENABLED
-				fprintf(stderr, "microjs_ll_push() failed!\n");
-#if MICROJS_DEBUG_ENABLED
-				fprintf(stderr, "lookahead = %s\n", microjs_ll_sym[lookahead]);
-#endif
 				ll_stack_dump(stderr, ll_sp, ll_top);
 #endif
 				goto error;
 			}
 			ll_sp -= k;
 			if (ll_sp < ll_sl) {
+				DCC_LOG(LOG_WARNING, "stack overflow!");
 				err = -ERR_SDT_STACK_OVERFLOW;
 				/* stack overflow */
 				goto error;
@@ -1517,13 +1653,6 @@ error:
 	/* save the parser's stack pointer */
 	microjs->ll_sp = ll_sp - (uint8_t *)microjs;
 
-#if MICROJS_TRACE_ENABLED
-#if MICROJS_DEBUG_ENABLED
-	TRACEF("\nSYMBOL TABLE:\n");
-	sym_dump(stderr, microjs->tab);
-	TRACEF("\n");
-#endif
-#endif
 	return err;
 }
 

@@ -135,35 +135,33 @@ int db_cmd_js_enc(struct microjs_json_parser * jsn,
 			   struct microjs_val * val, 
 			   unsigned int opt, void * ptr) 
 {
-	uint8_t * js = (uint8_t *)ptr;
-	int cnt = 0;
-	int typ;
+	struct json_js jj;
+	uint8_t code[256];
 	int ret;
 
-	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_STRING) {
-		if ((ret = const_str_add(val->str.dat, val->str.len)) < 0)
-			return ret;
-		if (cnt < SLCDEV_CMD_JS_LINE_MAX) {
-			js[cnt] = ret;
-			DCC_LOG2(LOG_INFO, "js[%d] = %d...", cnt, js[cnt]);
-			cnt++;
-		}
-	} 
+	DCC_LOG(LOG_TRACE, "...");
 
-	if (typ != MICROJS_JSON_END_ARRAY) {
-		DCC_LOG(LOG_ERROR, "expecting array closing!");
-		return -1;
-	}
+	jj.code_sz = sizeof(code);
+	jj.code = code;
+	jj.symtab = (struct symtab *)slcdev_symbuf;
 
-	return 0;
+	if ((ret = mcrojs_js_array_enc(jsn, val, opt, &jj)) < 0)
+		return ret;
+
+	DCC_LOG3(LOG_TRACE, "code=%d data=%d stack=%d", 
+			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
+
+	return db_stack_push(jj.code, jj.code_sz, ptr);
+
 }
+
 
 static const struct microjs_attr_desc command_desc[] = {
 	{ "tag", MICROJS_JSON_STRING, 0, offsetof(struct cmd_entry, tag),
 		microjs_const_str_enc },
 	{ "seq", MICROJS_JSON_ARRAY, 0, offsetof(struct cmd_entry, seq),
 		db_cmd_seq_enc },
-	{ "js", MICROJS_JSON_ARRAY, 0, offsetof(struct cmd_entry, js),
+	{ "js", MICROJS_JSON_ARRAY, 0, offsetof(struct cmd_entry, code),
 		db_cmd_js_enc },
 	{ "", 0, 0, 0, NULL}
 };
@@ -176,16 +174,9 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr)
 {
-//	struct symtab * symtab = (struct symtab *)slcdev_vm_data;
-	struct symtab * symtab = (struct symtab *)slcdev_symbuf;
-	struct microjs_sdt * microjs;
-	uint8_t code[256]; /* compiled code */
-	uint32_t js_sdtbuf[32]; /* compiler buffer */
 	struct cmd_list lst;
-	struct microjs_rt rt;
 	int ret;
 	int typ;
-	int i;
 
 	lst.cnt = 0;
 
@@ -211,61 +202,6 @@ int db_cmd_list_enc(struct microjs_json_parser * jsn,
 
 		lst.cnt++;
 	} 
-
-	/* initialize compiler */
-	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab);
-
-//	symstat = symtab_state_save(symtab);
-
-	/* for all commands in the list */
-	for (i = 0; i < lst.cnt; ++i) {
-		struct cmd_entry * cmd = &lst.cmd[i];
-		struct symstat symstat;
-		int cnt = 0;
-		int ret;
-		int j;
-
-		/* Save symbol table state. In case of a compilation error,
-		   the symbol table may have some invalid entries, saving
-		   the state allow us to roll back to a clean state without
-		   loosing the good symbols */
-		symstat = symtab_state_save(symtab);
-
-		/* begin compilation */
-		microjs_sdt_begin(microjs, code, sizeof(code));
-
-		/* compile line by line */
-		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
-			const char * js = const_str(cmd->js[j]);
-
-			if ((ret = microjs_compile(microjs, js, strlen(js))) < 0) {
-				if (ret != -ERR_UNEXPECED_EOF) {
-					DCC_LOG1(LOG_ERROR, "Javascript compile error %d!", -ret);
-					symtab_state_rollback(symtab, symstat);
-					microjs_sdt_error(stdout, microjs, ret);
-					return -1;
-				}
-			}
-			if (ret > 0) {
-				cnt++;
-				microjs_sdt_reset(microjs);
-			}
-		}
-
-		if (cnt > 0) {
-			int code_sz = 0;
-			/* end compilation */
-			if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
-				symtab_state_rollback(symtab, symstat);
-				fprintf(stderr, "# compile error: %d\n", -code_sz);
-				microjs_sdt_error(stderr, microjs, code_sz);
-				return -1;
-			}
-
-			if (db_stack_push(code, code_sz, (void **)&cmd->code) < 0)
-				return -1;
-		}
-	}
 
 	if (typ != MICROJS_JSON_END_ARRAY) {
 		DCC_LOG(LOG_ERROR, "expecting array closing!");
@@ -905,7 +841,7 @@ void cmd_seq_dec(char * s, struct cmd_seq * seq)
 static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 {
 	int i;
-	int j;
+//	int j;
 
 	if (lst == NULL)
 		return;
@@ -920,10 +856,10 @@ static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 		fprintf(f, "CMD[%d]: \"%s\" %s [%04x %04x]\n", 
 				i, const_str(cmd->tag), s, cmd->seq.msk, cmd->seq.val);	
 	
-		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
-			if (cmd->js[j] > 0)
-				fprintf(f, "\"%s\"\n", const_str(cmd->js[j]));
-		}
+//		for (j = 0; j < SLCDEV_CMD_JS_LINE_MAX; ++j) {
+//			if (cmd->js[j] > 0)
+//				fprintf(f, "\"%s\"\n", const_str(cmd->js[j]));
+//		}
 	}
 }
 

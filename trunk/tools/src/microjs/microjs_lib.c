@@ -416,7 +416,11 @@ int32_t __print(void * env, int32_t argv[], int argc)
 	return 0;
 }	
 
-uint8_t device[320];
+struct {
+	uint8_t alm;
+	uint8_t tbl;
+	uint8_t lvl[4];
+} device[320];
 
 int32_t __sens_state(void * env, int32_t argv[], int argc)
 {
@@ -426,7 +430,7 @@ int32_t __sens_state(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	retv[0] = device[addr];
+	retv[0] = (device[addr].alm ? 1 : 0) + (device[addr].tbl ? 2 : 0);
 
 	return 1; /* return the number of return values */
 }	
@@ -439,10 +443,10 @@ int32_t __sens_alarm(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	if (val > 1)
+	if (val > 15)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	device[addr] = (device[addr] & ~1) | val;
+	device[addr].alm = val;
 
 	return 0; /* return the number of return values */
 }
@@ -455,10 +459,10 @@ int32_t __sens_trouble(void * env, int32_t argv[], int argc)
 	if (addr > 159)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
-	if (val > 1)
+	if (val > 15)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	device[addr] = (device[addr] & ~2) | (val << 1);
+	device[addr].tbl = val;
 
 	return 0; /* return the number of return values */
 }
@@ -474,7 +478,7 @@ int32_t __mod_state(void * env, int32_t argv[], int argc)
 
 	addr += 160;
 
-	retv[0] = device[addr];
+	retv[0] = (device[addr].alm ? 1 : 0) + (device[addr].tbl ? 2 : 0);
 
 	return 1; /* return the number of return values */
 }	
@@ -492,7 +496,7 @@ int32_t __mod_alarm(void * env, int32_t argv[], int argc)
 	if (val > 10)
 		return -EXCEPT_INVALID_ALARM_CODE;
 
-	device[addr] = (device[addr] & ~1) | val;
+	device[addr].alm = val;
 
 	return 0; /* return the number of return values */
 }
@@ -510,7 +514,7 @@ int32_t __mod_trouble(void * env, int32_t argv[], int argc)
 	if (val > 10)
 		return -EXCEPT_INVALID_TROUBLE_CODE;
 
-	device[addr] = (device[addr] & ~2) | (val << 1);
+	device[addr].tbl = val;
 
 	return 0; /* return the number of return values */
 }
@@ -540,8 +544,7 @@ int32_t __dev_state(void * env, int32_t argv[], int argc)
 	int32_t * retv = argv;
 	unsigned int oid = argv[0];
 
-	retv[0] = ((device[oid] & 0xf) ? 1 : 0) + 
-		(device[oid] & 0xf0 ? 2 : 0);
+	retv[0] = (device[oid].alm ? 1 : 0) + (device[oid].tbl ? 2 : 0);
 
 	return 1; /* return the number of return values */
 }	
@@ -555,16 +558,16 @@ int32_t __dev_alarm(void * env, int32_t argv[], int argc)
 	if (argc > 1) { /* set */
 		unsigned int val = argv[1];
 
-		if (val > 16)
+		if (val >= 16)
 			return -EXCEPT_INVALID_ALARM_CODE;
 
-		device[oid] = (device[oid] & ~0xf) | val;
+		device[oid].alm = val;
 
 		return 0; /* number of return values */
 	}
 
 	/* get */
-	retv[0] = device[oid] & 0xf;
+	retv[0] = device[oid].alm;
 
 	return 1; /* number of return values */
 }
@@ -577,18 +580,102 @@ int32_t __dev_trouble(void * env, int32_t argv[], int argc)
 	if (argc > 1) { /* set */
 		unsigned int val = argv[1];
 
-		if (val > 16)
+		if (val >= 16)
 			return -EXCEPT_INVALID_ALARM_CODE;
 
-		device[oid] = (device[oid] & ~0xf0) | (val << 4);
+		device[oid].tbl = val;
 
 		return 0; /* number of return values */
 	}
 
 	/* get */
-	retv[0] = (device[oid] >> 4) & 0xf;
+	retv[0] = device[oid].tbl;
 
 	return 1; /* number of return values */
+}
+
+int32_t __dev_level(void * env, int32_t argv[], int argc)
+{
+	int32_t * retv = argv;
+	unsigned int oid = argv[0];
+	unsigned int idx = argv[1];
+
+	if (argc > 2) { /* set */
+		unsigned int val = argv[2];
+
+		if (val >= 256)
+			return -EXCEPT_INVALID_LEVEL;
+
+		device[oid].lvl[idx] = val;
+
+		return 0; /* number of return values */
+	}
+
+	/* get */
+	retv[0] = device[oid].lvl[idx];
+
+	return 1; /* number of return values */
+}
+
+
+/* --------------------------------------------------------------------------
+   LED
+   -------------------------------------------------------------------------- */
+
+int led[6];
+
+/* Array index translator */
+int32_t __led(void * env, int32_t argv[], int argc)
+{
+	/* just check for bounds */
+	if ((uint32_t)argv[0] >= 6)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+	return 1; /* return the number of return values */
+}	
+
+
+int32_t js_led_on(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = argv[0];
+
+	if (id >= 6)
+		return -EXCEPT_INVALID_LED; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+
+		led[id] = val;
+
+		return 0;
+	}
+
+	DCC_LOG2(LOG_TRACE, "id=%d val=%d", id, led[id]);
+
+	argv[0] = led[id];
+
+	return 1; /* return the number of return values */
+}
+
+int32_t js_led_flash(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = argv[0];
+	unsigned int ms = argv[1];
+
+
+	if (id >= 6)
+		return -EXCEPT_INVALID_LED; /* Throw an exception */
+
+	if (ms >= (256 * 16))
+		return -EXCEPT_INVALID_VALUE;
+
+	DCC_LOG2(LOG_TRACE, "id=%d ms=%d", id, ms);
+
+	led[id] = ms;
+
+	return 0; /* return no values */
 }
 
 /* --------------------------------------------------------------------------
@@ -614,10 +701,15 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 
 	[EXT_SENSOR] = __sensor,
 	[EXT_MODULE] = __module,
+	[EXT_LED] = __led,
 
 	[EXT_DEV_STATE] = __dev_state,
 	[EXT_DEV_ALARM] = __dev_alarm,
 	[EXT_DEV_TROUBLE] = __dev_trouble,
+	[EXT_DEV_LEVEL] = __dev_level,
+
+	[EXT_LED_ON] = js_led_on,
+	[EXT_LED_FLASH] = js_led_flash,
 };
 
 #endif /* MICROJS_STDLIB_ENABLED  */

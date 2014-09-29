@@ -120,7 +120,7 @@ bool fs_dirent_lookup(const char * name, struct fs_dirent * ep)
 			return fs_dirent_get(ep, i);
 	}
 
-	DCC_LOG(LOG_ERROR, "file not found!");
+	DCC_LOG(LOG_INFO, "file not found!");
 
 	return false;
 }
@@ -217,7 +217,11 @@ bool fs_xmodem_recv(FILE * f, const char * name)
 			break;
 		}
 
+		DCC_LOG2(LOG_TRACE, "ret=%d rem=%d", ret, rem);
+
 		n = MIN(rem, ret); 
+	
+		DCC_LOG2(LOG_TRACE, "stm32_flash_write(offs=%06x size=%d)", offs, n);
 		stm32_flash_write(offs, buf, n);
 		cnt += n;
 		offs += n;

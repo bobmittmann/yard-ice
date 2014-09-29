@@ -98,8 +98,8 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 //	int cnt = 0;
 
 	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
-			 (int)((int)(sp - data) * sizeof(int32_t)),
-			 (int)((int)(xp - data) * sizeof(int32_t)),
+			 (int)((int)(sp - vm->sp) * sizeof(int32_t)),
+			 (int)((int)(xp - vm->sp) * sizeof(int32_t)),
 			 (int)(pc - code));
 
 	if (trace)
@@ -382,8 +382,18 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 			case OPC_EXT:
 				r0 = *pc++;
 				r1 = *pc++;
-				if (trace)
-					FTRACEF(f, "EXT %d, %d\n", r0, r1);
+				if (trace) {
+					int i;
+					int32_t * argv = sp - r1;
+					FTRACEF(f, "EXT %d, %d (", r0, r1);
+					for (i = 0; i < r1; ++i) {
+						if (i != 0)
+							FTRACEF(f, ", %d", argv[i]);
+						else
+							FTRACEF(f, "%d", argv[i]);
+					}
+					FTRACEF(f, ")\n");
+				}
 				r0 = microjs_extern[r0](&vm->env, sp - r1, r1);
 				if (r0 < 0) {
 					DCC_LOG1(LOG_INFO, "exception %d!", r0);
@@ -440,9 +450,9 @@ done:
 		FTRACEF(f, "SP=0x%04x\n", (int)(sp - data) * SIZEOF_WORD);
 
 	DCC_LOG3(LOG_TRACE, "end: SP=0x%04x XP=0x%04x PC=0x%04x", 
-			(int)((int)(sp - data) * sizeof(int32_t)),
-			(int)((int)(xp - data) * sizeof(int32_t)), 
-			(int)(pc - code));
+			 (int)((int)(sp - vm->sp) * sizeof(int32_t)),
+			 (int)((int)(xp - vm->sp) * sizeof(int32_t)),
+			 (int)(pc - code));
 
 	return r0;
 }

@@ -20,7 +20,14 @@ try {
 		if (tbl < 16) {
 			sensor[i].trouble = tbl;
 		}
-		printf("%3d: %2d %2d %d\n", i, alm, tbl, sensor[i].state);
+		printf("%3d: %2d %2d %d -", i, alm, tbl, sensor[i].state);
+		var j;
+		for (j = 0; j < 4; j = j + 1) {
+			sensor[i].level[j] = rand() % 256;
+			printf(" %3d", sensor[i].level[j]);
+		}
+		printf("\n");
+
 
 		alm = rand() % 32;
 		if (alm < 16) {
@@ -30,14 +37,24 @@ try {
 		if (tbl < 16) {
 			module[i].trouble = tbl;
 		}
-		printf("%3d: %2d %2d %d\n", i, alm, tbl, module[i].state);
+		printf("%3d: %2d %2d %d -", i, alm, tbl, module[i].state);
+		var j;
+		for (j = 0; j < 4; j = j + 1) {
+			module[i].level[j] = rand() % 256;
+			printf(" %3d", module[i].level[j]);
+		}
+		printf("\n");
 	}
+
+
 }
 
-var mod_trbl = 0;
-var mod_alrm = 0;
-var sens_trbl = 0;
-var sens_alrm = 0;
+var mod_tbl = 0;
+var mod_alm = 0;
+var mod_lvl = 0;
+var sens_tbl = 0;
+var sens_alm = 0;
+var sens_lvl = 0;
 
 try {
 	var i;
@@ -55,13 +72,20 @@ try {
 			// clear alarm
 			sensor[i].alarm = 0;
 			// count the alarms
-			sens_alrm = sens_alrm + 1;
+			sens_alm = sens_alm + 1;
 		} 
 		if (state & 2) {
 			// clear the trouble 
 			sensor[i].trouble = 0;
 			// count the trouble 
-			sens_trbl = sens_trbl + 1;
+			sens_tbl = sens_tbl + 1;
+		}
+
+		var j;
+		for (j = 0; j < 4; j = j + 1) {
+			if (sensor[i].level[j] >= 128) {
+				sens_lvl = sens_lvl + 1;
+			}
 		}
 	}
 
@@ -74,13 +98,20 @@ try {
 			// clear alarm
 			module[i].alarm = 0;
 			// count the alarms
-			mod_alrm = mod_alrm + 1;
+			mod_alm = mod_alm + 1;
 		} 
 		if (state & 2) {
 			// clear the trouble 
 			module[i].trouble = 0;
 			// count the trouble 
-			mod_trbl = mod_trbl + 1;
+			mod_tbl = mod_tbl + 1;
+		}
+
+		var j;
+		for (j = 0; j < 4; j = j + 1) {
+			if (module[i].level[j] >= 128) {
+				mod_lvl = mod_lvl + 1;
+			}
 		}
 	}
 
@@ -88,14 +119,18 @@ try {
 	printf("Error: %d\n", err);
 }
 
-var trbl;
-var alrm;
+var tbl;
+var alm;
+var lvl;
 
-trbl = mod_trbl + sens_trbl;
-alrm = mod_alrm + sens_alrm;
+tbl = mod_tbl + sens_tbl;
+alm = mod_alm + sens_alm;
+lvl = mod_lvl + sens_lvl;
 
 printf(" - Trouble: %d sensors, %d modules, %3d total.\n", 
-	   sens_trbl, mod_trbl, trbl);
+	   sens_tbl, mod_tbl, tbl);
 printf(" -   Alarm: %d sensors, %d modules, %3d total.\n", 
-	   sens_alrm, mod_alrm, alrm);
+	   sens_alm, mod_alm, alm);
+printf(" -   Level: %d sensors, %d modules, %3d total.\n", 
+	   sens_lvl, mod_lvl, lvl);
 

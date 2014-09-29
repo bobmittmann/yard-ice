@@ -139,6 +139,8 @@
 #define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 1)
 #define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 2)
 
+#define IO_POLL_PERIOD_MS 16
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -159,8 +161,6 @@ static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
 void __attribute__((noreturn)) io_event_task(void);
 void io_init(void);
 
-void led_flash(unsigned int id, unsigned int ms);
-
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);
 
@@ -171,6 +171,10 @@ void lamp_test(void);
 void led_on(unsigned int id);
 
 void led_off(unsigned int id);
+
+bool led_status(unsigned int id);
+
+void led_flash(unsigned int id, unsigned int ms);
 
 void system_reset(void);
 
