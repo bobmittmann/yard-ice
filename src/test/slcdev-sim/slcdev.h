@@ -61,12 +61,9 @@ struct cmd_seq {
 	uint16_t val;
 } seq;
 
-#define SLCDEV_CMD_JS_LINE_MAX 11
-
 struct cmd_entry {
 	struct cmd_seq seq;
 	uint8_t tag; /* The tag string */
-	uint8_t js[11]; /* The javascript lines */
 	uint8_t * code; /* Compiled javascrit bytecodes */
 };
 
@@ -326,8 +323,12 @@ struct slcdev_drv {
  
  */
 
+#define SLCDEV_VM_STACK_SZ 64
+#define SLCDEV_VM_DATA_SZ 64
+
 extern struct slcdev_drv slcdev_drv;
-extern int32_t slcdev_vm_data[32]; /* data area */
+extern int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
+extern int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
 extern uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 
 #ifdef __cplusplus

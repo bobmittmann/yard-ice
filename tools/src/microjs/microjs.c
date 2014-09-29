@@ -112,7 +112,7 @@ extern FILE * microjs_vm_tracef;
 
 int main(int argc,  char **argv)
 {
-	uint8_t vm_code[512]; /* compiled code */
+	uint8_t vm_code[1024]; /* compiled code */
 	int32_t vm_data[64]; /* data area */
 	int32_t vm_stack[64]; /* stack area */
 

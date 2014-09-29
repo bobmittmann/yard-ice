@@ -111,6 +111,15 @@ struct microjs_attr_desc {
 	microjs_attr_parser_t parse;
 };
 
+#include <microjs.h>
+
+struct json_js {
+	struct microjs_rt rt;
+	uint16_t code_sz;
+	struct symtab * symtab;
+	uint8_t * code;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -169,6 +178,10 @@ int microjs_const_str_enc(struct microjs_json_parser * jsn,
 					struct microjs_val * val, 
 					unsigned int bit, void * ptr);
 
+
+int mcrojs_js_array_enc(struct microjs_json_parser * jsn, 
+						struct microjs_val * val, 
+						unsigned int opt, void * ptr);
 
 #ifdef __cplusplus
 }

@@ -685,7 +685,11 @@ static char * get_cmd_next(char ** linep)
 int shell(FILE * f, const char * (* get_prompt)(void), 
 		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
 {
+#if ENABLE_SHELL_HISTORY
+	char * line;
+#else
 	char line[SHELL_LINE_MAX];
+#endif
 	char * cp;
 	char * cmd;
 	char * prompt;
@@ -704,6 +708,9 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 
 #if ENABLE_SHELL_HISTORY
 		fprintf(f, "%s", prompt);
+
+		/* use the history head as line buffer */
+		line = &history.buf[history.head];
 
 		if (freadline_history(&history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;

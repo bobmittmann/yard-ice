@@ -632,47 +632,78 @@ int cfg_device_enc(struct microjs_json_parser * jsn,
 	return cfg_device_list_add(&cdev);
 }
 
+
+/* This is an auxiliarly structure for parsing the switch 
+   configuration JSON file */
+struct cfg_switch {
+	uint8_t id;
+	uint16_t off;
+	uint16_t up;
+	uint16_t down;
+};
+
+int cfg_script_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr) 
+{
+	int ret;
+	struct json_js jj;
+	uint8_t code[256];
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	jj.code_sz = sizeof(code);
+	jj.code = code;
+	jj.symtab = (struct symtab *)slcdev_symbuf;
+
+	if ((ret = mcrojs_js_array_enc(jsn, val, opt, &jj)) < 0)
+		return ret;
+
+	DCC_LOG3(LOG_TRACE, "code=%d data=%d stack=%d", 
+			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
+
+	return ret;
+}
+
+static const struct microjs_attr_desc switch_desc[] = {
+	{ "up", MICROJS_JSON_ARRAY, 0, offsetof(struct cfg_switch, up), 
+		cfg_script_enc },
+	{ "down", MICROJS_JSON_ARRAY, 0, offsetof(struct cfg_switch, down), 
+		cfg_script_enc },
+	{ "off", MICROJS_JSON_ARRAY, 0, offsetof(struct cfg_switch, off), 
+		cfg_script_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+int cfg_switch_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr)
+{
+	struct cfg_switch csw;
+	int ret;
+
+	memset(&csw, 0, sizeof(struct cfg_switch));
+	DCC_LOG1(LOG_TRACE, "SW%d", opt);
+
+	if ((ret = microjs_json_parse_obj(jsn, switch_desc, &csw)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+//	return cfg_device_list_add(&cdev);
+	return 0;
+}
+
+
 static const struct microjs_attr_desc cfg_desc[] = {
 	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_device_enc },
 	{ "module", MICROJS_JSON_OBJECT, 1, 0, cfg_device_enc },
+	{ "sw1", MICROJS_JSON_OBJECT, 1, 0, cfg_switch_enc },
+	{ "sw2", MICROJS_JSON_OBJECT, 2, 0, cfg_switch_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
 #define CFG_MAGIC 0xc01fe9da
-
-struct cfg_info {
-	uint32_t magic;
-	const char * json_txt;
-	uint16_t json_crc;
-	uint16_t json_len;
-	const void * tab_ptr;
-	uint16_t tab_size;
-	uint16_t tab_crc;
-};
-
-int dev_tab_save(struct cfg_info * inf)
-{
-	const void * ptr;
-	int offs;
-	int size;
-	int ret;
-
-	/* wrtie device table */
-	size = (sizeof(ss_dev_tab) + 3) & ~3;
-	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
-
-	if ((ret = stm32_flash_write(offs, ss_dev_tab, size)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
-		return -1;
-	}
-
-	ptr = (const void *)(STM32_MEM_FLASH + offs);
-	inf->tab_crc = crc16ccitt(0, ptr, size);
-	inf->tab_size = size;
-	inf->tab_ptr = ptr;
-
-	return ret;
-}
 
 #define JSON_TOK_BUF_MAX 384
 
@@ -742,95 +773,104 @@ int config_compile(struct fs_file * json)
 	return 0;
 }
 
+struct cfg_info {
+	uint32_t magic;
+	uint16_t json_crc;
+	uint16_t json_len;
+	const char * json_txt;
+};
+
+struct cfg_info * cfg_info_get(void)
+{
+	struct fs_dirent entry;
+	struct cfg_info * inf;
+
+	fs_dirent_get(&entry, FLASHFS_DB_BIN);
+	if (entry.fp->size == 0)
+		return NULL;
+
+	inf = (struct cfg_info *)(entry.fp->data);
+	if (inf->magic != CFG_MAGIC)
+		return NULL;
+
+	return inf;
+}
+
 int config_load(void)
 {
 	struct cfg_info * inf;
-	unsigned int offs;
-	unsigned int size;
-	unsigned int crc;
 	const void * ptr;
 
-	/* check configuration integrity */
-	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
-	/* wrtie device table */
-	size = (sizeof(ss_dev_tab) + 3) & ~3;
-	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
-	ptr = (const void *)(STM32_MEM_FLASH + offs);
-	crc = crc16ccitt(0, ptr, size);
+	if ((inf = cfg_info_get()) == NULL)
+		return -1;
 
-	if ((inf->magic == CFG_MAGIC) && (inf->tab_ptr == ptr) && 
-		(inf->tab_crc == crc) && (inf->tab_size == size)) {
-		memcpy(ss_dev_tab, ptr, sizeof(ss_dev_tab));
-		return 0;
-	}
+	ptr = ((const void *)inf) + sizeof(struct cfg_info);
+	memcpy(ss_dev_tab, ptr, sizeof(ss_dev_tab));
 
-	return -1;
+	return 0;
 }
 
 int config_save(struct fs_file * json)
 {
+	struct fs_dirent entry;
 	struct cfg_info inf;
-	int offs;
-	int size;
+	unsigned int offs;
+	unsigned int size;
 	int ret;
 
-	DCC_LOG(LOG_INFO, "...");
+	fs_dirent_get(&entry, FLASHFS_CFG_BIN);
+
+	/* reserve space for the file entry */
+	offs = entry.blk_offs + sizeof(struct fs_file);
+	size = entry.blk_size - sizeof(struct fs_file);
+
+	DCC_LOG2(LOG_TRACE, "off=0x%06x size=%d", offs, size);
 
 	inf.magic = CFG_MAGIC;
 	if (json == NULL) {
-		inf.json_txt = NULL;
 		inf.json_crc = 0;
 		inf.json_len = 0;
+		inf.json_txt = NULL;
 	} else {
-		inf.json_txt = (char *)json->data;
 		inf.json_crc = json->crc;
 		inf.json_len = json->size;
+		inf.json_txt = (char *)json->data;
 	}
-	if ((ret = dev_tab_save(&inf)) < 0)
-		return ret;
 
-	size = sizeof(struct cfg_info);
-	offs = FLASH_BLK_CFG_BIN_OFFS;
+	/* wrtie device table */
+	offs += sizeof(struct cfg_info);
+	size = (sizeof(ss_dev_tab) + 3) & ~3;
 
-	if ((ret = stm32_flash_write(offs, &inf, size)) < 0) {
+	if ((ret = stm32_flash_write(offs, ss_dev_tab, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return -1;
+	}
+
+	/* wrtie condig info */
+	offs -= sizeof(struct cfg_info);
+
+	if ((ret = stm32_flash_write(offs, &inf, sizeof(struct cfg_info))) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 	}
 
-	return ret;
+	size += sizeof(struct cfg_info);
+	return fs_file_commit(&entry, size);
 }
 
 bool config_is_sane(void)
 {
-	struct cfg_info * inf;
-	unsigned int offs;
-	unsigned int size;
-	unsigned int crc;
-	const void * ptr;
-
-	/* check configuration integrity */
-	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
-	/* wrtie device table */
-	size = (sizeof(ss_dev_tab) + 3) & ~3;
-	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
-	ptr = (const void *)(STM32_MEM_FLASH + offs);
-	crc = crc16ccitt(0, ptr, size);
-
-	if ((inf->magic == CFG_MAGIC) && (inf->tab_ptr == ptr) && 
-		(inf->tab_crc == crc) && (inf->tab_size == size)) {
-		return true;
-	}
-
-	return false;
+	return (cfg_info_get() == NULL) ? false : true;
 }
 
 bool config_need_update(struct fs_file * json)
 {
 	struct cfg_info * inf;
 
-	/* check configuration integrity */
-	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
+	if ((inf = cfg_info_get()) == NULL)
+		return true;
 
-	if (inf->magic != CFG_MAGIC || inf->json_txt != (char *)json->data ||
+	/* check configuration integrity */
+	if (inf->json_txt != (char *)json->data ||
 		inf->json_crc != json->crc || inf->json_len != json->size)
 		return true;
 
@@ -840,34 +880,13 @@ bool config_need_update(struct fs_file * json)
 int config_show_info(FILE * f)
 {
 	struct cfg_info * inf;
-	unsigned int offs;
-	unsigned int size;
-	unsigned int crc;
-	const void * ptr;
 
-	/* check configuration integrity */
-	inf = (struct cfg_info *)(STM32_MEM_FLASH + FLASH_BLK_CFG_BIN_OFFS);
-	/* wrtie device table */
-	size = (sizeof(ss_dev_tab) + 3) & ~3;
-	offs = FLASH_BLK_CFG_BIN_OFFS + FLASH_BLK_CFG_BIN_SIZE - size;
-	ptr = (const void *)(STM32_MEM_FLASH + offs);
-	crc = crc16ccitt(0, ptr, size);
+	if ((inf = cfg_info_get()) == NULL)
+		return -1;
 
-	fprintf(f, " Info: magic=0x%08x size=%d crc=0x%04x\n", inf->magic,
-			inf->tab_size, inf->tab_crc);
 	fprintf(f, " JSON: txt=0x%08x len=%d crc=0x%04x\n", 
 			(uint32_t)inf->json_txt, inf->json_len, inf->json_crc);
 
-	if ((inf->magic == CFG_MAGIC) && (inf->tab_ptr == ptr) && 
-		(inf->tab_crc == crc) && (inf->tab_size == size)) {
-		fprintf(f, "Ok.\n");
-		return 0;
-	}
-
-	fprintf(f, "Invalid configuration!\n");
-	fprintf(f, "Table: magic=0x%08x size=%d crc=0x%04x\n", 
-			(uint32_t)CFG_MAGIC, size, crc);
-
-	return -1;
+	return 0;
 }
 

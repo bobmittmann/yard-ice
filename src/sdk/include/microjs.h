@@ -68,6 +68,7 @@ enum {
 	ERR_EXTERN_NOT_MEMBER   = 32,
 	ERR_EXTERN_READONLY     = 33,
 	ERR_NOT_IMPLEMENTED     = 24,
+	ERR_ATTR_NOT_ARRAY      = 25,
 };
 
 struct symstat {
@@ -163,6 +164,8 @@ struct ext_libdef {
 	uint8_t xcnt;
 	struct extdef xdef[];
 };
+
+extern FILE * microjs_vm_tracef;
 
 #ifdef __cplusplus
 extern "C" {

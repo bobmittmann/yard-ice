@@ -68,6 +68,7 @@ enum {
 	ERR_EXTERN_NOT_MEMBER   = 32,
 	ERR_EXTERN_READONLY     = 33,
 	ERR_NOT_IMPLEMENTED     = 24,
+	ERR_ATTR_NOT_ARRAY      = 25,
 };
 
 struct symstat {
@@ -121,14 +122,16 @@ struct extdef {
 		struct {
 			uint8_t cdef; /* class definition */
 		} ao; /* array of objects, require a lookup function to translate
-				 array index to object instance */
+				 array index to object instance. */
+
 		struct {
 			uint8_t cdef; /* class definition */
 			uint8_t size;
 			int16_t offs;
-		} aos; ; /* array of objects, uses an offset and an object size
-					to translate array index to object instance: 
-					INSTANCE = offs + (size * INDEX) */
+		} aos; /* array of objects, uses an offset and an object size
+				  to translate array index to object instance: 
+				  INSTANCE = offs + (size * INDEX) */
+
 		struct {
 			int32_t val;
 		} ic; /* integer constant */
@@ -161,6 +164,8 @@ struct ext_libdef {
 	uint8_t xcnt;
 	struct extdef xdef[];
 };
+
+extern FILE * microjs_vm_tracef;
 
 #ifdef __cplusplus
 extern "C" {

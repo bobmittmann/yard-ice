@@ -1,61 +1,42 @@
-//
-// Count the sensors and modules in alarm or trouble
-// Clear the troubles and alarms
-//
-
-var pass;
-var mod_trbl = 0;
-var mod_alrm = 0;
-var sens_trbl = 0;
-var sens_alrm = 0;
-var alrm;
-var trbl;
+var mod_tbl = 0;
+var mod_alm = 0;
+var sens_tbl = 0;
+var sens_alm = 0;
 
 try {
 	var i;
 
-	//
-	// Process all sensors
-	//
+	// Process sensors
 	for (i = 0; i < 160; i = i + 1) {
-		if (sens_state(i) == 1) {
-			// clear alarm
-			sens_alarm(i, 0);
-			// count the alarms
-			sens_alrm = sens_alrm + 1;
-		} else {
-			if (sens_state(i) == 2) {
-				// clear the trouble 
-				sens_trouble(i, 0);
-				// count the trouble 
-				sens_trbl = sens_trbl + 1;
-			}
+		var s;
+
+		s = sensor[i];
+
+		var state = sensor[i].state;
+		if (state & 1) {
+			sensor[i].alarm = 0;
+			sens_alm = sens_alm + 1;
+		}
+		if (state & 2) {
+			sensor[i].trouble = 0;
+			sens_tbl = sens_tbl + 1;
 		}
 	}
 
-	//
-	// Process all modules 
-	//
+	// Process modules
 	for (i = 0; i < 160; i = i + 1) {
-		if (mod_state(i) == 1) {
-			// clear alarm
-			mod_alarm(i, 0);
-			// count the alarms
-			mod_alrm = mod_alrm + 1;
-		} else {
-			if (mod_state(i) == 2) {
-				// clear the trouble 
-				mod_trouble(i, 0);
-				// count the trouble 
-				mod_trbl = mod_trbl + 1;
-			}
+		var state = module[i].state;
+		if (state & 1) {
+			module[i].alarm = 0;
+			mod_alm = mod_alm + 1;
+		}
+		if (state & 2) {
+			module[i].trouble = 0;
+			mod_tbl = mod_tbl + 1;
 		}
 	}
 
 } catch (err) {
 	printf("Error: %d\n", err);
 }
-
-trbl = mod_trbl + sens_trbl;
-alrm = mod_alrm + sens_alrm;
 

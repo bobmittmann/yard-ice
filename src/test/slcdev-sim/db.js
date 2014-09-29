@@ -325,9 +325,9 @@
 				"js": [
 						"var x, i;",
 						"for (i = 0; i < 160; i = i + 1) {",
-						"  x = mod_level(i, 1);",
+						"  x = module[i].level[0];",
 						"  if (x > 200) {",
-						"    sens_alarm(1, 1);",
+						"    sensor[i].alarm = 1;",
 						"  }",
 						"}"
 					] 

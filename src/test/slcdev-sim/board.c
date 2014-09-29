@@ -46,8 +46,6 @@ const struct {
 	{ LED6 }
 };
 
-#define IO_POLL_PERIOD_MS 16
-
 void led_on(unsigned int id)
 {
 	__led_on(led_io[id].gpio, led_io[id].pin);
@@ -57,6 +55,12 @@ void led_off(unsigned int id)
 {
 	__led_off(led_io[id].gpio, led_io[id].pin);
 }
+
+bool led_status(unsigned int id)
+{
+	return __is_led_on(led_io[id].gpio, led_io[id].pin);
+}
+
 
 void led_flash(unsigned int id, unsigned int ms)
 {

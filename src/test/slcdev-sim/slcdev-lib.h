@@ -50,7 +50,8 @@
 #define EXT_GROUP           12
 #define EXT_LED				13
 
-#define EXT_LED_ON			15
+#define EXT_LED_ON			14
+#define EXT_LED_FLASH		15
 #define EXT_GRP_CLEAR    	16
 #define EXT_GRP_INSERT      17
 #define EXT_GRP_REMOVE      18
@@ -93,6 +94,8 @@
 #define EXCEPT_TOO_MANY_GROUPS         107
 #define EXCEPT_INVALID_GROUP           108
 #define EXCEPT_INVALID_DEVICE          109
+#define EXCEPT_INVALID_LED             110
+#define EXCEPT_MISSING_ARGUMENT        113
 
 #define CLASS_DEV 0
 #define CLASS_GRP 1
@@ -101,21 +104,21 @@
 #ifdef __SLCDEV_LIB_DEF__
 
 const struct ext_classtab test_classtab = {
-	.ccnt = 2,
+	.ccnt = 3,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
 			.fst = EXT_DEV_STATE, .lst = EXT_DEV_GRP_CLEAR },
 		[CLASS_GRP] = { .nm = "grp", 
 			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
 		[CLASS_LED] = { .nm = "led", 
-			.fst = EXT_LED_ON, .lst = EXT_LED_ON },
+			.fst = EXT_LED_ON, .lst = EXT_LED_FLASH },
 	}
 };
 
 struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 20,
+	.xcnt = 46,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -156,6 +159,13 @@ struct ext_libdef slcdev_lib = {
 			.nm = "led", 
 			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
 
+		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "on" },
+
+		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "flash" ,
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+
 		/* device class members */
 		[EXT_DEV_STATE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
 			.nm = "state" },
@@ -187,7 +197,7 @@ struct ext_libdef slcdev_lib = {
 			.nm = "alarm" },
 		[EXT_DEV_TROUBLE] = { .opt = O_INTEGER | O_MEMBER,  
 			.nm = "trouble" },
-		[EXT_DEV_LEVEL] = { .opt = O_INTEGER | O_MEMBER,
+		[EXT_DEV_LEVEL] = { .opt = O_INTEGER | O_MEMBER | O_ARRAY,
 			.nm = "level" },
 		[EXT_DEV_OUT1] = {.opt = O_INTEGER | O_MEMBER, 
 			.nm = "out1" },

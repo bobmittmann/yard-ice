@@ -64,7 +64,19 @@ object_assign	: '=' exp { op_object_assign }
 				| '.' attr_assign
 				;
 
-attr_assign		: ID { op_push_tmp } '=' exp { op_attr_assign }
+attr_assign		: ID { op_push_tmp } attr_assign2
+				;
+
+attr_assign2    : '=' exp { op_attr_assign }
+				| '[' exp ']' '=' exp { op_array_assign }
+				| method_call { op_ret_discard }
+				;
+
+// --------------------------------------------------------------------------
+// Method calls
+// -------------------------------------------------------------------------- 
+
+method_call		: { op_method_lookup } '(' arg_list_opt ')' { op_call } 
 				;
 
 // --------------------------------------------------------------------------
@@ -189,6 +201,12 @@ object_eval		: { op_object_eval }
 				| '.' attr_eval
 				;
 
-attr_eval		: ID { op_push_tmp, op_attr_eval }
+attr_eval		: ID { op_push_tmp } attr_eval1
+				;
+
+
+attr_eval1		: { op_attr_eval }
+				| method_call { op_call_ret }
+				| '[' exp ']' { op_array_eval }
 				;
 

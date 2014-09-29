@@ -83,7 +83,7 @@
 
 #define SHELL_LINE_MAX 64
 #define SHELL_ARG_MAX 12
-#define SHELL_HISTORY_MAX 4
+#define SHELL_HISTORY_MAX 5
 
 #define TTY_INBUF_LEN 8
 #define TTY_DEV_MAX 1

@@ -10,7 +10,8 @@
 #include "slcdev-lib.h"
 
 uint32_t slcdev_symbuf[64]; /* symbol table buffer */
-int32_t slcdev_vm_data[32]; /* data area */
+int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
+int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
 
 void dev_sim_enable(bool mod, unsigned int addr)
 {
@@ -560,14 +561,14 @@ void __attribute__((noreturn)) sim_event_task(void)
 	uint32_t ctl;
 
 	/* initialize virtual machine */
-	rt.data_sz = sizeof(slcdev_vm_data) / 2;
-	rt.stack_sz = sizeof(slcdev_vm_data) / 2;
-	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
+	rt.data_sz = sizeof(slcdev_vm_data);
+	rt.stack_sz = sizeof(slcdev_vm_stack);
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, slcdev_vm_stack);
 	microjs_vm_clr_data(&vm, &rt);
 
 	sim_reset(); 
 
-	thinkos_sleep(3000);
+	thinkos_sleep(5000);
 
 	slcdev_resume();
 

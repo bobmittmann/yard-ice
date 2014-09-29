@@ -40,6 +40,7 @@
 
 #include "flashfs.h"
 #include "isink.h"
+#include "profclk.h"
 
 #include "slcdev-lib.h"
 
@@ -89,7 +90,7 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 
-	fprintf(f, "RX waiting to receive.");
+	fprintf(f, "XMODEM ... ");
 	if ((fs_xmodem_recv(f, argv[1])) < 0) {
 		fprintf(f, "fs_xmodem_recv() failed!\r\n");
 		return -1;
@@ -799,20 +800,24 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-struct microjs_rt rt;
-
 int cmd_js(FILE * f, int argc, char ** argv)
 {
-	struct symtab * symtab = (struct symtab *)slcdev_symbuf;
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
 	uint8_t code[512]; /* compiled code */
 	uint32_t sdtbuf[64]; /* compiler buffer */
+	int32_t stack[16]; /* exec stack */
 	struct microjs_sdt * microjs; 
+	struct microjs_rt rt;
 	struct microjs_vm vm; 
 	struct symstat symstat;
+	struct fs_dirent entry;
+	uint32_t start_clk;
+	uint32_t stop_clk;
 	int code_sz;
 	char * script;
 	int len;
-	int n;
+	int ret;
+
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -820,41 +825,68 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
+	if (fs_dirent_lookup(argv[1], &entry)) {
+		script = (char *)entry.fp->data;
+		len = entry.fp->size;
+	} else {
+		script = argv[1];
+		len = strlen(argv[1]);
+	}
+
+	profclk_init();
+
 	/* initialize compiler */
 	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab);
-
-	script = argv[1];
-	len = strlen(argv[1]);
 
 	symstat = symtab_state_save(symtab);
 
 	microjs_sdt_begin(microjs, code, sizeof(code));
 
-	/* compile */
-	if ((n = microjs_compile(microjs, script, len)) < 0)
-		return -1;
-
-	if ((n = microjs_compile(microjs, script, len)) < 0) {
+	start_clk = profclk_get();
+	if ((ret = microjs_compile(microjs, script, len)) < 0) {
 		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -n);
-		microjs_sdt_error(stderr, microjs, n);
+		fprintf(f, "# compile error: %d\n", -ret);
+		microjs_sdt_error(f, microjs, ret);
 		return -1;
 	}
-
-	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0) {
+	if ((ret = microjs_sdt_end(microjs, &rt)) < 0) {
 		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -code_sz);
-		microjs_sdt_error(stderr, microjs, code_sz);
+		fprintf(f, "# compile error: %d\n", -ret);
+		microjs_sdt_error(f, microjs, ret);
+		return -1;
+	}
+	stop_clk = profclk_get();
+
+	code_sz = ret;
+	fprintf(f, " - Comile time: %d us.\n", profclk_us(stop_clk - start_clk));
+	fprintf(f, "  - code: %d\n", code_sz);
+	fprintf(f, "  - data: %d of %d\n", rt.data_sz, sizeof(slcdev_vm_data));
+	fprintf(f, " - stack: %d of %d\n", rt.stack_sz, sizeof(stack));
+
+	if (rt.data_sz > sizeof(slcdev_vm_data)) {
+		fprintf(f, "# data overlow. %d bytes required\n", rt.data_sz);
 		return -1;
 	}
 
-	/* initialize virtual machine */
-	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
-
-	if ((n = microjs_exec(&vm, code, n)) != 0){
-		fprintf(f, "# exec error: %d\n", n);
+	if (rt.stack_sz > sizeof(stack)) {
+		fprintf(f, "# stack overflow. %d bytes required\n", rt.stack_sz);
 		return -1;
 	}
+
+#if MICROJS_TRACE_ENABLED
+	microjs_vm_tracef = f;
+#endif
+
+	/* initialize virtual machine instance */
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, stack);
+
+	start_clk = profclk_get();
+	if ((ret = microjs_exec(&vm, code, code_sz)) != 0){
+		fprintf(f, "# exec error: %d\n", ret);
+		return -1;
+	}
+	stop_clk = profclk_get();
+	fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
 
 	return 0;
 }
@@ -863,6 +895,8 @@ int cmd_js(FILE * f, int argc, char ** argv)
 int cmd_run(FILE * f, int argc, char ** argv)
 {
 	struct microjs_vm vm; 
+	struct microjs_rt rt;
+	int32_t stack[16]; /* local stack */
 	uint8_t * code;
 	int ret;
 
@@ -879,8 +913,11 @@ int cmd_run(FILE * f, int argc, char ** argv)
 
 	DCC_LOG1(LOG_TRACE, "code=%08x.", code);
 
-	/* initialize virtual machine */
-	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, NULL);
+	rt.data_sz = sizeof(slcdev_vm_data);
+	rt.stack_sz = sizeof(stack);
+
+	/* initialize virtual machine instance */
+	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, stack);
 
 	DCC_LOG(LOG_TRACE, "microjs_exec...");
 
