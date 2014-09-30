@@ -424,7 +424,7 @@ static void ap_hdr_decode(unsigned int msg)
 			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
-			__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_SIM, 1);  
+			__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
 			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 			/* AP opcode */
@@ -654,7 +654,7 @@ static void clip_msg_decode(unsigned int msg)
 		DCC_LOG(LOG_INFO, "[CLIP]");
 
 		/* signal the simulator */
-		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_SIM, 1);  
+		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 	} else {

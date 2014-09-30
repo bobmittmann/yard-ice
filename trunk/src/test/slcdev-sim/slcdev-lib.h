@@ -45,6 +45,7 @@
 #define EXT_PRINT	        5
 
 #define EXT_MODEL_NAME      6
+#define EXT_THIS            9
 #define EXT_MODULE          10
 #define EXT_SENSOR          11
 #define EXT_GROUP           12
@@ -82,7 +83,8 @@
 #define EXT_DEV_PW3         42
 #define EXT_DEV_PW4         43
 #define EXT_DEV_PW5         44
-#define EXT_DEV_GRP_CLEAR   45
+#define EXT_DEV_GRP         45
+#define EXT_DEV_GRP_CLEAR   46
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -115,10 +117,10 @@ const struct ext_classtab test_classtab = {
 	}
 };
 
-struct ext_libdef slcdev_lib = {
+const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 46,
+	.xcnt = 47,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -143,7 +145,11 @@ struct ext_libdef slcdev_lib = {
 			.nm = "model_name", 
 			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
 
-		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT, 
+		[EXT_THIS] = { .opt = O_OBJECT,
+			.nm = "this", 
+			.o = { .cdef = CLASS_DEV } },
+
+		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "sensor", 
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
 
@@ -217,6 +223,8 @@ struct ext_libdef slcdev_lib = {
 			.nm = "pw4" },
 		[EXT_DEV_PW5] = { .opt = O_INTEGER | O_MEMBER,
 			.nm = "pw5" },
+		[EXT_DEV_GRP] = { .opt = O_INTEGER | O_MEMBER | O_ARRAY,
+			.nm = "grp" },
 		[EXT_DEV_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,  
 			.nm = "grp_clear", 
 			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
@@ -238,7 +246,7 @@ struct ext_libdef slcdev_lib = {
 
 #else
 
-extern struct ext_libdef slcdev_lib;
+extern const struct ext_libdef slcdev_lib;
 
 #endif
 

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Last symbol num:159  Num rules:101 */
+/* Last symbol num:160  Num rules:101 */
 
 #define T_EOF                    0
 #define T_DOT                    1
@@ -131,43 +131,44 @@
 #define A_OP_POP_TMP           119
 #define A_OP_RET_DISCARD       120
 #define A_OP_ARRAY_XLAT        121
-#define A_OP_OBJECT_ASSIGN     122
-#define A_OP_ATTR_ASSIGN       123
-#define A_OP_ARRAY_ASSIGN      124
-#define A_OP_METHOD_LOOKUP     125
-#define A_OP_CALL              126
-#define A_OP_FUNCTION_LOOKUP   127
-#define A_OP_ARG               128
-#define A_OP_OR                129
-#define A_OP_LOGIC_OR          130
-#define A_OP_XOR               131
-#define A_OP_AND               132
-#define A_OP_LOGIC_AND         133
-#define A_OP_LT                134
-#define A_OP_GT                135
-#define A_OP_EQU               136
-#define A_OP_NEQ               137
-#define A_OP_GTE               138
-#define A_OP_LTE               139
-#define A_OP_SHL               140
-#define A_OP_ASR               141
-#define A_OP_ADD               142
-#define A_OP_SUB               143
-#define A_OP_DIV               144
-#define A_OP_MOD               145
-#define A_OP_MUL               146
-#define A_OP_INV               147
-#define A_OP_MINUS             148
-#define A_OP_NOT               149
-#define A_OP_PUSH_INT          150
-#define A_OP_PUSH_STRING       151
-#define A_OP_PUSH_TRUE         152
-#define A_OP_PUSH_FALSE        153
-#define A_OP_VAR_EVAL          154
-#define A_OP_CALL_RET          155
-#define A_OP_OBJECT_EVAL       156
-#define A_OP_ATTR_EVAL         157
-#define A_OP_ARRAY_EVAL        158
+#define A_OP_OBJECT_GET        122
+#define A_OP_OBJECT_ASSIGN     123
+#define A_OP_ATTR_ASSIGN       124
+#define A_OP_ARRAY_ASSIGN      125
+#define A_OP_METHOD_LOOKUP     126
+#define A_OP_CALL              127
+#define A_OP_FUNCTION_LOOKUP   128
+#define A_OP_ARG               129
+#define A_OP_OR                130
+#define A_OP_LOGIC_OR          131
+#define A_OP_XOR               132
+#define A_OP_AND               133
+#define A_OP_LOGIC_AND         134
+#define A_OP_LT                135
+#define A_OP_GT                136
+#define A_OP_EQU               137
+#define A_OP_NEQ               138
+#define A_OP_GTE               139
+#define A_OP_LTE               140
+#define A_OP_SHL               141
+#define A_OP_ASR               142
+#define A_OP_ADD               143
+#define A_OP_SUB               144
+#define A_OP_DIV               145
+#define A_OP_MOD               146
+#define A_OP_MUL               147
+#define A_OP_INV               148
+#define A_OP_MINUS             149
+#define A_OP_NOT               150
+#define A_OP_PUSH_INT          151
+#define A_OP_PUSH_STRING       152
+#define A_OP_PUSH_TRUE         153
+#define A_OP_PUSH_FALSE        154
+#define A_OP_VAR_EVAL          155
+#define A_OP_CALL_RET          156
+#define A_OP_OBJECT_EVAL       157
+#define A_OP_ATTR_EVAL         158
+#define A_OP_ARRAY_EVAL        159
 
 #define IS_A_TERMINAL(_X) ((_X) < NONTERM_BASE)
 #ifdef ACTION_BASE

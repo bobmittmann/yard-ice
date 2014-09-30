@@ -34,11 +34,7 @@
 #define IPRE_DEFAULT 35
 
 /***************************************************************************
-  Simulation models 
- ***************************************************************************/
-
-/***************************************************************************
-  Device  Database
+  Database
  ***************************************************************************/
 
 #define SLCDEV_DESC_LEN_MAX 64
@@ -59,7 +55,7 @@ struct pw_list {
 struct cmd_seq {
 	uint16_t msk;
 	uint16_t val;
-} seq;
+};
 
 struct cmd_entry {
 	struct cmd_seq seq;
@@ -74,35 +70,13 @@ struct cmd_list {
 	struct cmd_entry cmd[SLCDEV_CMD_LIST_LEN_MAX]; 
 };
 
-struct db_obj {
-	uint16_t len;
-	uint16_t type;
-	struct db_obj * next;
-};
+/***************************************************************************
+  Simulation models 
+ ***************************************************************************/
 
-struct db_info {
-	struct {
-		uint16_t len;
-		uint16_t type;
-		struct db_obj * next;
-	};
-	uint8_t desc; /* Description string */
-	uint8_t version[3]; /* version info */
-	const char * json_txt;
-	uint16_t json_len;
-	uint16_t json_crc;
-
-	uint16_t obj_crc;
-	uint16_t obj_cnt;
-	struct db_obj * obj[];
-};
 
 struct db_dev_model {
-	struct {
-		uint16_t len;
-		uint16_t type;
-		struct db_obj * next;
-	};
+	struct db_dev_model * next;
 	union {
 		uint32_t opt;
 		struct {
@@ -124,76 +98,38 @@ struct db_dev_model {
 	struct cmd_list * cmd;
 };
 
-struct obj_module {
+#define DB_MODEL_MAX 64
+
+struct db_info {
+	uint32_t magic;
+	uint8_t desc; /* Description string */
+	uint8_t version[3]; /* version info */
 	struct {
 		uint16_t len;
-		uint16_t type;
-		struct db_obj * next;
-	};
-	union {
-		uint32_t opt;
-		struct {
-			uint32_t ap: 1;
-			uint32_t module: 1;
-		};
-	};
-	uint8_t model;	
-	uint8_t desc;	
-	uint8_t sim; /* Simulation algorithm */
-	uint8_t res;
-	struct pw_list * pw1;
-	struct pw_list * pw2;
-	struct pw_list * pw3;
-	struct pw_list * pw4;
-	struct pw_list * pw5;
-	struct cmd_list * cmd;
+		uint16_t crc;
+		const char * txt;
+	} json;
+
+	uint16_t obj_cnt;
+	struct db_dev_model * obj[DB_MODEL_MAX];
 };
 
-struct obj_sensor {
-	struct {
-		uint16_t len;
-		uint16_t type;
-		struct db_obj * next;
-	};
-	union {
-		uint32_t opt;
-		struct {
-			uint32_t ap: 1;
-			uint32_t module: 1;
-		};
-	};
-	uint8_t model;	
-	uint8_t desc;	
-	uint8_t sim; /* Simulation algorithm */
-	uint8_t res;
-	struct pw_list * pw1;
-	struct pw_list * pw2;
-	struct pw_list * pw3;
-	struct pw_list * pw4;
-	struct pw_list * pw5;
-	struct cmd_list * cmd;
-};
-
-enum {
-	DB_OBJ_DB_INFO = 0,
-	DB_OBJ_SENSOR,
-	DB_OBJ_MODULE
-};
 
 /***************************************************************************
   Events
  ***************************************************************************/
 
-#define SLC_EV_SIM        0
-#define SLC_EV_TRIG       1
-#define SLC_EV_SIM_STOP   2
-#define SLC_EV_SIM_RESUME 3
-#define SLC_EV_SW1_OFF    4
-#define SLC_EV_SW1_UP     5
-#define SLC_EV_SW1_DOWN   6
-#define SLC_EV_SW2_OFF    7
-#define SLC_EV_SW2_UP     8
-#define SLC_EV_SW2_DOWN   9
+#define SLC_EV_INIT       0
+#define SLC_EV_SIM_STOP   1
+#define SLC_EV_SIM_RESUME 2
+#define SLC_EV_DEV_POLL   3
+#define SLC_EV_TRIG       4
+#define SLC_EV_SW1_OFF    5
+#define SLC_EV_SW1_UP     6
+#define SLC_EV_SW1_DOWN   7
+#define SLC_EV_SW2_OFF    8
+#define SLC_EV_SW2_UP     9
+#define SLC_EV_SW2_DOWN   10
 
 /***************************************************************************
   Runtime
@@ -207,6 +143,7 @@ struct usr_switch {
 
 struct slcdev_usr {
 	struct usr_switch sw[2];
+	uint8_t * init; /* init script */
 };
 
 extern struct slcdev_usr usr;

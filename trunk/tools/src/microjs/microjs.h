@@ -69,6 +69,7 @@ enum {
 	ERR_EXTERN_READONLY     = 33,
 	ERR_NOT_IMPLEMENTED     = 24,
 	ERR_ATTR_NOT_ARRAY      = 25,
+	ERR_NULL_POINTER        = 26,
 };
 
 struct symstat {

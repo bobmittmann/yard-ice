@@ -123,7 +123,7 @@ static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 	} val;
 	int i = 0;
 
-	#define _va_arg(AP, TYPE) ((i < argc) ? argv[i++] : 0)
+	#define _va_arg(AP, TYPE) ((TYPE)((i < argc) ? argv[i++] : 0))
 
 	n = 0;
 	w = 0;
@@ -198,7 +198,7 @@ static int32_t __vprintf(void * env, int32_t argv[], int argc, const char * fmt)
 		}
 
 		if (c == 's') {
-			cp = (char *)str(_va_arg(ap, char *));
+			cp = (char *)str(_va_arg(ap, unsigned int) & 0xff);
 			n = strlen(cp);
 			goto print_buf;
 		}
@@ -262,7 +262,7 @@ print_buf:
 
 int32_t __printf(void * env, int32_t argv[], int argc)
 {
-	const char * fmt = str(argv[0]);
+	const char * fmt = str(((unsigned int)argv[0]) & 0xff);
 
 	return __vprintf(env, &argv[1], argc - 1, fmt);
 }
@@ -295,6 +295,13 @@ int32_t __model_name(void * env, int32_t argv[], int argc)
 /* --------------------------------------------------------------------------
    Devices API
    -------------------------------------------------------------------------- */
+
+/* Object instance resolver*/
+int32_t __this(void * env, int32_t argv[], int argc)
+{
+	argv[0] = slcdev_drv.addr;
+	return 1; /* return the number of return values */
+}	
 
 /* Array index translator */
 int32_t __sensor(void * env, int32_t argv[], int argc)
@@ -620,6 +627,59 @@ int32_t __dev_level(void * env, int32_t argv[], int argc)
 	argv[0] = ss_dev_tab[idx].lvl[lvl];
 
 	return 1; /* return the number of return values */
+}
+
+int32_t __dev_grp(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+	unsigned int grp = argv[1];
+	int i;
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if ((grp == 0) || (grp >= 256))
+		return -EXCEPT_INVALID_GROUP; /* Throw an exception */
+
+	if (argc > 2) {
+		unsigned int val = argv[2];
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+
+		if (val) {
+			/* insert into group */
+			for (i = 0; i < 4; ++i) {
+				if (ss_dev_tab[idx].grp[i] == grp)
+					return 0;
+			}
+		
+			for (i = 0; i < 4; ++i) {
+				if (ss_dev_tab[idx].grp[i] == 0) {
+					ss_dev_tab[idx].grp[i] = grp;
+					return 0;
+				}
+			}
+		
+			return -EXCEPT_TOO_MANY_GROUPS;
+		} 
+		
+		/* remove from group */
+		for (i = 0; i < 4; ++i) {
+			if (ss_dev_tab[idx].grp[i] == grp)
+				ss_dev_tab[idx].grp[i] = 0;
+		}
+		return 0;
+	}
+
+	for (i = 0; i < 4; ++i) {
+		if (ss_dev_tab[idx].grp[i] == grp) {
+			argv[0] = 1;
+			return 1;
+		}
+	}
+
+	argv[0] = 0;
+	return 1;
 }
 
 int32_t __dev_out1(void * env, int32_t argv[], int argc)
@@ -989,6 +1049,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 
 	[EXT_SENSOR] = __sensor,
 	[EXT_MODULE] = __module,
+	[EXT_THIS] = __this,
 
 	[EXT_DEV_STATE] = __dev_state,
 	[EXT_DEV_MODEL] = __dev_model,
@@ -1016,6 +1077,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_DEV_PW4] = __dev_pw4,
 	[EXT_DEV_PW5] = __dev_pw5,
 	[EXT_DEV_GRP_CLEAR] = __dev_grp_clear,
+	[EXT_DEV_GRP] = __dev_grp,
 
 	[EXT_GRP_CLEAR] = __grp_clear,
 	[EXT_GRP_INSERT] = __grp_insert,

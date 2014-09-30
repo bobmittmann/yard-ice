@@ -97,7 +97,12 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 	int opt;
 //	int cnt = 0;
 
-	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
+	if (code == NULL) {
+		DCC_LOG(LOG_WARNING, "null pointer!");
+		return ERR_NULL_POINTER;
+	}
+
+	DCC_LOG3(LOG_INFO, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
 			 (int)((int)(sp - vm->sp) * sizeof(int32_t)),
 			 (int)((int)(xp - vm->sp) * sizeof(int32_t)),
 			 (int)(pc - code));
@@ -439,7 +444,7 @@ done:
 	if (trace)
 		FTRACEF(f, "SP=0x%04x\n", (int)(sp - data) * SIZEOF_WORD);
 
-	DCC_LOG3(LOG_TRACE, "end: SP=0x%04x XP=0x%04x PC=0x%04x", 
+	DCC_LOG3(LOG_INFO, "end: SP=0x%04x XP=0x%04x PC=0x%04x", 
 			 (int)((int)(sp - vm->sp) * sizeof(int32_t)),
 			 (int)((int)(xp - vm->sp) * sizeof(int32_t)),
 			 (int)(pc - code));

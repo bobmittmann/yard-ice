@@ -27,7 +27,84 @@
 	},
 
 	"sensor": { 
+		"model" : "1251B", 
+		"desc" : "Ionization Smoke Detector", 
+		"sim" : "ion", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 870, 930],
+			["Low Chamber", 120, 180],
+			["High Chamber", 260, 330],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 2130, 2880]
+		],
+		"pw5" : [540, 660]
+	},
+
+
+	"sensor": { 
 		"model" : "2251", 
+		"desc" : "Photoelectric Smoke Detector", 
+		"sim" : "photo", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 3
+		},
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 618, 1068],
+			["Trouble", 120, 660],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 3100, 3825]
+		],
+		"pw5" : [810, 990]
+	},
+
+	"sensor": { 
+		"model" : "2251B", 
+		"desc" : "Photoelectric Smoke Detector", 
+		"sim" : "photo", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 3
+		},
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 618, 1068],
+			["Trouble", 120, 660],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 3100, 3825]
+		],
+		"pw5" : [810, 990]
+	},
+
+	"sensor": { 
+		"model" : "2251BR", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
 		"tbl" : {
@@ -74,6 +151,83 @@
 		],
 		"pw5" : [810, 990]
 	},
+
+	"sensor": { 
+		"model" : "2251TB", 
+		"desc" : "Photoelectric Smoke Detector", 
+		"sim" : "photo", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540, 660]
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 525, 975],
+			["Trouble", 120, 660],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Thermal Alarm (60°C)", 2800, 3840],
+			["Remote Test", 3100, 3840]
+		],
+		"pw5" : [810, 990]
+	},
+
+	"sensor": { 
+		"model" : "5251B", 
+		"desc" : "Heat Detector", 
+		"sim" : "heat", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
+	},
+
+	"sensor": { 
+		"model" : "5251RB", 
+		"desc" : "Heat Detector", 
+		"sim" : "heat", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
+	},
+
+	"sensor": { 
+		"model" : "5251H", 
+		"desc" : "Heat Detector", 
+		"sim" : "heat", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal, 25°C", 1070, 1400],
+			["Normal, 57.2°C", 1895, 2110],
+			["Remote Test", 3250, 3330]
+		],
+		"pw5" : [270, 330]
+	},
+
 
 	"sensor": { 
 		"model" : "5251P", 
@@ -194,6 +348,29 @@
 	},
 
 	"module": { 
+		"model": "SC-6", 
+		"desc": "6x Supervised Control Module", 
+		"sim" : "control", 
+		"pw1": [240, 360], 
+		"pw2": [ 
+			["Reset(Normal)", 240, 360],
+			["Set", 480, 720] 
+		],
+		"pw3": [
+			["Normal", 240, 360],
+			["Open", 480, 720],
+			["Short", 720, 1080]
+		],
+		"pw4": [
+			["Normal", 670, 1430],
+			["Open", 0, 243],
+			["Short", 1619, 4000]
+		],
+		"pw5": [480, 720]
+	},
+
+
+	"module": { 
 		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
 		"sim" : "mini", 
@@ -236,6 +413,54 @@
 	},
 
 	"module": { 
+		"model": "M500DM", 
+		"ap": false,
+		"desc": "Dual Monitor Module", 
+		"sim" : "monitor", 
+		"pw1": ["Reference Pulsewidth", 240, 360], 
+		"pw2": [
+			["Class A Normal", 240, 360],
+			["Class A Fixed", 480, 720]
+		],
+		"pw3": [
+			["Normal", 240, 360],
+			["Open", 480, 720],
+			["Short,Alarm", 720, 1080]
+		],
+		"pw4": [
+			["Normal", 670, 1430],
+			["Open", 0, 243],
+			["Short", 1619, 4000]
+		],
+		"pw5": [240, 360]
+	},
+
+	"module": { 
+		"model": "IM-10", 
+		"ap": false,
+		"desc": "10 Input Module", 
+		"sim" : "monitor", 
+		"pw1": ["Reference Pulsewidth", 240, 360], 
+		"pw2": [
+			["Class A Normal", 240, 360],
+			["Class A Fixed", 480, 720]
+		],
+		"pw3": [
+			["Normal", 240, 360],
+			["Open", 480, 720],
+			["Short,Alarm", 720, 1080]
+		],
+		"pw4": [
+			["Normal", 670, 1430],
+			["Open", 0, 243],
+			["Short", 1619, 4000]
+		],
+		"pw5": [240, 360]
+	},
+
+
+
+	"module": { 
 		"model": "M500M-4-20", 
 		"ap": false,
 		"desc": "500 Series 4-20mA Input Device", 
@@ -263,6 +488,65 @@
 		"pw4": ["Open", 0, 343],
 		"pw5": [480, 720]
 	},
+
+	"module": { 
+		"model": "CR-6", 
+		"sim" : "relay", 
+		"desc": "Six Up Relay Control Module", 
+		"pw1": [240, 360],
+		"pw2": [
+			["Reset(Normal)", 240, 360],
+			["Set", 480, 720]
+		],
+		"pw3": ["Open", 480, 720],
+		"pw4": ["Open", 0, 343],
+		"pw5": [480, 720]
+	},
+
+	"module": { 
+		"model": "M502M", 
+		"sim" : "czif", 
+		"desc": "Conventional Zone Interface Module", 
+		"pw1": [274, 339],
+		"pw2": [
+			["Class A Normal", 248, 367],
+			["Class A Fixed", 497, 734]
+		],
+		"pw3": [
+			["Normal", 248, 367],
+			["Open", 497, 734],
+			["Short,Alarm", 746, 1100]
+		],
+		"pw4": [
+			["Normal", 725, 1378],
+			["Open", 0, 212],
+			["Short,Alarm", 1800, 4000]
+		],
+		"pw5": [240, 360]
+	},
+
+	"module": { 
+		"model": "CZ-6", 
+		"sim" : "czif", 
+		"desc": "Six Up Conventional Zone Interface Module", 
+		"pw1": [274, 339],
+		"pw2": [
+			["Class A Normal", 248, 367],
+			["Class A Fixed", 497, 734]
+		],
+		"pw3": [
+			["Normal", 248, 367],
+			["Open", 497, 734],
+			["Short,Alarm", 746, 1100]
+		],
+		"pw4": [
+			["Normal", 725, 1378],
+			["Open", 0, 212],
+			["Short,Alarm", 1800, 4000]
+		],
+		"pw5": [240, 360]
+	},
+
 
 	"module": { 
 		"model": "M500FP", 

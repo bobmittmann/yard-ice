@@ -177,7 +177,10 @@ int str_add(const char * s, unsigned int len)
 const char * str(unsigned int idx)
 {
 	const struct const_strbuf * p = &flash_strbuf;
-
+	
+	if ((idx * sizeof(uint16_t)) >= const_str_heap) 
+		return "";
+	
 	return p->base + p->offs[idx];
 }
 
@@ -289,8 +292,6 @@ int cstr_add(const char * s, unsigned int len)
 
 	return flash_str_write(dst, len + 1);
 }
-
-
 
 int const_str_lookup(const char * s, unsigned int len)
 	__attribute__((weak, alias("str_lookup")));

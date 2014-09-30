@@ -413,9 +413,12 @@ int config_dump(FILE * f)
 	return 0;
 }
 
-uint16_t cfg_stack = FLASH_BLK_CFG_BIN_SIZE;
 #define CFG_STACK_LIMIT (sizeof(struct fs_file) + \
-						 sizeof(struct cfg_info) + sizeof(ss_dev_tab))
+						 sizeof(struct cfg_info) + \
+						 sizeof(ss_dev_tab) + \
+						 sizeof(usr))
+
+uint16_t cfg_stack = CFG_STACK_LIMIT;
 
 static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 {
@@ -423,7 +426,9 @@ static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 	uint32_t offs;
 	int ret;
 
-	pos = (cfg_stack - len) & ~3;
+//	pos = (cfg_stack - len) & ~3;
+
+	pos = (cfg_stack + 3) & ~3;
 	offs = FLASH_BLK_CFG_BIN_OFFS + pos;
 	DCC_LOG3(LOG_TRACE, "buf=0x%08x len=%d offs=%06x", buf, len, offs);
 
@@ -433,12 +438,12 @@ static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 	}
 
 	/* update stack */
-	cfg_stack = pos;
+	cfg_stack = pos + len;
 
-	/* check for collision */
-	if (cfg_stack <= CFG_STACK_LIMIT) {
+	/* check for overflow */
+	if (cfg_stack > FLASH_BLK_CFG_BIN_SIZE) {
 		DCC_LOG2(LOG_ERROR, "no memory stack=%d limit=%d!", 
-				cfg_stack, CFG_STACK_LIMIT);
+				cfg_stack, FLASH_BLK_CFG_BIN_SIZE);
 		return -1;
 	}
 
@@ -638,8 +643,6 @@ int cfg_script_enc(struct microjs_json_parser * jsn,
 	struct json_js jj;
 	uint8_t code[256];
 
-	DCC_LOG(LOG_TRACE, "...");
-
 	jj.code_sz = sizeof(code);
 	jj.code = code;
 	jj.symtab = (struct symtab *)slcdev_symbuf;
@@ -672,8 +675,8 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 	struct usr_switch * sw;
 	int ret;
 
-	DCC_LOG1(LOG_TRACE, "SW%d", opt);
-	sw = &usr.sw[opt - 1];
+	DCC_LOG1(LOG_TRACE, "SW%d", opt + 1);
+	sw = &usr.sw[opt];
 	memset(sw, 0, sizeof(struct usr_switch));
 
 	if ((ret = microjs_json_parse_obj(jsn, switch_desc, sw)) < 0) {
@@ -687,15 +690,42 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 }
 
 
-static const struct microjs_attr_desc cfg_desc[] = {
-	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_device_enc },
-	{ "module", MICROJS_JSON_OBJECT, 1, 0, cfg_device_enc },
-	{ "sw1", MICROJS_JSON_OBJECT, 1, 0, cfg_switch_enc },
-	{ "sw2", MICROJS_JSON_OBJECT, 2, 0, cfg_switch_enc },
+static const struct microjs_attr_desc misc_desc[] = {
+	{ "init", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, init), 
+		cfg_script_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
-#define CFG_MAGIC 0xc01fe9da
+
+int cfg_misc_enc(struct microjs_json_parser * jsn, 
+				 struct microjs_val * val, 
+				 unsigned int opt, void * ptr)
+{
+	int ret;
+
+	DCC_LOG1(LOG_TRACE, "init=%p", usr.init);
+
+	if ((ret = microjs_json_parse_obj(jsn, misc_desc, &usr)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	DCC_LOG1(LOG_TRACE, "init=%p", usr.init);
+
+	return ret;
+}
+
+static const struct microjs_attr_desc cfg_desc[] = {
+	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_device_enc },
+	{ "module", MICROJS_JSON_OBJECT, 1, 0, cfg_device_enc },
+	{ "sw1", MICROJS_JSON_OBJECT, 0, 0, cfg_switch_enc },
+	{ "sw2", MICROJS_JSON_OBJECT, 1, 0, cfg_switch_enc },
+	{ "misc", MICROJS_JSON_OBJECT, 0, 0, cfg_misc_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+#define CFG_VERSION 1
+#define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 #define JSON_TOK_BUF_MAX 384
 
@@ -725,6 +755,8 @@ const char * const cfg_labels[] = {
 	"up",
 	"down",
 	"script",
+	"init",
+	"misc",
 	NULL	
 };
 
@@ -742,7 +774,7 @@ int config_compile(struct fs_file * json)
 	}
 
 	/* initialize stack */
-	cfg_stack = FLASH_BLK_CFG_BIN_SIZE;
+	cfg_stack = CFG_STACK_LIMIT;
 
 	/* uncofigure all devices */
 	dev_sim_uncofigure_all();
@@ -836,13 +868,6 @@ int config_save(struct fs_file * json)
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 		return -1;
 	}
-	offs += size;
-
-	if (offs > (FLASH_BLK_CFG_BIN_OFFS + cfg_stack)) {
-		DCC_LOG2(LOG_ERROR, "config stack overflow: offs=%06x stack=%06x",
-				 offs, cfg_stack);
-		return -1;
-	}
 
 	inf.magic = CFG_MAGIC;
 	if (json == NULL) {
@@ -861,7 +886,7 @@ int config_save(struct fs_file * json)
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 	}
 
-	size = entry.blk_size - sizeof(struct fs_file);
+	size = cfg_stack - sizeof(struct fs_file);
 	return fs_file_commit(&entry, size);
 }
 

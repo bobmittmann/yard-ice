@@ -70,6 +70,7 @@ static const char * const err_tab[] = {
 	[ERR_EXTERN_READONLY] = "attribute is read-only",
 	[ERR_NOT_IMPLEMENTED] = "construct not implemented",
 	[ERR_ATTR_NOT_ARRAY] = "attribute is not an array",
+	[ERR_NULL_POINTER] = "null pointer",
 
 };
 

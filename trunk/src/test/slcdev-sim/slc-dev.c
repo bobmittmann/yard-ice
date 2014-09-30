@@ -34,7 +34,7 @@ const char * shell_prompt(void)
 }
 
 uint32_t __attribute__((aligned(8))) io_event_stack[24];
-uint32_t __attribute__((aligned(8))) sim_event_stack[80];
+uint32_t __attribute__((aligned(8))) sim_event_stack[128];
 
 #if THINKOS_STDERR_FAULT_DUMP
 const struct file stm32_uart_file = {
@@ -88,9 +88,6 @@ int main(int argc, char ** argv)
 	/* initialize constat string buffer */
 	const_strbuf_init();
 
-	/* initialize database */
-	device_db_init();
-
 	/* load configuration */
 	config_load();
 
@@ -121,6 +118,8 @@ int main(int argc, char ** argv)
 #else
 	stderr = f;
 #endif
+
+	slcdev_event_raise(SLC_EV_INIT);
 
 	/* start a shell on the serial TTY */
 	shell(f, shell_prompt, shell_greeting, cmd_tab);
