@@ -673,8 +673,6 @@ int mcrojs_js_array_enc(struct microjs_json_parser * jsn,
 	int typ;
 	int ret;
 
-	DCC_LOG(LOG_TRACE, "1.");
-
 	/* initialize compiler */
 	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), jj->symtab);
 
@@ -692,15 +690,15 @@ int mcrojs_js_array_enc(struct microjs_json_parser * jsn,
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_STRING) {
 
 		++line;
-		DCC_LOG1(LOG_TRACE, "line %d ...", line);
+		DCC_LOG1(LOG_INFO, "line %d ...", line);
 
 		if ((ret = microjs_compile(microjs, val->str.dat, val->str.len)) < 0) {
-			DCC_LOG1(LOG_TRACE, "compile err %d", ret);
+			DCC_LOG1(LOG_INFO, "compile err %d", ret);
 			if (ret != -ERR_UNEXPECED_EOF)
 				goto compile_error;
 		} 
 		
-		DCC_LOG1(LOG_TRACE, "compile ret %d", ret);
+		DCC_LOG1(LOG_INFO, "compile ret %d", ret);
 			
 		if (ret > 0)
 			microjs_sdt_reset(microjs);

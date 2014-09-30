@@ -47,7 +47,7 @@ static int tgt_alloc32(struct microjs_sdt * microjs)
 	addr = (microjs->data_pos + SIZEOF_WORD - 1) & ~(SIZEOF_WORD - 1);
 
 	microjs->data_pos = addr + SIZEOF_WORD;
-	DCC_LOG1(LOG_TRACE, "data_pos=%d", microjs->data_pos);
+	DCC_LOG1(LOG_INFO, "data_pos=%d", microjs->data_pos);
 
 	if (microjs->data_pos > microjs->data_max)
 		microjs->data_max = microjs->data_pos;
@@ -366,7 +366,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	DCC_LOG1(LOG_TRACE, "array object xid=%d", xid);
+	DCC_LOG1(LOG_INFO, "array object xid=%d", xid);
 
 	xdef = sym_extern_get(microjs->tab, xid);
 
@@ -402,7 +402,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 		microjs->code[microjs->pc++] = 1; /* stack size (arguments) */
 	}
 
-	DCC_LOG3(LOG_TRACE, "class=\"%s\" fst=%d lst=%d",  
+	DCC_LOG3(LOG_INFO, "class=\"%s\" fst=%d lst=%d",  
 			 cdef->nm, cdef->fst, cdef->lst);
 
 	cld.fst = cdef->fst;
@@ -444,7 +444,7 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	int ret;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_INFO, "1.");
 
 	/* get the member attribute name */
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
@@ -453,7 +453,7 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	DCC_LOG1(LOG_TRACE, "attribute xid=%d", xid);
+	DCC_LOG1(LOG_INFO, "attribute xid=%d", xid);
 
 	/* get the class definition */
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
@@ -488,7 +488,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	int ret;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_INFO, "1.");
 
 	/* get the member attribute name */
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
@@ -497,7 +497,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	DCC_LOG1(LOG_TRACE, "attribute xid=%d", xid);
+	DCC_LOG1(LOG_INFO, "attribute xid=%d", xid);
 
 	/* get the class definition */
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
@@ -535,7 +535,7 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	int ret;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_INFO, "1.");
 
 	/* get the member attribute name */
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
@@ -580,7 +580,7 @@ int op_array_assign(struct microjs_sdt * microjs)
 	int ret;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	DCC_LOG(LOG_INFO, "1.");
 
 	/* get the member attribute name */
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
@@ -1733,7 +1733,7 @@ int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt)
 	TRACEF("\n");
 #endif
 
-	DCC_LOG2(LOG_TRACE, "data_max=%d stack_max=%d", 
+	DCC_LOG2(LOG_INFO, "data_max=%d stack_max=%d", 
 			 microjs->data_max, microjs->stack_max);
 
 	if (rt != NULL) {

@@ -167,7 +167,7 @@
 	
 	"sw1": { 
 		"up" : [ 
-			'led[0].on = true;',
+			'led[3].on = true;',
 			'/* enable all */',
 			'var i;',
 			'for (i = 0; i < 160; i = i + 1) {',
@@ -178,32 +178,33 @@
 
 		"off" : [ 
 			'/* turn off leds */',
-			'led[0].on = false;',
-			'led[1].on = false;'
+			'led[3].on = false;'
+			'led[2].on = false;',
+			'printf("SW1 OFF\n");'
 		],
 
 		"down" : [
-			'led[1].on = true;',
-			'/* enable all */',
+			'led[2].on = true;',
+			'/* disable all */',
 			'var i;',
 			'for (i = 0; i < 160; i = i + 1) {',
-			'	sensor[i].en = true;',
-			'	module[i].en = true;',
+			'	sensor[i].en = false;',
+			'	module[i].en = false;',
 			'}'
 		],
 	},
 
 	"sw2": { 
 		"up" : [ 
-			'led[2].on = true;',
+			'led[5].on = true;',
 			'/* trouble 1 */',
 			'sensor[1].trouble = 1;'
 		],
 
 		"off" : [ 
 			'/* turn off leds */',
-			'led[2].on = false;',
-			'led[3].on = false;',
+			'led[5].on = false;',
+			'led[4].on = false;',
 			'/* clear trouble */',
 			'sensor[1].trouble = 0;',
 			'/* clear alarm */',
@@ -211,11 +212,17 @@
 		],
 
 		"down" : [
-			'led[3].on = true;',
+			'led[4].on = true;',
 			'/* alarm 3 */',
 			'sensor[1].alarm = 3;'
 		],
 	},
 
+	"init" : { 
+		"init" : [
+			'printf("Custom script 1\n");',
+			'printf("Bob Mittmann, Oct-2014\n");'
+		]
+	}
 }
 

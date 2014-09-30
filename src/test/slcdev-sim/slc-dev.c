@@ -34,7 +34,7 @@ const char * shell_prompt(void)
 }
 
 uint32_t __attribute__((aligned(8))) io_event_stack[24];
-uint32_t __attribute__((aligned(8))) sim_event_stack[40];
+uint32_t __attribute__((aligned(8))) sim_event_stack[80];
 
 #if THINKOS_STDERR_FAULT_DUMP
 const struct file stm32_uart_file = {

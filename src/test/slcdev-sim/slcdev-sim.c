@@ -12,6 +12,7 @@
 uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
 int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
+struct slcdev_usr usr;
 
 void dev_sim_enable(bool mod, unsigned int addr)
 {
@@ -557,7 +558,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct ss_device * dev;
 	struct db_info * db;
 	struct microjs_vm vm; 
-	uint32_t event;
+	uint32_t ev_bmp;
 	uint32_t ctl;
 
 	/* initialize virtual machine */
@@ -568,52 +569,102 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 	sim_reset(); 
 
-	thinkos_sleep(5000);
-
-	slcdev_resume();
+	thinkos_sleep(2000);
 
 	db = db_info_get();
 	DCC_LOG1(LOG_TRACE, "db=%08x", db);
 
 	for (;;) {
-		DCC_LOG(LOG_TRACE, ".1");
+		int ev;
 
-		event = slcdev_event_wait();
+		DCC_LOG(LOG_INFO, ".1");
+
+		thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
+		ev_bmp = slcdev_drv.ev_bmp;
+		/* FIXME: race condition, exclusive access is needed!!! */
+		slcdev_drv.ev_bmp = 0;
+		thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
+
 		dev = slcdev_drv.dev;
 		ctl = slcdev_drv.ctls;
-
-		DCC_LOG(LOG_TRACE, ".2");
+		DCC_LOG(LOG_INFO, ".2");
 		/* get the model for this device */
 		model = db_dev_model_by_index(db, dev->model);
+		DCC_LOG(LOG_INFO, ".3");
 
-		DCC_LOG(LOG_TRACE, ".3");
+		/* get an event form bitmap */
+		while ((ev = __clz(__rbit(ev_bmp))) != 32) {
 
-		/* get the model for this device */
-		if (event & SLC_EV_TRIG) {
-			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
-			led_flash(0, 64);
-		}
+			/* clear event from bitmap */
+			ev_bmp &= ~(1 << ev);
+			switch (ev) {
+			case SLC_EV_TRIG:
+				DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
+				led_flash(0, 64);
+				break;
 
-		DCC_LOG(LOG_TRACE, ".4");
-		
-		if ((event & SLC_EV_SIM) && (model != NULL)) {
-			const struct sim_model * sim;
-			sim = &sim_model_lut[model->sim];
+			case SLC_EV_SIM:
+				if (model != NULL) {
+					const struct sim_model * sim;
+					sim = &sim_model_lut[model->sim];
 
-			DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
+					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
 
-			/* Poll LED state */
-			if ((ctl & 0x4) == 0) {
-				dev->led = 1;
-				led_on(1);
-			} else if ((ctl & 0x5) == 4) {
-				dev->led = 0;
-				led_off(1);
-			} else if ((ctl & 0x5) == 5) {
-				led_flash(1, 64);
+					/* Poll LED state */
+					if ((ctl & 0x4) == 0) {
+						dev->led = 1;
+						led_on(1);
+					} else if ((ctl & 0x5) == 4) {
+						dev->led = 0;
+						led_off(1);
+					} else if ((ctl & 0x5) == 5) {
+						led_flash(1, 64);
+					}
+
+					sim->run(&vm, dev, model, ctl);
+				}
+				break;
+
+			case SLC_EV_SW1_OFF:
+				DCC_LOG(LOG_TRACE, "SW1_OFF");
+				microjs_exec(&vm, usr.sw[0].off, 1024);
+				break;
+
+			case SLC_EV_SW1_UP:
+				DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
+				microjs_exec(&vm, usr.sw[0].up, 1024);
+				break;
+
+			case SLC_EV_SW1_DOWN:
+				DCC_LOG(LOG_TRACE, "SW1_DOWN");
+				microjs_exec(&vm, usr.sw[0].down, 1024);
+				break;
+
+			case SLC_EV_SW2_OFF:
+				DCC_LOG(LOG_TRACE, "SW2_OFF");
+				microjs_exec(&vm, usr.sw[1].off, 1024);
+				break;
+
+			case SLC_EV_SW2_UP:
+				DCC_LOG(LOG_TRACE, "SW2_UP");
+				microjs_exec(&vm, usr.sw[1].up, 1024);
+				break;
+
+			case SLC_EV_SW2_DOWN:
+				DCC_LOG(LOG_TRACE, "SW2_DOWN");
+				microjs_exec(&vm, usr.sw[1].down, 1024);
+				break;
+
+			case SLC_EV_SIM_STOP:
+				DCC_LOG(LOG_TRACE, "SIM_STOP");
+				slcdev_stop();
+				break;
+
+			case SLC_EV_SIM_RESUME:
+				DCC_LOG(LOG_TRACE, "SIM_RESUME");
+				slcdev_resume();
+				break;
 			}
-
-			sim->run(&vm, dev, model, ctl);
 		}
 	}
 }

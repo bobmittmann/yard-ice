@@ -158,7 +158,7 @@ bool fs_file_commit(struct fs_dirent * ep, unsigned int size)
 	struct fs_file file;
 	struct fs_file * fp;
 
-	DCC_LOG2(LOG_TRACE, "offs=%06x size=%d", ep->blk_offs, size);
+	DCC_LOG2(LOG_INFO, "offs=%06x size=%d", ep->blk_offs, size);
 	
 	fp = (struct fs_file *)(STM32_MEM_FLASH + ep->blk_offs);
 	file.size = size;
@@ -217,11 +217,11 @@ bool fs_xmodem_recv(FILE * f, const char * name)
 			break;
 		}
 
-		DCC_LOG2(LOG_TRACE, "ret=%d rem=%d", ret, rem);
+		DCC_LOG2(LOG_INFO, "ret=%d rem=%d", ret, rem);
 
 		n = MIN(rem, ret); 
 	
-		DCC_LOG2(LOG_TRACE, "stm32_flash_write(offs=%06x size=%d)", offs, n);
+		DCC_LOG2(LOG_INFO, "stm32_flash_write(offs=%06x size=%d)", offs, n);
 		stm32_flash_write(offs, buf, n);
 		cnt += n;
 		offs += n;
