@@ -48,6 +48,10 @@ const struct fs_blk flash_desc[] = {
 		.offs = FLASH_BLK_CONST_STRING_OFFS,
 		.size = FLASH_BLK_CONST_STRING_SIZE
 	},
+	[FLASHFS_CODE_BIN] = { .name = "code.bin", 
+		.offs = FLASH_BLK_CODE_BIN_OFFS,
+		.size = FLASH_BLK_CODE_BIN_SIZE  
+	},
 	[FLASHFS_DB_BIN] = { .name = "db.bin", 
 		.offs = FLASH_BLK_DB_BIN_OFFS,
 		.size = FLASH_BLK_DB_BIN_SIZE  
@@ -64,6 +68,7 @@ const struct fs_blk flash_desc[] = {
 		.offs = FLASH_BLK_CFG_JSON_OFFS,
 		.size = FLASH_BLK_CFG_JSON_SIZE  
 	},
+#if 0
 	[FLASHFS_1_JS] = { .name = "1.js", 
 		.offs = FLASH_BLK_1_JS_OFFS,
 		.size = FLASH_BLK_1_JS_SIZE  
@@ -80,6 +85,7 @@ const struct fs_blk flash_desc[] = {
 		.offs = FLASH_BLK_4_JS_OFFS,
 		.size = FLASH_BLK_4_JS_SIZE  
 	}
+#endif
 };
 
 #define FLASH_FS_BLK_COUNT (sizeof(flash_desc) / sizeof(struct fs_blk)) 

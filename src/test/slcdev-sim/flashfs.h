@@ -41,6 +41,7 @@ struct fs_dirent {
 
 enum {
 	FLASHFS_STRINGS = 0,
+	FLASHFS_CODE_BIN,
 	FLASHFS_DB_BIN,
 	FLASHFS_CFG_BIN,
 	FLASHFS_DB_JSON,

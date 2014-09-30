@@ -12,8 +12,11 @@
 #include "slcdev.h"
 #include "slcdev-lib.h"
 
-uint16_t db_stack = FLASH_BLK_DB_BIN_SIZE;
-#define DB_STACK_LIMIT 256
+#define DB_STACK_LIMIT (sizeof(struct fs_file) + sizeof(struct db_info))
+uint16_t db_stack = DB_STACK_LIMIT;
+
+#define DB_VERSION 1
+#define DB_MAGIC (0xdb356900 + DB_VERSION)
 
 struct db_info * db_info_get(void)
 {
@@ -25,7 +28,7 @@ struct db_info * db_info_get(void)
 		return NULL;
 
 	inf = (struct db_info *)(entry.fp->data);
-	if (inf->type != DB_OBJ_DB_INFO)
+	if (inf->magic != DB_MAGIC)
 		return NULL;
 
 	return inf;
@@ -37,10 +40,9 @@ static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 	uint32_t offs;
 	int ret;
 
-	DCC_LOG2(LOG_INFO, "1. buf=0x%08x len=%d", buf, len);
-
-	pos = (db_stack - len) & ~3;
+	pos = (db_stack + 3) & ~3;
 	offs = FLASH_BLK_DB_BIN_OFFS + pos;
+	DCC_LOG3(LOG_INFO, "buf=0x%08x len=%d offs=%06x", buf, len, offs);
 
 	if ((ret = stm32_flash_write(offs, buf, len)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
@@ -48,12 +50,12 @@ static int db_stack_push(void * buf, unsigned int len, void ** ptr)
 	}
 
 	/* update stack */
-	db_stack = pos;
+	db_stack = pos + len;
 
 	/* check for collision */
-	if (db_stack <= DB_STACK_LIMIT) {
+	if (db_stack > FLASH_BLK_DB_BIN_SIZE) {
 		DCC_LOG2(LOG_ERROR, "no memory stack=%d limit=%d!", 
-				db_stack, DB_STACK_LIMIT);
+				db_stack, FLASH_BLK_DB_BIN_SIZE);
 		return -1;
 	}
 
@@ -337,115 +339,94 @@ static int db_sim_algorithm_enc(struct microjs_json_parser * jsn,
 }
 
 
-static const struct microjs_attr_desc sensor_desc[] = {
-	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct obj_sensor, opt),
+static const struct microjs_attr_desc model_desc[] = {
+	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct db_dev_model, opt),
 		microjs_bit_enc },
-	{ "sim", MICROJS_JSON_STRING, 0, offsetof(struct obj_sensor, sim),
+	{ "sim", MICROJS_JSON_STRING, 0, offsetof(struct db_dev_model, sim),
 		db_sim_algorithm_enc },
-	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct obj_sensor, model),
+	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct db_dev_model, model),
 		microjs_const_str_enc },
-	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct obj_sensor, desc),
+	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct db_dev_model, desc),
 		microjs_const_str_enc },
-	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, pw1),
+	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw1),
 		db_pw_list_enc},
-	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, pw2),
+	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw2),
 		db_pw_list_enc},
-	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, pw3),
+	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw3),
 		db_pw_list_enc},
-	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, pw4),
+	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw4),
 		db_pw_list_enc},
-	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, pw5),
+	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw5),
 		db_pw_list_enc},
-	{ "cmd", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_sensor, cmd),
+	{ "cmd", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, cmd),
 		db_cmd_list_enc},
 	{ "", 0, 0, 0, NULL}
 };
 
+struct db_cfg {
+	uint8_t desc; /* Description string */
+	uint8_t version[3]; /* version info */
+	struct db_dev_model * root;
+};
 
-/* Encode a sensor list */
-int db_sensor_enc(struct microjs_json_parser * jsn, 
+/* Encode a device model */
+int db_model_enc(struct microjs_json_parser * jsn, 
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr)
 {
-	struct db_obj ** objp = (struct db_obj **)ptr;
-	struct obj_sensor sensor;
+	struct db_dev_model ** rootp = (struct db_dev_model **)ptr;
+	struct db_dev_model model;
 	int ret;
 
-	memset(&sensor, 0, sizeof(struct obj_sensor));
-	sensor.len = sizeof(struct obj_sensor);
-	sensor.type = DB_OBJ_SENSOR;
-	sensor.module = 0;
-	sensor.next = *objp;
-	sensor.sim = sensor_sim_default();
+	memset(&model, 0, sizeof(struct db_dev_model));
+	model.module = opt;
+	model.next = *rootp;
+	if (opt)
+		model.sim = module_sim_default();
+	else
+		model.sim = sensor_sim_default();
 
-	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &sensor)) < 0) {
+	if ((ret = microjs_json_parse_obj(jsn, model_desc, &model)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
 
-	ret = db_stack_push(&sensor, sizeof(struct obj_sensor), (void **)objp);
-
-	DCC_LOG1(LOG_INFO, "obj=%08x ...................", *objp);
+	ret = db_stack_push(&model, sizeof(struct db_dev_model), (void **)rootp);
 
 	return ret;
 }
 
-static const struct microjs_attr_desc module_desc[] = {
-	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct obj_module, opt),
-		microjs_bit_enc },
-	{ "sim", MICROJS_JSON_STRING, 1, offsetof(struct obj_sensor, sim),
-		db_sim_algorithm_enc },
-	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, model),
+static const struct microjs_attr_desc info_desc[] = {
+	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct db_cfg, desc),
 		microjs_const_str_enc },
-	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct obj_module, desc),
-		microjs_const_str_enc },
-	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw1),
-		db_pw_list_enc},
-	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw2),
-		db_pw_list_enc},
-	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw3),
-		db_pw_list_enc},
-	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw4),
-		db_pw_list_enc},
-	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, pw5),
-		db_pw_list_enc},
-	{ "cmd", MICROJS_JSON_ARRAY, 0, offsetof(struct obj_module, cmd),
-		db_cmd_list_enc},
+	{ "version", MICROJS_JSON_ARRAY, 3, offsetof(struct db_cfg, version),
+		microjs_array_u8_enc },
 	{ "", 0, 0, 0, NULL}
 };
 
-
-/* Encode a module list */
-int db_module_enc(struct microjs_json_parser * jsn, 
+int db_info_enc(struct microjs_json_parser * jsn, 
 				   struct microjs_val * val, 
-				   unsigned int bit, void * ptr)
+				   unsigned int opt, void * ptr)
 {
-	struct db_obj ** objp = (struct db_obj **)ptr;
-	struct obj_module module;
 	int ret;
 
-	memset(&module, 0, sizeof(struct obj_module));
-	module.len = sizeof(struct obj_module);
-	module.type = DB_OBJ_MODULE;
-	module.module = 1;
-	module.next = *objp;
-	module.sim = module_sim_default();
+	DCC_LOG2(LOG_TRACE, "ptr=%08x *ptr=%08x", ptr, *(void **)ptr);
 
-	if ((ret = microjs_json_parse_obj(jsn, module_desc, &module)) < 0) {
+	if ((ret = microjs_json_parse_obj(jsn, info_desc, ptr)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
-
-	ret = db_stack_push(&module, sizeof(struct obj_module), (void **)objp);
-
-	DCC_LOG1(LOG_INFO, "obj=%08x ...................", *objp);
 
 	return ret;
 }
 
 static const struct microjs_attr_desc db_desc[] = {
-	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, db_sensor_enc },
-	{ "module", MICROJS_JSON_OBJECT, 0, 0, db_module_enc },
+	{ "sensor", MICROJS_JSON_OBJECT, 0, offsetof(struct db_cfg, root), 
+		db_model_enc },
+	{ "module", MICROJS_JSON_OBJECT, 1, offsetof(struct db_cfg, root), 
+		db_model_enc },
+	{ "info", MICROJS_JSON_OBJECT, 0, 0, 
+		db_info_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -468,14 +449,16 @@ const char * const db_label[] = {
 	"seq",
 	"js",
 	"sim",
+	"version",
+	"info",
 	NULL	
 };
 
-static struct db_obj * db_json_parse(struct fs_file * json)
+static int db_json_parse(struct fs_file * json, 
+						 struct db_cfg * db)
 {
 	struct microjs_json_parser jsn;
 	uint8_t tok_buf[JSON_TOK_BUF_MAX];
-	struct db_obj * root;
 	const char * text = (const char *)json->data;
 	unsigned int len = json->size;
 	int ret;
@@ -484,27 +467,24 @@ static struct db_obj * db_json_parse(struct fs_file * json)
 
 	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, db_label);
 
-	if (microjs_json_open(&jsn, text, len) < 0) {
+	if ((ret = microjs_json_open(&jsn, text, len)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_open() failed!");
-		return NULL;
+		return ret;
 	}
 
 	DCC_LOG(LOG_INFO, "2. erasing database.");
 	/* erase flash block */
-	if (stm32_flash_erase(FLASH_BLK_DB_BIN_OFFS, 
-						  FLASH_BLK_DB_BIN_SIZE) < 0) {
+	if ((ret = stm32_flash_erase(FLASH_BLK_DB_BIN_OFFS, 
+						  FLASH_BLK_DB_BIN_SIZE) < 0)) {
 		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return NULL;
+		return ret;
 	};
 
 	DCC_LOG(LOG_INFO, "3. erasing constant strings pool.");
-	if (const_strbuf_purge() < 0) {
+	if ((ret = const_strbuf_purge()) < 0) {
 		DCC_LOG(LOG_ERROR, "const_strbuf_purge() failed!");
-		return NULL;
+		return ret;
 	};
-
-	/* initialize the database with default devices */
-	root = NULL;
 
 	DCC_LOG(LOG_INFO, "4. parsing JSON.");
 
@@ -514,141 +494,108 @@ static struct db_obj * db_json_parse(struct fs_file * json)
 	/* parse the JASON file with the microjs tokenizer */
 	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
 		/* decode the token stream */
-		if (microjs_json_parse_obj(&jsn, db_desc, &root) < 0) {
+		if ((ret = microjs_json_parse_obj(&jsn, db_desc, db)) < 0) {
 			DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
-			return NULL;
+			return ret;
 		}
 		microjs_json_flush(&jsn);
 	}
 
 	if (ret != MICROJS_EMPTY_STACK) {
 		DCC_LOG(LOG_ERROR, "microjs_json_scan() failed!");
-		return NULL;
+		return -1;
 	}
 
-	DCC_LOG2(LOG_INFO, "5. done, root=0x%08x sp=0x%08x.", root, cm3_sp_get());
+	DCC_LOG2(LOG_INFO, "5. done, root=0x%08x sp=0x%08x.", db->root, 
+			 cm3_sp_get());
 
-	return root;
+	return 0;
 }
 
 
-#define DB_OBJ_MODEL_MAX 64
-
-#define DB_PTR_IS_VALID(PTR) \
-	(((void *)(PTR) >= (void *)(STM32_MEM_FLASH + \
-								FLASH_BLK_DB_BIN_OFFS)) && \
-	 ((void *)(PTR) < (void *)(STM32_MEM_FLASH + FLASH_BLK_DB_BIN_OFFS + \
-						 FLASH_BLK_DB_BIN_SIZE))) 
-
 int db_info_write(unsigned int offs, struct fs_file * json, 
-				  struct db_obj * root)
+				  struct db_cfg * db)
 {
-	uint32_t buf[(sizeof(struct db_info) + 
-		DB_OBJ_MODEL_MAX * sizeof(struct db_obj *)) / sizeof(uint32_t)];
-	struct db_info * info = (struct db_info *)buf;
-	struct db_obj * obj;
-	int cnt;
+	struct db_info info;
+	struct db_dev_model * obj;
+	int cnt = 0;
 	int i;
 
-	DCC_LOG(LOG_INFO, "1. clear info");
+	memset(&info, 0, sizeof(struct db_info));
 
-	memset(info, 0, sizeof(struct db_info));
-
-	cnt = 0;
-
-	DCC_LOG(LOG_INFO, "2. collect modules");
 	/* collect all modules */
-	obj = (struct db_obj *)root;
+	obj = (struct db_dev_model *)db->root;
 	while (obj != NULL) {
-/*
-		if (!DB_PTR_IS_VALID(obj)) {
-			DCC_LOG1(LOG_ERROR, "invalid pointer: 0x%08x", obj);
-			return -1;
-		}
-*/
-		if (obj->type == DB_OBJ_MODULE) {
-			if (cnt == DB_OBJ_MODEL_MAX) {
+		if (obj->module == 1) {
+			if (cnt == DB_MODEL_MAX) {
 				DCC_LOG(LOG_ERROR, "too many models.");
 				return -1;
 			}
-			info->obj[cnt++] = obj;
+			info.obj[cnt++] = obj;
 		}
 		obj = obj->next;
 	}
 
-	DCC_LOG(LOG_INFO, "3. collect sensors");
 	/* collect all sesnsors */
-	obj = (struct db_obj *)root;
+	obj = (struct db_dev_model *)db->root;
 	while (obj != NULL) {
-/*
-		if (!DB_PTR_IS_VALID(obj)) {
-			DCC_LOG1(LOG_ERROR, "invalid pointer: 0x%08x", obj);
-			return -1;
-		}
-*/
-		if (obj->type == DB_OBJ_SENSOR) {
-			if (cnt == DB_OBJ_MODEL_MAX) {
+		if (obj->module == 0) {
+			if (cnt == DB_MODEL_MAX) {
 				DCC_LOG(LOG_ERROR, "too many models.");
 				return -1;
 			}
-			info->obj[cnt++] = obj;
+			info.obj[cnt++] = obj;
 		}
 		obj = obj->next;
 	}
 			
 	/* invert the list order */
 	for (i = 0; i < (cnt / 2); ++i) {
-		obj = info->obj[i];
-		info->obj[i] = info->obj[cnt - i - 1];
-		info->obj[cnt - i - 1] = obj;
+		obj = info.obj[i];
+		info.obj[i] = info.obj[cnt - i - 1];
+		info.obj[cnt - i - 1] = obj;
 	}
 
 	DCC_LOG1(LOG_INFO, "%d models.", cnt);
-			
-	DCC_LOG(LOG_INFO, "4. fill structure");
 
-	info->len = sizeof(struct db_info) + cnt * sizeof(struct db_obj *);
-	info->type = DB_OBJ_DB_INFO;
-	info->next = root;
-	info->json_txt= (const char *)json->data;
-	info->json_crc = json->crc;
-	info->json_len = json->size;
-	info->obj_cnt = cnt;
+	info.magic = DB_MAGIC;
+	info.desc = db->desc;
+	info.version[0] = db->version[0];
+	info.version[1] = db->version[1];
+	info.version[2] = db->version[2];
+	info.json.txt= (const char *)json->data;
+	info.json.crc = json->crc;
+	info.json.len = json->size;
+	info.obj_cnt = cnt;
 
-	return stm32_flash_write(offs, info, info->len);
+	return stm32_flash_write(offs, &info, sizeof(struct db_info));
 }
 
 bool device_db_compile(struct fs_file * json)
 {
 	struct fs_dirent entry;
-	struct db_obj * root;
 	unsigned int offs;
 	unsigned int size;
+	struct db_cfg db;
 
 	fs_dirent_get(&entry, FLASHFS_DB_BIN);
 
-	/* reserve space for the file entry */
-	offs = entry.blk_offs + sizeof(struct fs_file);
-	size = entry.blk_size - sizeof(struct fs_file);
-
 	/* initialize database stack */
-	db_stack = entry.blk_size;
+	db_stack = DB_STACK_LIMIT;
 
-	if ((root = db_json_parse(json)) == NULL) {
+	memset(&db, 0, sizeof(struct db_cfg));
+	if (db_json_parse(json, &db) < 0) {
 		DCC_LOG(LOG_ERROR, "db_json_parse() failed.");
 		return false;
 	}
 
-	if (db_info_write(offs, json, root) < 0)
+	/* reserve space for the file entry */
+	offs = entry.blk_offs + sizeof(struct fs_file);
+	if (db_info_write(offs, json, &db) < 0)
 		return false;
 
+	size = db_stack - sizeof(struct fs_file);
 	return fs_file_commit(&entry, size);
-
-//	struct db_info * inf;
-//	printf("Device databse compiled.\n");
-//	printf(" - %d devices.\n", inf->obj_cnt);
-//	printf(" - Free memory: %d.%02d KiB.\n", (db_stack - db_heap) / 1024, 
-//		   (((db_stack - db_heap) % 1024) * 100) / 1024);
 }
 
 /* check database integrity */
@@ -665,19 +612,13 @@ bool device_db_need_update(struct fs_file * json)
 	if ((inf = db_info_get()) == NULL)
 		return true;
 
-	if ((inf->json_txt != (const char *)json->data) ||
-		(inf->json_crc != json->crc) ||
-		(inf->json_len != json->size)) {
+	if ((inf->json.txt != (const char *)json->data) ||
+		(inf->json.crc != json->crc) ||
+		(inf->json.len != json->size)) {
 		return true;
 	}
 
 	return false;
-}
-
-void device_db_init(void)
-{
-//	struct fs_dirent entry;
-//	fs_dirent_get(&entry, FLASHFS_DB_BIN);
 }
 
 /********************************************************************** 
@@ -784,7 +725,7 @@ uint8_t * db_js_lookup(const char * model, const char * jstag)
  * Diagnostics and debug
  ***********************************************************************/
 
-static void pw_list_dump(FILE * f, struct pw_list * lst)
+static void pw_list_dump(FILE * f, const struct pw_list * lst)
 {
 	int i;
 
@@ -796,7 +737,7 @@ static void pw_list_dump(FILE * f, struct pw_list * lst)
 	DCC_LOG1(LOG_INFO, "lst=0x%08x", lst);
 
 	for (i = 0; i < lst->cnt; ++i) {
-		struct pw_entry * pw = &lst->pw[i];
+		const struct pw_entry * pw = &lst->pw[i];
 
 		DCC_LOG2(LOG_INFO, "lst->pw[%d]=0x%08x", i, pw);
 		fprintf(f, "\t[%4d %4d] %s\n", pw->min, pw->max, const_str(pw->desc));	
@@ -863,7 +804,7 @@ static void cmd_list_dump(FILE * f, struct cmd_list * lst)
 	}
 }
 
-static void sensor_dump(FILE * f, struct obj_sensor * sens)
+static void model_dump(FILE * f, struct db_dev_model * sens)
 {
 	fprintf(f, "\"%s\" \"%s\"\n", 
 			const_str(sens->model), const_str(sens->desc));
@@ -882,29 +823,16 @@ static void sensor_dump(FILE * f, struct obj_sensor * sens)
 	fprintf(f, "\n");
 }
 
-static void module_dump(FILE * f, struct obj_module * mod)
-{
-	fprintf(f, "\"%s\" \"%s\"\n", 
-			const_str(mod->model), const_str(mod->desc));
-	fprintf(f, "SIM: %s\n", model_sim_name(mod->sim));
-	fprintf(f, "PW1:");
-	pw_list_dump(f, mod->pw1);
-	fprintf(f, "PW2:");
-	pw_list_dump(f, mod->pw2);
-	fprintf(f, "PW3:");
-	pw_list_dump(f, mod->pw3);
-	fprintf(f, "PW4:");
-	pw_list_dump(f, mod->pw4);
-	fprintf(f, "PW5:");
-	pw_list_dump(f, mod->pw5);
-	cmd_list_dump(f, mod->cmd);
-	fprintf(f, "\n");
-}
 
 static void db_info_dump(FILE * f, struct db_info * inf)
 {
-	fprintf(f, "Device database: txt=0x%08x len=%d crc=0x%04x\n", 
-			(uint32_t)inf->json_txt, inf->json_len ,inf->json_crc);
+	fprintf(f, "Model database\n");
+	fprintf(f, " - Desc: \"%s\"\n", const_str(inf->desc));
+	fprintf(f, " - Version: %d.%d.%d\n", 
+			inf->version[0], inf->version[1], inf->version[2]);
+	fprintf(f, " - JSON: txt=0x%08x len=%d crc=0x%04x\n", 
+			(uint32_t)inf->json.txt, inf->json.len ,inf->json.crc);
+
 }
 
 int device_db_dump(FILE * f)
@@ -918,19 +846,10 @@ int device_db_dump(FILE * f)
 	db_info_dump(f, inf);
 
 	for (i = 0 ; i < inf->obj_cnt; ++i) {
-		struct db_obj * obj = (struct db_obj *)inf->obj[i];
+		struct db_dev_model * obj = inf->obj[i];
 
 		fprintf(f, "%2d - ", i);
-
-		switch (obj->type) {
-		case DB_OBJ_SENSOR:
-			sensor_dump(f, (struct obj_sensor *)obj);
-			break;
-
-		case DB_OBJ_MODULE:
-			module_dump(f, (struct obj_module *)obj);
-			break;
-		}
+		model_dump(f, obj); 
 	}
 
 	return 0;

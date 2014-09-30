@@ -595,7 +595,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		} else {
 			fprintf(f, "Compiling...\n");
 			if (config_compile(entry.fp) < 0) {
-				printf("Parse error!\n");
+				fprintf(f, "# Error!\n");
 				return -1;
 			}
 
@@ -603,16 +603,19 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	}
 
 	if (save) {
-		printf("Saving...\n");
+		fprintf(f, "Saving...\n");
 		if (config_save(entry.fp) < 0) {
-			printf("Saving error!\n");
+			fprintf(f, "# Error!\n");
 			return -1;
 		}
 	}
 
 	if (load) {
-		printf("Loading...\n");
-		config_load();
+		fprintf(f, "Loading...\n");
+		if (config_load() < 0) {
+			fprintf(f, "# Error!\n");
+			return -1;
+		}
 	}
 
 	slcdev_resume();
@@ -774,7 +777,7 @@ int cmd_pw4(FILE * f, int argc, char ** argv)
 	return shell_pw_sel(f, argc, argv, 4);
 }
 
-int cmd_dev(FILE * f, int argc, char ** argv)
+int cmd_sim(FILE * f, int argc, char ** argv)
 {
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -784,10 +787,10 @@ int cmd_dev(FILE * f, int argc, char ** argv)
 
 	if ((strcmp(argv[1], "stop") == 0) || 
 		(strcmp(argv[1], "s") == 0)) {
-		slcdev_stop();
+		slcdev_event_raise(SLC_EV_SIM_STOP);
 	} else if ((strcmp(argv[1], "resume") == 0) || 
 		(strcmp(argv[1], "r") == 0)) {
-		slcdev_resume();
+		slcdev_event_raise(SLC_EV_SIM_RESUME);
 	} else
 		return SHELL_ERR_ARG_INVALID;
 
@@ -862,9 +865,9 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	stop_clk = profclk_get();
 
 	code_sz = ret;
-	fprintf(f, " - Comile time: %d us.\n", profclk_us(stop_clk - start_clk));
-	fprintf(f, "  - code: %d\n", code_sz);
-	fprintf(f, "  - data: %d of %d\n", rt.data_sz, sizeof(slcdev_vm_data));
+	fprintf(f, " - Compile time: %d us.\n", profclk_us(stop_clk - start_clk));
+	fprintf(f, " - code: %d\n", code_sz);
+	fprintf(f, " - data: %d of %d\n", rt.data_sz, sizeof(slcdev_vm_data));
 	fprintf(f, " - stack: %d of %d\n", rt.stack_sz, sizeof(stack));
 
 	if (rt.data_sz > sizeof(slcdev_vm_data)) {
@@ -1075,7 +1078,7 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
 
-	{ cmd_dev, "dev", "", "[start|stop]", "" },
+	{ cmd_sim, "sim", "", "[start|stop]", "" },
 	
 	{ cmd_js, "js", "", "script", "javascript" },
 

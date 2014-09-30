@@ -83,7 +83,6 @@ int microjs_json_open(struct microjs_json_parser * jsn,
 			continue;
 
 		if (c != '{') {
-			DCC_LOG(LOG_WARNING, "left brace expected");
 			ret = MICROJS_OBJECT_EXPECTED;
 		} else {
 			i++;
@@ -150,7 +149,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			for (;;) {
 				if (++i == len) {
 					/* parse error, unclosed quotes */
-					DCC_LOG(LOG_WARNING, "unclosed quotes");
 					err = MICROJS_UNCLOSED_STRING;
 					goto error;
 				}
@@ -163,13 +161,11 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			}
 
 			if (j > JSON_STRING_LEN_MAX) {
-				DCC_LOG(LOG_WARNING, "string too long!");
 				err = MICROJS_STRING_TOO_LONG;
 				goto error;
 			}
 
 			if ((sp - cnt) < 3) {
-				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
@@ -189,7 +185,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			/* check wether we have room to copy the symbol 
 			   to token buffer or not */
 			if ((sp - cnt) < 8) {
-				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
@@ -259,7 +254,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			}	
 		
 			if ((sp - cnt) < 5) {
-				DCC_LOG(LOG_WARNING, "token buffer overflow!");
 				err = MICROJS_TOKEN_BUF_OVF;
 				goto error;
 			}
@@ -318,7 +312,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 					DCC_LOG1(LOG_INFO, "%s:", cp);
 				} else {
 					/* not in the list of labels !!! */
-					DCC_LOG2(LOG_WARNING, "unlisted label: %c%c...", 
+					DCC_LOG2(LOG_INFO, "unlisted label: %c%c...", 
 							lbl[0], lbl[1]);
 				}
 
@@ -329,7 +323,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				continue;
 				
 			}
-			DCC_LOG(LOG_WARNING, "invalid label");
 			err = MICROJS_INVALID_LABEL;
 			goto error;
 		case ',':
@@ -352,7 +345,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			tok = JSON_TOK_RIGHTBRACE;
 			goto bkt_pop;
 		default:
-			DCC_LOG1(LOG_WARNING, "invalid character: '%c'.", c);
 			err = MICROJS_UNEXPECTED_CHAR;
 			goto error;
 		}
@@ -363,7 +355,6 @@ inc_push:
 push:
 		/* push a token into the buffer */
 		if ((sp - cnt) < 1) {
-			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
 			goto error;
 		}
@@ -372,7 +363,6 @@ push:
 
 	/* the matching bracket stack must be empty at this point */
 	if (sp != jsn->top) {
-		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
 	}
@@ -388,12 +378,10 @@ end:
 bkt_pop:
 	/* get a brakcet from the stack and check for matching pair */
 	if (sp == jsn->top) {
-		DCC_LOG(LOG_WARNING, "bracket stack empty!");
 		err = MICROJS_EMPTY_STACK;
 		goto error;
 	}
 	if (jsn->tok[sp++] != tok) {
-		DCC_LOG(LOG_WARNING, "bracket closing mismatch!");
 		err = MICROJS_BRACKET_MISMATCH;
 		goto error;
 	}
@@ -403,7 +391,6 @@ bkt_pop:
 
 		/* push a token into the buffer */
 		if ((sp - cnt) < 2) {
-			DCC_LOG(LOG_WARNING, "token buffer overflow!");
 			err = MICROJS_TOKEN_BUF_OVF;
 			goto error;
 		}
@@ -542,7 +529,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 				return -1;
 			}
 		} else {
-			DCC_LOG(LOG_WARNING, "unsupported attribute");
+			DCC_LOG(LOG_INFO, "unsupported attribute");
 			/* skip unsupported attribute */
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ == MICROJS_JSON_ARRAY) {

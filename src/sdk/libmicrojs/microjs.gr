@@ -57,7 +57,7 @@ assign_or_call  : ID { op_push_tmp } assign_or_call1
 assign_or_call1	: '=' exp { op_var_assign }
 				| function_call { op_ret_discard }
 				| '[' exp ']' { op_array_xlat } object_assign
-				| '.' attr_assign
+				| '.'{ op_object_get } attr_assign
 				;
 
 object_assign	: '=' exp { op_object_assign }
@@ -194,7 +194,7 @@ id_eval 		: ID { op_push_tmp } id_eval1
 id_eval1		: { op_var_eval }
 				| function_call { op_call_ret }
 				| '[' exp ']' { op_array_xlat } object_eval
-				| '.' attr_eval		
+				| '.' { op_object_get } attr_eval		
 				;
 
 object_eval		: { op_object_eval }

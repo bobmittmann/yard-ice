@@ -454,7 +454,7 @@ void module_sim_mini(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a 2 wire module */
-void module_sim_2wire(void * ptr, struct ss_device * dev, 
+void module_sim_czif(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
@@ -490,7 +490,7 @@ const struct sim_model sim_model_lut[] = {
 	[9] = { .name = "control", .run = module_sim_control },
 	[10] = { .name = "monitor", .run = module_sim_monitor },
 	[11] = { .name = "mini", .run = module_sim_mini },
-	[12] = { .name = "2wire", .run = module_sim_2wire },
+	[12] = { .name = "czif", .run = module_sim_czif },
 	[13] = { .name = "phone", .run = module_sim_phone },
 	[14] = { .name = "4-20mA", .run = module_sim_4_20ma }
 };
@@ -603,7 +603,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 				led_flash(0, 64);
 				break;
 
-			case SLC_EV_SIM:
+			case SLC_EV_DEV_POLL:
 				if (model != NULL) {
 					const struct sim_model * sim;
 					sim = &sim_model_lut[model->sim];
@@ -653,6 +653,14 @@ void __attribute__((noreturn)) sim_event_task(void)
 			case SLC_EV_SW2_DOWN:
 				DCC_LOG(LOG_TRACE, "SW2_DOWN");
 				microjs_exec(&vm, usr.sw[1].down, 1024);
+				break;
+
+			case SLC_EV_INIT:
+				db = db_info_get();
+				DCC_LOG2(LOG_TRACE, "INIT db=%08x init=%p", db, usr.init);
+				microjs_exec(&vm, usr.init, 1024);
+				/* resume simulation */
+				slcdev_event_raise(SLC_EV_SIM_RESUME);
 				break;
 
 			case SLC_EV_SIM_STOP:
