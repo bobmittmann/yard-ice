@@ -424,7 +424,7 @@ static void ap_hdr_decode(unsigned int msg)
 			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
-			slcdev_drv.ev_bmp |= SLC_EV_SIM;
+			__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_SIM, 1);  
 			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 			/* AP opcode */
@@ -624,7 +624,7 @@ static void clip_msg_decode(unsigned int msg)
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
-		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_TRIG, 1);  
 		trig_out_set();
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
@@ -654,7 +654,7 @@ static void clip_msg_decode(unsigned int msg)
 		DCC_LOG(LOG_INFO, "[CLIP]");
 
 		/* signal the simulator */
-		slcdev_drv.ev_bmp |= SLC_EV_SIM;
+		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_SIM, 1);  
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
 	} else {

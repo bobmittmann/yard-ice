@@ -184,13 +184,32 @@ enum {
   Events
  ***************************************************************************/
 
-#define SLC_EV_NONE 0
-#define SLC_EV_SIM  (1 << 0)
-#define SLC_EV_TRIG (1 << 1)
+#define SLC_EV_SIM        0
+#define SLC_EV_TRIG       1
+#define SLC_EV_SIM_STOP   2
+#define SLC_EV_SIM_RESUME 3
+#define SLC_EV_SW1_OFF    4
+#define SLC_EV_SW1_UP     5
+#define SLC_EV_SW1_DOWN   6
+#define SLC_EV_SW2_OFF    7
+#define SLC_EV_SW2_UP     8
+#define SLC_EV_SW2_DOWN   9
 
 /***************************************************************************
   Runtime
  ***************************************************************************/
+
+struct usr_switch {
+	uint8_t * off;
+	uint8_t * up; 
+	uint8_t * down;
+};
+
+struct slcdev_usr {
+	struct usr_switch sw[2];
+};
+
+extern struct slcdev_usr usr;
 
 /* -------------------------------------------------------------------------
  * Sysem Sensor device
@@ -282,13 +301,13 @@ struct cfg_sw {
  * ------------------------------------------------------------------------- */
 
 struct slcdev_drv {
-	uint16_t addr;      /* current polled device address */
-	uint8_t ev_bmp;     /* event bitmap */
-	uint8_t bit_cnt;    /* message bit count */
-	uint32_t msg;       /* message data from the pannel */
-	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	unsigned int state; /* decoder state */
+	uint32_t ev_bmp;     /* event bitmap */
+	uint16_t addr;      /* current polled device address */
+	uint8_t bit_cnt;    /* message bit count */
 	uint8_t pw5en;      /* PW5 (Type ID) requested */
+	uint32_t msg;       /* message data from the panel */
+	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	struct {
 		uint8_t insn;   /* AP instruction */
 		uint8_t irq;    /* Interrupt request */
@@ -343,13 +362,9 @@ static inline void trig_out_set(void) {
 	stm32_gpio_set(TRIG_OUT);
 }
 
-static inline uint32_t slcdev_event_wait(void) {
-	uint32_t events;
-	thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
-	events = slcdev_drv.ev_bmp;
-	slcdev_drv.ev_bmp= 0;
-	thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
-	return events;
+static inline void slcdev_event_raise(unsigned int ev) {
+	__bit_mem_wr(&slcdev_drv.ev_bmp, ev, 1);  
+	__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 }
 
 void slcdev_init(void);

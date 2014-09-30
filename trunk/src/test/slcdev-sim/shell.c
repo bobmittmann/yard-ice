@@ -522,7 +522,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	slcdev_stop();
 
 	if (erase) {
-
 		fprintf(f, "Erasing...\n");
 		fs_dirent_get(&entry, FLASHFS_DB_BIN);
 		fs_file_unlink(&entry);
@@ -564,6 +563,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	for (i = 1; i < argc; ++i) {
 		if ((strcmp(argv[i], "compile") == 0) || 
 			(strcmp(argv[i], "c") == 0)) {
+			erase = true;
 			compile = true;
 		} else if ((strcmp(argv[i], "erase") == 0) || 
 			(strcmp(argv[i], "e") == 0)) {
@@ -574,7 +574,6 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "save") == 0) || 
 			(strcmp(argv[i], "s") == 0)) {
 			save = true;
-			erase = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
 	}
@@ -582,6 +581,13 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	fs_dirent_get(&entry, FLASHFS_CFG_JSON);
 
 	slcdev_stop();
+
+	if (erase) {
+		struct fs_dirent bin;
+		fprintf(f, "Erasing...\n");
+		fs_dirent_get(&bin, FLASHFS_CFG_BIN);
+		fs_file_unlink(&bin);
+	}
 
 	if (compile) {
 		if (config_is_sane() && !config_need_update(entry.fp)) {
@@ -596,19 +602,17 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		}
 	}
 
-	if (erase) {
-		fprintf(f, "Erasing...\n");
-		config_erase();
-	}
-
 	if (save) {
 		printf("Saving...\n");
-		config_save(entry.fp);
+		if (config_save(entry.fp) < 0) {
+			printf("Saving error!\n");
+			return -1;
+		}
 	}
 
 	if (load) {
 		printf("Loading...\n");
-		config_save(entry.fp);
+		config_load();
 	}
 
 	slcdev_resume();

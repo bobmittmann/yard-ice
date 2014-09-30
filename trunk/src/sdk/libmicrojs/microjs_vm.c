@@ -97,6 +97,11 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 	int opt;
 //	int cnt = 0;
 
+	if (code == NULL) {
+		DCC_LOG(LOG_WARNING, "null pointer!");
+		return ERR_NULL_POINTER;
+	}
+
 	DCC_LOG3(LOG_TRACE, "begin: SP=0x%04x XP=0x%04x PC=0x%04x", 
 			 (int)((int)(sp - vm->sp) * sizeof(int32_t)),
 			 (int)((int)(xp - vm->sp) * sizeof(int32_t)),
@@ -382,18 +387,8 @@ int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm,
 			case OPC_EXT:
 				r0 = *pc++;
 				r1 = *pc++;
-				if (trace) {
-					int i;
-					int32_t * argv = sp - r1;
-					FTRACEF(f, "EXT %d, %d (", r0, r1);
-					for (i = 0; i < r1; ++i) {
-						if (i != 0)
-							FTRACEF(f, ", %d", argv[i]);
-						else
-							FTRACEF(f, "%d", argv[i]);
-					}
-					FTRACEF(f, ")\n");
-				}
+				if (trace)
+					FTRACEF(f, "EXT %d, %d\n", r0, r1);
 				r0 = microjs_extern[r0](&vm->env, sp - r1, r1);
 				if (r0 < 0) {
 					DCC_LOG1(LOG_INFO, "exception %d!", r0);

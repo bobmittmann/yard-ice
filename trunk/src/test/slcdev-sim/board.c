@@ -367,38 +367,42 @@ void __attribute__((noreturn)) io_event_task(void)
 
 			DCC_LOG1(LOG_INFO, "SW=%d", sw);
 
-			switch (sw & SW1_MSK) {
-			case SW1_OFF:
-				DCC_LOG(LOG_TRACE, "SW1 OFF");
-				led_off(2);
-				led_off(3);
-				break;
+			if (d & SW1_MSK) {
+				switch (sw & SW1_MSK) {
+				case SW1_OFF:
+					DCC_LOG(LOG_TRACE, "SW1 OFF");
+					slcdev_event_raise(SLC_EV_SW1_OFF);
+					break;
 
-			case SW1_A:
-				DCC_LOG(LOG_TRACE, "SW1 A");
-				led_on(2);
-				break;
+				case SW1_A:
+					DCC_LOG(LOG_TRACE, "SW1 A");
+					slcdev_event_raise(SLC_EV_SW1_DOWN);
+					break;
 
-			case SW1_B:
-				DCC_LOG(LOG_TRACE, "SW1 B");
-				led_on(3);
+				case SW1_B:
+					DCC_LOG(LOG_TRACE, "SW1 B");
+					slcdev_event_raise(SLC_EV_SW1_UP);
+					break;
+				}
 			}
 
-			switch (sw & SW2_MSK) {
-			case SW2_OFF:
-				DCC_LOG(LOG_TRACE, "SW2 OFF");
-				led_off(4);
-				led_off(5);
-				break;
+			if (d & SW2_MSK) {
+				switch (sw & SW2_MSK) {
+				case SW2_OFF:
+					DCC_LOG(LOG_TRACE, "SW2 OFF");
+					slcdev_event_raise(SLC_EV_SW2_OFF);
+					break;
 
-			case SW2_A:
-				DCC_LOG(LOG_TRACE, "SW2 A");
-				led_on(4);
-				break;
+				case SW2_A:
+					DCC_LOG(LOG_TRACE, "SW2 A");
+					slcdev_event_raise(SLC_EV_SW2_DOWN);
+					break;
 
-			case SW2_B:
-				DCC_LOG(LOG_TRACE, "SW2 B");
-				led_on(5);
+				case SW2_B:
+					DCC_LOG(LOG_TRACE, "SW2 B");
+					slcdev_event_raise(SLC_EV_SW2_UP);
+					break;
+				}
 			}
 		}
 

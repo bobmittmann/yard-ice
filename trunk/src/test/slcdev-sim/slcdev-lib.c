@@ -388,8 +388,12 @@ int32_t __dev_enabled(void * env, int32_t argv[], int argc)
 
 		if (val > 1)
 			return -EXCEPT_INVALID_VALUE;
-	
-		ss_dev_tab[idx].enabled = 1;
+
+		if (val)
+			/* only enable configured devices */ 
+			ss_dev_tab[idx].enabled = ss_dev_tab[idx].cfg;
+		else
+			ss_dev_tab[idx].enabled = 0;
 		return 0;
 	}
 
