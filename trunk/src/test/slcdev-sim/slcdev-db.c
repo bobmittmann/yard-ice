@@ -330,14 +330,13 @@ static int db_sim_algorithm_enc(struct microjs_json_parser * jsn,
 {
 	uint8_t * sim = (uint8_t *)ptr;
 
-	if (opt == 0)
+	if (*sim == sensor_sim_default())
 		*sim = sensor_sim_lookup(val->str.dat, val->str.len);
 	else
 		*sim = module_sim_lookup(val->str.dat, val->str.len);
 
 	return 0;
 }
-
 
 static const struct microjs_attr_desc model_desc[] = {
 	{ "ap", MICROJS_JSON_BOOLEAN, 0, offsetof(struct db_dev_model, opt),
@@ -578,8 +577,6 @@ bool device_db_compile(struct fs_file * json)
 	unsigned int size;
 	struct db_cfg db;
 
-	fs_dirent_get(&entry, FLASHFS_DB_BIN);
-
 	/* initialize database stack */
 	db_stack = DB_STACK_LIMIT;
 
@@ -588,6 +585,8 @@ bool device_db_compile(struct fs_file * json)
 		DCC_LOG(LOG_ERROR, "db_json_parse() failed.");
 		return false;
 	}
+
+	fs_dirent_get(&entry, FLASHFS_DB_BIN);
 
 	/* reserve space for the file entry */
 	offs = entry.blk_offs + sizeof(struct fs_file);

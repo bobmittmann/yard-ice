@@ -92,110 +92,7 @@ const uint8_t addr_sw_lut[] = {
 	 9, 19, 92, 59, 29, 39, 69, 79, 89, 99,  0,  0,  0,  0,  0, 0
 };
 
-#if 0
-void stm32_tim9_isr(void)
-{
-	struct stm32f_tim * tim = STM32_TIM9;
-	struct stm32_gpio * gpioa = STM32_GPIOA;
-	struct stm32_gpio * gpiob = STM32_GPIOB;
-	struct stm32_gpio * gpioc = STM32_GPIOC;
-	unsigned int addr;
-	unsigned int sw;
-	unsigned int d;
-	uint32_t pa;
-	uint32_t pb;
-	uint32_t pc;
-	unsigned int mod;
-	int i;
-
-	/* Clear interrupt flags */
-	tim->sr = 0;
-
-	pa = gpioa->idr; 
-	pb = gpiob->idr; 
-	pc = gpioc->idr; 
-
-	/* Rotatory switches decoder */
-	addr = addr_sw_lut[((~pa & (0x1f << 8)) | (~pc & (0x7 << 13))) >> 8];
-	/* Sensor/Module Switch */
-	mod = (pb & (1 << 4)) ? 0 : 0x80;
-	addr |= mod;
-
-	if (addr != io_drv.addr_prev) {
-		/* Debouncing */
-		io_drv.addr_prev = addr;
-	} else if (addr != io_drv.addr) {
-		/* State change */
-		io_drv.addr = addr;
-		io_event_set(EV_ADDR);  
-		DCC_LOG1(LOG_INFO, "Addr=%d", addr);
-		__thinkos_flag_signal(io_drv.flag);
-	}
-
-	/* Lever switches */
-	sw = (~pb >> 12) & 0xf; 
-
-	if (sw != io_drv.sw_prev) {
-		/* Debouncing */
-		io_drv.sw_prev = sw;
-	} if ((d = sw ^ io_drv.sw) != 0) {
-		/* State change */
-		io_drv.sw = sw;
-
-		DCC_LOG1(LOG_INFO, "SW=%d", sw);
-
-		if ((d & SW1_MSK) != 0)
-			io_event_set(EV_SW1);  
-
-		if ((d & SW2_MSK) != 0)
-			io_event_set(EV_SW2);  
-
-		if ((d & (SW2_MSK | SW1_MSK)) != 0)
-			__thinkos_flag_signal(io_drv.flag);
-	}
-
-//	DCC_LOG(LOG_TRACE, "TMR");
-
-	/* process led timers */
-	for (i = 0; i < 6; ++i) {
-		if (io_drv.led_tmr[i] == 0)
-			continue;
-		if (--io_drv.led_tmr[i] == 0) 
-			__led_off(led_io[i].gpio, led_io[i].pin);
-	}
-}
-
-static void io_timer_init(void)
-{
-	struct stm32f_tim * tim = STM32_TIM9;
-	uint32_t div;
-	uint32_t pre;
-	uint32_t n;
-
-	/* get the total divisior */
-	div = ((stm32f_tim1_hz * IO_POLL_PERIOD_MS) + 500) / 1000;
-	/* get the minimum pre scaler */
-	pre = (div / 65536) + 1;
-	/* get the reload register value */
-	n = (div * 2 + pre) / (2 * pre);
-
-	/* Timer clock enable */
-	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM9);
-	
-	/* Timer configuration */
-	tim->psc = pre - 1;
-	tim->arr = n - 1;
-	tim->dier = TIM_UIE; /* Update interrupt enable */
-	cm3_irq_pri_set(STM32_IRQ_TIM9, IRQ_PRIORITY_LOW);
-	/* Enable interrupt */
-	cm3_irq_enable(STM32_IRQ_TIM9);
-
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
-}
-#endif
-
 #define PWM_FREQ 100000
-
 
 static void io_leds_init(void)
 {
@@ -409,36 +306,39 @@ void __attribute__((noreturn)) io_event_task(void)
 	}
 }
 
+#ifndef ENABLE_SAVE_LED_STATE
+#define ENABLE_SAVE_LED_STATE 0
+#endif
+
 void lamp_test(void)
 {
+#if ENABLE_SAVE_LED_STATE
 	uint32_t state = 0;
 	int i;
 
+	/* save LED state */
 	for (i = 0; i < 6; ++i) {
 		state = __is_led_on(led_io[i].gpio, led_io[i].pin) ? (1 << i) : 0;
 		__led_off(led_io[i].gpio, led_io[i].pin);
 	}
+#endif
 
 	led_flash(0, 64);
 	led_flash(1, 64);
-	thinkos_sleep(100);
+	thinkos_sleep(166);
 	led_flash(2, 64);
 	led_flash(3, 64);
-	thinkos_sleep(100);
+	thinkos_sleep(166);
 	led_flash(4, 64);
 	led_flash(5, 64);
-	thinkos_sleep(100);
+	thinkos_sleep(166);
 
+#if ENABLE_SAVE_LED_STATE
+	/* restore LEDs state */
 	for (i = 0; i < 6; ++i) {
 		if (state & (1 << i))
 			__led_on(led_io[i].gpio, led_io[i].pin);
 	}
-}
-
-void system_reset(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-    CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
-	for(;;);
+#endif
 }
 

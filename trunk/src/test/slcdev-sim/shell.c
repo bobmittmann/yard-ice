@@ -210,10 +210,11 @@ void dev_lst_remove_unconfigured(uint32_t sb[], uint32_t mb[])
 	unsigned int addr;
 
 	for (addr = 0; addr < 160; ++addr) {
-		dev = dev_sim_lookup(false, addr);
+		dev = sensor(addr);
 		if (!dev->cfg)
 			sb[addr / 32] &= ~1;
-		dev = dev_sim_lookup(true, addr);
+
+		dev = module(addr);
 		if (!dev->cfg)
 			mb[addr / 32] &= ~1;
 	}
@@ -276,12 +277,12 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 
 		if (all) {
 			for (addr = 0; addr < 160; ++addr) {
-				dev = dev_sim_lookup(false, addr);
+				dev = sensor(addr);
 				if ((dev->grp[0] != 0) || (dev->grp[1] != 0) ||
 					(dev->grp[2] != 0) || (dev->grp[3] != 0))
 					sb[addr / 32] |= 1 << (addr % 32);
 
-				dev = dev_sim_lookup(true, addr);
+				dev = module(addr);
 				if ((dev->grp[0] != 0) || (dev->grp[1] != 0) ||
 					(dev->grp[2] != 0) || (dev->grp[3] != 0))
 					mb[addr / 32] |= 1 << (addr % 32);
@@ -295,12 +296,12 @@ int dev_lst_cmd_parse(FILE * f, int argc, char ** argv,
 					return SHELL_ERR_ARG_INVALID;
 
 				for (addr = 0; addr < 160; ++addr) {
-					dev = dev_sim_lookup(false, addr);
+					dev = sensor(addr);
 					if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
 						(dev->grp[2] == g) || (dev->grp[3] == g))
 						sb[addr / 32] |= 1 << (addr % 32);
 
-					dev = dev_sim_lookup(true, addr);
+					dev = module(addr);
 					if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
 						(dev->grp[2] == g) || (dev->grp[3] == g))
 						mb[addr / 32] |= 1 << (addr % 32);
@@ -346,14 +347,14 @@ int cmd_enable(FILE * f, int argc, char ** argv)
 
 		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(false, addr);
+			dev = sensor(addr);
 			if (dev->enabled)
 				fprintf(f, " %3d", addr);
 		}
 
 		fprintf(f, "\nModules:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(true, addr);
+			dev = module(addr);
 			if (dev->enabled)
 				fprintf(f, " %3d", addr);
 		}
@@ -407,14 +408,14 @@ int cmd_alarm(FILE * f, int argc, char ** argv)
 
 		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(false, addr);
+			dev = sensor(addr);
 			if (dev->alm)
 				fprintf(f, " %3d", addr);
 		}
 
 		fprintf(f, "\nModules:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(true, addr);
+			dev = module(addr);
 			if (dev->alm)
 				fprintf(f, " %3d", addr);
 		}
@@ -461,14 +462,14 @@ int cmd_trouble(FILE * f, int argc, char ** argv)
 
 		fprintf(f, "Sensors:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(false, addr);
+			dev = sensor(addr);
 			if (dev->tbl)
 				fprintf(f, " %3d", addr);
 		}
 
 		fprintf(f, "\nModules:");
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(true, addr);
+			dev = module(addr);
 			if (dev->tbl)
 				fprintf(f, " %3d", addr);
 		}
@@ -687,7 +688,7 @@ int cmd_group(FILE * f, int argc, char ** argv)
 		int k = 0;
 
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(false, addr);
+			dev = sensor(addr);
 			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
 				(dev->grp[2] == g) || (dev->grp[3] == g)) {
 				if (n++ == 0)
@@ -700,7 +701,7 @@ int cmd_group(FILE * f, int argc, char ** argv)
 
 		k = 0;
 		for (addr = 0; addr < 160; ++addr) {
-			dev = dev_sim_lookup(true, addr);
+			dev = module(addr);
 			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
 				(dev->grp[2] == g) || (dev->grp[3] == g)) {
 				if (n++ == 0)
@@ -736,7 +737,7 @@ static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
 	if (sel > 16)
 		return SHELL_ERR_ARG_INVALID;
 
-	dev = dev_sim_lookup(false, addr);
+	dev = sensor(addr);
 
 	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
 		return SHELL_ERR_ARG_INVALID;
@@ -775,26 +776,6 @@ int cmd_pw3(FILE * f, int argc, char ** argv)
 int cmd_pw4(FILE * f, int argc, char ** argv)
 {
 	return shell_pw_sel(f, argc, argv, 4);
-}
-
-int cmd_sim(FILE * f, int argc, char ** argv)
-{
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	if ((strcmp(argv[1], "stop") == 0) || 
-		(strcmp(argv[1], "s") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_STOP);
-	} else if ((strcmp(argv[1], "resume") == 0) || 
-		(strcmp(argv[1], "r") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_RESUME);
-	} else
-		return SHELL_ERR_ARG_INVALID;
-
-	return 0;
 }
 
 int cmd_reboot(FILE * f, int argc, char ** argv)
@@ -899,6 +880,44 @@ int cmd_js(FILE * f, int argc, char ** argv)
 }
 
 
+int cmd_str(FILE * f, int argc, char ** argv)
+{
+	int ret = 0;
+	int i;
+
+	if (argc == 1)
+		return const_strbuf_dump(f);
+
+	for (i = 1; i < argc; ++i) {
+		if ((ret = const_str_add(argv[i], strlen(argv[i]))) < 0)
+			break;
+	}
+
+	return ret;
+}
+
+#if 0
+
+int cmd_sim(FILE * f, int argc, char ** argv)
+{
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((strcmp(argv[1], "stop") == 0) || 
+		(strcmp(argv[1], "s") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_STOP);
+	} else if ((strcmp(argv[1], "resume") == 0) || 
+		(strcmp(argv[1], "r") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_RESUME);
+	} else
+		return SHELL_ERR_ARG_INVALID;
+
+	return 0;
+}
+
 int cmd_run(FILE * f, int argc, char ** argv)
 {
 	struct microjs_vm vm; 
@@ -938,22 +957,6 @@ int cmd_run(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int cmd_str(FILE * f, int argc, char ** argv)
-{
-	int ret = 0;
-	int i;
-
-	if (argc == 1)
-		return const_strbuf_dump(f);
-
-	for (i = 1; i < argc; ++i) {
-		if ((ret = const_str_add(argv[i], strlen(argv[i]))) < 0)
-			break;
-	}
-
-	return ret;
-}
-#if 0
 
 int cmd_self_test(FILE * f, int argc, char ** argv)
 {
@@ -1034,7 +1037,12 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
+	{ cmd_run, "run", "", "script", "run compiled code" },
+
+	{ cmd_sim, "sim", "", "[start|stop]", "" },
+	
 #endif
+
 	{ cmd_str, "str", "", "", "dump string pool" },
 
 	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
@@ -1050,7 +1058,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_enable, "enable", "e", "[<sens|mod|grp>[N1 .. N6]|all] ", 
 		"Device enable" },
 
-	{ cmd_disable, "disable", "d", "ADDR0 .. ADDR7", "Device disable" },
+	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
+		"Device disable" },
 
 	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
 
@@ -1078,11 +1087,7 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
 
-	{ cmd_sim, "sim", "", "[start|stop]", "" },
-	
 	{ cmd_js, "js", "", "script", "javascript" },
-
-	{ cmd_run, "run", "", "script", "run compiled code" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 
