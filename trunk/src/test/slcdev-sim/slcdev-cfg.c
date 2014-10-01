@@ -693,6 +693,14 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 static const struct microjs_attr_desc misc_desc[] = {
 	{ "init", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, init), 
 		cfg_script_enc },
+	{ "tmr1", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[0]), 
+		cfg_script_enc },
+	{ "tmr2", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[1]), 
+		cfg_script_enc },
+	{ "tmr3", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[2]), 
+		cfg_script_enc },
+	{ "tmr4", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[3]), 
+		cfg_script_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -757,6 +765,10 @@ const char * const cfg_labels[] = {
 	"script",
 	"init",
 	"misc",
+	"tmr1",
+	"tmr2",
+	"tmr3",
+	"tmr4",
 	NULL	
 };
 

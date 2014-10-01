@@ -157,7 +157,9 @@ void sensor_sim_photo(void * ptr, struct ss_device * dev,
 	int alm_max = 3;
 	int lvl;
 
-	DCC_LOG1(LOG_TRACE, "ctl=%04x", ctl);
+	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
+
 	sensor_ctl_default(dev, model, ctl);
 
 	if ((lvl = dev->alm) > 0) {
@@ -182,6 +184,9 @@ void sensor_sim_ion(void * ptr, struct ss_device * dev,
 {
 	int lvl;
 
+	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
+
 	sensor_ctl_default(dev, model, ctl);
 
 	if ((lvl = dev->alm) > 0) {
@@ -205,6 +210,9 @@ void sensor_sim_heat(void * ptr, struct ss_device * dev,
 {
 	int lvl;
 
+	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
+
 	sensor_ctl_default(dev, model, ctl);
 
 	if ((lvl = dev->alm) > 0) {
@@ -221,7 +229,8 @@ void sensor_sim_heat(void * ptr, struct ss_device * dev,
 void sensor_sim_acclimate(void * ptr, struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
 }
@@ -645,6 +654,26 @@ void __attribute__((noreturn)) sim_event_task(void)
 			case SLC_EV_SW2_DOWN:
 				DCC_LOG(LOG_TRACE, "SW2_DOWN");
 				microjs_exec(&vm, usr.sw[1].down, 1024);
+				break;
+
+			case SLC_EV_TMR1:
+				DCC_LOG(LOG_TRACE, "TMR1");
+				microjs_exec(&vm, usr.tmr[0], 1024);
+				break;
+
+			case SLC_EV_TMR2:
+				DCC_LOG(LOG_TRACE, "TMR2");
+				microjs_exec(&vm, usr.tmr[1], 1024);
+				break;
+
+			case SLC_EV_TMR3:
+				DCC_LOG(LOG_TRACE, "TMR3");
+				microjs_exec(&vm, usr.tmr[2], 1024);
+				break;
+
+			case SLC_EV_TMR4:
+				DCC_LOG(LOG_TRACE, "TMR4");
+				microjs_exec(&vm, usr.tmr[3], 1024);
 				break;
 
 			case SLC_EV_INIT:

@@ -252,28 +252,22 @@
 	"sw1": { 
 		"up" : [ 
 			'led[3].flash(500);',
-			'/* enable all in group 2 */',
+			'/* enable all */',
 			'var i;',
 			'for (i = 0; i < 160; i = i + 1) {',
-			'	if (sensor[i].grp[2]) { sensor[i].en = true; }',
-			'	if (module[i].grp[2]) { module[i].en = true; }',
+			'	sensor[i].en = true;',
+			'	module[i].en = true;',
 			'}'
 		],
 
 		"off" : [ 
 			'/* turn off leds */',
 			'led[3].on = false;',
-			'led[2].on = false;',
-			'/* enable only those in group 1 */',
-			'var i;',
-			'for (i = 0; i < 160; i = i + 1) {',
-			'  sensor[i].en = sensor[i].grp[1];',
-			'  module[i].en = module[i].grp[1];',
-			'}'
+			'led[2].on = false;'
 		],
 
 		"down" : [
-			'led[2].on = true;',
+			'led[2].flash(500);',
 			'/* disable all */',
 			'var i;',
 			'for (i = 0; i < 160; i = i + 1) {',
@@ -297,13 +291,16 @@
 			'/* clear trouble */',
 			'sensor[1].trouble = 0;',
 			'/* clear alarm */',
-			'sensor[1].alarm = 0;'
+			'sensor[1].alarm = 0;',
+			'timer[1].ms = 0;',
 		],
 
 		"down" : [
 			'led[4].on = true;',
 			'/* alarm 3 */',
-			'sensor[1].alarm = 3;'
+			'sensor[1].alarm = 3;',
+			'timer[1].ms = 500;',
+			'timer[2].set(5000);',
 		],
 	},
 
@@ -313,6 +310,21 @@
 			'printf("Custom script 1\n");',
 			'printf("Bob Mittmann, Oct-2014\n");'
 			'printf("----------------------\n");',
+			'var count = 0;',
+		],
+		"tmr1" : [
+			'count = count + 1;',
+			'if (count < 30) { timer[1].ms = 1000; }',
+			'printf("Timeout 1: %d\n", count);',
+		],
+		"tmr2" : [
+			'printf("timeout 2\n");',
+		],
+		"tmr3" : [
+			'printf("timeout 3\n");',
+		],
+		"tmr4" : [
+			'printf("timeout 4\n");',
 		]
 	},
 }

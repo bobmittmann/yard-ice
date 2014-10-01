@@ -43,13 +43,16 @@
 #define EXT_LOG2            3
 #define EXT_MEMRD	        4
 #define EXT_PRINT	        5
+#define EXT_CLOCK           6
 
-#define EXT_MODEL_NAME      6
-#define EXT_THIS            9
-#define EXT_MODULE          10
-#define EXT_SENSOR          11
-#define EXT_GROUP           12
-#define EXT_LED				13
+#define EXT_MODEL_NAME      7
+#define EXT_TIMER           8
+#define EXT_LED				9
+
+#define EXT_THIS            10
+#define EXT_MODULE          11
+#define EXT_SENSOR          12
+#define EXT_GROUP           13
 
 #define EXT_LED_ON			14
 #define EXT_LED_FLASH		15
@@ -85,6 +88,8 @@
 #define EXT_DEV_PW5         44
 #define EXT_DEV_GRP         45
 #define EXT_DEV_GRP_CLEAR   46
+#define EXT_TMR_SET         47
+#define EXT_TMR_MS          48
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -98,29 +103,33 @@
 #define EXCEPT_INVALID_DEVICE          109
 #define EXCEPT_INVALID_LED             110
 #define EXCEPT_MISSING_ARGUMENT        113
+#define EXCEPT_INVALID_TIMER           114
 
 #define CLASS_DEV 0
 #define CLASS_GRP 1
 #define CLASS_LED 2
+#define CLASS_TMR 3
 
 #ifdef __SLCDEV_LIB_DEF__
 
 const struct ext_classtab test_classtab = {
-	.ccnt = 3,
+	.ccnt = 4,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
-			.fst = EXT_DEV_STATE, .lst = EXT_DEV_GRP_CLEAR },
+			.first = EXT_DEV_STATE, .last = EXT_DEV_GRP_CLEAR },
 		[CLASS_GRP] = { .nm = "grp", 
-			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
+			.first = EXT_GRP_CLEAR, .last = EXT_GRP_BELONG },
 		[CLASS_LED] = { .nm = "led", 
-			.fst = EXT_LED_ON, .lst = EXT_LED_FLASH },
+			.first = EXT_LED_ON, .last = EXT_LED_FLASH },
+		[CLASS_TMR] = { .nm = "tmr", 
+			.first = EXT_TMR_SET, .last = EXT_TMR_MS },
 	}
 };
 
 const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 47,
+	.xcnt = 49,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -164,12 +173,19 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "led", 
 			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
-
 		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
 			.nm = "on" },
-
 		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
-			.nm = "flash" ,
+			.nm = "flash",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+
+		[EXT_TIMER] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "timer",
+			.aos = { .cdef = CLASS_TMR, .size = 1, .offs = 0 } },
+		[EXT_TMR_MS] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "ms" },
+		[EXT_TMR_SET] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "set",
 			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
 		/* device class members */

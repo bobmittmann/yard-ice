@@ -987,6 +987,33 @@ int32_t __grp_belong(void * env, int32_t argv[], int argc)
 }
 
 /* --------------------------------------------------------------------------
+   Timer 
+   -------------------------------------------------------------------------- */
+
+int32_t __timer(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = (argv[0] - 1); /* timers are numbered from 1 to 4 */
+
+	if (id >= 4)
+		return -EXCEPT_INVALID_TIMER; 
+
+	if (argc > 1) {
+		unsigned int ms = argv[1];
+
+		if ((ms / IO_POLL_PERIOD_MS) >= 65535)
+			return -EXCEPT_INVALID_VALUE;
+
+		timer_set(id, ms);
+
+		return 0;
+	}
+
+	argv[0] = timer_get(id);
+
+	return 1; /* return the number of return values */
+}
+
+/* --------------------------------------------------------------------------
    LED
    -------------------------------------------------------------------------- */
 
@@ -1020,7 +1047,6 @@ int32_t js_led_flash(void * env, int32_t argv[], int argc)
 {
 	unsigned int id = argv[0];
 	unsigned int ms = argv[1];
-
 
 	if (id >= 6)
 		return -EXCEPT_INVALID_LED; /* Throw an exception */
@@ -1086,5 +1112,8 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 
 	[EXT_LED_ON] = js_led_on,
 	[EXT_LED_FLASH] = js_led_flash,
+
+	[EXT_TMR_SET] = __timer,
+	[EXT_TMR_MS] = __timer
 };
 

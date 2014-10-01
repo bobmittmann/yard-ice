@@ -240,8 +240,7 @@ struct sym_fnd {
 
 /* Class Descriptor */
 struct sym_cld {
-	uint8_t fst;
-	uint8_t lst;
+	uint8_t def;
 };
 
 /* Function Call Descriptor */

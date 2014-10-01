@@ -32,6 +32,7 @@
 
 struct {
 	uint8_t led_tmr[6];
+	uint16_t usr_tmr[4];
 } io_drv;
 
 const struct {
@@ -45,6 +46,16 @@ const struct {
 	{ LED5 },
 	{ LED6 }
 };
+
+void timer_set(unsigned int id, unsigned int ms)
+{
+	io_drv.usr_tmr[id] = ms / IO_POLL_PERIOD_MS;
+}
+
+unsigned int timer_get(unsigned int id)
+{
+	return io_drv.usr_tmr[id] * IO_POLL_PERIOD_MS;
+}
 
 void led_on(unsigned int id)
 {
@@ -60,7 +71,6 @@ bool led_status(unsigned int id)
 {
 	return __is_led_on(led_io[id].gpio, led_io[id].pin);
 }
-
 
 void led_flash(unsigned int id, unsigned int ms)
 {
@@ -231,6 +241,25 @@ void __attribute__((noreturn)) io_event_task(void)
 			if (--io_drv.led_tmr[i] == 0) 
 				__led_off(led_io[i].gpio, led_io[i].pin);
 		}
+
+		/* process user timers */
+		if (io_drv.usr_tmr[0]) {
+			if (--io_drv.usr_tmr[0] == 0) 
+				slcdev_event_raise(SLC_EV_TMR1);
+		}
+		if (io_drv.usr_tmr[1]) {
+			if (--io_drv.usr_tmr[1] == 0) 
+				slcdev_event_raise(SLC_EV_TMR2);
+		}
+		if (io_drv.usr_tmr[2]) {
+			if (--io_drv.usr_tmr[2] == 0) 
+				slcdev_event_raise(SLC_EV_TMR3);
+		}
+		if (io_drv.usr_tmr[3]) {
+			if (--io_drv.usr_tmr[3] == 0) 
+				slcdev_event_raise(SLC_EV_TMR4);
+		}
+
 
 		pa = gpioa->idr; 
 		pb = gpiob->idr; 

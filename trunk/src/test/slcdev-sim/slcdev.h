@@ -130,6 +130,10 @@ struct db_info {
 #define SLC_EV_SW2_OFF    8
 #define SLC_EV_SW2_UP     9
 #define SLC_EV_SW2_DOWN   10
+#define SLC_EV_TMR1       11
+#define SLC_EV_TMR2       12
+#define SLC_EV_TMR3       13
+#define SLC_EV_TMR4       14
 
 /***************************************************************************
   Runtime
@@ -144,6 +148,7 @@ struct usr_switch {
 struct slcdev_usr {
 	struct usr_switch sw[2];
 	uint8_t * init; /* init script */
+	uint8_t * tmr[4]; /* user timers script */
 };
 
 extern struct slcdev_usr usr;

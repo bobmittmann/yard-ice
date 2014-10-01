@@ -71,6 +71,8 @@
 #define EXT_GRP_REMOVE   27
 #define EXT_GRP_BELONG   28
 
+#define EXT_TIMER        29
+#define EXT_TMR_SET      30
 
 
 #define EXCEPT_BAD_ADDR                100
@@ -86,20 +88,23 @@
 #define CLASS_DEV 0
 #define CLASS_GRP 1
 #define CLASS_LED 2
+#define CLASS_TMR 3
 
 #ifdef __MICROJS_LIB_DEF__
 
 #define CLASS_DEV 0
 
 const struct ext_classtab microjs_class = {
-	.ccnt = 3,
+	.ccnt = 4,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
-			.fst = EXT_DEV_STATE, .lst = EXT_DEV_LEVEL },
+			.first = EXT_DEV_STATE, .last = EXT_DEV_LEVEL },
 		[CLASS_GRP] = { .nm = "grp", 
-			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
+			.first = EXT_GRP_CLEAR, .last = EXT_GRP_BELONG },
 		[CLASS_LED] = { .nm = "led", 
-			.fst = EXT_LED_ON, .lst = EXT_LED_FLASH },
+			.first = EXT_LED_ON, .last = EXT_LED_FLASH },
+		[CLASS_TMR] = { .nm = "tmr", 
+			.first = EXT_TMR_SET, .last = EXT_TMR_SET },
 	}
 };
 
@@ -171,6 +176,18 @@ const struct ext_libdef microjs_lib = {
 		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "led", 
 			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
+		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "on" },
+		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "flash" ,
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+
+		[EXT_TIMER] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "timer", 
+			.aos = { .cdef = CLASS_TMR, .size = 1, .offs = 0 } },
+		[EXT_TMR_SET] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "set" ,
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
 		/* device class members */
 		[EXT_DEV_STATE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 
@@ -182,11 +199,6 @@ const struct ext_libdef microjs_lib = {
 		[EXT_DEV_LEVEL] = { .opt = O_ARRAY | O_INTEGER | O_MEMBER,  
 			.nm = "level" },
 
-		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
-			.nm = "on" },
-		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
-			.nm = "flash" ,
-			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
 		[EXT_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,
 			.nm = "clear",
