@@ -86,8 +86,8 @@ struct microjs_sdt;
 
 struct classdef {
 	const char * nm;
-	uint8_t fst;
-	uint8_t lst;
+	uint8_t first;
+	uint8_t last;
 };
 
 /* external definition  */

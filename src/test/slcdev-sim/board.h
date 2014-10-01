@@ -167,6 +167,10 @@ bool led_status(unsigned int id);
 
 void led_flash(unsigned int id, unsigned int ms);
 
+unsigned int timer_get(unsigned int id);
+
+void timer_set(unsigned int id, unsigned int ms);
+
 #ifdef __cplusplus
 }
 #endif
