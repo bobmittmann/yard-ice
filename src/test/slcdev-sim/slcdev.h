@@ -198,6 +198,7 @@ struct ss_device {
 	};
 
 	uint8_t lvl[4]; /* Internal variable levels */
+	uint32_t res[2];
 };
 
 #define SS_MODULES_IDX 160
@@ -359,6 +360,14 @@ int module_sim_default(void);
 const char * model_sim_name(unsigned int idx);
 
 struct ss_device * dev_sim_lookup(bool mod, unsigned int addr); 
+
+static inline struct ss_device * module(unsigned int addr) {
+	return &ss_dev_tab[addr + 160];
+}
+
+static inline struct ss_device * sensor(unsigned int addr) {
+	return &ss_dev_tab[addr];
+}
 
 void dev_sim_uncofigure_all(void);
 

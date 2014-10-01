@@ -95,14 +95,6 @@ void dev_sim_multiple_trouble_set(uint32_t s[], uint32_t m[], unsigned int lvl)
 	}
 }
 
-struct ss_device * dev_sim_lookup(bool mod, unsigned int addr) 
-{
-	if (addr > 160) 
-		return NULL;
-
-	return &ss_dev_tab[addr + (mod ? 160 : 0)];
-}
-
 void sim_js_exec(void * ptr, struct ss_device * dev, 
 				 struct db_dev_model * model, uint8_t code[])
 {

@@ -108,13 +108,13 @@
 #define FLASH_BLK_CONST_STRING_SIZE (8 * 1024)
 
 #define FLASH_BLK_CODE_BIN_OFFS     0x00010000
-#define FLASH_BLK_CODE_BIN_SIZE     (8 * 1024)
+#define FLASH_BLK_CODE_BIN_SIZE     (4 * 1024)
 
-#define FLASH_BLK_DB_BIN_OFFS       0x00012000
+#define FLASH_BLK_DB_BIN_OFFS       0x00011000
 #define FLASH_BLK_DB_BIN_SIZE       (8 * 1024)
 
-#define FLASH_BLK_CFG_BIN_OFFS      0x00014000
-#define FLASH_BLK_CFG_BIN_SIZE      (12 * 1024)
+#define FLASH_BLK_CFG_BIN_OFFS      0x00013000
+#define FLASH_BLK_CFG_BIN_SIZE      (16 * 1024)
 
 #define FLASH_BLK_DB_JSON_OFFS      0x00017000
 #define FLASH_BLK_DB_JSON_SIZE      (20 * 1024)
@@ -166,8 +166,6 @@ void led_off(unsigned int id);
 bool led_status(unsigned int id);
 
 void led_flash(unsigned int id, unsigned int ms);
-
-void system_reset(void);
 
 #ifdef __cplusplus
 }
