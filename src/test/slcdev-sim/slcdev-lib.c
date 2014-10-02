@@ -63,6 +63,15 @@ int32_t __isqrt(void * env, int32_t argv[], int argc)
 	return 1;
 }	
 
+extern int32_t clk_time;
+
+int32_t __time(void * env, int32_t argv[], int argc) 
+{
+	argv[0] = clk_time;
+
+	return 1;
+};
+
 int32_t __memrd(void * env, int32_t argv[], int argc)
 {
 	uint32_t addr = argv[0];
@@ -990,7 +999,7 @@ int32_t __grp_belong(void * env, int32_t argv[], int argc)
    Timer 
    -------------------------------------------------------------------------- */
 
-int32_t __timer(void * env, int32_t argv[], int argc)
+int32_t __timer_ms(void * env, int32_t argv[], int argc)
 {
 	unsigned int id = (argv[0] - 1); /* timers are numbered from 1 to 4 */
 
@@ -1009,6 +1018,29 @@ int32_t __timer(void * env, int32_t argv[], int argc)
 	}
 
 	argv[0] = timer_get(id);
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __timer_sec(void * env, int32_t argv[], int argc)
+{
+	unsigned int id = (argv[0] - 1); /* timers are numbered from 1 to 4 */
+
+	if (id >= 4)
+		return -EXCEPT_INVALID_TIMER; 
+
+	if (argc > 1) {
+		unsigned int ms = argv[1] * 1000;
+
+		if ((ms / IO_POLL_PERIOD_MS) >= 65535)
+			return -EXCEPT_INVALID_VALUE;
+
+		timer_set(id, ms);
+
+		return 0;
+	}
+
+	argv[0] = (timer_get(id) + 500) / 1000;
 
 	return 1; /* return the number of return values */
 }
@@ -1070,6 +1102,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
 	[EXT_MEMRD] = __memrd,
+	[EXT_TIME] = __time,
 
 	[EXT_MODEL_NAME] = __model_name,
 
@@ -1113,7 +1146,9 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_LED_ON] = js_led_on,
 	[EXT_LED_FLASH] = js_led_flash,
 
-	[EXT_TMR_SET] = __timer,
-	[EXT_TMR_MS] = __timer
+	[EXT_TMR_SEC] = __timer_sec,
+	[EXT_TMR_MS] = __timer_ms
+
+
 };
 

@@ -9,7 +9,6 @@
 #define __SLCDEV_LIB_DEF__
 #include "slcdev-lib.h"
 
-uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
 int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
 struct slcdev_usr usr;
@@ -100,7 +99,7 @@ void sim_js_exec(void * ptr, struct ss_device * dev,
 {
 	struct microjs_vm * vm = (struct microjs_vm *)ptr;
 
-	microjs_exec(vm, code, 1024);
+	microjs_exec(vm, code);
 }
 
 #define REMOTE_TEST_MSK 0x2d /* 101101 */
@@ -157,7 +156,7 @@ void sensor_sim_photo(void * ptr, struct ss_device * dev,
 	int alm_max = 3;
 	int lvl;
 
-	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
@@ -184,7 +183,7 @@ void sensor_sim_ion(void * ptr, struct ss_device * dev,
 {
 	int lvl;
 
-	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
@@ -210,7 +209,7 @@ void sensor_sim_heat(void * ptr, struct ss_device * dev,
 {
 	int lvl;
 
-	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
@@ -229,7 +228,7 @@ void sensor_sim_heat(void * ptr, struct ss_device * dev,
 void sensor_sim_acclimate(void * ptr, struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG3(LOG_TRACE, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
@@ -546,12 +545,6 @@ const char * model_sim_name(unsigned int idx)
 	return sim_model_lut[idx].name;
 }
 
-void sim_reset(void) 
-{
-	DCC_LOG(LOG_TRACE, "...");
-	symtab_init(slcdev_symbuf, sizeof(slcdev_symbuf), &slcdev_lib);
-}
-
 void __attribute__((noreturn)) sim_event_task(void)
 {
 	struct microjs_rt rt;
@@ -566,14 +559,11 @@ void __attribute__((noreturn)) sim_event_task(void)
 	rt.data_sz = sizeof(slcdev_vm_data);
 	rt.stack_sz = sizeof(slcdev_vm_stack);
 	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, slcdev_vm_stack);
-	microjs_vm_clr_data(&vm, &rt);
-
-	sim_reset(); 
 
 	thinkos_sleep(2000);
 
 	db = db_info_get();
-	DCC_LOG1(LOG_TRACE, "db=%08x", db);
+	DCC_LOG1(LOG_INFO, "db=%08x", db);
 
 	for (;;) {
 		int ev;
@@ -628,58 +618,61 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 			case SLC_EV_SW1_OFF:
 				DCC_LOG(LOG_TRACE, "SW1_OFF");
-				microjs_exec(&vm, usr.sw[0].off, 1024);
+				microjs_exec(&vm, usr.sw[0].off);
 				break;
 
 			case SLC_EV_SW1_UP:
 				DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
-				microjs_exec(&vm, usr.sw[0].up, 1024);
+				microjs_exec(&vm, usr.sw[0].up);
 				break;
 
 			case SLC_EV_SW1_DOWN:
 				DCC_LOG(LOG_TRACE, "SW1_DOWN");
-				microjs_exec(&vm, usr.sw[0].down, 1024);
+				microjs_exec(&vm, usr.sw[0].down);
 				break;
 
 			case SLC_EV_SW2_OFF:
 				DCC_LOG(LOG_TRACE, "SW2_OFF");
-				microjs_exec(&vm, usr.sw[1].off, 1024);
+				microjs_exec(&vm, usr.sw[1].off);
 				break;
 
 			case SLC_EV_SW2_UP:
 				DCC_LOG(LOG_TRACE, "SW2_UP");
-				microjs_exec(&vm, usr.sw[1].up, 1024);
+				microjs_exec(&vm, usr.sw[1].up);
 				break;
 
 			case SLC_EV_SW2_DOWN:
 				DCC_LOG(LOG_TRACE, "SW2_DOWN");
-				microjs_exec(&vm, usr.sw[1].down, 1024);
+				microjs_exec(&vm, usr.sw[1].down);
 				break;
 
 			case SLC_EV_TMR1:
 				DCC_LOG(LOG_TRACE, "TMR1");
-				microjs_exec(&vm, usr.tmr[0], 1024);
+				microjs_exec(&vm, usr.tmr[0]);
 				break;
 
 			case SLC_EV_TMR2:
 				DCC_LOG(LOG_TRACE, "TMR2");
-				microjs_exec(&vm, usr.tmr[1], 1024);
+				microjs_exec(&vm, usr.tmr[1]);
 				break;
 
 			case SLC_EV_TMR3:
 				DCC_LOG(LOG_TRACE, "TMR3");
-				microjs_exec(&vm, usr.tmr[2], 1024);
+				microjs_exec(&vm, usr.tmr[2]);
 				break;
 
 			case SLC_EV_TMR4:
 				DCC_LOG(LOG_TRACE, "TMR4");
-				microjs_exec(&vm, usr.tmr[3], 1024);
+				microjs_exec(&vm, usr.tmr[3]);
 				break;
 
-			case SLC_EV_INIT:
+			case SLC_EV_SIM_START:
+				DCC_LOG(LOG_TRACE, "SIM_START");
 				db = db_info_get();
-				DCC_LOG2(LOG_TRACE, "INIT db=%08x init=%p", db, usr.init);
-				microjs_exec(&vm, usr.init, 1024);
+				/* clear virtual machine data area */
+				microjs_vm_clr_data(&vm, &rt);
+				/* run script */
+				microjs_exec(&vm, usr.init);
 				/* resume simulation */
 				slcdev_event_raise(SLC_EV_SIM_RESUME);
 				break;

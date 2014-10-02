@@ -110,6 +110,9 @@ struct db_info {
 		const char * txt;
 	} json;
 
+	uint32_t * symbuf; /* symbol buffer */
+	uint16_t symbuf_sz; /* symbol buffer size */
+
 	uint16_t obj_cnt;
 	struct db_dev_model * obj[DB_MODEL_MAX];
 };
@@ -119,8 +122,8 @@ struct db_info {
   Events
  ***************************************************************************/
 
-#define SLC_EV_INIT       0
-#define SLC_EV_SIM_STOP   1
+#define SLC_EV_SIM_STOP   0
+#define SLC_EV_SIM_START  1
 #define SLC_EV_SIM_RESUME 2
 #define SLC_EV_DEV_POLL   3
 #define SLC_EV_TRIG       4

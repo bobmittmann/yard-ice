@@ -49,7 +49,7 @@ const struct {
 
 void timer_set(unsigned int id, unsigned int ms)
 {
-	io_drv.usr_tmr[id] = ms / IO_POLL_PERIOD_MS;
+	io_drv.usr_tmr[id] = (ms + IO_POLL_PERIOD_MS - 1) / IO_POLL_PERIOD_MS;
 }
 
 unsigned int timer_get(unsigned int id)
@@ -212,6 +212,8 @@ void io_init(void)
 	io_leds_init();
 }
 
+int32_t clk_time = 0;
+
 void __attribute__((noreturn)) io_event_task(void)
 {
 	struct stm32_gpio * gpioa = STM32_GPIOA;
@@ -221,6 +223,7 @@ void __attribute__((noreturn)) io_event_task(void)
 	unsigned int addr1 = 0;
 	unsigned int sw0 = 0;
 	unsigned int sw1 = 0;
+	uint32_t clk_ms = 0;
 
 	for (;;) {
 		unsigned int addr;
@@ -233,6 +236,12 @@ void __attribute__((noreturn)) io_event_task(void)
 		int i;
 
 		thinkos_sleep(IO_POLL_PERIOD_MS);
+
+		clk_ms += IO_POLL_PERIOD_MS;
+		if (clk_ms >= 1000) {
+			clk_time++;
+			clk_ms -= 1000;
+		}
 
 		/* process led timers */
 		for (i = 0; i < 6; ++i) {

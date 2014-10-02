@@ -359,7 +359,13 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 				DMA_MINC | DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
 			DCC_LOG(LOG_INFO, "TX DMA start...");
 		}
+		rem -= n;
+		src += n;
 #else /* SERDRV_DOUBLE_BUFFER */
+		/* having the thinkos_flag_wait() at the beginning of the
+		   loop provides thread safeness, as only one thread will be 
+		   allowed to enter the critical section. 
+		   The last statement in the section is the DMA enabling. */
 		thinkos_flag_wait(TX_FLAG);
 		thinkos_flag_clr(TX_FLAG);
 
@@ -368,13 +374,14 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len)
 		for (i = 0; i < n; ++i)
 			drv->tx_buf[0][i] = src[i];
 
+		rem -= n;
+		src += n;
+
 		/* Configure and enable DMA */
 		dma->ch[UART2_TX_DMA_CHAN].cndtr = n;
 		dma->ch[UART2_TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 			DMA_MINC | DMA_DIR_MTP | DMA_TCIE | DMA_TEIE | DMA_EN;
 #endif /* SERDRV_DOUBLE_BUFFER */
-		rem -= n;
-		src += n;
 	}
 
 #if SERDRV_DOUBLE_BUFFER

@@ -93,6 +93,9 @@ int main(int argc, char ** argv)
 	/* initialize constat string buffer */
 	const_strbuf_init();
 
+	/* initializes database */
+	device_db_init();
+
 	/* load configuration */
 	config_load();
 
@@ -118,7 +121,8 @@ int main(int argc, char ** argv)
 	stderr = f;
 #endif
 
-	slcdev_event_raise(SLC_EV_INIT);
+	/* start simulation */
+	slcdev_event_raise(SLC_EV_SIM_START);
 
 	/* start a shell on the serial TTY */
 	shell(f, shell_prompt, shell_greeting, cmd_tab);
