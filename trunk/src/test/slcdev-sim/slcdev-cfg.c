@@ -11,6 +11,10 @@
 #include "crc.h"
 #include "slcdev.h"
 #include "isink.h"
+#include "slcdev-lib.h"
+
+#define CFG_VERSION 2
+#define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 struct cfg_info {
 	uint32_t magic;
@@ -416,7 +420,8 @@ int config_dump(FILE * f)
 #define CFG_STACK_LIMIT (sizeof(struct fs_file) + \
 						 sizeof(struct cfg_info) + \
 						 sizeof(ss_dev_tab) + \
-						 sizeof(usr))
+						 sizeof(usr) + \
+						 sizeof(slcdev_symbuf))
 
 uint16_t cfg_stack = CFG_STACK_LIMIT;
 
@@ -639,16 +644,20 @@ int cfg_script_enc(struct microjs_json_parser * jsn,
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr) 
 {
-	int ret;
 	struct json_js jj;
 	uint8_t code[256];
+	int ret;
 
 	jj.code_sz = sizeof(code);
 	jj.code = code;
 	jj.symtab = (struct symtab *)slcdev_symbuf;
+	jj.libdef = &slcdev_lib;
 
-	if ((ret = mcrojs_js_array_enc(jsn, val, opt, &jj)) < 0)
+	if ((ret = mcrojs_js_array_enc(jsn, val, 0, &jj)) < 0) {
+		fprintf(stdout, "script %d error: %s\n", 
+				opt, microjs_strerr(ret));
 		return ret;
+	}
 
 	DCC_LOG3(LOG_TRACE, "code=%d data=%d stack=%d", 
 			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
@@ -659,12 +668,12 @@ int cfg_script_enc(struct microjs_json_parser * jsn,
 }
 
 static const struct microjs_attr_desc switch_desc[] = {
-	{ "up", MICROJS_JSON_ARRAY, 0, offsetof(struct usr_switch, up), 
-		cfg_script_enc },
-	{ "down", MICROJS_JSON_ARRAY, 0, offsetof(struct usr_switch, down), 
-		cfg_script_enc },
-	{ "off", MICROJS_JSON_ARRAY, 0, offsetof(struct usr_switch, off), 
-		cfg_script_enc },
+	{ "up", MICROJS_JSON_ARRAY, 0, 
+		offsetof(struct usr_switch, up), cfg_script_enc },
+	{ "down", MICROJS_JSON_ARRAY, 1, 
+		offsetof(struct usr_switch, down), cfg_script_enc },
+	{ "off", MICROJS_JSON_ARRAY, 2, 
+		offsetof(struct usr_switch, off), cfg_script_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -691,16 +700,16 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 
 
 static const struct microjs_attr_desc misc_desc[] = {
-	{ "init", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, init), 
-		cfg_script_enc },
-	{ "tmr1", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[0]), 
-		cfg_script_enc },
-	{ "tmr2", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[1]), 
-		cfg_script_enc },
-	{ "tmr3", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[2]), 
-		cfg_script_enc },
-	{ "tmr4", MICROJS_JSON_ARRAY, 0, offsetof(struct slcdev_usr, tmr[3]), 
-		cfg_script_enc },
+	{ "init", MICROJS_JSON_ARRAY, 3, 
+		offsetof(struct slcdev_usr, init), cfg_script_enc },
+	{ "tmr1", MICROJS_JSON_ARRAY, 4, 
+		offsetof(struct slcdev_usr, tmr[0]), cfg_script_enc },
+	{ "tmr2", MICROJS_JSON_ARRAY, 5, 
+		offsetof(struct slcdev_usr, tmr[1]), cfg_script_enc },
+	{ "tmr3", MICROJS_JSON_ARRAY, 6, 
+		offsetof(struct slcdev_usr, tmr[2]), cfg_script_enc },
+	{ "tmr4", MICROJS_JSON_ARRAY, 7, 
+		offsetof(struct slcdev_usr, tmr[3]), cfg_script_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -731,9 +740,6 @@ static const struct microjs_attr_desc cfg_desc[] = {
 	{ "misc", MICROJS_JSON_OBJECT, 0, 0, cfg_misc_enc },
 	{ "", 0, 0, 0, NULL},
 };
-
-#define CFG_VERSION 1
-#define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 #define JSON_TOK_BUF_MAX 384
 
@@ -845,6 +851,11 @@ int config_load(void)
 	/* read user config */
 	ptr += size;
 	memcpy(&usr, ptr, sizeof(usr));
+	size = sizeof(usr);
+
+	/* read symbol table */
+	ptr += size;
+	memcpy(slcdev_symbuf, ptr, sizeof(slcdev_symbuf));
 
 	return 0;
 }
@@ -863,23 +874,31 @@ int config_save(struct fs_file * json)
 	offs = entry.blk_offs + sizeof(struct fs_file);
 	DCC_LOG1(LOG_TRACE, "off=0x%06x", offs);
 
-	/* reserve space for config info */
-	offs += sizeof(struct cfg_info);
 
 	/* write device table */
-	size = (sizeof(ss_dev_tab) + 3) & ~3;
+	offs += sizeof(struct cfg_info); /* reserve space for config info */
+	size = sizeof(ss_dev_tab);
 	if ((ret = stm32_flash_write(offs, ss_dev_tab, size)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 		return -1;
 	}
-	offs += size;
 
 	/* write user config */
-	size = (sizeof(usr) + 3) & ~3;
+	offs += size;
+	size = sizeof(usr);
 	if ((ret = stm32_flash_write(offs, &usr, size)) < 0) {
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 		return -1;
 	}
+
+	/* write symbol table */
+	offs += size;
+	size = sizeof(slcdev_symbuf);
+	if ((ret = stm32_flash_write(offs, &slcdev_symbuf, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return -1;
+	}
+
 
 	inf.magic = CFG_MAGIC;
 	if (json == NULL) {

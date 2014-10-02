@@ -226,7 +226,7 @@
 
 	"module" : { 
 		"rem" : "Board 4 - Telephone Module",
-		"model" : "M500M",
+		"model" : "M500FP",
 		"enabled" : true,
 		"group" : [ 4 ],
 		"addr" : [ 92, 93 ] 
@@ -251,7 +251,19 @@
 	
 	"sw1": { 
 		"up" : [ 
-			'led[3].flash(500);',
+			'led[3].on = true;',
+			'/* disable all */',
+			'var i;',
+			'for (i = 0; i < 160; i = i + 1) {',
+			'	sensor[i].en = false;',
+			'	module[i].en = false;',
+			'}'
+		],
+
+		"off" : [ 
+			'/* turn off leds */',
+			'led[3].on = false;',
+			'led[2].on = false;'
 			'/* enable all */',
 			'var i;',
 			'for (i = 0; i < 160; i = i + 1) {',
@@ -260,20 +272,8 @@
 			'}'
 		],
 
-		"off" : [ 
-			'/* turn off leds */',
-			'led[3].on = false;',
-			'led[2].on = false;'
-		],
-
 		"down" : [
 			'led[2].flash(500);',
-			'/* disable all */',
-			'var i;',
-			'for (i = 0; i < 160; i = i + 1) {',
-			'	sensor[i].en = false;',
-			'	module[i].en = false;',
-			'}'
 		],
 	},
 
@@ -285,47 +285,51 @@
 		],
 
 		"off" : [ 
+			'var s_addr = 0;',
+			'var m_addr = 0;',
 			'/* turn off leds */',
 			'led[5].on = false;',
 			'led[4].on = false;',
 			'/* clear trouble */',
-			'sensor[1].trouble = 0;',
+			'sensor[s_addr].trouble = 0;',
 			'/* clear alarm */',
-			'sensor[1].alarm = 0;',
+			'sensor[s_addr].alarm = 0;',
+			'/* reset timers */',
 			'timer[1].ms = 0;',
+			'timer[2].ms = 0;'
 		],
 
 		"down" : [
-			'led[4].on = true;',
-			'/* alarm 3 */',
-			'sensor[1].alarm = 3;',
-			'timer[1].ms = 500;',
-			'timer[2].set(5000);',
+			'timer[1].sec = 1; /* set timer 1*/'
 		],
 	},
 
 	"misc": { 
 		"init" : [
-			'printf("----------------------\n");',
+			'var s_addr = 0;',
+			'var m_addr = 0;',
+			'printf("\n----------------------\n");',
 			'printf("Custom script 1\n");',
 			'printf("Bob Mittmann, Oct-2014\n");'
-			'printf("----------------------\n");',
-			'var count = 0;',
+			'printf("----------------------\n");'
 		],
 		"tmr1" : [
-			'count = count + 1;',
-			'if (count < 30) { timer[1].ms = 1000; }',
-			'printf("Timeout 1: %d\n", count);',
+			'var s_addr;',
+			's_addr = s_addr + 1; /* increment address */',
+			'printf("\n- %04d sensor %d in alarm", time(), s_addr);',
+			'sensor[s_addr].alarm = 3; /* set alarm */',
+			'led[4].on = true;',
+			'timer[2].sec = 20; /* set a timer to stop the alarm */'
 		],
 		"tmr2" : [
-			'printf("timeout 2\n");',
+			'var s_addr;',
+			'printf("\n- %04d sensor %d cleared", time(), s_addr);',
+			'sensor[s_addr].alarm = 0; /* clear alarm */',
+			'led[4].on = false;',
+			'if (s_addr < 160) { timer[1].sec = 5; } /* reschedule */'
 		],
-		"tmr3" : [
-			'printf("timeout 3\n");',
-		],
-		"tmr4" : [
-			'printf("timeout 4\n");',
-		]
+		"tmr3" : [ ],
+		"tmr4" : [ ]
 	},
 }
 

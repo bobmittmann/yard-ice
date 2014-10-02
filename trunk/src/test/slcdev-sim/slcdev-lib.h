@@ -43,7 +43,7 @@
 #define EXT_LOG2            3
 #define EXT_MEMRD	        4
 #define EXT_PRINT	        5
-#define EXT_CLOCK           6
+#define EXT_TIME            6
 
 #define EXT_MODEL_NAME      7
 #define EXT_TIMER           8
@@ -88,8 +88,8 @@
 #define EXT_DEV_PW5         44
 #define EXT_DEV_GRP         45
 #define EXT_DEV_GRP_CLEAR   46
-#define EXT_TMR_SET         47
-#define EXT_TMR_MS          48
+#define EXT_TMR_MS          47
+#define EXT_TMR_SEC         48
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -122,7 +122,7 @@ const struct ext_classtab test_classtab = {
 		[CLASS_LED] = { .nm = "led", 
 			.first = EXT_LED_ON, .last = EXT_LED_FLASH },
 		[CLASS_TMR] = { .nm = "tmr", 
-			.first = EXT_TMR_SET, .last = EXT_TMR_MS },
+			.first = EXT_TMR_MS, .last = EXT_TMR_SEC },
 	}
 };
 
@@ -149,6 +149,9 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_MEMRD] = { .opt = O_FUNCTION,  
 			.nm = "memrd", 
 			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+		[EXT_TIME] = { .opt = O_FUNCTION,  
+			.nm = "time", 
+			.f = { .argmin = 0, .argmax = 0, .ret = 1 } },
 
 		[EXT_MODEL_NAME] = { .opt = O_FUNCTION,  
 			.nm = "model_name", 
@@ -184,9 +187,8 @@ const struct ext_libdef slcdev_lib = {
 			.aos = { .cdef = CLASS_TMR, .size = 1, .offs = 0 } },
 		[EXT_TMR_MS] = { .opt = O_INTEGER | O_MEMBER, 
 			.nm = "ms" },
-		[EXT_TMR_SET] = { .opt = O_FUNCTION | O_MEMBER, 
-			.nm = "set",
-			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
+		[EXT_TMR_SEC] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "sec" },
 
 		/* device class members */
 		[EXT_DEV_STATE] = { .opt = O_INTEGER | O_MEMBER | O_READONLY, 

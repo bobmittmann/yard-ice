@@ -127,7 +127,7 @@ void microjs_vm_init(struct microjs_vm * vm, const struct microjs_rt * rt,
 void microjs_vm_clr_data(struct microjs_vm * vm, 
 						 const struct microjs_rt * rt);
 
-int microjs_exec(struct microjs_vm * vm, uint8_t code[], unsigned int len);
+int microjs_exec(struct microjs_vm * vm, uint8_t code[]);
 
 void strbuf_init(uint16_t * buf, unsigned int len);
 

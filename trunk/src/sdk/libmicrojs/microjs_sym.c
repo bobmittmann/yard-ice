@@ -36,8 +36,7 @@
    -------------------------------------------------------------------------- */
 
 struct symtab * symtab_init(uint32_t sym_buf[], 
-							unsigned int buf_len, 
-							const struct ext_libdef * libdef)
+							unsigned int buf_len)
 {
 	struct symtab * tab = (struct symtab *)sym_buf;
 
@@ -53,8 +52,6 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 	/* initialize temporary labels */
 	tab->tmp_lbl = 0;
 #endif
-
-	tab->libdef = libdef;
 
 	DCC_LOG3(LOG_INFO, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
 
@@ -336,9 +333,9 @@ struct sym_obj * sym_obj_scope_lookup(struct symtab * tab,
    Externals (Library)
    -------------------------------------------------------------------------- */
 
-int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
+int sym_extern_lookup(const struct ext_libdef * libdef, 
+					  const char * s, unsigned int len)
 {
-	const struct ext_libdef * libdef = tab->libdef;
 	int i;
 
 	DCC_LOG1(LOG_INFO, "len=%d", len);
@@ -356,22 +353,7 @@ int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len)
 	return -1;
 }
 
-struct extdef * sym_extern_get(struct symtab * tab, unsigned int xid)
-{
-	const struct ext_libdef * libdef = tab->libdef;
-
-	return (struct extdef *)&libdef->xdef[xid];
-}
-
-const char * sym_extern_name(struct symtab * tab, unsigned int xid)
-{
-	const struct ext_libdef * libdef = tab->libdef;
-
-	return libdef->xdef[xid].nm;
-}
-
-#if MICROJS_DEBUG_ENABLED
-int sym_dump(FILE * f, struct symtab * tab)
+int symtab_dump(FILE * f, struct symtab * tab)
 {
 	struct sym_obj * obj;
 	char * nm;
@@ -390,6 +372,22 @@ int sym_dump(FILE * f, struct symtab * tab)
 
 	return 0;
 }
+
+/* return the total data size of the objects in the table */
+int symtab_data_size(struct symtab * tab)
+{
+	int size = 0;
+	int i;
+
+	for (i = 0; i < tab->bp / sizeof(struct sym_obj); ++i) {
+		struct sym_obj * obj = &tab->buf[i];
+		size += obj->size;
+	}
+
+	return size;
+}
+
+#if MICROJS_DEBUG_ENABLED
 #endif
 
 #if 0

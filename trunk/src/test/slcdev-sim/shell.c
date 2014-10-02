@@ -498,6 +498,27 @@ int cmd_trouble(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+void db_cfg_purge(void)
+{
+	struct fs_dirent entry;
+
+	/* uncofigure all devices */
+	dev_sim_uncofigure_all();
+
+	/* Erase database */
+	fs_dirent_get(&entry, FLASHFS_DB_BIN);
+	fs_file_unlink(&entry);
+
+	/* Erase config */
+	fs_dirent_get(&entry, FLASHFS_CFG_BIN);
+	fs_file_unlink(&entry);
+
+	/* Erase strings */
+	const_strbuf_purge();
+
+	/* Initialize symbol table */
+	symtab_init(slcdev_symbuf, sizeof(slcdev_symbuf));
+}
 
 int cmd_dbase(FILE * f, int argc, char ** argv)
 {
@@ -513,6 +534,7 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		if ((strcmp(argv[i], "compile") == 0) || 
 			(strcmp(argv[i], "c") == 0)) {
 			compile = true;
+			erase = true;
 		} else if ((strcmp(argv[i], "erase") == 0) || 
 			(strcmp(argv[i], "e") == 0)) {
 			erase = true;
@@ -523,11 +545,8 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	slcdev_stop();
 
 	if (erase) {
-		fprintf(f, "Erasing...\n");
-		fs_dirent_get(&entry, FLASHFS_DB_BIN);
-		fs_file_unlink(&entry);
-		/* uncofigure all devices */
-		dev_sim_uncofigure_all();
+		fprintf(f, "Erasing DB...\n");
+		db_cfg_purge();
 	}
 
 	if (compile) {
@@ -544,8 +563,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		}
 	}
 
-	slcdev_resume();
-
 	return 0;
 }
 
@@ -555,7 +572,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	bool erase = false;
 	bool compile = false;
 	bool load = false;
-	bool save = false;
+	bool restart = false;
 	int i;
 
 	if (argc == 1) 
@@ -572,16 +589,11 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "load") == 0) || 
 			(strcmp(argv[i], "l") == 0)) {
 			load = true;
-		} else if ((strcmp(argv[i], "save") == 0) || 
-			(strcmp(argv[i], "s") == 0)) {
-			save = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
 	}
 
 	fs_dirent_get(&entry, FLASHFS_CFG_JSON);
-
-	slcdev_stop();
 
 	if (erase) {
 		struct fs_dirent bin;
@@ -594,32 +606,39 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		if (config_is_sane() && !config_need_update(entry.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
+			slcdev_stop();
 			fprintf(f, "Compiling...\n");
 			if (config_compile(entry.fp) < 0) {
+				struct fs_dirent bin;
+				fprintf(f, "# Error!\n");
+				/* purge the invalid config */
+				fs_dirent_get(&bin, FLASHFS_CFG_BIN);
+				fs_file_unlink(&bin);
+				return -1;
+			}
+			fprintf(f, "Saving...\n");
+			if (config_save(entry.fp) < 0) {
 				fprintf(f, "# Error!\n");
 				return -1;
 			}
-
-		}
-	}
-
-	if (save) {
-		fprintf(f, "Saving...\n");
-		if (config_save(entry.fp) < 0) {
-			fprintf(f, "# Error!\n");
-			return -1;
+			restart = true;
 		}
 	}
 
 	if (load) {
 		fprintf(f, "Loading...\n");
+		slcdev_stop();
 		if (config_load() < 0) {
 			fprintf(f, "# Error!\n");
 			return -1;
 		}
+		restart = true;
 	}
 
-	slcdev_resume();
+	if (restart) {
+		/* restart simulation */
+		slcdev_event_raise(SLC_EV_SIM_START);
+	}
 
 	return 0;
 }
@@ -788,6 +807,17 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_sym(FILE * f, int argc, char ** argv)
+{
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	return symtab_dump(f, symtab);
+}
+
+
 int cmd_js(FILE * f, int argc, char ** argv)
 {
 	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
@@ -824,7 +854,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	profclk_init();
 
 	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab);
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, &slcdev_lib);
 
 	symstat = symtab_state_save(symtab);
 
@@ -869,7 +899,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, stack);
 
 	start_clk = profclk_get();
-	if ((ret = microjs_exec(&vm, code, code_sz)) != 0){
+	if ((ret = microjs_exec(&vm, code)) != 0){
 		fprintf(f, "# exec error: %d\n", ret);
 		return -1;
 	}
@@ -896,7 +926,6 @@ int cmd_str(FILE * f, int argc, char ** argv)
 	return ret;
 }
 
-#if 0
 
 int cmd_sim(FILE * f, int argc, char ** argv)
 {
@@ -917,6 +946,8 @@ int cmd_sim(FILE * f, int argc, char ** argv)
 
 	return 0;
 }
+
+#if 0
 
 int cmd_run(FILE * f, int argc, char ** argv)
 {
@@ -1039,10 +1070,10 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_run, "run", "", "script", "run compiled code" },
 
-	{ cmd_sim, "sim", "", "[start|stop]", "" },
-	
 #endif
 
+	{ cmd_sim, "sim", "", "[start|stop]", "" },
+	
 	{ cmd_str, "str", "", "", "dump string pool" },
 
 	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
@@ -1088,6 +1119,8 @@ const struct shell_cmd cmd_tab[] = {
 		"get set PW4 value" },
 
 	{ cmd_js, "js", "", "script", "javascript" },
+
+	{ cmd_sym, "sym", "", "", "symbol table dump" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
 

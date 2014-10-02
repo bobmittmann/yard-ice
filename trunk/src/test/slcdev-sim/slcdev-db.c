@@ -12,10 +12,12 @@
 #include "slcdev.h"
 #include "slcdev-lib.h"
 
+uint32_t slcdev_symbuf[64]; /* symbol table buffer */
+
 #define DB_STACK_LIMIT (sizeof(struct fs_file) + sizeof(struct db_info))
 uint16_t db_stack = DB_STACK_LIMIT;
 
-#define DB_VERSION 1
+#define DB_VERSION 3
 #define DB_MAGIC (0xdb356900 + DB_VERSION)
 
 struct db_info * db_info_get(void)
@@ -146,6 +148,7 @@ int db_cmd_js_enc(struct microjs_json_parser * jsn,
 	jj.code_sz = sizeof(code);
 	jj.code = code;
 	jj.symtab = (struct symtab *)slcdev_symbuf;
+	jj.libdef = &slcdev_lib;
 
 	if ((ret = mcrojs_js_array_enc(jsn, val, opt, &jj)) < 0)
 		return ret;
@@ -154,7 +157,6 @@ int db_cmd_js_enc(struct microjs_json_parser * jsn,
 			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
 
 	return db_stack_push(jj.code, jj.code_sz, ptr);
-
 }
 
 
@@ -463,7 +465,6 @@ static int db_json_parse(struct fs_file * json,
 	int ret;
 
 	DCC_LOG(LOG_INFO, "1. JSON tokenizer.");
-
 	microjs_json_init(&jsn, tok_buf, JSON_TOK_BUF_MAX, db_label);
 
 	if ((ret = microjs_json_open(&jsn, text, len)) < 0) {
@@ -471,22 +472,7 @@ static int db_json_parse(struct fs_file * json,
 		return ret;
 	}
 
-	DCC_LOG(LOG_INFO, "2. erasing database.");
-	/* erase flash block */
-	if ((ret = stm32_flash_erase(FLASH_BLK_DB_BIN_OFFS, 
-						  FLASH_BLK_DB_BIN_SIZE) < 0)) {
-		DCC_LOG(LOG_ERROR, "stm32_flash_erase() failed!");
-		return ret;
-	};
-
-	DCC_LOG(LOG_INFO, "3. erasing constant strings pool.");
-	if ((ret = const_strbuf_purge()) < 0) {
-		DCC_LOG(LOG_ERROR, "const_strbuf_purge() failed!");
-		return ret;
-	};
-
-	DCC_LOG(LOG_INFO, "4. parsing JSON.");
-
+	DCC_LOG(LOG_INFO, "5. parsing JSON.");
 	/* skip to the object oppening to allow object by object parsing */
 	microjs_json_flush(&jsn);
 
@@ -505,7 +491,7 @@ static int db_json_parse(struct fs_file * json,
 		return -1;
 	}
 
-	DCC_LOG2(LOG_INFO, "5. done, root=0x%08x sp=0x%08x.", db->root, 
+	DCC_LOG2(LOG_INFO, "6. done, root=0x%08x sp=0x%08x.", db->root, 
 			 cm3_sp_get());
 
 	return 0;
@@ -555,6 +541,14 @@ int db_info_write(unsigned int offs, struct fs_file * json,
 		info.obj[cnt - i - 1] = obj;
 	}
 
+	if (db_stack_push(slcdev_symbuf, sizeof(slcdev_symbuf), 
+					  (void **)&info.symbuf) < 0) {
+		DCC_LOG(LOG_ERROR, "db_stack_push() failed!");
+		return -1;
+	}
+
+	info.symbuf_sz = sizeof(slcdev_symbuf);
+
 	DCC_LOG1(LOG_INFO, "%d models.", cnt);
 
 	info.magic = DB_MAGIC;
@@ -601,6 +595,17 @@ bool device_db_compile(struct fs_file * json)
 bool device_db_is_sane(void)
 {
 	return (db_info_get() == NULL) ? false : true;
+}
+
+void device_db_init(void)
+{
+	struct db_info * inf;
+
+	if ((inf = db_info_get()) == NULL)
+		return;
+
+	/* initialize the sybol table from the database */
+	memcpy(slcdev_symbuf, inf->symbuf, inf->symbuf_sz);
 }
 
 /* check JSON file against database */

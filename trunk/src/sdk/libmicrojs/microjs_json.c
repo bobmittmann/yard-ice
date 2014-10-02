@@ -661,7 +661,8 @@ int mcrojs_js_array_enc(struct microjs_json_parser * jsn,
 	int ret;
 
 	/* initialize compiler */
-	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), jj->symtab);
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
+							   jj->symtab, jj->libdef);
 
 	/* Save symbol table state. In case of a compilation error,
 	   the symbol table may have some invalid entries, saving
@@ -711,9 +712,8 @@ int mcrojs_js_array_enc(struct microjs_json_parser * jsn,
 compile_error:
 	DCC_LOG1(LOG_ERROR, "Javascript compile error %d!", -ret);
 	symtab_state_rollback(jj->symtab, symstat);
-	microjs_sdt_error(stdout, microjs, ret);
 
-	return -1;
+	return ret;
 }
 
 #if 0
