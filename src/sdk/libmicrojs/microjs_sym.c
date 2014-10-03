@@ -40,9 +40,11 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 {
 	struct symtab * tab = (struct symtab *)sym_buf;
 
+	tab->rt.stack_sz = 0; /* runtime stack limit */
+	tab->rt.data_sz = 0; /* runtime data limit */
 	/* top of the symbol table */
 	tab->top = buf_len - sizeof(struct symtab);
-	/* locals are allocated top-down */
+	/* references are allocated top-down */
 	tab->sp = tab->top;
 	tab->fp = tab->top;
 	/* symbols are allocated bottom-up */
@@ -52,10 +54,18 @@ struct symtab * symtab_init(uint32_t sym_buf[],
 	/* initialize temporary labels */
 	tab->tmp_lbl = 0;
 #endif
+	/* insert the end of list dummy object */
+	tab->buf[0].prev = 0;
+	tab->buf[0].next = 0;
 
 	DCC_LOG3(LOG_INFO, "bp=%d sp=%d fp=%d", tab->bp, tab->sp, tab->fp);
 
 	return tab;
+}
+
+struct microjs_rt * symtab_rt_get(struct symtab * tab)
+{
+	return &tab->rt;
 }
 
 struct symstat symtab_state_save(struct symtab * tab)
@@ -94,7 +104,8 @@ int sym_push(struct symtab * tab, const void * ptr,  unsigned int len)
 	DCC_LOG3(LOG_INFO, "bp=%d sp=%d len=%d", tab->bp, tab->sp, len);
 
 	sp -= len;
-	if (tab->bp > sp)
+	/* compute 2 bytes for the end of list marker */
+	if ((tab->bp + 2) > sp)
 		return -ERR_SYM_PUSH_FAIL;
 
 	dst = (uint8_t *)&tab->buf + sp;
@@ -142,6 +153,7 @@ int sym_pop(struct symtab * tab, void * ptr,  unsigned int len)
 	return 0;
 }
 
+#if 0
 static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 {
 	int sp = tab->sp;
@@ -165,7 +177,7 @@ static bool sym_push_str(struct symtab * tab, const char * s,  unsigned int len)
 
 	return true;
 }
-
+#endif
 
 /* --------------------------------------------------------------------------
    Stack frame
@@ -189,6 +201,7 @@ int sym_sf_push(struct symtab * tab)
 /* Pop the stack frame */
 int sym_sf_pop(struct symtab * tab)
 {
+	struct sym_obj * obj;
 	int sp = tab->fp; /* use frame pointer as reference */
 	struct sym_sf sf;
 	uint8_t * dst;
@@ -206,6 +219,10 @@ int sym_sf_pop(struct symtab * tab)
 	tab->sp = sp + sizeof(sf);
 	tab->fp = sf.prev;
 	tab->bp = sf.bp;
+
+	/* insert the end of list dummy */
+	obj = (struct sym_obj *)((void *)tab->buf + tab->bp);
+	obj->next = 0;
 
 	return 0;
 }
@@ -236,13 +253,13 @@ static bool sym_sf_get(struct symtab * tab, struct sym_sf * sf)
    -------------------------------------------------------------------------- */
 
 struct sym_obj * sym_obj_new(struct symtab * tab, 
-							 const char * s, unsigned int len)
+							 const char * nm, unsigned int nm_len)
 {
 	struct sym_obj * obj;
-	int bp = tab->bp;
-	int id;
-	int nm;
+	struct sym_obj * next;
+	int obj_len;
 
+#if 0
 	if ((obj = sym_obj_lookup(tab, s, len)) != NULL) {
 		/* reuse existing name */
 		nm = obj->nm;
@@ -254,23 +271,27 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 		}
 		nm = tab->sp;
 	}
-
-	if ((bp + sizeof(struct sym_obj)) > tab->sp) {
+#endif
+	obj = (struct sym_obj *)((void *)tab->buf + tab->bp);
+	obj_len = sizeof(struct sym_obj) + nm_len + 1;
+	if ((tab->bp + obj_len + 2) > tab->sp) {
 		DCC_LOG(LOG_WARNING, "bp overflow!");
 		return NULL;
 	}
 
-	id = bp / sizeof(struct sym_obj);
-
-	DCC_LOG2(LOG_INFO, "bp=%d id=%d", bp, id);
-	DCC_LOG1(LOG_INFO, "nm=\"%s\"", (char *)&tab->buf + tab->sp); 
-
-	obj = &tab->buf[id];
-	obj->nm = nm;
+	strncpy(obj->nm, nm, nm_len);
+	obj->nm[nm_len] = '\0';
 	obj->flags = (tab->fp == tab->top) ? SYM_OBJ_GLOBAL : 0;
 	obj->addr = 0;
 	obj->size = 0;
-	tab->bp = bp + sizeof(struct sym_obj);
+	obj->next = obj_len;
+	
+	/* insert the end of list dummy */
+	next = (struct sym_obj *)((void *)obj + obj_len);
+	next->prev = obj_len;
+	next->next = 0;
+
+	tab->bp += obj_len;
 
 	return obj;
 }
@@ -278,21 +299,13 @@ struct sym_obj * sym_obj_new(struct symtab * tab,
 struct sym_obj * sym_obj_lookup(struct symtab * tab, 
 								const char * s, unsigned int len)
 {
-	struct sym_obj * obj;
-	char * nm;
-	int i;
+	struct sym_obj * obj = (struct sym_obj *)((void *)tab->buf + tab->bp); 
 
-	/* search in the local list */
-	for (i = (tab->bp / sizeof(struct sym_obj)) - 1; i >= 0; --i) {
-		obj = &tab->buf[i];
-		nm = (char *)&tab->buf + obj->nm;
-
-		DCC_LOG3(LOG_MSG, "id=%d nm=\"%s\" len=%d", i, nm, len);
-
-		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0')) {
-			DCC_LOG2(LOG_INFO, "id=%d nm=\"%s\"", i, nm);
+	/* search from the inner scope out */
+	while (obj->prev != 0) { 
+		obj = (struct sym_obj *)((void *)obj - obj->prev);
+		if ((strncmp(obj->nm, s, len) == 0) && (obj->nm[len] == '\0'))
 			return obj;
-		}
 	}
 
 	return NULL;
@@ -301,33 +314,68 @@ struct sym_obj * sym_obj_lookup(struct symtab * tab,
 struct sym_obj * sym_obj_scope_lookup(struct symtab * tab, 
 									  const char * s, unsigned int len)
 {
-	struct sym_sf sf;
 	struct sym_obj * obj;
-	char * nm;
-	int i;
-	int begin;
-	int end;
+	struct sym_sf sf;
 
 	sym_sf_get(tab, &sf);
+	obj = (struct sym_obj *)((void *)tab->buf + sf.bp); 
 
-	begin = sf.bp / sizeof(struct sym_obj);
-	end = tab->bp / sizeof(struct sym_obj);
-
-	/* search in the current scope */
-	for (i = begin; i < end; ++i) {
-		obj = &tab->buf[i];
-		nm = (char *)&tab->buf + obj->nm;
-		DCC_LOG3(LOG_INFO, "id=%d nm=\"%s\" len=%d", i, nm, len);
-
-		if ((strncmp(nm, s, len) == 0) && (nm[len] == '\0')) {
-			DCC_LOG2(LOG_INFO, "id=%d nm=\"%s\"", i, nm);
+	/* search in the current scope only */
+	while (obj->next != 0) { 
+		if ((strncmp(obj->nm, s, len) == 0) && (obj->nm[len] == '\0'))
 			return obj;
-		}
+		obj = (struct sym_obj *)((void *)obj + obj->next);
 	}
 
 	return NULL;
 }
 
+int symtab_dump(FILE * f, struct symtab * tab)
+{
+	struct sym_obj * obj = (void *)tab->buf;
+
+	while (obj->next != 0) { 
+		fprintf(f, "%04x %c O .data   %04x    %s\n", obj->addr, 
+				(obj->flags & SYM_OBJ_GLOBAL) ? 'g' : 'l',
+				obj->size, obj->nm);
+		obj = (struct sym_obj *)((void *)obj + obj->next);
+	}
+
+	return 0;
+}
+
+#if 0
+int symtab_dump(FILE * f, struct symtab * tab)
+{
+	struct sym_obj * obj = (struct sym_obj *)((void *)tab->buf + tab->bp); 
+
+	fprintf(f, "----------------------\n");
+				
+	/* search from the inner scope out */
+	while (obj->prev != 0) { 
+		obj = (struct sym_obj *)((void *)obj - obj->prev);
+		fprintf(f, "%04x %c O .data   %04x    %s\n", obj->addr, 
+				(obj->flags & SYM_OBJ_GLOBAL) ? 'g' : 'l',
+				obj->size, obj->nm);
+	}
+
+	return 0;
+}
+#endif
+
+/* return the total data size of the objects in the table */
+int symtab_data_size(struct symtab * tab)
+{
+	struct sym_obj * obj = (void *)tab->buf;
+	int size = 0;
+
+	while (obj->next != 0) { 
+		size += obj->size;
+		obj = (struct sym_obj *)((void *)obj + obj->next);
+	}
+
+	return size;
+}
 
 /* --------------------------------------------------------------------------
    Externals (Library)
@@ -353,39 +401,6 @@ int sym_extern_lookup(const struct ext_libdef * libdef,
 	return -1;
 }
 
-int symtab_dump(FILE * f, struct symtab * tab)
-{
-	struct sym_obj * obj;
-	char * nm;
-	int i;
-
-	/* search in the local list */
-	for (i = 0; i < tab->bp / sizeof(struct sym_obj); ++i) {
-		obj = &tab->buf[i];
-		nm = (char *)&tab->buf + obj->nm;
-		fprintf(f, "%04x %c O .data   %04x    %s\n", obj->addr, 
-				(obj->flags & SYM_OBJ_GLOBAL) ? 'g' : 'l',
-				obj->size, nm);
-	}
-
-	fprintf(f, "FP=%04x, SP=%04x\n", tab->fp, tab->sp);
-
-	return 0;
-}
-
-/* return the total data size of the objects in the table */
-int symtab_data_size(struct symtab * tab)
-{
-	int size = 0;
-	int i;
-
-	for (i = 0; i < tab->bp / sizeof(struct sym_obj); ++i) {
-		struct sym_obj * obj = &tab->buf[i];
-		size += obj->size;
-	}
-
-	return size;
-}
 
 #if MICROJS_DEBUG_ENABLED
 #endif

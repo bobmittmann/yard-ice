@@ -95,11 +95,11 @@ const struct ext_classtab microjs_class = {
 	.ccnt = 3,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
-			.fst = EXT_DEV_STATE, .lst = EXT_DEV_LEVEL },
+			.first = EXT_DEV_STATE, .last = EXT_DEV_LEVEL },
 		[CLASS_GRP] = { .nm = "grp", 
-			.fst = EXT_GRP_CLEAR, .lst = EXT_GRP_BELONG },
+			.first = EXT_GRP_CLEAR, .last = EXT_GRP_BELONG },
 		[CLASS_LED] = { .nm = "led", 
-			.fst = EXT_LED_ON, .lst = EXT_LED_FLASH },
+			.first = EXT_LED_ON, .last = EXT_LED_FLASH },
 	}
 };
 

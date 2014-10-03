@@ -209,6 +209,8 @@ int symtab_data_size(struct symtab * tab);
 
 int symtab_dump(FILE * f, struct symtab * tab);
 
+struct microjs_rt * symtab_rt_get(struct symtab * tab);
+
 void symtab_state_rollback(struct symtab * tab, struct symstat st);
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
@@ -222,7 +224,7 @@ int microjs_sdt_begin(struct microjs_sdt * microjs,
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt);
+int microjs_sdt_end(struct microjs_sdt * microjs);
 
 void microjs_sdt_reset(struct microjs_sdt * microjs);
 

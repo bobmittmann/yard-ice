@@ -141,9 +141,7 @@ struct microjs_sdt {
 	uint16_t pc;         /* code pointer */
 
 	uint16_t stack_pos;
-	uint16_t stack_max;
 	uint16_t data_pos;
-	uint16_t data_max;
 
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
@@ -180,11 +178,26 @@ struct strbuf {
 
 /* object */
 struct sym_obj {
+	uint8_t prev;
+	uint8_t next;
 	uint8_t flags;
 	uint8_t size;
-	uint16_t nm;
 	uint16_t addr;
+	char nm[0];
+} __attribute__((packed))__;
+
+struct symtab {
+	struct microjs_rt rt; /* run-time info */
+	uint16_t sp;
+	uint16_t bp;
+	uint16_t fp;
+	uint16_t top;
+#if MICROJS_TRACE_ENABLED
+	uint16_t tmp_lbl;
+#endif
+	struct sym_obj buf[];
 };
+
 
 #define SYM_EXTERN    (1 << 0)
 #define SYM_METHOD    (1 << 1)
@@ -257,17 +270,6 @@ struct sym_sf {
 	uint16_t bp;
 };
 
-struct symtab {
-	uint16_t sp;
-	uint16_t bp;
-	uint16_t fp;
-	uint16_t top;
-#if MICROJS_TRACE_ENABLED
-	uint16_t tmp_lbl;
-#endif
-	struct sym_obj buf[];
-};
-
 struct tabst {
 	uint16_t sp;
 	uint16_t bp;
@@ -307,7 +309,7 @@ static inline bool symtab_isempty(struct symtab * tab) {
 
 static inline const char * sym_obj_name(struct symtab * tab, 
 										struct sym_obj * obj) {
-	return (char *)&tab->buf + obj->nm;
+	return (char *)obj->nm;
 }
 
 #if MICROJS_TRACE_ENABLED

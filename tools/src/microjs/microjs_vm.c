@@ -82,7 +82,7 @@ void microjs_vm_clr_data(struct microjs_vm * vm,
 }
 
 int __attribute__((optimize(3))) microjs_exec(struct microjs_vm * vm, 
-											  uint8_t code[], unsigned int len)
+											  uint8_t code[])
 {
 	FILE * f = microjs_vm_tracef;
 	bool trace = (f == NULL) ? false : true;
