@@ -71,8 +71,12 @@ static const char * const err_tab[] = {
 	[ERR_NOT_IMPLEMENTED] = "construct not implemented",
 	[ERR_ATTR_NOT_ARRAY] = "attribute is not an array",
 	[ERR_NULL_POINTER] = "null pointer",
-
 };
+
+const char * microjs_strerr(int err)
+{
+	return err_tab[-err];
+}
 
 static void js_dump_line(FILE * f, int ln, char * lp)
 {
@@ -90,6 +94,7 @@ static void js_dump_line(FILE * f, int ln, char * lp)
 	}
 	fprintf(f, "\n");
 }
+
 
 void lexer_print_err(FILE * f, struct lexer * lex, int err)
 {

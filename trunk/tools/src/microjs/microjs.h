@@ -199,18 +199,24 @@ int const_strbuf_purge(void);
 
 
 struct symtab * symtab_init(uint32_t sym_buf[], 
-							unsigned int buf_len, 
-							const struct ext_libdef * libdef);
+							unsigned int buf_len);
 
 struct symtab * symtab_open(uint32_t * buf, unsigned int len);
 
 struct symstat symtab_state_save(struct symtab * tab);
 
+int symtab_data_size(struct symtab * tab);
+
+int symtab_dump(FILE * f, struct symtab * tab);
+
+struct microjs_rt * symtab_rt_get(struct symtab * tab);
+
 void symtab_state_rollback(struct symtab * tab, struct symstat st);
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
 									  unsigned int sdt_size,
-									  struct symtab * tab);
+									  struct symtab * tab,
+									  const struct ext_libdef * libdef);
 
 int microjs_sdt_begin(struct microjs_sdt * microjs, 
 					  uint8_t code[], unsigned int code_size);
@@ -218,13 +224,13 @@ int microjs_sdt_begin(struct microjs_sdt * microjs,
 int microjs_compile(struct microjs_sdt * microjs, 
 					const char * txt, unsigned int len);
 
-int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt);
+int microjs_sdt_end(struct microjs_sdt * microjs);
 
 void microjs_sdt_reset(struct microjs_sdt * microjs);
 
 void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err);
 
-int microjs_tgt_heap(struct microjs_sdt * microjs);
+const char * microjs_strerr(int err);
 
 #ifdef __cplusplus
 }

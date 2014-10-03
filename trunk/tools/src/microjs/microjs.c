@@ -122,9 +122,9 @@ int main(int argc,  char **argv)
 	uint32_t js_sdtbuf[64]; /* compiler buffer */
 
 	struct microjs_sdt * microjs; 
+	struct microjs_rt * rt;
 
 	struct microjs_vm vm; 
-	struct microjs_rt rt;
 
 	struct symtab * symtab;
 
@@ -196,9 +196,11 @@ int main(int argc,  char **argv)
 	/* initialize string buffer */
 	strbuf_init(strbuf, sizeof(strbuf));
 	/* initialize symbol table */
-	symtab = symtab_init(js_symbuf, sizeof(js_symbuf), &microjs_lib);
+	symtab = symtab_init(js_symbuf, sizeof(js_symbuf));
+
 	/* initialize compiler */
-	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), symtab);
+	microjs = microjs_sdt_init(js_sdtbuf, sizeof(js_sdtbuf), 
+							   symtab, &microjs_lib);
 
 	microjs_sdt_begin(microjs, vm_code, sizeof(vm_code));
 
@@ -211,35 +213,42 @@ int main(int argc,  char **argv)
 	/* compile */
 	if ((err = microjs_compile(microjs, script, len)) < 0) {
 		microjs_sdt_error(stderr, microjs, err);
+		symtab_dump(stderr, symtab);
 		return 1;
 	}
 
+
 	/* insert an ABT opcode at the end of the code */
-	if ((code_sz = microjs_sdt_end(microjs, &rt)) < 0)
+	if ((code_sz = microjs_sdt_end(microjs)) < 0)
 		return 1;
+
+	printf("\nSymbol table:\n");
+	symtab_dump(stdout, symtab);
+
+	rt = symtab_rt_get(symtab);
 
 	if (verbose) {
 		printf(" -  Code size = %d!\n", code_sz);
-		printf(" -  Data size = %d!\n", rt.data_sz);
-		printf(" - Stack size = %d!\n", rt.stack_sz);
+		printf(" -  Data size = %d!\n", rt->data_sz);
+		printf(" - Stack size = %d!\n", rt->stack_sz);
 	}
 
-	if (rt.data_sz >= sizeof(vm_data)) {
+	if (rt->data_sz >= sizeof(vm_data)) {
 		fprintf(stderr, "\n#ERROR: data overflow!\n");
 		return 1;
 	}
 
-	if (rt.stack_sz >= sizeof(vm_stack)) {
+	if (rt->stack_sz >= sizeof(vm_stack)) {
 		fprintf(stderr, "\n#ERROR: stack overflow!\n");
 		return 1;
 	}
 
 	microjs_vm_tracef = ftrace;
 	/* initialize virtual machine */
-	microjs_vm_init(&vm, &rt, NULL, vm_data, vm_stack);
+	microjs_vm_init(&vm, rt, NULL, vm_data, vm_stack);
 
 	/* run */
-	if ((err = microjs_exec(&vm, vm_code, code_sz)) != 0) {
+	if ((err = microjs_exec(&vm, vm_code)) != 0) {
 		fprintf(stderr, "\n#ERROR: Script failed with code %d!\n", err);
 		return 1;
 	}

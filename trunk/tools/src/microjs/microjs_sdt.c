@@ -49,8 +49,8 @@ static int tgt_alloc32(struct microjs_sdt * microjs)
 	microjs->data_pos = addr + SIZEOF_WORD;
 	DCC_LOG1(LOG_INFO, "data_pos=%d", microjs->data_pos);
 
-	if (microjs->data_pos > microjs->data_max)
-		microjs->data_max = microjs->data_pos;
+	if (microjs->data_pos > microjs->tab->rt.data_sz)
+		microjs->tab->rt.data_sz = microjs->data_pos;
 
 	return addr;
 }
@@ -60,8 +60,8 @@ static int tgt_stack_push(struct microjs_sdt * microjs)
 	/* update stack usage */
 	microjs->stack_pos += SIZEOF_WORD;
 
-	if (microjs->stack_pos > microjs->stack_max)
-		microjs->stack_max = microjs->stack_pos;
+	if (microjs->stack_pos > microjs->tab->rt.stack_sz)
+		microjs->tab->rt.stack_sz = microjs->stack_pos;
 
 	return 0;
 }
@@ -358,10 +358,12 @@ int op_object_get(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0) {
+		DCC_LOG(LOG_WARNING, "extern unknown!");
 		return -ERR_EXTERN_UNKNOWN;
+	}
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_OBJECT)
 		return -ERR_EXTERN_NOT_OBJECT;
@@ -369,12 +371,12 @@ int op_object_get(struct microjs_sdt * microjs)
 	/* XXX: the object instance accepts no argument 
 	   and return 1 value. This call could be optimized */
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, xid), 1);
+		   sym_extern_name(microjs->libdef, xid), 1);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = xid; /* external call number */
 	microjs->code[microjs->pc++] = 0; /* stack size (arguments) */
 
-	/* the call will push on value into stack, 
+	/* the call will push one value into stack, 
 	   inform the stack evaluator. */ 
 	tgt_stack_push(microjs);
 
@@ -399,14 +401,14 @@ int op_array_xlat(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	DCC_LOG1(LOG_INFO, "array object xid=%d", xid);
+	DCC_LOG1(LOG_TRACE, "array object xid=%d", xid);
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
-	if (EXTDEF_TYPE(xdef) == O_OBJECT)
+	if (EXTDEF_TYPE(xdef) != O_OBJECT)
 		return -ERR_EXTERN_NOT_OBJECT;
 
 	if (!EXTDEF_FLAG(xdef, O_ARRAY))
@@ -432,7 +434,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 		   and return 1 value. This call could be optimized,
 		 since the stack size is allways one at the entry end exit! */
 		TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-			   sym_extern_name(microjs->tab, xid), 1);
+			   sym_extern_name(microjs->libdef, xid), 1);
 		microjs->code[microjs->pc++] = OPC_EXT;
 		microjs->code[microjs->pc++] = xid; /* external call number */
 		microjs->code[microjs->pc++] = 1; /* stack size (arguments) */
@@ -475,7 +477,7 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
 	DCC_LOG1(LOG_INFO, "attribute xid=%d", xid);
@@ -484,9 +486,9 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	cdef = ext_classdef_get(microjs->tab, cld.def);
+	cdef = ext_classdef_get(microjs->libdef, cld.def);
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_INTEGER)
 		return -ERR_EXTERN_NOT_INTEGER;
@@ -500,7 +502,7 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	   should receive 1 prameter: (object_id) and return the 
 	   attribute value. */
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, xid), 1);
+		   sym_extern_name(microjs->libdef, xid), 1);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = xid; /* external call number */
 	microjs->code[microjs->pc++] = 1; /* stack size (arguments) */
@@ -523,7 +525,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
 	DCC_LOG1(LOG_INFO, "attribute xid=%d", xid);
@@ -532,7 +534,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_INTEGER)
 		return -ERR_EXTERN_NOT_INTEGER;
@@ -540,7 +542,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	if (!EXTDEF_FLAG(xdef, O_ARRAY))
 		return -ERR_EXTERN_NOT_ARRAY;
 
-	cdef = ext_classdef_get(microjs->tab, cld.def);
+	cdef = ext_classdef_get(microjs->libdef, cld.def);
 
 	if (!EXTDEF_FLAG(xdef, O_MEMBER) || 
 		(xid > cdef->last) || (xid < cdef->first))
@@ -550,7 +552,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	   should receive 2 prameter: (object_id, array_idx) and return the 
 	   attribute value. */
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, xid), 1);
+		   sym_extern_name(microjs->libdef, xid), 1);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = xid; /* external call number */
 	microjs->code[microjs->pc++] = 2; /* stack size (arguments) */
@@ -578,15 +580,15 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_INTEGER)
 		return -ERR_EXTERN_NOT_INTEGER;
 
-	cdef = ext_classdef_get(microjs->tab, cld.def);
+	cdef = ext_classdef_get(microjs->libdef, cld.def);
 
 	if (!EXTDEF_FLAG(xdef, O_MEMBER) || 
 		(xid > cdef->last) || (xid < cdef->first))
@@ -598,7 +600,7 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	/* XXX: This call could be optimized, attribute assignement functions,
 	   should receive 2 prameters: (object_id, attr_val) and return nothing */
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, xid), 1);
+		   sym_extern_name(microjs->libdef, xid), 1);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = xid; /* external call number */
 	microjs->code[microjs->pc++] = 2; /* stack size (arguments) */
@@ -627,10 +629,10 @@ int op_array_assign(struct microjs_sdt * microjs)
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_INTEGER)
 		return -ERR_EXTERN_NOT_INTEGER;
@@ -638,7 +640,7 @@ int op_array_assign(struct microjs_sdt * microjs)
 	if (!EXTDEF_FLAG(xdef, O_ARRAY))
 		return -ERR_EXTERN_NOT_ARRAY;
 
-	cdef = ext_classdef_get(microjs->tab, cld.def);
+	cdef = ext_classdef_get(microjs->libdef, cld.def);
 
 	if (!EXTDEF_FLAG(xdef, O_MEMBER) || 
 		(xid > cdef->last) || (xid < cdef->first))
@@ -651,7 +653,7 @@ int op_array_assign(struct microjs_sdt * microjs)
 	   should receive 2 prameters: (object_id, array_idx, attr_val) 
 	   and return nothing */
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, xid), 1);
+		   sym_extern_name(microjs->libdef, xid), 1);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = xid; /* external call number */
 	microjs->code[microjs->pc++] = 3; /* stack size (arguments) */
@@ -683,15 +685,15 @@ int op_method_lookup(struct microjs_sdt * microjs)
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_FUNCTION)
 		return -ERR_EXTERN_NOT_FUNCTION;
 
-	cdef = ext_classdef_get(microjs->tab, cld.def);
+	cdef = ext_classdef_get(microjs->libdef, cld.def);
 
 	if (!EXTDEF_FLAG(xdef, O_MEMBER) || 
 		(xid > cdef->last) || (xid < cdef->first)) {
@@ -723,10 +725,10 @@ int op_function_lookup(struct microjs_sdt * microjs)
 	if ((ret = sym_tmp_pop(microjs->tab, &tmp)) < 0)
 		return ret;
 
-	if ((xid = sym_extern_lookup(microjs->tab, tmp.s, tmp.len)) < 0)
+	if ((xid = sym_extern_lookup(microjs->libdef, tmp.s, tmp.len)) < 0)
 		return -ERR_EXTERN_UNKNOWN;
 
-	xdef = sym_extern_get(microjs->tab, xid);
+	xdef = sym_extern_get(microjs->libdef, xid);
 
 	if (EXTDEF_TYPE(xdef) != O_FUNCTION)
 		return -ERR_EXTERN_NOT_FUNCTION;
@@ -774,7 +776,7 @@ int op_call(struct microjs_sdt * microjs)
 	microjs->spc = microjs->pc; /* save code pointer */
 #endif
 	TRACEF("%04x\tEXT \'%s\" %d\n", microjs->pc, 
-		   sym_extern_name(microjs->tab, call.xid), call.argcnt);
+		   sym_extern_name(microjs->libdef, call.xid), call.argcnt);
 	microjs->code[microjs->pc++] = OPC_EXT;
 	microjs->code[microjs->pc++] = call.xid; /* external call number */
 	microjs->code[microjs->pc++] = call.argcnt; /* stack size */
@@ -1739,7 +1741,7 @@ int microjs_sdt_begin(struct microjs_sdt * microjs, uint8_t code[],
 	return tgt_stack_push(microjs);
 }
 
-int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt)
+int microjs_sdt_end(struct microjs_sdt * microjs)
 {
 	struct sym_ref ref;
 	int ret;
@@ -1772,20 +1774,6 @@ int microjs_sdt_end(struct microjs_sdt * microjs, struct microjs_rt * rt)
 	TRACEF("%04x\tRET\n", microjs->pc);
 	microjs->code[microjs->pc++] = OPC_RET;
 
-#if MICROJS_DEBUG_ENABLED
-	TRACEF("\nSYMBOL TABLE:\n");
-	sym_dump(stdout, microjs->tab);
-	TRACEF("\n");
-#endif
-
-	DCC_LOG2(LOG_INFO, "data_max=%d stack_max=%d", 
-			 microjs->data_max, microjs->stack_max);
-
-	if (rt != NULL) {
-		rt->data_sz = microjs->data_max;
-		rt->stack_sz = microjs->stack_max;
-	}
-
 	return microjs->pc;
 }
 
@@ -1815,16 +1803,25 @@ void microjs_sdt_reset(struct microjs_sdt * microjs)
 
 struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf, 
 									  unsigned int sdt_size,
-									  struct symtab * tab)
+									  struct symtab * tab,
+									  const struct ext_libdef * libdef)
+
 {
 	struct microjs_sdt * microjs = (struct microjs_sdt *)sdt_buf;
+	int data_sz;
 
 	microjs->tab = tab;
+	microjs->libdef = libdef;
+
+	data_sz = symtab_data_size(tab);
+	if (data_sz != tab->rt.data_sz) {
+		DCC_LOG(LOG_ERROR, "Symbol table invalid!");
+		return NULL;
+	}
+
 	/* data memory allocation info */
-	microjs->data_pos = 0;
-	microjs->data_max = 0;
-	microjs->stack_pos = 0;
-	microjs->stack_max = 0;
+	microjs->data_pos = tab->rt.data_sz;
+	microjs->stack_pos = tab->rt.stack_sz;
 
 	/* size of the buffer provided for parsing */
 	microjs->size = sdt_size;

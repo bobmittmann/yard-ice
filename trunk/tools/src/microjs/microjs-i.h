@@ -135,16 +135,13 @@ struct microjs_sdt {
 	struct lexer lex;
 	struct token tok;    /* token buffer */
 	struct symtab * tab; /* symbol table */
+	const struct ext_libdef * libdef; /* external library */
 	uint8_t * code;      /* compiled code */
 	uint16_t cdsz;       /* code buffer size */
 	uint16_t pc;         /* code pointer */
 
-//	uint16_t stack_size;
 	uint16_t stack_pos;
-	uint16_t stack_max;
-//	uint16_t data_size;
 	uint16_t data_pos;
-	uint16_t data_max;
 
 	uint16_t size;       /* SDT stack size */
 	uint16_t ll_sp;      /* LL Parser stack pointer */
@@ -181,11 +178,26 @@ struct strbuf {
 
 /* object */
 struct sym_obj {
+	uint8_t prev;
+	uint8_t next;
 	uint8_t flags;
 	uint8_t size;
-	uint16_t nm;
 	uint16_t addr;
+	char nm[0];
+} __attribute__((packed))__;
+
+struct symtab {
+	struct microjs_rt rt; /* run-time info */
+	uint16_t sp;
+	uint16_t bp;
+	uint16_t fp;
+	uint16_t top;
+#if MICROJS_TRACE_ENABLED
+	uint16_t tmp_lbl;
+#endif
+	struct sym_obj buf[];
 };
+
 
 #define SYM_EXTERN    (1 << 0)
 #define SYM_METHOD    (1 << 1)
@@ -258,18 +270,6 @@ struct sym_sf {
 	uint16_t bp;
 };
 
-struct symtab {
-	const struct ext_libdef * libdef;
-	uint16_t sp;
-	uint16_t bp;
-	uint16_t fp;
-	uint16_t top;
-#if MICROJS_TRACE_ENABLED
-	uint16_t tmp_lbl;
-#endif
-	struct sym_obj buf[];
-};
-
 struct tabst {
 	uint16_t sp;
 	uint16_t bp;
@@ -288,8 +288,6 @@ void lexer_print_err(FILE * f, struct lexer * lex, int err);
 char * tok2str(struct token tok);
 
 int ll_stack_dump(FILE * f, uint8_t * sp, uint8_t * sl);
-
-int sym_dump(FILE * f, struct symtab * tab);
 
 /* --------------------------------------------------------------------------
    Objects
@@ -311,7 +309,7 @@ static inline bool symtab_isempty(struct symtab * tab) {
 
 static inline const char * sym_obj_name(struct symtab * tab, 
 										struct sym_obj * obj) {
-	return (char *)&tab->buf + obj->nm;
+	return (char *)obj->nm;
 }
 
 #if MICROJS_TRACE_ENABLED
@@ -351,12 +349,6 @@ static inline int sym_addr_pop(struct symtab * tab, uint16_t * addr) {
 /* --------------------------------------------------------------------------
    Classes
    -------------------------------------------------------------------------- */
-
-static inline struct classdef * ext_classdef_get(struct symtab * tab, 
-													   int cid) {
-	const struct ext_libdef * libdef = tab->libdef;
-	return (struct classdef *)&libdef->classtab->cdef[cid];
-}
 
 /* Push a clderence into the stack */
 static inline int sym_cld_push(struct symtab * tab, struct sym_cld * cld) {
@@ -445,11 +437,23 @@ static inline int sym_tmp_pop(struct symtab * tab, struct sym_tmp * tmp) {
    Externals (Library)
    -------------------------------------------------------------------------- */
 
-int sym_extern_lookup(struct symtab * tab, const char * s, unsigned int len);
+static inline struct classdef * ext_classdef_get(
+	const struct ext_libdef * libdef, int cid) {
+	return (struct classdef *)&libdef->classtab->cdef[cid];
+}
 
-struct extdef * sym_extern_get(struct symtab * tab, unsigned int xid);
+static inline struct extdef * sym_extern_get(const struct ext_libdef * libdef, 
+											 unsigned int xid) {
+	return (struct extdef *)&libdef->xdef[xid];
+}
 
-const char * sym_extern_name(struct symtab * tab, unsigned int xid);
+static inline const char * sym_extern_name(const struct ext_libdef * libdef, 
+										   unsigned int xid) {
+	return libdef->xdef[xid].nm;
+}
+
+int sym_extern_lookup(const struct ext_libdef * libdef, 
+					  const char * s, unsigned int len);
 
 
 #ifdef __cplusplus
