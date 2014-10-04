@@ -193,9 +193,14 @@ int cmd_trig(FILE * f, int argc, char ** argv)
 		if (addr > 159)
 			return SHELL_ERR_ARG_INVALID;
 
-		trig_addr_set(mod, addr);
+		trig_addr_set(addr);
+		if (mod)
+			trig_module_set(true);
+		else
+			trig_sensor_set(true);
+
 	} else {
-		trig_addr_get(&mod, &addr);
+		addr = trig_addr_get();
 	}
 
 	fprintf(f, "Trigger: %s %d\n", mod ? "module" : "sensor", addr);
@@ -555,11 +560,19 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		if (!device_db_need_update(entry.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
+			struct microjs_rt * rt;
+
 			fprintf(f, "Compiling...\n");
 			if (!device_db_compile(entry.fp)) {
 				printf("Parse error!\n");
 				return -1;
 			}
+
+			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+			fprintf(f, " - data: %d of %d\n", 
+					rt->data_sz, sizeof(slcdev_vm_data));
+			fprintf(f, " - stack: %d of %d\n", 
+					rt->stack_sz, sizeof(slcdev_vm_stack));
 		}
 	}
 
@@ -569,6 +582,7 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 int cmd_config(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
+	bool xfer = false;
 	bool erase = false;
 	bool compile = false;
 	bool load = false;
@@ -589,8 +603,21 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "load") == 0) || 
 			(strcmp(argv[i], "l") == 0)) {
 			load = true;
+		} else if ((strcmp(argv[i], "xfer") == 0) || 
+			(strcmp(argv[i], "x") == 0)) {
+			xfer = true;
+			erase = true;
+			compile = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
+	}
+
+	if (xfer) {
+		fprintf(f, "XMODEM ... ");
+		if ((fs_xmodem_recv(f, "cfg.js")) < 0) {
+			fprintf(f, "fs_xmodem_recv() failed!\r\n");
+			return -1;
+		}
 	}
 
 	fs_dirent_get(&entry, FLASHFS_CFG_JSON);
@@ -606,6 +633,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		if (config_is_sane() && !config_need_update(entry.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
+			struct microjs_rt * rt;
 			slcdev_stop();
 			fprintf(f, "Compiling...\n");
 			if (config_compile(entry.fp) < 0) {
@@ -616,6 +644,13 @@ int cmd_config(FILE * f, int argc, char ** argv)
 				fs_file_unlink(&bin);
 				return -1;
 			}
+
+			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+			fprintf(f, " - data: %d of %d\n", 
+					rt->data_sz, sizeof(slcdev_vm_data));
+			fprintf(f, " - stack: %d of %d\n", 
+					rt->stack_sz, sizeof(slcdev_vm_stack));
+
 			fprintf(f, "Saving...\n");
 			if (config_save(entry.fp) < 0) {
 				fprintf(f, "# Error!\n");
@@ -825,7 +860,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	uint32_t sdtbuf[64]; /* compiler buffer */
 	int32_t stack[16]; /* exec stack */
 	struct microjs_sdt * microjs; 
-	struct microjs_rt rt;
+	struct microjs_rt * rt;
 	struct microjs_vm vm; 
 	struct symstat symstat;
 	struct fs_dirent entry;
@@ -867,7 +902,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		microjs_sdt_error(f, microjs, ret);
 		return -1;
 	}
-	if ((ret = microjs_sdt_end(microjs, &rt)) < 0) {
+	if ((ret = microjs_sdt_end(microjs)) < 0) {
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -ret);
 		microjs_sdt_error(f, microjs, ret);
@@ -876,18 +911,19 @@ int cmd_js(FILE * f, int argc, char ** argv)
 	stop_clk = profclk_get();
 
 	code_sz = ret;
+	rt = symtab_rt_get(symtab);
 	fprintf(f, " - Compile time: %d us.\n", profclk_us(stop_clk - start_clk));
 	fprintf(f, " - code: %d\n", code_sz);
-	fprintf(f, " - data: %d of %d\n", rt.data_sz, sizeof(slcdev_vm_data));
-	fprintf(f, " - stack: %d of %d\n", rt.stack_sz, sizeof(stack));
+	fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
+	fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
 
-	if (rt.data_sz > sizeof(slcdev_vm_data)) {
-		fprintf(f, "# data overlow. %d bytes required\n", rt.data_sz);
+	if (rt->data_sz > sizeof(slcdev_vm_data)) {
+		fprintf(f, "# data overlow. %d bytes required\n", rt->data_sz);
 		return -1;
 	}
 
-	if (rt.stack_sz > sizeof(stack)) {
-		fprintf(f, "# stack overflow. %d bytes required\n", rt.stack_sz);
+	if (rt->stack_sz > sizeof(stack)) {
+		fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
 		return -1;
 	}
 
@@ -896,7 +932,7 @@ int cmd_js(FILE * f, int argc, char ** argv)
 #endif
 
 	/* initialize virtual machine instance */
-	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, stack);
+	microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
 
 	start_clk = profclk_get();
 	if ((ret = microjs_exec(&vm, code)) != 0){

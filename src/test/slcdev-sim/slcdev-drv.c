@@ -79,7 +79,7 @@ static inline const char * __ms(bool module)
  * Trigger module
  * ------------------------------------------------------------------------- */
 
-bool trig_addr_set(bool module, unsigned int addr)
+bool trig_addr_set(unsigned int addr)
 {
 	unsigned int lo;
 	unsigned int hi;
@@ -96,9 +96,10 @@ bool trig_addr_set(bool module, unsigned int addr)
 		slcdev_drv.trig.cmp = 0xffff; 
 	} else {
 		/* Adjust the trigger mask for CLIP mode */
-		slcdev_drv.trig.msk = 0x01ff;
+		slcdev_drv.trig.msk |= 0x01fe; /* don't mess with the 
+										  module bit */
 		/* Adjust the compare values for CLIP mode.*/
-		slcdev_drv.trig.cmp = module ? 1 : 0;
+		slcdev_drv.trig.cmp &= 1; /* clear all except the module bit */
 		slcdev_drv.trig.cmp |= hi << 1; 
 		slcdev_drv.trig.cmp |= lo << 5; 
 	}
@@ -111,45 +112,88 @@ bool trig_addr_set(bool module, unsigned int addr)
 	     SS - Sequence checksum
 	      C - Checksum error 
 	      I - Interrupt */
-	slcdev_drv.trig.ap_msk = 0x7fff;
-	slcdev_drv.trig.ap_cmp = 0x61e0;
-	slcdev_drv.trig.ap_cmp |= module ? 1 : 0;
+	slcdev_drv.trig.ap_msk |= 0x7ffe;
+	slcdev_drv.trig.ap_cmp &= 1; /* clear all except the module bit */
+	slcdev_drv.trig.ap_cmp |= 0x61e0;
 	slcdev_drv.trig.ap_cmp |= hi << 1; 
 	slcdev_drv.trig.ap_cmp |= lo << 9; 
-
-	DCC_LOG3(LOG_TRACE, "code=0x%02x %s %d", (hi << 4) + lo, 
-			 __ms(module), addr);
 
 	return true;
 }
 
-bool trig_addr_get(bool * module, unsigned int * addr)
+void trig_module_set(bool en)
+{
+	unsigned int addr;
+
+	addr = trig_addr_get();
+
+	if (addr < 100) {
+		/* Adjust the trigger mask for CLIP mode */
+		if (en) {
+			slcdev_drv.trig.msk |= 1;
+			slcdev_drv.trig.cmp |= 1;
+		} else {
+			if (slcdev_drv.trig.cmp & 1)
+				slcdev_drv.trig.msk &= ~1;
+		}
+	}
+
+	if (en) {
+		slcdev_drv.trig.ap_msk |= 1;
+		slcdev_drv.trig.ap_cmp |= 1;
+	} else {
+		if (slcdev_drv.trig.cmp & 1)
+			slcdev_drv.trig.msk &= ~1;
+	}
+
+}
+
+void trig_sensor_set(bool en)
+{
+	unsigned int addr;
+
+	addr = trig_addr_get();
+
+	if (addr < 100) {
+		/* Adjust the trigger mask for CLIP mode */
+		if (en) {
+			slcdev_drv.trig.msk |= 1;
+			slcdev_drv.trig.cmp &= ~1;
+		} else {
+			if ((slcdev_drv.trig.cmp & 1) == 0)
+				slcdev_drv.trig.msk &= ~1;
+		}
+	}
+
+	if (en) {
+		slcdev_drv.trig.ap_msk |= 1;
+		slcdev_drv.trig.ap_cmp &= ~1;
+	} else {
+		if ((slcdev_drv.trig.cmp & 1) ==0)
+			slcdev_drv.trig.msk &= ~1;
+	}
+}
+
+unsigned int trig_addr_get(void)
 {
 	unsigned int lo;
 	unsigned int hi;
+	unsigned int addr;
 
 	/* Get the address from the AP Direct poll trigger 
 	   configuration (mask and compare values) */
 	if ((slcdev_drv.trig.ap_msk == 0x7fff) &&
 		((slcdev_drv.trig.ap_cmp & 0x61e0) == 0x61e0)) {
-		/* Address mode */
-		*module = (slcdev_drv.trig.ap_cmp & 1) ? true : false;
 		/* Upper nibble address bits */
 		hi = (slcdev_drv.trig.ap_cmp >> 1) & 0xf; 
 		/* Lower nibble address bits. */
 		lo = (slcdev_drv.trig.ap_cmp >> 9) & 0xf; 
-		*addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
+		addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 	
-		DCC_LOG3(LOG_TRACE, "code=0x%02x %s %d", (hi << 4) + lo, 
-				 __ms(*module), *addr);
-		return true;
+		return addr;
 	}	
-
-	DCC_LOG(LOG_WARNING, "not a valid address trigger.");
-
-	return false;
+	return 0;
 }
-
 
 static void trig_init(void)
 {

@@ -91,6 +91,11 @@
 #define EXT_TMR_MS          47
 #define EXT_TMR_SEC         48
 
+#define EXT_TRIGGER         49
+#define EXT_TRIG_ADDR       50
+#define EXT_TRIG_MODULE     51
+#define EXT_TRIG_SENSOR     52
+
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
 #define EXCEPT_INVALID_ALARM_CODE      102
@@ -102,6 +107,7 @@
 #define EXCEPT_INVALID_GROUP           108
 #define EXCEPT_INVALID_DEVICE          109
 #define EXCEPT_INVALID_LED             110
+#define EXCEPT_INVALID_BOOLEAN         111
 #define EXCEPT_MISSING_ARGUMENT        113
 #define EXCEPT_INVALID_TIMER           114
 
@@ -109,11 +115,12 @@
 #define CLASS_GRP 1
 #define CLASS_LED 2
 #define CLASS_TMR 3
+#define CLASS_TRIG 4
 
 #ifdef __SLCDEV_LIB_DEF__
 
 const struct ext_classtab test_classtab = {
-	.ccnt = 4,
+	.ccnt = 5,
 	.cdef = {
 		[CLASS_DEV] = { .nm = "dev", 
 			.first = EXT_DEV_STATE, .last = EXT_DEV_GRP_CLEAR },
@@ -123,13 +130,15 @@ const struct ext_classtab test_classtab = {
 			.first = EXT_LED_ON, .last = EXT_LED_FLASH },
 		[CLASS_TMR] = { .nm = "tmr", 
 			.first = EXT_TMR_MS, .last = EXT_TMR_SEC },
+		[CLASS_TRIG] = { .nm = "trig", 
+			.first = EXT_TRIG_ADDR, .last = EXT_TRIG_SENSOR},
 	}
 };
 
 const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 49,
+	.xcnt = 53,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -160,6 +169,7 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_THIS] = { .opt = O_OBJECT,
 			.nm = "this", 
 			.o = { .cdef = CLASS_DEV } },
+
 
 		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "sensor", 
@@ -259,6 +269,17 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_GRP_BELONG] = {  .opt = O_FUNCTION | O_MEMBER,
 			.nm = "belong",
 			.f = { .argmin = 2, .argmax = 2, .ret = 1 } },
+
+		[EXT_TRIGGER] = { .opt = O_OBJECT | O_SINGLETON,
+			.nm = "trigger", 
+			.o = { .cdef = CLASS_TRIG, .inst = 0 } },
+		[EXT_TRIG_ADDR] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "addr" },
+		[EXT_TRIG_MODULE] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "module" },
+		[EXT_TRIG_SENSOR] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "sensor" },
+
 	}
 };
 

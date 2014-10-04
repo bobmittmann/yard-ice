@@ -114,7 +114,6 @@ struct microjs_attr_desc {
 #include <microjs.h>
 
 struct json_js {
-	struct microjs_rt rt;
 	uint16_t code_sz;
 	struct symtab * symtab;
 	const struct ext_libdef * libdef;
