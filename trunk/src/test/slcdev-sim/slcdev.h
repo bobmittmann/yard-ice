@@ -151,6 +151,7 @@ struct usr_switch {
 struct slcdev_usr {
 	struct usr_switch sw[2];
 	uint8_t * init; /* init script */
+	uint8_t * trig; /* trigger script */
 	uint8_t * tmr[4]; /* user timers script */
 };
 
@@ -246,6 +247,13 @@ struct cfg_sw {
  * SLC Device Driver 
  * ------------------------------------------------------------------------- */
 
+struct slcdev_trig {
+	uint16_t msk;    /* bitmask */
+	uint16_t cmp;    /* compare value */
+	uint16_t ap_msk; /* AP mode bitmask */
+	uint16_t ap_cmp; /* AP mode compare value */
+};
+
 struct slcdev_drv {
 	unsigned int state; /* decoder state */
 	uint32_t ev_bmp;     /* event bitmap */
@@ -262,12 +270,7 @@ struct slcdev_drv {
 		uint8_t ilat;   /* pulse latency (microsseconds) */
 		uint16_t ipw;   /* pulse width (microsseconds) */
 	} ap; /* AP specific options */
-	struct {
-		uint16_t msk;    /* bitmask */
-		uint16_t cmp;    /* compare value */
-		uint16_t ap_msk; /* AP mode bitmask */
-		uint16_t ap_cmp; /* AP mode compare value */
-	} trig; /* trigger module  */
+	struct slcdev_trig trig; /* trigger module  */
 	struct {
 		unsigned int state; /* decoder state */
 		uint8_t pre; /* pulse preenphasis width (microsseconds) */
@@ -317,8 +320,10 @@ void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
 
-bool trig_addr_set(bool module, unsigned int addr);
-bool trig_addr_get(bool * module, unsigned int * addr);
+bool trig_addr_set(unsigned int addr);
+unsigned int trig_addr_get(void);
+void trig_module_set(bool en);
+void trig_sensor_set(bool en);
 
 bool device_db_compile(struct fs_file * json);
 int device_db_dump(FILE * f);

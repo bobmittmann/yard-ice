@@ -700,14 +700,14 @@ int mcrojs_js_array_enc(struct microjs_json_parser * jsn,
 
 	if (ret > 0) {
 		/* finish compilation */
-		if ((ret = microjs_sdt_end(microjs, &jj->rt)) < 0) 
+		if ((ret = microjs_sdt_end(microjs)) < 0) 
 			goto compile_error;
 
 	}
 
 	jj->code_sz = ret;
 
-	return 0;
+	return ret;
 
 compile_error:
 	DCC_LOG1(LOG_ERROR, "Javascript compile error %d!", -ret);

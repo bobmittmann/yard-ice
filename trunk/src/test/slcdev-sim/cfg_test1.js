@@ -274,37 +274,34 @@
 
 		"down" : [
 			'led[2].on = true;',
+			'sensor[1].alarm = 1;'
 		],
 	},
 
 	"sw2": { 
 		"up" : [ 
-			'var state;',
-			'if (state == 0) { ',
-			'  printf("<0>"); led[5].on = true;',
-			'  sensor[1].trouble = 1;',
-			'} else {',
-			'  if (state == 2) { printf("<2>"); sensor[1].en = false; }',
-			'}',
-			'trigger.addr = 1;',
-			'trigger.sensor = true;',
-			'state = 1;',
+			'led[5].on = true;',
+			'/* trouble 1 */',
+			'sensor[1].trouble = 1;'
 		],
 
 		"off" : [ 
+			'var s_addr = 0;',
+			'var m_addr = 0;',
 			'/* turn off leds */',
 			'led[5].on = false;',
 			'led[4].on = false;',
-			'sensor[1].trouble = 0;',
-			'sensor[1].alarm = 0;',
-			'sensor[1].en = true;',
-			'timer[4].ms = 0;',
-			'if (state == 1) { state = 2; timer[4].ms = 1000; }',
+			'/* clear trouble */',
+			'sensor[s_addr].trouble = 0;',
+			'/* clear alarm */',
+			'sensor[s_addr].alarm = 0;',
+			'/* reset timers */',
+			'timer[1].ms = 0;',
+			'timer[2].ms = 0;'
 		],
 
 		"down" : [
-			'sensor[1].alarm = 3;',
-			'led[4].on = true;',
+			'timer[1].sec = 1; /* set timer 1*/'
 		],
 	},
 
@@ -312,10 +309,8 @@
 		"init" : [
 			'var s_addr = 0;',
 			'var m_addr = 0;',
-			'var m_addr = 0;',
-			'var state = 0;',
 			'printf("\n----------------------\n");',
-			'printf("Custom script 2\n");',
+			'printf("Custom script 1\n");',
 			'printf("Bob Mittmann, Oct-2014\n");'
 			'printf("----------------------\n");'
 		],
@@ -335,13 +330,7 @@
 			'if (s_addr < 160) { timer[1].sec = 5; } /* reschedule */'
 		],
 		"tmr3" : [ ],
-		"tmr4" : [
-			'state = 0;',
-			'if (!sensor[1].en) { ',
-			'	led[5].flash(500);',
-			'	timer[4].ms = 1000;',
-			'}',
-		],
+		"tmr4" : [ ]
 	},
 
 	"trigger" : { 

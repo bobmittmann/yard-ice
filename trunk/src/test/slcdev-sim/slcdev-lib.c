@@ -573,6 +573,7 @@ int32_t __dev_ipre(void * env, int32_t argv[], int argc)
 int32_t __dev_alarm(void * env, int32_t argv[], int argc)
 {
 	unsigned int idx = argv[0];
+	struct ss_device * dev;
 
 	if (idx >= 320)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
@@ -583,7 +584,10 @@ int32_t __dev_alarm(void * env, int32_t argv[], int argc)
 		if (val >= 16)
 			return -EXCEPT_INVALID_ALARM_CODE;
 	
-		ss_dev_tab[idx].alm = val;
+		dev = &ss_dev_tab[idx];
+		
+		dev->alm = val;
+
 		return 0;
 	}
 
@@ -1092,6 +1096,53 @@ int32_t js_led_flash(void * env, int32_t argv[], int argc)
 }
 
 /* --------------------------------------------------------------------------
+   Trigger module
+   -------------------------------------------------------------------------- */
+
+int32_t __trig_addr(void * env, int32_t argv[], int argc)
+{
+	/* this is a singleton, ignore the obect instance (argv[0]) */
+	if (argc > 1) {
+		unsigned int val = argv[1];
+		if (val >= 160)
+			return -EXCEPT_BAD_ADDR;
+		trig_addr_set(val);
+		return 0;
+	}
+	argv[0] = trig_addr_get();
+	return 1; 
+}
+
+int32_t __trig_module(void * env, int32_t argv[], int argc)
+{
+	/* this is a singleton, ignore the obect instance (argv[0]) */
+	if (argc > 1) {
+		unsigned int en = argv[1];
+		if (en > 1)
+			return -EXCEPT_INVALID_BOOLEAN;
+		trig_module_set(en);
+		return 0;
+	}
+	argv[0] = slcdev_drv.trig.ap_msk & 1 & slcdev_drv.trig.ap_cmp;
+	return 1; 
+}
+
+int32_t __trig_sensor(void * env, int32_t argv[], int argc)
+{
+	/* this is a singleton, ignore the obect instance (argv[0]) */
+	if (argc > 1) {
+		unsigned int en = argv[1];
+		if (en > 1)
+			return -EXCEPT_INVALID_BOOLEAN;
+		trig_sensor_set(en);
+		return 0;
+	}
+	argv[0] = slcdev_drv.trig.ap_msk & 1 & ~slcdev_drv.trig.ap_cmp;
+	return 1; 
+}
+
+
+/* --------------------------------------------------------------------------
    Native (external) call table
    -------------------------------------------------------------------------- */
 
@@ -1147,8 +1198,11 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_LED_FLASH] = js_led_flash,
 
 	[EXT_TMR_SEC] = __timer_sec,
-	[EXT_TMR_MS] = __timer_ms
+	[EXT_TMR_MS] = __timer_ms,
 
+	[EXT_TRIG_ADDR] = __trig_addr,
+	[EXT_TRIG_MODULE] = __trig_module,
+	[EXT_TRIG_SENSOR] = __trig_sensor,
 
 };
 

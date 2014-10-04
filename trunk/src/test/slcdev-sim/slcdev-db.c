@@ -153,9 +153,6 @@ int db_cmd_js_enc(struct microjs_json_parser * jsn,
 	if ((ret = mcrojs_js_array_enc(jsn, val, opt, &jj)) < 0)
 		return ret;
 
-	DCC_LOG3(LOG_TRACE, "code=%d data=%d stack=%d", 
-			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
-
 	return db_stack_push(jj.code, jj.code_sz, ptr);
 }
 

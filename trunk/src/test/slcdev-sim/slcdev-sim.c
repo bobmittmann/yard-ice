@@ -121,8 +121,8 @@ void sensor_ctl_default(struct ss_device * dev,
 	case REMOTE_TEST_OFF:
 		DCC_LOG(LOG_INFO, "Remote test disabled");
 		dev->tst = 0;
-		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+//		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+//		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
 		break;
 	}
 }
@@ -174,7 +174,6 @@ void sensor_sim_photo(void * ptr, struct ss_device * dev,
 	} else {
 		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
 	}
-	sensor_ctl_default(dev, model, ctl);
 }
 
 /* simulate a ion smoke detector */
@@ -589,10 +588,6 @@ void __attribute__((noreturn)) sim_event_task(void)
 			/* clear event from bitmap */
 			ev_bmp &= ~(1 << ev);
 			switch (ev) {
-			case SLC_EV_TRIG:
-				DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
-				led_flash(0, 64);
-				break;
 
 			case SLC_EV_DEV_POLL:
 				if (model != NULL) {
@@ -614,6 +609,11 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 					sim->run(&vm, dev, model, ctl);
 				}
+				break;
+
+			case SLC_EV_TRIG:
+				DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
+				microjs_exec(&vm, usr.trig);
 				break;
 
 			case SLC_EV_SW1_OFF:

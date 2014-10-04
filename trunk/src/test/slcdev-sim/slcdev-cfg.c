@@ -13,7 +13,7 @@
 #include "isink.h"
 #include "slcdev-lib.h"
 
-#define CFG_VERSION 2
+#define CFG_VERSION 3
 #define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 struct cfg_info {
@@ -421,6 +421,7 @@ int config_dump(FILE * f)
 						 sizeof(struct cfg_info) + \
 						 sizeof(ss_dev_tab) + \
 						 sizeof(usr) + \
+						 sizeof(struct slcdev_trig) + \
 						 sizeof(slcdev_symbuf))
 
 uint16_t cfg_stack = CFG_STACK_LIMIT;
@@ -659,9 +660,6 @@ int cfg_script_enc(struct microjs_json_parser * jsn,
 		return ret;
 	}
 
-	DCC_LOG3(LOG_TRACE, "code=%d data=%d stack=%d", 
-			 jj.code_sz, jj.rt.data_sz, jj.rt.stack_sz);
-
 	cfg_stack_push(jj.code, jj.code_sz, ptr);
 
 	return ret;
@@ -693,8 +691,6 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 		return ret;
 	}
 
-	DCC_LOG3(LOG_TRACE, "off=%p up=%p down=%p", sw->off, sw->up, sw->down);
-
 	return ret;
 }
 
@@ -720,17 +716,56 @@ int cfg_misc_enc(struct microjs_json_parser * jsn,
 {
 	int ret;
 
-	DCC_LOG1(LOG_TRACE, "init=%p", usr.init);
-
 	if ((ret = microjs_json_parse_obj(jsn, misc_desc, &usr)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
 
-	DCC_LOG1(LOG_TRACE, "init=%p", usr.init);
+	return ret;
+}
+
+struct cfg_trig {
+	uint8_t module;
+	uint8_t sensor;
+	uint8_t addr;
+	uint8_t * script;
+};
+
+static const struct microjs_attr_desc trig_desc[] = {
+	{ "module", MICROJS_JSON_BOOLEAN, 0, 
+		offsetof(struct cfg_trig, module), microjs_bit_enc},
+	{ "sensor", MICROJS_JSON_BOOLEAN, 0, 
+		offsetof(struct cfg_trig, module), microjs_bit_enc},
+	{ "addr", MICROJS_JSON_INTEGER, 0, 
+		offsetof(struct cfg_trig, addr), microjs_u8_enc },
+	{ "script", MICROJS_JSON_ARRAY, 8, 
+		offsetof(struct cfg_trig, script), cfg_script_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+
+int cfg_trig_enc(struct microjs_json_parser * jsn, 
+				 struct microjs_val * val, 
+				 unsigned int opt, void * ptr)
+{
+	struct cfg_trig cfg;
+	int ret;
+
+	memset(&cfg, 0, sizeof(struct cfg_trig));
+
+	if ((ret = microjs_json_parse_obj(jsn, trig_desc, &cfg)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	trig_addr_set(cfg.addr);
+	trig_module_set(cfg.module);
+	trig_sensor_set(cfg.sensor);
+	usr.trig = cfg.script;
 
 	return ret;
 }
+
 
 static const struct microjs_attr_desc cfg_desc[] = {
 	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_device_enc },
@@ -738,6 +773,7 @@ static const struct microjs_attr_desc cfg_desc[] = {
 	{ "sw1", MICROJS_JSON_OBJECT, 0, 0, cfg_switch_enc },
 	{ "sw2", MICROJS_JSON_OBJECT, 1, 0, cfg_switch_enc },
 	{ "misc", MICROJS_JSON_OBJECT, 0, 0, cfg_misc_enc },
+	{ "trigger", MICROJS_JSON_OBJECT, 0, 0, cfg_trig_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -775,6 +811,7 @@ const char * const cfg_labels[] = {
 	"tmr2",
 	"tmr3",
 	"tmr4",
+	"trigger",
 	NULL	
 };
 
@@ -853,9 +890,15 @@ int config_load(void)
 	memcpy(&usr, ptr, sizeof(usr));
 	size = sizeof(usr);
 
+	/* read trigger config */
+	ptr += size;
+	memcpy(&slcdev_drv.trig, ptr, sizeof(struct slcdev_trig));
+	size = sizeof(struct slcdev_trig);
+
 	/* read symbol table */
 	ptr += size;
 	memcpy(slcdev_symbuf, ptr, sizeof(slcdev_symbuf));
+
 
 	return 0;
 }
@@ -891,6 +934,14 @@ int config_save(struct fs_file * json)
 		return -1;
 	}
 
+	/* write trigger config */
+	offs += size;
+	size = sizeof(struct slcdev_trig);
+	if ((ret = stm32_flash_write(offs, &slcdev_drv.trig, size)) < 0) {
+		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
+		return -1;
+	}
+
 	/* write symbol table */
 	offs += size;
 	size = sizeof(slcdev_symbuf);
@@ -898,7 +949,6 @@ int config_save(struct fs_file * json)
 		DCC_LOG(LOG_WARNING, "stm32_flash_write() failed!");
 		return -1;
 	}
-
 
 	inf.magic = CFG_MAGIC;
 	if (json == NULL) {

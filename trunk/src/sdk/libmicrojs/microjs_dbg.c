@@ -71,6 +71,7 @@ static const char * const err_tab[] = {
 	[ERR_NOT_IMPLEMENTED] = "construct not implemented",
 	[ERR_ATTR_NOT_ARRAY] = "attribute is not an array",
 	[ERR_NULL_POINTER] = "null pointer",
+	[ERR_EXTERN_NOT_SCALAR] = "not scalar",
 };
 
 const char * microjs_strerr(int err)
