@@ -38,21 +38,16 @@ const struct {
 	uint8_t typ;
 	char nm[9];
 } lex_keyword[] = {
-	{ T_BREAK,  "break" },
-	{ T_CATCH,  "catch" },
-	{ T_CONTINUE,  "continue" },
-	{ T_ELSE,  "else" },
-	{ T_FALSE, "false" },
-	{ T_FINALLY, "finally" },
-	{ T_FUNCTION, "function" },
-	{ T_FOR,   "for" },
-	{ T_IF,    "if" },
-	{ T_RETURN,  "return" },
-	{ T_THROW,  "throw" },
-	{ T_TRUE,  "true" },
-	{ T_TRY,  "try" },
-	{ T_VAR,   "var" },
-	{ T_WHILE, "while" },
+	{ T_CATCH,    "catch" },
+	{ T_ELSE,     "else" },
+	{ T_FALSE,    "false" },
+	{ T_FOR,      "for" },
+	{ T_IF,       "if" },
+	{ T_THROW,    "throw" },
+	{ T_TRUE,     "true" },
+	{ T_TRY,      "try" },
+	{ T_VAR,      "var" },
+	{ T_WHILE,    "while" },
 };
 
 int lexer_open(struct lexer * lex, const char * txt, unsigned int len)

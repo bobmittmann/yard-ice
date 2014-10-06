@@ -39,92 +39,25 @@
 
 #include <sys/dcclog.h>
 
-struct shell_cmd * cmd_lookup(const char * s, 
-								const struct shell_cmd * cmd_tab)
-{
-	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
-
-	while (cmd->callback != NULL) {
-		if ((strcmp(s, cmd->name) == 0) || (strcmp(s, cmd->alias) == 0)) {
-			return cmd;
-		}
-		cmd++;
-	}
-
-	return NULL;
-}
-
-int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
-{
-	char * argv[SHELL_ARG_MAX];
-	struct shell_cmd * cmd;
-	int argc;
-
-	if ((argc = shell_parseline(line, argv, SHELL_ARG_MAX)) == 0) {
-		return 0;
-	}
-
-	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
-		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
-		return SHELL_ERR_CMD_INVALID;
-	}
-
-	return cmd->callback(f, argc, argv);
-}
-
-static char * get_cmd_next(char ** linep)
-{
-	char * cp = *linep;
-	char * cmd;
-	int c;
-	
-	while ((c = *cp) == ' ')
-		cp++;
-
-	if (c == '\0')
-		return NULL;
-
-	cmd = cp;
-
-	do {
-		if (c == ';') {
-			*cp = '\0';
-			cp++;
-			break;
-		}
-
-		cp++;
-
-		/* Quotes */
-		if ((c == '\'') || (c == '\"')) {
-			int qt = c;
-			for (; ((c = *cp) != '\0'); cp++) {
-				if (c == qt) {
-					cp++;
-					break;
-				}	
-			}
-		}
-
-		c = *cp;
-	} while (c != '\0');
-
-	*linep = cp;
-
-	return cmd;
-}
+#ifndef SHELL_HISTORY_MAX
+#define SHELL_HISTORY_MAX 5
+#endif
 
 int shell(FILE * f, const char * (* prompt)(void), 
-		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
+		  const char * (* greeting)(void), 
+		  const struct shell_cmd cmd_tab[])
 {
-	char line[SHELL_LINE_MAX];
+//	char line[SHELL_LINE_MAX];
+	char * line;
+	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+	struct cmd_history * history;
+	struct shell_cmd * cmd;
 	char * cp;
-	char * cmd;
+	char * stat;
 	int ret = 0;
-	struct cmd_history history;
 
 	DCC_LOG(LOG_TRACE, "history_init()");
-	history_init(&history);
+	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 
 	if (greeting != NULL)
 		fprintf(f, greeting());
@@ -132,17 +65,23 @@ int shell(FILE * f, const char * (* prompt)(void),
 	for (;;) {
 		fprintf(f, "%s", prompt());
 
-		if (history_readline(&history, f, line, SHELL_LINE_MAX) == NULL)
+		line = history_head(history);
+
+		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;
 
 		if ((cp = shell_stripline(line)) == NULL)
 			continue;
 
-		history_add(&history, cp);
+		history_add(history, cp);
 		cp = line;
 
-		while ((cmd = get_cmd_next(&cp)) != NULL) {
-			if ((ret = cmd_exec(f, cmd, cmd_tab)) < 0) {
+		while ((stat = cmd_get_next(&cp)) != NULL) {
+			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
+				fprintf(f, "Command not found!\n");
+				break;
+			}
+			if ((ret = cmd_exec(f, cmd, stat)) < 0) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;
 			}

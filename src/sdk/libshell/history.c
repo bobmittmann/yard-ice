@@ -74,16 +74,22 @@
 #define MODE_ESC_VAL2 3
 #define MODE_ESC_O 4
 
-void history_init(struct cmd_history * ht)
+struct cmd_history * history_init(void * buf, unsigned int bufsz,
+								  unsigned int line_len)
 {
-	DCC_LOG1(LOG_TRACE, "sizeof(struct cmd_history)=%d", 
-			 sizeof(struct cmd_history));
+	struct cmd_history * ht = (struct cmd_history *)buf;
 
 	ht->pos = 0;
 	ht->head = 0;
 	ht->tail = 0;
-	ht->max = SHELL_HISTORY_MAX;
+	ht->len = line_len;
+	ht->max = (bufsz - sizeof(struct cmd_history)) / line_len;
+
+	DCC_LOG2(LOG_INFO, "size=%d entries=%d", bufsz , ht->max);
+
+	return ht;
 }
+
 
 char * history_prev(struct cmd_history * ht)
 {
@@ -98,7 +104,7 @@ char * history_prev(struct cmd_history * ht)
 		ht->pos--;
 	}
 
-	cp = ht->buf[ht->pos];
+	cp = ht->buf + ht->pos * ht->len;
 
 	DCC_LOG1(LOG_MSG, "pos=%d", ht->pos);
 
@@ -118,11 +124,16 @@ char * history_next(struct cmd_history * ht)
 			ht->pos = 0;
 	}
 
-	cp = ht->buf[ht->pos];
+	cp = ht->buf + ht->pos * ht->len;
 
 	DCC_LOG1(LOG_MSG, "pos=%d", ht->pos);
 
 	return cp;
+}
+
+char * history_head(struct cmd_history * ht)
+{
+	return ht->buf + ht->head * ht->len;
 }
 
 void history_add(struct cmd_history * ht, char * s)
@@ -136,7 +147,7 @@ void history_add(struct cmd_history * ht, char * s)
 		n = (ht->head == 0) ? ht->max : ht->head;
 		n--;
 	
-		if (strcmp(s, ht->buf[n]) == 0) {
+		if (strcmp(s, ht->buf + n * ht->len) == 0) {
 			/* don't repeat the last insertion,
 			 just reposition the current pointer */
 			ht->pos = ht->head;
@@ -144,7 +155,7 @@ void history_add(struct cmd_history * ht, char * s)
 		}
 	}
 
-	strcpy(ht->buf[ht->head], s);
+	strcpy(ht->buf + ht->head * ht->len, s);
 
 	ht->head++;
 
@@ -162,7 +173,7 @@ void history_add(struct cmd_history * ht, char * s)
 	}
 	
 	/* invalidate the head position */
-	*ht->buf[ht->head] = '\0';
+	ht->buf[ht->head * ht->len] = '\0';
 	ht->pos = ht->head;
 }
 
@@ -191,7 +202,7 @@ char * history_readline(struct cmd_history * ht, FILE * f,
 	max--;
 	for (;;) {
 		if ((c = fgetc(f)) == EOF) {
-			DCC_LOG(LOG_TRACE, "EOF");
+			DCC_LOG(LOG_INFO, "EOF");
 			return NULL;
 		}
 
@@ -255,6 +266,11 @@ char * history_readline(struct cmd_history * ht, FILE * f,
 					DCC_LOG1(LOG_MSG, "delete %d", ctrl);
 					c = IN_DELETE + ctrl;
 					break;
+				case 4:
+					/* end */
+					DCC_LOG(LOG_MSG, "end");
+					c = IN_END + ctrl;
+					break;
 				case 5:
 					DCC_LOG1(LOG_MSG, "pg up %d", ctrl);
 					c = IN_PAGE_UP + ctrl;
@@ -290,7 +306,7 @@ char * history_readline(struct cmd_history * ht, FILE * f,
 				c = IN_END;
 				break;
 			case 'H':
-				/* end */
+				/* home */
 				DCC_LOG(LOG_MSG, "home");
 				c = IN_HOME;
 				break;
@@ -310,6 +326,12 @@ char * history_readline(struct cmd_history * ht, FILE * f,
 			continue;
 
 		case IN_CURSOR_UP:
+			if (ht->pos == ht->head) {
+				buf[len] = '\0';
+				/* save current line on history's head */
+				strcpy(ht->buf + ht->pos * ht->len, buf);
+			}
+
 			if ((s = history_prev(ht)) == NULL)
 				continue;
 			goto set_buf;

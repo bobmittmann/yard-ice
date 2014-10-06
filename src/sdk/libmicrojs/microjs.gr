@@ -1,36 +1,14 @@
-%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND BREAK CATCH CONTINUE ELSE FALSE FINALLY FOR FUNCTION IF RETURN THROW TRUE TRY VAR WHILE ID INT CHAR STRING ERR
+%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND CATCH ELSE FALSE FOR IF THROW TRUE TRY VAR WHILE ID INT CHAR STRING ERR
 %%
 
 program 		: EOF
 				| stat program
+				| semi_stat semi_list
 				| compound_stat program
 				;
 
-compound_stat	: '{' { op_blk_open } stat_list '}' { op_blk_close } 
-				;
-
-stat_list		:
-				| stat stat_list
-				;
-
-stat			: "for" '(' exp_lst_opt ';' { op_for_init } exp { op_for_cond } ';' exp_lst_opt { op_for_after } ')' compound_stat { op_for_end }
-				| "while" { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
-				| "if" condition { op_if_cond } compound_stat else_opt { op_if_end }
-				| "try" { op_try_begin } compound_stat catch_opt 
-				| "throw" exp { op_throw } ';'
-				| "var" var_list ';'
-				| assign_or_call ';'
-				;
-
-else_opt		: 
-				| "else" { op_if_else } compound_stat
-				;
-
-catch_opt		: { op_try_end }
-				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_var_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
-				;
-
-condition		: '(' exp ')'
+semi_list		: EOF
+				| ';' program
 				;
 
 // --------------------------------------------------------------------------
@@ -51,17 +29,10 @@ var_assign_opt  : { op_pop_tmp }
 				| '=' exp { op_var_assign }
 				;
 
-assign_or_call  : ID { op_push_tmp } assign_or_call1
-				;
-
 assign_or_call1	: '=' exp { op_var_assign }
 				| function_call { op_ret_discard }
-				| '[' exp ']' { op_array_xlat } object_assign
+				| '[' exp ']' { op_array_xlat } '.' attr_assign
 				| '.'{ op_object_get } attr_assign
-				;
-
-object_assign	: '=' exp { op_object_assign }
-				| '.' attr_assign
 				;
 
 attr_assign		: ID { op_push_tmp } attr_assign2
@@ -105,7 +76,7 @@ exp_lst_opt		:
 				| exp_lst
 				;
 
-exp_lst			: assign_or_call exp_lst1
+exp_lst			: ID { op_push_tmp } assign_or_call1 exp_lst1
 				;
 				
 exp_lst1		: 
@@ -193,12 +164,8 @@ id_eval 		: ID { op_push_tmp } id_eval1
 
 id_eval1		: { op_var_eval }
 				| function_call { op_call_ret }
-				| '[' exp ']' { op_array_xlat } object_eval
+				| '[' exp ']' { op_array_xlat } '.' attr_eval
 				| '.' { op_object_get } attr_eval		
-				;
-
-object_eval		: { op_object_eval }
-				| '.' attr_eval
 				;
 
 attr_eval		: ID { op_push_tmp } attr_eval1
@@ -209,4 +176,41 @@ attr_eval1		: { op_attr_eval }
 				| method_call { op_call_ret }
 				| '[' exp ']' { op_array_eval }
 				;
+
+
+// --------------------------------------------------------------------------
+// Statements
+// -------------------------------------------------------------------------- 
+
+compound_stat	: '{' { op_blk_open } stat_list '}' { op_blk_close } 
+				;
+
+stat_list		:
+				| stat stat_list
+				| semi_stat ';' stat_list
+				;
+
+stat			: "for" '(' exp_lst_opt ';' { op_for_init } exp { op_for_cond } ';' exp_lst_opt { op_for_after } ')' compound_stat { op_for_end }
+				| "while" { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
+				| "if" condition { op_if_cond } compound_stat else_opt { op_if_end }
+				| "try" { op_try_begin } compound_stat catch_opt 
+				;
+
+condition		: '(' exp ')'
+				;
+
+semi_stat		: "throw" exp { op_throw }
+				| "var" var_list
+				| ID { op_push_tmp } assign_or_call1
+				;
+
+
+else_opt		: 
+				| "else" { op_if_else } compound_stat
+				;
+
+catch_opt		: { op_try_end }
+				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_var_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
+				;
+
 

@@ -87,14 +87,19 @@
 #define EXT_DEV_PW4         43
 #define EXT_DEV_PW5         44
 #define EXT_DEV_GRP         45
-#define EXT_DEV_GRP_CLEAR   46
-#define EXT_TMR_MS          47
-#define EXT_TMR_SEC         48
+#define EXT_DEV_PRINT       46
+#define EXT_DEV_GRP_CLEAR   47
 
-#define EXT_TRIGGER         49
-#define EXT_TRIG_ADDR       50
-#define EXT_TRIG_MODULE     51
-#define EXT_TRIG_SENSOR     52
+#define EXT_TMR_MS          48
+#define EXT_TMR_SEC         49
+
+#define EXT_TRIGGER         51
+#define EXT_TRIG_ADDR       52
+#define EXT_TRIG_MODULE     53
+#define EXT_TRIG_SENSOR     54
+
+#define EXT_S               55
+#define EXT_M               56
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -138,7 +143,7 @@ const struct ext_classtab test_classtab = {
 const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 53,
+	.xcnt = 57,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -174,10 +179,15 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_SENSOR] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "sensor", 
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
-
+		[EXT_S] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "s", 
+			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
 		[EXT_MODULE] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "module", 
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 160 } },
+		[EXT_M] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "m", 
+			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
 
 		[EXT_GROUP] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "group", 
@@ -253,9 +263,12 @@ const struct ext_libdef slcdev_lib = {
 			.nm = "pw5" },
 		[EXT_DEV_GRP] = { .opt = O_INTEGER | O_MEMBER | O_ARRAY,
 			.nm = "grp" },
+		[EXT_DEV_PRINT] = { .opt = O_FUNCTION | O_MEMBER,  
+			.nm = "print", 
+			.f = { .argmin = 1, .argmax = 1, .ret = 0 } },
 		[EXT_DEV_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,  
 			.nm = "grp_clear", 
-			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+			.f = { .argmin = 1, .argmax = 1, .ret = 0 } },
 
 		[EXT_GRP_CLEAR] = { .opt = O_FUNCTION | O_MEMBER,
 			.nm = "clear",
