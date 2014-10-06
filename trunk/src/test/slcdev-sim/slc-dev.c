@@ -43,9 +43,19 @@ const struct file stm32_uart_file = {
 };
 #endif
 
+int js(FILE * f, char * script, unsigned int len);
+
 int main(int argc, char ** argv)
 {
+//	char line[SHELL_LINE_MAX];
+	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+	char * line;
+	struct cmd_history * history;
+	struct shell_cmd * cmd;
 	struct serdrv * sdrv;
+	char * cp;
+	char * stat;
+	int ret = 0;
 	FILE * f;
 
 	DCC_LOG_INIT();
@@ -125,7 +135,43 @@ int main(int argc, char ** argv)
 	slcdev_event_raise(SLC_EV_SIM_START);
 
 	/* start a shell on the serial TTY */
-	shell(f, shell_prompt, shell_greeting, cmd_tab);
+//	shell(f, shell_prompt, shell_greeting, cmd_tab);
+
+	DCC_LOG(LOG_TRACE, "history_init()");
+	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
+
+	fprintf(f, shell_greeting());
+
+	for (;;) {
+		fprintf(f, "%s", shell_prompt());
+
+		line = history_head(history);
+
+		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
+			break;
+
+		if ((cp = shell_stripline(line)) == NULL)
+			continue;
+
+		history_add(history, cp);
+
+		if (cmd_lookup(cmd_tab, cp) == NULL) {
+			js(f, cp, strlen(cp));
+			continue;
+		}
+
+		while ((stat = cmd_get_next(&cp)) != NULL) {
+			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
+				fprintf(f, "Command not found!\n");
+				break;
+			}
+			if ((ret = cmd_exec(f, cmd, stat)) < 0) {
+				fprintf(f, "Error: %d\n", -ret);
+				break;
+			}
+			
+		}
+	}
 
 	DCC_LOG(LOG_WARNING, "bye bye !!!!!!!!!!");
 

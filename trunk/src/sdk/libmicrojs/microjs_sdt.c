@@ -456,6 +456,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
    External object evaluation and assignement
    -------------------------------------------------------------------------- */
 
+#if 0
 int op_object_eval(struct microjs_sdt * microjs)
 {
 	return -ERR_NOT_IMPLEMENTED;
@@ -465,6 +466,7 @@ int op_object_assign(struct microjs_sdt * microjs)
 {
 	return -ERR_NOT_IMPLEMENTED;
 }
+#endif
 
 /* --------------------------------------------------------------------------
    External Object attribute evaluation and assignement
@@ -1494,8 +1496,10 @@ int (* const op[])(struct microjs_sdt * microjs) = {
  	[ACTION(A_OP_VAR_ASSIGN)] = op_var_assign,
  	[ACTION(A_OP_ARRAY_XLAT)] = op_array_xlat,
  	[ACTION(A_OP_OBJECT_GET)] = op_object_get,
+#if 0
  	[ACTION(A_OP_OBJECT_EVAL)] = op_object_eval,
  	[ACTION(A_OP_OBJECT_ASSIGN)] = op_object_assign,
+#endif
  	[ACTION(A_OP_ATTR_EVAL)] = op_attr_eval,
  	[ACTION(A_OP_ARRAY_EVAL)] = op_array_eval,
  	[ACTION(A_OP_ATTR_ASSIGN)] = op_attr_assign,

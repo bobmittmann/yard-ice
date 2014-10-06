@@ -331,6 +331,46 @@ int32_t __module(void * env, int32_t argv[], int argc)
 	return 1; /* return the number of return values */
 }	
 
+int32_t __dev_print(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+	struct ss_device * dev;
+	FILE * f = stdout;
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	dev = &ss_dev_tab[idx];
+		
+	fprintf(f, "%s %d [%s %s %s]\n",  
+			dev->module ? "module" : "sensor", dev->addr,
+			dev->cfg ? "confgd" : "unconfgd",
+			dev->enabled ? "enabled" : "disabled",
+			dev->apen ? "AP" : "CLIP");
+	fprintf(f, " - model=%d\n",  dev->model);
+	fprintf(f, " - tbias=%d ", dev->tbias);
+	fprintf(f, " icfg=0x%02x", dev->icfg);
+	fprintf(f, " ipre=%d", dev->ipre);
+	fprintf(f, " ilat=%d\n", dev->ilat);
+	fprintf(f, " - led=%d", dev->led);
+	fprintf(f, " tst=%d\n", dev->tst);
+	fprintf(f, " - out1=%d", dev->out1);
+	fprintf(f, " out2=%d", dev->out2);
+	fprintf(f, " out3=%d", dev->out3);
+	fprintf(f, " out5=%d\n", dev->out5);
+	fprintf(f, " - alm=%d", dev->alm);
+	fprintf(f, " tbl=%d\n", dev->tbl);
+	fprintf(f, " - pw1=%d", dev->pw1);
+	fprintf(f, " pw2=%d",  dev->pw2);
+	fprintf(f, " pw3=%d", dev->pw3);
+	fprintf(f, " pw4=%d", dev->pw4);
+	fprintf(f, " pw5=%d\n", dev->pw5);
+	fprintf(f, " - grp=[%d, %d, %d, %d]\n", 
+			dev->grp[0], dev->grp[1], dev->grp[2], dev->grp[3]);
+
+	return 0;
+}
+
 int32_t __dev_state(void * env, int32_t argv[], int argc)
 {
 	unsigned int idx = argv[0];
@@ -1159,6 +1199,8 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 
 	[EXT_SENSOR] = __sensor,
 	[EXT_MODULE] = __module,
+	[EXT_S] = __sensor,
+	[EXT_M] = __module,
 	[EXT_THIS] = __this,
 
 	[EXT_DEV_STATE] = __dev_state,
@@ -1188,6 +1230,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_DEV_PW5] = __dev_pw5,
 	[EXT_DEV_GRP_CLEAR] = __dev_grp_clear,
 	[EXT_DEV_GRP] = __dev_grp,
+	[EXT_DEV_PRINT] = __dev_print,
 
 	[EXT_GRP_CLEAR] = __grp_clear,
 	[EXT_GRP_INSERT] = __grp_insert,

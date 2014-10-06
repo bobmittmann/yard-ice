@@ -58,7 +58,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 		return -1;
 
 	if (argc > 1) {
-		if ((cmd = cmd_lookup(argv[1], cmd_tab)) == NULL) {
+		if ((cmd = cmd_lookup(cmd_tab, argv[1])) == NULL) {
 			fprintf(f, " Not found: '%s'\n", argv[1]);
 			return -1;
 		}
@@ -678,6 +678,201 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
+{
+	struct db_dev_model * mod;
+	struct ss_device * dev;
+	int addr;
+	int sel;
+
+	if (argc < 3)
+		return SHELL_ERR_ARG_MISSING;
+
+	addr = strtoul(argv[1], NULL, 0);
+	if (addr > 160)
+		return SHELL_ERR_ARG_INVALID;
+
+	sel = strtoul(argv[2], NULL, 0);
+	if (sel > 16)
+		return SHELL_ERR_ARG_INVALID;
+
+	dev = sensor(addr);
+
+	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
+		return SHELL_ERR_ARG_INVALID;
+
+	switch (n) { 
+	case 1:
+		dev->pw1 = device_db_pw_lookup(mod->pw1, sel);
+		break;
+	case 2:
+		dev->pw2 = device_db_pw_lookup(mod->pw2, sel);
+		break;
+	case 3:
+		dev->pw3 = device_db_pw_lookup(mod->pw3, sel);
+		break;
+	case 4:
+		dev->pw4 = device_db_pw_lookup(mod->pw4, sel);
+		break;
+	case 5:
+		dev->pw5 = device_db_pw_lookup(mod->pw5, sel);
+		break;
+	}
+
+	return 0;
+}
+
+int cmd_pw2(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 2);
+}
+
+int cmd_pw3(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 3);
+}
+
+int cmd_pw4(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 4);
+}
+
+int cmd_reboot(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	cm3_sysrst();
+
+	return 0;
+}
+
+int cmd_sym(FILE * f, int argc, char ** argv)
+{
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	return symtab_dump(f, symtab);
+}
+
+int js(FILE * f, char * script, unsigned int len)
+{
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
+	uint8_t code[512]; /* compiled code */
+	uint32_t sdtbuf[64]; /* compiler buffer */
+	int32_t stack[16]; /* exec stack */
+	struct microjs_sdt * microjs; 
+	struct microjs_rt * rt;
+	struct microjs_vm vm; 
+	struct symstat symstat;
+	uint32_t start_clk;
+	uint32_t stop_clk;
+	int code_sz;
+	int ret;
+
+	profclk_init();
+
+	/* initialize compiler */
+	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, &slcdev_lib);
+
+	symstat = symtab_state_save(symtab);
+
+	microjs_sdt_begin(microjs, code, sizeof(code));
+
+	start_clk = profclk_get();
+	if ((ret = microjs_compile(microjs, script, len)) < 0) {
+		symtab_state_rollback(symtab, symstat);
+		fprintf(f, "# compile error: %d\n", -ret);
+		microjs_sdt_error(f, microjs, ret);
+		return -1;
+	}
+	if ((ret = microjs_sdt_end(microjs)) < 0) {
+		symtab_state_rollback(symtab, symstat);
+		fprintf(f, "# compile error: %d\n", -ret);
+		microjs_sdt_error(f, microjs, ret);
+		return -1;
+	}
+	stop_clk = profclk_get();
+
+	code_sz = ret;
+	rt = symtab_rt_get(symtab);
+	fprintf(f, " - Compile time: %d us.\n", profclk_us(stop_clk - start_clk));
+	fprintf(f, " - code: %d\n", code_sz);
+	fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
+	fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
+
+	if (rt->data_sz > sizeof(slcdev_vm_data)) {
+		fprintf(f, "# data overlow. %d bytes required\n", rt->data_sz);
+		return -1;
+	}
+
+	if (rt->stack_sz > sizeof(stack)) {
+		fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
+		return -1;
+	}
+
+#if MICROJS_TRACE_ENABLED
+	microjs_vm_tracef = f;
+#endif
+
+	/* initialize virtual machine instance */
+	microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
+
+	start_clk = profclk_get();
+	if ((ret = microjs_exec(&vm, code)) != 0){
+		fprintf(f, "# exec error: %d\n", ret);
+		return -1;
+	}
+	stop_clk = profclk_get();
+	fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
+
+	return 0;
+}
+
+
+
+
+int cmd_str(FILE * f, int argc, char ** argv)
+{
+	int ret = 0;
+	int i;
+
+	if (argc == 1)
+		return const_strbuf_dump(f);
+
+	for (i = 1; i < argc; ++i) {
+		if ((ret = const_str_add(argv[i], strlen(argv[i]))) < 0)
+			break;
+	}
+
+	return ret;
+}
+
+
+int cmd_sim(FILE * f, int argc, char ** argv)
+{
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((strcmp(argv[1], "stop") == 0) || 
+		(strcmp(argv[1], "s") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_STOP);
+	} else if ((strcmp(argv[1], "resume") == 0) || 
+		(strcmp(argv[1], "r") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_RESUME);
+	} else
+		return SHELL_ERR_ARG_INVALID;
+
+	return 0;
+}
+
+#if 0
+
 int cmd_module(FILE * f, int argc, char ** argv)
 {
 	int addr;
@@ -773,104 +968,12 @@ int cmd_group(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
-{
-	struct db_dev_model * mod;
-	struct ss_device * dev;
-	int addr;
-	int sel;
-
-	if (argc < 3)
-		return SHELL_ERR_ARG_MISSING;
-
-	addr = strtoul(argv[1], NULL, 0);
-	if (addr > 160)
-		return SHELL_ERR_ARG_INVALID;
-
-	sel = strtoul(argv[2], NULL, 0);
-	if (sel > 16)
-		return SHELL_ERR_ARG_INVALID;
-
-	dev = sensor(addr);
-
-	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
-		return SHELL_ERR_ARG_INVALID;
-
-	switch (n) { 
-	case 1:
-		dev->pw1 = device_db_pw_lookup(mod->pw1, sel);
-		break;
-	case 2:
-		dev->pw2 = device_db_pw_lookup(mod->pw2, sel);
-		break;
-	case 3:
-		dev->pw3 = device_db_pw_lookup(mod->pw3, sel);
-		break;
-	case 4:
-		dev->pw4 = device_db_pw_lookup(mod->pw4, sel);
-		break;
-	case 5:
-		dev->pw5 = device_db_pw_lookup(mod->pw5, sel);
-		break;
-	}
-
-	return 0;
-}
-
-int cmd_pw2(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 2);
-}
-
-int cmd_pw3(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 3);
-}
-
-int cmd_pw4(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 4);
-}
-
-int cmd_reboot(FILE * f, int argc, char ** argv)
-{
-	if (argc > 1)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	cm3_sysrst();
-
-	return 0;
-}
-
-int cmd_sym(FILE * f, int argc, char ** argv)
-{
-	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
-
-	if (argc > 1)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	return symtab_dump(f, symtab);
-}
-
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
-	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
-	uint8_t code[512]; /* compiled code */
-	uint32_t sdtbuf[64]; /* compiler buffer */
-	int32_t stack[16]; /* exec stack */
-	struct microjs_sdt * microjs; 
-	struct microjs_rt * rt;
-	struct microjs_vm vm; 
-	struct symstat symstat;
 	struct fs_dirent entry;
-	uint32_t start_clk;
-	uint32_t stop_clk;
-	int code_sz;
 	char * script;
 	int len;
-	int ret;
-
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -886,104 +989,8 @@ int cmd_js(FILE * f, int argc, char ** argv)
 		len = strlen(argv[1]);
 	}
 
-	profclk_init();
-
-	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, &slcdev_lib);
-
-	symstat = symtab_state_save(symtab);
-
-	microjs_sdt_begin(microjs, code, sizeof(code));
-
-	start_clk = profclk_get();
-	if ((ret = microjs_compile(microjs, script, len)) < 0) {
-		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -ret);
-		microjs_sdt_error(f, microjs, ret);
-		return -1;
-	}
-	if ((ret = microjs_sdt_end(microjs)) < 0) {
-		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# compile error: %d\n", -ret);
-		microjs_sdt_error(f, microjs, ret);
-		return -1;
-	}
-	stop_clk = profclk_get();
-
-	code_sz = ret;
-	rt = symtab_rt_get(symtab);
-	fprintf(f, " - Compile time: %d us.\n", profclk_us(stop_clk - start_clk));
-	fprintf(f, " - code: %d\n", code_sz);
-	fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
-	fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
-
-	if (rt->data_sz > sizeof(slcdev_vm_data)) {
-		fprintf(f, "# data overlow. %d bytes required\n", rt->data_sz);
-		return -1;
-	}
-
-	if (rt->stack_sz > sizeof(stack)) {
-		fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
-		return -1;
-	}
-
-#if MICROJS_TRACE_ENABLED
-	microjs_vm_tracef = f;
-#endif
-
-	/* initialize virtual machine instance */
-	microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
-
-	start_clk = profclk_get();
-	if ((ret = microjs_exec(&vm, code)) != 0){
-		fprintf(f, "# exec error: %d\n", ret);
-		return -1;
-	}
-	stop_clk = profclk_get();
-	fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
-
-	return 0;
+	return js(f, script, len);
 }
-
-
-int cmd_str(FILE * f, int argc, char ** argv)
-{
-	int ret = 0;
-	int i;
-
-	if (argc == 1)
-		return const_strbuf_dump(f);
-
-	for (i = 1; i < argc; ++i) {
-		if ((ret = const_str_add(argv[i], strlen(argv[i]))) < 0)
-			break;
-	}
-
-	return ret;
-}
-
-
-int cmd_sim(FILE * f, int argc, char ** argv)
-{
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	if ((strcmp(argv[1], "stop") == 0) || 
-		(strcmp(argv[1], "s") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_STOP);
-	} else if ((strcmp(argv[1], "resume") == 0) || 
-		(strcmp(argv[1], "r") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_RESUME);
-	} else
-		return SHELL_ERR_ARG_INVALID;
-
-	return 0;
-}
-
-#if 0
 
 int cmd_run(FILE * f, int argc, char ** argv)
 {
@@ -1106,6 +1113,16 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_run, "run", "", "script", "run compiled code" },
 
+	{ cmd_js, "js", "", "script", "javascript" },
+
+	{ cmd_module, "module", "mod", "<addr> [attr [VAL]]", 
+		"get/set module attribute" },
+
+	{ cmd_sensor, "sensor", "sens", "<addr> [attr [VAL]]", 
+		"get/set sensor attribute" },
+
+	{ cmd_group, "group", "grp", "", "show group information" },
+
 #endif
 
 	{ cmd_sim, "sim", "", "[start|stop]", "" },
@@ -1133,14 +1150,6 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_config, "config", "cfg", "[compile|erase|load|save]", 
 		"configuration options" },
 
-	{ cmd_module, "module", "mod", "<addr> [attr [VAL]]", 
-		"get/set module attribute" },
-
-	{ cmd_sensor, "sensor", "sens", "<addr> [attr [VAL]]", 
-		"get/set sensor attribute" },
-
-	{ cmd_group, "group", "grp", "", "show group information" },
-
 	{ cmd_alarm, "alarm", "alm", "", "alarm" },
 
 	{ cmd_trouble, "trouble", "tbl", "", "trouble" },
@@ -1153,8 +1162,6 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
-
-	{ cmd_js, "js", "", "script", "javascript" },
 
 	{ cmd_sym, "sym", "", "", "symbol table dump" },
 

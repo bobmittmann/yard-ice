@@ -46,17 +46,35 @@ struct shell_cmd {
 	char * const desc;
 };
 
+struct cmd_history;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct shell_cmd * cmd_lookup(const char * s, 
-							  const struct shell_cmd * cmd_tab);
+struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line);
 
-int cmd_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
+int cmd_exec(FILE * f, const struct shell_cmd * cmd, char * line);
+
+char * cmd_get_next(char ** linep);
 
 int shell(FILE * f, const char * (* prompt)(void), 
 		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab);
+
+void history_add(struct cmd_history * ht, char * s);
+
+char * history_readline(struct cmd_history * ht, FILE * f, 
+						char * buf, int max);
+
+struct cmd_history * history_init(void * buf, unsigned int buf_len,
+								  unsigned int line_len);
+
+
+char * history_head(struct cmd_history * ht);
+
+int shell_parseline(char * line, char ** argv, int argmax);
+
+char * shell_stripline(char * line);
 
 #ifdef __cplusplus
 }

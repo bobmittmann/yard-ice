@@ -23,7 +23,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = shell
 
-CFILES = shell.c history.c parseline.c stripline.c
+CFILES = shell.c cmd.c history.c parseline.c stripline.c
 
 INCPATH = ../include
 
