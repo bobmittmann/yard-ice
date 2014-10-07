@@ -421,7 +421,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 		return -ERR_EXTERN_NOT_ARRAY;
 
 	if (EXTDEF_FLAG(xdef, O_SIZEOFFS)) {
-		DCC_LOG1(LOG_TRACE, "array object xid=%d (size and offs)", xid);
+		DCC_LOG1(LOG_INFO, "array object xid=%d (size and offs)", xid);
 		/* Array of objects with size and offset */
 		cld.cid = xdef->aos.cdef;
 		if (xdef->aos.size > 1) { /* multiply the index by the size */
@@ -435,7 +435,7 @@ int op_array_xlat(struct microjs_sdt * microjs)
 			microjs->code[microjs->pc++] = OPC_ADD;
 		}
 	} else {
-		DCC_LOG1(LOG_TRACE, "array object xid=%d (xlat call)", xid);
+		DCC_LOG1(LOG_INFO, "array object xid=%d (xlat call)", xid);
 		/* Array of objects with index translator call */
 		cld.cid = xdef->ao.cdef;
 		/* XXX: the index translator has to accept a single argument 
@@ -489,7 +489,7 @@ static int class_member_pop(struct microjs_sdt * microjs,
 	if ((ret = sym_cld_pop(microjs->tab, &cld)) < 0)
 		return ret;
 
-	DCC_LOG2(LOG_TRACE, "class[%d]: '%s'", cld.cid,
+	DCC_LOG2(LOG_INFO, "class[%d]: '%s'", cld.cid,
 			 lib_class_name(microjs->libdef, cld.cid));
 
 	if ((xid = lib_member_lookup(microjs->libdef, cld.cid, 
@@ -498,7 +498,7 @@ static int class_member_pop(struct microjs_sdt * microjs,
 
 	xdef = lib_extern_get(microjs->libdef, xid);
 
-	DCC_LOG2(LOG_TRACE, "member[%d]: '%s'", xid, xdef->nm);
+	DCC_LOG2(LOG_INFO, "member[%d]: '%s'", xid, xdef->nm);
 
 	if (!EXTDEF_FLAG(xdef, O_MEMBER))
 		return -ERR_EXTERN_NOT_MEMBER;
@@ -513,7 +513,7 @@ int op_attr_eval(struct microjs_sdt * microjs)
 	struct extdef * xdef;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	if ((xid = class_member_pop(microjs, &xdef)) < 0)
 		return xid;
@@ -541,7 +541,7 @@ int op_array_eval(struct microjs_sdt * microjs)
 	struct extdef * xdef;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	if ((xid = class_member_pop(microjs, &xdef)) < 0)
 		return xid;
@@ -570,7 +570,7 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	struct extdef * xdef;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	if ((xid = class_member_pop(microjs, &xdef)) < 0)
 		return xid;
@@ -584,7 +584,7 @@ int op_attr_assign(struct microjs_sdt * microjs)
 	if (EXTDEF_FLAG(xdef, O_ARRAY))
 		return -ERR_EXTERN_NOT_SCALAR;
 
-	DCC_LOG1(LOG_TRACE, "xid=%d.", xid);
+	DCC_LOG1(LOG_INFO, "xid=%d.", xid);
 
 	/* XXX: This call could be optimized, attribute assignement functions,
 	   should receive 2 prameters: (object_id, attr_val) and return nothing */
@@ -604,7 +604,7 @@ int op_array_assign(struct microjs_sdt * microjs)
 	struct extdef * xdef;
 	int xid;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	if ((xid = class_member_pop(microjs, &xdef)) < 0)
 		return xid;

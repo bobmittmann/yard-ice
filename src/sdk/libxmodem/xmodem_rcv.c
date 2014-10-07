@@ -74,7 +74,7 @@ int xmodem_rcv_cancel(struct xmodem_rcv * rx)
 	return 0;
 }
 
-int xmodem_rcv_pkt(struct xmodem_rcv * rx)
+static int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
 	unsigned char * cp;
@@ -83,6 +83,8 @@ int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 	int nseq;
 	int seq;
 	int rem;
+
+	DCC_LOG1(LOG_TRACE, "sp=0x%08x", cm3_sp_get());
 
 	for (;;) {
 
