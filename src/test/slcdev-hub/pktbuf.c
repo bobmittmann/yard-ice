@@ -86,7 +86,7 @@ void * pktbuf_alloc(void)
 		pktbuf_pool.free = buf->next;
 #if ENABLE_PKTBUF_STAT
 		pktbuf_pool.stat.alloc_cnt++;
-		DCC_LOG1(LOG_TRACE, "alloc=%d", pktbuf_pool.stat.alloc_cnt);
+		DCC_LOG1(LOG_INFO, "alloc=%d", pktbuf_pool.stat.alloc_cnt);
 	} else {
 		pktbuf_pool.stat.error_cnt++;
 		DCC_LOG1(LOG_WARNING, "errors=%d", pktbuf_pool.stat.error_cnt);
@@ -120,7 +120,7 @@ void pktbuf_free(void * ptr)
 
 #if ENABLE_PKTBUF_STAT
 	pktbuf_pool.stat.free_cnt++;
-	DCC_LOG1(LOG_TRACE, "free=%d", pktbuf_pool.stat.free_cnt);
+	DCC_LOG1(LOG_INFO, "free=%d", pktbuf_pool.stat.free_cnt);
 #endif
 
 	/* critical section exit */

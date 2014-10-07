@@ -56,7 +56,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 		return -1;
 
 	if (argc > 1) {
-		if ((cmd = cmd_lookup(argv[1], cmd_tab)) == NULL) {
+		if ((cmd = cmd_lookup(cmd_tab, argv[1])) == NULL) {
 			fprintf(f, " Not found: '%s'\n", argv[1]);
 			return -1;
 		}
@@ -145,10 +145,10 @@ int cmd_net(FILE * f, int argc, char ** argv)
 	bool flood = false;
 	bool conf = false;
 	bool probe = false;
+	bool supv = false;
 	bool normal = false;
 	bool init = false;
 	bool pattern = false;
-	unsigned int val;
 	(void)conf;
 
 	if (argc > 1) {
@@ -160,14 +160,17 @@ int cmd_net(FILE * f, int argc, char ** argv)
 			} else if ((strcmp(argv[i], "flood") == 0) || 
 					   (strcmp(argv[i], "f") == 0)) {
 				flood = true;
-			} else if ((strcmp(argv[i], "pat") == 0) || 
-					   (strcmp(argv[i], "p") == 0)) {
+			} else if ((strcmp(argv[i], "msg") == 0) || 
+					   (strcmp(argv[i], "m") == 0)) {
 				pattern = true;
 			} else if ((strcmp(argv[i], "conf") == 0) || 
 					   (strcmp(argv[i], "c") == 0)) {
 				conf = true;
 			} else if ((strcmp(argv[i], "sup") == 0) || 
 					   (strcmp(argv[i], "s") == 0)) {
+				supv = true;
+			} else if ((strcmp(argv[i], "probe") == 0) || 
+					   (strcmp(argv[i], "p") == 0)) {
 				probe = true;
 			} else if ((strcmp(argv[i], "auto") == 0) || 
 					   (strcmp(argv[i], "a") == 0)) {
@@ -176,9 +179,6 @@ int cmd_net(FILE * f, int argc, char ** argv)
 					   (strcmp(argv[i], "i") == 0)) {
 				init = true;
 			} else {
-				if ((strcmp(argv[i], "flood") == 0) || 
-					   (strcmp(argv[i], "f") == 0)) {
-				flood = true;
 				fprintf(f, "Invalid argument: %s\n", argv[i]);
 				return -1;
 			}
@@ -189,12 +189,16 @@ int cmd_net(FILE * f, int argc, char ** argv)
 	}
 
 	if (init) {
-		fprintf(f, "RS845 network init.\n");
-		net_init();
+		fprintf(f, "Initializing RS845 HUB... ");
+		if (net_init() < 0) {
+			fprintf(f, "FAILED!\n");
+			return -1;
+		}
+		fprintf(f, "OK.\n");
 	};
 
 	if (pattern) {
-		fprintf(f, "RS845 network pattern test.\n");
+		fprintf(f, "RS845 network message test.\n");
 		net_send(net_pattern, sizeof(net_pattern));
 	};
 
@@ -214,7 +218,7 @@ int cmd_net(FILE * f, int argc, char ** argv)
 		}
 	};
 
-	if (probe) {
+	if (supv) {
 		fprintf(f, "RS845 supervisory mode. (A: RX, B: TX)\n");
 		net_probe_enable();
 	};
@@ -223,6 +227,15 @@ int cmd_net(FILE * f, int argc, char ** argv)
 		fprintf(f, "RS845 automatic mode.\n");
 		net_probe_disable();
 	};
+
+	if (probe) {
+		fprintf(f, "Probing RS845 HUB... ");
+		if (net_probe() < 0) {
+			fprintf(f, "FAILED!\n");
+			return -1;
+		}
+		fprintf(f, "OK.\n");
+	}
 
 	return 0;
 }
@@ -343,29 +356,33 @@ const struct shell_cmd cmd_tab[] = {
 		"[erase] [load] [conf]", "update FPGA program." },
 
 	{ cmd_net, "net", "n", 
-		"[test]", "RS485 network." },
+		"[test|flood|pat|conf|sup|auto|init]", "RS485 network." },
 
 	{ NULL, "", "", NULL, NULL }
 };
 
 
-#define VERSION_NUM "0.1"
-#define VERSION_DATE "Jun, 2014"
+#define VERSION_NUM "0.2"
+#define VERSION_DATE "Oct, 2014"
 
-const char shell_greeting[] = "\n"
+const char * shell_greeting(void) 
+{
+	return "\n"
 	"SLCDEV-HUB" VERSION_NUM " - " VERSION_DATE "\n"
 	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
-
-const char * get_prompt(void)
-{
-	return (char *)"[HUB]$ ";
 }
+
+const char * shell_prompt(void)
+{
+	return "[DEV]$ ";
+}
+
 
 int stdio_shell(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	return shell(stdout, get_prompt, shell_greeting, cmd_tab);
+	return shell(stdout, shell_prompt, shell_greeting, cmd_tab);
 }
 
 int usb_shell(usb_cdc_class_t * cdc)
@@ -381,6 +398,6 @@ int usb_shell(usb_cdc_class_t * cdc)
 	stdout = f_tty;
 	stdin = f_tty;
 
-	return shell(f_tty, get_prompt, shell_greeting, cmd_tab);
+	return shell(f_tty, shell_prompt, shell_greeting, cmd_tab);
 }
 

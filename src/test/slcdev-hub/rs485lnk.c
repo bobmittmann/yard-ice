@@ -404,3 +404,40 @@ void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 	return pend_pkt;
 }
 
+void * rs485_pkt_drain(struct rs485_link * lnk)
+{
+	struct stm32_usart * uart = lnk->uart;
+	void * pend_pkt = NULL;
+	uint32_t sr;
+	uint32_t cr;
+
+	if (lnk->tx.pend_pkt) {
+		/* wait for the DMA transfer to complete */
+		while (!lnk->tx.isr[TCIF_BIT]) {
+			if (lnk->tx.isr[TEIF_BIT]) {
+				lnk->tx.ifcr[TEIF_BIT] = 1;
+			}
+			thinkos_irq_wait(lnk->tx.dma_irq);
+		} 
+		/* clear the the DMA trasfer complete flag */
+		lnk->tx.ifcr[TCIF_BIT] = 1;
+
+		/* return a reference to the packet just transmitted */
+		pend_pkt = lnk->tx.pend_pkt;
+
+		if ((sr = uart->sr) & USART_TC) {
+			/* pulse the TE bit to generate an idle frame */
+			cr = uart->cr1;
+			uart->cr1 = cr & ~USART_TE;
+			uart->cr1 = cr | USART_TE;
+		} else {
+			thinkos_sleep(lnk->idle_tm);
+		}
+	} 
+
+	lnk->tx.pend_pkt = NULL;
+	
+	/* return previous pending packet */
+	return pend_pkt;
+}
+

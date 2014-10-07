@@ -82,8 +82,8 @@ void monitor_init(void)
 	monitor_auto_flush = false;
 
 	thinkos_thread_create((void *)monitor_task, (void *)NULL,
-						  monitor_stack, sizeof(monitor_stack), 
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+						  monitor_stack, sizeof(monitor_stack) |
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), NULL);
 }
 
 uint32_t __attribute__((aligned(8))) watchdog_stack[32];
@@ -92,8 +92,8 @@ void watchdog_init(void)
 {
 
 	thinkos_thread_create((void *)watchdog_task, (void *)NULL,
-						  watchdog_stack, sizeof(watchdog_stack), 
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+						  watchdog_stack, sizeof(watchdog_stack) |
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL);
 }
 	
 
@@ -142,8 +142,8 @@ uint32_t __attribute__((aligned(8))) console_shell_stack[1024 + 256];
 void console_shell_init(void)
 {
 	thinkos_thread_create((void *)console_shell_task, (void *)NULL,
-						  console_shell_stack, sizeof(console_shell_stack), 
-						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+						  console_shell_stack, sizeof(console_shell_stack) | 
+						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2), NULL);
 }
 
 

@@ -39,6 +39,8 @@ int net_send(const void * buf, int len);
 
 int net_recv(void * buf, int len);
 
+int net_probe(void);
+
 void net_probe_enable(void);
 
 void net_probe_disable(void);
