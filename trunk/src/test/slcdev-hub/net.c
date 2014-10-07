@@ -50,10 +50,14 @@
 #include "lattice.h"
 
 struct {
-	int8_t initialized;
+	bool initialized;
+	volatile bool probe_mode;
+	volatile uint32_t probe_seq;
+	int probe_flag;
 	struct rs485_link link;
 } net = {
-	.initialized = false
+	.initialized = false,
+	.probe_mode = false
 };
 
 #define USART2_DMA         STM32F_DMA1
@@ -102,11 +106,20 @@ void __attribute__((noreturn)) net_recv_task(void)
 
 			DCC_LOG1(LOG_TRACE, "len=%d", len);
 			s[len] = '\0';
-			printf("\"%s\"\n", s);
+//			printf("\"%s\"\n", s);
+
+			if (net.probe_mode) {
+				if ((len == 12) && (s[0] == 'P') && (s[1] == 'R')
+					&& (s[2] == 'B') && (s[3] == '=')) {
+					net.probe_seq = strtoul(&s[4], NULL, 16);
+				} else {
+					net.probe_seq = 0;
+				}
+				thinkos_flag_set(net.probe_flag);
+			}
 
 			pktbuf_free(pkt);
 		}
-
 	}
 }
 
@@ -120,8 +133,9 @@ void net_recv_init(void)
 		return;
 
 	thread = thinkos_thread_create((void *)net_recv_task, (void *)NULL,
-								   net_recv_stack, sizeof(net_recv_stack), 
-								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5));
+								   net_recv_stack, sizeof(net_recv_stack) |
+								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5),
+								   NULL);
 }
 
 void net_probe_enable(void)
@@ -139,6 +153,113 @@ void net_probe_disable(void)
 	stm32_gpio_set(RS485_MODE);
 #endif
 }
+
+int net_probe(void)
+{
+	void * pkt;
+	int ret;
+
+	/* drain the transmmit queue */
+	pkt = rs485_pkt_drain(&net.link);
+	if (pkt != NULL)
+		pktbuf_free(pkt);
+
+	/* set the probe pin low */
+	net.probe_mode = true;
+	stm32_gpio_clr(RS485_MODE);
+	DCC_LOG(LOG_TRACE, "Probe mode.");
+
+	thinkos_flag_clr(net.probe_flag);
+
+	if ((pkt = pktbuf_alloc()) != NULL) {
+		uint32_t seq;
+
+		while ((seq = rand()) == 0);
+
+		/* send a probe packet */
+		sprintf((char *)pkt, "PRB=%08x", seq);
+		DCC_LOG1(LOG_TRACE, "seq=0x%08x", seq);
+
+		rs485_pkt_enqueue(&net.link, pkt, 12);
+		/* wait for the end of transmission */
+		pkt = rs485_pkt_drain(&net.link);
+		pktbuf_free(pkt);
+
+		if ((ret = thinkos_flag_timedwait(net.probe_flag, 10)) == 0) {
+			if (seq != net.probe_seq) {
+				DCC_LOG(LOG_WARNING, "probe sequence mismatch!");
+				ret = -1;
+			}
+		} else if (ret == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_WARNING, "probe sequence timedout!");
+		}
+		DCC_LOG1(LOG_TRACE, "seq=0x%08x", seq);
+	} else {	
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		ret  = -1;
+	}
+
+	/* set the probe pin high */
+	net.probe_mode = false;
+	stm32_gpio_set(RS485_MODE);
+	DCC_LOG(LOG_TRACE, "Probe mode.");
+
+	return ret;
+}
+
+
+int net_send(const void * buf, int len)
+{
+	void * pkt;
+
+	pkt = pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		return -1;
+	}
+
+	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
+
+	len = MIN(len, pktbuf_len);
+
+	memcpy(pkt, buf, len);
+
+	pkt = rs485_pkt_enqueue(&net.link, pkt, len);
+
+	if (pkt != NULL)
+		pktbuf_free(pkt);
+
+	return 0;
+}
+
+#if 0
+int net_recv(void * buf, int len)
+{
+	void * pkt;
+
+	pkt = pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		return -1;
+	}
+
+	len = rs485_pkt_receive(&net.link, &pkt, pktbuf_len);
+
+//	tracef("%s(): len=%d\n", __func__, len);
+
+	DCC_LOG1(LOG_TRACE, "%d", len);
+
+	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
+
+	if (pkt != NULL) {
+		memcpy(buf, pkt, len);
+		pktbuf_free(pkt);
+	}
+
+	return len;
+}
+#endif
 
 int net_init(void)
 {
@@ -180,6 +301,7 @@ int net_init(void)
 	stm32_gpio_set(RS485_MODE);
 #endif
 
+
 	if (!net.initialized) {
 		/* Link init */
 		rs485_init(&net.link, RS485_USART, RS485_LINK_SPEED, 
@@ -190,65 +312,15 @@ int net_init(void)
 		pktbuf_pool_init();
 
 		net_recv_init();
-	
+
+		net.probe_flag = thinkos_flag_alloc();
+
 		net.initialized = true;
 	}
 
 
 	return 0;
 }
-
-int net_send(const void * buf, int len)
-{
-	void * pkt;
-
-	pkt = pktbuf_alloc();
-	if (pkt == NULL) {
-		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		return -1;
-	}
-
-	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
-
-	len = MIN(len, pktbuf_len);
-
-	memcpy(pkt, buf, len);
-
-	pkt = rs485_pkt_enqueue(&net.link, pkt, len);
-
-	if (pkt != NULL)
-		pktbuf_free(pkt);
-
-	return 0;
-}
-
-int net_recv(void * buf, int len)
-{
-	void * pkt;
-
-	pkt = pktbuf_alloc();
-	if (pkt == NULL) {
-		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
-		return -1;
-	}
-
-	len = rs485_pkt_receive(&net.link, &pkt, pktbuf_len);
-
-//	tracef("%s(): len=%d\n", __func__, len);
-
-	DCC_LOG1(LOG_TRACE, "%d", len);
-
-	DCC_LOG2(LOG_TRACE, "pkt=%p len=%d", pkt, len);
-
-	if (pkt != NULL) {
-		memcpy(buf, pkt, len);
-		pktbuf_free(pkt);
-	}
-
-	return len;
-}
-
 
 #include "sndbuf.h"
 

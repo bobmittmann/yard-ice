@@ -276,7 +276,7 @@
 
 #define STM32F_UID ((uint32_t *)STM32F_BASE_UID)
 
-typedef enum {
+enum {
 	STM32_GPIOA_ID = 0,
 	STM32_GPIOB_ID,
 	STM32_GPIOC_ID,
@@ -286,16 +286,16 @@ typedef enum {
 	STM32_GPIOG_ID,
 	STM32_GPIOH_ID,
 	STM32_GPIOI_ID
-} stmf32_gpio_id_t;
+};
 
-typedef enum {
+enum {
 	STM32F_UART1_ID = 0,
 	STM32F_UART2_ID, 
 	STM32F_UART3_ID,
 	STM32F_UART4_ID,
 	STM32F_UART5_ID,
 	STM32F_UART6_ID
-} stmf32_uart_id_t;
+};
 
 #define STM32F_BKPSRAM ((uint32_t *)STM32F_BASE_BKPSRAM)
 #define STM32F_FSMC_NE1 ((uint32_t *)0x60000000)

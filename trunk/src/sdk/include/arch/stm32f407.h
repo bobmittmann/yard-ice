@@ -218,10 +218,11 @@
 
 #define STM32_PWR ((struct stm32_pwr *)STM32F_BASE_PWR)
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
+#define STM32_FLASH ((struct stm32_flash *)STM32F_BASE_FLASH)
+
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)
 #define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
-#define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 #define STM32F_FSMC ((struct stm32f_fsmc *)STM32F_BASE_FSMC)
 #define STM32F_SYSCFG ((struct stm32f_syscfg *)STM32F_BASE_SYSCFG)
 #define STM32F_DAC ((struct stm32f_dac *)STM32F_BASE_DAC)
@@ -231,7 +232,6 @@
 #define STM32F_ADCC ((struct stm32f_adcc *)STM32F_BASE_ADCC)
 
 #define STM32F_EXTI ((struct stm32f_exti *)STM32F_BASE_EXTI)
-#define STM32F_FLASH ((struct stm32f_flash *)STM32F_BASE_FLASH)
 
 #define STM32_USART1 ((struct stm32_usart *)STM32F_BASE_USART1)
 #define STM32_USART2 ((struct stm32_usart *)STM32F_BASE_USART2)

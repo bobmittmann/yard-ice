@@ -72,6 +72,7 @@ void rs485_link_isr(struct rs485_link * lnk);
 
 int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len);
 
+void * rs485_pkt_drain(struct rs485_link * lnk);
 
 void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len);
 

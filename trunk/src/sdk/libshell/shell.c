@@ -40,15 +40,14 @@
 #include <sys/dcclog.h>
 
 #ifndef SHELL_HISTORY_MAX
-#define SHELL_HISTORY_MAX 5
+#define SHELL_HISTORY_MAX 8
 #endif
 
 int shell(FILE * f, const char * (* prompt)(void), 
 		  const char * (* greeting)(void), 
 		  const struct shell_cmd cmd_tab[])
 {
-//	char line[SHELL_LINE_MAX];
-	char * line;
+	char line[SHELL_LINE_MAX];
 	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	struct cmd_history * history;
 	struct shell_cmd * cmd;
@@ -64,8 +63,6 @@ int shell(FILE * f, const char * (* prompt)(void),
 
 	for (;;) {
 		fprintf(f, "%s", prompt());
-
-		line = history_head(history);
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;
