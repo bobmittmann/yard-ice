@@ -36,7 +36,7 @@
    USART2_TX: Channel 7 
 */
 
-#if 1
+#if 0
 
 #define DMA_CHAN6 5
 #define DMA_CHAN7 6
@@ -494,132 +494,93 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 #define TX_LEN UART_TX_FIFO_BUF_LEN
 #define RX_LEN UART_RX_FIFO_BUF_LEN
 
-struct uart_fifo {
-	volatile uint8_t head;
-	volatile uint8_t tail;
-	uint8_t buf[];
-};
-
-static inline void uart_fifo_init(struct uart_fifo * fifo, int len)
-{
-	fifo->head = 0;
-	fifo->tail = 0;
-}
-
-static inline uint8_t uart_fifo_get(struct uart_fifo * fifo, 
-									unsigned int len)
-{
-	return fifo->buf[fifo->tail++ & (len - 1)];
-}
-
-static inline void uart_fifo_put(struct uart_fifo * fifo, int c, 
-								 unsigned int len)
-{
-	fifo->buf[fifo->head++ & (len - 1)] = c;
-}
-
-static inline bool uart_fifo_is_empty(struct uart_fifo * fifo)
-{
-	return (fifo->tail == fifo->head) ? true : false;
-}
-
-static inline bool uart_fifo_is_full(struct uart_fifo * fifo,
-									 unsigned int len)
-{
-	return ((fifo->head - fifo->tail) == len) ? true : false;
-}
-
-static inline bool uart_fifo_is_half_full(struct uart_fifo * fifo,
-										  unsigned int len)
-{
-	return ((fifo->head - fifo->tail) > (len / 2)) ? true : false;
-}
-
 struct serdrv {
-	struct uart_fifo tx_fifo;
-	uint8_t tx_buf[UART_TX_FIFO_BUF_LEN];
-	struct uart_fifo rx_fifo;
-	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
+	struct {
+		volatile uint8_t head;
+		volatile uint8_t tail;
+		uint8_t buf[UART_TX_FIFO_BUF_LEN];
+	} tx_fifo;	
+	struct {
+		volatile uint8_t head;
+		volatile uint8_t tail;
+		uint8_t buf[UART_RX_FIFO_BUF_LEN];
+	} rx_fifo;	
 	uint32_t * txie;
 };
 
 int serdrv_recv(struct serdrv * dev, void * buf, int len, unsigned int tmo)
 {
-
-	char * cp = (char *)buf;
-	int n = 0;
+	uint8_t * cp = (uint8_t *)buf;
+	unsigned int tail;
 	int ret;
-
-	while (uart_fifo_is_empty(&dev->rx_fifo)) {
-		DCC_LOG(LOG_INFO, "wait...");
-		if ((ret = thinkos_flag_timedwait(RX_FLAG, tmo)) < 0) {
-			DCC_LOG(LOG_MSG, "Timeout!");
-			return ret;
-		}
-		thinkos_flag_clr(RX_FLAG);
-		DCC_LOG(LOG_INFO, "wakeup.");
-	}
-
-	do {
-		if (n == len)
-			break;
-		cp[n++] = uart_fifo_get(&dev->rx_fifo, RX_LEN);
-	} while (!uart_fifo_is_empty(&dev->rx_fifo));
-
-
-	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
-
-	return n;
-}
-
-static void uart_putc(struct serdrv * dev, int c)
-{
-	while (uart_fifo_is_full(&dev->tx_fifo, TX_LEN)) {
-		/* enable TX interrupt */
-		DCC_LOG(LOG_INFO, "wait...");
-		thinkos_flag_wait(TX_FLAG);
-		thinkos_flag_clr(TX_FLAG);
-		DCC_LOG(LOG_INFO, "wakeup");
-	}
-	uart_fifo_put(&dev->tx_fifo, c, TX_LEN);
-	*dev->txie = 1; 
-}
-
-int serdrv_send(struct serdrv * dev, const void * buf, int len)
-{
-	char * cp = (char *)buf;
+	int cnt;
 	int n;
+	int i;
 
-	for (n = 0; n < len; ++n)
-		uart_putc(dev, cp[n]);
-
-	return n;
-}
-
-/*
-int serdrv_send(struct serdrv * dev, const void * buf, int len)
-{
-	char * cp = (char *)buf;
-	int n = 0;
-
-	DCC_LOG(LOG_INFO, "wait...");
+	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
 
 again:
-	thinkos_flag_wait(TX_FLAG);
-
-	for (; n < len; ++n) {
-		if (uart_fifo_is_full(&dev->tx_fifo, TX_LEN)) {
-			__thinkos_flag_clr(TX_FLAG);
-			goto again;
-		}
-
-		uart_fifo_put(&dev->tx_fifo, cp[n], TX_LEN);
-		*dev->txie = 1; 
+	if ((ret = thinkos_flag_timedwait(RX_FLAG, tmo)) < 0) {
+		DCC_LOG(LOG_INFO, "Timeout!");
+		return ret;
 	}
+	thinkos_flag_clr(RX_FLAG);
+
+
+	tail = dev->rx_fifo.tail;
+	cnt = (int8_t)(dev->rx_fifo.head - tail);
+	if (cnt == 0) {
+		DCC_LOG(LOG_WARNING, "RX FIFO empty!");
+		goto again;
+	}
+	n = MIN(len, cnt);
+	DCC_LOG2(LOG_INFO, "tail=%d cnt=%d", tail, cnt);
+
+	for (i = 0; i < n; ++i)
+		cp[i] = dev->rx_fifo.buf[tail++ & (RX_LEN - 1)];
+
+	dev->rx_fifo.tail = tail;
+
+	if (cnt > n)
+		__thinkos_flag_signal(RX_FLAG);
 
 	return n;
 }
-*/
+
+int serdrv_send(struct serdrv * dev, const void * buf, int len)
+{
+	uint8_t * cp = (uint8_t *)buf;
+	int rem = len;
+
+	DCC_LOG1(LOG_INFO, "len=%d", len);
+
+	while (rem) {
+		unsigned int head;
+		int free;
+		int n;
+		int i;
+
+		thinkos_flag_wait(TX_FLAG);
+		thinkos_flag_clr(TX_FLAG);
+
+		head = dev->tx_fifo.head;
+		free = TX_LEN - (int8_t)(head - dev->tx_fifo.tail);
+		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, dev->tx_fifo.tail, n);
+		n = MIN(rem, free);
+		for (i = 0; i < n; ++i) 
+			dev->tx_fifo.buf[head++ & (TX_LEN - 1)] = *cp++;
+		dev->tx_fifo.head = head;
+		*dev->txie = 1; 
+
+		if (free > n)
+			__thinkos_flag_signal(TX_FLAG);
+		rem -= n;
+		DCC_LOG1(LOG_INFO, "rem=%d", rem);
+	}
+
+
+	return len;
+}
 
 /* static serial driver object */
 static struct serdrv serial2_dev;
@@ -634,33 +595,40 @@ void stm32_usart2_isr(void)
 	sr = us->sr & us->cr1;
 
 	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_INFO, "RXNE");
+		unsigned int head;
+		int free;
+
 		c = us->dr;
-		if (!uart_fifo_is_full(&dev->rx_fifo, RX_LEN)) { 
-			uart_fifo_put(&dev->rx_fifo, c, RX_LEN);
+
+		head = dev->rx_fifo.head;
+		free = RX_LEN - (uint8_t)(head - dev->rx_fifo.tail);
+		if (free > 0) { 
+			dev->rx_fifo.buf[head & (RX_LEN - 1)] = c;
+			dev->rx_fifo.head = head + 1;
+			if (free < (RX_LEN / 2))
+				__thinkos_flag_signal(RX_FLAG);
 		} else {
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
 		
-		if (uart_fifo_is_half_full(&dev->rx_fifo, RX_LEN))
-			__thinkos_flag_signal(RX_FLAG);
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE");
+		DCC_LOG(LOG_MSG, "IDLE!");
 		c = us->dr;
 		(void)c;
 		__thinkos_flag_signal(RX_FLAG);
 	}
 
 	if (sr & USART_TXE) {
-		DCC_LOG(LOG_INFO, "TXE");
-		if (uart_fifo_is_empty(&dev->tx_fifo)) {
-			/* disable TXE interrupts */
+		unsigned int tail = dev->tx_fifo.tail;
+		if (tail == dev->tx_fifo.head) {
+			/* FIFO empty, disable TXE interrupts */
 			*dev->txie = 0; 
 			__thinkos_flag_signal(TX_FLAG);
 		} else {
-			us->dr = uart_fifo_get(&dev->tx_fifo, TX_LEN);
+			us->dr = dev->tx_fifo.buf[tail & (TX_LEN - 1)];
+			dev->tx_fifo.tail = tail + 1;
 		}
 	}
 }
@@ -692,11 +660,10 @@ struct serdrv * serdrv_init(unsigned int speed)
 	/* enable UART */
 	stm32_usart_enable(uart);
 
-
-	uart_fifo_init(&drv->tx_fifo, UART_TX_FIFO_BUF_LEN);
-	uart_fifo_init(&drv->rx_fifo, UART_RX_FIFO_BUF_LEN);
-
+	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
+	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
 	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	__thinkos_flag_signal(TX_FLAG);
 
 	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);

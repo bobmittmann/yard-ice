@@ -187,7 +187,7 @@ const struct ext_libdef slcdev_lib = {
 			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 160 } },
 		[EXT_M] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "m", 
-			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 0 } },
+			.aos = { .cdef = CLASS_DEV, .size = 1, .offs = 160 } },
 
 		[EXT_GROUP] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "group", 
