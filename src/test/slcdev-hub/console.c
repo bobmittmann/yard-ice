@@ -349,7 +349,16 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	uint32_t pri;
 	int ret;
 
-	fprintf(f, "XFLASH...\n");
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (strcmp(argv[1], "firmware") != 0)
+		return SHELL_ERR_ARG_INVALID;
+
+	fprintf(f, "Firmware update...\n");
 	fflush(f);
 
 	pri = cm3_primask_get();

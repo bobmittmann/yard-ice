@@ -107,6 +107,13 @@ int usb_send(int ep_id, void * buf, unsigned int len)
 }
 
 #define CDC_TX_EP 2
+/*
+static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
+{
+	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
+	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+}
+*/
 
 int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 {
@@ -136,14 +143,16 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 		gintsts = otg_fs->gintsts;
 
 		if (gintsts & OTG_FS_RXFLVL) {
+			int epnum;
 
 			/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
 			   the application must read the Receive status pop
 			   register (OTG_FS_GRXSTSP). */
 			grxsts = otg_fs->grxstsp;
 			cnt = OTG_FS_BCNT_GET(grxsts);
+			epnum = OTG_FS_EPNUM_GET(grxsts);
 
-			if (OTG_FS_EPNUM_GET(grxsts) == ep_id) {
+			if (epnum == ep_id) {
 				if ((grxsts & OTG_FS_PKTSTS_MSK) == 
 					OTG_FS_PKTSTS_OUT_DATA_UPDT) {
 					break;
@@ -154,25 +163,51 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
 				}
 			} else {
-				if ((grxsts & OTG_FS_PKTSTS_MSK) == 
-					OTG_FS_PKTSTS_OUT_DATA_UPDT) {
-					int wcnt;
-					/* Number of words in the receive fifo */
-					wcnt = (cnt + 3) / 4;
-					/* discard other EP's data */
-					for (i = 0; i < wcnt; ++i) {
+
+				if (epnum == 0) {
+					switch (grxsts & OTG_FS_PKTSTS_MSK) {
+					case OTG_FS_PKTSTS_GOUT_NACK:
+						/* Global OUT NAK (triggers an interrupt) */
+						break;
+					case OTG_FS_PKTSTS_OUT_DATA_UPDT: {
+						/* OUT data packet received */
+						/* Number of words in the receive fifo */
+						/* discard other EP's data */
+						for (i = 0; i < (cnt + 3) / 4; ++i) {
+							data = *pop;
+							(void)data;
+						}
+						break;
+					}
+
+					case OTG_FS_PKTSTS_OUT_XFER_COMP:
+						break;
+					case OTG_FS_PKTSTS_SETUP_COMP:
+						break;
+					case OTG_FS_PKTSTS_SETUP_UPDT:
+						for (i = 0; i < (cnt + 3) / 4; ++i) {
+							data = *pop;
+							(void)data;
+						}
+//						__ep_zlp_send(otg_fs, 0);
+						break;
+					}
+					otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
+				} else {
+					for (i = 0; i < (cnt + 3) / 4; ++i) {
 						data = *pop;
 						(void)data;
 					}
+					otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
 				}
 			}
 		}
 
 		if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
 			if (msec == 0) {
-				otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
-				return -1;
-			}
+			otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+			return -1;
+		}
 			msec--;
 		}
 	}
@@ -225,7 +260,7 @@ void usb_drain(int ep_id)
 	while (!(otg_fs->inep[ep_id].diepint & OTG_FS_XFRC));
 }
 
-
+#if 0
 
 int uint2hex(char * s, unsigned int val)
 {
@@ -271,4 +306,6 @@ void usb_send_hex(int ep_id, unsigned int val)
 
 	usb_send(ep_id, buf, n);
 }
+
+#endif
 
