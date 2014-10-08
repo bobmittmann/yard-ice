@@ -850,6 +850,8 @@
 
 /* Bits [16..15] - Data PID */
 #define OTG_FS_DPIDX ((16 - 15) << 15)
+#define OTG_FS_DPID_MSK (((1 << (16 - 15 + 1)) - 1) << 15)
+#define OTG_FS_DPID_GET(REG) (((REG) & OTG_FS_DPID_MSK) >> 15)
 #define OTG_FS_DPID_DATA0 (0 << 15)
 #define OTG_FS_DPID_DATA1 (1 << 15)
 #define OTG_FS_DPID_DATA2 (2 << 15)

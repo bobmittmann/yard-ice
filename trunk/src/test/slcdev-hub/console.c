@@ -340,6 +340,27 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int usb_xflash(uint32_t offs, uint32_t len);
+
+int cmd_xflash(FILE * f, int argc, char ** argv)
+{
+//	uint32_t offs = 0x40000;
+	uint32_t offs = 0x00000;
+	uint32_t pri;
+	int ret;
+
+	fprintf(f, "XFLASH...\n");
+	fflush(f);
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+
+	ret = usb_xflash(offs, 128 * 1024);
+
+	cm3_primask_set(pri);
+
+	return ret;
+}
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -357,6 +378,8 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_net, "net", "n", 
 		"[test|flood|pat|conf|sup|auto|init]", "RS485 network." },
+
+	{ cmd_xflash, "xf", "", "", "update firmware." },
 
 	{ NULL, "", "", NULL, NULL }
 };

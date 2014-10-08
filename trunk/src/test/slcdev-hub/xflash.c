@@ -25,17 +25,22 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-extern const uint8_t xflash_pic[];
-extern const unsigned int sizeof_xflash_pic;
+extern const uint8_t otg_xflash_pic[];
+extern const unsigned int sizeof_otg_xflash_pic;
 
-#define PIC_CODE_SIZE_MAX (1024 + 512)
+#define PIC_CODE_SIZE_MAX (2048)
+uint32_t text[PIC_CODE_SIZE_MAX / 4];
 
 int usb_xflash(uint32_t offs, uint32_t len)
 {
-	uint32_t text[PIC_CODE_SIZE_MAX / 4];
+	const uint8_t * xflash_pic;
+	unsigned int sizeof_xflash_pic;
 	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)text) + 1;
 
 	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
+
+	xflash_pic = otg_xflash_pic;
+	sizeof_xflash_pic = sizeof_otg_xflash_pic;
 
 	memcpy(text, xflash_pic, sizeof_xflash_pic);
 

@@ -34,276 +34,199 @@
 #define STM32F_BASE_OTG_FS  0x50000000
 #define STM32F_OTG_FS ((struct stm32f_otg_fs *)STM32F_BASE_OTG_FS)
 
-#if 0
-#define STM32F_BASE_USB     0x40005c00
-#define STM32F_USB_PKTBUF_ADDR 0x40006000
-#define STM32F_USB_PKTBUF_SIZE 512
-#define STM32F_USB_PKTBUF ((struct stm32f_usb_pktbuf *)STM32F_USB_PKTBUF_ADDR)
-#define STM32F_USB ((struct stm32f_usb *)STM32F_BASE_USB)
+void usb_send_hex(int ep_id, unsigned int val);
 
-/* -------------------------------------------------------------------------
- * End point packet buffer helpers
- * ------------------------------------------------------------------------- */
+const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[] = {
+	64, 32, 16, 8
+};
 
-static void __copy_from_pktbuf(void * ptr,
-							   struct stm32f_usb_rx_pktbuf * rx,
-							   unsigned int cnt)
+int usb_send(int ep_id, void * buf, unsigned int len)
 {
-	uint32_t * src;
-	uint8_t * dst = (uint8_t *)ptr;
-	uint32_t data;
-	int i;
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	unsigned int rem;
+	uint8_t * xfrptr;
 
-	/* copy data to destination buffer */
-	src = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (rx->addr / 2);
-	for (i = 0; i < (cnt + 1) / 2; i++) {
-		data = *src++;
-		*dst++ = data;
-		*dst++ = data >> 8;
+	rem = len;
+	xfrptr = (uint8_t *)buf;
+
+	while (rem > 0) {
+		uint32_t deptsiz;
+		uint32_t depctl;
+		uint32_t mpsiz;
+		uint32_t xfrsiz;
+		uint32_t pktcnt;
+		uint32_t data;
+		int i;
+
+		do {
+			/* wait for room in the fifo */
+			deptsiz = otg_fs->inep[ep_id].dieptsiz;
+			xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+			pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+		} while ((xfrsiz == 0) && (pktcnt));
+
+		depctl = otg_fs->inep[ep_id].diepctl;
+		if (ep_id == 0)
+			mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
+		else
+			mpsiz = OTG_FS_MPSIZ_GET(depctl);
+
+		if (rem > 0) {
+			pktcnt = (rem + (mpsiz - 1)) / mpsiz;
+			if (pktcnt > 7) {
+				pktcnt = 7;
+				xfrsiz = 7 * mpsiz;
+			} else {
+				xfrsiz = rem;
+			}
+		} else {
+			pktcnt = 1;
+			xfrsiz = 0;
+		}
+
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+			OTG_FS_XFRSIZ_SET(xfrsiz); 
+
+		/* enable end point, clear NACK */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+
+		/* push into fifo */
+		for (i = 0; i < xfrsiz; i += 4) {
+			data = xfrptr[0] + (xfrptr[1] << 8) + 
+				(xfrptr[2] << 16) + (xfrptr[3] << 24);
+			otg_fs->dfifo[ep_id].push = data;
+			xfrptr += 4;
+		}	
+
+		/* wait for transfer to complete */
+		while (!(otg_fs->inep[ep_id].diepint & OTG_FS_XFRC));
+		rem -= xfrsiz;
 	}
+
+	return len;
 }
 
-static void __copy_to_pktbuf(struct stm32f_usb_tx_pktbuf * tx,
-							 uint8_t * src, int len)
-{
-	uint32_t * dst;
-	int i;
-
-	/* copy data to destination buffer */
-	dst = (uint32_t *)STM32F_USB_PKTBUF_ADDR + (tx->addr / 2);
-	for (i = 0; i < ((len + 1) / 2); i++) {
-		*dst++ = src[0] | (src[1] << 8);
-		src += 2;
-	}
-
-	tx->count = len;
-}
-
-/* ------------------------------------------------------------------------- */
+#define CDC_TX_EP 2
 
 int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb * usb = STM32F_USB;
-	struct stm32f_usb_rx_pktbuf * rx_pktbuf;
-	uint32_t epr;
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	volatile uint32_t * pop = &otg_fs->dfifo[ep_id].pop;
+	uint8_t * cp = (uint8_t *)buf;
+	uint32_t rxfsiz;
+	uint32_t mxpktsz;
+	uint32_t pktcnt;
+	uint32_t gintsts;
+	uint32_t grxsts;
+	uint32_t data;
+	int rem;
 	int cnt;
+	int i;
 
-	while (!((epr = usb->epr[ep_id]) & USB_CTR_RX)) {
+	/* get EP max packet size */
+	mxpktsz	= OTG_FS_MPSIZ_GET(otg_fs->outep[ep_id].doepctl);
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+	/* packets in the RX fifio */
+	pktcnt = rxfsiz / mxpktsz;
+
+	for (;;) {
+		/* RxFIFO non-empty */
+		gintsts = otg_fs->gintsts;
+
+		if (gintsts & OTG_FS_RXFLVL) {
+
+			/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
+			   the application must read the Receive status pop
+			   register (OTG_FS_GRXSTSP). */
+			grxsts = otg_fs->grxstsp;
+			cnt = OTG_FS_BCNT_GET(grxsts);
+
+			if (OTG_FS_EPNUM_GET(grxsts) == ep_id) {
+				if ((grxsts & OTG_FS_PKTSTS_MSK) == 
+					OTG_FS_PKTSTS_OUT_DATA_UPDT) {
+					break;
+				} else if ((grxsts & OTG_FS_PKTSTS_MSK) == 
+						 OTG_FS_PKTSTS_OUT_XFER_COMP) {
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+				}
+			} else {
+				if ((grxsts & OTG_FS_PKTSTS_MSK) == 
+					OTG_FS_PKTSTS_OUT_DATA_UPDT) {
+					int wcnt;
+					/* Number of words in the receive fifo */
+					wcnt = (cnt + 3) / 4;
+					/* discard other EP's data */
+					for (i = 0; i < wcnt; ++i) {
+						data = *pop;
+						(void)data;
+					}
+				}
+			}
+		}
+
 		if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
 			if (msec == 0) {
-				
+				otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
 				return -1;
 			}
 			msec--;
 		}
 	}
 
-	/* OUT */
-	__clr_ep_flag(usb, ep_id, USB_CTR_RX);
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
 
-	if (epr & USB_EP_DBL_BUF) {
-		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0 : 1];
-	} else {
-		/* single buffer */
-		rx_pktbuf = &pktbuf[ep_id].rx;
+	/* transfer data from fifo */
+	rem = MIN(cnt, len);
+	while (rem >= 4) {
+		/* word trasfer */
+		data = otg_fs->dfifo[ep_id].pop;
+		cp[0] = data;
+		cp[1] = data >> 8;
+		cp[2] = data >> 16;
+		cp[3] = data >> 24;
+		cp += 4;
+		rem -= 4;
 	}
 
-	cnt = MIN(rx_pktbuf->count, len);
-
-	/* Data received */
-	__copy_from_pktbuf(buf, rx_pktbuf, cnt);
-
-	if (epr & USB_EP_DBL_BUF) {
-		/* release the buffer to the USB controller */
-		__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
-	} else {
-		/* free the out(rx) packet buffer */
-		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+	if (rem > 0) {
+		/* remaining bytes */
+		data = otg_fs->dfifo[ep_id].pop;
+		cp[0] = data;
+		if (rem > 1)
+			cp[1] = data >> 8;
+		if (rem > 2)
+			cp[2] = data >> 16;
+		rem = 0;
 	}
+
+	if ((rem = len - cnt) > 0) {
+		/* drop remaining data from fifo */
+		do {
+			data = otg_fs->dfifo[ep_id].pop;
+			(void)data;
+			rem -= 4;
+		} while (rem > 0);
+	}
+
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
 
 	return cnt;
 }
 
+
 void usb_drain(int ep_id)
-{
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb_tx_pktbuf * tx_pktbuf;
-	struct stm32f_usb * usb = STM32F_USB;
-	uint32_t epr;
-
-	epr = usb->epr[ep_id];
-
-	if (epr & USB_EP_DBL_BUF) {
-		/* select the descriptor according to the data toggle bit */
-		tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
-		tx_pktbuf->count = 0;
-		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-	} else {
-		tx_pktbuf = &pktbuf[ep_id].tx;
-		tx_pktbuf->count = 0;
-		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
-	}
-
-	while (!((epr = usb->epr[ep_id]) & USB_CTR_TX)) {
-	}
-
-	if (!(epr & USB_EP_DBL_BUF)) {
-		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
-	}
-}
-#endif
-
-int stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs, 
-							unsigned int ep_id, unsigned int len)
-{
-	uint32_t deptsiz;
-	uint32_t depctl;
-	uint32_t mpsiz;
-	uint32_t xfrsiz;
-	uint32_t pktcnt;
-
-	deptsiz = otg_fs->inep[ep_id].dieptsiz;
-	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
-	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
-	if ((xfrsiz == 0) && (pktcnt))
-		return -1;
-
-	depctl = otg_fs->inep[ep_id].diepctl;
-	if (ep_id == 0)
-		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
-	else
-		mpsiz = OTG_FS_MPSIZ_GET(depctl);
-
-	if (len > 0) {
-		/* XXX: check whether to get rid of this division or not,
-		 if the CM3 div is used it is not necessary.... */
-		pktcnt = (len + (mpsiz - 1)) / mpsiz;
-		if (pktcnt > 7) {
-			pktcnt = 7;
-			xfrsiz = 7 * mpsiz;
-		} else {
-			xfrsiz = len;
-		}
-	} else {
-		/* zero lenght packet */
-		pktcnt = 1;
-		xfrsiz = 0;
-	}
-
-	otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
-		OTG_FS_XFRSIZ_SET(xfrsiz); 
-	/* enable end point, clear NACK */
-	otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
-
-	deptsiz = otg_fs->inep[ep_id].dieptsiz;
-	(void)deptsiz;
-
-	return xfrsiz;
-}
-
-
-/* start sending */
-int usb_send(int ep_id, void * buf, unsigned int len)
-{
-	struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
-	struct stm32f_usb_tx_pktbuf * tx_pktbuf;
-	struct stm32f_usb * usb = STM32F_USB;
-	uint32_t epr;
-	unsigned int mxpktsz = 64; /* Maximum packet size for this EP */
-	unsigned int rem; /* Bytes pendig in the transfer buffer */
-	uint8_t * ptr; /* Pointer to the next transfer */
-	unsigned int pktsz = 0;
-
-	
-
-	epr = usb->epr[ep_id];
-	ptr = (uint8_t *)buf;
-	rem = len;
-
-	while (rem > 0) {
-		if (epr & USB_EP_DBL_BUF) {
-			/* select the descriptor according to the data toggle bit */
-			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
-		} else {
-			tx_pktbuf = &pktbuf[ep_id].tx;
-		}
-		pktsz = MIN(rem, mxpktsz);
-		__copy_to_pktbuf(tx_pktbuf, ptr, pktsz);
-		rem -= pktsz;
-		ptr += pktsz;
-
-		if (epr & USB_EP_DBL_BUF) {
-			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-		} else {
-			__set_ep_txstat(usb, ep_id, USB_TX_VALID);
-		}
-
-		while (!((epr = usb->epr[ep_id]) & USB_CTR_TX)) {
-		}
-
-		/* IN */
-		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
-	}
-
-	if (pktsz == mxpktsz) {
-		if (epr & USB_EP_DBL_BUF) {
-			/* select the descriptor according to the data toggle bit */
-			tx_pktbuf = &pktbuf[ep_id].dbtx[(epr & USB_SWBUF_TX) ? 1: 0];
-			tx_pktbuf->count = 0;
-			__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
-		} else {
-			__set_ep_txstat(usb, ep_id, USB_TX_NAK);
-		}
-	}	
-
-	if (!(epr & USB_EP_DBL_BUF)) {
-		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
-	}
-
-	return len;
-}
-
-#endif
-
-/* start sending */
-int usb_send(int ep_id, void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-	struct stm32f_otg_ep * ep;
-	int ret;
-
-	ep = &drv->ep[ep_id];
-	ep->xfr_ptr = buf;
-	ep->xfr_rem = MIN(len, ep->xfr_max);
-
-	/* prepare fifo to transmit */
-	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
-	} else {
-		/* umask FIFO empty interrupt */
-		otg_fs->diepempmsk |= (1 << ep_id);
-	}
-
-	DCC_LOG4(LOG_INFO, "ep_id=%d len=%d xfr_max=%d ret=%d", 
-			 ep_id, len, ep->xfr_max, ret);
-
-	return len;
-}
-
-int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
-{
-	return 0;
-}
-
-void usb_drain(int ep_id)
-{
+	/* wait for transfer to complete */
+	while (!(otg_fs->inep[ep_id].diepint & OTG_FS_XFRC));
 }
 
 
-#if 0
+
 int uint2hex(char * s, unsigned int val)
 {
 	int n;
@@ -348,6 +271,4 @@ void usb_send_hex(int ep_id, unsigned int val)
 
 	usb_send(ep_id, buf, n);
 }
-
-#endif
 
