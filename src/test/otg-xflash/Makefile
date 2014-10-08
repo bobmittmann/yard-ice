@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-CODELIB = xflash_pic
+CODELIB = otg_xflash_pic
 
 CFILES = xflash.c crc16ccitt.c stm32f2xx-flash.c stm32-otg_fs.c
 

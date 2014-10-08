@@ -591,6 +591,7 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 
 	__thinkos_flag_clr(dev->rx_flag);
 
+	DCC_LOG2(LOG_TRACE, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
 	usb_cdc_sn_set(sn);
 
 	usb_dev_init(dev->usb, cl, &usb_cdc_ev);

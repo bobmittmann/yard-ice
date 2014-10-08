@@ -326,7 +326,7 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 
 		}
 
-	} while (ret < 0);
+	} while ((ret < 0) || (cnt == 0));
 
 	usb_send(CDC_TX_EP, "\r\nDone.", 7);
 
