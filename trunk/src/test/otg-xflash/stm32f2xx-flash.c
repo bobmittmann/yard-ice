@@ -27,7 +27,7 @@
 #include <stm32f/stm32f-flash.h>
 #include <sys/param.h>
 
-#define STM32_BASE_FLASH 0x40022000
+#define STM32_BASE_FLASH 0x40023c00
 #define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
 #define STM32_FLASH_ADDR 0x08000000
 
@@ -53,13 +53,11 @@ static int stm32f2x_flash_sect_erase(struct stm32_flash * flash,
 {
 	uint32_t sr;
 
-	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect) ;
+	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
 
 	do {
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);
-
-	flash->cr = 0;
 
 	if (sr & FLASH_ERR)
 		return -1;
