@@ -59,7 +59,7 @@
 #define STM32F_BASE_DMA2    0x40026400
 #define STM32F_BASE_DMA1    0x40026000
 #define STM32F_BASE_BKPSRAM 0x40024000
-#define STM32F_BASE_FLASH   0x40023c00
+#define STM32_BASE_FLASH   0x40023c00
 #define STM32_BASE_RCC     0x40023800
 #define STM32F_BASE_CRC     0x40023000
 #define STM32_BASE_GPIOI   0x40022000
@@ -215,7 +215,7 @@
 
 #define STM32_PWR ((struct stm32_pwr *)STM32F_BASE_PWR)
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
-#define STM32_FLASH ((struct stm32_flash *)STM32F_BASE_FLASH)
+#define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
 
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)
 #define STM32F_ETH ((struct stm32f_eth *)STM32F_BASE_EMAC)

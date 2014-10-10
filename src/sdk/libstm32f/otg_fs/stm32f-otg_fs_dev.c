@@ -618,8 +618,8 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 	
 #endif
 	/* FIXME: the single input fifo creates a problem as 
-	   packets pending on the fifo blocks packets for unraletaed 
-	   endpoints. Ex: an outstanding OUT packet may block a control
+	   packets pending on the fifo for one endpoint blocks packets for 
+	   other  endpoints. Ex: an outstanding OUT packet may block a control
 	   packet. Either the upper layer garantees the removal or
 	   buffering at this layer should be implemented.
 	 */
