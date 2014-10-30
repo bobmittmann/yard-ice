@@ -382,6 +382,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_beep, "beep", "", 
 		"[tone [time]]", "play a tone" },
 
+	{ cmd_breakpoint, "breakpt", "bp", 
+		"", "set/modify breakpoint" },
+
 	{ cmd_cfgerase, "cfgerase", "ce", 
 		"", "restore default configuration" },
 
@@ -391,8 +394,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_connect, "connect", "con", 
 		"", "connect to target" },
 
-	{ cmd_breakpoint, "breakpt", "bp", 
-		"", "set/modify breakpoint" },
+	{ cmd_show_context, "context", "cpu", 
+		"", "show target context" },
+
 #if 0
 	{ cmd_dint, "dint", "di", 
 		"", "disable interrupts" },
@@ -436,11 +440,14 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_release, "release", "rel", 
 		"", "release/disconnect from target" },
 
+	{ cmd_mem_read, "read", "mr", 
+		"ADDR [SIZE]", "read a memory region" },
+
 	{ cmd_reset, "reset", "rst", 
 		"[auto|soft|hard|core|dbg]", "reset the target" },
 
-	{ cmd_show_context, "context", "cpu", 
-		"", "show target context" },
+	{ cmd_run, "run", "r", 
+		"", "resume target execution" },
 
 	{ cmd_step, "step", "s", 
 		"", "single step execution" },
@@ -448,16 +455,12 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_target, "target", "tgt", 
 		"", "configure the target system" },
 
-	{ cmd_run, "run", "r", 
-		"", "resume target execution" },
-
-	{ cmd_mem_read, "read", "mr", 
-		"ADDR [SIZE]", "read a memory region" },
-
 #if (ENABLE_NAND)
 	{ cmd_bb_scan, "bbscan", "bbs", 
 		"", "NAND bad block scan" },
+#endif
 
+#if (ENABLE_NAND)
 	{ cmd_scrub, "scrub", "scb", 
 		"", "NAND block forced erase" },
 #endif
