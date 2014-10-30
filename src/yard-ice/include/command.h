@@ -189,7 +189,7 @@ int cmd_trace(FILE * f, int argc, char ** argv);
 
 int cmd_fpga(FILE * f, int argc, char ** argv);
 
-
+int cmd_xflash(FILE * f, int argc, char ** argv);
 
 int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab);
 
