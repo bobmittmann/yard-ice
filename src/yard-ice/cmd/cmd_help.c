@@ -37,7 +37,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 		return -1;
 
 	if (argc > 1) {
-		if ((cmd = cmd_lookup(argv[1], yard_ice_cmd_tab)) == NULL) {
+		if ((cmd = cmd_lookup(yard_ice_cmd_tab, argv[1])) == NULL) {
 			fprintf(f, " Not found: '%s'\n", argv[1]);
 			return -1;
 		}

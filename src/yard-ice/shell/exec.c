@@ -51,7 +51,7 @@ int shell_exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 		return 0;
 	}
 
-	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
+	if ((cmd = cmd_lookup(cmd_tab, argv[0])) == NULL) {
 //		fprintf(f, "Command invalid. Type 'help'\n");
 		return -1;
 	}
