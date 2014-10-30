@@ -77,13 +77,27 @@
 #endif
 #endif
 
-struct shell_cmd * cmd_lookup(const char * s, 
-								const struct shell_cmd * cmd_tab)
+struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 {
 	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
+	char * s;
+	char * cp;
+	int n;
+
+	if ((cp = line) == NULL)
+		return NULL;
+
+	/* remove leading spaces */
+	for (; isspace(*cp); cp++);
+	s = cp;
+
+	/* get the command name lenght */
+	for (; isalnum(*cp); cp++);
+	n = cp - s;
 
 	while (cmd->callback != NULL) {
-		if ((strcmp(s, cmd->name) == 0) || (strcmp(s, cmd->alias) == 0)) {
+		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
+			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {
 			return cmd;
 		}
 		cmd++;
@@ -158,7 +172,7 @@ int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 		}
 	}
 
-	if ((cmd = cmd_lookup(argv[0], cmd_tab)) == NULL) {
+	if ((cmd = cmd_lookup(cmd_tab, argv[0])) == NULL) {
 
 		DCC_LOG(LOG_TRACE, "cmd_lookup() == NULL");
 
@@ -220,408 +234,10 @@ char * freadline(FILE * f, const char * prompt, char * buf, int len);
 #define MODE_ESC_VAL2 3
 #define MODE_ESC_O 4
 
-struct cmd_history {
-	uint8_t pos;
-	uint8_t tail;
-	uint8_t head;
-	uint8_t max;
-	char buf[SHELL_HISTORY_MAX][SHELL_LINE_MAX];
-};
+struct cmd_history;
 
-typedef struct cmd_history cmd_history_t;
-
-void history_init(cmd_history_t * ht)
-{
-	ht->pos = 0;
-	ht->head = 0;
-	ht->tail = 0;
-	ht->max = SHELL_HISTORY_MAX;
-}
-
-char * history_prev(cmd_history_t * ht)
-{
-	char * cp;
-
-	if (ht->tail == ht->head)
-		return NULL;
-
-	if (ht->pos != ht->tail) {
-		if (ht->pos == 0)
-			ht->pos = ht->max;
-		ht->pos--;
-	}
-
-	cp = ht->buf[ht->pos];
-
-	DCC_LOG1(LOG_MSG, "pos=%d", ht->pos);
-
-	return cp;
-}
-
-char * history_next(cmd_history_t * ht)
-{
-	char * cp;
-
-	if (ht->tail == ht->head)
-		return NULL;
-
-	if (ht->pos != ht->head) {
-		ht->pos++;
-		if (ht->pos == ht->max)
-			ht->pos = 0;
-	}
-
-	cp = ht->buf[ht->pos];
-
-	DCC_LOG1(LOG_MSG, "pos=%d", ht->pos);
-
-	return cp;
-}
-
-void history_add(cmd_history_t * ht, char * s)
-{
-	if ((s == NULL) || (*s == '\0'))
-		return;
-
-	if (ht->head != ht->tail) {
-		int n;
-
-		n = (ht->head == 0) ? ht->max : ht->head;
-		n--;
-	
-		if (strcmp(s, ht->buf[n]) == 0) {
-			/* don't repeat the last insertion,
-			 just reposition the current pointer */
-			ht->pos = ht->head;
-			return;
-		}
-	}
-
-	strcpy(ht->buf[ht->head], s);
-
-	ht->head++;
-
-	if (ht->head == ht->max)
-		ht->head = 0;
-
-	if (ht->head == ht->tail) {
-		/* override the last line */
-		ht->tail++;
-		if (ht->tail == ht->max)
-			ht->tail = 0;
-		DCC_LOG2(LOG_MSG, "override tail=%d head=%d", ht->tail, ht->head);
-	} else {
-		DCC_LOG2(LOG_MSG, "tail=%d head=%d", ht->tail, ht->head);
-	}
-	
-	/* invalidate the head position */
-	*ht->buf[ht->head] = '\0';
-	ht->pos = ht->head;
-}
-
-char * freadline_history(cmd_history_t * ht, FILE * f, 
-						 char * buf, int max)
-{
-	int mode;
-	int pos;
-	int val;
-	int len;
-	int ctrl;
-	int c;
-	int i;
-	char * s;
-
-	if (isfatty(f)) {
-		f = ftty_lowlevel(f);
-	}
-
-	mode = 0;
-	pos = 0;
-	val = 0;
-	ctrl = 0;
-	len = 0;
-	/* reserve space for NULL termination */
-	max--;
-	for (;;) {
-		if ((c = fgetc(f)) == EOF) {
-			DCC_LOG(LOG_TRACE, "EOF");
-			return NULL;
-		}
-
-		DCC_LOG1(LOG_MSG, "[%02x]", c);
-
-		switch (mode) {
-		case MODE_ESC:
-			switch (c) {
-			case '[':
-				mode = MODE_ESC_VAL1;
-				val = 0;
-				ctrl = 0;
-				break;
-			case 'O':
-				mode = MODE_ESC_O;
-				break;
-			default:
-				DCC_LOG1(LOG_INFO, "ESC:'%c'", c);
-				mode = 0;
-			};
-			continue;
-
-		case MODE_ESC_VAL1:
-		case MODE_ESC_VAL2:
-			switch (c) {
-			case '0'...'9':
-				val = val * 10 + c - '0';
-				continue;
-			case 'A':
-				/* cursor up */
-				DCC_LOG2(LOG_MSG, "up %d, %d", ctrl, val);
-				c = IN_CURSOR_UP + ctrl;
-				break;
-			case 'B':
-				/* cursor down */
-				DCC_LOG2(LOG_MSG, "down %d, %d", ctrl, val);
-				c = IN_CURSOR_DOWN + ctrl;
-				break;
-			case 'C':
-				/* cursor right */
-				DCC_LOG2(LOG_MSG, "right %d, %d", ctrl, val);
-				c = IN_CURSOR_RIGHT + ctrl;
-				break;
-			case 'D':
-				/* cursor left */
-				DCC_LOG2(LOG_MSG, "left %d, %d", ctrl, val);
-				c = IN_CURSOR_LEFT + ctrl;
-				break;
-			case '~':
-				switch (val) {
-				case 1:
-					DCC_LOG1(LOG_MSG, "home %d", ctrl);
-					c = IN_HOME + ctrl;
-					break;
-				case 2:
-					DCC_LOG1(LOG_MSG, "insert %d", ctrl);
-					c = IN_INSERT + ctrl;
-					break;
-				case 3:
-					/* delete */
-					DCC_LOG1(LOG_MSG, "delete %d", ctrl);
-					c = IN_DELETE + ctrl;
-					break;
-				case 5:
-					DCC_LOG1(LOG_MSG, "pg up %d", ctrl);
-					c = IN_PAGE_UP + ctrl;
-					break;
-				case 6:
-					DCC_LOG1(LOG_MSG, "pg down %d", ctrl);
-					c = IN_PAGE_DOWN + ctrl;
-					break;
-				default:
-					DCC_LOG1(LOG_INFO, "seq %d", val);
-					mode = 0;
-					continue;
-				}
-				break;
-			case ';':
-				mode = MODE_ESC_VAL2;
-				ctrl = IN_CTRL;
-				val = 0;
-				continue;
-			default:
-				DCC_LOG1(LOG_MSG, "VAL:'%c'", c);
-				mode = 0;
-				continue;
-			};
-			mode = 0;
-			break;
-
-		case MODE_ESC_O:
-			switch (c) {
-			case 'F':
-				/* end */
-				DCC_LOG(LOG_MSG, "end");
-				c = IN_END;
-				break;
-			case 'H':
-				/* end */
-				DCC_LOG(LOG_MSG, "home");
-				c = IN_HOME;
-				break;
-			default:
-				DCC_LOG1(LOG_INFO, "ESC O:'%c'", c);
-				mode = 0;
-				continue;
-			}
-			mode = 0;
-			break;
-		} 
-
-		switch (c) {
-		case IN_ESC:
-			DCC_LOG(LOG_MSG, "ESC");
-			mode = MODE_ESC;
-			continue;
-
-		case IN_CURSOR_UP:
-			if ((s = history_prev(ht)) == NULL)
-				continue;
-			goto set_buf;
-
-		case IN_CURSOR_DOWN:
-			if ((s = history_next(ht)) == NULL)
-				continue;
-			goto set_buf;
-
-		case IN_CURSOR_RIGHT:
-			if (pos < len)
-				fputc(buf[pos++], f);
-			else
-				fputs(OUT_BEL, f);
-			continue;
-
-		case IN_CURSOR_LEFT:
-			if (pos > 0) {
-				fputs(OUT_CURSOR_LEFT, f);
-				pos--;
-			} else {
-				fputs(OUT_BEL, f);
-			}
-			continue;
-
-		case IN_CTRL_CURSOR_RIGHT:
-			while (pos < len) {
-				fputc(buf[pos++], f);
-				if ((buf[pos - 1] != ' ') && (buf[pos] == ' '))
-					break;
-			} 
-			continue;
-
-		case IN_CTRL_CURSOR_LEFT:
-			if (pos > 0) {
-				do {
-					fputs(OUT_CURSOR_LEFT, f);
-					pos--;
-					if ((buf[pos - 1] == ' ') && (buf[pos] != ' '))
-						break;
-				} while (pos > 0);
-			}
-			continue;
-
-		case IN_PAGE_UP:
-			continue;
-
-		case IN_PAGE_DOWN:
-			continue;
-
-		case IN_INSERT:
-			continue;
-
-		case IN_HOME:
-			while (pos > 0) {
-				fputs(OUT_CURSOR_LEFT, f);
-				pos--;
-			} 
-			continue;
-
-		case IN_END:
-			while (pos < len) {
-				fputc(buf[pos++], f);
-			} 
-			continue;
-
-		case IN_TN_BS:     
-			DCC_LOG(LOG_MSG, "IN_TN_BS");
-		case IN_BS:
-			if (pos == 0) {
-				fputs(OUT_BEL, f);
-				continue;
-			}
-			if (len == pos) {
-				pos--;
-				len--;
-				fputs(OUT_BS, f);
-				continue;
-			}
-
-			fputs(OUT_CURSOR_LEFT, f);
-			pos--;
-			/* fall back */
-
-		case IN_DELETE:
-
-			if (len == pos) {
-				continue;
-			}
-			len--;
-
-			for (i = pos; i < len; i++) {
-				buf[i] = buf[i + 1];
-			}
-			buf[len] = '\0';
-			fputs(&buf[pos], f);
-			fputc(' ', f);
-			for (i = len + 1; i > pos; i--)
-				fputs(OUT_CURSOR_LEFT, f);
-			continue;
-
-		case IN_EOL:
-			buf[len] = '\0';
-			fputs("\r\n", f);
-			return buf;
-
-		case IN_SKIP:
-			fputs(OUT_SKIP, f);
-			return NULL;
-		}
-
-		if (len == max) {
-			fputs(OUT_BEL, f);
-			continue;
-		}
-
-		if (len == pos) {
-			fputc(c, f);
-			buf[pos] = c;
-			pos++;
-			len++;
-			continue;
-		}
-
-		for (i = len; i > pos; i--) {
-			buf[i] = buf[i - 1];
-		}
-
-		len++;
-		buf[pos] = c;
-		buf[len] = '\0';
-
-		fputs(&buf[pos], f);
-		pos++;
-
-		for (i = len; i > pos; i--)
-			fputs(OUT_CURSOR_LEFT, f);
-
-		continue;
-
-set_buf:
-		for (i = pos; i > 0; i--)
-			fputs(OUT_CURSOR_LEFT, f);
-
-		strcpy(buf, s);
-		fputs(s, f);
-
-		pos = strlen(s);
-		if (pos < len) {
-			for (i = pos; i < len; i++)
-				fputc(' ', f);
-			for (i = pos; i < len; i++)
-				fputs(OUT_CURSOR_LEFT, f);
-		}
-		len = pos;
-
-	}
-}
-
+char * history_prev(struct cmd_history * ht);
+char * history_next(struct cmd_history * ht);
 
 #if (ENABLE_SHELL_THREAD) 
 struct shell_context {
@@ -695,9 +311,11 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 	char * prompt;
 	int ret = 0;
 #if ENABLE_SHELL_HISTORY
-	cmd_history_t history;
+	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+	struct cmd_history * history;
 
-	history_init(&history);
+	DCC_LOG(LOG_TRACE, "history_init()");
+	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 #endif
 
 	if (greeting)
@@ -710,15 +328,15 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 		fprintf(f, "%s", prompt);
 
 		/* use the history head as line buffer */
-		line = &history.buf[history.head];
+		line = history_head(history);
 
-		if (freadline_history(&history, f, line, SHELL_LINE_MAX) == NULL)
+		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;
 
 		if ((cp = shell_stripline(line)) == NULL)
 			continue;
 
-		history_add(&history, cp);
+		history_add(history, cp);
 #else
 		if (freadline(f, prompt, line, SHELL_LINE_MAX) == NULL)
 			return -1;
