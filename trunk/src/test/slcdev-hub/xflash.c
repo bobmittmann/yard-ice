@@ -28,7 +28,7 @@
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
 
-#define PIC_CODE_SIZE_MAX (2048)
+#define PIC_CODE_SIZE_MAX (1720)
 uint32_t text[PIC_CODE_SIZE_MAX / 4];
 
 int usb_xflash(uint32_t offs, uint32_t len)

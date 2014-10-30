@@ -31,62 +31,43 @@
 #include "debugger.h"
 #include "eval.h"
 
-int cmd_let(FILE * f, int argc, char ** argv)
+int usb_xflash(uint32_t offs, uint32_t len);
+
+int cmd_xflash(FILE * f, int argc, char ** argv)
 {
-	char buf[64];
-	var_def_t * var;
+	uint32_t offs = 0x00000;
+	uint32_t pri;
 	value_t val;
-	int err;
+	int ret;
 	int n;
 
-	if (argc < 3) {
-//		fprintf(f, msg_init_usage);
-		return -1;
-	}
-
 	argc--;
 	argv++;
 
-	if ((var = var_global_lookup(*argv)) < 0) {
-		fprintf(f, "Variable '%s' not found!\n", *argv);
-		return -2;
-	}
-
-	argc--;
-	argv++;
-
-	switch (var->type) {
-	case TYPE_UINT32: 
-	case TYPE_INT32: 
-	case TYPE_BOOL: 
+	if (argc > 1) {
 		if ((n = eval_uint32(&val, argc, argv)) < 0) {
 			fprintf(f, "Can't evaluate\n");
 			return n;
 		}
-		break;
-	default:
-		fprintf(f, "Unsupported type: %d\n", var->type);
-		return -3;
+		argc -= n;
+		if (argc > 1) {
+			//		fprintf(f, msg_init_usage);
+			//		return SHELL_ERR_EXTRA_ARGS;
+			return -1;
+		}
+		offs = val.uint32;
 	}
 
+	fprintf(f, "Firmware update...\n");
+	fflush(f);
 
-	if (n != argc) {
-		fprintf(f, "Syntax error\n");
-		return -4;
-	}
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 
-	if ((err = var_set(var, &val)) < 0) {
-		fprintf(f, "Can't assign variable\n");
-		return err;
-	}
+	ret = usb_xflash(offs, 256 * 1024);
 
-	if ((err = var_get(var, &val)) < 0) {
-		fprintf(f, "Can't get variable value\n");
-		return err;
-	}
+	cm3_primask_set(pri);
 
-	fprintf(f, "%s\n", val_decode(def_of(var->type), &val, buf));
-
-	return 0;
+	return ret;
 }
 
