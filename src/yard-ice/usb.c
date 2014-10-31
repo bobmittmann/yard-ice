@@ -62,15 +62,12 @@ int usb_task(void * arg)
 	}
 }
 
-uint32_t usb_stack[1024 + 512];
-
-int usb_shell(void)
+int usb_shell(void * stack_buf, int stack_size)
 {
 	int th;
 
 	th = __os_thread_create((void *)usb_task, NULL, 
-						   usb_stack, sizeof(usb_stack), 
-						   __OS_PRIORITY_HIGHEST); 
+							stack_buf, stack_size, __OS_PRIORITY_HIGHEST); 
 
 	tracef("USB CDC-ACM shell thread=%d", th);
 

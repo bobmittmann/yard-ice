@@ -168,17 +168,13 @@ const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 const uint32_t __flash_size;
 
 int __attribute__((section (".data#"))) 
-	stm32f10x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
+	stm32f2x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
 {
-	uint32_t pri;
 	uint32_t sr;
 	int again;
 	int ret = -1;
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-
-	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect) ;
+	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
 
 	for (again = 4096 * 1024; again > 0; again--) {
 		sr = flash->sr;
@@ -188,19 +184,19 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_primask_set(pri);
-
 	return ret;
 }
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
-	uint32_t cr;
 	unsigned int page;
 	unsigned int sect;
 	unsigned int size;
 	unsigned int cnt;
+	uint32_t pri;
+	uint32_t cr;
+	int ret;
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -216,6 +212,8 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		DCC_LOG(LOG_ERROR, "offset must be a aligned to a sector boundary.");
 		return -1;
 	};
+
+	pri = cm3_primask_get();
 
 	cnt = 0;
 	while (cnt < len) {
@@ -234,7 +232,11 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 			break;
 		}
 
-		if (stm32f10x_flash_sect_erase(flash, sect) < 0) {
+		cm3_primask_set(1);
+		ret = stm32f2x_flash_sect_erase(flash, sect);
+		cm3_primask_set(pri);
+
+		if (ret < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
 			return -1;
 		}
@@ -246,16 +248,12 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 }
 
 int __attribute__((section (".data#"))) 
-	stm32_flash_wr32(struct stm32_flash * flash,
+	stm32f2x_flash_wr32(struct stm32_flash * flash,
 						 uint32_t volatile * addr, uint32_t data)
 {
-	uint32_t pri;
+	int ret = -1;
 	uint32_t sr;
 	int again;
-	int ret = -1;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
 
 	flash->cr = FLASH_PG | FLASH_PSIZE_32;
 	*addr = data;
@@ -268,8 +266,6 @@ int __attribute__((section (".data#")))
 		}
 	}
 
-	cm3_primask_set(pri);
-
 	return ret;
 }
 
@@ -280,6 +276,8 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	uint32_t * addr;
 	uint8_t * ptr;
 	uint32_t cr;
+	uint32_t pri;
+	int ret;
 	int n;
 	int i;
 
@@ -303,10 +301,14 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 
 	DCC_LOG2(LOG_INFO, "0x%08x len=%d", addr, len);
 
+	pri = cm3_primask_get();
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
-		if (stm32_flash_wr32(flash, addr, data) < 0) {
+		cm3_primask_set(1);
+		ret = stm32f2x_flash_wr32(flash, addr, data);
+		cm3_primask_set(pri);
+		if (ret < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
 			return -1;
 		}

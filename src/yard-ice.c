@@ -317,12 +317,14 @@ int init_target(void)
 }
 
 int console_shell(void);
-void telnet_shell(void);
-void usb_shell(void);
+int telnet_shell(void * stack_buf, int stack_size);
+int usb_shell(void * stack_buf, int stack_size);
 int sys_start(void);
 
 int main(int argc, char ** argv)
 {
+	uint32_t telnet_stack[1360];
+	uint32_t usb_stack[1360];
 	int ret;
 
 	DCC_LOG_INIT();
@@ -392,16 +394,6 @@ int main(int argc, char ** argv)
 	vcom_start();
 #endif
 
-#if ENABLE_USB
-	tracef("* starting USB shell ... ");
-	usb_shell();
-#endif
-
-#if ENABLE_TELNET
-	tracef("* starting TELNET server ... ");
-	telnet_shell();
-#endif
-
 #if (ENABLE_COMM)
 	tracef("* starting COMM daemon ... ");
 	comm_tcp_start(&debugger.comm);
@@ -415,6 +407,16 @@ int main(int argc, char ** argv)
 #if (ENABLE_GDB)
 	tracef("* starting GDB daemon ... ");
 	gdb_rspd_start();
+#endif
+
+#if ENABLE_USB
+	tracef("* starting USB shell ... ");
+	usb_shell(usb_stack, sizeof(usb_stack));
+#endif
+
+#if ENABLE_TELNET
+	tracef("* starting TELNET server ... ");
+	telnet_shell(telnet_stack, sizeof(telnet_stack));
 #endif
 
 	return console_shell();
