@@ -47,10 +47,6 @@
 
 #include <sys/dcclog.h>
 
-#ifndef ENABLE_SHELL_HISTORY
-#define ENABLE_SHELL_HISTORY 1
-#endif
-
 #ifndef ENABLE_SHELL_THREAD
 #define EENABLE_SHELL_THREAD 0
 #endif
@@ -301,22 +297,16 @@ static char * get_cmd_next(char ** linep)
 int shell(FILE * f, const char * (* get_prompt)(void), 
 		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
 {
-#if ENABLE_SHELL_HISTORY
-	char * line;
-#else
 	char line[SHELL_LINE_MAX];
-#endif
 	char * cp;
 	char * cmd;
 	char * prompt;
 	int ret = 0;
-#if ENABLE_SHELL_HISTORY
 	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	struct cmd_history * history;
 
 	DCC_LOG(LOG_TRACE, "history_init()");
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
-#endif
 
 	if (greeting)
 		fprintf(f, greeting());
@@ -324,11 +314,7 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 	for (;;) {
 		prompt = (char *)get_prompt();
 
-#if ENABLE_SHELL_HISTORY
 		fprintf(f, "%s", prompt);
-
-		/* use the history head as line buffer */
-		line = history_head(history);
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;
@@ -337,10 +323,6 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 			continue;
 
 		history_add(history, cp);
-#else
-		if (freadline(f, prompt, line, SHELL_LINE_MAX) == NULL)
-			return -1;
-#endif
 
 #if (ENABLE_SHELL_THREAD) 
 		struct shell_context shell;

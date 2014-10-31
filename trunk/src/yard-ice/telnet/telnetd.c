@@ -60,14 +60,12 @@ int telnetd_task(void * arg)
 	}
 }
 
-uint32_t telnetd_stack[1024 + 512];
-
-int telnet_shell(void)
+int telnet_shell(void * stack_buf, int stack_size)
 {
 	int th;
 
 	th = __os_thread_create((void *)telnetd_task, NULL, 
-						   telnetd_stack, sizeof(telnetd_stack), 0); 
+						   stack_buf, stack_size, 0); 
 
 	tracef("TELNET shell thread=%d", th);
 
