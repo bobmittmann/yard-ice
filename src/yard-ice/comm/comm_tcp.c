@@ -185,6 +185,14 @@ uint32_t comm_write_stack[512 + 128];
 uint32_t comm_read_stack[512 + (COMM_TCP_BUF_SIZE / 4)];
 struct comm_tcp comm_tcp;
 
+const struct thinkos_thread_info comm_read_inf = {
+	.tag = "COMM_RD"
+};
+
+const struct thinkos_thread_info comm_write_inf = {
+	.tag = "COMM_WR"
+};
+
 int comm_tcp_start(ice_comm_t * comm)
 {
 	int th;
@@ -195,16 +203,22 @@ int comm_tcp_start(ice_comm_t * comm)
 
 	DCC_LOG1(LOG_TRACE, "flag=%d", comm_tcp.con_flag);
 
-	th = __os_thread_create((void *)comm_tcp_read_task, (void *)&comm_tcp, 
-							comm_read_stack, sizeof(comm_read_stack), 
-							__OS_PRIORITY_LOWEST);
+	th = thinkos_thread_create_inf((void *)comm_tcp_read_task, 
+					   (void *)&comm_tcp, comm_read_stack, 
+					   THINKOS_OPT_PRIORITY(32) |
+					   THINKOS_OPT_ID(32) | 
+					   THINKOS_OPT_STACK_SIZE(sizeof(comm_read_stack)), 
+					   &comm_read_inf);
 
 	tracef("comm_tcp_start th=%d", th);
 	DCC_LOG1(LOG_TRACE, "Comm read thread %d", th);
 
-	th = __os_thread_create((void *)comm_tcp_write_task, (void *)&comm_tcp, 
-							comm_write_stack, sizeof(comm_write_stack), 
-							__OS_PRIORITY_LOWEST);
+	th = thinkos_thread_create_inf((void *)comm_tcp_write_task, 
+					   (void *)&comm_tcp, comm_write_stack, 
+					   THINKOS_OPT_PRIORITY(32) |
+					   THINKOS_OPT_ID(32) | 
+					   THINKOS_OPT_STACK_SIZE(sizeof(comm_write_stack)), 
+					   &comm_write_inf);
 
 	tracef("comm_tcp_write_task th=%d", th);
 	DCC_LOG1(LOG_TRACE, "Comm write thread=%d.", th);

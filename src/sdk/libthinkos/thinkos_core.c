@@ -338,7 +338,8 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	for(;;);
 }
 
-int thinkos_init(struct thinkos_thread_opt opt)
+int thinkos_init(struct thinkos_thread_opt opt, 
+				 const struct thinkos_thread_info * inf)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 	int self;
@@ -457,6 +458,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	self = thinkos_alloc_lo(&thinkos_rt.th_alloc, opt.id);
 #else
 	self = opt.id;
+#endif
+
+#if THINKOS_ENABLE_THREAD_INFO
+	thinkos_rt.th_inf[self] = (struct thinkos_thread_info *)inf;
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE

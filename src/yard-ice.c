@@ -158,15 +158,20 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
+const struct thinkos_thread_info supervisor_inf = {
+	.tag = "SUPV"
+};
+
 uint32_t supervisor_stack[512];
 
 void supervisor_init(void)
 {
 	monitor_stream = stdout;
 
-	thinkos_thread_create((void *)supervisor_task, (void *)NULL,
-						  supervisor_stack, sizeof(supervisor_stack) |
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), NULL);
+	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
+							  supervisor_stack, sizeof(supervisor_stack) |
+							  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), 
+							  &supervisor_inf);
 }
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
@@ -321,6 +326,10 @@ int telnet_shell(void * stack_buf, int stack_size);
 int usb_shell(void * stack_buf, int stack_size);
 int sys_start(void);
 
+const struct thinkos_thread_info main_inf = {
+	.tag = "MAIN"
+};
+
 int main(int argc, char ** argv)
 {
 	uint32_t telnet_stack[1360];
@@ -334,7 +343,7 @@ int main(int argc, char ** argv)
 	printf("\n---\n");
 
 	cm3_udelay_calibrate();
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), &main_inf);
 	trace_init();
 
 	tracef("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");

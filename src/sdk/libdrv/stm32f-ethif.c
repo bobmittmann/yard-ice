@@ -172,6 +172,10 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	}
 }
 
+const struct thinkos_thread_info stm32f_ethif_inf = {
+	.tag = "STM_ETH"
+};
+
 int stm32f_ethif_init(struct ifnet * __if)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
@@ -271,9 +275,12 @@ int stm32f_ethif_init(struct ifnet * __if)
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
-	__os_thread_create((void *)stm32f_ethif_input, (void *)__if, 
-					   drv->stack, STM32F_ETH_INPUT_STACK_SIZE, 
-					   __OS_PRIORITY_LOWEST);
+	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 
+						  drv->stack, 
+						  THINKOS_OPT_PRIORITY(32) |
+						  THINKOS_OPT_ID(32) | 
+						  THINKOS_OPT_STACK_SIZE(STM32F_ETH_INPUT_STACK_SIZE), 
+						  &stm32f_ethif_inf);
 
 	/* set the interrupt priority */
 	__thinkos_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);

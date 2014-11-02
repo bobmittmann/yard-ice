@@ -265,7 +265,7 @@ static inline int __os_thread_create(int (* task)(void *), void * arg,
 	return thinkos_thread_create(task, arg, stack_ptr, 
 								 THINKOS_OPT_PRIORITY(priority) |
 								 THINKOS_OPT_ID(id) | 
-								 THINKOS_OPT_STACK_SIZE(stack_size), NULL);
+								 THINKOS_OPT_STACK_SIZE(stack_size));
 }
 
 static inline int __os_thread_self(void) {

@@ -154,8 +154,16 @@ static inline int const __attribute__((always_inline))
 static inline int __attribute__((always_inline)) 
 	thinkos_thread_create(int (* task)(void *), 
 						  void * arg, void * stack_ptr,
-						  unsigned int opt,
-						  struct thinkos_thread_info * inf) {
+						  unsigned int opt) {
+	return THINKOS_SVC5(THINKOS_THREAD_CREATE, task, arg, 
+						stack_ptr, opt, 0);
+}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_thread_create_inf(int (* task)(void *), 
+							  void * arg, void * stack_ptr,
+							  unsigned int opt,
+							  const struct thinkos_thread_info * inf) {
 	return THINKOS_SVC5(THINKOS_THREAD_CREATE, task, arg, 
 						stack_ptr, opt, inf);
 }

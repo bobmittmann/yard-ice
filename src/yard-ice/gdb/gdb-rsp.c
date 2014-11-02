@@ -1272,9 +1272,17 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 	for (;;);
 }
 
-uint32_t gdb_stack[1024];
+uint32_t gdb_srv_stack[1024];
 uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
 struct gdb_rspd gdb_rspd;
+
+const struct thinkos_thread_info gdb_brk_inf = {
+	.tag = "GDB_BRK"
+};
+
+const struct thinkos_thread_info gdb_srv_inf = {
+	.tag = "GDB_SRV"
+};
 
 int gdb_rspd_start(void)
 {  
@@ -1295,16 +1303,23 @@ int gdb_rspd_start(void)
 	gdb_rspd.run_flag = thinkos_flag_alloc();
 	gdb_rspd.con_flag = thinkos_flag_alloc();
 
-	th = __os_thread_create((void *)gdb_task, (void *)&gdb_rspd, 
-							gdb_stack, sizeof(gdb_stack), 
-							__OS_PRIORITY_LOWEST);
+	th = thinkos_thread_create_inf((void *)gdb_task, 
+								   (void *)&gdb_rspd, gdb_srv_stack, 
+								 THINKOS_OPT_PRIORITY(32) |
+								 THINKOS_OPT_ID(32) | 
+								 THINKOS_OPT_STACK_SIZE(sizeof(gdb_srv_stack)), 
+								 &gdb_srv_inf);
 
 	tracef("GDB server started th=%d", th);
 
-	th = __os_thread_create((void *)gdb_brk_task, (void *)&gdb_rspd, 
-								gdb_brk_stack, sizeof(gdb_brk_stack), 
-								__OS_PRIORITY_LOWEST);
+	th = thinkos_thread_create_inf((void *)gdb_brk_task, 
+								   (void *)&gdb_rspd, gdb_brk_stack, 
+								 THINKOS_OPT_PRIORITY(32) |
+								 THINKOS_OPT_ID(32) | 
+								 THINKOS_OPT_STACK_SIZE(sizeof(gdb_brk_stack)), 
+								 &gdb_brk_inf);
 
+	tracef("GDB monitor started th=%d", th);
 
 	return 0;
 }

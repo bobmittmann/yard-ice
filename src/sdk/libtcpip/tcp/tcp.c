@@ -242,6 +242,10 @@ uint32_t tcp_rel_timestamp(void)
 }
 #endif
 
+const struct thinkos_thread_info tcp_tmr_inf = {
+	.tag = "TCP_TMR"
+};
+
 void tcp_init(void)
 {
 	DCC_LOG(LOG_TRACE, "initializing TCP subsystem."); 
@@ -254,9 +258,18 @@ void tcp_init(void)
 
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.output_cond);
 
+#if 0
 	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 
 					   tcp_tmr_stack, sizeof(tcp_tmr_stack), 
 					   __OS_PRIORITY_LOWEST);
+#endif
+
+	thinkos_thread_create_inf((void *)tcp_tmr_task, (void *)NULL, 
+					tcp_tmr_stack, 
+					THINKOS_OPT_PRIORITY(32) |
+					THINKOS_OPT_ID(32) | 
+					THINKOS_OPT_STACK_SIZE(sizeof(tcp_tmr_stack)), 
+					&tcp_tmr_inf);
 
 #if (ENABLE_TCP_PROFILING)
 	prof_clock_init();
