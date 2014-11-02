@@ -767,13 +767,22 @@ send_data:
 
 uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 
+const struct thinkos_thread_info tftpd_inf = {
+	.tag = "TFTPD"
+};
+
 int tftpd_start(void)
 {
 	int th;
+	int priority = __OS_PRIORITY_HIGHEST;
+	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
 
-	th = __os_thread_create((void *)tftp_daemon_task, (void *)&debugger, 
-							tftp_stack, sizeof(tftp_stack), 
-							__OS_PRIORITY_HIGH);
+	th = thinkos_thread_create_inf((void *)tftp_daemon_task, 
+								   (void *)&debugger, tftp_stack, 
+								 THINKOS_OPT_PRIORITY(priority) |
+								 THINKOS_OPT_ID(id) | 
+								 THINKOS_OPT_STACK_SIZE(sizeof(tftp_stack)), 
+								 &tftpd_inf);
 
 	tracef("TFTP started th=%d", th);
 

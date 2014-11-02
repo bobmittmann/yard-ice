@@ -170,7 +170,11 @@ int cmd_os(FILE * f, int argc, char ** argv)
 	fprintf(f, "Ticks = %d\n", rt.ticks);
 #endif
 
-	fprintf(f, "  Th |    Context"); 
+	fprintf(f, "  Th"); 
+#if THINKOS_ENABLE_THREAD_INFO
+	fprintf(f, " |     Tag"); 
+#endif
+	fprintf(f, " |    Context"); 
 #if THINKOS_ENABLE_THREAD_STAT
 	fprintf(f, " |  WQ | TmW"); 
 #endif
@@ -178,7 +182,7 @@ int cmd_os(FILE * f, int argc, char ** argv)
 	fprintf(f, " |  Val |  Pri"); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-	fprintf(f, " |    Clock "); 
+	fprintf(f, " |     Clock"); 
 #endif
 #if THINKOS_MUTEX_MAX > 0
 	fprintf(f, " | Locks\n"); 
@@ -188,7 +192,14 @@ int cmd_os(FILE * f, int argc, char ** argv)
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt.ctx[i] != NULL) {
-			fprintf(f, "%4d | 0x%08x", i, (uint32_t)rt.ctx[i]); 
+			fprintf(f, "%4d", i);
+#if THINKOS_ENABLE_THREAD_INFO
+			if (rt.th_inf[i] != NULL)
+				fprintf(f, " | %7s", rt.th_inf[i]->tag); 
+			else
+				fprintf(f, " | %7s", "..."); 
+#endif
+			fprintf(f, " | 0x%08x", (uint32_t)rt.ctx[i]); 
 #if THINKOS_ENABLE_THREAD_STAT
 			fprintf(f, " | %3d | %s", rt.th_stat[i] >> 1, 
 					rt.th_stat[i] & 1 ? "Yes" : " No"); 

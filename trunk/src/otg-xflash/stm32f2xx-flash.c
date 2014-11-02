@@ -74,13 +74,15 @@ int flash_erase(uint32_t offs, unsigned int len)
 	unsigned int cnt;
 
 	page = offs >> 14;
-	
+
+	/* must start at a page boundary */
 	if ((page << 14) != (offs)) {
 		return -1;
 	};
 
 	cnt = 0;
 	while (cnt < len) {
+
 		switch (page) {
 		case 0 ... 3:
 			sect = page;
@@ -101,6 +103,8 @@ int flash_erase(uint32_t offs, unsigned int len)
 		}
 
 		cnt += size;
+		offs += size;
+		page = offs >> 14;
 	}
 
 	return cnt;

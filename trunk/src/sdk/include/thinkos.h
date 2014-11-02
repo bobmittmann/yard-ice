@@ -41,12 +41,7 @@
 #ifndef __ASSEMBLER__
 
 struct thinkos_thread_info {
-	struct {
-		void * top;
-		void * bottom;
-	} stack;
-	uint8_t priority;
-	uint8_t id;
+	char tag[8];
 };
 
 #include <thinkos_svc.h>
@@ -60,15 +55,18 @@ static inline void thinkos_yield(void)  {
 	asm volatile ("dsb\n"); /* Data synchronization barrier */
 }
 
-int thinkos_init(unsigned int opt);
+int thinkos_init(unsigned int opt, const struct thinkos_thread_info * inf);
 
 int thinkos_thread_create(int (* task)(void *), 
 						  void * arg, void * stack_ptr,
-						  unsigned int opt, 
-						  struct thinkos_thread_info * inf);
+						  unsigned int opt);
+
+int thinkos_thread_create_inf(int (* task)(void *), 
+						  void * arg, void * stack_ptr,
+						  unsigned int opt,
+						  const struct thinkos_thread_info * inf);
 
 int const thinkos_thread_self(void);
-
 
 int thinkos_cancel(unsigned int thread_id, int code);
 

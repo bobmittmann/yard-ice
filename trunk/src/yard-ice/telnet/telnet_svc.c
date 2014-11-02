@@ -582,6 +582,10 @@ uint32_t telnet_input_stack[512];
 
 struct telnet_svc telnet_svc;
 
+const struct thinkos_thread_info telnet_srv_inf = {
+	.tag = "TELNETD"
+};
+
 struct telnet_svc * telnet_svc_init(int port)
 {  
 	struct telnet_svc * tn = &telnet_svc;
@@ -604,10 +608,13 @@ struct telnet_svc * telnet_svc_init(int port)
 	tn->rx.head = 0;
 	tn->rx.tail = 0;
 
-	th = __os_thread_create((void *)telnet_input_task, (void *)tn, 
-								telnet_input_stack, sizeof(telnet_input_stack), 
-								__OS_PRIORITY_LOWEST);
-
+	th = thinkos_thread_create_inf((void *)telnet_input_task, (void *)tn, 
+					telnet_input_stack, 
+					THINKOS_OPT_PRIORITY(32) |
+					THINKOS_OPT_ID(32) | 
+					THINKOS_OPT_STACK_SIZE(sizeof(telnet_input_stack)), 
+					&telnet_srv_inf);
+								
 	tracef("TELNET TCP input thread=%d", th);
 
 	return tn;

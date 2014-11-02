@@ -105,7 +105,7 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 const char * yard_ice_greeting(void) 
 {
 	return "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2013 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+	"(c) Copyright 2011-2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
 }
 
 const char * const prompt_tab[] = {
@@ -566,11 +566,11 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 #if (ENABLE_NETWORK)
 #if (ENABLE_TCP_RECV)
 	{ cmd_tcp_recv, "rcvnet", "rn", 
-		"[ADDR] [PORT]", "receive file trough network" },
+		"[ADDR] [PORT]", "receive file through network" },
 #endif
 #if (ENABLE_TCP_SEND)
 	{ cmd_tcp_send, "sndnet", "sn", 
-		"[ADDR] [SIZE] [PORT]", "send a memory block trough network" },
+		"[ADDR] [SIZE] [PORT]", "send a memory block through network" },
 #endif
 #endif
 
@@ -595,5 +595,4 @@ int console_shell(void)
 	return shell(f_tty, yard_ice_get_prompt, 
 				 yard_ice_greeting, yard_ice_cmd_tab);
 }
-
 

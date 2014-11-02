@@ -2753,6 +2753,11 @@ uint32_t dbg_poll_stack[80];
 
 int mod_ice_register(struct debugger * dbg);
 
+
+const struct thinkos_thread_info dbg_poll_inf = {
+	.tag = "DBG_POL"
+};
+
 void debugger_init(void)
 {
 	struct debugger * dbg = &debugger;
@@ -2797,9 +2802,11 @@ void debugger_init(void)
 
 	ice_comm_init(&dbg->comm);
 
-	dbg->poll_thread = __os_thread_create((void *)dbg_poll_task, (void *)dbg, 
-							dbg_poll_stack, sizeof(dbg_poll_stack), 
-							__OS_PRIORITY_LOWEST);
+	dbg->poll_thread = thinkos_thread_create_inf((void *)dbg_poll_task, 
+						(void *)dbg, dbg_poll_stack, 
+						THINKOS_OPT_ID(32) | 
+						THINKOS_OPT_STACK_SIZE(sizeof(dbg_poll_stack)), 
+						&dbg_poll_inf);
 
 	DCC_LOG1(LOG_TRACE, "__os_thread_create()=%d", dbg->poll_thread);
 

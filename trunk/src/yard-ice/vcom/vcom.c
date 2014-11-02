@@ -535,6 +535,14 @@ uint32_t serial_input_stack[512];
 
 struct vcom serial_vcom;
 
+const struct thinkos_thread_info tcp_input_inf = {
+	.tag = "VCOM_NI"
+};
+
+const struct thinkos_thread_info serial_input_inf = {
+	.tag = "VCOM_SI"
+};
+
 int vcom_start(void)
 {  
 	struct tcp_pcb * svc;
@@ -554,18 +562,22 @@ int vcom_start(void)
 	vcom->svc = svc;
 	vcom->tp = NULL;
 
-	th = __os_thread_create((void *)tcp_input_task, (void *)vcom, 
-								tcp_input_stack, sizeof(tcp_input_stack), 
-								__OS_PRIORITY_LOWEST);
-
-
+	th = thinkos_thread_create_inf((void *)tcp_input_task, (void *)vcom, 
+						tcp_input_stack, 
+						THINKOS_OPT_PRIORITY(32) |
+						THINKOS_OPT_ID(32) | 
+						THINKOS_OPT_STACK_SIZE(sizeof(tcp_input_stack)), 
+						&tcp_input_inf);
+								
 	tracef("VCOM TCP input thread=%d", th);
 
-
-	th = __os_thread_create((void *)serial_input_task, (void *)vcom, 
-								serial_input_stack, sizeof(serial_input_stack), 
-								__OS_PRIORITY_LOWEST);
-
+	th = thinkos_thread_create_inf((void *)serial_input_task, (void *)vcom, 
+						serial_input_stack, 
+						THINKOS_OPT_PRIORITY(32) |
+						THINKOS_OPT_ID(32) | 
+						THINKOS_OPT_STACK_SIZE(sizeof(serial_input_stack)), 
+						&serial_input_inf);
+								
 	tracef("VCOM serial input thread=%d", th);
 
 	return 0;
