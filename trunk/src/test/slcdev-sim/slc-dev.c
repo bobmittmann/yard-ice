@@ -87,7 +87,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	   address selection. This thread also controls the LEDs flashing. */
 	thinkos_thread_create((void *)io_event_task, (void *)NULL,
 						  io_event_stack, sizeof(io_event_stack) |
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), NULL);
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
 	/* perform a lamp test while the current sink 
 	   negative voltage stabilizes */
@@ -114,7 +114,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	   are current enabled. */
 	thinkos_thread_create((void *)sim_event_task, (void *)NULL,
 						  sim_event_stack, sizeof(sim_event_stack) | 
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL);
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	/* initialize serial driver */
 	sdrv = serdrv_init(115200);

@@ -55,7 +55,7 @@ static inline void thinkos_yield(void)  {
 	asm volatile ("dsb\n"); /* Data synchronization barrier */
 }
 
-int thinkos_init(unsigned int opt, const struct thinkos_thread_info * inf);
+int thinkos_init(unsigned int opt);
 
 int thinkos_thread_create(int (* task)(void *), 
 						  void * arg, void * stack_ptr,

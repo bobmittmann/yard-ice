@@ -326,10 +326,6 @@ int telnet_shell(void * stack_buf, int stack_size);
 int usb_shell(void * stack_buf, int stack_size);
 int sys_start(void);
 
-const struct thinkos_thread_info main_inf = {
-	.tag = "MAIN"
-};
-
 int main(int argc, char ** argv)
 {
 	uint32_t telnet_stack[1360];
@@ -343,7 +339,7 @@ int main(int argc, char ** argv)
 	printf("\n---\n");
 
 	cm3_udelay_calibrate();
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), &main_inf);
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 	trace_init();
 
 	tracef("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");

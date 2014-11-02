@@ -44,26 +44,26 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	argv++;
 
 	if (argc) {
-		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "fl") == 0)) {
+		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
 			fprintf(f, "flush\n");
 			trace_flush();
 			return 0;
 		} 
 
-		if ((strcmp(*argv, "monitor") == 0) || (strcmp(*argv, "mn") == 0)) {
+		if ((strcmp(*argv, "monitor") == 0) || (strcmp(*argv, "m") == 0)) {
 			fprintf(f, "monitor\n");
 			monitor_stream = f;
 			return 0;
 		}
 
-		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "af") == 0)) {
+		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
 			fprintf(f, "Auto flush\n");
 			monitor_auto_flush = true;
 			return 0;
 		}
 
-		if ((strcmp(*argv, "manual") == 0) || (strcmp(*argv, "ma") == 0)) {
-			fprintf(f, "Manual flush\n");
+		if ((strcmp(*argv, "keep") == 0) || (strcmp(*argv, "k") == 0)) {
+			fprintf(f, "Keep trace (don't flush)\n");
 			monitor_auto_flush = false;
 			return 0;
 		}

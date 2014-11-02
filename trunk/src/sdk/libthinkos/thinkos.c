@@ -403,3 +403,11 @@ void thinkos_sleep_svc(int32_t * arg)
 	
 }
 
+#if THINKOS_ENABLE_THREAD_INFO
+/* FIXME: move this definition elsewere ... */
+const struct thinkos_thread_info thinkos_main_inf = {
+	.tag = "MAIN"
+};
+#endif
+
+

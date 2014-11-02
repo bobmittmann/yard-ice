@@ -520,7 +520,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "show global variables" },
 
 	{ cmd_trace, "trace", "tc", 
-		"[monitor | flush]", "handle the trace ring..." },
+		"[monitor | flush | auto | keep]", "handle the trace ring..." },
 
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
@@ -535,7 +535,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"[erase] [load]", "update FPGA program." },
 
 	{ cmd_xflash, "xflash", "xf", 
-		"[offs]", "update firmware." },
+		"firmware", "update firmware." },
 
 #if (ENABLE_NETWORK)
 	{ cmd_ifconfig, "ifconfig", "if", 

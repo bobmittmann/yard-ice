@@ -25,6 +25,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/shell.h>
+#include <sys/tty.h>
+#include <sys/usb-cdc.h>
 
 #include "config.h"
 #include "target.h"
@@ -36,38 +39,43 @@ int usb_xflash(uint32_t offs, uint32_t len);
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
 	uint32_t offs = 0x00000;
+	uint32_t size = 0x00000;
 	uint32_t pri;
-	value_t val;
-	int ret;
-	int n;
+	FILE * raw;
 
-	argc--;
-	argv++;
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
 
-	if (argc > 1) {
-		if ((n = eval_uint32(&val, argc, argv)) < 0) {
-			fprintf(f, "Can't evaluate\n");
-			return n;
-		}
-		argc -= n;
-		if (argc > 1) {
-			//		fprintf(f, msg_init_usage);
-			//		return SHELL_ERR_EXTRA_ARGS;
-			return -1;
-		}
-		offs = val.uint32;
-	}
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
 
-	fprintf(f, "Firmware update...\n");
+	do {
+		if ((strcmp(argv[1], "firmware") == 0) || 
+			(strcmp(argv[1], "firm") == 0) ||
+			(strcmp(argv[1], "f") == 0)) {
+			offs = 0;
+			size = 256 * 1024;
+			fprintf(f, "Firmware update...\n");
+			break;;
+		} 
+
+		return SHELL_ERR_ARG_INVALID;
+	} while (0);
+
 	fflush(f);
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
+	raw = isfatty(f) ? ftty_lowlevel(f) : f;
+	if (usb_cdc_is_usb_file(raw)) {
+		int ret;
 
-	ret = usb_xflash(offs, 256 * 1024);
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = usb_xflash(offs, size);
+		cm3_primask_set(pri);
+		return ret;
+	} 
 
-	cm3_primask_set(pri);
-
-	return ret;
+	fprintf(f, "Operation not permited in this terminal.\n");
+	return -1;
 }
 
