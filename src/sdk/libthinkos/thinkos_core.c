@@ -31,6 +31,8 @@
 #include <stdio.h>
 #include <string.h>
 
+extern const struct thinkos_thread_info thinkos_main_inf;
+
 /* -------------------------------------------------------------------------- 
  * Run Time ThinkOS block
  * --------------------------------------------------------------------------*/
@@ -338,8 +340,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	for(;;);
 }
 
-int thinkos_init(struct thinkos_thread_opt opt, 
-				 const struct thinkos_thread_info * inf)
+int thinkos_init(struct thinkos_thread_opt opt)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 	int self;
@@ -461,7 +462,7 @@ int thinkos_init(struct thinkos_thread_opt opt,
 #endif
 
 #if THINKOS_ENABLE_THREAD_INFO
-	thinkos_rt.th_inf[self] = (struct thinkos_thread_info *)inf;
+	thinkos_rt.th_inf[self] = (struct thinkos_thread_info *)&thinkos_main_inf;
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE

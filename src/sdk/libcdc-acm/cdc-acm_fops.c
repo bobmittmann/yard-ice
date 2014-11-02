@@ -36,18 +36,13 @@ const struct fileop usb_cdc_ops= {
 	.close = (void *)usb_cdc_release
 };
 
-/* FIXME file structure dynamic allocation */
-struct file usb_cdc_file;
-
 FILE * usb_cdc_fopen(struct usb_cdc_class * dev)
 {
-	struct file * f = (struct file *)&usb_cdc_file;
+	return file_alloc(dev, &usb_cdc_ops);
+}
 
-	DCC_LOG(LOG_TRACE, "...");
-
-	f->data = (void *)dev;
-	f->op = &usb_cdc_ops; 
-
-	return f;
+bool usb_cdc_is_usb_file(FILE * f)
+{
+	return (f != NULL) && (f->op == &usb_cdc_ops);
 }
 
