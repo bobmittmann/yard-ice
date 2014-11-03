@@ -440,6 +440,21 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.sem_alloc = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
 #endif
 
+#if THINKOS_ENABLE_COND_ALLOC
+	/* initialize the conditional variable allocation bitmap */ 
+	thinkos_rt.cond_alloc = (uint32_t)(0xffffffffLL << THINKOS_COND_MAX);
+#endif
+
+#if THINKOS_ENABLE_FLAG_ALLOC
+	/* initialize the flag allocation bitmap */ 
+	thinkos_rt.flag_alloc = (uint32_t)(0xffffffffLL << THINKOS_FLAG_MAX);
+#endif
+
+#if THINKOS_ENABLE_EVENT_ALLOC
+	/* initialize the event allocation bitmap */ 
+	thinkos_rt.event_alloc = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
+#endif
+
 #if (THINKOS_MUTEX_MAX > 0)
 	{
 		int i;

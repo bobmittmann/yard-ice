@@ -92,11 +92,11 @@ class TftpPacketWRQ(TftpPacket):
 		opt_lst = []
 		for key in self.opt:
 			# Populate the option name
-			fmt += "%dsx" % len(key)
-			opt_lst.append(key)
+			fmt += "{0:d}sx".format(len(key))
+			opt_lst.append(key.encode('ascii'))
 			# Populate the option value
-			fmt += "%dsx" % len(str(self.opt[key]))
-			opt_lst.append(str(self.opt[key]))
+			fmt += "{0:d}sx".format(len(str(self.opt[key])))
+			opt_lst.append(str(self.opt[key]).encode('ascii'))
 
 		self.buf = struct.pack(fmt, int(self.opc), self.fname, mode_str, *opt_lst) 
 		return self.buf
@@ -145,13 +145,16 @@ class TftpPacketOACK(TftpPacket):
 		# Count the nulls in the buf. Each one terminates a string.
 		length = 0
 		for c in buf:
-			if ord(c) == 0:
+#XXX: Python 3
+#			if ord(c) == 0:
+			if c == 0:
 				if length > 0:
-					fmt += "%dsx" % length
+					fmt += "{0:d}sx".format(length)
 					length = -1
 				else:
-					raise TftpException, "Invalid options in buf"
+					raise TftpException("Invalid options in buf")
 			length += 1
+
 
 		mystruct = struct.unpack(fmt, buf)
 
@@ -321,7 +324,9 @@ class TftpClient(object):
 		else:
 			bin_data = data
 
-		if options.has_key('blksize'):
+#XXX: Python 3
+#		if options.has_key('blksize'):
+		if 'blksize' in options:
 			opt_blksize = options['blksize']
 			if opt_blksize < TFTP_MIN_BLKSIZE or opt_blksize > TFTP_MAX_BLKSIZE:
 				raise TftpException("Invalid blksize: {:d}".format(opt_blksize))
@@ -378,6 +383,8 @@ class TftpClient(object):
 
 			if not isinstance(pkt, TftpPacketACK):
 				raise TftpException("Invalid response.")
+
+			print('...')
 
 			# FIXME: retransmit lost packet
 			if (pkt.blkno != blkno):

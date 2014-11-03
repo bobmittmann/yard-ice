@@ -34,13 +34,13 @@ void thinkos_mutex_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int mutex;
 
-	mutex = thinkos_alloc_lo(&thinkos_rt.mutex_alloc, 0);
-	if (mutex >= 0)
+	if ((mutex = thinkos_alloc_lo(&thinkos_rt.mutex_alloc, 0)) >= 0) {
 		thinkos_rt.lock[mutex] = -1;
-	wq = mutex + THINKOS_MUTEX_BASE;
-
-	DCC_LOG2(LOG_MSG, "mutex=%d wq=%d", mutex, wq);
-	arg[0] = wq;
+		wq = mutex + THINKOS_MUTEX_BASE;
+		DCC_LOG2(LOG_MSG, "mutex=%d wq=%d", mutex, wq);
+		arg[0] = wq;
+	} else 
+		arg[0] = mutex;
 }
 
 void thinkos_mutex_free_svc(int32_t * arg)

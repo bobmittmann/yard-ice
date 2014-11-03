@@ -142,6 +142,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 		/* TODO: host protocol... */
 		for (i = 0; i < 1000000000; ++i) {
 			DCC_LOG3(LOG_TRACE, "%09d - %08x %08x", i, rand(), rand());
+			thinkos_sleep(100);
 		}
 
 		/* start a shell on the serial TTY */
