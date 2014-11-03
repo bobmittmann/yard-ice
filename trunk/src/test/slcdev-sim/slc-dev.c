@@ -133,9 +133,16 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	/* start simulation */
 	slcdev_event_raise(SLC_EV_SIM_START);
 
+	/* main loop */
 	for (;;) {
+		int i = 0;
 		history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 		fprintf(f, shell_greeting());
+
+		/* TODO: host protocol... */
+		for (i = 0; i < 1000000000; ++i) {
+			DCC_LOG3(LOG_TRACE, "%09d - %08x %08x", i, rand(), rand());
+		}
 
 		/* start a shell on the serial TTY */
 		for (;;) {
@@ -174,6 +181,9 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 			}
 		}
 		DCC_LOG(LOG_WARNING, "bye bye !!!!!!!!!!");
+		/* TODO: host protocol... */
+		for (;;) {
+		}
 	}
 }
 
