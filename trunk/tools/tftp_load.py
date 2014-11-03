@@ -211,7 +211,8 @@ def main():
 	sys.stdout.flush()
 
 	options = {}
-	options['blksize'] = 1428
+#XXX: Python 3
+#	options['blksize'] = 1428
 	timeout = 2
 	port = 69
 	tclient = tftp.TftpClient(host, port)
@@ -266,7 +267,7 @@ def main():
 		except Exception as err:
 			script_error(err, script)
 
-	try:
+#	try:
 		print(" - Loading binary file...")
 		sys.stdout.flush()
 		t0 = time.time()
@@ -276,8 +277,8 @@ def main():
 		print(" - {0:d} bytes transferred in {1:.2f} seconds"\
 			  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))
 		sys.stdout.flush()
-	except Exception as err:
-		error(err)
+#	except Exception as err:
+#		error(err)
 
 	if reset:
 		try:

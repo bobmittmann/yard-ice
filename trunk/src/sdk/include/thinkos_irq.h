@@ -74,7 +74,8 @@ __attribute__((always_inline)) __thinkos_critical_exit(void)  {
 #if THINKOS_ENABLE_EVENT_ALLOC
 static inline int __attribute__((always_inline)) 
 __thinkos_ev_alloc(void) {
-	return thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0) + THINKOS_EVENT_BASE;
+	int ev = thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0);
+	return (ev < 0) ? ev : ev + THINKOS_EVENT_BASE;
 }
 
 static inline void __attribute__((always_inline)) 
@@ -141,7 +142,8 @@ __thinkos_ev_timed_raise(int ev) {
 #if THINKOS_ENABLE_FLAG_ALLOC
 static inline int __attribute__((always_inline)) 
 __thinkos_flag_alloc(void) {
-	return thinkos_alloc_lo(&thinkos_rt.flag_alloc, 0) + THINKOS_FLAG_BASE;
+	int flag = thinkos_alloc_lo(&thinkos_rt.flag_alloc, 0);
+	return (flag < 0) ? flag : flag + THINKOS_FLAG_BASE;
 }
 
 static inline void __attribute__((always_inline)) 

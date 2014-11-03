@@ -240,6 +240,40 @@ int cmd_os(FILE * f, int argc, char ** argv)
 		}
 	}
 
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, "    Mutex");
+#endif
+#if THINKOS_ENABLE_COND_ALLOC
+	fprintf(f, "     Cond");
+#endif
+#if THINKOS_ENABLE_SEM_ALLOC
+	fprintf(f, "  Semaphr");
+#endif
+#if THINKOS_ENABLE_EVENT_ALLOC
+	fprintf(f, "    Event");
+#endif
+#if THINKOS_ENABLE_FLAG_ALLOC
+	fprintf(f, "     Flag");
+#endif
+	fprintf(f, "\n");
+
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, " %08x", rt.mutex_alloc);
+#endif
+#if THINKOS_ENABLE_COND_ALLOC
+	fprintf(f, " %08x", rt.cond_alloc);
+#endif
+#if THINKOS_ENABLE_SEM_ALLOC
+	fprintf(f, " %08x", rt.sem_alloc);
+#endif
+#if THINKOS_ENABLE_EVENT_ALLOC
+	fprintf(f, " %08x", rt.ev_alloc);
+#endif
+#if THINKOS_ENABLE_FLAG_ALLOC
+	fprintf(f, " %08x", rt.flag_alloc);
+#endif
+	fprintf(f, "\n");
+
 	return 0;
 }
 
