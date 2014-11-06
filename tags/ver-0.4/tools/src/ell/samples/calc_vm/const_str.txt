@@ -1,0 +1,1 @@
+rand sqrt log2 print write writeln x y z srand time printf sleep
