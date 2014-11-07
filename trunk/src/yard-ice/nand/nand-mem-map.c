@@ -32,7 +32,7 @@
 
 #include <sys/dcclog.h>
 
-static uint32_t cache[128];
+static uint32_t nand_cache[128];
 /* page */
 static int32_t cache_pg = -1;
 /* write pending */
@@ -43,7 +43,7 @@ int nand_mem_write(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 {
 	nand_dev_t * nand;
 	nand_chip_t * chip;
-	uint8_t * cp = (uint8_t *)cache;
+	uint8_t * cp = (uint8_t *)nand_cache;
 	int pos;
 	int ret;
 	int pg;
@@ -60,7 +60,7 @@ int nand_mem_write(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 	if ((pg != cache_pg) && (cache_wp)) {
 		/* write back */
 		cache_wp = 0;
-		if ((ret = nand_page_write(nand, cache_pg, cache)) < 0) {
+		if ((ret = nand_page_write(nand, cache_pg, nand_cache)) < 0) {
 			cache_pg = -1;
 			return ret;
 		}
@@ -74,7 +74,7 @@ int nand_mem_write(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 	if (end != pg) {
 		/* write thrugh */
 		cache_wp = 0;
-		if ((ret = nand_page_write(nand, pg, cache)) < 0) {
+		if ((ret = nand_page_write(nand, pg, nand_cache)) < 0) {
 			cache_pg = -1;
 			return ret;
 		}
@@ -91,7 +91,7 @@ int nand_mem_read(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 {
 	nand_dev_t * nand;
 	nand_chip_t * chip;
-	uint8_t * cp = (uint8_t *)cache;
+	uint8_t * cp = (uint8_t *)nand_cache;
 	int pos;
 	int ret;
 	int pg;
@@ -106,14 +106,14 @@ int nand_mem_read(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 	if (cache_wp) {
 		/* write back */
 		cache_wp = 0;
-		if ((ret = nand_page_write(nand, cache_pg, cache)) < 0) {
+		if ((ret = nand_page_write(nand, cache_pg, nand_cache)) < 0) {
 			cache_pg = -1;
 			return ret;
 		}
 	}
 
 	if (pg != cache_pg) {
-		if ((ret = nand_page_read(nand, pg, cache)) < 0) {
+		if ((ret = nand_page_read(nand, pg, nand_cache)) < 0) {
 			cache_pg = -1;
 			return ret;
 		}
@@ -147,7 +147,7 @@ int nand_mem_erase(ice_ctrl_t * ctrl, const ice_mem_ref_t * addr,
 	if (cache_wp) {
 		/* write back */
 		cache_wp = 0;
-		if ((ret = nand_page_write(nand, cache_pg, cache)) < 0) {
+		if ((ret = nand_page_write(nand, cache_pg, nand_cache)) < 0) {
 			DCC_LOG(LOG_WARNING, "nand_page_write() failed!");
 			cache_pg = -1;
 			return ret;

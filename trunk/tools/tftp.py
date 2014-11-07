@@ -146,8 +146,8 @@ class TftpPacketOACK(TftpPacket):
 		length = 0
 		for c in buf:
 #XXX: Python 3
-#			if ord(c) == 0:
-			if c == 0:
+#			if c == 0:
+			if ord(c) == 0:
 				if length > 0:
 					fmt += "{0:d}sx".format(length)
 					length = -1
@@ -383,8 +383,6 @@ class TftpClient(object):
 
 			if not isinstance(pkt, TftpPacketACK):
 				raise TftpException("Invalid response.")
-
-			print('...')
 
 			# FIXME: retransmit lost packet
 			if (pkt.blkno != blkno):

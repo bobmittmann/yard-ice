@@ -35,7 +35,7 @@
 #define MBUF_DATA_SIZE (__MBUF_SIZE - 4)
 
 #ifndef MBUF_POOL_SIZE
-#define MBUF_POOL_SIZE 128
+#define MBUF_POOL_SIZE 64
 #endif
 
 #ifndef ENABLE_MBUF_STATS
@@ -61,29 +61,6 @@ struct mbuf_sys {
 } __attribute__ ((aligned (8)));
 
 extern struct mbuf_sys __mbufs__;
-
-
-/*
-extern inline void * mbuf_ptr(int __id) {
-	return (void *)&(__mbuf_pool__[__id]);
-};
-
-#define MBUF_ID(P) (((struct mbuf *)((((uint32_t)(P)-(uint32_t)__mbuf_pool__)\
-		& ~(MBUF_SIZE - 1)) + (uint32_t)__mbuf_pool__)) - __mbuf_pool__)
-
-extern inline int mbuf_id(void * __p) {
-	return MBUF_ID(__p);
-}
-*/
-
-/*
-#define MBUF_FROM_PTR(P) ((struct mbuf *)((uintptr_t)(P) - \
-										  sizeof(struct mbuf *)))
-
-static inline struct mbuf * __mbuf_from_ptr(void * __p) {
-	return MBUF_FROM_PTR(__p);
-}
-*/
 
 #define IS_MBUF(P) ((uintptr_t)((uintptr_t)(P) - (uintptr_t)__mbufs__.pool) < \
 					(MBUF_POOL_SIZE * sizeof(struct mbuf)))
