@@ -526,7 +526,8 @@ const struct ifnet_operations stm32f_ethif_op = {
 	.op_munmap = stm32f_ethif_munmap
 };
 
-struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, in_addr_t netmask)
+struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, 
+						  in_addr_t netmask)
 {
 	struct stm32f_eth * eth = STM32F_ETH;
 	struct ifnet * ifn;

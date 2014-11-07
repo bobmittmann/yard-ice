@@ -36,13 +36,14 @@
 #include "sys/tty.h"
 #include "xmodem.h"
 
-union {
-	struct xmodem_rcv rx;
-	struct xmodem_snd sx;
-} xmodem;
-
 int flash_xmodem_recv(FILE * f, uint32_t offs)
 {
+	union {
+		union {
+			struct xmodem_rcv rx;
+			struct xmodem_snd sx;
+		};
+	} xmodem;
 	struct comm_dev comm;
 	struct file * raw;
 	uint8_t buf[128];

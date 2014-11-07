@@ -1272,7 +1272,9 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 	for (;;);
 }
 
-uint32_t gdb_srv_stack[1024];
+
+
+uint32_t gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 128];
 uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
 struct gdb_rspd gdb_rspd;
 

@@ -578,7 +578,7 @@ int telnet_svc_release(struct telnet_svc * tn)
 	return tcp_close(tn->tp);
 }
 
-uint32_t telnet_input_stack[512];
+uint32_t telnet_input_stack[128];
 
 struct telnet_svc telnet_svc;
 

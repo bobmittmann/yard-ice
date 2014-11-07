@@ -41,7 +41,6 @@ struct cmd_history {
 	char buf[];
 };
 
-
 #define IN_BS      '\x8'
 #define IN_TN_BS     0x7F /* TELNET back space */
 #define IN_EOL      '\r'

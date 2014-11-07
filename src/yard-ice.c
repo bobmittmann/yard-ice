@@ -162,7 +162,7 @@ const struct thinkos_thread_info supervisor_inf = {
 	.tag = "SUPV"
 };
 
-uint32_t supervisor_stack[512];
+uint32_t supervisor_stack[128];
 
 void supervisor_init(void)
 {
