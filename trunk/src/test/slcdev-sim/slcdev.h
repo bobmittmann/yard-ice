@@ -138,6 +138,15 @@ struct db_info {
 #define SLC_EV_TMR3       13
 #define SLC_EV_TMR4       14
 
+#define SLC_EV_USR1       16
+#define SLC_EV_USR2       17
+#define SLC_EV_USR3       18
+#define SLC_EV_USR4       19
+#define SLC_EV_USR5       20
+#define SLC_EV_USR6       21
+#define SLC_EV_USR7       22
+#define SLC_EV_USR8       23
+
 /***************************************************************************
   Runtime
  ***************************************************************************/
@@ -152,7 +161,8 @@ struct slcdev_usr {
 	struct usr_switch sw[2];
 	uint8_t * init; /* init script */
 	uint8_t * trig; /* trigger script */
-	uint8_t * tmr[4]; /* user timers script */
+	uint8_t * tmr[4]; /* timers script */
+	uint8_t * usr[8]; /* user events script */
 };
 
 extern struct slcdev_usr usr;
@@ -193,6 +203,10 @@ struct ss_device {
 
 	uint8_t grp[4];    /* Group membership */
 
+	uint8_t lvl[4];    /* Internal variable levels */
+	uint8_t event:5;   /* Simulation event */
+	uint8_t res1:3;
+
 	union {
 		struct {
 			uint16_t pw1;   /* Reference Pulse Width */
@@ -206,8 +220,7 @@ struct ss_device {
 		} ap;
 	};
 
-	uint8_t lvl[4]; /* Internal variable levels */
-	uint32_t res[2];
+	uint8_t res2[7];
 };
 
 #define SS_MODULES_IDX 160

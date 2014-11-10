@@ -666,6 +666,46 @@ void __attribute__((noreturn)) sim_event_task(void)
 				microjs_exec(&vm, usr.tmr[3]);
 				break;
 
+			case SLC_EV_USR1:
+				DCC_LOG(LOG_TRACE, "USR1");
+				microjs_exec(&vm, usr.usr[0]);
+				break;
+
+			case SLC_EV_USR2:
+				DCC_LOG(LOG_TRACE, "USR2");
+				microjs_exec(&vm, usr.usr[1]);
+				break;
+
+			case SLC_EV_USR3:
+				DCC_LOG(LOG_TRACE, "USR3");
+				microjs_exec(&vm, usr.usr[2]);
+				break;
+
+			case SLC_EV_USR4:
+				DCC_LOG(LOG_TRACE, "USR4");
+				microjs_exec(&vm, usr.usr[3]);
+				break;
+
+			case SLC_EV_USR5:
+				DCC_LOG(LOG_TRACE, "USR5");
+				microjs_exec(&vm, usr.usr[4]);
+				break;
+
+			case SLC_EV_USR6:
+				DCC_LOG(LOG_TRACE, "USR6");
+				microjs_exec(&vm, usr.usr[5]);
+				break;
+
+			case SLC_EV_USR7:
+				DCC_LOG(LOG_TRACE, "USR7");
+				microjs_exec(&vm, usr.usr[6]);
+				break;
+
+			case SLC_EV_USR8:
+				DCC_LOG(LOG_TRACE, "USR8");
+				microjs_exec(&vm, usr.usr[7]);
+				break;
+
 			case SLC_EV_SIM_START:
 				DCC_LOG(LOG_TRACE, "SIM_START");
 				db = db_info_get();
