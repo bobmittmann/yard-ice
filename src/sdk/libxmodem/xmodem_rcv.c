@@ -84,8 +84,6 @@ static int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 	int seq;
 	int rem;
 
-	DCC_LOG1(LOG_TRACE, "sp=0x%08x", cm3_sp_get());
-
 	for (;;) {
 
 		if ((ret = rx->comm->op.send(rx->comm->arg, &rx->sync, 1)) < 0) {

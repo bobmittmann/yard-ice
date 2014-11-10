@@ -13,6 +13,15 @@
 	},
 
 	"sensor" : { 
+		"rem" : "Sim 1",
+		"model" : "2251B",
+		"enabled" : true,
+		"group" : [1, 2],
+		"addr" : [ 2 ]
+		"event" : "usr1"
+	},
+
+	"sensor" : { 
 		"rem" : "Board 3 Photo",
 		"model" : "2251B",
 		"enabled" : true,
@@ -308,7 +317,7 @@
 		],
 	},
 
-	"misc": { 
+	"events": { 
 		"init" : [
 			'var s_addr = 0;',
 			'var m_addr = 0;',
@@ -316,9 +325,10 @@
 			'var state = 0;',
 			'printf("\n----------------------\n");',
 			'printf("Custom script 2\n");',
-			'printf("Bob Mittmann, Oct-2014\n");'
+			'printf("Bob Mittmann, Oct-2014\n");',
 			'printf("----------------------\n");'
 		],
+
 		"tmr1" : [
 			'var s_addr;',
 			's_addr = s_addr + 1; /* increment address */',
@@ -327,6 +337,7 @@
 			'led[4].on = true;',
 			'timer[2].sec = 20; /* set a timer to stop the alarm */'
 		],
+
 		"tmr2" : [
 			'var s_addr;',
 			'printf("\n- %04d sensor %d cleared", time(), s_addr);',
@@ -334,13 +345,27 @@
 			'led[4].on = false;',
 			'if (s_addr < 160) { timer[1].sec = 5; } /* reschedule */'
 		],
+
 		"tmr3" : [ ],
+
 		"tmr4" : [
 			'state = 0;',
 			'if (!sensor[1].en) { ',
 			'	led[5].flash(500);',
 			'	timer[4].ms = 1000;',
 			'}',
+		],
+
+		"usr1" : [
+			'led[5].on = this.led;',
+		],
+
+		"usr2" : [
+			'led[5].on = this.led;',
+		],
+
+		"usr3" : [
+			'led[5].on = this.led;',
 		],
 	},
 

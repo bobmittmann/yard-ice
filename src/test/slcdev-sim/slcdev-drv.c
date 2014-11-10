@@ -231,7 +231,7 @@ const struct ss_device null_dev = {
 	.pw5 = 0
 };
 
-void dev_sim_init(void)
+void dev_sim_reset(void)
 {
 	struct ss_device * dev;
 	int i;
@@ -256,32 +256,42 @@ void dev_sim_init(void)
 		dev->cfg = 0, /* Unconfigured */
 		dev->led = 0; /* LED status */
 		dev->tst = 0; /* Remote test mode */
-		dev->tbias = 128;
+
+		dev->out1 = 0; /* Module output 1 */
+		dev->out2 = 0; /* Module output 2 */
+		dev->out3 = 0; /* Module output 3 */
+		dev->out5 = 0; /* Module output 5 */
+
+		dev->alm = 0; /* Alarm level */
+		dev->tbl = 0; /* Trouble level */
+
+		/* current sink configuration */
+		dev->tbias = 128; /* time accuracy multiplication factor */
 		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
-		dev->ipre = IPRE_DEFAULT; /* preenphasis time */
-		dev->ilat = ILAT_DEFAULT;
+		dev->ipre = IPRE_DEFAULT; /* current sink preenphasis time */
+		dev->ilat = ILAT_DEFAULT; /* current sink latency (PW reponse time) */
+
+		dev->grp[0] = 0;
+		dev->grp[1] = 0;
+		dev->grp[2] = 0;
+		dev->grp[3] = 0;
+
 		dev->pw1 = 300;
 		dev->pw2 = 300;
 		dev->pw3 = 900;
 		dev->pw4 = 2200;
 		dev->pw5 = 300;
-	}
 
+		dev->lvl[0] = 0;
+		dev->lvl[1] = 0;
+		dev->lvl[2] = 0;
+		dev->lvl[3] = 0;
+	}
 }
 
 void dev_sim_uncofigure_all(void)
 {
-	struct ss_device * dev;
-	int addr;
-
-	for (addr = 0; addr < 160; ++addr) {
-		dev = &ss_dev_tab[addr];
-		dev->cfg = 0;
-		dev->enabled = 0;
-		dev = &ss_dev_tab[addr + 160];
-		dev->cfg = 0;
-		dev->enabled = 0;
-	}
+	dev_sim_reset();
 }
 
 #define COMP1_EXTI (1 << 21)
@@ -701,6 +711,12 @@ static void clip_msg_decode(unsigned int msg)
 		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
+		if (dev->event != 0) {
+			/* if an simulation event is correlated to the device,
+			 signal the simulator. */
+			__bit_mem_wr(&slcdev_drv.ev_bmp, dev->event, 1);  
+			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+		}
 	} else {
 		slcdev_drv.state = DEV_IDLE;
 		DCC_LOG1(LOG_INFO, "[%d IDLE]", addr);
@@ -1098,7 +1114,7 @@ void slcdev_init(void)
 
 	slc_sense_init();
 
-	dev_sim_init();
+	dev_sim_reset();
 
 	DCC_LOG1(LOG_TRACE, "sizeof(ss_dev_tab) = %d bytes.", sizeof(ss_dev_tab));
 }

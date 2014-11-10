@@ -49,10 +49,9 @@ char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
-//	char line[SHELL_LINE_MAX];
+	char line[SHELL_LINE_MAX];
 	struct cmd_history * history;
 	struct serdrv * sdrv;
-	char * line;
 	char * stat;
 	char * cp;
 	FILE * f;
@@ -135,21 +134,12 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 
 	/* main loop */
 	for (;;) {
-		int i = 0;
 		history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 		fprintf(f, shell_greeting());
-
-		/* TODO: host protocol... */
-		for (i = 0; i < 1000000000; ++i) {
-			DCC_LOG3(LOG_TRACE, "%09d - %08x %08x", i, rand(), rand());
-			thinkos_sleep(100);
-		}
 
 		/* start a shell on the serial TTY */
 		for (;;) {
 			fprintf(f, "%s", shell_prompt());
-
-			line = history_head(history);
 
 			if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 				break;

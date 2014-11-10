@@ -111,7 +111,7 @@ struct cfg_device {
 	uint32_t addr_bmp[160 / 32]; /* list of addresses */
 };
 
-static const struct microjs_attr_desc sensor_desc[] = {
+static const struct microjs_attr_desc device_desc[] = {
 	{ "model", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, model),
 		microjs_const_str_enc },
 	{ "tag", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, tag),
@@ -132,6 +132,7 @@ static const struct microjs_attr_desc sensor_desc[] = {
 		microjs_array_u8_enc },
 	{ "addr", MICROJS_JSON_ARRAY, 0, offsetof(struct cfg_device, addr_bmp), 
 		cfg_device_addr_enc },
+//	{ "event", MICROJS_JSON_STRING, 0, 0, cfg_device_event_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -238,7 +239,7 @@ int cfg_device_enc(struct microjs_json_parser * jsn,
 	cdev.imode = ISINK_CURRENT_NOM;
 	cdev.tbias = 100; /* 100 % */
 
-	if ((ret = microjs_json_parse_obj(jsn, sensor_desc, &cdev)) < 0) {
+	if ((ret = microjs_json_parse_obj(jsn, device_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
@@ -301,28 +302,44 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 }
 
 
-static const struct microjs_attr_desc misc_desc[] = {
+static const struct microjs_attr_desc events_desc[] = {
 	{ "init", MICROJS_JSON_ARRAY, 3, 
 		offsetof(struct slcdev_usr, init), cfg_script_enc },
-	{ "tmr1", MICROJS_JSON_ARRAY, 4, 
+	{ "tmr1", MICROJS_JSON_ARRAY, SLC_EV_TMR1, 
 		offsetof(struct slcdev_usr, tmr[0]), cfg_script_enc },
-	{ "tmr2", MICROJS_JSON_ARRAY, 5, 
+	{ "tmr2", MICROJS_JSON_ARRAY, SLC_EV_TMR2, 
 		offsetof(struct slcdev_usr, tmr[1]), cfg_script_enc },
-	{ "tmr3", MICROJS_JSON_ARRAY, 6, 
+	{ "tmr3", MICROJS_JSON_ARRAY, SLC_EV_TMR3, 
 		offsetof(struct slcdev_usr, tmr[2]), cfg_script_enc },
-	{ "tmr4", MICROJS_JSON_ARRAY, 7, 
+	{ "tmr4", MICROJS_JSON_ARRAY, SLC_EV_TMR4, 
 		offsetof(struct slcdev_usr, tmr[3]), cfg_script_enc },
+	{ "usr1", MICROJS_JSON_ARRAY, SLC_EV_USR1, 
+		offsetof(struct slcdev_usr, usr[0]), cfg_script_enc },
+	{ "usr2", MICROJS_JSON_ARRAY, SLC_EV_USR2, 
+		offsetof(struct slcdev_usr, usr[1]), cfg_script_enc },
+	{ "usr3", MICROJS_JSON_ARRAY, SLC_EV_USR3, 
+		offsetof(struct slcdev_usr, usr[2]), cfg_script_enc },
+	{ "usr4", MICROJS_JSON_ARRAY, SLC_EV_USR4, 
+		offsetof(struct slcdev_usr, usr[3]), cfg_script_enc },
+	{ "usr5", MICROJS_JSON_ARRAY, SLC_EV_USR5, 
+		offsetof(struct slcdev_usr, usr[4]), cfg_script_enc },
+	{ "usr6", MICROJS_JSON_ARRAY, SLC_EV_USR6, 
+		offsetof(struct slcdev_usr, usr[5]), cfg_script_enc },
+	{ "usr7", MICROJS_JSON_ARRAY, SLC_EV_USR7, 
+		offsetof(struct slcdev_usr, usr[6]), cfg_script_enc },
+	{ "usr8", MICROJS_JSON_ARRAY, SLC_EV_USR8, 
+		offsetof(struct slcdev_usr, usr[7]), cfg_script_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
 
-int cfg_misc_enc(struct microjs_json_parser * jsn, 
+int cfg_events_enc(struct microjs_json_parser * jsn, 
 				 struct microjs_val * val, 
 				 unsigned int opt, void * ptr)
 {
 	int ret;
 
-	if ((ret = microjs_json_parse_obj(jsn, misc_desc, &usr)) < 0) {
+	if ((ret = microjs_json_parse_obj(jsn, events_desc, &usr)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
@@ -378,7 +395,7 @@ static const struct microjs_attr_desc cfg_desc[] = {
 	{ "module", MICROJS_JSON_OBJECT, 1, 0, cfg_device_enc },
 	{ "sw1", MICROJS_JSON_OBJECT, 0, 0, cfg_switch_enc },
 	{ "sw2", MICROJS_JSON_OBJECT, 1, 0, cfg_switch_enc },
-	{ "misc", MICROJS_JSON_OBJECT, 0, 0, cfg_misc_enc },
+	{ "events", MICROJS_JSON_OBJECT, 0, 0, cfg_events_enc },
 	{ "trigger", MICROJS_JSON_OBJECT, 0, 0, cfg_trig_enc },
 	{ "", 0, 0, 0, NULL},
 };
@@ -412,11 +429,15 @@ const char * const cfg_labels[] = {
 	"down",
 	"script",
 	"init",
-	"misc",
+	"events",
 	"tmr1",
 	"tmr2",
 	"tmr3",
 	"tmr4",
+	"usr1",
+	"usr2",
+	"usr3",
+	"usr4",
 	"trigger",
 	NULL	
 };
