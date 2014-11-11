@@ -1154,7 +1154,7 @@ int32_t __timer_sec(void * env, int32_t argv[], int argc)
 
 int32_t js_led_on(void * env, int32_t argv[], int argc)
 {
-	unsigned int id = argv[0];
+	unsigned int id = argv[0] - 1;
 
 	if (id >= 6)
 		return -EXCEPT_INVALID_LED; /* Throw an exception */
@@ -1180,7 +1180,7 @@ int32_t js_led_on(void * env, int32_t argv[], int argc)
 
 int32_t js_led_flash(void * env, int32_t argv[], int argc)
 {
-	unsigned int id = argv[0];
+	unsigned int id = argv[0] - 1;
 	unsigned int ms = argv[1];
 
 	if (id >= 6)
