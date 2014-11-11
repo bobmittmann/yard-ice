@@ -13,7 +13,7 @@
 #include "isink.h"
 #include "slcdev-lib.h"
 
-#define CFG_VERSION 3
+#define CFG_VERSION 4
 #define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 struct cfg_info {
@@ -65,8 +65,85 @@ static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 	return len;
 }
 
+int cfg_script_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr) 
+{
+	struct json_js jj;
+	uint8_t code[256];
+	int ret;
 
-/* Encode the array of address. This effectivelly write the configuration 
+	jj.code_sz = sizeof(code);
+	jj.code = code;
+	jj.symtab = (struct symtab *)slcdev_symbuf;
+	jj.libdef = &slcdev_lib;
+
+	if ((ret = mcrojs_js_array_enc(jsn, val, 0, &jj)) < 0) {
+		fprintf(stdout, "script %d error: %s\n", 
+				opt, microjs_strerr(ret));
+		return ret;
+	}
+
+	cfg_stack_push(jj.code, jj.code_sz, ptr);
+
+	return ret;
+}
+
+
+static const struct microjs_attr_desc events_desc[] = {
+	{ "init", MICROJS_JSON_ARRAY, 0, 
+		offsetof(struct slcdev_usr, init), cfg_script_enc },
+	{ "tmr1", MICROJS_JSON_ARRAY, SLC_EV_TMR1, 
+		offsetof(struct slcdev_usr, tmr[0]), cfg_script_enc },
+	{ "tmr2", MICROJS_JSON_ARRAY, SLC_EV_TMR2, 
+		offsetof(struct slcdev_usr, tmr[1]), cfg_script_enc },
+	{ "tmr3", MICROJS_JSON_ARRAY, SLC_EV_TMR3, 
+		offsetof(struct slcdev_usr, tmr[2]), cfg_script_enc },
+	{ "tmr4", MICROJS_JSON_ARRAY, SLC_EV_TMR4, 
+		offsetof(struct slcdev_usr, tmr[3]), cfg_script_enc },
+	{ "usr1", MICROJS_JSON_ARRAY, SLC_EV_USR1, 
+		offsetof(struct slcdev_usr, usr[0]), cfg_script_enc },
+	{ "usr2", MICROJS_JSON_ARRAY, SLC_EV_USR2, 
+		offsetof(struct slcdev_usr, usr[1]), cfg_script_enc },
+	{ "usr3", MICROJS_JSON_ARRAY, SLC_EV_USR3, 
+		offsetof(struct slcdev_usr, usr[2]), cfg_script_enc },
+	{ "usr4", MICROJS_JSON_ARRAY, SLC_EV_USR4, 
+		offsetof(struct slcdev_usr, usr[3]), cfg_script_enc },
+	{ "usr5", MICROJS_JSON_ARRAY, SLC_EV_USR5, 
+		offsetof(struct slcdev_usr, usr[4]), cfg_script_enc },
+	{ "usr6", MICROJS_JSON_ARRAY, SLC_EV_USR6, 
+		offsetof(struct slcdev_usr, usr[5]), cfg_script_enc },
+	{ "usr7", MICROJS_JSON_ARRAY, SLC_EV_USR7, 
+		offsetof(struct slcdev_usr, usr[6]), cfg_script_enc },
+	{ "usr8", MICROJS_JSON_ARRAY, SLC_EV_USR8, 
+		offsetof(struct slcdev_usr, usr[7]), cfg_script_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+
+/* Encode an event by name */
+int cfg_device_event_enc(struct microjs_json_parser * jsn, 
+						struct microjs_val * val, 
+						unsigned int opt, void * ptr)
+{
+	const struct microjs_attr_desc * desc = events_desc;
+	uint8_t * evp = (uint8_t *)ptr;
+	int i;
+
+	for (i = 0; desc[i].parse != NULL; ++i) {
+		if ((strncmp(desc[i].key, val->str.dat, val->str.len) == 0) && 
+			(desc[val->str.len].key == '\0')){
+			*evp = desc[i].opt;
+			return 0;
+		}
+	}
+
+	DCC_LOG(LOG_INFO, "...");
+
+	return -1;
+}
+
+/* Encode the array of addresses. This effectivelly write the configuration 
    into the device objects. */
 int cfg_device_addr_enc(struct microjs_json_parser * jsn, 
 						struct microjs_val * val, 
@@ -89,6 +166,8 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 	return (typ == MICROJS_JSON_END_ARRAY) ? 0 : -1;
 }
 
+
+
 /* This is an auxiliarly structure for parsing the device 
    configuration JSON file */
 struct cfg_device {
@@ -106,7 +185,9 @@ struct cfg_device {
 	uint8_t irate;
 	uint8_t model;   /* reference to a database device model */
 	uint8_t tag; 
+	uint8_t led; 
 	uint8_t tbias;
+	uint8_t event;
 	uint8_t grp[4]; /* list of groups */	
 	uint32_t addr_bmp[160 / 32]; /* list of addresses */
 };
@@ -132,7 +213,10 @@ static const struct microjs_attr_desc device_desc[] = {
 		microjs_array_u8_enc },
 	{ "addr", MICROJS_JSON_ARRAY, 0, offsetof(struct cfg_device, addr_bmp), 
 		cfg_device_addr_enc },
-//	{ "event", MICROJS_JSON_STRING, 0, 0, cfg_device_event_enc },
+	{ "event", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, event),
+		cfg_device_event_enc },
+	{ "led", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, led),
+		microjs_array_u8_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -248,30 +332,6 @@ int cfg_device_enc(struct microjs_json_parser * jsn,
 }
 
 
-int cfg_script_enc(struct microjs_json_parser * jsn, 
-				   struct microjs_val * val, 
-				   unsigned int opt, void * ptr) 
-{
-	struct json_js jj;
-	uint8_t code[256];
-	int ret;
-
-	jj.code_sz = sizeof(code);
-	jj.code = code;
-	jj.symtab = (struct symtab *)slcdev_symbuf;
-	jj.libdef = &slcdev_lib;
-
-	if ((ret = mcrojs_js_array_enc(jsn, val, 0, &jj)) < 0) {
-		fprintf(stdout, "script %d error: %s\n", 
-				opt, microjs_strerr(ret));
-		return ret;
-	}
-
-	cfg_stack_push(jj.code, jj.code_sz, ptr);
-
-	return ret;
-}
-
 static const struct microjs_attr_desc switch_desc[] = {
 	{ "up", MICROJS_JSON_ARRAY, 0, 
 		offsetof(struct usr_switch, up), cfg_script_enc },
@@ -301,36 +361,6 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 	return ret;
 }
 
-
-static const struct microjs_attr_desc events_desc[] = {
-	{ "init", MICROJS_JSON_ARRAY, 3, 
-		offsetof(struct slcdev_usr, init), cfg_script_enc },
-	{ "tmr1", MICROJS_JSON_ARRAY, SLC_EV_TMR1, 
-		offsetof(struct slcdev_usr, tmr[0]), cfg_script_enc },
-	{ "tmr2", MICROJS_JSON_ARRAY, SLC_EV_TMR2, 
-		offsetof(struct slcdev_usr, tmr[1]), cfg_script_enc },
-	{ "tmr3", MICROJS_JSON_ARRAY, SLC_EV_TMR3, 
-		offsetof(struct slcdev_usr, tmr[2]), cfg_script_enc },
-	{ "tmr4", MICROJS_JSON_ARRAY, SLC_EV_TMR4, 
-		offsetof(struct slcdev_usr, tmr[3]), cfg_script_enc },
-	{ "usr1", MICROJS_JSON_ARRAY, SLC_EV_USR1, 
-		offsetof(struct slcdev_usr, usr[0]), cfg_script_enc },
-	{ "usr2", MICROJS_JSON_ARRAY, SLC_EV_USR2, 
-		offsetof(struct slcdev_usr, usr[1]), cfg_script_enc },
-	{ "usr3", MICROJS_JSON_ARRAY, SLC_EV_USR3, 
-		offsetof(struct slcdev_usr, usr[2]), cfg_script_enc },
-	{ "usr4", MICROJS_JSON_ARRAY, SLC_EV_USR4, 
-		offsetof(struct slcdev_usr, usr[3]), cfg_script_enc },
-	{ "usr5", MICROJS_JSON_ARRAY, SLC_EV_USR5, 
-		offsetof(struct slcdev_usr, usr[4]), cfg_script_enc },
-	{ "usr6", MICROJS_JSON_ARRAY, SLC_EV_USR6, 
-		offsetof(struct slcdev_usr, usr[5]), cfg_script_enc },
-	{ "usr7", MICROJS_JSON_ARRAY, SLC_EV_USR7, 
-		offsetof(struct slcdev_usr, usr[6]), cfg_script_enc },
-	{ "usr8", MICROJS_JSON_ARRAY, SLC_EV_USR8, 
-		offsetof(struct slcdev_usr, usr[7]), cfg_script_enc },
-	{ "", 0, 0, 0, NULL},
-};
 
 
 int cfg_events_enc(struct microjs_json_parser * jsn, 
@@ -438,7 +468,14 @@ const char * const cfg_labels[] = {
 	"usr2",
 	"usr3",
 	"usr4",
+	"usr5",
+	"usr6",
+	"usr7",
+	"usr8",
 	"trigger",
+	"led",
+	"led",
+	"led",
 	NULL	
 };
 
