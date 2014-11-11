@@ -205,7 +205,7 @@ struct ss_device {
 
 	uint8_t lvl[4];    /* Internal variable levels */
 	uint8_t event:5;   /* Simulation event */
-	uint8_t res1:3;
+	uint8_t ledno:3;
 
 	union {
 		struct {

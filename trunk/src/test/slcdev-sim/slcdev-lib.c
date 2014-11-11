@@ -458,6 +458,65 @@ int32_t __dev_enabled(void * env, int32_t argv[], int argc)
 	return 1; /* return the number of return values */
 }
 
+int32_t __dev_led(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val > 1)
+			return -EXCEPT_INVALID_VALUE;
+
+		if (val) {
+			ss_dev_tab[idx].led = 1;
+			if (ss_dev_tab[idx].ledno)
+				led_on(ss_dev_tab[idx].ledno - 1);
+		} else {
+			ss_dev_tab[idx].led = 0;
+			if (ss_dev_tab[idx].ledno)
+				led_off(ss_dev_tab[idx].ledno - 1);
+		}
+
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].led;
+
+	return 1; /* return the number of return values */
+}
+
+int32_t __dev_ledno(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		unsigned int val = argv[1];
+
+		if (val > 6)
+			return -EXCEPT_INVALID_VALUE;
+
+		if ((ss_dev_tab[idx].ledno = val)) {
+			if (ss_dev_tab[idx].led)
+				led_on(ss_dev_tab[idx].ledno - 1);
+			else
+				led_off(ss_dev_tab[idx].ledno - 1);
+		}
+
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].ledno;
+
+	return 1; /* return the number of return values */
+}
+
 int32_t __dev_cfg(void * env, int32_t argv[], int argc)
 {
 	unsigned int idx = argv[0];
@@ -1223,6 +1282,8 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_DEV_OUT2] = __dev_out2,
 	[EXT_DEV_OUT3] = __dev_out3,
 	[EXT_DEV_OUT5] = __dev_out5,
+	[EXT_DEV_LED] = __dev_led,
+	[EXT_DEV_LEDNO] = __dev_ledno,
 	[EXT_DEV_PW1] = __dev_pw1,
 	[EXT_DEV_PW2] = __dev_pw2,
 	[EXT_DEV_PW3] = __dev_pw3,

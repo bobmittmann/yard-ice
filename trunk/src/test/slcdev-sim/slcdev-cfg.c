@@ -130,15 +130,18 @@ int cfg_device_event_enc(struct microjs_json_parser * jsn,
 	uint8_t * evp = (uint8_t *)ptr;
 	int i;
 
+	DCC_LOG2(LOG_TRACE, "'%c%c'...", val->str.dat[0], val->str.dat[1]);
+
 	for (i = 0; desc[i].parse != NULL; ++i) {
 		if ((strncmp(desc[i].key, val->str.dat, val->str.len) == 0) && 
-			(desc[val->str.len].key == '\0')){
+			(desc[i].key[val->str.len] == '\0')) {
+			DCC_LOG1(LOG_TRACE, "'%s'", desc[i].key);
 			*evp = desc[i].opt;
 			return 0;
 		}
 	}
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_WARNING, "invalid event!");
 
 	return -1;
 }
@@ -151,6 +154,8 @@ int cfg_device_addr_enc(struct microjs_json_parser * jsn,
 {
 	uint32_t * addr_bmp = (uint32_t *)ptr;
 	int typ;
+
+	DCC_LOG(LOG_TRACE, "...");
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
 		unsigned int addr = val->u32;
@@ -185,7 +190,7 @@ struct cfg_device {
 	uint8_t irate;
 	uint8_t model;   /* reference to a database device model */
 	uint8_t tag; 
-	uint8_t led; 
+	uint8_t ledno; 
 	uint8_t tbias;
 	uint8_t event;
 	uint8_t grp[4]; /* list of groups */	
@@ -215,7 +220,7 @@ static const struct microjs_attr_desc device_desc[] = {
 		cfg_device_addr_enc },
 	{ "event", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, event),
 		cfg_device_event_enc },
-	{ "led", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, led),
+	{ "led", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ledno),
 		microjs_array_u8_enc },
 	{ "", 0, 0, 0, NULL},
 };
@@ -296,7 +301,9 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		dev->cfg = 1;
 		/* enable the device per configuration */
 		dev->enabled = cdev->enabled ? 1 : 0;
-
+		/* LED */
+		dev->ledno = cdev->ledno;
+		
 		DCC_LOG3(LOG_INFO, "%s %d: enabled=%d", 
 				 dev->module ? "module" : "sensor", dev->addr, dev->enabled);
 	}
@@ -306,8 +313,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 	return 0;
 }
 
-
-/* Encode a module list */
+/* Encode a device list (sensors or modules) */
 int cfg_device_enc(struct microjs_json_parser * jsn, 
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr)
@@ -323,10 +329,14 @@ int cfg_device_enc(struct microjs_json_parser * jsn,
 	cdev.imode = ISINK_CURRENT_NOM;
 	cdev.tbias = 100; /* 100 % */
 
+	DCC_LOG(LOG_TRACE, "<<<");
+
 	if ((ret = microjs_json_parse_obj(jsn, device_desc, &cdev)) < 0) {
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
+
+	DCC_LOG(LOG_TRACE, ">>>");
 
 	return cfg_device_list_add(&cdev);
 }
@@ -360,8 +370,6 @@ int cfg_switch_enc(struct microjs_json_parser * jsn,
 
 	return ret;
 }
-
-
 
 int cfg_events_enc(struct microjs_json_parser * jsn, 
 				 struct microjs_val * val, 
@@ -460,6 +468,7 @@ const char * const cfg_labels[] = {
 	"script",
 	"init",
 	"events",
+	"event",
 	"tmr1",
 	"tmr2",
 	"tmr3",
@@ -474,8 +483,7 @@ const char * const cfg_labels[] = {
 	"usr8",
 	"trigger",
 	"led",
-	"led",
-	"led",
+//	"rem",
 	NULL	
 };
 
@@ -506,6 +514,7 @@ int config_compile(struct fs_file * json)
 		/* decode the token stream */
 		if ((ret = microjs_json_parse_obj(&jsn, cfg_desc, NULL)) < 0) {
 			DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+			microjs_json_dump(stdout, &jsn);
 			return ret;
 		}
 		microjs_json_flush(&jsn);
