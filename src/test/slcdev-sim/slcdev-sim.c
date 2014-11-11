@@ -596,17 +596,21 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
 
-					/* Poll LED state */
-					if ((ctl & 0x4) == 0) {
-						dev->led = 1;
-						led_on(1);
-					} else if ((ctl & 0x5) == 4) {
-						dev->led = 0;
-						led_off(1);
-					} else if ((ctl & 0x5) == 5) {
-						led_flash(1, 64);
+					if (dev->ledno) {
+						/* Poll LED state */
+						if ((ctl & 0x4) == 0) {
+							led_on(dev->ledno - 1);
+						} else if ((ctl & 0x5) == 4) {
+							led_off(dev->ledno - 1);
+						} else if ((ctl & 0x5) == 5) {
+							led_flash(dev->ledno - 1, 64);
+						}
 					}
 
+					if ((ctl & 0x4) == 0)
+						dev->led = 1;
+					else if ((ctl & 0x5) == 4)
+						dev->led = 0;
 					sim->run(&vm, dev, model, ctl);
 				}
 				break;

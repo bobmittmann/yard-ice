@@ -145,7 +145,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			unsigned int j = 0; /* length of the string */
 			int qt = c; /* quote character */
 
-			DCC_LOG(LOG_INFO, "string");
+			DCC_LOG(LOG_TRACE, "string");
 			for (;;) {
 				if (++i == len) {
 					/* parse error, unclosed quotes */
@@ -300,7 +300,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				const char * cp;
 				int j;
 
-				DCC_LOG1(LOG_INFO, "label: %d", n);
+				DCC_LOG1(LOG_TRACE, "label: %d", n);
 
 				for (j = 0; (cp = jsn->lbl[j]) != NULL; ++j) {
 					if ((strncmp(cp, lbl, n) == 0) && (strlen(cp) == n)) {
@@ -309,10 +309,10 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				}
 
 				if (cp != NULL) {
-					DCC_LOG1(LOG_INFO, "%s:", cp);
+					DCC_LOG1(LOG_TRACE, "%s:", cp);
 				} else {
 					/* not in the list of labels !!! */
-					DCC_LOG2(LOG_INFO, "unlisted label: %c%c...", 
+					DCC_LOG2(LOG_TRACE, "unlisted label: %c%c...", 
 							lbl[0], lbl[1]);
 				}
 
@@ -321,7 +321,6 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				jsn->tok[cnt - 1] = tok + j;
 				i++;
 				continue;
-				
 			}
 			err = MICROJS_INVALID_LABEL;
 			goto error;
@@ -496,7 +495,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	int cnt = 0;
 	int typ;
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
 		microjs_attr_parser_t parse = NULL;
@@ -514,7 +513,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		if (parse != NULL) {
 			uint8_t * p;
 
-			DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
+			DCC_LOG1(LOG_TRACE, "%s:", desc[i].key);
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ != desc[i].type) {
 				/* the attribute type do not matches the decoder */
@@ -529,7 +528,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 				return -1;
 			}
 		} else {
-			DCC_LOG(LOG_INFO, "unsupported attribute");
+			DCC_LOG(LOG_TRACE, "unsupported attribute");
 			/* skip unsupported attribute */
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ == MICROJS_JSON_ARRAY) {
@@ -552,7 +551,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		return cnt;
 	}
 
-	DCC_LOG(LOG_WARNING, "invalid type!");
+	DCC_LOG1(LOG_WARNING, "invalid type: %d!", typ);
 	return -1;
 }
 
@@ -588,7 +587,7 @@ int microjs_array_u8_enc(struct microjs_json_parser * jsn,
 	int typ;
 
 	while ((typ = microjs_json_get_val(jsn, val)) == MICROJS_JSON_INTEGER) {
-		if (n < len) /* maximum of 4 groups per device */
+		if (n < len) 
 			p[n++] = val->u32;
 	}
 
@@ -628,20 +627,6 @@ int microjs_const_str_enc(struct microjs_json_parser * jsn,
 	DCC_LOG1(LOG_INFO, "<%d>", ret);
 
 	return 0;
-}
-
-int microjs_json_root_len(const char * js)
-{
-	char * cp;
-	char * ep;
-	int c;
-
-	for (cp = ep = (char *)js; (c = *cp) != '\0'; ++cp) {
-		if (c == '}')
-			ep = cp;
-	}
-
-	return (ep - js) + 1; 
 }
 
 /* -------------------------------------------------------------------------
@@ -717,6 +702,22 @@ compile_error:
 }
 
 #if 0
+int microjs_json_root_len(const char * js)
+{
+	char * cp;
+	char * ep;
+	int c;
+
+	for (cp = ep = (char *)js; (c = *cp) != '\0'; ++cp) {
+		if (c == '}')
+			ep = cp;
+	}
+
+	return (ep - js) + 1; 
+}
+#endif
+
+#if 1
 int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn)
 {
 	unsigned int offs;

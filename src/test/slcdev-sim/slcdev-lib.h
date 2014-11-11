@@ -81,25 +81,28 @@
 #define EXT_DEV_OUT2        37
 #define EXT_DEV_OUT3        38
 #define EXT_DEV_OUT5        39
-#define EXT_DEV_PW1         40
-#define EXT_DEV_PW2         41
-#define EXT_DEV_PW3         42
-#define EXT_DEV_PW4         43
-#define EXT_DEV_PW5         44
-#define EXT_DEV_GRP         45
-#define EXT_DEV_PRINT       46
-#define EXT_DEV_GRP_CLEAR   47
+#define EXT_DEV_LED         40
+#define EXT_DEV_LEDNO       41
 
-#define EXT_TMR_MS          48
-#define EXT_TMR_SEC         49
+#define EXT_DEV_PW1         42
+#define EXT_DEV_PW2         43
+#define EXT_DEV_PW3         44
+#define EXT_DEV_PW4         45
+#define EXT_DEV_PW5         46
+#define EXT_DEV_GRP         47
+#define EXT_DEV_PRINT       48
+#define EXT_DEV_GRP_CLEAR   49
 
-#define EXT_TRIGGER         51
-#define EXT_TRIG_ADDR       52
-#define EXT_TRIG_MODULE     53
-#define EXT_TRIG_SENSOR     54
+#define EXT_TMR_MS          50
+#define EXT_TMR_SEC         51
 
-#define EXT_S               55
-#define EXT_M               56
+#define EXT_TRIGGER         52
+#define EXT_TRIG_ADDR       53
+#define EXT_TRIG_MODULE     54
+#define EXT_TRIG_SENSOR     55
+
+#define EXT_S               56
+#define EXT_M               57
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -143,7 +146,7 @@ const struct ext_classtab test_classtab = {
 const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 57,
+	.xcnt = 58,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -192,15 +195,6 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_GROUP] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "group", 
 			.aos = { .cdef = CLASS_GRP, .size = 1, .offs = 0 } },
-
-		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
-			.nm = "led", 
-			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
-		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
-			.nm = "on" },
-		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
-			.nm = "flash",
-			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
 		[EXT_TIMER] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
 			.nm = "timer",
@@ -251,6 +245,10 @@ const struct ext_libdef slcdev_lib = {
 			.nm = "out3" },
 		[EXT_DEV_OUT5] = {.opt = O_INTEGER | O_MEMBER, 
 			.nm = "out5" },
+		[EXT_DEV_LED] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "led" },
+		[EXT_DEV_LEDNO] = {.opt = O_INTEGER | O_MEMBER, 
+			.nm = "ledno" },
 		[EXT_DEV_PW1] = {.opt = O_INTEGER | O_MEMBER, 
 			.nm = "pw1" },
 		[EXT_DEV_PW2] = { .opt = O_INTEGER | O_MEMBER,
@@ -292,6 +290,15 @@ const struct ext_libdef slcdev_lib = {
 			.nm = "module" },
 		[EXT_TRIG_SENSOR] = { .opt = O_INTEGER | O_MEMBER,
 			.nm = "sensor" },
+
+		[EXT_LED] = { .opt = O_ARRAY | O_OBJECT | O_SIZEOFFS, 
+			.nm = "led", 
+			.aos = { .cdef = CLASS_LED, .size = 1, .offs = 0 } },
+		[EXT_LED_ON] = { .opt = O_INTEGER | O_MEMBER, 
+			.nm = "on" },
+		[EXT_LED_FLASH] = { .opt = O_FUNCTION | O_MEMBER, 
+			.nm = "flash",
+			.f = { .argmin = 2, .argmax = 2, .ret = 0 } },
 
 	}
 };

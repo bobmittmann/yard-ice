@@ -17,7 +17,7 @@
 		"model" : "2251B",
 		"enabled" : true,
 		"group" : [1, 2],
-		"addr" : [ 2 ]
+		"addr" : [ 2 ],
 		"event" : "usr1"
 	},
 
@@ -357,15 +357,15 @@
 		],
 
 		"usr1" : [
-			'led[5].on = this.led;',
+			'led[5].on = this.out1;',
 		],
 
 		"usr2" : [
-			'led[5].on = this.led;',
+			'led[5].on = this.out1;',
 		],
 
 		"usr3" : [
-			'led[5].on = this.led;',
+			'led[5].on = this.out1;',
 		],
 	},
 
