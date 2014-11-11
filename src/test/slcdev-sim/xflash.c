@@ -321,7 +321,7 @@ extern const unsigned int sizeof_xflash_pic;
 
 #define PIC_CODE_SIZE_MAX (1024 + 128)
 
-int xflash(void * uart, uint32_t offs, uint32_t len)
+int usart_xflash(void * uart, uint32_t offs, uint32_t len)
 {
 	uint32_t text[PIC_CODE_SIZE_MAX / 4];
 	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)text) + 1;

@@ -1099,6 +1099,43 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 
 #endif
 
+int usart_xflash(void * uart, uint32_t offs, uint32_t len);
+
+int cmd_xflash(FILE * f, int argc, char ** argv)
+{
+	uint32_t offs = 0x00000;
+	uint32_t size = 0x00000;
+	uint32_t pri;
+	int ret;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	do {
+		if ( (strcmp(argv[1], "firm") == 0) ||
+			 (strcmp(argv[1], "f") == 0)) {
+			offs = 0;
+			size = 56 * 1024;
+			fprintf(f, "Firmware update...\n");
+			break;;
+		} 
+		return SHELL_ERR_ARG_INVALID;
+	} while (0);
+
+	fflush(f);
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+	ret = usart_xflash(STM32_USART2, offs, size);
+	cm3_primask_set(pri);
+
+	return ret;
+}
+
+
 const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
@@ -1166,6 +1203,9 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_sym, "sym", "", "", "symbol table dump" },
 
 	{ cmd_reboot, "reboot", "rst", "", "reboot" },
+
+	{ cmd_xflash, "xflash", "xf", 
+		"firm", "update firmware." },
 
 	{ NULL, "", "", NULL, NULL }
 };
