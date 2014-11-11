@@ -431,17 +431,35 @@ void module_sim_phone(void * ptr, struct ss_device * dev,
 void module_sim_monitor(void * ptr, struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
+	int tbl_max = 1;
+	int alm_max = 1;
+	int lvl;
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
-		DCC_LOG(LOG_INFO, "Class A switched");
+		DCC_LOG(LOG_TRACE, "Class A switched");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
 		break;
 	case CLASS_A_NORMAL:
-		DCC_LOG(LOG_INFO, "Class A normal");
+		DCC_LOG(LOG_TRACE, "Class A normal");
 		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
 		break;
+	}
+
+	if ((lvl = dev->alm) > 0) {
+		if (lvl > alm_max)
+			lvl = alm_max;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
+	} else if ((lvl = dev->tbl) > 0) {
+		if (lvl > tbl_max)
+			lvl = tbl_max;
+		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->tbl);
+		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+	} else {
+		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
 	}
 }
 
@@ -594,9 +612,9 @@ void __attribute__((noreturn)) sim_event_task(void)
 					const struct sim_model * sim;
 					sim = &sim_model_lut[model->sim];
 
-					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
-
 					if (dev->ledno) {
+						DCC_LOG2(LOG_TRACE, "dev=%d ctl=0x%x", dev->addr, ctl);
+
 						/* Poll LED state */
 						if ((ctl & 0x4) == 0) {
 							led_on(dev->ledno - 1);

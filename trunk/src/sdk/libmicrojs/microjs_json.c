@@ -51,6 +51,7 @@ int microjs_json_init(struct microjs_json_parser * jsn,
 {
 	jsn->cnt = 0;
 	jsn->off = 0;
+	jsn->end = 0;
 	jsn->idx = 0;
 	jsn->sp = size;
 	jsn->top = size;
@@ -95,7 +96,7 @@ int microjs_json_open(struct microjs_json_parser * jsn,
 		break;
 	}
 
-	jsn->off = i;
+	jsn->end = i;
 
 	return ret;
 }
@@ -118,7 +119,10 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 	const char * txt;
 	int err;
 	int c;
-	
+
+	/* skip the previous chunk */
+	jsn->off = jsn->end;
+
 	/* initialize variables */
 	cnt = jsn->cnt;
 	sp = jsn->sp;
@@ -370,7 +374,7 @@ end:
 	DCC_LOG2(LOG_INFO, "End Scan! (cnt=%d sp=0x%08x).", cnt, cm3_sp_get());
 	jsn->cnt = cnt;
 	jsn->sp = sp;
-	jsn->off = i;
+	jsn->end = i;
 
 	return MICROJS_OK;
 
@@ -717,7 +721,22 @@ int microjs_json_root_len(const char * js)
 }
 #endif
 
-#if 1
+int microjs_json_print(FILE * f, struct microjs_json_parser * jsn)
+{
+	const char * txt;
+	int i;
+	
+	txt = jsn->txt;
+	for (i = jsn->off; i < jsn->end; ++i)
+		fprintf(f, "%c", txt[i]);
+
+	fprintf(f, "\n");
+
+	return 0;
+}
+
+
+#if 0
 int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn)
 {
 	unsigned int offs;
@@ -739,7 +758,7 @@ int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn)
 			fprintf(f, "\"%s\" ", buf);
 		} else if (tok >= JSON_TOK_LABEL) {
 			const char * cp = jsn->lbl[tok - JSON_TOK_LABEL];
-			fprintf(f, "\"%s\":", cp);
+			fprintf(f, "\n\"%s\":", cp);
 		} else if (tok >= JSON_TOK_INT8) {
 			int32_t x;
 			x = jsn->tok[idx++];
@@ -753,7 +772,7 @@ int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn)
 			} 
 			fprintf(f, "%d ", x);
 		} else if (tok == JSON_TOK_LEFTBRACE) {
-			fprintf(f, "{\n");
+			fprintf(f, "{");
 			lvl++;
 			for (j = 0; j < lvl; ++j)
 				fprintf(f, "    ");

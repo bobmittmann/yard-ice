@@ -92,7 +92,8 @@ struct microjs_json_parser {
 	uint16_t top;  /* token buffer top pointer (size of the token buufer) */
 	uint8_t * tok; /* token buffer */
 
-	uint16_t off;  /* lexer text offset */
+	uint16_t off;  /* lexer text offset (start scanning position) */
+	uint16_t end;  /* lexer text position after scanning */
 	uint16_t len;  /* lexer text length */
 	const char * txt;   /* base pointer (original json txt file) */
 
@@ -142,6 +143,10 @@ int microjs_json_scan(struct microjs_json_parser * jsn);
 
 /* flushes the token buffer, but keep track of the file scanning */
 void microjs_json_flush(struct microjs_json_parser * jsn);
+
+unsigned int microjs_json_offset(struct microjs_json_parser * jsn);
+
+int microjs_json_print(FILE * f, struct microjs_json_parser * jsn);
 
 int microjs_json_dump(FILE * f, struct microjs_json_parser * jsn);
 

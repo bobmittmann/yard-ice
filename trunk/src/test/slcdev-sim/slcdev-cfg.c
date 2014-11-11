@@ -220,8 +220,8 @@ static const struct microjs_attr_desc device_desc[] = {
 		cfg_device_addr_enc },
 	{ "event", MICROJS_JSON_STRING, 0, offsetof(struct cfg_device, event),
 		cfg_device_event_enc },
-	{ "led", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ledno),
-		microjs_array_u8_enc },
+	{ "ledno", MICROJS_JSON_INTEGER, 0, offsetof(struct cfg_device, ledno),
+		microjs_u8_enc },
 	{ "", 0, 0, 0, NULL},
 };
 
@@ -482,7 +482,7 @@ const char * const cfg_labels[] = {
 	"usr7",
 	"usr8",
 	"trigger",
-	"led",
+	"ledno",
 //	"rem",
 	NULL	
 };
@@ -506,15 +506,17 @@ int config_compile(struct fs_file * json)
 	/* uncofigure all devices */
 	dev_sim_uncofigure_all();
 
-	/* skip to the object oppening to allow object by object parsing */
+	/* skip to the object oppening to allow object-by-object parsing */
 	microjs_json_flush(&jsn);
+
 
 	/* parse the JASON file with the microjs tokenizer */
 	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
 		/* decode the token stream */
 		if ((ret = microjs_json_parse_obj(&jsn, cfg_desc, NULL)) < 0) {
 			DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
-			microjs_json_dump(stdout, &jsn);
+			microjs_json_print(stdout, &jsn);
+//			microjs_json_dump(stdout, &jsn);
 			return ret;
 		}
 		microjs_json_flush(&jsn);

@@ -329,6 +329,12 @@
 		"model": "M500S", 
 		"desc": "Supervised Control Module", 
 		"sim" : "control", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
@@ -351,6 +357,12 @@
 		"model": "SC-6", 
 		"desc": "6x Supervised Control Module", 
 		"sim" : "control", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
@@ -374,6 +386,12 @@
 		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
 		"sim" : "mini", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": [240, 360], 
 		"pw2": ["Normal", 240, 360 ],
 		"pw3": [
@@ -394,6 +412,12 @@
 		"ap": false,
 		"desc": "Monitor Module", 
 		"sim" : "monitor", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -417,6 +441,12 @@
 		"ap": false,
 		"desc": "Dual Monitor Module", 
 		"sim" : "monitor", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -440,6 +470,12 @@
 		"ap": false,
 		"desc": "10 Input Module", 
 		"sim" : "monitor", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -457,7 +493,6 @@
 		],
 		"pw5": [240, 360]
 	},
-
 
 
 	"module": { 
@@ -507,6 +542,12 @@
 		"model": "M502M", 
 		"sim" : "czif", 
 		"desc": "Conventional Zone Interface Module", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": [274, 339],
 		"pw2": [
 			["Class A Normal", 248, 367],
@@ -529,6 +570,12 @@
 		"model": "CZ-6", 
 		"sim" : "czif", 
 		"desc": "Six Up Conventional Zone Interface Module", 
+		"tbl" : {
+			"lvl" : 1
+		},
+		"alm" : { 
+			"lvl" : 2
+		},
 		"pw1": [274, 339],
 		"pw2": [
 			["Class A Normal", 248, 367],
