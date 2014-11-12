@@ -48,10 +48,23 @@ void pin1_sel_gnd(void)
 	stm32_gpio_mode(USART3_RX, OUTPUT, PUSH_PULL | SPEED_LOW);
 }
 
+void pin1_sel_output(void)
+{
+	stm32_gpio_mode(USART3_RX, INPUT, SPEED_LOW);
+	stm32_gpio_clr(USART2_RTS);
+	stm32_gpio_mode(USART2_RTS, OUTPUT, PUSH_PULL | SPEED_LOW);
+}
+
 void pin1_sel_usart3_rx(void)
 {
 	stm32_gpio_mode(USART2_RTS, INPUT, PULL_UP);
 	stm32_gpio_mode(USART3_RX, INPUT, PULL_UP);
+}
+
+void pin1_sel_usart2_rts(void)
+{
+	stm32_gpio_mode(USART3_RX, INPUT, SPEED_LOW);
+	stm32_gpio_mode(USART2_RTS, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 }
 
 void pin1_sel_i2c_sda(void)

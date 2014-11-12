@@ -32,6 +32,8 @@
 #include <sys/serial.h>
 #include <sys/delay.h>
 
+#include "board.h"
+
 #include <thinkos.h>
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
@@ -91,7 +93,8 @@ struct serial_dev {
 	uint8_t tx_buf[UART_TX_FIFO_BUF_LEN];
 	struct uart_fifo rx_fifo;
 	uint8_t rx_buf[UART_RX_FIFO_BUF_LEN];
-	uint32_t * txie;
+	uint32_t * txeie;
+	uint32_t * tcie;
 	struct stm32_usart * uart;
 };
 
@@ -146,7 +149,7 @@ static void uart_putc(struct serial_dev * dev, int c)
 	DCC_LOG1(LOG_INFO, "%02x", c);
 
 	uart_fifo_put(&dev->tx_fifo, c);
-	*dev->txie = 1; 
+	*dev->txeie = 1; 
 }
 
 int serial_write(struct serial_dev * dev, const void * buf, 
@@ -257,11 +260,23 @@ void serial_isr(struct serial_dev * dev)
 		DCC_LOG(LOG_INFO, "TXE");
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
-			*dev->txie = 0; 
+			*dev->txeie = 0; 
+			/* enable TC interrupts */
+			*dev->tcie = 1;
 			__thinkos_flag_signal(dev->tx_flag);
 		} else {
+			/* RS485 enable receiver */ 
+			pin1_set();
 			uart->dr = uart_fifo_get(&dev->tx_fifo);
 		}
+	}
+
+	if (sr & USART_TC) {
+		DCC_LOG(LOG_INFO, "TC");
+		/* RS485 disable receiver */ 
+		pin1_clr();
+		/* disable TC interrupts */
+		*dev->tcie = 0;
 	}
 }
 
@@ -283,7 +298,8 @@ struct serial_dev * serial2_open(void)
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
 	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
 
-	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->txeie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);
 	dev->uart = uart;
 
 	cm3_irq_pri_set(STM32_IRQ_USART2, UART_IRQ_PRIORITY);
@@ -322,7 +338,8 @@ struct serial_dev * serial3_open(void)
 	uart_fifo_init(&dev->tx_fifo, UART_TX_FIFO_BUF_LEN);
 	uart_fifo_init(&dev->rx_fifo, UART_RX_FIFO_BUF_LEN);
 
-	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->txeie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	dev->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);
 	dev->uart = uart;
 
 	cm3_irq_pri_set(STM32_IRQ_USART3, UART_IRQ_PRIORITY);

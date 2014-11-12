@@ -92,13 +92,16 @@ void io_mode_set(int mode)
 {
 	switch (mode) {
 	case 0:
-		pin1_sel_gnd();
+		pin1_sel_output();
 		pin2_sel_vcc();
 		break;
 	case 1:
 		pin1_sel_input();
 		pin2_sel_input();
 		break;
+	case 2:
+		pin1_sel_gnd();
+		pin2_sel_vcc();
 	}
 	usb_serial.io_mode = mode;
 }
@@ -306,17 +309,17 @@ int main(int argc, char ** argv)
 
 
 	thinkos_thread_create((void *)event_task, (void *)NULL,
-						  event_stack, sizeof(event_stack),
+						  event_stack, sizeof(event_stack) |
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(5));
 
 	serial_recv_th = thinkos_thread_create((void *)serial_recv_task, 
 										  (void *)&vcom[0],
-						  serial1_recv_stack, sizeof(serial1_recv_stack),
+						  serial1_recv_stack, sizeof(serial1_recv_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
 	serial_ctrl_th = thinkos_thread_create((void *)serial_ctrl_task, 
 										  (void *)&vcom[0],
-						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack),
+						  serial1_ctrl_stack, sizeof(serial1_ctrl_stack) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(3));
 
 #if 0
@@ -333,7 +336,7 @@ int main(int argc, char ** argv)
 	usb_vbus(true);
 
 	usb_recv_th = thinkos_thread_create((void *)usb_recv_task, (void *)vcom,
-						  usb_recv_stack, sizeof(usb_recv_stack),
+						  usb_recv_stack, sizeof(usb_recv_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(0));
 
 	usb_serial.usb.dev = cdc;
