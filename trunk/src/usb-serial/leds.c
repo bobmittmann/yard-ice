@@ -182,7 +182,7 @@ void leds_init(void)
 	led_flag = thinkos_flag_alloc();
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
-						  led_stack, sizeof(led_stack),
+						  led_stack, sizeof(led_stack) |
 						  THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(6));
 }
 

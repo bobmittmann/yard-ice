@@ -72,6 +72,8 @@ extern "C" {
 
 void pin1_sel_input(void);
 
+void pin1_sel_output(void);
+
 void pin1_sel_vcc(void);
 
 void pin1_sel_gnd(void);
@@ -79,6 +81,16 @@ void pin1_sel_gnd(void);
 void pin1_sel_usart3_rx(void);
 
 void pin1_sel_i2c_sda(void);
+
+void pin1_sel_usart2_rts(void);
+
+static inline void pin1_clr(void) {
+	stm32_gpio_clr(USART2_RTS);
+}
+
+static inline void pin1_set(void) {
+	stm32_gpio_set(USART2_RTS);
+}
 
 /* Pin 2 */
 
