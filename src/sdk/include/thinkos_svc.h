@@ -75,7 +75,9 @@
 
 #define THINKOS_IRQ_WAIT 38
 
-#define THINKOS_EXIT 39
+#define THINKOS_RT_SNAPSHOT 39
+
+#define THINKOS_EXIT 40
 
 #ifndef __ASSEMBLER__
 
@@ -338,6 +340,10 @@ static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
 
 static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
+}
+
+static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
+	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
 }
 
 #ifdef __cplusplus

@@ -585,7 +585,7 @@ int32_t __dev_ilat(void * env, int32_t argv[], int argc)
 		if (val > 250)
 			return -EXCEPT_INVALID_VALUE;
 	
-		ss_dev_tab[idx].ilat = 1;
+		ss_dev_tab[idx].ilat = val;
 		return 0;
 	}
 

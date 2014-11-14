@@ -8,5 +8,5 @@ fi
 
 export JTAGTOOL_ADDR=192.168.10.50
 
-make D=$LVL && make D=$LVL jtagload && make D=$LVL logview
+make D=$LVL jtagload && ../../tools/dcclog -h 192.168.10.50 debug/usb-serial.elf
 

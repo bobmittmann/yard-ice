@@ -117,7 +117,7 @@ int serial_read(struct serial_dev * dev, char * buf,
 			return ret;
 		}
 		__thinkos_flag_clr(dev->rx_flag);
-		DCC_LOG(LOG_TRACE, "wakeup.");
+		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 
 	do {
@@ -128,7 +128,7 @@ int serial_read(struct serial_dev * dev, char * buf,
 		cp[n++] = c;
 	} while (!uart_fifo_is_empty(&dev->rx_fifo));
 
-	DCC_LOG2(LOG_TRACE, "[%d] n=%d", thinkos_thread_self(), n);
+	DCC_LOG2(LOG_INFO, "[%d] n=%d", thinkos_thread_self(), n);
 
 	return n;
 }
@@ -206,7 +206,7 @@ void serial_isr(struct serial_dev * dev)
 
 	sr = uart->sr;
 
-#if 1	
+#if 0	
 	if (sr & USART_LBD) {
 		/* Line break detection */
 		DCC_LOG(LOG_TRACE, "LBD");
@@ -242,7 +242,7 @@ void serial_isr(struct serial_dev * dev)
 			uart_fifo_put(&dev->rx_fifo, c);
 			DCC_LOG1(LOG_INFO, "RX: %02x", c);
 		} else {
-			DCC_LOG(LOG_WARNING, "RX fifo full!");
+			DCC_LOG(LOG_INFO, "RX fifo full!");
 		}
 		
 		if (uart_fifo_is_half_full(&dev->rx_fifo)) 
@@ -250,7 +250,7 @@ void serial_isr(struct serial_dev * dev)
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
+		DCC_LOG(LOG_INFO, "IDLE");
 		c = uart->dr;
 		(void)c;
 		__thinkos_flag_signal(dev->rx_flag);

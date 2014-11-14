@@ -158,6 +158,90 @@ const char obj_type_name[][8] = {
 	"Inv"
 };
 
+static int bmp_bit_cnt(uint32_t bmp)
+{
+	int i;
+	int cnt = 0;
+
+	for (i = 0; i < 32; ++i)
+		cnt += ((1 << i) & bmp) ? 1: 0;
+
+	return cnt;
+}
+
+void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
+{
+	fprintf(f, "     ");
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, "   Thread");
+#endif
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, "    Mutex");
+#endif
+#if THINKOS_ENABLE_COND_ALLOC
+	fprintf(f, "     Cond");
+#endif
+#if THINKOS_ENABLE_SEM_ALLOC
+	fprintf(f, "  Semaphr");
+#endif
+#if THINKOS_ENABLE_EVENT_ALLOC
+	fprintf(f, "    Event");
+#endif
+#if THINKOS_ENABLE_FLAG_ALLOC
+	fprintf(f, "     Flag");
+#endif
+	fprintf(f, "\n");
+
+	fprintf(f, " Bmp:");
+#if THINKOS_ENABLE_THREAD_ALLOC
+	fprintf(f, " %08x", rt->th_alloc);
+#endif
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, " %08x", rt->mutex_alloc);
+#endif
+#if THINKOS_ENABLE_COND_ALLOC
+	fprintf(f, " %08x", rt->cond_alloc);
+#endif
+#if THINKOS_ENABLE_SEM_ALLOC
+	fprintf(f, " %08x", rt->sem_alloc);
+#endif
+#if THINKOS_ENABLE_EVENT_ALLOC
+	fprintf(f, " %08x", rt->ev_alloc);
+#endif
+#if THINKOS_ENABLE_FLAG_ALLOC
+	fprintf(f, " %08x", rt->flag_alloc);
+#endif
+	fprintf(f, "\n");
+
+	fprintf(f, " Cnt:");
+#if THINKOS_ENABLE_THREAD_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc & 
+		~(0xffffffff << THINKOS_THREADS_MAX)), THINKOS_THREADS_MAX);
+#endif
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc & 
+		~(0xffffffff << THINKOS_MUTEX_MAX)), THINKOS_MUTEX_MAX);
+#endif
+#if THINKOS_ENABLE_COND_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc & 
+		~(0xffffffff << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+#endif
+#if THINKOS_ENABLE_SEM_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc & 
+		~(0xffffffff << THINKOS_SEMAPHORE_MAX)), THINKOS_SEMAPHORE_MAX);
+#endif
+#if THINKOS_ENABLE_EVENT_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->event_alloc & 
+		~(0xffffffff << THINKOS_EVENT_MAX)), THINKOS_EVENT_MAX);
+#endif
+#if THINKOS_ENABLE_FLAG_ALLOC
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc & 
+		~(0xffffffff << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+#endif
+	fprintf(f, "\n");
+
+}
+
 int cmd_os(FILE * f, int argc, char ** argv)
 {
 	struct thinkos_rt rt;
@@ -240,115 +324,101 @@ int cmd_os(FILE * f, int argc, char ** argv)
 		}
 	}
 
-#if THINKOS_ENABLE_MUTEX_ALLOC
-	fprintf(f, "    Mutex");
-#endif
-#if THINKOS_ENABLE_COND_ALLOC
-	fprintf(f, "     Cond");
-#endif
-#if THINKOS_ENABLE_SEM_ALLOC
-	fprintf(f, "  Semaphr");
-#endif
-#if THINKOS_ENABLE_EVENT_ALLOC
-	fprintf(f, "    Event");
-#endif
-#if THINKOS_ENABLE_FLAG_ALLOC
-	fprintf(f, "     Flag");
-#endif
-	fprintf(f, "\n");
-
-#if THINKOS_ENABLE_MUTEX_ALLOC
-	fprintf(f, " %08x", rt.mutex_alloc);
-#endif
-#if THINKOS_ENABLE_COND_ALLOC
-	fprintf(f, " %08x", rt.cond_alloc);
-#endif
-#if THINKOS_ENABLE_SEM_ALLOC
-	fprintf(f, " %08x", rt.sem_alloc);
-#endif
-#if THINKOS_ENABLE_EVENT_ALLOC
-	fprintf(f, " %08x", rt.ev_alloc);
-#endif
-#if THINKOS_ENABLE_FLAG_ALLOC
-	fprintf(f, " %08x", rt.flag_alloc);
-#endif
-	fprintf(f, "\n");
+	os_alloc_dump(f, &rt);
 
 	return 0;
 }
 
 int cmd_thread(FILE * f, int argc, char ** argv)
 {
+	uint8_t lst[THINKOS_THREADS_MAX];
 	struct thinkos_context * ctx;
 	struct thinkos_rt rt;
 	unsigned int th;
 	int oid;
 	int type;
+	int cnt;
 	int j;
-
-	if (argc > 1) {
-		th = strtoul(argv[1], NULL, 0);
-		if (argc > 2)
-			return -1;
-	} else {
-		th = thinkos_thread_self();
-	}
+	int i;
 
 	thinkos_rt_snapshot(&rt);
 
-	if (th >= THINKOS_THREADS_MAX) {
-		fprintf(f, "Thread %d is invalid!\n", th);
-		return 0;
+	if (argc == 1) {
+		// no arguments (dump the current thread)
+		lst[0] = thinkos_thread_self();
+		cnt = 1;
+	} else {
+		// read all arguments from command line
+		cnt = (argc - 1);
+		for (i = 0; i < cnt; ++i) {
+			lst[i] = strtoul(argv[i + 1], NULL, 0);
+		}
 	}
 
-	if (rt.ctx[th] == NULL) {
-		fprintf(f, "Thread %d is invalid!\n", th);
-		return 0;
-	}
+	for (i = 0; i < cnt; ++i) {
+		th = lst[i];
+		if (th >= THINKOS_THREADS_MAX) {
+			fprintf(f, "Thread %d is invalid!\n", th);
+			return 0;
+		}
 
-	oid = rt.th_stat[th] >> 1;
-	type = thinkos_obj_type_get(oid);
+		if (rt.ctx[th] == NULL) {
+			fprintf(f, "Thread %d is invalid!\n", th);
+			return 0;
+		}
 
-	fprintf(f, " - Id: %d\n", th); 
+		oid = rt.th_stat[th] >> 1;
+		type = thinkos_obj_type_get(oid);
+
+		fprintf(f, " - Id: %d", th); 
+
+#if THINKOS_ENABLE_THREAD_INFO
+		if (rt.th_inf[th] != NULL)
+			fprintf(f, ", %s", rt.th_inf[th]->tag); 
+		else
+			fprintf(f, ", %s", "..."); 
+#endif
+		fprintf(f, "\n"); 
 
 #if THINKOS_ENABLE_THREAD_STAT
-	fprintf(f, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
-			oid, obj_type_name[type], rt.th_stat[th] & 1 ? "Yes" : " No"); 
+		fprintf(f, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
+				oid, obj_type_name[type], rt.th_stat[th] & 1 ? "Yes" : " No"); 
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
-	fprintf(f, " - Scheduler: val=%d pri=%4d\n", 
-			rt.sched_val[th], rt.sched_pri[th]); 
+		fprintf(f, " - Scheduler: val=%d pri=%4d\n", 
+				rt.sched_val[th], rt.sched_pri[th]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-	fprintf(f, " - Clock: val=%d time=%d\n", rt.clock[th],
-			(int32_t)(rt.clock[th] - rt.ticks)); 
+		fprintf(f, " - Clock: val=%d time=%d\n", rt.clock[th],
+				(int32_t)(rt.clock[th] - rt.ticks)); 
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
-	fprintf(f, " - Mutex Locks: ");
-	for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
-		if (rt.lock[j] == th)
-			fprintf(f, " %d", j + THINKOS_MUTEX_BASE);
-	}
-	fprintf(f, "\n");
+		fprintf(f, " - Mutex Locks: ");
+		for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
+			if (rt.lock[j] == th)
+				fprintf(f, " %d", j + THINKOS_MUTEX_BASE);
+		}
+		fprintf(f, "\n");
 #endif 
 
-	ctx = rt.ctx[th];
+		ctx = rt.ctx[th];
 
-	fprintf(f, " - Context: 0x%08x\n", (uint32_t)ctx); 
+		fprintf(f, " - Context: 0x%08x\n", (uint32_t)ctx); 
 
-	fprintf(f, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\n", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	fprintf(f, "     r4=%08x  r5=%08x  r6=%08x  r7=%08x\n", 
-			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
-	fprintf(f, "     r8=%08x  r9=%08x r10=%08x r11=%08x\n", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	fprintf(f, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\n", 
-			ctx->r12, (uint32_t)ctx, ctx->lr, ctx->pc);
-	fprintf(f, "   xpsr=%08x\n", ctx->xpsr);
+		fprintf(f, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\n", 
+				ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+		fprintf(f, "     r4=%08x  r5=%08x  r6=%08x  r7=%08x\n", 
+				ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+		fprintf(f, "     r8=%08x  r9=%08x r10=%08x r11=%08x\n", 
+				ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+		fprintf(f, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\n", 
+				ctx->r12, (uint32_t)ctx, ctx->lr, ctx->pc);
+		fprintf(f, "   xpsr=%08x\n", ctx->xpsr);
 
-	fprintf(f, "\n");
+		fprintf(f, "\n");
+	}
 
 	return 0;
 }

@@ -1,4 +1,5 @@
 {
+
 	"sensor" : { 
 		"rem" : "Boards 1 and 2 Photo",
 		"model" : "2251B",
@@ -400,7 +401,7 @@
 
 	"trigger" : { 
 		"sensor" : true,
-		"addr" : 17,
+		"addr" : 1,
 		"script" : [
 			'//if (this.is_module) { ',
 			'//  printf("\n- module %d", this.addr);',

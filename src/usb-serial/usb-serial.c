@@ -184,7 +184,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
 		if (len > 0) {
 			led1_flash(1);
-			DCC_LOG1(LOG_TRACE, "USB RX: %d bytes.", len);
+			DCC_LOG1(LOG_INFO, "USB RX: %d bytes.", len);
 			serial_write(serial, buf, len);
 //			serial_write(serial2, buf, len);
 		}
@@ -206,7 +206,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 		if (len > 0) {
 			DCC_LOG5(LOG_INFO, "len=%d [%c%c%c%c]", 
 					 len, buf[0], buf[1], buf[2], buf[3]);
-			DCC_LOG1(LOG_TRACE, "%d bytes received!", len);
+			DCC_LOG1(LOG_INFO, "%d bytes received!", len);
 			led2_flash(1);
 			usb_cdc_write(cdc, buf, len);
 		}

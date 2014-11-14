@@ -217,6 +217,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_THREAD_NAME 0
 #endif
 
+#ifndef THINKOS_ENABLE_RT_DEBUG
+#define THINKOS_ENABLE_RT_DEBUG 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -735,7 +739,7 @@ static volatile inline uint32_t __attribute__((always_inline))
 
 #endif /* THINKOS_ENABLE_TIMER */
 
-void thinkos_rt_snapshot(struct thinkos_rt * rt);
+//int thinkos_rt_snapshot(struct thinkos_rt * rt);
 
 #ifdef __cplusplus
 }

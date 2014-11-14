@@ -226,32 +226,32 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		break;
 
 	case SET_LINE_CODING:
-		DCC_LOG3(LOG_INFO, "CDC SetLn: idx=%d val=%d len=%d",
+		DCC_LOG3(LOG_TRACE, "CDC SetLn: idx=%d val=%d len=%d",
 				 index, value, len);
 
         memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
         
-        DCC_LOG1(LOG_INFO, "dsDTERate=%d", dev->acm.lc.dwDTERate);
-        DCC_LOG1(LOG_INFO, "bCharFormat=%d", dev->acm.lc.bCharFormat);
-        DCC_LOG1(LOG_INFO, "bParityType=%d", dev->acm.lc.bParityType);
-        DCC_LOG1(LOG_INFO, "bDataBits=%d", dev->acm.lc.bDataBits);
+        DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
+        DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
+        DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
+        DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
 
 		__thinkos_flag_signal_all(dev->ctl_flag);
 		break;
 
 	case GET_LINE_CODING:
-		DCC_LOG(LOG_INFO, "CDC GetLn");
+		DCC_LOG(LOG_TRACE, "CDC GetLn");
 		/* Return Line Coding */
 		*ptr = (void *)&dev->acm.lc;
 		len = sizeof(struct cdc_line_coding);
 		break;
 
 	case SET_CONTROL_LINE_STATE:
-		DCC_LOG3(LOG_INFO, "CDC SetCtrl: idx=%d val=%d len=%d",
+		DCC_LOG3(LOG_TRACE, "CDC SetCtrl: idx=%d val=%d len=%d",
 				 index, value, len);
 		dev->acm.control = value;
 
-		DCC_LOG2(LOG_INFO, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
+		DCC_LOG2(LOG_TRACE, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
 
@@ -262,7 +262,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		break;
 
 	default:
-		DCC_LOG5(LOG_INFO, "CDC t=%x r=%x v=%x i=%d l=%d",
+		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
 				req->type, req->request, value, index, len);
 		break;
 	}
@@ -322,14 +322,17 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 	int n;
 
 	while (rem) {
-		while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
+#if 0
+FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
+//		while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
+		while ((dev->acm.control & CDC_ACTIVATE_CARRIER) == 0) {
 			DCC_LOG(LOG_INFO, "CTL wait...");
 			thinkos_flag_wait(dev->ctl_flag);
 			DCC_LOG(LOG_INFO, "CTL wakeup...");
 			__thinkos_flag_clr(dev->ctl_flag);
 		}
-
-		DCC_LOG2(LOG_TRACE, "len=%d rem=%d", len, rem);
+#endif
+		DCC_LOG2(LOG_INFO, "len=%d rem=%d", len, rem);
 
 		__thinkos_flag_clr(dev->tx_flag);
 
@@ -366,7 +369,7 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 
 	if ((ret = thinkos_flag_timedwait(dev->rx_flag, msec)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
-			DCC_LOG(LOG_TRACE, "timeout!!");
+			DCC_LOG(LOG_INFO, "timeout!!");
 		}
 		return ret;
 	}
