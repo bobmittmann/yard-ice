@@ -28,17 +28,16 @@
 
 #include <thinkos.h>
 
-void thinkos_rt_snapshot(struct thinkos_rt * rt)
+void thinkos_rt_snapshot_svc(int32_t * arg)
 {
+	uint32_t * dst = (uint32_t *)arg[0];
 	uint32_t pri = cm3_primask_get();
 	uint32_t * src;
-	uint32_t * dst;
 	int i;
 
 	cm3_primask_set(1);
 
 	src = (uint32_t *)&thinkos_rt;
-	dst = (uint32_t *)rt;
 
 	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
 		dst[i] = src[i];
@@ -46,11 +45,7 @@ void thinkos_rt_snapshot(struct thinkos_rt * rt)
 	cm3_primask_set(pri);
 }
 
-
-void thinkos_context_dump(FILE * f, struct thinkos_context * ctx)
-{
-
-}
+#if 0
 
 static void dump_queue(FILE * f, char * s, uint32_t q)
 {
@@ -237,6 +232,9 @@ void thinkos_rt_dump(FILE * f, struct thinkos_rt * rt)
 #endif
 }
 
+#endif
+
+
 #if 0
 static inline void __attribute__((always_inline)) 
 __dump_context(struct thinkos_context * __ctx) {
@@ -254,7 +252,7 @@ __dump_context(struct thinkos_context * __ctx) {
 
 #endif
 
-
+#if 0
 void thinkos_rt_trace(struct thinkos_rt * rt)
 {
 	int i;
@@ -267,7 +265,6 @@ void thinkos_rt_trace(struct thinkos_rt * rt)
 	DCC_LOG1(LOG_TRACE, "Idle context: %p\n", rt->idle_ctx);
 	DCC_LOG1(LOG_TRACE, "Active thread: %d\n", rt->active);
 
-#if 0
 	dump_queue(f, "Ready threads:", rt->wq_ready);
 
 #if THINKOS_ENABLE_TIMESHARE
@@ -410,8 +407,8 @@ void thinkos_rt_trace(struct thinkos_rt * rt)
 	uint32_t sched_trace_req;
 #endif
 
-#endif
 }
+#endif
 
 #if 0
 static inline void __attribute__((always_inline)) 

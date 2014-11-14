@@ -140,7 +140,7 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 
 	len = MIN(ep->xfr_rem, ep->mxpktsz);
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
+	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
 
 	__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
 	ep->xfr_rem -= len;
@@ -150,10 +150,10 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 		/* if we put all data into the TX packet buffer but the data
 		 * didn't filled the whole packet, this is the last packet,
 		 * otherwise we need to send a ZLP to finish the transaction */
-		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 		ep->state = EP_IN_DATA_LAST;
 	} else {
-		DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA]", ep_id);
+		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA]", ep_id);
 		ep->state = EP_IN_DATA;
 	}
 
@@ -266,7 +266,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	uint32_t pri;
 	uint32_t epr;
 
-	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
+	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 
@@ -289,7 +289,7 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 
 	epr = usb->epr[ep_id];
 	if (epr & USB_EP_DBL_BUF) {
-		DCC_LOG2(LOG_TRACE, "double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG2(LOG_INFO, "double buffer: DTOG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 		/* select the descriptor according to the data toggle bit */
@@ -300,9 +300,9 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	}
 
 	if (__ep_pkt_send(usb, ep_id, ep, tx_pktbuf) > 0) {
-		DCC_LOG(LOG_TRACE, "__ep_pkt_send() > 0");
+		DCC_LOG(LOG_INFO, "__ep_pkt_send() > 0");
 	} else {
-		DCC_LOG(LOG_TRACE, "__ep_pkt_send() <= 0");
+		DCC_LOG(LOG_INFO, "__ep_pkt_send() <= 0");
 	}
 
 	if (epr & USB_EP_DBL_BUF) {
@@ -644,23 +644,23 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
 
-		DCC_LOG(LOG_TRACE, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 #if ENABLE_PEDANTIC_CHECK
 		if (len < 0) {
 			__ep_stall(usb, 0, ep);
-			DCC_LOG(LOG_TRACE, "EP0 [STALLED] len < 0");
+			DCC_LOG(LOG_INFO, "EP0 [STALLED] len < 0");
 			return;
 		}
 		if (ep->tx_buf == NULL) {
 			__ep_stall(usb, 0, ep);
-			DCC_LOG(LOG_TRACE, "EP0 [STALLED] tx_buf == NULL");
+			DCC_LOG(LOG_INFO, "EP0 [STALLED] tx_buf == NULL");
 			return;
 		}
 #endif
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
 		__ep_pkt_send(usb, 0, ep, &pktbuf[0].tx);
 		__set_ep_txstat(usb, 0, USB_TX_VALID);
 		/* While enabling the last data stage, the opposite direction should
@@ -806,7 +806,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		/* IN */
 		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
 
-		DCC_LOG3(LOG_TRACE, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG3(LOG_INFO, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
 				 ep_id, (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 
@@ -816,7 +816,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			break;
 
 		case EP_IN_DATA_LAST:
-			DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IDLE]", ep_id);
+			DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IDLE]", ep_id);
 			ep->state = EP_IDLE;
 			/* call class endpoint callback */
 			ep->on_in(drv->cl, ep_id);
@@ -828,7 +828,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			/* send the next data chunk */
 			len = MIN(ep->xfr_rem, ep->mxpktsz);
 
-			DCC_LOG2(LOG_TRACE, "ep_id=%d, len=%d", ep_id, len);
+			DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
 
 			/* copy to packet buffer */
 			__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
@@ -843,7 +843,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 				/* if we put all data into the TX packet buffer but the data
 				 * didn't filled the whole packet, this is the last packet,
 				 * otherwise we need to send a ZLP to finish the transaction */
-				DCC_LOG1(LOG_TRACE, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+				DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 				ep->state = EP_IN_DATA_LAST;
 			}
 

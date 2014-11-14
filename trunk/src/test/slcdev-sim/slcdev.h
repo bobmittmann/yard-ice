@@ -30,7 +30,7 @@
 #include <microjs.h>
 
 /* default current source (PW) latency */
-#define ILAT_DEFAULT (100 - 20)
+#define ILAT_DEFAULT 20
 #define IPRE_DEFAULT 35
 
 /***************************************************************************

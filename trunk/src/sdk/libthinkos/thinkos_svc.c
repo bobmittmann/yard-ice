@@ -103,8 +103,9 @@ void thinkos_flag_set_svc(int32_t * arg);
 
 void thinkos_flag_clr_svc(int32_t * arg);
 
-
 void thinkos_irq_wait_svc(int32_t * arg);
+
+void thinkos_rt_snapshot_svc(int32_t * arg);
 
 static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
 	register uint32_t sp;
@@ -338,6 +339,12 @@ void cm3_svc_isr(void)
 #if THINKOS_ENABLE_EXIT
 	case THINKOS_EXIT:
 		thinkos_exit_svc(arg);
+		break;
+#endif
+
+#if THINKOS_ENABLE_RT_DEBUG
+	case THINKOS_RT_SNAPSHOT:
+		thinkos_rt_snapshot_svc(arg);
 		break;
 #endif
 
