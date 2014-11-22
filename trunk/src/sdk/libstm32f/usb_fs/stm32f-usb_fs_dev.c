@@ -878,7 +878,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 
 	if (sr & USB_RESET) {
 		usb->istr = sr & ~USB_RESET;
-		DCC_LOG(LOG_INFO, "RESET");
+		DCC_LOG(LOG_TRACE, "RESET");
 		stm32f_usb_dev_reset(drv);
 	}
 

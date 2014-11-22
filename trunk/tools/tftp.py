@@ -38,6 +38,9 @@ TFTP_DEF_PORT = 69
 TFTP_MODE_NETASCII = 0
 TFTP_MODE_OCTET = 1
 
+# --- constants
+PY3 = sys.version_info >= (3, 0)
+
 # ----------------------------------------------------------------------
 # TFTP Exceptions
 # ----------------------------------------------------------------------
@@ -324,8 +327,6 @@ class TftpClient(object):
 		else:
 			bin_data = data
 
-#XXX: Python 3
-#		if options.has_key('blksize'):
 		if 'blksize' in options:
 			opt_blksize = options['blksize']
 			if opt_blksize < TFTP_MIN_BLKSIZE or opt_blksize > TFTP_MAX_BLKSIZE:
