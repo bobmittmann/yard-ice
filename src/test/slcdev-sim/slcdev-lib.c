@@ -946,7 +946,7 @@ int32_t __dev_pw4(void * env, int32_t argv[], int argc)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val >= 8000)
 			return -EXCEPT_INVALID_PW_VALUE;
@@ -968,7 +968,7 @@ int32_t __dev_pw5(void * env, int32_t argv[], int argc)
 		return -EXCEPT_BAD_ADDR; /* Throw an exception */
 
 	if (argc > 1) {
-		unsigned int val = argv[0];
+		unsigned int val = argv[1];
 
 		if (val >= 8000)
 			return -EXCEPT_INVALID_PW_VALUE;

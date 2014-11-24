@@ -297,6 +297,12 @@
 		"model" : "2251 COPTIR", 
 		"sim" : "coptir", 
 		"desc" : "Multicriteria Smoke Detector", 
+		"tbl" : {
+			"lvl" : 7
+		},
+		"alm" : { 
+			"lvl" : 8
+		},
 		"pw1" : ["Reference", 285, 315],
 		"pw2" : [
 			["Remote test disabled", 285, 315],
