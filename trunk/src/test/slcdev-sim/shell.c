@@ -1175,9 +1175,10 @@ const struct shell_cmd cmd_tab[] = {
 
 
 	{ cmd_alarm, "alarm", "alm", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
-		"set/get alarm level" }
+		"set/get alarm level" },
 
-	{ cmd_cat, "cat", "", "<filename>", "display file content" },
+	{ cmd_cat, "cat", "", "<filename>", 
+		"display file content" },
 
 	{ cmd_config, "config", "cfg", "[compile|erase|load|xfer]", 
 		"configuration options" },

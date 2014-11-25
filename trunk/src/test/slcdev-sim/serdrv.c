@@ -484,6 +484,66 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 	return n;
 }
 
+int serdrv_send(struct serdrv * dev, const void * buf, int len)
+{
+	uint8_t * cp = (uint8_t *)buf;
+	int rem = len;
+
+	DCC_LOG1(LOG_INFO, "len=%d", len);
+
+	while (rem) {
+		uint8_t * dst;
+		unsigned int head;
+		int free;
+		int cnt;
+		int pos;
+		int i;
+
+		thinkos_flag_wait(TX_FLAG);
+		thinkos_flag_clr(TX_FLAG);
+
+		head = dev->tx_fifo.head;
+		free = TX_LEN - (int8_t)(head - dev->tx_fifo.tail);
+		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, dev->tx_fifo.tail, n);
+
+		cnt = MIN(rem, free);
+		pos = head & (TX_LEN - 1);
+
+		if ((pos + cnt) > TX_LEN) {
+			int n;
+			int m;
+			
+			/* get the number of chars from head pos until the end of buffer */
+			n = TX_LEN - pos;
+			/* the remaining empty space is at the beginning of the buffer */
+			m = cnt - n;
+
+			dst = &dev->tx_fifo.buf[pos];
+			for (i = 0; i < n; ++i) 
+				dst[i] = cp[i];
+			cp += n;
+			dst = &dev->tx_fifo.buf[0];
+			for (i = 0; i < m; ++i) 
+				dst[i] = cp[i];
+		} else {
+			dst = &dev->tx_fifo.buf[pos];
+			for (i = 0; i < cnt; ++i) 
+				dst[i] = cp[i];
+		}
+
+		dev->tx_fifo.head = head + cnt;
+		*dev->txie = 1; 
+
+		if (free > cnt)
+			__thinkos_flag_signal(TX_FLAG);
+
+		rem -= cnt;
+		DCC_LOG1(LOG_INFO, "rem=%d", rem);
+	}
+
+	return len;
+}
+
 #else
 
 #define UART_TX_FIFO_BUF_LEN 128
