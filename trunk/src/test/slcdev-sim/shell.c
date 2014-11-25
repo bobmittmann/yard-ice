@@ -678,65 +678,6 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
-{
-	struct db_dev_model * mod;
-	struct ss_device * dev;
-	int addr;
-	int sel;
-
-	if (argc < 3)
-		return SHELL_ERR_ARG_MISSING;
-
-	addr = strtoul(argv[1], NULL, 0);
-	if (addr > 160)
-		return SHELL_ERR_ARG_INVALID;
-
-	sel = strtoul(argv[2], NULL, 0);
-	if (sel > 16)
-		return SHELL_ERR_ARG_INVALID;
-
-	dev = sensor(addr);
-
-	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
-		return SHELL_ERR_ARG_INVALID;
-
-	switch (n) { 
-	case 1:
-		dev->pw1 = device_db_pw_lookup(mod->pw1, sel);
-		break;
-	case 2:
-		dev->pw2 = device_db_pw_lookup(mod->pw2, sel);
-		break;
-	case 3:
-		dev->pw3 = device_db_pw_lookup(mod->pw3, sel);
-		break;
-	case 4:
-		dev->pw4 = device_db_pw_lookup(mod->pw4, sel);
-		break;
-	case 5:
-		dev->pw5 = device_db_pw_lookup(mod->pw5, sel);
-		break;
-	}
-
-	return 0;
-}
-
-int cmd_pw2(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 2);
-}
-
-int cmd_pw3(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 3);
-}
-
-int cmd_pw4(FILE * f, int argc, char ** argv)
-{
-	return shell_pw_sel(f, argc, argv, 4);
-}
-
 int cmd_reboot(FILE * f, int argc, char ** argv)
 {
 	if (argc > 1)
@@ -831,7 +772,65 @@ int js(FILE * f, char * script, unsigned int len)
 	return 0;
 }
 
+#if 0
+static int shell_pw_sel(FILE * f, int argc, char ** argv, int n)
+{
+	struct db_dev_model * mod;
+	struct ss_device * dev;
+	int addr;
+	int sel;
 
+	if (argc < 3)
+		return SHELL_ERR_ARG_MISSING;
+
+	addr = strtoul(argv[1], NULL, 0);
+	if (addr > 160)
+		return SHELL_ERR_ARG_INVALID;
+
+	sel = strtoul(argv[2], NULL, 0);
+	if (sel > 16)
+		return SHELL_ERR_ARG_INVALID;
+
+	dev = sensor(addr);
+
+	if ((mod = db_dev_model_by_index(db_info_get(), dev->model)) == NULL)
+		return SHELL_ERR_ARG_INVALID;
+
+	switch (n) { 
+	case 1:
+		dev->pw1 = device_db_pw_lookup(mod->pw1, sel);
+		break;
+	case 2:
+		dev->pw2 = device_db_pw_lookup(mod->pw2, sel);
+		break;
+	case 3:
+		dev->pw3 = device_db_pw_lookup(mod->pw3, sel);
+		break;
+	case 4:
+		dev->pw4 = device_db_pw_lookup(mod->pw4, sel);
+		break;
+	case 5:
+		dev->pw5 = device_db_pw_lookup(mod->pw5, sel);
+		break;
+	}
+
+	return 0;
+}
+
+int cmd_pw2(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 2);
+}
+
+int cmd_pw3(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 3);
+}
+
+int cmd_pw4(FILE * f, int argc, char ** argv)
+{
+	return shell_pw_sel(f, argc, argv, 4);
+}
 
 
 int cmd_str(FILE * f, int argc, char ** argv)
@@ -871,7 +870,6 @@ int cmd_sim(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-#if 0
 
 int cmd_module(FILE * f, int argc, char ** argv)
 {
@@ -1160,36 +1158,9 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_group, "group", "grp", "", "show group information" },
 
-#endif
-
 	{ cmd_sim, "sim", "", "[start|stop]", "" },
-	
+
 	{ cmd_str, "str", "", "", "dump string pool" },
-
-	{ cmd_rx, "rx", "r", "FILENAME", "XMODEM file receive" },
-
-	{ cmd_cat, "cat", "", "<filename>", "display file content" },
-
-	{ cmd_ls, "ls", "", "<filename>", "list files" },
-
-	{ cmd_rm, "rm", "", "<filename>", "remove files" },
-
-	{ cmd_trig, "trig", "t", "[ADDR]", "Trigger module address get/set" },
-
-	{ cmd_enable, "enable", "e", "[<sens|mod|grp>[N1 .. N6]|all] ", 
-		"Device enable" },
-
-	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
-		"Device disable" },
-
-	{ cmd_dbase, "dbase", "db", "[compile|stat]", "device database" },
-
-	{ cmd_config, "config", "cfg", "[compile|erase|load|save]", 
-		"configuration options" },
-
-	{ cmd_alarm, "alarm", "alm", "", "alarm" },
-
-	{ cmd_trouble, "trouble", "tbl", "", "trouble" },
 
 	{ cmd_pw2, "pw2", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW2 value" },
@@ -1200,9 +1171,46 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_pw4, "pw4", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
 		"get set PW4 value" },
 
-	{ cmd_sym, "sym", "", "", "symbol table dump" },
+#endif
 
-	{ cmd_reboot, "reboot", "rst", "", "reboot" },
+
+	{ cmd_alarm, "alarm", "alm", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
+		"set/get alarm level" }
+
+	{ cmd_cat, "cat", "", "<filename>", "display file content" },
+
+	{ cmd_config, "config", "cfg", "[compile|erase|load|xfer]", 
+		"configuration options" },
+
+	{ cmd_dbase, "dbase", "db", 
+		"[compile|erase]", "device database" },
+
+	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
+		"Device disable" },
+
+	{ cmd_enable, "enable", "e", "[<sens|mod|grp>[N1 .. N6]|all] ", 
+		"Device enable" },
+
+	{ cmd_ls, "ls", "", "", 
+		"list files" },
+
+	{ cmd_reboot, "reboot", "rst", "", 
+		"reboot system" },
+
+	{ cmd_rm, "rm", "", "FILENAME", 
+		"remove files" },
+
+	{ cmd_rx, "rx", "", "FILENAME", 
+		"XMODEM file receive" },
+
+	{ cmd_sym, "sym", "", "", 
+		"JS symbol table dump" },
+
+	{ cmd_trig, "trig", "t", "[ADDR]", 
+		"Trigger module address get/set" },
+
+	{ cmd_trouble, "trouble", "tbl", "", 
+		"set/get trouble level" },
 
 	{ cmd_xflash, "xflash", "xf", 
 		"firm", "update firmware." },

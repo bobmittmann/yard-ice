@@ -13,7 +13,7 @@
 #include "isink.h"
 #include "slcdev-lib.h"
 
-#define CFG_VERSION 4
+#define CFG_VERSION 5
 #define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 struct cfg_info {
@@ -303,6 +303,8 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		dev->enabled = cdev->enabled ? 1 : 0;
 		/* LED */
 		dev->ledno = cdev->ledno;
+		/* event */
+		dev->event = cdev->event;
 		
 		DCC_LOG3(LOG_INFO, "%s %d: enabled=%d", 
 				 dev->module ? "module" : "sensor", dev->addr, dev->enabled);

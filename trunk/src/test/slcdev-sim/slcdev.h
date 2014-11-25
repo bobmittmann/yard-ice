@@ -220,7 +220,8 @@ struct ss_device {
 		} ap;
 	};
 
-	uint8_t res2[7];
+	uint8_t res2[5];
+	uint16_t poll;
 };
 
 #define SS_MODULES_IDX 160

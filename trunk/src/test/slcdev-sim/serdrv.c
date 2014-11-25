@@ -486,7 +486,7 @@ int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo)
 
 #else
 
-#define UART_TX_FIFO_BUF_LEN 16 
+#define UART_TX_FIFO_BUF_LEN 128
 #define UART_RX_FIFO_BUF_LEN 16
 
 #define RX_FLAG SERDRV_RX_FLAG 
