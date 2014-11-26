@@ -65,6 +65,32 @@ static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 	return len;
 }
 
+static const struct microjs_attr_desc info_desc[] = {
+	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct slcdev_cfg_info, desc),
+		microjs_const_str_enc },
+	{ "version", MICROJS_JSON_ARRAY, 3, offsetof(struct slcdev_cfg_info, 
+												 version),
+		microjs_array_u8_enc },
+	{ "", 0, 0, 0, NULL}
+};
+
+int cfg_info_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr)
+{
+	struct slcdev_cfg_info * info = (struct slcdev_cfg_info *)&usr.cfg_info;
+	int ret;
+
+	memset(info, 0, sizeof(struct slcdev_cfg_info));
+
+	if ((ret = microjs_json_parse_obj(jsn, info_desc, info)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+	}
+
+	return ret;
+}
+
+
 int cfg_script_enc(struct microjs_json_parser * jsn, 
 				   struct microjs_val * val, 
 				   unsigned int opt, void * ptr) 
@@ -431,6 +457,7 @@ int cfg_trig_enc(struct microjs_json_parser * jsn,
 
 
 static const struct microjs_attr_desc cfg_desc[] = {
+	{ "info", MICROJS_JSON_OBJECT, 0, 0, cfg_info_enc },
 	{ "sensor", MICROJS_JSON_OBJECT, 0, 0, cfg_device_enc },
 	{ "module", MICROJS_JSON_OBJECT, 1, 0, cfg_device_enc },
 	{ "sw1", MICROJS_JSON_OBJECT, 0, 0, cfg_switch_enc },
@@ -486,6 +513,9 @@ const char * const cfg_labels[] = {
 	"trigger",
 	"ledno",
 //	"rem",
+	"info",
+	"desc",
+	"version",
 	NULL	
 };
 
@@ -508,9 +538,11 @@ int config_compile(struct fs_file * json)
 	/* uncofigure all devices */
 	dev_sim_uncofigure_all();
 
+	/* clear user info */
+	memset(&usr, 0, sizeof(usr));
+
 	/* skip to the object oppening to allow object-by-object parsing */
 	microjs_json_flush(&jsn);
-
 
 	/* parse the JASON file with the microjs tokenizer */
 	while ((ret = microjs_json_scan(&jsn)) == MICROJS_OK) {
@@ -575,7 +607,6 @@ int config_load(void)
 	/* read symbol table */
 	ptr += size;
 	memcpy(slcdev_symbuf, ptr, sizeof(slcdev_symbuf));
-
 
 	return 0;
 }
@@ -675,6 +706,11 @@ int config_show_info(FILE * f)
 	if ((inf = cfg_info_get()) == NULL)
 		return -1;
 
+	fprintf(f, " - Desc: \"%s\"\n", const_str(usr.cfg_info.desc));
+	fprintf(f, " - Version: %d.%d.%d\n", 
+			usr.cfg_info.version[0], 
+			usr.cfg_info.version[1], 
+			usr.cfg_info.version[2]);
 	fprintf(f, " JSON: txt=0x%08x len=%d crc=0x%04x\n", 
 			(uint32_t)inf->json_txt, inf->json_len, inf->json_crc);
 

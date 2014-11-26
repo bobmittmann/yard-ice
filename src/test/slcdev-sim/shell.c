@@ -581,7 +581,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 int cmd_config(FILE * f, int argc, char ** argv)
 {
-	struct fs_dirent entry;
 	bool xfer = false;
 	bool erase = false;
 	bool compile = false;
@@ -620,8 +619,6 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		}
 	}
 
-	fs_dirent_get(&entry, FLASHFS_CFG_JSON);
-
 	if (erase) {
 		struct fs_dirent bin;
 		fprintf(f, "Erasing...\n");
@@ -630,13 +627,17 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	}
 
 	if (compile) {
-		if (config_is_sane() && !config_need_update(entry.fp)) {
+		struct fs_dirent json;
+
+		fs_dirent_get(&json, FLASHFS_CFG_JSON);
+
+		if (config_is_sane() && !config_need_update(json.fp)) {
 			fprintf(f, "Up-to-date.\n");
 		} else {
 			struct microjs_rt * rt;
 			slcdev_stop();
 			fprintf(f, "Compiling...\n");
-			if (config_compile(entry.fp) < 0) {
+			if (config_compile(json.fp) < 0) {
 				struct fs_dirent bin;
 				fprintf(f, "# Error!\n");
 				/* purge the invalid config */
@@ -652,12 +653,13 @@ int cmd_config(FILE * f, int argc, char ** argv)
 					rt->stack_sz, sizeof(slcdev_vm_stack));
 
 			fprintf(f, "Saving...\n");
-			if (config_save(entry.fp) < 0) {
+			if (config_save(json.fp) < 0) {
 				fprintf(f, "# Error!\n");
 				return -1;
 			}
 			restart = true;
 		}
+		config_show_info(f);
 	}
 
 	if (load) {

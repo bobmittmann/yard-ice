@@ -157,7 +157,13 @@ struct usr_switch {
 	uint8_t * down;
 };
 
+struct slcdev_cfg_info {
+	uint8_t desc; /* Description string */
+	uint8_t version[3]; /* version info */
+};
+
 struct slcdev_usr {
+	struct slcdev_cfg_info cfg_info;
 	struct usr_switch sw[2];
 	uint8_t * init; /* init script */
 	uint8_t * trig; /* trigger script */
