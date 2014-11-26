@@ -546,7 +546,7 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 
 #else
 
-#define UART_TX_FIFO_BUF_LEN 128
+#define UART_TX_FIFO_BUF_LEN 16
 #define UART_RX_FIFO_BUF_LEN 16
 
 #define RX_FLAG SERDRV_RX_FLAG 

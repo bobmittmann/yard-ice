@@ -1,4 +1,8 @@
 {
+	"info": {
+		"desc" : "Coptir test", 
+		"version" : [0, 1]
+	},
 
 	"sensor" : { 
 		"model" : "2251 COPTIR", 
