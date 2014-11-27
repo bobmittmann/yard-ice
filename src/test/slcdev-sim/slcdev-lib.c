@@ -72,17 +72,12 @@ int32_t __time(void * env, int32_t argv[], int argc)
 	return 1;
 };
 
-int32_t __memrd(void * env, int32_t argv[], int argc)
+int32_t __ticks(void * env, int32_t argv[], int argc) 
 {
-	uint32_t addr = argv[0];
-
-	if (addr >= 256)
-		return -1;
-
-	argv[0] = 0;
+	argv[0] = __thinkos_ticks();
 
 	return 1;
-}	
+};
 
 int32_t __ilog2(void * env, int32_t argv[], int argc)
 {
@@ -353,7 +348,8 @@ int32_t __dev_print(void * env, int32_t argv[], int argc)
 	fprintf(f, " ipre=%d", dev->ipre);
 	fprintf(f, " ilat=%d\n", dev->ilat);
 	fprintf(f, " - led=%d", dev->led);
-	fprintf(f, " tst=%d\n", dev->tst);
+	fprintf(f, " tst=%d", dev->tst);
+	fprintf(f, " pcnt=%d\n", dev->pcnt);
 	fprintf(f, " - out1=%d", dev->out1);
 	fprintf(f, " out2=%d", dev->out2);
 	fprintf(f, " out3=%d", dev->out3);
@@ -365,6 +361,8 @@ int32_t __dev_print(void * env, int32_t argv[], int argc)
 	fprintf(f, " pw3=%d", dev->pw3);
 	fprintf(f, " pw4=%d", dev->pw4);
 	fprintf(f, " pw5=%d\n", dev->pw5);
+	fprintf(f, " - lvl=[%d, %d, %d, %d]\n", 
+			dev->lvl[0], dev->lvl[1], dev->lvl[2], dev->lvl[3]);
 	fprintf(f, " - grp=[%d, %d, %d, %d]\n", 
 			dev->grp[0], dev->grp[1], dev->grp[2], dev->grp[3]);
 
@@ -982,6 +980,23 @@ int32_t __dev_pw5(void * env, int32_t argv[], int argc)
 	return 1; /* return the number of return values */
 }
 
+int32_t __dev_pcnt(void * env, int32_t argv[], int argc)
+{
+	unsigned int idx = argv[0];
+
+	if (idx >= 320)
+		return -EXCEPT_BAD_ADDR; /* Throw an exception */
+
+	if (argc > 1) {
+		ss_dev_tab[idx].pcnt = argv[1];
+		return 0;
+	}
+
+	argv[0] = ss_dev_tab[idx].pcnt;
+
+	return 1; /* return the number of return values */
+}
+
 /* Clear device's group list */
 int32_t __dev_grp_clear(void * env, int32_t argv[], int argc)
 {
@@ -1251,7 +1266,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_RAND] = __rand,
 	[EXT_SQRT] = __isqrt,
 	[EXT_LOG2] = __ilog2,
-	[EXT_MEMRD] = __memrd,
+	[EXT_TICKS] = __ticks,
 	[EXT_TIME] = __time,
 
 	[EXT_MODEL_NAME] = __model_name,
@@ -1289,6 +1304,7 @@ int32_t (* const microjs_extern[])(void *, int32_t [], int) = {
 	[EXT_DEV_PW3] = __dev_pw3,
 	[EXT_DEV_PW4] = __dev_pw4,
 	[EXT_DEV_PW5] = __dev_pw5,
+	[EXT_DEV_PCNT] = __dev_pcnt,
 	[EXT_DEV_GRP_CLEAR] = __dev_grp_clear,
 	[EXT_DEV_GRP] = __dev_grp,
 	[EXT_DEV_PRINT] = __dev_print,

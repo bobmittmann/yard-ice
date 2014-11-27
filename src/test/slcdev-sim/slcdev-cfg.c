@@ -13,7 +13,7 @@
 #include "isink.h"
 #include "slcdev-lib.h"
 
-#define CFG_VERSION 5
+#define CFG_VERSION 6
 #define CFG_MAGIC (0xcf124800 + CFG_VERSION)
 
 struct cfg_info {
@@ -711,7 +711,7 @@ int config_show_info(FILE * f)
 			usr.cfg_info.version[0], 
 			usr.cfg_info.version[1], 
 			usr.cfg_info.version[2]);
-	fprintf(f, " JSON: txt=0x%08x len=%d crc=0x%04x\n", 
+	fprintf(f, " - JSON: txt=0x%08x len=%d crc=0x%04x\n", 
 			(uint32_t)inf->json_txt, inf->json_len, inf->json_crc);
 
 	return 0;

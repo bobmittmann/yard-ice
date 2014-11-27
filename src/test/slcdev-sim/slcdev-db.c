@@ -827,13 +827,24 @@ static void model_dump(FILE * f, struct db_dev_model * sens)
 
 static void db_info_dump(FILE * f, struct db_info * inf)
 {
-	fprintf(f, "Model database\n");
 	fprintf(f, " - Desc: \"%s\"\n", const_str(inf->desc));
 	fprintf(f, " - Version: %d.%d.%d\n", 
 			inf->version[0], inf->version[1], inf->version[2]);
 	fprintf(f, " - JSON: txt=0x%08x len=%d crc=0x%04x\n", 
 			(uint32_t)inf->json.txt, inf->json.len ,inf->json.crc);
 
+}
+
+int device_db_info(FILE * f)
+{
+	struct db_info * inf;
+
+	if ((inf = db_info_get()) == NULL)
+		return -1;
+
+	db_info_dump(f, inf);
+
+	return 0;
 }
 
 int device_db_dump(FILE * f)

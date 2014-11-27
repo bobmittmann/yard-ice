@@ -728,6 +728,8 @@ static bool inline __attribute__((always_inline))
 #endif
 }
 
+#endif /* THINKOS_ENABLE_TIMER */
+
 static volatile inline uint32_t __attribute__((always_inline))
 	__thinkos_ticks(void) {
 #if THINKOS_ENABLE_CLOCK
@@ -736,8 +738,6 @@ static volatile inline uint32_t __attribute__((always_inline))
 #error "__thinkos_ticks() depends on THINKOS_ENABLE_CLOCK"
 #endif
 }
-
-#endif /* THINKOS_ENABLE_TIMER */
 
 //int thinkos_rt_snapshot(struct thinkos_rt * rt);
 

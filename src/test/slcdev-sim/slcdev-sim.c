@@ -569,7 +569,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct ss_device * dev;
 	struct db_info * db;
 	struct microjs_vm vm; 
-	uint32_t ev_bmp;
+	uint32_t ev_mask = 0xffffffff;
 	uint32_t ctl;
 
 	/* initialize virtual machine */
@@ -577,9 +577,14 @@ void __attribute__((noreturn)) sim_event_task(void)
 	rt.stack_sz = sizeof(slcdev_vm_stack);
 	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, slcdev_vm_stack);
 
+	/* guard period */
 	thinkos_sleep(2000);
 
 	db = db_info_get();
+	dev = slcdev_drv.dev;
+	ctl = slcdev_drv.ctls;
+	model = db_dev_model_by_index(db, dev->model);
+
 	DCC_LOG1(LOG_INFO, "db=%08x", db);
 
 	for (;;) {
@@ -588,167 +593,169 @@ void __attribute__((noreturn)) sim_event_task(void)
 		DCC_LOG(LOG_INFO, ".1");
 
 		thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
-		ev_bmp = slcdev_drv.ev_bmp;
-		/* FIXME: race condition, exclusive access is needed!!! */
-		slcdev_drv.ev_bmp = 0;
-		thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
+		/* get an event from bitmap */
+		if ((ev = __clz(__rbit(slcdev_drv.ev_bmp & ev_mask))) == 32) {
+			thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
+			continue;
+		}
 
-		dev = slcdev_drv.dev;
-		ctl = slcdev_drv.ctls;
-		DCC_LOG(LOG_INFO, ".2");
-		/* get the model for this device */
-		model = db_dev_model_by_index(db, dev->model);
-		DCC_LOG(LOG_INFO, ".3");
+		/* clear event from bitmap */
+		slcdev_event_clear(ev);
 
-		/* get an event form bitmap */
-		while ((ev = __clz(__rbit(ev_bmp))) != 32) {
+		if (dev != slcdev_drv.dev) {
+			dev = slcdev_drv.dev;
+			ctl = slcdev_drv.ctls;
+			/* get the model for this device */
+			model = db_dev_model_by_index(db, dev->model);
+		}
 
-			/* clear event from bitmap */
-			ev_bmp &= ~(1 << ev);
-			switch (ev) {
+		switch (ev) {
 
-			case SLC_EV_DEV_POLL:
-				if (model != NULL) {
-					const struct sim_model * sim;
-					sim = &sim_model_lut[model->sim];
+		case SLC_EV_DEV_POLL:
+			if (model != NULL) {
+				const struct sim_model * sim;
+				sim = &sim_model_lut[model->sim];
 
-					if (dev->ledno) {
-						DCC_LOG2(LOG_TRACE, "dev=%d ctl=0x%x", dev->addr, ctl);
+				if (dev->ledno) {
+					DCC_LOG2(LOG_TRACE, "dev=%d ctl=0x%x", dev->addr, ctl);
 
-						/* Poll LED state */
-						if ((ctl & 0x4) == 0) {
-							led_on(dev->ledno - 1);
-						} else if ((ctl & 0x5) == 4) {
-							led_off(dev->ledno - 1);
-						} else if ((ctl & 0x5) == 5) {
-							led_flash(dev->ledno - 1, 64);
-						}
+					/* Poll LED state */
+					if ((ctl & 0x4) == 0) {
+						led_on(dev->ledno - 1);
+					} else if ((ctl & 0x5) == 4) {
+						led_off(dev->ledno - 1);
+					} else if ((ctl & 0x5) == 5) {
+						led_flash(dev->ledno - 1, 64);
 					}
-
-					if ((ctl & 0x4) == 0)
-						dev->led = 1;
-					else if ((ctl & 0x5) == 4)
-						dev->led = 0;
-					sim->run(&vm, dev, model, ctl);
 				}
-				break;
 
-			case SLC_EV_TRIG:
-				DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
-				microjs_exec(&vm, usr.trig);
-				break;
-
-			case SLC_EV_SW1_OFF:
-				DCC_LOG(LOG_TRACE, "SW1_OFF");
-				microjs_exec(&vm, usr.sw[0].off);
-				break;
-
-			case SLC_EV_SW1_UP:
-				DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
-				microjs_exec(&vm, usr.sw[0].up);
-				break;
-
-			case SLC_EV_SW1_DOWN:
-				DCC_LOG(LOG_TRACE, "SW1_DOWN");
-				microjs_exec(&vm, usr.sw[0].down);
-				break;
-
-			case SLC_EV_SW2_OFF:
-				DCC_LOG(LOG_TRACE, "SW2_OFF");
-				microjs_exec(&vm, usr.sw[1].off);
-				break;
-
-			case SLC_EV_SW2_UP:
-				DCC_LOG(LOG_TRACE, "SW2_UP");
-				microjs_exec(&vm, usr.sw[1].up);
-				break;
-
-			case SLC_EV_SW2_DOWN:
-				DCC_LOG(LOG_TRACE, "SW2_DOWN");
-				microjs_exec(&vm, usr.sw[1].down);
-				break;
-
-			case SLC_EV_TMR1:
-				DCC_LOG(LOG_TRACE, "TMR1");
-				microjs_exec(&vm, usr.tmr[0]);
-				break;
-
-			case SLC_EV_TMR2:
-				DCC_LOG(LOG_TRACE, "TMR2");
-				microjs_exec(&vm, usr.tmr[1]);
-				break;
-
-			case SLC_EV_TMR3:
-				DCC_LOG(LOG_TRACE, "TMR3");
-				microjs_exec(&vm, usr.tmr[2]);
-				break;
-
-			case SLC_EV_TMR4:
-				DCC_LOG(LOG_TRACE, "TMR4");
-				microjs_exec(&vm, usr.tmr[3]);
-				break;
-
-			case SLC_EV_USR1:
-				DCC_LOG(LOG_TRACE, "USR1");
-				microjs_exec(&vm, usr.usr[0]);
-				break;
-
-			case SLC_EV_USR2:
-				DCC_LOG(LOG_TRACE, "USR2");
-				microjs_exec(&vm, usr.usr[1]);
-				break;
-
-			case SLC_EV_USR3:
-				DCC_LOG(LOG_TRACE, "USR3");
-				microjs_exec(&vm, usr.usr[2]);
-				break;
-
-			case SLC_EV_USR4:
-				DCC_LOG(LOG_TRACE, "USR4");
-				microjs_exec(&vm, usr.usr[3]);
-				break;
-
-			case SLC_EV_USR5:
-				DCC_LOG(LOG_TRACE, "USR5");
-				microjs_exec(&vm, usr.usr[4]);
-				break;
-
-			case SLC_EV_USR6:
-				DCC_LOG(LOG_TRACE, "USR6");
-				microjs_exec(&vm, usr.usr[5]);
-				break;
-
-			case SLC_EV_USR7:
-				DCC_LOG(LOG_TRACE, "USR7");
-				microjs_exec(&vm, usr.usr[6]);
-				break;
-
-			case SLC_EV_USR8:
-				DCC_LOG(LOG_TRACE, "USR8");
-				microjs_exec(&vm, usr.usr[7]);
-				break;
-
-			case SLC_EV_SIM_START:
-				DCC_LOG(LOG_TRACE, "SIM_START");
-				db = db_info_get();
-				/* clear virtual machine data area */
-				microjs_vm_clr_data(&vm, &rt);
-				/* run script */
-				microjs_exec(&vm, usr.init);
-				/* resume simulation */
-				slcdev_event_raise(SLC_EV_SIM_RESUME);
-				break;
-
-			case SLC_EV_SIM_STOP:
-				DCC_LOG(LOG_TRACE, "SIM_STOP");
-				slcdev_stop();
-				break;
-
-			case SLC_EV_SIM_RESUME:
-				DCC_LOG(LOG_TRACE, "SIM_RESUME");
-				slcdev_resume();
-				break;
+				if ((ctl & 0x4) == 0)
+					dev->led = 1;
+				else if ((ctl & 0x5) == 4)
+					dev->led = 0;
+				sim->run(&vm, dev, model, ctl);
 			}
+			break;
+
+		case SLC_EV_TRIG:
+			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
+			microjs_exec(&vm, usr.trig);
+			break;
+
+		case SLC_EV_SW1_OFF:
+			DCC_LOG(LOG_TRACE, "SW1_OFF");
+			microjs_exec(&vm, usr.sw[0].off);
+			break;
+
+		case SLC_EV_SW1_UP:
+			DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
+			microjs_exec(&vm, usr.sw[0].up);
+			break;
+
+		case SLC_EV_SW1_DOWN:
+			DCC_LOG(LOG_TRACE, "SW1_DOWN");
+			microjs_exec(&vm, usr.sw[0].down);
+			break;
+
+		case SLC_EV_SW2_OFF:
+			DCC_LOG(LOG_TRACE, "SW2_OFF");
+			microjs_exec(&vm, usr.sw[1].off);
+			break;
+
+		case SLC_EV_SW2_UP:
+			DCC_LOG(LOG_TRACE, "SW2_UP");
+			microjs_exec(&vm, usr.sw[1].up);
+			break;
+
+		case SLC_EV_SW2_DOWN:
+			DCC_LOG(LOG_TRACE, "SW2_DOWN");
+			microjs_exec(&vm, usr.sw[1].down);
+			break;
+
+		case SLC_EV_TMR1:
+			DCC_LOG(LOG_TRACE, "TMR1");
+			microjs_exec(&vm, usr.tmr[0]);
+			break;
+
+		case SLC_EV_TMR2:
+			DCC_LOG(LOG_TRACE, "TMR2");
+			microjs_exec(&vm, usr.tmr[1]);
+			break;
+
+		case SLC_EV_TMR3:
+			DCC_LOG(LOG_TRACE, "TMR3");
+			microjs_exec(&vm, usr.tmr[2]);
+			break;
+
+		case SLC_EV_TMR4:
+			DCC_LOG(LOG_TRACE, "TMR4");
+			microjs_exec(&vm, usr.tmr[3]);
+			break;
+
+		case SLC_EV_USR1:
+			DCC_LOG(LOG_TRACE, "USR1");
+			microjs_exec(&vm, usr.usr[0]);
+			break;
+
+		case SLC_EV_USR2:
+			DCC_LOG(LOG_TRACE, "USR2");
+			microjs_exec(&vm, usr.usr[1]);
+			break;
+
+		case SLC_EV_USR3:
+			DCC_LOG(LOG_TRACE, "USR3");
+			microjs_exec(&vm, usr.usr[2]);
+			break;
+
+		case SLC_EV_USR4:
+			DCC_LOG(LOG_TRACE, "USR4");
+			microjs_exec(&vm, usr.usr[3]);
+			break;
+
+		case SLC_EV_USR5:
+			DCC_LOG(LOG_TRACE, "USR5");
+			microjs_exec(&vm, usr.usr[4]);
+			break;
+
+		case SLC_EV_USR6:
+			DCC_LOG(LOG_TRACE, "USR6");
+			microjs_exec(&vm, usr.usr[5]);
+			break;
+
+		case SLC_EV_USR7:
+			DCC_LOG(LOG_TRACE, "USR7");
+			microjs_exec(&vm, usr.usr[6]);
+			break;
+
+		case SLC_EV_USR8:
+			DCC_LOG(LOG_TRACE, "USR8");
+			microjs_exec(&vm, usr.usr[7]);
+			break;
+
+		case SLC_EV_SIM_START:
+			DCC_LOG(LOG_TRACE, "SIM_START");
+			db = db_info_get();
+			/* clear virtual machine data area */
+			microjs_vm_clr_data(&vm, &rt);
+			/* run script */
+			microjs_exec(&vm, usr.init);
+			/* resume simulation */
+			slcdev_event_raise(SLC_EV_SIM_RESUME);
+			break;
+
+		case SLC_EV_SIM_STOP:
+			DCC_LOG(LOG_TRACE, "SIM_STOP");
+			slcdev_stop();
+			ev_mask = (1 << SLC_EV_SIM_RESUME) | (1 << SLC_EV_SIM_START);
+			break;
+
+		case SLC_EV_SIM_RESUME:
+			DCC_LOG(LOG_TRACE, "SIM_RESUME");
+			slcdev_resume();
+			/* force reprocessing posible unmasked events */
+			ev_mask = 0xffffffff;
+			thinkos_flag_set(SLCDEV_DRV_EV_FLAG);
+			break;
 		}
 	}
 }

@@ -93,7 +93,8 @@ static int xmodem_rcv_pkt(struct xmodem_rcv * rx)
 		for (;;) {
 			int c;
 
-			ret = rx->comm->op.recv(rx->comm->arg, pkt, 1, 2000);
+			ret = rx->comm->op.recv(rx->comm->arg, pkt, 
+									1, XMODEM_RCV_TMOUT_MS);
 
 			if (ret == THINKOS_ETIMEDOUT)
 				goto timeout;

@@ -41,7 +41,7 @@
 #define EXT_RAND            1
 #define EXT_SQRT            2
 #define EXT_LOG2            3
-#define EXT_MEMRD	        4
+#define EXT_TICKS           4
 #define EXT_PRINT	        5
 #define EXT_TIME            6
 
@@ -89,20 +89,22 @@
 #define EXT_DEV_PW3         44
 #define EXT_DEV_PW4         45
 #define EXT_DEV_PW5         46
-#define EXT_DEV_GRP         47
-#define EXT_DEV_PRINT       48
-#define EXT_DEV_GRP_CLEAR   49
+#define EXT_DEV_PCNT        47
+#define EXT_DEV_GRP         48
+#define EXT_DEV_PRINT       49
+#define EXT_DEV_GRP_CLEAR   50
 
-#define EXT_TMR_MS          50
-#define EXT_TMR_SEC         51
 
-#define EXT_TRIGGER         52
-#define EXT_TRIG_ADDR       53
-#define EXT_TRIG_MODULE     54
-#define EXT_TRIG_SENSOR     55
+#define EXT_TMR_MS          51
+#define EXT_TMR_SEC         52
 
-#define EXT_S               56
-#define EXT_M               57
+#define EXT_TRIGGER         53
+#define EXT_TRIG_ADDR       54
+#define EXT_TRIG_MODULE     55
+#define EXT_TRIG_SENSOR     56
+
+#define EXT_S               57
+#define EXT_M               58
 
 #define EXCEPT_BAD_ADDR                100
 #define EXCEPT_INVALID_TROUBLE_CODE    101
@@ -146,7 +148,7 @@ const struct ext_classtab test_classtab = {
 const struct ext_libdef slcdev_lib = {
 	.name = "lib",
 	.classtab = &test_classtab,
-	.xcnt = 58,
+	.xcnt = 59,
 	.xdef = {
 		[EXT_PRINTF] = { .opt = O_FUNCTION,  
 			.nm = "printf", 
@@ -163,9 +165,11 @@ const struct ext_libdef slcdev_lib = {
 		[EXT_LOG2] = { .opt = O_FUNCTION,  
 			.nm = "log2", 
 			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
-		[EXT_MEMRD] = { .opt = O_FUNCTION,  
-			.nm = "memrd", 
-			.f = { .argmin = 1, .argmax = 1, .ret = 1 } },
+
+		[EXT_TICKS] = { .opt = O_FUNCTION,  
+			.nm = "ticks", 
+			.f = { .argmin = 0, .argmax = 0, .ret = 1 } },
+
 		[EXT_TIME] = { .opt = O_FUNCTION,  
 			.nm = "time", 
 			.f = { .argmin = 0, .argmax = 0, .ret = 1 } },
@@ -259,6 +263,8 @@ const struct ext_libdef slcdev_lib = {
 			.nm = "pw4" },
 		[EXT_DEV_PW5] = { .opt = O_INTEGER | O_MEMBER,
 			.nm = "pw5" },
+		[EXT_DEV_PCNT] = { .opt = O_INTEGER | O_MEMBER,
+			.nm = "pcnt" },
 		[EXT_DEV_GRP] = { .opt = O_INTEGER | O_MEMBER | O_ARRAY,
 			.nm = "grp" },
 		[EXT_DEV_PRINT] = { .opt = O_FUNCTION | O_MEMBER,  

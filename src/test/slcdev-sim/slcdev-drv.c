@@ -711,6 +711,9 @@ static void clip_msg_decode(unsigned int msg)
 		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
 		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 
+		/* update poll counter */
+		dev->pcnt++;
+
 		if (dev->event != 0) {
 			/* if an simulation event is correlated to the device,
 			 signal the simulator. */

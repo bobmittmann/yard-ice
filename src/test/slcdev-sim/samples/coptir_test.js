@@ -1,39 +1,60 @@
 {
 	"info": {
-		"desc" : "Coptir test", 
-		"version" : [0, 1]
+		"desc" : "Simple COPTIR test", 
+		"version" : [0, 2]
 	},
 
 	"sensor" : { 
 		"model" : "2251 COPTIR", 
 		"enabled" : true,
 		"ledno" : 3,
+		"group" : [1, 2],
 		"addr" : [ 1 ]
+		"event" : "usr1"
 	},
 
 	"sensor" : { 
 		"model" : "2251 COPTIR", 
 		"enabled" : true,
 		"ledno" : 5,
+		"group" : [1, 2],
 		"addr" : [ 2 ]
+		"event" : "usr2"
 	},
 
 	"sensor" : { 
 		"model" : "2251 COPTIR", 
 		"enabled" : true,
 		"ledno" : 2,
+		"group" : [1, 3],
 		"addr" : [ 3, 4, 5, 6, 7, 8, 9, 10 ]
+	},
+
+	"module" : { 
+		"rem" : "Sample Input Module",
+		"model" : "M500M",
+		"enabled" : false,
+		"group" : [ 4 ],
+		"addr" : [ 1, 2, 4, 8 ]
 	},
 
 	"events": { 
 		"init" : [
-			'var count = 1;',
-			'printf("\nHello!\n");',
+			'printf("\nSimple COPTIR test!\n");',
 		],
 
 		"tmr1" : [
-			'printf("\nPW3=%d count=%d", s[1].pw3, count);',
-			'timer[1].sec = 10;'
+			'printf("\nPW3=%d %d.", s[1].pw3, ticks());',
+			'timer[1].sec = 3;'
+		],
+
+		"usr1" : [
+			'var t0, t1, dt, avg;'
+			't0 = t1;'
+			't1 = ticks();'
+			'dt = t1 - t0;'
+			'avg = (avg * 3 + dt) / 4;'
+			'printf("\nS1: PW3=%d %d %d.", s[1].pw3, dt, avg);',
 		],
 	}
 	
@@ -59,7 +80,6 @@
 		"up" : [ 
 			'led[6].on = true;',
 			'sensor[2].trouble = 1;',
-			'count = count + 1;'
 		],
 
 		"off" : [ 
