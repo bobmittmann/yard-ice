@@ -1,4 +1,8 @@
 {
+	"info": {
+		"desc" : "Fully loaded loop test", 
+		"version" : [0, 1]
+	},
 
 	"sensor" : { 
 		"rem" : "Boards 1 and 2 Photo",

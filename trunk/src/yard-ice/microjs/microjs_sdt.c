@@ -47,11 +47,10 @@ static int tgt_alloc32(struct microjs_sdt * microjs)
 	addr = (microjs->data_pos + SIZEOF_WORD - 1) & ~(SIZEOF_WORD - 1);
 
 	microjs->data_pos = addr + SIZEOF_WORD;
-	DCC_LOG1(LOG_TRACE, "data_pos=%d", microjs->data_pos);
+	DCC_LOG1(LOG_INFO, "data_pos=%d", microjs->data_pos);
 
-	if (microjs->data_pos > microjs->tab->rt.data_sz) {
+	if (microjs->data_pos > microjs->tab->rt.data_sz)
 		microjs->tab->rt.data_sz = microjs->data_pos;
-	}
 
 	return addr;
 }
@@ -1766,15 +1765,13 @@ struct microjs_sdt * microjs_sdt_init(uint32_t * sdt_buf,
 	microjs->libdef = libdef;
 
 	data_sz = symtab_data_size(tab);
-	if (data_sz > tab->rt.data_sz) {
+	if (data_sz != tab->rt.data_sz) {
 		DCC_LOG(LOG_ERROR, "Symbol table invalid!");
-		DCC_LOG2(LOG_TRACE, "data_sz(%d) > tab->rt.data_sz(%d)", 
-				 data_sz, tab->rt.data_sz);
 		return NULL;
 	}
 
 	/* data memory allocation info */
-	microjs->data_pos = data_sz;
+	microjs->data_pos = tab->rt.data_sz;
 	microjs->stack_pos = 0; /* initial stack position */
 
 	/* size of the buffer provided for parsing */

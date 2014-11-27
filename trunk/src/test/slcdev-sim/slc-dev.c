@@ -16,8 +16,8 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-#define VERSION_NUM "0.2"
-#define VERSION_DATE "Jul, 2014"
+#define VERSION_NUM "0.3"
+#define VERSION_DATE "Nov, 2014"
 
 extern const struct shell_cmd cmd_tab[];
 
@@ -155,6 +155,8 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 				js(f, cp, strlen(cp));
 				continue;
 			}
+		
+			DCC_LOG(LOG_TRACE, "shell command ...");
 
 			while ((stat = cmd_get_next(&cp)) != NULL) {
 				struct shell_cmd * cmd;

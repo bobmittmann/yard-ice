@@ -133,6 +133,7 @@ struct db_info {
 #define SLC_EV_SW2_OFF    8
 #define SLC_EV_SW2_UP     9
 #define SLC_EV_SW2_DOWN   10
+
 #define SLC_EV_TMR1       11
 #define SLC_EV_TMR2       12
 #define SLC_EV_TMR3       13
@@ -208,10 +209,7 @@ struct ss_device {
 	uint8_t ipre;      /* current sink preenphasis time */
 
 	uint8_t grp[4];    /* Group membership */
-
 	uint8_t lvl[4];    /* Internal variable levels */
-	uint8_t event:5;   /* Simulation event */
-	uint8_t ledno:3;
 
 	union {
 		struct {
@@ -226,8 +224,11 @@ struct ss_device {
 		} ap;
 	};
 
-	uint8_t res2[5];
-	uint16_t poll;
+	uint8_t event:5;   /* Simulation event */
+	uint8_t ledno:3;
+	uint8_t res2[3];
+
+	uint32_t pcnt;     /* poll count */
 };
 
 #define SS_MODULES_IDX 160
@@ -336,6 +337,10 @@ static inline void slcdev_event_raise(unsigned int ev) {
 	__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
 }
 
+static inline void slcdev_event_clear(unsigned int ev) {
+	__bit_mem_wr(&slcdev_drv.ev_bmp, ev, 0);  
+}
+
 void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
@@ -345,9 +350,10 @@ unsigned int trig_addr_get(void);
 void trig_module_set(bool en);
 void trig_sensor_set(bool en);
 
-bool device_db_compile(struct fs_file * json);
-int device_db_dump(FILE * f);
 void device_db_init(void);
+bool device_db_compile(struct fs_file * json);
+int device_db_info(FILE * f);
+int device_db_dump(FILE * f);
 
 int config_dump(FILE * f);
 

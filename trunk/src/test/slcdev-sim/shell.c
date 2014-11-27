@@ -46,6 +46,12 @@
 
 extern const struct shell_cmd cmd_tab[];
 
+uint8_t shell_opt = 0;
+
+#define SLCDEV_OPT_VERBOSE (1 << 0)
+
+#define SLCDEV_VERBOSE() (shell_opt & SLCDEV_OPT_VERBOSE) 
+
 /* -------------------------------------------------------------------------
  * Help
  * ------------------------------------------------------------------------- */
@@ -95,6 +101,8 @@ int cmd_rx(FILE * f, int argc, char ** argv)
 		fprintf(f, "fs_xmodem_recv() failed!\r\n");
 		return -1;
 	}
+
+	fprintf(f, "\n");
 
 	return 0;
 }
@@ -165,6 +173,34 @@ int cmd_ls(FILE * f, int argc, char ** argv)
 }
 
 /* -------------------------------------------------------------------------
+ * Environment
+ * ------------------------------------------------------------------------- */
+
+int cmd_verbose(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	shell_opt |= SLCDEV_OPT_VERBOSE;
+
+	fprintf(f, "Verbose mode.\n");
+
+	return 0;
+}
+
+int cmd_quiet(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	shell_opt &= ~SLCDEV_OPT_VERBOSE;
+
+	fprintf(f, "Quiet mode.\n");
+
+	return 0;
+}
+
+/* -------------------------------------------------------------------------
  * Trigger
  * ------------------------------------------------------------------------- */
 
@@ -217,11 +253,11 @@ void dev_lst_remove_unconfigured(uint32_t sb[], uint32_t mb[])
 	for (addr = 0; addr < 160; ++addr) {
 		dev = sensor(addr);
 		if (!dev->cfg)
-			sb[addr / 32] &= ~1;
+			sb[addr / 32] &= ~(1 << (addr % 32));
 
 		dev = module(addr);
 		if (!dev->cfg)
-			mb[addr / 32] &= ~1;
+			mb[addr / 32] &= ~(1 << (addr % 32));
 	}
 }
 
@@ -530,10 +566,14 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	struct fs_dirent entry;
 	bool erase = false;
 	bool compile = false;
+	bool xfer = false;
+	bool dump = false;
 	int i;
 
-	if (argc == 1)
-		device_db_dump(f);
+	if (argc == 1) {
+		fprintf(f, "Device Model Database:\n");
+		device_db_info(f);
+	}
 
 	for (i = 1; i < argc; ++i) {
 		if ((strcmp(argv[i], "compile") == 0) || 
@@ -543,11 +583,28 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "erase") == 0) || 
 			(strcmp(argv[i], "e") == 0)) {
 			erase = true;
+		} else if ((strcmp(argv[i], "xfer") == 0) || 
+			(strcmp(argv[i], "x") == 0)) {
+			xfer = true;
+			erase = true;
+			compile = true;
+		} else if ((strcmp(argv[i], "dump") == 0) || 
+			(strcmp(argv[i], "d") == 0)) {
+			dump = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
 	}
 
 	slcdev_stop();
+
+	if (xfer) {
+		fprintf(f, "XMODEM receive: '%s'... ", "db.js");
+		if ((fs_xmodem_recv(f, "db.js")) < 0) {
+			fprintf(f, "fs_xmodem_recv() failed!\r\n");
+			return -1;
+		}
+		fprintf(f, "\n");
+	}
 
 	if (erase) {
 		fprintf(f, "Erasing DB...\n");
@@ -568,13 +625,20 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 				return -1;
 			}
 
-			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
-			fprintf(f, " - data: %d of %d\n", 
-					rt->data_sz, sizeof(slcdev_vm_data));
-			fprintf(f, " - stack: %d of %d\n", 
-					rt->stack_sz, sizeof(slcdev_vm_stack));
+			if (SLCDEV_VERBOSE()) {
+				rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+				fprintf(f, " - data: %d of %d\n", 
+						rt->data_sz, sizeof(slcdev_vm_data));
+				fprintf(f, " - stack: %d of %d\n", 
+						rt->stack_sz, sizeof(slcdev_vm_stack));
+			}
 		}
+		
+		device_db_info(f);
 	}
+
+	if (dump)
+		device_db_dump(f);
 
 	return 0;
 }
@@ -588,8 +652,10 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	bool restart = false;
 	int i;
 
-	if (argc == 1) 
+	if (argc == 1) {
+		fprintf(f, "Simulation Configuration:\n");
 		return config_show_info(f);
+	}
 
 	for (i = 1; i < argc; ++i) {
 		if ((strcmp(argv[i], "compile") == 0) || 
@@ -612,11 +678,13 @@ int cmd_config(FILE * f, int argc, char ** argv)
 	}
 
 	if (xfer) {
-		fprintf(f, "XMODEM ... ");
+		slcdev_stop();
+		fprintf(f, "XMODEM receive: '%s'... ", "cfg.js");
 		if ((fs_xmodem_recv(f, "cfg.js")) < 0) {
 			fprintf(f, "fs_xmodem_recv() failed!\r\n");
 			return -1;
 		}
+		fprintf(f, "\n");
 	}
 
 	if (erase) {
@@ -646,11 +714,13 @@ int cmd_config(FILE * f, int argc, char ** argv)
 				return -1;
 			}
 
-			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
-			fprintf(f, " - data: %d of %d\n", 
-					rt->data_sz, sizeof(slcdev_vm_data));
-			fprintf(f, " - stack: %d of %d\n", 
-					rt->stack_sz, sizeof(slcdev_vm_stack));
+			if (SLCDEV_VERBOSE()) {
+				rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+				fprintf(f, " - data: %d of %d\n", 
+						rt->data_sz, sizeof(slcdev_vm_data));
+				fprintf(f, " - stack: %d of %d\n", 
+						rt->stack_sz, sizeof(slcdev_vm_stack));
+			}
 
 			fprintf(f, "Saving...\n");
 			if (config_save(json.fp) < 0) {
@@ -718,7 +788,11 @@ int js(FILE * f, char * script, unsigned int len)
 	profclk_init();
 
 	/* initialize compiler */
-	microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), symtab, &slcdev_lib);
+	if ((microjs = microjs_sdt_init(sdtbuf, sizeof(sdtbuf), 
+									symtab, &slcdev_lib)) == NULL) {
+		fprintf(f, "# internal error\n");
+		return -1;
+	}
 
 	symstat = symtab_state_save(symtab);
 
@@ -741,10 +815,13 @@ int js(FILE * f, char * script, unsigned int len)
 
 	code_sz = ret;
 	rt = symtab_rt_get(symtab);
-	fprintf(f, " - Compile time: %d us.\n", profclk_us(stop_clk - start_clk));
-	fprintf(f, " - code: %d\n", code_sz);
-	fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
-	fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
+	if (SLCDEV_VERBOSE()) {
+		fprintf(f, " - Compile time: %d us.\n", 
+				profclk_us(stop_clk - start_clk));
+		fprintf(f, " - code: %d\n", code_sz);
+		fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
+		fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
+	}
 
 	if (rt->data_sz > sizeof(slcdev_vm_data)) {
 		fprintf(f, "# data overlow. %d bytes required\n", rt->data_sz);
@@ -768,8 +845,11 @@ int js(FILE * f, char * script, unsigned int len)
 		fprintf(f, "# exec error: %d\n", ret);
 		return -1;
 	}
-	stop_clk = profclk_get();
-	fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
+
+	if (SLCDEV_VERBOSE()) {
+		stop_clk = profclk_get();
+		fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
+	}
 
 	return 0;
 }
@@ -851,26 +931,6 @@ int cmd_str(FILE * f, int argc, char ** argv)
 	return ret;
 }
 
-
-int cmd_sim(FILE * f, int argc, char ** argv)
-{
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	if ((strcmp(argv[1], "stop") == 0) || 
-		(strcmp(argv[1], "s") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_STOP);
-	} else if ((strcmp(argv[1], "resume") == 0) || 
-		(strcmp(argv[1], "r") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_RESUME);
-	} else
-		return SHELL_ERR_ARG_INVALID;
-
-	return 0;
-}
 
 
 int cmd_module(FILE * f, int argc, char ** argv)
@@ -1135,6 +1195,28 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	return ret;
 }
 
+int cmd_sim(FILE * f, int argc, char ** argv)
+{
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if ((strcmp(argv[1], "stop") == 0) || 
+		(strcmp(argv[1], "s") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_STOP);
+		fprintf(f, "Simulation paused...\n");
+	} else if ((strcmp(argv[1], "resume") == 0) || 
+		(strcmp(argv[1], "r") == 0)) {
+		slcdev_event_raise(SLC_EV_SIM_RESUME);
+		fprintf(f, "Simulation resumed...\n");
+	} else
+		return SHELL_ERR_ARG_INVALID;
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -1160,8 +1242,6 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_group, "group", "grp", "", "show group information" },
 
-	{ cmd_sim, "sim", "", "[start|stop]", "" },
-
 	{ cmd_str, "str", "", "", "dump string pool" },
 
 	{ cmd_pw2, "pw2", "", "<addr> [set [VAL]] | [lookup [SEL]]>", 
@@ -1186,7 +1266,7 @@ const struct shell_cmd cmd_tab[] = {
 		"configuration options" },
 
 	{ cmd_dbase, "dbase", "db", 
-		"[compile|erase]", "device database" },
+		"[compile|dump|erase|xfer]", "manage device database" },
 
 	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
 		"Device disable" },
@@ -1214,6 +1294,15 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_trouble, "trouble", "tbl", "", 
 		"set/get trouble level" },
+
+	{ cmd_sim, "sim", "", "[stop|resume]", 
+		"stop/resume simulation" },
+
+	{ cmd_verbose, "verbose", "v", 
+		"", "verbose mode enabled." },
+
+	{ cmd_quiet, "quiet", "q", 
+		"", "quiet mode enabled." },
 
 	{ cmd_xflash, "xflash", "xf", 
 		"firm", "update firmware." },

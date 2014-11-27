@@ -1,0 +1,216 @@
+%token EOF DOT COMMA SEMICOLON COLON PLUS MINUS STAR SLASH PERCENT AMPERSAND BAR CARET TILDE EXCLAM QUEST EQUALS LESSTHEN GREATTHEN LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE GTE LTE EQU NEQ ASR SHL LOGICOR LOGICAND CATCH ELSE FALSE FOR IF THROW TRUE TRY VAR WHILE ID INT CHAR STRING ERR
+%%
+
+program 		: EOF
+				| stat program
+				| semi_stat semi_list
+				| compound_stat program
+				;
+
+semi_list		: EOF
+				| ';' program
+				;
+
+// --------------------------------------------------------------------------
+// Variables
+// -------------------------------------------------------------------------- 
+
+var_list 		: var var_list1
+				;
+
+var_list1 		: 
+				| ',' var_list
+				;
+
+var				: ID { op_var_decl, op_push_tmp } var_assign_opt
+				;
+
+var_assign_opt  : { op_pop_tmp }
+				| '=' exp { op_var_assign }
+				;
+
+assign_or_call1	: '=' exp { op_var_assign }
+				| function_call { op_ret_discard }
+				| '[' exp ']' { op_array_xlat } '.' attr_assign
+				| '.'{ op_object_get } attr_assign
+				;
+
+attr_assign		: ID { op_push_tmp } attr_assign2
+				;
+
+attr_assign2    : '=' exp { op_attr_assign }
+				| '[' exp ']' '=' exp { op_array_assign }
+				| method_call { op_ret_discard }
+				;
+
+// --------------------------------------------------------------------------
+// Method calls
+// -------------------------------------------------------------------------- 
+
+method_call		: { op_method_lookup } '(' arg_list_opt ')' { op_call } 
+				;
+
+// --------------------------------------------------------------------------
+// Function calls
+// -------------------------------------------------------------------------- 
+
+function_call	: { op_function_lookup } '(' arg_list_opt ')' { op_call } 
+				;
+
+arg_list_opt	: 
+				| arg_list 
+				;
+
+arg_list		: exp { op_arg } arg_list1 
+				;
+
+arg_list1		: 
+				| ',' arg_list 
+				;
+
+// --------------------------------------------------------------------------
+// Expressions
+// -------------------------------------------------------------------------- 
+
+exp_lst_opt		: 
+				| exp_lst
+				;
+
+exp_lst			: ID { op_push_tmp } assign_or_call1 exp_lst1
+				;
+				
+exp_lst1		: 
+				| ',' exp_lst
+				;
+
+exp 			: and_exp or_exp
+				;
+
+or_exp			: 
+				| '|' exp { op_or }
+				| LOGICOR exp { op_logic_or }
+				| '^' exp { op_xor }
+				;
+
+and_exp			: relational_exp and_exp1
+				;
+
+and_exp1		: 
+				| '&' and_exp { op_and }
+				| LOGICAND and_exp { op_logic_and }
+				;
+
+relational_exp	: shift_exp	relational_exp1
+				;
+
+relational_exp1	:
+				| '<' relational_exp { op_lt }
+				| '>' relational_exp { op_gt }
+				| EQU relational_exp { op_equ }
+				| NEQ relational_exp { op_neq }
+				| GTE relational_exp { op_gte }
+				| LTE relational_exp { op_lte }
+				;
+
+shift_exp		: additive_exp shift_exp1
+				;
+
+shift_exp1		: 
+				| SHL shift_exp	{ op_shl }
+				| ASR shift_exp	{ op_asr }
+				;
+
+additive_exp 	: div_exp additive_exp1
+				;
+
+additive_exp1 	: 
+				| '+' additive_exp { op_add }
+				| '-' additive_exp { op_sub }
+				;
+
+
+div_exp			: mult_exp div_exp1		
+				;
+
+div_exp1		: 
+				| '/' div_exp { op_div }
+				| '%' div_exp { op_mod }
+				;
+
+mult_exp		: unary_exp mult_exp1		
+				;
+
+mult_exp1		: 
+				| '*' mult_exp { op_mul }
+				;
+
+unary_exp		: primary_exp
+				| '~' unary_exp { op_inv }
+				| '-' unary_exp { op_minus }
+				| NOT unary_exp { op_not }
+				;
+
+primary_exp		: '(' exp ')'
+				| INT { op_push_int }
+				| CHAR { op_push_int }
+				| STRING { op_push_string }
+				| "true" { op_push_true }
+				| "false" { op_push_false }
+				| id_eval
+				;
+
+id_eval 		: ID { op_push_tmp } id_eval1
+				;
+
+id_eval1		: { op_var_eval }
+				| function_call { op_call_ret }
+				| '[' exp ']' { op_array_xlat } '.' attr_eval
+				| '.' { op_object_get } attr_eval		
+				;
+
+attr_eval		: ID { op_push_tmp } attr_eval1
+				;
+
+
+attr_eval1		: { op_attr_eval }
+				| method_call { op_call_ret }
+				| '[' exp ']' { op_array_eval }
+				;
+
+
+// --------------------------------------------------------------------------
+// Statements
+// -------------------------------------------------------------------------- 
+
+compound_stat	: '{' { op_blk_open } stat_list '}' { op_blk_close } 
+				;
+
+stat_list		:
+				| stat stat_list
+				| semi_stat ';' stat_list
+				;
+
+stat			: "for" '(' exp_lst_opt ';' { op_for_init } exp { op_for_cond } ';' exp_lst_opt { op_for_after } ')' compound_stat { op_for_end }
+				| "while" { op_while_begin } condition { op_while_cond } compound_stat { op_while_end }
+				| "if" condition { op_if_cond } compound_stat else_opt { op_if_end }
+				| "try" { op_try_begin } compound_stat catch_opt 
+				;
+
+condition		: '(' exp ')'
+				;
+
+semi_stat		: "throw" exp { op_throw }
+				| "var" var_list
+				| ID { op_push_tmp } assign_or_call1
+				;
+
+
+else_opt		: 
+				| "else" { op_if_else } compound_stat
+				;
+
+catch_opt		: { op_try_end }
+				| "catch" { op_catch, op_blk_open } '(' ID { op_var_decl, op_push_tmp, op_var_assign } ')' '{' stat_list '}' { op_blk_close, op_catch_end }
+				;
+
+

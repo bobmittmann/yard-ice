@@ -76,6 +76,9 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	for (; isalnum(*cp); cp++);
 	n = cp - s;
 
+	if (n == 0)
+		return NULL;
+
 	while (cmd->callback != NULL) {
 		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
 			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {

@@ -50,11 +50,18 @@ const struct {
 void timer_set(unsigned int id, unsigned int ms)
 {
 	io_drv.usr_tmr[id] = (ms + IO_POLL_PERIOD_MS - 1) / IO_POLL_PERIOD_MS;
+#if 0
+	if (ms == 0) {
+		/* clear possibly pending event */
+		slcdev_event_clear(SLC_EV_TMR1 + id);
+	}
+#endif
 }
 
 unsigned int timer_get(unsigned int id)
 {
 	return io_drv.usr_tmr[id] * IO_POLL_PERIOD_MS;
+
 }
 
 void led_on(unsigned int id)
@@ -223,7 +230,7 @@ void __attribute__((noreturn)) io_event_task(void)
 	unsigned int addr1 = 0;
 	unsigned int sw0 = 0;
 	unsigned int sw1 = 0;
-	uint32_t clk_ms = 0;
+	uint32_t clk_tmo = __thinkos_ticks() + 1000;
 
 	for (;;) {
 		unsigned int addr;
@@ -237,10 +244,10 @@ void __attribute__((noreturn)) io_event_task(void)
 
 		thinkos_sleep(IO_POLL_PERIOD_MS);
 
-		clk_ms += IO_POLL_PERIOD_MS;
-		if (clk_ms >= 1000) {
+		/* update clock time */
+		if ((int32_t)(__thinkos_ticks() - clk_tmo) >= 1000) {
 			clk_time++;
-			clk_ms -= 1000;
+			clk_tmo += 1000;
 		}
 
 		/* process led timers */
