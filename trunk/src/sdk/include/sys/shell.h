@@ -48,6 +48,8 @@ struct shell_cmd {
 
 struct cmd_history;
 
+#define SIZEOF_CMD_HISTORY 5
+
 #ifdef __cplusplus
 extern "C" {
 #endif

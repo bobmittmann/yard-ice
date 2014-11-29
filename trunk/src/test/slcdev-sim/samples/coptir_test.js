@@ -1,7 +1,7 @@
 {
 	"info": {
 		"desc" : "Simple COPTIR test", 
-		"version" : [0, 2]
+		"version" : [0, 2, 1]
 	},
 
 	"sensor" : { 
@@ -45,23 +45,26 @@
 
 		"tmr1" : [
 			'printf("\nPW3=%d %d.", s[1].pw3, ticks());',
-			'timer[1].sec = 3;'
 		],
 
 		"usr1" : [
-			'var t0, t1, dt, avg;'
+			'var t0, t1;'
 			't0 = t1;'
 			't1 = ticks();'
-			'dt = t1 - t0;'
-			'avg = (avg * 3 + dt) / 4;'
-			'printf("\nS1: PW3=%d %d %d.", s[1].pw3, dt, avg);',
+			'printf("\nS1: PW4=%d dt=%d cnt=%d", s[1].pw4, t1 - t0, s[1].pcnt);',
+		],
+		"usr2" : [
+			'var t2, t3;'
+			't2 = t3;'
+			't3 = ticks();'
+			'printf("\nS2: PW4=%d dt=%d cnt=%d", s[2].pw4, t3 - t2, s[2].pcnt);',
 		],
 	}
 	
 	"sw1": { 
 		"up" : [ 
 			'led[4].on = true;',
-			'sensor[1].trouble = 1;',
+			'sensor[1].trouble = 4;',
 		],
 
 		"off" : [ 
@@ -72,14 +75,14 @@
 		],
 
 		"down" : [
-			'sensor[1].alarm = 1;',
+			'sensor[1].alarm = 2;',
 		],
 	},
 
 	"sw2": { 
 		"up" : [ 
 			'led[6].on = true;',
-			'sensor[2].trouble = 1;',
+			'sensor[2].trouble = 4;',
 		],
 
 		"off" : [ 
@@ -87,12 +90,10 @@
 			'led[6].on = false;',
 			'sensor[2].trouble = 0;',
 			'sensor[2].alarm = 0;',
-			'timer[1].sec = 0;'
 		],
 
 		"down" : [
-			'sensor[2].alarm = 1;',
-			'timer[1].ms = 1000;',
+			'sensor[2].alarm = 2;',
 		],
 	},
 

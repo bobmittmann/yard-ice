@@ -12,13 +12,18 @@
 #include "slcdev.h"
 #include "slcdev-lib.h"
 
-uint32_t slcdev_symbuf[64]; /* symbol table buffer */
+/* ATTENTION: The DB_BLK_VERSION macro should be incremented whenever a
+   structure of the database changes. This is to prevent errors/crashes 
+   when reading the database from the memory with potential layout 
+   differences. These differences will happen if a field is added or 
+   resized. */
+#define DB_BLK_VERSION 4
+#define DB_BLK_MAGIC (0xdb356900 + DB_BLK_VERSION)
 
 #define DB_STACK_LIMIT (sizeof(struct fs_file) + sizeof(struct db_info))
 uint16_t db_stack = DB_STACK_LIMIT;
 
-#define DB_VERSION 3
-#define DB_MAGIC (0xdb356900 + DB_VERSION)
+uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 
 struct db_info * db_info_get(void)
 {
@@ -30,7 +35,7 @@ struct db_info * db_info_get(void)
 		return NULL;
 
 	inf = (struct db_info *)(entry.fp->data);
-	if (inf->magic != DB_MAGIC)
+	if (inf->magic != DB_BLK_MAGIC)
 		return NULL;
 
 	return inf;
@@ -264,6 +269,34 @@ int db_pw_enc(struct microjs_json_parser * jsn,
 }
 
 /********************************************************************** 
+ * encode a set of lookup ranges
+ ***********************************************************************/
+
+static const struct microjs_attr_desc pw4_lut_desc[] = {
+	{ "tbl", MICROJS_JSON_ARRAY, 2, offsetof(struct pw4_set, tbl),
+		microjs_array_u8_enc },
+	{ "alm", MICROJS_JSON_ARRAY, 2, offsetof(struct pw4_set, alm),
+		microjs_array_u8_enc },
+	{ "tst", MICROJS_JSON_ARRAY, 2, offsetof(struct pw4_set, tst),
+		microjs_array_u8_enc },
+	{ "", 0, 0, 0, NULL},
+};
+
+int db_pw4_lut_enc(struct microjs_json_parser * jsn, 
+				   struct microjs_val * val, 
+				   unsigned int opt, void * ptr)
+{
+	int ret;
+
+	if ((ret = microjs_json_parse_obj(jsn, pw4_lut_desc, ptr)) < 0) {
+		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
+		return ret;
+	}
+
+	return ret;
+}
+
+/********************************************************************** 
  * encode a list of PW ranges
  ***********************************************************************/
 
@@ -346,20 +379,25 @@ static const struct microjs_attr_desc model_desc[] = {
 		microjs_const_str_enc },
 	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct db_dev_model, desc),
 		microjs_const_str_enc },
-	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw1),
+	{ "pw1", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw1lst),
 		db_pw_list_enc},
-	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw2),
+	{ "pw2", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw2lst),
 		db_pw_list_enc},
-	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw3),
+	{ "pw3", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw3lst),
 		db_pw_list_enc},
-	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw4),
+	{ "pw4", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw4lst),
 		db_pw_list_enc},
-	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw5),
+	{ "pw5", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, pw5lst),
 		db_pw_list_enc},
+	{ "lut", MICROJS_JSON_OBJECT, 0, offsetof(struct db_dev_model, pw4lut),
+		db_pw4_lut_enc},
 	{ "cmd", MICROJS_JSON_ARRAY, 0, offsetof(struct db_dev_model, cmd),
 		db_cmd_list_enc},
 	{ "", 0, 0, 0, NULL}
 };
+
+
+
 
 struct db_cfg {
 	uint8_t desc; /* Description string */
@@ -388,6 +426,11 @@ int db_model_enc(struct microjs_json_parser * jsn,
 		DCC_LOG(LOG_ERROR, "microjs_json_parse_obj() failed!");
 		return ret;
 	}
+
+	DCC_LOG6(LOG_TRACE, "tbl[%d, %d] alm[%d, %d] tst[%d, %d]",
+			 model.pw4lut.tbl.idx, model.pw4lut.tbl.cnt,
+			 model.pw4lut.alm.idx, model.pw4lut.alm.cnt,
+			 model.pw4lut.tst.idx, model.pw4lut.tst.cnt);
 
 	ret = db_stack_push(&model, sizeof(struct db_dev_model), (void **)rootp);
 
@@ -449,6 +492,15 @@ const char * const db_label[] = {
 	"sim",
 	"version",
 	"info",
+	"lut",
+	"pw",
+	"alm",
+	"tbl",
+	"tst",
+	"lvl",
+	"min",
+	"max",
+	"idx",
 	NULL	
 };
 
@@ -548,7 +600,7 @@ int db_info_write(unsigned int offs, struct fs_file * json,
 
 	DCC_LOG1(LOG_INFO, "%d models.", cnt);
 
-	info.magic = DB_MAGIC;
+	info.magic = DB_BLK_MAGIC;
 	info.desc = db->desc;
 	info.version[0] = db->version[0];
 	info.version[1] = db->version[1];
@@ -652,6 +704,11 @@ struct db_dev_model * db_dev_model_by_index(struct db_info * inf,
 	return (struct db_dev_model *)inf->obj[idx];
 }
 
+/* select one PW range from a list of PWs.
+   The selection index 'sel' starts from 1.
+   If 'sel' is 0 the first item in the list is selected.
+FIXME: empty list shuld return an error */
+
 int device_db_pw_lookup(const struct pw_list * lst, unsigned int sel)
 {
 	uint32_t min;
@@ -659,7 +716,10 @@ int device_db_pw_lookup(const struct pw_list * lst, unsigned int sel)
 	uint32_t pw;
 
 	if (sel >= lst->cnt)
-		sel = lst->cnt - 1;
+		sel = lst->cnt;
+
+	if (sel > 0)
+		sel--;
 
 	max = lst->pw[sel].max;
 	min = lst->pw[sel].min;
@@ -811,15 +871,15 @@ static void model_dump(FILE * f, struct db_dev_model * sens)
 			const_str(sens->model), const_str(sens->desc));
 	fprintf(f, "SIM: %s\n", model_sim_name(sens->sim));
 	fprintf(f, "PW1:");
-	pw_list_dump(f, sens->pw1);
+	pw_list_dump(f, sens->pw1lst);
 	fprintf(f, "PW2:");
-	pw_list_dump(f, sens->pw2);
+	pw_list_dump(f, sens->pw2lst);
 	fprintf(f, "PW3:");
-	pw_list_dump(f, sens->pw3);
+	pw_list_dump(f, sens->pw3lst);
 	fprintf(f, "PW4:");
-	pw_list_dump(f, sens->pw4);
+	pw_list_dump(f, sens->pw4lst);
 	fprintf(f, "PW5:");
-	pw_list_dump(f, sens->pw5);
+	pw_list_dump(f, sens->pw5lst);
 	cmd_list_dump(f, sens->cmd);
 	fprintf(f, "\n");
 }

@@ -228,7 +228,12 @@ const struct ss_device null_dev = {
 	.pw2 = 0,
 	.pw3 = 0,
 	.pw4 = 0,
-	.pw5 = 0
+	.pw5 = 0,
+	.event = 0,
+	.ledno = 0,
+	.pcnt = 0,
+	.lvl = { 0, 0, 0, 0 },
+	.grp = { 0, 0, 0, 0 },
 };
 
 void dev_sim_reset(void)
@@ -286,6 +291,11 @@ void dev_sim_reset(void)
 		dev->lvl[1] = 0;
 		dev->lvl[2] = 0;
 		dev->lvl[3] = 0;
+
+		dev->event = 0;
+		dev->ledno = 0;
+
+		dev->pcnt = 0;
 	}
 }
 

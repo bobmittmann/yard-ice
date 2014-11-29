@@ -45,6 +45,8 @@
 #include "slcdev-lib.h"
 
 extern const struct shell_cmd cmd_tab[];
+extern const char * version_str;
+extern const char * copyright_str;
 
 uint8_t shell_opt = 0;
 
@@ -71,7 +73,6 @@ int cmd_help(FILE *f, int argc, char ** argv)
 
 		fprintf(f, "  %s, %s - %s\n", cmd->name, cmd->alias, cmd->desc);
 		fprintf(f, "  usage: %s %s\n\n", argv[1], cmd->usage);
-
 		return 0;
 	}
 
@@ -572,7 +573,7 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 	if (argc == 1) {
 		fprintf(f, "Device Model Database:\n");
-		device_db_info(f);
+		return device_db_info(f);
 	}
 
 	for (i = 1; i < argc; ++i) {
@@ -983,51 +984,6 @@ int cmd_sensor(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int cmd_group(FILE * f, int argc, char ** argv)
-{
-	int g;
-
-	if (argc > 1)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	for (g = 1; g < 256; ++g) {
-		struct ss_device * dev;
-		int addr;
-		int n = 0;
-		int k = 0;
-
-		for (addr = 0; addr < 160; ++addr) {
-			dev = sensor(addr);
-			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
-				(dev->grp[2] == g) || (dev->grp[3] == g)) {
-				if (n++ == 0)
-					fprintf(f, "\nGroup %d:", g);
-				if (k++ == 0)
-					fprintf(f, "\n  Sensors:");
-				fprintf(f, "%4d", addr);
-			}
-		}
-
-		k = 0;
-		for (addr = 0; addr < 160; ++addr) {
-			dev = module(addr);
-			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
-				(dev->grp[2] == g) || (dev->grp[3] == g)) {
-				if (n++ == 0)
-					fprintf(f, "\nGroup %d:", g);
-				if (k++ == 0)
-					fprintf(f, "\n  Modules:");
-				fprintf(f, "%4d", addr);
-			}
-		}
-		if (n) 
-			fprintf(f, "\n");
-	}
-
-
-	return 0;
-}
-
 
 int cmd_js(FILE * f, int argc, char ** argv)
 {
@@ -1217,6 +1173,62 @@ int cmd_sim(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_group(FILE * f, int argc, char ** argv)
+{
+	int g;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	for (g = 1; g < 256; ++g) {
+		struct ss_device * dev;
+		int addr;
+		int n = 0;
+		int k = 0;
+
+		for (addr = 0; addr < 160; ++addr) {
+			dev = sensor(addr);
+			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+				(dev->grp[2] == g) || (dev->grp[3] == g)) {
+				if (n++ == 0)
+					fprintf(f, "\nGroup %d:", g);
+				if (k++ == 0)
+					fprintf(f, "\n  Sensors:");
+				fprintf(f, "%4d", addr);
+			}
+		}
+
+		k = 0;
+		for (addr = 0; addr < 160; ++addr) {
+			dev = module(addr);
+			if ((dev->grp[0] == g) || (dev->grp[1] == g) ||
+				(dev->grp[2] == g) || (dev->grp[3] == g)) {
+				if (n++ == 0)
+					fprintf(f, "\nGroup %d:", g);
+				if (k++ == 0)
+					fprintf(f, "\n  Modules:");
+				fprintf(f, "%4d", addr);
+			}
+		}
+		if (n) 
+			fprintf(f, "\n");
+	}
+
+
+	return 0;
+}
+
+int cmd_version(FILE *f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "%s\n", version_str);
+	fprintf(f, "%s\n", copyright_str);
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -1239,8 +1251,6 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_sensor, "sensor", "sens", "<addr> [attr [VAL]]", 
 		"get/set sensor attribute" },
-
-	{ cmd_group, "group", "grp", "", "show group information" },
 
 	{ cmd_str, "str", "", "", "dump string pool" },
 
@@ -1265,47 +1275,53 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_config, "config", "cfg", "[compile|erase|load|xfer]", 
 		"configuration options" },
 
-	{ cmd_dbase, "dbase", "db", 
-		"[compile|dump|erase|xfer]", "manage device database" },
+	{ cmd_dbase, "dbase", "db", "[compile|dump|erase|xfer]", 
+		"manage device database" },
 
 	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
-		"Device disable" },
+		"device disable" },
 
 	{ cmd_enable, "enable", "e", "[<sens|mod|grp>[N1 .. N6]|all] ", 
-		"Device enable" },
+		"device enable" },
+
+	{ cmd_group, "group", "grp", "", 
+		"show group information" },
 
 	{ cmd_ls, "ls", "", "", 
 		"list files" },
 
+	{ cmd_quiet, "quiet", "q", "", 
+		"enable quiet mode" },
+
 	{ cmd_reboot, "reboot", "rst", "", 
 		"reboot system" },
 
-	{ cmd_rm, "rm", "", "FILENAME", 
+	{ cmd_rm, "rm", "", "<FILENAME>", 
 		"remove files" },
 
-	{ cmd_rx, "rx", "", "FILENAME", 
-		"XMODEM file receive" },
+	{ cmd_rx, "rx", "", "<FILENAME>", 
+		"Xmodem file receive" },
+
+	{ cmd_sim, "sim", "", "[stop|resume]", 
+		"stop/resume simulation" },
 
 	{ cmd_sym, "sym", "", "", 
 		"JS symbol table dump" },
 
 	{ cmd_trig, "trig", "t", "[ADDR]", 
-		"Trigger module address get/set" },
+		"trigger module address get/set" },
 
 	{ cmd_trouble, "trouble", "tbl", "", 
 		"set/get trouble level" },
 
-	{ cmd_sim, "sim", "", "[stop|resume]", 
-		"stop/resume simulation" },
+	{ cmd_verbose, "verbose", "v", "", 
+		"enable verbose mode" },
 
-	{ cmd_verbose, "verbose", "v", 
-		"", "verbose mode enabled." },
+	{ cmd_version, "version", "ver", "", 
+		"show version information" },
 
-	{ cmd_quiet, "quiet", "q", 
-		"", "quiet mode enabled." },
-
-	{ cmd_xflash, "xflash", "xf", 
-		"firm", "update firmware." },
+	{ cmd_xflash, "xflash", "xf", "firm", 
+		"upgrade firmware using Xmodem" },
 
 	{ NULL, "", "", NULL, NULL }
 };

@@ -52,6 +52,23 @@ struct pw_list {
 	struct pw_entry pw[]; 
 };
 
+/* PW range represents a set of conntiguos entries in a PW list... */
+struct pw_range {
+	uint8_t idx;
+	uint8_t cnt;
+};
+
+/* PW4 set is a set of ranges from the PW4 list:
+   tbl: range of PW4 values representing trouble conditions. 
+   alm: range of PW4 values representing alarm conditions. 
+   tst: range of PW4 values representing remote test (usually one entry only). 
+ */
+struct pw4_set {
+	struct pw_range tbl;
+	struct pw_range alm;
+	struct pw_range tst;
+};
+
 struct cmd_seq {
 	uint16_t msk;
 	uint16_t val;
@@ -90,11 +107,12 @@ struct db_dev_model {
 	uint8_t desc;	
 	uint8_t sim; /* Simulation algorithm */
 	uint8_t res;
-	const struct pw_list * pw1; /* Reference Pulse Width */
-	const struct pw_list * pw2; /* Remote Test Status */
-	const struct pw_list * pw3; /* Manufacturer Code */
-	const struct pw_list * pw4; /* Analog */
-	const struct pw_list * pw5; /* Type Id */
+	const struct pw_list * pw1lst; /* Reference Pulse Width */
+	const struct pw_list * pw2lst; /* Remote Test Status */
+	const struct pw_list * pw3lst; /* Manufacturer Code */
+	const struct pw_list * pw4lst; /* Analog */
+	const struct pw_list * pw5lst; /* Type Id */
+	struct pw4_set pw4lut;
 	struct cmd_list * cmd;
 };
 

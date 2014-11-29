@@ -3,7 +3,10 @@ Quick Startup
 
 
 = Connecting =
-The SLC Device Simulator can be configured through a command shell.
+In order to configure the **SLC Device Simulator** you need a serial terminal program. 
+For windows users we recomend [TeraTerm http://ttssh2.sourceforge.jp/index.html.en], which is Open Source and have scripting capabilities. A the time this page was created the most up to date version is [TeraTerm 4.84 http://sourceforge.jp/projects/ttssh2/downloads/61906/teraterm-4.84.exe].
+
+Linux users can install the Minicom package.
 
 Configure your serial terminal according to the following parameters:
 - 115200 bps
@@ -80,27 +83,78 @@ Enabled.
 ```
 Notice that only devices that have been configured can be enabled.
 
-To disable all devices:
+If you are not sure what devices are currently enabled, a quick listing of enabled devices can be obtained this way:
 ```
+[DEV]$ e
+Sensors:   1   2   3   4   5   6   7   8   9  10
+Modules:   1   2   4   8
+```
+
+To enabled or disable all devices:
+```
+[DEV]$ e all
+  All sensors
+  All modules
+Enabled.
+
 [DEV]$ d all
   All sensors
   All modules
 Disabled.
 ```
 
-Enabling all configured devices:
+Enabling or disabling all configured sensors:
 ```
-[DEV]$ e all
+[DEV]$ e s all
   All sensors
-  All modules
 Enabled.
+
+[DEV]$ d s all
+  All sensors
+  Disabled.
 ```
 
-Listing enabled devices:
+Enabling or disabling all configured modules:
 ```
-[DEV]$ e
-Sensors:   1   2   3   4   5   6   7   8   9  10
-Modules:   1   2   4   8
+[DEV]$ e m all
+  All modules
+Enabled.
+
+[DEV]$ d m all
+  All modules
+Disabled.
+```
+
+Enabling or disabling groups of devices:
+```
+[DEV]$ e g 4 5 6
+  Group 4
+  Group 5
+  Group 6
+Enabled.
+
+[DEV]$ d g 1 2
+  Group 1
+  Group 2
+Disabled.
+```
+
+Listing group of devices:
+
+```
+[DEV]$ grp
+
+Group 1:
+  Sensors:   1   2   3   4   5   6   7   8   9  10
+
+Group 2:
+  Sensors:   1   2
+
+Group 3:
+  Sensors:   3   4   5   6   7   8   9  10
+
+Group 4:
+  Modules:   1   2   4   8
 ```
 
 == Stopping the Simulator ==

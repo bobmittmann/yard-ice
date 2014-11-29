@@ -149,7 +149,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 			unsigned int j = 0; /* length of the string */
 			int qt = c; /* quote character */
 
-			DCC_LOG(LOG_TRACE, "string");
+			DCC_LOG(LOG_INFO, "string");
 			for (;;) {
 				if (++i == len) {
 					/* parse error, unclosed quotes */
@@ -304,7 +304,7 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				const char * cp;
 				int j;
 
-				DCC_LOG1(LOG_TRACE, "label: %d", n);
+				DCC_LOG1(LOG_INFO, "label: %d", n);
 
 				for (j = 0; (cp = jsn->lbl[j]) != NULL; ++j) {
 					if ((strncmp(cp, lbl, n) == 0) && (strlen(cp) == n)) {
@@ -313,11 +313,11 @@ int microjs_json_scan(struct microjs_json_parser * jsn)
 				}
 
 				if (cp != NULL) {
-					DCC_LOG1(LOG_TRACE, "%s:", cp);
+					DCC_LOG1(LOG_INFO, "%s:", cp);
 				} else {
 					/* not in the list of labels !!! */
-					DCC_LOG2(LOG_TRACE, "unlisted label: %c%c...", 
-							lbl[0], lbl[1]);
+					DCC_LOG3(LOG_TRACE, "unlisted label: %c%c%c...", 
+							lbl[0], lbl[1], lbl[2]);
 				}
 
 				cnt -= 2; /* remove the string */
@@ -499,7 +499,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 	int cnt = 0;
 	int typ;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	while ((typ = microjs_json_get_val(jsn, &val)) == MICROJS_JSON_LABEL) {
 		microjs_attr_parser_t parse = NULL;
@@ -517,7 +517,7 @@ int microjs_json_parse_obj(struct microjs_json_parser * jsn,
 		if (parse != NULL) {
 			uint8_t * p;
 
-			DCC_LOG1(LOG_TRACE, "%s:", desc[i].key);
+			DCC_LOG1(LOG_INFO, "%s:", desc[i].key);
 			typ = microjs_json_get_val(jsn, &val);
 			if (typ != desc[i].type) {
 				/* the attribute type do not matches the decoder */

@@ -13,8 +13,10 @@
 #include "isink.h"
 #include "slcdev-lib.h"
 
-#define CFG_VERSION 6
-#define CFG_MAGIC (0xcf124800 + CFG_VERSION)
+/* ATTENTION: The CFG_BLK_VERSION macro should be incremented whenever a
+   configuration structure changes. */
+#define CFG_BLK_VERSION 6
+#define CFG_BLK_MAGIC (0xcf124800 + CFG_BLK_VERSION)
 
 struct cfg_info {
 	uint32_t magic;
@@ -309,11 +311,11 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		};
 
 		dev->model = mod_idx;
-		dev->pw1 = device_db_pw_lookup(mod->pw1, 0);
-		dev->pw2 = device_db_pw_lookup(mod->pw2, 0);
-		dev->pw3 = device_db_pw_lookup(mod->pw3, 0);
-		dev->pw4 = device_db_pw_lookup(mod->pw4, 0);
-		dev->pw5 = device_db_pw_lookup(mod->pw5, 0);
+		dev->pw1 = device_db_pw_lookup(mod->pw1lst, 0);
+		dev->pw2 = device_db_pw_lookup(mod->pw2lst, 0);
+		dev->pw3 = device_db_pw_lookup(mod->pw3lst, 0);
+		dev->pw4 = device_db_pw_lookup(mod->pw4lst, 0);
+		dev->pw5 = device_db_pw_lookup(mod->pw5lst, 0);
 
 		dev->ilat = cdev->ilat;
 		dev->ipre = cdev->ipre;
@@ -574,7 +576,7 @@ struct cfg_info * cfg_info_get(void)
 		return NULL;
 
 	inf = (struct cfg_info *)(entry.fp->data);
-	if (inf->magic != CFG_MAGIC)
+	if (inf->magic != CFG_BLK_MAGIC)
 		return NULL;
 
 	return inf;
@@ -658,7 +660,7 @@ int config_save(struct fs_file * json)
 		return -1;
 	}
 
-	inf.magic = CFG_MAGIC;
+	inf.magic = CFG_BLK_MAGIC;
 	if (json == NULL) {
 		inf.json_crc = 0;
 		inf.json_len = 0;
