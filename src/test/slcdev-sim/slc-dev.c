@@ -16,16 +16,19 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-#define VERSION_NUM "0.3"
+#define VERSION_NUM "0.5"
 #define VERSION_DATE "Nov, 2014"
 
 extern const struct shell_cmd cmd_tab[];
 
-const char * shell_greeting(void) 
+const char * version_str = "SLC Device Simulator " \
+							VERSION_NUM " - " VERSION_DATE;
+const char * copyright_str = "(c) Copyright 2014 - Mircom Group";
+
+void shell_greeting(FILE * f) 
 {
-	return "\n"
-	"SLC Device Simulator " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2014 - Mircom Group\n\n";
+	fprintf(f, "\n%s", version_str);
+	fprintf(f, "\n%s\n\n", copyright_str);
 }
 
 const char * shell_prompt(void)
@@ -45,7 +48,7 @@ const struct file stm32_uart_file = {
 
 int js(FILE * f, char * script, unsigned int len);
 
-char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
@@ -135,7 +138,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	/* main loop */
 	for (;;) {
 		history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
-		fprintf(f, shell_greeting());
+		shell_greeting(f);
 
 		/* start a shell on the serial TTY */
 		for (;;) {

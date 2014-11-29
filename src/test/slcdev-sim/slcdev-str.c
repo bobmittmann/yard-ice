@@ -32,7 +32,7 @@ const struct const_strbuf flash_strbuf = {
 };
 
 uint16_t const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
-uint16_t const_str_heap = 0;
+uint16_t const_str_heap = EEPROM_BLK_STRING_IDX_OFFS;
 
 int flash_str_write(const char * s, unsigned int len)
 {
@@ -56,13 +56,17 @@ int flash_str_write(const char * s, unsigned int len)
 
 	stm32_eeprom_unlock();
 	if ((const_str_heap & 3) == 0) {
+		/* write 32 bits aligned data */
 		stm32_eeprom_wr32(const_str_heap, pos);
 	} else {
+		/* uniligned date write */
 		uint32_t data;
 
 		stm32_eeprom_rd32(const_str_heap - sizeof(uint16_t), &data);
 		data |= pos << 16;
 		stm32_eeprom_wr32(const_str_heap - sizeof(uint16_t), data);
+		/* make sure the next on list is zero, 
+		   this marks the end of list. */
 		stm32_eeprom_wr32(const_str_heap + sizeof(uint16_t), 0);
 	}
 
@@ -85,7 +89,7 @@ int const_strbuf_purge(void)
 	};
 
 	const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
-	const_str_heap = 0;
+	const_str_heap = EEPROM_BLK_STRING_IDX_OFFS;
 
 	/* initialize string pool with a zero length string */
 	buf[0] = '\0';
@@ -102,7 +106,7 @@ int const_strbuf_init(void)
 	int i;
 
 	const_str_stack = FLASH_BLK_CONST_STRING_SIZE;
-	const_str_heap = 0;
+	const_str_heap = EEPROM_BLK_STRING_IDX_OFFS;
 
 	for (i = 0; (offs = p->offs[i]) > 0; ++i) {
 		if (offs < free)
@@ -110,7 +114,7 @@ int const_strbuf_init(void)
 		if (free <= 0)
 			return -1;
 	}
-	const_str_heap = i * sizeof(uint16_t);
+	const_str_heap = EEPROM_BLK_STRING_IDX_OFFS + i * sizeof(uint16_t);
 	const_str_stack = free;
 
 	return 0;

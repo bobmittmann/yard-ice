@@ -22,7 +22,7 @@
 		"imode" : 2,
 		"irate" : 3,
 		"tbias" : 100
-		"addr" : [ 1 ] 
+		"addr" : [ 1, 2, 3 ] 
 	},
 
 	"sensor" : { 

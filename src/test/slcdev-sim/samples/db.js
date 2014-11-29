@@ -1,7 +1,7 @@
 {
 	"info": {
-		"version" : [0, 1]
-		"desc" : "Mircom SLC Device Simulator", 
+		"version" : [0, 2, 0]
+		"desc" : "Mircom SLC Device Simulator Database", 
 	},
 
 	"sensor": { 
@@ -23,7 +23,13 @@
 			["Smoke Alarm 3", 2395, 2800],
 			["Remote Test", 2130, 2880]
 		],
-		"pw5" : [540, 660]
+		"pw5" : [540, 660],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 2],
+			"alm" : [4, 3],
+			"tst" : [7, 1]
+		}
 	},
 
 	"sensor": { 
@@ -45,7 +51,13 @@
 			["Smoke Alarm 3", 2395, 2800],
 			["Remote Test", 2130, 2880]
 		],
-		"pw5" : [540, 660]
+		"pw5" : [540, 660],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 3],
+			"tst" : [6, 1]
+		}
 	},
 
 
@@ -53,12 +65,6 @@
 		"model" : "2251", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 3
-		},
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -73,19 +79,19 @@
 			["Smoke Alarm 3", 2395, 2800],
 			["Remote Test", 3100, 3825]
 		],
-		"pw5" : [810, 990]
+		"pw5" : [810, 990],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 3],
+			"tst" : [6, 1]
+		}
 	},
 
 	"sensor": { 
 		"model" : "2251B", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 3
-		},
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -100,19 +106,19 @@
 			["Smoke Alarm 3", 2395, 2800],
 			["Remote Test", 3100, 3825]
 		],
-		"pw5" : [810, 990]
+		"pw5" : [810, 990],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 3],
+			"tst" : [6, 1]
+		},
 	},
 
 	"sensor": { 
 		"model" : "2251BR", 
 		"desc" : "Photoelectric Smoke Detector", 
 		"sim" : "photo", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 3
-		},
 		"pw1" : [270, 330],
 		"pw2" : [
 			["Remote test disabled", 270, 330],
@@ -127,7 +133,13 @@
 			["Smoke Alarm 3", 2395, 2800],
 			["Remote Test", 3100, 3825]
 		],
-		"pw5" : [810, 990]
+		"pw5" : [810, 990],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 3],
+			"tst" : [6, 1]
+		},
 	},
 
 	"sensor": { 
@@ -149,7 +161,13 @@
 			["Thermal Alarm (60°C)", 2800, 3840],
 			["Remote Test", 3100, 3840]
 		],
-		"pw5" : [810, 990]
+		"pw5" : [810, 990],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 4],
+			"tst" : [7, 1]
+		},
 	},
 
 	"sensor": { 
@@ -171,7 +189,13 @@
 			["Thermal Alarm (60°C)", 2800, 3840],
 			["Remote Test", 3100, 3840]
 		],
-		"pw5" : [810, 990]
+		"pw5" : [810, 990],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 4],
+			"tst" : [7, 1]
+		},
 	},
 
 	"sensor": { 
@@ -187,9 +211,25 @@
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
+			["Trouble", 150, 630],
+			["Alarm, 60°C", 1990, 2230],
+			["Alarm, 70°C", 2220, 2490],
+			["Alarm, 80°C", 2450, 2740],
+			["Alarm, 90°C", 2680, 3000],
 			["Remote Test", 3250, 3330]
 		],
-		"pw5" : [270, 330]
+		"pw5" : [270, 330],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [3, 1],
+			"alm" : [4, 4],
+			"tst" : [8, 1]
+		},
+		"lvl" : {
+			"idx" : 1,
+			"min" : [0, 600, 90, 2700],
+			"max" : [0, 700, 90, 3000]
+		}
 	},
 
 	"sensor": { 
@@ -205,8 +245,19 @@
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
+			["Trouble", 150, 630],
+			["Alarm, 60°C", 1990, 2230],
+			["Alarm, 70°C", 2220, 2490],
+			["Alarm, 80°C", 2450, 2740],
+			["Alarm, 90°C", 2680, 3000],
 			["Remote Test", 3250, 3330]
 		],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [3, 1],
+			"alm" : [4, 4],
+			"tst" : [8, 1]
+		},
 		"pw5" : [270, 330]
 	},
 
@@ -223,9 +274,20 @@
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
+			["Trouble", 150, 630],
+			["Alarm, 60°C", 1990, 2230],
+			["Alarm, 70°C", 2220, 2490],
+			["Alarm, 80°C", 2450, 2740],
+			["Alarm, 90°C", 2680, 3000],
 			["Remote Test", 3250, 3330]
 		],
-		"pw5" : [270, 330]
+		"pw5" : [270, 330],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [3, 1],
+			"alm" : [4, 4],
+			"tst" : [8, 1]
+		}
 	},
 
 
@@ -242,9 +304,20 @@
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
+			["Trouble", 150, 630],
+			["Alarm, 60°C", 1990, 2230],
+			["Alarm, 70°C", 2220, 2490],
+			["Alarm, 80°C", 2450, 2740],
+			["Alarm, 90°C", 2680, 3000],
 			["Remote Test", 3250, 3330]
 		],
-		"pw5" : [270, 330]
+		"pw5" : [270, 330],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [3, 1],
+			"alm" : [4, 4],
+			"tst" : [8, 1]
+		}
 	},
 
 	"sensor": { 
@@ -260,9 +333,20 @@
 		"pw4" : [
 			["Normal, 25°C", 1070, 1400],
 			["Normal, 57.2°C", 1895, 2110],
+			["Trouble", 150, 630],
+			["Alarm, 60°C", 1990, 2230],
+			["Alarm, 70°C", 2220, 2490],
+			["Alarm, 80°C", 2450, 2740],
+			["Alarm, 90°C", 2680, 3000],
 			["Remote Test", 3250, 3330]
 		],
-		"pw5" : [270, 330]
+		"pw5" : [270, 330],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [3, 1],
+			"alm" : [4, 4],
+			"tst" : [8, 1]
+		}
 	},
 
 	"sensor": { 
@@ -287,22 +371,22 @@
 			["Level 3 Alarm 3% 2%/ft.", 2052, 2346,],
 			["Level 4 Alarm - Acclimate 2% - 4%", 2427, 2774],
 			["Level 5 Alarm 4%/ft", 2800, 3200],
-			["Level 6 Alarm - Thermal Alarm (60°C, 135° Heat)", 
-			3250, 3600],
+			["Level 6 Alarm - Thermal Alarm (60°C, 135° Heat)", 3250, 3600],
+			["Remote Test", 3600, 3900]
 		],
-		"pw5" : [1910, 2240]
+		"pw5" : [1910, 2240],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 3],
+			"alm" : [5, 6],
+			"tst" : [11, 1]
+		}
 	},
 
 	"sensor": { 
 		"model" : "2251 COPTIR", 
 		"sim" : "coptir", 
 		"desc" : "Multicriteria Smoke Detector", 
-		"tbl" : {
-			"lvl" : 7
-		},
-		"alm" : { 
-			"lvl" : 8
-		},
 		"pw1" : ["Reference", 285, 315],
 		"pw2" : [
 			["Remote test disabled", 285, 315],
@@ -328,19 +412,19 @@
 			["Alarm 6 Heat", 3230, 3570],
 			["Remote Test / Magnet Test", 2850, 3150]
 		],
-		"pw5" : [1995, 2205]
+		"pw5" : [1995, 2205],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 7],
+			"alm" : [9, 6],
+			"tst" : [15, 1]
+		}
 	},
 
 	"module": { 
 		"model": "M500S", 
 		"desc": "Supervised Control Module", 
 		"sim" : "control", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
@@ -356,19 +440,18 @@
 			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": [480, 720]
+		"pw5": [480, 720],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
 	},
 
 	"module": { 
 		"model": "SC-6", 
 		"desc": "6x Supervised Control Module", 
 		"sim" : "control", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": [240, 360], 
 		"pw2": [ 
 			["Reset(Normal)", 240, 360],
@@ -384,7 +467,13 @@
 			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": [480, 720]
+		"pw5": [480, 720],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
 	},
 
 
@@ -392,12 +481,6 @@
 		"model": "M501M", 
 		"desc": "Freestanding Minimod", 
 		"sim" : "mini", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": [240, 360], 
 		"pw2": ["Normal", 240, 360 ],
 		"pw3": [
@@ -410,7 +493,13 @@
 			["Open", 0, 220],
 			["Short", 1613, 4000] 
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
 	},
 
 	"module": { 
@@ -418,12 +507,6 @@
 		"ap": false,
 		"desc": "Monitor Module", 
 		"sim" : "monitor", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -439,7 +522,13 @@
 			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
 	},
 
 	"module": { 
@@ -447,12 +536,6 @@
 		"ap": false,
 		"desc": "Dual Monitor Module", 
 		"sim" : "monitor", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -468,7 +551,13 @@
 			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
 	},
 
 	"module": { 
@@ -476,12 +565,6 @@
 		"ap": false,
 		"desc": "10 Input Module", 
 		"sim" : "monitor", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": ["Reference Pulsewidth", 240, 360], 
 		"pw2": [
 			["Class A Normal", 240, 360],
@@ -497,7 +580,13 @@
 			["Open", 0, 243],
 			["Short", 1619, 4000]
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
 	},
 
 
@@ -513,7 +602,12 @@
 			["Normal", 0, 3825],
 			["Power < 12V", 0, 100]
 		],
-		"pw5": [280, 320]
+		"pw5": [280, 320],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1]
+		}
+
 	},
 
 	"module": { 
@@ -548,12 +642,6 @@
 		"model": "M502M", 
 		"sim" : "czif", 
 		"desc": "Conventional Zone Interface Module", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": [274, 339],
 		"pw2": [
 			["Class A Normal", 248, 367],
@@ -569,19 +657,20 @@
 			["Open", 0, 212],
 			["Short,Alarm", 1800, 4000]
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
+
+
 	},
 
 	"module": { 
 		"model": "CZ-6", 
 		"sim" : "czif", 
 		"desc": "Six Up Conventional Zone Interface Module", 
-		"tbl" : {
-			"lvl" : 1
-		},
-		"alm" : { 
-			"lvl" : 2
-		},
 		"pw1": [274, 339],
 		"pw2": [
 			["Class A Normal", 248, 367],
@@ -597,9 +686,13 @@
 			["Open", 0, 212],
 			["Short,Alarm", 1800, 4000]
 		],
-		"pw5": [240, 360]
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
 	},
-
 
 	"module": { 
 		"model": "M500FP", 

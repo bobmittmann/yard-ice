@@ -9,90 +9,13 @@
 #define __SLCDEV_LIB_DEF__
 #include "slcdev-lib.h"
 
+/*----------------------------------------------------------------------
+ * CLIP mode sensors simulation
+ ----------------------------------------------------------------------- */
+
 int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
 int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
 struct slcdev_usr usr;
-
-void dev_sim_enable(bool mod, unsigned int addr)
-{
-	if (addr > 160) 
-		return;
-
-	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 1;
-}
-
-void dev_sim_disable(bool mod, unsigned int addr)
-{
-	if (addr > 160) 
-		return;
-
-	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 0;
-}
-
-void dev_sim_multiple_disable(uint32_t s[], uint32_t m[])
-{
-	int n;
-
-	for (n = 0; n < 160; ++n) {
-		int j = n / 32; 
-		int i = n % 32; 
-		/* disable sensors */
-		if ((s != NULL) && (s[j] & (1 << i))) {
-			ss_dev_tab[n].enabled = 0;
-		}
-		/* disable modules */
-		if ((m != NULL) && (m[j] & (1 << i)))
-			ss_dev_tab[160 + n].enabled = 0;
-	}
-}
-
-void dev_sim_multiple_enable(uint32_t s[], uint32_t m[])
-{
-	int n;
-
-	for (n = 0; n < 160; ++n) {
-		int j = n / 32; 
-		int i = n % 32; 
-		/* enable sensors */
-		if ((s != NULL) && (s[j] & (1 << i)))
-			ss_dev_tab[n].enabled = 1;
-		/* enable modules */
-		if ((m != NULL) && (m[j] & (1 << i)))
-			ss_dev_tab[160 + n].enabled = 1;
-	}
-}
-
-void dev_sim_multiple_alarm_set(uint32_t s[], uint32_t m[], unsigned int lvl)
-{
-	int n;
-
-	for (n = 0; n < 160; ++n) {
-		int j = n / 32; 
-		int i = n % 32; 
-		/* enable sensors */
-		if ((s != NULL) && (s[j] & (1 << i)))
-			ss_dev_tab[n].alm = lvl;
-		/* enable modules */
-		if ((m != NULL) && (m[j] & (1 << i)))
-			ss_dev_tab[160 + n].alm = lvl;
-	}
-}
-
-void dev_sim_multiple_trouble_set(uint32_t s[], uint32_t m[], unsigned int lvl)
-{
-	int n;
-
-	for (n = 0; n < 160; ++n) {
-		int j = n / 32; 
-		int i = n % 32; 
-		/* enable sensors */
-		if ((s != NULL) && (s[j] & (1 << i)))
-			ss_dev_tab[n].tbl = lvl;
-		/* enable modules */
-		if ((m != NULL) && (m[j] & (1 << i)))
-			ss_dev_tab[160 + n].tbl = lvl;
-	}
-}
 
 void sim_js_exec(void * ptr, struct ss_device * dev, 
 				 struct db_dev_model * model, uint8_t code[])
@@ -101,6 +24,10 @@ void sim_js_exec(void * ptr, struct ss_device * dev,
 
 	microjs_exec(vm, code);
 }
+
+/*----------------------------------------------------------------------
+ * CLIP mode sensors simulation
+ ----------------------------------------------------------------------- */
 
 #define REMOTE_TEST_MSK 0x2d /* 101101 */
 #define REMOTE_TEST_ON  0x00 
@@ -113,18 +40,44 @@ void sensor_ctl_default(struct ss_device * dev,
 	/* Remote test */
 	switch (ctl & REMOTE_TEST_MSK) {
 	case REMOTE_TEST_ON:
-		DCC_LOG(LOG_INFO, "Remote test enabled");
-		dev->tst = 1;
-		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
-		dev->pw4 = device_db_pw_lookup(model->pw4, 3);
+		if (dev->tst) { 
+			DCC_LOG(LOG_TRACE, "Remote test enabled");
+			dev->tst = 1;
+			dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
+		}
 		break;
 	case REMOTE_TEST_OFF:
-		DCC_LOG(LOG_INFO, "Remote test disabled");
-		dev->tst = 0;
-//		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
-//		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+		if (dev->tst) { 
+			DCC_LOG(LOG_TRACE, "Remote test disabled");
+			dev->tst = 0;
+			dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
+		}
 		break;
 	}
+}
+
+void sensor_pw4_default(struct ss_device * dev, struct db_dev_model * model)
+{
+	int idx;
+	int lvl;
+
+	if (dev->tst) {
+		idx = model->pw4lut.tst.idx;
+	} else if ((lvl = dev->alm) > 0) {
+		if (lvl > model->pw4lut.alm.cnt)
+			lvl = model->pw4lut.alm.cnt;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", lvl);
+		idx = model->pw4lut.alm.idx + lvl - 1;
+	} else if ((lvl = dev->tbl) > 0) {
+		if (lvl > model->pw4lut.tbl.cnt)
+			lvl = model->pw4lut.tbl.cnt;
+		DCC_LOG1(LOG_TRACE, "Trouble %d", lvl);
+		idx = model->pw4lut.tbl.idx + lvl - 1;
+	} else {
+		idx = 1;
+	}
+
+	dev->pw4 = device_db_pw_lookup(model->pw4lst, idx);
 }
 
 /* simulate a custom sensor */
@@ -152,75 +105,33 @@ void sensor_sim_custom(void * ptr, struct ss_device * dev,
 void sensor_sim_photo(void * ptr, struct ss_device * dev, 
 					  struct db_dev_model * model, uint32_t ctl)
 {
-	int tbl_max = 1;
-	int alm_max = 3;
-	int lvl;
-
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
-
-	if ((lvl = dev->alm) > 0) {
-		if (lvl > alm_max)
-			lvl = alm_max;
-		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
-	} else if ((lvl = dev->tbl) > 0) {
-		if (lvl > tbl_max)
-			lvl = tbl_max;
-		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->tbl);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
-	} else {
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
-	}
+	sensor_pw4_default(dev, model);
 }
 
 /* simulate a ion smoke detector */
 void sensor_sim_ion(void * ptr, struct ss_device * dev, 
 					struct db_dev_model * model, uint32_t ctl)
 {
-	int lvl;
-
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
-
-	if ((lvl = dev->alm) > 0) {
-		if (lvl > 3)
-			lvl = 3;
-		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + 2);
-	} else if ((lvl = dev->tbl) > 0) {
-		if (lvl > 2)
-			lvl = 2;
-		DCC_LOG1(LOG_INFO, "Trouble %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
-	} else {
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
-	}
+	sensor_pw4_default(dev, model);
 }
 
 /* simulate a heat detector sensor */
 void sensor_sim_heat(void * ptr, struct ss_device * dev, 
 					 struct db_dev_model * model, uint32_t ctl)
 {
-	int lvl;
-
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
-
-	if ((lvl = dev->alm) > 0) {
-		if (lvl > 2)
-			lvl = 2;
-		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
-	} else {
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
-	}
+	sensor_pw4_default(dev, model);
 }
 
 /* simulate an Acclimate Photoelectric Smoke Sensor */
@@ -231,40 +142,54 @@ void sensor_sim_acclimate(void * ptr, struct ss_device * dev,
 			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
+	sensor_pw4_default(dev, model);
 }
 
 /* simulate an Beam Smoke Sensor */
 void sensor_sim_beam(void * ptr, struct ss_device * dev, 
 						  struct db_dev_model * model, uint32_t ctl)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
+	sensor_pw4_default(dev, model);
 }
 
 /* simulate a COPTIR Smoke Detector Sensor */
 void sensor_sim_coptir(void * ptr, struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
-	int tbl_max = 7;
-	int alm_max = 7;
-	int lvl;
+	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
+			 dev->addr, ctl);
 
 	sensor_ctl_default(dev, model, ctl);
+	sensor_pw4_default(dev, model);
+}
 
-	if ((lvl = dev->alm) > 0) {
-		if (lvl > alm_max)
-			lvl = alm_max;
-		DCC_LOG1(LOG_INFO, "Alarm %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
+
+void module_pw4_default(struct ss_device * dev, struct db_dev_model * model)
+{
+	int idx;
+	int lvl;
+
+	if (dev->tst) {
+		idx = model->pw4lut.tst.idx;
+	} else if ((lvl = dev->alm) > 0) {
+		if (lvl > model->pw4lut.alm.cnt)
+			lvl = model->pw4lut.alm.cnt;
+		DCC_LOG1(LOG_TRACE, "Alarm %d", lvl);
+		idx = model->pw4lut.alm.idx + lvl - 1;
 	} else if ((lvl = dev->tbl) > 0) {
-		if (lvl > tbl_max)
-			lvl = tbl_max;
-		DCC_LOG1(LOG_INFO, "Trouble %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
+		if (lvl > model->pw4lut.tbl.cnt)
+			lvl = model->pw4lut.tbl.cnt;
+		DCC_LOG1(LOG_TRACE, "Trouble %d", lvl);
+		idx = model->pw4lut.tbl.idx + lvl - 1;
 	} else {
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
+		idx = 1;
 	}
+
+	dev->pw4 = device_db_pw_lookup(model->pw4lst, idx);
 }
 
 /* simulate a custom module */
@@ -372,14 +297,16 @@ void module_sim_relay(void * ptr, struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_INFO, "Set");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
 		break;
 
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_INFO, "Reset");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
 		break;
 	}
+
+	module_pw4_default(dev, model);
 }
 
 /* simulate a supervised cntrol module */
@@ -393,13 +320,15 @@ void module_sim_control(void * ptr, struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_INFO, "Control ON");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
 		break;
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_INFO, "Control Off");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
 		break;
 	}
+
+	module_pw4_default(dev, model);
 }
 
 /* simulate a firefighter telephone module */
@@ -413,14 +342,16 @@ void module_sim_phone(void * ptr, struct ss_device * dev,
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
 		DCC_LOG(LOG_INFO, "Set");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
 		break;
 
 	case CONTROL_OUT_OFF:
 		DCC_LOG(LOG_INFO, "Reset");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
 		break;
 	}
+
+	module_pw4_default(dev, model);
 }
 
 #define CLASS_A_MSK      0x2d /* 101101 */
@@ -431,36 +362,20 @@ void module_sim_phone(void * ptr, struct ss_device * dev,
 void module_sim_monitor(void * ptr, struct ss_device * dev, 
 						struct db_dev_model * model, uint32_t ctl)
 {
-	int tbl_max = 1;
-	int alm_max = 1;
-	int lvl;
-
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
 		DCC_LOG(LOG_TRACE, "Class A switched");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 1);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
 		break;
 	case CLASS_A_NORMAL:
 		DCC_LOG(LOG_TRACE, "Class A normal");
-		dev->pw2 = device_db_pw_lookup(model->pw2, 0);
+		dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
 		break;
 	}
 
-	if ((lvl = dev->alm) > 0) {
-		if (lvl > alm_max)
-			lvl = alm_max;
-		DCC_LOG1(LOG_TRACE, "Alarm %d", dev->alm);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl + tbl_max);
-	} else if ((lvl = dev->tbl) > 0) {
-		if (lvl > tbl_max)
-			lvl = tbl_max;
-		DCC_LOG1(LOG_TRACE, "Trouble %d", dev->tbl);
-		dev->pw4 = device_db_pw_lookup(model->pw4, lvl);
-	} else {
-		dev->pw4 = device_db_pw_lookup(model->pw4, 0);
-	}
+	module_pw4_default(dev, model);
 }
 
 /* simulate a mini-module */
@@ -468,6 +383,8 @@ void module_sim_mini(void * ptr, struct ss_device * dev,
 					 struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
+	module_pw4_default(dev, model);
 }
 
 /* simulate a 2 wire module */
@@ -475,6 +392,8 @@ void module_sim_czif(void * ptr, struct ss_device * dev,
 					  struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
+	module_pw4_default(dev, model);
 }
 
 /* simulate a 4-20ma input device */
@@ -482,6 +401,8 @@ void module_sim_4_20ma(void * ptr, struct ss_device * dev,
 					   struct db_dev_model * model, uint32_t ctl)
 {
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+
+	module_pw4_default(dev, model);
 }
 
 #define SIM_MODEL_NAME_MAX 12
@@ -633,6 +554,8 @@ void __attribute__((noreturn)) sim_event_task(void)
 					dev->led = 1;
 				else if ((ctl & 0x5) == 4)
 					dev->led = 0;
+
+				/* simulate the device */
 				sim->run(&vm, dev, model, ctl);
 			}
 			break;
@@ -760,3 +683,83 @@ void __attribute__((noreturn)) sim_event_task(void)
 	}
 }
 
+void dev_sim_enable(bool mod, unsigned int addr)
+{
+	if (addr > 160) 
+		return;
+
+	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 1;
+}
+
+void dev_sim_disable(bool mod, unsigned int addr)
+{
+	if (addr > 160) 
+		return;
+
+	ss_dev_tab[addr + (mod ? 160 : 0)].enabled = 0;
+}
+
+void dev_sim_multiple_disable(uint32_t s[], uint32_t m[])
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* disable sensors */
+		if ((s != NULL) && (s[j] & (1 << i))) {
+			ss_dev_tab[n].enabled = 0;
+		}
+		/* disable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].enabled = 0;
+	}
+}
+
+void dev_sim_multiple_enable(uint32_t s[], uint32_t m[])
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].enabled = 1;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].enabled = 1;
+	}
+}
+
+void dev_sim_multiple_alarm_set(uint32_t s[], uint32_t m[], unsigned int lvl)
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].alm = lvl;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].alm = lvl;
+	}
+}
+
+void dev_sim_multiple_trouble_set(uint32_t s[], uint32_t m[], unsigned int lvl)
+{
+	int n;
+
+	for (n = 0; n < 160; ++n) {
+		int j = n / 32; 
+		int i = n % 32; 
+		/* enable sensors */
+		if ((s != NULL) && (s[j] & (1 << i)))
+			ss_dev_tab[n].tbl = lvl;
+		/* enable modules */
+		if ((m != NULL) && (m[j] & (1 << i)))
+			ss_dev_tab[160 + n].tbl = lvl;
+	}
+}

@@ -163,8 +163,8 @@ def main():
 
 	pair.sort()
 
-	print("\tswitch (mode) {");
-	print("");
+	print("\tswitch (mode) {")
+	print("")
 
 	n = 0
 	while n < len(pair):
@@ -184,13 +184,26 @@ def main():
 			  " [ " + nm[x1] + nm[y1] + nm[z1] + "]" + \
 			  " {:s} */".format(nm[s4]))
 		print_io([[x0, x1], [y0, y1], [z0, z1]], s4)
-		print("\t\tbreak;");
-		print("");
+		print("\t\tbreak;")
+		print("")
 		n = n + 1
 
-	print("\t}");
-	print("");
+	print("\t}")
+	print("")
 
+	print("/*")
+	print("\t| mode | i0(mA) | i1(mA) |")
+	print("\t+------+--------+--------+")
+	n = 0
+	while n < len(pair):
+		i0 = pair[n][0][0]
+		i1 = pair[n][1][0]
+		print("\t| {:4d} | {:6d} | {:6d} |" .format(n, i0, i1))
+		n = n + 1
+
+	print("\t+------+--------+--------+")
+	print("*/");
+	print("");
 
 if __name__ == '__main__':
 	main()
