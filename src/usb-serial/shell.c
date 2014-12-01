@@ -37,6 +37,8 @@
 #include "board.h"
 
 extern const struct shell_cmd shell_cmd_tab[];
+extern const char * version_str;
+extern const char * copyright_str;
 
 /* -------------------------------------------------------------------------
  * Help
@@ -62,12 +64,25 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	}
 
 	fprintf(f, "\n Command:   Alias:  Desciption: \n");
-	for (cmd = (struct shell_cmd *)shell_cmd_tab; cmd->callback != NULL; cmd++) {
+	for (cmd = (struct shell_cmd *)shell_cmd_tab; 
+		 cmd->callback != NULL; cmd++) {
 		fprintf(f, "  %-10s %-4s   %s\n", cmd->name, cmd->alias, cmd->desc);
 	}
 
 	return 0;
 }
+
+int cmd_version(FILE *f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "%s\n", version_str);
+	fprintf(f, "%s\n", copyright_str);
+
+	return 0;
+}
+
 
 int usb_xflash(uint32_t offs, uint32_t len);
 
@@ -110,6 +125,9 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
+
+	{ cmd_version, "version", "ver", "", 
+		"show version information" },
 
 	{ cmd_xflash, "xflash", "xf", 
 		"firm", "update firmware." },

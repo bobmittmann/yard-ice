@@ -177,6 +177,8 @@ struct usr_switch {
 };
 
 struct slcdev_cfg_info {
+	uint8_t tag; /* TAG string */
+	uint8_t author; /* Author string */
 	uint8_t desc; /* Description string */
 	uint8_t version[3]; /* version info */
 };
