@@ -61,7 +61,8 @@ int cmd_exec(FILE * f, const struct shell_cmd * cmd, char * line);
 char * cmd_get_next(char ** linep);
 
 int shell(FILE * f, const char * (* prompt)(void), 
-		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab);
+		  void (* greeting)(FILE *), 
+		  const struct shell_cmd * cmd_tab);
 
 void history_add(struct cmd_history * ht, char * s);
 

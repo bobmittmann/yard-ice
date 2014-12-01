@@ -15,7 +15,7 @@
 
 /* ATTENTION: The CFG_BLK_VERSION macro should be incremented whenever a
    configuration structure changes. */
-#define CFG_BLK_VERSION 6
+#define CFG_BLK_VERSION 7
 #define CFG_BLK_MAGIC (0xcf124800 + CFG_BLK_VERSION)
 
 struct cfg_info {
@@ -68,11 +68,14 @@ static int cfg_stack_push(void * buf, unsigned int len, void ** ptr)
 }
 
 static const struct microjs_attr_desc info_desc[] = {
-	{ "desc", MICROJS_JSON_STRING, 0, offsetof(struct slcdev_cfg_info, desc),
-		microjs_const_str_enc },
-	{ "version", MICROJS_JSON_ARRAY, 3, offsetof(struct slcdev_cfg_info, 
-												 version),
-		microjs_array_u8_enc },
+	{ "tag", MICROJS_JSON_STRING, 0, 
+		offsetof(struct slcdev_cfg_info, tag), microjs_const_str_enc },
+	{ "desc", MICROJS_JSON_STRING, 0, 
+		offsetof(struct slcdev_cfg_info, desc), microjs_const_str_enc },
+	{ "author", MICROJS_JSON_STRING, 0, 
+		offsetof(struct slcdev_cfg_info, author), microjs_const_str_enc },
+	{ "version", MICROJS_JSON_ARRAY, 3, 
+		offsetof(struct slcdev_cfg_info, version), microjs_array_u8_enc },
 	{ "", 0, 0, 0, NULL}
 };
 
@@ -518,6 +521,7 @@ const char * const cfg_labels[] = {
 	"info",
 	"desc",
 	"version",
+	"author",
 	NULL	
 };
 
@@ -707,8 +711,9 @@ int config_show_info(FILE * f)
 
 	if ((inf = cfg_info_get()) == NULL)
 		return -1;
-
-	fprintf(f, " - Desc: \"%s\"\n", const_str(usr.cfg_info.desc));
+	fprintf(f, " -     Tag: \"%s\"\n", const_str(usr.cfg_info.tag));
+	fprintf(f, " -  Author: \"%s\"\n", const_str(usr.cfg_info.author));
+	fprintf(f, " -    Desc: \"%s\"\n", const_str(usr.cfg_info.desc));
 	fprintf(f, " - Version: %d.%d.%d\n", 
 			usr.cfg_info.version[0], 
 			usr.cfg_info.version[1], 

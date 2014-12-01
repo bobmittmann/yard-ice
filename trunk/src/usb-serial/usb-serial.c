@@ -47,15 +47,20 @@
 #include "led.h"
 #include "io.h"
 
-#define VERSION_NUM "0.3"
-#define VERSION_DATE "Jun, 2014"
+#define VERSION_NUM "0.4"
+#define VERSION_DATE "Nov, 2014"
 
 extern const struct shell_cmd shell_cmd_tab[];
 
-const char * shell_greeting(void)
+const char * version_str = "USB-Serial Converter " \
+							VERSION_NUM " - " VERSION_DATE;
+const char * copyright_str = "(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)";
+
+
+void shell_greeting(FILE * f) 
 {
-	return "\nUSB-Serial Converter " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+	fprintf(f, "\n%s", version_str);
+	fprintf(f, "\n%s\n\n", copyright_str);
 }
 
 const char * shell_prompt(void)

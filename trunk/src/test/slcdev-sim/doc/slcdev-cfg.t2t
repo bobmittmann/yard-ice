@@ -50,7 +50,10 @@ Top level objects are the type of objects declared just after the initial braces
 == Info ==
 Info object is used to track the configuration version.
 Two fields are provided:
-- ``"desc" :`` string with a generic description of the configuration.
+- ``"tag" :`` string with a short configuration name.
+- ``"author" :`` string with a the name of the confiuration's author.
+- ``"panel" :`` string describing the fire alarm panel.
+- ``"desc" :`` string with a generic description of what this configuration is intended to.
 - ``"version" :`` array with version information with the following format: ``[MAJOR, MINOR, REV]``. Notice that ``MINOR`` and ``REV`` are optional.
 
 
@@ -63,7 +66,7 @@ Devices can be either **sensors** or **modules**. They share the same general st
 - ``"irate" :`` current sink slew rate. Range: 0 to 3.
 - ``"tbias" :`` current pulse time bias.
 - ``"addr" :`` device addresses. This can be either a single address or a list (array) of addresses.
-- ``"ledno" :`` number corresponding to a LED which will flash when the device is polled. Valida values: 1 to 6.
+- ``"ledno" :`` number corresponding to a LED which will flash when the device is polled. Valid values: 1 to 6.
 - ``"enabled" :`` enables/disables the device. Boolean.
 - ``"model" :`` string matching a corresponding simulation model from the Device Database.
 - ``"tag" :`` string labeling the device.
@@ -87,12 +90,12 @@ Device polling trigger module.
 
 = Current Sink =
 
-The **SLC DEvice Simulator** have a flexible software programmable current sink arrangement. Latencies, currnet levels, slew rate and time tolarance can be programmed for individual devices. 
+The **SLC DEvice Simulator** have a flexible software programmable current sink arrangement. Latencies, current levels, slew rate and time tolerance can be programmed for individual devices. 
 
 
 == Mode ==
 
-The current sink module can be programmed for different currend draws according to the following table:
+The current sink module can be programmed for different current levels according to the following table:
 
 | **mode** | **pre**(mA) | **sink**(mA) |
 |    0 |    128 |     45 |

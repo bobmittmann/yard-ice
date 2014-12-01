@@ -44,7 +44,7 @@
 #endif
 
 int shell(FILE * f, const char * (* prompt)(void), 
-		  const char * (* greeting)(void), 
+		  void (* greeting)(FILE *), 
 		  const struct shell_cmd cmd_tab[])
 {
 	char line[SHELL_LINE_MAX];
@@ -59,7 +59,7 @@ int shell(FILE * f, const char * (* prompt)(void),
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 
 	if (greeting != NULL)
-		fprintf(f, greeting());
+		greeting(f);
 
 	for (;;) {
 		fprintf(f, "%s", prompt());
