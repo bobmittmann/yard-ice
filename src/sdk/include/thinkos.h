@@ -136,14 +136,20 @@ int thinkos_flag_alloc(void);
 
 int thinkos_flag_free(int flag);
 
+
+int thinkos_flag_set(int flag);
+
+int thinkos_flag_clr(int flag);
+
 int thinkos_flag_wait(int flag);
 
 int thinkos_flag_timedwait(int flag, unsigned int ms);
 
-int thinkos_flag_clr(int flag);
+int thinkos_flag_give(int flag);
 
-int thinkos_flag_set(int flag);
+int thinkos_flag_take(int flag);
 
+int thinkos_flag_timedtake(int flag, unsigned int ms);
 
 int thinkos_irq_wait(int irq);
 

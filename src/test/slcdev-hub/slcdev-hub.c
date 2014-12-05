@@ -83,7 +83,7 @@ void monitor_init(void)
 
 	thinkos_thread_create((void *)monitor_task, (void *)NULL,
 						  monitor_stack, sizeof(monitor_stack) |
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), NULL);
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
 
 uint32_t __attribute__((aligned(8))) watchdog_stack[32];
@@ -93,7 +93,7 @@ void watchdog_init(void)
 
 	thinkos_thread_create((void *)watchdog_task, (void *)NULL,
 						  watchdog_stack, sizeof(watchdog_stack) |
-						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0), NULL);
+						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 }
 	
 
@@ -143,7 +143,7 @@ void console_shell_init(void)
 {
 	thinkos_thread_create((void *)console_shell_task, (void *)NULL,
 						  console_shell_stack, sizeof(console_shell_stack) | 
-						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2), NULL);
+						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 }
 
 

@@ -260,14 +260,14 @@ void UART_ISR(void)
 		}
 		
 		if (uart_fifo_is_half_full(&dev->rx_fifo))
-			__thinkos_flag_signal(dev->rx_flag);
+			__thinkos_flag_give(dev->rx_flag);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_MSG, "IDLE");
 		c = uart->dr;
 		(void)c;
-		__thinkos_flag_signal(dev->rx_flag);
+		__thinkos_flag_give(dev->rx_flag);
 	}
 
 	if (sr & USART_TXE) {
@@ -276,7 +276,7 @@ void UART_ISR(void)
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
 #if ENABLE_UART_TX_BLOCK
-			__thinkos_flag_signal(dev->tx_flag);
+			__thinkos_flag_give(dev->tx_flag);
 #endif
 		} else {
 			uart->dr = uart_fifo_get(&dev->tx_fifo);

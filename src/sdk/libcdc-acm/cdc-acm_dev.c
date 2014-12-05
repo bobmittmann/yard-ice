@@ -79,7 +79,7 @@ int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
-	__thinkos_flag_signal(dev->rx_flag);
+	__thinkos_flag_give(dev->rx_flag);
 	return 0;
 }
 
@@ -87,7 +87,7 @@ int usb_cdc_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
-	__thinkos_flag_signal(dev->tx_flag);
+	__thinkos_flag_give(dev->tx_flag);
 	return 0;
 
 }
@@ -96,7 +96,7 @@ int usb_cdc_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
-	__thinkos_flag_signal_all(dev->ctl_flag);
+	__thinkos_flag_set(dev->ctl_flag);
 	return 0;
 }
 
@@ -185,9 +185,9 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
 		/* signal any pending threads */
-		__thinkos_flag_signal(dev->rx_flag);
-		__thinkos_flag_signal(dev->tx_flag);
-		__thinkos_flag_signal_all(dev->ctl_flag);
+//		__thinkos_flag_signal(dev->rx_flag);
+		__thinkos_flag_give(dev->tx_flag);
+		__thinkos_flag_set(dev->ctl_flag);
 		break;
 	}
 
@@ -236,7 +236,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
         DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
         DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
 
-		__thinkos_flag_signal_all(dev->ctl_flag);
+		__thinkos_flag_set(dev->ctl_flag);
 		break;
 
 	case GET_LINE_CODING:
@@ -258,7 +258,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		/* there might have threads waiting for
 		   modem control line changes (DTR, RTS)
 		   wake them up */
-		__thinkos_flag_signal_all(dev->ctl_flag);
+		__thinkos_flag_set(dev->ctl_flag);
 		break;
 
 	default:
@@ -297,9 +297,9 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 	DCC_LOG(LOG_TRACE, "...");
 	dev->acm.control = 0;
 
-	__thinkos_flag_signal_all(dev->ctl_flag);
-	__thinkos_flag_signal(dev->tx_flag);
-	__thinkos_flag_signal(dev->rx_flag);
+	__thinkos_flag_set(dev->ctl_flag);
+	__thinkos_flag_clr(dev->tx_flag);
+//	__thinkos_flag_wakeup_all(dev->rx_flag);
 
 	return 0;
 }
@@ -333,19 +333,15 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 		}
 #endif
 		DCC_LOG2(LOG_INFO, "len=%d rem=%d", len, rem);
+		thinkos_flag_take(dev->tx_flag);
+		DCC_LOG(LOG_INFO, "wakeup");
 
-		__thinkos_flag_clr(dev->tx_flag);
-
-		if ((n = usb_dev_ep_tx_start(dev->usb, dev->in_ep, ptr, rem)) < 0) {
+		if ((n = usb_dev_ep_tx_start(dev->usb, dev->in_ep, ptr, rem)) < 0)
 			return n;
-		}
 
 		rem -= n;
 		ptr += n;
 
-		DCC_LOG(LOG_INFO, "wait");
-		thinkos_flag_wait(dev->tx_flag);
-		DCC_LOG(LOG_INFO, "wakeup");
 	}
 
 	return len;
@@ -367,13 +363,12 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 
 	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
 
-	if ((ret = thinkos_flag_timedwait(dev->rx_flag, msec)) < 0) {
+	if ((ret = thinkos_flag_timedtake(dev->rx_flag, msec)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
 			DCC_LOG(LOG_INFO, "timeout!!");
 		}
 		return ret;
 	}
-	__thinkos_flag_clr(dev->rx_flag);
 
 	if (len >= EP_IN_MAX_PKT_SIZE) {
 		n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
@@ -507,7 +502,6 @@ int usb_cdc_dte_wait(usb_cdc_class_t * cl)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
 	while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
-		__thinkos_flag_clr(dev->ctl_flag);
 		DCC_LOG(LOG_INFO, "wait");
 		thinkos_flag_wait(dev->ctl_flag);
 		DCC_LOG(LOG_INFO, "CTL wakeup...");
@@ -592,7 +586,9 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
 
-	__thinkos_flag_clr(dev->rx_flag);
+	__thinkos_flag_clr(dev->tx_flag); 
+	__thinkos_flag_clr(dev->rx_flag); 
+	__thinkos_flag_clr(dev->ctl_flag); 
 
 	DCC_LOG2(LOG_TRACE, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
 	usb_cdc_sn_set(sn);

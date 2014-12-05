@@ -134,8 +134,7 @@ void net_recv_init(void)
 
 	thread = thinkos_thread_create((void *)net_recv_task, (void *)NULL,
 								   net_recv_stack, sizeof(net_recv_stack) |
-								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5),
-								   NULL);
+								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5));
 }
 
 void net_probe_enable(void)
