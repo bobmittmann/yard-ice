@@ -89,7 +89,7 @@ __thinkos_ev_wait(int ev) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
 	/* prepare to wait ... */
-	__thinkos_wait();
+	__thinkos_wait(self);
 	__thinkos_critical_exit();
 	/* the scheduler will run at this point */
 	__thinkos_critical_enter();
@@ -100,7 +100,7 @@ __thinkos_critical_ev_wait(int ev, int lvl) {
 	int self = thinkos_rt.active;
 	__thinkos_wq_insert(ev, self);
 	/* prepare to wait ... */
-	__thinkos_wait();
+	__thinkos_wait(self);
 	__thinkos_critical_exit();
 	/* the scheduler will run at this point */
 	__thinkos_critical_level(lvl);
@@ -159,14 +159,50 @@ __thinkos_flag_set(int flag) {
 }
 
 static inline void __attribute__((always_inline)) 
+__thinkos_flag_clr(int flag) {
+	/* clear the flag bit */
+	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 0);  
+}
+
+static inline unsigned int __attribute__((always_inline)) 
+__thinkos_flag_is_set(int flag) {
+	/* get the flag state */
+	return 	__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE);  
+}
+
+/* wakeup a single thread waiting on the flag 
+   OR set the flag */
+static inline void __attribute__((always_inline)) 
 __thinkos_flag_signal(int flag) {
 	uint32_t pri;
 	int th;
-	/* set the flag */
-	__thinkos_flag_set(flag);
 
 	pri = cm3_primask_get();
 	cm3_primask_set(1);
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(flag, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	} else {
+		/* set the flag */
+		__thinkos_flag_set(flag);
+	}
+	cm3_primask_set(pri);
+}
+
+/* set the flag and wakeup a single thread waiting on the flag */
+static inline void __attribute__((always_inline)) 
+__thinkos_flag_wakeup(int flag) {
+	uint32_t pri;
+	int th;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+
+	/* set the flag */
+	__thinkos_flag_set(flag);
+
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
 		__thinkos_wakeup(flag, th);
@@ -176,9 +212,9 @@ __thinkos_flag_signal(int flag) {
 	cm3_primask_set(pri);
 }
 
-
+/* set the flag and wakeup all threads waiting on the flag */
 static inline void __attribute__((always_inline)) 
-__thinkos_flag_signal_all(int flag) {
+__thinkos_flag_wakeup_all(int flag) {
 	uint32_t pri;
 	int th;
 	/* set the flag */
@@ -196,18 +232,6 @@ __thinkos_flag_signal_all(int flag) {
 		__thinkos_defer_sched();
 	}
 	cm3_primask_set(pri);
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_clr(int flag) {
-	/* clear the flag bit */
-	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 0);  
-}
-
-static inline unsigned int __attribute__((always_inline)) 
-__thinkos_flag_is_set(int flag) {
-	/* get the flag state */
-	return 	__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE);  
 }
 
 #endif /* (THINKOS_FLAG_MAX > 0) */
@@ -253,7 +277,7 @@ __thinkos_irq_wait(int irq) {
 	thinkos_rt.irq_th[irq] = self;
 	__thinkos_critical_enter();
 	/* prepare to wait ... */
-	__thinkos_wait();
+	__thinkos_wait(self);
 	/* clear pending interrupt */
 	cm3_irq_pend_clr(irq);
 	/* enable this interrupt source */

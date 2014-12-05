@@ -230,7 +230,8 @@ void __attribute__((noreturn)) io_event_task(void)
 	unsigned int addr1 = 0;
 	unsigned int sw0 = 0;
 	unsigned int sw1 = 0;
-	uint32_t clk_tmo = __thinkos_ticks() + 1000;
+	uint32_t clk = __thinkos_ticks();
+	uint32_t clk_sec = clk + 1000;
 
 	for (;;) {
 		unsigned int addr;
@@ -242,12 +243,13 @@ void __attribute__((noreturn)) io_event_task(void)
 		uint32_t pc;
 		int i;
 
-		thinkos_sleep(IO_POLL_PERIOD_MS);
+		clk += IO_POLL_PERIOD_MS;
+		thinkos_alarm(clk);
 
 		/* update clock time */
-		if ((int32_t)(__thinkos_ticks() - clk_tmo) >= 1000) {
+		if ((int32_t)(clk - clk_sec) >= 1000) {
 			clk_time++;
-			clk_tmo += 1000;
+			clk_sec += 1000;
 		}
 
 		/* process led timers */

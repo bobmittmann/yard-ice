@@ -104,7 +104,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 	arg[0] = 0;
 
 	/* wait for event */
-	__thinkos_wait();
+	__thinkos_wait(self);
 }
 
 void thinkos_mutex_trylock_svc(int32_t * arg)
@@ -193,7 +193,7 @@ void thinkos_mutex_timedlock_svc(int32_t * arg)
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	/* wait for event */
-	__thinkos_wait();
+	__thinkos_wait(self);
 
 }
 #endif

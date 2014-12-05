@@ -16,7 +16,7 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-#define VERSION_NUM "0.5"
+#define VERSION_NUM "0.6"
 #define VERSION_DATE "Nov, 2014"
 
 extern const struct shell_cmd cmd_tab[];
@@ -81,9 +81,15 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_INFO, "5. isink_init()");
+
 	/* enable the current sink driver. This will start the negative 
 	   voltage power supply */
 	isink_init();
+
+	/* configure the current sink driver to default values */
+	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
+
+	isink_pulse(2, 0);
 
 	/* create a thread to handle IO events like switches and
 	   address selection. This thread also controls the LEDs flashing. */
@@ -94,9 +100,6 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	/* perform a lamp test while the current sink 
 	   negative voltage stabilizes */
 	lamp_test();
-
-	/* configure the current sink driver to default values */
-	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
 
 	/* initilice the SLC device driver */
 	slcdev_init();
@@ -155,7 +158,9 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 			/* try to get a command from the line */
 			if (cmd_lookup(cmd_tab, cp) == NULL) {
 				/* try to interpret a javascript code instead */
+				DCC_LOG(LOG_TRACE, "js...");
 				js(f, cp, strlen(cp));
+				DCC_LOG(LOG_TRACE, "done...");
 				continue;
 			}
 		

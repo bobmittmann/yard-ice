@@ -650,8 +650,11 @@ void device_db_init(void)
 {
 	struct db_info * inf;
 
-	if ((inf = db_info_get()) == NULL)
+	if ((inf = db_info_get()) == NULL) {
+		/* initialize an empty symbol table */
+		symtab_init(slcdev_symbuf, sizeof(slcdev_symbuf));
 		return;
+	}
 
 	/* initialize the sybol table from the database */
 	memcpy(slcdev_symbuf, inf->symbuf, inf->symbuf_sz);
