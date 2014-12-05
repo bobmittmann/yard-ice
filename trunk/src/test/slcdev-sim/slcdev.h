@@ -246,7 +246,7 @@ struct ss_device {
 
 	uint8_t event:5;   /* Simulation event */
 	uint8_t ledno:3;
-	uint8_t res2[3];
+	uint8_t res2[1];
 
 	uint32_t pcnt;     /* poll count */
 };

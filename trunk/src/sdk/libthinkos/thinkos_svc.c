@@ -38,6 +38,7 @@ void thinkos_exit_svc(int32_t * arg);
 
 void thinkos_sleep_svc(int32_t * arg);
 
+void thinkos_alarm_svc(int32_t * arg);
 
 void thinkos_mutex_alloc_svc(int32_t * arg);
 
@@ -102,6 +103,8 @@ void thinkos_flag_timedwait_svc(int32_t * arg);
 void thinkos_flag_set_svc(int32_t * arg);
 
 void thinkos_flag_clr_svc(int32_t * arg);
+
+void thinkos_flag_signal_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
@@ -174,6 +177,11 @@ void cm3_svc_isr(void)
 		thinkos_sleep_svc(arg);
 		break;
 
+#if THINKOS_ENABLE_ALARM
+	case THINKOS_ALARM:
+		thinkos_alarm_svc(arg);
+		break;
+#endif
 
 #if THINKOS_MUTEX_MAX > 0
 #if THINKOS_ENABLE_MUTEX_ALLOC
@@ -312,6 +320,10 @@ void cm3_svc_isr(void)
 
 	case THINKOS_FLAG_WAIT:
 		thinkos_flag_wait_svc(arg);
+		break;
+
+	case THINKOS_FLAG_SIGNAL:
+		thinkos_flag_signal_svc(arg);
 		break;
 
 #if THINKOS_ENABLE_TIMED_CALLS

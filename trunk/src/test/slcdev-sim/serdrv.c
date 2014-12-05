@@ -577,15 +577,13 @@ int serdrv_recv(struct serdrv * dev, void * buf, int len, unsigned int tmo)
 	int n;
 	int i;
 
-	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
+	DCC_LOG2(LOG_TRACE, "1. len=%d tmo=%d", len, tmo);
 
 again:
 	if ((ret = thinkos_flag_timedwait(RX_FLAG, tmo)) < 0) {
-		DCC_LOG(LOG_INFO, "Timeout!");
+		DCC_LOG(LOG_TRACE, "Timeout!");
 		return ret;
 	}
-	thinkos_flag_clr(RX_FLAG);
-
 
 	tail = dev->rx_fifo.tail;
 	cnt = (int8_t)(dev->rx_fifo.head - tail);
@@ -594,7 +592,7 @@ again:
 		goto again;
 	}
 	n = MIN(len, cnt);
-	DCC_LOG2(LOG_INFO, "tail=%d cnt=%d", tail, cnt);
+	DCC_LOG2(LOG_TRACE, "tail=%d cnt=%d", tail, cnt);
 
 	for (i = 0; i < n; ++i)
 		cp[i] = dev->rx_fifo.buf[tail++ & (RX_LEN - 1)];
@@ -602,7 +600,7 @@ again:
 	dev->rx_fifo.tail = tail;
 
 	if (cnt > n)
-		__thinkos_flag_signal(RX_FLAG);
+		thinkos_flag_signal(RX_FLAG);
 
 	return n;
 }
@@ -621,7 +619,6 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 		int i;
 
 		thinkos_flag_wait(TX_FLAG);
-		thinkos_flag_clr(TX_FLAG);
 
 		head = dev->tx_fifo.head;
 		free = TX_LEN - (int8_t)(head - dev->tx_fifo.tail);
@@ -633,7 +630,8 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 		*dev->txie = 1; 
 
 		if (free > n)
-			__thinkos_flag_signal(TX_FLAG);
+			thinkos_flag_signal(TX_FLAG);
+
 		rem -= n;
 		DCC_LOG1(LOG_INFO, "rem=%d", rem);
 	}
@@ -641,6 +639,23 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 
 	return len;
 }
+
+void serdrv_flush(struct serdrv * dev)
+{
+	unsigned int head;
+
+	head = dev->tx_fifo.head;
+
+	thinkos_flag_wait(TX_FLAG);
+
+	if (((int8_t)head - dev->tx_fifo.tail) > 0)
+		thinkos_flag_wait(TX_FLAG);
+
+	stm32_usart_flush(STM32_USART2);
+
+	thinkos_flag_signal(TX_FLAG);
+}
+
 
 /* static serial driver object */
 static struct serdrv serial2_dev;
@@ -723,7 +738,7 @@ struct serdrv * serdrv_init(unsigned int speed)
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
 	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
-	__thinkos_flag_signal(TX_FLAG);
+	thinkos_flag_set(TX_FLAG);
 
 	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);
@@ -735,10 +750,6 @@ struct serdrv * serdrv_init(unsigned int speed)
 }
 
 #endif
-
-void serdrv_flush(struct serdrv * drv)
-{
-}
 
 
 /* ----------------------------------------------------------------------

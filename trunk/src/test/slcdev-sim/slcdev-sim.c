@@ -514,11 +514,10 @@ void __attribute__((noreturn)) sim_event_task(void)
 		DCC_LOG(LOG_INFO, ".1");
 
 		thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
+
 		/* get an event from bitmap */
-		if ((ev = __clz(__rbit(slcdev_drv.ev_bmp & ev_mask))) == 32) {
-			thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
+		if ((ev = __clz(__rbit(slcdev_drv.ev_bmp & ev_mask))) == 32)
 			continue;
-		}
 
 		/* clear event from bitmap */
 		slcdev_event_clear(ev);

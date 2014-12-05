@@ -803,15 +803,21 @@ int js(FILE * f, char * script, unsigned int len)
 	if ((ret = microjs_compile(microjs, script, len)) < 0) {
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -ret);
+		DCC_LOG1(LOG_WARNING, "compile error: %d", ret);
 		microjs_sdt_error(f, microjs, ret);
+		DCC_LOG(LOG_TRACE, "...");
 		return -1;
 	}
+
 	if ((ret = microjs_sdt_end(microjs)) < 0) {
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -ret);
+		DCC_LOG1(LOG_WARNING, "compile error: %d", ret);
 		microjs_sdt_error(f, microjs, ret);
+		DCC_LOG(LOG_TRACE, "...");
 		return -1;
 	}
+
 	stop_clk = profclk_get();
 
 	code_sz = ret;
@@ -1058,31 +1064,14 @@ int cmd_self_test(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int cmd_slewrate(FILE * f, int argc, char ** argv)
-{
-	unsigned int rate = 0;
-
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	rate = strtoul(argv[1], NULL, 0);
-
-	isink_slewrate_set(rate);
-
-	return 0;
-}
-
-void isink_test(void);
+#endif
 
 int cmd_isink(FILE * f, int argc, char ** argv)
 {
-	unsigned int mode = 0;
-	unsigned int rate = 0;
+	unsigned int mode = 2;
+	unsigned int rate = 1;
 	unsigned int pre = 50;
-	unsigned int pulse = 1000;
+	unsigned int pulse = 200;
 
 	if (argc > 5)
 		return SHELL_ERR_EXTRA_ARGS;
@@ -1101,19 +1090,20 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 					pre = strtoul(argv[4], NULL, 0);
 			}
 		}
-
-		isink_mode_set(mode | (rate << 5));
-		isink_pulse(pre, pulse);
-		udelay(pulse / 2);
-		isink_stop();
-	} else {
-		isink_test();
 	}
+
+	if (pulse < pre)
+		pulse = pre;
+
+	fprintf(f, "PW pulse: mode=%d rate=%d pulse=%dus pre=%dus ...\n",
+			mode, rate, pulse, pre);
+
+	isink_mode_set(mode | (rate << 5));
+	thinkos_sleep(2);
+	isink_pulse(pre, pulse);
 	
 	return 0;
 }
-
-#endif
 
 int usart_xflash(void * uart, uint32_t offs, uint32_t len);
 
@@ -1238,8 +1228,6 @@ const struct shell_cmd cmd_tab[] = {
 #if 0
 	{ cmd_self_test, "selftest", "st", "", "Self test" },
 
-	{ cmd_isink, "isink", "i", "[MODE [PRE [PULSE]]]", "Self test" },
-
 	{ cmd_slewrate, "slewrate", "sr", "[VALUE]", "Current slewrate set" },
 
 	{ cmd_run, "run", "", "script", "run compiled code" },
@@ -1286,6 +1274,9 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ cmd_group, "group", "grp", "", 
 		"show group information" },
+
+	{ cmd_isink, "isink", "isk", "[MODE [RATE [PULSE [PRE]]]]]", 
+		"isink pulse" },
 
 	{ cmd_ls, "ls", "", "", 
 		"list files" },

@@ -221,6 +221,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_RT_DEBUG 0
 #endif
 
+#ifndef THINKOS_ENABLE_ALARM
+#define THINKOS_ENABLE_ALARM 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -590,9 +594,9 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	scb->icsr = SCB_ICSR_PENDSVSET;
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wait(void) {
+static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
 	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thinkos_rt.active, 0);  
+	__bit_mem_wr(&thinkos_rt.wq_ready, thread, 0);  
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */

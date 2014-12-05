@@ -264,14 +264,14 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 
 void __attribute__((noreturn)) thinkos_thread_exit(int code)
 {
-	int idx = thinkos_rt.active;
+	int self = thinkos_rt.active;
 	int j;
 
-	DCC_LOG2(LOG_TRACE, "<%d> code=%d", idx, code); 
+	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	bmp_bit_clr(&thinkos_rt.wq_tmshare, idx);  
+	bmp_bit_clr(&thinkos_rt.wq_tmshare, self);  
 #endif
 
 	/* disable interrupts */
@@ -281,15 +281,15 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 #if THINKOS_ENABLE_THREAD_STAT
 	int stat;
 	/* update the thread status */
-	stat = thinkos_rt.th_stat[idx];
-	thinkos_rt.th_stat[idx] = 0;
+	stat = thinkos_rt.th_stat[self];
+	thinkos_rt.th_stat[self] = 0;
 	/* remove from other wait queue, if any */
-	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], idx);  
+	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], self);  
 #else
 	int i;
 	/* remove from other wait queue, if any */
 	for (i = 0; i < __wq_idx(thinkos_rt.wq_end); i++) {
-		bmp_bit_clr(&thinkos_rt.wq_lst[i], idx);  
+		bmp_bit_clr(&thinkos_rt.wq_lst[i], self);  
 	}
 #endif
 #endif
@@ -308,34 +308,36 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 #endif
 
 #if THINKOS_ENABLE_JOIN
-		if (__bit_mem_rd(&thinkos_rt.wq_join[idx], j) != 0) {
+		if (__bit_mem_rd(&thinkos_rt.wq_join[self], j) != 0) {
 			DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
 			bmp_bit_set((void *)&thinkos_rt.wq_ready, j);  
-			bmp_bit_clr((void *)&thinkos_rt.wq_join[idx], j);  
+			bmp_bit_clr((void *)&thinkos_rt.wq_join[self], j);  
 			thinkos_rt.ctx[j]->r0 = code;
 		}
 #endif
 	}
 
+	cm3_cpsie_i();
+
 #if !THINKOS_ENABLE_THREAD_ALLOC && THINKOS_ENABLE_TIMESHARE
 	/* clear the schedule priority. In case the thread allocations
 	 is disabled, the schedule limit reevaluation may produce inconsistent
 	 results ... */
-	thinkos_rt.sched_pri[idx] = 0;
+	thinkos_rt.sched_pri[self] = 0;
 #endif
 
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* Releases the thread block */
-	bmp_bit_clr(&thinkos_rt.th_alloc, idx);
+	bmp_bit_clr(&thinkos_rt.th_alloc, self);
 #endif
+
 
 	/* FIXME: clear context. The way is implemented th scheduler will 
 	   override this value...  */
-	thinkos_rt.ctx[idx] = 0;
+	thinkos_rt.ctx[self] = 0;
 
 	/* wait forever */
-	__thinkos_wait();
-	cm3_cpsie_i();
+	__thinkos_wait(self);
 
 	for(;;);
 }

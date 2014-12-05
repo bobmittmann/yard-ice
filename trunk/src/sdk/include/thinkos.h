@@ -80,6 +80,7 @@ int thinkos_resume(unsigned int thread_id);
 
 void thinkos_sleep(unsigned int ms);
 
+void thinkos_alarm(unsigned int clock);
 
 int thinkos_mutex_alloc(void);
 

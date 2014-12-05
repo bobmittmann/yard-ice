@@ -49,8 +49,8 @@ void thinkos_join_svc(int32_t * arg)
 #if THINKOS_ENABLE_CANCEL
 	/* remove thread from the canceled wait queue */
 	if (__bit_mem_rd(&thinkos_rt.wq_canceled, th)) {
-		bmp_bit_clr(&thinkos_rt.wq_canceled, th);  
-		bmp_bit_set(&thinkos_rt.wq_ready, th);  
+		__bit_mem_wr(&thinkos_rt.wq_canceled, th, 0);  
+		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
 	}
 #endif /* THINKOS_ENABLE_CANCEL */
 
@@ -59,7 +59,7 @@ void thinkos_join_svc(int32_t * arg)
 	__thinkos_wq_insert(wq, self);
 
 	/* wait for event */
-	__thinkos_wait();
+	__thinkos_wait(self);
 
 	/* set the return to ERROR as a default value. The
 	   exit function of the joining thread will set this to the 
@@ -95,7 +95,7 @@ void thinkos_cancel_svc(int32_t * arg)
 #endif
 	stat = thinkos_rt.th_stat[th];
 	/* remove from other wait queue including wq_ready */
-	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], th);  
+	__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], th, 0);
 
 #if THINKOS_ENABLE_JOIN
 	/* insert into the canceled wait queue and wait for a join call */ 
@@ -109,12 +109,12 @@ void thinkos_cancel_svc(int32_t * arg)
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	bmp_bit_clr(&thinkos_rt.wq_tmshare, th);  
+	__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0); 
 #endif
 
 #if THINKOS_ENABLE_CLOCK
 	/* possibly remove from the time wait queue */
-	bmp_bit_clr(&thinkos_rt.wq_clock, th);  
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
 #endif
 
 	DCC_LOG3(LOG_TRACE, "<%d> cancel %d, with code %d!", 
@@ -190,7 +190,7 @@ void thinkos_resume_svc(int32_t * arg)
 #error "thinkos_resume() depends on THINKOS_ENABLE_THREAD_STAT"	
 #endif
 	/* remove from the paused queue */
-	bmp_bit_clr(&thinkos_rt.wq_paused, th);  
+	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
 	/* reinsert the thread into a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
 	wq = stat >> 1;
@@ -358,12 +358,12 @@ void thinkos_thread_create_svc(int32_t * arg)
 #if THINKOS_ENABLE_PAUSE
 	if (init->opt.f_paused) 
 		/* insert into the paused list */
-		bmp_bit_set(&thinkos_rt.wq_paused, th);  
+		__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);  
 	else
 #endif
 	{
 		/* insert into the ready list */
-		bmp_bit_set(&thinkos_rt.wq_ready, th);  
+		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
 		__thinkos_defer_sched();
 	}
 
@@ -383,9 +383,9 @@ void thinkos_sleep_svc(int32_t * arg)
 	int self = thinkos_rt.active;
 
 	/* set the clock */
-	thinkos_rt.clock[self] = thinkos_rt.ticks + (ms / 1);
+	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
 	/* insert into the clock wait queue */
-	bmp_bit_set(&thinkos_rt.wq_clock, self);  
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);
 
 #if THINKOS_ENABLE_THREAD_STAT
 	/* mark the thread clock enable bit */
@@ -395,13 +395,32 @@ void thinkos_sleep_svc(int32_t * arg)
 	DCC_LOG2(LOG_MSG, "<%d> waiting %d milliseconds...", self, ms);
 
 	/* wait for event */
-	__thinkos_wait();
+	__thinkos_wait(self);
 #else
 	DCC_LOG1(LOG_TRACE, "busy wait: %d milliseconds...", ms);
 	udelay(1000 * ms);
 #endif
-	
 }
+
+#if THINKOS_ENABLE_ALARM
+void thinkos_alarm_svc(int32_t * arg)
+{
+	uint32_t ms = (uint32_t)arg[0];
+	int self = thinkos_rt.active;
+
+	/* set the clock */
+	thinkos_rt.clock[self] = ms;
+	/* insert into the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);
+#if THINKOS_ENABLE_THREAD_STAT
+	/* mark the thread clock enable bit */
+	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
+#endif
+	/* wait for event */
+	__thinkos_wait(self);
+}
+#endif
+
 
 #if THINKOS_ENABLE_THREAD_INFO
 /* FIXME: move this definition elsewere ... */

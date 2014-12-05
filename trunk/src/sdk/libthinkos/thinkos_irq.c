@@ -68,7 +68,7 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	cm3_irq_enable(irq);
 
 	/* prepare to wait ... */
-	__thinkos_wait();
+	__thinkos_wait(self);
 }
 
 #endif

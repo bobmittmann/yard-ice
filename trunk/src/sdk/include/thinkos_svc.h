@@ -72,12 +72,14 @@
 #define THINKOS_FLAG_TIMEDWAIT 35
 #define THINKOS_FLAG_SET 36
 #define THINKOS_FLAG_CLR 37
+#define THINKOS_FLAG_SIGNAL 38
 
-#define THINKOS_IRQ_WAIT 38
+#define THINKOS_IRQ_WAIT 39
 
-#define THINKOS_RT_SNAPSHOT 39
+#define THINKOS_RT_SNAPSHOT 40
 
-#define THINKOS_EXIT 40
+#define THINKOS_EXIT 41
+#define THINKOS_ALARM 42
 
 #ifndef __ASSEMBLER__
 
@@ -201,6 +203,10 @@ __attribute__((always_inline)) thinkos_sleep(unsigned int ms) {
 	THINKOS_SVC1(THINKOS_SLEEP, ms);
 }
 
+static inline void 
+__attribute__((always_inline)) thinkos_alarm(unsigned int clk) {
+	THINKOS_SVC1(THINKOS_ALARM, clk);
+}
 
 static inline int __attribute__((always_inline)) thinkos_mutex_alloc(void) {
 	return THINKOS_SVC(THINKOS_MUTEX_ALLOC);
@@ -337,6 +343,11 @@ static inline int __attribute__((always_inline)) thinkos_flag_set(int flag) {
 static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_CLR, flag);
 }
+
+static inline int __attribute__((always_inline)) thinkos_flag_signal(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_SIGNAL, flag);
+}
+
 
 static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
