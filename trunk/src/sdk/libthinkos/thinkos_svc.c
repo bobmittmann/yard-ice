@@ -96,15 +96,19 @@ void thinkos_flag_alloc_svc(int32_t * arg);
 
 void thinkos_flag_free_svc(int32_t * arg);
 
-void thinkos_flag_wait_svc(int32_t * arg);
-
-void thinkos_flag_timedwait_svc(int32_t * arg);
-
 void thinkos_flag_set_svc(int32_t * arg);
 
 void thinkos_flag_clr_svc(int32_t * arg);
 
-void thinkos_flag_signal_svc(int32_t * arg);
+void thinkos_flag_wait_svc(int32_t * arg);
+
+void thinkos_flag_timedwait_svc(int32_t * arg);
+
+void thinkos_flag_give_svc(int32_t * arg);
+
+void thinkos_flag_take_svc(int32_t * arg);
+
+void thinkos_flag_timedtake_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
@@ -318,12 +322,16 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-	case THINKOS_FLAG_WAIT:
-		thinkos_flag_wait_svc(arg);
+	case THINKOS_FLAG_SET:
+		thinkos_flag_set_svc(arg);
 		break;
 
-	case THINKOS_FLAG_SIGNAL:
-		thinkos_flag_signal_svc(arg);
+	case THINKOS_FLAG_CLR:
+		thinkos_flag_clr_svc(arg);
+		break;
+
+	case THINKOS_FLAG_WAIT:
+		thinkos_flag_wait_svc(arg);
 		break;
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -332,13 +340,20 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-	case THINKOS_FLAG_SET:
-		thinkos_flag_set_svc(arg);
+	case THINKOS_FLAG_GIVE:
+		thinkos_flag_give_svc(arg);
 		break;
 
-	case THINKOS_FLAG_CLR:
-		thinkos_flag_clr_svc(arg);
+	case THINKOS_FLAG_TAKE:
+		thinkos_flag_take_svc(arg);
 		break;
+
+#if THINKOS_ENABLE_TIMED_CALLS
+	case THINKOS_FLAG_TIMEDTAKE:
+		thinkos_flag_timedtake_svc(arg);
+		break;
+#endif
+
 #endif /* THINKOS_ENABLE_FLAG_SYSCALL */
 
 

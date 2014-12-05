@@ -68,18 +68,22 @@
 
 #define THINKOS_FLAG_ALLOC 32
 #define THINKOS_FLAG_FREE 33
-#define THINKOS_FLAG_WAIT 34
-#define THINKOS_FLAG_TIMEDWAIT 35
-#define THINKOS_FLAG_SET 36
-#define THINKOS_FLAG_CLR 37
-#define THINKOS_FLAG_SIGNAL 38
 
-#define THINKOS_IRQ_WAIT 39
+#define THINKOS_FLAG_SET 34
+#define THINKOS_FLAG_CLR 35
+#define THINKOS_FLAG_WAIT 36
+#define THINKOS_FLAG_TIMEDWAIT 37
 
-#define THINKOS_RT_SNAPSHOT 40
+#define THINKOS_FLAG_GIVE 38
+#define THINKOS_FLAG_TAKE 39
+#define THINKOS_FLAG_TIMEDTAKE 40
 
-#define THINKOS_EXIT 41
-#define THINKOS_ALARM 42
+#define THINKOS_IRQ_WAIT 41
+
+#define THINKOS_RT_SNAPSHOT 42
+
+#define THINKOS_EXIT 43
+#define THINKOS_ALARM 44
 
 #ifndef __ASSEMBLER__
 
@@ -328,14 +332,6 @@ static inline int __attribute__((always_inline)) thinkos_flag_free(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_FREE, flag);
 }
 
-static inline int __attribute__((always_inline)) thinkos_flag_wait(int flag) {
-	return THINKOS_SVC1(THINKOS_FLAG_WAIT, flag);
-}
-
-static inline int __attribute__((always_inline)) thinkos_flag_timedwait(int flag, unsigned int ms) {
-	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
-}
-
 static inline int __attribute__((always_inline)) thinkos_flag_set(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_SET, flag);
 }
@@ -344,8 +340,24 @@ static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_CLR, flag);
 }
 
-static inline int __attribute__((always_inline)) thinkos_flag_signal(int flag) {
-	return THINKOS_SVC1(THINKOS_FLAG_SIGNAL, flag);
+static inline int __attribute__((always_inline)) thinkos_flag_wait(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_WAIT, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_timedwait(int flag, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_give(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_GIVE, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_take(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_TAKE, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_timedtake(int flag, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
 }
 
 

@@ -397,11 +397,11 @@ const struct shell_cmd cmd_tab[] = {
 #define VERSION_NUM "0.2"
 #define VERSION_DATE "Oct, 2014"
 
-const char * shell_greeting(void) 
+void shell_greeting(FILE * f) 
 {
-	return "\n"
+	fprintf(f, "\n"
 	"SLCDEV-HUB" VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
 }
 
 const char * shell_prompt(void)

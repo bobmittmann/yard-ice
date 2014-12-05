@@ -153,75 +153,22 @@ __thinkos_flag_free(int flag) {
 #endif
 
 static inline void __attribute__((always_inline)) 
-__thinkos_flag_set(int flag) {
-	/* set the flag bit */
-	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 1);  
-}
-
-static inline void __attribute__((always_inline)) 
 __thinkos_flag_clr(int flag) {
 	/* clear the flag bit */
 	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 0);  
 }
 
-static inline unsigned int __attribute__((always_inline)) 
-__thinkos_flag_is_set(int flag) {
-	/* get the flag state */
-	return 	__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE);  
-}
-
-/* wakeup a single thread waiting on the flag 
-   OR set the flag */
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_signal(int flag) {
-	uint32_t pri;
-	int th;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(flag, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	} else {
-		/* set the flag */
-		__thinkos_flag_set(flag);
-	}
-	cm3_primask_set(pri);
-}
-
-/* set the flag and wakeup a single thread waiting on the flag */
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_wakeup(int flag) {
-	uint32_t pri;
-	int th;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-
-	/* set the flag */
-	__thinkos_flag_set(flag);
-
-	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(flag, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
-	cm3_primask_set(pri);
-}
-
 /* set the flag and wakeup all threads waiting on the flag */
 static inline void __attribute__((always_inline)) 
-__thinkos_flag_wakeup_all(int flag) {
+__thinkos_flag_set(int flag) {
 	uint32_t pri;
 	int th;
-	/* set the flag */
-	__thinkos_flag_set(flag);
 
 	pri = cm3_primask_get();
 	cm3_primask_set(1);
+	/* set the flag bit */
+	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 1);  
+
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
 		__thinkos_wakeup(flag, th);
@@ -233,6 +180,34 @@ __thinkos_flag_wakeup_all(int flag) {
 	}
 	cm3_primask_set(pri);
 }
+
+static inline unsigned int __attribute__((always_inline)) 
+__thinkos_flag_is_set(int flag) {
+	/* get the flag state */
+	return 	__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE);  
+}
+
+/* wakeup a single thread waiting on the flag 
+   OR set the flag */
+static inline void __attribute__((always_inline)) 
+__thinkos_flag_give(int flag) {
+	uint32_t pri;
+	int th;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(flag, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	} else {
+		/* set the flag bit */
+		__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 1);  
+	}
+	cm3_primask_set(pri);
+}
+
 
 #endif /* (THINKOS_FLAG_MAX > 0) */
 

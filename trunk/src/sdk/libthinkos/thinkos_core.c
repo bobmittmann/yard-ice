@@ -454,7 +454,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 #if THINKOS_ENABLE_EVENT_ALLOC
 	/* initialize the event allocation bitmap */ 
-	thinkos_rt.event_alloc = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
+	thinkos_rt.ev_alloc = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
 #endif
 
 #if (THINKOS_MUTEX_MAX > 0)
