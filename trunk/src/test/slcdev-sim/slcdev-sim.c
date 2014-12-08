@@ -513,13 +513,12 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 		DCC_LOG(LOG_INFO, ".1");
 
-		thinkos_flag_wait(SLCDEV_DRV_EV_FLAG);
+		thinkos_flag_take(SLCDEV_DRV_EV_FLAG);
 
 		/* get an event from bitmap */
 		if ((ev = __clz(__rbit(slcdev_drv.ev_bmp & ev_mask))) == 32)
 			continue;
 
-		/* clear event from bitmap */
 		slcdev_event_clear(ev);
 
 		if (dev != slcdev_drv.dev) {
@@ -676,7 +675,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 			slcdev_resume();
 			/* force reprocessing posible unmasked events */
 			ev_mask = 0xffffffff;
-			thinkos_flag_set(SLCDEV_DRV_EV_FLAG);
+			thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 			break;
 		}
 	}

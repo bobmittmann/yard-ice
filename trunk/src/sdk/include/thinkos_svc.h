@@ -357,7 +357,7 @@ static inline int __attribute__((always_inline)) thinkos_flag_take(int flag) {
 }
 
 static inline int __attribute__((always_inline)) thinkos_flag_timedtake(int flag, unsigned int ms) {
-	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
+	return THINKOS_SVC2(THINKOS_FLAG_TIMEDTAKE, flag, ms);
 }
 
 

@@ -196,14 +196,17 @@ __thinkos_flag_give(int flag) {
 
 	pri = cm3_primask_get();
 	cm3_primask_set(1);
-	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(flag, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	} else {
-		/* set the flag bit */
-		__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 1);  
+	/* get the flag state */
+	if (__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE) == 0) {
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(flag, th);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} else {
+			/* set the flag bit */
+			__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 1);  
+		}
 	}
 	cm3_primask_set(pri);
 }

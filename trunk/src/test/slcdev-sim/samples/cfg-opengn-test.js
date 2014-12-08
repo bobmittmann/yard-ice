@@ -221,5 +221,13 @@
 			'led[5].on = true;'
 		],
 	},
+
+	"trigger" : { 
+		"sensor" : true,
+		"addr" : 1,
+		"script" : [
+			'led[1].flash(200);',
+		],
+	},
 }
 

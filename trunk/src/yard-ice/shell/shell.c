@@ -102,10 +102,10 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	return NULL;
 }
 
-const char * yard_ice_greeting(void) 
+void yard_ice_greeting(FILE * f) 
 {
-	return "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2011-2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n";
+	fprintf(f, "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
+	"(c) Copyright 2011-2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
 }
 
 const char * const prompt_tab[] = {
@@ -294,13 +294,13 @@ static char * get_cmd_next(char ** linep)
 	return cmd;
 }
 
-int shell(FILE * f, const char * (* get_prompt)(void), 
-		  const char * (* greeting)(void), const struct shell_cmd * cmd_tab)
+int shell(FILE * f, const char * (* prompt)(void), 
+		  void (* greeting)(FILE *), 
+		  const struct shell_cmd * cmd_tab)
 {
 	char line[SHELL_LINE_MAX];
 	char * cp;
 	char * cmd;
-	char * prompt;
 	int ret = 0;
 	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	struct cmd_history * history;
@@ -309,12 +309,10 @@ int shell(FILE * f, const char * (* get_prompt)(void),
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 
 	if (greeting)
-		fprintf(f, greeting());
+		greeting(f);
 
 	for (;;) {
-		prompt = (char *)get_prompt();
-
-		fprintf(f, "%s", prompt);
+		fprintf(f, "%s", prompt());
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
 			return -1;

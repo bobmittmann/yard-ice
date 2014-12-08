@@ -449,7 +449,7 @@ static void ap_hdr_decode(unsigned int msg)
 	if ((msg & slcdev_drv.trig.ap_msk) == slcdev_drv.trig.ap_cmp) {
 		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
 		trig_out_set();
-		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
 	}
 
@@ -489,7 +489,7 @@ static void ap_hdr_decode(unsigned int msg)
 
 			/* signal the simulator */
 			__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
-			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 
 			/* AP opcode */
 			slcdev_drv.ap.insn = AP_DIRECT_POLL;
@@ -690,7 +690,7 @@ static void clip_msg_decode(unsigned int msg)
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
 		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_TRIG, 1);  
 		trig_out_set();
-		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
@@ -719,7 +719,7 @@ static void clip_msg_decode(unsigned int msg)
 
 		/* signal the simulator */
 		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
-		__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 
 		/* update poll counter */
 		dev->pcnt++;
@@ -728,7 +728,7 @@ static void clip_msg_decode(unsigned int msg)
 			/* if an simulation event is correlated to the device,
 			 signal the simulator. */
 			__bit_mem_wr(&slcdev_drv.ev_bmp, dev->event, 1);  
-			__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		}
 	} else {
 		slcdev_drv.state = DEV_IDLE;

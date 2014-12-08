@@ -354,7 +354,7 @@ static inline void trig_out_set(void) {
 
 static inline void slcdev_event_raise(unsigned int ev) {
 	__bit_mem_wr(&slcdev_drv.ev_bmp, ev, 1);  
-	__thinkos_flag_signal(SLCDEV_DRV_EV_FLAG);
+	__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 }
 
 static inline void slcdev_event_clear(unsigned int ev) {

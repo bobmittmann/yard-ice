@@ -209,7 +209,7 @@ do_recv:
 		xfer.rem--;
 		if (xfer.rem == 0) {
 			xfer.ret = xfer.cnt;
-			__thinkos_flag_signal(xfer.flag);
+			__thinkos_flag_give(xfer.flag);
 		} else if (xfer.rem == 1) {
 			/* Clear ACK */
 			i2c->cr1 = I2C_STOP | I2C_PE; 
@@ -234,7 +234,7 @@ do_xmit:
 			xfer.ret = xfer.cnt;
 			DCC_LOG1(LOG_INFO, "%d TXE ?", i2c_irq_cnt);
 //			trace("I2C TXE ?");
-			__thinkos_flag_signal(xfer.flag);
+			__thinkos_flag_give(xfer.flag);
 		} 
 		xfer.rem--;
 //		DCC_LOG1(LOG_TRACE, "%d TXE", i2c_irq_cnt);
@@ -255,7 +255,7 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "BERR");
 		trace("I2C BERR!");
-		__thinkos_flag_signal(xfer.flag);
+		__thinkos_flag_give(xfer.flag);
 	}
 
 	if (sr1 & I2C_ARLO) {
@@ -263,7 +263,7 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "ARLO");
 		trace("I2C ARLO!");
-		__thinkos_flag_signal(xfer.flag);
+		__thinkos_flag_give(xfer.flag);
 	}
 
 	if (sr1 & I2C_AF) {
@@ -273,7 +273,7 @@ void stm32f_i2c1_er_isr(void)
 		xfer.ret = -1;
 		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
 //		trace("I2C AF!");
-		__thinkos_flag_signal(xfer.flag);
+		__thinkos_flag_give(xfer.flag);
 	}
 
 	if (sr1 & I2C_OVR) {
@@ -298,11 +298,9 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 //	tracef("addr=0x%02x len=%d", addr, len);
 
-	__thinkos_flag_clr(xfer.flag);
-
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-	if (thinkos_flag_timedwait(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
+	if (thinkos_flag_timedtake(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
 	//	tracef("thinkos_flag_timedwait() tmo %d %d ", xfer.cnt, xfer.flag);
 		DCC_LOG(LOG_TRACE, "Timeout...");
 		i2c_master_reset();
@@ -332,15 +330,12 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 	xfer.addr = (addr << 1) | 1;
 	xfer.ret = -2;
 
-	__thinkos_flag_clr(xfer.flag);
-
 	DCC_LOG2(LOG_TRACE, "addr=0x%02x len=%d", addr, len);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
 //	trace("wait");
-	thinkos_flag_timedwait(xfer.flag, 100);
-	if (thinkos_flag_timedwait(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
+	if (thinkos_flag_timedtake(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
 		DCC_LOG(LOG_TRACE, "Timeout...");
 		i2c_master_reset();
 		ret = -1;
