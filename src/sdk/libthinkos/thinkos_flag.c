@@ -121,7 +121,11 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
+	cm3_cpsid_i();
+
 	if (__thinkos_flag_is_set(wq)) {
+//		__thinkos_flag_clr(wq);
+		cm3_cpsie_i();
 		arg[0] = 0;
 		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
 		return;
@@ -129,16 +133,20 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 
 	/* insert into the flag wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
+
+	cm3_cpsie_i();
+
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
-	/* wait for event */
 
+	/* wait for event */
 	__thinkos_wait(self);
 }
 #endif
+
 
 void thinkos_flag_clr_svc(int32_t * arg)
 {
@@ -213,18 +221,29 @@ void thinkos_flag_give_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = 0;
+
+	cm3_cpsid_i();
+	/* get the flag state */
+	if (__bit_mem_rd(&thinkos_rt.flag, flag)) {
+		cm3_cpsie_i();
+		DCC_LOG1(LOG_INFO, "flag %d is already set!", wq);
+		return;
+	}
+
+	/* set the flag bit */
+	__bit_mem_wr(&thinkos_rt.flag, flag, 1);  
+	cm3_cpsie_i();
+
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 		/* wakeup from the flag wait queue */
 		__thinkos_wakeup(wq, th);
 		DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
+		/* clear the flag bit */
+		__bit_mem_wr(&thinkos_rt.flag, flag, 0);  
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
-	} else {
-		/* set the flag bit */
-		__bit_mem_wr(&thinkos_rt.flag, flag, 1);  
 	}
-
-	arg[0] = 0;
 }
 
 void thinkos_flag_take_svc(int32_t * arg)
@@ -260,10 +279,11 @@ void thinkos_flag_take_svc(int32_t * arg)
 		return;
 	} 
 
-	cm3_cpsie_i();
-
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
+
+	cm3_cpsie_i();
+
 	DCC_LOG2(LOG_MSG, "<%d> waiting for flag %d...", self, wq);
 
 	/* wait for event */
@@ -297,25 +317,24 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	cm3_cpsid_i();
 
 	if (__thinkos_flag_is_set(wq)) {
-		arg[0] = 0;
 		__thinkos_flag_clr(wq);
 		cm3_cpsie_i();
+		arg[0] = 0;
 		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
 		return;
 	} 
 
-	cm3_cpsie_i();
-
-
 	/* insert into the flag wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
+	cm3_cpsie_i();
+
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
-	/* wait for event */
 
+	/* wait for event */
 	__thinkos_wait(self);
 }
 #endif

@@ -105,11 +105,9 @@ int serial_read(struct serial_dev * dev, char * buf,
 
 	DCC_LOG(LOG_INFO, "read");
 
-	__thinkos_flag_clr(dev->rx_flag);
 	while (uart_fifo_is_empty(&dev->rx_fifo)) {
 		DCC_LOG(LOG_INFO, "wait...");
-		thinkos_flag_wait(dev->rx_flag);
-		__thinkos_flag_clr(dev->rx_flag);
+		thinkos_flag_take(dev->rx_flag);
 		DCC_LOG(LOG_INFO, "wakeup.");
 	}
 
@@ -128,12 +126,10 @@ int serial_read(struct serial_dev * dev, char * buf,
 
 static void uart_putc(struct serial_dev * dev, int c)
 {
-	__thinkos_flag_clr(dev->tx_flag);
 	while (uart_fifo_is_full(&dev->tx_fifo)) {
 		/* enable TX interrupt */
 		DCC_LOG(LOG_TRACE, "wait...");
-		thinkos_flag_wait(dev->tx_flag);
-		__thinkos_flag_clr(dev->tx_flag);
+		thinkos_flag_take(dev->tx_flag);
 		DCC_LOG(LOG_TRACE, "wakeup");
 	}
 
@@ -207,14 +203,14 @@ void stm32f_usart6_isr(void)
 		}
 		
 		if (uart_fifo_is_half_full(&dev->rx_fifo)) 
-			__thinkos_flag_signal(dev->rx_flag);
+			__thinkos_flag_give(dev->rx_flag);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE");
 		c = uart->dr;
 		(void)c;
-		__thinkos_flag_signal(dev->rx_flag);
+		__thinkos_flag_give(dev->rx_flag);
 	}
 
 	if (sr & USART_TXE) {
@@ -222,7 +218,7 @@ void stm32f_usart6_isr(void)
 		if (uart_fifo_is_empty(&dev->tx_fifo)) {
 			/* disable TXE interrupts */
 			*dev->txie = 0; 
-			__thinkos_flag_signal(dev->tx_flag);
+			__thinkos_flag_give(dev->tx_flag);
 		} else {
 			uart->dr = uart_fifo_get(&dev->tx_fifo);
 		}

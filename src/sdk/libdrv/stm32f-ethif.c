@@ -329,8 +329,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 			break;
 		}
 		DCC_LOG(LOG_MSG, "wait....");
-		thinkos_flag_wait(drv->tx.flag);
-		__thinkos_flag_clr(drv->tx.flag);
+		thinkos_flag_take(drv->tx.flag);
 		DCC_LOG(LOG_MSG, "wakeup....");
 	}
 #else
@@ -395,8 +394,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 			break;
 		}
 		DCC_LOG(LOG_MSG, "wait....");
-		thinkos_flag_wait(drv->tx.flag);
-		__thinkos_flag_clr(drv->tx.flag);
+		thinkos_flag_take(drv->tx.flag);
 		DCC_LOG(LOG_MSG, "wakeup....");
 	}
 
@@ -476,7 +474,7 @@ void stm32f_eth_isr(void)
 	if (dmasr & ETH_TS) {
 		DCC_LOG(LOG_MSG, "DMA TS, stop transmission...");
 		eth->dmaomr &= ~ETH_ST;
-		__thinkos_flag_signal(drv->tx.flag);
+		__thinkos_flag_give(drv->tx.flag);
 	}
 
 	if (dmasr & ETH_TBUS)
