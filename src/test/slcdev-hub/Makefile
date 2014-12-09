@@ -23,7 +23,7 @@
 PROG = slcdev-hub
 
 CFILES = slcdev-hub.c console.c lattice.c pktbuf.c sndbuf.c rs485lnk.c net.c \
-		 xflash.c otg_xflash_pic.c
+		 xflash.c otg_xflash_pic.c uart_xflash_pic.c
 
 SDK = ../../sdk
 

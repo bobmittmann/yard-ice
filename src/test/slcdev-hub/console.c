@@ -342,34 +342,76 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 int usb_xflash(uint32_t offs, uint32_t len);
 
+int usart_xflash(void * uart, uint32_t offs, uint32_t len);
+
+extern const struct fileop uart_console_ops;
+
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
-//	uint32_t offs = 0x40000;
 	uint32_t offs = 0x00000;
+	uint32_t size = 0x00000;
 	uint32_t pri;
+	FILE * raw;
 	int ret;
 
-//	if (argc < 2)
-//		return SHELL_ERR_ARG_MISSING;
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
 
-//	if (argc > 2)
-//		return SHELL_ERR_EXTRA_ARGS;
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
 
-//	if (strcmp(argv[1], "firmware") != 0)
-//		return SHELL_ERR_ARG_INVALID;
+	do {
+		if ((strcmp(argv[1], "firmware") == 0) || 
+			(strcmp(argv[1], "firm") == 0) ||
+			(strcmp(argv[1], "f") == 0)) {
+			offs = 0;
+			size = 256 * 1024;
+			fprintf(f, "Firmware update...\n");
+			break;
+		} 
 
-	fprintf(f, "Firmware update...\n");
+		return SHELL_ERR_ARG_INVALID;
+	} while (0);
+
 	fflush(f);
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
+	raw = isfatty(f) ? ftty_lowlevel(f) : f;
 
-	ret = usb_xflash(offs, 128 * 1024);
+	if (usb_cdc_is_usb_file(raw)) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = usb_xflash(offs, size);
+		cm3_primask_set(pri);
+		return ret;
+	} 
 
-	cm3_primask_set(pri);
+	if (raw->op == &uart_console_ops) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = usart_xflash(STM32_UART5, offs, size);
+		cm3_primask_set(pri);
 
-	return ret;
+		return ret;
+	}
+		  
+	fprintf(f, "Operation not permited in this terminal.\n");
+	return -1;
 }
+
+int cmd_reboot(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "Restarting in 2 seconds...\n");
+
+	thinkos_sleep(2000);
+
+	cm3_sysrst();
+
+	return 0;
+}
+
 
 const struct shell_cmd cmd_tab[] = {
 
@@ -383,12 +425,19 @@ const struct shell_cmd cmd_tab[] = {
 		"[COMMAND]", "show command usage (help [CMD])" },
 
 	{ cmd_fpga, "fpga", "f", 
-		"[erase] [load] [conf]", "update FPGA program." },
+		"[erase] [load] [conf]", 
+		"update FPGA program." },
 
 	{ cmd_net, "net", "n", 
-		"[test|flood|pat|conf|sup|auto|init]", "RS485 network." },
+		"[test|flood|pat|conf|sup|auto|init]", 
+		"RS485 network." },
 
-	{ cmd_xflash, "xf", "", "", "update firmware." },
+	{ cmd_xflash, "xf", "", "", 
+		"update firmware." },
+
+	{ cmd_reboot, "reboot", "rst", "", 
+		"reboot system" },
+
 
 	{ NULL, "", "", NULL, NULL }
 };
@@ -406,7 +455,7 @@ void shell_greeting(FILE * f)
 
 const char * shell_prompt(void)
 {
-	return "[DEV]$ ";
+	return "[HUB]$ ";
 }
 
 
