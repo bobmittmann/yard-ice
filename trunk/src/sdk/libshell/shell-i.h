@@ -39,10 +39,6 @@
 #include "config.h"
 #endif
 
-#ifndef SHELL_LINE_MAX
-#define SHELL_LINE_MAX 128
-#endif
-
 #ifndef SHELL_ARG_MAX 
 #define SHELL_ARG_MAX 16
 #endif

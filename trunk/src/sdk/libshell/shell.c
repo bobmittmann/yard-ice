@@ -39,6 +39,10 @@
 
 #include <sys/dcclog.h>
 
+#ifndef SHELL_LINE_MAX
+#define SHELL_LINE_MAX 72
+#endif
+
 #ifndef SHELL_HISTORY_MAX
 #define SHELL_HISTORY_MAX 8
 #endif
@@ -48,11 +52,11 @@ int shell(FILE * f, const char * (* prompt)(void),
 		  const struct shell_cmd cmd_tab[])
 {
 	char line[SHELL_LINE_MAX];
-	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+	char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	struct cmd_history * history;
 	struct shell_cmd * cmd;
 	char * cp;
-	char * stat;
+	char * st;
 	int ret = 0;
 
 	DCC_LOG(LOG_TRACE, "history_init()");
@@ -71,14 +75,17 @@ int shell(FILE * f, const char * (* prompt)(void),
 			continue;
 
 		history_add(history, cp);
-		cp = line;
 
-		while ((stat = cmd_get_next(&cp)) != NULL) {
-			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
+		DCC_LOG3(LOG_TRACE, "line = %02x %02x %02x...", cp[0], cp[1], cp[2]);
+
+		/* get the next statement */
+		while ((st = cmd_get_next(&cp)) != NULL) {
+
+			if ((cmd = cmd_lookup(cmd_tab, st)) == NULL) {
 				fprintf(f, "Command not found!\n");
 				break;
 			}
-			if ((ret = cmd_exec(f, cmd, stat)) < 0) {
+			if ((ret = cmd_exec(f, cmd, st)) < 0) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;
 			}

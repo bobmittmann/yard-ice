@@ -27,23 +27,31 @@
 
 extern const uint8_t otg_xflash_pic[];
 extern const unsigned int sizeof_otg_xflash_pic;
-
-#define PIC_CODE_SIZE_MAX (1720)
-uint32_t text[PIC_CODE_SIZE_MAX / 4];
+extern uint32_t __data_start[]; 
 
 int usb_xflash(uint32_t offs, uint32_t len)
 {
-	const uint8_t * xflash_pic;
-	unsigned int sizeof_xflash_pic;
-	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)text) + 1;
+	uint32_t * xflash_code = __data_start;
+	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)xflash_code) + 1;
 
 	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
 
-	xflash_pic = otg_xflash_pic;
-	sizeof_xflash_pic = sizeof_otg_xflash_pic;
-
-	memcpy(text, xflash_pic, sizeof_xflash_pic);
+	memcpy(xflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
 
 	return xflash_ram(offs, len);
 }
 
+extern const uint8_t uart_xflash_pic[];
+extern const unsigned int sizeof_uart_xflash_pic;
+
+int usart_xflash(void * uart, uint32_t offs, uint32_t len)
+{
+	uint32_t * xflash_code = __data_start;
+	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)xflash_code) + 1;
+
+	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
+
+	memcpy(xflash_code, uart_xflash_pic, sizeof_uart_xflash_pic);
+
+	return xflash_ram(uart, offs, len);
+}

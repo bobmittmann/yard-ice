@@ -39,25 +39,6 @@
 
 #include <sys/dcclog.h>
 
-/*
-struct shell_cmd * cmd_lookup(const char * s, 
-							  const struct shell_cmd * cmd_tab)
-{
-	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
-
-
-
-
-	while (cmd->callback != NULL) {
-		if ((strcmp(s, cmd->name) == 0) || (strcmp(s, cmd->alias) == 0)) {
-			return cmd;
-		}
-		cmd++;
-	}
-
-	return NULL;
-} */
-
 struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 {
 	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
@@ -65,27 +46,41 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	char * cp;
 	int n;
 
-	if ((cp = line) == NULL)
+	if ((cp = line) == NULL) {
+		DCC_LOG(LOG_WARNING, "NULL pointer...");
 		return NULL;
+	}
 
 	/* remove leading spaces */
 	for (; isspace(*cp); cp++);
 	s = cp;
 
 	/* get the command name lenght */
-	for (; isalnum(*cp); cp++);
+	for (; (*cp != '\0') && (*cp != ';') && !isspace(*cp); cp++);
 	n = cp - s;
 
-	if (n == 0)
+	if (n == 0) {
+		DCC_LOG(LOG_WARNING, "empty line...");
 		return NULL;
+	}
+
+	if (n == 1)
+		DCC_LOG1(LOG_TRACE, "%c", s[0]);
+	else if (n == 2)
+		DCC_LOG2(LOG_TRACE, "%c%c", s[0], s[1]);
+	else
+		DCC_LOG3(LOG_TRACE, "%c%c%c...", s[0], s[1], s[2]);
 
 	while (cmd->callback != NULL) {
+		DCC_LOG1(LOG_TRACE, "'%s'", cmd->name);
 		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
 			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {
 			return cmd;
 		}
 		cmd++;
 	}
+
+	DCC_LOG(LOG_WARNING, "not found...");
 
 	return NULL;
 }

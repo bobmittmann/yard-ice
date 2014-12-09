@@ -490,7 +490,7 @@ int usb_cdc_ctl_wait(usb_cdc_class_t * cl, unsigned int msec)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	__thinkos_flag_clr(dev->ctl_flag);
+	thinkos_flag_clr(dev->ctl_flag);
 	thinkos_flag_wait(dev->ctl_flag);
 	DCC_LOG(LOG_INFO, "CTL wakeup...");
 
@@ -543,7 +543,7 @@ int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
 		pkt->bData[0] = status;
 		pkt->bData[1] = 0;
 
-		__thinkos_flag_clr(dev->ctl_flag);
+		thinkos_flag_clr(dev->ctl_flag);
 
 		ret = usb_dev_ep_tx_start(dev->usb, dev->int_ep, pkt, 
 							sizeof(struct cdc_notification));
@@ -580,15 +580,15 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 
 	/* initialize USB device */
 	dev->usb = (usb_dev_t *)usb;
-	dev->rx_flag = __thinkos_flag_alloc(); 
-	dev->tx_flag = __thinkos_flag_alloc(); 
-	dev->ctl_flag = __thinkos_flag_alloc(); 
+	dev->rx_flag = thinkos_flag_alloc(); 
+	dev->tx_flag = thinkos_flag_alloc(); 
+	dev->ctl_flag = thinkos_flag_alloc(); 
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
 
-	__thinkos_flag_clr(dev->tx_flag); 
-	__thinkos_flag_clr(dev->rx_flag); 
-	__thinkos_flag_clr(dev->ctl_flag); 
+	thinkos_flag_clr(dev->tx_flag); 
+	thinkos_flag_clr(dev->rx_flag); 
+	thinkos_flag_clr(dev->ctl_flag); 
 
 	DCC_LOG2(LOG_TRACE, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
 	usb_cdc_sn_set(sn);

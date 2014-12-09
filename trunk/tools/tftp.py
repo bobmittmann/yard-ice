@@ -195,9 +195,9 @@ class TftpPacketERR(TftpPacket):
 			self.msg = self.errmsgs[self.err]
 		else:
 			fmt = "!H{0:d}sx".format(buflen - 5)
-			(self.err, self.msg) = struct.unpack(fmt, self.buf[2:])
-
-		raise TftpException("TFTP Error: {0:d} - '{1:s}'".format(self.err, self.msg))
+			(self.err, txt) = struct.unpack(fmt, self.buf[2:])
+			self.msg = txt.decode('ascii')
+		raise TftpException("TFTP Error: {:d} - '{:s}'".format(self.err, self.msg))
 
 
 
