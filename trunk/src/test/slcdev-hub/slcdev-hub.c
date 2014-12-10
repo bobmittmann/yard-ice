@@ -37,6 +37,14 @@
 #include "board.h"
 #include "net.h"
 
+#define VERSION_NUM "0.3"
+#define VERSION_DATE "Nov, 2014"
+
+const char * version_str = "SLC Device Hub" \
+							VERSION_NUM " - " VERSION_DATE;
+const char * copyright_str = "(c) Copyright 2014 - Mircom Group";
+
+
 int console_shell(void);
 void env_init(void);
 

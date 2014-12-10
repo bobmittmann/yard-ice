@@ -49,12 +49,15 @@
 #include "board.h"
 #include "lattice.h"
 
+#include "net.h"
+
 struct {
 	bool initialized;
 	volatile bool probe_mode;
 	volatile uint32_t probe_seq;
 	int probe_flag;
 	struct rs485_link link;
+	struct netstats stat;
 } net = {
 	.initialized = false,
 	.probe_mode = false
@@ -104,9 +107,14 @@ void __attribute__((noreturn)) net_recv_task(void)
 		if (pkt != NULL) {
 			char * s = (char *)pkt;
 
+			net.stat.rx.pkt_cnt++;
+			net.stat.rx.octet_cnt += len;
+
 			DCC_LOG1(LOG_TRACE, "len=%d", len);
 			s[len] = '\0';
-//			printf("\"%s\"\n", s);
+
+//			tracef("net rx: len=%d", len);
+			tracef("\"%s\"", s);
 
 			if (net.probe_mode) {
 				if ((len == 12) && (s[0] == 'P') && (s[1] == 'R')
@@ -225,10 +233,20 @@ int net_send(const void * buf, int len)
 
 	pkt = rs485_pkt_enqueue(&net.link, pkt, len);
 
+	net.stat.tx.pkt_cnt++;
+	net.stat.tx.octet_cnt += len;
+
 	if (pkt != NULL)
 		pktbuf_free(pkt);
 
 	return 0;
+}
+
+void net_get_stats(struct netstats * stat, bool rst)
+{
+	memcpy(stat, &net.stat, sizeof(struct netstats));
+	if (rst)
+		memset(&net.stat, 0, sizeof(struct netstats));
 }
 
 #if 0

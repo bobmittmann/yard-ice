@@ -167,24 +167,23 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 const uint32_t __flash_size;
 
-int __attribute__((section (".data#"))) 
-	stm32f2x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
+#define FLASH_ERR (FLASH_PGSERR | FLASH_PGPERR | FLASH_PGAERR | FLASH_WRPERR | \
+				   FLASH_OPERR)
+
+int __attribute__((section (".data#"))) stm32f2x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
 {
 	uint32_t sr;
-	int again;
-	int ret = -1;
 
 	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
 
-	for (again = 4096 * 1024; again > 0; again--) {
+	do {
 		sr = flash->sr;
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
+	} while (sr & FLASH_BSY);
 
-	return ret;
+	if (sr & FLASH_ERR)
+		return -1;
+
+	return 0;
 }
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)

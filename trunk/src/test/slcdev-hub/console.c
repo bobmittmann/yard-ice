@@ -37,12 +37,15 @@
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
+#include "trace.h"
 
 #include "lattice.h"
 #include "net.h"
 
 extern const uint8_t * ice40lp384_bin;
-extern const struct shell_cmd cmd_tab[];
+extern const struct shell_cmd shell_cmd_tab[];
+extern const char * version_str;
+extern const char * copyright_str;
 
 /*****************************************************************************
  * Help
@@ -50,13 +53,13 @@ extern const struct shell_cmd cmd_tab[];
 
 int cmd_help(FILE *f, int argc, char ** argv)
 {
-	struct shell_cmd * cmd;
+	const struct shell_cmd * cmd;
 
 	if (argc > 2)
 		return -1;
 
 	if (argc > 1) {
-		if ((cmd = cmd_lookup(cmd_tab, argv[1])) == NULL) {
+		if ((cmd = cmd_lookup(shell_cmd_tab, argv[1])) == NULL) {
 			fprintf(f, " Not found: '%s'\n", argv[1]);
 			return -1;
 		}
@@ -68,7 +71,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	}
 
 	fprintf(f, "\n COMMAND:   ALIAS:  DESCIPTION: \n");
-	for (cmd = (struct shell_cmd *)cmd_tab; cmd->callback != NULL; cmd++) {
+	for (cmd = shell_cmd_tab; cmd->callback != NULL; cmd++) {
 		fprintf(f, "  %-10s %-4s   %s\n", cmd->name, cmd->alias, cmd->desc);
 	}
 
@@ -135,6 +138,24 @@ int cmd_get(FILE * f, int argc, char ** argv)
  * RS485 Network
  *****************************************************************************/
 
+int cmd_stat(FILE * f, int argc, char ** argv)
+{
+	struct netstats stat;
+	
+	
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	net_get_stats(&stat, true);
+
+	fprintf(f, "    | packets |  octets |\n");
+	fprintf(f, " TX | %7d | %7d |\n", stat.tx.pkt_cnt, stat.tx.octet_cnt);
+	fprintf(f, " RX | %7d | %7d |\n", stat.rx.pkt_cnt, stat.rx.octet_cnt);
+
+	return 0;
+}
+
+
 const char net_msg[] = "The qick brown fox jumps over the lazy dog!";
 const uint8_t net_pattern[] = { 0x54, 0x38, 0x54, 0x38 };
 
@@ -198,7 +219,7 @@ int cmd_net(FILE * f, int argc, char ** argv)
 	};
 
 	if (pattern) {
-		fprintf(f, "RS845 network message test.\n");
+		fprintf(f, "RS845 network pattern test.\n");
 		net_send(net_pattern, sizeof(net_pattern));
 	};
 
@@ -211,8 +232,8 @@ int cmd_net(FILE * f, int argc, char ** argv)
 		int i;
 		int n;
 		fprintf(f, "RS845 network flooding test.\n");
-		for (i = 0; i < 150; ++i) {
-			thinkos_sleep(100);
+		for (i = 0; i < 100; ++i) {
+			thinkos_sleep(10);
 			n = sprintf(msg, "%3d - %s", i, net_msg);
 			net_send(msg, n);
 		}
@@ -315,6 +336,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 
 	if (erase) {
 		fprintf(f, "Erasing sector: 0x%08x...\n", (uint32_t)bin);
+		fflush(f);
 		if (stm32_flash_erase(flash_offs, 0x20000) < 0) {
 			fprintf(f, "stm32f_flash_erase() failed!\n");
 			return -1;
@@ -412,8 +434,78 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+extern FILE * monitor_stream;
+extern bool monitor_auto_flush;
 
-const struct shell_cmd cmd_tab[] = {
+int cmd_trace(FILE * f, int argc, char ** argv)
+{
+	argc--;
+	argv++;
+
+	if (argc) {
+		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
+			fprintf(f, "flush\n");
+			trace_flush();
+			return 0;
+		} 
+
+		if ((strcmp(*argv, "monitor") == 0) || (strcmp(*argv, "m") == 0)) {
+			fprintf(f, "monitor\n");
+			monitor_stream = f;
+			return 0;
+		}
+
+		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
+			fprintf(f, "Auto flush\n");
+			monitor_auto_flush = true;
+			return 0;
+		}
+
+		if ((strcmp(*argv, "keep") == 0) || (strcmp(*argv, "k") == 0)) {
+			fprintf(f, "Keep trace (don't flush)\n");
+			monitor_auto_flush = false;
+			return 0;
+		}
+
+		return SHELL_ERR_ARG_INVALID;
+	}
+
+	fprintf(f, "---------\n");
+	trace_fprint(f, TRACE_ALL);
+
+	return 0;
+}
+
+int cmd_version(FILE *f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "%s\n", version_str);
+	fprintf(f, "%s\n", copyright_str);
+
+	return 0;
+}
+
+int cmd_echo(FILE *f, int argc, char ** argv)
+{
+	int i;
+
+	for (i = 1; i < argc; ++i) {
+		if (i != 1)
+			fprintf(f, " ");
+		fprintf(f, argv[i]);
+	}
+
+	fprintf(f, "\n");
+
+	return 0;
+}
+
+const struct shell_cmd shell_cmd_tab[] = {
+
+	{ cmd_echo, "echo", "", 
+		"[STRING]...", "Echo the STRING(s) to terminal" },
 
 	{ cmd_get, "get", "", 
 		"VAR", "get environement variable" },
@@ -438,32 +530,35 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_reboot, "reboot", "rst", "", 
 		"reboot system" },
 
+	{ cmd_trace, "trace", "t", 
+		"[monitor | flush | auto | keep]", "handle the trace ring" },
+
+	{ cmd_stat, "stat", "s", 
+		"", "show network statistics info" },
+
+	{ cmd_version, "version", "ver", "", 
+		"show version information" },
 
 	{ NULL, "", "", NULL, NULL }
 };
 
-
-#define VERSION_NUM "0.2"
-#define VERSION_DATE "Oct, 2014"
-
-void shell_greeting(FILE * f) 
-{
-	fprintf(f, "\n"
-	"SLCDEV-HUB" VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
-}
 
 const char * shell_prompt(void)
 {
 	return "[HUB]$ ";
 }
 
+void shell_greeting(FILE * f) 
+{
+	fprintf(f, "\n%s", version_str);
+	fprintf(f, "\n%s\n\n", copyright_str);
+}
 
 int stdio_shell(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
 
-	return shell(stdout, shell_prompt, shell_greeting, cmd_tab);
+	return shell(stdout, shell_prompt, shell_greeting, shell_cmd_tab);
 }
 
 int usb_shell(usb_cdc_class_t * cdc)
@@ -479,6 +574,6 @@ int usb_shell(usb_cdc_class_t * cdc)
 	stdout = f_tty;
 	stdin = f_tty;
 
-	return shell(f_tty, shell_prompt, shell_greeting, cmd_tab);
+	return shell(f_tty, shell_prompt, shell_greeting, shell_cmd_tab);
 }
 

@@ -76,8 +76,6 @@ int shell(FILE * f, const char * (* prompt)(void),
 
 		history_add(history, cp);
 
-		DCC_LOG3(LOG_TRACE, "line = %02x %02x %02x...", cp[0], cp[1], cp[2]);
-
 		/* get the next statement */
 		while ((st = cmd_get_next(&cp)) != NULL) {
 
