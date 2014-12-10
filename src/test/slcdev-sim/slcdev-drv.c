@@ -182,7 +182,7 @@ unsigned int trig_addr_get(void)
 
 	/* Get the address from the AP Direct poll trigger 
 	   configuration (mask and compare values) */
-	if ((slcdev_drv.trig.ap_msk == 0x7fff) &&
+	if ((slcdev_drv.trig.ap_msk == 0x7ffe) &&
 		((slcdev_drv.trig.ap_cmp & 0x61e0) == 0x61e0)) {
 		/* Upper nibble address bits */
 		hi = (slcdev_drv.trig.ap_cmp >> 1) & 0xf; 
@@ -190,6 +190,8 @@ unsigned int trig_addr_get(void)
 		lo = (slcdev_drv.trig.ap_cmp >> 9) & 0xf; 
 		addr = 10 * addr_dec_lut[hi] + addr_dec_lut[lo];
 	
+		DCC_LOG1(LOG_TRACE, "AP addr=%d", addr);
+
 		return addr;
 	}	
 	return 0;

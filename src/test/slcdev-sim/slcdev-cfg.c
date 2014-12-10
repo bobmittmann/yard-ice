@@ -429,7 +429,7 @@ static const struct microjs_attr_desc trig_desc[] = {
 	{ "module", MICROJS_JSON_BOOLEAN, 0, 
 		offsetof(struct cfg_trig, module), microjs_bit_enc},
 	{ "sensor", MICROJS_JSON_BOOLEAN, 0, 
-		offsetof(struct cfg_trig, module), microjs_bit_enc},
+		offsetof(struct cfg_trig, sensor), microjs_bit_enc},
 	{ "addr", MICROJS_JSON_INTEGER, 0, 
 		offsetof(struct cfg_trig, addr), microjs_u8_enc },
 	{ "script", MICROJS_JSON_ARRAY, 8, 

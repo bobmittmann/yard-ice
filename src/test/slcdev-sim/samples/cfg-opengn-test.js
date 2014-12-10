@@ -14,7 +14,6 @@
 		"ledno" : 2,
 		"group" : [ 1 ],
 		"addr" : [ 1 ]
-		"event" : "usr1"
 	},
 
 	"sensor" : { 
@@ -24,7 +23,6 @@
 		"ledno" : 2,
 		"group" : [ 1 ],
 		"addr" : [ 2 ],
-		"event" : "usr2"
 	},
 
 	"sensor" : { 
