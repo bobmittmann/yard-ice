@@ -536,7 +536,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 				sim = &sim_model_lut[model->sim];
 
 				if (dev->ledno) {
-					DCC_LOG2(LOG_TRACE, "dev=%d ctl=0x%x", dev->addr, ctl);
+					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
 
 					/* Poll LED state */
 					if ((ctl & 0x4) == 0) {

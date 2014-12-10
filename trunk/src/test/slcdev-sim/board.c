@@ -296,7 +296,7 @@ void __attribute__((noreturn)) io_event_task(void)
 			/* State change */
 			addr1 = addr;
 
-			DCC_LOG1(LOG_INFO, "Addr=%d", addr);
+			DCC_LOG1(LOG_TRACE, "Addr=%d", addr);
 			//trig_addr_set(addr >> 7, addr & 0x7f);
 			trig_addr_set(addr & 0x7f);
 		}
