@@ -21,7 +21,7 @@
 THISDIR:= $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 ifndef BASEDIR
-  BASEDIR := $(realpath $(THISDIR)/../..)
+  BASEDIR := $(realpath $(THISDIR)/..)
 endif
 
 ifndef TOOLSDIR 

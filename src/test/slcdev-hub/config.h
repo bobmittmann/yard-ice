@@ -73,5 +73,7 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE 256
 
+#define TRACE_RING_SIZE 512
+
 #endif /* __CONFIG_H__ */
 

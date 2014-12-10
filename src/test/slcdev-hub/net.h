@@ -23,6 +23,17 @@
 #ifndef __NET_H__
 #define __NET_H__
 
+struct netstats {
+	struct {
+		uint32_t pkt_cnt;
+		uint32_t octet_cnt;
+	} rx;
+	struct {
+		uint32_t pkt_cnt;
+		uint32_t octet_cnt;
+	} tx;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +56,8 @@ void net_probe_enable(void);
 
 void net_probe_disable(void);
 
+void net_get_stats(struct netstats * stat, bool rst);
+
 int audio_send(int stream, sndbuf_t * buf, uint32_t ts);
 
 int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts);
@@ -52,6 +65,7 @@ int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts);
 int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts);
 
 int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts);
+
 
 #ifdef __cplusplus
 }

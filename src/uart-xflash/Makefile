@@ -21,9 +21,11 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-CODELIB = xflash_pic
+CODELIB = uart_xflash_pic
 
-CFILES = xflash.c crc16ccitt.c stm32l-flash.c stm32-uart.c
+#CFILES = xflash.c crc16ccitt.c stm32l-flash.c stm32-uart.c
+
+CFILES = xflash.c crc16ccitt.c stm32-uart.c stm32f2xx-flash.c 
 
 include cm3-pic.mk
 

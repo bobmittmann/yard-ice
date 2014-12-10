@@ -65,11 +65,31 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	}
 
 	if (n == 1)
+		DCC_LOG1(LOG_INFO, "%c", s[0]);
+	else if (n == 2)
+		DCC_LOG2(LOG_INFO, "%c%c", s[0], s[1]);
+	else
+		DCC_LOG3(LOG_INFO, "%c%c%c...", s[0], s[1], s[2]);
+
+	while (cmd->callback != NULL) {
+		DCC_LOG1(LOG_MSG, "'%s'", cmd->name);
+		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
+			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {
+			return cmd;
+		}
+		cmd++;
+	}
+
+	DCC_LOG(LOG_WARNING, "not found...");
+
+	if (n == 1)
 		DCC_LOG1(LOG_TRACE, "%c", s[0]);
 	else if (n == 2)
 		DCC_LOG2(LOG_TRACE, "%c%c", s[0], s[1]);
 	else
 		DCC_LOG3(LOG_TRACE, "%c%c%c...", s[0], s[1], s[2]);
+
+	cmd = (struct shell_cmd *)cmd_tab; 
 
 	while (cmd->callback != NULL) {
 		DCC_LOG1(LOG_TRACE, "'%s'", cmd->name);
@@ -79,8 +99,6 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 		}
 		cmd++;
 	}
-
-	DCC_LOG(LOG_WARNING, "not found...");
 
 	return NULL;
 }
