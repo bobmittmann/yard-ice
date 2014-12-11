@@ -188,6 +188,8 @@ int net_probe(void)
 		DCC_LOG1(LOG_TRACE, "seq=0x%08x", seq);
 
 		rs485_pkt_enqueue(&net.link, pkt, 12);
+		net.stat.tx.pkt_cnt++;
+		net.stat.tx.octet_cnt += 12;
 		/* wait for the end of transmission */
 		pkt = rs485_pkt_drain(&net.link);
 		pktbuf_free(pkt);
@@ -232,7 +234,6 @@ int net_send(const void * buf, int len)
 	memcpy(pkt, buf, len);
 
 	pkt = rs485_pkt_enqueue(&net.link, pkt, len);
-
 	net.stat.tx.pkt_cnt++;
 	net.stat.tx.octet_cnt += len;
 
@@ -379,7 +380,8 @@ int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts)
 
 	pkt = rs485_pkt_enqueue(&net.link, pkt, 
 							data_len + sizeof(struct audio_pkt));
-
+	net.stat.tx.pkt_cnt++;
+	net.stat.tx.octet_cnt += data_len + sizeof(struct audio_pkt);
 	if (pkt != NULL)
 		pktbuf_free(pkt);
 
@@ -460,8 +462,10 @@ int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 
 //	tracef("%s(): ts=%d data_len=%d", __func__, ts, data_len);
 
-	pkt = rs485_pkt_enqueue(&net.link, pkt, data_len + sizeof(struct audio_pkt));
-
+	pkt = rs485_pkt_enqueue(&net.link, pkt, 
+							data_len + sizeof(struct audio_pkt));
+	net.stat.tx.pkt_cnt++;
+	net.stat.tx.octet_cnt += data_len + sizeof(struct audio_pkt);
 	if (pkt != NULL)
 		pktbuf_free(pkt);
 
