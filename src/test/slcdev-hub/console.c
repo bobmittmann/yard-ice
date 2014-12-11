@@ -31,6 +31,7 @@
 #include <sys/tty.h>
 #include <sys/usb-cdc.h>
 #include <sys/serial.h>
+#include <sys/null.h>
 #include <xmodem.h>
 #include <hexdump.h>
 
@@ -141,12 +142,20 @@ int cmd_get(FILE * f, int argc, char ** argv)
 int cmd_stat(FILE * f, int argc, char ** argv)
 {
 	struct netstats stat;
+	bool clear = false;
 	
-	
-	if (argc > 1)
+	if (argc > 2)
 		return SHELL_ERR_EXTRA_ARGS;
 
-	net_get_stats(&stat, true);
+	if (argc > 1) {
+		if ((strcmp(argv[1], "clear") == 0) || 
+			(strcmp(argv[1], "clr") == 0) ||
+			(strcmp(argv[1], "c") == 0)) {
+			clear = true;
+		} 
+	}
+
+	net_get_stats(&stat, clear);
 
 	fprintf(f, "    | packets |  octets |\n");
 	fprintf(f, " TX | %7d | %7d |\n", stat.tx.pkt_cnt, stat.tx.octet_cnt);
@@ -455,6 +464,12 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 			return 0;
 		}
 
+		if ((strcmp(*argv, "null") == 0) || (strcmp(*argv, "n") == 0)) {
+			fprintf(f, "null\n");
+			monitor_stream = null_fopen(NULL);
+			return 0;
+		}
+
 		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
 			fprintf(f, "Auto flush\n");
 			monitor_auto_flush = true;
@@ -531,10 +546,10 @@ const struct shell_cmd shell_cmd_tab[] = {
 		"reboot system" },
 
 	{ cmd_trace, "trace", "t", 
-		"[monitor | flush | auto | keep]", "handle the trace ring" },
+		"[flush | auto | monitor | null | keep]", "handle the trace ring" },
 
 	{ cmd_stat, "stat", "s", 
-		"", "show network statistics info" },
+		"[clear]", "show network statistics info" },
 
 	{ cmd_version, "version", "ver", "", 
 		"show version information" },
