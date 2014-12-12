@@ -54,13 +54,17 @@
 struct {
 	bool initialized;
 	volatile bool probe_mode;
+	volatile bool pkt_mode;
 	volatile uint32_t probe_seq;
+	uint32_t tx_seq;
+	uint32_t rx_seq;
 	int probe_flag;
 	struct rs485_link link;
 	struct netstats stat;
 } net = {
 	.initialized = false,
-	.probe_mode = false
+	.probe_mode = false,
+	.pkt_mode = false
 };
 
 #define USART2_DMA         STM32F_DMA1
@@ -84,6 +88,128 @@ struct {
 
 const uint8_t * ice40lp384_bin = (uint8_t *)0x08060000;
 
+/* -------------------------------------------------------------------------
+   - Packets
+   ------------------------------------------------------------------------- */
+
+struct net_pkt {
+	uint16_t crc;
+	uint16_t data_len;
+	uint16_t seq;
+	uint8_t data[];
+};
+
+
+int net_pkt_send(const void * buf, int len)
+{
+	struct net_pkt * pkt;
+	unsigned int data_len;
+	uint8_t * dst;
+	uint8_t * src;
+	int i;
+
+	pkt = (struct net_pkt *)pktbuf_alloc();
+	if (pkt == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		net.stat.tx.err_cnt++;
+		return -1;
+	}
+
+	data_len = MIN(len, pktbuf_len - sizeof(struct net_pkt));
+
+	pkt->crc = 0;
+	pkt->data_len = data_len;
+	pkt->seq = net.tx_seq++;
+	dst = (uint8_t *)pkt->data;
+	src = (uint8_t *)buf;
+
+	for (i = 0; i < data_len; ++i)
+		dst[i] = src[i];
+
+	pkt->crc = crc16ccitt(0, pkt, data_len + sizeof(struct net_pkt));
+
+	pkt = rs485_pkt_enqueue(&net.link, pkt, 
+							data_len + sizeof(struct net_pkt));
+	net.stat.tx.pkt_cnt++;
+	net.stat.tx.octet_cnt += data_len + sizeof(struct net_pkt);
+	if (pkt != NULL)
+		pktbuf_free(pkt);
+
+	return 0;
+}
+
+void net_pkt_recv(struct net_pkt * pkt, int len)
+{
+	void * buf = NULL;
+	int data_len;
+	uint16_t crc;
+
+	data_len = len - sizeof(struct net_pkt);
+	crc = pkt->crc;
+	pkt->crc = 0;
+	if (crc16ccitt(0, pkt, data_len + sizeof(struct net_pkt)) != crc) {
+		tracef("%s(): CRC error!", __func__);
+		data_len = -1;
+		net.stat.rx.err_cnt++;
+	} else if (data_len != pkt->data_len) {
+		tracef("%s(): invalid data_len=%d!", __func__, data_len);
+		data_len = -1;
+		net.stat.rx.err_cnt++;
+	} else {
+		net.stat.rx.pkt_cnt++;
+		net.stat.rx.octet_cnt += data_len + sizeof(struct net_pkt);
+
+		if (pkt->seq != net.rx_seq) {
+			int32_t n;
+		
+			n = (int32_t)(pkt->seq - net.rx_seq);
+			
+			tracef("%s(): SEQ error: %d pkts lost!", __func__, n);
+			net.stat.rx.seq_err_cnt += n;
+			net.rx_seq = pkt->seq;
+		}
+
+		net.rx_seq++;
+
+		if (buf != NULL) {
+			uint8_t * src;
+			uint8_t * dst;
+			int i;
+
+			src = (uint8_t *)pkt->data;
+			dst = (uint8_t *)buf;
+			for (i = 0; i < data_len; ++i)
+				dst[i] = src[i];
+		}
+
+	}
+}
+
+void net_probe_recv(char * s, int len)
+{
+	if ((len == 12) && (s[0] == 'P') && (s[1] == 'R')
+		&& (s[2] == 'B') && (s[3] == '=')) {
+		net.probe_seq = strtoul(&s[4], NULL, 16);
+		net.stat.rx.pkt_cnt++;
+		net.stat.rx.octet_cnt += len;
+	} else {
+		net.probe_seq = 0;
+	}
+	thinkos_flag_set(net.probe_flag);
+}
+
+void net_recv(char * s, int len)
+{
+	net.stat.rx.pkt_cnt++;
+	net.stat.rx.octet_cnt += len;
+
+	s[len] = '\0';
+
+//	tracef("net rx: len=%d", len);
+	tracef("\"%s\"", s);
+}
+
 void __attribute__((noreturn)) net_recv_task(void)
 {
 	void * pkt;
@@ -98,33 +224,32 @@ void __attribute__((noreturn)) net_recv_task(void)
 		if (pkt == NULL) {
 			DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
 			tracef("%s(): pktbuf_alloc() failed!", __func__);
-			thinkos_sleep(5000);
+			thinkos_sleep(1000);
 			continue;
 		}
 
 		len = rs485_pkt_receive(&net.link, &pkt, pktbuf_len);
 
+		if (len < 0) {
+			tracef("%s(): rs485_pkt_receive() failed!", __func__);
+			thinkos_sleep(1000);
+			continue;
+		}
+
+		if (len == 0) {
+			tracef("%s(): rs485_pkt_receive() == 0!", __func__);
+			thinkos_sleep(1000);
+			continue;
+		}
+
+
 		if (pkt != NULL) {
-			char * s = (char *)pkt;
-
-			net.stat.rx.pkt_cnt++;
-			net.stat.rx.octet_cnt += len;
-
-			DCC_LOG1(LOG_TRACE, "len=%d", len);
-			s[len] = '\0';
-
-//			tracef("net rx: len=%d", len);
-			tracef("\"%s\"", s);
-
-			if (net.probe_mode) {
-				if ((len == 12) && (s[0] == 'P') && (s[1] == 'R')
-					&& (s[2] == 'B') && (s[3] == '=')) {
-					net.probe_seq = strtoul(&s[4], NULL, 16);
-				} else {
-					net.probe_seq = 0;
-				}
-				thinkos_flag_set(net.probe_flag);
-			}
+			if (net.probe_mode)
+				net_probe_recv((char *)pkt, len);
+			else if (net.pkt_mode)
+				net_pkt_recv((struct net_pkt *)pkt, len);
+			else
+				net_recv((char *)pkt, len);
 
 			pktbuf_free(pkt);
 		}
@@ -143,6 +268,11 @@ void net_recv_init(void)
 	thread = thinkos_thread_create((void *)net_recv_task, (void *)NULL,
 								   net_recv_stack, sizeof(net_recv_stack) |
 								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5));
+}
+
+void net_pkt_mode(bool en)
+{
+	net.pkt_mode = en;
 }
 
 void net_probe_enable(void)

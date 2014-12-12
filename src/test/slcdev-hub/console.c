@@ -38,10 +38,13 @@
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
+#include <sys/delay.h>
+
 #include "trace.h"
 
 #include "lattice.h"
 #include "net.h"
+
 
 extern const uint8_t * ice40lp384_bin;
 extern const struct shell_cmd shell_cmd_tab[];
@@ -157,16 +160,109 @@ int cmd_stat(FILE * f, int argc, char ** argv)
 
 	net_get_stats(&stat, clear);
 
-	fprintf(f, "    | packets |  octets |\n");
-	fprintf(f, " TX | %7d | %7d |\n", stat.tx.pkt_cnt, stat.tx.octet_cnt);
-	fprintf(f, " RX | %7d | %7d |\n", stat.rx.pkt_cnt, stat.rx.octet_cnt);
+	fprintf(f, "    |    octets | packets |  errors | seq err |\n");
+	fprintf(f, " TX | %9d | %7d | %7d |         |\n", 
+			stat.tx.octet_cnt, stat.tx.pkt_cnt, stat.tx.err_cnt);
+	fprintf(f, " RX | %9d | %7d | %7d | %7d |\n", 
+			stat.rx.octet_cnt, stat.rx.pkt_cnt, 
+			stat.rx.err_cnt, stat.rx.seq_err_cnt);
 
 	return 0;
 }
 
 
 const char net_msg[] = "The qick brown fox jumps over the lazy dog!";
-const uint8_t net_pattern[] = { 0x54, 0x38, 0x54, 0x38 };
+const uint8_t net_pattern[] = { 
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+
+	0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+	0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+};
+
+int pkt_xmt_flag;
+
+void __attribute__((noreturn)) pkt_xmt_task(void)
+{
+	uint32_t data[64];
+	uint32_t x = 0;
+	int i;
+	
+	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
+
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	for (;;) {
+		thinkos_flag_wait(pkt_xmt_flag);
+
+		for (i = 0; i < 64; ++i) {
+			x = (1103515245 * x + 12345) & 0x7fffffff;
+			data[i] = x;
+		}
+
+//		net_pkt_send(net_msg, sizeof(net_msg));
+//		net_pkt_send(net_pattern, sizeof(net_pattern));
+		net_pkt_send(data, sizeof(data));
+
+//		x = (1103515245 * x + 12345) & 0x7fffffff;
+//		thinkos_sleep((x >> 8) & 0xf);
+//		udelay((x >> 16) & 0xf);
+	}
+}
+
+uint32_t __attribute__((aligned(8))) pkt_xmt_stack[1024];
+
+void pkt_xmt_init(void)
+{
+	static int8_t thread = -1;
+
+	if (thread >= 0)
+		return;
+
+	pkt_xmt_flag = thinkos_flag_alloc();
+
+	thread = thinkos_thread_create((void *)pkt_xmt_task, (void *)NULL,
+								   pkt_xmt_stack, sizeof(pkt_xmt_stack) |
+								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5));
+}
+
+int cmd_pkt(FILE * f, int argc, char ** argv)
+{
+
+	if (argc > 1) {
+		if ((strcmp(argv[1], "rx") == 0) || 
+			(strcmp(argv[1], "r") == 0)) {
+			fprintf(f, "Packet reception thread enabled.\n");
+			net_pkt_mode(true);
+			return 0;
+		}
+
+		if ((strcmp(argv[1], "tx") == 0) || 
+			(strcmp(argv[1], "t") == 0)) {
+			fprintf(f, "Packet transmission started.\n");
+			net_pkt_mode(true);
+			thinkos_flag_set(pkt_xmt_flag);
+			return 0;
+		}
+
+		if ((strcmp(argv[1], "stop") == 0) || 
+			(strcmp(argv[1], "s") == 0)) {
+			fprintf(f, "Packet mode disabled!.\n");
+			net_pkt_mode(false);
+			thinkos_flag_clr(pkt_xmt_flag);
+			return 0;
+		}
+
+		return SHELL_ERR_ARG_INVALID;
+	}
+
+	return 0;
+}
+
 
 int cmd_net(FILE * f, int argc, char ** argv)
 {
@@ -550,6 +646,9 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_stat, "stat", "s", 
 		"[clear]", "show network statistics info" },
+
+	{ cmd_pkt, "pkt", "p", 
+		"[rx | tx [count]]", "transfer packets over the network." },
 
 	{ cmd_version, "version", "ver", "", 
 		"show version information" },
