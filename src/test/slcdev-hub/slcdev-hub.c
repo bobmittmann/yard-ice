@@ -243,6 +243,7 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "11. pkt_xmt_init()");
 	pkt_xmt_init();
+	net_pkt_mode(true);
 
 	DCC_LOG(LOG_TRACE, "12. console_shell_init()");
 	console_shell_init();

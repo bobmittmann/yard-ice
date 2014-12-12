@@ -164,9 +164,10 @@ void net_pkt_recv(struct net_pkt * pkt, int len)
 			int32_t n;
 		
 			n = (int32_t)(pkt->seq - net.rx_seq);
-			
-			tracef("%s(): SEQ error: %d pkts lost!", __func__, n);
-			net.stat.rx.seq_err_cnt += n;
+			if (n > 0) {
+				tracef("%s(): SEQ error: %d pkts lost!", __func__, n);
+				net.stat.rx.seq_err_cnt += n;
+			} 
 			net.rx_seq = pkt->seq;
 		}
 

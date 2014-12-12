@@ -28,9 +28,11 @@
 #define __SYS_USB_CDC_H__
 
 #include <stdint.h>
+#include <stdio.h>
 #include <sys/cdc.h>
 #include <sys/usb-dev.h>
 #include <sys/serial.h>
+#include <sys/usb-cdc.h>
 
 #define USB_CDC_EINVAL 1
 #define USB_CDC_EINTR 2

@@ -96,6 +96,8 @@ void thinkos_flag_alloc_svc(int32_t * arg);
 
 void thinkos_flag_free_svc(int32_t * arg);
 
+void thinkos_flag_val_svc(int32_t * arg);
+
 void thinkos_flag_set_svc(int32_t * arg);
 
 void thinkos_flag_clr_svc(int32_t * arg);
@@ -321,6 +323,10 @@ void cm3_svc_isr(void)
 		thinkos_flag_free_svc(arg);
 		break;
 #endif
+
+	case THINKOS_FLAG_VAL:
+		thinkos_flag_val_svc(arg);
+		break;
 
 	case THINKOS_FLAG_SET:
 		thinkos_flag_set_svc(arg);

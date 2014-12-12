@@ -184,12 +184,22 @@ const uint8_t net_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 };
 
+
+/* ---------------------------------------------------------------------------
+   -- Continuous packet transmission thread
+   -------------------------------------------------------------------------- */
+
 int pkt_xmt_flag;
+volatile bool pkt_xmt_itv_rand = false;
+volatile uint16_t pkt_xmt_itv_ms = 10;
+volatile uint16_t pkt_xmt_len = 256;
+volatile uint32_t pkt_xmt_cnt = 0;
 
 void __attribute__((noreturn)) pkt_xmt_task(void)
 {
-	uint32_t data[64];
+	uint32_t data[128];
 	uint32_t x = 0;
+	uint32_t itv = 0x55555555;
 	int i;
 	
 	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
@@ -197,20 +207,36 @@ void __attribute__((noreturn)) pkt_xmt_task(void)
 	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
 
 	for (;;) {
+		int len;
 		thinkos_flag_wait(pkt_xmt_flag);
 
-		for (i = 0; i < 64; ++i) {
+		len = pkt_xmt_len;
+		if (len > sizeof(data))
+			len = sizeof(data);
+
+		for (i = 0; i < (len + 3) / 4; ++i) {
+			/* random packet data */
 			x = (1103515245 * x + 12345) & 0x7fffffff;
 			data[i] = x;
 		}
 
-//		net_pkt_send(net_msg, sizeof(net_msg));
-//		net_pkt_send(net_pattern, sizeof(net_pattern));
-		net_pkt_send(data, sizeof(data));
+		if (net_pkt_send(data, len) < 0) {
+			trace("net_pkt_send() failed!");
+			thinkos_sleep(100);
+			continue;
+		}
 
-//		x = (1103515245 * x + 12345) & 0x7fffffff;
-//		thinkos_sleep((x >> 8) & 0xf);
-//		udelay((x >> 16) & 0xf);
+		pkt_xmt_cnt++;
+
+		if (pkt_xmt_itv_rand) {
+			/* random packet interval */
+			itv = (1103515245 * itv + 12345) & 0x7fffffff;
+			thinkos_sleep(itv & 0xf);
+			udelay((itv >> 16) & 0xf);
+		} else {
+			/* fixed packet interval */
+			thinkos_sleep(pkt_xmt_itv_ms);
+		}	
 	}
 }
 
@@ -227,11 +253,12 @@ void pkt_xmt_init(void)
 
 	thread = thinkos_thread_create((void *)pkt_xmt_task, (void *)NULL,
 								   pkt_xmt_stack, sizeof(pkt_xmt_stack) |
-								   THINKOS_OPT_PRIORITY(5) | THINKOS_OPT_ID(5));
+								   THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(8));
 }
 
 int cmd_pkt(FILE * f, int argc, char ** argv)
 {
+	unsigned int val;
 
 	if (argc > 1) {
 		if ((strcmp(argv[1], "rx") == 0) || 
@@ -245,20 +272,54 @@ int cmd_pkt(FILE * f, int argc, char ** argv)
 			(strcmp(argv[1], "t") == 0)) {
 			fprintf(f, "Packet transmission started.\n");
 			net_pkt_mode(true);
+			pkt_xmt_cnt = 0;
 			thinkos_flag_set(pkt_xmt_flag);
 			return 0;
 		}
 
 		if ((strcmp(argv[1], "stop") == 0) || 
 			(strcmp(argv[1], "s") == 0)) {
-			fprintf(f, "Packet mode disabled!.\n");
-			net_pkt_mode(false);
+			fprintf(f, "Packet transmission stopped.\n");
 			thinkos_flag_clr(pkt_xmt_flag);
 			return 0;
 		}
 
+		if (argc > 2) {
+			if ((strcmp(argv[1], "len") == 0) || 
+				(strcmp(argv[1], "l") == 0)) {
+				val = strtoul(argv[2], NULL, 0);
+				fprintf(f, "Packet data length = %u.\n", val);
+				pkt_xmt_len = val;
+				return 0;
+			}
+			if ((strcmp(argv[1], "itv") == 0) || 
+				(strcmp(argv[1], "i") == 0)) {
+
+				if ((strcmp(argv[2], "rand") == 0) || 
+					(strcmp(argv[2], "r") == 0)) {
+					fprintf(f, "Random packet interval.\n");
+					pkt_xmt_itv_rand = true;
+				} else {
+					val = strtoul(argv[2], NULL, 0);
+					fprintf(f, "Packet interval = %u ms.\n", val);
+					pkt_xmt_itv_ms = val;
+					pkt_xmt_itv_rand = false;
+				}
+				return 0;
+			}
+		}
+
 		return SHELL_ERR_ARG_INVALID;
 	}
+
+	fprintf(f, "- Packet transmission %s.\n", 
+			thinkos_flag_val(pkt_xmt_flag) ? "enabled" : "disabled");
+	fprintf(f, "  - data length = %u.\n", pkt_xmt_len);
+	if (pkt_xmt_itv_rand)
+		fprintf(f, "  - interval = [random].\n");
+	else
+		fprintf(f, "  - interval = %u ms.\n", pkt_xmt_itv_ms);
+	fprintf(f, "  - count = %u.\n", pkt_xmt_cnt);
 
 	return 0;
 }
@@ -648,7 +709,8 @@ const struct shell_cmd shell_cmd_tab[] = {
 		"[clear]", "show network statistics info" },
 
 	{ cmd_pkt, "pkt", "p", 
-		"[rx | tx [count]]", "transfer packets over the network." },
+		"[rx | tx | itv [rand | <TIME ms>] | len <PKT_LEN>]", 
+		"transfer packets over the network." },
 
 	{ cmd_version, "version", "ver", "", 
 		"show version information" },

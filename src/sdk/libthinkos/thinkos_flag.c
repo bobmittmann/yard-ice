@@ -59,6 +59,29 @@ void thinkos_flag_free_svc(int32_t * arg)
 }
 #endif
 
+void thinkos_flag_val_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+
+#if THINKOS_ENABLE_ARG_CHECK
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	arg[0] = __thinkos_flag_is_set(wq);
+}
 
 void thinkos_flag_wait_svc(int32_t * arg)
 {
