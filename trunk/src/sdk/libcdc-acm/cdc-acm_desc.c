@@ -219,7 +219,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			   sending or receiving */
 			EP_OUT_MAX_PKT_SIZE,
 			/* Interval for polling endpoint for data transfers */
-			0x00
+			0x0
 		},
 		/* Endpoint 2 descriptor */
 		{

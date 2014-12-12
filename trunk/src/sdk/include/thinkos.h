@@ -136,6 +136,7 @@ int thinkos_flag_alloc(void);
 
 int thinkos_flag_free(int flag);
 
+int thinkos_flag_val(int flag);
 
 int thinkos_flag_set(int flag);
 

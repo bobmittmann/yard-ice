@@ -69,21 +69,22 @@
 #define THINKOS_FLAG_ALLOC 32
 #define THINKOS_FLAG_FREE 33
 
-#define THINKOS_FLAG_SET 34
-#define THINKOS_FLAG_CLR 35
-#define THINKOS_FLAG_WAIT 36
-#define THINKOS_FLAG_TIMEDWAIT 37
+#define THINKOS_FLAG_VAL 34
+#define THINKOS_FLAG_SET 35
+#define THINKOS_FLAG_CLR 36
+#define THINKOS_FLAG_WAIT 37
+#define THINKOS_FLAG_TIMEDWAIT 38
 
-#define THINKOS_FLAG_GIVE 38
-#define THINKOS_FLAG_TAKE 39
-#define THINKOS_FLAG_TIMEDTAKE 40
+#define THINKOS_FLAG_GIVE 39
+#define THINKOS_FLAG_TAKE 40
+#define THINKOS_FLAG_TIMEDTAKE 41
 
-#define THINKOS_IRQ_WAIT 41
+#define THINKOS_IRQ_WAIT 42
 
-#define THINKOS_RT_SNAPSHOT 42
+#define THINKOS_RT_SNAPSHOT 43
 
-#define THINKOS_EXIT 43
-#define THINKOS_ALARM 44
+#define THINKOS_EXIT 44
+#define THINKOS_ALARM 45
 
 #ifndef __ASSEMBLER__
 
@@ -330,6 +331,10 @@ static inline int __attribute__((always_inline)) thinkos_flag_alloc(void) {
 
 static inline int __attribute__((always_inline)) thinkos_flag_free(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_FREE, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_val(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_VAL, flag);
 }
 
 static inline int __attribute__((always_inline)) thinkos_flag_set(int flag) {
