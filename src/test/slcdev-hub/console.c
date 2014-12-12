@@ -160,10 +160,10 @@ int cmd_stat(FILE * f, int argc, char ** argv)
 
 	net_get_stats(&stat, clear);
 
-	fprintf(f, "    |    octets | packets |  errors | seq err |\n");
-	fprintf(f, " TX | %9d | %7d | %7d |         |\n", 
+	fprintf(f, "    |     octets | packets |  errors | seq err |\n");
+	fprintf(f, " TX | %10u | %7u | %7u |         |\n", 
 			stat.tx.octet_cnt, stat.tx.pkt_cnt, stat.tx.err_cnt);
-	fprintf(f, " RX | %9d | %7d | %7d | %7d |\n", 
+	fprintf(f, " RX | %10u | %7u | %7u | %7u |\n", 
 			stat.rx.octet_cnt, stat.rx.pkt_cnt, 
 			stat.rx.err_cnt, stat.rx.seq_err_cnt);
 
