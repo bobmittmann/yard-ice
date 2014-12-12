@@ -375,6 +375,7 @@ void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 			uart->cr1 = cr & ~USART_TE;
 			uart->cr1 = cr | USART_TE;
 		} else {
+			DCC_LOG(LOG_TRACE, "IDLE");
 			thinkos_sleep(lnk->idle_tm);
 		}
 	}

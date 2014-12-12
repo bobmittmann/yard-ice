@@ -26,10 +26,13 @@
 struct netstats {
 	struct {
 		uint32_t pkt_cnt;
+		uint32_t err_cnt;
+		uint32_t seq_err_cnt;
 		uint32_t octet_cnt;
 	} rx;
 	struct {
 		uint32_t pkt_cnt;
+		uint32_t err_cnt;
 		uint32_t octet_cnt;
 	} tx;
 };
@@ -48,7 +51,9 @@ int net_init(void);
 
 int net_send(const void * buf, int len);
 
-int net_recv(void * buf, int len);
+void net_pkt_mode(bool en);
+
+int net_pkt_send(const void * buf, int len);
 
 int net_probe(void);
 

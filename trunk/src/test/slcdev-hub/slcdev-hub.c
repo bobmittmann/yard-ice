@@ -45,6 +45,7 @@ const char * version_str = "SLC Device Hub " \
 const char * copyright_str = "(c) Copyright 2014 - Mircom Group";
 
 
+void pkt_xmt_init(void);
 int console_shell(void);
 void env_init(void);
 
@@ -201,7 +202,6 @@ void external_bus_init(void)
 	stm32f_mco2_enable();
 }
 
-
 int main(int argc, char ** argv)
 {
 	usb_cdc_class_t * cdc;
@@ -238,17 +238,19 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "9. watchdog_init()");
 	watchdog_init();
 
-	DCC_LOG(LOG_TRACE, "10. console_shell_init()");
-	console_shell_init();
-
-	DCC_LOG(LOG_TRACE, "11. net_init()");
+	DCC_LOG(LOG_TRACE, "10. net_init()");
 	net_init();
 
-	DCC_LOG(LOG_TRACE, "12. usb_cdc_init()");
+	DCC_LOG(LOG_TRACE, "11. pkt_xmt_init()");
+	pkt_xmt_init();
+
+	DCC_LOG(LOG_TRACE, "12. console_shell_init()");
+	console_shell_init();
+
+	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, *((uint64_t *)STM32F_UID));
 
-	DCC_LOG(LOG_TRACE, "13. usb_shell()");
-
+	DCC_LOG(LOG_TRACE, "14. usb_shell()");
 	for (;;) {
 		usb_shell(cdc);
 	}
