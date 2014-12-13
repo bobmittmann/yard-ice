@@ -42,6 +42,7 @@
 
 #define UART_TX_FIFO_BUF_LEN 128
 #define UART_RX_FIFO_BUF_LEN 128
+#define UART_RX_FIFO_WATER_MARK 16
 
 struct serial_dev {
 	int32_t tx_flag;
@@ -61,7 +62,7 @@ struct serial_dev {
 	struct stm32_usart * uart;
 };
 
-int serial_read(struct serial_dev * dev, char * buf, 
+int serial_read(struct serial_dev * dev, void * buf, 
 				unsigned int len, unsigned int tmo)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -94,7 +95,7 @@ again:
 	dev->rx_fifo.tail = tail;
 
 	if (cnt > n) {
-		DCC_LOG3(LOG_TRACE, "len=%d cnt=%d n=%d", len, cnt, n);
+		DCC_LOG3(LOG_INFO, "len=%d cnt=%d n=%d", len, cnt, n);
 		thinkos_flag_give(dev->rx_flag);
 	} else {
 		DCC_LOG1(LOG_INFO, "2. n=%d", n);
@@ -205,7 +206,7 @@ void stm32f_usart2_isr(void)
 		} else {
 			DCC_LOG(LOG_INFO, "RX fifo full!");
 		}
-		if (free < (UART_RX_FIFO_BUF_LEN / 2)) /* fifo is more than half full */
+		if (free < (UART_RX_FIFO_BUF_LEN  - UART_RX_FIFO_WATER_MARK)) 
 			__thinkos_flag_give(dev->rx_flag);
 	}	
 
