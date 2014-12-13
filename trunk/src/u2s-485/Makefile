@@ -22,7 +22,7 @@
 
 PROG = u2s-485
 
-CFILES = u2s-485.c serial.c board.c leds.c
+CFILES = u2s-485.c serial.c board.c leds.c profclk.c sdu.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
@@ -35,11 +35,9 @@ INCPATH = ../sdk/include
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-#JTAGTOOL_ADDR = 192.168.0.128 
+JTAGTOOL_ADDR = 192.168.10.50
 #JTAG_TARGET = stm32
 
 MACH = stm32f103x6
 include ../mk/stm32f103.mk
-
-#include ../mk/stm32f207.mk
 

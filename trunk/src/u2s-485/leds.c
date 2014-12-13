@@ -183,6 +183,6 @@ void leds_init(void)
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |
-						  THINKOS_OPT_PRIORITY(3) | THINKOS_OPT_ID(3));
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
 

@@ -36,8 +36,18 @@
 
 #include <sys/dcclog.h>
 
+#include "profclk.h"
 #include "board.h"
 #include "led.h"
+#include "sdu.h"
+
+#ifndef SDU_TRACE
+#define SDU_TRACE 1
+#endif
+
+#ifndef RAW_TRACE
+#define RAW_TRACE 0
+#endif
 
 struct serial_dev * serial2_open(void);
 
@@ -47,13 +57,13 @@ struct vcom {
 	struct serial_status ser_stat;
 };
 
-#define VCOM_BUF_SIZE 256
+#define VCOM_BUF_SIZE 64
 
 void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 {
 	struct serial_dev * serial = vcom[0].serial;
 	usb_cdc_class_t * cdc = vcom[0].cdc;
-	char buf[VCOM_BUF_SIZE];
+	uint8_t buf[VCOM_BUF_SIZE];
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
@@ -61,6 +71,9 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
 		if (len > 0) {
+			led1_flash(1);
+			serial_write(serial, buf, len);
+#if RAW_TRACE
 			if (len == 1)
 				DCC_LOG1(LOG_TRACE, "TX: %02x", buf[0]);
 			else if (len == 2)
@@ -86,9 +99,10 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 				DCC_LOG8(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x "
 						 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
 						 buf[4], buf[5], buf[6], buf[7]);
-
-			led1_flash(1);
-			serial_write(serial, buf, len);
+#endif
+#if SDU_TRACE
+			sdu_tx(buf, len);
+#endif
 		}
 
 	}
@@ -98,7 +112,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
 	struct usb_cdc_class * cdc = vcom->cdc;
-	char buf[VCOM_BUF_SIZE];
+	uint8_t buf[VCOM_BUF_SIZE];
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
@@ -106,6 +120,9 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	for (;;) {
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
+			led2_flash(1);
+			usb_cdc_write(cdc, buf, len);
+#if RAW_TRACE
 			if (len == 1)
 				DCC_LOG1(LOG_TRACE, "RX: %02x", buf[0]);
 			else if (len == 2)
@@ -131,9 +148,10 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 				DCC_LOG8(LOG_TRACE, "RX: %02x %02x %02x %02x %02x %02x "
 						 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
 						 buf[4], buf[5], buf[6], buf[7]);
-
-			led2_flash(1);
-			usb_cdc_write(cdc, buf, len);
+#endif
+#if SDU_TRACE
+			sdu_rx(buf, len);
+#endif
 		}
 	}
 }
@@ -190,6 +208,8 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+	profclk_init();
+
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();
 
@@ -197,7 +217,7 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
-	thinkos_init(THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+	thinkos_init(THINKOS_OPT_PRIORITY(3) | THINKOS_OPT_ID(3));
 
 	leds_init();
 
