@@ -42,7 +42,11 @@
 #include "sdu.h"
 
 #ifndef SDU_TRACE
+#ifdef DEBUG
 #define SDU_TRACE 1
+#else
+#define SDU_TRACE 0
+#endif
 #endif
 
 #ifndef RAW_TRACE
@@ -116,6 +120,10 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	usb_cdc_acm_lc_wait(cdc);
+
+	serial_enable(serial);
 
 	for (;;) {
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);

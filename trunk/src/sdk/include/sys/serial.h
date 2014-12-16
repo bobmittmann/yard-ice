@@ -132,6 +132,10 @@ int serial_write(struct serial_dev * dev, const void * buf,
 int serial_read(struct serial_dev * dev, void * buf, 
 				unsigned int len, unsigned int msec);
 
+int serial_enable(struct serial_dev * dev);
+
+int serial_disable(struct serial_dev * dev);
+
 #ifdef __cplusplus
 }
 #endif

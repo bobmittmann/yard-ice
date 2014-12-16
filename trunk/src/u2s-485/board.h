@@ -72,6 +72,11 @@ static inline void rs485_txdis(void) {
 	stm32_gpio_clr(RS485_TXEN);
 }
 
+static inline int rs485_is_txen(void) {
+	return stm32_gpio_stat(RS485_TXEN);
+}
+
+
 void usb_vbus(bool on);
 
 void io_init(void);

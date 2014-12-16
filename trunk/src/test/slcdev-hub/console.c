@@ -171,7 +171,7 @@ int cmd_stat(FILE * f, int argc, char ** argv)
 }
 
 
-const char net_msg[] = "The qick brown fox jumps over the lazy dog!";
+const char net_msg[] = "The quick brown fox jumps over the lazy dog!";
 const uint8_t net_pattern[] = { 
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
