@@ -23,27 +23,21 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <sys/stm32f.h>
-#include <arch/cortex-m3.h>
-#include <stdlib.h>
+#include "board.h"
+
 #include <string.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <sys/serial.h>
 #include <sys/usb-cdc.h>
 
-#include <thinkos.h>
-
 #include <sys/dcclog.h>
 
-#include "profclk.h"
-#include "board.h"
 #include "led.h"
 #include "sdu.h"
 
 #ifndef SDU_TRACE
 #ifdef DEBUG
-#define SDU_TRACE 1
+#define SDU_TRACE 0
 #else
 #define SDU_TRACE 0
 #endif
@@ -60,6 +54,40 @@ struct vcom {
 	usb_cdc_class_t * cdc;
 	struct serial_status ser_stat;
 };
+
+#define DBG_BUF_LEN 4096
+uint8_t dbg_buf[DBG_BUF_LEN];
+uint32_t dbg_cnt = 0;
+uint32_t dbg_head = 0;
+
+void dbg_buf_dump(void)
+{
+	DCC_LOG1(LOG_TRACE, "dbg_cnt=%d", dbg_cnt);
+
+	if (dbg_cnt < DBG_BUF_LEN)
+		RX(dbg_buf, dbg_cnt);
+	else {
+		int n;
+		int tail = (dbg_head + 1) & (DBG_BUF_LEN - 1);
+		n = DBG_BUF_LEN - tail;
+		RX(&dbg_buf[tail], n);
+		if ((n = tail) > 0) 
+			RX(&dbg_buf[0], n);
+	}
+	dbg_cnt = 0;
+	dbg_head = 0;
+}
+
+void dbg_write(uint8_t * buf, int len)
+{
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		dbg_buf[dbg_head++ & (DBG_BUF_LEN - 1)] = buf[i];
+		if (dbg_cnt < DBG_BUF_LEN)
+			dbg_cnt++;
+	}
+}
 
 #define VCOM_BUF_SIZE 64
 
@@ -105,10 +133,10 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 						 buf[4], buf[5], buf[6], buf[7]);
 #endif
 #if SDU_TRACE
-			sdu_tx(buf, len);
+			TX(buf, len);
 #endif
+			dbg_write(buf, len);
 		}
-
 	}
 }
 
@@ -121,13 +149,16 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
+	/* wait for line configuration */
 	usb_cdc_acm_lc_wait(cdc);
 
+	/* enable serial */
 	serial_enable(serial);
 
 	for (;;) {
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
+			dbg_write(buf, len);
 			led2_flash(1);
 			usb_cdc_write(cdc, buf, len);
 #if RAW_TRACE
@@ -158,7 +189,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 						 buf[4], buf[5], buf[6], buf[7]);
 #endif
 #if SDU_TRACE
-			sdu_rx(buf, len);
+			RX(buf, len);
 #endif
 		}
 	}
@@ -177,11 +208,13 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 	usb_cdc_state_get(cdc, &state);
 
 	while (1) {
-		DCC_LOG1(LOG_TRACE, "[%d] usb_cdc_ctl_wait() sleep!", 
+		DCC_LOG1(LOG_INFO, "[%d] usb_cdc_ctl_wait() sleep!", 
 				 thinkos_thread_self());
 		usb_cdc_ctl_wait(cdc, 0);
+		DCC_LOG1(LOG_INFO, "[%d] wakeup!", thinkos_thread_self());
 
-		DCC_LOG1(LOG_TRACE, "[%d] wakeup!", thinkos_thread_self());
+//		dbg_buf_dump();
+
 		usb_cdc_state_get(cdc, &state);
 
 		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
@@ -215,8 +248,6 @@ int main(int argc, char ** argv)
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
-
-	profclk_init();
 
 	/* calibrate usecond delay loop */
 	cm3_udelay_calibrate();

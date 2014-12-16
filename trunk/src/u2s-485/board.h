@@ -23,7 +23,16 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
+#include "config.h"
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
 #include <sys/stm32f.h>
+#include <arch/cortex-m3.h>
 
 /* USB */
 #define USB_FS_DP STM32_GPIOA, 12
@@ -41,14 +50,6 @@
 /* LEDs */
 #define LED1_IO STM32_GPIOA, 6
 #define LED2_IO STM32_GPIOA, 7
-
-/* -------------------------------------------------------------------------
- * ThinkOS flags assignements
- * ------------------------------------------------------------------------- */
-
-#define SLCDEV_DRV_EV_FLAG (THINKOS_FLAG_BASE + 0)
-#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 1)
-#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 2)
 
 #ifdef __cplusplus
 extern "C" {

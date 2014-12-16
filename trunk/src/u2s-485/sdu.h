@@ -57,8 +57,8 @@
 extern "C" {
 #endif
 
-void sdu_rx(uint8_t * buf, unsigned int len);
-void sdu_tx(uint8_t * buf, unsigned int len);
+void RX(uint8_t * buf, unsigned int len);
+void TX(uint8_t * buf, unsigned int len);
 
 #ifdef __cplusplus
 }
