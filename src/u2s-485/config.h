@@ -51,16 +51,14 @@
 #define THINKOS_COND_MAX 0
 #define THINKOS_ENABLE_COND_ALLOC 0
 
-#define THINKOS_SEMAPHORE_MAX 0
+#define THINKOS_SEMAPHORE_MAX 1
 #define THINKOS_ENABLE_SEM_ALLOC 0
 
 #define THINKOS_EVENT_MAX 0
 #define THINKOS_ENABLE_EVENT_ALLOC 0
-#define THINKOS_ENABLE_EVENT_SYSCALL 0
 
-#define THINKOS_FLAG_MAX 8
-#define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
+#define THINKOS_FLAG_MAX 5
+#define THINKOS_ENABLE_FLAG_ALLOC 0
 
 #define THINKOS_ENABLE_THREAD_STAT 0
 #define THINKOS_ENABLE_TIMED_CALLS 1
@@ -75,6 +73,21 @@
 #define THINKOS_SYSRST_ONFAULT 1
 
 #define THINKOS_EXCEPT_STACK_SIZE 384
+
+#define CDC_EP_OUT_MAX_PKT_SIZE 64
+#define CDC_EP_IN_MAX_PKT_SIZE 64
+#define CDC_EP_INT_MAX_PKT_SIZE 8
+
+/* -------------------------------------------------------------------------
+ * ThinkOS static resources
+ * ------------------------------------------------------------------------- */
+
+#define LEDDRV_FLAG_NO     0
+#define SERDRV_RX_FLAG_NO  1
+#define SERDRV_TX_FLAG_NO  2
+#define CDC_TX_FLAG_NO     3
+#define CDC_CTL_FLAG_NO    4
+#define CDC_RX_SEM_NO      0
 
 #endif /* __CONFIG_H__ */
 

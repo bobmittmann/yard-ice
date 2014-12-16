@@ -20,21 +20,25 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <sys/stm32f.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <thinkos.h>
-#include <sys/dcclog.h>
-
 #include "board.h"
 
+#include <sys/dcclog.h>
+
+#ifndef LEDDRV_FLAG_NO
 int8_t led_flag;
+#endif
+
 volatile uint8_t led1_flash_head;
 volatile uint8_t led1_flash_tail;
 volatile uint8_t led2_flash_head;
 volatile uint8_t led2_flash_tail;
 volatile int8_t led_locked;
+
+#ifdef LEDDRV_FLAG_NO
+#define LED_FLAG (THINKOS_FLAG_BASE + LEDDRV_FLAG_NO)
+#else
+#define LED_FLAG led_flag
+#endif
 
 void led_lock(void)
 {
@@ -50,21 +54,21 @@ void led1_flash(unsigned int cnt)
 {
 	led1_flash_head = led1_flash_tail + cnt;
 	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
-	thinkos_flag_set(led_flag);
+	thinkos_flag_set(LED_FLAG);
 }
 
 void led2_flash(unsigned int cnt)
 {
 	led2_flash_head = led2_flash_tail + cnt;
 	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
-	thinkos_flag_set(led_flag);
+	thinkos_flag_set(LED_FLAG);
 }
 
 void led_flash_all(unsigned int cnt)
 {
 	led1_flash_head = led1_flash_tail + cnt;
 	led2_flash_head = led2_flash_tail + cnt;
-	thinkos_flag_set(led_flag);
+	thinkos_flag_set(LED_FLAG);
 }
 
 void led1_on(void)
@@ -102,7 +106,7 @@ void __attribute__((noreturn)) led_task(void)
 
 	while (1) {
 		DCC_LOG(LOG_MSG, "thinkos_flag_wait()...");
-		thinkos_flag_wait(led_flag);
+		thinkos_flag_wait(LED_FLAG);
 		if (led1_flash_tail != led1_flash_head) {
 			led1_flash_tail++;
 			if (!led_locked)
@@ -116,7 +120,7 @@ void __attribute__((noreturn)) led_task(void)
 
 		if ((led1_flash_tail == led1_flash_head) &&
 			(led2_flash_tail == led2_flash_head)) 
-			thinkos_flag_clr(led_flag);
+			thinkos_flag_clr(LED_FLAG);
 
 		thinkos_sleep(100);
 		if (!led_locked) {
@@ -179,7 +183,9 @@ void leds_init(void)
 	tim->cr2 = 0;
 	tim->cr1 = TIM_URS | TIM_CEN; 
 
-	led_flag = thinkos_flag_alloc();
+#ifndef LEDDRV_FLAG_NO
+	LED_FLAG = thinkos_flag_alloc();
+#endif
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |
