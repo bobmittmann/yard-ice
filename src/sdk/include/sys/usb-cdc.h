@@ -96,6 +96,8 @@ struct file * usb_cdc_fopen(usb_cdc_class_t * cdc);
 
 bool usb_cdc_is_usb_file(FILE * f);
 
+int usb_cdc_acm_lc_wait(usb_cdc_class_t * cl);
+
 #ifdef __cplusplus
 }
 #endif

@@ -31,6 +31,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/serial.h>
 #include <sys/param.h>
+#include <sys/delay.h>
 
 #include "board.h"
 
@@ -42,7 +43,7 @@
 
 #define UART_TX_FIFO_BUF_LEN 128
 #define UART_RX_FIFO_BUF_LEN 128
-#define UART_RX_FIFO_WATER_MARK 16
+#define UART_RX_FIFO_WATER_MARK 64
 
 struct serial_dev {
 	int32_t tx_flag;
@@ -60,6 +61,7 @@ struct serial_dev {
 	uint32_t * txie;
 	uint32_t * tcie;
 	struct stm32_usart * uart;
+	int rx_full;
 };
 
 int serial_read(struct serial_dev * dev, void * buf, 
@@ -75,6 +77,7 @@ int serial_read(struct serial_dev * dev, void * buf,
 	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
 
 again:
+//	DCC_LOG(LOG_TRACE, "1.");
 	if ((ret = thinkos_flag_timedtake(dev->rx_flag, tmo)) < 0) {
 		DCC_LOG2(LOG_TRACE, "cnt=%d, timeout (%d ms)!", 
 				 (int32_t)(dev->rx_fifo.head - dev->rx_fifo.tail), tmo);
@@ -127,6 +130,12 @@ int serial_write(struct serial_dev * dev, const void * buf,
 		for (i = 0; i < n; ++i) 
 			dev->tx_fifo.buf[head++ & (UART_TX_FIFO_BUF_LEN - 1)] = *cp++;
 		dev->tx_fifo.head = head;
+
+		if (!rs485_is_txen()) {
+//			rs485_rxdis();
+//			rs485_txen();
+//			thinkos_sleep(12);
+		}
 		*dev->txie = 1; 
 
 		if (free > n)
@@ -177,6 +186,18 @@ int serial_config_set(struct serial_dev * dev,
 	return 0;
 }
 
+int serial_enable(struct serial_dev * dev)
+{
+	struct stm32_usart * uart = dev->uart;
+
+	DCC_LOG(LOG_TRACE, ".");
+
+	stm32_usart_enable(uart);
+
+	return 0;
+}
+
+
 struct serial_dev serial2_dev;
 
 void stm32f_usart2_isr(void)
@@ -203,8 +224,11 @@ void stm32f_usart2_isr(void)
 		if (free > 0) { 
 			dev->rx_fifo.buf[head & (UART_RX_FIFO_BUF_LEN - 1)] = c;
 			dev->rx_fifo.head = head + 1;
+			dev->rx_full = 0;
 		} else {
-			DCC_LOG(LOG_INFO, "RX fifo full!");
+			if ((dev->rx_full & 0x3f) == 0)
+				DCC_LOG(LOG_TRACE, "RX fifo full!");
+			dev->rx_full++;
 		}
 		if (free < (UART_RX_FIFO_BUF_LEN  - UART_RX_FIFO_WATER_MARK)) 
 			__thinkos_flag_give(dev->rx_flag);
@@ -227,8 +251,11 @@ void stm32f_usart2_isr(void)
 			__thinkos_flag_set(dev->tx_flag);
 		} else {
 			/* RS485 enable transmitter */ 
-			rs485_txen();
-			rs485_rxdis();
+//			if (!rs485_is_txen()) {
+//				rs485_rxdis();
+				rs485_txen();
+//				udelay(100);
+//			}
 			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
 			dev->tx_fifo.tail = tail + 1;
 		}
@@ -236,6 +263,7 @@ void stm32f_usart2_isr(void)
 
 	if (sr & USART_TC) {
 		DCC_LOG(LOG_INFO, "TC");
+//		udelay(53);
 		/* RS485 disable ransmitter */ 
 		rs485_txdis();
 		/* RS485 enable receiver */ 
@@ -273,8 +301,6 @@ struct serial_dev * serial2_open(void)
 	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
 	/* Errors interrupt */
 	uart->cr3 |= USART_EIE;
-
-	stm32_usart_enable(uart);
 
 	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_REGULAR);

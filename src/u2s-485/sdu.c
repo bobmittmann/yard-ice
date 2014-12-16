@@ -34,6 +34,11 @@
 
 #define SDU_SYNC 0x1b
 #define SDU_PKT_LEN_MAX (255 + 3)
+#define SDU_SUP  0x20
+#define SDU_CMD  0x40
+#define SDU_ACK  0x60
+#define SDU_RSY  0xc0
+#define SDU_NAK  0xe0
 
 struct sdu_link {
 	struct {
@@ -94,6 +99,9 @@ void sdu_rx(uint8_t * buf, unsigned int buf_len)
 
 		dev->rx.buf[dev->rx.pos++] = c;
 
+		if (dev->rx.pos < 4)
+			continue;
+
 		/*    trace_printf("%s() Rx: 0x%02x", __func__, c); */
 		if (dev->rx.pos == dev->rx.tot_len) {
 			uint8_t * cp;
@@ -101,8 +109,11 @@ void sdu_rx(uint8_t * buf, unsigned int buf_len)
 			uint8_t sum;
 			uint8_t route;
 			uint8_t ctrl;
+			int seq;
+			bool retry;
 			int len;
 			int addr;
+			int type;
 			int j;
 
 			/* restart the position index */
@@ -130,38 +141,134 @@ void sdu_rx(uint8_t * buf, unsigned int buf_len)
 
 			addr = route & 0x1f;
 			(void)addr;
+			type = route & 0xe0;
+			(void)route;
+			(void)type;
 			(void)msg;
 
-			if (addr > 0) {
-				if (len == 0)
-					DCC_LOG1(LOG_INFO, "[%2d]", addr);
-				else if (len == 1)
-					DCC_LOG2(LOG_TRACE, "[%2d]: %02x", addr, msg[0]);
-				else if (len == 2)
-					DCC_LOG3(LOG_TRACE, "[%2d]: %02x %02x", addr,
-							 msg[0], msg[1]);
-				else if (len == 3)
-					DCC_LOG4(LOG_TRACE, "[%2d]: %02x %02x %02x", addr,
-							 msg[0], msg[1], msg[2]);
-				else if (len == 4)
-					DCC_LOG5(LOG_TRACE, "[%2d]: %02x %02x %02x %02x", addr,
-							 msg[0], msg[1], msg[2], msg[3]);
-				else if (len == 5)
-					DCC_LOG6(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x", 
-							 addr, msg[0], msg[1], msg[2], msg[3], msg[4]);
-				else if (len == 6)
-					DCC_LOG7(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x", 
-							 addr, msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
-				else if (len == 7)
-					DCC_LOG8(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x %02x",
-							 addr, msg[0], msg[1], msg[2], msg[3], 
-							 msg[4], msg[5], msg[6]);
-				else
-					DCC_LOG9(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x "
-							 "%02x %02x ...", addr, msg[0], msg[1], msg[2], msg[3], 
-							 msg[4], msg[5], msg[6], msg[7]);
+			seq = ctrl & 0x7f;
+			(void)seq;
+			retry = (ctrl & 0x80) ? true : false;
+			(void)retry;
 
+			(void)msg;
+			
+			if ((len == 0) && (type = SDU_SUP)) {
+				continue;
 			}
+
+			if (retry) {
+				if (len == 0) {
+					switch (type) {
+					case 0x20:
+						DCC_LOG1(LOG_WARNING, "Retry SUP [%2d]", addr);
+						break;
+					case 0x40:
+						DCC_LOG1(LOG_WARNING, "Retry CMD [%2d]", addr);
+						break;
+					case 0x60:
+						DCC_LOG1(LOG_WARNING, "Retry ACK [%2d]", addr);
+						break;
+					case 0xC0:
+						DCC_LOG1(LOG_WARNING, "Retry SYN [%2d]", addr);
+						break;
+					case 0xe0:
+						DCC_LOG1(LOG_WARNING, "Retry NAK [%2d]", addr);
+						break;
+					} 
+					continue;
+				} 
+
+				if (len == 1) {
+					switch (type) {
+					case 0x20:
+						DCC_LOG2(LOG_WARNING, "Retry SUP [%2d]: %02x", addr, msg[0]);
+						break;
+					case 0x40:
+						DCC_LOG2(LOG_WARNING, "Retry CMD [%2d]: %02x", addr, msg[0]);
+						break;
+					case 0x60:
+						DCC_LOG2(LOG_WARNING, "Retry ACK [%2d]: %02x", addr, msg[0]);
+						break;
+					case 0xC0:
+						DCC_LOG2(LOG_WARNING, "Retry SYN [%2d]: %02x", addr, msg[0]);
+						break;
+					case 0xe0:
+						DCC_LOG2(LOG_WARNING, "Retry NAK [%2d]: %02x", addr, msg[0]);
+						break;
+					}
+
+					continue;
+				}
+
+				DCC_LOG1(LOG_WARNING, "Retry <%2d>", seq);
+			}
+
+
+			if (len == 0) {
+				switch (type) {
+				case 0x20:
+					DCC_LOG1(LOG_TRACE, "SUP [%2d]", addr);
+					break;
+				case 0x40:
+					DCC_LOG1(LOG_TRACE, "CMD [%2d]", addr);
+					break;
+				case 0x60:
+					DCC_LOG1(LOG_TRACE, "ACK [%2d]", addr);
+					break;
+				case 0xC0:
+					DCC_LOG1(LOG_TRACE, "SYN [%2d]", addr);
+					break;
+				case 0xe0:
+					DCC_LOG1(LOG_TRACE, "NAK [%2d]", addr);
+					break;
+				} 
+				continue;
+			} 
+			
+			if (len == 1) {
+				switch (type) {
+				case 0x20:
+					DCC_LOG2(LOG_TRACE, "SUP [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0x40:
+					DCC_LOG2(LOG_TRACE, "CMD [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0x60:
+					DCC_LOG2(LOG_INFO, "ACK [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0xC0:
+					DCC_LOG2(LOG_TRACE, "SYN [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0xe0:
+					DCC_LOG2(LOG_TRACE, "NAK [%2d]: %02x", addr, msg[0]);
+					break;
+				}
+			}
+			else if (len == 2)
+				DCC_LOG3(LOG_TRACE, "[%2d]: %02x %02x", addr,
+						 msg[0], msg[1]);
+			else if (len == 3)
+				DCC_LOG4(LOG_TRACE, "[%2d]: %02x %02x %02x", addr,
+						 msg[0], msg[1], msg[2]);
+			else if (len == 4)
+				DCC_LOG5(LOG_TRACE, "[%2d]: %02x %02x %02x %02x", addr,
+						 msg[0], msg[1], msg[2], msg[3]);
+			else if (len == 5)
+				DCC_LOG6(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x", 
+						 addr, msg[0], msg[1], msg[2], msg[3], msg[4]);
+			else if (len == 6)
+				DCC_LOG7(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x", 
+						 addr, msg[0], msg[1], msg[2], msg[3], msg[4], msg[5]);
+			else if (len == 7)
+				DCC_LOG8(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x %02x",
+						 addr, msg[0], msg[1], msg[2], msg[3], 
+						 msg[4], msg[5], msg[6]);
+			else
+				DCC_LOG9(LOG_TRACE, "[%2d]: %02x %02x %02x %02x %02x %02x "
+						 "%02x %02x ...", addr, msg[0], msg[1], msg[2], msg[3], 
+						 msg[4], msg[5], msg[6], msg[7]);
+
 		}
 	}
 }
@@ -217,8 +324,11 @@ void sdu_tx(uint8_t * buf, unsigned int buf_len)
 			uint8_t sum;
 			uint8_t route;
 			uint8_t ctrl;
+			int seq;
+			bool retry;
 			int len;
 			int addr;
+			int type;
 			int j;
 
 			/* restart the position index */
@@ -246,12 +356,61 @@ void sdu_tx(uint8_t * buf, unsigned int buf_len)
 
 			addr = route & 0x1f;
 			(void)addr;
-			(void)msg;
+			type = route & 0xe0;
+			(void)type;
 
-			if (len == 0)
-				DCC_LOG1(LOG_TRACE, "[%2d]", addr);
-			else if (len == 1)
-				DCC_LOG2(LOG_TRACE, "[%2d]: %02x", addr, msg[0]);
+			seq = ctrl & 0x7f;
+			(void)seq;
+			retry = (ctrl & 0x80) ? true : false;
+			(void)retry;
+
+
+			(void)msg;
+			
+			if (retry) {
+				DCC_LOG1(LOG_WARNING, "RETRY <%2d>", seq);
+			}
+
+			if (len == 0) {
+				switch (type) {
+				case 0x20:
+					DCC_LOG1(LOG_TRACE, "SUP [%2d]", addr);
+					break;
+				case 0x40:
+					DCC_LOG1(LOG_TRACE, "CMD [%2d]", addr);
+					break;
+				case 0x60:
+					DCC_LOG1(LOG_TRACE, "ACK [%2d]", addr);
+					break;
+				case 0xC0:
+					DCC_LOG1(LOG_TRACE, "SYN [%2d]", addr);
+					break;
+				case 0xE0:
+					DCC_LOG1(LOG_TRACE, "NAK [%2d]", addr);
+					break;
+				} 
+				continue;
+			} 
+		
+			if (len == 1) {
+				switch (type) {
+				case 0x20:
+					DCC_LOG2(LOG_TRACE, "SUP [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0x40:
+					DCC_LOG2(LOG_TRACE, "CMD [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0x60:
+					DCC_LOG2(LOG_TRACE, "ACK [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0xC0:
+					DCC_LOG2(LOG_TRACE, "SYN [%2d]: %02x", addr, msg[0]);
+					break;
+				case 0xE0:
+					DCC_LOG2(LOG_TRACE, "NAK [%2d]: %02x", addr, msg[0]);
+					break;
+				}
+			}
 			else if (len == 2)
 				DCC_LOG3(LOG_TRACE, "[%2d]: %02x %02x", addr,
 						 msg[0], msg[1]);

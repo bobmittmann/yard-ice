@@ -37,7 +37,7 @@ void thinkos_flag_alloc_svc(int32_t * arg)
 
 	flag = __thinkos_flag_alloc();
 
-	DCC_LOG1(LOG_TRACE, "flag=%d", flag);
+	DCC_LOG1(LOG_INFO, "flag=%d", flag);
 	arg[0] = flag;
 }
 
@@ -54,7 +54,7 @@ void thinkos_flag_free_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG1(LOG_TRACE, "flag=%d", flag);
+	DCC_LOG1(LOG_INFO, "flag=%d", flag);
 	__thinkos_flag_free(flag);
 }
 #endif
@@ -107,17 +107,45 @@ void thinkos_flag_wait_svc(int32_t * arg)
 
 	arg[0] = 0;
 
+	cm3_cpsid_i();
 	if (__thinkos_flag_is_set(wq)) {
+		cm3_cpsie_i();
 		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
 		return;
 	} 
 
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
-	DCC_LOG2(LOG_MSG, "<%d> waiting for flag %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 	/* wait for event */
-	__thinkos_wait(self);
+
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
+	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#endif
+#endif
+	cm3_cpsie_i();
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -145,9 +173,7 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 #endif
 
 	cm3_cpsid_i();
-
 	if (__thinkos_flag_is_set(wq)) {
-//		__thinkos_flag_clr(wq);
 		cm3_cpsie_i();
 		arg[0] = 0;
 		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
@@ -157,8 +183,6 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	/* insert into the flag wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
 
-	cm3_cpsie_i();
-
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 	/* Set the default return value to timeout. The
@@ -166,7 +190,33 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	/* wait for event */
-	__thinkos_wait(self);
+
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
+	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#endif
+#endif
+	cm3_cpsie_i();
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 #endif
 
@@ -298,19 +348,44 @@ void thinkos_flag_take_svc(int32_t * arg)
 	if (__thinkos_flag_is_set(wq)) {
 		__thinkos_flag_clr(wq);
 		cm3_cpsie_i();
-		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
+		DCC_LOG2(LOG_INFO, "<%d> flag %d was set.", self, wq);
 		return;
 	} 
 
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
 
-	cm3_cpsie_i();
-
-	DCC_LOG2(LOG_MSG, "<%d> waiting for flag %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 
 	/* wait for event */
-	__thinkos_wait(self);
+
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
+	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#endif
+#endif
+	cm3_cpsie_i();
+
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -350,18 +425,70 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	/* insert into the flag wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
 
-	cm3_cpsie_i();
-
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	/* wait for event */
-	__thinkos_wait(self);
+
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
+	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#endif
+#endif
+	cm3_cpsie_i();
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 #endif
 
+
+#if 0
+/* wakeup a single thread waiting on the flag 
+   OR set the flag */
+void thinkos_flag_give_i(int wq) 
+{
+	uint32_t pri;
+	int th;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+	/* get the flag state */
+	if (__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE) == 0) {
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			DCC_LOG3(LOG_INFO, "flag %d, wakeup %d, pri=%d...", wq, th, pri);
+			__thinkos_wakeup(wq, th);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} else {
+			DCC_LOG1(LOG_INFO, "set flag %d...", wq);
+			/* set the flag bit */
+			__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 1);  
+		}
+	}
+	cm3_primask_set(pri);
+}
+#endif
 
 #endif /* THINKOS_FLAG_MAX > 0 */
 

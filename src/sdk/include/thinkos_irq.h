@@ -153,9 +153,9 @@ __thinkos_flag_free(int flag) {
 #endif
 
 static inline void __attribute__((always_inline)) 
-__thinkos_flag_clr(int flag) {
+__thinkos_flag_clr(int wq) {
 	/* clear the flag bit */
-	__bit_mem_wr(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE, 0);  
+	__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 0);  
 }
 
 /* set the flag and wakeup all threads waiting on the flag */
@@ -182,9 +182,9 @@ __thinkos_flag_set(int flag) {
 }
 
 static inline unsigned int __attribute__((always_inline)) 
-__thinkos_flag_is_set(int flag) {
+__thinkos_flag_is_set(int wq) {
 	/* get the flag state */
-	return 	__bit_mem_rd(&thinkos_rt.flag, flag - THINKOS_FLAG_BASE);  
+	return 	__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE);  
 }
 
 /* wakeup a single thread waiting on the flag 
@@ -265,6 +265,8 @@ __thinkos_irq_wait(int irq) {
 }
 
 #endif /* THINKOS_IRQ_MAX  > 0 */
+
+void thinkos_flag_give_i(int flag);
 
 #ifdef __cplusplus
 }
