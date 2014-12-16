@@ -72,12 +72,19 @@ struct stm32f_usb_ep {
 
 #define USB_DRIVER_EP_MAX 8
 
+//#define DEBUG_DBLBUF
+
 /* USB Driver */
 struct stm32f_usb_drv {
 	struct stm32f_usb_ep ep[USB_DRIVER_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
+#ifdef DEBUG_DBLBUF
+	uint32_t pkt_recv;
+	uint32_t pkt_read;
+#endif
+
 };
 
 /* -------------------------------------------------------------------------
@@ -316,7 +323,6 @@ int stm32f_usb_ep_tx_start(struct stm32f_usb_drv * drv, int ep_id,
 	return len;
 }
 
-
 int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 							   void * buf, int len)
 {
@@ -334,7 +340,7 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 	if (epr & USB_EP_DBL_BUF) {
 		/* double buffer */
 		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0 : 1];
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
 		DCC_LOG2(LOG_INFO, "RX dbl buf DOTG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_RX) ? 1 : 0, (epr & USB_SWBUF_RX) ? 1 : 0);
 	} else {
@@ -347,15 +353,28 @@ int stm32f_usb_dev_ep_pkt_recv(struct stm32f_usb_drv * drv, int ep_id,
 
 	cnt = MIN(rx_pktbuf->count, len);
 
-	/* Data received */
-	__copy_from_pktbuf(buf, rx_pktbuf, cnt);
+	if (cnt > 0) {
+		/* Data received */
+		__copy_from_pktbuf(buf, rx_pktbuf, cnt);
 
-	if (epr & USB_EP_DBL_BUF) {
-		/* release the buffer to the USB controller */
-		__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
+		if (epr & USB_EP_DBL_BUF) {
+			/* release the buffer to the USB controller */
+			__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
+		} else {
+			/* free the out(rx) packet buffer */
+			__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+		}
+
+#ifdef DEBUG_DBLBUF
+		drv.pkt_read++;
+
+		if (drv.pkt_recv != drv.pkt_read) {
+			DCC_LOG2(LOG_WARNING, "recv=%d read=%d", 
+					 drv.pkt_recv, drv.pkt_read); 
+		}
+#endif
 	} else {
-		/* free the out(rx) packet buffer */
-		__set_ep_rxstat(usb, ep_id, USB_RX_VALID);
+		DCC_LOG1(LOG_WARNING, "cnt==%d", cnt);
 	}
 
 	DCC_LOG2(LOG_INFO, "OUT EP%d, cnt=%d", ea, cnt);
@@ -378,7 +397,7 @@ void stm32f_usb_dev_ep_nak(struct stm32f_usb_drv * drv, int ep_id, bool flag)
 {
 #if 0
 	struct stm32f_usb * usb = STM32F_USB;
-	/* FIXME: select outep/inep ... */
+
 	if (flag)
 		__set_ep_txstat(usb, ep_id, USB_TX_NAK);
 	else
@@ -755,7 +774,6 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 /* Private USB device driver data */
 struct stm32f_usb_drv stm32f_usb_drv0;
 
-
 /* USB high priority ISR */
 void stm32f_can1_tx_usb_hp_isr(void)
 {
@@ -792,11 +810,21 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
 
 		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0: 1];
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1: 0];
 
-		DCC_LOG2(LOG_INFO, "RX double buffer DOTG=%d SW_BUF=%d", 
-				 (epr & USB_DTOG_RX) ? 1: 0, 
-				 (epr & USB_SWBUF_RX) ? 1: 0);
+		if (((epr & USB_DTOG_RX) ? 1: 0) == ((epr & USB_SWBUF_RX) ? 1: 0)) {
+			DCC_LOG3(LOG_WARNING, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
+					 rx_pktbuf->count);
+		}
+
+		DCC_LOG3(LOG_INFO, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+				 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
+				 rx_pktbuf->count);
+
+#ifdef DEBUG_DBLBUF
+		drv->pkt_recv++;
+#endif
 
 		/* call class endpoint callback */
 		ep->on_out(drv->cl, ep_id, rx_pktbuf->count);

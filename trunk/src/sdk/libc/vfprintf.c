@@ -117,6 +117,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 	int c;
 	int w;
 	int n;
+	int r;
 	char * cp;
 	union {
 		void * ptr;
@@ -141,7 +142,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 				flags = PERCENT;
 #if (PRINTF_ENABLE_FAST)
 				if (n) {
-					f->op->write(f->data, cp, n);
+					n = f->op->write(f->data, cp, n);
 					cp = (char *)fmt;
 					cnt += n;;
 					n = 0;
@@ -154,8 +155,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 			n++;
 #else
 			buf[0] = c;
-			f->op->write(f->data, buf, 1);
-			cnt++;
+			cnt += f->op->write(f->data, buf, 1);
 #endif
 			continue;
 		}
@@ -298,28 +298,25 @@ print_buf:
 			if (flags & ZERO) {
 				if (flags & SIGN) {
 					flags &= ~SIGN;
-					f->op->write(f->data, buf, 1);
+					cnt += f->op->write(f->data, buf, 1);
 				}
-				f->op->write(f->data, __zeros, w - n);
+				r = f->op->write(f->data, __zeros, w - n);
 			} else {
-				f->op->write(f->data, __blanks, w - n);
+				r = f->op->write(f->data, __blanks, w - n);
 			}
-			cnt += w - n;
+			cnt += r;
 		}
 
 		if (flags & SIGN) {
-			f->op->write(f->data, buf, 1);
-			cnt++;
+			cnt += f->op->write(f->data, buf, 1);
 		}
 
-		f->op->write(f->data, cp, n);
-		cnt += n;
-
+		cnt += f->op->write(f->data, cp, n);
 
 #if (PRINTF_ENABLE_LEFT_ALIGN)
 		if ((flags & LEFT) && (w > n)) {
-			f->op->write(f->data, __blanks, w - n);
-			cnt += w - n;
+			r = f->op->write(f->data, __blanks, w - n);
+			cnt += r;
 		}
 #endif
 
@@ -334,8 +331,8 @@ print_buf:
 
 #if (PRINTF_ENABLE_FAST)
 	if (n) {
-		f->op->write(f->data, cp, n);
-		cnt+= n;;
+		r = f->op->write(f->data, cp, n);
+		cnt+= r;;
 	}
 #endif
 

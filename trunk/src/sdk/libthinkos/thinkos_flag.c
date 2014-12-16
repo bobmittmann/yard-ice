@@ -31,6 +31,18 @@
 #if THINKOS_FLAG_MAX > 0
 
 #if THINKOS_ENABLE_FLAG_ALLOC
+
+static inline int __attribute__((always_inline)) 
+__thinkos_flag_alloc(void) {
+	int flag = thinkos_alloc_lo(&thinkos_rt.flag_alloc, 0);
+	return (flag < 0) ? flag : flag + THINKOS_FLAG_BASE;
+}
+
+static inline void __attribute__((always_inline)) 
+__thinkos_flag_free(int flag) {
+	__bit_mem_wr(&thinkos_rt.flag_alloc, flag - THINKOS_FLAG_BASE, 0);
+}
+
 void thinkos_flag_alloc_svc(int32_t * arg)
 {
 	unsigned int flag;
@@ -486,6 +498,35 @@ void thinkos_flag_give_i(int wq)
 			__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 1);  
 		}
 	}
+	cm3_primask_set(pri);
+}
+
+/* set the flag and wakeup all threads waiting on the flag */
+void thinkos_flag_set_i(int wq) 
+{
+	uint32_t pri;
+	int th;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+
+	if (__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE) == 0) {
+		/* set the flag bit */
+		__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 1);  
+
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
+			DCC_LOG2(LOG_TRACE, "flag %d, wakeup %d.", wq, th);
+			while ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+				__thinkos_wakeup(wq, th);
+				DCC_LOG2(LOG_TRACE, "flag %d, wakeup %d.", wq, th);
+			}
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		}
+	}
+
 	cm3_primask_set(pri);
 }
 #endif

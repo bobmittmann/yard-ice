@@ -21,10 +21,6 @@
  */
 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include "cdc-acm.h"
 #include <sys/param.h>
 #include <string.h>
@@ -178,7 +174,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			ENDPOINT_TYPE_INTERRUPT,
 			/* Maximum packet size this endpoint is capable
 			   of sending or receiving */
-			EP_INT_MAX_PKT_SIZE,
+			CDC_EP_INT_MAX_PKT_SIZE,
 			/* Interval for polling endpoint (ms) */
 			10
 		},
@@ -217,7 +213,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			ENDPOINT_TYPE_BULK,
 			/* Maximum packet size this endpoint is capable of
 			   sending or receiving */
-			EP_OUT_MAX_PKT_SIZE,
+			CDC_EP_OUT_MAX_PKT_SIZE,
 			/* Interval for polling endpoint for data transfers */
 			0x0
 		},
@@ -233,7 +229,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			ENDPOINT_TYPE_BULK,
 			/* Maximum packet size this endpoint is capable of
 			   sending or receiving */
-			EP_IN_MAX_PKT_SIZE,
+			CDC_EP_IN_MAX_PKT_SIZE,
 			/* Interval for polling endpoint for data transfers */
 			0x0
 		}

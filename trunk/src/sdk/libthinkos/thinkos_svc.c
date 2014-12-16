@@ -286,7 +286,7 @@ void cm3_svc_isr(void)
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 
-#if THINKOS_ENABLE_EVENT_SYSCALL
+#if (THINKOS_EVENT_MAX > 0)
 #if THINKOS_ENABLE_EVENT_ALLOC
 	case THINKOS_EVENT_ALLOC:
 		thinkos_ev_alloc_svc(arg);
@@ -310,10 +310,10 @@ void cm3_svc_isr(void)
 	case THINKOS_EVENT_RAISE:
 		thinkos_ev_raise_svc(arg);
 		break;
-#endif /* THINKOS_ENABLE_EVENT_SYSCALL */
+#endif /* (THINKOS_EVENT_MAX > 0) */
 
 
-#if THINKOS_ENABLE_FLAG_SYSCALL
+#if (THINKOS_FLAG_MAX > 0)
 #if THINKOS_ENABLE_FLAG_ALLOC
 	case THINKOS_FLAG_ALLOC:
 		thinkos_flag_alloc_svc(arg);
@@ -360,8 +360,7 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-#endif /* THINKOS_ENABLE_FLAG_SYSCALL */
-
+#endif /* (THINKOS_FLAG_MAX > 0) */
 
 #if THINKOS_IRQ_MAX > 0
 	case THINKOS_IRQ_WAIT:
