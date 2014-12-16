@@ -36,6 +36,11 @@ int stm32_usart_baudrate_set(struct stm32_usart * us, unsigned int baudrate)
 		return id;
 	}
 
+	if (baudrate <= 100) {
+		DCC_LOG(LOG_WARNING, "invalid baudrate");
+		return -1;
+	}
+
 	/* disable TX and RX and interrupts */
 	cr1 = us->cr1;
 	us->cr1 = cr1 & ~(USART_UE | USART_TE | USART_RE | USART_TXEIE | 

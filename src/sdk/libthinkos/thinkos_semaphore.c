@@ -212,6 +212,7 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 	/* TODO: study the possibility of using exclusive access instead of 
 	   disabling interrupts. */
 	cm3_cpsid_i();
+
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
 		arg[0] = 0;
@@ -264,6 +265,9 @@ void thinkos_sem_post_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = 0;
+
+	cm3_cpsid_i();
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the semaphore, increment. */ 
 		thinkos_rt.sem_val[sem]++;
@@ -274,7 +278,9 @@ void thinkos_sem_post_svc(int32_t * arg)
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
-	arg[0] = 0;
+
+	cm3_cpsie_i();
+
 }
 
 #endif /* THINKOS_SEM_MAX > 0 */

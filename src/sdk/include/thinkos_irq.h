@@ -49,40 +49,8 @@
 extern "C" {
 #endif
 
-static inline void 
-__attribute__((always_inline)) __thinkos_critical_enter(void)  {
-	/* rise the BASEPRI to stop the scheduler */
-	cm3_basepri_set(SCHED_PRIORITY); 
-}
-
-static inline void 
-__attribute__((always_inline)) __thinkos_critical_level(int lvl)  {
-	/* set the BASEPRI */
-	cm3_basepri_set(lvl); 
-}
-
-
-static inline void 
-__attribute__((always_inline)) __thinkos_critical_exit(void)  {
-	/* return the BASEPRI to the default to reenable the scheduler. */
-	cm3_basepri_set(0x00);
-}
-
 
 #if (THINKOS_EVENT_MAX > 0)
-
-#if THINKOS_ENABLE_EVENT_ALLOC
-static inline int __attribute__((always_inline)) 
-__thinkos_ev_alloc(void) {
-	int ev = thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0);
-	return (ev < 0) ? ev : ev + THINKOS_EVENT_BASE;
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_ev_free(int ev) {
-	__bit_mem_wr(&thinkos_rt.ev_alloc, ev - THINKOS_EVENT_BASE, 0);
-}
-#endif
 
 static inline void __attribute__((always_inline)) 
 __thinkos_ev_wait(int ev) {
@@ -139,19 +107,6 @@ __thinkos_ev_timed_raise(int ev) {
 
 #if (THINKOS_FLAG_MAX > 0)
 
-#if THINKOS_ENABLE_FLAG_ALLOC
-static inline int __attribute__((always_inline)) 
-__thinkos_flag_alloc(void) {
-	int flag = thinkos_alloc_lo(&thinkos_rt.flag_alloc, 0);
-	return (flag < 0) ? flag : flag + THINKOS_FLAG_BASE;
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_free(int flag) {
-	__bit_mem_wr(&thinkos_rt.flag_alloc, flag - THINKOS_FLAG_BASE, 0);
-}
-#endif
-
 static inline void __attribute__((always_inline)) 
 __thinkos_flag_clr(int wq) {
 	/* clear the flag bit */
@@ -160,7 +115,7 @@ __thinkos_flag_clr(int wq) {
 
 /* set the flag and wakeup all threads waiting on the flag */
 static inline void __attribute__((always_inline)) 
-__thinkos_flag_set(int flag) {
+	__thinkos_flag_set(int flag) {
 	uint32_t pri;
 	int th;
 
@@ -211,6 +166,18 @@ __thinkos_flag_give(int flag) {
 	cm3_primask_set(pri);
 }
 
+static inline void thinkos_flag_clr_i(int flag) {
+	__thinkos_flag_clr(flag);
+}
+
+static inline void thinkos_flag_set_i(int flag) {
+	__thinkos_flag_set(flag);
+}
+
+static inline void thinkos_flag_give_i(int flag) {
+	__thinkos_flag_give(flag);
+}
+
 
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
@@ -219,16 +186,27 @@ __thinkos_flag_give(int flag) {
 
 static inline void __attribute__((always_inline)) 
 __thinkos_sem_post(int sem) {
+	uint32_t pri;
 	int th;
+
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
 	if ((th = __thinkos_wq_head(sem)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the semaphore, increment. */ 
 		thinkos_rt.sem_val[sem - THINKOS_SEM_BASE]++;
+		cm3_primask_set(pri);
 	} else {
 		/* wakeup from the sem wait queue */
 		__thinkos_wakeup(sem, th);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
+	cm3_primask_set(pri);
+}
+
+
+static inline void thinkos_sem_post_i(int sem) {
+	__thinkos_sem_post(sem);
 }
 
 #endif /* (THINKOS_SEMAPHORE_MAX > 0) */
@@ -266,7 +244,29 @@ __thinkos_irq_wait(int irq) {
 
 #endif /* THINKOS_IRQ_MAX  > 0 */
 
+static inline void 
+__attribute__((always_inline)) thinkos_critical_enter(void)  {
+	/* rise the BASEPRI to stop the scheduler */
+	cm3_basepri_set(SCHED_PRIORITY); 
+}
+
+static inline void 
+__attribute__((always_inline)) thinkos_critical_level(int lvl)  {
+	/* set the BASEPRI */
+	cm3_basepri_set(lvl); 
+}
+
+static inline void 
+__attribute__((always_inline)) thinkos_critical_exit(void)  {
+	/* return the BASEPRI to the default to reenable the scheduler. */
+	cm3_basepri_set(0x00);
+}
+
 void thinkos_flag_give_i(int flag);
+void thinkos_flag_set_i(int flag); 
+void thinkos_flag_clr_i(int flag); 
+
+void thinkos_sem_post_i(int sem);
 
 #ifdef __cplusplus
 }

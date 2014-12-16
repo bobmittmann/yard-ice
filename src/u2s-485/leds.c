@@ -24,15 +24,50 @@
 
 #include <sys/dcclog.h>
 
+struct {
+	uint8_t led_tmr[2];
+} io_drv;
+
+const struct {
+	struct stm32_gpio * gpio;
+	int pin;
+} led_io[] = {
+	{ LED1_IO },
+	{ LED2_IO },
+};
+
+#define IO_POLL_PERIOD_MS 16
+
+void led_on(unsigned int id)
+{
+	struct stm32f_tim * tim = STM32F_TIM3;
+	uint32_t arr = tim->arr;
+
+	if (id == 1)
+		tim->ccr1 = arr / 2;
+	else if (id == 2)
+		tim->ccr2 = arr / 2;
+}
+
+void led_off(unsigned int id)
+{
+	struct stm32f_tim * tim = STM32F_TIM3;
+
+	if (id == 1)
+		tim->ccr1 = 0;
+	else if (id == 2)
+		tim->ccr2 = tim->arr;
+}
+
+void led_flash(unsigned int id, unsigned int ms)
+{
+	io_drv.led_tmr[id] = ms / IO_POLL_PERIOD_MS;
+	led_on(id);
+}
+
 #ifndef LEDDRV_FLAG_NO
 int8_t led_flag;
 #endif
-
-volatile uint8_t led1_flash_head;
-volatile uint8_t led1_flash_tail;
-volatile uint8_t led2_flash_head;
-volatile uint8_t led2_flash_tail;
-volatile int8_t led_locked;
 
 #ifdef LEDDRV_FLAG_NO
 #define LED_FLAG (THINKOS_FLAG_BASE + LEDDRV_FLAG_NO)
@@ -40,98 +75,37 @@ volatile int8_t led_locked;
 #define LED_FLAG led_flag
 #endif
 
-void led_lock(void)
-{
-	led_locked = 1;
-}
-
-void led_unlock(void)
-{
-	led_locked = 0;
-}
-
-void led1_flash(unsigned int cnt)
-{
-	led1_flash_head = led1_flash_tail + cnt;
-	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
-	thinkos_flag_set(LED_FLAG);
-}
-
-void led2_flash(unsigned int cnt)
-{
-	led2_flash_head = led2_flash_tail + cnt;
-	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
-	thinkos_flag_set(LED_FLAG);
-}
-
-void led_flash_all(unsigned int cnt)
-{
-	led1_flash_head = led1_flash_tail + cnt;
-	led2_flash_head = led2_flash_tail + cnt;
-	thinkos_flag_set(LED_FLAG);
-}
-
-void led1_on(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM3;
-
-	tim->ccr1 = tim->arr / 2;
-}
-
-void led1_off(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM3;
-
-	tim->ccr1 = 0;
-}
-
-void led2_on(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM3;
-	uint32_t arr = tim->arr;
-
-	tim->ccr2 = arr - (arr / 2);
-}
-
-void led2_off(void)
-{
-	struct stm32f_tim * tim = STM32F_TIM3;
-
-	tim->ccr2 = tim->arr;
-}
+uint32_t clk_time = 0;
 
 void __attribute__((noreturn)) led_task(void)
 {
+	uint32_t clk = __thinkos_ticks();
+	uint32_t clk_sec = clk + 1000;
+
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
-	while (1) {
-		DCC_LOG(LOG_MSG, "thinkos_flag_wait()...");
-		thinkos_flag_wait(LED_FLAG);
-		if (led1_flash_tail != led1_flash_head) {
-			led1_flash_tail++;
-			if (!led_locked)
-				led1_on();
-		}
-		if (led2_flash_tail != led2_flash_head) {
-			led2_flash_tail++;
-			if (!led_locked)
-				led2_on();
+	for (;;) {
+		int i;
+
+		clk += IO_POLL_PERIOD_MS;
+		thinkos_alarm(clk);
+
+		/* update clock time */
+		if ((int32_t)(clk - clk_sec) >= 1000) {
+			clk_time++;
+			clk_sec += 1000;
 		}
 
-		if ((led1_flash_tail == led1_flash_head) &&
-			(led2_flash_tail == led2_flash_head)) 
-			thinkos_flag_clr(LED_FLAG);
-
-		thinkos_sleep(100);
-		if (!led_locked) {
-			led1_off();
-			led2_off();
+		/* process led timers */
+		for (i = 0; i < 2; ++i) {
+			if (io_drv.led_tmr[i] == 0)
+				continue;
+			if (--io_drv.led_tmr[i] == 0) 
+				led_off(i);
 		}
-		thinkos_sleep(100);
+
 	}
 }
-
-static uint32_t __attribute__((aligned(8))) led_stack[32];
 
 #define TIMER_PWM_FREQ 8000
 
@@ -156,8 +130,6 @@ void leds_init(void)
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
 
-	DCC_LOG2(LOG_TRACE, "div=%d pre=%d", div, pre);
-
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM3EN;
 	
@@ -171,7 +143,6 @@ void leds_init(void)
 	tim->rcr = 0;
 
 	/* */
-	DCC_LOG1(LOG_TRACE, "ARR=%d", tim->arr);
 	tim->ccr1 = 0;
 	tim->ccr2 = tim->arr;
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1 | TIM_OC1PE | \
@@ -182,13 +153,5 @@ void leds_init(void)
 	/* enable counter */
 	tim->cr2 = 0;
 	tim->cr1 = TIM_URS | TIM_CEN; 
-
-#ifndef LEDDRV_FLAG_NO
-	LED_FLAG = thinkos_flag_alloc();
-#endif
-
-	thinkos_thread_create((void *)led_task, (void *)NULL,
-						  led_stack, sizeof(led_stack) |
-						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 }
 

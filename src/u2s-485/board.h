@@ -77,10 +77,19 @@ static inline int rs485_is_txen(void) {
 	return stm32_gpio_stat(RS485_TXEN);
 }
 
-
 void usb_vbus(bool on);
 
 void io_init(void);
+
+void leds_init(void);
+
+void __attribute__((noreturn)) led_task(void);
+
+void led_on(unsigned int id);
+
+void led_off(unsigned int id);
+
+void led_flash(unsigned int id, unsigned int ms);
 
 #ifdef __cplusplus
 }
