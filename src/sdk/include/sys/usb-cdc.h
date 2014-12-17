@@ -53,10 +53,22 @@ struct usb_cdc_class;
 
 typedef struct usb_cdc_class usb_cdc_class_t;
 
+extern const uint8_t * const cdc_acm_def_str[];
+extern const uint8_t cdc_acm_def_strcnt;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, 
+							   const uint8_t * const str[], 
+							   unsigned int strcnt);
+
+int usb_cdc_write(usb_cdc_class_t * cdc,
+				  const void * buf, unsigned int len);
+
+int usb_cdc_read(usb_cdc_class_t * cdc, void * buf,
+				 unsigned int len, unsigned int msec);
 
 void usb_connect(usb_cdc_class_t * cdc);
 
@@ -69,14 +81,6 @@ void usb_reset_wait(usb_cdc_class_t * cdc);
 void usb_ctrl_event_wait(usb_cdc_class_t * cdc);
 
 void usb_device_init(usb_cdc_class_t * cdc);
-
-usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn);
-
-int usb_cdc_write(usb_cdc_class_t * cdc,
-				  const void * buf, unsigned int len);
-
-int usb_cdc_read(usb_cdc_class_t * cdc, void * buf,
-				 unsigned int len, unsigned int msec);
 
 int usb_cdc_flush(usb_cdc_class_t * cdc);
 

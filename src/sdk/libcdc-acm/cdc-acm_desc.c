@@ -25,10 +25,6 @@
 #include <sys/param.h>
 #include <string.h>
 
-#ifndef CDC_ACM_ENABLE_PRODUCT_SET
-#define CDC_ACM_ENABLE_PRODUCT_SET 0
-#endif
-
 #define ATMEL_VCOM_PRODUCT_ID 0x6119
 #define ST_VCOM_PRODUCT_ID 0x5740
 
@@ -234,95 +230,4 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			0x0
 		}
 };
-
-#define LANG_STR_SZ              4
-/* LangID = 0x0409: U.S. English */
-const uint8_t cdc_acm_lang_str[LANG_STR_SZ] = {
-	LANG_STR_SZ, USB_DESCRIPTOR_STRING,
-	0x09, 0x04
-};
-
-#define VENDOR_STR_SZ            38
-const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
-	VENDOR_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Manufacturer: "STMicroelectronics" */
-	'S', 0, 'T', 0, 'M', 0, 'i', 0, 'c', 0, 'r', 0, 'o', 0, 'e', 0, 'l', 0, 'e', 0,
-	'c', 0, 't', 0, 'r', 0, 'o', 0, 'n', 0, 'i', 0, 'c', 0, 's', 0
-};
-
-
-#define PRODUCT_STR_SZ           44
-
-#if (CDC_ACM_ENABLE_PRODUCT_SET)
-#define PRODUCT_STR_SZ_MAX       50
-uint8_t cdc_acm_product_str[PRODUCT_STR_SZ_MAX] = {
-#else
-const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
-#endif
-	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Product name: "STM32 Virtual ComPort" */
-	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 't', 0,
-	'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0, 'o', 0, 'm', 0, 'P', 0, 'o', 0, 'r', 0,
-	't', 0,
-};
-
-
-#define SERIAL_STR_SZ            26
-uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
-	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Serial number: "0000000000001" */
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, 
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
-};
-
-#define INTERFACE_STR_SZ         16
-const uint8_t cdc_acm_interface_str[INTERFACE_STR_SZ] = {
-	INTERFACE_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Interface 0: "ST VCOM" */
-	'S', 0, 'T', 0, ' ', 0, 'V', 0, 'C', 0, 'O', 0, 'M', 0
-};
-
-const uint8_t * const cdc_acm_str[] = {
-	cdc_acm_lang_str,
-	cdc_acm_vendor_str,
-	cdc_acm_product_str,
-	cdc_acm_serial_str,
-	cdc_acm_interface_str
-};
-
-void usb_cdc_sn_set(uint64_t sn)
-{
-	char s[24];
-	char * cp;
-	int c;
-	int i;
-	int n;
-
-	n = sprintf(s, "%llu", sn);
-	cp = s + n - 1;
-
-	for (i = (SERIAL_STR_SZ / 2) - 1; i >= 0; --i) {
-		if (cp < s)
-			break;
-		c = *cp--;
-		cdc_acm_serial_str[i * 2] = c;
-	}
-}
-
-void usb_cdc_product_set(const char * s)
-{
-#if (CDC_ACM_ENABLE_PRODUCT_SET)
-	char * cp;
-	int len;
-	int i;
-
-	len = MIN(strlen(s), ((PRODUCT_STR_SZ_MAX - 1)/2));
-	cdc_acm_product_str[0] = (len + 1) * 2;
-	cp = (char *)s;
-	for (i = 1; i <= len; ++i)
-		cdc_acm_product_str[i * 2] = *cp++;
-#endif
-}
-
-
 
