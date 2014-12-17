@@ -1,0 +1,13 @@
+getdir BASEDIR
+
+sendln ''
+wait '$ '
+
+makepath JS BASEDIR '.\db.js'
+sendln 'rx db.js'
+xmodemsend JS 3
+sendln ''
+wait '$'
+sendln 'db c'
+wait '$ '
+

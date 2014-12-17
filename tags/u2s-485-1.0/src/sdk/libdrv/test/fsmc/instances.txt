@@ -1,0 +1,3 @@
+CLOCK_SETTINGS mck, mclk
+CLOCK_SETTINGS = 60MHZ -to mclk
+CLOCK_SETTINGS = 60MHZ -to fsmc_clk

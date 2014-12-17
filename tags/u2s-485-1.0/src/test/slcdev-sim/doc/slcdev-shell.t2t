@@ -1,0 +1,172 @@
+SLC Device Simulator
+
+
+= Shell =
+
+The SLC Device Simulator can be configured, monitored and controlled by commands issued in the serial port shell.
+
+
+== Connecting to the Shell ==
+
+In order to connect to the **SLC Device Simulator** shell you need a serial terminal program. 
+For windows users we recomend [TeraTerm http://ttssh2.sourceforge.jp/index.html.en], which is Open Source and have scripting capabilities. A the time this page was created the most up to date version is [TeraTerm 4.84 http://sourceforge.jp/projects/ttssh2/downloads/61906/teraterm-4.84.exe].
+
+Linux users can install the Minicom package.
+
+Configure your serial terminal according to the following parameters:
+- 115200 bps
+- 8 data bits
+- no parity
+- 1 stop bit
+
+
+After powering up you should get a version and copyright disclaimer, followed by the command prompt:
+```
+SLC Device Simulator 0.3 - Nov, 2014
+(c) Copyright 2014 - Mircom Group
+
+[DEV]$
+```
+If you connected after power up, just press **[Enter]** to get the prompt.
+
+
+== Online help ==
+
+One useful command in the shell is the **help** which shows wich commands are available and how to use them.
+
+With no parameters the **help** command display a list of available commands.
+```
+[DEV]$ help
+
+Command:   Alias:  Desciption:
+  help       ?      show command usage (help [CMD])
+  alarm      alm    set/get alarm level
+  cat               display file content
+  config     cfg    configuration options
+  dbase      db     device database
+  disable    d      Device disable
+  enable     e      Device enable
+  ls                list files
+  reboot     rst    reboot system
+  rm                remove files
+  rx                XMODEM file receive
+  sym               JS symbol table dump
+  trig       t      Trigger module address get/set
+  trouble    tbl    set/get trouble level
+  verbose    v      verbose mode enabled.
+  quiet      q      quiet mode enabled.
+  xflash     xf     update firmware.
+```
+
+To get more information about a particular command type **help** followed by the command name or alias:
+
+```
+[DEV]$ help rx
+  rx,  - XMODEM file receive
+  usage: rx FILENAME
+```
+
+== Command History ==
+
+The user can retrieve the last 4 commands typed in the shell by pressing the [up] arrow keys. 
+The current line can be edited with the following keys:
+
+- ``[Bakcspace]`` - erase a letter.
+- ``[Delete]`` - erase a letter.
+- ``[Left arrow]`` - move cursor to the left.
+- ``[Right arrrow]`` - move cursor to the right.
+- ``[Home]`` - move cursor to the beggining of the line.
+- ``[End]`` - move cursor to the end of the line.
+- ``[Ctrl]+[<--]`` - move cursor to the previous word (not available in some terminals).
+- ``[Ctrl]+[-->]`` - move cursor to the next word (not available in some terminals).
+
+
+= Managing files =
+
+Use the command **rx** to upload the files into the simulator. This example shows hot to upload the database:
+```
+[DEV]$ rx db.js
+XMODEM ... C
+[DEV]$
+```
+
+
+= Managing the database =
+
+The command **db c** will compile the databse.
+```
+[DEV]$ db c
+Erasing DB...
+Compiling...
+```
+Usually the database will be compiled right after uploading. The command **db x** will perform the two steps at once:
+```
+[DEV]$ db x
+XMODEM receive: 'db.js'... CC
+Erasing DB...
+Compiling...
+Model database
+ - Desc: "Mircom SLC Device Simulator"
+ - Version: 0.1.0
+ - JSON: txt=0x08017004 len=15360 crc=0x495c
+```
+The database most commonly is transfered once. There is no need to reload or recompile except, sometimes, after a firmware upgrade wich require a different database format version.
+
+= Managing the configuration =
+
+After uploading and compiling the database the configuration can be loaded and compiled. The procedure is similar to the database:
+```
+[DEV]$ cfg x
+XMODEM receive: 'cfg.js'... CC
+Erasing...
+Compiling...
++ "2251 COPTIR" "Multicriteria Smoke Detector": 1
++ "2251 COPTIR" "Multicriteria Smoke Detector": 2
++ "2251 COPTIR" "Multicriteria Smoke Detector": 3 4 5 6 7 8 9 10
+Saving...
+ - Desc: "Coptir test"
+ - Version: 0.1.0
+ - JSON: txt=0x0801c004 len=2048 crc=0x7a80
+```
+
+
+= XMODEM file transfer =
+
+File transfers to the simulator are done using the Xmodem serial protocol.
+The information provided here will be commom to the several commands using Xmodem to transfer files.
+
+TODO: teraterm transfer example.
+
+A Xmodem transfer can be cancelled by pressing [Ctrl-D].
+```
+[DEV]$ rx db.js
+XMODEM ... CCCCCCCCCCCCCC^D
+[DEV]$
+```
+If the transfer doesn't start within 60 seconds it will be automatically cancelled.
+
+= Firmware update =
+
+The current firmware version can be retrieved with **ver**:
+
+```
+[DEV]$ ver
+SLC Device Simulator 0.3 - Nov, 2014
+(c) Copyright 2014 - Mircom Group
+```
+
+Use the command **xf firm** to upgrade the simulator's firmware.
+
+```
+[DEV]$ xf firm
+Firmware update..
+Erasing...
+Xmodem... CC
+SLC Device Simulator 0.3 - Nov, 2014
+(c) Copyright 2014 - Mircom Group
+
+[DEV]$
+```
+**WARNING:** this command will erase the current firmware prior to uploading the new one. Once initiated the command cannot be cancelled. Make sure you have the correct binary file before issuing this command.
+If this procedure fails, the simulator will be unusable and should be reprogrammed with an approrpriate JTAG tool like the **YARD-ICE**.
+

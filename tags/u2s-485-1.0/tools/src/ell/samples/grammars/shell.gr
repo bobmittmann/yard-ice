@@ -1,0 +1,186 @@
+%token EOF DOT COMMA SEMICOLON COLON LBRACKET RBRACKET LPAREN RPAREN LBRACE RBRACE ASR SHL LTE LT GTE GT EQU NEQ PLUS MINUS MUL DIV MOD OR LOR AND LAND XOR NOT INV QUEST ASSIGN ELSE FALSE FOR FUNCTION IF TRUE VAR WHILE CONTINUE BREAK RETURN ID INT STRING ERR
+%%
+
+program 		: EOF
+				| stat program
+				;
+
+compound_stat	: LBRACE  stat_list RBRACE  
+				;
+
+stat_list		:
+				| stat stat_list
+				;
+
+stat			: SEMICOLON
+				| FOR LPAREN exp_lst_opt SEMICOLON  exp  SEMICOLON exp_lst_opt  RPAREN compound_stat 
+
+				| WHILE  condition  compound_stat 
+
+				| IF condition  compound_stat else_opt 
+
+				| VAR var_list SEMICOLON
+				| assign_or_call SEMICOLON
+				| CONTINUE SEMICOLON
+				| BREAK SEMICOLON
+				| RETURN exp_opt SEMICOLON
+				| FUNCTION ID LPAREN param_list_opt RPAREN compound_stat 
+				;
+
+exp_lst_opt		: 
+				| exp_lst
+				;
+
+exp_lst			: assign_or_call exp_lst1
+				;
+				
+exp_lst1		: 
+				| COMMA exp_lst
+				;
+
+exp_opt 		: 
+				| exp
+				;
+
+param_list_opt	: 
+				| param_list 
+				;
+
+param_list		: ID param_list1 
+				;
+
+param_list1		: 
+				| COMMA param_list 
+				;
+
+else_opt		: 
+				| ELSE  compound_stat
+				;
+
+condition		: LPAREN exp RPAREN
+				;
+
+var_list 		: var var_list1
+				;
+
+var_list1 		: 
+				| COMMA var_list
+				;
+
+var				: ID  var_assign_opt 
+				;
+
+var_assign_opt  : 
+				| ASSIGN exp 
+				;
+
+assign_or_call  : ID  assign_or_call1 
+				;
+
+assign_or_call1	: ASSIGN exp 
+				| LPAREN arg_list_opt RPAREN 
+				| CMD cmd_arg_list
+				;
+
+arg_list_opt	: 
+				| arg_list 
+				;
+
+arg_list		: exp arg_list1 
+				;
+
+arg_list1		: 
+				| COMMA arg_list 
+				;
+
+exp 			: and_exp or_exp
+				;
+
+or_exp			: 
+				| OR exp 
+				| LOR exp 
+				| XOR exp 
+				;
+
+and_exp			: relational_exp and_exp1
+				;
+
+and_exp1		: 
+				| AND and_exp 
+				| LAND and_exp 
+				;
+
+relational_exp	: shift_exp	relational_exp1
+				;
+
+relational_exp1	:
+				| EQU relational_exp 
+				| NEQ relational_exp 
+				| LT  relational_exp 
+				| GT  relational_exp 
+				| GTE relational_exp 
+				| LTE relational_exp 
+				;
+
+shift_exp		: additive_exp shift_exp1
+				;
+
+shift_exp1		: 
+				| SHL shift_exp	
+				| ASR shift_exp	
+				;
+
+additive_exp 	: mult_exp additive_exp1
+				;
+
+additive_exp1 	: 
+				| PLUS additive_exp 
+				| MINUS additive_exp 
+				;
+
+mult_exp		: unary_exp mult_exp1		
+				;
+
+mult_exp1		: 
+				| MUL mult_exp 
+				| DIV mult_exp 
+				| MOD mult_exp 
+				;
+
+unary_exp		: primary_exp
+				| INV unary_exp 
+				| MINUS unary_exp 
+				| NOT unary_exp 
+				;
+
+primary_exp		: LPAREN exp RPAREN
+				| INT 
+				| TRUE 
+				| FALSE 
+				| STRING 
+				| meth_or_attr  
+				;
+
+meth_or_attr	: ID meth_or_attr1
+				;
+
+meth_or_attr1	: 
+				| LPAREN arg_list_opt RPAREN 
+				;
+
+ 
+cmd_arg_list 	: cmd_arg cmd_arg_list1
+				;
+
+cmd_arg_list1	: 
+				| cmd_arg_list
+				;
+
+cmd_arg 		: INT 
+				| TRUE 
+				| FALSE 
+				| STRING 
+				| ID
+				| LPAREN exp RPAREN
+				;
+
