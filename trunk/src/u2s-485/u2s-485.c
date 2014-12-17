@@ -49,6 +49,58 @@
 #define VERSION_MAJOR 1
 #define VERSION_MINOR 0
 
+#define LANG_STR_SZ              4
+static const uint8_t lang_str[LANG_STR_SZ] = {
+	/* LangID = 0x0409: U.S. English */
+	LANG_STR_SZ, USB_DESCRIPTOR_STRING, 0x09, 0x04
+};
+
+#define VENDOR_STR_SZ            26
+static const uint8_t vendor_str[VENDOR_STR_SZ] = {
+	VENDOR_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Manufacturer: "Mircom Group" */
+	'M', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'm', 0, 
+	' ', 0, 'G', 0, 'r', 0, 'o', 0, 'u', 0, 'p', 0
+};
+
+
+#define PRODUCT_STR_SZ           44
+static const uint8_t product_str[PRODUCT_STR_SZ] = {
+	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Product name: "Mircom U2S485 Adapter" */
+	'M', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'm', 0, ' ', 0, 'U', 0, 
+	'2', 0, 'S', 0, '4', 0, '8', 0, '5', 0, ' ', 0, 'A', 0, 'd', 0, 
+	'a', 0, 'p', 0, 't', 0, 'e', 0, 'r', 0,
+};
+
+
+#define SERIAL_STR_SZ            26
+static const uint8_t serial_str[SERIAL_STR_SZ] = {
+	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Serial number: "553273343835" */
+	'5', 0, '5', 0, '3', 0, '2', 0, '7', 0, '3', 0, 
+	'3', 0, '4', 0, '3', 0, '8', 0, '3', 0, '5', 0
+};
+
+
+#define INTERFACE_STR_SZ         16
+static const uint8_t interface_str[INTERFACE_STR_SZ] = {
+	INTERFACE_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Interface 0: "ST VCOM" */
+	'S', 0, 'T', 0, ' ', 0, 'V', 0, 'C', 0, 'O', 0, 'M', 0
+};
+
+const uint8_t * const cdc_acm_str[] = {
+	lang_str,
+	vendor_str,
+	product_str,
+	serial_str,
+	interface_str
+};
+
+const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
+
+
 struct serial_dev * serial2_open(void);
 
 struct vcom {
@@ -248,7 +300,7 @@ int main(int argc, char ** argv)
 	struct usb_cdc_class * cdc;
 	struct serial_dev * serial;
 	struct vcom vcom;
-	uint64_t esn;
+//	uint64_t esn;
 	int i;
 
 	DCC_LOG_INIT();
@@ -265,10 +317,12 @@ int main(int argc, char ** argv)
 
 	leds_init();
 
-//	esn = *((uint64_t *)STM32F_UID);
-	esn = 0x5532733438350000 + (VERSION_MAJOR << 8) + VERSION_MINOR;
+	/* Fixed ESN */
+//	esn = 0x5532733438350000 + (VERSION_MAJOR << 8) + VERSION_MINOR;
+//	usb_cdc_sn_set(esn);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
-	cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
+	cdc = usb_cdc_init(&stm32f_usb_fs_dev, cdc_acm_str, 
+					   cdc_acm_strcnt);
 
 	serial = serial2_open();
 

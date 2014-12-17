@@ -58,6 +58,11 @@ struct usb_cdc_acm_dev {
 	/* class specific block */
 	struct usb_cdc_acm acm;
 
+	/* string table */
+	const uint8_t * const * str;
+	/* number of strings */
+	uint8_t strcnt;
+
 #ifndef CDC_RX_SEM_NO
 	uint8_t rx_sem; /* RX semaphore */
 #endif
@@ -67,6 +72,10 @@ struct usb_cdc_acm_dev {
 #ifndef CDC_CTL_FLAG_NO
 	uint8_t ctl_flag; /* Control event flag */
 #endif
+	uint8_t ctl_ep;
+	uint8_t in_ep;
+	uint8_t out_ep;
+	uint8_t int_ep;
 
 	uint8_t rx_cnt; 
 	uint8_t rx_pos; 
@@ -75,10 +84,6 @@ struct usb_cdc_acm_dev {
 
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 
-	uint8_t ctl_ep;
-	uint8_t in_ep;
-	uint8_t out_ep;
-	uint8_t int_ep;
 };
 
 #ifdef CDC_CTL_FLAG_NO
@@ -180,9 +185,11 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		if (desc == USB_DESCRIPTOR_STRING) {
 			int n = value & 0xff;
-			*ptr = (void *)cdc_acm_str[n];
-			len = cdc_acm_str[n][0];
-			DCC_LOG1(LOG_INFO, "GetDesc: String[%d]", n);
+			DCC_LOG1(LOG_TRACE, "GetDesc: String[%d]", n);
+			if (n < dev->strcnt) {
+				*ptr = (void *)dev->str[n];
+				len = dev->str[n][0];
+			}
 			break;
 		}
 
@@ -668,7 +675,9 @@ const usb_class_events_t usb_cdc_ev = {
 	.on_error = usb_cdc_on_error
 };
 
-usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
+usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, 
+							   const uint8_t * const str[], 
+							   unsigned int strcnt)
 {
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)dev;
@@ -688,6 +697,8 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
+	dev->str = str;
+	dev->strcnt = strcnt;
 
 	DCC_LOG3(LOG_INFO, "tx_flag=%d rx_sem=%d ctl_flag=%d", 
 			 TX_FLAG, RX_SEM, CTL_FLAG);
@@ -695,9 +706,6 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb, uint64_t sn)
 	thinkos_flag_clr(TX_FLAG); 
 	thinkos_flag_clr(CTL_FLAG); 
 	
-	DCC_LOG2(LOG_INFO, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
-	usb_cdc_sn_set(sn);
-
 	usb_dev_init(dev->usb, cl, &usb_cdc_ev);
 
 	return (usb_cdc_class_t *)dev;
