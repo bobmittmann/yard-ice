@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?>
+
+<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="sdu_mon" buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.2121383263" name="/" resourcePath="">
+						<toolChain id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.1245353885" name="ARM Windows GCC (Yagarto)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base">
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor.383618738" name="Processor" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumb.2095842985" name="Thumb (-mthumb)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumb"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumbinterwork.1856356234" name="Thumb interwork (-mthumb-interwork)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumbinterwork"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.endiannes.1181504564" name="Endiannes" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.endiannes"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.abi.1175693442" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.abi"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.unit.1716903107" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.unit"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.level.1282238338" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.level"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.format.975600904" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.format"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.other.2012738273" name="Other debugging flags" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.other"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.prof.334207575" name="Generate prof information (-p)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.prof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.gprof.1763328879" name="Generate gprof information (-pg)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.gprof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createflash.1179905066" name="Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createflash"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createlisting.738871406" name="Create Extended Listing" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createlisting"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.printsize.1698493307" name="Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.printsize"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.platform.base.537152926" isAbstract="false" name="Windows Platform" osList="win32" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.platform.base"/>
+							<builder id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.builder.base.352752702" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="ARM Yagarto Windows GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.builder.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.767827539" name="ARM Yagarto Windows GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.1562127167" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdk/include}&quot;"/>
+								</option>
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def.12986759" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MACH=STM32F103X6"/>
+									<listOptionValue builtIn="false" value="STM32F103X6"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input.164716632" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.1199317452" name="ARM Yagarto Windows GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.2054936714" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdk/include}&quot;"/>
+								</option>
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def.594987784" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MACH=STM32F103X6"/>
+									<listOptionValue builtIn="false" value="STM32F103X6"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input.301590365" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.compiler.base.105943420" name="ARM Yagarto Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.compiler.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.linker.base.229093791" name="ARM Yagarto Windows GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.linker.base.2099292096" name="ARM Yagarto Windows GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.archiver.base.1426513748" name="ARM Yagarto Windows GCC Archiver" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.archiver.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createflash.base.537179447" name="ARM Yagarto Windows GNU Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createflash.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createlisting.base.2009337836" name="ARM Yagarto Windows GNU Create Listing" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createlisting.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.printsize.base.1122368585" name="ARM Yagarto Windows GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.printsize.base"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350" moduleId="org.eclipse.cdt.core.settings" name="Debug">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GNU_ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="sdu_mon" buildProperties="" description="" id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350" name="Debug" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350." name="/" resourcePath="">
+						<toolChain id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.1522056194" name="ARM Windows GCC (Yagarto)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base">
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor.872084240" name="Processor" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.processor"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumb.854135810" name="Thumb (-mthumb)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumb"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumbinterwork.2100226847" name="Thumb interwork (-mthumb-interwork)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.thumbinterwork"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.endiannes.811460610" name="Endiannes" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.endiannes"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.abi.750770226" name="Float ABI" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.abi"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.unit.2142393568" name="FPU Type" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.target.fpu.unit"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.level.2139447275" name="Debug level" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.level"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.format.1253004072" name="Debug format" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.format"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.other.1520052573" name="Other debugging flags" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.other"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.prof.1025895380" name="Generate prof information (-p)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.prof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.gprof.745079435" name="Generate gprof information (-pg)" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.debugging.gprof"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createflash.1635718268" name="Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createflash"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createlisting.1093755519" name="Create Extended Listing" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.createlisting"/>
+							<option id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.printsize.986914299" name="Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.option.addtools.printsize"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.GNU_ELF" id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.platform.base.79589898" isAbstract="false" name="Windows Platform" osList="win32" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.platform.base"/>
+							<builder id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.builder.base.1408984508" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="ARM Yagarto Windows GNU Make builder" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.builder.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.1565710141" name="ARM Yagarto Windows GCC Assembler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths.293588650" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdk/include}&quot;"/>
+								</option>
+								<option id="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def.372741648" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.assembler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="MACH=STM32F103X6"/>
+									<listOptionValue builtIn="false" value="STM32F103X6"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input.41592785" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.1802066982" name="ARM Yagarto Windows GCC C Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base">
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths.689588305" name="Include paths (-I)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdk/include}&quot;"/>
+								</option>
+								<option id="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def.240653046" name="Defined symbols (-D)" superClass="org.eclipse.cdt.cross.arm.gnu.c.compiler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="STM32F103X6"/>
+								</option>
+								<inputType id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input.4584596" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input"/>
+							</tool>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.compiler.base.1179425059" name="ARM Yagarto Windows GCC C++ Compiler" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.compiler.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.linker.base.912071786" name="ARM Yagarto Windows GCC C Linker" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.linker.base.2077132270" name="ARM Yagarto Windows GCC C++ Linker" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.cpp.linker.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.archiver.base.1680718059" name="ARM Yagarto Windows GCC Archiver" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.archiver.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createflash.base.1676972992" name="ARM Yagarto Windows GNU Create Flash Image" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createflash.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createlisting.base.366852520" name="ARM Yagarto Windows GNU Create Listing" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.createlisting.base"/>
+							<tool id="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.printsize.base.1959692728" name="ARM Yagarto Windows GNU Print Size" superClass="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.printsize.base"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="sdu_mon.null.638738982" name="sdu_mon"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/sdu_mon"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/sdu_mon"/>
+		</configuration>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350;org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350.;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.1565710141;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input.41592785">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350;org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.1668226350.;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.1802066982;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input.4584596">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366;org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.2121383263;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.1199317452;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input.301590365">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941.1480804262;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.589758935;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.c.compiler.base.input.2113332029">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.toolchain.base.2135475941.1480804262;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.1742075604;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input.360983786">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366;org.eclipse.cdt.cross.arm.gnu.windows.toolchain.base.1098565366.2121383263;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.767827539;org.eclipse.cdt.cross.arm.gnu.yagarto.windows.assembler.base.input.164716632">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.cross.arm.gnu.ARM_YG_GCCWinManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+</cproject>
