@@ -20,82 +20,110 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "board.h"
-
+#include <sys/stm32f.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <thinkos.h>
 #include <sys/dcclog.h>
 
-struct {
-	uint8_t led_tmr[2];
-} io_drv;
+#include "board.h"
 
-#define IO_POLL_PERIOD_MS 10
+int8_t led_flag;
+volatile uint8_t led1_flash_head;
+volatile uint8_t led1_flash_tail;
+volatile uint8_t led2_flash_head;
+volatile uint8_t led2_flash_tail;
+volatile int8_t led_locked;
 
-void led_on(unsigned int id)
+void led_lock(void)
+{
+	led_locked = 1;
+}
+
+void led_unlock(void)
+{
+	led_locked = 0;
+}
+
+void led1_flash(unsigned int cnt)
+{
+	led1_flash_head = led1_flash_tail + cnt;
+	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
+	thinkos_flag_set(led_flag);
+}
+
+void led2_flash(unsigned int cnt)
+{
+	led2_flash_head = led2_flash_tail + cnt;
+	DCC_LOG(LOG_MSG, "thinkos_flag_set()");
+	thinkos_flag_set(led_flag);
+}
+
+void led_flash_all(unsigned int cnt)
+{
+	led1_flash_head = led1_flash_tail + cnt;
+	led2_flash_head = led2_flash_tail + cnt;
+	thinkos_flag_set(led_flag);
+}
+
+void led1_on(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM3;
+
+	tim->ccr1 = tim->arr / 2;
+}
+
+void led1_off(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM3;
+
+	tim->ccr1 = 0;
+}
+
+void led2_on(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
 	uint32_t arr = tim->arr;
 
-	if (id == LED_AMBER)
-		tim->ccr1 = arr / 2;
-	else if (id == LED_RED)
-		tim->ccr2 = arr / 2;
+	tim->ccr2 = arr - (arr / 2);
 }
 
-void led_off(unsigned int id)
+void led2_off(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
 
-	if (id == LED_AMBER)
-		tim->ccr1 = 0;
-	else if (id == LED_RED)
-		tim->ccr2 = tim->arr;
+	tim->ccr2 = tim->arr;
 }
-
-void led_flash(unsigned int id, unsigned int ms)
-{
-	io_drv.led_tmr[id] = ms / IO_POLL_PERIOD_MS;
-	led_on(id);
-}
-
-#ifndef LEDDRV_FLAG_NO
-int8_t led_flag;
-#endif
-
-#ifdef LEDDRV_FLAG_NO
-#define LED_FLAG (THINKOS_FLAG_BASE + LEDDRV_FLAG_NO)
-#else
-#define LED_FLAG led_flag
-#endif
-
-uint32_t clk_time = 0;
 
 void __attribute__((noreturn)) led_task(void)
 {
-	uint32_t clk = __thinkos_ticks();
-	uint32_t clk_sec = clk + 1000;
-
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
-	for (;;) {
-		int i;
-
-		clk += IO_POLL_PERIOD_MS;
-		thinkos_alarm(clk);
-
-		/* update clock time */
-		if ((int32_t)(clk - clk_sec) >= 1000) {
-			clk_time++;
-			clk_sec += 1000;
+	while (1) {
+		DCC_LOG(LOG_MSG, "thinkos_flag_wait()...");
+		thinkos_flag_wait(led_flag);
+		if (led1_flash_tail != led1_flash_head) {
+			led1_flash_tail++;
+			if (!led_locked)
+				led1_on();
+		}
+		if (led2_flash_tail != led2_flash_head) {
+			led2_flash_tail++;
+			if (!led_locked)
+				led2_on();
 		}
 
-		/* process led timers */
-		for (i = 0; i < 2; ++i) {
-			if (io_drv.led_tmr[i] == 0)
-				continue;
-			if (--io_drv.led_tmr[i] == 0) 
-				led_off(i);
-		}
+		if ((led1_flash_tail == led1_flash_head) &&
+			(led2_flash_tail == led2_flash_head)) 
+			thinkos_flag_clr(led_flag);
 
+		thinkos_sleep(100);
+		if (!led_locked) {
+			led1_off();
+			led2_off();
+		}
+		thinkos_sleep(100);
 	}
 }
 
@@ -122,6 +150,8 @@ void leds_init(void)
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
 
+	DCC_LOG2(LOG_TRACE, "div=%d pre=%d", div, pre);
+
 	/* Timer clock enable */
 	rcc->apb1enr |= RCC_TIM3EN;
 	
@@ -135,6 +165,7 @@ void leds_init(void)
 	tim->rcr = 0;
 
 	/* */
+	DCC_LOG1(LOG_TRACE, "ARR=%d", tim->arr);
 	tim->ccr1 = 0;
 	tim->ccr2 = tim->arr;
 	tim->ccmr1 = TIM_OC1M_PWM_MODE1 | TIM_OC1PE | \
@@ -145,5 +176,8 @@ void leds_init(void)
 	/* enable counter */
 	tim->cr2 = 0;
 	tim->cr1 = TIM_URS | TIM_CEN; 
+
+	led_flag = thinkos_flag_alloc();
+
 }
 

@@ -23,16 +23,7 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include "config.h"
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <thinkos.h>
-#define __THINKOS_SYS__
-#include <thinkos_sys.h>
 #include <sys/stm32f.h>
-#include <arch/cortex-m3.h>
 
 /* USB */
 #define USB_FS_DP STM32_GPIOA, 12
@@ -51,8 +42,13 @@
 #define LED1_IO STM32_GPIOA, 6
 #define LED2_IO STM32_GPIOA, 7
 
-#define LED_RED 1
-#define LED_AMBER 0
+/* -------------------------------------------------------------------------
+ * ThinkOS flags assignements
+ * ------------------------------------------------------------------------- */
+
+#define SLCDEV_DRV_EV_FLAG (THINKOS_FLAG_BASE + 0)
+#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 1)
+#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 2)
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,19 +76,10 @@ static inline int rs485_is_txen(void) {
 	return stm32_gpio_stat(RS485_TXEN);
 }
 
+
 void usb_vbus(bool on);
 
 void io_init(void);
-
-void leds_init(void);
-
-void __attribute__((noreturn)) led_task(void);
-
-void led_on(unsigned int id);
-
-void led_off(unsigned int id);
-
-void led_flash(unsigned int id, unsigned int ms);
 
 #ifdef __cplusplus
 }

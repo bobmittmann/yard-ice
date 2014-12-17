@@ -46,6 +46,9 @@
 #define RAW_TRACE 0
 #endif
 
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+
 struct serial_dev * serial2_open(void);
 
 struct vcom {
@@ -105,7 +108,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
 		if (len > 0) {
-			led_flash(1, 50);
+			led_flash(LED_RED, 50);
 			serial_write(serial, buf, len);
 #if RAW_TRACE
 			if (len == 1)
@@ -161,7 +164,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
 //			dbg_write(buf, len);
-			led_flash(2, 50);
+			led_flash(LED_AMBER, 50);
 			usb_cdc_write(cdc, buf, len);
 #if RAW_TRACE
 			if (len == 1)
@@ -262,7 +265,8 @@ int main(int argc, char ** argv)
 
 	leds_init();
 
-	esn = *((uint64_t *)STM32F_UID);
+//	esn = *((uint64_t *)STM32F_UID);
+	esn = 0x5532733438350000 + (VERSION_MAJOR << 8) + VERSION_MINOR;
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 	cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
 
@@ -289,12 +293,12 @@ int main(int argc, char ** argv)
 	usb_vbus(true);
 
 	for (i = 0; i < 5; ++i) {
-		led_on(1);
+		led_on(LED_AMBER);
 		thinkos_sleep(100);
-		led_off(1);
-		led_on(2);
+		led_off(LED_AMBER);
+		led_on(LED_RED);
 		thinkos_sleep(100);
-		led_off(2);
+		led_off(LED_RED);
 	}
 
 
