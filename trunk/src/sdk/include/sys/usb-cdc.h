@@ -39,6 +39,13 @@
 #define USB_CDC_ETIMEDOUT 3
 
 struct usb_cdc_state {
+	union {
+		struct {
+			uint32_t reserved: 1;
+			uint32_t suspended: 1;
+		};
+		uint32_t flags;
+	};
 	uint32_t rx_chars;
 	uint32_t tx_chars;
 	struct serial_config cfg;

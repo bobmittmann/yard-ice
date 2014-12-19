@@ -62,12 +62,15 @@ typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
 
 typedef int (* usb_class_on_suspend_t)(usb_class_t * cl);
 
+typedef int (* usb_class_on_wakeup_t)(usb_class_t * cl);
+
 typedef int (* usb_class_on_error_t)(usb_class_t * cl, int code);
 
 
 struct usb_class_events {
 	usb_class_on_reset_t on_reset;
 	usb_class_on_suspend_t on_suspend;
+	usb_class_on_wakeup_t on_wakeup;
 	usb_class_on_error_t on_error;
 };
 
