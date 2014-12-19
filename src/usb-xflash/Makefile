@@ -21,7 +21,7 @@
 # Author: Robinson Mittmann <bobmittmann@gmail.com>
 # 
 
-CODELIB = xflash_pic
+CODELIB = usb_xflash_pic
 
 CFILES = xflash.c crc16ccitt.c stm32f1xx-flash.c stm32-usb_fs.c
 

@@ -23,8 +23,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#if 0
 #include <arch/cortex-m3.h>
+
+#if 0
 #include <sys/param.h>
 #include <crc.h>
 #include <sys/dcclog.h>
@@ -316,20 +317,24 @@ int xflash(void * uart, uint32_t offs, unsigned int size)
 
 #else
 
-extern const uint8_t xflash_pic[];
-extern const unsigned int sizeof_xflash_pic;
+extern const uint8_t uart_xflash_pic[];
+extern const unsigned int sizeof_uart_xflash_pic;
+extern uint32_t __data_start[];
 
-#define PIC_CODE_SIZE_MAX (1024 + 128)
-
-int usart_xflash(void * uart, uint32_t offs, uint32_t len)
+void __attribute__((noreturn)) uart_xflash(uint32_t offs, uint32_t len)
 {
-	uint32_t text[PIC_CODE_SIZE_MAX / 4];
-	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)text) + 1;
+	uint32_t * xflash_code = __data_start;
+	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)xflash_code) + 1;
 
-	memcpy(text, xflash_pic, sizeof_xflash_pic);
+	cm3_cpsid_i();
 
-	return xflash_ram(uart, offs, len);
+	memcpy(xflash_code, uart_xflash_pic, sizeof_uart_xflash_pic);
+
+	xflash_ram(offs, len);
+
+	cm3_sysrst();
 }
+
 
 #endif
 

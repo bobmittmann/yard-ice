@@ -22,7 +22,7 @@
 
 PROG = u2s-485
 
-CFILES = u2s-485.c serial.c board.c leds.c sdu.c
+CFILES = u2s-485.c serial.c board.c leds.c sdu.c usb_xflash_pic.c
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \

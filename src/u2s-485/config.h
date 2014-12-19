@@ -89,6 +89,7 @@
 #define CDC_TX_FLAG_NO     2
 #define CDC_CTL_FLAG_NO    3
 #define CDC_RX_SEM_NO      0
+#define VCOM_MODE_FLAG     1
 
 #endif /* __CONFIG_H__ */
 

@@ -49,6 +49,8 @@
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 1
 
+void serial_rx_disable(struct serial_dev * dev);
+void serial_rx_enable(struct serial_dev * dev);
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
@@ -107,11 +109,90 @@ const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
 
 struct serial_dev * serial2_open(void);
 
+enum {
+	VCOM_MODE_CONVERTER = 0,
+	VCOM_MODE_SERVICE = 1,
+	VCOM_MODE_INTERACTIVE = 2
+};
+
 struct vcom {
+	volatile int mode;
 	struct serial_dev * serial;
 	usb_cdc_class_t * cdc;
 	struct serial_status ser_stat;
 };
+
+extern const uint8_t usb_xflash_pic[];
+extern const unsigned int sizeof_usb_xflash_pic;
+extern uint32_t __data_start[]; 
+
+void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
+{
+	uint32_t * xflash_code = __data_start;
+	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)xflash_code) + 1;
+
+	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
+
+	cm3_cpsid_i();
+
+	memcpy(xflash_code, usb_xflash_pic, sizeof_usb_xflash_pic);
+
+	xflash_ram(offs, len);
+
+	cm3_sysrst();
+}
+
+int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
+{
+	char s[64];
+	char * cp = s;
+	va_list ap;
+
+	va_start(ap, fmt);
+	cp += vsnprintf(cp, 64 - 1, fmt, ap);
+	va_end(ap);
+
+	return usb_cdc_write(cdc, s, cp - s);
+}
+
+void show_menu(usb_cdc_class_t * cdc)
+{
+	usb_printf(cdc, "--- Option:\r\n");
+	usb_printf(cdc, " [f] firmware update\r\n");
+	usb_printf(cdc, " [q] quit\r\n");
+};
+
+void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
+{
+	usb_cdc_class_t * cdc = vcom->cdc;
+	int i;
+	int c;
+
+	if (vcom->mode == VCOM_MODE_SERVICE) {
+		usb_printf(cdc, "\r\n\r\n");
+		usb_printf(cdc, "--- U2S-485 Service mode -------------");
+		usb_printf(cdc, "\r\n\r\n");
+		vcom->mode = VCOM_MODE_INTERACTIVE;
+	}
+
+	for (i = 0; i < len; ++i) {
+		c = buf[i];
+		(void)c;
+
+		switch (c) {
+		case 'q':
+			usb_printf(cdc, "-- Converter mode...\r\n");
+			vcom->mode = VCOM_MODE_CONVERTER;
+			break;
+		case 'f':
+			usb_printf(cdc, "-- Firmware update...\r\n");
+			usb_xflash(0, 32 * 1024);
+			break;
+		default:
+			show_menu(cdc);
+		}
+	}
+}
 
 #if 0
 
@@ -152,51 +233,56 @@ void dbg_write(uint8_t * buf, int len)
 
 #define VCOM_BUF_SIZE 64
 
-void __attribute__((noreturn)) usb_recv_task(struct vcom vcom[])
+void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 {
-	struct serial_dev * serial = vcom[0].serial;
-	usb_cdc_class_t * cdc = vcom[0].cdc;
+	struct serial_dev * serial = vcom->serial;
+	usb_cdc_class_t * cdc = vcom->cdc;
 	uint8_t buf[VCOM_BUF_SIZE];
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
 	for (;;) {
-		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 5000);
-		if (len > 0) {
-			led_flash(LED_RED, 50);
-			serial_write(serial, buf, len);
+		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
+		if (vcom->mode == VCOM_MODE_CONVERTER) {
+			if (len > 0) {
+				led_flash(LED_RED, 50);
+				serial_write(serial, buf, len);
 #if RAW_TRACE
-			if (len == 1)
-				DCC_LOG1(LOG_TRACE, "TX: %02x", buf[0]);
-			else if (len == 2)
-				DCC_LOG2(LOG_TRACE, "TX: %02x %02x", 
-						 buf[0], buf[1]);
-			else if (len == 3)
-				DCC_LOG3(LOG_TRACE, "TX: %02x %02x %02x", 
-						 buf[0], buf[1], buf[2]);
-			else if (len == 4)
-				DCC_LOG4(LOG_TRACE, "TX: %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3]);
-			else if (len == 5)
-				DCC_LOG5(LOG_TRACE, "TX: %02x %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3], buf[4]);
-			else if (len == 6)
-				DCC_LOG6(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-			else if (len == 7)
-				DCC_LOG7(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x %02x ",
-						 buf[0], buf[1], buf[2], buf[3], 
-						 buf[4], buf[5], buf[6]);
-			else
-				DCC_LOG8(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x "
-						 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
-						 buf[4], buf[5], buf[6], buf[7]);
+				if (len == 1)
+					DCC_LOG1(LOG_TRACE, "TX: %02x", buf[0]);
+				else if (len == 2)
+					DCC_LOG2(LOG_TRACE, "TX: %02x %02x", 
+							 buf[0], buf[1]);
+				else if (len == 3)
+					DCC_LOG3(LOG_TRACE, "TX: %02x %02x %02x", 
+							 buf[0], buf[1], buf[2]);
+				else if (len == 4)
+					DCC_LOG4(LOG_TRACE, "TX: %02x %02x %02x %02x", 
+							 buf[0], buf[1], buf[2], buf[3]);
+				else if (len == 5)
+					DCC_LOG5(LOG_TRACE, "TX: %02x %02x %02x %02x %02x", 
+							 buf[0], buf[1], buf[2], buf[3], buf[4]);
+				else if (len == 6)
+					DCC_LOG6(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x", 
+							 buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
+				else if (len == 7)
+					DCC_LOG7(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x %02x ",
+							 buf[0], buf[1], buf[2], buf[3], 
+							 buf[4], buf[5], buf[6]);
+				else
+					DCC_LOG8(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x "
+							 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
+							 buf[4], buf[5], buf[6], buf[7]);
 #endif
 #if SDU_TRACE
-			TX(buf, len);
+				TX(buf, len);
 #endif
-//			dbg_write(buf, len);
+				//			dbg_write(buf, len);
+			}
+		} else {
+			// forward to service input
+			vcom_service_input(vcom, buf, len);
 		}
 	}
 }
@@ -220,8 +306,10 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
 //			dbg_write(buf, len);
-			led_flash(LED_AMBER, 50);
-			usb_cdc_write(cdc, buf, len);
+			if (vcom->mode == VCOM_MODE_CONVERTER) {
+				led_flash(LED_AMBER, 50);
+				usb_cdc_write(cdc, buf, len);
+			}
 #if RAW_TRACE
 			if (len == 1)
 				DCC_LOG1(LOG_TRACE, "RX: %02x", buf[0]);
@@ -289,20 +377,34 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			prev_state.flags = state.flags;
 		}
 
-		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
-			(state.cfg.databits != prev_state.cfg.databits) ||
-			(state.cfg.parity != prev_state.cfg.parity) ||
-			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
-			serial_config_set(serial, &state.cfg);
-			prev_state.cfg = state.cfg;
-		}
-
 		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
 			vcom->ser_stat.dsr = state.ctrl.dtr;
 			usb_cdc_status_set(cdc, &vcom->ser_stat);
 			prev_state.ctrl = state.ctrl;
 		}
 
+		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
+			(state.cfg.databits != prev_state.cfg.databits) ||
+			(state.cfg.parity != prev_state.cfg.parity) ||
+			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
+
+			serial_rx_disable(serial);
+			DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
+			DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);
+			DCC_LOG1(LOG_TRACE, "parity=%d", state.cfg.parity);
+			DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
+			if ((state.cfg.baudrate == 921600) && 
+				(state.cfg.databits == 8) &&
+				(state.cfg.parity == SERIAL_PARITY_NONE)) {
+				DCC_LOG(LOG_TRACE, "magic config!");
+				vcom->mode = VCOM_MODE_SERVICE; 
+			} else {
+				serial_config_set(serial, &state.cfg);
+				prev_state.cfg = state.cfg;
+//				serial_enable(serial);
+				serial_rx_enable(serial);
+			}
+		}
 	}
 }
 
@@ -340,6 +442,7 @@ int main(int argc, char ** argv)
 
 	vcom.serial = serial;
 	vcom.cdc = cdc;
+	vcom.mode = VCOM_MODE_CONVERTER;
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |

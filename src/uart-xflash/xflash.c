@@ -289,7 +289,7 @@ int __attribute__((section (".init"))) xflash(void * uart,
 			uart_drain(uart);
 		}
 
-	} while (ret < 0);
+	} while ((ret < 0) || (cnt == 0));
 
 	reset();
 

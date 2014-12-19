@@ -194,15 +194,38 @@ int serial_config_set(struct serial_dev * dev,
 
 int serial_enable(struct serial_dev * dev)
 {
-	struct stm32_usart * uart = dev->uart;
+	struct stm32_usart * us = dev->uart;
 
 	DCC_LOG(LOG_TRACE, ".");
-
-	stm32_usart_enable(uart);
+	us->cr1 |= USART_RE | USART_TE;
 
 	return 0;
 }
 
+int serial_disable(struct serial_dev * dev)
+{
+	struct stm32_usart * us = dev->uart;
+
+	DCC_LOG(LOG_TRACE, ".");
+	us->cr1 &= ~(USART_RE | USART_TE);
+
+	return 0;
+}
+
+
+void serial_rx_enable(struct serial_dev * dev)
+{
+	struct stm32_usart * us = dev->uart;
+	/* enable RX */
+	us->cr1 |= USART_RE;
+}
+
+void serial_rx_disable(struct serial_dev * dev)
+{
+	struct stm32_usart * us = dev->uart;
+	/* enable RX */
+	us->cr1 &= ~USART_RE;
+}
 
 struct serial_dev serial2_dev;
 
@@ -308,8 +331,8 @@ struct serial_dev * serial2_open(void)
 	stm32_usart_baudrate_set(uart, 19200);
 	stm32_usart_mode_set(uart, SERIAL_8N1);
 
-	/* enable RX and IDLE interrupts */
-	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
+	/* enable UART, RX and IDLE interrupts */
+	uart->cr1 |= USART_UE | USART_RXNEIE | USART_IDLEIE;
 	/* Errors interrupt */
 	uart->cr3 |= USART_EIE;
 

@@ -278,8 +278,6 @@ timeout:
 	return ret;
 }
 
-void dbg_reset(void);
-
 int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
 												  unsigned int blk_size)
 {
@@ -287,8 +285,6 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 	unsigned int cnt;
 	uint32_t offs;
 	int ret;
-
-//	dbg_reset();
 	
 	flash_unlock();
 
