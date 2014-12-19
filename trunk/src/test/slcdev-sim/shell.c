@@ -1105,14 +1105,12 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int usart_xflash(void * uart, uint32_t offs, uint32_t len);
+int uart_xflash(void * uart, uint32_t offs, uint32_t len);
 
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
 	uint32_t offs = 0x00000;
 	uint32_t size = 0x00000;
-	uint32_t pri;
-	int ret;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -1133,12 +1131,9 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 
 	fflush(f);
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-	ret = usart_xflash(STM32_USART2, offs, size);
-	cm3_primask_set(pri);
+	uart_xflash(STM32_USART2, offs, size);
 
-	return ret;
+	return 0;
 }
 
 int cmd_sim(FILE * f, int argc, char ** argv)

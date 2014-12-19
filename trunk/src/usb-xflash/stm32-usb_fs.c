@@ -101,7 +101,7 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 
 	if (epr & USB_EP_DBL_BUF) {
 		/* select the descriptor according to the data toggle bit */
-		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 0 : 1];
+		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
 	} else {
 		/* single buffer */
 		rx_pktbuf = &pktbuf[ep_id].rx;
