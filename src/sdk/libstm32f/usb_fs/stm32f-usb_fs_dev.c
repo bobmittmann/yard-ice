@@ -182,7 +182,7 @@ static void __ep_zlp_send(struct stm32f_usb * usb, int ep_id)
 void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-	int ep_id;
+//	int ep_id;
 	/* A brief description of a typical suspend procedure is provided below, 
 	   focused on the USB-related aspects of the application software routine 
 	   responding to the SUSP notification of the USB peripheral:
@@ -200,6 +200,7 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 
 	usb->cntr |= USB_FSUSP;
 
+#if 0
 	for (ep_id = 0; ep_id < 8; ep_id++) {
 		drv->ep[ep_id].state = EP_DISABLED;
 		__set_ep_txstat(usb, ep_id, USB_TX_DISABLED);
@@ -207,6 +208,7 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 		__clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
 		__set_ep_addr(usb, ep_id, 0);
 	}
+#endif
 
 	/* Enable Reset and Wakeup interrupts */
 	usb->cntr |= USB_WKUPM | USB_RESETM;
@@ -222,13 +224,18 @@ void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 void stm32f_usb_dev_wakeup(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t fnr = usb->fnr;
 
-//	drv->ev->on_wakeup(drv->cl);
+	if (((fnr & (USB_RXDP | USB_RXDM)) == 0) || 
+		((fnr & (USB_RXDP | USB_RXDM)) == USB_RXDM)) {
+	
+		/* Clear FSUSP flag */
+		usb->cntr = USB_WKUPM | USB_RESETM;
 
-	/* Clear FSUSP flag */
-	usb->cntr = USB_WKUPM | USB_RESETM;
+		DCC_LOG(LOG_TRACE, "wakeup.");
 
-	DCC_LOG(LOG_TRACE, "resumed.");
+		drv->ev->on_wakeup(drv->cl);
+	}
 }
 
 void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
@@ -904,16 +911,16 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		stm32f_usb_dev_suspend(drv);
 	}
 
-	if (sr & USB_RESET) {
-		usb->istr = sr & ~USB_RESET;
-		DCC_LOG(LOG_TRACE, "RESET");
-		stm32f_usb_dev_reset(drv);
-	}
-
 	if (sr & USB_WKUP) {
 		usb->istr = sr & ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
 		stm32f_usb_dev_wakeup(drv);
+	}
+
+	if (sr & USB_RESET) {
+		usb->istr = sr & ~USB_RESET;
+		DCC_LOG(LOG_TRACE, "RESET");
+		stm32f_usb_dev_reset(drv);
 	}
 
 	if (sr & USB_ERR) {

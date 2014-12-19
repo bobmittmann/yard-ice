@@ -276,6 +276,19 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 
 		usb_cdc_state_get(cdc, &state);
 
+		if (state.flags != prev_state.flags) {
+			if (state.suspended) {
+				DCC_LOG1(LOG_TRACE, "[%d] suspending...", 
+						 thinkos_thread_self());
+			} else {
+				if (prev_state.suspended) {
+					DCC_LOG1(LOG_TRACE, "[%d] wakeup from suspended!", 
+							 thinkos_thread_self());
+				} 
+			}
+			prev_state.flags = state.flags;
+		}
+
 		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
 			(state.cfg.databits != prev_state.cfg.databits) ||
 			(state.cfg.parity != prev_state.cfg.parity) ||

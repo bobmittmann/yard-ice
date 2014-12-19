@@ -42,11 +42,12 @@ struct usb_cdc_acm {
 	/* modem bits */
 	volatile uint8_t status; /* modem status lines */
 	volatile uint8_t control; /* modem control lines */
-	volatile uint8_t opt;
+	volatile uint8_t flags;
 	struct cdc_line_coding lc;
 };
 
-#define ACM_LC_SET (1 << 0)
+#define ACM_LC_SET        (1 << 0)
+#define ACM_USB_SUSPENDED (1 << 1)
 
 #define USB_CDC_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 #define CDC_CTR_BUF_LEN 16
@@ -217,7 +218,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			usb_dev_ep_disable(dev->usb, dev->int_ep);
 		}
 
-		dev->acm.opt = 0;
+		dev->acm.flags = 0;
 		/* signal any pending threads */
 		thinkos_flag_set_i(CTL_FLAG);
 		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
@@ -260,8 +261,8 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 	case SET_LINE_CODING:
 
-		if ((dev->acm.opt & ACM_LC_SET) == 0) {
-			dev->acm.opt |= ACM_LC_SET;
+		if ((dev->acm.flags & ACM_LC_SET) == 0) {
+			dev->acm.flags |= ACM_LC_SET;
 			thinkos_flag_give_i(TX_FLAG);
 		}
 		thinkos_flag_set_i(CTL_FLAG);
@@ -332,21 +333,25 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 	dev->acm.control = 0;
+	dev->acm.flags |= ACM_USB_SUSPENDED;
 	thinkos_flag_set_i(CTL_FLAG);
 	thinkos_flag_clr_i(TX_FLAG);
 
 	return 0;
 }
 
-int usb_cdc_on_resume(usb_class_t * cl)
+int usb_cdc_on_wakeup(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 
-	if (dev->acm.opt & ACM_LC_SET)
+	dev->acm.flags &= ~ACM_USB_SUSPENDED;
+	thinkos_flag_set_i(CTL_FLAG);
+
+	if (dev->acm.flags & ACM_LC_SET)
 		thinkos_flag_give_i(TX_FLAG);
 
 	return 0;
@@ -568,6 +573,8 @@ int usb_cdc_state_get(usb_cdc_class_t * cl, usb_cdc_state_t * state)
 	state->err.par = (dev->acm.status & CDC_SERIAL_STATE_PARITY);
 	state->err.frm = (dev->acm.status & CDC_SERIAL_STATE_FRAMING);
 
+	state->flags = dev->acm.flags;
+
 	return 0;
 }
 
@@ -601,7 +608,7 @@ int usb_cdc_acm_lc_wait(usb_cdc_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	while ((dev->acm.opt & ACM_LC_SET) == 0) {
+	while ((dev->acm.flags & ACM_LC_SET) == 0) {
 		DCC_LOG(LOG_INFO, "CTL wait");
 		thinkos_flag_wait(CTL_FLAG);
 		thinkos_flag_clr(CTL_FLAG);
@@ -672,6 +679,7 @@ struct usb_cdc_acm_dev usb_cdc_rt;
 const usb_class_events_t usb_cdc_ev = {
 	.on_reset = usb_cdc_on_reset,
 	.on_suspend = usb_cdc_on_suspend,
+	.on_wakeup = usb_cdc_on_wakeup,
 	.on_error = usb_cdc_on_error
 };
 
