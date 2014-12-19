@@ -1,0 +1,16 @@
+//
+// Expression evaluation example
+//
+
+var x0 = 0, x1 = 1, x, i;
+
+i = 0;
+x = "hello";
+while (i < 46) {
+	x = x1 + x0;
+	printf("%2d %s %10u\n", i, '-', x);
+	x0 = x1;
+	x1 = x;
+	i = i + 1;
+}
+

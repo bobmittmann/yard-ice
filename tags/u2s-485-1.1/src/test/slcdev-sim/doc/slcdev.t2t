@@ -1,0 +1,211 @@
+SLC Device Simulator
+
+
+== Shell ==
+
+The SLC Device Simulator can be configured through a command shell.
+
+=== Connecting to the Shell ===
+
+Configure your serial terminal according to the following parameters:
+- 115200 bps
+- 8 data bits
+- no parity
+- 1 stop bit
+
+
+After powering up you should get a version and copyright disclaimer, followed by the command prompt:
+```
+SLC Device Simulator 0.3 - Nov, 2014
+(c) Copyright 2014 - Mircom Group
+
+[DEV]$
+```
+If you connected after power up, just press **[Enter]** to get the prompt.
+
+=== Online help ===
+
+One useful command in the shell is the **help** which shows wich commands are available and how to use them.
+
+With no parameters the **help** command display a list of available commands.
+```
+[DEV]$ help
+
+Command:   Alias:  Desciption:
+  help       ?      show command usage (help [CMD])
+  alarm      alm    set/get alarm level
+  cat               display file content
+  config     cfg    configuration options
+  dbase      db     device database
+  disable    d      Device disable
+  enable     e      Device enable
+  ls                list files
+  reboot     rst    reboot system
+  rm                remove files
+  rx                XMODEM file receive
+  sym               JS symbol table dump
+  trig       t      Trigger module address get/set
+  trouble    tbl    set/get trouble level
+  verbose    v      verbose mode enabled.
+  quiet      q      quiet mode enabled.
+  xflash     xf     update firmware.
+```
+
+To get more information about a particular command type **help** followed by the command name or alias:
+
+```
+[DEV]$ help rx
+  rx,  - XMODEM file receive
+  usage: rx FILENAME
+```
+== Configuring the Simulator ==
+
+In order for the simulator to run it's necessary to upload and compile 2 files:
+- The Device Database: ''db.js''
+- The Simulation Configuration: ''cfg.js''
+
+
+Use the command **rx** to upload the files into the simulator. This example shows hot to upload the database:
+```
+[DEV]$ rx db.js
+XMODEM ... C
+[DEV]$
+```
+The command **db c** will compile the databse.
+```
+[DEV]$ db c
+Erasing DB...
+Compiling...
+```
+Usually the database will be compiled right after uploading. The command **db x** will perform the two steps at once:
+```
+[DEV]$ db x
+XMODEM receive: 'db.js'... CC
+Erasing DB...
+Compiling...
+Model database
+ - Desc: "Mircom SLC Device Simulator"
+ - Version: 0.1.0
+ - JSON: txt=0x08017004 len=15360 crc=0x495c
+```
+The database most commonly is transfered once. There is no need to reload or recompile except, sometimes, after a firmware upgrade wich require a different database format version.
+
+After uploading and compiling the database the configuration can be loaded and compiled. The procedure is similar to the database:
+```
+[DEV]$ cfg x
+XMODEM receive: 'cfg.js'... CC
+Erasing...
+Compiling...
++ "2251 COPTIR" "Multicriteria Smoke Detector": 1
++ "2251 COPTIR" "Multicriteria Smoke Detector": 2
++ "2251 COPTIR" "Multicriteria Smoke Detector": 3 4 5 6 7 8 9 10
+Saving...
+ - Desc: "Coptir test"
+ - Version: 0.1.0
+ - JSON: txt=0x0801c004 len=2048 crc=0x7a80
+```
+
+== XMODEM file transfer ==
+
+File transfers to the simulator are done using the Xmodem serial protocol.
+The information provided here will be commom to the several commands using Xmodem to transfer files.
+
+TODO: teraterm transfer example.
+
+A Xmodem transfer can be cancelled by pressing [Ctrl-D].
+```
+[DEV]$ rx db.js
+XMODEM ... CCCCCCCCCCCCCC^D
+[DEV]$
+```
+If the transfer doesn't start within 60 seconds it will be automatically cancelled.
+
+== Firmware update ==
+
+Use the command **xf firm** to upgrade the simulator's firmware.
+
+```
+[DEV]$ xf firm
+Firmware update..
+Erasing...
+Xmodem... CC
+SLC Device Simulator 0.3 - Nov, 2014
+(c) Copyright 2014 - Mircom Group
+
+[DEV]$
+```
+**WARNING:** this command will erase the current firmware prior to uploading the new one. Once initiated the command cannot be cancelled. Make sure you have the correct binary file before issuing this command.
+If this procedure fails, the simulator will be unusable and should be reprogrammed with an approrpriate JTAG tool like the **YARD-ICE**.
+
+== Device Database ==
+
+The database of devices is a textual JSON file. It consists of a list of device models declared as JSON objects. Each device object can be declared either as a **sensor** or a **module**. 
+
+=== Info ===
+The **info** object provide information about the database itself, and is declared as:
+
+```
+	"info": {
+		"version" : [0, 1]
+		"desc" : "Mircom SLC Device Simulator", 
+	},
+```
+
+=== Devices and Modules ===
+
+Both devices and modules have common fields and are declared in a similar fashion.
+
+```
+	"sensor": { 
+		"model" : "1251", 
+		"desc" : "Ionization Smoke Detector", 
+		"sim" : "ion", 
+		"pw1" : [270, 330],
+		"pw2" : [
+			["Remote test disabled", 270, 330],
+			["Remote test enabled", 540 , 660],
+		],
+		"pw3" : [540, 660],
+		"pw4" : [
+			["Normal", 870, 930],
+			["Low Chamber", 120, 180],
+			["High Chamber", 260, 330],
+			["Smoke Alarm 1", 1260, 1775],
+			["Smoke Alarm 2", 1775, 2395],
+			["Smoke Alarm 3", 2395, 2800],
+			["Remote Test", 2130, 2880]
+		],
+		"pw5" : [540, 660]
+	},
+
+```
+=== Devices and Modules ===
+
+| mode | i0(mA) | i1(mA) |
+|    0 |    128 |     45 |
+|    1 |    160 |     45 |
+|    2 |    160 |     57 |
+|    3 |    168 |     76 |
+|    4 |    179 |     45 |
+|    5 |    204 |     45 |
+|    6 |    204 |     52 |
+|    7 |    214 |     76 |
+|    8 |    216 |     82 |
+|    9 |    232 |     82 |
+|   10 |    232 |     89 |
+|   11 |    261 |     45 |
+|   12 |    261 |     82 |
+|   13 |    261 |    128 |
+|   14 |    299 |     76 |
+|   15 |    324 |     76 |
+|   16 |    324 |    115 |
+|   17 |    324 |    138 |
+|   18 |    362 |    138 |
+|   19 |    379 |     76 |
+|   20 |    379 |     96 |
+|   21 |    409 |    138 |
+|   22 |    409 |    156 |
+|   23 |    438 |     76 |
+|   24 |    438 |    138 |
+|   25 |    438 |    214 |
+
