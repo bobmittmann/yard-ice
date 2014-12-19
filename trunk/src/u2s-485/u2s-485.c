@@ -46,8 +46,11 @@
 #define RAW_TRACE 0
 #endif
 
-#define VERSION_MAJOR 1
-#define VERSION_MINOR 0
+#define FW_VERSION_MAJOR 1
+#define FW_VERSION_MINOR 1
+
+
+uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
 #define LANG_STR_SZ              4
 static const uint8_t lang_str[LANG_STR_SZ] = {
@@ -64,13 +67,14 @@ static const uint8_t vendor_str[VENDOR_STR_SZ] = {
 };
 
 
-#define PRODUCT_STR_SZ           44
+#define PRODUCT_STR_SZ           52
 static const uint8_t product_str[PRODUCT_STR_SZ] = {
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Product name: "Mircom U2S485 Adapter" */
 	'M', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'm', 0, ' ', 0, 'U', 0, 
 	'2', 0, 'S', 0, '4', 0, '8', 0, '5', 0, ' ', 0, 'A', 0, 'd', 0, 
-	'a', 0, 'p', 0, 't', 0, 'e', 0, 'r', 0,
+	'a', 0, 'p', 0, 't', 0, 'e', 0, 'r', 0, ' ', 0, 
+	'0' + FW_VERSION_MAJOR, 0, '.', 0, '0' + FW_VERSION_MINOR, 0, 
 };
 
 
@@ -300,7 +304,6 @@ int main(int argc, char ** argv)
 	struct usb_cdc_class * cdc;
 	struct serial_dev * serial;
 	struct vcom vcom;
-//	uint64_t esn;
 	int i;
 
 	DCC_LOG_INIT();
@@ -317,10 +320,6 @@ int main(int argc, char ** argv)
 
 	leds_init();
 
-	/* Fixed ESN */
-//	esn = 0x5532733438350000 + (VERSION_MAJOR << 8) + VERSION_MINOR;
-//	usb_cdc_sn_set(esn);
-	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
 	cdc = usb_cdc_init(&stm32f_usb_fs_dev, cdc_acm_str, 
 					   cdc_acm_strcnt);
 
