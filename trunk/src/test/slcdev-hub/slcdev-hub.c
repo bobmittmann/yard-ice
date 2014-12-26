@@ -249,7 +249,10 @@ int main(int argc, char ** argv)
 	console_shell_init();
 
 	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
-	cdc = usb_cdc_init(&stm32f_otg_fs_dev, *((uint64_t *)STM32F_UID));
+	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
+	cdc = usb_cdc_init(&stm32f_otg_fs_dev, 
+					   cdc_acm_def_str, 
+					   cdc_acm_def_strcnt);
 
 	DCC_LOG(LOG_TRACE, "14. usb_shell()");
 	for (;;) {

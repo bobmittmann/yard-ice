@@ -59,6 +59,9 @@
 #define UART6_TX       STM32_GPIOC, 6
 #define UART6_RX       STM32_GPIOD, 7
 
+#define FLASH_BLK_FS_OFFS     0x00020000
+#define FLASH_BLK_FS_SIZE     (256 * 1024)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

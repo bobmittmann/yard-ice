@@ -28,6 +28,7 @@
 #include <sys/shell.h>
 #include <sys/tty.h>
 #include <sys/usb-cdc.h>
+#include <sys/stm32f.h>
 
 #include "config.h"
 #include "target.h"
@@ -36,12 +37,17 @@
 
 int usb_xflash(uint32_t offs, uint32_t len);
 
+int usart_xflash(void * uart, uint32_t offs, uint32_t len);
+
+extern const struct fileop uart_console_ops;
+
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
 	uint32_t offs = 0x00000;
 	uint32_t size = 0x00000;
 	uint32_t pri;
 	FILE * raw;
+	int ret;
 
 	if (argc < 2)
 		return SHELL_ERR_ARG_MISSING;
@@ -56,7 +62,7 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 			offs = 0;
 			size = 256 * 1024;
 			fprintf(f, "Firmware update...\n");
-			break;;
+			break;
 		} 
 
 		return SHELL_ERR_ARG_INVALID;
@@ -65,9 +71,8 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	fflush(f);
 
 	raw = isfatty(f) ? ftty_lowlevel(f) : f;
-	if (usb_cdc_is_usb_file(raw)) {
-		int ret;
 
+	if (usb_cdc_is_usb_file(raw)) {
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
 		ret = usb_xflash(offs, size);
@@ -75,6 +80,15 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 		return ret;
 	} 
 
+	if (raw->op == &uart_console_ops) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = usart_xflash(STM32_UART5, offs, size);
+		cm3_primask_set(pri);
+
+		return ret;
+	}
+		  
 	fprintf(f, "Operation not permited in this terminal.\n");
 	return -1;
 }

@@ -231,14 +231,16 @@ __thinkos_irq_wait(int irq) {
 	int32_t self = thinkos_rt.active;
 	/* store the thread info */
 	thinkos_rt.irq_th[irq] = self;
-	__thinkos_critical_enter();
+	/* rise the BASEPRI to stop the scheduler */
+	cm3_basepri_set(SCHED_PRIORITY); 
 	/* prepare to wait ... */
 	__thinkos_wait(self);
 	/* clear pending interrupt */
 	cm3_irq_pend_clr(irq);
 	/* enable this interrupt source */
 	cm3_irq_enable(irq);
-	__thinkos_critical_exit();
+	/* return the BASEPRI to the default to reenable the scheduler. */
+	cm3_basepri_set(0x00);
 	/* the scheduler will run at this point */
 }
 

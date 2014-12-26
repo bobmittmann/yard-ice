@@ -95,7 +95,7 @@ struct serial_dev {
 	struct stm32_usart * uart;
 };
 
-int serial_read(struct serial_dev * dev, char * buf, 
+int serial_read(struct serial_dev * dev, void * buf, 
 				unsigned int len, unsigned int msec)
 {
 
