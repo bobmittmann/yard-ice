@@ -85,8 +85,10 @@ struct {
 //{
 //	rs485_link_isr(&net.link);
 //}
+//const uint8_t * ice40lp384_bin = (uint8_t *)0x08060000;
 
-const uint8_t * ice40lp384_bin = (uint8_t *)0x08060000;
+extern const uint8_t ice40lp384_bin[];
+extern const unsigned int sizeof_ice40lp384_bin;
 
 /* -------------------------------------------------------------------------
    - Packets
@@ -414,7 +416,7 @@ int net_init(void)
 {
 	tracef("%s():...", __func__);
 
-	if (lattice_ice40_configure(ice40lp384_bin, 32768) < 0) {
+	if (lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin) < 0) {
 		trace("lattice_ice40_configure() failed!");
 		return -1;
 	}

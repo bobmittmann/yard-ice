@@ -100,12 +100,6 @@ int par2cpc(char cpc)
 
 struct serial_dev * serial_open(void);
 
-int serial_write(struct serial_dev * dev, const void * buf, 
-				 unsigned int len);
-
-int serial_read(struct serial_dev * dev, char * buf, 
-				unsigned int len, unsigned int msec);
-
 struct vcom {
 	struct serial_dev * serial;
 	struct tcp_pcb * svc;

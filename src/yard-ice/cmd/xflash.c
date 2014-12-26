@@ -41,3 +41,17 @@ int usb_xflash(uint32_t offs, uint32_t len)
 	return xflash_ram(offs, len);
 }
 
+extern const uint8_t uart_xflash_pic[];
+extern const unsigned int sizeof_uart_xflash_pic;
+
+int usart_xflash(void * uart, uint32_t offs, uint32_t len)
+{
+	uint32_t * xflash_code = __data_start;
+	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)xflash_code) + 1;
+
+	DCC_LOG3(LOG_TRACE, "sp=%08x offs=%08x len=%d", cm3_sp_get(), offs, len);
+
+	memcpy(xflash_code, uart_xflash_pic, sizeof_uart_xflash_pic);
+
+	return xflash_ram(uart, offs, len);
+}
