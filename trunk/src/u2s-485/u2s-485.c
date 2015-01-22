@@ -47,7 +47,7 @@
 #endif
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 1
+#define FW_VERSION_MINOR 2
 
 void serial_rx_disable(struct serial_dev * dev);
 void serial_rx_enable(struct serial_dev * dev);
@@ -112,7 +112,8 @@ struct serial_dev * serial2_open(void);
 enum {
 	VCOM_MODE_CONVERTER = 0,
 	VCOM_MODE_SERVICE = 1,
-	VCOM_MODE_INTERACTIVE = 2
+	VCOM_MODE_INTERACTIVE = 2,
+	VCOM_MODE_SDU_TRACE = 3,
 };
 
 struct vcom {
@@ -158,20 +159,26 @@ int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
 void show_menu(usb_cdc_class_t * cdc)
 {
 	usb_printf(cdc, "--- Option:\r\n");
-	usb_printf(cdc, " [f] firmware update\r\n");
+	usb_printf(cdc, " [F] firmware update\r\n");
 	usb_printf(cdc, " [q] quit\r\n");
+	usb_printf(cdc, " [1] setup: 19200 8N1\r\n");
+	usb_printf(cdc, " [T/t] enable/disable trace\r\n");
+	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
+	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
 };
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 {
 	usb_cdc_class_t * cdc = vcom->cdc;
+	struct serial_config cfg;
 	int i;
 	int c;
 
 	if (vcom->mode == VCOM_MODE_SERVICE) {
 		usb_printf(cdc, "\r\n\r\n");
-		usb_printf(cdc, "--- U2S-485 Service mode -------------");
-		usb_printf(cdc, "\r\n\r\n");
+		usb_printf(cdc, "--- U2S-485 %d.%d -------------\r\n\r\n",
+				   FW_VERSION_MAJOR, FW_VERSION_MINOR);
+		usb_printf(cdc, "--- Service mode ...\r\n\r\n");
 		vcom->mode = VCOM_MODE_INTERACTIVE;
 	}
 
@@ -181,13 +188,55 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 
 		switch (c) {
 		case 'q':
-			usb_printf(cdc, "-- Converter mode...\r\n");
+			usb_printf(cdc, " - Converter mode...\r\n");
 			vcom->mode = VCOM_MODE_CONVERTER;
 			break;
-		case 'f':
-			usb_printf(cdc, "-- Firmware update...\r\n");
-			usb_xflash(0, 32 * 1024);
+		case 'T':
+			usb_printf(cdc, " - SDU trace mode...\r\n");
+			vcom->mode = VCOM_MODE_SDU_TRACE;
+			sdu_trace_init(cdc);
 			break;
+		case 't':
+			usb_printf(cdc, " - Interactive mode...\r\n");
+			vcom->mode = VCOM_MODE_INTERACTIVE;
+			break;
+		case 'F':
+			if (vcom->mode == VCOM_MODE_INTERACTIVE) {
+				usb_printf(cdc, " - Firmware update...\r\n");
+				usb_xflash(0, 32 * 1024);
+			}
+			break;
+		case '1':
+			cfg.baudrate = 19200;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 19200 8N1\r\n");
+			break;
+
+		case 'U':
+			sdu_trace_show_supv(true);
+			usb_printf(cdc, " - Show supervisory...\r\n");
+			break;
+
+		case 'u':
+			sdu_trace_show_supv(false);
+			usb_printf(cdc, " - Don't show supervisory...\r\n");
+			break;
+
+		case 'A':
+			sdu_trace_time_abs(true);
+			usb_printf(cdc, " - Absolute timestamps...\r\n");
+			break;
+
+		case 'a':
+			sdu_trace_time_abs(false);
+			usb_printf(cdc, " - Relative timestamps...\r\n");
+			break;
+
 		default:
 			show_menu(cdc);
 		}
@@ -309,6 +358,10 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
 				led_flash(LED_AMBER, 50);
 				usb_cdc_write(cdc, buf, len);
+			}
+			if (vcom->mode == VCOM_MODE_SDU_TRACE) {
+				led_flash(LED_AMBER, 50);
+				sdu_decode(buf, len);
 			}
 #if RAW_TRACE
 			if (len == 1)
