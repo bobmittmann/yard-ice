@@ -65,6 +65,7 @@ void sdu_decode(uint8_t * buf, unsigned int buf_len);
 
 void sdu_trace_show_supv(bool en);
 void sdu_trace_time_abs(bool en);
+void sdu_trace_show_pkt(bool en);
 
 #ifdef __cplusplus
 }

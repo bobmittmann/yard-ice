@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/serial.h>
+#include <sys/param.h>
 #include <sys/usb-cdc.h>
 
 #include <sys/dcclog.h>
@@ -110,16 +111,17 @@ const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
 struct serial_dev * serial2_open(void);
 
 enum {
-	VCOM_MODE_CONVERTER = 0,
-	VCOM_MODE_SERVICE = 1,
-	VCOM_MODE_INTERACTIVE = 2,
-	VCOM_MODE_SDU_TRACE = 3,
+	VCOM_MODE_NONE = 0,
+	VCOM_MODE_CONVERTER = 1,
+	VCOM_MODE_SERVICE = 2,
+	VCOM_MODE_INTERACTIVE = 3,
+	VCOM_MODE_SDU_TRACE = 4
 };
 
 struct vcom {
 	volatile int mode;
-	struct serial_dev * serial;
 	usb_cdc_class_t * cdc;
+	struct serial_dev * serial;
 	struct serial_status ser_stat;
 };
 
@@ -143,28 +145,36 @@ void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
 	cm3_sysrst();
 }
 
+char s[256];
+
 int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
 {
-	char s[64];
-	char * cp = s;
 	va_list ap;
+	int ret;
+	int n;
 
 	va_start(ap, fmt);
-	cp += vsnprintf(cp, 64 - 1, fmt, ap);
+	n = vsnprintf(s, 129, fmt, ap);
 	va_end(ap);
 
-	return usb_cdc_write(cdc, s, cp - s);
+	n = MIN(n, 128);
+
+	ret = usb_cdc_write(cdc, s, n);
+	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+
+	return ret;
 }
 
 void show_menu(usb_cdc_class_t * cdc)
 {
 	usb_printf(cdc, "--- Option:\r\n");
-	usb_printf(cdc, " [F] firmware update\r\n");
-	usb_printf(cdc, " [q] quit\r\n");
 	usb_printf(cdc, " [1] setup: 19200 8N1\r\n");
+	usb_printf(cdc, " [q] quit\r\n");
+	usb_printf(cdc, " [F] firmware update\r\n");
 	usb_printf(cdc, " [T/t] enable/disable trace\r\n");
 	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
 	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
+	usb_printf(cdc, " [P/p] enable/disable packets\r\n");
 };
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
@@ -227,6 +237,16 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - Don't show supervisory...\r\n");
 			break;
 
+		case 'P':
+			sdu_trace_show_pkt(true);
+			usb_printf(cdc, " - Show packets...\r\n");
+			break;
+
+		case 'p':
+			sdu_trace_show_pkt(false);
+			usb_printf(cdc, " - Don't show packets...\r\n");
+			break;
+
 		case 'A':
 			sdu_trace_time_abs(true);
 			usb_printf(cdc, " - Absolute timestamps...\r\n");
@@ -237,6 +257,33 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - Relative timestamps...\r\n");
 			break;
 
+		case 'v':
+			usb_printf(cdc, "\r\n");
+			usb_printf(cdc, 
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
+			usb_printf(cdc, "\r\n");
+			usb_printf(cdc, 
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
+			usb_printf(cdc, "\r\n");
+			usb_printf(cdc, 
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
+	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
+
+/*
+			usb_printf(cdc, "\r\n"
+					   "1. The qick brown fox jumps over the lazy dog.\r\n"
+					   "2. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
+			usb_printf(cdc, 
+					   "3. The qick brown fox jumps over the lazy dog.\r\n"
+					   "4. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
+			usb_printf(cdc, 
+					   "5. The qick brown fox jumps over the lazy dog.\r\n");
+			usb_printf(cdc, 
+					   "6. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
+*/
+			break;
 		default:
 			show_menu(cdc);
 		}
@@ -290,6 +337,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+	DCC_LOG2(LOG_TRACE, "vcom->%p, cdc->%p", vcom, cdc);
 
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
@@ -406,8 +454,7 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
-	memset(&prev_state, 0, sizeof(struct usb_cdc_state));
-	usb_cdc_state_get(cdc, &state);
+	usb_cdc_state_get(cdc, &prev_state);
 
 	while (1) {
 		DCC_LOG1(LOG_INFO, "[%d] usb_cdc_ctl_wait() sleep!", 
@@ -442,16 +489,16 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
 
 			serial_rx_disable(serial);
+
 			DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
 			DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);
 			DCC_LOG1(LOG_TRACE, "parity=%d", state.cfg.parity);
 			DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
-			if ((state.cfg.baudrate == 921600) && 
-				(state.cfg.databits == 8) &&
-				(state.cfg.parity == SERIAL_PARITY_NONE)) {
-				DCC_LOG(LOG_TRACE, "magic config!");
+			if (state.cfg.baudrate == 921600) {
 				vcom->mode = VCOM_MODE_SERVICE; 
+				DCC_LOG(LOG_TRACE, "magic config!");
 			} else {
+				vcom->mode = VCOM_MODE_CONVERTER;
 				serial_config_set(serial, &state.cfg);
 				prev_state.cfg = state.cfg;
 //				serial_enable(serial);
@@ -461,11 +508,9 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 	}
 }
 
-#define RECV_STACK_SIZE (VCOM_BUF_SIZE + 256)
-
 uint32_t __attribute__((aligned(8))) led_stack[32];
 uint32_t __attribute__((aligned(8))) serial_ctrl_stack[64];
-uint32_t __attribute__((aligned(8))) serial_recv_stack[RECV_STACK_SIZE / 4];
+uint32_t __attribute__((aligned(8))) serial_recv_stack[192];
 
 int main(int argc, char ** argv)
 {
@@ -495,7 +540,7 @@ int main(int argc, char ** argv)
 
 	vcom.serial = serial;
 	vcom.cdc = cdc;
-	vcom.mode = VCOM_MODE_CONVERTER;
+	vcom.mode = VCOM_MODE_NONE;
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |

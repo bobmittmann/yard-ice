@@ -71,15 +71,16 @@ struct sdu_link {
 
 uint32_t trace_ts;
 uint32_t trace_opt;
-struct usb_cdc_class * usb_cdc;
+static struct usb_cdc_class * usb_cdc;
 
-#define TIME_ABS 1
-#define DUMP_PKT 2
+#define TIME_ABS  1
+#define DUMP_PKT  2
 #define SHOW_SUPV 4
+#define SHOW_PKT  8
 
 int tracef(uint32_t ts, const char *fmt, ... )
 {
-	char s[80];
+	char s[129];
 	char * cp = s;
 	int32_t dt;
 	int32_t sec;
@@ -100,14 +101,15 @@ int tracef(uint32_t ts, const char *fmt, ... )
 	us = dt - (ms * 1000);
 	trace_ts = ts;
 
-	rem = 80 - 2;
+	rem = 126;
 
 	n = sprintf(s, "%2d.%03d.%03d: ", sec, ms, us);
 	cp += n;
 	rem -= n;
 
 	va_start(ap, fmt);
-	n = vsnprintf(cp, rem, fmt, ap);
+	n = vsnprintf(cp, rem + 1, fmt, ap);
+	n = MIN(n, rem);
 	cp += n;
 	va_end(ap);
 
@@ -115,6 +117,21 @@ int tracef(uint32_t ts, const char *fmt, ... )
 	*cp++ = '\n';
 
 	return usb_cdc_write(usb_cdc, s, cp - s);
+}
+
+int trace_printf(const char *fmt, ... )
+{
+	char s[129];
+	va_list ap;
+	int n;
+
+	va_start(ap, fmt);
+	n = vsnprintf(s, 129, fmt, ap);
+	va_end(ap);
+
+	n = MIN(n, 128);
+
+	return usb_cdc_write(usb_cdc, s, n);
 }
 
 int xxd(char * s, int max, uint8_t * buf, int len)
@@ -134,13 +151,13 @@ int xxd(char * s, int max, uint8_t * buf, int len)
 		cnt--; /* make room for elipses */
 
 	for (i = 0; i < cnt; ++i) {
-		n = snprintf(cp, rem, " %02x", buf[i]);
-		cp += n;
-		rem -= n;
-		if (rem <= 0) {
+		snprintf(cp, rem, " %02x", buf[i]);
+		if (rem < 3) {
 			DCC_LOG1(LOG_TRACE, "rem=%d", rem);
 			break;
 		}
+		cp += 3;
+		rem -= 3;
 	}
 
 	if (cnt < len) {
@@ -332,9 +349,36 @@ void sdu_decode(uint8_t * buf, unsigned int buf_len)
 
 		if (len > 0) {
 			char xs[64];
-			xxd(xs, 52, msg, len);
-			tracef(ts, "%2d %s %3d %c %3d:%s", addr, type_nm[type], 
-				   seq,  (retry) ? 'R' : '.', len, xs);
+		
+			if (trace_opt & SHOW_PKT) {
+				int n;
+
+				n = MIN(len, 16);
+				xxd(xs, 52, msg, n);
+				tracef(ts, "%2d %s %3d %c %3d:%s", addr, type_nm[type], 
+					   seq,  (retry) ? 'R' : '.', len, xs);
+
+				len -= n;
+				msg += n;
+
+				trace_printf("\r\n\r\n");
+
+
+#if 1
+				while (len) {
+					n = MIN(len, 16);
+//					xxd(xs, 52, msg, n);
+					trace_printf("                            :%s\r\n", xs);
+					len -= n;
+					msg += n;
+				}
+#endif
+			} else {
+				xxd(xs, 52, msg, len);
+				tracef(ts, "%2d %s %3d %c %3d:%s", addr, type_nm[type], 
+					   seq,  (retry) ? 'R' : '.', len, xs);
+			}
+
 		} else {
 			tracef(ts, "%2d %s %3d %c   0", addr, type_nm[type], 
 				   seq,  (retry) ? 'R' : '.');
@@ -365,5 +409,12 @@ void sdu_trace_time_abs(bool en)
 	uint32_t opt = trace_opt & ~TIME_ABS;
 	
 	trace_opt = opt | (en ? TIME_ABS : 0);
+}
+
+void sdu_trace_show_pkt(bool en)
+{
+	uint32_t opt = trace_opt & ~SHOW_PKT;
+	
+	trace_opt = opt | (en ? SHOW_PKT : 0);
 }
 
