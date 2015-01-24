@@ -218,7 +218,6 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			usb_dev_ep_disable(dev->usb, dev->int_ep);
 		}
 
-		dev->acm.flags = 0;
 		/* signal any pending threads */
 		thinkos_flag_set_i(CTL_FLAG);
 		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
@@ -322,10 +321,15 @@ int usb_cdc_on_reset(usb_class_t * cl)
 
 	DCC_LOG(LOG_INFO, "...");
 
+	/* invalidate th line coding structure */
+	memset(&dev->acm.lc, 0, sizeof(struct cdc_line_coding));
+	/* reset control lines */
+	dev->acm.control = 0;
+	/* clear all flags */
+	dev->acm.flags = 0;
 	/* initializes EP0 */
 	dev->ctl_ep = usb_dev_ep_init(dev->usb, &usb_cdc_ep0_info, 
 								  dev->ctr_buf, CDC_CTR_BUF_LEN);
-
 	return 0;
 }
 
@@ -377,6 +381,18 @@ int usb_cdc_write(usb_cdc_class_t * cl,
 	unsigned int rem = len;
 	int n;
 
+	if (dev == NULL) {
+		DCC_LOG(LOG_ERROR, "dev == NULL");
+		return -1;
+	}
+
+#if 0
+	if (dev->usb == NULL) {
+		DCC_LOG(LOG_ERROR, "dev->usb == NULL");
+		return -1;
+	}
+#endif
+
 	tx_wr = 1;
 	while (rem) {
 #if 0
@@ -393,7 +409,7 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 		tx_blk = 1;
 		thinkos_flag_take(TX_FLAG);
 		tx_blk = 0;
-		DCC_LOG(LOG_INFO, "wakeup");
+		DCC_LOG1(LOG_INFO, "ptr=%p wakeup.", ptr);
 
 		tx_ep = 1;
 		if ((n = usb_dev_ep_tx_start(dev->usb, dev->in_ep, ptr, rem)) < 0) {
@@ -408,7 +424,6 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 
 		rem -= n;
 		ptr += n;
-
 	}
 	tx_wr = 0;
 
