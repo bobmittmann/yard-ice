@@ -360,14 +360,10 @@ void sdu_decode(uint8_t * buf, unsigned int buf_len)
 
 				len -= n;
 				msg += n;
-
-				trace_printf("\r\n\r\n");
-
-
 #if 1
 				while (len) {
 					n = MIN(len, 16);
-//					xxd(xs, 52, msg, n);
+					xxd(xs, 52, msg, n);
 					trace_printf("                            :%s\r\n", xs);
 					len -= n;
 					msg += n;
