@@ -168,9 +168,13 @@ int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
 void show_menu(usb_cdc_class_t * cdc)
 {
 	usb_printf(cdc, "--- Option:\r\n");
-	usb_printf(cdc, " [1] setup: 19200 8N1\r\n");
-	usb_printf(cdc, " [q] quit\r\n");
-	usb_printf(cdc, " [F] firmware update\r\n");
+	usb_printf(cdc, "   [1]   9600 8N1\r\n");
+	usb_printf(cdc, "   [2]  19200 8N1\r\n");
+	usb_printf(cdc, "   [3]  38400 8N1\r\n");
+	usb_printf(cdc, "   [4]  57600 8N1\r\n");
+	usb_printf(cdc, "   [5] 115200 8N1\r\n");
+	usb_printf(cdc, "   [q] quit\r\n");
+	usb_printf(cdc, "   [F] firmware update\r\n");
 	usb_printf(cdc, " [T/t] enable/disable trace\r\n");
 	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
 	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
@@ -217,6 +221,16 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			}
 			break;
 		case '1':
+			cfg.baudrate = 9600;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 9600 8N1\r\n");
+			break;
+		case '2':
 			cfg.baudrate = 19200;
 			cfg.databits = 8;
 			cfg.parity = 0;
@@ -225,6 +239,36 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			serial_config_set(vcom->serial, &cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 19200 8N1\r\n");
+			break;
+		case '3':
+			cfg.baudrate = 38400;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 38400 8N1\r\n");
+			break;
+		case '4':
+			cfg.baudrate = 57600;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 57600 8N1\r\n");
+			break;
+		case '5':
+			cfg.baudrate = 115200;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 115200 8N1\r\n");
 			break;
 
 		case 'U':
