@@ -182,6 +182,23 @@ static void io_leds_init(void)
 	stm32_gpio_af(VNEG_SW, GPIO_AF1);
 }
 
+void io_shutdown(void)
+{
+	int i;
+
+	stm32_clk_disable(STM32_RCC, STM32_CLK_TIM2);
+	stm32_clk_disable(STM32_RCC, STM32_CLK_TIM3);
+
+	for (i = 0; i < 6; ++i) {
+		io_drv.led_tmr[i] = 0;
+		__led_off(led_io[i].gpio, led_io[i].pin);
+	}
+
+	stm32_clk_disable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_disable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_disable(STM32_RCC, STM32_CLK_GPIOC);
+}
+
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);

@@ -35,6 +35,7 @@ void uart_reset(void * uart);
 void uart_drain(void * uart);
 int uart_send(void * uart, const void * buf, unsigned int len);
 int uart_recv(void * uart, void * buf, unsigned int len, unsigned int msec);
+void uart_send_hex(void * usart, unsigned int val);
 
 static void reset(void)
 {
@@ -252,14 +253,14 @@ int __attribute__((section (".init"))) xflash(void * uart,
 
 	do {
 		uart_send(uart, "\r\nErasing...", 12);
+		cnt = 0;
 
-		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+		if ((ret = flash_erase(blk_offs, blk_size)) >= blk_size) {
 
 			uart_send(uart, "\r\nXmodem... ", 12);
 
 			xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
 			offs = blk_offs;
-			cnt = 0;
 
 			ret = xmodem_rcv_pkt(uart, &rx);
 

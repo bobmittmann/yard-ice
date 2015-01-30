@@ -1105,7 +1105,7 @@ int cmd_isink(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int uart_xflash(void * uart, uint32_t offs, uint32_t len);
+void uart_xflash(void * uart, uint32_t offs, uint32_t len);
 
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
@@ -1123,12 +1123,20 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 			 (strcmp(argv[1], "f") == 0)) {
 			offs = 0;
 			size = 56 * 1024;
-			fprintf(f, "Firmware update...\n");
 			break;;
 		} 
 		return SHELL_ERR_ARG_INVALID;
 	} while (0);
 
+	fprintf(f, "Shutdown...\n");
+	fflush(f);
+
+	slcdev_sim_stop();
+	slcdev_sleep();
+	isink_sleep();
+	io_shutdown();
+
+	fprintf(f, "Firmware update %d bytes...\n", size);
 	fflush(f);
 
 	uart_xflash(STM32_USART2, offs, size);
@@ -1297,7 +1305,7 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_trig, "trig", "t", "[ADDR]", 
 		"trigger module address get/set" },
 
-	{ cmd_trouble, "trouble", "tbl", "", 
+	{ cmd_trouble, "trouble", "tbl", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
 		"set/get trouble level" },
 
 	{ cmd_verbose, "verbose", "v", "", 

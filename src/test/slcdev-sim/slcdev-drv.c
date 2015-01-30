@@ -449,7 +449,7 @@ static void ap_hdr_decode(unsigned int msg)
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.ap_msk) == slcdev_drv.trig.ap_cmp) {
-		slcdev_drv.ev_bmp |= SLC_EV_TRIG;
+		slcdev_drv.sim.ev_bmp |= SLC_EV_TRIG;
 		trig_out_set();
 		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
@@ -490,7 +490,7 @@ static void ap_hdr_decode(unsigned int msg)
 			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
-			__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
+			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
 			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 
 			/* AP opcode */
@@ -690,7 +690,7 @@ static void clip_msg_decode(unsigned int msg)
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
-		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_TRIG, 1);  
+		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_TRIG, 1);  
 		trig_out_set();
 		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
@@ -720,7 +720,7 @@ static void clip_msg_decode(unsigned int msg)
 		DCC_LOG(LOG_INFO, "[CLIP]");
 
 		/* signal the simulator */
-		__bit_mem_wr(&slcdev_drv.ev_bmp, SLC_EV_DEV_POLL, 1);  
+		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
 		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 
 		/* update poll counter */
@@ -729,7 +729,7 @@ static void clip_msg_decode(unsigned int msg)
 		if (dev->event != 0) {
 			/* if an simulation event is correlated to the device,
 			 signal the simulator. */
-			__bit_mem_wr(&slcdev_drv.ev_bmp, dev->event, 1);  
+			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, dev->event, 1);  
 			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 		}
 	} else {
@@ -1108,7 +1108,7 @@ static void slc_sense_init(void)
 static void slcdev_reset(void)
 {
 	slcdev_drv.state = DEV_IDLE;
-	slcdev_drv.ev_bmp = 0;
+	slcdev_drv.sim.ev_bmp = 0;
 	slcdev_drv.dev = (struct ss_device *)&null_dev;
 	slcdev_drv.addr = 0;
 	slcdev_drv.isink.state = ISINK_IDLE;
@@ -1153,5 +1153,13 @@ void slcdev_resume(void)
 	cm3_irq_enable(STM32_IRQ_COMP);
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_TIM10);
+}
+
+void slcdev_sleep(void)
+{
+	slcdev_stop();
+
+	stm32_clk_disable(STM32_RCC, STM32_CLK_COMP);
+	stm32_clk_disable(STM32_RCC, STM32_CLK_SYSCFG);
 }
 

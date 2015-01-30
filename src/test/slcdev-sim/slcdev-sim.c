@@ -516,7 +516,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 		thinkos_flag_take(SLCDEV_DRV_EV_FLAG);
 
 		/* get an event from bitmap */
-		if ((ev = __clz(__rbit(slcdev_drv.ev_bmp & ev_mask))) == 32)
+		if ((ev = __clz(__rbit(slcdev_drv.sim.ev_bmp & ev_mask))) == 32)
 			continue;
 
 		slcdev_event_clear(ev);
@@ -668,6 +668,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 			DCC_LOG(LOG_TRACE, "SIM_STOP");
 			slcdev_stop();
 			ev_mask = (1 << SLC_EV_SIM_RESUME) | (1 << SLC_EV_SIM_START);
+			slcdev_drv.sim.halt = true;
 			break;
 
 		case SLC_EV_SIM_RESUME:
@@ -675,9 +676,18 @@ void __attribute__((noreturn)) sim_event_task(void)
 			slcdev_resume();
 			/* force reprocessing posible unmasked events */
 			ev_mask = 0xffffffff;
+			slcdev_drv.sim.halt = false;
 			thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 			break;
 		}
+	}
+}
+
+void slcdev_sim_stop(void)
+{
+	slcdev_event_raise(SLC_EV_SIM_STOP);
+	while (!slcdev_drv.sim.halt) {
+		thinkos_sleep(25);
 	}
 }
 

@@ -180,7 +180,7 @@ void event_raise(int event)
 		/* set the event bit */
 		__bit_mem_wr((uint32_t *)&event_drv.bmp, event - 1, 1);  
 		/* signal the flag */
-		__thinkos_flag_signal(event_drv.flag);
+		thinkos_flag_give_i(event_drv.flag);
 	}
 }
 
@@ -189,16 +189,15 @@ int event_wait(void)
 	int idx;
 
 	DCC_LOG1(LOG_INFO, "bmp=0x%08x", event_drv.bmp);
+
 	/* get a thread from the ready bitmap */
 	while ((idx = __clz(__rbit(event_drv.bmp))) == 32) {
 		/* wait for the flag to be set */
-		thinkos_flag_wait(event_drv.flag);
+		thinkos_flag_take(event_drv.flag);
 	}
 
 	DCC_LOG1(LOG_INFO, "2. idx=%d", idx);
 	__bit_mem_wr((uint32_t *)&event_drv.bmp, idx, 0);  
-
-	__thinkos_flag_clr(event_drv.flag);
 
 	return idx + 1;
 }

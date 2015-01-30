@@ -384,6 +384,16 @@ void isink_mode_set(unsigned int mode)
 
 }
 
+void isink_sleep(void)
+{
+	struct stm32f_tim * tim = STM32_TIM4;
+
+	/* stop the timer */
+ 	tim->cnt = 0;
+	/* disable clock */
+	stm32_clk_disable(STM32_RCC, STM32_CLK_TIM4);
+}
+
 void isink_init(void)
 {
 	struct stm32f_dac * dac = STM32_DAC;

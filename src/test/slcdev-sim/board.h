@@ -185,6 +185,8 @@ unsigned int timer_get(unsigned int id);
 
 void timer_set(unsigned int id, unsigned int ms);
 
+void io_shutdown(void);
+
 #ifdef __cplusplus
 }
 #endif

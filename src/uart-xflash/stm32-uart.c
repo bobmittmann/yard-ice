@@ -94,3 +94,51 @@ void uart_drain(struct stm32_usart * usart)
 	while (!(usart->isr & USART_TC));
 }
 
+#if 0
+int uint2hex(char * s, unsigned int val)
+{
+	int n;
+	int c;
+	int i;
+
+	/* value is zero ? */
+	if (!val) {
+		*s++ = '0';
+		*s = '\0';
+		return 1;
+	}
+
+	n = 0;
+	for (i = 0; i < (sizeof(unsigned int) * 2); i++) {
+		c = val >> ((sizeof(unsigned int) * 8) - 4);
+		val <<= 4;
+		if ((c != 0) || (n != 0)) {
+			s[n++] = c < 10 ? c + '0' : c + ('a' - 10);
+		}
+	}
+
+	s[n] = '\0';
+
+	return n;
+}
+
+void uart_send_hex(struct stm32_usart * usart, unsigned int val)
+{
+	char buf[16];
+	char * cp = buf;;
+	int n;
+
+	*cp++ = ' ';
+	*cp++ = '0';
+	*cp++ = 'x';
+	n = uint2hex(cp, val);
+	cp += n;
+	*cp++ = '\r';
+	*cp++ = '\n';
+	n += 5;
+
+	uart_send(usart, buf, n);
+}
+
+#endif
+

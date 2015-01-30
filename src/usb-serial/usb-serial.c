@@ -47,8 +47,8 @@
 #include "led.h"
 #include "io.h"
 
-#define VERSION_NUM "0.4"
-#define VERSION_DATE "Nov, 2014"
+#define VERSION_NUM "0.5"
+#define VERSION_DATE "Jan, 2015"
 
 extern const struct shell_cmd shell_cmd_tab[];
 
@@ -154,7 +154,7 @@ void __attribute__((noreturn)) event_task(void)
 
 		case EVENT_BTN_CLICK_N_HOLD:
 			DCC_LOG(LOG_TRACE, "EVENT_CLICK_N_HOLD");
-			thinkos_flag_set(usb_serial.flag);
+			thinkos_flag_give(usb_serial.flag);
 			break;
 
 		case EVENT_BTN_HOLD2:
@@ -206,6 +206,12 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 
+	/* wait for line configuration */
+	usb_cdc_acm_lc_wait(cdc);
+
+	/* enable serial */
+	serial_enable(serial);
+
 	for (;;) {
 		len = serial_read(serial, buf, VCOM_BUF_SIZE, 100);
 		if (len > 0) {
@@ -217,6 +223,9 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 		}
 	}
 }
+
+void serial_rx_disable(struct serial_dev * dev);
+void serial_rx_enable(struct serial_dev * dev);
 
 void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 {
@@ -231,12 +240,19 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 
 	while (1) {
 		usb_cdc_state_get(cdc, &state);
+
 		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
 			(state.cfg.databits != prev_state.cfg.databits) ||
 			(state.cfg.parity != prev_state.cfg.parity) ||
 			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
+			DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
+			DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);
+			DCC_LOG1(LOG_TRACE, "parity=%d", state.cfg.parity);
+			DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
+			serial_rx_disable(serial);
 			serial_config_set(serial, &state.cfg);
 			prev_state.cfg = state.cfg;
+			serial_rx_enable(serial);
 		}
 
 		if (state.ctrl.dtr != prev_state.ctrl.dtr) {
@@ -300,8 +316,11 @@ int main(int argc, char ** argv)
 
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
+	usb_cdc_sn_set(esn);
+	cdc = usb_cdc_init(&stm32f_usb_fs_dev, 
+					   cdc_acm_def_str, 
+					   cdc_acm_def_strcnt);
 
-	cdc = usb_cdc_init(&stm32f_usb_fs_dev, esn);
 	f_raw = usb_cdc_fopen(cdc);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
@@ -351,17 +370,21 @@ int main(int argc, char ** argv)
 	usb_serial.flag = thinkos_flag_alloc();
 
 	while (1) {
-		thinkos_flag_wait(usb_serial.flag);
+		thinkos_flag_take(usb_serial.flag);
 
+		serial_rx_disable(serial1);
 		led1_flash(4);
-		thinkos_pause(serial_recv_th);
+		DCC_LOG(LOG_TRACE, "1. terminal...");
+//		thinkos_pause(serial_recv_th);
 		thinkos_pause(usb_recv_th);
+		DCC_LOG(LOG_TRACE, "2. ...");
 		shell(f_tty, shell_prompt, shell_greeting, shell_cmd_tab);
 
+		serial_rx_enable(serial1);
+
 		led2_flash(4);
-		thinkos_flag_clr(usb_serial.flag);
 		thinkos_resume(usb_recv_th);
-		thinkos_resume(serial_recv_th);
+//		thinkos_resume(serial_recv_th);
 	}
 }
 

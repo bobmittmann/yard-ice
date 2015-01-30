@@ -36,8 +36,8 @@
 #define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
 				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
 
-static int stm32l_flash_page_erase(struct stm32_flash * flash, 
-								  uint32_t volatile * addr)
+int stm32l_flash_page_erase(struct stm32_flash * flash, 
+							uint32_t volatile * addr)
 {
 	uint32_t sr;
 
@@ -50,10 +50,7 @@ static int stm32l_flash_page_erase(struct stm32_flash * flash,
 
 	flash->pecr = 0;
 
-	if (sr & FLASH_ERR)
-		return -1;
-
-	return 0;
+	return (sr & FLASH_ERR) ? -1 : 0;
 }
 
 int flash_erase(uint32_t offs, unsigned int len)
@@ -79,6 +76,7 @@ int flash_erase(uint32_t offs, unsigned int len)
 			cnt = ret;
 			break;
 		}
+
 		addr += FLASH_PAGE_SIZE;
 		rem -= FLASH_PAGE_SIZE;
 		cnt += FLASH_PAGE_SIZE;
