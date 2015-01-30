@@ -163,8 +163,9 @@ void stm32_usart2_isr(void)
 		unsigned int head;
 		int free;
 
-		c = us->dr;
+		DCC_LOG(LOG_TRACE, "RXNE");
 
+		c = us->dr;
 		head = dev->rx_fifo.head;
 		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - dev->rx_fifo.tail);
 		if (free > 0) { 
@@ -174,14 +175,14 @@ void stm32_usart2_isr(void)
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
 		if (free < (UART_RX_FIFO_BUF_LEN / 2)) /* fifo is more than half full */
-			__thinkos_flag_give(SERDRV_RX_FLAG);
+			thinkos_flag_give_i(SERDRV_RX_FLAG);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE!");
 		c = us->dr;
 		(void)c;
-		__thinkos_flag_give(SERDRV_RX_FLAG);
+		thinkos_flag_give_i(SERDRV_RX_FLAG);
 	}
 
 	if (sr & USART_TXE) {
@@ -189,7 +190,7 @@ void stm32_usart2_isr(void)
 		if (tail == dev->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*dev->txie = 0; 
-			__thinkos_flag_set(SERDRV_TX_FLAG);
+			thinkos_flag_set_i(SERDRV_TX_FLAG);
 		} else {
 			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
 			dev->tx_fifo.tail = tail + 1;

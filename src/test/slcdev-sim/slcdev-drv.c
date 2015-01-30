@@ -434,8 +434,7 @@ static void ap_hdr_decode(unsigned int msg)
 	sum = ap_chksum(msg);
 
 	if (sum != (msg >> 15)) {
-		DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
-
+//		DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
 		/* prepare for sinking current */
 		/* FIXME: configurable current sink parameters for AP */ 
 		isink_mode_set(icfg);
@@ -451,7 +450,7 @@ static void ap_hdr_decode(unsigned int msg)
 	if ((msg & slcdev_drv.trig.ap_msk) == slcdev_drv.trig.ap_cmp) {
 		slcdev_drv.sim.ev_bmp |= SLC_EV_TRIG;
 		trig_out_set();
-		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
 	}
 
@@ -491,7 +490,7 @@ static void ap_hdr_decode(unsigned int msg)
 
 			/* signal the simulator */
 			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
-			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+			thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
 
 			/* AP opcode */
 			slcdev_drv.ap.insn = AP_DIRECT_POLL;
@@ -532,7 +531,7 @@ static void ap_hdr_decode(unsigned int msg)
 				slcdev_drv.ap.insn = AP_RD_TBL_LATCH_U;
 				break;
 			default:
-				DCC_LOG(LOG_WARNING, "AP command invalid");
+//				DCC_LOG(LOG_WARNING, "AP command invalid");
 				slcdev_drv.state = DEV_IDLE;
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				return;
@@ -692,7 +691,7 @@ static void clip_msg_decode(unsigned int msg)
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
 		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_TRIG, 1);  
 		trig_out_set();
-		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
 		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
@@ -721,7 +720,7 @@ static void clip_msg_decode(unsigned int msg)
 
 		/* signal the simulator */
 		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
-		__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
 
 		/* update poll counter */
 		dev->pcnt++;
@@ -730,7 +729,7 @@ static void clip_msg_decode(unsigned int msg)
 			/* if an simulation event is correlated to the device,
 			 signal the simulator. */
 			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, dev->event, 1);  
-			__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+			thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
 		}
 	} else {
 		slcdev_drv.state = DEV_IDLE;
@@ -762,8 +761,8 @@ void stm32_tim10_isr(void)
 		/* XXX: this is for debug only */
 		if ((slcdev_drv.state != DEV_IDLE) &&
 			(slcdev_drv.state != DEV_PW5_ISINK)) {
-			DCC_LOG2(LOG_WARNING, "%d: unexpected state: %d", 
-					 slcdev_drv.addr, slcdev_drv.state);
+//			DCC_LOG2(LOG_WARNING, "%d: unexpected state: %d", 
+//					 slcdev_drv.addr, slcdev_drv.state);
 		}
 
 		DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");
