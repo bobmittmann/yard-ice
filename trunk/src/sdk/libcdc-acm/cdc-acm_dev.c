@@ -724,7 +724,7 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb,
 	dev->tx_done = thinkos_flag_alloc(); 
 #endif
 #ifndef CDC_TX_LOCK_NO
-	dev->tx_lock = thinkos_mutex_alloc(); 
+	dev->tx_lock = thinkos_flag_alloc(); 
 #endif
 #ifndef CDC_CTL_FLAG_NO
 	dev->ctl_flag = thinkos_flag_alloc(); 

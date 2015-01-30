@@ -296,8 +296,11 @@ struct slcdev_trig {
 };
 
 struct slcdev_drv {
-	unsigned int state; /* decoder state */
-	uint32_t ev_bmp;     /* event bitmap */
+	int state;          /* decoder state */
+	struct {
+		uint32_t ev_bmp;    /* event bitmap */
+		volatile uint32_t halt : 1;
+	} sim;
 	uint16_t addr;      /* current polled device address */
 	uint8_t bit_cnt;    /* message bit count */
 	uint8_t pw5en;      /* PW5 (Type ID) requested */
@@ -353,17 +356,18 @@ static inline void trig_out_set(void) {
 }
 
 static inline void slcdev_event_raise(unsigned int ev) {
-	__bit_mem_wr(&slcdev_drv.ev_bmp, ev, 1);  
+	__bit_mem_wr(&slcdev_drv.sim.ev_bmp, ev, 1);  
 	__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
 }
 
 static inline void slcdev_event_clear(unsigned int ev) {
-	__bit_mem_wr(&slcdev_drv.ev_bmp, ev, 0);  
+	__bit_mem_wr(&slcdev_drv.sim.ev_bmp, ev, 0);  
 }
 
 void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
+void slcdev_sleep(void);
 
 bool trig_addr_set(unsigned int addr);
 unsigned int trig_addr_get(void);
@@ -453,6 +457,8 @@ int device_attr_print(FILE * f, bool mod,
 					  unsigned int addr, const char * name);
 
 void sim_reset(void);
+
+void slcdev_sim_stop(void);
 
 #ifdef __cplusplus
 }

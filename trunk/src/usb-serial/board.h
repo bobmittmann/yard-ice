@@ -23,7 +23,16 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
+#include "config.h"
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
 #include <sys/stm32f.h>
+#include <arch/cortex-m3.h>
 
 #define USB_FS_DP STM32_GPIOA, 12
 #define USB_FS_DM STM32_GPIOA, 11

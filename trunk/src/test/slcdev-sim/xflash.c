@@ -321,16 +321,17 @@ extern const uint8_t uart_xflash_pic[];
 extern const unsigned int sizeof_uart_xflash_pic;
 extern uint32_t __data_start[];
 
-void __attribute__((noreturn)) uart_xflash(uint32_t offs, uint32_t len)
+void __attribute__((noreturn)) uart_xflash(void * uart, 
+										   uint32_t offs, uint32_t len)
 {
 	uint32_t * xflash_code = __data_start;
-	int (* xflash_ram)(uint32_t, uint32_t) = ((void *)xflash_code) + 1;
+	int (* xflash_ram)(void *, uint32_t, uint32_t) = ((void *)xflash_code) + 1;
 
 	cm3_cpsid_i();
 
 	memcpy(xflash_code, uart_xflash_pic, sizeof_uart_xflash_pic);
 
-	xflash_ram(offs, len);
+	xflash_ram(uart, offs, len);
 
 	cm3_sysrst();
 }

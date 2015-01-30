@@ -16,8 +16,8 @@
 #include "serdrv.h"
 #include "xmodem.h"
 
-#define VERSION_NUM "0.6"
-#define VERSION_DATE "Nov, 2014"
+#define VERSION_NUM "0.8"
+#define VERSION_DATE "Jan, 2015"
 
 extern const struct shell_cmd cmd_tab[];
 

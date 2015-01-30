@@ -43,6 +43,8 @@ void isink_stop(void);
 
 void isink_init(void);
 
+void isink_sleep(void);
+
 /* Adjust the current sink slew rate (mA/us) 
    MIN: 110 mA/us
    MAX: 1100 mA/us 
