@@ -15,6 +15,7 @@
 #include "slcdev.h"
 #include "serdrv.h"
 #include "xmodem.h"
+#include "bacnet_ptp.h"
 
 #define VERSION_NUM "0.8"
 #define VERSION_DATE "Jan, 2015"
@@ -48,15 +49,66 @@ const struct file stm32_uart_file = {
 
 int js(FILE * f, char * script, unsigned int len);
 
-char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+void slcdev_shell(FILE * f) 
+{
+	char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
+	char line[SHELL_LINE_MAX];
+	struct cmd_history * history;
+	int ret = 0;
+
+	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
+	shell_greeting(f);
+
+	/* start a shell on the serial TTY */
+	do {
+		char * stat;
+		char * cp;
+
+		fprintf(f, "%s", shell_prompt());
+
+		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
+			continue;
+
+		if ((cp = shell_stripline(line)) == NULL)
+			continue;
+
+		history_add(history, cp);
+
+		/* try to get a command from the line */
+		if (cmd_lookup(cmd_tab, cp) == NULL) {
+			/* try to interpret a javascript code instead */
+			DCC_LOG(LOG_TRACE, "js...");
+			js(f, cp, strlen(cp));
+			DCC_LOG(LOG_TRACE, "done...");
+			continue;
+		}
+
+		DCC_LOG(LOG_TRACE, "shell command ...");
+
+		ret = 0;
+
+		while ((stat = cmd_get_next(&cp)) != NULL) {
+			struct shell_cmd * cmd;
+
+			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
+				fprintf(f, "Command not found!\n");
+				break;
+			}
+
+			ret = cmd_exec(f, cmd, stat);
+
+			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
+				fprintf(f, "Error: %d\n", -ret);
+				break;
+			}
+
+		}
+	} while (ret != SHELL_ABORT); 
+}
 
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
-	char line[SHELL_LINE_MAX];
-	struct cmd_history * history;
 	struct serdrv * sdrv;
-	char * stat;
-	char * cp;
 	FILE * f;
 
 	DCC_LOG_INIT();
@@ -122,7 +174,8 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	/* initialize serial driver */
-	sdrv = serdrv_init(115200);
+//	sdrv = serdrv_init(115200);
+	sdrv = serdrv_init(57600);
 
 	/* initialize serial TTY driver */
 	f = serdrv_tty_fopen(sdrv);
@@ -140,51 +193,12 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 
 	/* main loop */
 	for (;;) {
-		history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
-		shell_greeting(f);
+		DCC_LOG(LOG_WARNING, "Console shell!");
+		slcdev_shell(f); 
 
-		/* start a shell on the serial TTY */
-		for (;;) {
-			fprintf(f, "%s", shell_prompt());
-
-			if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
-				break;
-
-			if ((cp = shell_stripline(line)) == NULL)
-				continue;
-
-			history_add(history, cp);
-
-			/* try to get a command from the line */
-			if (cmd_lookup(cmd_tab, cp) == NULL) {
-				/* try to interpret a javascript code instead */
-				DCC_LOG(LOG_TRACE, "js...");
-				js(f, cp, strlen(cp));
-				DCC_LOG(LOG_TRACE, "done...");
-				continue;
-			}
-		
-			DCC_LOG(LOG_TRACE, "shell command ...");
-
-			while ((stat = cmd_get_next(&cp)) != NULL) {
-				struct shell_cmd * cmd;
-				int ret;
-
-				if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
-					fprintf(f, "Command not found!\n");
-					break;
-				}
-				if ((ret = cmd_exec(f, cmd, stat)) < 0) {
-					fprintf(f, "Error: %d\n", -ret);
-					break;
-				}
-
-			}
-		}
-		DCC_LOG(LOG_WARNING, "bye bye !!!!!!!!!!");
-		/* TODO: host protocol... */
-		for (;;) {
-		}
+		/* BACnet protocol... */
+		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
+		bacnet_ptp(sdrv);
 	}
 }
 

@@ -155,6 +155,15 @@ int cmd_cat(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_bacnet(FILE * f, int argc, char ** argv)
+{
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	return SHELL_ABORT;
+}
+
+
 int cmd_ls(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
@@ -1255,6 +1264,8 @@ const struct shell_cmd cmd_tab[] = {
 		"get set PW4 value" },
 
 #endif
+	{ cmd_bacnet, "BACnet", "", "", 
+		"Start BACnet Data Link Connection" },
 
 
 	{ cmd_alarm, "alarm", "alm", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 

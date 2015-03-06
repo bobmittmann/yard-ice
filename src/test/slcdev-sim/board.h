@@ -152,11 +152,13 @@ extern "C" {
 
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_af(__gpio, __pin);
+//	stm32_gpio_mode_af(__gpio, __pin);
+	stm32_gpio_clr(__gpio, __pin);
 }
 
 static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_mode_out(__gpio, __pin);
+//	stm32_gpio_mode_out(__gpio, __pin);
+	stm32_gpio_set(__gpio, __pin);
 }
 
 static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {

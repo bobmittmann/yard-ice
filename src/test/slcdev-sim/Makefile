@@ -25,7 +25,8 @@ PROG = slc-dev
 CFILES = slc-dev.c board.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c flashfs.c shell.c\
 		 xflash.c uart_xflash_pic.c slcdev-sim.c slcdev-cfg.c\
-		 slcdev-str.c slcdev-lib.c profclk.c
+		 slcdev-str.c slcdev-lib.c profclk.c\
+		 bacnet_ptp.c
 #		json.c  jsmn.c json-dump.c stm32l-flash.c stm32-uart.c
 
 
