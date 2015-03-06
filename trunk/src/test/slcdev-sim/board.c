@@ -133,6 +133,9 @@ static void io_leds_init(void)
 	stm32_gpio_af(LED4, GPIO_AF2);
 	stm32_gpio_af(LED5, GPIO_AF2);
 	stm32_gpio_af(LED6, GPIO_AF2);
+
+	stm32_gpio_mode_out(LED5);
+	stm32_gpio_mode_out(LED6);
 	stm32_gpio_set(LED3);
 	stm32_gpio_set(LED4);
 	stm32_gpio_set(LED5);
