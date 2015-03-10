@@ -509,11 +509,11 @@ static void ap_hdr_decode(unsigned int msg)
 			slcdev_drv.ap.insn = AP_NULL;
 			break;
 		case AP_OPC_RD_ALM_LATCH_T:
-			DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Tens");
+			DCC_LOG(LOG_INFO, "AP Read Alarm Latch Tens");
 			slcdev_drv.ap.insn = AP_RD_ALM_LATCH_T;
 			break;
 		case AP_OPC_RD_TBL_LATCH_T:
-			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens");
+			DCC_LOG(LOG_INFO, "AP Read Trouble Latch Tens");
 			slcdev_drv.ap.insn = AP_RD_TBL_LATCH_T;
 			break;
 		default:
@@ -523,11 +523,11 @@ static void ap_hdr_decode(unsigned int msg)
 				slcdev_drv.ap.insn = AP_RD_PRESENCE;
 				break;
 			case AP_OPC_RD_ALM_LATCH_U:
-				DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Units");
+				DCC_LOG(LOG_INFO, "AP Read Alarm Latch Units");
 				slcdev_drv.ap.insn = AP_RD_ALM_LATCH_U;
 				break;
 			case AP_OPC_RD_TBL_LATCH_U:
-				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units");
+				DCC_LOG(LOG_INFO, "AP Read Trouble Latch Units");
 				slcdev_drv.ap.insn = AP_RD_TBL_LATCH_U;
 				break;
 			default:
