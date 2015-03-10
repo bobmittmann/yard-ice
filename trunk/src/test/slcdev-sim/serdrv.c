@@ -32,7 +32,7 @@
 
 
 #define UART_TX_FIFO_BUF_LEN 128
-#define UART_RX_FIFO_BUF_LEN 16
+#define UART_RX_FIFO_BUF_LEN 128
 
 struct serdrv {
 	struct {
@@ -61,7 +61,7 @@ int serdrv_recv(struct serdrv * dev, void * buf, int len, unsigned int tmo)
 
 again:
 	if ((ret = thinkos_flag_timedtake(SERDRV_RX_FLAG, tmo)) < 0) {
-		DCC_LOG1(LOG_TRACE, "cnt=%d, timeout!", 
+		DCC_LOG1(LOG_INFO, "cnt=%d, timeout!", 
 				 (int8_t)(dev->rx_fifo.head - dev->rx_fifo.tail));
 		return ret;
 	}
@@ -163,7 +163,7 @@ void stm32_usart2_isr(void)
 		unsigned int head;
 		int free;
 
-		DCC_LOG(LOG_TRACE, "RXNE");
+		DCC_LOG(LOG_INFO, "RXNE");
 
 		c = us->dr;
 		head = dev->rx_fifo.head;
@@ -174,7 +174,7 @@ void stm32_usart2_isr(void)
 		} else {
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
-		if (free < (UART_RX_FIFO_BUF_LEN / 2)) /* fifo is more than half full */
+		if (free < (UART_RX_FIFO_BUF_LEN - 8)) /* fifo is more than half full */
 			thinkos_flag_give_i(SERDRV_RX_FLAG);
 	}	
 

@@ -35,6 +35,8 @@ int serdrv_send(struct serdrv * drv, const void * buf, int len);
 
 int serdrv_recv(struct serdrv * drv, void * buf, int len, unsigned int tmo);
 
+void serdrv_flush(struct serdrv * dev);
+
 FILE * serdrv_tty_fopen(struct serdrv * drv);
 
 #ifdef __cplusplus
