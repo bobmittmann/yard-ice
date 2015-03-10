@@ -33,6 +33,15 @@
 #include <stdint.h>
 #include <tcpip/tcp.h>
 
+#ifndef HTTPD_SERVER_NAME 
+#define HTTPD_SERVER_NAME "ThinkOS Web Server"
+#endif
+
+#ifndef HTTPD_URI_MAX_LEN
+#define HTTPD_URI_MAX_LEN 64
+#endif
+
+
 /* Mime types */
 enum {
 	APPLICATION_JAVASCRIPT = 0,
@@ -47,22 +56,81 @@ enum {
 	MIME_END_MARK
 };
 
+enum {
+	OBJ_STATIC_HTML = 0,
+	OBJ_STATIC_JS,
+	OBJ_STATIC_TEXT,
+	OBJ_STATIC_CSS,
+	OBJ_STATIC_XML,
+	OBJ_STATIC_GIF,
+	OBJ_STATIC_JPEG,
+	OBJ_STATIC_PNG,
+	OBJ_STATIC_MPEG,
+	OBJ_CODE_CGI,
+	OBJ_CODE_JS,
+};
+
+enum {
+	HTTP_UNKNOWN = 0,
+	HTTP_GET = 1,
+	HTTP_POST = 2
+};
+
+struct httpdobj {
+	const char * oid;
+	uint8_t typ;
+	uint8_t lvl;
+	uint16_t len;
+	const void * ptr;
+};
+
+struct httpddir {
+	const char * path;
+	const struct httpdobj * objlst;
+};
+
+#define HTTPDAUTH_NAME_MAX 12
+#define HTTPDAUTH_PASSWD_MAX 12
+
+struct httpdauth {
+	uint8_t uid;
+	uint8_t lvl;
+	char name[HTTPDAUTH_NAME_MAX + 1];
+	char passwd[HTTPDAUTH_PASSWD_MAX + 1];
+};
+
 /*
  * HTTP server control structure
  */
+
 struct httpd {
 	struct tcp_pcb * tp;
 	/* server root directory */
-	char * root;
+	const struct httpddir * dir;
 	/* authentication data */
+	const struct httpdauth * auth;
 };
 
 /* 
  * HTTP connection control structure
  */
-struct httpctl;
+struct httpctl {
+	struct httpd * httpd;
+	struct tcp_pcb * tp;
+	uint8_t method;
+	uint16_t version;
+	uint8_t auth;
+	uint8_t ctype;
+	uint8_t ctbound;
+	uint8_t ctlen;
+	char * usr;
+	char * pwd;
+	char uri[];
+};
 
-typedef int (* httpd_cgi_t)(struct tcp_pcb * tp, char * opt, 
+typedef int (* httpd_cgi_t)(struct httpctl ctl);
+
+typedef int (* __httpd_cgi_t)(struct tcp_pcb * tp, char * opt, 
 							int content_type, int content_len); 
 /*
  */
@@ -89,11 +157,18 @@ extern "C" {
 
 struct tcp_pcb * httpd_start(struct httpd * httpd, 
 							 int port, int backlog,
-							 const char * path);
+							 const struct httpddir dirlst[],
+							 const struct httpdauth authlst[]);
 
 int httpd_stop(struct httpd * httpd);
 
 int http_accept(struct httpd * httpd, struct httpctl * ctl);
+
+int http_close(struct httpctl * ctl);
+
+int http_get(struct httpctl * ctl);
+
+int http_post(struct httpctl * ctl);
 
 int http_process(struct httpd * httpd, struct httpctl * ctl);
 

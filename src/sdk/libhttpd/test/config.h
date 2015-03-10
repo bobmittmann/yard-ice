@@ -91,6 +91,8 @@
 #define UART_CONSOLE_ISR         stm32f_uart5_isr
 #define UART_CONSOLE_IRQ_NUM     STM32_IRQ_UART5
 
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
+
 #endif /* __CONFIG_H__ */
 
 

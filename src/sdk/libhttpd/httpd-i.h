@@ -26,29 +26,15 @@
 #ifndef __HTTPD_I_H__
 #define __HTTPD_I_H__
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdint.h>
-#include <tcpip/tcp.h>
-#include <tcpip/httpd.h>
+#include <string.h>
+#include <stdlib.h>
 #include <errno.h>
 
+#include <tcpip/tcp.h>
+#include <tcpip/httpd.h>
+
 #include <sys/dcclog.h>
-
-
-#ifndef HTTPD_URI_MAX_LEN
-#define HTTPD_URI_MAX_LEN 64
-#endif
-
-#ifndef HTTPD_SERVER_NAME 
-#define HTTPD_SERVER_NAME "ThinkOS Web Server"
-#endif
-
-#ifndef HTTPD_URI_MAX_LEN
-#define HTTPD_URI_MAX_LEN 64
-#endif
 
 /*
  * Preformatted HTML macros 
@@ -70,29 +56,11 @@
 	"<h2>" #CODE " - " INFO "</h2><p>" MSG "</p>"\
 	HTTPD_MSG_FOOTER
 
-/* 
- * HTTP connection control structure
- */
-struct httpctl {
-	struct tcp_pcb * tp;
-	uint8_t method;
-	uint16_t version;
-	uint8_t auth;
-	uint8_t ctype;
-	uint8_t ctbound;
-	uint8_t ctlen;
-	char * usr;
-	char * pwd;
-	char uri[HTTPD_URI_MAX_LEN];
-};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int http_get(struct httpd * httpd, struct httpctl * ctl);
-
-int http_post(struct httpd * httpd, struct httpctl * ctl);
 
 #ifdef __cplusplus
 }

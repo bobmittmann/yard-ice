@@ -24,8 +24,6 @@
  */ 
 
 #include "httpd-i.h"
-#include "string.h"
-#include "stdlib.h"
 
 /* CRC8 (polynomial x^8 + x^5 + x^4) */
 const uint8_t crc8_lut[256] = {
@@ -82,8 +80,9 @@ static inline unsigned int crc8(unsigned int crc, const void * buf, int len) {
  * hash values for http tokens
  */
 
-#define HTTPMETHOD_GET              0x55
-#define HTTPMETHOD_POST             0xeb
+
+#define HTTPMETHOD_GET_HASH         0x55
+#define HTTPMETHOD_POST_HASH        0xeb
 
 /* Request Header Fields */
 #define HTTPHDR_ACCEPT              0xb3
@@ -146,7 +145,14 @@ static int get_method(struct tcp_pcb * tp)
 		hash = __crc8(hash, c);
 	}
 
-	return hash;
+	switch (hash) {
+	case HTTPMETHOD_GET_HASH:
+		return HTTP_GET;
+	case HTTPMETHOD_POST_HASH:
+		return HTTP_POST;
+	}
+
+	return HTTP_UNKNOWN;
 }
 
 static int get_uri(struct tcp_pcb * tp, char * uri, int max)
@@ -170,7 +176,7 @@ static int get_uri(struct tcp_pcb * tp, char * uri, int max)
 			return n;
 		}
 
-		DCC_LOG1(DCC_MSG, "'%c'", c);
+		DCC_LOG1(LOG_MSG, "'%c'", c);
 
 		cp++;
 	}
@@ -193,7 +199,7 @@ static int get_version(struct tcp_pcb * tp)
 		if ((c = *cp) == '\r')
 			break;
 
-		DCC_LOG1(DCC_MSG, "'%c'", c);
+		DCC_LOG1(LOG_MSG, "'%c'", c);
 
 		if ((c >= '0') && (c <= '9'))
 			version = (version * 10) + c - '0';
@@ -219,7 +225,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 	int c;
 	int n;
 
-	DCC_LOG(DCC_INFO, "----------------");
+	DCC_LOG(LOG_INFO, "----------------");
 	hash = 0;
 	cp = buf;
 	/*
@@ -253,7 +259,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 					return ret;
 
 				c = *cp;
-				DCC_LOG1(DCC_INFO, "'%c'", c);
+				DCC_LOG1(LOG_INFO, "'%c'", c);
 			}
 
 			/* append zero */
@@ -265,7 +271,7 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 		if (c == '\r')
 			break;
 
-		DCC_LOG1(DCC_INFO, "'%c'", c);
+		DCC_LOG1(LOG_INFO, "'%c'", c);
 
 		hash = __crc8(hash, c);
 	}
@@ -294,92 +300,92 @@ static int parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 		switch (opt) {
 		/* Request Header Fields */
 		case HTTPHDR_AUTHORIZATION:
-			DCC_LOG1(DCC_TRACE, "Authorization: %s", val);
+			DCC_LOG1(LOG_TRACE, "Authorization: %s", val);
 			break;
 		case HTTPHDR_CONTENT_TYPE:
 			/* hash the content type */
 			ctl->ctype = crc8(0, val, strlen(val));
-			DCC_LOG1(DCC_TRACE, "Content-Type: %s", val);
+			DCC_LOG1(LOG_TRACE, "Content-Type: %s", val);
 			break;
 		case HTTPHDR_CONTENT_LENGTH:
-			DCC_LOG1(DCC_TRACE, "Content-Length: %s", val);
+			DCC_LOG1(LOG_TRACE, "Content-Length: %s", val);
 			ctl->ctlen = atoi(val);
 			break;			
 		case HTTPHDR_ACCEPT:
-			DCC_LOG1(DCC_TRACE, "Accept: %s", val);
+			DCC_LOG1(LOG_TRACE, "Accept: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_CHARSET:
-			DCC_LOG1(DCC_TRACE, "Accept-Charset: %s", val);
+			DCC_LOG1(LOG_TRACE, "Accept-Charset: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_ENCODING:
-			DCC_LOG1(DCC_TRACE, "Accept-Encoding: %s", val);
+			DCC_LOG1(LOG_TRACE, "Accept-Encoding: %s", val);
 			break;
 		case HTTPHDR_ACCEPT_LANGUAGE:
-			DCC_LOG1(DCC_TRACE, "Accept-Language: %s", val);
+			DCC_LOG1(LOG_TRACE, "Accept-Language: %s", val);
 			break;
 		case HTTPHDR_EXPECT:
-			DCC_LOG1(DCC_TRACE, "Expect: %s", val);
+			DCC_LOG1(LOG_TRACE, "Expect: %s", val);
 			break;
 		case HTTPHDR_HOST:
-			DCC_LOG1(DCC_TRACE, "Host: %s", val);
+			DCC_LOG1(LOG_TRACE, "Host: %s", val);
 			break;
 		case HTTPHDR_IF_MATCH:
-			DCC_LOG1(DCC_TRACE, "If-Match: %s", val);
+			DCC_LOG1(LOG_TRACE, "If-Match: %s", val);
 			break;
 		case HTTPHDR_IF_MODIFIED_SINCE:
-			DCC_LOG1(DCC_TRACE, "If-Modified-Since: %s", val);
+			DCC_LOG1(LOG_TRACE, "If-Modified-Since: %s", val);
 			break;
 		case HTTPHDR_IF_NONE_MATCH:
-			DCC_LOG1(DCC_TRACE, "If-None-Match: %s", val);
+			DCC_LOG1(LOG_TRACE, "If-None-Match: %s", val);
 			break;
 		case HTTPHDR_IF_RANGE:
-			DCC_LOG1(DCC_TRACE, "If-Range: %s", val);
+			DCC_LOG1(LOG_TRACE, "If-Range: %s", val);
 			break;
 		case HTTPHDR_IF_UNMODIFIED_SINCE:
-			DCC_LOG1(DCC_TRACE, "If-Unmodified-Since: %s", val);
+			DCC_LOG1(LOG_TRACE, "If-Unmodified-Since: %s", val);
 			break;
 		case HTTPHDR_MAX_FORWARDS:
-			DCC_LOG1(DCC_TRACE, "Max-Forwards: %s", val);
+			DCC_LOG1(LOG_TRACE, "Max-Forwards: %s", val);
 			break;
 		case HTTPHDR_PROXY_AUTHORIZATION:
-			DCC_LOG1(DCC_TRACE, "Proxy-Authorization: %s", val);
+			DCC_LOG1(LOG_TRACE, "Proxy-Authorization: %s", val);
 			break;
 		case HTTPHDR_RANGE:
-			DCC_LOG1(DCC_TRACE, "Range: %s", val);
+			DCC_LOG1(LOG_TRACE, "Range: %s", val);
 			break;
 		case HTTPHDR_REFERER:
-			DCC_LOG1(DCC_TRACE, "Referer: %s", val);
+			DCC_LOG1(LOG_TRACE, "Referer: %s", val);
 			break;
 		case HTTPHDR_TE:
-			DCC_LOG1(DCC_TRACE, "Te: %s", val);
+			DCC_LOG1(LOG_TRACE, "Te: %s", val);
 			break;
 		case HTTPHDR_USER_AGENT:
-			DCC_LOG1(DCC_TRACE, "User-Agent: %s", val);
+			DCC_LOG1(LOG_TRACE, "User-Agent: %s", val);
 			break;
 		/* Hop-by-Hop Headers */
 		case HTTPHDR_CONNECTION:
-			DCC_LOG1(DCC_TRACE, "Connection: %s", val);
+			DCC_LOG1(LOG_TRACE, "Connection: %s", val);
 			break;
 		case HTTPHDR_KEEP_ALIVE:
-			DCC_LOG1(DCC_TRACE, "keep-Alive: %s", val);
+			DCC_LOG1(LOG_TRACE, "keep-Alive: %s", val);
 			break;
 		case HTTPHDR_TRAILERS:
-			DCC_LOG1(DCC_TRACE, "Trailers: %s", val);
+			DCC_LOG1(LOG_TRACE, "Trailers: %s", val);
 			break;
 		case HTTPHDR_PROXY_AUTHENTICATE:
-			DCC_LOG1(DCC_TRACE, "Proxy-Authenticate: %s", val);
+			DCC_LOG1(LOG_TRACE, "Proxy-Authenticate: %s", val);
 			break;
 		case HTTPHDR_TRANSFER_ENCODING:
-			DCC_LOG1(DCC_TRACE, "Transfer-Encoding: %s", val);
+			DCC_LOG1(LOG_TRACE, "Transfer-Encoding: %s", val);
 			break;
 		case HTTPHDR_UPGRADE:
-			DCC_LOG1(DCC_TRACE, "Upgrade: %s", val);
+			DCC_LOG1(LOG_TRACE, "Upgrade: %s", val);
 			break;
 		case HTTPHDR_CACHE_CONTROL:
-			DCC_LOG1(DCC_TRACE, "Cache-Control: %s", val);
+			DCC_LOG1(LOG_TRACE, "Cache-Control: %s", val);
 			break;
 		default:
-			DCC_LOG2(DCC_TRACE, "opt=%02x: %s", opt, val);
+			DCC_LOG2(LOG_TRACE, "opt=%02x: %s", opt, val);
 		}
 	}
 
@@ -391,20 +397,20 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	struct tcp_pcb * tp;
 
 	if ((tp = tcp_accept(httpd->tp)) == NULL) {
-		DCC_LOG(DCC_ERROR, "tcp_accept().");
+		DCC_LOG(LOG_ERROR, "tcp_accept().");
 		return -1;
 	}
 
-	DCC_LOG(DCC_TRACE, "accepted.");
+	DCC_LOG(LOG_TRACE, "accepted.");
 
 	ctl->method = get_method(tp);
-	DCC_LOG1(DCC_TRACE, "method=0x%02x", ctl->method);
+	DCC_LOG1(LOG_TRACE, "method=0x%02x", ctl->method);
 
-	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
-	DCC_LOG1(DCC_TRACE, "uri='%s'", ctl->uri);
+	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN - 1);
+	DCC_LOG1(LOG_TRACE, "uri='%s'", ctl->uri);
 
 	ctl->version = get_version(tp);
-	DCC_LOG1(DCC_TRACE, "version=%d", ctl->version);
+	DCC_LOG1(LOG_TRACE, "version=%d", ctl->version);
 
 	if (parse_hdr(tp, ctl) < 0) {
 		/* Malformed request line, respond with: 400 Bad Request */
@@ -417,49 +423,100 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	return 0;
 }
 
-int http_process(struct httpd * httpd, struct httpctl * ctl)
-{
-	switch (ctl->method) {
-	case HTTPMETHOD_GET:
-		DCC_LOG(DCC_TRACE, "GET");
-		http_get(httpd, ctl);
-		break;
-	case HTTPMETHOD_POST:
-		DCC_LOG(DCC_TRACE, "POST");
-		http_post(httpd, ctl);
-		break;
-	}
-
-	tcp_close(ctl->tp);
-	return 0;
-}
+const struct httpdauth httpd_def_authlst[] = {
+	{ .uid = 0, .lvl = 0, .name = "", .passwd = "" }
+};
 
 struct tcp_pcb * httpd_start(struct httpd * httpd, 
 							 int port, int backlog,
-							 const char * path)
+							 const struct httpddir dirlst[],
+							 const struct httpdauth authlst[])
 {
 	struct tcp_pcb * tp;
 
 	if (httpd == NULL) {
-		DCC_LOG(DCC_ERROR, "Invalid parameter!\n");
+		DCC_LOG(LOG_ERROR, "Invalid parameter!\n");
 		return NULL;
 	}
 
 	if ((tp = tcp_alloc()) == NULL) {
-		DCC_LOG(DCC_ERROR, "Can't alloc TCP PCB!\n");
+		DCC_LOG(LOG_ERROR, "Can't alloc TCP PCB!\n");
 		return NULL;
 	}
 
 	tcp_bind(tp, INADDR_ANY, htons(port));
 
 	if (tcp_listen(tp, backlog) != 0) {
-		DCC_LOG(DCC_ERROR, "Can't register the TCP listner!\n");
+		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!\n");
 		return NULL;
 	}
 
 	httpd->tp = tp;
-	httpd->root = (char *)path;
+	httpd->dir = dirlst;
+
+	if (authlst == NULL)
+		httpd->auth = httpd_def_authlst;
+	else
+		httpd->auth = authlst;
 
 	return tp;
 }
 
+int http_close(struct httpctl * ctl)
+{
+	return tcp_close(ctl->tp);
+}
+
+
+#if 0
+int http_process(struct httpd * httpd, struct httpctl * ctl)
+{
+	switch (ctl->method) {
+	case HTTPMETHOD_GET:
+		DCC_LOG(LOG_TRACE, "GET");
+		http_get(httpd, ctl);
+		break;
+	case HTTPMETHOD_POST:
+		DCC_LOG(LOG_TRACE, "POST");
+		http_post(httpd, ctl);
+		break;
+	}
+
+	return 0;
+}
+
+
+#define SIZEOF_HTTPCTL (sizeof(struct httpctl) + HTTPD_URI_MAX_LEN)
+#define SIZEOF_HTTPD (sizeof(struct httpd)
+
+/*
+ * HTTP server control structure
+ */
+struct httpd {
+	struct tcp_pcb * tp;
+	/* server root directory */
+	const struct httpddir * dir;
+	/* authentication data */
+	const struct httpdauth * auth;
+	uint8_t max_con;
+	struct {
+		struct httpctl ctl;
+		uint8_t uri[HTTPD_URI_MAX_LEN];
+	} con[];
+};
+
+struct httpd * httpd_init(uint32_t * srv_buf, unsigned int srv_size,
+						  const struct httpddir dirlst[], 
+						  const struct httpdauth authlst[])
+{
+	struct httpdsrv * srv = (struct httpdsrv *)srv_buf;
+
+	if (srv_size < (SIZEOF_HTTPD + SIZEOF_HTTPCTL)) {
+		DCC_LOG(LOG_ERROR, "invalid buffer size!");
+		return NULL;
+	}
+
+	return httpd;
+}
+
+#endif
