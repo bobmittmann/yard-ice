@@ -90,6 +90,10 @@ struct httpctl {
 extern "C" {
 #endif
 
+int http_get(struct httpd * httpd, struct httpctl * ctl);
+
+int http_post(struct httpd * httpd, struct httpctl * ctl);
+
 #ifdef __cplusplus
 }
 #endif
