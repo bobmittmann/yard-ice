@@ -7,30 +7,29 @@
 
 #define	__ASSERT_H__
 
-#if defined __cplusplus && __GNUC_PREREQ (2,95)
-# define __ASSERT_VOID_CAST static_cast<void>
+#ifdef __cplusplus 
+#define __ASSERT_VOID_CAST static_cast<void>
 #else
-# define __ASSERT_VOID_CAST (void)
+#define __ASSERT_VOID_CAST (void)
 #endif
 
-#define __CONCAT(x,y)	x ## y
+#define __CONCAT(x,y) x ## y
 #define __STRING(x)	#x
 
 #ifdef	NDEBUG
 
-# define assert(expr)		(void)
+#define assert(EXPR)		(void)
 
 #else /* Not NDEBUG.  */
 
 /* This prints an "Assertion failed" message and aborts.  */
-extern void __assert_fail (const char *__assertion, const char *__file, 
-						   unsigned int __line, const char *__function) 
-	__attribute__ ((__noreturn__));
+extern void __assert_fail(const char *__assertion, const char *__file, 
+						  unsigned int __line, const char *__function) 
+			__attribute__ ((__noreturn__));
 
-# define assert(expr) \
-  ((expr) \
-   ? (void) \
-   : __assert_fail (__STRING(expr), __FILE__, __LINE__, __func__))
+#define assert(EXPR) ((EXPR) ? (void)0 : \
+					  __assert_fail(__STRING(EXPR), \
+									__FILE__, __LINE__, __func__))
 
 #endif /* NDEBUG.  */
 

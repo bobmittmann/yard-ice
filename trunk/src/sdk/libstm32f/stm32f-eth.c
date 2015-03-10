@@ -28,6 +28,10 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #define ETH_MII_TX_CLK STM32_GPIOC, 3
 #define ETH_MII_TX_EN  STM32_GPIOB, 11
 #define ETH_MII_TXD0   STM32_GPIOB, 12
@@ -45,9 +49,12 @@
 #define ETH_MII_COL    STM32_GPIOA, 3
 #define ETH_MDC        STM32_GPIOC, 1 
 #define ETH_MDIO       STM32_GPIOA, 2
-#define EXT_RST        STM32_GPIOE, 2
 
-#ifdef STM32F2X
+#ifndef ETH_PHY_RST_GPIO
+#define ETH_PHY_RST_GPIO STM32_GPIOE, 2
+#endif
+
+#if defined(STM32F2X) || defined(STM32F4X)
 
 void stm32f_eth_init(struct stm32f_eth * eth)
 {
@@ -68,8 +75,8 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 
 
 	DCC_LOG(LOG_TRACE, "Configuring GPIO pins...");
-	stm32_gpio_mode(EXT_RST, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_clr(EXT_RST);
+	stm32_gpio_mode(ETH_PHY_RST_GPIO, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_clr(ETH_PHY_RST_GPIO);
 
 	stm32_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
@@ -122,7 +129,7 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 
 	DCC_LOG(LOG_TRACE, "PHY reset...");
 	udelay(1000);
-	stm32_gpio_set(EXT_RST);
+	stm32_gpio_set(ETH_PHY_RST_GPIO);
 	udelay(9000);
 };
 

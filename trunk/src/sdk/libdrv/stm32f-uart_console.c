@@ -42,22 +42,38 @@
 
 #if (THINKOS_FLAG_MAX > 0) && (THINKOS_ENABLE_FLAG_ALLOC)
 
-#ifndef ENABLE_UART_TX_MUTEX
-#define ENABLE_UART_TX_MUTEX 1
+#ifndef UART_CONSOLE_TX_MUTEX
+#define UART_CONSOLE_TX_MUTEX     1
 #endif
 
-#define UART_TX_FIFO_BUF_LEN 512
-#define UART_RX_FIFO_BUF_LEN 16
+#ifndef UART_CONSOLE_TX_FIFO_LEN
+#define UART_CONSOLE_TX_FIFO_LEN  512
+#endif
 
-#define UART STM32_UART5
-#define UART_ISR stm32f_uart5_isr
-#define UART_IRQ_NUM STM32_IRQ_UART5
-#define UART_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
+#ifndef UART_CONSOLE_RX_FIFO_LEN
+#define UART_CONSOLE_RX_FIFO_LEN  16
+#endif
+
+#ifndef UART_CONSOLE_DEV         
+#define UART_CONSOLE_DEV          STM32_UART5
+#endif
+
+#ifndef UART_CONSOLE_ISR
+#define UART_CONSOLE_ISR          stm32f_uart5_isr
+#endif
+
+#ifndef UART_CONSOLE_IRQ_NUM
+#define UART_CONSOLE_IRQ_NUM      STM32_IRQ_UART5
+#endif
+
+#ifndef UART_CONSOLE_IRQ_PRIORITY 
+#define UART_CONSOLE_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
+#endif
 
 struct uart_console_dev {
 	uint8_t tx_flag;
 	uint8_t rx_flag;
-#if ENABLE_UART_TX_MUTEX
+#if UART_CONSOLE_TX_MUTEX
 	uint8_t tx_mutex;
 #endif
 	uint32_t * txie;
@@ -65,12 +81,12 @@ struct uart_console_dev {
 	struct {
 		volatile uint32_t head;
 		volatile uint32_t tail;
-		uint8_t buf[UART_TX_FIFO_BUF_LEN];
+		uint8_t buf[UART_CONSOLE_TX_FIFO_LEN];
 	} tx_fifo;	
 	struct {
 		volatile uint32_t head;
 		volatile uint32_t tail;
-		uint8_t buf[UART_RX_FIFO_BUF_LEN];
+		uint8_t buf[UART_CONSOLE_RX_FIFO_LEN];
 	} rx_fifo;	
 };
 
@@ -102,7 +118,7 @@ again:
 	n = MIN(len, cnt);
 
 	for (i = 0; i < n; ++i)
-		cp[i] = dev->rx_fifo.buf[tail++ & (UART_RX_FIFO_BUF_LEN - 1)];
+		cp[i] = dev->rx_fifo.buf[tail++ & (UART_CONSOLE_RX_FIFO_LEN - 1)];
 
 	dev->rx_fifo.tail = tail;
 
@@ -133,11 +149,11 @@ static int uart_console_write(struct uart_console_dev * dev, const void * buf,
 		thinkos_flag_take(dev->tx_flag);
 
 		head = dev->tx_fifo.head;
-		free = UART_TX_FIFO_BUF_LEN - (int32_t)(head - dev->tx_fifo.tail);
+		free = UART_CONSOLE_TX_FIFO_LEN - (int32_t)(head - dev->tx_fifo.tail);
 		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, dev->tx_fifo.tail, n);
 		n = MIN(rem, free);
 		for (i = 0; i < n; ++i) 
-			dev->tx_fifo.buf[head++ & (UART_TX_FIFO_BUF_LEN - 1)] = *cp++;
+			dev->tx_fifo.buf[head++ & (UART_CONSOLE_TX_FIFO_LEN - 1)] = *cp++;
 		dev->tx_fifo.head = head;
 		*dev->txie = 1; 
 
@@ -172,7 +188,7 @@ static int uart_console_close(struct uart_console_dev * dev)
 
 struct uart_console_dev uart_console_dev;
 
-void UART_ISR(void)
+void UART_CONSOLE_ISR(void)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
 	struct stm32_usart * us = dev->uart;
@@ -194,14 +210,14 @@ void UART_ISR(void)
 		c = us->dr;
 
 		head = dev->rx_fifo.head;
-		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - dev->rx_fifo.tail);
+		free = UART_CONSOLE_RX_FIFO_LEN - (uint8_t)(head - dev->rx_fifo.tail);
 		if (free > 0) { 
-			dev->rx_fifo.buf[head & (UART_RX_FIFO_BUF_LEN - 1)] = c;
+			dev->rx_fifo.buf[head & (UART_CONSOLE_RX_FIFO_LEN - 1)] = c;
 			dev->rx_fifo.head = head + 1;
 		} else {
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
-		if (free < (UART_RX_FIFO_BUF_LEN / 2)) /* fifo is more than half full */
+		if (free < (UART_CONSOLE_RX_FIFO_LEN / 2)) /* fifo is more than half full */
 			__thinkos_flag_give(dev->rx_flag);
 	}	
 
@@ -219,7 +235,7 @@ void UART_ISR(void)
 			*dev->txie = 0; 
 			__thinkos_flag_set(dev->tx_flag);
 		} else {
-			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
+			us->dr = dev->tx_fifo.buf[tail & (UART_CONSOLE_TX_FIFO_LEN - 1)];
 			dev->tx_fifo.tail = tail + 1;
 		}
 	}
@@ -235,14 +251,14 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 											unsigned int flags)
 {
 	struct uart_console_dev * dev = &uart_console_dev;
-	struct stm32_usart * uart = UART;
+	struct stm32_usart * uart = UART_CONSOLE_DEV;
 
 	DCC_LOG1(LOG_TRACE, "UART=0x%08x", uart);
 
 	dev->uart = uart;
 	dev->rx_flag = thinkos_flag_alloc(); 
 	dev->tx_flag = thinkos_flag_alloc(); 
-#if ENABLE_UART_TX_MUTEX
+#if UART_CONSOLE_TX_MUTEX
 	dev->tx_mutex = thinkos_mutex_alloc(); 
 	DCC_LOG1(LOG_TRACE, "tx_mutex=%d", dev->tx_mutex);
 #endif
@@ -263,9 +279,9 @@ struct uart_console_dev * uart_console_init(unsigned int baudrate,
 	stm32_usart_enable(uart);
 
 	/* configure interrupts */
-	cm3_irq_pri_set(UART_IRQ_NUM, UART_IRQ_PRIORITY);
+	cm3_irq_pri_set(UART_CONSOLE_IRQ_NUM, UART_CONSOLE_IRQ_PRIORITY);
 	/* enable interrupts */
-	cm3_irq_enable(UART_IRQ_NUM);
+	cm3_irq_enable(UART_CONSOLE_IRQ_NUM);
 
 	return dev;
 }
