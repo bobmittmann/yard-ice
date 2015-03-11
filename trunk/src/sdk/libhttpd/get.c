@@ -24,7 +24,7 @@ int http_get(struct httpctl * ctl)
 	char * src;
 	char * sep;
 	char * oid;
-	char * cp;
+//	char * cp;
 	int ret;
 	int c;
 
@@ -46,13 +46,14 @@ int http_get(struct httpctl * ctl)
 		path[1] = '\0';
 	}
 
+#if 0
 	DCC_LOG(LOG_TRACE, "PATH");
 	for (cp = path; (c = *cp) != '\0'; ++cp) {
 		DCC_LOG1(LOG_TRACE, "'%c'", c);
 	}
+#endif
 
 	for (dir = httpd->dir; (dir->path != NULL); ++dir) {
-		DCC_LOG1(LOG_TRACE, "\"%s\"", dir->path);
 		if (strcmp(dir->path, path) == 0) {
 			break;
 		};
@@ -64,17 +65,17 @@ int http_get(struct httpctl * ctl)
 		return -1;
 	}
 
-	if (*oid == '\0') {
+	if (*oid == '\0')
 		oid = (char *)http_index_obj;
-	}
 
+#if 0
 	DCC_LOG(LOG_TRACE, "OID");
 	for (cp = oid; (c = *cp) != '\0'; ++cp) {
 		DCC_LOG1(LOG_TRACE, "'%c'", c);
 	}
+#endif
 
 	for (obj = dir->objlst; (obj->oid != NULL); ++obj) {
-		DCC_LOG1(LOG_TRACE, "\"%s\"", obj->oid);
 		if (strcmp(obj->oid, oid) == 0) {
 			break;
 		};
@@ -99,6 +100,8 @@ int http_get(struct httpctl * ctl)
 	case OBJ_STATIC_TEXT:
 		break;
 	case OBJ_STATIC_CSS:
+		httpd_200_css(ctl->tp); 
+		ret = tcp_send(ctl->tp, obj->ptr, obj->len, 0);
 		break;
 	case OBJ_STATIC_XML:
 		break;

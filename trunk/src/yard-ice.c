@@ -221,9 +221,16 @@ int network_config(void)
 	char s1[16];
 	char s2[16];
 	char * env;
-	/* TODO: random initial mac address */
-	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x80};
+	uint8_t * ethaddr;
+	uint64_t esn;
 	int dhcp;
+
+	/* Initialize MAC address with the MCU's UID */
+	ethaddr = (uint8_t *)&esn;
+	esn = *((uint64_t *)STM32F_UID);
+	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
+	ethaddr[0] = (ethaddr[0] & 0xfc) | 0x02; /* Locally administered MAC */
+
 
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
@@ -241,9 +248,13 @@ int network_config(void)
 	if ((env = getenv("ETHADDR")) != NULL) {
 		eth_strtomac(ethaddr, env);
 	} else {
-		tracef("Ethernet MAC address not set, using defaults!");
+		trace("Ethernet MAC address not set, using defaults!");
 		DCC_LOG(LOG_WARNING, "Ethernet MAC address not set.");
 	}
+
+    tracef("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x",
+		   ethaddr[0], ethaddr[1], ethaddr[2],
+		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
 		DCC_LOG(LOG_WARNING, "inet_aton() failed.");

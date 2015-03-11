@@ -33,6 +33,10 @@ const char http_hdr_200_html[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
 	"Content-type: text/html;charset=ISO-8859-1\r\n\r\n";
 
+const char http_hdr_200_css[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Content-type: text/css\r\n\r\n";
+
 /* name of various mime types we support */
 const char * const mime_name_lut[] = {
 	"application/javascript\r\n\r\n"
@@ -88,10 +92,24 @@ int httpd_200_html(struct tcp_pcb * __tp)
 	hdr = (char *)http_hdr_200_html;
 	len = sizeof(http_hdr_200_html) - 1;
 
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0)) {
+	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
 		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-	}
 
 	return ret;
 }
 
+
+int httpd_200_css(struct tcp_pcb * __tp) 
+{
+	char * hdr;
+	int len;
+	int ret;
+
+	hdr = (char *)http_hdr_200_css;
+	len = sizeof(http_hdr_200_css) - 1;
+
+	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
+		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
+
+	return ret;
+}

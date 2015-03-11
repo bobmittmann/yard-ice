@@ -38,7 +38,7 @@
 #endif
 
 #ifndef HTTPD_URI_MAX_LEN
-#define HTTPD_URI_MAX_LEN 64
+#define HTTPD_URI_MAX_LEN 127
 #endif
 
 
@@ -125,7 +125,7 @@ struct httpctl {
 	uint8_t ctlen;
 	char * usr;
 	char * pwd;
-	char uri[];
+	char uri[HTTPD_URI_MAX_LEN + 1];
 };
 
 typedef int (* httpd_cgi_t)(struct httpctl ctl);
