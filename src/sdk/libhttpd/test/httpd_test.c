@@ -53,45 +53,12 @@ void tcpip_init(void);
 void env_init(void);
 void stdio_init(void);
 
-#define HTML_FOOTER "<hr>&copy; Copyrigth 2013-2014, Bob Mittmann" \
-	"<br><b>ThinkOS</b> - Cortex-M Operating System - "\
-	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i>"\
-	"</body></html>\r\n"
-
-const char index_html[] = "<html><head><title>Index</title></head>"
-"<h2>Hello World</h2><p>Hello World!</p>" HTML_FOOTER;
-
-
-const char footer_html[] = HTML_FOOTER;
-
-int index_cgi(struct httpctl * ctl)
-{
-	const char dynamic_html[] = "<html><head><title>%s</title></head>" 
-		"<h2>Hello World</h2><p>Cnt=%d</p>";
-	static cnt = 0;
-	char s[256];
-	int n;
-
-	n = snprintf(s, 256, dynamic_html, "CGI-BIN", cnt++);
-
-	tcp_send(ctl->tp, s, n, 0);
-	return tcp_send(ctl->tp, footer_html, sizeof(footer_html), 0);
-}
-
-struct httpdobj httpd_root[] = {
-	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 100, 
-		.len = sizeof(index_html), .ptr = index_html },
-	{ .oid = "index.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
-		.len = 0, .ptr = index_cgi },
-	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
-};
+extern struct httpdobj httpd_root[];
 
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = httpd_root },
 	{ .path = NULL, .objlst = NULL }
 };
-
-
 
 int httpd_server_task(struct httpd * httpd)
 {
@@ -99,13 +66,17 @@ int httpd_server_task(struct httpd * httpd)
 	struct httpctl * ctl = &httpctl;
 
 	for (;;) {
-		printf("Wating for connection.\n");
+//		printf("Wating for connection.\n");
+		DCC_LOG1(LOG_TRACE, "<%d> Wating for connection...", 
+				 thinkos_thread_self());
 		if (http_accept(httpd, ctl) < 0) {
-			printf("tcp_accept() failed!\n");
+//			printf("tcp_accept() failed!\n");
 			break;
 		}
 
-		printf("Connection accepted.\n");
+//		printf("Connection accepted.\n");
+		DCC_LOG1(LOG_TRACE, "<%d> Connection accepted...", 
+				 thinkos_thread_self());
 
 		switch (ctl->method) {
 		case HTTP_GET:
@@ -210,7 +181,8 @@ int network_config(void)
 	return 0;
 }
 
-uint32_t server_stack[256];
+uint32_t server_stack1[1024];
+uint32_t server_stack2[1024];
 
 int main(int argc, char ** argv)
 {
@@ -245,9 +217,14 @@ int main(int argc, char ** argv)
 	httpd_start(&httpd, port, 4, httpd_dir, NULL);
 	printf("Listening on port %d.\n", port);
 
+	DCC_LOG(LOG_TRACE, "2. starting workers...");
 	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack, sizeof(server_stack) |
+						  server_stack1, sizeof(server_stack1) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
+
+//	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
+//						  server_stack2, sizeof(server_stack2) |
+//						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
 
 
 	for (;;) {

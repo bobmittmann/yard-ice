@@ -61,6 +61,7 @@
 extern "C" {
 #endif
 
+int httpd_200_css(struct tcp_pcb * __tp); 
 
 #ifdef __cplusplus
 }

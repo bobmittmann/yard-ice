@@ -292,7 +292,13 @@ int cmd_os(FILE * f, int argc, char ** argv)
 			fprintf(f, " | %4d | %4d", rt.sched_val[i], sched_pri[i]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-			fprintf(f, " | %9d", (int32_t)(rt.clock[i] - rt.ticks)); 
+			{
+				int32_t dt = (int32_t)(rt.clock[i] - rt.ticks);
+				if (dt < 0)
+					fprintf(f, " | <timeout>"); 
+				else
+					fprintf(f, " | %9d", dt); 
+			}
 #endif
 			fprintf(f, " |");
 #if THINKOS_MUTEX_MAX > 0

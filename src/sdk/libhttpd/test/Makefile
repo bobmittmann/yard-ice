@@ -22,7 +22,8 @@
 
 PROG = httpd_test
 
-CFILES = httpd_test.c stdio.c zarathustra.c
+CFILES = httpd_test.c stdio.c web_root.c
+#zarathustra.c
 
 SDK = ../../../sdk
 
@@ -40,8 +41,9 @@ JTAGTOOL_ADDR = 192.168.0.80
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-MACH = stm32f407
-include ../../../mk/stm32f4xx.mk
+#MACH = stm32f407
+#include ../../../mk/stm32f4xx.mk
 
-#include ../../../mk/stm32f207.mk
+MACH = stm32f207
+include ../../../mk/stm32f2xx.mk
 

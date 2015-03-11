@@ -406,7 +406,7 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	ctl->method = get_method(tp);
 	DCC_LOG1(LOG_TRACE, "method=0x%02x", ctl->method);
 
-	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN - 1);
+	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
 	DCC_LOG1(LOG_TRACE, "uri='%s'", ctl->uri);
 
 	ctl->version = get_version(tp);
@@ -420,6 +420,8 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	}
 
 	ctl->tp = tp;
+	ctl->httpd = httpd;
+
 	return 0;
 }
 
