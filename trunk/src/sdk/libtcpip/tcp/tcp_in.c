@@ -739,7 +739,7 @@ close:
 		} else {
 			/* TODO: peristent timer */
 //			if (tp->t_persist_tmr == 0) {
-				DCC_LOG(LOG_TRACE, "not all data acked restart rxmt tmr");
+				DCC_LOG(LOG_INFO, "not all data acked restart rxmt tmr");
 				tp->t_rxmt_tmr = tcp_rxmtintvl[tp->t_rxmt_cnt / 2];
 //			}
 		}
@@ -910,8 +910,7 @@ dodata:
 			mbuf_queue_free(&tp->rcv_q);
 			mbuf_queue_free(&tp->snd_q);
 			tp->t_state = TCPS_TIME_WAIT;
-			DCC_LOG1(LOG_TRACE, "<%05x> [TIME_WAIT]", (int)tp);
-			DCC_LOG(LOG_TRACE, "stop rxmt tmr, start 2MSL tmr");
+			DCC_LOG1(LOG_TRACE, "<%05x> stop rxmt tmr, start 2MSL tmr [TIME_WAIT]", (int)tp);
 			tp->t_rxmt_tmr = 0;
 			tp->t_conn_tmr = 2 * tcp_msl;
 			break;

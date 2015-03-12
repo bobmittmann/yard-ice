@@ -369,7 +369,7 @@ again:
 	}
 
 	if (flags & (TH_SYN | TH_RST)) {
-		DCC_LOG(LOG_INFO, "SYN | RST, send...");
+		DCC_LOG1(LOG_TRACE, "<%05x> SYN | RST, send...", tp);
 		goto send;
 	}
 

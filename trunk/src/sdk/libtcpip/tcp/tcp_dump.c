@@ -29,20 +29,21 @@
 #include <tcpip/tcp.h>
 
 #ifndef TCPDUMP_SEQ_TAB_MAX
-#define TCPDUMP_SEQ_TAB_MAX 4
+#define TCPDUMP_SEQ_TAB_MAX 16
 #endif
 
 struct {
 	in_addr_t addr;
+	unsigned int port;
 	uint32_t seq;
 } offtab[TCPDUMP_SEQ_TAB_MAX];
 
-static uint32_t offset_seq(in_addr_t addr, uint32_t seq)
+static uint32_t offset_seq(in_addr_t addr, unsigned int port, uint32_t seq)
 {
 	int i;
 
 	for (i = 0; i < TCPDUMP_SEQ_TAB_MAX; i++) {
-		if (offtab[i].addr == addr) {
+		if ((offtab[i].addr == addr) && (offtab[i].port == port)) {
 			return seq - offtab[i].seq;
 		}
 	}
@@ -50,12 +51,12 @@ static uint32_t offset_seq(in_addr_t addr, uint32_t seq)
 	return seq;
 }
 
-static void offset_set(in_addr_t addr, uint32_t seq)
+static void offset_set(in_addr_t addr, unsigned int port, uint32_t seq)
 {
 	int i;
 
 	for (i = 0; i < TCPDUMP_SEQ_TAB_MAX; i++) {
-		if (offtab[i].addr == addr) {
+		if ((offtab[i].addr == addr) && (offtab[i].port == port)) {
 			offtab[i].seq = seq;
 			return;
 		}
@@ -64,6 +65,7 @@ static void offset_set(in_addr_t addr, uint32_t seq)
 	for (i = 0; i < TCPDUMP_SEQ_TAB_MAX; i++) {
 		if (offtab[i].addr == INADDR_ANY) {
 			offtab[i].addr = addr;
+			offtab[i].port = port;
 			offtab[i].seq = seq;
 			return;
 		}
@@ -88,12 +90,12 @@ static void rx(struct iphdr * iph, struct tcphdr * th)
 	datalen = ip_tlen - (sizeof(struct tcphdr) + optlen);
 
 	if (th->th_flags & TH_SYN) {
-		offset_set(iph->saddr, ntohl(th->th_seq));
+		offset_set(iph->saddr, th->th_sport, ntohl(th->th_seq));
 	}
-	seq = offset_seq(iph->saddr, ntohl(th->th_seq)); 
+	seq = offset_seq(iph->saddr, th->th_sport, ntohl(th->th_seq)); 
 
 	if (th->th_flags & TH_ACK) {
-		ack = offset_seq(iph->daddr, ntohl(th->th_ack));
+		ack = offset_seq(iph->daddr, th->th_dport, ntohl(th->th_ack));
 		if (datalen){ 
 			DCC_LOG10(LOG_TRACE, 
 					  "TCP %I:%d > %I:%d %s %u:%u(%d) ack %u win %d", 
@@ -142,12 +144,12 @@ static void tx(struct iphdr * iph, struct tcphdr * th)
 	datalen = ip_tlen - (sizeof(struct tcphdr) + optlen);
 
 	if (th->th_flags & TH_SYN) {
-		offset_set(iph->saddr, ntohl(th->th_seq));
+		offset_set(iph->saddr, th->th_sport, ntohl(th->th_seq));
 	}
-	seq = offset_seq(iph->saddr, ntohl(th->th_seq)); 
+	seq = offset_seq(iph->saddr, th->th_sport, ntohl(th->th_seq)); 
 
 	if (th->th_flags & TH_ACK) {
-		ack = offset_seq(iph->daddr, ntohl(th->th_ack));
+		ack = offset_seq(iph->daddr, th->th_dport, ntohl(th->th_ack));
 		if (datalen){ 
 			DCC_LOG10(LOG_TRACE, 
 					  "TCP %I:%d > %I:%d %s %u:%u(%d) ack %u win %d", 

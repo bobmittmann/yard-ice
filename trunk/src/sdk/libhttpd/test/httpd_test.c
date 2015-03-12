@@ -69,7 +69,7 @@ int httpd_server_task(struct httpd * httpd)
 
 	for (;;) {
 //		printf("Wating for connection.\n");
-		DCC_LOG1(LOG_TRACE, "<%d> Wating for connection...", 
+		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...", 
 				 thinkos_thread_self());
 		if (http_accept(httpd, ctl) < 0) {
 //			printf("tcp_accept() failed!\n");
@@ -77,12 +77,12 @@ int httpd_server_task(struct httpd * httpd)
 		}
 
 //		printf("Connection accepted.\n");
-		DCC_LOG1(LOG_TRACE, "<%d> Connection accepted...", 
+		DCC_LOG1(LOG_INFO, "<%d> Connection accepted...", 
 				 thinkos_thread_self());
 
 		switch (ctl->method) {
 		case HTTP_GET:
-			DCC_LOG(LOG_TRACE, "GET");
+			DCC_LOG(LOG_INFO, "GET");
 			http_get(ctl);
 			break;
 		case HTTP_POST:
@@ -224,9 +224,9 @@ int main(int argc, char ** argv)
 						  server_stack1, sizeof(server_stack1) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
 
-	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack2, sizeof(server_stack2) |
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
+//	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
+//						  server_stack2, sizeof(server_stack2) |
+//						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
 
 
 	for (;;) {
