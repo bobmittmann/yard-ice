@@ -148,7 +148,7 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 	}
 #endif
 
-	DCC_LOG2(LOG_TRACE, "<%05x> state=%s", (int)tp, __tcp_state[tp->t_state]);
+	DCC_LOG2(LOG_INFO, "<%05x> state=%s", (int)tp, __tcp_state[tp->t_state]);
 
 	if (tp->t_state == TCPS_LISTEN) {
 		struct tcp_listen_pcb * mux = (struct tcp_listen_pcb *)tp;

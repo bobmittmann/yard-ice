@@ -30,14 +30,11 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 {
 	struct tcp_listen_pcb * mux = (struct tcp_listen_pcb *)__mux;
 	struct tcp_pcb * tp;
-	unsigned int tail;
 
 	if (__mux == NULL)
 		DCC_LOG(LOG_WARNING, "NULL pointer");
 
-	/* FIXME: this call is not reentrant for the same tcp_pcb.
-	   Only one accept point should exist for each listening PCB. */
-		DCC_LOG1(LOG_TRACE, "<%04x> waiting...", (int)mux);
+	DCC_LOG1(LOG_INFO, "<%04x> waiting...", (int)mux);
 
 	if (__os_sem_wait(mux->t_sem) < 0) {
 		DCC_LOG2(LOG_ERROR, "<%04x> __os_sem_wait(%d) failed!", 
@@ -45,24 +42,34 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 		return NULL;
 	}
 
-	tail = mux->t_tail;
+	tcpip_net_lock();
 
-	tp = (struct tcp_pcb *)mux->t_backlog[tail++];
+	if (mux->t_state != TCPS_LISTEN) {
+		DCC_LOG1(LOG_WARNING, "<%04x> invalid state!", (int)mux);
+		tp = NULL;
+	} else {
+		unsigned int tail;
 
-	/* wrap */
-	if (tail == mux->t_max)
-		tail = 0;
+		tail = mux->t_tail;
 
-	mux->t_tail = tail;
+		tp = (struct tcp_pcb *)mux->t_backlog[tail++];
+
+		/* wrap */
+		if (tail == mux->t_max)
+			tail = 0;
+
+		mux->t_tail = tail;
 
 #ifdef ENABLE_SANITY
-	if (tp == NULL)
-		DCC_LOG(LOG_PANIC, "NULL pointer");
+		if (tp == NULL)
+			DCC_LOG(LOG_PANIC, "NULL pointer");
 #endif
 
-	DCC_LOG4(LOG_TRACE, "<%04x> --> <%04x> %I:%d", (int)mux, 
-			 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
+		DCC_LOG4(LOG_TRACE, "<%04x> --> <%04x> %I:%d", (int)mux, 
+				 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
+	}
 
+	tcpip_net_unlock();
 
 	return tp;
 }

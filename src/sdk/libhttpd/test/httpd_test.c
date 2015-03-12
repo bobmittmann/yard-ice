@@ -53,10 +53,12 @@ void tcpip_init(void);
 void env_init(void);
 void stdio_init(void);
 
-extern struct httpdobj httpd_root[];
+extern struct httpdobj www_root[];
+extern struct httpdobj www_img[];
 
 struct httpddir httpd_dir[] = {
-	{ .path = "/", .objlst = httpd_root },
+	{ .path = "/", .objlst = www_root },
+	{ .path = "/img", .objlst = www_img },
 	{ .path = NULL, .objlst = NULL }
 };
 
@@ -222,9 +224,9 @@ int main(int argc, char ** argv)
 						  server_stack1, sizeof(server_stack1) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
 
-//	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-//						  server_stack2, sizeof(server_stack2) |
-//						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
+	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
+						  server_stack2, sizeof(server_stack2) |
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
 
 
 	for (;;) {

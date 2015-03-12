@@ -44,6 +44,8 @@ void tcpip_init(void)
 {
 	net_mutex = __os_mutex_alloc();
 
+	tcpip_net_lock();
+
 	DCC_LOG1(LOG_TRACE, "net_mutex=%d", net_mutex);
 
 	mbuf_init();
@@ -59,5 +61,7 @@ void tcpip_init(void)
 #if (ENABLE_NET_TCP)
 	tcp_init();
 #endif
+
+	tcpip_net_unlock();
 }
 

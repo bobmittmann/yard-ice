@@ -354,6 +354,8 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 	int idle;
 	int ret;
 
+	tcpip_net_lock();
+
 	DCC_LOG1(LOG_TRACE, "      fast timer period : %4d ms", tcp_fast_tmr_ms);
 	DCC_LOG1(LOG_TRACE, "      slow timer period : %4d ms", tcp_slow_tmr_ms);
 	DCC_LOG1(LOG_TRACE, "      idle timer period : %4d ms", tcp_idle_tmr_ms);
@@ -368,8 +370,6 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 			 tcp_max_idle_mn);
 	DCC_LOG1(LOG_TRACE, "                    msl : %4d seconds", 
 			 tcp_msl_sec);
-
-	tcpip_net_lock();
 
 	rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
 	idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;

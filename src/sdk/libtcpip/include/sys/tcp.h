@@ -42,6 +42,10 @@
 #define ENABLE_NET_TCP_CHECKSUM 1
 #endif
 
+#ifndef ENABLE_NET_TCP_TIMEWAIT
+#define ENABLE_NET_TCP_TIMEWAIT 1
+#endif
+
 #include <stdint.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>

@@ -62,13 +62,13 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	int type;
 	int len;
 
-	DCC_LOG(LOG_TRACE, "-------");
+	DCC_LOG1(LOG_TRACE, "<%d> DMA interrupts enabled ...", 
+			 thinkos_thread_self());
 
-	DCC_LOG(LOG_TRACE, " DMA interrupts enabled ...");
 	/* enable DMA RX interrupts */
 	eth->dmaier |= ETH_RIE | ETH_NISE;
 
-	DCC_LOG(LOG_TRACE, " DMA start receive...");
+	DCC_LOG(LOG_INFO, "DMA start receive...");
 	eth->dmaomr |= ETH_SR;
 
 	for (;;) {
@@ -273,6 +273,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
+
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 

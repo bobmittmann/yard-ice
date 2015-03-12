@@ -181,8 +181,8 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 
 	tp->t_state = TCPS_SYN_RCVD;
 
-	DCC_LOG3(LOG_TRACE, "<%05x> %I:%d [SYN_RCVD]", (int)tp, 
-			 tp->t_faddr, ntohs(tp->t_fport));
+	DCC_LOG3(LOG_TRACE, "<%05x> %I:%d [SYN_RCVD]", 
+			 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
 
 	/* XXX: don't respond now - the upper layer must call the tcp_accept()
 	   function to send back the SYNC and finish handshaking. */
@@ -490,7 +490,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		if (ti_len > rcv_wnd) {
 			DCC_LOG3(LOG_WARNING, "<%05x> ti_len(%d) > rcv_wnd(%d)", 
 				(int)tp, ti_len, rcv_wnd);
-		/* TODO: if data, trim to stay whitin window. */
+		/* TODO: if data, trim to stay within window. */
 			ti_len = rcv_wnd;
 		}
 
@@ -674,7 +674,7 @@ close:
 		tp->t_state = TCPS_ESTABLISHED;
 		tp->snd_off--;
 		tp->snd_max--;
-		DCC_LOG1(LOG_TRACE, "<%05x> [ESTABLISHED]", (int)tp);
+		DCC_LOG1(LOG_TRACE, "<%05x> SYN ackd [ESTABLISHED]", (int)tp);
 		/* notify the upper layer*/
 //		__os_cond_signal(tp->t_cond);
 
@@ -789,9 +789,9 @@ close:
 			break;
 		case TCPS_CLOSING:
 			if (ourfinisacked) {
-				tp->t_state = TCPS_TIME_WAIT;
 				mbuf_queue_free(&tp->snd_q);
 				mbuf_queue_free(&tp->rcv_q);
+				tp->t_state = TCPS_TIME_WAIT;
 				DCC_LOG1(LOG_TRACE, "<%05x> [TIME_WAIT]", (int)tp);
 				DCC_LOG(LOG_TRACE, "stop rxmt tmr, start 2MSL tmr");
 				tp->t_rxmt_tmr = 0;
