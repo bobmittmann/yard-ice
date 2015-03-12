@@ -84,8 +84,9 @@
 #define TCP_FAST_TMR_MS   100
 #define TCP_MAX_RCV_QUEUE 2048
 #define TCP_MAX_SND_QUEUE 2048 
-#define ENABLE_NET_TCP_TIMEWAIT 2
+#define ENABLE_NET_TCP_TIMEWAIT 0
 #define MBUF_POOL_SIZE    128
+#define ENABLE_TCP_HEADER_PREDICTION 0
 
 #define UART_CONSOLE_TX_FIFO_LEN 512
 #define UART_CONSOLE_RX_FIFO_LEN 16
@@ -98,6 +99,9 @@
 #elif defined(STM32F207)
 #define ETH_PHY_RST_GPIO         STM32_GPIOE, 2
 #endif
+
+/* Number of reception DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_RX_NDESC      8
 
 #endif /* __CONFIG_H__ */
 

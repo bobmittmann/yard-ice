@@ -65,8 +65,9 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 			DCC_LOG(LOG_PANIC, "NULL pointer");
 #endif
 
-		DCC_LOG4(LOG_TRACE, "<%04x> --> <%04x> %I:%d", (int)mux, 
+		DCC_LOG4(LOG_INFO, "<%04x> --> <%04x> %I:%d", (int)mux, 
 				 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
+//		thinkos_sleep(100);
 	}
 
 	tcpip_net_unlock();

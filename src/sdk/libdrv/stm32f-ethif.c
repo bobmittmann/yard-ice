@@ -62,6 +62,20 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 	int type;
 	int len;
 
+	DCC_LOG3(LOG_TRACE, "RX DMA: %d (desc) x %d = %d bytes", 
+			 STM32F_ETH_RX_NDESC, STM32F_ETH_RX_BUF_SIZE + 
+			 sizeof(struct rxdma_enh_desc),
+			 STM32F_ETH_RX_NDESC * (STM32F_ETH_RX_BUF_SIZE + 
+			 sizeof(struct rxdma_enh_desc))); 
+	DCC_LOG3(LOG_TRACE, "TX DMA: %d (desc) x %d = %d bytes", 
+			 STM32F_ETH_TX_NDESC, STM32F_ETH_TX_BUF_SIZE + 
+			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr),
+			 STM32F_ETH_TX_NDESC * (STM32F_ETH_TX_BUF_SIZE + 
+			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr)));
+	DCC_LOG1(LOG_TRACE, "Ethernet driver memory: %d bytes", 
+			 sizeof(struct stm32f_eth_drv));
+	DCC_LOG1(LOG_TRACE, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
+
 	DCC_LOG1(LOG_TRACE, "<%d> DMA interrupts enabled ...", 
 			 thinkos_thread_self());
 
