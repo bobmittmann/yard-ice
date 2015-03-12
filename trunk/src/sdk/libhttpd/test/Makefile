@@ -22,10 +22,12 @@
 
 PROG = httpd_test
 
-CFILES = httpd_test.c stdio.c web_root.c
+CFILES = httpd_test.c stdio.c www_root.c www_img.c
+#thinkos16x16.c thinkos24x57.c
 #zarathustra.c
 
 SDK = ../../../sdk
+TOOLS = ../../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
@@ -36,7 +38,7 @@ LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty httpd
 
 INCPATH = $(SDK)/include  
 
-JTAGTOOL_ADDR = 192.168.0.80
+JTAGTOOL_ADDR = 192.168.10.50
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
@@ -47,3 +49,5 @@ CFLAGS = -g -O2
 MACH = stm32f207
 include ../../../mk/stm32f2xx.mk
 
+%.c: %.png
+	$(TOOLS)/bin2hex.py $< > $@ 

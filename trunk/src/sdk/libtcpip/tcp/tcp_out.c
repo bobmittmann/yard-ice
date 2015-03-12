@@ -612,6 +612,14 @@ send:
 				 tcp_rel_timestamp(), ntohs(th->th_sport), 
 				 iph->daddr, ntohs(th->th_dport), 
 				 tcp_all_flags[th->th_flags], len);
+#if (!ENABLE_NET_TCP_TIMEWAIT)
+		/* force closing TIME_WAIT sockets to save resources */
+		if (tp->t_state == TCPS_TIME_WAIT) {
+			DCC_LOG1(LOG_INFO, "<%05x> closing TIME_WAIT...", (int)tp);
+			tcp_pcb_free(tp);
+			return 0;
+		}
+#endif
 	}
 
 	/* Data sent (as far as we can tell)

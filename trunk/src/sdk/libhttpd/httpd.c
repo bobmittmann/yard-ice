@@ -286,11 +286,11 @@ static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
 	return -1;
 }
 
-#define HTML_HDR_VAL_LEN_MAX 64
+#define HTML_HDR_VAL_LEN_MAX 80
 
 static int parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 {
-	char val[HTML_HDR_VAL_LEN_MAX];
+	char val[HTML_HDR_VAL_LEN_MAX + 1];
 	int opt;
 
 	/*
@@ -300,92 +300,92 @@ static int parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 		switch (opt) {
 		/* Request Header Fields */
 		case HTTPHDR_AUTHORIZATION:
-			DCC_LOG1(LOG_TRACE, "Authorization: %s", val);
+			DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
 			break;
 		case HTTPHDR_CONTENT_TYPE:
 			/* hash the content type */
 			ctl->ctype = crc8(0, val, strlen(val));
-			DCC_LOG1(LOG_TRACE, "Content-Type: %s", val);
+			DCC_LOG1(LOG_INFO, "Content-Type: 0x%02x", ctl->ctype);
 			break;
 		case HTTPHDR_CONTENT_LENGTH:
-			DCC_LOG1(LOG_TRACE, "Content-Length: %s", val);
 			ctl->ctlen = atoi(val);
+			DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->ctlen);
 			break;			
 		case HTTPHDR_ACCEPT:
-			DCC_LOG1(LOG_TRACE, "Accept: %s", val);
+			DCC_LOG1(LOG_INFO, "Accept: %c ...", val[0]);
 			break;
 		case HTTPHDR_ACCEPT_CHARSET:
-			DCC_LOG1(LOG_TRACE, "Accept-Charset: %s", val);
+			DCC_LOG1(LOG_INFO, "Accept-Charset: %c ...", val[0]);
 			break;
 		case HTTPHDR_ACCEPT_ENCODING:
-			DCC_LOG1(LOG_TRACE, "Accept-Encoding: %s", val);
+			DCC_LOG1(LOG_INFO, "Accept-Encoding: %c ...", val[0]);
 			break;
 		case HTTPHDR_ACCEPT_LANGUAGE:
-			DCC_LOG1(LOG_TRACE, "Accept-Language: %s", val);
+			DCC_LOG1(LOG_INFO, "Accept-Language: %c ...", val[0]);
 			break;
 		case HTTPHDR_EXPECT:
-			DCC_LOG1(LOG_TRACE, "Expect: %s", val);
+			DCC_LOG1(LOG_INFO, "Expect: %c ...", val[0]);
 			break;
 		case HTTPHDR_HOST:
-			DCC_LOG1(LOG_TRACE, "Host: %s", val);
+			DCC_LOG1(LOG_INFO, "Host: %c ...", val[0]);
 			break;
 		case HTTPHDR_IF_MATCH:
-			DCC_LOG1(LOG_TRACE, "If-Match: %s", val);
+			DCC_LOG1(LOG_INFO, "If-Match: %c ...", val[0]);
 			break;
 		case HTTPHDR_IF_MODIFIED_SINCE:
-			DCC_LOG1(LOG_TRACE, "If-Modified-Since: %s", val);
+			DCC_LOG1(LOG_INFO, "If-Modified-Since: %c ...", val[0]);
 			break;
 		case HTTPHDR_IF_NONE_MATCH:
-			DCC_LOG1(LOG_TRACE, "If-None-Match: %s", val);
+			DCC_LOG1(LOG_INFO, "If-None-Match: %c ...", val[0]);
 			break;
 		case HTTPHDR_IF_RANGE:
-			DCC_LOG1(LOG_TRACE, "If-Range: %s", val);
+			DCC_LOG1(LOG_INFO, "If-Range: %c ...", val[0]);
 			break;
 		case HTTPHDR_IF_UNMODIFIED_SINCE:
-			DCC_LOG1(LOG_TRACE, "If-Unmodified-Since: %s", val);
+			DCC_LOG1(LOG_INFO, "If-Unmodified-Since: %c ...", val[0]);
 			break;
 		case HTTPHDR_MAX_FORWARDS:
-			DCC_LOG1(LOG_TRACE, "Max-Forwards: %s", val);
+			DCC_LOG1(LOG_INFO, "Max-Forwards: %c ...", val[0]);
 			break;
 		case HTTPHDR_PROXY_AUTHORIZATION:
-			DCC_LOG1(LOG_TRACE, "Proxy-Authorization: %s", val);
+			DCC_LOG1(LOG_INFO, "Proxy-Authorization: %c ...", val[0]);
 			break;
 		case HTTPHDR_RANGE:
-			DCC_LOG1(LOG_TRACE, "Range: %s", val);
+			DCC_LOG1(LOG_INFO, "Range: %c ...", val[0]);
 			break;
 		case HTTPHDR_REFERER:
-			DCC_LOG1(LOG_TRACE, "Referer: %s", val);
+			DCC_LOG1(LOG_INFO, "Referer: %c ...", val[0]);
 			break;
 		case HTTPHDR_TE:
-			DCC_LOG1(LOG_TRACE, "Te: %s", val);
+			DCC_LOG1(LOG_INFO, "Te: %c ...", val[0]);
 			break;
 		case HTTPHDR_USER_AGENT:
-			DCC_LOG1(LOG_TRACE, "User-Agent: %s", val);
+			DCC_LOG1(LOG_INFO, "User-Agent: %c ...", val[0]);
 			break;
 		/* Hop-by-Hop Headers */
 		case HTTPHDR_CONNECTION:
-			DCC_LOG1(LOG_TRACE, "Connection: %s", val);
+			DCC_LOG1(LOG_INFO, "Connection: %c ...", val[0]);
 			break;
 		case HTTPHDR_KEEP_ALIVE:
-			DCC_LOG1(LOG_TRACE, "keep-Alive: %s", val);
+			DCC_LOG1(LOG_INFO, "keep-Alive: %c ...", val[0]);
 			break;
 		case HTTPHDR_TRAILERS:
-			DCC_LOG1(LOG_TRACE, "Trailers: %s", val);
+			DCC_LOG1(LOG_INFO, "Trailers: %c ...", val[0]);
 			break;
 		case HTTPHDR_PROXY_AUTHENTICATE:
-			DCC_LOG1(LOG_TRACE, "Proxy-Authenticate: %s", val);
+			DCC_LOG1(LOG_INFO, "Proxy-Authenticate: %c ...", val[0]);
 			break;
 		case HTTPHDR_TRANSFER_ENCODING:
-			DCC_LOG1(LOG_TRACE, "Transfer-Encoding: %s", val);
+			DCC_LOG1(LOG_INFO, "Transfer-Encoding: %c ...", val[0]);
 			break;
 		case HTTPHDR_UPGRADE:
-			DCC_LOG1(LOG_TRACE, "Upgrade: %s", val);
+			DCC_LOG1(LOG_INFO, "Upgrade: %c ...", val[0]);
 			break;
 		case HTTPHDR_CACHE_CONTROL:
-			DCC_LOG1(LOG_TRACE, "Cache-Control: %s", val);
+			DCC_LOG1(LOG_INFO, "Cache-Control: %c ...", val[0]);
 			break;
 		default:
-			DCC_LOG2(LOG_TRACE, "opt=%02x: %s", opt, val);
+			DCC_LOG2(LOG_INFO, "opt=%02x: %c ...", opt, val[0]);
 		}
 	}
 
@@ -396,21 +396,23 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 {
 	struct tcp_pcb * tp;
 
+	DCC_LOG1(LOG_INFO, "httpd=%p.", httpd);
+
 	if ((tp = tcp_accept(httpd->tp)) == NULL) {
 		DCC_LOG(LOG_ERROR, "tcp_accept().");
 		return -1;
 	}
 
-	DCC_LOG(LOG_TRACE, "accepted.");
+	DCC_LOG1(LOG_INFO, "ctl=%p accepted.", ctl);
 
 	ctl->method = get_method(tp);
-	DCC_LOG1(LOG_TRACE, "method=0x%02x", ctl->method);
+	DCC_LOG1(LOG_INFO, "method=%d", ctl->method);
 
 	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
-	DCC_LOG1(LOG_TRACE, "uri='%s'", ctl->uri);
+	DCC_LOG1(LOG_INFO, "uri='%c ...'", ctl->uri[0]);
 
 	ctl->version = get_version(tp);
-	DCC_LOG1(LOG_TRACE, "version=%d", ctl->version);
+	DCC_LOG1(LOG_INFO, "version=%d", ctl->version);
 
 	if (parse_hdr(tp, ctl) < 0) {
 		/* Malformed request line, respond with: 400 Bad Request */
@@ -421,6 +423,8 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 
 	ctl->tp = tp;
 	ctl->httpd = httpd;
+	
+	DCC_LOG1(LOG_INFO, "version=%d", ctl->version);
 
 	return 0;
 }
@@ -475,11 +479,11 @@ int http_process(struct httpd * httpd, struct httpctl * ctl)
 {
 	switch (ctl->method) {
 	case HTTPMETHOD_GET:
-		DCC_LOG(LOG_TRACE, "GET");
+		DCC_LOG(LOG_INFO, "GET");
 		http_get(httpd, ctl);
 		break;
 	case HTTPMETHOD_POST:
-		DCC_LOG(LOG_TRACE, "POST");
+		DCC_LOG(LOG_INFO, "POST");
 		http_post(httpd, ctl);
 		break;
 	}
