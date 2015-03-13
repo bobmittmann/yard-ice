@@ -183,8 +183,8 @@ int network_config(void)
 	return 0;
 }
 
-uint32_t server_stack1[1024];
-uint32_t server_stack2[1024];
+uint32_t server_stack1[256];
+uint32_t server_stack2[256];
 
 int main(int argc, char ** argv)
 {

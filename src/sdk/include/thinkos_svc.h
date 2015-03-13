@@ -250,17 +250,25 @@ static inline int __attribute__((always_inline)) thinkos_cond_free(int cond) {
 
 static inline int __attribute__((always_inline)) 
 thinkos_cond_wait(int cond, int mutex) {
+//	uint32_t pri;
 	int ret;
+//	pri = cm3_primask_get();
+//	cm3_primask_set(2);
 	ret = THINKOS_SVC2(THINKOS_COND_WAIT, cond, mutex);
 	THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
+//	cm3_primask_set(pri);
 	return ret;
 }
 
 static inline int __attribute__((always_inline)) 
 thinkos_cond_timedwait(int cond, int mutex, unsigned int ms) {
+//	uint32_t pri;
 	int ret;
+//	pri = cm3_primask_get();
+//	cm3_primask_set(2);
 	ret = THINKOS_SVC3(THINKOS_COND_TIMEDWAIT, cond, mutex, ms);
 	THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
+//	cm3_primask_set(pri);
 	return ret;
 }
 

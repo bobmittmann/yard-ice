@@ -302,13 +302,13 @@ void thinkos_thread_create_svc(int32_t * arg)
 		return;
 	}
 
-	DCC_LOG2(LOG_INFO, "stack ptr=%08x size=%d", 
-			 init->stack_ptr, init->opt.stack_size);
-
 	sp &= 0xfffffff8; /* 64bits alignemnt */
+	DCC_LOG3(LOG_INFO, "stack ptr=%08x top=%08x size=%d", 
+			 init->stack_ptr, sp, init->opt.stack_size);
+
 	sp -= sizeof(struct thinkos_context);
 
-	DCC_LOG1(LOG_INFO, "sp=%08x", sp);
+	DCC_LOG1(LOG_TRACE, "sp=%08x", sp);
 
 	/* initialize stack */
 	{
