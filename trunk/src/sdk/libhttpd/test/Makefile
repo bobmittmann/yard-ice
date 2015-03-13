@@ -22,9 +22,9 @@
 
 PROG = httpd_test
 
-CFILES = httpd_test.c stdio.c www_root.c www_img.c
+CFILES = httpd_test.c stdio.c www_root.c www_img.c zarathustra.c 
+#nietzsche.c
 #thinkos16x16.c thinkos24x57.c
-#zarathustra.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
@@ -43,11 +43,14 @@ JTAGTOOL_ADDR = 192.168.10.50
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-#MACH = stm32f407
-#include ../../../mk/stm32f4xx.mk
+MACH = stm32f407
+include ../../../mk/stm32f4xx.mk
 
-MACH = stm32f207
-include ../../../mk/stm32f2xx.mk
+#MACH = stm32f207
+#include ../../../mk/stm32f2xx.mk
 
 %.c: %.png
+	$(TOOLS)/bin2hex.py $< > $@ 
+
+%.c: %.jpg
 	$(TOOLS)/bin2hex.py $< > $@ 
