@@ -67,6 +67,9 @@ int httpd_200_png(struct tcp_pcb * __tp);
 
 int httpd_200_jpeg(struct tcp_pcb * __tp);
 
+int http_decode_uri_query(char * buf, int len, 
+						  struct httpqry lst[], int max);
+
 #ifdef __cplusplus
 }
 #endif
