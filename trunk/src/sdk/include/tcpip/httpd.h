@@ -41,6 +41,10 @@
 #define HTTPD_URI_MAX_LEN 127
 #endif
 
+#ifndef HTTPD_QUERY_LST_MAX
+#define HTTPD_QUERY_LST_MAX 16
+#endif
+
 
 /* Mime types */
 enum {
@@ -111,18 +115,25 @@ struct httpd {
 	const struct httpdauth * auth;
 };
 
+struct httpqry {
+	char * key;
+	char * val;
+};
+
 /* 
  * HTTP connection control structure
  */
 struct httpctl {
 	struct httpd * httpd;
 	struct tcp_pcb * tp;
-	uint8_t method;
 	uint16_t version;
+	uint8_t method;
 	uint8_t auth;
 	uint8_t ctype;
 	uint8_t ctbound;
 	uint8_t ctlen;
+	uint8_t qrycnt;
+	struct httpqry qrylst[HTTPD_QUERY_LST_MAX];
 	char * usr;
 	char * pwd;
 	char uri[HTTPD_URI_MAX_LEN + 1];
@@ -132,9 +143,6 @@ typedef int (* httpd_cgi_t)(struct httpctl ctl);
 
 typedef int (* __httpd_cgi_t)(struct tcp_pcb * tp, char * opt, 
 							int content_type, int content_len); 
-/*
- */
-typedef int (* cgi_callback_t)(struct tcp_pcb * tp, int event, void * context);
 
 /* 
 	Ex:
@@ -166,21 +174,13 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl);
 
 int http_close(struct httpctl * ctl);
 
-int http_get(struct httpctl * ctl);
+int http_get(struct httpctl * ctl, const struct httpdobj * obj);
 
-int http_post(struct httpctl * ctl);
+int http_post(struct httpctl * ctl, const struct httpdobj * obj);
 
-int http_process(struct httpd * httpd, struct httpctl * ctl);
+const struct httpdobj * http_obj_lookup(struct httpctl * ctl);
 
-int httpd_dirlist(struct httpd * httpd, struct httpctl * ctl);
-
-/*
- Connect a cgi event handler to a CGI tcp connection. 
- Returns a pointer to an internall allocated memory, used for the
- CGI to keep its context... This same pointer is passed to the
- event handler. The event handler is called whenever a TCP event is raised.
- */
-void * httpd_cgi_attach(struct tcp_pcb * __tp, cgi_callback_t __callback); 
+char * http_query_lookup(struct httpctl * ctl, char * key);
 
 int httpd_contenttype(struct tcp_pcb * __tp, unsigned int __type);
 

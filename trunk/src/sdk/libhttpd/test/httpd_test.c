@@ -66,6 +66,7 @@ int httpd_server_task(struct httpd * httpd)
 {
 	struct httpctl httpctl;
 	struct httpctl * ctl = &httpctl;
+	const struct httpdobj * obj;
 
 	for (;;) {
 //		printf("Wating for connection.\n");
@@ -79,16 +80,18 @@ int httpd_server_task(struct httpd * httpd)
 //		printf("Connection accepted.\n");
 		DCC_LOG1(LOG_INFO, "<%d> Connection accepted...", 
 				 thinkos_thread_self());
-
-		switch (ctl->method) {
-		case HTTP_GET:
-			DCC_LOG(LOG_INFO, "GET");
-			http_get(ctl);
-			break;
-		case HTTP_POST:
-			DCC_LOG(LOG_TRACE, "POST");
-//			http_post(httpd, ctl);
-			break;
+	
+		if ((obj = http_obj_lookup(ctl)) != NULL) {
+			switch (ctl->method) {
+			case HTTP_GET:
+				DCC_LOG1(LOG_TRACE, "GET '%s'", obj->oid);
+				http_get(ctl, obj);
+				break;
+			case HTTP_POST:
+				DCC_LOG1(LOG_TRACE, "POST '%s'", obj->oid);
+				http_post(ctl, obj);
+				break;
+			}
 		}
 
 		http_close(ctl);
@@ -130,8 +133,7 @@ int network_config(void)
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
-//	if ((env = getenv("IPCFG")) == NULL) {
-	if (1) {
+	if ((env = getenv("IPCFG")) == NULL) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
 		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");
