@@ -544,7 +544,7 @@ struct httpdobj www_img[] = {
 		.len = sizeof(thinkos16x16_png), .ptr = thinkos16x16_png },
 	{ .oid = "thinkos57x24.png", .typ = OBJ_STATIC_PNG, .lvl = 255, 
 		.len = sizeof(thinkos57x24_png), .ptr = thinkos57x24_png },
-	{ .oid = "nietzsche.jpg", .typ = OBJ_STATIC_PNG, .lvl = 255, 
+	{ .oid = "nietzsche.jpg", .typ = OBJ_STATIC_JPEG, .lvl = 255, 
 		.len = sizeof(nietzsche_jpg), .ptr = nietzsche_jpg },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };

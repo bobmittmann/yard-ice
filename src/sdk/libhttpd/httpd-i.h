@@ -65,6 +65,8 @@ int httpd_200_css(struct tcp_pcb * __tp);
 
 int httpd_200_png(struct tcp_pcb * __tp); 
 
+int httpd_200_jpeg(struct tcp_pcb * __tp);
+
 #ifdef __cplusplus
 }
 #endif
