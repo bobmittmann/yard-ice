@@ -108,6 +108,8 @@ int http_get(struct httpctl * ctl)
 	case OBJ_STATIC_GIF:
 		break;
 	case OBJ_STATIC_JPEG:
+		httpd_200_jpeg(ctl->tp); 
+		ret = tcp_send(ctl->tp, obj->ptr, obj->len, 0);
 		break;
 	case OBJ_STATIC_PNG:
 		httpd_200_png(ctl->tp); 

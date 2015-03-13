@@ -41,6 +41,10 @@ const char http_hdr_200_png[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
 	"Content-type: image/png\r\n\r\n";
 
+const char http_hdr_200_jpeg[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Content-type: image/jpeg\r\n\r\n";
+
 /* name of various mime types we support */
 const char * const mime_name_lut[] = {
 	"application/javascript\r\n\r\n"
@@ -126,6 +130,21 @@ int httpd_200_png(struct tcp_pcb * __tp)
 
 	hdr = (char *)http_hdr_200_png;
 	len = sizeof(http_hdr_200_png) - 1;
+
+	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
+		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
+
+	return ret;
+}
+
+int httpd_200_jpeg(struct tcp_pcb * __tp) 
+{
+	char * hdr;
+	int len;
+	int ret;
+
+	hdr = (char *)http_hdr_200_jpeg;
+	len = sizeof(http_hdr_200_jpeg) - 1;
 
 	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
 		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
