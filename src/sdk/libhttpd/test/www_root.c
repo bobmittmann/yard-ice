@@ -34,9 +34,10 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 		"\"bitstream vera sans\",sans-serif; margin: 10px 10px 25px 10px; }\r\n"
 	"a { color: #779; text-decoration:none; }\r\n"
 	"a:hover { color:#335; text-decoration:none; }\r\n"
-	"p { color: #111; text-align: justify; margin: 10px 0px 25px 0px; }\r\n"
-	"h1 { font: 1.0em; text-align:center; margin: 10px 0px 50px 0px; }\r\n"
-	"h2 { font: 1.0em; text-align:left;  margin: 10px 0px 50px 0px; }\r\n"
+	"p { color: #111; text-align: justify; margin: 10px 0px 20px 0px; }\r\n"
+	"ul { margin: 10px 0px 20px 0px; }\r\n"
+	"h1 { font: 0.9em; text-align:center; margin: 10px 0px 10px 0px; }\r\n"
+	"h2 { font: 0.9em; text-align:center;  margin: 10px 0px 25px 0px; }\r\n"
 	"hr { background-color:#114; color:#112; width: 100%; height: 1px; " 
 		"margin: 10px 0px 5px 0px; }\r\n"
 	"table { border-collapse: collapse; }\r\n"
@@ -69,7 +70,7 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	" - Cortex-M Operating System - "\
 	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i>"\
 	"<br>&copy; Copyrigth 2013-2015, Bob Mittmann<br>"\
-	"</body></html>\r\n"
+	"</body>\r\n</html>\r\n"
 
 const char footer_html[] = HTML_FOOTER;
 
@@ -107,18 +108,20 @@ const char footer_html[] = HTML_FOOTER;
 
 const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<title>ThinkOS HTTP Server Demo</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS STYLE_LOGIN_CSS "</head><body>\r\n"
+	META_HTTP META_COPY LINK_ICON LINK_CSS STYLE_LOGIN_CSS 
+	"</head>\r\n<body>\r\n"
 	"<h1>ThinkOS Web Server Demo</h1>\r\n"
 	"<p>Welcome to the <b>ThinkOS</b> web server demo initial page.</p>\r\n"
-	"<ul>"
-	"<li><a href=\"test1.cgi\">Dynamic page 1</a></li>"
-	"<li><a href=\"test2.cgi\">Dynamic page 2</a></li>"
+	"<ul>\r\n"
+	"<li><a href=\"test1.cgi\">Dynamic page 1</a></li>\r\n"
+	"<li><a href=\"test2.cgi\">Dynamic page 2</a></li>\r\n"
+	"<li><a href=\"zarathustra.cgi\">Thus Spake Zarathustra</a></li>\r\n"
 	"</ul>\r\n"
 	HTML_FOOTER;
 
 const char test1_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<title>ThinkOS Dynamic Page 1</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS STYLE_LOGIN_CSS "</head><body>\r\n"
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
 	"<h1>ThinkOS Dynamic Page 1</h1>\r\n";
 
 int test1_cgi(struct httpctl * ctl)
@@ -135,7 +138,7 @@ int test1_cgi(struct httpctl * ctl)
 
 const char test2_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<title>ThinkOS Dynamic Page 2</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS STYLE_LOGIN_CSS "</head><body>\r\n"
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
 	"<h1>ThinkOS Dynamic Page 2</h1>\r\n";
 
 int test2_cgi(struct httpctl * ctl)
@@ -150,6 +153,32 @@ int test2_cgi(struct httpctl * ctl)
 	return tcp_send(ctl->tp, footer_html, sizeof(footer_html), 0);
 }
 
+const char zarathustra_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>Thus Spake Zarathustra</title>\r\n" 
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
+	"<h1>Thus Spake Zarathustra</h1>\r\n"
+	"<h2>by Friedrich Wilhelm Nietzsche</h2>\r\n"
+	"<img src=\"img/nietzsche.jpg\" alt=\"Nietzsche\" align=\"middle\">"
+	"<p>\r\n";
+
+const char zarathustra_foot_html[] = "</p>\r\n";
+
+extern const char const * zarathustra_txt[];
+extern const uint16_t zarathustra_len[];
+
+int zarathustra_cgi(struct httpctl * ctl)
+{
+	const char * txt;
+	int i;
+
+	tcp_send(ctl->tp, zarathustra_hdr_html, sizeof(zarathustra_hdr_html), 0);
+	for (i = 0; (txt = zarathustra_txt[i]) != NULL; ++i) { 
+		tcp_send(ctl->tp, txt, zarathustra_len[i], 0);
+	}
+	tcp_send(ctl->tp, zarathustra_foot_html, sizeof(zarathustra_foot_html), 0);
+	return tcp_send(ctl->tp, footer_html, sizeof(footer_html), 0);
+}
+
 
 struct httpdobj www_root[] = {
 	{ .oid = "style.css", .typ = OBJ_STATIC_CSS, .lvl = 255, 
@@ -160,6 +189,8 @@ struct httpdobj www_root[] = {
 		.len = 0, .ptr = test1_cgi },
 	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = test2_cgi },
+	{ .oid = "zarathustra.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
+		.len = 0, .ptr = zarathustra_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

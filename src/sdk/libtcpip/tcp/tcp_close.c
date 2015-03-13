@@ -108,8 +108,7 @@ int tcp_close(struct tcp_pcb * __tp)
 	/* ACK now */
 	__tp->t_flags |= TF_ACKNOW;
 	/* schedule output */
-	__tcp__.need_output = 1;
-	__os_cond_signal(__tcp__.output_cond);
+	tcp_output_sched(__tp);
 
 	tcpip_net_unlock();
 	return 0;

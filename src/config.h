@@ -111,6 +111,8 @@
 #define  ENABLE_NET_TCP_CHECKSUM 0
 #define  ENABLE_NET_UDP_CHECKSUM 0
 
+#define NET_TCP_PCB_ACTIVE_MAX 16
+
 #endif /* __CONFIG_H__ */
 
 

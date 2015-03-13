@@ -46,6 +46,14 @@
 #define ENABLE_NET_TCP_TIMEWAIT 1
 #endif
 
+#ifndef NET_TCP_PCB_ACTIVE_MAX
+#define NET_TCP_PCB_ACTIVE_MAX 8
+#endif
+
+#ifndef NET_TCP_PCB_LISTEN_MAX
+#define NET_TCP_PCB_LISTEN_MAX 2
+#endif
+
 #include <stdint.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
@@ -95,7 +103,7 @@
 #define TF_IDLE         0x08
 #define TF_RXMT         0x10
 #define TF_NODELAY      0x20
-//#define TF_ERROR        0x10
+#define TF_NEEDOUTPUT   0x40
 #define TF_NONBLOCK     0x80
 
 /* useful macros */
@@ -225,6 +233,8 @@ extern const uint8_t tcp_keepintvl[];
 extern const uint8_t tcp_rxmtintvl[];
 
 struct tcp_system {
+	/* list of free PCBs */
+	struct pcb_list free;
 	/* list of closed PCBs */
 	struct pcb_list closed;
 	/* list of listen state PCBs */
@@ -235,8 +245,14 @@ struct tcp_system {
 	uint16_t iss;
 	/* used to generate ephemeral port numbers */
 	uint16_t port_seq;
-	volatile uint8_t need_output;
-	int8_t output_cond;
+
+	struct {
+		int8_t cond;
+		volatile uint16_t head;
+		volatile uint16_t tail;
+		struct tcp_pcb * tp[NET_TCP_PCB_ACTIVE_MAX];
+	} out;
+
 #if ENABLE_TCP_PROTO_STAT
 	struct proto_stat stat;
 #endif

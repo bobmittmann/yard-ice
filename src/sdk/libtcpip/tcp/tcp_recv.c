@@ -102,8 +102,7 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 
 		DCC_LOG(LOG_INFO, "empty queue, call tcp_out.");
 
-		__tcp__.need_output = 1;
-		__os_cond_signal(__tcp__.output_cond);
+		tcp_output_sched(__tp);
 	}
 
 	tcpip_net_unlock();

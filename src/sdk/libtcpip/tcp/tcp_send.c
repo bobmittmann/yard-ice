@@ -99,8 +99,7 @@ again:
 			__tp->t_flags |= TF_ACKNOW;
 			
 			DCC_LOG(LOG_INFO, "output request.");
-			__tcp__.need_output = 1;
-			__os_cond_signal(__tcp__.output_cond);
+			tcp_output_sched(__tp);
 		
 			DCC_LOG(LOG_INFO, "waiting for buffer space.");
 			__os_cond_wait(__tp->t_cond, net_mutex);
@@ -139,8 +138,7 @@ again:
 		if ((__flags & TCP_SEND_NOWAIT) || 
 			((__tp->snd_q.len - (int)__tp->snd_q.offs) >= __tp->t_maxseg)) {
 			DCC_LOG(LOG_INFO, "output request.");
-			__tcp__.need_output = 1;
-			__os_cond_signal(__tcp__.output_cond);
+			tcp_output_sched(__tp);
 //			if (tcp_output(__tp) < 0) {
 				/* if the reason to fail was an arp failure
 				   try query an address pending for resolution ... */

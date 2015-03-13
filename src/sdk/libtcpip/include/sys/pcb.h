@@ -82,6 +82,7 @@ int pcb_enum(int (* __callback)(struct pcb *, void *),
 			   void * __parm, struct pcb_list * __list);
 
 void pcb_insert(struct pcb * __inp, struct pcb_list * __list);
+struct pcb * pcb_remove_head(struct pcb_list * __list);
 int pcb_remove(struct pcb * __inp, struct pcb_list * __list);
 int pcb_release(struct pcb * __inp, struct pcb_list * __list);
 int pcb_move(struct pcb * __inp, struct pcb_list * __from, struct pcb_list * __to);

@@ -131,6 +131,32 @@ void pcb_insert(struct pcb * __inp, struct pcb_list * __list)
 	__insert(__list, __link(__inp));
 }
 
+
+/*
+ * Remove the first pcb from a list
+ */
+struct pcb * pcb_remove_head(struct pcb_list * __list)
+{
+	struct pcb_link * m;
+	struct pcb_link * q;
+	struct pcb_link * p;
+
+	q = (struct pcb_link *)&__list->first;
+
+	if ((p = q->next) == NULL) {
+		DCC_LOG(LOG_WARNING, "list empty!");
+		return NULL;
+	} 
+
+	m = p->next;
+	q->next = m;
+
+	if (__list->last == p)
+		__list->last = q;
+
+	return &p->pcb;
+}
+
 /*
  * Remove a pcb from a list
  */

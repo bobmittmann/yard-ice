@@ -189,11 +189,26 @@ const uint8_t tcp_keepintvl[13] = {
  * rate of about 2.5 secs.
  */
 
-int tcp_fast_tmr(void)
+/* enqueue the PCB for output processing */
+static void tcp_output_enqueue(struct tcp_pcb * __tp)
+{
+	int i = __tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX;
+	__tcp__.out.tp[i] = __tp;
+}
+
+/* enqueue and schedule the PCB for output processing */
+void tcp_output_sched(struct tcp_pcb * __tp)
+{
+	int i = __tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX;
+	__tcp__.out.tp[i] = __tp;
+	__os_cond_signal(__tcp__.out.cond);
+}
+
+
+static void tcp_fast_tmr(void)
 {
 	struct tcp_pcb * tp;
 	struct pcb_link * q;
-	int n = 0;
 
 //	DCC_LOG2(LOG_TRACE, "timestamp=%d", tcp_rel_timestamp());
 
@@ -211,18 +226,15 @@ int tcp_fast_tmr(void)
 			DCC_LOG1(LOG_INFO, "%4u delayed ack", tcp_rel_timestamp());
 			tp->t_flags &= ~TF_DELACK;
 			tp->t_flags |= TF_ACKNOW;
-			n++;
+			tcp_output_enqueue(tp);
 		}
 	}
-
-	return n;
 }
 
-int tcp_rxmt_tmr(void)
+static void tcp_rxmt_tmr(void)
 {
 	struct tcp_pcb * tp;
 	struct pcb_link * q;
-	int n = 0;
 
 	/* Update the Initial Segment Sequence */
 //	__tcp__.iss++;
@@ -254,7 +266,7 @@ int tcp_rxmt_tmr(void)
 				tp->t_rxmt_tmr = tcp_rxmtintvl[tp->t_rxmt_cnt];
 				tp->snd_off = 0;
 				tp->t_flags &= ~TF_SENTFIN;
-				n++;
+				tcp_output_enqueue(tp);
 
 				(void)snd_una;
 				(void)snd_nxt;
@@ -262,8 +274,6 @@ int tcp_rxmt_tmr(void)
 			}
 		}
 	}
-
-	return n;
 }
 
 void tcp_idle_tmr(void)
@@ -339,17 +349,9 @@ void tcp_idle_tmr(void)
 	}
 }
 
-void tcp_output_sched(struct tcp_pcb * __tp)
-{
-	/* schedule output */
-	__tcp__.need_output = 1;
-	__os_cond_signal(__tcp__.output_cond);
-}
-
 int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 {
 	struct tcp_pcb * tp;
-	struct pcb_link * q;
 	int rxmt;
 	int idle;
 	int ret;
@@ -374,36 +376,35 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 	rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
 	idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;
 	for (;;) {
-		if (__tcp__.need_output) {
-			__tcp__.need_output = 0;
-			q = (struct pcb_link *)&__tcp__.active.first;
-			while ((q = q->next)) {
-				tp = (struct tcp_pcb *)&q->pcb;
-				if ((ret = tcp_output(tp)) == -EAGAIN) {
-					DCC_LOG(LOG_TRACE, "tcp_output(tp)) == -EAGAIN");
-					/* if the reason to fail was an arp failure
-					   try query an address pending for resolution ... */
-					arp_query_pending();
-				}
-			}
-			continue;
-		}
 
-		ret = __os_cond_timedwait(__tcp__.output_cond, net_mutex, 
+		/* process PCBs pending for output */
+		uint16_t tail = __tcp__.out.tail;
+		uint16_t head = __tcp__.out.head;
+		while (tail != head) {
+			int i = tail++ % NET_TCP_PCB_ACTIVE_MAX;
+
+			tp = __tcp__.out.tp[i];
+			if ((ret = tcp_output(tp)) == -EAGAIN) {
+				DCC_LOG(LOG_TRACE, "tcp_output(tp)) == -EAGAIN");
+				/* if the reason to fail was an arp failure
+				   try query an address pending for resolution ... */
+				arp_query_pending();
+				break;
+			}
+		}
+		__tcp__.out.tail = tail;
+
+		ret = __os_cond_timedwait(__tcp__.out.cond, net_mutex, 
 									 TCP_FAST_TMR_MS);
 		if (ret == __OS_TIMEOUT) {
 			DCC_LOG(LOG_MSG, "__os_cond_timedwait() timeout!");
 
 			/* timeout */
-			if (tcp_fast_tmr() != 0) {
-				__tcp__.need_output = 1;
-			}
+			tcp_fast_tmr();
 
 			if (--rxmt == 0) { 
 				rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
-				if (tcp_rxmt_tmr() != 0) {
-					__tcp__.need_output = 1;
-				}
+				tcp_rxmt_tmr();
 			}
 
 			if (--idle == 0) { 

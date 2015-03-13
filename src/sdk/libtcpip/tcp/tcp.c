@@ -28,6 +28,9 @@
 
 #include <string.h>
 
+const uint16_t tcp_pcb_active_max = NET_TCP_PCB_ACTIVE_MAX;
+const uint16_t tcp_pcb_listen_max = NET_TCP_PCB_LISTEN_MAX;
+
 #ifndef TCP_DEFAULT_RTT
 #define TCP_DEFAULT_RTT     47
 #endif
@@ -79,6 +82,7 @@ const uint16_t tcp_maxmss = TCP_MAX_MSS;
 #define TCP_MAX_SYN_BACKLOG 16
 #endif
 
+
 const uint16_t tcp_max_syn_backlog = TCP_MAX_SYN_BACKLOG;
 
 struct tcp_system __tcp__ = {
@@ -119,21 +123,22 @@ const char * const __tcp_state[11] = {
 struct tcp_pcb * tcp_pcb_new(struct pcb_list * __list)
 {
 	struct tcp_pcb * tp;
-
+#if 0
 	/* get a new PCB */
 	if ((tp = (struct tcp_pcb *)pcb_alloc()) == NULL) {
+#endif
+	if ((tp = (struct tcp_pcb *)pcb_remove_head(&__tcp__.free)) == NULL) {
 		DCC_LOG(LOG_WARNING, "could not allocate a PCB");
 		return NULL;
 	}
 
-	/* ensure the mem is clean */
-	memset(tp, 0, sizeof(struct tcp_pcb));
-
 	pcb_insert((struct pcb *)tp, __list);
 
+	/* ensure the mem is clean */
+	memset(tp, 0, sizeof(struct tcp_pcb));
 	tp->t_cond = -1;
 
-	DCC_LOG1(LOG_INFO, "<%05x>", (int)tp);
+	DCC_LOG1(LOG_TRACE, "<%05x>", (int)tp);
 
 	return tp;
 }
@@ -166,28 +171,28 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 		/* listening sockets do not have receiving or trasmmit queues,
 		so we don't release this structures */
 		DCC_LOG1(LOG_TRACE, "<%05x> release LISTEN", (int)tp);
-		return pcb_release((struct pcb *)tp, &__tcp__.listen);
-	}
-
-	if (tp->t_state == TCPS_CLOSED) {
+//		return pcb_release((struct pcb *)tp, &__tcp__.listen);
+		return pcb_move((struct pcb *)tp, &__tcp__.listen, &__tcp__.free);
+	} else  if (tp->t_state == TCPS_CLOSED) {
 		DCC_LOG1(LOG_TRACE, "<%05x> release CLOSED", (int)tp);
 		/* connections in the close state had their buffers
 		and conditional variables released already,
 		just release the control block. */
-		return pcb_release((struct pcb *)tp, &__tcp__.closed);
+//		return pcb_release((struct pcb *)tp, &__tcp__.closed);
+		return pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.free);
+	} else {
+		DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
+		/* release all the control structures */
+
+		mbuf_queue_free(&tp->rcv_q);
+		mbuf_queue_free(&tp->snd_q);
+		__os_cond_free(tp->t_cond);
+
+//		return pcb_release((struct pcb *)tp, &__tcp__.active);
+		return pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.free);
 	}
 
-	DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
-
-	/* release all the control structures */
-
-	mbuf_queue_free(&tp->rcv_q);
-
-	mbuf_queue_free(&tp->snd_q);
-
-	__os_cond_free(tp->t_cond);
-
-	return pcb_release((struct pcb *)tp, &__tcp__.active);
+	return 0;
 } 
 
 struct tcp_pcb * tcp_alloc(void)
@@ -198,6 +203,8 @@ struct tcp_pcb * tcp_alloc(void)
 
 	if ((tp = tcp_pcb_new(&__tcp__.closed)) != NULL)
 		tp->t_state = TCPS_CLOSED;
+
+	//	pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.listen);
 
 	DCC_LOG1(LOG_TRACE, "<%05x>", (int)tp);
 
@@ -246,17 +253,35 @@ const struct thinkos_thread_info tcp_tmr_inf = {
 	.tag = "TCP_TMR"
 };
 
+struct tcp_pcb_link {
+	struct pcb_link * next;
+	struct tcp_pcb pcb;
+};
+
+struct tcp_pcb_link tcp_pcb_pool[NET_TCP_PCB_ACTIVE_MAX];
+
 void tcp_init(void)
 {
+	int i;
 	DCC_LOG(LOG_TRACE, "initializing TCP subsystem."); 
 
+	pcb_list_init(&__tcp__.free);
+	for (i = 0; i < NET_TCP_PCB_ACTIVE_MAX; ++i) {
+		struct tcp_pcb * tp = &tcp_pcb_pool[i].pcb;
+		pcb_insert((struct pcb *)tp, &__tcp__.free);
+	}
 	pcb_list_init(&__tcp__.closed);
 	pcb_list_init(&__tcp__.listen);
 	pcb_list_init(&__tcp__.active);
 
-	__tcp__.output_cond = __os_cond_alloc();
+	__tcp__.out.cond = __os_cond_alloc();
+	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
 
-	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.output_cond);
+	__tcp__.out.head = 0;
+	__tcp__.out.tail = 0;
+
+	DCC_LOG1(LOG_TRACE, "max active TCP PCBs : %d ", tcp_pcb_active_max);
+	DCC_LOG1(LOG_TRACE, "max listen TCP PCBs : %d ", tcp_pcb_listen_max);
 
 #if 0
 	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 
