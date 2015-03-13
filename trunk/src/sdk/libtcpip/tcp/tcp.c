@@ -38,13 +38,13 @@ const uint16_t tcp_pcb_listen_max = NET_TCP_PCB_LISTEN_MAX;
 const uint16_t tcp_defrtt = TCP_DEFAULT_RTT;
 
 #ifndef TCP_MAX_RCV_QUEUE
-#define TCP_MAX_RCV_QUEUE   512
+#define TCP_MAX_RCV_QUEUE   (1460 * 2)
 #endif
 
 const uint16_t tcp_maxrcv = TCP_MAX_RCV_QUEUE;
 
 #ifndef TCP_MAX_SND_QUEUE 
-#define TCP_MAX_SND_QUEUE   512
+#define TCP_MAX_SND_QUEUE   (1460 * 2)
 #endif
 
 const uint16_t tcp_maxsnd = TCP_MAX_SND_QUEUE;
@@ -63,8 +63,8 @@ const uint16_t tcp_maxwin = TCP_MAX_WIN;
 
 
 #ifndef TCP_DEFAULT_MSS 
-#if TCP_MAX_RCV_QUEUE > 1024
-#define TCP_DEFAULT_MSS 1024
+#if TCP_MAX_RCV_QUEUE > 1460
+#define TCP_DEFAULT_MSS 1460
 #else
 #define TCP_DEFAULT_MSS (TCP_MAX_RCV_QUEUE / 2)
 #endif
@@ -73,7 +73,7 @@ const uint16_t tcp_maxwin = TCP_MAX_WIN;
 const uint16_t tcp_defmss = TCP_DEFAULT_MSS;
 
 #ifndef TCP_MAX_MSS 
-#define TCP_MAX_MSS (TCP_MAX_SND_QUEUE / 2)
+#define TCP_MAX_MSS TCP_MAX_SND_QUEUE
 #endif
 
 const uint16_t tcp_maxmss = TCP_MAX_MSS;
@@ -152,6 +152,11 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 		return -1;
 	}
 #endif
+	if (tp->t_flags & TF_NEEDOUTPUT) {
+		DCC_LOG(LOG_WARNING, "TF_NEEDOUTPUT set?????");
+		tp->t_flags &= ~TF_NEEDOUTPUT;
+		tcp_output_dequeue(tp);
+	}
 
 	DCC_LOG2(LOG_INFO, "<%05x> state=%s", (int)tp, __tcp_state[tp->t_state]);
 
@@ -274,11 +279,10 @@ void tcp_init(void)
 	pcb_list_init(&__tcp__.listen);
 	pcb_list_init(&__tcp__.active);
 
-	__tcp__.out.cond = __os_cond_alloc();
-	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
-
 	__tcp__.out.head = 0;
 	__tcp__.out.tail = 0;
+	__tcp__.out.cond = __os_cond_alloc();
+	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
 
 	DCC_LOG1(LOG_TRACE, "max active TCP PCBs : %d ", tcp_pcb_active_max);
 	DCC_LOG1(LOG_TRACE, "max listen TCP PCBs : %d ", tcp_pcb_listen_max);

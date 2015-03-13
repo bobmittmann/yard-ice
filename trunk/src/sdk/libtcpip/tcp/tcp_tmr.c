@@ -29,6 +29,8 @@
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
 
+#include <stdlib.h>
+
 #ifndef TCP_FAST_TMR_MS
 #define TCP_FAST_TMR_MS 100
 #endif
@@ -192,18 +194,43 @@ const uint8_t tcp_keepintvl[13] = {
 /* enqueue the PCB for output processing */
 static void tcp_output_enqueue(struct tcp_pcb * __tp)
 {
-	int i = __tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX;
-	__tcp__.out.tp[i] = __tp;
+	if (!(__tp->t_flags & TF_NEEDOUTPUT)) {
+		DCC_LOG1(LOG_MSG, "<%05x>", (int)__tp);
+		__tcp__.out.tp[__tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX] = __tp;
+		__tp->t_flags |= TF_NEEDOUTPUT;
+	}
 }
 
 /* enqueue and schedule the PCB for output processing */
 void tcp_output_sched(struct tcp_pcb * __tp)
 {
-	int i = __tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX;
-	__tcp__.out.tp[i] = __tp;
-	__os_cond_signal(__tcp__.out.cond);
+	if ((__tp->t_flags & TF_NEEDOUTPUT) == 0) {
+		DCC_LOG2(LOG_MSG, "<%05x> head=%d", (int)__tp, __tcp__.out.head);
+		__tcp__.out.tp[__tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX] = __tp;
+		__tp->t_flags |= TF_NEEDOUTPUT;
+		__os_cond_signal(__tcp__.out.cond);
+	}
 }
 
+void tcp_output_dequeue(struct tcp_pcb * __tp)
+{
+	/* remove PCB from the output processing fifo */
+	uint16_t tail = __tcp__.out.tail;
+	uint16_t head = __tcp__.out.head;
+	uint16_t mark;
+
+	for (mark = tail; mark != head; ++mark) { 
+		if (__tp == __tcp__.out.tp[mark % NET_TCP_PCB_ACTIVE_MAX]) {
+			__tcp__.out.tail = tail + 1;
+			while (tail != mark) {
+				int i = tail++ % NET_TCP_PCB_ACTIVE_MAX;
+				int j = tail % NET_TCP_PCB_ACTIVE_MAX;
+				__tcp__.out.tp[j] = __tcp__.out.tp[i];
+			}
+			return;
+		}
+	}
+}
 
 static void tcp_fast_tmr(void)
 {
@@ -349,9 +376,8 @@ void tcp_idle_tmr(void)
 	}
 }
 
-int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
+int __attribute__((noreturn)) tcp_tmr_task(void * p)
 {
-	struct tcp_pcb * tp;
 	int rxmt;
 	int idle;
 	int ret;
@@ -376,14 +402,30 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 	rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
 	idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;
 	for (;;) {
-
 		/* process PCBs pending for output */
-		uint16_t tail = __tcp__.out.tail;
-		uint16_t head = __tcp__.out.head;
-		while (tail != head) {
-			int i = tail++ % NET_TCP_PCB_ACTIVE_MAX;
+		struct tcp_pcb * tp;
+		uint16_t head;
+		uint16_t tail;
 
+		head = __tcp__.out.head;
+	//	DCC_LOG1(LOG_TRACE, "head=%d", head);
+		for (tail = __tcp__.out.tail; tail != head; ++tail) {
+			int i = tail % NET_TCP_PCB_ACTIVE_MAX;
+			
 			tp = __tcp__.out.tp[i];
+
+			DCC_LOG2(LOG_MSG, "<%05x> tail=%d", (int)tp, tail);
+
+			if (tp == NULL) {
+				DCC_LOG2(LOG_PANIC, "Null pointer, tail=%d i=%d!!!", tail, i);
+				continue;
+			}
+			
+			if (!(tp->t_flags & TF_NEEDOUTPUT)) {
+				DCC_LOG(LOG_PANIC, "TF_NEEDOUTPUT not set!!!");
+				continue;
+			}
+
 			if ((ret = tcp_output(tp)) == -EAGAIN) {
 				DCC_LOG(LOG_TRACE, "tcp_output(tp)) == -EAGAIN");
 				/* if the reason to fail was an arp failure
@@ -391,6 +433,17 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 				arp_query_pending();
 				break;
 			}
+
+			__tcp__.out.tp[i] = NULL;
+
+			tp->t_flags &= ~TF_NEEDOUTPUT;
+#if (!ENABLE_NET_TCP_TIMEWAIT)
+			/* force closing TIME_WAIT sockets to save resources */
+			if (tp->t_state == TCPS_TIME_WAIT) {
+				DCC_LOG1(LOG_INFO, "<%05x> closing TIME_WAIT...", (int)tp);
+				tcp_pcb_free(tp);
+			}
+#endif
 		}
 		__tcp__.out.tail = tail;
 
@@ -412,7 +465,8 @@ int __attribute__((noreturn, naked)) tcp_tmr_task(void * p)
 				tcp_idle_tmr();
 			}
 		} else if (ret < 0)  {
-			DCC_LOG1(LOG_WARNING, "__os_cond_timedwait() failed: %d.", ret);
+			DCC_LOG1(LOG_PANIC, "__os_cond_timedwait() failed: %d.", ret);
+			abort();
 		}
 	}
 }

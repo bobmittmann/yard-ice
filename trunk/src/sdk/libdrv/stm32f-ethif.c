@@ -96,7 +96,7 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 			if (st.own == 0) {
 				break;
 			}
-			DCC_LOG(LOG_INFO, "wait....");
+			DCC_LOG(LOG_MSG, "wait....");
 
 			thinkos_sem_wait(drv->rx.sem);
 
@@ -189,6 +189,8 @@ void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 const struct thinkos_thread_info stm32f_ethif_inf = {
 	.tag = "STM_ETH"
 };
+
+uint32_t ethif_stack[128];
 
 int stm32f_ethif_init(struct ifnet * __if)
 {
@@ -291,10 +293,10 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 
-						  drv->stack, 
+						  ethif_stack, 
 						  THINKOS_OPT_PRIORITY(32) |
 						  THINKOS_OPT_ID(32) | 
-						  THINKOS_OPT_STACK_SIZE(STM32F_ETH_INPUT_STACK_SIZE), 
+						  THINKOS_OPT_STACK_SIZE(sizeof(ethif_stack)), 
 						  &stm32f_ethif_inf);
 
 	/* set the interrupt priority */
@@ -465,10 +467,8 @@ struct stm32f_eth_drv stm32f_eth_drv;
 void stm32f_eth_isr(void)
 {
 	struct stm32f_eth_drv * drv = &stm32f_eth_drv;
-//	struct ifnet * ifn = drv->ifn;
-	struct stm32f_eth * eth = drv->eth;
+	struct stm32f_eth * eth = STM32F_ETH;
 	uint32_t dmasr;
-//	uint32_t rps;
 
 //	DCC_LOG1(LOG_TRACE, "if=0x%p", ifn);
 
@@ -481,22 +481,22 @@ void stm32f_eth_isr(void)
 		DCC_LOG(LOG_INFO, "DMA RS");
 		/* disable DMA receive interrupts */
 		eth->dmaier &= ~ETH_RIE;
-		/* clear RS bit */
-	//	eth->dmasr = ETH_RS;
-		__thinkos_sem_post(drv->rx.sem);
+		thinkos_sem_post_i(drv->rx.sem);
 	}
 
 	if (dmasr & ETH_TS) {
 		DCC_LOG(LOG_MSG, "DMA TS, stop transmission...");
 		eth->dmaomr &= ~ETH_ST;
-		__thinkos_flag_give(drv->tx.flag);
+		thinkos_flag_give_i(drv->tx.flag);
 	}
 
-	if (dmasr & ETH_TBUS)
-		DCC_LOG(LOG_MSG, "TBUS");
+	if (dmasr & ETH_TBUS) {
+		DCC_LOG(LOG_INFO, "TBUS");
+	}
 
 	if (dmasr & ETH_AIS) {
 		if (dmasr & ETH_RBUS) {
+			DCC_LOG(LOG_INFO, "RBUS");
 			/* RBUS: Receive buffer unavailable status
 			   This bit indicates that the next descriptor in the receive list 
 			   is owned by the host and cannot be acquired by the DMA. Receive 

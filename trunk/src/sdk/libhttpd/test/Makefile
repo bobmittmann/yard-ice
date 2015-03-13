@@ -38,16 +38,17 @@ LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty httpd
 
 INCPATH = $(SDK)/include  
 
-JTAGTOOL_ADDR = 192.168.10.50
+#JTAGTOOL_ADDR = 192.168.10.50
+JTAGTOOL_ADDR = 192.168.0.50
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-MACH = stm32f407
-include ../../../mk/stm32f4xx.mk
+#MACH = stm32f407
+#include ../../../mk/stm32f4xx.mk
 
-#MACH = stm32f207
-#include ../../../mk/stm32f2xx.mk
+MACH = stm32f207
+include ../../../mk/stm32f2xx.mk
 
 %.c: %.png
 	$(TOOLS)/bin2hex.py $< > $@ 

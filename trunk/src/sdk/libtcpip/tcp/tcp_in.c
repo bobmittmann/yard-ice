@@ -79,7 +79,7 @@ static void tcp_parse_options(struct tcp_pcb * tp, struct tcphdr * th,
 					   the initialy configured one. */
 					if (val < tp->t_maxseg)
 						tp->t_maxseg = val;
-					DCC_LOG1(LOG_INFO, "option MSS: %d", val);
+					DCC_LOG1(LOG_TRACE, "option MSS: %d", val);
 				}
 				break;
 			case TCPOPT_WINDOW:
@@ -157,6 +157,8 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 
 	if (tp->t_maxseg > tcp_maxmss)
 		tp->t_maxseg = tcp_maxmss;
+
+	DCC_LOG1(LOG_TRACE, "tp->t_maxseg=%d", tp->t_maxseg);			
 
 	/* TODO: calculate the amount of space in receive window */
 //	tp->rcv_wnd = MIN(tcp_maxrcv, tcp_maxwin);

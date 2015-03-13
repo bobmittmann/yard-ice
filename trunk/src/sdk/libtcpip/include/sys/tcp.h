@@ -103,8 +103,8 @@
 #define TF_IDLE         0x08
 #define TF_RXMT         0x10
 #define TF_NODELAY      0x20
-#define TF_NEEDOUTPUT   0x40
-#define TF_NONBLOCK     0x80
+#define TF_NONBLOCK     0x40
+#define TF_NEEDOUTPUT   0x80
 
 /* useful macros */
 #define SEQ_LT(A, B) ((int32_t)((A) - (B)) < 0)
@@ -247,10 +247,10 @@ struct tcp_system {
 	uint16_t port_seq;
 
 	struct {
-		int8_t cond;
+		int cond;
 		volatile uint16_t head;
 		volatile uint16_t tail;
-		struct tcp_pcb * tp[NET_TCP_PCB_ACTIVE_MAX];
+		struct tcp_pcb * volatile tp[NET_TCP_PCB_ACTIVE_MAX];
 	} out;
 
 #if ENABLE_TCP_PROTO_STAT
@@ -299,6 +299,8 @@ uint32_t tcp_timestamp(void);
 uint32_t tcp_rel_timestamp(void);
 
 void tcp_output_sched(struct tcp_pcb * __tp);
+
+void tcp_output_dequeue(struct tcp_pcb * __tp);
 
 #ifdef __cplusplus
 }

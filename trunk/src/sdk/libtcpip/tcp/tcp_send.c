@@ -93,7 +93,7 @@ again:
 
 	while (rem) {
 		/* buffer limit ... */
-		m = tcp_maxrcv - __tp->snd_q.len;
+		m = tcp_maxsnd - __tp->snd_q.len;
 		if (m <= 0) {
 			DCC_LOG1(LOG_INFO, "<%05x> queue limit", (int)__tp);
 			__tp->t_flags |= TF_ACKNOW;
