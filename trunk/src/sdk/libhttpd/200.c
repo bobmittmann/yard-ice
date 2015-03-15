@@ -33,122 +33,84 @@ const char http_hdr_200_html[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
 	"Content-type: text/html;charset=ISO-8859-1\r\n\r\n";
 
+const char http_hdr_200_js[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
+	"Content-type: application/javascript\r\n\r\n";
+
+const char http_hdr_200_text[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Content-type: text/plain\r\n\r\n";
+
 const char http_hdr_200_css[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
 	"Content-type: text/css\r\n\r\n";
+
+const char http_hdr_200_html_gz[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Content-type: text/html;charset=ISO-8859-1\r\n"
+	"Content-Encoding: gzip\r\n\r\n";
+
+const char http_hdr_200_js_gz[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
+	"Content-type: application/javascript\r\n"
+	"Content-Encoding: gzip\r\n\r\n";
+
+const char http_hdr_200_text_gz[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Content-type: text/plain\r\n"
+	"Content-Encoding: gzip\r\n\r\n";
+
+const char http_hdr_200_css_gz[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
+	"Content-type: text/css\r\n"
+	"Content-Encoding: gzip\r\n\r\n";
 
 const char http_hdr_200_png[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
 	"Content-type: image/png\r\n\r\n";
 
 const char http_hdr_200_jpeg[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
 	"Content-type: image/jpeg\r\n\r\n";
 
-/* name of various mime types we support */
-const char * const mime_name_lut[] = {
-	"application/javascript\r\n\r\n"
-	"application/xml\r\n\r\n",
-	"image/gif\r\n\r\n",
-	"image/jpeg\r\n\r\n",
-	"image/png\r\n\r\n",
-	"text/css\r\n\r\n",
-	"text/html;charset=ISO-8859-1\r\n\r\n",
-	"text/plain\r\n\r\n",
-	"video/mpeg\r\n\r\n",
-	};
+const char * const http_200_hdr[] = {
+	http_hdr_200_html,
+	http_hdr_200_js,
+	http_hdr_200_text,
+	http_hdr_200_css,
+	http_hdr_200_html_gz,
+	http_hdr_200_js_gz,
+	http_hdr_200_text_gz,
+	http_hdr_200_css_gz,
+	http_hdr_200_png,
+	http_hdr_200_jpeg };
+
+const uint16_t http_200_len[] = {
+	sizeof(http_hdr_200_html) - 1,
+	sizeof(http_hdr_200_js) - 1,
+	sizeof(http_hdr_200_text) - 1,
+	sizeof(http_hdr_200_css) - 1,
+	sizeof(http_hdr_200_html_gz) - 1,
+	sizeof(http_hdr_200_js_gz) - 1,
+	sizeof(http_hdr_200_text_gz) - 1,
+	sizeof(http_hdr_200_css_gz) - 1,
+	sizeof(http_hdr_200_png) - 1,
+	sizeof(http_hdr_200_jpeg) - 1 };
 
 int httpd_200(struct tcp_pcb * __tp, int unsigned __type)
 {
 	char * hdr;
-	char * str;
 	int len;
-	int idx;
-	int ret;
 
-	if (__type >= MIME_END_MARK) {
-		DCC_LOG1(LOG_TRACE, "Unsupported MIME type %d!", __type);
-		return -EINVAL;
-	}
-	idx = __type;
+	hdr = (char *)http_200_hdr[__type];
+	len = http_200_len[__type];
 
-	hdr = (char *)http_hdr_200_html;
-	len = sizeof(http_hdr_200_html) - 
-		sizeof("text/html;charset=ISO-8859-1\r\n\r\n");
-
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0)) {
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-		return ret;
-	}
-
-	str = (char *)mime_name_lut[idx];
-	len = strlen(str);
-
-	if ((ret = tcp_send(__tp, str, len, 0) < 0)) {
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-	}
-
-	return ret;
-}
-
-int httpd_200_html(struct tcp_pcb * __tp) 
-{
-	char * hdr;
-	int len;
-	int ret;
-
-	hdr = (char *)http_hdr_200_html;
-	len = sizeof(http_hdr_200_html) - 1;
-
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-
-	return ret;
-}
-
-
-int httpd_200_css(struct tcp_pcb * __tp) 
-{
-	char * hdr;
-	int len;
-	int ret;
-
-	hdr = (char *)http_hdr_200_css;
-	len = sizeof(http_hdr_200_css) - 1;
-
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-
-	return ret;
-}
-
-int httpd_200_png(struct tcp_pcb * __tp) 
-{
-	char * hdr;
-	int len;
-	int ret;
-
-	hdr = (char *)http_hdr_200_png;
-	len = sizeof(http_hdr_200_png) - 1;
-
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-
-	return ret;
-}
-
-int httpd_200_jpeg(struct tcp_pcb * __tp) 
-{
-	char * hdr;
-	int len;
-	int ret;
-
-	hdr = (char *)http_hdr_200_jpeg;
-	len = sizeof(http_hdr_200_jpeg) - 1;
-
-	if ((ret = tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY) < 0))
-		DCC_LOG(LOG_ERROR, "tcp_send() failed!");
-
-	return ret;
+	return tcp_send(__tp, hdr, len, TCP_SEND_NOCOPY);
 }
 

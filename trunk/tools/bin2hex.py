@@ -2,6 +2,7 @@
 
 import binascii  
 import sys
+import os
 
 __version__ = '0.1'
 
@@ -36,15 +37,25 @@ def dumpgen(f):
     yield line
   
 def bin2hex(f, name):
+  f.seek(0, os.SEEK_END)
+  size = f.tell()
+  f.seek(0, os.SEEK_SET)
   print('#include <stdint.h>')
   print('')
-  print('const uint8_t ' + name + '[] = {')
+  print('#define SIZEOF_' + name.upper() + ' {:d}'.format(size) )
+  print('')
+  print('const uint8_t ' + name + '[{:d}]'.format(size) + ' = {' )
   gen = dumpgen(f)
   for line in gen:
     print(line)
   print('};')
   print('')
   print('const unsigned int sizeof_' + name + ' = sizeof(' + name + ');')
+
+def replacelst(s, lst, val):
+  for c in lst:
+      s = s.replace(c, val)
+  return s
 
 if __name__ == '__main__':
   from optparse import OptionParser
@@ -67,7 +78,7 @@ if __name__ == '__main__':
   if options.name:
     name = options.name
   else:
-    name = 'bin'
+    name = replacelst(os.path.basename(infile), [' ', '-', '.'], '_') 
 
   bin2hex(open(infile, 'rb'), name)
 

@@ -22,7 +22,10 @@
 
 PROG = httpd_test
 
-CFILES = httpd_test.c stdio.c www_root.c www_img.c zarathustra.c 
+CFILES = httpd_test.c stdio.c www_root.c www_img.c www_lib.c \
+		 zarathustra.html.c 
+#modalbox.c zepto.c
+#overlay.c
 #nietzsche.c
 #thinkos16x16.c thinkos24x57.c
 
@@ -55,3 +58,16 @@ include ../../../mk/stm32f2xx.mk
 
 %.c: %.jpg
 	$(TOOLS)/bin2hex.py $< > $@ 
+
+%.c: %.js
+	$(TOOLS)/bin2hex.py $< > $@ 
+
+%.c: %.gz
+	$(TOOLS)/bin2hex.py $< > $@ 
+
+%.html.c: %html..gz
+	$(TOOLS)/bin2hex.py $< > $@ 
+
+%.html.gz: %.html
+	gzip -c $< > $@ 
+
