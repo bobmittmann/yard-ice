@@ -55,10 +55,12 @@ void stdio_init(void);
 
 extern struct httpdobj www_root[];
 extern struct httpdobj www_img[];
+extern struct httpdobj www_lib[];
 
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
 	{ .path = "/img", .objlst = www_img },
+	{ .path = "/lib", .objlst = www_lib },
 	{ .path = NULL, .objlst = NULL }
 };
 
@@ -133,7 +135,8 @@ int network_config(void)
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
-	if ((env = getenv("IPCFG")) == NULL) {
+//	if ((env = getenv("IPCFG")) == NULL) {
+	if (1) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
 		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");

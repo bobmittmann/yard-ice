@@ -45,6 +45,12 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"textarea { background:#fff; margin:1px 2px 1px; border:1px "
 		"solid #aaa; padding:1px 2px 1px; }\r\n"
 	"form { padding:0; margin:0; border:0; display:table;}\r\n"
+	"div.form { padding:0; margin-left:auto; margin-right:auto; "
+		"display:table; }\r\n"
+	"div.fbody { margin:0; border:0; padding:4px 12px 4px; }\r\n"
+	"div.fcol { float:left; margin:0; border:0; padding:0px 6px 0px; }\r\n"
+	"div.ffoot { padding:4px 12px 4px; border:0; margin:0; "
+		"text-align:left; }\r\n"
 	"input[type=text] { background:#fff; margin:1px 2px 1px; " 
 		"border:1px solid #444; padding:1px 2px 1px; }\r\n"
 	"input[type=text]:hover { background:#cdf; }\r\n"
@@ -59,7 +65,22 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"input[type=submit] { background:#ccc; margin:1px 4px 1px; "
 		"border:1px solid #444; padding:2px 8px 2px; }\r\n"
 	"input[type=submit]:hover { background:#458; "
-		"color:#fff; text-decoration:none; }\r\n";
+		"color:#fff; text-decoration:none; }\r\n"
+	/* modal dialog box */
+	"#mbox { background-color:#eee; padding:8px; border:2px solid #222; }\r\n"
+	"#dlg { clear:both; }\r\n"
+	"#dlg h1 { text-align:left; border-bottom:1px dashed #666; "
+		"font-size:1.1em; padding:1px 0 0; margin-bottom:4px; "
+		"clear:both; width:100%; }\r\n"
+	"#ol { background-image: url(img/overlay.png); } \r\n"
+	".dialog { display:none }\r\n"
+	"* html #ol{ background-image:none; "
+		"filter:progid:DXImageTransform.Microsoft.AlphaImageLoader("
+		"src=\"img/overlay.png\", sizingMethod=\"scale\"); } \r\n"
+	".hidden { background:#fdd; border:0; margin:0; padding:0;"
+		"width: 1px; height: 1px; opacity: 0; filter: alpha(opacity=0);" 
+		"-ms-filter: \"alpha(opacity=0)\"; -khtml-opacity: 0; "
+		"-moz-opacity: 0; } \r\n";
 
 #if 0
 	"select { background:#fff; border:1px solid #666; }\r\n"
@@ -93,7 +114,7 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"<img src=\"img/thinkos57x24.png\"></a>"\
 	" - Cortex-M Operating System - "\
 	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i>\r\n"\
-	"<br>&copy; Copyrigth 2013-2015, Bob Mittmann<br>\r\n"\
+	"<br>&copy; Copyright 2013-2015, Bob Mittmann<br>\r\n"\
 	"</body>\r\n</html>\r\n"
 
 #define DOCTYPE_HTML "<!DOCTYPE html PUBLIC " \
@@ -104,7 +125,7 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 #define SERVER "Server: " HTTPD_SERVER_NAME "\r\n"
 
 #define META_COPY "<meta name=\"copyright\" "\
-	"content=\"Copyright (c) Bob Mittmann 2014\"/>\r\n"
+	"content=\"Copyright (c) Bob Mittmann 2014-2015\"/>\r\n"
 
 #define META_HTTP "<meta http-equiv=\"content-type\" "\
 	"content=\"text/html; charset=utf-8\"/>\r\n"
@@ -114,6 +135,12 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 
 #define LINK_CSS "<link rel=\"stylesheet\" href=\"style.css\" "\
 	"type=\"text/css\" media=\"screen\"/>\r\n"
+
+#define LINK_MODALBOX "<script type=\"text/javascript\" "\
+		"src=\"lib/modalbox.js.gz\"></script>\r\n"
+
+#define LINK_ZEPTO "<script type=\"text/javascript\" "\
+		"src=\"lib/zepto.js.gz\"></script>\r\n"
 
 #define S_MAX 256 /* HTML formatting string buffer lenght */
 
@@ -132,7 +159,7 @@ const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<ul>\r\n"
 	"<li><a href=\"test1.cgi\">Dynamic page 1</a></li>\r\n"
 	"<li><a href=\"test2.cgi\">Dynamic page 2</a></li>\r\n"
-	"<li><a href=\"zarathustra.cgi\">Thus Spake Zarathustra</a></li>\r\n"
+	"<li><a href=\"zarathustra.html\">Thus Spake Zarathustra</a></li>\r\n"
 	"<li><a href=\"form1.html\">Form Demo</a></li>\r\n"
 	"<li><a href=\"ipcfg_form.cgi\">IP Configuration</a></li>\r\n"
 	"</ul>\r\n"
@@ -177,37 +204,6 @@ int test2_cgi(struct httpctl * ctl)
 	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
 	tcp_send(ctl->tp, test2_hdr_html, sizeof(test2_hdr_html) - 1, 0);
 	tcp_send(ctl->tp, s, n, 0);
-	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
-}
-
-/*---------------------------------------------------------------------------
-  Dynamic page 3
-  ---------------------------------------------------------------------------*/
-
-const char zarathustra_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>Thus Spake Zarathustra</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
-	"<h1>Thus Spake Zarathustra</h1>\r\n"
-	"<h2>by Friedrich Wilhelm Nietzsche</h2>\r\n"
-	"<img src=\"img/nietzsche.jpg\" alt=\"Nietzsche\" align=\"middle\">"
-	"<p>\r\n";
-
-const char zarathustra_foot_html[] = "</p>\r\n";
-
-extern const char const * zarathustra_txt[];
-extern const uint16_t zarathustra_len[];
-
-int zarathustra_cgi(struct httpctl * ctl)
-{
-	const char * txt;
-	int i;
-
-	tcp_send(ctl->tp, zarathustra_hdr_html, 
-			 sizeof(zarathustra_hdr_html) - 1, 0);
-	for (i = 0; (txt = zarathustra_txt[i]) != NULL; ++i) { 
-		tcp_send(ctl->tp, txt, zarathustra_len[i], 0);
-	}
-	tcp_send(ctl->tp, zarathustra_foot_html, sizeof(zarathustra_foot_html), 0);
 	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
 }
 
@@ -265,19 +261,49 @@ int form1_cgi(struct httpctl * ctl)
 
 const char ipcfg_form_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<title>ThinkOS IP Configuration</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS 
-	"</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Ethernet IP Configuration</h1>\r\n"
-	"<p>Please fill the infomation and press <b>Submit</b>.</p>\r\n"
-	"<form action=\"ipcfg_set.cgi\" method=\"POST\">\r\n"
-	"<table>\r\n" ;
+	META_HTTP META_COPY LINK_ICON LINK_CSS LINK_MODALBOX 
+	"<script type=\"text/javascript\">\r\n"
+	"function restore_defaults() { dlg.okSelected = function () {\r\n"
+		"dlg.hide(); window.location.assign('restore.html'); }\r\n"
+		"dlg.cancelSelected = function () { dlg.hide(); }\r\n"
+		"dlg.show('defaults_dlg', 'Restore factory settings?', 400, 100); }\r\n"
+	"function ipcfg_set() { dlg.okSelected = function () {\r\n"
+		"dlg.hide(); document.getElementById('ipcfg_form').submit(); }\r\n"
+		"dlg.cancelSelected = function () { dlg.hide(); }\r\n"
+		"dlg.show('ipcfg_dlg', 'Change IP Settings?', 400, 100); }\r\n"
+	"function init() { dlg.init(); }\r\n"
+	"</script>\r\n</head>\r\n<body onload=\"init()\">\r\n"
+	"<h1>ThinkOS IP Configuration</h1>\r\n"
+	"<p>Please fill in the form and press <b>OK</b>.</p>\r\n"
+	"<form id=\"ipcfg_form\" action=\"ipcfg_set.cgi\" method=\"POST\">\r\n"
+	"<table>\r\n";
 
 const char ipcfg_form_ftr_html[] = "</table><br>\r\n"
 	"<input type=\"hidden\" name=\"apply\" value=\"0\">"
-	"<input type=\"submit\" value=\"Submit\"> "
 	"<input type=\"reset\" value=\"Reset\"> "
 	"<input type=\"button\" onclick=\"history.back();\" value=\"Cancel\">\r\n"
+	"<input type=\"button\" onclick=\"ipcfg_set()\" value=\"OK\" />\r\n"
 	"</form>\r\n"
+	"<div id=\"defaults_dlg\" class=\"dialog\">"
+	"<h1 id=\"title\"></h1><div class=\"fbody\"><center>"
+	"<p>Press <b>Confirm</b> if you are sure about restoring the "
+		"factory default configuration.</p>	"
+	"</center></div><div class=\"ffoot\"><center>"
+	"<input type=\"button\" class=\"button\" "
+		"onclick=\"dlg.cancelSelected()\" value=\"Cancel\" />"
+	"<input type=\"button\" class=\"button\" " 
+		"onclick=\"dlg.okSelected()\" value=\"Confirm\" />"
+	"</center></div></div>\r\n"
+	"<div id=\"ipcfg_dlg\" class=\"dialog\">"
+	"<h1 id=\"title\"></h1><div class=\"fbody\"><center>"
+	"<p>Press <b>Confirm</b> if you are sure about modifying the "
+		"IP configuration.</p>	"
+	"</center></div><div class=\"ffoot\"><center>"
+	"<input type=\"button\" class=\"button\" "
+		"onclick=\"dlg.cancelSelected()\" value=\"Cancel\" />"
+	"<input type=\"button\" class=\"button\" " 
+		"onclick=\"dlg.okSelected()\" value=\"Confirm\" />"
+	"</center></div></div>\r\n"
 	HTML_FOOTER;
 
 int ipcfg_form_cgi(struct httpctl * ctl)
@@ -337,22 +363,7 @@ int ipcfg_form_cgi(struct httpctl * ctl)
 					sizeof(ipcfg_form_ftr_html) - 1, 0);
 }
 
-const char ipcfg_confirm_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS IP Configuration</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS 
-	"</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Ethernet IP Configuration</h1>\r\n"
-	"<p><b>WARNING:</b>Are you sure?</p>\r\n"
-	"<table>\r\n" ;
-
-const char ipcfg_confirm_ftr_html[] = 
-	"<input type=\"hidden\" name=\"apply\" value=\"1\">"
-	"<input type=\"submit\" value=\"Confirm\"> "
-	"<input type=\"button\" onclick=\"history.back();\" value=\"Cancel\">\r\n"
-	"</form>\r\n"
-	HTML_FOOTER;
-
-const char ipcfg_apply_html[] = DOCTYPE_HTML "<head>\r\n"
+const char ipcfg_set_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<title>ThinkOS IP Configuration Changed</title>\r\n" 
 	META_HTTP META_COPY LINK_ICON LINK_CSS 
 	"<script type=\"text/javascript\">\r\n"
@@ -369,18 +380,24 @@ const char ipcfg_apply_html[] = DOCTYPE_HTML "<head>\r\n"
 	"</script>\r\n"
 	"</head>\r\n"
 	"<body onload=\"countdown()\">\r\n"
-	"<h1>Ethernet IP Configuration Changed</h1>\r\n"
+	"<h1>Ethernet IP Configuration Changed</h1><p>\r\n";
+
+const char ipcfg_set_ftr_html[] = "</p>\r\n"
 	"<p><b>WARNING:</b> The IP address was changed.</p>\r\n"
 	"<p>This page will be redirected to the new address in "
-	"<b id=\"countdown\">5</b> seconds...</p>\r\n";
+	"<b id=\"countdown\">5</b> seconds...</p>\r\n"
+	HTML_FOOTER;
 
 int ipcfg_set_cgi(struct httpctl * ctl)
 {
 	in_addr_t ipv4_mask = INADDR_ANY;
 	in_addr_t gw_addr = INADDR_ANY;
 	in_addr_t ipv4_addr;
+	struct ifnet * ifn;
+	int use_dhcp = 0;
+	char ip[16];
+	char * cp;
 	char s[S_MAX];
-	bool apply;
 	int n;
 
 	ipv4_addr = IP4_ADDR(atoi(http_query_lookup(ctl, "a1")), 
@@ -398,16 +415,8 @@ int ipcfg_set_cgi(struct httpctl * ctl)
 					   atoi(http_query_lookup(ctl, "g3")),
 					   atoi(http_query_lookup(ctl, "g4")));
 
-	apply = atoi(http_query_lookup(ctl, "apply"));
-
-	if (apply) {
-		tcp_send(ctl->tp, ipcfg_apply_html, 
-				 sizeof(ipcfg_apply_html) - 1, 0);
-	} else {
-		tcp_send(ctl->tp, ipcfg_confirm_hdr_html, 
-				 sizeof(ipcfg_confirm_hdr_html) - 1, 0);
-	}
-
+	tcp_send(ctl->tp, ipcfg_set_hdr_html, 
+			 sizeof(ipcfg_set_hdr_html) - 1, 0);
 
 	n = snprintf(s, S_MAX, "<table><tr><td>IP Address:</td><td id=\"ipaddr\">"
 		 "%d.%d.%d.%d</td></tr>\r\n",
@@ -427,81 +436,44 @@ int ipcfg_set_cgi(struct httpctl * ctl)
 		 IP4_ADDR3(gw_addr), IP4_ADDR4(gw_addr));
 	tcp_send(ctl->tp, s, n, 0);
 
-	if (apply) {
-		struct ifnet * ifn;
-		int use_dhcp = 0;
-		char ip[16];
-		char * cp;
-		
-		tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 
-				 TCP_SEND_NOWAIT);
+	tcp_send(ctl->tp, ipcfg_set_ftr_html, 
+			 sizeof(ipcfg_set_ftr_html) - 1, 0);
 
-		/* close thisp page connection */
-		tcp_close(ctl->tp);
-		ctl->tp = NULL;
+	/* close thisp page connection */
+	tcp_close(ctl->tp);
+	ctl->tp = NULL;
 
+	cp = s + sprintf(s, "%s", inet_ntop(AF_INET, 
+										(void *)&ipv4_addr, ip, 16));
+	cp += sprintf(cp, " %s", inet_ntop(AF_INET, 
+									   (void *)&ipv4_mask, ip, 16));
+	cp += sprintf(cp, " %s", inet_ntop(AF_INET, 
+									   (void *)&gw_addr, ip, 16));
+	sprintf(cp, " %d", use_dhcp);
 
-		cp = s + sprintf(s, "%s", inet_ntop(AF_INET, 
-											(void *)&ipv4_addr, ip, 16));
-		cp += sprintf(cp, " %s", inet_ntop(AF_INET, 
-										   (void *)&ipv4_mask, ip, 16));
-		cp += sprintf(cp, " %s", inet_ntop(AF_INET, 
-										   (void *)&gw_addr, ip, 16));
-		sprintf(cp, " %d", use_dhcp);
+	setenv("IPCFG", s, 1);
 
-		setenv("IPCFG", s, 1);
+	//		tcp_flush(ctl->tp, TCP_FLUSH_SEND);
+	/* wait for the TCP transmission to go trhugh */
+	thinkos_sleep(2500);
 
-//		tcp_flush(ctl->tp, TCP_FLUSH_SEND);
-		/* wait for the TCP transmission to go trhugh */
-		thinkos_sleep(2500);
-
-
-		/* apply the config change */
-		if ((ifn = get_ifn_byname("eth0")) != NULL) {
-			ifn_ipv4_set(ifn, ipv4_addr, ipv4_mask);
-			/* set the default route */
-			ipv4_route_del(INADDR_ANY);
-			ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
-		}
-
-		return 0;
+	/* apply the config change */
+	if ((ifn = get_ifn_byname("eth0")) != NULL) {
+		ifn_ipv4_set(ifn, ipv4_addr, ipv4_mask);
+		/* set the default route */
+		ipv4_route_del(INADDR_ANY);
+		ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
 	}
 
-	n = snprintf(s, S_MAX, 
-				 "<form action=\"ipcfg_set.cgi\" method=\"POST\">\r\n"
-				 "<input type=\"hidden\" name=\"a1\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"a2\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"a3\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"a4\" value=\"%d\">\r\n",
-				 IP4_ADDR1(ipv4_addr), IP4_ADDR2(ipv4_addr), 
-				 IP4_ADDR3(ipv4_addr), IP4_ADDR4(ipv4_addr));
-	tcp_send(ctl->tp, s, n, 0);
-
-	n = snprintf(s, S_MAX, 
-				 "<input type=\"hidden\" name=\"m1\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"m2\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"m3\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"m4\" value=\"%d\">\r\n",
-				 IP4_ADDR1(ipv4_mask), IP4_ADDR2(ipv4_mask), 
-				 IP4_ADDR3(ipv4_mask), IP4_ADDR4(ipv4_mask));
-	tcp_send(ctl->tp, s, n, 0);
-
-	n = snprintf(s, S_MAX, 
-				 "<input type=\"hidden\" name=\"g1\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"g2\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"g3\" value=\"%d\">"
-				 "<input type=\"hidden\" name=\"g4\" value=\"%d\">\r\n",
-				 IP4_ADDR1(gw_addr), IP4_ADDR2(gw_addr), 
-				 IP4_ADDR3(gw_addr), IP4_ADDR4(gw_addr));
-	tcp_send(ctl->tp, s, n, 0);
-
-	return tcp_send(ctl->tp, ipcfg_confirm_ftr_html, 
-					sizeof(ipcfg_confirm_ftr_html) - 1, 0);
+	return 0;
 }
 
 /*---------------------------------------------------------------------------
   root directory content
   ---------------------------------------------------------------------------*/
+
+#define SIZEOF_ZARATHUSTRA_HTML_GZ 10829
+extern const uint8_t zarathustra_html_gz[];
 
 struct httpdobj www_root[] = {
 	{ .oid = "style.css", .typ = OBJ_STATIC_CSS, .lvl = 255, 
@@ -512,8 +484,8 @@ struct httpdobj www_root[] = {
 		.len = 0, .ptr = test1_cgi },
 	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = test2_cgi },
-	{ .oid = "zarathustra.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
-		.len = 0, .ptr = zarathustra_cgi },
+	{ .oid = "zarathustra.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
+		.len = SIZEOF_ZARATHUSTRA_HTML_GZ, .ptr = zarathustra_html_gz },
 	{ .oid = "form1.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = sizeof(form1_html) - 1, .ptr = form1_html },
 	{ .oid = "form1.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
