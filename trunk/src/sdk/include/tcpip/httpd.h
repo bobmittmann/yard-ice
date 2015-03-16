@@ -88,7 +88,7 @@ struct httpdobj {
 	const char * oid;
 	uint8_t typ;
 	uint8_t lvl;
-	uint16_t len;
+	uint32_t len;
 	const void * ptr;
 };
 

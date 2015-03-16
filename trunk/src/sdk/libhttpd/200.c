@@ -31,7 +31,7 @@
 /* Preformatted HTTP header */
 const char http_hdr_200_html[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
-	"Content-type: text/html;charset=ISO-8859-1\r\n\r\n";
+	"Content-type: text/html;charset=UTF-8\r\n\r\n";
 
 const char http_hdr_200_js[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
@@ -49,7 +49,7 @@ const char http_hdr_200_css[] = "HTTP/1.1 200 OK\r\n"
 
 const char http_hdr_200_html_gz[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
-	"Content-type: text/html;charset=ISO-8859-1\r\n"
+	"Content-type: text/html;charset=UTF-8\r\n"
 	"Content-Encoding: gzip\r\n\r\n";
 
 const char http_hdr_200_js_gz[] = "HTTP/1.1 200 OK\r\n"
