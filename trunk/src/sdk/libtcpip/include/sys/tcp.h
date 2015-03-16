@@ -102,8 +102,8 @@
 #define TF_SENTFIN      0x04
 #define TF_IDLE         0x08
 #define TF_RXMT         0x10
-#define TF_NODELAY      0x20
-#define TF_NONBLOCK     0x40
+//#define TF_NODELAY      0x20
+//#define TF_NONBLOCK     0x40
 #define TF_NEEDOUTPUT   0x80
 
 /* useful macros */
@@ -232,6 +232,11 @@ struct tcp_pcb {
 extern const uint8_t tcp_keepintvl[];
 extern const uint8_t tcp_rxmtintvl[];
 
+struct tcp_pcb_link {
+	struct pcb_link * next;
+	struct tcp_pcb pcb;
+};
+
 struct tcp_system {
 	/* list of free PCBs */
 	struct pcb_list free;
@@ -252,6 +257,8 @@ struct tcp_system {
 		volatile uint16_t tail;
 		struct tcp_pcb * volatile tp[NET_TCP_PCB_ACTIVE_MAX];
 	} out;
+
+	struct tcp_pcb_link pcb_pool[NET_TCP_PCB_ACTIVE_MAX];
 
 #if ENABLE_TCP_PROTO_STAT
 	struct proto_stat stat;

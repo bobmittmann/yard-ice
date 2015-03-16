@@ -987,12 +987,6 @@ int net_dcc_log_expand(int sock)
 		n++;
 	}
 
-#ifdef _WIN32
-	closesocket(sock);
-#else
-	close(sock);
-#endif
-
 	return 0;
 }
 
@@ -1123,6 +1117,8 @@ int pipe_start(FILE * stream)
 	return ret;
 }
 
+int dcc_sock = -1;
+
 void cleanup(void)
 {
 //	printf("cleanup...\n");
@@ -1132,6 +1128,12 @@ void cleanup(void)
 		__thread_destroy(pipe_thread);
 		pipe_thread = NULL;
 	}
+
+#ifdef _WIN32
+	closesocket(dcc_sock);
+#else
+	close(dcc_sock);
+#endif
 }
 
 void sig_quit(int signo)
@@ -1328,6 +1330,100 @@ int load_elf(char * pathname)
 	return n;
 }
 
+/* Should be called from the main(). This will
+ initialize signals, and signal handlers. 
+
+ Alert: The application cannot use SIGALRM as the interval timer 
+ depends on it to work.
+ 
+ */
+/* global cleanup callback */
+static void (* __term_handler)(void) = NULL;
+
+#ifdef _WIN32
+
+BOOL CtrlHandler(DWORD fdwCtrlType) 
+{ 
+	switch (fdwCtrlType) { 
+	case CTRL_C_EVENT: // Handle the CTRL-C signal. 
+	case CTRL_BREAK_EVENT: 
+	case CTRL_CLOSE_EVENT: 
+		if (__term_handler != NULL) {
+			__term_handler();
+			return FALSE; 
+		} else {
+			return FALSE; 
+		}
+
+	default: 
+		return FALSE; 
+	} 
+} 
+
+#else
+
+static void __abort_handler(int signum)
+{
+	const char msg[] = "\n!!! ABORTED !!!\n";
+	int ret = write(STDERR_FILENO, msg, strlen(msg));
+	(void)ret;
+	_exit(4);
+}
+
+static void __termination_handler(int signum)
+{
+	struct sigaction new_action;
+
+	/* Redirect the signal handlers to the abort handler */
+	new_action.sa_handler = __abort_handler;
+	sigemptyset(&new_action.sa_mask);
+	new_action.sa_flags = 0;
+
+	sigaction(SIGINT, &new_action, NULL);
+	sigaction(SIGTERM, &new_action, NULL);
+	sigaction(SIGQUIT, &new_action, NULL);
+
+	if (__term_handler != NULL) {
+		__term_handler();
+	} 
+
+	exit(3);
+}
+
+#endif
+
+
+void __term_sig_handler(void (* handler)(void))
+{       
+#ifdef _WIN32
+	if (SetConsoleCtrlHandler((PHANDLER_ROUTINE)CtrlHandler, TRUE)) { 
+		/* Register a cleanup callback routine */
+		__term_handler = handler;
+	} else {
+	}
+#else
+	sigset_t set;
+	struct sigaction new_action;
+
+	/* Register a cleanup callback routine */
+	__term_handler = handler;
+
+	/* Disable SIGALRM signal wich is used by the interval timer. 
+	   Only one thread can have this signal enabled. */
+	sigemptyset(&set);
+//	sigaddset(&set, SIGALRM);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+	/* Configure the common termination handlers to call
+	   the cleanup routine.  */
+	new_action.sa_flags = SA_NODEFER;
+	new_action.sa_handler = __termination_handler;
+	sigaction(SIGINT, &new_action, NULL);
+	sigaction(SIGTERM, &new_action, NULL);
+	sigaction(SIGQUIT, &new_action, NULL);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
 	extern char *optarg;	/* getopt */
@@ -1339,8 +1435,8 @@ int main(int argc, char *argv[])
 	int dump = 0;
 	int host_set = 0;
 	int log_set = 0;
-	int c;
 	int sock;
+	int c;
 	FILE * f;
 
 	/* the prog name start just after the last lash */
@@ -1421,6 +1517,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	__term_sig_handler(cleanup);
+
 	printf("== ARM DCC log viewer ==\n\n");
 
 	if (log_set) {
@@ -1440,13 +1538,16 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "%s: can't connect to '%s'\n", prog, host);
 				return 5;
 			}
-	
+
+			dcc_sock = sock;
+
 			printf("\n");
 
 			if (net_dcc_log_expand(sock) < 0) {
 				cleanup();
 				return 3;
 			}
+
 			cleanup();
 			return 0;
 

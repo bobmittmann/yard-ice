@@ -1,7 +1,7 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
- * This file is part of the libtcpip.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,41 +18,31 @@
  */
 
 /** 
- * @file udp_enum.c
- * @brief
+ * @file .c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#define __USE_SYS_UDP__
-#include <sys/udp.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <thinkos.h>
+#include <sys/shell.h>
 
-#include <tcpip/udp.h>
-
-int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg) 
+int cmd_sleep(FILE * f, int argc, char ** argv)
 {
-	struct udp_pcb * up = NULL;
-	struct udp_inf inf;
-	int n = 0;
-	int ret;
+	int ms;
 
-	tcpip_net_lock();
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
 
-	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.list, 
-											   (struct pcb *)up)) != NULL) {
-		inf.faddr = up->u_faddr;
-		inf.laddr = up->u_laddr;
-		inf.fport = up->u_fport;
-		inf.lport = up->u_lport;
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
 
-		if ((ret = __callback(&inf, __arg)) < 0)
-			return ret;
+	ms = strtoul(argv[1], NULL, 0);
 
-		n++;
-	}
+	thinkos_sleep(ms);
 
-	tcpip_net_unlock();
-
-	return n;
+	return 0;
 }
-
 

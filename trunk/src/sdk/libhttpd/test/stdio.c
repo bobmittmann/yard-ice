@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <sys/shell.h>
 
 const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
@@ -56,4 +57,89 @@ void stdio_init(void)
 	stdin = f_tty;
 }
 
-int stdio_shell(void);
+/*****************************************************************************
+ * Help
+ *****************************************************************************/
+
+extern const struct shell_cmd shell_cmd_tab[];
+
+int cmd_help(FILE *f, int argc, char ** argv)
+{
+	const struct shell_cmd * cmd;
+
+	if (argc > 2)
+		return -1;
+
+	if (argc > 1) {
+		if ((cmd = cmd_lookup(shell_cmd_tab, argv[1])) == NULL) {
+			fprintf(f, " Not found: '%s'\n", argv[1]);
+			return -1;
+		}
+
+		fprintf(f, "  %s, %s - %s\n", cmd->name, cmd->alias, cmd->desc);
+		fprintf(f, "  usage: %s %s\n\n", argv[1], cmd->usage);
+
+		return 0;
+	}
+
+	fprintf(f, "\n COMMAND:   ALIAS:  DESCIPTION: \n");
+	for (cmd = shell_cmd_tab; cmd->callback != NULL; cmd++) {
+		fprintf(f, "  %-10s %-4s   %s\n", cmd->name, cmd->alias, cmd->desc);
+	}
+
+	return 0;
+}
+
+const struct shell_cmd shell_cmd_tab[] = {
+
+	{ cmd_echo, "echo", "", 
+		"[STRING]...", "Echo the STRING(s) to terminal" },
+
+	{ cmd_get, "get", "", 
+		"VAR", "get environement variable" },
+
+	{ cmd_set, "set", "", 
+		"VAR EXPR", "set environement variable" },
+
+	{ cmd_help, "help", "?", 
+		"[COMMAND]", "show command usage (help [CMD])" },
+
+	{ cmd_reboot, "reboot", "rst", "", 
+		"reboot system" },
+
+	{ cmd_ifconfig, "ifconfig", "if", 
+		"", "configure a network interface" },
+
+	{ cmd_netstat, "netstat", "n", 
+		"", "print network connections" },
+
+	{ cmd_osinfo, "sys", "os", 
+		"", "show OS status" },
+
+	{ cmd_thread, "thread", "th", 
+		"[ID]", "show thread status" },
+
+
+	{ NULL, "", "", NULL, NULL }
+};
+
+
+const char * shell_prompt(void)
+{
+	return "[WEBSRV]$ ";
+}
+
+extern const char * version_str;
+extern const char * copyright_str;
+
+void shell_greeting(FILE * f) 
+{
+	fprintf(f, "\n%s", version_str);
+	fprintf(f, "\n%s\n\n", copyright_str);
+}
+
+int stdio_shell(void)
+{
+	return shell(stdout, shell_prompt, shell_greeting, shell_cmd_tab);
+}
+

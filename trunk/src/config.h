@@ -104,8 +104,12 @@
 #define ENABLE_TCP_SEND 1
 #define ENABLE_TCP_RECV 1
 
-#define TCP_MAX_RCV_QUEUE 2048
-#define TCP_MAX_SND_QUEUE 2048 
+#define TCP_MAX_RCV_QUEUE (1460 * 2)
+#define TCP_MAX_SND_QUEUE (1460 * 2)
+
+#define TCP_IDLE_DET_SEC         10
+#define TCP_KEEP_ALIVE_PROBE_SEC 15
+#define TCP_MAX_IDLE_SEC         30
 
 /* use hardware checksum */
 #define  ENABLE_NET_TCP_CHECKSUM 0

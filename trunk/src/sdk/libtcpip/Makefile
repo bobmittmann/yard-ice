@@ -39,7 +39,7 @@ IFNET_CFILES = get_ifn_byipaddr.c get_ifn_byname.c ifn_enum.c ifn_getaddr.c \
 			   ifn_ipv4_get.c ifn_ipv4_set.c ifn_register.c ifn_unregister.c \
 			   ifn_getinfo.c loopif.c 
 
-PCB_CFILES = in_pcb.c
+PCB_CFILES = in_pcb.c pcb_getnext.c pcb_enum.c
 
 ARP_CFILES = etharp.c
 

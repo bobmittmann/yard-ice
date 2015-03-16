@@ -26,19 +26,52 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
-int tcp_enum(int (* __callback)(struct tcp_pcb *, void *), void * __parm)
+#include <tcpip/tcp.h>
+
+
+static inline int __enum(int (* __callback)(struct tcp_inf *, void *), 
+						 void * __arg, struct tcp_pcb * __tp) {
+	struct tcp_inf inf;
+	inf.faddr = __tp->t_faddr;
+	inf.laddr = __tp->t_laddr;
+	inf.fport = __tp->t_fport;
+	inf.lport = __tp->t_lport;
+	inf.state = __tp->t_state;
+
+	return __callback(&inf, __arg);
+}
+
+int tcp_enum(int (* __callback)(struct tcp_inf *, void *), void * __arg) 
 {
+	struct tcp_pcb * tp = NULL;
 	int n = 0;
+	int ret;
 
-	n = pcb_enum((int (*)(struct pcb *, void *))__callback,
-				   __parm, &__tcp__.closed);
+	tcpip_net_lock();
 
-	n += pcb_enum((int (*)(struct pcb *, void *))__callback,
-				   __parm, &__tcp__.listen);
+	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.closed, 
+											  (struct pcb *)tp)) != NULL) {
+		if ((ret = __enum(__callback, __arg, tp)) < 0)
+			return ret;
+		n++;
+	}
 
-	n += pcb_enum((int (*)(struct pcb *, void *))__callback,
-					__parm, &__tcp__.active);
+	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.listen, 
+											  (struct pcb *)tp)) != NULL) {
+		if ((ret = __enum(__callback, __arg, tp)) < 0)
+			return ret;
+		n++;
+	}
+
+	while ((tp = (struct tcp_pcb *)pcb_getnext(&__tcp__.active, 
+											  (struct pcb *)tp)) != NULL) {
+		if ((ret = __enum(__callback, __arg, tp)) < 0)
+			return ret;
+		n++;
+	}
+	tcpip_net_unlock();
 
 	return n;
 }
+
 

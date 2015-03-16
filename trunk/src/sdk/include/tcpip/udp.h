@@ -40,6 +40,21 @@
 #include <tcpip/ifnet.h>
 #include <tcpip/stat.h>
 
+/*
+ * UDP protocol control block info
+ */   
+struct udp_inf
+{
+	/* foreign address */
+	in_addr_t faddr;
+	/* local address */
+	in_addr_t laddr;
+	/* foreign port */
+	uint16_t fport;
+	/* local port */
+	uint16_t lport;
+};
+
 struct udp_pcb;
 
 extern const uint8_t udp_def_ttl;
@@ -107,7 +122,7 @@ int udp_recv(struct udp_pcb * __pb, void * __buf, int __len,
 int udp_recv_tmo(struct udp_pcb * __up, void * __buf, int __len, 
 				 struct sockaddr_in * __sin, int msec);
 
-int udp_enum(int (* __callback)(struct udp_pcb *, void *), void * __parm);
+int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg);
 
 /* get the network interface statistic counters, 
    optionally reseting the counters */

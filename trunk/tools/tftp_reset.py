@@ -46,29 +46,28 @@ tgt_reset_noisy = 'rst\n'\
 tgt_reset_quiet = 'rst\n'\
 	'connect\n'
 
-
 def show_usage():
-	print >> sys.stderr, "Usage: %s [OPTION]" % progname
-	print >> sys.stderr, "Reset remote target using the TFTP protocol"
-	print >> sys.stderr, ""
-	print >> sys.stderr, "  -h, --host     remote host addr."\
-		" Default to: '%s'" % def_host
-	print >> sys.stderr, "  -q, --quiet    silent mode (no beeps)"
-	print >> sys.stderr, "      --help     display this help and exit"
-	print >> sys.stderr, "  -V, --version  output version information and exit"
-	print >> sys.stderr, ""
+	print("Usage: {0} [OPTION] FILE".format(progname))
+	print("Reset remote target using the TFTP protocol")
+	print("")
+	print("  -h, --host     remote host addr."\
+		" Default to: '{0}'".format(def_host))
+	print("  -q, --quiet    silent mode (no beeps)")
+	print("      --help     display this help and exit")
+	print("  -V, --version  output version information and exit")
+	print("")
 
 def show_version():
-	print "%s - version %d.%d" % (progname, ver_major, ver_minor)
-	print ""
-	print "Writen by Bob Mittmann - bobmittmann@gmail.com"
-	print "(C) Cpyright 2014 - Bob Mittmann"
-	print ""
+	print("{0} - version {1:d}.{2:d}".format(progname, ver_major, ver_minor))
+	print("")
+	print("Writen by Bob Mittmann - bobmittmann@gmail.com")
+	print("(C) Cpyright 2014 - Bob Mittmann")
+	print("")
 
 def error(msg):
-	print >> sys.stderr, ""
-	print >> sys.stderr, "%s: error: %s" % (progname, msg)
-	print >> sys.stderr, ""
+	print("", file=sys.stderr)
+	print("{0}: error: {1}".format(progname, msg), file=sys.stderr)
+	print("", file=sys.stderr)
 	sys.exit(2)
 
 def main():
@@ -82,7 +81,7 @@ def main():
 	try:
 		opts, args = getopt.getopt(sys.argv[1:], "?qvh:", \
 			["help", "quiet", "version", "host=" ])
-	except GetoptError, err:
+	except err:
 		error(str(err))
 
 	for o, a in opts:

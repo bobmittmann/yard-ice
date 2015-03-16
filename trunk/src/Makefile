@@ -42,9 +42,9 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip drv bitvec hexdump \
 
 CFLAGS = -g -O2
 
-VERSION_DATE = "2015-03-12"
+VERSION_DATE = "2015-03-16"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "6"
+VERSION_MINOR = "7"
 
 CDEFS = CONFIG_H
 

@@ -49,9 +49,20 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "board.h"
+
+#define VERSION_NUM "0.3"
+#define VERSION_DATE "Mar, 2015"
+
+const char * version_str = "HTTP Server Demo " \
+							VERSION_NUM " - " VERSION_DATE;
+const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
+
 void tcpip_init(void);
 void env_init(void);
 void stdio_init(void);
+int stdio_shell(void);
+int tcp_echo_start(void);
 
 extern struct httpdobj www_root[];
 extern struct httpdobj www_img[];
@@ -188,6 +199,35 @@ int network_config(void)
 	return 0;
 }
 
+void io_init(void)
+{
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+
+#if 0
+	/* JTAG TRST Pin */
+	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
+#endif
+
+	/* USART5 TX */
+	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_af(UART5_TX, GPIO_AF8);
+	/* USART5 RX */
+	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART5_RX, GPIO_AF8);
+
+	/* USART6_TX */
+	stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_af(UART6_TX, GPIO_AF7);
+	/* USART6_RX */
+	stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART6_RX, GPIO_AF7);
+
+}
+
 uint32_t server_stack1[256];
 uint32_t server_stack2[256];
 
@@ -207,7 +247,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "3. stdio_init().");
+	DCC_LOG(LOG_TRACE, "3. io_init()");
+	io_init();
+
+	DCC_LOG(LOG_TRACE, "4. stdio_init().");
 	stdio_init();
 
 
@@ -218,13 +261,13 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 
-	DCC_LOG(LOG_TRACE, "4. network_config().");
+	DCC_LOG(LOG_TRACE, "5. network_config().");
 	network_config();
 
 	httpd_start(&httpd, port, 4, httpd_dir, NULL);
 	printf("Listening on port %d.\n", port);
 
-	DCC_LOG(LOG_TRACE, "2. starting workers...");
+	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
 	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
 						  server_stack1, sizeof(server_stack1) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
@@ -233,9 +276,15 @@ int main(int argc, char ** argv)
 						  server_stack2, sizeof(server_stack2) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
 
+	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
+
+	tcp_echo_start();
+
+	DCC_LOG(LOG_TRACE, "7. starting console shell...");
 
 	for (;;) {
 		thinkos_sleep(1000);
+		stdio_shell();
 	}
 
 	return 0;

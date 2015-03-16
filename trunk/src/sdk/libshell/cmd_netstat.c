@@ -86,6 +86,8 @@ static int show_udp_pcb(struct udp_inf * inf, FILE * f)
 				
 int cmd_netstat(FILE *f, int argc, char ** argv)
 {
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
 
 	fprintf(f, "\nActive Internet connections (servers and established)\n");
 	fprintf(f, "Proto  Local Address"

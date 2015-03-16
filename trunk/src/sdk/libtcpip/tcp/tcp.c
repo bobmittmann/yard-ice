@@ -29,7 +29,10 @@
 #include <string.h>
 
 const uint16_t tcp_pcb_active_max = NET_TCP_PCB_ACTIVE_MAX;
+
+/* FIXME: listen only PCBs 
 const uint16_t tcp_pcb_listen_max = NET_TCP_PCB_LISTEN_MAX;
+ */
 
 #ifndef TCP_DEFAULT_RTT
 #define TCP_DEFAULT_RTT     47
@@ -258,13 +261,6 @@ const struct thinkos_thread_info tcp_tmr_inf = {
 	.tag = "TCP_TMR"
 };
 
-struct tcp_pcb_link {
-	struct pcb_link * next;
-	struct tcp_pcb pcb;
-};
-
-struct tcp_pcb_link tcp_pcb_pool[NET_TCP_PCB_ACTIVE_MAX];
-
 void tcp_init(void)
 {
 	int i;
@@ -272,7 +268,7 @@ void tcp_init(void)
 
 	pcb_list_init(&__tcp__.free);
 	for (i = 0; i < NET_TCP_PCB_ACTIVE_MAX; ++i) {
-		struct tcp_pcb * tp = &tcp_pcb_pool[i].pcb;
+		struct tcp_pcb * tp = &__tcp__.pcb_pool[i].pcb;
 		pcb_insert((struct pcb *)tp, &__tcp__.free);
 	}
 	pcb_list_init(&__tcp__.closed);
@@ -285,7 +281,9 @@ void tcp_init(void)
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
 
 	DCC_LOG1(LOG_TRACE, "max active TCP PCBs : %d ", tcp_pcb_active_max);
+#if 0
 	DCC_LOG1(LOG_TRACE, "max listen TCP PCBs : %d ", tcp_pcb_listen_max);
+#endif
 
 #if 0
 	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 

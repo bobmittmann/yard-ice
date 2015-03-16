@@ -1,7 +1,7 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
- * This file is part of the libtcpip.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,41 +18,33 @@
  */
 
 /** 
- * @file udp_enum.c
- * @brief
+ * @file cmd_echo.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
+ */
 
-#define __USE_SYS_UDP__
-#include <sys/udp.h>
 
-#include <tcpip/udp.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/shell.h>
 
-int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg) 
+/*****************************************************************************
+ * Environment variable set 
+ *****************************************************************************/
+
+int cmd_echo(FILE *f, int argc, char ** argv)
 {
-	struct udp_pcb * up = NULL;
-	struct udp_inf inf;
-	int n = 0;
-	int ret;
+	int i;
 
-	tcpip_net_lock();
-
-	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.list, 
-											   (struct pcb *)up)) != NULL) {
-		inf.faddr = up->u_faddr;
-		inf.laddr = up->u_laddr;
-		inf.fport = up->u_fport;
-		inf.lport = up->u_lport;
-
-		if ((ret = __callback(&inf, __arg)) < 0)
-			return ret;
-
-		n++;
+	for (i = 1; i < argc; ++i) {
+		if (i != 1)
+			fprintf(f, " ");
+		fprintf(f, argv[i]);
 	}
 
-	tcpip_net_unlock();
+	fprintf(f, "\n");
 
-	return n;
+	return 0;
 }
-
 

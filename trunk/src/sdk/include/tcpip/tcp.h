@@ -31,19 +31,21 @@
 #include <tcpip/stat.h>
 
 /*
- * TCP events
- */
-typedef enum {
-	TCP_ON_ERROR = -3,
-	TCP_ON_TIMEOUT = -2,
-	TCP_ON_RESET = -1,
-	TCP_ON_CLOSE = 0,
-	TCP_ON_CON_REQ = 1,
-	TCP_ON_CONNECT = 2,
-	TCP_ON_DATA_RCVD = 3,
-	TCP_ON_FIN_RCVD = 4,
-	TCP_ON_DATA_SENT = 5
-} tcp_event_t;
+ * TCP protocol control block info
+ */   
+struct tcp_inf
+{
+	/* foreign address */
+	in_addr_t faddr;
+	/* local address */
+	in_addr_t laddr;
+	/* foreign port */
+	uint16_t fport;
+	/* local port */
+	uint16_t lport;
+	/* tcp state */
+	uint8_t state;
+};
 
 /*
  * TCP protocol control block
@@ -208,14 +210,15 @@ int tcp_flush(struct tcp_pcb * __tp, int __which);
 
 int tcp_drop(struct tcp_pcb * __tp);
 
-int tcp_enum(int (* __callback)(struct tcp_pcb *, void *), void * __arg);
-
 /* Debugging */
 int tcp_pcb_stat(struct tcp_pcb * tp, char * buf);
 
 /* get the network interface statistic counters, 
    optionally reseting the counters */
 void tcp_proto_getstat(struct proto_stat * __st, int __rst);
+
+
+int tcp_enum(int (* __callback)(struct tcp_inf *, void *), void * __arg);
 
 #ifdef __cplusplus
 }

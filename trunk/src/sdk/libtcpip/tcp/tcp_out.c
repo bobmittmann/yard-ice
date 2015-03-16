@@ -297,9 +297,14 @@ again:
 			DCC_LOG1(LOG_INFO, "len == maxseg (%d), send...", len); 
 			goto send;
 		}
-		
+
+/*		
+		XXX: the TF_NODELAY flag was never set and was
+		removed 
 		if ((idle || (tp->t_flags & TF_NODELAY)) && 
 			(len + off >= tp->snd_q.len)) {
+*/
+		if ((idle) && (len + off >= tp->snd_q.len)) {
 			if (idle) {
 				DCC_LOG(LOG_INFO, "idle, send..."); 
 			} else  {
@@ -368,8 +373,13 @@ again:
 		goto send;
 	}
 
-	if (flags & (TH_SYN | TH_RST)) {
-		DCC_LOG1(LOG_TRACE, "<%05x> SYN | RST, send...", tp);
+	if (flags & TH_SYN) {
+		DCC_LOG1(LOG_TRACE, "<%05x> SYN send...", tp);
+		goto send;
+	}
+
+	if (flags & TH_RST) {
+		DCC_LOG1(LOG_TRACE, "<%05x> RST send...", tp);
 		goto send;
 	}
 
