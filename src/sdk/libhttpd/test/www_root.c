@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <tcpip/httpd.h>
 #include <thinkos.h>
+#include "www.h"
 
 const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"body { background: #f8f8f8; color: #555; font: 1.0em Arial,Helvetica,"
@@ -111,10 +112,10 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 
 #define HTML_FOOTER "<hr>\r\n"\
 	"<a href=\"https://code.google.com/p/yard-ice\">"\
-	"<img src=\"img/thinkos57x24.png\"></a>"\
-	" - Cortex-M Operating System - "\
-	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i>\r\n"\
-	"<br>&copy; Copyright 2013-2015, Bob Mittmann<br>\r\n"\
+	"<img src=\"img/thinkos57x24.png\"></a>\r\n"\
+	" - Cortex-M Operating System - \r\n"\
+	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i><br>\r\n"\
+	"&copy; Copyright 2013-2015, Bob Mittmann<br>\r\n"\
 	"</body>\r\n</html>\r\n"
 
 #define DOCTYPE_HTML "<!DOCTYPE html PUBLIC " \
@@ -162,6 +163,7 @@ const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<li><a href=\"zarathustra.html\">Thus Spake Zarathustra</a></li>\r\n"
 	"<li><a href=\"form1.html\">Form Demo</a></li>\r\n"
 	"<li><a href=\"ipcfg_form.cgi\">IP Configuration</a></li>\r\n"
+	"<li><a href=\"treeview.html\">Treeview Demo</a></li>\r\n"
 	"</ul>\r\n"
 	HTML_FOOTER;
 
@@ -468,12 +470,10 @@ int ipcfg_set_cgi(struct httpctl * ctl)
 	return 0;
 }
 
+
 /*---------------------------------------------------------------------------
   root directory content
   ---------------------------------------------------------------------------*/
-
-#define SIZEOF_ZARATHUSTRA_HTML_GZ 10829
-extern const uint8_t zarathustra_html_gz[];
 
 struct httpdobj www_root[] = {
 	{ .oid = "style.css", .typ = OBJ_STATIC_CSS, .lvl = 255, 
@@ -494,6 +494,10 @@ struct httpdobj www_root[] = {
 		.len = 0, .ptr = ipcfg_form_cgi },
 	{ .oid = "ipcfg_set.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = ipcfg_set_cgi },
+	{ .oid = "treeview.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
+		.len = SIZEOF_TREEVIEW_HTML_GZ, .ptr = treeview_html_gz },
+	{ .oid = "treeview.css", .typ = OBJ_STATIC_CSS_GZ, .lvl = 100, 
+		.len = SIZEOF_TREEVIEW_CSS_GZ, .ptr = treeview_css_gz },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

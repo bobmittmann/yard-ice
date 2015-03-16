@@ -23,11 +23,7 @@
 PROG = httpd_test
 
 CFILES = httpd_test.c stdio.c www_root.c www_img.c www_lib.c \
-		 zarathustra.html.c 
-#modalbox.c zepto.c
-#overlay.c
-#nietzsche.c
-#thinkos16x16.c thinkos24x57.c
+		 zarathustra.html.c treeview.html.c treeview.css.c 
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
@@ -63,11 +59,17 @@ include ../../../mk/stm32f2xx.mk
 	$(TOOLS)/bin2hex.py $< > $@ 
 
 %.c: %.gz
-	$(TOOLS)/bin2hex.py $< > $@ 
+	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
 
-%.html.c: %html..gz
-	$(TOOLS)/bin2hex.py $< > $@ 
+#%.html.c: %html..gz
+#	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
+
+#%.css.c: %css..gz
+#	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
 
 %.html.gz: %.html
+	gzip -c $< > $@ 
+
+%.css.gz: %.css
 	gzip -c $< > $@ 
 
