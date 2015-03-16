@@ -123,6 +123,9 @@ const char obj_type_name[][8] = {
 	"Inv"
 };
 
+#if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
+	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
+	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
 static int bmp_bit_cnt(uint32_t bmp)
 {
 	int i;
@@ -133,6 +136,7 @@ static int bmp_bit_cnt(uint32_t bmp)
 
 	return cnt;
 }
+#endif
 
 void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 {
@@ -212,7 +216,9 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 	struct thinkos_rt rt;
 	uint32_t * wq;
 	int i;
+#if THINKOS_MUTEX_MAX > 0
 	int j;
+#endif
 
 	if (argc > 1)
 		return SHELL_ERR_EXTRA_ARGS;
@@ -316,7 +322,9 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	int oid;
 	int type;
 	int cnt;
+#if THINKOS_MUTEX_MAX > 0
 	int j;
+#endif
 	int i;
 
 	thinkos_rt_snapshot(&rt);

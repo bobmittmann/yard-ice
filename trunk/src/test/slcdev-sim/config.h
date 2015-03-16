@@ -103,5 +103,7 @@
 #define JSON_LABEL_LST_MAX 48
 #define JSON_STRING_LEN_MAX 192
 
+#define STM32_ENABLE_PLL 0
+
 #endif /* __CONFIG_H__ */
 
