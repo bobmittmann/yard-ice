@@ -103,30 +103,26 @@ const uint32_t tcp_idle_tmr_ms = TCP_IDLE_TMR_MS;
 const uint16_t tcp_conn_est_tmo_sec = TCP_CONN_EST_TMO_SEC;
 
 #ifndef TCP_IDLE_DET_SEC
-#define TCP_IDLE_DET_SEC 60
+#define TCP_IDLE_DET_SEC (1 * 60)
 #endif
 
 const uint16_t tcp_idle_det_sec = TCP_IDLE_DET_SEC;
 
-#ifndef TCP_KEEP_ALIVE_PROBE_MN
-#define TCP_KEEP_ALIVE_PROBE_MN 10
+#ifndef TCP_KEEP_ALIVE_PROBE_SEC
+#define TCP_KEEP_ALIVE_PROBE_SEC (5 * 60)
 #endif
 
-const uint16_t tcp_keep_alive_probe_mn = TCP_KEEP_ALIVE_PROBE_MN;
+const uint16_t tcp_keep_alive_probe_sec = TCP_KEEP_ALIVE_PROBE_SEC;
 
-#ifndef TCP_MAX_IDLE_MN
-#define TCP_MAX_IDLE_MN 15
+#ifndef TCP_MAX_IDLE_SEC
+#define TCP_MAX_IDLE_SEC (15 * 60)
 #endif
 
-const uint16_t tcp_max_idle_mn = TCP_MAX_IDLE_MN;
+const uint16_t tcp_max_idle_sec = TCP_MAX_IDLE_SEC;
 
 
 /* convert from seconds to idle timer time value */
 #define SECOND_TO_IDLETV(S) ((((S) * 1000) + (TCP_IDLE_TMR_MS - 1)) \
-							 / TCP_IDLE_TMR_MS)
-
-/* convert from minutes to idle timer time value */
-#define MINUTE_TO_IDLETV(M) ((((M) * 60000) + (TCP_IDLE_TMR_MS - 1)) \
 							 / TCP_IDLE_TMR_MS)
 
 #define TCPTV_MSL SECOND_TO_IDLETV(TCP_DEFAULT_MSL)
@@ -141,8 +137,8 @@ const uint16_t tcp_msl = TCPTV_MSL;
 #define TCPTV_MAX_IDLE SECOND_TO_IDLETV(30)
 #else
 #define TCPTV_IDLE_DET_TMO SECOND_TO_IDLETV(TCP_IDLE_DET_SEC)
-#define TCPTV_KEEP_IDLE MINUTE_TO_IDLETV(TCP_KEEP_ALIVE_PROBE_MN)
-#define TCPTV_MAX_IDLE MINUTE_TO_IDLETV(TCP_MAX_IDLE_MN) 
+#define TCPTV_KEEP_IDLE SECOND_TO_IDLETV(TCP_KEEP_ALIVE_PROBE_SEC)
+#define TCPTV_MAX_IDLE SECOND_TO_IDLETV(TCP_MAX_IDLE_SEC) 
 #endif
 
 const uint16_t tcp_conn_est_tmo = TCPTV_CONN_EST_TMO;
@@ -150,22 +146,22 @@ const uint16_t tcp_conn_est_tmo = TCPTV_CONN_EST_TMO;
 const uint16_t tcp_idle_det_tmo = TCPTV_IDLE_DET_TMO;
 
 const uint8_t tcp_keepintvl[13] = {
-	TCPTV_KEEP_IDLE / 4,
-	TCPTV_KEEP_IDLE / 4,
-	TCPTV_KEEP_IDLE / 4,
-	TCPTV_KEEP_IDLE / 4,
+	(TCPTV_KEEP_IDLE + 3) / 4,
+	(TCPTV_KEEP_IDLE + 2) / 4,
+	(TCPTV_KEEP_IDLE + 1) / 4,
+	(TCPTV_KEEP_IDLE + 0) / 4,
 
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 7) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 6) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 5) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 4) / 8,
 
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 3) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 2) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 1) / 8,
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 0) / 8,
 
-	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE) / 8
+	(TCPTV_MAX_IDLE - TCPTV_KEEP_IDLE + 0) / 8
 };
 
 /* Fast TCP timer: 
@@ -330,6 +326,9 @@ void tcp_idle_tmr(void)
 				/* notify the upper layer */
 				__os_cond_signal(tp->t_cond);
 				/* TODO: statistics */
+
+				/* send reset */
+				tcp_output_enqueue(tp);
 				break;
 
 			case TCPS_ESTABLISHED:
@@ -345,19 +344,32 @@ void tcp_idle_tmr(void)
 				}
 				tp->t_idle_cnt++;
 				if (tp->t_idle_cnt < 12) {
-					/* reload the keepalive timer */
-					tp->t_conn_tmr = tcp_keepintvl[tp->t_idle_cnt];
-
 					if (tp->t_idle_cnt >= 4) {
 						/* send a keep alive probe */
 						DCC_LOG1(LOG_TRACE, "<%05x>  keep alive probe", 
 								 (int)tp);
 						tcp_keepalive(tp);
 					}
+					/* reload the keepalive timer */
+					tp->t_conn_tmr = tcp_keepintvl[tp->t_idle_cnt];
+
 					break;
 				}
 				/* Keep alive timeout */
 
+				/* discard the data */
+				mbuf_queue_free(&tp->snd_q);
+				mbuf_queue_free(&tp->rcv_q);
+				/* */
+				tp->t_state = TCPS_CLOSED;
+				pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.closed);
+				DCC_LOG1(LOG_TRACE, "<%05x> keep alive timeout [CLOSED]", 
+						 (int)tp);
+
+				/* notify the upper layer */
+				__os_cond_signal(tp->t_cond);
+				/* TODO: statistics */
+				tcp_output_enqueue(tp);
 				break;
 			case TCPS_FIN_WAIT_2:
 				/* FIN_WAIT_2 timer */
@@ -392,10 +404,10 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 			 tcp_conn_est_tmo_sec);
 	DCC_LOG1(LOG_TRACE, "     idle detection tmo : %4d seconds", 
 			 tcp_idle_det_sec);
-	DCC_LOG1(LOG_TRACE, "   keep alive probe tmo : %4d minutes", 
-			 tcp_keep_alive_probe_mn);
-	DCC_LOG1(LOG_TRACE, "    idle connection max : %4d minutes", 
-			 tcp_max_idle_mn);
+	DCC_LOG1(LOG_TRACE, "   keep alive probe tmo : %4d seconds", 
+			 tcp_keep_alive_probe_sec);
+	DCC_LOG1(LOG_TRACE, "    idle connection max : %4d seconds", 
+			 tcp_max_idle_sec);
 	DCC_LOG1(LOG_TRACE, "                    msl : %4d seconds", 
 			 tcp_msl_sec);
 

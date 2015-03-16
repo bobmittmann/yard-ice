@@ -64,6 +64,10 @@ struct pcb_list {
 #define INPF_NWR          0x40
 #define INPF_NBIO         0x80
 
+static inline struct pcb_link * __link(struct pcb * __inp) {
+	return (struct pcb_link *)((uintptr_t)__inp - sizeof(struct pcb_link *));
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -94,6 +98,10 @@ struct pcb * pcb_wildlookup(in_addr_t __faddr, uint16_t __fport,
 
 struct pcb * pcb_lookup(in_addr_t __faddr, uint16_t __fport, 
 	in_addr_t __laddr, uint16_t __lport, struct pcb_list * __list);
+
+struct pcb * pcb_getfirst(struct pcb_list * __list);
+
+struct pcb * pcb_getnext(struct pcb_list * __list, struct pcb * __inp);
 
 #ifdef __cplusplus
 }

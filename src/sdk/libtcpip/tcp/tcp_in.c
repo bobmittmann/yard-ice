@@ -608,14 +608,12 @@ close_and_reset:
 	/* If the RST bit is set eximine the state: ...
 	   Ref.: TCP/IP Illustrated Volume 2, pg. 964 */
 	if ((tiflags & TH_RST)) {
-		DCC_LOG1(LOG_TRACE, "<%05x> RST received", (int)tp);
+		DCC_LOG1(LOG_WARNING, "<%05x> RST received", (int)tp);
 		switch(tp->t_state) {
 		case TCPS_SYN_RCVD:
 //			tp->errno = ECONNREFUSED;
 			goto close;
 		case TCPS_ESTABLISHED:
-		case TCPS_FIN_WAIT_1:
-		case TCPS_FIN_WAIT_2:
 		case TCPS_CLOSE_WAIT:
 //			tp->errno = ECONNRESET;
 close:
@@ -629,12 +627,15 @@ close:
 
 			/* notify the upper layer */
 			__os_cond_broadcast(tp->t_cond);
-//			__os_cond_signal(__mbufs__.cond);
+			/* PCBs in the close state should be cleared by the application */
 			goto drop;
 
+		case TCPS_FIN_WAIT_1:
+		case TCPS_FIN_WAIT_2:
 		case TCPS_CLOSING:
 		case TCPS_LAST_ACK:
 		case TCPS_TIME_WAIT:
+			/* Our side was already closed */
 			tcp_pcb_free(tp);
 			goto drop;
 		}

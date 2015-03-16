@@ -22,7 +22,7 @@
 
 PROG = httpd_test
 
-CFILES = httpd_test.c stdio.c www_root.c www_img.c www_lib.c \
+CFILES = httpd_test.c tcp_echo.c stdio.c www_root.c www_img.c www_lib.c \
 		 zarathustra.html.c treeview.html.c treeview.css.c 
 
 SDK = ../../../sdk
@@ -31,23 +31,21 @@ TOOLS = ../../../../tools
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libtcpip $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc \
-		  $(SDK)/libhttpd
+		  $(SDK)/libhttpd $(SDK)/libshell
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty httpd
+LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty httpd shell
 
 INCPATH = $(SDK)/include  
-
-#JTAGTOOL_ADDR = 192.168.10.50
-JTAGTOOL_ADDR = 192.168.0.50
-
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-#MACH = stm32f407
-#include ../../../mk/stm32f4xx.mk
+JTAGTOOL_ADDR = 192.168.10.50
+MACH = stm32f407
+include ../../../mk/stm32f4xx.mk
 
-MACH = stm32f207
-include ../../../mk/stm32f2xx.mk
+#JTAGTOOL_ADDR = 192.168.0.50
+#MACH = stm32f207
+#include ../../../mk/stm32f2xx.mk
 
 %.c: %.png
 	$(TOOLS)/bin2hex.py $< > $@ 

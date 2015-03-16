@@ -75,6 +75,8 @@
 
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
+#define THINKOS_ENABLE_RT_DEBUG 1
+
 #define ENABLE_NETWORK 1
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
@@ -82,10 +84,14 @@
 #define ENABLE_TCPDUMP 0
 
 #define TCP_FAST_TMR_MS   100
-#define ENABLE_NET_TCP_TIMEWAIT 0
+#define ENABLE_NET_TCP_TIMEWAIT 1
 #define MBUF_POOL_SIZE    64
 #define ENABLE_TCP_HEADER_PREDICTION 1
 #define NET_TCP_PCB_ACTIVE_MAX 8
+
+#define TCP_IDLE_DET_SEC         5
+#define TCP_KEEP_ALIVE_PROBE_SEC 10
+#define TCP_MAX_IDLE_SEC         60
 
 /* use hardware checksum */
 #define ENABLE_NET_TCP_CHECKSUM 0

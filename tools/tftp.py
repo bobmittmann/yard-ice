@@ -144,13 +144,16 @@ class TftpPacketOACK(TftpPacket):
 
 		if len(buf) == 0:
 			return {}
-
+		
 		# Count the nulls in the buf. Each one terminates a string.
 		length = 0
 		for c in buf:
-#XXX: Python 3
-#			if c == 0:
-			if ord(c) == 0:
+			if PY3:
+				octet = c
+			else:
+				octet = ord(c)
+			
+			if octet == 0:
 				if length > 0:
 					fmt += "{0:d}sx".format(length)
 					length = -1

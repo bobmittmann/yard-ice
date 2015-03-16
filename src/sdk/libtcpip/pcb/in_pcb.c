@@ -95,10 +95,6 @@ static int __lookup(struct pcb_list * __l, struct pcb_link * __p)
 	return -1;
 }
 
-static inline struct pcb_link * __link(struct pcb * __inp) {
-	return (struct pcb_link *)((uintptr_t)__inp - sizeof(struct pcb_link *));
-}
-
 void pcb_list_init(struct pcb_list * __list)
 {
 	__list->first = NULL;
@@ -334,25 +330,4 @@ int pcb_find(struct pcb * __inp, struct pcb_list * __list)
 {
 	return __lookup(__list, __link(__inp));
 }
-
-int pcb_enum(int (* __callback)(struct pcb *, void *), 
-			   void * __parm, struct pcb_list * __list)
-{
-	struct pcb_link * q;
-	struct pcb * pcb;
-
-	q = (struct pcb_link *)&__list->first;
-
-	while ((q = q->next)) {
-		pcb = &q->pcb;
-
-		if (__callback != NULL) {
-			if (__callback(pcb, __parm))
-				break;
-		}
-	}
-
-	return 0;
-}
-
 

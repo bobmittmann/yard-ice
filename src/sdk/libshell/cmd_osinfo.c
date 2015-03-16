@@ -18,7 +18,7 @@
  */
 
 /** 
- * @file cmd_os.c
+ * @file cmd_osinfo.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
@@ -207,14 +207,21 @@ void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 
 }
 
-int cmd_os(FILE * f, int argc, char ** argv)
+int cmd_osinfo(FILE * f, int argc, char ** argv)
 {
 	struct thinkos_rt rt;
 	uint32_t * wq;
 	int i;
 	int j;
 
-	thinkos_rt_snapshot(&rt);
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (thinkos_rt_snapshot(&rt) < 0) {
+		fprintf(f, "#ERROR: Thinkos RT_DEBUG not enabled!\n");
+		return SHELL_ERR_GENERAL;
+	}
+
 #if THINKOS_ENABLE_CLOCK
 	fprintf(f, "Ticks = %d\n", rt.ticks);
 #endif
@@ -231,7 +238,7 @@ int cmd_os(FILE * f, int argc, char ** argv)
 	fprintf(f, " |  Val |  Pri"); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-	fprintf(f, " |     Clock"); 
+	fprintf(f, " |      Clock"); 
 #endif
 #if THINKOS_MUTEX_MAX > 0
 	fprintf(f, " | Locks\n"); 
@@ -260,9 +267,9 @@ int cmd_os(FILE * f, int argc, char ** argv)
 			{
 				int32_t dt = (int32_t)(rt.clock[i] - rt.ticks);
 				if (dt < 0)
-					fprintf(f, " | <timeout>"); 
+					fprintf(f, " | <timedout>"); 
 				else
-					fprintf(f, " | %9d", dt); 
+					fprintf(f, " | %10d", dt); 
 			}
 #endif
 			fprintf(f, " |");
@@ -328,14 +335,9 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 
 	for (i = 0; i < cnt; ++i) {
 		th = lst[i];
-		if (th >= THINKOS_THREADS_MAX) {
+		if ((th >= THINKOS_THREADS_MAX) || (rt.ctx[th] == NULL)) {
 			fprintf(f, "Thread %d is invalid!\n", th);
-			return 0;
-		}
-
-		if (rt.ctx[th] == NULL) {
-			fprintf(f, "Thread %d is invalid!\n", th);
-			return 0;
+			return SHELL_ERR_ARG_INVALID;
 		}
 
 		oid = rt.th_stat[th] >> 1;

@@ -18,41 +18,45 @@
  */
 
 /** 
- * @file udp_enum.c
- * @brief
+ * @file pcb_getnext.c
+ * @brief Internet Protocol Control Block
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#define __USE_SYS_UDP__
-#include <sys/udp.h>
+#ifdef CONFIG_H
+#include "config.h"
+#endif
 
-#include <tcpip/udp.h>
+#ifdef PCB_DEBUG
+#ifndef DEBUG
+#define DEBUG
+#endif
+#endif
+#include <sys/dcclog.h>
 
-int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg) 
+#include <sys/pcb.h>
+#include <sys/mbuf.h>
+
+#include <errno.h>
+#include <stdlib.h>
+
+struct pcb * pcb_getnext(struct pcb_list * __list, struct pcb * __inp)
 {
-	struct udp_pcb * up = NULL;
-	struct udp_inf inf;
-	int n = 0;
-	int ret;
+	struct pcb_link * q;
 
-	tcpip_net_lock();
+	if (__inp == NULL)
+		q = (struct pcb_link *)&__list->first;
+	else
+		q = __link(__inp);
 
-	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.list, 
-											   (struct pcb *)up)) != NULL) {
-		inf.faddr = up->u_faddr;
-		inf.laddr = up->u_laddr;
-		inf.fport = up->u_fport;
-		inf.lport = up->u_lport;
+	if ((q = q->next))
+		return (struct pcb *)&q->pcb;
 
-		if ((ret = __callback(&inf, __arg)) < 0)
-			return ret;
-
-		n++;
-	}
-
-	tcpip_net_unlock();
-
-	return n;
+	return NULL;
 }
 
+struct pcb * pcb_getfirst(struct pcb_list * __list)
+{
+	return pcb_getnext(__list, NULL);
+}
 
