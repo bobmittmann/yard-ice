@@ -23,6 +23,10 @@
 #include <sys/stm32f.h>
 #include <sys/halt.h>
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #ifndef STM32_ENABLE_HSI
 #define STM32_ENABLE_HSI 1
 #endif
@@ -66,7 +70,7 @@
 
 #ifndef STM32_APB1_HZ
   #if STM32_ENABLE_PLL
-    #define STM32_APB1_HZ (HCLK_HZ / 4)
+    #define STM32_APB1_HZ (HCLK_HZ / 2)
   #else 
     #define STM32_APB1_HZ HCLK_HZ
   #endif
@@ -74,7 +78,7 @@
 
 #ifndef STM32_APB2_HZ
   #if STM32_ENABLE_PLL
-    #define STM32_APB2_HZ (HCLK_HZ / 4)
+    #define STM32_APB2_HZ (HCLK_HZ / 2)
   #else 
     #define STM32_APB2_HZ HCLK_HZ
   #endif
@@ -186,7 +190,7 @@ void _init(void)
 	   PCLK1 = 8 MHz
 	   PCLK2 = 8 MHz */
 	cfg = RCC_PLLDIV_2 | RCC_PLLMUL_4 | RCC_PLLSRC_HSI | 
-		RCC_PPRE2_4 | RCC_PPRE1_4 | RCC_HPRE_1 | RCC_SW_MSI;
+		RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_2 | RCC_SW_MSI;
 #else
 
 	/* F_HSE = 8 MHz
@@ -196,7 +200,7 @@ void _init(void)
 	   PCLK1 = 8 MHz
 	   PCLK2 = 8 MHz */
 	cfg = RCC_PLLDIV_2 | RCC_PLLMUL_8 | RCC_PLLSRC_HSE | 
-		RCC_PPRE2_4 | RCC_PPRE1_4 | RCC_HPRE_1 | RCC_SW_MSI;
+		RCC_PPRE2_2 | RCC_PPRE1_2 | RCC_HPRE_2 | RCC_SW_MSI;
 #endif
 	rcc->cfgr = cfg;
 
