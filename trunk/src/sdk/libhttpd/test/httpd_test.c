@@ -231,6 +231,8 @@ void io_init(void)
 
 uint32_t server_stack1[256];
 uint32_t server_stack2[256];
+uint32_t server_stack3[256];
+uint32_t server_stack4[256];
 
 int main(int argc, char ** argv)
 {
@@ -276,6 +278,14 @@ int main(int argc, char ** argv)
 	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
 						  server_stack2, sizeof(server_stack2) |
 						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
+
+	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
+						  server_stack3, sizeof(server_stack3) |
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(6));
+
+	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
+						  server_stack4, sizeof(server_stack4) |
+						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(5));
 
 	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
 
