@@ -100,7 +100,7 @@ int udp_recv_tmo(struct udp_pcb * __up, void * __buf, int __len,
 		}
 	}
 
-	dgram = &__up->u_rcv_buf[head % UDP_RECV_MAX];
+	dgram = &__up->u_rcv_buf[head % NET_UDP_RECV_QUEUE_LEN];
 	__up->u_rcv_head = head + 1;
 
 	n = MIN(dgram->len, __len);

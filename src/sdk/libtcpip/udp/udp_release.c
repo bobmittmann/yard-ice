@@ -26,8 +26,10 @@
 #define __USE_SYS_UDP__
 #include <sys/udp.h>
 
-int udp_release(struct udp_pcb * __inp)
+int udp_release(struct udp_pcb * __up)
 {
-	return pcb_release((struct pcb *)__inp, &__udp__.list);
+	__os_cond_free(__up->u_rcv_cond);
+	__up->u_rcv_cond = -1;
+	return pcb_move((struct pcb *)__up, &__udp__.active, &__udp__.free);
 }
 

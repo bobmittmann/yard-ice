@@ -29,17 +29,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-#ifndef UDP_DEFAULT_TTL
-#define UDP_DEFAULT_TTL 127
-#endif
-
-const uint8_t udp_def_ttl = UDP_DEFAULT_TTL;
-
-#ifndef UDP_DEFAULT_TOS
-#define UDP_DEFAULT_TOS 0x80
-#endif
-
-const uint8_t udp_def_tos = UDP_DEFAULT_TOS;
+const uint8_t udp_pcb_active_max = NET_UDP_PCB_ACTIVE_MAX;
+const uint8_t udp_def_ttl = NET_UDP_DEFAULT_TTL;
+const uint8_t udp_rcev_queue_len = NET_UDP_RECV_QUEUE_LEN;
+const uint8_t udp_def_tos = NET_UDP_DEFAULT_TOS;
 
 struct udp_system __udp__;
 
@@ -47,18 +40,17 @@ struct udp_pcb * udp_alloc(void)
 {
 	struct udp_pcb * up;
 
-	/* get a new memory PCB */
-	if ((up = (struct udp_pcb *)pcb_alloc()) == NULL) {
+	tcpip_net_lock();
+
+	if ((up = (struct udp_pcb *)pcb_remove_head(&__udp__.free)) == NULL) {
 		DCC_LOG(LOG_WARNING, "could not allocate a PCB");
 		return NULL;
 	}
 
+	pcb_insert((struct pcb *)up, &__udp__.active);
+
 	/* ensure the mem is clean */
 	memset(up, 0, sizeof(struct udp_pcb));
-
-	tcpip_net_lock();
-
-	pcb_insert((struct pcb *)up, &__udp__.list);
 
 	up->u_rcv_cond = __os_cond_alloc();
 
@@ -73,7 +65,7 @@ int udp_port_unreach(in_addr_t __faddr, uint16_t __fport,
 	struct udp_pcb * up;
 
 	up = (struct udp_pcb *)pcb_wildlookup(__faddr, __fport, 
-										  __laddr, __lport, &__udp__.list);
+										  __laddr, __lport, &__udp__.active);
 	if (up == NULL) {
 		DCC_LOG4(LOG_TRACE, "not found: %I:%d > %I:%d", 
 				 __laddr, ntohs(__lport), __faddr, ntohs(__lport));
@@ -95,8 +87,16 @@ int udp_port_unreach(in_addr_t __faddr, uint16_t __fport,
 
 void udp_init(void)
 {
+	int i;
+
 	DCC_LOG(LOG_TRACE, "initializing UDP subsystem."); 
 
-	pcb_list_init(&__udp__.list);
+	pcb_list_init(&__udp__.free);
+	for (i = 0; i < NET_TCP_PCB_ACTIVE_MAX; ++i) {
+		struct udp_pcb * up = &__udp__.pcb_pool[i].pcb;
+		pcb_insert((struct pcb *)up, &__udp__.free);
+	}
+
+	pcb_list_init(&__udp__.active);
 }
 

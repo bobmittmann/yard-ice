@@ -55,8 +55,13 @@ struct udp_inf
 	uint16_t lport;
 };
 
+/*
+ * UDP protocol control block
+ */   
 struct udp_pcb;
 
+extern const uint8_t udp_pcb_active_max;
+extern const uint8_t udp_rcev_queue_len;
 extern const uint8_t udp_def_ttl;
 extern const uint8_t udp_def_tos;
 
@@ -73,15 +78,6 @@ int udp_bind(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port);
 int udp_connect(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port);
 
 int udp_send(struct udp_pcb * __up, void * __buf, int __len);
-
-/*! \brief Register a PCB listener.
- */
-int udp_register(struct udp_pcb * __pb);
-//int udp_register(struct pcb * __pb);
-
-/*! \brief unregister a PCB listener and free its memory.
- */
-int udp_release(struct udp_pcb * __pb);
 
 /*!	\brief Sends a UDP packet.
  *

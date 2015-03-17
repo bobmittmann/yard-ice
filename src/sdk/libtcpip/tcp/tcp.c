@@ -28,7 +28,7 @@
 
 #include <string.h>
 
-const uint16_t tcp_pcb_active_max = NET_TCP_PCB_ACTIVE_MAX;
+const uint8_t tcp_pcb_active_max = NET_TCP_PCB_ACTIVE_MAX;
 
 /* FIXME: listen only PCBs 
 const uint16_t tcp_pcb_listen_max = NET_TCP_PCB_LISTEN_MAX;
@@ -38,7 +38,7 @@ const uint16_t tcp_pcb_listen_max = NET_TCP_PCB_LISTEN_MAX;
 #define TCP_DEFAULT_RTT     47
 #endif
 
-const uint16_t tcp_defrtt = TCP_DEFAULT_RTT;
+const uint8_t tcp_defrtt = TCP_DEFAULT_RTT;
 
 #ifndef TCP_MAX_RCV_QUEUE
 #define TCP_MAX_RCV_QUEUE   (1460 * 2)
