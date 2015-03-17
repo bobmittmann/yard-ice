@@ -185,27 +185,27 @@ void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 	fprintf(f, " Cnt:");
 #if THINKOS_ENABLE_THREAD_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc & 
-		~(0xffffffff << THINKOS_THREADS_MAX)), THINKOS_THREADS_MAX);
+		~(0xffffffffLL << THINKOS_THREADS_MAX)), THINKOS_THREADS_MAX);
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc & 
-		~(0xffffffff << THINKOS_MUTEX_MAX)), THINKOS_MUTEX_MAX);
+		~(0xffffffffLL << THINKOS_MUTEX_MAX)), THINKOS_MUTEX_MAX);
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc & 
-		~(0xffffffff << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc & 
-		~(0xffffffff << THINKOS_SEMAPHORE_MAX)), THINKOS_SEMAPHORE_MAX);
+		~(0xffffffffLL << THINKOS_SEMAPHORE_MAX)), THINKOS_SEMAPHORE_MAX);
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->event_alloc & 
-		~(0xffffffff << THINKOS_EVENT_MAX)), THINKOS_EVENT_MAX);
+		~(0xffffffffLL << THINKOS_EVENT_MAX)), THINKOS_EVENT_MAX);
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
 	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc & 
-		~(0xffffffff << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
 #endif
 	fprintf(f, "\n");
 
