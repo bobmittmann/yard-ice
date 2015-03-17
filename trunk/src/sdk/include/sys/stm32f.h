@@ -290,6 +290,19 @@ int stm32_eeprom_wr16(uint32_t offs, uint16_t val);
 
 int stm32f_rtc_init(void);
 
+/*---------------------------------------------------------------------
+ * NVRAM (Backupp SRAM
+ *---------------------------------------------------------------------*/
+
+void stm32f_nvram_env_init(void);
+
+/*---------------------------------------------------------------------
+ * Serial 
+ *---------------------------------------------------------------------*/
+
+struct serial_dev * stm32f_uart5_serial_init(unsigned int baudrate, 
+											 unsigned int flags);
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __SYS_STM32F_H__ */
