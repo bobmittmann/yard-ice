@@ -23,13 +23,13 @@
 #ifndef __BACNET_PTP_H__
 #define __BACNET_PTP_H__
 
-#include "serdrv.h"
+#include <sys/serial.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int bacnet_ptp(struct serdrv * dev);
+int bacnet_ptp(struct serial_dev * dev);
 
 #ifdef __cplusplus
 }
