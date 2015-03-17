@@ -220,7 +220,7 @@ char * stm32f_bkp_sram_env_insert(char * var, const char * name,
 extern char ** environ;
 char * env_tab[ENVIRON_MAX + 1];
 
-void env_init(void)
+void stm32f_nvram_env_init(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
 

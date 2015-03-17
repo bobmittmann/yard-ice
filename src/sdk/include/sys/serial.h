@@ -126,15 +126,19 @@ int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
 
 int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
 
-int serial_write(struct serial_dev * dev, const void * buf, 
-				 unsigned int len);
+int serial_send(struct serial_dev * dev, const void * buf, 
+				unsigned int len);
 
-int serial_read(struct serial_dev * dev, void * buf, 
+int serial_recv(struct serial_dev * dev, void * buf, 
 				unsigned int len, unsigned int msec);
+
+int serial_drain(struct serial_dev * dev);
 
 int serial_enable(struct serial_dev * dev);
 
 int serial_disable(struct serial_dev * dev);
+
+struct file * serial_fopen(struct serial_dev * dev);
 
 #ifdef __cplusplus
 }

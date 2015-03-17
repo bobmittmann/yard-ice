@@ -26,8 +26,11 @@ include ../../mk/config.mk
 
 LIB_STATIC = drv
 
+SERIAL_CFILES = stm32f-serial.c stm32f-usart5.c serial-file.c
+
 CFILES = stm32f-ethif.c stm32f-uart_console.c stm32f-dac.c stm32f-adc.c \
-		 stm32f-bkp_sram.c stm32f-io.c stm32f-rtc.c
+		 stm32f-bkp_sram.c stm32f-io.c stm32f-rtc.c \
+		 $(addprefix serial/,$(SERIAL_CFILES))
 
 override INCPATH += ./include ../libtcpip/include
 

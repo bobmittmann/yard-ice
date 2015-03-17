@@ -65,7 +65,7 @@ int shell(FILE * f, const char * (* prompt)(void),
 	if (greeting != NULL)
 		greeting(f);
 
-	for (;;) {
+	do {
 		fprintf(f, "%s", prompt());
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
@@ -83,12 +83,17 @@ int shell(FILE * f, const char * (* prompt)(void),
 				fprintf(f, "Command not found!\n");
 				break;
 			}
-			if ((ret = cmd_exec(f, cmd, st)) < 0) {
+
+			ret = cmd_exec(f, cmd, st);
+
+			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;
 			}
 			
 		}
-	}
+	} while (ret != SHELL_ABORT); 
+
+	return 0;
 }
 

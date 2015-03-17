@@ -25,11 +25,15 @@
 
 #include <sys/serial.h>
 
+struct bacnet_ptp_lnk;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int bacnet_ptp(struct serial_dev * dev);
+struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev);
+
+int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t * buf);
 
 #ifdef __cplusplus
 }

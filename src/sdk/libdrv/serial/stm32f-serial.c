@@ -23,237 +23,163 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <sys/stm32f.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <arch/cortex-m3.h>
-#include <sys/serial.h>
-#include <sys/delay.h>
+#define __STM32_SERIAL_I__
+#include "stm32-serial-i.h"
+#include <sys/param.h>
 
-#include <thinkos.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
+#if !SERIAL_ENABLE_DMA
 
-#include <sys/dcclog.h>
-
-#define SERIAL_RX_BUF_LEN 64
-
-struct stm32f_serial_dev {
-	struct stm32f_usart * uart;
-	struct stm32f_dma * dma;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-		int flag;
-	} tx;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-		uint8_t buf[2][SERIAL_RX_BUF_LEN];
-		uint32_t idx;
-		int flag;
-	} rx;
-
-};
-
-int stm32f_serial_init(struct stm32f_serial_dev * dev)
+int stm32f_serial_init(struct stm32f_serial_dev * dev, 
+					   unsigned int baudrate, unsigned int flags)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
+	struct stm32_usart * uart = dev->uart;
 
-	dev->rx.flag = thinkos_flag_alloc();
-	dev->tx.flag = thinkos_flag_alloc();
+	DCC_LOG1(LOG_TRACE, "UART=0x%08x", uart);
+	DCC_LOG1(LOG_TRACE, "SERIAL_RX_FIFO_LEN=%d", SERIAL_RX_FIFO_LEN);
+	DCC_LOG1(LOG_TRACE, "SERIAL_TX_FIFO_LEN=%d", SERIAL_TX_FIFO_LEN);
+	DCC_LOG1(LOG_TRACE, "SERIAL_ENABLE_TX_MUTEX=%d", SERIAL_ENABLE_TX_MUTEX);
 
-	DCC_LOG(LOG_TRACE, "...");
-	stm32f_usart_init(dev->uart);
+	dev->rx_flag = thinkos_flag_alloc(); 
+	dev->tx_flag = thinkos_flag_alloc(); 
+#if SERIAL_ENABLE_TX_MUTEX
+	dev->tx_mutex = thinkos_mutex_alloc(); 
+	DCC_LOG1(LOG_TRACE, "tx_mutex=%d", dev->tx_mutex);
+#endif
 
-	/* Enable DMA for transmission and reception */
-	dev->uart->cr3 |= USART_DMAT | USART_DMAR;
+	dev->tx_fifo.head = dev->tx_fifo.tail = 0;
+	dev->rx_fifo.head = dev->rx_fifo.tail = 0;
+	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	thinkos_flag_give(dev->tx_flag);
 
-	/* DMA clock enable */
-	rcc->ahb1enr |= (dev->dma == STM32F_DMA1) ? RCC_DMA1EN : RCC_DMA2EN;
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, baudrate);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
 
-	/* Disable DMA stream */
-	dev->tx.s->cr = 0;
-	while (dev->tx.s->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	dev->tx.s->par = &dev->uart->dr;
-	dev->tx.s->fcr = DMA_DMDIS | DMA_FTH_FULL;
+	/* enable RX interrupt */
+	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
 
-	/* Disable DMA stream */
-	dev->rx.s->cr = 0;
-	while (dev->rx.s->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	/* peripheral address */
-	dev->rx.s->par = &dev->uart->dr;
-	/* Memory address */
-	dev->rx.s->m0ar = (void *)dev->rx.buf[0];
-	dev->rx.s->m1ar = (void *)dev->rx.buf[1];
-	/* Number of data items to transfer */
-	dev->rx.s->ndtr = SERIAL_RX_BUF_LEN;
-	dev->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 |
-		DMA_CT_M0AR | DMA_DBM |  DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_CIRC | DMA_DIR_PTM | DMA_TCIE;
-
-	stm32f_usart_baudrate_set(dev->uart, 115200);
-	stm32f_usart_mode_set(dev->uart, SERIAL_8N1);
-
-	/* receive buffer index */
-	dev->rx.idx = -1;
-
-	/* Enable DMA */
-	dev->rx.s->cr |= DMA_EN;
+	/* enable UART */
+	stm32_usart_enable(uart);
 
 	return 0;
 }
 
-int stm32f_serial_dma_recv(struct stm32f_serial_dev * dev, char ** buf)
+int stm32f_serial_read(struct stm32f_serial_dev * dev, void * buf, 
+					   unsigned int len, unsigned int tmo)
 {
-	buf = dev->rx.buf[dev->rx.idx++ & 1];
-	return 0;
-}
+	uint8_t * cp = (uint8_t *)buf;
+	unsigned int tail;
+	int ret;
+	int cnt;
+	int n;
+	int i;
 
+	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
 
-void stm32f_dma2_stream0_isr(void)
-{
-	struct stm32f_dma * dma = STM32F_DMA2;
-	uint16_t * data;
-
-	if ((dma->lisr & DMA_TCIF0) == 0)
-		return;
-
-	/* clear the DMA transfer complete flag */
-	dma->lifcr = DMA_CTCIF0;
-
-	/* get a pointer to the last filled DMA transfer buffer */
-//	data = adc_buf[adc_dma_cnt++ & 1];
-
-}
-
-
-int stm32f_serial_read(struct stm32f_serial_dev * dev, char * buf, 
-					   unsigned int len)
-{
-	uint32_t st;
-	unsigned int cnt;
-
-	DCC_LOG(LOG_INFO, "read");
-
-	if (dev->rx.s->cr & DMA_EN) {
-		DCC_LOG(LOG_TRACE, "DMA enabled");
+again:
+	if ((ret = thinkos_flag_timedtake(dev->rx_flag, tmo)) < 0) {
+		DCC_LOG1(LOG_INFO, "cnt=%d, timeout!", 
+				 (int32_t)(dev->rx_fifo.head - dev->rx_fifo.tail));
+		return ret;
 	}
 
-	/* Memory address */
-	dev->rx.s->m0ar = (void *)buf;
-	/* Number of data items to transfer */
-	dev->rx.s->ndtr = len;
+	tail = dev->rx_fifo.tail;
+	cnt = (int32_t)(dev->rx_fifo.head - tail);
+	if (cnt == 0) {
+		DCC_LOG(LOG_WARNING, "RX FIFO empty!");
+		goto again;
+	}
+	n = MIN(len, cnt);
 
-	/* enable DMA */
-	dev->rx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 |
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_DIR_PTM | DMA_TCIE  | DMA_EN;
+	for (i = 0; i < n; ++i)
+		cp[i] = dev->rx_fifo.buf[tail++ & (SERIAL_RX_FIFO_LEN - 1)];
 
-	/* wait for the DMA transfer to complete */
-	while (((st = dev->dma->lisr) & DMA_TCIF0) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_irq_wait(dev->rx.irq);
-		DCC_LOG(LOG_INFO, "wakeup.");
+	dev->rx_fifo.tail = tail;
+
+	if (cnt > n) {
+		DCC_LOG3(LOG_INFO, "len=%d cnt=%d n=%d", len, cnt, n);
+		thinkos_flag_give(dev->rx_flag);
+	} else {
+		DCC_LOG1(LOG_INFO, "2. n=%d", n);
 	}
 
-	/* clear the the DMA stream trasfer complete flag */
-	dev->dma->lifcr = DMA_CTCIF0;
+//	DCC_LOG1(LOG_TRACE, "len=%d", n);
+	DCC_LOG2(LOG_INFO, "len=%d '%c'...", n, cp[0]);
 
-	/* Number of data items transfered... */
-	cnt = len - dev->rx.s->ndtr;
-
-	DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
-	return cnt;
+	return n;
 }
 
 int stm32f_serial_write(struct stm32f_serial_dev * dev, const void * buf,
-					   unsigned int len)
+						unsigned int len)
 {
-	unsigned int cnt;
-	uint32_t st;
-	uint32_t sr;
+	uint8_t * cp = (uint8_t *)buf;
+	int rem = len;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	DCC_LOG1(LOG_INFO, "len=%d", len);
 
-	if (dev->tx.s->cr & DMA_EN) {
-		DCC_LOG(LOG_TRACE, "DMA enabled");
+#if SERIAL_ENABLE_TX_MUTEX
+	 thinkos_mutex_lock(dev->tx_mutex); 
+#endif
+
+	while (rem) {
+		unsigned int head;
+		int free;
+		int n;
+		int i;
+
+		thinkos_flag_take(dev->tx_flag);
+
+		head = dev->tx_fifo.head;
+		free = SERIAL_TX_FIFO_LEN - (int32_t)(head - dev->tx_fifo.tail);
+		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, dev->tx_fifo.tail, n);
+		n = MIN(rem, free);
+		for (i = 0; i < n; ++i) 
+			dev->tx_fifo.buf[head++ & (SERIAL_TX_FIFO_LEN - 1)] = *cp++;
+		dev->tx_fifo.head = head;
+		*dev->txie = 1; 
+
+		if (free > n)
+			thinkos_flag_give(dev->tx_flag);
+
+		rem -= n;
+		DCC_LOG1(LOG_INFO, "rem=%d", rem);
 	}
 
-	/* Memory address */
-	dev->tx.s->m0ar = (void *)buf;
-	/* Number of data items to transfer */
-	dev->tx.s->ndtr = len;
+#if SERIAL_ENABLE_TX_MUTEX
+	thinkos_mutex_unlock(dev->tx_mutex); 
+#endif
 
-	/* clear the TC bit */
-	if ((sr = dev->uart->sr) & USART_TC) {
-		DCC_LOG(LOG_INFO, "TC=1");
-	}
-
-	/* enable DMA */
-	dev->tx.s->cr = DMA_CHSEL_SET(4) | DMA_MBURST_1 | DMA_PBURST_1 |
-		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
-		DMA_DIR_MTP | DMA_TCIE  | DMA_EN;
-
-	/* wait for the DMA transfer to complete */
-	while (((st = dev->dma->hisr) & DMA_TCIF7) == 0) {
-		DCC_LOG(LOG_INFO, "wait...");
-		__thinkos_irq_wait(dev->tx.irq);
-		DCC_LOG(LOG_INFO, "wakeup");
-	}
-
-	/* clear the the DMA stream transfer complete flag */
-	dev->dma->hifcr = DMA_CTCIF7;
-
-	/* Number of data items transfered... */
-	cnt = len - dev->tx.s->ndtr;
-
-	DCC_LOG1(LOG_INFO, "cnt=%d", cnt);
-	return cnt;
+	return len;
 }
 
-
-struct stm32f_serial_dev uart5_dev = {
-	.uart = STM32F_UART5,
-	.dma = STM32F_DMA1,
-	.rx = {
-		.irq = STM32F_IRQ_DMA1_STREAM0,
-		.s = &STM32F_DMA1->s[0]
-	},
-	.tx = {
-		.irq = STM32F_IRQ_DMA1_STREAM7,
-		.s = &STM32F_DMA1->s[7]
-	}
-};
-
-void stm32f_uart5_isr(void)
+int stm32f_serial_flush(struct stm32f_serial_dev * dev)
 {
-	struct stm32f_serial_dev * dev= (struct stm32f_serial_dev *)&uart5_dev;
-	struct stm32f_usart * us;
-	uint32_t sr;
-	int c;
-	
-	us = dev->uart;
-	sr = us->sr;
+	do {
+		thinkos_flag_take(dev->tx_flag);
+	} while (((int32_t)dev->tx_fifo.head - dev->tx_fifo.tail) > 0);
 
-	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_TRACE, "RXNE");
-		c = us->dr;
-		(void)c;
-	}	
+	stm32_usart_flush(dev->uart);
 
-	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_TRACE, "IDLE");
-		/* Stop DMA transfer */
-		dev->rx.s->cr &= ~DMA_EN;
-		c = us->dr;
-		(void)c;
-	}
+	thinkos_flag_give(dev->tx_flag);
 
-	if (sr & USART_TXE) {
-		DCC_LOG(LOG_MSG, "TXE");
-	}
-
+	return 0;
 }
+
+int stm32f_serial_close(struct stm32f_serial_dev * dev)
+{
+	return 0;
+}
+
+int serial_send(struct serial_dev * dev, const void * buf, 
+				 unsigned int len) 
+__attribute__ ((weak, alias ("stm32f_serial_write")));
+
+int serial_recv(struct serial_dev * dev, void * buf, 
+				unsigned int len, unsigned int msec)
+__attribute__ ((weak, alias ("stm32f_serial_read")));
+
+int serial_drain(struct serial_dev * dev)
+__attribute__ ((weak, alias ("stm32f_serial_flush")));
+
+#endif /* !SERIAL_ENABLE_DMA */
+

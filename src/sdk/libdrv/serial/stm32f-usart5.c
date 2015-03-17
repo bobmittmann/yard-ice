@@ -23,54 +23,113 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <sys/stm32f.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <arch/cortex-m3.h>
-#include <sys/serial.h>
-#include <sys/delay.h>
+#define __STM32_SERIAL_I__
+#include "stm32-serial-i.h"
 
-#include <thinkos.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
-
-#include <sys/dcclog.h>
-
-#define UART_FIFO_BUF_LEN 64
-
-#define USART5_TXIE ((uint32_t *) CM3_PERIPHERAL_BITBAND_ADDR( \
-						STM32F_BASE_UART5 + STM32F_USART_CR1, 7))
+struct stm32f_serial_dev uart5_serial_dev = {
+	.uart = STM32_UART5,
+#if SERIAL_ENABLE_DMA
+	.dma = STM32F_DMA1,
+	.rx = {
+		.irq = STM32F_IRQ_DMA1_STREAM0,
+		.s = &STM32F_DMA1->s[0]
+	},
+	.tx = {
+		.irq = STM32F_IRQ_DMA1_STREAM7,
+		.s = &STM32F_DMA1->s[7]
+	}
+#endif
+};
 
 void stm32f_uart5_isr(void)
 {
-	struct stm32f_usart * us = STM32F_UART5;
+	struct stm32f_serial_dev * dev = &uart5_serial_dev;
+	struct stm32_usart * us;
 	uint32_t sr;
 	int c;
 	
+	us = dev->uart;
 	sr = us->sr;
 
+#if SERIAL_ENABLE_DMA
 	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_INFO, "RXNE");
+		DCC_LOG(LOG_TRACE, "RXNE");
 		c = us->dr;
 		(void)c;
-		__thinkos_ev_raise(dev->rx_ev);
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE");
+		DCC_LOG(LOG_TRACE, "IDLE");
+		/* Stop DMA transfer */
+		dev->rx.s->cr &= ~DMA_EN;
 		c = us->dr;
 		(void)c;
-		__thinkos_ev_raise(dev->rx_ev);
 	}
 
 	if (sr & USART_TXE) {
 		DCC_LOG(LOG_MSG, "TXE");
-		/* disable TXE interrupts */
-		*USART5_TXIE = 0;
-		__thinkos_ev_raise(dev->tx_ev);
 	}
+#else
+
+	if (sr & USART_ORE) {
+		DCC_LOG(LOG_WARNING, "OVR!");
+	}
+
+	sr &= us->cr1;
+
+	if (sr & USART_RXNE) {
+		unsigned int head;
+		int free;
+
+		c = us->dr;
+
+		head = dev->rx_fifo.head;
+		free = SERIAL_RX_FIFO_LEN - (uint8_t)(head - dev->rx_fifo.tail);
+		if (free > 0) { 
+			dev->rx_fifo.buf[head & (SERIAL_RX_FIFO_LEN - 1)] = c;
+			dev->rx_fifo.head = head + 1;
+		} else {
+			DCC_LOG(LOG_WARNING, "RX fifo full!");
+		}
+		if (free < (SERIAL_RX_FIFO_LEN / 2)) /* fifo is more than half full */
+			__thinkos_flag_give(dev->rx_flag);
+	}	
+
+	if (sr & USART_IDLE) {
+		DCC_LOG(LOG_INFO, "IDLE!");
+		c = us->dr;
+		(void)c;
+		__thinkos_flag_give(dev->rx_flag);
+	}
+
+	if (sr & USART_TXE) {
+		unsigned int tail = dev->tx_fifo.tail;
+		if (tail == dev->tx_fifo.head) {
+			/* FIFO empty, disable TXE interrupts */
+			*dev->txie = 0; 
+			__thinkos_flag_set(dev->tx_flag);
+		} else {
+			us->dr = dev->tx_fifo.buf[tail & (SERIAL_TX_FIFO_LEN - 1)];
+			dev->tx_fifo.tail = tail + 1;
+		}
+	}
+#endif
 }
 
-struct stm32f_usart * us = STM32F_UART5;
+struct serial_dev * stm32f_uart5_serial_init(unsigned int baudrate, 
+											 unsigned int flags)
+{
+	struct stm32f_serial_dev * dev = &uart5_serial_dev;
+
+	DCC_LOG(LOG_TRACE, "IDLE!");
+
+	stm32f_serial_init(dev, baudrate, flags);
+
+	/* configure interrupts */
+	cm3_irq_pri_set(STM32_IRQ_UART5, SERIAL_IRQ_PRIORITY);
+	/* enable interrupts */
+	cm3_irq_enable(STM32_IRQ_UART5);
+
+	return (struct serial_dev *)dev;
+}
+
