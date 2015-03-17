@@ -38,6 +38,22 @@
 #define ENABLE_NET_UDP 1
 #endif
 
+#ifndef NET_UDP_PCB_ACTIVE_MAX
+#define NET_UDP_PCB_ACTIVE_MAX 2
+#endif
+
+#ifndef NET_UDP_RECV_QUEUE_LEN
+#define NET_UDP_RECV_QUEUE_LEN 4
+#endif
+
+#ifndef NET_UDP_DEFAULT_TTL
+#define NET_UDP_DEFAULT_TTL 127
+#endif
+
+#ifndef NET_UDP_DEFAULT_TOS
+#define NET_UDP_DEFAULT_TOS 0x80
+#endif
+
 #include <stdint.h>
 #include <netinet/in.h>
 #include <netinet/udp.h>
@@ -78,8 +94,6 @@ struct udp_dgram {
 	struct mbuf * q;
 }; /* 12 bytes */
 
-#define UDP_RECV_MAX 4
-
 /*! \brief UDP protocol control block. */
 struct udp_pcb {
 	/*! foreign address */
@@ -100,22 +114,31 @@ struct udp_pcb {
 	uint8_t u_flags : 7;
 	uint8_t u_icmp_err : 1;
 	int8_t u_rcv_cond;
+	/* receiving queue */
 	volatile uint8_t u_rcv_tail;
 	volatile uint8_t u_rcv_head;
 	/* 16 */
-	struct udp_dgram u_rcv_buf[UDP_RECV_MAX];
+	struct udp_dgram u_rcv_buf[NET_UDP_RECV_QUEUE_LEN];
 	/* 4 * 12 = 48 + 16 = 64*/
+};
+
+struct udp_pcb_link {
+	struct pcb_link * next;
+	struct udp_pcb pcb;
 };
 
 struct udp_system {
 #ifdef ENABLE_UDP_CACHE
 	struct udp_pcb * cache;
 #endif
-	/*! pcb list */
-	struct pcb_list list;
+	/* list of free PCBs */
+	struct pcb_list free;
+	/* active PCBs list */
+	struct pcb_list active;
 #if ENABLE_UDP_PROTO_STAT
 	struct proto_stat stat;
 #endif
+	struct udp_pcb_link pcb_pool[NET_UDP_PCB_ACTIVE_MAX];
 };
 
 #if ENABLE_UDP_PROTO_STAT

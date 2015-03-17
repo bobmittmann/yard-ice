@@ -54,7 +54,7 @@ int udp_recv(struct udp_pcb * __up, void * __buf, int __len,
 	tcpip_net_lock();
 
 #if (ENABLE_NET_SANITY_CHECK)
-	if (pcb_find((struct pcb *)__up, &__udp__.pcb) < 0) {
+	if (pcb_find((struct pcb *)__up, &__udp__.active) < 0) {
 		DCC_LOG1(LOG_ERROR, "<%05x> pcb_find()", (int)__up);
 		tcpip_net_unlock();
 		/* TODO: errno */
@@ -72,7 +72,7 @@ int udp_recv(struct udp_pcb * __up, void * __buf, int __len,
 		}
 
 		if (__up->u_icmp_err) {
-			/* there where a ICMP error, clear the flag and exit  */
+			/* there was an ICMP error, clear the flag and exit  */
 			__up->u_icmp_err = 0;
 			DCC_LOG(LOG_WARNING, "ICMP error!");
 			tcpip_net_unlock();
@@ -88,7 +88,7 @@ int udp_recv(struct udp_pcb * __up, void * __buf, int __len,
 		__os_cond_wait(__up->u_rcv_cond, net_mutex);
 	}
 
-	dgram = &__up->u_rcv_buf[head % UDP_RECV_MAX];
+	dgram = &__up->u_rcv_buf[head % NET_UDP_RECV_QUEUE_LEN];
 	__up->u_rcv_head = head + 1;
 
 	n = MIN(dgram->len, __len);

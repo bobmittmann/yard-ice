@@ -23,7 +23,7 @@
 PROG = httpd_test
 
 CFILES = httpd_test.c tcp_echo.c stdio.c www_root.c www_img.c www_lib.c \
-		 zarathustra.html.c treeview.html.c treeview.css.c 
+		 zarathustra.html.c treeview.html.c treeview.css.c tftp.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools

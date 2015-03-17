@@ -34,7 +34,7 @@
 
 #include <netinet/in.h>
 
-int tcp_echo_task(void * arg)
+void __attribute__((noreturn)) tcp_echo_task(void * arg)
 {
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
@@ -48,13 +48,13 @@ int tcp_echo_task(void * arg)
 
 	if (tcp_listen(svc, 1) != 0) {
 		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!");
-		return -1;
+		abort();
 	}
 
 	for (;;) {
 		if ((tp = tcp_accept(svc)) == NULL) {
 			DCC_LOG(LOG_ERROR, "tcp_accept() failed!");
-			return -1;
+			abort();
 		}
 
 		DCC_LOG(LOG_TRACE, "Connection accepted.");
@@ -68,8 +68,6 @@ int tcp_echo_task(void * arg)
 		tcp_close(tp);
 		DCC_LOG(LOG_TRACE, "Connection closed.");
 	}
-
-	return 0;
 }
 
 uint32_t tcp_echo_stack[256];

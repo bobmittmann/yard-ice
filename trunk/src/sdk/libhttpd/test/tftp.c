@@ -30,25 +30,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <sys/param.h>
-#include <sys/null.h>
-#include <sys/shell.h>
-
-#include <tcpip/ethif.h>
-#include <tcpip/route.h>
-#include <tcpip/udp.h>
-
+#include <errno.h>
 #include <arpa/tftp.h>
 
-#include <debugger.h>
-#include <command.h>
-#include <tftpd.h>
-#include <errno.h>
+#include <tcpip/udp.h>
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
-
-#include "trace.h"
 
 #define MAX_TFTP_SEGSIZE 1428
 #define MAX_TFTP_MSG (MAX_TFTP_SEGSIZE + sizeof(struct tftphdr))
@@ -94,6 +83,33 @@ struct tftp_pkt_oack {
 	uint16_t th_opcode;
 	char opt[TFTP_OACK_OPT_MAX];
 };
+
+int tftp_bin_read(unsigned int addr, unsigned char * buf, int size)
+{
+	/* Read data at buffer's last half... */
+	memset(buf, 'B', size);
+
+	return size;
+}
+
+int tftp_bin_write(unsigned int addr, const unsigned char * buf, int size)
+{
+	return size;
+}
+
+int tftp_ascii_read(unsigned int addr, unsigned char * buf, int size)
+{
+	/* Read data at buffer's last half... */
+	memset(buf, 'A', size);
+
+	return size;
+}
+
+int tftp_ascii_write(unsigned int addr, const unsigned char * buf, int size)
+{
+	return size;
+}
+
 
 int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin, 
 			   int errno, char * msg)
@@ -155,223 +171,6 @@ int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
 	return udp_sendto(udp, &pkt, 2 + len, sin);
 }
 
-int tftp_decode_fname(struct debugger * dbg, char * fname)
-{
-	char * cp;
-	unsigned int size;
-	unsigned int addr;
-	unsigned int end;
-
-	/* 
-	 * octet mode:
-	 * if the file name starts with 0x convert it to the load address 
-	 * as hexadecimal number
-	 *
-	 * File name format:
-	 *
-	 * Start only: 
-	 *   0x[START]
-	 *
-	 *   The start address is specified, the size is defined by the 
-	 *   debugger variable: transf.size
-	 *
-	 *   Ex: 
-	 *   	0x0100000
-	 *   	0x0
-	 *
-	 * Range: * 0x[START]:0x[END] or 0x[START]-0x[END]
-	 *
-	 *   Specify the initial (START) and final (END) addresses. 
-	 *   The size is END - START. END must be great then START.
-	 *  
-	 *   Ex: 
-	 *   	0x0100000:0x0100100
-	 *   	0x0:0x0a0000
-	 *
-	 * Start and size: 0x[START].[SIZE] or 0x[START]_[SIZE] or [START]#[SIZE]
-	 *
-	 *   Specify the initial (START) address and data size. Size may be 
-	 *   both a decimal or hexadecimal value.
-	 *  
-	 *   Ex: 
-	 *   	0x0100000.0x100
-	 *   	0x0100000_0x100
-	 *   	0x0100000#0x100
-	 *   	0x0200000_4096
-	 *   	0x0200000_4k
-	 *   	0x0200000_0x100000
-	 *   	0x0200000_2M
-	 */
-
-	if ((fname[0] == '0') && (fname[1] == 'x')) {
-		
-		addr = strtoul(fname, &cp, 16);
-
-		tracef("%s(): fname=%s addr=0x%08x", __func__, fname, addr);
-
-		DCC_LOG1(LOG_TRACE, "addr=0x%08x", addr);
-
-		if (cp == NULL) {
-			end = addr + (dbg->transf.size);
-		} else {
-			if ((*cp == ':') || (*cp == '-')) {
-				cp++;
-				end = strtoul(cp, NULL, 16);
-
-				DCC_LOG1(LOG_TRACE, "end=0x%08x", end);
-				if (end <= addr) {
-/*					tftp_error(udp, &sin, TFTP_ENOTFOUND, 
-							   "BAD ADDR."); */
-					return -1;
-				}
-			} else {
-				if ((*cp == '.') || (*cp == '_') || (*cp == '#')) {
-					cp++;
-					size = strtoul(cp, &cp, 0);
-					if (cp != NULL) {
-						if ((*cp == 'k') || (*cp == 'K')) {
-							size *= 1024;
-						} else {
-							if ((*cp == 'm') || (*cp == 'M')) {
-								size *= 1024 * 1024;
-							}
-						}
-					}
-
-					DCC_LOG1(LOG_TRACE, "size=%d", size);
-
-					end = addr + size;
-				} else {
-					end = addr + (dbg->transf.size);
-				}
-			}
-		}
-
-		DCC_LOG2(LOG_TRACE, "region: %08x, %d", addr, end - addr);
-
-		/* set the address and size info in the debugger state */
-		dbg->transf.base = addr;
-		dbg->transf.size = end - addr;
-	} else {
-		ice_drv_t * ice = (ice_drv_t *)&dbg->ice;
-		struct ice_mem_entry * e;
-		char * cp;
-		int c;
-
-		for (cp = fname; (c = *cp); cp++) {
-			if ((c == '.') || (c == ' ')) {
-				*cp = '\0';
-				break;
-			}
-		}
-
-		if ((e = ice_mem_by_name(ice, dbg->mem, fname)) == NULL) {
-			DCC_LOG(LOG_TRACE, "memory not found!");
-			return 0;
-		}
-
-		DCC_LOG2(LOG_TRACE, "mem: %08x,%d", e->addr.base + e->addr.offs, 
-				 e->blk.count * e->blk.size);
-
-		dbg->transf.base = e->addr.base + e->addr.offs;
-		dbg->transf.size = e->blk.count * e->blk.size;
-	}
-
-	return 0;
-}
-
-int tftp_recv_netascii(struct udp_pcb * udp, struct sockaddr_in * sin, 
-					   int block, char * buf, int len)
-{
-	char * line;
-	FILE * f;
-	int ret;
-	int n;
-	int i;
-
-
-	f = null_fopen(NULL);
-	DCC_LOG1(LOG_TRACE, "1. f=%p", f);
-
-	i = 0;
-	n = 1;
-	ret = 0;
-	while (i < len) {
-		for (line = &buf[i]; i < len; i++) {
-			/* CR or [CR, LF] */
-			if (buf[i] == '\r') {
-				buf[i++] = '\0';
-				if (buf[i] == '\n')
-					i++;
-				break;
-			}
-			/* LF or [LF, CR] */
-			if (buf[i] == '\n') {
-				buf[i++] = '\0';
-				if (buf[i] == '\r')
-					i++;
-				break;
-			}
-		}
-
-		if (i == len)
-			buf[i] = '\0';
-
-
-		if ((ret = exec(f, line, yard_ice_cmd_tab)) < 0) {
-			DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
-			break;
-		}
-		n++;
-		DCC_LOG1(LOG_TRACE, "line %d", n);
-	}
-
-	if (ret < 0) {
-		sprintf(buf, "ERROR %d on line %d: %s", -ret, n, target_strerror(ret));
-		DCC_LOG1(LOG_TRACE, "2. f=%p", f);
-		ret = tftp_error(udp, sin, TFTP_EACCESS, buf);
-		DCC_LOG1(LOG_TRACE, "3. f=%p", f);
-	} else {
-		ret = tftp_ack(udp, block, sin);
-	}
-
-	DCC_LOG1(LOG_TRACE, "f=%p", f);
-	fclose(f);
-
-	return ret;
-}
-
-static const char hextab[] = { 
-	'0', '1', '2', '3', '4', '5', '6', '7',
-	'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-};
-
-int tftp_hex(unsigned int addr, unsigned char * buf, int size)
-{
-	unsigned char * s;
-	unsigned char * cp;
-	int n;
-	int i;
-
-	/* Read data at buffer's last half... */
-	n = target_mem_read(addr, &buf[256], size);
-
-	if (n < 0) {
-		DCC_LOG(LOG_WARNING, "target memory read error.");
-		n = 0;
-	}
-
-	s = &buf[256];
-	cp = buf;
-	/* convert to hexadecimal (in place) */
-	for (i = 0; i < n; i++) {
-		*cp++ = hextab[(s[i] >> 4) & 0xf];
-		*cp++ = hextab[s[i] & 0xf];
-	}
-
-	return n * 2;
-}
-
 struct tftp_req {
 	char * fname;
 	uint8_t mode;
@@ -419,7 +218,7 @@ int tftp_req_parse(char * hdr, struct tftp_req * req)
 	return 0;
 }
 
-void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
+void __attribute__((noreturn)) tftp_daemon_task(void * arg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
@@ -435,7 +234,7 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 	int len;
 	int blksize = TFTP_SEGSIZE; 
 
-	DCC_LOG1(LOG_TRACE, "thread: %d", __os_thread_self());
+	DCC_LOG1(LOG_TRACE, "thread: %d", thinkos_thread_self());
 
 	if ((udp = udp_alloc()) == NULL) {
 		DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
@@ -489,17 +288,9 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
 
-				tracef("%s(): RRQ '%s' '%s' blksize=%d", __func__, req.fname, 
-					   tftp_mode[req.mode], req.blksize);
-
-				if (tftp_decode_fname(dbg, req.fname) < 0) {
-					tftp_error(udp, &sin, TFTP_ENOTFOUND, "BAD ADDR.");
-					break;
-				}
-
 				/* set the transfer info */
-				addr_start = dbg->transf.base;
-				addr_end = addr_start + dbg->transf.size;
+				addr_start = 0;
+				addr_end = addr_start + (1024 * 1024);
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
@@ -534,17 +325,9 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
 
-				tracef("%s(): WRQ '%s' '%s' blksize=%d", __func__, req.fname, 
-					   tftp_mode[req.mode], req.blksize);
-
-				if (tftp_decode_fname(dbg, req.fname) < 0) {
-					tftp_error(udp, &sin, TFTP_ENOTFOUND, "BAD ADDR.");
-					break;
-				}
-
 				/* set the transfer info */
-				addr_start = dbg->transf.base;
-				addr_end = addr_start + dbg->transf.size;
+				addr_start = 0;
+				addr_end = addr_start + (1024 * 1024);
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
@@ -575,7 +358,7 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 					int n;
 
 send_netascii:
-					addr = addr_start + (block * 256);
+					addr = addr_start + (block * blksize);
 					rem = addr_end - addr;
 					if (rem < 0) {
 						state = TFTPD_IDLE;
@@ -584,13 +367,13 @@ send_netascii:
 						break;
 					}
 
-					n = (rem < 256) ? rem : 256;
+					n = (rem < blksize) ? rem : blksize;
 
 					DCC_LOG2(LOG_TRACE, "send netascii: addr=0x%08x n=%d", 
 							 addr, n);
 
 					/* build the packet */
-					len = tftp_hex(addr, hdr->th_data, n);
+					len = tftp_ascii_read(addr, hdr->th_data, n);
 
 					goto send_data;
 				}
@@ -611,11 +394,10 @@ send_octet:
 					}
 					n = (rem < blksize) ? rem : blksize;
 
-					DCC_LOG2(LOG_TRACE, "send octet: addr=0x%08x n=%d", 
-							 addr, n);
+					DCC_LOG2(LOG_TRACE, "send octet: addr=0x%08x n=%d", addr, n);
 
 					/* build the packet */
-					len = target_mem_read(addr, hdr->th_data, n);
+					len = tftp_bin_read(addr, hdr->th_data, n);
 
 					if (len < 0) {
 						DCC_LOG(LOG_WARNING, "target memory read error.");
@@ -626,8 +408,7 @@ send_data:
 					hdr->th_opcode = htons(TFTP_DATA);
 					hdr->th_block = htons(block + 1);
 
-					DCC_LOG2(LOG_TRACE, "block %d: %d bytes.", 
-							 block + 1,  len);
+					DCC_LOG2(LOG_TRACE, "block %d: %d bytes.", block + 1,  len);
 
 					if (udp_sendto(udp, hdr, 
 								   sizeof(struct tftphdr) + len, &sin) < 0) {
@@ -679,14 +460,12 @@ send_data:
 						tftp_ack(udp, block, &sin);
 					}
 
-					n = target_mem_write(addr, hdr->th_data, len);
+					n = tftp_bin_write(addr, hdr->th_data, len);
 
 					if (n < len) {
 						if (n < 0) {
 							DCC_LOG(LOG_ERROR, "target_mem_write()!");
 							sprintf(msg, "TARGET WRITE FAIL: %08x", addr);
-							tracef("%s(): memory write failed at "
-								   "addr=0x%08x, code %d", __func__, addr, n);
 						} else {
 							DCC_LOG2(LOG_WARNING, "short read: "
 									 "ret(%d) < len(%d)!", n, len);
@@ -715,6 +494,10 @@ send_data:
 				}
 
 				if (state == TFTPD_RECV_NETASCII) {
+					unsigned int addr;
+
+					addr = addr_start + (block * blksize);
+
 					block++;
 					if (len != blksize) {
 						state = TFTPD_IDLE;
@@ -722,10 +505,14 @@ send_data:
 							tftp_ack(udp, block, &sin);
 							break;
 						}
+					} else {
+						/* ACK the packet before writing to
+						   speed up the transfer, errors are postponed... */
+						tftp_ack(udp, block, &sin);
 					}
 					DCC_LOG1(LOG_TRACE, "ASCII recv %d...", len);
-					tftp_recv_netascii(udp, &sin, block, 
-									   (char *)hdr->th_data, len);
+					tftp_ascii_write(addr, hdr->th_data, len);
+
 					break;
 				}
 
@@ -769,25 +556,12 @@ send_data:
 
 uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 
-const struct thinkos_thread_info tftpd_inf = {
-	.tag = "TFTPD"
-};
-
 int tftpd_start(void)
 {
-	int th;
-	int priority = __OS_PRIORITY_HIGHEST;
-	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
-
-	th = thinkos_thread_create_inf((void *)tftp_daemon_task, 
-								   (void *)&debugger, tftp_stack, 
-								 THINKOS_OPT_PRIORITY(priority) |
-								 THINKOS_OPT_ID(id) | 
-								 THINKOS_OPT_STACK_SIZE(sizeof(tftp_stack)), 
-								 &tftpd_inf);
-
-	tracef("TFTP started th=%d", th);
-
-	return 0;
+	return thinkos_thread_create((void *)tftp_daemon_task, 
+								   (void *)NULL, tftp_stack, 
+								 THINKOS_OPT_PRIORITY(8) |
+								 THINKOS_OPT_ID(8) | 
+								 THINKOS_OPT_STACK_SIZE(sizeof(tftp_stack)));
 }
 

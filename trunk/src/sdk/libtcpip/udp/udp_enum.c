@@ -37,7 +37,7 @@ int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg)
 
 	tcpip_net_lock();
 
-	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.list, 
+	while ((up = (struct udp_pcb *)pcb_getnext(&__udp__.active, 
 											   (struct pcb *)up)) != NULL) {
 		inf.faddr = up->u_faddr;
 		inf.laddr = up->u_laddr;

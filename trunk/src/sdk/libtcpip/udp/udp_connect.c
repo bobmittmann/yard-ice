@@ -54,7 +54,7 @@ int udp_connect(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port)
 		__os_cond_signal(__up->u_rcv_cond);
 	} else {
 		if (pcb_lookup(__addr, __port, __up->u_laddr, 
-					   __up->u_lport, &__udp__.list)) {
+					   __up->u_lport, &__udp__.active)) {
 			DCC_LOG3(LOG_WARNING, "<%05x> %I:%d in use", (int)__up,
 					 __addr, ntohs(__port));
 			ret = -EADDRINUSE;

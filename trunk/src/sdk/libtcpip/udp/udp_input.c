@@ -55,7 +55,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 
 	up = (struct udp_pcb *)pcb_wildlookup(__ip->saddr, __udp->sport, 
 										   __ip->daddr, __udp->dport, 
-										   &__udp__.list);
+										   &__udp__.active);
 
 	if (up == NULL) {
 		DCC_LOG5(LOG_TRACE, "%I:%d > %I:%d (%d) port unreach", 
@@ -97,16 +97,16 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 	tail = up->u_rcv_tail;
 	cnt = (tail - (int)up->u_rcv_head) & 0xff;
 
-	if (cnt >= UDP_RECV_MAX) {
+	if (cnt >= NET_UDP_RECV_QUEUE_LEN) {
 		UDP_PROTO_STAT_ADD(rx_drop, 1);
-		if ((unsigned int)cnt > (unsigned int)UDP_RECV_MAX) {
+		if ((unsigned int)cnt > (unsigned int)NET_UDP_RECV_QUEUE_LEN) {
 			DCC_LOG4(LOG_PANIC, "<%05x> queue error: head=%d tail=%d cnt=%d", 
 					 (int)up, (int)up->u_rcv_head, tail, cnt);
 		}
 		DCC_LOG1(LOG_WARNING, "<%05x> queue full", (int)up);
 	//	__os_cond_signal(up->u_rcv_cond);
 	} else {
-		dgram = &up->u_rcv_buf[tail % UDP_RECV_MAX];
+		dgram = &up->u_rcv_buf[tail % NET_UDP_RECV_QUEUE_LEN];
 		if ((dgram->q = mbuf_list_alloc(len)) != NULL) {
 
 			n = mbuf_list_write(dgram->q, ptr, len);

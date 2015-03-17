@@ -33,7 +33,7 @@
 #include <stdlib.h>
 
 int udp_sendto(struct udp_pcb * __up, void * __buf, int __len, 
-	const struct sockaddr_in * __sin)
+			   const struct sockaddr_in * __sin)
 {
 	struct iphdr * ip;
 	struct udphdr * uh;

@@ -63,6 +63,7 @@ void env_init(void);
 void stdio_init(void);
 int stdio_shell(void);
 int tcp_echo_start(void);
+int tftpd_start(void);
 
 extern struct httpdobj www_root[];
 extern struct httpdobj www_img[];
@@ -280,7 +281,10 @@ int main(int argc, char ** argv)
 
 	tcp_echo_start();
 
-	DCC_LOG(LOG_TRACE, "7. starting console shell...");
+	DCC_LOG(LOG_TRACE, "7. TFTP server ...");
+	tftpd_start();
+
+	DCC_LOG(LOG_TRACE, "8. starting console shell...");
 
 	for (;;) {
 		thinkos_sleep(1000);
