@@ -89,7 +89,8 @@ void pcb_insert(struct pcb * __inp, struct pcb_list * __list);
 struct pcb * pcb_remove_head(struct pcb_list * __list);
 int pcb_remove(struct pcb * __inp, struct pcb_list * __list);
 int pcb_release(struct pcb * __inp, struct pcb_list * __list);
-int pcb_move(struct pcb * __inp, struct pcb_list * __from, struct pcb_list * __to);
+int pcb_move(struct pcb * __inp, struct pcb_list * __from, 
+			 struct pcb_list * __to);
 
 int pcb_find(struct pcb * __inp, struct pcb_list * __list);
 

@@ -913,7 +913,8 @@ dodata:
 			mbuf_queue_free(&tp->rcv_q);
 			mbuf_queue_free(&tp->snd_q);
 			tp->t_state = TCPS_TIME_WAIT;
-			DCC_LOG1(LOG_TRACE, "<%05x> stop rxmt tmr, start 2MSL tmr [TIME_WAIT]", (int)tp);
+			DCC_LOG1(LOG_TRACE, "<%05x> stop rxmt tmr, start 2MSL tmr "
+					 "[TIME_WAIT]", (int)tp);
 			tp->t_rxmt_tmr = 0;
 			tp->t_conn_tmr = 2 * tcp_msl;
 			break;

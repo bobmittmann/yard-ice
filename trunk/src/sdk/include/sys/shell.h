@@ -85,37 +85,37 @@ char * shell_stripline(char * line);
    Predefined commands
    --------------------------------------------------------------------------*/
 
-int cmd_close(FILE *f, int argc, char ** argv);
+int cmd_close(FILE * f, int argc, char ** argv);
 
-int cmd_echo(FILE *f, int argc, char ** argv);
-
-
-int cmd_set(FILE *f, int argc, char ** argv);
-
-int cmd_get(FILE *f, int argc, char ** argv);
+int cmd_echo(FILE * f, int argc, char ** argv);
 
 
-int cmd_reboot(FILE *f, int argc, char ** argv);
+int cmd_set(FILE * f, int argc, char ** argv);
 
-int cmd_sleep(FILE *f, int argc, char ** argv);
+int cmd_get(FILE * f, int argc, char ** argv);
 
 
-int cmd_osinfo(FILE *f, int argc, char ** argv);
+int cmd_reboot(FILE * f, int argc, char ** argv);
+
+int cmd_sleep(FILE * f, int argc, char ** argv);
+
+
+int cmd_osinfo(FILE * f, int argc, char ** argv);
 
 int cmd_thread(FILE * f, int argc, char ** argv);
 
 
-int cmd_ifconfig(FILE *f, int argc, char ** argv);
+int cmd_ifconfig(FILE * f, int argc, char ** argv);
 
-int cmd_arp(FILE *f, int argc, char ** argv);
+int cmd_arp(FILE * f, int argc, char ** argv);
 
-int cmd_route(FILE *f, int argc, char ** argv);
+int cmd_route(FILE * f, int argc, char ** argv);
 
-int cmd_netstat(FILE *f, int argc, char ** argv);
+int cmd_netstat(FILE * f, int argc, char ** argv);
 
-int cmd_ping(FILE *f, int argc, char ** argv);
+int cmd_ping(FILE * f, int argc, char ** argv);
 
-int cmd_tcpstat(FILE *f, int argc, char ** argv);
+int cmd_tcpstat(FILE * f, int argc, char ** argv);
 
 
 #ifdef __cplusplus

@@ -98,14 +98,8 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_get, "get", "", 
 		"VAR", "get environement variable" },
 
-	{ cmd_set, "set", "", 
-		"VAR EXPR", "set environement variable" },
-
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
-
-	{ cmd_reboot, "reboot", "rst", "", 
-		"reboot system" },
 
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
@@ -115,6 +109,19 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
+
+	{ cmd_ping, "ping", "", 
+		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
+
+	{ cmd_reboot, "reboot", "rst", "", 
+		"reboot system" },
+
+	{ cmd_route, "route", "rt", 
+		"<add|del|help> dest [netmask [gateway]] iface",
+		"show / manipulate the IP routing table" },
+
+	{ cmd_set, "set", "", 
+		"VAR EXPR", "set environement variable" },
 
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },

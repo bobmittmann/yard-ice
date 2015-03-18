@@ -25,13 +25,14 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-#include <thinkos_svc.h>
+//#include <thinkos_svc.h>
 #include <thinkos_except.h>
 
 #include <stdio.h>
 #include <string.h>
 
-extern const struct thinkos_thread_info thinkos_main_inf;
+extern const char thinkos_svc_nm[];
+extern const struct thinkos_thread_inf thinkos_main_inf;
 
 /* -------------------------------------------------------------------------- 
  * Run Time ThinkOS block
@@ -479,7 +480,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if THINKOS_ENABLE_THREAD_INFO
-	thinkos_rt.th_inf[self] = (struct thinkos_thread_info *)&thinkos_main_inf;
+	thinkos_rt.th_inf[self] = (struct thinkos_thread_inf *)&thinkos_main_inf;
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE

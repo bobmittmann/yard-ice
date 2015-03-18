@@ -30,11 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/param.h>
 
 #include <sys/os.h>
 #include <sys/mbuf.h>
 
-#if (ENABLE_NET_RAW)
+const uint8_t raw_pcb_max = NET_RAW_PCB_MAX;
 
 struct raw_system __raw__;
 
@@ -44,12 +45,12 @@ struct raw_pcb * raw_pcb_new(int __protocol)
 
 	tcpip_net_lock();
 
-	/* get a new memory descriptor */
-	if ((raw = (struct raw_pcb *)pcb_alloc()) == NULL) {
+	if ((raw = (struct raw_pcb *)pcb_remove_head(&__raw__.free)) == NULL) {
 		DCC_LOG(LOG_WARNING, "could not allocate a PCB");
-		tcpip_net_unlock();
 		return NULL;
 	}
+
+	pcb_insert((struct pcb *)raw, &__raw__.active);
 
 	/* ensure the mem is clean */
 	memset(raw, 0, sizeof(struct raw_pcb));
@@ -59,7 +60,6 @@ struct raw_pcb * raw_pcb_new(int __protocol)
 
 	DCC_LOG2(LOG_TRACE, "<%x> protocol=%d", raw, __protocol); 
 
-	pcb_insert((struct pcb *)raw, &__raw__.list);
 
 	tcpip_net_unlock();
 
@@ -72,17 +72,16 @@ int raw_pcb_free(struct raw_pcb * __raw)
 
 	__os_cond_free(__raw->r_cond);
 
-	pcb_release((struct pcb *)__raw, &__raw__.list);
-
-	return 0;
+	return pcb_move((struct pcb *)__raw, &__raw__.active, &__raw__.free);
 } 
 
 int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 {
 	struct pcb_link * q;
 	struct raw_pcb * raw;
+	int n;
 
-	q = (struct pcb_link *)&__raw__.list.first;
+	q = (struct pcb_link *)&__raw__.active.first;
 
 	DCC_LOG3(LOG_TRACE, "%I > %I (%d)", __ip->saddr, __ip->daddr, __len); 
 
@@ -97,10 +96,12 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		DCC_LOG1(LOG_TRACE, "protocol %d", __ip->proto); 
 		DCC_LOG3(LOG_TRACE, "%I > %I (%d)", __ip->saddr, __ip->daddr, __len); 
 
-		raw->r_buf = __ip;
-		raw->r_len = __len;
 		raw->r_faddr = __ip->saddr;
 		raw->r_laddr = __ip->daddr;
+
+		n = MIN(NET_RAW_RCV_BUF_LEN, __len);	
+		memcpy(raw->r_buf, __ip, n);
+		raw->r_len = n;
 
 		__os_cond_signal(raw->r_cond);
 
@@ -112,10 +113,17 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 
 void raw_init(void)
 {
+	int i;
+
 	DCC_LOG(LOG_TRACE, "initializing RAW subsystem."); 
 
-	pcb_list_init(&__raw__.list);
-}
+	pcb_list_init(&__raw__.free);
 
-#endif /* !ENABLE_NET_RAW */
+	for (i = 0; i < NET_RAW_PCB_MAX; ++i) {
+		struct raw_pcb * p = &__raw__.pcb_pool[i].pcb;
+		pcb_insert((struct pcb *)p, &__raw__.free);
+	}
+
+	pcb_list_init(&__raw__.active);
+}
 

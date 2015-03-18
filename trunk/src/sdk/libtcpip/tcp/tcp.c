@@ -126,10 +126,8 @@ const char * const __tcp_state[11] = {
 struct tcp_pcb * tcp_pcb_new(struct pcb_list * __list)
 {
 	struct tcp_pcb * tp;
-#if 0
+
 	/* get a new PCB */
-	if ((tp = (struct tcp_pcb *)pcb_alloc()) == NULL) {
-#endif
 	if ((tp = (struct tcp_pcb *)pcb_remove_head(&__tcp__.free)) == NULL) {
 		DCC_LOG(LOG_WARNING, "could not allocate a PCB");
 		return NULL;
@@ -179,14 +177,12 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 		/* listening sockets do not have receiving or trasmmit queues,
 		so we don't release this structures */
 		DCC_LOG1(LOG_TRACE, "<%05x> release LISTEN", (int)tp);
-//		return pcb_release((struct pcb *)tp, &__tcp__.listen);
 		return pcb_move((struct pcb *)tp, &__tcp__.listen, &__tcp__.free);
 	} else  if (tp->t_state == TCPS_CLOSED) {
 		DCC_LOG1(LOG_TRACE, "<%05x> release CLOSED", (int)tp);
 		/* connections in the close state had their buffers
 		and conditional variables released already,
 		just release the control block. */
-//		return pcb_release((struct pcb *)tp, &__tcp__.closed);
 		return pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.free);
 	} else {
 		DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
@@ -196,7 +192,6 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 		mbuf_queue_free(&tp->snd_q);
 		__os_cond_free(tp->t_cond);
 
-//		return pcb_release((struct pcb *)tp, &__tcp__.active);
 		return pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.free);
 	}
 
@@ -212,8 +207,6 @@ struct tcp_pcb * tcp_alloc(void)
 	if ((tp = tcp_pcb_new(&__tcp__.closed)) != NULL)
 		tp->t_state = TCPS_CLOSED;
 
-	//	pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.listen);
-
 	DCC_LOG1(LOG_TRACE, "<%05x>", (int)tp);
 
 	tcpip_net_unlock();
@@ -223,12 +216,6 @@ struct tcp_pcb * tcp_alloc(void)
 
 extern int  tcp_tmr_task(void * p);
 
-#if defined(DEBUG) || defined(ENABLE_TCPDUMP) || defined(IP_DEBUG) || \
-	defined(ETHARP_DEBUG)
-uint32_t tcp_tmr_stack[128];
-#else
-uint32_t tcp_tmr_stack[80];
-#endif
 
 #if (ENABLE_TCP_PROFILING)
 
@@ -257,7 +244,19 @@ uint32_t tcp_rel_timestamp(void)
 }
 #endif
 
-const struct thinkos_thread_info tcp_tmr_inf = {
+#if defined(DEBUG) || defined(ENABLE_TCPDUMP) || defined(IP_DEBUG) || \
+	defined(ETHARP_DEBUG)
+uint32_t tcp_tmr_stack[128];
+#else
+uint32_t tcp_tmr_stack[80];
+#endif
+
+const struct thinkos_thread_inf tcp_tmr_inf = {
+	.stack_ptr = tcp_tmr_stack, 
+	.stack_size = sizeof(tcp_tmr_stack), 
+	.priority = 32,
+	.thread_id = 32, 
+	.paused = 0,
 	.tag = "TCP_TMR"
 };
 
@@ -285,18 +284,7 @@ void tcp_init(void)
 	DCC_LOG1(LOG_TRACE, "max listen TCP PCBs : %d ", tcp_pcb_listen_max);
 #endif
 
-#if 0
-	__os_thread_create((void *)tcp_tmr_task, (void *)NULL, 
-					   tcp_tmr_stack, sizeof(tcp_tmr_stack), 
-					   __OS_PRIORITY_LOWEST);
-#endif
-
-	thinkos_thread_create_inf((void *)tcp_tmr_task, (void *)NULL, 
-					tcp_tmr_stack, 
-					THINKOS_OPT_PRIORITY(32) |
-					THINKOS_OPT_ID(32) | 
-					THINKOS_OPT_STACK_SIZE(sizeof(tcp_tmr_stack)), 
-					&tcp_tmr_inf);
+	thinkos_thread_create_inf((void *)tcp_tmr_task, NULL, &tcp_tmr_inf);
 
 #if (ENABLE_TCP_PROFILING)
 	prof_clock_init();

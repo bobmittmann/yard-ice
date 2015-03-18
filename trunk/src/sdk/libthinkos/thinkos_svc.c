@@ -21,8 +21,8 @@
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#include <thinkos_svc.h>
 #include <thinkos.h>
+#include <thinkos_svc.h>
 
 void thinkos_thread_create_svc(int32_t * arg);
 
@@ -158,6 +158,7 @@ void cm3_svc_isr(void)
 	case THINKOS_YIELD:
 		__thinkos_defer_sched();
 		break;
+
 #if THINKOS_ENABLE_PAUSE
 	case THINKOS_PAUSE:
 		thinkos_pause_svc(arg);
@@ -167,6 +168,7 @@ void cm3_svc_isr(void)
 		thinkos_resume_svc(arg);
 		break;
 #endif
+
 #if THINKOS_ENABLE_CANCEL
 	case THINKOS_CANCEL:
 		thinkos_cancel_svc(arg);
@@ -179,13 +181,21 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
+#if THINKOS_ENABLE_SLEEP
 	case THINKOS_SLEEP:
 		thinkos_sleep_svc(arg);
 		break;
+#endif
 
 #if THINKOS_ENABLE_ALARM
 	case THINKOS_ALARM:
 		thinkos_alarm_svc(arg);
+		break;
+#endif
+		
+#if THINKOS_ENABLE_CLOCK
+	case THINKOS_CLOCK:
+		arg[0] = thinkos_rt.ticks;
 		break;
 #endif
 
