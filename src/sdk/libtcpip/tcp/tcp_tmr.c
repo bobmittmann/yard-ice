@@ -28,6 +28,7 @@
 
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
+#include <sys/etharp.h>
 
 #include <stdlib.h>
 
@@ -442,7 +443,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 				DCC_LOG(LOG_TRACE, "tcp_output(tp)) == -EAGAIN");
 				/* if the reason to fail was an arp failure
 				   try query an address pending for resolution ... */
-				arp_query_pending();
+				etharp_query_pending();
 				break;
 			}
 

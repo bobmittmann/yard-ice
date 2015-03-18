@@ -141,6 +141,8 @@ int stm32f_serial_flush(struct stm32f_serial_dev * dev);
 
 int stm32f_serial_close(struct stm32f_serial_dev * dev);
 
+void stm32f_serial_isr(struct stm32f_serial_dev * dev);
+
 #ifdef __cplusplus
 }
 #endif

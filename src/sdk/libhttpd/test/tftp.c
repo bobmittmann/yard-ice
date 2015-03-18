@@ -218,7 +218,7 @@ int tftp_req_parse(char * hdr, struct tftp_req * req)
 	return 0;
 }
 
-void __attribute__((noreturn)) tftp_daemon_task(void * arg)
+int __attribute__((noreturn)) tftpd_task(void * arg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
@@ -556,12 +556,17 @@ send_data:
 
 uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 
+const struct thinkos_thread_inf tftpd_inf = {
+	.stack_ptr = tftp_stack, 
+	.stack_size = sizeof(tftp_stack), 
+	.priority = 32,
+	.thread_id = 9, 
+	.paused = 0,
+	.tag = "TFTPD"
+};
+
 int tftpd_start(void)
 {
-	return thinkos_thread_create((void *)tftp_daemon_task, 
-								   (void *)NULL, tftp_stack, 
-								 THINKOS_OPT_PRIORITY(8) |
-								 THINKOS_OPT_ID(8) | 
-								 THINKOS_OPT_STACK_SIZE(sizeof(tftp_stack)));
+	return thinkos_thread_create_inf(tftpd_task, NULL, &tftpd_inf);
 }
 

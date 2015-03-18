@@ -216,7 +216,7 @@ int ip_output(struct route * __rt, struct iphdr * __ip)
 	/* get interface */
 	ifn = __rt->rt_ifn;
 
-	dst_hwaddr = arp_lookup(ifn, dst);
+	dst_hwaddr = ifn_arplookup(ifn, dst);
 
 	if (dst_hwaddr == NULL) {
 		/* if we can't get the link address return EGAIN.

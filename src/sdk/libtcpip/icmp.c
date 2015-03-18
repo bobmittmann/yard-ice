@@ -106,7 +106,8 @@ int icmp_send(struct iphdr * __ip, struct icmp * __icp, int __len)
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 
 		if (ret == -EAGAIN) {
-			arp_query_pending();
+			/* FIXME: non ethernet type interfaces */
+			etharp_query_pending();
 		}
 		return -1;
 	}
@@ -147,7 +148,8 @@ int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip,
 		DCC_LOG(LOG_ERROR, "ip_output() fail!");
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 		if (ret == -EAGAIN) {
-			arp_query_pending();
+			/* FIXME: non ethernet type interfaces */
+			etharp_query_pending();
 		}
 		return -1;
 	}

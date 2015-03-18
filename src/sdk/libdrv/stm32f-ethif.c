@@ -533,6 +533,7 @@ const struct ifnet_operations stm32f_ethif_op = {
 	.op_mmap = stm32f_ethif_mmap, 
 	.op_send = stm32f_ethif_send,
 	.op_arplookup = etharp_lookup, 
+	.op_arpquery = etharp_query, 
 	.op_getaddr = stm32f_ethif_getaddr,
 	.op_getdesc = stm32f_ethif_getdesc, 
 	.op_sleep = NULL,

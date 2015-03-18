@@ -115,7 +115,7 @@ int cmd_ifconfig(FILE *f, int argc, char ** argv)
 	struct ifnet * ifn;
 
 	if (argc > 4) {
-		return -1;
+		return SHELL_ERR_EXTRA_ARGS;
 	}
 
 	if (--argc == 0) {
@@ -124,14 +124,14 @@ int cmd_ifconfig(FILE *f, int argc, char ** argv)
 	}
 
 	if (strcmp(argv[1], "help") == 0) {
-//		shell_write(msg_ifconfig_usage, strlen(msg_ifconfig_usage), tty);
+		/* FIXME implement help */
 		return 0;
 	}
 
 	if (inet_aton(argv[1], (struct in_addr *)&ip_addr) == 0) {
 		if ((ifn = get_ifn_byname(argv[1])) == NULL) {
 			fprintf(f, "network interface not found.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 		if (argc == 1) {
 			show_ifn(ifn, NULL);
@@ -139,7 +139,7 @@ int cmd_ifconfig(FILE *f, int argc, char ** argv)
 		}
 		if (inet_aton(argv[2], (struct in_addr *)&ip_addr) == 0) {
 			fprintf(f, "ip address invalid.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 		argc--;
 	} else {
@@ -149,7 +149,7 @@ int cmd_ifconfig(FILE *f, int argc, char ** argv)
 	if (argc > 1) {
 		if (inet_aton(argv[argc], (struct in_addr *)&netmask) == 0) {
 			fprintf(f, "network mask invalid.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 	} else {
 		if (IN_CLASSA(ip_addr))
