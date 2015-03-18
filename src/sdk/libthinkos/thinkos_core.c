@@ -434,27 +434,27 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.mutex_alloc = (uint32_t)(0xffffffffLL << THINKOS_MUTEX_MAX);
+	thinkos_rt.mutex_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_MUTEX_MAX);
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
 	/* initialize the semaphore allocation bitmap */ 
-	thinkos_rt.sem_alloc = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
+	thinkos_rt.sem_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
 #endif
 
 #if THINKOS_ENABLE_COND_ALLOC
 	/* initialize the conditional variable allocation bitmap */ 
-	thinkos_rt.cond_alloc = (uint32_t)(0xffffffffLL << THINKOS_COND_MAX);
+	thinkos_rt.cond_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_COND_MAX);
 #endif
 
 #if THINKOS_ENABLE_FLAG_ALLOC
 	/* initialize the flag allocation bitmap */ 
-	thinkos_rt.flag_alloc = (uint32_t)(0xffffffffLL << THINKOS_FLAG_MAX);
+	thinkos_rt.flag_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_FLAG_MAX);
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
 	/* initialize the event allocation bitmap */ 
-	thinkos_rt.ev_alloc = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
+	thinkos_rt.ev_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
 #endif
 
 #if (THINKOS_MUTEX_MAX > 0)
@@ -472,8 +472,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		opt.id = THINKOS_THREADS_MAX - 1;
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.th_alloc = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
-	self = thinkos_alloc_lo(&thinkos_rt.th_alloc, opt.id);
+	thinkos_rt.th_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
+	self = thinkos_alloc_lo(thinkos_rt.th_alloc, opt.id);
 #else
 	self = opt.id;
 #endif

@@ -28,82 +28,6 @@
 
 #include <thinkos.h>
 
-enum {
-	THINKOS_OBJ_WQ_READY = 0,
-	THINKOS_OBJ_WQ_TMSHARE,
-	THINKOS_OBJ_WQ_CANCELED,
-	THINKOS_OBJ_WQ_PAUSED,
-	THINKOS_OBJ_WQ_CLOCK,
-	THINKOS_OBJ_MUTEX,
-	THINKOS_OBJ_COND,
-	THINKOS_OBJ_SEMAPHORE,
-	THINKOS_OBJ_EVENT,
-	THINKOS_OBJ_FLAG,
-	THINKOS_OBJ_JOIN,
-	THINKOS_OBJ_INVALID
-};
-
-static int thinkos_obj_type_get(int oid)
-{
-	if (oid == 0)
-		return THINKOS_OBJ_WQ_READY;
-
-#if THINKOS_ENABLE_TIMESHARE
-	if (oid == THINKOS_WQ_TMSHARE)
-		return THINKOS_OBJ_WQ_TMSHARE;
-#endif
-
-#if THINKOS_ENABLE_JOIN
-	if (oid == THINKOS_WQ_CANCELED)
-		return THINKOS_OBJ_WQ_CANCELED;
-#endif
-
-#if THINKOS_ENABLE_PAUSE
-	if (oid == THINKOS_WQ_PAUSED)
-		return THINKOS_OBJ_WQ_PAUSED;
-#endif
-
-#if THINKOS_ENABLE_CLOCK
-	if (oid == THINKOS_WQ_CLOCK)
-		return THINKOS_OBJ_WQ_CLOCK;
-#endif
-
-	if (oid >= THINKOS_WQ_LST_END)
-		return THINKOS_OBJ_INVALID;
-
-#if THINKOS_ENABLE_JOIN
-	if (oid >= THINKOS_JOIN_BASE)
-		return THINKOS_OBJ_JOIN;
-#endif 
-
-#if THINKOS_FLAG_MAX > 0
-	if (oid >= THINKOS_FLAG_BASE)
-		return THINKOS_OBJ_FLAG;
-#endif 
-
-#if THINKOS_EVENT_MAX > 0
-	if (oid >= THINKOS_EVENT_BASE)
-		return THINKOS_OBJ_EVENT;
-#endif 
-
-#if THINKOS_SEMAPHORE_MAX > 0
-	if (oid >= THINKOS_SEM_BASE)
-		return THINKOS_OBJ_SEMAPHORE;
-#endif 
-
-#if THINKOS_COND_MAX > 0
-	if (oid >= THINKOS_COND_BASE)
-		return THINKOS_OBJ_COND;
-#endif 
-
-#if THINKOS_MUTEX_MAX > 0
-	if (oid >= THINKOS_MUTEX_BASE)
-		return THINKOS_OBJ_MUTEX;
-#endif 
-
-	return THINKOS_OBJ_INVALID;
-}
-
 void thinkos_trace_rt(struct thinkos_rt * rt)
 {
 	uint32_t * wq;
@@ -116,19 +40,19 @@ void thinkos_trace_rt(struct thinkos_rt * rt)
 			oid = wq - rt->wq_lst;
 			type = thinkos_obj_type_get(oid);
 			switch (type) {
-			case THINKOS_OBJ_WQ_READY:
+			case THINKOS_OBJ_READY:
 				DCC_LOG2(LOG_TRACE, "READY %d: 0x%08x", oid, *wq);
 				break;
-			case THINKOS_OBJ_WQ_TMSHARE:
+			case THINKOS_OBJ_TMSHARE:
 				DCC_LOG2(LOG_TRACE, "TMSHARE %d: 0x%08x", oid, *wq);
 				break;
-			case THINKOS_OBJ_WQ_CANCELED:
+			case THINKOS_OBJ_CANCELED:
 				DCC_LOG2(LOG_TRACE, "CANCELED %d: 0x%08x", oid, *wq);
 				break;
-			case THINKOS_OBJ_WQ_PAUSED:
+			case THINKOS_OBJ_PAUSED:
 				DCC_LOG2(LOG_TRACE, "PAUSED %d: 0x%08x", oid, *wq);
 				break;
-			case THINKOS_OBJ_WQ_CLOCK:
+			case THINKOS_OBJ_CLOCK:
 				DCC_LOG2(LOG_TRACE, "CLOCK %d: 0x%08x", oid, *wq);
 				break;
 			case THINKOS_OBJ_MUTEX:

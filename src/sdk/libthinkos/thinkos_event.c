@@ -33,7 +33,7 @@
 #if THINKOS_ENABLE_EVENT_ALLOC
 static inline int __attribute__((always_inline)) 
 __thinkos_ev_alloc(void) {
-	int ev = thinkos_alloc_lo(&thinkos_rt.ev_alloc, 0);
+	int ev = thinkos_alloc_lo(thinkos_rt.ev_alloc, 0);
 	return (ev < 0) ? ev : ev + THINKOS_EVENT_BASE;
 }
 

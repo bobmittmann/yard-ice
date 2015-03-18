@@ -49,7 +49,7 @@
 extern "C" {
 #endif
 
-
+#if 0
 #if (THINKOS_EVENT_MAX > 0)
 
 static inline void __attribute__((always_inline)) 
@@ -101,8 +101,7 @@ __thinkos_ev_timed_raise(int ev) {
 #endif
 
 #endif /* (THINKOS_EVENT_MAX > 0) */
-
-
+#endif 
 
 
 #if (THINKOS_FLAG_MAX > 0)
