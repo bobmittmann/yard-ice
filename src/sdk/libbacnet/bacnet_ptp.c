@@ -31,7 +31,7 @@
 
 #include <sys/dcclog.h>
 
-#include "bacnet_ptp.h"
+#include <bacnet/bacnet-ptp.h>
 
 
 
@@ -170,8 +170,6 @@ unsigned int bacnet_crc16(unsigned int crc, const void * buf, int len)
 
 	return crc;
 }
-
-
 
 struct bacnet_ptp_hdr {
 	uint16_t preamble;
@@ -637,6 +635,11 @@ again:
 
 		if (typ == THINKOS_ETIMEDOUT) {
 			if (++timeout == 2) {
+				if (--retry == 0) {
+					lnk->state = BACNET_PTP_DISCONNECTED;
+					DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
+					return -1;
+				}
 				bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
 				DCC_LOG(LOG_TRACE, "[INBOUND]");
 				timeout = 0;
