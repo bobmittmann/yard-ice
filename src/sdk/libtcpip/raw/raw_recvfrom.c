@@ -29,6 +29,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/param.h>
 
 int raw_recvfrom(struct raw_pcb * __raw, void * __buf, 
 				 int __len, struct sockaddr_in * __sin)
@@ -62,10 +63,8 @@ int raw_recvfrom(struct raw_pcb * __raw, void * __buf,
 		__sin->sin_addr.s_addr = __raw->r_faddr;
 	}
 
-	n = (__raw->r_len > __len) ? __len : __raw->r_len;
-
+	n = MIN(__raw->r_len , __len);
 	memcpy(__buf, __raw->r_buf, n);
-
 	__raw->r_len = 0;
 
 	DCC_LOG2(LOG_TRACE, "<%05x> len=%d", (int)__raw, n);

@@ -206,7 +206,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_INFO
-#define THINKOS_ENABLE_THREAD_NAME 0
+#define THINKOS_ENABLE_THREAD_INFO 0
 #endif
 
 #ifndef THINKOS_ENABLE_RT_DEBUG
@@ -215,6 +215,10 @@ struct thinkos_context {
 
 #ifndef THINKOS_ENABLE_ALARM
 #define THINKOS_ENABLE_ALARM 0
+#endif
+
+#ifndef THINKOS_ENABLE_SLEEP
+#define THINKOS_ENABLE_SLEEP 1
 #endif
 
 #ifndef THINKOS_ENABLE_BREAK
@@ -407,7 +411,7 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_THREAD_INFO
-	struct thinkos_thread_info * th_inf[THINKOS_THREADS_MAX]; 
+	struct thinkos_thread_inf * th_inf[THINKOS_THREADS_MAX]; 
 #endif
 
 } __attribute__ ((aligned (8)));
@@ -466,12 +470,11 @@ struct thinkos_rt {
 /* -------------------------------------------------------------------------- 
  * Thread initialization 
  * --------------------------------------------------------------------------*/
-
 struct thinkos_thread_opt {
 	uint16_t stack_size;
 	uint8_t priority;
 	uint8_t id: 7;
-	uint8_t f_paused: 1;
+	uint8_t paused: 1;
 };
 
 struct thinkos_thread_init {
@@ -479,7 +482,7 @@ struct thinkos_thread_init {
 	void * arg;
 	void * stack_ptr;
 	struct thinkos_thread_opt opt;
-	struct thinkos_thread_info * inf;
+	struct thinkos_thread_inf * inf;
 };
 
 

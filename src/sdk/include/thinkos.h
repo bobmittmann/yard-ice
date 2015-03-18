@@ -25,13 +25,16 @@
 
 #include <arch/cortex-m3.h>
 
-#define THINKOS_ETIMEDOUT -1
-#define THINKOS_EINTR -2
-#define THINKOS_EINVAL -3
-#define THINKOS_EAGAIN -4
-#define THINKOS_EDEADLK -5
-#define THINKOS_EPERM -6
-#define THINKOS_ENOSYS -7
+enum {
+	THINKOS_OK        =  0,
+	THINKOS_ETIMEDOUT = -1,
+	THINKOS_EINTR     = -2,
+	THINKOS_EINVAL    = -3,
+	THINKOS_EAGAIN    = -4,
+	THINKOS_EDEADLK   = -5,
+	THINKOS_EPERM     = -6,
+	THINKOS_ENOSYS    = -7
+};
 
 enum {
 	THINKOS_OBJ_READY = 0,
@@ -48,14 +51,24 @@ enum {
 	THINKOS_OBJ_INVALID
 };
 
-#define THINKOS_OPT_PRIORITY(VAL) (((VAL) & 0x7f) << 16)
+#define THINKOS_OPT_PRIORITY(VAL) (((VAL) & 0xff) << 16)
 #define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 24)
 #define THINKOS_OPT_PAUSED (1 << 31) /* don't run at startup */
 #define THINKOS_OPT_STACK_SIZE(VAL) ((VAL) & 0xffff)
 
 #ifndef __ASSEMBLER__
 
-struct thinkos_thread_info {
+struct thinkos_thread_inf {
+	void * stack_ptr;
+	union {
+		uint32_t opt;
+		struct {
+			uint16_t stack_size;
+			uint8_t priority;
+			uint8_t thread_id: 7;
+			uint8_t paused: 1;
+		};
+	};
 	char tag[8];
 };
 
@@ -72,14 +85,12 @@ static inline void thinkos_yield(void)  {
 
 int thinkos_init(unsigned int opt);
 
-int thinkos_thread_create(int (* task)(void *), 
-						  void * arg, void * stack_ptr,
+int thinkos_thread_create(int (* task_ptr)(void *), 
+						  void * task_arg, void * stack_ptr,
 						  unsigned int opt);
 
-int thinkos_thread_create_inf(int (* task)(void *), 
-						  void * arg, void * stack_ptr,
-						  unsigned int opt,
-						  const struct thinkos_thread_info * inf);
+int thinkos_thread_create_inf(int (* task_ptr)(void *), void * task_arg,
+							  const struct thinkos_thread_inf * inf);
 
 int const thinkos_thread_self(void);
 
@@ -93,9 +104,11 @@ int thinkos_pause(unsigned int thread_id);
 
 int thinkos_resume(unsigned int thread_id);
 
-void thinkos_sleep(unsigned int ms);
+int thinkos_sleep(unsigned int ms);
 
-void thinkos_alarm(unsigned int clock);
+int thinkos_alarm(uint32_t clock);
+
+uint32_t thinkos_clock(void);
 
 int thinkos_mutex_alloc(void);
 

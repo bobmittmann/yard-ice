@@ -86,6 +86,8 @@
 #define THINKOS_EXIT 44
 #define THINKOS_ALARM 45
 
+#define THINKOS_CLOCK 46
+
 #ifndef __ASSEMBLER__
 
 /* -------------------------------------------------------------------------- 
@@ -149,8 +151,6 @@
 #define THINKOS_SVC5(N, A1, A2, A3, A4, A5) __SVC_CALL5(N, (A1), (A2), \
 														(A3), (A4), (A5))
 
-extern const char thinkos_svc_nm[];
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -169,12 +169,10 @@ static inline int __attribute__((always_inline))
 }
 
 static inline int __attribute__((always_inline)) 
-	thinkos_thread_create_inf(int (* task)(void *), 
-							  void * arg, void * stack_ptr,
-							  unsigned int opt,
-							  const struct thinkos_thread_info * inf) {
+	thinkos_thread_create_inf(int (* task)(void *), void * arg, 
+							  const struct thinkos_thread_inf * inf) {
 	return THINKOS_SVC5(THINKOS_THREAD_CREATE, task, arg, 
-						stack_ptr, opt, inf);
+						inf->stack_ptr, inf->opt, inf);
 }
 
 static inline int 
@@ -202,15 +200,18 @@ __attribute__((always_inline)) thinkos_resume(unsigned int id) {
 	return THINKOS_SVC1(THINKOS_RESUME, id);
 }
 
-
-static inline void 
+static inline int
 __attribute__((always_inline)) thinkos_sleep(unsigned int ms) {
-	THINKOS_SVC1(THINKOS_SLEEP, ms);
+	return THINKOS_SVC1(THINKOS_SLEEP, ms);
 }
 
-static inline void 
-__attribute__((always_inline)) thinkos_alarm(unsigned int clk) {
-	THINKOS_SVC1(THINKOS_ALARM, clk);
+static inline int
+__attribute__((always_inline)) thinkos_alarm(uint32_t clk) {
+	return THINKOS_SVC1(THINKOS_ALARM, clk);
+}
+
+static inline uint32_t __attribute__((always_inline)) thinkos_clock(void) {
+	return THINKOS_SVC(THINKOS_CLOCK);
 }
 
 static inline int __attribute__((always_inline)) thinkos_mutex_alloc(void) {

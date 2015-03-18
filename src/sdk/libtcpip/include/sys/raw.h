@@ -38,6 +38,14 @@
 #define ENABLE_NET_RAW 1
 #endif
 
+#ifndef NET_RAW_PCB_MAX
+#define NET_RAW_PCB_MAX 1
+#endif
+
+#ifndef NET_RAW_RCV_BUF_LEN
+#define NET_RAW_RCV_BUF_LEN 256
+#endif
+
 #ifdef RAW_DEBUG
 #ifndef DEBUG
 #define DEBUG
@@ -91,7 +99,7 @@ struct raw_pcb {
 	uint8_t r_flags;
 	uint8_t r_state;
 
-	int8_t r_cond;
+	uint8_t r_cond;
 
 	/*! ip type of service  */
 	uint8_t r_tos;
@@ -103,13 +111,23 @@ struct raw_pcb {
 
 	uint16_t r_len;
 
-	void * r_buf;
-	struct iphdr * r_ip;
+	uint8_t r_buf[NET_RAW_RCV_BUF_LEN];
+};
+
+struct raw_pcb_link {
+	struct pcb_link * next;
+	struct raw_pcb pcb;
 };
 
 struct raw_system {
-	/*! pcb list */
-	struct pcb_list list;
+	/* list of free PCBs */
+	struct pcb_list free;
+	/* active PCBs list */
+	struct pcb_list active;
+#if ENABLE_RAW_PROTO_STAT
+	struct proto_stat stat;
+#endif
+	struct raw_pcb_link pcb_pool[NET_RAW_PCB_MAX];
 };
 
 extern struct raw_system __raw__;

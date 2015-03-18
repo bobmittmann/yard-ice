@@ -59,7 +59,6 @@ const char * version_str = "HTTP Server Demo " \
 const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void tcpip_init(void);
-void env_init(void);
 void stdio_init(void);
 int stdio_shell(void);
 int tcp_echo_start(void);
@@ -245,7 +244,7 @@ int main(int argc, char ** argv)
 	cm3_udelay_calibrate();
 
 	DCC_LOG(LOG_TRACE, "1. env_init().");
-	env_init();
+	stm32f_nvram_env_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
