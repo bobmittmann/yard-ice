@@ -228,10 +228,47 @@ void io_init(void)
 
 }
 
-uint32_t server_stack1[256];
-uint32_t server_stack2[256];
-uint32_t server_stack3[256];
-uint32_t server_stack4[256];
+uint32_t httpd1_stack[256];
+uint32_t httpd2_stack[256];
+uint32_t httpd3_stack[256];
+uint32_t httpd4_stack[256];
+
+
+const struct thinkos_thread_inf httpd1_inf = {
+	.stack_ptr = httpd1_stack, 
+	.stack_size = sizeof(httpd1_stack), 
+	.priority = 32,
+	.thread_id = 4, 
+	.paused = 0,
+	.tag = "HTTPD 1"
+};
+
+const struct thinkos_thread_inf httpd2_inf = {
+	.stack_ptr = httpd2_stack, 
+	.stack_size = sizeof(httpd2_stack), 
+	.priority = 32,
+	.thread_id = 5, 
+	.paused = 0,
+	.tag = "HTTPD 2"
+};
+
+const struct thinkos_thread_inf httpd3_inf = {
+	.stack_ptr = httpd3_stack, 
+	.stack_size = sizeof(httpd3_stack), 
+	.priority = 32,
+	.thread_id = 6, 
+	.paused = 0,
+	.tag = "HTTPD 3"
+};
+
+const struct thinkos_thread_inf httpd4_inf = {
+	.stack_ptr = httpd4_stack, 
+	.stack_size = sizeof(httpd4_stack), 
+	.priority = 32,
+	.thread_id = 7, 
+	.paused = 0,
+	.tag = "HTTPD 4"
+};
 
 int main(int argc, char ** argv)
 {
@@ -270,21 +307,17 @@ int main(int argc, char ** argv)
 	printf("Listening on port %d.\n", port);
 
 	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
-	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack1, sizeof(server_stack1) |
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+							  &httpd1_inf);
 
-	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack2, sizeof(server_stack2) |
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(7));
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+							  &httpd2_inf);
 
-	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack3, sizeof(server_stack3) |
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(6));
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+							  &httpd3_inf);
 
-	thinkos_thread_create((void *)httpd_server_task, (void *)&httpd,
-						  server_stack4, sizeof(server_stack4) |
-						  THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(5));
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+							  &httpd4_inf);
 
 	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
 

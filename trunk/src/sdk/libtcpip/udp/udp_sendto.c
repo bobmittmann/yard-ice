@@ -26,6 +26,8 @@
 #define __USE_SYS_UDP__
 #include <sys/udp.h>
 
+#include <sys/etharp.h>
+
 #include <tcpip/udp.h>
 
 #include <string.h>
@@ -189,7 +191,7 @@ again:
 		/* if the reason to fail was an arp failure
 		   try query an address pending for resolution ... */
 		if ((ret == -EAGAIN) && (--retry)) {
-			arp_query_pending();
+			etharp_query_pending();
 			tcpip_net_unlock();
 			DCC_LOG1(LOG_WARNING, "<%05x> again!", (int)__up);
 			__os_sleep(10);

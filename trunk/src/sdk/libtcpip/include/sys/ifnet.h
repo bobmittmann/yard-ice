@@ -81,6 +81,8 @@ struct ifnet_operations {
 	/* translate ipv4 address into hardware address */
 	void * (* op_arplookup)(struct ifnet * __if, in_addr_t __ipaddr);	
 
+	int (* op_arpquery)(struct ifnet * __if, in_addr_t __ipaddr);
+
 	/* get the interface mac address if any */
 	int (* op_getaddr)(struct ifnet * __if, uint8_t * __buf);	
 
@@ -175,6 +177,14 @@ extern inline int ifn_getaddr(struct ifnet * __if, uint8_t * __buf) {
 
 extern inline int ifn_getdesc(struct ifnet * __if, char * __s, int __len) {
 	return __if->if_op->op_getdesc(__if, __s, __len);
+}
+
+extern inline void * ifn_arplookup(struct ifnet * __if, in_addr_t __ipaddr) {
+	return __if->if_op->op_arplookup(__if, __ipaddr);
+}
+
+extern inline int ifn_arpquery(struct ifnet * __if, in_addr_t __ipaddr) {
+	return __if->if_op->op_arpquery(__if, __ipaddr);
 }
 
 extern inline int in_broadcast(in_addr_t __addr, struct ifnet * __if)

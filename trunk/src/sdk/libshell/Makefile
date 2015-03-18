@@ -25,7 +25,8 @@ LIB_STATIC = shell
 
 CFILES = shell.c cmd.c history.c parseline.c stripline.c cmd_set.c cmd_get.c \
 		 cmd_echo.c cmd_close.c cmd_sleep.c cmd_reboot.c cmd_memxxd.c \
-		 cmd_osinfo.c cmd_netstat.c cmd_ifconfig.c cmd_ping.c cmd_route.c
+		 cmd_osinfo.c cmd_netstat.c cmd_ifconfig.c cmd_ping.c cmd_route.c \
+		 cmd_arp.c
 
 INCPATH = ../include
 

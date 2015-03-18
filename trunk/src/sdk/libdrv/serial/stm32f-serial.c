@@ -29,6 +29,80 @@
 
 #if !SERIAL_ENABLE_DMA
 
+void stm32f_serial_isr(struct stm32f_serial_dev * dev)
+{
+	struct stm32_usart * us;
+	uint32_t sr;
+	int c;
+	
+	us = dev->uart;
+	sr = us->sr;
+
+#if SERIAL_ENABLE_DMA
+	if (sr & USART_RXNE) {
+		DCC_LOG(LOG_TRACE, "RXNE");
+		c = us->dr;
+		(void)c;
+	}	
+
+	if (sr & USART_IDLE) {
+		DCC_LOG(LOG_TRACE, "IDLE");
+		/* Stop DMA transfer */
+		dev->rx.s->cr &= ~DMA_EN;
+		c = us->dr;
+		(void)c;
+	}
+
+	if (sr & USART_TXE) {
+		DCC_LOG(LOG_MSG, "TXE");
+	}
+#else
+
+	if (sr & USART_ORE) {
+		DCC_LOG(LOG_WARNING, "OVR!");
+	}
+
+	sr &= us->cr1;
+
+	if (sr & USART_RXNE) {
+		unsigned int head;
+		int free;
+
+		c = us->dr;
+
+		head = dev->rx_fifo.head;
+		free = SERIAL_RX_FIFO_LEN - (uint8_t)(head - dev->rx_fifo.tail);
+		if (free > 0) { 
+			dev->rx_fifo.buf[head & (SERIAL_RX_FIFO_LEN - 1)] = c;
+			dev->rx_fifo.head = head + 1;
+		} else {
+			DCC_LOG(LOG_WARNING, "RX fifo full!");
+		}
+		if (free < (SERIAL_RX_FIFO_LEN / 2)) /* fifo is more than half full */
+			__thinkos_flag_give(dev->rx_flag);
+	}	
+
+	if (sr & USART_IDLE) {
+		DCC_LOG(LOG_INFO, "IDLE!");
+		c = us->dr;
+		(void)c;
+		__thinkos_flag_give(dev->rx_flag);
+	}
+
+	if (sr & USART_TXE) {
+		unsigned int tail = dev->tx_fifo.tail;
+		if (tail == dev->tx_fifo.head) {
+			/* FIFO empty, disable TXE interrupts */
+			*dev->txie = 0; 
+			__thinkos_flag_set(dev->tx_flag);
+		} else {
+			us->dr = dev->tx_fifo.buf[tail & (SERIAL_TX_FIFO_LEN - 1)];
+			dev->tx_fifo.tail = tail + 1;
+		}
+	}
+#endif
+}
+
 int stm32f_serial_init(struct stm32f_serial_dev * dev, 
 					   unsigned int baudrate, unsigned int flags)
 {

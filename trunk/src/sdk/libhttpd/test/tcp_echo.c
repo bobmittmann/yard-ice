@@ -72,11 +72,19 @@ void __attribute__((noreturn)) tcp_echo_task(void * arg)
 
 uint32_t tcp_echo_stack[256];
 
+const struct thinkos_thread_inf tcp_echo_inf = {
+	.stack_ptr = tcp_echo_stack, 
+	.stack_size = sizeof(tcp_echo_stack), 
+	.priority = 32,
+	.thread_id = 8, 
+	.paused = 0,
+	.tag = "TCPECHO"
+};
+
 int tcp_echo_start(void)
 {
-	return thinkos_thread_create((void *)tcp_echo_task, (void *)NULL,
-								 tcp_echo_stack, sizeof(tcp_echo_stack) |
-								 THINKOS_OPT_PRIORITY(4) | THINKOS_OPT_ID(8));
+	return thinkos_thread_create_inf((void *)tcp_echo_task, (void *)NULL,
+								 &tcp_echo_inf);
 
 }
 

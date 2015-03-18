@@ -31,8 +31,7 @@
 
 #define __USE_SYS_ARP__
 #include <sys/arp.h>
-#define __USE_SYS_IFNET__
-#include <sys/ifnet.h>
+#include <sys/ethernet.h>
 
 struct etharp {
 	struct arphdr ea_hdr;	
@@ -52,10 +51,6 @@ struct etharp {
  * Ethernet ARP cache
  */
 
-#ifndef ETH_ADDR_LEN
-#define	ETH_ADDR_LEN    6
-#endif
-
 struct etharp_entry {
 	uint16_t count;
 	uint8_t hwaddr[ETH_ADDR_LEN];
@@ -72,9 +67,6 @@ void etharp_clear(void);
 
 int etharp_add(uint32_t ipaddr, uint8_t * hwaddr);
 
-int etharp_enum(int (* __callback)(struct etharp_entry *, void *), 
-				void * __parm);
-
 void etharp_input(struct ifnet * __if, struct etharp * __etharp, int __len);
 
 int etharp_query(struct ifnet * __if, in_addr_t __addr);
@@ -82,6 +74,10 @@ int etharp_query(struct ifnet * __if, in_addr_t __addr);
 void * etharp_lookup(struct ifnet * __if, in_addr_t __ipaddr);
 
 void etharp_proto_getstat(struct proto_stat * __st, int __rst);
+
+int etharp_query_pending(void);
+
+int etharp_enum(int (* __callback)(struct ipv4_arp *, void *), void * __parm);
 
 #ifdef __cplusplus
 }

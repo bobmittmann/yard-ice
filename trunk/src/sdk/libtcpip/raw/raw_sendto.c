@@ -26,6 +26,8 @@
 #define __USE_SYS_RAW__
 #include <sys/raw.h>
 
+#include <sys/etharp.h>
+
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -99,7 +101,7 @@ int raw_sendto(struct raw_pcb * __raw, void * __buf, int __len,
 		DCC_LOG1(LOG_ERROR, "<%05x> ip_output() fail!", (int)__raw);
 		/* if the reason to fail was an arp failure
 		   try query an address pending for resolution ... */
-		arp_query_pending();
+		etharp_query_pending();
 		tcpip_net_unlock();
 		return -1;
 	}

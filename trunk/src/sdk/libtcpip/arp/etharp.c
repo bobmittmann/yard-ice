@@ -24,7 +24,6 @@
  */ 
 
 #include <sys/etharp.h>
-#include <sys/ethernet.h>
 
 #define __USE_SYS_ROUTE__
 #include <sys/route.h>
@@ -65,11 +64,11 @@ struct etharp_system __etharp__ = {
 	.pending = INADDR_ANY
 };
 
-int etharp_enum(int (* __callback)(struct etharp_entry *, void *), 
-				void * __parm)
+int etharp_enum(int (* __callback)(struct ipv4_arp *, void *), void * __parm)
 {
-	int i;
 	struct etharp_entry * p;
+	struct ipv4_arp arp;
+	int i;
 	int n;
 
 	p = __etharp__.tab;
@@ -77,10 +76,13 @@ int etharp_enum(int (* __callback)(struct etharp_entry *, void *),
 	for(i = 0; i < ETHARP_TABLE_LEN; i++) {
 		if (p->ipaddr) {
 			n++;
-			if (__callback != NULL) {
-				if (__callback(p, __parm))
-					break;
-			}
+			arp.type = ARPHRD_ETHER;
+			arp.flags = 0;
+			arp.ipaddr = p->ipaddr;
+			arp.ifn = NULL;
+			memcpy(arp.hwaddr, p->hwaddr, ETH_ADDR_LEN);
+			if (__callback(&arp, __parm))
+				break;
 		}
 		p++;
 	}
@@ -368,7 +370,7 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 
 }
 
-int arp_query_pending(void)
+int etharp_query_pending(void)
 {
 	struct route * rt;
 	in_addr_t daddr;
@@ -390,6 +392,7 @@ int arp_query_pending(void)
 
 	return etharp_query(rt->rt_ifn , daddr);
 }
+
 
 void etharp_proto_getstat(struct proto_stat * __st, int __rst)
 {

@@ -45,6 +45,9 @@
 #define DATA_LEN 64
 #define BUF_LEN (DATA_LEN + sizeof(struct iphdr) + sizeof(struct icmphdr))
 
+const char msg_ping_usage[] = 
+	"usage: ping HOST\n";
+
 int cmd_ping(FILE * f, int argc, char ** argv)
 {
 	struct raw_pcb * raw;
@@ -67,15 +70,25 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	int n;
 	int ret = 0;
 
+	if (argc < 2) {
+		fprintf(f, msg_ping_usage);
+		return SHELL_ERR_ARG_MISSING;
+	}
+
 	if (argc > 3) {
+		fprintf(f, msg_ping_usage);
+		return SHELL_ERR_EXTRA_ARGS;
+	}
+
+	if (strcmp(argv[1], "help") == 0) {
 		fprintf(f, "ping - send ICMP ECHO_REQUEST to network host\n");
-	 	fprintf(f, "usage: ping HOST\n");
-		return -1;
+		fprintf(f, msg_ping_usage);
+		return 0;
 	}
 
 	if (inet_aton(argv[1], (struct in_addr *)&ip_addr) == 0) {
 		fprintf(f, "ip address invalid.\n");
-		return -1;
+		return SHELL_ERR_ARG_INVALID;
 	}
 
 	if (argc > 2) {

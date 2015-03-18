@@ -78,15 +78,20 @@ int cmd_route(FILE * f, int argc, char ** argv)
 		return 0;
 	}
 
-	if ((argc > 6) || (argc < 3)) {
+	if (argc < 3) {
 		fprintf(f, msg_route_usage);
-		return -1;
+		return SHELL_ERR_ARG_MISSING;
+	}
+
+	if (argc > 6) {
+		fprintf(f, msg_route_usage);
+		return SHELL_ERR_EXTRA_ARGS;
 	}
 
 	if (strcmp(argv[1], "del") == 0) {
 		if (inet_aton(argv[2], (struct in_addr *)&dst) == 0) {
 			fprintf(f, "ip address invalid.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 		fprintf(f, "deleting entry %s.\n", 
 				inet_ntop(AF_INET, (void *)&dst, buf, 16));
@@ -95,19 +100,19 @@ int cmd_route(FILE * f, int argc, char ** argv)
 
 	if ((argc < 4) || (strcmp(argv[1], "add") != 0)) {
 		fprintf(f, msg_route_usage);
-		return -1;
+		return SHELL_ERR_ARG_INVALID;
 	}
 
 	if (inet_aton(argv[2], (struct in_addr *)&dst) == 0) {
 		fprintf(f, "ip address invalid.\n");
-		return -1;
+		return SHELL_ERR_ARG_INVALID;
 	}
 
 	argn = 3;
 	if (argc > 3) {
 		if (inet_aton(argv[argn++], (struct in_addr *)&netmask) == 0) {
 			fprintf(f, "network mask invalid.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 	} else
 		netmask = 0xffffffff;
@@ -115,7 +120,7 @@ int cmd_route(FILE * f, int argc, char ** argv)
 	if (argc > 4) {
 		if (inet_aton(argv[argn++], (struct in_addr *)&gw) == 0) {
 			fprintf(f, "ip address invalid.\n");
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 	} else
 		gw = 0;
@@ -128,13 +133,13 @@ int cmd_route(FILE * f, int argc, char ** argv)
 		}
 		if (ifn == NULL) {
 			fprintf(f, "interface not found %s.\n", argv[argn]);
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 	} else {
 		if ((rt = ipv4_route_lookup(gw)) == NULL) {
 			fprintf(f, "no route to gateway: %s", 
 				   inet_ntop(AF_INET, (void *)&gw, buf, 16));
-			return -1;
+			return SHELL_ERR_ARG_INVALID;
 		}
 		ifn = rt->rt_ifn;
 	}

@@ -35,20 +35,16 @@ const struct file stm32_uart_file = {
 	.op = &stm32_usart_fops 
 };
 
-struct uart_console_dev * uart_console_init(unsigned int baudrate, 
-											unsigned int flags);
-
-struct file * uart_console_fopen(struct uart_console_dev * dev);
 
 void stdio_init(void)
 {
-	struct uart_console_dev * dev;
+	struct serial_dev * console;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	dev = uart_console_init(115200, SERIAL_8N1);
-	f_raw = uart_console_fopen(dev);
+	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(console);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
@@ -92,6 +88,9 @@ int cmd_help(FILE *f, int argc, char ** argv)
 
 const struct shell_cmd shell_cmd_tab[] = {
 
+	{ cmd_arp, "arp", "arp", 
+		"[IPADDR [HWADDR]]", "show / manipulate the system ARP cache" },
+
 	{ cmd_echo, "echo", "", 
 		"[STRING]...", "Echo the STRING(s) to terminal" },
 
@@ -117,7 +116,7 @@ const struct shell_cmd shell_cmd_tab[] = {
 		"reboot system" },
 
 	{ cmd_route, "route", "rt", 
-		"<add|del|help> dest [netmask [gateway]] iface",
+		"<add|del|help> DEST [NETMASK [GATEWAY]] iface",
 		"show / manipulate the IP routing table" },
 
 	{ cmd_set, "set", "", 

@@ -41,7 +41,7 @@ IFNET_CFILES = get_ifn_byipaddr.c get_ifn_byname.c ifn_enum.c ifn_getaddr.c \
 
 PCB_CFILES = in_pcb.c pcb_getnext.c pcb_enum.c
 
-ARP_CFILES = etharp.c
+ARP_CFILES = etharp.c arp.c
 
 RAW_CFILES = raw.c raw_close.c raw_getstat.c \
 			 raw_recvfrom.c raw_recvfrom_tmo.c raw_sendto.c raw_ioctl.c
