@@ -32,82 +32,6 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
-enum {
-	THINKOS_OBJ_WQ_READY = 0,
-	THINKOS_OBJ_WQ_TMSHARE,
-	THINKOS_OBJ_WQ_CANCELED,
-	THINKOS_OBJ_WQ_PAUSED,
-	THINKOS_OBJ_WQ_CLOCK,
-	THINKOS_OBJ_MUTEX,
-	THINKOS_OBJ_COND,
-	THINKOS_OBJ_SEMAPHORE,
-	THINKOS_OBJ_EVENT,
-	THINKOS_OBJ_FLAG,
-	THINKOS_OBJ_JOIN,
-	THINKOS_OBJ_INVALID
-};
-
-static int thinkos_obj_type_get(int oid)
-{
-	if (oid == 0)
-		return THINKOS_OBJ_WQ_READY;
-
-#if THINKOS_ENABLE_TIMESHARE
-	if (oid == THINKOS_WQ_TMSHARE)
-		return THINKOS_OBJ_WQ_TMSHARE;
-#endif
-
-#if THINKOS_ENABLE_JOIN
-	if (oid == THINKOS_WQ_CANCELED)
-		return THINKOS_OBJ_WQ_CANCELED;
-#endif
-
-#if THINKOS_ENABLE_PAUSE
-	if (oid == THINKOS_WQ_PAUSED)
-		return THINKOS_OBJ_WQ_PAUSED;
-#endif
-
-#if THINKOS_ENABLE_CLOCK
-	if (oid == THINKOS_WQ_CLOCK)
-		return THINKOS_OBJ_WQ_CLOCK;
-#endif
-
-	if (oid >= THINKOS_WQ_LST_END)
-		return THINKOS_OBJ_INVALID;
-
-#if THINKOS_ENABLE_JOIN
-	if (oid >= THINKOS_JOIN_BASE)
-		return THINKOS_OBJ_JOIN;
-#endif 
-
-#if THINKOS_FLAG_MAX > 0
-	if (oid >= THINKOS_FLAG_BASE)
-		return THINKOS_OBJ_FLAG;
-#endif 
-
-#if THINKOS_EVENT_MAX > 0
-	if (oid >= THINKOS_EVENT_BASE)
-		return THINKOS_OBJ_EVENT;
-#endif 
-
-#if THINKOS_SEMAPHORE_MAX > 0
-	if (oid >= THINKOS_SEM_BASE)
-		return THINKOS_OBJ_SEMAPHORE;
-#endif 
-
-#if THINKOS_COND_MAX > 0
-	if (oid >= THINKOS_COND_BASE)
-		return THINKOS_OBJ_COND;
-#endif 
-
-#if THINKOS_MUTEX_MAX > 0
-	if (oid >= THINKOS_MUTEX_BASE)
-		return THINKOS_OBJ_MUTEX;
-#endif 
-
-	return THINKOS_OBJ_INVALID;
-}
-
 const char obj_type_name[][8] = {
 	"Ready",
 	"Sched",
@@ -163,48 +87,48 @@ void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 
 	fprintf(f, " Bmp:");
 #if THINKOS_ENABLE_THREAD_ALLOC
-	fprintf(f, " %08x", rt->th_alloc);
+	fprintf(f, " %08x", rt->th_alloc[0]);
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	fprintf(f, " %08x", rt->mutex_alloc);
+	fprintf(f, " %08x", rt->mutex_alloc[0]);
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	fprintf(f, " %08x", rt->cond_alloc);
+	fprintf(f, " %08x", rt->cond_alloc[0]);
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
-	fprintf(f, " %08x", rt->sem_alloc);
+	fprintf(f, " %08x", rt->sem_alloc[0]);
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
-	fprintf(f, " %08x", rt->ev_alloc);
+	fprintf(f, " %08x", rt->ev_alloc[0]);
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
-	fprintf(f, " %08x", rt->flag_alloc);
+	fprintf(f, " %08x", rt->flag_alloc[0]);
 #endif
 	fprintf(f, "\n");
 
 	fprintf(f, " Cnt:");
 #if THINKOS_ENABLE_THREAD_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc[0] & 
 		~(0xffffffffLL << THINKOS_THREADS_MAX)), THINKOS_THREADS_MAX);
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc[0] & 
 		~(0xffffffffLL << THINKOS_MUTEX_MAX)), THINKOS_MUTEX_MAX);
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc[0] & 
 		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc[0] & 
 		~(0xffffffffLL << THINKOS_SEMAPHORE_MAX)), THINKOS_SEMAPHORE_MAX);
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->event_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->ev_alloc[0] & 
 		~(0xffffffffLL << THINKOS_EVENT_MAX)), THINKOS_EVENT_MAX);
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc & 
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc[0] & 
 		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
 #endif
 	fprintf(f, "\n");

@@ -33,7 +33,7 @@ void thinkos_cond_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int cond;
 
-	if ((cond = thinkos_alloc_lo(&thinkos_rt.cond_alloc, 0)) >= 0) {
+	if ((cond = thinkos_alloc_lo(thinkos_rt.cond_alloc, 0)) >= 0) {
 		wq = cond + THINKOS_COND_BASE;
 		DCC_LOG2(LOG_INFO, "cond=%d wq=%d", cond, wq);
 		arg[0] = wq;

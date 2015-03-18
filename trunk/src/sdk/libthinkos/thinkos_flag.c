@@ -34,7 +34,7 @@
 
 static inline int __attribute__((always_inline)) 
 __thinkos_flag_alloc(void) {
-	int flag = thinkos_alloc_lo(&thinkos_rt.flag_alloc, 0);
+	int flag = thinkos_alloc_lo(thinkos_rt.flag_alloc, 0);
 	return (flag < 0) ? flag : flag + THINKOS_FLAG_BASE;
 }
 

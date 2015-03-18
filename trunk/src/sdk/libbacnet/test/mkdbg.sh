@@ -11,7 +11,7 @@ BUILD_NAME=bacnet_test
 
 make JTAGTOOL_ADDR=${JTAGTOOL_ADDR} D=$LVL jtagload 
 
-if [ $? == 0 ] ; then
+if [ $? = 0 ] ; then
 	../../../../tools/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf
 
 fi

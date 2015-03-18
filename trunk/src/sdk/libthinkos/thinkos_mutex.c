@@ -34,7 +34,7 @@ void thinkos_mutex_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int mutex;
 
-	if ((mutex = thinkos_alloc_lo(&thinkos_rt.mutex_alloc, 0)) >= 0) {
+	if ((mutex = thinkos_alloc_lo(thinkos_rt.mutex_alloc, 0)) >= 0) {
 		thinkos_rt.lock[mutex] = -1;
 		wq = mutex + THINKOS_MUTEX_BASE;
 		DCC_LOG2(LOG_MSG, "mutex=%d wq=%d", mutex, wq);

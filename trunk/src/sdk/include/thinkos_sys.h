@@ -217,6 +217,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_ALARM 0
 #endif
 
+#ifndef THINKOS_ENABLE_BREAK
+#define THINKOS_ENABLE_BREAK 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -375,27 +379,27 @@ struct thinkos_rt {
 #endif /* THINKOS_IRQ_MAX */
 
 #if THINKOS_ENABLE_THREAD_ALLOC
-	uint32_t th_alloc;
+	uint32_t th_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	uint32_t mutex_alloc;
+	uint32_t mutex_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_COND_ALLOC
-	uint32_t cond_alloc;
+	uint32_t cond_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
-	uint32_t sem_alloc;
+	uint32_t sem_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-	uint32_t ev_alloc;
+	uint32_t ev_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-	uint32_t flag_alloc;
+	uint32_t flag_alloc[1];
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
@@ -681,6 +685,24 @@ __thinkos_wakeup(unsigned int wq, unsigned int th) {
 #endif
 }
 
+static void inline __attribute__((always_inline)) 
+__thinkos_wakeup_return(unsigned int wq, unsigned int th, int ret) {
+	/* insert the thread into ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+	/* remove from the wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);  
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status */
+	thinkos_rt.th_stat[th] = 0;
+#endif
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = ret;
+}
+
 #if THINKOS_ENABLE_TIMER
 static void inline __attribute__((always_inline))
 __thinkos_timer_set(unsigned int ms) {
@@ -736,6 +758,8 @@ static volatile inline uint32_t __attribute__((always_inline))
 }
 
 void thinkos_trace_rt(struct thinkos_rt * rt);
+
+int thinkos_obj_type_get(unsigned int oid);
 
 #ifdef __cplusplus
 }
