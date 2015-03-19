@@ -35,6 +35,7 @@
 #include <tcpip/telnetd.h>
 #include <sys/shell.h>
 #include <sys/tty.h>
+#include <sys/stm32f.h>
 
 #include <sys/serial.h>
 #include <yard-ice/drv.h>
@@ -47,60 +48,11 @@
 
 #include <sys/dcclog.h>
 
-#ifndef ENABLE_SHELL_THREAD
-#define EENABLE_SHELL_THREAD 0
-#endif
-
-#ifndef SHELL_LINE_MAX
-#define SHELL_LINE_MAX 128
-#endif
-
-#ifndef SHELL_ARG_MAX 
-#define SHELL_ARG_MAX 16
-#endif
-
-#ifndef SHELL_CMD_MAX 
-#define SHELL_CMD_MAX 16
-#endif
-
-#ifndef SHELL_HISTORY_MAX
-#define SHELL_HISTORY_MAX 32
-#endif
-
 #if ENABLE_TELNET || ENABLE_TFTP || ENABLE_GDB || ENABLE_DCC || ENABLE_VCOM
 #ifndef ENABLE_NETWORK
 #define ENABLE_NETWORK 1
 #endif
 #endif
-
-struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
-{
-	struct shell_cmd * cmd = (struct shell_cmd *)cmd_tab; 
-	char * s;
-	char * cp;
-	int n;
-
-	if ((cp = line) == NULL)
-		return NULL;
-
-	/* remove leading spaces */
-	for (; isspace(*cp); cp++);
-	s = cp;
-
-	/* get the command name lenght */
-	for (; isalnum(*cp); cp++);
-	n = cp - s;
-
-	while (cmd->callback != NULL) {
-		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
-			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {
-			return cmd;
-		}
-		cmd++;
-	}
-
-	return NULL;
-}
 
 void yard_ice_greeting(FILE * f) 
 {
@@ -133,9 +85,6 @@ void show_uint32(FILE * f, uint32_t val)
 			else
 				fprintf(f, "0x%08x (%d)\n", val, val);
 }
-
-int shell_parseline(char * line, char ** argv, int argmax);
-char * shell_stripline(char * line);
 
 int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 {
@@ -189,121 +138,14 @@ int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 	return cmd->callback(f, argc, argv);
 }
 
-#define IN_BS      '\x8'
-#define IN_TN_BS     0x7F /* TELNET back space */
-#define IN_EOL      '\r'
-#define IN_SKIP     '\3'
-#define IN_EOF      '\x1A'
-#define IN_ESC      '\033'
-
-#define MK_IN_KEY(CODE)   (0x2000 + (CODE))
-#define IN_CTRL        0x4000
-
-#define IN_CURSOR_UP    MK_IN_KEY(0)
-#define IN_CURSOR_DOWN  MK_IN_KEY(1)
-#define IN_CURSOR_RIGHT MK_IN_KEY(2)
-#define IN_CURSOR_LEFT  MK_IN_KEY(3)
-#define IN_PAGE_UP      MK_IN_KEY(5)
-#define IN_PAGE_DOWN    MK_IN_KEY(6)
-#define IN_INSERT       MK_IN_KEY(7)
-#define IN_DELETE       MK_IN_KEY(8)
-#define IN_HOME         MK_IN_KEY(9)
-#define IN_END          MK_IN_KEY(10)
-
-#define IN_CTRL_CURSOR_UP    IN_CURSOR_UP + IN_CTRL 
-#define IN_CTRL_CURSOR_DOWN  IN_CURSOR_DOWN + IN_CTRL   
-#define IN_CTRL_CURSOR_RIGHT IN_CURSOR_RIGHT + IN_CTRL    
-#define IN_CTRL_CURSOR_LEFT  IN_CURSOR_LEFT + IN_CTRL   
-#define IN_CTRL_PAGE_UP      IN_PAGE_UP + IN_CTRL   
-#define IN_CTRL_PAGE_DOWN    IN_PAGE_DOWN + IN_CTRL   
-
-#define OUT_CURSOR_LEFT     "\x8"
-#define OUT_BS              "\x8 \x8"
-#define OUT_SKIP            "^C"
-#define OUT_BEL             "\7"
-
-char * freadline(FILE * f, const char * prompt, char * buf, int len);
-
-
-#define MODE_ESC 1
-#define MODE_ESC_VAL1 2
-#define MODE_ESC_VAL2 3
-#define MODE_ESC_O 4
-
-struct cmd_history;
-
-char * history_prev(struct cmd_history * ht);
-char * history_next(struct cmd_history * ht);
-
-#if (ENABLE_SHELL_THREAD) 
-struct shell_context {
-	FILE * f;
-	char * line;
-};
-
-int shell_exec_task(struct shell_context * shell, uthread_id_t id)
-{
-		fprintf(shell->f, "Line='%s'\n", shell->line);
-		return exec(shell->f, shell->line, cmd_tab);
-}
-
-int shell_thread;
-uint32_t shell_stack[512];
-#endif
-
-
-static char * get_cmd_next(char ** linep)
-{
-	char * cp = *linep;
-	char * cmd;
-	int c;
-	
-	while ((c = *cp) == ' ')
-		cp++;
-
-	if (c == '\0')
-		return NULL;
-
-	cmd = cp;
-
-	do {
-		if (c == ';') {
-			*cp = '\0';
-			cp++;
-			break;
-		}
-
-		cp++;
-
-		/* Quotes */
-		if ((c == '\'') || (c == '\"')) {
-			int qt = c;
-			for (; ((c = *cp) != '\0'); cp++) {
-				if (c == qt) {
-					cp++;
-					break;
-				}	
-			}
-		}
-
-		c = *cp;
-	} while (c != '\0');
-
-	*linep = cp;
-
-	return cmd;
-}
-
 int shell(FILE * f, const char * (* prompt)(void), 
 		  void (* greeting)(FILE *), 
 		  const struct shell_cmd * cmd_tab)
 {
+	char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	char line[SHELL_LINE_MAX];
-	char * cp;
-	char * cmd;
-	int ret = 0;
-	char hist_buf[5 + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
 	struct cmd_history * history;
+	int ret = 0;
 
 	DCC_LOG(LOG_TRACE, "history_init()");
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
@@ -311,7 +153,10 @@ int shell(FILE * f, const char * (* prompt)(void),
 	if (greeting)
 		greeting(f);
 
-	for (;;) {
+	do {
+		char * stat;
+		char * cp;
+
 		fprintf(f, "%s", prompt());
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
@@ -322,30 +167,29 @@ int shell(FILE * f, const char * (* prompt)(void),
 
 		history_add(history, cp);
 
-#if (ENABLE_SHELL_THREAD) 
-		struct shell_context shell;
-
-		shell.f = f;
-		shell.line = line;
-
-		shell_thread = uthread_create(shell_stack, sizeof(shell_stack), 
-									  (uthread_task_t)shell_exec_task, 
-									  (void *)&shell, 1, NULL);
-		if ((ret = uthread_join(shell_thread) ) < 0) {
-			fprintf(f, "Error: %d\n", -ret);
-		}
-#else
 		cp = line;
 
-		while ((cmd = get_cmd_next(&cp)) != NULL) {
-			if ((ret = exec(f, cmd, cmd_tab)) < 0) {
+		ret = 0;
+
+		while ((stat = cmd_get_next(&cp)) != NULL) {
+			struct shell_cmd * cmd;
+
+			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
+				fprintf(f, "Command not found!\n");
+				break;
+			}
+
+			ret = cmd_exec(f, cmd, stat);
+
+			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;
 			}
 			
 		}
-#endif
-	}
+	} while (ret != SHELL_ABORT); 
+
+	return 0;
 }
 
 const char * yard_ice_get_prompt(void)
@@ -523,7 +367,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
 
-	{ cmd_os, "sys", "os", 
+	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
 
 	{ cmd_thread, "thread", "th", 
@@ -548,10 +392,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
 
-#if 0
 	{ cmd_arp, "arp", "arp", 
 		"", "show / manipulate the system ARP cache" },
-#endif
+
 	{ cmd_route, "route", "rt", 
 		"", "show / manipulate the IP routing table" },
 
@@ -577,19 +420,19 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 
 int console_shell(void)
 {
-	struct uart_console_dev * dev;
+	struct serial_dev * console;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	dev = uart_console_init(115200, SERIAL_8N1);
-	f_raw = uart_console_fopen(dev);
+	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(console);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
 	stdout = f_tty;
-	stdin = stdout;
-
+	stdin = f_tty;
+	
 	return shell(f_tty, yard_ice_get_prompt, 
 				 yard_ice_greeting, yard_ice_cmd_tab);
 }
