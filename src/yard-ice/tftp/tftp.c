@@ -767,26 +767,25 @@ send_data:
 	}
 }
 
-uint32_t tftp_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
+uint32_t tftpd_stack[384 + (MAX_TFTP_SEGSIZE / 4)];
 
-const struct thinkos_thread_info tftpd_inf = {
+const struct thinkos_thread_inf tftpd_inf = {
+	.stack_ptr = tftpd_stack, 
+	.stack_size = sizeof(tftpd_stack),
+	.priority = __OS_PRIORITY_HIGHEST,
+	.thread_id = 2,
+	.paused = false,
 	.tag = "TFTPD"
 };
 
 int tftpd_start(void)
 {
 	int th;
-	int priority = __OS_PRIORITY_HIGHEST;
-	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
 
 	th = thinkos_thread_create_inf((void *)tftp_daemon_task, 
-								   (void *)&debugger, tftp_stack, 
-								 THINKOS_OPT_PRIORITY(priority) |
-								 THINKOS_OPT_ID(id) | 
-								 THINKOS_OPT_STACK_SIZE(sizeof(tftp_stack)), 
-								 &tftpd_inf);
+								   (void *)&debugger, &tftpd_inf);
 
-	tracef("TFTP started th=%d", th);
+	tracef("TFTPD started th=%d", th);
 
 	return 0;
 }

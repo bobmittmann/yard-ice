@@ -18,33 +18,34 @@
  */
 
 /** 
- * @file stm32f-serial.c
- * @brief STM32F serial driver
+ * @file cmd_cfgerase.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
-
-#include <sys/serial.h>
-#include <sys/file.h>
-#include <stdio.h>
-
-/* ----------------------------------------------------------------------
- * Serial file operations 
- * ----------------------------------------------------------------------
  */
 
-const struct fileop serial_fileop = {
-	.write = (void *)serial_send,
-	.read = (void *)serial_recv,
-	.flush = (void *)serial_drain,
-	.close = (void *)serial_close
-};
 
-struct file * serial_fopen(struct serial_dev * dev)
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/shell.h>
+
+int cmd_cfgerase(FILE *f, int argc, char ** argv)
 {
-	return file_alloc(dev, &serial_fileop);
+	char s[64];
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	fprintf(f, "\nErase the configuration [y/n]? ");
+
+	fgets(s, 32, f);
+
+	if (tolower(s[0]) == 'y') {
+		clearenv();
+		fprintf(f, "\nFactory defaults restored.\n");
+	}
+
+	return 0;
 }
 
-bool is_serial(struct file * f) 
-{
-	return (f->op == &serial_fileop) ? true : false;
-}

@@ -38,13 +38,7 @@ void stm32f_dac_init(void);
 
 void stm32f_dac_vout_set(unsigned int mv);
 
-
 void stm32f_adc_init(void);
-
-struct uart_console_dev * uart_console_init(unsigned int baudrate, 
-											unsigned int flags);
-
-struct file * uart_console_fopen(struct uart_console_dev * dev);
 
 void bsp_io_ini(void);
 

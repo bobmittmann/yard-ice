@@ -80,7 +80,7 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 		return ret;
 	} 
 
-	if (raw->op == &uart_console_ops) {
+	if (is_serial(raw)) {
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
 		ret = usart_xflash(STM32_UART5, offs, size);

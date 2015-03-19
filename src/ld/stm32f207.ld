@@ -215,5 +215,11 @@ SECTIONS
 	. = ALIGN(4);
 	PROVIDE (__bss_end = . );
 	PROVIDE (__heap_start = . );
+
+	.sram1 :
+	{
+		/* all .sram1 sections  */
+		*(.sram1)
+	} >sram1
 }
 

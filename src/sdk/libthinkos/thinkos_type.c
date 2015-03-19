@@ -90,14 +90,6 @@ const struct {
 #endif
 };
 
-int thinkos_obj_type_get(unsigned int oid)
-{
-	if (oid >= THINKOS_WQ_LST_END)
-		return THINKOS_EINVAL;
-
-	return thinkos_obj_type_lut.wq[oid];
-}
-
 uint32_t * const thinkos_obj_alloc_lut[] = {
 	[THINKOS_OBJ_READY] = NULL,
 	[THINKOS_OBJ_TMSHARE] = NULL,

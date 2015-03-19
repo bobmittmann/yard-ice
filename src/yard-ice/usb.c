@@ -115,21 +115,23 @@ int usb_task(void * arg)
 	}
 }
 
-const struct thinkos_thread_info usb_shell_inf = {
+uint32_t usb_shell_stack[1360] __attribute__((section (".sram1")));
+
+const struct thinkos_thread_inf usb_shell_inf = {
+	.stack_ptr = usb_shell_stack, 
+	.stack_size = sizeof(usb_shell_stack),
+	.priority = 0,
+	.thread_id = 16,
+	.paused = false,
 	.tag = "USB_SH"
 };
 
-int usb_shell(void * stack_buf, int stack_size)
+int usb_shell(void)
 {
 	int th;
-	int priority = __OS_PRIORITY_HIGHEST;
-	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
 
-	th = thinkos_thread_create_inf((void *)usb_task, NULL, stack_buf, 
-								 THINKOS_OPT_PRIORITY(priority) |
-								 THINKOS_OPT_ID(id) | 
-								 THINKOS_OPT_STACK_SIZE(stack_size), 
-								 &usb_shell_inf);
+	th = thinkos_thread_create_inf((void *)usb_task, NULL, 
+								   &usb_shell_inf);
 
 	tracef("USB CDC-ACM shell thread=%d", th);
 

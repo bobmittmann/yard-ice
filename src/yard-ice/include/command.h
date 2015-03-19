@@ -87,10 +87,6 @@ int cmd_bp_clear(FILE * f, int argc, char ** argv);
 
 int cmd_delete(FILE * f, int argc, char ** argv);
 
-int cmd_cfgerase(FILE *f, int argc, char ** argv);
-
-int cmd_ipcfg(FILE *f, int argc, char ** argv);
-
 int cmd_target(FILE *f, int argc, char ** argv);
 
 int cmd_mem_read(FILE * f, int argc, char ** argv);
@@ -103,13 +99,7 @@ int cmd_meminfo(FILE * f, int argc, char ** argv);
 
 int cmd_version(FILE *f, int argc, char ** argv);
 
-int cmd_get(FILE *f, int argc, char ** argv);
-
-int cmd_set(FILE *f, int argc, char ** argv);
-
 int cmd_let(FILE *f, int argc, char ** argv);
-
-int cmd_unset(FILE *f, int argc, char ** argv);
 
 int cmd_test(FILE *f, int argc, char ** argv);
 
@@ -147,27 +137,9 @@ int cmd_idcode(FILE * f, int argc, char ** argv);
 
 int cmd_close(FILE *f, int argc, char ** argv);
 
-int cmd_ifconfig(FILE *f, int argc, char ** argv);
-
-int cmd_arp(FILE *f, int argc, char ** argv);
-
-int cmd_route(FILE *f, int argc, char ** argv);
-
-int cmd_netstat(FILE *f, int argc, char ** argv);
-
-int cmd_ping(FILE *f, int argc, char ** argv);
-
-int cmd_reboot(FILE *f, int argc, char ** argv);
-
 int cmd_tcpstat(FILE *f, int argc, char ** argv);
 
 int cmd_var(FILE *f, int argc, char ** argv);
-
-int cmd_sleep(FILE *f, int argc, char ** argv);
-
-int cmd_os(FILE *f, int argc, char ** argv);
-
-int cmd_thread(FILE * f, int argc, char ** argv);
 
 int cmd_bb_scan(FILE *f, int argc, char ** argv);
 

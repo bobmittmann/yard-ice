@@ -26,11 +26,13 @@
 #include <stdio.h>
 #include <sys/shell.h>
 
-int cmd_close(FILE *f, int argc, char ** argv)
+int cmd_close(FILE * f, int argc, char ** argv)
 {
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
 	fprintf(f, "\nBye\n");
 	fflush(f);
-
 	fclose(f);
 	
 	return 0;

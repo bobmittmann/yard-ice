@@ -134,8 +134,8 @@ void rtc_init(void)
 //	stm32f_rtc_init();
 }
 
-FILE * monitor_stream;
-bool monitor_auto_flush;
+FILE * volatile monitor_stream;
+volatile bool monitor_auto_flush;
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
@@ -158,19 +158,21 @@ void __attribute__((noreturn)) supervisor_task(void)
 	}
 }
 
-const struct thinkos_thread_info supervisor_inf = {
+uint32_t supervisor_stack[128];
+
+const struct thinkos_thread_inf supervisor_inf = {
+	.stack_ptr = supervisor_stack, 
+	.stack_size = sizeof(supervisor_stack),
+	.priority = 1,
+	.thread_id = 1,
+	.paused = false,
 	.tag = "SUPV"
 };
-
-uint32_t supervisor_stack[128];
 
 void supervisor_init(void)
 {
 	monitor_stream = stdout;
-
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
-							  supervisor_stack, sizeof(supervisor_stack) |
-							  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1), 
 							  &supervisor_inf);
 }
 
@@ -333,14 +335,12 @@ int init_target(void)
 }
 
 int console_shell(void);
-int telnet_shell(void * stack_buf, int stack_size);
-int usb_shell(void * stack_buf, int stack_size);
+int telnet_shell(void);
+int usb_shell(void);
 int sys_start(void);
 
 int main(int argc, char ** argv)
 {
-	uint32_t telnet_stack[1360];
-	uint32_t usb_stack[1360];
 	int ret;
 
 	DCC_LOG_INIT();
@@ -355,7 +355,7 @@ int main(int argc, char ** argv)
 
 	tracef("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
 
-	env_init();
+	stm32f_nvram_env_init();
 
 	bsp_io_ini();
 
@@ -427,12 +427,12 @@ int main(int argc, char ** argv)
 
 #if ENABLE_USB
 	tracef("* starting USB shell ... ");
-	usb_shell(usb_stack, sizeof(usb_stack));
+	usb_shell();
 #endif
 
 #if ENABLE_TELNET
 	tracef("* starting TELNET server ... ");
-	telnet_shell(telnet_stack, sizeof(telnet_stack));
+	telnet_shell();
 #endif
 
 	return console_shell();

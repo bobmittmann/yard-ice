@@ -60,21 +60,23 @@ int telnetd_task(void * arg)
 	}
 }
 
-const struct thinkos_thread_info telnet_shell_inf = {
+uint32_t telnet_shell_stack[1360] __attribute__((section (".sram1")));
+
+const struct thinkos_thread_inf telnet_shell_inf = {
+	.stack_ptr = telnet_shell_stack, 
+	.stack_size = sizeof(telnet_shell_stack),
+	.priority = 0,
+	.thread_id = 4,
+	.paused = false,
 	.tag = "TNET_SH"
 };
 
-int telnet_shell(void * stack_buf, int stack_size)
+int telnet_shell(void)
 {
 	int th;
-	int priority = __OS_PRIORITY_HIGHEST;
-	int id = (priority <= __OS_PRIORITY_HIGH) ? 0 : 32;
 
-	th = thinkos_thread_create_inf((void *)telnetd_task, NULL, stack_buf, 
-								 THINKOS_OPT_PRIORITY(priority) |
-								 THINKOS_OPT_ID(id) | 
-								 THINKOS_OPT_STACK_SIZE(stack_size), 
-								 &telnet_shell_inf);
+	th = thinkos_thread_create_inf((void *)telnetd_task, NULL, 
+								   &telnet_shell_inf);
 
 	tracef("TELNET shell thread=%d", th);
 

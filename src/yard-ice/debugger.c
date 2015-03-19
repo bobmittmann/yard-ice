@@ -2749,12 +2749,16 @@ void debugger_except(const char * msg)
 	__os_mutex_unlock(dbg->busy);
 }
 
-uint32_t dbg_poll_stack[80];
-
 int mod_ice_register(struct debugger * dbg);
 
+uint32_t dbg_poll_stack[80];
 
-const struct thinkos_thread_info dbg_poll_inf = {
+const struct thinkos_thread_inf dbg_poll_inf = {
+	.stack_ptr = dbg_poll_stack, 
+	.stack_size = sizeof(dbg_poll_stack),
+	.priority = 128,
+	.thread_id = 32,
+	.paused = false,
 	.tag = "DBG_POL"
 };
 
@@ -2803,10 +2807,7 @@ void debugger_init(void)
 	ice_comm_init(&dbg->comm);
 
 	dbg->poll_thread = thinkos_thread_create_inf((void *)dbg_poll_task, 
-						(void *)dbg, dbg_poll_stack, 
-						THINKOS_OPT_ID(32) | 
-						THINKOS_OPT_STACK_SIZE(sizeof(dbg_poll_stack)), 
-						&dbg_poll_inf);
+						(void *)dbg, &dbg_poll_inf);
 
 	DCC_LOG1(LOG_TRACE, "__os_thread_create()=%d", dbg->poll_thread);
 

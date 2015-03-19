@@ -244,7 +244,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 				tn->rx.head = head;
 				DCC_LOG1(LOG_TRACE, "rx nonempty: head=%d", head);
 				/* signal the head update */
-				thinkos_flag_set(tn->rx.nonempty_flag);
+				thinkos_flag_give(tn->rx.nonempty_flag);
 			}
 
 			/* receive data form network */
@@ -277,16 +277,15 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 								/* update the head */
 								tn->rx.head = head;
 								/* signal the head update */
-								thinkos_flag_set(tn->rx.nonempty_flag);
+								thinkos_flag_give(tn->rx.nonempty_flag);
 								
 								/* wait for space in the input buffer */
 								while (1) {
-									thinkos_flag_clr(tn->rx.nonfull_flag);
 									if (head < (tn->rx.tail + 
 												 TELNET_SVC_RX_BUF_LEN)) {
 										break;
 									}
-									thinkos_flag_wait(tn->rx.nonfull_flag);
+									thinkos_flag_take(tn->rx.nonfull_flag);
 								}
 							} 
 
@@ -520,7 +519,6 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 
 	while (1) {
 		DCC_LOG(LOG_INFO, "flag clr...");
-		thinkos_flag_clr(tn->rx.nonempty_flag);
 
 		/* get the maximum number of chars we can read from the buffer */
 		if ((max = tn->rx.head - tail) > 0)
@@ -529,7 +527,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 		DCC_LOG(LOG_INFO, "waiting...");
 		/* wait for a signal indicating that there is some data in the
 		   input buffer */
-		thinkos_flag_wait(tn->rx.nonempty_flag);
+		thinkos_flag_take(tn->rx.nonempty_flag);
 	} 
 
 	/* cnt is the number of chars we will read from the buffer,
@@ -560,7 +558,7 @@ int telnet_svc_read(struct telnet_svc * tn, void * buf,
 
 	if (cnt) {
 		DCC_LOG(LOG_TRACE, "rx buffer non empty signal");
-		thinkos_flag_set(tn->rx.nonfull_flag);
+		thinkos_flag_give(tn->rx.nonfull_flag);
 	}
 
 	return cnt;
@@ -580,11 +578,16 @@ int telnet_svc_release(struct telnet_svc * tn)
 
 uint32_t telnet_input_stack[128];
 
-struct telnet_svc telnet_svc;
-
-const struct thinkos_thread_info telnet_srv_inf = {
+const struct thinkos_thread_inf telnet_srv_inf = {
+	.stack_ptr = telnet_input_stack, 
+	.stack_size = sizeof(telnet_input_stack),
+	.priority = 32,
+	.thread_id = 32,
+	.paused = false,
 	.tag = "TELNETD"
 };
+
+struct telnet_svc telnet_svc;
 
 struct telnet_svc * telnet_svc_init(int port)
 {  
@@ -609,11 +612,7 @@ struct telnet_svc * telnet_svc_init(int port)
 	tn->rx.tail = 0;
 
 	th = thinkos_thread_create_inf((void *)telnet_input_task, (void *)tn, 
-					telnet_input_stack, 
-					THINKOS_OPT_PRIORITY(32) |
-					THINKOS_OPT_ID(32) | 
-					THINKOS_OPT_STACK_SIZE(sizeof(telnet_input_stack)), 
-					&telnet_srv_inf);
+								   &telnet_srv_inf);
 								
 	tracef("TELNET TCP input thread=%d", th);
 
