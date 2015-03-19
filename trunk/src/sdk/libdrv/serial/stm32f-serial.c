@@ -255,5 +255,8 @@ __attribute__ ((weak, alias ("stm32f_serial_read")));
 int serial_drain(struct serial_dev * dev)
 __attribute__ ((weak, alias ("stm32f_serial_flush")));
 
+int serial_close(struct serial_dev * dev)
+__attribute__ ((weak, alias ("stm32f_serial_close")));
+
 #endif /* !SERIAL_ENABLE_DMA */
 

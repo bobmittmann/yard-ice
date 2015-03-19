@@ -250,8 +250,8 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 		for (;;) {
 			if (cnt) {
 				/* flush input buffer */
-				if ((ret = serial_write(serial, buf, cnt)) <= 0) {
-					DCC_LOG(LOG_ERROR, "serial_write() failed!");
+				if ((ret = serial_send(serial, buf, cnt)) <= 0) {
+					DCC_LOG(LOG_ERROR, "serial_send() failed!");
 					break;
 				}
 				/* reset output data pointer */
@@ -500,7 +500,7 @@ int __attribute__((noreturn)) serial_input_task(struct vcom * vcom)
 	DCC_LOG1(LOG_TRACE, "<%d> started...", __os_thread_self());
 
 	for (;;) {
-		if ((len = serial_read(serial, buf, VCOM_BUF_SIZE, 100)) < 0) {
+		if ((len = serial_send(serial, buf, VCOM_BUF_SIZE)) < 0) {
 			DCC_LOG(LOG_ERROR, "serial_read(): failed!");
 			continue;
 		}
@@ -529,11 +529,21 @@ uint32_t serial_input_stack[128];
 
 struct vcom serial_vcom;
 
-const struct thinkos_thread_info tcp_input_inf = {
+const struct thinkos_thread_inf tcp_input_inf = {
+	.stack_ptr = tcp_input_stack, 
+	.stack_size = sizeof(tcp_input_stack),
+	.priority = 32,
+	.thread_id = 32,
+	.paused = false,
 	.tag = "VCOM_NI"
 };
 
-const struct thinkos_thread_info serial_input_inf = {
+const struct thinkos_thread_inf serial_input_inf = {
+	.stack_ptr = serial_input_stack, 
+	.stack_size = sizeof(serial_input_stack),
+	.priority = 32,
+	.thread_id = 32,
+	.paused = false,
 	.tag = "VCOM_SI"
 };
 
@@ -557,19 +567,11 @@ int vcom_start(void)
 	vcom->tp = NULL;
 
 	th = thinkos_thread_create_inf((void *)tcp_input_task, (void *)vcom, 
-						tcp_input_stack, 
-						THINKOS_OPT_PRIORITY(32) |
-						THINKOS_OPT_ID(32) | 
-						THINKOS_OPT_STACK_SIZE(sizeof(tcp_input_stack)), 
 						&tcp_input_inf);
 								
 	tracef("VCOM TCP input thread=%d", th);
 
 	th = thinkos_thread_create_inf((void *)serial_input_task, (void *)vcom, 
-						serial_input_stack, 
-						THINKOS_OPT_PRIORITY(32) |
-						THINKOS_OPT_ID(32) | 
-						THINKOS_OPT_STACK_SIZE(sizeof(serial_input_stack)), 
 						&serial_input_inf);
 								
 	tracef("VCOM serial input thread=%d", th);

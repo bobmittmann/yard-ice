@@ -1278,12 +1278,22 @@ uint32_t gdb_srv_stack[((RSP_BUFFER_LEN * 3) / 8)  + 128];
 uint32_t gdb_brk_stack[(RSP_BUFFER_LEN / 3) + 128];
 struct gdb_rspd gdb_rspd;
 
-const struct thinkos_thread_info gdb_brk_inf = {
-	.tag = "GDB_BRK"
+const struct thinkos_thread_inf gdb_srv_inf = {
+	.stack_ptr = gdb_srv_stack, 
+	.stack_size = sizeof(gdb_srv_stack),
+	.priority = 32,
+	.thread_id = 32,
+	.paused = false,
+	.tag = "GDB_SRV"
 };
 
-const struct thinkos_thread_info gdb_srv_inf = {
-	.tag = "GDB_SRV"
+const struct thinkos_thread_inf gdb_brk_inf = {
+	.stack_ptr = gdb_brk_stack, 
+	.stack_size = sizeof(gdb_brk_stack),
+	.priority = 32,
+	.thread_id = 32,
+	.paused = false,
+	.tag = "GDB_BRK"
 };
 
 int gdb_rspd_start(void)
@@ -1305,21 +1315,13 @@ int gdb_rspd_start(void)
 	gdb_rspd.run_flag = thinkos_flag_alloc();
 	gdb_rspd.con_flag = thinkos_flag_alloc();
 
-	th = thinkos_thread_create_inf((void *)gdb_task, 
-								   (void *)&gdb_rspd, gdb_srv_stack, 
-								 THINKOS_OPT_PRIORITY(32) |
-								 THINKOS_OPT_ID(32) | 
-								 THINKOS_OPT_STACK_SIZE(sizeof(gdb_srv_stack)), 
-								 &gdb_srv_inf);
+	th = thinkos_thread_create_inf((void *)gdb_task, (void *)&gdb_rspd, 
+								   &gdb_srv_inf);
 
 	tracef("GDB server started th=%d", th);
 
-	th = thinkos_thread_create_inf((void *)gdb_brk_task, 
-								   (void *)&gdb_rspd, gdb_brk_stack, 
-								 THINKOS_OPT_PRIORITY(32) |
-								 THINKOS_OPT_ID(32) | 
-								 THINKOS_OPT_STACK_SIZE(sizeof(gdb_brk_stack)), 
-								 &gdb_brk_inf);
+	th = thinkos_thread_create_inf((void *)gdb_brk_task, (void *)&gdb_rspd, 
+								   &gdb_brk_inf);
 
 	tracef("GDB monitor started th=%d", th);
 

@@ -71,6 +71,7 @@
 #define SERIAL_9N2 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
 
 #include <stdint.h>
+#include <stdbool.h>
 
 /* character encoding and baud rate */
 struct serial_config {
@@ -134,11 +135,15 @@ int serial_recv(struct serial_dev * dev, void * buf,
 
 int serial_drain(struct serial_dev * dev);
 
+int serial_close(struct serial_dev * dev);
+
 int serial_enable(struct serial_dev * dev);
 
 int serial_disable(struct serial_dev * dev);
 
 struct file * serial_fopen(struct serial_dev * dev);
+
+bool is_serial(struct file * f); 
 
 #ifdef __cplusplus
 }

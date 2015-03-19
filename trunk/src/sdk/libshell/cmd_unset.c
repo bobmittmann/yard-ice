@@ -18,33 +18,28 @@
  */
 
 /** 
- * @file stm32f-serial.c
- * @brief STM32F serial driver
+ * @file cmd_unset.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <sys/serial.h>
-#include <sys/file.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-/* ----------------------------------------------------------------------
- * Serial file operations 
- * ----------------------------------------------------------------------
- */
-
-const struct fileop serial_fileop = {
-	.write = (void *)serial_send,
-	.read = (void *)serial_recv,
-	.flush = (void *)serial_drain,
-	.close = (void *)serial_close
-};
-
-struct file * serial_fopen(struct serial_dev * dev)
+int cmd_unset(FILE *f, int argc, char ** argv)
 {
-	return file_alloc(dev, &serial_fileop);
+	if (argc != 2) {
+		fprintf(f, "Argument invalid or missing!\n");
+		fprintf(f, "usage: %s VAR\n", argv[0]);
+		return -1;
+	}
+
+	if (unsetenv(argv[1]) < 0) {
+		fprintf(f, "unsetenv(): fail!\n");
+		return -1;
+	}
+
+	return 0;
 }
 
-bool is_serial(struct file * f) 
-{
-	return (f->op == &serial_fileop) ? true : false;
-}

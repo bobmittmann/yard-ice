@@ -43,7 +43,7 @@ struct telnet_svc * telnet_svc_init(int port);
 
 FILE * telnet_svc_fopen(struct telnet_svc * svc);
 
-int telnet_shell(void * stack_buf, int stack_size);
+int telnet_shell(void);
 
 #ifdef __cplusplus
 }

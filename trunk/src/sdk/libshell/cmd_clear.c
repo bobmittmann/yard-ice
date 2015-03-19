@@ -18,33 +18,21 @@
  */
 
 /** 
- * @file stm32f-serial.c
- * @brief STM32F serial driver
+ * @file cmd_clear.c
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
-
-#include <sys/serial.h>
-#include <sys/file.h>
-#include <stdio.h>
-
-/* ----------------------------------------------------------------------
- * Serial file operations 
- * ----------------------------------------------------------------------
  */
 
-const struct fileop serial_fileop = {
-	.write = (void *)serial_send,
-	.read = (void *)serial_recv,
-	.flush = (void *)serial_drain,
-	.close = (void *)serial_close
-};
+#include <stdio.h>
+#include <vt100.h>
+#include <sys/shell.h>
 
-struct file * serial_fopen(struct serial_dev * dev)
+int cmd_clear(FILE * f, int argc, char ** argv)
 {
-	return file_alloc(dev, &serial_fileop);
-}
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
 
-bool is_serial(struct file * f) 
-{
-	return (f->op == &serial_fileop) ? true : false;
+	fprintf(f, _CLRSCR_);
+
+	return 0;
 }

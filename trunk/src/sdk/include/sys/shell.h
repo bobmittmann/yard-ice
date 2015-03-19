@@ -89,11 +89,16 @@ int cmd_close(FILE * f, int argc, char ** argv);
 
 int cmd_echo(FILE * f, int argc, char ** argv);
 
+int cmd_clear(FILE * f, int argc, char ** argv);
+
 
 int cmd_set(FILE * f, int argc, char ** argv);
 
+int cmd_unset(FILE * f, int argc, char ** argv);
+
 int cmd_get(FILE * f, int argc, char ** argv);
 
+int cmd_cfgerase(FILE * f, int argc, char ** argv);
 
 int cmd_reboot(FILE * f, int argc, char ** argv);
 
@@ -116,6 +121,8 @@ int cmd_netstat(FILE * f, int argc, char ** argv);
 int cmd_ping(FILE * f, int argc, char ** argv);
 
 int cmd_tcpstat(FILE * f, int argc, char ** argv);
+
+int cmd_ipcfg(FILE * f, int argc, char ** argv);
 
 
 #ifdef __cplusplus

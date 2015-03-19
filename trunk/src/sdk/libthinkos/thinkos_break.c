@@ -23,6 +23,10 @@
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
+extern const uint8_t thinkos_obj_type_lut[];
+extern uint32_t * const thinkos_obj_alloc_lut[];
+extern const uint8_t thinkos_wq_base_lut[];
+
 #if THINKOS_ENABLE_BREAK
 
 void thinkos_break_svc(int32_t * arg)
@@ -42,7 +46,7 @@ void thinkos_break_svc(int32_t * arg)
 #endif 
 
 #if THINKOS_ENABLE_ARG_CHECK
-	type = thinkos_obj_type_lut.wq[wq];
+	type = thinkos_obj_type_lut[wq];
 	alloc = thinkos_obj_alloc_lut[type];
 	idx = wq - thinkos_wq_base_lut[type];
 
