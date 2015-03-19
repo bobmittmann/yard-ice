@@ -22,7 +22,7 @@
 
 PROG = bacnet_test
 
-CFILES = bacnet_test.c console.c 
+CFILES = bacnet_test.c console.c lattice.c ice40lp384.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
@@ -34,9 +34,11 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 
 LIBS = cm3 stm32f util thinkos c ice-comm crc drv tty shell bacnet
 
-INCPATH = $(SDK)/include  
+INCPATH = $(SDK)/include ../bacnet-stack/include ../bacnet-stack/demo/object
+
 CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CFLAGS = -g -O2 
+#CFLAGS = -g -O2 -Wno-unused-but-set-variable -Wno-unused-value -Wno-unused
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407

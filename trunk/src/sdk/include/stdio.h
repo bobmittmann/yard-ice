@@ -44,11 +44,7 @@ extern FILE * stderr;
 extern "C" {
 #endif
 
-int fgetc(FILE * f);
-
 int fputc(int c, FILE * f);
-
-int fputs(const char * s, FILE * f);
 
 int putchar(int c);
 
@@ -68,17 +64,30 @@ int snprintf(char * str, size_t size, const char *fmt, ...);
 
 int sprintf(char * str, const char * fmt, ...);
 
+int scanf(const char *format, ...);
+
+int fscanf(FILE *stream, const char *format, ...);
+
+int sscanf(const char *str, const char *format, ...);
+
+FILE *fopen(const char *path, const char *mode);
+
 int fflush(FILE * f);
 
 int feof(FILE * f);
 
 int fclose(FILE * f);
 
-char * fgets(char * s, int size, FILE * f);
-
 size_t fwrite(const void * ptr, size_t size, size_t nmemb, FILE * f);
 
 size_t fread(void * ptr, size_t size, size_t  nmemb, FILE * f);
+
+char * fgets(char * s, int size, FILE * f);
+
+int fgetc(FILE * f);
+
+int fputs(const char * s, FILE * f);
+
 
 #ifdef __cplusplus
 }

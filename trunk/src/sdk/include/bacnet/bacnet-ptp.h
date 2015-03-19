@@ -35,6 +35,9 @@ struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev);
 
 int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t * buf);
 
+int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, uint8_t * dat, 
+					unsigned int len);
+
 #ifdef __cplusplus
 }
 #endif

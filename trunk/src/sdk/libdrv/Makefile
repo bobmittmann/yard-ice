@@ -26,7 +26,8 @@ include ../../mk/config.mk
 
 LIB_STATIC = drv
 
-SERIAL_CFILES = stm32f-serial.c stm32f-usart5.c serial-file.c
+SERIAL_CFILES = stm32f-serial.c stm32f-usart1.c stm32f-usart5.c \
+				stm32f-usart6.c serial-file.c
 
 CFILES = stm32f-ethif.c stm32f-dac.c stm32f-adc.c \
 		 stm32f-bkp_sram.c stm32f-io.c stm32f-rtc.c \

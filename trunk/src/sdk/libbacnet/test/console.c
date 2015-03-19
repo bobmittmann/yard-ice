@@ -71,6 +71,24 @@ int cmd_bacnet(FILE * f, int argc, char ** argv)
 	return SHELL_ABORT;
 }
 
+int cmd_test(FILE * f, int argc, char ** argv)
+{
+	int i;
+
+	fprintf(stdout, "----------------------\n");
+
+	for (i = 1; i < argc; ++i) {
+		if (i != 1)
+			fprintf(stdout, " ");
+		fprintf(stdout, argv[i]);
+	}
+
+	fprintf(stdout, "\n");
+
+	return 0;
+}
+
+
 const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_bacnet, "BACnet", "", "", 
@@ -91,6 +109,8 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_set, "set", "", 
 		"VAR EXPR", "set environement variable" },
 
+	{ cmd_test, "stdout", ">", "", "" },
+
 #if 0
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
@@ -108,24 +128,4 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ NULL, "", "", NULL, NULL }
 };
-
-
-const char * shell_prompt(void)
-{
-	return "[WEBSRV]$ ";
-}
-
-extern const char * version_str;
-extern const char * copyright_str;
-
-void shell_greeting(FILE * f) 
-{
-	fprintf(f, "\n%s", version_str);
-	fprintf(f, "\n%s\n\n", copyright_str);
-}
-
-int stdio_shell(void)
-{
-	return shell(stdout, shell_prompt, shell_greeting, shell_cmd_tab);
-}
 
