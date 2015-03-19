@@ -41,6 +41,7 @@
 #include <sys/dcclog.h>
 
 #include "command.h"
+#include "version.h"
 
 #define LANG_STR_SZ              4
 static const uint8_t lang_str[LANG_STR_SZ] = {
@@ -51,9 +52,9 @@ static const uint8_t lang_str[LANG_STR_SZ] = {
 #define VENDOR_STR_SZ            26
 static const uint8_t vendor_str[VENDOR_STR_SZ] = {
 	VENDOR_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Manufacturer: "Mircom Group" */
-	'M', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'm', 0, 
-	' ', 0, 'G', 0, 'r', 0, 'o', 0, 'u', 0, 'p', 0
+	/* Manufacturer: "Bob Mittmann" */
+	'B', 0, 'o', 0, 'b', 0, ' ', 0, 'M', 0, 'i', 0, 
+	't', 0, 't', 0, 'm', 0, 'a', 0, 'n', 0, 'n', 0
 };
 
 
@@ -62,7 +63,9 @@ static const uint8_t product_str[PRODUCT_STR_SZ] = {
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
 	/* Product name: "YARD-ICE x.x" */
 	'Y', 0, 'A', 0, 'R', 0, 'D', 0, '-', 0, 'I', 0, 'C', 0, 'E', 0, 
-	' ', 0, '1', 0, '.', 0, '0', 0, '5', 0, 
+	' ', 0, '0' + VERSION_MAJOR , 0, '.', 0, 
+	'0' + (VERSION_MINOR / 10), 0, 
+	'0' + (VERSION_MINOR % 10), 0, 
 };
 
 
