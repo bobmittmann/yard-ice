@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/serial.h>
+#include <sys/shell.h>
 #include <sys/tty.h>
 
 #include <sys/dcclog.h>
@@ -44,6 +45,10 @@
 #include "board.h"
 
 #include <bacnet/bacnet-ptp.h>
+#include "dcc.h"
+#include "npdu.h"
+#include "handlers.h"
+#include "lattice.h"
 
 #define VERSION_NUM "0.1"
 #define VERSION_DATE "Mar, 2015"
@@ -52,7 +57,20 @@ const char * version_str = "BACnet Demo " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-int stdio_shell(void);
+const char * shell_prompt(void)
+{
+	return "[WEBSRV]$ ";
+}
+
+void shell_greeting(FILE * f) 
+{
+	fprintf(f, "\n%s", version_str);
+	fprintf(f, "\n%s\n\n", copyright_str);
+}
+
+extern const struct shell_cmd shell_cmd_tab[];
+extern const uint8_t ice40lp384_bin[];
+extern const unsigned int sizeof_ice40lp384_bin;
 
 void io_init(void)
 {
@@ -76,32 +94,103 @@ void io_init(void)
 	stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART6_RX, GPIO_AF7);
 
+	/* IO init */
+	stm32_gpio_mode(RS485_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(RS485_RX, GPIO_AF7);
+
+	stm32_gpio_mode(RS485_TX, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(RS485_TX, GPIO_AF7);
+
+#ifdef RS485_CK
+	stm32_gpio_mode(RS485_CK, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(RS485_CK, GPIO_AF7);
+#endif
+
+#ifdef RS485_TRIG
+	stm32_gpio_mode(RS485_TRIG, INPUT, PULL_UP);
+#endif
+
+#ifdef RS485_TXEN
+	stm32_gpio_mode(RS485_TXEN, OUTPUT, PUSH_PULL | SPEED_MED);
+	stm32_gpio_set(RS485_TXEN);
+#endif
+
+#ifdef RS485_LOOP
+	stm32_gpio_mode(RS485_LOOP, OUTPUT, PUSH_PULL | SPEED_MED);
+	stm32_gpio_set(RS485_LOOP);
+#endif
+
+#ifdef RS485_MODE
+	stm32_gpio_mode(RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_set(RS485_MODE);
+#endif
+
+	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 }
 
-const struct file stm32_uart5_file = {
-	.data = STM32_UART5, 
-	.op = &stm32_usart_fops 
-};
+struct bacnet_ptp_lnk * ptp_lnk;
 
-void stdio_init(struct serial_dev * serdev)
+int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
+					  uint8_t * pdu, unsigned pdu_len)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return bacnet_ptp_send(ptp_lnk, pdu, pdu_len);
+}
+
+uint16_t datalink_receive(BACNET_ADDRESS * src, uint8_t * pdu,
+						  uint16_t max_pdu, unsigned timeout)
+{
+	return 0;
+}
+
+void datalink_cleanup(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+void datalink_get_my_address(BACNET_ADDRESS * my_address)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return; 
+}
+
+void datalink_set_interface(char *ifname)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+void datalink_set(char *datalink_string)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+FILE * serial_tty_open(struct serial_dev * serdev)
 {
 	struct tty_dev * tty;
-	FILE * f_tty;
 	FILE * f_raw;
 
 	f_raw = serial_fopen(serdev);
 	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
-
-	stderr = (struct file *)&stm32_uart5_file;
-	stdout = f_tty;
-	stdin = f_tty;
+	return tty_fopen(tty);
 }
 
 int main(int argc, char ** argv)
 {
-	struct serial_dev * console;
-	struct bacnet_ptp_lnk * ptp_lnk;
+	struct serial_dev * ser5;
+	struct serial_dev * ser1;
+	FILE * term1;
+	FILE * term5;
+
+
 	uint8_t buf[512];
 	int len;
 
@@ -120,12 +209,16 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "4. console serial init");
-	console = stm32f_uart5_serial_init(57600, SERIAL_8N1);
+	ser5 = stm32f_uart5_serial_init(57600, SERIAL_8N1);
+	ser1 = stm32f_uart1_serial_init(460800, SERIAL_8N1);
+
+	term1 = serial_tty_open(ser1);
+	term5 = serial_tty_open(ser5);
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
-	stdio_init(console);
-
-	fprintf(stderr, "\r\n!\r\n");
+	stderr = term1;
+	stdout = term1;
+	stdin = term1;
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -133,24 +226,26 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
-
 	DCC_LOG(LOG_TRACE, "5. starting console shell...");
 
 	for (;;) {
 		DCC_LOG(LOG_WARNING, "Console shell!");
-		stdio_shell();
+	
+		shell(term5, shell_prompt, shell_greeting, shell_cmd_tab);
 
 		/* BACnet protocol... */
 		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-		ptp_lnk = bacnet_ptp_inbound(console);
+		ptp_lnk = bacnet_ptp_inbound(ser5);
 
 		while ((len = bacnet_ptp_recv(ptp_lnk, buf)) >= 0) {
-
 			DCC_LOG(LOG_TRACE, "BACnet PDU received...");
+        	npdu_handler(NULL, buf, len);
 		}
+
 	}
 
 	return 0;
 }
+
 
 

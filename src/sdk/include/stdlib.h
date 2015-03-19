@@ -27,11 +27,10 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
+#define __need_size_t
+#define __need_wchar_t
+#define __need_NULL
 #include <stddef.h>
-
-#ifndef NULL
-#define NULL    ((void*) 0 )
-#endif
 
 typedef struct {
 	int quot;
@@ -71,6 +70,22 @@ int unsetenv(const char *name);
 int clearenv(void);
 
 void abort(void) __attribute__ ((__noreturn__));
+
+/* FIXME: not implemented */
+
+void exit(int status);
+
+void * malloc(size_t size);
+
+void free(void *ptr);
+
+void *calloc(size_t nmemb, size_t size);
+
+void *realloc(void *ptr, size_t size);
+
+double strtod(const char *nptr, char **endptr);
+
+float strtof(const char *nptr, char **endptr);
 
 #ifdef __cplusplus
 }

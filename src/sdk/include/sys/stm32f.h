@@ -300,7 +300,13 @@ void stm32f_nvram_env_init(void);
  * Serial 
  *---------------------------------------------------------------------*/
 
+struct serial_dev * stm32f_uart1_serial_init(unsigned int baudrate, 
+											 unsigned int flags);
+
 struct serial_dev * stm32f_uart5_serial_init(unsigned int baudrate, 
+											 unsigned int flags);
+
+struct serial_dev * stm32f_uart6_serial_init(unsigned int baudrate, 
 											 unsigned int flags);
 
 #endif /* __ASSEMBLER__ */

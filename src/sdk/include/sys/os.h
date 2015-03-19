@@ -69,10 +69,10 @@ static inline void __os_sleep(unsigned int msec) {
 #endif
 }
 
-static inline void exit(int status) {
+extern inline void exit(int status) {
 #if ENABLE_THINKOS
-	thinkos_cancel(thinkos_thread_self(), status);
-	thinkos_yield();
+//	thinkos_cancel(thinkos_thread_self(), status);
+//	thinkos_yield();
 #else
 	for(;;);
 #endif

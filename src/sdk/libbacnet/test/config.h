@@ -26,6 +26,10 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+/* -------------------------------------------------------------------------
+   ThinkOS configuration
+   -------------------------------------------------------------------------- */
+
 #define THINKOS_IRQ_MAX 80
 
 #define THINKOS_ENABLE_IDLE_WFI 1
@@ -47,7 +51,7 @@
 #define THINKOS_MUTEX_MAX 8
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
 
-#define THINKOS_COND_MAX 32
+#define THINKOS_COND_MAX 8
 #define THINKOS_ENABLE_COND_ALLOC 1
 
 #define THINKOS_SEMAPHORE_MAX 8
@@ -79,6 +83,10 @@
 
 #define THINKOS_ENABLE_BREAK 1
 
+/* -------------------------------------------------------------------------
+   TCP/IP network configuration
+   -------------------------------------------------------------------------- */
+
 #define ENABLE_NETWORK 1
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
@@ -100,9 +108,6 @@
 #define ENABLE_NET_TCP_CHECKSUM 0
 #define ENABLE_NET_UDP_CHECKSUM 0
 
-#define SERIAL_TX_FIFO_LEN 512
-#define SERIAL_RX_FIFO_LEN 512
-
 #if defined(STM32F407)
 #define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
 #elif defined(STM32F207)
@@ -111,6 +116,15 @@
 
 /* Number of reception DMA descriptors for the Ethernet driver */
 #define STM32F_ETH_RX_NDESC      4
+
+/* -------------------------------------------------------------------------
+   Other configuration
+   -------------------------------------------------------------------------- */
+
+#define SERIAL_TX_FIFO_LEN 512
+#define SERIAL_RX_FIFO_LEN 512
+
+#include "bacnet_config.h"
 
 #endif /* __CONFIG_H__ */
 
