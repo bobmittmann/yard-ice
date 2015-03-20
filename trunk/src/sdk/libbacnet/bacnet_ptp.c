@@ -209,6 +209,7 @@ struct bacnet_ptp_lnk {
 		uint8_t buf[BACNET_PTP_MTU];
 		volatile unsigned int len;
 		volatile uint32_t seq;
+		volatile bool xon;
 		uint32_t idle_tmr;
 		uint32_t rxmt_tmr;
 		uint8_t rxmt_cnt;
@@ -229,6 +230,7 @@ void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
 	lnk->state = BACNET_PTP_DISCONNECTED;
 	lnk->rx.seq = 0;
 	lnk->tx.seq = 0;
+	lnk->tx.xon = false;
 	DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
 	bacnet_ptp_lnk_rx_rst(lnk);
 }
@@ -683,6 +685,8 @@ again:
 			DCC_LOG(LOG_TRACE, "[CONNECTED]");
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_HEARTBEAT_XON,
 								NULL, 0);
+			/* start the cyclic 1 second timer for DCC */
+//			timer_interval_start_seconds(&DCC_Timer, DCC_CYCLE_SECONDS);
 			return 0;
 		} 
 
@@ -717,10 +721,21 @@ again:
 	case BACNET_PTP_CONNECTED:
 		switch (typ) {
 		case BACNET_PTP_FRM_HEARTBEAT_XOFF:
+			if (lnk->tx.xon) {
+				DCC_LOG(LOG_TRACE, "[XOFF]");
+				lnk->tx.xon = false;
+				return 3;
+			}
 			break;
 
 		case BACNET_PTP_FRM_HEARTBEAT_XON:
+			if (!lnk->tx.xon) {
+				DCC_LOG(LOG_TRACE, "[XON]");
+				lnk->tx.xon = true;
+				return 2;
+			}
 			break;
+
 		case BACNET_PTP_FRM_DATA_0:
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DATA_ACK_0_XON, NULL, 0);
 			return 1; 
@@ -849,7 +864,7 @@ int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, uint8_t * dat,
 		if (lnk->state != BACNET_PTP_CONNECTED)
 			return -1;
 
-		if (lnk->tx.len == 0)
+		if ((lnk->tx.len == 0) && (lnk->tx.xon))
 			break;
 
 		/* FIXME: better flow control mechanism ... */

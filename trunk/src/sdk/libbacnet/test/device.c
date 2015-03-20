@@ -241,6 +241,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#if 0
     {OBJECT_LOAD_CONTROL,
             Load_Control_Init,
             Load_Control_Count,
@@ -256,6 +257,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
     {OBJECT_MULTI_STATE_INPUT,
             Multistate_Input_Init,
             Multistate_Input_Count,
@@ -303,6 +305,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
 #endif
+#if 0
     {OBJECT_TRENDLOG,
             Trend_Log_Init,
             Trend_Log_Count,
@@ -318,6 +321,7 @@ static object_functions_t My_Object_Table[] = {
             NULL /* COV */ ,
             NULL /* COV Clear */ ,
         NULL /* Intrinsic Reporting */ },
+#endif
 #if defined(BACFILE)
     {OBJECT_FILE,
             bacfile_init,
@@ -1350,7 +1354,7 @@ int Device_Read_Property_Local(
             break;
         case PROP_DEVICE_ADDRESS_BINDING:
             /* FIXME: the real max apdu remaining should be passed into function */
-            apdu_len = address_list_encode(&apdu[0], MAX_APDU);
+//            apdu_len = address_list_encode(&apdu[0], MAX_APDU);
             break;
         case PROP_DATABASE_REVISION:
             apdu_len =
@@ -1847,8 +1851,8 @@ bool DeviceGetRRInfo(
             break;
 
         case PROP_DEVICE_ADDRESS_BINDING:
-            pInfo->RequestTypes = RR_BY_POSITION;
-            pInfo->Handler = rr_address_list_encode;
+//            pInfo->RequestTypes = RR_BY_POSITION;
+ //           pInfo->Handler = rr_address_list_encode;
             status = true;
             break;
 

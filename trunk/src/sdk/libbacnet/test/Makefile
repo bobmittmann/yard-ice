@@ -32,7 +32,7 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc $(SDK)/libshell \
 		  $(SDK)/libbacnet
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc drv tty shell bacnet
+LIBS = cm3 stm32f util thinkos c ice-comm crc drv tty shell bacnet gcc
 
 INCPATH = $(SDK)/include ../bacnet-stack/include ../bacnet-stack/demo/object
 
