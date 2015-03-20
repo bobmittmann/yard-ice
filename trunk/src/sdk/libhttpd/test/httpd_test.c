@@ -35,19 +35,8 @@
 #include <sys/serial.h>
 #include <sys/delay.h>
 #include <sys/dcclog.h>
-#include <tcpip/tcp.h>
-#include <netinet/in.h>
-
 #include <thinkos.h>
-#define __THINKOS_SYS__
-#include <thinkos_sys.h>
-
-#include <tcpip/ethif.h>
-#include <tcpip/route.h>
-#include <tcpip/loopif.h>
-#include <tcpip/httpd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <tcpip/net.h>
 
 #include "board.h"
 
@@ -58,7 +47,6 @@ const char * version_str = "HTTP Server Demo " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-void tcpip_init(void);
 void stdio_init(void);
 int stdio_shell(void);
 int tcp_echo_start(void);

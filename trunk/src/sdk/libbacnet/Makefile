@@ -35,9 +35,10 @@ STACK_CFILES = abort.c alarm_ack.c apdu.c arf.c awf.c \
 			   npdu.c proplist.c ptransfer.c \
 			   rd.c readrange.c reject.c ringbuf.c rp.c rpm.c \
 			   sbuf.c timestamp.c timesync.c tsm.c version.c whohas.c \
-			   whois.c wp.c wpm.c
+			   whois.c wp.c wpm.c address.c 
+#			   bvlc.c 
 
-#mstp.c mstptext.c bip.c bvlc.c address.c 
+#mstp.c mstptext.c bip.c 
 
 HANDLER_CFILES = h_alarm_ack.c h_arf.c h_arf_a.c h_awf.c \
 				 h_ccov.c h_cov.c h_dcc.c h_gas_a.c h_get_alarm_sum.c \
