@@ -28,6 +28,7 @@
 #include <sys/param.h>
 #include <thinkos.h>
 #include <crc.h>
+#include <errno.h>
 
 #include <sys/dcclog.h>
 
@@ -65,10 +66,10 @@ enum {
 /* PTP Connection State Machine states */
 enum {
 	BACNET_PTP_DISCONNECTED = 0,
+	BACNET_PTP_DISCONNECTING,
 	BACNET_PTP_INBOUND,
 	BACNET_PTP_OUTBOUND,
-	BACNET_PTP_CONNECTED,
-	BACNET_PTP_DISCONNECTING
+	BACNET_PTP_CONNECTED
 };
 
 #define DLE  0x10
@@ -174,8 +175,10 @@ unsigned int bacnet_crc16(unsigned int crc, const void * buf, int len)
 
 #define TX_IDLE_HBEAT_TMO_MS 15000
 #define RX_IDLE_DISC_TMO_MS 30000
-#define RXMT_TIME_MS  5000
-#define DCC_TIME_MS  15000
+#define CONN_RXMT_TIME_MS  5000
+#define DISC_RXMT_TIME_MS  5000
+#define NPDU_RXMT_TIME_MS  1000
+#define DCC_TIME_MS        1000
 
 struct bacnet_ptp_hdr {
 	uint16_t preamble;
@@ -190,20 +193,30 @@ struct bacnet_ptp_frm {
 };
 
 #define BACNET_PTP_MTU 512
-
+#define PTP_LINK_RXMT_MAX 3
 
 struct bacnet_ptp_lnk {
 	struct serial_dev * dev;
 	bool enabled;
-	uint8_t state; 
+	volatile uint8_t state; 
 	uint32_t dcc_tmr;
+	uint32_t clk;
 	struct {
-		uint8_t buf[BACNET_PTP_MTU];
+		union {
+			uint8_t buf[BACNET_PTP_MTU];
+			struct {
+				uint8_t hdr[6];
+				uint8_t pdu[BACNET_PTP_MTU - 6];
+			};
+		};
+		volatile unsigned int pdu_len;
+		volatile bool xon;
 		unsigned int off;
 		unsigned int cnt;
 		bool dle;
 		uint32_t seq;
 		uint32_t idle_tmr;
+		int flag;
 	} rx;
 	struct {
 		uint8_t buf[BACNET_PTP_MTU];
@@ -213,6 +226,7 @@ struct bacnet_ptp_lnk {
 		uint32_t idle_tmr;
 		uint32_t rxmt_tmr;
 		uint8_t rxmt_cnt;
+		int flag;
 	} tx;
 };
 
@@ -223,27 +237,17 @@ static void bacnet_ptp_lnk_rx_rst(struct bacnet_ptp_lnk * lnk)
 	lnk->rx.dle = false;
 }
 
-void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
+#if 0
+int bacnet_ptp_frame_decode(uint8_t * frm, int frm_len)
 {
-	lnk->dev = dev;
-	lnk->enabled = true;
-	lnk->state = BACNET_PTP_DISCONNECTED;
-	lnk->rx.seq = 0;
-	lnk->tx.seq = 0;
-	lnk->tx.xon = false;
-	DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-	bacnet_ptp_lnk_rx_rst(lnk);
-}
-
-int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat, 
-						  uint16_t * plen)
-{
-	bool dle = lnk->rx.dle;
-	int off = lnk->rx.off;
-	int cnt = lnk->rx.cnt;
-	uint8_t * buf = lnk->rx.buf;
+	static uint8_t frm_buf[512];
+	uint8_t * buf = frm_buf;
+	bool dle = false;
+	int off = 0;
+	int cnt = 0;
 	uint8_t * cp;
 	int len;
+	int pdu_len;
 	
 	for (;;) {
 		uint8_t crc;
@@ -266,10 +270,10 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 			int n;
 			int rem = BACNET_PTP_MTU - cnt;
 
-			n = serial_recv(lnk->dev, cp, rem, 500);
+			memcpy(buf, frm, frm_len);
+			n = frm_len;
 			if (n <= 0) {
 				DCC_LOG1(LOG_INFO, "serdrv_recv=%d", n);
-				bacnet_ptp_lnk_rx_rst(lnk);
 				return n;
 			}
 
@@ -325,13 +329,197 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 		uint16_t chk;
 		int i;
 
+		chk = (buf[len + 7] << 8) + buf[len + 6];
+		crc = ~bacnet_crc16(0xffff, &buf[6], len);
+		if (crc != chk) {
+			DCC_LOG2(LOG_WARNING, "Data CRC error %04x != %04x", crc, chk);
+			return -1;
+		}
+#if 0
+		{
+			int i;
+			printf("RX:");
+			for (i = 0; i < len + 8; ++i)
+				printf(" %02x", buf[i]);
+			printf("\n");
+		}
+#endif
+		pdu_len = len;
+		off = len + 8;
+	} else {
+#if 0
+		{
+			int i;
+			printf("RX:");
+			for (i = 0; i < 6; ++i)
+				printf(" %02x", buf[i]);
+			printf("\n");
+		}
+#endif
+		pdu_len = 0;
+		off = 6;
+	}
+
+
+	switch (buf[2]) {
+	case BACNET_PTP_FRM_HEARTBEAT_XOFF:
+		DCC_LOG(LOG_TRACE, "HEARTBEAT_XOFF");
+		break;
+	case BACNET_PTP_FRM_HEARTBEAT_XON:
+		DCC_LOG(LOG_TRACE, "HEARTBEAT_XON");
+		break;
+	case BACNET_PTP_FRM_DATA_0:
+		DCC_LOG1(LOG_TRACE, "DATA_0(%d)", pdu_len);
+		break;
+	case BACNET_PTP_FRM_DATA_1:
+		DCC_LOG1(LOG_TRACE, "DATA_1(%d)", pdu_len);
+		break;
+	case BACNET_PTP_FRM_DATA_ACK_0_XOFF:
+		DCC_LOG(LOG_TRACE, "DATA_ACK_0_XOFF");
+		break;
+	case BACNET_PTP_FRM_DATA_ACK_1_XOFF:
+		DCC_LOG(LOG_TRACE, "DATA_ACK_1_XOFF");
+		break;
+	case BACNET_PTP_FRM_DATA_ACK_0_XON:
+		DCC_LOG(LOG_TRACE, "DATA_ACK_0_XON");
+		break;
+	case BACNET_PTP_FRM_DATA_ACK_1_XON:
+		DCC_LOG(LOG_TRACE, "DATA_ACK_1_XON");
+		break;
+	case BACNET_PTP_FRM_DATA_NAK_0_XOFF:
+		DCC_LOG(LOG_TRACE, "DATA_NAK_0_XOFF");
+		break;
+	case BACNET_PTP_FRM_DATA_NAK_1_XOFF:
+		DCC_LOG(LOG_TRACE, "DATA_NAK_1_XOFF");
+		break;
+	case BACNET_PTP_FRM_DATA_NAK_0_XON:
+		DCC_LOG(LOG_TRACE, "DATA_NAK_0_XON");
+		break;
+	case BACNET_PTP_FRM_DATA_NAK_1_XON:
+		DCC_LOG(LOG_TRACE, "DATA_NAK_1_XON");
+		break;
+	case BACNET_PTP_FRM_CONNECT_REQ:
+		DCC_LOG(LOG_TRACE, "CONNECT_REQ");
+		break;
+	case BACNET_PTP_FRM_CONNECT_RESP:
+		DCC_LOG(LOG_TRACE, "CONNECT_RESP");
+		break;
+	case BACNET_PTP_FRM_DISCONNECT_REQ:
+		DCC_LOG(LOG_TRACE, "DISCONNECT_REQ");
+		break;
+	case BACNET_PTP_FRM_DISCONNECT_RESP:
+		DCC_LOG(LOG_TRACE, "DISCONNECT_RESP");
+		break;
+	case BACNET_PTP_FRM_TEST_REQ:
+		DCC_LOG(LOG_TRACE, "TEST_REQ");
+		break;
+	case BACNET_PTP_FRM_TEST_RESP:
+		DCC_LOG(LOG_TRACE, "TEST_RESP");
+		break;
+	}
+
+	return buf[2]; /* Frame Type */
+}
+
+#endif
+
+
+int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, unsigned int tmo)
+{
+	bool dle = lnk->rx.dle;
+	int off = lnk->rx.off;
+	int cnt = lnk->rx.cnt;
+	uint8_t * buf = lnk->rx.buf;
+	uint8_t * cp;
+	int len;
+	
+	for (;;) {
+		uint8_t crc;
+
+		/* move remaining octets to the beginning of the buffer */
+		if (off) {
+			DCC_LOG2(LOG_INFO, "shift off=%d cnt=%d", off, cnt);
+			cnt = cnt - off;
+			memcpy(buf, &buf[off], cnt);
+		} else
+			cnt = 0;
+
+		off = 0;
+		cp = &buf[cnt];
+
+		/* receive a packet header */
+		while (cnt < 5) {
+			int i;
+			int j;
+			int n;
+			int rem = BACNET_PTP_MTU - cnt;
+
+			n = serial_recv(lnk->dev, cp, rem, tmo);
+			if (n <= 0) {
+				DCC_LOG1(LOG_INFO, "serdrv_recv=%d", n);
+				bacnet_ptp_lnk_rx_rst(lnk);
+				return n;
+			}
+
+			for (i = 0, j = 0; i < n; ++i) {
+				int c = cp[i];
+
+				/* byte destuff */
+				if (dle) {
+					DCC_LOG1(LOG_INFO, "DLE %02x", c);
+					c &= 0x7f;
+					dle = false;
+				} else if (c == DLE) {
+					dle = true;
+					continue;
+				} 
+
+				cp[j++] = c;
+				DCC_LOG1(LOG_INFO, "%02x", c);
+				dle = false;
+			}
+
+			cp += j;
+			cnt += j;
+		}
+
+		if (buf[0] != 0x55) {
+			DCC_LOG(LOG_WARNING, "frame error 1");
+			off = 1;
+			continue;
+		}
+		if (buf[1] != 0xff) {
+			DCC_LOG(LOG_WARNING, "frame error 2");
+			off = 2;
+			continue;
+		}
+
+		crc = ~bacnet_crc8(0xff, &buf[2], 3);
+
+		if (buf[5] != crc) {
+			DCC_LOG2(LOG_WARNING, "CRC error: %02x != %02x", buf[5], crc);
+			off = 3;
+			continue;
+		}
+
+		break;
+	}
+
+	len = (buf[3] << 8) + buf[4];
+	DCC_LOG2(LOG_INFO, "cnt=%d len=%d", cnt, len);
+
+	if (len > 0) {
+		uint16_t crc;
+		uint16_t chk;
+		int i;
+
 		/* receive the frame data */
 		while (cnt < len + 8) {
 			int j;
 			int n;
 			int rem = BACNET_PTP_MTU - cnt;
 
-			n = serial_recv(lnk->dev, cp, rem, 500);
+			n = serial_recv(lnk->dev, cp, rem, tmo);
 			if (n <= 0) {
 				DCC_LOG1(LOG_WARNING, "serdrv_recv=%d", n);
 				bacnet_ptp_lnk_rx_rst(lnk);
@@ -366,6 +554,7 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 			return -1;
 		}
 
+#if 0
 		{
 			int i;
 			printf("RX:");
@@ -373,11 +562,11 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 				printf(" %02x", buf[i]);
 			printf("\n");
 		}
-
-		*pdat = &buf[6];
-		*plen = len;
+#endif
+		lnk->rx.pdu_len = len;
 		off = len + 8;
 	} else {
+#if 0
 		{
 			int i;
 			printf("RX:");
@@ -385,8 +574,8 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 				printf(" %02x", buf[i]);
 			printf("\n");
 		}
-		*pdat = NULL;
-		*plen = 0;
+#endif
+		lnk->rx.pdu_len = 0;
 		off = 6;
 	}
 
@@ -402,10 +591,10 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 		DCC_LOG(LOG_TRACE, "HEARTBEAT_XON");
 		break;
 	case BACNET_PTP_FRM_DATA_0:
-		DCC_LOG(LOG_TRACE, "DATA_0");
+		DCC_LOG1(LOG_TRACE, "DATA_0(%d)", len);
 		break;
 	case BACNET_PTP_FRM_DATA_1:
-		DCC_LOG(LOG_TRACE, "DATA_1");
+		DCC_LOG1(LOG_TRACE, "DATA_1(%d)", len);
 		break;
 	case BACNET_PTP_FRM_DATA_ACK_0_XOFF:
 		DCC_LOG(LOG_TRACE, "DATA_ACK_0_XOFF");
@@ -455,7 +644,7 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 }
 
 int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ, 
-						uint8_t * dat, unsigned int len)
+						uint8_t * pdu, unsigned int len)
 {
 	uint8_t hdr[6];
 	uint8_t buf[9 + 2 * len];
@@ -465,7 +654,7 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 	int c;
 
 	/* reset TX idle timer */
-	lnk->tx.idle_tmr = thinkos_clock() + TX_IDLE_HBEAT_TMO_MS; 
+	lnk->tx.idle_tmr = lnk->clk + TX_IDLE_HBEAT_TMO_MS; 
 
 	hdr[0] = 0x55;
 	hdr[1] = 0xff;
@@ -488,9 +677,9 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 	if (len > 0) {
 		uint16_t crc;
 
-		crc = ~bacnet_crc16(0xffff, &dat, len);
+		crc = ~bacnet_crc16(0xffff, pdu, len);
 		for (i = 0, j = cnt; i < len; ++i) {
-			c = dat[i];
+			c = pdu[i];
 			if ((c == DLE) || (c == XON) || (c == XOFF)) {
 				buf[j++] = DLE;
 				c |= 0x80;
@@ -514,13 +703,14 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 		cnt = j;
 	} 
 
+#if 0
 	printf("TX:");
 	for (i = 0; i < cnt; ++i) {
 		c = buf[i];
-//		DCC_LOG1(LOG_TRACE, "%02x", c);
 		printf(" %02x", c);
 	}
 	printf("\n");
+#endif
 
 	switch (typ) {
 	case BACNET_PTP_FRM_HEARTBEAT_XOFF:
@@ -582,72 +772,45 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 	return serial_send(lnk->dev, buf, cnt);
 }
 
-static struct bacnet_ptp_lnk ptp_lnk;
-
-struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct serial_dev * dev)
+int __attribute__((noreturn)) bacnet_ptp_task(struct bacnet_ptp_lnk * lnk)
 {
-	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
-
-	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
-
-	bacnet_ptp_lnk_init(lnk, dev);
-
-	/* 10.4.9.1 DISCONNECTED, ConnectOutbound 
-	If a DL-CONNECT.request is received,
-	then establish a physical connection; transmit the "BACnet<CR>" trigger 
-	sequence; set RetryCount to zero; set
-	ResponseTimer to zero; and enter the OUTBOUND state.
-	 */
-	serial_send(lnk->dev, "BACnet\r", 7);
-
-	lnk->state = BACNET_PTP_OUTBOUND;
-	DCC_LOG(LOG_TRACE, "[OUTBOUND]");
-
-	return lnk;
-}
-
-struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
-{
-	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
-	uint32_t clk;
-
-	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
-
-	bacnet_ptp_lnk_init(lnk, dev);
-	clk = thinkos_clock();
-
-	lnk->dcc_tmr = clk + DCC_TIME_MS; 
-
-	lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
-
-	bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
-	lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
-	lnk->tx.rxmt_cnt = 0;
-
-	/* 10.4.9.1 DISCONNECTED, ConnectInbound */
-	lnk->state = BACNET_PTP_INBOUND;
-	DCC_LOG(LOG_TRACE, "[INBOUND]");
-
-	return lnk;
-}
-
-int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, 
-					uint8_t ** pdu, uint16_t * pdu_len)
-{
+	uint8_t * pdu;
+	int pdu_len;
 	uint32_t clk;
 	int typ;
 	int len;
 
+wait_connect:
+	lnk->tx.xon = false;
+	lnk->tx.seq = 1;
+	lnk->tx.len = 0;
+	thinkos_flag_give(lnk->rx.flag);
+
+	lnk->rx.xon = false;
+	lnk->rx.seq = 1;
+	lnk->rx.pdu_len = 0;
+	thinkos_flag_give(lnk->tx.flag);
+
+	while (lnk->state == BACNET_PTP_DISCONNECTED) {
+		/* In this state, the device waits for the network layer to 
+		   initiate a PTP data link connection or for the physical 
+		   layer to indicate the occurrence of a physical 
+		   layer connection. */
+		thinkos_sleep(100);
+	}
+
+
 again:
-	clk = thinkos_clock();
+	clk = lnk->clk;
 	if (((int32_t)(lnk->dcc_tmr - clk)) < 0) {
 		lnk->dcc_tmr = clk + DCC_TIME_MS; 
-		DCC_LOG(LOG_TRACE, "DCC timer");
+		DCC_LOG(LOG_INFO, "DCC timer");
 		dcc_timer_seconds((DCC_TIME_MS + 500) / 1000);
 	}
 
-	typ = bacnet_ptp_frame_recv(lnk, pdu, pdu_len);
+	typ = bacnet_ptp_frame_recv(lnk, 100);
 	clk = thinkos_clock();
+	lnk->clk = clk;
 
 	if (typ > 0) {
 #if 0
@@ -667,13 +830,8 @@ again:
 	
 	switch (lnk->state) {
 	case BACNET_PTP_DISCONNECTED:
-		/* In this state, the device waits for the network layer to 
-		   initiate a PTP data link connection or for the physical 
-		   layer to indicate the occurrence of a physical 
-		   layer connection. */
-
 		DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-		return -1;
+		goto wait_connect;
 
 	case BACNET_PTP_INBOUND:
 		/* In this state, the Connection State Machine has 
@@ -687,7 +845,7 @@ again:
 								NULL, 0);
 			/* start the cyclic 1 second timer for DCC */
 //			timer_interval_start_seconds(&DCC_Timer, DCC_CYCLE_SECONDS);
-			return 0;
+			break;
 		} 
 
 		if (typ == BACNET_PTP_FRM_DISCONNECT_REQ) {
@@ -695,27 +853,27 @@ again:
 								NULL, 0);
 			lnk->state = BACNET_PTP_DISCONNECTED;
 			DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-			return -1;
+			goto wait_connect;
 		}
 
 		if (typ == THINKOS_ETIMEDOUT) {
 			if (((int32_t)(lnk->tx.rxmt_tmr - clk)) < 0) {
-				if (++lnk->tx.rxmt_cnt < 3) {
+				if (++lnk->tx.rxmt_cnt < PTP_LINK_RXMT_MAX) {
+					lnk->tx.rxmt_tmr = clk + CONN_RXMT_TIME_MS; 
 					bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, 
 										  NULL, 0);
 					DCC_LOG(LOG_TRACE, "[INBOUND]");
-					lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
 				} else {
 					lnk->state = BACNET_PTP_DISCONNECTED;
 					DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-					return -1;
+					goto wait_connect;
 				} 
 			}
 		}
-
 		break;
 
 	case BACNET_PTP_OUTBOUND:
+		/* FIXME: not implemented ... */
 		break;
 
 	case BACNET_PTP_CONNECTED:
@@ -724,7 +882,6 @@ again:
 			if (lnk->tx.xon) {
 				DCC_LOG(LOG_TRACE, "[XOFF]");
 				lnk->tx.xon = false;
-				return 3;
 			}
 			break;
 
@@ -732,17 +889,20 @@ again:
 			if (!lnk->tx.xon) {
 				DCC_LOG(LOG_TRACE, "[XON]");
 				lnk->tx.xon = true;
-				return 2;
 			}
 			break;
 
 		case BACNET_PTP_FRM_DATA_0:
+			/* FIXME: check for correct sequence number */
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DATA_ACK_0_XON, NULL, 0);
-			return 1; 
+			thinkos_flag_give(lnk->rx.flag);
+			break;
 
 		case BACNET_PTP_FRM_DATA_1:
+			/* FIXME: check for correct sequence number */
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DATA_ACK_1_XON, NULL, 0);
-			return 1; 
+			thinkos_flag_give(lnk->rx.flag);
+			break;
 
 		case BACNET_PTP_FRM_DATA_ACK_0_XOFF:
 			break;
@@ -753,6 +913,7 @@ again:
 			if ((lnk->tx.seq & 1) == 0) {
 				lnk->tx.seq++;
 				lnk->tx.len = 0;
+				thinkos_flag_give(lnk->tx.flag);
 			}
 			break;
 
@@ -760,6 +921,7 @@ again:
 			if ((lnk->tx.seq & 1) == 1) {
 				lnk->tx.seq++;
 				lnk->tx.len = 0;
+				thinkos_flag_give(lnk->tx.flag);
 			}	
 			break;
 
@@ -794,7 +956,7 @@ again:
 								NULL, 0);
 			lnk->state = BACNET_PTP_DISCONNECTED;
 			DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-			return -1;
+			goto wait_connect;
 
 		case BACNET_PTP_FRM_DISCONNECT_RESP:
 			lnk->enabled = false;
@@ -807,19 +969,40 @@ again:
 			break;
 
 		case THINKOS_ETIMEDOUT:
+			if (lnk->tx.len) {
+				/* data pending on the TX buffer */
+				if (((int32_t)(lnk->tx.rxmt_tmr - clk)) < 0) {
+					if (++lnk->tx.rxmt_cnt < PTP_LINK_RXMT_MAX) {
+						/* restart retransmission timer */
+						lnk->tx.rxmt_tmr = clk + NPDU_RXMT_TIME_MS; 
+						if (lnk->tx.xon) {
+							DCC_LOG(LOG_TRACE, "retransmitting...");
+							bacnet_ptp_frame_send(lnk, (lnk->tx.seq & 1) ? 
+												  BACNET_PTP_FRM_DATA_1 :
+												  BACNET_PTP_FRM_DATA_0,
+												  lnk->tx.buf, lnk->tx.len);
+						}
+					} else {
+						DCC_LOG(LOG_TRACE, "too many retries giving up...");
+						lnk->tx.len = 0;
+						thinkos_flag_give(lnk->tx.flag);
+					}
+				} 
+			}
 			if (((int32_t)(lnk->rx.idle_tmr - clk)) < 0) {
 				DCC_LOG(LOG_TRACE, "RX IDLE timeout");
 				uint8_t code = 0x01;
 				/* IDLE timeout */
+				lnk->tx.rxmt_tmr = clk + DISC_RXMT_TIME_MS; 
+				lnk->tx.rxmt_cnt = 0;
 				bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DISCONNECT_REQ,
 									  &code, 1);
+
 				lnk->state = BACNET_PTP_DISCONNECTING;
 				DCC_LOG(LOG_TRACE, "[DISCONNECTING]");
-				lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
-				lnk->tx.rxmt_cnt = 0;
 			}
 			if (((int32_t)(lnk->tx.idle_tmr - clk)) < 0) {
-				DCC_LOG(LOG_TRACE, "TX IDLE timeout");
+				DCC_LOG(LOG_INFO, "TX IDLE timeout");
 				bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_HEARTBEAT_XON, 
 									  NULL, 0);
 			}
@@ -832,21 +1015,21 @@ again:
 		if (typ == BACNET_PTP_FRM_DISCONNECT_RESP) {
 			lnk->state = BACNET_PTP_DISCONNECTED;
 			DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-			return -1;
+			goto wait_connect;
 		}
 
 		if (typ == THINKOS_ETIMEDOUT) {
 			if (((int32_t)(lnk->tx.rxmt_tmr - clk)) < 0) {
-				if (++lnk->tx.rxmt_cnt < 3) {
+				if (++lnk->tx.rxmt_cnt < PTP_LINK_RXMT_MAX) {
 					uint8_t code = 0x02;
 					bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DISCONNECT_REQ,
 										  &code, 1);
 					DCC_LOG(LOG_TRACE, "[DISCONNECTING]");
-					lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
+					lnk->tx.rxmt_tmr = clk + DISC_RXMT_TIME_MS; 
 				} else {
 					lnk->state = BACNET_PTP_DISCONNECTED;
 					DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
-					return -1;
+					goto wait_connect;
 				} 
 			}
 		}
@@ -857,31 +1040,152 @@ again:
 	goto again;
 }
 
-int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, uint8_t * dat, 
-					unsigned int len)
+uint32_t bacnet_ptp_stack[256];
+
+const struct thinkos_thread_inf bacnet_ptp_inf = {
+	.stack_ptr = bacnet_ptp_stack, 
+	.stack_size = sizeof(bacnet_ptp_stack), 
+	.priority = 32,
+	.thread_id = 7, 
+	.paused = 0,
+	.tag = "BN PTP"
+};
+
+void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
 {
+	lnk->dev = dev;
+	lnk->enabled = true;
+	lnk->state = BACNET_PTP_DISCONNECTED;
+	lnk->rx.seq = 0;
+	lnk->tx.seq = 0;
+	lnk->tx.xon = false;
+	lnk->rx.xon = false;
+
+	DCC_LOG(LOG_TRACE, "[DISCONNECTED]");
+	bacnet_ptp_lnk_rx_rst(lnk);
+	lnk->rx.flag = thinkos_flag_alloc();
+	lnk->tx.flag = thinkos_flag_alloc();
+
+	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
+	thinkos_thread_create_inf((void *)bacnet_ptp_task, (void *)lnk, 
+							  &bacnet_ptp_inf);
+}
+
+int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t pdu[], 
+					unsigned int max)
+{
+	int pdu_len;
+
 	for(;;) {
-		if (lnk->state != BACNET_PTP_CONNECTED)
-			return -1;
+		thinkos_flag_take(lnk->rx.flag);
 
-		if ((lnk->tx.len == 0) && (lnk->tx.xon))
+		if (lnk->state == BACNET_PTP_DISCONNECTED) {
+			DCC_LOG(LOG_TRACE, "Disconnected. Bailing out...");
+			return -EAGAIN;
+		}
+
+		/* check for a slot in the xmit queue ... */
+		if (lnk->rx.pdu_len) 
 			break;
-
-		/* FIXME: better flow control mechanism ... */
-		thinkos_sleep(100);
 	};
 
-	DCC_LOG(LOG_TRACE, "...");
+	pdu_len = lnk->rx.pdu_len;
+	memcpy(pdu, lnk->rx.pdu, pdu_len);
 
-	memcpy(lnk->tx.buf, dat, len);
+	lnk->rx.pdu_len = 0;
+
+	return pdu_len;
+}
+
+int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, const uint8_t pdu[], 
+					unsigned int len)
+{
+	uint32_t clk;
+
+	for(;;) {
+		thinkos_flag_take(lnk->tx.flag);
+
+		if (lnk->state != BACNET_PTP_CONNECTED)
+			return -EAGAIN;
+
+		/* check for a slot in the xmit queue ... */
+		if (lnk->tx.len == 0) 
+			break;
+	};
+
+	/* update the link layer event clock */
+	clk = thinkos_clock();
+	lnk->clk = clk;
+
+	/* restart the retransmission timer */
+	lnk->tx.rxmt_tmr = clk + NPDU_RXMT_TIME_MS; 
+	lnk->tx.rxmt_cnt = 0;
+
+	/* insert frame in the transmission queue ...  */
+	memcpy(lnk->tx.buf, pdu, len);
 	lnk->tx.len = len;
 
-	bacnet_ptp_frame_send(lnk, (lnk->tx.seq & 1) ? 
-						  BACNET_PTP_FRM_DATA_0 :
-						  BACNET_PTP_FRM_DATA_1,
-						  lnk->tx.buf, lnk->tx.len);
+	if (lnk->tx.xon) {
+		DCC_LOG1(LOG_INFO, "sending now (%d)...", len);
+		/* if the remote side is reception is on send the frame now! */
+		bacnet_ptp_frame_send(lnk, (lnk->tx.seq & 1) ? 
+							  BACNET_PTP_FRM_DATA_1 :
+							  BACNET_PTP_FRM_DATA_0,
+							  lnk->tx.buf, lnk->tx.len);
+	}
 
 	return len;
 }
 
+
+
+static struct bacnet_ptp_lnk ptp_lnk;
+
+struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct serial_dev * dev)
+{
+	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
+
+	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
+
+	bacnet_ptp_lnk_init(lnk, dev);
+
+	/* 10.4.9.1 DISCONNECTED, ConnectOutbound 
+	If a DL-CONNECT.request is received,
+	then establish a physical connection; transmit the "BACnet<CR>" trigger 
+	sequence; set RetryCount to zero; set
+	ResponseTimer to zero; and enter the OUTBOUND state.
+	 */
+	serial_send(lnk->dev, "BACnet\r", 7);
+
+	lnk->state = BACNET_PTP_OUTBOUND;
+	DCC_LOG(LOG_TRACE, "[OUTBOUND]");
+
+	return lnk;
+}
+
+struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
+{
+	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
+	uint32_t clk;
+
+	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
+
+	bacnet_ptp_lnk_init(lnk, dev);
+	clk = thinkos_clock();
+	lnk->clk = clk;
+
+	lnk->dcc_tmr = clk + DCC_TIME_MS; 
+
+	lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
+
+	lnk->tx.rxmt_tmr = clk + CONN_RXMT_TIME_MS; 
+	lnk->tx.rxmt_cnt = 0;
+	bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
+
+	/* 10.4.9.1 DISCONNECTED, ConnectInbound */
+	lnk->state = BACNET_PTP_INBOUND;
+	DCC_LOG(LOG_TRACE, "[INBOUND]");
+
+	return lnk;
+}
 

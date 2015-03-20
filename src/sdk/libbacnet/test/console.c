@@ -103,7 +103,13 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
-	{ cmd_reboot, "reboot", "rst", "", 
+	{ cmd_ifconfig, "ifconfig", "if", 
+		"", "configure a network interface" },
+
+	{ cmd_netstat, "netstat", "n", 
+		"", "print network connections" },
+
+	{ cmd_reboot, "reboot", "r", "", 
 		"reboot system" },
 
 	{ cmd_set, "set", "", 
