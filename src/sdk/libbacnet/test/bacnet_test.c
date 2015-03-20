@@ -43,12 +43,13 @@
 #include <thinkos_sys.h>
 
 #include "board.h"
+#include "lattice.h"
 
 #include <bacnet/bacnet-ptp.h>
 #include "dcc.h"
 #include "npdu.h"
 #include "handlers.h"
-#include "lattice.h"
+#include "device.h"
 
 #define VERSION_NUM "0.1"
 #define VERSION_DATE "Mar, 2015"
@@ -189,10 +190,8 @@ int main(int argc, char ** argv)
 	struct serial_dev * ser1;
 	FILE * term1;
 	FILE * term5;
-
-
-	uint8_t buf[512];
-	int len;
+	uint8_t * pdu;
+	uint16_t pdu_len;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -228,6 +227,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "5. starting console shell...");
 
+	Device_Init(NULL);
+
 	for (;;) {
 		DCC_LOG(LOG_WARNING, "Console shell!");
 	
@@ -237,9 +238,10 @@ int main(int argc, char ** argv)
 		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
 		ptp_lnk = bacnet_ptp_inbound(ser5);
 
-		while ((len = bacnet_ptp_recv(ptp_lnk, buf)) >= 0) {
+		while (bacnet_ptp_recv(ptp_lnk, &pdu, &pdu_len) >= 0) {
 			DCC_LOG(LOG_TRACE, "BACnet PDU received...");
-        	npdu_handler(NULL, buf, len);
+			if (pdu_len > 0)
+	        	npdu_handler(NULL, pdu, pdu_len);
 		}
 
 	}

@@ -202,7 +202,7 @@
 #define BACNET_SVC_SERVER      0
 #define BACNET_USE_OCTETSTRING 1
 #define BACNET_USE_DOUBLE      0
-#define BACNET_USE_SIGNED      0
+#define BACNET_USE_SIGNED      1
 #endif
 
 /* Do them one by one */

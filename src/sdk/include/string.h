@@ -72,7 +72,7 @@ int ffs(int i);
 /* FIXME: not implemented */
 
 char *strerror(int errnum);
-
+void *memmove(void *dest, const void *src, size_t n);
 #ifdef __cplusplus
 }
 #endif

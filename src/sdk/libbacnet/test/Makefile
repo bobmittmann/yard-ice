@@ -22,7 +22,7 @@
 
 PROG = bacnet_test
 
-CFILES = bacnet_test.c console.c lattice.c ice40lp384.c
+CFILES = bacnet_test.c console.c lattice.c ice40lp384.c device.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools

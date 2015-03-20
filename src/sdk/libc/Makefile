@@ -31,7 +31,7 @@ CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 fgets.c fprintf.c fputc.c fputs.c fread.c fwrite.c\
 		 file.c getchar.c ctype.c div.c\
 		 int2dec.c uint2dec.c ll2dec.c ull2dec.c uint2hex.c ull2hex.c\
-		 memcmp.c memcpy.c memset.c ffs.c\
+		 memcmp.c memcpy.c memset.c memmove.c ffs.c\
 		 printf.c putchar.c puts.c vsnprintf.c sprintf.c snprintf.c\
 		 strcasecmp.c strcat.c strchr.c strstr.c\
 		 strcmp.c strncmp.c strcpy.c strncpy.c strlen.c\
