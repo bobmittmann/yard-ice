@@ -109,34 +109,16 @@
 #define MAX_ADDRESS_CACHE 2
 
 /* some modules have debugging enabled using PRINT_ENABLED */
-#define PRINT_ENABLED 1
+#define PRINT_ENABLED 0
 
 /* BACAPP decodes WriteProperty service requests
    Choose the datatypes that your application supports */
-#if !(defined(BACAPP_ALL) || \
-    defined(BACAPP_NULL) || \
-    defined(BACAPP_BOOLEAN) || \
-    defined(BACAPP_UNSIGNED) || \
-    defined(BACAPP_SIGNED) || \
-    defined(BACAPP_REAL) || \
-    defined(BACAPP_DOUBLE) || \
-    defined(BACAPP_OCTET_STRING) || \
-    defined(BACAPP_CHARACTER_STRING) || \
-    defined(BACAPP_BIT_STRING) || \
-    defined(BACAPP_ENUMERATED) || \
-    defined(BACAPP_DATE) || \
-    defined(BACAPP_TIME) || \
-    defined(BACAPP_OBJECT_ID))
-#define BACAPP_ALL
-#endif
-
-#if defined (BACAPP_ALL)
 #define BACAPP_NULL
 #define BACAPP_BOOLEAN
 #define BACAPP_UNSIGNED
 #define BACAPP_SIGNED
 #define BACAPP_REAL
-#define BACAPP_DOUBLE
+//#define BACAPP_DOUBLE
 #define BACAPP_OCTET_STRING
 #define BACAPP_CHARACTER_STRING
 #define BACAPP_BIT_STRING
@@ -144,7 +126,6 @@
 #define BACAPP_DATE
 #define BACAPP_TIME
 #define BACAPP_OBJECT_ID
-#endif
 
 /*
 ** Set the maximum vector type sizes

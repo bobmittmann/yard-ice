@@ -174,6 +174,32 @@ void datalink_set(char *datalink_string)
 	return;
 }
 
+void bacnet_init(void)
+{
+    /* initialize objects */
+    Device_Init(NULL);
+
+    /* set up our confirmed service unrecognized service handler - required! */
+    apdu_set_unrecognized_service_handler_handler
+        (handler_unrecognized_service);
+    /* we need to handle who-is to support dynamic device binding */
+    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_WHO_IS, handler_who_is);
+    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_WHO_HAS, handler_who_has);
+    /* Set the handlers for any confirmed services that we support. */
+    /* We must implement read property - it's required! */
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_PROPERTY,
+        handler_read_property);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_PROP_MULTIPLE,
+        handler_read_property_multiple);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_REINITIALIZE_DEVICE,
+        handler_reinitialize_device);
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_WRITE_PROPERTY,
+        handler_write_property);
+    /* handle communication so we can shutup when asked */
+    apdu_set_confirmed_handler(SERVICE_CONFIRMED_DEVICE_COMMUNICATION_CONTROL,
+        handler_device_communication_control);
+}
+
 FILE * serial_tty_open(struct serial_dev * serdev)
 {
 	struct tty_dev * tty;
@@ -192,6 +218,7 @@ int main(int argc, char ** argv)
 	FILE * term5;
 	uint8_t * pdu;
 	uint16_t pdu_len;
+	int ev;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -225,9 +252,9 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
-	DCC_LOG(LOG_TRACE, "5. starting console shell...");
+	bacnet_init();
 
-	Device_Init(NULL);
+	DCC_LOG(LOG_TRACE, "5. starting console shell...");
 
 	for (;;) {
 		DCC_LOG(LOG_WARNING, "Console shell!");
@@ -238,10 +265,16 @@ int main(int argc, char ** argv)
 		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
 		ptp_lnk = bacnet_ptp_inbound(ser5);
 
-		while (bacnet_ptp_recv(ptp_lnk, &pdu, &pdu_len) >= 0) {
-			DCC_LOG(LOG_TRACE, "BACnet PDU received...");
-			if (pdu_len > 0)
+		while ((ev = bacnet_ptp_recv(ptp_lnk, &pdu, &pdu_len)) >= 0) {
+			if (ev == 0) {
+				DCC_LOG(LOG_TRACE, "BACnet Data Link Layer connected ...");
+			} else if (ev == 2) {
+				/* Hello World! */
+//				Send_I_Am(&Handler_Transmit_Buffer[0]);
+			} else if (ev == 1) {
+				DCC_LOG(LOG_TRACE, "BACnet PDU received...");
 	        	npdu_handler(NULL, pdu, pdu_len);
+			}
 		}
 
 	}

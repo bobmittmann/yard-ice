@@ -25,7 +25,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = bacnet
 
-STACK_CFILES = abort.c address.c alarm_ack.c apdu.c arf.c awf.c \
+STACK_CFILES = abort.c alarm_ack.c apdu.c arf.c awf.c \
 			   bacaddr.c bacapp.c bacdcode.c bacdevobjpropref.c \
 			   bacerror.c bacint.c bacprop.c bacpropstates.c \
 			   bacreal.c bacstr.c bactext.c bigend.c \
@@ -37,7 +37,7 @@ STACK_CFILES = abort.c address.c alarm_ack.c apdu.c arf.c awf.c \
 			   sbuf.c timestamp.c timesync.c tsm.c version.c whohas.c \
 			   whois.c wp.c wpm.c
 
-#mstp.c mstptext.c bip.c bvlc.c 
+#mstp.c mstptext.c bip.c bvlc.c address.c 
 
 HANDLER_CFILES = h_alarm_ack.c h_arf.c h_arf_a.c h_awf.c \
 				 h_ccov.c h_cov.c h_dcc.c h_gas_a.c h_get_alarm_sum.c \
@@ -51,11 +51,14 @@ HANDLER_CFILES = h_alarm_ack.c h_arf.c h_arf_a.c h_awf.c \
 				 s_upt.c s_whohas.c s_whois.c s_wp.c s_wpm.c txbuf.c
 #dlenv.c 
 
-OBJECT_CFILES = 
+OBJECT_CFILES = lo.c lsp.c ai.c ao.c av.c bi.c bo.c \
+				bv.c csv.c ms-input.c mso.c msv.c nc.c 
+#trendlog.c
+#bacfile.c 
+#lc.c 
 #device.c 
-#gw_device.c lc.c lo.c lsp.c device-client.c 
-#ai.c ao.c av.c bacfile.c bi.c bo.c bv.c csv.c ms-input.c 
-#mso.c msv.c nc.c trendlog.c
+#gw_device.c 
+#device-client.c 
 
 CFILES = $(addprefix bacnet-stack/src/,$(STACK_CFILES))\
 		 $(addprefix bacnet-stack/demo/handler/,$(HANDLER_CFILES))\
