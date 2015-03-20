@@ -211,7 +211,8 @@ def main():
 	sys.stdout.flush()
 
 	options = {}
-	options['blksize'] = 1428
+#	options['blksize'] = 1428
+	options['blksize'] = 1024 + 128 + 64
 	timeout = 2
 	port = 69
 	tclient = tftp.TftpClient(host, port)
