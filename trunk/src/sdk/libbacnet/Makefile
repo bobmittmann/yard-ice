@@ -51,8 +51,15 @@ HANDLER_CFILES = h_alarm_ack.c h_arf.c h_arf_a.c h_awf.c \
 				 s_upt.c s_whohas.c s_whois.c s_wp.c s_wpm.c txbuf.c
 #dlenv.c 
 
-CFILES = $(addprefix bacnet-stack/demo/handler/,$(HANDLER_CFILES))\
-		 $(addprefix bacnet-stack/src/,$(STACK_CFILES))\
+OBJECT_CFILES = 
+#device.c 
+#gw_device.c lc.c lo.c lsp.c device-client.c 
+#ai.c ao.c av.c bacfile.c bi.c bo.c bv.c csv.c ms-input.c 
+#mso.c msv.c nc.c trendlog.c
+
+CFILES = $(addprefix bacnet-stack/src/,$(STACK_CFILES))\
+		 $(addprefix bacnet-stack/demo/handler/,$(HANDLER_CFILES))\
+		 $(addprefix bacnet-stack/demo/object/,$(OBJECT_CFILES))\
 		 bacnet_ptp.c 
 
 INCPATH = ../include 

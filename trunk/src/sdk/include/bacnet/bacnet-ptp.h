@@ -33,9 +33,10 @@ extern "C" {
 
 struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev);
 
-int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t * buf);
+int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, 
+					uint8_t ** pdu, uint16_t * pdu_len);
 
-int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, uint8_t * dat, 
+int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, uint8_t * pdu, 
 					unsigned int len);
 
 #ifdef __cplusplus

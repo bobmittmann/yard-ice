@@ -172,7 +172,8 @@ unsigned int bacnet_crc16(unsigned int crc, const void * buf, int len)
 	return crc;
 }
 
-#define IDLE_TIME_MS 15000
+#define TX_IDLE_HBEAT_TMO_MS 15000
+#define RX_IDLE_DISC_TMO_MS 30000
 #define RXMT_TIME_MS  5000
 #define DCC_TIME_MS  15000
 
@@ -203,12 +204,12 @@ struct bacnet_ptp_lnk {
 		bool dle;
 		uint32_t seq;
 		uint32_t idle_tmr;
-		uint8_t idle_cnt;
 	} rx;
 	struct {
 		uint8_t buf[BACNET_PTP_MTU];
 		volatile unsigned int len;
 		volatile uint32_t seq;
+		uint32_t idle_tmr;
 		uint32_t rxmt_tmr;
 		uint8_t rxmt_cnt;
 	} tx;
@@ -233,7 +234,7 @@ void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
 }
 
 int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat, 
-						  unsigned int * plen)
+						  uint16_t * plen)
 {
 	bool dle = lnk->rx.dle;
 	int off = lnk->rx.off;
@@ -315,7 +316,7 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 	}
 
 	len = (buf[3] << 8) + buf[4];
-	DCC_LOG2(LOG_INFO, "cnt=%d len=%d", cnt, len);
+	DCC_LOG2(LOG_TRACE, "cnt=%d len=%d", cnt, len);
 
 	if (len > 0) {
 		uint16_t crc;
@@ -363,10 +364,25 @@ int bacnet_ptp_frame_recv(struct bacnet_ptp_lnk * lnk, uint8_t ** pdat,
 			return -1;
 		}
 
+		{
+			int i;
+			printf("RX:");
+			for (i = 0; i < len + 8; ++i)
+				printf(" %02x", buf[i]);
+			printf("\n");
+		}
+
 		*pdat = &buf[6];
 		*plen = len;
 		off = len + 8;
 	} else {
+		{
+			int i;
+			printf("RX:");
+			for (i = 0; i < 6; ++i)
+				printf(" %02x", buf[i]);
+			printf("\n");
+		}
 		*pdat = NULL;
 		*plen = 0;
 		off = 6;
@@ -446,6 +462,9 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 	int j;
 	int c;
 
+	/* reset TX idle timer */
+	lnk->tx.idle_tmr = thinkos_clock() + TX_IDLE_HBEAT_TMO_MS; 
+
 	hdr[0] = 0x55;
 	hdr[1] = 0xff;
 	hdr[2] = typ;
@@ -467,7 +486,7 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 	if (len > 0) {
 		uint16_t crc;
 
-		crc = bacnet_crc16(0xffff, &dat, len);
+		crc = ~bacnet_crc16(0xffff, &dat, len);
 		for (i = 0, j = cnt; i < len; ++i) {
 			c = dat[i];
 			if ((c == DLE) || (c == XON) || (c == XOFF)) {
@@ -483,7 +502,7 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 		}
 		buf[j++] = c;
 
-		c = (crc << 8) & 0xff;
+		c = (crc >> 8) & 0xff;
 		if ((c == DLE) || (c == XON) || (c == XOFF)) {
 			buf[j++] = DLE;
 			c |= 0x80;
@@ -493,12 +512,13 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 		cnt = j;
 	} 
 
-#if 0
+	printf("TX:");
 	for (i = 0; i < cnt; ++i) {
 		c = buf[i];
-		DCC_LOG1(LOG_TRACE, "%02x", c);
+//		DCC_LOG1(LOG_TRACE, "%02x", c);
+		printf(" %02x", c);
 	}
-#endif
+	printf("\n");
 
 	switch (typ) {
 	case BACNET_PTP_FRM_HEARTBEAT_XOFF:
@@ -508,10 +528,10 @@ int bacnet_ptp_frame_send(struct bacnet_ptp_lnk * lnk, int typ,
 		DCC_LOG(LOG_TRACE, "HEARTBEAT_XON");
 		break;
 	case BACNET_PTP_FRM_DATA_0:
-		DCC_LOG(LOG_TRACE, "DATA_0");
+		DCC_LOG1(LOG_TRACE, "DATA_0(%d)", len);
 		break;
 	case BACNET_PTP_FRM_DATA_1:
-		DCC_LOG(LOG_TRACE, "DATA_1");
+		DCC_LOG1(LOG_TRACE, "DATA_1(%d)", len);
 		break;
 	case BACNET_PTP_FRM_DATA_ACK_0_XOFF:
 		DCC_LOG(LOG_TRACE, "DATA_ACK_0_XOFF");
@@ -596,8 +616,7 @@ struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
 
 	lnk->dcc_tmr = clk + DCC_TIME_MS; 
 
-	lnk->rx.idle_tmr = clk + IDLE_TIME_MS; 
-	lnk->rx.idle_cnt = 0;
+	lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
 
 	bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
 	lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
@@ -610,11 +629,12 @@ struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
 	return lnk;
 }
 
-int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t * buf)
+int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, 
+					uint8_t ** pdu, uint16_t * pdu_len)
 {
-	unsigned int len;
-	int typ;
 	uint32_t clk;
+	int typ;
+	int len;
 
 again:
 	clk = thinkos_clock();
@@ -624,13 +644,23 @@ again:
 		dcc_timer_seconds((DCC_TIME_MS + 500) / 1000);
 	}
 
-	typ = bacnet_ptp_frame_recv(lnk, &buf, &len);
+	typ = bacnet_ptp_frame_recv(lnk, pdu, pdu_len);
 	clk = thinkos_clock();
 
-	if (len > 0) {
+	if (typ > 0) {
+#if 0
+		int len = *pdu_len;
+		if (len) {
+			uint8_t * cp = *pdu;
+			int i;
+			printf("RX PDU: ");
+			for (i = 0; i < len; ++i)
+				printf(" %02x", cp[i]);
+			printf("\n");
+		}
+#endif
 		/* Reset IDLE timer */
-		lnk->rx.idle_tmr = clk + IDLE_TIME_MS; 
-		lnk->rx.idle_cnt = 0;
+		lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
 	} 
 	
 	switch (lnk->state) {
@@ -693,11 +723,11 @@ again:
 			break;
 		case BACNET_PTP_FRM_DATA_0:
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DATA_ACK_0_XON, NULL, 0);
-			return len; 
+			return 1; 
 
 		case BACNET_PTP_FRM_DATA_1:
 			bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DATA_ACK_1_XON, NULL, 0);
-			return len; 
+			return 1; 
 
 		case BACNET_PTP_FRM_DATA_ACK_0_XOFF:
 			break;
@@ -763,21 +793,20 @@ again:
 
 		case THINKOS_ETIMEDOUT:
 			if (((int32_t)(lnk->rx.idle_tmr - clk)) < 0) {
-				DCC_LOG(LOG_TRACE, "IDLE timeout");
+				DCC_LOG(LOG_TRACE, "RX IDLE timeout");
+				uint8_t code = 0x01;
 				/* IDLE timeout */
-				if (++lnk->rx.idle_cnt < 4) {
-					bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_HEARTBEAT_XON, 
-										  NULL, 0);
-					lnk->rx.idle_tmr = clk + IDLE_TIME_MS; 
-				} else  {
-					uint8_t code = 0x03;
-					bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DISCONNECT_REQ,
-										  &code, 1);
-					lnk->state = BACNET_PTP_DISCONNECTING;
-					DCC_LOG(LOG_TRACE, "[DISCONNECTING]");
-					lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
-					lnk->tx.rxmt_cnt = 0;
-				}
+				bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DISCONNECT_REQ,
+									  &code, 1);
+				lnk->state = BACNET_PTP_DISCONNECTING;
+				DCC_LOG(LOG_TRACE, "[DISCONNECTING]");
+				lnk->tx.rxmt_tmr = clk + RXMT_TIME_MS; 
+				lnk->tx.rxmt_cnt = 0;
+			}
+			if (((int32_t)(lnk->tx.idle_tmr - clk)) < 0) {
+				DCC_LOG(LOG_TRACE, "TX IDLE timeout");
+				bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_HEARTBEAT_XON, 
+									  NULL, 0);
 			}
 			break;
 		}
@@ -794,7 +823,7 @@ again:
 		if (typ == THINKOS_ETIMEDOUT) {
 			if (((int32_t)(lnk->tx.rxmt_tmr - clk)) < 0) {
 				if (++lnk->tx.rxmt_cnt < 3) {
-					uint8_t code = 0x03;
+					uint8_t code = 0x02;
 					bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_DISCONNECT_REQ,
 										  &code, 1);
 					DCC_LOG(LOG_TRACE, "[DISCONNECTING]");
