@@ -32,7 +32,7 @@
  * ----------------------------------------------------------------------
  */
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 #define UART_TX STM32_GPIOC, 12
 #define UART_RX STM32_GPIOD, 2
@@ -54,7 +54,7 @@ struct file stm32f_uart_file = {
 
 void stdio_init(void)
 {
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 	struct stm32_usart * uart = STM32_UART5;
 #else
 	struct stm32_usart * uart = STM32_USART1;
@@ -64,11 +64,11 @@ void stdio_init(void)
 #endif
 
 	/* Enable GPIO */
-#if defined(STM32F2X)
-	stm32_gpio_clock_en(STM32_GPIOC);
-	stm32_gpio_clock_en(STM32_GPIOD);
+#if defined(STM32F2X) || defined(STM32F4X)
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 #else
-	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 #endif
 
 	/* USART1_TX */
@@ -79,11 +79,11 @@ void stdio_init(void)
 	stm32_gpio_mode(UART_RX, INPUT, PULL_UP);
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
-#elif defined(STM32F4X)
+#elif defined(STM32F2X) 
 	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART_RX, GPIO_AF7);
 	stm32_gpio_af(UART_TX, GPIO_AF7);
-#elif defined(STM32F2X)
+#elif defined(STM32F4X)
 	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART_RX, GPIO_AF8);
 	stm32_gpio_af(UART_TX, GPIO_AF8);
@@ -98,4 +98,5 @@ void stdio_init(void)
 	stdin = stderr;
 	stdout = stdin;
 }
+
 

@@ -49,59 +49,37 @@
 extern "C" {
 #endif
 
-#if 0
 #if (THINKOS_EVENT_MAX > 0)
 
 static inline void __attribute__((always_inline)) 
-__thinkos_ev_wait(int ev) {
-	int self = thinkos_rt.active;
-	__thinkos_wq_insert(ev, self);
-	/* prepare to wait ... */
-	__thinkos_wait(self);
-	__thinkos_critical_exit();
-	/* the scheduler will run at this point */
-	__thinkos_critical_enter();
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_critical_ev_wait(int ev, int lvl) {
-	int self = thinkos_rt.active;
-	__thinkos_wq_insert(ev, self);
-	/* prepare to wait ... */
-	__thinkos_wait(self);
-	__thinkos_critical_exit();
-	/* the scheduler will run at this point */
-	__thinkos_critical_level(lvl);
-}
-
-static inline void __attribute__((always_inline)) __thinkos_ev_raise(int ev) {
+	__thinkos_ev_raise(int wq, int ev)
+{
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+	uint32_t pri;
 	int th;
 
-	if ((th = __thinkos_wq_head(ev)) != THINKOS_THREAD_NULL) {
-		/* remove from the ev wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_lst[ev], th, 0);
-		/* insert the thread into ready queue */
-		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
+		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
+		/* wakeup from the event wait queue, set the return of
+		 the thread to the event */
+		__thinkos_wakeup_return(wq, th, ev);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
+	} else {
+		/* event is maksed or no thread is waiting ont hte event set
+		   , set the event as pending */
+		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
+	cm3_primask_set(pri);
 }
 
-#if THINKOS_ENABLE_TIMED_CALLS
-static inline void __attribute__((always_inline)) 
-__thinkos_ev_timed_raise(int ev) {
-	int th;
-
-	if ((th = __thinkos_wq_head(ev)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(ev, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
+static inline void thinkos_ev_raise_i(int wq, int ev) {
+	__thinkos_ev_raise(wq, ev);
 }
-#endif
 
 #endif /* (THINKOS_EVENT_MAX > 0) */
-#endif 
 
 
 #if (THINKOS_FLAG_MAX > 0)
@@ -136,7 +114,7 @@ static inline void __attribute__((always_inline))
 }
 
 static inline unsigned int __attribute__((always_inline)) 
-__thinkos_flag_is_set(int wq) {
+	__thinkos_flag_is_set(int wq) {
 	/* get the flag state */
 	return 	__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE);  
 }

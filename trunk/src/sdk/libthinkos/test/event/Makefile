@@ -32,5 +32,7 @@ INCPATH = ../../../include
 
 CFLAGS = -g -O2 
 
-include ../../../../mk/stm32f207.mk
+#include ../../../../mk/stm32f207.mk
+MACH = stm32f407
+include ../../../../mk/stm32f4xx.mk
 
