@@ -27,66 +27,70 @@
  * Service numbers
  * --------------------------------------------------------------------------*/
 
-#define THINKOS_THREAD_SELF 0
-#define THINKOS_THREAD_CREATE 1
+#define THINKOS_THREAD_SELF      0
+#define THINKOS_THREAD_CREATE    1
+   
+#define THINKOS_CLOCK            2
+#define THINKOS_ALARM            3
+#define THINKOS_SLEEP            4
 
-#define THINKOS_YIELD 2
-#define THINKOS_PAUSE 3
-#define THINKOS_RESUME 4
-#define THINKOS_CANCEL 5
-#define THINKOS_JOIN 6
+#define THINKOS_MUTEX_LOCK       5
+#define THINKOS_MUTEX_TRYLOCK    6
+#define THINKOS_MUTEX_TIMEDLOCK  7
+#define THINKOS_MUTEX_UNLOCK     8
 
-#define THINKOS_SLEEP 7
+#define THINKOS_SEM_INIT         9
+#define THINKOS_SEM_WAIT        10
+#define THINKOS_SEM_TRYWAIT     11
+#define THINKOS_SEM_TIMEDWAIT   12
+#define THINKOS_SEM_POST        13
 
-#define THINKOS_MUTEX_ALLOC 8
-#define THINKOS_MUTEX_FREE 9
-#define THINKOS_MUTEX_LOCK 10
-#define THINKOS_MUTEX_TRYLOCK 11
-#define THINKOS_MUTEX_TIMEDLOCK 12
-#define THINKOS_MUTEX_UNLOCK 13
+#define THINKOS_COND_WAIT       14
+#define THINKOS_COND_TIMEDWAIT  15
+#define THINKOS_COND_SIGNAL     16
+#define THINKOS_COND_BROADCAST  17
 
-#define THINKOS_COND_ALLOC 14
-#define THINKOS_COND_FREE 15
-#define THINKOS_COND_WAIT 16
-#define THINKOS_COND_TIMEDWAIT 17
-#define THINKOS_COND_SIGNAL 18
-#define THINKOS_COND_BROADCAST 19
+#define THINKOS_FLAG_VAL        18
+#define THINKOS_FLAG_SET        19
+#define THINKOS_FLAG_CLR        20
+#define THINKOS_FLAG_WAIT       21
+#define THINKOS_FLAG_TIMEDWAIT  22
+#define THINKOS_FLAG_GIVE       23
+#define THINKOS_FLAG_TAKE       24
+#define THINKOS_FLAG_TIMEDTAKE  25
+#define THINKOS_FLAG_TAKELOCK   26
 
-#define THINKOS_SEM_ALLOC 20
-#define THINKOS_SEM_FREE 21
-#define THINKOS_SEM_INIT 22
-#define THINKOS_SEM_WAIT 23
-#define THINKOS_SEM_TRYWAIT 24
-#define THINKOS_SEM_TIMEDWAIT 25
-#define THINKOS_SEM_POST 26
+#define THINKOS_EVENT_WAIT      27
+#define THINKOS_EVENT_TIMEDWAIT 28
+#define THINKOS_EVENT_RAISE     29
+#define THINKOS_EVENT_MASK      30
+#define THINKOS_EVENT_UNMASK    31
 
-#define THINKOS_EVENT_ALLOC 27
-#define THINKOS_EVENT_FREE 28
-#define THINKOS_EVENT_WAIT 29
-#define THINKOS_EVENT_TIMEDWAIT 30
-#define THINKOS_EVENT_RAISE 31
+#define THINKOS_IRQ_WAIT        32
 
-#define THINKOS_FLAG_ALLOC 32
-#define THINKOS_FLAG_FREE 33
+#define THINKOS_MUTEX_ALLOC     33
+#define THINKOS_MUTEX_FREE      34
 
-#define THINKOS_FLAG_VAL 34
-#define THINKOS_FLAG_SET 35
-#define THINKOS_FLAG_CLR 36
-#define THINKOS_FLAG_WAIT 37
-#define THINKOS_FLAG_TIMEDWAIT 38
+#define THINKOS_SEM_ALLOC       35
+#define THINKOS_SEM_FREE        36
 
-#define THINKOS_FLAG_GIVE 39
-#define THINKOS_FLAG_TAKE 40
-#define THINKOS_FLAG_TIMEDTAKE 41
+#define THINKOS_COND_ALLOC      37
+#define THINKOS_COND_FREE       38
 
-#define THINKOS_IRQ_WAIT 42
+#define THINKOS_FLAG_ALLOC      39
+#define THINKOS_FLAG_FREE       40
 
-#define THINKOS_RT_SNAPSHOT 43
+#define THINKOS_EVENT_ALLOC     41
+#define THINKOS_EVENT_FREE      42
 
-#define THINKOS_EXIT 44
-#define THINKOS_ALARM 45
+#define THINKOS_YIELD           43
+#define THINKOS_PAUSE           44
+#define THINKOS_RESUME          45
+#define THINKOS_CANCEL          46
+#define THINKOS_JOIN            47
 
-#define THINKOS_CLOCK 46
+#define THINKOS_RT_SNAPSHOT     48
+#define THINKOS_EXIT            49
 
 #ifndef __ASSEMBLER__
 
@@ -251,25 +255,17 @@ static inline int __attribute__((always_inline)) thinkos_cond_free(int cond) {
 
 static inline int __attribute__((always_inline)) 
 thinkos_cond_wait(int cond, int mutex) {
-//	uint32_t pri;
 	int ret;
-//	pri = cm3_primask_get();
-//	cm3_primask_set(2);
 	ret = THINKOS_SVC2(THINKOS_COND_WAIT, cond, mutex);
 	THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
-//	cm3_primask_set(pri);
 	return ret;
 }
 
 static inline int __attribute__((always_inline)) 
 thinkos_cond_timedwait(int cond, int mutex, unsigned int ms) {
-//	uint32_t pri;
 	int ret;
-//	pri = cm3_primask_get();
-//	cm3_primask_set(2);
 	ret = THINKOS_SVC3(THINKOS_COND_TIMEDWAIT, cond, mutex, ms);
 	THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
-//	cm3_primask_set(pri);
 	return ret;
 }
 
@@ -314,25 +310,45 @@ static inline int __attribute__((always_inline)) thinkos_sem_post(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
+/* ---------------------------------------------------------------------------
+   Event sets
+  ----------------------------------------------------------------------------*/
+
 static inline int __attribute__((always_inline)) thinkos_ev_alloc(void) {
 	return THINKOS_SVC(THINKOS_EVENT_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_free(int ev) {
-	return THINKOS_SVC1(THINKOS_EVENT_FREE, ev);
+static inline int __attribute__((always_inline)) thinkos_ev_free(int set) {
+	return THINKOS_SVC1(THINKOS_EVENT_FREE, set);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_wait(int ev) {
-	return THINKOS_SVC1(THINKOS_EVENT_WAIT, ev);
+static inline int __attribute__((always_inline)) thinkos_ev_wait(int set) {
+	return THINKOS_SVC1(THINKOS_EVENT_WAIT, set);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_timedwait(int ev, unsigned int ms) {
-	return THINKOS_SVC2(THINKOS_EVENT_TIMEDWAIT, ev, ms);
+static inline int __attribute__((always_inline)) thinkos_ev_timedwait(
+	int set, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_EVENT_TIMEDWAIT, set, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_raise(int ev) {
-	return THINKOS_SVC1(THINKOS_EVENT_RAISE, ev);
+static inline int __attribute__((always_inline)) thinkos_ev_raise(
+	int set, int ev) {
+	return THINKOS_SVC2(THINKOS_EVENT_RAISE, set, ev);
 }
+
+static inline int __attribute__((always_inline)) thinkos_ev_mask(
+	int set, uint32_t msk) {
+	return THINKOS_SVC2(THINKOS_EVENT_MASK, set, msk);
+}
+
+static inline int __attribute__((always_inline)) thinkos_ev_unmask(
+	int set, uint32_t msk) {
+	return THINKOS_SVC2(THINKOS_EVENT_UNMASK, set, msk);
+}
+
+/* ---------------------------------------------------------------------------
+   Flags
+  ----------------------------------------------------------------------------*/
 
 static inline int __attribute__((always_inline)) thinkos_flag_alloc(void) {
 	return THINKOS_SVC(THINKOS_FLAG_ALLOC);
@@ -368,6 +384,14 @@ static inline int __attribute__((always_inline)) thinkos_flag_give(int flag) {
 
 static inline int __attribute__((always_inline)) thinkos_flag_take(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_TAKE, flag);
+}
+
+static inline int __attribute__((always_inline)) thinkos_flag_takelock(
+	int flag, int mutex) {
+	int ret;
+	ret = THINKOS_SVC2(THINKOS_FLAG_TAKELOCK, flag, mutex);
+	THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
+	return ret;
 }
 
 static inline int __attribute__((always_inline)) thinkos_flag_timedtake(int flag, unsigned int ms) {

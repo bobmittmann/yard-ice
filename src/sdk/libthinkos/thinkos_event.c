@@ -31,62 +31,56 @@
 #if THINKOS_EVENT_MAX > 0
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-static inline int __attribute__((always_inline)) 
-__thinkos_ev_alloc(void) {
-	int ev = thinkos_alloc_lo(thinkos_rt.ev_alloc, 0);
-	return (ev < 0) ? ev : ev + THINKOS_EVENT_BASE;
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_ev_free(int ev) {
-	__bit_mem_wr(&thinkos_rt.ev_alloc, ev - THINKOS_EVENT_BASE, 0);
-}
-
 void thinkos_ev_alloc_svc(int32_t * arg)
 {
-	unsigned int ev;
+	unsigned int wq;
+	int idx;
 
-	ev = __thinkos_ev_alloc();
-
-	DCC_LOG1(LOG_TRACE, "event=%d", ev);
-	arg[0] = ev;
+	if ((idx = thinkos_alloc_lo(thinkos_rt.ev_alloc, 0)) >= 0) {
+		thinkos_rt.ev[idx].mask = 0xffffffff;
+		thinkos_rt.ev[idx].pend = 0;
+		wq = idx + THINKOS_EVENT_BASE;
+		DCC_LOG2(LOG_MSG, "event set=%d wq=%d", idx, wq);
+		arg[0] = wq;
+	} else 
+		arg[0] = idx;
 }
 
 void thinkos_ev_free_svc(int32_t * arg)
 {
-	unsigned int ev = arg[0];
+	unsigned int wq = arg[0];
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if ((ev < THINKOS_EVENT_BASE) || 
-		(ev >= (THINKOS_EVENT_BASE + THINKOS_EVENT_MAX))) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", ev);
+	if ((wq < THINKOS_EVENT_BASE) || 
+		(wq >= (THINKOS_EVENT_BASE + THINKOS_EVENT_MAX))) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 
-	DCC_LOG1(LOG_TRACE, "event=%d", ev);
-	__thinkos_ev_free(ev);
+	DCC_LOG2(LOG_MSG, "event set=%d wq=%d", idx, wq);
+	__bit_mem_wr(&thinkos_rt.ev_alloc, wq - THINKOS_EVENT_BASE, 0);
 }
 #endif
-
 
 void thinkos_ev_wait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int self = thinkos_rt.active;
+	unsigned int ev;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int no = wq - THINKOS_EVENT_BASE;
 
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -94,6 +88,14 @@ void thinkos_ev_wait_svc(int32_t * arg)
 #endif
 
 	cm3_cpsid_i();
+
+	/* check for any pending unmasked event */
+	if ((ev = __clz(thinkos_rt.ev[no].pend & thinkos_rt.ev[no].mask)) < 32) {
+		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+		arg[0] = ev;
+		cm3_cpsie_i();
+		return;
+	} 
 
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
@@ -122,18 +124,19 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 	unsigned int wq = arg[0];
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
+	unsigned int ev;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
+	unsigned int no = wq - THINKOS_EVENT_BASE;
 
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -141,6 +144,14 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 #endif
 
 	cm3_cpsid_i();
+
+	/* check for any pending unmasked event */
+	if ((ev = __clz(thinkos_rt.ev[no].pend & thinkos_rt.ev[no].mask)) < 32) {
+		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+		arg[0] = ev;
+		cm3_cpsie_i();
+		return;
+	} 
 
 	/* insert into the mutex wait queue */
 	__thinkos_tmdwq_insert(wq, self, ms);
@@ -171,33 +182,138 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 void thinkos_ev_raise_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
+	unsigned int ev = arg[1];
+	unsigned int no = wq - THINKOS_EVENT_BASE;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int ev = wq - THINKOS_EVENT_BASE;
-
-	if (ev >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event!", wq);
+	if (ev > 31) {
+		DCC_LOG1(LOG_ERROR, "event %d is invalid!", ev);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, ev) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event %d!", ev);
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
-	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		/* wakeup from the event wait queue */
-		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_TRACE, "<%d> waked up with event %d", th, wq);
+	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
+		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
+		/* wakeup from the event wait queue, set the return of
+		 the thread to the event */
+		__thinkos_wakeup_return(wq, th, ev);
+		DCC_LOG3(LOG_TRACE, "<%d> waked up with event %d.%d", th, wq, ev);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
+	} else {
+		/* event is maksed or no thread is waiting ont hte event set
+		   , set the event as pending */
+		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
 }
+
+void thinkos_ev_mask_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+	uint32_t mask = arg[1];
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_EVENT_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	/* mask the events on the mask bitmap */
+	thinkos_rt.ev[no].mask &= ~mask;
+}
+
+void thinkos_ev_unmask_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+	uint32_t mask = arg[1];
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+	unsigned int ev;
+	int th;
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_EVENT_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	cm3_cpsid_i();
+
+	/* unmask the events on the mask bitmap */
+	thinkos_rt.ev[no].mask |= mask;
+
+	/* wake up the first unmasked thread if any. */
+	if ((ev = __clz(thinkos_rt.ev[no].pend & mask)) < 32) {
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			/* a pending event was unmaksed and there is a thread waiting on 
+			   the queue, clear the event pending flag and 
+			   wakes up the thread. */
+			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+			/* wakeup from the event wait queue, set the return of
+			   the thread to the event */
+			__thinkos_wakeup_return(wq, th, ev);
+			DCC_LOG3(LOG_TRACE, "<%d> waked up with event %d.%d", th, wq, ev);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} else {
+			/* no threads waiting */
+			cm3_cpsie_i();
+			return;
+		}
+	}
+
+	/* wake up as many other threads as possible */
+	while ((ev = __clz(thinkos_rt.ev[no].pend & mask)) < 32) {
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			/* a pending event was unmaksed and there is a thread waiting on 
+			   the queue, clear the event pending flag and 
+			   wakes up the thread. */
+			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+			/* wakeup from the event wait queue, set the return of
+			   the thread to the event */
+			__thinkos_wakeup_return(wq, th, ev);
+			DCC_LOG3(LOG_TRACE, "<%d> waked up with event %d.%d", th, wq, ev);
+		} else {
+			/* no more threads waiting */
+			break;
+		}
+	}
+
+	cm3_cpsie_i();
+}
+
 
 #endif /* THINKOS_EVENT_MAX > 0 */
 

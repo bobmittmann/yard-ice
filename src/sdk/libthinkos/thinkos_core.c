@@ -467,6 +467,17 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	}
 #endif
 
+#if THINKOS_EVENT_MAX > 0
+	{
+		int i;
+		/* initialize the event sets */
+		for (i = 0; i < THINKOS_EVENT_MAX; i++) {
+			thinkos_rt.ev[i].pend = 0; /* no pending events */
+			thinkos_rt.ev[i].mask = 0xffffffff; /* all events a are enabled */
+		}
+	}
+#endif /* THINKOS_EVENT_MAX > 0 */
+
 	/* initialize the main thread */ 
 	/* alloc main thread */
 	if (opt.id >= THINKOS_THREADS_MAX)
@@ -527,7 +538,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if THINKOS_ENABLE_PAUSE
-	if (opt.f_paused) {
+	if (opt.paused) {
 		/* insert into the paused list */
 		bmp_bit_set(&thinkos_rt.wq_paused, self);  
 		/* Invoke the scheduler */

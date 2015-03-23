@@ -151,13 +151,17 @@ int thinkos_sem_post(int sem);
 
 int thinkos_ev_alloc(void);
 
-int thinkos_ev_free(int ev);
+int thinkos_ev_free(int set);
 
-int thinkos_ev_wait(int ev);
+int thinkos_ev_wait(int set);
 
-int thinkos_ev_timedwait(int ev, unsigned int ms);
+int thinkos_ev_timedwait(int set, unsigned int ms);
 
-int thinkos_ev_raise(int ev);
+int thinkos_ev_raise(int set, int ev);
+
+int thinkos_ev_mask(int set, uint32_t mask);
+
+int thinkos_ev_unmaks(int set, uint32_t mask);
 
 
 int thinkos_flag_alloc(void);
@@ -179,6 +183,7 @@ int thinkos_flag_give(int flag);
 int thinkos_flag_take(int flag);
 
 int thinkos_flag_timedtake(int flag, unsigned int ms);
+
 
 int thinkos_irq_wait(int irq);
 
