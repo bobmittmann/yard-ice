@@ -83,7 +83,7 @@ const struct {
 	.wq_event = { [0 ... (THINKOS_EVENT_MAX - 1)] = THINKOS_OBJ_EVENT },
 #endif
 #if THINKOS_FLAG_MAX > 0
-	.wq_flag = { [0 ... (THINKOS_FLAG_MAX - 1)] = THINKOS_OBJ_FLAG }
+	.wq_flag = { [0 ... (THINKOS_FLAG_MAX - 1)] = THINKOS_OBJ_FLAG },
 #endif
 #if THINKOS_ENABLE_JOIN
 	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN }

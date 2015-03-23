@@ -253,7 +253,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 #endif
 
 #if THINKOS_ENABLE_PAUSE
-	if (init->opt.f_paused) 
+	if (init->opt.paused) 
 		/* insert into the paused list */
 		__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);  
 	else

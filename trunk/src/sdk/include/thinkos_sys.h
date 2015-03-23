@@ -174,7 +174,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_STAT
-#define THINKOS_ENABLE_THREAD_STAT 0
+#define THINKOS_ENABLE_THREAD_STAT 1
 #endif
 
 #ifndef THINKOS_ENABLE_TIMED_CALLS
@@ -201,20 +201,12 @@ struct thinkos_context {
 #define THINKOS_ENABLE_EXCEPTIONS 1
 #endif
 
-#ifndef THINKOS_ENABLE_SCHED_DEBUG
-#define THINKOS_ENABLE_SCHED_DEBUG 0
-#endif
-
 #ifndef THINKOS_ENABLE_THREAD_INFO
-#define THINKOS_ENABLE_THREAD_INFO 0
-#endif
-
-#ifndef THINKOS_ENABLE_RT_DEBUG
-#define THINKOS_ENABLE_RT_DEBUG 0
+#define THINKOS_ENABLE_THREAD_INFO 1
 #endif
 
 #ifndef THINKOS_ENABLE_ALARM
-#define THINKOS_ENABLE_ALARM 0
+#define THINKOS_ENABLE_ALARM 1
 #endif
 
 #ifndef THINKOS_ENABLE_SLEEP
@@ -222,8 +214,17 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_BREAK
-#define THINKOS_ENABLE_BREAK 0
+#define THINKOS_ENABLE_BREAK 1
 #endif
+
+#ifndef THINKOS_ENABLE_SCHED_DEBUG
+#define THINKOS_ENABLE_SCHED_DEBUG 0
+#endif
+
+#ifndef THINKOS_ENABLE_RT_DEBUG
+#define THINKOS_ENABLE_RT_DEBUG 0
+#endif
+
 
 /* -------------------------------------------------------------------------- 
  * Sanity check
@@ -373,6 +374,13 @@ struct thinkos_rt {
 #if THINKOS_SEMAPHORE_MAX > 0
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
+
+#if THINKOS_EVENT_MAX > 0
+	struct {
+		uint32_t pend; /* event set pending bitmap */
+		uint32_t mask; /* event set mask */
+	} ev[THINKOS_EVENT_MAX];
+#endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
 	uint32_t flag; /* event flags */
