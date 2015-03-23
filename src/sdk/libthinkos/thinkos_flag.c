@@ -474,62 +474,119 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 #endif
 
 
-#if 0
-/* wakeup a single thread waiting on the flag 
-   OR set the flag */
-void thinkos_flag_give_i(int wq) 
+#if THINKOS_ENABLE_FLAG_LOCK
+
+void thinkos_flag_takelock_svc(int32_t * arg)
 {
-	uint32_t pri;
+	unsigned int wq = arg[0];
+	unsigned int mwq = arg[1];
+	int self = thinkos_rt.active;
 	int th;
 
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-	/* get the flag state */
-	if (__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE) == 0) {
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			DCC_LOG3(LOG_INFO, "flag %d, wakeup %d, pri=%d...", wq, th, pri);
-			__thinkos_wakeup(wq, th);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else {
-			DCC_LOG1(LOG_INFO, "set flag %d...", wq);
-			/* set the flag bit */
-			__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 1);  
-		}
+#if THINKOS_ENABLE_ARG_CHECK
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	unsigned int mutex = mwq - THINKOS_MUTEX_BASE;
+
+	if (flag >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
 	}
-	cm3_primask_set(pri);
-}
-
-/* set the flag and wakeup all threads waiting on the flag */
-void thinkos_flag_set_i(int wq) 
-{
-	uint32_t pri;
-	int th;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
-
-	if (__bit_mem_rd(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE) == 0) {
-		/* set the flag bit */
-		__bit_mem_wr(&thinkos_rt.flag, wq - THINKOS_FLAG_BASE, 1);  
-
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(wq, th);
-			DCC_LOG2(LOG_TRACE, "flag %d, wakeup %d.", wq, th);
-			while ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-				__thinkos_wakeup(wq, th);
-				DCC_LOG2(LOG_TRACE, "flag %d, wakeup %d.", wq, th);
-			}
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		}
+	if (mutex >= THINKOS_MUTEX_MAX) {
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
+		arg[0] = THINKOS_EINVAL;
+		return;
 	}
-
-	cm3_primask_set(pri);
-}
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
 #endif
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	/* sanity check: avoid unlock the mutex by a thread that 
+	   does not own the lock */
+	if (thinkos_rt.lock[mutex] != self) {
+		DCC_LOG3(LOG_WARNING, "<%d> mutex %d is locked by <%d>", 
+				 self, mwq, thinkos_rt.lock[mutex]);
+		arg[0] = THINKOS_EPERM;
+		return;
+	}
+
+
+	arg[0] = 0;
+
+	cm3_cpsid_i();
+
+	if (__thinkos_flag_is_set(wq)) {
+		__thinkos_flag_clr(wq);
+		cm3_cpsie_i();
+		DCC_LOG2(LOG_INFO, "<%d> flag %d was set.", self, wq);
+		return;
+	} 
+
+	/* insert into the wait queue */
+	__thinkos_wq_insert(wq, self);
+
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
+
+	/* wait for event */
+
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+
+#if THINKOS_ENABLE_TIMESHARE
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+#if (THINKOS_THREADS_MAX < 32) 
+	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+		/* No more threads into the ready queue,
+		 move the timeshare queue to the ready queue.
+		 Keep the IDLE bit set */
+		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#else
+	if (thinkos_rt.wq_ready == 0) {
+		/* no more threads into the ready queue,
+		 move the timeshare queue to the ready queue */
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
+	} 
+#endif
+#endif
+
+	cm3_cpsie_i();
+
+	/* check for threads wating on the mutex wait queue */
+	if ((th = __thinkos_wq_head(mwq)) == THINKOS_THREAD_NULL) {
+		/* no threads waiting on the lock, just release
+		   the lock */
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d released", self, mwq);
+		thinkos_rt.lock[mutex] = -1;
+	} else {
+		/* set the mutex ownership to the new thread */
+		thinkos_rt.lock[mutex] = th;
+		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked", th, mwq);
+		/* wakeup from the mutex wait queue */
+		__thinkos_wakeup(mwq, th);
+	}
+
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+
+}
+
+#endif /* THINKOS_FLAG_LOCK */
 
 #endif /* THINKOS_FLAG_MAX > 0 */
 

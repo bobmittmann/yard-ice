@@ -122,23 +122,25 @@ void thinkos_sem_wait_svc(int32_t * arg)
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
-	} else {
-		/* insert into the semaphore wait queue */
-		__thinkos_wq_insert(wq, self);
-		DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
-		/* wait for event */
-		/* remove from the ready wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
+		/* reenable interrupts ... */
+		cm3_cpsie_i();
+		return;
+	} 
+	
+	/* insert into the semaphore wait queue */
+	__thinkos_wq_insert(wq, self);
+	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+	/* wait for event */
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
 #if THINKOS_ENABLE_TIMESHARE
-		/* if the ready queue is empty, collect
-		   the threads from the CPU wait queue */
-		if (thinkos_rt.wq_ready == 0) {
-			thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-			thinkos_rt.wq_tmshare = 0;
-		}
-#endif
+	/* if the ready queue is empty, collect
+	   the threads from the CPU wait queue */
+	if (thinkos_rt.wq_ready == 0) {
+		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
+		thinkos_rt.wq_tmshare = 0;
 	}
-
+#endif
 	/* reenable interrupts ... */
 	cm3_cpsie_i();
 

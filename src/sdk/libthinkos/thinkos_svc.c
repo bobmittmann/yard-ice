@@ -91,6 +91,10 @@ void thinkos_ev_timedwait_svc(int32_t * arg);
 
 void thinkos_ev_raise_svc(int32_t * arg);
 
+void thinkos_ev_mask_svc(int32_t * arg);
+
+void thinkos_ev_unmask_svc(int32_t * arg);
+
 
 void thinkos_flag_alloc_svc(int32_t * arg);
 
@@ -111,6 +115,8 @@ void thinkos_flag_give_svc(int32_t * arg);
 void thinkos_flag_take_svc(int32_t * arg);
 
 void thinkos_flag_timedtake_svc(int32_t * arg);
+
+void thinkos_flag_takelock_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
@@ -320,6 +326,15 @@ void cm3_svc_isr(void)
 	case THINKOS_EVENT_RAISE:
 		thinkos_ev_raise_svc(arg);
 		break;
+
+	case THINKOS_EVENT_MASK:
+		thinkos_ev_mask_svc(arg);
+		break;
+
+	case THINKOS_EVENT_UNMASK:
+		thinkos_ev_unmask_svc(arg);
+		break;
+
 #endif /* (THINKOS_EVENT_MAX > 0) */
 
 
@@ -367,6 +382,12 @@ void cm3_svc_isr(void)
 #if THINKOS_ENABLE_TIMED_CALLS
 	case THINKOS_FLAG_TIMEDTAKE:
 		thinkos_flag_timedtake_svc(arg);
+		break;
+#endif
+
+#if THINKOS_ENABLE_FLAG_LOCK
+	case THINKOS_FLAG_TAKELOCK:
+		thinkos_flag_takelock_svc(arg);
 		break;
 #endif
 

@@ -173,6 +173,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_FLAG_ALLOC 1
 #endif
 
+#ifndef THINKOS_ENABLE_FLAG_LOCK
+#define THINKOS_ENABLE_FLAG_LOCK 1
+#endif
+
 #ifndef THINKOS_ENABLE_THREAD_STAT
 #define THINKOS_ENABLE_THREAD_STAT 1
 #endif
@@ -363,14 +367,6 @@ struct thinkos_rt {
 	};
 #endif
 
-#if THINKOS_MUTEX_MAX > 0
-	int8_t lock[THINKOS_MUTEX_MAX];
-#endif /* THINKOS_MUTEX_MAX > 0 */
-
-#if THINKOS_COND_MAX > 0
-	uint8_t cond_mutex[THINKOS_COND_MAX];
-#endif /* THINKOS_COND_MAX > 0 */
-
 #if THINKOS_SEMAPHORE_MAX > 0
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
@@ -385,6 +381,16 @@ struct thinkos_rt {
 #if THINKOS_FLAG_MAX > 0
 	uint32_t flag; /* event flags */
 #endif /* THINKOS_FLAG_MAX > 0 */
+
+#if THINKOS_MUTEX_MAX > 0
+	int8_t lock[THINKOS_MUTEX_MAX];
+#endif /* THINKOS_MUTEX_MAX > 0 */
+
+#if 0
+#if THINKOS_COND_MAX > 0
+	uint8_t cond_mutex[THINKOS_COND_MAX];
+#endif /* THINKOS_COND_MAX > 0 */
+#endif
 
 #if THINKOS_IRQ_MAX > 0
 	int8_t irq_th[THINKOS_IRQ_MAX];

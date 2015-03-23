@@ -70,26 +70,26 @@ void thinkos_cond_wait_svc(int32_t * arg)
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if (mutex >= THINKOS_MUTEX_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
 	if (cond >= THINKOS_COND_MAX) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-#if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (mutex >= THINKOS_MUTEX_MAX) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-#endif
 #if THINKOS_ENABLE_COND_ALLOC
 	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#if THINKOS_ENABLE_MUTEX_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -104,9 +104,10 @@ void thinkos_cond_wait_svc(int32_t * arg)
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
-
+#if 0
 	/* assign the mutex to be locked on wakeup */
 	thinkos_rt.cond_mutex[cond] = mwq;
+#endif
 	/* insert into the cond wait queue */
 	__thinkos_wq_insert(cwq, self);
 	DCC_LOG3(LOG_INFO, "<%d> mutex %d unlocked, waiting on cond %d...", 
@@ -132,6 +133,7 @@ void thinkos_cond_wait_svc(int32_t * arg)
 	__thinkos_wait(self);
 }
 
+#if 0
 #if THINKOS_ENABLE_TIMED_CALLS
 void thinkos_cond_hook(void)
 {
@@ -166,7 +168,7 @@ void thinkos_cond_hook(void)
 
 }
 #endif
-
+#endif
 
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -216,8 +218,10 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 		return;
 	}
 
+#if 0
 	/* assign the mutex to be locked on wakeup */
 	thinkos_rt.cond_mutex[cond] = mwq;
+#endif
 	/* insert into the cond wait queue */
 	__thinkos_tmdwq_insert(cwq, self, ms);
 	DCC_LOG3(LOG_INFO, "<%d> mutex %d unlocked, waiting on cond %d...", 
