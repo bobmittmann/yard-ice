@@ -38,7 +38,8 @@ void thinkos_resume_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_THREAD_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.th_alloc, th) == 0) {
+	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -85,7 +86,8 @@ void thinkos_pause_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_THREAD_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.th_alloc, th) == 0) {
+	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}

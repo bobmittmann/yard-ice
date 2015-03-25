@@ -46,18 +46,16 @@ void thinkos_mutex_alloc_svc(int32_t * arg)
 void thinkos_mutex_free_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+	unsigned int idx = wq - THINKOS_MUTEX_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if (mutex >= THINKOS_MUTEX_MAX) {
+	if (idx >= THINKOS_MUTEX_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a mutex!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
-
-	DCC_LOG2(LOG_MSG, "mutex=%d wq=%d", mutex, wq);
-	__bit_mem_wr(&thinkos_rt.mutex_alloc, mutex, 0);
+	__bit_mem_wr(thinkos_rt.mutex_alloc, idx, 0);
 }
 #endif
 
@@ -74,7 +72,7 @@ void thinkos_mutex_lock_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (__bit_mem_rd(thinkos_rt.mutex_alloc, mutex) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
@@ -120,7 +118,7 @@ void thinkos_mutex_trylock_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (__bit_mem_rd(thinkos_rt.mutex_alloc, mutex) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
@@ -213,7 +211,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (__bit_mem_rd(thinkos_rt.mutex_alloc, mutex) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;

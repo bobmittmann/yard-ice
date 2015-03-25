@@ -178,6 +178,8 @@ int thinkos_flag_wait(int flag);
 
 int thinkos_flag_timedwait(int flag, unsigned int ms);
 
+int thinkos_flag_signal(int flag);
+
 int thinkos_flag_give(int flag);
 
 int thinkos_flag_take(int flag);

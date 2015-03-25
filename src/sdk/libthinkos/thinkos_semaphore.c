@@ -48,18 +48,16 @@ void thinkos_sem_alloc_svc(int32_t * arg)
 void thinkos_sem_free_svc(int32_t * arg)
 {	
 	unsigned int wq = arg[0];
-	unsigned int sem = wq - THINKOS_SEM_BASE;
+	unsigned int idx = wq - THINKOS_SEM_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if (sem >= THINKOS_SEMAPHORE_MAX) {
+	if (idx >= THINKOS_SEMAPHORE_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
-
-	DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", sem, wq);
-	__bit_mem_wr(&thinkos_rt.sem_alloc, sem, 0);
+	__bit_mem_wr(thinkos_rt.sem_alloc, idx, 0);
 }
 #endif
 
@@ -76,8 +74,8 @@ void thinkos_sem_init_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+	if (__bit_mem_rd(thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -103,8 +101,8 @@ void thinkos_sem_wait_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+	if (__bit_mem_rd(thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -160,8 +158,8 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+	if (__bit_mem_rd(thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -200,8 +198,8 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+	if (__bit_mem_rd(thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -259,8 +257,8 @@ void thinkos_sem_post_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_SEM_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.sem_alloc, sem) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", sem);
+	if (__bit_mem_rd(thinkos_rt.sem_alloc, sem) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid semaphore %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
