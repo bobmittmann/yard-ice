@@ -79,14 +79,14 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
 		if (free < (SERIAL_RX_FIFO_LEN / 2)) /* fifo is more than half full */
-			__thinkos_flag_give(drv->rx_flag);
+			thinkos_flag_give_i(drv->rx_flag);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE!");
 		c = us->dr;
 		(void)c;
-		__thinkos_flag_give(drv->rx_flag);
+		thinkos_flag_give_i(drv->rx_flag);
 	}
 
 	if (sr & USART_TXE) {
@@ -94,7 +94,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		if (tail == drv->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*drv->txie = 0; 
-			__thinkos_flag_set(drv->tx_flag);
+			thinkos_flag_set_i(drv->tx_flag);
 		} else {
 			us->dr = drv->tx_fifo.buf[tail & (SERIAL_TX_FIFO_LEN - 1)];
 			drv->tx_fifo.tail = tail + 1;
@@ -244,11 +244,39 @@ int stm32f_serial_close(struct stm32f_serial_drv * drv)
 	return 0;
 }
 
+int stm32f_serial_conf_get(struct stm32f_serial_drv * drv, 
+							struct serial_config * cfg)
+{
+//	struct stm32f_usart * uart = dev->uart;
+
+	return 0;
+}
+
+int stm32f_serial_conf_set(struct stm32f_serial_drv * drv, 
+						   const struct serial_config * cfg)
+{
+	struct stm32_usart * uart = drv->uart;
+	uint32_t flags;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	stm32_usart_baudrate_set(uart, cfg->baudrate);
+
+	flags = CFG_TO_FLAGS(cfg);
+
+	stm32_usart_mode_set(uart, flags);
+
+	return 0;
+}
+
+
 const struct serial_op stm32f_uart_serial_op = {
 	.send = (void *)stm32f_serial_write,
 	.recv = (void *)stm32f_serial_read,
 	.drain = (void *)stm32f_serial_flush,
-	.close = (void *)stm32f_serial_close
+	.close = (void *)stm32f_serial_close,
+	.conf_set = (void *)stm32f_serial_conf_set,
+	.conf_get = (void *)stm32f_serial_conf_get
 };
 
 #endif /* !SERIAL_ENABLE_DMA */
