@@ -33,16 +33,16 @@ void thinkos_sem_alloc_svc(int32_t * arg)
 {	
 	unsigned int wq;
 	uint32_t value = (uint32_t)arg[0];
-	int sem;
+	int idx;
 
-	if ((sem = thinkos_alloc_lo(thinkos_rt.sem_alloc, 0)) >= 0) {
-		thinkos_rt.sem_val[sem] = value;
-		wq = sem + THINKOS_SEM_BASE;
-		DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", sem, wq);
+	if ((idx = thinkos_bmp_alloc(thinkos_rt.sem_alloc, 
+								 THINKOS_SEMAPHORE_MAX )) >= 0) {
+		thinkos_rt.sem_val[idx] = value;
+		wq = idx + THINKOS_SEM_BASE;
+		DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", idx, wq);
 		arg[0] = wq;
-	} else {
-		arg[0] = sem;
-	}
+	} else
+		arg[0] = idx;
 }
 
 void thinkos_sem_free_svc(int32_t * arg)

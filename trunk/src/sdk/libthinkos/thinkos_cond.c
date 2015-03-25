@@ -38,9 +38,8 @@ void thinkos_cond_alloc_svc(int32_t * arg)
 		wq = idx + THINKOS_COND_BASE;
 		DCC_LOG2(LOG_INFO, "cond=%d wq=%d", idx, wq);
 		arg[0] = wq;
-	} else {
+	} else
 		arg[0] = idx;
-	}
 }
 
 void thinkos_cond_free_svc(int32_t * arg)

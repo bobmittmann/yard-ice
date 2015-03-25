@@ -36,7 +36,8 @@ void thinkos_ev_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int idx;
 
-	if ((idx = thinkos_alloc_lo(thinkos_rt.ev_alloc, 0)) >= 0) {
+	if ((idx = thinkos_bmp_alloc(thinkos_rt.ev_alloc, 
+								 THINKOS_EVENT_MAX)) >= 0) {
 		thinkos_rt.ev[idx].mask = 0xffffffff;
 		thinkos_rt.ev[idx].pend = 0;
 		wq = idx + THINKOS_EVENT_BASE;

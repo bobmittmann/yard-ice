@@ -547,6 +547,9 @@ extern struct thinkos_except_and_idle thinkos_idle;
 
 extern struct thinkos_rt thinkos_rt;
 
+extern uint32_t * const thinkos_obj_alloc_lut[];
+extern const uint16_t thinkos_wq_base_lut[];
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -784,6 +787,7 @@ void thinkos_trace_rt(struct thinkos_rt * rt);
 int thinkos_obj_type_get(unsigned int oid);
 
 int thinkos_bmp_alloc(uint32_t bmp[], int bits);
+
 
 #ifdef __cplusplus
 }
