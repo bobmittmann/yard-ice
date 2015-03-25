@@ -434,8 +434,13 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_idle.snapshot.val = 0;
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.mutex_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_MUTEX_MAX);
+	{	/* initialize the mutex allocation bitmap */ 
+		int i;
+		for (i = 0; i < (THINKOS_MUTEX_MAX / 32); ++i)
+			thinkos_rt.mutex_alloc[i] = 0;
+		if (THINKOS_MUTEX_MAX % 32)
+			thinkos_rt.mutex_alloc[i] = 0xffffffff << (THINKOS_MUTEX_MAX % 32);
+	}
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
@@ -469,8 +474,13 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-	/* initialize the event allocation bitmap */ 
-	thinkos_rt.ev_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_EVENT_MAX);
+	{	/* initialize the event set allocation bitmap */ 
+		int i;
+		for (i = 0; i < (THINKOS_EVENT_MAX / 32); ++i)
+			thinkos_rt.ev_alloc[i] = 0;
+		if (THINKOS_EVENT_MAX % 32)
+			thinkos_rt.ev_alloc[i] = 0xffffffff << (THINKOS_EVENT_MAX % 32);
+	}
 #endif
 
 #if (THINKOS_MUTEX_MAX > 0)
@@ -481,6 +491,17 @@ int thinkos_init(struct thinkos_thread_opt opt)
 			thinkos_rt.lock[i] = -1;
 	}
 #endif
+
+#if THINKOS_FLAG_MAX > 0
+	{
+		/* initialize the flags */
+		int i;
+		for (i = 0; i < ((THINKOS_FLAG_MAX + 31) / 32); ++i) {
+			thinkos_rt.flag.sig[i] = 0;
+			thinkos_rt.flag.lock[i] = 0;
+		}
+	}
+#endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_EVENT_MAX > 0
 	{

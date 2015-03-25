@@ -128,7 +128,7 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 	[THINKOS_OBJ_INVALID] = NULL
 };
 
-const uint8_t thinkos_wq_base_lut[] = {
+const uint16_t thinkos_wq_base_lut[] = {
 	[THINKOS_OBJ_READY] = THINKOS_WQ_READY,
 #if THINKOS_ENABLE_TIMESHARE
 	[THINKOS_OBJ_TMSHARE] = THINKOS_WQ_TMSHARE,
