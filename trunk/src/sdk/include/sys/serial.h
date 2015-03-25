@@ -112,20 +112,53 @@ struct serial_error {
 
 struct serial_dev;
 
-typedef struct serial_dev serial_dev_t;
+struct serial_op {
+	int (* send)(void *, const void *, unsigned int);
+	int (* recv)(void *, void *, unsigned int, unsigned int);
+	int (* drain)(void *);
+	int (* close)(void *);
+	int (* conf_get)(void *, struct serial_config *);
+	int (* conf_set)(void *, const struct serial_config *);
+};
+
+struct serial_dev {
+	void * drv;
+	const struct serial_op * op;
+};
+
+extern inline int serial_send(struct serial_dev * dev, const void * buf, 
+							  unsigned int len) {
+	return dev->op->send(dev->drv, buf, len);
+}
+
+extern inline int serial_recv(struct serial_dev * dev, void * buf, 
+							  unsigned int len, unsigned int msec) {
+	return dev->op->recv(dev->drv, buf, len, msec);
+}
+
+extern inline int serial_drain(struct serial_dev * dev) {
+	return dev->op->drain(dev->drv);
+}
+
+extern inline int serial_close(struct serial_dev * dev){
+	return dev->op->close(dev->drv);
+}
+
+extern inline int serial_config_get(struct serial_dev * dev, 
+									struct serial_config * cfg){
+	return dev->op->conf_get(dev->drv, cfg);
+}
+
+extern inline int serial_config_set(struct serial_dev * dev, 
+									const struct serial_config * cfg){
+	return dev->op->conf_set(dev->drv, cfg);
+}
+
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
-
-int serial_config_set(struct serial_dev * dev, 
-					  const struct serial_config * cfg);
-
-int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
-
-int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
 
 int serial_send(struct serial_dev * dev, const void * buf, 
 				unsigned int len);
@@ -136,6 +169,15 @@ int serial_recv(struct serial_dev * dev, void * buf,
 int serial_drain(struct serial_dev * dev);
 
 int serial_close(struct serial_dev * dev);
+
+int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
+
+int serial_config_set(struct serial_dev * dev, 
+					  const struct serial_config * cfg);
+
+int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
+
+int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
 
 int serial_enable(struct serial_dev * dev);
 

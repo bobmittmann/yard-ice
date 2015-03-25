@@ -137,7 +137,7 @@ int usb_cdc_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	(void)dev;
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 	thinkos_flag_set_i(CTL_FLAG);
 	return 0;
 }
@@ -195,7 +195,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		if (desc == USB_DESCRIPTOR_STRING) {
 			int n = value & 0xff;
-			DCC_LOG1(LOG_TRACE, "GetDesc: String[%d]", n);
+			DCC_LOG1(LOG_INFO, "GetDesc: String[%d]", n);
 			if (n < dev->strcnt) {
 				*ptr = (void *)dev->str[n];
 				len = dev->str[n][0];
@@ -229,7 +229,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		/* signal any pending threads */
 		thinkos_flag_set_i(CTL_FLAG);
-		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
+		DCC_LOG(LOG_INFO, "[CONFIGURED]");
 		break;
 	}
 
@@ -347,7 +347,7 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	dev->acm.control = 0;
 	dev->acm.flags |= ACM_USB_SUSPENDED;
 	thinkos_flag_set_i(CTL_FLAG);
@@ -361,7 +361,7 @@ int usb_cdc_on_wakeup(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 
 	dev->acm.flags &= ~ACM_USB_SUSPENDED;
 	thinkos_flag_set_i(CTL_FLAG);
@@ -492,6 +492,37 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 								dev->rx_buf, CDC_EP_IN_MAX_PKT_SIZE);
 	DCC_LOG1(LOG_INFO, "wakeup, pkt rcv intern buffer: %d bytes", n);
+
+	{
+		char * s = (char *)dev->rx_buf;
+		(void)s;
+
+		if (n == 1)
+			DCC_LOG1(LOG_INFO, "%02x", s[0]);
+		else if (n == 2)
+			DCC_LOG2(LOG_INFO, "%02x %02x", s[0], s[1]);
+		else if (n == 3)
+			DCC_LOG3(LOG_INFO, "%02x %02x %02x", s[0], s[1], s[2]);
+		else if (n == 4)
+			DCC_LOG4(LOG_INFO, "%02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3]);
+		else if (n == 5)
+			DCC_LOG5(LOG_INFO, "%02x %02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3], s[4]);
+		else if (n == 6)
+			DCC_LOG6(LOG_INFO, "%02x %02x %02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3], s[4], s[5]);
+		else if (n == 7)
+			DCC_LOG7(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
+		else if (n == 8)
+			DCC_LOG8(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
+		else
+			DCC_LOG8(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x %02x ...", 
+					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
+	}
+
 		
 	dev->rx_pos = 0;
 	dev->rx_cnt = n;
@@ -735,7 +766,7 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb,
 	dev->str = str;
 	dev->strcnt = strcnt;
 
-	DCC_LOG4(LOG_TRACE, "tx_done=%d tx_lock=%d rx_sem=%d ctl_flag=%d", 
+	DCC_LOG4(LOG_INFO, "tx_done=%d tx_lock=%d rx_sem=%d ctl_flag=%d", 
 			 TX_DONE, TX_LOCK, RX_SEM, CTL_FLAG);
 
 	thinkos_flag_clr(TX_DONE); 

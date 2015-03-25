@@ -25,51 +25,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <sys/tty.h>
+#include <sys/usb-cdc.h>
+#include <sys/serial.h>
 
 #include <sys/dcclog.h>
 
-const struct fileop tty_ops = {
-	.write = (void *)tty_write,
-	.read = (void *)tty_read,
-	.flush = (void *)tty_flush,
-	.close = (void *)tty_release
+const struct serial_op cdc_acm_serial_op = {
+	.send = (void *)usb_cdc_write,
+	.recv = (void *)usb_cdc_read,
+	.drain = (void *)usb_cdc_flush,
+	.close = (void *)usb_cdc_release
 };
 
-FILE * tty_fopen(struct tty_dev * dev)
-{
-	if (dev == NULL) {
-		DCC_LOG(LOG_INFO, "(dev == NULL)!");
-		return NULL;
-	}
+extern struct usb_cdc_acm_dev usb_cdc_rt;
 
-	DCC_LOG(LOG_INFO, "...");
-
-	return file_alloc(dev, &tty_ops);
-}
-
-int isfatty(struct file * f)
-{
-	return (f->op == &tty_ops) ? 1 : 0;
-}
-
-struct file * ftty_lowlevel(struct file * f)
-{
-	if (f->op != &tty_ops) {
-		DCC_LOG(LOG_WARNING, "not a tty!");
-		return NULL;
-	}
-
-	return tty_lowlevel((struct tty_dev *)f->data);
-}
-
-void * ftty_drv(struct file * f)
-{
-	if (f->op != &tty_ops) {
-		DCC_LOG(LOG_WARNING, "not a tty!");
-		return NULL;
-	}
-
-	return tty_drv((struct tty_dev *)f->data);
-}
+const struct serial_dev cdc_acm_serial_dev = {
+	.drv = &usb_cdc_rt,
+	.op = &cdc_acm_serial_op
+};
 

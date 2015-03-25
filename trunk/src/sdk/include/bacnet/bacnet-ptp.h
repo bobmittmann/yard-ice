@@ -25,13 +25,52 @@
 
 #include <sys/serial.h>
 
-struct bacnet_ptp_lnk;
+#define BACNET_PTP_MTU 512
+
+struct bacnet_ptp_lnk {
+	struct serial_dev * dev;
+	bool enabled;
+	volatile uint8_t state; 
+	uint32_t dcc_tmr;
+	uint32_t clk;
+	struct {
+		union {
+			uint8_t buf[BACNET_PTP_MTU];
+			struct {
+				uint8_t hdr[6];
+				uint8_t pdu[BACNET_PTP_MTU - 6];
+			};
+		};
+		volatile unsigned int pdu_len;
+		volatile bool xon;
+		unsigned int off;
+		unsigned int cnt;
+		bool dle;
+		uint32_t seq;
+		uint32_t idle_tmr;
+		int flag;
+	} rx;
+	struct {
+		uint8_t buf[BACNET_PTP_MTU];
+		volatile unsigned int len;
+		volatile uint32_t seq;
+		volatile bool xon;
+		uint32_t idle_tmr;
+		uint32_t rxmt_tmr;
+		uint8_t rxmt_cnt;
+		int flag;
+	} tx;
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev);
+int __attribute__((noreturn)) bacnet_ptp_task(struct bacnet_ptp_lnk * lnk);
+
+int bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev);
+
+int bacnet_ptp_inbound(struct bacnet_ptp_lnk * lnk);
 
 int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t pdu[], 
 					unsigned int max);

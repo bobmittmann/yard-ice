@@ -87,7 +87,7 @@
  #endif
 #endif
 
-struct stm32f_serial_dev {
+struct stm32f_serial_drv {
 	struct stm32_usart * uart;
 	uint8_t tx_flag;
 	uint8_t rx_flag;
@@ -124,24 +124,26 @@ struct stm32f_serial_dev {
 #endif
 };
 
+extern const struct serial_op stm32f_uart_serial_op;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int stm32f_serial_init(struct stm32f_serial_dev * dev, 
+int stm32f_serial_init(struct stm32f_serial_drv * drv, 
 					   unsigned int baudrate, unsigned int flags);
 
-int stm32f_serial_read(struct stm32f_serial_dev * dev, void * buf, 
+int stm32f_serial_read(struct stm32f_serial_drv * drv, void * buf, 
 					   unsigned int len, unsigned int tmo);
 
-int stm32f_serial_write(struct stm32f_serial_dev * dev, const void * buf,
+int stm32f_serial_write(struct stm32f_serial_drv * drv, const void * buf,
 						unsigned int len);
 
-int stm32f_serial_flush(struct stm32f_serial_dev * dev);
+int stm32f_serial_flush(struct stm32f_serial_drv * drv);
 
-int stm32f_serial_close(struct stm32f_serial_dev * dev);
+int stm32f_serial_close(struct stm32f_serial_drv * drv);
 
-void stm32f_serial_isr(struct stm32f_serial_dev * dev);
+void stm32f_serial_isr(struct stm32f_serial_drv * drv);
 
 #ifdef __cplusplus
 }
