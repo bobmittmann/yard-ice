@@ -63,6 +63,8 @@ typedef struct usb_cdc_class usb_cdc_class_t;
 extern const uint8_t * const cdc_acm_def_str[];
 extern const uint8_t cdc_acm_def_strcnt;
 
+extern const struct serial_dev cdc_acm_serial_dev;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

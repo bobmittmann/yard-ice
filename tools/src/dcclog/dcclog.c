@@ -1360,6 +1360,12 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 	} 
 } 
 
+static void __termination_handler(int signum)
+{
+	printf("That was all, folks\n");
+	fflush(stdout);
+}
+
 #else
 
 static void __abort_handler(int signum)
@@ -1392,7 +1398,6 @@ static void __termination_handler(int signum)
 
 #endif
 
-
 void __term_sig_handler(void (* handler)(void))
 {       
 #ifdef _WIN32
@@ -1400,7 +1405,13 @@ void __term_sig_handler(void (* handler)(void))
 		/* Register a cleanup callback routine */
 		__term_handler = handler;
 	} else {
-	}
+#ifdef __MINGW32__
+		__term_handler = handler;
+		signal(SIGINT, __termination_handler);
+		signal(SIGTERM, __termination_handler);
+		signal(SIGBREAK, __termination_handler);
+#endif
+//	}
 #else
 	sigset_t set;
 	struct sigaction new_action;

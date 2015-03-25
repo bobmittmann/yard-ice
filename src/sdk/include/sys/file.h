@@ -29,10 +29,10 @@
 struct file;
 
 struct fileop {
-	int  (* write)(void * arg, const void * buf, int count);
-	int  (* read)(void * arg, void * buf, int count);
-	int  (* flush)(void * arg);
-	int  (* close)(void * arg);
+	int (* write)(void * arg, const void * buf, int count);
+	int (* read)(void * arg, void * buf, int count);
+	int (* flush)(void * arg);
+	int (* close)(void * arg);
 };
 
 struct file {

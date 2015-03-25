@@ -221,3 +221,8 @@ struct file * tty_lowlevel(struct tty_dev * tty)
 	return &tty->f;
 }
 
+void * tty_drv(struct tty_dev * tty)
+{
+	return &tty->f.data;
+}
+

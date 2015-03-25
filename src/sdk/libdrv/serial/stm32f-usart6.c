@@ -26,7 +26,7 @@
 #define __STM32_SERIAL_I__
 #include "stm32-serial-i.h"
 
-struct stm32f_serial_dev uart6_serial_dev = {
+struct stm32f_serial_drv uart6_serial_drv = {
 	.uart = STM32_USART6,
 #if SERIAL_ENABLE_DMA
 	.dma = STM32F_DMA1,
@@ -43,23 +43,28 @@ struct stm32f_serial_dev uart6_serial_dev = {
 
 void stm32f_usart6_isr(void)
 {
-	stm32f_serial_isr(&uart6_serial_dev);
+	stm32f_serial_isr(&uart6_serial_drv);
 }
+
+const struct serial_dev uart6_serial_dev = {
+	.drv = &uart6_serial_drv,
+	.op = &stm32f_uart_serial_op
+};
 
 struct serial_dev * stm32f_uart6_serial_init(unsigned int baudrate, 
 											 unsigned int flags)
 {
-	struct stm32f_serial_dev * dev = &uart6_serial_dev;
+	struct stm32f_serial_drv * drv = &uart6_serial_drv;
 
 	DCC_LOG(LOG_TRACE, "IDLE!");
 
-	stm32f_serial_init(dev, baudrate, flags);
+	stm32f_serial_init(drv, baudrate, flags);
 
 	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_USART6, SERIAL_IRQ_PRIORITY);
 	/* enable interrupts */
 	cm3_irq_enable(STM32_IRQ_USART6);
 
-	return (struct serial_dev *)dev;
+	return (struct serial_dev *)&uart6_serial_dev;
 }
 

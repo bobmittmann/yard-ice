@@ -38,6 +38,7 @@
 #include <tcpip/net.h>
 #include <thinkos.h>
 #include <bacnet/bacnet-ptp.h>
+#include <sys/usb-cdc.h>
 
 #include <sys/dcclog.h>
 
@@ -216,12 +217,12 @@ void io_init(void)
 	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 }
 
-struct bacnet_ptp_lnk * ptp_lnk;
+struct bacnet_ptp_lnk * volatile ptp_lnk;
 
 int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
 					  uint8_t * pdu, unsigned pdu_len)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 	return bacnet_ptp_send(ptp_lnk, pdu, pdu_len);
 }
 
@@ -441,48 +442,6 @@ void bacnet_init(void)
 
 	Init_Service_Handlers();
 
-#if 0
-    /* initialize objects */
-    Device_Init(NULL);
-
-    /* set up our confirmed service unrecognized service handler - required! */
-    apdu_set_unrecognized_service_handler_handler
-        (handler_unrecognized_service);
-    /* we need to handle who-is to support dynamic device binding */
-    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_WHO_IS, handler_who_is);
-    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_WHO_HAS, handler_who_has);
-    /* Set the handlers for any confirmed services that we support. */
-    /* We must implement read property - it's required! */
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_PROPERTY,
-        handler_read_property);
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_READ_PROP_MULTIPLE,
-        handler_read_property_multiple);
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_REINITIALIZE_DEVICE,
-        handler_reinitialize_device);
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_WRITE_PROPERTY,
-        handler_write_property);
-    /* handle communication so we can shutup when asked */
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_DEVICE_COMMUNICATION_CONTROL,
-        handler_device_communication_control);
-
-    /* handle i-am to support binding to other devices */
-    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_I_AM, handler_i_am_bind);
-
-    /* handle the data coming back from COV subscriptions */
-    apdu_set_confirmed_handler(SERVICE_CONFIRMED_COV_NOTIFICATION,
-        My_Confirmed_COV_Notification_Handler);
-
-    apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_COV_NOTIFICATION,
-        My_Unconfirmed_COV_Notification_Handler);
-
-    /* handle the Simple ack coming back from SubscribeCOV */
-    apdu_set_confirmed_simple_ack_handler(SERVICE_CONFIRMED_SUBSCRIBE_COV,
-        MyWritePropertySimpleAckHandler);
-    /* handle any errors coming back */
-    apdu_set_error_handler(SERVICE_CONFIRMED_SUBSCRIBE_COV, MyErrorHandler);
-    apdu_set_abort_handler(MyAbortHandler);
-    apdu_set_reject_handler(MyRejectHandler);
-#endif
 }
 
 FILE * serial_tty_open(struct serial_dev * serdev)
@@ -495,6 +454,16 @@ FILE * serial_tty_open(struct serial_dev * serdev)
 	return tty_fopen(tty);
 }
 
+FILE * usb_tty_open(usb_cdc_class_t * cdc)
+{
+	struct tty_dev * tty;
+	FILE * f_raw;
+
+	f_raw = usb_cdc_fopen(cdc);
+	tty = tty_attach(f_raw);
+	return tty_fopen(tty);
+}
+
 
 int __attribute__((noreturn)) shell_task(FILE * term)
 {
@@ -503,25 +472,107 @@ int __attribute__((noreturn)) shell_task(FILE * term)
 	}
 }
 
-uint32_t shell_stack[512];
+struct bn_ptp_bundle {
+	FILE * term;
+	struct bacnet_ptp_lnk * ptp; 
+};
 
-const struct thinkos_thread_inf shell_inf = {
-	.stack_ptr = shell_stack, 
-	.stack_size = sizeof(shell_stack), 
+int __attribute__((noreturn)) bacnet_task(struct bn_ptp_bundle * p)
+{
+	FILE * term = p->term;
+	struct bacnet_ptp_lnk * ptp = p->ptp; 
+	uint8_t pdu[512];
+	int pdu_len;
+
+	for (;;) {
+		DCC_LOG(LOG_WARNING, "shell!");
+		shell(term, shell_prompt, shell_greeting, shell_cmd_tab);
+
+		/* BACnet protocol... */
+		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
+		bacnet_ptp_inbound(ptp);
+
+		while ((pdu_len = bacnet_ptp_recv(ptp, pdu, 512)) >= 0) {
+			ptp_lnk = ptp;
+	       	npdu_handler(NULL, pdu, pdu_len);
+		}
+
+		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
+
+	}
+}
+
+uint32_t tty1_stack[1024];
+
+const struct thinkos_thread_inf tty1_inf = {
+	.stack_ptr = tty1_stack, 
+	.stack_size = sizeof(tty1_stack), 
+	.priority = 32,
+	.thread_id = 8, 
+	.paused = 0,
+	.tag = "TTY1"
+};
+
+uint32_t tty2_stack[1024];
+
+const struct thinkos_thread_inf tty2_inf = {
+	.stack_ptr = tty2_stack, 
+	.stack_size = sizeof(tty2_stack), 
 	.priority = 32,
 	.thread_id = 7, 
 	.paused = 0,
-	.tag = "SHELL"
+	.tag = "TTY2"
 };
+
+uint32_t ptp1_stack[128];
+
+const struct thinkos_thread_inf ptp1_inf = {
+	.stack_ptr = ptp1_stack, 
+	.stack_size = sizeof(ptp1_stack), 
+	.priority = 32,
+	.thread_id = 6, 
+	.paused = 0,
+	.tag = "PTP1"
+};
+
+uint32_t ptp2_stack[128];
+
+const struct thinkos_thread_inf ptp2_inf = {
+	.stack_ptr = ptp2_stack, 
+	.stack_size = sizeof(ptp2_stack), 
+	.priority = 32,
+	.thread_id = 5, 
+	.paused = 0,
+	.tag = "PTP2"
+};
+
+uint32_t ptp3_stack[128];
+
+const struct thinkos_thread_inf ptp3_inf = {
+	.stack_ptr = ptp3_stack, 
+	.stack_size = sizeof(ptp3_stack), 
+	.priority = 32,
+	.thread_id = 4, 
+	.paused = 0,
+	.tag = "PTP3"
+};
+
+
+struct bacnet_ptp_lnk ptp1; 
+struct bacnet_ptp_lnk ptp2; 
+struct bacnet_ptp_lnk ptp3; 
 
 int main(int argc, char ** argv)
 {
-	struct serial_dev * ser5;
 	struct serial_dev * ser1;
+	struct serial_dev * ser2;
+	struct serial_dev * ser5;
 	FILE * term1;
+	FILE * term2;
 	FILE * term5;
-	uint8_t pdu[512];
-	uint16_t pdu_len;
+	struct bn_ptp_bundle bdl1;
+	struct bn_ptp_bundle bdl2;
+	struct bn_ptp_bundle bdl3;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -542,17 +593,22 @@ int main(int argc, char ** argv)
 //	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
 	ser1 = stm32f_uart1_serial_init(460800, SERIAL_8N1);
 
+	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
+	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
+	usb_cdc_init(&stm32f_otg_fs_dev, 
+				 cdc_acm_def_str, 
+				 cdc_acm_def_strcnt);
+	
+	ser2 = (struct serial_dev *)&cdc_acm_serial_dev;
+
 	term1 = serial_tty_open(ser1);
 	term5 = serial_tty_open(ser5);
+	term2 = serial_tty_open(ser2);
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
 	stderr = term1;
 	stdout = term1;
 	stdin = term1;
-
-	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
-	thinkos_thread_create_inf((void *)shell_task, (void *)term1, &shell_inf);
-
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -564,24 +620,38 @@ int main(int argc, char ** argv)
 
 	bacnet_init();
 
+	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
+	bacnet_ptp_lnk_init(&ptp1, ser1);
+	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+							  (void *)&ptp1, &ptp1_inf);
+
+	bacnet_ptp_lnk_init(&ptp2, ser2);
+	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+							  (void *)&ptp2, &ptp2_inf);
+
+	bacnet_ptp_lnk_init(&ptp3, ser5);
+	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+							  (void *)&ptp3, &ptp3_inf);
+
+	DCC_LOG(LOG_TRACE, "5. starting TTY threads...");
+	bdl1.ptp = &ptp1;
+	bdl1.term = term1;
+	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl1, &tty1_inf);
+//	thinkos_thread_create_inf((void *)shell_task, (void *)term1, &tty1_inf);
+
+	bdl2.ptp = &ptp2;
+	bdl2.term = term2;
+	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
+//	thinkos_thread_create_inf((void *)shell_task, (void *)term2, &tty2_inf);
+
+	bdl3.ptp = &ptp3;
+	bdl3.term = term5;
+//	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl3, &tty3_inf);
+
 	DCC_LOG(LOG_TRACE, "5. starting console shell...");
+	bacnet_task(&bdl3);
 
-	for (;;) {
-		DCC_LOG(LOG_WARNING, "Console shell!");
-	
-		shell(term5, shell_prompt, shell_greeting, shell_cmd_tab);
-
-		/* BACnet protocol... */
-		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-		ptp_lnk = bacnet_ptp_inbound(ser5);
-
-		while ((pdu_len = bacnet_ptp_recv(ptp_lnk, pdu, 512)) >= 0) {
-	       	npdu_handler(NULL, pdu, pdu_len);
-		}
-
-		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-
-	}
+//	shell_task(term2);
 
 	return 0;
 }

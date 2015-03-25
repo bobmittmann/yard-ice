@@ -25,7 +25,8 @@ include ../../mk/config.mk
 
 LIB_STATIC = cdc-acm
 
-CFILES = cdc-acm_desc.c cdc-acm_str.c cdc-acm_dev.c cdc-acm_fops.c
+CFILES = cdc-acm_desc.c cdc-acm_str.c cdc-acm_dev.c cdc-acm_fops.c \
+		 cdc-acm_serial.c
 
 include ../../mk/lib.mk
 

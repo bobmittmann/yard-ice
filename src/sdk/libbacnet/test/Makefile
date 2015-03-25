@@ -22,17 +22,19 @@
 
 PROG = bacnet_test
 
-CFILES = bacnet_test.c console.c lattice.c ice40lp384.c device.c bip.c
+CFILES = bacnet_test.c console.c lattice.c ice40lp384.c device.c
+#bip.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc $(SDK)/libshell \
-		  $(SDK)/libbacnet $(SDK)/libtcpip
+		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty $(SDK)/libcrc \
+		  $(SDK)/libshell $(SDK)/libbacnet $(SDK)/libtcpip
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc drv tty shell tcpip bacnet gcc
+LIBS = cm3 stm32f util thinkos c ice-comm crc drv cdc-acm tty \
+	   shell tcpip bacnet gcc
 
 INCPATH = $(SDK)/include ../bacnet-stack/include ../bacnet-stack/demo/object
 

@@ -57,6 +57,10 @@ struct file * tty_lowlevel(struct tty_dev * tty);
 
 struct file * ftty_lowlevel(struct file * f);
 
+void * tty_drv(struct tty_dev * tty);
+
+void * ftty_drv(struct file * f);
+
 #ifdef __cplusplus
 }
 #endif

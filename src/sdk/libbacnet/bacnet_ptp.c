@@ -192,43 +192,8 @@ struct bacnet_ptp_frm {
 	uint8_t data[];
 };
 
-#define BACNET_PTP_MTU 512
 #define PTP_LINK_RXMT_MAX 3
 
-struct bacnet_ptp_lnk {
-	struct serial_dev * dev;
-	bool enabled;
-	volatile uint8_t state; 
-	uint32_t dcc_tmr;
-	uint32_t clk;
-	struct {
-		union {
-			uint8_t buf[BACNET_PTP_MTU];
-			struct {
-				uint8_t hdr[6];
-				uint8_t pdu[BACNET_PTP_MTU - 6];
-			};
-		};
-		volatile unsigned int pdu_len;
-		volatile bool xon;
-		unsigned int off;
-		unsigned int cnt;
-		bool dle;
-		uint32_t seq;
-		uint32_t idle_tmr;
-		int flag;
-	} rx;
-	struct {
-		uint8_t buf[BACNET_PTP_MTU];
-		volatile unsigned int len;
-		volatile uint32_t seq;
-		volatile bool xon;
-		uint32_t idle_tmr;
-		uint32_t rxmt_tmr;
-		uint8_t rxmt_cnt;
-		int flag;
-	} tx;
-};
 
 static void bacnet_ptp_lnk_rx_rst(struct bacnet_ptp_lnk * lnk)
 {
@@ -797,8 +762,12 @@ wait_connect:
 		   layer to indicate the occurrence of a physical 
 		   layer connection. */
 		thinkos_sleep(100);
+		clk = thinkos_clock();
+		lnk->clk = clk;
 	}
 
+	lnk->dcc_tmr = lnk->clk + DCC_TIME_MS; 
+	lnk->rx.idle_tmr = lnk->clk + RX_IDLE_DISC_TMO_MS; 
 
 again:
 	clk = lnk->clk;
@@ -1040,19 +1009,12 @@ again:
 	goto again;
 }
 
-uint32_t bacnet_ptp_stack[256];
-
-const struct thinkos_thread_inf bacnet_ptp_inf = {
-	.stack_ptr = bacnet_ptp_stack, 
-	.stack_size = sizeof(bacnet_ptp_stack), 
-	.priority = 32,
-	.thread_id = 7, 
-	.paused = 0,
-	.tag = "BN PTP"
-};
-
-void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
+int bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
 {
+	uint32_t clk;
+
+	memset(lnk, 0, sizeof(struct bacnet_ptp_lnk));
+
 	lnk->dev = dev;
 	lnk->enabled = true;
 	lnk->state = BACNET_PTP_DISCONNECTED;
@@ -1066,9 +1028,14 @@ void bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev)
 	lnk->rx.flag = thinkos_flag_alloc();
 	lnk->tx.flag = thinkos_flag_alloc();
 
-	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
-	thinkos_thread_create_inf((void *)bacnet_ptp_task, (void *)lnk, 
-							  &bacnet_ptp_inf);
+	DCC_LOG2(LOG_TRACE, "tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
+
+	clk = thinkos_clock();
+	lnk->clk = clk;
+	lnk->dcc_tmr = clk + DCC_TIME_MS; 
+	lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
+
+	return 0;
 }
 
 int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t pdu[], 
@@ -1077,7 +1044,10 @@ int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t pdu[],
 	int pdu_len;
 
 	for(;;) {
-		thinkos_flag_take(lnk->rx.flag);
+		if (thinkos_flag_take(lnk->rx.flag) < 0) {
+			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
+			abort();
+		}
 
 		if (lnk->state == BACNET_PTP_DISCONNECTED) {
 			DCC_LOG(LOG_TRACE, "Disconnected. Bailing out...");
@@ -1103,7 +1073,10 @@ int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, const uint8_t pdu[],
 	uint32_t clk;
 
 	for(;;) {
-		thinkos_flag_take(lnk->tx.flag);
+		if (thinkos_flag_take(lnk->tx.flag) < 0) {
+			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
+			abort();
+		}
 
 		if (lnk->state != BACNET_PTP_CONNECTED)
 			return -EAGAIN;
@@ -1138,16 +1111,9 @@ int bacnet_ptp_send(struct bacnet_ptp_lnk * lnk, const uint8_t pdu[],
 }
 
 
-
-static struct bacnet_ptp_lnk ptp_lnk;
-
-struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct serial_dev * dev)
+struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct bacnet_ptp_lnk * lnk)
 {
-	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
-
 	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
-
-	bacnet_ptp_lnk_init(lnk, dev);
 
 	/* 10.4.9.1 DISCONNECTED, ConnectOutbound 
 	If a DL-CONNECT.request is received,
@@ -1160,25 +1126,15 @@ struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct serial_dev * dev)
 	lnk->state = BACNET_PTP_OUTBOUND;
 	DCC_LOG(LOG_TRACE, "[OUTBOUND]");
 
-	return lnk;
+	return 0;
 }
 
-struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
+int bacnet_ptp_inbound(struct bacnet_ptp_lnk * lnk)
 {
-	struct bacnet_ptp_lnk * lnk = (struct bacnet_ptp_lnk *)&ptp_lnk;
-	uint32_t clk;
 
 	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
 
-	bacnet_ptp_lnk_init(lnk, dev);
-	clk = thinkos_clock();
-	lnk->clk = clk;
-
-	lnk->dcc_tmr = clk + DCC_TIME_MS; 
-
-	lnk->rx.idle_tmr = clk + RX_IDLE_DISC_TMO_MS; 
-
-	lnk->tx.rxmt_tmr = clk + CONN_RXMT_TIME_MS; 
+	lnk->tx.rxmt_tmr = lnk->clk + CONN_RXMT_TIME_MS; 
 	lnk->tx.rxmt_cnt = 0;
 	bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
 
@@ -1186,6 +1142,28 @@ struct bacnet_ptp_lnk * bacnet_ptp_inbound(struct serial_dev * dev)
 	lnk->state = BACNET_PTP_INBOUND;
 	DCC_LOG(LOG_TRACE, "[INBOUND]");
 
-	return lnk;
+	return 0;
 }
+
+#if 0
+
+uint32_t bacnet_ptp_stack[256];
+
+const struct thinkos_thread_inf bacnet_ptp_inf = {
+	.stack_ptr = bacnet_ptp_stack, 
+	.stack_size = sizeof(bacnet_ptp_stack), 
+	.priority = 32,
+	.thread_id = 7, 
+	.paused = 0,
+	.tag = "BN PTP"
+};
+
+void bacnet_ptp_task_init(struct bacnet_ptp_lnk * lnk)
+{
+	DCC_LOG(LOG_TRACE, "5. BACnet PtP Task...");
+	thinkos_thread_create_inf((void *)bacnet_ptp_task, (void *)lnk, 
+							  &bacnet_ptp_inf);
+}
+
+#endif
 
