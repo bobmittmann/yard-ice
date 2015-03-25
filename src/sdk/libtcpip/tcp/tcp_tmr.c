@@ -461,7 +461,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 		__tcp__.out.tail = tail;
 
 		ret = __os_cond_timedwait(__tcp__.out.cond, net_mutex, 
-									 TCP_FAST_TMR_MS);
+								  TCP_FAST_TMR_MS);
 		if (ret == __OS_TIMEOUT) {
 			DCC_LOG(LOG_MSG, "__os_cond_timedwait() timeout!");
 
