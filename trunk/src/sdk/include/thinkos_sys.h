@@ -379,7 +379,12 @@ struct thinkos_rt {
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
-	uint32_t flag; /* event flags */
+	struct {
+		uint32_t sig[(THINKOS_FLAG_MAX + 31) / 32]; /* flag signal */
+#if THINKOS_ENABLE_FLAG_LOCK
+		uint32_t lock[(THINKOS_FLAG_MAX + 31) / 32]; /* flag lock */
+#endif
+	} flag;
 #endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_MUTEX_MAX > 0
@@ -401,23 +406,23 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	uint32_t mutex_alloc[1];
+	uint32_t mutex_alloc[(THINKOS_MUTEX_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_COND_ALLOC
-	uint32_t cond_alloc[1];
+	uint32_t cond_alloc[(THINKOS_COND_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
-	uint32_t sem_alloc[1];
+	uint32_t sem_alloc[(THINKOS_SEMAPHORE_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-	uint32_t ev_alloc[1];
+	uint32_t ev_alloc[(THINKOS_EVENT_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-	uint32_t flag_alloc[1];
+	uint32_t flag_alloc[(THINKOS_FLAG_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
@@ -777,6 +782,8 @@ static volatile inline uint32_t __attribute__((always_inline))
 void thinkos_trace_rt(struct thinkos_rt * rt);
 
 int thinkos_obj_type_get(unsigned int oid);
+
+int thinkos_bmp_alloc(uint32_t bmp[], int bits);
 
 #ifdef __cplusplus
 }

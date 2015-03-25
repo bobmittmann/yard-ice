@@ -31,14 +31,15 @@
 void thinkos_cond_alloc_svc(int32_t * arg)
 {
 	unsigned int wq;
-	int cond;
+	int idx;
 
-	if ((cond = thinkos_alloc_lo(thinkos_rt.cond_alloc, 0)) >= 0) {
-		wq = cond + THINKOS_COND_BASE;
-		DCC_LOG2(LOG_INFO, "cond=%d wq=%d", cond, wq);
+	if ((idx = thinkos_bmp_alloc(thinkos_rt.cond_alloc, 
+								 THINKOS_COND_MAX)) >= 0) {
+		wq = idx + THINKOS_COND_BASE;
+		DCC_LOG2(LOG_INFO, "cond=%d wq=%d", idx, wq);
 		arg[0] = wq;
 	} else {
-		arg[0] = cond;
+		arg[0] = idx;
 	}
 }
 
@@ -56,7 +57,7 @@ void thinkos_cond_free_svc(int32_t * arg)
 #endif
 
 	DCC_LOG2(LOG_INFO, "cond=%d wq=%d", cond, wq);
-	__bit_mem_wr(&thinkos_rt.cond_alloc, cond, 0);
+	__bit_mem_wr(thinkos_rt.cond_alloc, cond, 0);
 }
 #endif
 
@@ -81,14 +82,14 @@ void thinkos_cond_wait_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_COND_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+	if (__bit_mem_rd(thinkos_rt.cond_alloc, cond) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (__bit_mem_rd(thinkos_rt.mutex_alloc, mutex) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
@@ -194,14 +195,14 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
+	if (__bit_mem_rd(thinkos_rt.mutex_alloc, mutex) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+	if (__bit_mem_rd(thinkos_rt.cond_alloc, cond) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
@@ -264,7 +265,7 @@ void thinkos_cond_signal_svc(int32_t * arg)
 	}
 
 #if THINKOS_ENABLE_COND_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+	if (__bit_mem_rd(thinkos_rt.cond_alloc, cond) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;
@@ -339,7 +340,7 @@ void thinkos_cond_broadcast_svc(int32_t * arg)
 		return;
 	}
 #if THINKOS_ENABLE_COND_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.cond_alloc, cond) == 0) {
+	if (__bit_mem_rd(thinkos_rt.cond_alloc, cond) == 0) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
 		return;

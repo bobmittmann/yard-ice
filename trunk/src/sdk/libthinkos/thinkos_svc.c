@@ -116,7 +116,7 @@ void thinkos_flag_take_svc(int32_t * arg);
 
 void thinkos_flag_timedtake_svc(int32_t * arg);
 
-void thinkos_flag_takelock_svc(int32_t * arg);
+void thinkos_flag_release_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
@@ -349,16 +349,12 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-	case THINKOS_FLAG_VAL:
-		thinkos_flag_val_svc(arg);
+	case THINKOS_FLAG_CLR:
+		thinkos_flag_clr_svc(arg);
 		break;
 
 	case THINKOS_FLAG_SET:
 		thinkos_flag_set_svc(arg);
-		break;
-
-	case THINKOS_FLAG_CLR:
-		thinkos_flag_clr_svc(arg);
 		break;
 
 	case THINKOS_FLAG_WAIT:
@@ -371,9 +367,11 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-	case THINKOS_FLAG_GIVE:
-		thinkos_flag_give_svc(arg);
+#if THINKOS_ENABLE_FLAG_LOCK
+	case THINKOS_FLAG_RELEASE:
+		thinkos_flag_release_svc(arg);
 		break;
+#endif
 
 	case THINKOS_FLAG_TAKE:
 		thinkos_flag_take_svc(arg);
@@ -385,12 +383,9 @@ void cm3_svc_isr(void)
 		break;
 #endif
 
-#if THINKOS_ENABLE_FLAG_LOCK
-	case THINKOS_FLAG_TAKELOCK:
-		thinkos_flag_takelock_svc(arg);
+	case THINKOS_FLAG_GIVE:
+		thinkos_flag_give_svc(arg);
 		break;
-#endif
-
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
 #if THINKOS_IRQ_MAX > 0

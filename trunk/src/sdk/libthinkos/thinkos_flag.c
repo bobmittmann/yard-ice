@@ -32,109 +32,85 @@
 
 #if THINKOS_ENABLE_FLAG_ALLOC
 
-static inline int __attribute__((always_inline)) 
-__thinkos_flag_alloc(void) {
-	int flag = thinkos_alloc_lo(thinkos_rt.flag_alloc, 0);
-	return (flag < 0) ? flag : flag + THINKOS_FLAG_BASE;
-}
-
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_free(int flag) {
-	__bit_mem_wr(&thinkos_rt.flag_alloc, flag - THINKOS_FLAG_BASE, 0);
-}
-
 void thinkos_flag_alloc_svc(int32_t * arg)
 {
-	unsigned int flag;
+	int idx;
 
-	flag = __thinkos_flag_alloc();
-
-	DCC_LOG1(LOG_INFO, "flag=%d", flag);
-	arg[0] = flag;
+	if ((idx = thinkos_bmp_alloc(thinkos_rt.flag_alloc, 
+								 THINKOS_FLAG_MAX)) >= 0) {
+		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+#if THINKOS_ENABLE_FLAG_LOCK
+		__bit_mem_wr(thinkos_rt.flag.lock, idx, 0);
+#endif
+		arg[0] = idx + THINKOS_FLAG_BASE;
+		DCC_LOG1(LOG_TRACE, "wq=%d", arg[0]);
+	} else {
+		arg[0] = idx;
+	}
 }
 
 void thinkos_flag_free_svc(int32_t * arg)
 {
-	unsigned int flag = arg[0];
-
-#if THINKOS_ENABLE_ARG_CHECK
-	if ((flag < THINKOS_FLAG_BASE) || 
-		(flag >= (THINKOS_FLAG_BASE + THINKOS_FLAG_MAX))) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", flag);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-
-	DCC_LOG1(LOG_INFO, "flag=%d", flag);
-	__thinkos_flag_free(flag);
-}
-#endif
-
-void thinkos_flag_val_svc(int32_t * arg)
-{
 	unsigned int wq = arg[0];
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (idx >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not a xdmon!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
-#endif
-
-	arg[0] = __thinkos_flag_is_set(wq);
+	__bit_mem_wr(thinkos_rt.flag_alloc, wq - THINKOS_FLAG_BASE, 0);
 }
+
+#endif
 
 void thinkos_flag_wait_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int self = thinkos_rt.active;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
-	arg[0] = 0;
-
+	/* disable interrupts */
 	cm3_cpsid_i();
-	if (__thinkos_flag_is_set(wq)) {
-		cm3_cpsie_i();
-		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
-		return;
-	} 
+	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
+#if THINKOS_ENABLE_FLAG_LOCK
+		if (!__bit_mem_rd(thinkos_rt.flag.lock, idx)) {
+			/* lock the flag */
+			__bit_mem_wr(thinkos_rt.flag.lock, idx, 1);
+#endif
+			cm3_cpsie_i();
+			/* clear the signal */
+			__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+			arg[0] = 0;
+			return;
+#if THINKOS_ENABLE_FLAG_LOCK
+		}
+#endif
+	}
 
+	/* -- wait for event ---------------------------------------- */
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-
-	/* wait for event */
-
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -155,9 +131,8 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	} 
 #endif
 #endif
-	cm3_cpsie_i();
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	cm3_cpsie_i(); /* reenable interrupts */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -166,46 +141,52 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	unsigned int wq = arg[0];
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
+	/* disable interrupts */
 	cm3_cpsid_i();
-	if (__thinkos_flag_is_set(wq)) {
-		cm3_cpsie_i();
-		arg[0] = 0;
-		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
-		return;
-	} 
-
-	/* insert into the flag wait queue */
-	__thinkos_tmdwq_insert(wq, self, ms);
-
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
+	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
+#if THINKOS_ENABLE_FLAG_LOCK
+		if (!__bit_mem_rd(thinkos_rt.flag.lock, idx)) {
+			/* lock the flag */
+			__bit_mem_wr(thinkos_rt.flag.lock, idx, 1);
+#endif
+			cm3_cpsie_i();
+			/* clear the signal */
+			__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+			arg[0] = 0;
+			return;
+#if THINKOS_ENABLE_FLAG_LOCK
+		}
+#endif
+	}
 
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
-	/* wait for event */
-
+	/* -- wait for event ---------------------------------------- */
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
+	/* insert into the flag wait queue */
+	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-
+	/* wait for event */
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -226,80 +207,30 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	} 
 #endif
 #endif
-	cm3_cpsie_i();
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	cm3_cpsie_i(); /* reenable interrupts */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 #endif
 
+#if THINKOS_ENABLE_FLAG_LOCK
 
-void thinkos_flag_clr_svc(int32_t * arg)
+void thinkos_flag_release_svc(int32_t * arg)
 {
+
 	unsigned int wq = arg[0];
-
-#if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-	arg[0] = __thinkos_flag_is_set(wq);
-
-	__thinkos_flag_clr(wq);
-}
-
-void thinkos_flag_set_svc(int32_t * arg)
-{
-	unsigned int wq = arg[0];
-
-#if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-	arg[0] = __thinkos_flag_is_set(wq);
-
-	__thinkos_flag_set(wq);
-}
-
-void thinkos_flag_give_svc(int32_t * arg)
-{
-	unsigned int wq = arg[0];
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	unsigned int sig = arg[1];
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -308,72 +239,80 @@ void thinkos_flag_give_svc(int32_t * arg)
 
 	arg[0] = 0;
 
+	/* unlock the flag */
+	__bit_mem_wr(thinkos_rt.flag.lock, idx, 0);
+
+	if (sig) {
+		/* signal the flag acoording to the call argument */
+		__bit_mem_wr(thinkos_rt.flag.sig, idx, 1);
+	}
+
+	if (!__bit_mem_rd(thinkos_rt.flag.sig, idx))
+		return;
+
+	/* disable interrupts */
 	cm3_cpsid_i();
-	/* get the flag state */
-	if (__bit_mem_rd(&thinkos_rt.flag, flag)) {
+
+	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
+		/* no pending threads, just return */
 		cm3_cpsie_i();
-		DCC_LOG1(LOG_INFO, "flag %d is already set!", wq);
 		return;
 	}
 
-	/* set the flag bit */
-	__bit_mem_wr(&thinkos_rt.flag, flag, 1);  
+	/* wakeup from the xdmon wait queue */
+	__thinkos_wakeup(wq, th);
+	DCC_LOG2(LOG_MSG, "<%d> waked up with xdmon %d", th, wq);
+	/* reenable interrupts */ 
 	cm3_cpsie_i();
-
-	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		/* wakeup from the flag wait queue */
-		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
-		/* clear the flag bit */
-		__bit_mem_wr(&thinkos_rt.flag, flag, 0);  
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
+	/* clear the xdmon signal bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);  
+	/* set the xdmon lock bit */
+	__bit_mem_wr(thinkos_rt.flag.lock, idx, 1);  
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
+
+#endif /* THINKOS_FLAG_LOCK */
+
 
 void thinkos_flag_take_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int self = thinkos_rt.active;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
-	arg[0] = 0;
-
+	/* disable interrupts */
 	cm3_cpsid_i();
 
-	if (__thinkos_flag_is_set(wq)) {
-		__thinkos_flag_clr(wq);
+	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
 		cm3_cpsie_i();
-		DCC_LOG2(LOG_INFO, "<%d> flag %d was set.", self, wq);
+		/* clear the signal */
+		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+		arg[0] = 0;
 		return;
 	} 
 
+	/* -- wait for event ---------------------------------------- */
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 	/* insert into the wait queue */
 	__thinkos_wq_insert(wq, self);
-
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-
-	/* wait for event */
-
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -394,10 +333,8 @@ void thinkos_flag_take_svc(int32_t * arg)
 	} 
 #endif
 #endif
-	cm3_cpsie_i();
-
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	cm3_cpsie_i(); /* reenable interrupts */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -406,47 +343,43 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	unsigned int wq = arg[0];
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
 
+	/* disable interrupts */
 	cm3_cpsid_i();
-
-	if (__thinkos_flag_is_set(wq)) {
-		__thinkos_flag_clr(wq);
+	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
 		cm3_cpsie_i();
+		/* clear the signal */
+		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
 		arg[0] = 0;
-		DCC_LOG1(LOG_INFO, "flag %d is set!", wq);
 		return;
 	} 
 
-	/* insert into the flag wait queue */
-	__thinkos_tmdwq_insert(wq, self, ms);
-
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
 	/* Set the default return value to timeout. The
 	   flag_rise() call will change it to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
 
-	/* wait for event */
-
+	/* -- wait for event ---------------------------------------- */
+	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
+	/* insert into the flag wait queue */
+	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
@@ -467,126 +400,121 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	} 
 #endif
 #endif
-	cm3_cpsie_i();
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	cm3_cpsie_i(); /* reenable interrupts */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 #endif
 
-
-#if THINKOS_ENABLE_FLAG_LOCK
-
-void thinkos_flag_takelock_svc(int32_t * arg)
+void thinkos_flag_give_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int mwq = arg[1];
-	int self = thinkos_rt.active;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	unsigned int mutex = mwq - THINKOS_MUTEX_BASE;
-
-	if (flag >= THINKOS_FLAG_MAX) {
+	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
-	if (mutex >= THINKOS_MUTEX_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	/* get the flag state */
+	if ((arg[0] = __bit_mem_rd(&thinkos_rt.flag.sig, idx)) != 0) {
+		/* already set, just return */
+		return;
+	}
+
+	/* disable interrupts */
+	cm3_cpsid_i();
+
+	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
+		/* set the flag bit */
+		__bit_mem_wr(&thinkos_rt.flag.sig, idx, 1);  
+		cm3_cpsie_i();
+		return;
+	}	
+
+	/* wakeup from the flag wait queue */
+	__thinkos_wakeup(wq, th);
+	cm3_cpsie_i();
+	DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+}
+
+void thinkos_flag_clr_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (idx >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #if THINKOS_ENABLE_FLAG_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.flag_alloc, flag) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid flag %d!", flag);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#if THINKOS_ENABLE_MUTEX_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.mutex_alloc, mutex) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid mutex %d!", mwq);
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #endif
 #endif
-
-	/* sanity check: avoid unlock the mutex by a thread that 
-	   does not own the lock */
-	if (thinkos_rt.lock[mutex] != self) {
-		DCC_LOG3(LOG_WARNING, "<%d> mutex %d is locked by <%d>", 
-				 self, mwq, thinkos_rt.lock[mutex]);
-		arg[0] = THINKOS_EPERM;
-		return;
-	}
-
-
-	arg[0] = 0;
-
-	cm3_cpsid_i();
-
-	if (__thinkos_flag_is_set(wq)) {
-		__thinkos_flag_clr(wq);
-		cm3_cpsie_i();
-		DCC_LOG2(LOG_INFO, "<%d> flag %d was set.", self, wq);
-		return;
-	} 
-
-	/* insert into the wait queue */
-	__thinkos_wq_insert(wq, self);
-
-	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-
-	/* wait for event */
-
-	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-
-#if THINKOS_ENABLE_TIMESHARE
-	/* if the ready queue is empty, collect
-	 the threads from the CPU wait queue */
-#if (THINKOS_THREADS_MAX < 32) 
-	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
-		/* No more threads into the ready queue,
-		 move the timeshare queue to the ready queue.
-		 Keep the IDLE bit set */
-		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#else
-	if (thinkos_rt.wq_ready == 0) {
-		/* no more threads into the ready queue,
-		 move the timeshare queue to the ready queue */
-		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#endif
-#endif
-
-	cm3_cpsie_i();
-
-	/* check for threads wating on the mutex wait queue */
-	if ((th = __thinkos_wq_head(mwq)) == THINKOS_THREAD_NULL) {
-		/* no threads waiting on the lock, just release
-		   the lock */
-		DCC_LOG2(LOG_INFO, "<%d> mutex %d released", self, mwq);
-		thinkos_rt.lock[mutex] = -1;
-	} else {
-		/* set the mutex ownership to the new thread */
-		thinkos_rt.lock[mutex] = th;
-		DCC_LOG2(LOG_INFO, "<%d> mutex %d locked", th, mwq);
-		/* wakeup from the mutex wait queue */
-		__thinkos_wakeup(mwq, th);
-	}
-
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
-
+	arg[0] = __bit_mem_rd(thinkos_rt.flag.sig, idx);
+	/* clear the flag signal bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);  
 }
 
-#endif /* THINKOS_FLAG_LOCK */
+void thinkos_flag_set_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	int th;
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (idx >= THINKOS_FLAG_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_FLAG_ALLOC
+	if (__bit_mem_rd(thinkos_rt.flag_alloc, idx) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid flag %d!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+	arg[0] = __bit_mem_rd(thinkos_rt.flag.sig, idx);
+
+	/* disable interrupts */
+	cm3_cpsid_i();
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, idx, 1);  
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(wq, th);
+		DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
+		while ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
+			DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
+		}
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
+	/* reenable interrupts */
+	cm3_cpsie_i();
+}
+
 
 #endif /* THINKOS_FLAG_MAX > 0 */
 

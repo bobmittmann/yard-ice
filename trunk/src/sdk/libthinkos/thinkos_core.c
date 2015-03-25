@@ -439,18 +439,33 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
-	/* initialize the semaphore allocation bitmap */ 
-	thinkos_rt.sem_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_SEMAPHORE_MAX);
+	{	/* initialize the semaphore allocation bitmap */ 
+		int i;
+		for (i = 0; i < (THINKOS_SEMAPHORE_MAX / 32); ++i)
+			thinkos_rt.sem_alloc[i] = 0;
+		if (THINKOS_SEMAPHORE_MAX % 32)
+			thinkos_rt.sem_alloc[i] = 0xffffffff << (THINKOS_SEMAPHORE_MAX % 32);
+	}
 #endif
 
 #if THINKOS_ENABLE_COND_ALLOC
-	/* initialize the conditional variable allocation bitmap */ 
-	thinkos_rt.cond_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_COND_MAX);
+	{	/* initialize the conditional variable allocation bitmap */ 
+		int i;
+		for (i = 0; i < (THINKOS_COND_MAX / 32); ++i)
+			thinkos_rt.cond_alloc[i] = 0;
+		if (THINKOS_COND_MAX % 32)
+			thinkos_rt.cond_alloc[i] = 0xffffffff << (THINKOS_COND_MAX % 32);
+	}
 #endif
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-	/* initialize the flag allocation bitmap */ 
-	thinkos_rt.flag_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_FLAG_MAX);
+	{	/* initialize the flag allocation bitmap */ 
+		int i;
+		for (i = 0; i < (THINKOS_FLAG_MAX / 32); ++i)
+			thinkos_rt.flag_alloc[i] = 0;
+		if (THINKOS_FLAG_MAX % 32)
+			thinkos_rt.flag_alloc[i] = 0xffffffff << (THINKOS_FLAG_MAX % 32);
+	}
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
@@ -555,6 +570,22 @@ int thinkos_init(struct thinkos_thread_opt opt)
 			 self, cm3_msp_get(), cm3_psp_get(), cm3_control_get());
 
 	return self;
+}
+
+int thinkos_bmp_alloc(uint32_t bmp[], int bits) 
+{
+	int i;
+	int j;
+
+	for (i = 0; i < ((bits + 31) / 32); ++i) {
+		/* Look for an empty bit MSB first */
+		if ((j = __clz(__rbit(~(bmp[i])))) < 32) {
+			/* Mark as used */
+			__bit_mem_wr(&bmp[i], j, 1);  
+			return 32 * i + j;;
+		}
+	}
+	return -1;
 }
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
