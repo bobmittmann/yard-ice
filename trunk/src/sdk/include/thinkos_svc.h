@@ -255,7 +255,8 @@ static inline int __attribute__((always_inline)) thinkos_cond_free(int cond) {
 static inline int __attribute__((always_inline)) 
 thinkos_cond_wait(int cond, int mutex) {
 	int ret;
-	if ((ret = THINKOS_SVC2(THINKOS_COND_WAIT, cond, mutex)) >= 0)
+	if ((ret = THINKOS_SVC2(THINKOS_COND_WAIT, 
+							cond, mutex)) >= THINKOS_ETIMEDOUT )
 		ret = THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
 	return ret;
 }
@@ -263,7 +264,8 @@ thinkos_cond_wait(int cond, int mutex) {
 static inline int __attribute__((always_inline)) 
 thinkos_cond_timedwait(int cond, int mutex, unsigned int ms) {
 	int ret;
-	if ((ret = THINKOS_SVC3(THINKOS_COND_TIMEDWAIT, cond, mutex, ms)) >= 0) 
+	if ((ret = THINKOS_SVC3(THINKOS_COND_TIMEDWAIT, 
+							cond, mutex, ms)) >= THINKOS_ETIMEDOUT) 
 		ret = THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
 	return ret;
 }
