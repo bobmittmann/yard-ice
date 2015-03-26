@@ -185,7 +185,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	}
 #else
 	th = init->opt.id;
-	if (th >= THINKOS_THREADS_MAX)
+	if (th >= THINKOS_THREADS_MAX) {
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}

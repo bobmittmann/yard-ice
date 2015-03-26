@@ -1,0 +1,6 @@
+[Rr]elease*/
+[Dd]ebug*/
+bacnet-stack/
+*.bak
+*~
+*.swp

@@ -50,9 +50,6 @@
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 2
 
-void serial_rx_disable(struct serial_dev * dev);
-void serial_rx_enable(struct serial_dev * dev);
-
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
 #define LANG_STR_SZ              4
@@ -388,7 +385,7 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 		if (vcom->mode == VCOM_MODE_CONVERTER) {
 			if (len > 0) {
 				led_flash(LED_RED, 50);
-				serial_write(serial, buf, len);
+				serial_send(serial, buf, len);
 #if RAW_TRACE
 				if (len == 1)
 					DCC_LOG1(LOG_TRACE, "TX: %02x", buf[0]);
@@ -444,7 +441,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	serial_enable(serial);
 
 	for (;;) {
-		len = serial_read(serial, buf, VCOM_BUF_SIZE, 1000);
+		len = serial_recv(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
 //			dbg_write(buf, len);
 			if (vcom->mode == VCOM_MODE_CONVERTER) {

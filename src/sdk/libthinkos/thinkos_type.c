@@ -103,7 +103,7 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #if THINKOS_ENABLE_COND_ALLOC
 	[THINKOS_OBJ_COND] = thinkos_rt.cond_alloc,
 #else
-	[THINKOS_OBJ_COND] = NULL
+	[THINKOS_OBJ_COND] = NULL,
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
 	[THINKOS_OBJ_SEMAPHORE] = thinkos_rt.sem_alloc,

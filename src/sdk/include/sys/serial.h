@@ -112,6 +112,16 @@ struct serial_error {
 
 struct serial_dev;
 
+enum {
+	SERIAL_IOCTL_ENABLE = 0,
+	SERIAL_IOCTL_DISABLE,
+	SERIAL_IOCTL_DRAIN,
+	SERIAL_IOCTL_FLUSH
+};
+
+#define SERIAL_RX_EN 1
+#define SERIAL_TX_EN 2
+
 struct serial_op {
 	int (* send)(void *, const void *, unsigned int);
 	int (* recv)(void *, void *, unsigned int, unsigned int);
@@ -119,6 +129,7 @@ struct serial_op {
 	int (* close)(void *);
 	int (* conf_get)(void *, struct serial_config *);
 	int (* conf_set)(void *, const struct serial_config *);
+	int (* ioctl)(void *, int , unsigned int );
 };
 
 struct serial_dev {
@@ -154,7 +165,39 @@ extern inline int serial_config_set(struct serial_dev * dev,
 	return dev->op->conf_set(dev->drv, cfg);
 }
 
+extern inline int serial_ioctl(struct serial_dev * dev, 
+							   int opt, unsigned int arg) {
+	return dev->op->ioctl(dev->drv, opt, arg);
+}
 
+#if 0
+extern inline int serial_drain(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DRAIN, 0);
+}
+#endif
+
+extern inline int serial_flush(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLUSH, 0);
+}
+
+
+extern inline int serial_enable(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, 
+						  SERIAL_RX_EN | SERIAL_TX_EN);
+}
+
+extern inline int serial_disable(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, 
+						  SERIAL_RX_EN | SERIAL_TX_EN);
+}
+
+extern inline int serial_rx_enable(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, SERIAL_RX_EN);
+}
+
+extern inline int serial_rx_disable(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, SERIAL_RX_EN);
+}
 
 #ifdef __cplusplus
 extern "C" {
@@ -174,18 +217,27 @@ int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
 
 int serial_config_set(struct serial_dev * dev, 
 					  const struct serial_config * cfg);
+int serial_ioctl(struct serial_dev * dev, int opt, unsigned int arg);
 
-int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
-
-int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
 
 int serial_enable(struct serial_dev * dev);
 
 int serial_disable(struct serial_dev * dev);
 
+int serial_rx_disable(struct serial_dev * dev);
+
+int serial_rx_enable(struct serial_dev * dev);
+
+
 struct file * serial_fopen(struct serial_dev * dev);
 
 bool is_serial(struct file * f); 
+
+/*
+int serial_control_get(struct serial_dev * dev, struct serial_control * ctrl);
+
+int serial_status_set(struct serial_dev * dev, struct serial_status * stat);
+*/
 
 #ifdef __cplusplus
 }

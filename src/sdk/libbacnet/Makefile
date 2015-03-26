@@ -64,7 +64,7 @@ OBJECT_CFILES = lo.c lsp.c ai.c ao.c av.c bi.c bo.c \
 CFILES = $(addprefix bacnet-stack/src/,$(STACK_CFILES))\
 		 $(addprefix bacnet-stack/demo/handler/,$(HANDLER_CFILES))\
 		 $(addprefix bacnet-stack/demo/object/,$(OBJECT_CFILES))\
-		 bacnet_ptp.c 
+		 bacnet_dl.c bacnet_ptp.c 
 
 INCPATH = ../include 
 

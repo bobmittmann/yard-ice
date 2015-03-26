@@ -77,6 +77,7 @@
 #define SERIAL_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 #endif
 
+#if 0
 #if (THINKOS_FLAG_MAX == 0) || (THINKOS_ENABLE_FLAG_ALLOC == 0)
 #error "THINKOS_FLAG_MAX or THINKOS_ENABLE_FLAG_ALLOC not set!"
 #endif
@@ -85,6 +86,7 @@
  #if (THINKOS_MUTEX_MAX == 0) && (THINKOS_ENABLE_MUTEX_ALLOC == 0)
  #error "THINKOS_MUTEX_MAX or THINKOS_ENABLE_MUTEX_ALLOC not set!"
  #endif
+#endif
 #endif
 
 struct stm32f_serial_drv {

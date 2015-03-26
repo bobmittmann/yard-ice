@@ -40,7 +40,7 @@
 #define UART_RX_FIFO_BUF_LEN 64
 #define UART_RX_FIFO_WATER_MARK 32
 
-struct serial_dev {
+struct stm32_serial_drv {
 #ifndef SERDRV_TX_FLAG_NO
 	int32_t tx_flag;
 #endif
@@ -66,16 +66,16 @@ struct serial_dev {
 #ifdef SERDRV_RX_FLAG_NO
 #define RX_FLAG (THINKOS_FLAG_BASE + SERDRV_RX_FLAG_NO)
 #else
-#define RX_FLAG dev->rx_flag
+#define RX_FLAG drv->rx_flag
 #endif
 
 #ifdef SERDRV_TX_FLAG_NO
 #define TX_FLAG (THINKOS_FLAG_BASE + SERDRV_TX_FLAG_NO)
 #else
-#define TX_FLAG dev->tx_flag
+#define TX_FLAG drv->tx_flag
 #endif
 
-int serial_read(struct serial_dev * dev, void * buf, 
+int __serial_read(struct stm32_serial_drv * drv, void * buf, 
 				unsigned int len, unsigned int tmo)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -91,12 +91,12 @@ again:
 //	DCC_LOG(LOG_TRACE, "1.");
 	if ((ret = thinkos_flag_timedtake(RX_FLAG, tmo)) < 0) {
 		DCC_LOG2(LOG_INFO, "cnt=%d, timeout (%d ms)!", 
-				 (int32_t)(dev->rx_fifo.head - dev->rx_fifo.tail), tmo);
+				 (int32_t)(drv->rx_fifo.head - drv->rx_fifo.tail), tmo);
 		return ret;
 	}
 
-	tail = dev->rx_fifo.tail;
-	cnt = (int32_t)(dev->rx_fifo.head - tail);
+	tail = drv->rx_fifo.tail;
+	cnt = (int32_t)(drv->rx_fifo.head - tail);
 	if (cnt == 0) {
 		DCC_LOG(LOG_INFO, "RX FIFO empty!");
 		goto again;
@@ -104,9 +104,9 @@ again:
 	n = MIN(len, cnt);
 
 	for (i = 0; i < n; ++i)
-		cp[i] = dev->rx_fifo.buf[tail++ & (UART_RX_FIFO_BUF_LEN - 1)];
+		cp[i] = drv->rx_fifo.buf[tail++ & (UART_RX_FIFO_BUF_LEN - 1)];
 
-	dev->rx_fifo.tail = tail;
+	drv->rx_fifo.tail = tail;
 
 	if (cnt > n) {
 		DCC_LOG3(LOG_INFO, "len=%d cnt=%d n=%d", len, cnt, n);
@@ -118,7 +118,7 @@ again:
 	return n;
 }
 
-int serial_write(struct serial_dev * dev, const void * buf, 
+int __serial_write(struct stm32_serial_drv * drv, const void * buf, 
 				 unsigned int len)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -134,15 +134,15 @@ int serial_write(struct serial_dev * dev, const void * buf,
 
 		thinkos_flag_take(TX_FLAG);
 
-		head = dev->tx_fifo.head;
-		free = UART_TX_FIFO_BUF_LEN - (int32_t)(head - dev->tx_fifo.tail);
-		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, dev->tx_fifo.tail, n);
+		head = drv->tx_fifo.head;
+		free = UART_TX_FIFO_BUF_LEN - (int32_t)(head - drv->tx_fifo.tail);
+		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, drv->tx_fifo.tail, n);
 		n = MIN(rem, free);
 		for (i = 0; i < n; ++i) 
-			dev->tx_fifo.buf[head++ & (UART_TX_FIFO_BUF_LEN - 1)] = *cp++;
-		dev->tx_fifo.head = head;
+			drv->tx_fifo.buf[head++ & (UART_TX_FIFO_BUF_LEN - 1)] = *cp++;
+		drv->tx_fifo.head = head;
 
-		*dev->txie = 1; 
+		*drv->txie = 1; 
 
 		if (free > n)
 			thinkos_flag_give(TX_FLAG);
@@ -154,13 +154,13 @@ int serial_write(struct serial_dev * dev, const void * buf,
 	return len;
 }
 
-int serial_drain(struct serial_dev * dev)
+int __serial_drain(struct stm32_serial_drv * drv)
 {
 	do {
 		thinkos_flag_take(TX_FLAG);
-	} while (((int32_t)dev->tx_fifo.head - dev->tx_fifo.tail) > 0);
+	} while (((int32_t)drv->tx_fifo.head - drv->tx_fifo.tail) > 0);
 
-	stm32_usart_flush(dev->uart);
+	stm32_usart_flush(drv->uart);
 
 	thinkos_flag_give(TX_FLAG);
 
@@ -168,17 +168,17 @@ int serial_drain(struct serial_dev * dev)
 }
 
 
-int serial_config_get(struct serial_dev * dev, struct serial_config * cfg)
+int __serial_conf_get(struct stm32_serial_drv * drv, struct serial_config * cfg)
 {
-//	struct stm32_usart * uart = dev->uart;
+//	struct stm32_usart * uart = drv->uart;
 
 	return 0;
 }
 
-int serial_config_set(struct serial_dev * dev, 
+int __serial_conf_set(struct stm32_serial_drv * drv, 
 					  const struct serial_config * cfg)
 {
-	struct stm32_usart * uart = dev->uart;
+	struct stm32_usart * uart = drv->uart;
 	uint32_t flags;
 
 	DCC_LOG(LOG_INFO, "...");
@@ -192,47 +192,46 @@ int serial_config_set(struct serial_dev * dev,
 	return 0;
 }
 
-int serial_enable(struct serial_dev * dev)
+int __serial_ioctl(struct stm32_serial_drv * drv, int opt, unsigned int arg)
 {
-	struct stm32_usart * us = dev->uart;
+	struct stm32_usart * us = drv->uart;
+	unsigned int msk = 0;
 
 	DCC_LOG(LOG_TRACE, ".");
-	us->cr1 |= USART_RE | USART_TE;
+
+	switch (opt) {
+	case SERIAL_IOCTL_ENABLE:
+		msk |= (arg & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg & SERIAL_TX_EN) ? USART_TE : 0;
+		us->cr1 |= msk;
+		break;
+	case SERIAL_IOCTL_DISABLE:
+		msk |= (arg & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg & SERIAL_TX_EN) ? USART_TE : 0;
+		us->cr1 &= ~msk;
+		break;
+	case SERIAL_IOCTL_DRAIN:
+		break;
+	}
+	
 
 	return 0;
 }
 
-int serial_disable(struct serial_dev * dev)
+int __serial_close(struct stm32_serial_drv * drv)
 {
-	struct stm32_usart * us = dev->uart;
-
-	DCC_LOG(LOG_TRACE, ".");
-	us->cr1 &= ~(USART_RE | USART_TE);
+	struct stm32_usart * us = drv->uart;
+	us->cr1 = 0;
 
 	return 0;
 }
 
-
-void serial_rx_enable(struct serial_dev * dev)
-{
-	struct stm32_usart * us = dev->uart;
-	/* enable RX */
-	us->cr1 |= USART_RE;
-}
-
-void serial_rx_disable(struct serial_dev * dev)
-{
-	struct stm32_usart * us = dev->uart;
-	/* enable RX */
-	us->cr1 &= ~USART_RE;
-}
-
-struct serial_dev serial2_dev;
+struct stm32_serial_drv uart2_serial_drv;
 
 void stm32f_usart2_isr(void)
 {
-	struct serial_dev * dev = &serial2_dev;
-	struct stm32_usart * us = dev->uart;
+	struct stm32_serial_drv * drv = &uart2_serial_drv;
+	struct stm32_usart * us = drv->uart;
 	uint32_t sr;
 	int c;
 	
@@ -248,16 +247,16 @@ void stm32f_usart2_isr(void)
 		unsigned int head;
 		int free;
 		c = us->dr;
-		head = dev->rx_fifo.head;
-		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - dev->rx_fifo.tail);
+		head = drv->rx_fifo.head;
+		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - drv->rx_fifo.tail);
 		if (free > 0) { 
-			dev->rx_fifo.buf[head & (UART_RX_FIFO_BUF_LEN - 1)] = c;
-			dev->rx_fifo.head = head + 1;
-			dev->rx_full = 0;
+			drv->rx_fifo.buf[head & (UART_RX_FIFO_BUF_LEN - 1)] = c;
+			drv->rx_fifo.head = head + 1;
+			drv->rx_full = 0;
 		} else {
-			if ((dev->rx_full & 0x3f) == 0)
+			if ((drv->rx_full & 0x3f) == 0)
 				DCC_LOG(LOG_WARNING, "RX fifo full!");
-			dev->rx_full++;
+			drv->rx_full++;
 		}
 		if (free < (UART_RX_FIFO_BUF_LEN  - UART_RX_FIFO_WATER_MARK)) 
 			thinkos_flag_give_i(RX_FLAG);
@@ -271,12 +270,12 @@ void stm32f_usart2_isr(void)
 	}
 
 	if (sr & USART_TXE) {
-		unsigned int tail = dev->tx_fifo.tail;
-		if (tail == dev->tx_fifo.head) {
+		unsigned int tail = drv->tx_fifo.tail;
+		if (tail == drv->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
-			*dev->txie = 0; 
+			*drv->txie = 0; 
 			/* enable TC interrupts */
-			*dev->tcie = 1;
+			*drv->tcie = 1;
 			thinkos_flag_set_i(TX_FLAG);
 		} else {
 			/* disable UART RX */
@@ -285,8 +284,8 @@ void stm32f_usart2_isr(void)
 //			rs485_rxdis();
 			/* RS485 enable transmitter */ 
 			rs485_txen();
-			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
-			dev->tx_fifo.tail = tail + 1;
+			us->dr = drv->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
+			drv->tx_fifo.tail = tail + 1;
 		}
 	}
 
@@ -299,28 +298,43 @@ void stm32f_usart2_isr(void)
 		/* enable UART RX */
 		us->cr1 |= USART_RE;
 		/* disable TC interrupts */
-		*dev->tcie = 0;
+		*drv->tcie = 0;
 	}
 }
 
+const struct serial_op stm32f_uart_serial_op = {
+	.send = (void *)__serial_write,
+	.recv = (void *)__serial_read,
+	.drain = (void *)__serial_drain,
+	.close = (void *)__serial_close,
+	.conf_set = (void *)__serial_conf_set,
+	.conf_get = (void *)__serial_conf_get,
+	.ioctl = (void *)__serial_ioctl
+};
+
+const struct serial_dev uart2_serial_dev = {
+	.drv = &uart2_serial_drv,
+	.op = &stm32f_uart_serial_op
+};
+
 struct serial_dev * serial2_open(void)
 {
-	struct serial_dev * dev = &serial2_dev;
+	struct stm32_serial_drv * drv = &uart2_serial_drv;
 	struct stm32_usart * uart = STM32_USART2;
 
-	DCC_LOG2(LOG_TRACE, "dev=%p uart=%p...", dev, uart);
+	DCC_LOG2(LOG_TRACE, "drv=%p uart=%p...", drv, uart);
 #ifndef SERDRV_RX_FLAG_NO
-	dev->rx_flag = thinkos_flag_alloc(); 
+	drv->rx_flag = thinkos_flag_alloc(); 
 #endif
 #ifndef SERDRV_TX_FLAG_NO
-	dev->tx_flag = thinkos_flag_alloc(); 
+	drv->tx_flag = thinkos_flag_alloc(); 
 #endif
-	dev->tx_fifo.head = dev->tx_fifo.tail = 0;
-	dev->rx_fifo.head = dev->rx_fifo.tail = 0;
+	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
+	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
 
-	dev->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
-	dev->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);
-	dev->uart = uart;
+	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+	drv->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);
+	drv->uart = uart;
 
 	thinkos_flag_give(TX_FLAG);
 
@@ -341,6 +355,6 @@ struct serial_dev * serial2_open(void)
 	/* enable interrupts */
 	cm3_irq_enable(STM32_IRQ_USART2);
 
-	return dev;
+	return (struct serial_dev *)&uart2_serial_dev;
 }
 
