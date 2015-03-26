@@ -32,173 +32,218 @@
 
 #include <sys/dcclog.h>
 
-#include <bacnet/bacnet-ptp.h>
+#include <bacnet/bacnet-dl.h>
+
+#ifdef CONFIG_H
+#include "config.h"
+#endif
 
 #include "dcc.h"
+#include "npdu.h"
+#include "address.h"
+#include "device.h"
+#include "bactext.h"
+#include "bacerror.h"
+
+/* some demo stuff needed */
+#include "handlers.h"
+#include "client.h"
 
 
 /* -------------------------------------------------------------------------
- * 10 DATA LINK/PHYSICAL LAYERS: POINT-TO-POINT (PTP)
+ * Data Link Layer Control
  * ------------------------------------------------------------------------- */
 
-struct bacnetdl_op {
-	int ( * recv)(void * drv, uint8_t pdu[], unsigned int max);
-	int ( * send)(void * drv, const uint8_t pdu[], unsigned int max);
-};
-
 struct bacnetdl_dev {
+	const char * nm;
 	void * drv;
 	const struct bacnetdl_op * op;
 };
 
+#define BACNET_DL_DEV_MAX 12
+
 struct {
-	struct bacnetdl_dev dev[12];
-	int ev;
-} bacnet_io;
+	struct bacnetdl_dev dev[BACNET_DL_DEV_MAX];
+	struct bacnetdl_dev * volatile reply_dev;
+	struct {
+		int ev;
+	} rx;
+	struct {
+		int ev;
+	} tx;
+} __bacnet_dl;
 
-int bacnet_dl_recv(uint8_t pdu[], unsigned int max)
+
+int bacnet_dl_register(const char * name, void * drv, 
+					   const struct bacnetdl_op * op)
 {
-	int pdu_len;
+	int i;
 
-	int i = 0;
-	int ev;
-	uint32_t clk;
-
-	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
-	thinkos_sleep(100);
-
-	/* set the production enable flag to start production */
-	for (;;) {
-		ev = thinkos_ev_wait(bacnet_io.ev);
-		clk = thinkos_clock();
-		printf(" %5d.%03d - %4d - event=%d\n", clk / 1000, clk % 1000, i, ev);
-		i++;
-	} 
-
-	return i;
-
-
-
-	for(;;) {
-		if (thinkos_flag_take(lnk->rx.flag) < 0) {
-			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
-			abort();
+	for (i = 0; i < BACNET_DL_DEV_MAX; ++i) {
+		if (__bacnet_dl.dev[i].drv == NULL) {
+			__bacnet_dl.dev[i].drv = drv;
+			__bacnet_dl.dev[i].nm = name;
+			__bacnet_dl.dev[i].op = op;
+			return i;
 		}
-
-		if (lnk->state == BACNET_PTP_DISCONNECTED) {
-			DCC_LOG(LOG_TRACE, "Disconnected. Bailing out...");
-			return -EAGAIN;
-		}
-
-		/* check for a slot in the xmit queue ... */
-		if (lnk->rx.pdu_len) 
-			break;
-	};
-
-	pdu_len = lnk->rx.pdu_len;
-	memcpy(pdu, lnk->rx.pdu, pdu_len);
-
-	lnk->rx.pdu_len = 0;
-
-	return pdu_len;
-}
-
-int bacnet_dl_send(const uint8_t pdu[], unsigned int len)
-{
-	uint32_t clk;
-
-	for(;;) {
-		if (thinkos_flag_take(lnk->tx.flag) < 0) {
-			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
-			abort();
-		}
-
-		if (lnk->state != BACNET_PTP_CONNECTED)
-			return -EAGAIN;
-
-		/* check for a slot in the xmit queue ... */
-		if (lnk->tx.len == 0) 
-			break;
-	};
-
-	/* update the link layer event clock */
-	clk = thinkos_clock();
-	lnk->clk = clk;
-
-	/* restart the retransmission timer */
-	lnk->tx.rxmt_tmr = clk + NPDU_RXMT_TIME_MS; 
-	lnk->tx.rxmt_cnt = 0;
-
-	/* insert frame in the transmission queue ...  */
-	memcpy(lnk->tx.buf, pdu, len);
-	lnk->tx.len = len;
-
-	if (lnk->tx.xon) {
-		DCC_LOG1(LOG_INFO, "sending now (%d)...", len);
-		/* if the remote side is reception is on send the frame now! */
-		bacnet_ptp_frame_send(lnk, (lnk->tx.seq & 1) ? 
-							  BACNET_PTP_FRM_DATA_1 :
-							  BACNET_PTP_FRM_DATA_0,
-							  lnk->tx.buf, lnk->tx.len);
 	}
-
-	return len;
+	return -1;
 }
 
+#define VIRTUAL_DNET 1
 
-struct bacnet_ptp_lnk * bacnet_ptp_outbound(struct bacnet_ptp_lnk * lnk)
-{
-	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
-
-	/* 10.4.9.1 DISCONNECTED, ConnectOutbound 
-	If a DL-CONNECT.request is received,
-	then establish a physical connection; transmit the "BACnet<CR>" trigger 
-	sequence; set RetryCount to zero; set
-	ResponseTimer to zero; and enter the OUTBOUND state.
-	 */
-	serial_send(lnk->dev, "BACnet\r", 7);
-
-	lnk->state = BACNET_PTP_OUTBOUND;
-	DCC_LOG(LOG_TRACE, "[OUTBOUND]");
-
-	return 0;
-}
-
-int bacnet_ptp_inbound(struct bacnet_ptp_lnk * lnk)
-{
-
-	DCC_LOG(LOG_TRACE, "Starting BACnet PtP Data Link");
-
-	lnk->tx.rxmt_tmr = lnk->clk + CONN_RXMT_TIME_MS; 
-	lnk->tx.rxmt_cnt = 0;
-	bacnet_ptp_frame_send(lnk, BACNET_PTP_FRM_CONNECT_REQ, NULL, 0);
-
-	/* 10.4.9.1 DISCONNECTED, ConnectInbound */
-	lnk->state = BACNET_PTP_INBOUND;
-	DCC_LOG(LOG_TRACE, "[INBOUND]");
-
-	return 0;
-}
-
-#if 0
-
-uint32_t bacnet_ptp_stack[256];
-
-const struct thinkos_thread_inf bacnet_ptp_inf = {
-	.stack_ptr = bacnet_ptp_stack, 
-	.stack_size = sizeof(bacnet_ptp_stack), 
-	.priority = 32,
-	.thread_id = 7, 
-	.paused = 0,
-	.tag = "BN PTP"
+/** The list of DNETs that our router can reach.
+ *  Only one entry since we don't support downstream routers.
+ */
+int DNET_list[8] = {
+    VIRTUAL_DNET, -1    /* Need -1 terminator */
 };
 
-void bacnet_ptp_task_init(struct bacnet_ptp_lnk * lnk)
+#define DCC_TIME_MS        1000
+
+int __attribute__((noreturn)) bacnet_dl_task(void * arg)
 {
-	DCC_LOG(LOG_TRACE, "5. BACnet PtP Task...");
-	thinkos_thread_create_inf((void *)bacnet_ptp_task, (void *)lnk, 
-							  &bacnet_ptp_inf);
+    BACNET_ADDRESS src = {
+        0
+    };  /* address where message came from */
+	struct bacnetdl_dev * dev;
+	uint8_t pdu[512];
+	int pdu_len;
+	uint32_t clk;
+	uint32_t dcc_tmr;
+	int ev;
+
+	clk = thinkos_clock();
+	dcc_tmr = clk + DCC_TIME_MS; 
+
+	for (;;) {
+		/* set the production enable flag to start production */
+		if ((ev = thinkos_ev_wait(__bacnet_dl.rx.ev)) < 0) {
+			DCC_LOG(LOG_ERROR, "thinkos_ev_wait() failed!");
+			abort();
+		}
+		clk = thinkos_clock();
+		DCC_LOG3(LOG_TRACE, "%5d.%03d event=%d\n", clk / 1000, clk % 1000, ev);
+		dev = &__bacnet_dl.dev[ev];
+		if ((pdu_len = dev->op->recv(dev->drv, pdu, 512)) > 0) {
+			__bacnet_dl.reply_dev = dev;
+#ifdef BAC_ROUTING
+            routing_npdu_handler(&src, DNET_list, pdu, pdu_len);
+#else
+	       	npdu_handler(NULL, pdu, pdu_len);
+#endif
+#if 0
+
+        /* process */
+        if (pdu_len) {
+        }
+        /* at least one second has passed */
+        elapsed_seconds = current_seconds - last_seconds;
+        if (elapsed_seconds) {
+            last_seconds = current_seconds;
+            dcc_timer_seconds(elapsed_seconds);
+#if defined(BACDL_BIP) && BBMD_ENABLED
+            bvlc_maintenance_timer(elapsed_seconds);
+#endif
+            dlenv_maintenance_timer(elapsed_seconds);
+            Load_Control_State_Machine_Handler();
+            elapsed_milliseconds = elapsed_seconds * 1000;
+            handler_cov_task();
+            tsm_timer_milliseconds(elapsed_milliseconds);
+        }
+        /* output */
+#endif
+
+		}
+
+		dcc_tmr = clk + DCC_TIME_MS; 
+		if (((int32_t)(dcc_tmr - clk)) < 0) {
+			dcc_tmr = clk + DCC_TIME_MS; 
+			DCC_LOG(LOG_INFO, "DCC timer");
+			dcc_timer_seconds((DCC_TIME_MS + 500) / 1000);
+		}
+
+	}
 }
 
-#endif
+int bacnet_dl_pdu_recv_notify(int link)
+{
+	return thinkos_ev_raise(__bacnet_dl.rx.ev, link);
+}
+
+uint32_t bacnetdl_stack[128];
+
+const struct thinkos_thread_inf bacnetdl_inf = {
+	.stack_ptr = bacnetdl_stack, 
+	.stack_size = sizeof(bacnetdl_stack), 
+	.priority = 32,
+	.thread_id = 4, 
+	.paused = 0,
+	.tag = "BCN DL"
+};
+
+int bacnet_dl_init(void)
+{
+	thinkos_thread_create_inf((void *)bacnet_dl_task, 
+							  (void *)NULL, &bacnetdl_inf);
+	return 0;
+}
+
+int bacnet_dl_send(struct bacnetdl_dev * dev, 
+				   const uint8_t pdu[], unsigned int len)
+{
+	return dev->op->send(dev->drv, pdu, len);
+}
+
+/* -------------------------------------------------------------------------
+   Open source bacnet stack 
+   ------------------------------------------------------------------------- */
+
+int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
+					  uint8_t * pdu, unsigned pdu_len)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return bacnet_dl_send(__bacnet_dl.reply_dev, pdu, pdu_len);
+}
+
+
+uint16_t datalink_receive(BACNET_ADDRESS * src, uint8_t * pdu,
+						  uint16_t max_pdu, unsigned timeout)
+{
+	return 0;
+}
+
+void datalink_cleanup(void)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
+{
+	DCC_LOG(LOG_TRACE, "...");
+    dest->mac_len = 0;
+    dest->net = 0;
+    dest->len = 0;
+}
+
+void datalink_get_my_address(BACNET_ADDRESS * my_address)
+{
+	DCC_LOG(LOG_TRACE, "...");
+    my_address->mac_len = 0;
+    my_address->net = 0;
+    my_address->len = 0;        
+}
+
+void datalink_set_interface(char *ifname)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
+
+void datalink_set(char *datalink_string)
+{
+	DCC_LOG(LOG_TRACE, "...");
+	return;
+}
 

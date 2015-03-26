@@ -64,13 +64,7 @@ int snprintf(char * str, size_t size, const char *fmt, ...);
 
 int sprintf(char * str, const char * fmt, ...);
 
-int scanf(const char *format, ...);
-
-int fscanf(FILE *stream, const char *format, ...);
-
-int sscanf(const char *str, const char *format, ...);
-
-FILE *fopen(const char *path, const char *mode);
+FILE * fopen(const char * path, const char * mode);
 
 int fflush(FILE * f);
 
@@ -88,6 +82,17 @@ int fgetc(FILE * f);
 
 int fputs(const char * s, FILE * f);
 
+int scanf(const char * fmt, ...);
+
+int fscanf(FILE * f, const char * fmt, ...);
+
+int sscanf(const char * str, const char * fmt, ...);
+
+int vscanf(const char * fmt, va_list ap);
+
+int vsscanf(const char * str, const char * fmt, va_list ap);
+
+int vfscanf(FILE * f, const char * fmt, va_list ap);
 
 #ifdef __cplusplus
 }

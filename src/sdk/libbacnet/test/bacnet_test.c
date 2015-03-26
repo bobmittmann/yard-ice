@@ -217,15 +217,6 @@ void io_init(void)
 	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 }
 
-struct bacnet_ptp_lnk * volatile ptp_lnk;
-
-int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
-					  uint8_t * pdu, unsigned pdu_len)
-{
-	DCC_LOG(LOG_TRACE, "...");
-	return bacnet_ptp_send(ptp_lnk, pdu, pdu_len);
-}
-
 /* converted command line arguments */
 uint32_t Target_Device_Object_Instance = BACNET_MAX_INSTANCE;
 /* Process identifier for matching replies */
@@ -320,48 +311,6 @@ void MyWritePropertySimpleAckHandler(
         printf("SubscribeCOV Acknowledged!\r\n");
         Simple_Ack_Detected = true;
     }
-}
-
-uint16_t datalink_receive(BACNET_ADDRESS * src, uint8_t * pdu,
-						  uint16_t max_pdu, unsigned timeout)
-{
-	return 0;
-}
-
-void datalink_cleanup(void)
-{
-	DCC_LOG(LOG_TRACE, "...");
-	return;
-}
-
-void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
-{
-	DCC_LOG(LOG_INFO, "...");
-
-    dest->mac_len = 0;
-    dest->net = 0;
-    dest->len = 0;
-}
-
-void datalink_get_my_address(BACNET_ADDRESS * my_address)
-{
-	DCC_LOG(LOG_INFO, "...");
-
-    my_address->mac_len = 0;
-    my_address->net = 0;
-    my_address->len = 0;        
-}
-
-void datalink_set_interface(char *ifname)
-{
-	DCC_LOG(LOG_TRACE, "...");
-	return;
-}
-
-void datalink_set(char *datalink_string)
-{
-	DCC_LOG(LOG_TRACE, "...");
-	return;
 }
 
 static void Init_Service_Handlers( void)
@@ -481,24 +430,15 @@ int __attribute__((noreturn)) bacnet_task(struct bn_ptp_bundle * p)
 {
 	FILE * term = p->term;
 	struct bacnet_ptp_lnk * ptp = p->ptp; 
-	uint8_t pdu[512];
-	int pdu_len;
 
 	for (;;) {
-		DCC_LOG(LOG_WARNING, "shell!");
+		DCC_LOG(LOG_WARNING, "Console shell!");
 		shell(term, shell_prompt, shell_greeting, shell_cmd_tab);
 
 		/* BACnet protocol... */
-		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
+		DCC_LOG(LOG_WARNING, "BACnet PtP Data Link!");
 		bacnet_ptp_inbound(ptp);
-
-		while ((pdu_len = bacnet_ptp_recv(ptp, pdu, 512)) >= 0) {
-			ptp_lnk = ptp;
-	       	npdu_handler(NULL, pdu, pdu_len);
-		}
-
-		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-
+		bacnet_ptp_loop(ptp);
 	}
 }
 
@@ -621,17 +561,17 @@ int main(int argc, char ** argv)
 	bacnet_init();
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
-	bacnet_ptp_lnk_init(&ptp1, ser1);
-	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-							  (void *)&ptp1, &ptp1_inf);
+	bacnet_ptp_init("PtP1", &ptp1, ser1);
+//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+//							  (void *)&ptp1, &ptp1_inf);
 
-	bacnet_ptp_lnk_init(&ptp2, ser2);
-	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-							  (void *)&ptp2, &ptp2_inf);
+	bacnet_ptp_init("PtP2", &ptp2, ser2);
+//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+//							  (void *)&ptp2, &ptp2_inf);
 
-	bacnet_ptp_lnk_init(&ptp3, ser5);
-	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-							  (void *)&ptp3, &ptp3_inf);
+	bacnet_ptp_init("PtP3", &ptp3, ser5);
+//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
+//							  (void *)&ptp3, &ptp3_inf);
 
 	DCC_LOG(LOG_TRACE, "5. starting TTY threads...");
 	bdl1.ptp = &ptp1;

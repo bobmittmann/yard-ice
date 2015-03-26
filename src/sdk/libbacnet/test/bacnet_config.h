@@ -51,6 +51,8 @@
 #endif
 #endif
 
+#define BAC_ROUTING
+
 /* Enable the Gateway (Routing) functionality here, if desired. */
 #if !defined(MAX_NUM_DEVICES)
 #ifdef BAC_ROUTING

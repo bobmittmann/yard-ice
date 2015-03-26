@@ -29,9 +29,8 @@
 
 struct bacnet_ptp_lnk {
 	struct serial_dev * dev;
-	bool enabled;
 	volatile uint8_t state; 
-	uint32_t dcc_tmr;
+	uint8_t dln;
 	uint32_t clk;
 	struct {
 		union {
@@ -68,9 +67,15 @@ extern "C" {
 
 int __attribute__((noreturn)) bacnet_ptp_task(struct bacnet_ptp_lnk * lnk);
 
-int bacnet_ptp_lnk_init(struct bacnet_ptp_lnk * lnk, struct serial_dev * dev);
+int bacnet_ptp_init(const char * name, 
+					struct bacnet_ptp_lnk * lnk, 
+					struct serial_dev * dev);
+
+int bacnet_ptp_loop(struct bacnet_ptp_lnk * lnk);
 
 int bacnet_ptp_inbound(struct bacnet_ptp_lnk * lnk);
+
+int bacnet_ptp_outbound(struct bacnet_ptp_lnk * lnk);
 
 int bacnet_ptp_recv(struct bacnet_ptp_lnk * lnk, uint8_t pdu[], 
 					unsigned int max);
