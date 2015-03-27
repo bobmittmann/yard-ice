@@ -44,6 +44,9 @@
 #include "device.h"
 #include "bactext.h"
 #include "bacerror.h"
+#include "dlenv.h"
+#include "tsm.h"
+#include "lc.h"
 
 /* some demo stuff needed */
 #include "handlers.h"
@@ -111,59 +114,44 @@ int __attribute__((noreturn)) bacnet_dl_task(void * arg)
 	uint8_t pdu[512];
 	int pdu_len;
 	uint32_t clk;
-	uint32_t dcc_tmr;
+	uint32_t dcc_clk;
 	int ev;
 
 	clk = thinkos_clock();
-	dcc_tmr = clk + DCC_TIME_MS; 
+	dcc_clk = clk + DCC_TIME_MS; 
 
 	for (;;) {
 		/* set the production enable flag to start production */
-		if ((ev = thinkos_ev_wait(__bacnet_dl.rx.ev)) < 0) {
+		ev = thinkos_ev_timedwait(__bacnet_dl.rx.ev, 100);
+		clk = thinkos_clock();
+		if (ev > 0) {
+			DCC_LOG3(LOG_TRACE, "%5d.%03d event=%d", 
+					 clk / 1000, clk % 1000, ev);
+			dev = &__bacnet_dl.dev[ev];
+			if ((pdu_len = dev->op->recv(dev->drv, pdu, 512)) > 0) {
+				__bacnet_dl.reply_dev = dev;
+				//#if BAC_ROUTING
+#if 0
+				routing_npdu_handler(&src, DNET_list, pdu, pdu_len);
+#else
+				npdu_handler(NULL, pdu, pdu_len);
+#endif
+			}
+		} else if (ev != THINKOS_ETIMEDOUT) {
 			DCC_LOG(LOG_ERROR, "thinkos_ev_wait() failed!");
 			abort();
 		}
-		clk = thinkos_clock();
-		DCC_LOG3(LOG_TRACE, "%5d.%03d event=%d\n", clk / 1000, clk % 1000, ev);
-		dev = &__bacnet_dl.dev[ev];
-		if ((pdu_len = dev->op->recv(dev->drv, pdu, 512)) > 0) {
-			__bacnet_dl.reply_dev = dev;
-#if BAC_ROUTING
-            routing_npdu_handler(&src, DNET_list, pdu, pdu_len);
-#else
-	       	npdu_handler(NULL, pdu, pdu_len);
-#endif
-#if 0
 
-        /* process */
-        if (pdu_len) {
-        }
-        /* at least one second has passed */
-        elapsed_seconds = current_seconds - last_seconds;
-        if (elapsed_seconds) {
-            last_seconds = current_seconds;
-            dcc_timer_seconds(elapsed_seconds);
-#if defined(BACDL_BIP) && BBMD_ENABLED
-            bvlc_maintenance_timer(elapsed_seconds);
-#endif
-            dlenv_maintenance_timer(elapsed_seconds);
-            Load_Control_State_Machine_Handler();
-            elapsed_milliseconds = elapsed_seconds * 1000;
+		if (((int32_t)(dcc_clk - clk)) < 0) {
+			uint32_t dt = DCC_TIME_MS + (clk - dcc_clk);
+			dcc_clk += DCC_TIME_MS; 
+			DCC_LOG2(LOG_INFO, "%5d.%03d timeout...", clk / 1000, clk % 1000);
+			dcc_timer_seconds(dt * 1000);
+//            dlenv_maintenance_timer(dt * 1000);
+ //           Load_Control_State_Machine_Handler();
             handler_cov_task();
-            tsm_timer_milliseconds(elapsed_milliseconds);
-        }
-        /* output */
-#endif
-
+            tsm_timer_milliseconds(dt);
 		}
-
-		dcc_tmr = clk + DCC_TIME_MS; 
-		if (((int32_t)(dcc_tmr - clk)) < 0) {
-			dcc_tmr = clk + DCC_TIME_MS; 
-			DCC_LOG(LOG_INFO, "DCC timer");
-			dcc_timer_seconds((DCC_TIME_MS + 500) / 1000);
-		}
-
 	}
 }
 
@@ -172,7 +160,7 @@ int bacnet_dl_pdu_recv_notify(int link)
 	return thinkos_ev_raise(__bacnet_dl.rx.ev, link);
 }
 
-uint32_t bacnetdl_stack[256];
+uint32_t bacnetdl_stack[512];
 
 const struct thinkos_thread_inf bacnetdl_inf = {
 	.stack_ptr = bacnetdl_stack, 
@@ -186,6 +174,7 @@ const struct thinkos_thread_inf bacnetdl_inf = {
 int bacnet_dl_init(void)
 {
 	DCC_LOG(LOG_TRACE, "...");
+	__bacnet_dl.rx.ev = thinkos_ev_alloc();
 	thinkos_thread_create_inf((void *)bacnet_dl_task, 
 							  (void *)NULL, &bacnetdl_inf);
 	return 0;
@@ -204,7 +193,7 @@ int bacnet_dl_send(struct bacnetdl_dev * dev,
 int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
 					  uint8_t * pdu, unsigned pdu_len)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	return bacnet_dl_send(__bacnet_dl.reply_dev, pdu, pdu_len);
 }
 
@@ -223,7 +212,7 @@ void datalink_cleanup(void)
 
 void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
     dest->mac_len = 0;
     dest->net = 0;
     dest->len = 0;
@@ -231,7 +220,7 @@ void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
 
 void datalink_get_my_address(BACNET_ADDRESS * my_address)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
     my_address->mac_len = 0;
     my_address->net = 0;
     my_address->len = 0;        

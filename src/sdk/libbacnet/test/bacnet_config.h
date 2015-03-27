@@ -46,16 +46,14 @@
     USE_INADDR - uses INADDR_BROADCAST for broadcast and binds using INADDR_ANY
     USE_CLASSADDR = uses IN_CLASSx_HOST where x=A,B,C or D for broadcast
 */
-#if !defined(BBMD_ENABLED)
 #define BBMD_ENABLED 1
 #endif
-#endif
 
-#define BAC_ROUTING 1
+//#define BAC_ROUTING 0
 
 /* Enable the Gateway (Routing) functionality here, if desired. */
 #if !defined(MAX_NUM_DEVICES)
-#if BAC_ROUTING
+#ifdef BAC_ROUTING
 #define MAX_NUM_DEVICES 3       /* Eg, Gateway + two remote devices */
 #else
 #define MAX_NUM_DEVICES 1       /* Just the one normal BACnet Device Object */
@@ -71,12 +69,8 @@
 #endif
 
 /* Define your Vendor Identifier assigned by ASHRAE */
-#if !defined(BACNET_VENDOR_ID)
 #define BACNET_VENDOR_ID 260
-#endif
-#if !defined(BACNET_VENDOR_NAME)
 #define BACNET_VENDOR_NAME "BACnet Stack at SourceForge"
-#endif
 
 /* Max number of bytes in an APDU. */
 /* Typical sizes are 50, 128, 206, 480, 1024, and 1476 octets */

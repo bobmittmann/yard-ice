@@ -46,7 +46,6 @@
 #include "board.h"
 #include "lattice.h"
 
-#include "dcc.h"
 #include "npdu.h"
 #include "address.h"
 #include "device.h"
@@ -433,11 +432,12 @@ int __attribute__((noreturn)) bacnet_task(struct bn_ptp_bundle * p)
 	struct bacnet_ptp_lnk * ptp = p->ptp; 
 
 	for (;;) {
-		DCC_LOG(LOG_WARNING, "Console shell!");
+		DCC_LOG1(LOG_WARNING, "<%d> Console shell!", thinkos_thread_self());
 		shell(term, shell_prompt, shell_greeting, shell_cmd_tab);
 
 		/* BACnet protocol... */
-		DCC_LOG(LOG_WARNING, "BACnet PtP Data Link!");
+		DCC_LOG1(LOG_WARNING, "<%d> BACnet PtP Data Link!", 
+				 thinkos_thread_self());
 		bacnet_ptp_inbound(ptp);
 		bacnet_ptp_loop(ptp);
 	}
@@ -464,40 +464,6 @@ const struct thinkos_thread_inf tty2_inf = {
 	.paused = 0,
 	.tag = "TTY2"
 };
-
-uint32_t ptp1_stack[128];
-
-const struct thinkos_thread_inf ptp1_inf = {
-	.stack_ptr = ptp1_stack, 
-	.stack_size = sizeof(ptp1_stack), 
-	.priority = 32,
-	.thread_id = 6, 
-	.paused = 0,
-	.tag = "PTP1"
-};
-
-uint32_t ptp2_stack[128];
-
-const struct thinkos_thread_inf ptp2_inf = {
-	.stack_ptr = ptp2_stack, 
-	.stack_size = sizeof(ptp2_stack), 
-	.priority = 32,
-	.thread_id = 5, 
-	.paused = 0,
-	.tag = "PTP2"
-};
-
-uint32_t ptp3_stack[128];
-
-const struct thinkos_thread_inf ptp3_inf = {
-	.stack_ptr = ptp3_stack, 
-	.stack_size = sizeof(ptp3_stack), 
-	.priority = 32,
-	.thread_id = 4, 
-	.paused = 0,
-	.tag = "PTP3"
-};
-
 
 struct bacnet_ptp_lnk ptp1; 
 struct bacnet_ptp_lnk ptp2; 
@@ -565,33 +531,23 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
 	bacnet_ptp_init("PtP1", &ptp1, ser1);
-//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-//							  (void *)&ptp1, &ptp1_inf);
-
 	bacnet_ptp_init("PtP2", &ptp2, ser2);
-//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-//							  (void *)&ptp2, &ptp2_inf);
-
 	bacnet_ptp_init("PtP3", &ptp3, ser5);
-//	thinkos_thread_create_inf((void *)bacnet_ptp_task, 
-//							  (void *)&ptp3, &ptp3_inf);
 
-	DCC_LOG(LOG_TRACE, "5. starting TTY threads...");
+	DCC_LOG(LOG_TRACE, "6. starting TTY threads...");
 	bdl1.ptp = &ptp1;
 	bdl1.term = term1;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl1, &tty1_inf);
-//	thinkos_thread_create_inf((void *)shell_task, (void *)term1, &tty1_inf);
 
 	bdl2.ptp = &ptp2;
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
-//	thinkos_thread_create_inf((void *)shell_task, (void *)term2, &tty2_inf);
 
 	bdl3.ptp = &ptp3;
 	bdl3.term = term5;
 //	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl3, &tty3_inf);
 
-	DCC_LOG(LOG_TRACE, "5. starting console shell...");
+	DCC_LOG(LOG_TRACE, "7. starting console shell...");
 	bacnet_task(&bdl3);
 
 //	shell_task(term2);

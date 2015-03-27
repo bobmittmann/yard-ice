@@ -55,9 +55,9 @@ HANDLER_CFILES = h_alarm_ack.c h_arf.c h_arf_a.c h_awf.c \
 OBJECT_CFILES = lo.c lsp.c ai.c ao.c av.c bi.c bo.c \
 				bv.c csv.c ms-input.c mso.c msv.c nc.c \
 				gw_device.c 
+#				lc.c 
 #trendlog.c
 #bacfile.c 
-#lc.c 
 #device.c 
 #device-client.c 
 

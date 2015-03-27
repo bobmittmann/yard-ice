@@ -1411,7 +1411,7 @@ void __term_sig_handler(void (* handler)(void))
 		signal(SIGTERM, __termination_handler);
 		signal(SIGBREAK, __termination_handler);
 #endif
-//	}
+	}
 #else
 	sigset_t set;
 	struct sigaction new_action;
