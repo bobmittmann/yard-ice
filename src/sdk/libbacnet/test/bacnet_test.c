@@ -38,6 +38,7 @@
 #include <tcpip/net.h>
 #include <thinkos.h>
 #include <bacnet/bacnet-ptp.h>
+#include <bacnet/bacnet-dl.h>
 #include <sys/usb-cdc.h>
 
 #include <sys/dcclog.h>
@@ -559,6 +560,8 @@ int main(int argc, char ** argv)
 	network_init();
 
 	bacnet_init();
+
+	bacnet_dl_init();
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
 	bacnet_ptp_init("PtP1", &ptp1, ser1);

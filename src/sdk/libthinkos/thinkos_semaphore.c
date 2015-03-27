@@ -125,20 +125,11 @@ void thinkos_sem_wait_svc(int32_t * arg)
 		return;
 	} 
 	
+	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 	/* insert into the semaphore wait queue */
 	__thinkos_wq_insert(wq, self);
-	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
-	/* wait for event */
 	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-	/* if the ready queue is empty, collect
-	   the threads from the CPU wait queue */
-	if (thinkos_rt.wq_ready == 0) {
-		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	}
-#endif
+	__thinkos_suspend(self);
 	/* reenable interrupts ... */
 	cm3_cpsie_i();
 
@@ -215,32 +206,22 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
+		/* reenable interrupts ... */
+		cm3_cpsie_i();
 		arg[0] = 0;
-	} else {
-		/* insert into the semaphore wait queue */
-		__thinkos_tmdwq_insert(wq, self, ms);
-		DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
-		/* wait for event */
-		/* remove from the ready wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_ready, self, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-		/* if the ready queue is empty, collect
-		   the threads from the CPU wait queue */
-		if (thinkos_rt.wq_ready == 0) {
-			thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-			thinkos_rt.wq_tmshare = 0;
-		}
-#endif
-		/* Set the default return value to timeout. The
-		   sem_post call will change this to 0 */
-		arg[0] = THINKOS_ETIMEDOUT;
+		return;
 	}
 
-	/* reenable interrupts ... */
-	cm3_cpsie_i();
-
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+	/* Set the default return value to timeout. The
+	   sem_post call will change this to 0 */
+	arg[0] = THINKOS_ETIMEDOUT;
+	/* insert into the semaphore wait queue */
+	__thinkos_tmdwq_insert(wq, self, ms);
+	/* remove from the ready wait queue */
+	__thinkos_suspend(self);
+	cm3_cpsie_i(); /* reenable interrupts ... */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 #endif
 
@@ -271,15 +252,16 @@ void thinkos_sem_post_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the semaphore, increment. */ 
 		thinkos_rt.sem_val[sem]++;
-	} else {
-		/* wakeup from the sem wait queue */
-		__thinkos_wakeup(wq, th);
-		DCC_LOG2(LOG_INFO, "<%d> wakeup from sem %d ", th, wq);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
-
+		cm3_cpsie_i();
+		return;
+	} 
+	/* wakeup from the sem wait queue */
+	__thinkos_wakeup(wq, th);
 	cm3_cpsie_i();
+
+	DCC_LOG2(LOG_INFO, "<%d> wakeup from sem %d ", th, wq);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 
 }
 

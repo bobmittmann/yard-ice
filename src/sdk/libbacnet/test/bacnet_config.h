@@ -51,11 +51,11 @@
 #endif
 #endif
 
-#define BAC_ROUTING
+#define BAC_ROUTING 1
 
 /* Enable the Gateway (Routing) functionality here, if desired. */
 #if !defined(MAX_NUM_DEVICES)
-#ifdef BAC_ROUTING
+#if BAC_ROUTING
 #define MAX_NUM_DEVICES 3       /* Eg, Gateway + two remote devices */
 #else
 #define MAX_NUM_DEVICES 1       /* Just the one normal BACnet Device Object */

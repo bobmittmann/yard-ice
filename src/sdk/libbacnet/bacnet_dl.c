@@ -84,6 +84,7 @@ int bacnet_dl_register(const char * name, void * drv,
 			__bacnet_dl.dev[i].drv = drv;
 			__bacnet_dl.dev[i].nm = name;
 			__bacnet_dl.dev[i].op = op;
+			DCC_LOG2(LOG_TRACE, "\"%s\"-> %d", name, i);
 			return i;
 		}
 	}
@@ -127,7 +128,7 @@ int __attribute__((noreturn)) bacnet_dl_task(void * arg)
 		dev = &__bacnet_dl.dev[ev];
 		if ((pdu_len = dev->op->recv(dev->drv, pdu, 512)) > 0) {
 			__bacnet_dl.reply_dev = dev;
-#ifdef BAC_ROUTING
+#if BAC_ROUTING
             routing_npdu_handler(&src, DNET_list, pdu, pdu_len);
 #else
 	       	npdu_handler(NULL, pdu, pdu_len);
@@ -171,7 +172,7 @@ int bacnet_dl_pdu_recv_notify(int link)
 	return thinkos_ev_raise(__bacnet_dl.rx.ev, link);
 }
 
-uint32_t bacnetdl_stack[128];
+uint32_t bacnetdl_stack[256];
 
 const struct thinkos_thread_inf bacnetdl_inf = {
 	.stack_ptr = bacnetdl_stack, 
@@ -179,11 +180,12 @@ const struct thinkos_thread_inf bacnetdl_inf = {
 	.priority = 32,
 	.thread_id = 4, 
 	.paused = 0,
-	.tag = "BCN DL"
+	.tag = "BACnet"
 };
 
 int bacnet_dl_init(void)
 {
+	DCC_LOG(LOG_TRACE, "...");
 	thinkos_thread_create_inf((void *)bacnet_dl_task, 
 							  (void *)NULL, &bacnetdl_inf);
 	return 0;

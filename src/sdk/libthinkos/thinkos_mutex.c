@@ -229,6 +229,8 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		return;
 	}
 
+	arg[0] = 0;
+
 	DCC_LOG2(LOG_MSG, "<%d> mutex %d unlocked.", self, wq);
 
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
@@ -245,8 +247,6 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
-
-	arg[0] = 0;
 }
 
 #endif /* THINKOS_MUTEX_MAX > 0 */
