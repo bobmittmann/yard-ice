@@ -50,7 +50,7 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	cr1 = 0;
 	cr2 = 0;
 
-	bits = flags & SERIAL_DATABITS_MASK;
+	bits = SERIAL_DATABITS(flags);
 	switch (bits) {
 	case SERIAL_DATABITS_7:
 		DCC_LOG(LOG_INFO, "7 data bits");
@@ -65,7 +65,7 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	}
 
 	/* parity and data bits */
-	switch (flags & SERIAL_PARITY_MASK) {
+	switch (SERIAL_PARITY(flags)) {
 	case SERIAL_PARITY_EVEN:
 		DCC_LOG(LOG_INFO, "parity EVEN");
 		cr1 |= USART_PCE | USART_PS_EVEN;
@@ -84,7 +84,7 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	}
 
 	/* stop bits */
-	switch (flags & SERIAL_STOPBITS_MASK) {
+	switch (SERIAL_STOPBITS(flags)) {
 	case SERIAL_STOPBITS_2:
 		DCC_LOG(LOG_INFO, "2 stop bits");
 		cr2 |= USART_STOP_2;
@@ -101,4 +101,5 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 
 	return 0;
 }
+
 

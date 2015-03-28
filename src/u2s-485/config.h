@@ -57,7 +57,7 @@
 #define THINKOS_EVENT_MAX 0
 #define THINKOS_ENABLE_EVENT_ALLOC 0
 
-#define THINKOS_FLAG_MAX 5
+#define THINKOS_FLAG_MAX 8
 #define THINKOS_ENABLE_FLAG_ALLOC 0
 
 #define THINKOS_ENABLE_THREAD_STAT 0
@@ -84,13 +84,14 @@
  * ThinkOS static resources
  * ------------------------------------------------------------------------- */
 
-#define SERDRV_RX_FLAG_NO  0
-#define SERDRV_TX_FLAG_NO  1
-#define CDC_TX_DONE_NO     2
-#define CDC_TX_LOCK_NO     3
-#define CDC_CTL_FLAG_NO    4
-#define CDC_RX_SEM_NO      0
-#define VCOM_MODE_FLAG     1
+#define SERDRV_RX_FLAG_NO   0
+#define SERDRV_TX_FLAG_NO   1
+#define SERDRV_CTL_FLAG_NO  2
+#define CDC_TX_DONE_NO      3
+#define CDC_TX_LOCK_NO      4
+#define CDC_CTL_FLAG_NO     5
+#define VCOM_MODE_FLAG_NO   6
+#define CDC_RX_SEM_NO       0
 
 #endif /* __CONFIG_H__ */
 

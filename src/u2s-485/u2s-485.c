@@ -48,7 +48,7 @@
 #endif
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 2
+#define FW_VERSION_MINOR 3
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
@@ -176,6 +176,7 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
 	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
 	usb_printf(cdc, " [P/p] enable/disable packets\r\n");
+	usb_printf(cdc, " [X/x] enable/disable XON/XOFF flow control\r\n");
 };
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
@@ -211,6 +212,15 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - Interactive mode...\r\n");
 			vcom->mode = VCOM_MODE_INTERACTIVE;
 			break;
+		case 'X':
+			usb_printf(cdc, " - XON/XOFF enabled...\r\n");
+			serial_flowctrl_set(vcom->serial, SERIAL_FLOWCTRL_XONXOFF);
+			break;
+		case 'x':
+			usb_printf(cdc, " - XON/XOFF disabled...\r\n");
+			serial_flowctrl_set(vcom->serial, SERIAL_FLOWCTRL_NONE);
+			break;
+
 		case 'F':
 			if (vcom->mode == VCOM_MODE_INTERACTIVE) {
 				usb_printf(cdc, " - Firmware update...\r\n");
@@ -375,13 +385,39 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 	struct serial_dev * serial = vcom->serial;
 	usb_cdc_class_t * cdc = vcom->cdc;
 	uint8_t buf[VCOM_BUF_SIZE];
+	uint32_t usb_stat_rx = 0;
+	struct serial_stat stat;
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
 	DCC_LOG2(LOG_TRACE, "vcom->%p, cdc->%p", vcom, cdc);
 
+	stat.rx_cnt = 0;
+	stat.tx_cnt = 0;
+
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
+		if (len > 0) {
+			usb_stat_rx += len;
+		} else if (len == THINKOS_ETIMEDOUT) {
+			struct serial_stat tmp;
+			uint32_t rx_cnt;
+			uint32_t tx_cnt;
+			
+			if (usb_stat_rx) {
+				DCC_LOG1(LOG_TRACE, "USB rx=%d", usb_stat_rx);
+				usb_stat_rx = 0;
+			}
+
+			serial_stat_get(serial, &tmp);
+			rx_cnt = tmp.rx_cnt - stat.rx_cnt;
+			tx_cnt = tmp.tx_cnt - stat.tx_cnt;
+			stat.rx_cnt = tmp.rx_cnt;
+			stat.tx_cnt = tmp.tx_cnt;
+
+			if (rx_cnt || tx_cnt)
+				DCC_LOG2(LOG_TRACE, "Serial rx=%d tx=%d", rx_cnt, tx_cnt);
+		}
 		if (vcom->mode == VCOM_MODE_CONVERTER) {
 			if (len > 0) {
 				led_flash(LED_RED, 50);
@@ -501,7 +537,7 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 		DCC_LOG1(LOG_INFO, "[%d] usb_cdc_ctl_wait() sleep!", 
 				 thinkos_thread_self());
 		usb_cdc_ctl_wait(cdc, 0);
-		DCC_LOG1(LOG_INFO, "[%d] wakeup!", thinkos_thread_self());
+		DCC_LOG1(LOG_TRACE, "[%d] wakeup ---------- ", thinkos_thread_self());
 
 		usb_cdc_state_get(cdc, &state);
 
@@ -545,6 +581,12 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 //				serial_enable(serial);
 				serial_rx_enable(serial);
 			}
+		} else {
+			DCC_LOG(LOG_TRACE, "keeping serial config.");
+			DCC_LOG1(LOG_TRACE, "baudrate=%d", prev_state.cfg.baudrate);
+			DCC_LOG1(LOG_TRACE, "databits=%d", prev_state.cfg.databits);
+			DCC_LOG1(LOG_TRACE, "parity=%d", prev_state.cfg.parity);
+			DCC_LOG1(LOG_TRACE, "stopbits=%d", prev_state.cfg.stopbits);
 		}
 	}
 }

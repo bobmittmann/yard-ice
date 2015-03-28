@@ -27,51 +27,55 @@
 #define __SYS_SERIAL_H__
 
 /* Number of data bits */
-#define SERIAL_DATABITS_6 (6 << 0)
-#define SERIAL_DATABITS_7 (7 << 0)
-#define SERIAL_DATABITS_8 (8 << 0)
-#define SERIAL_DATABITS_9 (9 << 0)
-#define SERIAL_DATABITS_MASK (0x0f << 0)
+#define SERIAL_DATABITS_6      6
+#define SERIAL_DATABITS_7      7
+#define SERIAL_DATABITS_8      8
+#define SERIAL_DATABITS_9      9
+#define SERIAL_DATABITS(FLAGS) ((FLAGS) & 0x0f)
 
 /* Parity bit type */
-#define SERIAL_PARITY_NONE (0 << 4)
-#define SERIAL_PARITY_EVEN (1 << 4)
-#define SERIAL_PARITY_ODD  (2 << 4)
-#define SERIAL_PARITY_MARK (3 << 4)
-#define SERIAL_PARITY_SPACE (4 << 4)
-#define SERIAL_PARITY_MASK (0x0f << 4)
+#define SERIAL_PARITY_NONE     0 
+#define SERIAL_PARITY_ODD      1 
+#define SERIAL_PARITY_EVEN     2 
+#define SERIAL_PARITY_MARK     3 
+#define SERIAL_PARITY_SPACE    4 
+#define SERIAL_PARITY(FLAGS)   (((FLAGS) >> 4) & 0x0f)
 
 /* Number of stop bits */
-#define SERIAL_STOPBITS_1 (1 << 8)
-#define SERIAL_STOPBITS_2 (2 << 8)
-#define SERIAL_STOPBITS_1_5 (3 << 8)
-#define SERIAL_STOPBITS_0_5 (4 << 8)
-#define SERIAL_STOPBITS_MASK (0x0f << 8)
+#define SERIAL_STOPBITS_1      0
+#define SERIAL_STOPBITS_1_5    1
+#define SERIAL_STOPBITS_2      2
+#define SERIAL_STOPBITS_0_5    3
+#define SERIAL_STOPBITS(FLAGS) (((FLAGS) >> 8) & 0x0f)
 
 /* Flow control bits */
-#define SERIAL_FLOWCTRL_NONE (0 << 12)
-#define SERIAL_FLOWCTRL_RTSCTS (1 << 12)
-#define SERIAL_FLOWCTRL_XONXOFF (2 << 12)
-#define SERIAL_FLOWCTRL_MASK (0x0f << 12)
+#define SERIAL_FLOWCTRL_NONE    0
+#define SERIAL_FLOWCTRL_RTSCTS  1
+#define SERIAL_FLOWCTRL_XONXOFF 2
+#define SERIAL_FLOWCTRL(FLAGS)  (((FLAGS) >> 12) & 0x0f)
 
 /* Common character frame options */
-#define SERIAL_8N1 (SERIAL_DATABITS_8 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
-#define SERIAL_8N2 (SERIAL_DATABITS_8 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
-#define SERIAL_7N1 (SERIAL_DATABITS_7 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
-#define SERIAL_7N2 (SERIAL_DATABITS_7 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
-#define SERIAL_8E1 (SERIAL_DATABITS_8 | SERIAL_PARITY_EVEN | SERIAL_STOPBITS_1) 
-#define SERIAL_8E2 (SERIAL_DATABITS_8 | SERIAL_PARITY_EVEN | SERIAL_STOPBITS_2) 
-#define SERIAL_7E1 (SERIAL_DATABITS_7 | SERIAL_PARITY_EVEN | SERIAL_STOPBITS_1) 
-#define SERIAL_7E2 (SERIAL_DATABITS_7 | SERIAL_PARITY_EVEN | SERIAL_STOPBITS_2) 
-#define SERIAL_8O1 (SERIAL_DATABITS_8 | SERIAL_PARITY_ODD | SERIAL_STOPBITS_1) 
-#define SERIAL_8O2 (SERIAL_DATABITS_8 | SERIAL_PARITY_ODD | SERIAL_STOPBITS_2) 
-#define SERIAL_7O1 (SERIAL_DATABITS_7 | SERIAL_PARITY_ODD | SERIAL_STOPBITS_1) 
-#define SERIAL_7O2 (SERIAL_DATABITS_7 | SERIAL_PARITY_ODD | SERIAL_STOPBITS_2) 
-#define SERIAL_9N1 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_1) 
-#define SERIAL_9N2 (SERIAL_DATABITS_9 | SERIAL_PARITY_NONE | SERIAL_STOPBITS_2) 
+#define SERIAL_8N1 (SERIAL_DATABITS_8 | \
+					(SERIAL_PARITY_NONE << 4) | \
+					(SERIAL_STOPBITS_1 << 8)) 
+
+#define SERIAL_7E1 (SERIAL_DATABITS_7 | \
+					(SERIAL_PARITY_EVEN << 4) | \
+					(SERIAL_STOPBITS_1 << 8)) 
+
+#define SERIAL_7O1 (SERIAL_DATABITS_7 | \
+					(SERIAL_PARITY_ODD << 4) | \
+					(SERIAL_STOPBITS_1 << 8) 
 
 #include <stdint.h>
 #include <stdbool.h>
+
+/* driver statistics */
+struct serial_stat {
+	uint32_t rx_cnt;
+	uint32_t tx_cnt;
+	uint32_t err_cnt;
+};
 
 /* character encoding and baud rate */
 struct serial_config {
@@ -83,8 +87,8 @@ struct serial_config {
 };
 
 /* Convert from the config structure to de encoded flag bits */
-#define CFG_TO_FLAGS(CFG) ((CFG)->databits + (CFG)->parity +\
-						  ((CFG)->stopbits << 8))
+#define CFG_TO_FLAGS(CFG) ((CFG)->databits + ((CFG)->parity << 4) +\
+						  ((CFG)->stopbits << 8) + ((CFG)->flowctrl << 12))
 
 /* modem control bits */
 struct serial_control {
@@ -116,7 +120,10 @@ enum {
 	SERIAL_IOCTL_ENABLE = 0,
 	SERIAL_IOCTL_DISABLE,
 	SERIAL_IOCTL_DRAIN,
-	SERIAL_IOCTL_FLUSH
+	SERIAL_IOCTL_RESET,
+	SERIAL_IOCTL_FLUSH,
+	SERIAL_IOCTL_FLOWCTRL_SET,
+	SERIAL_IOCTL_STAT_GET
 };
 
 #define SERIAL_RX_EN 1
@@ -129,7 +136,7 @@ struct serial_op {
 	int (* close)(void *);
 	int (* conf_get)(void *, struct serial_config *);
 	int (* conf_set)(void *, const struct serial_config *);
-	int (* ioctl)(void *, int , unsigned int );
+	int (* ioctl)(void *, int, uintptr_t);
 };
 
 struct serial_dev {
@@ -181,6 +188,15 @@ extern inline int serial_flush(struct serial_dev * dev) {
 }
 
 
+extern inline int serial_reset(struct serial_dev * dev) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RESET, 0);
+}
+
+extern inline int serial_stat_get(struct serial_dev * dev, 
+								  struct serial_stat * stat) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_STAT_GET, (uintptr_t)stat);
+}
+
 extern inline int serial_enable(struct serial_dev * dev) {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, 
 						  SERIAL_RX_EN | SERIAL_TX_EN);
@@ -197,6 +213,11 @@ extern inline int serial_rx_enable(struct serial_dev * dev) {
 
 extern inline int serial_rx_disable(struct serial_dev * dev) {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, SERIAL_RX_EN);
+}
+
+extern inline int serial_flowctrl_set(struct serial_dev * dev, 
+									  unsigned int flowctrl) {
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLOWCTRL_SET, flowctrl);
 }
 
 #ifdef __cplusplus
@@ -219,6 +240,7 @@ int serial_config_set(struct serial_dev * dev,
 					  const struct serial_config * cfg);
 int serial_ioctl(struct serial_dev * dev, int opt, unsigned int arg);
 
+int serial_stat_get(struct serial_dev * dev, struct serial_stat * stat);
 
 int serial_enable(struct serial_dev * dev);
 

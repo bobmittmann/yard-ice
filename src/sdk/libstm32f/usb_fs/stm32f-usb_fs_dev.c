@@ -820,7 +820,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1: 0];
 
 		if (((epr & USB_DTOG_RX) ? 1: 0) == ((epr & USB_SWBUF_RX) ? 1: 0)) {
-			DCC_LOG3(LOG_WARNING, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+			DCC_LOG3(LOG_INFO, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
 					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
 					 rx_pktbuf->count);
 		}
@@ -925,7 +925,10 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 
 	if (sr & USB_ERR) {
 		usb->istr = sr & ~USB_ERR;
-		DCC_LOG(LOG_TRACE, "ERR");
+		DCC_LOG(LOG_WARNING, "ERR");
+		/* The USB software can usually ignore errors, since the 
+		   USB peripheral and the PC host manage retransmission in case 
+		   of errors in a fully transparent way. */
 	}
 
 	if (sr & USB_PMAOVR) {
