@@ -352,7 +352,7 @@ void stm32f_usart2_isr(void)
 			*drv->txie = 0; 
 			/* enable TC interrupts */
 			*drv->tcie = 1;
-			thinkos_flag_set_i(TX_FLAG);
+			thinkos_flag_give_i(TX_FLAG);
 		} else {
 			/* disable UART RX */
 //			us->cr1 &= ~USART_RE;
@@ -378,7 +378,7 @@ void stm32f_usart2_isr(void)
 		/* RS485 enable receiver */ 
 //		rs485_rxen();
 		/* enable UART RX */
-		us->cr1 |= USART_RE;
+//		us->cr1 |= USART_RE;
 		/* disable TC interrupts */
 		*drv->tcie = 0;
 	}
