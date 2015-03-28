@@ -38,6 +38,7 @@
 #include <tcpip/net.h>
 #include <thinkos.h>
 #include <bacnet/bacnet-ptp.h>
+#include <bacnet/bacnet-mstp.h>
 #include <bacnet/bacnet-dl.h>
 #include <sys/usb-cdc.h>
 
@@ -467,7 +468,7 @@ const struct thinkos_thread_inf tty2_inf = {
 
 struct bacnet_ptp_lnk ptp1; 
 struct bacnet_ptp_lnk ptp2; 
-struct bacnet_ptp_lnk ptp3; 
+struct bacnet_mstp_lnk mstp1; 
 
 int main(int argc, char ** argv)
 {
@@ -476,10 +477,8 @@ int main(int argc, char ** argv)
 	struct serial_dev * ser5;
 	FILE * term1;
 	FILE * term2;
-	FILE * term5;
 	struct bn_ptp_bundle bdl1;
 	struct bn_ptp_bundle bdl2;
-	struct bn_ptp_bundle bdl3;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -508,8 +507,7 @@ int main(int argc, char ** argv)
 	
 	ser2 = (struct serial_dev *)&cdc_acm_serial_dev;
 
-	term1 = serial_tty_open(ser1);
-	term5 = serial_tty_open(ser5);
+	term1 = serial_tty_open(ser5);
 	term2 = serial_tty_open(ser2);
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
@@ -530,9 +528,11 @@ int main(int argc, char ** argv)
 	bacnet_dl_init();
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
-	bacnet_ptp_init("PtP1", &ptp1, ser1);
-	bacnet_ptp_init("PtP2", &ptp2, ser2);
-	bacnet_ptp_init("PtP3", &ptp3, ser5);
+	bacnet_ptp_init(&ptp1, "PtP1", ser5);
+	bacnet_ptp_init(&ptp2, "PtP2", ser2);
+
+	DCC_LOG(LOG_TRACE, "5. starting BACnet MS/TP links...");
+	bacnet_mstp_init(&mstp1, "MS/TP1", 10, ser1);
 
 	DCC_LOG(LOG_TRACE, "6. starting TTY threads...");
 	bdl1.ptp = &ptp1;
@@ -543,14 +543,10 @@ int main(int argc, char ** argv)
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
 
-	bdl3.ptp = &ptp3;
-	bdl3.term = term5;
-//	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl3, &tty3_inf);
+	DCC_LOG(LOG_TRACE, "7. BACnet MS/TP...");
+	bacnet_mstp_start(&mstp1);
+	bacnet_mstp_loop(&mstp1);
 
-	DCC_LOG(LOG_TRACE, "7. starting console shell...");
-	bacnet_task(&bdl3);
-
-//	shell_task(term2);
 
 	return 0;
 }

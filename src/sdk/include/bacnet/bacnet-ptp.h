@@ -67,8 +67,8 @@ extern "C" {
 
 int __attribute__((noreturn)) bacnet_ptp_task(struct bacnet_ptp_lnk * lnk);
 
-int bacnet_ptp_init(const char * name, 
-					struct bacnet_ptp_lnk * lnk, 
+int bacnet_ptp_init(struct bacnet_ptp_lnk * lnk, 
+					const char * name, 
 					struct serial_dev * dev);
 
 int bacnet_ptp_loop(struct bacnet_ptp_lnk * lnk);
