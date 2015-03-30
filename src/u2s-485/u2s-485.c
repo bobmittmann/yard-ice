@@ -48,7 +48,7 @@
 #endif
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 3
+#define FW_VERSION_MINOR 4
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
