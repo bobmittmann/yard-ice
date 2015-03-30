@@ -229,7 +229,6 @@ struct tcp_pcb {
 #define t_rxmt_cnt t_count
 #define t_idle_cnt t_count
 
-extern const uint8_t tcp_keepintvl[];
 extern const uint8_t tcp_rxmtintvl[];
 
 struct tcp_pcb_link {
