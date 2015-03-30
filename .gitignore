@@ -23,3 +23,4 @@ tools/src/dcclog/install-sh
 tools/src/dcclog/Makefile
 tools/src/dcclog/Makefile.in
 tools/src/dcclog/missing
+*.pyc
