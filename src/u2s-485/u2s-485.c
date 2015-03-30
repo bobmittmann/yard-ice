@@ -575,6 +575,18 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				vcom->mode = VCOM_MODE_SERVICE; 
 				DCC_LOG(LOG_TRACE, "magic config!");
 			} else {
+
+				/* XXX: Big hack, enable XON/XOFF flow control by either enabling
+				   it explicitly or by combining Parity=Mark with Stopbits=2.
+				   This is to enable XON/XOFF in case this driver is used to 
+				   implement a USB to serial converter. The CDC-ACM windows driver
+				   usbser.sys does not handle the XON/XOFF codes and the USB-CDC-ACM
+				   specification omits flow control altogether. */
+				if (state.cfg.parity == SERIAL_PARITY_SPACE ||
+					state.cfg.parity == SERIAL_PARITY_MARK) {
+					DCC_LOG(LOG_TRACE, "XON/XOFF magic ...");
+					state.cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
+				}
 				vcom->mode = VCOM_MODE_CONVERTER;
 				serial_config_set(serial, &state.cfg);
 				prev_state.cfg = state.cfg;

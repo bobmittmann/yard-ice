@@ -195,24 +195,14 @@ int __serial_conf_set(struct stm32_serial_drv * drv,
 	struct stm32_usart * uart = drv->uart;
 	uint32_t flags;
 
-	DCC_LOG(LOG_TRACE, "...");
-
 	stm32_usart_baudrate_set(uart, cfg->baudrate);
 
 	flags = CFG_TO_FLAGS(cfg);
 
-	/* XXX: Big hack, enable XON/XOFF flow control by either enabling
-	   it explicitly or by combining Parity=Mark with Stopbits=2.
-	 This is to enable XON/XOFF in case this driver is used to 
-	 implement a USB to serial converter. The CDC-ACM windows driver
-	 usbser.sys does not handle the XON/XOFF codes and the USB-CDC-ACM
-	 specification omits flow control altogether. */
-	if ((SERIAL_FLOWCTRL(flags) == SERIAL_FLOWCTRL_XONXOFF) ||
-		((SERIAL_PARITY(flags) == SERIAL_PARITY_SPACE) && 
-		 (SERIAL_STOPBITS(flags) == SERIAL_STOPBITS_2))) {
+	if (SERIAL_FLOWCTRL(flags) == SERIAL_FLOWCTRL_XONXOFF) {
 		drv->flowctl_xonxoff = true; 
 		drv->tx_on = true;
-		DCC_LOG(LOG_TRACE, "XON/XOFF magic ...");
+		DCC_LOG(LOG_TRACE, "XON/XOFF ebabled.");
 	} else {
 		drv->flowctl_xonxoff = false; 
 		drv->tx_on = true;
