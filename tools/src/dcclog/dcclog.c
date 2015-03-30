@@ -54,7 +54,7 @@
 
 #include "arm_elf.h"
 
-#define VERSION_MAJOR 2
+#define VERSION_MAJOR 3
 #define VERSION_MINOR 0
 
 #define LVL_PANIC   1
