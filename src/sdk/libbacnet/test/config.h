@@ -123,6 +123,7 @@
 
 #define SERIAL_TX_FIFO_LEN 512
 #define SERIAL_RX_FIFO_LEN 512
+#define SERIAL_RX_TRIG_LVL 4
 
 #include "bacnet_config.h"
 

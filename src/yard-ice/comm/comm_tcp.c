@@ -151,18 +151,18 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 		thinkos_flag_set(parm->con_flag);
 
 		for (;;) {
-			if ((n = ice_comm_read(comm, buf, sizeof(buf), 500)) < 0) {
+			if ((n = ice_comm_read(comm, buf, sizeof(buf), 250)) < 0) {
 				DCC_LOG1(LOG_WARNING, "ice_comm_read(): %d", n); 
 				break;
 			}
-
-			DCC_LOG1(LOG_INFO, "ice_comm_read(): %d", n); 
 
 			if (n == 0) {
 				continue;
 			}
 
-			if ((n = tcp_send(tp, buf, n, 0)) < 0) {
+			DCC_LOG1(LOG_INFO, "ice_comm_read(): %d", n); 
+
+			if ((n = tcp_send(tp, buf, n, TCP_SEND_NOWAIT)) < 0) {
 				DCC_LOG(LOG_WARNING, "tcp_send() failed!");
 				break;
 			}

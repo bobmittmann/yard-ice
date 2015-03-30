@@ -90,11 +90,10 @@ static inline void __attribute__((always_inline))
 __thinkos_flag_give(int flag) {
 	uint32_t pri;
 	int th;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
 	/* get the flag state */
 	if (__bit_mem_rd(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE) == 0) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
 		/* get a thread from the queue */
 		if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
 			__thinkos_wakeup(flag, th);
@@ -104,8 +103,8 @@ __thinkos_flag_give(int flag) {
 			/* set the flag bit */
 			__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 1);  
 		}
+		cm3_primask_set(pri);
 	}
-	cm3_primask_set(pri);
 }
 
 static inline void thinkos_flag_clr_i(int flag) {

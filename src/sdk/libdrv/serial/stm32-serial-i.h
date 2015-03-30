@@ -62,7 +62,7 @@
 #endif
 
 #ifndef SERIAL_ENABLE_TX_MUTEX
-#define SERIAL_ENABLE_TX_MUTEX 1
+#define SERIAL_ENABLE_TX_MUTEX 0
 #endif
 
 #ifndef SERIAL_TX_FIFO_LEN
@@ -71,6 +71,10 @@
 
 #ifndef SERIAL_RX_FIFO_LEN
 #define SERIAL_RX_FIFO_LEN  16
+#endif
+
+#ifndef SERIAL_RX_TRIG_LVL
+#define SERIAL_RX_TRIG_LVL (SERIAL_RX_FIFO_LEN / 2)
 #endif
 
 #ifndef SERIAL_IRQ_PRIORITY 

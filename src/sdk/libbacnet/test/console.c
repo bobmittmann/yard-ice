@@ -103,12 +103,6 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
-	{ cmd_ifconfig, "ifconfig", "if", 
-		"", "configure a network interface" },
-
-	{ cmd_netstat, "netstat", "n", 
-		"", "print network connections" },
-
 	{ cmd_reboot, "reboot", "r", "", 
 		"reboot system" },
 
@@ -118,6 +112,12 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_test, "stdout", ">", "", "" },
 
 #if 0
+	{ cmd_ifconfig, "ifconfig", "if", 
+		"", "configure a network interface" },
+
+	{ cmd_netstat, "netstat", "n", 
+		"", "print network connections" },
+
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
 

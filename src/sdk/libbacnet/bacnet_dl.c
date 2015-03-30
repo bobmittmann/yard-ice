@@ -193,7 +193,7 @@ int bacnet_dl_send(struct bacnetdl_dev * dev,
 int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
 					  uint8_t * pdu, unsigned pdu_len)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
 	return bacnet_dl_send(__bacnet_dl.reply_dev, pdu, pdu_len);
 }
 
@@ -212,7 +212,7 @@ void datalink_cleanup(void)
 
 void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
     dest->mac_len = 0;
     dest->net = 0;
     dest->len = 0;
@@ -220,7 +220,7 @@ void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
 
 void datalink_get_my_address(BACNET_ADDRESS * my_address)
 {
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_TRACE, "...");
     my_address->mac_len = 0;
     my_address->net = 0;
     my_address->len = 0;        

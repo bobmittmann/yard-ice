@@ -78,7 +78,7 @@ void shell_greeting(FILE * f)
 extern const struct shell_cmd shell_cmd_tab[];
 extern const uint8_t ice40lp384_bin[];
 extern const unsigned int sizeof_ice40lp384_bin;
-
+#if 0
 void network_init(void)
 {
 	struct ifnet * ifn;
@@ -161,7 +161,7 @@ void network_init(void)
 #endif
 	}
 }
-
+#endif
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
@@ -479,6 +479,8 @@ int main(int argc, char ** argv)
 	FILE * term2;
 	struct bn_ptp_bundle bdl1;
 	struct bn_ptp_bundle bdl2;
+	unsigned int mstp_addr;
+	char * env;
 
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -495,8 +497,9 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "4. console serial init");
-	ser5 = stm32f_uart5_serial_init(57600, SERIAL_8N1);
+//	ser5 = stm32f_uart5_serial_init(57600, SERIAL_8N1);
 //	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	ser5 = stm32f_uart5_serial_init(38400, SERIAL_8N1);
 	ser1 = stm32f_uart1_serial_init(460800, SERIAL_8N1);
 
 	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
@@ -507,7 +510,8 @@ int main(int argc, char ** argv)
 	
 	ser2 = (struct serial_dev *)&cdc_acm_serial_dev;
 
-	term1 = serial_tty_open(ser5);
+///	term1 = serial_tty_open(ser5);
+	term1 = serial_tty_open(ser1);
 	term2 = serial_tty_open(ser2);
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
@@ -521,24 +525,35 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
-	network_init();
+//	network_init();
 
 	bacnet_init();
 
 	bacnet_dl_init();
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
-	bacnet_ptp_init(&ptp1, "PtP1", ser5);
+//	bacnet_ptp_init(&ptp1, "PtP1", ser5);
 	bacnet_ptp_init(&ptp2, "PtP2", ser2);
 
-	DCC_LOG(LOG_TRACE, "5. starting BACnet MS/TP links...");
-	bacnet_mstp_init(&mstp1, "MS/TP1", 10, ser1);
+	if ((env = getenv("MSTP")) == NULL) {
+		char s[16];
+		mstp_addr = 8;
+		/* default configuration */
+		sprintf(s, "%d", mstp_addr);
+		/* set the default configuration */
+		setenv("MSTP", s, 1);
+	} else {
+		mstp_addr = strtoul(env, NULL, 0);
+	}
 
-	DCC_LOG(LOG_TRACE, "6. starting TTY threads...");
+	DCC_LOG1(LOG_TRACE, "5. BACnet MS/TP link addr: %d ...", mstp_addr);
+//	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser1);
+	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser5);
+
+	DCC_LOG(LOG_TRACE, "6. TTY threads...");
 	bdl1.ptp = &ptp1;
 	bdl1.term = term1;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl1, &tty1_inf);
-
 	bdl2.ptp = &ptp2;
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
@@ -546,7 +561,6 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "7. BACnet MS/TP...");
 	bacnet_mstp_start(&mstp1);
 	bacnet_mstp_loop(&mstp1);
-
 
 	return 0;
 }

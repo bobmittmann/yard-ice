@@ -79,6 +79,7 @@ int ice_comm_read(ice_comm_t * comm, void * buf, int len, int tmo)
 	int tail;
 	int head;
 	int max;
+	int ret;
 	int n;
 	int m;
 
@@ -93,15 +94,18 @@ int ice_comm_read(ice_comm_t * comm, void * buf, int len, int tmo)
 		DCC_LOG(LOG_MSG, "block");
 
 		/* wait for data to became available in the buffer */
-		__os_sem_timedwait(comm->rx_sem, tmo);
+		ret = __os_sem_timedwait(comm->rx_sem, tmo);
+
+		if (ret < 0) {
+			DCC_LOG(LOG_TRACE, "timeout!!!");
+		}
 
 		if ((head = comm->rx.head) == tail) {
-			DCC_LOG(LOG_MSG, "timeout.");
 			return 0;
 		}
 	}
 	
-	DCC_LOG2(LOG_MSG, "tail=%d head=%d", tail, head);
+	DCC_LOG2(LOG_TRACE, "tail=%d head=%d", tail, head);
 
 	/* round wrap the pointers */
 	head &= ICE_COMM_RX_BUF_LEN - 1;

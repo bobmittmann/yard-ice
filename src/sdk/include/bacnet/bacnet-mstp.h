@@ -41,8 +41,6 @@ struct bacnet_mstp_lnk {
 	volatile uint8_t state; 
 	uint8_t dln;
 	uint8_t ts; /* This station */
-	uint8_t ns; /* Next Station */
-	uint8_t ps; /* Poll Station */
 	bool sole_master;
 	struct {
 		union {
@@ -55,7 +53,6 @@ struct bacnet_mstp_lnk {
 		volatile uint16_t pdu_len;
 		unsigned int off;
 		unsigned int cnt;
-		uint32_t seq;
 		int flag;
 	} rx;
 	struct {
@@ -63,7 +60,6 @@ struct bacnet_mstp_lnk {
 		uint8_t frm_type;
 		volatile uint16_t pdu_len;
 		uint8_t pdu[BACNET_MSTP_MTU - 8];
-		volatile uint32_t seq;
 		int flag;
 	} tx;
 };

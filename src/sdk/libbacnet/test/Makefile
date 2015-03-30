@@ -31,15 +31,18 @@ TOOLS = ../../../../tools
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty $(SDK)/libcrc \
-		  $(SDK)/libshell $(SDK)/libbacnet $(SDK)/libtcpip
+		  $(SDK)/libshell $(SDK)/libbacnet 
+		  
+# $(SDK)/libtcpip
 
 LIBS = cm3 stm32f util thinkos c ice-comm crc drv cdc-acm tty \
-	   shell tcpip bacnet gcc
+	   shell  bacnet gcc
+#tcpip
 
 INCPATH = $(SDK)/include ../bacnet-stack/include ../bacnet-stack/demo/object
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O2 
+CFLAGS = -g -O2 -Wall
 #CFLAGS = -g -O2 -Wno-unused-but-set-variable -Wno-unused-value -Wno-unused
 
 JTAGTOOL_ADDR = 192.168.10.50
