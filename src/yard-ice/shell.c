@@ -86,7 +86,7 @@ void show_uint32(FILE * f, uint32_t val)
 				fprintf(f, "0x%08x (%d)\n", val, val);
 }
 
-int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
+int exec(FILE * f, const struct shell_cmd * cmd_tab, char * line)
 {
 	char * argv[SHELL_ARG_MAX];
 	struct shell_cmd * cmd;
@@ -104,9 +104,9 @@ int exec(FILE * f, char * line, const struct shell_cmd * cmd_tab)
 
 #if 0
 	for (n = 0; n < argc; n++) {
-		printf(" '%s'", argv[n]);
+		fprintf(f, " '%s'", argv[n]);
 	}
-	printf("\n");
+	fprintf(f, "\n");
 #endif
 
 	/* */
@@ -172,6 +172,7 @@ int shell(FILE * f, const char * (* prompt)(void),
 		ret = 0;
 
 		while ((stat = cmd_get_next(&cp)) != NULL) {
+#if 0
 			struct shell_cmd * cmd;
 
 			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
@@ -180,7 +181,9 @@ int shell(FILE * f, const char * (* prompt)(void),
 			}
 
 			ret = cmd_exec(f, cmd, stat);
-
+#else
+			ret = exec(f, cmd_tab, stat);
+#endif
 			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
 				fprintf(f, "Error: %d\n", -ret);
 				break;

@@ -18,53 +18,32 @@
  */
 
 /** 
- * @file shell-i.h
+ * @file shell.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 
-/*****************************************************************************
- * libshell internal (private) header file
- *****************************************************************************/
 
-#ifndef __SHELL_I_H__
-#define __SHELL_I_H__
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/shell.h>
 
-#ifndef __SHELL_I__
-#error "Never use <shell-i.h> directly; include <shell.h> instead."
-#endif
+#define __SHELL_I__
+#include "shell-i.h"
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#include <sys/dcclog.h>
 
-#include <stdint.h>
+int cmd_exec(FILE * f,  const struct shell_cmd * cmd, char * line)
+{
+	char * argv[SHELL_ARG_MAX];
+	int argc;
 
-#ifndef SHELL_ARG_MAX 
-#define SHELL_ARG_MAX 16
-#endif
+	if ((argc = shell_parseline(line, argv, SHELL_ARG_MAX)) == 0)
+		return 0;
 
-struct cmd_history {
-	uint8_t pos;
-	uint8_t tail;
-	uint8_t head;
-	uint8_t max;
-	uint8_t len;
-	char buf[];
-};
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-char * history_prev(struct cmd_history * ht);
-
-char * history_next(struct cmd_history * ht);
-
-#ifdef __cplusplus
+	return cmd->callback(f, argc, argv);
 }
-#endif
-
-#endif /* __SHELL_I_H__ */
 

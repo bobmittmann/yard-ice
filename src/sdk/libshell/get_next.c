@@ -18,53 +18,63 @@
  */
 
 /** 
- * @file shell-i.h
+ * @file shell.c
  * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 
-/*****************************************************************************
- * libshell internal (private) header file
- *****************************************************************************/
 
-#ifndef __SHELL_I_H__
-#define __SHELL_I_H__
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/shell.h>
 
-#ifndef __SHELL_I__
-#error "Never use <shell-i.h> directly; include <shell.h> instead."
-#endif
+#define __SHELL_I__
+#include "shell-i.h"
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#include <sys/dcclog.h>
 
-#include <stdint.h>
+char * cmd_get_next(char ** linep)
+{
+	char * cp = *linep;
+	char * cmd;
+	int c;
+	
+	/* remove leading spaces */
+	for (; isspace(c = *cp); cp++);
 
-#ifndef SHELL_ARG_MAX 
-#define SHELL_ARG_MAX 16
-#endif
+	if (c == '\0')
+		return NULL;
 
-struct cmd_history {
-	uint8_t pos;
-	uint8_t tail;
-	uint8_t head;
-	uint8_t max;
-	uint8_t len;
-	char buf[];
-};
+	cmd = cp;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+	do {
+		if (c == ';') {
+			*cp = '\0';
+			cp++;
+			break;
+		}
 
-char * history_prev(struct cmd_history * ht);
+		cp++;
 
-char * history_next(struct cmd_history * ht);
+		/* Quotes */
+		if ((c == '\'') || (c == '\"')) {
+			int qt = c;
+			for (; ((c = *cp) != '\0'); cp++) {
+				if (c == qt) {
+					cp++;
+					break;
+				}	
+			}
+		}
 
-#ifdef __cplusplus
+		c = *cp;
+	} while (c != '\0');
+
+	*linep = cp;
+
+	return cmd;
 }
-#endif
-
-#endif /* __SHELL_I_H__ */
 

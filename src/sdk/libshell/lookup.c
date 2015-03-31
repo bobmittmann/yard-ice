@@ -30,9 +30,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/shell.h>
-#include <sys/tty.h>
-
-#include <sys/serial.h>
 
 #define __SHELL_I__
 #include "shell-i.h"
@@ -97,58 +94,5 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	DCC_LOG(LOG_WARNING, "not found...");
 
 	return NULL;
-}
-
-int cmd_exec(FILE * f,  const struct shell_cmd * cmd, char * line)
-{
-	char * argv[SHELL_ARG_MAX];
-	int argc;
-
-	if ((argc = shell_parseline(line, argv, SHELL_ARG_MAX)) == 0)
-		return 0;
-
-	return cmd->callback(f, argc, argv);
-}
-
-char * cmd_get_next(char ** linep)
-{
-	char * cp = *linep;
-	char * cmd;
-	int c;
-	
-	/* remove leading spaces */
-	for (; isspace(c = *cp); cp++);
-
-	if (c == '\0')
-		return NULL;
-
-	cmd = cp;
-
-	do {
-		if (c == ';') {
-			*cp = '\0';
-			cp++;
-			break;
-		}
-
-		cp++;
-
-		/* Quotes */
-		if ((c == '\'') || (c == '\"')) {
-			int qt = c;
-			for (; ((c = *cp) != '\0'); cp++) {
-				if (c == qt) {
-					cp++;
-					break;
-				}	
-			}
-		}
-
-		c = *cp;
-	} while (c != '\0');
-
-	*linep = cp;
-
-	return cmd;
 }
 
