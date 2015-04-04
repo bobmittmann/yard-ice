@@ -26,14 +26,19 @@ int stm32_usart_write(struct stm32_usart * usart, const void * buf,
 					   unsigned int len)
 {
 	char * cp = (char *)buf;
+	uint32_t cr1 = usart->cr1;
 	int c;
 	int n;
+
+	cr1 = usart->cr1;
+	usart->cr1 = cr1 & ~(USART_TXEIE | USART_TCIE);
 
 	for (n = 0; n < len; n++) {
 		c = cp[n];
 		stm32_usart_putc(usart, c);
 	}
 
+	usart->cr1 = cr1;
 	return n;
 }
 

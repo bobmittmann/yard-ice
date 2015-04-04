@@ -309,6 +309,9 @@ struct serial_dev * stm32f_uart5_serial_init(unsigned int baudrate,
 struct serial_dev * stm32f_uart6_serial_init(unsigned int baudrate, 
 											 unsigned int flags);
 
+struct serial_dev * stm32f_uart1_serial_dma_init(unsigned int baudrate, 
+												 unsigned int flags);
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* __SYS_STM32F_H__ */

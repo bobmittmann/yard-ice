@@ -53,20 +53,12 @@
 
 #include <sys/dcclog.h>
 
-#ifndef SERIAL_RX_BUF_LEN
-#define SERIAL_RX_BUF_LEN 64
-#endif
-
-#ifndef SERIAL_ENABLE_DMA
-#define SERIAL_ENABLE_DMA 0
-#endif
-
 #ifndef SERIAL_ENABLE_TX_MUTEX
 #define SERIAL_ENABLE_TX_MUTEX 0
 #endif
 
 #ifndef SERIAL_TX_FIFO_LEN
-#define SERIAL_TX_FIFO_LEN  512
+#define SERIAL_TX_FIFO_LEN  64
 #endif
 
 #ifndef SERIAL_RX_FIFO_LEN
@@ -81,18 +73,6 @@
 #define SERIAL_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 #endif
 
-#if 0
-#if (THINKOS_FLAG_MAX == 0) || (THINKOS_ENABLE_FLAG_ALLOC == 0)
-#error "THINKOS_FLAG_MAX or THINKOS_ENABLE_FLAG_ALLOC not set!"
-#endif
-
-#if (SERIAL_ENABLE_TX_MUTEX)
- #if (THINKOS_MUTEX_MAX == 0) && (THINKOS_ENABLE_MUTEX_ALLOC == 0)
- #error "THINKOS_MUTEX_MAX or THINKOS_ENABLE_MUTEX_ALLOC not set!"
- #endif
-#endif
-#endif
-
 struct stm32f_serial_drv {
 	struct stm32_usart * uart;
 	uint8_t tx_flag;
@@ -101,21 +81,7 @@ struct stm32f_serial_drv {
 	uint8_t tx_mutex;
 #endif
 
-#if SERIAL_ENABLE_DMA
-	struct stm32f_dma * dma;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-		int flag;
-	} tx;
-	struct {
-		int irq;
-		struct stm32f_dma_stream * s;
-		uint8_t buf[2][SERIAL_RX_BUF_LEN];
-		uint32_t idx;
-		int flag;
-	} rx;
-#else
+	uint16_t rx_trig;
 	uint32_t * txie;
 	struct {
 		volatile uint32_t head;
@@ -127,29 +93,50 @@ struct stm32f_serial_drv {
 		volatile uint32_t tail;
 		uint8_t buf[SERIAL_RX_FIFO_LEN];
 	} rx_fifo;	
+};
+
+struct stm32f_serial_dma_drv {
+	struct stm32_usart * uart;
+	uint8_t rx_idle;
+	uint8_t tx_done;
+#if SERIAL_ENABLE_TX_MUTEX
+	uint8_t tx_mutex;
 #endif
+	struct stm32f_dma * dma;
+	struct {
+		struct stm32f_dma_stream * strm;
+		/* Bitband pointer to interrupt clear flags */
+		uint32_t * volatile ifcr;
+	} tx;
+	struct {
+		struct stm32f_dma_stream * strm;
+		void * buf_ptr;
+		unsigned int buf_len;
+		/* Bitband pointer to interrupt clear flags */
+		volatile uint32_t * ifcr;
+	} rx;
 };
 
 extern const struct serial_op stm32f_uart_serial_op;
+
+extern const struct serial_op stm32f_uart_serial_dma_op;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+void stm32f_serial_isr(struct stm32f_serial_drv * drv);
+
 int stm32f_serial_init(struct stm32f_serial_drv * drv, 
 					   unsigned int baudrate, unsigned int flags);
 
-int stm32f_serial_read(struct stm32f_serial_drv * drv, void * buf, 
-					   unsigned int len, unsigned int tmo);
 
-int stm32f_serial_write(struct stm32f_serial_drv * drv, const void * buf,
-						unsigned int len);
+void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv);
 
-int stm32f_serial_flush(struct stm32f_serial_drv * drv);
-
-int stm32f_serial_close(struct stm32f_serial_drv * drv);
-
-void stm32f_serial_isr(struct stm32f_serial_drv * drv);
+int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv, 
+					   unsigned int baudrate, unsigned int flags,
+					   struct stm32f_dma * dma, int dma_chan_id, 
+					   int rx_dma_strm_id, int tx_dma_strm_id);
 
 #ifdef __cplusplus
 }

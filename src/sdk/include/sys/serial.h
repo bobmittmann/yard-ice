@@ -123,7 +123,11 @@ enum {
 	SERIAL_IOCTL_RESET,
 	SERIAL_IOCTL_FLUSH,
 	SERIAL_IOCTL_FLOWCTRL_SET,
-	SERIAL_IOCTL_STAT_GET
+	SERIAL_IOCTL_STAT_GET,
+	SERIAL_IOCTL_DMA_PREPARE,
+	SERIAL_IOCTL_CONF_SET,
+	SERIAL_IOCTL_CONF_GET,
+	SERIAL_IOCTL_RX_TRIG_SET
 };
 
 #define SERIAL_RX_EN 1
@@ -136,7 +140,7 @@ struct serial_op {
 	int (* close)(void *);
 	int (* conf_get)(void *, struct serial_config *);
 	int (* conf_set)(void *, const struct serial_config *);
-	int (* ioctl)(void *, int, uintptr_t);
+	int (* ioctl)(void *, int, uintptr_t, uintptr_t);
 };
 
 struct serial_dev {
@@ -162,19 +166,9 @@ extern inline int serial_close(struct serial_dev * dev){
 	return dev->op->close(dev->drv);
 }
 
-extern inline int serial_config_get(struct serial_dev * dev, 
-									struct serial_config * cfg){
-	return dev->op->conf_get(dev->drv, cfg);
-}
-
-extern inline int serial_config_set(struct serial_dev * dev, 
-									const struct serial_config * cfg){
-	return dev->op->conf_set(dev->drv, cfg);
-}
-
 extern inline int serial_ioctl(struct serial_dev * dev, 
-							   int opt, unsigned int arg) {
-	return dev->op->ioctl(dev->drv, opt, arg);
+							   int opt, uintptr_t arg1, uintptr_t arg2) {
+	return dev->op->ioctl(dev->drv, opt, arg1, arg2);
 }
 
 #if 0
@@ -184,41 +178,73 @@ extern inline int serial_drain(struct serial_dev * dev) {
 #endif
 
 extern inline int serial_flush(struct serial_dev * dev) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLUSH, 0);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLUSH, 0, 0);
 }
 
 
 extern inline int serial_reset(struct serial_dev * dev) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RESET, 0);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RESET, 0, 0);
 }
 
 extern inline int serial_stat_get(struct serial_dev * dev, 
 								  struct serial_stat * stat) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_STAT_GET, (uintptr_t)stat);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_STAT_GET, 
+						  (uintptr_t)stat, 0);
 }
 
 extern inline int serial_enable(struct serial_dev * dev) {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, 
-						  SERIAL_RX_EN | SERIAL_TX_EN);
+						  SERIAL_RX_EN | SERIAL_TX_EN, 0);
 }
 
 extern inline int serial_disable(struct serial_dev * dev) {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, 
-						  SERIAL_RX_EN | SERIAL_TX_EN);
+						  SERIAL_RX_EN | SERIAL_TX_EN, 0);
 }
 
 extern inline int serial_rx_enable(struct serial_dev * dev) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, SERIAL_RX_EN);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_ENABLE, 
+						  SERIAL_RX_EN, 0);
 }
 
 extern inline int serial_rx_disable(struct serial_dev * dev) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, SERIAL_RX_EN);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DISABLE, 
+						  SERIAL_RX_EN, 0);
 }
 
 extern inline int serial_flowctrl_set(struct serial_dev * dev, 
 									  unsigned int flowctrl) {
-	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLOWCTRL_SET, flowctrl);
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_FLOWCTRL_SET, 
+						  flowctrl, 0);
 }
+
+extern inline int serial_config_get(struct serial_dev * dev, 
+									struct serial_config * cfg)
+{
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_CONF_GET, 
+						  (uintptr_t)cfg, 0);
+}
+
+extern inline int serial_config_set(struct serial_dev * dev, 
+									const struct serial_config * cfg)
+{
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_CONF_SET, 
+						  (uintptr_t)cfg, 0);
+}
+
+extern inline int serial_rx_trig_set(struct serial_dev * dev, 
+										 unsigned int lvl)
+{
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RX_TRIG_SET, lvl, 0);
+}
+
+extern inline int serial_dma_prepare(struct serial_dev * dev, 
+									 void * buf, unsigned int len)
+{
+	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DMA_PREPARE, 
+						  (uintptr_t)buf, len);
+}
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -238,7 +264,9 @@ int serial_config_get(struct serial_dev * dev, struct serial_config * cfg);
 
 int serial_config_set(struct serial_dev * dev, 
 					  const struct serial_config * cfg);
-int serial_ioctl(struct serial_dev * dev, int opt, unsigned int arg);
+
+int serial_ioctl(struct serial_dev * dev, int opt, 
+				 uintptr_t arg1, uintptr_t arg2);
 
 int serial_stat_get(struct serial_dev * dev, struct serial_stat * stat);
 

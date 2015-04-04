@@ -26,8 +26,9 @@
 #define __STM32_SERIAL_I__
 #include "stm32-serial-i.h"
 #include <sys/param.h>
+#include <errno.h>
 
-#if !SERIAL_ENABLE_DMA
+#include <arch/cortex-m3.h>
 
 void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 {
@@ -36,20 +37,17 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 	int c;
 	
 	us = drv->uart;
-	sr = us->sr;
+	sr = us->sr &= us->cr1;
 
 	if (sr & USART_ORE) {
 		DCC_LOG(LOG_WARNING, "OVR!");
 	}
-
-	sr &= us->cr1;
 
 	if (sr & USART_RXNE) {
 		uint32_t head;
 		int free;
 
 		c = us->dr;
-
 		head = drv->rx_fifo.head;
 		free = SERIAL_RX_FIFO_LEN - (head - drv->rx_fifo.tail);
 		if (free > 0) { 
@@ -60,7 +58,8 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		} else {
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
-		if (free <= (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL)) {
+//		if (free <= (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL)) {
+		if (free <= drv->rx_trig) {
 			DCC_LOG(LOG_MSG, "---");
 			thinkos_flag_give_i(drv->rx_flag);
 		}
@@ -78,10 +77,11 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		if (tail == drv->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*drv->txie = 0; 
-			thinkos_flag_give_i(drv->tx_flag);
+//			thinkos_flag_give_i(drv->tx_flag);
+			thinkos_flag_signal_i(drv->tx_flag);
 		} else {
-			us->dr = drv->tx_fifo.buf[tail & (SERIAL_TX_FIFO_LEN - 1)];
-			drv->tx_fifo.tail = tail + 1;
+			us->dr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
+			drv->tx_fifo.tail = tail;
 		}
 	}
 }
@@ -106,6 +106,8 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
+	drv->rx_trig = (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL);
+
 	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	thinkos_flag_give(drv->tx_flag);
 
@@ -122,7 +124,7 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 	return 0;
 }
 
-int stm32f_serial_read(struct stm32f_serial_drv * drv, void * buf, 
+int stm32f_serial_recv(struct stm32f_serial_drv * drv, void * buf, 
 					   unsigned int len, unsigned int tmo)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -170,7 +172,7 @@ again:
 	return n;
 }
 
-int stm32f_serial_write(struct stm32f_serial_drv * drv, const void * buf,
+int stm32f_serial_send(struct stm32f_serial_drv * drv, const void * buf,
 						unsigned int len)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -188,23 +190,24 @@ int stm32f_serial_write(struct stm32f_serial_drv * drv, const void * buf,
 		int n;
 		int i;
 
-		thinkos_flag_take(drv->tx_flag);
-//		thinkos_flag_wait(drv->tx_flag);
+//		thinkos_flag_take(drv->tx_flag);
+		thinkos_flag_wait(drv->tx_flag);
 
 		head = drv->tx_fifo.head;
 		free = SERIAL_TX_FIFO_LEN - (head - drv->tx_fifo.tail);
 		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, drv->tx_fifo.tail, n);
 		n = MIN(rem, free);
 		for (i = 0; i < n; ++i) 
-			drv->tx_fifo.buf[head++ & (SERIAL_TX_FIFO_LEN - 1)] = *cp++;
+			drv->tx_fifo.buf[head++ % SERIAL_TX_FIFO_LEN] = cp[i];
 		drv->tx_fifo.head = head;
 		*drv->txie = 1; 
 
-		if (free > n)
-			thinkos_flag_give(drv->tx_flag);
-//		thinkos_flag_release(drv->tx_flag, (free > n));
+//		if (free > n)
+//			thinkos_flag_give(drv->tx_flag);
+		thinkos_flag_release(drv->tx_flag, (free > n));
 
 		rem -= n;
+		cp += n;
 		DCC_LOG1(LOG_INFO, "rem=%d", rem);
 	}
 
@@ -215,15 +218,15 @@ int stm32f_serial_write(struct stm32f_serial_drv * drv, const void * buf,
 	return len;
 }
 
-int stm32f_serial_flush(struct stm32f_serial_drv * drv)
+int stm32f_serial_drain(struct stm32f_serial_drv * drv)
 {
 	do {
-		thinkos_flag_take(drv->tx_flag);
+		thinkos_flag_wait(drv->tx_flag);
 	} while ((drv->tx_fifo.head - drv->tx_fifo.tail) > 0);
 
 	stm32_usart_flush(drv->uart);
 
-	thinkos_flag_give(drv->tx_flag);
+	thinkos_flag_release(drv->tx_flag, 0);
 
 	return 0;
 }
@@ -233,40 +236,79 @@ int stm32f_serial_close(struct stm32f_serial_drv * drv)
 	return 0;
 }
 
-int stm32f_serial_conf_get(struct stm32f_serial_drv * drv, 
-							struct serial_config * cfg)
+int stm32f_serial_ioctl(struct stm32f_serial_drv * drv, int opt, 
+						uintptr_t arg1, uintptr_t arg2)
 {
-//	struct stm32f_usart * uart = dev->uart;
+	struct stm32_usart * us = drv->uart;
+	unsigned int msk = 0;
+
+	switch (opt) {
+	case SERIAL_IOCTL_ENABLE:
+		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_ENABLE");
+		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
+		us->cr1 |= msk;
+		break;
+
+	case SERIAL_IOCTL_DISABLE:
+		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_DISABLE");
+		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
+		us->cr1 &= ~msk;
+		break;
+
+	case SERIAL_IOCTL_DRAIN:
+		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_DRAIN");
+		stm32f_serial_drain(drv);
+		break;
+
+	case SERIAL_IOCTL_RESET:
+		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_RESET");
+		stm32f_serial_drain(drv);
+		drv->tx_fifo.head = 0;
+		drv->tx_fifo.tail = 0;
+		break;
+
+	case SERIAL_IOCTL_STAT_GET: 
+		{
+			struct serial_stat * stat = (struct serial_stat *)arg1;
+
+			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_STAT_GET");
+			stat->rx_cnt = drv->rx_fifo.head;
+			stat->tx_cnt = drv->tx_fifo.tail;
+			stat->err_cnt = 0;
+			break;
+		}
+
+	case SERIAL_IOCTL_RX_TRIG_SET:
+		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_RX_TRIG_SET");
+		drv->rx_trig = (unsigned int)arg1 < SERIAL_RX_FIFO_LEN ? arg1 : 0;
+		break;
+
+	case SERIAL_IOCTL_CONF_SET: 
+		{
+			struct serial_config * cfg = (struct serial_config *)arg1;
+			uint32_t flags;
+			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_CONF_SET");
+
+			stm32_usart_baudrate_set(us, cfg->baudrate);
+			flags = CFG_TO_FLAGS(cfg);
+			stm32_usart_mode_set(us, flags);
+		}
+		break;
+
+	default:
+		return -EINVAL;
+	}
 
 	return 0;
 }
-
-int stm32f_serial_conf_set(struct stm32f_serial_drv * drv, 
-						   const struct serial_config * cfg)
-{
-	struct stm32_usart * uart = drv->uart;
-	uint32_t flags;
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	stm32_usart_baudrate_set(uart, cfg->baudrate);
-
-	flags = CFG_TO_FLAGS(cfg);
-
-	stm32_usart_mode_set(uart, flags);
-
-	return 0;
-}
-
 
 const struct serial_op stm32f_uart_serial_op = {
-	.send = (void *)stm32f_serial_write,
-	.recv = (void *)stm32f_serial_read,
-	.drain = (void *)stm32f_serial_flush,
+	.send = (void *)stm32f_serial_send,
+	.recv = (void *)stm32f_serial_recv,
+	.drain = (void *)stm32f_serial_drain,
 	.close = (void *)stm32f_serial_close,
-	.conf_set = (void *)stm32f_serial_conf_set,
-	.conf_get = (void *)stm32f_serial_conf_get
+	.ioctl = (void *)stm32f_serial_ioctl
 };
-
-#endif /* !SERIAL_ENABLE_DMA */
 
