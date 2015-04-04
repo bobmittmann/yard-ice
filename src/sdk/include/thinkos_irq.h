@@ -86,8 +86,7 @@ static inline void thinkos_ev_raise_i(int wq, int ev) {
 
 /* wakeup a single thread waiting on the flag 
    OR set the flag */
-static inline void __attribute__((always_inline)) 
-__thinkos_flag_give(int flag) {
+static inline void thinkos_flag_give_i(int flag) {
 	uint32_t pri;
 	int th;
 	/* get the flag state */
@@ -105,6 +104,39 @@ __thinkos_flag_give(int flag) {
 		}
 		cm3_primask_set(pri);
 	}
+}
+
+/* wakeup a single thread waiting on the flag 
+   OR set the flag */
+static inline void thinkos_flag_signal_i(int flag) {
+	uint32_t pri;
+	int th;
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 1);  
+	pri = cm3_primask_get();
+	cm3_primask_set(1);
+#if THINKOS_ENABLE_FLAG_LOCK
+	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag - THINKOS_FLAG_BASE)) {
+#endif
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+#if THINKOS_ENABLE_FLAG_LOCK
+			/* lock the flag */
+			__bit_mem_wr(thinkos_rt.flag.lock, flag - THINKOS_FLAG_BASE, 1);
+#endif
+			__thinkos_wakeup(flag, th);
+
+			cm3_primask_set(pri);
+			/* clear the flag bit */
+			__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 0);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+			return;
+		} 
+#if THINKOS_ENABLE_FLAG_LOCK
+	}
+#endif
+	cm3_primask_set(pri);
 }
 
 static inline void thinkos_flag_clr_i(int flag) {
@@ -133,17 +165,6 @@ static inline void thinkos_flag_set_i(int flag) {
 	}
 	cm3_primask_set(pri);
 }
-
-/* wakeup a single thread waiting on the flag 
-   OR set the flag */
-static inline void thinkos_flag_signal_i(int flag) {
-	__thinkos_flag_give(flag);
-}
-
-static inline void thinkos_flag_give_i(int flag) {
-	__thinkos_flag_give(flag);
-}
-
 
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
@@ -228,6 +249,11 @@ static inline void
 __attribute__((always_inline)) thinkos_critical_exit(void)  {
 	/* return the BASEPRI to the default to reenable the scheduler. */
 	cm3_basepri_set(0x00);
+}
+
+static inline volatile uint32_t __attribute__((always_inline)) 
+	thinkos_clock_i(void)  {
+	return (volatile uint32_t)thinkos_rt.ticks;
 }
 
 void thinkos_flag_give_i(int flag);

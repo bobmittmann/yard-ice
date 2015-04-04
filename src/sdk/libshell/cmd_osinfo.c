@@ -140,6 +140,14 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 	struct thinkos_rt rt;
 	uint32_t * wq;
 	int i;
+#if THINKOS_ENABLE_PROFILING
+	uint32_t cycsum = 0;
+	uint32_t cycbusy = 0;
+	uint32_t cycdiv;
+	uint32_t idle;
+	uint32_t busy;
+	uint32_t sys;
+#endif
 #if THINKOS_MUTEX_MAX > 0
 	int j;
 #endif
@@ -153,8 +161,30 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 	}
 
 #if THINKOS_ENABLE_CLOCK
-	fprintf(f, "Ticks = %d\n", rt.ticks);
+	fprintf(f, "[ Ticks = %d ]", rt.ticks);
 #endif
+
+#if THINKOS_ENABLE_PROFILING
+	cycsum = 0;
+	cycbusy = 0;
+	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
+		cycsum += rt.cyccnt[i];
+	cycbusy = cycsum;
+	cycsum += rt.cyccnt[THINKOS_CYCCNT_IDLE];
+	cycsum += rt.cyccnt[THINKOS_CYCCNT_SYS];
+
+	cycdiv = (cycsum + 500) / 1000;
+	busy = (cycbusy + cycdiv / 2) / cycdiv;
+	sys = (rt.cyccnt[THINKOS_CYCCNT_SYS] + cycdiv / 2) / cycdiv;
+//	idle = (rt.cyccnt[THINKOS_CYCCNT_IDLE] + cycdiv / 2) / cycdiv;
+	idle = 1000 - busy - sys;
+	fprintf(f, " [ %u cycles | %d.%d%% busy | %d.%d%% sys | %d.%d%% idle ]", 
+		   cycsum, busy / 10, busy % 10, 
+		   sys / 10, sys % 10,
+		   idle / 10, idle % 10);
+#endif
+
+	fprintf(f, "\n");
 
 	fprintf(f, "  Th"); 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -168,8 +198,12 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 	fprintf(f, " |  Val |  Pri"); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-	fprintf(f, " |      Clock"); 
+	fprintf(f, " | Clock (ms)"); 
 #endif
+#if THINKOS_ENABLE_PROFILING
+	fprintf(f, " | CPU %%"); 
+#endif
+
 #if THINKOS_MUTEX_MAX > 0
 	fprintf(f, " | Locks\n"); 
 #else
@@ -201,6 +235,10 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 				else
 					fprintf(f, " | %10d", dt); 
 			}
+#endif
+#if THINKOS_ENABLE_PROFILING
+			busy = (rt.cyccnt[i] + cycdiv / 2) / cycdiv;
+			fprintf(f, " | %3d.%d", busy / 10, busy % 10);
 #endif
 			fprintf(f, " |");
 #if THINKOS_MUTEX_MAX > 0

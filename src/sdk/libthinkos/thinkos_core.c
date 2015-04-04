@@ -47,13 +47,6 @@ struct thinkos_rt thinkos_rt;
    stack. */
 struct thinkos_except_and_idle thinkos_idle;
 
-#if THINKOS_ENABLE_IDLE_SNAPSHOT
-uint32_t thinkos_idle_val(void)
-{
-	return thinkos_idle.snapshot.val;
-}
-#endif
-
 #if THINKOS_ENABLE_SCHED_DEBUG
 static inline void __attribute__((always_inline)) 
 __dump_context(struct thinkos_context * __ctx) {
@@ -86,18 +79,47 @@ static inline void __attribute__((always_inline)) __wait(void) {
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
+#if THINKOS_ENABLE_PROFILING_
+	volatile uint32_t * cycref = &thinkos_rt.cycref;
+	volatile uint32_t * cycidle = &thinkos_rt.cyccnt[THINKOS_CYCCNT_IDLE];
+	volatile uint32_t * cycsys = &thinkos_rt.cyccnt[THINKOS_CYCCNT_SYS];
+	register uint32_t * dwt_cyccnt asm ("lr") = (void *)&(CM3_DWT->cyccnt);
+	for (;;) {
+		uint32_t cyccnt;
+		uint32_t cycprev;
+		int32_t delta;
+
+		cm3_cpsie_i();
+		cm3_cpsid_i();
+
+		asm volatile ("ldr	%0, [%1, #0]" : "=r" (cyccnt) : "r" (dwt_cyccnt));
+		delta = cyccnt - *cycref;
+		/* update system cycle counter */
+		*cycsys += delta; 
+		/* save counter */
+		cycprev = cyccnt; 
+		asm volatile ("wfi\n"); /* wait for interrupt */
+
+		asm volatile ("ldr	%0, [%1, #0]" : "=r" (cyccnt) : "r" (dwt_cyccnt));
+		delta = cyccnt - cycprev;
+		/* update the reference */
+		*cycref = cyccnt;
+		/* update idle cycle counter */
+		*cycidle += delta; 
+	}
+#else
+
 	for (;;) {
 #if THINKOS_ENABLE_SCHED_DEBUG
 		DCC_LOG(LOG_MSG, "zzz...");
 //		__dump_context(&thinkos_idle.ctx);
 #endif
-#if THINKOS_ENABLE_IDLE_SNAPSHOT
-		asm volatile ("ldr  r12, [lr, #0]\n"); /* update the snapshot value */
-#endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
 #endif
 	}
+
+#endif
 }
 
 static inline struct thinkos_context * __attribute__((always_inline)) 
@@ -145,6 +167,17 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 
 	/* save SP */
 	thinkos_rt.ctx[idx] = ctx;
+
+#if THINKOS_ENABLE_PROFILING
+	{
+		uint32_t cyccnt = CM3_DWT->cyccnt;
+		int32_t delta = cyccnt - thinkos_rt.cycref;
+		/* update the reference */
+		thinkos_rt.cycref = cyccnt;
+		/* update thread's cycle counter */
+		thinkos_rt.cyccnt[idx] += delta; 
+	}
+#endif
 
 	/* get a thread from the ready bitmap */
 	idx = __clz(__rbit(thinkos_rt.wq_ready));
@@ -403,7 +436,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if 0
 	msp = (uint32_t)&thinkos_except_stack + sizeof(thinkos_except_stack);
 #endif
-	msp = (uint32_t)&thinkos_idle.stack.r12;
+	msp = (uint32_t)&thinkos_idle.stack.r0;
 	cm3_msp_set(msp);
 
 	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
@@ -426,12 +459,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
-#if THINKOS_ENABLE_CLOCK
-	thinkos_idle.snapshot.ptr = &thinkos_rt.ticks;
-#else
-	thinkos_idle.snapshot.ptr = (void *)&thinkos_rt.active;
-#endif
-	thinkos_idle.snapshot.val = 0;
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	{	/* initialize the mutex allocation bitmap */ 
@@ -580,6 +607,23 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		/* Invoke the scheduler */
 		__thinkos_defer_sched();
 	} else
+#endif
+
+#if THINKOS_ENABLE_PROFILING
+	{
+		int i;
+		/* initialize cycle counters */
+		for (i = 0; i < THINKOS_THREADS_MAX + 2; i++)
+			thinkos_rt.cyccnt[i] = 0; 
+
+		/* Enable trace */
+		CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+		/* Enable cycle counter */
+		CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+
+		/* set the reference to now */
+		thinkos_rt.cycref = CM3_DWT->cyccnt;
+	}
 #endif
 
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");

@@ -44,6 +44,12 @@ void thinkos_rt_snapshot_svc(int32_t * arg)
 	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
 		dst[i] = src[i];
 
+#if THINKOS_ENABLE_PROFILING
+	/* Reset cycle counters */
+	for (i = 0; i < THINKOS_THREADS_MAX + 1; i++)
+		thinkos_rt.cyccnt[i] = 0; 
+#endif
+
 	cm3_primask_set(pri);
 }
 

@@ -78,7 +78,7 @@ struct thinkos_context {
  * --------------------------------------------------------------------------*/
 
 #ifndef THINKOS_EXCEPT_STACK_SIZE
-#define THINKOS_EXCEPT_STACK_SIZE 256
+#define THINKOS_EXCEPT_STACK_SIZE 320
 #endif
 
 #ifndef THINKOS_IRQ_MAX 
@@ -158,7 +158,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_EVENT_MAX
-#define THINKOS_EVENT_MAX 8
+#define THINKOS_EVENT_MAX 4
 #endif
 
 #ifndef THINKOS_ENABLE_EVENT_ALLOC
@@ -166,7 +166,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_FLAG_MAX
-#define THINKOS_FLAG_MAX 8
+#define THINKOS_FLAG_MAX 16
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_ALLOC
@@ -226,9 +226,12 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_RT_DEBUG
-#define THINKOS_ENABLE_RT_DEBUG 0
+#define THINKOS_ENABLE_RT_DEBUG 1
 #endif
 
+#ifndef THINKOS_ENABLE_PROFILING
+#define THINKOS_ENABLE_PROFILING 1
+#endif
 
 /* -------------------------------------------------------------------------- 
  * Sanity check
@@ -297,6 +300,13 @@ struct thinkos_rt {
 	struct thinkos_context * idle_ctx; 
 
 	int32_t active; /* current active thread */
+
+#if THINKOS_ENABLE_PROFILING
+	/* Per thread cycle count */
+	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2];
+	/* Reference cycle state ... */
+	uint32_t cycref;
+#endif
 
 	uint32_t wq_lst[0]; /* queue list placeholder */
 
@@ -486,6 +496,13 @@ struct thinkos_rt {
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 
+
+#define THINKOS_THREAD_NULL (32)
+#define THINKOS_THREAD_IDLE (THINKOS_THREADS_MAX)
+
+#define THINKOS_CYCCNT_SYS  (THINKOS_THREADS_MAX)
+#define THINKOS_CYCCNT_IDLE (THINKOS_THREADS_MAX + 1)
+
 /* -------------------------------------------------------------------------- 
  * Thread initialization 
  * --------------------------------------------------------------------------*/
@@ -509,18 +526,7 @@ struct thinkos_thread_init {
  * Idle thread
  * --------------------------------------------------------------------------*/
 
-#define IDLE_UNUSED_REGS 12
-
-struct thinkos_idle {
-	union {
-		struct thinkos_context ctx;
-		struct {
-			uint32_t r[IDLE_UNUSED_REGS];
-			uint32_t val;
-			uint32_t * ptr;
-		} snapshot;
-	};
-} __attribute__ ((aligned (8)));
+#define IDLE_UNUSED_REGS 8
 
 struct thinkos_except_and_idle {
 	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
@@ -528,26 +534,24 @@ struct thinkos_except_and_idle {
 		struct thinkos_context ctx;
 		struct {
 			uint32_t res2[IDLE_UNUSED_REGS];
+			uint32_t r0;
+			uint32_t r1;
+			uint32_t r2;
+			uint32_t r3;
 			uint32_t r12;
 			uint32_t lr;
 			uint32_t pc;
 			uint32_t xpsr;
 		} stack;
-		struct {
-			uint32_t res3[IDLE_UNUSED_REGS];
-			uint32_t val;
-			uint32_t * ptr;
-			uint32_t pc;
-			uint32_t xpsr;
-		} snapshot;
 	};
 } __attribute__ ((aligned (8)));
 
-extern struct thinkos_except_and_idle thinkos_idle;
-
 extern struct thinkos_rt thinkos_rt;
 
+extern struct thinkos_except_and_idle thinkos_idle;
+
 extern uint32_t * const thinkos_obj_alloc_lut[];
+
 extern const uint16_t thinkos_wq_base_lut[];
 
 #ifdef __cplusplus
@@ -615,15 +619,12 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	scb->icsr = SCB_ICSR_PENDSVSET;
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
-	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thread, 0);  
 #if THINKOS_ENABLE_TIMESHARE
-	cm3_cpsid_i();
+static void inline __attribute__((always_inline)) __thinkos_tmshare(void) {
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
-#if (THINKOS_THREADS_MAX < 32) 
-	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
+#if ((THINKOS_THREADS_MAX) < 32) 
+	if (thinkos_rt.wq_ready == (1 << (THINKOS_THREADS_MAX))) {
 		/* No more threads into the ready queue,
 		 move the timeshare queue to the ready queue.
 		 Keep the IDLE bit set */
@@ -638,6 +639,17 @@ static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
 		thinkos_rt.wq_tmshare = 0;
 	} 
 #endif
+}
+#endif
+
+static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
+	/* remove from the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, thread, 0);  
+#if THINKOS_ENABLE_TIMESHARE
+	cm3_cpsid_i();
+	/* if the ready queue is empty, collect
+	 the threads from the CPU wait queue */
+	__thinkos_tmshare();
 	cm3_cpsie_i();
 #endif
 	/* signal the scheduler ... */
@@ -650,27 +662,9 @@ static void inline __attribute__((always_inline)) __thinkos_suspend(int thread) 
 #if THINKOS_ENABLE_TIMESHARE
 	/* if the ready queue is empty, collect
 	 the threads from the CPU wait queue */
-#if (THINKOS_THREADS_MAX < 32) 
-	if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
-		/* No more threads into the ready queue,
-		 move the timeshare queue to the ready queue.
-		 Keep the IDLE bit set */
-		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#else
-	if (thinkos_rt.wq_ready == 0) {
-		/* no more threads into the ready queue,
-		 move the timeshare queue to the ready queue */
-		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#endif
+	__thinkos_tmshare();
 #endif
 }
-
-#define THINKOS_THREAD_NULL 32
-#define THINKOS_THREAD_IDLE THINKOS_THREADS_MAX
 
 static int inline __attribute__((always_inline)) __wq_idx(uint32_t * ptr) {
 	return ptr - thinkos_rt.wq_lst;
