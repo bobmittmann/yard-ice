@@ -105,7 +105,7 @@
 #define MAX_ADDRESS_CACHE 2
 
 /* some modules have debugging enabled using PRINT_ENABLED */
-#define PRINT_ENABLED 0
+#define PRINT_ENABLED 1
 
 /* BACAPP decodes WriteProperty service requests
    Choose the datatypes that your application supports */

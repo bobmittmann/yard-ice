@@ -24,6 +24,7 @@
 #define __BACNET_MSTP_H__
 
 #include <sys/serial.h>
+#include <bacnet/bacnet-dl.h>
 
 #define BACNET_MSTP_MTU 512
 
@@ -38,9 +39,8 @@ struct bacnet_mstp_hdr {
 
 struct bacnet_mstp_lnk {
 	struct serial_dev * dev;
+	struct bacnetdl_addr addr;
 	volatile uint8_t state; 
-	uint8_t dln;
-	uint8_t ts; /* This station */
 	bool sole_master;
 	struct {
 		union {
@@ -59,6 +59,8 @@ struct bacnet_mstp_lnk {
 		uint8_t dst_addr;
 		uint8_t frm_type;
 		volatile uint16_t pdu_len;
+		uint8_t token[8];
+		uint8_t buf[BACNET_MSTP_MTU];
 		uint8_t pdu[BACNET_MSTP_MTU - 8];
 		int flag;
 	} tx;
@@ -77,12 +79,6 @@ int bacnet_mstp_init(struct bacnet_mstp_lnk * lnk,
 int bacnet_mstp_loop(struct bacnet_mstp_lnk * lnk);
 
 int bacnet_mstp_start(struct bacnet_mstp_lnk * lnk);
-
-int bacnet_mstp_recv(struct bacnet_mstp_lnk * lnk, uint8_t pdu[], 
-					unsigned int max);
-
-int bacnet_mstp_send(struct bacnet_mstp_lnk * lnk, const uint8_t pdu[], 
-					unsigned int len);
 
 #ifdef __cplusplus
 }

@@ -23,9 +23,21 @@
 #ifndef __BACNET_DL_H__
 #define __BACNET_DL_H__
 
+#include <stdint.h>
+
+struct bacnetdl_addr {
+	uint8_t netif;
+	uint8_t mac_len;
+	uint8_t mac[6];
+};
+
 struct bacnetdl_op {
-	int ( * recv)(void * drv, uint8_t pdu[], unsigned int max);
-	int ( * send)(void * drv, const uint8_t pdu[], unsigned int max);
+	int ( * recv)(void * drv, struct bacnetdl_addr * addr,
+				  uint8_t pdu[], unsigned int max);
+	int ( * send)(void * drv, struct bacnetdl_addr * addr, 
+				  const uint8_t pdu[], unsigned int max);
+	struct bacnetdl_addr * (* getaddr)(void * drv);
+	struct bacnetdl_addr * (* getbcast)(void * drv);
 };
 
 #ifdef __cplusplus

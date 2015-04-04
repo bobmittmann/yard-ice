@@ -470,6 +470,16 @@ struct bacnet_ptp_lnk ptp1;
 struct bacnet_ptp_lnk ptp2; 
 struct bacnet_mstp_lnk mstp1; 
 
+char msg[64];
+uint8_t rcv_buf[512];
+
+#if THINKOS_STDERR_FAULT_DUMP
+const struct file stm32_uart_file = {
+	.data = STM32_UART5, 
+	.op = &stm32_usart_fops 
+};
+#endif
+
 int main(int argc, char ** argv)
 {
 	struct serial_dev * ser1;
@@ -491,16 +501,19 @@ int main(int argc, char ** argv)
 	stm32f_nvram_env_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(31));
 
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
 
-	DCC_LOG(LOG_TRACE, "4. console serial init");
+	DCC_LOG(LOG_TRACE, "4. serial ports init");
 //	ser5 = stm32f_uart5_serial_init(57600, SERIAL_8N1);
-//	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	ser5 = stm32f_uart5_serial_init(38400, SERIAL_8N1);
-	ser1 = stm32f_uart1_serial_init(460800, SERIAL_8N1);
+	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+//	ser5 = stm32f_uart5_serial_init(38400, SERIAL_8N1);
+//	ser1 = stm32f_uart1_serial_init(460800, SERIAL_8N1);
+	ser1 = stm32f_uart1_serial_init(500000, SERIAL_8N1);
+//	ser1 = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
+//	ser1 = stm32f_uart1_serial_dma_init(460800, SERIAL_8N1);
 
 	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
 	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
@@ -510,14 +523,18 @@ int main(int argc, char ** argv)
 	
 	ser2 = (struct serial_dev *)&cdc_acm_serial_dev;
 
-///	term1 = serial_tty_open(ser5);
-	term1 = serial_tty_open(ser1);
+	term1 = serial_tty_open(ser5);
+//	term1 = serial_tty_open(ser1);
 	term2 = serial_tty_open(ser2);
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
+#if THINKOS_STDERR_FAULT_DUMP
+	stderr = (struct file *)&stm32_uart_file;
+#else
 	stderr = term1;
-	stdout = term1;
-	stdin = term1;
+#endif
+	stdout = stderr;
+	stdin = stderr;
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -532,7 +549,7 @@ int main(int argc, char ** argv)
 	bacnet_dl_init();
 
 	DCC_LOG(LOG_TRACE, "5. starting BACnet PtP links...");
-//	bacnet_ptp_init(&ptp1, "PtP1", ser5);
+	bacnet_ptp_init(&ptp1, "PtP1", ser5);
 	bacnet_ptp_init(&ptp2, "PtP2", ser2);
 
 	if ((env = getenv("MSTP")) == NULL) {
@@ -547,8 +564,8 @@ int main(int argc, char ** argv)
 	}
 
 	DCC_LOG1(LOG_TRACE, "5. BACnet MS/TP link addr: %d ...", mstp_addr);
-//	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser1);
-	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser5);
+	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser1);
+//	bacnet_mstp_init(&mstp1, "MS/TP1", mstp_addr, ser5);
 
 	DCC_LOG(LOG_TRACE, "6. TTY threads...");
 	bdl1.ptp = &ptp1;
@@ -558,9 +575,39 @@ int main(int argc, char ** argv)
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
 
+#if 0
+	{
+		int i;
+		uint32_t old_clk = thinkos_clock();
+		int n;
+
+		for (i = 0;; ++i) {
+			uint32_t clk;
+			int32_t dt;
+			int ret;
+	
+			clk = thinkos_clock();
+			dt = clk - old_clk;
+			old_clk = clk;
+//			DCC_LOG1(LOG_TRACE, "-- %4d ----------------------------", dt);
+		
+			ret = serial_recv(ser1, rcv_buf, 512, 100);
+
+//			if (ret != THINKOS_ETIMEDOUT)
+//				thinkos_sleep(0);
+		
+			n = sprintf(msg, "%2d %6d.%03d "
+						"The quick brown fox jumps over the lazy dog!\r\n", 
+						 mstp_addr, clk / 1000, clk % 1000); 
+			serial_send(ser1, msg, n);
+		}
+	}
+#endif
+	thinkos_sleep(100);
 	DCC_LOG(LOG_TRACE, "7. BACnet MS/TP...");
 	bacnet_mstp_start(&mstp1);
 	bacnet_mstp_loop(&mstp1);
+	
 
 	return 0;
 }

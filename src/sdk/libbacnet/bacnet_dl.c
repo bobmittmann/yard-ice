@@ -111,11 +111,13 @@ int __attribute__((noreturn)) bacnet_dl_task(void * arg)
         0
     };  /* address where message came from */
 	struct bacnetdl_dev * dev;
+	struct bacnetdl_addr addr;
 	uint8_t pdu[512];
 	int pdu_len;
 	uint32_t clk;
 	uint32_t dcc_clk;
 	int ev;
+	int netif;
 
 	clk = thinkos_clock();
 	dcc_clk = clk + DCC_TIME_MS; 
@@ -127,14 +129,31 @@ int __attribute__((noreturn)) bacnet_dl_task(void * arg)
 		if (ev > 0) {
 			DCC_LOG3(LOG_TRACE, "%5d.%03d event=%d", 
 					 clk / 1000, clk % 1000, ev);
-			dev = &__bacnet_dl.dev[ev];
-			if ((pdu_len = dev->op->recv(dev->drv, pdu, 512)) > 0) {
+			netif = ev;
+			dev = &__bacnet_dl.dev[netif];
+			addr.netif = netif;
+
+			if ((pdu_len = dev->op->recv(dev->drv, &addr, pdu, 512)) > 0) {
 				__bacnet_dl.reply_dev = dev;
+	
+
+				if (addr.mac_len == 0)
+					DCC_LOG1(LOG_TRACE, "[%d]", addr.netif);
+				else
+					DCC_LOG2(LOG_TRACE, "[%d %d]", addr.netif, addr.mac[0]);
+
 				//#if BAC_ROUTING
 #if 0
 				routing_npdu_handler(&src, DNET_list, pdu, pdu_len);
 #else
-				npdu_handler(NULL, pdu, pdu_len);
+				src.mac_len = addr.mac_len;
+				src.mac[0] = addr.mac[0];
+				src.mac[1] = addr.mac[1];
+				src.mac[2] = addr.mac[2];
+				src.mac[3] = addr.mac[3];
+				src.mac[4] = addr.mac[4];
+				src.mac[5] = addr.mac[5];
+				npdu_handler(&src, pdu, pdu_len);
 #endif
 			}
 		} else if (ev != THINKOS_ETIMEDOUT) {
@@ -180,10 +199,20 @@ int bacnet_dl_init(void)
 	return 0;
 }
 
-int bacnet_dl_send(struct bacnetdl_dev * dev, 
-				   const uint8_t pdu[], unsigned int len)
+int bacnet_dl_send(struct bacnetdl_dev * dev, struct bacnetdl_addr * addr,
+				   const uint8_t pdu[], unsigned int pdu_len)
 {
-	return dev->op->send(dev->drv, pdu, len);
+	return dev->op->send(dev->drv, addr, pdu, pdu_len);
+}
+
+struct bacnetdl_addr * bacnet_dl_getaddr(struct bacnetdl_dev * dev)
+{
+	return dev->op->getaddr(dev->drv);
+}
+
+struct bacnetdl_addr * bacnet_dl_getbcast(struct bacnetdl_dev * dev)
+{
+	return dev->op->getbcast(dev->drv);
 }
 
 /* -------------------------------------------------------------------------
@@ -193,16 +222,21 @@ int bacnet_dl_send(struct bacnetdl_dev * dev,
 int datalink_send_pdu(BACNET_ADDRESS * dest, BACNET_NPDU_DATA * npdu_data,
 					  uint8_t * pdu, unsigned pdu_len)
 {
+	struct bacnetdl_addr * addr = (struct bacnetdl_addr *)dest;
+
 	DCC_LOG(LOG_TRACE, "...");
-	return bacnet_dl_send(__bacnet_dl.reply_dev, pdu, pdu_len);
+
+	return bacnet_dl_send(__bacnet_dl.reply_dev, addr, pdu, pdu_len);
 }
 
 
+#if 0
 uint16_t datalink_receive(BACNET_ADDRESS * src, uint8_t * pdu,
 						  uint16_t max_pdu, unsigned timeout)
 {
 	return 0;
 }
+#endif
 
 void datalink_cleanup(void)
 {
@@ -212,16 +246,38 @@ void datalink_cleanup(void)
 
 void datalink_get_broadcast_address(BACNET_ADDRESS * dest)
 {
+	struct bacnetdl_addr * bcast;
+
 	DCC_LOG(LOG_TRACE, "...");
-    dest->mac_len = 0;
+
+	bcast = bacnet_dl_getbcast(__bacnet_dl.reply_dev);
+    dest->mac_len = bcast->mac_len;
+    dest->mac[0] = bcast->mac[0];
+    dest->mac[1] = bcast->mac[1];
+    dest->mac[2] = bcast->mac[2];
+    dest->mac[3] = bcast->mac[3];
+    dest->mac[4] = bcast->mac[4];
+    dest->mac[5] = bcast->mac[5];
+
     dest->net = 0;
     dest->len = 0;
 }
 
 void datalink_get_my_address(BACNET_ADDRESS * my_address)
 {
+	struct bacnetdl_addr * addr;
+
 	DCC_LOG(LOG_TRACE, "...");
-    my_address->mac_len = 0;
+
+	addr = bacnet_dl_getaddr(__bacnet_dl.reply_dev);
+    my_address->mac_len = addr->mac_len;
+    my_address->mac[0] = addr->mac[0];
+    my_address->mac[1] = addr->mac[1];
+    my_address->mac[2] = addr->mac[2];
+    my_address->mac[3] = addr->mac[3];
+    my_address->mac[4] = addr->mac[4];
+    my_address->mac[5] = addr->mac[5];
+
     my_address->net = 0;
     my_address->len = 0;        
 }

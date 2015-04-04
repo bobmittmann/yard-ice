@@ -33,7 +33,7 @@
 #define THINKOS_IRQ_MAX 80
 
 #define THINKOS_ENABLE_IDLE_WFI 1
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 0
+#define THINKOS_ENABLE_IDLE_SNAPSHOT 1
 
 #define THINKOS_ENABLE_CLOCK 1
 
@@ -76,6 +76,8 @@
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
 #define THINKOS_EXCEPT_STACK_SIZE 384
+
+#define THINKOS_STDERR_FAULT_DUMP 1
 
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
@@ -121,7 +123,7 @@
    Other configuration
    -------------------------------------------------------------------------- */
 
-#define SERIAL_TX_FIFO_LEN 512
+#define SERIAL_TX_FIFO_LEN 32
 #define SERIAL_RX_FIFO_LEN 512
 #define SERIAL_RX_TRIG_LVL 4
 

@@ -27,6 +27,7 @@
 #include <sys/tty.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <thinkos.h>
 
 #include <sys/shell.h>
 
@@ -71,7 +72,7 @@ int cmd_bacnet(FILE * f, int argc, char ** argv)
 	return SHELL_ABORT;
 }
 
-int cmd_test(FILE * f, int argc, char ** argv)
+int cmd_stdout(FILE * f, int argc, char ** argv)
 {
 	int i;
 
@@ -88,6 +89,41 @@ int cmd_test(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_stderr(FILE * f, int argc, char ** argv)
+{
+	int i;
+
+	fprintf(stderr, "----------------------\n");
+
+	for (i = 1; i < argc; ++i) {
+		if (i != 1)
+			fprintf(stderr, " ");
+		fprintf(stderr, argv[i]);
+	}
+
+	fprintf(stderr, "\n");
+
+	return 0;
+}
+
+int cmd_busy(FILE * f, int argc, char ** argv)
+{
+	uint32_t tmo;
+	uint32_t dt = 100;
+
+	if (argc > 1)
+		dt = strtoul(argv[1], NULL, 0);
+
+	fprintf(f, "Keeping busy for %d ms ....\n", dt);
+
+	tmo = thinkos_clock() + dt;
+
+	while ((int32_t)(thinkos_clock() - tmo) < 0) {
+	}
+
+
+	return 0;
+}
 
 const struct shell_cmd shell_cmd_tab[] = {
 
@@ -103,13 +139,22 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
+	{ cmd_osinfo, "sys", "os", 
+		"", "show OS status" },
+
 	{ cmd_reboot, "reboot", "r", "", 
 		"reboot system" },
 
 	{ cmd_set, "set", "", 
 		"VAR EXPR", "set environement variable" },
 
-	{ cmd_test, "stdout", ">", "", "" },
+	{ cmd_stdout, "stdout", ">", "", "" },
+
+	{ cmd_stderr, "stderr", "&", "", "" },
+
+	{ cmd_busy, "busy", "b", "", "" },
+
+	{ cmd_memxxd, "xxd", "x", "", "" },
 
 #if 0
 	{ cmd_ifconfig, "ifconfig", "if", 
@@ -123,9 +168,6 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_netstat, "netstat", "n", 
 		"", "print network connections" },
-
-	{ cmd_osinfo, "sys", "os", 
-		"", "show OS status" },
 
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
