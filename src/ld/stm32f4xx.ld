@@ -21,6 +21,7 @@
 
 
 _stack = ORIGIN(sram2) + LENGTH(sram2);
+__heap_end = ORIGIN(sram1) + LENGTH(sram1);
 
 EXTERN(_stack)
 EXTERN(_reset)
