@@ -18,49 +18,28 @@
  */
 
 /** 
- * @file trace.h
+ * @file mstp.c
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __TRACE_H__
-#define __TRACE_H__
-
 #include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include <stdint.h>
-#include <sys/usb-cdc.h>
+#include <sys/dcclog.h>
 
-#define TIME_ABS  1
-#define DUMP_PKT  2
-#define SHOW_SUPV 4
-#define SHOW_PKT  8
+#include "trace.h"
+#include "profclk.h"
 
-extern uint32_t trace_opt;
-extern uint32_t trace_ts;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int tracef(uint32_t ts, const char *fmt, ... );
-
-int trace_printf(const char *fmt, ... );
-
-int xxd(char * s, int max, uint8_t * buf, int len);
-
-int xx_dump(uint32_t ts, uint8_t * buf, int len);
-
-void usb_trace_init(struct usb_cdc_class * cdc);
-
-int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... );
-
-void raw_trace(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len);
-
-void raw_trace_init(struct usb_cdc_class * cdc, void * buf);
-
-#ifdef __cplusplus
+void raw_trace(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len)
+{
+	xx_dump(ts, rx_buf, rx_len);
 }
-#endif
 
-#endif /* __TRACE_H__ */
+void raw_trace_init(struct usb_cdc_class * cdc, void * buf)
+{
+	usb_trace_init(cdc);
+	tracef(profclk_get(), "--- RW data trace ---------"); 
+}
 

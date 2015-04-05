@@ -430,6 +430,33 @@ static int mstp_fast_send(struct bacnet_mstp_lnk * lnk, unsigned int route)
 	crc = __bacnet_crc8(crc, 0);
 	buf[7] = ~__bacnet_crc8(crc, 0);
 
+	switch (buf[2]) {
+	case FRM_TOKEN:
+		DCC_LOG(LOG_TRACE, "Token");
+		break;
+	case FRM_POLL_FOR_MASTER:
+		DCC_LOG2(LOG_TRACE, "Poll For Master (%d, %d)", buf[3], buf[4]);
+		break;
+	case FRM_REPLY_POLL_FOR_MASTER:
+		DCC_LOG2(LOG_TRACE, "Reply Poll For Master (%d, %d)", buf[3], buf[4]);
+		break;
+	case FRM_TEST_REQUEST:
+		DCC_LOG(LOG_TRACE, "Test Request");
+		break;
+	case FRM_TEST_RESPONSE:
+		DCC_LOG(LOG_TRACE, "Test Response");
+		break;
+	case FRM_BACNET_DATA_XPCT_REPLY:
+		DCC_LOG(LOG_TRACE, "BACnet Data Expecting Reply");
+		break;
+	case FRM_BACNET_DATA_NO_REPLY:
+		DCC_LOG(LOG_TRACE, "BACnet Data Not Expecting Reply");
+		break;
+	case FRM_REPLY_POSTPONED:
+		DCC_LOG(LOG_TRACE, "Reply Postponed");
+		break;
+	}
+
 	return serial_send(lnk->dev, buf, 8);
 }
 

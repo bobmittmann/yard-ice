@@ -181,40 +181,8 @@ int __serial_drain(struct stm32_serial_drv * drv)
 	return 0;
 }
 
-
-int __serial_conf_get(struct stm32_serial_drv * drv, struct serial_config * cfg)
-{
-//	struct stm32_usart * uart = drv->uart;
-
-	return 0;
-}
-
-int __serial_conf_set(struct stm32_serial_drv * drv, 
-					  const struct serial_config * cfg)
-{
-	struct stm32_usart * uart = drv->uart;
-	uint32_t flags;
-
-	stm32_usart_baudrate_set(uart, cfg->baudrate);
-
-	flags = CFG_TO_FLAGS(cfg);
-
-	if (SERIAL_FLOWCTRL(flags) == SERIAL_FLOWCTRL_XONXOFF) {
-		drv->flowctl_xonxoff = true; 
-		drv->tx_on = true;
-		DCC_LOG(LOG_TRACE, "XON/XOFF ebabled.");
-	} else {
-		drv->flowctl_xonxoff = false; 
-		drv->tx_on = true;
-	}
-
-	stm32_usart_mode_set(uart, flags);
-	thinkos_flag_give(CTL_FLAG);
-
-	return 0;
-}
-
-int __serial_ioctl(struct stm32_serial_drv * drv, int opt, uintptr_t arg)
+int __serial_ioctl(struct stm32_serial_drv * drv, int opt, 
+				   uintptr_t arg1, uintptr_t arg2)
 {
 	struct stm32_usart * us = drv->uart;
 	unsigned int msk = 0;
@@ -222,15 +190,15 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt, uintptr_t arg)
 	switch (opt) {
 	case SERIAL_IOCTL_ENABLE:
 		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_ENABLE");
-		msk |= (arg & SERIAL_RX_EN) ? USART_RE : 0;
-		msk |= (arg & SERIAL_TX_EN) ? USART_TE : 0;
+		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
 		us->cr1 |= msk;
 		break;
 
 	case SERIAL_IOCTL_DISABLE:
 		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_DISABLE");
-		msk |= (arg & SERIAL_RX_EN) ? USART_RE : 0;
-		msk |= (arg & SERIAL_TX_EN) ? USART_TE : 0;
+		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
+		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
 		us->cr1 &= ~msk;
 		break;
 
@@ -248,7 +216,7 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt, uintptr_t arg)
 
 	case SERIAL_IOCTL_STAT_GET: 
 		{
-			struct serial_stat * stat = (struct serial_stat *)arg;
+			struct serial_stat * stat = (struct serial_stat *)arg1;
 
 //			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_STAT_GET");
 			stat->rx_cnt = drv->rx_fifo.head;
@@ -257,8 +225,29 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt, uintptr_t arg)
 			break;
 		}
 
+	case SERIAL_IOCTL_CONF_SET: 
+		{
+			struct serial_config * cfg = (struct serial_config *)arg1;
+			uint32_t flags;
+			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_CONF_SET");
+
+			stm32_usart_baudrate_set(us, cfg->baudrate);
+			flags = CFG_TO_FLAGS(cfg);
+			stm32_usart_mode_set(us, flags);
+			if (SERIAL_FLOWCTRL(flags) == SERIAL_FLOWCTRL_XONXOFF) {
+				drv->flowctl_xonxoff = true; 
+				drv->tx_on = true;
+				DCC_LOG(LOG_TRACE, "XON/XOFF ebabled.");
+			} else {
+				drv->flowctl_xonxoff = false; 
+				drv->tx_on = true;
+			}
+			thinkos_flag_give(CTL_FLAG);
+		}
+		break;
+
 	case SERIAL_IOCTL_FLOWCTRL_SET: 
-		switch (arg) { 
+		switch (arg1) { 
 		case SERIAL_FLOWCTRL_NONE:
 		case SERIAL_FLOWCTRL_RTSCTS:
 			drv->flowctl_xonxoff = false; 
@@ -379,8 +368,6 @@ const struct serial_op stm32f_uart_serial_op = {
 	.recv = (void *)__serial_read,
 	.drain = (void *)__serial_drain,
 	.close = (void *)__serial_close,
-	.conf_set = (void *)__serial_conf_set,
-	.conf_get = (void *)__serial_conf_get,
 	.ioctl = (void *)__serial_ioctl
 };
 

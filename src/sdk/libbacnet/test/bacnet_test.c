@@ -575,7 +575,7 @@ int main(int argc, char ** argv)
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
 
-#if 0
+#if 1
 	{
 		int i;
 		uint32_t old_clk = thinkos_clock();
@@ -589,10 +589,10 @@ int main(int argc, char ** argv)
 			clk = thinkos_clock();
 			dt = clk - old_clk;
 			old_clk = clk;
-//			DCC_LOG1(LOG_TRACE, "-- %4d ----------------------------", dt);
+			DCC_LOG1(LOG_TRACE, "-- %4d ----------------------------", dt);
 		
 			ret = serial_recv(ser1, rcv_buf, 512, 100);
-
+			(void)ret;
 //			if (ret != THINKOS_ETIMEDOUT)
 //				thinkos_sleep(0);
 		
@@ -603,6 +603,7 @@ int main(int argc, char ** argv)
 		}
 	}
 #endif
+
 	thinkos_sleep(100);
 	DCC_LOG(LOG_TRACE, "7. BACnet MS/TP...");
 	bacnet_mstp_start(&mstp1);

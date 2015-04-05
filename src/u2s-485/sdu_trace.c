@@ -70,10 +70,9 @@ const char type_nm[8][4] = {
 
 struct sdu_link  * sdu_buf;
 
-void sdu_decode(uint8_t * buf, unsigned int buf_len)
+void sdu_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len)
 {
 	struct sdu_link * dev = sdu_buf; 
-	uint32_t ts;
 	uint8_t * cp;
 	uint8_t * msg;
 	uint8_t sum;
@@ -88,10 +87,7 @@ void sdu_decode(uint8_t * buf, unsigned int buf_len)
 	int c;
 	int i;
 
-	ts = profclk_get();
-
 	DCC_LOG1(LOG_INFO, "0. len=%d", buf_len);
-//	xx_dump(ts, buf, buf_len);
 
 	for (i = 0; i < buf_len; ++i) {
 	

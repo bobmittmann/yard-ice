@@ -138,8 +138,6 @@ struct serial_op {
 	int (* recv)(void *, void *, unsigned int, unsigned int);
 	int (* drain)(void *);
 	int (* close)(void *);
-	int (* conf_get)(void *, struct serial_config *);
-	int (* conf_set)(void *, const struct serial_config *);
 	int (* ioctl)(void *, int, uintptr_t, uintptr_t);
 };
 

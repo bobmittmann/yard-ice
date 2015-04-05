@@ -29,8 +29,10 @@ static inline uint32_t profclk_get(void) {
 	return CM3_DWT->cyccnt;
 }
 
+#define PROFCLK_HZ 72000000
+
 static inline uint32_t profclk_us(uint32_t clk) {
-	return clk / 72; 
+	return clk / ((PROFCLK_HZ) / 1000000); 
 }
 
 #ifdef __cplusplus

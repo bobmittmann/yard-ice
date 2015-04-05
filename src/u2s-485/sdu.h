@@ -39,7 +39,7 @@ void RX(uint8_t * buf, unsigned int len);
 void TX(uint8_t * buf, unsigned int len);
 
 void sdu_trace_init(struct usb_cdc_class * cdc, void * buf);
-void sdu_decode(uint8_t * buf, unsigned int buf_len);
+void sdu_decode(uint32_t ts, uint8_t * buf, unsigned int buf_len);
 
 void sdu_trace_show_supv(bool en);
 void sdu_trace_time_abs(bool en);

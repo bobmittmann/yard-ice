@@ -212,7 +212,7 @@ int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
 
 void usb_trace_init(struct usb_cdc_class * cdc)
 {
-	usb_trace_init(cdc);
+	usb_cdc = cdc;
 	profclk_init();
 }
 

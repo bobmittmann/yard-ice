@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 void mstp_trace_init(struct usb_cdc_class * cdc, void * buf);
-void mstp_decode(uint8_t * buf, unsigned int buf_len);
+void mstp_decode(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len);
 
 #ifdef __cplusplus
 }

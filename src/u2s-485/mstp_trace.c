@@ -64,6 +64,10 @@ struct bacnet_mstp_hdr {
 
 struct bacnet_mstp_lnk {
 	struct {
+		unsigned int pdu_len;
+		unsigned int off;
+		unsigned int cnt;
+		uint32_t start_ts;
 		union {
 			uint8_t buf[BACNET_MSTP_MTU];
 			struct {
@@ -71,10 +75,6 @@ struct bacnet_mstp_lnk {
 				uint8_t pdu[BACNET_MSTP_MTU - 8];
 			};
 		};
-		volatile uint16_t pdu_len;
-		unsigned int off;
-		unsigned int cnt;
-		int flag;
 	} rx;
 };
 
@@ -180,23 +180,20 @@ struct bacnet_mstp_lnk * mstp_buf;
    Packet decoding
    ------------------------------------------------------------------------- */
 
-void mstp_decode(uint8_t * rx_buf, unsigned int rx_len)
+void mstp_decode(uint32_t ts, uint8_t * rx_buf, unsigned int rx_len)
 {
 	struct bacnet_mstp_lnk * lnk = mstp_buf;
-	uint32_t ts;
 	int off = lnk->rx.off;
 	int cnt = lnk->rx.cnt;
 	uint8_t * buf = lnk->rx.buf;
-	uint8_t * cp;
 	uint8_t crc;
 	int len;
 
-	ts = profclk_get();
-
-	cp = &buf[cnt];
-	memcpy(cp, rx_buf, rx_len);
+	if (cnt == 0) {
+		lnk->rx.start_ts = ts;
+	}
+	memcpy(&buf[cnt], rx_buf, rx_len);
 	cnt += rx_len;
-	cp += rx_len;
 
 again:
 	/* move remaining octets to the beginning of the buffer */
@@ -209,7 +206,7 @@ again:
 	} 
 
 	if (cnt < 8) {
-		lnk->rx.off = off;
+		lnk->rx.off = 0;
 		lnk->rx.cnt = cnt;
 		return;
 	}
@@ -217,14 +214,12 @@ again:
 	if (buf[0] != 0x55) {
 		tracef(ts, "frame error 1!");
 		off = 1;
-		cnt = cnt;
 		goto again;
 	}
 
 	if (buf[1] != 0xff) {
 		tracef(ts, "frame error 2");
 		off = 2;
-		cnt = cnt;
 		goto again;
 	}
 
@@ -233,36 +228,8 @@ again:
 	if (buf[7] != crc) {
 		tracef(ts, "hdr CRC error: %02x != %02x", buf[7], crc);
 		off = 2;
-		cnt = cnt;
 		goto again;
 	}
-
-	len = (buf[5] << 8) + buf[6];
-	if (len > 0) {
-		uint16_t crc;
-		uint16_t chk;
-
-		if (cnt < len + 10) {
-			lnk->rx.off = off;
-			lnk->rx.cnt = cnt;
-			return;
-		}
-
-		chk = (buf[len + 9] << 8) + buf[len + 8];
-		crc = ~bacnet_crc16(0xffff, &buf[8], len);
-		off = len + 10;
-		if (crc != chk) {
-			tracef(ts, "Data CRC error %04x != %04x", crc, chk);
-			goto again;
-		}
-		lnk->rx.pdu_len = len;
-	} else {
-		off = 8;
-		lnk->rx.pdu_len = 0;
-	}
-
-	lnk->rx.off = off;
-	lnk->rx.cnt = cnt;
 
 	switch (buf[2]) {
 	case FRM_TOKEN:
@@ -291,7 +258,36 @@ again:
 		break;
 	}
 
-	goto again;
+	len = (buf[5] << 8) + buf[6];
+	if (len > 0) {
+		uint16_t crc;
+		uint16_t chk;
+
+		if (cnt < len + 10) {
+			lnk->rx.off = 0;
+			lnk->rx.cnt = 0;
+			tracef(ts, "too short!");
+			return;
+		}
+
+		chk = (buf[len + 9] << 8) + buf[len + 8];
+		crc = ~bacnet_crc16(0xffff, &buf[8], len);
+		off = len + 10;
+		if (crc != chk) {
+			tracef(ts, "Data CRC error %04x != %04x", crc, chk);
+			lnk->rx.off = 0;
+			lnk->rx.cnt = 0;
+			return;
+		}
+		lnk->rx.pdu_len = len;
+	} else {
+		off = 8;
+		lnk->rx.pdu_len = 0;
+	}
+
+	lnk->rx.off = 0;
+	lnk->rx.cnt = 0;
+
 }
 
 void mstp_trace_init(struct usb_cdc_class * cdc, void * buf)

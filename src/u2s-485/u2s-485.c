@@ -36,6 +36,7 @@
 #include "sdu.h"
 #include "mstp.h"
 #include "trace.h"
+#include "profclk.h"
 
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 4
@@ -110,12 +111,15 @@ enum {
 	VCOM_MODE_SERVICE = 2,
 	VCOM_MODE_INTERACTIVE = 3,
 	VCOM_MODE_SDU_TRACE = 4,
-	VCOM_MODE_MSTP_TRACE = 5
+	VCOM_MODE_MSTP_TRACE = 5,
+	VCOM_MODE_RAW_TRACE = 6
 };
 
 struct vcom {
 	volatile int mode;
+	struct serial_config cfg;
 	usb_cdc_class_t * cdc;
+	uint32_t ticks_per_byte;
 	struct serial_dev * serial;
 	struct serial_status ser_stat;
 };
@@ -163,15 +167,15 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
 	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
 	usb_printf(cdc, " [P/p] enable/disable packets\r\n");
+	usb_printf(cdc, " [R/r] enable/disable raw data trace\r\n");
 	usb_printf(cdc, " [X/x] enable/disable XON/XOFF flow control\r\n");
 };
 
-uint32_t protocol_buf[256];
+uint32_t protocol_buf[512];
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 {
 	usb_cdc_class_t * cdc = vcom->cdc;
-	struct serial_config cfg;
 	int i;
 	int c;
 
@@ -192,18 +196,27 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - Converter mode...\r\n");
 			vcom->mode = VCOM_MODE_CONVERTER;
 			break;
-		case 'T':
+		case 'S':
 			usb_printf(cdc, " - SDU trace mode...\r\n");
 			vcom->mode = VCOM_MODE_SDU_TRACE;
+			vcom->ticks_per_byte = ((PROFCLK_HZ) * 10) / vcom->cfg.baudrate;
 			sdu_trace_init(cdc, (void *)protocol_buf);
 			break;
 		case 'B':
 			usb_printf(cdc, " - BACnet MS/TP trace mode...\r\n");
 			vcom->mode = VCOM_MODE_MSTP_TRACE;
+			vcom->ticks_per_byte = ((PROFCLK_HZ) * 10) / vcom->cfg.baudrate;
 			mstp_trace_init(cdc, (void *)protocol_buf);
 			break;
+		case 'R':
+			usb_printf(cdc, " - Raw data trace mode...\r\n");
+			vcom->mode = VCOM_MODE_RAW_TRACE;
+			vcom->ticks_per_byte = ((PROFCLK_HZ) * 10) / vcom->cfg.baudrate;
+			raw_trace_init(cdc, (void *)protocol_buf);
+			break;
+		case 'r':
 		case 'b':
-		case 't':
+		case 's':
 			usb_printf(cdc, " - Interactive mode...\r\n");
 			vcom->mode = VCOM_MODE_INTERACTIVE;
 			break;
@@ -223,63 +236,63 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			}
 			break;
 		case '1':
-			cfg.baudrate = 9600;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 9600;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 9600 8N1\r\n");
 			break;
 		case '2':
-			cfg.baudrate = 19200;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 19200;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 19200 8N1\r\n");
 			break;
 		case '3':
-			cfg.baudrate = 38400;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 38400;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 38400 8N1\r\n");
 			break;
 		case '4':
-			cfg.baudrate = 57600;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 57600;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 57600 8N1\r\n");
 			break;
 		case '5':
-			cfg.baudrate = 115200;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 115200;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 115200 8N1\r\n");
 			break;
 
 		case '6':
-			cfg.baudrate = 500000;
-			cfg.databits = 8;
-			cfg.parity = 0;
-			cfg.stopbits = 1;
+			vcom->cfg.baudrate = 500000;
+			vcom->cfg.databits = 8;
+			vcom->cfg.parity = 0;
+			vcom->cfg.stopbits = 1;
 			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &cfg);
+			serial_config_set(vcom->serial, &vcom->cfg);
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 500000 8N1\r\n");
 			break;
@@ -340,6 +353,12 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, 
 					   "6. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
 */
+			break;
+		case 't':
+			led_flash(LED_RED, 50);
+			serial_send(vcom->serial, 
+						"The qick brown fox jumps over the lazy dog.\r\n", 
+						45);
 			break;
 		default:
 			show_menu(cdc);
@@ -417,15 +436,23 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	for (;;) {
 		len = serial_recv(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
+			uint32_t ts;
+			ts = profclk_get();
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
 				led_flash(LED_AMBER, 50);
 				usb_cdc_write(cdc, buf, len);
 			} else if (vcom->mode == VCOM_MODE_SDU_TRACE) {
 				led_flash(LED_AMBER, 50);
-				sdu_decode(buf, len);
+				ts -= vcom->ticks_per_byte * len;
+				sdu_decode(ts, buf, len);
 			} else if (vcom->mode == VCOM_MODE_MSTP_TRACE) {
 				led_flash(LED_AMBER, 50);
-				mstp_decode(buf, len);
+				ts -= vcom->ticks_per_byte * len;
+				mstp_decode(ts, buf, len);
+			} else if (vcom->mode == VCOM_MODE_RAW_TRACE) {
+				led_flash(LED_AMBER, 50);
+				ts -= vcom->ticks_per_byte * len;
+				raw_trace(ts, buf, len);
 			}
 		}
 	}
@@ -469,10 +496,10 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			prev_state.ctrl = state.ctrl;
 		}
 
-		if ((state.cfg.baudrate != prev_state.cfg.baudrate) ||
-			(state.cfg.databits != prev_state.cfg.databits) ||
-			(state.cfg.parity != prev_state.cfg.parity) ||
-			(state.cfg.stopbits != prev_state.cfg.stopbits)) {
+		if ((state.cfg.baudrate != vcom->cfg.baudrate) ||
+			(state.cfg.databits != vcom->cfg.databits) ||
+			(state.cfg.parity != vcom->cfg.parity) ||
+			(state.cfg.stopbits != vcom->cfg.stopbits)) {
 
 			serial_rx_disable(serial);
 
@@ -482,7 +509,7 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
 			if (state.cfg.baudrate == 921600) {
 				vcom->mode = VCOM_MODE_SERVICE; 
-				DCC_LOG(LOG_TRACE, "magic config!");
+				DCC_LOG(LOG_TRACE, "Service mode magic config ...");
 			} else {
 				/* XXX: Big hack, enable XON/XOFF flow control by either enabling
 				   it explicitly or by combining Parity=Mark with Stopbits=2.
@@ -492,20 +519,20 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				   specification omits flow control altogether. */
 				if (state.cfg.parity == SERIAL_PARITY_SPACE ||
 					state.cfg.parity == SERIAL_PARITY_MARK) {
-					DCC_LOG(LOG_TRACE, "XON/XOFF magic ...");
+					DCC_LOG(LOG_TRACE, "XON/XOFF magic config ...");
 					state.cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
 				}
 				vcom->mode = VCOM_MODE_CONVERTER;
-				serial_config_set(serial, &state.cfg);
-				prev_state.cfg = state.cfg;
+				vcom->cfg = state.cfg;
+				serial_config_set(serial, &vcom->cfg);
 				serial_rx_enable(serial);
 			}
 		} else {
 			DCC_LOG(LOG_TRACE, "keeping serial config.");
-			DCC_LOG1(LOG_TRACE, "baudrate=%d", prev_state.cfg.baudrate);
-			DCC_LOG1(LOG_TRACE, "databits=%d", prev_state.cfg.databits);
-			DCC_LOG1(LOG_TRACE, "parity=%d", prev_state.cfg.parity);
-			DCC_LOG1(LOG_TRACE, "stopbits=%d", prev_state.cfg.stopbits);
+			DCC_LOG1(LOG_TRACE, "baudrate=%d", vcom->cfg.baudrate);
+			DCC_LOG1(LOG_TRACE, "databits=%d", vcom->cfg.databits);
+			DCC_LOG1(LOG_TRACE, "parity=%d", vcom->cfg.parity);
+			DCC_LOG1(LOG_TRACE, "stopbits=%d", vcom->cfg.stopbits);
 		}
 	}
 }
@@ -543,11 +570,14 @@ int main(int argc, char ** argv)
 	vcom.serial = serial;
 	vcom.cdc = cdc;
 	vcom.mode = VCOM_MODE_NONE;
+	vcom.cfg.baudrate = 19200;
+	vcom.cfg.databits = 8;
+	vcom.cfg.parity = 0;
+	vcom.cfg.stopbits = 1;
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
-
 
 	thinkos_thread_create((void *)serial_recv_task, 
 						  (void *)&vcom,
