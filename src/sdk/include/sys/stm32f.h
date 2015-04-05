@@ -139,8 +139,34 @@ static inline uint32_t * dma_ifcr_bitband(struct stm32f_dma * dma,
 	return CM3_BITBAND_DEV(&dma->lifcr, stm32f_dma_isr_base_lut[stream]);
 }
 
+#define FEIF_BIT 0
+#define DMEIF_BIT 2
+#define TEIF_BIT 3
+#define HTIF_BIT 4
+#define TCIF_BIT 5
+
 #endif
 
+#if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)
+
+static inline uint32_t * dma_isr_bitband(struct stm32f_dma * dma,
+										 int stream) {
+	return CM3_BITBAND_DEV(&dma->isr, (stream << 2));
+}
+
+static inline uint32_t * dma_ifcr_bitband(struct stm32f_dma * dma,
+										 int stream) {
+	return CM3_BITBAND_DEV(&dma->ifcr, (stream << 2));
+}
+
+#define TEIF_BIT 3
+#define HTIF_BIT 2
+#define TCIF_BIT 1
+#define GIF_BIT  0
+
+#endif
+
+#if 0
 struct stm32f_dmactl {
 	int strm_id;
 	struct stm32f_dma_stream * strm;
@@ -151,13 +177,7 @@ struct stm32f_dmactl {
 void stm32f_dmactl_init(struct stm32f_dmactl * ctl, 
 						struct stm32f_dma * dma,
 						int strm_id);
-
-#define FEIF_BIT 0
-#define DMEIF_BIT 2
-#define TEIF_BIT 3
-#define HTIF_BIT 4
-#define TCIF_BIT 5
-
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>

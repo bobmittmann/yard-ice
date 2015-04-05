@@ -85,13 +85,17 @@
 
 #define THINKOS_ENABLE_BREAK 1
 
+#define THINKOS_ENABLE_PROFILING 1
+
 /* -------------------------------------------------------------------------
    TCP/IP network configuration
    -------------------------------------------------------------------------- */
 
+
 #define ENABLE_NETWORK 1
 #define ENABLE_NET_TCP 1
 #define ENABLE_NET_UDP 1
+
 
 #define ENABLE_TCPDUMP 0
 

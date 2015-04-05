@@ -52,6 +52,7 @@ const uint8_t stm32f_dma2_irqnum_lut[] = {
 	STM32F_IRQ_DMA2_STREAM7
 };
 
+#if 0
 void stm32f_dmactl_init(struct stm32f_dmactl * ctl, 
 						struct stm32f_dma * dma,
 						int strm_id)
@@ -72,6 +73,36 @@ void stm32f_dmactl_init(struct stm32f_dmactl * ctl,
 	ctl->ifcr[HTIF_BIT] = 1;
 	ctl->ifcr[TCIF_BIT] = 1; 
 }
+#endif
+#endif
+
+#if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)
+
+const uint8_t stm32f_dma1_irqnum_lut[] = {
+	STM32F_IRQ_DMA1_STREAM0,
+	STM32F_IRQ_DMA1_STREAM1,
+	STM32F_IRQ_DMA1_STREAM2,
+	STM32F_IRQ_DMA1_STREAM3,
+	STM32F_IRQ_DMA1_STREAM4,
+	STM32F_IRQ_DMA1_STREAM5,
+	STM32F_IRQ_DMA1_STREAM6
+};
+
+const uint8_t stm32f_dma2_irqnum_lut[] = {
+	STM32F_IRQ_DMA2_STREAM0,
+	STM32F_IRQ_DMA2_STREAM1,
+	STM32F_IRQ_DMA2_STREAM2,
+	STM32F_IRQ_DMA2_STREAM3,
+#ifdef STM32F_IRQ_DMA2_STREAM4
+	STM32F_IRQ_DMA2_STREAM4,
+#endif
+#ifdef STM32F_IRQ_DMA2_STREAM5
+	STM32F_IRQ_DMA2_STREAM5,
+#endif
+#ifdef STM32F_IRQ_DMA2_STREAM6
+	STM32F_IRQ_DMA2_STREAM6
+#endif
+};
 
 #endif
 

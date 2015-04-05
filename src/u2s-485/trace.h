@@ -18,36 +18,45 @@
  */
 
 /** 
- * @file sdu.h
+ * @file trace.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SDU_H__
-#define __SDU_H__
+#ifndef __TRACE_H__
+#define __TRACE_H__
 
 #include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include <stdint.h>
+#include <sys/usb-cdc.h>
+
+#define TIME_ABS  1
+#define DUMP_PKT  2
+#define SHOW_SUPV 4
+#define SHOW_PKT  8
+
+extern uint32_t trace_opt;
+extern uint32_t trace_ts;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void RX(uint8_t * buf, unsigned int len);
-void TX(uint8_t * buf, unsigned int len);
+int tracef(uint32_t ts, const char *fmt, ... );
 
-void sdu_trace_init(struct usb_cdc_class * cdc, void * buf);
-void sdu_decode(uint8_t * buf, unsigned int buf_len);
+int trace_printf(const char *fmt, ... );
 
-void sdu_trace_show_supv(bool en);
-void sdu_trace_time_abs(bool en);
-void sdu_trace_show_pkt(bool en);
+int xxd(char * s, int max, uint8_t * buf, int len);
+
+int xx_dump(uint32_t ts, uint8_t * buf, int len);
+
+void usb_trace_init(struct usb_cdc_class * cdc);
+
+int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SDU_H__ */
+#endif /* __TRACE_H__ */
 

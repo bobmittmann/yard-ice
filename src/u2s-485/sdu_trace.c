@@ -34,20 +34,9 @@
 
 #include <sys/dcclog.h>
 
+#include "trace.h"
 #include "profclk.h"
 #include "sdu.h"
-
-#ifndef SDU_INFO
-#ifdef DEBUG
-#define SDU_INFO 1
-#else
-#define SDU_INFO 0
-#endif
-#endif
-
-#ifndef RAW_INFO
-#define RAW_INFO 0
-#endif
 
 #define SDU_SYNC 0x1b
 #define SDU_PKT_LEN_MAX (255 + 3)
@@ -69,158 +58,6 @@ struct sdu_link {
 	} rx;
 };
 
-uint32_t trace_ts;
-uint32_t trace_opt;
-static struct usb_cdc_class * usb_cdc;
-
-#define TIME_ABS  1
-#define DUMP_PKT  2
-#define SHOW_SUPV 4
-#define SHOW_PKT  8
-
-int tracef(uint32_t ts, const char *fmt, ... )
-{
-	char s[129];
-	char * cp = s;
-	int32_t dt;
-	int32_t sec;
-	uint32_t ms;
-	uint32_t us;
-	va_list ap;
-	int rem;
-	int n;
-
-	if (trace_opt & TIME_ABS)
-		dt = profclk_us(ts);
-	else
-		dt = profclk_us((int32_t)(ts - trace_ts));
-
-	sec = dt / 1000000;
-	dt -= (sec * 1000000);
-	ms = dt / 1000;
-	us = dt - (ms * 1000);
-	trace_ts = ts;
-
-	rem = 126;
-
-	n = sprintf(s, "%2d.%03d.%03d: ", sec, ms, us);
-	cp += n;
-	rem -= n;
-
-	va_start(ap, fmt);
-	n = vsnprintf(cp, rem + 1, fmt, ap);
-	n = MIN(n, rem);
-	cp += n;
-	va_end(ap);
-
-	*cp++ = '\r';
-	*cp++ = '\n';
-
-	return usb_cdc_write(usb_cdc, s, cp - s);
-}
-
-int trace_printf(const char *fmt, ... )
-{
-	char s[129];
-	va_list ap;
-	int n;
-
-	va_start(ap, fmt);
-	n = vsnprintf(s, 129, fmt, ap);
-	va_end(ap);
-
-	n = MIN(n, 128);
-
-	return usb_cdc_write(usb_cdc, s, n);
-}
-
-int xxd(char * s, int max, uint8_t * buf, int len)
-{
-	char * cp = s;
-	int rem;
-	int cnt;
-	int n;
-	int i;
-
-	rem = max - 2;
-	cnt = MIN(len, rem / 3);
-
-	DCC_LOG2(LOG_INFO, "len=%d cnt=%d", len, cnt);
-
-	if (cnt < len) 
-		cnt--; /* make room for elipses */
-
-	for (i = 0; i < cnt; ++i) {
-		snprintf(cp, rem, " %02x", buf[i]);
-		if (rem < 3) {
-			DCC_LOG1(LOG_TRACE, "rem=%d", rem);
-			break;
-		}
-		cp += 3;
-		rem -= 3;
-	}
-
-	if (cnt < len) {
-		*cp++ = ' ';
-		*cp++ = '.';
-		*cp++ = '.';
-		*cp++ = '.';
-	}
-
-	*cp++ = '\0';
-	n = cp - s;
-
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
-
-	return n;
-}
-
-
-int xx_dump(uint32_t ts, uint8_t * buf, int len)
-{
-	char s[80];
-	char * cp = s;
-	int32_t dt;
-	int32_t sec;
-	uint32_t ms;
-	uint32_t us;
-	int rem;
-	int cnt;
-	int n;
-	int i;
-
-	if (trace_opt & TIME_ABS )
-		dt = profclk_us(ts);
-	else
-		dt = profclk_us((int32_t)(ts - trace_ts));
-
-	sec = dt / 1000000;
-	dt -= (sec * 1000000);
-	ms = dt / 1000;
-	us = dt - (ms * 1000);
-	trace_ts = ts;
-
-	rem = 80 - 3;
-	n = sprintf(s, "%2d.%03d.%03d:", sec, ms, us);
-	cp += n;
-	rem -= n;
-
-	cnt = MIN(len, rem / 3);
-
-	for (i = 0; i < cnt; ++i) {
-		n = snprintf(cp, rem, " %02x", buf[i]);
-		cp += n;
-		rem -= n;
-		if (rem == 0)
-			break;
-	}
-
-	*cp++ = '\r';
-	*cp++ = '\n';
-
-	return usb_cdc_write(usb_cdc, s, cp - s);
-}
-
 const char type_nm[8][4] = {
 	"x00",
 	"SUP",
@@ -231,11 +68,11 @@ const char type_nm[8][4] = {
 	"RSY",
 	"NAK" };
 
-struct sdu_link sdu_buf;
+struct sdu_link  * sdu_buf;
 
 void sdu_decode(uint8_t * buf, unsigned int buf_len)
 {
-	struct sdu_link * dev = &sdu_buf; 
+	struct sdu_link * dev = sdu_buf; 
 	uint32_t ts;
 	uint8_t * cp;
 	uint8_t * msg;
@@ -386,13 +223,6 @@ void sdu_decode(uint8_t * buf, unsigned int buf_len)
 	DCC_LOG(LOG_INFO, "4. DONE.");
 }
 
-void sdu_trace_init(struct usb_cdc_class * cdc)
-{
-	usb_cdc = cdc;
-	profclk_init();
-	tracef(profclk_get(), "--- SDU trace ---------"); 
-}
-
 void sdu_trace_show_supv(bool en)
 {
 	uint32_t opt = trace_opt & ~SHOW_SUPV;
@@ -412,5 +242,18 @@ void sdu_trace_show_pkt(bool en)
 	uint32_t opt = trace_opt & ~SHOW_PKT;
 	
 	trace_opt = opt | (en ? SHOW_PKT : 0);
+}
+
+void sdu_trace_init(struct usb_cdc_class * cdc, void * buf)
+{
+	struct sdu_link * lnk = (struct sdu_link *)buf;
+	usb_trace_init(cdc);
+	sdu_buf = lnk;
+	lnk->rx.timeout = false;
+	lnk->rx.stuff = 0;
+	lnk->rx.pos = 0;
+	lnk->rx.tot_len = 0;
+	lnk->rx.addr = 0;
+	tracef(profclk_get(), "--- SDU trace ---------"); 
 }
 

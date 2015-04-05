@@ -79,7 +79,10 @@ static inline void __attribute__((always_inline)) __wait(void) {
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
-#if THINKOS_ENABLE_PROFILING_
+	/* FIXME: the profile counter does not take into 
+	 account the time spent on interrupt handlers or OS (SYS).. */
+//#if THINKOS_ENABLE_PROFILING
+#if 0 
 	volatile uint32_t * cycref = &thinkos_rt.cycref;
 	volatile uint32_t * cycidle = &thinkos_rt.cyccnt[THINKOS_CYCCNT_IDLE];
 	volatile uint32_t * cycsys = &thinkos_rt.cyccnt[THINKOS_CYCCNT_SYS];

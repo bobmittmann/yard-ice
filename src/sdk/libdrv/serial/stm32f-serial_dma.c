@@ -281,18 +281,14 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->tx.strm->cr = 0;
 	while (drv->tx.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
 	/* clear all interrupt flags */
-	drv->tx.ifcr[FEIF_BIT] = 1;
-	drv->tx.ifcr[DMEIF_BIT] = 1;
 	drv->tx.ifcr[TEIF_BIT] = 1;
 	drv->tx.ifcr[HTIF_BIT] = 1;
 	drv->tx.ifcr[TCIF_BIT] = 1; 
 	drv->tx.strm->par = &drv->uart->dr;
 //	drv->tx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
-	drv->tx.strm->fcr = 0;
 	/* configure TX DMA stream */
 	drv->tx.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
-		DMA_MBURST_1 | DMA_PBURST_1 | 
-		DMA_CT_M0AR | DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
+		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
 		DMA_DIR_MTP | DMA_TCIE | DMA_TEIE;
 	/* ------------------------------------------------------- 
 	 */
@@ -304,8 +300,6 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->rx.strm->cr = 0;
 	while (drv->rx.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
 	/* clear all interrupt flags */
-	drv->rx.ifcr[FEIF_BIT] = 1;
-	drv->rx.ifcr[DMEIF_BIT] = 1;
 	drv->rx.ifcr[TEIF_BIT] = 1;
 	drv->rx.ifcr[HTIF_BIT] = 1;
 	drv->rx.ifcr[TCIF_BIT] = 1; 
@@ -313,11 +307,9 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->rx.strm->par = &drv->uart->dr;
 	/* cofigure FIFO */
 //	drv->rx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
-	drv->rx.strm->fcr = 0;
 	/* configure DMA */
 	drv->rx.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
-		DMA_MBURST_1 | DMA_PBURST_1 |
-		DMA_CT_M0AR | DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
+		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
 		DMA_DIR_PTM | DMA_TCIE | DMA_TEIE;
 	/* ------------------------------------------------------- 
 	 */

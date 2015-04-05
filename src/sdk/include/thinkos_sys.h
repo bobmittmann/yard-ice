@@ -303,7 +303,7 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_PROFILING
 	/* Per thread cycle count */
-	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2];
+	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];
 	/* Reference cycle state ... */
 	uint32_t cycref;
 #endif
@@ -500,8 +500,12 @@ struct thinkos_rt {
 #define THINKOS_THREAD_NULL (32)
 #define THINKOS_THREAD_IDLE (THINKOS_THREADS_MAX)
 
+#if 0
 #define THINKOS_CYCCNT_SYS  (THINKOS_THREADS_MAX)
 #define THINKOS_CYCCNT_IDLE (THINKOS_THREADS_MAX + 1)
+#else
+#define THINKOS_CYCCNT_IDLE (THINKOS_THREADS_MAX)
+#endif
 
 /* -------------------------------------------------------------------------- 
  * Thread initialization 

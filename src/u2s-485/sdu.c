@@ -30,6 +30,8 @@
 #include <sys/dcclog.h>
 #include <thinkos.h>
 
+#include "profclk.h"
+
 #define SDU_SYNC 0x1b
 #define SDU_PKT_LEN_MAX (255 + 3)
 #define SDU_SUP  0x20

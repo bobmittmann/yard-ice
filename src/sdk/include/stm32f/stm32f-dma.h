@@ -915,6 +915,10 @@ struct stm32f_dma {
 #endif
 
 #if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)
+
+/* Fake Channel selection */
+#define DMA_CHSEL_SET(VAL) 0
+
 struct stm32f_dma_channel {
 	volatile uint32_t ccr;
 	volatile uint32_t cndtr;
@@ -923,10 +927,23 @@ struct stm32f_dma_channel {
 	uint32_t res1;
 };
 
+/*
+XXX: t seems that the 1xx and 3xx devices implements a reduced version
+of the the DMA stream found on 2xx and 4xx parts... */
+struct stm32f_dma_stream {
+	volatile uint32_t cr;
+	volatile uint32_t ndtr;
+	volatile void * par;
+	volatile void * m0ar;
+};
+
 struct stm32f_dma {
 	volatile uint32_t isr;
 	volatile uint32_t ifcr;
-	struct stm32f_dma_channel ch[8];
+	union {
+		struct stm32f_dma_channel ch[8];
+		struct stm32f_dma_stream s[8];
+	};
 };
 #endif
 

@@ -41,10 +41,7 @@
 #include <string.h>		/* for memcpy() */
 #include <unistd.h>		/* for sbrk() */
 
-#include <debug.h>
 #include <sys/dcclog.h>
-
-#define MAIN_THREAD_STACK_SIZE (2048) /* 2KiB */
 
 /* Number of bits which define chunk size. */
 #ifndef MALLOC_CHUNK_BITS
@@ -123,6 +120,8 @@ static inline chsize_t bytes2chunks(size_t bytes)
 }
 
 #if 0
+#define MAIN_THREAD_STACK_SIZE (2048) /* 2KiB */
+
 void __attribute__ ((constructor)) malloc_init(void)
 {
 	struct hole * hole;
@@ -149,7 +148,7 @@ void __attribute__ ((constructor)) malloc_init(void)
 #endif
 uintptr_t heap_break = (uintptr_t)&__heap_start;
 
-void * sbrk (intptr_t delta)
+void * sbrk(intptr_t delta)
 {
 	uintptr_t data_end;
 	uintptr_t data_max;
@@ -189,6 +188,8 @@ void __attribute__ ((constructor)) malloc_init(void)
 }
 
 #ifdef DEBUG
+#include <stdio.h>
+
 void hole_dump(void)
 {
 	struct hole * curr;

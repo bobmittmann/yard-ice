@@ -18,36 +18,34 @@
  */
 
 /** 
- * @file sdu.h
+ * @file mstp.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SDU_H__
-#define __SDU_H__
+#ifndef __MSTP_H__
+#define __MSTP_H__
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <sys/usb-cdc.h>
+
+struct mstp_lnk {
+	uint8_t data[512];
+};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void RX(uint8_t * buf, unsigned int len);
-void TX(uint8_t * buf, unsigned int len);
-
-void sdu_trace_init(struct usb_cdc_class * cdc, void * buf);
-void sdu_decode(uint8_t * buf, unsigned int buf_len);
-
-void sdu_trace_show_supv(bool en);
-void sdu_trace_time_abs(bool en);
-void sdu_trace_show_pkt(bool en);
+void mstp_trace_init(struct usb_cdc_class * cdc, void * buf);
+void mstp_decode(uint8_t * buf, unsigned int buf_len);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SDU_H__ */
+#endif /* __MSTP_H__ */
 

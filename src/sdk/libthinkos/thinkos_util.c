@@ -38,6 +38,17 @@ void thinkos_rt_snapshot_svc(int32_t * arg)
 	int i;
 
 	cm3_primask_set(1);
+#if THINKOS_ENABLE_PROFILING
+	{
+		int self = thinkos_rt.active;
+		uint32_t cyccnt = CM3_DWT->cyccnt;
+		int32_t delta = cyccnt - thinkos_rt.cycref;
+		/* update the reference */
+		thinkos_rt.cycref = cyccnt;
+		/* update thread's cycle counter */
+		thinkos_rt.cyccnt[self] += delta; 
+	}
+#endif
 
 	src = (uint32_t *)&thinkos_rt;
 

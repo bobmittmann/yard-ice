@@ -318,5 +318,3 @@ ifneq ($(HOST),Cygwin)
 -include $(DFILES)
 endif
 
-
-

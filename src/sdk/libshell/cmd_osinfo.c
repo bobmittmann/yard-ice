@@ -141,12 +141,8 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 	uint32_t * wq;
 	int i;
 #if THINKOS_ENABLE_PROFILING
-	uint32_t cycsum = 0;
-	uint32_t cycbusy = 0;
 	uint32_t cycdiv;
-	uint32_t idle;
 	uint32_t busy;
-	uint32_t sys;
 #endif
 #if THINKOS_MUTEX_MAX > 0
 	int j;
@@ -165,23 +161,36 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 #endif
 
 #if THINKOS_ENABLE_PROFILING
-	cycsum = 0;
-	cycbusy = 0;
-	for (i = 0; i < THINKOS_THREADS_MAX; ++i)
-		cycsum += rt.cyccnt[i];
-	cycbusy = cycsum;
-	cycsum += rt.cyccnt[THINKOS_CYCCNT_IDLE];
-	cycsum += rt.cyccnt[THINKOS_CYCCNT_SYS];
+	{
+		uint32_t cycsum = 0;
+		uint32_t cycbusy;
+		uint32_t idle;
+//		uint32_t sys;
 
-	cycdiv = (cycsum + 500) / 1000;
-	busy = (cycbusy + cycdiv / 2) / cycdiv;
-	sys = (rt.cyccnt[THINKOS_CYCCNT_SYS] + cycdiv / 2) / cycdiv;
-//	idle = (rt.cyccnt[THINKOS_CYCCNT_IDLE] + cycdiv / 2) / cycdiv;
-	idle = 1000 - busy - sys;
-	fprintf(f, " [ %u cycles | %d.%d%% busy | %d.%d%% sys | %d.%d%% idle ]", 
-		   cycsum, busy / 10, busy % 10, 
-		   sys / 10, sys % 10,
-		   idle / 10, idle % 10);
+		cycsum = 0;
+		for (i = 0; i < THINKOS_THREADS_MAX; ++i)
+			cycsum += rt.cyccnt[i];
+		cycbusy = cycsum;
+		cycsum += rt.cyccnt[THINKOS_CYCCNT_IDLE];
+//		cycsum += rt.cyccnt[THINKOS_CYCCNT_SYS];
+
+		cycdiv = (cycsum + 500) / 1000;
+		busy = (cycbusy + cycdiv / 2) / cycdiv;
+#if 0
+		sys = (rt.cyccnt[THINKOS_CYCCNT_SYS] + cycdiv / 2) / cycdiv;
+		//	idle = (rt.cyccnt[THINKOS_CYCCNT_IDLE] + cycdiv / 2) / cycdiv;
+		idle = 1000 - busy - sys;
+		fprintf(f, " [ %u cycles | %d.%d%% busy | %d.%d%% sys | %d.%d%% idle ]", 
+				cycsum, busy / 10, busy % 10, 
+				sys / 10, sys % 10,
+				idle / 10, idle % 10);
+#else
+		idle = 1000 - busy;
+		fprintf(f, " [ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
+				cycsum, busy / 10, busy % 10, idle / 10, idle % 10);
+	}
+#endif
+
 #endif
 
 	fprintf(f, "\n");

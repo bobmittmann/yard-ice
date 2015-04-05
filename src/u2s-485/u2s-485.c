@@ -34,23 +34,17 @@
 #include <sys/dcclog.h>
 
 #include "sdu.h"
-
-#ifndef SDU_TRACE
-#ifdef DEBUG
-#define SDU_TRACE 0
-#else
-#define SDU_TRACE 0
-#endif
-#endif
-
-#ifndef RAW_TRACE
-#define RAW_TRACE 0
-#endif
+#include "mstp.h"
+#include "trace.h"
 
 #define FW_VERSION_MAJOR 1
 #define FW_VERSION_MINOR 4
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
+
+/* -------------------------------------------------------------------------
+   USB-CDC ACM
+   ------------------------------------------------------------------------- */
 
 #define LANG_STR_SZ              4
 static const uint8_t lang_str[LANG_STR_SZ] = {
@@ -104,6 +98,9 @@ const uint8_t * const cdc_acm_str[] = {
 
 const uint8_t cdc_acm_strcnt = sizeof(cdc_acm_str) / sizeof(uint8_t *);
 
+/* -------------------------------------------------------------------------
+   Virtual COM 
+   ------------------------------------------------------------------------- */
 
 struct serial_dev * serial2_open(void);
 
@@ -112,7 +109,8 @@ enum {
 	VCOM_MODE_CONVERTER = 1,
 	VCOM_MODE_SERVICE = 2,
 	VCOM_MODE_INTERACTIVE = 3,
-	VCOM_MODE_SDU_TRACE = 4
+	VCOM_MODE_SDU_TRACE = 4,
+	VCOM_MODE_MSTP_TRACE = 5
 };
 
 struct vcom {
@@ -121,6 +119,10 @@ struct vcom {
 	struct serial_dev * serial;
 	struct serial_status ser_stat;
 };
+
+/* -------------------------------------------------------------------------
+   Firmware update 
+   ------------------------------------------------------------------------- */
 
 extern const uint8_t usb_xflash_pic[];
 extern const unsigned int sizeof_usb_xflash_pic;
@@ -142,26 +144,9 @@ void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
 	cm3_sysrst();
 }
 
-char s[256];
-
-int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
-{
-	va_list ap;
-	int ret;
-	int n;
-
-	va_start(ap, fmt);
-	n = vsnprintf(s, 129, fmt, ap);
-	va_end(ap);
-
-	n = MIN(n, 128);
-
-	ret = usb_cdc_write(cdc, s, n);
-	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
-
-	return ret;
-}
-
+/* -------------------------------------------------------------------------
+   Debug and trace 
+   ------------------------------------------------------------------------- */
 void show_menu(usb_cdc_class_t * cdc)
 {
 	usb_printf(cdc, "--- Option:\r\n");
@@ -170,14 +155,18 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, "   [3]  38400 8N1\r\n");
 	usb_printf(cdc, "   [4]  57600 8N1\r\n");
 	usb_printf(cdc, "   [5] 115200 8N1\r\n");
+	usb_printf(cdc, "   [6] 500000 8N1\r\n");
 	usb_printf(cdc, "   [q] quit\r\n");
 	usb_printf(cdc, "   [F] firmware update\r\n");
-	usb_printf(cdc, " [T/t] enable/disable trace\r\n");
+	usb_printf(cdc, " [S/s] enable/disable SDU trace\r\n");
+	usb_printf(cdc, " [B/b] enable/disable BACnet MS/TP trace\r\n");
 	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
 	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
 	usb_printf(cdc, " [P/p] enable/disable packets\r\n");
 	usb_printf(cdc, " [X/x] enable/disable XON/XOFF flow control\r\n");
 };
+
+uint32_t protocol_buf[256];
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 {
@@ -206,8 +195,14 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 		case 'T':
 			usb_printf(cdc, " - SDU trace mode...\r\n");
 			vcom->mode = VCOM_MODE_SDU_TRACE;
-			sdu_trace_init(cdc);
+			sdu_trace_init(cdc, (void *)protocol_buf);
 			break;
+		case 'B':
+			usb_printf(cdc, " - BACnet MS/TP trace mode...\r\n");
+			vcom->mode = VCOM_MODE_MSTP_TRACE;
+			mstp_trace_init(cdc, (void *)protocol_buf);
+			break;
+		case 'b':
 		case 't':
 			usb_printf(cdc, " - Interactive mode...\r\n");
 			vcom->mode = VCOM_MODE_INTERACTIVE;
@@ -278,6 +273,17 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - 115200 8N1\r\n");
 			break;
 
+		case '6':
+			cfg.baudrate = 500000;
+			cfg.databits = 8;
+			cfg.parity = 0;
+			cfg.stopbits = 1;
+			serial_rx_disable(vcom->serial);
+			serial_config_set(vcom->serial, &cfg);
+			serial_rx_enable(vcom->serial);
+			usb_printf(cdc, " - 500000 8N1\r\n");
+			break;
+
 		case 'U':
 			sdu_trace_show_supv(true);
 			usb_printf(cdc, " - Show supervisory...\r\n");
@@ -341,43 +347,6 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 	}
 }
 
-#if 0
-
-#define DBG_BUF_LEN 4096
-uint8_t dbg_buf[DBG_BUF_LEN];
-uint32_t dbg_cnt = 0;
-uint32_t dbg_head = 0;
-
-void dbg_buf_dump(void)
-{
-	DCC_LOG1(LOG_TRACE, "dbg_cnt=%d", dbg_cnt);
-
-	if (dbg_cnt < DBG_BUF_LEN)
-		RX(dbg_buf, dbg_cnt);
-	else {
-		int n;
-		int tail = (dbg_head + 1) & (DBG_BUF_LEN - 1);
-		n = DBG_BUF_LEN - tail;
-		RX(&dbg_buf[tail], n);
-		if ((n = tail) > 0) 
-			RX(&dbg_buf[0], n);
-	}
-	dbg_cnt = 0;
-	dbg_head = 0;
-}
-
-void dbg_write(uint8_t * buf, int len)
-{
-	int i;
-
-	for (i = 0; i < len; ++i) {
-		dbg_buf[dbg_head++ & (DBG_BUF_LEN - 1)] = buf[i];
-		if (dbg_cnt < DBG_BUF_LEN)
-			dbg_cnt++;
-	}
-}
-#endif
-
 #define VCOM_BUF_SIZE 64
 
 void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
@@ -422,37 +391,6 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 			if (len > 0) {
 				led_flash(LED_RED, 50);
 				serial_send(serial, buf, len);
-#if RAW_TRACE
-				if (len == 1)
-					DCC_LOG1(LOG_TRACE, "TX: %02x", buf[0]);
-				else if (len == 2)
-					DCC_LOG2(LOG_TRACE, "TX: %02x %02x", 
-							 buf[0], buf[1]);
-				else if (len == 3)
-					DCC_LOG3(LOG_TRACE, "TX: %02x %02x %02x", 
-							 buf[0], buf[1], buf[2]);
-				else if (len == 4)
-					DCC_LOG4(LOG_TRACE, "TX: %02x %02x %02x %02x", 
-							 buf[0], buf[1], buf[2], buf[3]);
-				else if (len == 5)
-					DCC_LOG5(LOG_TRACE, "TX: %02x %02x %02x %02x %02x", 
-							 buf[0], buf[1], buf[2], buf[3], buf[4]);
-				else if (len == 6)
-					DCC_LOG6(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x", 
-							 buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-				else if (len == 7)
-					DCC_LOG7(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x %02x ",
-							 buf[0], buf[1], buf[2], buf[3], 
-							 buf[4], buf[5], buf[6]);
-				else
-					DCC_LOG8(LOG_TRACE, "TX: %02x %02x %02x %02x %02x %02x "
-							 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
-							 buf[4], buf[5], buf[6], buf[7]);
-#endif
-#if SDU_TRACE
-				TX(buf, len);
-#endif
-				//			dbg_write(buf, len);
 			}
 		} else {
 			// forward to service input
@@ -479,45 +417,16 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	for (;;) {
 		len = serial_recv(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
-//			dbg_write(buf, len);
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
 				led_flash(LED_AMBER, 50);
 				usb_cdc_write(cdc, buf, len);
-			}
-			if (vcom->mode == VCOM_MODE_SDU_TRACE) {
+			} else if (vcom->mode == VCOM_MODE_SDU_TRACE) {
 				led_flash(LED_AMBER, 50);
 				sdu_decode(buf, len);
+			} else if (vcom->mode == VCOM_MODE_MSTP_TRACE) {
+				led_flash(LED_AMBER, 50);
+				mstp_decode(buf, len);
 			}
-#if RAW_TRACE
-			if (len == 1)
-				DCC_LOG1(LOG_TRACE, "RX: %02x", buf[0]);
-			else if (len == 2)
-				DCC_LOG2(LOG_TRACE, "RX: %02x %02x", 
-						 buf[0], buf[1]);
-			else if (len == 3)
-				DCC_LOG3(LOG_TRACE, "RX: %02x %02x %02x", 
-						 buf[0], buf[1], buf[2]);
-			else if (len == 4)
-				DCC_LOG4(LOG_TRACE, "RX: %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3]);
-			else if (len == 5)
-				DCC_LOG5(LOG_TRACE, "RX: %02x %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3], buf[4]);
-			else if (len == 6)
-				DCC_LOG6(LOG_TRACE, "RX: %02x %02x %02x %02x %02x %02x", 
-						 buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-			else if (len == 7)
-				DCC_LOG7(LOG_TRACE, "RX: %02x %02x %02x %02x %02x %02x %02x ",
-						 buf[0], buf[1], buf[2], buf[3], 
-						 buf[4], buf[5], buf[6]);
-			else
-				DCC_LOG8(LOG_TRACE, "RX: %02x %02x %02x %02x %02x %02x "
-						 "%02x %02x ...", buf[0], buf[1], buf[2], buf[3], 
-						 buf[4], buf[5], buf[6], buf[7]);
-#endif
-#if SDU_TRACE
-			RX(buf, len);
-#endif
 		}
 	}
 }
@@ -575,7 +484,6 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				vcom->mode = VCOM_MODE_SERVICE; 
 				DCC_LOG(LOG_TRACE, "magic config!");
 			} else {
-
 				/* XXX: Big hack, enable XON/XOFF flow control by either enabling
 				   it explicitly or by combining Parity=Mark with Stopbits=2.
 				   This is to enable XON/XOFF in case this driver is used to 
@@ -590,7 +498,6 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				vcom->mode = VCOM_MODE_CONVERTER;
 				serial_config_set(serial, &state.cfg);
 				prev_state.cfg = state.cfg;
-//				serial_enable(serial);
 				serial_rx_enable(serial);
 			}
 		} else {
@@ -662,7 +569,6 @@ int main(int argc, char ** argv)
 		thinkos_sleep(100);
 		led_off(LED_RED);
 	}
-
 
 	for (;;) {
 		usb_recv_task(&vcom);
