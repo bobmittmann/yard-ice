@@ -131,19 +131,19 @@ void mutex_test(void)
 
 	printf("  * thinkos_thread_create()\n");
 	th[0] = thinkos_thread_create(fibonnaci_task, NULL, 
-								  stack[0], STACK_SIZE,
+								  stack[0], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(1));
 
 	printf("  * thinkos_thread_create()\n");
 	th[1] = thinkos_thread_create(fibonnaci_task, NULL, 
-								  stack[1], STACK_SIZE,
+								  stack[1], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(1));
 
 	printf("  * thinkos_thread_create()\n");
 	th[2] = thinkos_thread_create(fibonnaci_task, NULL, 
-								  stack[2], STACK_SIZE,
+								  stack[2], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(1));
 

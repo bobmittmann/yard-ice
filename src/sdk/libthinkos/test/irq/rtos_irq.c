@@ -49,7 +49,7 @@ struct {
 } meter;
 
 int sem_timer; /* semaphore to signal a full buffer */
-int ev_timer; /* event */
+int flag_timer; /* event flag */
 
 volatile bool req;
 volatile bool ack;
@@ -75,7 +75,7 @@ void stm32f_tim7_isr(void)
 	meter.ticks.tim7 = ticks + 1;
 
 	if (req & !ack) {
-		__thinkos_ev_raise(ev_timer);
+		thinkos_flag_give(flag_timer);
 		ack = true;
 		req = false;
 	}
@@ -114,10 +114,9 @@ void stm32f_tim1_brk_tim9_isr(void)
 void tim7_init(void)
 {
 	struct stm32f_tim * tim7 = STM32F_TIM7;
-	struct stm32f_rcc * rcc = STM32F_RCC;
 
 	/* clock enable */
-	rcc->apb1enr |= RCC_TIM7EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM7);
 
 	tim7->cnt = 0;
 	tim7->psc = 2 - 1; /* 2 * APB1_CLK(30MHz) / 2 = 30MHz*/
@@ -132,10 +131,9 @@ void tim7_init(void)
 void tim9_init(void)
 {
 	struct stm32f_tim * tim9 = STM32F_TIM9;
-	struct stm32f_rcc * rcc = STM32F_RCC;
 
 	/* clock enable */
-	rcc->apb2enr |= RCC_TIM9EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM9);
 
 	tim9->cnt = 0;
 	tim9->psc = 4 - 1; /* 2 * APB2_CLK(60MHz) / 4 = 30MHz*/
@@ -150,18 +148,16 @@ void tim9_init(void)
 
 void timer_init(struct stm32f_tim * tim)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
-
 	if (tim == STM32F_TIM9) {
 		/* clock enable */
-		rcc->apb2enr |= RCC_TIM9EN;
+		stm32_clk_enable(STM32_RCC, STM32_CLK_TIM9);
 		tim->psc = 4 - 1; /* 2 * APB2_CLK(60MHz) / 4 = 30MHz*/
 	} else {
 		if (tim == STM32F_TIM7) {
-			rcc->apb1enr |= RCC_TIM7EN;
+			stm32_clk_enable(STM32_RCC, STM32_CLK_TIM7);
 		} else if (tim == STM32F_TIM6) {
 			/* clock enable */
-			rcc->apb1enr |= RCC_TIM6EN;
+			stm32_clk_enable(STM32_RCC, STM32_CLK_TIM6);
 		}
 		tim->psc = 2 - 1; /* 2 * APB1_CLK(30MHz) / 2 = 30MHz*/
 	}
@@ -191,7 +187,7 @@ int timer_isr_task(void * arg)
 	printf(" [%d] started.\n", self);
 
 	while (1) {
-		__thinkos_irq_wait(STM32F_IRQ_TIM6);
+		thinkos_irq_wait(STM32F_IRQ_TIM6);
 		latency = tim6->cnt;
 		ev = tim6->sr;
 		if (ev == 0)
@@ -233,12 +229,9 @@ int event_wait_task(void * arg)
 	while (1) {
 		ack = false;
 		req = true;
-		__thinkos_critical_enter();
 		while (!ack) {
-			__thinkos_ev_wait(ev_timer);
+			thinkos_flag_take(flag_timer);
 		}
-		__thinkos_critical_exit();
-
 		latency = tim7->cnt;
 
 		if (meter.max.event < latency)
@@ -276,9 +269,9 @@ void irq_test(void)
 	/* allocate semaphore */
 	printf("1.\n");
 	sem_timer = thinkos_sem_alloc(0); 
-	/* allocate event */
+	/* allocate flag */
 	printf("2.\n");
-	ev_timer = thinkos_ev_alloc(); 
+	flag_timer = thinkos_flag_alloc(); 
 
 	/* initialize timer 6 */
 	timer_init(STM32F_TIM6);
@@ -297,15 +290,11 @@ void irq_test(void)
 
 	printf("4.\n");
 	event_th = thinkos_thread_create(event_wait_task, NULL, 
-						  stack[1], STACK_SIZE, 
-						  THINKOS_OPT_PRIORITY(0) |
-						  THINKOS_OPT_ID(0));
+									 stack[1], STACK_SIZE);
 
 	printf("5.\n");
 	timer_th = thinkos_thread_create(timer_isr_task, NULL, 
-						  stack[2], STACK_SIZE, 
-						  THINKOS_OPT_PRIORITY(0) |
-						  THINKOS_OPT_ID(0));
+									 stack[2], STACK_SIZE);
 
 
 	thinkos_sleep(100);
@@ -376,21 +365,27 @@ void irq_test(void)
 	thinkos_cancel(event_th, 0);
 	thinkos_cancel(timer_th, 0);
 
-	thinkos_ev_free(ev_timer);
+	thinkos_flag_free(flag_timer);
 	thinkos_sem_free(sem_timer);
 }
 
 void io_init(void)
 {
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_mode(STM32F_GPIOB, 6, OUTPUT, PUSH_PULL | SPEED_MED);
-	stm32f_gpio_mode(STM32F_GPIOB, 7, OUTPUT, PUSH_PULL | SPEED_MED);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_mode(STM32_GPIOB, 6, OUTPUT, PUSH_PULL | SPEED_MED);
+	stm32_gpio_mode(STM32_GPIOB, 7, OUTPUT, PUSH_PULL | SPEED_MED);
 }
+
+void stdio_init(void);
 
 int main(int argc, char ** argv)
 {
 	cm3_udelay_calibrate();
-	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
+
+	cm3_udelay_calibrate();
+
+	/* Initialize the stdin, stdout and stderr */
+	stdio_init();
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");

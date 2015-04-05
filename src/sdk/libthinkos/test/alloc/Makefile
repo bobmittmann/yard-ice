@@ -21,7 +21,7 @@
 
 PROG = alloc_test
 
-CFILES = alloc_test.c stdio.c
+CFILES = alloc_test.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm

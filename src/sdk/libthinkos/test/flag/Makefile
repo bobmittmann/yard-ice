@@ -21,7 +21,7 @@
 
 PROG = flag_test
 
-CFILES = flag_test.c stdio.c
+CFILES = flag_test.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm

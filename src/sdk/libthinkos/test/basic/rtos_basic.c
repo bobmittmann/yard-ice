@@ -180,22 +180,22 @@ void sched_speed_test(void)
 	printf(" - Scheduler speed test\n");
 
 	th[0] = thinkos_thread_create(yield_task, (void *)&dev[0], 
-								  stack[0], STACK_SIZE,
+								  stack[0], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(2) | THINKOS_OPT_PAUSED);
 								  
 	th[1] = thinkos_thread_create(yield_task, (void *)&dev[1], 
-								  stack[1], STACK_SIZE,
+								  stack[1], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(1) |
 								  THINKOS_OPT_ID(2) | THINKOS_OPT_PAUSED);
 
 	th[2] = thinkos_thread_create(yield_task, (void *)&dev[2], 
-								  stack[2], STACK_SIZE,
+								  stack[2], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(0) | THINKOS_OPT_PAUSED);
 
 	th[3] = thinkos_thread_create(yield_task, (void *)&dev[3], 
-								  stack[3], STACK_SIZE,
+								  stack[3], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(0) | THINKOS_OPT_PAUSED);
 
@@ -222,9 +222,8 @@ void sched_speed_test(void)
 		d[2] = y[2] - x[2];
 		d[3] = y[3] - x[3];
 
-		printf(" %8d + %8d + %8d + %8d = %8d (%d idle)\n", 
-			   d[0], d[1], d[2], d[3], d[0] + d[1] + d[2] + d[3], 
-			   thinkos_idle_val());
+		printf(" %8d + %8d + %8d + %8d = %8d\n", 
+			   d[0], d[1], d[2], d[3], d[0] + d[1] + d[2] + d[3]);
 	}
 
 	for (i = 0; i < 4; i++) {
@@ -258,22 +257,22 @@ void busy_test(void)
 	}
 
 	th[0] = thinkos_thread_create(busy_task, (void *)&dev[0], 
-								  stack[0], STACK_SIZE, 
+								  stack[0], STACK_SIZE | 
 								  THINKOS_OPT_PRIORITY(2) |
 								  THINKOS_OPT_ID(8));
 
 	th[1] = thinkos_thread_create(busy_task, (void *)&dev[1], 
-								  stack[1], STACK_SIZE,
+								  stack[1], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(4) |
 								  THINKOS_OPT_ID(8));
 
 	th[2] = thinkos_thread_create(busy_task, (void *)&dev[2], 
-								  stack[2], STACK_SIZE,
+								  stack[2], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(6) |
 								  THINKOS_OPT_ID(8));
 
 	th[3] = thinkos_thread_create(busy_task, (void *)&dev[3], 
-								  stack[3], STACK_SIZE,
+								  stack[3], STACK_SIZE |
 								  THINKOS_OPT_PRIORITY(8) |
 								  THINKOS_OPT_ID(8));
 
@@ -298,8 +297,8 @@ void busy_test(void)
 
 		ref = 100 * d[3];
 
-		printf(" %8d + %8d + %8d + %8d = %8d (%d idle)\n", 
-			   d[0], d[1], d[2], d[3], sum, thinkos_idle_val());
+		printf(" %8d + %8d + %8d + %8d = %8d\n", 
+			   d[0], d[1], d[2], d[3], sum);
 		printf(" %d%% %d%% %d%% %d%%\n", 
 			   ref / d[0], ref / d[1], ref / d[2], ref / d[3]);
 

@@ -260,9 +260,8 @@ int main(int argc, char ** argv)
 
 	cm3_udelay_calibrate();
 
-	stdio_init();
-
-	env_init();
+	DCC_LOG(LOG_TRACE, "1. env_init().");
+	stm32f_nvram_env_init();
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -271,6 +270,9 @@ int main(int argc, char ** argv)
 	printf("\n");
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+	DCC_LOG(LOG_TRACE, "4. stdio_init().");
+	stdio_init();
 
 	network_config();
 

@@ -29,6 +29,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/serial.h>
 #include <sys/delay.h>
+#include <sys/tty.h>
 
 #include <thinkos.h>
 
@@ -36,13 +37,13 @@ struct thread_ctrl {
 	volatile bool enabled;
 };
 
-#define DAC1_GPIO STM32F_GPIOA
+#define DAC1_GPIO STM32_GPIOA
 #define DAC1_PORT 4
 
-#define DAC2_GPIO STM32F_GPIOA
+#define DAC2_GPIO STM32_GPIOA
 #define DAC2_PORT 5
 
-#define ADC6_GPIO STM32F_GPIOA
+#define ADC6_GPIO STM32_GPIOA
 #define ADC6_PORT 6
 
 const int32_t sine_wave[] = {
@@ -67,7 +68,6 @@ const int32_t sine_wave[] = {
 int dac_waveform_task(void * arg)
 {
 	struct thread_ctrl * ctrl = (struct thread_ctrl *)arg;
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_dac * dac = STM32F_DAC;
 	struct stm32f_tim * tim7 = STM32F_TIM7;
 	int self = thinkos_thread_self();
@@ -77,7 +77,7 @@ int dac_waveform_task(void * arg)
 	thinkos_sleep(100);
 
 	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM7EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM7);
 	tim7->cnt = 0;
 	tim7->psc = 600 - 1; /* 2 * APB1_CLK(30MHz) / 600 = 100KHz */
 	tim7->arr = 2000 - 1; /* 100KHz / 2000 = 50 Hz*/
@@ -87,12 +87,12 @@ int dac_waveform_task(void * arg)
 	tim7->cr1 = TIM_URS | TIM_CEN;
 
 	/* I/O pins config */
-	stm32f_gpio_clock_en(DAC2_GPIO);
-	stm32f_gpio_mode(DAC2_GPIO, DAC2_PORT, ANALOG, 0);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_gpio_mode(DAC2_GPIO, DAC2_PORT, ANALOG, 0);
 
 	/* DAC clock enable */
-	rcc->apb1enr |= RCC_DACEN;
-	dac->cr = CR_EN2;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_DAC);
+	dac->cr = DAC_EN2;
 	dac->dhr12r2 = 2048;
 
 	while (ctrl->enabled) {
@@ -115,12 +115,11 @@ int dac_waveform_task(void * arg)
  ***********************************************************/
 void adc1_init(unsigned int chans)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_adc * adc = STM32F_ADC1;
 	struct stm32f_adcc * adcc = STM32F_ADCC;
 
 	/* ADC clock enable */
-	rcc->apb2enr |= RCC_ADC1EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_ADC1);
 
 	/* configure for DMA use */
 	adc->cr1 = ADC_RES_12BIT | ADC_SCAN;
@@ -147,11 +146,10 @@ void adc1_init(unsigned int chans)
  ***********************************************************/
 void dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_dma * dma = STM32F_DMA2;
 
 	/* DMA clock enable */
-	rcc->ahb1enr |= RCC_DMA2EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA2);
 
 	/* Disable DMA channel */
 	dma->s[0].cr = 0;
@@ -178,14 +176,13 @@ void dma2_init(void * dst0, void * dst1, void * src, unsigned int ndt)
  ***********************************************************/
 void tim2_init(uint32_t freq)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct stm32f_tim * tim2 = STM32F_TIM2;
 	uint32_t div;
 	uint32_t pre;
 	uint32_t n;
 
 	/* get the total divisior */
-	div = ((2 * STM32F_APB1_HZ) + (freq / 2)) / freq;
+	div = ((2 * stm32f_tim1_hz) + (freq / 2)) / freq;
 	/* get the minimum pre scaler */
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
@@ -194,7 +191,7 @@ void tim2_init(uint32_t freq)
 	printf(" %s(): div=%d pre=%d n=%d\n", __func__, pre, div, n);
 
 	/* Timer clock enable */
-	rcc->apb1enr |= RCC_TIM2EN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM2);
 	
 	/* Timer configuration */
 	tim2->psc = pre - 1;
@@ -207,7 +204,7 @@ void tim2_init(uint32_t freq)
 	tim2->ccmr1 = TIM_OC1M_PWM_MODE1;
 	tim2->ccr1 = tim2->arr - 2;
 	printf(" %s(): PSC=%d AAR=%d.\n", __func__, tim2->psc, tim2->arr);
-	printf(" %s(): F=%dHz\n", __func__, (2 * STM32F_APB1_HZ) /
+	printf(" %s(): F=%dHz\n", __func__, (2 * stm32f_tim1_hz) /
 		   ((tim2->psc + 1) * ( tim2->arr + 1)));
 }
 
@@ -244,11 +241,11 @@ int adc_capture_task(void * arg)
 	 I/O pin configuration
 	 ***********************************************************/
 	/* GPIO */
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_mode(STM32F_GPIOB, 6, OUTPUT, PUSH_PULL | SPEED_MED);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_gpio_mode(STM32_GPIOB, 6, OUTPUT, PUSH_PULL | SPEED_MED);
 	/* ADC Input pins */
-	stm32f_gpio_clock_en(ADC6_GPIO);
-	stm32f_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_gpio_mode(ADC6_GPIO, ADC6_PORT, ANALOG, 0);
 
 	adc1_init(ADC_CHANS);
 
@@ -293,9 +290,9 @@ int adc_capture_task(void * arg)
 		printf(" %2d[dg.C]", temp);
 
 		if (cnt & 1)
-			stm32f_gpio_set(STM32F_GPIOB, 6);
+			stm32_gpio_set(STM32_GPIOB, 6);
 		else
-			stm32f_gpio_clr(STM32F_GPIOB, 6);
+			stm32_gpio_clr(STM32_GPIOB, 6);
 	}
 
 	return 0;
@@ -305,14 +302,26 @@ uint32_t capture_stack[512 + 2 * ADC_CHANS * ADC_SAMPLES];
  
 uint32_t wave_stack[512];
 
+FILE * serial_tty_open(struct serial_dev * serdev)
+{
+	struct tty_dev * tty;
+	FILE * f_raw;
+
+	f_raw = serial_fopen(serdev);
+	tty = tty_attach(f_raw);
+	return tty_fopen(tty);
+}
+
 int main(int argc, char ** argv)
 {
 	struct thread_ctrl ctrl;
+	struct serial_dev * ser5;
 	int capture_th;
 	int wave_th;
 
 	cm3_udelay_calibrate();
-	stdout = stm32f_usart_open(STM32F_UART5, 115200, SERIAL_8N1);
+	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	stdout = serial_tty_open(ser5);
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -325,12 +334,10 @@ int main(int argc, char ** argv)
 	ctrl.enabled = true;
 
 	capture_th = thinkos_thread_create(adc_capture_task, (void *)&ctrl, 
-						  capture_stack, sizeof(capture_stack), 
-						  THINKOS_OPT_PRIORITY(0));
+						  capture_stack, sizeof(capture_stack));
 
 	wave_th = thinkos_thread_create(dac_waveform_task, (void *)&ctrl, 
-						  wave_stack, sizeof(wave_stack), 
-						  THINKOS_OPT_PRIORITY(0));
+						  wave_stack, sizeof(wave_stack));
 
 	/* wait for the capture thread to finish */
 	thinkos_join(capture_th);

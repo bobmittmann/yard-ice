@@ -24,7 +24,7 @@ PROG = tcp_test
 
 CFILES = tcp_test.c stdio.c zarathustra.c
 
-SDK = ../../../sdk
+SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
@@ -34,10 +34,12 @@ LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty
 
 INCPATH = $(SDK)/include  
 
-JTAGTOOL_ADDR = 192.168.0.80
-
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-include ../../../mk/stm32f207.mk
+JTAGTOOL_ADDR = 192.168.0.80
+
+#include ../../mk/stm32f207.mk
+MACH = stm32f407
+include ../../mk/stm32f4xx.mk
 

@@ -21,7 +21,7 @@
 
 PROG = ev_test
 
-CFILES = ev_test.c stdio.c
+CFILES = ev_test.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm

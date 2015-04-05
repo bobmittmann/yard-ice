@@ -38,8 +38,8 @@
 #define ENABLE_NET_UDP 1
 #endif
 
-#ifndef NET_UDP_PCB_ACTIVE_MAX
-#define NET_UDP_PCB_ACTIVE_MAX 2
+#ifndef NET_UDP_PCB_MAX
+#define NET_UDP_PCB_MAX 2
 #endif
 
 #ifndef NET_UDP_RECV_QUEUE_LEN
@@ -138,7 +138,7 @@ struct udp_system {
 #if ENABLE_UDP_PROTO_STAT
 	struct proto_stat stat;
 #endif
-	struct udp_pcb_link pcb_pool[NET_UDP_PCB_ACTIVE_MAX];
+	struct udp_pcb_link pcb_pool[NET_UDP_PCB_MAX];
 };
 
 #if ENABLE_UDP_PROTO_STAT

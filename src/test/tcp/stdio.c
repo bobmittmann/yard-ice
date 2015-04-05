@@ -23,31 +23,25 @@
 
 #include <sys/stm32f.h>
 #include <sys/serial.h>
-#include <sys/delay.h>
 #include <sys/tty.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 
 const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
 	.op = &stm32_usart_fops 
 };
 
-struct uart_console_dev * uart_console_init(unsigned int baudrate, 
-											unsigned int flags);
-
-struct file * uart_console_fopen(struct uart_console_dev * dev);
-
 void stdio_init(void)
 {
-	struct uart_console_dev * dev;
+	struct serial_dev * ser5;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	dev = uart_console_init(115200, SERIAL_8N1);
-	f_raw = uart_console_fopen(dev);
+	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+
+	f_raw = serial_fopen(ser5);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
@@ -56,4 +50,3 @@ void stdio_init(void)
 	stdin = f_tty;
 }
 
-int stdio_shell(void);

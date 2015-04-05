@@ -135,11 +135,11 @@ void semaphore_test(void)
 
 	/* create the producer thread */
 	producer_th = thinkos_thread_create(producer_task, NULL, 
-			producer_stack, sizeof(producer_stack), 0);
+			producer_stack, sizeof(producer_stack));
 
 	/* create the consuer thread */
 	consumer_th = thinkos_thread_create(consumer_task, NULL, 
-			consumer_stack, sizeof(consumer_stack), 0);
+			consumer_stack, sizeof(consumer_stack));
 
 	printf(" * Empty semaphore: %d\n", sem_empty);
 	printf(" * Full semaphore: %d\n", sem_full);

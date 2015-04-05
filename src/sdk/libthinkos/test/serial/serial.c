@@ -36,7 +36,7 @@
 #define CONSOLE_RX_BUF_LEN 16
 
 struct console_ctrl {
-	struct stm32f_usart * uart;
+	struct stm32_usart * uart;
 	struct stm32f_dma * dma;
 	struct {
 		struct stm32f_dma_stream * s;
@@ -47,7 +47,7 @@ struct console_ctrl {
 	} rx;
 };
 
-static int inline getc(struct stm32f_usart * usart, unsigned int msec)
+static int inline getc(struct stm32_usart * usart, unsigned int msec)
 {
 	int tm;
 
@@ -185,7 +185,7 @@ const struct fileop console_ops = {
 };
 
 const struct console_ctrl uart5_ctrl = {
-	.uart = STM32F_UART5, 
+	.uart = STM32_UART5, 
 	.dma = STM32F_DMA1,
 	.rx.s = &STM32F_DMA1->s[0],
 	.tx.s = &STM32F_DMA1->s[7]
@@ -198,16 +198,24 @@ const struct file console_file = {
 
 struct file * console_open(unsigned int baudrate, unsigned int flags)
 {
-	struct stm32f_rcc * rcc = STM32F_RCC;
 	struct console_ctrl * ctrl = (struct console_ctrl *)console_file.data;
 
-	stm32f_usart_init(ctrl->uart, baudrate, flags);
+	/* Enable DMA for transmission and reception */
+	stm32_usart_init(ctrl->uart);
+	stm32_usart_baudrate_set(ctrl->uart, baudrate);
+	stm32_usart_mode_set(ctrl->uart, flags);
 
 	/* Enable DMA for transmission and reception */
 	ctrl->uart->cr3 |= USART_DMAT | USART_DMAR;
 
 	/* DMA clock enable */
-	rcc->ahb1enr |= (ctrl->dma == STM32F_DMA1) ? RCC_DMA1EN : RCC_DMA2EN;
+	if (ctrl->dma == STM32F_DMA1) {
+		/* DMA clock enable */
+		stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
+	} else {
+		/* DMA clock enable */
+		stm32_clk_enable(STM32_RCC, STM32_CLK_DMA2);
+	}
 
 	/* Disable DMA stream */
 	ctrl->tx.s->cr = 0;

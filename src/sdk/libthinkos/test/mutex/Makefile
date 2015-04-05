@@ -21,7 +21,7 @@
 
 PROG = mutex-test
 
-CFILES = mutex-test.c stdio.c
+CFILES = mutex-test.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm

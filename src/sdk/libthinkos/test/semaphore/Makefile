@@ -21,7 +21,7 @@
 
 PROG = sem_test
 
-CFILES = sem_test.c stdio.c
+CFILES = sem_test.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 		  ../../../libthinkos ../../../libc ../../../libice-comm

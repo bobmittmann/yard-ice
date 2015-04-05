@@ -140,7 +140,7 @@ const uint16_t tcp_conn_est_tmo = TCPTV_CONN_EST_TMO;
 
 const uint16_t tcp_idle_det_tmo = TCPTV_IDLE_DET_TMO;
 
-static const uint8_t tcp_keepintvl[9] = {
+static const uint16_t tcp_keepintvl[9] = {
 	((TCPTV_IDLE_DET_TMO) - (TCPTV_KEEP_IDLE)),
 	((TCPTV_MAX_IDLE) - (TCPTV_IDLE_DET_TMO) + 7) / 8,
 	((TCPTV_MAX_IDLE) - (TCPTV_IDLE_DET_TMO) + 6) / 8,

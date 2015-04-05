@@ -173,26 +173,25 @@ int producer_task(void * arg)
 int consumer_task(void * arg)
 {
 	char buf[16];
-	int i = 0;
-	int n;
 	uint32_t clk;
+	int n;
+	int i = 0;
 	int id;
 
 	printf(" %s(): [%d] started...\n", __func__, id = thinkos_thread_self());
 	thinkos_sleep(100);
 
-	/* set the production enable flag to start production */
 	for (;;) {
 		if (thinkos_flag_wait(my_queue.rd_flag) < 0)
 			abort();
 		n = q_read(&my_queue, buf, 3);
 		thinkos_sleep(10);
-		thinkos_flag_release(my_queue.rd_flag, q_len(&my_queue));
-
 		clk = thinkos_clock();
+
 		buf[n] = '\0';
 		printf("<%d> %5d.%03d - %4d - \"%s\"\n", 
 			   id, clk / 1000, clk % 1000, i, buf);
+		thinkos_flag_release(my_queue.rd_flag, q_len(&my_queue));
 		i++;
 	} 
 

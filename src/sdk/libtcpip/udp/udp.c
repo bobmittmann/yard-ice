@@ -29,7 +29,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-const uint8_t udp_pcb_active_max = NET_UDP_PCB_ACTIVE_MAX;
+const uint8_t udp_pcb_max = NET_UDP_PCB_MAX;
 const uint8_t udp_def_ttl = NET_UDP_DEFAULT_TTL;
 const uint8_t udp_rcev_queue_len = NET_UDP_RECV_QUEUE_LEN;
 const uint8_t udp_def_tos = NET_UDP_DEFAULT_TOS;
@@ -92,7 +92,7 @@ void udp_init(void)
 	DCC_LOG(LOG_TRACE, "initializing UDP subsystem."); 
 
 	pcb_list_init(&__udp__.free);
-	for (i = 0; i < NET_TCP_PCB_ACTIVE_MAX; ++i) {
+	for (i = 0; i < NET_UDP_PCB_MAX; ++i) {
 		struct udp_pcb * up = &__udp__.pcb_pool[i].pcb;
 		pcb_insert((struct pcb *)up, &__udp__.free);
 	}

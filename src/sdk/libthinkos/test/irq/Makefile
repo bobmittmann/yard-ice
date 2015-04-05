@@ -21,7 +21,7 @@
 
 PROG = rtos_irq
 
-CFILES = rtos_irq.c
+CFILES = rtos_irq.c ../common/stdio.c
 
 LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
 	  ../../../libthinkos ../../../libc 
