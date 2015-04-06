@@ -38,6 +38,10 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+#ifndef STM32_ENABLE_USB_DEVICE 
+#error "cdc-acm_dev.c depends on STM32_ENABLE_USB_DEVICE"
+#endif 
+
 struct usb_cdc_acm {
 	/* modem bits */
 	volatile uint8_t status; /* modem status lines */

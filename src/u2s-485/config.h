@@ -74,9 +74,7 @@
 #define THINKOS_ENABLE_DEADLOCK_CHECK 0
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
-#define THINKOS_SYSRST_ONFAULT 0
-
-#define THINKOS_SYSRST_ONFAULT 0
+#define THINKOS_SYSRST_ONFAULT 1
 
 #define THINKOS_ENABLE_BREAK 0
 
@@ -84,6 +82,11 @@
 
 #define THINKOS_ENABLE_PROFILING 0
 
+/* -------------------------------------------------------------------------
+ * USB device and CDC-ACM 
+ * ------------------------------------------------------------------------- */
+
+#define STM32_ENABLE_USB_DEVICE 1
 
 #define CDC_EP_OUT_MAX_PKT_SIZE 64
 #define CDC_EP_IN_MAX_PKT_SIZE 64
@@ -101,6 +104,7 @@
 #define CDC_CTL_FLAG_NO     5
 #define VCOM_MODE_FLAG_NO   6
 #define CDC_RX_SEM_NO       0
+
 
 #endif /* __CONFIG_H__ */
 

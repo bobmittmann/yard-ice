@@ -39,13 +39,13 @@
 
 #include <sys/dcclog.h>
 
-#ifndef STM32F_ENABLE_USB_DEVICE 
-#define STM32F_ENABLE_USB_DEVICE 0
+#ifndef STM32_ENABLE_USB_DEVICE 
+#define STM32_ENABLE_USB_DEVICE 0
 #endif 
 
 #ifdef STM32F_OTG_FS
 
-#if STM32F_ENABLE_USB_DEVICE
+#if STM32_ENABLE_USB_DEVICE
 
 typedef enum {
 	EP_UNCONFIGURED = 0,

@@ -39,7 +39,7 @@
 #include "profclk.h"
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 4
+#define FW_VERSION_MINOR 5
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
@@ -122,7 +122,47 @@ struct vcom {
 	uint32_t ticks_per_byte;
 	struct serial_dev * serial;
 	struct serial_status ser_stat;
+	struct {
+		const char * pat;
+		int pos;
+	} scan;
 };
+
+/* -------------------------------------------------------------------------
+   Stream scan / pattern match
+   ------------------------------------------------------------------------- */
+
+static void vcom_scan_config(struct vcom * vcom, const char * pattern)
+{
+	vcom->scan.pat = pattern;
+	vcom->scan.pos = 0;
+}
+
+static bool vcom_scan_match(struct vcom * vcom, uint8_t buf[], int len)
+{
+	uint8_t * pat = (uint8_t *)vcom->scan.pat;
+	int j = vcom->scan.pos;
+	int c = pat[j];
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		if (buf[i] == c) {
+			j++;
+			c = pat[j];
+			if (c == '\0') {
+				vcom->scan.pos = 0;
+				return true;
+			}
+		} else {
+			/* mismatch, restart */
+			j = 0;
+			c = pat[0];
+		}
+	}
+
+	vcom->scan.pos = j;
+	return false;
+}
 
 /* -------------------------------------------------------------------------
    Firmware update 
@@ -153,22 +193,23 @@ void __attribute__((noreturn)) usb_xflash(uint32_t offs, uint32_t len)
    ------------------------------------------------------------------------- */
 void show_menu(usb_cdc_class_t * cdc)
 {
-	usb_printf(cdc, "--- Option:\r\n");
-	usb_printf(cdc, "   [1]   9600 8N1\r\n");
-	usb_printf(cdc, "   [2]  19200 8N1\r\n");
-	usb_printf(cdc, "   [3]  38400 8N1\r\n");
-	usb_printf(cdc, "   [4]  57600 8N1\r\n");
-	usb_printf(cdc, "   [5] 115200 8N1\r\n");
-	usb_printf(cdc, "   [6] 500000 8N1\r\n");
-	usb_printf(cdc, "   [q] quit\r\n");
-	usb_printf(cdc, "   [F] firmware update\r\n");
-	usb_printf(cdc, " [S/s] enable/disable SDU trace\r\n");
-	usb_printf(cdc, " [B/b] enable/disable BACnet MS/TP trace\r\n");
-	usb_printf(cdc, " [A/a] absolute/relative time\r\n");
-	usb_printf(cdc, " [U/u] enable/disable supervisory\r\n");
-	usb_printf(cdc, " [P/p] enable/disable packets\r\n");
-	usb_printf(cdc, " [R/r] enable/disable raw data trace\r\n");
-	usb_printf(cdc, " [X/x] enable/disable XON/XOFF flow control\r\n");
+	usb_printf(cdc, "\r\n - Service options:\r\n");
+	usb_printf(cdc, "    [1]   9600 8N1\r\n");
+	usb_printf(cdc, "    [2]  19200 8N1\r\n");
+	usb_printf(cdc, "    [3]  38400 8N1\r\n");
+	usb_printf(cdc, "    [4]  57600 8N1\r\n");
+	usb_printf(cdc, "    [5] 115200 8N1\r\n");
+	usb_printf(cdc, "    [6] 500000 8N1\r\n");
+	usb_printf(cdc, "    [q] quit service mode\r\n");
+	usb_printf(cdc, "    [F] firmware update\r\n");
+	usb_printf(cdc, "  [S/s] enable/disable SDU trace\r\n");
+	usb_printf(cdc, "  [B/b] enable/disable BACnet MS/TP trace\r\n");
+	usb_printf(cdc, "  [A/a] absolute/relative time\r\n");
+	usb_printf(cdc, "  [U/u] enable/disable supervisory\r\n");
+	usb_printf(cdc, "  [P/p] enable/disable packets\r\n");
+	usb_printf(cdc, "  [R/r] enable/disable raw data trace\r\n");
+	usb_printf(cdc, "  [X/x] enable/disable XON/XOFF flow control\r\n");
+	usb_printf(cdc, "[U2S-485 %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
 
 uint32_t protocol_buf[512];
@@ -181,9 +222,9 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 
 	if (vcom->mode == VCOM_MODE_SERVICE) {
 		usb_printf(cdc, "\r\n\r\n");
-		usb_printf(cdc, "--- U2S-485 %d.%d -------------\r\n\r\n",
+		usb_printf(cdc, "--- U2S-485 %d.%d -------------\r\n",
 				   FW_VERSION_MAJOR, FW_VERSION_MINOR);
-		usb_printf(cdc, "--- Service mode ...\r\n\r\n");
+		usb_printf(cdc, " - Service mode ...\r\n");
 		vcom->mode = VCOM_MODE_INTERACTIVE;
 	}
 
@@ -418,6 +459,19 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 	}
 }
 
+
+/* XXX: If the input serial stream mathces this string it
+   will assume that we are connected to a DSP5683 core board in
+   boot loader monitor mode. This will trigger the XON/XOFF 
+   flow control mode. 
+   The reason for that being the fact that the USB CDC/ACM windows 
+   driver (usbser.sys) do not implements XON/XOFF and the USB CDC
+   standard do not provide any mechanism to configure flow cotrol.
+ */
+
+const char dsp5685_xonxoff_magic[] = "Motorola Inc. "
+	"5685x Serial Data Flash Programmer. Version";
+
 void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
@@ -426,6 +480,8 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
+
+	vcom_scan_config(vcom, dsp5685_xonxoff_magic);
 
 	/* wait for line configuration */
 	usb_cdc_acm_lc_wait(cdc);
@@ -441,6 +497,11 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
 				led_flash(LED_AMBER, 50);
 				usb_cdc_write(cdc, buf, len);
+				if (vcom_scan_match(vcom, buf, len)) {
+					DCC_LOG(LOG_WARNING, "DSP5685 XON/XOFF magic!");
+					vcom->cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
+					serial_flowctrl_set(vcom->serial, SERIAL_FLOWCTRL_XONXOFF);
+				}
 			} else if (vcom->mode == VCOM_MODE_SDU_TRACE) {
 				led_flash(LED_AMBER, 50);
 				ts -= vcom->ticks_per_byte * len;
@@ -499,7 +560,8 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 		if ((state.cfg.baudrate != vcom->cfg.baudrate) ||
 			(state.cfg.databits != vcom->cfg.databits) ||
 			(state.cfg.parity != vcom->cfg.parity) ||
-			(state.cfg.stopbits != vcom->cfg.stopbits)) {
+			(state.cfg.stopbits != vcom->cfg.stopbits) ||
+			(state.cfg.flowctrl != vcom->cfg.flowctrl)) {
 
 			serial_rx_disable(serial);
 

@@ -39,13 +39,13 @@
 
 #include <sys/dcclog.h>
 
-#ifndef STM32F_ENABLE_USB_DEVICE 
-#define STM32F_ENABLE_USB_DEVICE 0
+#ifndef STM32_ENABLE_USB_DEVICE 
+#define STM32_ENABLE_USB_DEVICE 0
 #endif 
 
 #ifdef STM32F_USB
 
-#if STM32F_ENABLE_USB_DEVICE
+#if STM32_ENABLE_USB_DEVICE
 
 /* Endpoint state */
 typedef enum {

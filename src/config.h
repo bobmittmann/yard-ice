@@ -79,6 +79,18 @@
 
 #define THINKOS_ENABLE_RT_DEBUG 1
 
+#define THINKOS_ENABLE_PROFILING 0
+
+/* -------------------------------------------------------------------------
+ * USB device and CDC-ACM 
+ * ------------------------------------------------------------------------- */
+
+#define STM32_ENABLE_USB_DEVICE 1
+
+#define CDC_EP_OUT_MAX_PKT_SIZE 64
+#define CDC_EP_IN_MAX_PKT_SIZE 64
+#define CDC_EP_INT_MAX_PKT_SIZE 8
+
 #define JTAG_VEC_BITS_MAX 256
 
 #define JTAG_TAP_MAX 8
