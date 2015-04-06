@@ -24,3 +24,6 @@ tools/src/dcclog/Makefile
 tools/src/dcclog/Makefile.in
 tools/src/dcclog/missing
 *.pyc
+/tools/dcclog
+/tools/src/dcclog/compile
+/tools/src/dcclog/dcclog
