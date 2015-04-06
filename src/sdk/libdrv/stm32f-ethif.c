@@ -23,14 +23,13 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-
 #include <sys/stm32f.h>
 
 #ifdef STM32F_ETH
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include <sys/stm32f_ethif.h>
 #include <sys/etharp.h>
 
@@ -46,8 +45,7 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-
-#if THINKOS_ENABLE_FLAG_ALLOC && ENABLE_NETWORK
+#if THINKOS_ENABLE_FLAG_ALLOC
 
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
@@ -566,5 +564,5 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 
 #endif
 
-#endif /* STM32FX2 */
+#endif /* STM32F_ETH */
 

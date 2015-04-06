@@ -18,10 +18,14 @@
  */
 
 /** 
- * @file yard-ice.c
+ * @file stm32f-otg_fs_dev.c
  * @brief YARD-ICE UART console
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
+
+#ifdef CONFIG_H
+#include "config.h"
+#endif
 
 #include <sys/stm32f.h>
 #include <stdio.h>
@@ -35,7 +39,13 @@
 
 #include <sys/dcclog.h>
 
+#ifndef STM32F_ENABLE_USB_DEVICE 
+#define STM32F_ENABLE_USB_DEVICE 0
+#endif 
+
 #ifdef STM32F_OTG_FS
+
+#if STM32F_ENABLE_USB_DEVICE
 
 typedef enum {
 	EP_UNCONFIGURED = 0,
@@ -1244,6 +1254,8 @@ const struct usb_dev stm32f_otg_fs_dev = {
 	.priv = (void *)&stm32f_otg_fs_drv0,
 	.op = &stm32f_otg_fs_ops
 };
+
+#endif /* STM32F_ENABLE_USB_DEVICE */
 
 #endif /* STM32F_OTG_FS */
 

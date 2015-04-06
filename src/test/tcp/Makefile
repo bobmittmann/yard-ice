@@ -30,16 +30,15 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libtcpip $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty
+LIBS = cm3 stm32f util thinkos c ice-comm crc drv tcpip tty
 
 INCPATH = $(SDK)/include  
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2
 
-JTAGTOOL_ADDR = 192.168.0.80
-
-#include ../../mk/stm32f207.mk
+JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407
 include ../../mk/stm32f4xx.mk
 
+#include ../../mk/stm32f207.mk

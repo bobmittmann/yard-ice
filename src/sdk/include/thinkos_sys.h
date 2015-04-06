@@ -105,10 +105,6 @@ struct thinkos_context {
 #define THINKOS_ENABLE_IDLE_WFI 1
 #endif
 
-#ifndef THINKOS_ENABLE_IDLE_SNAPSHOT
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 1
-#endif
-
 #ifndef THINKOS_ENABLE_PAUSE
 #define THINKOS_ENABLE_PAUSE 1
 #endif

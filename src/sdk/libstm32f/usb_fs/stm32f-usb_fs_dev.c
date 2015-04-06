@@ -23,6 +23,10 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,7 +39,13 @@
 
 #include <sys/dcclog.h>
 
-#if defined(STM32F103) || defined(STM32F30X)
+#ifndef STM32F_ENABLE_USB_DEVICE 
+#define STM32F_ENABLE_USB_DEVICE 0
+#endif 
+
+#ifdef STM32F_USB
+
+#if STM32F_ENABLE_USB_DEVICE
 
 /* Endpoint state */
 typedef enum {
@@ -1043,5 +1053,8 @@ const struct usb_dev stm32f_usb_fs_dev = {
 	.op = &stm32f_usb_ops
 };
 
-#endif /* defined(STM32F103) || defined(STM32F30X) */
+#endif /* STM32F_ENABLE_USB_DEVICE */
+
+#endif /* STM32F_USB */
+
 

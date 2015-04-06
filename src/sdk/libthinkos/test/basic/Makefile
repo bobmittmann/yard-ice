@@ -30,13 +30,14 @@ LIBS = stm32f cm3 util thinkos c ice-comm
 
 INCPATH = ../../../include
 
+CDEFS = CONFIG_H
 CFLAGS = -g -O2 
 
 JTAGTOOL_ADDR = 192.168.0.80
 
 #MACH = stm32f405
-#include ../../../../mk/stm32f4xx.mk
-
-include ../../../../mk/stm32f207.mk
+MACH = stm32f407
+include ../../../../mk/stm32f4xx.mk
+#include ../../../../mk/stm32f207.mk
 
 

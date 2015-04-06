@@ -283,7 +283,7 @@ int main(int argc, char ** argv)
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
-	printf(" ThinkOS (TCP Test)\n");
+	printf(" ThinkOS (HTTPD Test)\n");
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 

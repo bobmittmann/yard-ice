@@ -48,17 +48,9 @@ int busy_task(void * arg)
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
 		dev->cnt++;
 
 		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
@@ -68,17 +60,45 @@ int busy_task(void * arg)
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
 		dev->cnt++;
 
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
+		dev->cnt++;
 
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
 		dev->cnt++;
@@ -173,6 +193,8 @@ void sched_speed_test(void)
 	int x[4];
 	int y[4];
 	int d[4];
+	unsigned int sum;
+	unsigned int dt;
 	int ret;
 	int i;
 
@@ -221,9 +243,11 @@ void sched_speed_test(void)
 		d[1] = y[1] - x[1];
 		d[2] = y[2] - x[2];
 		d[3] = y[3] - x[3];
+		sum = d[0] + d[1] + d[2] + d[3];
+		dt = 1000000000 / sum;
 
-		printf(" %8d + %8d + %8d + %8d = %8d\n", 
-			   d[0], d[1], d[2], d[3], d[0] + d[1] + d[2] + d[3]);
+		printf(" %7d + %7d + %8d + %7d = %8d (%d.%03d us)\n", 
+			   d[0], d[1], d[2], d[3], sum, dt / 1000, dt % 1000);
 	}
 
 	for (i = 0; i < 4; i++) {
@@ -297,10 +321,11 @@ void busy_test(void)
 
 		ref = 100 * d[3];
 
-		printf(" %8d + %8d + %8d + %8d = %8d\n", 
+		printf("  Ops: %8d + %8d + %8d + %8d = %8d\n", 
 			   d[0], d[1], d[2], d[3], sum);
-		printf(" %d%% %d%% %d%% %d%%\n", 
-			   ref / d[0], ref / d[1], ref / d[2], ref / d[3]);
+		printf(" Nice: %7d%%   %7d%%   %7d%%   %7d%%\n", 
+			   (ref + d[0] / 2) / d[0], (ref + d[1] / 2) / d[1], 
+			   (ref + d[2] / 2) / d[2], (ref + d[3] / 2) / d[3]);
 
 	}
 
