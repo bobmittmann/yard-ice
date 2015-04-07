@@ -575,7 +575,7 @@ int main(int argc, char ** argv)
 	bdl2.term = term2;
 	thinkos_thread_create_inf((void *)bacnet_task, (void *)&bdl2, &tty2_inf);
 
-#if 1
+#if 0
 	{
 		int i;
 		uint32_t old_clk = thinkos_clock();

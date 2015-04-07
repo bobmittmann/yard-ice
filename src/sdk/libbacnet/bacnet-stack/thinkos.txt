@@ -1,0 +1,7 @@
+This directory is a placeholder for the "BACnet open source protocol stack for embedded systems, Linux, and Windows" 
+
+ - Download the source code from: http://bacnet.sourceforge.net/
+ - The latest version at the time of this writing was 0.8.2: http://sourceforge.net/projects/bacnet/files/latest/download
+ - Decompress the source files this directory: libbacnet/bacnet-stack
+ - Remove or rename the file include/config.h
+

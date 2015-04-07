@@ -211,62 +211,38 @@ again:
 		return;
 	}
 
-	if (buf[0] != 0x55) {
-		tracef(ts, "frame error 1!");
-		off = 1;
-		goto again;
-	}
+	if (lnk->rx.cnt < 8) {
+		if (buf[0] != 0x55) {
+			tracef(ts, "frame error 1!");
+			off = 1;
+			goto again;
+		}
 
-	if (buf[1] != 0xff) {
-		tracef(ts, "frame error 2");
-		off = 2;
-		goto again;
-	}
+		if (buf[1] != 0xff) {
+			tracef(ts, "frame error 2");
+			off = 2;
+			goto again;
+		}
 
-	crc = ~bacnet_crc8(0xff, &buf[2], 5);
+		crc = ~bacnet_crc8(0xff, &buf[2], 5);
 
-	if (buf[7] != crc) {
-		tracef(ts, "hdr CRC error: %02x != %02x", buf[7], crc);
-		off = 2;
-		goto again;
-	}
+		if (buf[7] != crc) {
+			tracef(ts, "hdr CRC error: %02x != %02x", buf[7], crc);
+			off = 2;
+			goto again;
+		}
+	
+		len = (buf[5] << 8) + buf[6];
+		lnk->rx.pdu_len = len;
+	} 
 
-	switch (buf[2]) {
-	case FRM_TOKEN:
-		tracef(ts, "Token");
-		break;
-	case FRM_POLL_FOR_MASTER:
-		tracef(ts, "Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
-	case FRM_REPLY_POLL_FOR_MASTER:
-		tracef(ts, "Reply Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
-	case FRM_TEST_REQUEST:
-		tracef(ts, "Test Request");
-		break;
-	case FRM_TEST_RESPONSE:
-		tracef(ts, "Test Response");
-		break;
-	case FRM_BACNET_DATA_XPCT_REPLY:
-		tracef(ts, "BACnet Data Expecting Reply");
-		break;
-	case FRM_BACNET_DATA_NO_REPLY:
-		tracef(ts, "BACnet Data Not Expecting Reply");
-		break;
-	case FRM_REPLY_POSTPONED:
-		tracef(ts, "Reply Postponed");
-		break;
-	}
-
-	len = (buf[5] << 8) + buf[6];
-	if (len > 0) {
+	if ((len = lnk->rx.pdu_len) > 0) {
 		uint16_t crc;
 		uint16_t chk;
 
 		if (cnt < len + 10) {
 			lnk->rx.off = 0;
-			lnk->rx.cnt = 0;
-			tracef(ts, "too short!");
+			lnk->rx.cnt = cnt;
 			return;
 		}
 
@@ -275,18 +251,51 @@ again:
 		off = len + 10;
 		if (crc != chk) {
 			tracef(ts, "Data CRC error %04x != %04x", crc, chk);
-			lnk->rx.off = 0;
-			lnk->rx.cnt = 0;
+			lnk->rx.off = off;
+			lnk->rx.cnt = cnt;
 			return;
 		}
-		lnk->rx.pdu_len = len;
 	} else {
 		off = 8;
-		lnk->rx.pdu_len = 0;
 	}
 
-	lnk->rx.off = 0;
-	lnk->rx.cnt = 0;
+	lnk->rx.off = off;
+	lnk->rx.cnt = cnt;
+
+	switch (buf[2]) {
+	case FRM_TOKEN:
+		tracef(ts, "%2d -> %2d Token", 
+			   buf[4], buf[3]);
+		break;
+	case FRM_POLL_FOR_MASTER:
+		tracef(ts, "%2d -> %2d Poll For Master", 
+			   buf[4], buf[3]);
+		break;
+	case FRM_REPLY_POLL_FOR_MASTER:
+		tracef(ts, "%2d -> %2d Reply Poll For Master", 
+			   buf[4], buf[3]);
+		break;
+	case FRM_TEST_REQUEST:
+		tracef(ts, "%2d -> %2d Test Request",
+			   buf[4], buf[3]);
+		break;
+	case FRM_TEST_RESPONSE:
+		tracef(ts, "%2d -> %2d Test Response",
+			   buf[4], buf[3]);
+		break;
+	case FRM_BACNET_DATA_XPCT_REPLY:
+		tracef(ts, "%2d -> %2d BACnet Data Expecting Reply", 
+			   buf[4], buf[3]);
+		break;
+	case FRM_BACNET_DATA_NO_REPLY:
+		tracef(ts, "%2d -> %2d BACnet Data Not Expecting Reply", 
+			   buf[4], buf[3]);
+		break;
+	case FRM_REPLY_POSTPONED:
+		tracef(ts, "%2d -> %2d Reply Postponed", 
+			   buf[4], buf[3]);
+		break;
+	}
 
 }
 

@@ -41,6 +41,7 @@
 #define UART_RX_FIFO_WATER_MARK 32
 
 struct stm32_serial_drv {
+	struct stm32_usart * uart;
 #ifndef SERDRV_TX_FLAG_NO
 	int32_t tx_flag;
 #endif
@@ -50,6 +51,9 @@ struct stm32_serial_drv {
 #ifndef SERDRV_CTL_FLAG_NO
 	int32_t ctl_flag;
 #endif	
+	uint32_t * txie;
+	uint32_t * tcie;
+	uint32_t err_cnt;
 	volatile bool tx_on;
 	volatile bool flowctl_xonxoff;
 	struct {
@@ -62,9 +66,6 @@ struct stm32_serial_drv {
 		volatile uint32_t tail;
 		uint8_t buf[UART_RX_FIFO_BUF_LEN];
 	} rx_fifo;	
-	uint32_t * txie;
-	uint32_t * tcie;
-	struct stm32_usart * uart;
 };
 
 #ifdef SERDRV_RX_FLAG_NO
@@ -217,11 +218,10 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 	case SERIAL_IOCTL_STAT_GET: 
 		{
 			struct serial_stat * stat = (struct serial_stat *)arg1;
-
-//			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_STAT_GET");
+			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_STAT_GET");
 			stat->rx_cnt = drv->rx_fifo.head;
 			stat->tx_cnt = drv->tx_fifo.tail;
-			stat->err_cnt = 0;
+			stat->err_cnt = drv->err_cnt;
 			break;
 		}
 
@@ -258,8 +258,8 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 			drv->tx_on = true;
 			break;
 		}
-
 		thinkos_flag_give(CTL_FLAG);
+		break;
 	}
 
 	return 0;
@@ -287,26 +287,11 @@ void stm32f_usart2_isr(void)
 	
 	sr = us->sr;
 
-	if (sr & USART_ORE) {
-		DCC_LOG(LOG_WARNING, "OVR!");
-	}
-
-	sr &= us->cr1;
-
 	if (sr & USART_RXNE) {
-		unsigned int head;
+		uint32_t head;
 		int free;
 		c = us->dr;
 		
-		if (c == XON) {
-			DCC_LOG(LOG_WARNING, "RX: XON");
-			drv->tx_on = true;
-			thinkos_flag_give_i(CTL_FLAG);
-		} else if (c == XOFF) {
-			DCC_LOG(LOG_WARNING, "RX: XOFF");
-			drv->tx_on = false;
-			thinkos_flag_give_i(CTL_FLAG);
-		}
 		head = drv->rx_fifo.head;
 		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - drv->rx_fifo.tail);
 		if (free > 0) { 
@@ -315,6 +300,19 @@ void stm32f_usart2_isr(void)
 		}
 		if (free < (UART_RX_FIFO_BUF_LEN  - UART_RX_FIFO_WATER_MARK)) 
 			thinkos_flag_give_i(RX_FLAG);
+
+		if (drv->flowctl_xonxoff) {
+			if (c == XON) {
+				DCC_LOG(LOG_WARNING, "RX: XON");
+				drv->tx_on = true;
+				thinkos_flag_give_i(CTL_FLAG);
+			} else if (c == XOFF) {
+				DCC_LOG(LOG_WARNING, "RX: XOFF");
+				drv->tx_on = false;
+				thinkos_flag_give_i(CTL_FLAG);
+			}
+		}
+		return;
 	}	
 
 	if (sr & USART_IDLE) {
@@ -324,8 +322,14 @@ void stm32f_usart2_isr(void)
 		thinkos_flag_give_i(RX_FLAG);
 	}
 
+	if (sr & USART_ORE) {
+		drv->err_cnt++;
+	}
+
+	sr &= us->cr1;
+
 	if (sr & USART_TXE) {
-		unsigned int tail = drv->tx_fifo.tail;
+		uint32_t tail = drv->tx_fifo.tail;
 		if (tail == drv->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*drv->txie = 0; 
@@ -333,31 +337,17 @@ void stm32f_usart2_isr(void)
 			*drv->tcie = 1;
 			thinkos_flag_give_i(TX_FLAG);
 		} else {
-			/* disable UART RX */
-//			us->cr1 &= ~USART_RE;
-			/* RS485 disable receiver */ 
-//			rs485_rxdis();
 			/* RS485 enable transmitter */ 
 			rs485_txen();
 			c = drv->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
-			if (c == XON) {
-				DCC_LOG(LOG_WARNING, "TX: XON");
-			} else if (c == XOFF) {
-				DCC_LOG(LOG_WARNING, "TX: XOFF");
-			}
 			us->dr = c;
 			drv->tx_fifo.tail = tail + 1;
 		}
 	}
 
 	if (sr & USART_TC) {
-		DCC_LOG(LOG_INFO, "TC");
 		/* RS485 disable ransmitter */ 
 		rs485_txdis();
-		/* RS485 enable receiver */ 
-//		rs485_rxen();
-		/* enable UART RX */
-//		us->cr1 |= USART_RE;
 		/* disable TC interrupts */
 		*drv->tcie = 0;
 	}
@@ -390,6 +380,7 @@ struct serial_dev * serial2_open(void)
 #endif
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
+	drv->err_cnt = 0;
 
 	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	drv->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);

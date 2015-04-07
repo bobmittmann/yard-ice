@@ -118,10 +118,12 @@ enum {
 struct vcom {
 	volatile int mode;
 	struct serial_config cfg;
+	bool cfg_lock;
 	usb_cdc_class_t * cdc;
 	uint32_t ticks_per_byte;
 	struct serial_dev * serial;
 	struct serial_status ser_stat;
+	struct serial_stat stat;
 	struct {
 		const char * pat;
 		int pos;
@@ -202,12 +204,13 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, "    [6] 500000 8N1\r\n");
 	usb_printf(cdc, "    [q] quit service mode\r\n");
 	usb_printf(cdc, "    [F] firmware update\r\n");
-	usb_printf(cdc, "  [S/s] enable/disable SDU trace\r\n");
-	usb_printf(cdc, "  [B/b] enable/disable BACnet MS/TP trace\r\n");
 	usb_printf(cdc, "  [A/a] absolute/relative time\r\n");
-	usb_printf(cdc, "  [U/u] enable/disable supervisory\r\n");
+	usb_printf(cdc, "  [B/b] enable/disable BACnet MS/TP trace\r\n");
+	usb_printf(cdc, "  [L/l] lock/unlock configuration\r\n");
 	usb_printf(cdc, "  [P/p] enable/disable packets\r\n");
 	usb_printf(cdc, "  [R/r] enable/disable raw data trace\r\n");
+	usb_printf(cdc, "  [S/s] enable/disable SDU trace\r\n");
+	usb_printf(cdc, "  [U/u] enable/disable supervisory\r\n");
 	usb_printf(cdc, "  [X/x] enable/disable XON/XOFF flow control\r\n");
 	usb_printf(cdc, "[U2S-485 %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
@@ -276,7 +279,26 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 				usb_xflash(0, 32 * 1024);
 			}
 			break;
+
+		case 'l':
+			if (vcom->cfg_lock) {
+				vcom->cfg_lock = false;
+				serial_rx_disable(vcom->serial);
+				serial_config_set(vcom->serial, &vcom->cfg);
+				serial_rx_enable(vcom->serial);
+				usb_printf(cdc, " - Config unlocked.\r\n");
+			}
+			break;
+
+		case 'L':
+			if (!vcom->cfg_lock) {
+				vcom->cfg_lock = true;
+				usb_printf(cdc, " - Config locked.\r\n");
+			}
+			break;
+
 		case '1':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 9600;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -287,6 +309,7 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - 9600 8N1\r\n");
 			break;
 		case '2':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 19200;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -297,6 +320,7 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - 19200 8N1\r\n");
 			break;
 		case '3':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 38400;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -307,6 +331,7 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - 38400 8N1\r\n");
 			break;
 		case '4':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 57600;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -317,6 +342,7 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - 57600 8N1\r\n");
 			break;
 		case '5':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 115200;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -326,8 +352,8 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			serial_rx_enable(vcom->serial);
 			usb_printf(cdc, " - 115200 8N1\r\n");
 			break;
-
 		case '6':
+			vcom->cfg_lock = true;
 			vcom->cfg.baudrate = 500000;
 			vcom->cfg.databits = 8;
 			vcom->cfg.parity = 0;
@@ -401,6 +427,17 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 						"The qick brown fox jumps over the lazy dog.\r\n", 
 						45);
 			break;
+
+		case 'h': {
+			struct serial_stat stat;
+			serial_stat_get(vcom->serial, &stat);
+			usb_printf(cdc, " -  RX: %10d\r\n", stat.rx_cnt);
+			usb_printf(cdc, " -  TX: %10d\r\n", stat.tx_cnt);
+			usb_printf(cdc, " - Err: %10d\r\n", stat.err_cnt);
+
+			vcom->stat = stat;
+			break;
+		}
 		default:
 			show_menu(cdc);
 		}
@@ -493,25 +530,26 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 		len = serial_recv(serial, buf, VCOM_BUF_SIZE, 1000);
 		if (len > 0) {
 			uint32_t ts;
+			led_flash(LED_AMBER, 50);
 			ts = profclk_get();
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
-				led_flash(LED_AMBER, 50);
 				usb_cdc_write(cdc, buf, len);
 				if (vcom_scan_match(vcom, buf, len)) {
 					DCC_LOG(LOG_WARNING, "DSP5685 XON/XOFF magic!");
-					vcom->cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
-					serial_flowctrl_set(vcom->serial, SERIAL_FLOWCTRL_XONXOFF);
+					if (!vcom->cfg_lock) {
+						/* only update the configuration if we are not locked */
+						vcom->cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
+						serial_flowctrl_set(vcom->serial, 
+											SERIAL_FLOWCTRL_XONXOFF);
+					}
 				}
 			} else if (vcom->mode == VCOM_MODE_SDU_TRACE) {
-				led_flash(LED_AMBER, 50);
 				ts -= vcom->ticks_per_byte * len;
 				sdu_decode(ts, buf, len);
 			} else if (vcom->mode == VCOM_MODE_MSTP_TRACE) {
-				led_flash(LED_AMBER, 50);
 				ts -= vcom->ticks_per_byte * len;
 				mstp_decode(ts, buf, len);
 			} else if (vcom->mode == VCOM_MODE_RAW_TRACE) {
-				led_flash(LED_AMBER, 50);
 				ts -= vcom->ticks_per_byte * len;
 				raw_trace(ts, buf, len);
 			}
@@ -585,8 +623,11 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 					state.cfg.flowctrl = SERIAL_FLOWCTRL_XONXOFF;
 				}
 				vcom->mode = VCOM_MODE_CONVERTER;
-				vcom->cfg = state.cfg;
-				serial_config_set(serial, &vcom->cfg);
+				if (!vcom->cfg_lock) {
+					/* only update the configuration if we are not locked */
+					vcom->cfg = state.cfg;
+					serial_config_set(serial, &vcom->cfg);
+				}
 				serial_rx_enable(serial);
 			}
 		} else {
@@ -636,6 +677,7 @@ int main(int argc, char ** argv)
 	vcom.cfg.databits = 8;
 	vcom.cfg.parity = 0;
 	vcom.cfg.stopbits = 1;
+	vcom.cfg_lock = false;
 
 	thinkos_thread_create((void *)led_task, (void *)NULL,
 						  led_stack, sizeof(led_stack) |

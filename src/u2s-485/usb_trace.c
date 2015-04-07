@@ -46,9 +46,11 @@ static struct usb_cdc_class * usb_cdc;
 #define SHOW_SUPV 4
 #define SHOW_PKT  8
 
+char trace_buf[129];
+
 int tracef(uint32_t ts, const char *fmt, ... )
 {
-	char s[129];
+	char * s = trace_buf;
 	char * cp = s;
 	int32_t dt;
 	int32_t sec;
@@ -128,10 +130,9 @@ int xxd(char * s, int max, uint8_t * buf, int len)
 	return n;
 }
 
-
 int xx_dump(uint32_t ts, uint8_t * buf, int len)
 {
-	char s[80];
+	char * s = trace_buf;
 	char * cp = s;
 	int32_t dt;
 	int32_t sec;
@@ -153,7 +154,7 @@ int xx_dump(uint32_t ts, uint8_t * buf, int len)
 	us = dt - (ms * 1000);
 	trace_ts = ts;
 
-	rem = 80 - 3;
+	rem = 80 - 4;
 	n = sprintf(s, "%2d.%03d.%03d:", sec, ms, us);
 	cp += n;
 	rem -= n;
@@ -161,11 +162,20 @@ int xx_dump(uint32_t ts, uint8_t * buf, int len)
 	cnt = MIN(len, rem / 3);
 
 	for (i = 0; i < cnt; ++i) {
-		n = snprintf(cp, rem, " %02x", buf[i]);
+		n = sprintf(cp, " %02x", buf[i]);
 		cp += n;
 		rem -= n;
 		if (rem == 0)
 			break;
+	}
+
+	if (i < cnt) {
+		if ((i - cnt) == 1)
+			n = sprintf(cp, " %02x", buf[i]);
+		else
+			n = sprintf(cp, " ...");
+		cp += n;
+		rem -= n;
 	}
 
 	*cp++ = '\r';
@@ -173,8 +183,6 @@ int xx_dump(uint32_t ts, uint8_t * buf, int len)
 
 	return usb_cdc_write(usb_cdc, s, cp - s);
 }
-
-char trace_buf[129];
 
 int trace_printf(const char *fmt, ... )
 {
