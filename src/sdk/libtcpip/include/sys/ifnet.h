@@ -51,6 +51,10 @@
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <tcpip/in.h>
+
+#define __THINKOS_IRQ__
+#include <thinkos_irq.h>
 
 #ifndef ENABLE_NETIF_STAT
 #define ENABLE_NETIF_STAT 0
@@ -59,6 +63,15 @@
 #ifndef IFNET_INTERFACES_MAX
 #define IFNET_INTERFACES_MAX 1
 #endif
+
+#if (THINKOS_EVENT_MAX == 0)
+#error "THINKOS_EVENT_MAX == 0!"
+#endif 
+
+enum {
+	IFN_PROTO_IP = 0,
+	IFN_PROTO_ETHARP
+};
 
 struct ifnet;
 
@@ -79,8 +92,11 @@ struct ifnet_operations {
 	void * (* op_mmap)(struct ifnet * __if, size_t __length);
 
 	/* receive a frame */
-	int (* op_recv)(struct ifnet * __if, uint8_t * __src,
-					unsigned int * __proto, uint8_t ** __pkt);
+	int (* op_pkt_recv)(struct ifnet * __if, uint8_t ** __src,
+						unsigned int * __proto, uint8_t ** __pkt);
+
+	/* release a frame */
+	int (* op_pkt_free)(struct ifnet * __if, uint8_t * __pkt);
 
 	/* send a frame */
 	int (* op_send)(struct ifnet * __if, const uint8_t * __dst,
@@ -166,8 +182,8 @@ extern  struct ifnet_system __ifnet__;
 
 extern const char ifn_type_name[][4];
 
-extern inline int ifn_signal_i(struct ifnet * __if) {
-	return thinkos_flag_raise_i(__ifnet__.evset, __if->if_idx);
+static inline void ifn_signal_i(struct ifnet * __if) {
+	thinkos_ev_raise_i(__ifnet__.evset, __if->if_idx);
 }
 
 extern inline int ifn_init(struct ifnet * __if) {
@@ -215,9 +231,17 @@ extern inline int ifn_arpquery(struct ifnet * __if, in_addr_t __ipaddr) {
 	return __if->if_op->op_arpquery(__if, __ipaddr);
 }
 
-extern inline int in_broadcast(in_addr_t __addr, struct ifnet * __if)
-{
+extern inline int in_broadcast(in_addr_t __addr, struct ifnet * __if) {
 	return (__addr | __if->if_ipv4_mask) == INADDR_BROADCAST;
+}
+
+extern inline int ifn_pkt_recv(struct ifnet * __if, uint8_t ** __src,
+					unsigned int * __proto, uint8_t ** __pkt) {
+	return __if->if_op->op_pkt_recv(__if, __src, __proto, __pkt);
+}
+
+extern inline int ifn_pkt_free(struct ifnet * __if, uint8_t * __pkt) {
+	return __if->if_op->op_pkt_free(__if, __pkt);
 }
 
 #ifdef __cplusplus

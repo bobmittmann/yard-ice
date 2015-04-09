@@ -38,7 +38,7 @@ int ifn_unregister(struct ifnet * __if)
 
 	for (i = 0; i < ifnet_max; i++) {
 		/* naive lookup method to avoid division */
-		if (ifn == (&__ifnet__[i])) {
+		if (ifn == (&__ifnet__.ifn[i])) {
 			if (ifn->if_id != 0) {
 				if (__if->if_op->op_cleanup != NULL) {
 					ret = __if->if_op->op_cleanup(__if);

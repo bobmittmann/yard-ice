@@ -308,6 +308,30 @@ int stm32f_ethif_init(struct ifnet * __if)
 		ETH_RWTIE | ETH_RBUIE |ETH_ROIE |
 		ETH_TUIE | ETH_TJTIE | ETH_TBUIE;
 
+
+	DCC_LOG3(LOG_TRACE, "RX DMA: %d (desc) x %d = %d bytes", 
+			 STM32F_ETH_RX_NDESC, STM32F_ETH_RX_BUF_SIZE + 
+			 sizeof(struct rxdma_enh_desc),
+			 STM32F_ETH_RX_NDESC * (STM32F_ETH_RX_BUF_SIZE + 
+			 sizeof(struct rxdma_enh_desc))); 
+	DCC_LOG3(LOG_TRACE, "TX DMA: %d (desc) x %d = %d bytes", 
+			 STM32F_ETH_TX_NDESC, STM32F_ETH_TX_BUF_SIZE + 
+			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr),
+			 STM32F_ETH_TX_NDESC * (STM32F_ETH_TX_BUF_SIZE + 
+			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr)));
+	DCC_LOG1(LOG_TRACE, "Ethernet driver memory: %d bytes", 
+			 sizeof(struct stm32f_eth_drv));
+	DCC_LOG1(LOG_TRACE, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
+
+	DCC_LOG1(LOG_TRACE, "<%d> DMA interrupts enabled ...", 
+			 thinkos_thread_self());
+
+	/* enable DMA RX interrupts */
+	eth->dmaier |= ETH_RIE | ETH_NISE;
+
+	DCC_LOG(LOG_INFO, "DMA start receive...");
+	eth->dmaomr |= ETH_SR;
+
 	return 0;
 }
 
@@ -448,18 +472,15 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	return 0;
 }
 
-int stm32f_ethif_recv(struct ifnet * __if, uint8_t * __src, 
-					  unsigned int * __proto, uint8_t ** __pkt)
+int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src, 
+						  unsigned int * __proto, uint8_t ** __pkt)
 {
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 	struct rxdma_ext_st ext_st;
 	struct rxdma_st st;
 	struct rxdma_enh_desc * desc;
 	struct eth_hdr * hdr;
-	uint32_t cnt = 0;
 	uint8_t * pkt;
-	int type;
 	int len;
 	
 	desc = &drv->rx.desc[drv->rx.cnt & (STM32F_ETH_RX_NDESC - 1)];
@@ -511,19 +532,27 @@ int stm32f_ethif_recv(struct ifnet * __if, uint8_t * __src,
 
 	hdr = (struct eth_hdr *)desc->rbap1;
 
-	type = hdr->eth_type;
 	pkt = (uint8_t *)hdr + 14;
 	len -= 14;
 
+	switch (hdr->eth_type) {
+	case HTONS(ETH_P_IP):
+		*__proto = IFN_PROTO_IP;
+		break;
+	case HTONS(ETH_P_ARP):
+		*__proto = IFN_PROTO_ETHARP;
+		break;
+	};
+
 	*__pkt = pkt;
-	__src = hdr->saddr; 
+	*__src = hdr->eth_src; 
 	return len;
 }
 
 int stm32f_ethif_pkt_free(struct ifnet * __if, const void * __pkt)
 {
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct rxdma_enh_desc * desc;
 	
 	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
@@ -619,6 +648,8 @@ const struct ifnet_operations stm32f_ethif_op = {
 	.op_cleanup = stm32f_ethif_cleanup, 
 	.op_mmap = stm32f_ethif_mmap, 
 	.op_send = stm32f_ethif_send,
+	.op_pkt_recv = stm32f_ethif_pkt_recv,
+	.op_pkt_free = stm32f_ethif_pkt_free,
 	.op_arplookup = etharp_lookup, 
 	.op_arpquery = etharp_query, 
 	.op_getaddr = stm32f_ethif_getaddr,

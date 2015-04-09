@@ -37,14 +37,14 @@ struct ifnet * ifn_get_next(struct ifnet * __if)
 
 	for (i = 0; i < ifnet_max; i++) {
 		/* naive lookup method to avoid division */
-		if (&__ifnet__[i] == __if) {
+		if (&__ifnet__.ifn[i] == __if) {
 			break;
 		}
 	}
 
 	for (; i < ifnet_max; i++) {
-		if (__ifnet__[i].if_id != 0) {
-			ifn = &__ifnet__[i];
+		if (__ifnet__.ifn[i].if_id != 0) {
+			ifn = &__ifnet__.ifn[i];
 		}
 	}
 

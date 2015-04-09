@@ -37,8 +37,8 @@ struct ifnet * get_ifn_byipaddr(in_addr_t __addr)
 
 	for (i = 0; i < ifnet_max; i++) {
 		/* naive lookup method to avoid division */
-		if (__ifnet__[i].if_id != 0) {
-			ifn = &__ifnet__[i];
+		if (__ifnet__.ifn[i].if_id != 0) {
+			ifn = &__ifnet__.ifn[i];
 			if (ifn->if_ipv4_addr == __addr)
 				break;
 		}

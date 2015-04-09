@@ -37,7 +37,7 @@ MBUF_CFILES = mbuf.c mbuf_memavail.c mbuf_alloc.c mbuf_try_alloc.c\
 IFNET_CFILES = get_ifn_byipaddr.c get_ifn_byname.c ifn_enum.c ifn_getaddr.c \
 			   ifn_get_first.c ifn_getname.c ifn_get_next.c ifn_getstat.c \
 			   ifn_ipv4_get.c ifn_ipv4_set.c ifn_register.c ifn_unregister.c \
-			   ifn_getinfo.c loopif.c 
+			   ifn_getinfo.c ifn_input.c loopif.c 
 
 PCB_CFILES = in_pcb.c pcb_getnext.c pcb_enum.c
 

@@ -71,6 +71,7 @@ struct stm32f_eth_drv {
 		uint32_t buf[STM32F_ETH_RX_NDESC][(STM32F_ETH_RX_BUF_SIZE + 3) / 4];
 		struct rxdma_enh_desc desc[STM32F_ETH_RX_NDESC];
 		int sem;
+		unsigned int cnt;
 	} rx;
 	struct {
 		struct eth_hdr hdr[STM32F_ETH_TX_NDESC];

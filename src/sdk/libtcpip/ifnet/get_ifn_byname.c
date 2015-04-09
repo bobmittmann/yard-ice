@@ -41,8 +41,8 @@ struct ifnet * get_ifn_byname(const char * __s)
 
 	for (i = 0; i < ifnet_max; i++) {
 		/* naive lookup method to avoid division */
-		if (__ifnet__[i].if_id != 0) {
-			ifn = &__ifnet__[i];
+		if (__ifnet__.ifn[i].if_id != 0) {
+			ifn = &__ifnet__.ifn[i];
 
 			ifn_getname(ifn, nm);
 

@@ -33,8 +33,8 @@ int ifn_enum(int (* __callback)(struct ifnet *, void *), void * __parm)
 
 	n = 0;
 	for (i = 0; i < ifnet_max; i++) {
-		if (__ifnet__[i].if_id != 0) {
-			if (__callback(&__ifnet__[i], __parm))
+		if (__ifnet__.ifn[i].if_id != 0) {
+			if (__callback(&__ifnet__.ifn[i], __parm))
 				break;
 		}
 	}
