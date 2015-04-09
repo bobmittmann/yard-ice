@@ -50,15 +50,15 @@ struct mbuf {
 struct mbuf_sys {
 	uint8_t max;
 	uint8_t used;
-	int8_t mutex; /* mbuf strucutre access mutex */
-	int8_t cond;
+	uint8_t mutex; /* mbuf strucutre access mutex */
+	uint8_t cond;
 	/* mbuf free list */
 	struct {
 		struct mbuf * first;
 		struct mbuf * last;
 	} free;
 	struct mbuf pool[MBUF_POOL_SIZE];
-} __attribute__ ((aligned (8)));
+};
 
 extern struct mbuf_sys __mbufs__;
 

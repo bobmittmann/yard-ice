@@ -549,7 +549,7 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 	return len;
 }
 
-int stm32f_ethif_pkt_free(struct ifnet * __if, const void * __pkt)
+int stm32f_ethif_pkt_free(struct ifnet * __if, void * __pkt)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
