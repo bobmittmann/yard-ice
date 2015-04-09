@@ -448,9 +448,8 @@ static void ap_hdr_decode(unsigned int msg)
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.ap_msk) == slcdev_drv.trig.ap_cmp) {
-		slcdev_drv.sim.ev_bmp |= SLC_EV_TRIG;
 		trig_out_set();
-		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
+		thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_TRIG);
 		trig_out_clr();
 	}
 
@@ -489,8 +488,7 @@ static void ap_hdr_decode(unsigned int msg)
 			irq = (dev->alm || dev->tbl) ? 1 : 0;
 
 			/* signal the simulator */
-			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
-			thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
+			thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_DEV_POLL);
 
 			/* AP opcode */
 			slcdev_drv.ap.insn = AP_DIRECT_POLL;
@@ -689,9 +687,8 @@ static void clip_msg_decode(unsigned int msg)
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
-		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_TRIG, 1);  
 		trig_out_set();
-		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
+		thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_TRIG);
 		trig_out_clr();
 		/* */
 		DCC_LOG2(LOG_INFO, "Trigger %s %d", 
@@ -719,8 +716,7 @@ static void clip_msg_decode(unsigned int msg)
 		DCC_LOG(LOG_INFO, "[CLIP]");
 
 		/* signal the simulator */
-		__bit_mem_wr(&slcdev_drv.sim.ev_bmp, SLC_EV_DEV_POLL, 1);  
-		thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
+		thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_DEV_POLL);
 
 		/* update poll counter */
 		dev->pcnt++;
@@ -728,8 +724,7 @@ static void clip_msg_decode(unsigned int msg)
 		if (dev->event != 0) {
 			/* if an simulation event is correlated to the device,
 			 signal the simulator. */
-			__bit_mem_wr(&slcdev_drv.sim.ev_bmp, dev->event, 1);  
-			thinkos_flag_give_i(SLCDEV_DRV_EV_FLAG);
+			thinkos_ev_raise_i(SLCDEV_DRV_EV, dev->event);
 		}
 	} else {
 		slcdev_drv.state = DEV_IDLE;
@@ -1107,7 +1102,6 @@ static void slc_sense_init(void)
 static void slcdev_reset(void)
 {
 	slcdev_drv.state = DEV_IDLE;
-	slcdev_drv.sim.ev_bmp = 0;
 	slcdev_drv.dev = (struct ss_device *)&null_dev;
 	slcdev_drv.addr = 0;
 	slcdev_drv.isink.state = ISINK_IDLE;
@@ -1140,7 +1134,16 @@ void slcdev_stop(void)
 	/* Enable interrupt */
 	cm3_irq_disable(STM32_IRQ_TIM10);
 
-	thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
+	/* FIXME: the event handling changed from flags to events,
+	   but there is no API call to clear all pending events on 
+	   an event set!! Possible solutions add API call to either
+	   1. get an event without blocking:
+		while (thinkos_ev_trywait() != THINKOS_EAGAIN);
+	   2. clear event set:
+		thinkos_ev_clear(0xffffffff);
+	 */
+//	while (thinkos_ev_trywait()
+//	thinkos_flag_clr(SLCDEV_DRV_EV_FLAG);
 
 	/* reset the driver state */
 	slcdev_reset();

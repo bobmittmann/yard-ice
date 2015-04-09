@@ -754,7 +754,7 @@ int cmd_config(FILE * f, int argc, char ** argv)
 
 	if (restart) {
 		/* restart simulation */
-		slcdev_event_raise(SLC_EV_SIM_START);
+		thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
 	}
 
 	return 0;
@@ -1163,11 +1163,11 @@ int cmd_sim(FILE * f, int argc, char ** argv)
 
 	if ((strcmp(argv[1], "stop") == 0) || 
 		(strcmp(argv[1], "s") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_STOP);
+		thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_STOP);
 		fprintf(f, "Simulation paused...\n");
 	} else if ((strcmp(argv[1], "resume") == 0) || 
 		(strcmp(argv[1], "r") == 0)) {
-		slcdev_event_raise(SLC_EV_SIM_RESUME);
+		thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_RESUME);
 		fprintf(f, "Simulation resumed...\n");
 	} else
 		return SHELL_ERR_ARG_INVALID;

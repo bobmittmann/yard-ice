@@ -189,7 +189,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 #endif
 
 	/* start simulation */
-	slcdev_event_raise(SLC_EV_SIM_START);
+	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
 
 	/* main loop */
 	for (;;) {

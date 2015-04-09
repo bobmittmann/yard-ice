@@ -140,9 +140,9 @@
  * ThinkOS flags assignements
  * ------------------------------------------------------------------------- */
 
-#define SLCDEV_DRV_EV_FLAG (THINKOS_FLAG_BASE + 0)
-#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 1)
-#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 2)
+#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 0)
+#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 1)
+#define SLCDEV_DRV_EV  (THINKOS_EVENT_BASE + 0)
 
 #define IO_POLL_PERIOD_MS 16
 

@@ -30,20 +30,13 @@
 
 #include <stdlib.h>
 
-#ifndef IFNET_INTERFACES_MAX
-#define IFNET_INTERFACES_MAX 1
-#endif
-
-const uint8_t ifnet_max = IFNET_INTERFACES_MAX;
-
-struct ifnet __ifnet__[IFNET_INTERFACES_MAX];
-
 struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 							void * __io, int __irq_no)
 {
 	struct ifnet * ifn = NULL;
-	int i;
 	int type;
+	int idx;
+	int i;
 	int n;
 
 	if (__op == NULL) {
@@ -54,8 +47,9 @@ struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 	tcpip_net_lock();
 
 	for (i = 0; i < ifnet_max; i++) {
-		if (__ifnet__[i].if_id == 0) {
-			ifn = &__ifnet__[i];
+		if (__ifnet__.ifn[i].if_id == 0) {
+			ifn = &__ifnet__.ifn[i];
+			idx = i;
 			break;
 		}
 	}
@@ -69,12 +63,14 @@ struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 	type = __op->op_type;
 	n = 0;	
 	for (i = 0; i < ifnet_max; i++) {
-		if ((__ifnet__[i].if_id & IFT_MASK) == type) {
+		if ((__ifnet__.ifn[i].if_id & IFT_MASK) == type) {
 			n++;
 		}
 	}
 
 	/* alloc the interface  */
+	ifn->if_idx = idx;
+	ifn->if_type = type;
 	ifn->if_id = type + n;
 	ifn->if_ipv4_addr = INADDR_ANY;
 	ifn->if_ipv4_mask = INADDR_ANY;

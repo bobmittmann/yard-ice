@@ -490,7 +490,6 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct ss_device * dev;
 	struct db_info * db;
 	struct microjs_vm vm; 
-	uint32_t ev_mask = 0xffffffff;
 	uint32_t ctl;
 
 	/* initialize virtual machine */
@@ -513,13 +512,8 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 		DCC_LOG(LOG_INFO, ".1");
 
-		thinkos_flag_take(SLCDEV_DRV_EV_FLAG);
-
-		/* get an event from bitmap */
-		if ((ev = __clz(__rbit(slcdev_drv.sim.ev_bmp & ev_mask))) == 32)
-			continue;
-
-		slcdev_event_clear(ev);
+		/* wait for an event */
+		ev = thinkos_ev_wait(SLCDEV_DRV_EV);
 
 		if (dev != slcdev_drv.dev) {
 			dev = slcdev_drv.dev;
@@ -661,23 +655,23 @@ void __attribute__((noreturn)) sim_event_task(void)
 			/* run script */
 			microjs_exec(&vm, usr.init);
 			/* resume simulation */
-			slcdev_event_raise(SLC_EV_SIM_RESUME);
+			thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_RESUME);
 			break;
 
 		case SLC_EV_SIM_STOP:
 			DCC_LOG(LOG_TRACE, "SIM_STOP");
 			slcdev_stop();
-			ev_mask = (1 << SLC_EV_SIM_RESUME) | (1 << SLC_EV_SIM_START);
+			thinkos_ev_mask(SLCDEV_DRV_EV, (1 << SLC_EV_SIM_RESUME) | 
+							(1 << SLC_EV_SIM_START));
 			slcdev_drv.sim.halt = true;
 			break;
 
 		case SLC_EV_SIM_RESUME:
 			DCC_LOG(LOG_TRACE, "SIM_RESUME");
 			slcdev_resume();
-			/* force reprocessing posible unmasked events */
-			ev_mask = 0xffffffff;
 			slcdev_drv.sim.halt = false;
-			thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
+			/* force reprocessing posible unmasked events */
+			thinkos_ev_unmask(SLCDEV_DRV_EV, 0xffffffff);
 			break;
 		}
 	}
@@ -685,7 +679,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 void slcdev_sim_stop(void)
 {
-	slcdev_event_raise(SLC_EV_SIM_STOP);
+	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_STOP);
 	while (!slcdev_drv.sim.halt) {
 		thinkos_sleep(25);
 	}

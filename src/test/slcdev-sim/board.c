@@ -283,19 +283,19 @@ void __attribute__((noreturn)) io_event_task(void)
 		/* process user timers */
 		if (io_drv.usr_tmr[0]) {
 			if (--io_drv.usr_tmr[0] == 0) 
-				slcdev_event_raise(SLC_EV_TMR1);
+				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR1);
 		}
 		if (io_drv.usr_tmr[1]) {
 			if (--io_drv.usr_tmr[1] == 0) 
-				slcdev_event_raise(SLC_EV_TMR2);
+				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR2);
 		}
 		if (io_drv.usr_tmr[2]) {
 			if (--io_drv.usr_tmr[2] == 0) 
-				slcdev_event_raise(SLC_EV_TMR3);
+				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR3);
 		}
 		if (io_drv.usr_tmr[3]) {
 			if (--io_drv.usr_tmr[3] == 0) 
-				slcdev_event_raise(SLC_EV_TMR4);
+				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR4);
 		}
 
 
@@ -336,17 +336,17 @@ void __attribute__((noreturn)) io_event_task(void)
 				switch (sw & SW1_MSK) {
 				case SW1_OFF:
 					DCC_LOG(LOG_TRACE, "SW1 OFF");
-					slcdev_event_raise(SLC_EV_SW1_OFF);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW1_OFF);
 					break;
 
 				case SW1_A:
 					DCC_LOG(LOG_TRACE, "SW1 A");
-					slcdev_event_raise(SLC_EV_SW1_DOWN);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW1_DOWN);
 					break;
 
 				case SW1_B:
 					DCC_LOG(LOG_TRACE, "SW1 B");
-					slcdev_event_raise(SLC_EV_SW1_UP);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW1_UP);
 					break;
 				}
 			}
@@ -355,22 +355,21 @@ void __attribute__((noreturn)) io_event_task(void)
 				switch (sw & SW2_MSK) {
 				case SW2_OFF:
 					DCC_LOG(LOG_TRACE, "SW2 OFF");
-					slcdev_event_raise(SLC_EV_SW2_OFF);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW2_OFF);
 					break;
 
 				case SW2_A:
 					DCC_LOG(LOG_TRACE, "SW2 A");
-					slcdev_event_raise(SLC_EV_SW2_DOWN);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW2_DOWN);
 					break;
 
 				case SW2_B:
 					DCC_LOG(LOG_TRACE, "SW2 B");
-					slcdev_event_raise(SLC_EV_SW2_UP);
+					thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SW2_UP);
 					break;
 				}
 			}
 		}
-
 	}
 }
 

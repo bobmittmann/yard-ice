@@ -448,6 +448,95 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	return 0;
 }
 
+int stm32f_ethif_recv(struct ifnet * __if, uint8_t * __src, 
+					  unsigned int * __proto, uint8_t ** __pkt)
+{
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;
+	struct rxdma_ext_st ext_st;
+	struct rxdma_st st;
+	struct rxdma_enh_desc * desc;
+	struct eth_hdr * hdr;
+	uint32_t cnt = 0;
+	uint8_t * pkt;
+	int type;
+	int len;
+	
+	desc = &drv->rx.desc[drv->rx.cnt & (STM32F_ETH_RX_NDESC - 1)];
+	st = desc->st;
+	if (st.es) {
+		DCC_LOG(LOG_ERROR, "summary flag set!");
+		return -1;
+	}
+	if (st.own) {
+		DCC_LOG(LOG_ERROR, "DMA own flag set!");
+		return -1;
+	}
+
+	len = st.fl;
+	DCC_LOG1(LOG_INFO, "frame len=%d", len);
+
+	ext_st = desc->ext_st;
+
+	/* IP payload type */
+	switch (ext_st.ippt) {
+	case ETH_IPPT_UNKOWN:
+		DCC_LOG(LOG_INFO, "not IP!");
+		break;
+	case ETH_IPPT_UDP:
+		DCC_LOG(LOG_INFO, "UDP");
+		break;
+	case ETH_IPPT_TCP:
+		DCC_LOG(LOG_INFO, "TCP");
+		break;
+	case ETH_IPPT_ICMP:
+		DCC_LOG(LOG_INFO, "ICMP");
+		break;
+	}
+
+	if (ext_st.iphe) {
+		DCC_LOG(LOG_WARNING, "IP header error!");
+		return -1;
+	}
+	if (ext_st.ippe) {
+		DCC_LOG(LOG_WARNING, "IP payload error!");
+		return -1;
+	}
+	if (ext_st.ipcb)
+		DCC_LOG(LOG_TRACE, "IP checksum bypass.");
+	if (ext_st.ipv4pr)
+		DCC_LOG(LOG_INFO, "IPv4 packet received.");
+	if (ext_st.ipv6pr)
+		DCC_LOG(LOG_TRACE, "IPv6 packet received.");
+
+	hdr = (struct eth_hdr *)desc->rbap1;
+
+	type = hdr->eth_type;
+	pkt = (uint8_t *)hdr + 14;
+	len -= 14;
+
+	*__pkt = pkt;
+	__src = hdr->saddr; 
+	return len;
+}
+
+int stm32f_ethif_pkt_free(struct ifnet * __if, const void * __pkt)
+{
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;
+	struct rxdma_enh_desc * desc;
+	
+	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
+	/* set the DMA descriptor ownership */
+	desc->rdes0 = ETH_RXDMA_OWN;
+	/* enable DMA receive interrupts */
+	eth->dmaier |= ETH_RIE;
+	/* Receive Poll Demand command */
+	eth->dmarpdr = 1;
+
+	return 0;
+}
+
 int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
 {
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;

@@ -528,7 +528,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		int i;
 		for (i = 0; i < ((THINKOS_FLAG_MAX + 31) / 32); ++i) {
 			thinkos_rt.flag.sig[i] = 0;
+#if THINKOS_ENABLE_FLAG_LOCK
 			thinkos_rt.flag.lock[i] = 0;
+#endif 
 		}
 	}
 #endif /* THINKOS_EVENT_MAX > 0 */

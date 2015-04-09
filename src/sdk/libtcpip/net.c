@@ -62,6 +62,8 @@ void tcpip_init(void)
 	tcp_init();
 #endif
 
+	ifnet_init();
+
 	tcpip_net_unlock();
 }
 

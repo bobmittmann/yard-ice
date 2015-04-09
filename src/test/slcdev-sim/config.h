@@ -27,16 +27,19 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+/* -------------------------------------------------------------------------
+   ThinkOS configuration
+   -------------------------------------------------------------------------- */
+
+#define THINKOS_EXCEPT_STACK_SIZE 320
+
 #define THINKOS_IRQ_MAX 0
 
 #define THINKOS_ENABLE_IDLE_WFI 1
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 0
 
 #define THINKOS_ENABLE_CLOCK 1
 
 #define THINKOS_ENABLE_TIMESHARE 0
-#define THINKOS_SCHED_LIMIT_MAX 32
-#define THINKOS_SCHED_LIMIT_MIN 1
 
 #define THINKOS_THREADS_MAX 3
 #define THINKOS_ENABLE_THREAD_ALLOC 0
@@ -55,25 +58,25 @@
 #define THINKOS_SEMAPHORE_MAX 0
 #define THINKOS_ENABLE_SEM_ALLOC 0
 
-#define THINKOS_EVENT_MAX 0
+#define THINKOS_EVENT_MAX 1
 #define THINKOS_ENABLE_EVENT_ALLOC 0
-#define THINKOS_ENABLE_EVENT_SYSCALL 0
 
-#define THINKOS_FLAG_MAX 3
+#define THINKOS_FLAG_MAX 2
 #define THINKOS_ENABLE_FLAG_ALLOC 0
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
+#define THINKOS_ENABLE_FLAG_LOCK 0
 
 #define THINKOS_ENABLE_THREAD_STAT 0
 #define THINKOS_ENABLE_TIMED_CALLS 1
-#define THINKOS_ENABLE_TIMER 0
 
 #define THINKOS_ENABLE_ALARM 1
-
-#define THINKOS_ENABLE_IRQ_SVC_CALL 0
+#define THINKOS_ENABLE_SLEEP 1
+#define THINKOS_ENABLE_BREAK 0
 
 #define THINKOS_ENABLE_ARG_CHECK 0
 
 #define THINKOS_ENABLE_DEADLOCK_CHECK 0
+
+#define THINKOS_ENABLE_IRQ_SVC_CALL 0
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
@@ -81,16 +84,13 @@
 
 #define THINKOS_STDERR_FAULT_DUMP 1
 
-#define THINKOS_EXCEPT_STACK_SIZE 320
+#define THINKOS_ENABLE_RT_DEBUG 0
 
-#define SHELL_LINE_MAX 72
-#define SHELL_ARG_MAX 12
-#define SHELL_HISTORY_MAX 5
+#define THINKOS_ENABLE_PROFILING 0
 
-#define TTY_INBUF_LEN 8
-#define TTY_DEV_MAX 1
-
-#define FILE_DEV_MAX 2
+/* -------------------------------------------------------------------------
+   MicroJS configuration
+   -------------------------------------------------------------------------- */
 
 #define MICROJS_DEBUG_ENABLED 0
 #define MICROJS_TRACE_ENABLED 0
@@ -103,7 +103,20 @@
 #define JSON_LABEL_LST_MAX 48
 #define JSON_STRING_LEN_MAX 192
 
+/* -------------------------------------------------------------------------
+   Other configuration
+   -------------------------------------------------------------------------- */
+
 #define STM32_ENABLE_PLL 0
+
+#define SHELL_LINE_MAX 72
+#define SHELL_ARG_MAX 12
+#define SHELL_HISTORY_MAX 5
+
+#define TTY_INBUF_LEN 8
+#define TTY_DEV_MAX 1
+
+#define FILE_DEV_MAX 2
 
 #endif /* __CONFIG_H__ */
 

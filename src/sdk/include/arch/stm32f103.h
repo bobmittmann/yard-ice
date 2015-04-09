@@ -133,14 +133,14 @@
 #define STM32F_IRQ_EXTI2 8 /* EXTI Line2 Interrupt */
 #define STM32F_IRQ_EXTI3 9 /* EXTI Line3 Interrupt */
 #define STM32F_IRQ_EXTI4 10 /* EXTI Line4 Interrupt */
-#define STM32F_IRQ_DMA1_STREAM0 11 /* DMA1 Stream 0 global Interrupt */
-#define STM32F_IRQ_DMA1_STREAM1 12 /* DMA1 Stream 1 global Interrupt */
-#define STM32F_IRQ_DMA1_STREAM2 13 /* DMA1 Stream 2 global Interrupt */
-#define STM32F_IRQ_DMA1_STREAM3 14 /* DMA1 Stream 3 global Interrupt */
-#define STM32F_IRQ_DMA1_STREAM4 15 /* DMA1 Stream 4 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL1 11 /* DMA1 Channel 1 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL2 12 /* DMA1 Channel 2 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL3 13 /* DMA1 Channel 3 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL4 14 /* DMA1 Channel 4 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL5 15 /* DMA1 Channel 5 global Interrupt */
 
-#define STM32F_IRQ_DMA1_STREAM5 16 /* DMA1 Stream 5 global Interrupt */
-#define STM32F_IRQ_DMA1_STREAM6 17 /* DMA1 Stream 6 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL6 16 /* DMA1 Channel 6 global Interrupt */
+#define STM32_IRQ_DMA1_CHANNEL7 17 /* DMA1 Channel 7 global Interrupt */
 #define STM32F_IRQ_ADC 18 /* ADC1 and ADC2 global Interrupts */
 #define STM32F_IRQ_USB_HP 19 /* USB High Priority */
 #define STM32F_IRQ_CAN1_TX 19 /* CAN1 TX Interrupt */
@@ -198,10 +198,11 @@
 #define STM32F_IRQ_DAC 54 /* DAC1&2 underrun error Interrupt */
 
 #define STM32F_IRQ_TIM7 55 /* TIM7 global interrupt */
-#define STM32F_IRQ_DMA2_STREAM0 56 /* DMA2 Stream 0 global Interrupt */
-#define STM32F_IRQ_DMA2_STREAM1 57 /* DMA2 Stream 1 global Interrupt */
-#define STM32F_IRQ_DMA2_STREAM2 58 /* DMA2 Stream 2 global Interrupt */
-#define STM32F_IRQ_DMA2_STREAM3 59 /* DMA2 Stream 3 global Interrupt */
+#define STM32_IRQ_DMA2_CHANNEL1 56 /* DMA2 Channel 1 global Interrupt */
+#define STM32_IRQ_DMA2_CHANNEL2 57 /* DMA2 Channel 2 global Interrupt */
+#define STM32_IRQ_DMA2_CHANNEL3 58 /* DMA2 Channel 3 global Interrupt */
+#define STM32_IRQ_DMA2_CHANNEL4 59 /* DMA2 Channel 4 and 5 global Interrupts */
+#define STM32_IRQ_DMA2_CHANNEL5 59 /* DMA2 Channel 4 and 5 global Interrupts */
 
 #define STM32F_USB_PKTBUF_ADDR 0x40006000
 #define STM32F_USB_PKTBUF_SIZE 512

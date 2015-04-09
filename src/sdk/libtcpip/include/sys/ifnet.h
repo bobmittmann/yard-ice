@@ -56,6 +56,10 @@
 #define ENABLE_NETIF_STAT 0
 #endif
 
+#ifndef IFNET_INTERFACES_MAX
+#define IFNET_INTERFACES_MAX 1
+#endif
+
 struct ifnet;
 
 struct ifnet_operations {
@@ -73,6 +77,10 @@ struct ifnet_operations {
 
 	/* request a memory region */
 	void * (* op_mmap)(struct ifnet * __if, size_t __length);
+
+	/* receive a frame */
+	int (* op_recv)(struct ifnet * __if, uint8_t * __src,
+					unsigned int * __proto, uint8_t ** __pkt);
 
 	/* send a frame */
 	int (* op_send)(struct ifnet * __if, const uint8_t * __dst,
@@ -95,13 +103,19 @@ struct ifnet_operations {
 	/* return a string describing the interface. */
 	int (* op_getdesc)(struct ifnet * __if,  char * __desc, int len);
 
-	/* request a memory region */
+	/* release a memory region */
 	int (* op_munmap)(struct ifnet * __if, void * __mem);
 };
 
 struct ifnet {
 	/* low level io address */
 	void * if_io;
+
+	/* interface index */
+	uint8_t if_idx;
+
+	/* interface index */
+	uint8_t if_type;
 
 	/* irq number */
 	uint8_t if_irq_no;
@@ -141,6 +155,20 @@ struct ifnet {
 #define NETIF_STAT_ADD(NETIF, STAT, VAL)
 #endif
 
+struct ifnet_system {
+	int evset;
+	struct ifnet ifn[IFNET_INTERFACES_MAX];
+};
+
+extern  const uint8_t ifnet_max;
+
+extern  struct ifnet_system __ifnet__;
+
+extern const char ifn_type_name[][4];
+
+extern inline int ifn_signal_i(struct ifnet * __if) {
+	return thinkos_flag_raise_i(__ifnet__.evset, __if->if_idx);
+}
 
 extern inline int ifn_init(struct ifnet * __if) {
 	return __if->if_op->op_init(__if);
@@ -192,12 +220,6 @@ extern inline int in_broadcast(in_addr_t __addr, struct ifnet * __if)
 	return (__addr | __if->if_ipv4_mask) == INADDR_BROADCAST;
 }
 
-extern  const uint8_t ifnet_max;
-
-extern  struct ifnet __ifnet__[];
-
-extern const char ifn_type_name[][4];
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -218,6 +240,8 @@ int ifn_add(struct ifnet * __if);
 int ifn_del(struct ifnet * __if);
 
 int in_broadcast(in_addr_t __addr, struct ifnet * __if);
+
+int ifnet_init(void);
 
 #ifdef __cplusplus
 }

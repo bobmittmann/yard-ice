@@ -298,7 +298,6 @@ struct slcdev_trig {
 struct slcdev_drv {
 	int state;          /* decoder state */
 	struct {
-		uint32_t ev_bmp;    /* event bitmap */
 		volatile uint32_t halt : 1;
 	} sim;
 	uint16_t addr;      /* current polled device address */
@@ -354,16 +353,6 @@ static inline void trig_out_clr(void) {
 static inline void trig_out_set(void) {
 	stm32_gpio_set(TRIG_OUT);
 }
-
-static inline void slcdev_event_raise(unsigned int ev) {
-	__bit_mem_wr(&slcdev_drv.sim.ev_bmp, ev, 1);  
-	__thinkos_flag_give(SLCDEV_DRV_EV_FLAG);
-}
-
-static inline void slcdev_event_clear(unsigned int ev) {
-	__bit_mem_wr(&slcdev_drv.sim.ev_bmp, ev, 0);  
-}
-
 void slcdev_init(void);
 void slcdev_stop(void);
 void slcdev_resume(void);
