@@ -140,7 +140,7 @@ if __name__ == '__main__':
   else:
     name = replacelst(os.path.basename(infile), [' ', '-', '.'], '_') 
 
-  f = open(infile, 'r')
+  f = open(infile, 'rb')
   f.seek(0, os.SEEK_END)
   size = f.tell()
   f.seek(0, os.SEEK_SET)
@@ -149,6 +149,6 @@ if __name__ == '__main__':
   f.close()
 
   if options.header:
-	f = c_hdr_open(options.header)
-	c_hdr_update(f, name, size)
+    f = c_hdr_open(options.header)
+    c_hdr_update(f, name, size)
 
