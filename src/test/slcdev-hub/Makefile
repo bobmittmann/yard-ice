@@ -26,6 +26,7 @@ CFILES = slcdev-hub.c console.c lattice.c pktbuf.c sndbuf.c rs485lnk.c net.c \
 		 xflash.c otg_xflash_pic.c uart_xflash_pic.c ice40lp384.c
 
 SDK = ../../sdk
+TOOLS = ../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
@@ -45,3 +46,6 @@ CFLAGS = -g -O2
 
 MACH = stm32f407
 include ../../mk/stm32f4xx.mk
+
+ice40lp384.c: release/rs485hub_bitmap.bin
+	$(TOOLS)/bin2hex.py -n ice40lp384_bin $< > $@ 

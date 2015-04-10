@@ -147,6 +147,9 @@ static bool vcom_scan_match(struct vcom * vcom, uint8_t buf[], int len)
 	int c = pat[j];
 	int i;
 
+	buf[len] = '\0';
+	DCC_LOGSTR(LOG_TRACE, "\"%s\"", buf);
+
 	for (i = 0; i < len; ++i) {
 		if (buf[i] == c) {
 			j++;
@@ -513,7 +516,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
 	struct usb_cdc_class * cdc = vcom->cdc;
-	uint8_t buf[VCOM_BUF_SIZE];
+	uint8_t buf[VCOM_BUF_SIZE + 1];
 	int len;
 
 	DCC_LOG1(LOG_TRACE, "[%d] started.", thinkos_thread_self());
@@ -533,6 +536,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 			led_flash(LED_AMBER, 50);
 			ts = profclk_get();
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
+				DCC_LOG(LOG_TRACE, "CONVERTER");
 				usb_cdc_write(cdc, buf, len);
 				if (vcom_scan_match(vcom, buf, len)) {
 					DCC_LOG(LOG_WARNING, "DSP5685 XON/XOFF magic!");

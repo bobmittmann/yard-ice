@@ -218,7 +218,7 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 	case SERIAL_IOCTL_STAT_GET: 
 		{
 			struct serial_stat * stat = (struct serial_stat *)arg1;
-			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_STAT_GET");
+			DCC_LOG(LOG_INFO, "SERIAL_IOCTL_STAT_GET");
 			stat->rx_cnt = drv->rx_fifo.head;
 			stat->tx_cnt = drv->tx_fifo.tail;
 			stat->err_cnt = drv->err_cnt;
