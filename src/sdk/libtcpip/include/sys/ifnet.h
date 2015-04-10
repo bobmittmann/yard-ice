@@ -182,8 +182,8 @@ extern  struct ifnet_system __ifnet__;
 
 extern const char ifn_type_name[][4];
 
-static inline void ifn_signal_i(struct ifnet * __if) {
-	thinkos_ev_raise_i(__ifnet__.evset, __if->if_idx);
+static inline void ifn_signal_i(int event) {
+	thinkos_ev_raise_i(__ifnet__.evset, event);
 }
 
 extern inline int ifn_init(struct ifnet * __if) {

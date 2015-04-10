@@ -42,7 +42,7 @@ void udp_init(void);
 
 void tcpip_init(void)
 {
-	net_mutex = __os_mutex_alloc();
+	net_mutex = thinkos_mutex_alloc();
 
 	tcpip_net_lock();
 

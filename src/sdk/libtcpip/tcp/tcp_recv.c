@@ -77,7 +77,7 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 
 		DCC_LOG2(LOG_MSG, "<%05x> wait [%d]", (int)__tp, __tp->t_cond);
 
-		__os_cond_wait(__tp->t_cond, net_mutex); 
+		thinkos_cond_wait(__tp->t_cond, net_mutex); 
 	}
 			 
 	n = mbuf_queue_remove(&__tp->rcv_q, __buf, __len);

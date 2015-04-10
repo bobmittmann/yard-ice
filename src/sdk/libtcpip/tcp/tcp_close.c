@@ -60,7 +60,7 @@ int tcp_close(struct tcp_pcb * __tp)
 			DCC_LOG2(LOG_TRACE, "<%05x> [%s]", (int)__tp, 
 					 __tcp_state[__tp->t_state]);
 			if (__tp->t_cond >= 0) {
-				__os_cond_free(__tp->t_cond);
+				thinkos_cond_free(__tp->t_cond);
 				__tp->t_cond = -1;
 			}
 			ret = tcp_pcb_free(__tp);

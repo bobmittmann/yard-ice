@@ -25,6 +25,7 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
+#include <errno.h>
 
 static int can_bind(addr, port)
 {

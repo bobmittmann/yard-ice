@@ -104,7 +104,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 					 (int)up, (int)up->u_rcv_head, tail, cnt);
 		}
 		DCC_LOG1(LOG_WARNING, "<%05x> queue full", (int)up);
-	//	__os_cond_signal(up->u_rcv_cond);
+	//	thinkos_cond_signal(up->u_rcv_cond);
 	} else {
 		dgram = &up->u_rcv_buf[tail % NET_UDP_RECV_QUEUE_LEN];
 		if ((dgram->q = mbuf_list_alloc(len)) != NULL) {
@@ -118,7 +118,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 			dgram->port = __udp->sport;
 			dgram->addr = __ip->saddr;
 			up->u_rcv_tail = tail + 1;
-			__os_cond_signal(up->u_rcv_cond);
+			thinkos_cond_signal(up->u_rcv_cond);
 
 			DCC_LOG5(LOG_TRACE, "%I:%d > %I:%d (%d) queued.", 
 					 __ip->saddr, ntohs(__udp->sport), __ip->daddr, 

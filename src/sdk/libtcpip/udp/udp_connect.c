@@ -27,6 +27,7 @@
 #include <sys/udp.h>
 
 #include <stdlib.h>
+#include <errno.h>
 
 int udp_connect(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port) 
 {
@@ -51,7 +52,7 @@ int udp_connect(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port)
 	if ((__addr == INADDR_ANY) && (__port == 0)) {
 		__up->u_faddr = __addr;
 		__up->u_fport = __port;
-		__os_cond_signal(__up->u_rcv_cond);
+		thinkos_cond_signal(__up->u_rcv_cond);
 	} else {
 		if (pcb_lookup(__addr, __port, __up->u_laddr, 
 					   __up->u_lport, &__udp__.active)) {
@@ -61,7 +62,7 @@ int udp_connect(struct udp_pcb * __up, in_addr_t __addr, uint16_t __port)
 		} else {
 			__up->u_faddr = __addr;
 			__up->u_fport = __port;
-			__os_cond_signal(__up->u_rcv_cond);
+			thinkos_cond_signal(__up->u_rcv_cond);
 		}
 	}
 

@@ -25,6 +25,7 @@
 
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
+#include <errno.h>
 
 int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 {
@@ -69,8 +70,9 @@ int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 	if (tp->t_state == TCPS_CLOSED) {
 		int sem;
 
-		if ((sem = __os_sem_alloc(0)) < 0) {
-			DCC_LOG1(LOG_WARNING, "<%04x> __os_sem_alloc() failed!", (int)tp);
+		if ((sem = thinkos_sem_alloc(0)) < 0) {
+			DCC_LOG1(LOG_WARNING, 
+					 "<%04x> thinkos_sem_alloc() failed!", (int)tp);
 			tcpip_net_unlock();
 			return -ENOMEM;
 		}

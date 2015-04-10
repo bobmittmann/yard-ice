@@ -58,7 +58,7 @@
 #include <netinet/in.h>
 #include <netinet/udp.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 #include <sys/mbuf.h>
 #include <sys/net.h>
 #include <sys/pcb.h>
@@ -113,7 +113,7 @@ struct udp_pcb {
 	/*! udp flags  */
 	uint8_t u_flags : 7;
 	uint8_t u_icmp_err : 1;
-	int8_t u_rcv_cond;
+	uint8_t u_rcv_cond;
 	/* receiving queue */
 	volatile uint8_t u_rcv_tail;
 	volatile uint8_t u_rcv_head;

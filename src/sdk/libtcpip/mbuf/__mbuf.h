@@ -25,7 +25,7 @@
 #include <sys/dcclog.h>
 
 #include <sys/mbuf.h>
-#include <sys/os.h>
+#include <thinkos.h>
 #include <stdlib.h>
 
 #ifndef __MBUF_SIZE

@@ -28,8 +28,8 @@
 
 int udp_release(struct udp_pcb * __up)
 {
-	__os_cond_free(__up->u_rcv_cond);
-	__up->u_rcv_cond = -1;
+	thinkos_cond_free(__up->u_rcv_cond);
+	__up->u_rcv_cond = 0;
 	return pcb_move((struct pcb *)__up, &__udp__.active, &__udp__.free);
 }
 

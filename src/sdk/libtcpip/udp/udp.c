@@ -52,7 +52,7 @@ struct udp_pcb * udp_alloc(void)
 	/* ensure the mem is clean */
 	memset(up, 0, sizeof(struct udp_pcb));
 
-	up->u_rcv_cond = __os_cond_alloc();
+	up->u_rcv_cond = thinkos_cond_alloc();
 
 	tcpip_net_unlock();
 
@@ -80,7 +80,7 @@ int udp_port_unreach(in_addr_t __faddr, uint16_t __fport,
 	up->u_fport = 0;
 
 	/* notify the application */
-	__os_cond_signal(up->u_rcv_cond);
+	thinkos_cond_signal(up->u_rcv_cond);
 
 	return 0;
 }

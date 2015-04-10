@@ -24,7 +24,7 @@ int mbuf_queue_free(struct mbuf_queue * __q)
 
 	m = __q->first;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	while (m) {
 		p = m->next;
@@ -32,8 +32,8 @@ int mbuf_queue_free(struct mbuf_queue * __q)
 		m = p;
 	}
 
-	__os_cond_signal(__mbufs__.cond);
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_cond_signal(__mbufs__.cond);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	__q->first = NULL;
 	__q->last = (struct mbuf *)&__q->first;

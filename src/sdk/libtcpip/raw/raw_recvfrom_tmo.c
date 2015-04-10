@@ -53,7 +53,8 @@ int raw_recvfrom_tmo(struct raw_pcb * __raw, void * __buf,
 		DCC_LOG3(LOG_TRACE, "<%05x> wait [%d, %d]", (int)__raw, 
 			__raw->r_cond, net_mutex);
 
-		if ((err = __os_cond_timedwait(__raw->r_cond, net_mutex, msec)) < 0) {
+		if ((err = thinkos_cond_timedwait(__raw->r_cond, 
+										  net_mutex, msec)) < 0) {
 			tcpip_net_unlock();
 			return err;
 		}

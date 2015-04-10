@@ -123,8 +123,8 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 		return NULL;
 	}
 
-	if ((cond = __os_cond_alloc()) < 0) {
-		DCC_LOG(LOG_WARNING, "__os_cond_alloc()");
+	if ((cond = thinkos_cond_alloc()) < 0) {
+		DCC_LOG(LOG_WARNING, "thinkos_cond_alloc()");
 		return NULL;
 	}
 
@@ -193,7 +193,7 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	/* insert into backlog */
 	mux->t_backlog[mux->t_head] = tp;
 	mux->t_head = new_head;
-	__os_sem_post(mux->t_sem);
+	thinkos_sem_post(mux->t_sem);
 
 	return tp;
 }
@@ -372,7 +372,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 					}
 				}
 
-				__os_cond_broadcast(tp->t_cond);
+				thinkos_cond_broadcast(tp->t_cond);
 
 				if (tp->snd_q.len) {
 					/* schedule output */
@@ -390,7 +390,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 				/* append data */
 				len = mbuf_queue_add(&tp->rcv_q, data, ti_len);
 				tp->rcv_nxt += len;
-				__os_cond_broadcast(tp->t_cond);
+				thinkos_cond_broadcast(tp->t_cond);
 
 				if (len != ti_len) {
 					DCC_LOG1(LOG_WARNING, "<%05x> no more mbufs", (int)tp);
@@ -508,7 +508,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		tcp->rcv_up = ti_seq; */
 		/* XXX: */ 
 		tp->t_flags |= TF_ACKNOW;
-		__os_cond_broadcast(tp->t_cond);
+		thinkos_cond_broadcast(tp->t_cond);
 
 		goto step6;
 
@@ -522,7 +522,7 @@ close_and_reset:
 		mbuf_queue_free(&tp->rcv_q);
 
 		/* notify the upper layer */
-		__os_cond_broadcast(tp->t_cond);
+		thinkos_cond_broadcast(tp->t_cond);
 
 		goto dropwithreset;	
 	}
@@ -626,7 +626,7 @@ close:
 			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
 
 			/* notify the upper layer */
-			__os_cond_broadcast(tp->t_cond);
+			thinkos_cond_broadcast(tp->t_cond);
 			/* PCBs in the close state should be cleared by the application */
 			goto drop;
 
@@ -679,7 +679,7 @@ close:
 		tp->snd_max--;
 		DCC_LOG1(LOG_TRACE, "<%05x> SYN ackd [ESTABLISHED]", (int)tp);
 		/* notify the upper layer*/
-//		__os_cond_signal(tp->t_cond);
+//		thinkos_cond_signal(tp->t_cond);
 
 		/* TODO: tcp reassembly
 		tcp_reass(tp); */
@@ -765,7 +765,7 @@ close:
 		}
 
 		/* awaken a thread waiting on the send buffer ... */
-		__os_cond_broadcast(tp->t_cond);
+		thinkos_cond_broadcast(tp->t_cond);
 
 		snd_una = ti_ack;
 
@@ -866,7 +866,7 @@ dodata:
 			/* 
 			 * notify the upper layer of the data arrival...
 			 */
-			__os_cond_signal(tp->t_cond);
+			thinkos_cond_signal(tp->t_cond);
 //			} else {
 //				DCC_LOG2(LOG_INFO, "<%05x> rcvd %d", (int)tp, ti_len);
 //			}
@@ -902,7 +902,7 @@ dodata:
 			   has closed its side. Sockets: marks 
 			   the socket as write-only */
 			if (tp->rcv_q.len == 0) {
-				__os_cond_broadcast(tp->t_cond);
+				thinkos_cond_broadcast(tp->t_cond);
 			}
 			break;
 		case TCPS_FIN_WAIT_1:

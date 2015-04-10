@@ -48,7 +48,7 @@ void tcp_abort(struct tcp_pcb * tp)
 		/* discard the buffers */
 		mbuf_queue_free(&tp->rcv_q);
 		mbuf_queue_free(&tp->snd_q);
-		__os_cond_free(tp->t_cond);
+		thinkos_cond_free(tp->t_cond);
 
 		/* move from the active pcb list to the closed list */
 		if (pcb_move((struct pcb *)tp, &__tcp__.active, 

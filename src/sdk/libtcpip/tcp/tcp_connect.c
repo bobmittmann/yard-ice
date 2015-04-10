@@ -27,6 +27,7 @@
 #include <sys/tcp.h>
 
 #include <tcpip/tcp.h>
+#include <errno.h>
 
 int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port) 
 {
@@ -83,8 +84,8 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 	if (mss > tcp_maxmss)
 		mss = tcp_maxmss;
 
-	if ((__tp->t_cond = __os_cond_alloc()) < 0) {
-		DCC_LOG(LOG_WARNING, "__os_cond_alloc()");
+	if ((__tp->t_cond = thinkos_cond_alloc()) < 0) {
+		DCC_LOG(LOG_WARNING, "thinkos_cond_alloc()");
 		tcpip_net_unlock();
 		return -1;
 	}
@@ -131,7 +132,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 		if ((__tp->t_state == TCPS_CLOSED)) {
 			DCC_LOG1(LOG_WARNING, "<%05x> refused", (int)__tp);
 			/* release the conditional variable */
-			__os_cond_free(__tp->t_cond);
+			thinkos_cond_free(__tp->t_cond);
 			/* XXX: discard the data */
 			mbuf_queue_free(&__tp->snd_q);
 			mbuf_queue_free(&__tp->rcv_q);
@@ -154,7 +155,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 			break;
 		}
 
-		__os_cond_wait(__tp->t_cond, net_mutex); 
+		thinkos_cond_wait(__tp->t_cond, net_mutex); 
 	}
 
 	tcpip_net_unlock();

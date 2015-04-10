@@ -17,17 +17,17 @@ int mbuf_wait(int mutex)
 
 	DCC_LOG1(LOG_TRACE, "mutex=%d", mutex);
 
-	__os_mutex_lock(__mbufs__.mutex);
-	__os_mutex_unlock(mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_unlock(mutex);
 
 	DCC_LOG(LOG_TRACE, "cond");
-	ret = __os_cond_wait(__mbufs__.cond, __mbufs__.mutex);
+	ret = thinkos_cond_wait(__mbufs__.cond, __mbufs__.mutex);
 
 	DCC_LOG(LOG_TRACE, "unlock");
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	DCC_LOG(LOG_TRACE, "lock");
-	__os_mutex_lock(mutex);
+	thinkos_mutex_lock(mutex);
 
 	DCC_LOG(LOG_TRACE, "end");
 	return ret;

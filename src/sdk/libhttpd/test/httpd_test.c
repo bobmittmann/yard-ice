@@ -55,11 +55,13 @@ int tftpd_start(void);
 extern struct httpdobj www_root[];
 extern struct httpdobj www_img[];
 extern struct httpdobj www_lib[];
+extern struct httpdobj www_cgi[];
 
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
 	{ .path = "/img", .objlst = www_img },
 	{ .path = "/lib", .objlst = www_lib },
+	{ .path = "/cgi", .objlst = www_cgi },
 	{ .path = NULL, .objlst = NULL }
 };
 

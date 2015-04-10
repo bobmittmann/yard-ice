@@ -32,7 +32,7 @@
 #include <errno.h>
 #include <sys/param.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 #include <sys/mbuf.h>
 
 const uint8_t raw_pcb_max = NET_RAW_PCB_MAX;
@@ -55,7 +55,7 @@ struct raw_pcb * raw_pcb_new(int __protocol)
 	/* ensure the mem is clean */
 	memset(raw, 0, sizeof(struct raw_pcb));
 
-	raw->r_cond = __os_cond_alloc();
+	raw->r_cond = thinkos_cond_alloc();
 	raw->r_protocol = __protocol;
 
 	DCC_LOG2(LOG_TRACE, "<%x> protocol=%d", raw, __protocol); 
@@ -70,7 +70,7 @@ int raw_pcb_free(struct raw_pcb * __raw)
 {
 	DCC_LOG1(LOG_TRACE, "<%x>...", __raw); 
 
-	__os_cond_free(__raw->r_cond);
+	thinkos_cond_free(__raw->r_cond);
 
 	return pcb_move((struct pcb *)__raw, &__raw__.active, &__raw__.free);
 } 
@@ -103,7 +103,7 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		memcpy(raw->r_buf, __ip, n);
 		raw->r_len = n;
 
-		__os_cond_signal(raw->r_cond);
+		thinkos_cond_signal(raw->r_cond);
 
 		return 1;
 	}

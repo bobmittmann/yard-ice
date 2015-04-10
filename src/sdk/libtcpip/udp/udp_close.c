@@ -27,6 +27,7 @@
 #include <sys/udp.h>
 
 #include <stdlib.h>
+#include <errno.h>
 
 int udp_close(struct udp_pcb * __up)
 {

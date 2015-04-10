@@ -49,32 +49,36 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 	int len;
 
 	for (;;) {
+		DCC_LOG(LOG_INFO, "wait...");
 		/* wait for an event form a network interface */
 		idx = thinkos_ev_wait(__ifnet__.evset);
+		DCC_LOG1(LOG_INFO, "idx=%d", idx);
+
 		/* lookup the interface */
 		ifn = &__ifnet__.ifn[idx];
+
 		/* get the packet from the network interface */
-		len = ifn_pkt_recv(ifn, &src, &proto, &pkt);
+		while ((len = ifn_pkt_recv(ifn, &src, &proto, &pkt)) > 0) {
+			tcpip_net_lock();
 
-		tcpip_net_lock();
-		NETIF_STAT_ADD(ifn, rx_pkt, 1);
-
-		if (proto == IFN_PROTO_IP) {
-			DCC_LOG(LOG_INFO, "IP");
-			ip_input(ifn, (struct iphdr *)pkt, len);
-		} else {
-			if (proto == IFN_PROTO_ETHARP) {
-				DCC_LOG(LOG_INFO, "ARP");
-				etharp_input(ifn, (struct etharp*)pkt, len);
+			NETIF_STAT_ADD(ifn, rx_pkt, 1);
+			if (proto == IFN_PROTO_IP) {
+				DCC_LOG(LOG_INFO, "IP");
+				ip_input(ifn, (struct iphdr *)pkt, len);
 			} else {
-				NETIF_STAT_ADD(ifn, rx_drop, 1);
-				DCC_LOG(LOG_INFO, "unhandled protocol");
+				if (proto == IFN_PROTO_ETHARP) {
+					DCC_LOG(LOG_INFO, "ARP");
+					etharp_input(ifn, (struct etharp*)pkt, len);
+				} else {
+					NETIF_STAT_ADD(ifn, rx_drop, 1);
+					DCC_LOG(LOG_INFO, "unhandled protocol");
+				}
 			}
+
+			tcpip_net_unlock();
+
+			ifn_pkt_free(ifn, pkt);
 		}
-
-		tcpip_net_unlock();
-
-		ifn_pkt_free(ifn, pkt);
 	}
 }
 

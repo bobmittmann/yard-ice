@@ -194,7 +194,7 @@ again:
 			etharp_query_pending();
 			tcpip_net_unlock();
 			DCC_LOG1(LOG_WARNING, "<%05x> again!", (int)__up);
-			__os_sleep(10);
+			thinkos_sleep(10);
 			tcpip_net_lock();
 			goto again;
 		}

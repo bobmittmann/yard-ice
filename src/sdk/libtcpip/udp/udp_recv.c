@@ -85,7 +85,7 @@ int udp_recv(struct udp_pcb * __up, void * __buf, int __len,
 			break;
 
 		DCC_LOG2(LOG_INFO, "<%05x> wait [%d]", (int)__up, __up->u_rcv_cond);
-		__os_cond_wait(__up->u_rcv_cond, net_mutex);
+		thinkos_cond_wait(__up->u_rcv_cond, net_mutex);
 	}
 
 	dgram = &__up->u_rcv_buf[head % NET_UDP_RECV_QUEUE_LEN];

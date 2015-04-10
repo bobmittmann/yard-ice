@@ -46,7 +46,7 @@
 #include <thinkos_irq.h>
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-
+#if 0
 void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
@@ -194,6 +194,7 @@ const struct thinkos_thread_inf stm32f_ethif_inf = {
 	.paused = 0,
 	.tag = "STM_ETH"
 };
+#endif
 
 int stm32f_ethif_init(struct ifnet * __if)
 {
@@ -213,6 +214,9 @@ int stm32f_ethif_init(struct ifnet * __if)
 	__if->if_link_speed = 100000000;
 	/* set the broadcast flag */
 	__if->if_flags |= IFF_BROADCAST;
+
+	drv->event = __if->if_idx;
+	drv->rx.cnt = 0;
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d", mtu);
 
@@ -261,10 +265,11 @@ int stm32f_ethif_init(struct ifnet * __if)
 	/* DMA receive descriptor list address */
 	eth->dmardlar = (uint32_t)&drv->rx.desc[0];
 
+#if 0
 	/* alloc a new semaphore */
 	drv->rx.sem = thinkos_sem_alloc(0); 
 	DCC_LOG1(LOG_TRACE, "rx.sem=%d", drv->rx.sem);
-
+#endif
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
 
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
@@ -293,10 +298,11 @@ int stm32f_ethif_init(struct ifnet * __if)
 	drv->tx.flag = thinkos_flag_alloc(); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
 
-
+#if 0
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
 	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 
 							  &stm32f_ethif_inf);
+#endif
 
 	/* set the interrupt priority */
 	__thinkos_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);
@@ -476,6 +482,7 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 						  unsigned int * __proto, uint8_t ** __pkt)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct rxdma_ext_st ext_st;
 	struct rxdma_st st;
 	struct rxdma_enh_desc * desc;
@@ -486,12 +493,11 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 	desc = &drv->rx.desc[drv->rx.cnt & (STM32F_ETH_RX_NDESC - 1)];
 	st = desc->st;
 	if (st.es) {
-		DCC_LOG(LOG_ERROR, "summary flag set!");
-		return -1;
+		DCC_LOG(LOG_ERROR, "error summary flag set!");
 	}
 	if (st.own) {
-		DCC_LOG(LOG_ERROR, "DMA own flag set!");
-		return -1;
+		DCC_LOG(LOG_INFO, "DMA own flag set!");
+		return 0;
 	}
 
 	len = st.fl;
@@ -517,11 +523,11 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 
 	if (ext_st.iphe) {
 		DCC_LOG(LOG_WARNING, "IP header error!");
-		return -1;
+		goto error;
 	}
 	if (ext_st.ippe) {
 		DCC_LOG(LOG_WARNING, "IP payload error!");
-		return -1;
+		goto error;
 	}
 	if (ext_st.ipcb)
 		DCC_LOG(LOG_TRACE, "IP checksum bypass.");
@@ -547,13 +553,26 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 	*__pkt = pkt;
 	*__src = hdr->eth_src; 
 	return len;
+
+error:
+	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
+	/* set the DMA descriptor ownership */
+	desc->rdes0 = ETH_RXDMA_OWN;
+	/* enable DMA receive interrupts */
+	eth->dmaier |= ETH_RIE;
+	/* Receive Poll Demand command */
+	eth->dmarpdr = 1;
+
+	return -1;
 }
 
-int stm32f_ethif_pkt_free(struct ifnet * __if, void * __pkt)
+int stm32f_ethif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
 {
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct rxdma_enh_desc * desc;
+
+	DCC_LOG(LOG_INFO, "...");
 	
 	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
 	/* set the DMA descriptor ownership */
@@ -598,7 +617,8 @@ void stm32f_eth_isr(void)
 		DCC_LOG(LOG_INFO, "DMA RS");
 		/* disable DMA receive interrupts */
 		eth->dmaier &= ~ETH_RIE;
-		thinkos_sem_post_i(drv->rx.sem);
+	//	thinkos_sem_post_i(drv->rx.sem);
+		ifn_signal_i(drv->event);
 	}
 
 	if (dmasr & ETH_TS) {

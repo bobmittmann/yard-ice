@@ -23,7 +23,7 @@ struct mbuf * mbuf_list_alloc(int __len)
 	int n = (__len + (MBUF_DATA_SIZE - 1)) / MBUF_DATA_SIZE;
 	int i;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	if (n > (__mbufs__.max - __mbufs__.used))
 		return NULL;
@@ -49,7 +49,7 @@ struct mbuf * mbuf_list_alloc(int __len)
 	DCC_LOG3(LOG_INFO, "mbuf=%05x used=%d free=%d", (int)m, 
 		__mbufs__.used, __mbufs__.max - __mbufs__.used);
 
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return (struct mbuf *)m;
 }

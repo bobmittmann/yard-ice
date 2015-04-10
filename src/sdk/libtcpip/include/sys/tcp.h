@@ -59,7 +59,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-#include <sys/os.h>
+#include <thinkos.h>
 #include <sys/mbuf.h>
 #include <sys/net.h>
 #include <sys/pcb.h>

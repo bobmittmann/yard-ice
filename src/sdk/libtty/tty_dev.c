@@ -38,7 +38,6 @@
 
 struct tty_dev {
 	struct file f;
-
 	uint8_t inpos;
 	uint8_t inlen;
 	char inbuf[TTY_INBUF_LEN];

@@ -16,7 +16,7 @@ void * mbuf_try_alloc(void)
 	struct mbuf * m;
 	void * p;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	if ((m = __mbufs__.free.first) != NULL) {
 		if ((__mbufs__.free.first = m->next) == NULL)
@@ -34,7 +34,7 @@ void * mbuf_try_alloc(void)
 		p = NULL;
 	}
 
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return p;
 }

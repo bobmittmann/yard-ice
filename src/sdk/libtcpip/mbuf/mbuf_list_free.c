@@ -24,7 +24,7 @@ void mbuf_list_free(struct mbuf * __q)
 
 	m = (struct mbuf *)__q;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	while (m != NULL) {
 		p = m->next;
@@ -32,8 +32,8 @@ void mbuf_list_free(struct mbuf * __q)
 		m = p;
 	}
 
-	__os_cond_signal(__mbufs__.cond);
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_cond_signal(__mbufs__.cond);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return;
 }

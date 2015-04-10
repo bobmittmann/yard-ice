@@ -16,7 +16,7 @@ void * mbuf_try_alloc_and_wait(int mutex)
 	struct mbuf * m;
 	void * p;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	if ((m = __mbufs__.free.first) != NULL) {
 
@@ -30,13 +30,13 @@ void * mbuf_try_alloc_and_wait(int mutex)
 
 		p = (void *)m;
 	} else {
-		__os_mutex_unlock(mutex);
-		__os_cond_wait(__mbufs__.cond, __mbufs__.mutex);
-		__os_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+		thinkos_cond_wait(__mbufs__.cond, __mbufs__.mutex);
+		thinkos_mutex_lock(mutex);
 		p = NULL;
 	}
 
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return p;
 }

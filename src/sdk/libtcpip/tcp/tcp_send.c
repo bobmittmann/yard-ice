@@ -78,7 +78,7 @@ again:
 
 		if (__tp->t_state == TCPS_SYN_RCVD) {
 			DCC_LOG1(LOG_TRACE, "<%05x> wait", (int)__tp);
-			__os_cond_wait(__tp->t_cond, net_mutex);
+			thinkos_cond_wait(__tp->t_cond, net_mutex);
 			DCC_LOG2(LOG_TRACE, "<%05x> again [%s]",
 					 (int)__tp, __tcp_state[__tp->t_state]);
 			goto again;
@@ -102,7 +102,7 @@ again:
 			tcp_output_sched(__tp);
 		
 			DCC_LOG(LOG_INFO, "waiting for buffer space.");
-			__os_cond_wait(__tp->t_cond, net_mutex);
+			thinkos_cond_wait(__tp->t_cond, net_mutex);
 
 			goto again;
 		}

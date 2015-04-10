@@ -26,7 +26,7 @@
 #ifndef __SYS_NET_H__
 #define __SYS_NET_H__
 
-#include <sys/os.h>
+#include <thinkos.h>
 #include <stdint.h>
 
 /* Network Framework mutex - all functions accessing the network stack must
@@ -38,11 +38,11 @@ extern "C" {
 #endif
 
 static inline int tcpip_net_lock(void) {
-	return __os_mutex_lock(net_mutex);
+	return thinkos_mutex_lock(net_mutex);
 }
 
 static inline int tcpip_net_unlock(void) {
-	return __os_mutex_unlock(net_mutex);
+	return thinkos_mutex_unlock(net_mutex);
 }
 
 #ifdef __cplusplus

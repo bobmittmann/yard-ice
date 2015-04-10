@@ -172,7 +172,7 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 				mux->t_head = 0;
 		}
 
-		__os_sem_free(mux->t_sem);
+		thinkos_sem_free(mux->t_sem);
 
 		/* listening sockets do not have receiving or trasmmit queues,
 		so we don't release this structures */
@@ -190,7 +190,7 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 
 		mbuf_queue_free(&tp->rcv_q);
 		mbuf_queue_free(&tp->snd_q);
-		__os_cond_free(tp->t_cond);
+		thinkos_cond_free(tp->t_cond);
 
 		return pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.free);
 	}
@@ -276,7 +276,7 @@ void tcp_init(void)
 
 	__tcp__.out.head = 0;
 	__tcp__.out.tail = 0;
-	__tcp__.out.cond = __os_cond_alloc();
+	__tcp__.out.cond = thinkos_cond_alloc();
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
 
 	DCC_LOG1(LOG_TRACE, "max active TCP PCBs : %d ", tcp_pcb_active_max);

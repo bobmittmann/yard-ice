@@ -18,7 +18,7 @@ int mbuf_alloc_check(void)
 	int ret = 0;
 	int n;
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	n = 0;
 	m = __mbufs__.free.first;
@@ -36,7 +36,7 @@ int mbuf_alloc_check(void)
 		ret = -1;
 	}
 
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return ret;
 }

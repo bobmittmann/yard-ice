@@ -76,12 +76,12 @@ int __attribute__((noreturn)) loopif_input_task(struct ifnet * ifn)
 	for (;;) {
 		drv->len = 0;
 		/* ok to send another package */
-		__os_sem_post(drv->tx_sem);
+		thinkos_sem_post(drv->tx_sem);
 
 		/* unlock the network layer */
 		tcpip_net_unlock();
 
-		__os_sem_wait(drv->rx_sem);
+		thinkos_sem_wait(drv->rx_sem);
 
 		tcpip_net_lock();
 
@@ -106,7 +106,7 @@ int loopif_send(struct ifnet * __if, const uint8_t * dst, int proto,
 
 	DCC_LOG1(LOG_TRACE, "(%d)", len);
 
-	__os_sem_post(drv->rx_sem);
+	thinkos_sem_post(drv->rx_sem);
 
 	return len;
 }
@@ -115,7 +115,7 @@ void * loopif_mmap(struct ifnet * __if, size_t __length)
 {
 	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
 
-	__os_sem_wait(drv->tx_sem);
+	thinkos_sem_wait(drv->tx_sem);
 
 	return drv->buf;
 }
@@ -133,14 +133,14 @@ int loopif_startup(struct ifnet * __if)
 	__if->if_flags |= IFF_LOOPBACK;
 
 	/* alloc a semaphore to control packet reception */
-	drv->rx_sem = __os_sem_alloc(0);
+	drv->rx_sem = thinkos_sem_alloc(0);
 	/* alloc a semaphore to control packet transmission */
-	drv->tx_sem = __os_sem_alloc(0);
+	drv->tx_sem = thinkos_sem_alloc(0);
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d",  __if->if_mtu);
 
-	__os_thread_create((void *)loopif_input_task, (void *)__if, 
-					   drv->stack, LOOPIF_STACK_SIZE, __OS_PRIORITY_LOWEST);
+	thinkos_thread_create((void *)loopif_input_task, (void *)__if, 
+					   drv->stack, LOOPIF_STACK_SIZE);
 
 	DCC_LOG(LOG_TRACE, "...");
 

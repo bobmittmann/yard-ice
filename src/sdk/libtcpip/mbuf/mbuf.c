@@ -20,8 +20,8 @@ void mbuf_init(void)
 	struct mbuf * q;
 	int i;
 
-	__mbufs__.cond = __os_cond_alloc();
-	__mbufs__.mutex = __os_mutex_alloc();
+	__mbufs__.cond = thinkos_cond_alloc();
+	__mbufs__.mutex = thinkos_mutex_alloc();
 	__mbufs__.used = 0;
 	__mbufs__.max = MBUF_POOL_SIZE;
 

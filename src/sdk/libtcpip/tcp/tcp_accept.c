@@ -36,8 +36,8 @@ struct tcp_pcb * tcp_accept(const struct tcp_pcb * __mux)
 
 	DCC_LOG1(LOG_INFO, "<%04x> waiting...", (int)mux);
 
-	if (__os_sem_wait(mux->t_sem) < 0) {
-		DCC_LOG2(LOG_ERROR, "<%04x> __os_sem_wait(%d) failed!", 
+	if (thinkos_sem_wait(mux->t_sem) < 0) {
+		DCC_LOG2(LOG_ERROR, "<%04x> thinkos_sem_wait(%d) failed!", 
 				 (int)mux, mux->t_sem);
 		return NULL;
 	}

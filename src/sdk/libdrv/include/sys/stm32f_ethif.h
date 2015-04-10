@@ -40,7 +40,7 @@
 #include <netinet/in.h>
 
 #include <tcpip/ifnet.h>
-#include <sys/os.h>
+#include <thinkos.h>
 
 #include <sys/dcclog.h>
 
@@ -67,6 +67,7 @@
 struct stm32f_eth_drv {
 	struct ifnet * ifn;
 	struct stm32f_eth * eth;
+	int event;
 	struct {
 		uint32_t buf[STM32F_ETH_RX_NDESC][(STM32F_ETH_RX_BUF_SIZE + 3) / 4];
 		struct rxdma_enh_desc desc[STM32F_ETH_RX_NDESC];

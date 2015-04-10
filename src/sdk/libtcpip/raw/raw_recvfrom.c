@@ -52,7 +52,7 @@ int raw_recvfrom(struct raw_pcb * __raw, void * __buf,
 		DCC_LOG3(LOG_INFO, "<%05x> wait [%d, %d]", (int)__raw, 
 			__raw->r_cond, net_mutex);
 
-		__os_cond_wait(__raw->r_cond, net_mutex);
+		thinkos_cond_wait(__raw->r_cond, net_mutex);
 
 		DCC_LOG2(LOG_INFO, "<%05x> lock [%d]", (int)__raw, net_mutex);
 	}

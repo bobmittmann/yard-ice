@@ -25,16 +25,16 @@ int mbuf_free(void * __p)
 
 	DCC_LOG1(LOG_INFO, "p=0x%05x", (int)p);
 
-	__os_mutex_lock(__mbufs__.mutex);
+	thinkos_mutex_lock(__mbufs__.mutex);
 
 	__mbuf_release(p);
 
 	DCC_LOG3(LOG_INFO, "mbuf=%05x used=%d free=%d", (int)p, 
 		__mbufs__.used, __mbufs__.max - __mbufs__.used);
 
-	__os_cond_signal(__mbufs__.cond);
+	thinkos_cond_signal(__mbufs__.cond);
 
-	__os_mutex_unlock(__mbufs__.mutex);
+	thinkos_mutex_unlock(__mbufs__.mutex);
 
 	return 0;
 }

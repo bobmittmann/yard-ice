@@ -31,6 +31,7 @@
 #include <sys/etharp.h>
 
 #include <stdlib.h>
+#include <errno.h>
 
 #ifndef TCP_FAST_TMR_MS
 #define TCP_FAST_TMR_MS 100
@@ -192,7 +193,7 @@ void tcp_output_sched(struct tcp_pcb * __tp)
 		DCC_LOG2(LOG_MSG, "<%05x> head=%d", (int)__tp, __tcp__.out.head);
 		__tcp__.out.tp[__tcp__.out.head++ % NET_TCP_PCB_ACTIVE_MAX] = __tp;
 		__tp->t_flags |= TF_NEEDOUTPUT;
-		__os_cond_signal(__tcp__.out.cond);
+		thinkos_cond_signal(__tcp__.out.cond);
 	}
 }
 
@@ -311,7 +312,7 @@ void tcp_idle_tmr(void)
 						 (int)tp);
 
 				/* notify the upper layer */
-				__os_cond_signal(tp->t_cond);
+				thinkos_cond_signal(tp->t_cond);
 				/* TODO: statistics */
 
 				/* send reset */
@@ -357,7 +358,7 @@ void tcp_idle_tmr(void)
 						 (int)tp);
 
 				/* notify the upper layer */
-				__os_cond_signal(tp->t_cond);
+				thinkos_cond_signal(tp->t_cond);
 				/* TODO: statistics */
 				tcp_output_enqueue(tp);
 				break;
@@ -449,11 +450,11 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 		}
 		__tcp__.out.tail = tail;
 
-		ret = __os_cond_timedwait(__tcp__.out.cond, net_mutex, 
+		ret = thinkos_cond_timedwait(__tcp__.out.cond, net_mutex, 
 								  TCP_FAST_TMR_MS);
 
-		if (ret == __OS_TIMEOUT) {
-			DCC_LOG(LOG_MSG, "__os_cond_timedwait() timeout!");
+		if (ret == THINKOS_ETIMEDOUT) {
+			DCC_LOG(LOG_MSG, "thinkos_cond_timedwait() timeout!");
 
 			/* timeout */
 			tcp_fast_tmr();
@@ -468,7 +469,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 				tcp_idle_tmr();
 			}
 		} else if (ret < 0)  {
-			DCC_LOG1(LOG_PANIC, "__os_cond_timedwait() failed: %d.", ret);
+			DCC_LOG1(LOG_PANIC, "thinkos_cond_timedwait() failed: %d.", ret);
 			abort();
 		}
 	}
