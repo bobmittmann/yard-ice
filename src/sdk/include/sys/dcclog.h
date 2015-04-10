@@ -74,6 +74,11 @@ struct trace_entry {
 #endif
 #endif
 
+enum {
+	LOG_OPT_NONE = 0,
+	LOG_OPT_STR  = 1
+};
+
 #ifdef ENABLE_LOG
 
 #define DCC_LOG_INIT() ice_trace_init()
@@ -181,6 +186,14 @@ struct trace_entry {
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F), (int)(__G), \
 		(int)(__H), (int)(__I), (int)(__J)); }} while (0)
 
+#define DCC_LOGSTR(__LVL, __FMT, __STR) \
+	do { if (__LVL <= LOG_LEVEL)  { ice_tracestr( ({ \
+	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
+	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
+	static const struct trace_entry __attribute__((section(".dcclog"))) \
+	log_entry = { _f, __LINE__, __LVL, LOG_OPT_STR, __FUNCTION__, _m}; \
+	(struct trace_entry *)&log_entry; }), (const char *)(__STR)); }} while (0)
+
 #else
 
 #define DCC_LOG_INIT()
@@ -195,7 +208,9 @@ struct trace_entry {
 #define DCC_LOG7(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G)
 #define DCC_LOG8(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H)
 #define DCC_LOG9(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H, __I)
-#define DCC_LOG10(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H, __I, __J)
+#define DCC_LOG10(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, \
+				  __H, __I, __J)
+#define DCC_LOGSTR(__LVL, __FMT, __STR)
 
 #endif
 
@@ -222,6 +237,8 @@ struct trace_entry {
 
 #define LOG8(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H) \
 	DCC_LOG8(__LVL, __FMT, __A, __B, __C, __D, __E, __F, __G, __H)
+
+#define LOGSTR(__LVL, __FMT, __STR) DCC_LOGSTR(__LVL, __FMT, __STR)
 
 #ifdef __cplusplus
 extern "C" {
@@ -261,6 +278,8 @@ void ice_trace9(const struct trace_entry * __entry, int __a, int __b,
 void ice_trace10(const struct trace_entry * __entry, int __a, int __b, 
 			 int __c, int __d, int __e, int __f, int __g, int __h,
 			 int __i, int __j);
+
+void ice_tracestr(const struct trace_entry * __entry, const char * __s);
 
 #ifdef __cplusplus
 }

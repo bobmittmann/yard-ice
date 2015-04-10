@@ -1,5 +1,5 @@
 # File:		Makefile
-# Author:   Robinson Mittmann (bobmittmann@gmail.com)
+# Module: 
 # Target:
 # Comment:  
 # Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
@@ -19,14 +19,24 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-include ../../mk/config.mk
 
-LIB_STATIC = ice-comm
+PROG = hello
 
-CFILES = ice-comm.c ice-io.c ice-comm_wr32.c \
-		 ice-trace_init.c ice-trace0.c ice-trace1.c \
-		 ice-trace2.c ice-trace3.c ice-trace4.c ice-trace5.c ice-trace6.c \
-		 ice-trace7.c ice-trace8.c ice-trace9.c ice-trace10.c ice-tracestr.c 
+CFILES = hello.c ../common/stdio.c
 
-include ../../mk/lib.mk
+SDK = ../../sdk
 
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
+		  $(SDK)/libc $(SDK)/libice-comm  
+
+LIBS = cm3 stm32f util c ice-comm 
+
+INCPATH = $(SDK)/include  
+
+CFLAGS = -g -O2
+
+JTAGTOOL_ADDR = 192.168.10.50
+MACH = stm32f407
+include ../../mk/stm32f4xx.mk
+
+#include ../../mk/stm32f207.mk

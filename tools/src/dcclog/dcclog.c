@@ -85,11 +85,17 @@ struct dcclog_entry {
 	uint32_t msg;
 };
 
+enum {
+	LOG_OPT_NONE = 0,
+	LOG_OPT_STR  = 1
+};
+
 struct log_def {
 	uint32_t addr;
 	int level;
 	char * file;
 	unsigned int line;
+	unsigned int opt;
 	char * function;
 	char * fmt;
 };
@@ -355,6 +361,7 @@ int fix_log(void)
 
 		log->line = entry->line;
 		log->level = entry->level;
+		log->opt = entry->opt;
 	}
 
 	return 0;
@@ -390,6 +397,36 @@ void * dcc_ptr(FILE *stream)
 	return image_ptr(addr);
 }
 
+char * dcc_str(FILE *stream)
+{
+	static char s[8192 + 1];
+	uint32_t val;
+	int i;
+	int c;
+
+	i = 0;
+	do {
+		if (fread(&val, 4, 1, stream) != 1)
+			return NULL;
+		c = val & 0xff;
+		if (c != '\0') {
+			s[i++] = c;
+			c = (val >> 8) & 0xff;
+			if (c != '\0') {
+				s[i++] = c;
+				c = (val >> 16) & 0xff;
+				if (c != '\0') {
+					s[i++] = c;
+					c = (val >> 24)  & 0xff;
+				}
+			}
+		}
+		s[i++] = c;
+	} while ((c != '\0') && (i < 8192)) ;
+
+	return s;
+}
+
 #define	GOT_PERCENT     0x80
 #define	ZERO_FILL       0x40
 #define	JUST_LEFT       0x20
@@ -400,7 +437,7 @@ void * dcc_ptr(FILE *stream)
 #define IP4_ADDR3(a)    ((((in_addr_t) (a)) >> 16) & 0xff)
 #define IP4_ADDR4(a)    ((((in_addr_t) (a)) >> 24) & 0xff)
 
-int logprintf(FILE *stream, const char *fmt)
+int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 {
 	char c;
 	char flags;
@@ -414,6 +451,8 @@ int logprintf(FILE *stream, const char *fmt)
 	} val;
 	int n = 0;
 	int m = 0;
+
+	printf("opt=%d. ", opt);
 
 	flags = 0;
 	for (;(c = *fmt++);) {
@@ -444,10 +483,18 @@ int logprintf(FILE *stream, const char *fmt)
 
 		case 's':
 			m++;
-			if ((val.cp = dcc_ptr(stream)) == NULL) {
-				printf("[INVALID POINTER]");
-				flags = 0;
-				continue;
+			if (opt == LOG_OPT_STR) {
+				if ((val.cp = dcc_str(stream)) == NULL) {
+					printf("[INVALID STRING]");
+					flags = 0;
+					continue;
+				}
+			} else {
+				if ((val.cp = dcc_ptr(stream)) == NULL) {
+					printf("[INVALID POINTER]");
+					flags = 0;
+					continue;
+				}
 			}
 
 			width -= (int)strlen(val.cp);
@@ -669,7 +716,7 @@ int dcc_log_expand(FILE * f)
 		}
 
 //		fflush(stdout);
-		logprintf(f, log->fmt);
+		logprintf(f, log->opt, log->fmt);
 		putchar('\n');
 //		fflush(stdout);
 		n++;
@@ -710,9 +757,43 @@ void * net_dcc_ptr(int sock)
 }
 
 #ifdef _WIN32
-int net_logprintf(SOCKET sock, const char *fmt)
+char * net_dcc_str(SOCKET sock)
 #else
-int net_logprintf(int sock, const char *fmt)
+char * net_dcc_str(int sock)
+#endif
+{
+	static char s[8192 + 1];
+	uint32_t val;
+	int i;
+	int c;
+
+	i = 0;
+	do {
+		if (recv(sock, (char *)&val, 4, 0) != 4)
+			return NULL;
+		c = val & 0xff;
+		if (c != '\0') {
+			s[i++] = c;
+			c = (val >> 8) & 0xff;
+			if (c != '\0') {
+				s[i++] = c;
+				c = (val >> 16) & 0xff;
+				if (c != '\0') {
+					s[i++] = c;
+					c = (val >> 24)  & 0xff;
+				}
+			}
+		}
+		s[i++] = c;
+	} while ((c != '\0') && (i < 8192)) ;
+
+	return s;
+}
+
+#ifdef _WIN32
+int net_logprintf(SOCKET sock, unsigned int opt, const char *fmt)
+#else
+int net_logprintf(int sock, unsigned int opt, const char *fmt)
 #endif
 {
 	char c;
@@ -757,10 +838,18 @@ int net_logprintf(int sock, const char *fmt)
 
 		case 's':
 			m++;
-			if ((val.cp = net_dcc_ptr(sock)) == NULL) {
-				printf("[INVALID POINTER]");
-				flags = 0;
-				continue;
+			if (opt == LOG_OPT_STR) {
+				if ((val.cp = net_dcc_str(sock)) == NULL) {
+					printf("[INVALID STRING]");
+					flags = 0;
+					continue;
+				}
+			} else {
+				if ((val.cp = net_dcc_ptr(sock)) == NULL) {
+					printf("[INVALID POINTER]");
+					flags = 0;
+					continue;
+				}
 			}
 
 			width -= (int)strlen(val.cp);
@@ -981,7 +1070,7 @@ int net_dcc_log_expand(int sock)
 		}
 
 //		fflush(stdout);
-		net_logprintf(sock, log->fmt);
+		net_logprintf(sock, log->opt, log->fmt);
 		putchar('\n');
 		fflush(stdout);
 		n++;
