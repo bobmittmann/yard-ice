@@ -27,3 +27,4 @@ tools/src/dcclog/missing
 /tools/dcclog
 /tools/src/dcclog/compile
 /tools/src/dcclog/dcclog
+tools/src/dcclog/config.h.in

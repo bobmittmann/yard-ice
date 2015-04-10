@@ -71,13 +71,14 @@ else
 	$(Q)$(compile) -MT $@ -MD -MP -MM -c -o $@ $<
 endif
 
-$(DEPDIR)/%.d : %.S
+$(DEPDIR)/%.d : $(SRCDIR)/%.S
 	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
 
-$(DEPDIR)/%.d : %.s
+$(DEPDIR)/%.d : $(SRCDIR)/%.s
 	$(ACTION) "DEP .S 1: $@"
 	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
+
 
 $(OUTDIR)/%.o : $(SRCDIR)/%.c $(DEPDIR)/%.d
 	$(ACTION) "CC 1: $@"
@@ -87,11 +88,47 @@ else
 	$(Q)$(compile) -o $@ -c $<
 endif
 
-$(OUTDIR)/%.o : %.S $(DEPDIR)/%.d
+$(OUTDIR)/%.o : $(SRCDIR)/%.S $(DEPDIR)/%.d
 	$(ACTION) "AS: $@"
 	$(Q)$(assemble) -o $@ -c $<
 
-$(OUTDIR)/%.o : %.s $(DEPDIR)/%.d
+$(OUTDIR)/%.o : $(SRCDIR)/%.s $(DEPDIR)/%.d
+	$(ACTION) "AS: $@"
+	$(Q)$(assemble) -o $@ -c $<
+
+
+#------------------------------------------------------------------------------ 
+# some rules to compile files on adjacent folders...
+
+$(DEPDIR)/%.d : $(SRCDIR)/../%.c
+	$(ACTION) "DEP .c 1: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(compile) -MT $(subst \,\\,$(shell cygpath -w $@)) -MD -MP -MM -c -o $(subst \,\\,$(shell cygpath -w $@)) $<
+else
+	$(Q)$(compile) -MT $@ -MD -MP -MM -c -o $@ $<
+endif
+
+$(DEPDIR)/%.d : $(SRCDIR)/../%.S
+	$(ACTION) "DEP .S 1: $@"
+	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
+
+$(DEPDIR)/%.d : $(SRCDIR)/../%.s
+	$(ACTION) "DEP .S 1: $@"
+	$(Q)$(assemble) -MT $@ -MD -MP -MM -c -o $@ $<
+
+$(OUTDIR)/%.o : $(SRCDIR)/../%.c $(DEPDIR)/%.d
+	$(ACTION) "CC 3: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+else
+	$(Q)$(compile) -o $@ -c $<
+endif
+
+$(OUTDIR)/%.o : $(SRCDIR)/../%.S $(DEPDIR)/%.d
+	$(ACTION) "AS: $@"
+	$(Q)$(assemble) -o $@ -c $<
+
+$(OUTDIR)/%.o : $(SRCDIR)/../%.s $(DEPDIR)/%.d
 	$(ACTION) "AS: $@"
 	$(Q)$(assemble) -o $@ -c $<
 
