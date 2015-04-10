@@ -62,30 +62,30 @@ struct shell_cmd * cmd_lookup(const struct shell_cmd cmd_tab[], char * line)
 	}
 
 	if (n == 1)
-		DCC_LOG1(LOG_TRACE, "\"%c\"", s[0]);
+		DCC_LOG1(LOG_MSG, "\"%c\"", s[0]);
 	else if (n == 2)
-		DCC_LOG2(LOG_TRACE, "\"%c%c\"", s[0], s[1]);
+		DCC_LOG2(LOG_MSG, "\"%c%c\"", s[0], s[1]);
 	else if (n == 3)
-		DCC_LOG3(LOG_TRACE, "\"%c%c%c\"", s[0], s[1], s[2]);
+		DCC_LOG3(LOG_MSG, "\"%c%c%c\"", s[0], s[1], s[2]);
 	else if (n == 4)
-		DCC_LOG4(LOG_TRACE, "\"%c%c%c%c\"", s[0], s[1], s[2], s[3]);
+		DCC_LOG4(LOG_MSG, "\"%c%c%c%c\"", s[0], s[1], s[2], s[3]);
 	else if (n == 5)
-		DCC_LOG5(LOG_TRACE, "\"%c%c%c%c%c\"", s[0], s[1], s[2], s[3], s[4]);
+		DCC_LOG5(LOG_MSG, "\"%c%c%c%c%c\"", s[0], s[1], s[2], s[3], s[4]);
 	else if (n == 6)
-		DCC_LOG6(LOG_TRACE, "\"%c%c%c%c%c%c\"", 
+		DCC_LOG6(LOG_MSG, "\"%c%c%c%c%c%c\"", 
 				 s[0], s[1], s[2], s[3], s[4], s[5]);
 	else if (n == 7)
-		DCC_LOG7(LOG_TRACE, "\"%c%c%c%c%c%c%c\"", 
+		DCC_LOG7(LOG_MSG, "\"%c%c%c%c%c%c%c\"", 
 				 s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
 	else 
-		DCC_LOG8(LOG_TRACE, "\"%c%c%c%c%c%c%c%c\" ...", 
+		DCC_LOG8(LOG_MSG, "\"%c%c%c%c%c%c%c%c\" ...", 
 				 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
 
 
 	while (cmd->callback != NULL) {
 		if ((cmd->name[n] == '\0' && strncmp(s, cmd->name, n) == 0) ||
 			(cmd->alias[n] == '\0' && strncmp(s, cmd->alias, n) == 0)) {
-			DCC_LOG1(LOG_TRACE, "\"%s\"", cmd->name);
+			DCC_LOG1(LOG_MSG, "\"%s\"", cmd->name);
 			return cmd;
 		}
 		cmd++;

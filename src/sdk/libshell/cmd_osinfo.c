@@ -234,7 +234,7 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 					rt.th_stat[i] & 1 ? "Yes" : " No"); 
 #endif
 #if THINKOS_ENABLE_TIMESHARE
-			fprintf(f, " | %4d | %4d", rt.sched_val[i], sched_pri[i]); 
+			fprintf(f, " | %4d | %4d", rt.sched_val[i], rt.sched_pri[i]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
 			{

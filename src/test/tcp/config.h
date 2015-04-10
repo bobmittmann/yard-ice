@@ -70,6 +70,19 @@
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
+/* use hardware checksum */
+#define ENABLE_NET_TCP_CHECKSUM 0
+#define ENABLE_NET_UDP_CHECKSUM 0
+
+#if defined(STM32F407)
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
+#elif defined(STM32F207)
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 2
+#endif
+
+/* Number of reception DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_RX_NDESC      4
+
 
 #endif /* __CONFIG_H__ */
 

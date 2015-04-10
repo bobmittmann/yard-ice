@@ -55,11 +55,12 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"input[type=text] { background:#fff; margin:1px 2px 1px; " 
 		"border:1px solid #444; padding:3px 3px 2px; }\r\n"
 	"input[type=text]:hover { background:#cdf; }\r\n"
-	"input[type=button],input[type=reset],input[type=submit] {"  
+	"input[type=button],input[type=reset],input[type=submit],button {"  
 		"background:#ccc; margin:1px 4px 1px; "
 		"border:1px solid #444; padding:4px 8px 3px; }\r\n"
-	"input[type=button]:hover,input[type=reset]:hover,input[type=submit]:hover "
-		"{ background:#458; color:#fff; text-decoration:none; }\r\n"
+	"input[type=button]:hover,input[type=reset]:hover,"
+	"input[type=submit]:hover,button:hover {"
+		" background:#458; color:#fff; text-decoration:none; }\r\n"
 	/* modal dialog box */
 	"#mbox { background-color:#eee; padding:8px; border:2px solid #222; }\r\n"
 	"#dlg { clear:both; }\r\n"
@@ -102,39 +103,6 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 	"\r\n</style>\r\n"
 
 #endif
-
-#define HTML_FOOTER "<hr>\r\n"\
-	"<a href=\"https://code.google.com/p/yard-ice\">"\
-	"<img src=\"img/thinkos57x24.png\"></a>\r\n"\
-	" - Cortex-M Operating System - \r\n"\
-	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i><br>\r\n"\
-	"&copy; Copyright 2013-2015, Bob Mittmann<br>\r\n"\
-	"</body>\r\n</html>\r\n"
-
-#define DOCTYPE_HTML "<!DOCTYPE html PUBLIC " \
-	"\"-//W3C//DTD XHTML 1.0 Strict//EN\" "\
-	"\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\r\n"\
-	"<html xmlns=\"http://www.w3.org/1999/xhtml\">\r\n"
-
-#define SERVER "Server: " HTTPD_SERVER_NAME "\r\n"
-
-#define META_COPY "<meta name=\"copyright\" "\
-	"content=\"Copyright (c) Bob Mittmann 2014-2015\"/>\r\n"
-
-#define META_HTTP "<meta http-equiv=\"content-type\" "\
-	"content=\"text/html; charset=utf-8\"/>\r\n"
-
-#define LINK_ICON "<link rel=\"shortcut icon\" "\
-	"href=\"img/thinkos16x16.png\"/>\r\n"
-
-#define LINK_CSS "<link rel=\"stylesheet\" href=\"style.css\" "\
-	"type=\"text/css\" media=\"screen\"/>\r\n"
-
-#define LINK_MODALBOX "<script type=\"text/javascript\" "\
-		"src=\"lib/modalbox.js.gz\"></script>\r\n"
-
-#define LINK_ZEPTO "<script type=\"text/javascript\" "\
-		"src=\"lib/zepto.js.gz\"></script>\r\n"
 
 #define S_MAX 256 /* HTML formatting string buffer lenght */
 
