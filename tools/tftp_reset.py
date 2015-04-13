@@ -65,9 +65,13 @@ def show_version():
 	print("")
 
 def error(msg):
-	print("", file=sys.stderr)
-	print("{0}: error: {1}".format(progname, msg), file=sys.stderr)
-	print("", file=sys.stderr)
+#	print("", file=sys.stderr)
+#	print("{0}: error: {1}".format(progname, msg), file=sys.stderr)
+#	print("", file=sys.stderr)
+#	sys.exit(2)
+	print("")
+	print("{0}: error: {1}".format(progname, msg))
+	print("")
 	sys.exit(2)
 
 def main():
