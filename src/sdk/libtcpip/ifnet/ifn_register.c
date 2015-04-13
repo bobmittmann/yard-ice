@@ -46,7 +46,7 @@ struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 
 	tcpip_net_lock();
 
-	for (i = 0; i < ifnet_max; i++) {
+	for (i = 0; i < ifnet_max; ++i) {
 		if (__ifnet__.ifn[i].if_id == 0) {
 			ifn = &__ifnet__.ifn[i];
 			idx = i;
@@ -61,17 +61,15 @@ struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,
 	}
 
 	type = __op->op_type;
-	n = 0;	
-	for (i = 0; i < ifnet_max; i++) {
-		if ((__ifnet__.ifn[i].if_id & IFT_MASK) == type) {
+	n = 1;	
+	for (i = 0; i < ifnet_max; ++i) {
+		if (__ifnet__.ifn[i].if_id == ((type << 2) + n))
 			n++;
-		}
 	}
 
 	/* alloc the interface  */
 	ifn->if_idx = idx;
-	ifn->if_type = type;
-	ifn->if_id = type + n;
+	ifn->if_id = (type << 2) + n;
 	ifn->if_ipv4_addr = INADDR_ANY;
 	ifn->if_ipv4_mask = INADDR_ANY;
 	ifn->if_flags = 0;

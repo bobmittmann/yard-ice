@@ -94,7 +94,7 @@ int tcp_keepalive(struct tcp_pcb * tp)
 	tcp_dump(iph, th, TCPDUMP_TX);
 #endif
 
-	if ((ret = (ip_output(rt, iph)) < 0)) {
+	if ((ret = (ip_output(ifn, rt, iph)) < 0)) {
 		DCC_LOG3(LOG_ERROR, "ip_output(): > %I:%d %s (0)", 
 				 iph->daddr, ntohs(th->th_dport), 
 				 tcp_all_flags[th->th_flags]);

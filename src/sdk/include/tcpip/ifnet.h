@@ -74,13 +74,13 @@ struct ifnet_info {
 #define IFF_LINK_UP         0x0080
 
 /* Network Interface Type */
-#define IFT_MASK            0xf0
-#define IFT_OTHER           0x00
-#define IFT_ETHER           0x10
-#define IFT_LOOP            0x20
-#define IFT_SLIP            0x30
-#define IFT_PPP             0x40
-
+enum {
+	IFT_LOOP  = 0,
+	IFT_ETHER = 1,
+	IFT_SLIP  = 2,
+	IFT_PPP   = 3,
+	IFT_OTHER = 4
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -98,6 +98,8 @@ struct ifnet * get_ifn_byname(const char * __s);
 struct ifnet * get_ifn_byipaddr(in_addr_t __addr);
 
 int ifn_getname(struct ifnet * __if, char * __s);
+
+char * ifn_name(struct ifnet * __if);
 
 /* Netork device initialization */
 struct ifnet * ifn_register(void * __drv, const struct ifnet_operations * __op,

@@ -30,6 +30,13 @@
 #include <stdlib.h>
 #include <tcpip/icmp.h>
 
+/*
+  return value:
+    -1 : error not processed.
+     0 : ok processed, packet can be released.
+     1 : ok processed, packet reused, don't release.
+*/
+
 int udp_input(struct ifnet * __if, struct iphdr * __ip, 
 			   struct udphdr * __udp, int __len)
 {
@@ -49,7 +56,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 #if 1
 	if (len > __len) {
 		DCC_LOG1(LOG_WARNING, "invalid len=%d!", len);
-		return 1;
+		return -1;
 	}
 #endif
 
@@ -63,7 +70,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 				 __ip->daddr, ntohs(__udp->dport), len); 
 		icmp_error(__ip, ICMP_DEST_UNREACH, ICMP_PORT_UNREACH, __if);
 		UDP_PROTO_STAT_ADD(rx_drop, 1);
-		return 1;
+		return -1;
 	}
 
 	UDP_PROTO_STAT_ADD(rx_ok, 1);
@@ -88,7 +95,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 					 __ip->daddr, ntohs(__udp->dport), len, sum); 
 			UDP_PROTO_STAT_ADD(rx_drop, 1);
 			UDP_PROTO_STAT_ADD(rx_err, 1);
-			return 1;
+			return -1;
 		}
 
 	}
@@ -130,6 +137,6 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 		}
 	}
 
-	return 1;
+	return 0;
 } 
 

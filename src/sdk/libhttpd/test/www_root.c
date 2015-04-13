@@ -143,6 +143,7 @@ int test1_cgi(struct httpctl * ctl)
 	char s[S_MAX];
 	int n;
 
+	httpd_200(ctl->tp, TEXT_HTML);
 	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
 	tcp_send(ctl->tp, test1_hdr_html, sizeof(test1_hdr_html) - 1, 0);
 	tcp_send(ctl->tp, s, n, 0);
@@ -164,6 +165,7 @@ int test2_cgi(struct httpctl * ctl)
 	char s[S_MAX];
 	int n;
 
+	httpd_200(ctl->tp, TEXT_HTML);
 	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
 	tcp_send(ctl->tp, test2_hdr_html, sizeof(test2_hdr_html) - 1, 0);
 	tcp_send(ctl->tp, s, n, 0);
@@ -202,6 +204,7 @@ int form1_cgi(struct httpctl * ctl)
 	int n;
 	int i;
 
+	httpd_200(ctl->tp, TEXT_HTML);
 	tcp_send(ctl->tp, form1_hdr_html, sizeof(form1_hdr_html) - 1, 0);
 	for (i = 0; i < ctl->qrycnt; ++i) {
 		char * key = ctl->qrylst[i].key;
@@ -278,6 +281,8 @@ int ipcfg_form_cgi(struct httpctl * ctl)
 	struct route * rt;
 	char s[S_MAX];
 	int n;
+
+	httpd_200(ctl->tp, TEXT_HTML);
 
 	/* get current configuration */
 	if ((ifn = get_ifn_byname("eth0")) == NULL)
@@ -377,6 +382,8 @@ int ipcfg_set_cgi(struct httpctl * ctl)
 					   atoi(http_query_lookup(ctl, "g2")),
 					   atoi(http_query_lookup(ctl, "g3")),
 					   atoi(http_query_lookup(ctl, "g4")));
+
+	httpd_200(ctl->tp, TEXT_HTML);
 
 	tcp_send(ctl->tp, ipcfg_set_hdr_html, 
 			 sizeof(ipcfg_set_hdr_html) - 1, 0);

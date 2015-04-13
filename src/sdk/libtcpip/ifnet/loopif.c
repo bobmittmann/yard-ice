@@ -56,42 +56,11 @@
 #endif
 
 struct loopif_drv {
-	int8_t rx_sem;
-	int8_t tx_sem;
+	uint8_t tx_sem;
+	uint8_t proto;
 	int16_t len;
 	uint32_t buf[LOOPIF_BUF_SIZE / sizeof(uint32_t)];
-	uint32_t stack[LOOPIF_STACK_SIZE / sizeof(uint32_t)];
 };
-
-int __attribute__((noreturn)) loopif_input_task(struct ifnet * ifn)
-{
-	struct loopif_drv * drv = (struct loopif_drv *)ifn->if_drv;
-	int len;
-
-
-	tcpip_net_lock();
-
-	DCC_LOG(LOG_TRACE, "...");
-
-	for (;;) {
-		drv->len = 0;
-		/* ok to send another package */
-		thinkos_sem_post(drv->tx_sem);
-
-		/* unlock the network layer */
-		tcpip_net_unlock();
-
-		thinkos_sem_wait(drv->rx_sem);
-
-		tcpip_net_lock();
-
-		len = drv->len;
-
-		DCC_LOG1(LOG_TRACE, "packet received: %d bytes", len);
-
-		ip_input(ifn, (struct iphdr *)drv->buf, len);
-	}
-}
 
 int loopif_send(struct ifnet * __if, const uint8_t * dst, int proto, 
 					const void * buf, int len)
@@ -103,21 +72,54 @@ int loopif_send(struct ifnet * __if, const uint8_t * dst, int proto,
 
 	memcpy(drv->buf, buf, len);
 	drv->len = len;
+	drv->proto = proto;
 
-	DCC_LOG1(LOG_TRACE, "(%d)", len);
+	DCC_LOG2(LOG_INFO, "proto=%d len=%d", proto, len);
 
-	thinkos_sem_post(drv->rx_sem);
+	ifn_signal_i(__if->if_idx);
 
 	return len;
 }
 
-void * loopif_mmap(struct ifnet * __if, size_t __length)
+void * loopif_mmap(struct ifnet * __if, size_t __len)
 {
 	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
 
-	thinkos_sem_wait(drv->tx_sem);
+	DCC_LOG1(LOG_TRACE, "(%d)", __len);
+
+//	tcpip_net_unlock();
+//	thinkos_sem_wait(drv->tx_sem);
+//	tcpip_net_lock();
 
 	return drv->buf;
+}
+
+int loopif_pkt_recv(struct ifnet * __if, uint8_t ** __src, 
+						  unsigned int * __proto, uint8_t ** __pkt)
+{
+	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+	
+	*__pkt = (uint8_t *)drv->buf;
+//	*__src = drv->src;
+	*__proto = drv->proto;
+
+	DCC_LOG1(LOG_TRACE, "(%d)", drv->len);
+
+	return drv->len;
+}
+
+int loopif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
+{
+	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+
+	DCC_LOG1(LOG_TRACE, "(%d)", drv->len);
+
+	drv->len = 0;
+
+	/* ok to send another package */
+	thinkos_sem_post(drv->tx_sem);
+
+	return 0;
 }
 
 int loopif_getdesc(struct ifnet * __if, char * __s, int __len)
@@ -132,17 +134,11 @@ int loopif_startup(struct ifnet * __if)
 	__if->if_mtu = LOOPIF_BUF_SIZE;
 	__if->if_flags |= IFF_LOOPBACK;
 
-	/* alloc a semaphore to control packet reception */
-	drv->rx_sem = thinkos_sem_alloc(0);
 	/* alloc a semaphore to control packet transmission */
-	drv->tx_sem = thinkos_sem_alloc(0);
+	drv->tx_sem = thinkos_sem_alloc(1);
+	drv->len = 0;
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d",  __if->if_mtu);
-
-	thinkos_thread_create((void *)loopif_input_task, (void *)__if, 
-					   drv->stack, LOOPIF_STACK_SIZE);
-
-	DCC_LOG(LOG_TRACE, "...");
 
 	return 0;
 }
@@ -152,7 +148,12 @@ void * loopif_arplookup(struct ifnet * __if, in_addr_t __ipaddr)
 	return &__if->if_id;
 }
 
-	/* set the broadcast flag */
+int loopif_getaddr(struct ifnet * __if, uint8_t * __buf)
+{
+	__buf[0] = 0;
+	return 0;
+}
+
 const struct ifnet_operations loopif_op = {
 	.op_type = IFT_LOOP,
 	.op_addrlen = 0,
@@ -161,10 +162,12 @@ const struct ifnet_operations loopif_op = {
 	.op_mmap = loopif_mmap,
 	.op_send = loopif_send,
 	.op_arplookup = loopif_arplookup,
-	.op_getaddr = NULL,
+	.op_getaddr = loopif_getaddr,
 	.op_getdesc = loopif_getdesc,
 	.op_sleep = NULL,
-	.op_wakeup = NULL
+	.op_wakeup = NULL,
+	.op_pkt_recv = loopif_pkt_recv,
+	.op_pkt_free = loopif_pkt_free,
 };
 
 struct loopif_drv loopif_drv;

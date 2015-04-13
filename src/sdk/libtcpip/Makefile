@@ -43,12 +43,14 @@ PCB_CFILES = in_pcb.c pcb_getnext.c pcb_enum.c
 
 ARP_CFILES = etharp.c arp.c
 
+DHCP_CFILES = dhcp.c 
+
 RAW_CFILES = raw.c raw_close.c raw_getstat.c \
 			 raw_recvfrom.c raw_recvfrom_tmo.c raw_sendto.c raw_ioctl.c
 
 UDP_CFILES = udp_bind.c udp.c udp_close.c udp_connect.c udp_enum.c \
 			 udp_input.c udp_proto_getstat.c udp_recv.c udp_recv_tmo.c\
-			 udp_release.c udp_send.c udp_sendto.c
+			 udp_release.c udp_send.c udp_sendto.c udp_bcast.c
 
 TCP_CFILES = tcp_abort.c tcp_accept.c tcp_accept_tmo.c tcp_bind.c\
 			 tcp.c tcp_close.c tcp_connect.c tcp_drop.c tcp_dump.c\
@@ -61,6 +63,7 @@ CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
 		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES))\
 		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES))\
 		 $(addprefix udp/,$(UDP_CFILES)) $(addprefix tcp/,$(TCP_CFILES))\
+		 $(addprefix dhcp/,$(DHCP_CFILES))\
 		 telnet/telopts.c
 
 override INCPATH += ./include

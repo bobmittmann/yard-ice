@@ -100,7 +100,7 @@ int icmp_send(struct iphdr * __ip, struct icmp * __icp, int __len)
 		return -1;
 	}
 
-	if ((ret = ip_output(rt, __ip)) < 0) {
+	if ((ret = ip_output(rt->rt_ifn, rt, __ip)) < 0) {
 		DCC_LOG(LOG_ERROR, "ip_output() fail!");
 		/* XXX:  */
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
@@ -115,11 +115,19 @@ int icmp_send(struct iphdr * __ip, struct icmp * __icp, int __len)
 	return 0;
 }
 
+/*
+  return value:
+    < 0 : error not processed.
+    = 0 : ok processed, packet can be released.
+    > 0 : ok processed, packet reused, don't release.
+*/
 int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip, 
 					struct icmphdr * __icmp, int __len)
 {
+	struct ifnet * ifn;
 	struct route * rt;
-	uint32_t tmp;
+	unsigned int tmp;
+//	int pkt_len;
 	int ret;
 
 	ICMP_PROTO_STAT_ADD(tx_ok, 1);
@@ -133,18 +141,31 @@ int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip,
 		 __icmp->chksum += + HTONS(ICMP_ECHO << 8);
 	}
 
-	/* swap addresses in the ip header */
-	tmp = __ip->daddr;
-	__ip->daddr = __ip->saddr;
-	__ip->saddr = tmp;
-
 	if ((rt = __route_lookup(__ip->daddr)) == NULL) {
 		DCC_LOG1(LOG_WARNING, "no route to host: %I", __ip->daddr);
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 		return -1;
 	}
+	ifn = (struct ifnet *)rt->rt_ifn;
 
-	if ((ret = ip_output(rt, __ip)) < 0) {
+	/* swap addresses in the ip header */
+	tmp = __ip->saddr;
+	__ip->saddr = __ip->daddr;
+	__ip->daddr = tmp;
+
+#if 0
+	struct iphdr * ip;
+	pkt_len = sizeof(struct iphdr) + sizeof(struct icmphdr) + __len;
+	ip = (struct iphdr *)ifn_mmap(ifn, pkt_len);
+	if (ip == NULL) {
+		return -1;
+	}
+
+	memcpy(ip, __ip, pkt_len);
+#endif
+
+	if ((ret = ip_output(ifn, rt, __ip)) < 0) {
+//		ifn_munmap(ifn, ip);
 		DCC_LOG(LOG_ERROR, "ip_output() fail!");
 		ICMP_PROTO_STAT_ADD(tx_drop, 1);
 		if (ret == -EAGAIN) {
@@ -154,7 +175,7 @@ int icmp_echoreplay(struct ifnet * __if, struct iphdr * __ip,
 		return -1;
 	}
 	
-	return __len;
+	return 1;
 }
 
 #if (ENABLE_NET_UDP)
@@ -178,17 +199,27 @@ static void * icmp_skip_ip_hdr(struct iphdr * ip, int frag_len)
 }
 #endif
 
+/*
+  return value:
+    -1 : error not processed.
+     0 : ok processed, packet can be released.
+     1 : ok processed, packet reused, don't release.
+*/
 int icmp_input(struct ifnet * __if, struct iphdr * __ip, 
 			   struct icmphdr * __icmp, int __len)
 {
+	int ret;
+
 	__len -= ICMP_MINLEN;
 
 	ICMP_PROTO_STAT_ADD(rx_ok, 1);
 
 	switch (__icmp->type) {
 	case ICMP_ECHO: 
-		DCC_LOG(LOG_INFO, "ICMP: echo request");
-		return icmp_echoreplay(__if, __ip, __icmp, __len);
+		DCC_LOG(LOG_TRACE, "ICMP: echo request");
+		ret = icmp_echoreplay(__if, __ip, __icmp, __len);
+		break;
+
 	case ICMP_DEST_UNREACH:
 		DCC_LOG(LOG_TRACE, "ICMP: dest unreach");
 #if (ENABLE_NET_UDP)
@@ -202,12 +233,16 @@ int icmp_input(struct ifnet * __if, struct iphdr * __ip,
 							 icp->icmp_ip.saddr, udp->sport);
 		}
 #endif
+		ret = 0;
 		break;
+
 	default:
 		ICMP_PROTO_STAT_ADD(rx_drop, 1);
-		DCC_LOG2(LOG_WARNING, "ICMP: %d (%d)", __icmp->type, __len);
+		DCC_LOG2(LOG_INFO, "ICMP: %d (%d)", __icmp->type, __len);
+		ret = -1;
 	}
-	return 0;
+
+	return ret;
 } 
 
 int icmp_error(struct iphdr * __ip, int __type, 

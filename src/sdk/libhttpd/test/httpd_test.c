@@ -37,6 +37,8 @@
 #include <sys/dcclog.h>
 #include <thinkos.h>
 #include <tcpip/net.h>
+#include <tcpip/dhcp.h>
+#include <tcpip/in.h>
 
 #include "board.h"
 
@@ -87,11 +89,11 @@ int httpd_server_task(struct httpd * httpd)
 		if ((obj = http_obj_lookup(ctl)) != NULL) {
 			switch (ctl->method) {
 			case HTTP_GET:
-				DCC_LOG1(LOG_TRACE, "GET '%s'", obj->oid);
+				DCC_LOG1(LOG_TRACE, "GET \"%s\"", obj->oid);
 				http_get(ctl, obj);
 				break;
 			case HTTP_POST:
-				DCC_LOG1(LOG_TRACE, "POST '%s'", obj->oid);
+				DCC_LOG1(LOG_TRACE, "POST \"%s\"", obj->oid);
 				http_post(ctl, obj);
 				break;
 			}
@@ -117,7 +119,10 @@ int network_config(void)
 	/* TODO: random initial mac address */
 	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x80};
 	uint64_t esn;
-	int dhcp;
+	int dhcp = 1;
+	
+	DCC_LOG(LOG_TRACE, "tcpip_init().");
+	tcpip_init();
 
 	esn = *((uint64_t *)STM32F_UID);
 	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
@@ -133,14 +138,13 @@ int network_config(void)
 		   ethaddr[0], ethaddr[1], ethaddr[2],
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
-	DCC_LOG(LOG_TRACE, "tcpip_init().");
-	tcpip_init();
 
-//	if ((env = getenv("IPCFG")) == NULL) {
-	if (1) {
+	if ((env = getenv("IPCFG")) == NULL) {
+//	if (1) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
-		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");
+	//	strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 1");
+		strcpy(s, "0.0.0.0 0.0.0.0 0.0.0.0 1");
 		/* set the default configuration */
 		setenv("IPCFG", s, 1);
 	} else {
@@ -161,7 +165,6 @@ int network_config(void)
 	/* initialize the Ethernet interface */
 	/* configure the ip address */
 	ifn = ethif_init(ethaddr, ip_addr, netmask);
-//	ifn = loopif_init(ip_addr, netmask);
 
 	ifn_getname(ifn, s);
 	ifn_ipv4_get(ifn, &ip_addr, &netmask);
@@ -177,14 +180,14 @@ int network_config(void)
 	}
 
 	if (dhcp) {
-#if 0
-		/* configure the initial ip address */
-		dhcp_start();
-		/* schedule the interface to be configured through dhcp */
-		dhcp_ifconfig(ethif, dhcp_callback);
-		tracef("DHCP started.\n");
-#endif
+		/* start the DHCP client daemon */
+		DCC_LOG(LOG_TRACE, "dhcpc_start().");
+		dhcpc_start();
+		/* schedule the interface to be configured through DHCP */
+		dhcpc_ifconfig(ifn, NULL);
 	}
+
+	loopif_init(IPV4_ADDR(127, 0, 0, 1), IPV4_ADDR(255, 0, 0, 0));
 
 	return 0;
 }

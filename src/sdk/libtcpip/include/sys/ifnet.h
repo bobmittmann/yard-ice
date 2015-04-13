@@ -127,11 +127,8 @@ struct ifnet {
 	/* low level io address */
 	void * if_io;
 
-	/* interface index */
+	/* interface index for reverse lookup */
 	uint8_t if_idx;
-
-	/* interface index */
-	uint8_t if_type;
 
 	/* irq number */
 	uint8_t if_irq_no;
@@ -180,7 +177,7 @@ extern  const uint8_t ifnet_max;
 
 extern  struct ifnet_system __ifnet__;
 
-extern const char ifn_type_name[][4];
+extern const char ifn_name_lut[][5];
 
 static inline void ifn_signal_i(int event) {
 	thinkos_ev_raise_i(__ifnet__.evset, event);

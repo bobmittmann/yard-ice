@@ -96,8 +96,7 @@ struct raw_pcb {
 		uint32_t r_ports;
 	};
 
-	uint8_t r_flags;
-	uint8_t r_state;
+	volatile uint8_t r_flags;
 
 	uint8_t r_cond;
 
@@ -109,7 +108,7 @@ struct raw_pcb {
 	/*! mtu */
 	uint16_t r_mtu;
 
-	uint16_t r_len;
+	volatile uint16_t r_len;
 
 	uint8_t r_buf[NET_RAW_RCV_BUF_LEN];
 };

@@ -33,26 +33,22 @@
 
 struct ifnet * get_ifn_byname(const char * __s)
 {
-	struct ifnet * ifn = NULL;
-	char nm[8];
+	struct ifnet * ifn;
 	int i;
 
 	tcpip_net_lock();
 
 	for (i = 0; i < ifnet_max; i++) {
-		/* naive lookup method to avoid division */
-		if (__ifnet__.ifn[i].if_id != 0) {
-			ifn = &__ifnet__.ifn[i];
-
-			ifn_getname(ifn, nm);
-
-			if (strcmp(nm, __s) == 0)
-				break;
+		ifn = &__ifnet__.ifn[i];
+		/* naive lookup method */
+		if ((ifn->if_id != 0) && (strcmp(ifn_name(ifn), __s) == 0)) {
+			tcpip_net_unlock();
+			return ifn;
 		}
 	}
 
 	tcpip_net_unlock();
 
-	return ifn;
+	return NULL;
 }
 

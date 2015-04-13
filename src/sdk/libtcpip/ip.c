@@ -87,8 +87,14 @@ struct proto_stat ip_stat;
 
 int arp_ping_ipconfig(struct ifnet * __if, struct iphdr * __ip, 
 					  struct icmphdr * __icmp, int __len);
+/*
+  return value:
+    -1 : error not processed.
+     0 : ok processed, packet can be released.
+     1 : ok processed, packet reused, don't release.
+*/
 
-void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
+int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 {
 	int hdr_len;
 	int tot_len;
@@ -100,7 +106,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		/* unsupported version */
 		DCC_LOG(LOG_WARNING, "not ipv4!");
 		IP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	/* header length  */
@@ -110,7 +116,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		/* invalid header length */
 		DCC_LOG(LOG_WARNING, "invalid iphdr length!");
 		IP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	if (tot_len > __len) {
@@ -118,7 +124,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		DCC_LOG2(LOG_WARNING, "length error: ip.tot_len=%d frame.len=%d",
 				 tot_len, __len);
 		IP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	/* TODO: check for IP flags */
@@ -126,7 +132,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		DCC_LOG(LOG_WARNING, "ip fragmentation unsupported!");
 		/* ip fragmentation flag set */
 		IP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	if (in_chksum(0, (uint8_t *)__ip, hdr_len) != 0x0000ffff) {
@@ -134,7 +140,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		DCC_LOG(LOG_WARNING, "bad checksum!");
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		IP_PROTO_STAT_ADD(rx_err, 1);
-		return;
+		return -1;
 	}
 
 	IP_PROTO_STAT_ADD(rx_ok, 1);
@@ -142,7 +148,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	ptr = (void *)&__ip->opt[hdr_len - sizeof(struct iphdr)];
 	len = tot_len - hdr_len;
 
-	DCC_LOG3(LOG_INFO, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
+	DCC_LOG3(LOG_TRACE, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
 
 	/* check the destination ip address */
 	/* get interface ip address */
@@ -159,7 +165,7 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 					arp_ping_ipconfig(__if, __ip, (struct icmphdr *)ptr, len);
 #endif
 				IP_PROTO_STAT_ADD(rx_drop, 1);
-				return;
+				return -1;
 			}
 		}
 	}
@@ -185,27 +191,28 @@ void ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 #endif
 
 	default:
-		DCC_LOG1(LOG_INFO, "invalid protocol %d.", __ip->proto);
+		DCC_LOG1(LOG_TRACE, "invalid protocol %d.", __ip->proto);
 		ret = 0;
 	}
 
-	if (ret == 0) {
+	if (ret < 0) {
 #if (ENABLE_NET_RAW)
-		DCC_LOG(LOG_TRACE, "RAW");
-		if (raw_input(__if, __ip, tot_len) == 0)
+		DCC_LOG(LOG_INFO, "RAW");
+		if ((ret = raw_input(__if, __ip, tot_len)) < 0)
 #endif
 			IP_PROTO_STAT_ADD(rx_drop, 1);
 	}
+
+	return ret;
 }
 
-int ip_output(struct route * __rt, struct iphdr * __ip)
+int ip_output(struct ifnet * __ifn, struct route * __rt, struct iphdr * __ip)
 {
 	void * dst_hwaddr;
-	struct ifnet * ifn;
 	in_addr_t dst;
 	int len;
 
-	if (__rt->rt_gateway) {
+	if ((__rt != NULL) && (__rt->rt_gateway != INADDR_ANY)) {
 		dst = __rt->rt_gateway;
 		DCC_LOG1(LOG_INFO, "gateway: %I", dst);
 	} else {
@@ -213,10 +220,7 @@ int ip_output(struct route * __rt, struct iphdr * __ip)
 		DCC_LOG1(LOG_INFO, "direct: %I", dst);
 	}
 
-	/* get interface */
-	ifn = __rt->rt_ifn;
-
-	dst_hwaddr = ifn_arplookup(ifn, dst);
+	dst_hwaddr = ifn_arplookup(__ifn, dst);
 
 	if (dst_hwaddr == NULL) {
 		/* if we can't get the link address return EGAIN.
@@ -235,7 +239,7 @@ int ip_output(struct route * __rt, struct iphdr * __ip)
 
 	DCC_LOG3(LOG_INFO, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
 
-	return ifn_send(ifn, dst_hwaddr, HTONS(ETH_P_IP), __ip, len);
+	return ifn_send(__ifn, dst_hwaddr, HTONS(ETH_P_IP), __ip, len);
 }
 
 struct iphdr * mk_iphdr(struct iphdr * iph, in_addr_t saddr, 

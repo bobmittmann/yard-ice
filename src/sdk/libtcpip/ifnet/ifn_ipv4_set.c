@@ -51,9 +51,8 @@ int ifn_ipv4_set(struct ifnet * __if, in_addr_t __addr, in_addr_t __mask)
 		__if->if_ipv4_mask, 0, __if);
 	}
 
-	DCC_LOG4(LOG_TRACE, "%s%d - addr=%I mask=%I", 
-		ifn_type_name[__if->if_id >> 4], __if->if_id & 0x0f,
-		__if->if_ipv4_addr, __if->if_ipv4_mask);
+	DCC_LOG3(LOG_TRACE, "%s - addr=%I mask=%I", 
+		ifn_name_lut[__if->if_id], __if->if_ipv4_addr, __if->if_ipv4_mask);
 
 	DCC_LOG(LOG_INFO, "tcpip_net_unlock().");
 	tcpip_net_unlock();

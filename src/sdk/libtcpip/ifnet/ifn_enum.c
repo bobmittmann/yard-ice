@@ -25,19 +25,33 @@
 
 #define __USE_SYS_IFNET__
 #include <sys/ifnet.h>
+#include <errno.h>
 
 int ifn_enum(int (* __callback)(struct ifnet *, void *), void * __parm)
 {
+	struct ifnet * ifn;
 	int i;
 	int n;
 
+	if (__callback == NULL) {
+		DCC_LOG(LOG_WARNING, "null pointer");
+		return -EINVAL;
+	}
+
+//	tcpip_net_lock();
+
 	n = 0;
-	for (i = 0; i < ifnet_max; i++) {
-		if (__ifnet__.ifn[i].if_id != 0) {
-			if (__callback(&__ifnet__.ifn[i], __parm))
+	for (i = 0; i < ifnet_max; ++i) {
+		ifn = &__ifnet__.ifn[i];
+		if (ifn->if_id != 0) {
+			DCC_LOG1(LOG_TRACE, "%s ...", ifn_name_lut[ifn->if_id]);
+			if (__callback(ifn, __parm))
 				break;
+			n++;
 		}
 	}
+
+//	tcpip_net_unlock();
 
 	return n;
 }

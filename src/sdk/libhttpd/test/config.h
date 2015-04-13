@@ -84,6 +84,8 @@
 
 #define ENABLE_TCPDUMP 0
 
+#define IFNET_INTERFACES_MAX 2
+
 #define MBUF_POOL_SIZE    64
 
 #define TCP_FAST_TMR_MS   100

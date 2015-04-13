@@ -217,7 +217,7 @@ int calc_parse(struct calc * calc, const char * txt, unsigned int len)
 	lexer_open(&calc->lex, txt, len);
 	pp_sp = parser_stack + STACK_SIZE;
 	pp_sl = parser_stack;
-	if ((k = ll_start(pp_sp)) < 0) {
+	if ((k = calc_ll_start(pp_sp)) < 0) {
 		return ERR_SYNTAX_ERROR;
 	}
 	pp_sp -= k;
@@ -238,7 +238,7 @@ int calc_parse(struct calc * calc, const char * txt, unsigned int len)
 			}
 		} else {
 			//printf("%s\n", sym_nm[sym]);
-			if ((k = ll_rule_push(pp_sp, sym, tok.typ)) < 0) {
+			if ((k = calc_ll_push(pp_sp, sym, tok.typ)) < 0) {
 				WARN("ll_rule_push() failed!");
 				return k;
 			}

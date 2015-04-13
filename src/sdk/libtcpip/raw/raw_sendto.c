@@ -27,6 +27,7 @@
 #include <sys/raw.h>
 
 #include <sys/etharp.h>
+#include <sys/ip.h>
 
 #include <string.h>
 #include <errno.h>
@@ -35,13 +36,14 @@
 int raw_sendto(struct raw_pcb * __raw, void * __buf, int __len, 
 			   const struct sockaddr_in * __sin)
 {
+	struct ifnet * ifn;
 	struct iphdr * ip;
 	in_addr_t daddr;
 	in_addr_t saddr;
 	struct route * rt;
 	uint8_t * ptr;
+	int ret;
 	int mtu;
-	struct ifnet * ifn;
 
 	DCC_LOG2(LOG_TRACE, "<%05x> len=%d", (int)__raw, __len);
 	
@@ -86,7 +88,6 @@ int raw_sendto(struct raw_pcb * __raw, void * __buf, int __len,
 	}
 
 	ip = (struct iphdr *)ifn_mmap(ifn, sizeof(struct iphdr) + __len);
-
 	iph_template(ip, __raw->r_protocol, ip_defttl, __raw->r_tos);
 	ptr = (uint8_t *)ip->opt;
 	
@@ -97,11 +98,17 @@ int raw_sendto(struct raw_pcb * __raw, void * __buf, int __len,
 
 	DCC_LOG3(LOG_TRACE, "IP %I > %I (%d)", ip->saddr, ip->daddr, __len); 
 
-	if (ip_output(rt, ip) < 0) {
+	if ((ret = ip_output(ifn, rt, ip)) < 0) {
+		ifn_munmap(ifn, ip);
 		DCC_LOG1(LOG_ERROR, "<%05x> ip_output() fail!", (int)__raw);
 		/* if the reason to fail was an arp failure
 		   try query an address pending for resolution ... */
-		etharp_query_pending();
+
+		if (ret == -EAGAIN) {
+			/* FIXME: non ethernet type interfaces */
+			etharp_query_pending();
+		}
+
 		tcpip_net_unlock();
 		return -1;
 	}

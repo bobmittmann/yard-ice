@@ -384,6 +384,8 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 	int rxmt;
 	int idle;
 	int ret;
+	int mutex = net_mutex;
+	int cond = __tcp__.out.cond;
 
 	tcpip_net_lock();
 
@@ -450,8 +452,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 		}
 		__tcp__.out.tail = tail;
 
-		ret = thinkos_cond_timedwait(__tcp__.out.cond, net_mutex, 
-								  TCP_FAST_TMR_MS);
+		ret = thinkos_cond_timedwait(cond, mutex, TCP_FAST_TMR_MS);
 
 		if (ret == THINKOS_ETIMEDOUT) {
 			DCC_LOG(LOG_MSG, "thinkos_cond_timedwait() timeout!");

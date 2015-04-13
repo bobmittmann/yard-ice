@@ -45,6 +45,7 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 	unsigned int proto;
 	uint8_t * pkt; 
 	uint8_t * src; 
+	int ret;
 	int idx;
 	int len;
 
@@ -62,22 +63,22 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 			tcpip_net_lock();
 
 			NETIF_STAT_ADD(ifn, rx_pkt, 1);
-			if (proto == IFN_PROTO_IP) {
+			if (proto == NTOHS(ETH_P_IP)) {
 				DCC_LOG(LOG_INFO, "IP");
-				ip_input(ifn, (struct iphdr *)pkt, len);
+				ret = ip_input(ifn, (struct iphdr *)pkt, len);
+			} else if (proto == NTOHS(ETH_P_ARP)) {
+				DCC_LOG(LOG_INFO, "ARP");
+				ret = etharp_input(ifn, (struct etharp*)pkt, len);
 			} else {
-				if (proto == IFN_PROTO_ETHARP) {
-					DCC_LOG(LOG_INFO, "ARP");
-					etharp_input(ifn, (struct etharp*)pkt, len);
-				} else {
-					NETIF_STAT_ADD(ifn, rx_drop, 1);
-					DCC_LOG(LOG_INFO, "unhandled protocol");
-				}
+				NETIF_STAT_ADD(ifn, rx_drop, 1);
+				DCC_LOG1(LOG_TRACE, "unhandled protocol: %d", proto);
+				ret = 0;
 			}
 
 			tcpip_net_unlock();
 
-			ifn_pkt_free(ifn, pkt);
+			if (ret <= 0)
+				ifn_pkt_free(ifn, pkt);
 		}
 	}
 }

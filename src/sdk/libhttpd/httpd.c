@@ -521,31 +521,7 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 		path[1] = '\0';
 	}
 
-	{
-		char * s = path;
-		int n = strlen(s);
-		if (n == 1)
-			DCC_LOG1(LOG_TRACE, "path=\"%c\"", s[0]);
-		else if (n == 2)
-			DCC_LOG2(LOG_TRACE, "path=\"%c%c\"", s[0], s[1]);
-		else if (n == 3)
-			DCC_LOG3(LOG_TRACE, "path=\"%c%c%c\"", s[0], s[1], s[2]);
-		else if (n == 4)
-			DCC_LOG4(LOG_TRACE, "path=\"%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3]);
-		else if (n == 5)
-			DCC_LOG5(LOG_TRACE, "path=\"%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4]);
-		else if (n == 6)
-			DCC_LOG6(LOG_TRACE, "path=\"%c%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4], s[5]);
-		else if (n == 7)
-			DCC_LOG7(LOG_TRACE, "path=\"%c%c%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
-		else 
-			DCC_LOG8(LOG_TRACE, "path=\"%c%c%c%c%c%c%c%c\" ...", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
-	}
+	DCC_LOGSTR(LOG_TRACE, "path=\"%s\"", path);
 
 	for (dir = httpd->dir; (dir->path != NULL); ++dir) {
 		if (strcmp(dir->path, path) == 0) {
@@ -562,32 +538,7 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 	if (*oid == '\0')
 		oid = (char *)http_index_obj;
 
-	{
-		char * s = oid;
-		int n = strlen(s);
-		if (n == 1)
-			DCC_LOG1(LOG_TRACE, "obj=\"%c\"", s[0]);
-		else if (n == 2)
-			DCC_LOG2(LOG_TRACE, "obj=\"%c%c\"", s[0], s[1]);
-		else if (n == 3)
-			DCC_LOG3(LOG_TRACE, "obj=\"%c%c%c\"", s[0], s[1], s[2]);
-		else if (n == 4)
-			DCC_LOG4(LOG_TRACE, "obj=\"%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3]);
-		else if (n == 5)
-			DCC_LOG5(LOG_TRACE, "obj=\"%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4]);
-		else if (n == 6)
-			DCC_LOG6(LOG_TRACE, "obj=\"%c%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4], s[5]);
-		else if (n == 7)
-			DCC_LOG7(LOG_TRACE, "obj=\"%c%c%c%c%c%c%c\"", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
-		else 
-			DCC_LOG8(LOG_TRACE, "obj=\"%c%c%c%c%c%c%c%c\" ...", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
-	}
-
+	DCC_LOGSTR(LOG_TRACE, "obj=\"%s\"", oid);
 
 	for (obj = dir->objlst; (obj->oid != NULL); ++obj) {
 		if (strcmp(obj->oid, oid) == 0) {

@@ -34,7 +34,7 @@ int ifn_getinfo(struct ifnet * __if, struct ifnet_info * __info)
 	if ((__if == NULL) || (__info == NULL))
 		return -1;
 
-	__info->type = __if->if_id & IFT_MASK;
+	__info->type = __if->if_op->op_type;
 	__info->flags = __if->if_flags;
 	__info->mtu = __if->if_mtu;
 	__info->lnk_speed = __if->if_link_speed;

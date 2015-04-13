@@ -283,7 +283,14 @@ int etharp_reply(struct ifnet * __if, uint8_t * __dha, in_addr_t __addr)
 	return 0;
 }
 
-void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
+/*
+  return value:
+    -1 : error not processed.
+     0 : ok processed, packet can be released.
+     1 : ok processed, packet reused, don't release.
+*/
+
+int etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 {
 	in_addr_t daddr;
 	in_addr_t saddr;
@@ -298,7 +305,7 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 				 __len, (int)sizeof(struct etharp));
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
 		ETHARP_PROTO_STAT_ADD(rx_err, 1);
-		return;
+		return -1;
 	}
 
 	/* arp destination ip address */
@@ -316,9 +323,9 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 
 	/* is a valid destination ? */
 	if (daddr != __if->if_ipv4_addr) {
-		DCC_LOG2(LOG_TRACE, "%I:%I drop.", saddr, daddr);
+		DCC_LOG2(LOG_TRACE, "%I:%I, not for me!", saddr, daddr);
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	DCC_LOG2(LOG_TRACE, "%I:%I", saddr, daddr);
@@ -328,7 +335,7 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 		DCC_LOG2(LOG_WARNING, "hdr = %d != %d!", 
 				 __arp->arp_hdr, HTONS(ARPHRD_ETHER));
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	/* arp protocol type */
@@ -336,7 +343,7 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 		DCC_LOG2(LOG_WARNING, "pro = %d != %d!", 
 				 __arp->arp_pro, HTONS(ETH_P_IP));
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	/* arp hardware len */
@@ -344,14 +351,14 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 		DCC_LOG2(LOG_WARNING, "pro = %d != %d!", 
 				 __arp->arp_hln, ETH_ADDR_LEN);
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	/* arp protocol len */
 	if (__arp->arp_pln != 4) {
 		DCC_LOG2(LOG_WARNING, "pln = %d != %d!", __arp->arp_pln, 4);
 		ETHARP_PROTO_STAT_ADD(rx_drop, 1);
-		return;
+		return -1;
 	}
 
 	etharp_add(saddr, __arp->arp_sha);
@@ -361,13 +368,13 @@ void etharp_input(struct ifnet * __if, struct etharp * __arp, int __len)
 				IP4_ADDR(__arp->arp_dpa[0], __arp->arp_dpa[1],
 						 __arp->arp_dpa[2], __arp->arp_dpa[3]));
 
-		etharp_reply(__if, sha, saddr);
+		return etharp_reply(__if, sha, saddr);
 	} else {
 		DCC_LOG2(LOG_TRACE, "ARP REPLY %I:%I", saddr, 
 				IP4_ADDR(__arp->arp_dpa[0], __arp->arp_dpa[1],
 						 __arp->arp_dpa[2], __arp->arp_dpa[3]));
+		return 0;
 	}
-
 }
 
 int etharp_query_pending(void)

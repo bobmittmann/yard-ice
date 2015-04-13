@@ -83,18 +83,14 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 
 	q = (struct pcb_link *)&__raw__.active.first;
 
-	DCC_LOG3(LOG_TRACE, "%I > %I (%d)", __ip->saddr, __ip->daddr, __len); 
+	DCC_LOG4(LOG_TRACE, "%I > %I prot=%d (%d) ", 
+			 __ip->saddr, __ip->daddr, __ip->proto, __len); 
 
 	while ((q = q->next)) {
 		raw = (struct raw_pcb *)&q->pcb;
 
-		DCC_LOG2(LOG_TRACE, "<%0x> protocol=%d", raw, __ip->proto); 
-
 		if (raw->r_protocol != __ip->proto)
 			continue;
-
-		DCC_LOG1(LOG_TRACE, "protocol %d", __ip->proto); 
-		DCC_LOG3(LOG_TRACE, "%I > %I (%d)", __ip->saddr, __ip->daddr, __len); 
 
 		raw->r_faddr = __ip->saddr;
 		raw->r_laddr = __ip->daddr;
@@ -103,12 +99,14 @@ int raw_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		memcpy(raw->r_buf, __ip, n);
 		raw->r_len = n;
 
+		DCC_LOG2(LOG_TRACE, "<%0x> signal ---> %d", raw, raw->r_cond); 
+
 		thinkos_cond_signal(raw->r_cond);
 
-		return 1;
+		return 0;
 	}
 
-	return 0;
+	return -1;
 } 
 
 void raw_init(void)

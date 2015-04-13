@@ -198,6 +198,12 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	return tp;
 }
 
+/*
+  return value:
+    -1 : error not processed.
+     0 : ok processed, packet can be released.
+     1 : ok processed, packet reused, don't release.
+*/
 
 int tcp_input(struct ifnet * __if, struct iphdr * iph, 
 			   struct tcphdr * th, int len)
@@ -223,6 +229,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 	int tiwin;
 	int hdrlen;
 	uint8_t * data;
+	int ret;
 
 #if (ENABLE_TCPDUMP)
 	tcp_dump(iph, th, TCPDUMP_RX);
@@ -304,7 +311,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		tcp_output_sched(tp);
 
 		/* packet handled */
-		return 1;
+		return 0;
 	}
 
 	DCC_LOG1(LOG_MSG, "<%05x> active", (int)tp);
@@ -378,7 +385,8 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 					/* schedule output */
 					tcp_output_sched(tp);
 				}
-				return 1;
+
+				return 0;
 			}
 		} else {
 			if ((ti_ack == snd_una) && 
@@ -400,7 +408,8 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 				} else {
 					tp->t_flags |= TF_DELACK;
 				}
-				return len;
+
+				return 0;
 			 }
 		}
 	}
@@ -936,7 +945,7 @@ dodata:
 		/* schedule output */
 		tcp_output_sched(tp);
 	}
-	return 1;
+	return 0;
 
 dropafterack:
 	DCC_LOG1(LOG_INFO, "<%05x> drop and ACK", (int)tp);
@@ -947,26 +956,28 @@ dropafterack:
 	tp->t_flags |= TF_ACKNOW;
 	/* schedule output */
 	tcp_output_sched(tp);
-	return 1;
+	return 0;
 
 dropwithreset:
 	DCC_LOG1(LOG_INFO, "<%05x> drop and RST", (int)tp);
 
+	ret = 0;
 	/* TODO: check for a broadcast/multicast */
 	if (!(tiflags & TH_RST)) {
 		if (tiflags & TH_ACK) {
-			tcp_respond(iph, th, 0, ti_ack, TH_RST);
-		} else {
-			if (tiflags & TH_SYN)
+			ret = tcp_respond(iph, th, 0, ti_ack, TH_RST);
+		} else if (tiflags & TH_SYN) {
 				ti_len++;
-			tcp_respond(iph, th, ti_seq + ti_len, 0, TH_ACK | TH_RST);
+			ret = tcp_respond(iph, th, ti_seq + ti_len, 0, TH_ACK | TH_RST);
 		}
 	}
+	TCP_PROTO_STAT_ADD(rx_drop, 1);
+	return ret;
 
 drop:
 	DCC_LOG(LOG_INFO, "drop");
 	TCP_PROTO_STAT_ADD(rx_drop, 1);
 
-	return 1;
+	return 0;
 }
 

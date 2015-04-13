@@ -66,8 +66,8 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	int32_t dt;
 	uint32_t ts;
 	uint32_t now;
+	int cnt;
 	int i;
-	int n;
 	int ret = 0;
 
 	if (argc < 2) {
@@ -92,9 +92,9 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	}
 
 	if (argc > 2) {
-		n = strtol(argv[2], NULL, 0);
+		cnt = strtol(argv[2], NULL, 0);
 	} else {
-		n = 5;
+		cnt = 5;
 	}
 
 	raw = raw_pcb_new(IPPROTO_ICMP);
@@ -105,7 +105,7 @@ int cmd_ping(FILE * f, int argc, char ** argv)
 	fprintf(f, "PING %s: %d octets data.\n", 
 			inet_ntop(AF_INET, (void *)&ip_addr, s, 16), datalen);
 
-	for (seq = 1; seq <= n; seq++) {
+	for (seq = 1; seq <= cnt; seq++) {
 		icmp = (struct icmphdr *)(void *)buf;
 		icmp->type = ICMP_ECHO;
 		icmp->un.echo.id = id;

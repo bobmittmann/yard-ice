@@ -79,29 +79,61 @@ const char http_hdr_200_jpeg[] = "HTTP/1.1 200 OK\r\n"
 	"Cache-Control: private, max-age=3153600\r\n"
 	"Content-type: image/jpeg\r\n\r\n";
 
+const char http_hdr_200_gif[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: private, max-age=3153600\r\n"
+	"Content-type: image/gif\r\n\r\n";
+
+const char http_hdr_200_json[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Connection: keep-alive\r\n"
+	"Content-Type: application/json\r\n"
+	"\r\n";
+
+const char http_hdr_200_xml[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Connection: keep-alive\r\n"
+	"Content-Type: application/xml\r\n"
+	"\r\n";
+
+/*
+const char http_hdr_200_text_js[] = "HTTP/1.1 200 OK\r\n"
+	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Connection: keep-alive\r\n"
+	"Content-type: text/javascript\r\n"
+	"\r\n";
+*/
+
 const char * const http_200_hdr[] = {
 	http_hdr_200_html,
-	http_hdr_200_js,
 	http_hdr_200_text,
 	http_hdr_200_css,
+	http_hdr_200_js,
+	http_hdr_200_json,
+	http_hdr_200_xml,
+	http_hdr_200_png,
+	http_hdr_200_jpeg,
+	http_hdr_200_gif,
 	http_hdr_200_html_gz,
-	http_hdr_200_js_gz,
 	http_hdr_200_text_gz,
 	http_hdr_200_css_gz,
-	http_hdr_200_png,
-	http_hdr_200_jpeg };
+	http_hdr_200_js_gz };
 
 const uint16_t http_200_len[] = {
 	sizeof(http_hdr_200_html) - 1,
-	sizeof(http_hdr_200_js) - 1,
 	sizeof(http_hdr_200_text) - 1,
 	sizeof(http_hdr_200_css) - 1,
+	sizeof(http_hdr_200_js) - 1,
+	sizeof(http_hdr_200_json) - 1,
+	sizeof(http_hdr_200_xml) - 1,
+	sizeof(http_hdr_200_png) - 1,
+	sizeof(http_hdr_200_jpeg) - 1,
+	sizeof(http_hdr_200_gif) - 1,
 	sizeof(http_hdr_200_html_gz) - 1,
-	sizeof(http_hdr_200_js_gz) - 1,
 	sizeof(http_hdr_200_text_gz) - 1,
 	sizeof(http_hdr_200_css_gz) - 1,
-	sizeof(http_hdr_200_png) - 1,
-	sizeof(http_hdr_200_jpeg) - 1 };
+	sizeof(http_hdr_200_js_gz) - 1
+};
 
 int httpd_200(struct tcp_pcb * __tp, int unsigned __type)
 {

@@ -34,19 +34,33 @@
 #endif
 #endif
 
-const char ifn_type_name[][4] = {
-	"xxx",
-	"eth",
+const char ifn_name_lut[][5] = {
+	"err",
 	"lo",
-	"sl",
-	"ppp",
-	"atm"
-	""
+	"lo",
+	"lo",
+	"lo",
+	"eth0",
+	"eth1",
+	"eth2",
+	"eth3",
+	"sl0",
+	"sl1",
+	"sl2",
+	"sl3",
+	"ppp0",
+	"ppp1",
+	"ppp2",
+	"ppp3"
 };
 
 int ifn_getname(struct ifnet * __if, char * __s)
 {
-	return sprintf(__s, "%s%d", ifn_type_name[__if->if_id >> 4], 
-				   __if->if_id & 0x0f);
+	return sprintf(__s, "%s", ifn_name_lut[__if->if_id]);
+}
+
+const char * ifn_name(struct ifnet * __if, char * __s)
+{
+	return ifn_name_lut[__if->if_id];
 }
 

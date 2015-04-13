@@ -124,6 +124,11 @@ int udp_enum(int (* __callback)(struct udp_inf *, void *), void * __arg);
    optionally reseting the counters */
 void udp_proto_getstat(struct proto_stat * __st, int __rst);
 
+int udp_close(struct udp_pcb * __up);
+
+int udp_bcast(struct udp_pcb * __up, void * __buf, int __len, 
+			  struct ifnet * __ifn, unsigned int __dport);
+
 #ifdef __cplusplus
 }
 #endif

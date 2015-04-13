@@ -34,23 +34,20 @@
 #include <errno.h>
 #include <stdlib.h>
 
-int udp_sendto(struct udp_pcb * __up, void * __buf, int __len, 
-			   const struct sockaddr_in * __sin)
+int udp_bcast(struct udp_pcb * __up, void * __buf, int __len, 
+			  struct ifnet * __ifn, unsigned int __dport)
 {
 	struct iphdr * ip;
 	struct udphdr * uh;
 	in_addr_t daddr;
 	int dport;
 	in_addr_t saddr;
-	struct route * rt;
 #if (ENABLE_NET_UDP_CHECKSUM)
 	unsigned int sum;
 #endif
 	uint8_t * ptr;
 	int mtu;
-	struct ifnet * ifn;
 	int ret;
-	int retry = 0;
 
 	DCC_LOG2(LOG_INFO, "<%05x> len=%d", (int)__up, __len);
 	
@@ -82,42 +79,13 @@ int udp_sendto(struct udp_pcb * __up, void * __buf, int __len,
 		return -3;
 	}
 
-	if (__sin == NULL) {
-		if ((dport = __up->u_fport) == 0) {
-			DCC_LOG1(LOG_WARNING, "<%05x> connection refused", (int)__up);
-			tcpip_net_unlock();
-			return -ECONNREFUSED;
-		}
-
-		if ((daddr = __up->u_faddr) == INADDR_ANY) {
-			DCC_LOG1(LOG_WARNING, "<%05x> not connected", (int)__up);
-			tcpip_net_unlock();
-			return -ENOTCONN;
-		}
-	} else {
-		if ((dport = __sin->sin_port) == 0) {
-			DCC_LOG1(LOG_WARNING, "<%05x> invalid port", (int)__up);
-			tcpip_net_unlock();
-			return -ECONNREFUSED;
-		}
-
-		if ((daddr = __sin->sin_addr.s_addr) == INADDR_ANY) {
-			DCC_LOG1(LOG_WARNING, "<%05x> invalid address", (int)__up);
-			tcpip_net_unlock();
-			return -EDESTADDRREQ;
-		}
+	if ((dport = __dport) == 0) {
+		DCC_LOG1(LOG_WARNING, "<%05x> connection refused", (int)__up);
+		return -ECONNREFUSED;
 	}
 
-	if ((rt = __route_lookup(daddr)) == NULL) {
-		DCC_LOG2(LOG_WARNING, "<%05x> no route to host: %I", (int)__up, daddr);
-		tcpip_net_unlock();
-		UDP_PROTO_STAT_ADD(tx_drop, 1);
-		UDP_PROTO_STAT_ADD(tx_err, 1);
-		return -EHOSTUNREACH;
-	}
-
-	ifn = (struct ifnet *)rt->rt_ifn;
-	mtu = ifn->if_mtu - sizeof(struct iphdr);
+	daddr = INADDR_BROADCAST;
+	mtu = __ifn->if_mtu - sizeof(struct iphdr);
 
 	if ((__len <= 0) || (__len > mtu)) {
 		DCC_LOG3(LOG_WARNING, "<%04x> invalid length %d (max: %d)", 
@@ -129,11 +97,10 @@ int udp_sendto(struct udp_pcb * __up, void * __buf, int __len,
 
 	/* get the source address */
 	if ((saddr = __up->u_laddr) == INADDR_ANY) {
-		saddr = ifn->if_ipv4_addr;
+		saddr = __ifn->if_ipv4_addr;
 	}
 
-again:
-	ip = (struct iphdr *)ifn_mmap(ifn, sizeof(struct iphdr) + 
+	ip = (struct iphdr *)ifn_mmap(__ifn, sizeof(struct iphdr) + 
 								  sizeof(struct udphdr) + __len);
 
 	if (ip == NULL) {
@@ -142,7 +109,6 @@ again:
 		/* TODO: errno */
 		return -1;
 	}
-	DCC_LOG2(LOG_TRACE, "<%05x> ip=%p", (int)__up, ip);
 
 	iph_template(ip, IPPROTO_UDP, udp_def_ttl, udp_def_tos);
 	uh = (struct udphdr *)ip->opt;
@@ -187,21 +153,10 @@ again:
 		ntohs(uh->dport), ntohs(uh->len)); 
 #endif
 
-	if ((ret = ip_output(ifn, rt, ip)) < 0) {
-		ifn_munmap(ifn, ip);
-		/* if the reason to fail was an arp failure
-		   try query an address pending for resolution ... */
-		if ((ret == -EAGAIN) && (retry < 10)) {
-			etharp_query_pending();
-			tcpip_net_unlock();
-			DCC_LOG2(LOG_WARNING, "<%05x> again, retry=%d!", (int)__up, retry);
-			thinkos_sleep(10 + retry * 10);
-			retry++;
-			tcpip_net_lock();
-			goto again;
-		}
-		DCC_LOG1(LOG_ERROR, "<%05x> ip_output() fail!", (int)__up);
+	if ((ret = ip_output(__ifn, NULL, ip)) < 0) {
 		UDP_PROTO_STAT_ADD(tx_drop, 1);
+		ifn_munmap(__ifn, ip);
+		DCC_LOG1(LOG_ERROR, "<%05x> ip_output() fail!", (int)__up);
 	} else {
 		UDP_PROTO_STAT_ADD(tx_ok, 1);
 		DCC_LOG5(LOG_INFO, "IP %I:%d > %I:%d: %d", 

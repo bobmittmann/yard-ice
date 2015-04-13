@@ -30,8 +30,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include <sys/stm32f_ethif.h>
 #include <sys/etharp.h>
+#include <sys/param.h>
 
 #include <tcpip/in.h>
 
@@ -216,7 +218,6 @@ int stm32f_ethif_init(struct ifnet * __if)
 	__if->if_flags |= IFF_BROADCAST;
 
 	drv->event = __if->if_idx;
-	drv->rx.cnt = 0;
 
 	DCC_LOG1(LOG_TRACE, "mtu=%d", mtu);
 
@@ -250,7 +251,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 		rxdesc->rbs1 = STM32F_ETH_RX_BUF_SIZE;
 		/* Receive end of ring */
 		rxdesc->rer = 0;
-		/* Disable interrupt on comletion */
+		/* Disable interrupt on completion */
 		rxdesc->dic = 0;
 		/* Second address chained */
 		rxdesc->rch = 1;
@@ -264,12 +265,14 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	/* DMA receive descriptor list address */
 	eth->dmardlar = (uint32_t)&drv->rx.desc[0];
+	drv->rx.cnt = 0;
 
 #if 0
 	/* alloc a new semaphore */
 	drv->rx.sem = thinkos_sem_alloc(0); 
 	DCC_LOG1(LOG_TRACE, "rx.sem=%d", drv->rx.sem);
 #endif
+
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
 
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
@@ -288,15 +291,23 @@ int stm32f_ethif_init(struct ifnet * __if)
 		/* Transmit buffer 2 addr */
 		txdesc->tbap2 = drv->tx.buf[i];
 		/* Transmit end of ring */
-		txdesc->tdes0 = ETH_TXDMA_TER;
+		txdesc->tdes0 = 0;
 	}
+	/* Transmit end of ring */
+	txdesc->tdes0 = ETH_TXDMA_TER;
 
 	/* DMA transmit descriptor list address */
 	eth->dmatdlar = (uint32_t)&drv->tx.desc[0];
+	drv->tx.cnt = 0;
 
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
+
+#if 0
+	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
+	DCC_LOG1(LOG_TRACE, "tx.sem=%d", drv->tx.sem);
+#endif
 
 #if 0
 	DCC_LOG(LOG_TRACE, "__os_thread_create()");
@@ -353,8 +364,9 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 #if 1
 	struct txdma_enh_desc * txdesc;
 	struct txdma_st st;
+	int n = 0; 
 
-	txdesc = &drv->tx.desc[0];
+	txdesc = &drv->tx.desc[n];
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
@@ -386,7 +398,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
 	}
 #endif
 
-	ptr = &drv->tx.buf[14];
+	ptr = drv->tx.buf[n];
 
 	DCC_LOG2(LOG_INFO, "mem=%p len=%d", ptr, __length);
 
@@ -407,8 +419,9 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct txdma_enh_desc * txdesc;
-	struct txdma_st st;
+//	struct txdma_st st;
 	struct eth_hdr * hdr;
+	int n = 0;
 
 	DCC_LOG1(LOG_INFO, "len=%d", __len);
 
@@ -418,8 +431,14 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 		return -1;
 	}
 
-	txdesc = &drv->tx.desc[0];
-	hdr = &drv->tx.hdr[0];
+	hdr = &drv->tx.hdr[n];
+	if (__buf != drv->tx.buf[n]) {
+		DCC_LOG(LOG_ERROR, "invalid DMA buffer!");
+		abort();
+	}
+
+	txdesc = &drv->tx.desc[n];
+#if 0
 	for (;;) {
 		/* wait for buffer availability */
 		st = txdesc->st;
@@ -443,11 +462,22 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 		thinkos_flag_take(drv->tx.flag);
 		DCC_LOG(LOG_MSG, "wakeup....");
 	}
+#endif
 
 	DCC_LOG7(LOG_MSG, "to: %02x:%02x:%02x:%02x:%02x:%02x (%d)",
 			 __dst[0], __dst[1], __dst[2], __dst[3], __dst[4], __dst[5], __len);
 
 	hdr->eth_type = __proto;
+#if 0
+	switch (hdr->eth_type) {
+	case IFN_PROTO_IP:
+		hdr->eth_type = HTONS(ETH_P_IP);
+		break;
+	case IFN_PROTO_ETHARP:
+		hdr->eth_type = HTONS(ETH_P_ARP);
+		break;
+	};
+#endif
 
 	/* ethernet destination address */
 	hdr->eth_dst[0] = __dst[0];
@@ -472,6 +502,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 //	eth->dmaier |= ETH_TIE;
 //	/* Transmit Poll Demand command */
 //	eth->dmatpdr = 1;
+
 	DCC_LOG(LOG_MSG, " DMA start transmit...");
 	eth->dmaomr |= ETH_ST;
 
@@ -541,7 +572,7 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 	pkt = (uint8_t *)hdr + 14;
 	len -= 14;
 
-	switch (hdr->eth_type) {
+/*	switch (hdr->eth_type) {
 	case HTONS(ETH_P_IP):
 		*__proto = IFN_PROTO_IP;
 		break;
@@ -549,7 +580,9 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 		*__proto = IFN_PROTO_ETHARP;
 		break;
 	};
+	*/
 
+	*__proto = hdr->eth_type;
 	*__pkt = pkt;
 	*__src = hdr->eth_src; 
 	return len;
@@ -593,9 +626,14 @@ int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
 	return 0;
 }
 
+const char stm32f_ethif_desc[] = "STM32F-Ethernet";
+
 int stm32f_ethif_getdesc(struct ifnet * __if, char * __s, int __len)
 {
-	return 0;
+	int n = MIN(__len, sizeof(stm32f_ethif_desc));
+	memcpy(__s, stm32f_ethif_desc, n);
+	__s[n - 1] = '\0';
+	return n;
 }
 
 struct stm32f_eth_drv stm32f_eth_drv;

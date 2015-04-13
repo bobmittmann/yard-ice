@@ -89,13 +89,13 @@ int udp_recv_tmo(struct udp_pcb * __up, void * __buf, int __len,
 
 		ret = thinkos_cond_timedwait(__up->u_rcv_cond, net_mutex, msec);
 		if (ret < 0) {
+			tcpip_net_unlock();
 			if (ret == THINKOS_ETIMEDOUT) {
 				ret = -ETIMEDOUT;
-				DCC_LOG(LOG_WARNING, "timeout!");
+				DCC_LOG(LOG_INFO, "timeout!");
 			} else {
 				DCC_LOG(LOG_ERROR, "thinkos_cond_timedwait()!");
 			}
-			tcpip_net_unlock();
 			return ret;
 		}
 	}

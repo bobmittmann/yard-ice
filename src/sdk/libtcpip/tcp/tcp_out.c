@@ -112,7 +112,7 @@ int tcp_respond(struct iphdr * iph, struct tcphdr * th,
 	tcp_dump(iph, th, TCPDUMP_TX);
 #endif
 
-	if ((ret = ip_output(rt, iph)) < 0) {
+	if ((ret = ip_output(rt->rt_ifn, rt, iph)) < 0) {
 		DCC_LOG(LOG_ERROR, "<____> ip_output() fail!");
 		TCP_PROTO_STAT_ADD(tx_drop, 1);
 		return ret;
@@ -120,7 +120,7 @@ int tcp_respond(struct iphdr * iph, struct tcphdr * th,
 
 	TCP_PROTO_STAT_ADD(tx_ok, 1);
 
-	return 0;
+	return 1;
 }
 
 static int tcp_mss(struct tcp_pcb * tp, unsigned int offer)
@@ -606,7 +606,7 @@ send:
 
 	TCP_PROTO_STAT_ADD(tx_ok, 1);
 
-	if ((ret = ip_output(rt, iph)) < 0) {
+	if ((ret = ip_output(rt->rt_ifn, rt, iph)) < 0) {
 		DCC_LOG4(LOG_ERROR, "ip_output(): > %I:%d %s (%d)", 
 				 iph->daddr, ntohs(th->th_dport), 
 				 tcp_all_flags[th->th_flags], len);

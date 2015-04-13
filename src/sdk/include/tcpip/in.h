@@ -44,6 +44,8 @@
 #define IP4_ADDR(A, B, C, D) ((((A) & 0xff) << 0) | \
 		(((B) & 0xff) << 8) | (((C) & 0xff) << 16) | (((D) & 0xff) << 24))
 
+#define IPV4_ADDR(A, B, C, D) IP4_ADDR((A), (B), (C), (D))
+
 #define NTOHL(x) \
 	((uint32_t)((((uint32_t)(x) & 0x000000ffU) << 24) | \
 	(((uint32_t)(x) & 0x0000ff00U) <<  8) | \
