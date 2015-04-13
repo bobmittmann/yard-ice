@@ -39,7 +39,7 @@
 #include "profclk.h"
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 5
+#define FW_VERSION_MINOR 6
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
@@ -69,7 +69,8 @@ static const uint8_t product_str[PRODUCT_STR_SZ] = {
 	'M', 0, 'i', 0, 'r', 0, 'c', 0, 'o', 0, 'm', 0, ' ', 0, 'U', 0, 
 	'2', 0, 'S', 0, '4', 0, '8', 0, '5', 0, ' ', 0, 'A', 0, 'd', 0, 
 	'a', 0, 'p', 0, 't', 0, 'e', 0, 'r', 0, ' ', 0, 
-	'0' + FW_VERSION_MAJOR, 0, '.', 0, '0' + FW_VERSION_MINOR, 0, 
+	'0' + FW_VERSION_MAJOR, 0, '.', 0, 
+	'0' + FW_VERSION_MINOR, 0, 
 };
 
 
@@ -147,9 +148,16 @@ static bool vcom_scan_match(struct vcom * vcom, uint8_t buf[], int len)
 	int c = pat[j];
 	int i;
 
+#if 0
 	buf[len] = '\0';
-	DCC_LOGSTR(LOG_TRACE, "\"%s\"", buf);
+	c = buf[0];
+	if ((len > 1) || ((c != '-') && (c != '/') && 
+					 (c != '\\') && (c != '\r'))) {
+		DCC_LOGSTR(LOG_TRACE, "\"%s\"", buf);
+	}
+#endif
 
+	c = pat[j];
 	for (i = 0; i < len; ++i) {
 		if (buf[i] == c) {
 			j++;
@@ -536,7 +544,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 			led_flash(LED_AMBER, 50);
 			ts = profclk_get();
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
-				DCC_LOG(LOG_TRACE, "CONVERTER");
+				DCC_LOG(LOG_INFO, "CONVERTER");
 				usb_cdc_write(cdc, buf, len);
 				if (vcom_scan_match(vcom, buf, len)) {
 					DCC_LOG(LOG_WARNING, "DSP5685 XON/XOFF magic!");
@@ -576,7 +584,7 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 		DCC_LOG1(LOG_INFO, "[%d] usb_cdc_ctl_wait() sleep!", 
 				 thinkos_thread_self());
 		usb_cdc_ctl_wait(cdc, 0);
-		DCC_LOG1(LOG_TRACE, "[%d] wakeup ---------- ", thinkos_thread_self());
+		DCC_LOG1(LOG_INFO, "[%d] wakeup ---------- ", thinkos_thread_self());
 
 		usb_cdc_state_get(cdc, &state);
 
@@ -606,6 +614,19 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			(state.cfg.flowctrl != vcom->cfg.flowctrl)) {
 
 			serial_rx_disable(serial);
+
+			if (state.cfg.baudrate == 0) {
+				state.cfg.baudrate = vcom->cfg.baudrate;
+				DCC_LOG1(LOG_WARNING, "invalid baudrate, keep current: %d", 
+						 vcom->cfg.baudrate);
+				continue;
+			}
+			if (state.cfg.databits == 0) {
+				state.cfg.databits = vcom->cfg.databits;
+				DCC_LOG1(LOG_WARNING, "invalid databits, keep current: %d", 
+						 vcom->cfg.databits);
+				continue;
+			}
 
 			DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
 			DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);

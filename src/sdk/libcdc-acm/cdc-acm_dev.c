@@ -283,10 +283,10 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
         memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
 		thinkos_flag_give_i(CTL_FLAG);
         
-        DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
-        DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
-        DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
-        DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
+        DCC_LOG1(LOG_INFO, "dsDTERate=%d", dev->acm.lc.dwDTERate);
+        DCC_LOG1(LOG_INFO, "bCharFormat=%d", dev->acm.lc.bCharFormat);
+        DCC_LOG1(LOG_INFO, "bParityType=%d", dev->acm.lc.bParityType);
+        DCC_LOG1(LOG_INFO, "bDataBits=%d", dev->acm.lc.bDataBits);
 
 		break;
 
@@ -610,11 +610,6 @@ int usb_cdc_state_get(usb_cdc_class_t * cl, usb_cdc_state_t * state)
 	state->cfg.baudrate = dev->acm.lc.dwDTERate;
 	state->cfg.databits = dev->acm.lc.bDataBits;
 
-        DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
-        DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
-        DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
-        DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
-
 	switch (dev->acm.lc.bParityType) {
 	case ACM_PARITY_MARK:
 		state->cfg.parity = SERIAL_PARITY_MARK;
@@ -673,7 +668,7 @@ int usb_cdc_ctl_wait(usb_cdc_class_t * cl, unsigned int msec)
 	(void)dev;
 
 	thinkos_flag_take(CTL_FLAG);
-	DCC_LOG(LOG_TRACE, "CTL wakeup...");
+	DCC_LOG(LOG_INFO, "CTL wakeup...");
 
 	return 0;
 }
@@ -685,7 +680,7 @@ int usb_cdc_dte_wait(usb_cdc_class_t * cl)
 	while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
 		DCC_LOG(LOG_INFO, "wait");
 		thinkos_flag_take(CTL_FLAG);
-		DCC_LOG(LOG_TRACE, "CTL wakeup...");
+		DCC_LOG(LOG_INFO, "CTL wakeup...");
 	}
 
 	return 0;
@@ -698,7 +693,7 @@ int usb_cdc_acm_lc_wait(usb_cdc_class_t * cl)
 	while ((dev->acm.flags & ACM_LC_SET) == 0) {
 		DCC_LOG(LOG_INFO, "CTL wait");
 		thinkos_flag_take(CTL_FLAG);
-		DCC_LOG(LOG_TRACE, "CTL wakeup...");
+		DCC_LOG(LOG_INFO, "CTL wakeup...");
 	}
 
 	return 0;
@@ -748,7 +743,7 @@ int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
 
 		DCC_LOG1(LOG_INFO, "ret=%d wait", ret);
 		thinkos_flag_take(CTL_FLAG);
-		DCC_LOG(LOG_TRACE, "CTL wakeup...");
+		DCC_LOG(LOG_INFO, "CTL wakeup...");
 
 		/* FIXME: handle failures .... */
 		/* set the status */

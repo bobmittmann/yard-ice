@@ -153,23 +153,23 @@ int thinkos_thread_create_inf(int (* <i>task_ptr</i>)(void *),
 
 <dt>int const thinkos_thread_self(void)</dt>
 
-<dt>int thinkos_exit(int code)</dt>
+<dt>int thinkos_exit(int <i>retcode</i>)</dt>
 
-<dt>int thinkos_cancel(int thread, int code)</dt>
+<dt>int thinkos_cancel(int <i>thread,</i> int <i>retcode</i>)</dt>
 
-<dt>int thinkos_join(int thread)</dt>
+<dt>int thinkos_join(int <i>thread</i>)</dt>
 
-<dt>int thinkos_pause(int thread)</dt>
+<dt>int thinkos_pause(int <i>thread</i>)</dt>
 
-<dt>int thinkos_resume(int thread)</dt>
+<dt>int thinkos_resume(int <i>thread</i>)</dt>
 
 </dl>
 
 <h3>Time Wait</h3>
 
-<dt>int thinkos_sleep(unsigned int ms)</dt>
+<dt>int thinkos_sleep(unsigned int <i>tmo</i>)</dt>
 
-<dt>int thinkos_alarm(uint32_t clock)</dt>
+<dt>int thinkos_alarm(uint32_t <i>clock</i>)</dt>
 
 <dt>uint32_t thinkos_clock(void)</dt>
 
@@ -177,15 +177,15 @@ int thinkos_thread_create_inf(int (* <i>task_ptr</i>)(void *),
 
 <dt>int thinkos_mutex_alloc(void)</dt>
 
-<dt>int thinkos_mutex_free(int mutex)</dt>
+<dt>int thinkos_mutex_free(int <i>mutex</i>)</dt>
 
-<dt>int thinkos_mutex_lock(int mutex)</dt>
+<dt>int thinkos_mutex_lock(int <i>mutex</i>)</dt>
 
-<dt>int thinkos_mutex_trylock(int mutex)</dt>
+<dt>int thinkos_mutex_trylock(int <i>mutex</i>)</dt>
 
-<dt>int thinkos_mutex_timedlock(int mutex, unsigned int ms)</dt>
+<dt>int thinkos_mutex_timedlock(int <i>mutex</i>, unsigned int <i>tmo</i>)</dt>
 
-<dt>int thinkos_mutex_unlock(int mutex)</dt>
+<dt>int thinkos_mutex_unlock(int <i>mutex</i>)</dt>
 
 <h3>Conditional Variables</h3>
 

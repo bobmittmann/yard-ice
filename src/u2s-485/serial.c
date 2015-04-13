@@ -145,9 +145,9 @@ int __serial_write(struct stm32_serial_drv * drv, const void * buf,
 
 		thinkos_flag_take(TX_FLAG);
 
-		while (drv->flowctl_xonxoff & !drv->tx_on) {
-			thinkos_flag_take(CTL_FLAG);
-		}
+//		while (drv->flowctl_xonxoff & !drv->tx_on) {
+//			thinkos_flag_take(CTL_FLAG);
+//		}
 
 		head = drv->tx_fifo.head;
 		free = UART_TX_FIFO_BUF_LEN - (int32_t)(head - drv->tx_fifo.tail);
@@ -187,6 +187,7 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 {
 	struct stm32_usart * us = drv->uart;
 	unsigned int msk = 0;
+	unsigned int flowctrl;
 
 	switch (opt) {
 	case SERIAL_IOCTL_ENABLE:
@@ -229,36 +230,40 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 		{
 			struct serial_config * cfg = (struct serial_config *)arg1;
 			uint32_t flags;
-			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_CONF_SET");
+			DCC_LOG(LOG_INFO, "SERIAL_IOCTL_CONF_SET");
 
 			stm32_usart_baudrate_set(us, cfg->baudrate);
 			flags = CFG_TO_FLAGS(cfg);
 			stm32_usart_mode_set(us, flags);
-			if (SERIAL_FLOWCTRL(flags) == SERIAL_FLOWCTRL_XONXOFF) {
-				drv->flowctl_xonxoff = true; 
-				drv->tx_on = true;
-				DCC_LOG(LOG_TRACE, "XON/XOFF ebabled.");
-			} else {
-				drv->flowctl_xonxoff = false; 
-				drv->tx_on = true;
-			}
-			thinkos_flag_give(CTL_FLAG);
+			flowctrl = SERIAL_FLOWCTRL(flags);
+			goto flowctrl_set;
 		}
 		break;
 
 	case SERIAL_IOCTL_FLOWCTRL_SET: 
-		switch (arg1) { 
+		flowctrl = arg1;
+
+flowctrl_set:
+		switch (flowctrl) { 
 		case SERIAL_FLOWCTRL_NONE:
 		case SERIAL_FLOWCTRL_RTSCTS:
-			drv->flowctl_xonxoff = false; 
-			drv->tx_on = true;
+			if (drv->flowctl_xonxoff) {
+				DCC_LOG(LOG_TRACE, "XON/XOFF disabled...");
+				drv->flowctl_xonxoff = false; 
+				if (!drv->tx_on) {
+					drv->tx_on = true;
+					*drv->txie = 1; 
+				}
+			}
 			break;
 		case SERIAL_FLOWCTRL_XONXOFF:
-			drv->flowctl_xonxoff = true; 
-			drv->tx_on = true;
+			if (!drv->flowctl_xonxoff) {
+				drv->flowctl_xonxoff = true; 
+				drv->tx_on = true;
+				DCC_LOG(LOG_TRACE, "XON/XOFF ebabled!!!");
+			}	
 			break;
 		}
-		thinkos_flag_give(CTL_FLAG);
 		break;
 	}
 
@@ -291,6 +296,25 @@ void stm32f_usart2_isr(void)
 		uint32_t head;
 		int free;
 		c = us->dr;
+
+		if (drv->flowctl_xonxoff) {
+			if (c == XON) {
+				DCC_LOG(LOG_WARNING, "RX: XON");
+				if (!drv->tx_on) {
+					drv->tx_on = true;
+					/* enable TXE interrupts */
+					*drv->txie = 1; 
+				}
+//				thinkos_flag_give_i(CTL_FLAG);
+				return;
+			} 
+			if (c == XOFF) {
+				DCC_LOG(LOG_WARNING, "RX: XOFF");
+				drv->tx_on = false;
+//				thinkos_flag_give_i(CTL_FLAG);
+				return;
+			}
+		}
 		
 		head = drv->rx_fifo.head;
 		free = UART_RX_FIFO_BUF_LEN - (uint8_t)(head - drv->rx_fifo.tail);
@@ -301,17 +325,6 @@ void stm32f_usart2_isr(void)
 		if (free < (UART_RX_FIFO_BUF_LEN  - UART_RX_FIFO_WATER_MARK)) 
 			thinkos_flag_give_i(RX_FLAG);
 
-		if (drv->flowctl_xonxoff) {
-			if (c == XON) {
-				DCC_LOG(LOG_WARNING, "RX: XON");
-				drv->tx_on = true;
-				thinkos_flag_give_i(CTL_FLAG);
-			} else if (c == XOFF) {
-				DCC_LOG(LOG_WARNING, "RX: XOFF");
-				drv->tx_on = false;
-				thinkos_flag_give_i(CTL_FLAG);
-			}
-		}
 		return;
 	}	
 
@@ -330,7 +343,7 @@ void stm32f_usart2_isr(void)
 
 	if (sr & USART_TXE) {
 		uint32_t tail = drv->tx_fifo.tail;
-		if (tail == drv->tx_fifo.head) {
+		if ((tail == drv->tx_fifo.head) || (!drv->tx_on)) {
 			/* FIFO empty, disable TXE interrupts */
 			*drv->txie = 0; 
 			/* enable TC interrupts */
