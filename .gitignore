@@ -28,3 +28,4 @@ tools/src/dcclog/missing
 /tools/src/dcclog/compile
 /tools/src/dcclog/dcclog
 tools/src/dcclog/config.h.in
+/src/sdk/libhttpd/test/log.txt
