@@ -74,6 +74,8 @@
 #define ENABLE_NET_TCP_CHECKSUM 0
 #define ENABLE_NET_UDP_CHECKSUM 0
 
+#define TCP_MAX_SND_QUEUE   (1460 * 4)
+
 #if defined(STM32F407)
 #define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
 #elif defined(STM32F207)

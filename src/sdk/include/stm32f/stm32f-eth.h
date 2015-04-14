@@ -1666,8 +1666,8 @@ frequency will always be correct during any one-second window). */
 /* The abnormal interrupt summary bit value is the logical OR of the 
  * following when the corresponding interrupt bits are enabled in the 
  * ETH_DMAIER register:
- * – ETH_DMASR [1]:Transmit process stopped
- * – ETH_DMASR [3]:Transmit jabber timeout
+ * – ETH_DMASR [1]: Transmit process stopped
+ * – ETH_DMASR [3]: Transmit jabber timeout
  * – ETH_DMASR [4]: Receive FIFO overflow
  * – ETH_DMASR [5]: Transmit underflow
  * – ETH_DMASR [7]: Receive buffer unavailable
@@ -2690,32 +2690,64 @@ struct txdma_desc {
 struct txdma_enh_desc {
 	volatile union {
 		uint32_t tdes0;
-		struct txdma_st st;
+		volatile struct txdma_st st;
+		struct {
+			uint32_t db: 1; /* Deferred bit */
+			uint32_t uf: 1; /* Underflow error */
+			uint32_t ed: 1; /* Excessive deferral */
+			uint32_t cc: 4; /* Collision count */
+			uint32_t vf: 1; /* VLAN frame */
+
+			uint32_t ec: 1; /* Excessive collision */
+			uint32_t lco: 1; /* Late collision */
+			uint32_t nc: 1; /* No carrier */
+			uint32_t lca: 1; /* Loss of carrier */
+			uint32_t ipe: 1; /* IP payload error */
+			uint32_t ff: 1; /* Frame flushed */
+			uint32_t jt: 1; /* Jabber timeout */
+			uint32_t es: 1; /* Error summary */
+
+			uint32_t ihe: 1; /* IP header error */
+			uint32_t ttss: 1; /* Transmit time stamp status */
+			uint32_t res1: 2; 
+			uint32_t tch: 1; /* Second address chained */
+			uint32_t ter: 1; /* Transmit end of ring */
+			uint32_t cic: 2; /* Checksum insertion control */
+
+			uint32_t res2: 1;
+			uint32_t ttse: 1; /* Transmit time stamp enable */
+			uint32_t dp: 1; /* Disable pad */
+			uint32_t dc: 1; /* Disable CRC */
+			uint32_t fs: 1; /* First segment */
+			uint32_t ls: 1; /* Last segment */
+			uint32_t ic: 1; /* Interrupt on completion */
+			volatile uint32_t own: 1; /* Own bit */
+		};
 	};
 	union {
 		uint32_t tdes1;
 		struct {
 			uint32_t tbs1: 13; /* Buffer 1 byte count */
-			uint32_t res1: 3;
+			uint32_t res3: 3;
 			uint32_t tbs2: 13; /* Buffer 2 byte count */
-			uint32_t res2: 3;
+			uint32_t res4: 3;
 		};
 	};
 	union {
 		uint32_t tdes2;
-		uint32_t * tbap1; /* Transmit buffer 1 address pointer */
+		uint32_t * volatile tbap1; /* Transmit buffer 1 address pointer */
 	};
 	union {
 		uint32_t tdes3;
-		uint32_t * tbap2; /* Transmit buffer 2 address pointer */
+		uint32_t * volatile tbap2; /* Transmit buffer 2 address pointer */
 	};
 	union {
 		uint32_t tdes4;
-		uint32_t res3;
+		uint32_t res5;
 	};
 	union {
 		uint32_t tdes5;
-		uint32_t res4;
+		uint32_t res6;
 	};
 	union {
 		uint32_t tdes6;

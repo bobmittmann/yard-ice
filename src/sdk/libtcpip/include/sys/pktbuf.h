@@ -1,5 +1,5 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ * Copyright(C) 2015 Bob Mittmann. All Rights Reserved.
  *
  * This file is part of the libtcpip.
  *
@@ -18,55 +18,37 @@
  */
 
 /** 
- * @file net.c
- * @brief TCP/IP library initialization
+ * @file pktbuf.c
+ * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#define __USE_SYS_NET__
-#include <sys/net.h>
+#ifndef __SYS_PKTBUF_H__
+#define __SYS_PKTBUF_H__
 
-#include <sys/mbuf.h>
-#include <sys/pktbuf.h>
+//#ifndef __USE_SYS_PKTBUF__
+//#error "Never use <sys/pktbuf.h> directly; include <tcpip/pktbuf.h> instead."
+//#endif 
 
-#define __USE_SYS_RAW__
-#include <sys/raw.h>
-#define __USE_SYS_UDP__
-#include <sys/udp.h>
-#define __USE_SYS_TCP__
-#include <sys/tcp.h>
-
-int32_t net_mutex;
-
-void tcp_init(void);
-void udp_init(void);
-
-void tcpip_init(void)
-{
-	net_mutex = thinkos_mutex_alloc();
-
-	tcpip_net_lock();
-
-	DCC_LOG1(LOG_TRACE, "net_mutex=%d", net_mutex);
-
-	mbuf_init();
-
-	pktbuf_pool_init();
-
-#if (ENABLE_NET_RAW)
-	raw_init();
+#ifdef CONFIG_H
+#include "config.h"
 #endif
 
-#if (ENABLE_NET_UDP)
-	udp_init();
+extern const uint16_t pktbuf_len;
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#if (ENABLE_NET_TCP)
-	tcp_init();
-#endif
+void * pktbuf_alloc(void);
 
-	ifnet_init();
+void pktbuf_free(void * ptr);
 
-	tcpip_net_unlock();
+void pktbuf_pool_init(void);
+
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* __PKTBUF_H__ */
 

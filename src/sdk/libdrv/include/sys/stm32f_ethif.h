@@ -69,17 +69,17 @@ struct stm32f_eth_drv {
 	struct stm32f_eth * eth;
 	int event;
 	struct {
-		uint32_t buf[STM32F_ETH_RX_NDESC][(STM32F_ETH_RX_BUF_SIZE + 3) / 4];
 		struct rxdma_enh_desc desc[STM32F_ETH_RX_NDESC];
-		unsigned int cnt;
-		int sem;
+//		unsigned int cnt;
+		uint32_t head;
+		uint32_t tail;
 	} rx;
 	struct {
-		struct eth_hdr hdr[STM32F_ETH_TX_NDESC];
-		uint32_t buf[STM32F_ETH_TX_NDESC][(STM32F_ETH_TX_BUF_SIZE + 3) / 4];
 		struct txdma_enh_desc desc[STM32F_ETH_TX_NDESC];
-		unsigned int cnt;
-		int flag;
+		volatile uint32_t head;
+		volatile uint32_t tail;
+//		int flag;
+		int sem;
 	} tx;
 } __attribute__ ((aligned (8)));
 

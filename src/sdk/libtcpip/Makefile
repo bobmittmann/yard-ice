@@ -58,7 +58,7 @@ TCP_CFILES = tcp_abort.c tcp_accept.c tcp_accept_tmo.c tcp_bind.c\
 			 tcp_out.c tcp_proto_getstat.c tcp_recv.c tcp_send.c\
 			 tcp_shutdown.c tcp_tmr.c
 
-CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c stat.c \
+CFILES = arping.c icmp.c in_chksum.c ip.c ip_route.c net.c pktbuf.c stat.c \
 		 $(addprefix mbuf/,$(MBUF_CFILES))\
 		 $(addprefix pcb/,$(PCB_CFILES)) $(addprefix ifnet/,$(IFNET_CFILES))\
 		 $(addprefix arp/,$(ARP_CFILES)) $(addprefix raw/,$(RAW_CFILES))\

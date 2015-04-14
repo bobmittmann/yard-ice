@@ -43,160 +43,261 @@
 #include "sys/route.h"
 #include "sys/net.h"
 #include "sys/ip.h"
+#include "sys/pktbuf.h"
 
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-#if 0
-void __attribute__((noreturn)) stm32f_ethif_input(struct ifnet * ifn)
+
+void * stm32f_ethif_mmap(struct ifnet * __if, size_t __len)
 {
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)ifn->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)ifn->if_io;
-	struct rxdma_ext_st ext_st;
-	struct rxdma_st st;
-	struct rxdma_enh_desc * desc;
-	struct eth_hdr * hdr;
-	uint32_t cnt = 0;
-	uint8_t * pkt;
-	int type;
-	int len;
+	uint8_t * pktbuf;
 
-	DCC_LOG3(LOG_TRACE, "RX DMA: %d (desc) x %d = %d bytes", 
-			 STM32F_ETH_RX_NDESC, STM32F_ETH_RX_BUF_SIZE + 
-			 sizeof(struct rxdma_enh_desc),
-			 STM32F_ETH_RX_NDESC * (STM32F_ETH_RX_BUF_SIZE + 
-			 sizeof(struct rxdma_enh_desc))); 
-	DCC_LOG3(LOG_TRACE, "TX DMA: %d (desc) x %d = %d bytes", 
-			 STM32F_ETH_TX_NDESC, STM32F_ETH_TX_BUF_SIZE + 
-			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr),
-			 STM32F_ETH_TX_NDESC * (STM32F_ETH_TX_BUF_SIZE + 
-			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr)));
-	DCC_LOG1(LOG_TRACE, "Ethernet driver memory: %d bytes", 
-			 sizeof(struct stm32f_eth_drv));
-	DCC_LOG1(LOG_TRACE, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
-
-	DCC_LOG1(LOG_TRACE, "<%d> DMA interrupts enabled ...", 
-			 thinkos_thread_self());
-
-	/* enable DMA RX interrupts */
-	eth->dmaier |= ETH_RIE | ETH_NISE;
-
-	DCC_LOG(LOG_INFO, "DMA start receive...");
-	eth->dmaomr |= ETH_SR;
-
-	for (;;) {
-		desc = &drv->rx.desc[cnt++ & (STM32F_ETH_RX_NDESC - 1)];
-
-		for (;;) {
-			st = desc->st;
-			if (st.es) {
-				DCC_LOG(LOG_ERROR, "Error summary flag set!");
-			}
-			if (st.own == 0) {
-				break;
-			}
-			DCC_LOG(LOG_MSG, "wait....");
-
-			thinkos_sem_wait(drv->rx.sem);
-
-			DCC_LOG(LOG_MSG, "wakeup....");
-		}
-
-		len = st.fl;
-		DCC_LOG1(LOG_INFO, "frame len=%d", len);
-
-		ext_st = desc->ext_st;
-
-		/* IP payload type */
-		switch (ext_st.ippt) {
-		case ETH_IPPT_UNKOWN:
-			DCC_LOG(LOG_INFO, "not IP!");
-			break;
-		case ETH_IPPT_UDP:
-			DCC_LOG(LOG_INFO, "UDP");
-			break;
-		case ETH_IPPT_TCP:
-			DCC_LOG(LOG_INFO, "TCP");
-			break;
-		case ETH_IPPT_ICMP:
-			DCC_LOG(LOG_INFO, "ICMP");
-			break;
-		}
-
-		if (ext_st.iphe)
-			DCC_LOG(LOG_WARNING, "IP header error!");
-		if (ext_st.ippe)
-			DCC_LOG(LOG_WARNING, "IP payload error!");
-		if (ext_st.ipcb)
-			DCC_LOG(LOG_TRACE, "IP checksum bypass.");
-		if (ext_st.ipv4pr)
-			DCC_LOG(LOG_INFO, "IPv4 packet received.");
-		if (ext_st.ipv6pr)
-			DCC_LOG(LOG_TRACE, "IPv6 packet received.");
-
-		hdr = (struct eth_hdr *)desc->rbap1;
-
-#if LOG_LEVEL == LOG_INFO
-		{
-			uint8_t * da = hdr->eth_dst;
-			uint8_t * sa = hdr->eth_src;
-			DCC_LOG6(LOG_LEVEL, "Dst: %02x:%02x:%02x:%02x:%02x:%02x",
-					 da[0], da[1], da[2], da[3], da[4], da[5]);
-
-			DCC_LOG6(LOG_LEVEL, "Src: %02x:%02x:%02x:%02x:%02x:%02x",
-					 sa[0], sa[1], sa[2], sa[3], sa[4], sa[5]);
-		}
-#endif
-
-
-		type = hdr->eth_type;
-		pkt = (uint8_t *)hdr + 14;
-		len -= 14;
-
-		DCC_LOG8(LOG_MSG, "Pkt: %02x %02x %02x %02x %02x %02x %02x %02x",
-				 pkt[0], pkt[1], pkt[2], pkt[3], 
-				 pkt[4], pkt[5], pkt[6], pkt[7]);
-
-		tcpip_net_lock();
-
-		NETIF_STAT_ADD(ifn, rx_pkt, 1);
-
-		if (type == HTONS(ETH_P_IP)) {
-			DCC_LOG(LOG_INFO, "IP");
-			ip_input(ifn, (struct iphdr *)pkt, len);
-		} else {
-			if (type == HTONS(ETH_P_ARP)) {
-				DCC_LOG(LOG_INFO, "ARP");
-				etharp_input(ifn, (struct etharp*)pkt, len);
-			} else {
-				NETIF_STAT_ADD(ifn, rx_drop, 1);
-				DCC_LOG(LOG_INFO, "unhandled protocol");
-			}
-		}
-
-		tcpip_net_unlock();
-
-		/* set the DMA descriptor ownership */
-		desc->rdes0 = ETH_RXDMA_OWN;
-		/* enable DMA receive interrupts */
-		eth->dmaier |= ETH_RIE;
-		/* Receive Poll Demand command */
-		eth->dmarpdr = 1;
+	if (__len > __if->if_mtu) {
+		NETIF_STAT_ADD(__if, tx_drop, 1);
+		DCC_LOG(LOG_ERROR, "too big!");
+		return NULL;
 	}
+
+	if ((pktbuf = pktbuf_alloc()) == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		return NULL;
+	}
+
+	DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", pktbuf);
+
+	return pktbuf + 14;
 }
 
-uint32_t ethif_stack[128];
+int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst, 
+					  int __proto, const void * __buf, int __len)
+{
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
+	struct txdma_enh_desc * txdesc;
+	struct eth_hdr * hdr;
+	uint32_t head;
 
-const struct thinkos_thread_inf stm32f_ethif_inf = {
-	.stack_ptr = ethif_stack, 
-	.stack_size = sizeof(ethif_stack), 
-	.priority = 32,
-	.thread_id = 32, 
-	.paused = 0,
-	.tag = "STM_ETH"
-};
+	DCC_LOG2(LOG_INFO, "mem=%p len=%d", __buf, __len);
+
+
+	/* wait for buffer availability */
+	thinkos_sem_wait(drv->tx.sem);
+
+	head = drv->tx.head;
+#if 0
+	while ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
+		DCC_LOG(LOG_TRACE, "wait....");
+		thinkos_flag_take(drv->tx.flag);
+		DCC_LOG(LOG_TRACE, "got flag....");
+		thinkos_sleep(200);
+		DCC_LOG(LOG_TRACE, "wakeup....");
+	}
 #endif
+	if ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
+		DCC_LOG(LOG_PANIC, "queue full!..");
+		abort();
+	}
+
+	txdesc = &drv->tx.desc[head % STM32F_ETH_TX_NDESC];
+#ifdef DEBUG
+	if (txdesc->es) {
+		struct txdma_st st;
+		st = txdesc->st;
+		DCC_LOG10(LOG_WARNING, "Error:%s%s%s%s%s%s%s%s%s%s",
+				  (st.uf) ? " UF" : "",
+				  (st.ed) ? " ED" : "",
+				  (st.ec) ? " EC" : "",
+				  (st.lco) ? " LCO" : "",
+				  (st.nc) ? " NC" : "",
+				  (st.lca) ? " LCA" : "",
+				  (st.ipe) ? " IPE" : "",
+				  (st.ff) ? " FF" : "",
+				  (st.jt) ? " JT" : "",
+				  (st.ihe) ? " IHE" : "");
+	}
+#endif
+	if (txdesc->own != 0) {
+		DCC_LOG(LOG_PANIC, "DMA own flag is set!");
+		abort();
+	}
+
+	hdr = (struct eth_hdr *)((uintptr_t)__buf - 14);
+	DCC_LOG1(LOG_TRACE, "pktbuf=%p", hdr);
+
+	hdr->eth_type = __proto;
+
+	/* ethernet source address */
+	stm32f_eth_mac_get(eth, 0, (uint8_t *)hdr->eth_src);
+
+	/* ethernet destination address */
+	hdr->eth_dst[0] = __dst[0];
+	hdr->eth_dst[1] = __dst[1];
+	hdr->eth_dst[2] = __dst[2];
+	hdr->eth_dst[3] = __dst[3];
+	hdr->eth_dst[4] = __dst[4];
+	hdr->eth_dst[5] = __dst[5];
+
+#if 0
+	DCC_LOG7(LOG_TRACE, "from: %02x:%02x:%02x:%02x:%02x:%02x (prot=%d)",
+			 hdr->eth_src[0], hdr->eth_src[1], 
+			 hdr->eth_src[2], hdr->eth_src[3], 
+			 hdr->eth_src[4], hdr->eth_src[5], hdr->eth_type); 
+
+	DCC_LOG7(LOG_TRACE, "to: %02x:%02x:%02x:%02x:%02x:%02x (len=%d)",
+			 hdr->eth_dst[0], hdr->eth_dst[1], 
+			 hdr->eth_dst[2], hdr->eth_dst[3], 
+			 hdr->eth_dst[4], hdr->eth_dst[5], __len); 
+#endif		 
+
+	/* Transmit buffer 1 size */
+	txdesc->tbs1 = 14 + __len;
+	/* Transmit buffer 1 addr */
+	txdesc->tbap1 = (void *)hdr;
+	/* set the DMA descriptor ownership */
+	txdesc->own = 1;
+	/* update queue head */
+	drv->tx.head = head + 1;
+
+	DCC_LOG(LOG_INFO, " DMA start transmit...");
+//	eth->dmaomr |= ETH_ST;
+
+	/* Transmit Poll Demand command */
+	eth->dmatpdr = 1;
+
+	return 0;
+}
+
+int stm32f_ethif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
+{
+	uint8_t * pktbuf = (uint8_t *)((uintptr_t)__pkt - 14);
+	
+	DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+	pktbuf_free(pktbuf);
+	return 0;
+}
+
+int stm32f_ethif_munmap(struct ifnet * __if, void * __mem)
+{
+	uint8_t * pktbuf = (uint8_t *)((uintptr_t)__mem - 14);
+	
+	DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+	pktbuf_free(pktbuf);
+	return 0;
+}
+
+int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src, 
+						  unsigned int * __proto, uint8_t ** __pkt)
+{
+	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
+	struct rxdma_ext_st ext_st;
+	struct rxdma_st st;
+	struct rxdma_enh_desc * rxdesc;
+	struct eth_hdr * hdr;
+	int len;
+	
+	rxdesc = &drv->rx.desc[drv->rx.tail & (STM32F_ETH_RX_NDESC - 1)];
+	st = rxdesc->st;
+	if (st.es) {
+		DCC_LOG(LOG_ERROR, "error summary flag set!");
+	}
+	if (st.own) {
+		DCC_LOG(LOG_INFO, "DMA own flag set!");
+		return 0;
+	}
+	drv->rx.tail++; 
+
+	len = st.fl;
+	DCC_LOG1(LOG_INFO, "frame len=%d", len);
+
+	ext_st = rxdesc->ext_st;
+
+	/* IP payload type */
+	switch (ext_st.ippt) {
+	case ETH_IPPT_UNKOWN:
+		DCC_LOG(LOG_INFO, "not IP!");
+		break;
+	case ETH_IPPT_UDP:
+		DCC_LOG(LOG_INFO, "UDP");
+		break;
+	case ETH_IPPT_TCP:
+		DCC_LOG(LOG_INFO, "TCP");
+		break;
+	case ETH_IPPT_ICMP:
+		DCC_LOG(LOG_INFO, "ICMP");
+		break;
+	}
+
+	if (ext_st.iphe) {
+		DCC_LOG(LOG_WARNING, "IP header error!");
+		goto error;
+	}
+	if (ext_st.ippe) {
+		DCC_LOG(LOG_WARNING, "IP payload error!");
+		goto error;
+	}
+	if (ext_st.ipcb)
+		DCC_LOG(LOG_TRACE, "IP checksum bypass.");
+	if (ext_st.ipv4pr)
+		DCC_LOG(LOG_INFO, "IPv4 packet received.");
+	if (ext_st.ipv6pr)
+		DCC_LOG(LOG_TRACE, "IPv6 packet received.");
+
+	/* get the current buffer */
+	hdr = (struct eth_hdr *)rxdesc->rbap1;
+	DCC_LOG1(LOG_INFO, "pktbuf=%p", hdr);
+
+	/* alloc a new buffer */
+	if ((rxdesc->rbap1 = pktbuf_alloc()) == NULL) {
+		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+		abort();
+	}
+	DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", rxdesc->rbap1);
+
+	/* set the DMA descriptor ownership */
+	rxdesc->rdes0 = ETH_RXDMA_OWN;
+	/* enable DMA receive interrupts */
+	eth->dmaier |= ETH_RIE;
+	/* Receive Poll Demand command */
+	eth->dmarpdr = 1;
+
+	*__proto = hdr->eth_type;
+	*__pkt = (uint8_t *)hdr + 14;
+	*__src = hdr->eth_src; 
+	return len - 14;
+
+error:
+	/* recycle the buffer */
+	/* set the DMA descriptor ownership */
+	rxdesc->rdes0 = ETH_RXDMA_OWN;
+	/* enable DMA receive interrupts */
+	eth->dmaier |= ETH_RIE;
+	/* Receive Poll Demand command */
+	eth->dmarpdr = 1;
+
+	return -1;
+}
+
+int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
+{
+	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
+
+	stm32f_eth_mac_get(eth, 0, __buf);
+	return 0;
+}
+
+const char stm32f_ethif_desc[] = "STM32F-Ethernet";
+
+int stm32f_ethif_getdesc(struct ifnet * __if, char * __s, int __len)
+{
+	int n = MIN(__len, sizeof(stm32f_ethif_desc));
+	memcpy(__s, stm32f_ethif_desc, n);
+	__s[n - 1] = '\0';
+	return n;
+}
+
 
 int stm32f_ethif_init(struct ifnet * __if)
 {
@@ -204,6 +305,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct rxdma_enh_desc * rxdesc;
 	struct txdma_enh_desc * txdesc;
+//	struct eth_hdr * hdr;
 	int mtu;
 	int i;
 
@@ -255,17 +357,22 @@ int stm32f_ethif_init(struct ifnet * __if)
 		rxdesc->dic = 0;
 		/* Second address chained */
 		rxdesc->rch = 1;
-		rxdesc->rbap1 = drv->rx.buf[i];
+//		rxdesc->rbap1 = drv->rx.buf[i];
+		if ((rxdesc->rbap1 = pktbuf_alloc()) == NULL) {
+			DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
+			abort();
+		}
+		DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", rxdesc->rbap1);
 		/* link to the next descriptor */
 		rxdesc->rbap2 = (void *)&drv->rx.desc[i + 1];
 	}
-
 	/* link to the first */
 	rxdesc->rbap2 = (void *)&drv->rx.desc[0];
 
 	/* DMA receive descriptor list address */
 	eth->dmardlar = (uint32_t)&drv->rx.desc[0];
-	drv->rx.cnt = 0;
+	drv->rx.head = 0;
+	drv->rx.tail = 0;
 
 #if 0
 	/* alloc a new semaphore */
@@ -274,37 +381,42 @@ int stm32f_ethif_init(struct ifnet * __if)
 #endif
 
 	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
-
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
-		/* setup the source address in the ethernet header 
-		   of the  transmit buffer */
-		stm32f_eth_mac_get(eth, 0, (uint8_t *)drv->tx.hdr[i].eth_src);
-
 		/* configure transmit descriptors */
 		txdesc = &drv->tx.desc[i];
 		/* Transmit buffer 1 size */
-		txdesc->tbs1 = 14;
+		txdesc->tbs1 = 0;
 		/* Transmit buffer 2 size */
 		txdesc->tbs2 = 0;
-		/* Transmit buffer 1 addr */
-		txdesc->tbap1 = (void *)&drv->tx.hdr[i];
-		/* Transmit buffer 2 addr */
-		txdesc->tbap2 = drv->tx.buf[i];
+//		txdesc->tdes0 = ETH_TXDMA_IC | ETH_TXDMA_LS | ETH_TXDMA_FS;
+		txdesc->ic = 1;
+		txdesc->ls = 1;
+		txdesc->fs = 1;
+		/* Second address chained */
+		txdesc->tch = 1;
 		/* Transmit end of ring */
-		txdesc->tdes0 = 0;
+		txdesc->ter = 0;
+		/* Transmit buffer 1 addr */
+		txdesc->tbap1 = NULL;
+		/* Transmit buffer 2 addr */
+		/* link to the next descriptor */
+		txdesc->tbap2 = (void *)&drv->tx.desc[i + 1];
 	}
-	/* Transmit end of ring */
-	txdesc->tdes0 = ETH_TXDMA_TER;
+	/* link the last to the first */
+	txdesc->tbap2 = (void *)&drv->tx.desc[0];
 
 	/* DMA transmit descriptor list address */
 	eth->dmatdlar = (uint32_t)&drv->tx.desc[0];
-	drv->tx.cnt = 0;
+	drv->tx.head = 0;
+	drv->tx.tail = 0;
 
+#if 0
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
 	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
+#endif
 
-#if 0
+#if 1
 	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
 	DCC_LOG1(LOG_TRACE, "tx.sem=%d", drv->tx.sem);
 #endif
@@ -322,8 +434,8 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	/* enable Normal interrupt summary and Abnormal interrupt summary */
 	eth->dmaier = ETH_NISE | ETH_AISE | ETH_FBEIE | 
-		ETH_RWTIE | ETH_RBUIE |ETH_ROIE |
-		ETH_TUIE | ETH_TJTIE | ETH_TBUIE;
+		ETH_RWTIE | ETH_RBUIE | ETH_ROIE |
+		ETH_TUIE | ETH_TJTIE | ETH_TIE | ETH_TBUIE;
 
 
 	DCC_LOG3(LOG_TRACE, "RX DMA: %d (desc) x %d = %d bytes", 
@@ -349,6 +461,9 @@ int stm32f_ethif_init(struct ifnet * __if)
 	DCC_LOG(LOG_INFO, "DMA start receive...");
 	eth->dmaomr |= ETH_SR;
 
+	DCC_LOG(LOG_INFO, "DMA start transmit...");
+	eth->dmaomr |= ETH_ST;
+
 	return 0;
 }
 
@@ -357,284 +472,23 @@ int stm32f_ethif_cleanup(struct ifnet * __if)
 	return 0;
 }
 
-void * stm32f_ethif_mmap(struct ifnet * __if, size_t __length)
-{
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-	void * ptr;
-#if 1
-	struct txdma_enh_desc * txdesc;
-	struct txdma_st st;
-	int n = 0; 
-
-	txdesc = &drv->tx.desc[n];
-	for (;;) {
-		/* wait for buffer availability */
-		st = txdesc->st;
-		if (st.es) {
-			DCC_LOG10(LOG_WARNING, "Error:%s%s%s%s%s%s%s%s%s%s",
-					 (st.uf) ? " UF" : "",
-					 (st.ed) ? " ED" : "",
-					 (st.ec) ? " EC" : "",
-					 (st.lco) ? " LCO" : "",
-					 (st.nc) ? " NC" : "",
-					 (st.lca) ? " LCA" : "",
-					 (st.ipe) ? " IPE" : "",
-					 (st.ff) ? " FF" : "",
-					 (st.jt) ? " JT" : "",
-					 (st.ihe) ? " IHE" : "");
-		}
-		if (st.own == 0) {
-			break;
-		}
-		DCC_LOG(LOG_MSG, "wait....");
-		thinkos_flag_take(drv->tx.flag);
-		DCC_LOG(LOG_MSG, "wakeup....");
-	}
-#else
-	/* chek for availability  */
-	if (drv->tx.desc.st.own) {
-		DCC_LOG(LOG_WARNING, "not available TX buffers!");
-		return NULL;
-	}
-#endif
-
-	ptr = drv->tx.buf[n];
-
-	DCC_LOG2(LOG_INFO, "mem=%p len=%d", ptr, __length);
-
-	return ptr;
-}
-
-int stm32f_ethif_munmap(struct ifnet * __if, void * __mem)
-{
-//	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-//
-	DCC_LOG(LOG_INFO, "...");
-	return 0;
-}
-
-int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst, 
-					  int __proto, const void * __buf, int __len)
-{
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
-	struct txdma_enh_desc * txdesc;
-//	struct txdma_st st;
-	struct eth_hdr * hdr;
-	int n = 0;
-
-	DCC_LOG1(LOG_INFO, "len=%d", __len);
-
-	if (__len > __if->if_mtu) {
-		NETIF_STAT_ADD(__if, tx_drop, 1);
-		DCC_LOG(LOG_WARNING, "too big!");
-		return -1;
-	}
-
-	hdr = &drv->tx.hdr[n];
-	if (__buf != drv->tx.buf[n]) {
-		DCC_LOG(LOG_ERROR, "invalid DMA buffer!");
-		abort();
-	}
-
-	txdesc = &drv->tx.desc[n];
-#if 0
-	for (;;) {
-		/* wait for buffer availability */
-		st = txdesc->st;
-		if (st.es) {
-			DCC_LOG10(LOG_WARNING, "Error:%s%s%s%s%s%s%s%s%s%s",
-					 (st.uf) ? " UF" : "",
-					 (st.ed) ? " ED" : "",
-					 (st.ec) ? " EC" : "",
-					 (st.lco) ? " LCO" : "",
-					 (st.nc) ? " NC" : "",
-					 (st.lca) ? " LCA" : "",
-					 (st.ipe) ? " IPE" : "",
-					 (st.ff) ? " FF" : "",
-					 (st.jt) ? " JT" : "",
-					 (st.ihe) ? " IHE" : "");
-		}
-		if (st.own == 0) {
-			break;
-		}
-		DCC_LOG(LOG_MSG, "wait....");
-		thinkos_flag_take(drv->tx.flag);
-		DCC_LOG(LOG_MSG, "wakeup....");
-	}
-#endif
-
-	DCC_LOG7(LOG_MSG, "to: %02x:%02x:%02x:%02x:%02x:%02x (%d)",
-			 __dst[0], __dst[1], __dst[2], __dst[3], __dst[4], __dst[5], __len);
-
-	hdr->eth_type = __proto;
-#if 0
-	switch (hdr->eth_type) {
-	case IFN_PROTO_IP:
-		hdr->eth_type = HTONS(ETH_P_IP);
-		break;
-	case IFN_PROTO_ETHARP:
-		hdr->eth_type = HTONS(ETH_P_ARP);
-		break;
-	};
-#endif
-
-	/* ethernet destination address */
-	hdr->eth_dst[0] = __dst[0];
-	hdr->eth_dst[1] = __dst[1];
-	hdr->eth_dst[2] = __dst[2];
-	hdr->eth_dst[3] = __dst[3];
-	hdr->eth_dst[4] = __dst[4];
-	hdr->eth_dst[5] = __dst[5];
-
-	/* Transmit buffer 1 size */
-	txdesc->tbs1 = 14;
-	/* Transmit buffer 2 size */
-	txdesc->tbs2 = __len;
-	/* Transmit buffer 1 addr */
-	txdesc->tbap1 = (void *)hdr;
-	/* Transmit buffer 2 addr */
-	txdesc->tbap2 = (void *)__buf;
-	/* set the DMA descriptor ownership and end of ring */
-	txdesc->tdes0 = ETH_TXDMA_OWN | ETH_TXDMA_IC | 
-		ETH_TXDMA_LS | ETH_TXDMA_FS | ETH_TXDMA_TER;
-	/* enable DMA transmit interrupts */
-//	eth->dmaier |= ETH_TIE;
-//	/* Transmit Poll Demand command */
-//	eth->dmatpdr = 1;
-
-	DCC_LOG(LOG_MSG, " DMA start transmit...");
-	eth->dmaomr |= ETH_ST;
-
-	return 0;
-}
-
-int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src, 
-						  unsigned int * __proto, uint8_t ** __pkt)
-{
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
-	struct rxdma_ext_st ext_st;
-	struct rxdma_st st;
-	struct rxdma_enh_desc * desc;
-	struct eth_hdr * hdr;
-	uint8_t * pkt;
-	int len;
-	
-	desc = &drv->rx.desc[drv->rx.cnt & (STM32F_ETH_RX_NDESC - 1)];
-	st = desc->st;
-	if (st.es) {
-		DCC_LOG(LOG_ERROR, "error summary flag set!");
-	}
-	if (st.own) {
-		DCC_LOG(LOG_INFO, "DMA own flag set!");
-		return 0;
-	}
-
-	len = st.fl;
-	DCC_LOG1(LOG_INFO, "frame len=%d", len);
-
-	ext_st = desc->ext_st;
-
-	/* IP payload type */
-	switch (ext_st.ippt) {
-	case ETH_IPPT_UNKOWN:
-		DCC_LOG(LOG_INFO, "not IP!");
-		break;
-	case ETH_IPPT_UDP:
-		DCC_LOG(LOG_INFO, "UDP");
-		break;
-	case ETH_IPPT_TCP:
-		DCC_LOG(LOG_INFO, "TCP");
-		break;
-	case ETH_IPPT_ICMP:
-		DCC_LOG(LOG_INFO, "ICMP");
-		break;
-	}
-
-	if (ext_st.iphe) {
-		DCC_LOG(LOG_WARNING, "IP header error!");
-		goto error;
-	}
-	if (ext_st.ippe) {
-		DCC_LOG(LOG_WARNING, "IP payload error!");
-		goto error;
-	}
-	if (ext_st.ipcb)
-		DCC_LOG(LOG_TRACE, "IP checksum bypass.");
-	if (ext_st.ipv4pr)
-		DCC_LOG(LOG_INFO, "IPv4 packet received.");
-	if (ext_st.ipv6pr)
-		DCC_LOG(LOG_TRACE, "IPv6 packet received.");
-
-	hdr = (struct eth_hdr *)desc->rbap1;
-
-	pkt = (uint8_t *)hdr + 14;
-	len -= 14;
-
-/*	switch (hdr->eth_type) {
-	case HTONS(ETH_P_IP):
-		*__proto = IFN_PROTO_IP;
-		break;
-	case HTONS(ETH_P_ARP):
-		*__proto = IFN_PROTO_ETHARP;
-		break;
-	};
-	*/
-
-	*__proto = hdr->eth_type;
-	*__pkt = pkt;
-	*__src = hdr->eth_src; 
-	return len;
-
-error:
-	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
-	/* set the DMA descriptor ownership */
-	desc->rdes0 = ETH_RXDMA_OWN;
-	/* enable DMA receive interrupts */
-	eth->dmaier |= ETH_RIE;
-	/* Receive Poll Demand command */
-	eth->dmarpdr = 1;
-
-	return -1;
-}
-
-int stm32f_ethif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
-{
-	struct stm32f_eth_drv * drv = (struct stm32f_eth_drv *)__if->if_drv;
-	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
-	struct rxdma_enh_desc * desc;
-
-	DCC_LOG(LOG_INFO, "...");
-	
-	desc = &drv->rx.desc[drv->rx.cnt++ & (STM32F_ETH_RX_NDESC - 1)];
-	/* set the DMA descriptor ownership */
-	desc->rdes0 = ETH_RXDMA_OWN;
-	/* enable DMA receive interrupts */
-	eth->dmaier |= ETH_RIE;
-	/* Receive Poll Demand command */
-	eth->dmarpdr = 1;
-
-	return 0;
-}
-
-int stm32f_ethif_getaddr(struct ifnet * __if, uint8_t * __buf)
-{
-	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
-
-	stm32f_eth_mac_get(eth, 0, __buf);
-	return 0;
-}
-
-const char stm32f_ethif_desc[] = "STM32F-Ethernet";
-
-int stm32f_ethif_getdesc(struct ifnet * __if, char * __s, int __len)
-{
-	int n = MIN(__len, sizeof(stm32f_ethif_desc));
-	memcpy(__s, stm32f_ethif_desc, n);
-	__s[n - 1] = '\0';
-	return n;
-}
+const struct ifnet_operations stm32f_ethif_op = {
+	.op_type = IFT_ETHER,
+	.op_addrlen = ETH_ADDR_LEN,
+	.op_init = stm32f_ethif_init,
+	.op_cleanup = stm32f_ethif_cleanup, 
+	.op_mmap = stm32f_ethif_mmap, 
+	.op_send = stm32f_ethif_send,
+	.op_pkt_recv = stm32f_ethif_pkt_recv,
+	.op_pkt_free = stm32f_ethif_pkt_free,
+	.op_arplookup = etharp_lookup, 
+	.op_arpquery = etharp_query, 
+	.op_getaddr = stm32f_ethif_getaddr,
+	.op_getdesc = stm32f_ethif_getdesc, 
+	.op_sleep = NULL,
+	.op_wakeup = NULL,
+	.op_munmap = stm32f_ethif_munmap
+};
 
 struct stm32f_eth_drv stm32f_eth_drv;
 
@@ -660,9 +514,27 @@ void stm32f_eth_isr(void)
 	}
 
 	if (dmasr & ETH_TS) {
-		DCC_LOG(LOG_MSG, "DMA TS, stop transmission...");
-		eth->dmaomr &= ~ETH_ST;
-		thinkos_flag_give_i(drv->tx.flag);
+		DCC_LOG(LOG_INFO, "TS");
+		struct txdma_enh_desc * txdesc;
+		void * pktbuf;
+		uint32_t tail;
+
+	//	eth->dmaomr &= ~ETH_ST;
+		tail = drv->tx.tail;
+		while (tail != drv->tx.head) {
+			txdesc = &drv->tx.desc[tail % STM32F_ETH_TX_NDESC];
+			if (txdesc->own) {
+				DCC_LOG(LOG_INFO, "DMA own flag set!");
+				break;
+			}
+			pktbuf = txdesc->tbap1;
+			DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+			pktbuf_free(pktbuf);
+			tail++;
+			thinkos_sem_post_i(drv->tx.sem);
+		}
+		drv->tx.tail = tail;
+//		thinkos_flag_give_i(drv->tx.flag);
 	}
 
 	if (dmasr & ETH_TBUS) {
@@ -698,24 +570,6 @@ void stm32f_eth_isr(void)
 	/* clear interrupt bits */
 	eth->dmasr = dmasr;
 }
-
-const struct ifnet_operations stm32f_ethif_op = {
-	.op_type = IFT_ETHER,
-	.op_addrlen = ETH_ADDR_LEN,
-	.op_init = stm32f_ethif_init,
-	.op_cleanup = stm32f_ethif_cleanup, 
-	.op_mmap = stm32f_ethif_mmap, 
-	.op_send = stm32f_ethif_send,
-	.op_pkt_recv = stm32f_ethif_pkt_recv,
-	.op_pkt_free = stm32f_ethif_pkt_free,
-	.op_arplookup = etharp_lookup, 
-	.op_arpquery = etharp_query, 
-	.op_getaddr = stm32f_ethif_getaddr,
-	.op_getdesc = stm32f_ethif_getdesc, 
-	.op_sleep = NULL,
-	.op_wakeup = NULL,
-	.op_munmap = stm32f_ethif_munmap
-};
 
 struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, 
 						  in_addr_t netmask)

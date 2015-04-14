@@ -139,12 +139,12 @@ int network_config(void)
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
 
-	if ((env = getenv("IPCFG")) == NULL) {
-//	if (1) {
+//	if ((env = getenv("IPCFG")) == NULL) {
+	if (1) {
 		printf("IPCFG not set, using defaults!\n");
 		/* default configuration */
-	//	strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 1");
-		strcpy(s, "0.0.0.0 0.0.0.0 0.0.0.0 1");
+		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");
+//		strcpy(s, "0.0.0.0 0.0.0.0 0.0.0.0 1");
 		/* set the default configuration */
 		setenv("IPCFG", s, 1);
 	} else {

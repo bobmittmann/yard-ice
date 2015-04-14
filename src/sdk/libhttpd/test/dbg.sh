@@ -6,6 +6,6 @@ BUILD_NAME=httpd_test
 ../../../../tools/tftp_load.py -q -i -e -r  -a 0x08000000 -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.bin 
 
 if [ $? = 0 ] ; then
-	../../../../tools/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf
+	../../../../tools/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf | tee log.txt 
 fi
 

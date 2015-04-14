@@ -97,6 +97,7 @@
 #define TCP_IDLE_DET_SEC         10
 #define TCP_KEEP_ALIVE_PROBE_SEC 20
 #define TCP_MAX_IDLE_SEC         60
+#define TCP_MAX_SND_QUEUE   (1460 * 4)
 
 /* use hardware checksum */
 #define ENABLE_NET_TCP_CHECKSUM 0
