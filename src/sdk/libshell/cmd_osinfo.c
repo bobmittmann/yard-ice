@@ -384,3 +384,67 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+int scan_stack(FILE * f, uint32_t * ptr, unsigned int size)
+{
+	int i;
+
+	for (i = 0; i < size / 4; ++i) {
+		if (ptr[i] != 0xdeadbeef)
+			break;
+	}
+	fprintf(f, " | %6d ", i * 4);
+
+	return 0;
+}
+
+int cmd_oscheck(FILE * f, int argc, char ** argv)
+{
+	struct thinkos_rt rt;
+	int i;
+
+	if (argc > 1)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (thinkos_rt_snapshot(&rt) < 0) {
+		fprintf(f, "#ERROR: Thinkos RT_DEBUG not enabled!\n");
+		return SHELL_ERR_GENERAL;
+	}
+
+	fprintf(f, "\n");
+
+	fprintf(f, " Th"); 
+#if THINKOS_ENABLE_THREAD_INFO
+	fprintf(f, " |     Tag"); 
+	fprintf(f, " |    Stack"); 
+#endif
+	fprintf(f, " |  Context"); 
+#if THINKOS_ENABLE_THREAD_INFO
+	fprintf(f, " |   Size"); 
+	fprintf(f, " |   Free"); 
+#endif
+	fprintf(f, "\n");
+
+	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
+		if (rt.ctx[i] != NULL) {
+			fprintf(f, "%3d", i);
+#if THINKOS_ENABLE_THREAD_INFO
+			if (rt.th_inf[i] != NULL) {
+				fprintf(f, " | %7s", rt.th_inf[i]->tag); 
+				fprintf(f, " | %08x", (uint32_t)rt.th_inf[i]->stack_ptr); 
+			} else {
+				fprintf(f, " |     ..."); 
+				fprintf(f, " |      ..."); 
+			}
+#endif
+			fprintf(f, " | %08x", (uint32_t)rt.ctx[i]); 
+#if THINKOS_ENABLE_THREAD_INFO
+			fprintf(f, " | %6d", rt.th_inf[i]->stack_size); 
+			scan_stack(f, rt.th_inf[i]->stack_ptr, rt.th_inf[i]->stack_size);
+#endif
+			fprintf(f, "\n");
+		}
+	}
+
+	return 0;
+}
+
