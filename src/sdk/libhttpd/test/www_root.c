@@ -106,7 +106,7 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 
 #define S_MAX 256 /* HTML formatting string buffer lenght */
 
-const char footer_html[] = HTML_FOOTER;
+static const char footer_html[] = HTML_FOOTER;
 
 /*---------------------------------------------------------------------------
   Initial page (index.html)
@@ -119,58 +119,17 @@ const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<h1>ThinkOS Web Server Demo</h1>\r\n"
 	"<p>Welcome to the <b>ThinkOS</b> web server demo initial page.</p>\r\n"
 	"<ul>\r\n"
-	"<li><a href=\"test1.cgi\">Dynamic page 1</a></li>\r\n"
-	"<li><a href=\"test2.cgi\">Dynamic page 2</a></li>\r\n"
+	"<li><a href=\"cgi/test1.cgi\">Dynamic page 1</a></li>\r\n"
+	"<li><a href=\"cgi/test2.cgi\">Dynamic page 2</a></li>\r\n"
+	"<li><a href=\"cgi/qotd.cgi\">Qute of The Day</a></li>\r\n"
 	"<li><a href=\"zarathustra.html\">Thus Spake Zarathustra</a></li>\r\n"
 	"<li><a href=\"form1.html\">Form Demo</a></li>\r\n"
 	"<li><a href=\"ipcfg_form.cgi\">IP Configuration</a></li>\r\n"
 	"<li><a href=\"treeview.html\">Treeview Demo</a></li>\r\n"
+	"<li><a href=\"thinkos.html\">ThinkOS Documentation</a></li>\r\n"
 	"</ul>\r\n"
 	HTML_FOOTER;
 
-const char test1_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS Dynamic Page 1</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Dynamic Page 1</h1>\r\n";
-
-/*---------------------------------------------------------------------------
-  Dynamic page 1
-  ---------------------------------------------------------------------------*/
-
-int test1_cgi(struct httpctl * ctl)
-{
-	static unsigned int cnt = 0;
-	char s[S_MAX];
-	int n;
-
-	httpd_200(ctl->tp, TEXT_HTML);
-	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
-	tcp_send(ctl->tp, test1_hdr_html, sizeof(test1_hdr_html) - 1, 0);
-	tcp_send(ctl->tp, s, n, 0);
-	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
-}
-
-const char test2_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS Dynamic Page 2</title>\r\n" 
-	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Dynamic Page 2</h1>\r\n";
-
-/*---------------------------------------------------------------------------
-  Dynamic page 2
-  ---------------------------------------------------------------------------*/
-
-int test2_cgi(struct httpctl * ctl)
-{
-	static unsigned int cnt = 0;
-	char s[S_MAX];
-	int n;
-
-	httpd_200(ctl->tp, TEXT_HTML);
-	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
-	tcp_send(ctl->tp, test2_hdr_html, sizeof(test2_hdr_html) - 1, 0);
-	tcp_send(ctl->tp, s, n, 0);
-	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
-}
 
 /*---------------------------------------------------------------------------
   Form Demo
@@ -448,10 +407,6 @@ struct httpdobj www_root[] = {
 		.len = sizeof(style_css) - 1, .ptr = style_css },
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = sizeof(index_html) - 1, .ptr = index_html },
-	{ .oid = "test1.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
-		.len = 0, .ptr = test1_cgi },
-	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
-		.len = 0, .ptr = test2_cgi },
 	{ .oid = "zarathustra.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
 		.len = SIZEOF_ZARATHUSTRA_HTML_GZ, .ptr = zarathustra_html_gz },
 	{ .oid = "form1.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
@@ -466,6 +421,8 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_TREEVIEW_HTML_GZ, .ptr = treeview_html_gz },
 	{ .oid = "treeview.css", .typ = OBJ_STATIC_CSS_GZ, .lvl = 100, 
 		.len = SIZEOF_TREEVIEW_CSS_GZ, .ptr = treeview_css_gz },
+	{ .oid = "thinkos.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
+		.len = SIZEOF_THINKOS_HTML, .ptr = thinkos_html },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

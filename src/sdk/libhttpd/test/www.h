@@ -47,11 +47,14 @@
 
 /* File size */
 
+#define SIZEOF_THINKOS_HTML 5678
 #define SIZEOF_ZARATHUSTRA_HTML_GZ 10829
 #define SIZEOF_TREEVIEW_HTML_GZ 1003
 #define SIZEOF_TREEVIEW_CSS_GZ 912
 
 /* File content */
+
+extern const uint8_t thinkos_html[];
 
 extern const uint8_t zarathustra_html_gz[];
 

@@ -28,9 +28,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <tcpip/httpd.h>
+#include <netinet/in.h>
 #include <thinkos.h>
 #include <sys/dcclog.h>
 #include "www.h"
+
+static const char footer_html[] = HTML_FOOTER;
 
 /*---------------------------------------------------------------------------
   Initial page (index.html)
@@ -107,10 +110,85 @@ int get_data_cgi(struct httpctl * ctl)
 	n = snprintf(s, S_MAX, "]}\r\n");
 	tcp_send(ctl->tp, s, n, 0);
 
-	/* close thisp page connection */
-	tcp_close(ctl->tp);
-
 	return 0;
+}
+const char test1_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS Dynamic Page 1</title>\r\n" 
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Dynamic Page 1</h1>\r\n";
+
+/*---------------------------------------------------------------------------
+  Dynamic page 1
+  ---------------------------------------------------------------------------*/
+
+int test1_cgi(struct httpctl * ctl)
+{
+	static unsigned int cnt = 0;
+	char s[S_MAX];
+	int n;
+
+	httpd_200(ctl->tp, TEXT_HTML);
+	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
+	tcp_send(ctl->tp, test1_hdr_html, sizeof(test1_hdr_html) - 1, 0);
+	tcp_send(ctl->tp, s, n, 0);
+	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
+}
+
+const char test2_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS Dynamic Page 2</title>\r\n" 
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Dynamic Page 2</h1>\r\n";
+
+/*---------------------------------------------------------------------------
+  Dynamic page 2
+  ---------------------------------------------------------------------------*/
+
+int test2_cgi(struct httpctl * ctl)
+{
+	static unsigned int cnt = 0;
+	char s[S_MAX];
+	int n;
+
+	httpd_200(ctl->tp, TEXT_HTML);
+	n = snprintf(s, S_MAX, "<p>This page was accessed %d times!</p>", ++cnt);
+	tcp_send(ctl->tp, test2_hdr_html, sizeof(test2_hdr_html) - 1, 0);
+	tcp_send(ctl->tp, s, n, 0);
+	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
+}
+
+/*---------------------------------------------------------------------------
+  Quote of the Day 
+  ---------------------------------------------------------------------------*/
+
+const char qotd_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS Quote of The Day</title>\r\n" 
+	"<meta http-equiv=\"refresh\" content=\"1\" />\r\n"
+	META_HTTP META_COPY LINK_ICON LINK_CSS "</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Quote of The Day</h1>\r\n"
+	"<p><pre>\r\n";
+
+int qotd_cgi(struct httpctl * ctl)
+{
+	struct tcp_pcb * tp;
+	char s[S_MAX];
+	int n;
+
+	httpd_200(ctl->tp, TEXT_HTML);
+	tcp_send(ctl->tp, qotd_hdr_html, sizeof(qotd_hdr_html) - 1, 0);
+
+	tp = tcp_alloc();
+	if (tcp_connect(tp, INADDR_LOOPBACK, htons(17)) < 0) {
+		n = snprintf(s, S_MAX, "ERROR: can't connect to QOTD!");
+		tcp_send(ctl->tp, s, n, 0);
+	} else {
+		while ((n = tcp_recv(tp, s, S_MAX)) > 0)
+			tcp_send(ctl->tp, s, n, 0);
+	}
+	tcp_close(tp);
+	n = snprintf(s, S_MAX, "</pre></p>\r\n");
+	tcp_send(ctl->tp, s, n, 0);
+
+	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
 }
 
 /*---------------------------------------------------------------------------
@@ -122,6 +200,12 @@ struct httpdobj www_cgi[] = {
 		.len = sizeof(cgi_index_html) - 1, .ptr = cgi_index_html },
 	{ .oid = "get_data.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = get_data_cgi },
+	{ .oid = "qotd.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
+		.len = 0, .ptr = qotd_cgi },
+	{ .oid = "test1.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
+		.len = 0, .ptr = test1_cgi },
+	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
+		.len = 0, .ptr = test2_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

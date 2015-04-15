@@ -26,65 +26,61 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/shell.h>
 #include <sys/dcclog.h>
 #include <tcpip/tcp.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <thinkos.h>
 
-#include <netinet/in.h>
+const char cmd_netcat_usage[] = 
+	"usage: nc HOST PORT\n";
 
-void __attribute__((noreturn)) tcp_echo_task(void * arg)
+#define BUF_LEN 128
+
+int cmd_netcat(FILE * f, int argc, char ** argv)
 {
-	struct tcp_pcb * svc;
+	uint8_t buf[BUF_LEN];
 	struct tcp_pcb * tp;
-	uint8_t buf[128];
-	int port = 23;
+	in_addr_t host;
+	int port;
 	int n;
 
-	svc = tcp_alloc();
-
-	tcp_bind(svc, INADDR_ANY, htons(port));
-
-	if (tcp_listen(svc, 1) != 0) {
-		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!");
-		abort();
+	if (argc < 3) {
+		fprintf(f, "nc - open a TCP connection to HOST at PORT\n");
+		fprintf(f, cmd_netcat_usage);
+		return SHELL_ERR_ARG_MISSING;
 	}
 
-	for (;;) {
-		if ((tp = tcp_accept(svc)) == NULL) {
-			DCC_LOG(LOG_ERROR, "tcp_accept() failed!");
-			abort();
-		}
-
-		DCC_LOG(LOG_TRACE, "Connection accepted.");
-
-		while ((n = tcp_recv(tp, buf, 128)) > 0)  {
-			if ((n = tcp_send(tp, buf, n, 0)) < 0) {
-				break;
-			}
-		} 
-
-		tcp_close(tp);
-		DCC_LOG(LOG_TRACE, "Connection closed.");
+	if (argc > 3) {
+		fprintf(f, cmd_netcat_usage);
+		return SHELL_ERR_EXTRA_ARGS;
 	}
+
+	if (inet_aton(argv[1], (struct in_addr *)&host) == 0) {
+		fprintf(f, "ip address invalid.\n");
+		return SHELL_ERR_ARG_INVALID;
+	}
+	
+	port = strtol(argv[2], NULL, 0);
+
+	if ((tp = tcp_alloc()) == NULL) {
+		fprintf(f, "can't allocate socket!\n");
+		return SHELL_ERR_GENERAL;
+	}
+
+	if (tcp_connect(tp, host, htons(port)) < 0) {
+		fprintf(f, "can't connect to host!\n");
+		return SHELL_ERR_GENERAL;
+	}
+
+	while ((n = tcp_recv(tp, buf, BUF_LEN)) > 0)  {
+		buf[n] = '\0';
+		fprintf(f, (char *)buf);
+	} 
+
+	tcp_close(tp);
+
+	return 0;
 }
-
-uint32_t tcp_echo_stack[256];
-
-const struct thinkos_thread_inf tcp_echo_inf = {
-	.stack_ptr = tcp_echo_stack, 
-	.stack_size = sizeof(tcp_echo_stack), 
-	.priority = 32,
-	.thread_id = 8, 
-	.paused = 0,
-	.tag = "TCPECHO"
-};
-
-int tcp_echo_start(void)
-{
-	return thinkos_thread_create_inf((void *)tcp_echo_task, (void *)NULL,
-								 &tcp_echo_inf);
-
-}
-

@@ -86,6 +86,8 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	return 0;
 }
 
+int cmd_netcat(FILE *f, int argc, char ** argv);
+
 const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_arp, "arp", "arp", 
@@ -103,8 +105,11 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_ifconfig, "ifconfig", "if", 
 		"", "configure a network interface" },
 
+	{ cmd_netcat, "netcat", "nc", 
+		"", "connect to remote host" },
+
 	{ cmd_netstat, "netstat", "n", 
-		"", "print network connections" },
+		"HOST PORT", "print network connections" },
 
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
