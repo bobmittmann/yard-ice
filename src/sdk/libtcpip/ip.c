@@ -148,7 +148,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	ptr = (void *)&__ip->opt[hdr_len - sizeof(struct iphdr)];
 	len = tot_len - hdr_len;
 
-	DCC_LOG3(LOG_TRACE, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, len);
+	DCC_LOG3(LOG_INFO, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, __len);
 
 	/* check the destination ip address */
 	/* get interface ip address */
@@ -191,7 +191,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 #endif
 
 	default:
-		DCC_LOG1(LOG_TRACE, "invalid protocol %d.", __ip->proto);
+		DCC_LOG1(LOG_INFO, "invalid protocol %d.", __ip->proto);
 		ret = 0;
 	}
 

@@ -79,7 +79,7 @@ static void tcp_parse_options(struct tcp_pcb * tp, struct tcphdr * th,
 					   the initialy configured one. */
 					if (val < tp->t_maxseg)
 						tp->t_maxseg = val;
-					DCC_LOG1(LOG_TRACE, "option MSS: %d", val);
+					DCC_LOG1(LOG_INFO, "option MSS: %d", val);
 				}
 				break;
 			case TCPOPT_WINDOW:
@@ -158,8 +158,6 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	if (tp->t_maxseg > tcp_maxmss)
 		tp->t_maxseg = tcp_maxmss;
 
-	DCC_LOG1(LOG_TRACE, "tp->t_maxseg=%d", tp->t_maxseg);			
-
 	/* TODO: calculate the amount of space in receive window */
 //	tp->rcv_wnd = MIN(tcp_maxrcv, tcp_maxwin);
 	/* advertised window */
@@ -179,11 +177,14 @@ struct tcp_pcb * tcp_passive_open(struct tcp_listen_pcb * mux,
 	tp->t_conn_tmr = tcp_conn_est_tmo;
 	tp->snd_wnd = ntohs(th->th_win);
 
+	DCC_LOG2(LOG_INFO, "maxseg=%d snd_wnd=%d", 
+			 tp->t_maxseg, tp->snd_wnd);			
+
 	/* TODO: initialization of receive urgent pointer */
 
 	tp->t_state = TCPS_SYN_RCVD;
 
-	DCC_LOG3(LOG_TRACE, "<%05x> %I:%d [SYN_RCVD]", 
+	DCC_LOG3(LOG_INFO, "<%05x> %I:%d [SYN_RCVD]", 
 			 (int)tp, tp->t_faddr, ntohs(tp->t_fport));
 
 	/* XXX: don't respond now - the upper layer must call the tcp_accept()
@@ -330,7 +331,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 	if (tp->t_flags & TF_IDLE) {
 		/* exits from the idle state */
 		tp->t_flags &= ~TF_IDLE;
-		DCC_LOG1(LOG_TRACE, "<%05x> IDLE exit", (int)tp);		
+		DCC_LOG1(LOG_INFO, "<%05x> IDLE exit", (int)tp);		
 	}
 
 #if 0
@@ -344,7 +345,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 #endif
 
 	/* Ref.: TCP/IP Illustrated Volume 2, pg. 934  */
-#if (ENABLE_TCP_HEADER_PREDICTION)
+#if (TCP_ENABLE_HEADER_PREDICTION)
 	if ((tp->t_state == TCPS_ESTABLISHED) &&
 		(tiflags & (TH_SYN | TH_FIN | TH_RST | TH_URG | TH_ACK)) == TH_ACK &&
 		(ti_seq == tp->rcv_nxt) && 
@@ -414,7 +415,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		}
 	}
 
-#endif /* ENABLE_TCP_HEADER_PREDICTION */
+#endif /* TCP_ENABLE_HEADER_PREDICTION */
 
 	/* Slow path input processing
 	   Ref.: TCP/IP Illustrated Volume 2, pg. 941  */
@@ -441,7 +442,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		
 		if (win <= 0) {
 			win = 0;
-			DCC_LOG(LOG_TRACE, "receive buffer full!");
+			DCC_LOG(LOG_INFO, "receive buffer full!");
 		}
 
 
@@ -512,7 +513,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 		tp->snd_wnd = ntohs(th->th_win);
 
 		tp->t_state = TCPS_ESTABLISHED;
-		DCC_LOG1(LOG_TRACE, "<%05x> [ESTABLISHED]", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> [ESTABLISHED]", (int)tp);
 		/* TODO: initialization of receive urgent pointer
 		tcp->rcv_up = ti_seq; */
 		/* XXX: */ 
@@ -524,7 +525,7 @@ int tcp_input(struct ifnet * __if, struct iphdr * iph,
 close_and_reset:
 		tp->t_state = TCPS_CLOSED;
 		pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.closed);
-		DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> [CLOSED]", (int)tp);
 
 		/* XXX: discard the data */
 		mbuf_queue_free(&tp->snd_q);
@@ -547,7 +548,7 @@ close_and_reset:
 	todrop = tp->rcv_nxt - ti_seq;
 	if (todrop > 0) {
 		if (tiflags & TH_SYN) {
-			DCC_LOG(LOG_TRACE, "SYN");
+			DCC_LOG(LOG_INFO, "SYN");
 			tiflags &= ~TH_SYN;
 			ti_seq++;
 			todrop--;
@@ -574,7 +575,7 @@ close_and_reset:
 	/* FIXME: only reset the connection if there are no more 
 		application to handle the incomming data, half-close */
 	if ((tp->t_state > TCPS_FIN_WAIT_1) && (ti_len)) { 
-		DCC_LOG1(LOG_TRACE, "<%05x> segment received after FIN", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> segment received after FIN", (int)tp);
 		/* TODO: stat */
 		goto dropwithreset;	
 	}
@@ -632,7 +633,7 @@ close:
 
 			tp->t_state = TCPS_CLOSED;
 			pcb_move((struct pcb *)tp, &__tcp__.active, &__tcp__.closed);
-			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [CLOSED]", (int)tp);
 
 			/* notify the upper layer */
 			thinkos_cond_broadcast(tp->t_cond);
@@ -686,7 +687,7 @@ close:
 		tp->t_state = TCPS_ESTABLISHED;
 		tp->snd_off--;
 		tp->snd_max--;
-		DCC_LOG1(LOG_TRACE, "<%05x> SYN ackd [ESTABLISHED]", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> SYN ackd [ESTABLISHED]", (int)tp);
 		/* notify the upper layer*/
 //		thinkos_cond_signal(tp->t_cond);
 
@@ -796,7 +797,7 @@ close:
 				   Ref.: TCP/IP Illustrated Volume 2, pg. 979 */
 				tp->t_conn_tmr = 4 * tcp_msl;
 				tp->t_state = TCPS_FIN_WAIT_2;
-				DCC_LOG1(LOG_TRACE, "<%05x> [FIN_WAIT_2]", (int)tp);
+				DCC_LOG1(LOG_INFO, "<%05x> [FIN_WAIT_2]", (int)tp);
 			}
 			break;
 		case TCPS_CLOSING:
@@ -804,10 +805,11 @@ close:
 				mbuf_queue_free(&tp->snd_q);
 				mbuf_queue_free(&tp->rcv_q);
 				tp->t_state = TCPS_TIME_WAIT;
-				DCC_LOG1(LOG_TRACE, "<%05x> [TIME_WAIT]", (int)tp);
-				DCC_LOG(LOG_TRACE, "stop rxmt tmr, start 2MSL tmr");
+				DCC_LOG1(LOG_INFO, "<%05x> [TIME_WAIT]", (int)tp);
 				tp->t_rxmt_tmr = 0;
 				tp->t_conn_tmr = 2 * tcp_msl;
+				DCC_LOG1(LOG_INFO, "stop rxmt tmr, start 2MSL tmr: %d",
+						 tp->t_conn_tmr);
 			}
 			break;
 		case TCPS_LAST_ACK:
@@ -833,7 +835,8 @@ step6:
 	   Ref.: TCP/IP Illustrated Volume 2, pg. 982 */
 	DCC_LOG(LOG_MSG, "setp6");
 	
-	if ((tiflags & TH_ACK) && (tiwin > tp->snd_wnd)) {
+//	if ((tiflags & TH_ACK) && (tiwin > tp->snd_wnd)) {
+	if ((tiflags & TH_ACK) && (tiwin != tp->snd_wnd)) {
 		/* Keep track of pure window updates */
 		/* TODO: TCP Statistics */
 		/* TODO: Update window information */
@@ -906,7 +909,7 @@ dodata:
 		case TCPS_SYN_RCVD:
 		case TCPS_ESTABLISHED:
 			tp->t_state = TCPS_CLOSE_WAIT;
-			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSE_WAIT]", (int)tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [CLOSE_WAIT]", (int)tp);
 			/* notify the application that our peer 
 			   has closed its side. Sockets: marks 
 			   the socket as write-only */
@@ -916,16 +919,17 @@ dodata:
 			break;
 		case TCPS_FIN_WAIT_1:
 			tp->t_state = TCPS_CLOSING;
-			DCC_LOG1(LOG_TRACE, "<%05x> [CLOSING]", (int)tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [CLOSING]", (int)tp);
 			break;
 		case TCPS_FIN_WAIT_2:
 			mbuf_queue_free(&tp->rcv_q);
 			mbuf_queue_free(&tp->snd_q);
 			tp->t_state = TCPS_TIME_WAIT;
-			DCC_LOG1(LOG_TRACE, "<%05x> stop rxmt tmr, start 2MSL tmr "
-					 "[TIME_WAIT]", (int)tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [TIME_WAIT]", (int)tp);
 			tp->t_rxmt_tmr = 0;
 			tp->t_conn_tmr = 2 * tcp_msl;
+			DCC_LOG1(LOG_INFO, "stop rxmt tmr, start 2MSL tmr: %d",
+					 tp->t_conn_tmr);
 			break;
 		case TCPS_TIME_WAIT:
 			/* restart the counter */

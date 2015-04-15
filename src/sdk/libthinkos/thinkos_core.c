@@ -642,6 +642,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	return self;
 }
 
+#if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
+	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
+	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
 int thinkos_bmp_alloc(uint32_t bmp[], int bits) 
 {
 	int i;
@@ -657,6 +660,7 @@ int thinkos_bmp_alloc(uint32_t bmp[], int bits)
 	}
 	return -1;
 }
+#endif
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 

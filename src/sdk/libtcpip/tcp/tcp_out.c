@@ -27,6 +27,7 @@
 #include <sys/tcp.h>
 #include <sys/mbuf.h>
 #include <tcpip/tcp.h>
+#include <string.h>
 
 #ifndef ENABLE_TCPCHKSUMCHECK
 #define ENABLE_TCPCHKSUMCHECK 0
@@ -209,7 +210,7 @@ int tcp_output(struct tcp_pcb * tp)
 	struct tcphdr * th;
 	int flags;
 	unsigned int optlen;
-	uint8_t * opt;
+	uint8_t opt[16];
 	unsigned int hdrlen;
 	uint32_t daddr;
 	uint32_t saddr;
@@ -220,6 +221,8 @@ int tcp_output(struct tcp_pcb * tp)
 	uint32_t snd_max;
 	int off;
 	int win;
+	int w_rem;
+	int q_rem;
 	int len;
 	uint8_t * data;
 	int sendalot;
@@ -250,9 +253,11 @@ again:
 
 	/* Ref.: TCP/IP Ilustrated Voume 2, pg. 854 */
 	off = snd_nxt - snd_una;
-	win = tp->snd_wnd;
+	w_rem = tp->snd_wnd - off;
+	q_rem = tp->snd_q.len - off;
 
 	flags = tcp_outflags[tp->t_state];
+
 	/*
 	 * TODO:
 	 * If in persist timeout with window of 0, send 1 byte. ...
@@ -260,7 +265,10 @@ again:
 	 */
 
 	/* Ref.: TCP/IP Ilustrated Voume 2, pg. 855 */
-	len = MIN(tp->snd_q.len, tp->snd_wnd) - off;
+	len = MIN(w_rem, q_rem);
+
+	DCC_LOG2(LOG_INFO, "queue=%d window=%d", q_rem, w_rem);
+
 	if (len < 0) {
 		/*
 		 * If FIN has been sent but not acked,
@@ -268,7 +276,7 @@ again:
 		 * len will be -1. ...
 		 */
 		len = 0;
-		if (win == 0) {
+		if (w_rem == 0) {
 			DCC_LOG(LOG_INFO, "window closed, stop rxmt tmr");
 			tp->t_rxmt_tmr = 0;
 			snd_nxt = snd_una;
@@ -304,7 +312,7 @@ again:
 		if ((idle || (tp->t_flags & TF_NODELAY)) && 
 			(len + off >= tp->snd_q.len)) {
 */
-		if ((idle) && (len + off >= tp->snd_q.len)) {
+		if ((idle) && (len >= q_rem)) {
 			if (idle) {
 				DCC_LOG(LOG_INFO, "idle, send..."); 
 			} else  {
@@ -374,12 +382,12 @@ again:
 	}
 
 	if (flags & TH_SYN) {
-		DCC_LOG1(LOG_TRACE, "<%05x> SYN send...", tp);
+		DCC_LOG1(LOG_INFO, "<%05x> SYN send...", tp);
 		goto send;
 	}
 
 	if (flags & TH_RST) {
-		DCC_LOG1(LOG_TRACE, "<%05x> RST send...", tp);
+		DCC_LOG1(LOG_INFO, "<%05x> RST send...", tp);
 		goto send;
 	}
 
@@ -442,21 +450,9 @@ send:
 									sizeof(struct tcphdr));
 	}
 
-	iph = ifn_mmap(rt->rt_ifn, sizeof(struct iphdr) + 
-				   sizeof(struct tcphdr) + len);
-
-	if (iph == NULL) {
-		DCC_LOG1(LOG_ERROR, "<%05x> ifn_mmap() failed!", (int)tp);
-		return 0;
-	}
-
-	iph_template(iph, IPPROTO_TCP, ip_defttl, ip_deftos);
-	th = (struct tcphdr *)iph->opt;
-
 	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 872 */
 	optlen = 0;
 	hdrlen = sizeof(struct tcphdr);
-	opt = th->th_opt;
 	if (flags & TH_SYN) {
 		uint16_t * mss;
 		/* fill the tcp options */
@@ -466,7 +462,7 @@ send:
 		*mss = htons(tcp_mss(tp, 0));
 		optlen = 4;
 	}
-
+	
 	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 873 */
 	hdrlen += optlen;
 
@@ -493,8 +489,6 @@ send:
 		/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 876 */
 	}
 
-	mk_iphdr(iph, saddr, daddr, hdrlen + len);
-
 	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 877 */
 	/*
 	 * Fill in fields ...
@@ -504,15 +498,6 @@ send:
 		(snd_nxt == snd_max)) {
 		snd_nxt--;
 	}
-
-	if ((len) || (flags & (TH_SYN | TH_FIN)))
-		th->th_seq = htonl(snd_nxt);
-	else
-		th->th_seq = htonl(snd_max);
-
-	th->th_ack = htonl(tp->rcv_nxt);
-
-	th->th_flags = flags;
 
 	/* TODO: Calculate receive window. Don't shrink window,
 	   but avoid silly window syndrome. */
@@ -525,6 +510,31 @@ send:
 
 //	if (win < tp->rcv_adv_wnd)
 //		win = tp->rcv_adv_wnd;
+
+
+	iph = ifn_mmap(rt->rt_ifn, sizeof(struct iphdr) + 
+				   sizeof(struct tcphdr) + len);
+
+	if (iph == NULL) {
+		DCC_LOG1(LOG_ERROR, "<%05x> ifn_mmap() failed!", (int)tp);
+		return 0;
+	}
+
+	iph_template(iph, IPPROTO_TCP, ip_defttl, ip_deftos);
+	th = (struct tcphdr *)iph->opt;
+
+	mk_iphdr(iph, saddr, daddr, hdrlen + len);
+
+	memcpy(th->th_opt, opt, optlen);
+
+	if ((len) || (flags & (TH_SYN | TH_FIN)))
+		th->th_seq = htonl(snd_nxt);
+	else
+		th->th_seq = htonl(snd_max);
+
+	th->th_ack = htonl(tp->rcv_nxt);
+
+	th->th_flags = flags;
 
 	th->th_win = htons(win);
 
@@ -554,6 +564,32 @@ send:
 
 	th->th_sum = ~sum;
 
+#if (ENABLE_TCPCHKSUMCHECK)
+	checksum_check(tp, iph, m);
+#endif
+
+#if (ENABLE_TCPDUMP)
+	tcp_dump(iph, th, TCPDUMP_TX);
+#endif
+
+	TCP_PROTO_STAT_ADD(tx_ok, 1);
+
+	DCC_LOG7(LOG_INFO, "%I:%d > %I:%d %s win=%d (%d)", 
+			 iph->saddr, ntohs(th->th_sport), 
+			 iph->daddr, ntohs(th->th_dport), 
+			 tcp_all_flags[th->th_flags], win, len);
+
+	if ((ret = ip_output(rt->rt_ifn, rt, iph)) < 0) {
+		DCC_LOG4(LOG_ERROR, "ip_output(): > %I:%d %s (%d)", 
+				 iph->daddr, ntohs(th->th_dport), 
+				 tcp_all_flags[th->th_flags], len);
+		ifn_munmap(rt->rt_ifn, iph);
+		/* FIXME: if the reason to fail was an arp failure
+		   try to query an address pending for resolution ... */
+		TCP_PROTO_STAT_ADD(tx_drop, 1);
+		return ret;
+	}
+
 	/* In transmit state, time the transmission and arrange for
 	   the retransmit.  In persist state, just set snd_max.
 	   Ref.: TCP/IP Ilustrated Voume 2, pg. 881 */
@@ -577,6 +613,7 @@ send:
 		/* TODO: time this transmission if not a retransmission and
 		   not currently timing anything */
 	}
+
 	/* Set retransmit timer if not currently set,
 	   and not doing an ack or a keepalive probe.
 	   Initial value for retransmit is smoothed
@@ -592,30 +629,9 @@ send:
 		/* tp->t_flags &= ~TF_IDLE; */
 	}
 
-#if (ENABLE_TCPCHKSUMCHECK)
-	checksum_check(tp, iph, m);
-#endif
-
 	tp->snd_seq = snd_una;
 	tp->snd_off = snd_nxt - tp->snd_seq;
 	tp->snd_max = snd_max - tp->snd_seq;
-
-#if (ENABLE_TCPDUMP)
-	tcp_dump(iph, th, TCPDUMP_TX);
-#endif
-
-	TCP_PROTO_STAT_ADD(tx_ok, 1);
-
-	if ((ret = ip_output(rt->rt_ifn, rt, iph)) < 0) {
-		DCC_LOG4(LOG_ERROR, "ip_output(): > %I:%d %s (%d)", 
-				 iph->daddr, ntohs(th->th_dport), 
-				 tcp_all_flags[th->th_flags], len);
-		ifn_munmap(rt->rt_ifn, iph);
-		/* FIXME: if the reason to fail was an arp failure
-		   try to query an address pending for resolution ... */
-		TCP_PROTO_STAT_ADD(tx_drop, 1);
-		return ret;
-	}
 
 	if (tp->t_state != TCPS_ESTABLISHED) {
 		DCC_LOG6(LOG_INFO, "%5u %d->%I:%d %s (%d)", 

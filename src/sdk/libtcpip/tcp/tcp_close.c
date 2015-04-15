@@ -57,7 +57,7 @@ int tcp_close(struct tcp_pcb * __tp)
 		case TCPS_TIME_WAIT:
 		case TCPS_CLOSED:  
 		case TCPS_SYN_SENT:
-			DCC_LOG2(LOG_TRACE, "<%05x> [%s]", (int)__tp, 
+			DCC_LOG2(LOG_INFO, "<%05x> [%s]", (int)__tp, 
 					 __tcp_state[__tp->t_state]);
 			if (__tp->t_cond >= 0) {
 				thinkos_cond_free(__tp->t_cond);
@@ -77,13 +77,13 @@ int tcp_close(struct tcp_pcb * __tp)
 			 */
 //			__tp->rcv_wnd = 0;
 			__tp->t_state = TCPS_FIN_WAIT_1;
-			DCC_LOG1(LOG_TRACE, "<%05x> [FIN_WAIT_1]", (int)__tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [FIN_WAIT_1]", (int)__tp);
 			break;
 
 		/* passive close */
 		case TCPS_CLOSE_WAIT:
 			__tp->t_state = TCPS_LAST_ACK;
-			DCC_LOG1(LOG_TRACE, "<%05x> [LAST_ACK]", (int)__tp);
+			DCC_LOG1(LOG_INFO, "<%05x> [LAST_ACK]", (int)__tp);
 			/* discard the data 
 			 *  TODO: check whether both buffers must be 
 			 * released or not. Probably they where released already.

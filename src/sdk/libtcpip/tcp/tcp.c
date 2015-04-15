@@ -139,7 +139,7 @@ struct tcp_pcb * tcp_pcb_new(struct pcb_list * __list)
 	memset(tp, 0, sizeof(struct tcp_pcb));
 	tp->t_cond = -1;
 
-	DCC_LOG1(LOG_TRACE, "<%05x>", (int)tp);
+	DCC_LOG1(LOG_INFO, "<%05x>", (int)tp);
 
 	return tp;
 }
@@ -176,16 +176,16 @@ int tcp_pcb_free(struct tcp_pcb * tp)
 
 		/* listening sockets do not have receiving or trasmmit queues,
 		so we don't release this structures */
-		DCC_LOG1(LOG_TRACE, "<%05x> release LISTEN", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> release LISTEN", (int)tp);
 		return pcb_move((struct pcb *)tp, &__tcp__.listen, &__tcp__.free);
 	} else  if (tp->t_state == TCPS_CLOSED) {
-		DCC_LOG1(LOG_TRACE, "<%05x> release CLOSED", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> release CLOSED", (int)tp);
 		/* connections in the close state had their buffers
 		and conditional variables released already,
 		just release the control block. */
 		return pcb_move((struct pcb *)tp, &__tcp__.closed, &__tcp__.free);
 	} else {
-		DCC_LOG1(LOG_TRACE, "<%05x> [CLOSED]", (int)tp);
+		DCC_LOG1(LOG_INFO, "<%05x> [CLOSED]", (int)tp);
 		/* release all the control structures */
 
 		mbuf_queue_free(&tp->rcv_q);
@@ -207,7 +207,7 @@ struct tcp_pcb * tcp_alloc(void)
 	if ((tp = tcp_pcb_new(&__tcp__.closed)) != NULL)
 		tp->t_state = TCPS_CLOSED;
 
-	DCC_LOG1(LOG_TRACE, "<%05x>", (int)tp);
+	DCC_LOG1(LOG_INFO, "<%05x>", (int)tp);
 
 	tcpip_net_unlock();
 
@@ -279,7 +279,13 @@ void tcp_init(void)
 	__tcp__.out.cond = thinkos_cond_alloc();
 	DCC_LOG1(LOG_TRACE, "tcp output_cond=%d", __tcp__.out.cond);
 
-	DCC_LOG1(LOG_TRACE, "max active TCP PCBs : %d ", tcp_pcb_active_max);
+	DCC_LOG1(LOG_TRACE, "   max active TCP PCBs : %d ", tcp_pcb_active_max);
+	DCC_LOG1(LOG_TRACE, " max receive queue len : %d ", tcp_maxrcv);
+	DCC_LOG1(LOG_TRACE, "max transmit queue len : %d ", tcp_maxsnd);
+	DCC_LOG1(LOG_TRACE, "    max receive window : %d ", tcp_maxwin);
+	DCC_LOG1(LOG_TRACE, "           default mss : %d ", tcp_defmss);
+	DCC_LOG1(LOG_TRACE, "               max mss : %d ", tcp_maxmss);
+
 #if 0
 	DCC_LOG1(LOG_TRACE, "max listen TCP PCBs : %d ", tcp_pcb_listen_max);
 #endif

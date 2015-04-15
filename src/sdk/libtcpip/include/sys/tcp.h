@@ -42,8 +42,16 @@
 #define ENABLE_NET_TCP_CHECKSUM 1
 #endif
 
-#ifndef ENABLE_NET_TCP_TIMEWAIT
-#define ENABLE_NET_TCP_TIMEWAIT 1
+#ifndef ENABLE_TCP_PROTO_STAT
+#define ENABLE_TCP_PROTO_STAT   0
+#endif
+
+#ifndef TCP_ENABLE_HEADER_PREDICTION 
+#define TCP_ENABLE_HEADER_PREDICTION 1
+#endif
+
+#ifndef TCP_ENABLE_TIMEWAIT       
+#define TCP_ENABLE_TIMEWAIT    1
 #endif
 
 #ifndef NET_TCP_PCB_ACTIVE_MAX
@@ -118,14 +126,6 @@
 
 #ifndef MAX
 #define MAX(X, Y) (((int)(X) > (int)(Y)) ? (X) : (Y))
-#endif
-
-#ifndef ENABLE_TCP_PROTO_STAT
-#define ENABLE_TCP_PROTO_STAT 0
-#endif
-
-#ifndef ENABLE_TCP_HEADER_PREDICTION
-#define ENABLE_TCP_HEADER_PREDICTION 1
 #endif
 
 struct tcp_listen_pcb {

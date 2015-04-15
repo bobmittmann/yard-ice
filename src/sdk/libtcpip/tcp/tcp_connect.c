@@ -27,12 +27,14 @@
 #include <sys/tcp.h>
 
 #include <tcpip/tcp.h>
+#include <tcpip/ifnet.h>
 #include <errno.h>
 
 int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port) 
 {
 	struct route * rt;
 	in_addr_t laddr;
+	uint16_t lport;
 	int mss;
 
 	if (__tp == NULL) {
@@ -47,9 +49,11 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 		return -ENOTSOCK;
 	}
 
+	DCC_LOG2(LOG_INFO, "%I,%d", __addr, htons(__port)); 
+
 	tcpip_net_lock();
 
-	if ((rt = __route_lookup(__tp->t_faddr)) == NULL) {
+	if ((rt = __route_lookup(__addr)) == NULL) {
 		DCC_LOG(LOG_WARNING, "no route to host");			
 		if (__tp->t_laddr == INADDR_ANY) {
 			DCC_LOG(LOG_WARNING, "no local address");			
@@ -59,6 +63,10 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 		mss = tcp_defmss;
 		laddr = __tp->t_laddr; 
 	} else {
+		DCC_LOG4(LOG_INFO, "route %I:%I --> %I %s", 
+				 rt->rt_dst, rt->rt_genmask, 
+				 rt->rt_gateway, ifn_name(rt->rt_ifn));
+				 
 		/* default mss to the network interface mtu. */
 		mss = rt->rt_ifn->if_mtu - (sizeof(struct tcphdr) + 
 									sizeof(struct iphdr));
@@ -69,20 +77,14 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 		} else
 			laddr = __tp->t_laddr; 
 	}
-
-	/* Check to see if this address is not in use already. */
-	if (pcb_lookup(__addr, __port, laddr, __tp->t_lport, 
-				   &__tcp__.listen) != NULL) {
-		DCC_LOG3(LOG_WARNING, "<%04x> %I:%d in use", (int)__tp,
-				 __addr, ntohs(__port));
-		return -EADDRINUSE;
-	}
-
-	__tp->t_faddr = __addr;
-	__tp->t_fport = __port;
-
 	if (mss > tcp_maxmss)
 		mss = tcp_maxmss;
+
+	do {
+		/* generate an ephemeral port number from 1024 to 33791 */
+		lport = ntohs(((__tcp__.port_seq++) & 0x7fff) + 1024);
+		/* Check to see if this address is not in use already. */
+	} while (pcb_lookup(__addr, __port, laddr, lport, &__tcp__.active));
 
 	if ((__tp->t_cond = thinkos_cond_alloc()) < 0) {
 		DCC_LOG(LOG_WARNING, "thinkos_cond_alloc()");
@@ -95,8 +97,16 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 	tp->t_laddr = iph->daddr;
 	tp->t_fport = th->th_sport; 
 	tp->t_faddr = iph->saddr; */
+	__tp->t_faddr = __addr;
+	__tp->t_fport = __port;
+
 	__tp->t_laddr = laddr; 
+	__tp->t_lport = lport; 
 	__tp->t_maxseg = mss;
+
+	DCC_LOG5(LOG_INFO, "<%04x> local(%I:%d) remote(%I:%d)", (int)__tp,
+			 __tp->t_laddr, ntohs(__tp->t_lport), 
+			 __tp->t_faddr, ntohs(__tp->t_fport));
 
 	/*
 	 * TODO: max queue size...
@@ -108,7 +118,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 
 	/* set the initial sequence number */
 	__tp->snd_seq = (++__tcp__.iss << 20);
-	DCC_LOG2(LOG_TRACE, "<%05x> snd_seq = (%d)", (int)__tp, __tp->snd_seq);
+	DCC_LOG2(LOG_INFO, "<%05x> snd_seq = (%d)", (int)__tp, __tp->snd_seq);
 
 	__tp->snd_off = 0;
 	__tp->snd_max = 0;
@@ -126,7 +136,7 @@ int tcp_connect(struct tcp_pcb * __tp, in_addr_t __addr, uint16_t __port)
 
 	tcp_output_sched(__tp);
 
-	DCC_LOG1(LOG_TRACE, "<%05x> [SYN_SENT]", (int)__tp);
+	DCC_LOG1(LOG_INFO, "<%05x> [SYN_SENT]", (int)__tp);
 
 	for (;;) {
 		if ((__tp->t_state == TCPS_CLOSED)) {
