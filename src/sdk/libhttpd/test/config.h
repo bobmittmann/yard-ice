@@ -46,7 +46,7 @@
 #define THINKOS_MUTEX_MAX 8
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
 
-#define THINKOS_COND_MAX 32
+#define THINKOS_COND_MAX          64
 #define THINKOS_ENABLE_COND_ALLOC 1
 
 #define THINKOS_SEMAPHORE_MAX 8
@@ -84,20 +84,21 @@
 
 #define ENABLE_TCPDUMP 0
 
-#define IFNET_INTERFACES_MAX 2
+#define IFNET_INTERFACES_MAX         2
 
-#define MBUF_POOL_SIZE    64
+#define MBUF_POOL_SIZE               128
 
-#define TCP_FAST_TMR_MS   100
-#define ENABLE_NET_TCP_TIMEWAIT 1
-#define ENABLE_TCP_HEADER_PREDICTION 1
-#define NET_TCP_PCB_ACTIVE_MAX   24
-#define NET_UDP_PCB_ACTIVE_MAX   1
+#define TCP_FAST_TMR_MS              100
+#define TCP_ENABLE_TIMEWAIT          1
+#define TCP_ENABLE_HEADER_PREDICTION 1
+#define NET_TCP_PCB_ACTIVE_MAX       64
+#define NET_UDP_PCB_ACTIVE_MAX       1
 
-#define TCP_IDLE_DET_SEC         10
-#define TCP_KEEP_ALIVE_PROBE_SEC 20
-#define TCP_MAX_IDLE_SEC         60
-#define TCP_MAX_SND_QUEUE   (1460 * 4)
+#define TCP_DEFAULT_MSL_SEC          2
+#define TCP_IDLE_DET_SEC             10
+#define TCP_KEEP_ALIVE_PROBE_SEC     20
+#define TCP_MAX_IDLE_SEC             60
+#define TCP_MAX_SND_QUEUE            (1460 * 4)
 
 /* use hardware checksum */
 #define ENABLE_NET_TCP_CHECKSUM 0

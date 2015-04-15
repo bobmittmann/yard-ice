@@ -65,7 +65,7 @@ void * stm32f_ethif_mmap(struct ifnet * __if, size_t __len)
 		return NULL;
 	}
 
-	DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", pktbuf);
+	DCC_LOG1(LOG_INFO, "pktbuf=%p ++", pktbuf);
 
 	return pktbuf + 14;
 }
@@ -88,11 +88,11 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	head = drv->tx.head;
 #if 0
 	while ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
-		DCC_LOG(LOG_TRACE, "wait....");
+		DCC_LOG(LOG_INFO, "wait....");
 		thinkos_flag_take(drv->tx.flag);
-		DCC_LOG(LOG_TRACE, "got flag....");
+		DCC_LOG(LOG_INFO, "got flag....");
 		thinkos_sleep(200);
-		DCC_LOG(LOG_TRACE, "wakeup....");
+		DCC_LOG(LOG_INFO, "wakeup....");
 	}
 #endif
 	if ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
@@ -124,7 +124,7 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	}
 
 	hdr = (struct eth_hdr *)((uintptr_t)__buf - 14);
-	DCC_LOG1(LOG_TRACE, "pktbuf=%p", hdr);
+	DCC_LOG1(LOG_INFO, "pktbuf=%p", hdr);
 
 	hdr->eth_type = __proto;
 
@@ -140,12 +140,12 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	hdr->eth_dst[5] = __dst[5];
 
 #if 0
-	DCC_LOG7(LOG_TRACE, "from: %02x:%02x:%02x:%02x:%02x:%02x (prot=%d)",
+	DCC_LOG7(LOG_INFO, "from: %02x:%02x:%02x:%02x:%02x:%02x (prot=%d)",
 			 hdr->eth_src[0], hdr->eth_src[1], 
 			 hdr->eth_src[2], hdr->eth_src[3], 
 			 hdr->eth_src[4], hdr->eth_src[5], hdr->eth_type); 
 
-	DCC_LOG7(LOG_TRACE, "to: %02x:%02x:%02x:%02x:%02x:%02x (len=%d)",
+	DCC_LOG7(LOG_INFO, "to: %02x:%02x:%02x:%02x:%02x:%02x (len=%d)",
 			 hdr->eth_dst[0], hdr->eth_dst[1], 
 			 hdr->eth_dst[2], hdr->eth_dst[3], 
 			 hdr->eth_dst[4], hdr->eth_dst[5], __len); 
@@ -173,7 +173,7 @@ int stm32f_ethif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
 {
 	uint8_t * pktbuf = (uint8_t *)((uintptr_t)__pkt - 14);
 	
-	DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+	DCC_LOG1(LOG_INFO, "pktbuf=%p --", pktbuf);
 	pktbuf_free(pktbuf);
 	return 0;
 }
@@ -182,7 +182,7 @@ int stm32f_ethif_munmap(struct ifnet * __if, void * __mem)
 {
 	uint8_t * pktbuf = (uint8_t *)((uintptr_t)__mem - 14);
 	
-	DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+	DCC_LOG1(LOG_INFO, "pktbuf=%p --", pktbuf);
 	pktbuf_free(pktbuf);
 	return 0;
 }
@@ -239,11 +239,11 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 		goto error;
 	}
 	if (ext_st.ipcb)
-		DCC_LOG(LOG_TRACE, "IP checksum bypass.");
+		DCC_LOG(LOG_INFO, "IP checksum bypass.");
 	if (ext_st.ipv4pr)
 		DCC_LOG(LOG_INFO, "IPv4 packet received.");
 	if (ext_st.ipv6pr)
-		DCC_LOG(LOG_TRACE, "IPv6 packet received.");
+		DCC_LOG(LOG_INFO, "IPv6 packet received.");
 
 	/* get the current buffer */
 	hdr = (struct eth_hdr *)rxdesc->rbap1;
@@ -254,7 +254,7 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
 		abort();
 	}
-	DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", rxdesc->rbap1);
+	DCC_LOG1(LOG_INFO, "pktbuf=%p ++", rxdesc->rbap1);
 
 	/* set the DMA descriptor ownership */
 	rxdesc->rdes0 = ETH_RXDMA_OWN;
@@ -309,7 +309,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	int mtu;
 	int i;
 
-	DCC_LOG2(LOG_TRACE, "if=0x%p drv=0x%p", __if, drv);
+	DCC_LOG2(LOG_INFO, "if=0x%p drv=0x%p", __if, drv);
 	drv->ifn = __if;
 	drv->eth = eth;
 
@@ -321,9 +321,9 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 	drv->event = __if->if_idx;
 
-	DCC_LOG1(LOG_TRACE, "mtu=%d", mtu);
+	DCC_LOG1(LOG_INFO, "mtu=%d", mtu);
 
-	DCC_LOG(LOG_TRACE, "MAC configuration ...");
+	DCC_LOG(LOG_INFO, "MAC configuration ...");
 	/* Bit 25 - CRC stripping for Type frames */
 	/* Bit 14 - Fast Ethernet speed */
 	/* Bit 13 - Receive own disable */
@@ -334,17 +334,17 @@ int stm32f_ethif_init(struct ifnet * __if)
 	eth->maccr = ETH_CSTF | ETH_FES | ETH_ROD | ETH_DM | ETH_IPCO | 
 		ETH_TE | ETH_RE;
 
-	DCC_LOG(LOG_TRACE, "DMA operation mode ...");
+	DCC_LOG(LOG_INFO, "DMA operation mode ...");
 	/* Bit 21 - Transmit store and forward */
 	/* Bit 25 - Receive store and forward */
 	/* Bit 20 - Flush transmit FIFO */
 	eth->dmaomr = ETH_RSF | ETH_TSF | ETH_FTF;
 
-	DCC_LOG(LOG_TRACE, "DMA bus mode ...");
+	DCC_LOG(LOG_INFO, "DMA bus mode ...");
 	/* Bit 7 - Enhanced descriptor format enable */
 	eth->dmabmr = ETH_EDFE;
 
-	DCC_LOG(LOG_TRACE, "DMA RX descriptors ...");
+	DCC_LOG(LOG_INFO, "DMA RX descriptors ...");
 	for (i = 0; i < STM32F_ETH_RX_NDESC; ++i) {
 		/* configure recevie descriptors */
 		rxdesc = &drv->rx.desc[i];
@@ -362,7 +362,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 			DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
 			abort();
 		}
-		DCC_LOG1(LOG_TRACE, "pktbuf=%p ++", rxdesc->rbap1);
+		DCC_LOG1(LOG_INFO, "pktbuf=%p ++", rxdesc->rbap1);
 		/* link to the next descriptor */
 		rxdesc->rbap2 = (void *)&drv->rx.desc[i + 1];
 	}
@@ -377,10 +377,10 @@ int stm32f_ethif_init(struct ifnet * __if)
 #if 0
 	/* alloc a new semaphore */
 	drv->rx.sem = thinkos_sem_alloc(0); 
-	DCC_LOG1(LOG_TRACE, "rx.sem=%d", drv->rx.sem);
+	DCC_LOG1(LOG_INFO, "rx.sem=%d", drv->rx.sem);
 #endif
 
-	DCC_LOG(LOG_TRACE, "DMA TX descriptors ...");
+	DCC_LOG(LOG_INFO, "DMA TX descriptors ...");
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
 		/* configure transmit descriptors */
 		txdesc = &drv->tx.desc[i];
@@ -413,16 +413,16 @@ int stm32f_ethif_init(struct ifnet * __if)
 #if 0
 	/* alloc a new event wait queue */
 	drv->tx.flag = thinkos_flag_alloc(); 
-	DCC_LOG1(LOG_TRACE, "tx.flag=%d", drv->tx.flag);
+	DCC_LOG1(LOG_INFO, "tx.flag=%d", drv->tx.flag);
 #endif
 
 #if 1
 	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
-	DCC_LOG1(LOG_TRACE, "tx.sem=%d", drv->tx.sem);
+	DCC_LOG1(LOG_INFO, "tx.sem=%d", drv->tx.sem);
 #endif
 
 #if 0
-	DCC_LOG(LOG_TRACE, "__os_thread_create()");
+	DCC_LOG(LOG_INFO, "__os_thread_create()");
 	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 
 							  &stm32f_ethif_inf);
 #endif
@@ -438,21 +438,21 @@ int stm32f_ethif_init(struct ifnet * __if)
 		ETH_TUIE | ETH_TJTIE | ETH_TIE | ETH_TBUIE;
 
 
-	DCC_LOG3(LOG_TRACE, "RX DMA: %d (desc) x %d = %d bytes", 
+	DCC_LOG3(LOG_INFO, "RX DMA: %d (desc) x %d = %d bytes", 
 			 STM32F_ETH_RX_NDESC, STM32F_ETH_RX_BUF_SIZE + 
 			 sizeof(struct rxdma_enh_desc),
 			 STM32F_ETH_RX_NDESC * (STM32F_ETH_RX_BUF_SIZE + 
 			 sizeof(struct rxdma_enh_desc))); 
-	DCC_LOG3(LOG_TRACE, "TX DMA: %d (desc) x %d = %d bytes", 
+	DCC_LOG3(LOG_INFO, "TX DMA: %d (desc) x %d = %d bytes", 
 			 STM32F_ETH_TX_NDESC, STM32F_ETH_TX_BUF_SIZE + 
 			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr),
 			 STM32F_ETH_TX_NDESC * (STM32F_ETH_TX_BUF_SIZE + 
 			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr)));
-	DCC_LOG1(LOG_TRACE, "Ethernet driver memory: %d bytes", 
+	DCC_LOG1(LOG_INFO, "Ethernet driver memory: %d bytes", 
 			 sizeof(struct stm32f_eth_drv));
-	DCC_LOG1(LOG_TRACE, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
+	DCC_LOG1(LOG_INFO, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
 
-	DCC_LOG1(LOG_TRACE, "<%d> DMA interrupts enabled ...", 
+	DCC_LOG1(LOG_INFO, "<%d> DMA interrupts enabled ...", 
 			 thinkos_thread_self());
 
 	/* enable DMA RX interrupts */
@@ -498,7 +498,7 @@ void stm32f_eth_isr(void)
 	struct stm32f_eth * eth = STM32F_ETH;
 	uint32_t dmasr;
 
-//	DCC_LOG1(LOG_TRACE, "if=0x%p", ifn);
+//	DCC_LOG1(LOG_INFO, "if=0x%p", ifn);
 
 	dmasr = eth->dmasr;
 //	show_dma_status(dmasr);
@@ -528,7 +528,7 @@ void stm32f_eth_isr(void)
 				break;
 			}
 			pktbuf = txdesc->tbap1;
-			DCC_LOG1(LOG_TRACE, "pktbuf=%p --", pktbuf);
+			DCC_LOG1(LOG_INFO, "pktbuf=%p --", pktbuf);
 			pktbuf_free(pktbuf);
 			tail++;
 			thinkos_sem_post_i(drv->tx.sem);
@@ -580,7 +580,7 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 	stm32f_eth_init(eth);
 	stm32f_eth_mac_set(eth, 0, ethaddr);
 
-	DCC_LOG2(LOG_TRACE, "ifn_register(%I, %I)", ip_addr, netmask);
+	DCC_LOG2(LOG_INFO, "ifn_register(%I, %I)", ip_addr, netmask);
 
 	ifn = ifn_register((void *)&stm32f_eth_drv, &stm32f_ethif_op, 
 					   eth, STM32F_IRQ_ETH);
@@ -589,7 +589,7 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 		ifn_ipv4_set(ifn, ip_addr, netmask);
 	}
 
-	DCC_LOG(LOG_TRACE, "done.");
+	DCC_LOG(LOG_INFO, "done.");
 
 	return ifn;
 }

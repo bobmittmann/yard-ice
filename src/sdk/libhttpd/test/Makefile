@@ -23,7 +23,8 @@
 PROG = httpd_test
 
 CFILES = httpd_test.c tcp_echo.c stdio.c www_root.c www_img.c www_lib.c \
-		 www_cgi.c zarathustra.html.c treeview.html.c treeview.css.c tftp.c
+		 www_cgi.c zarathustra.html.c treeview.html.c treeview.css.c tftp.c \
+		 netcat.c tcp_qotd.c thinkos.html.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
@@ -59,11 +60,14 @@ include ../../../mk/stm32f4xx.mk
 %.c: %.gz
 	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
 
-#%.html.c: %html..gz
+#%.html.c: %.html.gz
 #	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
 
-#%.css.c: %css..gz
+#%.css.c: %.css.gz
 #	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
+
+%.html.c: %.html
+	$(TOOLS)/bin2hex.py -H www.h $< > $@ 
 
 %.html.gz: %.html
 	gzip -c $< > $@ 

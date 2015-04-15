@@ -442,19 +442,19 @@ struct tcp_pcb * httpd_start(struct httpd * httpd,
 	struct tcp_pcb * tp;
 
 	if (httpd == NULL) {
-		DCC_LOG(LOG_ERROR, "Invalid parameter!\n");
+		DCC_LOG(LOG_ERROR, "Invalid parameter!");
 		return NULL;
 	}
 
 	if ((tp = tcp_alloc()) == NULL) {
-		DCC_LOG(LOG_ERROR, "Can't alloc TCP PCB!\n");
+		DCC_LOG(LOG_ERROR, "Can't alloc TCP PCB!");
 		return NULL;
 	}
 
 	tcp_bind(tp, INADDR_ANY, htons(port));
 
 	if (tcp_listen(tp, backlog) != 0) {
-		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!\n");
+		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!");
 		return NULL;
 	}
 
@@ -471,6 +471,7 @@ struct tcp_pcb * httpd_start(struct httpd * httpd,
 
 int http_close(struct httpctl * ctl)
 {
+	DCC_LOG(LOG_TRACE, "...");
 	return tcp_close(ctl->tp);
 }
 

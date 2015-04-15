@@ -52,6 +52,7 @@ const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 void stdio_init(void);
 int stdio_shell(void);
 int tcp_echo_start(void);
+int tcp_qotd_start(void);
 int tftpd_start(void);
 
 extern struct httpdobj www_root[];
@@ -187,7 +188,7 @@ int network_config(void)
 		dhcpc_ifconfig(ifn, NULL);
 	}
 
-	loopif_init(IPV4_ADDR(127, 0, 0, 1), IPV4_ADDR(255, 0, 0, 0));
+	loopif_init();
 
 	return 0;
 }
@@ -313,13 +314,15 @@ int main(int argc, char ** argv)
 							  &httpd4_inf);
 
 	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
-
 	tcp_echo_start();
 
-	DCC_LOG(LOG_TRACE, "7. TFTP server ...");
+	DCC_LOG(LOG_TRACE, "7. TCP QOTD ...");
+	tcp_qotd_start();
+
+	DCC_LOG(LOG_TRACE, "8. TFTP server ...");
 	tftpd_start();
 
-	DCC_LOG(LOG_TRACE, "8. starting console shell...");
+	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 
 	for (;;) {
 		thinkos_sleep(1000);
