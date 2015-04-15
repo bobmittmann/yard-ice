@@ -50,13 +50,18 @@ const char obj_type_name[][8] = {
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
 	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
 	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
-static int bmp_bit_cnt(uint32_t bmp)
+static int bmp_bit_cnt(uint32_t bmp[], int bits)
 {
-	int i;
 	int cnt = 0;
+	int j;
+	int i;
 
-	for (i = 0; i < 32; ++i)
-		cnt += ((1 << i) & bmp) ? 1: 0;
+	for (j = 0; j < (bits / 32); ++j)
+		for (i = 0; i < 32; ++i)
+			cnt += ((1 << i) & bmp[j]) ? 1: 0;
+
+	for (i = 0; i < bits % 32; ++i)
+		cnt += ((1 << i) & bmp[j]) ? 1: 0;
 
 	return cnt;
 }
@@ -108,28 +113,28 @@ void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 
 	fprintf(f, " Cnt:");
 #if THINKOS_ENABLE_THREAD_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc[0] & 
-		~(0xffffffffLL << THINKOS_THREADS_MAX)), THINKOS_THREADS_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc, THINKOS_THREADS_MAX), 
+			THINKOS_THREADS_MAX);
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc[0] & 
-		~(0xffffffffLL << THINKOS_MUTEX_MAX)), THINKOS_MUTEX_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc, THINKOS_MUTEX_MAX), 
+			THINKOS_MUTEX_MAX);
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc[0] & 
-		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc, THINKOS_COND_MAX),
+			THINKOS_COND_MAX);
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc[0] & 
-		~(0xffffffffLL << THINKOS_SEMAPHORE_MAX)), THINKOS_SEMAPHORE_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc, THINKOS_SEMAPHORE_MAX), 
+			THINKOS_SEMAPHORE_MAX);
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->ev_alloc[0] & 
-		~(0xffffffffLL << THINKOS_EVENT_MAX)), THINKOS_EVENT_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->ev_alloc, THINKOS_EVENT_MAX),
+			THINKOS_EVENT_MAX);
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
-	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc[0] & 
-		~(0xffffffffLL << THINKOS_COND_MAX)), THINKOS_COND_MAX);
+	fprintf(f, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc, THINKOS_FLAG_MAX),
+			THINKOS_FLAG_MAX);
 #endif
 	fprintf(f, "\n");
 
