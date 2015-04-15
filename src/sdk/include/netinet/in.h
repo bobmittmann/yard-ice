@@ -109,7 +109,7 @@ struct sockaddr_in {
 #define	IN_LOOPBACKNET		127
 
 /* Address to loopback in software to local host.  */
-#define INADDR_LOOPBACK	((in_addr_t) 0x7f000001)	/* Inet 127.0.0.1.  */
+#define INADDR_LOOPBACK	((in_addr_t) 0x0100007f)	/* Inet 127.0.0.1.  */
 
 #define	IN_CLASSA(a)		((((in_addr_t)(a)) & 0x00000080) == 0)
 #define	IN_CLASSB(a)		((((in_addr_t)(a)) & 0x000000c0) == 0x00000080)
