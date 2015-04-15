@@ -34,6 +34,10 @@
 
 #include <netinet/in.h>
 
+#ifndef QOTD_ENABLE_ALL
+#define QOTD_ENABLE_ALL 0
+#endif
+
 /* 
   Fortune quotes from:
   http://fortunes.cat-v.org/plan_9/ 
@@ -49,7 +53,7 @@ const char * const qotd[] = {
 "A bad workman quarrels with his tools.",
 "A big book is a big nuisance.  - Callimachus, librarian of Alexandria",
 "A billion here, a billion there; soon you're talking real money.  -E.  Dirksen",
-"A bird in hand is safer than one overhead.",
+#if QOTD_ENABLE_ALL
 "A bird in the hand is worth what it will bring.",
 "A block grant is a nice terminal, but it will keep you awake until noon.",
 "A block grant is a solid mass of money surrounded on all sides by governors.",
@@ -1831,6 +1835,8 @@ const char * const qotd[] = {
 "You will step on the night soil of many countries.",
 "You win some, you lose some, and some go into extra innings.",
 "You worry too much about your job.  Stop it.  You are not paid enough to worry.",
+#endif
+
 "You'll just have to sleep faster tonight.",
 "You're being followed.  Cut out the hanky-panky for a few days.",
 "You're so bossy you ought to be milked before you come home at night.",
@@ -1862,8 +1868,11 @@ void __attribute__((noreturn)) tcp_qotd_task(void * arg)
 {
 	struct tcp_pcb * svc;
 	struct tcp_pcb * tp;
+	char s[256];
 	int port = 17;
+	int n;
 	int i;
+	int j;
 
 	svc = tcp_alloc();
 
@@ -1880,15 +1889,17 @@ void __attribute__((noreturn)) tcp_qotd_task(void * arg)
 			abort();
 		}
 
-		DCC_LOG(LOG_TRACE, "Connection accepted.");
+		DCC_LOG(LOG_INFO, "Connection accepted.");
 
-		i = rand() % (sizeof(qotd) / sizeof(char *));
 //		for (i = 0; i < (sizeof(qotd) / sizeof(char *)); ++i)
-			tcp_send(tp, qotd[i], strlen(qotd[i]), 0);
-			tcp_send(tp, "\r\n", 2, 0);
+		for (j = 0; j < 10; ++j) {
+			i = rand() % (sizeof(qotd) / sizeof(char *));
+			n = sprintf(s, "%04d - '%s'\r\n", i, qotd[i]);
+			tcp_send(tp, s, n, 0);
+		}
 
 		tcp_close(tp);
-		DCC_LOG(LOG_TRACE, "Connection closed.");
+		DCC_LOG(LOG_INFO, "Connection closed.");
 	}
 }
 

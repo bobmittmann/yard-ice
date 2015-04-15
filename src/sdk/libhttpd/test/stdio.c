@@ -87,6 +87,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 }
 
 int cmd_netcat(FILE *f, int argc, char ** argv);
+int cmd_oscheck(FILE * f, int argc, char ** argv);
 
 const struct shell_cmd shell_cmd_tab[] = {
 
@@ -114,6 +115,9 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
 
+	{ cmd_oscheck, "check", "ck", 
+		"", "check OS sanity" },
+
 	{ cmd_ping, "ping", "", 
 		"DESTINATION", "send ICMP ECHO_REQUEST to network hosts" },
 
@@ -130,6 +134,8 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
 
+	{ cmd_memxxd, "xxd", "x", "ADDR [COUNT]", 
+		"prints a hexdump of a memory block" },
 
 	{ NULL, "", "", NULL, NULL }
 };

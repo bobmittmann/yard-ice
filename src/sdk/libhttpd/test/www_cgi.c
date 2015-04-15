@@ -31,6 +31,9 @@
 #include <netinet/in.h>
 #include <thinkos.h>
 #include <sys/dcclog.h>
+#include <sys/file.h>
+#include <sys/null.h>
+#include <sys/shell.h>
 #include "www.h"
 
 static const char footer_html[] = HTML_FOOTER;
@@ -192,12 +195,119 @@ int qotd_cgi(struct httpctl * ctl)
 }
 
 /*---------------------------------------------------------------------------
+  Shell Command Exec
+  ---------------------------------------------------------------------------*/
+
+int http_write(struct httpctl * ctl, 
+			   const void * buf, unsigned int len)
+{
+	return tcp_send(ctl->tp, buf, len, 0);
+}
+
+const struct fileop http_fops = {
+	.write = (void *)http_write,
+	.read = (void *)null_read,
+	.flush = (void *)null_flush,
+	.close = (void *)null_close
+};
+
+extern const struct shell_cmd shell_cmd_tab[];
+
+int cmd_exec_cgi(struct httpctl * ctl)
+{
+	struct file http_file = {
+		.data = ctl, 
+		.op = &http_fops 
+	};
+	struct file * f = &http_file;
+	struct shell_cmd * cmd;
+	char * cmd_ln;
+	int ret;
+
+	cmd_ln = http_query_lookup(ctl, "cmd"); 
+	if (cmd_ln == NULL) {
+		DCC_LOG(LOG_WARNING, "invalid request!");
+		/* 400 Bad Request */
+		return httpd_400(ctl->tp);
+	}
+
+	DCC_LOGSTR(LOG_TRACE, "cmd=\"%s\"", cmd_ln);
+
+	httpd_200(ctl->tp, TEXT_PLAIN);
+
+	if ((cmd = cmd_lookup(shell_cmd_tab, cmd_ln)) == NULL) {
+		fprintf(f, "Command not found!\n");
+		return -1;
+	}
+
+	ret = cmd_exec(f, cmd, cmd_ln);
+	if ((ret < 0) && (ret !=  SHELL_ABORT)) {
+		fprintf(f, "Error: %d\n", -ret);
+	}
+
+	return 0;
+}
+
+const char shell_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS Shell Demo</title>\r\n" 
+	META_HTTP META_COPY LINK_ICON LINK_CSS LINK_ZEPTO 
+	"</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Shell Demo</h1>\r\n"
+	"<p>Welcome to the <b>ThinkOS</b> shell demo</p>\r\n"
+	"<pre>\r\n<div id=\"results\" style=\"min-height: 200px;"
+	"border-style: solid; border-width: 1px; border-color: #111;"
+	"\">\r\n</div>\r\n</pre>\r\n"
+	"<div>\r\n<input type=\"text\" id=\"cmd\" value=\"help\" size=\"40\"/>\r\n"
+	"<button id=\"btn\">Exec</button>\r\n"
+	"<input type=\"text\" id=\"tmo\" value=\"1000\" size=\"4\"/>\r\n"
+	"<input type=\"checkbox\" id=\"repeat\" />Repeat\r\n"
+	"</div>\r\n"
+	"<script>\r\n"
+	"var timeout = 0;\r\n"
+	"function cmd_exec() {\r\n"
+	" $.ajax({\r\n"
+	"  type: 'GET', \r\n"
+	"  url: 'exec.cgi', \r\n"
+	"  data: { cmd: $('#cmd').val() }, \r\n"
+	"  dataType: 'text', \r\n"
+	"  timeout: 500, \r\n"
+	"  context: $('body'), \r\n"
+	"  success: function(data) {\r\n"
+	"   $('#results').empty();\r\n"
+	"   $('#results').text(data);\r\n"
+	"  },\r\n"
+	"  error: function(xhr, type){ alert('Ajax error!') },\r\n"
+	"  complete: function() { \r\n"
+	"   if (timeout > 100) {\r\n"
+	"    setTimeout(cmd_exec, timeout);\r\n"
+	"   }\r\n"
+	"  }\r\n"
+	" });\r\n"
+	"};\r\n"
+	"function tmr_cfg() {\r\n"
+	" if ($('#repeat').prop('checked')) {\r\n"
+	"  timeout = parseInt($('#tmo').val());\r\n"
+	" } else {\r\n"
+	"  timeout = 0;\r\n"
+	" } \r\n"
+	"};\r\n"
+	"$(function() {\r\n"
+	" $(document).on('click', '#btn', cmd_exec);\r\n"
+	" $(document).on('click', '#repeat', tmr_cfg);\r\n"
+	"});\r\n"
+	"</script>\r\n"
+	HTML_FOOTER;
+
+
+/*---------------------------------------------------------------------------
   root directory content
   ---------------------------------------------------------------------------*/
 
 struct httpdobj www_cgi[] = {
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = sizeof(cgi_index_html) - 1, .ptr = cgi_index_html },
+	{ .oid = "shell.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
+		.len = sizeof(shell_html) - 1, .ptr = shell_html },
 	{ .oid = "get_data.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = get_data_cgi },
 	{ .oid = "qotd.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
@@ -206,6 +316,9 @@ struct httpdobj www_cgi[] = {
 		.len = 0, .ptr = test1_cgi },
 	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = test2_cgi },
+	{ .oid = "exec.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
+		.len = 0, .ptr = cmd_exec_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
+
 
