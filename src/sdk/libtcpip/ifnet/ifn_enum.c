@@ -44,7 +44,7 @@ int ifn_enum(int (* __callback)(struct ifnet *, void *), void * __parm)
 	for (i = 0; i < ifnet_max; ++i) {
 		ifn = &__ifnet__.ifn[i];
 		if (ifn->if_id != 0) {
-			DCC_LOG1(LOG_TRACE, "%s ...", ifn_name_lut[ifn->if_id]);
+			DCC_LOG1(LOG_INFO, "%s ...", ifn_name_lut[ifn->if_id]);
 			if (__callback(ifn, __parm))
 				break;
 			n++;

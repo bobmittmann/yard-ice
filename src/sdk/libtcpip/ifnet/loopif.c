@@ -55,70 +55,98 @@
 #define LOOPIF_BUF_SIZE 512
 #endif
 
-struct loopif_drv {
-	uint8_t tx_sem;
-	uint8_t proto;
-	int16_t len;
-	uint32_t buf[LOOPIF_BUF_SIZE / sizeof(uint32_t)];
+struct loopif_pkt {
+	uint16_t proto;
+	uint16_t len;
+	uint8_t buf[LOOPIF_BUF_SIZE];
 };
 
-int loopif_send(struct ifnet * __if, const uint8_t * dst, int proto, 
-					const void * buf, int len)
-{
-	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
-
-	if (len > __if->if_mtu)
-		return -1;
-
-	memcpy(drv->buf, buf, len);
-	drv->len = len;
-	drv->proto = proto;
-
-	DCC_LOG2(LOG_INFO, "proto=%d len=%d", proto, len);
-
-	ifn_signal_i(__if->if_idx);
-
-	return len;
-}
+struct loopif_drv {
+	uint8_t tx_sem;
+	struct loopif_pkt pkt;
+};
 
 void * loopif_mmap(struct ifnet * __if, size_t __len)
 {
 	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+	struct loopif_pkt * pkt;
 
-	DCC_LOG1(LOG_TRACE, "(%d)", __len);
+	DCC_LOG1(LOG_INFO, "(%d)", __len);
 
-//	tcpip_net_unlock();
-//	thinkos_sem_wait(drv->tx_sem);
-//	tcpip_net_lock();
+	if (__len > __if->if_mtu)
+		return NULL;
 
-	return drv->buf;
+	pkt = (struct loopif_pkt *)&drv->pkt;
+
+	tcpip_net_unlock();
+	thinkos_sem_wait(drv->tx_sem);
+	tcpip_net_lock();
+
+	return (void *)((uintptr_t)pkt + 4);
+}
+
+int loopif_send(struct ifnet * __if, const uint8_t * __dst, int __proto, 
+					const void * __buf, int __len)
+{
+	struct loopif_pkt * pkt;
+
+	pkt = (struct loopif_pkt *)((uintptr_t)__buf - 4);
+
+	memcpy(pkt->buf, __buf, __len);
+	pkt->len = __len;
+	pkt->proto = __proto;
+
+	DCC_LOG2(LOG_INFO, "proto=%d len=%d", __proto, __len);
+
+	ifn_signal_i(__if->if_idx);
+
+	return __len;
 }
 
 int loopif_pkt_recv(struct ifnet * __if, uint8_t ** __src, 
 						  unsigned int * __proto, uint8_t ** __pkt)
 {
 	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+	struct loopif_pkt * pkt;
 	
-	*__pkt = (uint8_t *)drv->buf;
-//	*__src = drv->src;
-	*__proto = drv->proto;
+	pkt = (struct loopif_pkt *)&drv->pkt;
+	if (pkt->len == 0)
+		return 0;
 
-	DCC_LOG1(LOG_TRACE, "(%d)", drv->len);
+	*__pkt = (void *)((uintptr_t)pkt + 4);
+	*__proto = pkt->proto;
 
-	return drv->len;
+	DCC_LOG1(LOG_INFO, "(%d)", pkt->len);
+
+	return pkt->len;
+}
+
+int loopif_ethif_munmap(struct ifnet * __if, void * __mem)
+{
+//	uint8_t * pktbuf = (uint8_t *)((uintptr_t)__mem - 14);
+//	DCC_LOG1(LOG_INFO, "pktbuf=%p --", pktbuf);
+//	pktbuf_free(pktbuf);
+	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+	struct loopif_pkt * pkt;
+
+	pkt = (struct loopif_pkt *)((uintptr_t)__mem - 4);
+	pkt->len = 0;
+
+	/* ok to send another package */
+	thinkos_sem_post(drv->tx_sem);
+	return 0;
 }
 
 int loopif_pkt_free(struct ifnet * __if, uint8_t * __pkt)
 {
 	struct loopif_drv * drv = (struct loopif_drv *)__if->if_drv;
+	struct loopif_pkt * pkt;
 
-	DCC_LOG1(LOG_TRACE, "(%d)", drv->len);
-
-	drv->len = 0;
+	pkt = (struct loopif_pkt *)((uintptr_t)__pkt - 4);
+	pkt->len = 0;
 
 	/* ok to send another package */
 	thinkos_sem_post(drv->tx_sem);
-
 	return 0;
 }
 
@@ -136,9 +164,9 @@ int loopif_startup(struct ifnet * __if)
 
 	/* alloc a semaphore to control packet transmission */
 	drv->tx_sem = thinkos_sem_alloc(1);
-	drv->len = 0;
+	drv->pkt.len = 0;
 
-	DCC_LOG1(LOG_TRACE, "mtu=%d",  __if->if_mtu);
+	DCC_LOG1(LOG_INFO, "mtu=%d",  __if->if_mtu);
 
 	return 0;
 }
@@ -168,18 +196,19 @@ const struct ifnet_operations loopif_op = {
 	.op_wakeup = NULL,
 	.op_pkt_recv = loopif_pkt_recv,
 	.op_pkt_free = loopif_pkt_free,
+	.op_munmap = loopif_ethif_munmap
 };
 
 struct loopif_drv loopif_drv;
 
-struct ifnet * loopif_init(in_addr_t ip_addr, in_addr_t netmask)
+struct ifnet * loopif_init(void)
 {
 	struct ifnet * ifn;
 	
 	ifn = ifn_register(&loopif_drv, &loopif_op, NULL, 0);
 
 	if (ifn != NULL) {
-		ifn_ipv4_set(ifn, ip_addr, netmask);
+		ifn_ipv4_set(ifn, IPV4_ADDR(127, 0, 0, 1), IPV4_ADDR(255, 0, 0, 0));
 	}
 
 	return ifn;

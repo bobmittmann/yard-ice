@@ -60,6 +60,7 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 
 		/* get the packet from the network interface */
 		while ((len = ifn_pkt_recv(ifn, &src, &proto, &pkt)) > 0) {
+
 			tcpip_net_lock();
 
 			NETIF_STAT_ADD(ifn, rx_pkt, 1);
