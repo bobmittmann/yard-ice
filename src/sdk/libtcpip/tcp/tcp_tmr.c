@@ -87,13 +87,13 @@ const uint8_t tcp_rxmtintvl[] = {
 #define TCP_IDLE_TMR_MS (2 * TCP_FAST_TMR_MS)
 #endif
 
-/* we set the default MSL to 2 seconds becase we have no enougth resorces 
+/* we set the default MSL to 5 seconds becase we have no enougth resorces 
    to block PCBs for greater times */
-#ifndef TCP_DEFAULT_MSL
-#define TCP_DEFAULT_MSL 2
+#ifndef TCP_DEFAULT_MSL_SEC
+#define TCP_DEFAULT_MSL_SEC 5
 #endif
 
-const uint16_t tcp_msl_sec = TCP_DEFAULT_MSL;
+const uint16_t tcp_msl_sec = TCP_DEFAULT_MSL_SEC;
 
 /* miliseconds per idle timer ticks */
 const uint32_t tcp_idle_tmr_ms = TCP_IDLE_TMR_MS;
@@ -114,10 +114,20 @@ const uint16_t tcp_idle_det_sec = TCP_IDLE_DET_SEC;
 #define TCP_KEEP_ALIVE_PROBE_SEC (5 * 60)
 #endif
 
+#if (TCP_KEEP_ALIVE_PROBE_SEC < TCP_IDLE_DET_SEC)
+#undef TCP_KEEP_ALIVE_PROBE_SEC
+#define TCP_KEEP_ALIVE_PROBE_SEC TCP_IDLE_DET_SEC
+#endif
+
 const uint16_t tcp_keep_alive_probe_sec = TCP_KEEP_ALIVE_PROBE_SEC;
 
 #ifndef TCP_MAX_IDLE_SEC
 #define TCP_MAX_IDLE_SEC (15 * 60)
+#endif
+
+#if (TCP_MAX_IDLE_SEC < TCP_KEEP_ALIVE_PROBE_SEC)
+#undef TCP_MAX_IDLE_SEC
+#define TCP_MAX_IDLE_SEC TCP_KEEP_ALIVE_PROBE_SEC
 #endif
 
 const uint16_t tcp_max_idle_sec = TCP_MAX_IDLE_SEC;
@@ -127,7 +137,7 @@ const uint16_t tcp_max_idle_sec = TCP_MAX_IDLE_SEC;
 #define SECOND_TO_IDLETV(S) ((((S) * 1000) + (TCP_IDLE_TMR_MS - 1)) \
 							 / TCP_IDLE_TMR_MS)
 
-#define TCPTV_MSL SECOND_TO_IDLETV(TCP_DEFAULT_MSL)
+#define TCPTV_MSL SECOND_TO_IDLETV(TCP_DEFAULT_MSL_SEC)
 
 const uint16_t tcp_msl = TCPTV_MSL;
 
@@ -142,7 +152,7 @@ const uint16_t tcp_conn_est_tmo = TCPTV_CONN_EST_TMO;
 const uint16_t tcp_idle_det_tmo = TCPTV_IDLE_DET_TMO;
 
 static const uint16_t tcp_keepintvl[9] = {
-	((TCPTV_IDLE_DET_TMO) - (TCPTV_KEEP_IDLE)),
+	((TCPTV_KEEP_IDLE) - (TCPTV_IDLE_DET_TMO)),
 	((TCPTV_MAX_IDLE) - (TCPTV_IDLE_DET_TMO) + 7) / 8,
 	((TCPTV_MAX_IDLE) - (TCPTV_IDLE_DET_TMO) + 6) / 8,
 	((TCPTV_MAX_IDLE) - (TCPTV_IDLE_DET_TMO) + 5) / 8,
@@ -292,10 +302,17 @@ void tcp_idle_tmr(void)
 {
 	struct tcp_pcb * tp;
 	struct pcb_link * q;
+	struct pcb_link * p;
 
 	q = (struct pcb_link *)&__tcp__.active.first;
-	while ((q = q->next)) {
+	p = q->next;
+	while ((q = p) != NULL) {
 		tp = (struct tcp_pcb *)&q->pcb;
+		/* save the next in the list, as the current item can be removed 
+		   from the list */
+		p = q->next;
+
+		DCC_LOG2(LOG_TRACE, "<%05x> tmr=%d", (int)tp, tp->t_conn_tmr);
 
 		if ((tp->t_conn_tmr) && (--tp->t_conn_tmr == 0)) {
 			switch (tp->t_state) {
@@ -328,8 +345,11 @@ void tcp_idle_tmr(void)
 					/* reset the idle counter */
 					tp->t_idle_cnt = 0;
 					/* restarts the timer */
-					if ((tp->t_conn_tmr = tcp_keepintvl[tp->t_idle_cnt]) != 0)
+					if ((tp->t_conn_tmr = tcp_keepintvl[tp->t_idle_cnt]) != 0) {
+						DCC_LOG2(LOG_INFO, "<%05x> 1. tmr=%d", (int)tp, 
+							 tp->t_conn_tmr);
 						break;
+					}
 					/* if the timer is 0 then fall through and send 
 					   a keep alive probe now! */
 				}
@@ -345,6 +365,9 @@ void tcp_idle_tmr(void)
 					}
 					/* if the timer is 0 then fall through and close 
 					   the connection */
+
+					DCC_LOG2(LOG_INFO, "<%05x> 2. tmr=%d", (int)tp, 
+							 tp->t_conn_tmr);
 				}
 				/* Keep alive timeout */
 
@@ -367,11 +390,10 @@ void tcp_idle_tmr(void)
 				tp->t_rxmt_tmr = 0;
 				tp->t_state = TCPS_TIME_WAIT;
 				DCC_LOG1(LOG_TRACE, "<%05x> [TIME_WAIT]", (int)tp);
-				tp->t_conn_tmr = TCPTV_MSL << 1;
+				tp->t_conn_tmr = TCPTV_MSL * 2;
 				break;
 
 			case TCPS_TIME_WAIT:
-				DCC_LOG1(LOG_INFO, "<%05x> [CLOSED]", (int)tp);
 				tcp_pcb_free(tp);
 				break;
 			}
@@ -381,11 +403,13 @@ void tcp_idle_tmr(void)
 
 int __attribute__((noreturn)) tcp_tmr_task(void * p)
 {
-	int rxmt;
-	int idle;
-	int ret;
 	int mutex = net_mutex;
 	int cond = __tcp__.out.cond;
+	uint32_t fast_clk;
+	uint32_t rxmt_clk;
+	uint32_t idle_clk;
+	uint32_t clk;
+	int ret;
 
 	tcpip_net_lock();
 
@@ -401,11 +425,13 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 			 tcp_keep_alive_probe_sec);
 	DCC_LOG1(LOG_TRACE, "    idle connection max : %4d seconds", 
 			 tcp_max_idle_sec);
-	DCC_LOG1(LOG_TRACE, "                    msl : %4d seconds", 
-			 tcp_msl_sec);
+	DCC_LOG2(LOG_TRACE, "        msl (%4d itv) : %4d seconds", 
+			 tcp_msl, tcp_msl_sec);
 
-	rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
-	idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;
+	clk = thinkos_clock();
+	fast_clk = clk + TCP_FAST_TMR_MS;
+	rxmt_clk = clk + TCP_SLOW_TMR_MS ;
+	idle_clk = clk + TCP_IDLE_TMR_MS + TCP_FAST_TMR_MS;
 	for (;;) {
 		/* process PCBs pending for output */
 		struct tcp_pcb * tp;
@@ -442,7 +468,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 			__tcp__.out.tp[i] = NULL;
 
 			tp->t_flags &= ~TF_NEEDOUTPUT;
-#if (!ENABLE_NET_TCP_TIMEWAIT)
+#if (!TCP_ENABLE_TIMEWAIT)
 			/* force closing TIME_WAIT sockets to save resources */
 			if (tp->t_state == TCPS_TIME_WAIT) {
 				DCC_LOG1(LOG_INFO, "<%05x> closing TIME_WAIT...", (int)tp);
@@ -452,27 +478,26 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 		}
 		__tcp__.out.tail = tail;
 
-		ret = thinkos_cond_timedwait(cond, mutex, TCP_FAST_TMR_MS);
+		ret = thinkos_cond_timedwait(cond, mutex, fast_clk - clk);
 
-		if (ret == THINKOS_ETIMEDOUT) {
-			DCC_LOG(LOG_MSG, "thinkos_cond_timedwait() timeout!");
+		clk = thinkos_clock();
 
+		if ((int32_t)(clk - fast_clk) >= 0) {
+			fast_clk += TCP_FAST_TMR_MS;
 			/* timeout */
 			tcp_fast_tmr();
-
-			if (--rxmt == 0) { 
-				rxmt = TCP_SLOW_TMR_MS / TCP_FAST_TMR_MS;
-				tcp_rxmt_tmr();
-			}
-
-			if (--idle == 0) { 
-				idle = TCP_IDLE_TMR_MS / TCP_FAST_TMR_MS;
-				tcp_idle_tmr();
-			}
-		} else if (ret < 0)  {
-			DCC_LOG1(LOG_PANIC, "thinkos_cond_timedwait() failed: %d.", ret);
-			abort();
 		}
+
+		if ((int32_t)(clk - rxmt_clk) >= 0) {
+			rxmt_clk += TCP_SLOW_TMR_MS;
+			tcp_rxmt_tmr();
+		}
+
+		if ((int32_t)(clk - idle_clk) >= 0) {
+			idle_clk += TCP_IDLE_TMR_MS;
+			tcp_idle_tmr();
+		}
+
 	}
 }
 
