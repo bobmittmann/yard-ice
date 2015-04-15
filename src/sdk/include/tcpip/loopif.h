@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-struct ifnet * loopif_init(in_addr_t ip_addr, in_addr_t netmask);
+struct ifnet * loopif_init(void);
 
 #ifdef __cplusplus
 }
