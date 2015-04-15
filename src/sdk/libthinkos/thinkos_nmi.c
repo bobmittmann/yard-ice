@@ -64,41 +64,45 @@ void __thinkos_ev_raise_i(int wq, int ev)
 #if (THINKOS_FLAG_MAX > 0)
 /* wakeup a single thread waiting on the flag 
    OR set the flag */
-void __thinkos_flag_give_i(int flag) {
+void __thinkos_flag_give_i(int wq) 
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	int th;
 	/* get the flag state */
-	if (__bit_mem_rd(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE) == 0) {
+	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
 		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(flag, th);
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched();
 		} else {
 			/* set the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 1);  
+			__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
 		}
 	}
 }
 
 /* wakeup a single thread waiting on the flag 
    OR set the flag */
-void __thinkos_flag_signal_i(int flag) {
+void __thinkos_flag_signal_i(int wq) 
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	int th;
 	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 1);  
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
 #if THINKOS_ENABLE_FLAG_LOCK
-	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag - THINKOS_FLAG_BASE)) {
+	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag)) {
 #endif
 		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 #if THINKOS_ENABLE_FLAG_LOCK
 			/* lock the flag */
-			__bit_mem_wr(thinkos_rt.flag.lock, flag - THINKOS_FLAG_BASE, 1);
+			__bit_mem_wr(thinkos_rt.flag.lock, flag, 1);
 #endif
-			__thinkos_wakeup(flag, th);
+			__thinkos_wakeup(wq, th);
 
 			/* clear the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 0);
+			__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched();
 			return;
@@ -108,23 +112,28 @@ void __thinkos_flag_signal_i(int flag) {
 #endif
 }
 
-void __thinkos_flag_clr_i(int flag) {
+void __thinkos_flag_clr_i(int wq) 
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	/* clear the flag signal bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 0);  
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
 }
 
 /* set the flag and wakeup all threads waiting on the flag */
-void __thinkos_flag_set_i(int flag) {
+void __thinkos_flag_set_i(int wq) 
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	int th;
 
 	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag - THINKOS_FLAG_BASE, 1);  
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
 
 	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(flag, th);
-		while ((th = __thinkos_wq_head(flag)) != THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(flag, th);
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(wq, th);
+		/* get the remaining threads from the queue */
+		while ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
 		}
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();

@@ -559,6 +559,8 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 	cm3_faultmask_set(1);
 
 	thinkos_mem(ctx, msp, psp, lr);
+
+	thinkos_exception_dsr(ctx);
 }
 
 void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
@@ -578,6 +580,8 @@ void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
 	cm3_faultmask_set(1);
 
 	thinkos_mon(ctx, msp, psp, lr);
+
+	thinkos_exception_dsr(ctx);
 }
 
 
