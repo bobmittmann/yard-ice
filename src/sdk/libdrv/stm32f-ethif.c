@@ -81,7 +81,6 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 
 	DCC_LOG2(LOG_INFO, "mem=%p len=%d", __buf, __len);
 
-
 	/* wait for buffer availability */
 	thinkos_sem_wait(drv->tx.sem);
 

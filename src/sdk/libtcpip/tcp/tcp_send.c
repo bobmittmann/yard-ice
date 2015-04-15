@@ -73,20 +73,17 @@ again:
 	if ((__tp->t_state != TCPS_ESTABLISHED) &&
 		(__tp->t_state != TCPS_CLOSE_WAIT)) {
 */
-		DCC_LOG2(LOG_WARNING, "<%05x> [%s]", (int)__tp, 
+		DCC_LOG2(LOG_INFO, "<%05x> [%s]", (int)__tp, 
 				 __tcp_state[__tp->t_state]);
 
 		if (__tp->t_state == TCPS_SYN_RCVD) {
-			DCC_LOG1(LOG_TRACE, "<%05x> wait", (int)__tp);
+			DCC_LOG1(LOG_INFO, "<%05x> wait", (int)__tp);
 			thinkos_cond_wait(__tp->t_cond, net_mutex);
-			DCC_LOG2(LOG_TRACE, "<%05x> again [%s]",
+			DCC_LOG2(LOG_INFO, "<%05x> again [%s]",
 					 (int)__tp, __tcp_state[__tp->t_state]);
 			goto again;
 		} 
 		
-
-		DCC_LOG(LOG_TRACE, "done.");
-
 		tcpip_net_unlock();
 		return -1;
 	}

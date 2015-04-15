@@ -214,6 +214,9 @@ void tcp_output_dequeue(struct tcp_pcb * __tp)
 	uint16_t head = __tcp__.out.head;
 	uint16_t mark;
 
+	DCC_LOG1(LOG_WARNING, "<%05x> ...", (int)__tp);
+
+#if 0
 	for (mark = tail; mark != head; ++mark) { 
 		if (__tp == __tcp__.out.tp[mark % NET_TCP_PCB_ACTIVE_MAX]) {
 			__tcp__.out.tail = tail + 1;
@@ -222,6 +225,13 @@ void tcp_output_dequeue(struct tcp_pcb * __tp)
 				int j = tail % NET_TCP_PCB_ACTIVE_MAX;
 				__tcp__.out.tp[j] = __tcp__.out.tp[i];
 			}
+			return;
+		}
+	}
+#endif
+	for (mark = tail; mark != head; ++mark) { 
+		if (__tp == __tcp__.out.tp[mark % NET_TCP_PCB_ACTIVE_MAX]) {
+			__tcp__.out.tp[mark] = NULL;
 			return;
 		}
 	}
@@ -312,7 +322,7 @@ void tcp_idle_tmr(void)
 		   from the list */
 		p = q->next;
 
-		DCC_LOG2(LOG_TRACE, "<%05x> tmr=%d", (int)tp, tp->t_conn_tmr);
+		DCC_LOG2(LOG_MSG, "<%05x> tmr=%d", (int)tp, tp->t_conn_tmr);
 
 		if ((tp->t_conn_tmr) && (--tp->t_conn_tmr == 0)) {
 			switch (tp->t_state) {
@@ -448,7 +458,7 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 			DCC_LOG2(LOG_MSG, "<%05x> tail=%d", (int)tp, tail);
 
 			if (tp == NULL) {
-				DCC_LOG2(LOG_PANIC, "Null pointer, tail=%d i=%d!!!", tail, i);
+				DCC_LOG2(LOG_WARNING, "Null pointer, tail=%d i=%d!!!", tail, i);
 				continue;
 			}
 			

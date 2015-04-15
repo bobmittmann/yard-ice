@@ -471,7 +471,7 @@ struct tcp_pcb * httpd_start(struct httpd * httpd,
 
 int http_close(struct httpctl * ctl)
 {
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	return tcp_close(ctl->tp);
 }
 
@@ -522,7 +522,7 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 		path[1] = '\0';
 	}
 
-	DCC_LOGSTR(LOG_TRACE, "path=\"%s\"", path);
+	DCC_LOGSTR(LOG_INFO, "path=\"%s\"", path);
 
 	for (dir = httpd->dir; (dir->path != NULL); ++dir) {
 		if (strcmp(dir->path, path) == 0) {
@@ -539,7 +539,7 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 	if (*oid == '\0')
 		oid = (char *)http_index_obj;
 
-	DCC_LOGSTR(LOG_TRACE, "obj=\"%s\"", oid);
+	DCC_LOGSTR(LOG_INFO, "obj=\"%s\"", oid);
 
 	for (obj = dir->objlst; (obj->oid != NULL); ++obj) {
 		if (strcmp(obj->oid, oid) == 0) {

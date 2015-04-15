@@ -111,6 +111,8 @@ void thinkos_flag_wait_svc(int32_t * arg)
 	__thinkos_wq_insert(wq, self);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	cm3_cpsie_i(); /* reenable interrupts */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
@@ -166,6 +168,8 @@ void thinkos_flag_timedwait_svc(int32_t * arg)
 	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	cm3_cpsie_i(); /* reenable interrupts */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
@@ -272,6 +276,8 @@ void thinkos_flag_take_svc(int32_t * arg)
 	__thinkos_wq_insert(wq, self);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	cm3_cpsie_i(); /* reenable interrupts */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
@@ -318,6 +324,8 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	cm3_cpsie_i(); /* reenable interrupts */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }

@@ -183,6 +183,10 @@ static inline void ifn_signal_i(int event) {
 	thinkos_ev_raise_i(__ifnet__.evset, event);
 }
 
+static inline void ifn_signal(int event) {
+	thinkos_ev_raise(__ifnet__.evset, event);
+}
+
 extern inline int ifn_init(struct ifnet * __if) {
 	return __if->if_op->op_init(__if);
 }

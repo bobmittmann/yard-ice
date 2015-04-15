@@ -323,10 +323,9 @@ int main(int argc, char ** argv)
 	tftpd_start();
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
-
 	for (;;) {
-		thinkos_sleep(1000);
 		stdio_shell();
+		thinkos_sleep(1000);
 	}
 
 	return 0;

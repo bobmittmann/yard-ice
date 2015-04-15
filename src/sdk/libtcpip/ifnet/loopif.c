@@ -98,7 +98,7 @@ int loopif_send(struct ifnet * __if, const uint8_t * __dst, int __proto,
 
 	DCC_LOG2(LOG_INFO, "proto=%d len=%d", __proto, __len);
 
-	ifn_signal_i(__if->if_idx);
+	ifn_signal(__if->if_idx);
 
 	return __len;
 }

@@ -49,10 +49,11 @@
 extern "C" {
 #endif
 
-#if (THINKOS_EVENT_MAX > 0)
+#if 0
 
+#if (THINKOS_EVENT_MAX > 0)
 static inline void __attribute__((always_inline)) 
-	__thinkos_ev_raise(int wq, int ev)
+	thinkos_ev_raise_i(int wq, int ev)
 {
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 	uint32_t pri;
@@ -68,19 +69,13 @@ static inline void __attribute__((always_inline))
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	} else {
-		/* event is maksed or no thread is waiting ont hte event set
-		   , set the event as pending */
+		/* event is masked or no thread is waiting ont the event set, 
+		   mark the event as pending */
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
 	cm3_primask_set(pri);
 }
-
-static inline void thinkos_ev_raise_i(int wq, int ev) {
-	__thinkos_ev_raise(wq, ev);
-}
-
 #endif /* (THINKOS_EVENT_MAX > 0) */
-
 
 #if (THINKOS_FLAG_MAX > 0)
 
@@ -198,6 +193,8 @@ static inline void thinkos_sem_post_i(int sem) {
 
 #endif /* (THINKOS_SEMAPHORE_MAX > 0) */
 
+#endif
+
 
 /* set the interrupt priority */
 static inline void __attribute__((always_inline)) 
@@ -256,11 +253,13 @@ static inline volatile uint32_t __attribute__((always_inline))
 	return (volatile uint32_t)thinkos_rt.ticks;
 }
 
+#if 0
 void thinkos_flag_give_i(int flag);
 void thinkos_flag_set_i(int flag); 
 void thinkos_flag_clr_i(int flag); 
-
 void thinkos_sem_post_i(int sem);
+void thinkos_ev_raise_i(int wq, int ev);
+#endif
 
 #ifdef __cplusplus
 }

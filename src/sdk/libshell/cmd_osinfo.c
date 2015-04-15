@@ -200,11 +200,12 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 
 	fprintf(f, "\n");
 
-	fprintf(f, "  Th"); 
+	fprintf(f, " Th"); 
 #if THINKOS_ENABLE_THREAD_INFO
 	fprintf(f, " |     Tag"); 
+	fprintf(f, " |    Stack"); 
 #endif
-	fprintf(f, " |    Context"); 
+	fprintf(f, " |  Context"); 
 #if THINKOS_ENABLE_THREAD_STAT
 	fprintf(f, " |  WQ | TmW"); 
 #endif
@@ -226,14 +227,17 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt.ctx[i] != NULL) {
-			fprintf(f, "%4d", i);
+			fprintf(f, "%3d", i);
 #if THINKOS_ENABLE_THREAD_INFO
-			if (rt.th_inf[i] != NULL)
+			if (rt.th_inf[i] != NULL) {
 				fprintf(f, " | %7s", rt.th_inf[i]->tag); 
-			else
-				fprintf(f, " | %7s", "..."); 
+				fprintf(f, " | %08x", (uint32_t)rt.th_inf[i]->stack_ptr); 
+			} else {
+				fprintf(f, " |     ..."); 
+				fprintf(f, " |      ..."); 
+			}
 #endif
-			fprintf(f, " | 0x%08x", (uint32_t)rt.ctx[i]); 
+			fprintf(f, " | %08x", (uint32_t)rt.ctx[i]); 
 #if THINKOS_ENABLE_THREAD_STAT
 			fprintf(f, " | %3d | %s", rt.th_stat[i] >> 1, 
 					rt.th_stat[i] & 1 ? "Yes" : " No"); 

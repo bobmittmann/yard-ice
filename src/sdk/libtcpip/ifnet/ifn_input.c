@@ -39,21 +39,42 @@ const uint8_t ifnet_max = IFNET_INTERFACES_MAX;
 
 struct ifnet_system __ifnet__;
 
+//uint32_t ifnet_sp;
+
 void __attribute__((noreturn)) ifnet_input_task(void * arg)
 {
 	struct ifnet * ifn = NULL;
 	unsigned int proto;
+	unsigned int idx;
 	uint8_t * pkt; 
 	uint8_t * src; 
+//	uint32_t sp;
 	int ret;
-	int idx;
 	int len;
 
+//	sp = cm3_sp_get();
+//	DCC_LOG1(LOG_TRACE, "sp=%p", sp);
+//	ifnet_sp = sp;
 	for (;;) {
 		DCC_LOG(LOG_INFO, "wait...");
 		/* wait for an event form a network interface */
 		idx = thinkos_ev_wait(__ifnet__.evset);
-		DCC_LOG1(LOG_INFO, "idx=%d", idx);
+#if 0
+		sp = cm3_sp_get();
+		if (sp != ifnet_sp) {
+			DCC_LOG1(LOG_TRACE, "sp=%p", sp);
+			for(;;);
+		}
+//		if (idx < 0) {
+//			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() failed: %d", idx);
+//			for(;;);
+//		} else if (idx > IFNET_INTERFACES_MAX) {
+		if (idx > IFNET_INTERFACES_MAX) {
+//			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() invalid event: %d", idx);
+//			abort();
+			for(;;);
+		}
+#endif
 
 		/* lookup the interface */
 		ifn = &__ifnet__.ifn[idx];

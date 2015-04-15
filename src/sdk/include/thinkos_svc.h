@@ -91,6 +91,13 @@
 #define THINKOS_RT_SNAPSHOT     47
 #define THINKOS_EXIT            48
 
+#define THINKOS_SEM_POST_I       0
+#define THINKOS_FLAG_GIVE_I      1
+#define THINKOS_FLAG_SIGNAL_I    2
+#define THINKOS_EV_RAISE_I       3
+#define THINKOS_FLAG_CLR_I       4
+#define THINKOS_FLAG_SET_I       5
+
 #ifndef __ASSEMBLER__
 
 /* -------------------------------------------------------------------------- 
@@ -140,6 +147,28 @@
 				  "0"(r0), "r"(r1), "r"(r2), "r"(r3), "r"(r12) : ); \
 	ret; } )
 
+/* -------------------------------------------------------------------------- 
+ * C NMI call macros 
+ * --------------------------------------------------------------------------*/
+
+#define THINKOS_NMI1(N, A1) ( { \
+	register int r0 asm("r0") = (int)(A1); \
+	register int r1 asm("r2") = (int)(N); \
+	register struct cm3_scb * scb = CM3_SCB; \
+	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET; \
+	asm volatile ("str	%3, [%2, #4]\n" :  : \
+				  "r"(r0), "r"(r1), "r"(scb), "r"(nmi) : ); \
+	} )
+
+#define THINKOS_NMI2(N, A1, A2) ( { \
+	register int r0 asm("r0") = (int)(A1); \
+	register int r1 asm("r1") = (int)(A2); \
+	register int r2 asm("r2") = (int)(N); \
+	register struct cm3_scb * scb = CM3_SCB; \
+	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET; \
+	asm volatile ("str	%4, [%3, #4]\n" :  : \
+				  "r"(r0), "r"(r1), "r"(r2), "r"(scb), "r"(nmi) : ); \
+	} )
 
 #define THINKOS_SVC(N) __SVC_CALL(N)
 
@@ -313,6 +342,10 @@ static inline int __attribute__((always_inline)) thinkos_sem_post(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
+static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
+	THINKOS_NMI1(THINKOS_SEM_POST_I, sem);
+}
+
 /* ---------------------------------------------------------------------------
    Event sets
   ----------------------------------------------------------------------------*/
@@ -347,6 +380,11 @@ static inline int __attribute__((always_inline)) thinkos_ev_mask(
 static inline int __attribute__((always_inline)) thinkos_ev_unmask(
 	int set, uint32_t msk) {
 	return THINKOS_SVC2(THINKOS_EVENT_UNMASK, set, msk);
+}
+
+static inline void __attribute__((always_inline)) thinkos_ev_raise_i(
+	int set, int ev) {
+	THINKOS_NMI2(THINKOS_EV_RAISE_I, set, ev);
 }
 
 /* ---------------------------------------------------------------------------
@@ -408,6 +446,29 @@ static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
 	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
 }
+
+
+static inline void __attribute__((always_inline)) 
+	thinkos_flag_set_i(int flag) {
+	THINKOS_NMI1(THINKOS_FLAG_SET_I, flag);
+}
+
+static inline void __attribute__((always_inline)) 
+	thinkos_flag_clr_i(int flag) {
+	THINKOS_NMI1(THINKOS_FLAG_CLR_I, flag);
+}
+
+static inline void __attribute__((always_inline)) 
+	thinkos_flag_give_i(int flag) {
+	THINKOS_NMI1(THINKOS_FLAG_GIVE_I, flag);
+}
+
+static inline void  __attribute__((always_inline)) 
+	thinkos_flag_signal_i(int flag) {
+	THINKOS_NMI1(THINKOS_FLAG_SIGNAL_I, flag);
+}
+
+
 
 #ifdef __cplusplus
 }

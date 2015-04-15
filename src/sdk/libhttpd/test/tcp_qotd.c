@@ -1885,6 +1885,7 @@ void __attribute__((noreturn)) tcp_qotd_task(void * arg)
 		i = rand() % (sizeof(qotd) / sizeof(char *));
 //		for (i = 0; i < (sizeof(qotd) / sizeof(char *)); ++i)
 			tcp_send(tp, qotd[i], strlen(qotd[i]), 0);
+			tcp_send(tp, "\r\n", 2, 0);
 
 		tcp_close(tp);
 		DCC_LOG(LOG_TRACE, "Connection closed.");

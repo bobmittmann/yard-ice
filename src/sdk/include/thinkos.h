@@ -33,7 +33,8 @@ enum {
 	THINKOS_EAGAIN    = -4,
 	THINKOS_EDEADLK   = -5,
 	THINKOS_EPERM     = -6,
-	THINKOS_ENOSYS    = -7
+	THINKOS_ENOSYS    = -7,
+	THINKOS_EFAULT    = -8        
 };
 
 enum {

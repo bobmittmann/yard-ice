@@ -619,6 +619,7 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	scb->icsr = SCB_ICSR_PENDSVSET;
 }
 
+
 #if THINKOS_ENABLE_TIMESHARE
 static void inline __attribute__((always_inline)) __thinkos_tmshare(void) {
 	/* if the ready queue is empty, collect

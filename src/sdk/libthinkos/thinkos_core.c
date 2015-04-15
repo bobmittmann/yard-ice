@@ -32,6 +32,7 @@
 #include <string.h>
 
 extern const char thinkos_svc_nm[];
+extern const char thinkos_nmi_nm[];
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
 /* -------------------------------------------------------------------------- 
@@ -631,6 +632,37 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	}
 #endif
 
+#if (THINKOS_MUTEX_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,
+			 THINKOS_MUTEX_BASE,
+			 THINKOS_MUTEX_BASE + THINKOS_MUTEX_MAX - 1);
+#endif
+#if (THINKOS_COND_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "  condvar: %2d (%2d .. %2d)", THINKOS_COND_MAX,
+			 THINKOS_COND_BASE,
+			 THINKOS_COND_BASE + THINKOS_COND_MAX - 1);
+#endif
+#if (THINKOS_SEMAPHORE_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "semaphore: %2d (%2d .. %2d)", THINKOS_SEMAPHORE_MAX,
+			 THINKOS_SEM_BASE,
+			 THINKOS_SEM_BASE + THINKOS_SEMAPHORE_MAX - 1);
+#endif
+#if (THINKOS_EVENT_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "    evset: %2d (%2d .. %2d)", THINKOS_EVENT_MAX,
+			 THINKOS_EVENT_BASE,
+			 THINKOS_EVENT_BASE + THINKOS_EVENT_MAX - 1);
+#endif
+#if (THINKOS_FLAG_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "     flag: %2d (%2d .. %2d)", THINKOS_FLAG_MAX,
+			 THINKOS_FLAG_BASE,
+			 THINKOS_FLAG_BASE + THINKOS_FLAG_MAX - 1);
+#endif
+#if THINKOS_ENABLE_JOIN
+	DCC_LOG3(LOG_TRACE, "     join: %2d (%2d .. %2d)", THINKOS_THREADS_MAX,
+			 THINKOS_JOIN_BASE,
+			 THINKOS_JOIN_BASE + THINKOS_THREADS_MAX- 1);
+#endif
+
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 
 	/* enable interrupts */
@@ -663,6 +695,7 @@ int thinkos_bmp_alloc(uint32_t bmp[], int bits)
 #endif
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
+const char * const thinkos_nmic_link = thinkos_nmi_nm;
 
 #if THINKOS_ENABLE_EXCEPTIONS
 const char * const thinkos_execpt_link = thinkos_except_nm;

@@ -302,7 +302,8 @@ _reset:
 	.thumb_func
 	.type   _halt, %function
 _halt:
-	b		_halt
+	cpsid   i
+	b		.
 	.size   _halt, . - _halt
 
 	.text

@@ -124,17 +124,17 @@ void thinkos_sem_wait_svc(int32_t * arg)
 		cm3_cpsie_i();
 		return;
 	} 
-	
+
+	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 	/* insert into the semaphore wait queue */
 	__thinkos_wq_insert(wq, self);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
-	/* reenable interrupts ... */
-	cm3_cpsie_i();
-
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+	cm3_cpsie_i(); /* reenable interrupts ... */
+	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 
 void thinkos_sem_trywait_svc(int32_t * arg)
@@ -212,6 +212,7 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 		return;
 	}
 
+	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
 	/* Set the default return value to timeout. The
 	   sem_post call will change this to 0 */
@@ -220,6 +221,8 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
+	/* XXX: save the context pointer */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	cm3_cpsie_i(); /* reenable interrupts ... */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
