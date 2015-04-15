@@ -73,6 +73,8 @@ int httpd_server_task(struct httpd * httpd)
 	struct httpctl httpctl;
 	struct httpctl * ctl = &httpctl;
 	const struct httpdobj * obj;
+	unsigned int cnt = 0;
+	unsigned int id = thinkos_thread_self();
 
 	for (;;) {
 //		printf("Wating for connection.\n");
@@ -88,13 +90,14 @@ int httpd_server_task(struct httpd * httpd)
 				 thinkos_thread_self());
 	
 		if ((obj = http_obj_lookup(ctl)) != NULL) {
+			cnt++;
 			switch (ctl->method) {
 			case HTTP_GET:
-				DCC_LOG1(LOG_TRACE, "GET \"%s\"", obj->oid);
+				DCC_LOG3(LOG_TRACE, "%2d %6d GET \"%s\"", id, cnt, obj->oid);
 				http_get(ctl, obj);
 				break;
 			case HTTP_POST:
-				DCC_LOG1(LOG_TRACE, "POST \"%s\"", obj->oid);
+				DCC_LOG3(LOG_TRACE, "%2d %6d POST \"%s\"", id, cnt, obj->oid);
 				http_post(ctl, obj);
 				break;
 			}
@@ -222,10 +225,10 @@ void io_init(void)
 
 }
 
-uint32_t httpd1_stack[256];
-uint32_t httpd2_stack[256];
-uint32_t httpd3_stack[256];
-uint32_t httpd4_stack[256];
+uint32_t httpd1_stack[384];
+uint32_t httpd2_stack[384];
+uint32_t httpd3_stack[384];
+uint32_t httpd4_stack[384];
 
 
 const struct thinkos_thread_inf httpd1_inf = {

@@ -94,7 +94,7 @@
 #define NET_TCP_PCB_ACTIVE_MAX       64
 #define NET_UDP_PCB_ACTIVE_MAX       1
 
-#define TCP_DEFAULT_MSL_SEC          2
+#define TCP_DEFAULT_MSL_SEC          1
 #define TCP_IDLE_DET_SEC             10
 #define TCP_KEEP_ALIVE_PROBE_SEC     20
 #define TCP_MAX_IDLE_SEC             60
