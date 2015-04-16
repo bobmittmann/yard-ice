@@ -44,6 +44,7 @@ void stdio_init(void)
 	FILE * f_raw;
 
 	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+//	console = stm32f_uart5_serial_dma_init(115200, SERIAL_8N1);
 	f_raw = serial_fopen(console);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);

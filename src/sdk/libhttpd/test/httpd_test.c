@@ -75,6 +75,7 @@ int httpd_server_task(struct httpd * httpd)
 	const struct httpdobj * obj;
 	unsigned int cnt = 0;
 	unsigned int id = thinkos_thread_self();
+	(void)id;
 
 	for (;;) {
 //		printf("Wating for connection.\n");

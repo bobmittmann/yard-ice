@@ -46,6 +46,7 @@ void __thinkos_ev_raise_i(int wq, int ev)
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 	int th;
 
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
 	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
 		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
 		/* wakeup from the event wait queue, set the return of
@@ -68,7 +69,9 @@ void __thinkos_flag_give_i(int wq)
 {
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	int th;
+
 	/* get the flag state */
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
 	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
 		/* get a thread from the queue */
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {

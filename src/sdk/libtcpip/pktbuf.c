@@ -41,7 +41,7 @@
 #endif
 
 #ifndef PKTBUF_POOL_SIZE
-#define PKTBUF_POOL_SIZE 8
+#define PKTBUF_POOL_SIZE   6
 #endif
 
 #ifndef PKTBUF_ENABLE_STAT

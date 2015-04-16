@@ -248,7 +248,7 @@ uint32_t tcp_rel_timestamp(void)
 	defined(ETHARP_DEBUG)
 uint32_t tcp_tmr_stack[128];
 #else
-uint32_t tcp_tmr_stack[80];
+uint32_t tcp_tmr_stack[96];
 #endif
 
 const struct thinkos_thread_inf tcp_tmr_inf = {

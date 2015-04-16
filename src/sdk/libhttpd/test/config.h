@@ -71,11 +71,17 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE 384
 
+#define THINKOS_STDERR_FAULT_DUMP 1
+
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
 #define THINKOS_ENABLE_THREAD_INFO 1
 
 #define THINKOS_ENABLE_RT_DEBUG 1
+
+/* -------------------------------------------------------------------------
+ * TCP/IP
+ * ------------------------------------------------------------------------- */
 
 #define ENABLE_NETWORK 1
 #define ENABLE_NET_TCP 1
@@ -104,6 +110,10 @@
 #define ENABLE_NET_TCP_CHECKSUM 0
 #define ENABLE_NET_UDP_CHECKSUM 0
 
+/* -------------------------------------------------------------------------
+ * Ethernet Driver
+ * ------------------------------------------------------------------------- */
+
 #if defined(STM32F407)
 #define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
 #elif defined(STM32F207)
@@ -112,6 +122,10 @@
 
 /* Number of reception DMA descriptors for the Ethernet driver */
 #define STM32F_ETH_RX_NDESC      4
+/* Number of transmision DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_TX_NDESC      4
+/* Number of packet in the buffer pool */
+#define PKTBUF_POOL_SIZE        10 
 
 #endif /* __CONFIG_H__ */
 
