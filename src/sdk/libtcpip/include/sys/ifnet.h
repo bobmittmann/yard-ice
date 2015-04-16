@@ -64,10 +64,6 @@
 #define IFNET_INTERFACES_MAX 1
 #endif
 
-#if (THINKOS_EVENT_MAX == 0)
-#error "THINKOS_EVENT_MAX == 0!"
-#endif 
-
 enum {
 	IFN_PROTO_IP = 0,
 	IFN_PROTO_ETHARP

@@ -1,8 +1,8 @@
 #!/bin/sh
 
 JTAGTOOL_ADDR=192.168.10.50
-BUILD_NAME=httpd_test
-TOOLS_DIR=../../../../tools
+BUILD_NAME=slcdev-hub
+TOOLS_DIR=../../../tools
 
 ${TOOLS_DIR}/tftp_reset.py -q -h ${JTAGTOOL_ADDR} 
 

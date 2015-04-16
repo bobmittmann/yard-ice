@@ -173,6 +173,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_FLAG_LOCK 1
 #endif
 
+#ifndef THINKOS_ENABLE_FLAG_WATCH
+#define THINKOS_ENABLE_FLAG_WATCH 1
+#endif
+
 #ifndef THINKOS_ENABLE_THREAD_STAT
 #define THINKOS_ENABLE_THREAD_STAT 1
 #endif

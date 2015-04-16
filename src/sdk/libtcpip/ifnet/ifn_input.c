@@ -30,16 +30,18 @@
 #include <sys/route.h>
 #include <sys/net.h>
 #include <sys/ip.h>
+#include <stdlib.h>
 
 #include <tcpip/ifnet.h>
 
-#include <stdlib.h>
+
+#if (THINKOS_EVENT_MAX == 0)
+#error "THINKOS_EVENT_MAX == 0!"
+#endif 
 
 const uint8_t ifnet_max = IFNET_INTERFACES_MAX;
 
 struct ifnet_system __ifnet__;
-
-//uint32_t ifnet_sp;
 
 void __attribute__((noreturn)) ifnet_input_task(void * arg)
 {
@@ -48,31 +50,20 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 	unsigned int idx;
 	uint8_t * pkt; 
 	uint8_t * src; 
-//	uint32_t sp;
 	int ret;
 	int len;
 
-//	sp = cm3_sp_get();
-//	DCC_LOG1(LOG_TRACE, "sp=%p", sp);
-//	ifnet_sp = sp;
 	for (;;) {
 		DCC_LOG(LOG_INFO, "wait...");
 		/* wait for an event form a network interface */
 		idx = thinkos_ev_wait(__ifnet__.evset);
 #if 0
-		sp = cm3_sp_get();
-		if (sp != ifnet_sp) {
-			DCC_LOG1(LOG_TRACE, "sp=%p", sp);
-			for(;;);
-		}
-//		if (idx < 0) {
-//			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() failed: %d", idx);
-//			for(;;);
-//		} else if (idx > IFNET_INTERFACES_MAX) {
-		if (idx > IFNET_INTERFACES_MAX) {
-//			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() invalid event: %d", idx);
-//			abort();
-			for(;;);
+		if (idx < 0) {
+			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() failed: %d", idx);
+			abort();
+		} else if (idx > IFNET_INTERFACES_MAX) {
+			DCC_LOG1(LOG_ERROR, "thinkos_ev_wait() invalid event: %d", idx);
+			abort();
 		}
 #endif
 

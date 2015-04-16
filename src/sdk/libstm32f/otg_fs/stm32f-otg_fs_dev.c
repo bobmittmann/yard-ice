@@ -62,20 +62,14 @@ typedef enum {
 
 /* Endpoint control */
 struct stm32f_otg_ep {
-
-
 	ep_state_t state;
-
 	uint16_t xfr_max;
 	uint16_t xfr_rem;
 	uint16_t xfr_buf_len;
-
 	uint8_t * xfr_buf;
 	uint8_t * xfr_ptr;
-
 	/* reload value for the DOEPTSIZ register */
 	uint32_t doeptsiz;
-
 	union {
 		usb_class_on_ep_ev_t on_ev;
 		usb_class_on_ep_in_t on_in;
@@ -213,29 +207,9 @@ static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
-void stm32f_otg_dev_ep_nak(struct stm32f_otg_drv * drv, int ep_id, bool flag)
-{
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
-
-	/* FIXME: select outep/inep ... */
-	if (flag)
-		otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
-	else
-		otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
-}
-
-int stm32f_otg_dev_ep_stall(struct stm32f_otg_drv * drv, int ep_id)
-{
-	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
-#if 0
-	__ep_stall(drv, ep_id);
-#endif
-	return 0;
-}
-
 /* start sending */
-int stm32f_otg_dev_ep_tx_start(struct stm32f_otg_drv * drv, int ep_id,
-		void * buf, unsigned int len)
+int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
+							   void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	struct stm32f_otg_ep * ep;
@@ -322,16 +296,45 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	return cnt;
 }
 
-int stm32f_otg_dev_ep_zlp_send(struct stm32f_otg_drv * drv, int ep_id)
+
+int stm32f_otg_dev_ep_ctl(struct stm32f_otg_drv * drv, 
+						  int ep_id, unsigned int opt)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
-	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
+	DCC_LOG2(LOG_INFO, "ep=%d opt=%d", ep_id, opt);
 
-	__ep_zlp_send(otg_fs, ep_id);
+	switch (opt) {
+	case USB_EP_RECV_OK:
+	case USB_EP_NAK_CLR:
+		/* Clear NAK, prepare to receive  ... */
+		otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+		break;
+
+	case USB_EP_NAK_SET:
+		otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
+		break;
+
+	case USB_EP_ZLP_SEND:
+		__ep_zlp_send(otg_fs, ep_id);
+		break;
+
+	case USB_EP_STALL:
+#if 0
+		__ep_stall(drv, ep_id);
+		ep->state = EP_STALLED;
+#endif
+		break;
+
+	case USB_EP_DISABLE:
+		ep->state = EP_UNCONFIGURED;
+		break;
+	}
 
 	return 0;
 }
+
 
 int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv, 
 						   const usb_dev_ep_info_t * info, 
@@ -471,7 +474,11 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 			otg_fs->outep[ep_id].doeptsiz = ep->doeptsiz;
 
 			/* EP enable */
-			otg_fs->outep[ep_id].doepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK;
+			/* FIXME: the single input fifo creates a problem as 
+			   packets pending on the fifo for one endpoint blocks packets for 
+			   other  endpoints. */
+			/* XXX: set the nak on endpoint ???? */
+			otg_fs->outep[ep_id].doepctl = depctl | OTG_FS_EPENA | OTG_FS_SNAK;
 
 			/* Enable endpoint interrupt */
 			otg_fs->daintmsk |= OTG_FS_OEPM(ep_id);
@@ -486,19 +493,6 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 
 	return ep_id;
 }
-
-int stm32f_otg_dev_ep_disable(struct stm32f_otg_drv * drv,  int ep_id)
-{
-	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-
-	DCC_LOG1(LOG_INFO, "ep_id=%d...", ep_id);
-
-//	__ep_stall(drv, 0);
-	ep->state = EP_UNCONFIGURED;
-
-	return 0;
-}
-
 
 #define OTG_FS_DP STM32_GPIOA, 12
 #define OTG_FS_DM STM32_GPIOA, 11
@@ -523,7 +517,7 @@ static void otg_fs_io_init(void)
 	stm32_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
-void otg_fs_vbus_connect(bool connect)
+static void otg_fs_vbus_connect(bool connect)
 {
 	if (connect)
 		stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
@@ -531,20 +525,20 @@ void otg_fs_vbus_connect(bool connect)
 		stm32_gpio_mode(OTG_FS_VBUS, INPUT, 0);
 }
 
-void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
+static void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
 {
 	/* Connect device */
 	otg_fs->dctl &= ~OTG_FS_SDIS;
 	udelay(3000);
 }
 
-void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
+static void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
 {
 	otg_fs->dctl |= OTG_FS_SDIS;
 	udelay(3000);
 }
 
-void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
+static void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
 
@@ -562,7 +556,7 @@ void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
-void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
+static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
 
@@ -616,23 +610,20 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 								  int ep_id, int len)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-//	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 
 	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 
 	ep->xfr_rem = len;
 
-#if 0
-	/* XXX: set the nak on endpoint ???? */
-	otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
-	
-#endif
 	/* FIXME: the single input fifo creates a problem as 
 	   packets pending on the fifo for one endpoint blocks packets for 
 	   other  endpoints. Ex: an outstanding OUT packet may block a control
 	   packet. Either the upper layer garantees the removal or
 	   buffering at this layer should be implemented.
 	 */
+	/* XXX: set the nak on endpoint ???? */
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_SNAK;
 
 	/* call class endpoint callback */
 	ep->on_out(drv->cl, ep_id, len);
@@ -981,7 +972,6 @@ void stm32f_otg_fs_isr(void)
 				   periodically remove the packets from 
 				   the fifo. Otherwise the EP0 will not receive its
 				   packets and we end up with a deadlock situation */
-
 //				otg_fs->outep[epnum].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 				/* Disable SOF interrupts */
 //				otg_fs->gintmsk &= ~OTG_FS_SOFM;
@@ -1240,12 +1230,9 @@ void stm32f_otg_fs_isr(void)
 /* USB device operations */
 const struct usb_dev_ops stm32f_otg_fs_ops = {
 	.dev_init = (usb_dev_init_t)stm32f_otg_fs_dev_init,
-	.ep_tx_start= (usb_dev_ep_tx_start_t)stm32f_otg_dev_ep_tx_start,
 	.ep_init = (usb_dev_ep_init_t)stm32f_otg_dev_ep_init,
-	.ep_disable = (usb_dev_ep_disable_t)stm32f_otg_dev_ep_disable,
-	.ep_stall = (usb_dev_ep_stall_t)stm32f_otg_dev_ep_stall,
-	.ep_zlp_send = (usb_dev_ep_zlp_send_t)stm32f_otg_dev_ep_zlp_send,
-	.ep_nak = (usb_dev_ep_nak_t)stm32f_otg_dev_ep_nak,
+	.ep_ctl = (usb_dev_ep_ctl_t)stm32f_otg_dev_ep_ctl,
+	.ep_pkt_xmit = (usb_dev_ep_pkt_xmit_t)stm32f_otg_dev_ep_pkt_xmit,
 	.ep_pkt_recv = (usb_dev_ep_pkt_recv_t)stm32f_otg_dev_ep_pkt_recv
 };
 
@@ -1258,4 +1245,5 @@ const struct usb_dev stm32f_otg_fs_dev = {
 #endif /* STM32F_ENABLE_USB_DEVICE */
 
 #endif /* STM32F_OTG_FS */
+
 

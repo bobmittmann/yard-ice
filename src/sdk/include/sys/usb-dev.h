@@ -99,39 +99,37 @@ typedef struct usb_dev_ep_info usb_dev_ep_info_t;
  *
  */
 
+enum usb_ep_ctl {
+	USB_EP_RECV_OK = 0,
+	USB_EP_ZLP_SEND,
+	USB_EP_STALL,
+	USB_EP_NAK_SET,
+	USB_EP_NAK_CLR,
+	USB_EP_DISABLE
+};
+
+
 typedef int (* usb_dev_init_t)(void *, usb_class_t *,
 		const struct usb_class_events * ev);
 
-typedef int (* usb_dev_ep_tx_start_t)(void *, int, const void *, int);
-
-typedef int (* usb_dev_ep_stall_t)(void *, int);
-
-typedef int (* usb_dev_ep_zlp_send_t)(void *, int);
-
-typedef int (* usb_dev_ep_disable_t)(void *, int);
-
-typedef void (* usb_dev_ep_nak_t)(void *, int, bool);
-
 typedef int (* usb_dev_ep_init_t)(void *, const usb_dev_ep_info_t *,
 								  void *, int);
+
+typedef int (* usb_dev_ep_ctl_t)(void *, int, unsigned int);
+
+typedef int (* usb_dev_ep_pkt_xmit_t)(void *, int, const void *, int);
 
 typedef int (* usb_dev_ep_pkt_recv_t)(void *, int, const void *, int);
 
 struct usb_dev_ops {
 	/* Initialize the USB device */
 	usb_dev_init_t dev_init;
-	/* Start sending data on an endpoint  */
-	usb_dev_ep_tx_start_t ep_tx_start;
-	/* Stall the endpoint */
-	usb_dev_ep_stall_t ep_stall;
-	/* Send a zero-length package */
-	usb_dev_ep_zlp_send_t ep_zlp_send;
-	/* EP set/clear nak */
-	usb_dev_ep_nak_t ep_nak;
-	/* EP Disable */
-	usb_dev_ep_disable_t ep_disable;
 	/* EP Initialize */
 	usb_dev_ep_init_t ep_init;
+	/* control the endpoint */
+	usb_dev_ep_ctl_t ep_ctl;
+	/* Start sending data on an endpoint  */
+	usb_dev_ep_pkt_xmit_t ep_pkt_xmit;
 	/* EP packet receive - get data from end-point receiving FIFO */
 	usb_dev_ep_pkt_recv_t ep_pkt_recv;
 };
@@ -161,31 +159,20 @@ extern inline int usb_dev_init(const usb_dev_t * dev, usb_class_t * cl,
 	return dev->op->dev_init(dev->priv, cl, ev);
 }
 
-extern inline int usb_dev_ep_tx_start(const usb_dev_t * dev, int ep_id,
-		const void * buf, int len) {
-	return dev->op->ep_tx_start(dev->priv, ep_id, buf, len);
-}
-
-extern inline int usb_dev_ep_stall(const usb_dev_t * dev, int ep_id) {
-	return dev->op->ep_stall(dev->priv, ep_id);
-}
-
-extern inline void usb_dev_ep_nak(const usb_dev_t * dev, int ep_id, bool flag) {
-	return dev->op->ep_nak(dev->priv, ep_id, flag);
-}
-
-extern inline int usb_dev_ep_zlp_send(const usb_dev_t * dev, int ep_id) {
-	return dev->op->ep_zlp_send(dev->priv, ep_id);
-}
-
-extern inline int usb_dev_ep_disable(const usb_dev_t * dev, int ep_id) {
-	return dev->op->ep_disable(dev->priv, ep_id);
-}
-
 extern inline int usb_dev_ep_init(const usb_dev_t * dev, 
 								  const usb_dev_ep_info_t * info,
 								  void * xfr_buf, unsigned int buf_len) {
 	return dev->op->ep_init(dev->priv, info, xfr_buf, buf_len);
+}
+
+extern inline int usb_dev_ep_ctl(const usb_dev_t * dev, int ep_id,
+								 unsigned int opt) {
+	return dev->op->ep_ctl(dev->priv, ep_id, opt);
+}
+
+extern inline int usb_dev_ep_pkt_xmit(const usb_dev_t * dev, int ep_id,
+		const void * buf, int len) {
+	return dev->op->ep_pkt_xmit(dev->priv, ep_id, buf, len);
 }
 
 extern inline int usb_dev_ep_pkt_recv(const usb_dev_t * dev, int ep_id,

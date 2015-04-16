@@ -41,6 +41,7 @@
 #include <tcpip/in.h>
 
 #include "board.h"
+#include "monitor.h"
 
 #define VERSION_NUM "0.3"
 #define VERSION_DATE "Mar, 2015"
@@ -52,6 +53,7 @@ const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 void stdio_init(void);
 int stdio_shell(void);
 int gdb_rspd_start(FILE * f);
+
 
 void io_init(void)
 {
@@ -97,6 +99,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init().");
 	stdio_init();
+
+	monitor_init();
 
 
 	printf("\n");

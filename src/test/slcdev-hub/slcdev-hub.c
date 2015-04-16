@@ -111,20 +111,15 @@ const struct file stm32_uart_file = {
 	.op = &stm32_usart_fops 
 };
 
-struct uart_console_dev * uart_console_init(unsigned int baudrate, 
-											unsigned int flags);
-
-struct file * uart_console_fopen(struct uart_console_dev * dev);
-
 void stdio_init(void)
 {
-	struct uart_console_dev * dev;
+	struct serial_dev * console;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	dev = uart_console_init(115200, SERIAL_8N1);
-	f_raw = uart_console_fopen(dev);
+	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(console);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
@@ -212,6 +207,9 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate()");
 	cm3_udelay_calibrate();
 
+	DCC_LOG(LOG_TRACE, "1. env_init().");
+	stm32f_nvram_env_init();
+
 	DCC_LOG(LOG_TRACE, "2. thinkos_init()");
 	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
 
@@ -227,9 +225,6 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "6. trace_init()");
 	trace_init();
-
-	DCC_LOG(LOG_TRACE, "7. env_init()");
-	env_init();
 
 	/* create some threads */
 	DCC_LOG(LOG_TRACE, "8. monitor_init()");

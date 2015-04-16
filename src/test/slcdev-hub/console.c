@@ -208,7 +208,7 @@ void __attribute__((noreturn)) pkt_xmt_task(void)
 
 	for (;;) {
 		int len;
-		thinkos_flag_wait(pkt_xmt_flag);
+		thinkos_flag_watch(pkt_xmt_flag);
 
 		len = pkt_xmt_len;
 		if (len > sizeof(data))
@@ -312,8 +312,10 @@ int cmd_pkt(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_ARG_INVALID;
 	}
 
+#if 0
 	fprintf(f, "- Packet transmission %s.\n", 
 			thinkos_flag_val(pkt_xmt_flag) ? "enabled" : "disabled");
+#endif
 	fprintf(f, "  - data length = %u.\n", pkt_xmt_len);
 	if (pkt_xmt_itv_rand)
 		fprintf(f, "  - interval = [random].\n");
@@ -532,8 +534,6 @@ int usb_xflash(uint32_t offs, uint32_t len);
 
 int usart_xflash(void * uart, uint32_t offs, uint32_t len);
 
-extern const struct fileop uart_console_ops;
-
 int cmd_xflash(FILE * f, int argc, char ** argv)
 {
 	uint32_t offs = 0x00000;
@@ -573,7 +573,7 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 		return ret;
 	} 
 
-	if (raw->op == &uart_console_ops) {
+	if (is_serial(raw)) {
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
 		ret = usart_xflash(STM32_UART5, offs, size);

@@ -50,46 +50,48 @@
 #define THINKOS_COND_SIGNAL     16
 #define THINKOS_COND_BROADCAST  17
 
-#define THINKOS_FLAG_CLR        18
-#define THINKOS_FLAG_SET        19
-#define THINKOS_FLAG_WAIT       20
-#define THINKOS_FLAG_TIMEDWAIT  21
-#define THINKOS_FLAG_RELEASE    22
-#define THINKOS_FLAG_TAKE       23
-#define THINKOS_FLAG_TIMEDTAKE  24
-#define THINKOS_FLAG_GIVE       25
+#define THINKOS_FLAG_TAKE       18
+#define THINKOS_FLAG_TIMEDTAKE  19
+#define THINKOS_FLAG_GIVE       20
+#define THINKOS_FLAG_WAIT       21
+#define THINKOS_FLAG_TIMEDWAIT  22
+#define THINKOS_FLAG_RELEASE    23
+#define THINKOS_FLAG_CLR        24
+#define THINKOS_FLAG_SET        25
+#define THINKOS_FLAG_WATCH      26
+#define THINKOS_FLAG_TIMEDWATCH 27
 
-#define THINKOS_EVENT_WAIT      26
-#define THINKOS_EVENT_TIMEDWAIT 27
-#define THINKOS_EVENT_RAISE     28
-#define THINKOS_EVENT_MASK      29
-#define THINKOS_EVENT_UNMASK    30
+#define THINKOS_EVENT_WAIT      28
+#define THINKOS_EVENT_TIMEDWAIT 29
+#define THINKOS_EVENT_RAISE     30
+#define THINKOS_EVENT_MASK      31
+#define THINKOS_EVENT_UNMASK    32
 
-#define THINKOS_IRQ_WAIT        31
+#define THINKOS_IRQ_WAIT        33
 
-#define THINKOS_MUTEX_ALLOC     32
-#define THINKOS_MUTEX_FREE      33
+#define THINKOS_MUTEX_ALLOC     34
+#define THINKOS_MUTEX_FREE      35
 
-#define THINKOS_SEM_ALLOC       34
-#define THINKOS_SEM_FREE        35
+#define THINKOS_SEM_ALLOC       36
+#define THINKOS_SEM_FREE        37
 
-#define THINKOS_COND_ALLOC      36
-#define THINKOS_COND_FREE       37
+#define THINKOS_COND_ALLOC      38
+#define THINKOS_COND_FREE       39
 
-#define THINKOS_FLAG_ALLOC      38
-#define THINKOS_FLAG_FREE       39
+#define THINKOS_FLAG_ALLOC      40
+#define THINKOS_FLAG_FREE       41
 
-#define THINKOS_EVENT_ALLOC     40
-#define THINKOS_EVENT_FREE      41
+#define THINKOS_EVENT_ALLOC     42
+#define THINKOS_EVENT_FREE      43
 
-#define THINKOS_YIELD           42
-#define THINKOS_PAUSE           43
-#define THINKOS_RESUME          44
-#define THINKOS_CANCEL          45
-#define THINKOS_JOIN            46
+#define THINKOS_YIELD           44
+#define THINKOS_PAUSE           45
+#define THINKOS_RESUME          46
+#define THINKOS_CANCEL          47
+#define THINKOS_JOIN            48
 
-#define THINKOS_RT_SNAPSHOT     47
-#define THINKOS_EXIT            48
+#define THINKOS_RT_SNAPSHOT     49
+#define THINKOS_EXIT            50
 
 #define THINKOS_SEM_POST_I       0
 #define THINKOS_FLAG_GIVE_I      1
@@ -408,6 +410,17 @@ static inline int __attribute__((always_inline)) thinkos_flag_set(int flag) {
 static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_CLR, flag);
 }
+
+
+static inline int __attribute__((always_inline)) thinkos_flag_watch(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_WATCH, flag);
+}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_flag_timedwatch(int flag, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWATCH, flag, ms);
+}
+
 
 static inline int __attribute__((always_inline)) thinkos_flag_wait(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_WAIT, flag);

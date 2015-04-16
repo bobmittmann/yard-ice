@@ -25,7 +25,6 @@
 #include <sys/serial.h>
 #include <sys/delay.h>
 #include <sys/tty.h>
-#include <sys/usb-cdc.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -39,20 +38,21 @@ const struct file stm32_uart_file = {
 
 void stdio_init(void)
 {
-//	struct serial_dev * console;
-	struct usb_cdc_class * cdc;
+	struct serial_dev * console;
+//	struct usb_cdc_class * cdc;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-//	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-//	console = stm32f_uart5_serial_dma_init(115200, SERIAL_8N1);
-//	f_raw = serial_fopen(console);
-	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
+	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(console);
+#if 0
+//	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, 
 					   cdc_acm_def_str, 
 					   cdc_acm_def_strcnt);
 	f_raw = usb_cdc_fopen(cdc);
+#endif
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 

@@ -119,7 +119,6 @@ struct usb_cdc_acm_dev {
 int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
-	usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 	thinkos_sem_post_i(RX_SEM);
 	return 0;
@@ -221,12 +220,11 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		if (value) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_cdc_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_cdc_out_info, NULL, 0);
-			usb_dev_ep_nak(dev->usb, dev->out_ep, true);
 			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_cdc_int_info, NULL, 0);
 		} else {
-			usb_dev_ep_disable(dev->usb, dev->in_ep);
-			usb_dev_ep_disable(dev->usb, dev->out_ep);
-			usb_dev_ep_disable(dev->usb, dev->int_ep);
+			usb_dev_ep_ctl(dev->usb, dev->in_ep, USB_EP_DISABLE);
+			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
+			usb_dev_ep_ctl(dev->usb, dev->int_ep, USB_EP_DISABLE);
 		}
 
 		/* signal any pending threads */
@@ -336,6 +334,8 @@ int usb_cdc_on_reset(usb_class_t * cl)
 
 	/* invalidate th line coding structure */
 	memset(&dev->acm.lc, 0, sizeof(struct cdc_line_coding));
+
+	DCC_LOG(LOG_INFO, "2.");
 	/* reset control lines */
 	dev->acm.control = 0;
 	/* clear all flags */
@@ -420,8 +420,8 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 		thinkos_flag_take(TX_LOCK);
 		DCC_LOG1(LOG_INFO, "ptr=%p wakeup.", ptr);
 
-		if ((n = usb_dev_ep_tx_start(dev->usb, dev->in_ep, ptr, rem)) < 0) {
-			DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!!");
+		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {
+			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!!");
 			thinkos_flag_give(TX_LOCK);
 			return n;
 		}
@@ -477,7 +477,8 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 		goto read_from_buffer;
 	};
 
-	usb_dev_ep_nak(dev->usb, dev->out_ep, false);
+	/* Ok to receive */
+	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 
 	if ((ret = thinkos_sem_timedwait(RX_SEM, msec)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
@@ -732,10 +733,8 @@ int usb_cdc_status_set(usb_cdc_class_t * cl, struct serial_status * stat)
 		pkt->bData[0] = status;
 		pkt->bData[1] = 0;
 
-//		thinkos_flag_clr(CTL_FLAG);
-
-		ret = usb_dev_ep_tx_start(dev->usb, dev->int_ep, pkt, 
-							sizeof(struct cdc_notification));
+		ret = usb_dev_ep_pkt_xmit(dev->usb, dev->int_ep, pkt, 
+								  sizeof(struct cdc_notification));
 		if (ret < 0) {
 			DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!");
 			return ret;

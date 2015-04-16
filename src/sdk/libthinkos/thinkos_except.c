@@ -384,6 +384,40 @@ void thinkos_nmi(struct thinkos_context * ctx, uint32_t msp,
 #endif
 	for(;;);
 }
+
+void thinkos_mon(struct thinkos_context * ctx, uint32_t msp, 
+				 uint32_t psp, uint32_t lr)
+{
+	uint32_t sp;
+	(void)sp;
+
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
+
+	DCC_LOG(LOG_ERROR, "Debug Monitor");
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			ctx->xpsr, msp, psp, lr);
+
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
+	fprintf(stderr, "Debug Monitor:");
+	thinkos_context_show(ctx, sp, msp, psp);
+	fprintf(stderr, "\n");
+	fflush(stderr);
+#endif
+	for(;;);
+}
+
 #endif
 
 void thinkos_mem(struct thinkos_context * ctx, uint32_t msp, 
@@ -412,39 +446,6 @@ void thinkos_mem(struct thinkos_context * ctx, uint32_t msp,
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Mem Manager:");
-	thinkos_context_show(ctx, sp, msp, psp);
-	fprintf(stderr, "\n");
-	fflush(stderr);
-#endif
-	for(;;);
-}
-
-void thinkos_mon(struct thinkos_context * ctx, uint32_t msp, 
-				 uint32_t psp, uint32_t lr)
-{
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
-	DCC_LOG(LOG_ERROR, "Debug Monitor");
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
-
-#if THINKOS_STDERR_FAULT_DUMP
-	fprintf(stderr, "\n---\n");
-	fprintf(stderr, "Debug Monitor:");
 	thinkos_context_show(ctx, sp, msp, psp);
 	fprintf(stderr, "\n");
 	fflush(stderr);
@@ -540,6 +541,27 @@ void __attribute__((naked, noreturn)) cm3_nmi_isr(void)
 
 	thinkos_nmi(ctx, msp, psp, lr);
 }
+
+void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
+{
+	struct thinkos_context * ctx;
+	uint32_t msp;
+	uint32_t psp;
+	uint32_t lr;
+
+	/* save the context */
+	ctx = __get_context();
+	
+	lr = cm3_lr_get();
+	msp = cm3_msp_get();
+	psp = cm3_psp_get();
+
+	cm3_faultmask_set(1);
+
+	thinkos_mon(ctx, msp, psp, lr);
+
+	thinkos_exception_dsr(ctx);
+}
 #endif
 
 void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
@@ -559,27 +581,6 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 	cm3_faultmask_set(1);
 
 	thinkos_mem(ctx, msp, psp, lr);
-
-	thinkos_exception_dsr(ctx);
-}
-
-void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
-{
-	struct thinkos_context * ctx;
-	uint32_t msp;
-	uint32_t psp;
-	uint32_t lr;
-
-	/* save the context */
-	ctx = __get_context();
-	
-	lr = cm3_lr_get();
-	msp = cm3_msp_get();
-	psp = cm3_psp_get();
-
-	cm3_faultmask_set(1);
-
-	thinkos_mon(ctx, msp, psp, lr);
 
 	thinkos_exception_dsr(ctx);
 }

@@ -75,11 +75,7 @@
 
 #define TRACE_RING_SIZE 512
 
-#define UART_CONSOLE_TX_FIFO_LEN 512
-#define UART_CONSOLE_RX_FIFO_LEN 16
-#define UART_CONSOLE_DEV         STM32_UART5
-#define UART_CONSOLE_ISR         stm32f_uart5_isr
-#define UART_CONSOLE_IRQ_NUM     STM32_IRQ_UART5
+#define STM32_ENABLE_USB_DEVICE 1 
 
 #endif /* __CONFIG_H__ */
 

@@ -22,7 +22,7 @@
 
 PROG = gdb_test
 
-CFILES = gdb_test.c stdio.c
+CFILES = gdb_test.c stdio.c cdc-acm_mon.c monitor.c
 
 SDK = ../../../sdk
 TOOLS = ../../../../tools
