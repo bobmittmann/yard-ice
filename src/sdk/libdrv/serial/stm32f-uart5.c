@@ -28,17 +28,6 @@
 
 struct stm32f_serial_drv uart5_serial_drv = {
 	.uart = STM32_UART5,
-#if SERIAL_ENABLE_DMA
-	.dma = STM32F_DMA1,
-	.rx = {
-		.irq = STM32F_IRQ_DMA1_STREAM0,
-		.s = &STM32F_DMA1->s[0]
-	},
-	.tx = {
-		.irq = STM32F_IRQ_DMA1_STREAM7,
-		.s = &STM32F_DMA1->s[7]
-	}
-#endif
 };
 
 void stm32f_uart5_isr(void)

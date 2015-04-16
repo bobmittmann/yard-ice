@@ -80,7 +80,6 @@ struct stm32f_serial_drv {
 #if SERIAL_ENABLE_TX_MUTEX
 	uint8_t tx_mutex;
 #endif
-
 	uint16_t rx_trig;
 	uint32_t * txie;
 	struct {
