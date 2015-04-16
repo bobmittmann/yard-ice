@@ -107,6 +107,8 @@ int cmd_sleep(FILE * f, int argc, char ** argv);
 
 int cmd_osinfo(FILE * f, int argc, char ** argv);
 
+int cmd_oscheck(FILE * f, int argc, char ** argv);
+
 int cmd_thread(FILE * f, int argc, char ** argv);
 
 

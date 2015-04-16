@@ -444,7 +444,7 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 
 	tracef("%s(): \"%s\"", __func__, s);
 
-	if ((ret = exec(f, s, yard_ice_cmd_tab)) < 0) {
+	if ((ret = exec(f, yard_ice_cmd_tab, s)) < 0) {
 		DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
 		rsp_fclose(f);
 		return rsp_error(tp, -ret);

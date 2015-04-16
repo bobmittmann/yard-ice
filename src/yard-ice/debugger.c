@@ -60,7 +60,7 @@ struct debugger debugger;
  ***********************************************************************/
 
 /* Breakpoint allocation data */
-static struct dbg_bp dbg_bp_poll[DBG_BREAKPOINT_MAX];
+static struct dbg_bp dbg_bp_pool[DBG_BREAKPOINT_MAX];
 
 /* Breakpoint management data */
 /* This is a list of breakpoints ordered from the most to the least recently
@@ -79,14 +79,14 @@ static void dbg_bp_init(dbg_bp_ctrl_t * bpctl)
 	/* initialize the breakpoint poll.
 	 The breakpoint poll consist of a linked list of free
 	 breakpoint structures */
-	bpctl->free = dbg_bp_poll;
+	bpctl->free = dbg_bp_pool;
 	bpctl->lst = dbg_bp_list;
 	bpctl->cnt = 0;
 
 	bp = bpctl->free;
 	for (i = 1; i < DBG_BREAKPOINT_MAX; i++) {
-		bp->next = &dbg_bp_poll[i];
-		bp = &dbg_bp_poll[i];
+		bp->next = &dbg_bp_pool[i];
+		bp = &dbg_bp_pool[i];
 	}
 	bp->next = NULL;
 

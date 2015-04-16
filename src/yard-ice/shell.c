@@ -373,6 +373,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
 
+	{ cmd_oscheck, "check", "ck", 
+		"", "perform OS sanity check" },
+
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
 

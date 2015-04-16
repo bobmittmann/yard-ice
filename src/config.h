@@ -53,12 +53,11 @@
 #define THINKOS_SEMAPHORE_MAX 16
 #define THINKOS_ENABLE_SEM_ALLOC 1
 
-#define THINKOS_EVENT_MAX 0
-#define THINKOS_ENABLE_EVENT_ALLOC 0
+#define THINKOS_EVENT_MAX 2
+#define THINKOS_ENABLE_EVENT_ALLOC 2
 
 #define THINKOS_FLAG_MAX 16
 #define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
 
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
@@ -69,17 +68,17 @@
 
 #define THINKOS_ENABLE_DEADLOCK_CHECK 1
 
-#define THINKOS_ENABLE_EXCEPTIONS 1
+#define THINKOS_ENABLE_EXCEPTIONS  1
 
-#define THINKOS_EXCEPT_STACK_SIZE 384
+#define THINKOS_EXCEPT_STACK_SIZE  384
 
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
 #define THINKOS_ENABLE_THREAD_INFO 1
 
-#define THINKOS_ENABLE_RT_DEBUG 1
+#define THINKOS_ENABLE_RT_DEBUG    1
 
-#define THINKOS_ENABLE_PROFILING 0
+#define THINKOS_ENABLE_PROFILING   1
 
 /* -------------------------------------------------------------------------
  * USB device and CDC-ACM 
@@ -91,18 +90,51 @@
 #define CDC_EP_IN_MAX_PKT_SIZE 64
 #define CDC_EP_INT_MAX_PKT_SIZE 8
 
+/* -------------------------------------------------------------------------
+ * TCP/IP
+ * ------------------------------------------------------------------------- */
+
+#define MBUF_POOL_SIZE               64
+
+#define TCP_MAX_RCV_QUEUE            (1460 * 2)
+#define TCP_MAX_SND_QUEUE            (1460 * 2)
+
+#define TCP_DEFAULT_MSL_SEC          1
+#define TCP_IDLE_DET_SEC             10
+#define TCP_KEEP_ALIVE_PROBE_SEC     10
+#define TCP_MAX_IDLE_SEC             15
+
+#define TCP_ENABLE_TIMEWAIT          1
+#define TCP_ENABLE_HEADER_PREDICTION 1
+#define NET_TCP_PCB_ACTIVE_MAX       8
+#define NET_UDP_PCB_ACTIVE_MAX       1
+
+/* use hardware checksum */
+#define  ENABLE_NET_TCP_CHECKSUM 0
+#define  ENABLE_NET_UDP_CHECKSUM 0
+
+/* -------------------------------------------------------------------------
+ * JTAG
+ * ------------------------------------------------------------------------- */
+
 #define JTAG_VEC_BITS_MAX 256
-
 #define JTAG_TAP_MAX 8
+#define ENABLE_ICE_TEST 0
 
-#define	ENABLE_HISTORY 1
+/* -------------------------------------------------------------------------
+ * Shell
+ * ------------------------------------------------------------------------- */
 
 #define SHELL_LINE_MAX 72
 #define SHELL_ARG_MAX 16
 #define SHELL_HISTORY_MAX 32
 
-#define ENABLE_ICE_TEST 0
+/* -------------------------------------------------------------------------
+ * Services
+ * ------------------------------------------------------------------------- */
 
+#define ENABLE_TCP_SEND 1
+#define ENABLE_TCP_RECV 1
 #define ENABLE_USB 1
 #define ENABLE_NETWORK 1
 #define ENABLE_TFTP 1
@@ -112,22 +144,6 @@
 #define ENABLE_VCOM 1
 #define ENABLE_I2C 1
 #define ENABLE_TELNET 1
-
-#define ENABLE_TCP_SEND 1
-#define ENABLE_TCP_RECV 1
-
-#define TCP_MAX_RCV_QUEUE (1460 * 2)
-#define TCP_MAX_SND_QUEUE (1460 * 2)
-
-#define TCP_IDLE_DET_SEC         10
-#define TCP_KEEP_ALIVE_PROBE_SEC 10
-#define TCP_MAX_IDLE_SEC         15
-
-/* use hardware checksum */
-#define  ENABLE_NET_TCP_CHECKSUM 0
-#define  ENABLE_NET_UDP_CHECKSUM 0
-
-#define NET_TCP_PCB_ACTIVE_MAX 8
 
 #endif /* __CONFIG_H__ */
 

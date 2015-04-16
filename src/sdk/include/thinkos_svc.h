@@ -156,7 +156,8 @@
 	register int r1 asm("r2") = (int)(N); \
 	register struct cm3_scb * scb = CM3_SCB; \
 	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET; \
-	asm volatile ("str	%3, [%2, #4]\n" :  : \
+	asm volatile ("str	%3, [%2, #4]\n" \
+				  "isb\n" :  :  \
 				  "r"(r0), "r"(r1), "r"(scb), "r"(nmi) : ); \
 	} )
 
@@ -166,7 +167,8 @@
 	register int r2 asm("r2") = (int)(N); \
 	register struct cm3_scb * scb = CM3_SCB; \
 	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET; \
-	asm volatile ("str	%4, [%3, #4]\n" :  : \
+	asm volatile ("str	%4, [%3, #4]\n" \
+				  "isb\n" :  :  \
 				  "r"(r0), "r"(r1), "r"(r2), "r"(scb), "r"(nmi) : ); \
 	} )
 

@@ -57,7 +57,7 @@
 #endif
 
 #ifndef STM32F_ETH_RX_NDESC
-#define STM32F_ETH_RX_NDESC 4
+#define STM32F_ETH_RX_NDESC 2
 #endif
 
 #ifndef STM32F_ETH_TX_NDESC
@@ -70,7 +70,6 @@ struct stm32f_eth_drv {
 	int event;
 	struct {
 		struct rxdma_enh_desc desc[STM32F_ETH_RX_NDESC];
-//		unsigned int cnt;
 		uint32_t head;
 		uint32_t tail;
 	} rx;
@@ -78,7 +77,6 @@ struct stm32f_eth_drv {
 		struct txdma_enh_desc desc[STM32F_ETH_TX_NDESC];
 		volatile uint32_t head;
 		volatile uint32_t tail;
-//		int flag;
 		int sem;
 	} tx;
 } __attribute__ ((aligned (8)));
