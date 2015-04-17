@@ -36,7 +36,7 @@ LIBS = cm3 stm32f util thinkos c ice-comm cdc-acm crc drv tty shell gdb
 
 INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CFLAGS = -g -O2 --save-temps
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407

@@ -70,6 +70,10 @@ struct usb_cdc_acm_dev {
 	uint8_t out_ep;
 	uint8_t int_ep;
 
+	uint8_t rx_cnt; 
+	uint8_t rx_pos; 
+	uint8_t rx_buf[CDC_EP_IN_MAX_PKT_SIZE];
+
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
 
@@ -175,8 +179,6 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_mon_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_mon_out_info, NULL, 0);
 			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_mon_int_info, NULL, 0);
-			/* Ok to receive */
-			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 		} else {
 			usb_dev_ep_ctl(dev->usb, dev->in_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
@@ -204,6 +206,12 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		break;
 
 	case SET_LINE_CODING:
+		if ((dev->acm.flags & ACM_LC_SET) == 0) {
+			dev->acm.flags |= ACM_LC_SET;
+			/* signal monitor */
+			monitor_signal(MON_COMM_CTL);
+		}
+
         memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
         DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
         DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
@@ -283,28 +291,83 @@ int usb_mon_on_error(usb_class_t * cl, int code)
 int monitor_comm_send(void * drv, const void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	uint8_t * ptr = (uint8_t *)buf;
+	unsigned int rem = len;
+	int ret;
+	int n;
 
-	if (len >= CDC_EP_OUT_MAX_PKT_SIZE)
-		len = CDC_EP_OUT_MAX_PKT_SIZE;
+	while (rem) {
+		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {
+			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!!");
+			return n;
+		}
 
-	return usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, buf, len);
+		if ((ret = monitor_wait(MON_COMM_EOT)) < 0) {
+			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
+			return ret;
+		}
+
+		rem -= n;
+		ptr += n;
+	}
+
+	return len;
 }
 
 int monitor_comm_recv(void * drv, void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	int ret;
 	int n;
 
-	if (len >= CDC_EP_IN_MAX_PKT_SIZE)
-		len = CDC_EP_IN_MAX_PKT_SIZE;
+	if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
+		DCC_LOG(LOG_INFO, "read from intern buffer");
+		goto read_from_buffer;
+	};
 
-	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
-	/* Ok to receive next */
+	/* Ok to receive */
+	DCC_LOG(LOG_TRACE, "OK to receive!");
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 
+	if ((ret = monitor_wait(MON_COMM_RCV)) < 0) {
+		DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
+		return ret;
+	}
+
+	if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
+		n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
+		return n;
+	} 
+	
+	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
+							dev->rx_buf, CDC_EP_IN_MAX_PKT_SIZE);
+	dev->rx_pos = 0;
+	dev->rx_cnt = n;
+
+read_from_buffer:
+	/* get data from the rx buffer if not empty */
+	n = MIN(n, len);
+	memcpy(buf, &dev->rx_buf[dev->rx_pos], n); 
+
+	dev->rx_pos += n;
 	return n;
 }
 
+int monitor_comm_connect(void * drv)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	int ret;
+
+	while ((dev->acm.flags & ACM_LC_SET) == 0) {
+		DCC_LOG(LOG_TRACE, "CTL wait");
+		if ((ret = monitor_wait(MON_COMM_CTL)) < 0) {
+			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
 
 struct usb_cdc_acm_dev usb_cdc_rt;
 
@@ -325,6 +388,8 @@ void * usb_mon_init(const usb_dev_t * usb,
 	/* initialize USB device */
 	dev->usb = (usb_dev_t *)usb;
 
+	dev->rx_cnt = 0;
+	dev->rx_pos = 0;
 	dev->str = str;
 	dev->strcnt = strcnt;
 	
