@@ -29,3 +29,4 @@ tools/src/dcclog/missing
 /tools/src/dcclog/dcclog
 tools/src/dcclog/config.h.in
 /src/sdk/libhttpd/test/log.txt
+log.txt
