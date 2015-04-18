@@ -299,7 +299,7 @@ void stm32f_usart2_isr(void)
 
 		if (drv->flowctl_xonxoff) {
 			if (c == XON) {
-				DCC_LOG(LOG_WARNING, "RX: XON");
+				DCC_LOG(LOG_INFO, "RX: XON");
 				if (!drv->tx_on) {
 					drv->tx_on = true;
 					/* enable TXE interrupts */
@@ -309,7 +309,7 @@ void stm32f_usart2_isr(void)
 				return;
 			} 
 			if (c == XOFF) {
-				DCC_LOG(LOG_WARNING, "RX: XOFF");
+				DCC_LOG(LOG_INFO, "RX: XOFF");
 				drv->tx_on = false;
 //				thinkos_flag_give_i(CTL_FLAG);
 				return;

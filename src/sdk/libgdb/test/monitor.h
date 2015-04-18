@@ -23,56 +23,19 @@
 #ifndef __MONITOR_H__
 #define __MONITOR_H__
 
-#define __THINKOS_SYS__
-#include <thinkos_sys.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
-
-enum monitor_ev_no {
-	MON_COMM_RCV = 0,
-	MON_COMM_EOT = 1,
-	MON_COMM_CTL = 2,
-	MON_START    = 31
-};
-
-#define MON_RX_BUF_LEN 64
-
-struct thinkos_monitor {
-	uint32_t * ctx;
-	volatile uint32_t events;
-	volatile uint32_t mask;
-	struct {
-		uint8_t rx_buf[MON_RX_BUF_LEN];
-		void * drv;
-	} comm;
-} monitor_rt;
-
-static inline void monitor_signal(int ev) {
-	struct cm3_dcb * dcb = CM3_DCB;
-	__bit_mem_wr((uint32_t *)&monitor_rt.events, ev, 1);  
-	dcb->demcr |= DCB_DEMCR_MON_PEND;
-	asm volatile ("isb\n" :  :  : );
-}
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct usb_cdc_class * usb_mon_init(const usb_dev_t * usb, 
+									const uint8_t * const str[], 
+									unsigned int strcnt);
+
 void monitor_init(void);
 
-int monitor_comm_send(void * drv, const void * buf, unsigned int len);
-
-int monitor_comm_recv(void * drv, void * buf, unsigned int len);
-
-int monitor_comm_connect(void * drv);
-
-void monitor_event_unmask(int event);
-
-void monitor_event_mask(int event);
-
-uint32_t monitor_wait_multiple(uint32_t watch);
-
-int monitor_wait(int event);
 
 #ifdef __cplusplus
 }

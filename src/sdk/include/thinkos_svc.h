@@ -56,42 +56,42 @@
 #define THINKOS_FLAG_WAIT       21
 #define THINKOS_FLAG_TIMEDWAIT  22
 #define THINKOS_FLAG_RELEASE    23
-#define THINKOS_FLAG_CLR        24
-#define THINKOS_FLAG_SET        25
-#define THINKOS_FLAG_WATCH      26
-#define THINKOS_FLAG_TIMEDWATCH 27
+#define THINKOS_FLAG_VAL        24
+#define THINKOS_FLAG_CLR        25
+#define THINKOS_FLAG_SET        26
+#define THINKOS_FLAG_WATCH      27
+#define THINKOS_FLAG_TIMEDWATCH 28
 
-#define THINKOS_EVENT_WAIT      28
-#define THINKOS_EVENT_TIMEDWAIT 29
-#define THINKOS_EVENT_RAISE     30
-#define THINKOS_EVENT_MASK      31
-#define THINKOS_EVENT_UNMASK    32
+#define THINKOS_EVENT_WAIT      29
+#define THINKOS_EVENT_TIMEDWAIT 30
+#define THINKOS_EVENT_RAISE     31
+#define THINKOS_EVENT_MASK      32
+#define THINKOS_EVENT_UNMASK    33
 
-#define THINKOS_IRQ_WAIT        33
+#define THINKOS_IRQ_WAIT        34
 
-#define THINKOS_MUTEX_ALLOC     34
-#define THINKOS_MUTEX_FREE      35
+#define THINKOS_MUTEX_ALLOC     35
+#define THINKOS_MUTEX_FREE      36
 
-#define THINKOS_SEM_ALLOC       36
-#define THINKOS_SEM_FREE        37
+#define THINKOS_SEM_ALLOC       37
+#define THINKOS_SEM_FREE        38
 
-#define THINKOS_COND_ALLOC      38
-#define THINKOS_COND_FREE       39
+#define THINKOS_COND_ALLOC      39
+#define THINKOS_COND_FREE       40
 
-#define THINKOS_FLAG_ALLOC      40
-#define THINKOS_FLAG_FREE       41
+#define THINKOS_FLAG_ALLOC      41
+#define THINKOS_FLAG_FREE       42
 
-#define THINKOS_EVENT_ALLOC     42
-#define THINKOS_EVENT_FREE      43
+#define THINKOS_EVENT_ALLOC     43
+#define THINKOS_EVENT_FREE      44
 
-#define THINKOS_YIELD           44
 #define THINKOS_PAUSE           45
 #define THINKOS_RESUME          46
 #define THINKOS_CANCEL          47
 #define THINKOS_JOIN            48
 
-#define THINKOS_RT_SNAPSHOT     49
-#define THINKOS_EXIT            50
+#define THINKOS_EXIT            49
+#define THINKOS_RT_SNAPSHOT     50
 
 #define THINKOS_SEM_POST_I       0
 #define THINKOS_FLAG_GIVE_I      1
@@ -411,6 +411,9 @@ static inline int __attribute__((always_inline)) thinkos_flag_clr(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_CLR, flag);
 }
 
+static inline int __attribute__((always_inline)) thinkos_flag_val(int flag) {
+	return THINKOS_SVC1(THINKOS_FLAG_VAL, flag);
+}
 
 static inline int __attribute__((always_inline)) thinkos_flag_watch(int flag) {
 	return THINKOS_SVC1(THINKOS_FLAG_WATCH, flag);

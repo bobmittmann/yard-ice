@@ -85,6 +85,10 @@ struct thinkos_context {
 #define THINKOS_IRQ_MAX 80
 #endif
 
+#ifndef THINKOS_ENABLE_IRQ_SVC_CALL
+#define THINKOS_ENABLE_IRQ_SVC_CALL 1
+#endif
+
 #ifndef THINKOS_THREADS_MAX 
 #define THINKOS_THREADS_MAX 8
 #endif
@@ -93,16 +97,20 @@ struct thinkos_context {
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 #endif
 
-#ifndef THINKOS_ENABLE_TIMESHARE
-#define THINKOS_ENABLE_TIMESHARE 1
+#ifndef THINKOS_ENABLE_THREAD_INFO
+#define THINKOS_ENABLE_THREAD_INFO 1
 #endif
 
-#ifndef THINKOS_ENABLE_JOIN
-#define THINKOS_ENABLE_JOIN 1
+#ifndef THINKOS_ENABLE_THREAD_STAT
+#define THINKOS_ENABLE_THREAD_STAT 1
 #endif
 
 #ifndef THINKOS_ENABLE_IDLE_WFI
 #define THINKOS_ENABLE_IDLE_WFI 1
+#endif
+
+#ifndef THINKOS_ENABLE_JOIN
+#define THINKOS_ENABLE_JOIN 1
 #endif
 
 #ifndef THINKOS_ENABLE_PAUSE
@@ -117,16 +125,16 @@ struct thinkos_context {
 #define THINKOS_ENABLE_EXIT 1
 #endif
 
+#ifndef THINKOS_ENABLE_TIMESHARE
+#define THINKOS_ENABLE_TIMESHARE 1
+#endif
+
 #ifndef THINKOS_SCHED_LIMIT_MAX
 #define THINKOS_SCHED_LIMIT_MAX 32
 #endif
 
 #ifndef THINKOS_SCHED_LIMIT_MIN
 #define THINKOS_SCHED_LIMIT_MIN 1
-#endif
-
-#ifndef THINKOS_ENABLE_CLOCK
-#define THINKOS_ENABLE_CLOCK 1
 #endif
 
 #ifndef THINKOS_MUTEX_MAX
@@ -177,36 +185,12 @@ struct thinkos_context {
 #define THINKOS_ENABLE_FLAG_WATCH 1
 #endif
 
-#ifndef THINKOS_ENABLE_THREAD_STAT
-#define THINKOS_ENABLE_THREAD_STAT 1
-#endif
-
 #ifndef THINKOS_ENABLE_TIMED_CALLS
 #define THINKOS_ENABLE_TIMED_CALLS 1
 #endif
 
-#ifndef THINKOS_ENABLE_TIMER
-#define THINKOS_ENABLE_TIMER 1
-#endif
-
-#ifndef THINKOS_ENABLE_IRQ_SVC_CALL
-#define THINKOS_ENABLE_IRQ_SVC_CALL 1
-#endif
-
-#ifndef THINKOS_ENABLE_ARG_CHECK
-#define THINKOS_ENABLE_ARG_CHECK 1
-#endif
-
-#ifndef THINKOS_ENABLE_DEADLOCK_CHECK
-#define THINKOS_ENABLE_DEADLOCK_CHECK 1
-#endif
-
-#ifndef THINKOS_ENABLE_EXCEPTIONS
-#define THINKOS_ENABLE_EXCEPTIONS 1
-#endif
-
-#ifndef THINKOS_ENABLE_THREAD_INFO
-#define THINKOS_ENABLE_THREAD_INFO 1
+#ifndef THINKOS_ENABLE_CLOCK
+#define THINKOS_ENABLE_CLOCK 1
 #endif
 
 #ifndef THINKOS_ENABLE_ALARM
@@ -219,6 +203,18 @@ struct thinkos_context {
 
 #ifndef THINKOS_ENABLE_BREAK
 #define THINKOS_ENABLE_BREAK 1
+#endif
+
+#ifndef THINKOS_ENABLE_ARG_CHECK
+#define THINKOS_ENABLE_ARG_CHECK 1
+#endif
+
+#ifndef THINKOS_ENABLE_DEADLOCK_CHECK
+#define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#endif
+
+#ifndef THINKOS_ENABLE_EXCEPTIONS
+#define THINKOS_ENABLE_EXCEPTIONS 1
 #endif
 
 #ifndef THINKOS_ENABLE_SCHED_DEBUG
@@ -751,51 +747,6 @@ __thinkos_wakeup_return(unsigned int wq, unsigned int th, int ret) {
 	/* set the thread's return value */
 	thinkos_rt.ctx[th]->r0 = ret;
 }
-
-#if THINKOS_ENABLE_TIMER
-static void inline __attribute__((always_inline))
-__thinkos_timer_set(unsigned int ms) {
-	int self = thinkos_rt.active;
-#if THINKOS_ENABLE_CLOCK
-	/* set the clock */
-	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
-	/* insert into the clock wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);
-#if THINKOS_ENABLE_THREAD_STAT
-	/* update status, mark the thread clock enable bit */
-	__bit_mem_wr(&thinkos_rt.th_stat[self], 0, 1);
-#endif
-#else
-#error "__thinkos_timer_set() depends on THINKOS_ENABLE_CLOCK"
-#endif
-}
-
-static void inline __attribute__((always_inline))
-	__thinkos_timer_cancel(void) {
-	int self = thinkos_rt.active;
-#if THINKOS_ENABLE_CLOCK
-	/* remove from the clock wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_clock, self, 0);
-#if THINKOS_ENABLE_THREAD_STAT
-	/* clear the thread clock enable bit */
-	__bit_mem_wr(&thinkos_rt.th_stat[self], 0, 0);
-#endif
-#else
-#error "__thinkos_timer_cancel() depends on THINKOS_ENABLE_CLOCK"
-#endif
-}
-
-static bool inline __attribute__((always_inline))
-	__thinkos_timer_timedout(void) {
-	int self = thinkos_rt.active;
-#if THINKOS_ENABLE_CLOCK
-	return ((int32_t)(thinkos_rt.clock[self] - thinkos_rt.ticks) <= 0) ? true : false;
-#else
-#error "__thinkos_timedout() depends on THINKOS_ENABLE_CLOCK"
-#endif
-}
-
-#endif /* THINKOS_ENABLE_TIMER */
 
 static volatile inline uint32_t __attribute__((always_inline))
 	__thinkos_ticks(void) {

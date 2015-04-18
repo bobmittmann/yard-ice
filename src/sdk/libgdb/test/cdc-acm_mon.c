@@ -34,7 +34,8 @@
 
 #include <sys/dcclog.h>
 
-#include "monitor.h"
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 #ifndef STM32_ENABLE_USB_DEVICE 
 #error "cdc-acm_dev.c depends on STM32_ENABLE_USB_DEVICE"
@@ -82,7 +83,7 @@ int usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	(void)dev;
 	DCC_LOG2(LOG_TRACE, "ep_id=%d len=%d", ep_id, len);
-	monitor_signal(MON_COMM_RCV);
+	dmon_signal(DMON_COMM_RCV);
 	return 0;
 }
 
@@ -91,7 +92,7 @@ int usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	(void)dev;
 	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
-	monitor_signal(MON_COMM_EOT);
+	dmon_signal(DMON_COMM_EOT);
 	return 0;
 
 }
@@ -209,7 +210,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		if ((dev->acm.flags & ACM_LC_SET) == 0) {
 			dev->acm.flags |= ACM_LC_SET;
 			/* signal monitor */
-			monitor_signal(MON_COMM_CTL);
+			dmon_signal(DMON_COMM_CTL);
 		}
 
         memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
@@ -288,7 +289,7 @@ int usb_mon_on_error(usb_class_t * cl, int code)
 	return 0;
 }
 
-int monitor_comm_send(void * drv, const void * buf, unsigned int len)
+int dmon_comm_send(void * drv, const void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
 	uint8_t * ptr = (uint8_t *)buf;
@@ -302,7 +303,7 @@ int monitor_comm_send(void * drv, const void * buf, unsigned int len)
 			return n;
 		}
 
-		if ((ret = monitor_wait(MON_COMM_EOT)) < 0) {
+		if ((ret = dmon_wait(DMON_COMM_EOT)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
 		}
@@ -314,7 +315,7 @@ int monitor_comm_send(void * drv, const void * buf, unsigned int len)
 	return len;
 }
 
-int monitor_comm_recv(void * drv, void * buf, unsigned int len)
+int dmon_comm_recv(void * drv, void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
 	int ret;
@@ -329,7 +330,7 @@ int monitor_comm_recv(void * drv, void * buf, unsigned int len)
 	DCC_LOG(LOG_TRACE, "OK to receive!");
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 
-	if ((ret = monitor_wait(MON_COMM_RCV)) < 0) {
+	if ((ret = dmon_wait(DMON_COMM_RCV)) < 0) {
 		DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 		return ret;
 	}
@@ -353,14 +354,14 @@ read_from_buffer:
 	return n;
 }
 
-int monitor_comm_connect(void * drv)
+int dmon_comm_connect(void * drv)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
 	int ret;
 
 	while ((dev->acm.flags & ACM_LC_SET) == 0) {
 		DCC_LOG(LOG_TRACE, "CTL wait");
-		if ((ret = monitor_wait(MON_COMM_CTL)) < 0) {
+		if ((ret = dmon_wait(DMON_COMM_CTL)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
 		}
