@@ -393,6 +393,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* disable interrupts */
 	cm3_cpsid_i();
 
+#if THINKOS_ENABLE_EXCEPTIONS
+	thinkos_except_init();
+#endif
+
 	/* adjust exception priorities */
 	/*
 	 *  0x00 - low latency interrupts
@@ -420,11 +424,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	   regular interrupts (higher number) */
 	cm3_except_pri_set(CM3_EXCEPT_PENDSV, SCHED_PRIORITY);
 
-
 	cm3_except_pri_set(CM3_EXCEPT_MEM_MANAGE, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_BUS_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
-
+	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
 
 #if	(THINKOS_IRQ_MAX > 0)
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
@@ -696,8 +699,4 @@ int thinkos_bmp_alloc(uint32_t bmp[], int bits)
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 const char * const thinkos_nmic_link = thinkos_nmi_nm;
-
-#if THINKOS_ENABLE_EXCEPTIONS
-const char * const thinkos_execpt_link = thinkos_except_nm;
-#endif
 

@@ -91,17 +91,16 @@ int main(int argc, char ** argv)
 
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
 
-	DCC_LOG(LOG_TRACE, "4. stdio_init().");
-	stdio_init();
+	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	monitor_init();
 
+	DCC_LOG(LOG_TRACE, "4. stdio_init().");
+	stdio_init();
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -112,8 +111,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 	for (;;) {
-//		stdio_shell();
-		gdb_rspd_start(stdout);
+		stdio_shell();
+//		gdb_rspd_start(stdout);
 	}
 
 	return 0;

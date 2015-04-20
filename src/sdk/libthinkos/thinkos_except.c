@@ -30,6 +30,8 @@
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 #include <sys/dcclog.h>
 
@@ -279,7 +281,7 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 #endif
 }
 
-void bus_fault(struct thinkos_context * ctx, uint32_t msp, 
+void __bus_fault(struct thinkos_context * ctx, uint32_t msp, 
 			   uint32_t psp, uint32_t lr)
 {
 	uint32_t sp;
@@ -453,30 +455,46 @@ void thinkos_mem(struct thinkos_context * ctx, uint32_t msp,
 	for(;;);
 }
 
-
-
-
-
+static inline struct thinkos_context * 
+	__attribute__((always_inline)) __save_context(struct thinkos_context * ctx) {
+	return ctx;
+}
 
 void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
-	struct thinkos_context * ctx;
-	uint32_t msp;
-	uint32_t psp;
+	struct thinkos_context * ctx = &thinkos_dmon_rt.except.ctx;
+	uint32_t sp;
+	uint32_t tmp;
 	uint32_t lr;
+	asm volatile ("mov    %2, %3\n"
+				  "stmia  %2, {r4-r11}\n"
+				  "add    %2, %2, #32\n"
+				  "tst    lr, #4\n" 
+				  "ite    eq\n" 
+				  "mrseq  %0, MSP\n" 
+				  "mrsne  %0, PSP\n" 
+				  "ldmia  %0, {r4-r11}\n"
+				  "stmia  %2, {r4-r11}\n"
+				  "mov    %1, lr\n"
+				  : "=r" (sp), "=r" (lr), "=r" (tmp) : "r" (ctx) );
 
-	/* save the context */
-	ctx = __get_context();
+	thinkos_dmon_rt.except.ret = lr;
+	thinkos_dmon_rt.except.sp = sp;
 
-	lr = cm3_lr_get();
-	msp = cm3_msp_get();
-	psp = cm3_psp_get();
+	DCC_LOG(LOG_ERROR, "DMON_BUSFAULT");
+	dmon_signal(DMON_BUSFAULT);
 
-	cm3_faultmask_set(1);
+	lr = thinkos_dmon_rt.except.ret;
+	sp = thinkos_dmon_rt.except.sp;
 
-	bus_fault(ctx, msp, psp, lr);
-
-	thinkos_exception_dsr(ctx);
+	asm volatile ("add    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "stmia  %0, {r4-r11}\n"
+				  "sub    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "mov    lr, %1\n"
+				  "bx     lr\n"
+				  : : "r" (sp), "r" (lr), "r" (ctx) );
 }
 
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
@@ -599,7 +617,12 @@ void __attribute__((noreturn))
 void thinkos_exception_dsr(struct thinkos_context *) 
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
-const char const thinkos_except_nm[] = "EXT";
+void thinkos_except_init(void)
+{
+	struct cm3_scb * scb = CM3_SCB;
+	scb->shcsr = SCB_SHCSR_USGFAULTENA | SCB_SHCSR_BUSFAULTENA | 
+		SCB_SHCSR_MEMFAULTENA;
+}
 
 #endif /* THINKOS_ENABLE_EXCEPTIONS */
 

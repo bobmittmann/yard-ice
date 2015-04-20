@@ -1663,7 +1663,7 @@ int microjs_compile(struct microjs_sdt * microjs,
 			}
 			/* FIXME: checking for the code buffer overflow at this
 			   point is dangerous because we may have corrupted the 
-			   mamory already!!!! */
+			   memory already!!!! */
 			if (microjs->pc >= microjs->cdsz) {
 				err = -ERR_CODE_MEM_OVERFLOW;
 				goto error;

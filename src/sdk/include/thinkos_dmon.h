@@ -40,15 +40,25 @@ enum dmon_ev_no {
 	DMON_COMM_RCV = 0,
 	DMON_COMM_EOT = 1,
 	DMON_COMM_CTL = 2,
+	DMON_THREAD_FAULT = 16,
+	DMON_BUSFAULT = 30,
 	DMON_START    = 31
 };
 
+struct dmon_comm;
+
 struct thinkos_dmon {
-	void * comm;
+	struct dmon_comm * comm;
 	uint32_t * ctx;
 	volatile uint32_t events;
 	volatile uint32_t mask;
-	void (* task)(struct thinkos_dmon * dmon);
+	void (* task)(struct thinkos_dmon * dmon, struct dmon_comm * comm);
+	struct {	
+		struct thinkos_context ctx;
+		uint32_t ret;
+		uint32_t sp;
+		int thread;
+	} except;
 };
 
 extern struct thinkos_dmon thinkos_dmon_rt;
@@ -64,7 +74,8 @@ static inline void dmon_signal(int ev) {
 extern "C" {
 #endif
 
-void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * dmon));
+void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * , 
+												  struct dmon_comm * ));
 
 int dmon_comm_send(void * comm, const void * buf, unsigned int len);
 

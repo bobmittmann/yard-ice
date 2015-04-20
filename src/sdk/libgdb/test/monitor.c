@@ -25,6 +25,7 @@
 #include <sys/param.h>
 #include <sys/serial.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdbool.h>
 #include <sys/usb-cdc.h>
 
@@ -32,19 +33,20 @@
 
 #include "monitor.h"
 
-
 const char monitor_banner[] = "\r\n\r\n"
 "-------------------------------------------------------------------------\r\n"
 "- ThinkOS Monitor\r\n"
 "-------------------------------------------------------------------------\r\n"
 "\r\n";
 
-void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon) 
+void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
+											struct dmon_comm * comm)
 {
-	void * comm = mon->comm;
-	char buf[64];
+	char buf[80];
 	int n;
 	int c;
+
+	dmon_unmask(DMON_THREAD_FAULT);
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
 	dmon_comm_connect(comm);
@@ -56,8 +58,15 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon)
 		n = dmon_comm_recv(comm, buf, 64);
 		DCC_LOG1(LOG_TRACE, "n=%d...", n);
 		(void)n;
-		if (n == 0)
+		if (n < 0) {
+			if (mon->events & (1 << DMON_THREAD_FAULT)) {
+				DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
+				mon->events &= ~(1 << DMON_THREAD_FAULT);
+				n = sprintf(buf, "Fault at thread %d\r\n", mon->except.thread);
+				dmon_comm_send(comm, buf, n);
+			}
 			continue;
+		}
 
 		dmon_comm_send(comm, buf, n);
 		c = buf[0];

@@ -209,6 +209,8 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 	case SET_LINE_CODING:
 		if ((dev->acm.flags & ACM_LC_SET) == 0) {
 			dev->acm.flags |= ACM_LC_SET;
+			DCC_LOG1(LOG_TRACE, "Signal:%d", DMON_COMM_CTL);
+			DCC_LOG1(LOG_TRACE, "dev->acm.flags<-%0p", &dev->acm.flags);
 			/* signal monitor */
 			dmon_signal(DMON_COMM_CTL);
 		}
@@ -232,6 +234,8 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		DCC_LOG2(LOG_TRACE, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
+		/* signal monitor */
+		dmon_signal(DMON_COMM_CTL);
 		break;
 
 	default:
@@ -303,6 +307,8 @@ int dmon_comm_send(void * drv, const void * buf, unsigned int len)
 			return n;
 		}
 
+		DCC_LOG1(LOG_TRACE, "n=%d!!", n);
+
 		if ((ret = dmon_wait(DMON_COMM_EOT)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
@@ -359,8 +365,8 @@ int dmon_comm_connect(void * drv)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
 	int ret;
 
-	while ((dev->acm.flags & ACM_LC_SET) == 0) {
-		DCC_LOG(LOG_TRACE, "CTL wait");
+//	while ((dev->acm.flags & ACM_LC_SET) == 0) {
+	while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
 		if ((ret = dmon_wait(DMON_COMM_CTL)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
@@ -395,6 +401,7 @@ void * usb_mon_init(const usb_dev_t * usb,
 	dev->strcnt = strcnt;
 	
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
+	DCC_LOG1(LOG_TRACE, "dev->acm.flags<-%0p", &dev->acm.flags);
 
 	return (void *)dev;
 }

@@ -27,6 +27,7 @@
 #include <sys/tty.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sys/shell.h>
 
@@ -102,6 +103,41 @@ int cmd_gdb(FILE * f, int argc, char ** argv)
 	return SHELL_ABORT;
 }
 
+int cmd_fault(FILE * f, int argc, char ** argv)
+{
+	volatile uint32_t * ptr = (uint32_t *)(0x0);
+	uint32_t x;
+	int i;
+
+	if (argc > 2)
+		return SHELL_ERR_EXTRA_ARGS;
+
+	if (argc < 2)
+		return SHELL_ERR_ARG_MISSING;
+
+	if (strcmp(argv[1], "r") == 0) {
+		fprintf(f, "Invalid read access\n");
+		for (i = 0; i < (16 << 4); ++i) {
+			fprintf(f, "0x%08x\n", (uintptr_t)ptr);
+			x = *ptr;
+			(void)x;
+			ptr += 0x10000000 / (2 << 4);
+		}
+	};
+
+	if (strcmp(argv[1], "w") == 0) {
+		fprintf(f, "Invalid write access\n");
+		for (i = 0; i < (16 << 4); ++i) {
+			fprintf(f, "0x%08x\n", (uintptr_t)ptr);
+			*ptr = 0;
+			ptr += 0x10000000 / (2 << 4);
+		}
+	};
+
+
+	return 0;
+}
+
 const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_echo, "echo", "", 
 		"[STRING]...", "Echo the STRING(s) to terminal" },
@@ -132,6 +168,9 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 	{ cmd_gdb, "gdb", "", "", 
 		"Start GDB monitor" },
+
+	{ cmd_fault, "fault", "f", "", 
+		"Generate a fault" },
 
 	{ NULL, "", "", NULL, NULL }
 };

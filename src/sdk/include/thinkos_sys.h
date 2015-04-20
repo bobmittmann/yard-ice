@@ -763,6 +763,7 @@ int thinkos_obj_type_get(unsigned int oid);
 
 int thinkos_bmp_alloc(uint32_t bmp[], int bits);
 
+void thinkos_except_init(void);
 
 #ifdef __cplusplus
 }

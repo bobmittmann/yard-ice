@@ -80,6 +80,9 @@ struct usb_cdc_acm_dev {
 #ifndef CDC_CTL_FLAG_NO
 	uint8_t ctl_flag; /* Control event flag */
 #endif
+#ifndef CDC_RX_FLAG_NO
+	uint8_t rx_flag; /* RX flag */
+#endif
 	uint8_t ctl_ep;
 	uint8_t in_ep;
 	uint8_t out_ep;
