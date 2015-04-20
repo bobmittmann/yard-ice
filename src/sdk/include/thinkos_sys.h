@@ -521,6 +521,19 @@ struct thinkos_thread_init {
 	struct thinkos_thread_inf * inf;
 };
 
+/* -------------------------------------------------------------------------- 
+ * Exception state
+ * --------------------------------------------------------------------------*/
+
+struct thinkos_except {
+	struct thinkos_context ctx;
+	uint32_t ret;
+	uint32_t sp;
+	uint32_t msp;
+	uint32_t psp;
+	uint8_t ipsr;
+	uint8_t thread;
+};
 
 /* -------------------------------------------------------------------------- 
  * Idle thread
@@ -549,6 +562,8 @@ struct thinkos_except_and_idle {
 extern struct thinkos_rt thinkos_rt;
 
 extern struct thinkos_except_and_idle thinkos_idle;
+
+extern struct thinkos_except thinkos_except_buf;
 
 extern uint32_t * const thinkos_obj_alloc_lut[];
 
@@ -763,7 +778,10 @@ int thinkos_obj_type_get(unsigned int oid);
 
 int thinkos_bmp_alloc(uint32_t bmp[], int bits);
 
-void thinkos_except_init(void);
+void thinkos_exception_init(void);
+
+void thinkos_exception_dsr(struct thinkos_except * xcpt);
+
 
 #ifdef __cplusplus
 }

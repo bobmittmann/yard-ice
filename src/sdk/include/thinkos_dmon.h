@@ -40,8 +40,12 @@ enum dmon_ev_no {
 	DMON_COMM_RCV = 0,
 	DMON_COMM_EOT = 1,
 	DMON_COMM_CTL = 2,
+
+	DMON_PIPE_RD  = 3,
+	DMON_PIPE_WR  = 4,
+
 	DMON_THREAD_FAULT = 16,
-	DMON_BUSFAULT = 30,
+	DMON_EXCEPT   = 30,
 	DMON_START    = 31
 };
 
@@ -53,12 +57,6 @@ struct thinkos_dmon {
 	volatile uint32_t events;
 	volatile uint32_t mask;
 	void (* task)(struct thinkos_dmon * dmon, struct dmon_comm * comm);
-	struct {	
-		struct thinkos_context ctx;
-		uint32_t ret;
-		uint32_t sp;
-		int thread;
-	} except;
 };
 
 extern struct thinkos_dmon thinkos_dmon_rt;
@@ -86,6 +84,8 @@ int dmon_comm_connect(void * drv);
 void dmon_unmask(int event);
 
 void dmon_mask(int event);
+
+void dmon_clear(int event);
 
 uint32_t dmon_select(uint32_t watch);
 

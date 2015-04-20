@@ -86,19 +86,8 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 	uint32_t epr;
 	int cnt;
 
-	while (!((epr = usb->epr[ep_id]) & USB_CTR_RX)) {
-		if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
-			if (msec == 0) {
-				
-				return -1;
-			}
-			msec--;
-		}
-	}
-
-	/* OUT */
-	__clr_ep_flag(usb, ep_id, USB_CTR_RX);
-
+	epr = usb->epr[ep_id];
+again:
 	if (epr & USB_EP_DBL_BUF) {
 		/* select the descriptor according to the data toggle bit */
 		rx_pktbuf = &pktbuf[ep_id].dbrx[(epr & USB_SWBUF_RX) ? 1 : 0];
@@ -106,11 +95,25 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 		/* single buffer */
 		rx_pktbuf = &pktbuf[ep_id].rx;
 	}
+	if (rx_pktbuf->count == 0) {
+		while (!(epr & USB_CTR_RX)) {
+			if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
+				if (msec == 0)
+					return -1;
+				msec--;
+			}
+			epr = usb->epr[ep_id];
+		}
+		/* OUT */
+		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
+		goto again;
+	}
 
 	cnt = MIN(rx_pktbuf->count, len);
 
 	/* Data received */
 	__copy_from_pktbuf(buf, rx_pktbuf, cnt);
+	rx_pktbuf->count = 0;
 
 	if (epr & USB_EP_DBL_BUF) {
 		/* release the buffer to the USB controller */

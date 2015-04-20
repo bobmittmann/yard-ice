@@ -68,9 +68,6 @@ struct usb_cdc_acm_dev {
 	/* number of strings */
 	uint8_t strcnt;
 
-#ifndef CDC_RX_SEM_NO
-	uint8_t rx_sem; /* RX semaphore */
-#endif
 #ifndef CDC_TX_DONE_NO
 	uint8_t tx_done; /* TX done flag */
 #endif
@@ -109,11 +106,6 @@ struct usb_cdc_acm_dev {
 #undef TX_LOCK
 #endif
 
-#ifdef RX_SEM
-#undef RX_SEM
-#endif
-
-
 #ifdef CDC_CTL_FLAG_NO
 #define CTL_FLAG (THINKOS_FLAG_BASE + CDC_CTL_FLAG_NO)
 #else
@@ -132,70 +124,59 @@ struct usb_cdc_acm_dev {
 #define TX_LOCK dev->tx_lock
 #endif
 
-#ifdef CDC_RX_SEM_NO
-#define RX_SEM (THINKOS_SEM_BASE + CDC_RX_SEM_NO)
-#else
-#define RX_SEM dev->rx_sem
-#endif
-
 #ifdef CDC_RX_FLAG_NO
 #define RX_FLAG (THINKOS_FLAG_BASE + CDC_RX_FLAG_NO)
 #else
 #define RX_FLAG dev->rx_flag
 #endif
 
-int usb_cdc_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
+static inline void __memcpy(void * __dst, void * __src,  unsigned int __len)
 {
-//#ifndef CDC_RX_SEM_NO
-#ifndef CDC_RX_FLAG_NO
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-#endif
-	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
-	thinkos_sem_post_i(RX_SEM);
-//	thinkos_flag_give_i(RX_FLAG);
-	return 0;
+	uint8_t * dst = (uint8_t *)__dst;
+	uint8_t * src = (uint8_t *)__src;
+	int i;
+
+	for (i = 0; i < __len; ++i)
+		dst[i] = src[i];
 }
 
-int usb_cdc_on_eot(usb_class_t * cl, unsigned int ep_id)
+
+void usb_cdc_on_rcv(struct usb_cdc_acm_dev * dev, 
+					unsigned int ep_id, unsigned int len)
 {
-#ifndef CDC_TX_DONE_NO
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-#endif
-	DCC_LOG2(LOG_INFO, "ep_id=%d flag=%d", ep_id, TX_DONE);
+	thinkos_flag_give_i(RX_FLAG);
+}
+
+void usb_cdc_on_eot(struct usb_cdc_acm_dev * dev, unsigned int ep_id)
+{
 	thinkos_flag_give_i(TX_DONE);
-	return 0;
 
 }
 
-int usb_cdc_on_eot_int(usb_class_t * cl, unsigned int ep_id)
+void usb_cdc_on_eot_int(struct usb_cdc_acm_dev * dev, unsigned int ep_id)
 {
-#ifndef CDC_CTL_FLAG_NO
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-#endif
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
 	thinkos_flag_give_i(CTL_FLAG);
-	return 0;
 }
 
 const usb_dev_ep_info_t usb_cdc_in_info = {
 	.addr = USB_ENDPOINT_IN + EP_IN_ADDR,
 	.attr = ENDPOINT_TYPE_BULK,
 	.mxpktsz = CDC_EP_IN_MAX_PKT_SIZE,
-	.on_in = usb_cdc_on_eot
+	.on_in = (void *)usb_cdc_on_eot
 };
 
 const usb_dev_ep_info_t usb_cdc_out_info = {
 	.addr = USB_ENDPOINT_OUT + EP_OUT_ADDR,
 	.attr = ENDPOINT_TYPE_BULK,
 	.mxpktsz = CDC_EP_OUT_MAX_PKT_SIZE,
-	.on_out = usb_cdc_on_rcv
+	.on_out = (void *)usb_cdc_on_rcv
 };
 
 const usb_dev_ep_info_t usb_cdc_int_info = {
 	.addr = USB_ENDPOINT_IN + EP_INT_ADDR,
 	.attr = ENDPOINT_TYPE_INTERRUPT,
 	.mxpktsz = CDC_EP_INT_MAX_PKT_SIZE,
-	.on_in = usb_cdc_on_eot_int
+	.on_in = (void *)usb_cdc_on_eot_int
 };
 
 int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
@@ -302,6 +283,7 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		break;
 
 	case SET_LINE_CODING:
+		__memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
 
 		if ((dev->acm.flags & ACM_LC_SET) == 0) {
 			dev->acm.flags |= ACM_LC_SET;
@@ -311,8 +293,6 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 
 		DCC_LOG3(LOG_INFO, "CDC SetLn: idx=%d val=%d len=%d",
 				 index, value, len);
-
-        memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
 		thinkos_flag_give_i(CTL_FLAG);
         
         DCC_LOG1(LOG_INFO, "dsDTERate=%d", dev->acm.lc.dwDTERate);
@@ -360,14 +340,17 @@ const usb_dev_ep_info_t usb_cdc_ep0_info = {
 	.on_setup = usb_cdc_on_setup
 };
 
-int usb_cdc_on_reset(usb_class_t * cl)
+void usb_cdc_on_reset(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
 	DCC_LOG(LOG_INFO, "...");
 
 	/* invalidate th line coding structure */
-	memset(&dev->acm.lc, 0, sizeof(struct cdc_line_coding));
+    dev->acm.lc.dwDTERate = 0;
+    dev->acm.lc.bCharFormat = 0;
+    dev->acm.lc.bParityType = 0;
+    dev->acm.lc.bDataBits = 0 ;
 
 	DCC_LOG(LOG_INFO, "2.");
 	/* reset control lines */
@@ -377,10 +360,9 @@ int usb_cdc_on_reset(usb_class_t * cl)
 	/* initializes EP0 */
 	dev->ctl_ep = usb_dev_ep_init(dev->usb, &usb_cdc_ep0_info, 
 								  dev->ctr_buf, CDC_CTR_BUF_LEN);
-	return 0;
 }
 
-int usb_cdc_on_suspend(usb_class_t * cl)
+void usb_cdc_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
@@ -390,11 +372,9 @@ int usb_cdc_on_suspend(usb_class_t * cl)
 	thinkos_flag_give_i(CTL_FLAG);
 //	thinkos_flag_clr_i(TX_DONE);
 	thinkos_flag_clr_i(TX_LOCK);
-
-	return 0;
 }
 
-int usb_cdc_on_wakeup(usb_class_t * cl)
+void usb_cdc_on_wakeup(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 
@@ -407,16 +387,11 @@ int usb_cdc_on_wakeup(usb_class_t * cl)
 //		thinkos_flag_give_i(TX_DONE);
 		thinkos_flag_give_i(TX_LOCK);
 	}
-
-	return 0;
 }
 
-int usb_cdc_on_error(usb_class_t * cl, int code)
+void usb_cdc_on_error(usb_class_t * cl, int code)
 {
 	DCC_LOG(LOG_INFO, "...");
-
-
-	return 0;
 }
 
 int usb_cdc_write(usb_cdc_class_t * cl,
@@ -476,27 +451,6 @@ FIXME: Flexnet pannel do not set DTE_PRESENT nor ACTIVATE_CARRIER ....
 	return len;
 }
 
-#if 0
-#define __THINKOS_SYS__
-#include <thinkos_sys.h>
-
-void usb_cdc_dump_stat(usb_cdc_class_t * cl)
-{
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	struct thinkos_rt rt;
-
-	(void)dev;
-
-	thinkos_rt_snapshot(&rt);
-
-	DCC_LOG5(LOG_INFO, "ep=%d wr=%d blk=%d TX_DONE(%d)=%d", 
-			 tx_ep, tx_wr, tx_blk, TX_DONE, 
-			 thinkos_flag_val(TX_DONE));
-
-	thinkos_trace_rt(&rt);
-}
-#endif
-
 int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 				 unsigned int len, unsigned int msec)
 {
@@ -511,127 +465,56 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 		goto read_from_buffer;
 	};
 
-	/* Ok to receive */
+	/* Ok to receive more */
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 
-	if ((ret = thinkos_sem_timedwait(RX_SEM, msec)) < 0) {
-//	if ((ret = thinkos_flag_timedtake(RX_FLAG, msec)) < 0) {
-		if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
-									 buf, len)) > 0) {
-			DCC_LOG1(LOG_WARNING, "n=%d!!!!!!!!!!", n);
+	for (;;) {
+		if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
+			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, 
+										 len)) > 0) {
+				{
+					char * s = (char *)buf;
+					(void)s;
+
+					if (n == 1)
+						DCC_LOG1(LOG_TRACE, "%02x", s[0]);
+					else if (n == 2)
+						DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
+				}
+			} return n;
+		} else {
+			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, dev->rx_buf, 
+										 CDC_EP_IN_MAX_PKT_SIZE)) > 0) {
+				{
+					char * s = (char *)buf;
+					(void)s;
+
+					if (n == 1)
+						DCC_LOG1(LOG_TRACE, "%02x", s[0]);
+					else if (n == 2)
+						DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
+				}
+				dev->rx_pos = 0;
+				dev->rx_cnt = n;
+				goto read_from_buffer;
+			}
 		}
-		if (ret == THINKOS_ETIMEDOUT) {
-			DCC_LOG(LOG_INFO, "timeout!!");
+
+		if ((ret = thinkos_flag_timedtake(RX_FLAG, msec)) < 0) {
+			if (ret == THINKOS_ETIMEDOUT) {
+				DCC_LOG(LOG_INFO, "timeout!!");
+			}
+			return ret;
 		}
-		return ret;
 	}
-
-	if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
-		n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, len);
-		{
-			char * s = (char *)buf;
-			(void)s;
-
-			if (n == 1)
-				DCC_LOG1(LOG_TRACE, "%02x", s[0]);
-			else if (n == 2)
-				DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
-			else if (n == 3)
-				DCC_LOG3(LOG_INFO, "%02x %02x %02x", s[0], s[1], s[2]);
-			else if (n == 4)
-				DCC_LOG4(LOG_INFO, "%02x %02x %02x %02x", 
-						 s[0], s[1], s[2], s[3]);
-		}
-		DCC_LOG1(LOG_INFO, "wakeup, pkt rcv extern buffer: %d bytes", n);
-		return n;
-	} 
-	
-	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
-							dev->rx_buf, CDC_EP_IN_MAX_PKT_SIZE);
-	DCC_LOG1(LOG_TRACE, "wakeup, pkt rcv intern buffer: %d bytes", n);
-
-	{
-		char * s = (char *)dev->rx_buf;
-		(void)s;
-
-		if (n == 1)
-			DCC_LOG1(LOG_TRACE, "%02x", s[0]);
-		else if (n == 2)
-			DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
-		else if (n == 3)
-			DCC_LOG3(LOG_INFO, "%02x %02x %02x", s[0], s[1], s[2]);
-		else if (n == 4)
-			DCC_LOG4(LOG_INFO, "%02x %02x %02x %02x", 
-					 s[0], s[1], s[2], s[3]);
-		else if (n == 5)
-			DCC_LOG5(LOG_INFO, "%02x %02x %02x %02x %02x", 
-					 s[0], s[1], s[2], s[3], s[4]);
-		else if (n == 6)
-			DCC_LOG6(LOG_INFO, "%02x %02x %02x %02x %02x %02x", 
-					 s[0], s[1], s[2], s[3], s[4], s[5]);
-		else if (n == 7)
-			DCC_LOG7(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6]);
-		else if (n == 8)
-			DCC_LOG8(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x %02x", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
-		else
-			DCC_LOG8(LOG_INFO, "%02x %02x %02x %02x %02x %02x %02x %02x ...", 
-					 s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]);
-	}
-
-		
-	dev->rx_pos = 0;
-	dev->rx_cnt = n;
 
 read_from_buffer:
 	DCC_LOG(LOG_TRACE, "reading from buffer");
 	n = MIN(n, len);
-	{
-		/* get data from the rx buffer if not empty */
-		uint8_t * src = (uint8_t *)&dev->rx_buf[dev->rx_pos];
-		uint8_t * dst = (uint8_t *)buf;
-		int i;
-
-		for (i = 0; i < n; ++i)
-			dst[i] = src[i];
-
-	}
+	__memcpy(buf, &dev->rx_buf[dev->rx_pos], n);
 	dev->rx_pos += n;
+
 	return n;
-
-#if 0
-	{
-		int rem;
-		uint8_t * cp = (uint8_t *)buf;
-
-		rem = n;
-
-		while (rem > 4) {
-			DCC_LOG4(LOG_INFO, "%02x %02x %02x %02x", 
-					 cp[0], cp[1], cp[2], cp[3]);
-			rem -= 4;
-			cp += 4;
-		}
-
-		switch (rem) {
-		case 3:
-			DCC_LOG3(LOG_INFO, "%02x %02x %02x", cp[0], cp[1], cp[2]);
-			break;
-		case 2:
-			DCC_LOG2(LOG_INFO, "%02x %02x", cp[0], cp[1]);
-			break;
-		case 1:
-			if ((*cp) >= ' ') { 
-				DCC_LOG1(LOG_INFO, "'%c'", cp[0]);
-			} else {
-				DCC_LOG1(LOG_INFO, "%02x", cp[0]);
-			}
-			break;
-		}
-	}
-#endif
-
 }
 
 int usb_cdc_flush(usb_cdc_class_t * cl)
@@ -834,9 +717,6 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb,
 	/* initialize USB device */
 	dev->usb = (usb_dev_t *)usb;
 
-#ifndef CDC_RX_SEM_NO
-	dev->rx_sem = thinkos_sem_alloc(0); 
-#endif
 #ifndef CDC_TX_DONE_NO
 	dev->tx_done = thinkos_flag_alloc(); 
 #endif
@@ -855,8 +735,8 @@ usb_cdc_class_t * usb_cdc_init(const usb_dev_t * usb,
 	dev->str = str;
 	dev->strcnt = strcnt;
 
-	DCC_LOG4(LOG_INFO, "tx_done=%d tx_lock=%d rx_sem=%d ctl_flag=%d", 
-			 TX_DONE, TX_LOCK, RX_SEM, CTL_FLAG);
+	DCC_LOG4(LOG_INFO, "tx_done=%d tx_lock=%d rx_flag=%d ctl_flag=%d", 
+			 TX_DONE, TX_LOCK, RX_FLAG, CTL_FLAG);
 
 	thinkos_flag_clr(TX_DONE); 
 	thinkos_flag_clr(TX_LOCK); 

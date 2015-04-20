@@ -67,7 +67,7 @@ static int bmp_bit_cnt(uint32_t bmp[], int bits)
 }
 #endif
 
-void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
+static void os_alloc_dump(FILE * f, struct thinkos_rt * rt)
 {
 	fprintf(f, "     ");
 #if THINKOS_ENABLE_MUTEX_ALLOC

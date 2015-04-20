@@ -48,23 +48,23 @@ typedef struct usb_ep_if usb_ep_t;
 typedef int (* usb_class_on_ep_setup_t)(usb_class_t * cl,
 		struct usb_request * req, void ** tx_ptr);
 
-typedef int (* usb_class_on_ep_in_t)(usb_class_t * cl,
+typedef void (* usb_class_on_ep_in_t)(usb_class_t * cl,
 		unsigned int ep_id);
 
 /* This callback is invoked after a successful OUT transaction */
-typedef int (* usb_class_on_ep_out_t)(usb_class_t * cl,
+typedef void (* usb_class_on_ep_out_t)(usb_class_t * cl,
 		unsigned int ep_id, unsigned int len);
 
-typedef int (* usb_class_on_ep_ev_t)(usb_class_t * cl,
+typedef void (* usb_class_on_ep_ev_t)(usb_class_t * cl,
 		unsigned int ep_id);
 
-typedef int (* usb_class_on_reset_t)(usb_class_t * cl);
+typedef void (* usb_class_on_reset_t)(usb_class_t * cl);
 
-typedef int (* usb_class_on_suspend_t)(usb_class_t * cl);
+typedef void (* usb_class_on_suspend_t)(usb_class_t * cl);
 
-typedef int (* usb_class_on_wakeup_t)(usb_class_t * cl);
+typedef void (* usb_class_on_wakeup_t)(usb_class_t * cl);
 
-typedef int (* usb_class_on_error_t)(usb_class_t * cl, int code);
+typedef void (* usb_class_on_error_t)(usb_class_t * cl, int code);
 
 
 struct usb_class_events {

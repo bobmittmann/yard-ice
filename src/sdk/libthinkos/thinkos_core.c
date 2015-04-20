@@ -394,7 +394,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_cpsid_i();
 
 #if THINKOS_ENABLE_EXCEPTIONS
-	thinkos_except_init();
+	thinkos_exception_init();
 #endif
 
 	/* adjust exception priorities */

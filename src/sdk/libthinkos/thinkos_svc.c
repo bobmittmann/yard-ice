@@ -140,7 +140,7 @@ void thinkos_clock_svc(int32_t * arg)
 	arg[0] = thinkos_rt.ticks;
 }
 
-void thinkos_thread_Self_svc(int32_t * arg)
+void thinkos_thread_self_svc(int32_t * arg)
 {
 	arg[0] = thinkos_rt.active;
 }
@@ -177,7 +177,7 @@ void cm3_svc_isr(void)
 
 	switch (svc) {
 	case THINKOS_THREAD_SELF:
-		thinkos_thread_Self_svc(arg);
+		thinkos_thread_self_svc(arg);
 		break;
 
 	case THINKOS_THREAD_CREATE:

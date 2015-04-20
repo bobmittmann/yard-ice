@@ -45,6 +45,76 @@
 #define THINKOS_STDERR_FAULT_DUMP 0
 #endif
 
+#ifndef THINKOS_ENABLE_MPU
+#define THINKOS_ENABLE_MPU 0
+#endif
+
+#ifndef THINKOS_ENABLE_BUSFAULT
+#define THINKOS_ENABLE_BUSFAULT 0
+#endif
+
+#ifndef THINKOS_ENABLE_USAGEFAULT 
+#define THINKOS_ENABLE_USAGEFAULT 0
+#endif
+
+static inline void __attribute__((always_inline)) 
+__xcpt_context_save(struct thinkos_except * xcpt)
+{
+	register struct thinkos_context * ctx asm("r0");
+	register uint32_t sp asm("r1");
+	register uint32_t tmp asm("r2");
+	register uint32_t lr asm("r3");
+
+	ctx = &xcpt->ctx;
+
+	asm volatile ("mov    %2, %3\n"
+				  "stmia  %2, {r4-r11}\n"
+				  "add    %2, %2, #32\n"
+				  "tst    lr, #4\n" 
+				  "ite    eq\n" 
+				  "mrseq  %0, MSP\n" 
+				  "mrsne  %0, PSP\n" 
+				  "ldmia  %0, {r4-r11}\n"
+				  "stmia  %2, {r4-r11}\n"
+				  "mov    %1, lr\n"
+				  : "=r" (sp), "=r" (lr), "=r" (tmp) : "r" (ctx) );
+
+	xcpt->ret = lr;
+	xcpt->sp = sp;
+	xcpt->ipsr = cm3_ipsr_get();
+
+	if (lr & (1 << 4)) {
+		xcpt->psp = sp;
+		xcpt->msp = cm3_msp_get();
+	} else {
+		xcpt->msp = sp;
+		xcpt->psp = cm3_psp_get();
+	}
+}
+
+static inline void __attribute__((always_inline, noreturn)) 
+__xcpt_context_restore(struct thinkos_except * xcpt)
+{
+	register struct thinkos_context * ctx asm("r0");
+	register uint32_t sp asm("r1");
+	register uint32_t lr asm("r3");
+
+	ctx = &xcpt->ctx;
+	sp = xcpt->sp;
+	lr = xcpt->ret;
+
+	asm volatile ("add    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "stmia  %0, {r4-r11}\n"
+				  "sub    %2, %2, #32\n"
+				  "ldmia  %2, {r4-r11}\n"
+				  "mov    lr, %1\n"
+				  "bx     lr\n"
+				  : : "r" (sp), "r" (lr), "r" (ctx) );
+	for(;;);
+}
+
+
 #if THINKOS_STDERR_FAULT_DUMP
 void __show_ctrl(uint32_t ctrl)
 {
@@ -151,58 +221,11 @@ static void __dump_ufsr(void)
 }
 #endif
 
-#if 0
-static inline uint32_t __attribute__((always_inline)) __get_stack(void) {
-	register uint32_t sp;
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq r0, MSP\n" 
-				  "mrsne r0, PSP\n" 
-				  : "=r" (sp));
-	return sp;
-}
-#endif
-
-static inline struct thinkos_context * 
-	__attribute__((always_inline)) __get_context(void) {
-	register struct thinkos_context * ctx;
-	asm volatile ("tst   lr, #0x4\n" /* Test EXC_RETURN bit 2 */
-				  "it    ne\n"
-				  "subne sp, #32\n"  /* Make room in the stack... */ 
-				  "push  {r4-r11}\n"
-				  "tst   lr, #0x4\n"
-				  "beq   0f\n"
-				  "mrs   r0, PSP\n" 
-				  "add   r1, sp, #32\n" 
-				  "ldmia r0, {r2-r9}\n"
-				  "stmia r1, {r2-r9}\n"
-				  "0:\n"
-				  "mov  %0, sp\n" : "=r" (ctx));
-	return ctx;
-}
-
-void __attribute__((noreturn)) 
-	thinkos_exception_dsr(struct thinkos_context * ctx);
-
-void hard_fault(struct thinkos_context * ctx, uint32_t msp, 
-				uint32_t psp, uint32_t lr)
+static void __xdump(struct thinkos_except * xcpt)
 {
-	struct cm3_scb * scb = CM3_SCB;
-	uint32_t hfsr;
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
-	hfsr = scb->hfsr;
-
-	DCC_LOG3(LOG_ERROR, "Hard fault:%s%s%s", 
-			 (hfsr & SCB_HFSR_DEBUGEVT) ? " DEBUGEVT" : "",
-			 (hfsr & SCB_HFSR_FORCED) ?  " FORCED" : "",
-			 (hfsr & SCB_HFSR_VECTTBL) ? " VECTTBL" : "");
+#ifdef DEBUG
+	struct thinkos_context * ctx = &xcpt->ctx;
+#endif
 
 	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
 			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
@@ -211,10 +234,23 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
 			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
 	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
+			ctx->r12, xcpt->sp, ctx->lr, ctx->pc);
 	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
+			ctx->xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
+}
 
+void hard_fault(struct thinkos_except * xcpt)
+{
+	struct cm3_scb * scb = CM3_SCB;
+	uint32_t hfsr;
+
+	hfsr = scb->hfsr;
+
+	DCC_LOG3(LOG_ERROR, "Hard fault:%s%s%s", 
+			 (hfsr & SCB_HFSR_DEBUGEVT) ? " DEBUGEVT" : "",
+			 (hfsr & SCB_HFSR_FORCED) ?  " FORCED" : "",
+			 (hfsr & SCB_HFSR_VECTTBL) ? " VECTTBL" : "");
+	__xdump(xcpt);
 	DCC_LOG1(LOG_ERROR, "HFSR=%08x", scb->hfsr);
 	DCC_LOG1(LOG_ERROR, "CFSR=%08x", scb->cfsr);
 	DCC_LOG1(LOG_ERROR, "BFAR=%08x", scb->bfar);
@@ -275,35 +311,32 @@ void hard_fault(struct thinkos_context * ctx, uint32_t msp,
 		fprintf(stderr, "\n");
 	}
 
-	thinkos_context_show(ctx, sp, msp, psp);
+	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
 }
 
-void __bus_fault(struct thinkos_context * ctx, uint32_t msp, 
-			   uint32_t psp, uint32_t lr)
+#if	THINKOS_ENABLE_BUSFAULT 
+void bus_fault(struct thinkos_except * xcpt)
 {
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
+	struct cm3_scb * scb = CM3_SCB;
+	uint32_t bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
+	(void)bfsr;
 
 	DCC_LOG(LOG_ERROR, "Bus fault!");
-
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
+	DCC_LOG1(LOG_ERROR, "BFSR=%08X", bfsr);
+	if (bfsr) {
+		DCC_LOG7(LOG_ERROR, "    %s%s%s%s%s%s%s", 
+				 (bfsr & BFSR_BFARVALID) ? " BFARVALID" : "",
+				 (bfsr & BFSR_LSPERR) ? " LSPERR" : "",
+				 (bfsr & BFSR_STKERR) ? " STKERR" : "",
+				 (bfsr & BFSR_UNSTKERR) ?  " INVPC" : "",
+				 (bfsr & BFSR_IMPRECISERR) ?  " IMPRECISERR" : "",
+				 (bfsr & BFSR_PRECISERR) ?  " PRECISERR" : "",
+				 (bfsr & BFSR_IBUSERR)  ?  " IBUSERR" : "");
+	}
+	__xdump(xcpt);
 
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
@@ -311,35 +344,32 @@ void __bus_fault(struct thinkos_context * ctx, uint32_t msp,
 
 	__dump_bfsr();
 
-	thinkos_context_show(ctx, sp, msp, psp);
+	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
 }
+#endif /* THINKOS_ENABLE_BUSFAULT  */
 
-void usage_fault(struct thinkos_context * ctx, uint32_t msp, 
-				 uint32_t psp, uint32_t lr)
+#if	THINKOS_ENABLE_USAGEFAULT 
+void usage_fault(struct thinkos_except * xcpt)
 {
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
+	struct cm3_scb * scb = CM3_SCB;
+	uint32_t ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
+	(void)ufsr;
 
 	DCC_LOG(LOG_ERROR, "Usage fault!");
-
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
+	DCC_LOG1(LOG_ERROR, "UFSR=%08X", ufsr);
+	if (ufsr) {
+		DCC_LOG6(LOG_ERROR, "    %s%s%s%s%s%s", 
+				 (ufsr & UFSR_DIVBYZERO)  ? " DIVBYZERO" : "",
+				 (ufsr & UFSR_UNALIGNED)  ? " UNALIGNED" : "",
+				 (ufsr & UFSR_NOCP)  ? " NOCP" : "",
+				 (ufsr & UFSR_INVPC)  ? " INVPC" : "",
+				 (ufsr & UFSR_INVSTATE)  ? " INVSTATE" : "",
+				 (ufsr & UFSR_UNDEFINSTR)  ? " UNDEFINSTR" : "");
+	}
+	__xdump(xcpt);
 
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
@@ -347,198 +377,121 @@ void usage_fault(struct thinkos_context * ctx, uint32_t msp,
 
 	__dump_ufsr();
 
-	thinkos_context_show(ctx, sp, msp, psp);
+	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
 }
+#endif /* THINKOS_ENABLE_USAGEFAULT  */
 
-#if 0
-void thinkos_nmi(struct thinkos_context * ctx, uint32_t msp, 
-				 uint32_t psp, uint32_t lr)
+#if THINKOS_ENABLE_MPU
+void mem_manag(struct thinkos_except * xcpt)
 {
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
-	DCC_LOG(LOG_ERROR, "NMI");
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			 ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			 ctx->r4, ctx->r5, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			 ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			 ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			 ctx->xpsr, msp, psp, lr);
-
-#if THINKOS_STDERR_FAULT_DUMP
-	fprintf(stderr, "\n---\n");
-	fprintf(stderr, "NMI:");
-	thinkos_context_show(ctx, sp, msp, psp);
-	fprintf(stderr, "\n");
-	fflush(stderr);
-#endif
-	for(;;);
-}
-
-void thinkos_mon(struct thinkos_context * ctx, uint32_t msp, 
-				 uint32_t psp, uint32_t lr)
-{
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
-	DCC_LOG(LOG_ERROR, "Debug Monitor");
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
-
-#if THINKOS_STDERR_FAULT_DUMP
-	fprintf(stderr, "\n---\n");
-	fprintf(stderr, "Debug Monitor:");
-	thinkos_context_show(ctx, sp, msp, psp);
-	fprintf(stderr, "\n");
-	fflush(stderr);
-#endif
-	for(;;);
-}
-
-#endif
-
-void thinkos_mem(struct thinkos_context * ctx, uint32_t msp, 
-				 uint32_t psp, uint32_t lr)
-{
-	uint32_t sp;
-	(void)sp;
-
-	if (lr & (1 << 4))
-		sp = psp;
-	else
-		sp = msp;
-
-	DCC_LOG(LOG_ERROR, "Mem Manager");
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
-	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, msp, psp, lr);
+	DCC_LOG(LOG_ERROR, "Mem Management!");
+	__xdump(xcpt);
 
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Mem Manager:");
-	thinkos_context_show(ctx, sp, msp, psp);
+	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
-	for(;;);
 }
+#endif
 
-static inline struct thinkos_context * 
-	__attribute__((always_inline)) __save_context(struct thinkos_context * ctx) {
-	return ctx;
-}
+/* -------------------------------------------------------------------------
+   Fault handlers 
+   ------------------------------------------------------------------------- */
 
+void thinkos_default_exception_dsr(struct thinkos_except * xcpt);
+
+struct thinkos_except thinkos_except_buf;
+
+#if	THINKOS_ENABLE_BUSFAULT 
 void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
-	struct thinkos_context * ctx = &thinkos_dmon_rt.except.ctx;
-	uint32_t sp;
-	uint32_t tmp;
-	uint32_t lr;
-	asm volatile ("mov    %2, %3\n"
-				  "stmia  %2, {r4-r11}\n"
-				  "add    %2, %2, #32\n"
-				  "tst    lr, #4\n" 
-				  "ite    eq\n" 
-				  "mrseq  %0, MSP\n" 
-				  "mrsne  %0, PSP\n" 
-				  "ldmia  %0, {r4-r11}\n"
-				  "stmia  %2, {r4-r11}\n"
-				  "mov    %1, lr\n"
-				  : "=r" (sp), "=r" (lr), "=r" (tmp) : "r" (ctx) );
+	__xcpt_context_save(&thinkos_except_buf);
 
-	thinkos_dmon_rt.except.ret = lr;
-	thinkos_dmon_rt.except.sp = sp;
+	bus_fault(&thinkos_except_buf);
 
-	DCC_LOG(LOG_ERROR, "DMON_BUSFAULT");
-	dmon_signal(DMON_BUSFAULT);
+	thinkos_exception_dsr(&thinkos_except_buf);
 
-	lr = thinkos_dmon_rt.except.ret;
-	sp = thinkos_dmon_rt.except.sp;
-
-	asm volatile ("add    %2, %2, #32\n"
-				  "ldmia  %2, {r4-r11}\n"
-				  "stmia  %0, {r4-r11}\n"
-				  "sub    %2, %2, #32\n"
-				  "ldmia  %2, {r4-r11}\n"
-				  "mov    lr, %1\n"
-				  "bx     lr\n"
-				  : : "r" (sp), "r" (lr), "r" (ctx) );
+	__xcpt_context_restore(&thinkos_except_buf);
 }
+#endif
 
+#if	THINKOS_ENABLE_USAGEFAULT 
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
-	struct thinkos_context * ctx;
-	uint32_t msp;
-	uint32_t psp;
-	uint32_t lr;
+	__xcpt_context_save(&thinkos_except_buf);
 
-	/* save the context */
-	ctx = __get_context();
+	usage_fault(&thinkos_except_buf);
 
-	lr = cm3_lr_get();
-	msp = cm3_msp_get();
-	psp = cm3_psp_get();
+	thinkos_exception_dsr(&thinkos_except_buf);
 
-	cm3_faultmask_set(1);
-
-	usage_fault(ctx, msp, psp, lr);
-
-	thinkos_exception_dsr(ctx);
+	__xcpt_context_restore(&thinkos_except_buf);
 }
+#endif
 
+#if THINKOS_ENABLE_MPU
+void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
+{
+	__xcpt_context_save(&thinkos_except_buf);
+
+	mem_manag(&thinkos_except_buf);
+
+	thinkos_exception_dsr(&thinkos_except_buf);
+
+	__xcpt_context_restore(&thinkos_except_buf);
+}
+#endif
 
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
-	struct thinkos_context * ctx;
-	uint32_t msp;
-	uint32_t psp;
-	uint32_t lr;
-
-	/* save the context */
-	ctx = __get_context();
-	
-	lr = cm3_lr_get();
-	msp = cm3_msp_get();
-	psp = cm3_psp_get();
-
-	cm3_faultmask_set(1);
-
-	hard_fault(ctx, msp, psp, lr);
-
-	thinkos_exception_dsr(ctx);
+	__xcpt_context_save(&thinkos_except_buf);
+	hard_fault(&thinkos_except_buf);
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
+	for(;;);
+#endif
 }
+
+/* -------------------------------------------------------------------------
+   Application fault defered handler 
+   ------------------------------------------------------------------------- */
+
+void thinkos_default_exception_dsr(struct thinkos_except * xcpt)
+{
+	dmon_signal(DMON_EXCEPT);
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
+	for(;;);
+#endif
+}
+
+void thinkos_exception_dsr(struct thinkos_except *) 
+	__attribute__((weak, alias("thinkos_default_exception_dsr")));
+
+void thinkos_exception_init(void)
+{
+	struct cm3_scb * scb = CM3_SCB;
+	scb->shcsr = 0
+#if	THINKOS_ENABLE_USAGEFAULT 
+	| SCB_SHCSR_USGFAULTENA 
+#endif
+#if	THINKOS_ENABLE_BUSFAULT 
+	| SCB_SHCSR_BUSFAULTENA
+#endif
+#if THINKOS_ENABLE_MPU
+	| SCB_SHCSR_MEMFAULTENA;
+#endif
+	;
+}
+
+#endif /* THINKOS_ENABLE_EXCEPTIONS */
 
 #if 0
 void __attribute__((naked, noreturn)) cm3_nmi_isr(void)
@@ -582,47 +535,71 @@ void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
 }
 #endif
 
-void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
+#if 0
+void thinkos_nmi(struct thinkos_context * ctx, uint32_t msp, 
+				 uint32_t psp, uint32_t lr)
 {
-	struct thinkos_context * ctx;
-	uint32_t msp;
-	uint32_t psp;
-	uint32_t lr;
+	uint32_t sp;
+	(void)sp;
 
-	/* save the context */
-	ctx = __get_context();
-	
-	lr = cm3_lr_get();
-	msp = cm3_msp_get();
-	psp = cm3_psp_get();
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
 
-	cm3_faultmask_set(1);
+	DCC_LOG(LOG_ERROR, "NMI");
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			 ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			 ctx->r4, ctx->r5, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			 ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			 ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			 ctx->xpsr, msp, psp, lr);
 
-	thinkos_mem(ctx, msp, psp, lr);
-
-	thinkos_exception_dsr(ctx);
-}
-
-
-void __attribute__((noreturn)) 
-	thinkos_default_exception_dsr(struct thinkos_context * ctx)
-{
-#if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
-#else
-	for(;;);
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
+	fprintf(stderr, "NMI:");
+	thinkos_context_show(xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	fprintf(stderr, "\n");
+	fflush(stderr);
 #endif
+	for(;;);
 }
 
-void thinkos_exception_dsr(struct thinkos_context *) 
-	__attribute__((weak, alias("thinkos_default_exception_dsr")));
-
-void thinkos_except_init(void)
+void thinkos_mon(struct thinkos_context * ctx, uint32_t msp, 
+				 uint32_t psp, uint32_t lr)
 {
-	struct cm3_scb * scb = CM3_SCB;
-	scb->shcsr = SCB_SHCSR_USGFAULTENA | SCB_SHCSR_BUSFAULTENA | 
-		SCB_SHCSR_MEMFAULTENA;
+	uint32_t sp;
+	(void)sp;
+
+	if (lr & (1 << 4))
+		sp = psp;
+	else
+		sp = msp;
+
+	DCC_LOG(LOG_ERROR, "Debug Monitor");
+	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
+			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
+			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
+	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
+			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
+			ctx->r12, sp, ctx->lr, ctx->pc);
+	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
+			ctx->xpsr, msp, psp, lr);
+
+#if THINKOS_STDERR_FAULT_DUMP
+	fprintf(stderr, "\n---\n");
+	fprintf(stderr, "Debug Monitor:");
+	thinkos_context_show(xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	fprintf(stderr, "\n");
+	fflush(stderr);
+#endif
+	for(;;);
 }
 
-#endif /* THINKOS_ENABLE_EXCEPTIONS */
-
+#endif

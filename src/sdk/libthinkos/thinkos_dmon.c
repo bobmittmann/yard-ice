@@ -50,28 +50,60 @@ void __attribute__((noinline)) monitor_context_swap(void * ctx)
 				  : : "r" (ptr0) : "r1");
 }
 
-uint32_t dmon_select(uint32_t watch)
+uint32_t dmon_select(uint32_t evmask)
 {
-	uint32_t ret;
 	uint32_t evset;
-	uint32_t mask;
+	
+	DCC_LOG1(LOG_TRACE, "evmask=%08x", evmask);
 
-	for (;;) {
-		evset = thinkos_dmon_rt.events;
-		mask = thinkos_dmon_rt.mask | watch;
-		
-		if ((ret = (evset & mask)) != 0)
-			break;
+	evset = thinkos_dmon_rt.events;
+	if (evset & evmask)
+		return evset & evmask;
 
+	/* umask event */
+	thinkos_dmon_rt.mask |= evmask;
+
+	do {
+		DCC_LOG(LOG_TRACE, "sleep...");
 		monitor_context_swap(&thinkos_dmon_rt.ctx); 
+		DCC_LOG(LOG_TRACE, "wakeup...");
+		evset = thinkos_dmon_rt.events;
+	} while ((evset & evmask) == 0);
+
+	thinkos_dmon_rt.mask &= ~evmask;
+
+	return evset & evmask;
+}
+
+int dmon_wait(int ev)
+{
+	uint32_t evset;
+	uint32_t mask = (1 << ev);
+	
+	evset = thinkos_dmon_rt.events;
+	if (evset & mask) {
+		thinkos_dmon_rt.events = evset & ~(mask);
+		return 0;
 	}
 
-	/* clear events */
-	thinkos_dmon_rt.events = evset ^ ret;
+	/* umask event */
+	thinkos_dmon_rt.mask |= mask;
 
-	/* return events */
-	return ret;
+	DCC_LOG1(LOG_TRACE, "waiting for %d, sleeping...", ev);
+	monitor_context_swap(&thinkos_dmon_rt.ctx); 
+	DCC_LOG(LOG_TRACE, "wakeup...");
+
+	evset = thinkos_dmon_rt.events;
+	if (evset & mask) {
+		thinkos_dmon_rt.events = evset & ~mask;
+		thinkos_dmon_rt.mask &= ~mask;
+		return 0;
+	}
+
+	/* unexpected event received */
+	return -1;
 }
+
 
 void dmon_unmask(int event)
 {
@@ -83,57 +115,9 @@ void dmon_mask(int event)
 	__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.mask, event, 0);  
 }
 
-int __dmon_wait(int event)
+void dmon_clear(int event)
 {
-//	DCC_LOG1(LOG_TRACE, "event=%d", event);
-
-	if (__bit_mem_rd((uint32_t *)&thinkos_dmon_rt.events, event)) {
-		/* clear event */
-		__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.events, event, 0);  
-		return 0;
-	}
-
-	/* umask event */
-	__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.mask, event, 1);  
-
-	monitor_context_swap(&thinkos_dmon_rt.ctx); 
-
-	if (__bit_mem_rd((uint32_t *)&thinkos_dmon_rt.events, event)) {
-		/* clear event */
-		__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.events, event, 0);  
-		/* mask event */
-		__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.mask, event, 0);  
-		return 0;
-	}
-//	DCC_LOG(LOG_WARNING, "unexpected event received");
-	/* unexpected event received */
-	return -1;
-}
-
-int dmon_wait(int ev)
-{
-	uint32_t evset;
-	
-	evset = thinkos_dmon_rt.events;
-	if (evset & (1 << ev)) {
-		thinkos_dmon_rt.events = evset & ~(1 << ev);
-		return 0;
-	}
-
-	/* umask event */
-	thinkos_dmon_rt.mask |=  (1 << ev);
-
-	monitor_context_swap(&thinkos_dmon_rt.ctx); 
-
-	evset = thinkos_dmon_rt.events;
-	if (evset & (1 << ev)) {
-		thinkos_dmon_rt.events = evset & ~(1 << ev);
-		thinkos_dmon_rt.mask &=  ~(1 << ev);
-		return 0;
-	}
-
-	/* unexpected event received */
-	return -1;
+	__bit_mem_wr((uint32_t *)&thinkos_dmon_rt.events, event, 0);  
 }
 
 static inline void __attribute__((always_inline)) __wait(void) {
@@ -150,11 +134,13 @@ void __attribute__((noreturn)) dmon_bootstrap(void)
 	for(;;);
 }
 
-void bus_fault(struct thinkos_dmon * mon)
+void dmon_except(struct thinkos_dmon * mon)
 {
-	struct thinkos_context * ctx = &mon->except.ctx;
-	uint32_t sp = mon->except.sp;
-	uint32_t ret = mon->except.ret;
+#if DEBUG
+	struct thinkos_context * ctx = &thinkos_except_buf.ctx;
+#endif
+	uint32_t sp = thinkos_except_buf.sp;
+	uint32_t ret = thinkos_except_buf.ret;
 	bool handler_mode;
 	int th;
 	(void)sp;
@@ -192,7 +178,7 @@ void bus_fault(struct thinkos_dmon * mon)
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 
-	mon->except.thread = th;
+	thinkos_except_buf.thread = th;
 }
 
 void cm3_debug_mon_isr(void)
@@ -208,10 +194,10 @@ void cm3_debug_mon_isr(void)
 		DCC_LOG(LOG_TRACE, "HW Debug Event");
 	}
 
-	if (thinkos_dmon_rt.events & (1 << DMON_BUSFAULT)) {
-		thinkos_dmon_rt.events &= ~(1 << DMON_BUSFAULT);
+	if (thinkos_dmon_rt.events & (1 << DMON_EXCEPT)) {
+		thinkos_dmon_rt.events &= ~(1 << DMON_EXCEPT);
 		thinkos_dmon_rt.events |= (1 << DMON_THREAD_FAULT);
-		bus_fault(&thinkos_dmon_rt);
+		dmon_except(&thinkos_dmon_rt);
 	}
 
 	DCC_LOG2(LOG_TRACE, "events=%08x mask=%08x", 
@@ -228,7 +214,7 @@ void cm3_debug_mon_isr(void)
 			thinkos_dmon_rt.ctx = sp;
 			thinkos_dmon_rt.events = 0;
 			thinkos_dmon_rt.mask = (1 << DMON_START) | (1 << DMON_COMM_CTL) |
-				(1 << DMON_BUSFAULT);
+				(1 << DMON_EXCEPT);
 		} else {
 			DCC_LOG1(LOG_TRACE, "evset=%08x", evset);
 		}
@@ -239,6 +225,10 @@ void cm3_debug_mon_isr(void)
 	DCC_LOG(LOG_INFO, "done.");
 }
 
+void thinkos_exception_dsr(struct thinkos_except * xcpt)
+{
+	dmon_signal(DMON_EXCEPT);
+}
 
 void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * , 
 												  struct dmon_comm * ))

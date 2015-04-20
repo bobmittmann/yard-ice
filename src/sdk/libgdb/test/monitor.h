@@ -25,6 +25,7 @@
 
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
+#include <thinkos.h>
 
 #ifdef __cplusplus
 extern "C" {

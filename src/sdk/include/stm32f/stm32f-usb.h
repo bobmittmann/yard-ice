@@ -560,7 +560,7 @@ struct stm32f_usb_tx_pktbuf {
 /* RX packet buffer descriptor */
 struct stm32f_usb_rx_pktbuf {
 	uint32_t addr;
-	uint32_t count: 10;
+	volatile uint32_t count: 10;
 	uint32_t num_block: 5;
 	uint32_t blsize: 1;
 	uint32_t res: 16;
