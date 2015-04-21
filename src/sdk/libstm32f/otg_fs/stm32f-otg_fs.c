@@ -213,7 +213,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep_id,
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
 	(void)pktcnt;
 
-	DCC_LOG5(LOG_INFO, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+	DCC_LOG5(LOG_MSG, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 ep_id, mpsiz, pktcnt, xfrsiz, free);
 
 	if (xfrsiz < mpsiz) {
@@ -247,7 +247,9 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep_id,
 		cp += 4;
 	}	
 
-	DCC_LOG1(LOG_INFO, "Tx: (%d)", cnt);
+	DCC_LOG2(LOG_MSG, "Tx: (%d) free=%d", cnt, 
+			 otg_fs->inep[ep_id].dtxfsts * 4 );
+
 	return cnt;
 }
 

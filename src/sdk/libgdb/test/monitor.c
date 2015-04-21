@@ -118,11 +118,11 @@ void show_menu(struct dmon_comm * comm)
 
 void test(struct dmon_comm * comm)
 {
-//			cprintf(comm, "\r\n");
+			cprintf(comm, "\r\n");
 			cprintf(comm, 
 	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
 	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-//			cprintf(comm, "\r\n");
+			cprintf(comm, "\r\n");
 //			cprintf(comm, 
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
@@ -147,8 +147,8 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 
 	DCC_LOG(LOG_TRACE, "Comm connected..");
 
-//	dmon_comm_send(comm, monitor_banner, 
-//					  sizeof(monitor_banner) - 1);
+	dmon_comm_send(comm, monitor_banner, 
+					  sizeof(monitor_banner) - 1);
 
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_COMM_RCV);
@@ -162,9 +162,9 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_TRACE, "Comm RX.");
+			DCC_LOG(LOG_INFO, "Comm RX.");
 			n = dmon_comm_recv(comm, buf, 64);
-			DCC_LOG1(LOG_TRACE, "n=%d...", n);
+			DCC_LOG1(LOG_INFO, "n=%d...", n);
 			c = buf[0];
 //			buf[1] = '\r';
 //			buf[2] = '\n';
@@ -259,7 +259,7 @@ static void os_alloc_dump(struct dmon_comm * comm, struct thinkos_rt * rt)
 #if THINKOS_ENABLE_FLAG_ALLOC
 	cprintf(comm, "     Flag");
 #endif
-	cprintf(comm, "\n");
+	cprintf(comm, "\r\n");
 
 	cprintf(comm, " Cnt:");
 #if THINKOS_ENABLE_THREAD_ALLOC
@@ -286,7 +286,7 @@ static void os_alloc_dump(struct dmon_comm * comm, struct thinkos_rt * rt)
 	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc, THINKOS_FLAG_MAX),
 			THINKOS_FLAG_MAX);
 #endif
-	cprintf(comm, "\n");
+	cprintf(comm, "\r\n");
 
 }
 
@@ -304,11 +304,21 @@ int osinfo(struct dmon_comm * comm)
 #endif
 
 
+	cprintf(comm, "\r\n");
 #if THINKOS_ENABLE_CLOCK
 	cprintf(comm, "[ Ticks = %d ]", rt->ticks);
 #endif
 
 #if THINKOS_ENABLE_PROFILING
+	{
+		int self = thinkos_rt.active;
+		uint32_t cyccnt = CM3_DWT->cyccnt;
+		int32_t delta = cyccnt - thinkos_rt.cycref;
+		/* update the reference */
+		thinkos_rt.cycref = cyccnt;
+		/* update thread's cycle counter */
+		thinkos_rt.cyccnt[self] += delta; 
+	}
 	{
 		uint32_t cycsum = 0;
 		uint32_t cycbusy;
@@ -324,24 +334,14 @@ int osinfo(struct dmon_comm * comm)
 
 		cycdiv = (cycsum + 500) / 1000;
 		busy = (cycbusy + cycdiv / 2) / cycdiv;
-#if 0
-		sys = (rt->cyccnt[THINKOS_CYCCNT_SYS] + cycdiv / 2) / cycdiv;
-		//	idle = (rt->cyccnt[THINKOS_CYCCNT_IDLE] + cycdiv / 2) / cycdiv;
-		idle = 1000 - busy - sys;
-		cprintf(comm, " [ %u cycles | %d.%d%% busy | %d.%d%% sys | %d.%d%% idle ]", 
-				cycsum, busy / 10, busy % 10, 
-				sys / 10, sys % 10,
-				idle / 10, idle % 10);
-#else
 		idle = 1000 - busy;
 		cprintf(comm, " [ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
 				cycsum, busy / 10, busy % 10, idle / 10, idle % 10);
 	}
-#endif
 
 #endif
 
-	cprintf(comm, "\n");
+	cprintf(comm, "\r\n");
 
 	cprintf(comm, " Th"); 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -363,9 +363,9 @@ int osinfo(struct dmon_comm * comm)
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
-	cprintf(comm, " | Locks\n"); 
+	cprintf(comm, " | Locks\r\n"); 
 #else
-	cprintf(comm, " |\n");
+	cprintf(comm, " |\r\n");
 #endif
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
@@ -408,8 +408,12 @@ int osinfo(struct dmon_comm * comm)
 					cprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
 			}
 #endif 
-			cprintf(comm, "\n");
+			cprintf(comm, "\r\n");
 		}
+#if THINKOS_ENABLE_PROFILING
+		/* Reset cycle counters */
+		rt->cyccnt[i] = 0; 
+#endif
 	}
 
 	for (wq = rt->wq_lst; wq != rt->wq_end; ++wq) {
@@ -427,7 +431,7 @@ int osinfo(struct dmon_comm * comm)
 			if (type == THINKOS_OBJ_MUTEX)
 				cprintf(comm, " [lock=%d]", rt->lock[oid - THINKOS_MUTEX_BASE]);
 #endif 
-			cprintf(comm, "\n");
+			cprintf(comm, "\r\n");
 		}
 	}
 

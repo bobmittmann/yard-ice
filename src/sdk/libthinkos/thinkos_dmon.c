@@ -54,7 +54,7 @@ uint32_t dmon_select(uint32_t evmask)
 {
 	uint32_t evset;
 	
-	DCC_LOG1(LOG_TRACE, "evmask=%08x", evmask);
+	DCC_LOG1(LOG_INFO, "evmask=%08x", evmask);
 
 	evset = thinkos_dmon_rt.events;
 	if (evset & evmask)
@@ -64,9 +64,9 @@ uint32_t dmon_select(uint32_t evmask)
 	thinkos_dmon_rt.mask |= evmask;
 
 	do {
-		DCC_LOG(LOG_TRACE, "sleep...");
+		DCC_LOG(LOG_INFO, "sleep...");
 		monitor_context_swap(&thinkos_dmon_rt.ctx); 
-		DCC_LOG(LOG_TRACE, "wakeup...");
+		DCC_LOG(LOG_INFO, "wakeup...");
 		evset = thinkos_dmon_rt.events;
 	} while ((evset & evmask) == 0);
 
@@ -89,9 +89,9 @@ int dmon_wait(int ev)
 	/* umask event */
 	thinkos_dmon_rt.mask |= mask;
 
-	DCC_LOG1(LOG_TRACE, "waiting for %d, sleeping...", ev);
+	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
 	monitor_context_swap(&thinkos_dmon_rt.ctx); 
-	DCC_LOG(LOG_TRACE, "wakeup...");
+	DCC_LOG(LOG_INFO, "wakeup...");
 
 	evset = thinkos_dmon_rt.events;
 	if (evset & mask) {
@@ -189,9 +189,9 @@ void cm3_debug_mon_isr(void)
 	DCC_LOG1(LOG_INFO, "demcr=%08x", dcb->demcr);
 
 	if (dcb->demcr & DCB_DEMCR_MON_REQ) {
-		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ");
+		DCC_LOG(LOG_INFO, "DCB_DEMCR_MON_REQ");
 	} else {
-		DCC_LOG(LOG_TRACE, "HW Debug Event");
+		DCC_LOG(LOG_INFO, "HW Debug Event");
 	}
 
 	if (thinkos_dmon_rt.events & (1 << DMON_EXCEPT)) {
@@ -200,7 +200,7 @@ void cm3_debug_mon_isr(void)
 		dmon_except(&thinkos_dmon_rt);
 	}
 
-	DCC_LOG2(LOG_TRACE, "events=%08x mask=%08x", 
+	DCC_LOG2(LOG_INFO, "events=%08x mask=%08x", 
 			 thinkos_dmon_rt.events, thinkos_dmon_rt.mask);
 
 	/* Process events */
@@ -215,10 +215,9 @@ void cm3_debug_mon_isr(void)
 			thinkos_dmon_rt.events = 0;
 			thinkos_dmon_rt.mask = (1 << DMON_START) | (1 << DMON_COMM_CTL) |
 				(1 << DMON_EXCEPT);
-		} else {
-			DCC_LOG1(LOG_TRACE, "evset=%08x", evset);
 		}
 
+		DCC_LOG1(LOG_INFO, "context swap: events=%08x", evset);
 		monitor_context_swap(&thinkos_dmon_rt.ctx); 
 	}
 

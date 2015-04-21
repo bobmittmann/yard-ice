@@ -93,10 +93,8 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 	int n;
 
-	DCC_LOG(LOG_TRACE, "RCV!");
-
 	if (dev->rx_cnt != dev->rx_pos)
-		DCC_LOG(LOG_TRACE, "overflow!");
+		DCC_LOG(LOG_WARNING, "overflow!");
 	
 	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 							dev->rx_buf, CDC_EP_IN_MAX_PKT_SIZE);
@@ -104,13 +102,13 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	dev->rx_pos = 0;
 	dev->rx_cnt = n;
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
-	DCC_LOG(LOG_TRACE, "COMM_RCV!");
+	DCC_LOG(LOG_INFO, "COMM_RCV!");
 	dmon_signal(DMON_COMM_RCV);
 }
 
 void usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
-	DCC_LOG(LOG_TRACE, "EOT");
+	DCC_LOG(LOG_INFO, "COMM_EOT");
 	dmon_signal(DMON_COMM_EOT);
 }
 
@@ -195,7 +193,6 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_mon_out_info, NULL, 0);
 			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_mon_int_info, NULL, 0);
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
-			dmon_signal(DMON_COMM_EOT);
 		} else {
 			usb_dev_ep_ctl(dev->usb, dev->in_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
@@ -249,6 +246,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 		DCC_LOG2(LOG_TRACE, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
+
 		/* signal monitor */
 		dmon_signal(DMON_COMM_CTL);
 		break;
@@ -315,20 +313,20 @@ int dmon_comm_send(void * drv, const void * buf, unsigned int len)
 	int n;
 
 	while (rem) {
-		if ((ret = dmon_wait(DMON_COMM_EOT)) < 0) {
-			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
-			return ret;
-		}
-
 		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {
 			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!!");
 			return n;
 		}
 
-		DCC_LOG1(LOG_TRACE, "n=%d!!", n);
+		DCC_LOG1(LOG_INFO, "n=%d!!", n);
 
 		rem -= n;
 		ptr += n;
+
+		if ((ret = dmon_wait(DMON_COMM_EOT)) < 0) {
+			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
+			return ret;
+		}
 	}
 
 	return len;

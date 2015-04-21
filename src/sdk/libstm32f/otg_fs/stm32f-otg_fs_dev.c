@@ -225,7 +225,7 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 		otg_fs->diepempmsk |= (1 << ep_id);
 	}
 
-	DCC_LOG4(LOG_TRACE, "ep_id=%d len=%d xfr_max=%d ret=%d", 
+	DCC_LOG4(LOG_MSG, "ep_id=%d len=%d xfr_max=%d ret=%d", 
 			 ep_id, len, ep->xfr_max, ret);
 
 	return ret;
@@ -1026,11 +1026,11 @@ void stm32f_otg_fs_isr(void)
 			diepint = otg_fs->inep[2].diepint & msk;
 			otg_fs->inep[2].diepint = diepint;
 			if (diepint & OTG_FS_TXFE) {
-				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_INFO, "[2] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 2);
 			}
 			if (diepint & OTG_FS_XFRC) {
-				DCC_LOG(LOG_TRACE, "[2] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_INFO, "[2] <IEPINT> <XFRC>");
 				stm32f_otg_dev_ep_in(drv, 2);
 			}
 		}

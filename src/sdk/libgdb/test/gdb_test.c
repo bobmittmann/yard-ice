@@ -54,6 +54,122 @@ void stdio_init(void);
 int stdio_shell(void);
 int gdb_rspd_start(FILE * f);
 
+volatile uint64_t buffer; /* production buffer */
+
+int sem_empty; /* semaphore to signal an empty buffer */
+int sem_full; /* semaphore to signal a full buffer */
+
+volatile bool prod_done; /* production control flag */
+
+int producer_task(void * arg)
+{
+	int prod_count;
+	uint64_t y;
+	unsigned int i = 0;
+	uint64_t x0 = 0;
+	uint64_t x1 = 0;
+
+	prod_done = false;
+
+	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
+	thinkos_sleep(100);
+
+	/* number of items to be produced */
+	prod_count = 1000000000;
+
+	for (i = 0; i < prod_count; i++) {
+		/* let's spend some time thinking */
+		thinkos_sleep(500);
+
+		/* working */
+		if (i == 0)
+			y = 0;
+		else if (i == 1)
+			y = 1;
+		else
+			y = x1 + x0;
+
+		x0 = x1;
+		x1 = y;
+
+		/* waiting for room to insert a new item */
+		thinkos_sem_wait(sem_empty);
+
+		/* insert the produced item in the buffer */
+		buffer = y;
+
+		/* signal a full buffer */
+		thinkos_sem_post(sem_full);
+	}
+
+	prod_done = true;
+
+	return i;
+}
+
+int consumer_task(void * arg)
+{
+	int i = 0;
+
+	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
+	thinkos_sleep(100);
+
+	/* set the production enable flag to start production */
+	do {
+		printf(" %3d ", i);
+		/* wait for an item to be produced */
+		while (thinkos_sem_timedwait(sem_full, 50) == THINKOS_ETIMEDOUT) {
+			printf(".");
+		}
+
+		/* unload the buffer */
+		printf(" %016llx %llu\n", buffer, buffer);
+		i++;
+		/* signal the empty buffer */
+		thinkos_sem_post(sem_empty);
+	} while (!prod_done);
+
+	/* get the last produced item, if any */
+	if (thinkos_sem_timedwait(sem_full, 0) == 0) {
+		printf(" %3d ", i);
+		printf(" %016llx %llu\n", buffer, buffer);
+		i++;
+		thinkos_sem_post(sem_empty);
+	}
+
+	return i;
+};
+
+uint32_t producer_stack[128];
+uint32_t consumer_stack[128];
+
+void semaphore_test(void)
+{
+	int producer_th;
+	int consumer_th;
+
+	/* allocate the empty signal semaphores */
+	/* initialize the empty as 1 so we can insert an item immediately. */
+	sem_empty = thinkos_sem_alloc(1); 
+
+	/* allocate the full signal semaphores */
+	/* initialize the full as 0 as we don't have produced anything yet. */
+	sem_full = thinkos_sem_alloc(0); 
+
+	/* create the producer thread */
+	producer_th = thinkos_thread_create(producer_task, NULL, 
+			producer_stack, sizeof(producer_stack));
+
+	/* create the consuer thread */
+	consumer_th = thinkos_thread_create(consumer_task, NULL, 
+			consumer_stack, sizeof(consumer_stack));
+
+	printf(" * Empty semaphore: %d\n", sem_empty);
+	printf(" * Full semaphore: %d\n", sem_full);
+	printf(" * Producer thread: %d\n", producer_th);
+	printf(" * Consumer thread: %d\n", consumer_th);
+	printf("\n");
+};
 
 void io_init(void)
 {
@@ -108,6 +224,8 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
+	/* Run the test */
+	semaphore_test();
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 	for (;;) {
