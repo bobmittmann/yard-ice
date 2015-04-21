@@ -52,7 +52,6 @@ const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void stdio_init(void);
 int stdio_shell(void);
-int gdb_rspd_start(FILE * f);
 
 volatile uint64_t buffer; /* production buffer */
 

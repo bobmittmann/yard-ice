@@ -33,15 +33,9 @@
 
 #include "monitor.h"
 
-const char monitor_banner[] = "\r\n\r\n"
-"-------------------------------------------------------------------------\r\n"
-"- ThinkOS Monitor\r\n"
-"-------------------------------------------------------------------------\r\n"
-"\r\n";
-
 char comm_buf[129];
 
-int cprintf(struct dmon_comm * comm, const char *fmt, ... )
+int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 {
 	char * s = comm_buf;
 	va_list ap;
@@ -63,10 +57,8 @@ void show_context(struct dmon_comm * comm,
 				  uint32_t sp)
 {
 	uint32_t psr = ctx->xpsr;
-	char * s = comm_buf;
-	int n;
 
-	n = sprintf(s, " xpsr=%08x [N=%c Z=%c C=%c V=%c Q=%c "
+	dmprintf(comm, " xpsr=%08x [N=%c Z=%c C=%c V=%c Q=%c "
 				"ICI/IT=%02x XCP=%02x]\r\n", 
 				psr,
 				((psr >> 31) & 0x01) + '0',
@@ -76,62 +68,130 @@ void show_context(struct dmon_comm * comm,
 				((psr >> 27) & 0x01) + '0',
 				((psr >> 19) & 0xc0) | ((psr >> 10) & 0x3f),
 				psr & 0xff);
-	dmon_comm_send(comm, s, n);
-	n = sprintf(s, "   r0=%08x   r4=%08x   r8=%08x  r12=%08x\r\n",
+	dmprintf(comm, "   r0=%08x   r4=%08x   r8=%08x  r12=%08x\r\n",
 				ctx->r0, ctx->r4, ctx->r8, ctx->r12);
-	dmon_comm_send(comm, s, n);
-	n = sprintf(s, "   r1=%08x   r5=%08x   r9=%08x   sp=%08x\r\n", 
+	dmprintf(comm, "   r1=%08x   r5=%08x   r9=%08x   sp=%08x\r\n", 
 				ctx->r1, ctx->r5, ctx->r9, sp);
-	dmon_comm_send(comm, s, n);
-	n = sprintf(s, "   r2=%08x   r6=%08x  r10=%08x   lr=%08x\r\n", 
+	dmprintf(comm, "   r2=%08x   r6=%08x  r10=%08x   lr=%08x\r\n", 
 				ctx->r2, ctx->r6, ctx->r10, ctx->lr);
-	dmon_comm_send(comm, s, n);
-	n = sprintf(s, "   r3=%08x   r7=%08x  r11=%08x   pc=%08x\r\n",  
+	dmprintf(comm, "   r3=%08x   r7=%08x  r11=%08x   pc=%08x\r\n",  
 				ctx->r3, ctx->r7, ctx->r11, ctx->pc);
-	dmon_comm_send(comm, s, n);
 }
 
 void monitor_on_fault(struct dmon_comm * comm)
 {
 	const struct thinkos_except * xcpt = &thinkos_except_buf;
-	char * s = comm_buf;
-	int n;
 
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
-	n = sprintf(s, "Fault at thread %d\r\n", xcpt->thread);
-	dmon_comm_send(comm, s, n);
+	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
 	show_context(comm, &xcpt->ctx, xcpt->sp);
 }
 
-const char monitor_menu[] = "\r\n\r\n"
-	 "ThinkOS Monitor Demo\r\n"
-	 "  [r] - restart monitor\r\n"
-	 "  [x] - show exception\r\n"
-	 "  [t] - comm test\r\n"
-	 "  [i] - ThinkOS info\r\n"
-	 "> ";
+const char monitor_banner[] = "\r\n\r\n"
+"-------------------------------------------------------------------------\r\n"
+"- ThinkOS Monitor\r\n"
+"-------------------------------------------------------------------------\r\n"
+"\r\n";
 
-void show_menu(struct dmon_comm * comm)
+const char monitor_menu[] = "\r\n"
+	 "-- ThinkOS Monitor Commands ---------\r\n"
+	 " Ctrl+Q - Restart monitor\r\n"
+	 " Ctrl+R - Resume all threads\r\n"
+	 " Ctrl+P - Pause all threads\r\n"
+	 " Ctrl+X - Show exception\r\n"
+	 " Ctrl+T - Comm test\r\n"
+	 " Ctrl+I - ThinkOS info\r\n"
+	 "-------------------------------------\r\n\r\n";
+
+void show_help(struct dmon_comm * comm)
 {
 	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
 }
 
 void test(struct dmon_comm * comm)
 {
-			cprintf(comm, "\r\n");
-			cprintf(comm, 
+			dmprintf(comm, "\r\n");
+			dmprintf(comm, 
 	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
 	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-			cprintf(comm, "\r\n");
-//			cprintf(comm, 
+			dmprintf(comm, "\r\n");
+		
+	dmon_sleep(100);
+	dmprintf(comm, "1.\r\n");
+
+	dmon_sleep(100);
+	dmprintf(comm, "2.\r\n");
+
+//			dmprintf(comm, 
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-//			cprintf(comm, "\r\n");
-//			cprintf(comm, 
+//			dmprintf(comm, "\r\n");
+//			dmprintf(comm, 
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
 }
 
+void thinkos_resume_svc(int32_t * arg);
+void thinkos_pause_svc(int32_t * arg);
+
+#if (!THINKOS_ENABLE_PAUSE)
+#error "Need THINKOS_ENABLE_PAUSE!"
+#endif
+
+void monitor_pause_all(struct dmon_comm * comm)
+{
+	int32_t th;
+	int32_t arg[1];
+
+	dmprintf(comm, "\r\nPausing all threads...\r\n");
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		arg[0] = th;
+		thinkos_pause_svc(arg);
+	}
+
+	dmon_wait_idle();
+	dmprintf(comm, "Idle.\r\n");
+}
+
+void monitor_resume_all(struct dmon_comm * comm)
+{
+	int32_t th;
+	int32_t arg[1];
+
+	dmprintf(comm, "\r\nResuming all threads...\r\n");
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		arg[0] = th;
+		thinkos_resume_svc(arg);
+	}
+}
+
+#define CTRL_B 0x02
+#define CTRL_C 0x03
+#define CTRL_D 0x04
+#define CTRL_E 0x05
+#define CTRL_F 0x06
+#define CTRL_G 0x07
+#define CTRL_H 0x08
+#define CTRL_I 0x09
+#define CTRL_J 0x0a
+#define CTRL_K 0x0b
+#define CTRL_L 0x0c
+#define CTRL_M 0x0d
+#define CTRL_N 0x0e
+#define CTRL_O 0x0f
+#define CTRL_P 0x10
+#define CTRL_Q 0x11
+#define CTRL_R 0x12
+#define CTRL_S 0x13
+#define CTRL_T 0x14
+#define CTRL_U 0x15
+#define CTRL_V 0x16
+#define CTRL_W 0x17
+#define CTRL_X 0x18
+#define CTRL_Y 0x19
+#define CTRL_Z 0x1a
+
+void gdb_task(struct thinkos_dmon * mon, struct dmon_comm * comm);
 
 void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 											struct dmon_comm * comm)
@@ -146,9 +206,9 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 	dmon_comm_connect(comm);
 
 	DCC_LOG(LOG_TRACE, "Comm connected..");
-
-	dmon_comm_send(comm, monitor_banner, 
-					  sizeof(monitor_banner) - 1);
+//	dmon_sleep(500);
+//	dmon_comm_send(comm, monitor_banner, sizeof(monitor_banner) - 1);
+//	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
 
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_COMM_RCV);
@@ -164,26 +224,45 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 		if (sigset & (1 << DMON_COMM_RCV)) {
 			DCC_LOG(LOG_INFO, "Comm RX.");
 			n = dmon_comm_recv(comm, buf, 64);
-			DCC_LOG1(LOG_INFO, "n=%d...", n);
 			c = buf[0];
+			if (n == 1)
+				DCC_LOG1(LOG_TRACE, "%02x.", buf[0]);
+			else if (n == 2)
+				DCC_LOG2(LOG_TRACE, "%02x.", buf[0], buf[1]);
+			else
+				DCC_LOG3(LOG_TRACE, "%02x %02x %02x", buf[0], buf[1], buf[2]);
 //			buf[1] = '\r';
 //			buf[2] = '\n';
 //			dmon_comm_send(comm, buf, 3);
 			switch (c) {
-			case 'r':
+			case CTRL_Q:
 				dmon_signal(DMON_START);
 				break;
-			case 'x':
-				monitor_on_fault(comm);
+			case CTRL_G:
+				dmprintf(comm, "GDB\r\n");
+			case '+':
+				thinkos_dmon_init(comm, gdb_task);
 				break;
-			case 't':
+			case CTRL_P:
+				monitor_pause_all(comm);
+				break;
+			case CTRL_R:
+				monitor_resume_all(comm);
+				break;
+			case CTRL_T:
 				test(comm);
 				break;
-			case 'i':
+			case CTRL_I:
 				osinfo(comm);
 				break;
+			case CTRL_S:
+				monitor_on_fault(comm);
+				break;
+			case CTRL_H:
+				show_help(comm);
+				break;
 			default:
-				show_menu(comm);
+				dmprintf(comm, "[%02x]\r\n", buf[0]);
 				break;
 			}
 		}
@@ -240,53 +319,53 @@ static int bmp_bit_cnt(uint32_t bmp[], int bits)
 
 static void os_alloc_dump(struct dmon_comm * comm, struct thinkos_rt * rt)
 {
-	cprintf(comm, "     ");
+	dmprintf(comm, "     ");
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	cprintf(comm, "   Thread");
+	dmprintf(comm, "   Thread");
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	cprintf(comm, "    Mutex");
+	dmprintf(comm, "    Mutex");
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	cprintf(comm, "     Cond");
+	dmprintf(comm, "     Cond");
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
-	cprintf(comm, "  Semaphr");
+	dmprintf(comm, "  Semaphr");
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
-	cprintf(comm, "    Event");
+	dmprintf(comm, "    Event");
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
-	cprintf(comm, "     Flag");
+	dmprintf(comm, "     Flag");
 #endif
-	cprintf(comm, "\r\n");
+	dmprintf(comm, "\r\n");
 
-	cprintf(comm, " Cnt:");
+	dmprintf(comm, " Cnt:");
 #if THINKOS_ENABLE_THREAD_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc, THINKOS_THREADS_MAX), 
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->th_alloc, THINKOS_THREADS_MAX), 
 			THINKOS_THREADS_MAX);
 #endif
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc, THINKOS_MUTEX_MAX), 
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->mutex_alloc, THINKOS_MUTEX_MAX), 
 			THINKOS_MUTEX_MAX);
 #endif
 #if THINKOS_ENABLE_COND_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc, THINKOS_COND_MAX),
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->cond_alloc, THINKOS_COND_MAX),
 			THINKOS_COND_MAX);
 #endif
 #if THINKOS_ENABLE_SEM_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc, THINKOS_SEMAPHORE_MAX), 
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->sem_alloc, THINKOS_SEMAPHORE_MAX), 
 			THINKOS_SEMAPHORE_MAX);
 #endif
 #if THINKOS_ENABLE_EVENT_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->ev_alloc, THINKOS_EVENT_MAX),
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->ev_alloc, THINKOS_EVENT_MAX),
 			THINKOS_EVENT_MAX);
 #endif
 #if THINKOS_ENABLE_FLAG_ALLOC
-	cprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc, THINKOS_FLAG_MAX),
+	dmprintf(comm, "%6d/%-2d", bmp_bit_cnt(rt->flag_alloc, THINKOS_FLAG_MAX),
 			THINKOS_FLAG_MAX);
 #endif
-	cprintf(comm, "\r\n");
+	dmprintf(comm, "\r\n");
 
 }
 
@@ -304,9 +383,9 @@ int osinfo(struct dmon_comm * comm)
 #endif
 
 
-	cprintf(comm, "\r\n");
+	dmprintf(comm, "\r\n----------------\r\n");
 #if THINKOS_ENABLE_CLOCK
-	cprintf(comm, "[ Ticks = %d ]", rt->ticks);
+	dmprintf(comm, "[ Ticks = %d ]", rt->ticks);
 #endif
 
 #if THINKOS_ENABLE_PROFILING
@@ -335,80 +414,80 @@ int osinfo(struct dmon_comm * comm)
 		cycdiv = (cycsum + 500) / 1000;
 		busy = (cycbusy + cycdiv / 2) / cycdiv;
 		idle = 1000 - busy;
-		cprintf(comm, " [ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
+		dmprintf(comm, " [ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
 				cycsum, busy / 10, busy % 10, idle / 10, idle % 10);
 	}
 
 #endif
 
-	cprintf(comm, "\r\n");
+	dmprintf(comm, "\r\n");
 
-	cprintf(comm, " Th"); 
+	dmprintf(comm, " Th"); 
 #if THINKOS_ENABLE_THREAD_INFO
-	cprintf(comm, " |     Tag"); 
-	cprintf(comm, " |    Stack"); 
+	dmprintf(comm, " |     Tag"); 
+	dmprintf(comm, " |    Stack"); 
 #endif
-	cprintf(comm, " |  Context"); 
+	dmprintf(comm, " |  Context"); 
 #if THINKOS_ENABLE_THREAD_STAT
-	cprintf(comm, " |  WQ | TmW"); 
+	dmprintf(comm, " |  WQ | TmW"); 
 #endif
 #if THINKOS_ENABLE_TIMESHARE
-	cprintf(comm, " |  Val |  Pri"); 
+	dmprintf(comm, " |  Val |  Pri"); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-	cprintf(comm, " | Clock (ms)"); 
+	dmprintf(comm, " | Clock (ms)"); 
 #endif
 #if THINKOS_ENABLE_PROFILING
-	cprintf(comm, " | CPU %%"); 
+	dmprintf(comm, " | CPU %%"); 
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
-	cprintf(comm, " | Locks\r\n"); 
+	dmprintf(comm, " | Locks\r\n"); 
 #else
-	cprintf(comm, " |\r\n");
+	dmprintf(comm, " |\r\n");
 #endif
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
-			cprintf(comm, "%3d", i);
+			dmprintf(comm, "%3d", i);
 #if THINKOS_ENABLE_THREAD_INFO
 			if (rt->th_inf[i] != NULL) {
-				cprintf(comm, " | %7s", rt->th_inf[i]->tag); 
-				cprintf(comm, " | %08x", (uint32_t)rt->th_inf[i]->stack_ptr); 
+				dmprintf(comm, " | %7s", rt->th_inf[i]->tag); 
+				dmprintf(comm, " | %08x", (uint32_t)rt->th_inf[i]->stack_ptr); 
 			} else {
-				cprintf(comm, " |     ..."); 
-				cprintf(comm, " |      ..."); 
+				dmprintf(comm, " |     ..."); 
+				dmprintf(comm, " |      ..."); 
 			}
 #endif
-			cprintf(comm, " | %08x", (uint32_t)rt->ctx[i]); 
+			dmprintf(comm, " | %08x", (uint32_t)rt->ctx[i]); 
 #if THINKOS_ENABLE_THREAD_STAT
-			cprintf(comm, " | %3d | %s", rt->th_stat[i] >> 1, 
+			dmprintf(comm, " | %3d | %s", rt->th_stat[i] >> 1, 
 					rt->th_stat[i] & 1 ? "Yes" : " No"); 
 #endif
 #if THINKOS_ENABLE_TIMESHARE
-			cprintf(comm, " | %4d | %4d", rt->sched_val[i], rt->sched_pri[i]); 
+			dmprintf(comm, " | %4d | %4d", rt->sched_val[i], rt->sched_pri[i]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
 			{
 				int32_t dt = (int32_t)(rt->clock[i] - rt->ticks);
 				if (dt < 0)
-					cprintf(comm, " | <timedout>"); 
+					dmprintf(comm, " | <timedout>"); 
 				else
-					cprintf(comm, " | %10d", dt); 
+					dmprintf(comm, " | %10d", dt); 
 			}
 #endif
 #if THINKOS_ENABLE_PROFILING
 			busy = (rt->cyccnt[i] + cycdiv / 2) / cycdiv;
-			cprintf(comm, " | %3d.%d", busy / 10, busy % 10);
+			dmprintf(comm, " | %3d.%d", busy / 10, busy % 10);
 #endif
-			cprintf(comm, " |");
+			dmprintf(comm, " |");
 #if THINKOS_MUTEX_MAX > 0
 			for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
 				if (rt->lock[j] == i)
-					cprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
+					dmprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
 			}
 #endif 
-			cprintf(comm, "\r\n");
+			dmprintf(comm, "\r\n");
 		}
 #if THINKOS_ENABLE_PROFILING
 		/* Reset cycle counters */
@@ -422,16 +501,16 @@ int osinfo(struct dmon_comm * comm)
 		if (*wq) { 
 			oid = wq - rt->wq_lst;
 			type = thinkos_obj_type_get(oid);
-			cprintf(comm, "%3d %5s:", oid, obj_type_name[type]);
+			dmprintf(comm, "%3d %5s:", oid, obj_type_name[type]);
 			for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 				if (*wq & (1 << i)) 
-					cprintf(comm, " %d", i);
+					dmprintf(comm, " %d", i);
 			}
 #if THINKOS_MUTEX_MAX > 0
 			if (type == THINKOS_OBJ_MUTEX)
-				cprintf(comm, " [lock=%d]", rt->lock[oid - THINKOS_MUTEX_BASE]);
+				dmprintf(comm, " [lock=%d]", rt->lock[oid - THINKOS_MUTEX_BASE]);
 #endif 
-			cprintf(comm, "\r\n");
+			dmprintf(comm, "\r\n");
 		}
 	}
 
@@ -472,61 +551,61 @@ int cmd_thread(struct dmon_comm * comm)
 	for (i = 0; i < cnt; ++i) {
 		th = lst[i];
 		if ((th >= THINKOS_THREADS_MAX) || (rt->ctx[th] == NULL)) {
-			cprintf(comm, "Thread %d is invalid!\n", th);
+			dmprintf(comm, "Thread %d is invalid!\n", th);
 			return SHELL_ERR_ARG_INVALID;
 		}
 
 		oid = rt->th_stat[th] >> 1;
 		type = thinkos_obj_type_get(oid);
 
-		cprintf(comm, " - Id: %d", th); 
+		dmprintf(comm, " - Id: %d", th); 
 
 #if THINKOS_ENABLE_THREAD_INFO
 		if (rt->th_inf[th] != NULL)
-			cprintf(comm, ", %s", rt->th_inf[th]->tag); 
+			dmprintf(comm, ", %s", rt->th_inf[th]->tag); 
 		else
-			cprintf(comm, ", %s", "..."); 
+			dmprintf(comm, ", %s", "..."); 
 #endif
-		cprintf(comm, "\n"); 
+		dmprintf(comm, "\n"); 
 
 #if THINKOS_ENABLE_THREAD_STAT
-		cprintf(comm, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
+		dmprintf(comm, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
 				oid, obj_type_name[type], rt->th_stat[th] & 1 ? "Yes" : " No"); 
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
-		cprintf(comm, " - Scheduler: val=%d pri=%4d\n", 
+		dmprintf(comm, " - Scheduler: val=%d pri=%4d\n", 
 				rt->sched_val[th], rt->sched_pri[th]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
-		cprintf(comm, " - Clock: val=%d time=%d\n", rt->clock[th],
+		dmprintf(comm, " - Clock: val=%d time=%d\n", rt->clock[th],
 				(int32_t)(rt->clock[th] - rt->ticks)); 
 #endif
 
 #if THINKOS_MUTEX_MAX > 0
-		cprintf(comm, " - Mutex Locks: ");
+		dmprintf(comm, " - Mutex Locks: ");
 		for (j = 0; j < THINKOS_MUTEX_MAX ; ++j) {
 			if (rt->lock[j] == th)
-				cprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
+				dmprintf(comm, " %d", j + THINKOS_MUTEX_BASE);
 		}
-		cprintf(comm, "\n");
+		dmprintf(comm, "\n");
 #endif 
 
 		ctx = rt->ctx[th];
 
-		cprintf(comm, " - Context: 0x%08x\n", (uint32_t)ctx); 
+		dmprintf(comm, " - Context: 0x%08x\n", (uint32_t)ctx); 
 
-		cprintf(comm, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\n", 
+		dmprintf(comm, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\n", 
 				ctx->r0, ctx->r1, ctx->r2, ctx->r3);
-		cprintf(comm, "     r4=%08x  r5=%08x  r6=%08x  r7=%08x\n", 
+		dmprintf(comm, "     r4=%08x  r5=%08x  r6=%08x  r7=%08x\n", 
 				ctx->r4, ctx->r7, ctx->r6, ctx->r7);
-		cprintf(comm, "     r8=%08x  r9=%08x r10=%08x r11=%08x\n", 
+		dmprintf(comm, "     r8=%08x  r9=%08x r10=%08x r11=%08x\n", 
 				ctx->r8, ctx->r9, ctx->r10, ctx->r11);
-		cprintf(comm, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\n", 
+		dmprintf(comm, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\n", 
 				ctx->r12, (uint32_t)ctx, ctx->lr, ctx->pc);
-		cprintf(comm, "   xpsr=%08x\n", ctx->xpsr);
+		dmprintf(comm, "   xpsr=%08x\n", ctx->xpsr);
 
-		cprintf(comm, "\n");
+		dmprintf(comm, "\n");
 	}
 
 	return 0;
@@ -542,7 +621,7 @@ int scan_stack(FILE * f, uint32_t * ptr, unsigned int size)
 		if (ptr[i] != 0xdeadbeef)
 			break;
 	}
-	cprintf(comm, " | %6d ", i * 4);
+	dmprintf(comm, " | %6d ", i * 4);
 
 	return 0;
 }
@@ -556,42 +635,42 @@ int cmd_oscheck(FILE * f, int argc, char ** argv)
 		return SHELL_ERR_EXTRA_ARGS;
 
 	if (thinkos_rt_snapshot(&rt) < 0) {
-		cprintf(comm, "#ERROR: Thinkos RT_DEBUG not enabled!\n");
+		dmprintf(comm, "#ERROR: Thinkos RT_DEBUG not enabled!\n");
 		return SHELL_ERR_GENERAL;
 	}
 
-	cprintf(comm, "\n");
+	dmprintf(comm, "\n");
 
-	cprintf(comm, " Th"); 
+	dmprintf(comm, " Th"); 
 #if THINKOS_ENABLE_THREAD_INFO
-	cprintf(comm, " |     Tag"); 
-	cprintf(comm, " |    Stack"); 
+	dmprintf(comm, " |     Tag"); 
+	dmprintf(comm, " |    Stack"); 
 #endif
-	cprintf(comm, " |  Context"); 
+	dmprintf(comm, " |  Context"); 
 #if THINKOS_ENABLE_THREAD_INFO
-	cprintf(comm, " |   Size"); 
-	cprintf(comm, " |   Free"); 
+	dmprintf(comm, " |   Size"); 
+	dmprintf(comm, " |   Free"); 
 #endif
-	cprintf(comm, "\n");
+	dmprintf(comm, "\n");
 
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 		if (rt->ctx[i] != NULL) {
-			cprintf(comm, "%3d", i);
+			dmprintf(comm, "%3d", i);
 #if THINKOS_ENABLE_THREAD_INFO
 			if (rt->th_inf[i] != NULL) {
-				cprintf(comm, " | %7s", rt->th_inf[i]->tag); 
-				cprintf(comm, " | %08x", (uint32_t)rt->th_inf[i]->stack_ptr); 
+				dmprintf(comm, " | %7s", rt->th_inf[i]->tag); 
+				dmprintf(comm, " | %08x", (uint32_t)rt->th_inf[i]->stack_ptr); 
 			} else {
-				cprintf(comm, " |     ..."); 
-				cprintf(comm, " |      ..."); 
+				dmprintf(comm, " |     ..."); 
+				dmprintf(comm, " |      ..."); 
 			}
 #endif
-			cprintf(comm, " | %08x", (uint32_t)rt->ctx[i]); 
+			dmprintf(comm, " | %08x", (uint32_t)rt->ctx[i]); 
 #if THINKOS_ENABLE_THREAD_INFO
-			cprintf(comm, " | %6d", rt->th_inf[i]->stack_size); 
+			dmprintf(comm, " | %6d", rt->th_inf[i]->stack_size); 
 			scan_stack(f, rt->th_inf[i]->stack_ptr, rt->th_inf[i]->stack_size);
 #endif
-			cprintf(comm, "\n");
+			dmprintf(comm, "\n");
 		}
 	}
 

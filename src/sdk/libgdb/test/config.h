@@ -40,13 +40,13 @@
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 
 #define THINKOS_ENABLE_JOIN 0
-#define THINKOS_ENABLE_PAUSE 0
+#define THINKOS_ENABLE_PAUSE 1
 #define THINKOS_ENABLE_CANCEL 0
 
 #define THINKOS_MUTEX_MAX 8
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
 
-#define THINKOS_COND_MAX          64
+#define THINKOS_COND_MAX          8
 #define THINKOS_ENABLE_COND_ALLOC 1
 
 #define THINKOS_SEMAPHORE_MAX 8
@@ -80,6 +80,8 @@
 #define THINKOS_ENABLE_THREAD_INFO 1
 
 #define THINKOS_ENABLE_RT_DEBUG 1
+
+#define THINKOS_ENABLE_MONITOR 1
 
 /* -------------------------------------------------------------------------
  * USB 

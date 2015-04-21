@@ -24,6 +24,8 @@
 #include <thinkos_sys.h>
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 //#include <thinkos_svc.h>
 #include <thinkos_except.h>
@@ -77,7 +79,6 @@ static inline void __attribute__((always_inline)) __wait(void) {
 }
 #endif
 
-
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
 	/* FIXME: the profile counter does not take into 
@@ -112,11 +113,29 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 		*cycidle += delta; 
 	}
 #else
+#if THINKOS_ENABLE_MONITOR
+	volatile uint32_t * req_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.req, 
+												  DMON_IDLE);
+	volatile uint32_t * sig_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, 
+												  DMON_IDLE);
+	uint32_t val;
+#endif
 
 	for (;;) {
 #if THINKOS_ENABLE_SCHED_DEBUG
 		DCC_LOG(LOG_MSG, "zzz...");
 //		__dump_context(&thinkos_idle.ctx);
+#endif
+#if THINKOS_ENABLE_MONITOR
+		/* check if the monitor is requesting a notification when
+		   entering IDLE state */
+		if ((val = *req_bit) != 0) {
+			/* Notify the monitor */
+			/* Set the IDLE signal bit */
+			*sig_bit = val;
+			/* Call the monitor by a pending a monitor interrupt */
+			CM3_DCB->demcr |= DCB_DEMCR_MON_PEND;
+		}
 #endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
@@ -219,6 +238,12 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	ticks++;
 	thinkos_rt.ticks = ticks; 
 
+#if THINKOS_ENABLE_MONITOR
+	if ((int32_t)(thinkos_rt.dmclock - ticks) <= 0) {
+		dmon_signal(DMON_ALARM);
+	}
+#endif
+
 	wq = __rbit(thinkos_rt.wq_clock);
 	while ((j = __clz(wq)) < 32) {
 		wq &= ~(0x80000000 >> j);  
@@ -229,16 +254,16 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 			stat = thinkos_rt.th_stat[j];
 			thinkos_rt.th_stat[j] = 0;
 			/* remove from other wait queue, if any */
-			bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], j);  
+			__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], j, 0);  
 #endif
 			/* remove from the time wait queue */
-			bmp_bit_clr(&thinkos_rt.wq_clock, j);  
+			__bit_mem_wr(&thinkos_rt.wq_clock, j, 0);  
 			DCC_LOG1(LOG_MSG, "Wakeup %d...", j);
 #if THINKOS_ENABLE_SCHED_DEBUG
 			thinkos_rt.sched_trace_req = 1;
 #endif
 			/* insert into the ready wait queue */
-			bmp_bit_set(&thinkos_rt.wq_ready, j);  
+			__bit_mem_wr(&thinkos_rt.wq_ready, j, 1);  
 			sched++;
 //			printf("^%d", j);
 		} else {
@@ -261,11 +286,11 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 		if (thinkos_rt.sched_val[idx] < 0) {
 			thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
 			/* set the non schedule flag for the active thread */
-//			bmp_bit_set(&thinkos_rt.active.flags, THINKOS_NON_SCHED);  
+//			__bit_mem_wr(&thinkos_rt.active.flags, THINKOS_NON_SCHED, 1);  
 			/* insert into the CPU wait queue */
-			bmp_bit_set(&thinkos_rt.wq_tmshare, idx);  
+			__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
 //			printf(" w%x", thinkos_rt.wq_tmshare);
-			bmp_bit_clr(&thinkos_rt.wq_ready, idx);
+			__bit_mem_wr(&thinkos_rt.wq_ready, idx, 0);
 			cm3_cpsid_i();
 #if (THINKOS_THREADS_MAX < 32) 
 			if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
@@ -286,7 +311,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 			cm3_cpsie_i();
 			sched++;
 		} else {
-//			bmp_bit_set(&thinkos_rt.wq_ready, idx);
+//			__bit_mem_wr(&thinkos_rt.wq_ready, idx, 1);
 //			printf(" r%x", thinkos_rt.wq_ready);
 		}
 //	} else {
@@ -309,7 +334,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	bmp_bit_clr(&thinkos_rt.wq_tmshare, self);  
+	__bit_mem_wr(&thinkos_rt.wq_tmshare, self, 0);  
 #endif
 
 	/* disable interrupts */
@@ -322,12 +347,12 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	stat = thinkos_rt.th_stat[self];
 	thinkos_rt.th_stat[self] = 0;
 	/* remove from other wait queue, if any */
-	bmp_bit_clr(&thinkos_rt.wq_lst[stat >> 1], self);  
+	__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], self, 0);  
 #else
 	int i;
 	/* remove from other wait queue, if any */
 	for (i = 0; i < __wq_idx(thinkos_rt.wq_end); i++) {
-		bmp_bit_clr(&thinkos_rt.wq_lst[i], self);  
+		__bit_mem_wr(&thinkos_rt.wq_lst[i], self, 0);  
 	}
 #endif
 #endif
@@ -348,8 +373,8 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 #if THINKOS_ENABLE_JOIN
 		if (__bit_mem_rd(&thinkos_rt.wq_join[self], j) != 0) {
 			DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
-			bmp_bit_set((void *)&thinkos_rt.wq_ready, j);  
-			bmp_bit_clr((void *)&thinkos_rt.wq_join[self], j);  
+			__bit_mem_wr((void *)&thinkos_rt.wq_ready, j, 1); 
+			__bit_mem_wr((void *)&thinkos_rt.wq_join[self], j, 0);  
 			thinkos_rt.ctx[j]->r0 = code;
 		}
 #endif
@@ -366,7 +391,7 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* Releases the thread block */
-	bmp_bit_clr(&thinkos_rt.th_alloc, self);
+	__bit_mem_wr(&thinkos_rt.th_alloc, self, 0);
 #endif
 
 
@@ -590,11 +615,11 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 	/* set the active thread */
 	thinkos_rt.active = self;
-	bmp_bit_set(&thinkos_rt.wq_ready, self);
+	__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);
 
 #if (THINKOS_THREADS_MAX < 32) 
 	/* put the IDLE thread in the ready queue */
-	bmp_bit_set(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX);
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
 #endif
 
 	DCC_LOG2(LOG_TRACE, "threads_max=%d ready=%08x", 
@@ -612,7 +637,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if THINKOS_ENABLE_PAUSE
 	if (opt.paused) {
 		/* insert into the paused list */
-		bmp_bit_set(&thinkos_rt.wq_paused, self);  
+		__bit_mem_wr(&thinkos_rt.wq_paused, self, 1);
 		/* Invoke the scheduler */
 		__thinkos_defer_sched();
 	} else

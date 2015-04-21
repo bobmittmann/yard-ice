@@ -98,6 +98,12 @@ void thinkos_pause_svc(int32_t * arg)
 #error "thinkos_pause() depends on THINKOS_ENABLE_THREAD_STAT"	
 #endif
 
+	if (thinkos_rt.ctx[th] == NULL) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+
 	DCC_LOG1(LOG_TRACE, "thread=%d", th);
 
 	arg[0] = 0;

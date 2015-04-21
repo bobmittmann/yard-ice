@@ -43,8 +43,11 @@ enum dmon_ev_no {
 
 	DMON_PIPE_RD  = 3,
 	DMON_PIPE_WR  = 4,
+	DMON_ALARM    = 5,
+
 
 	DMON_THREAD_FAULT = 16,
+	DMON_IDLE     = 29,
 	DMON_EXCEPT   = 30,
 	DMON_START    = 31
 };
@@ -54,8 +57,9 @@ struct dmon_comm;
 struct thinkos_dmon {
 	struct dmon_comm * comm;
 	uint32_t * ctx;
-	volatile uint32_t events;
 	volatile uint32_t mask;
+	volatile uint32_t events;
+	volatile uint32_t req;
 	void (* task)(struct thinkos_dmon * dmon, struct dmon_comm * comm);
 };
 
@@ -90,6 +94,12 @@ void dmon_clear(int event);
 uint32_t dmon_select(uint32_t watch);
 
 int dmon_wait(int event);
+
+int dmon_sleep(unsigned int ms);
+
+void dmon_alarm(unsigned int ms);
+
+int dmon_wait_idle(void);
 
 #ifdef __cplusplus
 }
