@@ -35,20 +35,11 @@
 struct thinkos_dmon thinkos_dmon_rt;
 uint32_t thinkos_dmon_stack[256];
 
-void __attribute__((noinline)) monitor_context_swap(void * ctx) 
-{
-	register void * ptr0 asm("r0") = ctx;
-	asm volatile ("push   {r4-r11,lr}\n"
-				  "mrs    r1, APSR\n"
-				  "push   {r1}\n"
-				  "mov    r1, sp\n"
-				  "ldr    sp, [%0]\n" /* restore context */
-				  "str    r1, [%0]\n" /* save context */
-				  "pop    {r1}\n"
-				  "msr    APSR_nzcvq, r1\n"
-				  "pop    {r4-r11,lr}\n"
-				  : : "r" (ptr0) : "r1");
-}
+void dmon_context_swap(void * ctx); 
+
+/* -------------------------------------------------------------------------
+ * Debug Monitor API
+ * ------------------------------------------------------------------------- */
 
 uint32_t dmon_select(uint32_t evmask)
 {
@@ -65,7 +56,7 @@ uint32_t dmon_select(uint32_t evmask)
 
 	do {
 		DCC_LOG(LOG_INFO, "sleep...");
-		monitor_context_swap(&thinkos_dmon_rt.ctx); 
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 		DCC_LOG(LOG_INFO, "wakeup...");
 		evset = thinkos_dmon_rt.events;
 	} while ((evset & evmask) == 0);
@@ -89,9 +80,9 @@ int dmon_wait(int ev)
 	/* umask event */
 	thinkos_dmon_rt.mask |= mask;
 
-	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
-	monitor_context_swap(&thinkos_dmon_rt.ctx); 
-	DCC_LOG(LOG_INFO, "wakeup...");
+	DCC_LOG1(LOG_TRACE, "waiting for %d, sleeping...", ev);
+	dmon_context_swap(&thinkos_dmon_rt.ctx); 
+	DCC_LOG(LOG_TRACE, "wakeup...");
 
 	evset = thinkos_dmon_rt.events;
 	if (evset & mask) {
@@ -131,6 +122,7 @@ int dmon_sleep(unsigned int ms)
 void dmon_alarm(unsigned int ms)
 {
 	dmon_clear(DMON_ALARM);
+	dmon_unmask(DMON_ALARM);
 	/* set the clock */
 	thinkos_rt.dmclock = thinkos_rt.ticks + ms;
 }
@@ -143,38 +135,68 @@ int dmon_wait_idle(void)
 	/* wait for signal */
 	if ((ret = dmon_wait(DMON_IDLE)) < 0)
 		return ret;
+
 	/* clear request */
 	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
 	return 0;
 }
 
-static inline void __attribute__((always_inline)) __wait(void) {
-	asm volatile ("mov    r3, #1\n"
-				  "0:\n"
-				  "cbz	r3, 1f\n"
-				  "b.n  0b\n"
-				  "1:\n" : : : "r3"); 
+void dmon_reset(void)
+{
+	dmon_signal(DMON_RESET);
+	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
 
-void __attribute__((noreturn)) dmon_bootstrap(void)
+void dmon_exec(void (* task)(struct dmon_comm *))
 {
-	thinkos_dmon_rt.task(&thinkos_dmon_rt, thinkos_dmon_rt.comm);
+	thinkos_dmon_rt.task = task;
+	dmon_signal(DMON_RESET);
+	dmon_context_swap(&thinkos_dmon_rt.ctx); 
+}
+
+
+
+/* -------------------------------------------------------------------------
+ * Debug Monitor Core
+ * ------------------------------------------------------------------------- */
+
+void __attribute__((noinline)) dmon_context_swap(void * ctx) 
+{
+	register void * ptr0 asm("r0") = ctx;
+	asm volatile ("push   {r4-r11,lr}\n"
+				  "mrs    r1, APSR\n"
+				  "push   {r1}\n"
+				  "mov    r1, sp\n"
+				  "ldr    sp, [%0]\n" /* restore context */
+				  "str    r1, [%0]\n" /* save context */
+				  "pop    {r1}\n"
+				  "msr    APSR_nzcvq, r1\n"
+				  "pop    {r4-r11,lr}\n"
+				  : : "r" (ptr0) : "r1");
+}
+
+
+static void __attribute__((noreturn)) dmon_bootstrap(void)
+{
+	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
 	for(;;);
 }
 
-void dmon_start(struct thinkos_dmon * dmon)
+static void dmon_on_reset(struct thinkos_dmon * dmon)
 {
 	uint32_t * sp;
-	DCC_LOG(LOG_TRACE, "DMON_START");
+	DCC_LOG(LOG_TRACE, "DMON_RESET");
 	sp = &thinkos_dmon_stack[(sizeof(thinkos_dmon_stack) / 4) - 10];
 	sp[0] = 0x0100000f; /* CPSR */
+	sp[1] = 0; /* R4 */
+	sp[2] = 0; /* R5 */
 	sp[9] = ((uint32_t)dmon_bootstrap) | 1; /* LR */
 	dmon->ctx = sp;
 	dmon->events = 0;
-	dmon->mask = (1 << DMON_START) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
+	dmon->mask = (1 << DMON_RESET) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
 }
 
-void dmon_except(struct thinkos_dmon * mon)
+static void dmon_on_except(struct thinkos_dmon * mon)
 {
 #if DEBUG
 	struct thinkos_context * ctx = &thinkos_except_buf.ctx;
@@ -220,101 +242,156 @@ void dmon_except(struct thinkos_dmon * mon)
 	thinkos_except_buf.thread = th;
 }
 
+void thinkos_pause_svc(int32_t * arg);
+
+void thinkos_suspend_all(void)
+{
+	int32_t th;
+	int32_t arg[1];
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		arg[0] = th;
+		thinkos_pause_svc(arg);
+	}
+}
 
 #if 1
 void cm3_debug_mon_isr(void)
 {
+	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t sigset = thinkos_dmon_rt.events;
+
+
+	if (dcb->demcr & DCB_DEMCR_MON_REQ) {
+		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ=1 ++++++++++++++");
+//		dcb->demcr &= ~DCB_DEMCR_MON_REQ;
+//		thinkos_suspend_all();
+	} else {
+		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ=0 --------------");
+	}
+	
+	if (thinkos_rt.step != -1) {
+		DCC_LOG1(LOG_TRACE, "thinkos_rt.step=%d", thinkos_rt.step);
+	}
 
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);
 		sigset |= (1 << DMON_THREAD_FAULT);
 		thinkos_dmon_rt.events = sigset;
-		dmon_except(&thinkos_dmon_rt);
+		dmon_on_except(&thinkos_dmon_rt);
 	}
 
-	if (sigset & (1 << DMON_START)) {
-		dmon_start(&thinkos_dmon_rt);
+	if (sigset & (1 << DMON_RESET)) {
+		dmon_on_reset(&thinkos_dmon_rt);
 	}
 
 	/* Process monitor events */
 	if ((sigset & thinkos_dmon_rt.mask) != 0) {
-		monitor_context_swap(&thinkos_dmon_rt.ctx); 
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	}
+
 }
 #endif
 
 #if 0
+
+static inline void __attribute__((always_inline)) __wait(void) {
+	asm volatile ("mov    r3, #1\n"
+				  "0:\n"
+				  "cbz	r3, 1f\n"
+				  "b.n  0b\n"
+				  "1:\n" : : : "r3"); 
+}
+
 void thinkos_debug_monitor(void)
 {
+	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t sigset = thinkos_dmon_rt.events;
+
+
+	if (dcb->demcr & DCB_DEMCR_MON_REQ) {
+		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ +++++++++++++++");
+		dcb->demcr &= ~DCB_DEMCR_MON_REQ;
+		thinkos_suspend_all();
+	}
 
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);
 		sigset |= (1 << DMON_THREAD_FAULT);
 		thinkos_dmon_rt.events = sigset;
-		dmon_except(&thinkos_dmon_rt);
+		dmon_on_except(&thinkos_dmon_rt);
 	}
 
-	if (sigset & (1 << DMON_START)) {
-		dmon_start(&thinkos_dmon_rt);
+	if (sigset & (1 << DMON_RESET)) {
+		dmon_on_reset(&thinkos_dmon_rt);
 	}
 
 	/* Process monitor events */
 	if ((sigset & thinkos_dmon_rt.mask) != 0) {
-		monitor_context_swap(&thinkos_dmon_rt.ctx); 
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	}
+
 }
 
 /* THinkOS - Debug Monitor */
-//void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
-void cm3_debug_mon_isr(void)
+void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
+//void cm3_debug_mon_isr(void)
 {
 	register struct thinkos_context * ctx asm("r0");
-//	register uint32_t lr asm("r4");
+	register uint32_t lr asm("r4");
 	uint32_t idx;
 
 	/* save the context */
 	asm volatile ("mrs    %0, PSP\n" 
 				  "stmdb  %0!, {r4-r11}\n"
-//				  "mov    %1, lr\n"
-//				  : "=r" (ctx), "=r" (lr));
-				  : "=r" (ctx));
+				  "mov    %1, lr\n"
+				  : "=r" (ctx), "=r" (lr));
+
+	/* disable interrupts */
+	cm3_cpsid_i();
 
 	/* get the active (current) thread */	
 	idx = thinkos_rt.active;
 	/* save SP */
 	thinkos_rt.ctx[idx] = ctx;
 
-	DCC_LOG2(LOG_TRACE, "--> thread=%d ctx=%p", idx, ctx);
-
-//	thinkos_debug_monitor();
+	thinkos_debug_monitor();
 
 	/* update the active thread */
 	idx = thinkos_rt.active;
 	ctx = thinkos_rt.ctx[idx];
-	DCC_LOG2(LOG_TRACE, "<-- thread=%d ctx=%p", idx, ctx);
+
+	/* enable interrupts */
+	cm3_cpsie_i();
 
 	/* restore the context */
-	asm volatile ("add    r3, %0, #8 * 4\n"
+	asm volatile (
+				  "mov    lr, %1\n"
+				  "add    r3, %0, #8 * 4\n"
 				  "msr    PSP, r3\n"
 				  "ldmia  %0, {r4-r11}\n"
-				  : : "r" (ctx) : "r3"); 
+				  "bx     lr\n"
+				  : : "r" (ctx), "r" (lr): "r3"); 
+	for(;;);
 }
 #endif
 
-void thinkos_exception_dsr(struct thinkos_except * xcpt)
-{
-	dmon_signal(DMON_EXCEPT);
-}
 
-void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * , 
-												  struct dmon_comm * ))
+/* -------------------------------------------------------------------------
+ * ThinkOS thread level API
+ * ------------------------------------------------------------------------- */
+
+//void thinkos_exception_dsr(struct thinkos_except * xcpt)
+//{
+//	dmon_signal(DMON_EXCEPT);
+//}
+
+void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 	
-	thinkos_dmon_rt.events = (1 << DMON_START);
-	thinkos_dmon_rt.mask = (1 << DMON_START);
+	thinkos_dmon_rt.events = (1 << DMON_RESET);
+	thinkos_dmon_rt.mask = (1 << DMON_RESET);
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
 
@@ -324,3 +401,4 @@ void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * ,
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 
 }
+

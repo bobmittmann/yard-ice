@@ -297,6 +297,10 @@ struct thinkos_rt {
 
 	int32_t active; /* current active thread */
 
+#if THINKOS_ENABLE_MONITOR
+	int32_t step; /* step request on thread */
+#endif
+
 #if THINKOS_ENABLE_PROFILING
 	/* Per thread cycle count */
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];

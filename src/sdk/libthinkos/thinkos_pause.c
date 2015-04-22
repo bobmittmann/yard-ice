@@ -45,13 +45,17 @@ void thinkos_resume_svc(int32_t * arg)
 	}
 #endif
 #endif
-
-	DCC_LOG1(LOG_TRACE, "thread=%d", th);
+	if (thinkos_rt.ctx[th] == NULL) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
 
 	arg[0] = 0;
 
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) == 0) {
-		/* not paused */
+		DCC_LOG1(LOG_WARNING, "thread=%d is not paused!", th);
+		/* not paused, this is not an error condition. */
 		return;
 	}
 
@@ -63,13 +67,16 @@ void thinkos_resume_svc(int32_t * arg)
 	/* reinsert the thread into a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
 	wq = stat >> 1;
-	DCC_LOG2(LOG_TRACE, "stat=0x%02x wq=%d", stat, wq);
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+
+	DCC_LOG4(LOG_TRACE, "thread=%d stat=0x%02x wq=%d clk=%d", 
+			 th, stat, wq, (stat & 1));
 
 #if THINKOS_ENABLE_CLOCK
 	/* reenable the clock according to the thread status */
-	__bit_mem_wr(&thinkos_rt.wq_clock, th, 1);
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, (stat & 1));
 #endif
+
 	__thinkos_defer_sched();
 }
 
@@ -104,11 +111,10 @@ void thinkos_pause_svc(int32_t * arg)
 		return;
 	}
 
-	DCC_LOG1(LOG_TRACE, "thread=%d", th);
-
 	arg[0] = 0;
 
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) != 0) {
+		DCC_LOG1(LOG_WARNING, "thread=%d is paused already!", th);
 		/* paused */
 		return;
 	}
@@ -119,7 +125,8 @@ void thinkos_pause_svc(int32_t * arg)
 	/* remove the thread from a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
 	wq = stat >> 1;
-	DCC_LOG2(LOG_TRACE, "stat=0x%02x wq=%d", stat, wq);
+	DCC_LOG4(LOG_TRACE, "thread=%d stat=0x%02x wq=%d clk=%d", 
+			 th, stat, wq, (stat & 1));
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 
 #if THINKOS_ENABLE_TIMESHARE

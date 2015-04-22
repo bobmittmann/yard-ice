@@ -304,9 +304,9 @@ void usb_mon_on_error(usb_class_t * cl, int code)
 {
 }
 
-int dmon_comm_send(void * drv, const void * buf, unsigned int len)
+int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 {
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
 	uint8_t * ptr = (uint8_t *)buf;
 	unsigned int rem = len;
 	int ret;
@@ -332,9 +332,9 @@ int dmon_comm_send(void * drv, const void * buf, unsigned int len)
 	return len;
 }
 
-int dmon_comm_recv(void * drv, void * buf, unsigned int len)
+int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 {
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
 	int ret;
 	int n;
 
@@ -351,9 +351,9 @@ int dmon_comm_recv(void * drv, void * buf, unsigned int len)
 	return ret;
 }
 
-int dmon_comm_connect(void * drv)
+int dmon_comm_connect(struct dmon_comm * comm)
 {
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)drv;
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
 	int ret;
 
 //	while ((dev->acm.flags & ACM_LC_SET) == 0) {
@@ -366,6 +366,13 @@ int dmon_comm_connect(void * drv)
 
 	return 0;
 }
+
+bool dmon_comm_isconnected(struct dmon_comm * comm)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
+	return (dev->acm.control & CDC_DTE_PRESENT) ? true : false;
+}
+
 
 struct usb_cdc_acm_dev usb_cdc_rt;
 

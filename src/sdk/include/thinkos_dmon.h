@@ -49,7 +49,7 @@ enum dmon_ev_no {
 	DMON_THREAD_FAULT = 16,
 	DMON_IDLE     = 29,
 	DMON_EXCEPT   = 30,
-	DMON_START    = 31
+	DMON_RESET    = 31
 };
 
 struct dmon_comm;
@@ -60,7 +60,7 @@ struct thinkos_dmon {
 	volatile uint32_t mask;
 	volatile uint32_t events;
 	volatile uint32_t req;
-	void (* task)(struct thinkos_dmon * dmon, struct dmon_comm * comm);
+	void (* task)(struct dmon_comm * comm);
 };
 
 extern struct thinkos_dmon thinkos_dmon_rt;
@@ -76,14 +76,15 @@ static inline void dmon_signal(int ev) {
 extern "C" {
 #endif
 
-void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * , 
-												  struct dmon_comm * ));
+void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ));
 
-int dmon_comm_send(void * comm, const void * buf, unsigned int len);
 
-int dmon_comm_recv(void * comm, void * buf, unsigned int len);
 
-int dmon_comm_connect(void * drv);
+void dmon_reset(void);
+
+void dmon_exec(void (* task)(struct dmon_comm *));
+
+
 
 void dmon_unmask(int event);
 
@@ -100,6 +101,17 @@ int dmon_sleep(unsigned int ms);
 void dmon_alarm(unsigned int ms);
 
 int dmon_wait_idle(void);
+
+
+
+int dmon_comm_send(struct dmon_comm * comm, 
+				   const void * buf, unsigned int len);
+
+int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len);
+
+int dmon_comm_connect(struct dmon_comm * comm);
+
+bool dmon_comm_isconnected(struct dmon_comm * comm);
 
 #ifdef __cplusplus
 }

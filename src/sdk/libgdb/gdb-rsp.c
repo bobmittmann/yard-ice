@@ -72,6 +72,9 @@ struct gdb_rspd {
 	int8_t nonstop_mode;
 	uint8_t current_thread;
 	struct {
+		uint32_t supress_detach_ack;
+	} flag;
+	struct {
 		int8_t g; 
 		int8_t c;
 		int8_t p;
@@ -79,6 +82,7 @@ struct gdb_rspd {
 	uint8_t last_signal;
 	struct dmon_comm * comm;
 	struct dbg_bp_ctrl bp_ctrl;
+	void (* shell_task)(struct dmon_comm * comm);
 };
 
 static const char hextab[] = { 
@@ -266,6 +270,7 @@ int target_step(int th)
 	int32_t arg[1];
 
 	dcb->dhcsr &= ~DCB_DHCSR_C_DEBUGEN;
+//	dcb->demcr |= DCB_DEMCR_MON_STEP | DCB_DEMCR_MON_REQ;
 	dcb->demcr |= DCB_DEMCR_MON_STEP;
 
 	arg[0] = th - 1;
@@ -1738,18 +1743,18 @@ static int rsp_v_packet(struct dmon_comm * comm, char * pkt, int len)
 	return rsp_empty(comm);
 }
 
-void monitor_task(struct thinkos_dmon * mon, struct dmon_comm * comm);
-
-static int rsp_detach(struct dmon_comm * comm)
+static int rsp_detach(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "[DETACH]");
 
 	target_run();
 
-	/* detach - just reply OK */
-	rsp_ok(comm);
+	if (!gdb->flag.supress_detach_ack) {
+		/* reply OK */
+		rsp_ok(comm);
+	}	
 
-	thinkos_dmon_init(comm, monitor_task);
+	dmon_exec(gdb->shell_task);
 
 	return 0;
 }
@@ -1789,8 +1794,12 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 	sum = 0;
 	pos = 0;
 
+	dmon_alarm(1000);
+
 	for (;;) {
 		if ((n = dmon_comm_recv(comm, &pkt[pos], rem)) < 0) {
+			dmon_clear(DMON_ALARM);
+			dmon_mask(DMON_ALARM);
 			return n;
 		}
 
@@ -1815,8 +1824,7 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 
 struct gdb_rspd gdb_rspd;
 
-void __attribute__((noreturn)) gdb_task(struct thinkos_dmon * mon, 
-										struct dmon_comm * comm)
+void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
 	char buf[RSP_BUFFER_LEN];
@@ -1833,6 +1841,10 @@ void __attribute__((noreturn)) gdb_task(struct thinkos_dmon * mon,
 	dbg_bp_init(&gdb->bp_ctrl);
 
 	gdb->last_signal = TARGET_SIGNAL_0;
+	gdb->flag.supress_detach_ack = 0;
+
+	if (gdb->shell_task == NULL)
+		gdb->shell_task = gdb_task;
 
 	dmon_comm_connect(comm);
 
@@ -1852,6 +1864,8 @@ void __attribute__((noreturn)) gdb_task(struct thinkos_dmon * mon,
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_TRACE, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
+			if (!dmon_comm_isconnected(comm))	
+				dmon_exec(gdb->shell_task);
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
@@ -1951,7 +1965,7 @@ void __attribute__((noreturn)) gdb_task(struct thinkos_dmon * mon,
 				ret = rsp_v_packet(comm, pkt, len);
 				break;
 			case 'D':
-				ret = rsp_detach(comm);
+				ret = rsp_detach(gdb, comm);
 				break;
 			case 'X':
 				ret = rsp_memory_write_bin(comm, pkt, len);
@@ -1988,27 +2002,10 @@ void __attribute__((noreturn)) gdb_task(struct thinkos_dmon * mon,
 		}
 
 	}
+
+	DCC_LOG(LOG_WARNING, "fault..");
+	dmon_reset();
+
 	for(;;);
-}
-
-int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
-{
-	struct dmon_comm * comm;
-	char pkt[32];
-	int sum;;
-	int sig = 5;
-
-	for (;;) {
-		if ((comm = gdb->comm) != NULL) {
-			pkt[0] = '$';
-			pkt[1] = sum = 'S';
-			sum += pkt[2] = hextab[((sig >> 4) & 0xf)];
-			sum += pkt[3] = hextab[(sig & 0xf)];
-			pkt[4] = '#';
-			pkt[5] = hextab[((sum >> 4) & 0xf)];
-			pkt[6] = hextab[sum & 0xf];
-			dmon_comm_send(comm, pkt, 8);
-		}
-	}
 }
 

@@ -52,6 +52,8 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 
 int osinfo(struct dmon_comm * comm);
 
+void show_thread_info(struct dmon_comm * comm, int id);
+
 void show_context(struct dmon_comm * comm, 
 				  const struct thinkos_context * ctx, 
 				  uint32_t sp)
@@ -85,6 +87,27 @@ void monitor_on_fault(struct dmon_comm * comm)
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
 	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
 	show_context(comm, &xcpt->ctx, xcpt->sp);
+}
+
+void thinkos_resume_svc(int32_t * arg);
+void thinkos_pause_svc(int32_t * arg);
+
+int thread_id = 3;
+
+void monitor_step(struct dmon_comm * comm)
+{
+	int32_t arg[1];
+
+	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
+//	show_thread_info(comm, thread_id);
+	thinkos_rt.step = thread_id;
+	arg[0] = thread_id;
+	thinkos_resume_svc(arg);
+}
+
+void monitor_dump(struct dmon_comm * comm)
+{
+	show_thread_info(comm, thread_id);
 }
 
 const char monitor_banner[] = "\r\n\r\n"
@@ -131,9 +154,6 @@ void test(struct dmon_comm * comm)
 //	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
 }
 
-void thinkos_resume_svc(int32_t * arg);
-void thinkos_pause_svc(int32_t * arg);
-
 #if (!THINKOS_ENABLE_PAUSE)
 #error "Need THINKOS_ENABLE_PAUSE!"
 #endif
@@ -163,6 +183,7 @@ void monitor_resume_all(struct dmon_comm * comm)
 		arg[0] = th;
 		thinkos_resume_svc(arg);
 	}
+	dmprintf(comm, "Restarting...\r\n");
 }
 
 #define CTRL_B 0x02
@@ -191,10 +212,9 @@ void monitor_resume_all(struct dmon_comm * comm)
 #define CTRL_Y 0x19
 #define CTRL_Z 0x1a
 
-void gdb_task(struct thinkos_dmon * mon, struct dmon_comm * comm);
+void gdb_task(struct dmon_comm * comm);
 
-void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
-											struct dmon_comm * comm)
+void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 {
 	uint32_t sigmask;
 	uint32_t sigset;
@@ -221,8 +241,15 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 			dmon_clear(DMON_THREAD_FAULT);
 		}
 
+		if (sigset & (1 << DMON_COMM_CTL)) {
+			DCC_LOG(LOG_TRACE, "Comm Ctl.");
+			dmon_clear(DMON_COMM_CTL);
+			if (!dmon_comm_isconnected(comm))	
+				dmon_reset();
+		}
+
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_INFO, "Comm RX.");
+			DCC_LOG(LOG_INFO, "Comm Rcv.");
 			n = dmon_comm_recv(comm, buf, 64);
 			c = buf[0];
 			if (n == 1)
@@ -236,12 +263,12 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 //			dmon_comm_send(comm, buf, 3);
 			switch (c) {
 			case CTRL_Q:
-				dmon_signal(DMON_START);
+				dmon_reset();
 				break;
 			case CTRL_G:
 				dmprintf(comm, "GDB\r\n");
 			case '+':
-				thinkos_dmon_init(comm, gdb_task);
+				dmon_exec(gdb_task);
 				break;
 			case CTRL_P:
 				monitor_pause_all(comm);
@@ -255,8 +282,14 @@ void __attribute__((noreturn)) monitor_task(struct thinkos_dmon * mon,
 			case CTRL_I:
 				osinfo(comm);
 				break;
-			case CTRL_S:
+			case CTRL_X:
 				monitor_on_fault(comm);
+				break;
+			case CTRL_S:
+				monitor_step(comm);
+				break;
+			case CTRL_D:
+				monitor_dump(comm);
 				break;
 			case CTRL_H:
 				show_help(comm);
@@ -369,12 +402,17 @@ static void os_alloc_dump(struct dmon_comm * comm, struct thinkos_rt * rt)
 
 }
 
+struct thinkos_rt rt_buf;
+
 int osinfo(struct dmon_comm * comm)
 {
-	struct thinkos_rt * rt = &thinkos_rt;
+//	struct thinkos_rt * rt = &thinkos_rt;
+	struct thinkos_rt * rt = &rt_buf;
 	uint32_t * wq;
 	int i;
 #if THINKOS_ENABLE_PROFILING
+	uint32_t cyccnt;
+	int32_t delta;
 	uint32_t cycdiv;
 	uint32_t busy;
 #endif
@@ -382,34 +420,40 @@ int osinfo(struct dmon_comm * comm)
 	int j;
 #endif
 
+#if THINKOS_ENABLE_PROFILING
+	cyccnt = CM3_DWT->cyccnt;
+	delta = cyccnt - thinkos_rt.cycref;
+	/* update the reference */
+	thinkos_rt.cycref = cyccnt;
+	/* update active thread's cycle counter */
+	thinkos_rt.cyccnt[thinkos_rt.active] += delta; 
+#endif
 
-	dmprintf(comm, "\r\n----------------\r\n");
+	memcpy(rt, &thinkos_rt, sizeof(struct thinkos_rt));
+
+#if THINKOS_ENABLE_PROFILING
+	/* Reset cycle counters */
+	for (i = 0; i <= THINKOS_THREADS_MAX; ++i)
+		thinkos_rt.cyccnt[i] = 0; 
+#endif
+
+	dmprintf(comm, "\r\n------------------------------------------------"
+			 "---------------------\r\n");
 #if THINKOS_ENABLE_CLOCK
 	dmprintf(comm, "[ Ticks = %d ]", rt->ticks);
 #endif
 
 #if THINKOS_ENABLE_PROFILING
 	{
-		int self = thinkos_rt.active;
-		uint32_t cyccnt = CM3_DWT->cyccnt;
-		int32_t delta = cyccnt - thinkos_rt.cycref;
-		/* update the reference */
-		thinkos_rt.cycref = cyccnt;
-		/* update thread's cycle counter */
-		thinkos_rt.cyccnt[self] += delta; 
-	}
-	{
 		uint32_t cycsum = 0;
 		uint32_t cycbusy;
 		uint32_t idle;
-//		uint32_t sys;
 
 		cycsum = 0;
 		for (i = 0; i < THINKOS_THREADS_MAX; ++i)
 			cycsum += rt->cyccnt[i];
 		cycbusy = cycsum;
 		cycsum += rt->cyccnt[THINKOS_CYCCNT_IDLE];
-//		cycsum += rt->cyccnt[THINKOS_CYCCNT_SYS];
 
 		cycdiv = (cycsum + 500) / 1000;
 		busy = (cycbusy + cycdiv / 2) / cycdiv;
@@ -489,10 +533,6 @@ int osinfo(struct dmon_comm * comm)
 #endif 
 			dmprintf(comm, "\r\n");
 		}
-#if THINKOS_ENABLE_PROFILING
-		/* Reset cycle counters */
-		rt->cyccnt[i] = 0; 
-#endif
 	}
 
 	for (wq = rt->wq_lst; wq != rt->wq_end; ++wq) {
@@ -517,6 +557,143 @@ int osinfo(struct dmon_comm * comm)
 	os_alloc_dump(comm, rt);
 
 	return 0;
+}
+
+struct thinkos_thread {
+	uint8_t idx;
+	uint8_t tmw: 1;
+	uint8_t alloc: 1;
+	uint16_t wq;
+	int8_t sched_val;
+	uint8_t sched_pri;
+	int32_t timeout;
+	uint32_t cyccnt;
+	struct thinkos_thread_inf * th_inf;
+	uint32_t sp;
+	struct thinkos_context ctx;
+};
+
+int thinkos_thread_get(struct thinkos_rt * rt, 
+					   struct thinkos_thread * st, int th)
+{
+	uint32_t * src;
+	uint32_t * dst;
+	int i;
+
+	if ((th >= THINKOS_THREADS_MAX) || (rt->ctx[th] == NULL)) {
+		return -1;
+	}
+
+	DCC_LOG(LOG_TRACE, "1.");
+
+	st->idx = th;
+
+#if THINKOS_ENABLE_THREAD_STAT
+	st->wq = rt->th_stat[th] >> 1;
+	st->tmw = rt->th_stat[th] & 1;
+#else
+	for (i = 0; i < THINKOS_WQ_LST_END; ++i) {
+		if (rt->wq_lst[i] & (1 << th))
+			break;
+	}
+	if (i == THINKOS_WQ_LST_END)
+		return -1; /* not found */
+	st->wq = i;
+ #if THINKOS_ENABLE_CLOCK
+	st->tmw = rt->wq_clock & (1 << th) ? 1 : 0;
+ #else
+	st->tmw = 0;
+ #endif
+#endif /* THINKOS_ENABLE_THREAD_STAT */
+
+	DCC_LOG(LOG_TRACE, "2.");
+
+#if THINKOS_ENABLE_THREAD_ALLOC
+	st->alloc = rt->th_alloc[0] & (1 << th) ? 1 : 0;
+#else
+	st->alloc = 0;
+#endif
+
+#if THINKOS_ENABLE_TIMESHARE
+	st->sched_val = rt->sched_val[th];
+	st->sched_pri = rt->sched_pri[th]; 
+#else
+	st->sched_val = 0;
+	st->sched_pri = 0;
+#endif
+
+#if THINKOS_ENABLE_CLOCK
+	st->timeout = (int32_t)(rt->clock[th] - rt->ticks); 
+#else
+	st->timeout = -1;
+#endif
+
+#if THINKOS_ENABLE_PROFILING
+	st->cyccnt = rt->cyccnt[th];
+#else
+	st->cyccnt = 0;
+#endif
+
+#if THINKOS_ENABLE_THREAD_INFO
+	st->th_inf = rt->th_inf[th];
+#else
+	st->th_inf = NULL;
+#endif
+
+	st->sp = (uint32_t)rt->ctx[th];
+	src = (uint32_t *)rt->ctx[th];
+	dst = (uint32_t *)&st->ctx;
+	for (i = 0; i < 16; ++i)
+		dst[i] = src[i];
+
+	DCC_LOG(LOG_TRACE, "3.");
+
+	return 0;
+}
+
+void show_thread_info(struct dmon_comm * comm, int id)
+{
+	struct thinkos_thread st;
+	struct thinkos_context * ctx;
+	int type;
+
+	if (thinkos_thread_get(&thinkos_rt, &st, id) < 0) {
+		dmprintf(comm, "Thread %d is invalid!\r\n", id);
+		return;
+	}
+
+	type = thinkos_obj_type_get(st.wq);
+
+	dmprintf(comm, " - Id: %d", id); 
+	if (st.th_inf != NULL)
+		dmprintf(comm, ", %s\r\n", st.th_inf->tag); 
+	else
+		dmprintf(comm, ", %s\r\n", "..."); 
+
+	dmprintf(comm, " - Waiting on queue: %3d %5s (time wait: %s)\r\n", 
+			st.wq, obj_type_name[type], st.tmw ? "Yes" : " No"); 
+
+	dmprintf(comm, " - Scheduler: val=%d pri=%4d\r\n", 
+			 st.sched_val, st.sched_pri); 
+
+	dmprintf(comm, " - Clock: timeout=%d ms\r\n", st.timeout); 
+	dmprintf(comm, " - Cycles: %u\r\n", st.cyccnt); 
+
+	ctx = &st.ctx;
+
+	dmprintf(comm, " - Context:\r\n"); 
+
+	dmprintf(comm, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\r\n", 
+			 ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+	dmprintf(comm, "     r4=%08x  r5=%08x  r6=%08x  r7=%08x\r\n", 
+			 ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+	dmprintf(comm, "     r8=%08x  r9=%08x r10=%08x r11=%08x\r\n", 
+			 ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+	dmprintf(comm, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\r\n", 
+			 ctx->r12, st.sp, ctx->lr, ctx->pc);
+	dmprintf(comm, "   xpsr=%08x\r\n", ctx->xpsr);
+
+	dmprintf(comm, "\r\n");
 }
 
 #if 0

@@ -31,20 +31,22 @@
 
 #ifndef __ASSEMBLER__
 
-#define MONITOR_PRIORITY       0x00
-#define EXCEPT_PRIORITY        0x20
-#define SYSCALL_PRIORITY       0x60
-#define CLOCK_PRIORITY         0xa0
-#define SCHED_PRIORITY         0xff
+#define MONITOR_PRIORITY       (0 << 5)
+//#define MONITOR_PRIORITY       (7 << 5)
+#define EXCEPT_PRIORITY        (1 << 5)
+#define SYSCALL_PRIORITY       (5 << 5)
+#define CLOCK_PRIORITY         (6 << 5)
+#define SCHED_PRIORITY         (7 << 5)
+//#define SCHED_PRIORITY         (6 << 5)
 
 #define IRQ_PRIORITY_HIGHEST   (0 << 5)
 #define IRQ_PRIORITY_VERY_HIGH (1 << 5)
 #define IRQ_PRIORITY_HIGH      (2 << 5)
-#define IRQ_PRIORITY_SYSCALL   (3 << 5)
-#define IRQ_PRIORITY_REGULAR   (4 << 5)
-#define IRQ_PRIORITY_CLOCK     (5 << 5)
-#define IRQ_PRIORITY_SCHED     (6 << 5)
-#define IRQ_PRIORITY_LOW       (7 << 5)
+#define IRQ_PRIORITY_REGULAR   (3 << 5)
+#define IRQ_PRIORITY_LOW       (4 << 5)
+#define IRQ_PRIORITY_SYSCALL   (5 << 5)
+#define IRQ_PRIORITY_CLOCK     (6 << 5)
+#define IRQ_PRIORITY_SCHED     (7 << 5)
 
 #ifdef __cplusplus
 extern "C" {

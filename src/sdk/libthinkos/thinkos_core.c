@@ -220,6 +220,12 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	}
 #endif
 
+#if THINKOS_ENABLE_MONITOR
+	if (idx == thinkos_rt.step) {
+		struct cm3_dcb * dcb = CM3_DCB;
+		dcb->demcr |= DCB_DEMCR_MON_STEP;
+	}
+#endif
 	/* restore the context */
 	__sched_exit(ctx);
 }
@@ -239,7 +245,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	thinkos_rt.ticks = ticks; 
 
 #if THINKOS_ENABLE_MONITOR
-	if ((int32_t)(thinkos_rt.dmclock - ticks) <= 0) {
+	if ((int32_t)(thinkos_rt.dmclock - ticks) == 0) {
 		dmon_signal(DMON_ALARM);
 	}
 #endif
@@ -453,6 +459,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_except_pri_set(CM3_EXCEPT_BUS_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
+
+#if THINKOS_ENABLE_MONITOR
+	thinkos_rt.step = -1;
+#endif
 
 #if	(THINKOS_IRQ_MAX > 0)
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
