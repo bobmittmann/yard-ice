@@ -322,5 +322,5 @@ void thinkos_dmon_init(void * comm, void (* task)(struct thinkos_dmon * ,
 
 	/* enable monitor and send the start event */
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
-}
 
+}

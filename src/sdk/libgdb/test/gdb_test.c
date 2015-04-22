@@ -139,8 +139,8 @@ int consumer_task(void * arg)
 	return i;
 };
 
-uint32_t producer_stack[128];
 uint32_t consumer_stack[128];
+uint32_t producer_stack[128];
 
 void semaphore_test(void)
 {
@@ -167,6 +167,54 @@ void semaphore_test(void)
 	printf(" * Full semaphore: %d\n", sem_full);
 	printf(" * Producer thread: %d\n", producer_th);
 	printf(" * Consumer thread: %d\n", consumer_th);
+	printf("\n");
+};
+
+volatile uint32_t filt_y;
+volatile uint32_t filt_x;
+
+int busy_task(void * arg)
+{
+	uint32_t a0 = 123;
+	uint32_t a1 = 455;
+	uint32_t b0 = 111;
+	uint32_t b1 = 222;
+	volatile uint32_t x0 = 0;
+	volatile uint32_t y0 = 0;
+	volatile uint32_t x1 = 0;
+	volatile uint32_t y1 = 0;
+	uint32_t y;
+	unsigned int i;
+
+	printf(" %s(): [%d] started...\n", __func__, thinkos_thread_self());
+	thinkos_sleep(100);
+
+	for (i = 0; ; ++i) {
+		x0 = filt_x;
+		y =  x0 * a0;
+		y += x1 * a1;
+		y -= y0 * b0;
+		y -= y1 * b1;
+		filt_y = y;
+		y0 = y;
+		y1 = y0;
+		x1 = x0;
+	}
+
+	return i;
+}
+
+uint32_t busy_stack[128];
+
+void busy_test(void)
+{
+	int busy_th;
+
+	/* create the busy thread */
+	busy_th = thinkos_thread_create(busy_task, NULL, 
+			busy_stack, sizeof(busy_stack));
+
+	printf(" * Busy thread: %d\n", busy_th);
 	printf("\n");
 };
 
@@ -225,6 +273,8 @@ int main(int argc, char ** argv)
 
 	/* Run the test */
 	semaphore_test();
+
+	busy_test();
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 	for (;;) {
