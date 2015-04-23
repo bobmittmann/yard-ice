@@ -266,17 +266,7 @@ int target_run(void)
 
 int target_step(int th)
 {
-	struct cm3_dcb * dcb = CM3_DCB;
-	int32_t arg[1];
-
-	dcb->dhcsr &= ~DCB_DHCSR_C_DEBUGEN;
-//	dcb->demcr |= DCB_DEMCR_MON_STEP | DCB_DEMCR_MON_REQ;
-	dcb->demcr |= DCB_DEMCR_MON_STEP;
-
-	arg[0] = th - 1;
-	thinkos_resume_svc(arg);
-
-	return 0;
+	return dmon_thread_step(th - 1, 1);
 }
 
 int target_goto(uint32_t addr, int opt)

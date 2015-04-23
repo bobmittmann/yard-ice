@@ -31,6 +31,7 @@
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
 
+#if (THINKOS_ENABLE_MONITOR)
 
 struct thinkos_dmon thinkos_dmon_rt;
 uint32_t thinkos_dmon_stack[256];
@@ -243,6 +244,7 @@ static void dmon_on_except(struct thinkos_dmon * mon)
 }
 
 void thinkos_pause_svc(int32_t * arg);
+void thinkos_resume_svc(int32_t * arg);
 
 void thinkos_suspend_all(void)
 {
@@ -255,25 +257,69 @@ void thinkos_suspend_all(void)
 	}
 }
 
+int dmon_thread_step(unsigned int id, unsigned int cnt)
+{
+	struct cm3_dcb * dcb = CM3_DCB;
+	int32_t arg[1];
+
+	if (dcb->dhcsr & DCB_DHCSR_C_DEBUGEN) {
+		DCC_LOG(LOG_ERROR, "can't step: DCB_DHCSR_C_DEBUGEN !!");
+		return -1;
+	}
+
+	thinkos_rt.step_id = id;
+	thinkos_rt.step_cnt = 2 + cnt;
+	arg[0] = id;
+	thinkos_resume_svc(arg);
+
+	DCC_LOG2(LOG_TRACE, "step_id=%d step_cnt=%d", 
+			 thinkos_rt.step_id, thinkos_rt.step_cnt);
+
+	/* wait for signal */
+	return dmon_wait(DMON_STEP);
+}
+
 #if 1
 void cm3_debug_mon_isr(void)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t sigset = thinkos_dmon_rt.events;
+	uint32_t demcr;
 
+	demcr = dcb->demcr;
+	
+	DCC_LOG3(LOG_TRACE, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
+			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
+			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
+			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
 
-	if (dcb->demcr & DCB_DEMCR_MON_REQ) {
-		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ=1 ++++++++++++++");
-//		dcb->demcr &= ~DCB_DEMCR_MON_REQ;
+#if 0
+	if (demcr & DCB_DEMCR_MON_REQ) {
+		dcb->demcr = demcr & ~DCB_DEMCR_MON_REQ;
 //		thinkos_suspend_all();
 	} else {
-		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ=0 --------------");
 	}
-	
-	if (thinkos_rt.step != -1) {
-		DCC_LOG1(LOG_TRACE, "thinkos_rt.step=%d", thinkos_rt.step);
+#endif
+
+	if (thinkos_rt.step_id != -1) {
+		DCC_LOG1(LOG_TRACE, "thinkos_rt.step_id=%d", thinkos_rt.step_id);
 	}
 
+	if (demcr & DCB_DEMCR_MON_STEP) {
+		int32_t arg[1];
+		if (thinkos_rt.step_cnt == 0) {
+			dcb->demcr = demcr & ~DCB_DEMCR_MON_STEP;
+			arg[0] = thinkos_rt.step_id;
+			thinkos_rt.step_id = -1;
+			thinkos_pause_svc(arg);
+			sigset |= (1 << DMON_STEP);
+			thinkos_dmon_rt.events = sigset;
+		} else {
+			thinkos_rt.step_cnt--;
+		}
+	} else {
+	}
+	
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);
 		sigset |= (1 << DMON_THREAD_FAULT);
@@ -401,4 +447,6 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 
 }
+
+#endif /* THINKOS_ENABLE_MONITOR */
 

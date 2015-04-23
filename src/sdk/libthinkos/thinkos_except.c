@@ -464,7 +464,6 @@ void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 
 void thinkos_default_exception_dsr(struct thinkos_except * xcpt)
 {
-	dmon_signal(DMON_EXCEPT);
 #if THINKOS_SYSRST_ONFAULT
 	cm3_sysrst();
 #else

@@ -44,6 +44,7 @@ enum dmon_ev_no {
 	DMON_PIPE_RD  = 3,
 	DMON_PIPE_WR  = 4,
 	DMON_ALARM    = 5,
+	DMON_STEP     = 6,
 
 
 	DMON_THREAD_FAULT = 16,
@@ -102,6 +103,8 @@ void dmon_alarm(unsigned int ms);
 
 int dmon_wait_idle(void);
 
+
+int dmon_thread_step(unsigned int id, unsigned int cnt);
 
 
 int dmon_comm_send(struct dmon_comm * comm, 

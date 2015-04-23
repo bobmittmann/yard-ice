@@ -96,13 +96,10 @@ int thread_id = 3;
 
 void monitor_step(struct dmon_comm * comm)
 {
-	int32_t arg[1];
-
 	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
-//	show_thread_info(comm, thread_id);
-	thinkos_rt.step = thread_id;
-	arg[0] = thread_id;
-	thinkos_resume_svc(arg);
+
+	dmon_thread_step(thread_id, 1);
+	show_thread_info(comm, thread_id);
 }
 
 void monitor_dump(struct dmon_comm * comm)

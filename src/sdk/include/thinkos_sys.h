@@ -214,7 +214,7 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_EXCEPTIONS
-#define THINKOS_ENABLE_EXCEPTIONS 1
+#define THINKOS_ENABLE_EXCEPTIONS  1
 #endif
 
 #ifndef THINKOS_ENABLE_SCHED_DEBUG
@@ -222,11 +222,15 @@ struct thinkos_context {
 #endif
 
 #ifndef THINKOS_ENABLE_RT_DEBUG
-#define THINKOS_ENABLE_RT_DEBUG 1
+#define THINKOS_ENABLE_RT_DEBUG    0
 #endif
 
 #ifndef THINKOS_ENABLE_PROFILING
-#define THINKOS_ENABLE_PROFILING 1
+#define THINKOS_ENABLE_PROFILING   0
+#endif
+
+#ifndef THINKOS_ENABLE_MONITOR
+#define THINKOS_ENABLE_MONITOR     0
 #endif
 
 /* -------------------------------------------------------------------------- 
@@ -298,7 +302,8 @@ struct thinkos_rt {
 	int32_t active; /* current active thread */
 
 #if THINKOS_ENABLE_MONITOR
-	int32_t step; /* step request on thread */
+	int32_t step_id; /* step request on thread */
+	uint32_t step_cnt; /* step count */
 #endif
 
 #if THINKOS_ENABLE_PROFILING

@@ -221,7 +221,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 #endif
 
 #if THINKOS_ENABLE_MONITOR
-	if (idx == thinkos_rt.step) {
+	if (idx == thinkos_rt.step_id) {
 		struct cm3_dcb * dcb = CM3_DCB;
 		dcb->demcr |= DCB_DEMCR_MON_STEP;
 	}
@@ -461,7 +461,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
 
 #if THINKOS_ENABLE_MONITOR
-	thinkos_rt.step = -1;
+	thinkos_rt.step_id = -1;
+	thinkos_rt.step_cnt = 0;
 #endif
 
 #if	(THINKOS_IRQ_MAX > 0)
