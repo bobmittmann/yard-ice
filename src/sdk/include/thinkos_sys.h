@@ -321,14 +321,6 @@ struct thinkos_rt {
 	uint32_t wq_tmshare; /* Threads waiting for time share cycle */
 #endif
 
-#if THINKOS_ENABLE_JOIN
-	uint32_t wq_canceled; /* canceled threads wait queue */
-#endif
-
-#if THINKOS_ENABLE_PAUSE
-	uint32_t wq_paused;
-#endif
-
 #if THINKOS_ENABLE_CLOCK
 	uint32_t wq_clock;
 #endif
@@ -356,6 +348,14 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
+
+#if THINKOS_ENABLE_PAUSE
+	uint32_t wq_paused;
+#endif
+
+#if THINKOS_ENABLE_JOIN
+	uint32_t wq_canceled; /* canceled threads wait queue */
+#endif
 
 	uint32_t wq_end[0]; /* end of queue list placeholder */
 
@@ -465,14 +465,6 @@ struct thinkos_rt {
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 
-#define THINKOS_WQ_CANCELED ((offsetof(struct thinkos_rt, wq_canceled) \
-							 - offsetof(struct thinkos_rt, wq_lst)) \
-							/ sizeof(uint32_t))
-
-#define THINKOS_WQ_PAUSED ((offsetof(struct thinkos_rt, wq_paused) \
-							 - offsetof(struct thinkos_rt, wq_lst)) \
-							/ sizeof(uint32_t))
-
 #define THINKOS_WQ_CLOCK ((offsetof(struct thinkos_rt, wq_clock) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
@@ -500,6 +492,14 @@ struct thinkos_rt {
 #define THINKOS_JOIN_BASE ((offsetof(struct thinkos_rt, wq_join) \
 						   - offsetof(struct thinkos_rt, wq_lst)) \
 						  / sizeof(uint32_t))
+
+#define THINKOS_WQ_PAUSED ((offsetof(struct thinkos_rt, wq_paused) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_WQ_CANCELED ((offsetof(struct thinkos_rt, wq_canceled) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
 
 #define THINKOS_WQ_LST_END ((offsetof(struct thinkos_rt, wq_end) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
@@ -794,6 +794,10 @@ int thinkos_bmp_alloc(uint32_t bmp[], int bits);
 void thinkos_exception_init(void);
 
 void thinkos_exception_dsr(struct thinkos_except * xcpt);
+
+bool __thinkos_thread_resume(unsigned int th);
+
+bool __thinkos_thread_pause(unsigned int th);
 
 
 #ifdef __cplusplus

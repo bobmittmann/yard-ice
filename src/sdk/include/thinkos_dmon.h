@@ -101,6 +101,8 @@ int dmon_sleep(unsigned int ms);
 
 void dmon_alarm(unsigned int ms);
 
+void dmon_alarm_stop(void);
+
 int dmon_wait_idle(void);
 
 

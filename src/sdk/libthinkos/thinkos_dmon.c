@@ -30,6 +30,7 @@
 
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
+#include <thinkos.h>
 
 #if (THINKOS_ENABLE_MONITOR)
 
@@ -81,9 +82,9 @@ int dmon_wait(int ev)
 	/* umask event */
 	thinkos_dmon_rt.mask |= mask;
 
-	DCC_LOG1(LOG_TRACE, "waiting for %d, sleeping...", ev);
+	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
-	DCC_LOG(LOG_TRACE, "wakeup...");
+	DCC_LOG(LOG_INFO, "wakeup...");
 
 	evset = thinkos_dmon_rt.events;
 	if (evset & mask) {
@@ -91,6 +92,9 @@ int dmon_wait(int ev)
 		thinkos_dmon_rt.mask &= ~mask;
 		return 0;
 	}
+
+	DCC_LOG1(LOG_WARNING, "unexpected event=%08x!!", 
+			 evset & thinkos_dmon_rt.mask);
 
 	/* unexpected event received */
 	return -1;
@@ -128,6 +132,16 @@ void dmon_alarm(unsigned int ms)
 	thinkos_rt.dmclock = thinkos_rt.ticks + ms;
 }
 
+void dmon_alarm_stop(void)
+{
+	/* set the clock in the past so it won't generate a signal */
+	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
+	/* make sure the signal is cleared */
+	dmon_clear(DMON_ALARM);
+	/* mask the signal */
+	dmon_mask(DMON_ALARM);
+}
+
 int dmon_wait_idle(void)
 {
 	int ret;
@@ -155,8 +169,6 @@ void dmon_exec(void (* task)(struct dmon_comm *))
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
 
-
-
 /* -------------------------------------------------------------------------
  * Debug Monitor Core
  * ------------------------------------------------------------------------- */
@@ -179,6 +191,9 @@ void __attribute__((noinline)) dmon_context_swap(void * ctx)
 
 static void __attribute__((noreturn)) dmon_bootstrap(void)
 {
+	/* set the clock in the past so it won't generate signals in 
+	 the near future */
+	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
 	for(;;);
 }
@@ -249,18 +264,18 @@ void thinkos_resume_svc(int32_t * arg);
 void thinkos_suspend_all(void)
 {
 	int32_t th;
-	int32_t arg[1];
 
 	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		arg[0] = th;
-		thinkos_pause_svc(arg);
+		__thinkos_thread_pause(th);
 	}
+
+	__thinkos_defer_sched();
 }
 
 int dmon_thread_step(unsigned int id, unsigned int cnt)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
-	int32_t arg[1];
+	int ret;
 
 	if (dcb->dhcsr & DCB_DHCSR_C_DEBUGEN) {
 		DCC_LOG(LOG_ERROR, "can't step: DCB_DHCSR_C_DEBUGEN !!");
@@ -269,14 +284,23 @@ int dmon_thread_step(unsigned int id, unsigned int cnt)
 
 	thinkos_rt.step_id = id;
 	thinkos_rt.step_cnt = 2 + cnt;
-	arg[0] = id;
-	thinkos_resume_svc(arg);
+	__thinkos_thread_resume(id);
+
+	__thinkos_defer_sched();
 
 	DCC_LOG2(LOG_TRACE, "step_id=%d step_cnt=%d", 
 			 thinkos_rt.step_id, thinkos_rt.step_cnt);
 
+	/* request signal */
+	thinkos_dmon_rt.req |= (1 << DMON_IDLE);
+
 	/* wait for signal */
-	return dmon_wait(DMON_STEP);
+	if ((ret = dmon_wait(DMON_IDLE)) < 0)
+		return ret;
+
+	/* clear request */
+	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
+	return 0;
 }
 
 #if 1
@@ -288,7 +312,7 @@ void cm3_debug_mon_isr(void)
 
 	demcr = dcb->demcr;
 	
-	DCC_LOG3(LOG_TRACE, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
+	DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
 			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
 			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
@@ -299,21 +323,21 @@ void cm3_debug_mon_isr(void)
 //		thinkos_suspend_all();
 	} else {
 	}
-#endif
-
 	if (thinkos_rt.step_id != -1) {
 		DCC_LOG1(LOG_TRACE, "thinkos_rt.step_id=%d", thinkos_rt.step_id);
 	}
+#endif
 
 	if (demcr & DCB_DEMCR_MON_STEP) {
-		int32_t arg[1];
 		if (thinkos_rt.step_cnt == 0) {
 			dcb->demcr = demcr & ~DCB_DEMCR_MON_STEP;
-			arg[0] = thinkos_rt.step_id;
+			__thinkos_thread_pause(thinkos_rt.step_id);
 			thinkos_rt.step_id = -1;
-			thinkos_pause_svc(arg);
-			sigset |= (1 << DMON_STEP);
-			thinkos_dmon_rt.events = sigset;
+			/* return the BASEPRI to the default to reenable the scheduler. */
+			cm3_basepri_set(0); 
+			__thinkos_defer_sched();
+//			sigset |= (1 << DMON_STEP);
+//			thinkos_dmon_rt.events = sigset;
 		} else {
 			thinkos_rt.step_cnt--;
 		}
@@ -447,6 +471,8 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 
 }
+
+
 
 #endif /* THINKOS_ENABLE_MONITOR */
 

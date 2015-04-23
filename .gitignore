@@ -9,6 +9,7 @@ bacnet-stack/
 *.a
 .deps*/
 *.cache
+.metadata/
 tools/src/dcclog/stamp-h1
 tools/__pycache__/tftp.cpython-33.pyc
 tools/src/dcclog/aclocal.m4

@@ -170,8 +170,10 @@ void semaphore_test(void)
 	printf("\n");
 };
 
-volatile uint32_t filt_y;
-volatile uint32_t filt_x;
+volatile uint32_t filt_y = 1;
+volatile uint32_t filt_x = 1;
+volatile uint32_t coef1 = 1234;
+volatile uint32_t coef2 = 3455;
 
 int busy_task(void * arg)
 {
@@ -191,11 +193,12 @@ int busy_task(void * arg)
 
 	for (i = 0; ; ++i) {
 		x0 = filt_x;
+		x0 += coef1;
 		y =  x0 * a0;
 		y += x1 * a1;
 		y -= y0 * b0;
 		y -= y1 * b1;
-		filt_y = y;
+		filt_y = y + coef2;
 		y0 = y;
 		y1 = y0;
 		x1 = x0;

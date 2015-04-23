@@ -73,7 +73,8 @@ struct usb_cdc_acm_dev {
 
 	volatile uint8_t rx_cnt; 
 	volatile uint8_t rx_pos; 
-	uint8_t rx_buf[CDC_EP_IN_MAX_PKT_SIZE];
+
+	uint8_t rx_buf[CDC_EP_IN_MAX_PKT_SIZE + 1];
 
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
@@ -101,6 +102,12 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 
 	dev->rx_pos = 0;
 	dev->rx_cnt = n;
+
+#if 0
+	dev->rx_buf[n] = '\0';
+	DCC_LOGSTR(LOG_TRACE, "'%s'", dev->rx_buf);
+#endif
+
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 	DCC_LOG(LOG_INFO, "COMM_RCV!");
 	dmon_signal(DMON_COMM_RCV);
@@ -138,7 +145,8 @@ const usb_dev_ep_info_t usb_mon_int_info = {
 	.on_in = usb_mon_on_eot_int
 };
 
-int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
+int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) 
+{
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *) cl;
 	int value = req->value;
 	int index = req->index;
@@ -271,11 +279,14 @@ void usb_mon_on_reset(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 	DCC_LOG(LOG_TRACE, "...");
+	/* clear input buffer */
+	dev->rx_cnt = 0;
+	dev->rx_pos = 0;
 	/* invalidate th line coding structure */
-    dev->acm.lc.dwDTERate = 0;
+    dev->acm.lc.dwDTERate = 38400;
     dev->acm.lc.bCharFormat = 0;
     dev->acm.lc.bParityType = 0;
-    dev->acm.lc.bDataBits = 0 ;
+    dev->acm.lc.bDataBits = 8;
 	/* reset control lines */
 	dev->acm.control = 0;
 	/* clear all flags */
@@ -354,6 +365,9 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 int dmon_comm_connect(struct dmon_comm * comm)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
+	struct cdc_notification * pkt;
+	uint32_t buf[4];
+
 	int ret;
 
 //	while ((dev->acm.flags & ACM_LC_SET) == 0) {
@@ -362,6 +376,28 @@ int dmon_comm_connect(struct dmon_comm * comm)
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
 		}
+	}
+
+	pkt = (struct cdc_notification *)buf;
+	/* bmRequestType */
+	pkt->bmRequestType = USB_CDC_NOTIFICATION;
+	/* bNotification */
+	pkt->bNotification = CDC_NOTIFICATION_SERIAL_STATE;
+	/* wValue */
+	pkt->wValue = 0;
+	/* wIndex */
+	pkt->wIndex = 1;
+	/* wLength */
+	pkt->wLength = 2;
+	/* data */
+	pkt->bData[0] = CDC_SERIAL_STATE_TX_CARRIER | CDC_SERIAL_STATE_RX_CARRIER;
+	pkt->bData[1] = 0;
+
+	ret = usb_dev_ep_pkt_xmit(dev->usb, dev->int_ep, pkt, 
+							  sizeof(struct cdc_notification));
+	if (ret < 0) {
+		DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!");
+		return ret;
 	}
 
 	return 0;

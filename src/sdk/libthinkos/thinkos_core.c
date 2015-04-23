@@ -223,7 +223,10 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 #if THINKOS_ENABLE_MONITOR
 	if (idx == thinkos_rt.step_id) {
 		struct cm3_dcb * dcb = CM3_DCB;
-		dcb->demcr |= DCB_DEMCR_MON_STEP;
+		/* rise the BASEPRI to stop the scheduler and interrupts */
+//		cm3_basepri_set(EXCEPT_PRIORITY); 
+		cm3_basepri_set(MONITOR_PRIORITY); 
+		dcb->demcr |= DCB_DEMCR_MON_STEP; /* step the processor */
 	}
 #endif
 	/* restore the context */

@@ -29,12 +29,6 @@ const struct {
 #if THINKOS_ENABLE_TIMESHARE
 	uint8_t wq_tmshare; /* Threads waiting for time share cycle */
 #endif
-#if THINKOS_ENABLE_JOIN
-	uint8_t wq_canceled; /* canceled threads wait queue */
-#endif
-#if THINKOS_ENABLE_PAUSE
-	uint8_t wq_paused;
-#endif
 #if THINKOS_ENABLE_CLOCK
 	uint8_t wq_clock;
 #endif
@@ -56,16 +50,16 @@ const struct {
 #if THINKOS_ENABLE_JOIN
 	uint8_t wq_join[THINKOS_THREADS_MAX];
 #endif
+#if THINKOS_ENABLE_PAUSE
+	uint8_t wq_paused;
+#endif
+#if THINKOS_ENABLE_JOIN
+	uint8_t wq_canceled; /* canceled threads wait queue */
+#endif
 } thinkos_obj_type_lut = {
 	.wq_ready = THINKOS_OBJ_READY,
 #if THINKOS_ENABLE_TIMESHARE
 	.wq_tmshare = THINKOS_OBJ_TMSHARE,
-#endif
-#if THINKOS_ENABLE_JOIN
-	.wq_canceled = THINKOS_OBJ_CANCELED,
-#endif
-#if THINKOS_ENABLE_PAUSE
-	.wq_paused = THINKOS_OBJ_PAUSED,
 #endif
 #if THINKOS_ENABLE_CLOCK
 	.wq_clock = THINKOS_OBJ_CLOCK,
@@ -88,13 +82,17 @@ const struct {
 #if THINKOS_ENABLE_JOIN
 	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN }
 #endif
+#if THINKOS_ENABLE_PAUSE
+	.wq_paused = THINKOS_OBJ_PAUSED,
+#endif
+#if THINKOS_ENABLE_JOIN
+	.wq_canceled = THINKOS_OBJ_CANCELED
+#endif
 };
 
 uint32_t * const thinkos_obj_alloc_lut[] = {
 	[THINKOS_OBJ_READY] = NULL,
 	[THINKOS_OBJ_TMSHARE] = NULL,
-	[THINKOS_OBJ_CANCELED] = NULL,
-	[THINKOS_OBJ_PAUSED] = NULL,
 	[THINKOS_OBJ_CLOCK] = NULL,
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	[THINKOS_OBJ_MUTEX] = NULL,
@@ -125,6 +123,8 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #else
 	[THINKOS_OBJ_JOIN] = NULL,
 #endif
+	[THINKOS_OBJ_PAUSED] = NULL,
+	[THINKOS_OBJ_CANCELED] = NULL,
 	[THINKOS_OBJ_INVALID] = NULL
 };
 
@@ -132,12 +132,6 @@ const uint16_t thinkos_wq_base_lut[] = {
 	[THINKOS_OBJ_READY] = THINKOS_WQ_READY,
 #if THINKOS_ENABLE_TIMESHARE
 	[THINKOS_OBJ_TMSHARE] = THINKOS_WQ_TMSHARE,
-#endif
-#if THINKOS_ENABLE_JOIN
-	[THINKOS_OBJ_CANCELED] = THINKOS_WQ_CANCELED,
-#endif
-#if THINKOS_ENABLE_PAUSE
-	[THINKOS_OBJ_PAUSED] = THINKOS_WQ_PAUSED,
 #endif
 #if THINKOS_ENABLE_CLOCK
 	[THINKOS_OBJ_CLOCK] = THINKOS_WQ_CLOCK,
@@ -159,6 +153,12 @@ const uint16_t thinkos_wq_base_lut[] = {
 #endif
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_JOIN] = THINKOS_JOIN_BASE,
+#endif
+#if THINKOS_ENABLE_PAUSE
+	[THINKOS_OBJ_PAUSED] = THINKOS_WQ_PAUSED,
+#endif
+#if THINKOS_ENABLE_JOIN
+	[THINKOS_OBJ_CANCELED] = THINKOS_WQ_CANCELED,
 #endif
 	[THINKOS_OBJ_INVALID] = 0 
 };

@@ -1234,6 +1234,8 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		DCC_LOG(LOG_TRACE, "qSupported");
 		n = sprintf(pkt, "$PacketSize=%x;"
 					"qXfer:features:read-;"
+					"multiprocess-;"
+					"qRelocInsn-;"
 					"QStartNoAckMode+;"
 					"QNonStop+",
 					RSP_BUFFER_LEN - 1);
@@ -1643,7 +1645,7 @@ static int rsp_thread_isalive(struct dmon_comm * comm, char * pkt, int len)
 	int id;
 
 	id = strtol(&pkt[1], NULL, 16);
-	DCC_LOG1(LOG_TRACE, "T%d", id);
+	DCC_LOG1(LOG_INFO, "T%d", id);
 
 	/* Find out if the thread thread-id is alive. 
 	   ‘OK’ thread is still alive 
@@ -1772,6 +1774,7 @@ static int rsp_memory_write_bin(struct dmon_comm * comm, char * pkt, int len)
 
 static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 {
+	int ret = -1;
 	char * cp;
 	int pos;
 	int rem;
@@ -1787,10 +1790,11 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 	dmon_alarm(1000);
 
 	for (;;) {
-		if ((n = dmon_comm_recv(comm, &pkt[pos], rem)) < 0) {
-			dmon_clear(DMON_ALARM);
-			dmon_mask(DMON_ALARM);
-			return n;
+		n = dmon_comm_recv(comm, &pkt[pos], rem);
+		if (n < 0) {
+			DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
+			ret = n;
+			break;
 		}
 
 		cp = &pkt[pos];
@@ -1799,6 +1803,7 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 			c = cp[i];
 
 			if (c == '#') {
+				dmon_alarm_stop();
 				return pos + i;
 			}
 
@@ -1808,8 +1813,11 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 		rem -= n;
 
 		if (rem == 0)
-			return -1;
+			break;
 	}
+
+	dmon_alarm_stop();
+	return ret;
 }
 
 struct gdb_rspd gdb_rspd;
@@ -1830,6 +1838,8 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 	dbg_bp_init(&gdb->bp_ctrl);
 
+	gdb->nonstop_mode = 0;
+	gdb->noack_mode = 0;
 	gdb->last_signal = TARGET_SIGNAL_0;
 	gdb->flag.supress_detach_ack = 0;
 
@@ -1860,7 +1870,10 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
 			DCC_LOG(LOG_INFO, "Comm RX.");
-			dmon_comm_recv(comm, buf, 1);
+			if (dmon_comm_recv(comm, buf, 1) != 1) {
+				DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
+				continue;
+			}
 			c = buf[0];
 
 			if (c == '+') {

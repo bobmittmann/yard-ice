@@ -98,7 +98,11 @@ void monitor_step(struct dmon_comm * comm)
 {
 	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
 
-	dmon_thread_step(thread_id, 1);
+	if (dmon_thread_step(thread_id, 1) < 0) {
+		dmprintf(comm, "dmon_thread_step() failed!\r\n");
+		return;
+	}
+
 	show_thread_info(comm, thread_id);
 }
 
@@ -119,6 +123,7 @@ const char monitor_menu[] = "\r\n"
 	 " Ctrl+R - Resume all threads\r\n"
 	 " Ctrl+P - Pause all threads\r\n"
 	 " Ctrl+X - Show exception\r\n"
+	 " Ctrl+S - Step\r\n"
 	 " Ctrl+T - Comm test\r\n"
 	 " Ctrl+I - ThinkOS info\r\n"
 	 "-------------------------------------\r\n\r\n";
