@@ -73,6 +73,9 @@ void thinkos_trace_rt(struct thinkos_rt * rt)
 			case THINKOS_OBJ_JOIN:
 				DCC_LOG2(LOG_TRACE, "JOIN %d: 0x%08x", oid, *wq);
 				break;
+			case THINKOS_OBJ_FAULT:
+				DCC_LOG2(LOG_TRACE, "FAULT %d: 0x%08x", oid, *wq);
+				break;
 			case THINKOS_OBJ_INVALID:
 				DCC_LOG2(LOG_TRACE, "INVALID %d: 0x%08x", oid, *wq);
 				break;

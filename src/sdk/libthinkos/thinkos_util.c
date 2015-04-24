@@ -77,3 +77,76 @@ uint32_t * thinkos_alloc_bmp_get(unsigned int type)
 	return thinkos_obj_alloc_lut[type];
 }
 
+#if THINKOS_ENABLE_JOIN || THINKOS_ENABLE_DEBUG_FAULT
+bool __thinkos_thread_isalive(unsigned int th)
+{
+	bool dead;
+
+	if (th >= THINKOS_THREADS_MAX)
+		return false;
+
+	if (thinkos_rt.ctx[th] == NULL)
+		return false;
+
+	dead = false;
+#if THINKOS_ENABLE_JOIN
+	dead |= __bit_mem_rd(&thinkos_rt.wq_canceled, th);
+#endif
+#if THINKOS_ENABLE_DEBUG_FAULT
+	dead |= __bit_mem_rd(&thinkos_rt.wq_fault, th);
+#endif
+
+	return !dead;
+}
+#endif
+
+#if THINKOS_ENABLE_PAUSE
+bool __thinkos_thread_ispaused(unsigned int th)
+{
+	if (th >= THINKOS_THREADS_MAX)
+		return false;
+
+	if (thinkos_rt.ctx[th] == NULL)
+		return false;
+
+	return __bit_mem_rd(&thinkos_rt.wq_paused, th);
+}
+#endif
+
+#if THINKOS_ENABLE_DEBUG_FAULT
+bool __thinkos_thread_isfaulty(unsigned int th)
+{
+	if (th >= THINKOS_THREADS_MAX)
+		return false;
+
+	if (thinkos_rt.ctx[th] == NULL)
+		return false;
+
+	return __bit_mem_rd(&thinkos_rt.wq_fault, th);
+}
+#endif
+
+bool __thinkos_suspended(void)
+{
+	unsigned int th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if (thinkos_rt.ctx[th] != NULL) {
+			bool suspended = false;
+#if THINKOS_ENABLE_JOIN
+			suspended |= __bit_mem_rd(&thinkos_rt.wq_canceled, th);
+#endif
+#if THINKOS_ENABLE_DEBUG_FAULT
+			suspended |= __bit_mem_rd(&thinkos_rt.wq_fault, th);
+#endif
+#if THINKOS_ENABLE_PAUSE
+			suspended |= __bit_mem_rd(&thinkos_rt.wq_paused, th);
+#endif
+			if (!suspended)
+				return false;
+		}
+	}
+
+	return true;
+}
+

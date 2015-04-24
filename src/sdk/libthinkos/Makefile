@@ -27,7 +27,7 @@ CFILES = thinkos.c thinkos_core.c thinkos_mutex.c thinkos_cond.c \
 		 thinkos_semaphore.c thinkos_event.c thinkos_svc.c thinkos_irq.c \
 		 thinkos_flag.c thinkos_except.c thinkos_util.c thinkos_debug.c \
 		 thinkos_type.c thinkos_sleep.c thinkos_break.c thinkos_pause.c \
-		 thinkos_nmi.c thinkos_dmon.c
+		 thinkos_nmi.c thinkos_dmon.c thinkos_console.c
 
 include ../../mk/lib.mk
 

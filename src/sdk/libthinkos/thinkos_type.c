@@ -56,6 +56,9 @@ const struct {
 #if THINKOS_ENABLE_JOIN
 	uint8_t wq_canceled; /* canceled threads wait queue */
 #endif
+#if THINKOS_ENABLE_DEBUG_FAULT
+	uint8_t wq_fault;
+#endif
 } thinkos_obj_type_lut = {
 	.wq_ready = THINKOS_OBJ_READY,
 #if THINKOS_ENABLE_TIMESHARE
@@ -86,7 +89,10 @@ const struct {
 	.wq_paused = THINKOS_OBJ_PAUSED,
 #endif
 #if THINKOS_ENABLE_JOIN
-	.wq_canceled = THINKOS_OBJ_CANCELED
+	.wq_canceled = THINKOS_OBJ_CANCELED,
+#endif
+#if THINKOS_ENABLE_DEBUG_FAULT
+	.wq_fault = THINKOS_OBJ_FAULT
 #endif
 };
 
@@ -125,6 +131,7 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #endif
 	[THINKOS_OBJ_PAUSED] = NULL,
 	[THINKOS_OBJ_CANCELED] = NULL,
+	[THINKOS_OBJ_FAULT] = NULL,
 	[THINKOS_OBJ_INVALID] = NULL
 };
 

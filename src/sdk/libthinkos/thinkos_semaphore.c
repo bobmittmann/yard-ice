@@ -248,6 +248,8 @@ void thinkos_sem_post_svc(int32_t * arg)
 #endif
 #endif
 
+	DCC_LOG1(LOG_TRACE, "sem %d ", wq);
+
 	arg[0] = 0;
 
 	cm3_cpsid_i();

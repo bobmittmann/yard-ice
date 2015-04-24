@@ -68,12 +68,12 @@ struct dbg_bp_ctrl {
 };
 
 struct gdb_rspd {
-	int8_t noack_mode;
-	int8_t nonstop_mode;
 	uint8_t current_thread;
 	struct {
-		uint32_t supress_detach_ack;
-	} flag;
+		uint32_t noack_mode : 1;
+		uint32_t nonstop_mode : 1;
+		uint32_t stopped : 1;
+	};
 	struct {
 		int8_t g; 
 		int8_t c;
@@ -144,9 +144,6 @@ typedef enum {
 	DBG_ST_HALTED = 4
 } dbg_state_t;
 
-void thinkos_resume_svc(int32_t * arg);
-void thinkos_pause_svc(int32_t * arg);
-
 #if (!THINKOS_ENABLE_PAUSE)
 #error "Need THINKOS_ENABLE_PAUSE!"
 #endif
@@ -165,30 +162,13 @@ int thread_getnext(int th)
 	return -1;
 }
 
-bool thread_isalive(int th)
-{
-	int idx;
-	/* convert from GDB thread id to ThinkOS thread index */
-	idx = th - 1;
-	
-	if ((idx < 0 ) || (idx >= THINKOS_THREADS_MAX))
-		return false;
-
-	if (thinkos_rt.ctx[idx] == NULL)
-		return false;
-
-	return true;
-}
-
-
 int target_halt(struct gdb_rspd * gdb)
 {
 	int32_t th;
-	int32_t arg[1];
 
 	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		arg[0] = th;
-		thinkos_pause_svc(arg);
+		if (thinkos_rt.ctx[th] != NULL)
+			__thinkos_thread_pause(th);
 	}
 
 	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
@@ -199,8 +179,34 @@ int target_halt(struct gdb_rspd * gdb)
 	}
 
 	DCC_LOG1(LOG_TRACE, "current_thread=%d", gdb->current_thread);
+	__thinkos_defer_sched();
 	dmon_wait_idle();
 
+	gdb->stopped = true;
+
+	return 0;
+}
+
+int target_run(void)
+{
+	int32_t th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if (thinkos_rt.ctx[th] != NULL)
+			__thinkos_thread_resume(th);
+	}
+	__thinkos_defer_sched();
+
+	return 0;
+}
+
+int target_step(int th)
+{
+	return dmon_thread_step(th - 1, 1);
+}
+
+int target_goto(uint32_t addr, int opt)
+{
 	return 0;
 }
 
@@ -249,30 +255,6 @@ int target_mem_read(uint32_t addr, void * ptr, int len)
 	return len;
 }
 
-int target_run(void)
-{
-	int32_t th;
-	int32_t arg[1];
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL) {
-			arg[0] = th;
-			thinkos_resume_svc(arg);
-		}
-	}
-
-	return 0;
-}
-
-int target_step(int th)
-{
-	return dmon_thread_step(th - 1, 1);
-}
-
-int target_goto(uint32_t addr, int opt)
-{
-	return 0;
-}
 
 int thread_register_get(int thread, int reg, uint32_t * val)
 {
@@ -331,7 +313,7 @@ int thread_register_get(int thread, int reg, uint32_t * val)
 		x = ctx->lr;
 		break;
 	case 15:
-		x = ctx->pc - 2;
+		x = ctx->pc;
 		break;
 	case 16:
 		x = ctx->xpsr;
@@ -401,7 +383,7 @@ int thread_register_set(int thread, int reg, uint32_t val)
 		ctx->lr = val;
 		break;
 	case 15:
-		ctx->pc = val + 2;
+		ctx->pc = val;
 		break;
 	case 16:
 		ctx->xpsr = val;
@@ -902,41 +884,22 @@ static int rsp_send_pkt(struct dmon_comm * comm, char * pkt, int len)
 	return dmon_comm_send(comm, pkt, n);
 }
 
-static int rsp_signal(struct dmon_comm * comm, char * pkt, int sig)
+
+static int rsp_break_signal(struct gdb_rspd * gdb, 
+							struct dmon_comm * comm, char * pkt)
 {
-	int sum;;
-
-	pkt[0] = '$';
-	pkt[1] = sum = 'S';
-	sum += pkt[2] = hextab[((sig >> 4) & 0xf)];
-	sum += pkt[3] = hextab[(sig & 0xf)];
-	pkt[4] = '#';
-	pkt[5] = hextab[((sum >> 4) & 0xf)];
-	pkt[6] = hextab[sum & 0xf];
-
-	return dmon_comm_send(comm, pkt, 7);
-}
-
-static int rsp_break_signal(struct dmon_comm * comm, char * pkt)
-{
-	int sum;
 	int sig = 5;
 
 	DCC_LOG(LOG_TRACE, "break received, stopping...");
 
-	if (target_halt(0) < 0) {
-		return rsp_error(comm, 1);
+	if (target_halt(gdb) < 0) {
+		rsp_error(comm, 1);
+		return -1;
 	}
 
-	pkt[0] = '$';
-	pkt[1] = sum = 'S';
-	sum += pkt[2] = hextab[((sig >> 4) & 0xf)];
-	sum += pkt[3] = hextab[(sig & 0xf)];
-	pkt[4] = '#';
-	pkt[5] = hextab[((sum >> 4) & 0xf)];
-	pkt[6] = hextab[sum & 0xf];
+	gdb->last_signal = sig;
 
-	return dmon_comm_send(comm, pkt, 8);
+	return 0;
 }
 
 #if 0
@@ -970,7 +933,7 @@ static int  rsp_offsets(struct dmon_comm * comm, unsigned int text,
 int hex_str(char * pkt, const char * s)
 {
 	char * cp;
-	char c;
+	int c;
 	int n;
 
 	n = 0;
@@ -984,6 +947,22 @@ int hex_str(char * pkt, const char * s)
 	return n;
 }
 
+int hex_bin(char * pkt, const void * buf, int len)
+{
+	char * cp = (char *)buf;
+	int c;
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		c = hextab[((cp[i] >> 4) & 0xf)];
+		pkt[i * 2] = c;
+		c = hextab[cp[i] & 0xf];
+		pkt[i * 2 + 1] = c;
+	}
+
+	return i * 2;
+}
+
 
 int uint2dec(char * s, unsigned int val);
 
@@ -995,19 +974,20 @@ int hex_int(char * pkt, unsigned int val)
 	return hex_str(pkt, s);
 }
 
-static const char obj_type_name[][8] = {
-	"Ready",
-	"Sched",
-	"Cancl",
-	"Pausd",
-	"Clock",
-	"Mutex",
-	"Cond",
-	"Sem",
-	"Event",
-	"Flag",
-	"Join",
-	"Inv"
+const char obj_type_name[][8] = {
+	[THINKOS_OBJ_READY] = "Ready",
+	[THINKOS_OBJ_TMSHARE] = "Sched",
+	[THINKOS_OBJ_CLOCK] = "Clock",
+	[THINKOS_OBJ_MUTEX] = "Mutex",
+	[THINKOS_OBJ_COND] = "Cond",
+	[THINKOS_OBJ_SEMAPHORE] = "Sem",
+	[THINKOS_OBJ_EVENT] = "EvSet",
+	[THINKOS_OBJ_FLAG] = "Flag",
+	[THINKOS_OBJ_JOIN] = "Join",
+	[THINKOS_OBJ_PAUSED] = "Pausd",
+	[THINKOS_OBJ_CANCELED] = "Cancl",
+	[THINKOS_OBJ_FAULT] = "Fault",
+	[THINKOS_OBJ_INVALID] = "Inv"
 };
 
 int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
@@ -1022,7 +1002,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 
 	/* qThreadExtraInfo */
 	id = strtoul(cp, NULL, 16);
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", id);
+	DCC_LOG1(LOG_INFO, "thread_id=%d", id);
 	idx = id - 1;
 
 	cp = pkt;
@@ -1031,9 +1011,9 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	if (thinkos_rt.th_inf[idx] != NULL)
 		n = hex_str(cp, thinkos_rt.th_inf[idx]->tag);
 	else
-		n = hex_int(cp, id);
+		n = hex_int(cp, idx);
 #else
-	n = hex_int(cp, id);
+	n = hex_int(cp, idx);
 #endif
 	cp += n;
 	n = hex_str(cp, " ");
@@ -1061,11 +1041,14 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	cp += n;
 	if (oid != 0) {
 		type = thinkos_obj_type_get(oid);
+		if (type == THINKOS_OBJ_PAUSED) {
+			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", id);
+		}
 		n = hex_str(cp, obj_type_name[type]);
 		cp += n;
 		n = hex_str(cp, "(");
 		cp += n;
-		n = hex_int(cp, id);
+		n = hex_int(cp, oid);
 		cp += n;
 		n = hex_str(cp, ")");
 		cp += n;
@@ -1110,13 +1093,6 @@ int rsp_thread_get_next(struct dmon_comm * comm)
 	pkt[4] = hextab[sum & 0xf];
 
 	return dmon_comm_send(comm, pkt, 5);
-}
-
-static int rsp_last_signal(struct gdb_rspd * gdb, struct dmon_comm * comm, 
-						   char * pkt, int len)
-{
-	DCC_LOG1(LOG_TRACE, "last_signal=%d", gdb->last_signal);
-	return rsp_signal(comm, pkt, gdb->last_signal);
 }
 
 #if 0
@@ -1249,6 +1225,39 @@ int rsp_cmd(struct dmon_comm * comm, char * pkt, int len)
 	return rsp_ok(comm);
 }
 
+static int rsp_stop_reply(struct gdb_rspd * gdb, 
+						  struct dmon_comm * comm, char * pkt)
+{
+	char * cp;
+	int n;
+
+	cp = pkt;
+	*cp++ = '$';
+
+	if (gdb->stopped) {
+		DCC_LOG1(LOG_TRACE, "last_signal=%d", gdb->last_signal);
+		*cp++ = 'S';
+		n = hex_int(cp, gdb->last_signal);
+		cp += n;
+	} else if (gdb->nonstop_mode) {
+		DCC_LOG(LOG_WARNING, "nonstop mode!!!");
+	} else {
+		*cp++ = 'O';
+#if (THINKOS_ENABLE_CONSOLE)
+		char * buf;
+		buf = (pkt + RSP_BUFFER_LEN) - 64;
+		n = __thinkos_console_tx_get(buf, 64);
+		if (n > 0) {
+			n = hex_bin(cp, buf, n);
+			cp += n;
+		}
+#endif
+	}
+
+	n = cp - pkt;
+	return rsp_send_pkt(comm, pkt, n);
+}
+
 
 static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 					 char * pkt, int len)
@@ -1306,20 +1315,20 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	}
 
 	if (strstr(pkt, "qfThreadInfo")) {
-		DCC_LOG(LOG_TRACE, "qfThreadInfo");
+		DCC_LOG(LOG_INFO, "qfThreadInfo");
 		/* First Thread Info */
 		return rsp_thread_get_first(comm, pkt);
 	}
 
 	if (strstr(pkt, "qsThreadInfo")) {
-		DCC_LOG(LOG_TRACE, "qsThreadInfo");
+		DCC_LOG(LOG_INFO, "qsThreadInfo");
 		/* Sequence Thread Info */
 		return rsp_thread_get_next(comm);
 	}
 
 	/* Get thread info from RTOS */
 	if (strstr(pkt, "qThreadExtraInfo")) {
-		DCC_LOG(LOG_TRACE, "qThreadExtraInfo");
+		DCC_LOG(LOG_INFO, "qThreadExtraInfo");
 		return rsp_thread_extra_info(comm, pkt);
 	}
 
@@ -1341,7 +1350,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	if (strstr(pkt, "QNonStop:")) {
 		gdb->nonstop_mode = pkt[9] - '0';
 		DCC_LOG1(LOG_TRACE, "Nonstop=%d", gdb->nonstop_mode);
-		if (gdb->nonstop_mode ==0) {
+		if (!gdb->nonstop_mode && !gdb->stopped) {
 			target_halt(gdb);
 		}
 		return rsp_ok(comm);
@@ -1368,6 +1377,11 @@ static int rsp_all_registers_get(int th, struct dmon_comm * comm,
 	int sum = 0;
 	int n;
 	int r;
+
+	if (!(__thinkos_thread_ispaused(th - 1) || 
+		  __thinkos_thread_isfaulty(th - 1))) {
+		return rsp_error(comm, 5);
+	} 
 
 	DCC_LOG1(LOG_TRACE, "thread=%d", th);
 
@@ -1724,7 +1738,8 @@ static int rsp_thread_isalive(struct dmon_comm * comm, char * pkt, int len)
 	/* Find out if the thread thread-id is alive. 
 	   ‘OK’ thread is still alive 
 	   ‘E NN’ thread is dead */
-	if (thread_isalive(id))
+
+	if (__thinkos_thread_isalive(id - 1))
 		ret = rsp_ok(comm);
 	else 
 		ret = rsp_error(comm, 1);
@@ -1739,7 +1754,7 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int id;
 
 	id = strtol(&pkt[2], NULL, 16);
-	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], id);
+	DCC_LOG2(LOG_INFO, "H%c%d", pkt[1], id);
 
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
@@ -1756,8 +1771,7 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		ret = rsp_ok(comm);
 		break;
 	default:
-		DCC_LOG(LOG_TRACE, "Unsupported!");
-		/* we don't have threads, empty replay */
+		DCC_LOG2(LOG_WARNING, "Unsupported 'H%c%d'", pkt[1], id);
 		ret = rsp_empty(comm);
 	}
 
@@ -1815,15 +1829,27 @@ static int rsp_detach(struct gdb_rspd * gdb, struct dmon_comm * comm)
 
 	target_run();
 
-	if (!gdb->flag.supress_detach_ack) {
-		/* reply OK */
-		rsp_ok(comm);
-	}	
+	/* reply OK */
+	rsp_ok(comm);
 
 	dmon_exec(gdb->shell_task);
 
 	return 0;
 }
+
+static int rsp_kill(struct gdb_rspd * gdb, struct dmon_comm * comm)
+{
+	DCC_LOG(LOG_TRACE, "[KILL]");
+
+	target_run();
+
+	rsp_ok(comm);
+
+	dmon_exec(gdb->shell_task);
+
+	return 0;
+}
+
 
 static int rsp_memory_write_bin(struct dmon_comm * comm, char * pkt, int len)
 {
@@ -1896,6 +1922,8 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 
 struct gdb_rspd gdb_rspd;
 
+void monitor_task(struct dmon_comm * comm);
+
 void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
@@ -1914,11 +1942,11 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 	gdb->nonstop_mode = 0;
 	gdb->noack_mode = 0;
+	gdb->stopped = __thinkos_suspended();
 	gdb->last_signal = TARGET_SIGNAL_0;
-	gdb->flag.supress_detach_ack = 0;
 
 	if (gdb->shell_task == NULL)
-		gdb->shell_task = gdb_task;
+		gdb->shell_task = monitor_task;
 
 	dmon_comm_connect(comm);
 
@@ -1951,22 +1979,23 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			c = buf[0];
 
 			if (c == '+') {
-				DCC_LOG(LOG_TRACE, "[ACK]");
+				DCC_LOG(LOG_INFO, "[ACK]");
 				continue;
 			}
 
 			if (c == '-') {
-				DCC_LOG(LOG_TRACE, "[NACK]");
+				DCC_LOG(LOG_INFO, "[NACK]");
 				continue;
 
 			}
 
 			if (c == 0x03) {
 				DCC_LOG(LOG_TRACE, "[BREAK]");
-				if (rsp_break_signal(comm, pkt) < 0) {
+				if (rsp_break_signal(gdb, comm, pkt) < 0) {
 					DCC_LOG(LOG_WARNING, "rsp_break_signal() failed!");
 					break;
 				}
+				rsp_stop_reply(gdb, comm, pkt);
 				continue;
 			}
 
@@ -2032,7 +2061,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				ret = rsp_breakpoint_insert(comm, gdb, pkt, len);
 				break;
 			case '?':
-				ret = rsp_last_signal(gdb, comm, pkt, len);
+				ret = rsp_stop_reply(gdb, comm, pkt);
 				break;
 			case 'i':
 			case 's':
@@ -2052,10 +2081,8 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				ret = rsp_memory_write_bin(comm, pkt, len);
 				break;
 			case 'k':
-				/*				if (extended_protocol != 0)
-								break; */
 				/* kill */
-				ret = rsp_ok(comm);
+				ret = rsp_kill(gdb, comm);
 				break;
 #if 0
 			case '!':

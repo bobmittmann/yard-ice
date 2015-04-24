@@ -32,19 +32,20 @@
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 
-const char obj_type_name[][8] = {
-	"Ready",
-	"Sched",
-	"Cancl",
-	"Pausd",
-	"Clock",
-	"Mutex",
-	"Cond",
-	"Sem",
-	"Event",
-	"Flag",
-	"Join",
-	"Inv"
+static const char obj_type_name[][8] = {
+	[THINKOS_OBJ_READY] = "Ready",
+	[THINKOS_OBJ_TMSHARE] = "Sched",
+	[THINKOS_OBJ_CLOCK] = "Clock",
+	[THINKOS_OBJ_MUTEX] = "Mutex",
+	[THINKOS_OBJ_COND] = "Cond",
+	[THINKOS_OBJ_SEMAPHORE] = "Sem",
+	[THINKOS_OBJ_EVENT] = "EvSet",
+	[THINKOS_OBJ_FLAG] = "Flag",
+	[THINKOS_OBJ_JOIN] = "Join",
+	[THINKOS_OBJ_PAUSED] = "Pausd",
+	[THINKOS_OBJ_CANCELED] = "Cancl",
+	[THINKOS_OBJ_FAULT] = "Fault",
+	[THINKOS_OBJ_INVALID] = "Inv"
 };
 
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \

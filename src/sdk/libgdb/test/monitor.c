@@ -92,7 +92,21 @@ void monitor_on_fault(struct dmon_comm * comm)
 void thinkos_resume_svc(int32_t * arg);
 void thinkos_pause_svc(int32_t * arg);
 
-int thread_id = 3;
+int __thinkos_thread_getnext(int th)
+{
+	int idx;
+
+	idx = (th < 0) ? 0 : th + 1;
+	
+	for (; idx < THINKOS_THREADS_MAX; ++idx) {
+		if (thinkos_rt.ctx[idx] != NULL)
+			return idx;
+	}
+
+	return -1;
+}
+
+int thread_id = -1;
 
 void monitor_step(struct dmon_comm * comm)
 {
@@ -123,9 +137,10 @@ const char monitor_menu[] = "\r\n"
 	 " Ctrl+R - Resume all threads\r\n"
 	 " Ctrl+P - Pause all threads\r\n"
 	 " Ctrl+X - Show exception\r\n"
-	 " Ctrl+S - Step\r\n"
+	 " Ctrl+S - Thread Step\r\n"
 	 " Ctrl+T - Comm test\r\n"
 	 " Ctrl+I - ThinkOS info\r\n"
+	 " Ctrl+N - Select Next Thread\r\n"
 	 "-------------------------------------\r\n\r\n";
 
 void show_help(struct dmon_comm * comm)
@@ -221,7 +236,6 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint32_t sigmask;
 	uint32_t sigset;
 	char buf[80];
-	int n;
 	int c;
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
@@ -231,6 +245,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 //	dmon_sleep(500);
 //	dmon_comm_send(comm, monitor_banner, sizeof(monitor_banner) - 1);
 //	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
+
+	thread_id = __thinkos_thread_getnext(-1);
 
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_COMM_RCV);
@@ -252,14 +268,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
 			DCC_LOG(LOG_INFO, "Comm Rcv.");
-			n = dmon_comm_recv(comm, buf, 64);
+			dmon_comm_recv(comm, buf, 1);
 			c = buf[0];
-			if (n == 1)
-				DCC_LOG1(LOG_TRACE, "%02x.", buf[0]);
-			else if (n == 2)
-				DCC_LOG2(LOG_TRACE, "%02x.", buf[0], buf[1]);
-			else
-				DCC_LOG3(LOG_TRACE, "%02x %02x %02x", buf[0], buf[1], buf[2]);
 //			buf[1] = '\r';
 //			buf[2] = '\n';
 //			dmon_comm_send(comm, buf, 3);
@@ -283,6 +293,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				break;
 			case CTRL_I:
 				osinfo(comm);
+				break;
+			case CTRL_N:
+				thread_id = __thinkos_thread_getnext(thread_id);
+				if (thread_id == - 1)
+					thread_id = __thinkos_thread_getnext(thread_id);
+				dmprintf(comm, "Current thread = %d\r\n", thread_id);
+				show_thread_info(comm, thread_id);
 				break;
 			case CTRL_X:
 				monitor_on_fault(comm);
@@ -317,20 +334,7 @@ void monitor_init(void)
 }
 
 
-static const char obj_type_name[][8] = {
-	"Ready",
-	"Sched",
-	"Cancl",
-	"Pausd",
-	"Clock",
-	"Mutex",
-	"Cond",
-	"Sem",
-	"Event",
-	"Flag",
-	"Join",
-	"Inv"
-};
+extern const char obj_type_name[][8];
 
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
 	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
@@ -575,8 +579,8 @@ struct thinkos_thread {
 	struct thinkos_context ctx;
 };
 
-int thinkos_thread_get(struct thinkos_rt * rt, 
-					   struct thinkos_thread * st, int th)
+int __thinkos_thread_get(struct thinkos_rt * rt, 
+						 struct thinkos_thread * st, int th)
 {
 	uint32_t * src;
 	uint32_t * dst;
@@ -585,8 +589,6 @@ int thinkos_thread_get(struct thinkos_rt * rt,
 	if ((th >= THINKOS_THREADS_MAX) || (rt->ctx[th] == NULL)) {
 		return -1;
 	}
-
-	DCC_LOG(LOG_TRACE, "1.");
 
 	st->idx = th;
 
@@ -607,8 +609,6 @@ int thinkos_thread_get(struct thinkos_rt * rt,
 	st->tmw = 0;
  #endif
 #endif /* THINKOS_ENABLE_THREAD_STAT */
-
-	DCC_LOG(LOG_TRACE, "2.");
 
 #if THINKOS_ENABLE_THREAD_ALLOC
 	st->alloc = rt->th_alloc[0] & (1 << th) ? 1 : 0;
@@ -648,8 +648,6 @@ int thinkos_thread_get(struct thinkos_rt * rt,
 	for (i = 0; i < 16; ++i)
 		dst[i] = src[i];
 
-	DCC_LOG(LOG_TRACE, "3.");
-
 	return 0;
 }
 
@@ -659,7 +657,7 @@ void show_thread_info(struct dmon_comm * comm, int id)
 	struct thinkos_context * ctx;
 	int type;
 
-	if (thinkos_thread_get(&thinkos_rt, &st, id) < 0) {
+	if (__thinkos_thread_get(&thinkos_rt, &st, id) < 0) {
 		dmprintf(comm, "Thread %d is invalid!\r\n", id);
 		return;
 	}
@@ -668,22 +666,23 @@ void show_thread_info(struct dmon_comm * comm, int id)
 
 	dmprintf(comm, " - Id: %d", id); 
 	if (st.th_inf != NULL)
-		dmprintf(comm, ", %s\r\n", st.th_inf->tag); 
+		dmprintf(comm, ", '%s'", st.th_inf->tag); 
 	else
-		dmprintf(comm, ", %s\r\n", "..."); 
+		dmprintf(comm, ", '%s'", "..."); 
 
-	dmprintf(comm, " - Waiting on queue: %3d %5s (time wait: %s)\r\n", 
-			st.wq, obj_type_name[type], st.tmw ? "Yes" : " No"); 
+	if (THINKOS_OBJ_READY == obj_type_name[type]) {
+		dmprintf(comm, " %s.\r\n", obj_type_name[type]); 
+	} else {
+		dmprintf(comm, " %swait on %s(%3d)\r\n", 
+				 st.tmw ? "time" : "", obj_type_name[type], st.wq ); 
+	}
 
-	dmprintf(comm, " - Scheduler: val=%d pri=%4d\r\n", 
+	dmprintf(comm, " - Scheduler: val=%3d pri=%3d - ", 
 			 st.sched_val, st.sched_pri); 
-
-	dmprintf(comm, " - Clock: timeout=%d ms\r\n", st.timeout); 
-	dmprintf(comm, " - Cycles: %u\r\n", st.cyccnt); 
+	dmprintf(comm, " timeout=%8d ms", st.timeout); 
+	dmprintf(comm, " - cycles=%u\r\n", st.cyccnt); 
 
 	ctx = &st.ctx;
-
-	dmprintf(comm, " - Context:\r\n"); 
 
 	dmprintf(comm, "     r0=%08x  r1=%08x  r2=%08x  r3=%08x\r\n", 
 			 ctx->r0, ctx->r1, ctx->r2, ctx->r3);

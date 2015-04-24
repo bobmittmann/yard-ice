@@ -452,8 +452,11 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	   at higher priority. In order for the regular priority
 	   interrupts to call SVC, they shuld run at a lower priority
 	   then SVC.*/
-	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
-	/* SysTick interrupt has to have a lowr priority then SVC */
+//	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
+	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);
+
+	/* SysTick interrupt has to have a lower priority then SVC,
+	 to not preempt SVC */
 	cm3_except_pri_set(CM3_EXCEPT_SYSTICK, CLOCK_PRIORITY);
 	/* PendSV interrupt has to have the lowest priority among
 	   regular interrupts (higher number) */
@@ -662,7 +665,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	{
 		int i;
 		/* initialize cycle counters */
-		for (i = 0; i < THINKOS_THREADS_MAX + 2; i++)
+		for (i = 0; i <= THINKOS_THREADS_MAX; i++)
 			thinkos_rt.cyccnt[i] = 0; 
 
 		/* Enable trace */

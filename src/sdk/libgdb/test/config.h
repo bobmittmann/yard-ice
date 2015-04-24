@@ -83,6 +83,8 @@
 
 #define THINKOS_ENABLE_MONITOR     1
 #define THINKOS_ENABLE_DEBUG_STEP  1
+#define THINKOS_ENABLE_DEBUG_FAULT 1
+#define THINKOS_ENABLE_CONSOLE     0
 
 /* -------------------------------------------------------------------------
  * USB 

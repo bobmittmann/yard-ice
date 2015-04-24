@@ -237,6 +237,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_DEBUG_STEP  0
 #endif
 
+#ifndef THINKOS_ENABLE_DEBUG_FAULT
+#define THINKOS_ENABLE_DEBUG_FAULT 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -366,6 +370,10 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_canceled; /* canceled threads wait queue */
+#endif
+
+#if THINKOS_ENABLE_DEBUG_FAULT
+	uint32_t wq_fault; /* fault threads wait queue */
 #endif
 
 	uint32_t wq_end[0]; /* end of queue list placeholder */
@@ -810,6 +818,17 @@ bool __thinkos_thread_resume(unsigned int th);
 
 bool __thinkos_thread_pause(unsigned int th);
 
+bool __thinkos_thread_isalive(unsigned int th);
+
+bool __thinkos_thread_ispaused(unsigned int th);
+
+bool __thinkos_thread_isfaulty(unsigned int th);
+
+bool __thinkos_suspended(void);
+
+int __thinkos_console_tx_get(void * buf, int len);
+
+int __thinkos_console_rx_put(const void * buf, int len);
 
 #ifdef __cplusplus
 }

@@ -91,12 +91,14 @@ int producer_task(void * arg)
 		x0 = x1;
 		x1 = y;
 
+		DCC_LOG(LOG_TRACE, "1. thinkos_sem_wait().");
 		/* waiting for room to insert a new item */
 		thinkos_sem_wait(sem_empty);
 
 		/* insert the produced item in the buffer */
 		buffer = y;
 
+		DCC_LOG(LOG_TRACE, "3. thinkos_sem_post().");
 		/* signal a full buffer */
 		thinkos_sem_post(sem_full);
 	}
