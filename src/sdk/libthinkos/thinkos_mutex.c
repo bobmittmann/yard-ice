@@ -19,12 +19,11 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-
 #include <thinkos.h>
-
-#include <sys/dcclog.h>
 
 #if THINKOS_MUTEX_MAX > 0
 

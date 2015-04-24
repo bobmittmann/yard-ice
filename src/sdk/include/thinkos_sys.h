@@ -233,6 +233,10 @@ struct thinkos_context {
 #define THINKOS_ENABLE_MONITOR     0
 #endif
 
+#ifndef THINKOS_ENABLE_DEBUG_STEP 
+#define THINKOS_ENABLE_DEBUG_STEP  0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -279,8 +283,15 @@ struct thinkos_context {
  #define THINKOS_ENABLE_CLOCK 1
 #endif
 
-/* timed calls cancel and pause depends on thread status */
-#if THINKOS_ENABLE_TIMED_CALLS || THINKOS_ENABLE_PAUSE || THINKOS_ENABLE_CANCEL
+/* dbug step depends on monitor */
+#if (THINKOS_ENABLE_DEBUG_STEP) & (!THINKOS_ENABLE_MONITOR)
+ #undef THINKOS_ENABLE_MONITOR
+ #define THINKOS_ENABLE_MONITOR 1
+#endif
+
+/* timed calls, cancel, pause and debug step depend on thread status */
+#if THINKOS_ENABLE_TIMED_CALLS || THINKOS_ENABLE_PAUSE || \
+	THINKOS_ENABLE_CANCEL || THINKOS_ENABLE_DEBUG_STEP 
  #undef THINKOS_ENABLE_THREAD_STAT
  #define THINKOS_ENABLE_THREAD_STAT 1
 #endif
@@ -301,7 +312,7 @@ struct thinkos_rt {
 
 	int32_t active; /* current active thread */
 
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DEBUG_STEP
 	int32_t step_id; /* step request on thread */
 	uint32_t step_cnt; /* step count */
 #endif

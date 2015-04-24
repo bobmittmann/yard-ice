@@ -274,7 +274,7 @@ int target_goto(uint32_t addr, int opt)
 	return 0;
 }
 
-int target_register_get(int thread, int reg, uint32_t * val)
+int thread_register_get(int thread, int reg, uint32_t * val)
 {
 	unsigned int idx = thread - 1;
 	struct thinkos_context * ctx;
@@ -345,8 +345,71 @@ int target_register_get(int thread, int reg, uint32_t * val)
 	return 0;
 }
 
-int target_register_set(int reg, uint32_t val)
+int thread_register_set(int thread, int reg, uint32_t val)
 {
+	unsigned int idx = thread - 1;
+	struct thinkos_context * ctx;
+
+	if (idx > THINKOS_THREADS_MAX)
+		return -1;
+
+	ctx = thinkos_rt.ctx[idx];
+	switch (reg) {
+	case 0:
+		ctx->r0 = val;
+		break;
+	case 1:
+		ctx->r1 = val;
+		break;
+	case 2:
+		ctx->r2 = val;
+		break;
+	case 3:
+		ctx->r3 = val;
+		break;
+	case 4:
+		ctx->r4 = val;
+		break;
+	case 5:
+		ctx->r5 = val;
+		break;
+	case 6:
+		ctx->r6 = val;
+		break;
+	case 7:
+		ctx->r7 = val;
+		break;
+	case 8:
+		ctx->r8 = val;
+		break;
+	case 9:
+		ctx->r9 = val;
+		break;
+	case 10:
+		ctx->r10 = val;
+		break;
+	case 11:
+		ctx->r11 = val;
+		break;
+	case 12:
+		ctx->r12 = val;
+		break;
+	case 13:
+		thinkos_rt.ctx[idx] = (struct thinkos_context *)val;
+		break;
+	case 14:
+		ctx->lr = val;
+		break;
+	case 15:
+		ctx->pc = val + 2;
+		break;
+	case 16:
+		ctx->xpsr = val;
+		break;
+	default:
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -1313,7 +1376,7 @@ static int rsp_all_registers_get(int th, struct dmon_comm * comm,
 
 	/* all integer registers */
 	for (r = 0; r < 16; r++) {
-		target_register_get(th, r, &val);
+		thread_register_get(th, r, &val);
 	
 		DCC_LOG2(LOG_INFO, "R%d = 0x%08x", r, val);
 
@@ -1339,7 +1402,7 @@ static int rsp_all_registers_get(int th, struct dmon_comm * comm,
 	sum += pkt[n++] = ' ' + 4;
 
 	/* cpsr */
-	target_register_get(th, 16, &val);
+	thread_register_get(th, 16, &val);
 
 	sum += pkt[n++] = hextab[((val >> 4) & 0xf)];
 	sum += pkt[n++] = hextab[(val & 0xf)];
@@ -1384,13 +1447,13 @@ static int rsp_register_get(int th, struct dmon_comm * comm,
 
 	if (reg == 25) {
 		DCC_LOG1(LOG_TRACE, "reg=%d (cpsr)", reg);
-		target_register_get(th, 16, &val);
+		thread_register_get(th, 16, &val);
 	} else {
 		if (reg > 15 ) {
 			val = 0;
 			DCC_LOG1(LOG_WARNING, "reg=%d (float)", reg);
 		} else {
-			target_register_get(th, reg, &val);
+			thread_register_get(th, reg, &val);
 			DCC_LOG1(LOG_TRACE, "reg=%d", reg);
 		}
 	}
@@ -1415,16 +1478,27 @@ static int rsp_register_get(int th, struct dmon_comm * comm,
 	return dmon_comm_send(comm, pkt, n);
 }
 
-static int rsp_register_set(struct dmon_comm * comm, char * pkt, int len)
+#ifndef NTOHL
+#define NTOHL(x) \
+	((uint32_t)((((uint32_t)(x) & 0x000000ffU) << 24) | \
+	(((uint32_t)(x) & 0x0000ff00U) <<  8) | \
+	(((uint32_t)(x) & 0x00ff0000U) >>  8) | \
+	(((uint32_t)(x) & 0xff000000U) >> 24)))
+#endif
+
+static int rsp_register_set(int th, struct dmon_comm * comm, 
+							char * pkt, int len)
 {
 	uint32_t reg;
+	uint32_t tmp;
 	uint32_t val;
 	char * cp;
 
 	cp = &pkt[1];
 	reg = strtoul(cp, &cp, 16);
 	cp++;
-	val = strtoul(cp, &cp, 16);
+	tmp = strtoul(cp, &cp, 16);
+	val = NTOHL(tmp);
 
 	/* FIXME: the register enumaration and details 
 	   must be in the ICE driver not here! */
@@ -1446,8 +1520,8 @@ static int rsp_register_set(struct dmon_comm * comm, char * pkt, int len)
 
 	DCC_LOG2(LOG_TRACE, "reg=%d val=0x%08x", reg, val);
 
-	if (target_register_set(reg, val) < 0) {
-		DCC_LOG(LOG_WARNING, "target_register_set() failed!");
+	if (thread_register_set(th, reg, val) < 0) {
+		DCC_LOG(LOG_WARNING, "thread_register_set() failed!");
 		return rsp_error(comm, 2);
 	}
 
@@ -1934,7 +2008,11 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				ret = rsp_register_get(gdb->thread_id.p, comm, pkt, len);
 				break;
 			case 'P':
-				ret = rsp_register_set(comm, pkt, len);
+				if (gdb->thread_id.g <= 0)
+					th = gdb->current_thread;
+				else
+					th = gdb->thread_id.g;
+				ret = rsp_register_set(th, comm, pkt, len);
 				break;
 			case 'm':
 				ret = rsp_memory_read(comm, pkt, len);

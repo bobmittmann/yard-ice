@@ -20,6 +20,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
 #include <sys/param.h>
@@ -272,6 +274,7 @@ void thinkos_suspend_all(void)
 	__thinkos_defer_sched();
 }
 
+#if (THINKOS_ENABLE_DEBUG_STEP)
 int dmon_thread_step(unsigned int id, unsigned int cnt)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
@@ -302,6 +305,7 @@ int dmon_thread_step(unsigned int id, unsigned int cnt)
 	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
 	return 0;
 }
+#endif
 
 #if 1
 void cm3_debug_mon_isr(void)
@@ -328,6 +332,7 @@ void cm3_debug_mon_isr(void)
 	}
 #endif
 
+#if (THINKOS_ENABLE_DEBUG_STEP)
 	if (demcr & DCB_DEMCR_MON_STEP) {
 		if (thinkos_rt.step_cnt == 0) {
 			dcb->demcr = demcr & ~DCB_DEMCR_MON_STEP;
@@ -341,8 +346,8 @@ void cm3_debug_mon_isr(void)
 		} else {
 			thinkos_rt.step_cnt--;
 		}
-	} else {
 	}
+#endif
 	
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);

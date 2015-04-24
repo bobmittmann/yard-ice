@@ -19,6 +19,8 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 

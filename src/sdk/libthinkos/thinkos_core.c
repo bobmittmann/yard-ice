@@ -19,6 +19,7 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
@@ -113,7 +114,7 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 		*cycidle += delta; 
 	}
 #else
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DEBUG_STEP
 	volatile uint32_t * req_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.req, 
 												  DMON_IDLE);
 	volatile uint32_t * sig_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, 
@@ -126,7 +127,7 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 		DCC_LOG(LOG_MSG, "zzz...");
 //		__dump_context(&thinkos_idle.ctx);
 #endif
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DEBUG_STEP
 		/* check if the monitor is requesting a notification when
 		   entering IDLE state */
 		if ((val = *req_bit) != 0) {
@@ -220,7 +221,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	}
 #endif
 
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DEBUG_STEP
 	if (idx == thinkos_rt.step_id) {
 		struct cm3_dcb * dcb = CM3_DCB;
 		/* rise the BASEPRI to stop the scheduler and interrupts */
@@ -463,7 +464,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
 
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DEBUG_STEP
 	thinkos_rt.step_id = -1;
 	thinkos_rt.step_cnt = 0;
 #endif

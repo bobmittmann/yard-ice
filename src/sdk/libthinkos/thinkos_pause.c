@@ -19,14 +19,15 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
-#if THINKOS_ENABLE_PAUSE
-
 extern const uint8_t thinkos_obj_type_lut[];
 
+#if THINKOS_ENABLE_THREAD_STAT
 
 static void ready_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -187,41 +188,6 @@ bool __thinkos_thread_resume(unsigned int th)
 	return true;
 }
 
-#if (THINKOS_ENABLE_THREAD_STAT == 0)
-#error "thinkos_resume() depends on THINKOS_ENABLE_THREAD_STAT"	
-#endif
-
-void thinkos_resume_svc(int32_t * arg)
-{
-	unsigned int th = arg[0];
-
-#if THINKOS_ENABLE_ARG_CHECK
-	if (th >= THINKOS_THREADS_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_THREAD_ALLOC
-	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-	if (thinkos_rt.ctx[th] == NULL) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-
-	arg[0] = 0;
-
-	if (__thinkos_thread_resume(th))
-		__thinkos_defer_sched();
-}
-
 bool __thinkos_thread_pause(unsigned int th)
 {
 	unsigned int wq;
@@ -256,7 +222,13 @@ bool __thinkos_thread_pause(unsigned int th)
 	return true;
 }
 
-void thinkos_pause_svc(int32_t * arg)
+#endif /* THINKOS_ENABLE_THREAD_STAT */
+
+
+#if THINKOS_ENABLE_PAUSE
+
+
+void thinkos_resume_svc(int32_t * arg)
 {
 	unsigned int th = arg[0];
 
@@ -275,8 +247,35 @@ void thinkos_pause_svc(int32_t * arg)
 #endif
 #endif
 
-#if (THINKOS_ENABLE_THREAD_STAT == 0)
-#error "thinkos_pause() depends on THINKOS_ENABLE_THREAD_STAT"	
+	if (thinkos_rt.ctx[th] == NULL) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+
+	arg[0] = 0;
+
+	if (__thinkos_thread_resume(th))
+		__thinkos_defer_sched();
+}
+
+void thinkos_pause_svc(int32_t * arg)
+{
+	unsigned int th = arg[0];
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (th >= THINKOS_THREADS_MAX) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_THREAD_ALLOC
+	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
 #endif
 
 	if (thinkos_rt.ctx[th] == NULL) {

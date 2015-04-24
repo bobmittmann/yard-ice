@@ -79,9 +79,10 @@
 #define THINKOS_ENABLE_PROFILING   1
 #define THINKOS_ENABLE_THREAD_INFO 1
 
-#define THINKOS_ENABLE_RT_DEBUG 1
+#define THINKOS_ENABLE_RT_DEBUG    1
 
-#define THINKOS_ENABLE_MONITOR 1
+#define THINKOS_ENABLE_MONITOR     1
+#define THINKOS_ENABLE_DEBUG_STEP  1
 
 /* -------------------------------------------------------------------------
  * USB 

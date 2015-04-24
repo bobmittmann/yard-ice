@@ -19,10 +19,11 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #include <thinkos.h>
-#include <thinkos_svc.h>
 
 #if (THINKOS_SEMAPHORE_MAX  > 0)
 void __thinkos_sem_post_i(int sem) {

@@ -18,14 +18,11 @@
  * You can receive a copy of the GNU Lesser General Public License from 
  * http://www.gnu.org/
  */
-#include <stdio.h>
+
+_Pragma ("GCC optimize (\"Ofast\")")
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
-
 #include <thinkos.h>
 
 #if THINKOS_EVENT_MAX > 0
