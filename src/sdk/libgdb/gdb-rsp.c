@@ -47,6 +47,8 @@
 #define RSP_BUFFER_LEN 512
 #endif
 
+int uint2dec(char * s, unsigned int val);
+
 struct dbg_bp {
 	union {
 		struct dbg_bp * next;
@@ -144,6 +146,70 @@ typedef enum {
 	DBG_ST_HALTED = 4
 } dbg_state_t;
 
+
+static int char2hex(char * pkt, int c)
+{
+	pkt[0] = hextab[((c >> 4) & 0xf)];
+	pkt[1] = hextab[c & 0xf];
+
+	return 2;
+}
+
+static int str2hex(char * pkt, const char * s)
+{
+	char * cp;
+	int c;
+	int n;
+
+	n = 0;
+	for (cp = (char *)s; *cp != '\0'; ++cp) {
+		c = hextab[((*cp >> 4) & 0xf)];
+		pkt[n++] = c;
+		c = hextab[*cp & 0xf];
+		pkt[n++] = c;
+	}
+
+	return n;
+}
+
+static int bin2hex(char * pkt, const void * buf, int len)
+{
+	char * cp = (char *)buf;
+	int c;
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		c = hextab[((cp[i] >> 4) & 0xf)];
+		pkt[i * 2] = c;
+		c = hextab[cp[i] & 0xf];
+		pkt[i * 2 + 1] = c;
+	}
+
+	return i * 2;
+}
+
+static int int2hex(char * pkt, unsigned int val)
+{
+	char s[12];
+
+	uint2dec(s, val);
+	return str2hex(pkt, s);
+}
+
+
+static inline int toint(int c)
+{
+	if (isalpha(c))
+		return c - (isupper(c) ? 'A' - 10 : 'a' - 10);
+	return c - '0';
+}
+
+static int hex2char(char * hex)
+{
+	return (toint(hex[0]) << 4) + toint(hex[1]);
+}
+
+
 #if (!THINKOS_ENABLE_PAUSE)
 #error "Need THINKOS_ENABLE_PAUSE!"
 #endif
@@ -226,7 +292,7 @@ int target_mem_write(uint32_t addr, const void * ptr, int len)
 	return len;
 }
 
-int target_mem_read(uint32_t addr, void * ptr, int len)
+static int mem_read(uint32_t addr, void * ptr, int len)
 {
 	uint8_t * dst = (uint8_t *)ptr;
 	uint8_t * src = (uint8_t *)addr;;
@@ -916,50 +982,6 @@ static int  rsp_offsets(struct dmon_comm * comm, unsigned int text,
 }
 #endif
 
-int hex_str(char * pkt, const char * s)
-{
-	char * cp;
-	int c;
-	int n;
-
-	n = 0;
-	for (cp = (char *)s; *cp != '\0'; ++cp) {
-		c = hextab[((*cp >> 4) & 0xf)];
-		pkt[n++] = c;
-		c = hextab[*cp & 0xf];
-		pkt[n++] = c;
-	}
-
-	return n;
-}
-
-int hex_bin(char * pkt, const void * buf, int len)
-{
-	char * cp = (char *)buf;
-	int c;
-	int i;
-
-	for (i = 0; i < len; ++i) {
-		c = hextab[((cp[i] >> 4) & 0xf)];
-		pkt[i * 2] = c;
-		c = hextab[cp[i] & 0xf];
-		pkt[i * 2 + 1] = c;
-	}
-
-	return i * 2;
-}
-
-
-int uint2dec(char * s, unsigned int val);
-
-int hex_int(char * pkt, unsigned int val)
-{
-	char s[12];
-
-	uint2dec(s, val);
-	return hex_str(pkt, s);
-}
-
 int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 {
 	char * cp = pkt + sizeof("qThreadExtraInfo,") - 1;
@@ -979,14 +1001,14 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	*cp++ = '$';
 #if THINKOS_ENABLE_THREAD_INFO
 	if (thinkos_rt.th_inf[idx] != NULL)
-		n = hex_str(cp, thinkos_rt.th_inf[idx]->tag);
+		n = str2hex(cp, thinkos_rt.th_inf[idx]->tag);
 	else
-		n = hex_int(cp, idx);
+		n = int2hex(cp, idx);
 #else
-	n = hex_int(cp, idx);
+	n = int2hex(cp, idx);
 #endif
 	cp += n;
-	n = hex_str(cp, " ");
+	n = char2hex(cp, ' ');
 	cp += n;
 #if THINKOS_ENABLE_THREAD_STAT
 	oid = thinkos_rt.th_stat[idx] >> 1;
@@ -997,15 +1019,15 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 #endif
 	if (tmw) {
 		if (oid == 0) {
-			n = hex_str(cp, "time wait");
+			n = str2hex(cp, "time wait");
 		} else {
-			n = hex_str(cp, "timedwait on ");
+			n = str2hex(cp, "timedwait on ");
 		}
 	} else {
 		if (oid == 0) {
-			n = hex_str(cp, "ready");
+			n = str2hex(cp, "ready");
 		} else {
-			n = hex_str(cp, "wait on ");
+			n = str2hex(cp, "wait on ");
 		}
 	}
 	cp += n;
@@ -1014,13 +1036,13 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 		if (type == THINKOS_OBJ_PAUSED) {
 			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", id);
 		}
-		n = hex_str(cp, thinkos_type_name_lut[type]);
+		n = str2hex(cp, thinkos_type_name_lut[type]);
 		cp += n;
-		n = hex_str(cp, "(");
+		n = char2hex(cp, '(');
 		cp += n;
-		n = hex_int(cp, oid);
+		n = int2hex(cp, oid);
 		cp += n;
-		n = hex_str(cp, ")");
+		n = char2hex(cp, ')');
 		cp += n;
 	}
 	n = cp - pkt;
@@ -1090,20 +1112,6 @@ static int rsp_thread_id(struct dmon_comm * comm, int id)
 	return dmon_comm_send(comm, pkt, n);
 }
 #endif
-
-
-static inline int toint(int c)
-{
-	if (isalpha(c))
-		return c - (isupper(c) ? 'A' - 10 : 'a' - 10);
-	return c - '0';
-}
-
-static inline int tochar(char * hex)
-{
-	return (toint(hex[0]) << 4) + toint(hex[1]);
-}
-
 
 int rsp_write(struct dmon_comm * comm, const void * buf, int len)
 {
@@ -1177,7 +1185,7 @@ int rsp_cmd(struct dmon_comm * comm, char * pkt, int len)
 	DCC_LOG1(LOG_TRACE, "len=%d", len);
 
 	for (i = 0; i < (len / 2); i++) {
-		c = tochar(cp);
+		c = hex2char(cp);
 		cp += 2;
 		s[i] = c;
 	}
@@ -1207,7 +1215,7 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 	if (gdb->stopped) {
 		DCC_LOG1(LOG_TRACE, "last_signal=%d", gdb->last_signal);
 		*cp++ = 'S';
-		n = hex_int(cp, gdb->last_signal);
+		n = int2hex(cp, gdb->last_signal);
 		cp += n;
 	} else if (gdb->nonstop_mode) {
 		DCC_LOG(LOG_WARNING, "nonstop mode!!!");
@@ -1216,7 +1224,7 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 #if (THINKOS_ENABLE_CONSOLE)
 		uint8_t * buf;
 		if ((n = __console_tx_pipe_ptr(&buf)) > 0) {
-			n = hex_bin(cp, buf, n);
+			n = bin2hex(cp, buf, n);
 			cp += n;
 			__console_tx_pipe_commit(n);
 		}
@@ -1528,14 +1536,14 @@ static int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 	cp++;
 	size = strtoul(cp, NULL, 16);
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
 	if (size > max)
 		size = max;
 
-	if ((ret = target_mem_read(addr, buf, size)) < 0) {
+	if ((ret = mem_read(addr, buf, size)) < 0) {
 		DCC_LOG3(LOG_TRACE, "ERR: %d addr=%08x size=%d", ret, addr, size);
 
 		pkt[0] = '$';
@@ -1561,6 +1569,8 @@ static int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 		pkt[n++] = hextab[sum & 0xf];
 	}
 
+	pkt[n] = '\0';
+	DCC_LOGSTR(LOG_TRACE, "pkt='%s'", pkt);
 	return dmon_comm_send(comm, pkt, n);
 }
 

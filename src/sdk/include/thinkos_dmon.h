@@ -36,6 +36,8 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+#include <sys/usb-dev.h>
+
 enum dmon_ev_no {
 	DMON_COMM_RCV = 0,
 	DMON_COMM_EOT = 1,
@@ -120,6 +122,11 @@ int dmon_comm_connect(struct dmon_comm * comm);
 bool dmon_comm_isconnected(struct dmon_comm * comm);
 
 void dmon_comm_rxflowctrl(struct dmon_comm * comm, bool en);
+
+
+struct dmon_comm * usb_comm_init(const usb_dev_t * usb, 
+								 const uint8_t * const str[], 
+								 unsigned int strcnt);
 
 #ifdef __cplusplus
 }

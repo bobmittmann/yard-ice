@@ -23,11 +23,19 @@ include ../../mk/config.mk
 
 LIB_STATIC = thinkos
 
-CFILES = thinkos.c thinkos_core.c thinkos_mutex.c thinkos_cond.c \
-		 thinkos_semaphore.c thinkos_event.c thinkos_svc.c thinkos_irq.c \
-		 thinkos_flag.c thinkos_except.c thinkos_util.c thinkos_debug.c \
-		 thinkos_type.c thinkos_sleep.c thinkos_break.c thinkos_pause.c \
-		 thinkos_nmi.c thinkos_dmon.c thinkos_console.c
+DMON_CFILES = thinkos_dmon.c usb_comm.c
+MISC_CFILES = thinkos_util.c thinkos_type.c 
+CONSOLE_CFILES = thinkos_console.c
+
+CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c \
+		 thinkos_thread.c thinkos_mutex.c thinkos_cond.c \
+		 thinkos_semaphore.c thinkos_event.c thinkos_irq.c \
+		 thinkos_flag.c thinkos_except.c thinkos_debug.c \
+		 thinkos_sleep.c thinkos_break.c thinkos_pause.c \
+		 thinkos_exit.c thinkos_join.c thinkos_cancel.c \
+		 $(addprefix misc/,$(MISC_CFILES)) \
+		 $(addprefix dmon/,$(DMON_CFILES)) \
+		 $(addprefix console/,$(CONSOLE_CFILES))
 
 include ../../mk/lib.mk
 

@@ -34,8 +34,6 @@
 
 #include <sys/stm32f.h>
 #include <sys/serial.h>
-#include <sys/shell.h>
-#include <sys/tty.h>
 #include <thinkos.h>
 #include <sys/usb-cdc.h>
 
@@ -49,19 +47,6 @@
 const char * version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
-
-const char * shell_prompt(void)
-{
-	return "[ThinkOS]$ ";
-}
-
-void shell_greeting(FILE * f) 
-{
-	fprintf(f, "\n%s", version_str);
-	fprintf(f, "\n%s\n\n", copyright_str);
-}
-
-extern const struct shell_cmd shell_cmd_tab[];
 
 void io_init(void)
 {
@@ -78,17 +63,6 @@ void io_init(void)
 	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART5_RX, GPIO_AF8);
 }
-
-FILE * usb_tty_open(usb_cdc_class_t * cdc)
-{
-	struct tty_dev * tty;
-	FILE * f_raw;
-
-	f_raw = usb_cdc_fopen(cdc);
-	tty = tty_attach(f_raw);
-	return tty_fopen(tty);
-}
-
 
 int main(int argc, char ** argv)
 {
@@ -111,12 +85,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
 	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
 		
-	term2  = usb_tty_open(usb_cdc_init(&stm32f_otg_fs_dev, 
-									   cdc_acm_def_str, 
-									   cdc_acm_def_strcnt));
-
 	for (;;) {
-		shell(term2, shell_prompt, shell_greeting, shell_cmd_tab);
 	}
 
 	return 0;

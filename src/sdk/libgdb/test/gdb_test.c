@@ -317,13 +317,13 @@ int console_test_task(void * arg)
 	tty = tty_attach(f_raw);
 	f = tty_fopen(tty);
 
+#if 0
 	thinkos_sleep(5000);
 
 	DCC_LOG(LOG_TRACE, "=================================================");
 
 	console_file_recv();
 
-#if 0
 	console_write(NULL, 
 				  "| 0123456789abcdefg | 0123456789ABCDEFG |" 
 				  " 0123456789abcdefg | 0123456789ABCDEF |"

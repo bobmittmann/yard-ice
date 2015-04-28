@@ -22,17 +22,16 @@
 
 PROG = tboot
 
-CFILES = boot.c console.c 
+CFILES = boot.c 
 
 SDK = ../sdk
 TOOLS = ../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty $(SDK)/libcrc \
-		  $(SDK)/libshell 
+		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libcrc
 		  
-LIBS = cm3 stm32f util thinkos c ice-comm crc drv cdc-acm tty shell gcc
+LIBS = cm3 stm32f util thinkos c ice-comm drv cdc-acm gcc crc
 
 INCPATH = $(SDK)/include 
 

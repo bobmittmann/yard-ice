@@ -19,6 +19,8 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #define __THINKOS_DMON__
@@ -26,6 +28,8 @@
 #include <thinkos.h>
 
 #include <sys/param.h>
+
+#if THINKOS_ENABLE_CONSOLE
 
 #define CONSOLE_PIPE_LEN 64
 
@@ -387,4 +391,5 @@ void thinkos_console_init(void)
 	thinkos_console_rt.rx_pipe.tail = 0;
 }
 
+#endif /* THINKOS_ENABLE_CONSOLE */
 

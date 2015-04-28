@@ -348,7 +348,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		return -1;
 	}
 
-	DCC_LOG3(LOG_TRACE, "ep_id=%d addr=%d mxpktsz=%d", 
+	DCC_LOG3(LOG_INFO, "ep_id=%d addr=%d mxpktsz=%d", 
 			 ep_id, info->addr & 0x7f, mxpktsz);
 
 	ep = &drv->ep[ep_id];
@@ -718,7 +718,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_TRACE, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
 		/* prepare fifo to transmit */
 		if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");

@@ -19,141 +19,12 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #include <thinkos.h>
 #include <sys/delay.h>
-
-#if THINKOS_ENABLE_JOIN
-void thinkos_join_svc(int32_t * arg)
-{
-	int self = thinkos_rt.active;
-	unsigned int th = arg[0];
-	unsigned int wq;
-
-#if THINKOS_ENABLE_ARG_CHECK
-	if (th >= THINKOS_THREADS_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a thread!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_THREAD_ALLOC
-	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-#if THINKOS_ENABLE_CANCEL
-	/* remove thread from the canceled wait queue */
-	if (__bit_mem_rd(&thinkos_rt.wq_canceled, th)) {
-		__bit_mem_wr(&thinkos_rt.wq_canceled, th, 0);  
-		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
-	}
-#endif /* THINKOS_ENABLE_CANCEL */
-
-	/* insert the current thread (self) into the joining thread wait queue */
-	wq = __wq_idx(&thinkos_rt.wq_join[th]);
-	__thinkos_wq_insert(wq, self);
-
-	/* wait for event */
-	__thinkos_wait(self);
-
-	/* set the return to ERROR as a default value. The
-	   exit function of the joining thread will set this to the 
-	   appropriate return code */
-	arg[0] = -1;
-}
-#endif
-
-#if THINKOS_ENABLE_CANCEL
-void thinkos_cancel_svc(int32_t * arg)
-{
-	unsigned int th = arg[0];
-	int code = arg[1];
-	unsigned int wq;
-	int stat;
-
-#if THINKOS_ENABLE_ARG_CHECK
-	if (th >= THINKOS_THREADS_MAX) {
-		DCC_LOG1(LOG_ERROR, "invalid thread %d!", th);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_THREAD_ALLOC
-	if (__bit_mem_rd(thinkos_rt.th_alloc, th) == 0) {
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-#if (THINKOS_ENABLE_THREAD_STAT == 0)
-#error "thinkos_cancel() depends on THINKOS_ENABLE_THREAD_STAT"	
-#endif
-	stat = thinkos_rt.th_stat[th];
-	/* remove from other wait queue including wq_ready */
-	__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], th, 0);
-
-#if THINKOS_ENABLE_JOIN
-	/* insert into the canceled wait queue and wait for a join call */ 
-	wq = __wq_idx(&thinkos_rt.wq_canceled);
-#else /* THINKOS_ENABLE_JOIN */
-	/* if join is not enabled insert into the ready queue */
-	wq = __wq_idx(&thinkos_rt.wq_ready);
-#endif /* THINKOS_ENABLE_JOIN */
-
-	__thinkos_wq_insert(wq, th);
-
-#if THINKOS_ENABLE_TIMESHARE
-	/* possibly remove from the time share wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0); 
-#endif
-
-#if THINKOS_ENABLE_CLOCK
-	/* possibly remove from the time wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
-#endif
-
-	DCC_LOG3(LOG_TRACE, "<%d> cancel %d, with code %d!", 
-			 thinkos_rt.active, th, code); 
-
-	thinkos_rt.ctx[th]->pc = (uint32_t)thinkos_thread_exit;
-	thinkos_rt.ctx[th]->r0 = code;
-	arg[0] = 0;
-}
-#endif
-
-
-#if THINKOS_ENABLE_EXIT
-void thinkos_exit_svc(int32_t * arg)
-{
-	int self = thinkos_rt.active;
-	int code = arg[0];
-	unsigned int wq;
-
-#if THINKOS_ENABLE_JOIN
-	/* insert into the canceled wait queue and wait for a join call */ 
-	wq = __wq_idx(&thinkos_rt.wq_canceled);
-#else /* THINKOS_ENABLE_JOIN */
-	/* if join is not enabled insert into the ready queue */
-	wq = __wq_idx(&thinkos_rt.wq_ready);
-#endif /* THINKOS_ENABLE_JOIN */
-
-	__thinkos_wq_insert(wq, self);
-
-	DCC_LOG2(LOG_TRACE, "<%d> exit with code %d!", self, code); 
-
-	/* adjust PC */
-	arg[6] = (uint32_t)thinkos_thread_exit;
-	/* set the return code at R0 */
-	arg[0] = code;
-
-	__thinkos_defer_sched();
-}
-#endif
 
 /* initialize a thread context */
 void thinkos_thread_create_svc(int32_t * arg)
@@ -207,30 +78,16 @@ void thinkos_thread_create_svc(int32_t * arg)
 			 init->stack_ptr, sp, init->opt.stack_size);
 
 	sp -= sizeof(struct thinkos_context);
-
-	DCC_LOG1(LOG_TRACE, "sp=%08x", sp);
+	DCC_LOG1(LOG_INFO, "sp=%08x", sp);
 
 	ctx = (struct thinkos_context *)sp;
-
-//	ctx->ret = CM3_EXC_RET_THREAD_PSP;
+	__thinkos_memset32(ctx, 0, sizeof(struct thinkos_context));
 	ctx->r0 = (uint32_t)init->arg;
-	ctx->r1 = 0;
-	ctx->r2 = 0;
-	ctx->r3 = 0;
-	ctx->r4 = 0;
-	ctx->r5 = 0;
-	ctx->r6 = 0;
-	ctx->r7 = 0;
-	ctx->r8 = 0;
-	ctx->r9 = 0;
-	ctx->r10 = 0;
-	ctx->r11 = 0;
-	ctx->r12 = 0;
 	ctx->lr = (uint32_t)thinkos_thread_exit;
 	ctx->pc = (uint32_t)init->task;
 	ctx->xpsr = 0x01000000;
-
 	thinkos_rt.ctx[th] = ctx;
+
 
 #if THINKOS_ENABLE_THREAD_INFO
 	thinkos_rt.th_inf[th] = init->inf;
@@ -261,7 +118,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	}
 
 #if THINKOS_ENABLE_TIMESHARE
-	DCC_LOG5(LOG_TRACE, "<%d> pri=%d/%d task=%08x sp=%08x", 
+	DCC_LOG5(LOG_INFO, "<%d> pri=%d/%d task=%08x sp=%08x", 
 			 th, thinkos_rt.sched_pri[th], 
 			 thinkos_rt.sched_limit, init->task, ctx);
 #endif

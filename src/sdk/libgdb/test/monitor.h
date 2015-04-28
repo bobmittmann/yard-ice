@@ -31,10 +31,6 @@
 extern "C" {
 #endif
 
-struct usb_cdc_class * usb_mon_init(const usb_dev_t * usb, 
-									const uint8_t * const str[], 
-									unsigned int strcnt);
-
 void monitor_init(void);
 
 

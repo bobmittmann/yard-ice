@@ -32,3 +32,4 @@ tools/src/dcclog/config.h.in
 /src/sdk/libhttpd/test/log.txt
 log.txt
 *.i
+src/sdk/libgdb/test/.settings/language.settings.xml

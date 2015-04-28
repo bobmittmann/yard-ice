@@ -20,8 +20,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "cdc-acm.h"
-
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
 #include <sys/param.h>
@@ -41,6 +39,150 @@
 #error "cdc-acm_dev.c depends on STM32_ENABLE_USB_DEVICE"
 #endif 
 
+#define EP0_ADDR 0
+#define EP0_MAX_PKT_SIZE 64
+
+#define EP_OUT_ADDR 1
+#define EP_IN_ADDR  2
+#define EP_INT_ADDR 3
+
+#ifndef CDC_EP_OUT_MAX_PKT_SIZE
+#define CDC_EP_OUT_MAX_PKT_SIZE 64
+#endif
+
+#ifndef CDC_EP_IN_MAX_PKT_SIZE 
+#define CDC_EP_IN_MAX_PKT_SIZE 64
+#endif
+
+#ifndef CDC_EP_INT_MAX_PKT_SIZE 
+#define CDC_EP_INT_MAX_PKT_SIZE 64
+#endif
+
+struct cdc_acm_descriptor_config {
+	struct usb_descriptor_configuration cfg;
+	struct usb_descriptor_interface comm_if;
+	struct cdc_header_descriptor hdr;
+	struct cdc_call_management_descriptor cm;
+	struct cdc_abstract_control_management_descriptor acm;
+	struct cdc_union_1slave_descriptor un;
+	struct usb_descriptor_endpoint ep_int;
+	struct usb_descriptor_interface if_data;
+	struct usb_descriptor_endpoint ep_out;
+	struct usb_descriptor_endpoint ep_in;
+} __attribute__((__packed__));
+
+struct usb_str_entry {
+	const uint8_t * str;
+	uint8_t len;
+};
+
+const struct usb_descriptor_device cdc_acm_desc_dev;
+const struct cdc_acm_descriptor_config cdc_acm_desc_cfg;
+extern const uint8_t * const cdc_acm_str[];
+
+#define CDC_STOP_BITS_1   (0 << 0)
+#define CDC_STOP_BITS_1_5 (1 << 0)
+#define CDC_STOP_BITS_2   (2 << 0)
+#define CDC_STOP_BITS_ERR (3 << 0)
+#define CDC_CHAR_FORMAT_SET(VAL)  (((VAL) & 0x3) << 0)
+#define CDC_CHAR_FORMAT_GET(VAL)  (((VAL) >> 0) & 0x3)
+#define CDC_STOP_BITS_MAX 2
+
+#define CDC_PARITY_NONE   (0 << 2)
+#define CDC_PARITY_ODD    (1 << 2)
+#define CDC_PARITY_EVEN   (2 << 2)
+#define CDC_PARITY_MARK   (3 << 2)
+#define CDC_PARITY_SPACE  (4 << 2)
+#define CDC_PARITY_ERR    (7 << 2)
+#define CDC_PARITY_SET(VAL)  (((VAL) & 0x7) << 2)
+#define CDC_PARITY_GET(VAL)  (((VAL) >> 2) & 0x7)
+#define CDC_PARITY_MAX    4
+
+#define CDC_DATA_BITS_5   (0 << 5)
+#define CDC_DATA_BITS_6   (1 << 5)
+#define CDC_DATA_BITS_7   (2 << 5)
+#define CDC_DATA_BITS_8   (3 << 5)
+#define CDC_DATA_BITS_16  (4 << 5)
+#define CDC_DATA_BITS_ERR (7 << 5)
+#define CDC_DATA_BITS_SET(VAL)  data_bit_lut[(VAL) & 0x1f]
+#define CDC_DATA_BITS_GET(VAL)  data_bit_rev_lut[((VAL) >> 5) & 0x7]
+#define CDC_DATA_BITS_MAX 16
+
+
+#define LANG_STR_SZ              4
+/* LangID = 0x0409: U.S. English */
+const uint8_t cdc_acm_lang_str[LANG_STR_SZ] = {
+	LANG_STR_SZ, USB_DESCRIPTOR_STRING,
+	0x09, 0x04
+};
+
+#define VENDOR_STR_SZ            38
+const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
+	VENDOR_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Manufacturer: "STMicroelectronics" */
+	'S', 0, 'T', 0, 'M', 0, 'i', 0, 'c', 0, 'r', 0, 'o', 0, 'e', 0, 'l', 0, 
+	'e', 0, 'c', 0, 't', 0, 'r', 0, 'o', 0, 'n', 0, 'i', 0, 'c', 0, 's', 0
+};
+
+
+#define PRODUCT_STR_SZ           44
+const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
+	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Product name: "STM32 Virtual ComPort" */
+	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 
+	't', 0, 'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0, 'o', 0, 'm', 0, 'P', 0, 
+	'o', 0, 'r', 0, 't', 0,
+};
+
+
+#define SERIAL_STR_SZ            26
+uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
+	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Serial number: "0000000000001" */
+	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, 
+	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
+};
+
+#define INTERFACE_STR_SZ         16
+const uint8_t cdc_acm_interface_str[INTERFACE_STR_SZ] = {
+	INTERFACE_STR_SZ, USB_DESCRIPTOR_STRING,
+	/* Interface 0: "ST VCOM" */
+	'S', 0, 'T', 0, ' ', 0, 'V', 0, 'C', 0, 'O', 0, 'M', 0
+};
+
+const uint8_t * const cdc_acm_def_str[] = {
+	cdc_acm_lang_str,
+	cdc_acm_vendor_str,
+	cdc_acm_product_str,
+	cdc_acm_serial_str,
+	cdc_acm_interface_str
+};
+
+const uint8_t cdc_acm_def_strcnt = sizeof(cdc_acm_def_str) / sizeof(uint8_t *);
+
+#if 0
+void usb_cdc_sn_set(uint64_t sn)
+{
+	char s[24];
+	char * cp;
+	int c;
+	int i;
+	int n;
+
+	DCC_LOG2(LOG_INFO, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
+
+	n = sprintf(s, "%llu", sn);
+	cp = s + n - 1;
+
+	for (i = (SERIAL_STR_SZ / 2) - 1; i >= 0; --i) {
+		if (cp < s)
+			break;
+		c = *cp--;
+		cdc_acm_serial_str[i * 2] = c;
+	}
+}
+#endif
+
 struct usb_cdc_acm {
 	/* modem bits */
 	volatile uint8_t status; /* modem status lines */
@@ -52,7 +194,6 @@ struct usb_cdc_acm {
 #define ACM_LC_SET        (1 << 0)
 #define ACM_USB_SUSPENDED (1 << 1)
 
-#define USB_CDC_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 #define CDC_CTR_BUF_LEN 16
 
 struct usb_cdc_acm_dev {
@@ -81,7 +222,6 @@ struct usb_cdc_acm_dev {
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
 
-#if 1
 void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
@@ -128,25 +268,6 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	DCC_LOG(LOG_INFO, "COMM_RCV!");
 	dmon_signal(DMON_COMM_RCV);
 }
-#endif
-
-#if 0
-void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
-{
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-
-	if (dev->rx_cnt != dev->rx_pos) {
-		if (dev->rx_flowctrl) {
-			DCC_LOG(LOG_WARNING, "RX paused!");
-			dev->rx_paused = true;
-			return;
-		} else {
-			DCC_LOG(LOG_WARNING, "overflow!");
-		}
-	}
-	dmon_signal(DMON_COMM_RCV);
-}
-#endif
 
 void usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
@@ -379,30 +500,6 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 	return len;
 }
 
-#if 0
-int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
-{
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
-	int ret;
-	int n;
-
-	do {
-		if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
-			/* get data from the rx buffer if not empty */
-			n = MIN(n, len);
-			__thinkos_memcpy(buf, &dev->rx_buf[dev->rx_pos], n);
-			dev->rx_pos += n;
-			if (dev->rx_cnt == dev->rx_pos)
-				dmon_clear(DMON_COMM_RCV);
-			return n;
-		}
-		DCC_LOG1(LOG_INFO, "n=%d!!!!", n);
-	} while ((ret = dmon_expect(DMON_COMM_RCV)) == 0);
-
-	return ret;
-}
-#endif
-
 int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
@@ -417,7 +514,7 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 		if ((n = cnt - pos) > 0) {
 			/* get data from the rx buffer if not empty */
 			n = MIN(n, len);
-			DCC_LOG3(LOG_INFO, "1. pos=%d cnt=%d n=%d .......", pos, cnt, n);
+			DCC_LOG3(LOG_TRACE, "1. pos=%d cnt=%d n=%d .......", pos, cnt, n);
 			__thinkos_memcpy(buf, &dev->rx_buf[pos], n);
 			pos += n;
 			if (cnt == pos) {
@@ -429,7 +526,7 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 					cnt = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 											  dev->rx_buf, 
 											  CDC_EP_IN_MAX_PKT_SIZE);
-					DCC_LOG2(LOG_INFO, "2. pos=%d cnt=%d unpaused!!!", 
+					DCC_LOG2(LOG_TRACE, "2. pos=%d cnt=%d unpaused!!!", 
 							 pos, cnt);
 					usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 				} 
@@ -446,7 +543,6 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 
 	return ret;
 }
-
 
 int dmon_comm_connect(struct dmon_comm * comm)
 {
@@ -510,9 +606,9 @@ const usb_class_events_t usb_mon_ev = {
 	.on_error = usb_mon_on_error
 };
 
-void * usb_mon_init(const usb_dev_t * usb, 
-					const uint8_t * const str[], 
-					unsigned int strcnt)
+struct dmon_comm * usb_comm_init(const usb_dev_t * usb, 
+								 const uint8_t * const str[], 
+								 unsigned int strcnt)
 {
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)dev;
@@ -529,6 +625,6 @@ void * usb_mon_init(const usb_dev_t * usb,
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
 	DCC_LOG1(LOG_INFO, "dev->acm.flags<-%0p", &dev->acm.flags);
 
-	return (void *)dev;
+	return (struct dmon_comm *)dev;
 }
 
