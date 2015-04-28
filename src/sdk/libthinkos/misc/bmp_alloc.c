@@ -21,39 +21,37 @@
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#include <thinkos.h>
 
-void thinkos_rt_snapshot_svc(int32_t * arg)
+#if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
+	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
+	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
+int __thinkos_bmp_alloc(uint32_t bmp[], int bits) 
 {
-	uint32_t * dst = (uint32_t *)arg[0];
-	uint32_t pri = cm3_primask_get();
-	uint32_t * src;
 	int i;
+	int j;
 
-	cm3_primask_set(1);
-#if THINKOS_ENABLE_PROFILING
-	{
-		int self = thinkos_rt.active;
-		uint32_t cyccnt = CM3_DWT->cyccnt;
-		int32_t delta = cyccnt - thinkos_rt.cycref;
-		/* update the reference */
-		thinkos_rt.cycref = cyccnt;
-		/* update thread's cycle counter */
-		thinkos_rt.cyccnt[self] += delta; 
+	for (i = 0; i < ((bits + 31) / 32); ++i) {
+		/* Look for an empty bit MSB first */
+		if ((j = __clz(__rbit(~(bmp[i])))) < 32) {
+			/* Mark as used */
+			__bit_mem_wr(&bmp[i], j, 1);  
+			return 32 * i + j;;
+		}
 	}
-#endif
-
-	src = (uint32_t *)&thinkos_rt;
-
-	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
-		dst[i] = src[i];
-
-#if THINKOS_ENABLE_PROFILING
-	/* Reset cycle counters */
-	for (i = 0; i < THINKOS_THREADS_MAX + 1; i++)
-		thinkos_rt.cyccnt[i] = 0; 
-#endif
-
-	cm3_primask_set(pri);
+	return -1;
 }
+#endif
+
+#if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
+	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
+	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
+void __thinkos_bmp_init(uint32_t bmp[], int bits) 
+{
+	int i;
+	for (i = 0; i < bits / 32; ++i)
+		bmp[i] = 0;
+	if (bits % 32)
+		bmp[i] = 0xffffffff << (bits % 32);
+}
+#endif
 

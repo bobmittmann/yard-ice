@@ -24,14 +24,10 @@
 	.syntax unified
 	.cpu cortex-m3
 
-	.section .vectors
-__vectors:
-	.global __vectors
-
-	.section .rom_vectors, "ax", %progbits
-__rom_vectors:
-	.global __rom_vectors
-	.type __rom_vectors, %object
+	/* ---------------------------------------------------------------------
+	 * Generate the vectors table 
+	 * --------------------------------------------------------------------- */
+.macro stm32f_vectors
 	.word	_stack
 	.word   _reset
 	.word   cm3_nmi_isr
@@ -214,7 +210,34 @@ __rom_vectors:
 	.word	stm32f_cryp_isr           /* 79 CRYP crypto */
 	.word	stm32f_hash_rng_isr       /* 80 Hash and Rng */
 #endif
+.endm
+
+
+	.section .vectors
+__vectors:
+	.global __vectors
+
+	/* ---------------------------------------------------------------------
+	 * vectors residing in FLASH 
+	 * --------------------------------------------------------------------- */
+	.section .rom_vectors, "ax", %progbits
+__rom_vectors:
+	.global __rom_vectors
+	.type __rom_vectors, %object
+	stm32f_vectors
 	.size   __rom_vectors, . - __rom_vectors
+
+#ifdef CM3_RAM_VECTORS
+	/* ---------------------------------------------------------------------
+	 * vectors residing in RAM 
+	 * --------------------------------------------------------------------- */
+	.section .ram_vectors, "ax", %progbits
+__ram_vectors:
+	.global __ram_vectors
+	.type __ram_vectors, %object
+	stm32f_vectors
+	.size   __ram_vectors, . - __ram_vectors
+#endif
 
 	.align  0
 	.thumb

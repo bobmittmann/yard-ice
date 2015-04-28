@@ -179,9 +179,6 @@ void stm32f_dmactl_init(struct stm32f_dmactl * ctl,
 						int strm_id);
 #endif
 
-#include <stdint.h>
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

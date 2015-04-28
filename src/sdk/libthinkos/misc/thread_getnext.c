@@ -19,41 +19,20 @@
  * http://www.gnu.org/
  */
 
+
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#include <thinkos.h>
 
-void thinkos_rt_snapshot_svc(int32_t * arg)
+int __thinkos_thread_getnext(int th)
 {
-	uint32_t * dst = (uint32_t *)arg[0];
-	uint32_t pri = cm3_primask_get();
-	uint32_t * src;
-	int i;
+	int idx;
 
-	cm3_primask_set(1);
-#if THINKOS_ENABLE_PROFILING
-	{
-		int self = thinkos_rt.active;
-		uint32_t cyccnt = CM3_DWT->cyccnt;
-		int32_t delta = cyccnt - thinkos_rt.cycref;
-		/* update the reference */
-		thinkos_rt.cycref = cyccnt;
-		/* update thread's cycle counter */
-		thinkos_rt.cyccnt[self] += delta; 
+	idx = (th < 0) ? 0 : th + 1;
+	
+	for (; idx < THINKOS_THREADS_MAX; ++idx) {
+		if (thinkos_rt.ctx[idx] != NULL)
+			return idx;
 	}
-#endif
 
-	src = (uint32_t *)&thinkos_rt;
-
-	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
-		dst[i] = src[i];
-
-#if THINKOS_ENABLE_PROFILING
-	/* Reset cycle counters */
-	for (i = 0; i < THINKOS_THREADS_MAX + 1; i++)
-		thinkos_rt.cyccnt[i] = 0; 
-#endif
-
-	cm3_primask_set(pri);
+	return -1;
 }
-

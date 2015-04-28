@@ -126,6 +126,22 @@ void dmon_comm_rxflowctrl(struct dmon_comm * comm, bool en);
 
 struct dmon_comm * usb_comm_init(const usb_dev_t * usb);
 
+void console_task(struct dmon_comm * comm);
+
+void monitor_task(struct dmon_comm * comm);
+
+int dmprintf(struct dmon_comm * comm, const char *fmt, ... );
+
+void dmon_print_thread(struct dmon_comm * comm, int id);
+
+void dmon_print_context(struct dmon_comm * comm, 
+						const struct thinkos_context * ctx, 
+						uint32_t sp);
+
+int dmon_print_osinfo(struct dmon_comm * comm);
+
+void dmon_print_alloc(struct dmon_comm * comm);
+
 #ifdef __cplusplus
 }
 #endif

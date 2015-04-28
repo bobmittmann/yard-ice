@@ -37,7 +37,7 @@ _Pragma ("GCC optimize (\"O2\")")
 #if (THINKOS_ENABLE_MONITOR)
 
 struct thinkos_dmon thinkos_dmon_rt;
-uint32_t thinkos_dmon_stack[384];
+uint32_t thinkos_dmon_stack[256];
 
 void dmon_context_swap(void * ctx); 
 
@@ -351,9 +351,10 @@ void thinkos_suspend_all(void)
 #if 1
 void cm3_debug_mon_isr(void)
 {
-	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t sigset = thinkos_dmon_rt.events;
 	uint32_t sigmsk = thinkos_dmon_rt.mask;
+#if (THINKOS_ENABLE_DEBUG_STEP)
+	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t demcr;
 
 	demcr = dcb->demcr;
@@ -362,6 +363,7 @@ void cm3_debug_mon_isr(void)
 			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
 			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
+#endif
 
 #if 0
 	if (demcr & DCB_DEMCR_MON_REQ) {

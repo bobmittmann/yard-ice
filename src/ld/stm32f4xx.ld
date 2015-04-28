@@ -181,6 +181,7 @@ SECTIONS
 		. = ALIGN(4);
 		/* create a global symbol marking the start of the .data section  */
 		PROVIDE (__data_start = . );
+		KEEP (*(.ram_vectors))
 		/* all .data sections  */
 		*(.data .data*)
 		/* define a global symbol marking the end of the .data section  */

@@ -23,7 +23,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = gdb
 
-CFILES = gdb-rsp.c 
+CFILES = gdb-rsp.c utils.c
 
 override INCPATH += ../include 
 

@@ -104,7 +104,7 @@ struct thinkos_thread {
 #endif
 
 #ifndef THINKOS_ENABLE_IRQ_SVC_CALL
-#define THINKOS_ENABLE_IRQ_SVC_CALL 1
+#define THINKOS_ENABLE_IRQ_SVC_CALL 0
 #endif
 
 #ifndef THINKOS_THREADS_MAX 
@@ -878,6 +878,8 @@ int __thinkos_thread_getnext(int th);
 bool __thinkos_suspended(void);
 
 void __thinkos_memcpy(void * __dst, void * __src,  unsigned int __len);
+
+void __thinkos_memcpy32(void * __dst, void * __src,  unsigned int __len);
 
 void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
 

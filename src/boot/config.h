@@ -60,14 +60,14 @@
 #define THINKOS_EVENT_MAX 8
 #define THINKOS_ENABLE_EVENT_ALLOC 1
 
-#define THINKOS_FLAG_MAX 64
+#define THINKOS_FLAG_MAX 32
 #define THINKOS_ENABLE_FLAG_ALLOC 1
 #define THINKOS_ENABLE_FLAG_SYSCALL 1
 
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
-#define THINKOS_ENABLE_IRQ_SVC_CALL 1
+#define THINKOS_ENABLE_IRQ_SVC_CALL 0
 
 #define THINKOS_ENABLE_ARG_CHECK 1
 
@@ -77,7 +77,7 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE 384
 
-#define THINKOS_STDERR_FAULT_DUMP 1
+#define THINKOS_STDERR_FAULT_DUMP 0
 
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
@@ -87,6 +87,14 @@
 
 #define THINKOS_ENABLE_PROFILING 1
 
+#define THINKOS_ENABLE_MONITOR 1
+
+#define THINKOS_ENABLE_CONSOLE 1
+
+#define THINKOS_ENABLE_DEBUG_STEP 1
+
+#define THINKOS_ENABLE_DEBUG_FAULT 1
+
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
@@ -94,31 +102,12 @@
 #define STM32_ENABLE_USB_DEVICE 1
 
 /* -------------------------------------------------------------------------
-   TTY
-   -------------------------------------------------------------------------- */
-#define TTY_DEV_MAX 1
-#define TTY_INBUF_LEN 16
-
-/* -------------------------------------------------------------------------
-   File descriptors
-   -------------------------------------------------------------------------- */
-#define FILE_DEV_MAX 1
-
-/* -------------------------------------------------------------------------
-   Other configuration
-   -------------------------------------------------------------------------- */
-
-#define SERIAL_TX_FIFO_LEN 32
-#define SERIAL_RX_FIFO_LEN 512
-#define SERIAL_RX_TRIG_LVL 4
-
-/* -------------------------------------------------------------------------
    Printf
    -------------------------------------------------------------------------- */
 #define PRINTF_ENABLE_LEFT_ALIGN 0
 #define PRINTF_ENABLE_LARGE_PADDING 0
 #define PRINTF_ENABLE_FAST 0
-#define PRINTF_ENABLE_UNSIGNED 0
+#define PRINTF_ENABLE_UNSIGNED 1
 #define PRINTF_ENABLE_POINTER 0
 #define PRINTF_ENABLE_LONG 0
 #define PRINTF_ENABLE_ARG_WIDTH 0

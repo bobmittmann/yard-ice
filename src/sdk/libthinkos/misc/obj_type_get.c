@@ -23,37 +23,13 @@
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
-void thinkos_rt_snapshot_svc(int32_t * arg)
+extern const uint8_t thinkos_obj_type_lut[];
+
+int thinkos_obj_type_get(unsigned int oid)
 {
-	uint32_t * dst = (uint32_t *)arg[0];
-	uint32_t pri = cm3_primask_get();
-	uint32_t * src;
-	int i;
+	if (oid >= THINKOS_WQ_LST_END)
+		return THINKOS_EINVAL;
 
-	cm3_primask_set(1);
-#if THINKOS_ENABLE_PROFILING
-	{
-		int self = thinkos_rt.active;
-		uint32_t cyccnt = CM3_DWT->cyccnt;
-		int32_t delta = cyccnt - thinkos_rt.cycref;
-		/* update the reference */
-		thinkos_rt.cycref = cyccnt;
-		/* update thread's cycle counter */
-		thinkos_rt.cyccnt[self] += delta; 
-	}
-#endif
-
-	src = (uint32_t *)&thinkos_rt;
-
-	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
-		dst[i] = src[i];
-
-#if THINKOS_ENABLE_PROFILING
-	/* Reset cycle counters */
-	for (i = 0; i < THINKOS_THREADS_MAX + 1; i++)
-		thinkos_rt.cyccnt[i] = 0; 
-#endif
-
-	cm3_primask_set(pri);
+	return thinkos_obj_type_lut[oid];
 }
 

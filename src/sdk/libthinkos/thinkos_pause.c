@@ -190,7 +190,7 @@ static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw)
 }
 #endif
 
-const void * resume_ltu[] = {
+static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_READY] = ready_resume,
 #if THINKOS_ENABLE_TIMESHARE
 	[THINKOS_OBJ_TMSHARE] = tmshare_resume,
@@ -248,7 +248,7 @@ bool __thinkos_thread_resume(unsigned int th)
 	DCC_LOG3(LOG_TRACE, "thread=%d wq=%d clk=%d", th, wq, tmw);
 
 	type = thinkos_obj_type_lut[wq];
-	resume = (void (*)(unsigned int, unsigned int, bool))resume_ltu[type];
+	resume = thread_resume_lut[type];
 	resume(th, wq, tmw);
 
 	return true;

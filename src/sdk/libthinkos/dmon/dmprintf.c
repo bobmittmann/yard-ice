@@ -1,37 +1,30 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ * File:	 usb-cdc.c
+ * Author:   Robinson Mittmann (bobmittmann@gmail.com)
+ * Target:
+ * Comment:
+ * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
  *
- * This file is part of the YARD-ICE.
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 3.0 of the License, or (at your option) any later version.
- * 
- * This library is distributed in the hope that it will be useful,
+ * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- * 
- * You can receive a copy of the GNU Lesser General Public License from 
- * http://www.gnu.org/
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-/** 
- * @file vfprintf.c
- * @brief YARD-ICE libc
- * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
-
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/file.h>
-#include <stdlib.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
+#include <thinkos.h>
+#include <sys/param.h>
 #include <sys/dcclog.h>
 
 #ifndef PRINTF_ENABLE_LEFT_ALIGN
@@ -39,7 +32,7 @@
 #endif
 
 #ifndef PRINTF_ENABLE_LARGE_PADDING
-#define PRINTF_ENABLE_LARGE_PADDING 1
+#define PRINTF_ENABLE_LARGE_PADDING 0
 #endif
 
 #ifndef PRINTF_ENABLE_FAST
@@ -51,15 +44,15 @@
 #endif
 
 #ifndef PRINTF_ENABLE_POINTER
-#define PRINTF_ENABLE_POINTER 1
+#define PRINTF_ENABLE_POINTER 0
 #endif
 
 #ifndef PRINTF_ENABLE_LONG
-#define PRINTF_ENABLE_LONG 1
+#define PRINTF_ENABLE_LONG 0
 #endif
 
 #ifndef PRINTF_ENABLE_ARG_WIDTH
-#define PRINTF_ENABLE_ARG_WIDTH 1
+#define PRINTF_ENABLE_ARG_WIDTH 0
 #endif
 
 int uint2dec(char * s, unsigned int val);
@@ -109,9 +102,11 @@ const char __blanks[] = {
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ' };
 
-int vfprintf(struct file * f, const char * fmt, va_list ap)
+
+int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 {
 	char buf[BUF_LEN];
+	va_list ap;
 	int flags;
 	int cnt;
 	int c;
@@ -129,6 +124,8 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 #endif
 	} val;
 
+	va_start(ap, fmt);
+
 	n = 0;
 	w = 0;
 	cnt = 0;
@@ -142,7 +139,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 				flags = PERCENT;
 #if (PRINTF_ENABLE_FAST)
 				if (n) {
-					n = f->op->write(f->data, cp, n);
+					n = dmon_comm_send(comm, cp, n);
 					cp = (char *)fmt;
 					cnt += n;;
 					n = 0;
@@ -155,7 +152,7 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 			n++;
 #else
 			buf[0] = c;
-			cnt += f->op->write(f->data, buf, 1);
+			cnt += dmon_comm_send(comm, buf, 1);
 #endif
 			continue;
 		}
@@ -300,24 +297,24 @@ print_buf:
 			if (flags & ZERO) {
 				if (flags & SIGN) {
 					flags &= ~SIGN;
-					cnt += f->op->write(f->data, buf, 1);
+					cnt += dmon_comm_send(comm, buf, 1);
 				}
-				r = f->op->write(f->data, __zeros, w - n);
+				r = dmon_comm_send(comm, __zeros, w - n);
 			} else {
-				r = f->op->write(f->data, __blanks, w - n);
+				r = dmon_comm_send(comm, __blanks, w - n);
 			}
 			cnt += r;
 		}
 
 		if (flags & SIGN) {
-			cnt += f->op->write(f->data, buf, 1);
+			cnt += dmon_comm_send(comm, buf, 1);
 		}
 
-		cnt += f->op->write(f->data, cp, n);
+		cnt += dmon_comm_send(comm, cp, n);
 
 #if (PRINTF_ENABLE_LEFT_ALIGN)
 		if ((flags & LEFT) && (w > n)) {
-			r = f->op->write(f->data, __blanks, w - n);
+			r = dmon_comm_send(comm, __blanks, w - n);
 			cnt += r;
 		}
 #endif
@@ -333,11 +330,12 @@ print_buf:
 
 #if (PRINTF_ENABLE_FAST)
 	if (n) {
-		r = f->op->write(f->data, cp, n);
+		r = dmon_comm_send(comm, cp, n);
 		cnt+= r;;
 	}
 #endif
 
+	va_end(ap);
+
 	return cnt;
 }
-

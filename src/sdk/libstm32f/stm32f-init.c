@@ -148,9 +148,6 @@ void _init(void)
 	int again;
 #ifdef CM3_RAM_VECTORS
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
-
-	/* remap the SRAM to 0x00000000  */
-	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
 #endif
 
 	/* Make sure we are using the internal oscillator */
@@ -254,6 +251,12 @@ void _init(void)
 	/* switch to pll oscillator */
 	/* select PLL as MCO output */
 	rcc->cfgr = RCC_MCO_PLL | (cfg & ~RCC_SW) | RCC_SW_PLL;
+
+#ifdef CM3_RAM_VECTORS
+	/* remap the SRAM to 0x00000000  */
+	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
+#endif
+
 }
 
 #endif
@@ -279,9 +282,6 @@ void _init(void)
 	int again;
 #ifdef CM3_RAM_VECTORS
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
-
-	/* remap the SRAM to 0x00000000  */
-	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
 #endif
 
 	/* Make sure we are using the internal oscillator */
@@ -401,6 +401,12 @@ void _init(void)
 
 	/* switch to pll oscillator */
 	rcc->cfgr = (cfg & ~RCC_SW) | RCC_SW_PLL;
+
+#ifdef CM3_RAM_VECTORS
+	/* remap the SRAM to 0x00000000  */
+	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
+#endif
+
 }
 
 #endif

@@ -192,6 +192,7 @@ SECTIONS
 	.data :
 	{
 		. = ALIGN(4);
+		KEEP (*(.ram_vectors))
 		/* create a global symbol marking the start of the .data section  */
 		PROVIDE (__data_start = . );
 		/* all .data sections  */

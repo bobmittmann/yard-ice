@@ -28,16 +28,16 @@ SDK = ../sdk
 TOOLS = ../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libcrc
-		  
-LIBS = cm3 stm32f util thinkos c ice-comm drv cdc-acm gcc crc
+		  $(SDK)/libthinkos $(SDK)/libice-comm \
+		  $(SDK)/libdrv $(SDK)/libgdb
+
+LIBS = cm3 stm32f util thinkos ice-comm drv gdb gcc 
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H
-CFLAGS = -g -O3 -Wall
-#CFLAGS = -g -O2 -Wno-unused-but-set-variable -Wno-unused-value -Wno-unused
+CDEFS = CONFIG_H CM3_RAM_VECTORS
+
+CFLAGS = -g -O2 -Wall
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407

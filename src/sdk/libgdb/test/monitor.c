@@ -387,8 +387,6 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	}
 }
 
-void console_task(struct dmon_comm * comm);
-
 void monitor_init(void)
 {
 	struct dmon_comm * comm;

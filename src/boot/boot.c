@@ -33,20 +33,22 @@
 #include <stdbool.h>
 
 #include <sys/stm32f.h>
-#include <sys/serial.h>
+
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 #include <thinkos.h>
-#include <sys/usb-cdc.h>
 
 #include <sys/dcclog.h>
+#include <gdb.h>
 
 #include "board.h"
 
 #define VERSION_NUM "0.1"
 #define VERSION_DATE "Mar, 2015"
 
-const char * version_str = "ThinkOS Boot Loader " \
+const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
-const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
+const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void io_init(void)
 {
@@ -64,28 +66,40 @@ void io_init(void)
 	stm32_gpio_af(UART5_RX, GPIO_AF8);
 }
 
+void monitor_init(void)
+{
+	struct dmon_comm * comm;
+	
+	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
+
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+	thinkos_console_init();
+
+	gdb_init(comm, console_task);
+}
+
+
 int main(int argc, char ** argv)
 {
-	FILE * term2;
-
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
 	cm3_udelay_calibrate();
-
-	DCC_LOG(LOG_TRACE, "1. stm32f_nvram_env_init().");
-	stm32f_nvram_env_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(31));
 
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
-
-	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
-	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
 		
+	DCC_LOG(LOG_TRACE, "4. monitor_init()");
+	monitor_init();
+
 	for (;;) {
+		DCC_LOG(LOG_TRACE, "5. tick!");
+		thinkos_sleep(3000);
+		thinkos_console_write("Hello world\r\n", 13);
 	}
 
 	return 0;
