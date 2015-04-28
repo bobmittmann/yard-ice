@@ -41,13 +41,12 @@ enum dmon_ev_no {
 	DMON_COMM_EOT = 1,
 	DMON_COMM_CTL = 2,
 
-	DMON_PIPE_RD  = 3,
-	DMON_PIPE_WR  = 4,
+	DMON_RX_PIPE  = 3,
+	DMON_TX_PIPE  = 4,
 	DMON_ALARM    = 5,
-	DMON_STEP     = 6,
 
-
-	DMON_THREAD_FAULT = 16,
+	DMON_THREAD_STEP  = 8,
+	DMON_THREAD_FAULT = 12,
 	DMON_IDLE     = 29,
 	DMON_EXCEPT   = 30,
 	DMON_RESET    = 31
@@ -87,15 +86,17 @@ void dmon_exec(void (* task)(struct dmon_comm *));
 
 
 
-void dmon_unmask(int event);
+void dmon_unmask(int sig);
 
-void dmon_mask(int event);
+void dmon_mask(int sig);
 
-void dmon_clear(int event);
+void dmon_clear(int sig);
 
 uint32_t dmon_select(uint32_t watch);
 
-int dmon_wait(int event);
+int dmon_wait(int sig);
+
+int dmon_expect(int sig);
 
 int dmon_sleep(unsigned int ms);
 
@@ -106,7 +107,7 @@ void dmon_alarm_stop(void);
 int dmon_wait_idle(void);
 
 
-int dmon_thread_step(unsigned int id, unsigned int cnt);
+int dmon_thread_step(unsigned int id, bool block);
 
 
 int dmon_comm_send(struct dmon_comm * comm, 
@@ -117,6 +118,8 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len);
 int dmon_comm_connect(struct dmon_comm * comm);
 
 bool dmon_comm_isconnected(struct dmon_comm * comm);
+
+void dmon_comm_rxflowctrl(struct dmon_comm * comm, bool en);
 
 #ifdef __cplusplus
 }

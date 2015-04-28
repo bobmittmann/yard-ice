@@ -53,7 +53,16 @@ static void mutex_resume(unsigned int th, unsigned int wq, bool tmw)
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = th;
+		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+		/* set the thread's return value */
+		thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+		/* update status */
+		thinkos_rt.th_stat[th] = 0;
+#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 		__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
@@ -74,10 +83,21 @@ static void semaphore_resume(unsigned int th, unsigned int wq, bool tmw)
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
+		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+		/* set the thread's return value */
+		thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+		/* update status */
+		thinkos_rt.th_stat[th] = 0;
+#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+#if THINKOS_ENABLE_CLOCK
 		__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
+#endif
 	}
 }
 #endif
@@ -91,7 +111,16 @@ static void evset_resume(unsigned int th, unsigned int wq, bool tmw)
 	if ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & 
 						   thinkos_rt.ev[no].mask))) < 32) {
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+		/* set the thread's return value */
+		thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+		/* update status */
+		thinkos_rt.th_stat[th] = 0;
+#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 		__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
@@ -106,16 +135,34 @@ static void flag_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_ENABLE_FLAG_LOCK
 	if ((__bit_mem_rd(thinkos_rt.flag.sig, idx)) && 
 		(!__bit_mem_rd(thinkos_rt.flag.lock, idx))) {
-			/* lock the flag */
-			__bit_mem_wr(thinkos_rt.flag.lock, idx, 1);
-			/* clear the signal */
-			__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
-			__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+		/* lock the flag */
+		__bit_mem_wr(thinkos_rt.flag.lock, idx, 1);
+		/* clear the signal */
+		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+		/* insert the thread into ready queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+		/* set the thread's return value */
+		thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+		/* update status */
+		thinkos_rt.th_stat[th] = 0;
+#endif
 #else
 	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
 		/* clear the signal */
 		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+		/* set the thread's return value */
+		thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+		/* update status */
+		thinkos_rt.th_stat[th] = 0;
+#endif
 #endif
 	} else { 
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
@@ -175,6 +222,8 @@ bool __thinkos_thread_resume(unsigned int th)
 	/* remove from the paused queue */
 	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
 
+	/* remove from the paused queue */
+	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
 	/* reinsert the thread into a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
 	wq = stat >> 1;
@@ -214,12 +263,40 @@ bool __thinkos_thread_pause(unsigned int th)
 	__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0);
 #endif
 
+#if (THINKOS_ENABLE_DEBUG_STEP)
+	/* posibly clear the step request */
+	__bit_mem_wr(&thinkos_rt.step_req, th, 0);
+#endif
+
 #if THINKOS_ENABLE_CLOCK
 	/* disable the clock */
 	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);
 #endif
 
 	return true;
+}
+
+void __thinkos_pause_all(void)
+{
+	int32_t th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if (thinkos_rt.ctx[th] != NULL)
+			__thinkos_thread_pause(th);
+	}
+
+	__thinkos_defer_sched();
+}
+
+void __thinkos_resume_all(void)
+{
+	int32_t th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if (thinkos_rt.ctx[th] != NULL)
+			__thinkos_thread_resume(th);
+	}
+	__thinkos_defer_sched();
 }
 
 #endif /* THINKOS_ENABLE_THREAD_STAT */

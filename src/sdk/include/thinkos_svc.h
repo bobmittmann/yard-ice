@@ -68,30 +68,32 @@
 #define THINKOS_EVENT_MASK      32
 #define THINKOS_EVENT_UNMASK    33
 
-#define THINKOS_IRQ_WAIT        34
+#define THINKOS_CONSOLE         34
 
-#define THINKOS_MUTEX_ALLOC     35
-#define THINKOS_MUTEX_FREE      36
+#define THINKOS_IRQ_WAIT        35
 
-#define THINKOS_SEM_ALLOC       37
-#define THINKOS_SEM_FREE        38
+#define THINKOS_MUTEX_ALLOC     36
+#define THINKOS_MUTEX_FREE      37
 
-#define THINKOS_COND_ALLOC      39
-#define THINKOS_COND_FREE       40
+#define THINKOS_SEM_ALLOC       38
+#define THINKOS_SEM_FREE        39
 
-#define THINKOS_FLAG_ALLOC      41
-#define THINKOS_FLAG_FREE       42
+#define THINKOS_COND_ALLOC      40
+#define THINKOS_COND_FREE       41
 
-#define THINKOS_EVENT_ALLOC     43
-#define THINKOS_EVENT_FREE      44
+#define THINKOS_FLAG_ALLOC      42
+#define THINKOS_FLAG_FREE       43
 
-#define THINKOS_PAUSE           45
-#define THINKOS_RESUME          46
-#define THINKOS_CANCEL          47
-#define THINKOS_JOIN            48
+#define THINKOS_EVENT_ALLOC     44
+#define THINKOS_EVENT_FREE      45
 
-#define THINKOS_EXIT            49
-#define THINKOS_RT_SNAPSHOT     50
+#define THINKOS_PAUSE           46
+#define THINKOS_RESUME          47
+#define THINKOS_CANCEL          48
+#define THINKOS_JOIN            49
+
+#define THINKOS_EXIT            50
+#define THINKOS_RT_SNAPSHOT     51
 
 #define THINKOS_SEM_POST_I       0
 #define THINKOS_FLAG_GIVE_I      1
@@ -99,6 +101,14 @@
 #define THINKOS_EV_RAISE_I       3
 #define THINKOS_FLAG_CLR_I       4
 #define THINKOS_FLAG_SET_I       5
+
+#define CONSOLE_WRITE     0
+#define CONSOLE_READ      1
+#define CONSOLE_TIMEDREAD 2
+#define CONSOLE_OPEN      3
+#define CONSOLE_CLOSE     4
+#define CONSOLE_DRAIN     5
+#define CONSOLE_IOCTL     6
 
 #ifndef __ASSEMBLER__
 
@@ -254,15 +264,18 @@ static inline int __attribute__((always_inline)) thinkos_mutex_alloc(void) {
 	return THINKOS_SVC(THINKOS_MUTEX_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_free(int mutex) {
+static inline int __attribute__((always_inline)) 
+thinkos_mutex_free(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_FREE, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_lock(int mutex) {
+static inline int __attribute__((always_inline)) 
+thinkos_mutex_lock(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_LOCK, mutex);
 }
 
-static inline int __attribute__((always_inline)) thinkos_mutex_trylock(int mutex) {
+static inline int __attribute__((always_inline)) 
+thinkos_mutex_trylock(int mutex) {
 	return THINKOS_SVC1(THINKOS_MUTEX_TRYLOCK, mutex);
 }
 
@@ -463,6 +476,31 @@ static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 
 static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
 	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_console_write(const void * buf, unsigned int len) {
+	return THINKOS_SVC3(THINKOS_CONSOLE, CONSOLE_WRITE, buf, len);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_console_read(void * buf, unsigned int len) {
+	return THINKOS_SVC3(THINKOS_CONSOLE, CONSOLE_READ, buf, len);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_console_timedread(void * buf, unsigned int len, unsigned int ms) {
+	return THINKOS_SVC4(THINKOS_CONSOLE, CONSOLE_TIMEDREAD, buf, len, ms);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_console_close(void) {
+	return THINKOS_SVC1(THINKOS_CONSOLE, CONSOLE_CLOSE);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_console_drain(void) {
+	return THINKOS_SVC1(THINKOS_CONSOLE, CONSOLE_DRAIN);
 }
 
 

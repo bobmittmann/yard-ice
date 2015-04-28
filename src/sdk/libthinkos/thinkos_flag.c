@@ -33,8 +33,8 @@ void thinkos_flag_alloc_svc(int32_t * arg)
 {
 	int idx;
 
-	if ((idx = thinkos_bmp_alloc(thinkos_rt.flag_alloc, 
-								 THINKOS_FLAG_MAX)) >= 0) {
+	if ((idx = __thinkos_bmp_alloc(thinkos_rt.flag_alloc, 
+								   THINKOS_FLAG_MAX)) >= 0) {
 		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
 #if THINKOS_ENABLE_FLAG_LOCK
 		__bit_mem_wr(thinkos_rt.flag.lock, idx, 0);

@@ -52,8 +52,10 @@ uint32_t dmon_select(uint32_t evmask)
 	DCC_LOG1(LOG_INFO, "evmask=%08x", evmask);
 
 	evset = thinkos_dmon_rt.events;
-	if (evset & evmask)
+	if (evset & evmask) {
+		DCC_LOG1(LOG_INFO, "got evset=%08x !!", evset);
 		return evset & evmask;
+	}
 
 	/* umask event */
 	thinkos_dmon_rt.mask |= evmask;
@@ -61,8 +63,8 @@ uint32_t dmon_select(uint32_t evmask)
 	do {
 		DCC_LOG(LOG_INFO, "sleep...");
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
-		DCC_LOG(LOG_INFO, "wakeup...");
 		evset = thinkos_dmon_rt.events;
+		DCC_LOG1(LOG_INFO, "wakeup evset=%08x.", evset);
 	} while ((evset & evmask) == 0);
 
 	thinkos_dmon_rt.mask &= ~evmask;
@@ -73,6 +75,7 @@ uint32_t dmon_select(uint32_t evmask)
 int dmon_wait(int ev)
 {
 	uint32_t evset;
+	uint32_t evmsk;
 	uint32_t mask = (1 << ev);
 	
 	evset = thinkos_dmon_rt.events;
@@ -85,13 +88,16 @@ int dmon_wait(int ev)
 	thinkos_dmon_rt.mask |= mask;
 
 	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
-	dmon_context_swap(&thinkos_dmon_rt.ctx); 
+	do {
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
+		evset = thinkos_dmon_rt.events;
+		evmsk = thinkos_dmon_rt.mask;
+	} while ((evset & evmsk) == 0);
 	DCC_LOG(LOG_INFO, "wakeup...");
 
-	evset = thinkos_dmon_rt.events;
 	if (evset & mask) {
 		thinkos_dmon_rt.events = evset & ~mask;
-		thinkos_dmon_rt.mask &= ~mask;
+		thinkos_dmon_rt.mask = evmsk & ~mask;
 		return 0;
 	}
 
@@ -101,6 +107,41 @@ int dmon_wait(int ev)
 	/* unexpected event received */
 	return -1;
 }
+
+int dmon_expect(int ev)
+{
+	uint32_t evset;
+	uint32_t evmsk;
+	uint32_t mask = (1 << ev);
+	
+	evset = thinkos_dmon_rt.events;
+	if (evset & mask)
+		return 0;
+
+	/* umask event */
+	thinkos_dmon_rt.mask |= mask;
+
+	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
+	do {
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
+		evset = thinkos_dmon_rt.events;
+		evmsk = thinkos_dmon_rt.mask;
+	} while ((evset & evmsk) == 0);
+	DCC_LOG(LOG_INFO, "wakeup...");
+
+	if (evset & mask) {
+		thinkos_dmon_rt.mask = evmsk & ~mask;
+		return 0;
+	}
+
+	DCC_LOG1(LOG_WARNING, "unexpected event=%08x!!", 
+			 evset & thinkos_dmon_rt.mask);
+
+	/* unexpected event received */
+	return -1;
+}
+
+
 
 void dmon_unmask(int event)
 {
@@ -260,9 +301,6 @@ static void dmon_on_except(struct thinkos_dmon * mon)
 	thinkos_except_buf.thread = th;
 }
 
-void thinkos_pause_svc(int32_t * arg);
-void thinkos_resume_svc(int32_t * arg);
-
 void thinkos_suspend_all(void)
 {
 	int32_t th;
@@ -275,7 +313,7 @@ void thinkos_suspend_all(void)
 }
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
-int dmon_thread_step(unsigned int id, unsigned int cnt)
+int dmon_thread_step(unsigned int id, bool block)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 	int ret;
@@ -285,24 +323,35 @@ int dmon_thread_step(unsigned int id, unsigned int cnt)
 		return -1;
 	}
 
-	thinkos_rt.step_id = id;
-	thinkos_rt.step_cnt = 2 + cnt;
-	__thinkos_thread_resume(id);
+	if (__bit_mem_rd(&thinkos_rt.step_req, id)) {
+		DCC_LOG1(LOG_WARNING, "thread %d is step waiting already!", id);
+		return -1;
+	}
 
+	/* request stepping the thread  */
+	__bit_mem_wr(&thinkos_rt.step_req, id, 1);
+	/* resume the thread */
+	__thinkos_thread_resume(id);
+	/* make sure to run the scheduler */
 	__thinkos_defer_sched();
 
-	DCC_LOG2(LOG_TRACE, "step_id=%d step_cnt=%d", 
-			 thinkos_rt.step_id, thinkos_rt.step_cnt);
+	DCC_LOG1(LOG_TRACE, "thread_id=%d +++++++++++++++++++++", id);
 
+	if (block) {
+		if ((ret = dmon_wait(DMON_THREAD_STEP)) < 0)
+			return ret;
+	}
+
+#if 0
 	/* request signal */
 	thinkos_dmon_rt.req |= (1 << DMON_IDLE);
-
 	/* wait for signal */
 	if ((ret = dmon_wait(DMON_IDLE)) < 0)
 		return ret;
-
 	/* clear request */
 	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
+#endif
+
 	return 0;
 }
 #endif
@@ -312,6 +361,7 @@ void cm3_debug_mon_isr(void)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t sigset = thinkos_dmon_rt.events;
+	uint32_t sigmsk = thinkos_dmon_rt.mask;
 	uint32_t demcr;
 
 	demcr = dcb->demcr;
@@ -334,17 +384,19 @@ void cm3_debug_mon_isr(void)
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	if (demcr & DCB_DEMCR_MON_STEP) {
-		if (thinkos_rt.step_cnt == 0) {
+		if (--thinkos_rt.step_cnt == 0) {
 			dcb->demcr = demcr & ~DCB_DEMCR_MON_STEP;
+			/* suspend the thread, this will clear the step request flag */
 			__thinkos_thread_pause(thinkos_rt.step_id);
-			thinkos_rt.step_id = -1;
 			/* return the BASEPRI to the default to reenable the scheduler. */
 			cm3_basepri_set(0); 
+			/* signal the monitor */
+			sigset |= (1 << DMON_THREAD_STEP);
+			sigmsk |= (1 << DMON_THREAD_STEP);
+			thinkos_dmon_rt.events = sigset;
+			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+					 thinkos_rt.step_id);
 			__thinkos_defer_sched();
-//			sigset |= (1 << DMON_STEP);
-//			thinkos_dmon_rt.events = sigset;
-		} else {
-			thinkos_rt.step_cnt--;
 		}
 	}
 #endif
@@ -352,6 +404,7 @@ void cm3_debug_mon_isr(void)
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);
 		sigset |= (1 << DMON_THREAD_FAULT);
+		sigmsk |= (1 << DMON_THREAD_FAULT);
 		thinkos_dmon_rt.events = sigset;
 		dmon_on_except(&thinkos_dmon_rt);
 	}
@@ -361,7 +414,7 @@ void cm3_debug_mon_isr(void)
 	}
 
 	/* Process monitor events */
-	if ((sigset & thinkos_dmon_rt.mask) != 0) {
+	if ((sigset & sigmsk) != 0) {
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	}
 
@@ -469,6 +522,9 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	thinkos_dmon_rt.mask = (1 << DMON_RESET);
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
+
+	__thinkos_memset32(thinkos_dmon_stack, 0xdeafbeef, 
+					   sizeof(thinkos_dmon_stack));
 
 	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);
 

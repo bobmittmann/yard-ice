@@ -130,6 +130,8 @@ void thinkos_irq_wait_svc(int32_t * arg);
 
 void thinkos_rt_snapshot_svc(int32_t * arg);
 
+void thinkos_console_svc(int32_t * arg);
+
 void thinkos_nosys(int32_t * arg)
 {
 	arg[0] = THINKOS_ENOSYS;
@@ -597,6 +599,13 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
+	case THINKOS_CONSOLE:
+#if THINKOS_ENABLE_CONSOLE
+		thinkos_console_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
 	default:
 		thinkos_nosys(arg);
 		break;

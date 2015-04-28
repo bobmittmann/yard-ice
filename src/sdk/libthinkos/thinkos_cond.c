@@ -35,8 +35,8 @@ void thinkos_cond_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int idx;
 
-	if ((idx = thinkos_bmp_alloc(thinkos_rt.cond_alloc, 
-								 THINKOS_COND_MAX)) >= 0) {
+	if ((idx = __thinkos_bmp_alloc(thinkos_rt.cond_alloc, 
+								   THINKOS_COND_MAX)) >= 0) {
 		wq = idx + THINKOS_COND_BASE;
 		DCC_LOG2(LOG_INFO, "cond=%d wq=%d", idx, wq);
 		arg[0] = wq;

@@ -164,12 +164,7 @@ int thread_getnext(int th)
 
 int target_halt(struct gdb_rspd * gdb)
 {
-	int32_t th;
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL)
-			__thinkos_thread_pause(th);
-	}
+	__thinkos_pause_all();
 
 	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
 		DCC_LOG(LOG_TRACE, "Current is Idle!");
@@ -179,30 +174,21 @@ int target_halt(struct gdb_rspd * gdb)
 	}
 
 	DCC_LOG1(LOG_TRACE, "current_thread=%d", gdb->current_thread);
-	__thinkos_defer_sched();
+
 	dmon_wait_idle();
-
 	gdb->stopped = true;
-
 	return 0;
 }
 
 int target_run(void)
 {
-	int32_t th;
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL)
-			__thinkos_thread_resume(th);
-	}
-	__thinkos_defer_sched();
-
+	__thinkos_resume_all();
 	return 0;
 }
 
 int target_step(int th)
 {
-	return dmon_thread_step(th - 1, 1);
+	return dmon_thread_step(th - 1, false);
 }
 
 int target_goto(uint32_t addr, int opt)
@@ -974,22 +960,6 @@ int hex_int(char * pkt, unsigned int val)
 	return hex_str(pkt, s);
 }
 
-const char obj_type_name[][8] = {
-	[THINKOS_OBJ_READY] = "Ready",
-	[THINKOS_OBJ_TMSHARE] = "Sched",
-	[THINKOS_OBJ_CLOCK] = "Clock",
-	[THINKOS_OBJ_MUTEX] = "Mutex",
-	[THINKOS_OBJ_COND] = "Cond",
-	[THINKOS_OBJ_SEMAPHORE] = "Sem",
-	[THINKOS_OBJ_EVENT] = "EvSet",
-	[THINKOS_OBJ_FLAG] = "Flag",
-	[THINKOS_OBJ_JOIN] = "Join",
-	[THINKOS_OBJ_PAUSED] = "Pausd",
-	[THINKOS_OBJ_CANCELED] = "Cancl",
-	[THINKOS_OBJ_FAULT] = "Fault",
-	[THINKOS_OBJ_INVALID] = "Inv"
-};
-
 int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 {
 	char * cp = pkt + sizeof("qThreadExtraInfo,") - 1;
@@ -1044,7 +1014,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 		if (type == THINKOS_OBJ_PAUSED) {
 			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", id);
 		}
-		n = hex_str(cp, obj_type_name[type]);
+		n = hex_str(cp, thinkos_type_name_lut[type]);
 		cp += n;
 		n = hex_str(cp, "(");
 		cp += n;
@@ -1244,12 +1214,11 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 	} else {
 		*cp++ = 'O';
 #if (THINKOS_ENABLE_CONSOLE)
-		char * buf;
-		buf = (pkt + RSP_BUFFER_LEN) - 64;
-		n = __thinkos_console_tx_get(buf, 64);
-		if (n > 0) {
+		uint8_t * buf;
+		if ((n = __console_tx_pipe_ptr(&buf)) > 0) {
 			n = hex_bin(cp, buf, n);
 			cp += n;
+			__console_tx_pipe_commit(n);
 		}
 #endif
 	}
@@ -1663,31 +1632,37 @@ static int rsp_breakpoint_remove(struct dmon_comm * comm, struct gdb_rspd * gdb,
 static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm, 
 					char * pkt, int len)
 {
-	unsigned int val;
 	unsigned int addr;
-	int err;
-	int sum;
-	int n;
-	int th;
+	int thread_id;
 
 	if (gdb->thread_id.g <= 0)
-		th = gdb->current_thread;
+		thread_id = gdb->current_thread;
 	else
-		th = gdb->thread_id.g;
+		thread_id = gdb->thread_id.g;
 
 	/* step */
 	if (pkt[1] != '#') {
 		addr = strtoul(&pkt[1], 0, 16);
+		DCC_LOG1(LOG_TRACE, "Addr=%08x", addr);
 		target_goto(addr, 0);
 	}
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	/* FIXME: handle errors */	
-	if ((err = target_step(th)) < 0) {
-		DCC_LOG(LOG_WARNING, "target_step() failed!");
-		return rsp_error(comm, 1);
-	}
+	dmon_thread_step(thread_id - 1, false);
+	return 0;
+}
+
+static int rsp_step_done(struct gdb_rspd * gdb, struct dmon_comm * comm, 
+						 char * pkt)
+{
+	int thread_id = thinkos_rt.step_id + 1;
+	unsigned int val;
+	int sum;
+	int n;
+
+	(void)thread_id;
+	DCC_LOG1(LOG_TRACE, "thread_id=%d.", thread_id);
 
 	pkt[0] = '$';
 	pkt[1] = sum = 'T';
@@ -1799,6 +1774,7 @@ static int rsp_v_packet(struct dmon_comm * comm, char * pkt, int len)
 	 	} else {
 			id = 0;
 		}
+		(void)id;
 		switch (pkt[6]) {
 		case 'c':
 			DCC_LOG1(LOG_TRACE, "Continue %d", id);
@@ -1953,6 +1929,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	DCC_LOG(LOG_TRACE, "Comm connected..");
 
 	sigmask = (1 << DMON_THREAD_FAULT);
+	sigmask |= (1 << DMON_THREAD_STEP);
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	for(;;) {
@@ -1961,6 +1938,12 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");
 			dmon_clear(DMON_THREAD_FAULT);
+		}
+
+		if (sigset & (1 << DMON_THREAD_STEP)) {
+			DCC_LOG(LOG_TRACE, "Thread step.");
+			dmon_clear(DMON_THREAD_STEP);
+			rsp_step_done(gdb, comm, pkt);
 		}
 
 		if (sigset & (1 << DMON_COMM_CTL)) {

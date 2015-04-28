@@ -23,9 +23,9 @@
 
 include ../../mk/config.mk
 
-LIB_STATIC = crc
+LIB_STATIC = md5
 
-CFILES = crc16ccitt.c crc32tab.c crc32.c
+CFILES = md5sum.c
 
 include ../../mk/lib.mk
 

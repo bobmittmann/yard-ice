@@ -28,13 +28,68 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thinkos.h>
+#include <sys/dcclog.h>
 
 #include <sys/shell.h>
+
+
+int console_write(void * dev, const void * buf, unsigned int len) 
+{
+	unsigned int rem = len;
+	uint8_t * cp = (uint8_t *)buf;
+	int n;
+
+	DCC_LOG1(LOG_INFO, "len=%d ...", len);
+
+	while (rem) {
+		n = thinkos_console_write(cp, rem);
+		cp += n;
+		rem -= n;
+	}
+
+	return len;
+}
+
+int console_read(void * dev, void * buf, unsigned int len, unsigned int msec) 
+{
+	return thinkos_console_timedread(buf, len, msec);
+}
+
+int console_drain(void * dev)
+{
+	return thinkos_console_drain();
+}
+
+int console_close(void * dev)
+{
+	return thinkos_console_close();
+}
+
+const struct fileop console_fops = {
+	.write = (void *)console_write,
+	.read = (void *)console_read,
+	.flush = (void *)console_drain,
+	.close = (void *)console_close
+};
+
+const struct file console_file = {
+	.data = NULL, 
+	.op = &console_fops 
+};
+
+FILE * console_fopen(void)
+{
+	FILE * f;
+	f = (FILE *)&console_file;
+	return f;
+}
 
 const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
 	.op = &stm32_usart_fops 
 };
+
 
 
 void stdio_init(void)
@@ -45,8 +100,11 @@ void stdio_init(void)
 	FILE * f_tty;
 	FILE * f_raw;
 
+//	f_raw = (FILE *)&console_file;
+#if 1
 	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
 	f_raw = serial_fopen(console);
+#endif
 #if 0
 //	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
 	cdc = usb_cdc_init(&stm32f_otg_fs_dev, 
@@ -95,12 +153,12 @@ int cmd_help(FILE *f, int argc, char ** argv)
 	return 0;
 }
 
-int cmd_gdb(FILE * f, int argc, char ** argv)
+int cmd_test(FILE * f, int argc, char ** argv)
 {
-	if (argc > 1)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	return SHELL_ABORT;
+	fprintf(f, 
+"| 0123456789abcdefg | 0123456789ABCDEFG | 0123456789abcdefg | 0123456789ABCDEF |"
+"| 0123456789abcdefg | 0123456789ABCDEFG | 0123456789abcdefg | 0123456789ABCDEF |");
+	return 0;
 }
 
 int cmd_fault(FILE * f, int argc, char ** argv)
@@ -166,8 +224,8 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_memxxd, "xxd", "x", "ADDR [COUNT]", 
 		"prints a hexdump of a memory block" },
 
-	{ cmd_gdb, "gdb", "", "", 
-		"Start GDB monitor" },
+	{ cmd_test, "test", "t", "", 
+		"Test" },
 
 	{ cmd_fault, "fault", "f", "", 
 		"Generate a fault" },
@@ -178,7 +236,7 @@ const struct shell_cmd shell_cmd_tab[] = {
 
 const char * shell_prompt(void)
 {
-	return "[WEBSRV]$ ";
+	return "[TEST]$ ";
 }
 
 extern const char * version_str;
@@ -190,8 +248,8 @@ void shell_greeting(FILE * f)
 	fprintf(f, "\n%s\n\n", copyright_str);
 }
 
-int stdio_shell(void)
+int test_shell(FILE * f)
 {
-	return shell(stdout, shell_prompt, shell_greeting, shell_cmd_tab);
+	return shell(f, shell_prompt, shell_greeting, shell_cmd_tab);
 }
 

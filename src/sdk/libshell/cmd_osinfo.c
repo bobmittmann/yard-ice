@@ -31,22 +31,7 @@
 #include <thinkos.h>
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-
-static const char obj_type_name[][8] = {
-	[THINKOS_OBJ_READY] = "Ready",
-	[THINKOS_OBJ_TMSHARE] = "Sched",
-	[THINKOS_OBJ_CLOCK] = "Clock",
-	[THINKOS_OBJ_MUTEX] = "Mutex",
-	[THINKOS_OBJ_COND] = "Cond",
-	[THINKOS_OBJ_SEMAPHORE] = "Sem",
-	[THINKOS_OBJ_EVENT] = "EvSet",
-	[THINKOS_OBJ_FLAG] = "Flag",
-	[THINKOS_OBJ_JOIN] = "Join",
-	[THINKOS_OBJ_PAUSED] = "Pausd",
-	[THINKOS_OBJ_CANCELED] = "Cancl",
-	[THINKOS_OBJ_FAULT] = "Fault",
-	[THINKOS_OBJ_INVALID] = "Inv"
-};
+#include <sys/dcclog.h>
 
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
 	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
@@ -276,7 +261,7 @@ int cmd_osinfo(FILE * f, int argc, char ** argv)
 		if (*wq) { 
 			oid = wq - rt.wq_lst;
 			type = thinkos_obj_type_get(oid);
-			fprintf(f, "%3d %5s:", oid, obj_type_name[type]);
+			fprintf(f, "%3d %5s:", oid, thinkos_type_name_lut[type]);
 			for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 				if (*wq & (1 << i)) 
 					fprintf(f, " %d", i);
@@ -344,7 +329,7 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 
 #if THINKOS_ENABLE_THREAD_STAT
 		fprintf(f, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
-				oid, obj_type_name[type], rt.th_stat[th] & 1 ? "Yes" : " No"); 
+				oid, thinkos_type_name_lut[type], rt.th_stat[th] & 1 ? "Yes" : " No"); 
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
@@ -385,7 +370,7 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int scan_stack(FILE * f, uint32_t * ptr, unsigned int size)
+int scan_stack(uint32_t * ptr, unsigned int size)
 {
 	int i;
 
@@ -393,9 +378,8 @@ int scan_stack(FILE * f, uint32_t * ptr, unsigned int size)
 		if (ptr[i] != 0xdeadbeef)
 			break;
 	}
-	fprintf(f, " | %6d ", i * 4);
 
-	return 0;
+	return i * 4;
 }
 
 int cmd_oscheck(FILE * f, int argc, char ** argv)
@@ -439,8 +423,14 @@ int cmd_oscheck(FILE * f, int argc, char ** argv)
 #endif
 			fprintf(f, " | %08x", (uint32_t)rt.ctx[i]); 
 #if THINKOS_ENABLE_THREAD_INFO
-			fprintf(f, " | %6d", rt.th_inf[i]->stack_size); 
-			scan_stack(f, rt.th_inf[i]->stack_ptr, rt.th_inf[i]->stack_size);
+			if (rt.th_inf[i] != NULL) {
+				fprintf(f, " | %6d", rt.th_inf[i]->stack_size); 
+				fprintf(f, " | %6d", scan_stack(rt.th_inf[i]->stack_ptr, 
+												rt.th_inf[i]->stack_size));
+			} else {
+				fprintf(f, " |    ..."); 
+				fprintf(f, " |    ..."); 
+			}
 #endif
 			fprintf(f, "\n");
 		}

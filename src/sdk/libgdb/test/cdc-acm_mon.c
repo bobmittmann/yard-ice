@@ -70,6 +70,8 @@ struct usb_cdc_acm_dev {
 	uint8_t in_ep;
 	uint8_t out_ep;
 	uint8_t int_ep;
+	uint8_t rx_flowctrl;
+	uint8_t rx_paused;
 
 	volatile uint8_t rx_cnt; 
 	volatile uint8_t rx_pos; 
@@ -79,39 +81,72 @@ struct usb_cdc_acm_dev {
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
 
-static inline void __memcpy(void * __dst, void * __src,  unsigned int __len)
-{
-	uint8_t * dst = (uint8_t *)__dst;
-	uint8_t * src = (uint8_t *)__src;
-	int i;
-
-	for (i = 0; i < __len; ++i)
-		dst[i] = src[i];
-}
-
+#if 1
 void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+	int pos = dev->rx_pos;
+	int cnt = dev->rx_cnt;
+	int free;
 	int n;
 
-	if (dev->rx_cnt != dev->rx_pos)
-		DCC_LOG(LOG_WARNING, "overflow!");
-	
-	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
-							dev->rx_buf, CDC_EP_IN_MAX_PKT_SIZE);
+	cm3_primask_set(1);
 
-	dev->rx_pos = 0;
-	dev->rx_cnt = n;
+	if (cnt == pos) {
+		cnt = 0;
+		dev->rx_pos = pos = 0;
+		free = CDC_EP_IN_MAX_PKT_SIZE;
+		DCC_LOG2(LOG_INFO, "1. pos=%d free=%d.......", pos, free);
+	} else {
+		free = CDC_EP_IN_MAX_PKT_SIZE - cnt;
+		if (free < len) {
+			if (dev->rx_flowctrl) {
+				dev->rx_paused = true;
+				cm3_primask_set(0);
+				DCC_LOG(LOG_INFO, "RX paused!");
+				return;
+			} else {
+				DCC_LOG(LOG_WARNING, "overflow!");
+				cnt = 0;
+				dev->rx_pos = pos = 0;
+				free = CDC_EP_IN_MAX_PKT_SIZE; 
+			}
+		}
+		DCC_LOG2(LOG_INFO, "2. pos=%d cnt=%d.......", pos, cnt);
+	}
+
+	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, &dev->rx_buf[cnt], free);
+	dev->rx_cnt = cnt + n;
 
 #if 0
 	dev->rx_buf[n] = '\0';
-	DCC_LOGSTR(LOG_TRACE, "'%s'", dev->rx_buf);
+	DCC_LOGSTR(LOG_INFO, "'%s'", dev->rx_buf);
 #endif
 
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
+	cm3_primask_set(0);
 	DCC_LOG(LOG_INFO, "COMM_RCV!");
 	dmon_signal(DMON_COMM_RCV);
 }
+#endif
+
+#if 0
+void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
+
+	if (dev->rx_cnt != dev->rx_pos) {
+		if (dev->rx_flowctrl) {
+			DCC_LOG(LOG_WARNING, "RX paused!");
+			dev->rx_paused = true;
+			return;
+		} else {
+			DCC_LOG(LOG_WARNING, "overflow!");
+		}
+	}
+	dmon_signal(DMON_COMM_RCV);
+}
+#endif
 
 void usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
@@ -121,7 +156,7 @@ void usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 
 void usb_mon_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 {
-	DCC_LOG1(LOG_TRACE, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 }
 
 const usb_dev_ep_info_t usb_mon_in_info = {
@@ -164,7 +199,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 			/* Return Device Descriptor */
 			*ptr = (void *)&cdc_acm_desc_dev;
 			len = sizeof(struct usb_descriptor_device);
-			DCC_LOG1(LOG_TRACE, "GetDesc: Device: len=%d", len);
+			DCC_LOG1(LOG_INFO, "GetDesc: Device: len=%d", len);
 			break;
 		}
 
@@ -172,13 +207,13 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 			/* Return Configuration Descriptor */
 			*ptr = (void *)&cdc_acm_desc_cfg;
 			len = sizeof(struct cdc_acm_descriptor_config);
-			DCC_LOG1(LOG_TRACE, "GetDesc: Config: len=%d", len);
+			DCC_LOG1(LOG_INFO, "GetDesc: Config: len=%d", len);
 			break;
 		}
 
 		if (desc == USB_DESCRIPTOR_STRING) {
 			int n = value & 0xff;
-			DCC_LOG1(LOG_TRACE, "GetDesc: String[%d]", n);
+			DCC_LOG1(LOG_INFO, "GetDesc: String[%d]", n);
 			if (n < dev->strcnt) {
 				*ptr = (void *)dev->str[n];
 				len = dev->str[n][0];
@@ -187,15 +222,15 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		}
 
 		len = -1;
-		DCC_LOG1(LOG_TRACE, "GetDesc: %d ?", desc);
+		DCC_LOG1(LOG_INFO, "GetDesc: %d ?", desc);
 		break;
 
 	case STD_SET_ADDRESS:
-		DCC_LOG1(LOG_TRACE, "SetAddr: %d [ADDRESS]", value);
+		DCC_LOG1(LOG_INFO, "SetAddr: %d [ADDRESS]", value);
 		break;
 
 	case STD_SET_CONFIGURATION: {
-		DCC_LOG1(LOG_TRACE, "SetCfg: %d", value);
+		DCC_LOG1(LOG_INFO, "SetCfg: %d", value);
 		if (value) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_mon_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_mon_out_info, NULL, 0);
@@ -206,44 +241,45 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->int_ep, USB_EP_DISABLE);
 		}
-		DCC_LOG(LOG_TRACE, "[CONFIGURED]");
+		DCC_LOG(LOG_INFO, "[CONFIGURED]");
 		break;
 	}
 
 	case STD_GET_CONFIGURATION:
-		DCC_LOG(LOG_TRACE, "GetCfg");
+		DCC_LOG(LOG_INFO, "GetCfg");
 		break;
 
 	case STD_GET_STATUS_INTERFACE:
-		DCC_LOG(LOG_TRACE, "GetStIf");
+		DCC_LOG(LOG_INFO, "GetStIf");
 		break;
 
 	case STD_GET_STATUS_ZERO:
-		DCC_LOG(LOG_TRACE, "GetStZr");
+		DCC_LOG(LOG_INFO, "GetStZr");
 		break;
 
 	case STD_GET_STATUS_ENDPOINT:
 		index &= 0x0f;
-		DCC_LOG1(LOG_TRACE, "GetStEpt:%d", index);
+		DCC_LOG1(LOG_INFO, "GetStEpt:%d", index);
 		break;
 
 	case SET_LINE_CODING:
-		__memcpy(&dev->acm.lc, dev->ctr_buf, sizeof(struct cdc_line_coding));
-        DCC_LOG1(LOG_TRACE, "dsDTERate=%d", dev->acm.lc.dwDTERate);
-        DCC_LOG1(LOG_TRACE, "bCharFormat=%d", dev->acm.lc.bCharFormat);
-        DCC_LOG1(LOG_TRACE, "bParityType=%d", dev->acm.lc.bParityType);
-        DCC_LOG1(LOG_TRACE, "bDataBits=%d", dev->acm.lc.bDataBits);
+		__thinkos_memcpy(&dev->acm.lc, dev->ctr_buf, 
+						 sizeof(struct cdc_line_coding));
+        DCC_LOG1(LOG_INFO, "dsDTERate=%d", dev->acm.lc.dwDTERate);
+        DCC_LOG1(LOG_INFO, "bCharFormat=%d", dev->acm.lc.bCharFormat);
+        DCC_LOG1(LOG_INFO, "bParityType=%d", dev->acm.lc.bParityType);
+        DCC_LOG1(LOG_INFO, "bDataBits=%d", dev->acm.lc.bDataBits);
 		if ((dev->acm.flags & ACM_LC_SET) == 0) {
 			dev->acm.flags |= ACM_LC_SET;
-			DCC_LOG1(LOG_TRACE, "Signal:%d", DMON_COMM_CTL);
-			DCC_LOG1(LOG_TRACE, "dev->acm.flags<-%0p", &dev->acm.flags);
+			DCC_LOG1(LOG_INFO, "Signal:%d", DMON_COMM_CTL);
+			DCC_LOG1(LOG_INFO, "dev->acm.flags<-%0p", &dev->acm.flags);
 			/* signal monitor */
 			dmon_signal(DMON_COMM_CTL);
 		}
 		break;
 
 	case GET_LINE_CODING:
-		DCC_LOG(LOG_TRACE, "CDC GetLn");
+		DCC_LOG(LOG_INFO, "CDC GetLn");
 		/* Return Line Coding */
 		*ptr = (void *)&dev->acm.lc;
 		len = sizeof(struct cdc_line_coding);
@@ -251,7 +287,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 
 	case SET_CONTROL_LINE_STATE:
 		dev->acm.control = value;
-		DCC_LOG2(LOG_TRACE, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
+		DCC_LOG2(LOG_INFO, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
 
@@ -260,7 +296,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		break;
 
 	default:
-		DCC_LOG5(LOG_TRACE, "CDC t=%x r=%x v=%x i=%d l=%d",
+		DCC_LOG5(LOG_INFO, "CDC t=%x r=%x v=%x i=%d l=%d",
 				req->type, req->request, value, index, len);
 		break;
 	}
@@ -278,7 +314,7 @@ const usb_dev_ep_info_t usb_mon_ep0_info = {
 void usb_mon_on_reset(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	/* clear input buffer */
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
@@ -299,7 +335,7 @@ void usb_mon_on_reset(usb_class_t * cl)
 void usb_mon_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	dev->acm.control = 0;
 	dev->acm.flags |= ACM_USB_SUSPENDED;
 }
@@ -307,7 +343,7 @@ void usb_mon_on_suspend(usb_class_t * cl)
 void usb_mon_on_wakeup(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_INFO, "...");
 	dev->acm.flags &= ~ACM_USB_SUSPENDED;
 }
 
@@ -343,6 +379,7 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 	return len;
 }
 
+#if 0
 int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
@@ -353,14 +390,63 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 		if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
 			/* get data from the rx buffer if not empty */
 			n = MIN(n, len);
-			__memcpy(buf, &dev->rx_buf[dev->rx_pos], n);
+			__thinkos_memcpy(buf, &dev->rx_buf[dev->rx_pos], n);
 			dev->rx_pos += n;
+			if (dev->rx_cnt == dev->rx_pos)
+				dmon_clear(DMON_COMM_RCV);
 			return n;
 		}
-	} while ((ret = dmon_wait(DMON_COMM_RCV)) == 0);
+		DCC_LOG1(LOG_INFO, "n=%d!!!!", n);
+	} while ((ret = dmon_expect(DMON_COMM_RCV)) == 0);
 
 	return ret;
 }
+#endif
+
+int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
+	int pos;
+	int cnt;
+	int ret;
+	int n;
+
+	do {
+		pos = dev->rx_pos;
+		cnt = dev->rx_cnt;
+		if ((n = cnt - pos) > 0) {
+			/* get data from the rx buffer if not empty */
+			n = MIN(n, len);
+			DCC_LOG3(LOG_INFO, "1. pos=%d cnt=%d n=%d .......", pos, cnt, n);
+			__thinkos_memcpy(buf, &dev->rx_buf[pos], n);
+			pos += n;
+			if (cnt == pos) {
+				/* buffer is now empty */
+				pos = 0;
+				cnt = 0;
+				if (dev->rx_paused) {
+					dev->rx_paused = false;
+					cnt = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
+											  dev->rx_buf, 
+											  CDC_EP_IN_MAX_PKT_SIZE);
+					DCC_LOG2(LOG_INFO, "2. pos=%d cnt=%d unpaused!!!", 
+							 pos, cnt);
+					usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
+				} 
+				if (cnt == 0)
+					dmon_clear(DMON_COMM_RCV); /* next call will block */
+				dev->rx_cnt = cnt;
+			} 
+			dev->rx_pos = pos;
+			return n;
+		}
+
+		DCC_LOG2(LOG_WARNING, "3. pos=%d cnt=%d blocked!!!", pos, cnt);
+	} while ((ret = dmon_expect(DMON_COMM_RCV)) == 0);
+
+	return ret;
+}
+
 
 int dmon_comm_connect(struct dmon_comm * comm)
 {
@@ -409,6 +495,11 @@ bool dmon_comm_isconnected(struct dmon_comm * comm)
 	return (dev->acm.control & CDC_DTE_PRESENT) ? true : false;
 }
 
+void dmon_comm_rxflowctrl(struct dmon_comm * comm, bool en)
+{
+	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
+	dev->rx_flowctrl = en;
+}
 
 struct usb_cdc_acm_dev usb_cdc_rt;
 
@@ -433,9 +524,10 @@ void * usb_mon_init(const usb_dev_t * usb,
 	dev->rx_pos = 0;
 	dev->str = str;
 	dev->strcnt = strcnt;
+	dev->rx_flowctrl = false;
 	
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
-	DCC_LOG1(LOG_TRACE, "dev->acm.flags<-%0p", &dev->acm.flags);
+	DCC_LOG1(LOG_INFO, "dev->acm.flags<-%0p", &dev->acm.flags);
 
 	return (void *)dev;
 }

@@ -222,12 +222,14 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 #endif
 
 #if THINKOS_ENABLE_DEBUG_STEP
-	if (idx == thinkos_rt.step_id) {
-		struct cm3_dcb * dcb = CM3_DCB;
+	if ((1 << idx) & thinkos_rt.step_req) {
+		/* save the current stepping thread */
+		thinkos_rt.step_id = idx;
+		/* need 4 steps to actually step the thread */
+		thinkos_rt.step_cnt = 4;
 		/* rise the BASEPRI to stop the scheduler and interrupts */
-//		cm3_basepri_set(EXCEPT_PRIORITY); 
 		cm3_basepri_set(MONITOR_PRIORITY); 
-		dcb->demcr |= DCB_DEMCR_MON_STEP; /* step the processor */
+		CM3_DCB->demcr |= DCB_DEMCR_MON_STEP; /* step the processor */
 	}
 #endif
 	/* restore the context */
@@ -423,7 +425,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if	(THINKOS_IRQ_MAX > 0)
 	int irq;
 #endif
-	int i;
 
 	/* disable interrupts */
 	cm3_cpsid_i();
@@ -495,8 +496,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
 	/* initialize exception stack */
-	for (i = 0; i < (THINKOS_EXCEPT_STACK_SIZE / 4 - IDLE_UNUSED_REGS); ++i)
-		thinkos_idle.except_stack[i] = 0xdeadbeef;
+	__thinkos_memset32(thinkos_idle.except_stack, 0xdeafbeef, 
+					   THINKOS_EXCEPT_STACK_SIZE - 4 * IDLE_UNUSED_REGS);
 
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
@@ -511,53 +512,28 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_idle.ctx.xpsr = 0x01000000;
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
-	{	/* initialize the mutex allocation bitmap */ 
-		int i;
-		for (i = 0; i < (THINKOS_MUTEX_MAX / 32); ++i)
-			thinkos_rt.mutex_alloc[i] = 0;
-		if (THINKOS_MUTEX_MAX % 32)
-			thinkos_rt.mutex_alloc[i] = 0xffffffff << (THINKOS_MUTEX_MAX % 32);
-	}
+	/* initialize the mutex allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.mutex_alloc, THINKOS_MUTEX_MAX); 
 #endif
 
 #if THINKOS_ENABLE_SEM_ALLOC
-	{	/* initialize the semaphore allocation bitmap */ 
-		int i;
-		for (i = 0; i < (THINKOS_SEMAPHORE_MAX / 32); ++i)
-			thinkos_rt.sem_alloc[i] = 0;
-		if (THINKOS_SEMAPHORE_MAX % 32)
-			thinkos_rt.sem_alloc[i] = 0xffffffff << (THINKOS_SEMAPHORE_MAX % 32);
-	}
+	/* initialize the semaphore allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.sem_alloc, THINKOS_SEMAPHORE_MAX); 
 #endif
 
 #if THINKOS_ENABLE_COND_ALLOC
-	{	/* initialize the conditional variable allocation bitmap */ 
-		int i;
-		for (i = 0; i < (THINKOS_COND_MAX / 32); ++i)
-			thinkos_rt.cond_alloc[i] = 0;
-		if (THINKOS_COND_MAX % 32)
-			thinkos_rt.cond_alloc[i] = 0xffffffff << (THINKOS_COND_MAX % 32);
-	}
+	/* initialize the conditional variable allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.cond_alloc, THINKOS_COND_MAX); 
 #endif
 
 #if THINKOS_ENABLE_FLAG_ALLOC
-	{	/* initialize the flag allocation bitmap */ 
-		int i;
-		for (i = 0; i < (THINKOS_FLAG_MAX / 32); ++i)
-			thinkos_rt.flag_alloc[i] = 0;
-		if (THINKOS_FLAG_MAX % 32)
-			thinkos_rt.flag_alloc[i] = 0xffffffff << (THINKOS_FLAG_MAX % 32);
-	}
+	/* initialize the flag allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.flag_alloc, THINKOS_FLAG_MAX); 
 #endif
 
 #if THINKOS_ENABLE_EVENT_ALLOC
-	{	/* initialize the event set allocation bitmap */ 
-		int i;
-		for (i = 0; i < (THINKOS_EVENT_MAX / 32); ++i)
-			thinkos_rt.ev_alloc[i] = 0;
-		if (THINKOS_EVENT_MAX % 32)
-			thinkos_rt.ev_alloc[i] = 0xffffffff << (THINKOS_EVENT_MAX % 32);
-	}
+	/* initialize the event set allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.ev_alloc, THINKOS_EVENT_MAX); 
 #endif
 
 #if (THINKOS_MUTEX_MAX > 0)
@@ -719,26 +695,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 	return self;
 }
-
-#if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
-	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
-	THINKOS_ENABLE_EVENT_ALLOC | THINKOS_ENABLE_FLAG_ALLOC
-int thinkos_bmp_alloc(uint32_t bmp[], int bits) 
-{
-	int i;
-	int j;
-
-	for (i = 0; i < ((bits + 31) / 32); ++i) {
-		/* Look for an empty bit MSB first */
-		if ((j = __clz(__rbit(~(bmp[i])))) < 32) {
-			/* Mark as used */
-			__bit_mem_wr(&bmp[i], j, 1);  
-			return 32 * i + j;;
-		}
-	}
-	return -1;
-}
-#endif
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 const char * const thinkos_nmic_link = thinkos_nmi_nm;

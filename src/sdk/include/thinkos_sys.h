@@ -74,6 +74,24 @@ struct thinkos_context {
 };
 
 /* -------------------------------------------------------------------------- 
+ * Flattened thread state structure
+ * --------------------------------------------------------------------------*/
+
+struct thinkos_thread {
+	uint8_t idx;
+	uint8_t tmw: 1;
+	uint8_t alloc: 1;
+	uint16_t wq;
+	int8_t sched_val;
+	uint8_t sched_pri;
+	int32_t timeout;
+	uint32_t cyccnt;
+	struct thinkos_thread_inf * th_inf;
+	uint32_t sp;
+	struct thinkos_context ctx;
+};
+
+/* -------------------------------------------------------------------------- 
  * Set default configuration options
  * --------------------------------------------------------------------------*/
 
@@ -317,7 +335,8 @@ struct thinkos_rt {
 	int32_t active; /* current active thread */
 
 #if THINKOS_ENABLE_DEBUG_STEP
-	int32_t step_id; /* step request on thread */
+	uint32_t step_req; /* step request bitmap */
+	int32_t step_id; /* current stepping thread id */
 	uint32_t step_cnt; /* step count */
 #endif
 
@@ -363,6 +382,11 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
 #endif /* THINKOS_ENABLE_JOIN */
+
+#if THINKOS_ENABLE_CONSOLE
+	uint32_t wq_console_wr;
+	uint32_t wq_console_rd;
+#endif
 
 #if THINKOS_ENABLE_PAUSE
 	uint32_t wq_paused;
@@ -512,6 +536,14 @@ struct thinkos_rt {
 						   - offsetof(struct thinkos_rt, wq_lst)) \
 						  / sizeof(uint32_t))
 
+#define THINKOS_WQ_CONSOLE_WR ((offsetof(struct thinkos_rt, wq_console_wr) \
+								- offsetof(struct thinkos_rt, wq_lst)) \
+							   / sizeof(uint32_t))
+
+#define THINKOS_WQ_CONSOLE_RD ((offsetof(struct thinkos_rt, wq_console_rd) \
+								- offsetof(struct thinkos_rt, wq_lst)) \
+							   / sizeof(uint32_t))
+
 #define THINKOS_WQ_PAUSED ((offsetof(struct thinkos_rt, wq_paused) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
@@ -519,6 +551,10 @@ struct thinkos_rt {
 #define THINKOS_WQ_CANCELED ((offsetof(struct thinkos_rt, wq_canceled) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
+
+#define THINKOS_WQ_FAULT ((offsetof(struct thinkos_rt, wq_fault) \
+						   - offsetof(struct thinkos_rt, wq_lst)) \
+						  / sizeof(uint32_t))
 
 #define THINKOS_WQ_LST_END ((offsetof(struct thinkos_rt, wq_end) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
@@ -600,6 +636,8 @@ extern struct thinkos_except thinkos_except_buf;
 extern uint32_t * const thinkos_obj_alloc_lut[];
 
 extern const uint16_t thinkos_wq_base_lut[];
+
+extern const char thinkos_type_name_lut[][6];
 
 #ifdef __cplusplus
 extern "C" {
@@ -808,11 +846,14 @@ void thinkos_trace_rt(struct thinkos_rt * rt);
 
 int thinkos_obj_type_get(unsigned int oid);
 
-int thinkos_bmp_alloc(uint32_t bmp[], int bits);
+void __thinkos_bmp_init(uint32_t bmp[], int bits);
+int __thinkos_bmp_alloc(uint32_t bmp[], int bits);
 
 void thinkos_exception_init(void);
 
 void thinkos_exception_dsr(struct thinkos_except * xcpt);
+
+void thinkos_console_init(void);
 
 bool __thinkos_thread_resume(unsigned int th);
 
@@ -824,11 +865,28 @@ bool __thinkos_thread_ispaused(unsigned int th);
 
 bool __thinkos_thread_isfaulty(unsigned int th);
 
+void __thinkos_pause_all(void);
+
+void __thinkos_resume_all(void);
+
+int __thinkos_thread_get(struct thinkos_rt * rt, 
+						 struct thinkos_thread * st, 
+						 unsigned int th);
+
+int __thinkos_thread_getnext(int th);
+
 bool __thinkos_suspended(void);
 
-int __thinkos_console_tx_get(void * buf, int len);
+void __thinkos_memcpy(void * __dst, void * __src,  unsigned int __len);
 
-int __thinkos_console_rx_put(const void * buf, int len);
+void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
+
+
+int __console_rx_pipe_ptr(uint8_t ** ptr);
+void __console_rx_pipe_commit(unsigned int cnt); 
+
+int __console_tx_pipe_ptr(uint8_t ** ptr);
+void __console_tx_pipe_commit(unsigned int cnt);
 
 #ifdef __cplusplus
 }

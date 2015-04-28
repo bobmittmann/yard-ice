@@ -34,11 +34,14 @@
 #include <stdbool.h>
 #include <sys/serial.h>
 #include <sys/delay.h>
+#include <sys/tty.h>
 #include <sys/dcclog.h>
 #include <thinkos.h>
 #include <tcpip/net.h>
 #include <tcpip/dhcp.h>
 #include <tcpip/in.h>
+#include <crc.h>
+#include <md5.h>
 
 #include "board.h"
 #include "monitor.h"
@@ -51,7 +54,8 @@ const char * version_str = "HTTP Server Demo " \
 const char * copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void stdio_init(void);
-int stdio_shell(void);
+int test_shell(FILE * f);
+FILE * console_fopen(void);
 
 volatile uint64_t buffer; /* production buffer */
 
@@ -91,14 +95,14 @@ int producer_task(void * arg)
 		x0 = x1;
 		x1 = y;
 
-		DCC_LOG(LOG_TRACE, "1. thinkos_sem_wait().");
+		DCC_LOG(LOG_INFO, "1. thinkos_sem_wait().");
 		/* waiting for room to insert a new item */
 		thinkos_sem_wait(sem_empty);
 
 		/* insert the produced item in the buffer */
 		buffer = y;
 
-		DCC_LOG(LOG_TRACE, "3. thinkos_sem_post().");
+		DCC_LOG(LOG_INFO, "3. thinkos_sem_post().");
 		/* signal a full buffer */
 		thinkos_sem_post(sem_full);
 	}
@@ -142,7 +146,24 @@ int consumer_task(void * arg)
 };
 
 uint32_t consumer_stack[128];
+const struct thinkos_thread_inf consumer_inf = {
+	.stack_ptr = consumer_stack, 
+	.stack_size = sizeof(consumer_stack), 
+	.priority = 10,
+	.thread_id = 8, 
+	.paused = 0,
+	.tag = "CONSUM"
+};
+
 uint32_t producer_stack[128];
+const struct thinkos_thread_inf producer_inf = {
+	.stack_ptr = producer_stack, 
+	.stack_size = sizeof(producer_stack), 
+	.priority = 10,
+	.thread_id = 9, 
+	.paused = 0,
+	.tag = "PRODUC"
+};
 
 void semaphore_test(void)
 {
@@ -158,12 +179,12 @@ void semaphore_test(void)
 	sem_full = thinkos_sem_alloc(0); 
 
 	/* create the producer thread */
-	producer_th = thinkos_thread_create(producer_task, NULL, 
-			producer_stack, sizeof(producer_stack));
+	producer_th = thinkos_thread_create_inf(producer_task, NULL, 
+											&producer_inf);
 
 	/* create the consuer thread */
-	consumer_th = thinkos_thread_create(consumer_task, NULL, 
-			consumer_stack, sizeof(consumer_stack));
+	consumer_th = thinkos_thread_create_inf(consumer_task, NULL, 
+											&consumer_inf);
 
 	printf(" * Empty semaphore: %d\n", sem_empty);
 	printf(" * Full semaphore: %d\n", sem_full);
@@ -171,6 +192,15 @@ void semaphore_test(void)
 	printf(" * Consumer thread: %d\n", consumer_th);
 	printf("\n");
 };
+
+int sleep_task(void * arg)
+{
+	for (;;) {
+		thinkos_sleep(10000);
+	}
+
+	return 0;
+}
 
 volatile uint32_t filt_y = 1;
 volatile uint32_t filt_x = 1;
@@ -210,16 +240,137 @@ int busy_task(void * arg)
 }
 
 uint32_t busy_stack[128];
+const struct thinkos_thread_inf busy_inf = {
+	.stack_ptr = busy_stack, 
+	.stack_size = sizeof(busy_stack), 
+	.priority = 32,
+	.thread_id = 31, 
+	.paused = 0,
+	.tag = "BUSY"
+};
 
 void busy_test(void)
 {
 	int busy_th;
 
 	/* create the busy thread */
-	busy_th = thinkos_thread_create(busy_task, NULL, 
-			busy_stack, sizeof(busy_stack));
+	busy_th = thinkos_thread_create_inf(busy_task, NULL, &busy_inf);
 
 	printf(" * Busy thread: %d\n", busy_th);
+	printf("\n");
+};
+
+
+uint32_t sleep_stack[128];
+
+void sleep_test(void)
+{
+	int sleep_th;
+
+	/* create the sleep thread */
+	sleep_th = thinkos_thread_create(sleep_task, NULL, 
+			sleep_stack, sizeof(sleep_stack));
+
+	printf(" * Sleepy thread: %d\n", sleep_th);
+	printf("\n");
+};
+
+
+int console_write(void * dev, const void * buf, unsigned int len); 
+int console_read(void * dev, void * buf, unsigned int len, unsigned int msec);
+
+void console_file_recv(void)
+{
+	char buf[128];
+	struct md5ctx md5;
+	uint32_t r[4];
+	int size = 0;
+	int n;
+
+	md5_init(&md5);
+
+	while ((n = console_read(NULL, buf, 100, 5000)) > 0) { 
+		md5_update(&md5, buf, n);
+		size += n;
+		thinkos_sleep(2);
+	}
+
+	md5_final((uint8_t *)r, &md5);
+
+	r[0] = ntohl(r[0]);
+	r[1] = ntohl(r[1]);
+	r[2] = ntohl(r[2]);
+	r[3] = ntohl(r[3]);
+	DCC_LOG5(LOG_TRACE, "size=%d md5sum=%08x%08x%08x%08x.", size, 
+			 r[0], r[1], r[2], r[3]);
+}
+
+int console_test_task(void * arg)
+{
+	struct tty_dev * tty;
+	FILE * f_raw;
+	FILE * f;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	f_raw = console_fopen();
+	tty = tty_attach(f_raw);
+	f = tty_fopen(tty);
+
+	thinkos_sleep(5000);
+
+	DCC_LOG(LOG_TRACE, "=================================================");
+
+	console_file_recv();
+
+#if 0
+	console_write(NULL, 
+				  "| 0123456789abcdefg | 0123456789ABCDEFG |" 
+				  " 0123456789abcdefg | 0123456789ABCDEF |"
+				  "| 0123456789abcdefg | 0123456789ABCDEFG |"
+				  " 0123456789abcdefg | 0123456789ABCDEF |", 160);
+
+	thinkos_sleep(1000);
+	fprintf(f_raw, "\r\n");
+
+	thinkos_sleep(1000);
+	console_write(NULL, 
+				  "| 0123456789abcdefg | 0123456789ABCDEFG |" 
+				  " 0123456789abcdefg | 0123456789ABCDEF |"
+				  "| 0123456789abcdefg | 0123456789ABCDEFG |"
+				  " 0123456789abcdefg | 0123456789ABCDEF |", 160);
+	thinkos_sleep(1000);
+#endif
+
+	for (;;) {
+		test_shell(f);
+	}
+
+	return 0;
+}
+
+uint32_t console_test_stack[512];
+
+const struct thinkos_thread_inf console_test_inf = {
+	.stack_ptr = console_test_stack, 
+	.stack_size = sizeof(console_test_stack), 
+	.priority = 32,
+	.thread_id = 1, 
+	.paused = 0,
+	.tag = "SHELL"
+};
+
+void console_test(void)
+{
+	int thread_id;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	/* create the sleep thread */
+	thread_id = thinkos_thread_create_inf(console_test_task, NULL, 
+										  &console_test_inf);
+	
+	printf(" * Console test thread: %d\n", thread_id);
 	printf("\n");
 };
 
@@ -279,12 +430,15 @@ int main(int argc, char ** argv)
 	/* Run the test */
 	semaphore_test();
 
+	sleep_test();
+
+	console_test();
+
 	busy_test();
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 	for (;;) {
-		stdio_shell();
-//		gdb_rspd_start(stdout);
+		test_shell(stdout);
 	}
 
 	return 0;

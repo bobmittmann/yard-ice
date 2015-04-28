@@ -50,6 +50,10 @@ const struct {
 #if THINKOS_ENABLE_JOIN
 	uint8_t wq_join[THINKOS_THREADS_MAX];
 #endif
+#if THINKOS_ENABLE_CONSOLE
+	uint8_t wq_console_rd;
+	uint8_t wq_console_wr;
+#endif
 #if THINKOS_ENABLE_PAUSE
 	uint8_t wq_paused;
 #endif
@@ -83,7 +87,11 @@ const struct {
 	.wq_flag = { [0 ... (THINKOS_FLAG_MAX - 1)] = THINKOS_OBJ_FLAG },
 #endif
 #if THINKOS_ENABLE_JOIN
-	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN }
+	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN },
+#endif
+#if THINKOS_ENABLE_CONSOLE
+	.wq_console_rd = THINKOS_OBJ_CONREAD,
+	.wq_console_wr = THINKOS_OBJ_CONWRITE,
 #endif
 #if THINKOS_ENABLE_PAUSE
 	.wq_paused = THINKOS_OBJ_PAUSED,
@@ -129,6 +137,10 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #else
 	[THINKOS_OBJ_JOIN] = NULL,
 #endif
+#if THINKOS_ENABLE_CONSOLE
+	[THINKOS_OBJ_CONREAD] = NULL,
+	[THINKOS_OBJ_CONWRITE] = NULL,
+#endif
 	[THINKOS_OBJ_PAUSED] = NULL,
 	[THINKOS_OBJ_CANCELED] = NULL,
 	[THINKOS_OBJ_FAULT] = NULL,
@@ -161,12 +173,37 @@ const uint16_t thinkos_wq_base_lut[] = {
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_JOIN] = THINKOS_JOIN_BASE,
 #endif
+#if THINKOS_ENABLE_CONSOLE
+	[THINKOS_OBJ_CONREAD] = THINKOS_WQ_CONSOLE_RD,
+	[THINKOS_OBJ_CONWRITE] = THINKOS_WQ_CONSOLE_WR,
+#endif
 #if THINKOS_ENABLE_PAUSE
 	[THINKOS_OBJ_PAUSED] = THINKOS_WQ_PAUSED,
 #endif
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_CANCELED] = THINKOS_WQ_CANCELED,
 #endif
+#if THINKOS_ENABLE_FAULT
+	[THINKOS_OBJ_FAULT] = THINKOS_WQ_FAULT,
+#endif
 	[THINKOS_OBJ_INVALID] = 0 
+};
+
+const char thinkos_type_name_lut[][6] = {
+	[THINKOS_OBJ_READY]     = "Ready",
+	[THINKOS_OBJ_TMSHARE]   = "Sched",
+	[THINKOS_OBJ_CLOCK]     = "Clock",
+	[THINKOS_OBJ_MUTEX]     = "Mutex",
+	[THINKOS_OBJ_COND]      = "Cond",
+	[THINKOS_OBJ_SEMAPHORE] = "Sema",
+	[THINKOS_OBJ_EVENT]     = "EvSet",
+	[THINKOS_OBJ_FLAG]      = "Flag",
+	[THINKOS_OBJ_JOIN]      = "Join",
+	[THINKOS_OBJ_CONREAD]   = "ConRd",
+	[THINKOS_OBJ_CONWRITE]  = "ConWr",
+	[THINKOS_OBJ_PAUSED]    = "Pausd",
+	[THINKOS_OBJ_CANCELED]  = "Cancl",
+	[THINKOS_OBJ_FAULT]     = "Fault",
+	[THINKOS_OBJ_INVALID]   = "Inval"
 };
 

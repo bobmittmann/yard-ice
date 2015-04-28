@@ -34,11 +34,11 @@ void thinkos_sem_alloc_svc(int32_t * arg)
 	uint32_t value = (uint32_t)arg[0];
 	int idx;
 
-	if ((idx = thinkos_bmp_alloc(thinkos_rt.sem_alloc, 
-								 THINKOS_SEMAPHORE_MAX )) >= 0) {
+	if ((idx = __thinkos_bmp_alloc(thinkos_rt.sem_alloc, 
+								   THINKOS_SEMAPHORE_MAX )) >= 0) {
 		thinkos_rt.sem_val[idx] = value;
 		wq = idx + THINKOS_SEM_BASE;
-		DCC_LOG2(LOG_TRACE, "sem=%d wq=%d", idx, wq);
+		DCC_LOG2(LOG_INFO, "sem=%d wq=%d", idx, wq);
 		arg[0] = wq;
 	} else
 		arg[0] = idx;
@@ -81,7 +81,7 @@ void thinkos_sem_init_svc(int32_t * arg)
 #endif
 #endif
 
-	DCC_LOG2(LOG_TRACE, "sem[%d] <= %d", sem, value);
+	DCC_LOG2(LOG_INFO, "sem[%d] <= %d", sem, value);
 
 	thinkos_rt.sem_val[sem] = value;
 	arg[0] = 0;
@@ -119,6 +119,7 @@ void thinkos_sem_wait_svc(int32_t * arg)
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
+		DCC_LOG2(LOG_INFO, "<%d> got semaphore %d...", self, wq);
 		/* reenable interrupts ... */
 		cm3_cpsie_i();
 		return;
@@ -248,7 +249,7 @@ void thinkos_sem_post_svc(int32_t * arg)
 #endif
 #endif
 
-	DCC_LOG1(LOG_TRACE, "sem %d ", wq);
+	DCC_LOG1(LOG_INFO, "sem %d +++++++++++++ ", wq);
 
 	arg[0] = 0;
 

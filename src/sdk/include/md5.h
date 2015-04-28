@@ -1,7 +1,7 @@
 /* 
  * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
  *
- * This file is part of the libcrc.
+ * This file is part of the libmd5.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,40 +18,36 @@
  */
 
 /** 
- * @file crc.h
- * @brief YARD-ICE libcrc
+ * @file md5.h
+ * @brief YARD-ICE libmd5
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __CRC_H__
-#define __CRC_H__
+#ifndef __MD5_H__
+#define __MD5_H__
 
-static inline unsigned int __crc16ccitt(unsigned int crc, int c) {
-	crc = (crc >> 8) | ((crc & 0xff) << 8);
-	crc ^= c;
-	crc ^= (crc & 0xff) >> 4;
-	crc ^= (crc & 0x0f) << 12;
-	crc ^= (crc & 0xff) << 5;
-	return crc;
-}
+#include <stdint.h>
 
-#define CRC16CCITT(CRC, C) __crc16ccitt(CRC, C)
+struct md5ctx {
+	uint32_t lo, hi;
+	uint32_t a, b, c, d;
+	uint8_t buffer[64];
+	uint32_t block[16];
+};
 
-extern const unsigned long _crc32_[256];
-#define CRC32(CRC, C) (_crc32_[((CRC) ^ (unsigned int)(C)) & 0xff] ^ \
-					   ((CRC) >> 8))
+extern void md5_init(struct md5ctx *ctx);
+extern void md5_update(struct md5ctx *ctx, const void *data, 
+					   unsigned long size);
+extern void md5_final(uint8_t * result, struct md5ctx *ctx);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-unsigned int crc16ccitt(unsigned int __crc, const void * __buf, int __len);
-
-unsigned long crc32(unsigned long __crc, const void * __buf, int __len);
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif /* __CRC_H__ */
+#endif /* __MD5_H__ */
 

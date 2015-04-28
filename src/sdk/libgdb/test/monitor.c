@@ -28,10 +28,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/usb-cdc.h>
-
+#include <dis-asm.h>
 #include <sys/dcclog.h>
 
 #include "monitor.h"
+
+int osinfo(struct dmon_comm * comm);
+void show_thread_info(struct dmon_comm * comm, int id);
+int target_print_insn(struct dmon_comm * comm, uint32_t addr);
 
 char comm_buf[129];
 
@@ -49,10 +53,6 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 
 	return dmon_comm_send(comm, s, n);
 }
-
-int osinfo(struct dmon_comm * comm);
-
-void show_thread_info(struct dmon_comm * comm, int id);
 
 void show_context(struct dmon_comm * comm, 
 				  const struct thinkos_context * ctx, 
@@ -89,35 +89,60 @@ void monitor_on_fault(struct dmon_comm * comm)
 	show_context(comm, &xcpt->ctx, xcpt->sp);
 }
 
-void thinkos_resume_svc(int32_t * arg);
-void thinkos_pause_svc(int32_t * arg);
-
-int __thinkos_thread_getnext(int th)
-{
-	int idx;
-
-	idx = (th < 0) ? 0 : th + 1;
-	
-	for (; idx < THINKOS_THREADS_MAX; ++idx) {
-		if (thinkos_rt.ctx[idx] != NULL)
-			return idx;
-	}
-
-	return -1;
-}
-
 int thread_id = -1;
 
-void monitor_step(struct dmon_comm * comm)
+void monitor_on_step(struct dmon_comm * comm)
 {
-	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
+	struct thinkos_thread st;
+	struct thinkos_context * ctx;
+	int id = thinkos_rt.step_id;
+	int type;
 
-	if (dmon_thread_step(thread_id, 1) < 0) {
-		dmprintf(comm, "dmon_thread_step() failed!\r\n");
+	if (__thinkos_thread_get(&thinkos_rt, &st, id) < 0) {
+		dmprintf(comm, "Thread %d is invalid!\r\n", id);
 		return;
 	}
 
-	show_thread_info(comm, thread_id);
+	type = thinkos_obj_type_get(st.wq);
+
+	if (st.th_inf != NULL)
+		dmprintf(comm, " <%2d> '%s': ", id, st.th_inf->tag); 
+	else
+		dmprintf(comm, " <%2d> '...': ", id); 
+
+	if (THINKOS_OBJ_READY == type) {
+		dmprintf(comm, " %s.\r\n", thinkos_type_name_lut[type]); 
+	} else {
+		dmprintf(comm, " %swait on %s(%3d)\r\n", 
+				 st.tmw ? "time" : "", thinkos_type_name_lut[type], st.wq ); 
+	}
+
+	ctx = &st.ctx;
+
+	dmprintf(comm, " %08x:  ", ctx->pc & ~1);
+	target_print_insn(comm, ctx->pc);
+	dmprintf(comm, "\r\n");
+}
+
+
+void monitor_step_sync(struct dmon_comm * comm)
+{
+	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
+	if (dmon_thread_step(thread_id, true) < 0) {
+		dmprintf(comm, "dmon_thread_step() failed!\r\n");
+		return;
+	}
+	monitor_on_step(comm);
+}
+
+
+void monitor_step_assync(struct dmon_comm * comm)
+{
+	DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
+
+	if (dmon_thread_step(thread_id, false) < 0) {
+		dmprintf(comm, "dmon_thread_step() failed!\r\n");
+	}
 }
 
 void monitor_dump(struct dmon_comm * comm)
@@ -177,29 +202,16 @@ void test(struct dmon_comm * comm)
 
 void monitor_pause_all(struct dmon_comm * comm)
 {
-	int32_t th;
-	int32_t arg[1];
-
 	dmprintf(comm, "\r\nPausing all threads...\r\n");
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		arg[0] = th;
-		thinkos_pause_svc(arg);
-	}
-
+	__thinkos_pause_all();
 	dmon_wait_idle();
-	dmprintf(comm, "Idle.\r\n");
+	dmprintf(comm, "[Idle]\r\n");
 }
 
 void monitor_resume_all(struct dmon_comm * comm)
 {
-	int32_t th;
-	int32_t arg[1];
-
 	dmprintf(comm, "\r\nResuming all threads...\r\n");
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		arg[0] = th;
-		thinkos_resume_svc(arg);
-	}
+	__thinkos_resume_all();
 	dmprintf(comm, "Restarting...\r\n");
 }
 
@@ -231,12 +243,73 @@ void monitor_resume_all(struct dmon_comm * comm)
 
 void gdb_task(struct dmon_comm * comm);
 
+static int process_input(struct dmon_comm * comm, char * buf, int len)
+{
+	int i;
+	int c;
+
+	for (i = 0; i < len; ++i) {
+		c = buf[i];
+		switch (c) {
+		case CTRL_Q:
+			dmon_reset();
+			break;
+		case CTRL_G:
+			dmprintf(comm, "GDB\r\n");
+		case '+':
+			dmon_exec(gdb_task);
+			break;
+		case CTRL_P:
+			monitor_pause_all(comm);
+			break;
+		case CTRL_R:
+			monitor_resume_all(comm);
+			break;
+		case CTRL_T:
+			test(comm);
+			break;
+		case CTRL_I:
+			osinfo(comm);
+			break;
+		case CTRL_N:
+		case 'n':
+			thread_id = __thinkos_thread_getnext(thread_id);
+			if (thread_id == - 1)
+				thread_id = __thinkos_thread_getnext(thread_id);
+			dmprintf(comm, "Current thread = %d\r\n", thread_id);
+			show_thread_info(comm, thread_id);
+			break;
+		case CTRL_X:
+			monitor_on_fault(comm);
+			break;
+		case CTRL_S:
+		case 's':
+			monitor_step_assync(comm);
+			break;
+		case CTRL_D:
+		case 'd':
+			monitor_dump(comm);
+			break;
+		case CTRL_H:
+			show_help(comm);
+			break;
+		default:
+			dmprintf(comm, "[%02x]\r\n", buf[0]);
+			break;
+		}
+	}
+
+	return len;
+}
+
+
 void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 {
 	uint32_t sigmask;
 	uint32_t sigset;
-	char buf[80];
-	int c;
+	uint8_t * ptr;
+	int cnt;
+	int len;
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
 	dmon_comm_connect(comm);
@@ -249,14 +322,26 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	thread_id = __thinkos_thread_getnext(-1);
 
 	sigmask = (1 << DMON_THREAD_FAULT);
+	sigmask |= (1 << DMON_THREAD_STEP);
 	sigmask |= (1 << DMON_COMM_RCV);
+	sigmask |= (1 << DMON_COMM_CTL);
+	sigmask |= (1 << DMON_TX_PIPE);
+	sigmask |= (1 << DMON_RX_PIPE);
+
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
+
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");
 			monitor_on_fault(comm);
 			dmon_clear(DMON_THREAD_FAULT);
+		}
+
+		if (sigset & (1 << DMON_THREAD_STEP)) {
+			DCC_LOG(LOG_TRACE, "Thread step.");
+			monitor_on_step(comm);
+			dmon_clear(DMON_THREAD_STEP);
 		}
 
 		if (sigset & (1 << DMON_COMM_CTL)) {
@@ -266,61 +351,44 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				dmon_reset();
 		}
 
+		if (sigset & (1 << DMON_RX_PIPE)) {
+			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
+				DCC_LOG1(LOG_INFO, "RX Pipe. rx_pipe.free=%d. "
+						 "Unmaksing DMON_COMM_RCV!", cnt);
+				sigmask |= (1 << DMON_COMM_RCV);
+			} else {
+				DCC_LOG(LOG_INFO, "RX Pipe empty!!!");
+			}
+			dmon_clear(DMON_RX_PIPE);
+		}
+
+		if (sigset & (1 << DMON_TX_PIPE)) {
+			DCC_LOG(LOG_INFO, "TX Pipe.");
+			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+				len = dmon_comm_send(comm, ptr, cnt);
+				__console_tx_pipe_commit(len); 
+			} else {
+				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
+				dmon_clear(DMON_TX_PIPE);
+			}
+		}
+
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_INFO, "Comm Rcv.");
-			dmon_comm_recv(comm, buf, 1);
-			c = buf[0];
-//			buf[1] = '\r';
-//			buf[2] = '\n';
-//			dmon_comm_send(comm, buf, 3);
-			switch (c) {
-			case CTRL_Q:
-				dmon_reset();
-				break;
-			case CTRL_G:
-				dmprintf(comm, "GDB\r\n");
-			case '+':
-				dmon_exec(gdb_task);
-				break;
-			case CTRL_P:
-				monitor_pause_all(comm);
-				break;
-			case CTRL_R:
-				monitor_resume_all(comm);
-				break;
-			case CTRL_T:
-				test(comm);
-				break;
-			case CTRL_I:
-				osinfo(comm);
-				break;
-			case CTRL_N:
-				thread_id = __thinkos_thread_getnext(thread_id);
-				if (thread_id == - 1)
-					thread_id = __thinkos_thread_getnext(thread_id);
-				dmprintf(comm, "Current thread = %d\r\n", thread_id);
-				show_thread_info(comm, thread_id);
-				break;
-			case CTRL_X:
-				monitor_on_fault(comm);
-				break;
-			case CTRL_S:
-				monitor_step(comm);
-				break;
-			case CTRL_D:
-				monitor_dump(comm);
-				break;
-			case CTRL_H:
-				show_help(comm);
-				break;
-			default:
-				dmprintf(comm, "[%02x]\r\n", buf[0]);
-				break;
+			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
+				DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
+				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
+					process_input(comm, (char *)ptr, len);
+					__console_rx_pipe_commit(len); 
+				}
+			} else {
+				DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
+				sigmask &= ~(1 << DMON_COMM_RCV);
 			}
 		}
 	}
 }
 
+void console_task(struct dmon_comm * comm);
 
 void monitor_init(void)
 {
@@ -331,10 +399,9 @@ void monitor_init(void)
 						cdc_acm_def_strcnt);
 
 	thinkos_dmon_init(comm, monitor_task);
+//	thinkos_dmon_init(comm, console_task);
 }
 
-
-extern const char obj_type_name[][8];
 
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
 	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
@@ -547,7 +614,7 @@ int osinfo(struct dmon_comm * comm)
 		if (*wq) { 
 			oid = wq - rt->wq_lst;
 			type = thinkos_obj_type_get(oid);
-			dmprintf(comm, "%3d %5s:", oid, obj_type_name[type]);
+			dmprintf(comm, "%3d %5s:", oid, thinkos_type_name_lut[type]);
 			for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 				if (*wq & (1 << i)) 
 					dmprintf(comm, " %d", i);
@@ -561,92 +628,6 @@ int osinfo(struct dmon_comm * comm)
 	}
 
 	os_alloc_dump(comm, rt);
-
-	return 0;
-}
-
-struct thinkos_thread {
-	uint8_t idx;
-	uint8_t tmw: 1;
-	uint8_t alloc: 1;
-	uint16_t wq;
-	int8_t sched_val;
-	uint8_t sched_pri;
-	int32_t timeout;
-	uint32_t cyccnt;
-	struct thinkos_thread_inf * th_inf;
-	uint32_t sp;
-	struct thinkos_context ctx;
-};
-
-int __thinkos_thread_get(struct thinkos_rt * rt, 
-						 struct thinkos_thread * st, int th)
-{
-	uint32_t * src;
-	uint32_t * dst;
-	int i;
-
-	if ((th >= THINKOS_THREADS_MAX) || (rt->ctx[th] == NULL)) {
-		return -1;
-	}
-
-	st->idx = th;
-
-#if THINKOS_ENABLE_THREAD_STAT
-	st->wq = rt->th_stat[th] >> 1;
-	st->tmw = rt->th_stat[th] & 1;
-#else
-	for (i = 0; i < THINKOS_WQ_LST_END; ++i) {
-		if (rt->wq_lst[i] & (1 << th))
-			break;
-	}
-	if (i == THINKOS_WQ_LST_END)
-		return -1; /* not found */
-	st->wq = i;
- #if THINKOS_ENABLE_CLOCK
-	st->tmw = rt->wq_clock & (1 << th) ? 1 : 0;
- #else
-	st->tmw = 0;
- #endif
-#endif /* THINKOS_ENABLE_THREAD_STAT */
-
-#if THINKOS_ENABLE_THREAD_ALLOC
-	st->alloc = rt->th_alloc[0] & (1 << th) ? 1 : 0;
-#else
-	st->alloc = 0;
-#endif
-
-#if THINKOS_ENABLE_TIMESHARE
-	st->sched_val = rt->sched_val[th];
-	st->sched_pri = rt->sched_pri[th]; 
-#else
-	st->sched_val = 0;
-	st->sched_pri = 0;
-#endif
-
-#if THINKOS_ENABLE_CLOCK
-	st->timeout = (int32_t)(rt->clock[th] - rt->ticks); 
-#else
-	st->timeout = -1;
-#endif
-
-#if THINKOS_ENABLE_PROFILING
-	st->cyccnt = rt->cyccnt[th];
-#else
-	st->cyccnt = 0;
-#endif
-
-#if THINKOS_ENABLE_THREAD_INFO
-	st->th_inf = rt->th_inf[th];
-#else
-	st->th_inf = NULL;
-#endif
-
-	st->sp = (uint32_t)rt->ctx[th];
-	src = (uint32_t *)rt->ctx[th];
-	dst = (uint32_t *)&st->ctx;
-	for (i = 0; i < 16; ++i)
-		dst[i] = src[i];
 
 	return 0;
 }
@@ -670,11 +651,11 @@ void show_thread_info(struct dmon_comm * comm, int id)
 	else
 		dmprintf(comm, ", '%s'", "..."); 
 
-	if (THINKOS_OBJ_READY == obj_type_name[type]) {
-		dmprintf(comm, " %s.\r\n", obj_type_name[type]); 
+	if (THINKOS_OBJ_READY == type) {
+		dmprintf(comm, " %s.\r\n", thinkos_type_name_lut[type]); 
 	} else {
 		dmprintf(comm, " %swait on %s(%3d)\r\n", 
-				 st.tmw ? "time" : "", obj_type_name[type], st.wq ); 
+				 st.tmw ? "time" : "", thinkos_type_name_lut[type], st.wq ); 
 	}
 
 	dmprintf(comm, " - Scheduler: val=%3d pri=%3d - ", 
@@ -693,6 +674,10 @@ void show_thread_info(struct dmon_comm * comm, int id)
 	dmprintf(comm, "    r12=%08x  sp=%08x  lr=%08x  pc=%08x\r\n", 
 			 ctx->r12, st.sp, ctx->lr, ctx->pc);
 	dmprintf(comm, "   xpsr=%08x\r\n", ctx->xpsr);
+
+	dmprintf(comm, "%08x:  ", ctx->pc & ~1);
+
+	target_print_insn(comm, ctx->pc);
 
 	dmprintf(comm, "\r\n");
 }
@@ -748,7 +733,7 @@ int cmd_thread(struct dmon_comm * comm)
 
 #if THINKOS_ENABLE_THREAD_STAT
 		dmprintf(comm, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
-				oid, obj_type_name[type], rt->th_stat[th] & 1 ? "Yes" : " No"); 
+				oid, thinkos_type_name_lut[type], rt->th_stat[th] & 1 ? "Yes" : " No"); 
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
@@ -856,3 +841,92 @@ int cmd_oscheck(FILE * f, int argc, char ** argv)
 }
 #endif
 
+
+struct mem_range {
+	uint32_t base;
+	uint32_t size;
+};
+
+static struct mem_range target_mem_map[] = {
+	{ .base = 0x08000000, .size = 512 * 1024 },
+	{ .base = 0x20000000, .size = 112 * 1024 },
+	{ .base = 0x2001c000, .size = 16 * 1024 },
+	{ .base = 0x10000000, .size = 64 * 1024 }
+};
+	/*
+	flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
+	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 112K
+	sram1 (rw) : ORIGIN = 0x2001c000, LENGTH = 16K
+	sram2 (rw) : ORIGIN = 0x10000000, LENGTH = 64K
+	*/
+
+static bool is_addr_valid(uint32_t addr) 
+{
+	int i;
+	int n = sizeof(target_mem_map) / sizeof(struct mem_range);
+
+	for (i = 0; i < n; ++i) {
+		struct mem_range * mem = &target_mem_map[i];
+		if ((addr >= mem->base) && (addr < (mem->base + mem->size))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static int read_memory(bfd_vma addr, uint8_t * buf, unsigned int len, 
+				struct disassemble_info *dinfo)
+{
+	uint8_t * dst = (uint8_t *)buf;
+	uint8_t * src = (uint8_t *)addr;;
+	int i;
+	
+	DCC_LOG2(LOG_INFO, "addr=0x%08x len=%d", addr, len);
+
+	if (len == 0)
+		return 0;
+
+	if (!is_addr_valid(addr))
+		return -1;
+
+	for (i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	return 0;
+}
+
+static void memory_error(int status, bfd_vma addr, 
+						 struct disassemble_info *dinfo)
+{
+	dinfo->fprintf_func(dinfo->stream, "ERROR: Memory Read @ %08x\n", addr);
+}
+
+static void print_address(bfd_vma addr, struct disassemble_info *dinfo)
+{
+	dinfo->fprintf_func(dinfo->stream, "%08x", addr);
+}
+
+static int symbol_at_address(bfd_vma addr, struct disassemble_info *dinfo)
+{
+	return 0;
+}
+
+int target_print_insn(struct dmon_comm * comm, uint32_t addr)
+{
+	struct disassemble_info dinfo;
+
+	memset(&dinfo, 0, sizeof(struct disassemble_info));
+	dinfo.fprintf_func = (fprintf_ftype)dmprintf;
+	dinfo.stream = comm;
+	dinfo.read_memory_func = read_memory;
+	dinfo.memory_error_func = memory_error;
+	dinfo.print_address_func = print_address;
+	dinfo.symbol_at_address_func = symbol_at_address;
+	dinfo.endian_code = BFD_ENDIAN_LITTLE;
+	dinfo.mach = bfd_mach_arm_unknown;
+	dinfo.flags = USER_SPECIFIED_MACHINE_TYPE;
+	dinfo.disassembler_options = "force-thumb";
+	dinfo.application_data = NULL;
+
+	return print_insn_little_arm(addr, &dinfo);
+}

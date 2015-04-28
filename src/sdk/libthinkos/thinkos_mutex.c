@@ -33,8 +33,8 @@ void thinkos_mutex_alloc_svc(int32_t * arg)
 	unsigned int wq;
 	int idx;
 
-	if ((idx = thinkos_bmp_alloc(thinkos_rt.mutex_alloc, 
-								 THINKOS_MUTEX_MAX)) >= 0) {
+	if ((idx = __thinkos_bmp_alloc(thinkos_rt.mutex_alloc, 
+								   THINKOS_MUTEX_MAX)) >= 0) {
 		thinkos_rt.lock[idx] = -1;
 		wq = idx + THINKOS_MUTEX_BASE;
 		DCC_LOG2(LOG_MSG, "mutex=%d wq=%d", idx, wq);
