@@ -71,7 +71,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	}
 
 	/* initialize stack */
-	__thinkos_memset32(init->stack_ptr, 0xdeafbeef, init->opt.stack_size);
+	__thinkos_memset32(init->stack_ptr, 0xdeadbeef, init->opt.stack_size);
 
 	sp &= 0xfffffff8; /* 64bits alignemnt */
 	DCC_LOG3(LOG_INFO, "stack ptr=%08x top=%08x size=%d", 

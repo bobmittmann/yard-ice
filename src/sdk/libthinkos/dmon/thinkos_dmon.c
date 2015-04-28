@@ -20,7 +20,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-_Pragma ("GCC optimize (\"Ofast\")")
+_Pragma ("GCC optimize (\"O2\")")
 
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
@@ -37,7 +37,7 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #if (THINKOS_ENABLE_MONITOR)
 
 struct thinkos_dmon thinkos_dmon_rt;
-uint32_t thinkos_dmon_stack[256];
+uint32_t thinkos_dmon_stack[384];
 
 void dmon_context_swap(void * ctx); 
 
@@ -301,17 +301,6 @@ static void dmon_on_except(struct thinkos_dmon * mon)
 	thinkos_except_buf.thread = th;
 }
 
-void thinkos_suspend_all(void)
-{
-	int32_t th;
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		__thinkos_thread_pause(th);
-	}
-
-	__thinkos_defer_sched();
-}
-
 #if (THINKOS_ENABLE_DEBUG_STEP)
 int dmon_thread_step(unsigned int id, bool block)
 {
@@ -342,17 +331,20 @@ int dmon_thread_step(unsigned int id, bool block)
 			return ret;
 	}
 
-#if 0
-	/* request signal */
-	thinkos_dmon_rt.req |= (1 << DMON_IDLE);
-	/* wait for signal */
-	if ((ret = dmon_wait(DMON_IDLE)) < 0)
-		return ret;
-	/* clear request */
-	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
+	return 0;
+}
 #endif
 
-	return 0;
+#if 0
+void thinkos_suspend_all(void)
+{
+	int32_t th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		__thinkos_thread_pause(th);
+	}
+
+	__thinkos_defer_sched();
 }
 #endif
 
@@ -520,6 +512,7 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	
 	thinkos_dmon_rt.events = (1 << DMON_RESET);
 	thinkos_dmon_rt.mask = (1 << DMON_RESET);
+	thinkos_dmon_rt.req = 0;
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
 

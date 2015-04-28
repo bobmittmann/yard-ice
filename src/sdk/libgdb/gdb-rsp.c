@@ -47,6 +47,14 @@
 #define RSP_BUFFER_LEN 512
 #endif
 
+#ifndef GDB_ENABLE_NOACK_MODE
+#define GDB_ENABLE_NOACK_MODE 0
+#endif
+
+#ifndef GDB_ENABLE_NOSTOP_MODE
+#define GDB_ENABLE_NOSTOP_MODE 1
+#endif
+
 int uint2dec(char * s, unsigned int val);
 
 struct dbg_bp {
@@ -1281,13 +1289,17 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		if (pkt[10] == ':') {
 		} 
 		DCC_LOG(LOG_TRACE, "qSupported");
-		n = sprintf(pkt, "$PacketSize=%x;"
-					"qXfer:features:read-;"
-					"multiprocess-;"
-					"qRelocInsn-;"
-					"QStartNoAckMode+;"
-					"QNonStop+",
-					RSP_BUFFER_LEN - 1);
+		n = sprintf(pkt, "$PacketSize=%x"
+					";qXfer:features:read-"
+					";qRelocInsn-"
+					";multiprocess-"
+#if GDB_ENABLE_NOACK_MODE
+					";QStartNoAckMode+"
+#endif
+#if GDB_ENABLE_NOSTOP_MODE
+					";QNonStop+"
+#endif
+					, RSP_BUFFER_LEN - 1);
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -1332,7 +1344,6 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		}
 		return rsp_ok(comm);
 	}
-
 
 	if (strstr(pkt, "QStartNoAckMode")) {
 		DCC_LOG(LOG_TRACE, "QStartNoAckMode");
@@ -1519,7 +1530,7 @@ static int rsp_register_set(int th, struct dmon_comm * comm,
 	return rsp_ok(comm);
 }
 
-static int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
+int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 {
 	uint8_t buf[(RSP_BUFFER_LEN - 5) / 2];
 	unsigned int addr;
@@ -1536,7 +1547,7 @@ static int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 	cp++;
 	size = strtoul(cp, NULL, 16);
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
@@ -1972,12 +1983,12 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			c = buf[0];
 
 			if (c == '+') {
-				DCC_LOG(LOG_INFO, "[ACK]");
+				DCC_LOG(LOG_TRACE, "[ACK]");
 				continue;
 			}
 
 			if (c == '-') {
-				DCC_LOG(LOG_INFO, "[NACK]");
+				DCC_LOG(LOG_WARNING, "[NACK]");
 				continue;
 
 			}

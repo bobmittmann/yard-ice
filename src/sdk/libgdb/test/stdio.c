@@ -33,64 +33,10 @@
 
 #include <sys/shell.h>
 
-
-int console_write(void * dev, const void * buf, unsigned int len) 
-{
-	unsigned int rem = len;
-	uint8_t * cp = (uint8_t *)buf;
-	int n;
-
-	DCC_LOG1(LOG_INFO, "len=%d ...", len);
-
-	while (rem) {
-		n = thinkos_console_write(cp, rem);
-		cp += n;
-		rem -= n;
-	}
-
-	return len;
-}
-
-int console_read(void * dev, void * buf, unsigned int len, unsigned int msec) 
-{
-	return thinkos_console_timedread(buf, len, msec);
-}
-
-int console_drain(void * dev)
-{
-	return thinkos_console_drain();
-}
-
-int console_close(void * dev)
-{
-	return thinkos_console_close();
-}
-
-const struct fileop console_fops = {
-	.write = (void *)console_write,
-	.read = (void *)console_read,
-	.flush = (void *)console_drain,
-	.close = (void *)console_close
-};
-
-const struct file console_file = {
-	.data = NULL, 
-	.op = &console_fops 
-};
-
-FILE * console_fopen(void)
-{
-	FILE * f;
-	f = (FILE *)&console_file;
-	return f;
-}
-
 const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
 	.op = &stm32_usart_fops 
 };
-
-
 
 void stdio_init(void)
 {

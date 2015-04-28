@@ -25,7 +25,7 @@ LIB_STATIC = thinkos
 
 DMON_CFILES = thinkos_dmon.c usb_comm.c
 MISC_CFILES = thinkos_util.c thinkos_type.c 
-CONSOLE_CFILES = thinkos_console.c
+CONSOLE_CFILES = thinkos_console.c console_api.c
 
 CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c \
 		 thinkos_thread.c thinkos_mutex.c thinkos_cond.c \

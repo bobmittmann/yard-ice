@@ -67,8 +67,8 @@ struct usb_str_entry {
 	uint8_t len;
 };
 
-const struct usb_descriptor_device cdc_acm_desc_dev;
-const struct cdc_acm_descriptor_config cdc_acm_desc_cfg;
+extern const struct usb_descriptor_device cdc_acm_desc_dev;
+extern const struct cdc_acm_descriptor_config cdc_acm_desc_cfg;
 extern const uint8_t * const cdc_acm_str[];
 
 #define CDC_STOP_BITS_1   (0 << 0)

@@ -193,14 +193,7 @@ void semaphore_test(void)
 	printf("\n");
 };
 
-int sleep_task(void * arg)
-{
-	for (;;) {
-		thinkos_sleep(10000);
-	}
 
-	return 0;
-}
 
 volatile uint32_t filt_y = 1;
 volatile uint32_t filt_x = 1;
@@ -260,18 +253,38 @@ void busy_test(void)
 	printf("\n");
 };
 
+int sleep_task(void * arg)
+{
+	int i;
+	int sum = 0;
+
+	for (i = 0; i < 1000000000; ++i) {
+		thinkos_sleep(10000);
+	//	sum += rand();
+	}
+
+	return sum;
+}
+
 
 uint32_t sleep_stack[128];
+const struct thinkos_thread_inf sleep_inf = {
+	.stack_ptr = sleep_stack, 
+	.stack_size = sizeof(sleep_stack), 
+	.priority = 32,
+	.thread_id = 31, 
+	.paused = 0,
+	.tag = "LAZY"
+};
 
 void sleep_test(void)
 {
 	int sleep_th;
 
 	/* create the sleep thread */
-	sleep_th = thinkos_thread_create(sleep_task, NULL, 
-			sleep_stack, sizeof(sleep_stack));
+	sleep_th = thinkos_thread_create_inf(sleep_task, NULL, &sleep_inf);
 
-	printf(" * Sleepy thread: %d\n", sleep_th);
+	printf(" * Lazy thread: %d\n", sleep_th);
 	printf("\n");
 };
 

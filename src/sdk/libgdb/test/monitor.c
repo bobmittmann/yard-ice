@@ -23,11 +23,9 @@
 #include <sys/stm32f.h>
 #include <arch/cortex-m3.h>
 #include <sys/param.h>
-#include <sys/serial.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <sys/usb-cdc.h>
 #include <dis-asm.h>
 #include <sys/dcclog.h>
 
@@ -395,10 +393,11 @@ void monitor_init(void)
 {
 	struct dmon_comm * comm;
 	
-	comm = usb_comm_init(&stm32f_otg_fs_dev, 
-						 cdc_acm_def_str, 
-						 cdc_acm_def_strcnt);
+	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
 
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+	thinkos_console_init();
 	thinkos_dmon_init(comm, monitor_task);
 //	thinkos_dmon_init(comm, console_task);
 }
