@@ -177,6 +177,19 @@ static void join_resume(unsigned int th, unsigned int wq, bool tmw)
 }
 #endif
 
+#if THINKOS_ENABLE_CONSOLE
+static void console_rd_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	/* wakeup from the console wait queue */
+	__thinkos_wakeup_return(wq, th, 0);
+}
+
+static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	__thinkos_wakeup_return(wq, th, 0);
+}
+#endif
+
 const void * resume_ltu[] = {
 	[THINKOS_OBJ_READY] = ready_resume,
 #if THINKOS_ENABLE_TIMESHARE
@@ -202,6 +215,10 @@ const void * resume_ltu[] = {
 #endif
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_JOIN] = join_resume,
+#endif
+#if THINKOS_ENABLE_CONSOLE
+	[THINKOS_OBJ_CONREAD] = console_rd_resume,
+	[THINKOS_OBJ_CONWRITE] = console_wr_resume,
 #endif
 };
 
