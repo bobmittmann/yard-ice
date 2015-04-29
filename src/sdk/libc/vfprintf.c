@@ -252,6 +252,10 @@ hexadecimal:
 		if (c == 's') {
 			cp = va_arg(ap, char *);
 			n = 0;
+			if (cp == NULL) {
+				/* XXX: Null pointer! */
+				goto print_buf;
+			}
 			while (cp[n] != '\0')
 				n++;
 			goto print_buf;

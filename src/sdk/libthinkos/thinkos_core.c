@@ -417,22 +417,15 @@ void __attribute__((noreturn)) thinkos_thread_exit(int code)
 	for(;;);
 }
 
-int thinkos_init(struct thinkos_thread_opt opt)
+_Pragma ("GCC optimize (\"Os\")")
+
+void __thinkos_reset(void)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
-	int self;
-	uint32_t msp;
-#if	(THINKOS_IRQ_MAX > 0)
-	int irq;
-#endif
-
-	/* disable interrupts */
-	cm3_cpsid_i();
 
 #if THINKOS_ENABLE_EXCEPTIONS
 	thinkos_exception_init();
 #endif
-
 	/* adjust exception priorities */
 	/*
 	 *  0x00 - low latency interrupts
@@ -474,30 +467,15 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 #if	(THINKOS_IRQ_MAX > 0)
-	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
-	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
-		cm3_irq_pri_set(irq, IRQ_PRIORITY_REGULAR);
-		thinkos_rt.irq_th[irq] = -1;
+	{
+		int irq;
+		/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
+		for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
+			cm3_irq_pri_set(irq, IRQ_PRIORITY_REGULAR);
+			thinkos_rt.irq_th[irq] = -1;
+		}
 	}
 #endif
-
-	/* configure the thread stack */
-	cm3_psp_set(cm3_sp_get());
-	/* configure the main stack */
-#if 0
-	msp = (uint32_t)&thinkos_except_stack + sizeof(thinkos_except_stack);
-#endif
-	msp = (uint32_t)&thinkos_idle.stack.r0;
-	cm3_msp_set(msp);
-
-	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
-
-	/* configure the use of PSP in thread mode */
-	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
-
-	/* initialize exception stack */
-	__thinkos_memset32(thinkos_idle.except_stack, 0xdeafbeef, 
-					   THINKOS_EXCEPT_STACK_SIZE - 4 * IDLE_UNUSED_REGS);
 
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
@@ -569,10 +547,48 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	}
 #endif /* THINKOS_EVENT_MAX > 0 */
 
+#if THINKOS_ENABLE_PROFILING
+	{
+		int i;
+		/* initialize cycle counters */
+		for (i = 0; i <= THINKOS_THREADS_MAX; i++)
+			thinkos_rt.cyccnt[i] = 0; 
+
+		/* Enable trace */
+		CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+		/* Enable cycle counter */
+		CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+
+		/* set the reference to now */
+		thinkos_rt.cycref = CM3_DWT->cyccnt;
+	}
+#endif
+
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#endif
+
+	/* initialize the SysTick module */
+	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
+	systick->val = 0;
+#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
+	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
+#else
+	systick->ctrl = SYSTICK_CTRL_ENABLE;
+#endif
+
+}
+
+int __thinkos_init_main(struct thinkos_thread_opt opt)
+{
+	int self;
+
 	/* initialize the main thread */ 
 	/* alloc main thread */
 	if (opt.id >= THINKOS_THREADS_MAX)
 		opt.id = THINKOS_THREADS_MAX - 1;
+
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* initialize the thread allocation bitmap */ 
 	thinkos_rt.th_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
@@ -611,22 +627,8 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	thinkos_rt.active = self;
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);
 
-#if (THINKOS_THREADS_MAX < 32) 
-	/* put the IDLE thread in the ready queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
-#endif
-
 	DCC_LOG2(LOG_TRACE, "threads_max=%d ready=%08x", 
 			 THINKOS_THREADS_MAX, thinkos_rt.wq_ready);
-
-	/* initialize the SysTick module */
-	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
-	systick->val = 0;
-#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
-	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
-#else
-	systick->ctrl = SYSTICK_CTRL_ENABLE;
-#endif
 
 #if THINKOS_ENABLE_PAUSE
 	if (opt.paused) {
@@ -634,25 +636,43 @@ int thinkos_init(struct thinkos_thread_opt opt)
 		__bit_mem_wr(&thinkos_rt.wq_paused, self, 1);
 		/* Invoke the scheduler */
 		__thinkos_defer_sched();
-	} else
+	} 
 #endif
 
-#if THINKOS_ENABLE_PROFILING
-	{
-		int i;
-		/* initialize cycle counters */
-		for (i = 0; i <= THINKOS_THREADS_MAX; i++)
-			thinkos_rt.cyccnt[i] = 0; 
+	return self;
+}
 
-		/* Enable trace */
-		CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
-		/* Enable cycle counter */
-		CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+int thinkos_init(struct thinkos_thread_opt opt)
+{
+	uint32_t msp;
+	int self;
 
-		/* set the reference to now */
-		thinkos_rt.cycref = CM3_DWT->cyccnt;
-	}
+	/* disable interrupts */
+	cm3_cpsid_i();
+
+	/* configure the thread stack */
+	cm3_psp_set(cm3_sp_get());
+
+	/* configure the main stack */
+#if 0
+	msp = (uint32_t)&thinkos_except_stack + sizeof(thinkos_except_stack);
 #endif
+	msp = (uint32_t)&thinkos_idle.stack.r0;
+	cm3_msp_set(msp);
+
+	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
+
+	/* configure the use of PSP in thread mode */
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
+
+	/* initialize exception stack */
+	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
+					   THINKOS_EXCEPT_STACK_SIZE - 4 * IDLE_UNUSED_REGS);
+
+	__thinkos_reset();
+
+	self = __thinkos_init_main(opt);
+
 
 #if (THINKOS_MUTEX_MAX > 0)
 	DCC_LOG3(LOG_TRACE, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,

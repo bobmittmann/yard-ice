@@ -847,6 +847,7 @@ void thinkos_trace_rt(struct thinkos_rt * rt);
 int thinkos_obj_type_get(unsigned int oid);
 
 void __thinkos_bmp_init(uint32_t bmp[], int bits);
+
 int __thinkos_bmp_alloc(uint32_t bmp[], int bits);
 
 void thinkos_exception_init(void);

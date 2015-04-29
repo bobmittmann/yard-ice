@@ -29,6 +29,7 @@
 #include <stdbool.h>
 
 int uint2dec(char * s, unsigned int val);
+int int2dec(char * s, int val);
 
 unsigned long hex2int(const char * __s, char ** __endp)
 {
@@ -93,6 +94,30 @@ int char2hex(char * pkt, int c)
 	return 2;
 }
 
+int short2hex(char * pkt, unsigned int val)
+{
+	pkt[0] = hextab[((val >> 4) & 0xf)];
+	pkt[1] = hextab[val & 0xf];
+	pkt[2] = hextab[((val >> 12) & 0xf)];
+	pkt[3] = hextab[((val >> 8) & 0xf)];
+
+	return 4;
+}
+
+int long2hex(char * pkt, unsigned long val)
+{
+	pkt[0] = hextab[((val >> 4) & 0xf)];
+	pkt[1] = hextab[(val & 0xf)];
+	pkt[2] = hextab[((val >> 12) & 0xf)];
+	pkt[3] = hextab[((val >> 8) & 0xf)];
+	pkt[4] = hextab[((val >> 20) & 0xf)];
+	pkt[5] = hextab[((val >> 16) & 0xf)];
+	pkt[6] = hextab[((val >> 28) & 0xf)];
+	pkt[7] = hextab[((val >> 24) & 0xf)];
+
+	return 8;
+}
+
 int str2str(char * pkt, const char * s)
 {
 	char * cp;
@@ -136,39 +161,11 @@ int bin2hex(char * pkt, const void * buf, int len)
 	return i * 2;
 }
 
-int int2hex(char * pkt, unsigned int val)
+int int2str2hex(char * pkt, unsigned int val)
 {
 	char s[12];
-
-	uint2dec(s, val);
+	int2dec(s, val);
 	return str2hex(pkt, s);
-}
-
-int uint2hex(char * s, unsigned int val)
-{
-	int n;
-	int c;
-	int i;
-
-	/* value is zero ? */
-	if (!val) {
-		*s++ = '0';
-		*s = '\0';
-		return 1;
-	}
-
-	n = 0;
-	for (i = 0; i < (sizeof(unsigned int) * 2); i++) {
-		c = val >> ((sizeof(unsigned int) * 8) - 4);
-		val <<= 4;
-		if ((c != 0) || (n != 0)) {
-			s[n++] = hextab[c];
-		}
-	}
-
-	s[n] = '\0';
-
-	return n;
 }
 
 inline int hex_digit(int c)
@@ -188,5 +185,4 @@ int hex2char(char * hex)
 {
 	return (hex_digit(hex[0]) << 4) + hex_digit(hex[1]);
 }
-
 

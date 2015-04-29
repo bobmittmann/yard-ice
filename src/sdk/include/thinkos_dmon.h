@@ -142,6 +142,8 @@ int dmon_print_osinfo(struct dmon_comm * comm);
 
 void dmon_print_alloc(struct dmon_comm * comm);
 
+void dmon_print_stack_usage(struct dmon_comm * comm);
+
 #ifdef __cplusplus
 }
 #endif

@@ -49,7 +49,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 	thinkos_rt.cyccnt[thinkos_rt.active] += delta; 
 #endif
 
-	__thinkos_memcpy32(rt, &thinkos_rt, sizeof(struct thinkos_rt));
+//	__thinkos_memcpy32(rt, &thinkos_rt, sizeof(struct thinkos_rt));
 
 #if THINKOS_ENABLE_PROFILING
 	/* Reset cycle counters */

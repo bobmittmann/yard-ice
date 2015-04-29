@@ -370,7 +370,7 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-int scan_stack(uint32_t * ptr, unsigned int size)
+static int scan_stack(uint32_t * ptr, unsigned int size)
 {
 	int i;
 

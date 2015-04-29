@@ -337,6 +337,7 @@ void bus_fault(struct thinkos_except * xcpt)
 				 (bfsr & BFSR_PRECISERR) ?  " PRECISERR" : "",
 				 (bfsr & BFSR_IBUSERR)  ?  " IBUSERR" : "");
 	}
+	DCC_LOG1(LOG_ERROR, "BFAR=%08x", scb->bfar);
 	__xdump(xcpt);
 
 #if THINKOS_STDERR_FAULT_DUMP

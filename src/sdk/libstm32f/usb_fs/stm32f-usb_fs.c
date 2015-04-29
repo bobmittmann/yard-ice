@@ -87,9 +87,7 @@ void stm32f_usb_power_on(struct stm32f_usb * usb)
 
 	/* enable Cortex interrupts */
 	cm3_irq_enable(STM32F_IRQ_USB_LP);
-
 	cm3_irq_enable(STM32F_IRQ_USB_HP);
-
 }
 
 void stm32f_usb_power_off(struct stm32f_usb * usb)

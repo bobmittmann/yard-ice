@@ -81,7 +81,7 @@ int ull2hex(char * s, unsigned long long val);
 #define PRINTF_ENABLE_LARGE_PADDING 1
 #endif
 
-const char __zeros[]  = {  
+static const char __zeros[]  = {  
 #if (PRINTF_ENABLE_LARGE_PADDING)
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', '0', '0', '0', '0', 
@@ -90,7 +90,7 @@ const char __zeros[]  = {
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', };
 	
-const char __blanks[] = {
+static const char __blanks[] = {
 #if (PRINTF_ENABLE_LARGE_PADDING)
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 

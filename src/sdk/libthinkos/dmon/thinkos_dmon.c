@@ -38,6 +38,7 @@ _Pragma ("GCC optimize (\"O2\")")
 
 struct thinkos_dmon thinkos_dmon_rt;
 uint32_t thinkos_dmon_stack[256];
+const uint16_t thinkos_dmon_stack_size = sizeof(thinkos_dmon_stack);
 
 void dmon_context_swap(void * ctx); 
 
@@ -518,7 +519,7 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
 
-	__thinkos_memset32(thinkos_dmon_stack, 0xdeafbeef, 
+	__thinkos_memset32(thinkos_dmon_stack, 0xdeadbeef, 
 					   sizeof(thinkos_dmon_stack));
 
 	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);

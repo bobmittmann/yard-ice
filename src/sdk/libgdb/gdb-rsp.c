@@ -25,7 +25,6 @@
 
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
 
 #include <sys/dcclog.h>
@@ -81,7 +80,7 @@ int char2hex(char * pkt, int c);
 int str2str(char * pkt, const char * s);
 int str2hex(char * pkt, const char * s);
 int bin2hex(char * pkt, const void * buf, int len);
-int int2hex(char * pkt, unsigned int val);
+int int2str2hex(char * pkt, unsigned int val);
 int uint2hex(char * s, unsigned int val);
 int hex2char(char * hex);
 extern const char hextab[];
@@ -98,7 +97,7 @@ const char monitor_menu[] = "\r\n"
 " Ctrl+N - Select Next Thread\r\n"
 "-------------------------------------\r\n\r\n";
 
-void show_help(struct dmon_comm * comm)
+void monitor_show_help(struct dmon_comm * comm)
 {
 	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
 }
@@ -178,15 +177,18 @@ typedef enum {
 } dbg_hw_bp_t;
 
 struct mem_range {
+	char name[8];
 	uint32_t base;
 	uint32_t size;
 };
 
 struct mem_range target_mem_map[] = {
-	{ .base = 0x08000000, .size = 512 * 1024 },
-	{ .base = 0x20000000, .size = 112 * 1024 },
-	{ .base = 0x2001c000, .size = 16 * 1024 },
-	{ .base = 0x10000000, .size = 64 * 1024 }
+	{ .name = "boot", .base = 0x08000000, .size = 4 * 16 * 1024 },
+	{ .name = "app", .base = 0x08010000, .size = 64 * 1024 },
+	{ .name = "ffs", .base = 0x08020000, .size = 4 * 128 * 1024 },
+	{ .name = "sram0", .base = 0x20000000, .size = 112 * 1024 },
+	{ .name = "sram1", .base = 0x2001c000, .size = 16 * 1024 },
+	{ .name = "sram2", .base = 0x10000000, .size = 64 * 1024 }
 };
 	/*
 	flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
@@ -257,6 +259,8 @@ int target_halt(struct gdb_rspd * gdb)
 
 	dmon_wait_idle();
 	gdb->stopped = true;
+	gdb->last_signal = TARGET_SIGNAL_TRAP;
+
 	return 0;
 }
 
@@ -857,6 +861,7 @@ int target_breakpoint_clear(struct gdb_rspd * gdb,
 
 static inline int rsp_ack(struct dmon_comm * comm)
 {
+	DCC_LOG(LOG_TRACE, "--> Ack.");
 	return dmon_comm_send(comm, "+", 1);
 }
 
@@ -869,11 +874,13 @@ static int rsp_nack(struct dmon_comm * comm)
 
 static inline int rsp_ok(struct dmon_comm * comm)
 {
+	DCC_LOG(LOG_TRACE, "--> Ok.");
 	return dmon_comm_send(comm, "$OK#9a", 6);
 }
 
 static int rsp_empty(struct dmon_comm * comm)
 {
+	DCC_LOG(LOG_TRACE, "--> Empty.");
 	return dmon_comm_send(comm, "$#00", 4);
 }
 
@@ -942,8 +949,6 @@ static int rsp_send_pkt(struct dmon_comm * comm, char * pkt, int len)
 static int rsp_break_signal(struct gdb_rspd * gdb, 
 							struct dmon_comm * comm, char * pkt)
 {
-	int sig = 5;
-
 	DCC_LOG(LOG_TRACE, "break received, stopping...");
 
 	if (target_halt(gdb) < 0) {
@@ -951,7 +956,7 @@ static int rsp_break_signal(struct gdb_rspd * gdb,
 		return -1;
 	}
 
-	gdb->last_signal = sig;
+	gdb->last_signal = TARGET_SIGNAL_TRAP;
 
 	return 0;
 }
@@ -1005,9 +1010,9 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	if (thinkos_rt.th_inf[idx] != NULL)
 		n = str2hex(cp, thinkos_rt.th_inf[idx]->tag);
 	else
-		n = int2hex(cp, idx);
+		n = int2str2hex(cp, idx);
 #else
-	n = int2hex(cp, idx);
+	n = int2str2hex(cp, idx);
 #endif
 	cp += n;
 	n = char2hex(cp, ' ');
@@ -1042,7 +1047,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 		cp += n;
 		n = char2hex(cp, '(');
 		cp += n;
-		n = int2hex(cp, oid);
+		n = int2str2hex(cp, oid);
 		cp += n;
 		n = char2hex(cp, ')');
 		cp += n;
@@ -1063,14 +1068,11 @@ int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 		n = str2str(pkt, "$l");
 	} else {
 		cp = pkt;
-		n = str2str(cp, "$m");
-		cp += n;
-		n = int2hex(cp, id);
-		cp += n;
+		cp += str2str(cp, "$m");
+		cp += uint2hex(cp, id);
 		while ((id = thread_getnext(id)) > 0) {
 			*cp++ = ',';
-			n = int2hex(cp, id);
-			cp += n;
+			cp += uint2hex(cp, id);
 		}
 		n = cp - pkt;
 	}
@@ -1188,8 +1190,7 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 	if (gdb->stopped) {
 		DCC_LOG1(LOG_TRACE, "last_signal=%d", gdb->last_signal);
 		*cp++ = 'S';
-		n = uint2hex(cp, gdb->last_signal);
-		cp += n;
+		cp += char2hex(cp, gdb->last_signal);
 	} else if (gdb->nonstop_mode) {
 		DCC_LOG(LOG_WARNING, "nonstop mode!!!");
 	} else {
@@ -1197,8 +1198,7 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 #if (THINKOS_ENABLE_CONSOLE)
 		uint8_t * buf;
 		if ((n = __console_tx_pipe_ptr(&buf)) > 0) {
-			n = bin2hex(cp, buf, n);
-			cp += n;
+			cp += bin2hex(cp, buf, n);
 			__console_tx_pipe_commit(n);
 		}
 #endif
@@ -1239,12 +1239,12 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		   '1' - The remote server attached to an existing process. 
 		   '0' - The remote server created a new process. 
 		 */
-		n = sprintf(pkt, "$1");
+		n = str2str(pkt, "$1");
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "qOffsets")) {
-		n = sprintf(pkt, "$Text=0;Data=0;Bss=0");
+		n = str2str(pkt, "$Text=0;Data=0;Bss=0");
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -2034,7 +2034,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_TRACE, "Comm RX.");
+			DCC_LOG(LOG_INFO, "Comm RX.");
 			if (dmon_comm_recv(comm, buf, 1) != 1) {
 				DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
 				continue;
@@ -2045,7 +2045,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			switch (buf[0]) {
 
 			case '+':
-				DCC_LOG(LOG_TRACE, "[ACK]");
+				DCC_LOG(LOG_INFO, "[ACK]");
 				break;
 
 			case '-':
@@ -2055,9 +2055,10 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			case '$':
 				if ((len = rsp_pkt_recv(comm, pkt, RSP_BUFFER_LEN)) <= 0) {
 					DCC_LOG1(LOG_WARNING, "rsp_pkt_recv(): %d", len);
+					dmon_exec(gdb->shell_task);
 				} else {
 					pkt[len] = 0;
-					DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
+					DCC_LOGSTR(LOG_INFO, "'%s'", pkt);
 					if (!gdb->noack_mode)
 						rsp_ack(comm);
 					rsp_pkt_input(gdb, comm, pkt, len);
@@ -2074,22 +2075,27 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				break;
 
 			case CTRL_Q:
+				DCC_LOG(LOG_TRACE, "Ctrl+Q");
 				dmon_reset();
 				break;
 
 			case CTRL_P:
+				DCC_LOG(LOG_TRACE, "Ctrl+P");
 				monitor_pause_all(comm);
 				break;
 
 			case CTRL_R:
+				DCC_LOG(LOG_TRACE, "Ctrl+R");
 				monitor_resume_all(comm);
 				break;
 
 			case CTRL_I:
+				DCC_LOG(LOG_TRACE, "Ctrl+I");
 				dmon_print_osinfo(comm);
 				break;
 
 			case CTRL_N:
+				DCC_LOG(LOG_TRACE, "Ctrl+N");
 				thread_id = __thinkos_thread_getnext(thread_id);
 				if (thread_id == - 1)
 					thread_id = __thinkos_thread_getnext(thread_id);
@@ -2098,15 +2104,23 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				break;
 
 			case CTRL_X:
+				DCC_LOG(LOG_TRACE, "Ctrl+X");
 				monitor_on_fault(comm);
 				break;
 
 			case CTRL_D:
+				DCC_LOG(LOG_TRACE, "Ctrl+D");
 				monitor_dump(comm);
 				break;
 
-			case CTRL_H:
-				show_help(comm);
+			case CTRL_V:
+				DCC_LOG(LOG_TRACE, "Ctrl+V");
+				monitor_show_help(comm);
+				break;
+
+			case CTRL_Y:
+				DCC_LOG(LOG_TRACE, "Ctrl+Y");
+				dmon_print_stack_usage(comm);
 				break;
 
 			default:
@@ -2125,7 +2139,10 @@ void gdb_init(void * comm, void (* shell)(struct dmon_comm * ))
 	struct gdb_rspd * gdb = &gdb_rspd;
 	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
 
+	if (shell == NULL)
+		shell = gdb_task;
 	gdb->shell_task = shell;
-	thinkos_dmon_init(comm, gdb_task);
+
+	thinkos_dmon_init(comm, shell);
 }
 

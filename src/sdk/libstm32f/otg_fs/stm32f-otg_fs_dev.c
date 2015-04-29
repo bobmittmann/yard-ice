@@ -552,6 +552,7 @@ static void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 
 	/* Enable Cortex interrupt */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+
 }
 
 static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
@@ -1238,6 +1239,8 @@ const struct usb_dev_ops stm32f_otg_fs_ops = {
 /* USB device driver */
 const struct usb_dev stm32f_otg_fs_dev = {
 	.priv = (void *)&stm32f_otg_fs_drv0,
+	.irq[0] = STM32F_IRQ_OTG_FS,
+	.irq_cnt = 1,
 	.op = &stm32f_otg_fs_ops
 };
 

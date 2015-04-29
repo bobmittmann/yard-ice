@@ -293,6 +293,8 @@ bool __thinkos_thread_pause(unsigned int th)
 	return true;
 }
 
+#if THINKOS_ENABLE_MONITOR
+
 void __thinkos_pause_all(void)
 {
 	int32_t th;
@@ -315,6 +317,8 @@ void __thinkos_resume_all(void)
 	}
 	__thinkos_defer_sched();
 }
+
+#endif /* THINKOS_ENABLE_MONITOR */
 
 #endif /* THINKOS_ENABLE_THREAD_STAT */
 

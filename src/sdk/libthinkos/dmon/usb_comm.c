@@ -432,8 +432,6 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	int free;
 	int n;
 
-	cm3_primask_set(1);
-
 	if (cnt == pos) {
 		cnt = 0;
 		dev->rx_pos = pos = 0;
@@ -444,7 +442,6 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 		if (free < len) {
 			if (dev->rx_flowctrl) {
 				dev->rx_paused = true;
-				cm3_primask_set(0);
 				DCC_LOG(LOG_INFO, "RX paused!");
 				return;
 			} else {
@@ -466,7 +463,6 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 #endif
 
 	usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
-	cm3_primask_set(0);
 	DCC_LOG(LOG_INFO, "COMM_RCV!");
 	dmon_signal(DMON_COMM_RCV);
 }
@@ -812,6 +808,7 @@ const usb_class_events_t usb_mon_ev = {
 
 struct dmon_comm * usb_comm_init(const usb_dev_t * usb)
 {
+	int i;
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
 	usb_class_t * cl =  (usb_class_t *)dev;
 
@@ -821,6 +818,9 @@ struct dmon_comm * usb_comm_init(const usb_dev_t * usb)
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
 	dev->rx_flowctrl = false;
+
+	for (i = 0; i < usb->irq_cnt; ++i)
+		cm3_irq_pri_set(usb->irq[i], MONITOR_PRIORITY);
 
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
 

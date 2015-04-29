@@ -1053,6 +1053,9 @@ const struct usb_dev_ops stm32f_usb_ops = {
 /* USB device driver */
 const struct usb_dev stm32f_usb_fs_dev = {
 	.priv = (void *)&stm32f_usb_drv0,
+	.irq[0] = STM32F_IRQ_USB_HP,
+	.irq[1] = STM32F_IRQ_USB_LP,
+	.irq_cnt = 2,
 	.op = &stm32f_usb_ops
 };
 

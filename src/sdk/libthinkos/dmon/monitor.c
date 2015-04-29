@@ -60,23 +60,23 @@
 
 int thread_id = -1;
 
-void show_help(struct dmon_comm * comm)
-{
-	const char monitor_menu[] = "\r\n"
-		"-- ThinkOS Monitor Commands ---------\r\n"
-		" Ctrl+Q - Restart monitor\r\n"
-		" Ctrl+R - Resume all threads\r\n"
-		" Ctrl+P - Pause all threads\r\n"
-		" Ctrl+X - Show exception\r\n"
-		" Ctrl+S - Thread Step\r\n"
-		" Ctrl+I - ThinkOS info\r\n"
-		" Ctrl+N - Select Next Thread\r\n"
-		"-------------------------------------\r\n\r\n";
+static const char monitor_menu[] = "\r\n"
+"-- ThinkOS Monitor Commands ---------\r\n"
+" Ctrl+Q - Restart monitor\r\n"
+" Ctrl+R - Resume all threads\r\n"
+" Ctrl+P - Pause all threads\r\n"
+" Ctrl+X - Show exception\r\n"
+" Ctrl+S - Thread Step\r\n"
+" Ctrl+I - ThinkOS info\r\n"
+" Ctrl+N - Select Next Thread\r\n"
+"-------------------------------------\r\n\r\n";
 
+static void monitor_show_help(struct dmon_comm * comm)
+{
 	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
 }
 
-void monitor_on_fault(struct dmon_comm * comm)
+static void monitor_on_fault(struct dmon_comm * comm)
 {
 	const struct thinkos_except * xcpt = &thinkos_except_buf;
 
@@ -85,12 +85,7 @@ void monitor_on_fault(struct dmon_comm * comm)
 	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
 }
 
-void monitor_dump(struct dmon_comm * comm)
-{
-	dmon_print_thread(comm, thread_id);
-}
-
-void monitor_pause_all(struct dmon_comm * comm)
+static void monitor_pause_all(struct dmon_comm * comm)
 {
 	dmprintf(comm, "\r\nPausing all threads...\r\n");
 	__thinkos_pause_all();
@@ -98,7 +93,7 @@ void monitor_pause_all(struct dmon_comm * comm)
 	dmprintf(comm, "[Idle]\r\n");
 }
 
-void monitor_resume_all(struct dmon_comm * comm)
+static void monitor_resume_all(struct dmon_comm * comm)
 {
 	dmprintf(comm, "\r\nResuming all threads...\r\n");
 	__thinkos_resume_all();
@@ -144,10 +139,10 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			monitor_on_fault(comm);
 			break;
 		case CTRL_D:
-			monitor_dump(comm);
+			dmon_print_thread(comm, thread_id);
 			break;
 		case CTRL_H:
-			show_help(comm);
+			monitor_show_help(comm);
 			break;
 		default:
 			continue;
