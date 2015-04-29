@@ -33,3 +33,4 @@ tools/src/dcclog/config.h.in
 log.txt
 *.i
 src/sdk/libgdb/test/.settings/language.settings.xml
+src/boot/.settings/language.settings.xml

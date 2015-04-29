@@ -58,6 +58,21 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #define THINKOS_ENABLE_USAGEFAULT 0
 #endif
 
+
+#if (THINKOS_ENABLE_DEBUG_FAULT)
+
+#undef THINKOS_ENABLE_MPU
+#define THINKOS_ENABLE_MPU 1
+
+#undef THINKOS_ENABLE_BUSFAULT
+#define THINKOS_ENABLE_BUSFAULT 1
+
+#undef THINKOS_ENABLE_USAGEFAULT 
+#define THINKOS_ENABLE_USAGEFAULT 1
+
+#endif
+
+
 static inline void __attribute__((always_inline)) 
 __xcpt_context_save(struct thinkos_except * xcpt)
 {

@@ -47,7 +47,7 @@
 
 #if STM32_ENABLE_USB_DEVICE
 
-typedef enum {
+enum ep_state {
 	EP_UNCONFIGURED = 0,
 	EP_IDLE,
 	EP_STALLED,
@@ -58,11 +58,11 @@ typedef enum {
 	EP_WAIT_STATUS_OUT,
 	EP_OUT_DATA,
 	EP_OUT_DATA_LAST,
-} ep_state_t;
+};
 
 /* Endpoint control */
 struct stm32f_otg_ep {
-	ep_state_t state;
+	uint8_t state;
 	uint16_t xfr_max;
 	uint16_t xfr_rem;
 	uint16_t xfr_buf_len;
@@ -70,6 +70,7 @@ struct stm32f_otg_ep {
 	uint8_t * xfr_ptr;
 	/* reload value for the DOEPTSIZ register */
 	uint32_t doeptsiz;
+	/* endpoint callback */
 	union {
 		usb_class_on_ep_ev_t on_ev;
 		usb_class_on_ep_in_t on_in;
@@ -232,7 +233,7 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 }
 
 int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
-		void * buf, int len)
+							   void * buf, int len)
 {
 	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
 	uint8_t * cp = (uint8_t *)buf;
@@ -1103,7 +1104,6 @@ void stm32f_otg_fs_isr(void)
 
 			if (doepint & OTG_FS_XFRC) {
 				DCC_LOG(LOG_INFO, "[1] <OEPINT> <OUT XFRC>");
-//				stm32f_otg_dev_ep_out(drv, 1);
 			}
 			if (doepint & OTG_FS_EPDISD) {
 				DCC_LOG(LOG_INFO, "[1] <OEPINT> <EPDISD>");
@@ -1122,7 +1122,6 @@ void stm32f_otg_fs_isr(void)
 
 			if (doepint & OTG_FS_XFRC) {
 				DCC_LOG(LOG_INFO, "[2] <OEPINT> <OUT XFRC>");
-//				stm32f_otg_dev_ep_out(drv, 2);
 			}
 			if (doepint & OTG_FS_EPDISD) {
 				DCC_LOG(LOG_INFO, "[2] <OEPINT> <EPDISD>");
@@ -1141,7 +1140,6 @@ void stm32f_otg_fs_isr(void)
 
 			if (doepint & OTG_FS_XFRC) {
 				DCC_LOG(LOG_INFO, "[3] <OEPINT> <OUT XFRC>");
-//				stm32f_otg_dev_ep_out(drv, 3);
 			}
 			if (doepint & OTG_FS_EPDISD) {
 				DCC_LOG(LOG_INFO, "[3] <OEPINT> <EPDISD>");

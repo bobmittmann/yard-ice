@@ -2,10 +2,12 @@
 
 JTAGTOOL_ADDR=192.168.10.50
 BUILD_NAME=alloc_test
+TOOLS_DIR=../../../../../tools
 
-../../../../../tools/tftp_load.py -q -i -e -r  -a 0x08000000 -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.bin 
+${TOOLS_DIR}/tftp_load.py -q -i -e -r  -a 0x08000000 -h ${JTAGTOOL_ADDR} \
+		debug/${BUILD_NAME}.bin 
 
-if [ $? == 0 ] ; then
-	../../../../../tools/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf
+if [ $? = 0 ] ; then
+	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf 
 fi
 

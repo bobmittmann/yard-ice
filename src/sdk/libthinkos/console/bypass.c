@@ -52,6 +52,7 @@ void __attribute__((noreturn)) console_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_TX_PIPE);
 	sigmask |= (1 << DMON_RX_PIPE);
+	sigmask |= (1 << DMON_APP_EXEC);
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
@@ -67,6 +68,12 @@ void __attribute__((noreturn)) console_task(struct dmon_comm * comm)
 			dmon_clear(DMON_COMM_CTL);
 			if (!dmon_comm_isconnected(comm))	
 				dmon_reset();
+		}
+
+		if (sigset & (1 << DMON_APP_EXEC)) {
+			DCC_LOG(LOG_TRACE, "App exec.");
+			dmon_clear(DMON_APP_EXEC);
+			dmon_app_exec();
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {

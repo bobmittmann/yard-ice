@@ -856,15 +856,18 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt);
 
 void thinkos_console_init(void);
 
-bool __thinkos_thread_resume(unsigned int th);
+void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp, 
+						   void * task, void * arg);
 
-bool __thinkos_thread_pause(unsigned int th);
+bool __thinkos_thread_resume(unsigned int thread_id);
 
-bool __thinkos_thread_isalive(unsigned int th);
+bool __thinkos_thread_pause(unsigned int thread_id);
 
-bool __thinkos_thread_ispaused(unsigned int th);
+bool __thinkos_thread_isalive(unsigned int thread_id);
 
-bool __thinkos_thread_isfaulty(unsigned int th);
+bool __thinkos_thread_ispaused(unsigned int thread_id);
+
+bool __thinkos_thread_isfaulty(unsigned int thread_id);
 
 void __thinkos_pause_all(void);
 

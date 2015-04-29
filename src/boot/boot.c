@@ -52,6 +52,7 @@ const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void io_init(void)
 {
+#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
@@ -64,31 +65,44 @@ void io_init(void)
 	/* USART5 RX */
 	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART5_RX, GPIO_AF8);
+#endif
 }
 
 void monitor_init(void)
 {
 	struct dmon_comm * comm;
 	
-	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
+//	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
 
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
 	thinkos_console_init();
 
-	gdb_init(comm, console_task);
+//	gdb_init(comm, console_task);
+	gdb_init(comm, monitor_task);
 }
 
+int app_exec(void)
+{
+//	dmon_signal(DMON_APP_EXEC);
+	for(;;);
+}
+
+void stdio_init(void);
+int serial_write(void * buf, int len);
 
 int main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
+	stdio_init();
+
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(31));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
@@ -96,14 +110,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
+	thinkos_yield();
+
+	DCC_LOG(LOG_TRACE, "5. app_exec()");
 	for (;;) {
-		DCC_LOG(LOG_TRACE, "5. tick!");
-		thinkos_sleep(3000);
-		thinkos_console_write("Hello world\r\n", 13);
+		serial_write(".", 1);
+	//	app_exec();
+	//	thinkos_sleep(1000);
 	}
 
 	return 0;
 }
-
-
 

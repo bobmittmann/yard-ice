@@ -56,8 +56,11 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 #------------------------------------------------------------------------------ 
 # object files
 #------------------------------------------------------------------------------ 
-OFILES = $(addprefix $(OUTDIR)/, $(CFILES_GEN:.c=.o) \
-			$(SFILES_GEN:.S=.o) $(CFILES:.c=.o) $(SFILES:.S=.o))
+OFILES = $(addprefix $(OUTDIR)/,\
+		   $(CFILES_GEN:.c=.o) \
+		   $(SFILES_GEN:.S=.o) \
+		   $(CFILES:.c=.o) \
+		   $(SFILES:.S=.o))
 #ODIRS = $(abspath $(sort $(dir $(OFILES))))
 ODIRS = $(sort $(dir $(OFILES)))
 

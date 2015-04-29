@@ -95,6 +95,12 @@
 
 #define THINKOS_ENABLE_DEBUG_FAULT 1
 
+#define THINKOS_ENABLE_BUSFAULT 1
+
+#define THINKOS_ENABLE_USAGEFAULT 1
+
+#define THINKOS_ENABLE_MPU 1
+
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */

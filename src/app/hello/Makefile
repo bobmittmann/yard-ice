@@ -20,26 +20,25 @@
 # 
 
 
-PROG = thinkos
+PROG = hello
 
-CFILES = stdio.c boot.c 
+CFILES = hello.c
+#SFILES = crt0.S
 
-SDK = ../sdk
-TOOLS = ../../tools
+SDK = ../../sdk
+TOOLS = ../../../tools
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libgdb
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libconsole $(SDK)/libutil $(SDK)/libc
 
-LIBS = cm3 stm32f util thinkos ice-comm drv gdb gcc 
+LIBS = cm3 console util c 
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CDEFS =
 
 CFLAGS = -g -O2 -Wall
 
-JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407
-include ../mk/stm32f4xx.mk
+THINKOS = 1
+include ../../mk/stm32f4xx.mk
 

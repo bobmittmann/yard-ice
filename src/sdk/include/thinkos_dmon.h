@@ -49,6 +49,7 @@ enum dmon_ev_no {
 
 	DMON_THREAD_STEP  = 8,
 	DMON_THREAD_FAULT = 12,
+	DMON_APP_EXEC = 28,
 	DMON_IDLE     = 29,
 	DMON_EXCEPT   = 30,
 	DMON_RESET    = 31
@@ -143,6 +144,8 @@ int dmon_print_osinfo(struct dmon_comm * comm);
 void dmon_print_alloc(struct dmon_comm * comm);
 
 void dmon_print_stack_usage(struct dmon_comm * comm);
+
+int dmon_app_exec(void);
 
 #ifdef __cplusplus
 }

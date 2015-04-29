@@ -26,6 +26,7 @@ include ../../mk/config.mk
 LIB_STATIC = cm3
 
 CFILES = cm3-udelay.c cm3-sysrst.c
+SFILES = crt0.S
 
 include ../../mk/lib.mk
 

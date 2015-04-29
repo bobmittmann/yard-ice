@@ -60,9 +60,12 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 #------------------------------------------------------------------------------ 
 #OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
 #         $(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
-OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
-         $(SFILES_OUT:.S=.o)) $(subst ../,,$(CFILES:.c=.o)) \
-		 $(subst ../,,$(SFILES:.S=.o)) $(subst ../,,$(SFILES:.s=.o)) )
+OFILES = $(addprefix $(OUTDIR)/,\
+		   $(notdir $(CFILES_OUT:.c=.o) $(SFILES_OUT:.S=.o))\
+		   $(subst ../,,$(CFILES:.c=.o))\
+		   $(subst ../,,$(SFILES:.S=.o)))
+
+#		   $(subst ../,,$(SFILES:.s=.o)))
 #ODIRS = $(abspath $(sort $(dir $(OFILES))))
 ODIRS = $(sort $(dir $(OFILES)))
 
@@ -71,9 +74,12 @@ ODIRS = $(sort $(dir $(OFILES)))
 #------------------------------------------------------------------------------ 
 #DFILES = $(abspath $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
 #         $(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d)))
-DFILES = $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
-         $(SFILES_OUT:.S=.d)) $(subst ../,,$(CFILES:.c=.d)) \
-         $(subst ../,,$(SFILES:.S=.d)) $(subst ../,,$(SFILES:.s=.d)) )
+DFILES = $(addprefix $(DEPDIR)/,\
+		   $(notdir $(CFILES_OUT:.c=.d) $(SFILES_OUT:.S=.d))\
+		   $(subst ../,,$(CFILES:.c=.d))\
+		   $(subst ../,,$(SFILES:.S=.d)))
+
+#		   $(subst ../,,$(SFILES:.s=.d)))
 #DDIRS = $(abspath $(sort $(dir $(DFILES))))
 DDIRS = $(sort $(dir $(DFILES)))
 

@@ -58,7 +58,7 @@
 #define CTRL_Y 0x19
 #define CTRL_Z 0x1a
 
-int thread_id = -1;
+extern int thread_id;
 
 static const char monitor_menu[] = "\r\n"
 "-- ThinkOS Monitor Commands ---------\r\n"
@@ -138,6 +138,9 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_X:
 			monitor_on_fault(comm);
 			break;
+		case CTRL_B:
+			dmon_signal(DMON_APP_EXEC);
+			break;
 		case CTRL_D:
 			dmon_print_thread(comm, thread_id);
 			break;
@@ -174,6 +177,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_TX_PIPE);
 	sigmask |= (1 << DMON_RX_PIPE);
+	sigmask |= (1 << DMON_APP_EXEC);
 
 	for(;;) {
 		
@@ -191,6 +195,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			if (!dmon_comm_isconnected(comm))	
 				dmon_reset();
 		}
+
+		if (sigset & (1 << DMON_APP_EXEC)) {
+			DCC_LOG(LOG_TRACE, "App exec.");
+			dmon_clear(DMON_APP_EXEC);
+			dmon_app_exec();
+		}
+
 
 		if (sigset & (1 << DMON_RX_PIPE)) {
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {

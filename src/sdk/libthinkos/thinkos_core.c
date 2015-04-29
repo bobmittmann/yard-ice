@@ -716,6 +716,7 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	return self;
 }
 
+
 const char * const thinkos_svc_link = thinkos_svc_nm;
 const char * const thinkos_nmic_link = thinkos_nmi_nm;
 

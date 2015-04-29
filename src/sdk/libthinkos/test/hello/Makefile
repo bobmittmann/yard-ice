@@ -1,8 +1,8 @@
-# File:		Makefile
-# Module: 
+# File:     Makefile
+# Author:   Robinson Mittmann (bobmittmann@gmail.com)
 # Target:
-# Comment:  
-# Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
+# Comment:
+# Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -19,27 +19,21 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+PROG = hello
 
-PROG = thinkos
+CFILES = hello.c ../common/stdio.c
 
-CFILES = stdio.c boot.c 
+LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
+		  ../../../libthinkos ../../../libc ../../../libice-comm
 
-SDK = ../sdk
-TOOLS = ../../tools
+LIBS = stm32f cm3 util thinkos c ice-comm
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libgdb
+INCPATH = ../../../include
 
-LIBS = cm3 stm32f util thinkos ice-comm drv gdb gcc 
+CDEFS = CONFIG_H
+CFLAGS = -g -O1 
 
-INCPATH = $(SDK)/include 
-
-CDEFS = CONFIG_H CM3_RAM_VECTORS
-
-CFLAGS = -g -O2 -Wall
-
-JTAGTOOL_ADDR = 192.168.10.50
+#include ../../../../mk/stm32f207.mk
 MACH = stm32f407
-include ../mk/stm32f4xx.mk
+include ../../../../mk/stm32f4xx.mk
 

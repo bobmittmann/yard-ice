@@ -1,5 +1,5 @@
 # File:		Makefile
-# Module: 
+# Author:   Robinson Mittmann (bobmittmann@gmail.com)
 # Target:
 # Comment:  
 # Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
@@ -19,27 +19,13 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+include ../../mk/config.mk
 
-PROG = thinkos
+LIB_STATIC = console
 
-CFILES = stdio.c boot.c 
+CFILES = console.c
 
-SDK = ../sdk
-TOOLS = ../../tools
+override INCPATH += ../include 
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libgdb
-
-LIBS = cm3 stm32f util thinkos ice-comm drv gdb gcc 
-
-INCPATH = $(SDK)/include 
-
-CDEFS = CONFIG_H CM3_RAM_VECTORS
-
-CFLAGS = -g -O2 -Wall
-
-JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f407
-include ../mk/stm32f4xx.mk
+include ../../mk/lib.mk
 

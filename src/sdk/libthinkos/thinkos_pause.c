@@ -59,10 +59,8 @@ static void mutex_resume(unsigned int th, unsigned int wq, bool tmw)
 		/* set the thread's return value */
 		thinkos_rt.ctx[th]->r0 = 0;
 #endif
-#if THINKOS_ENABLE_THREAD_STAT
 		/* update status */
 		thinkos_rt.th_stat[th] = 0;
-#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 		__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
@@ -89,10 +87,8 @@ static void semaphore_resume(unsigned int th, unsigned int wq, bool tmw)
 		/* set the thread's return value */
 		thinkos_rt.ctx[th]->r0 = 0;
 #endif
-#if THINKOS_ENABLE_THREAD_STAT
 		/* update status */
 		thinkos_rt.th_stat[th] = 0;
-#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 #if THINKOS_ENABLE_CLOCK
@@ -117,10 +113,8 @@ static void evset_resume(unsigned int th, unsigned int wq, bool tmw)
 		/* set the thread's return value */
 		thinkos_rt.ctx[th]->r0 = 0;
 #endif
-#if THINKOS_ENABLE_THREAD_STAT
 		/* update status */
 		thinkos_rt.th_stat[th] = 0;
-#endif
 	} else {
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 		__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
@@ -145,10 +139,8 @@ static void flag_resume(unsigned int th, unsigned int wq, bool tmw)
 		/* set the thread's return value */
 		thinkos_rt.ctx[th]->r0 = 0;
 #endif
-#if THINKOS_ENABLE_THREAD_STAT
 		/* update status */
 		thinkos_rt.th_stat[th] = 0;
-#endif
 #else
 	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
 		/* clear the signal */
@@ -159,10 +151,8 @@ static void flag_resume(unsigned int th, unsigned int wq, bool tmw)
 		/* set the thread's return value */
 		thinkos_rt.ctx[th]->r0 = 0;
 #endif
-#if THINKOS_ENABLE_THREAD_STAT
 		/* update status */
 		thinkos_rt.th_stat[th] = 0;
-#endif
 #endif
 	} else { 
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
@@ -230,6 +220,7 @@ bool __thinkos_thread_resume(unsigned int th)
 	int stat;
 	int type;
 
+#if THINKOS_ENABLE_PAUSE
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) == 0) {
 		DCC_LOG1(LOG_WARNING, "thread=%d is not paused!", th);
 		/* not paused, this is not an error condition. */
@@ -238,9 +229,8 @@ bool __thinkos_thread_resume(unsigned int th)
 
 	/* remove from the paused queue */
 	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
+#endif
 
-	/* remove from the paused queue */
-	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
 	/* reinsert the thread into a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];
 	wq = stat >> 1;
@@ -259,6 +249,7 @@ bool __thinkos_thread_pause(unsigned int th)
 	unsigned int wq;
 	int stat;
 
+#if THINKOS_ENABLE_PAUSE
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) != 0) {
 		DCC_LOG1(LOG_WARNING, "thread=%d is paused already!", th);
 		/* paused */
@@ -267,6 +258,7 @@ bool __thinkos_thread_pause(unsigned int th)
 
 	/* insert into the paused queue */
 	__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);
+#endif
 
 	/* remove the thread from a waiting queue, including ready  */
 	stat = thinkos_rt.th_stat[th];

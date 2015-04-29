@@ -106,91 +106,6 @@ __rom_vectors:
 	.thumb
 	.section .text.init
 
-	.thumb_func
-_reset:
-	.global _reset
-	.type   _reset, %function
-
-	/* jump to hardware initialization code */
-	/* disable interrupts */
-	cpsid   i
-	bl		_init
-
-0:
-	/* copy initialized variables .data section  (Copy from ROM to RAM) */
-	ldr     r2, .L_data_start
-	ldr     r3, .L_data_end
-	ldr     r4, .L_idata_start
-1:
-	/* while the .data pointer is less then the .bss
-	   copy from .idata to .data */
-	cmp     r2, r3
-	ittt	lo
-	ldrlo   r7, [r4], #4
-	strlo   r7, [r2], #4
-	blo     1b
-
-	/* clear .bss  */
-	ldr     r2, .L_bss_start
-	ldr     r3, .L_bss_end
-	mov     r7, #0
-2:
-	cmp     r2, r3
-	itt		lo
-	strlo   r7, [r2], #4
-	blo     2b
-
-	/* call constructors */
-	ldr     r5, .L_ctors_start
-	ldr     r6, .L_ctors_end
-	.L_ctor_loop:
-	cmp     r5, r6
-	beq     .L_ctor_end
-	ldr     r4, [r5], #4
-	blx     r4
-	b       .L_ctor_loop
-	.L_ctor_end:
-
-	/* argc = 0 */
-	mov     r0, #0
-	/* argv = NULL */
-	mov     r1, r0
-	/* go to C main function */
-	bl      main
-	b       _reset
-
-/* section of initialized data at ROM */
-.L_idata_start:
-	.word	__text_end
-/* section of initialized data at RAM */
-.L_data_start:
-	.word	__data_start
-.L_data_end:
-/* end of initialized data */
-	.word	__data_end	
-.L_bss_start:
-	.word	__bss_start
-.L_bss_end:
-	.word	__bss_end
-.L_heap_start:
-	.word	__heap_start
-.L_ctors_start:
-	.word   __ctors_start
-.L_ctors_end:
-	.word   __ctors_end
-
-	.size   _reset, . - _reset
-
-	.text
-	.align  2
-	.global _halt
-	.thumb
-	.thumb_func
-	.type   _halt, %function
-_halt:
-	b		_halt
-	.size   _halt, . - _halt
-
 	.text
 	.align  2
 	.global _isr
@@ -203,55 +118,53 @@ _isr:
 	b       cm3_default_isr
 	.size   _isr, . - _isr
 
+	.text
 	.align  2
-	.global	_void
+	.global _fault
 	.thumb
 	.thumb_func
-	.type   _void, %function
-_void:
-	bx      lr
-	.size   _void, . - _void
+	.type   _fault, %function
+_fault:
+	b		.
+	.size   _fault, . - _fault
 
 	/***********************************************************************
-	 * Provide weak aliases for each Exception handler to _halt().
+	 * Provide weak aliases for each Exception handler to _fault().
 	 * Any function with the same name will override these definitions.
 	 */
 
 	.weak       ice_comm_blk
 	.set		ice_comm_blk, __vectors
 
-	.weak       halt
-	.thumb_set  halt,_halt
-
 	.weak       cm3_default_isr
-	.thumb_set  cm3_default_isr,_halt
+	.thumb_set  cm3_default_isr,_fault
 
 	.weak       cm3_nmi_isr
-	.thumb_set  cm3_nmi_isr,_halt
+	.thumb_set  cm3_nmi_isr,_fault
 
 	.weak       cm3_hard_fault_isr
-	.thumb_set  cm3_hard_fault_isr,_halt
+	.thumb_set  cm3_hard_fault_isr,_fault
 
 	.weak       cm3_mem_manage_isr
-	.thumb_set  cm3_mem_manage_isr,_halt
+	.thumb_set  cm3_mem_manage_isr,_fault
 
 	.weak       cm3_bus_fault_isr
-	.thumb_set  cm3_bus_fault_isr,_halt
+	.thumb_set  cm3_bus_fault_isr,_fault
 
 	.weak       cm3_usage_fault_isr
-	.thumb_set  cm3_usage_fault_isr,_halt
+	.thumb_set  cm3_usage_fault_isr,_fault
 
 	.weak       cm3_svc_isr
-	.thumb_set  cm3_svc_isr,_halt
+	.thumb_set  cm3_svc_isr,_fault
 
 	.weak       cm3_debug_mon_isr
-	.thumb_set  cm3_debug_mon_isr,_halt
+	.thumb_set  cm3_debug_mon_isr,_fault
 
 	.weak     	cm3_pendsv_isr
-	.thumb_set  cm3_pendsv_isr,_halt
+	.thumb_set  cm3_pendsv_isr,_fault
 
 	.weak       cm3_systick_isr
-	.thumb_set  cm3_systick_isr,_halt
+	.thumb_set  cm3_systick_isr,_fault
 
 	.weak       stm32_wwdg_isr
 	.thumb_set  stm32_wwdg_isr,_isr

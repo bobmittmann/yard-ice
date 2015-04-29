@@ -23,15 +23,12 @@
 
 #include <thinkos.h>
 #include <sys/file.h>
-#include <sys/dcclog.h>
 
 int console_write(void * dev, const void * buf, unsigned int len) 
 {
 	unsigned int rem = len;
 	uint8_t * cp = (uint8_t *)buf;
 	int n;
-
-	DCC_LOG1(LOG_INFO, "len=%d ...", len);
 
 	while (rem) {
 		n = thinkos_console_write(cp, rem);

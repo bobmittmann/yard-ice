@@ -25,14 +25,14 @@ LIB_STATIC = thinkos
 
 DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c monitor.c \
 			  print_osinfo.c print_alloc.c print_thread.c \
-			  print_context.c print_stack_usage.c
+			  print_context.c print_stack_usage.c app_exec.c
 
 MISC_CFILES = thinkos_util.c thinkos_type.c bmp_alloc.c \
 			  memcpy.c memcpy32.c memset32.c thread_getnext.c \
 			  thread_get.c suspended.c isfaulty.c ispaused.c \
 			  isalive.c alloc_bmp_get.c obj_type_get.c
 
-CONSOLE_CFILES = thinkos_console.c console_api.c bypass.c 
+CONSOLE_CFILES = thinkos_console.c bypass.c 
 CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c \
 		 thinkos_thread.c thinkos_mutex.c thinkos_cond.c \
 		 thinkos_semaphore.c thinkos_event.c thinkos_irq.c \

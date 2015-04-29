@@ -26,37 +26,57 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos.h>
 #include <sys/delay.h>
 
+void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp, 
+						   void * task, void * arg)
+{
+	struct thinkos_context * ctx;
+
+	sp &= 0xfffffff8; /* 64bits alignemnt */
+	sp -= sizeof(struct thinkos_context);
+	ctx = (struct thinkos_context *)sp;
+
+	__thinkos_memset32(ctx, 0, sizeof(struct thinkos_context));
+
+	ctx->r0 = (uint32_t)arg;
+	ctx->lr = (uint32_t)thinkos_thread_exit;
+	ctx->pc = (uint32_t)task;
+	ctx->xpsr = 0x01000000;
+	thinkos_rt.ctx[thread_id] = ctx;
+
+}
+
 /* initialize a thread context */
 void thinkos_thread_create_svc(int32_t * arg)
 {
 	struct thinkos_thread_init * init = (struct thinkos_thread_init *)arg;
-	struct thinkos_context * ctx;
 	uint32_t sp;
-	int th;
+	int thread_id;
 
 #if THINKOS_ENABLE_THREAD_ALLOC
 	if (init->opt.id >= THINKOS_THREADS_MAX) {
-		th = thinkos_alloc_hi(thinkos_rt.th_alloc, THINKOS_THREADS_MAX);
-		DCC_LOG2(LOG_INFO, "thinkos_alloc_hi() %d -> %d.", init->opt.id, th);
+		thread_id = thinkos_alloc_hi(thinkos_rt.th_alloc, THINKOS_THREADS_MAX);
+		DCC_LOG2(LOG_INFO, "thinkos_alloc_hi() %d -> %d.", init->opt.id, 
+				 thread_id);
 		DCC_LOG1(LOG_INFO, "thinkos_rt.th_alloc=0x%08x", thinkos_rt.th_alloc);
 	} else {
 		/* Look for the next available slot */
-		th = thinkos_alloc_lo(thinkos_rt.th_alloc, init->opt.id);
-		DCC_LOG2(LOG_INFO, "thinkos_alloc_lo() %d -> %d.", init->opt.id, th);
-		if (th < 0) {
-			th = thinkos_alloc_hi(thinkos_rt.th_alloc, init->opt.id);
+		thread_id = thinkos_alloc_lo(thinkos_rt.th_alloc, init->opt.id);
+		DCC_LOG2(LOG_INFO, "thinkos_alloc_lo() %d -> %d.", init->opt.id, 
+				 thread_id);
+		if (thread_id < 0) {
+			thread_id = thinkos_alloc_hi(thinkos_rt.th_alloc, init->opt.id);
 			DCC_LOG2(LOG_INFO, "thinkos_alloc_hi() %d -> %d.", 
-					init->opt.id, th);
+					init->opt.id, thread_id);
 		}
 	}
 
-	if (th < 0) {
+	if (thread_id < 0) {
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
 #else
-	th = init->opt.id;
-	if (th >= THINKOS_THREADS_MAX) {
+	thread_id = init->opt.id;
+	if (thread_id >= THINKOS_THREADS_MAX) {
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -73,65 +93,56 @@ void thinkos_thread_create_svc(int32_t * arg)
 	/* initialize stack */
 	__thinkos_memset32(init->stack_ptr, 0xdeadbeef, init->opt.stack_size);
 
-	sp &= 0xfffffff8; /* 64bits alignemnt */
-	DCC_LOG3(LOG_INFO, "stack ptr=%08x top=%08x size=%d", 
-			 init->stack_ptr, sp, init->opt.stack_size);
-
-	sp -= sizeof(struct thinkos_context);
-	DCC_LOG1(LOG_INFO, "sp=%08x", sp);
-
-	ctx = (struct thinkos_context *)sp;
-	__thinkos_memset32(ctx, 0, sizeof(struct thinkos_context));
-	ctx->r0 = (uint32_t)init->arg;
-	ctx->lr = (uint32_t)thinkos_thread_exit;
-	ctx->pc = (uint32_t)init->task;
-	ctx->xpsr = 0x01000000;
-	thinkos_rt.ctx[th] = ctx;
-
-
 #if THINKOS_ENABLE_THREAD_INFO
-	thinkos_rt.th_inf[th] = init->inf;
+	thinkos_rt.th_inf[thread_id] = init->inf;
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
-	thinkos_rt.sched_pri[th] = init->opt.priority;
-	if (thinkos_rt.sched_pri[th] > THINKOS_SCHED_LIMIT_MAX)
-		thinkos_rt.sched_pri[th] = THINKOS_SCHED_LIMIT_MAX;
+	thinkos_rt.sched_pri[thread_id] = init->opt.priority;
+	if (thinkos_rt.sched_pri[thread_id] > THINKOS_SCHED_LIMIT_MAX)
+		thinkos_rt.sched_pri[thread_id] = THINKOS_SCHED_LIMIT_MAX;
 
 	/* update schedule limit */
-	if (thinkos_rt.sched_limit < thinkos_rt.sched_pri[th]) {
-		thinkos_rt.sched_limit = thinkos_rt.sched_pri[th];
+	if (thinkos_rt.sched_limit < thinkos_rt.sched_pri[thread_id]) {
+		thinkos_rt.sched_limit = thinkos_rt.sched_pri[thread_id];
 	}
-	thinkos_rt.sched_val[th] = thinkos_rt.sched_limit / 2;
+	thinkos_rt.sched_val[thread_id] = thinkos_rt.sched_limit / 2;
 #endif
 
 #if THINKOS_ENABLE_PAUSE
 	if (init->opt.paused) 
 		/* insert into the paused list */
-		__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);  
+		__bit_mem_wr(&thinkos_rt.wq_paused, thread_id, 1);  
 	else
 #endif
 	{
 		/* insert into the ready list */
-		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
+		__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
 		__thinkos_defer_sched();
 	}
 
-#if THINKOS_ENABLE_TIMESHARE
-	DCC_LOG5(LOG_INFO, "<%d> pri=%d/%d task=%08x sp=%08x", 
-			 th, thinkos_rt.sched_pri[th], 
-			 thinkos_rt.sched_limit, init->task, ctx);
-#endif
+	__thinkos_thread_exec(thread_id, sp, init->task, init->arg);
 
-	arg[0] = th;
+	arg[0] = thread_id;
 }
 
+
 #if THINKOS_ENABLE_THREAD_INFO
+extern uint32_t _stack;
+
+#ifndef THINKOS_MAIN_STACK_SIZE
+#define THINKOS_MAIN_STACK_SIZE 4096
+#endif
+
 /* FIXME: move this definition elsewere, or allow it 
    to be configured by the user ... */
 const struct thinkos_thread_inf thinkos_main_inf = {
-	.tag = "MAIN"
+	.tag = "MAIN",
+	.stack_ptr = (void *)((uintptr_t)&_stack - THINKOS_MAIN_STACK_SIZE),
+	.stack_size = THINKOS_MAIN_STACK_SIZE,
+	.priority = 0,
+	.thread_id = 0,
+	.paused = 0
 };
 #endif
-
 

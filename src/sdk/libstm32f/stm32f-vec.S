@@ -24,6 +24,8 @@
 	.syntax unified
 	.cpu cortex-m3
 
+	.extern _reset
+
 	/* ---------------------------------------------------------------------
 	 * Generate the vectors table 
 	 * --------------------------------------------------------------------- */
@@ -81,10 +83,10 @@
 	.word	stm32f_can1_rx1_isr        /* 21 CAN1 RX1 */
 	.word	stm32f_can1_sce_isr        /* 22 CAN1 SCE */
 #elif defined(STM32F100)
-	.word	_halt                      /* 19 Reserved */
-	.word	_halt                      /* 20 Reserved */
-	.word	_halt                      /* 21 Reserved */
-	.word	_halt                      /* 22 Reserved */
+	.word	_fault                      /* 19 Reserved */
+	.word	_fault                      /* 20 Reserved */
+	.word	_fault                      /* 21 Reserved */
+	.word	_fault                      /* 22 Reserved */
 #endif
 
 	.word	stm32f_exti9_5_isr         /* 23 External Lines [9:5] */
@@ -159,8 +161,8 @@
 #endif
 
 #if defined(STM32F100)
-	.word	_halt                     /* 46 Reserved */
-	.word	_halt                     /* 47 Reserved */
+	.word	_fault                     /* 46 Reserved */
+	.word	_fault                     /* 47 Reserved */
 #else
 	.word	stm32f_tim8_cc_isr        /* 46 TIM8 Capture Compare */
 	.word	stm32f_dma1_stream7_isr   /* 47 DMA1 Stream7 */
@@ -169,7 +171,7 @@
 	.word	stm32f_fsmc_isr           /* 48 FSMC */
 	
 #if defined(STM32F100)
-	.word	_halt                     /* 49 Reserved */
+	.word	_fault                     /* 49 Reserved */
 #else
 	.word	stm32f_sdio_isr           /* 49 SDIO */
 #endif
@@ -239,96 +241,6 @@ __ram_vectors:
 	.size   __ram_vectors, . - __ram_vectors
 #endif
 
-	.align  0
-	.thumb
-	.section .text.init
-
-	.thumb_func
-_reset:
-	.global _reset
-	.type   _reset, %function
-
-	/* jump to hardware initialization code */
-	/* disable interrupts */
-	cpsid   i
-	bl		_init
-
-0:
-	/* copy initialized variables .data section  (Copy from ROM to RAM) */
-	ldr     r2, .L_data_start
-	ldr     r3, .L_data_end
-	ldr     r4, .L_idata_start
-1:
-	/* while the .data pointer is less then the .bss
-	   copy from .idata to .data */
-	cmp     r2, r3
-	ittt	lo
-	ldrlo   r7, [r4], #4
-	strlo   r7, [r2], #4
-	blo     1b
-
-	/* clear .bss  */
-	ldr     r2, .L_bss_start
-	ldr     r3, .L_bss_end
-	mov     r7, #0
-2:
-	cmp     r2, r3
-	itt		lo
-	strlo   r7, [r2], #4
-	blo     2b
-
-	/* call constructors */
-	ldr     r5, .L_ctors_start
-	ldr     r6, .L_ctors_end
-	.L_ctor_loop:
-	cmp     r5, r6
-	beq     .L_ctor_end
-	ldr     r4, [r5], #4
-	blx     r4
-	b       .L_ctor_loop
-	.L_ctor_end:
-
-	/* argc = 0 */
-	mov     r0, #0
-	/* argv = NULL */
-	mov     r1, r0
-	/* go to C main function */
-	bl      main
-	b       _reset
-
-/* section of initialized data at ROM */
-.L_idata_start:
-	.word	__text_end
-/* section of initialized data at RAM */
-.L_data_start:
-	.word	__data_start
-.L_data_end:
-/* end of initialized data */
-	.word	__data_end	
-.L_bss_start:
-	.word	__bss_start
-.L_bss_end:
-	.word	__bss_end
-.L_heap_start:
-	.word	__heap_start
-.L_ctors_start:
-	.word   __ctors_start
-.L_ctors_end:
-	.word   __ctors_end
-
-	.size   _reset, . - _reset
-
-	.text
-	.align  2
-	.global _halt
-	.thumb
-	.thumb_func
-	.type   _halt, %function
-_halt:
-	cpsid   i
-	b		.
-	.size   _halt, . - _halt
-
 	.text
 	.align  2
 	.global _isr
@@ -341,58 +253,56 @@ _isr:
 	b       cm3_default_isr
 	.size   _isr, . - _isr
 
+	.text
 	.align  2
-	.global	_void
+	.global _fault
 	.thumb
 	.thumb_func
-	.type   _void, %function
-_void:
-	bx      lr
-	.size   _void, . - _void
+	.type   _fault, %function
+_fault:
+	b		.
+	.size   _fault, . - _fault
 
 	/***********************************************************************
-	 * Provide weak aliases for each Exception handler to _halt().
+	 * Provide weak aliases for each Exception handler to _fault().
 	 * Any function with the same name will override these definitions.
 	 */
 
 	.weak       ice_comm_blk
 	.set		ice_comm_blk, __vectors
 
-	.weak       halt
-	.thumb_set  halt,_halt
-
 	.weak       cm3_default_isr
-	.thumb_set  cm3_default_isr,_halt
+	.thumb_set  cm3_default_isr,_fault
 
 	.weak       cm3_nmi_isr
-	.thumb_set  cm3_nmi_isr,_halt
+	.thumb_set  cm3_nmi_isr,_fault
 
 	.weak       cm3_hard_fault_isr
-	.thumb_set  cm3_hard_fault_isr,_halt
+	.thumb_set  cm3_hard_fault_isr,_fault
 
 	.weak       cm3_mem_manage_isr
-	.thumb_set  cm3_mem_manage_isr,_halt
+	.thumb_set  cm3_mem_manage_isr,_fault
 
 	.weak       cm3_bus_fault_isr
-	.thumb_set  cm3_bus_fault_isr,_halt
+	.thumb_set  cm3_bus_fault_isr,_fault
 
 	.weak       cm3_usage_fault_isr
-	.thumb_set  cm3_usage_fault_isr,_halt
+	.thumb_set  cm3_usage_fault_isr,_fault
 
 	.weak       cm3_svc_isr
-	.thumb_set  cm3_svc_isr,_halt
+	.thumb_set  cm3_svc_isr,_fault
 
 	.weak       cm3_debug_mon_isr
-	.thumb_set  cm3_debug_mon_isr,_halt
+	.thumb_set  cm3_debug_mon_isr,_fault
 
 	.weak     	cm3_pendsv_isr
-	.thumb_set  cm3_pendsv_isr,_halt
+	.thumb_set  cm3_pendsv_isr,_fault
 
 	.weak       cm3_systick_isr
-	.thumb_set  cm3_systick_isr,_halt
+	.thumb_set  cm3_systick_isr,_fault
 
 	.weak       stm32f_wwdg_isr
-	.thumb_set  stm32f_wwdg_isr,_isr
+	.thumb_set  stm32f_wwdg_isr,_fault
 
 	.weak       stm32f_pvd_isr
 	.thumb_set  stm32f_pvd_isr,_isr
@@ -451,21 +361,17 @@ _void:
 	.weak       stm32f_adc_isr
 	.thumb_set  stm32f_adc_isr,_isr
 
-#if defined(STM32F2X) || defined(STM32F4X)
 	.weak       stm32f_can1_tx_isr
 	.thumb_set  stm32f_can1_tx_isr,_isr
 
 	.weak       stm32f_can1_rx0_isr
 	.thumb_set  stm32f_can1_rx0_isr,_isr
-#endif
 
-#ifdef STM32F10X
 	.weak       stm32f_can1_tx_usb_hp_isr
 	.thumb_set  stm32f_can1_tx_usb_hp_isr,_isr
 
 	.weak       stm32f_can1_rx0_usb_lp_isr
 	.thumb_set  stm32f_can1_rx0_usb_lp_isr,_isr
-#endif
 
 	.weak       stm32f_can1_rx1_isr
 	.thumb_set  stm32f_can1_rx1_isr,_isr
@@ -635,7 +541,6 @@ _void:
 	.weak       stm32f_dma2_stream4_isr
 	.thumb_set  stm32f_dma2_stream4_isr,_isr
 
-#if defined(STM32F2X) || defined(STM32F4X)
 	.weak       stm32f_eth_isr
 	.thumb_set  stm32f_eth_isr,_isr
 
@@ -695,6 +600,5 @@ _void:
 
 	.weak       stm32f_hash_rng_isr
 	.thumb_set  stm32f_hash_rng_isr,_isr
-#endif
 
 	.end

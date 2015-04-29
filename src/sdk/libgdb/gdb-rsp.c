@@ -131,26 +131,6 @@ void monitor_resume_all(struct dmon_comm * comm)
 	dmprintf(comm, "Restarting...\r\n");
 }
 
-struct dbg_bp {
-	union {
-		struct dbg_bp * next;
-		struct {
-			int16_t hw_id;
-			uint8_t type;
-			uint8_t active:1;
-			uint8_t enabled:1;
-			uint32_t addr;
-			uint32_t size;
-		};
-	};
-};
-
-struct dbg_bp_ctrl {
-	uint16_t cnt;
-	struct dbg_bp ** lst;
-	struct dbg_bp * free;
-};
-
 struct gdb_rspd {
 	uint8_t current_thread;
 	struct {
@@ -165,7 +145,6 @@ struct gdb_rspd {
 	} thread_id;
 	uint8_t last_signal;
 	struct dmon_comm * comm;
-	struct dbg_bp_ctrl bp_ctrl;
 	void (* shell_task)(struct dmon_comm * comm);
 };
 
@@ -182,7 +161,7 @@ struct mem_range {
 	uint32_t size;
 };
 
-struct mem_range target_mem_map[] = {
+const struct mem_range target_mem_map[] = {
 	{ .name = "boot", .base = 0x08000000, .size = 4 * 16 * 1024 },
 	{ .name = "app", .base = 0x08010000, .size = 64 * 1024 },
 	{ .name = "ffs", .base = 0x08020000, .size = 4 * 128 * 1024 },
@@ -275,7 +254,7 @@ static bool is_addr_valid(uint32_t addr)
 	int n = sizeof(target_mem_map) / sizeof(struct mem_range);
 
 	for (i = 0; i < n; ++i) {
-		struct mem_range * mem = &target_mem_map[i];
+		const struct mem_range * mem = &target_mem_map[i];
 		if ((addr >= mem->base) && (addr < (mem->base + mem->size))) {
 			return true;
 		}
@@ -458,399 +437,25 @@ int thread_register_set(int thread, int reg, uint32_t val)
  Breakpoint management
  ***********************************************************************/
 
-/* Breakpoint allocation data */
-static struct dbg_bp dbg_bp_pool[DBG_BREAKPOINT_MAX];
-
-/* Breakpoint management data */
-/* This is a list of breakpoints ordered from the most to the least recently
-   used.
-   In most cases the target can support a limited number of active 
-   breakpoints, in this case the top of this list will 
-   correspond to the target's hardware ones.
- */
-static struct dbg_bp * dbg_bp_list[DBG_BREAKPOINT_MAX];
-
-static void dbg_bp_init(dbg_bp_ctrl_t * bpctl)
-{
-	struct dbg_bp * bp;
-	int i;
-
-	/* initialize the breakpoint poll.
-	 The breakpoint poll consist of a linked list of free
-	 breakpoint structures */
-	bpctl->free = dbg_bp_pool;
-	bpctl->lst = dbg_bp_list;
-	bpctl->cnt = 0;
-
-	bp = bpctl->free;
-	for (i = 1; i < DBG_BREAKPOINT_MAX; i++) {
-		bp->next = &dbg_bp_pool[i];
-		bp = &dbg_bp_pool[i];
-	}
-	bp->next = NULL;
-
-}
-
-static struct dbg_bp * dbg_bp_new(dbg_bp_ctrl_t * bpctl, 
-								  uint32_t addr, uint32_t size)
-{
-	struct dbg_bp * bp;
-
-	if ((bp = bpctl->free) != NULL)
-		bpctl->free = bp->next;
-
-	bp->addr = addr;
-	bp->size = size;
-	bp->active = 0;
-
-	/* insert at the list's tail,
-	   if the list is full drop the last entry */
-
-	if (bpctl->cnt < DBG_BREAKPOINT_MAX)
-		bpctl->cnt++;
-
-	bpctl->lst[bpctl->cnt - 1] = bp;
-	
-	DCC_LOG1(LOG_TRACE, "cnt=%d", bpctl->cnt);
-
-	return bp;
-}
-
-static void dbg_bp_move_to_head(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
-{
-	struct dbg_bp * tmp = NULL;
-	struct dbg_bp * prev = bp;
-	int i;
-
-	DCC_LOG1(LOG_TRACE, "bpctl->cnt=%d", bpctl->cnt);
-
-	/* moving the list (shifting) */
-	for (i = 0; i < bpctl->cnt; i++) {
-		DCC_LOG1(LOG_TRACE, "i=%d", i);
-		tmp = bpctl->lst[i];
-		bpctl->lst[i] = prev;
-		if (tmp == bp) {
-			break;
-		}
-		prev = tmp;
-	}
-}
-
-#define HW_BP_MAX 4
-
-static int dbg_bp_delete(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
-{
-	int i;
-	int n;
-
-	/* look up for this breakpoint in the list */
-	for (i = 0; i < bpctl->cnt; i++) {
-		if (bp == bpctl->lst[i])
-			break;
-	}
-
-	n = i;
-
-	if (n == bpctl->cnt) {
-		DCC_LOG(LOG_EXCEPT, "not in the list!!!");
-	}
-
-	/* one less item in the list */
-	bpctl->cnt--;
-
-	/* moving the remaining items in the list one position to the front */
-	for (i = n; i < bpctl->cnt; i++) {
-		bpctl->lst[i] = bpctl->lst[i + 1];
-	}
-
-	if (bp->active) {
-		/* clear the current breakpoint */
-		DCC_LOG1(LOG_TRACE, "clearing active BP: %d", bp->hw_id);
-	//	ice_bp_clr(ice, bp->hw_id);
-
-		/* activate the next if not disabled */
-		if (bpctl->cnt >= HW_BP_MAX) {
-			struct dbg_bp * nxt;
-			uint32_t id;
-
-			nxt = bpctl->lst[HW_BP_MAX - 1];
-			if (nxt->enabled) {
-				DCC_LOG(LOG_TRACE, "seting next BP on list");
-//				if (ice_bp_set(ice, nxt->addr, nxt->size, &id) < 0) {
-//					DCC_LOG(LOG_EXCEPT, "ice_bp_set() error!");
-//				}
-				id = 1;
-				nxt->active = 1;
-				nxt->hw_id = id;
-			}
-		}
-	} 
-
-	/* release memory */
-	bp->next = bpctl->free;
-	bpctl->free = bp;
-
-	return 0;
-}
-
-#if 0
-static int dbg_bp_enable_all(dbg_bp_ctrl_t * bpctl)
-{
-	struct dbg_bp * bp = NULL;
-	uint32_t id;
-	int ret = 0;
-	int n;
-	int i;
-
-	/* activate the breakpoints */
-	n = (bpctl->cnt > HW_BP_MAX) ? HW_BP_MAX: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
-		if (!bp->active) {
-			DCC_LOG(LOG_TRACE, "activating breakpoint...");
-//			if ((ret = ice_bp_set(ice, bp->addr, bp->size, &id)) < 0) {
-//				DCC_LOG(LOG_ERROR, "ice_bp_set() error!");
-//				return ret;
-//			}
-			bp->active = 1;
-			bp->hw_id = id;
-		}
-		bp->enabled = 1;
-	}
-	/* enable the remaining */
-	for (i = n; i < bpctl->cnt; i++) {
-		bp = bpctl->lst[i];
-		bp->enabled = 1;
-	}
-
-	return ret;
-}
-
-static int dbg_bp_disable_all(dbg_bp_ctrl_t * bpctl)
-{
-	struct dbg_bp * bp = NULL;
-	int ret = 0;
-	int i;
-
-	/* disable all the breakpoints */
-	for (i = 0; i < bpctl->cnt; i++) {
-		bp = bpctl->lst[i];
-		if (bp->active) {
-			/* deactivate the breakpoints */
-			DCC_LOG1(LOG_TRACE, "deactivating breakpoint %d", i);
-//			if ((ret = ice_bp_clr(ice, bp->hw_id)) < 0) {
-//				DCC_LOG(LOG_ERROR, "ice_bp_clr() error!");
-//				return ret;
-//			}
-			bp->active = 0;
-			bp->hw_id = -1;
-		}
-		bp->enabled = 0;
-	}
-
-	return ret;
-}
-#endif
-
-static int dbg_bp_activate(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
-{
-	uint32_t id;
-
-	if (bp->active)
-		return 0;
-
-	if (bpctl->cnt > HW_BP_MAX) {
-		struct dbg_bp * nxt;
-		/* we are short of hardware breakpoints,
-		   deactivate the least recently active */
-		nxt = bpctl->lst[HW_BP_MAX];
-		if (nxt->active) {
-			id = nxt->hw_id;
-			nxt->active = 0;
-			DCC_LOG1(LOG_TRACE, "deactivating breakpoint %d", id);
-//			ice_bp_clr(ice, id);
-		}
-	} 
-
-	DCC_LOG2(LOG_TRACE, "activating breakpoint: 0x%08x(%d) ...", 
-			bp->addr, bp->size);
-
-	id = 1;
-//	if (ice_bp_set(ice, bp->addr, bp->size, &id) < 0) {
-//		DCC_LOG(LOG_ERROR, "ice_bp_set() error!");
-//		bp->active = 0;
-//		bp->hw_id = -1;
-//		return -1;
-//	} 
-
-	DCC_LOG1(LOG_TRACE, "HW breakpoint id=%d", id);
-	bp->active = 1;
-	bp->hw_id = id;
-	return 0;
-}
-
-#if 0
-static int dbg_bp_deactivate(dbg_bp_ctrl_t * bpctl, struct dbg_bp * bp)
-{
-	uint32_t id;
-
-	if (!bp->active)
-		return 0;
-
-	id = bp->hw_id;
-	bp->active = 0;
-	DCC_LOG1(LOG_TRACE, "deactivating breakpoint %d", id);
-	(void)id;
-//	ice_bp_clr(ice, id);
-
-	return 0;
-}
-
-static int dbg_bp_activate_all(dbg_bp_ctrl_t * bpctl)
-{
-	struct dbg_bp * bp = NULL;
-	uint32_t id;
-	int ret = 0;
-	int n;
-	int i;
-
-	n = (bpctl->cnt > HW_BP_MAX) ? HW_BP_MAX: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
-		if (bp->enabled && !bp->active) {
-			DCC_LOG(LOG_TRACE, "activating breakpoint...");
-//			if ((ret = ice_bp_set(ice, bp->addr, bp->size, &id)) < 0) {
-//				DCC_LOG(LOG_ERROR, "ice_bp_set() error!");
-//				return ret;
-//			}
-			bp->active = 1;
-			bp->hw_id = id;
-		}
-	}
-
-	return ret;
-}
-
-static int dbg_bp_deactivate_all(dbg_bp_ctrl_t * bpctl)
-{
-	struct dbg_bp * bp = NULL;
-	int ret = 0;
-	int n;
-	int i;
-
-	n = (bpctl->cnt > HW_BP_MAX) ? HW_BP_MAX: bpctl->cnt;
-	for (i = 0; i < n; i++) {
-		bp = bpctl->lst[i];
-		if (bp->active) {
-			/* deactivate the breakpoints */
-			DCC_LOG1(LOG_TRACE, "deactivating breakpoint %d", i);
-//			if ((ret = ice_bp_clr(ice, bp->hw_id)) < 0) {
-//				DCC_LOG(LOG_ERROR, "ice_bp_clr() error!");
-//				return ret;
-//			}
-			bp->active = 0;
-			bp->hw_id = -1;
-		}
-	}
-
-	return ret;
-}
-
-static struct dbg_bp * dbg_bp_get_next(dbg_bp_ctrl_t * bpctl, 
-									   struct dbg_bp * bp)
-{
-	int i;
-
-	if (bpctl->cnt == 0)
-		return NULL;
-
-	/* look up for this breakpoint in the list */
-	for (i = 0; i < bpctl->cnt; i++) {
-		if (bp == bpctl->lst[i]) {
-			/* the breakpoint is in the list, return the next item */
-			i++;
-			if (i < bpctl->cnt)
-				return bpctl->lst[i];
-			return NULL;
-		}
-	}
-
-	return bpctl->lst[0];
-}
-#endif
-
-static struct dbg_bp * dbg_bp_lookup(dbg_bp_ctrl_t * bpctl, 
-									 uint32_t addr, uint32_t size)
-{
-	struct dbg_bp * bp;
-	int pos;
-
-	/* check if a breakpoint with the same address and size 
-	 already exist */
-	for (pos = 0; pos < bpctl->cnt; pos++) {
-		bp = bpctl->lst[pos];
-		if ((bp->addr == addr) && (bp->size == size)) {
-			return bp;
-		}
-	}
-
-	return NULL;
-}
-
 #define BP_DEFSZ 2
 
-int target_breakpoint_set(struct gdb_rspd * gdb, 
-						  uint32_t addr, uint32_t size)
+int target_breakpoint_set(struct gdb_rspd * gdb, uint32_t addr, uint32_t size)
 {
-	struct dbg_bp * bp = NULL;
-
 	/* use default size if zero */
 	size = (size == 0) ? BP_DEFSZ : size;
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	/* check if a breakpoint with the same address and size 
-	 already exist */
-	if ((bp = dbg_bp_lookup(&gdb->bp_ctrl, addr, size)) == NULL) {
-		/* no breakpoint exist, create a new one */
-		if ((bp = dbg_bp_new(&gdb->bp_ctrl, addr, size)) == NULL) {
-			DCC_LOG(LOG_WARNING, "breakpoint allocation fail!");
-			return -1;
-		};
-		DCC_LOG1(LOG_TRACE, "new breakpoint: %p", bp);
-	}
-	
-	/* move the to the head */
-	dbg_bp_move_to_head(&gdb->bp_ctrl, bp);
-
-	/* enable the breakpoint */
-	bp->enabled = 1;
-
-	if (!bp->active) {
-		/* activate the hardware break point */
-		dbg_bp_activate(&gdb->bp_ctrl, bp);
-	} 
-
 	return 0;
 }
 
-int target_breakpoint_clear(struct gdb_rspd * gdb,
-							uint32_t addr, uint32_t size)
+int target_breakpoint_clear(struct gdb_rspd * gdb, uint32_t addr, uint32_t size)
 {
-	struct dbg_bp * bp;
-	int ret;
+	int ret = 0;
 
 	size = (size == 0) ? BP_DEFSZ : size;
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
-
-	/* check if a breakpoint with this address and size exists */
-	if ((bp = dbg_bp_lookup(&gdb->bp_ctrl, addr, size)) == NULL) {
-		DCC_LOG(LOG_WARNING, "breakpoint not found!");
-		ret = -1;
-	} else {
-		ret = dbg_bp_delete(&gdb->bp_ctrl, bp);
-	}
 
 	return ret;
 }
@@ -1993,8 +1598,6 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	int len;
 
 	DCC_LOG(LOG_TRACE, "GDB start...");
-
-	dbg_bp_init(&gdb->bp_ctrl);
 
 	gdb->nonstop_mode = 0;
 	gdb->noack_mode = 0;
