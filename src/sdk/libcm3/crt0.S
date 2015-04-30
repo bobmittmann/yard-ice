@@ -31,6 +31,11 @@ _reset:
 	.global _reset
 	.type   _reset, %function
 
+	b       0f
+	.byte   '\r'
+	.byte   '\n'
+	.string "ThinkOS"
+0:
 	/* jump to hardware initialization code */
 	/* disable interrupts */
 	bl		_init

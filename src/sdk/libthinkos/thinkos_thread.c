@@ -38,11 +38,20 @@ void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp,
 	__thinkos_memset32(ctx, 0, sizeof(struct thinkos_context));
 
 	ctx->r0 = (uint32_t)arg;
-	ctx->lr = (uint32_t)thinkos_thread_exit;
+	ctx->lr = (uint32_t)__thinkos_thread_exit;
 	ctx->pc = (uint32_t)task;
 	ctx->xpsr = 0x01000000;
 	thinkos_rt.ctx[thread_id] = ctx;
 
+#if THINKOS_ENABLE_PAUSE
+	if (__bit_mem_rd(&thinkos_rt.wq_paused, thread_id)) {  
+	} else
+#endif
+	{
+		/* insert into the ready list */
+		__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
+		__thinkos_defer_sched();
+	}
 }
 
 /* initialize a thread context */
@@ -113,13 +122,7 @@ void thinkos_thread_create_svc(int32_t * arg)
 	if (init->opt.paused) 
 		/* insert into the paused list */
 		__bit_mem_wr(&thinkos_rt.wq_paused, thread_id, 1);  
-	else
 #endif
-	{
-		/* insert into the ready list */
-		__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
-		__thinkos_defer_sched();
-	}
 
 	__thinkos_thread_exec(thread_id, sp, init->task, init->arg);
 

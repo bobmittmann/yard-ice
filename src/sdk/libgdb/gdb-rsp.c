@@ -1737,7 +1737,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 }
 
-void gdb_init(void * comm, void (* shell)(struct dmon_comm * ))
+void gdb_init(void (* shell)(struct dmon_comm * ))
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
 	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
@@ -1745,7 +1745,5 @@ void gdb_init(void * comm, void (* shell)(struct dmon_comm * ))
 	if (shell == NULL)
 		shell = gdb_task;
 	gdb->shell_task = shell;
-
-	thinkos_dmon_init(comm, shell);
 }
 

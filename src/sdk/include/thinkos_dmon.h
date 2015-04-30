@@ -147,6 +147,10 @@ void dmon_print_stack_usage(struct dmon_comm * comm);
 
 int dmon_app_exec(void);
 
+void dmon_comm_irq_config(struct dmon_comm * comm);
+
+void dmon_irq_disable_all(void);
+
 #ifdef __cplusplus
 }
 #endif

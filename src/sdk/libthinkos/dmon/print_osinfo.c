@@ -51,19 +51,16 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 
 //	__thinkos_memcpy32(rt, &thinkos_rt, sizeof(struct thinkos_rt));
 
-#if THINKOS_ENABLE_PROFILING
-	/* Reset cycle counters */
-	for (i = 0; i <= THINKOS_THREADS_MAX; ++i)
-		thinkos_rt.cyccnt[i] = 0; 
-#endif
-
 	dmprintf(comm, "\r\n------------------------------------------------"
 			 "---------------------\r\n");
+	dmprintf(comm, "[ Current = %d ]", rt->active);
+
 #if THINKOS_ENABLE_CLOCK
-	dmprintf(comm, "[ Ticks = %d ]", rt->ticks);
+	dmprintf(comm, "[ %d ticks ]", rt->ticks);
 #endif
 
 #if THINKOS_ENABLE_PROFILING
+	dmprintf(comm, "[ cyccnt = %u ]\r\n", cyccnt);
 	{
 		uint32_t cycsum = 0;
 		uint32_t cycbusy;
@@ -78,7 +75,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 		cycdiv = (cycsum + 500) / 1000;
 		busy = (cycbusy + cycdiv / 2) / cycdiv;
 		idle = 1000 - busy;
-		dmprintf(comm, " [ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
+		dmprintf(comm, "[ %u cycles | %d.%d%% busy | %d.%d%% idle ]", 
 				cycsum, busy / 10, busy % 10, idle / 10, idle % 10);
 	}
 
@@ -96,7 +93,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 	dmprintf(comm, " |  WQ | TmW"); 
 #endif
 #if THINKOS_ENABLE_TIMESHARE
-	dmprintf(comm, " |  Val |  Pri"); 
+//	dmprintf(comm, " |  Val |  Pri"); 
 #endif
 #if THINKOS_ENABLE_CLOCK
 	dmprintf(comm, " | Clock (ms)"); 
@@ -129,7 +126,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 					rt->th_stat[i] & 1 ? "Yes" : " No"); 
 #endif
 #if THINKOS_ENABLE_TIMESHARE
-			dmprintf(comm, " | %4d | %4d", rt->sched_val[i], rt->sched_pri[i]); 
+//			dmprintf(comm, " | %4d | %4d", rt->sched_val[i], rt->sched_pri[i]); 
 #endif
 #if THINKOS_ENABLE_CLOCK
 			{
@@ -154,6 +151,12 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 			dmprintf(comm, "\r\n");
 		}
 	}
+
+#if THINKOS_ENABLE_PROFILING
+	/* Reset cycle counters */
+	for (i = 0; i <= THINKOS_THREADS_MAX; ++i)
+		thinkos_rt.cyccnt[i] = 0; 
+#endif
 
 	for (wq = rt->wq_lst; wq != rt->wq_end; ++wq) {
 		int oid;

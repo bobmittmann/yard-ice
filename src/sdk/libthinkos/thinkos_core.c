@@ -175,22 +175,30 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  : : "r" (r0) : "r3"); 
 }
 
-/* THinkOS - scheduler */
+/* --------------------------------------------------------------------------
+ * ThinkOS - scheduler 
+ * --------------------------------------------------------------------------*/
 void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 {
-	struct thinkos_context * ctx;
-	uint32_t idx;
+	struct thinkos_context * old_ctx;
+	struct thinkos_context * new_ctx;
+	uint32_t old_thread_id;
+	uint32_t new_thread_id;
 
 //	DCC_LOG(LOG_TRACE, "...");
 
 	/* save the context */
-	ctx = __sched_entry();
-
+	old_ctx = __sched_entry();
 	/* get the active (current) thread */	
-	idx = thinkos_rt.active;
-
-	/* save SP */
-	thinkos_rt.ctx[idx] = ctx;
+	old_thread_id = thinkos_rt.active;
+	/* get a thread from the ready bitmap */
+	new_thread_id = __clz(__rbit(thinkos_rt.wq_ready));
+	/* update the active thread */
+	thinkos_rt.active = new_thread_id;
+	/* save the old context (SP) */
+	thinkos_rt.ctx[old_thread_id] = old_ctx;
+	/* get the new context (SP) */
+	new_ctx = thinkos_rt.ctx[new_thread_id];
 
 #if THINKOS_ENABLE_PROFILING
 	{
@@ -199,32 +207,24 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 		/* update the reference */
 		thinkos_rt.cycref = cyccnt;
 		/* update thread's cycle counter */
-		thinkos_rt.cyccnt[idx] += delta; 
+		thinkos_rt.cyccnt[old_thread_id] += delta; 
 	}
 #endif
 
-	/* get a thread from the ready bitmap */
-	idx = __clz(__rbit(thinkos_rt.wq_ready));
-
-	/* update the active thread */
-	thinkos_rt.active = idx;
-
-	ctx = thinkos_rt.ctx[idx];
-
 #if THINKOS_ENABLE_SCHED_DEBUG
 	if (thinkos_rt.sched_trace_req) {
-		DCC_LOG1(LOG_TRACE, "active=%d", idx);
+		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
 		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
-		__dump_context(ctx);
+		__dump_context(new_ctx);
 		__wait();
 		thinkos_rt.sched_trace_req = 0;
 	}
 #endif
 
 #if THINKOS_ENABLE_DEBUG_STEP
-	if ((1 << idx) & thinkos_rt.step_req) {
+	if ((1 << new_thread_id) & thinkos_rt.step_req) {
 		/* save the current stepping thread */
-		thinkos_rt.step_id = idx;
+		thinkos_rt.step_id = new_thread_id;
 		/* need 4 steps to actually step the thread */
 		thinkos_rt.step_cnt = 4;
 		/* rise the BASEPRI to stop the scheduler and interrupts */
@@ -233,7 +233,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	}
 #endif
 	/* restore the context */
-	__sched_exit(ctx);
+	__sched_exit(new_ctx);
 }
 
 #if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
@@ -337,85 +337,8 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 }
 #endif /* THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE */
 
-void __attribute__((noreturn)) thinkos_thread_exit(int code)
-{
-	int self = thinkos_rt.active;
-	int j;
-
-	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
-
-#if THINKOS_ENABLE_TIMESHARE
-	/* possibly remove from the time share wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_tmshare, self, 0);  
-#endif
-
-	/* disable interrupts */
-	cm3_cpsid_i();
-
-#ifdef THINKOS_ENABLE_CANCEL
-#if THINKOS_ENABLE_THREAD_STAT
-	int stat;
-	/* update the thread status */
-	stat = thinkos_rt.th_stat[self];
-	thinkos_rt.th_stat[self] = 0;
-	/* remove from other wait queue, if any */
-	__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], self, 0);  
-#else
-	int i;
-	/* remove from other wait queue, if any */
-	for (i = 0; i < __wq_idx(thinkos_rt.wq_end); i++) {
-		__bit_mem_wr(&thinkos_rt.wq_lst[i], self, 0);  
-	}
-#endif
-#endif
-
-	for (j = 0; j < THINKOS_THREADS_MAX; j++) {
-#if THINKOS_ENABLE_THREAD_ALLOC
-		if (__bit_mem_rd(&thinkos_rt.th_alloc, j) == 0)
-			continue;
-#endif
-
-#if THINKOS_ENABLE_TIMESHARE
-		/* schedule limit reevaluation */
-		if (thinkos_rt.sched_limit < thinkos_rt.sched_pri[j]) {
-			thinkos_rt.sched_limit = thinkos_rt.sched_pri[j];
-		}
-#endif
-
-#if THINKOS_ENABLE_JOIN
-		if (__bit_mem_rd(&thinkos_rt.wq_join[self], j) != 0) {
-			DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
-			__bit_mem_wr((void *)&thinkos_rt.wq_ready, j, 1); 
-			__bit_mem_wr((void *)&thinkos_rt.wq_join[self], j, 0);  
-			thinkos_rt.ctx[j]->r0 = code;
-		}
-#endif
-	}
-
-	cm3_cpsie_i();
-
-#if !THINKOS_ENABLE_THREAD_ALLOC && THINKOS_ENABLE_TIMESHARE
-	/* clear the schedule priority. In case the thread allocations
-	 is disabled, the schedule limit reevaluation may produce inconsistent
-	 results ... */
-	thinkos_rt.sched_pri[self] = 0;
-#endif
-
-#if THINKOS_ENABLE_THREAD_ALLOC
-	/* Releases the thread block */
-	__bit_mem_wr(&thinkos_rt.th_alloc, self, 0);
-#endif
 
 
-	/* FIXME: clear context. The way is implemented th scheduler will 
-	   override this value...  */
-	thinkos_rt.ctx[self] = 0;
-
-	/* wait forever */
-	__thinkos_wait(self);
-
-	for(;;);
-}
 
 _Pragma ("GCC optimize (\"Os\")")
 
@@ -634,10 +557,11 @@ int __thinkos_init_main(struct thinkos_thread_opt opt)
 	if (opt.paused) {
 		/* insert into the paused list */
 		__bit_mem_wr(&thinkos_rt.wq_paused, self, 1);
-		/* Invoke the scheduler */
-		__thinkos_defer_sched();
 	} 
 #endif
+
+	/* Invoke the scheduler */
+	__thinkos_defer_sched();
 
 	return self;
 }
@@ -702,7 +626,20 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #if THINKOS_ENABLE_JOIN
 	DCC_LOG3(LOG_TRACE, "     join: %2d (%2d .. %2d)", THINKOS_THREADS_MAX,
 			 THINKOS_JOIN_BASE,
-			 THINKOS_JOIN_BASE + THINKOS_THREADS_MAX- 1);
+			 THINKOS_JOIN_BASE + THINKOS_THREADS_MAX - 1);
+#endif
+#if THINKOS_ENABLE_CONSOLE
+	DCC_LOG2(LOG_TRACE, "  console: (wr:%2d rd:%2d)", 
+			THINKOS_WQ_CONSOLE_WR,  THINKOS_WQ_CONSOLE_RD); 
+#endif
+#if THINKOS_ENABLE_PAUSE
+	DCC_LOG1(LOG_TRACE, "   paused: (%2d)", THINKOS_WQ_PAUSED); 
+#endif
+#if THINKOS_ENABLE_JOIN
+	DCC_LOG1(LOG_TRACE, " canceled: (%2d)", THINKOS_WQ_CANCELED); 
+#endif
+#if THINKOS_ENABLE_DEBUG_FAULT
+	DCC_LOG1(LOG_TRACE, "    fault: (%2d)", THINKOS_WQ_FAULT); 
 #endif
 
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");

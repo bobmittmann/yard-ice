@@ -25,11 +25,11 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
-const char * const app_argv[] = {
+static const char * const app_argv[] = {
 	"thinkos_app"
 };
 
-void __attribute__((noreturn)) app_task(void * arg)
+static void __attribute__((noreturn)) app_bootstrap(void * arg)
 {
 	int (* app_main)(int argc, char ** argv) = (void *)arg;
 
@@ -43,19 +43,30 @@ extern uint32_t _stack;
 int dmon_app_exec(void)
 {
 	uint32_t * app_main = (uint32_t *)0x08010000;
-	int i;
 
 	DCC_LOG1(LOG_TRACE, "app_main=%p", app_main);
 
-	for (i = 0; i < 32; ++i) {
-		if (app_main[i] == 0xffffffff) {
-			DCC_LOG(LOG_WARNING, "invalid application!");
-			return -1;
-		}
+	if ((app_main[0] != 0x0a0de004) ||
+		(app_main[1] != 0x6e696854) ||
+		(app_main[2] != 0x00534f6b)) {
+		DCC_LOG(LOG_WARNING, "invalid application signature!");
+		return -1;
 	}
 
 	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
-						  (void *)app_task, (void *)app_main);
+						  (void *)app_bootstrap, (void *)app_main);
 
 	return 0;
 }
+
+void dmon_irq_disable_all(void)
+{
+	int irq;
+
+	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
+	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
+		cm3_irq_disable(irq);
+		thinkos_rt.irq_th[irq] = -1;
+	}
+}
+

@@ -50,6 +50,9 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
+void stdio_init(void);
+int serial_write(void * buf, int len);
+
 void io_init(void)
 {
 #if 0
@@ -68,6 +71,60 @@ void io_init(void)
 #endif
 }
 
+static const char * const app_argv[] = {
+	"thinkos_app"
+};
+
+void __attribute__((noreturn)) app_bootstrap(void * arg)
+{
+	int (* app_main)(int argc, char ** argv) = (void *)arg;
+
+	for (;;) {
+		DCC_LOG(LOG_TRACE, "app()");
+		app_main(1, (char **)app_argv);
+	}
+}
+
+extern uint32_t _stack;
+
+int test_main(int argc, char ** argv)
+{
+	int i;
+
+	serial_write("\n++++++\n", 8);
+	for (i = 0 ; i < 20 * 80 * 25; ++i) {
+		serial_write("?", 1);
+	//	thinkos_sleep(1000);
+	}
+	serial_write("\n------\n", 8);
+
+	return 0;
+}
+
+void boot_task(struct dmon_comm * comm)
+{
+//	dmon_signal(DMON_APP_EXEC);
+	dmon_comm_connect(comm);
+	dmon_sleep(250);
+	dmprintf(comm, "\r\n\r\n------------------------------------------\r\n");
+	dmprintf(comm, "- ThinkOS Bootloader (Debug Monitor) \r\n");
+	dmprintf(comm, "------------------------------------------\r\n");
+	dmon_sleep(250);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_exec()");
+
+	dmon_irq_disable_all();
+	dmon_comm_irq_config(comm);
+	__thinkos_thread_abort(0);
+	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
+						  (void *)app_bootstrap, (void *)test_main);
+
+	dmon_sleep(2000);
+
+	dmon_exec(monitor_task);
+}
+
+
 void monitor_init(void)
 {
 	struct dmon_comm * comm;
@@ -78,21 +135,15 @@ void monitor_init(void)
 
 	thinkos_console_init();
 
-//	gdb_init(comm, console_task);
-	gdb_init(comm, monitor_task);
-}
+	gdb_init(monitor_task);
 
-int app_exec(void)
-{
-//	dmon_signal(DMON_APP_EXEC);
-	for(;;);
+	thinkos_dmon_init(comm, boot_task);
 }
-
-void stdio_init(void);
-int serial_write(void * buf, int len);
 
 int main(int argc, char ** argv)
 {
+	int i;
+
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -110,14 +161,17 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
-	thinkos_yield();
-
 	DCC_LOG(LOG_TRACE, "5. app_exec()");
-	for (;;) {
+
+	serial_write("\n++++++\n", 8);
+	for (i = 0 ; i < 100 * 80 * 25; ++i) {
 		serial_write(".", 1);
-	//	app_exec();
 	//	thinkos_sleep(1000);
 	}
+	serial_write("\n------\n", 8);
+
+	DCC_LOG(LOG_TRACE, "6. abort()");
+	__thinkos_thread_abort(0);
 
 	return 0;
 }

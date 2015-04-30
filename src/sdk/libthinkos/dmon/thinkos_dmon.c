@@ -233,13 +233,14 @@ void __attribute__((noinline)) dmon_context_swap(void * ctx)
 }
 
 
-static void __attribute__((noreturn)) dmon_bootstrap(void)
+static void __attribute__((noreturn, naked)) dmon_bootstrap(void)
 {
 	/* set the clock in the past so it won't generate signals in 
 	 the near future */
 	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
-	for(;;);
+	DCC_LOG(LOG_TRACE, "task exit.");
+	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
 
 static void dmon_on_reset(struct thinkos_dmon * dmon)
@@ -526,7 +527,6 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 
 	/* enable monitor and send the start event */
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
-
 }
 
 

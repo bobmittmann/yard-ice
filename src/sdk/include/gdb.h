@@ -36,7 +36,9 @@
 extern "C" {
 #endif
 
-void gdb_init(void * comm, void (* shell)(struct dmon_comm * ));
+void gdb_init(void (* shell)(struct dmon_comm * ));
+
+void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm);
 
 #ifdef __cplusplus
 }

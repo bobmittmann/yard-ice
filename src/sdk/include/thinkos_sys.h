@@ -326,11 +326,14 @@ struct thinkos_rt {
 	/* This fields must be at the beginning of this structure 
 	   and their order and sizes must not be changed.
 	   This is critical for the scheduler operation. */
-
 	/* Thread context pointers */
 	struct thinkos_context * ctx[THINKOS_THREADS_MAX]; 
 	/* Idle thread context pointer */
 	struct thinkos_context * idle_ctx; 
+#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+	/* void thread context pointer */
+	struct thinkos_context * void_ctx; 
+#endif
 
 	int32_t active; /* current active thread */
 
@@ -342,7 +345,11 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_PROFILING
 	/* Per thread cycle count */
+#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2]; /* extra slot for exit */
+#else
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];
+#endif
 	/* Reference cycle state ... */
 	uint32_t cycref;
 #endif
@@ -563,6 +570,7 @@ struct thinkos_rt {
 
 #define THINKOS_THREAD_NULL (32)
 #define THINKOS_THREAD_IDLE (THINKOS_THREADS_MAX)
+#define THINKOS_THREAD_VOID (THINKOS_THREADS_MAX + 1)
 
 #if 0
 #define THINKOS_CYCCNT_SYS  (THINKOS_THREADS_MAX)
@@ -643,7 +651,9 @@ extern const char thinkos_type_name_lut[][6];
 extern "C" {
 #endif
 
-void __attribute__((noreturn)) thinkos_thread_exit(int code);
+void __attribute__((noreturn)) __thinkos_thread_exit(int code);
+
+void __thinkos_thread_abort(int thread_id);
 
 void __attribute__((noreturn)) thinkos_idle_task(void);
 
