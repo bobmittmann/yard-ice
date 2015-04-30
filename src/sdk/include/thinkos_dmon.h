@@ -49,7 +49,6 @@ enum dmon_ev_no {
 
 	DMON_THREAD_STEP  = 8,
 	DMON_THREAD_FAULT = 12,
-	DMON_APP_EXEC = 28,
 	DMON_IDLE     = 29,
 	DMON_EXCEPT   = 30,
 	DMON_RESET    = 31
@@ -81,13 +80,9 @@ extern "C" {
 
 void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ));
 
-
-
 void dmon_reset(void);
 
 void dmon_exec(void (* task)(struct dmon_comm *));
-
-
 
 void dmon_unmask(int sig);
 

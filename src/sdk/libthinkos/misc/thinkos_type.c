@@ -51,8 +51,8 @@ const struct {
 	uint8_t wq_join[THINKOS_THREADS_MAX];
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	uint8_t wq_console_rd;
 	uint8_t wq_console_wr;
+	uint8_t wq_console_rd;
 #endif
 #if THINKOS_ENABLE_PAUSE
 	uint8_t wq_paused;
@@ -90,8 +90,8 @@ const struct {
 	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN },
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	.wq_console_rd = THINKOS_OBJ_CONREAD,
 	.wq_console_wr = THINKOS_OBJ_CONWRITE,
+	.wq_console_rd = THINKOS_OBJ_CONREAD,
 #endif
 #if THINKOS_ENABLE_PAUSE
 	.wq_paused = THINKOS_OBJ_PAUSED,
@@ -138,8 +138,8 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 	[THINKOS_OBJ_JOIN] = NULL,
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	[THINKOS_OBJ_CONREAD] = NULL,
 	[THINKOS_OBJ_CONWRITE] = NULL,
+	[THINKOS_OBJ_CONREAD] = NULL,
 #endif
 	[THINKOS_OBJ_PAUSED] = NULL,
 	[THINKOS_OBJ_CANCELED] = NULL,
@@ -174,8 +174,8 @@ const uint16_t thinkos_wq_base_lut[] = {
 	[THINKOS_OBJ_JOIN] = THINKOS_JOIN_BASE,
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	[THINKOS_OBJ_CONREAD] = THINKOS_WQ_CONSOLE_RD,
 	[THINKOS_OBJ_CONWRITE] = THINKOS_WQ_CONSOLE_WR,
+	[THINKOS_OBJ_CONREAD] = THINKOS_WQ_CONSOLE_RD,
 #endif
 #if THINKOS_ENABLE_PAUSE
 	[THINKOS_OBJ_PAUSED] = THINKOS_WQ_PAUSED,
@@ -199,8 +199,8 @@ const char thinkos_type_name_lut[][6] = {
 	[THINKOS_OBJ_EVENT]     = "EvSet",
 	[THINKOS_OBJ_FLAG]      = "Flag",
 	[THINKOS_OBJ_JOIN]      = "Join",
-	[THINKOS_OBJ_CONREAD]   = "ConRd",
 	[THINKOS_OBJ_CONWRITE]  = "ConWr",
+	[THINKOS_OBJ_CONREAD]   = "ConRd",
 	[THINKOS_OBJ_PAUSED]    = "Pausd",
 	[THINKOS_OBJ_CANCELED]  = "Cancl",
 	[THINKOS_OBJ_FAULT]     = "Fault",

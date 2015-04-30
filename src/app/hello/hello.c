@@ -25,6 +25,7 @@
 
 #include <sys/console.h>
 #include <stdio.h>
+#include <thinkos.h>
 
 void stdio_init(void)
 {
@@ -43,6 +44,7 @@ int main(int argc, char ** argv)
 	stdio_init();
 
 	printf("Hello world\r\n");
+	thinkos_sleep(500);
 
 	return 0;
 }

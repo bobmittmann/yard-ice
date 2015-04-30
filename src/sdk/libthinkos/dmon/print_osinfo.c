@@ -152,6 +152,29 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 		}
 	}
 
+
+	/* IDLE thread */
+	dmprintf(comm, "%3d", i);
+#if THINKOS_ENABLE_THREAD_INFO
+	dmprintf(comm, " |  <IDLE>");
+	dmprintf(comm, " | %08x", (uint32_t)&thinkos_idle.stack); 
+#endif
+	dmprintf(comm, " | %08x", (uint32_t)rt->idle_ctx); 
+#if THINKOS_ENABLE_THREAD_STAT
+	dmprintf(comm, " | ... | ...");
+#endif
+#if THINKOS_ENABLE_TIMESHARE
+	//			dmprintf(comm, " | %4d | %4d", rt->sched_val[i], rt->sched_pri[i]); 
+#endif
+#if THINKOS_ENABLE_CLOCK
+	dmprintf(comm, " |        ..."); 
+#endif
+#if THINKOS_ENABLE_PROFILING
+	busy = (rt->cyccnt[i] + cycdiv / 2) / cycdiv;
+	dmprintf(comm, " | %3d.%d", busy / 10, busy % 10);
+#endif
+	dmprintf(comm, " |\r\n");
+
 #if THINKOS_ENABLE_PROFILING
 	/* Reset cycle counters */
 	for (i = 0; i <= THINKOS_THREADS_MAX; ++i)
@@ -164,14 +187,16 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 		if (*wq) { 
 			oid = wq - rt->wq_lst;
 			type = thinkos_obj_type_get(oid);
-			dmprintf(comm, "%3d %5s:", oid, thinkos_type_name_lut[type]);
+			dmprintf(comm, "%3d %5s: {", oid, thinkos_type_name_lut[type]);
 			for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
 				if (*wq & (1 << i)) 
 					dmprintf(comm, " %d", i);
 			}
+			dmprintf(comm, " }");
 #if THINKOS_MUTEX_MAX > 0
 			if (type == THINKOS_OBJ_MUTEX)
-				dmprintf(comm, " [lock=%d]", rt->lock[oid - THINKOS_MUTEX_BASE]);
+				dmprintf(comm, " [lock=%d]", 
+						 rt->lock[oid - THINKOS_MUTEX_BASE]);
 #endif 
 			dmprintf(comm, "\r\n");
 		}

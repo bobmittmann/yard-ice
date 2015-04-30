@@ -33,6 +33,7 @@
 #include <stdbool.h>
 
 #include <sys/stm32f.h>
+#include <sys/delay.h>
 
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
@@ -111,18 +112,25 @@ void boot_task(struct dmon_comm * comm)
 	dmprintf(comm, "------------------------------------------\r\n");
 	dmon_sleep(250);
 
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_exec()");
 
 //	dmon_irq_disable_all();
 //	dmon_comm_irq_config(comm);
 //	__thinkos_thread_abort(0);
 
-	dmon_soft_reset(comm);
+//	DCC_LOG(LOG_TRACE, "dmon_soft_reset()");
+//	dmon_soft_reset(comm);
 
-	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)test_main);
+	dmon_print_osinfo(comm);
 
-	dmon_sleep(2000);
+//	DCC_LOG(LOG_TRACE, "__thinkos_thread_exec()");
+//	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
+//						  (void *)app_bootstrap, (void *)test_main);
+
+//	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
+//	dmon_app_exec();
+
+//	dmon_print_osinfo(comm);
+//	dmon_sleep(2000);
 
 	dmon_exec(monitor_task);
 }
@@ -167,8 +175,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. app_exec()");
 
 	serial_write("\n++++++\n", 8);
-	for (i = 0 ; i < 100 * 80 * 25; ++i) {
-		serial_write(".", 1);
+	for (i = 0 ; i < 1000000 * 80 * 25; ++i) {
+//		udelay(10000);
+//		serial_write(".", 1);
+		thinkos_console_write(".", 1);
 	//	thinkos_sleep(1000);
 	}
 	serial_write("\n------\n", 8);

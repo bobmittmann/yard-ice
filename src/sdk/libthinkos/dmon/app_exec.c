@@ -31,10 +31,13 @@ static const char * const app_argv[] = {
 
 static void __attribute__((noreturn)) app_bootstrap(void * arg)
 {
-	int (* app_main)(int argc, char ** argv) = (void *)arg;
+	int (* app_reset)(int argc, char ** argv);
+	uintptr_t thumb_call = (uintptr_t)arg | 1;
 
+	app_reset = (void *)thumb_call;
 	for (;;) {
-		app_main(1, (char **)app_argv);
+		DCC_LOG(LOG_TRACE, "app_reset()");
+		app_reset(1, (char **)app_argv);
 	}
 }
 
@@ -42,31 +45,20 @@ extern uint32_t _stack;
 
 int dmon_app_exec(void)
 {
-	uint32_t * app_main = (uint32_t *)0x08010000;
+	uint32_t * app = (uint32_t *)0x08010000;
 
-	DCC_LOG1(LOG_TRACE, "app_main=%p", app_main);
+	DCC_LOG1(LOG_TRACE, "app=%p", app);
 
-	if ((app_main[0] != 0x0a0de004) ||
-		(app_main[1] != 0x6e696854) ||
-		(app_main[2] != 0x00534f6b)) {
+	if ((app[0] != 0x0a0de004) ||
+		(app[1] != 0x6e696854) ||
+		(app[2] != 0x00534f6b)) {
 		DCC_LOG(LOG_WARNING, "invalid application signature!");
 		return -1;
 	}
 
 	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)app_main);
+						  (void *)app_bootstrap, (void *)app);
 
 	return 0;
-}
-
-void dmon_irq_disable_all(void)
-{
-	int irq;
-
-	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
-	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
-		cm3_irq_disable(irq);
-		thinkos_rt.irq_th[irq] = -1;
-	}
 }
 

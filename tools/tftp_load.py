@@ -274,8 +274,11 @@ def main():
 		tclient.put(bin_data, "0x{0:08x}".format(addr), \
 					tftp.TFTP_MODE_OCTET, timeout, options)
 		dt = time.time() - t0
-		print(" - {0:d} bytes transferred in {1:.2f} seconds"\
-			  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))
+		if (dt > 0):
+			print(" - {0:d} bytes transferred in {1:.2f} seconds"\
+				  " ({2:.0f} bytes/sec)".format(fsize, dt, fsize/dt))
+		else:
+			print(" - {0:d} bytes transferred".format(fsize))
 		sys.stdout.flush()
 #	except Exception as err:
 #		error(err)

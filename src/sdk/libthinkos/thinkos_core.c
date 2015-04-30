@@ -346,9 +346,6 @@ void __thinkos_reset(void)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 
-#if THINKOS_ENABLE_EXCEPTIONS
-	thinkos_exception_init();
-#endif
 	/* adjust exception priorities */
 	/*
 	 *  0x00 - low latency interrupts
@@ -384,10 +381,8 @@ void __thinkos_reset(void)
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
 
-#if THINKOS_ENABLE_DEBUG_STEP
-	thinkos_rt.step_id = -1;
-	thinkos_rt.step_cnt = 0;
-#endif
+	/* clear the ThinkOS runtime structure */
+	__thinkos_memset32(&thinkos_rt, 0, sizeof(struct thinkos_rt));  
 
 #if	(THINKOS_IRQ_MAX > 0)
 	{
@@ -402,15 +397,12 @@ void __thinkos_reset(void)
 
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
-#if THINKOS_ENABLE_TIMESHARE
-	thinkos_rt.sched_idle_val = 0;
-	thinkos_rt.sched_idle_pri = 0;
-#endif
-//	thinkos_idle.ctx.ret = CM3_EXC_RET_THREAD_PSP;
-
-
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#endif
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	/* initialize the mutex allocation bitmap */ 
@@ -446,19 +438,6 @@ void __thinkos_reset(void)
 	}
 #endif
 
-#if THINKOS_FLAG_MAX > 0
-	{
-		/* initialize the flags */
-		int i;
-		for (i = 0; i < ((THINKOS_FLAG_MAX + 31) / 32); ++i) {
-			thinkos_rt.flag.sig[i] = 0;
-#if THINKOS_ENABLE_FLAG_LOCK
-			thinkos_rt.flag.lock[i] = 0;
-#endif 
-		}
-	}
-#endif /* THINKOS_EVENT_MAX > 0 */
-
 #if THINKOS_EVENT_MAX > 0
 	{
 		int i;
@@ -470,26 +449,19 @@ void __thinkos_reset(void)
 	}
 #endif /* THINKOS_EVENT_MAX > 0 */
 
-#if THINKOS_ENABLE_PROFILING
-	{
-		int i;
-		/* initialize cycle counters */
-		for (i = 0; i <= THINKOS_THREADS_MAX; i++)
-			thinkos_rt.cyccnt[i] = 0; 
-
-		/* Enable trace */
-		CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
-		/* Enable cycle counter */
-		CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
-
-		/* set the reference to now */
-		thinkos_rt.cycref = CM3_DWT->cyccnt;
-	}
+#if THINKOS_ENABLE_DEBUG_STEP
+	thinkos_rt.step_id = -1;
+	thinkos_rt.step_cnt = 0;
 #endif
 
-#if (THINKOS_THREADS_MAX < 32) 
-	/* put the IDLE thread in the ready queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#if THINKOS_ENABLE_PROFILING
+	/* Enable trace */
+	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+	/* Enable cycle counter */
+	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+
+	/* set the reference to now */
+	thinkos_rt.cycref = CM3_DWT->cyccnt;
 #endif
 
 	/* initialize the SysTick module */
@@ -501,6 +473,9 @@ void __thinkos_reset(void)
 	systick->ctrl = SYSTICK_CTRL_ENABLE;
 #endif
 
+	/* Set the initial thread as an invalid thread,
+	   to allow for the scheduler to save the current contex somewre */
+	thinkos_rt.active = THINKOS_THREAD_VOID;
 }
 
 int __thinkos_init_main(struct thinkos_thread_opt opt)
@@ -592,6 +567,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* initialize exception stack */
 	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
 					   THINKOS_EXCEPT_STACK_SIZE - 4 * IDLE_UNUSED_REGS);
+
+#if THINKOS_ENABLE_EXCEPTIONS
+	thinkos_exception_init();
+#endif
 
 	__thinkos_reset();
 

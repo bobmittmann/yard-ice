@@ -410,7 +410,7 @@ struct thinkos_rt {
 	uint32_t wq_end[0]; /* end of queue list placeholder */
 
 #if THINKOS_ENABLE_THREAD_STAT
-	uint8_t th_stat[THINKOS_THREADS_MAX]; /* Per thread status */
+	uint16_t th_stat[THINKOS_THREADS_MAX]; /* Per thread status */
 #endif
 
 #if THINKOS_ENABLE_TIMESHARE
@@ -737,6 +737,17 @@ static void inline __attribute__((always_inline)) __thinkos_tmshare(void) {
 #endif
 }
 #endif
+
+static void inline __attribute__((always_inline)) __thinkos_ready_clr(void) {
+	thinkos_rt.wq_ready = 0;
+#if THINKOS_ENABLE_TIMESHARE
+	thinkos_rt.wq_tmshare = 0;
+#endif
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#endif
+}
 
 static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
 	/* remove from the ready wait queue */

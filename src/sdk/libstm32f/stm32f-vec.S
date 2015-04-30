@@ -229,6 +229,12 @@ __rom_vectors:
 	stm32f_vectors
 	.size   __rom_vectors, . - __rom_vectors
 
+	.global __sizeof_rom_vectors
+__sizeof_rom_vectors:
+	.type __sizeof_rom_vectors, %object
+	.word	__rom_vectors, . - __rom_vectors
+	.size   __sizeof_rom_vectors, . - __sizeof_rom_vectors
+
 #ifdef CM3_RAM_VECTORS
 	/* ---------------------------------------------------------------------
 	 * vectors residing in RAM 

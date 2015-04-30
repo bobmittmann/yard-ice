@@ -241,6 +241,7 @@ static void __attribute__((noreturn, naked)) dmon_bootstrap(void)
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
 	DCC_LOG(LOG_TRACE, "task exit.");
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
+	for(;;);
 }
 
 static void dmon_on_reset(struct thinkos_dmon * dmon)
@@ -253,8 +254,8 @@ static void dmon_on_reset(struct thinkos_dmon * dmon)
 	sp[2] = 0; /* R5 */
 	sp[9] = ((uint32_t)dmon_bootstrap) | 1; /* LR */
 	dmon->ctx = sp;
-	dmon->events = 0;
-	dmon->mask = (1 << DMON_RESET) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
+	dmon->events &= ~(1 << DMON_RESET);
+	dmon->mask |= (1 << DMON_RESET) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
 }
 
 static void dmon_on_except(struct thinkos_dmon * mon)
