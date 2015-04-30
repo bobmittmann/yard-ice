@@ -36,7 +36,7 @@ INCPATH = $(SDK)/include
 
 CDEFS =
 
-CFLAGS = -g -O2 -Wall
+CFLAGS = -g -O1 -Wall
 
 MACH = stm32f407
 THINKOS = 1

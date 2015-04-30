@@ -51,9 +51,6 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-void stdio_init(void);
-int serial_write(void * buf, int len);
-
 void io_init(void)
 {
 #if 0
@@ -72,65 +69,12 @@ void io_init(void)
 #endif
 }
 
-static const char * const app_argv[] = {
-	"thinkos_app"
-};
-
-void __attribute__((noreturn)) app_bootstrap(void * arg)
-{
-	int (* app_main)(int argc, char ** argv) = (void *)arg;
-
-	for (;;) {
-		DCC_LOG(LOG_TRACE, "app()");
-		app_main(1, (char **)app_argv);
-	}
-}
-
-extern uint32_t _stack;
-
-int test_main(int argc, char ** argv)
-{
-	int i;
-
-	serial_write("\n++++++\n", 8);
-	for (i = 0 ; i < 20 * 80 * 25; ++i) {
-		serial_write("?", 1);
-	//	thinkos_sleep(1000);
-	}
-	serial_write("\n------\n", 8);
-
-	return 0;
-}
-
 void boot_task(struct dmon_comm * comm)
 {
-//	dmon_signal(DMON_APP_EXEC);
-	dmon_comm_connect(comm);
-	dmon_sleep(250);
-	dmprintf(comm, "\r\n\r\n------------------------------------------\r\n");
-	dmprintf(comm, "- ThinkOS Bootloader (Debug Monitor) \r\n");
-	dmprintf(comm, "------------------------------------------\r\n");
-	dmon_sleep(250);
+	__thinkos_thread_abort(0);
 
-
-//	dmon_irq_disable_all();
-//	dmon_comm_irq_config(comm);
-//	__thinkos_thread_abort(0);
-
-//	DCC_LOG(LOG_TRACE, "dmon_soft_reset()");
-//	dmon_soft_reset(comm);
-
-	dmon_print_osinfo(comm);
-
-//	DCC_LOG(LOG_TRACE, "__thinkos_thread_exec()");
-//	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
-//						  (void *)app_bootstrap, (void *)test_main);
-
-//	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
-//	dmon_app_exec();
-
-//	dmon_print_osinfo(comm);
-//	dmon_sleep(2000);
+	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
+	dmon_app_exec();
 
 	dmon_exec(monitor_task);
 }
@@ -139,8 +83,6 @@ void boot_task(struct dmon_comm * comm)
 void monitor_init(void)
 {
 	struct dmon_comm * comm;
-	
-//	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
 
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
@@ -153,15 +95,11 @@ void monitor_init(void)
 
 int main(int argc, char ** argv)
 {
-	int i;
-
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
-
-	stdio_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
@@ -172,18 +110,6 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
-	DCC_LOG(LOG_TRACE, "5. app_exec()");
-
-	serial_write("\n++++++\n", 8);
-	for (i = 0 ; i < 1000000 * 80 * 25; ++i) {
-//		udelay(10000);
-//		serial_write(".", 1);
-		thinkos_console_write(".", 1);
-	//	thinkos_sleep(1000);
-	}
-	serial_write("\n------\n", 8);
-
-	DCC_LOG(LOG_TRACE, "6. abort()");
 	__thinkos_thread_abort(0);
 
 	return 0;

@@ -31,7 +31,6 @@
 #ifdef STM32F1X
 
 const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
-const uint32_t __flash_size;
 
 int __attribute__((section (".data#"))) 
 	stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
@@ -165,7 +164,6 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 #if defined(STM32F2X) || defined(STM32F4X)
 
 const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
-const uint32_t __flash_size;
 
 #define FLASH_ERR (FLASH_PGSERR | FLASH_PGPERR | FLASH_PGAERR | FLASH_WRPERR | \
 				   FLASH_OPERR)

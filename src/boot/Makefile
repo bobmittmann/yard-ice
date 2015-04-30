@@ -22,7 +22,7 @@
 
 PROG = thinkos
 
-CFILES = stdio.c boot.c 
+CFILES = boot.c 
 
 SDK = ../sdk
 TOOLS = ../../tools

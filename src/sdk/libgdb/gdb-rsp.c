@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include <sys/dcclog.h>
+#include <sys/stm32f.h>
 
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
@@ -169,12 +170,83 @@ const struct mem_range target_mem_map[] = {
 	{ .name = "sram1", .base = 0x2001c000, .size = 16 * 1024 },
 	{ .name = "sram2", .base = 0x10000000, .size = 64 * 1024 }
 };
-	/*
-	flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
-	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 112K
-	sram1 (rw) : ORIGIN = 0x2001c000, LENGTH = 16K
-	sram2 (rw) : ORIGIN = 0x10000000, LENGTH = 64K
-	*/
+
+
+struct flash_map {
+	uint32_t base;
+	uint8_t blk[];
+};
+
+struct flash_blk {
+	uint32_t base;
+	uint32_t size: 30;
+	uint32_t ro: 1;
+};
+
+#define SZ_128   7
+#define SZ_256   8
+#define SZ_1K   10
+#define SZ_2K   11
+#define SZ_4K   12
+#define SZ_8K   13
+#define SZ_16K  14
+#define SZ_32K  15
+#define SZ_64K  16
+#define SZ_128K 17
+#define SZ_256K 18
+
+#define BLK_RW  (0 << 7)
+#define BLK_RO  (1 << 7)
+
+const struct flash_map stm32f407_flash = {
+	.base = 0x08000000,
+	.blk = {
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RW + SZ_64K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		0
+	}
+};
+
+#define BLK_SZ(BLK) (1 << ((BLK) & 0x3f)) 
+
+int flash_addr2block(const struct flash_map * map,
+					 uint32_t addr, struct flash_blk * blk) 
+{
+	uint32_t base = map->base;
+	uint32_t size;
+	int i;
+
+	if (addr < base)
+		return -1;
+
+	for (i = 0; map->blk[i] != 0; ++i) {
+		size = BLK_SZ(map->blk[i]);
+		if (addr < base + size) {
+			if (blk != NULL) {
+				blk->base = base;
+				blk->size = size;
+				blk->ro = (map->blk[i] & BLK_RO) ? 1 : 0;
+			}
+			return i;
+		}
+		base += size;
+	}
+
+	return -1;
+}
+
+/*
+flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
+sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 112K
+sram1 (rw) : ORIGIN = 0x2001c000, LENGTH = 16K
+sram2 (rw) : ORIGIN = 0x10000000, LENGTH = 64K
+*/
 
 typedef struct dbg_bp_ctrl dbg_bp_ctrl_t;
 
@@ -263,22 +335,43 @@ static bool is_addr_valid(uint32_t addr)
 }
 
 
-int mem_write(uint32_t addr, const void * ptr, int len)
+int mem_write(uint32_t addr, const void * ptr, unsigned int len)
 {
-	uint8_t * dst = (uint8_t *)addr;
-	uint8_t * src = (uint8_t *)ptr;;
-	int i;
+	const struct flash_map * flash = &stm32f407_flash;
+	struct flash_blk blk;
+	uint32_t offs;
 
 	if (!is_addr_valid(addr))
 		return -1;
 
-	for (i = 0; i < len; ++i)
-		dst[i] = src[i];
+	if (flash_addr2block(flash, addr, &blk) < 0) {
+		uint8_t * dst = (uint8_t *)addr;
+		uint8_t * src = (uint8_t *)ptr;;
+		int i;
 
-	return len;
+		for (i = 0; i < len; ++i)
+			dst[i] = src[i];
+		return len;
+	}
+
+	if (blk.ro) {
+		DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
+				 blk.base, blk.size);
+		return -1;
+	}
+
+	offs = addr - flash->base;
+	if (blk.base == addr) {
+		DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
+				 blk.base, blk.size);
+		stm32_flash_erase(offs, blk.size);
+	};
+
+	stm32_flash_erase(offs, blk.size);
+	return stm32_flash_write(offs, ptr, len);
 }
 
-static int mem_read(uint32_t addr, void * ptr, int len)
+static int mem_read(uint32_t addr, void * ptr, unsigned int len)
 {
 	uint8_t * dst = (uint8_t *)ptr;
 	uint8_t * src = (uint8_t *)addr;;
@@ -1156,7 +1249,7 @@ int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 	}
 
 	pkt[n] = '\0';
-	DCC_LOGSTR(LOG_TRACE, "pkt='%s'", pkt);
+	DCC_LOGSTR(LOG_INFO, "pkt='%s'", pkt);
 	return dmon_comm_send(comm, pkt, n);
 }
 
@@ -1431,11 +1524,17 @@ static int rsp_memory_write_bin(struct dmon_comm * comm, char * pkt, int len)
 	size = hex2int(cp, &cp);
 	cp++;
 
+	if (size == 0) {
+		DCC_LOG(LOG_TRACE, "write probe!");
+		return rsp_ok(comm);
+	}
+
+	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
+
 	if (mem_write(addr, cp, size) < 0) {
 		return rsp_error(comm, 1);
 	}
 
-	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 	return rsp_ok(comm);
 }
 
@@ -1530,7 +1629,7 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		break;
 #endif
 	default:
-		DCC_LOG(LOG_WARNING, "unsupported");
+		DCC_LOG1(LOG_WARNING, "unsupported: %c", pkt[0]);
 		ret = rsp_empty(comm);
 		break;
 	}
@@ -1548,6 +1647,8 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 	int c;
 	int n;
 	int i;
+	int j;
+	bool esc = false;
 
 	rem = max;
 	sum = 0;
@@ -1556,30 +1657,38 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 	dmon_alarm(1000);
 
 	for (;;) {
-		n = dmon_comm_recv(comm, &pkt[pos], rem);
-		if (n < 0) {
+		cp = &pkt[pos];
+		if ((n = dmon_comm_recv(comm, cp, rem)) < 0) {
 			DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
 			ret = n;
 			break;
 		}
 
-		cp = &pkt[pos];
-	
-		for (i = 0;  i < n; i++) {
+		for (i = 0, j = 0; i < n; ++i) {
 			c = cp[i];
-
-			if (c == '#') {
-				dmon_alarm_stop();
-				return pos + i;
-			}
-
 			sum += c;
+			if (esc) {
+				esc = false;
+				cp[j++] = c ^ 0x20;
+			} else {
+				if (c == '#') {
+					dmon_alarm_stop();
+					return pos + i;
+					/* FIXME: check the sum!!! */
+				} else if (c == '}') {
+					esc = true;
+				} else {
+					cp[j++] = c;
+				}
+			}
 		}
-
+		pos += j;
 		rem -= n;
 
-		if (rem == 0)
+		if (rem <= 0) {
+			DCC_LOG(LOG_ERROR, "packet too big!");
 			break;
+		}
 	}
 
 	dmon_alarm_stop();
@@ -1661,7 +1770,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 					dmon_exec(gdb->shell_task);
 				} else {
 					pkt[len] = 0;
-					DCC_LOGSTR(LOG_INFO, "'%s'", pkt);
+					DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
 					if (!gdb->noack_mode)
 						rsp_ack(comm);
 					rsp_pkt_input(gdb, comm, pkt, len);

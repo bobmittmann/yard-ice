@@ -59,7 +59,6 @@
 #define CTRL_Z 0x1a
 
 extern int thread_id;
-bool block_console = false;
 
 static const char monitor_menu[] = "\r\n"
 "-- ThinkOS Monitor Commands ---------\r\n"
@@ -145,12 +144,8 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_D:
 			dmon_print_thread(comm, thread_id);
 			break;
-		case CTRL_B:
-			if (block_console) { 
-				block_console = false;
-				dmon_signal(DMON_TX_PIPE);
-			} else
-				block_console = true;
+		case CTRL_C:
+			dmon_soft_reset(comm);
 			break;
 		case CTRL_H:
 			monitor_show_help(comm);
@@ -230,7 +225,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
-			if (!block_console && (cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 				len = dmon_comm_send(comm, ptr, cnt);
 				__console_tx_pipe_commit(len); 
 			} else {

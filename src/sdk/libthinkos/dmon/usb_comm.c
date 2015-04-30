@@ -438,7 +438,7 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 		cnt = 0;
 		dev->rx_pos = pos = 0;
 		free = CDC_EP_IN_MAX_PKT_SIZE;
-		DCC_LOG2(LOG_INFO, "1. pos=%d free=%d.......", pos, free);
+		DCC_LOG3(LOG_INFO, "1. pos=%d free=%d len=%d.......", pos, free, len);
 	} else {
 		free = CDC_EP_IN_MAX_PKT_SIZE - cnt;
 		if (free < len) {
@@ -457,6 +457,9 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 	}
 
 	n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, &dev->rx_buf[cnt], free);
+	if (n <= 0) {
+		DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_recv() failed!");
+	}
 	dev->rx_cnt = cnt + n;
 
 #if 0
@@ -740,7 +743,7 @@ int dmon_comm_recv(struct dmon_comm * comm, void * buf, unsigned int len)
 			return n;
 		}
 
-		DCC_LOG2(LOG_WARNING, "3. pos=%d cnt=%d blocked!!!", pos, cnt);
+		DCC_LOG2(LOG_INFO, "3. pos=%d cnt=%d blocked!!!", pos, cnt);
 	} while ((ret = dmon_expect(DMON_COMM_RCV)) == 0);
 
 	return ret;
