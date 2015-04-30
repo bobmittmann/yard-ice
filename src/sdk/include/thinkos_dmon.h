@@ -151,6 +151,8 @@ void dmon_comm_irq_config(struct dmon_comm * comm);
 
 void dmon_irq_disable_all(void);
 
+void dmon_soft_reset(struct dmon_comm * comm);
+
 #ifdef __cplusplus
 }
 #endif

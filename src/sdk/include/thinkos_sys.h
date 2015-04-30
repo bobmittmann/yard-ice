@@ -897,6 +897,7 @@ void __thinkos_memcpy32(void * __dst, void * __src,  unsigned int __len);
 
 void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
 
+void __thinkos_reset(void);
 
 int __console_rx_pipe_ptr(uint8_t ** ptr);
 void __console_rx_pipe_commit(unsigned int cnt); 

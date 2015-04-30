@@ -113,9 +113,12 @@ void boot_task(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_exec()");
 
-	dmon_irq_disable_all();
-	dmon_comm_irq_config(comm);
-	__thinkos_thread_abort(0);
+//	dmon_irq_disable_all();
+//	dmon_comm_irq_config(comm);
+//	__thinkos_thread_abort(0);
+
+	dmon_soft_reset(comm);
+
 	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
 						  (void *)app_bootstrap, (void *)test_main);
 
