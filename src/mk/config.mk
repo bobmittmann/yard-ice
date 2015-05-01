@@ -150,7 +150,7 @@ ifeq ($(HOST),Windows)
  RMALL := del /F /Q 
  CP := copy 
  MV := ren
- MKDIR := -mkdir
+ MKDIR := mkdir
  ECHO := echo
  DEVNULL := NUL:
 else

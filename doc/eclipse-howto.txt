@@ -1,0 +1,16 @@
+----
+
+== Windows ==
+
+Download and install the GNU toolchain for ARM processros:
+
+https://launchpad.net/gcc-arm-embedded
+https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q1-update/+download/gcc-arm-none-eabi-4_9-2015q1-20150306-win32.exe
+
+Download and install GNU Make:
+
+http://gnuwin32.sourceforge.net/packages/make.htm
+Tip: Install on the same folder as the GCC so you won't need to modify your path. During the installation in the "Select Destination Location: page enter:
+"C:\Program Files (x86)\GNU Tools ARM Embedded\4.9 2015q1" in the text box.
+Also there is no point of creating a "Start Menu" folder. Disable this option by uncheckintg the "Don't create a Start Menu folder" in the page: "Select Start Menu Folder". 
+

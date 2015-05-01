@@ -290,7 +290,7 @@ endif
 $(ODIRS):
 #	$(ACTION) "Creating outdir: $@"
 ifeq ($(HOST),Windows)
-	$(Q)$(MKDIR) $(subst /,\,$@)
+	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
 else
 	$(Q)$(MKDIR) $@
 endif
@@ -298,7 +298,7 @@ endif
 $(DDIRS):
 #	$(ACTION) "Creating depdir: $@"
 ifeq ($(HOST),Windows)
-	$(Q)$(MKDIR) $(subst /,\,$@)
+	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
 else
 	$(Q)$(MKDIR) $@ 
 endif
