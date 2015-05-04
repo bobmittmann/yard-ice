@@ -74,22 +74,25 @@ void boot_task(struct dmon_comm * comm)
 	__thinkos_thread_abort(0);
 
 	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
-	dmon_app_exec();
+	dmon_app_exec(false);
 
 	dmon_exec(monitor_task);
 }
-
 
 void monitor_init(void)
 {
 	struct dmon_comm * comm;
 
+	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
+	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
 
+	DCC_LOG(LOG_TRACE, "3. gdb_init()");
 	gdb_init(monitor_task);
 
+	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
 	thinkos_dmon_init(comm, boot_task);
 }
 
@@ -110,6 +113,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
+	DCC_LOG(LOG_TRACE, "5. __thinkos_thread_abort()");
 	__thinkos_thread_abort(0);
 
 	return 0;

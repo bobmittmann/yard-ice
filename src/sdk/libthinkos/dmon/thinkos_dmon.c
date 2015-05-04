@@ -359,13 +359,54 @@ void cm3_debug_mon_isr(void)
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	struct cm3_dcb * dcb = CM3_DCB;
 	uint32_t demcr;
+	uint32_t dfsr;
 
 	demcr = dcb->demcr;
-	
+
 	DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
 			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
 			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
+
+	/* read SCB Debug Fault Status Register */
+	if ((dfsr = CM3_SCB->dfsr) != 0) {
+		/* clear the fault */
+		CM3_SCB->dfsr = dfsr;
+		DCC_LOG5(LOG_TRACE, "DFSR=(EXT=%c)(VCATCH=%c)"
+				 "(DWTRAP=%c)(BKPT=%c)(HALT=%c)", 
+				 dfsr & SCB_DFSR_EXTERNAL ? '1' : '0',
+				 dfsr & SCB_DFSR_VCATCH ? '1' : '0',
+				 dfsr & SCB_DFSR_DWTTRAP ? '1' : '0',
+				 dfsr & SCB_DFSR_BKPT ? '1' : '0',
+				 dfsr & SCB_DFSR_HALTED ? '1' : '0');
+
+		if (dfsr & SCB_DFSR_BKPT) {
+			/* suspend the current thread */
+			__thinkos_thread_pause(thinkos_rt.active);
+			sigset |= (1 << DMON_BREAKPOINT);
+			sigmsk |= (1 << DMON_BREAKPOINT);
+			thinkos_dmon_rt.events = sigset;
+			__thinkos_defer_sched();
+			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+					 thinkos_rt.active);
+		}
+
+		if (dfsr & SCB_DFSR_HALTED) {
+			/* clear the step request */
+			dcb->demcr &= ~DCB_DEMCR_MON_STEP;
+			/* return the BASEPRI to the default to reenable the scheduler. */
+			cm3_basepri_set(0); 
+			/* suspend the thread, this will clear the step request flag */
+			__thinkos_thread_pause(thinkos_rt.step_id);
+			/* signal the monitor */
+			sigset |= (1 << DMON_THREAD_STEP);
+			sigmsk |= (1 << DMON_THREAD_STEP);
+			thinkos_dmon_rt.events = sigset;
+			__thinkos_defer_sched();
+			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+					 thinkos_rt.step_id);
+		}
+	}
 #endif
 
 #if 0
@@ -379,24 +420,6 @@ void cm3_debug_mon_isr(void)
 	}
 #endif
 
-#if (THINKOS_ENABLE_DEBUG_STEP)
-	if (demcr & DCB_DEMCR_MON_STEP) {
-		if (--thinkos_rt.step_cnt == 0) {
-			dcb->demcr = demcr & ~DCB_DEMCR_MON_STEP;
-			/* suspend the thread, this will clear the step request flag */
-			__thinkos_thread_pause(thinkos_rt.step_id);
-			/* return the BASEPRI to the default to reenable the scheduler. */
-			cm3_basepri_set(0); 
-			/* signal the monitor */
-			sigset |= (1 << DMON_THREAD_STEP);
-			sigmsk |= (1 << DMON_THREAD_STEP);
-			thinkos_dmon_rt.events = sigset;
-			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
-					 thinkos_rt.step_id);
-			__thinkos_defer_sched();
-		}
-	}
-#endif
 	
 	if (sigset & (1 << DMON_EXCEPT)) {
 		sigset &= ~(1 << DMON_EXCEPT);

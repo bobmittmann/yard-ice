@@ -28,11 +28,10 @@
 #define __ARM_FPB_H__
 
 /*************************************************************************/
-/* Flash Patch and Breakpoint (FPB)                                            */
+/* Flash Patch and Breakpoint (FPB)                                      */
 /*************************************************************************/
 
 /*
-
 0xE0002000 FP_CTRL RW a FlashPatch Control Register, FP_CTRL.
 0xE0002004 FP_REMAP RW UNKNOWN FlashPatch Remap register, FP_REMAP on page C1-908.
 0xE0002008 - FP_COMP0- RW UNKNOWN a FlashPatch Comparator register, FP_COMPn on
@@ -95,7 +94,8 @@ Defines the behavior when the COMP address is matched:
 	For a literal address comparator:
 	Field is UNK/SBZP.
 [29] - Reserved.
-[28:2] COMP Bits [28:2] of the address to compare with addresses from the Code memory region.
+[28:2] COMP Bits [28:2] of the address to compare with addresses 
+from the Code memory region.
 
 [0] ENABLE Enable bit for this comparator: 
 	0 = Comparator disabled.
@@ -115,10 +115,6 @@ Defines the behavior when the COMP address is matched:
 
 #include "jtag_adi.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 struct arm_fpb {
 	uint32_t fp_ctrl;
 	uint32_t fp_remap;
@@ -126,6 +122,10 @@ struct arm_fpb {
 	uint32_t fp_res[861];
 	uint32_t fp_lsr;
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef __cplusplus
 }

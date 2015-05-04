@@ -31,11 +31,13 @@ extern const uint8_t thinkos_obj_type_lut[];
 
 static void ready_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 }
 #if THINKOS_ENABLE_TIMESHARE
 static void tmshare_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 
 }
@@ -43,6 +45,7 @@ static void tmshare_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_ENABLE_CLOCK
 static void clock_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 }
 #endif
@@ -50,6 +53,8 @@ static void clock_resume(unsigned int th, unsigned int wq, bool tmw)
 static void mutex_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
 	unsigned int mutex = wq - THINKOS_MUTEX_BASE;
+
+	DCC_LOG(LOG_TRACE, "...........");
 
 	if (thinkos_rt.lock[mutex] == -1) {
 		thinkos_rt.lock[mutex] = th;
@@ -70,6 +75,8 @@ static void mutex_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_COND_MAX > 0
 static void cond_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
+
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 	__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
 }
@@ -78,6 +85,8 @@ static void cond_resume(unsigned int th, unsigned int wq, bool tmw)
 static void semaphore_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
 	unsigned int sem = wq - THINKOS_SEM_BASE;
+
+	DCC_LOG(LOG_TRACE, "...........");
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
@@ -102,6 +111,8 @@ static void evset_resume(unsigned int th, unsigned int wq, bool tmw)
 {
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 	unsigned int ev;
+
+	DCC_LOG(LOG_TRACE, "...........");
 
 	/* check for any pending unmasked event */
 	if ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & 
@@ -170,12 +181,14 @@ static void join_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_ENABLE_CONSOLE
 static void console_rd_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
 	/* wakeup from the console wait queue */
 	__thinkos_wakeup_return(wq, th, 0);
 }
 
 static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+	DCC_LOG(LOG_TRACE, "...........");
 	__thinkos_wakeup_return(wq, th, 0);
 }
 #endif
@@ -211,38 +224,6 @@ static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_CONWRITE] = console_wr_resume,
 #endif
 };
-
-bool __thinkos_thread_resume(unsigned int th)
-{
-	void (* resume)(unsigned int, unsigned int, bool);
-	unsigned int wq;
-	bool tmw;
-	int stat;
-	int type;
-
-#if THINKOS_ENABLE_PAUSE
-	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) == 0) {
-		DCC_LOG1(LOG_WARNING, "thread=%d is not paused!", th);
-		/* not paused, this is not an error condition. */
-		return false;
-	}
-
-	/* remove from the paused queue */
-	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
-#endif
-
-	/* reinsert the thread into a waiting queue, including ready  */
-	stat = thinkos_rt.th_stat[th];
-	wq = stat >> 1;
-	tmw = stat & 1;
-	DCC_LOG3(LOG_TRACE, "thread=%d wq=%d clk=%d", th, wq, tmw);
-
-	type = thinkos_obj_type_lut[wq];
-	resume = thread_resume_lut[type];
-	resume(th, wq, tmw);
-
-	return true;
-}
 
 bool __thinkos_thread_pause(unsigned int th)
 {
@@ -313,6 +294,45 @@ void __thinkos_resume_all(void)
 #endif /* THINKOS_ENABLE_MONITOR */
 
 #endif /* THINKOS_ENABLE_THREAD_STAT */
+
+bool __thinkos_thread_resume(unsigned int th)
+{
+#if THINKOS_ENABLE_PAUSE
+	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) == 0) {
+		DCC_LOG1(LOG_WARNING, "thread=%d is not paused!", th);
+		/* not paused, this is not an error condition. */
+		return false;
+	}
+
+	/* remove from the paused queue */
+	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
+#endif
+
+#if THINKOS_ENABLE_THREAD_STAT
+	{
+		void (* resume)(unsigned int, unsigned int, bool);
+		unsigned int wq;
+		bool tmw;
+		int stat;
+		int type;
+
+		/* reinsert the thread into a waiting queue, including ready  */
+		stat = thinkos_rt.th_stat[th];
+		wq = stat >> 1;
+		tmw = stat & 1;
+		DCC_LOG3(LOG_TRACE, "thread=%d wq=%d clk=%d", th, wq, tmw);
+
+		type = thinkos_obj_type_lut[wq];
+		resume = thread_resume_lut[type];
+		resume(th, wq, tmw);
+	}
+#else
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#endif /* THINKOS_ENABLE_THREAD_STAT */
+
+	return true;
+}
+
 
 
 #if THINKOS_ENABLE_PAUSE

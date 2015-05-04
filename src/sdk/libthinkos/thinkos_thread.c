@@ -26,7 +26,7 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos.h>
 #include <sys/delay.h>
 
-void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp, 
+void __thinkos_thread_init(unsigned int thread_id, uint32_t sp, 
 						   void * task, void * arg)
 {
 	struct thinkos_context * ctx;
@@ -44,14 +44,9 @@ void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp,
 	thinkos_rt.ctx[thread_id] = ctx;
 
 #if THINKOS_ENABLE_PAUSE
-	if (__bit_mem_rd(&thinkos_rt.wq_paused, thread_id)) {  
-	} else
+	/* insert into the paused list */
+	__bit_mem_wr(&thinkos_rt.wq_paused, thread_id, 1);  
 #endif
-	{
-		/* insert into the ready list */
-		__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
-		__thinkos_defer_sched();
-	}
 }
 
 /* initialize a thread context */
@@ -118,13 +113,10 @@ void thinkos_thread_create_svc(int32_t * arg)
 	thinkos_rt.sched_val[thread_id] = thinkos_rt.sched_limit / 2;
 #endif
 
-#if THINKOS_ENABLE_PAUSE
-	if (init->opt.paused) 
-		/* insert into the paused list */
-		__bit_mem_wr(&thinkos_rt.wq_paused, thread_id, 1);  
-#endif
+	__thinkos_thread_init(thread_id, sp, init->task, init->arg);
 
-	__thinkos_thread_exec(thread_id, sp, init->task, init->arg);
+	if (!init->opt.paused)
+		__thinkos_thread_resume(thread_id);
 
 	arg[0] = thread_id;
 }

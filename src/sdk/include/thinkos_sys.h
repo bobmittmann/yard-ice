@@ -877,7 +877,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt);
 
 void thinkos_console_init(void);
 
-void __thinkos_thread_exec(unsigned int thread_id, uint32_t sp, 
+void __thinkos_thread_init(unsigned int thread_id, uint32_t sp, 
 						   void * task, void * arg);
 
 bool __thinkos_thread_resume(unsigned int thread_id);
@@ -899,6 +899,8 @@ int __thinkos_thread_get(struct thinkos_rt * rt,
 						 unsigned int th);
 
 int __thinkos_thread_getnext(int th);
+
+bool __thinkos_active(void);
 
 bool __thinkos_suspended(void);
 

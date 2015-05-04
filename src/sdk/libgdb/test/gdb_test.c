@@ -289,6 +289,48 @@ void sleep_test(void)
 };
 
 
+int step_task(void * arg)
+{
+	asm volatile (
+				  "1:\r\n"
+				  "mov r0, #0\r\n" 
+				  "mov r0, #1\r\n" 
+				  "mov r0, #2\r\n" 
+				  "mov r0, #3\r\n" 
+				  "mov r0, #4\r\n" 
+				  "mov r0, #5\r\n" 
+				  "mov r0, #6\r\n" 
+				  "mov r0, #7\r\n" 
+				  "mov r0, #8\r\n" 
+				  "mov r0, #9\r\n" 
+				  "b 1b\r\n" 
+				  : : );
+
+	return 0;
+}
+
+
+uint32_t step_stack[128];
+const struct thinkos_thread_inf step_inf = {
+	.stack_ptr = step_stack, 
+	.stack_size = sizeof(step_stack), 
+	.priority = 32,
+	.thread_id = 31, 
+	.paused = 0,
+	.tag = "STEP"
+};
+
+void step_test(void)
+{
+	int step_th;
+
+	/* create the step thread */
+	step_th = thinkos_thread_create_inf(step_task, NULL, &step_inf);
+
+	printf(" * Lazy thread: %d\n", step_th);
+	printf("\n");
+};
+
 int console_write(void * dev, const void * buf, unsigned int len); 
 int console_read(void * dev, void * buf, unsigned int len, unsigned int msec);
 
@@ -418,6 +460,8 @@ void io_init(void)
 
 int main(int argc, char ** argv)
 {
+//	struct cm3_dcb * dcb = CM3_DCB;
+
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -440,18 +484,29 @@ int main(int argc, char ** argv)
 	printf("---------------------------------------------------------\n");
 	printf("\n");
 
+	DCC_LOG(LOG_TRACE, "5. starting tests...");
+
 	/* Run the test */
-	semaphore_test();
+//	semaphore_test();
 
-	sleep_test();
+//	sleep_test();
 
-	console_test();
+//	console_test();
 
-	busy_test();
+//	busy_test();
 
-	DCC_LOG(LOG_TRACE, "9. starting console shell...");
+//	step_test();
+
+//	step_task(NULL);
+
 	for (;;) {
-		test_shell(stdout);
+		thinkos_sleep(2000);
+//	thinkos_debug_step_i(0);
+//		DCC_LOG(LOG_TRACE, "6. DCB_DEMCR_MON_REQ...");
+//		dcb->demcr |= DCB_DEMCR_MON_REQ | DCB_DEMCR_MON_PEND;
+//		dcb->demcr = demcr & ~DCB_DEMCR_MON_REQ;
+//		thinkos_suspend_all();
+//		test_shell(stdout);
 	}
 
 	return 0;

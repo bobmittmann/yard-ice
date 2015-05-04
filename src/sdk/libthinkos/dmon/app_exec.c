@@ -43,9 +43,10 @@ static void __attribute__((noreturn)) app_bootstrap(void * arg)
 
 extern uint32_t _stack;
 
-int dmon_app_exec(void)
+int dmon_app_exec(bool paused)
 {
 	uint32_t * app = (uint32_t *)0x08010000;
+	int thread_id = 0;
 
 	DCC_LOG1(LOG_TRACE, "app=%p", app);
 
@@ -56,8 +57,11 @@ int dmon_app_exec(void)
 		return -1;
 	}
 
-	__thinkos_thread_exec(0, (uintptr_t)&_stack, 
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
 						  (void *)app_bootstrap, (void *)app);
+
+	if (!paused)
+		__thinkos_thread_resume(thread_id);
 
 	return 0;
 }

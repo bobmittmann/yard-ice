@@ -101,6 +101,7 @@
 #define THINKOS_EV_RAISE_I       3
 #define THINKOS_FLAG_CLR_I       4
 #define THINKOS_FLAG_SET_I       5
+#define THINKOS_DEBUG_STEP_I     6
 
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1
@@ -522,6 +523,11 @@ static inline void __attribute__((always_inline))
 static inline void  __attribute__((always_inline)) 
 	thinkos_flag_signal_i(int flag) {
 	THINKOS_NMI1(THINKOS_FLAG_SIGNAL_I, flag);
+}
+
+static inline void  __attribute__((always_inline)) 
+	thinkos_debug_step_i(unsigned int thread_id) {
+	THINKOS_NMI1(THINKOS_DEBUG_STEP_I, thread_id);
 }
 
 

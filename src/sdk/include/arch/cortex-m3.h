@@ -400,6 +400,7 @@
 #define CM3_ITM_BASE     (0xe0000000) /* ITM Base Address */
 #define CM3_DCB_BASE     (0xe000edf0) /* Core Debug Base Address */
 #define CM3_DWT_BASE     (0xe0001000) /* DWT Base Address */
+#define CM3_FPB_BASE     (0xe0002000) /* Flash Patch and Bkpt Base Address */
 #define CM3_SYSTICK_BASE (CM3_SCS_BASE + 0x0010)
 #define CM3_NVIC_BASE    (CM3_SCS_BASE + 0x0100)
 #define CM3_SCB_BASE     (CM3_SCS_BASE + 0x0d00)
@@ -642,6 +643,71 @@ struct cm3_dwt {
 	volatile uint32_t cid3; /* Component Identification Register #3 */
 }; 
 
+/*************************************************************************
+  CM3 Flash Patch and Breakpoint (FPB)                                      
+ *************************************************************************/
+
+/* ----------------------------------------------------------------------- */
+/* FP_CTRL FlashPatch Control Register */
+/* ----------------------------------------------------------------------- */
+
+#define FP_NUM_CODE(CTRL) ((((CTRL) >> 8) & 0x70) | (((CTRL) >> 4) & 0xf)) 
+ /* The number of instruction address comparators. */
+
+#define FP_NUM_LIT(CTRL) (((CTRL) >> 8) & 0x7) /* The number of literal 
+	address comparators supported. If this field is zero, the implementation 
+	does not support literal comparators. */
+
+#define FP_KEY (1 << 1)
+#define FP_ENABLE (1 << 0)
+#define FP_DISABLE (0 << 0)
+
+/* ----------------------------------------------------------------------- */
+/* FP_REMAP FlashPatch Remap register */
+/* ----------------------------------------------------------------------- */
+
+#define FP_RMPSPT(REMAP) (((CTRL) >> 29) & 0x1) /* Indicates whether the FPB 
+ unit supports flash patch remap:
+	0 = Remapping not supported. The FPB only supports breakpoint functionality.
+	1 = Hard-wired remap to SRAM region. */
+
+
+/* ----------------------------------------------------------------------- */
+/* FP_COMP FlashPatch Comparator register */
+/* ----------------------------------------------------------------------- */
+
+/* [31:30] REPLACE For an instruction address comparator:
+Defines the behavior when the COMP address is matched:
+	00 = Remap to remap address, see FlashPatch Remap register, 
+		FP_REMAP on page C1-908 a.
+	01 = Breakpoint on lower halfword, upper is unaffected
+	10 = Breakpoint on upper halfword, lower is unaffected
+	11 = Breakpoint on both lower and upper halfwords.
+	The reset value of this field is UNKNOWN.
+	For a literal address comparator:
+	Field is UNK/SBZP.
+[29] - Reserved.
+[28:2] COMP Bits [28:2] of the address to compare with addresses 
+from the Code memory region.
+
+[0] ENABLE Enable bit for this comparator: 
+	0 = Comparator disabled.
+	1 = Comparator enabled.
+	A Power-on reset clears this bit to 0. */
+
+#define COMP_REMAP   (0 << 30)
+#define COMP_BP_LOW  (1 << 30)
+#define COMP_BP_HIGH (2 << 30)
+#define COMP_BP_WORD (3 << 30)
+
+#define COMP_ENABLE (1 << 0)
+
+struct cm3_fpb {
+	uint32_t ctrl;
+	uint32_t remap;
+	uint32_t comp[8];
+};
+
 #define CM3_SYSTICK ((struct cm3_systick *) CM3_SYSTICK_BASE) 
 #define CM3_SCB ((struct cm3_scb *) CM3_SCB_BASE) 
 #define CM3_NVIC ((struct cm3_nvic *) CM3_NVIC_BASE) 
@@ -649,6 +715,7 @@ struct cm3_dwt {
 #define CM3_ITM ((struct cm3_itm *) CM3_ITM_BASE) 
 #define CM3_MPU ((struct cm3_mpu *) CM3_MPU_BASE) 
 #define CM3_DWT ((struct cm3_dwt *) CM3_DWT_BASE) 
+#define CM3_FPB ((struct cm3_fpb *) CM3_FPB_BASE) 
 
 /* this constant must be privided by the BSP */
 extern const uint32_t cm3_systick_load_1ms;

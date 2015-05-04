@@ -30,10 +30,11 @@ TOOLS = ../../../../tools
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
 		  $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc \
-		  $(SDK)/libshell $(SDK)/libgdb $(SDK)/libopcodes $(SDK)/libmd5
+		  $(SDK)/libshell $(SDK)/libgdb $(SDK)/libopcodes \
+		  $(SDK)/libmd5 $(SDK)/libconsole
 
 LIBS = cm3 stm32f util thinkos c ice-comm crc drv tty shell \
-	   gdb opcodes md5
+	   gdb opcodes md5 console
 
 INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H

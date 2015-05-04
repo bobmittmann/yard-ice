@@ -78,7 +78,6 @@ void __thinkos_thread_abort(int thread_id)
 void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 {
 	int self = thinkos_rt.active;
-	int j;
 
 	DCC_LOG2(LOG_TRACE, "<%d> code=%d", self, code); 
 
@@ -112,14 +111,17 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 #endif /* THINKOS_ENABLE_CANCEL */
 
 #if THINKOS_ENABLE_JOIN
-	for (j = 0; j < THINKOS_THREADS_MAX; j++) {
-		if (thinkos_rt.ctx[j] == NULL)
-			continue;
-		if (__bit_mem_rd(&thinkos_rt.wq_join[self], j) != 0) {
-			DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
-			__bit_mem_wr((void *)&thinkos_rt.wq_ready, j, 1); 
-			__bit_mem_wr((void *)&thinkos_rt.wq_join[self], j, 0);  
-			thinkos_rt.ctx[j]->r0 = code;
+	{
+		int j;
+		for (j = 0; j < THINKOS_THREADS_MAX; j++) {
+			if (thinkos_rt.ctx[j] == NULL)
+				continue;
+			if (__bit_mem_rd(&thinkos_rt.wq_join[self], j) != 0) {
+				DCC_LOG1(LOG_TRACE, "wakeup <%d>", j);
+				__bit_mem_wr((void *)&thinkos_rt.wq_ready, j, 1); 
+				__bit_mem_wr((void *)&thinkos_rt.wq_join[self], j, 0);  
+				thinkos_rt.ctx[j]->r0 = code;
+			}
 		}
 	}
 #endif

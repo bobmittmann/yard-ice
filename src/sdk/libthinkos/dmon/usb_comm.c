@@ -836,9 +836,10 @@ struct dmon_comm * usb_comm_init(const usb_dev_t * usb)
 	dev->rx_pos = 0;
 	dev->rx_flowctrl = false;
 
+	DCC_LOG(LOG_TRACE, "usb_dev_init()");
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
 
-	DCC_LOG1(LOG_INFO, "dev->acm.flags<-%0p", &dev->acm.flags);
+	DCC_LOG1(LOG_TRACE, "dev->acm.flags<-%0p", &dev->acm.flags);
 
 	dmon_comm_irq_config((struct dmon_comm *)dev);
 

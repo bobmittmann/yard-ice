@@ -203,6 +203,7 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			dmon_print_osinfo(comm);
 			break;
 		case CTRL_N:
+		case 'n':
 			thread_id = __thinkos_thread_getnext(thread_id);
 			if (thread_id == - 1)
 				thread_id = __thinkos_thread_getnext(thread_id);
@@ -213,6 +214,7 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			monitor_on_fault(comm);
 			break;
 		case CTRL_S:
+		case 's':
 			monitor_step_assync(comm);
 			break;
 		case CTRL_D:
@@ -220,6 +222,9 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 		case CTRL_V:
 			show_help(comm);
+			break;
+		case 'i':
+			thinkos_debug_step_i(4);
 			break;
 		case CTRL_Y:
 			dmon_print_stack_usage(comm);
@@ -331,10 +336,12 @@ void monitor_init(void)
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
 
 	thinkos_console_init();
-//	thinkos_dmon_init(comm, monitor_task);
 
-	gdb_init(comm, monitor_task);
+//	gdb_init(monitor_task);
+
 //	thinkos_dmon_init(comm, console_task);
+
+	thinkos_dmon_init(comm, monitor_task);
 }
 
 struct mem_range {

@@ -146,8 +146,58 @@ void __thinkos_flag_set_i(int wq)
 
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
+#if THINKOS_ENABLE_DEBUG_STEP
+void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) {
+	/* save the current stepping thread */
+	thinkos_rt.step_id = thread_id;
+	unsigned int isr_no;
+
+	asm volatile ("ldr   %0, [sp, #7 * 4]\n"
+				  : "=r" (isr_no) : : ); 
+	isr_no &= 0xff;
+
+	if (isr_no == CM3_EXCEPT_PENDSV) {
+		CM3_SCB->shcsr &= ~SCB_SHCSR_PENDSVACT; /* Clear PendSV active */
+		/* Remove NMI context */
+		asm volatile ("pop    {r0-r3,r12,lr}\n"
+					  "add    sp, sp, #2 * 4\n"
+					  : : : ); 
+	}
+	/* Step and return */
+	asm volatile ("movw   r3, #0xedf0\n"
+				  "movt   r3, #0xe000\n"
+				  "ldr    r2, [r3, #12]\n"
+				  "orr.w  r2, r2, #0x40000\n"
+				  "str    r2, [r3, #12]\n"
+				  "bx     lr\n"
+				  : :  : "r3", "r2"); 
+
+	/* Step and return */
+	asm volatile ("bx     lr\n" : : :); 
+}
+
+#endif /* THINKOS_ENABLE_DEBUG_STEP */
+
+void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int svc)
+{
+	asm volatile (
+				  "add    r3, pc, #4\n"
+				  "nop\n"
+				  "ldr    pc, [r3, %2, lsl #2]\n"
+				  ".word  __thinkos_sem_post_i\n"
+				  ".word  __thinkos_ev_raise_i\n"
+				  ".word __thinkos_flag_give_i\n"
+				  ".word __thinkos_flag_signal_i\n"
+				  ".word __thinkos_flag_clr_i\n"
+				  ".word __thinkos_flag_set_i\n"
+				  ".word __thinkos_debug_step_i\n"
+				  : : "r" (arg1), "r" (arg2), "r" (svc) : ); 
+}
+
+#if 0
 void cm3_nmi_isr(int arg1, int arg2, int svc)
 {
+
 	switch (svc) {
 	case THINKOS_SEM_POST_I:
 #if THINKOS_SEMAPHORE_MAX > 0
@@ -184,8 +234,15 @@ void cm3_nmi_isr(int arg1, int arg2, int svc)
 		__thinkos_flag_set_i(arg1);
 #endif /* (THINKOS_FLAG_MAX > 0) */
 		break;
+
+	case THINKOS_DEBUG_STEP_I:
+#if THINKOS_ENABLE_DEBUG_STEP
+		__thinkos_debug_step_i(arg1);
+#endif /* THINKOS_ENABLE_DEBUG_STEP */
+		break;
 	}
 }
+#endif
 
 /* FIXME: this is a hack to force linking this file. 
  The linker then will override the weak alias for the cm3_svc_isr() */

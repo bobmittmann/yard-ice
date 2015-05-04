@@ -138,6 +138,7 @@ struct gdb_rspd {
 		uint32_t noack_mode : 1;
 		uint32_t nonstop_mode : 1;
 		uint32_t stopped : 1;
+		uint32_t active_app : 1;
 	};
 	struct {
 		int8_t g; 
@@ -295,7 +296,7 @@ int thread_getnext(int th)
 	return __thinkos_thread_getnext(th - 1) + 1;
 }
 
-int target_halt(struct gdb_rspd * gdb)
+void target_halt(struct gdb_rspd * gdb)
 {
 	__thinkos_pause_all();
 
@@ -310,9 +311,6 @@ int target_halt(struct gdb_rspd * gdb)
 
 	dmon_wait_idle();
 	gdb->stopped = true;
-	gdb->last_signal = TARGET_SIGNAL_TRAP;
-
-	return 0;
 }
 
 int target_goto(uint32_t addr, int opt)
@@ -367,7 +365,6 @@ int mem_write(uint32_t addr, const void * ptr, unsigned int len)
 		stm32_flash_erase(offs, blk.size);
 	};
 
-	stm32_flash_erase(offs, blk.size);
 	return stm32_flash_write(offs, ptr, len);
 }
 
@@ -517,7 +514,7 @@ int thread_register_set(int thread, int reg, uint32_t val)
 		ctx->pc = val;
 		break;
 	case 16:
-		ctx->xpsr = val;
+//		ctx->xpsr = val;
 		break;
 	default:
 		return -1;
@@ -531,28 +528,85 @@ int thread_register_set(int thread, int reg, uint32_t val)
  ***********************************************************************/
 
 #define BP_DEFSZ 2
+#define BP_MAX 6
 
-int target_breakpoint_set(struct gdb_rspd * gdb, uint32_t addr, uint32_t size)
+bool breakpoint_set(uint32_t addr, uint32_t size)
 {
+	struct cm3_fpb * fbp = CM3_FPB;
+	uint32_t comp;
+	int i;
+
+	for (i = 0; i < BP_MAX; ++i) {
+		if ((fbp->comp[i] & COMP_ENABLE) == 0) 
+			break;
+	}
+
+	if (i == BP_MAX) {
+		DCC_LOG(LOG_WARNING, "no more breakpoints");
+		return false;
+	}
+
 	/* use default size if zero */
 	size = (size == 0) ? BP_DEFSZ : size;
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	if (size == 2) {
+		if (addr & 0x00000002) {
+			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+		} else {
+			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+		}
+	} else {
+		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+	}
 
-	return 0;
+	fbp->comp[i] = comp;
+
+	DCC_LOG4(LOG_TRACE, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
+			 size, fbp->comp[i]);
+
+	return true;
 }
 
-int target_breakpoint_clear(struct gdb_rspd * gdb, uint32_t addr, uint32_t size)
+bool breakpoint_clear(uint32_t addr, uint32_t size)
 {
-	int ret = 0;
+	struct cm3_fpb * fbp = CM3_FPB;
+	uint32_t comp;
+	int i;
 
 	size = (size == 0) ? BP_DEFSZ : size;
 
+	if (size == 2) {
+		if (addr & 0x00000002) {
+			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+		} else {
+			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+		}
+	} else {
+		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+	}
+
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	return ret;
+	for (i = 0; i < BP_MAX; ++i) {
+		if (fbp->comp[i] == comp) {
+			fbp->comp[i] = 0;
+			return true;
+		}
+	}
+
+	DCC_LOG(LOG_WARNING, "breakpoint not found!");
+	return false;
 }
 
+void breakpoint_clear_all(void)
+{
+	struct cm3_fpb * fbp = CM3_FPB;
+	int i;
+
+	for (i = 0; i < BP_MAX; ++i) {
+		fbp->comp[i] = 0;
+	}
+}
 /*
  * Common response packets
  */
@@ -595,32 +649,9 @@ static int rsp_error(struct dmon_comm * comm, int err)
 	pkt[5] = hextab[((sum >> 4) & 0xf)];
 	pkt[6] = hextab[sum & 0xf];
 
+	DCC_LOG1(LOG_TRACE, "--> Error(%d)!", err);
+
 	return dmon_comm_send(comm, pkt, 7);
-}
-
-int rsp_msg(struct dmon_comm * comm, char * pkt, const char * s)
-{
-	int sum;
-	int n;
-	char c;
-
-	pkt[0] = '$';
-	pkt[1] = sum = 'O';
-	n = 2;
-	while (*s) {
-		c = hextab[((*s >> 4) & 0xf)];
-		pkt[n++] = c;
-		sum += c;
-		c = hextab[*s & 0xf];
-		pkt[n++] = c;
-		sum += c;
-		s++;
-	}
-	pkt[n++] = '#';
-	pkt[n++] = hextab[((sum >> 4) & 0xf)];
-	pkt[n++] = hextab[sum & 0xf];
-
-	return dmon_comm_send(comm, pkt, n);
 }
 
 static int rsp_send_pkt(struct dmon_comm * comm, char * pkt, int len)
@@ -638,25 +669,26 @@ static int rsp_send_pkt(struct dmon_comm * comm, char * pkt, int len)
 	pkt[n++] = hextab[sum & 0xf];
 
 	pkt[n] = '\0';
-	DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
+	DCC_LOGSTR(LOG_TRACE, "--> '%s'", pkt);
 
 	return dmon_comm_send(comm, pkt, n);
 }
 
 
-static int rsp_break_signal(struct gdb_rspd * gdb, 
-							struct dmon_comm * comm, char * pkt)
+static void rsp_break_signal(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "break received, stopping...");
 
-	if (target_halt(gdb) < 0) {
-		rsp_error(comm, 1);
-		return -1;
-	}
+	target_halt(gdb);
+	gdb->last_signal = TARGET_SIGNAL_INT;
+}
 
+static void rsp_breakpoint(struct gdb_rspd * gdb, struct dmon_comm * comm)
+{
+	DCC_LOG(LOG_TRACE, "breakpoint, stopping...");
+
+	target_halt(gdb);
 	gdb->last_signal = TARGET_SIGNAL_TRAP;
-
-	return 0;
 }
 
 #if 0
@@ -778,18 +810,12 @@ int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 	return rsp_send_pkt(comm, pkt, n);
 }
 
-int rsp_thread_get_next(struct dmon_comm * comm)
+int rsp_thread_get_next(struct dmon_comm * comm, char * pkt)
 {
-	char pkt[32];
-	int sum;;
+	int n;
 
-	pkt[0] = '$';
-	pkt[1] = sum = 'l';
-	pkt[2] = '#';
-	pkt[3] = hextab[((sum >> 4) & 0xf)];
-	pkt[4] = hextab[sum & 0xf];
-
-	return dmon_comm_send(comm, pkt, 5);
+	n = str2str(pkt, "$l");
+	return rsp_send_pkt(comm, pkt, n);
 }
 
 #if 0
@@ -914,6 +940,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int n;
 
 	pkt[len] = '\0';
+	DCC_LOGSTR(LOG_INFO, "'%s'", pkt);
 
 	if (prefix(pkt, "qRcmd,")) {
 		DCC_LOG(LOG_TRACE, "qRcmd");
@@ -980,7 +1007,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	if (prefix(pkt, "qsThreadInfo")) {
 		DCC_LOG(LOG_INFO, "qsThreadInfo");
 		/* Sequence Thread Info */
-		return rsp_thread_get_next(comm);
+		return rsp_thread_get_next(comm, pkt);
 	}
 
 	/* Get thread info from RTOS */
@@ -1006,9 +1033,10 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 
 	if (prefix(pkt, "QNonStop:")) {
 		gdb->nonstop_mode = pkt[9] - '0';
-		DCC_LOG1(LOG_TRACE, "Nonstop=%d", gdb->nonstop_mode);
+		DCC_LOG1(LOG_TRACE, "Nonstop=%d +++++++++++++++", gdb->nonstop_mode);
 		if (!gdb->nonstop_mode && !gdb->stopped) {
 			target_halt(gdb);
+			gdb->last_signal = TARGET_SIGNAL_STOP;
 		}
 		return rsp_ok(comm);
 	}
@@ -1026,20 +1054,27 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 
 }
 
-static int rsp_all_registers_get(int th, struct dmon_comm * comm, 
+static int rsp_all_registers_get(struct gdb_rspd * gdb, 
+								 struct dmon_comm * comm, 
 								 char * pkt, int len)
 {
 	unsigned int val = 0;
 	int sum = 0;
+	int th;
 	int n;
 	int r;
+
+	if (gdb->thread_id.g <= 0)
+		th = gdb->current_thread;
+	else
+		th = gdb->thread_id.g;
+
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", th);
 
 	if (!(__thinkos_thread_ispaused(th - 1) || 
 		  __thinkos_thread_isfaulty(th - 1))) {
 		return rsp_error(comm, 5);
 	} 
-
-	DCC_LOG1(LOG_TRACE, "thread=%d", th);
 
 	pkt[0] = '$';
 	n = 1;
@@ -1090,20 +1125,25 @@ static int rsp_all_registers_get(int th, struct dmon_comm * comm,
 	return dmon_comm_send(comm, pkt, n);
 }
 
-static int rsp_all_registers_set(struct dmon_comm * comm, char * pkt, int len)
+static int rsp_all_registers_set(struct gdb_rspd * gdb, 
+								 struct dmon_comm * comm, char * pkt, int len)
 {
 	DCC_LOG(LOG_WARNING, "not implemented");
 
 	return rsp_empty(comm);
 }
 
-static int rsp_register_get(int th, struct dmon_comm * comm, 
+static int rsp_register_get(struct gdb_rspd * gdb,
+							struct dmon_comm * comm, 
 							char * pkt, int len)
 {
 	unsigned int val;
 	int sum = 0;
 	int reg;
+	int th;
 	int n;
+
+	th = gdb->thread_id.p;
 
 	reg = hex2int(&pkt[1], NULL);
 
@@ -1156,13 +1196,28 @@ static int rsp_register_get(int th, struct dmon_comm * comm,
 	(((uint32_t)(x) & 0xff000000U) >> 24)))
 #endif
 
-static int rsp_register_set(int th, struct dmon_comm * comm, 
+static int rsp_register_set(struct gdb_rspd * gdb, 
+							struct dmon_comm * comm, 
 							char * pkt, int len)
 {
 	uint32_t reg;
 	uint32_t tmp;
 	uint32_t val;
+	int th;
 	char * cp;
+
+	if (gdb->thread_id.g <= 0)
+		th = gdb->current_thread;
+	else
+		th = gdb->thread_id.g;
+
+	if (!gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "no active application!");
+		if (dmon_app_exec(true) < 0) {
+			return rsp_error(comm, 8);
+		}
+		gdb->active_app = true;
+	}
 
 	cp = &pkt[1];
 	reg = hex2int(cp, &cp);
@@ -1180,11 +1235,11 @@ static int rsp_register_set(int th, struct dmon_comm * comm,
 
 	/* cpsr */
 	if (reg == 25) {
+		DCC_LOG(LOG_TRACE, "xPSR");
 		reg = 16;
 	}
 
 	if (reg > 16) {
-		DCC_LOG(LOG_TRACE, "CPSR");
 		return rsp_error(comm, 2);
 	}
 
@@ -1280,7 +1335,7 @@ static int rsp_breakpoint_insert(struct dmon_comm * comm, struct gdb_rspd * gdb,
 	char * cp;
 
 	if (pkt[1] != '0')
-		return rsp_ok(comm);
+		return rsp_empty(comm);
 
 	cp = &pkt[3];
 	addr = hex2int(cp, &cp);
@@ -1289,11 +1344,10 @@ static int rsp_breakpoint_insert(struct dmon_comm * comm, struct gdb_rspd * gdb,
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	target_breakpoint_set(gdb, addr, size);
+	if (breakpoint_set(addr, size))
+		return rsp_ok(comm);
 
-	DCC_LOG(LOG_TRACE, "target_breakpoint_set() done.");
-
-	return rsp_ok(comm);
+	return rsp_error(comm, 1);
 }
 
 static int rsp_breakpoint_remove(struct dmon_comm * comm, struct gdb_rspd * gdb,
@@ -1304,7 +1358,7 @@ static int rsp_breakpoint_remove(struct dmon_comm * comm, struct gdb_rspd * gdb,
 	char * cp;
 
 	if (pkt[1] != '0')
-		return rsp_ok(comm);
+		return rsp_empty(comm);
 
 	cp = &pkt[3];
 	addr = hex2int(cp, &cp);
@@ -1313,9 +1367,10 @@ static int rsp_breakpoint_remove(struct dmon_comm * comm, struct gdb_rspd * gdb,
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	target_breakpoint_clear(gdb, addr, size);
+	if (breakpoint_clear(addr, size))
+		return rsp_ok(comm);
 
-	return rsp_ok(comm);
+	return rsp_error(comm, 1);
 }
 
 static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm, 
@@ -1381,6 +1436,7 @@ static int rsp_continue(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	}
 
 	__thinkos_resume_all();
+	gdb->stopped = false;
 
 	/* signal that we are now running */
 	return dmon_comm_send(comm, "+", 1);
@@ -1413,7 +1469,7 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int id;
 
 	id = hex2int(&pkt[2], NULL);
-	DCC_LOG2(LOG_INFO, "H%c%d", pkt[1], id);
+	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], id);
 
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
@@ -1436,7 +1492,6 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 
 	return ret;
 }
-
 
 static int rsp_v_packet(struct dmon_comm * comm, char * pkt, int len)
 {
@@ -1487,7 +1542,8 @@ static int rsp_detach(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "[DETACH]");
 
-	__thinkos_resume_all();
+	if (gdb->stopped)
+		__thinkos_resume_all();
 
 	/* reply OK */
 	rsp_ok(comm);
@@ -1501,7 +1557,8 @@ static int rsp_kill(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "[KILL]");
 
-	__thinkos_resume_all();
+	if (gdb->stopped)
+		__thinkos_resume_all();
 
 	rsp_ok(comm);
 
@@ -1511,7 +1568,8 @@ static int rsp_kill(struct gdb_rspd * gdb, struct dmon_comm * comm)
 }
 
 
-static int rsp_memory_write_bin(struct dmon_comm * comm, char * pkt, int len)
+static int rsp_memory_write_bin(struct gdb_rspd * gdb, 
+								struct dmon_comm * comm, char * pkt, int len)
 {
 	unsigned int addr;
 	char * cp;
@@ -1526,7 +1584,17 @@ static int rsp_memory_write_bin(struct dmon_comm * comm, char * pkt, int len)
 
 	if (size == 0) {
 		DCC_LOG(LOG_TRACE, "write probe!");
+		/* XXX: if there is an active application, even if it is suspended,
+		   writing over it may cause errors */
+		if (gdb->active_app) {
+			DCC_LOG(LOG_WARNING, "active application!");
+			dmon_soft_reset(comm);
+			gdb->active_app = false;
+		}
 		return rsp_ok(comm);
+	}
+	if (gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "active application!");
 	}
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
@@ -1542,7 +1610,10 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 						 char * pkt, unsigned int len)
 {
 	int ret;
-	int th;
+
+	pkt[len] = 0;
+	if ((pkt[0] != 'X') && (pkt[0] != 'm'))
+		DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
 
 	switch (pkt[0]) {
 	case 'H':
@@ -1553,24 +1624,16 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		ret = rsp_query(gdb, comm, pkt, len);
 		break; 
 	case 'g':
-		if (gdb->thread_id.g <= 0)
-			th = gdb->current_thread;
-		else
-			th = gdb->thread_id.g;
-		ret = rsp_all_registers_get(th, comm, pkt, len);
+		ret = rsp_all_registers_get(gdb, comm, pkt, len);
 		break;
 	case 'G':
-		ret = rsp_all_registers_set(comm, pkt, len);
+		ret = rsp_all_registers_set(gdb, comm, pkt, len);
 		break;
 	case 'p':
-		ret = rsp_register_get(gdb->thread_id.p, comm, pkt, len);
+		ret = rsp_register_get(gdb, comm, pkt, len);
 		break;
 	case 'P':
-		if (gdb->thread_id.g <= 0)
-			th = gdb->current_thread;
-		else
-			th = gdb->thread_id.g;
-		ret = rsp_register_set(th, comm, pkt, len);
+		ret = rsp_register_set(gdb, comm, pkt, len);
 		break;
 	case 'm':
 		ret = rsp_memory_read(comm, pkt, len);
@@ -1607,7 +1670,7 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		ret = rsp_detach(gdb, comm);
 		break;
 	case 'X':
-		ret = rsp_memory_write_bin(comm, pkt, len);
+		ret = rsp_memory_write_bin(gdb, comm, pkt, len);
 		break;
 	case 'k':
 		/* kill */
@@ -1629,7 +1692,7 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		break;
 #endif
 	default:
-		DCC_LOG1(LOG_WARNING, "unsupported: %c", pkt[0]);
+		DCC_LOGSTR(LOG_TRACE, "unsupported: '%s'", pkt);
 		ret = rsp_empty(comm);
 		break;
 	}
@@ -1711,7 +1774,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	gdb->nonstop_mode = 0;
 	gdb->noack_mode = 0;
 	gdb->stopped = __thinkos_suspended();
+	gdb->active_app = __thinkos_active();
 	gdb->last_signal = TARGET_SIGNAL_0;
+	breakpoint_clear_all();
 
 	if (gdb->shell_task == NULL)
 		gdb->shell_task = gdb_task;
@@ -1724,6 +1789,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_THREAD_STEP);
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
+	sigmask |= (1 << DMON_BREAKPOINT);
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
@@ -1736,6 +1802,13 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			DCC_LOG(LOG_TRACE, "Thread step.");
 			dmon_clear(DMON_THREAD_STEP);
 			rsp_step_done(gdb, comm, pkt);
+		}
+
+		if (sigset & (1 << DMON_BREAKPOINT)) {
+			DCC_LOG(LOG_TRACE, "Breakpoint.");
+			dmon_clear(DMON_BREAKPOINT);
+			rsp_breakpoint(gdb, comm);
+			rsp_stop_reply(gdb, comm, pkt);
 		}
 
 		if (sigset & (1 << DMON_COMM_CTL)) {
@@ -1769,8 +1842,6 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 					DCC_LOG1(LOG_WARNING, "rsp_pkt_recv(): %d", len);
 					dmon_exec(gdb->shell_task);
 				} else {
-					pkt[len] = 0;
-					DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
 					if (!gdb->noack_mode)
 						rsp_ack(comm);
 					rsp_pkt_input(gdb, comm, pkt, len);
@@ -1779,11 +1850,8 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 			case CTRL_C:
 				DCC_LOG(LOG_TRACE, "[BREAK]");
-				if (rsp_break_signal(gdb, comm, pkt) < 0) {
-					DCC_LOG(LOG_WARNING, "rsp_break_signal() failed!");
-				} else {
-					rsp_stop_reply(gdb, comm, pkt);
-				}
+				rsp_break_signal(gdb, comm);
+				rsp_stop_reply(gdb, comm, pkt);
 				break;
 
 			case CTRL_Q:
@@ -1849,10 +1917,14 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 void gdb_init(void (* shell)(struct dmon_comm * ))
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
+
 	DCC_LOG(LOG_TRACE, "..... !!!!! ......");
 
 	if (shell == NULL)
 		shell = gdb_task;
 	gdb->shell_task = shell;
+
+	/* enable the FPB unit */
+	CM3_FPB->ctrl = FP_KEY | FP_ENABLE;
 }
 
