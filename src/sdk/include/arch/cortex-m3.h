@@ -156,15 +156,21 @@
 
 /* SCB Hard Fault Status Register */
 #define SCB_HFSR_DEBUGEVT (1 << 31)
-#define SCB_HFSR_FORCED (1 << 30)
-#define SCB_HFSR_VECTTBL (1 << 1)
+#define SCB_HFSR_FORCED   (1 << 30)
+#define SCB_HFSR_VECTTBL  (1 << 1)
 
 /* SCB Debug Fault Status Register */
 #define SCB_DFSR_EXTERNAL (1 << 4)
-#define SCB_DFSR_VCATCH (1 << 3)
-#define SCB_DFSR_DWTTRAP (1 << 2)
-#define SCB_DFSR_BKPT (1 << 1)
-#define SCB_DFSR_HALTED (1 << 0)
+#define SCB_DFSR_VCATCH   (1 << 3)
+#define SCB_DFSR_DWTTRAP  (1 << 2)
+#define SCB_DFSR_BKPT     (1 << 1)
+#define SCB_DFSR_HALTED   (1 << 0)
+
+/* SCB Coprocessor Access Control Register, CPACR */
+#define SCB_CPACR_CP11    (0x3 << 22)
+#define SCB_CPACR_CP10    (0x3 << 20)
+#define CP11_SET(X) ((X) << 22)
+#define CP10_SET(X) ((X) << 20)
 
 /****************************************************************************
   CM3 DCB (Debug Control Block)
@@ -494,12 +500,22 @@ struct cm3_scb {
 	volatile uint32_t dfsr; /* Debug Fault Status */
 	volatile uint32_t mmfar; /* Mem Manage Address */
 	volatile uint32_t bfar; /* Bus Fault Address */
-	volatile uint32_t afsr; /* Auxiliary Fault Status */
-	volatile uint32_t pfr[2]; /* Processor Feature */
-	volatile uint32_t dfr; /* Debug Feature */
-	volatile uint32_t adr; /* Auxiliary Feature */
-	volatile uint32_t mmfr[4]; /* Memory Model Feature */
-	volatile uint32_t isar[5]; /* ISA Feature */
+	volatile uint32_t afsr; /* Auxiliary Fault Status      (0xd3c) */
+	volatile uint32_t pfr[2]; /* Processor Feature         (0xd40) */
+	volatile uint32_t dfr;     /* Debug Feature            (0xd48) */
+	volatile uint32_t adr;     /* Auxiliary Feature        (0xd4c) */
+	volatile uint32_t mmfr[4]; /* Memory Model Feature     (0xd50) */
+	volatile uint32_t isar[5]; /* ISA Feature              (0xd60) */
+	volatile uint32_t reserved0[5]; /*                     (0xd74) */
+	volatile uint32_t cpacr; /* Coprocessor Access Control (0xd88) */
+	volatile uint32_t reserved1[4 * 7 + 1]; /* (0xd8c) */
+	volatile uint32_t reserved2[0x34 / 4];  /* (0xf00) */
+	volatile uint32_t fpccr; /* Floating Point Context Control (0xf34) */
+	volatile uint32_t fpcar; /* Floating Point Context Address */ 
+	volatile uint32_t fpdscr; /* Floating Point Default Status Control */
+	volatile uint32_t mvfr0; /* Media and FP Feature Register 0 */
+	volatile uint32_t mvfr1; /* Media and FP Feature Register 1 */
+	volatile uint32_t mvfr2; /* Media and FP Feature Register 2 */
 }; 
 
 /****************************************************************************

@@ -1,13 +1,19 @@
 @echo off
 
-rem export JTAGTOOL_ADDR=192.168.10.50
-rem make D=1 jtagload && 
+set JTAGTOOL_ADDR=192.168.10.50
+set BUILD_NAME=thinkos
+set TOOLS_DIR=..\..\tools
 
-..\..\tools\tftp_load.py -q -i -e -r  -a 0x08000000 -h 192.168.10.50 debug\thinkos.bin
+%TOOLS_DIR%\tftp_load.py -q -i -e -r  -a 0x08000000 -h %JTAGTOOL_ADDR% debug\thinkos.bin
 
 if %ERRORLEVEL% NEQ 0 goto :EOF
 
-..\..\tools\dcclog -h 192.168.10.50 debug\thinkos.elf
+rem Disable the halt debug mode by clearing C_DEBUGEN on DHCSR
+%TOOLS_DIR%\tftp_cmd.py -h %JTAGTOOL_ADDR% "disable poll" "let dhcsr 0xa05f0000" "enable poll"
+
+if %ERRORLEVEL% NEQ 0 goto :EOF
+
+%TOOLS_DIR%\dcclog -h %JTAGTOOL_ADDR% debug\thinkos.elf
 
 :EOF
 

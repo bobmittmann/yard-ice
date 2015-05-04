@@ -76,12 +76,12 @@ _Pragma ("GCC optimize (\"Ofast\")")
 static inline void __attribute__((always_inline)) 
 __xcpt_context_save(struct thinkos_except * xcpt)
 {
-	register struct thinkos_context * ctx asm("r0");
+	register uint32_t * ctx asm("r0");
 	register uint32_t sp asm("r1");
 	register uint32_t tmp asm("r2");
 	register uint32_t lr asm("r3");
 
-	ctx = &xcpt->ctx;
+	ctx = (uint32_t *)&xcpt->ctx;
 
 	asm volatile ("mov    %2, %3\n"
 				  "stmia  %2, {r4-r11}\n"
@@ -111,11 +111,11 @@ __xcpt_context_save(struct thinkos_except * xcpt)
 static inline void __attribute__((always_inline, noreturn)) 
 __xcpt_context_restore(struct thinkos_except * xcpt)
 {
-	register struct thinkos_context * ctx asm("r0");
+	register uint32_t * ctx asm("r0");
 	register uint32_t sp asm("r1");
 	register uint32_t lr asm("r3");
 
-	ctx = &xcpt->ctx;
+	ctx = (uint32_t *)&xcpt->ctx;
 	sp = xcpt->sp;
 	lr = xcpt->ret;
 
@@ -239,20 +239,16 @@ static void __dump_ufsr(void)
 
 static void __xdump(struct thinkos_except * xcpt)
 {
-#ifdef DEBUG
-	struct thinkos_context * ctx = &xcpt->ctx;
-#endif
-
 	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+			xcpt->ctx.r0, xcpt->ctx.r1, xcpt->ctx.r2, xcpt->ctx.r3);
 	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r5, ctx->r6, ctx->r7);
+			xcpt->ctx.r4, xcpt->ctx.r5, xcpt->ctx.r6, xcpt->ctx.r7);
 	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+			xcpt->ctx.r8, xcpt->ctx.r9, xcpt->ctx.r10, xcpt->ctx.r11);
 	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, xcpt->sp, ctx->lr, ctx->pc);
+			xcpt->ctx.r12, xcpt->sp, xcpt->ctx.lr, xcpt->ctx.pc);
 	DCC_LOG4(LOG_ERROR, "XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			ctx->xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
+			xcpt->ctx.xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
 }
 
 void hard_fault(struct thinkos_except * xcpt)

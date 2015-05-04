@@ -46,52 +46,6 @@
 #include <stddef.h>
 
 /* -------------------------------------------------------------------------- 
- * Thread context layout
- * --------------------------------------------------------------------------*/
-
-struct thinkos_context {
-	/* saved context */
-	uint32_t r4;
-	uint32_t r5;
-	uint32_t r6;
-	uint32_t r7;
-
-	uint32_t r8;
-	uint32_t r9;
-	uint32_t r10;
-	uint32_t r11;
-
-	/* exception context */
-	uint32_t r0;
-	uint32_t r1;
-	uint32_t r2;
-	uint32_t r3;
-
-	uint32_t r12;
-	uint32_t lr;
-	uint32_t pc;
-	uint32_t xpsr;
-};
-
-/* -------------------------------------------------------------------------- 
- * Flattened thread state structure
- * --------------------------------------------------------------------------*/
-
-struct thinkos_thread {
-	uint8_t idx;
-	uint8_t tmw: 1;
-	uint8_t alloc: 1;
-	uint16_t wq;
-	int8_t sched_val;
-	uint8_t sched_pri;
-	int32_t timeout;
-	uint32_t cyccnt;
-	struct thinkos_thread_inf * th_inf;
-	uint32_t sp;
-	struct thinkos_context ctx;
-};
-
-/* -------------------------------------------------------------------------- 
  * Set default configuration options
  * --------------------------------------------------------------------------*/
 
@@ -259,6 +213,14 @@ struct thinkos_thread {
 #define THINKOS_ENABLE_DEBUG_FAULT 0
 #endif
 
+#ifndef THINKOS_ENABLE_MPU 
+#define THINKOS_ENABLE_MPU 0
+#endif
+
+#ifndef THINKOS_ENABLE_FPU 
+#define THINKOS_ENABLE_FPU 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/
@@ -319,6 +281,58 @@ struct thinkos_thread {
 #endif
 
 /* -------------------------------------------------------------------------- 
+ * Thread context layout
+ * --------------------------------------------------------------------------*/
+
+struct thinkos_context {
+#if THINKOS_ENABLE_FPU 
+	union {
+		uint32_t s[32];
+		uint32_t d[16];
+	};
+#endif
+	/* saved context */
+	uint32_t r4;
+	uint32_t r5;
+	uint32_t r6;
+	uint32_t r7;
+
+	uint32_t r8;
+	uint32_t r9;
+	uint32_t r10;
+	uint32_t r11;
+
+	/* exception context */
+	uint32_t r0;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+
+	uint32_t r12;
+	uint32_t lr;
+	uint32_t pc;
+	uint32_t xpsr;
+};
+
+/* -------------------------------------------------------------------------- 
+ * Flattened thread state structure
+ * --------------------------------------------------------------------------*/
+
+struct thinkos_thread {
+	uint8_t idx;
+	uint8_t tmw: 1;
+	uint8_t alloc: 1;
+	uint16_t wq;
+	int8_t sched_val;
+	uint8_t sched_pri;
+	int32_t timeout;
+	uint32_t cyccnt;
+	struct thinkos_thread_inf * th_inf;
+	uint32_t sp;
+	struct thinkos_context ctx;
+};
+
+/* -------------------------------------------------------------------------- 
  * Run Time RTOS block
  * --------------------------------------------------------------------------*/
 
@@ -340,7 +354,6 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_DEBUG_STEP
 	uint32_t step_req; /* step request bitmap */
 	int32_t step_id; /* current stepping thread id */
-	uint32_t step_cnt; /* step count */
 #endif
 
 #if THINKOS_ENABLE_PROFILING
@@ -602,7 +615,28 @@ struct thinkos_thread_init {
  * --------------------------------------------------------------------------*/
 
 struct thinkos_except {
-	struct thinkos_context ctx;
+//	struct thinkos_context ctx;
+	struct {
+		/* saved context */
+		uint32_t r4;
+		uint32_t r5;
+		uint32_t r6;
+		uint32_t r7;
+		uint32_t r8;
+		uint32_t r9;
+		uint32_t r10;
+		uint32_t r11;
+		/* exception context */
+		uint32_t r0;
+		uint32_t r1;
+		uint32_t r2;
+		uint32_t r3;
+		uint32_t r12;
+		uint32_t lr;
+		uint32_t pc;
+		uint32_t xpsr;
+	} ctx;
+
 	uint32_t ret;
 	uint32_t sp;
 	uint32_t msp;
@@ -615,24 +649,10 @@ struct thinkos_except {
  * Idle thread
  * --------------------------------------------------------------------------*/
 
-#define IDLE_UNUSED_REGS 8
-
 struct thinkos_except_and_idle {
-	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE / 4) - IDLE_UNUSED_REGS];
-	union {
-		struct thinkos_context ctx;
-		struct {
-			uint32_t res2[IDLE_UNUSED_REGS];
-			uint32_t r0;
-			uint32_t r1;
-			uint32_t r2;
-			uint32_t r3;
-			uint32_t r12;
-			uint32_t lr;
-			uint32_t pc;
-			uint32_t xpsr;
-		} stack;
-	};
+	uint32_t except_stack[(THINKOS_EXCEPT_STACK_SIZE - 
+						   sizeof(struct thinkos_context)) / 4];
+	struct thinkos_context ctx;
 } __attribute__ ((aligned (8)));
 
 extern struct thinkos_rt thinkos_rt;

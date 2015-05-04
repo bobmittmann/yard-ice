@@ -168,20 +168,17 @@ const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 #define FLASH_ERR (FLASH_PGSERR | FLASH_PGPERR | FLASH_PGAERR | FLASH_WRPERR | \
 				   FLASH_OPERR)
 
-int __attribute__((section (".data#"))) stm32f2x_flash_sect_erase(struct stm32_flash * flash, unsigned int sect)
+uint32_t __attribute__((section (".data#"))) stm32f2x_flash_sect_erase(struct stm32_flash * flash, uint32_t cr)
 {
 	uint32_t sr;
 
-	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
+	flash->cr = cr;
 
 	do {
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);
 
-	if (sr & FLASH_ERR)
-		return -1;
-
-	return 0;
+	return sr;
 }
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
@@ -193,7 +190,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	unsigned int cnt;
 	uint32_t pri;
 	uint32_t cr;
-	int ret;
+	uint32_t sr;
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -229,11 +226,12 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 			break;
 		}
 
+		cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
 		cm3_primask_set(1);
-		ret = stm32f2x_flash_sect_erase(flash, sect);
+		sr = stm32f2x_flash_sect_erase(flash, cr);
 		cm3_primask_set(pri);
 
-		if (ret < 0) {
+		if (sr & FLASH_ERR) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
 			return -1;
 		}
@@ -244,26 +242,20 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	return cnt;
 }
 
-int __attribute__((section (".data#"))) 
+uint32_t __attribute__((section (".data#"))) 
 	stm32f2x_flash_wr32(struct stm32_flash * flash,
 						 uint32_t volatile * addr, uint32_t data)
 {
-	int ret = -1;
 	uint32_t sr;
-	int again;
 
 	flash->cr = FLASH_PG | FLASH_PSIZE_32;
 	*addr = data;
 	
-	for (again = 4096 * 1024; again > 0; --again) {
+	do {
 		sr = flash->sr;
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
+	} while (sr & FLASH_BSY);
 
-	return ret;
+	return sr;
 }
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
@@ -273,8 +265,8 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	uint32_t * addr;
 	uint8_t * ptr;
 	uint32_t cr;
+	uint32_t sr;
 	uint32_t pri;
-	int ret;
 	int n;
 	int i;
 
@@ -303,9 +295,9 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
 		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
 		cm3_primask_set(1);
-		ret = stm32f2x_flash_wr32(flash, addr, data);
+		sr = stm32f2x_flash_wr32(flash, addr, data);
 		cm3_primask_set(pri);
-		if (ret < 0) {
+		if (sr & FLASH_ERR) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
 			return -1;
 		}

@@ -104,17 +104,22 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
-
-	DCC_LOG(LOG_TRACE, "3. io_init()");
+	DCC_LOG(LOG_TRACE, "2. io_init()");
 	io_init();
 		
+	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
 	DCC_LOG(LOG_TRACE, "5. __thinkos_thread_abort()");
 	__thinkos_thread_abort(0);
+
+	for (;;) {
+		DCC_LOG(LOG_TRACE, "sleep...");
+		thinkos_sleep(1000);
+	}
 
 	return 0;
 }

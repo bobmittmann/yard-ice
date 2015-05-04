@@ -260,9 +260,7 @@ static void dmon_on_reset(struct thinkos_dmon * dmon)
 
 static void dmon_on_except(struct thinkos_dmon * mon)
 {
-#if DEBUG
-	struct thinkos_context * ctx = &thinkos_except_buf.ctx;
-#endif
+	struct thinkos_except * xcpt = &thinkos_except_buf;
 	uint32_t sp = thinkos_except_buf.sp;
 	uint32_t ret = thinkos_except_buf.ret;
 	bool handler_mode;
@@ -275,15 +273,15 @@ static void dmon_on_except(struct thinkos_dmon * mon)
 	DCC_LOG1(LOG_ERROR, "Bus fault!: [%s mode]!", handler_mode ? 
 			 "handler": "thread");
 	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			ctx->r0, ctx->r1, ctx->r2, ctx->r3);
+			xcpt->ctx.r0, xcpt->ctx.r1, xcpt->ctx.r2, xcpt->ctx.r3);
 	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			ctx->r4, ctx->r7, ctx->r6, ctx->r7);
+			xcpt->ctx.r4, xcpt->ctx.r7, xcpt->ctx.r6, xcpt->ctx.r7);
 	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			ctx->r8, ctx->r9, ctx->r10, ctx->r11);
+			xcpt->ctx.r8, xcpt->ctx.r9, xcpt->ctx.r10, xcpt->ctx.r11);
 	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			ctx->r12, sp, ctx->lr, ctx->pc);
+			xcpt->ctx.r12, sp, xcpt->ctx.lr, xcpt->ctx.pc);
 	DCC_LOG2(LOG_ERROR, "XPSR=%08x RET=%08x", 
-			ctx->xpsr, ret);
+			xcpt->ctx.xpsr, ret);
 
 	if (handler_mode) {
 		DCC_LOG(LOG_TRACE, "-----------------------------------------");
@@ -381,30 +379,38 @@ void cm3_debug_mon_isr(void)
 				 dfsr & SCB_DFSR_HALTED ? '1' : '0');
 
 		if (dfsr & SCB_DFSR_BKPT) {
-			/* suspend the current thread */
-			__thinkos_thread_pause(thinkos_rt.active);
-			sigset |= (1 << DMON_BREAKPOINT);
-			sigmsk |= (1 << DMON_BREAKPOINT);
-			thinkos_dmon_rt.events = sigset;
-			__thinkos_defer_sched();
-			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
-					 thinkos_rt.active);
+			if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+				/* suspend the current thread */
+				__thinkos_thread_pause(thinkos_rt.active);
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				__thinkos_defer_sched();
+				DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+						 thinkos_rt.active);
+			} else {
+				DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
+						 thinkos_rt.active);
+			}
 		}
 
 		if (dfsr & SCB_DFSR_HALTED) {
 			/* clear the step request */
 			dcb->demcr &= ~DCB_DEMCR_MON_STEP;
-			/* return the BASEPRI to the default to reenable the scheduler. */
-			cm3_basepri_set(0); 
-			/* suspend the thread, this will clear the step request flag */
-			__thinkos_thread_pause(thinkos_rt.step_id);
-			/* signal the monitor */
-			sigset |= (1 << DMON_THREAD_STEP);
-			sigmsk |= (1 << DMON_THREAD_STEP);
-			thinkos_dmon_rt.events = sigset;
-			__thinkos_defer_sched();
-			DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
-					 thinkos_rt.step_id);
+			if ((uint32_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
+				/* suspend the thread, this will clear the step request flag */
+				__thinkos_thread_pause(thinkos_rt.step_id);
+				/* signal the monitor */
+				sigset |= (1 << DMON_THREAD_STEP);
+				sigmsk |= (1 << DMON_THREAD_STEP);
+				thinkos_dmon_rt.events = sigset;
+				__thinkos_defer_sched();
+				DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+						 thinkos_rt.step_id);
+			} else {
+				DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
+						 thinkos_rt.step_id);
+			}
 		}
 	}
 #endif

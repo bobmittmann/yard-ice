@@ -157,7 +157,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 	dmprintf(comm, "%3d", i);
 #if THINKOS_ENABLE_THREAD_INFO
 	dmprintf(comm, " |  <IDLE>");
-	dmprintf(comm, " | %08x", (uint32_t)&thinkos_idle.stack); 
+	dmprintf(comm, " | %08x", (uint32_t)&thinkos_idle.ctx.r0); 
 #endif
 	dmprintf(comm, " | %08x", (uint32_t)rt->idle_ctx); 
 #if THINKOS_ENABLE_THREAD_STAT

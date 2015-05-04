@@ -76,6 +76,10 @@ void __thinkos_reset(void)
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
 
+#if THINKOS_ENABLE_FPU 
+	CM3_SCB->cpacr |= CP11_SET(3) | CP10_SET(3);
+#endif
+
 	/* clear the ThinkOS runtime structure */
 	__thinkos_memset32(&thinkos_rt, 0, sizeof(struct thinkos_rt));  
 
@@ -146,7 +150,7 @@ void __thinkos_reset(void)
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	thinkos_rt.step_id = -1;
-	thinkos_rt.step_cnt = 0;
+	thinkos_rt.step_req = 0;
 #endif
 
 #if THINKOS_ENABLE_PROFILING
@@ -244,24 +248,21 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* disable interrupts */
 	cm3_cpsid_i();
 
+	/* initialize exception stack */
+	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
+					   sizeof(thinkos_idle.except_stack));
+
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
 
 	/* configure the main stack */
-#if 0
-	msp = (uint32_t)&thinkos_except_stack + sizeof(thinkos_except_stack);
-#endif
-	msp = (uint32_t)&thinkos_idle.stack.r0;
+	msp = (uint32_t)&thinkos_idle.ctx.r0;
 	cm3_msp_set(msp);
-
-	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
 	/* configure the use of PSP in thread mode */
 	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
-	/* initialize exception stack */
-	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
-					   THINKOS_EXCEPT_STACK_SIZE - 4 * IDLE_UNUSED_REGS);
+	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
 #if THINKOS_ENABLE_EXCEPTIONS
 	thinkos_exception_init();

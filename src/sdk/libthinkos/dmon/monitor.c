@@ -82,7 +82,7 @@ static void monitor_on_fault(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
 	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
-	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
+//	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
 }
 
 static void monitor_pause_all(struct dmon_comm * comm)
@@ -144,6 +144,9 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_D:
 			dmon_print_thread(comm, thread_id);
 			break;
+		case CTRL_Y:
+			dmon_print_stack_usage(comm);
+			break;
 		case CTRL_C:
 			dmon_soft_reset(comm);
 			break;
@@ -200,13 +203,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
+				DCC_LOG1(LOG_TRACE, "Comm recv. rx_pipe.free=%d", cnt);
 				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
 					len = process_input(comm, (char *)ptr, len);
 					__console_rx_pipe_commit(len); 
 				}
 			} else {
-				DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
+				DCC_LOG(LOG_TRACE, "Comm recv. Masking DMON_COMM_RCV!");
 				sigmask &= ~(1 << DMON_COMM_RCV);
 			}
 		}

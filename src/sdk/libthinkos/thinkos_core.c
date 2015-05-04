@@ -41,7 +41,7 @@ struct thinkos_rt thinkos_rt;
    xpsr, pc, lr, r12. The other registers are not used at any time. We 
    claim the space avalilable for this registers as part of the exception 
    stack. */
-struct thinkos_except_and_idle thinkos_idle;
+struct thinkos_except_and_idle __attribute__((aligned(8))) thinkos_idle;
 
 #if THINKOS_ENABLE_SCHED_DEBUG
 static inline void __attribute__((always_inline)) 
@@ -63,6 +63,8 @@ void test_call(struct thinkos_context * ctx)
 	__dump_context(ctx);
 }
 
+#endif
+
 static inline void __attribute__((always_inline)) __wait(void) {
 	asm volatile ("mov    r3, #1\n"
 				  "0:\n"
@@ -70,7 +72,6 @@ static inline void __attribute__((always_inline)) __wait(void) {
 				  "b.n  0b\n"
 				  "1:\n" : : : "r3"); 
 }
-#endif
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
@@ -149,6 +150,9 @@ __sched_entry(void) {
 #endif				  
 				  "mrs   %0, PSP\n" 
 				  "stmdb %0!, {r4-r11}\n"
+#if THINKOS_ENABLE_FPU 
+				  "vstmdb.64 %0!, {d0-d15}\n"
+#endif
 				  : "=r" (ctx));
 	return ctx;
 }
@@ -161,32 +165,19 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  "add    sp, #16\n"
 				  "pop    {lr}\n"
 #endif				  
+#if THINKOS_ENABLE_FPU 
+				  "add    r3, %0, #40 * 4\n"
+				  "msr    PSP, r3\n"
+				  "vldmia.64 %0!, {d0-d15}\n"
+#else
 				  "add    r3, %0, #8 * 4\n"
 				  "msr    PSP, r3\n"
+#endif
 				  "ldmia  %0, {r4-r11}\n"
 				  "bx     lr\n"
 				  : : "r" (r0) : "r3"); 
 }
 
-static inline void __attribute__((always_inline)) 
-___sched_exit_step(struct thinkos_context * __ctx) {
-	register struct thinkos_context * r0 asm("r0") = __ctx;
-	asm volatile (
-#if THINKOS_ENABLE_SCHED_DEBUG
-				  "add    sp, #16\n"
-				  "pop    {lr}\n"
-#endif				  
-				  "add    r3, %0, #8 * 4\n"
-				  "msr    PSP, r3\n"
-				  "ldmia  %0, {r4-r11}\n"
-				  "movw   r3, #0xedf0\n"
-				  "movt   r3, #0xe000\n"
-				  "ldr    r2, [r3, #12]\n"
-				  "orr.w  r2, r2, #0x40000\n"
-				  "str    r2, [r3, #12]\n"
-				  "bx     lr\n"
-				  : : "r" (r0) : "r2", "r3"); 
-}
 
 /* Partially restore the context and then set the NMI pending
    to step thread. */ 
@@ -200,8 +191,14 @@ __sched_exit_step(unsigned int thread_id, struct thinkos_context * ctx) {
 				  "add    sp, #16\n"
 				  "pop    {lr}\n"
 #endif				  
+#if THINKOS_ENABLE_FPU 
+				  "add    r3, %1, #40 * 4\n"
+				  "msr    PSP, r3\n"
+				  "vldmia.64 %1!, {d0-d15}\n"
+#else
 				  "add    r3, %1, #8 * 4\n"
 				  "msr    PSP, r3\n"
+#endif
 				  "ldmia  %1, {r4-r11}\n"
 				  "movw   r3, #0xed00\n"
 				  "movt   r3, #0xe000\n"
@@ -222,6 +219,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	uint32_t new_thread_id;
 
 //	DCC_LOG(LOG_TRACE, "...");
+//	__wait();
 
 	/* save the context */
 	old_ctx = __sched_entry();
@@ -259,12 +257,6 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	if ((1 << new_thread_id) & thinkos_rt.step_req) {
-		/* save the current stepping thread */
-//		thinkos_rt.step_id = new_thread_id;
-		/* rise the BASEPRI to stop the scheduler and interrupts */
-//		cm3_basepri_set(MONITOR_PRIORITY); 
-		/* restore the context and step the core */
-//		__sched_exit_step(new_ctx);
 		__sched_exit_step(new_thread_id, new_ctx);
 	} else
 #endif

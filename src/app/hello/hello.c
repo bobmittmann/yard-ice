@@ -49,8 +49,7 @@ int main(int argc, char ** argv)
 
 	for (;;) {
 		y = isqrt(x + y * y);
-
-//		printf("Hello world\r\n");
+		printf("Hello world\r\n");
 		thinkos_sleep(500);
 	}
 

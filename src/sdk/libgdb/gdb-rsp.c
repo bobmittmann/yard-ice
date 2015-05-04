@@ -109,7 +109,7 @@ void monitor_on_fault(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
 	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
-	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
+//	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
 }
 
 void monitor_dump(struct dmon_comm * comm)
@@ -146,6 +146,7 @@ struct gdb_rspd {
 		int8_t p;
 	} thread_id;
 	uint8_t last_signal;
+	uint8_t cont_signal;
 	struct dmon_comm * comm;
 	void (* shell_task)(struct dmon_comm * comm);
 };
@@ -446,6 +447,11 @@ int thread_register_get(int thread, int reg, uint32_t * val)
 	case 16:
 		x = ctx->xpsr;
 		break;
+#if THINKOS_ENABLE_FPU
+	case 17 ... 33 :
+		x = ctx->s[reg - 17];
+		break;
+#endif
 	default:
 		return -1;
 	}
@@ -516,6 +522,11 @@ int thread_register_set(int thread, int reg, uint32_t val)
 	case 16:
 //		ctx->xpsr = val;
 		break;
+#if THINKOS_ENABLE_FPU
+	case 17 ... 33 :
+		ctx->s[reg - 17] = val;
+		break;
+#endif
 	default:
 		return -1;
 	}
@@ -844,33 +855,25 @@ static int rsp_thread_id(struct dmon_comm * comm, int id)
 }
 #endif
 
-int rsp_write(struct dmon_comm * comm, const void * buf, int len)
+int rsp_output(struct gdb_rspd * gdb, struct dmon_comm * comm, char * pkt)
 {
-	char pkt[(len * 2) + 8];
-	char * s = (char *)buf;
-	int sum;
+	char * cp;
 	int n;
-	char c;
-	int i;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
-
-	pkt[0] = '$';
-	pkt[1] = sum = 'O';
-	n = 2;
-	for (i = 0; i < len; i++) {
-		c = hextab[((s[i] >> 4) & 0xf)];
-		pkt[n++] = c;
-		sum += c;
-		c = hextab[s[i] & 0xf];
-		pkt[n++] = c;
-		sum += c;
+	cp = pkt;
+	*cp++ = '$';
+	*cp++ = 'O';
+#if (THINKOS_ENABLE_CONSOLE)
+	uint8_t * ptr;
+	int cnt;
+	if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+		cp += bin2hex(cp, ptr, cnt);
+		__console_tx_pipe_commit(cnt);
 	}
-	pkt[n++] = '#';
-	pkt[n++] = hextab[((sum >> 4) & 0xf)];
-	pkt[n++] = hextab[sum & 0xf];
+#endif
 
-	return dmon_comm_send(comm, pkt, n);
+	n = cp - pkt;
+	return rsp_send_pkt(comm, pkt, n);
 }
 
 int rsp_read(struct dmon_comm * comm, const void * buf, int len)
@@ -987,6 +990,9 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		cp += str2str(cp, ";qXfer:features:read-"
 					";qRelocInsn-"
 					";multiprocess-"
+#if 0
+					";QPassSignals+"
+#endif
 #if GDB_ENABLE_NOACK_MODE
 					";QStartNoAckMode+"
 #endif
@@ -1047,13 +1053,92 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		return rsp_ok(comm);
 	}
 
+#if 0
+	if (prefix(pkt, "QPassSignals:")) {
+		int sig;
+		cp = &pkt[12];
+		do {
+			cp++;
+			sig = hex2int(cp, &cp);
+			DCC_LOG1(LOG_TRACE, "sig=%d", sig);
+		} while (*cp == ';');
+		return rsp_ok(comm);
+	}
+#endif
+
 	DCC_LOG(LOG_TRACE, "unsupported query");
 
 	return rsp_empty(comm);
 
 
 }
+static int rsp_all_registers_get(struct gdb_rspd * gdb, 
+								 struct dmon_comm * comm, 
+								 char * pkt, int len)
+{
+	unsigned int val = 0;
+	char * cp;
+	int th;
+	int n;
+	int r;
 
+	if (gdb->thread_id.g <= 0)
+		th = gdb->current_thread;
+	else
+		th = gdb->thread_id.g;
+
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", th);
+
+	if (!(__thinkos_thread_ispaused(th - 1) || 
+		  __thinkos_thread_isfaulty(th - 1))) {
+		return rsp_error(comm, 5);
+	} 
+
+	cp = pkt;
+	*cp++ = '$';
+
+	/* all integer registers */
+	for (r = 0; r < 16; r++) {
+		thread_register_get(th, r, &val);
+		DCC_LOG2(LOG_INFO, "R%d = 0x%08x", r, val);
+		*cp++ = hextab[((val >> 4) & 0xf)];
+		*cp++ = hextab[(val & 0xf)];
+		*cp++ = hextab[((val >> 12) & 0xf)];
+		*cp++ = hextab[((val >> 8) & 0xf)];
+		*cp++ = hextab[((val >> 20) & 0xf)];
+		*cp++ = hextab[((val >> 16) & 0xf)];
+		*cp++ = hextab[((val >> 28) & 0xf)];
+		*cp++ = hextab[((val >> 24) & 0xf)];
+	}
+
+	/* all fp registers */
+	for (r = 0; r < 8; r++) {
+		*cp++ = '0' + r;
+		*cp++ = '*';
+		*cp++ = ' ' + 20;
+	}
+	/* fps */
+	*cp++ = '0';
+	*cp++ = '*';
+	*cp++ = ' ' + 4;
+
+	/* cpsr */
+	thread_register_get(th, 16, &val);
+
+	*cp++ = hextab[((val >> 4) & 0xf)];
+	*cp++ = hextab[(val & 0xf)];
+	*cp++ = hextab[((val >> 12) & 0xf)];
+	*cp++ = hextab[((val >> 8) & 0xf)];
+	*cp++ = hextab[((val >> 20) & 0xf)];
+	*cp++ = hextab[((val >> 16) & 0xf)];
+	*cp++ = hextab[((val >> 28) & 0xf)];
+	*cp++ = hextab[((val >> 24) & 0xf)];
+
+	n = cp - pkt;
+	return rsp_send_pkt(comm, pkt, n);
+}
+
+#if 0
 static int rsp_all_registers_get(struct gdb_rspd * gdb, 
 								 struct dmon_comm * comm, 
 								 char * pkt, int len)
@@ -1124,6 +1209,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 
 	return dmon_comm_send(comm, pkt, n);
 }
+#endif
 
 static int rsp_all_registers_set(struct gdb_rspd * gdb, 
 								 struct dmon_comm * comm, char * pkt, int len)
@@ -1211,12 +1297,9 @@ static int rsp_register_set(struct gdb_rspd * gdb,
 	else
 		th = gdb->thread_id.g;
 
-	if (!gdb->active_app) {
-		DCC_LOG(LOG_WARNING, "no active application!");
-		if (dmon_app_exec(true) < 0) {
-			return rsp_error(comm, 8);
-		}
-		gdb->active_app = true;
+	if (!__thinkos_thread_isalive(th - 1)) {
+		DCC_LOG1(LOG_WARNING, "thread %d is dead!", th);
+		return rsp_ok(comm);
 	}
 
 	cp = &pkt[1];
@@ -1438,9 +1521,33 @@ static int rsp_continue(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	__thinkos_resume_all();
 	gdb->stopped = false;
 
-	/* signal that we are now running */
-	return dmon_comm_send(comm, "+", 1);
+	return rsp_stop_reply(gdb, comm, pkt);
 }
+
+static int rsp_continue_sig(struct gdb_rspd * gdb, struct dmon_comm * comm, 
+						char * pkt, int len)
+{
+	unsigned int addr;
+	unsigned int sig;
+	char * cp;
+
+
+	sig = hex2int(&pkt[1], &cp);
+	DCC_LOG1(LOG_TRACE, "sig=%d", sig);
+	if (*cp == ':') {
+		cp++;
+		addr = hex2int(cp, &cp);
+		DCC_LOG1(LOG_TRACE, "addr=%08x", addr);
+		target_goto(addr, 0);
+	}
+
+	gdb->cont_signal = sig;
+	__thinkos_resume_all();
+	gdb->stopped = false;
+
+	return rsp_stop_reply(gdb, comm, pkt);
+}
+
 
 static int rsp_thread_isalive(struct dmon_comm * comm, char * pkt, int len)
 {
@@ -1471,6 +1578,27 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	id = hex2int(&pkt[2], NULL);
 	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], id);
 
+	/* XXX: if there is an active application, even if it is suspended,
+	   writing over it may cause errors */
+	if (!gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "no active application!");
+		DCC_LOG(LOG_TRACE, "dmon_app_exec()");
+		if (dmon_app_exec(true) < 0) {
+			return rsp_error(comm, 1);
+		}
+		gdb->active_app = true;
+	}
+
+	if (id <= 0)
+		id = gdb->current_thread;
+
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", id);
+
+	if (!__thinkos_thread_isalive(id - 1)) {
+		DCC_LOG1(LOG_WARNING, "thread %d is dead!", id);
+		return rsp_error(comm, 2);
+	}
+
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
@@ -1493,11 +1621,14 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	return ret;
 }
 
-static int rsp_v_packet(struct dmon_comm * comm, char * pkt, int len)
+static int rsp_v_packet(struct gdb_rspd * gdb, 
+						struct dmon_comm * comm, char * pkt, int len)
 {
+	unsigned int sig = 0;
+	int thread_id = 0;
 	int n;
-	int id;
-	int ret;
+	char * cp;
+	int action ;
 
 	pkt[len] = '\0';
 
@@ -1508,34 +1639,53 @@ static int rsp_v_packet(struct dmon_comm * comm, char * pkt, int len)
 	}
 
 	if (prefix(pkt, "vCont;")) {
-		if (pkt[7] == ':') { 
-			id = hex2int(&pkt[8], NULL);
-	 	} else {
-			id = 0;
+		cp = &pkt[5];
+
+		while (*cp == ';') {
+			++cp;
+			action = *cp++;
+			if ((action == 'C') || (action == 'S')) {
+				sig = hex2int(cp, &cp);
+			}
+			if (*cp == ':') { 
+				cp++;
+				thread_id = hex2int(cp, &cp);
+			} else {
+				thread_id = 0;
+			}
+
+			switch (pkt[6]) {
+			case 'c':
+				DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
+				gdb->stopped = false;
+				__thinkos_thread_resume(thread_id - 1);
+				break;
+			case 'C':
+				gdb->cont_signal = sig;
+				DCC_LOG2(LOG_TRACE, "Continue %d sig=%d", thread_id, sig);
+				break;
+			case 's':
+				DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
+				break;
+			case 'S':
+				DCC_LOG2(LOG_TRACE, "Step %d sig=%d", thread_id, sig);
+				break;
+			case 't':
+				DCC_LOG1(LOG_TRACE, "Stop %d", thread_id);
+				break;
+			default:
+				DCC_LOG(LOG_TRACE, "Unsupported!");
+				/* we don't have threads, empty replay */
+				return rsp_empty(comm);
+			}
 		}
-		(void)id;
-		switch (pkt[6]) {
-		case 'c':
-			DCC_LOG1(LOG_TRACE, "Continue %d", id);
-			ret = rsp_ok(comm);
-			break;
-		case 's':
-			DCC_LOG1(LOG_TRACE, "Step %d", id);
-			ret = rsp_ok(comm);
-			break;
-		case 't':
-			DCC_LOG1(LOG_TRACE, "Stop %d", id);
-			ret = rsp_ok(comm);
-			break;
-		default:
-			DCC_LOG(LOG_TRACE, "Unsupported!");
-			/* we don't have threads, empty replay */
-			ret = rsp_empty(comm);
-		}
-		return ret;
+
+		/* signal that we are now running */
+		return rsp_ack(comm);
 	}
 
-	return rsp_empty(comm);
+	/* signal that we are now running */
+	return rsp_ack(comm);
 }
 
 static int rsp_detach(struct gdb_rspd * gdb, struct dmon_comm * comm)
@@ -1663,8 +1813,12 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		/* continue */
 		ret = rsp_continue(gdb, comm, pkt, len);
 		break;
+	case 'C':
+		/* continue with signal */
+		ret = rsp_continue_sig(gdb, comm, pkt, len);
+		break;
 	case 'v':
-		ret = rsp_v_packet(comm, pkt, len);
+		ret = rsp_v_packet(gdb, comm, pkt, len);
 		break;
 	case 'D':
 		ret = rsp_detach(gdb, comm);
@@ -1767,6 +1921,8 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	char * pkt = buf;
 	uint32_t sigmask;
 	uint32_t sigset;
+	uint8_t * ptr;
+	int cnt;
 	int len;
 
 	DCC_LOG(LOG_TRACE, "GDB start...");
@@ -1790,6 +1946,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_BREAKPOINT);
+	sigmask |= (1 << DMON_TX_PIPE);
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
@@ -1816,6 +1973,16 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			dmon_clear(DMON_COMM_CTL);
 			if (!dmon_comm_isconnected(comm))	
 				dmon_exec(gdb->shell_task);
+		}
+
+		if (sigset & (1 << DMON_TX_PIPE)) {
+			DCC_LOG(LOG_TRACE, "TX Pipe.");
+			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+				rsp_output(gdb, comm, pkt);
+			} else {
+				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
+				dmon_clear(DMON_TX_PIPE);
+			}
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {

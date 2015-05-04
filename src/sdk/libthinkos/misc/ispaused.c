@@ -25,11 +25,15 @@
 #if THINKOS_ENABLE_PAUSE
 bool __thinkos_thread_ispaused(unsigned int th)
 {
-	if (th >= THINKOS_THREADS_MAX)
+	if (th >= THINKOS_THREADS_MAX) {
+		DCC_LOG1(LOG_WARNING, "invalid thread %d!", th);
 		return false;
+	}
 
-	if (thinkos_rt.ctx[th] == NULL)
+	if (thinkos_rt.ctx[th] == NULL) {
+		DCC_LOG1(LOG_WARNING, "invalid thread %d!", th);
 		return false;
+	}
 
 	return __bit_mem_rd(&thinkos_rt.wq_paused, th);
 }
