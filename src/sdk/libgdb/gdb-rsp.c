@@ -201,7 +201,7 @@ struct flash_blk {
 #define BLK_RO  (1 << 7)
 
 const struct flash_map stm32f407_flash = {
-	.base = 0x08000000,
+	.base = (uint32_t)STM32_FLASH_MEM,
 	.blk = {
 		BLK_RO + SZ_16K, 
 		BLK_RO + SZ_16K, 

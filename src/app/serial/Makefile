@@ -20,27 +20,25 @@
 # 
 
 
-PROG = gdb_test
+PROG = serial
 
-CFILES = gdb_test.c stdio.c monitor.c
+CFILES = serial.c
 
 SDK = ../../sdk
 TOOLS = ../../../tools
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc \
-		  $(SDK)/libgdb $(SDK)/libopcodes \
-		  $(SDK)/libconsole
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
+		   $(SDK)/libdrv $(SDK)/libtty $(SDK)/libutil $(SDK)/libc
 
-LIBS = cm3 stm32f util thinkos c ice-comm drv tty \
-	   gdb opcodes console
+LIBS = cm3 stm32f drv tty console util c 
 
-INCPATH = $(SDK)/include  
-CDEFS = CONFIG_H
-CFLAGS = -g -O1 
+INCPATH = $(SDK)/include 
 
-JTAGTOOL_ADDR = 192.168.10.50
+CDEFS =
+
+CFLAGS = -g -O1 -Wall
+
 MACH = stm32f407
+THINKOS = 1
 include ../../mk/stm32f4xx.mk
 

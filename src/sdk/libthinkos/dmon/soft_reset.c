@@ -67,7 +67,10 @@ void dmon_soft_reset(struct dmon_comm * comm)
 	/* signal the scheduler ... */
 //	__thinkos_defer_sched();
 //	dmon_wait_idle();
+	DCC_LOG(LOG_TRACE, "5. Console reset...");
+	__console_reset();
 	DCC_LOG(LOG_TRACE, "6. restore Comm interrupts...");
 	dmon_comm_irq_config(comm);
+	DCC_LOG(LOG_TRACE, "7. done.");
 }
 

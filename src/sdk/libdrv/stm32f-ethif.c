@@ -427,9 +427,9 @@ int stm32f_ethif_init(struct ifnet * __if)
 #endif
 
 	/* set the interrupt priority */
-	__thinkos_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);
+	cm3_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);
 	/* enable interrupts */
-	__thinkos_irq_enable(STM32F_IRQ_ETH);
+	cm3_irq_enable(STM32F_IRQ_ETH);
 
 	/* enable Normal interrupt summary and Abnormal interrupt summary */
 	eth->dmaier = ETH_NISE | ETH_AISE | ETH_FBEIE | 

@@ -153,35 +153,34 @@ static void __show_xpsr(uint32_t psr)
 }
 
 
-void thinkos_context_show(const struct thinkos_context * ctx, 
-						  uint32_t sp, uint32_t msp, uint32_t psp)
+void print_except_context(struct thinkos_except * xcpt)
 {
-	__show_xpsr(ctx->xpsr);
+	__show_xpsr(xcpt->ctx.xpsr);
 
 	fprintf(stderr, "\n");
 
-	fprintf(stderr, "   r0=%08x", ctx->r0);
-	fprintf(stderr, "   r4=%08x", ctx->r4);
-	fprintf(stderr, "   r8=%08x", ctx->r8);
-	fprintf(stderr, "  r12=%08x", ctx->r12);
-	fprintf(stderr, " xpsr=%08x\n", ctx->xpsr);
+	fprintf(stderr, "   r0=%08x", xcpt->ctx.r0);
+	fprintf(stderr, "   r4=%08x", xcpt->ctx.r4);
+	fprintf(stderr, "   r8=%08x", xcpt->ctx.r8);
+	fprintf(stderr, "  r12=%08x", xcpt->ctx.r12);
+	fprintf(stderr, " xpsr=%08x\n", xcpt->ctx.xpsr);
 
-	fprintf(stderr, "   r1=%08x", ctx->r1);
-	fprintf(stderr, "   r5=%08x", ctx->r5);
-	fprintf(stderr, "   r9=%08x", ctx->r9);
-	fprintf(stderr, "   sp=%08x", sp);
-	fprintf(stderr, "  msp=%08x\n", msp);
+	fprintf(stderr, "   r1=%08x", xcpt->ctx.r1);
+	fprintf(stderr, "   r5=%08x", xcpt->ctx.r5);
+	fprintf(stderr, "   r9=%08x", xcpt->ctx.r9);
+	fprintf(stderr, "   sp=%08x", xcpt->sp);
+	fprintf(stderr, "  msp=%08x\n", xcpt->msp);
 
-	fprintf(stderr, "   r2=%08x", ctx->r2);
-	fprintf(stderr, "   r6=%08x", ctx->r6);
-	fprintf(stderr, "  r10=%08x", ctx->r10);
-	fprintf(stderr, "   lr=%08x",  ctx->lr);
-	fprintf(stderr, "  psp=%08x\n", psp);
+	fprintf(stderr, "   r2=%08x", xcpt->ctx.r2);
+	fprintf(stderr, "   r6=%08x", xcpt->ctx.r6);
+	fprintf(stderr, "  r10=%08x", xcpt->ctx.r10);
+	fprintf(stderr, "   lr=%08x",  xcpt->ctx.lr);
+	fprintf(stderr, "  psp=%08x\n", xcpt->psp);
 
-	fprintf(stderr, "   r3=%08x",  ctx->r3);
-	fprintf(stderr, "   r7=%08x",  ctx->r7);
-	fprintf(stderr, "  r11=%08x",  ctx->r11);
-	fprintf(stderr, "   pc=%08x\n",  ctx->pc);
+	fprintf(stderr, "   r3=%08x",  xcpt->ctx.r3);
+	fprintf(stderr, "   r7=%08x",  xcpt->ctx.r7);
+	fprintf(stderr, "  r11=%08x",  xcpt->ctx.r11);
+	fprintf(stderr, "   pc=%08x\n",  xcpt->ctx.pc);
 }
 
 static void __dump_bfsr(void)
@@ -323,7 +322,7 @@ void hard_fault(struct thinkos_except * xcpt)
 		fprintf(stderr, "\n");
 	}
 
-	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
@@ -357,7 +356,7 @@ void bus_fault(struct thinkos_except * xcpt)
 
 	__dump_bfsr();
 
-	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
@@ -390,7 +389,7 @@ void usage_fault(struct thinkos_except * xcpt)
 
 	__dump_ufsr();
 
-	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
@@ -406,7 +405,7 @@ void mem_manag(struct thinkos_except * xcpt)
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Mem Manager:");
-	thinkos_context_show(&xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
@@ -574,7 +573,7 @@ void thinkos_nmi(struct thinkos_context * ctx, uint32_t msp,
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "NMI:");
-	thinkos_context_show(xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif
@@ -607,7 +606,7 @@ void thinkos_mon(struct thinkos_context * ctx, uint32_t msp,
 #if THINKOS_STDERR_FAULT_DUMP
 	fprintf(stderr, "\n---\n");
 	fprintf(stderr, "Debug Monitor:");
-	thinkos_context_show(xcpt->ctx, xcpt->sp, xcpt->msp, xcpt->psp);
+	print_except_context(xcpt);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 #endif

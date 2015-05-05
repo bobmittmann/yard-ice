@@ -38,6 +38,17 @@ void monitor_pause_all(struct dmon_comm * comm);
 void monitor_resume_all(struct dmon_comm * comm);
 int monitor_print_insn(struct dmon_comm * comm, uint32_t addr);
 
+void monitor_ymodem_recv(struct dmon_comm * comm)
+{
+	dmon_soft_reset(comm);
+	if (dmon_app_load_ymodem(comm) < 0) {
+		dmprintf(comm, "YMODEM fail!\r\n");
+		return;
+	}	
+
+	dmon_app_exec(false);
+}
+
 static int thread_id = -1;
 
 void monitor_on_step(struct dmon_comm * comm)
@@ -226,8 +237,11 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 		case 'i':
 			thinkos_debug_step_i(4);
 			break;
-		case CTRL_Y:
+		case CTRL_U:
 			dmon_print_stack_usage(comm);
+			break;
+		case CTRL_Y:
+			monitor_ymodem_recv(comm);
 			break;
 		default:
 			continue;

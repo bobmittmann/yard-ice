@@ -66,6 +66,7 @@ void stdio_init(void)
 	stdin = f_tty;
 }
 
+#if 0
 /*****************************************************************************
  * Help
  *****************************************************************************/
@@ -198,4 +199,6 @@ int test_shell(FILE * f)
 {
 	return shell(f, shell_prompt, shell_greeting, shell_cmd_tab);
 }
+
+#endif
 

@@ -135,7 +135,7 @@ int dmon_expect(int ev)
 		return 0;
 	}
 
-	DCC_LOG1(LOG_WARNING, "unexpected event=%08x!!", 
+	DCC_LOG1(LOG_INFO, "unexpected event=%08x!!", 
 			 evset & thinkos_dmon_rt.mask);
 
 	/* unexpected event received */
@@ -265,8 +265,9 @@ static void dmon_on_except(struct thinkos_dmon * mon)
 	uint32_t ret = thinkos_except_buf.ret;
 	bool handler_mode;
 	int th;
-	(void)sp;
+	(void)xcpt;
 	(void)ret;
+	(void)sp;
 
 	handler_mode = (ret & (1 << 4)) ? false : true;
 
@@ -360,6 +361,7 @@ void cm3_debug_mon_isr(void)
 	uint32_t dfsr;
 
 	demcr = dcb->demcr;
+	(void)demcr; 
 
 	DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
 			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',

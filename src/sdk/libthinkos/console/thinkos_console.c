@@ -161,20 +161,20 @@ void __console_rx_pipe_commit(unsigned int cnt)
 
 	thinkos_console_rt.rx_pipe.head += cnt;
 
-	DCC_LOG2(LOG_TRACE, "wq=%d -> 0x%08x", wq, thinkos_rt.wq_lst[wq]);
+	DCC_LOG2(LOG_INFO, "wq=%d -> 0x%08x", wq, thinkos_rt.wq_lst[wq]);
 
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
-		DCC_LOG(LOG_TRACE, "no thread waiting.");
+		DCC_LOG(LOG_INFO, "no thread waiting.");
 		return;
 	}
 
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", th);
+	DCC_LOG1(LOG_INFO, "thread_id=%d", th);
 
 	buf = (uint8_t *)thinkos_rt.ctx[th]->r1;
 	max = thinkos_rt.ctx[th]->r2;
 	/* read from the RX pipe into the thread's read buffer */
 	if ((n = pipe_get(&thinkos_console_rt.rx_pipe, buf, max)) == 0) {
-		DCC_LOG(LOG_TRACE, "_pipe_get() == 0");
+		DCC_LOG(LOG_INFO, "_pipe_get() == 0");
 		return;
 	}
 
@@ -241,8 +241,6 @@ void thinkos_console_svc(int32_t * arg)
 	uint8_t * buf;
 	int n;
 	
-	DCC_LOG1(LOG_TRACE, "req=%d!", req);
-
 	switch (req) {
 	case CONSOLE_OPEN:
 		arg[0] = 0;
@@ -317,20 +315,19 @@ void thinkos_console_svc(int32_t * arg)
 	}
 }
 
-void thinkos_console_init(void)
+void __console_reset(void)
 {
 	thinkos_console_rt.tx_pipe.head = 0;
 	thinkos_console_rt.tx_pipe.tail = 0;
 	thinkos_console_rt.rx_pipe.head = 0;
 	thinkos_console_rt.rx_pipe.tail = 0;
+	dmon_clear(DMON_TX_PIPE);
+	dmon_clear(DMON_RX_PIPE);
+}
 
-	DCC_LOG2(LOG_TRACE, "rd_wq=%0p -> 0x%08x", 
-			 &thinkos_rt.wq_lst[THINKOS_WQ_CONSOLE_RD],
-			 thinkos_rt.wq_lst[THINKOS_WQ_CONSOLE_RD]);
-
-	DCC_LOG2(LOG_TRACE, "wr_wq=%0p -> 0x%08x", 
-			 &thinkos_rt.wq_lst[THINKOS_WQ_CONSOLE_WR],
-			 thinkos_rt.wq_lst[THINKOS_WQ_CONSOLE_WR]);
+void thinkos_console_init(void)
+{
+	__console_reset();
 }
 
 #endif /* THINKOS_ENABLE_CONSOLE */

@@ -45,6 +45,7 @@ OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork
 CROSS_COMPILE = arm-none-eabi-
 
 ifdef THINKOS
+CDEFS += "THINKAPP" 
 LDFLAGS = -nostdlib -T thinkos.ld
 else
 LDFLAGS = -nostdlib -T $(MACH).ld

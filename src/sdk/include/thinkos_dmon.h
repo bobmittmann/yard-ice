@@ -143,6 +143,8 @@ void dmon_print_stack_usage(struct dmon_comm * comm);
 
 int dmon_app_exec(bool paused);
 
+int dmon_app_load_ymodem(struct dmon_comm * comm);
+
 void dmon_comm_irq_config(struct dmon_comm * comm);
 
 void dmon_irq_disable_all(void);

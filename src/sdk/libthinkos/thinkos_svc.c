@@ -128,6 +128,8 @@ void thinkos_flag_timedwait_svc(int32_t * arg);
 
 void thinkos_irq_wait_svc(int32_t * arg);
 
+void thinkos_irq_register_svc(int32_t * arg);
+
 void thinkos_rt_snapshot_svc(int32_t * arg);
 
 void thinkos_console_svc(int32_t * arg);
@@ -482,6 +484,14 @@ void cm3_svc_isr(void)
 #else
 		thinkos_nosys(arg);
 #endif /* THINKOS_IRQ_MAX > 0 */
+		break;
+
+	case THINKOS_IRQ_REGISTER:
+#if CM3_RAM_VECTORS
+		thinkos_irq_register_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif /* CM3_RAM_VECTORS */
 		break;
 
 /* ----------------------------------------------

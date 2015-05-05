@@ -73,3 +73,48 @@ void thinkos_irq_wait_svc(int32_t * arg)
 
 #endif
 
+#ifdef CM3_RAM_VECTORS
+extern void * __ram_vectors[];
+extern int __sizeof_rom_vectors;
+
+void thinkos_irq_register_svc(int32_t * arg)
+{
+	unsigned int irq = arg[0];
+	unsigned int priority = arg[1];
+	void * isr = (void *)arg[2];
+
+#if THINKOS_ENABLE_ARG_CHECK
+	int irq_max = ((uintptr_t)&__sizeof_rom_vectors / sizeof(void *)) - 16;
+
+	if (irq >= irq_max) {
+		DCC_LOG1(LOG_ERROR, "invalid IRQ %d!", irq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+
+	/* disable this interrupt source */
+	cm3_irq_disable(irq);
+
+	/* adjust the priority level */
+	cm3_irq_disable(irq);
+	if (priority > IRQ_PRIORITY_VERY_LOW)
+		priority = IRQ_PRIORITY_VERY_LOW;
+	else if (priority < IRQ_PRIORITY_VERY_HIGH)
+		priority = IRQ_PRIORITY_VERY_HIGH;
+
+	/* set the interrupt priority */
+	cm3_irq_pri_set(irq, priority);
+
+	/* clear pending interrupt */
+	cm3_irq_pend_clr(irq);
+
+	/* set the vector */
+	__ram_vectors[irq + 16] = isr;
+
+	/* enable this interrupt source */
+	cm3_irq_enable(irq);
+}
+
+#endif
+

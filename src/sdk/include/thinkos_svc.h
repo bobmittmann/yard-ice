@@ -93,7 +93,9 @@
 #define THINKOS_JOIN            49
 
 #define THINKOS_EXIT            50
-#define THINKOS_RT_SNAPSHOT     51
+#define THINKOS_IRQ_REGISTER    51
+
+#define THINKOS_RT_SNAPSHOT     52
 
 #define THINKOS_SEM_POST_I       0
 #define THINKOS_FLAG_GIVE_I      1
@@ -473,6 +475,11 @@ static inline int __attribute__((always_inline))
 
 static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
+}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_irq_register(int irq, int pri, void (* isr)(void)) {
+	return THINKOS_SVC3(THINKOS_IRQ_REGISTER, irq, pri, isr);
 }
 
 static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {

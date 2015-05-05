@@ -334,6 +334,7 @@ void step_test(void)
 int console_write(void * dev, const void * buf, unsigned int len); 
 int console_read(void * dev, void * buf, unsigned int len, unsigned int msec);
 
+#if 0
 void console_file_recv(void)
 {
 	char buf[128];
@@ -359,6 +360,7 @@ void console_file_recv(void)
 	DCC_LOG5(LOG_TRACE, "size=%d md5sum=%08x%08x%08x%08x.", size, 
 			 r[0], r[1], r[2], r[3]);
 }
+#endif
 
 int console_test_task(void * arg)
 {
@@ -398,7 +400,7 @@ int console_test_task(void * arg)
 #endif
 
 	for (;;) {
-		test_shell(f);
+//		test_shell(f);
 	}
 
 	return 0;
