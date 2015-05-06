@@ -54,6 +54,16 @@
     #define HCLK_HZ 72000000
   #endif
 
+#elif defined(STM32F429)
+
+  #ifndef HSE_HZ
+    #define HSE_HZ 25000000
+  #endif
+
+  #ifndef HCLK_HZ
+    #define HCLK_HZ 168000000
+  #endif
+
 #elif defined(STM32F4X)
 
   #ifndef HSE_HZ
@@ -304,8 +314,16 @@ void _init(void)
 	}
 
 #if (HCLK_HZ == 168000000)
-
-#if (HSE_HZ == 12000000)
+#if (HSE_HZ == 25000000)
+	/* F_HSE = 25 MHz
+	   F_VCO = 336 MHz (F_HSE * 13.4)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+	pll = RCC_PLLQ(7) | 
+		RCC_PLLSRC_HSE | 
+		RCC_PLLP(2) | 
+		RCC_PLLN(336) | RCC_PLLM(25);
+#elif (HSE_HZ == 12000000)
 	/* F_HSE = 12 MHz
 	   F_VCO = 336 MHz (F_HSE * 28)
 	   F_MAIN = 168 MHz (F_VCO / 2)
@@ -328,7 +346,6 @@ void _init(void)
 #endif
 
 #elif (HCLK_HZ == 120000000)
-
 #if (HSE_HZ == 24000000)
 	/* F_HSE = 24 MHz
 	   F_VCO = 240 MHz
@@ -348,7 +365,21 @@ void _init(void)
 		RCC_PLLP(2) | 
 		RCC_PLLN(240) | RCC_PLLM(12);
 #else
-//#error "HSE_HZ invalid!"
+#error "HSE_HZ invalid!"
+#endif
+
+#elif (HCLK_HZ == 192000000)
+#if (HSE_HZ == 25000000)
+	/* F_HSE = 25 MHz
+	   F_VCO = 384 MHz
+	   F_MAIN = 192 MHz
+	   F_USB = 48 MHz */
+	pll = RCC_PLLQ(8) | 
+		RCC_PLLSRC_HSE | 
+		RCC_PLLP(2) | 
+		RCC_PLLN(384) | RCC_PLLM(25);
+#else
+#error "HSE_HZ invalid!"
 #endif
 
 #endif

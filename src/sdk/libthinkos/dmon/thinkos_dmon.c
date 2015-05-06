@@ -258,58 +258,12 @@ static void dmon_on_reset(struct thinkos_dmon * dmon)
 	dmon->mask |= (1 << DMON_RESET) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
 }
 
-static void dmon_on_except(struct thinkos_dmon * mon)
-{
-	struct thinkos_except * xcpt = &thinkos_except_buf;
-	uint32_t sp = thinkos_except_buf.sp;
-	uint32_t ret = thinkos_except_buf.ret;
-	bool handler_mode;
-	int th;
-	(void)xcpt;
-	(void)ret;
-	(void)sp;
-
-	handler_mode = (ret & (1 << 4)) ? false : true;
-
-	DCC_LOG1(LOG_ERROR, "Bus fault!: [%s mode]!", handler_mode ? 
-			 "handler": "thread");
-	DCC_LOG4(LOG_ERROR, "  R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			xcpt->ctx.r0, xcpt->ctx.r1, xcpt->ctx.r2, xcpt->ctx.r3);
-	DCC_LOG4(LOG_ERROR, "  R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			xcpt->ctx.r4, xcpt->ctx.r7, xcpt->ctx.r6, xcpt->ctx.r7);
-	DCC_LOG4(LOG_ERROR, "  R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			xcpt->ctx.r8, xcpt->ctx.r9, xcpt->ctx.r10, xcpt->ctx.r11);
-	DCC_LOG4(LOG_ERROR, " R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			xcpt->ctx.r12, sp, xcpt->ctx.lr, xcpt->ctx.pc);
-	DCC_LOG2(LOG_ERROR, "XPSR=%08x RET=%08x", 
-			xcpt->ctx.xpsr, ret);
-
-	if (handler_mode) {
-		DCC_LOG(LOG_TRACE, "-----------------------------------------");
-		for(;;);
-	}
-
-	/* get the active (current) thread */	
-	th = thinkos_rt.active;
-#if THINKOS_ENABLE_PAUSE
-	/* insert into the paused queue */
-	__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);
-#endif
-	/* remove from the ready wait queue */
-	__thinkos_suspend(th);
-
-	for(;;);
-
-	thinkos_except_buf.thread = th;
-}
-
 #if (THINKOS_ENABLE_DEBUG_STEP)
-int dmon_thread_step(unsigned int id, bool block)
+int dmon_thread_step(unsigned int id, bool sync)
 {
-	struct cm3_dcb * dcb = CM3_DCB;
 	int ret;
 
-	if (dcb->dhcsr & DCB_DHCSR_C_DEBUGEN) {
+	if (CM3_DCB->dhcsr & DCB_DHCSR_C_DEBUGEN) {
 		DCC_LOG(LOG_ERROR, "can't step: DCB_DHCSR_C_DEBUGEN !!");
 		return -1;
 	}
@@ -328,7 +282,7 @@ int dmon_thread_step(unsigned int id, bool block)
 
 	DCC_LOG1(LOG_TRACE, "thread_id=%d +++++++++++++++++++++", id);
 
-	if (block) {
+	if (sync) {
 		if ((ret = dmon_wait(DMON_THREAD_STEP)) < 0)
 			return ret;
 	}
@@ -355,18 +309,19 @@ void cm3_debug_mon_isr(void)
 {
 	uint32_t sigset = thinkos_dmon_rt.events;
 	uint32_t sigmsk = thinkos_dmon_rt.mask;
-#if (THINKOS_ENABLE_DEBUG_STEP)
-	struct cm3_dcb * dcb = CM3_DCB;
+#if 0
 	uint32_t demcr;
-	uint32_t dfsr;
 
-	demcr = dcb->demcr;
+	demcr = CM3_DCB->demcr;
 	(void)demcr; 
 
 	DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
 			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
 			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
+#endif
+#if (THINKOS_ENABLE_DEBUG_STEP)
+	uint32_t dfsr;
 
 	/* read SCB Debug Fault Status Register */
 	if ((dfsr = CM3_SCB->dfsr) != 0) {
@@ -398,7 +353,7 @@ void cm3_debug_mon_isr(void)
 
 		if (dfsr & SCB_DFSR_HALTED) {
 			/* clear the step request */
-			dcb->demcr &= ~DCB_DEMCR_MON_STEP;
+			CM3_DCB->demcr &= ~DCB_DEMCR_MON_STEP;
 			if ((uint32_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
 				/* suspend the thread, this will clear the step request flag */
 				__thinkos_thread_pause(thinkos_rt.step_id);
@@ -416,26 +371,6 @@ void cm3_debug_mon_isr(void)
 		}
 	}
 #endif
-
-#if 0
-	if (demcr & DCB_DEMCR_MON_REQ) {
-		dcb->demcr = demcr & ~DCB_DEMCR_MON_REQ;
-//		thinkos_suspend_all();
-	} else {
-	}
-	if (thinkos_rt.step_id != -1) {
-		DCC_LOG1(LOG_TRACE, "thinkos_rt.step_id=%d", thinkos_rt.step_id);
-	}
-#endif
-
-	
-	if (sigset & (1 << DMON_EXCEPT)) {
-		sigset &= ~(1 << DMON_EXCEPT);
-		sigset |= (1 << DMON_THREAD_FAULT);
-		sigmsk |= (1 << DMON_THREAD_FAULT);
-		thinkos_dmon_rt.events = sigset;
-		dmon_on_except(&thinkos_dmon_rt);
-	}
 
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);
@@ -537,10 +472,33 @@ void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
  * ThinkOS thread level API
  * ------------------------------------------------------------------------- */
 
-//void thinkos_exception_dsr(struct thinkos_except * xcpt)
-//{
-//	dmon_signal(DMON_EXCEPT);
-//}
+void thinkos_exception_dsr(struct thinkos_except * xcpt)
+{
+	unsigned int isr_no;
+
+	isr_no = xcpt->ctx.xpsr & 0xff;
+
+	if (isr_no == 0) {
+		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+			/* record the  */
+			xcpt->thread_id = thinkos_rt.active;
+			/* suspend the current thread */
+			__thinkos_thread_pause(thinkos_rt.active);
+			__thinkos_defer_sched();
+			DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!",
+					 thinkos_rt.active);
+			dmon_signal(DMON_THREAD_FAULT);
+		} else {
+			DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
+					 thinkos_rt.active);
+			dmon_signal(DMON_EXCEPT);
+		}
+	} else {
+		/* suspend all threads */
+		__thinkos_pause_all();
+		dmon_signal(DMON_EXCEPT);
+	}
+}
 
 void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 {

@@ -26,10 +26,10 @@ SEARCH_DIR(.)
 MEMORY
 {
 	vectors(r) : ORIGIN = 0x00000000, LENGTH = 1K
-	flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
+	flash (rx) : ORIGIN = 0x08000000, LENGTH = 2048K
 	sram1 (rw) : ORIGIN = 0x20000000, LENGTH = 112K
 	sram2 (rw) : ORIGIN = 0x2001c000, LENGTH = 16K
-	sram3 (rw) : ORIGIN = 0x20000000, LENGTH = 0
+	sram3 (rw) : ORIGIN = 0x20020000, LENGTH = 64K
 	ccm   (rw) : ORIGIN = 0x10000000, LENGTH = 64K
 	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
 }

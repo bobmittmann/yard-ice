@@ -125,6 +125,7 @@ ifdef PROG
   else
     PROG_BIN := $(OUTDIR)/$(PROG).bin
   endif
+  PROG_SREC := $(OUTDIR)/$(PROG).srec
   PROG_MAP := $(OUTDIR)/$(PROG).map
   PROG_ELF := $(OUTDIR)/$(PROG).elf
   PROG_SYM := $(OUTDIR)/$(PROG).sym
@@ -165,7 +166,9 @@ LIBDIRS_ALL := $(LIBDIRS:%=%-all)
 
 LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
-CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) $(PROG_BIN) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) $(PROG_MAP)
+CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) \
+			   $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) \
+			   $(PROG_MAP)
 
 ifeq (Windows,$(HOST))
   CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
@@ -183,6 +186,8 @@ elf: $(PROG_ELF)
 map: $(PROG_MAP)
 
 bin: $(PROG_BIN)
+
+srec: $(PROG_SREC)
 
 sym: $(PROG_SYM)
 
@@ -282,6 +287,12 @@ else
 	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data \
 					  --output-target binary $< $@
 endif
+
+$(PROG_SREC): $(PROG_ELF)
+%.srec: %.elf
+	$(ACTION) "SREC: $@"
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data \
+					  --output-target srec $< $@
 
 #------------------------------------------------------------------------------ 
 # Build tree

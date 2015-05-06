@@ -60,8 +60,9 @@
 
 extern int thread_id;
 
-static const char monitor_menu[] = "\r\n"
-"-- ThinkOS Monitor Commands ---------\r\n"
+static const char monitor_menu[] = 
+"- ThinkOS Monitor Commands:\r\n"
+" Ctrl+C - Stop application\r\n"
 " Ctrl+N - Select Next Thread\r\n"
 " Ctrl+O - ThinkOS info\r\n"
 " Ctrl+P - Pause all threads\r\n"
@@ -69,23 +70,42 @@ static const char monitor_menu[] = "\r\n"
 " Ctrl+R - Resume all threads\r\n"
 " Ctrl+T - Thread info\r\n"
 " Ctrl+U - Stack usage info\r\n"
-" Ctrl+H - Help\r\n"
+" Ctrl+V - Help\r\n"
 " Ctrl+X - Exception info\r\n"
 " Ctrl+Y - YModem application upload\r\n"
-"-------------------------------------\r\n\r\n";
+" Ctrl+Z - Restart application\r\n";
+
+static const char __hr__[] = 
+"--------------------------------------------------------------\r\n";
 
 static void monitor_show_help(struct dmon_comm * comm)
 {
+	dmprintf(comm, __hr__);
 	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
+	dmprintf(comm, __hr__);
+}
+
+static void monitor_print_fault(struct dmon_comm * comm)
+{
+	struct thinkos_except * xcpt = &thinkos_except_buf;
+
+	switch (xcpt->type == 0) {
+		dmprintf(comm, "No fault!");
+		return;
+	}
+
+	dmon_print_exception(comm, xcpt);
 }
 
 static void monitor_on_fault(struct dmon_comm * comm)
 {
-	const struct thinkos_except * xcpt = &thinkos_except_buf;
+	struct thinkos_except * xcpt = &thinkos_except_buf;
 
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
-	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
-//	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
+	dmprintf(comm, "\r\n\r\n");
+	dmprintf(comm, __hr__);
+	dmon_print_exception(comm, xcpt);
+	dmprintf(comm, __hr__);
 }
 
 static void monitor_pause_all(struct dmon_comm * comm)
@@ -107,10 +127,10 @@ static void monitor_resume_all(struct dmon_comm * comm)
 
 static void monitor_ymodem_recv(struct dmon_comm * comm)
 {
-	dmprintf(comm, "\r\nYMODEM waiting to receive... ");
+	dmprintf(comm, "\r\nYMODEM waiting to receive (^X to cancel) ... ");
 	dmon_soft_reset(comm);
 	if (dmon_app_load_ymodem(comm) < 0) {
-		dmprintf(comm, "#ERROR: YMODEM transfer failed!\r\n");
+		dmprintf(comm, "\r\n#ERROR: YMODEM transfer failed!\r\n");
 		return;
 	}	
 
@@ -123,6 +143,16 @@ static void monitor_ymodem_recv(struct dmon_comm * comm)
 	__thinkos_resume_all();
 }
 
+static void monitor_exec(struct dmon_comm * comm)
+{
+	dmon_soft_reset(comm);
+	if (dmon_app_exec(true) < 0) {
+		dmprintf(comm, "\r\n#ERROR: Invalid application!\r\n");
+		return;
+	}
+	dmprintf(comm, "\r\nStarting application...\r\n");
+	__thinkos_resume_all();
+}
 
 void gdb_task(struct dmon_comm * comm);
 
@@ -135,22 +165,14 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 	for (i = 0; i < len; ++i) {
 		c = buf[i];
 		switch (c) {
-		case CTRL_Q:
-			dmon_reset();
+		case CTRL_C:
+			dmprintf(comm, "^C\r\n");
+			dmon_soft_reset(comm);
 			break;
 		case CTRL_G:
 			dmprintf(comm, "GDB\r\n");
 		case '+':
 			dmon_exec(gdb_task);
-			break;
-		case CTRL_P:
-			monitor_pause_all(comm);
-			break;
-		case CTRL_R:
-			monitor_resume_all(comm);
-			break;
-		case CTRL_O:
-			dmon_print_osinfo(comm);
 			break;
 		case CTRL_N:
 			thread_id = __thinkos_thread_getnext(thread_id);
@@ -159,8 +181,20 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "Current thread = %d\r\n", thread_id);
 			dmon_print_thread(comm, thread_id);
 			break;
-		case CTRL_X:
-			monitor_on_fault(comm);
+		case CTRL_O:
+			dmon_print_osinfo(comm);
+			break;
+		case CTRL_P:
+			dmprintf(comm, "^P\r\n");
+			monitor_pause_all(comm);
+			break;
+		case CTRL_Q:
+			dmprintf(comm, "^Q\r\n");
+			dmon_reset();
+			break;
+		case CTRL_R:
+			dmprintf(comm, "^R\r\n");
+			monitor_resume_all(comm);
 			break;
 		case CTRL_T:
 			dmon_print_thread(comm, thread_id);
@@ -168,14 +202,19 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_U:
 			dmon_print_stack_usage(comm);
 			break;
+		case CTRL_V:
+			monitor_show_help(comm);
+			break;
+		case CTRL_X:
+			monitor_print_fault(comm);
+			break;
 		case CTRL_Y:
+			dmprintf(comm, "^Y\r\n");
 			monitor_ymodem_recv(comm);
 			break;
-		case CTRL_C:
-			dmon_soft_reset(comm);
-			break;
-		case CTRL_H:
-			monitor_show_help(comm);
+		case CTRL_Z:
+			dmprintf(comm, "^Z\r\n");
+			monitor_exec(comm);
 			break;
 		default:
 			continue;
@@ -199,6 +238,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	int len;
 
 	dmon_comm_connect(comm);
+
+	dmprintf(comm, "\r\n\r\n");
+	dmprintf(comm, __hr__);
+	dmprintf(comm, " ThikOS Debug Monitor (Ctrl+V for Help)\r\n");
+	dmprintf(comm, __hr__);
 
 	thread_id = __thinkos_thread_getnext(-1);
 

@@ -49,8 +49,23 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
+#define LED1      STM32_GPIOG, 6
+#define LED2      STM32_GPIOG, 7
+#define LED3      STM32_GPIOG, 10
+#define LED4      STM32_GPIOG, 12
+
 void io_init(void)
 {
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
+
+	stm32_gpio_set(LED1);
+	stm32_gpio_set(LED2);
+	stm32_gpio_clr(LED3);
+	stm32_gpio_clr(LED4);
 #if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);

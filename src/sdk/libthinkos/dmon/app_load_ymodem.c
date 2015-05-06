@@ -116,6 +116,10 @@ static int ymodem_rcv_pkt(struct dmon_comm * comm, struct ymodem_rcv * rx)
 				break;
 			}
 
+			if (c == CAN) {
+				return -1;
+			}
+
 			if (c == EOT) {
 				DCC_LOG(LOG_INFO, "EOT!!");
 				/* end of transmission */
@@ -237,9 +241,8 @@ timeout:
 
 	pkt[0] = CAN;
 	pkt[1] = CAN;
-	pkt[2] = CAN;
 
-	dmon_comm_send(comm, pkt, 3);
+	dmon_comm_send(comm, pkt, 2);
 
 	dmon_alarm_stop();
 	return ret;
@@ -281,7 +284,7 @@ int dmon_app_load_ymodem(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_INFO, "Starting...");
 	while ((ret = ymodem_rcv_pkt(comm, ry)) >= 0) {
-		if ((ret == 0) && (ry->xmodem))
+		if ((ret == 0) && (ry->xmodem) )
 			break;
 		int len = ret;
 		if (ry->pktno == 1) {

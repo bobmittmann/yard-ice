@@ -26,6 +26,14 @@
 #ifndef __SYS_STM32F_H__
 #define __SYS_STM32F_H__
 
+#ifdef STM32F429
+#include <arch/stm32f429.h>
+#endif
+
+#ifdef STM32F427
+#include <arch/stm32f427.h>
+#endif
+
 #ifdef STM32F407
 #include <arch/stm32f407.h>
 #endif

@@ -615,7 +615,8 @@ struct thinkos_thread_init {
  * --------------------------------------------------------------------------*/
 
 struct thinkos_except {
-//	struct thinkos_context ctx;
+/* FIXME: store the full context including the FPU registers? 
+	struct thinkos_context ctx; */
 	struct {
 		/* saved context */
 		uint32_t r4;
@@ -642,7 +643,8 @@ struct thinkos_except {
 	uint32_t msp;
 	uint32_t psp;
 	uint8_t ipsr;
-	uint8_t thread;
+	uint8_t type; /* exception type */
+	int8_t thread_id;
 };
 
 /* -------------------------------------------------------------------------- 
@@ -933,6 +935,8 @@ void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
 void __thinkos_reset(void);
 
 void __console_reset(void);
+
+void __exception_reset(void);
 
 int __console_rx_pipe_ptr(uint8_t ** ptr);
 void __console_rx_pipe_commit(unsigned int cnt); 

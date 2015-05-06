@@ -199,7 +199,7 @@ static void __dump_bfsr(void)
 	if (bfsr & BFSR_STKERR)  
 		fprintf(stderr, " STKERR");
 	if (bfsr & BFSR_UNSTKERR)  
-		fprintf(stderr, " INVPC");
+		fprintf(stderr, " UNSTKERR");
 	if (bfsr & BFSR_IMPRECISERR)  
 		fprintf(stderr, " IMPRECISERR");
 	if (bfsr & BFSR_PRECISERR)
@@ -250,7 +250,7 @@ static void __xdump(struct thinkos_except * xcpt)
 			xcpt->ctx.xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
 }
 
-void hard_fault(struct thinkos_except * xcpt)
+void __hard_fault(struct thinkos_except * xcpt)
 {
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
@@ -281,7 +281,7 @@ void hard_fault(struct thinkos_except * xcpt)
 					 (bfsr & BFSR_BFARVALID) ? " BFARVALID" : "",
 					 (bfsr & BFSR_LSPERR) ? " LSPERR" : "",
 					 (bfsr & BFSR_STKERR) ? " STKERR" : "",
-					 (bfsr & BFSR_UNSTKERR) ?  " INVPC" : "",
+					 (bfsr & BFSR_UNSTKERR) ?  " UNSTKERR" : "",
 					 (bfsr & BFSR_IMPRECISERR) ?  " IMPRECISERR" : "",
 					 (bfsr & BFSR_PRECISERR) ?  " PRECISERR" : "",
 					 (bfsr & BFSR_IBUSERR)  ?  " IBUSERR" : "");
@@ -329,7 +329,7 @@ void hard_fault(struct thinkos_except * xcpt)
 }
 
 #if	THINKOS_ENABLE_BUSFAULT 
-void bus_fault(struct thinkos_except * xcpt)
+void __bus_fault(struct thinkos_except * xcpt)
 {
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t bfsr = SCB_CFSR_BFSR_GET(scb->cfsr);
@@ -342,7 +342,7 @@ void bus_fault(struct thinkos_except * xcpt)
 				 (bfsr & BFSR_BFARVALID) ? " BFARVALID" : "",
 				 (bfsr & BFSR_LSPERR) ? " LSPERR" : "",
 				 (bfsr & BFSR_STKERR) ? " STKERR" : "",
-				 (bfsr & BFSR_UNSTKERR) ?  " INVPC" : "",
+				 (bfsr & BFSR_UNSTKERR) ?  " UNSTKERR" : "",
 				 (bfsr & BFSR_IMPRECISERR) ?  " IMPRECISERR" : "",
 				 (bfsr & BFSR_PRECISERR) ?  " PRECISERR" : "",
 				 (bfsr & BFSR_IBUSERR)  ?  " IBUSERR" : "");
@@ -364,7 +364,7 @@ void bus_fault(struct thinkos_except * xcpt)
 #endif /* THINKOS_ENABLE_BUSFAULT  */
 
 #if	THINKOS_ENABLE_USAGEFAULT 
-void usage_fault(struct thinkos_except * xcpt)
+void __usage_fault(struct thinkos_except * xcpt)
 {
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t ufsr = SCB_CFSR_UFSR_GET(scb->cfsr);
@@ -397,7 +397,7 @@ void usage_fault(struct thinkos_except * xcpt)
 #endif /* THINKOS_ENABLE_USAGEFAULT  */
 
 #if THINKOS_ENABLE_MPU
-void mem_manag(struct thinkos_except * xcpt)
+void __mem_manag(struct thinkos_except * xcpt)
 {
 	DCC_LOG(LOG_ERROR, "Mem Management!");
 	__xdump(xcpt);
@@ -424,8 +424,8 @@ struct thinkos_except thinkos_except_buf;
 void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
-
-	bus_fault(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_BUS_FAULT;
+	__bus_fault(&thinkos_except_buf);
 
 	thinkos_exception_dsr(&thinkos_except_buf);
 
@@ -437,8 +437,8 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
-
-	usage_fault(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_USAGE_FAULT;
+	__usage_fault(&thinkos_except_buf);
 
 	thinkos_exception_dsr(&thinkos_except_buf);
 
@@ -450,8 +450,8 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
-
-	mem_manag(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_MEM_MANAGE;
+	__mem_manag(&thinkos_except_buf);
 
 	thinkos_exception_dsr(&thinkos_except_buf);
 
@@ -462,7 +462,9 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
-	hard_fault(&thinkos_except_buf);
+	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
+	__hard_fault(&thinkos_except_buf);
+	thinkos_exception_dsr(&thinkos_except_buf);
 #if THINKOS_SYSRST_ONFAULT
 	cm3_sysrst();
 #else
@@ -486,6 +488,14 @@ void thinkos_default_exception_dsr(struct thinkos_except * xcpt)
 void thinkos_exception_dsr(struct thinkos_except *) 
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
+
+void __exception_reset(void)
+{
+	__thinkos_memset32(&thinkos_except_buf, 0x00000000,
+					   sizeof(struct thinkos_except));
+	thinkos_except_buf.thread_id = -1;
+}
+
 void thinkos_exception_init(void)
 {
 	struct cm3_scb * scb = CM3_SCB;
@@ -500,6 +510,7 @@ void thinkos_exception_init(void)
 	| SCB_SHCSR_MEMFAULTENA;
 #endif
 	;
+	__exception_reset();
 }
 
 #endif /* THINKOS_ENABLE_EXCEPTIONS */

@@ -153,6 +153,14 @@
 #define BFSR_IBUSERR     (1 << 0)
 
 #define SCB_CFSR_MEMFAULTSR (0xff << 0)
+#define SCB_CFSR_MMFSR_GET(CFSR) ((CFSR) & 0xff)
+
+#define MMFSR_MMARVALID (1 << 7)
+#define MMFSR_MLSPERR   (1 << 5)
+#define MMFSR_MSTKERR   (1 << 4)
+#define MMFSR_MUNSTKERR (1 << 3)
+#define MMFSR_DACCVIOL  (1 << 1)
+#define MMFSR_IACCVIOL  (1 << 0)
 
 /* SCB Hard Fault Status Register */
 #define SCB_HFSR_DEBUGEVT (1 << 31)

@@ -57,20 +57,30 @@ void dmon_soft_reset(struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
 	__thinkos_irq_disable_all();
+
 	DCC_LOG(LOG_TRACE, "2. kill all threads...");
 	__thinkos_kill_all(); 
+
 	DCC_LOG(LOG_TRACE, "3. wait idle..."); 
 	dmon_wait_idle();
+
 	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
 	__thinkos_reset();
+
 //	DCC_LOG(LOG_TRACE, "5. Reload idle ...");
 	/* signal the scheduler ... */
 //	__thinkos_defer_sched();
 //	dmon_wait_idle();
-	DCC_LOG(LOG_TRACE, "5. Console reset...");
+
+	DCC_LOG(LOG_TRACE, "5. console reset...");
 	__console_reset();
-	DCC_LOG(LOG_TRACE, "6. restore Comm interrupts...");
+
+	DCC_LOG(LOG_TRACE, "6. exception reset...");
+	__exception_reset();
+
+	DCC_LOG(LOG_TRACE, "7. restore Comm interrupts...");
 	dmon_comm_irq_config(comm);
-	DCC_LOG(LOG_TRACE, "7. done.");
+
+	DCC_LOG(LOG_TRACE, "8. done.");
 }
 

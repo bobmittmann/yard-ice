@@ -21,6 +21,8 @@
    Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
    MA 02110-1301, USA.  */
 
+_Pragma ("GCC optimize (\"Os\")")
+
 #include "opcode/arm.h"
 #include "dis-asm.h"
 

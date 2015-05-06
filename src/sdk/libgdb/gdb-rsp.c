@@ -108,7 +108,7 @@ void monitor_on_fault(struct dmon_comm * comm)
 	const struct thinkos_except * xcpt = &thinkos_except_buf;
 
 	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
-	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread);
+	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread_id);
 //	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
 }
 

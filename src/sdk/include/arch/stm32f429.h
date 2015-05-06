@@ -18,13 +18,13 @@
  */
 
 /** 
- * @file stm32f407.h
+ * @file stm32f429.h
  * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __STM32F407_H__
-#define __STM32F407_H__
+#ifndef __STM32F429_H__
+#define __STM32F429_H__
 
 #include <arch/stm32f4xx.h>
 
@@ -97,5 +97,6 @@
 
 #endif /* __ASSEMBLER__ */
 
-#endif /* __STM32F407_H__ */
+#endif /* __STM32F429_H__ */
+
 

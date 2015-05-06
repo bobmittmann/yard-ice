@@ -171,9 +171,6 @@ void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) {
 				  "str    r2, [r3, #12]\n"
 				  "bx     lr\n"
 				  : :  : "r3", "r2"); 
-
-	/* Step and return */
-	asm volatile ("bx     lr\n" : : :); 
 }
 
 #endif /* THINKOS_ENABLE_DEBUG_STEP */

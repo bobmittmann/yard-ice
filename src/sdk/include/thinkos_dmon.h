@@ -135,6 +135,9 @@ void dmon_print_context(struct dmon_comm * comm,
 						const struct thinkos_context * ctx, 
 						uint32_t sp);
 
+void dmon_print_exception(struct dmon_comm * comm, 
+						  struct thinkos_except * xcpt);
+
 int dmon_print_osinfo(struct dmon_comm * comm);
 
 void dmon_print_alloc(struct dmon_comm * comm);

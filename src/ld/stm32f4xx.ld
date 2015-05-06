@@ -20,9 +20,9 @@
  */
 
 
-_stack = ORIGIN(sram2) + LENGTH(sram2);
-_stack_limit = ORIGIN(sram2);
-__heap_end = ORIGIN(sram1) + LENGTH(sram1);
+_stack = ORIGIN(ccm) + LENGTH(ccm);
+_stack_limit = ORIGIN(ccm);
+__heap_end = ORIGIN(sram3) + LENGTH(sram3);
 
 EXTERN(_stack)
 EXTERN(_reset)
@@ -135,12 +135,12 @@ SECTIONS
 		KEEP(*(.dccdata))
 	} >dcclog
 
-	.init :
+	.init __code_init :
 	{
 		KEEP (*(.rom_vectors))
 		KEEP (*(.boot))
 		KEEP (*(.init))
-	} >flash = 0xffffffff
+	} >"CODE" = 0xffffffff
 
 	.text :
 	{
@@ -160,18 +160,18 @@ SECTIONS
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
 		. = ALIGN(8);
-	} >flash = 0xffffffff
+	} >"CODE" = 0xffffffff
 
 	.ARM.extab : 
 	{ 
 		*(.ARM.extab* .gnu.linkonce.armextab.*) 
-	} >flash = 0xffffffff
+	} >"CODE" = 0xffffffff
 	PROVIDE_HIDDEN (__exidx_start = .);
 
 	.ARM.exidx : 
 	{ 
 		*(.ARM.exidx* .gnu.linkonce.armexidx.*) 
-	} >flash = 0xffffffff
+	} >"CODE" = 0xffffffff
 	PROVIDE_HIDDEN (__exidx_end = .);
 
 	/* define a global symbol marking the end of read only data sections */
@@ -188,7 +188,7 @@ SECTIONS
 		/* define a global symbol marking the end of the .data section  */
 		. = ALIGN(4);
 		PROVIDE (__data_end = . );
-	} >sram0 AT >flash
+	} >"DATA" AT >"CODE"
 
 	PROVIDE(__image_size = SIZEOF(.init) + SIZEOF(.text) + SIZEOF(.data));
 
@@ -198,10 +198,11 @@ SECTIONS
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
 		*(.bss)
-	} >sram0
+	} >"DATA"
 
 	/* advance location counter to the next 32-bit boundary */
 	. = ALIGN(4);
 	PROVIDE (__bss_end = . );
 	PROVIDE (__heap_start = . );
 }
+

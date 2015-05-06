@@ -26,7 +26,7 @@ LIB_STATIC = thinkos
 DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c monitor.c \
 			  print_osinfo.c print_alloc.c print_thread.c \
 			  print_context.c print_stack_usage.c soft_reset.c \
-			  app_exec.c app_load_ymodem.c
+			  app_exec.c app_load_ymodem.c print_exception.c
 
 MISC_CFILES = thinkos_util.c thinkos_type.c bmp_alloc.c \
 			  memcpy.c memcpy32.c memset32.c thread_getnext.c \
