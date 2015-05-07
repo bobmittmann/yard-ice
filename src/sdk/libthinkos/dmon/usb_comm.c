@@ -638,7 +638,7 @@ const usb_dev_ep_info_t usb_mon_ep0_info = {
 void usb_mon_on_reset(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
-	DCC_LOG(LOG_INFO, "...");
+	DCC_LOG(LOG_MSG, "...");
 	/* clear input buffer */
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
@@ -759,6 +759,7 @@ int dmon_comm_connect(struct dmon_comm * comm)
 
 //	while ((dev->acm.flags & ACM_LC_SET) == 0) {
 	while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
+		DCC_LOG1(LOG_TRACE, "ctrl=%02x, waiting...", dev->acm.control);
 		if ((ret = dmon_wait(DMON_COMM_CTL)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;

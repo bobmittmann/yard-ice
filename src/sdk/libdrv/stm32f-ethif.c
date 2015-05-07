@@ -48,6 +48,8 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
+void stm32f_eth_isr(void);
+
 #if THINKOS_ENABLE_FLAG_ALLOC
 
 void * stm32f_ethif_mmap(struct ifnet * __if, size_t __len)
@@ -426,10 +428,19 @@ int stm32f_ethif_init(struct ifnet * __if)
 							  &stm32f_ethif_inf);
 #endif
 
+
+#ifdef THINKAPP
+	/* configure and Enable interrupt */
+	thinkos_irq_register(STM32F_IRQ_ETH, IRQ_PRIORITY_HIGH, 
+						 stm32f_eth_isr);
+#else
+	/* configure interrupts */
 	/* set the interrupt priority */
-	cm3_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_VERY_HIGH);
+	cm3_irq_pri_set(STM32F_IRQ_ETH, IRQ_PRIORITY_HIGH);
 	/* enable interrupts */
 	cm3_irq_enable(STM32F_IRQ_ETH);
+#endif
+
 
 	/* enable Normal interrupt summary and Abnormal interrupt summary */
 	eth->dmaier = ETH_NISE | ETH_AISE | ETH_FBEIE | 

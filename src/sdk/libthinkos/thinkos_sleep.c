@@ -43,12 +43,12 @@ void thinkos_sleep_svc(int32_t * arg)
 	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
 #endif
 
-	DCC_LOG2(LOG_INFO, "<%d> waiting %d milliseconds...", self, ms);
+	DCC_LOG2(LOG_MSG, "<%d> waiting %d milliseconds...", self, ms);
 
 	/* wait for event */
 	__thinkos_wait(self);
 #else
-	DCC_LOG1(LOG_INFO, "busy wait: %d milliseconds...", ms);
+	DCC_LOG1(LOG_MSG, "busy wait: %d milliseconds...", ms);
 	udelay(1000 * ms);
 #endif
 }

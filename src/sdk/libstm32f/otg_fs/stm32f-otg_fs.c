@@ -28,6 +28,7 @@
 #include <sys/dcclog.h>
 #include <sys/delay.h>
 
+
 #ifdef STM32F_OTG_FS
 
 void stm32f_otg_fs_core_reset(struct stm32f_otg_fs * otg_fs)

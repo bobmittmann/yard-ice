@@ -20,26 +20,23 @@
 # 
 
 
-PROG = serial
+PROG = tcp_test
 
-CFILES = serial.c
+CFILES = tcp_test.c zarathustra.c
 
-SDK = ../../sdk
-TOOLS = ../../../tools
+SDK = ../../../sdk
 
-LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libdrv $(SDK)/libtty $(SDK)/libutil $(SDK)/libc
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
+		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libdrv \
+		  $(SDK)/libtty $(SDK)/libcrc $(SDK)/libconsole
 
-LIBS = cm3 stm32f drv tty console util c 
+LIBS = cm3 stm32f util c crc drv tcpip tty console
 
-INCPATH = $(SDK)/include 
+INCPATH = $(SDK)/include ..
 
-CDEFS =
-
+CDEFS = CONFIG_H
 CFLAGS = -g -O1 -Wall
 
-#MACH = stm32f407
 MACH = stm32f429
 THINKOS = 1
-include ../../mk/stm32f4xx.mk
-
+include ../../../mk/stm32f4xx.mk

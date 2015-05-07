@@ -24,15 +24,13 @@ PROG = led_test
 
 CFILES = led_test.c
 
-SDK = ../../sdk
-TOOLS = ../../../tools
+SDK = ../../../sdk
 
-LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libutil $(SDK)/libc
+LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f 
 
-LIBS = cm3 stm32f console util c 
+LIBS = cm3 stm32f 
 
-INCPATH = $(SDK)/include 
+INCPATH = $(SDK)/include ..
 
 CDEFS =
 
@@ -40,5 +38,5 @@ CFLAGS = -g -O1 -Wall
 
 MACH = stm32f429
 THINKOS = 1
-include ../../mk/stm32f4xx.mk
+include ../../../mk/stm32f4xx.mk
 

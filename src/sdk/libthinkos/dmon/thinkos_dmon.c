@@ -214,6 +214,93 @@ void dmon_exec(void (* task)(struct dmon_comm *))
 }
 
 /* -------------------------------------------------------------------------
+ * Debug Breakpoint
+ * ------------------------------------------------------------------------- */
+
+#if (THINKOS_ENABLE_DEBUG_STEP)
+#define BP_DEFSZ 2
+#define BP_MAX 6
+
+bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
+{
+	struct cm3_fpb * fbp = CM3_FPB;
+	uint32_t comp;
+	int i;
+
+	for (i = 0; i < BP_MAX; ++i) {
+		if ((fbp->comp[i] & COMP_ENABLE) == 0) 
+			break;
+	}
+
+	if (i == BP_MAX) {
+		DCC_LOG(LOG_WARNING, "no more breakpoints");
+		return false;
+	}
+
+	/* use default size if zero */
+	size = (size == 0) ? BP_DEFSZ : size;
+
+	if (size == 2) {
+		if (addr & 0x00000002) {
+			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+		} else {
+			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+		}
+	} else {
+		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+	}
+
+	fbp->comp[i] = comp;
+
+	DCC_LOG4(LOG_TRACE, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
+			 size, fbp->comp[i]);
+
+	return true;
+}
+
+bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
+{
+	struct cm3_fpb * fbp = CM3_FPB;
+	uint32_t comp;
+	int i;
+
+	size = (size == 0) ? BP_DEFSZ : size;
+
+	if (size == 2) {
+		if (addr & 0x00000002) {
+			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+		} else {
+			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+		}
+	} else {
+		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+	}
+
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+
+	for (i = 0; i < BP_MAX; ++i) {
+		if (fbp->comp[i] == comp) {
+			fbp->comp[i] = 0;
+			return true;
+		}
+	}
+
+	DCC_LOG(LOG_WARNING, "breakpoint not found!");
+	return false;
+}
+
+void dmon_breakpoint_clear_all(void)
+{
+	struct cm3_fpb * fbp = CM3_FPB;
+	int i;
+
+	for (i = 0; i < BP_MAX; ++i)
+		fbp->comp[i] = 0;
+}
+
+#endif
+
+/* -------------------------------------------------------------------------
  * Debug Monitor Core
  * ------------------------------------------------------------------------- */
 
@@ -239,9 +326,10 @@ static void __attribute__((noreturn, naked)) dmon_bootstrap(void)
 	 the near future */
 	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
-	DCC_LOG(LOG_TRACE, "task exit.");
-	dmon_context_swap(&thinkos_dmon_rt.ctx); 
-	for(;;);
+	DCC_LOG(LOG_WARNING, "task exit.");
+	for (;;) {
+		dmon_context_swap(&thinkos_dmon_rt.ctx); 
+	}
 }
 
 static void dmon_on_reset(struct thinkos_dmon * dmon)
@@ -304,11 +392,22 @@ void thinkos_suspend_all(void)
 }
 #endif
 
+static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
+	register uint32_t sp;
+	asm volatile ("tst lr, #4\n" 
+				  "ite eq\n" 
+				  "mrseq %0, MSP\n" 
+				  "mrsne %0, PSP\n" 
+				  : "=r" (sp));
+	return sp;
+}
+
 #if 1
 void cm3_debug_mon_isr(void)
 {
 	uint32_t sigset = thinkos_dmon_rt.events;
 	uint32_t sigmsk = thinkos_dmon_rt.mask;
+
 #if 0
 	uint32_t demcr;
 
@@ -321,6 +420,7 @@ void cm3_debug_mon_isr(void)
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
 #endif
 #if (THINKOS_ENABLE_DEBUG_STEP)
+	uint32_t lr = cm3_lr_get();
 	uint32_t dfsr;
 
 	/* read SCB Debug Fault Status Register */
@@ -336,18 +436,32 @@ void cm3_debug_mon_isr(void)
 				 dfsr & SCB_DFSR_HALTED ? '1' : '0');
 
 		if (dfsr & SCB_DFSR_BKPT) {
-			if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
-				/* suspend the current thread */
-				__thinkos_thread_pause(thinkos_rt.active);
+			if (lr & 0x4) {
+				DCC_LOG(LOG_ERROR, "invalid breakpoint on exception!!!");
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
+				__thinkos_pause_all();
+				/* diasble all breakpoints */
+				dmon_breakpoint_clear_all();
+			} else if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				/* suspend the current thread */
+				__thinkos_thread_pause(thinkos_rt.active);
 				__thinkos_defer_sched();
 				DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
 						 thinkos_rt.active);
 			} else {
 				DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
 						 thinkos_rt.active);
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				__thinkos_pause_all();
+				/* diasble all breakpoints */
+				dmon_breakpoint_clear_all();
 			}
 		}
 
@@ -371,6 +485,8 @@ void cm3_debug_mon_isr(void)
 		}
 	}
 #endif
+
+	DCC_LOG1(LOG_INFO, "<%08x>", sigset );
 
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);

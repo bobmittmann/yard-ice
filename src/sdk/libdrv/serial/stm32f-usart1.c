@@ -60,10 +60,16 @@ struct serial_dev * stm32f_uart1_serial_init(unsigned int baudrate,
 
 	stm32f_serial_init(drv, baudrate, flags);
 
+#ifdef THINKAPP
+	/* configure and Enable interrupt */
+	thinkos_irq_register(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY, 
+						 stm32f_usart1_isr);
+#else
 	/* configure interrupts */
 	cm3_irq_pri_set(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY);
 	/* enable interrupts */
 	cm3_irq_enable(STM32_IRQ_USART1);
+#endif
 
 	return (struct serial_dev *)&uart1_serial_dev;
 }

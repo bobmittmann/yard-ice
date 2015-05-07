@@ -31,6 +31,9 @@
 #define UART5_TX       STM32_GPIOC, 12
 #define UART5_RX       STM32_GPIOD, 2
 
+#define UART1_TX       STM32_GPIOA, 9
+#define UART1_RX       STM32_GPIOA, 10
+
 /**************************************************************************
  * Lattice FPGA (iCE40LP384) connections
  **************************************************************************/

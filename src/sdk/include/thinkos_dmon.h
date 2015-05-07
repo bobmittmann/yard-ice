@@ -154,6 +154,12 @@ void dmon_irq_disable_all(void);
 
 void dmon_soft_reset(struct dmon_comm * comm);
 
+bool dmon_breakpoint_set(uint32_t addr, uint32_t size);
+
+bool dmon_breakpoint_clear(uint32_t addr, uint32_t size);
+
+void dmon_breakpoint_clear_all(void);
+
 #ifdef __cplusplus
 }
 #endif

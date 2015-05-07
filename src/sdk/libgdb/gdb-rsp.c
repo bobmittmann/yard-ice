@@ -538,86 +538,6 @@ int thread_register_set(int thread, int reg, uint32_t val)
  Breakpoint management
  ***********************************************************************/
 
-#define BP_DEFSZ 2
-#define BP_MAX 6
-
-bool breakpoint_set(uint32_t addr, uint32_t size)
-{
-	struct cm3_fpb * fbp = CM3_FPB;
-	uint32_t comp;
-	int i;
-
-	for (i = 0; i < BP_MAX; ++i) {
-		if ((fbp->comp[i] & COMP_ENABLE) == 0) 
-			break;
-	}
-
-	if (i == BP_MAX) {
-		DCC_LOG(LOG_WARNING, "no more breakpoints");
-		return false;
-	}
-
-	/* use default size if zero */
-	size = (size == 0) ? BP_DEFSZ : size;
-
-	if (size == 2) {
-		if (addr & 0x00000002) {
-			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
-		} else {
-			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
-		}
-	} else {
-		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
-	}
-
-	fbp->comp[i] = comp;
-
-	DCC_LOG4(LOG_TRACE, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
-			 size, fbp->comp[i]);
-
-	return true;
-}
-
-bool breakpoint_clear(uint32_t addr, uint32_t size)
-{
-	struct cm3_fpb * fbp = CM3_FPB;
-	uint32_t comp;
-	int i;
-
-	size = (size == 0) ? BP_DEFSZ : size;
-
-	if (size == 2) {
-		if (addr & 0x00000002) {
-			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
-		} else {
-			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
-		}
-	} else {
-		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
-	}
-
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
-
-	for (i = 0; i < BP_MAX; ++i) {
-		if (fbp->comp[i] == comp) {
-			fbp->comp[i] = 0;
-			return true;
-		}
-	}
-
-	DCC_LOG(LOG_WARNING, "breakpoint not found!");
-	return false;
-}
-
-void breakpoint_clear_all(void)
-{
-	struct cm3_fpb * fbp = CM3_FPB;
-	int i;
-
-	for (i = 0; i < BP_MAX; ++i) {
-		fbp->comp[i] = 0;
-	}
-}
 /*
  * Common response packets
  */
@@ -967,7 +887,8 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		   '1' - The remote server attached to an existing process. 
 		   '0' - The remote server created a new process. 
 		 */
-		n = str2str(pkt, "$1");
+//		n = str2str(pkt, "$1");
+		n = str2str(pkt, "$0");
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -1427,7 +1348,7 @@ static int rsp_breakpoint_insert(struct dmon_comm * comm, struct gdb_rspd * gdb,
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	if (breakpoint_set(addr, size))
+	if (dmon_breakpoint_set(addr, size))
 		return rsp_ok(comm);
 
 	return rsp_error(comm, 1);
@@ -1450,10 +1371,9 @@ static int rsp_breakpoint_remove(struct dmon_comm * comm, struct gdb_rspd * gdb,
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	if (breakpoint_clear(addr, size))
-		return rsp_ok(comm);
+	dmon_breakpoint_clear(addr, size);
 
-	return rsp_error(comm, 1);
+	return rsp_ok(comm);
 }
 
 static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm, 
@@ -1932,7 +1852,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	gdb->stopped = __thinkos_suspended();
 	gdb->active_app = __thinkos_active();
 	gdb->last_signal = TARGET_SIGNAL_0;
-	breakpoint_clear_all();
+	dmon_breakpoint_clear_all();
 
 	if (gdb->shell_task == NULL)
 		gdb->shell_task = gdb_task;

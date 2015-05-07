@@ -26,18 +26,13 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-/* -------------------------------------------------------------------------
-   ThinkOS configuration
-   -------------------------------------------------------------------------- */
-
 #define THINKOS_IRQ_MAX 80
 
 #define THINKOS_ENABLE_IDLE_WFI 1
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 1
 
 #define THINKOS_ENABLE_CLOCK 1
 
-#define THINKOS_ENABLE_TIMESHARE 1
+#define THINKOS_ENABLE_TIMESHARE 0
 #define THINKOS_SCHED_LIMIT_MAX 32
 #define THINKOS_SCHED_LIMIT_MIN 1
 
@@ -45,8 +40,8 @@
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 
 #define THINKOS_ENABLE_JOIN 1
-#define THINKOS_ENABLE_PAUSE 1
-#define THINKOS_ENABLE_CANCEL 1
+#define THINKOS_ENABLE_PAUSE 0
+#define THINKOS_ENABLE_CANCEL 0
 
 #define THINKOS_MUTEX_MAX 32
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
@@ -57,69 +52,53 @@
 #define THINKOS_SEMAPHORE_MAX 32
 #define THINKOS_ENABLE_SEM_ALLOC 1
 
-#define THINKOS_EVENT_MAX 8
+#define THINKOS_EVENT_MAX 1
 #define THINKOS_ENABLE_EVENT_ALLOC 1
 
 #define THINKOS_FLAG_MAX 32
 #define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
 
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
 #define THINKOS_ENABLE_IRQ_SVC_CALL 0
 
-#define THINKOS_ENABLE_ARG_CHECK 1
+#define THINKOS_ENABLE_ARG_CHECK    0
 
 #define THINKOS_ENABLE_DEADLOCK_CHECK 1
 
-#define THINKOS_ENABLE_EXCEPTIONS 1
+#define THINKOS_ENABLE_EXCEPTIONS  1
 
-#define THINKOS_EXCEPT_STACK_SIZE 320
-
-#define THINKOS_STDERR_FAULT_DUMP 0
-
-#define THINKOS_ENABLE_SCHED_DEBUG 0
-
-#define THINKOS_ENABLE_RT_DEBUG 1
-
-#define THINKOS_ENABLE_BREAK 1
-
-#define THINKOS_ENABLE_PROFILING 1
-
-#define THINKOS_ENABLE_MONITOR 1
-
-#define THINKOS_ENABLE_CONSOLE 1
-
-#define THINKOS_ENABLE_DEBUG_STEP 1
-
-#define THINKOS_ENABLE_DEBUG_FAULT 1
-
-#define THINKOS_ENABLE_BUSFAULT 1
-
-#define THINKOS_ENABLE_USAGEFAULT 1
-
-#define THINKOS_ENABLE_MPU 1
-
-#define THINKOS_ENABLE_FPU 0
+#define THINKOS_ENABLE_PROFILING   0
 
 /* -------------------------------------------------------------------------
-   USB 
-   -------------------------------------------------------------------------- */
+ * TCP/IP
+ * ------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_USB_DEVICE 1
-#define STM32_OTG_FS_VBUS STM32_GPIOB, 13
+/* use hardware checksum */
+#define ENABLE_NET_TCP_CHECKSUM 0
+#define ENABLE_NET_UDP_CHECKSUM 0
+
+#define MBUF_POOL_SIZE               128
+#define TCP_MAX_SND_QUEUE            (1460 * 4)
 
 /* -------------------------------------------------------------------------
-   Printf
-   -------------------------------------------------------------------------- */
-#define PRINTF_ENABLE_LEFT_ALIGN 0
-#define PRINTF_ENABLE_LARGE_PADDING 0
-#define PRINTF_ENABLE_FAST 0
-#define PRINTF_ENABLE_UNSIGNED 1
-#define PRINTF_ENABLE_POINTER 0
-#define PRINTF_ENABLE_LONG 0
-#define PRINTF_ENABLE_ARG_WIDTH 0
+ * Ethernet Driver
+ * ------------------------------------------------------------------------- */
+
+#if defined(STM32F407)
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
+#elif defined(STM32F207)
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 2
+#endif
+
+/* Number of reception DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_RX_NDESC      4
+/* Number of transmision DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_TX_NDESC      4
+/* Number of packet in the buffer pool */
+#define PKTBUF_POOL_SIZE        10 
+
 
 #endif /* __CONFIG_H__ */
 

@@ -27,27 +27,32 @@
 #include <thinkos.h>
 #include <sys/console.h>
 #include <sys/stm32f.h>
-#include <sys/serial.h>
-#include <sys/tty.h>
 
 #include "board.h"
 
 void stdio_init(void)
 {
-	struct serial_dev * ser;
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
+	FILE * f;
 
-//	ser = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	ser = stm32f_uart1_serial_init(115200, SERIAL_8N1);
-	f_raw = serial_fopen(ser);
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
+	f = console_fopen();
+	/* initialize STDIO */
+	stderr = f;
+	stdout = f;
+	stdin = f;
+}
 
-	stderr = console_fopen();
-	stdout = f_tty;
-	stdin = f_tty;
+void io_init(void)
+{
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
+
+	stm32_gpio_set(LED1);
+	stm32_gpio_set(LED2);
+	stm32_gpio_set(LED3);
+	stm32_gpio_set(LED4);
 }
 
 volatile uint32_t irq_count = 0 ;
@@ -94,51 +99,31 @@ void timer_init(uint32_t freq)
 	tim->cr2 = TIM_MMS_OC1REF;
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 
-	/* Enable interrupt */
+	/* Enable DMA interrupt */
 	thinkos_irq_register(STM32F_IRQ_TIM3, 0xff, stm32_tim3_isr);
 }
 
-void io_init(void)
+void led_flash(void)
 {
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-	/* USART5 TX */
-	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(UART5_TX, GPIO_AF8);
-	/* USART5 RX */
-	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART5_RX, GPIO_AF8);
-
-	/* USART1 TX */
-	stm32_gpio_mode(UART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(UART1_TX, GPIO_AF7);
-	/* USART1 RX */
-	stm32_gpio_mode(UART1_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART1_RX, GPIO_AF7);
+	stm32_gpio_clr(LED4);
+	thinkos_sleep(50);
+	stm32_gpio_set(LED4);
 }
 
 int main(int argc, char ** argv)
 {
 	io_init();
-
 	stdio_init();
-
-	printf("\n");
-	printf("--------------------------------------------\n");
-	printf("- Serial Console Test\n");
-	printf("--------------------------------------------\n");
-
 	tmr_sem = thinkos_sem_alloc(0);
 	timer_init(2);
 
 	for (;;) {
 		thinkos_sem_wait(tmr_sem);
-		printf("IRQ count = %d\n", irq_count);
+		printf("IRQ count = %d\r\n", irq_count);
+		led_flash();
 	}
 
 	return 0;
 }
-
 
 

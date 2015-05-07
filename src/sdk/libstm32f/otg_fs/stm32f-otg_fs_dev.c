@@ -23,11 +23,12 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#include <sys/stm32f.h>
+
 #ifdef CONFIG_H
 #include "config.h"
 #endif
 
-#include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -83,6 +84,7 @@ struct stm32f_otg_ep {
 
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
+	struct stm32f_otg_fs * otg_fs;
 	struct stm32f_otg_ep ep[OTG_FS_DRIVER_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
@@ -95,7 +97,7 @@ struct stm32f_otg_drv {
 /* EP TX fifo memory allocation */
 void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 
 	switch (ep_id) {
 	case 0:
@@ -142,7 +144,7 @@ static void __copy_from_pktbuf(void * ptr,
 static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	int cnt;
 
 	/* push data into transmit fifo */
@@ -164,7 +166,7 @@ static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
 
 static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	volatile uint32_t * pop = &otg_fs->dfifo[ep_id].pop;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 	uint8_t * dst;
@@ -210,7 +212,7 @@ static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 							   void * buf, unsigned int len)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep;
 	int ret;
 
@@ -235,7 +237,7 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 							   void * buf, int len)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	uint8_t * cp = (uint8_t *)buf;
 	struct stm32f_otg_ep * ep;
 	uint32_t data;
@@ -299,7 +301,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 int stm32f_otg_dev_ep_ctl(struct stm32f_otg_drv * drv, 
 						  int ep_id, unsigned int opt)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
 	DCC_LOG2(LOG_INFO, "ep=%d opt=%d", ep_id, opt);
@@ -339,7 +341,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 						   const usb_dev_ep_info_t * info, 
 						   void * xfr_buf, int buf_len)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep;
 	int mxpktsz = info->mxpktsz;
 	int ep_id;
@@ -493,27 +495,42 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 	return ep_id;
 }
 
-#define OTG_FS_DP STM32_GPIOA, 12
-#define OTG_FS_DM STM32_GPIOA, 11
+#define OTG_FS_DP   STM32_GPIOA, 12
+#define OTG_FS_DM   STM32_GPIOA, 11
+#define OTG_FS_ID   STM32_GPIOA, 10
+
+#ifdef STM32_OTG_FS_VBUS 
+#define OTG_FS_VBUS STM32_OTG_FS_VBUS
+#else
 #define OTG_FS_VBUS STM32_GPIOA, 9
-#define OTG_FS_ID STM32_GPIOA, 10
+#endif
+
+static inline struct stm32_gpio * vbus_gpio(struct stm32_gpio *__gpio, 
+											int __pin) {
+	return __gpio;
+}
 
 static void otg_fs_io_init(void)
 {
-	DCC_LOG(LOG_MSG, "Enabling GPIO clock...");
-	stm32_gpio_clock_en(STM32_GPIOA);
-
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
+
+	if (vbus_gpio(OTG_FS_VBUS) == STM32_GPIOB)
+		stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 
 	stm32_gpio_af(OTG_FS_DP, GPIO_AF10);
 	stm32_gpio_af(OTG_FS_DM, GPIO_AF10);
 	stm32_gpio_af(OTG_FS_VBUS, GPIO_AF10);
+#if 0
 	stm32_gpio_af(OTG_FS_ID, GPIO_AF10);
-
+#endif
 	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+#if 0
 	stm32_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+#endif
 }
 
 static void otg_fs_vbus_connect(bool connect)
@@ -539,12 +556,10 @@ static void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
 
 static void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 {
-	struct stm32_rcc * rcc = STM32_RCC;
-
 	otg_fs_vbus_connect(true);
 
 	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
-	rcc->ahb2enr |= RCC_OTGFSEN;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGFS);
 
 	/* Initialize as a device */
 	stm32f_otg_fs_device_init(otg_fs);
@@ -563,6 +578,7 @@ static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 	/* Removing any spurious pending interrupts */
 //	usb->istr = 0;
 	otg_fs_disconnect(otg_fs);
+
 //	otg_fs_vbus_connect(false);
 
 //	usb->cntr = USB_FRES | USB_PDWN;
@@ -579,7 +595,7 @@ static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
 int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 		const usb_class_events_t * ev)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 
 	drv->cl = cl;
 	drv->ev = ev;
@@ -609,7 +625,7 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 								  int ep_id, int len)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 
 	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
 
@@ -641,7 +657,7 @@ static void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 
 static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
 
 	if (ep->state == EP_WAIT_STATUS_IN) {
@@ -676,7 +692,7 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 
 static void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
 
 	/* last and only transfer */
@@ -690,7 +706,7 @@ static void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
 
 static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct usb_request * req = &drv->req;
 	struct stm32f_otg_ep * ep = &drv->ep[0];
 	int len;
@@ -762,7 +778,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 {
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	uint32_t siz;
 	int i;
 
@@ -845,12 +861,14 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 }
 
 /* Private USB device driver data */
-struct stm32f_otg_drv stm32f_otg_fs_drv0;
+struct stm32f_otg_drv stm32f_otg_fs_drv0 = {
+	.otg_fs = STM32F_OTG_FS
+};
 
 void stm32f_otg_fs_isr(void)
 {
 	struct stm32f_otg_drv * drv = &stm32f_otg_fs_drv0;
-	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	uint32_t gintsts;
 	uint32_t ep_intr;
 

@@ -32,6 +32,28 @@
 #include "config.h"
 #endif
 
+#ifdef STM32F429
+
+#define ETH_MII_TX_CLK STM32_GPIOC, 3
+#define ETH_MII_TX_EN  STM32_GPIOG, 11
+#define ETH_MII_TXD0   STM32_GPIOG, 13
+#define ETH_MII_TXD1   STM32_GPIOG, 14
+#define ETH_MII_TXD2   STM32_GPIOC, 2
+#define ETH_MII_TXD3   STM32_GPIOB, 8
+#define ETH_MII_RX_CLK STM32_GPIOA, 1
+#define ETH_MII_RX_DV  STM32_GPIOA, 7
+#define ETH_MII_RXD0   STM32_GPIOC, 4
+#define ETH_MII_RXD1   STM32_GPIOC, 5
+#define ETH_MII_RXD2   STM32_GPIOH, 6
+#define ETH_MII_RXD3   STM32_GPIOH, 7
+#define ETH_MII_RX_ER  STM32_GPIOI, 10
+#define ETH_MII_CRS    STM32_GPIOA, 0
+#define ETH_MII_COL    STM32_GPIOH, 3
+#define ETH_MDC        STM32_GPIOC, 1 
+#define ETH_MDIO       STM32_GPIOA, 2
+
+#else
+
 #define ETH_MII_TX_CLK STM32_GPIOC, 3
 #define ETH_MII_TX_EN  STM32_GPIOB, 11
 #define ETH_MII_TXD0   STM32_GPIOB, 12
@@ -54,6 +76,8 @@
 #define ETH_PHY_RST_GPIO STM32_GPIOE, 2
 #endif
 
+#endif
+
 #if defined(STM32F2X) || defined(STM32F4X)
 
 void stm32f_eth_init(struct stm32f_eth * eth)
@@ -68,15 +92,21 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
 
 	DCC_LOG(LOG_TRACE, "Enabling GPIO clocks...");
-	stm32_gpio_clock_en(STM32_GPIOA);
-	stm32_gpio_clock_en(STM32_GPIOB);
-	stm32_gpio_clock_en(STM32_GPIOC);
-	stm32_gpio_clock_en(STM32_GPIOE);
-
-
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+#ifdef STM32F429
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOH);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOI);
+#endif
 	DCC_LOG(LOG_TRACE, "Configuring GPIO pins...");
+
+#ifdef ETH_PHY_RST_GPIO
 	stm32_gpio_mode(ETH_PHY_RST_GPIO, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_clr(ETH_PHY_RST_GPIO);
+#endif
 
 	stm32_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
@@ -127,10 +157,12 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	/* clear all DMA status bits */
 	eth->dmasr = 0xffffffff;
 
+#ifdef ETH_PHY_RST_GPIO
 	DCC_LOG(LOG_TRACE, "PHY reset...");
 	udelay(1000);
 	stm32_gpio_set(ETH_PHY_RST_GPIO);
 	udelay(9000);
+#endif
 };
 
 void stm32f_eth_mac_get(struct stm32f_eth * eth, int idx, uint8_t * mac)

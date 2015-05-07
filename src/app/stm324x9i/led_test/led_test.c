@@ -40,8 +40,8 @@ void io_init(void)
 
 	stm32_gpio_set(LED1);
 	stm32_gpio_set(LED2);
-	stm32_gpio_clr(LED3);
-	stm32_gpio_clr(LED4);
+	stm32_gpio_set(LED3);
+	stm32_gpio_set(LED4);
 }
 
 int main(int argc, char ** argv)
@@ -53,20 +53,34 @@ int main(int argc, char ** argv)
 		thinkos_sleep(100);
 		__led_on(LED2);
 		thinkos_sleep(100);
-		__led_on(LED3);
 		__led_off(LED1);
+		__led_on(LED3);
 		thinkos_sleep(100);
-		__led_on(LED4);
 		__led_off(LED2);
+		__led_on(LED4);
 		thinkos_sleep(100);
 		__led_off(LED3);
 		thinkos_sleep(100);
 		__led_off(LED4);
 		thinkos_sleep(100);
+
+
+		__led_on(LED4);
+		thinkos_sleep(100);
+		__led_on(LED3);
+		thinkos_sleep(100);
+		__led_off(LED4);
+		__led_on(LED2);
+		thinkos_sleep(100);
+		__led_off(LED3);
+		__led_on(LED1);
+		thinkos_sleep(100);
+		__led_off(LED2);
+		thinkos_sleep(100);
+		__led_off(LED1);
+		thinkos_sleep(100);
 	}
 
 	return 0;
 }
-
-
 

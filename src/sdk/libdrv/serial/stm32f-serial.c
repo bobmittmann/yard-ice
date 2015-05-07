@@ -187,8 +187,8 @@ int stm32f_serial_send(struct stm32f_serial_drv * drv, const void * buf,
 
 		head = drv->tx_fifo.head;
 		free = SERIAL_TX_FIFO_LEN - (head - drv->tx_fifo.tail);
-		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, drv->tx_fifo.tail, n);
 		n = MIN(rem, free);
+		DCC_LOG3(LOG_MSG, "head=%d tail=%d n=%d", head, drv->tx_fifo.tail, n);
 		for (i = 0; i < n; ++i) 
 			drv->tx_fifo.buf[head++ % SERIAL_TX_FIFO_LEN] = cp[i];
 		drv->tx_fifo.head = head;

@@ -56,15 +56,14 @@ const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void io_init(void)
 {
-
-#if 0
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
 	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_set(LED1);
+#if 0
 	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
 
-	stm32_gpio_set(LED1);
 	stm32_gpio_set(LED2);
 	stm32_gpio_clr(LED3);
 	stm32_gpio_clr(LED4);
@@ -83,13 +82,62 @@ void io_init(void)
 #endif
 }
 
+#define CTRL_C 0x03
+
 void boot_task(struct dmon_comm * comm)
 {
-//	__thinkos_thread_abort(0);
+	uint32_t sigmask = 0;
+	bool delay = true;
+	char c;
 
+
+	sigmask |= (1 << DMON_COMM_RCV);
+	sigmask |= (1 << DMON_COMM_CTL);
+	sigmask |= (1 << DMON_ALARM);
+	dmon_alarm(5000);
+
+	while (delay) {
+		uint32_t sigset;
+
+		sigset = dmon_select(sigmask);
+
+		if (sigset & (1 << DMON_COMM_CTL)) {
+			DCC_LOG(LOG_INFO, "Comm Ctl.");
+			dmon_clear(DMON_COMM_CTL);
+			if (dmon_comm_isconnected(comm)) {
+				sigmask |= (1 << DMON_COMM_RCV);
+#if 0
+				dmprintf(comm, "\r\n\r\n- ThikOS Bootloader "
+						 "- (^C to stop boot)");
+#endif
+			}
+		}
+
+		if (sigset & (1 << DMON_COMM_RCV) && 
+			(dmon_comm_recv(comm, &c, 1) == 1)) {
+			switch (c) {
+			case CTRL_C:
+				dmprintf(comm, "^C\r\n");
+				dmon_exec(monitor_task);
+				break;
+			case '+':
+				dmon_exec(gdb_task);
+				break;
+			default:
+				delay = false;
+			}
+		}
+
+		if (sigset & (1 << DMON_ALARM)) {
+			dmon_clear(DMON_ALARM);
+			delay = false;
+		}
+
+	}
+
+	__thinkos_thread_abort(0);
 	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
 	dmon_app_exec(false);
-
 	dmon_exec(monitor_task);
 }
 
@@ -127,13 +175,10 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
-	DCC_LOG(LOG_TRACE, "5. __thinkos_thread_abort()");
-//	__thinkos_thread_abort(0);
-
 	for (;;) {
-		thinkos_sleep(50);
+		thinkos_sleep(250);
 		stm32_gpio_set(LED1);
-		thinkos_sleep(50);
+		thinkos_sleep(250);
 		stm32_gpio_clr(LED1);
 	}
 

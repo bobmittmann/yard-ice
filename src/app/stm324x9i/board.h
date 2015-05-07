@@ -25,27 +25,24 @@
 
 #include <sys/stm32f.h>
 
+/**************************************************************************
+ * Sebug serial
+ **************************************************************************/
+#define UART5_TX       STM32_GPIOC, 12
+#define UART5_RX       STM32_GPIOD, 2
+
+#define UART1_TX       STM32_GPIOA, 9
+#define UART1_RX       STM32_GPIOA, 10
+
 #define LED1      STM32_GPIOG, 6
 #define LED2      STM32_GPIOG, 7
 #define LED3      STM32_GPIOG, 10
 #define LED4      STM32_GPIOG, 12
 
 
-/* low level led on/off functions */
-static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
-	//  stm32_gpio_mode_af(__gpio, __pin);
-	stm32_gpio_clr(__gpio, __pin);
-}
-
-static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
-	//  stm32_gpio_mode_out(__gpio, __pin);
-	stm32_gpio_set(__gpio, __pin);
-}
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #ifdef __cplusplus
 }

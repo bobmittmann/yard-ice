@@ -239,10 +239,12 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 	dmon_comm_connect(comm);
 
+#if 0
 	dmprintf(comm, "\r\n\r\n");
 	dmprintf(comm, __hr__);
 	dmprintf(comm, " ThikOS Debug Monitor (Ctrl+V for Help)\r\n");
 	dmprintf(comm, __hr__);
+#endif
 
 	thread_id = __thinkos_thread_getnext(-1);
 
@@ -253,7 +255,6 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_RX_PIPE);
 
 	for(;;) {
-		
 		sigset = dmon_select(sigmask);
 
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
