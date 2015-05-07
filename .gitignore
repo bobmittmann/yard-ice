@@ -34,3 +34,7 @@ log.txt
 *.i
 src/sdk/libgdb/test/.settings/language.settings.xml
 src/boot/.settings/language.settings.xml
+src/app/hello/.settings/language.settings.xml
+src/app/hello/.settings/language.settings.xml
+src/app/hello/.settings/org.eclipse.cdt.codan.core.prefs
+src/app/test1/.settings/language.settings.xml

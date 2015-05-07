@@ -511,10 +511,12 @@ int arm9_thumb_insn_step(jtag_tap_t * tap,
 
 	jtag_arm9_step(tap, 1, ARM_LDM(ARM_R1_R14, ARM_SP));
 	jtag_arm9_step(tap, 2, ARM_MSR_CPSR(ARM_R0));
-	/* restore registers r2 to r14 */
-	for (i = 1; i < 14; i++) {
+	/* restore registers r2 to r12 */
+	for (i = 1; i < 13; i++) {
 		jtag_arm9_step_wr(tap, 1, ct->r[i]);
 	}
+	/* register 13 */
+	jtag_arm9_step_wr(tap, 1, ct->sp);
 	/* register 14 and LDM stuffing, MSR stuffing */
 	jtag_arm9_step_wr(tap, 4, ct->lr);
 

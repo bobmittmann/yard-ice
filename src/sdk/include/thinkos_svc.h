@@ -97,13 +97,14 @@
 
 #define THINKOS_RT_SNAPSHOT     52
 
-#define THINKOS_SEM_POST_I       0
-#define THINKOS_FLAG_GIVE_I      1
-#define THINKOS_FLAG_SIGNAL_I    2
-#define THINKOS_EV_RAISE_I       3
-#define THINKOS_FLAG_CLR_I       4
-#define THINKOS_FLAG_SET_I       5
-#define THINKOS_DEBUG_STEP_I     6
+/* NMI calls ... */
+#define THINKOS_DEBUG_STEP_I     0
+#define THINKOS_SEM_POST_I       1
+#define THINKOS_EV_RAISE_I       2
+#define THINKOS_FLAG_GIVE_I      3
+#define THINKOS_FLAG_SIGNAL_I    4
+#define THINKOS_FLAG_CLR_I       5
+#define THINKOS_FLAG_SET_I       6
 
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1

@@ -147,7 +147,8 @@ void __thinkos_flag_set_i(int wq)
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
 #if THINKOS_ENABLE_DEBUG_STEP
-void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) {
+void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) 
+{
 	/* save the current stepping thread */
 	thinkos_rt.step_id = thread_id;
 	unsigned int isr_no;
@@ -172,24 +173,30 @@ void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) {
 				  "bx     lr\n"
 				  : :  : "r3", "r2"); 
 }
-
+#else
+void __thinkos_debug_step_i(unsigned int thread_id)
+{
+}
 #endif /* THINKOS_ENABLE_DEBUG_STEP */
 
+#if 1
 void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int svc)
 {
 	asm volatile (
 				  "add    r3, pc, #4\n"
 				  "nop\n"
 				  "ldr    pc, [r3, %2, lsl #2]\n"
+				  ".word __thinkos_debug_step_i\n"
 				  ".word  __thinkos_sem_post_i\n"
 				  ".word  __thinkos_ev_raise_i\n"
 				  ".word __thinkos_flag_give_i\n"
 				  ".word __thinkos_flag_signal_i\n"
 				  ".word __thinkos_flag_clr_i\n"
 				  ".word __thinkos_flag_set_i\n"
-				  ".word __thinkos_debug_step_i\n"
 				  : : "r" (arg1), "r" (arg2), "r" (svc) : ); 
+
 }
+#endif
 
 #if 0
 void cm3_nmi_isr(int arg1, int arg2, int svc)

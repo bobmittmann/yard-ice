@@ -384,6 +384,7 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #error "invalid PLLM!"
 #endif
 
+#if 0
 #define LED1      STM32_GPIOG, 6
 #define LED2      STM32_GPIOG, 7
 #define LED3      STM32_GPIOG, 10
@@ -401,6 +402,7 @@ void __io_init(void)
 	stm32_gpio_set(LED3);
 	stm32_gpio_set(LED4);
 }
+#endif
 
 void _init(void)
 {
@@ -418,8 +420,6 @@ void _init(void)
 
 	/* Make sure we are using the internal oscillator */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
-
-	__io_init();
 
 	/* Enable external oscillator */
 	cr = rcc->cr;
@@ -446,8 +446,6 @@ void _init(void)
 	cr |= RCC_PLLON;
 	rcc->cr = cr;;
 
-	stm32_gpio_clr(LED1);
-
 	for (again = 8192; ; again--) {
 		cr = rcc->cr;
 		if (cr & RCC_PLLRDY)
@@ -467,8 +465,6 @@ void _init(void)
 	
 	rcc->cfgr = cfg;
 
-	stm32_gpio_clr(LED2);
-
 	for (again = 4096; ; again--) {
 		sr = flash->sr;
 		if ((sr & FLASH_BSY) == 0)
@@ -478,8 +474,6 @@ void _init(void)
 			return;
 		}
 	}
-
-	stm32_gpio_clr(LED3);
 
 	ws = HCLK_HZ / 30000000;
 
@@ -499,8 +493,6 @@ void _init(void)
 	/* remap the SRAM to 0x00000000  */
 	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
 #endif
-
-	stm32_gpio_clr(LED4);
 }
 
 #endif

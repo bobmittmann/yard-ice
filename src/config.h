@@ -43,6 +43,7 @@
 #define THINKOS_ENABLE_JOIN 0
 #define THINKOS_ENABLE_PAUSE 0
 #define THINKOS_ENABLE_CANCEL 0
+#define THINKOS_ENABLE_EXIT 0
 
 #define THINKOS_MUTEX_MAX 16
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
@@ -62,9 +63,9 @@
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
-#define THINKOS_ENABLE_IRQ_SVC_CALL 1
+#define THINKOS_ENABLE_IRQ_SVC_CALL   0
 
-#define THINKOS_ENABLE_ARG_CHECK 1
+#define THINKOS_ENABLE_ARG_CHECK      1
 
 #define THINKOS_ENABLE_DEADLOCK_CHECK 1
 
@@ -82,6 +83,14 @@
 
 #define THINKOS_ENABLE_MONITOR     0
 
+#define THINKOS_ENABLE_DEBUG_STEP  0
+
+#define THINKOS_ENABLE_DEBUG_FAULT 0
+
+#define THINKOS_ENABLE_MPU 0
+
+#define THINKOS_ENABLE_FPU 0
+
 /* -------------------------------------------------------------------------
  * USB device and CDC-ACM 
  * ------------------------------------------------------------------------- */
@@ -89,7 +98,7 @@
 #define STM32_ENABLE_USB_DEVICE 1
 
 #define CDC_EP_OUT_MAX_PKT_SIZE 64
-#define CDC_EP_IN_MAX_PKT_SIZE 64
+#define CDC_EP_IN_MAX_PKT_SIZE  64
 #define CDC_EP_INT_MAX_PKT_SIZE 8
 
 /* -------------------------------------------------------------------------

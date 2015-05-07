@@ -297,6 +297,8 @@ int network_config(void)
 #endif
 	}
 
+	loopif_init();
+
 	return 0;
 }
 #endif

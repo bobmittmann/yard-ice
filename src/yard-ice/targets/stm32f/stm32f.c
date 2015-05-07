@@ -35,9 +35,10 @@
 #define STM32F2X
 #include "stm32f_defs.h"
 
-#define FLASH 1
+#define FLASH  1
 #define EEPROM 2
-#define SRAM 3
+#define SRAM   3
+#define CCM    4
 
 uint16_t stm32f10xxx_config(const ice_drv_t * ice, 
 							target_info_t * target)
@@ -69,6 +70,8 @@ uint16_t stm32f10xxx_config(const ice_drv_t * ice,
 		mem[SRAM].blk.count = 48;
 	else 
 		mem[SRAM].blk.count = 64;
+
+	mem[CCM].blk.count = 0;
 
 	return memsz;
 }
@@ -130,18 +133,33 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[FLASH].blk.count = memsz / 16;
 		mem[EEPROM].blk.count = 0;
 		mem[SRAM].blk.count = 128;
+		mem[CCM].blk.count = 0;
 		break;
 
 	case 0x413:
 		ice_rd16(ice, 0x1fff7a22, &memsz);
-		fprintf(f, "STM32F4XX\n"); 
+		fprintf(f, "STM32F40X\n"); 
 		target->on_init = (target_script_t)stm32f2xx_on_init,
 		mem[FLASH].op = &flash_stm32f2_oper;
 		mem[FLASH].blk.size = MEM_KiB(16);
 		mem[FLASH].blk.count = memsz / 16;
 		mem[EEPROM].blk.count = 0;
-		mem[SRAM].blk.count = 192;
+		mem[SRAM].blk.count = 112 + 16;
+		mem[CCM].blk.count = 64;
 		break;
+
+	case 0x419:
+		ice_rd16(ice, 0x1fff7a22, &memsz);
+		fprintf(f, "STM32F42X\n"); 
+		target->on_init = (target_script_t)stm32f2xx_on_init,
+		mem[FLASH].op = &flash_stm32f2_oper;
+		mem[FLASH].blk.size = MEM_KiB(16);
+		mem[FLASH].blk.count = memsz / 16;
+		mem[EEPROM].blk.count = 0;
+		mem[SRAM].blk.count = 112 + 16 + 64;
+		mem[CCM].blk.count = 64;
+		break;
+
 
 	case 0x416:
 		ice_rd16(ice, 0x1ff8004c, &memsz);
@@ -155,6 +173,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 			mem[SRAM].blk.count = 10;
 		else if (memsz == 128)
 			mem[SRAM].blk.count = 16;
+		mem[CCM].blk.count = 0;
 		break;
 
 	case 0x429:
@@ -170,6 +189,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[EEPROM].blk.count = 1024;
 		/* FIXME: configure SRAM */
 		mem[SRAM].blk.count = 16;
+		mem[CCM].blk.count = 0;
 		break;
 
 	case 0x427:
@@ -182,6 +202,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[EEPROM].blk.count = 2048;
 		/* FIXME: configure SRAM */
 		mem[SRAM].blk.count = 16;
+		mem[CCM].blk.count = 0;
 		break;
 
 	case 0x436:
@@ -197,6 +218,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[EEPROM].blk.count = 3072;
 		/* FIXME: configure SRAM */
 		mem[SRAM].blk.count = 16;
+		mem[CCM].blk.count = 0;
 		break;
 
 	case 0x437:
@@ -209,6 +231,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[EEPROM].blk.count = 4096;
 		/* FIXME: configure SRAM */
 		mem[SRAM].blk.count = 16;
+		mem[CCM].blk.count = 0;
 		break;
 
 	default:
@@ -255,6 +278,11 @@ struct ice_mem_entry stm32f_mem[] = {
 	{ .name = "sram", .flags = MEM_32_BITS,
 		.addr = { .base = 0x20000000, .offs = 0 }, 
 		.blk = {.count = 16, .size = MEM_KiB(1)},
+		.op = &cm3_ram_oper 
+	},
+	{ .name = "ccm", .flags = MEM_32_BITS,
+		.addr = { .base = 0x10000000, .offs = 0 }, 
+		.blk = {.count = 0, .size = MEM_KiB(1)},
 		.op = &cm3_ram_oper 
 	},
 	{ .name = "sys", .flags = MEM_32_BITS,

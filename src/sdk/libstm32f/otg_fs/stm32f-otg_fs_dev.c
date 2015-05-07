@@ -553,7 +553,6 @@ static void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
 
 	/* Enable Cortex interrupt */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
-
 }
 
 static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
