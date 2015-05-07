@@ -42,8 +42,8 @@ struct ymodem_rcv {
 	unsigned int fsize;
 	unsigned int count;
 
-	unsigned char crc_mode:1;
-	unsigned char xmodem:1;
+	unsigned char crc_mode;
+	unsigned char xmodem;
 	unsigned char sync;
 	unsigned char retry;
 

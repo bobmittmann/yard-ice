@@ -37,7 +37,7 @@ INCPATH = $(SDK)/include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
-CFLAGS = -g -Os -Wall
+CFLAGS = -g -O2 -Wall
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f429

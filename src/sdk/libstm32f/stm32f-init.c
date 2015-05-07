@@ -280,6 +280,128 @@ const uint32_t stm32f_tim1_hz = HCLK_HZ / 2;
 const uint32_t stm32f_apb2_hz = HCLK_HZ / 2;
 const uint32_t stm32f_tim2_hz = HCLK_HZ;
 
+#if (HCLK_HZ == 168000000)
+#if (HSE_HZ == 25000000)
+	/* F_HSE = 25 MHz
+	   F_VCO = 336 MHz (F_HSE * 13.4)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+  #define PLLQ 7
+  #define PLLP 2
+ // #define PLLN 265
+  //#define PLLM 18
+ // #define PLLN 215
+  //#define PLLM 16
+  //#define PLLN 336
+  //#define PLLM 25
+  #define PLLN 215
+  #define PLLM 16
+#elif (HSE_HZ == 16000000)
+	/* F_HSE = 16 MHz
+	   F_VCO = 336 MHz (F_HSE * 42)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+  #define PLLQ 7
+  #define PLLP 2
+  #define PLLN 168
+  #define PLLM 8
+#elif (HSE_HZ == 12000000)
+	/* F_HSE = 12 MHz
+	   F_VCO = 336 MHz (F_HSE * 28)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+  #define PLLQ 7
+  #define PLLP 2
+  #define PLLN 112
+  #define PLLM 4
+#elif (HSE_HZ == 8000000)
+	/* F_HSE = 8 MHz
+	   F_VCO = 336 MHz (F_HSE * 42)
+	   F_MAIN = 168 MHz (F_VCO / 2)
+	   F_USB = 48 MHz (F_VCO / 7)*/
+  #define PLLQ 7
+  #define PLLP 2
+  #define PLLN 168
+  #define PLLM 4
+#else
+#error "HSE_HZ invalid!"
+#endif
+
+#elif (HCLK_HZ == 120000000)
+#if (HSE_HZ == 24000000)
+	/* F_HSE = 24 MHz
+	   F_VCO = 240 MHz
+	   F_MAIN = 120 MHz
+	   F_USB = 48 MHz */
+  #define PLLQ 5
+  #define PLLP 2
+  #define PLLN 120
+  #define PLLM 12
+#elif (HSE_HZ == 12000000)
+	/* F_HSE = 24 MHz
+	   F_VCO = 240 MHz
+	   F_MAIN = 120 MHz
+	   F_USB = 48 MHz */
+  #define PLLQ 5
+  #define PLLP 2
+  #define PLLN 240
+  #define PLLM 12
+#else
+#error "HSE_HZ invalid!"
+#endif
+
+#elif (HCLK_HZ == 192000000)
+#if (HSE_HZ == 25000000)
+	/* F_HSE = 25 MHz
+	   F_VCO = 384 MHz
+	   F_MAIN = 192 MHz
+	   F_USB = 48 MHz */
+  #define PLLQ 8
+  #define PLLP 2
+  #define PLLN 384
+  #define PLLM 25
+#else
+#error "HSE_HZ invalid!"
+#endif
+
+#endif
+
+#define VCO_HZ ((HCLK_HZ) * (PLLP))
+
+#if ((HSE_HZ * PLLN) / PLLM) != VCO_HZ 
+//#error "invalid PLL configuration!"
+#endif
+
+#if (VCO_HZ / PLLQ) != 48000000
+//#error "invalid PLL configuration!"
+#endif
+
+#if (PLLN > 432)
+#error "invalid PLLN!"
+#endif
+
+#if (PLLM > 63)
+#error "invalid PLLM!"
+#endif
+
+#define LED1      STM32_GPIOG, 6
+#define LED2      STM32_GPIOG, 7
+#define LED3      STM32_GPIOG, 10
+#define LED4      STM32_GPIOG, 12
+
+void __io_init(void)
+{
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_set(LED1);
+	stm32_gpio_set(LED2);
+	stm32_gpio_set(LED3);
+	stm32_gpio_set(LED4);
+}
+
 void _init(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
@@ -297,6 +419,8 @@ void _init(void)
 	/* Make sure we are using the internal oscillator */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
 
+	__io_init();
+
 	/* Enable external oscillator */
 	cr = rcc->cr;
 	cr |= RCC_HSEON;
@@ -313,91 +437,16 @@ void _init(void)
 
 	}
 
-#if (HCLK_HZ == 168000000)
-#if (HSE_HZ == 25000000)
-	/* F_HSE = 25 MHz
-	   F_VCO = 336 MHz (F_HSE * 13.4)
-	   F_MAIN = 168 MHz (F_VCO / 2)
-	   F_USB = 48 MHz (F_VCO / 7)*/
-	pll = RCC_PLLQ(7) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(336) | RCC_PLLM(25);
-#elif (HSE_HZ == 12000000)
-	/* F_HSE = 12 MHz
-	   F_VCO = 336 MHz (F_HSE * 28)
-	   F_MAIN = 168 MHz (F_VCO / 2)
-	   F_USB = 48 MHz (F_VCO / 7)*/
-	pll = RCC_PLLQ(7) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(112) | RCC_PLLM(4);
-#elif (HSE_HZ == 8000000)
-	/* F_HSE = 8 MHz
-	   F_VCO = 336 MHz (F_HSE * 42)
-	   F_MAIN = 168 MHz (F_VCO / 2)
-	   F_USB = 48 MHz (F_VCO / 7)*/
-	pll = RCC_PLLQ(7) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(168) | RCC_PLLM(4);
-#else
-#error "HSE_HZ invalid!"
-#endif
-
-#elif (HCLK_HZ == 120000000)
-#if (HSE_HZ == 24000000)
-	/* F_HSE = 24 MHz
-	   F_VCO = 240 MHz
-	   F_MAIN = 120 MHz
-	   F_USB = 48 MHz */
-	pll = RCC_PLLQ(5) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(120) | RCC_PLLM(12);
-#elif (HSE_HZ == 12000000)
-	/* F_HSE = 24 MHz
-	   F_VCO = 240 MHz
-	   F_MAIN = 120 MHz
-	   F_USB = 48 MHz */
-	pll = RCC_PLLQ(5) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(240) | RCC_PLLM(12);
-#else
-#error "HSE_HZ invalid!"
-#endif
-
-#elif (HCLK_HZ == 192000000)
-#if (HSE_HZ == 25000000)
-	/* F_HSE = 25 MHz
-	   F_VCO = 384 MHz
-	   F_MAIN = 192 MHz
-	   F_USB = 48 MHz */
-	pll = RCC_PLLQ(8) | 
-		RCC_PLLSRC_HSE | 
-		RCC_PLLP(2) | 
-		RCC_PLLN(384) | RCC_PLLM(25);
-#else
-#error "HSE_HZ invalid!"
-#endif
-
-#endif
+	pll = RCC_PLLQ(PLLQ) | RCC_PLLSRC_HSE | RCC_PLLP(PLLP) | 
+		RCC_PLLN(PLLN) | RCC_PLLM(PLLM);
 
 	rcc->pllcfgr = pll;
-
-	/* switch to external clock */
-	cfg = RCC_MCO2_SYSCLK | RCC_MCO2PRE_2 /* Clock output 2 */
-		| RCC_PPRE2_2 /* APB high speed prescaler : 60|84MHz */
-		| RCC_PPRE1_4 /* APB low speed prescaler : 30|42MHz */
-		| RCC_HPRE_1 /* AHB prescaler : 120|168MHz */ 
-		| RCC_SW_HSE;
-	
-	rcc->cfgr = cfg;
 
 	/* enable PLL */
 	cr |= RCC_PLLON;
 	rcc->cr = cr;;
+
+	stm32_gpio_clr(LED1);
 
 	for (again = 8192; ; again--) {
 		cr = rcc->cr;
@@ -409,6 +458,17 @@ void _init(void)
 		}
 	}
 
+	/* switch to external clock */
+	cfg = RCC_MCO2_SYSCLK | RCC_MCO2PRE_2 /* Clock output 2 */
+		| RCC_PPRE2_2 /* APB high speed prescaler : 60|84MHz */
+		| RCC_PPRE1_4 /* APB low speed prescaler : 30|42MHz */
+		| RCC_HPRE_1 /* AHB prescaler : 120|168MHz */ 
+		| RCC_SW_HSE;
+	
+	rcc->cfgr = cfg;
+
+	stm32_gpio_clr(LED2);
+
 	for (again = 4096; ; again--) {
 		sr = flash->sr;
 		if ((sr & FLASH_BSY) == 0)
@@ -418,6 +478,8 @@ void _init(void)
 			return;
 		}
 	}
+
+	stm32_gpio_clr(LED3);
 
 	ws = HCLK_HZ / 30000000;
 
@@ -438,6 +500,7 @@ void _init(void)
 	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
 #endif
 
+	stm32_gpio_clr(LED4);
 }
 
 #endif
