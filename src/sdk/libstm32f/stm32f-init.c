@@ -283,17 +283,11 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #if (HCLK_HZ == 168000000)
 #if (HSE_HZ == 25000000)
 	/* F_HSE = 25 MHz
-	   F_VCO = 336 MHz (F_HSE * 13.4)
-	   F_MAIN = 168 MHz (F_VCO / 2)
-	   F_USB = 48 MHz (F_VCO / 7)*/
+	   F_VCO = 335.9375 MHz (F_HSE * 215 / 16)
+	   F_MAIN = 167.96875 MHz (F_VCO / 2)
+	   F_USB = 47.991 MHz (F_VCO / 7) */
   #define PLLQ 7
   #define PLLP 2
- // #define PLLN 265
-  //#define PLLM 18
- // #define PLLN 215
-  //#define PLLM 16
-  //#define PLLN 336
-  //#define PLLM 25
   #define PLLN 215
   #define PLLM 16
 #elif (HSE_HZ == 16000000)
@@ -353,13 +347,27 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #elif (HCLK_HZ == 192000000)
 #if (HSE_HZ == 25000000)
 	/* F_HSE = 25 MHz
-	   F_VCO = 384 MHz
-	   F_MAIN = 192 MHz
-	   F_USB = 48 MHz */
+	   F_VCO = 383.9286 MHz (F_HSE * 215 / 14)
+	   F_MAIN = 191.964 MHz (F_VCO / 2)
+	   F_USB = 47.991 MHz (F_VCO / 7) */
   #define PLLQ 8
   #define PLLP 2
-  #define PLLN 384
-  #define PLLM 25
+  #define PLLN 215
+  #define PLLM 14
+#else
+#error "HSE_HZ invalid!"
+#endif
+
+#elif (HCLK_HZ == 180000000)
+#if (HSE_HZ == 25000000)
+	/* F_HSE = 25 MHz
+	   F_VCO = 360 MHz (F_HSE * 216 / 15)
+	   F_MAIN = 180 MHz (F_VCO / 2)
+	   F_USB = 45 MHz (F_VCO / 8) */
+  #define PLLQ 8
+  #define PLLP 2
+  #define PLLN 216
+  #define PLLM 15
 #else
 #error "HSE_HZ invalid!"
 #endif
@@ -367,13 +375,23 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #endif
 
 #define VCO_HZ ((HCLK_HZ) * (PLLP))
+#define USB_HZ 48000000
 
-#if ((HSE_HZ * PLLN) / PLLM) != VCO_HZ 
-//#error "invalid PLL configuration!"
+/* Validate the PLL configuration */
+#if ((HSE_HZ * PLLN) / PLLM) > ((VCO_HZ) + (VCO_HZ) / 1000)
+#error "invalid PLL configuration (err > 0.1 %)!"
 #endif
 
-#if (VCO_HZ / PLLQ) != 48000000
-//#error "invalid PLL configuration!"
+#if ((HSE_HZ * PLLN) / PLLM) < ((VCO_HZ) - (VCO_HZ) / 1000)
+#error "invalid PLL configuration (err < -0.1 %)!"
+#endif
+
+#if (VCO_HZ / PLLQ) > ((USB_HZ) + (USB_HZ) / 1000) 
+#error "invalid PLL configuration (err > 0.1 %)!"
+#endif
+
+#if (VCO_HZ / PLLQ) < ((USB_HZ) - (USB_HZ) / 1000) 
+#error "invalid PLL configuration (err < -0.1 %)!"
 #endif
 
 #if (PLLN > 432)
