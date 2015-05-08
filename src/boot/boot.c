@@ -101,7 +101,7 @@ void boot_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_ALARM);
-	dmon_alarm(3000);
+	dmon_alarm(5000);
 
 	while (delay) {
 		uint32_t sigset;

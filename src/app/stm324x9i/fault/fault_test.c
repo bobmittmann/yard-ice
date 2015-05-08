@@ -88,19 +88,49 @@ void write_fault(void)
 	}
 }
 
-volatile uint32_t irq_count = 0 ;
+unsigned int irq_count = 0 ;
 
 void stm32_tim3_isr(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
 	/* Clear timer interrupt flags */
 	tim->sr = 0;
+
 	irq_count++;
-	if (irq_count == 100)
+
+	if (irq_count & 1)
+		__led_on(LED4);
+	else
+		__led_off(LED4);
+
+	if (irq_count == 50)
 		read_fault();
 }
 
-void timer_init(uint32_t freq)
+void stm32_tim2_isr(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM2;
+	int i;
+
+	/* Clear timer interrupt flags */
+	tim->sr = 0;
+	for (;;) {
+		__led_on(LED2);
+		for (i = 0; i < 1000000; ++i)
+			__NOP();
+		__led_off(LED2);
+		for (i = 0; i < 1000000; ++i)
+			__NOP();
+	}
+}
+#define IRQ_PRIORITY_HIGHEST   (1 << 5)
+#define IRQ_PRIORITY_VERY_HIGH (2 << 5)
+#define IRQ_PRIORITY_HIGH      (3 << 5)
+#define IRQ_PRIORITY_REGULAR   (4 << 5)
+#define IRQ_PRIORITY_LOW       (5 << 5)
+#define IRQ_PRIORITY_VERY_LOW  (6 << 5)
+
+void timer3_init(uint32_t freq)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
 	uint32_t div;
@@ -132,7 +162,44 @@ void timer_init(uint32_t freq)
 	tim->cr2 = TIM_MMS_OC1REF;
 
 	/* Enable Timer interrupt */
-	thinkos_irq_register(STM32F_IRQ_TIM3, 0xff, stm32_tim3_isr);
+	thinkos_irq_register(STM32F_IRQ_TIM3, IRQ_PRIORITY_HIGH, stm32_tim3_isr);
+
+	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
+}
+
+void timer2_init(uint32_t freq)
+{
+	struct stm32f_tim * tim = STM32F_TIM2;
+	uint32_t div;
+	uint32_t pre;
+	uint32_t n;
+
+	/* get the total divisior */
+	div = ((stm32f_tim1_hz) + (freq / 2)) / freq;
+	/* get the minimum pre scaler */
+	pre = (div / 65536) + 1;
+	/* get the reload register value */
+	n = (div + pre / 2) / pre;
+
+
+	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
+		   __func__, freq, pre, n);
+
+	/* Timer clock enable */
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM2);
+	
+	/* Timer configuration */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
+	tim->ccr1 = tim->arr - 2;
+	tim->cr2 = TIM_MMS_OC1REF;
+
+	/* Enable Timer interrupt */
+	thinkos_irq_register(STM32F_IRQ_TIM2, IRQ_PRIORITY_LOW, stm32_tim2_isr);
 
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
@@ -143,15 +210,21 @@ int main(int argc, char ** argv)
 
 	io_init();
 	stdio_init();
-	timer_init(10);
 
+	thinkos_sleep(2000);
+
+	timer3_init(10);
+	timer2_init(4);
+
+#if 0
 	printf("\r\n");
 	printf("--------------------------------------------\r\n");
 	printf("- Thread Fault Test\r\n");
 	printf("--------------------------------------------\r\n");
+#endif
 
-	for (i = 10; i > 0; --i) {
-		printf(" %d", i);
+	for (i = 100000; i > 0; --i) {
+//		printf(" %d", i);
 		__led_on(LED1);
 		thinkos_sleep(167);
 		__led_on(LED2);
@@ -170,7 +243,7 @@ int main(int argc, char ** argv)
 
 	printf(" ^^^\r\n");
 
-	read_fault();
+//	read_fault();
 
 	return 0;
 }

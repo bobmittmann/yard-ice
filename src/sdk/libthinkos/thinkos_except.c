@@ -172,7 +172,7 @@ void __idump(const char * s, uint32_t sp, uint32_t ret)
 		DCC_LOG(LOG_ERROR, "IPSR != ICSR.VECTACTIVE");
 }
 
-void __attribute__((naked, noreturn))__xcpt_thread(void)
+void __attribute__((naked, noreturn))__xcpt_thread(uint32_t xpsr)
 {
 	__idump(__func__, cm3_sp_get(), cm3_lr_get());
 
@@ -183,7 +183,7 @@ void __attribute__((naked, noreturn))__xcpt_thread(void)
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 	/* set the active thread to void, to flush this context */
-//	thinkos_rt.active = THINKOS_THREAD_VOID;
+	thinkos_rt.active = THINKOS_THREAD_VOID;
 
 	cm3_cpsie_f();
 	cm3_cpsie_i();
@@ -192,24 +192,31 @@ void __attribute__((naked, noreturn))__xcpt_thread(void)
 }
 
 
-void __attribute__((naked, noreturn))__xcpt_handler(void)
+void __attribute__((naked, noreturn))__xcpt_handler(uint32_t xpsr)
 {
 	struct cm3_isr_sf * sf;
 	uint32_t ret = cm3_lr_get();
+	uint32_t ipsr;
 
 	__idump(__func__, cm3_sp_get(), ret);
 
-	sf = (struct cm3_isr_sf *)&thinkos_idle.ctx.r0;
-	/* reset the IDLE thread */
-	sf->r0 = 0x00000000;
-	sf->r1 = 0x01000001;
-	sf->r2 = 0x02000002;
-	sf->r3 = 0x03000003;
-	sf->r12 = 0xdeadbeef;
-	sf->lr = 0x0badface;
-	sf->pc = (uint32_t)__xcpt_thread;
-	sf->xpsr = 0x01000000;
-	cm3_psp_set((uint32_t)sf);
+	ipsr = xpsr & 0x1ff;
+
+	if (ipsr != 0) {
+		sf = (struct cm3_isr_sf *)&thinkos_idle.ctx;
+		sf->r0 = 0x01000000 + ((CM3_SCB->icsr & SCB_ICSR_VECTPENDING) >> 12);
+		sf->pc = (uint32_t)__xcpt_handler;
+		sf->xpsr = xpsr;
+		/* Reset exception context */
+		cm3_msp_set((uint32_t)sf);
+		ret = CM3_EXC_RET_HANDLER;
+	} else {
+		sf = (struct cm3_isr_sf *)&thinkos_idle.ctx;
+		sf->pc = (uint32_t)__xcpt_thread;
+		sf->xpsr = 0x01000000;
+		cm3_psp_set((uint32_t)sf);
+		ret = CM3_EXC_RET_THREAD_PSP;
+	}
 
 	asm volatile ("bx   %0\n" : : "r" (ret)); 
 
@@ -232,9 +239,8 @@ void __attribute__((noreturn))__xcpt_return_to_dsr(uint32_t xpsr)
 		int irq;
 		if ((irq = (ipsr - 16)) >= 0)
 			cm3_irq_disable(irq);
-
 		sf = (struct cm3_isr_sf *)&thinkos_idle.ctx;
-		sf->r0 = 0x00000000;
+//		sf->r0 = 0x01000000 + ((CM3_SCB->icsr & SCB_ICSR_VECTPENDING) >> 12);
 		sf->r1 = 0x00000101;
 		sf->r2 = 0x00000202;
 		sf->r3 = 0x00000303;
@@ -246,9 +252,9 @@ void __attribute__((noreturn))__xcpt_return_to_dsr(uint32_t xpsr)
 		cm3_msp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_HANDLER;
 	} else {
-		sf = (struct cm3_isr_sf *)&thinkos_idle.ctx.r0;
+		sf = (struct cm3_isr_sf *)&thinkos_idle.ctx;
 		/* reset the IDLE thread */
-		sf->r0 = 0x00000000;
+		sf->r0 = 0x01000000;
 		sf->r1 = 0x01010101;
 		sf->r2 = 0x02020202;
 		sf->r3 = 0x03030303;
