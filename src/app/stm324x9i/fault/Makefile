@@ -24,22 +24,20 @@ PROG = fault_test
 
 CFILES = fault_test.c
 
-SDK = ../../sdk
-TOOLS = ../../../tools
+SDK = ../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libdrv $(SDK)/libtty $(SDK)/libutil $(SDK)/libc
+		   $(SDK)/libutil $(SDK)/libc
 
-LIBS = cm3 stm32f drv tty console util c 
+LIBS = cm3 stm32f console util c 
 
-INCPATH = $(SDK)/include 
+INCPATH = $(SDK)/include ..
 
 CDEFS =
 
 CFLAGS = -g -O1 -Wall
 
-MACH = stm32f407
-#MACH = stm32f429
+MACH = stm32f429
 THINKOS = 1
-include ../../mk/stm32f4xx.mk
+include ../../../mk/stm32f4xx.mk
 

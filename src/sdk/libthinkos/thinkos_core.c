@@ -75,6 +75,11 @@ static inline void __attribute__((always_inline)) __wait(void) {
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
+#if THINKOS_ENABLE_DEBUG_STEP
+	volatile uint32_t * req_bit;
+	volatile uint32_t * sig_bit;
+	uint32_t val;
+#endif
 	/* FIXME: the profile counter does not take into 
 	 account the time spent on interrupt handlers or OS (SYS).. */
 //#if THINKOS_ENABLE_PROFILING
@@ -107,12 +112,12 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 		*cycidle += delta; 
 	}
 #else
+
+	DCC_LOG(LOG_TRACE, "<<< Idle >>>");
+
 #if THINKOS_ENABLE_DEBUG_STEP
-	volatile uint32_t * req_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.req, 
-												  DMON_IDLE);
-	volatile uint32_t * sig_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, 
-												  DMON_IDLE);
-	uint32_t val;
+	req_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.req, DMON_IDLE);
+	sig_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, DMON_IDLE);
 #endif
 
 	for (;;) {

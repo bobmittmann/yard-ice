@@ -428,15 +428,15 @@
   CM3 Exception Numbers
  ****************************************************************************/
 
-#define CM3_EXCEPT_NMI 2
-#define CM3_EXCEPT_HARD_FAULT 3
-#define CM3_EXCEPT_MEM_MANAGE 4
-#define CM3_EXCEPT_BUS_FAULT 5
-#define CM3_EXCEPT_USAGE_FAULT 6
-#define CM3_EXCEPT_SVC 11
+#define CM3_EXCEPT_NMI            2
+#define CM3_EXCEPT_HARD_FAULT     3
+#define CM3_EXCEPT_MEM_MANAGE     4
+#define CM3_EXCEPT_BUS_FAULT      5
+#define CM3_EXCEPT_USAGE_FAULT    6
+#define CM3_EXCEPT_SVC           11
 #define CM3_EXCEPT_DEBUG_MONITOR 12
-#define CM3_EXCEPT_PENDSV 14
-#define CM3_EXCEPT_SYSTICK 15
+#define CM3_EXCEPT_PENDSV        14
+#define CM3_EXCEPT_SYSTICK       15
 
 /****************************************************************************
   Get the bitband addresses 

@@ -9,7 +9,7 @@ set TOOLS_DIR=..\..\tools
 if %ERRORLEVEL% NEQ 0 goto :EOF
 
 rem Disable the halt debug mode by clearing C_DEBUGEN on DHCSR
-%TOOLS_DIR%\tftp_cmd.py -h %JTAGTOOL_ADDR% "disable poll" "let dhcsr 0xa05f0000" "enable poll"
+rem %TOOLS_DIR%\tftp_cmd.py -h %JTAGTOOL_ADDR% "disable poll" "let dhcsr 0xa05f0000" "enable poll"
 
 if %ERRORLEVEL% NEQ 0 goto :EOF
 

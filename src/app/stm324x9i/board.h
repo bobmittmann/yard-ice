@@ -39,6 +39,15 @@
 #define LED3      STM32_GPIOG, 10
 #define LED4      STM32_GPIOG, 12
 
+/* low level led on/off functions */
+static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_clr(__gpio, __pin);
+}
+
+static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_set(__gpio, __pin);
+}
+
 
 #ifdef __cplusplus
 extern "C" {

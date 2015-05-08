@@ -592,7 +592,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 {
 	unsigned int isr_no;
 
-	isr_no = xcpt->ctx.xpsr & 0xff;
+	isr_no = xcpt->ctx.xpsr & 0x1ff;
 
 	if (isr_no == 0) {
 		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
