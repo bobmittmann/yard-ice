@@ -274,12 +274,6 @@ void _init(void)
 
 #if defined(STM32F2X) || defined(STM32F4X)
 
-const uint32_t stm32f_ahb_hz = HCLK_HZ;
-const uint32_t stm32f_apb1_hz = HCLK_HZ / 4;
-const uint32_t stm32f_tim1_hz = HCLK_HZ / 2;
-const uint32_t stm32f_apb2_hz = HCLK_HZ / 2;
-const uint32_t stm32f_tim2_hz = HCLK_HZ;
-
 #if (HCLK_HZ == 168000000)
 #if (HSE_HZ == 25000000)
 	/* F_HSE = 25 MHz
@@ -401,6 +395,15 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #if (PLLM > 63)
 #error "invalid PLLM!"
 #endif
+
+#define __VCO_HZ (((uint64_t)HSE_HZ * PLLN) / PLLM)
+#define __HCLK_HZ (__VCO_HZ / PLLP)
+
+const uint32_t stm32f_ahb_hz  = __HCLK_HZ;
+const uint32_t stm32f_apb1_hz = __HCLK_HZ / 4;
+const uint32_t stm32f_tim1_hz = __HCLK_HZ / 2;
+const uint32_t stm32f_apb2_hz = __HCLK_HZ / 2;
+const uint32_t stm32f_tim2_hz = __HCLK_HZ;
 
 #if 0
 #define LED1      STM32_GPIOG, 6

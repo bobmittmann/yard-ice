@@ -596,22 +596,29 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 
 	if (isr_no == 0) {
 		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
-			/* record the  */
+			/* record the  current thread */
 			xcpt->thread_id = thinkos_rt.active;
 			/* suspend the current thread */
 			__thinkos_thread_pause(thinkos_rt.active);
-			__thinkos_defer_sched();
-			DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!",
-					 thinkos_rt.active);
+			DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!", 
+					 xcpt->thread_id);
 			dmon_signal(DMON_THREAD_FAULT);
 		} else {
 			DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
 					 thinkos_rt.active);
+			xcpt->thread_id = -1;
+			/* suspend all threads */
+			__thinkos_pause_all();
+			/* set the active thread to void */
+			thinkos_rt.active = THINKOS_THREAD_VOID;
 			dmon_signal(DMON_EXCEPT);
 		}
 	} else {
+		xcpt->thread_id = -1;
 		/* suspend all threads */
 		__thinkos_pause_all();
+		/* set the active thread to void */
+		thinkos_rt.active = THINKOS_THREAD_VOID;
 		dmon_signal(DMON_EXCEPT);
 	}
 }

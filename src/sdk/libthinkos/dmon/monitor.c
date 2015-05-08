@@ -101,8 +101,10 @@ static void monitor_on_fault(struct dmon_comm * comm)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
 
-	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
-	dmprintf(comm, "\r\n\r\n");
+	__thinkos_pause_all();
+	if (dmon_wait_idle() < 0) {
+		DCC_LOG(LOG_WARNING, "dmon_wait_idle() failed!");
+	}
 	dmprintf(comm, __hr__);
 	dmon_print_exception(comm, xcpt);
 	dmprintf(comm, __hr__);
