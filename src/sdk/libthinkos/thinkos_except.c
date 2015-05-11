@@ -20,7 +20,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-_Pragma ("GCC optimize (\"Ofast\")")
+_Pragma ("GCC optimize (\"O2\")")
 
 #include <sys/stm32f.h>
 #include <stdio.h>
@@ -72,169 +72,6 @@ _Pragma ("GCC optimize (\"Ofast\")")
 
 #endif
 
-const char except_name[16][12] = {
-	"Thread",
-	"Reset",
-	"NMI",
-	"HardFault",
-	"MemManage",
-	"BusFault",
-	"UsageFault",
-	"Invalid 7",
-	"Invalid 8",
-	"Invalid 9",
-	"Invalid 10",
-	"SVCall",
-	"DbgMonitor",
-	"Invalid 13",
-	"PendSV",
-	"SysTick"
-};
-
-static void __xdump(struct thinkos_except * xcpt)
-{
-#ifdef DEBUG
-	uint32_t shcsr;
-	uint32_t icsr;
-	uint32_t ipsr;
-	uint32_t xpsr;
-	int irqmax;
-	int irqbits;
-	int i;
-	int j;
-
-	irqmax = CM3_ICTR;
-	for (i = 0; i < irqmax ; ++i) {
-		irqbits = __rbit(CM3_NVIC->iabr[i]);
-		while ((j = __clz(irqbits)) < 32) {
-			irqbits &= ~(0x80000000 >> j);
-			DCC_LOG1(LOG_TRACE, "Active IRQ=%d", i * 32 + j); 
-		}
-	}
-
-	for (i = 0; i < irqmax ; ++i) {
-		irqbits = __rbit(CM3_NVIC->ispr[i]);
-		while ((j = __clz(irqbits)) < 32) {
-			irqbits &= ~(0x80000000 >> j);
-			DCC_LOG1(LOG_TRACE, "Pending IRQ=%d", i * 32 + j); 
-		}
-	}
-
-	DCC_LOG4(LOG_ERROR, "   R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
-			xcpt->ctx.r0, xcpt->ctx.r1, xcpt->ctx.r2, xcpt->ctx.r3);
-	DCC_LOG4(LOG_ERROR, "   R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
-			xcpt->ctx.r4, xcpt->ctx.r5, xcpt->ctx.r6, xcpt->ctx.r7);
-	DCC_LOG4(LOG_ERROR, "   R8=%08x  R9=%08x R10=%08x R11=%08x", 
-			xcpt->ctx.r8, xcpt->ctx.r9, xcpt->ctx.r10, xcpt->ctx.r11);
-	DCC_LOG4(LOG_ERROR, "  R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			xcpt->ctx.r12, xcpt->sp, xcpt->ctx.lr, xcpt->ctx.pc);
-	DCC_LOG4(LOG_ERROR, " XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
-			xcpt->ctx.xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
-	xpsr = xcpt->ctx.xpsr;
-	ipsr = xpsr & 0x1ff;
-	if (ipsr < 16) { 
-		DCC_LOG10(LOG_ERROR, " XPSR={ %c%c%c%c%c %c "
-				 "ICI/IT=%02x GE=%1x IPSR=%d (%s) }", 
-				 (xpsr & (1 << 31)) ? 'N' : '.',
-				 (xpsr & (1 << 30)) ? 'Z' : '.',
-				 (xpsr & (1 << 29)) ? 'C' : '.',
-				 (xpsr & (1 << 28)) ? 'V' : '.',
-				 (xpsr & (1 << 27)) ? 'Q' : '.',
-				 (xpsr & (1 << 24)) ? 'T' : '.',
-				 ((xpsr >> 19) & 0xc0) | ((xpsr >> 10) & 0x3f),
-				 ((xpsr >> 16) & 0x0f),
-				 ipsr, except_name[ipsr]);
-	} else {
-		DCC_LOG10(LOG_ERROR, " XPSR={ %c%c%c%c%c %c "
-				 "ICI/IT=%02x GE=%1x IPSR=%d (IRQ %d) }", 
-				 (xpsr & (1 << 31)) ? 'N' : '.',
-				 (xpsr & (1 << 30)) ? 'Z' : '.',
-				 (xpsr & (1 << 29)) ? 'C' : '.',
-				 (xpsr & (1 << 28)) ? 'V' : '.',
-				 (xpsr & (1 << 27)) ? 'Q' : '.',
-				 (xpsr & (1 << 24)) ? 'T' : '.',
-				 ((xpsr >> 19) & 0xc0) | ((xpsr >> 10) & 0x3f),
-				 ((xpsr >> 16) & 0x0f),
-				 ipsr, ipsr - 16);
-	}
-	shcsr = CM3_SCB->shcsr;
-	DCC_LOG7(LOG_ERROR, "SHCSR={%s%s%s%s%s%s%s }", 
-				 (shcsr & SCB_SHCSR_SYSTICKACT) ? " SYSTICKACT" : "",
-				 (shcsr & SCB_SHCSR_PENDSVACT) ? " PENDSVACT" : "",
-				 (shcsr & SCB_SHCSR_MONITORACT) ? " MONITORACT" : "",
-				 (shcsr & SCB_SHCSR_SVCALLACT) ? " SVCALLACT" : "",
-				 (shcsr & SCB_SHCSR_USGFAULTACT) ?  " USGFAULTACT" : "",
-				 (shcsr & SCB_SHCSR_BUSFAULTACT) ?  " BUSFAULTACT" : "",
-				 (shcsr & SCB_SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
-
-	icsr = CM3_SCB->icsr;
-	DCC_LOG5(LOG_ERROR, " ICSR={%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
-				 (icsr & SCB_ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
-				 (icsr & SCB_ICSR_ISRPENDING) ? " ISRPENDING" : "",
-				 (icsr & SCB_ICSR_RETTOBASE) ? " RETTOBASE" : "",
-				 (icsr & SCB_ICSR_VECTPENDING) >> 12,
-				 (icsr & SCB_ICSR_VECTACTIVE));
-
-#endif
-}
-
-static void __idump(const char * s, uint32_t ipsr)
-{
-#ifdef DEBUG
-	uint32_t shcsr;
-	uint32_t icsr;
-	int irqmax;
-	int irqbits;
-	int i;
-	int j;
-
-	DCC_LOG1(LOG_TRACE, "%s() _________________________________", s); 
-
-	irqmax = CM3_ICTR;
-	for (i = 0; i < irqmax ; ++i) {
-		irqbits = __rbit(CM3_NVIC->iabr[i]);
-		while ((j = __clz(irqbits)) < 32) {
-			irqbits &= ~(0x80000000 >> j);
-			DCC_LOG1(LOG_TRACE, "Active IRQ=%d", i * 32 + j); 
-		}
-	}
-
-	for (i = 0; i < irqmax ; ++i) {
-		irqbits = __rbit(CM3_NVIC->ispr[i]);
-		while ((j = __clz(irqbits)) < 32) {
-			irqbits &= ~(0x80000000 >> j);
-			DCC_LOG1(LOG_TRACE, "Pending IRQ=%d", i * 32 + j); 
-		}
-	}
-
-	if (ipsr < 16) { 
-		DCC_LOG2(LOG_TRACE, " IPSR=%d (%s)", ipsr, except_name[ipsr]);
-	} else {
-		DCC_LOG2(LOG_TRACE, " IPSR=%d (IRQ %d)", ipsr, ipsr - 16);
-	}
-	shcsr = CM3_SCB->shcsr;
-	DCC_LOG7(LOG_TRACE, "SHCSR={%s%s%s%s%s%s%s }", 
-				 (shcsr & SCB_SHCSR_SYSTICKACT) ? " SYSTICKACT" : "",
-				 (shcsr & SCB_SHCSR_PENDSVACT) ? " PENDSVACT" : "",
-				 (shcsr & SCB_SHCSR_MONITORACT) ? " MONITORACT" : "",
-				 (shcsr & SCB_SHCSR_SVCALLACT) ? " SVCALLACT" : "",
-				 (shcsr & SCB_SHCSR_USGFAULTACT) ?  " USGFAULTACT" : "",
-				 (shcsr & SCB_SHCSR_BUSFAULTACT) ?  " BUSFAULTACT" : "",
-				 (shcsr & SCB_SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
-
-	icsr = CM3_SCB->icsr;
-	DCC_LOG5(LOG_TRACE, " ICSR={%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
-				 (icsr & SCB_ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
-				 (icsr & SCB_ICSR_ISRPENDING) ? " ISRPENDING" : "",
-				 (icsr & SCB_ICSR_RETTOBASE) ? " RETTOBASE" : "",
-				 (icsr & SCB_ICSR_VECTPENDING) >> 12,
-				 (icsr & SCB_ICSR_VECTACTIVE));
-
-	if (ipsr != (icsr & SCB_ICSR_VECTACTIVE))
-		DCC_LOG(LOG_ERROR, "IPSR != ICSR.VECTACTIVE");
-#endif
-}
-
 
 static inline void __attribute__((always_inline)) 
 __xcpt_context_save(struct thinkos_except * xcpt)
@@ -269,6 +106,7 @@ __xcpt_context_save(struct thinkos_except * xcpt)
 	}
 
 	xcpt->msp = cm3_msp_get() - 4 * 8;
+	xcpt->icsr = CM3_SCB->icsr;
 }
 
 static inline void __attribute__((always_inline, noreturn)) 
@@ -293,34 +131,9 @@ __xcpt_context_restore(struct thinkos_except * xcpt)
 	for(;;);
 }
 
-/* Return the an active interrupt wich is different from the 
-   interrupt in the current irq. Otherwise returns -16  */
-
-static int __next_active_irq(int this_irq)
+void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 {
-	int irqmax;
-	int irqbits;
-	int irq;
-	int i;
-	int j;
-
-	irqmax = CM3_ICTR;
-	for (i = 0; i < irqmax ; ++i) {
-		irqbits = __rbit(CM3_NVIC->iabr[i]);
-		while ((j = __clz(irqbits)) < 32) {
-			irq = i * 32 + j;
-			if (irq != this_irq)
-				return irq;
-			irqbits &= ~(0x80000000 >> j);
-		}
-	}
-
-	return -16;
-}
-
-void __attribute__((naked, noreturn))
-__xcpt_thread(struct thinkos_except * xcpt)
-{
+	uint32_t icsr;
 	int ipsr;
 
 	__idump(__func__, cm3_ipsr_get());
@@ -330,7 +143,8 @@ __xcpt_thread(struct thinkos_except * xcpt)
 	__thinkos_pause_all();
 
 	ipsr = xcpt->ctx.xpsr & 0x1ff;
-	if ((ipsr == 0) || (ipsr == CM3_EXCEPT_SVC)) {
+	icsr = xcpt->icsr;
+	if ((icsr & SCB_ICSR_RETTOBASE) || (ipsr == CM3_EXCEPT_SVC)) {
 		if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
 			/* record the current thread */
 			xcpt->thread_id = thinkos_rt.active;
@@ -353,15 +167,30 @@ __xcpt_thread(struct thinkos_except * xcpt)
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 
+	if (thinkos_rt.wq_ready != 0) {
+		DCC_LOG1(LOG_ERROR, "wq_ready=%08x, ready queue not empty !!!!!!!", 
+				 thinkos_rt.wq_ready);
+		thinkos_rt.wq_ready = 0;
+	}
+
+#if THINKOS_ENABLE_TIMESHARE
+	if (thinkos_rt.wq_tmshare != 0) {
+		DCC_LOG1(LOG_ERROR, "wq_tmshare=%08x, timeshare queue not empty !!!!!", 
+				 thinkos_rt.wq_tmshare);
+		thinkos_rt.wq_tmshare = 0;
+	}
+#endif
+
 	thinkos_exception_dsr(xcpt);
 
-	cm3_cpsie_i();
+	__tdump();
 
+	cm3_cpsie_i();
+	
 	for(;;);
 }
 
-void __attribute__((naked, noreturn))
-__xcpt_return(struct thinkos_except * xcpt)
+void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 {
 	struct cm3_except_context * sf;
 	uint32_t icsr;
@@ -369,10 +198,10 @@ __xcpt_return(struct thinkos_except * xcpt)
 	uint32_t xpsr;
 	int ipsr;
 
-	__idump(__func__, cm3_ipsr_get());
-
 	ipsr = cm3_ipsr_get();
-	xpsr = 0x01000000 + __next_active_irq(ipsr - 16) + 16;
+	__idump(__func__, ipsr);
+
+	xpsr = 0x01000000 + __xcpt_next_active_irq(ipsr - 16) + 16;
 
 	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
 	sf->r0 = (uint32_t)xcpt;
@@ -391,16 +220,6 @@ __xcpt_return(struct thinkos_except * xcpt)
 
 	/* return */
 	asm volatile ("bx   %0\n" : : "r" (ret)); 
-
-	for(;;);
-}
-
-void __xcpt_irq_disable_all(void)
-{
-	int i;
-
-	for (i = 0; i < CM3_ICTR; ++i)
-		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
 }
 
 #if THINKOS_STDERR_FAULT_DUMP
@@ -679,7 +498,7 @@ void thinkos_default_exception_dsr(struct thinkos_except * xcpt);
 struct thinkos_except thinkos_except_buf;
 
 #if	THINKOS_ENABLE_BUSFAULT 
-void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
+void __attribute__((naked)) cm3_bus_fault_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
@@ -691,7 +510,7 @@ void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 #endif
 
 #if	THINKOS_ENABLE_USAGEFAULT 
-void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
+void __attribute__((naked)) cm3_usage_fault_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
@@ -703,7 +522,7 @@ void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 #endif
 
 #if THINKOS_ENABLE_MPU
-void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
+void __attribute__((naked)) cm3_mem_manage_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
@@ -714,7 +533,7 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 }
 #endif
 
-void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
+void __attribute__((naked)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
@@ -771,7 +590,7 @@ void thinkos_exception_init(void)
 #endif /* THINKOS_ENABLE_EXCEPTIONS */
 
 #if 0
-void __attribute__((naked, noreturn)) cm3_nmi_isr(void)
+void __attribute__((naked)) cm3_nmi_isr(void)
 {
 	struct thinkos_context * ctx;
 	uint32_t msp;
@@ -790,7 +609,7 @@ void __attribute__((naked, noreturn)) cm3_nmi_isr(void)
 	thinkos_nmi(ctx, msp, psp, lr);
 }
 
-void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
+void __attribute__((naked)) cm3_debug_mon_isr(void)
 {
 	struct thinkos_context * ctx;
 	uint32_t msp;

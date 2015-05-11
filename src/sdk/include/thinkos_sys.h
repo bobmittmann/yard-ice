@@ -357,14 +357,14 @@ struct thinkos_rt {
 #endif
 
 #if THINKOS_ENABLE_PROFILING
+	/* Reference cycle state ... */
+	uint32_t cycref;
 	/* Per thread cycle count */
 #if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2]; /* extra slot for exit */
 #else
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];
 #endif
-	/* Reference cycle state ... */
-	uint32_t cycref;
 #endif
 
 	uint32_t wq_lst[0]; /* queue list placeholder */
@@ -642,6 +642,7 @@ struct thinkos_except {
 	uint32_t sp;
 	uint32_t msp;
 	uint32_t psp;
+	uint32_t icsr;
 	uint8_t ipsr;
 	uint8_t type; /* exception type */
 	int8_t thread_id;
@@ -668,6 +669,8 @@ extern uint32_t * const thinkos_obj_alloc_lut[];
 extern const uint16_t thinkos_wq_base_lut[];
 
 extern const char thinkos_type_name_lut[][6];
+
+extern const char __xcpt_name_lut[16][12];
 
 #ifdef __cplusplus
 extern "C" {
@@ -842,6 +845,7 @@ __thinkos_wq_remove(unsigned int wq, unsigned int th) {
 
 static void inline __attribute__((always_inline)) 
 __thinkos_wakeup(unsigned int wq, unsigned int th) {
+//	DCC_LOG2(LOG_TRACE, "wakeup %d from wq %d", th, wq);
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 	/* remove from the wait queue */
@@ -860,6 +864,7 @@ __thinkos_wakeup(unsigned int wq, unsigned int th) {
 
 static void inline __attribute__((always_inline)) 
 __thinkos_wakeup_return(unsigned int wq, unsigned int th, int ret) {
+//	DCC_LOG2(LOG_TRACE, "wakeup %d from wq %d", th, wq);
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 	/* remove from the wait queue */
@@ -943,6 +948,20 @@ void __console_rx_pipe_commit(unsigned int cnt);
 
 int __console_tx_pipe_ptr(uint8_t ** ptr);
 void __console_tx_pipe_commit(unsigned int cnt);
+
+/* -------------------------------------------------------------------------
+ * Exception handling utility functions
+ * ------------------------------------------------------------------------- */
+
+void __xdump(struct thinkos_except * xcpt);
+
+void __idump(const char * s, uint32_t ipsr);
+
+void __tdump(void);
+
+int __xcpt_next_active_irq(int this_irq);
+
+void __xcpt_irq_disable_all(void);
 
 #ifdef __cplusplus
 }

@@ -273,6 +273,9 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 void __attribute__((aligned(16))) cm3_systick_isr(void)
 {
 	int sched = 0;
+#if THINKOS_ENABLE_TIMESHARE
+	int32_t idx;
+#endif
 #if THINKOS_ENABLE_CLOCK
 	uint32_t ticks;
 	uint32_t wq;
@@ -320,52 +323,28 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 #endif /* THINKOS_ENABLE_CLOCK */
 
 #if THINKOS_ENABLE_TIMESHARE
-	int32_t idx;
-
 	idx = thinkos_rt.active;
 
 	/* write the schedule bit into the ready bitmap */
-//	if (idx != THINKOS_THREAD_IDLE) {
-		thinkos_rt.sched_val[idx] -= thinkos_rt.sched_pri[idx];
-		if (thinkos_rt.sched_val[idx] < 0) {
-			thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
-			/* set the non schedule flag for the active thread */
-//			__bit_mem_wr(&thinkos_rt.active.flags, THINKOS_NON_SCHED, 1);  
-			/* insert into the CPU wait queue */
-			__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
-//			printf(" w%x", thinkos_rt.wq_tmshare);
-			__bit_mem_wr(&thinkos_rt.wq_ready, idx, 0);
-			cm3_cpsid_i();
-#if (THINKOS_THREADS_MAX < 32) 
-			if (thinkos_rt.wq_ready == (1 << THINKOS_THREADS_MAX)) {
-				/* No more threads into the ready queue,
-				 move the timeshare queue to the ready queue.
-				 Keep the IDLE bit set */
-				thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
-				thinkos_rt.wq_tmshare = 0;
-			} 
-#else
-			if (thinkos_rt.wq_ready == 0) {
-				/* no more threads into the ready queue,
-				 move the timeshare queue to the ready queue */
-				thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-				thinkos_rt.wq_tmshare = 0;
-			} 
-#endif
-			cm3_cpsie_i();
-			sched++;
-		} else {
-//			__bit_mem_wr(&thinkos_rt.wq_ready, idx, 1);
-//			printf(" r%x", thinkos_rt.wq_ready);
-		}
-//	} else {
-//		printf("i");
-//	}
+	thinkos_rt.sched_val[idx] -= thinkos_rt.sched_pri[idx];
+	if (thinkos_rt.sched_val[idx] < 0) {
+		thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
+
+		cm3_cpsid_i();
+
+		/* insert into the CPU wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
+		__thinkos_suspend(idx);
+
+		cm3_cpsie_i();
+		sched++;
+	}
 
 #endif /* THINKOS_ENABLE_TIMESHARE */
 
 	if (sched)
 		__thinkos_defer_sched();
+
 }
 #endif /* THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE */
 

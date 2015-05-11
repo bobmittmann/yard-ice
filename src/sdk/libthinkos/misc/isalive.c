@@ -27,6 +27,9 @@ bool __thinkos_thread_isalive(unsigned int th)
 {
 	bool dead;
 
+	if (th == THINKOS_THREAD_IDLE)
+		return true;
+
 	if (th >= THINKOS_THREADS_MAX)
 		return false;
 

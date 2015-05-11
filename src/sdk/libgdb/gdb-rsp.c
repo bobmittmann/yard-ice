@@ -86,67 +86,18 @@ int uint2hex(char * s, unsigned int val);
 int hex2char(char * hex);
 extern const char hextab[];
 
-int thread_id = -1;
-
-const char monitor_menu[] = "\r\n"
-"-- ThinkOS Monitor Commands ---------\r\n"
-" Ctrl+Q - Restart monitor\r\n"
-" Ctrl+R - Resume all threads\r\n"
-" Ctrl+P - Pause all threads\r\n"
-" Ctrl+X - Show exception\r\n"
-" Ctrl+I - ThinkOS info\r\n"
-" Ctrl+N - Select Next Thread\r\n"
-"-------------------------------------\r\n\r\n";
-
-void monitor_show_help(struct dmon_comm * comm)
-{
-	dmon_comm_send(comm, monitor_menu, sizeof(monitor_menu) - 1);
-}
-
-void monitor_on_fault(struct dmon_comm * comm)
-{
-	const struct thinkos_except * xcpt = &thinkos_except_buf;
-
-	DCC_LOG(LOG_TRACE, "DMON_THREAD_FAULT.");
-	dmprintf(comm, "Fault at thread %d\r\n", xcpt->thread_id);
-//	dmon_print_context(comm, &xcpt->ctx, xcpt->sp);
-}
-
-void monitor_dump(struct dmon_comm * comm)
-{
-	dmon_print_thread(comm, thread_id);
-}
-
-void monitor_pause_all(struct dmon_comm * comm)
-{
-	dmprintf(comm, "\r\nPausing all threads...\r\n");
-	__thinkos_pause_all();
-	dmon_wait_idle();
-	dmprintf(comm, "[Idle]\r\n");
-}
-
-void monitor_resume_all(struct dmon_comm * comm)
-{
-	dmprintf(comm, "\r\nResuming all threads...\r\n");
-	__thinkos_resume_all();
-	dmprintf(comm, "Restarting...\r\n");
-}
-
 struct gdb_rspd {
-	uint8_t current_thread;
-	struct {
-		uint32_t noack_mode : 1;
-		uint32_t nonstop_mode : 1;
-		uint32_t stopped : 1;
-		uint32_t active_app : 1;
-	};
+	uint8_t noack_mode : 1;
+	uint8_t nonstop_mode : 1;
+	uint8_t stopped : 1;
+	uint8_t active_app : 1;
+	uint8_t last_signal;
+	uint8_t cont_signal;
 	struct {
 		int8_t g; 
 		int8_t c;
 		int8_t p;
 	} thread_id;
-	uint8_t last_signal;
-	uint8_t cont_signal;
 	struct dmon_comm * comm;
 	void (* shell_task)(struct dmon_comm * comm);
 };
@@ -292,102 +243,55 @@ typedef enum {
 #error "Need THINKOS_ENABLE_DEBUG_FAULT!"
 #endif
 
-int thread_getnext(int th)
+/* -------------------------------------------------------------------------
+ * Threads auxiliarly functions
+ * ------------------------------------------------------------------------- */
+
+#define THREAD_ID_OFFS 64
+#define THREAD_ID_ALL -1
+#define THREAD_ID_ANY 0
+
+int thread_getnext(int thread_id)
 {
-	return __thinkos_thread_getnext(th - 1) + 1;
+	int id;
+
+	id = __thinkos_thread_getnext(thread_id - THREAD_ID_OFFS);
+	if (id >= 0)
+		id += THREAD_ID_OFFS;
+
+	return id;
 }
 
-void target_halt(struct gdb_rspd * gdb)
+int thread_active(void)
 {
-	__thinkos_pause_all();
+	if (thinkos_rt.active == THINKOS_THREAD_IDLE)
+		DCC_LOG(LOG_TRACE, "IDLE");
+//		return 0;
+	return thinkos_rt.active + THREAD_ID_OFFS;
+}
 
-	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
-		DCC_LOG(LOG_TRACE, "Current is Idle!");
-		gdb->current_thread = thread_getnext(0);
-	} else {
-		gdb->current_thread = thinkos_rt.active + 1;
+int thread_any(void)
+{
+	if (thinkos_rt.active != THINKOS_THREAD_IDLE) {
+		return thinkos_rt.active + THREAD_ID_OFFS;
 	}
 
-	DCC_LOG1(LOG_TRACE, "current_thread=%d", gdb->current_thread);
+	DCC_LOG(LOG_TRACE, "IDLE");
 
-	dmon_wait_idle();
-	gdb->stopped = true;
+	return __thinkos_thread_getnext(-1) + THREAD_ID_OFFS;
 }
 
-int target_goto(uint32_t addr, int opt)
+bool thread_isalive(int thread_id)
 {
-	return 0;
+	if (thread_id == 0)
+		return true;
+
+	return __thinkos_thread_isalive(thread_id - THREAD_ID_OFFS);
 }
 
-static bool is_addr_valid(uint32_t addr) 
+int thread_register_get(int thread_id, int reg, uint32_t * val)
 {
-	int i;
-	int n = sizeof(target_mem_map) / sizeof(struct mem_range);
-
-	for (i = 0; i < n; ++i) {
-		const struct mem_range * mem = &target_mem_map[i];
-		if ((addr >= mem->base) && (addr < (mem->base + mem->size))) {
-			return true;
-		}
-	}
-	return false;
-}
-
-
-int mem_write(uint32_t addr, const void * ptr, unsigned int len)
-{
-	const struct flash_map * flash = &stm32f407_flash;
-	struct flash_blk blk;
-	uint32_t offs;
-
-	if (!is_addr_valid(addr))
-		return -1;
-
-	if (flash_addr2block(flash, addr, &blk) < 0) {
-		uint8_t * dst = (uint8_t *)addr;
-		uint8_t * src = (uint8_t *)ptr;;
-		int i;
-
-		for (i = 0; i < len; ++i)
-			dst[i] = src[i];
-		return len;
-	}
-
-	if (blk.ro) {
-		DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
-				 blk.base, blk.size);
-		return -1;
-	}
-
-	offs = addr - flash->base;
-	if (blk.base == addr) {
-		DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
-				 blk.base, blk.size);
-		stm32_flash_erase(offs, blk.size);
-	};
-
-	return stm32_flash_write(offs, ptr, len);
-}
-
-static int mem_read(uint32_t addr, void * ptr, unsigned int len)
-{
-	uint8_t * dst = (uint8_t *)ptr;
-	uint8_t * src = (uint8_t *)addr;;
-	int i;
-
-	if (!is_addr_valid(addr))
-		return -1;
-
-	for (i = 0; i < len; ++i)
-		dst[i] = src[i];
-
-	return len;
-}
-
-
-int thread_register_get(int thread, int reg, uint32_t * val)
-{
-	unsigned int idx = thread - 1;
+	unsigned int idx = thread_id - THREAD_ID_OFFS;
 	struct thinkos_context * ctx;
 	uint32_t x;
 
@@ -461,9 +365,9 @@ int thread_register_get(int thread, int reg, uint32_t * val)
 	return 0;
 }
 
-int thread_register_set(int thread, int reg, uint32_t val)
+int thread_register_set(unsigned int thread_id, int reg, uint32_t val)
 {
-	unsigned int idx = thread - 1;
+	unsigned int idx = thread_id - THREAD_ID_OFFS;
 	struct thinkos_context * ctx;
 
 	if (idx > THINKOS_THREADS_MAX)
@@ -534,13 +438,101 @@ int thread_register_set(int thread, int reg, uint32_t val)
 	return 0;
 }
 
-/***********************************************************************
- Breakpoint management
- ***********************************************************************/
+/* -------------------------------------------------------------------------
+ * Memory auxiliarly functions
+ * ------------------------------------------------------------------------- */
 
-/*
+static bool is_addr_valid(uint32_t addr) 
+{
+	int i;
+	int n = sizeof(target_mem_map) / sizeof(struct mem_range);
+
+	for (i = 0; i < n; ++i) {
+		const struct mem_range * mem = &target_mem_map[i];
+		if ((addr >= mem->base) && (addr < (mem->base + mem->size))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+int mem_write(uint32_t addr, const void * ptr, unsigned int len)
+{
+	const struct flash_map * flash = &stm32f407_flash;
+	struct flash_blk blk;
+	uint32_t offs;
+
+	if (!is_addr_valid(addr))
+		return -1;
+
+	if (flash_addr2block(flash, addr, &blk) < 0) {
+		uint8_t * dst = (uint8_t *)addr;
+		uint8_t * src = (uint8_t *)ptr;;
+		int i;
+
+		for (i = 0; i < len; ++i)
+			dst[i] = src[i];
+		return len;
+	}
+
+	if (blk.ro) {
+		DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
+				 blk.base, blk.size);
+		return -1;
+	}
+
+	offs = addr - flash->base;
+	if (blk.base == addr) {
+		DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
+				 blk.base, blk.size);
+		stm32_flash_erase(offs, blk.size);
+	};
+
+	return stm32_flash_write(offs, ptr, len);
+}
+
+static int mem_read(uint32_t addr, void * ptr, unsigned int len)
+{
+	uint8_t * dst = (uint8_t *)ptr;
+	uint8_t * src = (uint8_t *)addr;;
+	int i;
+
+	if (!is_addr_valid(addr))
+		return -1;
+
+	for (i = 0; i < len; ++i)
+		dst[i] = src[i];
+
+	return len;
+}
+
+/* -------------------------------------------------------------------------
+ * Core auxiliarly functions
+ * ------------------------------------------------------------------------- */
+
+void target_halt(struct gdb_rspd * gdb)
+{
+	__thinkos_pause_all();
+
+	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
+		DCC_LOG(LOG_TRACE, "Current is Idle!");
+	} else {
+		DCC_LOG1(LOG_TRACE, "current_thread=%d", thinkos_rt.active);
+	}
+
+	dmon_wait_idle();
+	gdb->stopped = true;
+}
+
+int target_goto(uint32_t addr, int opt)
+{
+	return 0;
+}
+
+/* -------------------------------------------------------------------------
  * Common response packets
- */
+ * ------------------------------------------------------------------------- */
 
 static inline int rsp_ack(struct dmon_comm * comm)
 {
@@ -622,69 +614,51 @@ static void rsp_breakpoint(struct gdb_rspd * gdb, struct dmon_comm * comm)
 	gdb->last_signal = TARGET_SIGNAL_TRAP;
 }
 
-#if 0
-static inline void rsp_fixup_sum(char * s)
-{
-	int sum;
-
-	sum = 0;
-	while (*s != '#')
-		sum += *s++;
-
-	s[1] = hextab[((sum >> 4) & 0xf)];
-	s[2] = hextab[sum & 0xf];
-}
-
-static int  rsp_offsets(struct dmon_comm * comm, unsigned int text,
-							   unsigned int data, unsigned int bss)
-{
-	char s[128];
-	int n;
-
-	DCC_LOG3(LOG_TRACE, "text=%08x data=%08x bss=%08x", text, data, bss);
-
-	/* FIXME: max id = 15 by the time */
-	n = sprintf(s, "+$Text=%x;Data=%x;Bss=%x#", text, data, bss);
-	rsp_fixup_sum(s + 2);
-	return dmon_comm_send(comm, s, n + 2);
-}
-#endif
-
 int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 {
 	char * cp = pkt + sizeof("qThreadExtraInfo,") - 1;
 	int idx;
-	int id;
+	int thread_id;
 	int oid;
 	int type;
 	bool tmw;
 	int n;
 
 	/* qThreadExtraInfo */
-	id = hex2int(cp, NULL);
-	DCC_LOG1(LOG_INFO, "thread_id=%d", id);
-	idx = id - 1;
+	thread_id = hex2int(cp, NULL);
+	DCC_LOG1(LOG_INFO, "thread_id=%d", thread_id);
+	idx = thread_id - THREAD_ID_OFFS;
 
 	cp = pkt;
 	*cp++ = '$';
+	if (idx == THINKOS_THREAD_IDLE) {
+		n = str2hex(cp, "IDLE");
+	} else {
 #if THINKOS_ENABLE_THREAD_INFO
-	if (thinkos_rt.th_inf[idx] != NULL)
-		n = str2hex(cp, thinkos_rt.th_inf[idx]->tag);
-	else
-		n = int2str2hex(cp, idx);
+		if (thinkos_rt.th_inf[idx] != NULL)
+			n = str2hex(cp, thinkos_rt.th_inf[idx]->tag);
+		else
+			n = int2str2hex(cp, idx);
 #else
-	n = int2str2hex(cp, idx);
+		n = int2str2hex(cp, idx);
 #endif
+	}
 	cp += n;
 	n = char2hex(cp, ' ');
 	cp += n;
+
+	if (idx == THINKOS_THREAD_IDLE) {
+		oid = 0;
+		tmw = false;
+	} else {
 #if THINKOS_ENABLE_THREAD_STAT
-	oid = thinkos_rt.th_stat[idx] >> 1;
-	tmw = thinkos_rt.th_stat[idx] & 1;
+		oid = thinkos_rt.th_stat[idx] >> 1;
+		tmw = thinkos_rt.th_stat[idx] & 1;
 #else
-	oid = 0; /* FIXME */
-	tmw = (thinkos_rt.wq_clock & (1 << idx)) ? true : false;
+		oid = 0; /* FIXME */
+		tmw = (thinkos_rt.wq_clock & (1 << idx)) ? true : false;
 #endif
+	}
 	if (tmw) {
 		if (oid == 0) {
 			n = str2hex(cp, "time wait");
@@ -702,7 +676,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	if (oid != 0) {
 		type = thinkos_obj_type_get(oid);
 		if (type == THINKOS_OBJ_PAUSED) {
-			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", id);
+			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", thread_id);
 		}
 		n = str2hex(cp, thinkos_type_name_lut[type]);
 		cp += n;
@@ -721,19 +695,19 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 {
 	char * cp;
-	int id;
+	int thread_id;
 	int n;
 
 	/* get the first thread */
-	if ((id = thread_getnext(0)) < 0) {
+	if ((thread_id = thread_getnext(0)) < 0) {
 		n = str2str(pkt, "$l");
 	} else {
 		cp = pkt;
 		cp += str2str(cp, "$m");
-		cp += uint2hex(cp, id);
-		while ((id = thread_getnext(id)) > 0) {
+		cp += uint2hex(cp, thread_id);
+		while ((thread_id = thread_getnext(thread_id)) > 0) {
 			*cp++ = ',';
-			cp += uint2hex(cp, id);
+			cp += uint2hex(cp, thread_id);
 		}
 		n = cp - pkt;
 	}
@@ -748,32 +722,6 @@ int rsp_thread_get_next(struct dmon_comm * comm, char * pkt)
 	n = str2str(pkt, "$l");
 	return rsp_send_pkt(comm, pkt, n);
 }
-
-#if 0
-static int rsp_thread_id(struct dmon_comm * comm, int id)
-{
-	char pkt[32];
-	int sum;
-	int n;
-
-	DCC_LOG1(LOG_TRACE, "id=%d", id);
-
-	pkt[0] = '$';
-	pkt[1] = 'Q';
-	pkt[2] = 'C';
-	n = 3;
-	sum = 'Q' + 'C';
-	if (id > 15) {
-		sum += pkt[n++] = hextab[((id >> 4) & 0xf)];
-	}
-	sum += pkt[n++] = hextab[(id & 0xf)];
-	pkt[n++] = '#';
-	pkt[n++] = hextab[((sum >> 4) & 0xf)];
-	pkt[n++] = hextab[sum & 0xf];
-
-	return dmon_comm_send(comm, pkt, n);
-}
-#endif
 
 int rsp_output(struct gdb_rspd * gdb, struct dmon_comm * comm, char * pkt)
 {
@@ -876,8 +824,8 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	}
 
 	if (prefix(pkt, "qC")) {
-		cp = pkt + str2str(pkt, "$QC");
-		cp += uint2hex(cp, gdb->current_thread);
+		cp = pkt + str2str(pkt, "$Q");
+		cp += uint2hex(cp, thread_active());
 		n = cp - pkt;
 		return rsp_send_pkt(comm, pkt, n);
 	}
@@ -999,19 +947,24 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 {
 	unsigned int val = 0;
 	char * cp;
-	int th;
+	int thread_id;
 	int n;
 	int r;
 
-	if (gdb->thread_id.g <= 0)
-		th = gdb->current_thread;
-	else
-		th = gdb->thread_id.g;
+	if (gdb->thread_id.g == THREAD_ID_ALL) {
+		DCC_LOG(LOG_TRACE, "g thread set to ALL!!!");
+		thread_id = thread_any();
+	} else if (gdb->thread_id.g == THREAD_ID_ANY) {
+		DCC_LOG(LOG_TRACE, "g thread set to ANY");
+		thread_id = thread_any();
+	} else {
+		thread_id = gdb->thread_id.g;
+	}
 
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", th);
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 
-	if (!(__thinkos_thread_ispaused(th - 1) || 
-		  __thinkos_thread_isfaulty(th - 1))) {
+	if (!(__thinkos_thread_ispaused(thread_id - THREAD_ID_OFFS) || 
+		  __thinkos_thread_isfaulty(thread_id - THREAD_ID_OFFS))) {
 		return rsp_error(comm, 5);
 	} 
 
@@ -1020,7 +973,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 
 	/* all integer registers */
 	for (r = 0; r < 16; r++) {
-		thread_register_get(th, r, &val);
+		thread_register_get(thread_id, r, &val);
 		DCC_LOG2(LOG_INFO, "R%d = 0x%08x", r, val);
 		*cp++ = hextab[((val >> 4) & 0xf)];
 		*cp++ = hextab[(val & 0xf)];
@@ -1044,7 +997,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	*cp++ = ' ' + 4;
 
 	/* cpsr */
-	thread_register_get(th, 16, &val);
+	thread_register_get(thread_id, 16, &val);
 
 	*cp++ = hextab[((val >> 4) & 0xf)];
 	*cp++ = hextab[(val & 0xf)];
@@ -1058,79 +1011,6 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	n = cp - pkt;
 	return rsp_send_pkt(comm, pkt, n);
 }
-
-#if 0
-static int rsp_all_registers_get(struct gdb_rspd * gdb, 
-								 struct dmon_comm * comm, 
-								 char * pkt, int len)
-{
-	unsigned int val = 0;
-	int sum = 0;
-	int th;
-	int n;
-	int r;
-
-	if (gdb->thread_id.g <= 0)
-		th = gdb->current_thread;
-	else
-		th = gdb->thread_id.g;
-
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", th);
-
-	if (!(__thinkos_thread_ispaused(th - 1) || 
-		  __thinkos_thread_isfaulty(th - 1))) {
-		return rsp_error(comm, 5);
-	} 
-
-	pkt[0] = '$';
-	n = 1;
-
-	/* all integer registers */
-	for (r = 0; r < 16; r++) {
-		thread_register_get(th, r, &val);
-	
-		DCC_LOG2(LOG_INFO, "R%d = 0x%08x", r, val);
-
-		sum += pkt[n++] = hextab[((val >> 4) & 0xf)];
-		sum += pkt[n++] = hextab[(val & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 12) & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 8) & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 20) & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 16) & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 28) & 0xf)];
-		sum += pkt[n++] = hextab[((val >> 24) & 0xf)];
-	}
-
-	/* all fp registers */
-	for (r = 0; r < 8; r++) {
-		sum += pkt[n++] = '0' + r;
-		sum += pkt[n++] = '*';
-		sum += pkt[n++] = ' ' + 20;
-	}
-	/* fps */
-	sum += pkt[n++] = '0';
-	sum += pkt[n++] = '*';
-	sum += pkt[n++] = ' ' + 4;
-
-	/* cpsr */
-	thread_register_get(th, 16, &val);
-
-	sum += pkt[n++] = hextab[((val >> 4) & 0xf)];
-	sum += pkt[n++] = hextab[(val & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 12) & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 8) & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 20) & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 16) & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 28) & 0xf)];
-	sum += pkt[n++] = hextab[((val >> 24) & 0xf)];
-
-	pkt[n++] = '#';
-	pkt[n++] = hextab[((sum >> 4) & 0xf)];
-	pkt[n++] = hextab[sum & 0xf];
-
-	return dmon_comm_send(comm, pkt, n);
-}
-#endif
 
 static int rsp_all_registers_set(struct gdb_rspd * gdb, 
 								 struct dmon_comm * comm, char * pkt, int len)
@@ -1147,10 +1027,10 @@ static int rsp_register_get(struct gdb_rspd * gdb,
 	unsigned int val;
 	int sum = 0;
 	int reg;
-	int th;
+	int thread_id;
 	int n;
 
-	th = gdb->thread_id.p;
+	thread_id = gdb->thread_id.p;
 
 	reg = hex2int(&pkt[1], NULL);
 
@@ -1164,13 +1044,13 @@ static int rsp_register_get(struct gdb_rspd * gdb,
 
 	if (reg == 25) {
 		DCC_LOG1(LOG_TRACE, "reg=%d (cpsr)", reg);
-		thread_register_get(th, 16, &val);
+		thread_register_get(thread_id, 16, &val);
 	} else {
 		if (reg > 15 ) {
 			val = 0;
 			DCC_LOG1(LOG_WARNING, "reg=%d (float)", reg);
 		} else {
-			thread_register_get(th, reg, &val);
+			thread_register_get(thread_id, reg, &val);
 			DCC_LOG1(LOG_TRACE, "reg=%d", reg);
 		}
 	}
@@ -1210,16 +1090,16 @@ static int rsp_register_set(struct gdb_rspd * gdb,
 	uint32_t reg;
 	uint32_t tmp;
 	uint32_t val;
-	int th;
+	int thread_id;
 	char * cp;
 
 	if (gdb->thread_id.g <= 0)
-		th = gdb->current_thread;
+		thread_id = thread_active();
 	else
-		th = gdb->thread_id.g;
+		thread_id = gdb->thread_id.g;
 
-	if (!__thinkos_thread_isalive(th - 1)) {
-		DCC_LOG1(LOG_WARNING, "thread %d is dead!", th);
+	if (!thread_isalive(thread_id)) {
+		DCC_LOG1(LOG_WARNING, "thread %d is dead!", thread_id);
 		return rsp_ok(comm);
 	}
 
@@ -1249,7 +1129,7 @@ static int rsp_register_set(struct gdb_rspd * gdb,
 
 	DCC_LOG2(LOG_TRACE, "reg=%d val=0x%08x", reg, val);
 
-	if (thread_register_set(th, reg, val) < 0) {
+	if (thread_register_set(thread_id, reg, val) < 0) {
 		DCC_LOG(LOG_WARNING, "thread_register_set() failed!");
 		return rsp_error(comm, 2);
 	}
@@ -1383,7 +1263,7 @@ static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int thread_id;
 
 	if (gdb->thread_id.g <= 0)
-		thread_id = gdb->current_thread;
+		thread_id = thread_active();
 	else
 		thread_id = gdb->thread_id.g;
 
@@ -1396,14 +1276,14 @@ static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm,
 
 	DCC_LOG(LOG_TRACE, ".");
 
-	dmon_thread_step(thread_id - 1, false);
+	dmon_thread_step(thread_id, false);
 	return 0;
 }
 
 static int rsp_step_done(struct gdb_rspd * gdb, struct dmon_comm * comm, 
 						 char * pkt)
 {
-	int thread_id = thinkos_rt.step_id + 1;
+	int thread_id = thinkos_rt.step_id + THREAD_ID_OFFS;
 	unsigned int val;
 	int sum;
 	int n;
@@ -1472,16 +1352,16 @@ static int rsp_continue_sig(struct gdb_rspd * gdb, struct dmon_comm * comm,
 static int rsp_thread_isalive(struct dmon_comm * comm, char * pkt, int len)
 {
 	int ret = 0;
-	int id;
+	int thread_id;
 
-	id = hex2int(&pkt[1], NULL);
-	DCC_LOG1(LOG_INFO, "T%d", id);
+	thread_id = hex2int(&pkt[1], NULL);
+	DCC_LOG1(LOG_INFO, "T%d", thread_id);
 
 	/* Find out if the thread thread-id is alive. 
 	   ‘OK’ thread is still alive 
 	   ‘E NN’ thread is dead */
 
-	if (__thinkos_thread_isalive(id - 1))
+	if (thread_isalive(thread_id))
 		ret = rsp_ok(comm);
 	else 
 		ret = rsp_error(comm, 1);
@@ -1493,10 +1373,14 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 						char * pkt, int len)
 {
 	int ret = 0;
-	int id;
+	int thread_id;
 
-	id = hex2int(&pkt[2], NULL);
-	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], id);
+	if ((pkt[2] == '-') && (pkt[3] == '1'))
+		thread_id = THREAD_ID_ALL;
+	else
+		thread_id = hex2int(&pkt[2], NULL);
+
+	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], thread_id);
 
 	/* XXX: if there is an active application, even if it is suspended,
 	   writing over it may cause errors */
@@ -1509,32 +1393,23 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		gdb->active_app = true;
 	}
 
-	if (id <= 0)
-		id = gdb->current_thread;
-
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", id);
-
-	if (!__thinkos_thread_isalive(id - 1)) {
-		DCC_LOG1(LOG_WARNING, "thread %d is dead!", id);
-		return rsp_error(comm, 2);
-	}
-
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
-		gdb->thread_id.c = id;
+		gdb->thread_id.c = thread_id;
 		ret = rsp_ok(comm);
 		break;
 	case 'g':
-		gdb->thread_id.g = id;
+		gdb->thread_id.g = thread_id;
 		ret = rsp_ok(comm);
 		break;
 	case 'p':
-		gdb->thread_id.p = id;
+		gdb->thread_id.p = thread_id;
 		ret = rsp_ok(comm);
 		break;
 	default:
-		DCC_LOG2(LOG_WARNING, "Unsupported 'H%c%d'", pkt[1], id);
+		DCC_LOG2(LOG_WARNING, "Unsupported 'H%c%d'", pkt[1], thread_id);
 		ret = rsp_empty(comm);
 	}
 
@@ -1578,7 +1453,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 			case 'c':
 				DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
 				gdb->stopped = false;
-				__thinkos_thread_resume(thread_id - 1);
+				__thinkos_thread_resume(thread_id - THREAD_ID_OFFS);
 				break;
 			case 'C':
 				gdb->cont_signal = sig;
@@ -1941,54 +1816,6 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				rsp_stop_reply(gdb, comm, pkt);
 				break;
 
-			case CTRL_Q:
-				DCC_LOG(LOG_TRACE, "Ctrl+Q");
-				dmon_reset();
-				break;
-
-			case CTRL_P:
-				DCC_LOG(LOG_TRACE, "Ctrl+P");
-				monitor_pause_all(comm);
-				break;
-
-			case CTRL_R:
-				DCC_LOG(LOG_TRACE, "Ctrl+R");
-				monitor_resume_all(comm);
-				break;
-
-			case CTRL_I:
-				DCC_LOG(LOG_TRACE, "Ctrl+I");
-				dmon_print_osinfo(comm);
-				break;
-
-			case CTRL_N:
-				DCC_LOG(LOG_TRACE, "Ctrl+N");
-				thread_id = __thinkos_thread_getnext(thread_id);
-				if (thread_id == - 1)
-					thread_id = __thinkos_thread_getnext(thread_id);
-				dmprintf(comm, "Current thread = %d\r\n", thread_id);
-				dmon_print_thread(comm, thread_id);
-				break;
-
-			case CTRL_X:
-				DCC_LOG(LOG_TRACE, "Ctrl+X");
-				monitor_on_fault(comm);
-				break;
-
-			case CTRL_D:
-				DCC_LOG(LOG_TRACE, "Ctrl+D");
-				monitor_dump(comm);
-				break;
-
-			case CTRL_V:
-				DCC_LOG(LOG_TRACE, "Ctrl+V");
-				monitor_show_help(comm);
-				break;
-
-			case CTRL_Y:
-				DCC_LOG(LOG_TRACE, "Ctrl+Y");
-				dmon_print_stack_usage(comm);
-				break;
 
 			default:
 				DCC_LOG1(LOG_WARNING, "invalid: %02x", buf[0]);

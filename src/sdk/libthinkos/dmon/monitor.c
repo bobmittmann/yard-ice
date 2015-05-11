@@ -58,7 +58,7 @@
 #define CTRL_Y 0x19
 #define CTRL_Z 0x1a
 
-int8_t thread_id;
+int8_t monitor_thread_id;
 
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
@@ -155,9 +155,9 @@ static void monitor_exec(struct dmon_comm * comm)
 	__thinkos_resume_all();
 }
 
-void gdb_task(struct dmon_comm * comm);
+void gdb_task(struct dmon_comm *) __attribute__((weak, alias("monitor_task")));
 
-static int process_input(struct dmon_comm * comm, char * buf, int len)
+int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 {
 	int i;
 	int j;
@@ -170,17 +170,15 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "^C\r\n");
 			dmon_soft_reset(comm);
 			break;
-//		case CTRL_G:
-//			dmprintf(comm, "GDB\r\n");
-//		case '+':
-//			dmon_exec(gdb_task);
-//			break;
+		case '+':
+			dmon_exec(gdb_task);
+			break;
 		case CTRL_N:
-			thread_id = __thinkos_thread_getnext(thread_id);
-			if (thread_id == - 1)
-				thread_id = __thinkos_thread_getnext(thread_id);
-			dmprintf(comm, "Current thread = %d\r\n", thread_id);
-			dmon_print_thread(comm, thread_id);
+			monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
+			if (monitor_thread_id == - 1)
+				monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
+			dmprintf(comm, "Current thread = %d\r\n", monitor_thread_id);
+			dmon_print_thread(comm, monitor_thread_id);
 			break;
 		case CTRL_O:
 			dmon_print_osinfo(comm);
@@ -198,7 +196,7 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 			monitor_resume_all(comm);
 			break;
 		case CTRL_T:
-			dmon_print_thread(comm, thread_id);
+			dmon_print_thread(comm, monitor_thread_id);
 			break;
 		case CTRL_U:
 			dmon_print_stack_usage(comm);
@@ -229,6 +227,9 @@ static int process_input(struct dmon_comm * comm, char * buf, int len)
 	return len;
 }
 
+/*
+   Dafault Monitor Task
+ */
 
 void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 {
@@ -251,7 +252,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	dmprintf(comm, __hr__);
 #endif
 
-	thread_id = __thinkos_thread_getnext(-1);
+	monitor_thread_id = __thinkos_thread_getnext(-1);
 
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_EXCEPT);
@@ -289,7 +290,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
 				DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
 				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
-					len = process_input(comm, (char *)ptr, len);
+					len = monitor_process_input(comm, (char *)ptr, len);
 					__console_rx_pipe_commit(len); 
 				}
 			} else {
@@ -298,7 +299,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			}
 #else
 			if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
-				process_input(comm, buf, len);
+				monitor_process_input(comm, buf, len);
 			}
 #endif
 		}

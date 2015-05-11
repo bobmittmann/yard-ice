@@ -24,6 +24,7 @@
  */ 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <thinkos.h>
 #include <sys/console.h>
 #include <sys/stm32f.h>
@@ -71,6 +72,13 @@ void read_fault(void)
 		(void)x;
 		ptr += 0x10000000 / (2 << 4);
 	}
+}
+
+void usage_fault(void)
+{
+	void (* f)(int, int, int, int) = (void *)(0x0);
+
+	f(1, 2, 3, 4);
 }
 
 void write_fault(void)
@@ -143,28 +151,19 @@ void timer3_init(uint32_t freq)
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
-
-
-	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
-		   __func__, freq, pre, n);
-
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM3);
-	
 	/* Timer configuration */
 	tim->psc = pre - 1;
 	tim->arr = n - 1;
-	tim->cnt = 0;
-	tim->egr = 0;
+	tim->cnt = 0; 
+	tim->cr1 = TIM_CEN; /* Enable counter */
+	tim->egr = TIM_UG; /* Force update event */
+	while (tim->sr == 0);
+	tim->sr = 0;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
-	tim->cr2 = TIM_MMS_OC1REF;
-
 	/* Enable Timer interrupt */
 	thinkos_irq_register(STM32F_IRQ_TIM3, IRQ_PRIORITY_HIGH, stm32_tim3_isr);
-
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
 void timer2_init(uint32_t freq)
@@ -180,51 +179,26 @@ void timer2_init(uint32_t freq)
 	pre = (div / 65536) + 1;
 	/* get the reload register value */
 	n = (div + pre / 2) / pre;
-
-
-	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
-		   __func__, freq, pre, n);
-
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM2);
-	
 	/* Timer configuration */
 	tim->psc = pre - 1;
 	tim->arr = n - 1;
 	tim->cnt = 0;
-	tim->egr = 0;
+	tim->cr1 = TIM_CEN; /* Enable counter */
+	tim->egr = TIM_UG; /* Force update event */
+	while (tim->sr == 0);
+	tim->sr = 0;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
-	tim->cr2 = TIM_MMS_OC1REF;
-
 	/* Enable Timer interrupt */
 	thinkos_irq_register(STM32F_IRQ_TIM2, IRQ_PRIORITY_LOW, stm32_tim2_isr);
-
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
-int main(int argc, char ** argv)
+int led_task(void * arg)
 {
 	int i;
 
-	io_init();
-	stdio_init();
-
-	thinkos_sleep(2000);
-
-	timer3_init(10);
-	timer2_init(4);
-
-#if 0
-	printf("\r\n");
-	printf("--------------------------------------------\r\n");
-	printf("- Thread Fault Test\r\n");
-	printf("--------------------------------------------\r\n");
-#endif
-
-	for (i = 100000; i > 0; --i) {
-//		printf(" %d", i);
+	for (i = 10; i > 0; --i) {
 		__led_on(LED1);
 		thinkos_sleep(167);
 		__led_on(LED2);
@@ -241,9 +215,47 @@ int main(int argc, char ** argv)
 		thinkos_sleep(166);
 	}
 
-	printf(" ^^^\r\n");
+	usage_fault();
 
-//	read_fault();
+	return 0;
+}
+
+uint32_t led_stack[256];
+
+int main(int argc, char ** argv)
+{
+	int i;
+
+	io_init();
+	stdio_init();
+
+//	thinkos_sleep(2000);
+
+//	timer3_init(10);
+//	timer2_init(4);
+
+#if 0
+	printf("\r\n");
+	printf("--------------------------------------------\r\n");
+	printf("- Thread Fault Test\r\n");
+	printf("--------------------------------------------\r\n");
+#endif
+
+	thinkos_thread_create((void *)led_task, (void *)NULL,
+						  led_stack, sizeof(led_stack) | 
+						  THINKOS_OPT_PRIORITY(30) | 
+						  THINKOS_OPT_ID(30));
+
+
+	for (i = 1000; i > 0; --i) {
+		__led_on(LED1);
+		__led_on(LED2);
+		thinkos_sleep(500);
+		__led_off(LED1);
+		__led_off(LED2);
+		thinkos_sleep(500);
+	}
+
 
 	return 0;
 }

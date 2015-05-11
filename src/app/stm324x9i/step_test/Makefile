@@ -20,23 +20,24 @@
 # 
 
 
-PROG = fault_test
+PROG = step_test
 
-CFILES = fault_test.c 
+CFILES = step_test.c
 
 SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil\
-		  $(SDK)/libthinkos $(SDK)/libice-comm
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
+		   $(SDK)/libutil 
 
-LIBS = cm3 stm32f util thinkos ice-comm 
+LIBS = cm3 stm32f console util 
 
-INCPATH = $(SDK)/include  
-CDEFS = CONFIG_H
-CFLAGS = -g -O2
+INCPATH = $(SDK)/include ..
 
-JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f407
-#MACH = stm32f429
+CDEFS =
+
+CFLAGS = -g -O1 -Wall
+
+MACH = stm32f429
+THINKOS = 1
 include ../../../mk/stm32f4xx.mk
 

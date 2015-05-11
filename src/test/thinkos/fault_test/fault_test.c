@@ -247,6 +247,7 @@ void timer5_init(uint32_t period_ms)
 
 void monitor_init(void)
 {
+#if 0
 	struct dmon_comm * comm;
 
 	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
@@ -254,6 +255,7 @@ void monitor_init(void)
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_dmon_init()");
 	thinkos_dmon_init(comm, monitor_task);
+#endif
 }
 
 int main(int argc, char ** argv)

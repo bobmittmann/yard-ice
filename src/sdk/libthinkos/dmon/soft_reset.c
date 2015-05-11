@@ -32,6 +32,7 @@ void __thinkos_irq_disable_all(void)
 	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
 	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
 		cm3_irq_disable(irq);
+		cm3_irq_pend_clr(irq);
 		thinkos_rt.irq_th[irq] = -1;
 	}
 }

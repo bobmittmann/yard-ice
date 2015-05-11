@@ -23,7 +23,7 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-static const unsigned long long __div_tab[21] = {
+static const unsigned long long __lldiv_tab[21] = {
 	10000000000000000000ULL, 
 	8000000000000000000ULL, 
 	800000000000000000ULL, 
@@ -60,7 +60,7 @@ int ull2dec(char * s, unsigned long long val)
 		return 1;
 	}
 
-	dvp = (unsigned long long *)__div_tab;
+	dvp = (unsigned long long *)__lldiv_tab;
 	n = 0;
 	c = 0;
 	i = 4;

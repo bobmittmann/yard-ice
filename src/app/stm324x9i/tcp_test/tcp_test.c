@@ -34,6 +34,7 @@
 #include <stdbool.h>
 #include <sys/console.h>
 #include <sys/tty.h>
+#include <sys/null.h>
 
 #include <thinkos.h>
 
@@ -61,7 +62,8 @@ void stdio_init(void)
 	f_tty = tty_fopen(tty);
 
 	stderr = console_fopen();
-	stdout = f_tty;
+//	stdout = f_tty;
+	stdout = null_fopen(0);
 	stdin = f_tty;
 }
 

@@ -86,16 +86,17 @@ void __thinkos_ev_raise_i(int wq, int ev)
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 	int th;
 
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
 	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
 		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
 		/* wakeup from the event wait queue, set the return of
 		 the thread to event */
+		DCC_LOG2(LOG_INFO, "wakeup ev=%d.%d", wq, ev);
 		__thinkos_wakeup_return(wq, th, ev);
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	} else {
-		/* event is masked or no thread is waiting ont the event set, 
+		DCC_LOG2(LOG_INFO, "pending ev=%d.%d", wq, ev);
+		/* event is masked or no thread is waiting on the event set, 
 		   mark the event as pending */
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
