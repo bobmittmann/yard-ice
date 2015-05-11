@@ -25,8 +25,43 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
+#if THINKOS_ENABLE_DEBUG_STEP
+void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) 
+{
+	/* save the current stepping thread */
+	unsigned int isr_no;
+
+	thinkos_rt.step_id = thread_id;
+
+	asm volatile ("ldr   %0, [sp, #7 * 4]\n"
+				  : "=r" (isr_no) : : ); 
+	isr_no &= 0xff;
+
+	if (isr_no == CM3_EXCEPT_PENDSV) {
+		CM3_SCB->shcsr &= ~SCB_SHCSR_PENDSVACT; /* Clear PendSV active */
+		/* Remove NMI context */
+		asm volatile ("pop    {r0-r3,r12,lr}\n"
+					  "add    sp, sp, #2 * 4\n"
+					  : : : ); 
+	}
+	/* Step and return */
+	asm volatile ("movw   r3, #0xedf0\n"
+				  "movt   r3, #0xe000\n"
+				  "ldr    r2, [r3, #12]\n"
+				  "orr.w  r2, r2, #0x40000\n"
+				  "str    r2, [r3, #12]\n"
+				  "bx     lr\n"
+				  : :  : "r3", "r2"); 
+}
+#else
+void __thinkos_debug_step_i(unsigned int thread_id)
+{
+}
+#endif /* THINKOS_ENABLE_DEBUG_STEP */
+
 #if (THINKOS_SEMAPHORE_MAX  > 0)
-void __thinkos_sem_post_i(int sem) {
+void __thinkos_sem_post_i(int sem) 
+{
 	int th;
 
 	if ((th = __thinkos_wq_head(sem)) == THINKOS_THREAD_NULL) {
@@ -38,6 +73,10 @@ void __thinkos_sem_post_i(int sem) {
 		/* signal the scheduler ... */
 		__thinkos_defer_sched();
 	}
+}
+#else
+void __thinkos_sem_post_i(int sem) 
+{
 }
 #endif /* (THINKOS_SEMAPHORE_MAX > 0) */
 
@@ -60,6 +99,10 @@ void __thinkos_ev_raise_i(int wq, int ev)
 		   mark the event as pending */
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
+}
+#else
+void __thinkos_ev_raise_i(int wq, int ev)
+{
 }
 #endif /* (THINKOS_EVENT_MAX > 0) */
 
@@ -144,43 +187,24 @@ void __thinkos_flag_set_i(int wq)
 	}
 }
 
+#else
+void __thinkos_flag_give_i(int wq) 
+{
+}
+
+void __thinkos_flag_signal_i(int wq) 
+{
+}
+
+void __thinkos_flag_clr_i(int wq) 
+{
+}
+
+void __thinkos_flag_set_i(int wq) 
+{
+}
 #endif /* (THINKOS_FLAG_MAX > 0) */
 
-#if THINKOS_ENABLE_DEBUG_STEP
-void __attribute__((naked)) __thinkos_debug_step_i(unsigned int thread_id) 
-{
-	/* save the current stepping thread */
-	unsigned int isr_no;
-
-	thinkos_rt.step_id = thread_id;
-
-	asm volatile ("ldr   %0, [sp, #7 * 4]\n"
-				  : "=r" (isr_no) : : ); 
-	isr_no &= 0xff;
-
-	if (isr_no == CM3_EXCEPT_PENDSV) {
-		CM3_SCB->shcsr &= ~SCB_SHCSR_PENDSVACT; /* Clear PendSV active */
-		/* Remove NMI context */
-		asm volatile ("pop    {r0-r3,r12,lr}\n"
-					  "add    sp, sp, #2 * 4\n"
-					  : : : ); 
-	}
-	/* Step and return */
-	asm volatile ("movw   r3, #0xedf0\n"
-				  "movt   r3, #0xe000\n"
-				  "ldr    r2, [r3, #12]\n"
-				  "orr.w  r2, r2, #0x40000\n"
-				  "str    r2, [r3, #12]\n"
-				  "bx     lr\n"
-				  : :  : "r3", "r2"); 
-}
-#else
-void __thinkos_debug_step_i(unsigned int thread_id)
-{
-}
-#endif /* THINKOS_ENABLE_DEBUG_STEP */
-
-#if 1
 void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 {
 	asm volatile ("lsl    r12, r12, #2\n"
@@ -197,57 +221,6 @@ void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 				  : : "r" (arg1), "r" (arg2), "r" (arg3), "r" (arg4) : ); 
 
 }
-#endif
-
-#if 0
-void cm3_nmi_isr(int arg1, int arg2, int svc)
-{
-
-	switch (svc) {
-	case THINKOS_SEM_POST_I:
-#if THINKOS_SEMAPHORE_MAX > 0
-		__thinkos_sem_post_i(arg1);
-#endif /* THINKOS_SEMAPHORE_MAX > 0 */
-		break;
-
-	case THINKOS_EV_RAISE_I:
-#if (THINKOS_EVENT_MAX > 0)
-		__thinkos_ev_raise_i(arg1, arg2);
-#endif /* (THINKOS_EVENT_MAX > 0) */
-		break;
-
-	case THINKOS_FLAG_GIVE_I:
-#if (THINKOS_FLAG_MAX > 0)
-		__thinkos_flag_give_i(arg1);
-#endif /* (THINKOS_FLAG_MAX > 0) */
-		break;
-
-	case THINKOS_FLAG_SIGNAL_I:
-#if (THINKOS_FLAG_MAX > 0)
-		__thinkos_flag_signal_i(arg1);
-#endif /* (THINKOS_FLAG_MAX > 0) */
-		break;
-
-	case THINKOS_FLAG_CLR_I:
-#if (THINKOS_FLAG_MAX > 0)
-		__thinkos_flag_clr_i(arg1);
-#endif /* (THINKOS_FLAG_MAX > 0) */
-		break;
-
-	case THINKOS_FLAG_SET_I:
-#if (THINKOS_FLAG_MAX > 0)
-		__thinkos_flag_set_i(arg1);
-#endif /* (THINKOS_FLAG_MAX > 0) */
-		break;
-
-	case THINKOS_DEBUG_STEP_I:
-#if THINKOS_ENABLE_DEBUG_STEP
-		__thinkos_debug_step_i(arg1);
-#endif /* THINKOS_ENABLE_DEBUG_STEP */
-		break;
-	}
-}
-#endif
 
 /* FIXME: this is a hack to force linking this file. 
  The linker then will override the weak alias for the cm3_svc_isr() */

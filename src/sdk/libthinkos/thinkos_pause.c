@@ -266,33 +266,6 @@ bool __thinkos_thread_pause(unsigned int th)
 	return true;
 }
 
-#if THINKOS_ENABLE_MONITOR
-
-void __thinkos_pause_all(void)
-{
-	int32_t th;
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL)
-			__thinkos_thread_pause(th);
-	}
-
-	__thinkos_defer_sched();
-}
-
-void __thinkos_resume_all(void)
-{
-	int32_t th;
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL)
-			__thinkos_thread_resume(th);
-	}
-	__thinkos_defer_sched();
-}
-
-#endif /* THINKOS_ENABLE_MONITOR */
-
 #endif /* THINKOS_ENABLE_THREAD_STAT */
 
 bool __thinkos_thread_resume(unsigned int th)

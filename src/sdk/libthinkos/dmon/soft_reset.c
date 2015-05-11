@@ -72,8 +72,10 @@ void dmon_soft_reset(struct dmon_comm * comm)
 //	__thinkos_defer_sched();
 //	dmon_wait_idle();
 
+#if THINKOS_ENABLE_CONSOLE
 	DCC_LOG(LOG_TRACE, "5. console reset...");
 	__console_reset();
+#endif
 
 	DCC_LOG(LOG_TRACE, "6. exception reset...");
 	__exception_reset();

@@ -488,6 +488,17 @@ struct cm3_context {
 	uint32_t xpsr;
 };
 
+struct cm3_except_context {
+	uint32_t r0;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+	uint32_t r12;
+	uint32_t lr;
+	uint32_t pc;
+	uint32_t xpsr;
+};
+
 #define __NOP() __asm__ __volatile__ ("\tnop\n" : : )
 
 /****************************************************************************
@@ -523,8 +534,20 @@ struct cm3_scb {
 	volatile uint32_t fpdscr; /* Floating Point Default Status Control */
 	volatile uint32_t mvfr0; /* Media and FP Feature Register 0 */
 	volatile uint32_t mvfr1; /* Media and FP Feature Register 1 */
-	volatile uint32_t mvfr2; /* Media and FP Feature Register 2 */
+	volatile uint32_t mvfr2; /* Media and FP Feature Register 2 (0xf48) */
 }; 
+
+/* System control and ID registers not in the SCB */
+struct cm3_sys {
+	volatile uint32_t mcr; /* Master Control Register, Reserved */
+	uint32_t ictr; /* Interrupt Controller Type Register */
+	volatile uint32_t actlr; /* Auxiliarly Controller Register */
+	volatile uint32_t stir; /* Software Trigger Interrupt Register */
+}; 
+
+/* Interrupt Controller Type Register */
+#define CM3_ICTR_ADDR 0xe000e004 
+#define CM3_ICTR (*((uint32_t *)CM3_ICTR_ADDR)) 
 
 /****************************************************************************
   CM3 DCB (Debug Control Block)

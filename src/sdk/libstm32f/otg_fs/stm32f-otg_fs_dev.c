@@ -546,6 +546,7 @@ static void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
 	/* Connect device */
 	otg_fs->dctl &= ~OTG_FS_SDIS;
 	udelay(3000);
+
 }
 
 static void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)

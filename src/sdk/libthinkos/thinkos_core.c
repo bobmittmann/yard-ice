@@ -133,8 +133,7 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 			/* Set the IDLE signal bit */
 			*sig_bit = val;
 			/* Call the monitor by a pending a monitor interrupt */
-			CM3_DCB->demcr |= DCB_DEMCR_MON_PEND;
-//			thinkos_debug_step_i(new_thread_id);
+			CM3_DCB->demcr |= DCB_DEMCR_MON_PEND | DCB_DEMCR_MON_REQ;
 		}
 #endif
 #if THINKOS_ENABLE_IDLE_WFI
