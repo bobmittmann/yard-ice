@@ -56,15 +56,17 @@ const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void io_init(void)
 {
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
-	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
-	stm32_gpio_set(LED1);
-
 	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
 	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
 	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
+
+#if 0
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_set(LED1);
+#endif
 
 #if 0
 	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
@@ -142,7 +144,7 @@ void boot_task(struct dmon_comm * comm)
 
 	}
 
-	__thinkos_thread_abort(0);
+//	__thinkos_thread_abort(0);
 	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
 	dmon_app_exec(false);
 	dmon_exec(monitor_task);
@@ -182,11 +184,15 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
 
+	__thinkos_thread_abort(0);
+
 	for (;;) {
+#if 0
 		thinkos_sleep(250);
 		stm32_gpio_set(LED1);
 		thinkos_sleep(250);
 		stm32_gpio_clr(LED1);
+#endif
 	}
 
 	return 0;

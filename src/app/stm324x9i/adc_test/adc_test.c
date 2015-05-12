@@ -162,3 +162,8 @@ int main(int argc, char ** argv)
 }
 
 
+void _exit(int status)
+{
+	for (;;);
+}
+

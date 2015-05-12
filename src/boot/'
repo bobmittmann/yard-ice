@@ -831,18 +831,8 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		   '1' - The remote server attached to an existing process. 
 		   '0' - The remote server created a new process. 
 		 */
-		/* XXX: if there is no active application run  */
-		if (!gdb->active_app) {
-			DCC_LOG(LOG_WARNING, "no active application, "
-					"calling dmon_app_exec()!");
-			if (dmon_app_exec(true) < 0) {
-				return rsp_error(comm, 1);
-			}
-			gdb->active_app = true;
-			n = str2str(pkt, "$0");
-		} else {
-			n = str2str(pkt, "$1");
-		}
+//		n = str2str(pkt, "$1");
+		n = str2str(pkt, "$0");
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -1303,14 +1293,26 @@ static int rsp_step_done(struct gdb_rspd * gdb, struct dmon_comm * comm,
 						 char * pkt)
 {
 	int thread_id = thinkos_rt.step_id + THREAD_ID_OFFS;
+	unsigned int val;
+	int sum;
+	int n;
 
 	(void)thread_id;
 	DCC_LOG1(LOG_TRACE, "thread_id=%d.", thread_id);
 
-	dmon_app_suspend();
-	gdb->stopped = true;
+	pkt[0] = '$';
+	pkt[1] = sum = 'T';
+	n = 2;
+	/* signal */
+	val = 5;
+	sum += pkt[n++] = hextab[((val >> 4) & 0xf)];
+	sum += pkt[n++] = hextab[(val & 0xf)];
 
-	return rsp_stop_reply(gdb, comm, pkt);
+	pkt[n++] = '#';
+	pkt[n++] = hextab[((sum >> 4) & 0xf)];
+	pkt[n++] = hextab[sum & 0xf];
+
+	return dmon_comm_send(comm, pkt, n);
 }
 
 static int rsp_continue(struct gdb_rspd * gdb, struct dmon_comm * comm, 
@@ -1379,14 +1381,12 @@ static int rsp_thread_isalive(struct gdb_rspd * gdb,
 	thread_id = hex2int(&pkt[1], NULL);
 	DCC_LOG1(LOG_INFO, "thread_id = %d", thread_id);
 
-	/* XXX: if there is no active application run  */
+
+	/* XXX: if there is an active application, even if it is suspended,
+	   writing over it may cause errors */
 	if (!gdb->active_app) {
-		DCC_LOG(LOG_WARNING, "no active application, "
-				"calling dmon_app_exec()!");
-		if (dmon_app_exec(true) < 0) {
-			return rsp_error(comm, 1);
-		}
-		gdb->active_app = true;
+		DCC_LOG(LOG_WARNING, "no active application, calling dmon_app_exec()!");
+		dmon_app_exec(true);
 	}
 
 	/* Find out if the thread thread-id is alive. 
@@ -1407,24 +1407,25 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int ret = 0;
 	int thread_id;
 
-	if ((pkt[2] == '-') && (pkt[3] == '1')) {
+	if ((pkt[2] == '-') && (pkt[3] == '1'))
 		thread_id = THREAD_ID_ALL;
-		DCC_LOG(LOG_TRACE, "all threads");
-	} else {
+	else
 		thread_id = hex2int(&pkt[2], NULL);
-		DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
-	}
 
-	/* XXX: if there is no active application run  */
+	DCC_LOG2(LOG_TRACE, "H%c%d", pkt[1], thread_id);
+
+	/* XXX: if there is an active application, even if it is suspended,
+	   writing over it may cause errors */
 	if (!gdb->active_app) {
-		DCC_LOG(LOG_WARNING, "no active application, "
-				"calling dmon_app_exec()!");
+		DCC_LOG(LOG_WARNING, "no active application!");
+		DCC_LOG(LOG_TRACE, "dmon_app_exec()");
 		if (dmon_app_exec(true) < 0) {
 			return rsp_error(comm, 1);
 		}
 		gdb->active_app = true;
 	}
 
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
@@ -1455,7 +1456,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 {
 #if GDB_ENABLE_VCONT
 	unsigned int sig = 0;
-	int thread_id = THREAD_ID_ALL;
+	int thread_id = 0;
 	int n;
 	char * cp;
 	int action ;
@@ -1465,7 +1466,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 
 	if (prefix(pkt, "vCont?")) {
 		DCC_LOG(LOG_TRACE, "vCont?");
-		n = str2str(pkt, "$vCont;c;C;s;S;t");
+		n = str2str(pkt, "$vCont;cC;sS;t");
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -1473,9 +1474,6 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 		cp = &pkt[5];
 
 		while (*cp == ';') {
-			sig = 0;
-			thread_id = THREAD_ID_ALL;
-
 			++cp;
 			action = *cp++;
 			if ((action == 'C') || (action == 'S')) {
@@ -1484,43 +1482,22 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 			if (*cp == ':') { 
 				cp++;
 				thread_id = hex2int(cp, &cp);
+			} else {
+				thread_id = 0;
 			}
 
-			switch (action) {
+			switch (pkt[6]) {
 			case 'c':
-				if (thread_id == THREAD_ID_ALL) {
-					DCC_LOG(LOG_TRACE, "Continue all!");
-					/* XXX: if there is no active application run  */
-					if (!gdb->active_app) {
-						DCC_LOG(LOG_WARNING, "no active application, "
-								"calling dmon_app_exec()!");
-						if (dmon_app_exec(true) < 0) {
-							return rsp_error(comm, 1);
-						}
-						gdb->active_app = true;
-					}
-					dmon_app_continue();
-					gdb->stopped = false;
-				} else {
-					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
-					__thinkos_thread_resume(thread_id - THREAD_ID_OFFS);
-				}
+				DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
+				gdb->stopped = false;
+				__thinkos_thread_resume(thread_id - THREAD_ID_OFFS);
 				break;
 			case 'C':
+				gdb->cont_signal = sig;
 				DCC_LOG2(LOG_TRACE, "Continue %d sig=%d", thread_id, sig);
-				if (thread_id == THREAD_ID_ALL) {
-					DCC_LOG(LOG_TRACE, "Continue all!");
-					dmon_app_continue();
-					gdb->stopped = false;
-				} else {
-					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
-					__thinkos_thread_resume(thread_id - THREAD_ID_OFFS);
-				}
-				gdb->last_signal = sig;
 				break;
 			case 's':
 				DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
-				dmon_thread_step(thread_id - THREAD_ID_OFFS, false);
 				break;
 			case 'S':
 				DCC_LOG2(LOG_TRACE, "Step %d sig=%d", thread_id, sig);
@@ -1535,14 +1512,14 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 			}
 		}
 
-		return rsp_stop_reply(gdb, comm, pkt);
+		/* signal that we are now running */
+		return rsp_ack(comm);
 	}
 
 	/* signal that we are now running */
-	DCC_LOG(LOG_WARNING, "v???");
-	return rsp_empty(comm);
+	return rsp_ack(comm);
 #else
-	DCC_LOG(LOG_WARNING, "vCont unsupported!");
+	DCC_LOG(LOG_WWARNING, "vCont unsupported!");
 	return rsp_empty(comm);
 #endif
 }

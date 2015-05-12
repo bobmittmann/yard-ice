@@ -89,6 +89,13 @@ DDIRS = $(sort $(dir $(DFILES)))
 LIBDIRS := $(abspath $(LIBDIRS))
 
 #------------------------------------------------------------------------------ 
+# Installation directory
+#------------------------------------------------------------------------------ 
+
+INSTALL_DIR = $(abspath .)
+LIBINSTALL_DIR = $(abspath $(OUTDIR))
+
+#------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
 LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
@@ -143,8 +150,17 @@ ifeq ($(HOST),Cygwin)
   PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
 endif
 
-
 #export LDFLAGS INCPATH LIBPATH
+
+CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) \
+			   $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) \
+			   $(PROG_MAP)
+
+ifeq (Windows,$(HOST))
+  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
+  INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
+  LIBINSTALL_DIR := $(subst /,\,$(LIBINSTALL_DIR))
+endif
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -160,19 +176,15 @@ FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'SFLAGS=$(SFLAGS)'\
 				 'LDFLAGS=$(LDFLAGS)'\
 				 'INCPATH=$(INCPATH)'\
-				 'LIBPATH=$(LIBPATH)'
+				 'LIBPATH=$(LIBPATH)'\
+				 'INSTALL_DIR=$(LIBINSTALL_DIR)'
 
 LIBDIRS_ALL := $(LIBDIRS:%=%-all)
 
 LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
-CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) \
-			   $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) \
-			   $(PROG_MAP)
+LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 
-ifeq (Windows,$(HOST))
-  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
-endif
 
 all: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
@@ -196,6 +208,8 @@ lst: $(PROG_LST)
 libs-all: $(LIBDIRS_ALL)
 
 libs-clean: $(LIBDIRS_CLEAN)
+
+libs-install: $(LIBDIRS_INSTALL)
 
 #------------------------------------------------------------------------------ 
 # Helpers to print the binary full path
@@ -225,7 +239,7 @@ cleanRelease:
 
 .PHONY: all clean prog elf map bin lst libs-all libs-clean bin_path elf_path 
 .PHONY: Debug Release cleanDebug cleanRelease
-.PHONY: $(LIBDIRS_ALL) $(LIBDIRS_CLEAN)
+.PHONY: $(LIBDIRS_ALL) $(LIBDIRS_CLEAN) $(LIBDIRS_INSTALL)
 
 #------------------------------------------------------------------------------ 
 # Library dependencies targets
@@ -238,6 +252,10 @@ $(LIBDIRS_ALL):
 $(LIBDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
 	$(Q)$(MAKE) -C $(@:%-clean=%) O=$(OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
+
+$(LIBDIRS_INSTALL):
+	$(ACTION) "Installing : $@"
+	$(Q)$(MAKE) -C $(@:%-install=%) O=$(OUTDIR)/$(notdir $(@:%-install=%)) $(FLAGS_TO_PASS) install
 
 #------------------------------------------------------------------------------ 
 # Program targets
@@ -313,6 +331,8 @@ ifeq ($(HOST),Windows)
 else
 	$(Q)$(MKDIR) $@ 
 endif
+
+$(LIBDIRS_INSTALL): | $(ODIRS)
 
 $(LIBDIRS_ALL): | $(ODIRS)
 

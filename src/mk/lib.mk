@@ -72,6 +72,12 @@ DFILES = $(addprefix $(DEPDIR)/, $(CFILES:.c=.d) $(SFILES:.S=.d))
 DDIRS = $(sort $(dir $(DFILES)))
 
 #------------------------------------------------------------------------------ 
+# Installation directory
+#------------------------------------------------------------------------------ 
+
+INSTALL_DIR = $(abspath .)
+
+#------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
 override INCPATH += $(abspath .)
@@ -88,8 +94,8 @@ endif
 ifdef LIB_STATIC
   LIB_STATIC_OUT = $(OUTDIR)/lib$(LIB_STATIC).a
   LIB_STATIC_LST = $(OUTDIR)/lib$(LIB_STATIC).lst
-  LIB_OUT := $(LIB_STATIC_OUT)
-  LIB_LST := $(LIB_STATIC_LST)
+  LIB_OUT = $(LIB_STATIC_OUT)
+  LIB_LST = $(LIB_STATIC_LST)
 endif
 
 ifdef LIB_SHARED
@@ -113,6 +119,8 @@ CLEAN_FILES := $(OFILES) $(DFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHA
 
 ifeq (Windows,$(HOST))
   CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
+  LIB_OUT := $(subst /,\,$(LIB_OUT))
+  INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
@@ -144,6 +152,10 @@ all: $(LIB_OUT)
 
 clean: deps-clean
 	$(Q)$(RMALL) $(CLEAN_FILES)
+
+install: $(LIB_OUT)
+	$(Q)$(CP) $(LIB_OUT) $(INSTALL_DIR)
+
 
 lib: $(LIB_OUT)
 

@@ -148,6 +148,10 @@ int dmon_app_exec(bool paused);
 
 int dmon_app_load_ymodem(struct dmon_comm * comm);
 
+bool dmon_app_suspend(void);
+
+bool dmon_app_continue(void);
+
 void dmon_comm_irq_config(struct dmon_comm * comm);
 
 void dmon_irq_disable_all(void);

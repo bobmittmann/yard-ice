@@ -20,22 +20,20 @@
 # 
 
 
-PROG = step_test
+#PROG = dummy
 
-CFILES = step_test.c
+#CFILES = dummy.c
 
 SDK = ../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libutil 
+		   $(SDK)/libutil $(SDK)/libc
 
-LIBS = cm3 stm32f console util 
+LIBS = cm3 stm32f console util c 
 
 INCPATH = $(SDK)/include ..
 
-CDEFS =
-
-CFLAGS = -g -O0 -Wall
+CFLAGS = -g -O1 -Wall
 
 MACH = stm32f429
 THINKOS = 1

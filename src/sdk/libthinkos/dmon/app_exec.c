@@ -45,6 +45,10 @@ extern uint32_t _stack;
 const uint32_t thinkos_app_blk_addr = 0x08010000;
 const uint32_t thinkos_app_blk_size = (64 + 128) * 1024;
 
+/* -------------------------------------------------------------------------
+ * Application execution
+ * ------------------------------------------------------------------------- */
+
 int dmon_app_exec(bool paused)
 {
 	uint32_t * app = (uint32_t *)thinkos_app_blk_addr;
@@ -68,5 +72,32 @@ int dmon_app_exec(bool paused)
 	}
 
 	return 0;
+}
+
+bool dmon_app_suspend(void)
+{
+	__thinkos_pause_all();
+
+	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
+		DCC_LOG(LOG_TRACE, "Current is Idle!");
+	} else {
+		DCC_LOG1(LOG_TRACE, "current_thread=%d", thinkos_rt.active);
+	}
+
+	/* clear stepping requests */
+	thinkos_rt.step_req = 0;
+
+	dmon_wait_idle();
+
+	return true;
+}
+
+bool dmon_app_continue(void)
+{
+	DCC_LOG(LOG_TRACE, "....");
+
+	__thinkos_resume_all();
+
+	return true;
 }
 

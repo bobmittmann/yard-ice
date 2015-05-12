@@ -41,8 +41,6 @@ unsigned int stm32_usart_baudrate_get(struct stm32_usart * us)
 	else 
 		f_pclk = stm32f_apb1_hz;
 
-	div = f_pclk / baudrate;
-
 	m = us->brr >> 4;
 	f = us->brr & 0x0f;
 

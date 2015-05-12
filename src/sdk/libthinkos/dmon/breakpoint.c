@@ -301,51 +301,6 @@ void dmon_breakpoint_clear_all(void)
 #endif
 
 /* -------------------------------------------------------------------------
- * Thread stepping
- * ------------------------------------------------------------------------- */
-
-#if (THINKOS_ENABLE_DEBUG_STEP)
-int dmon_thread_step(unsigned int thread_id, bool sync)
-{
-	int ret;
-
-	DCC_LOG2(LOG_INFO, "step_req=%08x thread_id=%d", 
-			 thinkos_rt.step_req, thread_id);
-
-	if (CM3_DCB->dhcsr & DCB_DHCSR_C_DEBUGEN) {
-		DCC_LOG(LOG_ERROR, "can't step: DCB_DHCSR_C_DEBUGEN !!");
-		return -1;
-	}
-
-	if (thread_id >= THINKOS_THREADS_MAX) {
-		DCC_LOG1(LOG_ERROR, "thread %d is invalid!", thread_id);
-		return -1;
-	}
-
-	if (__bit_mem_rd(&thinkos_rt.step_req, thread_id)) {
-		DCC_LOG1(LOG_WARNING, "thread %d is step waiting already!", thread_id);
-		return -1;
-	}
-
-	/* request stepping the thread  */
-	__bit_mem_wr(&thinkos_rt.step_req, thread_id, 1);
-	/* resume the thread */
-	__thinkos_thread_resume(thread_id);
-	/* make sure to run the scheduler */
-	__thinkos_defer_sched();
-
-	DCC_LOG1(LOG_TRACE, "thread_id=%d +++++++++++++++++++++", thread_id);
-
-	if (sync) {
-		if ((ret = dmon_wait(DMON_THREAD_STEP)) < 0)
-			return ret;
-	}
-
-	return 0;
-}
-#endif
-
-/* -------------------------------------------------------------------------
  * Debug Monitor Core
  * ------------------------------------------------------------------------- */
 
@@ -391,7 +346,31 @@ static void dmon_on_reset(struct thinkos_dmon * dmon)
 	dmon->mask |= (1 << DMON_RESET) | (1 << DMON_COMM_CTL) | (1 << DMON_EXCEPT);
 }
 
-void dmon_isr(struct cm3_except_context * ctx)
+#if 0
+void thinkos_suspend_all(void)
+{
+	int32_t th;
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		__thinkos_thread_pause(th);
+	}
+
+	__thinkos_defer_sched();
+}
+#endif
+
+static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
+	register uint32_t sp;
+	asm volatile ("tst lr, #4\n" 
+				  "ite eq\n" 
+				  "mrseq %0, MSP\n" 
+				  "mrsne %0, PSP\n" 
+				  : "=r" (sp));
+	return sp;
+}
+
+#if 1
+void cm3_debug_mon_isr(void)
 {
 	uint32_t sigset = thinkos_dmon_rt.events;
 	uint32_t sigmsk = thinkos_dmon_rt.mask;
@@ -408,6 +387,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
 #endif
 #if (THINKOS_ENABLE_DEBUG_STEP)
+	uint32_t lr = cm3_lr_get();
 	uint32_t dfsr;
 
 	/* read SCB Debug Fault Status Register */
@@ -423,9 +403,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 				 dfsr & SCB_DFSR_HALTED ? '1' : '0');
 
 		if (dfsr & SCB_DFSR_BKPT) {
-			if ((CM3_SCB->icsr & SCB_ICSR_RETTOBASE) == 0) {
-				DCC_LOG2(LOG_ERROR, "<<BREAKPOINT>>: exception=%d pc=%08x", 
-						 ctx->xpsr & 0x1ff, ctx->pc);
+			if (lr & 0x4) {
 				DCC_LOG(LOG_ERROR, "invalid breakpoint on exception!!!");
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
@@ -437,11 +415,11 @@ void dmon_isr(struct cm3_except_context * ctx)
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
-				DCC_LOG2(LOG_TRACE, "<<BREAKPOINT>>: thread_id=%d pc=%08x ---", 
-						 thinkos_rt.active, ctx->pc);
 				/* suspend the current thread */
 				__thinkos_thread_pause(thinkos_rt.active);
 				__thinkos_defer_sched();
+				DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+						 thinkos_rt.active);
 			} else {
 				DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
 						 thinkos_rt.active);
@@ -465,8 +443,8 @@ void dmon_isr(struct cm3_except_context * ctx)
 				sigmsk |= (1 << DMON_THREAD_STEP);
 				thinkos_dmon_rt.events = sigset;
 				__thinkos_defer_sched();
-				DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ------------------", 
-						 thinkos_rt.step_id, ctx->pc);
+				DCC_LOG1(LOG_TRACE, "thread_id=%d --------------------", 
+						 thinkos_rt.step_id);
 			} else {
 				DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
 						 thinkos_rt.step_id);
@@ -487,66 +465,9 @@ void dmon_isr(struct cm3_except_context * ctx)
 	}
 
 }
-
-void __attribute__((naked)) cm3_debug_mon_isr(void)
-{
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq r0, MSP\n" 
-				  "mrsne r0, PSP\n" 
-				  "b   dmon_isr\n"
-				  : : : "r0");
-}
-
-void thinkos_exception_dsr(struct thinkos_except * xcpt)
-{
-	if (xcpt->thread_id >= 0) {
-		DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!", 
-				 xcpt->thread_id);
-		dmon_signal(DMON_THREAD_FAULT);
-	} else {
-		DCC_LOG1(LOG_ERROR, "Exception at IRQ: %d !!!", 
-				 (xcpt->ctx.xpsr & 0x1ff) - 16);
-		dmon_signal(DMON_EXCEPT);
-	}
-}
-
-/* -------------------------------------------------------------------------
- * ThinkOS thread level API
- * ------------------------------------------------------------------------- */
-
-void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
-{
-	struct cm3_dcb * dcb = CM3_DCB;
-	
-	thinkos_dmon_rt.events = (1 << DMON_RESET);
-	thinkos_dmon_rt.mask = (1 << DMON_RESET);
-	thinkos_dmon_rt.req = 0;
-	thinkos_dmon_rt.comm = comm;
-	thinkos_dmon_rt.task = task;
-
-	__thinkos_memset32(thinkos_dmon_stack, 0xdeadbeef, 
-					   sizeof(thinkos_dmon_stack));
-
-	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);
-
-	/* enable monitor and send the start event */
-	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
-}
-
-#endif /* THINKOS_ENABLE_MONITOR */
+#endif
 
 #if 0
-static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
-	register uint32_t sp;
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq %0, MSP\n" 
-				  "mrsne %0, PSP\n" 
-				  : "=r" (sp));
-	return sp;
-}
-
 
 static inline void __attribute__((always_inline)) __wait(void) {
 	asm volatile ("mov    r3, #1\n"
@@ -629,4 +550,44 @@ void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
 }
 #endif
 
+
+/* -------------------------------------------------------------------------
+ * ThinkOS thread level API
+ * ------------------------------------------------------------------------- */
+
+void thinkos_exception_dsr(struct thinkos_except * xcpt)
+{
+	if (xcpt->thread_id >= 0) {
+		DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!", 
+				 xcpt->thread_id);
+		dmon_signal(DMON_THREAD_FAULT);
+	} else {
+		DCC_LOG1(LOG_ERROR, "Exception at IRQ: %d !!!", 
+				 (xcpt->ctx.xpsr & 0x1ff) - 16);
+		dmon_signal(DMON_EXCEPT);
+	}
+}
+
+void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
+{
+	struct cm3_dcb * dcb = CM3_DCB;
+	
+	thinkos_dmon_rt.events = (1 << DMON_RESET);
+	thinkos_dmon_rt.mask = (1 << DMON_RESET);
+	thinkos_dmon_rt.req = 0;
+	thinkos_dmon_rt.comm = comm;
+	thinkos_dmon_rt.task = task;
+
+	__thinkos_memset32(thinkos_dmon_stack, 0xdeadbeef, 
+					   sizeof(thinkos_dmon_stack));
+
+	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);
+
+	/* enable monitor and send the start event */
+	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
+}
+
+
+
+#endif /* THINKOS_ENABLE_MONITOR */
 
