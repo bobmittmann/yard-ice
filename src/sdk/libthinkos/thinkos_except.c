@@ -196,12 +196,42 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	uint32_t icsr;
 	uint32_t ret;
 	uint32_t xpsr;
+	uint32_t shcsr;
 	int ipsr;
+	int irq;
 
 	ipsr = cm3_ipsr_get();
 	__idump(__func__, ipsr);
 
-	xpsr = 0x01000000 + __xcpt_next_active_irq(ipsr - 16) + 16;
+	if ((irq = __xcpt_next_active_irq(ipsr - 16)) >= 0) {
+		xpsr = 0x01000000 + __xcpt_next_active_irq(ipsr - 16) + 16;
+	} else if ((shcsr = CM3_SCB->shcsr) & (SCB_SHCSR_SYSTICKACT | 
+										   SCB_SHCSR_PENDSVACT | 
+										   SCB_SHCSR_MONITORACT | 
+										   SCB_SHCSR_SVCALLACT |
+										   SCB_SHCSR_USGFAULTACT |  
+										   SCB_SHCSR_BUSFAULTACT |
+										   SCB_SHCSR_MEMFAULTACT)) {
+		if (shcsr & SCB_SHCSR_MEMFAULTACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_MEM_MANAGE;
+		} else if (shcsr & SCB_SHCSR_BUSFAULTACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_BUS_FAULT;
+		} else if (shcsr & SCB_SHCSR_USGFAULTACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_USAGE_FAULT;
+		} else if (shcsr & SCB_SHCSR_SVCALLACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_SVC;
+		} else if (shcsr & SCB_SHCSR_MONITORACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_DEBUG_MONITOR;
+		} else if (shcsr & SCB_SHCSR_PENDSVACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_PENDSV;
+		} else if (shcsr & SCB_SHCSR_SYSTICKACT) {
+			xpsr = 0x01000000 + CM3_EXCEPT_SYSTICK;
+		} else 
+			xpsr = 0x01000000;
+	} else {
+		xpsr = 0x01000000;
+	}
+
 
 	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
 	sf->r0 = (uint32_t)xcpt;
@@ -538,6 +568,8 @@ void __attribute__((naked)) cm3_hard_fault_isr(void)
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
 	__hard_fault(&thinkos_except_buf);
+	__xcpt_irq_disable_all();
+	__xcpt_return(&thinkos_except_buf);
 #if THINKOS_SYSRST_ONFAULT
 	cm3_sysrst();
 #else

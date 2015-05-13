@@ -31,13 +31,13 @@ extern const uint8_t thinkos_obj_type_lut[];
 
 static void ready_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	DCC_LOG(LOG_TRACE, "...........");
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 }
 #if THINKOS_ENABLE_TIMESHARE
 static void tmshare_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	DCC_LOG(LOG_TRACE, "...........");
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 
 }
@@ -45,7 +45,7 @@ static void tmshare_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_ENABLE_CLOCK
 static void clock_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	DCC_LOG(LOG_TRACE, "...........");
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 }
 #endif
@@ -309,6 +309,7 @@ bool __thinkos_thread_resume(unsigned int th)
 		resume(th, wq, tmw);
 	}
 #else
+	DCC_LOG1(LOG_TRACE, "thread=%d [ready]", th);
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 #endif /* THINKOS_ENABLE_THREAD_STAT */
 

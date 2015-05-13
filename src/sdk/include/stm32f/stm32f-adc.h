@@ -36,7 +36,7 @@
 
 /* Bits 31:6 Reserved, must be kept cleared. */
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* Bit 5 - Overrun */
 #define ADC_OVR (1 << 5)
@@ -91,7 +91,7 @@
  * ADC control register 1 */
 #define STM32F_ADC_CR1 0x04
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* Bit 26 - Overrun interrupt enable */
 #define ADC_OVRIE (1 << 26)
@@ -316,7 +316,7 @@
    110: EXTI line15 
    111: JSWSTART */
 
-#elif defined(STM32F2X)
+#elif defined(STM32F2X) || defined(STM32F4X)
 
 /* Bit 30 - Start conversion of regular channels */
 #define ADC_SWSTART (1 << 30)
@@ -431,7 +431,7 @@
    0: Right alignment
    1: Left alignment */
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /* Bit 10 - End of conversion selection */
 #define ADC_EOCS (1 << 10)
@@ -530,7 +530,7 @@
 #define ADC_SMP_71_CYC  6
 #define ADC_SMP_239_CYC 7
 
-#elif defined(STM32F2X)
+#elif defined(STM32F2X) || defined(STM32F4X)
 
 #define ADC_SMP_3_CYC   0
 #define ADC_SMP_15_CYC  1
@@ -775,7 +775,7 @@ channel. */
    in Figure 32 and Figure 33. */
 
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 
 /*-------------------------------------------------------------------------
  * ADC Common status register */
@@ -1016,7 +1016,7 @@ struct stm32f_adc {
 	volatile uint32_t dr;
 };
 
-#if defined(STM32F2X)
+#if defined(STM32F2X) || defined(STM32F4X)
 struct stm32f_adcc {
 	volatile uint32_t csr;
 	volatile uint32_t ccr;

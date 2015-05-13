@@ -219,7 +219,10 @@ void dmon_exec(void (* task)(struct dmon_comm *))
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
 #define BP_DEFSZ 2
-#define BP_MAX 6
+/* (Flash Patch) Number of instruction address comparators */
+#define CM3_FP_NUM_CODE 6
+/* (Flash Patch) Number of literal address comparators */
+#define CM3_FP_NUM_LIT  2
 
 bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
 {
@@ -227,12 +230,12 @@ bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
 	uint32_t comp;
 	int i;
 
-	for (i = 0; i < BP_MAX; ++i) {
+	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
 		if ((fbp->comp[i] & COMP_ENABLE) == 0) 
 			break;
 	}
 
-	if (i == BP_MAX) {
+	if (i == CM3_FP_NUM_CODE) {
 		DCC_LOG(LOG_WARNING, "no more breakpoints");
 		return false;
 	}
@@ -278,7 +281,7 @@ bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	for (i = 0; i < BP_MAX; ++i) {
+	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
 		if (fbp->comp[i] == comp) {
 			fbp->comp[i] = 0;
 			return true;
@@ -294,7 +297,7 @@ void dmon_breakpoint_clear_all(void)
 	struct cm3_fpb * fbp = CM3_FPB;
 	int i;
 
-	for (i = 0; i < BP_MAX; ++i)
+	for (i = 0; i < CM3_FP_NUM_CODE + CM3_FP_NUM_LIT; ++i)
 		fbp->comp[i] = 0;
 }
 
@@ -443,8 +446,9 @@ void dmon_isr(struct cm3_except_context * ctx)
 				__thinkos_thread_pause(thinkos_rt.active);
 				__thinkos_defer_sched();
 			} else {
-				DCC_LOG1(LOG_ERROR, "invalid active thread: %d !!!",
-						 thinkos_rt.active);
+				DCC_LOG2(LOG_ERROR, "<<BREAKPOINT>>: thread_id=%d pc=%08x ---", 
+						 thinkos_rt.active, ctx->pc);
+				DCC_LOG(LOG_ERROR, "invalid active thread!!!");
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
@@ -465,7 +469,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 				sigmsk |= (1 << DMON_THREAD_STEP);
 				thinkos_dmon_rt.events = sigset;
 				__thinkos_defer_sched();
-				DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ------------------", 
+				DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ----------", 
 						 thinkos_rt.step_id, ctx->pc);
 			} else {
 				DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
@@ -475,7 +479,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 	}
 #endif
 
-	DCC_LOG1(LOG_INFO, "<%08x>", sigset );
+	DCC_LOG1(LOG_INFO, "<%08x>", sigset);
 
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);

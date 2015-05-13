@@ -34,6 +34,9 @@
 #define UART1_TX       STM32_GPIOA, 9
 #define UART1_RX       STM32_GPIOA, 10
 
+#define ADC6_GPIO      STM32_GPIOA
+#define ADC6_PORT      6
+
 #define LED1      STM32_GPIOG, 6
 #define LED2      STM32_GPIOG, 7
 #define LED3      STM32_GPIOG, 10

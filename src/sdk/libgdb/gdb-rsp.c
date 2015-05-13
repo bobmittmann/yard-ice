@@ -254,6 +254,7 @@ typedef enum {
 #define THREAD_ID_OFFS 64
 #define THREAD_ID_ALL -1
 #define THREAD_ID_ANY 0
+#define THREAD_ID_NONE -2
 
 int thread_getnext(int thread_id)
 {
@@ -276,13 +277,31 @@ int thread_active(void)
 
 int thread_any(void)
 {
-	if (thinkos_rt.active != THINKOS_THREAD_IDLE) {
+	int thread_id;
+
+	if ((unsigned int)thinkos_rt.active < THINKOS_THREADS_MAX) {
+		DCC_LOG1(LOG_TRACE, "active=%d", thinkos_rt.active);
 		return thinkos_rt.active + THREAD_ID_OFFS;
 	}
 
-	DCC_LOG(LOG_TRACE, "IDLE");
+	if (thinkos_rt.active == THINKOS_THREAD_IDLE)
+		DCC_LOG(LOG_WARNING, "IDLE thread!");
+	else if (thinkos_rt.active == THINKOS_THREAD_VOID)
+		DCC_LOG(LOG_WARNING, "VOID thread!");
+	else
+		DCC_LOG1(LOG_WARNING, "active=%d is invalid!", thinkos_rt.active);
 
-	return __thinkos_thread_getnext(-1) + THREAD_ID_OFFS;
+	/* Active thread is IDLE thread, try to get the first 
+	   available thread */
+
+	thread_id = __thinkos_thread_getnext(-1);
+	
+	if (thread_id < 0) {
+		DCC_LOG(LOG_WARNING, "No threads!");
+		return THREAD_ID_NONE;
+	}
+
+	return thread_id + THREAD_ID_OFFS;
 }
 
 bool thread_isalive(int thread_id)
@@ -378,6 +397,13 @@ int thread_register_set(unsigned int thread_id, int reg, uint32_t val)
 		return -1;
 
 	ctx = thinkos_rt.ctx[idx];
+
+	DCC_LOG2(LOG_TRACE, "ThinkOS thread=%d context=%08x!", idx, ctx);
+	if (((uint32_t)ctx < 0x10000000) || ((uint32_t)ctx >= 0x30000000)) {
+		DCC_LOG(LOG_ERROR, "Invalid context!");
+		return -1;
+	}
+
 	switch (reg) {
 	case 0:
 		ctx->r0 = val;
@@ -969,6 +995,10 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 
 	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 
+	if (thread_id < 0) {
+		return rsp_error(comm, 4);
+	} 
+
 	if (!(__thinkos_thread_ispaused(thread_id - THREAD_ID_OFFS) || 
 		  __thinkos_thread_isfaulty(thread_id - THREAD_ID_OFFS))) {
 		return rsp_error(comm, 5);
@@ -1036,10 +1066,19 @@ static int rsp_register_get(struct gdb_rspd * gdb,
 	int thread_id;
 	int n;
 
-	if (gdb->thread_id.g <= 0)
-		thread_id = thread_active();
-	else
+	if (gdb->thread_id.g == THREAD_ID_ALL) {
+		DCC_LOG(LOG_TRACE, "g thread set to ALL!!!");
+		thread_id = thread_any();
+	} else if (gdb->thread_id.g == THREAD_ID_ANY) {
+		DCC_LOG(LOG_TRACE, "g thread set to ANY");
+		thread_id = thread_any();
+	} else {
 		thread_id = gdb->thread_id.g;
+	}
+
+	if (thread_id < 0) {
+		return rsp_error(comm, 4);
+	} 
 
 	if (!thread_isalive(thread_id)) {
 		DCC_LOG1(LOG_WARNING, "thread %d is dead!", thread_id);
@@ -1107,10 +1146,20 @@ static int rsp_register_set(struct gdb_rspd * gdb,
 	int thread_id;
 	char * cp;
 
-	if (gdb->thread_id.g <= 0)
-		thread_id = thread_active();
-	else
+	if (gdb->thread_id.g == THREAD_ID_ALL) {
+		DCC_LOG(LOG_TRACE, "'g' thread set to ALL!!!");
+		thread_id = thread_any();
+	} else if (gdb->thread_id.g == THREAD_ID_ANY) {
+		thread_id = thread_any();
+		DCC_LOG1(LOG_TRACE, "'g' thread set to ANY -> thread_id=%d", thread_id);
+	} else {
 		thread_id = gdb->thread_id.g;
+	}
+
+	if (thread_id < 0) {
+		DCC_LOG(LOG_WARNING, "no valid threads!");
+		return rsp_ok(comm);
+	} 
 
 	if (!thread_isalive(thread_id)) {
 		DCC_LOG1(LOG_WARNING, "thread %d is dead!", thread_id);
@@ -1141,7 +1190,7 @@ static int rsp_register_set(struct gdb_rspd * gdb,
 		return rsp_error(comm, 2);
 	}
 
-	DCC_LOG2(LOG_TRACE, "reg=%d val=0x%08x", reg, val);
+	DCC_LOG3(LOG_TRACE, "thread_id=%d reg=%d val=0x%08x", thread_id, reg, val);
 
 	if (thread_register_set(thread_id, reg, val) < 0) {
 		DCC_LOG(LOG_WARNING, "thread_register_set() failed!");
@@ -1286,6 +1335,10 @@ static int rsp_step(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		thread_id = gdb->thread_id.c;
 	}
 
+	if (thread_id < 0) {
+		return rsp_error(comm, 4);
+	} 
+
 	/* step */
 	if (pkt[1] != '#') {
 		addr = hex2int(&pkt[1], 0);
@@ -1332,7 +1385,9 @@ static int rsp_continue(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		thread_id = gdb->thread_id.c;
 	}
 
-	(void)thread_id;
+	if (thread_id < 0) {
+		return rsp_error(comm, 4);
+	} 
 
 	if (pkt[1] != '#') {
 		addr = hex2int(&pkt[1], 0);
@@ -1862,6 +1917,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 			case '-':
 				DCC_LOG(LOG_WARNING, "[NACK]");
+				dmon_exec(gdb->shell_task);
 				break;
 
 			case '$':

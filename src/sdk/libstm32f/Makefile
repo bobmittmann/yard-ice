@@ -52,7 +52,7 @@ else
 
 SFILES = stm32f-vec.S
 
-CFILES = stm32f-init.c stm32f-gpio.c stm32f-eth.c\
+CFILES = stm32f2x-init.c stm32f1x-init.c stm32f-gpio.c stm32f-eth.c\
 		 stm32f-spi.c stm32f-fsmc.c  stm32f-exti.c stm32f-mco.c\
 		 stm32f-dma.c stm32f-flash.c stm32f-rtc.c\
 		 $(addprefix usart/,$(USART_CFILES))\
