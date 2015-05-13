@@ -23,20 +23,19 @@ PROG = mutex-test
 
 CFILES = mutex-test.c ../common/stdio.c
 
-LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
-		  ../../../libthinkos ../../../libc ../../../libice-comm
+SDK = ../../../sdk
 
-LIBS = stm32f cm3 util thinkos c ice-comm
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil\
+		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm
 
-INCPATH = ../../../include
+LIBS = cm3 stm32f util thinkos c ice-comm 
 
+INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H
+CFLAGS = -g -O2
 
-CFLAGS = -g -O2 
-
-JTAGTOOL_ADDR = 192.168.0.80
-
-INCPATH = $(abspath ../../../include)
-
-include ../../../../mk/stm32f207.mk
+JTAGTOOL_ADDR = 192.168.10.50
+MACH = stm32f407
+#MACH = stm32f429
+include ../../../mk/stm32f4xx.mk
 

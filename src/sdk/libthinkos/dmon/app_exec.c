@@ -84,8 +84,10 @@ bool dmon_app_suspend(void)
 		DCC_LOG1(LOG_TRACE, "current_thread=%d", thinkos_rt.active);
 	}
 
+#if (THINKOS_ENABLE_DEBUG_STEP)
 	/* clear stepping requests */
 	thinkos_rt.step_req = 0;
+#endif
 
 	dmon_wait_idle();
 

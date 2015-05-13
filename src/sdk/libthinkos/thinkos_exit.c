@@ -148,10 +148,9 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 void thinkos_exit_svc(int32_t * arg)
 {
 	int code = arg[0];
-
-#if THINKOS_ENABLE_JOIN
 	int self = thinkos_rt.active;
 
+#if THINKOS_ENABLE_JOIN
 	if (thinkos_rt.wq_join[self] == 0) {
 		/* insert into the canceled wait queue and wait for a join call */ 
 		__thinkos_wq_insert(THINKOS_WQ_CANCELED, self);

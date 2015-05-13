@@ -54,8 +54,7 @@ __dump_context(struct thinkos_context * __ctx) {
 			__ctx->r8, __ctx->r9, __ctx->r10, __ctx->r11);
 	DCC_LOG4(LOG_TRACE, " r12=%08x  sp=%08x  lr=%08x  pc=%08x", 
 			__ctx->r12, __ctx, __ctx->lr, __ctx->pc);
-	DCC_LOG2(LOG_TRACE, "xpsr=%08x ret=%08x ", 
-			 __ctx->xpsr, __ctx->ret);
+	DCC_LOG1(LOG_TRACE, "xpsr=%08x", __ctx->xpsr);
 }
 
 void test_call(struct thinkos_context * ctx)

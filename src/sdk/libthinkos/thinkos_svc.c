@@ -149,16 +149,6 @@ void thinkos_thread_self_svc(int32_t * arg)
 	arg[0] = thinkos_rt.active;
 }
 
-static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
-	register uint32_t sp;
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq %0, MSP\n" 
-				  "mrsne %0, PSP\n" 
-				  : "=r" (sp));
-	return sp;
-}
-
 void cm3_svc_isr(void)
 {
 	int32_t * arg;
@@ -166,11 +156,7 @@ void cm3_svc_isr(void)
 	int svc;
 
 	/* get a pointer to the caller's stack */
-#if THINKOS_ENABLE_IRQ_SVC_CALL
-	arg = (int32_t * )cm3_svc_stackframe();
-#else
 	arg = (int32_t * )cm3_psp_get();
-#endif
 
 	/* get PC value */
 	pc = (uint8_t *)arg[6];

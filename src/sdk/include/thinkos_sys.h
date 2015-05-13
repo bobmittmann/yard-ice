@@ -57,10 +57,6 @@
 #define THINKOS_IRQ_MAX 80
 #endif
 
-#ifndef THINKOS_ENABLE_IRQ_SVC_CALL
-#define THINKOS_ENABLE_IRQ_SVC_CALL 0
-#endif
-
 #ifndef THINKOS_THREADS_MAX 
 #define THINKOS_THREADS_MAX 8
 #endif
