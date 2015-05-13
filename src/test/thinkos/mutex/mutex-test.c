@@ -178,6 +178,96 @@ void mutex_test(void)
 	printf("\n");
 };
 
+
+volatile bool task_enabled;
+
+int lock_unlock_task(void * arg)
+{
+	volatile uint32_t * cnt = (uint32_t *)arg;
+	int thread_id = thinkos_thread_self();
+
+	printf("<%d> started...\n", thread_id);
+
+	while (task_enabled) {
+//		printf("<%d> lock...\n", thread_id);
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		thinkos_mutex_lock(mutex);
+		thinkos_mutex_unlock(mutex);
+
+		(*cnt) += 8;
+	}
+
+	return thread_id + 100;
+}
+
+void mutex_speed_test(void)
+{
+	volatile uint32_t cnt[2];
+	uint32_t sum;
+	uint32_t dt;
+	int th[2];
+	int ret;
+	int i;
+
+	task_enabled = true;
+
+	mutex = thinkos_mutex_alloc();
+	printf(" * mutex=%d\n", mutex);
+
+	for (i = 0; i < 2; ++i) {
+		cnt[i] = 0;
+		th[i] = thinkos_thread_create(lock_unlock_task, (void *)&cnt[i], 
+									  stack[i], STACK_SIZE |
+									  THINKOS_OPT_PRIORITY(1) |
+									  THINKOS_OPT_ID(1));
+		printf(" * thread=%d stak=%08x\n", th[i], (uint32_t)stack[i]);
+	}
+
+	for (i = 0; i < 8; ++i) {
+		thinkos_sleep(1000);
+		sum = cnt[0] + cnt[1];
+		dt = 1000000000 / sum;
+
+		printf("  Ops: %8d + %8d = %8d (%d.%03d us)\n", 
+			   cnt[0], cnt[1], sum, dt / 1000, dt % 1000);
+
+		cnt[0] = 0;
+		cnt[1] = 0;
+	}
+
+	task_enabled = false;
+
+	for (i = 0; i < 2; i++) {
+		printf("  * join(%d) ...", th[i]);
+		ret = thinkos_join(th[i]);
+		printf(" %d\n", ret);
+	}
+
+	thinkos_mutex_free(mutex);
+
+	printf("\n");
+};
+
 void stdio_init(void);
 
 int main(int argc, char ** argv)
@@ -197,11 +287,12 @@ int main(int argc, char ** argv)
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	sleep_test();
+//	sleep_test();
 
-	mutex_test();
+//	mutex_test();
+	mutex_speed_test();
 
-	thinkos_sleep(1000);
+	thinkos_sleep(10000);
 
 	return 0;
 }

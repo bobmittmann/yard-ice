@@ -357,7 +357,7 @@ struct thinkos_rt {
 	uint32_t cycref;
 	/* Per thread cycle count */
 #if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
-	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2]; /* extra slot for exit */
+	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2]; /* extra slot for void thread */
 #else
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];
 #endif

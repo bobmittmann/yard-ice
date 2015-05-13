@@ -225,10 +225,13 @@ static const void * const thread_resume_lut[] = {
 #endif
 };
 
+#endif /* THINKOS_ENABLE_THREAD_STAT */
+
 bool __thinkos_thread_pause(unsigned int th)
 {
 	unsigned int wq;
-	int stat;
+#if THINKOS_ENABLE_THREAD_STAT
+#endif
 
 #if THINKOS_ENABLE_PAUSE
 	if (__bit_mem_rd(&thinkos_rt.wq_paused, th) != 0) {
@@ -241,17 +244,25 @@ bool __thinkos_thread_pause(unsigned int th)
 	__bit_mem_wr(&thinkos_rt.wq_paused, th, 1);
 #endif
 
-	/* remove the thread from a waiting queue, including ready  */
-	stat = thinkos_rt.th_stat[th];
-	wq = stat >> 1;
-	DCC_LOG4(LOG_TRACE, "thread=%d stat=0x%02x wq=%d clk=%d", 
-			 th, stat, wq, (stat & 1));
-	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
-
+#if THINKOS_ENABLE_THREAD_STAT
+	{
+		int stat;
+		/* remove the thread from a waiting queue, including ready  */
+		stat = thinkos_rt.th_stat[th];
+		wq = stat >> 1;
+		DCC_LOG4(LOG_TRACE, "thread=%d stat=0x%02x wq=%d clk=%d", 
+				 th, stat, wq, (stat & 1));
+		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 #if THINKOS_ENABLE_TIMESHARE
-	/* possibly remove from the time share wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0);
+		/* possibly remove from the time share wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0);
 #endif
+	}
+#else
+	/* clear all bits on all queues */
+	for (wq = 0; wq < THINKOS_WQ_LST_END; ++wq) 
+		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
+#endif /* THINKOS_ENABLE_THREAD_STAT */
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	/* posibly clear the step request */
@@ -265,8 +276,6 @@ bool __thinkos_thread_pause(unsigned int th)
 
 	return true;
 }
-
-#endif /* THINKOS_ENABLE_THREAD_STAT */
 
 bool __thinkos_thread_resume(unsigned int th)
 {

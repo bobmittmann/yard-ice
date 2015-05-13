@@ -71,29 +71,29 @@
 #define THINKOS_CONSOLE         34
 
 #define THINKOS_IRQ_WAIT        35
+#define THINKOS_IRQ_REGISTER    36
 
-#define THINKOS_MUTEX_ALLOC     36
-#define THINKOS_MUTEX_FREE      37
+#define THINKOS_MUTEX_ALLOC     37
+#define THINKOS_MUTEX_FREE      38
 
-#define THINKOS_SEM_ALLOC       38
-#define THINKOS_SEM_FREE        39
+#define THINKOS_SEM_ALLOC       39
+#define THINKOS_SEM_FREE        40
 
-#define THINKOS_COND_ALLOC      40
-#define THINKOS_COND_FREE       41
+#define THINKOS_COND_ALLOC      41
+#define THINKOS_COND_FREE       42
 
-#define THINKOS_FLAG_ALLOC      42
-#define THINKOS_FLAG_FREE       43
+#define THINKOS_FLAG_ALLOC      43
+#define THINKOS_FLAG_FREE       44
 
-#define THINKOS_EVENT_ALLOC     44
-#define THINKOS_EVENT_FREE      45
+#define THINKOS_EVENT_ALLOC     45
+#define THINKOS_EVENT_FREE      46
 
-#define THINKOS_PAUSE           46
-#define THINKOS_RESUME          47
-#define THINKOS_CANCEL          48
-#define THINKOS_JOIN            49
+#define THINKOS_JOIN            47
+#define THINKOS_PAUSE           48
+#define THINKOS_RESUME          49
+#define THINKOS_CANCEL          50
 
-#define THINKOS_EXIT            50
-#define THINKOS_IRQ_REGISTER    51
+#define THINKOS_EXIT            51
 
 #define THINKOS_RT_SNAPSHOT     52
 
@@ -169,23 +169,21 @@
 
 #define THINKOS_NMI1(N, A1) ( { \
 	register int r0 asm("r0") = (int)(A1); \
-	register int r1 asm("r2") = (int)(N); \
 	register struct cm3_scb * scb = CM3_SCB; \
-	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N); \
-	asm volatile ("str	%3, [%2, #4]\n" \
+	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N) * 2; \
+	asm volatile ("str	%2, [%1, #4]\n" \
 				  "isb\n" :  :  \
-				  "r"(r0), "r"(r1), "r"(scb), "r"(nmi) : ); \
+				  "r"(r0), "r"(scb), "r"(nmi) : ); \
 	} )
 
 #define THINKOS_NMI2(N, A1, A2) ( { \
 	register int r0 asm("r0") = (int)(A1); \
 	register int r1 asm("r1") = (int)(A2); \
-	register int r2 asm("r2") = (int)(N); \
 	register struct cm3_scb * scb = CM3_SCB; \
-	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N); \
-	asm volatile ("str	%4, [%3, #4]\n" \
+	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N) * 2; \
+	asm volatile ("str	%3, [%2, #4]\n" \
 				  "isb\n" :  :  \
-				  "r"(r0), "r"(r1), "r"(r2), "r"(scb), "r"(nmi) : ); \
+				  "r"(r0), "r"(r1), "r"(scb), "r"(nmi) : ); \
 	} )
 
 #define THINKOS_SVC(N) __SVC_CALL(N)

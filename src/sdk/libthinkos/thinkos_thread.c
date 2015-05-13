@@ -26,6 +26,13 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos.h>
 #include <sys/delay.h>
 
+#if THINKOS_ENABLE_EXIT
+static void __exit_stub(int code)
+{
+	thinkos_exit(code);
+}
+#endif
+
 void __thinkos_thread_init(unsigned int thread_id, uint32_t sp, 
 						   void * task, void * arg)
 {
@@ -38,7 +45,11 @@ void __thinkos_thread_init(unsigned int thread_id, uint32_t sp,
 	__thinkos_memset32(ctx, 0, sizeof(struct thinkos_context));
 
 	ctx->r0 = (uint32_t)arg;
+#if THINKOS_ENABLE_EXIT
+	ctx->lr = (uint32_t)__exit_stub;
+#else
 	ctx->lr = (uint32_t)__thinkos_thread_exit;
+#endif
 	ctx->pc = (uint32_t)task;
 	ctx->xpsr = 0x01000000;
 	thinkos_rt.ctx[thread_id] = ctx;

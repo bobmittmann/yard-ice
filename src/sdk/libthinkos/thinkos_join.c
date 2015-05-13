@@ -46,17 +46,17 @@ void thinkos_join_svc(int32_t * arg)
 #endif
 #endif
 
-#if THINKOS_ENABLE_CANCEL
 	/* remove thread from the canceled wait queue */
 	if (__bit_mem_rd(&thinkos_rt.wq_canceled, th)) {
 		__bit_mem_wr(&thinkos_rt.wq_canceled, th, 0);  
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
 	}
-#endif /* THINKOS_ENABLE_CANCEL */
 
 	/* insert the current thread (self) into the joining thread wait queue */
-	wq = __wq_idx(&thinkos_rt.wq_join[th]);
+	wq = THINKOS_JOIN_BASE + th;
 	__thinkos_wq_insert(wq, self);
+
+	DCC_LOG2(LOG_TRACE, "<%d> waiting to join at %d.", self, wq);
 
 	/* wait for event */
 	__thinkos_wait(self);

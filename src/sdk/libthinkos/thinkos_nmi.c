@@ -208,10 +208,9 @@ void __thinkos_flag_set_i(int wq)
 
 void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 {
-	asm volatile ("lsl    r12, r12, #2\n"
+	asm volatile ("add    r12, r12\n"
 				  "add    r12, r12, pc\n"
-				  "nop\n"
-				  "ldr    pc, [r12, #4]\n"
+				  "ldr    pc, [r12, #2]\n"
 				  ".word  __thinkos_debug_step_i\n"
 				  ".word  __thinkos_sem_post_i\n"
 				  ".word  __thinkos_ev_raise_i\n"
