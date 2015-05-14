@@ -80,10 +80,10 @@ struct usb_cdc_acm_dev {
 #ifndef CDC_RX_FLAG_NO
 	uint8_t rx_flag; /* RX flag */
 #endif
-	uint8_t ctl_ep;
-	uint8_t in_ep;
-	uint8_t out_ep;
-	uint8_t int_ep;
+	int8_t ctl_ep;
+	int8_t in_ep;
+	int8_t out_ep;
+	int8_t int_ep;
 
 	uint8_t rx_cnt; 
 	uint8_t rx_pos; 
@@ -240,6 +240,9 @@ int usb_cdc_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr) {
 			usb_dev_ep_ctl(dev->usb, dev->in_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->int_ep, USB_EP_DISABLE);
+			dev->in_ep = -1;
+			dev->out_ep = -1;
+			dev->int_ep = -1;
 		}
 
 		/* signal any pending threads */
@@ -352,6 +355,10 @@ void usb_cdc_on_reset(usb_class_t * cl)
     dev->acm.lc.bParityType = 0;
     dev->acm.lc.bDataBits = 0 ;
 
+	dev->in_ep = -1;
+	dev->out_ep = -1;
+	dev->int_ep = -1;
+
 	DCC_LOG(LOG_INFO, "2.");
 	/* reset control lines */
 	dev->acm.control = 0;
@@ -458,7 +465,7 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 	int ret;
 	int n;
 
-//	DCC_LOG2(LOG_TRACE, "len=%d msec=%d", len, msec);
+	DCC_LOG3(LOG_MSG, "ep=%d len=%d msec=%d", dev->out_ep, len, msec);
 	
 	if ((n = dev->rx_cnt - dev->rx_pos) > 0) {
 		DCC_LOG(LOG_INFO, "read from intern buffer");
@@ -470,30 +477,13 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 
 	for (;;) {
 		if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
-			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, buf, 
-										 len)) > 0) {
-				{
-					char * s = (char *)buf;
-					(void)s;
-
-					if (n == 1)
-						DCC_LOG1(LOG_TRACE, "%02x", s[0]);
-					else if (n == 2)
-						DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
-				}
-			} return n;
+			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
+										 buf, len)) > 0) {
+				return n;
+			} 
 		} else {
 			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, dev->rx_buf, 
 										 CDC_EP_IN_MAX_PKT_SIZE)) > 0) {
-				{
-					char * s = (char *)buf;
-					(void)s;
-
-					if (n == 1)
-						DCC_LOG1(LOG_TRACE, "%02x", s[0]);
-					else if (n == 2)
-						DCC_LOG2(LOG_TRACE, "%02x %02x", s[0], s[1]);
-				}
 				dev->rx_pos = 0;
 				dev->rx_cnt = n;
 				goto read_from_buffer;

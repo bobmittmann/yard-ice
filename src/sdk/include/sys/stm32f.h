@@ -74,6 +74,7 @@
 #include <sys/usb-dev.h>
 extern const usb_dev_t stm32f_usb_fs_dev;
 extern const usb_dev_t stm32f_otg_fs_dev;
+extern const usb_dev_t stm32f_otg_hs_dev;
 
 enum {
 	INPUT = 0,

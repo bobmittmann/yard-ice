@@ -42,6 +42,7 @@
 #include <stm32f/stm32f-i2c.h>
 #include <stm32f/stm32f-eth.h>
 #include <stm32f/stm32f-otg_fs.h>
+#include <stm32f/stm32f-otg_hs.h>
 #include <stm32f/stm32f-fsmc.h>
 #include <stm32f/stm32f-tim.h>
 #include <stm32f/stm32f-dma.h>

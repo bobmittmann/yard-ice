@@ -95,7 +95,7 @@ struct stm32f_otg_drv {
 #define OTG_FS_RX_FIFO_SIZE 512
 
 /* EP TX fifo memory allocation */
-void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
+static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 {
 	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 

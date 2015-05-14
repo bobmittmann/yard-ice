@@ -518,10 +518,14 @@
 #define RCC_ETHMACRX 27
 #define RCC_ETHMACTX 26
 #define RCC_ETHMAC 25
+#define RCC_DMA2D 23
 #define RCC_DMA2 22
 #define RCC_DMA1 21
+#define RCC_CCMDATARAM 20
 #define RCC_BKPSRAM 18
 #define RCC_CRC 12
+#define RCC_GPIOK 10
+#define RCC_GPIOJ 9
 #define RCC_GPIOI 8
 #define RCC_GPIOH 7
 #define RCC_GPIOG 6
@@ -2479,6 +2483,7 @@ again in case of a new switch is required)
 #define STM32_CLK_DMA1      STM32_AHB1, RCC_DMA1
 #define STM32_CLK_BKPSRAM   STM32_AHB1, RCC_BKPSRAM
 #define STM32_CLK_CRC       STM32_AHB1, RCC_CRC
+#define STM32_CLK_GPIOJ     STM32_AHB1, RCC_GPIOJ
 #define STM32_CLK_GPIOI     STM32_AHB1, RCC_GPIOI
 #define STM32_CLK_GPIOH     STM32_AHB1, RCC_GPIOH
 #define STM32_CLK_GPIOG     STM32_AHB1, RCC_GPIOG

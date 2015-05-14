@@ -39,6 +39,7 @@ USB_FS_CFILES = stm32f-usb_fs.c stm32f-usb_fs_dev.c
 
 OTG_FS_CFILES = stm32f-otg_fs.c stm32f-otg_fs_dev.c
 
+OTG_HS_CFILES = stm32f-otg_hs.c stm32f-otg_hs_dev.c
 
 ifeq ($(STM32), stm32l)
 
@@ -57,7 +58,8 @@ CFILES = stm32f2x-init.c stm32f1x-init.c stm32f-gpio.c stm32f-eth.c\
 		 stm32f-dma.c stm32f-flash.c stm32f-rtc.c\
 		 $(addprefix usart/,$(USART_CFILES))\
 		 $(addprefix usb_fs/,$(USB_FS_CFILES))\
-		 $(addprefix otg_fs/,$(OTG_FS_CFILES))
+		 $(addprefix otg_fs/,$(OTG_FS_CFILES))\
+		 $(addprefix otg_hs/,$(OTG_HS_CFILES))
 
 endif
 

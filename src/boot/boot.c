@@ -155,7 +155,8 @@ void monitor_init(void)
 	struct dmon_comm * comm;
 
 	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
-	comm = usb_comm_init(&stm32f_otg_fs_dev);
+//	comm = usb_comm_init(&stm32f_otg_fs_dev);
+	comm = usb_comm_init(&stm32f_otg_hs_dev);
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
