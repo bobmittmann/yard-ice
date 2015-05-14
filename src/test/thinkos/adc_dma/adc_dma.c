@@ -30,8 +30,11 @@
 #include <sys/serial.h>
 #include <sys/delay.h>
 #include <sys/tty.h>
+#include <sys/dcclog.h>
 
 #include <thinkos.h>
+
+void stdio_init(void);
 
 struct thread_ctrl {
 	volatile bool enabled;
@@ -65,12 +68,42 @@ const int32_t sine_wave[] = {
 	1263, 1357, 1452, 1549, 1647, 1746, 1846, 1946
 }; 
 
+void timer_init(struct stm32f_tim * tim, uint32_t freq)
+{
+	uint32_t div;
+	uint32_t pre;
+	uint32_t n;
+
+	/* get the total divisior */
+	div = ((stm32f_tim1_hz) + (freq / 2)) / freq;
+	/* get the minimum pre scaler */
+	pre = (div / 65536) + 1;
+	/* get the reload register value */
+	n = (div + pre / 2) / pre;
+
+
+	printf(" %s(): freq=%dHz pre=%d n=%d\n", 
+		   __func__, freq, pre, n);
+
+	/* Timer configuration */
+	tim->psc = pre - 1;
+	tim->arr = n - 1;
+	tim->cnt = 0;
+	tim->egr = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->cr2 = 0;
+	tim->cr1 = TIM_URS | TIM_CEN;
+
+}
+
 int dac_waveform_task(void * arg)
 {
 	struct thread_ctrl * ctrl = (struct thread_ctrl *)arg;
 	struct stm32f_dac * dac = STM32F_DAC;
 	struct stm32f_tim * tim7 = STM32F_TIM7;
 	int self = thinkos_thread_self();
+	unsigned int sin_freq;
+	unsigned int dac_freq;
 	int i = 0;
 
 	printf(" [%d] started.\n", self);
@@ -78,12 +111,11 @@ int dac_waveform_task(void * arg)
 
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM7);
-	tim7->cnt = 0;
-	tim7->psc = 600 - 1; /* 2 * APB1_CLK(30MHz) / 600 = 100KHz */
-	tim7->arr = 2000 - 1; /* 100KHz / 2000 = 50 Hz*/
-	tim7->egr = 0; /* Update generation */
-	tim7->dier = TIM_UIE; /* Update interrupt enable */
-	tim7->cr2 = 0;
+
+	sin_freq = 440;
+	dac_freq = (sin_freq * sizeof(sine_wave)) / sizeof(int32_t);
+
+	timer_init(tim7, dac_freq);
 	tim7->cr1 = TIM_URS | TIM_CEN;
 
 	/* I/O pins config */
@@ -95,13 +127,13 @@ int dac_waveform_task(void * arg)
 	dac->cr = DAC_EN2;
 	dac->dhr12r2 = 2048;
 
+	DCC_LOG(LOG_TRACE, "thinkos_irq_wait(STM32F_IRQ_TIM7)");
 	while (ctrl->enabled) {
 		thinkos_irq_wait(STM32F_IRQ_TIM7);
 		if (tim7->sr == 0)
 			continue;
 		/* Clear update interrupt flag */
 		tim7->sr = 0;
-		
 		/* write into ADC buffer */
 		dac->dhr12r2 = sine_wave[i];
 		i += (i == 127) ? -127 : 1;
@@ -211,7 +243,7 @@ void tim2_init(uint32_t freq)
 #define VT25  760
 #define AVG_SLOPE 2500
 #define ADC_CHANS 4
-#define ADC_SAMPLES 2048
+#define ADC_SAMPLES 1024
 #define ADC_RATE 10 * ADC_SAMPLES
 
 struct dset {
@@ -302,26 +334,18 @@ uint32_t capture_stack[512 + 2 * ADC_CHANS * ADC_SAMPLES];
  
 uint32_t wave_stack[512];
 
-FILE * serial_tty_open(struct serial_dev * serdev)
-{
-	struct tty_dev * tty;
-	FILE * f_raw;
-
-	f_raw = serial_fopen(serdev);
-	tty = tty_attach(f_raw);
-	return tty_fopen(tty);
-}
-
 int main(int argc, char ** argv)
 {
 	struct thread_ctrl ctrl;
-	struct serial_dev * ser5;
 	int capture_th;
 	int wave_th;
 
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
 	cm3_udelay_calibrate();
-	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	stdout = serial_tty_open(ser5);
+
+	stdio_init();
 
 	printf("\n");
 	printf("---------------------------------------------------------\n");
@@ -331,16 +355,20 @@ int main(int argc, char ** argv)
 
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
+	printf("stack=%d\n", sizeof(capture_stack));
+	thinkos_sleep(2000);
+
 	ctrl.enabled = true;
 
 	capture_th = thinkos_thread_create(adc_capture_task, (void *)&ctrl, 
 						  capture_stack, sizeof(capture_stack));
 
+	/* wait for the capture thread to finish */
+	thinkos_join(capture_th);
+
 	wave_th = thinkos_thread_create(dac_waveform_task, (void *)&ctrl, 
 						  wave_stack, sizeof(wave_stack));
 
-	/* wait for the capture thread to finish */
-	thinkos_join(capture_th);
 	thinkos_join(wave_th);
 
 	printf("---------------------------------------------------------\n");

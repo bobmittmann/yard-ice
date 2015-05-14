@@ -21,19 +21,21 @@
 
 PROG = adc_dma
 
-CFILES = adc_dma.c
+CFILES = adc_dma.c ../common/stdio.c
 
+SDK = ../../../sdk
 
-LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
-		  ../../../libthinkos ../../../libc ../../../libice-comm
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil\
+		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm
 
-LIBS = stm32f cm3 util thinkos c ice-comm
+LIBS = cm3 stm32f util c thinkos ice-comm 
 
-CFLAGS = -g -O2 
+INCPATH = $(SDK)/include  
+#CDEFS = CONFIG_H
+CFLAGS = -g -O2
 
-JTAGTOOL_ADDR = 192.168.0.80
-
-INCPATH = $(abspath ../../../include)
-
-include ../../../../mk/stm32f207.mk
+JTAGTOOL_ADDR = 192.168.10.50
+MACH = stm32f407
+#MACH = stm32f429
+include ../../../mk/stm32f4xx.mk
 

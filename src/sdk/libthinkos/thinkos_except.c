@@ -136,8 +136,9 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 	uint32_t icsr;
 	int ipsr;
 
+	cm3_cpsid_i();
+
 	__idump(__func__, cm3_ipsr_get());
-	DCC_LOG(LOG_TRACE, "end of exception...");
 
 	/* suspend all threads */
 	__thinkos_pause_all();
@@ -183,6 +184,7 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 
 	thinkos_exception_dsr(xcpt);
 
+	__xcpt_systick_int_enable();
 	__tdump();
 
 	cm3_cpsie_i();
@@ -204,7 +206,7 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	__idump(__func__, ipsr);
 
 	if ((irq = __xcpt_next_active_irq(ipsr - 16)) >= 0) {
-		xpsr = 0x01000000 + __xcpt_next_active_irq(ipsr - 16) + 16;
+		xpsr = 0x01000000 + irq + 16;
 	} else if ((shcsr = CM3_SCB->shcsr) & (SCB_SHCSR_SYSTICKACT | 
 										   SCB_SHCSR_PENDSVACT | 
 										   SCB_SHCSR_MONITORACT | 
@@ -231,7 +233,6 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	} else {
 		xpsr = 0x01000000;
 	}
-
 
 	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
 	sf->r0 = (uint32_t)xcpt;
@@ -535,6 +536,7 @@ void __attribute__((naked)) cm3_bus_fault_isr(void)
 	thinkos_except_buf.type = CM3_EXCEPT_BUS_FAULT;
 	__bus_fault(&thinkos_except_buf);
 	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
 	__xcpt_return(&thinkos_except_buf);
 }
 #endif
@@ -547,6 +549,7 @@ void __attribute__((naked)) cm3_usage_fault_isr(void)
 	thinkos_except_buf.type = CM3_EXCEPT_USAGE_FAULT;
 	__usage_fault(&thinkos_except_buf);
 	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
 	__xcpt_return(&thinkos_except_buf);
 }
 #endif
@@ -559,6 +562,7 @@ void __attribute__((naked)) cm3_mem_manage_isr(void)
 	thinkos_except_buf.type = CM3_EXCEPT_MEM_MANAGE;
 	__mem_manag(&thinkos_except_buf);
 	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
 	__xcpt_return(&thinkos_except_buf);
 }
 #endif
@@ -569,12 +573,8 @@ void __attribute__((naked)) cm3_hard_fault_isr(void)
 	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
 	__hard_fault(&thinkos_except_buf);
 	__xcpt_irq_disable_all();
+	__xcpt_systick_int_disable();
 	__xcpt_return(&thinkos_except_buf);
-#if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
-#else
-	for(;;);
-#endif
 }
 
 /* -------------------------------------------------------------------------

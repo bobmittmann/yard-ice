@@ -959,6 +959,10 @@ int __xcpt_next_active_irq(int this_irq);
 
 void __xcpt_irq_disable_all(void);
 
+void __xcpt_systick_int_disable(void);
+
+void __xcpt_systick_int_enable(void);
+
 #ifdef __cplusplus
 }
 #endif

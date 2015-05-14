@@ -121,7 +121,10 @@ void __xdump(struct thinkos_except * xcpt)
 				 (shcsr & SCB_SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
 
 	icsr = CM3_SCB->icsr;
-	DCC_LOG5(LOG_ERROR, " ICSR={%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
+	DCC_LOG8(LOG_ERROR, " ICSR={%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
+				 (icsr & SCB_ICSR_NMIPENDSET) ? " NMIPEND" : "",
+				 (icsr & SCB_ICSR_PENDSVSET) ? " PENDSV" : "",
+				 (icsr & SCB_ICSR_PENDSTSET) ? " PENDST" : "",
 				 (icsr & SCB_ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
 				 (icsr & SCB_ICSR_ISRPENDING) ? " ISRPENDING" : "",
 				 (icsr & SCB_ICSR_RETTOBASE) ? " RETTOBASE" : "",
@@ -176,7 +179,10 @@ void __idump(const char * s, uint32_t ipsr)
 				 (shcsr & SCB_SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
 
 	icsr = CM3_SCB->icsr;
-	DCC_LOG5(LOG_TRACE, " ICSR={%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
+	DCC_LOG8(LOG_ERROR, " ICSR={%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
+				 (icsr & SCB_ICSR_NMIPENDSET) ? " NMIPEND" : "",
+				 (icsr & SCB_ICSR_PENDSVSET) ? " PENDSV" : "",
+				 (icsr & SCB_ICSR_PENDSTSET) ? " PENDST" : "",
 				 (icsr & SCB_ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
 				 (icsr & SCB_ICSR_ISRPENDING) ? " ISRPENDING" : "",
 				 (icsr & SCB_ICSR_RETTOBASE) ? " RETTOBASE" : "",
@@ -220,6 +226,25 @@ void __xcpt_irq_disable_all(void)
 	for (i = 0; i < CM3_ICTR; ++i)
 		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
 }
+
+void __xcpt_systick_int_disable(void)
+{
+#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
+	struct cm3_systick * systick = CM3_SYSTICK;
+
+	systick->ctrl &= ~SYSTICK_CTRL_TICKINT;
+	CM3_SCB->icsr = SCB_ICSR_PENDSTCLR;
+#endif
+}
+
+void __xcpt_systick_int_enable(void)
+{
+#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
+	struct cm3_systick * systick = CM3_SYSTICK;
+	systick->ctrl |= SYSTICK_CTRL_TICKINT;
+#endif
+}
+
 
 void __tdump(void)
 {
