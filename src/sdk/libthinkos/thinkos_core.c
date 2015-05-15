@@ -137,6 +137,7 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 #endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
+//		asm volatile ("wfe\n"); /* wait for interrupt */
 #endif
 	}
 

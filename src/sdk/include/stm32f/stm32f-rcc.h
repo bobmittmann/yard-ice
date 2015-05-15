@@ -2633,7 +2633,7 @@ struct stm32_rcc {
 	uint32_t res3[2]; 
 
 	volatile uint32_t ahb1lpenr;
-	volatile uint32_t hb2lpenr; 
+	volatile uint32_t ahb2lpenr; 
 	volatile uint32_t ahb3lpenr;
 	uint32_t res4; 
 
@@ -2705,6 +2705,7 @@ static inline void stm32_clk_enable(struct stm32_rcc * rcc,
 	else
 		rcc->ahb1enr |= 1 << bit;
 #endif
+	asm volatile ("dsb" : );
 }
 
 static inline void stm32_clk_disable(struct stm32_rcc * rcc, 

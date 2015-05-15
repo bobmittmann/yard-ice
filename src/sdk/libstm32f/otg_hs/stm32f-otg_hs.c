@@ -279,7 +279,11 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 
 	/* Restart the Phy Clock */
 	otg_hs->pcgcctl = 0;
+//	otg_hs->pcgcctl = OTG_HS_GATEHCLK; 
 
+	/* AHB configuration */
+	/* Enable global interrupts */
+	otg_hs->gahbcfg = OTG_HS_PTXFELVL | OTG_HS_TXFELVL | OTG_HS_GINTMSK; 
 #if 0
 	/* Flush the FIFOs */
 	stm32f_otg_hs_txfifo_flush(otg_hs, 0x10);
@@ -342,9 +346,6 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 	   At this point, the device is ready to accept SOF packets and perform 
 	   control transfers on control endpoint 0. */
 
-	/* AHB configuration */
-	/* Enable global interrupts */
-	otg_hs->gahbcfg = OTG_HS_PTXFELVL | OTG_HS_TXFELVL | OTG_HS_GINTMSK; 
 
 	DCC_LOG(LOG_INFO, "3.");
 }

@@ -9,7 +9,7 @@ set TOOLS_DIR=..\..\..\..\tools
 if %ERRORLEVEL% NEQ 0 goto :EOF
 
 rem on firelink board wait 500 ms and reset the target !!!!
-%TOOLS_DIR%\tftp_cmd.py -h %JTAGTOOL_ADDR% "sleep 500" "rst"
+rem %TOOLS_DIR%\tftp_cmd.py -h %JTAGTOOL_ADDR% "sleep 500" "rst"
 
 if %ERRORLEVEL% NEQ 0 goto :EOF
 

@@ -86,6 +86,11 @@ int echo_task(FILE * f)
 	return 0;
 }
 
+#ifndef FIRELINK
+#define FIRELINK 0
+#endif
+
+#if FIRELINK
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
@@ -98,14 +103,15 @@ void io_init(void)
 	stm32_gpio_set(LED2);
 
 }
+#endif
 
-#if 0
-
+#if !FIRELINK
+#undef LED1
+#undef LED2
 #define LED1      STM32_GPIOG, 6
 #define LED2      STM32_GPIOG, 7
 #define LED3      STM32_GPIOG, 10
 #define LED4      STM32_GPIOG, 12
-
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
@@ -127,8 +133,10 @@ uint32_t echo_stack2[STACK_SIZE / 4];
 
 int main(int argc, char ** argv)
 {
-	usb_cdc_class_t * cdc;
+#if FIRELINK
 	struct lcd_dev * lcd;
+#endif
+	usb_cdc_class_t * cdc;
 	uint8_t buf[128];
 	int i;
 	int n;
@@ -147,6 +155,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
 
+#if FIRELINK
 	DCC_LOG(LOG_TRACE, "4. lcd20x4_init()");
 	lcd = lcd20x4_init();
 
@@ -154,6 +163,7 @@ int main(int argc, char ** argv)
 	lcd_puts(lcd, " Zigbee Coordinator ");
 	lcd_puts(lcd, "      Firelink      ");
 	lcd_puts(lcd, "====================");
+#endif
 
 	for (i = 0; i < 0; ++i) {
 		DCC_LOG1(LOG_MSG, "%d", i);
@@ -172,11 +182,16 @@ int main(int argc, char ** argv)
 	cdc = usb_cdc_init(&stm32f_otg_hs_dev, 
 					   cdc_acm_def_str, 
 					   cdc_acm_def_strcnt);
-	
-	__led_on(LED1);
 
+	thinkos_sleep(500);
+//	mdelay(500);
+
+//	__led_on(LED1);
+
+	DCC_LOG(LOG_TRACE, "usb_cdc_acm_lc_wait()");
 	usb_cdc_acm_lc_wait(cdc);
-	__led_on(LED2);
+
+//	__led_on(LED2);
 
 	while (0) {
 		thinkos_sleep(5000);
@@ -191,6 +206,8 @@ int main(int argc, char ** argv)
 		n = usb_cdc_read(cdc, buf, 128, 5000);
 		(void)n;
 		DCC_LOG1(LOG_TRACE, "n=%d", n);
+		if (n > 0)
+			usb_cdc_write(cdc, buf, n);
 	};
 
 	thinkos_sleep(1000);

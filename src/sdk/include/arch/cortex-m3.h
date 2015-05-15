@@ -1005,6 +1005,10 @@ static inline void __attribute__((always_inline)) __clrx(void) {
 	asm volatile ("clrex" : );
 }
 
+static inline void __attribute__((always_inline)) __dsb(void) {
+	asm volatile ("dsb" : );
+}
+
 void cm3_udelay_calibrate(void);
 
 void __attribute__((noreturn)) cm3_sysrst(void);

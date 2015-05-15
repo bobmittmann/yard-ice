@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cdtprojectproperties>
+<section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.IncludePaths">
+<language name="Assembly Source File">
+<includepath>${ProjDirPath}/..</includepath>
+<includepath>${ProjDirPath}/../../../sdk/include</includepath>
+<includepath>C:\Program Files (x86)\GNU Tools ARM Embedded\4.9 2015q1\lib\gcc\arm-none-eabi\4.9.3\include</includepath>
+
+</language>
+<language name="C Source File">
+<includepath>${ProjDirPath}/..</includepath>
+<includepath>${ProjDirPath}/../../../sdk/include</includepath>
+<includepath>C:\Program Files (x86)\GNU Tools ARM Embedded\4.9 2015q1\lib\gcc\arm-none-eabi\4.9.3\include</includepath>
+
+</language>
+<language name="Object File">
+
+</language>
+</section>
+<section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.Macros">
+<language name="Assembly Source File">
+<macro>
+<name>STM32F429</name><value/>
+</macro>
+
+</language>
+<language name="C Source File">
+<macro>
+<name>STM32F429</name><value/>
+</macro>
+
+</language>
+<language name="Object File">
+
+</language>
+</section>
+</cdtprojectproperties>

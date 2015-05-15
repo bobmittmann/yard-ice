@@ -255,6 +255,7 @@ typedef enum {
 #define THREAD_ID_ALL -1
 #define THREAD_ID_ANY 0
 #define THREAD_ID_NONE -2
+#define THREAD_ID_IDLE (THINKOS_THREAD_IDLE + THREAD_ID_OFFS) 
 
 int thread_getnext(int thread_id)
 {
@@ -996,13 +997,14 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 
 	if (thread_id < 0) {
-		return rsp_error(comm, 4);
-	} 
-
-	if (!(__thinkos_thread_ispaused(thread_id - THREAD_ID_OFFS) || 
-		  __thinkos_thread_isfaulty(thread_id - THREAD_ID_OFFS))) {
-		return rsp_error(comm, 5);
-	} 
+		thread_id = THREAD_ID_IDLE;
+//		return rsp_error(comm, 4);
+	} else { 
+		if (!(__thinkos_thread_ispaused(thread_id - THREAD_ID_OFFS) || 
+			  __thinkos_thread_isfaulty(thread_id - THREAD_ID_OFFS))) {
+			return rsp_error(comm, 5);
+		} 
+	}
 
 	cp = pkt;
 	*cp++ = '$';

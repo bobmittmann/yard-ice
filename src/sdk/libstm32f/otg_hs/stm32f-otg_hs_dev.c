@@ -80,7 +80,7 @@ struct stm32f_otg_ep {
 	};
 };
 
-#define OTG_HS_DRIVER_EP_MAX 4
+#define OTG_HS_DRIVER_EP_MAX 5
 
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
@@ -544,6 +544,7 @@ static void otg_hs_io_init(void)
 //	stm32_gpio_mode(OTG_HS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
+#if 0
 void otg_hs_vbus_connect(bool connect)
 {
 	if (connect)
@@ -552,27 +553,10 @@ void otg_hs_vbus_connect(bool connect)
 		stm32_gpio_mode(OTG_HS_VBUS, INPUT, 0);
 }
 
-static void otg_hs_connect(struct stm32f_otg_hs * otg_hs)
-{
-	/* Connect device */
-	otg_hs->dctl &= ~OTG_HS_SDIS;
-	udelay(3000);
-
-}
-
-static void otg_hs_disconnect(struct stm32f_otg_hs * otg_hs)
-{
-	otg_hs->dctl |= OTG_HS_SDIS;
-	udelay(3000);
-}
-
 static void otg_hs_power_on(struct stm32f_otg_hs * otg_hs)
 {
 	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
-
-	/* Initialize as a device */
-	stm32f_otg_hs_device_init(otg_hs);
 
 	otg_hs_connect(otg_hs);
 	DCC_LOG(LOG_INFO, "[ATTACHED]");
@@ -597,7 +581,53 @@ static void otg_hs_power_off(struct stm32f_otg_hs * otg_hs)
 //	stm32_gpio_mode(OTG_HS_DM, INPUT, 0);
 }
 
-#include <stddef.h>
+#endif
+
+void otg_hs_connect(struct stm32f_otg_hs * otg_hs)
+{
+	/* Connect device */
+	otg_hs->dctl &= ~OTG_HS_SDIS;
+	udelay(3000);
+
+}
+
+void otg_hs_disconnect(struct stm32f_otg_hs * otg_hs)
+{
+	otg_hs->dctl |= OTG_HS_SDIS;
+	udelay(3000);
+}
+
+#if 0
+int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
+		const usb_class_events_t * ev)
+{
+	struct stm32f_otg_hs * otg_hs = drv->otg_hs;
+
+	drv->cl = cl;
+	drv->ev = ev;
+
+	/* Initialize IO pins */
+	otg_hs_io_init();
+
+	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
+	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
+
+	/* Initialize as a device */
+	stm32f_otg_hs_device_init(otg_hs);
+
+	/* Enable Cortex interrupt */
+	cm3_irq_enable(STM32F_IRQ_OTG_HS);
+
+	DCC_LOG(LOG_INFO, "----------------------------------------");
+	DCC_LOG(LOG_INFO, "[ATTACHED]");
+
+	udelay(1000000);
+
+	otg_hs_connect(otg_hs);
+
+	return 0;
+}
+#endif
 
 int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 		const usb_class_events_t * ev)
@@ -607,22 +637,59 @@ int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	drv->cl = cl;
 	drv->ev = ev;
 
-	DCC_LOG1(LOG_INFO, "ev=0x%08x", drv->ev);
-	DCC_LOG1(LOG_MSG, "dcfg -> 0x%3x", 
-			 offsetof(struct stm32f_otg_fs, dcfg));
-	DCC_LOG1(LOG_MSG, "pcgcctl -> 0x%3x", 
-			 offsetof(struct stm32f_otg_fs, pcgcctl));
-
 	/* Initialize IO pins */
 	otg_hs_io_init();
 
-	udelay(10000);
+	DCC_LOG(LOG_INFO, "Enabling USB HS clock...");
+	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
+	
+	DCC_LOG(LOG_TRACE, "Enabling USB HS clock during sleep...");
+//	STM32_RCC->ahb1lpenr |= (1 << RCC_OTGHS);
 
-	otg_hs_power_off(otg_hs);
+	/* Initialize as a device */
+	stm32f_otg_hs_device_init(otg_hs);
+//	otg_hs_disconnect(otg_hs);
 
-	udelay(10000);
+	/* Reset global interrupts mask */
+	otg_hs->gintmsk = OTG_HS_WUIM |
+		OTG_HS_SRQIM |
+		OTG_HS_DISCINT |
+		OTG_HS_CIDSCHGM |
+		OTG_HS_FSUSPM |
+		OTG_HS_IISOOXFRM |
+		OTG_HS_IISOIXFRM |
+		OTG_HS_OEPINTM |
+		OTG_HS_IEPINTM |
+		OTG_HS_EPMISM |
+		OTG_HS_EOPFM |
+		OTG_HS_ISOODRPM |
+		OTG_HS_ENUMDNEM |
+		OTG_HS_USBRSTM |
+		OTG_HS_USBSUSPM |
+		OTG_HS_ESUSPM |
+		OTG_HS_GONAKEFFM |
+		OTG_HS_GINAKEFFM |
+//		OTG_HS_NPTXFEM |
+		OTG_HS_RXFLVLM |
+		OTG_HS_SOFM |
+		OTG_HS_OTGINTM |
+		OTG_HS_MMISM;
 
-	otg_hs_power_on(otg_hs);
+
+	
+//	otg_hs_connect(otg_hs);
+	/* Enable Cortex interrupt */
+	cm3_irq_enable(STM32F_IRQ_OTG_HS);
+
+	DCC_LOG(LOG_INFO, "----------------------------------------");
+
+//	mdelay(500);
+
+//	DCC_LOG(LOG_INFO, "........................................");
+
+//	mdelay(500);
+
+	DCC_LOG(LOG_INFO, "Done.");
 
 	return 0;
 }
@@ -895,7 +962,12 @@ void stm32f_otg_hs_isr(void)
 
 	gintsts = otg_hs->gintsts & otg_hs->gintmsk;
 
-	DCC_LOG1(LOG_INFO, "GINTSTS=0x%08x", gintsts);
+	DCC_LOG1(LOG_MSG, "GINTSTS=0x%08x", gintsts);
+	DCC_LOG1(LOG_MSG, "PCGCCTL --> %s", 
+			 otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
+	DCC_LOG2(LOG_MSG, "GOTGCTL --> %s%s", 
+			 otg_hs->gotgctl & OTG_HS_BSVLD ? "BSVLD" : "",
+			 otg_hs->gotgctl & OTG_HS_CIDSTS ? " CIDSTS=B" : " CIDSTS=A");
 
 	if (gintsts & OTG_HS_IEPINT) {
 		uint32_t diepmsk;
@@ -903,7 +975,7 @@ void stm32f_otg_hs_isr(void)
 		uint32_t diepempmsk;
 		uint32_t msk;
 
-		DCC_LOG(LOG_INFO, "<IEPINT>");
+		DCC_LOG(LOG_MSG, "<IEPINT>");
 
 		ep_intr = (otg_hs->daint & otg_hs->daintmsk);
 		diepmsk = otg_hs->diepmsk;
@@ -988,7 +1060,7 @@ void stm32f_otg_hs_isr(void)
 	if (gintsts & OTG_HS_OEPINT) {
 		ep_intr = (otg_hs->daint & otg_hs->daintmsk);
 
-		DCC_LOG(LOG_INFO, "<OEPINT>");
+		DCC_LOG(LOG_MSG, "<OEPINT>");
 
 		if (ep_intr & OTG_HS_OEPINT0) {
 			uint32_t doepint;
@@ -1122,7 +1194,7 @@ void stm32f_otg_hs_isr(void)
 		stat = OTG_HS_PKTSTS_GET(grxsts);
 		(void)stat;
 
-		DCC_LOG3(LOG_INFO, "[%d] <RXFLVL> len=%d status=%d", epnum, len, stat);
+		DCC_LOG3(LOG_MSG, "[%d] <RXFLVL> len=%d status=%d", epnum, len, stat);
 
 		if (epnum == 0) {
 
@@ -1159,7 +1231,7 @@ void stm32f_otg_hs_isr(void)
 				/* Copy the received setup packet into the setup buffer */
 				__copy_from_pktbuf(&drv->req, &otg_hs->dfifo[0].pop, len);
 
-				DCC_LOG3(LOG_INFO, "type=0x%02x request=0x%02x len=%d ",
+				DCC_LOG3(LOG_MSG, "type=0x%02x request=0x%02x len=%d ",
 						drv->req.type, drv->req.request, drv->req.length);
 
 				break;
@@ -1181,7 +1253,7 @@ void stm32f_otg_hs_isr(void)
 				break;
 			case OTG_HS_PKTSTS_OUT_XFER_COMP:
 				DCC_LOG1(LOG_INFO, "[%d] <RXFLVL> <OUT_XFER_COMP>", epnum);
-				DCC_LOG2(LOG_INFO, "[%d] doeptsiz=%08x", epnum, 
+				DCC_LOG2(LOG_MSG, "[%d] doeptsiz=%08x", epnum, 
 						 otg_hs->outep[epnum].doeptsiz);	 
 				/* Prepare to receive more */
 				otg_hs->outep[epnum].doeptsiz = drv->ep[epnum].doeptsiz;
@@ -1226,17 +1298,49 @@ void stm32f_otg_hs_isr(void)
 
 	if (gintsts & OTG_HS_SRQINT) {
 		/* Session request/new session detected interrupt */
-		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]");
+		DCC_LOG1(LOG_INFO, "<SRQINT> [POWERED] %s",
+				otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
+/* Indicates that the PHY has been suspended. This bit is updated once the PHY is suspended after the application has set the STPPCLK bit (bit 0). */
+
+//		otg_hs->gccfg = OTG_HS_VBUSBSEN | OTG_HS_PWRDWN;
+
 		otg_hs->gintmsk |= OTG_HS_WUIM | OTG_HS_USBRSTM | OTG_HS_ENUMDNEM |
 			OTG_HS_ESUSPM | OTG_HS_USBSUSPM;
-//		otg_hs->gccfg = OTG_HS_VBUSBSEN;
+#if 0
+		otg_hs->pcgcctl = 0; 
+
+	/* Core Soft Reset */
+	otg_hs->grstctl = OTG_HS_HSRST;
+	do {
+		udelay(3);
+	} while (otg_hs->grstctl & OTG_HS_HSRST);
+	otg_hs->gccfg |= OTG_HS_PWRDWN;
+#endif
+#if 0
+	DCC_LOG(LOG_INFO, "...");
+
+	/* Wait for AHB master IDLE state. */
+	while (!(otg_hs->grstctl & OTG_HS_AHBIDL)) {
+		udelay(3);
+	}
+
+	/* Core Soft Reset */
+	otg_hs->grstctl = OTG_HS_CSRST;
+	do {
+		udelay(3);
+	} while (otg_hs->grstctl & OTG_HS_CSRST);
+
+	/* Wait for 3 PHY Clocks*/
+	udelay(3);
+#endif
+
 	}
 
 	if (gintsts & OTG_HS_OTGINT) {
 		uint32_t gotgint = otg_hs->gotgint;
 		DCC_LOG(LOG_INFO, "<OTGINT>");
-		if (gotgint & OTG_HS_OTGINT) {
-			DCC_LOG(LOG_INFO, "<SEDET>  [ATTACHED]");
+		if (gotgint & OTG_HS_SEDET) {
+			DCC_LOG(LOG_INFO, "<SEDET> [ATTACHED]");
 			otg_hs->gintmsk = OTG_HS_SRQIM | OTG_HS_OTGINT;
 		}
 		otg_hs->gotgint = gotgint;
@@ -1251,9 +1355,7 @@ void stm32f_otg_hs_isr(void)
 		uint32_t dsts = otg_hs->dsts;
 		(void)dsts;
 		
-		DCC_LOG1(LOG_INFO, "<ENUMDNE> DSTS=%08x", dsts);
-
-		DCC_LOG3(LOG_INFO, "DSTS={%s%s ENUMSPD=%d }", 
+		DCC_LOG3(LOG_INFO, "<ENUMDNE> DSTS={%s%s ENUMSPD=%d }", 
 				 (dsts & OTG_HS_EERR) ? " EERR" : "",
 				 (dsts & OTG_HS_SUSPSTS) ? " SUSPSTS" : "",
 				 OTG_HS_ENUMSPD_GET(dsts));
@@ -1293,11 +1395,11 @@ void stm32f_otg_hs_isr(void)
 		uint32_t dsts = otg_hs->dsts;
 		(void)dsts;
 
-		DCC_LOG(LOG_INFO, "<ESUSP>");
-		DCC_LOG3(LOG_INFO, "DSTS={%s%s ENUMSPD=%d }", 
+		DCC_LOG4(LOG_INFO, "<ESUSP> %s%s ENUMSPD=%d %s", 
 				 (dsts & OTG_HS_EERR) ? " EERR" : "",
 				 (dsts & OTG_HS_SUSPSTS) ? " SUSPSTS" : "",
-				 OTG_HS_ENUMSPD_GET(dsts));
+				 OTG_HS_ENUMSPD_GET(dsts),
+				 otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
 	}
 
 	if (gintsts & OTG_HS_USBSUSP) {
@@ -1314,6 +1416,14 @@ void stm32f_otg_hs_isr(void)
 
 	if (gintsts & OTG_HS_MMIS) {
 		DCC_LOG(LOG_INFO, "<MMIS>");
+	}
+
+	if (gintsts & OTG_HS_CIDSCHG) {
+		DCC_LOG(LOG_INFO, "<CIDSCHG>");
+	}
+
+	if (gintsts & OTG_HS_CMOD) {
+		DCC_LOG(LOG_INFO, "<CMOD>");
 	}
 
 	/* clear pending interrupts */
@@ -1341,4 +1451,5 @@ const struct usb_dev stm32f_otg_hs_dev = {
 #endif /* STM32F_ENABLE_USB_DEVICE */
 
 #endif /* STM32F_OTG_HS */
+
 
