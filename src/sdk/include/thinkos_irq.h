@@ -33,16 +33,10 @@
 
 #define MONITOR_PRIORITY       (0 << 5)
 #define EXCEPT_PRIORITY        (1 << 5)
+#define IRQ_DEF_PRIORITY       (4 << 5)
 #define SYSCALL_PRIORITY       (6 << 5)
 #define CLOCK_PRIORITY         (6 << 5)
 #define SCHED_PRIORITY         (7 << 5)
-
-#define IRQ_PRIORITY_HIGHEST   (1 << 5)
-#define IRQ_PRIORITY_VERY_HIGH (2 << 5)
-#define IRQ_PRIORITY_HIGH      (3 << 5)
-#define IRQ_PRIORITY_REGULAR   (4 << 5)
-#define IRQ_PRIORITY_LOW       (5 << 5)
-#define IRQ_PRIORITY_VERY_LOW  (6 << 5)
 
 #ifdef __cplusplus
 extern "C" {

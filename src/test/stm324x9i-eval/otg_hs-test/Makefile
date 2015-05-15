@@ -22,7 +22,7 @@
 
 PROG = otg_hs-test
 
-CFILES = otg_hs-test.c
+CFILES = otg_hs-test.c lcd20x4.c
 
 SDK = ../../../sdk
 

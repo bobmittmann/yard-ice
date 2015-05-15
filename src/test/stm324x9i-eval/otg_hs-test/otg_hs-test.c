@@ -20,22 +20,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <sys/stm32f.h>
-#include <arch/cortex-m3.h>
-#include <sys/delay.h>
-#include <sys/serial.h>
-#include <sys/param.h>
-#include <sys/file.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <sys/param.h>
 
-#include <sys/dcclog.h>
+#include <sys/stm32f.h>
+#include <sys/delay.h>
 #include <sys/usb-cdc.h>
-#include <xmodem.h>
+#include <sys/dcclog.h>
 
 #include <thinkos.h>
+
+#include "board.h"
 
 const char msg[] = "1.\r\n\r\n"
 	"When Zarathustra was thirty years old, he left his home and the lake of "
@@ -88,28 +86,6 @@ int echo_task(FILE * f)
 	return 0;
 }
 
-/* low level led on/off functions */
-static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_clr(__gpio, __pin);
-}
-
-static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
-	stm32_gpio_set(__gpio, __pin);
-}
-
-#if 1
-
-#define LCD_POWER      STM32_GPIOJ, 9
-#define LCD_BACKLIGHT  STM32_GPIOJ, 8
-
-#define UART2_TX       STM32_GPIOD, 5
-#define UART2_RX       STM32_GPIOD, 6
-#define UART2_CTS      STM32_GPIOD, 3
-#define UART2_RTS      STM32_GPIOD, 4
-
-#define LED1           STM32_GPIOD, 6
-#define LED2           STM32_GPIOD, 5
-
 void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
@@ -118,16 +94,10 @@ void io_init(void)
 	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
 
-	stm32_gpio_mode(LCD_POWER, OUTPUT, PUSH_PULL| SPEED_MED);
-	stm32_gpio_mode(LCD_BACKLIGHT, OUTPUT, PUSH_PULL| SPEED_MED);
-
 	stm32_gpio_set(LED1);
 	stm32_gpio_set(LED2);
 
-	stm32_gpio_set(LCD_POWER);
-	stm32_gpio_set(LCD_BACKLIGHT);
 }
-#endif
 
 #if 0
 
@@ -158,6 +128,7 @@ uint32_t echo_stack2[STACK_SIZE / 4];
 int main(int argc, char ** argv)
 {
 	usb_cdc_class_t * cdc;
+	struct lcd_dev * lcd;
 	uint8_t buf[128];
 	int i;
 	int n;
@@ -175,6 +146,14 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "3. io_init()");
 	io_init();
+
+	DCC_LOG(LOG_TRACE, "4. lcd20x4_init()");
+	lcd = lcd20x4_init();
+
+	lcd_puts(lcd, "===== ThinkOS ======");
+	lcd_puts(lcd, " Zigbee Coordinator ");
+	lcd_puts(lcd, "      Firelink      ");
+	lcd_puts(lcd, "====================");
 
 	for (i = 0; i < 0; ++i) {
 		DCC_LOG1(LOG_MSG, "%d", i);

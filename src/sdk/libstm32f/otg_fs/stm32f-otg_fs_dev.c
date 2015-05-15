@@ -1028,7 +1028,7 @@ void stm32f_otg_fs_isr(void)
 				DCC_LOG(LOG_MSG, "[2] <OEPINT> <STUP>");
 			}
 			/* clear interrupts */
-			otg_fs->outep[1].doepint = doepint;
+			otg_fs->outep[2].doepint = doepint;
 		}
 
 		if (ep_intr & OTG_FS_OEPINT3) {
@@ -1047,7 +1047,7 @@ void stm32f_otg_fs_isr(void)
 			}
 
 			/* clear interrupts */
-			otg_fs->outep[1].doepint = doepint;
+			otg_fs->outep[3].doepint = doepint;
 		}
 	}
 

@@ -423,6 +423,16 @@ static inline int stm32_gpio_stat(struct stm32_gpio *__gpio, int __pin) {
 	return __gpio->idr & (1 << __pin);
 }
 
+/* */
+static inline void stm32_gpio_wr(struct stm32_gpio *__gpio, 
+								uint32_t __val) {
+	__gpio->odr = __val;
+}
+
+static inline uint32_t stm32_gpio_rd(struct stm32_gpio *__gpio) {
+	return __gpio->idr;
+}
+
 /* mode */
 void stm32_gpio_mode(struct stm32_gpio * gpio, unsigned int pin,
 					  unsigned int mode, unsigned int opt);

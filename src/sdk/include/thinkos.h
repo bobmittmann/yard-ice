@@ -55,6 +55,13 @@ enum {
 	THINKOS_OBJ_INVALID
 };
 
+#define IRQ_PRIORITY_HIGHEST   (1 << 5)
+#define IRQ_PRIORITY_VERY_HIGH (2 << 5)
+#define IRQ_PRIORITY_HIGH      (3 << 5)
+#define IRQ_PRIORITY_REGULAR   (4 << 5)
+#define IRQ_PRIORITY_LOW       (5 << 5)
+#define IRQ_PRIORITY_VERY_LOW  (6 << 5)
+
 #define THINKOS_OPT_PRIORITY(VAL) (((VAL) & 0xff) << 16)
 #define THINKOS_OPT_ID(VAL) (((VAL) & 0x07f) << 24)
 #define THINKOS_OPT_PAUSED (1 << 31) /* don't run at startup */

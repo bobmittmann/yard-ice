@@ -535,18 +535,19 @@ static void otg_hs_io_init(void)
 	stm32_gpio_af(OTG_HS_DP, GPIO_AF12);
 	stm32_gpio_af(OTG_HS_DM, GPIO_AF12);
 	stm32_gpio_af(OTG_HS_VBUS, GPIO_AF12);
-	stm32_gpio_af(OTG_HS_ID, GPIO_AF12);
+//	stm32_gpio_af(OTG_HS_ID, GPIO_AF12);
 
 	stm32_gpio_mode(OTG_HS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_HS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_LOW);
-	stm32_gpio_mode(OTG_HS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(OTG_HS_VBUS, INPUT, 0);
+//	stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_LOW);
+//	stm32_gpio_mode(OTG_HS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 }
 
-static void otg_hs_vbus_connect(bool connect)
+void otg_hs_vbus_connect(bool connect)
 {
 	if (connect)
-		stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_LOW);
+		stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_HIGH);
 	else
 		stm32_gpio_mode(OTG_HS_VBUS, INPUT, 0);
 }
@@ -567,8 +568,6 @@ static void otg_hs_disconnect(struct stm32f_otg_hs * otg_hs)
 
 static void otg_hs_power_on(struct stm32f_otg_hs * otg_hs)
 {
-	otg_hs_vbus_connect(true);
-
 	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
 
@@ -578,6 +577,8 @@ static void otg_hs_power_on(struct stm32f_otg_hs * otg_hs)
 	otg_hs_connect(otg_hs);
 	DCC_LOG(LOG_INFO, "[ATTACHED]");
  
+	otg_hs_vbus_connect(true);
+
 	/* Enable Cortex interrupt */
 	cm3_irq_enable(STM32F_IRQ_OTG_HS);
 }
@@ -586,15 +587,14 @@ static void otg_hs_power_off(struct stm32f_otg_hs * otg_hs)
 {
 	otg_hs_disconnect(otg_hs);
 
-	otg_hs_vbus_connect(false);
+//	otg_hs_vbus_connect(false);
 
 	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
 	stm32_clk_disable(STM32_RCC, STM32_CLK_OTGHS);
 
 	/* disabling IO pins */
-	stm32_gpio_mode(OTG_HS_DP, INPUT, 0);
-	stm32_gpio_mode(OTG_HS_DM, INPUT, 0);
-
+//	stm32_gpio_mode(OTG_HS_DP, INPUT, 0);
+//	stm32_gpio_mode(OTG_HS_DM, INPUT, 0);
 }
 
 #include <stddef.h>
@@ -613,13 +613,14 @@ int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	DCC_LOG1(LOG_MSG, "pcgcctl -> 0x%3x", 
 			 offsetof(struct stm32f_otg_fs, pcgcctl));
 
+	/* Initialize IO pins */
+	otg_hs_io_init();
+
+	udelay(10000);
 
 	otg_hs_power_off(otg_hs);
 
 	udelay(10000);
-
-	/* Initialize IO pins */
-	otg_hs_io_init();
 
 	otg_hs_power_on(otg_hs);
 
@@ -731,7 +732,7 @@ static void stm32f_otg_hs_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			DCC_LOG(LOG_INFO, "address set!");
+			DCC_LOG1(LOG_INFO, "address=%d",  req->value);
 			stm32f_otg_hs_addr_set(otg_hs, req->value);
 		}
 		ep->on_setup(drv->cl, req, dummy);
@@ -968,6 +969,20 @@ void stm32f_otg_hs_isr(void)
 				stm32f_otg_hs_dev_ep_in(drv, 3);
 			}
 		}
+		if (ep_intr & OTG_HS_IEPINT4) {
+			/* add the Transmit FIFO empty bit to the mask */
+			msk = diepmsk | ((diepempmsk >> 4) & 0x1) << 7;
+			diepint = otg_hs->inep[4].diepint & msk;
+			otg_hs->inep[4].diepint = diepint;
+			if (diepint & OTG_HS_TXFE) {
+				DCC_LOG(LOG_INFO, "[4] <IEPINT> <TXFE>");
+				__ep_tx_push(drv, 4);
+			}
+			if (diepint & OTG_HS_XFRC) {
+				DCC_LOG(LOG_INFO, "[4] <IEPINT> <XFRC>");
+				stm32f_otg_hs_dev_ep_in(drv, 4);
+			}
+		}
 	}
 
 	if (gintsts & OTG_HS_OEPINT) {
@@ -1047,7 +1062,7 @@ void stm32f_otg_hs_isr(void)
 				DCC_LOG(LOG_INFO, "[2] <OEPINT> <STUP>");
 			}
 			/* clear interrupts */
-			otg_hs->outep[1].doepint = doepint;
+			otg_hs->outep[2].doepint = doepint;
 		}
 
 		if (ep_intr & OTG_HS_OEPINT3) {
@@ -1066,7 +1081,26 @@ void stm32f_otg_hs_isr(void)
 			}
 
 			/* clear interrupts */
-			otg_hs->outep[1].doepint = doepint;
+			otg_hs->outep[3].doepint = doepint;
+		}
+
+		if (ep_intr & OTG_HS_OEPINT4) {
+			uint32_t doepint;
+
+			doepint = otg_hs->outep[4].doepint & otg_hs->doepmsk;
+
+			if (doepint & OTG_HS_XFRC) {
+				DCC_LOG(LOG_INFO, "[4] <OEPINT> <OUT XFRC>");
+			}
+			if (doepint & OTG_HS_EPDISD) {
+				DCC_LOG(LOG_INFO, "[4] <OEPINT> <EPDISD>");
+			}
+			if (doepint & OTG_HS_STUP) {
+				DCC_LOG(LOG_INFO, "[4] <OEPINT> <STUP>");
+			}
+
+			/* clear interrupts */
+			otg_hs->outep[4].doepint = doepint;
 		}
 	}
 
@@ -1195,6 +1229,7 @@ void stm32f_otg_hs_isr(void)
 		DCC_LOG(LOG_INFO, "<SRQINT>  [POWERED]");
 		otg_hs->gintmsk |= OTG_HS_WUIM | OTG_HS_USBRSTM | OTG_HS_ENUMDNEM |
 			OTG_HS_ESUSPM | OTG_HS_USBSUSPM;
+//		otg_hs->gccfg = OTG_HS_VBUSBSEN;
 	}
 
 	if (gintsts & OTG_HS_OTGINT) {
@@ -1214,6 +1249,7 @@ void stm32f_otg_hs_isr(void)
 
 	if (gintsts & OTG_HS_ENUMDNE) {
 		uint32_t dsts = otg_hs->dsts;
+		(void)dsts;
 		
 		DCC_LOG1(LOG_INFO, "<ENUMDNE> DSTS=%08x", dsts);
 
@@ -1255,6 +1291,7 @@ void stm32f_otg_hs_isr(void)
 
 	if (gintsts & OTG_HS_ESUSP) {
 		uint32_t dsts = otg_hs->dsts;
+		(void)dsts;
 
 		DCC_LOG(LOG_INFO, "<ESUSP>");
 		DCC_LOG3(LOG_INFO, "DSTS={%s%s ENUMSPD=%d }", 
@@ -1304,5 +1341,4 @@ const struct usb_dev stm32f_otg_hs_dev = {
 #endif /* STM32F_ENABLE_USB_DEVICE */
 
 #endif /* STM32F_OTG_HS */
-
 

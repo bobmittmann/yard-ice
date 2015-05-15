@@ -258,8 +258,8 @@ int stm32f_otg_hs_txf_push(struct stm32f_otg_hs * otg_hs, unsigned int ep_id,
 
 void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 {
-	uint32_t depctl;
-	int i;
+//	uint32_t depctl;
+//	int i;
 
 	DCC_LOG(LOG_INFO, "1.");
 
@@ -268,8 +268,8 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 
 	/* - Force device mode 
 	   - Full Speed serial transceiver select */
-	otg_hs->gusbcfg = OTG_HS_FDMOD | OTG_HS_TRDT_SET(5) | 
-		OTG_HS_TOCAL_SET(2) | OTG_HS_PHSEL;
+	otg_hs->gusbcfg = OTG_HS_FDMOD | OTG_HS_TRDT_SET(9) | 
+		 OTG_HS_PHYSEL | OTG_HS_SRPCAP | OTG_HS_TOCAL_SET(4);
 //		OTG_HS_SRPCAP | OTG_HS_TOCAL_SET(1) | OTG_HS_PHSEL;
 
 	/* Reset after a PHY select and set Device mode */
@@ -280,6 +280,7 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 	/* Restart the Phy Clock */
 	otg_hs->pcgcctl = 0;
 
+#if 0
 	/* Flush the FIFOs */
 	stm32f_otg_hs_txfifo_flush(otg_hs, 0x10);
 	stm32f_otg_hs_rxfifo_flush(otg_hs);
@@ -305,7 +306,7 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 		otg_hs->outep[i].doepint = 0xff;
 		otg_hs->outep[i].doepdma = 0;
 	}
-
+#endif
 	/* The application must perform the following steps to initialize the 
 	   core as a device on power-up or after a mode change from host 
 	   to device. */
@@ -325,9 +326,6 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 	   - SOF */
 	otg_hs->gintmsk = OTG_HS_SRQIM | OTG_HS_OTGINT;
 
-	otg_hs->gintmsk = OTG_HS_WUIM | OTG_HS_USBRSTM | OTG_HS_ENUMDNEM | 
-		OTG_HS_ESUSPM | OTG_HS_USBSUSPM | OTG_HS_SOFM;
-
 	/* 3. Program the VBUSBSEN bit in the OTG_HS_GCCFG register to enable VBUS 
 	   sensing in "B" device mode and supply the 5 volts across the pull-up 
 	   resistor on the DP line. */
@@ -346,7 +344,7 @@ void stm32f_otg_hs_device_init(struct stm32f_otg_hs * otg_hs)
 
 	/* AHB configuration */
 	/* Enable global interrupts */
-	otg_hs->gahbcfg |= OTG_HS_PTXFELVL | OTG_HS_TXFELVL | OTG_HS_GINTMSK; 
+	otg_hs->gahbcfg = OTG_HS_PTXFELVL | OTG_HS_TXFELVL | OTG_HS_GINTMSK; 
 
 	DCC_LOG(LOG_INFO, "3.");
 }

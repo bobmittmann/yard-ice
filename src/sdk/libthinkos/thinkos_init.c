@@ -88,7 +88,7 @@ void __thinkos_reset(void)
 		int irq;
 		/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
 		for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
-			cm3_irq_pri_set(irq, IRQ_PRIORITY_REGULAR);
+			cm3_irq_pri_set(irq, IRQ_DEF_PRIORITY);
 			thinkos_rt.irq_th[irq] = -1;
 		}
 	}

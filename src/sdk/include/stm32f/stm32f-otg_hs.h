@@ -337,7 +337,7 @@ Note: Accessible in both peripheral and host modes. */
 
 
 /* Bit 6 - USB 2.0 high-speed ULPI PHY or USB 1.1 full-speed serial transceiver select */
-#define OTG_HS_PHSEL (1 << 6)
+#define OTG_HS_PHYSEL (1 << 6)
 /* 0: USB 2.0 high-speed ULPI PHY
 1: USB 1.1 full-speed serial transceiver */
 
