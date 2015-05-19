@@ -23,7 +23,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = thinkos
 
-DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c monitor.c \
+DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c \
 			  print_osinfo.c print_alloc.c print_thread.c \
 			  print_context.c print_stack_usage.c soft_reset.c \
 			  app_exec.c app_load_ymodem.c print_exception.c

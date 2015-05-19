@@ -61,6 +61,8 @@ void firelink_lcd_puts(char * s);
 void firelink_lcd_putc(int c);
 #endif
 
+void monitor_task(struct dmon_comm * comm);
+
 void io_init(void)
 {
 	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);

@@ -22,7 +22,7 @@
 
 PROG = thinkos
 
-CFILES = boot.c firelink.c
+CFILES = boot.c monitor.c firelink.c
 
 SDK = ../sdk
 TOOLS = ../../tools

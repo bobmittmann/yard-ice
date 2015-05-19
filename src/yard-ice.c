@@ -73,6 +73,11 @@
 #define ENABLE_USB 0
 #endif
 
+#ifndef ENABLE_MONITOR
+#undef ENABLE_USB
+#define ENABLE_MONITOR 0
+#endif
+
 #ifndef ENABLE_TELNET
 #define ENABLE_TELNET 0
 #endif
@@ -336,6 +341,8 @@ int init_target(void)
 	return 0;
 }
 
+int monitor_init(void);
+int serial_shell(void);
 int console_shell(void);
 int telnet_shell(void);
 int usb_shell(void);
@@ -432,11 +439,17 @@ int main(int argc, char ** argv)
 	usb_shell();
 #endif
 
+#if ENABLE_MONITOR
+	tracef("* starting ThinkOS monitor ... ");
+	monitor_init();
+	console_shell();
+#endif
+
 #if ENABLE_TELNET
 	tracef("* starting TELNET server ... ");
 	telnet_shell();
 #endif
 
-	return console_shell();
+	return serial_shell();
 }
 

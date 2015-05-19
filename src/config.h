@@ -79,13 +79,19 @@
 
 #define THINKOS_ENABLE_PROFILING   1
 
-#define THINKOS_ENABLE_MONITOR     0
+#define THINKOS_ENABLE_MONITOR     1
+
+#define THINKOS_ENABLE_CONSOLE 1
 
 #define THINKOS_ENABLE_DEBUG_STEP  0
 
-#define THINKOS_ENABLE_DEBUG_FAULT 0
+#define THINKOS_ENABLE_DEBUG_FAULT 1
 
-#define THINKOS_ENABLE_MPU 0
+#define THINKOS_ENABLE_MPU 1
+
+#define THINKOS_ENABLE_BUSFAULT 1
+
+#define THINKOS_ENABLE_USAGEFAULT 1
 
 #define THINKOS_ENABLE_FPU 0
 
@@ -93,7 +99,7 @@
  * USB device and CDC-ACM 
  * ------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_USB_DEVICE 1
+#define STM32_ENABLE_OTG_FS 1
 
 #define CDC_EP_OUT_MAX_PKT_SIZE 64
 #define CDC_EP_IN_MAX_PKT_SIZE  64
@@ -144,15 +150,16 @@
 
 #define ENABLE_TCP_SEND 1
 #define ENABLE_TCP_RECV 1
-#define ENABLE_USB 1
-#define ENABLE_NETWORK 1
-#define ENABLE_TFTP 1
-#define ENABLE_NAND 1
-#define ENABLE_COMM 1
-#define ENABLE_GDB 1
-#define ENABLE_VCOM 1
-#define ENABLE_I2C 1
-#define ENABLE_TELNET 1
+#define ENABLE_USB      0
+#define ENABLE_MONITOR  1
+#define ENABLE_NETWORK  1
+#define ENABLE_TFTP     1
+#define ENABLE_NAND     1
+#define ENABLE_COMM     1
+#define ENABLE_GDB      1
+#define ENABLE_VCOM     1
+#define ENABLE_I2C      1
+#define ENABLE_TELNET   1
 
 #endif /* __CONFIG_H__ */
 

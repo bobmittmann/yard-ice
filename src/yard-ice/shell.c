@@ -36,6 +36,7 @@
 #include <sys/shell.h>
 #include <sys/tty.h>
 #include <sys/stm32f.h>
+#include <sys/console.h>
 
 #include <sys/serial.h>
 #include <yard-ice/drv.h>
@@ -424,15 +425,15 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ NULL, "", "", NULL, NULL }
 };
 
-int console_shell(void)
+int serial_shell(void)
 {
-	struct serial_dev * console;
+	struct serial_dev * ser;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	f_raw = serial_fopen(console);
+	ser = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(ser);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
@@ -442,4 +443,20 @@ int console_shell(void)
 	return shell(f_tty, yard_ice_get_prompt, 
 				 yard_ice_greeting, yard_ice_cmd_tab);
 }
+
+#if ENABLE_MONITOR
+int console_shell(void)
+{
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
+
+	f_raw = console_fopen();
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
+
+	return shell(f_tty, yard_ice_get_prompt, 
+				 yard_ice_greeting, yard_ice_cmd_tab);
+}
+#endif
 

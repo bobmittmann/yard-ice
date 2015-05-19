@@ -125,8 +125,6 @@ struct dmon_comm * usb_comm_init(const usb_dev_t * usb);
 
 void console_task(struct dmon_comm * comm);
 
-void monitor_task(struct dmon_comm * comm);
-
 int dmprintf(struct dmon_comm * comm, const char *fmt, ... );
 
 void dmon_print_thread(struct dmon_comm * comm, int id);
