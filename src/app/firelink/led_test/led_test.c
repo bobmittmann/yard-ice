@@ -30,16 +30,31 @@
 
 #include "board.h"
 
+
+
 void io_init(void)
 {
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOF);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOI);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOJ);
 
-	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
-	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
+	stm32_gpio_mode(IO_LED_TRBL, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED_ALRM, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED_AC_PWR, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED_SPR, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED_SLNC, OUTPUT, PUSH_PULL | SPEED_LOW);
 
-	stm32_gpio_set(LED1);
-	stm32_gpio_set(LED2);
+	stm32_gpio_set(IO_LED_TRBL);
+	stm32_gpio_set(IO_LED_ALRM);
+	stm32_gpio_set(IO_LED_AC_PWR);
+	stm32_gpio_set(IO_LED_SPR);
+	stm32_gpio_set(IO_LED_SLNC);
 }
 
 int main(int argc, char ** argv)
@@ -47,13 +62,22 @@ int main(int argc, char ** argv)
 	io_init();
 
 	for (;;) {
-		__led_on(LED1);
+		__led_on(IO_LED_SLNC);
 		thinkos_sleep(100);
-		__led_on(LED2);
+		__led_on(IO_LED_SPR);
 		thinkos_sleep(100);
-		__led_off(LED1);
+		__led_off(IO_LED_SLNC);
+		__led_on(IO_LED_AC_PWR);
 		thinkos_sleep(100);
-		__led_off(LED2);
+		__led_off(IO_LED_SPR);
+		__led_on(IO_LED_TRBL);
+		thinkos_sleep(100);
+		__led_off(IO_LED_AC_PWR);
+		__led_on(IO_LED_ALRM);
+		thinkos_sleep(100);
+		__led_off(IO_LED_TRBL);
+		thinkos_sleep(100);
+		__led_off(IO_LED_ALRM);
 		thinkos_sleep(100);
 	}
 

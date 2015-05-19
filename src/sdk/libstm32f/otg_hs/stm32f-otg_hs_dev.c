@@ -40,13 +40,13 @@
 
 #include <sys/dcclog.h>
 
-#ifndef STM32_ENABLE_USB_DEVICE 
-#define STM32_ENABLE_USB_DEVICE 0
+#ifndef STM32_ENABLE_OTG_HS 
+#define STM32_ENABLE_OTG_HS 0
 #endif 
 
 #ifdef STM32F_OTG_HS
 
-#if STM32_ENABLE_USB_DEVICE
+#if STM32_ENABLE_OTG_HS
 
 enum ep_state {
 	EP_UNCONFIGURED = 0,
@@ -80,7 +80,7 @@ struct stm32f_otg_ep {
 	};
 };
 
-#define OTG_HS_DRIVER_EP_MAX 5
+#define OTG_HS_DRIVER_EP_MAX 4
 
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
@@ -1041,6 +1041,7 @@ void stm32f_otg_hs_isr(void)
 				stm32f_otg_hs_dev_ep_in(drv, 3);
 			}
 		}
+#if 0
 		if (ep_intr & OTG_HS_IEPINT4) {
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 4) & 0x1) << 7;
@@ -1055,6 +1056,7 @@ void stm32f_otg_hs_isr(void)
 				stm32f_otg_hs_dev_ep_in(drv, 4);
 			}
 		}
+#endif
 	}
 
 	if (gintsts & OTG_HS_OEPINT) {
@@ -1155,7 +1157,7 @@ void stm32f_otg_hs_isr(void)
 			/* clear interrupts */
 			otg_hs->outep[3].doepint = doepint;
 		}
-
+#if 0
 		if (ep_intr & OTG_HS_OEPINT4) {
 			uint32_t doepint;
 
@@ -1174,6 +1176,7 @@ void stm32f_otg_hs_isr(void)
 			/* clear interrupts */
 			otg_hs->outep[4].doepint = doepint;
 		}
+#endif
 	}
 
 	/* RxFIFO non-empty */
@@ -1448,7 +1451,7 @@ const struct usb_dev stm32f_otg_hs_dev = {
 	.op = &stm32f_otg_hs_ops
 };
 
-#endif /* STM32F_ENABLE_USB_DEVICE */
+#endif /* STM32_ENABLE_OTG_HS */
 
 #endif /* STM32F_OTG_HS */
 

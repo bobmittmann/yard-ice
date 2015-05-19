@@ -21,9 +21,7 @@
  */
 
 #include <sys/stm32f.h>
-#include <arch/cortex-m3.h>
 #include <sys/delay.h>
-#include <sys/dcclog.h>
 #include <thinkos.h>
 
 #include "board.h"
@@ -49,6 +47,9 @@
 
 struct lcd_dev {
 	int16_t mutex;
+	uint8_t x;
+	uint8_t y;
+	uint8_t fb[80];
 };
 
 static struct lcd_dev lcd20x4_dev;

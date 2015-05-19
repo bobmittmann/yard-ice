@@ -20,26 +20,23 @@
 # 
 
 
-PROG = thinkos
+PROG = io_test
 
-CFILES = boot.c firelink.c
+CFILES = io_test.c 
 
-SDK = ../sdk
-TOOLS = ../../tools
+SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libstm32drv $(SDK)/libgdb
+LIBS = cm3 stm32f stm32drv console util c driver 
 
-LIBS = cm3 stm32f util thinkos ice-comm stm32drv gdb gcc 
+INCPATH = $(SDK)/include ../include
 
-INCPATH = $(SDK)/include 
+LIBPATH = ../libs/release ../driver/release
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CDEFS =
 
-CFLAGS = -g -O2 -Wall
+CFLAGS = -g3 -Og -Wall
 
-JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f429
-include ../mk/stm32f4xx.mk
+THINKOS = 1
+include ../../../mk/stm32f4xx.mk
 

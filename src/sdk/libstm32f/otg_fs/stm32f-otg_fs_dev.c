@@ -40,13 +40,13 @@
 
 #include <sys/dcclog.h>
 
-#ifndef STM32_ENABLE_USB_DEVICE 
-#define STM32_ENABLE_USB_DEVICE 0
+#ifndef STM32_ENABLE_OTG_FS 
+#define STM32_ENABLE_OTG_FS 0
 #endif 
 
 #ifdef STM32F_OTG_FS
 
-#if STM32_ENABLE_USB_DEVICE
+#if STM32_ENABLE_OTG_FS
 
 enum ep_state {
 	EP_UNCONFIGURED = 0,
@@ -1260,7 +1260,7 @@ const struct usb_dev stm32f_otg_fs_dev = {
 	.op = &stm32f_otg_fs_ops
 };
 
-#endif /* STM32F_ENABLE_USB_DEVICE */
+#endif /* STM32F_ENABLE_OTG_FS */
 
 #endif /* STM32F_OTG_FS */
 

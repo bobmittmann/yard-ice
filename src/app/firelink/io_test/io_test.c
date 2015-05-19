@@ -30,12 +30,8 @@
 #include <thinkos.h>
 
 #include "board.h"
-
-void io_init(void)
-{
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOJ);
-}
+#include "fzc_io.h"
+#include "zigbee.h"
 
 int clock_task(struct lcd_dev * lcd)
 {
@@ -67,6 +63,8 @@ int clock_task(struct lcd_dev * lcd)
 		lcd_set_pos(lcd, 0, 12);
 		lcd_puts(lcd, buf);
 	}
+
+	return 0;
 }
 
 void init_clock_task(struct lcd_dev * lcd)
@@ -77,7 +75,7 @@ void init_clock_task(struct lcd_dev * lcd)
 		.stack_ptr = clock_stack, 
 		.stack_size = sizeof(clock_stack), 
 		.priority = 8,
-		.thread_id = 31, 
+		.thread_id = 30, 
 		.paused = 0,
 		.tag = "CLOCK"
 	};
@@ -85,13 +83,28 @@ void init_clock_task(struct lcd_dev * lcd)
 	thinkos_thread_create_inf((void *)clock_task, lcd, &clock_inf);
 }
 
+void stdio_init(void)
+{
+	FILE * f;
+
+	f = console_fopen();
+	/* initialize STDIO */
+	stderr = f;
+	stdout = f;
+	stdin = f;
+}
+
 int main(int argc, char ** argv)
 {
 	struct lcd_dev * lcd;
+	struct zigbee_dev * zigb;
+	int c;
 
 	io_init();
+	stdio_init();
 
 	lcd = lcd20x4_init();
+	zigb = zigbee_init();
 
 	lcd_puts(lcd, "= ThinkOS = 00:00:00");
 	lcd_puts(lcd, " Zigbee Coordinator ");
@@ -100,8 +113,31 @@ int main(int argc, char ** argv)
 
 	init_clock_task(lcd);
 
+	led_set_rate(LED_AC_PWR, RATE_1BPS);
+
 	for (;;) {
-		thinkos_sleep(1000);
+		c = keypad_read();
+		switch (c) {
+		case KEY_UP:
+			led_set_rate(LED_ALRM, RATE_2BPS);
+			zigbee_nac_on(zigb);
+			break;
+		case KEY_DOWN:
+			zigbee_nac_off(zigb);
+			led_off(LED_ALRM);
+			break;
+		case KEY_LEFT:
+			led_set_rate(LED_TRBL, RATE_2BPS);
+			break;
+		case KEY_RIGHT:
+			led_set_rate(LED_SPR, RATE_2BPS);
+			break;
+		case KEY_ENTER:
+			led_set_rate(LED_SLNC, RATE_2BPS);
+			break;
+
+		};
+		lcd_set_pos(lcd, 0, 12);
 	}
 
 	return 0;

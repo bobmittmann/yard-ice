@@ -37,10 +37,6 @@
 
 #if (THINKOS_ENABLE_MONITOR)
 
-#ifndef STM32_ENABLE_USB_DEVICE 
-#error "usb_comm.c depends on STM32_ENABLE_USB_DEVICE"
-#endif 
-
 #define EP0_ADDR 0
 #define EP0_MAX_PKT_SIZE 64
 

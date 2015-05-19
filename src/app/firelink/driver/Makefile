@@ -1,5 +1,5 @@
 # File:		Makefile
-# Module: 
+# Author:   Robinson Mittmann (bobmittmann@gmail.com)
 # Target:
 # Comment:  
 # Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
@@ -19,27 +19,23 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+include ../../../mk/config.mk
 
-PROG = thinkos
+LIB_STATIC = driver
 
-CFILES = boot.c firelink.c
+CFILES = io.c buzzer.c lcd20x4.c zigbee.c
 
-SDK = ../sdk
-TOOLS = ../../tools
+INCPATH = ../../../sdk/include ../include
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libstm32drv $(SDK)/libgdb
+CFLAGS = -g3 -Og
 
-LIBS = cm3 stm32f util thinkos ice-comm stm32drv gdb gcc 
+CDEFS = STM32F429 THINKAPP
 
-INCPATH = $(SDK)/include 
+OPTIONS	= -mcpu=cortex-m4 -mthumb
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CROSS_COMPILE = arm-none-eabi-
 
-CFLAGS = -g -O2 -Wall
+include ../../../mk/lib.mk
 
-JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f429
-include ../mk/stm32f4xx.mk
+
 

@@ -717,23 +717,24 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 
 int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 {
-	char * cp;
+	char * cp = pkt;
 	int thread_id;
 	int n;
 
 	/* get the first thread */
 	if ((thread_id = thread_getnext(0)) < 0) {
-		n = str2str(pkt, "$l");
+		thread_id = THREAD_ID_IDLE;
+		cp += str2str(cp, "$m");
+		cp += uint2hex(cp, thread_id);
 	} else {
-		cp = pkt;
 		cp += str2str(cp, "$m");
 		cp += uint2hex(cp, thread_id);
 		while ((thread_id = thread_getnext(thread_id)) > 0) {
 			*cp++ = ',';
 			cp += uint2hex(cp, thread_id);
 		}
-		n = cp - pkt;
 	}
+	n = cp - pkt;
 
 	return rsp_send_pkt(comm, pkt, n);
 }
@@ -994,12 +995,12 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 		thread_id = gdb->thread_id.g;
 	}
 
+	if (thread_id < 0)
+		thread_id = THREAD_ID_IDLE;
+
 	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 
-	if (thread_id < 0) {
-		thread_id = THREAD_ID_IDLE;
-//		return rsp_error(comm, 4);
-	} else { 
+	if (thread_id != THREAD_ID_IDLE) {
 		if (!(__thinkos_thread_ispaused(thread_id - THREAD_ID_OFFS) || 
 			  __thinkos_thread_isfaulty(thread_id - THREAD_ID_OFFS))) {
 			return rsp_error(comm, 5);
@@ -1608,14 +1609,17 @@ static int rsp_detach(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "[DETACH]");
 
+#if 0
 	if (gdb->stopped)
 		dmon_app_continue();
+#endif
 
 	/* reply OK */
 	rsp_ok(comm);
 
+#if 1
 	dmon_exec(gdb->shell_task);
-
+#endif
 	return 0;
 }
 
@@ -1623,12 +1627,16 @@ static int rsp_kill(struct gdb_rspd * gdb, struct dmon_comm * comm)
 {
 	DCC_LOG(LOG_TRACE, "[KILL]");
 
+#if 0
 	if (gdb->stopped)
 		dmon_app_continue();
+#endif
 
 	rsp_ok(comm);
 
+#if 0
 	dmon_exec(gdb->shell_task);
+#endif
 
 	return 0;
 }

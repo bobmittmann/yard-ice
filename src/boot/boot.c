@@ -49,10 +49,17 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-#define LED1      STM32_GPIOG, 6
-#define LED2      STM32_GPIOG, 7
-#define LED3      STM32_GPIOG, 10
-#define LED4      STM32_GPIOG, 12
+#ifndef FIRELINK
+#define FIRELINK 1
+#endif
+
+#if FIRELINK
+void firelink_io_init(void);
+void firelink_lcd_init(void);
+void firelink_lcd_clear(void);
+void firelink_lcd_puts(char * s);
+void firelink_lcd_putc(int c);
+#endif
 
 void io_init(void)
 {
@@ -69,6 +76,11 @@ void io_init(void)
 #endif
 
 #if 0
+#define LED1      STM32_GPIOG, 6
+#define LED2      STM32_GPIOG, 7
+#define LED3      STM32_GPIOG, 10
+#define LED4      STM32_GPIOG, 12
+
 	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
 	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
@@ -97,13 +109,13 @@ void boot_task(struct dmon_comm * comm)
 {
 	uint32_t sigmask = 0;
 	bool delay = true;
+	int cnt = 20;
 	char c;
-
 
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_ALARM);
-	dmon_alarm(5000);
+	dmon_alarm(250);
 
 	while (delay) {
 		uint32_t sigset;
@@ -139,7 +151,13 @@ void boot_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_ALARM)) {
 			dmon_clear(DMON_ALARM);
-			delay = false;
+#if FIRELINK
+			firelink_lcd_putc('.');
+#endif
+			if (--cnt == 0)
+				delay = false;
+			else
+				dmon_alarm(250);
 		}
 
 	}
@@ -173,11 +191,20 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+#if FIRELINK
+	firelink_io_init();
+#endif
+	io_init();
+
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "2. io_init()");
-	io_init();
+#if FIRELINK
+	firelink_lcd_init();
+	firelink_lcd_puts("ThinkOS 0.21        ");
+	firelink_lcd_puts("Bootloader          ");
+	firelink_lcd_puts("Debug Monitor       ");
+#endif
 		
 	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));

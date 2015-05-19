@@ -26,11 +26,11 @@ CFILES = led_test.c
 
 SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f 
-
 LIBS = cm3 stm32f 
 
-INCPATH = $(SDK)/include ..
+INCPATH = $(SDK)/include ../include
+
+LIBPATH = ../libs/release
 
 CDEFS =
 

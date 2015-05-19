@@ -208,6 +208,7 @@ void dmon_reset(void)
 
 void dmon_exec(void (* task)(struct dmon_comm *))
 {
+	DCC_LOG1(LOG_TRACE, "task=%p", task);
 	thinkos_dmon_rt.task = task;
 	dmon_signal(DMON_RESET);
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 

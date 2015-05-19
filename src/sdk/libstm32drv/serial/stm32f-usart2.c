@@ -26,35 +26,24 @@
 #define __STM32_SERIAL_I__
 #include "stm32-serial-i.h"
 
-struct stm32f_serial_drv uart1_serial_drv = {
-	.uart = STM32_USART1,
-#if SERIAL_ENABLE_DMA
-	.dma = STM32F_DMA2,
-	.rx = {
-		.irq = STM32F_IRQ_DMA2_STREAM5,
-		.s = &STM32F_DMA2->s[5]
-	},
-	.tx = {
-		.irq = STM32F_IRQ_DMA2_STREAM7,
-		.s = &STM32F_DMA2->s[7]
-	}
-#endif
+struct stm32f_serial_drv uart2_serial_drv = {
+	.uart = STM32_USART2,
 };
 
-void stm32f_usart1_isr(void)
+void stm32f_usart2_isr(void)
 {
-	stm32f_serial_isr(&uart1_serial_drv);
+	stm32f_serial_isr(&uart2_serial_drv);
 }
 
-const struct serial_dev uart1_serial_dev = {
-	.drv = &uart1_serial_drv,
+const struct serial_dev uart2_serial_dev = {
+	.drv = &uart2_serial_drv,
 	.op = &stm32f_uart_serial_op
 };
 
-struct serial_dev * stm32f_uart1_serial_init(unsigned int baudrate, 
+struct serial_dev * stm32f_uart2_serial_init(unsigned int baudrate, 
 											 unsigned int flags)
 {
-	struct stm32f_serial_drv * drv = &uart1_serial_drv;
+	struct stm32f_serial_drv * drv = &uart2_serial_drv;
 
 	DCC_LOG(LOG_TRACE, "IDLE!");
 
@@ -62,15 +51,15 @@ struct serial_dev * stm32f_uart1_serial_init(unsigned int baudrate,
 
 #ifdef THINKAPP
 	/* configure and Enable interrupt */
-	thinkos_irq_register(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY, 
-						 stm32f_usart1_isr);
+	thinkos_irq_register(STM32_IRQ_USART2, SERIAL_IRQ_PRIORITY, 
+						 stm32f_usart2_isr);
 #else
 	/* configure interrupts */
-	cm3_irq_pri_set(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY);
+	cm3_irq_pri_set(STM32_IRQ_USART2, SERIAL_IRQ_PRIORITY);
 	/* enable interrupts */
-	cm3_irq_enable(STM32_IRQ_USART1);
+	cm3_irq_enable(STM32_IRQ_USART2);
 #endif
 
-	return (struct serial_dev *)&uart1_serial_dev;
+	return (struct serial_dev *)&uart2_serial_dev;
 }
 

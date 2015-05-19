@@ -152,10 +152,6 @@ struct usb_dev {
 
 typedef struct usb_dev usb_dev_t;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 extern inline int usb_dev_init(const usb_dev_t * dev, usb_class_t * cl,
 		const usb_class_events_t * ev) {
 	return dev->op->dev_init(dev->priv, cl, ev);
@@ -181,6 +177,25 @@ extern inline int usb_dev_ep_pkt_recv(const usb_dev_t * dev, int ep_id,
 		void * buf, int len) {
 	return dev->op->ep_pkt_recv(dev->priv, ep_id, buf, len);
 }
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int usb_dev_init(const usb_dev_t * dev, usb_class_t * cl, 
+				 const usb_class_events_t * ev);
+
+int usb_dev_ep_init(const usb_dev_t * dev, 
+					const usb_dev_ep_info_t * info,
+					void * xfr_buf, unsigned int buf_len);
+
+int usb_dev_ep_ctl(const usb_dev_t * dev, int ep_id, unsigned int opt);
+
+int usb_dev_ep_pkt_xmit(const usb_dev_t * dev, int ep_id, 
+						const void * buf, int len);
+
+int usb_dev_ep_pkt_recv(const usb_dev_t * dev, int ep_id, void * buf, int len);
 
 #ifdef __cplusplus
 }

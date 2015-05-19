@@ -26,10 +26,10 @@
 
 SDK = ../../../sdk
 
-LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libutil $(SDK)/libc
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
+		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole
 
-LIBS = cm3 stm32f console util c 
+LIBS = cm3 stm32f stm32drv console util c 
 
 INCPATH = $(SDK)/include ..
 
