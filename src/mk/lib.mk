@@ -119,8 +119,8 @@ CLEAN_FILES := $(OFILES) $(DFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHA
 
 ifeq (Windows,$(HOST))
   CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
-  LIB_OUT := $(subst /,\,$(LIB_OUT))
   INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
+  LIB_OUT_WIN := $(subst /,\,$(LIB_OUT))
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
@@ -154,7 +154,11 @@ clean: deps-clean
 	$(Q)$(RMALL) $(CLEAN_FILES)
 
 install: $(LIB_OUT)
+ifeq (Windows,$(HOST))
+	$(Q)$(CP) $(LIB_OUT_WIN) $(INSTALL_DIR)
+else
 	$(Q)$(CP) $(LIB_OUT) $(INSTALL_DIR)
+endif
 
 
 lib: $(LIB_OUT)

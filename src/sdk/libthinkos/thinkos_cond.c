@@ -66,7 +66,9 @@ void thinkos_cond_wait_svc(int32_t * arg)
 {
 	unsigned int cwq = arg[0];
 	unsigned int mwq = arg[1];
+#if THINKOS_ENABLE_ARG_CHECK
 	unsigned int cond = cwq - THINKOS_COND_BASE;
+#endif
 	unsigned int mutex = mwq - THINKOS_MUTEX_BASE;
 	int self = thinkos_rt.active;
 	int th;
@@ -178,7 +180,9 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 {
 	unsigned int cwq = arg[0];
 	unsigned int mwq = arg[1];
+#if THINKOS_ENABLE_ARG_CHECK
 	unsigned int cond = cwq - THINKOS_COND_BASE;
+#endif
 	unsigned int mutex = mwq - THINKOS_MUTEX_BASE;
 	uint32_t ms = (uint32_t)arg[2];
 	int self = thinkos_rt.active;
@@ -255,10 +259,10 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 void thinkos_cond_signal_svc(int32_t * arg)
 {	
 	unsigned int cwq = arg[0];
-	unsigned int cond = cwq - THINKOS_COND_BASE;
 	int th;
-
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int cond = cwq - THINKOS_COND_BASE;
+
 	if (cond >= THINKOS_COND_MAX) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;
@@ -331,10 +335,10 @@ void thinkos_cond_signal_svc(int32_t * arg)
 void thinkos_cond_broadcast_svc(int32_t * arg)
 {	
 	unsigned int cwq = arg[0];
-	unsigned int cond = cwq - THINKOS_COND_BASE;
 	int th;
-
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int cond = cwq - THINKOS_COND_BASE;
+
 	if (cond >= THINKOS_COND_MAX) {
 		DCC_LOG1(LOG_ERROR, "invalid conditional variable %d!", cwq);
 		arg[0] = THINKOS_EINVAL;

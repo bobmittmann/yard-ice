@@ -61,7 +61,7 @@
 /* Set and Cleared by software.These bits control the PHY interface for 
    the Ethernet MAC.
    0: MII interface is selected
-   1: RMII Why interface is selected 
+   1: RMII interface is selected 
    Note: This configuration must be done while the MAC is under reset and 
    before enabling the MAC clocks.  */
 

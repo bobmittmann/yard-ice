@@ -49,9 +49,10 @@ void thinkos_flag_alloc_svc(int32_t * arg)
 void thinkos_flag_free_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+
 	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a xdmon!", wq);
 		arg[0] = THINKOS_EINVAL;

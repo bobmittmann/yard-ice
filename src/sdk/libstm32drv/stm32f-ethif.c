@@ -50,6 +50,37 @@
 
 void stm32f_eth_isr(void);
 
+void stm32f_eth_mii_wr(struct stm32f_eth * eth, unsigned int addr, 
+					   unsigned int reg, uint16_t data)
+{
+	DCC_LOG1(LOG_MSG, "reg: %d", reg);
+
+	while (eth->macmiiar & ETH_MII_MB) {
+	}
+
+	eth->macmiidr = data;
+	eth->macmiiar = ETH_PA_SET(addr) | ETH_MR_SET(reg) | 
+		ETH_CR_HCLK_16 | ETH_MII_MW | ETH_MII_MB;
+}
+
+void stm32f_eth_mii_rd(struct stm32f_eth * eth, unsigned int addr, 
+					   unsigned int reg, uint16_t * data)
+{
+	DCC_LOG1(LOG_MSG, "reg: %d", reg);
+
+	while (eth->macmiiar & ETH_MII_MB) {
+	}
+
+	eth->macmiiar = ETH_PA_SET(addr) | ETH_MR_SET(reg) | 
+		ETH_CR_HCLK_16 | ETH_MII_MB;
+
+	while (eth->macmiiar & ETH_MII_MB) {
+	}
+
+	*data = eth->macmiidr;
+}
+
+
 #if THINKOS_ENABLE_FLAG_ALLOC
 
 void * stm32f_ethif_mmap(struct ifnet * __if, size_t __len)
@@ -513,7 +544,7 @@ void stm32f_eth_isr(void)
 	dmasr = eth->dmasr;
 //	show_dma_status(dmasr);
 
-	DCC_LOG1(LOG_INFO, "DMASR=0x%08x", dmasr);
+	DCC_LOG1(LOG_TRACE, "DMASR=0x%08x", dmasr);
 
 	if (dmasr & ETH_RS) {
 		DCC_LOG(LOG_INFO, "DMA RS");
@@ -581,13 +612,51 @@ void stm32f_eth_isr(void)
 	eth->dmasr = dmasr;
 }
 
+#define PHY_RESET (1 << 15)
+#define PHY_AUTO (1 << 12)
+
+#define PHY_LINK_UP (1 << 2)
+#define PHY_AUTO_DONE (1 << 5)
+
 struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr, 
 						  in_addr_t netmask)
 {
 	struct stm32f_eth * eth = STM32F_ETH;
 	struct ifnet * ifn;
+	unsigned int addr;
+	uint16_t data;
+	uint32_t phy_id;
 
 	stm32f_eth_init(eth);
+
+	DCC_LOG(LOG_TRACE, "probing PHY...");
+	for (addr = 0; addr < 32; ++addr) {
+		stm32f_eth_mii_rd(eth, addr, 0, &data);
+		DCC_LOG2(LOG_INFO, "addr=%d r0=%04x", addr, data);
+		if (data != 0xff)
+			break;
+	}
+
+	if (addr < 32) {
+		stm32f_eth_mii_rd(eth, addr, 2, &data);
+		phy_id = data;
+		stm32f_eth_mii_rd(eth, addr, 3, &data);
+		phy_id |= data << 16;
+		DCC_LOG2(LOG_TRACE, "PHY addr=%d id=%08x", addr, phy_id);
+		(void)phy_id;	
+		DCC_LOG(LOG_TRACE, "PHY reset...");
+		stm32f_eth_mii_wr(eth, addr, 0, PHY_RESET);
+#if 0
+		stm32f_eth_mii_wr(eth, addr, 0, PHY_AUTO);
+		do {
+			stm32f_eth_mii_rd(eth, addr, 1, &data);
+		} while (!(data & PHY_AUTO_DONE)); 
+
+		DCC_LOG1(LOG_TRACE, "Link is %s.", 
+				 data & PHY_LINK_UP ? "up" : " down");
+#endif
+	}
+
 	stm32f_eth_mac_set(eth, 0, ethaddr);
 
 	DCC_LOG2(LOG_INFO, "ifn_register(%I, %I)", ip_addr, netmask);

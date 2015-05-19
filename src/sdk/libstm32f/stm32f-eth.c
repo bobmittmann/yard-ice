@@ -32,6 +32,10 @@
 #include "config.h"
 #endif
 
+#ifndef STM32F_ETH_ENABLE_RMII  
+#define STM32F_ETH_ENABLE_RMII 0
+#endif
+
 #ifdef STM32F429
 
 #define ETH_MII_TX_CLK STM32_GPIOC, 3
@@ -51,6 +55,23 @@
 #define ETH_MII_COL    STM32_GPIOH, 3
 #define ETH_MDC        STM32_GPIOC, 1 
 #define ETH_MDIO       STM32_GPIOA, 2
+
+#define ETH_RMII_TX_EN   STM32_GPIOG, 11
+#define ETH_RMII_TXD0    STM32_GPIOG, 13
+#define ETH_RMII_TXD1    STM32_GPIOG, 14
+#define ETH_RMII_REF_CLK STM32_GPIOA, 1
+#define ETH_RMII_CRS_DV  STM32_GPIOA, 7
+#define ETH_RMII_RXD0    STM32_GPIOC, 4
+#define ETH_RMII_RXD1    STM32_GPIOC, 5
+#define ETH_RMII_RX_ER   STM32_GPIOI, 10
+
+#ifndef ETH_PHY_IRQ_GPIO
+#define ETH_PHY_IRQ_GPIO STM32_GPIOI, 4
+#endif
+
+#if STM32F_ETH_ENABLE_RMII
+
+#endif
 
 #else
 
@@ -78,6 +99,7 @@
 
 #endif
 
+
 #if defined(STM32F2X) || defined(STM32F4X)
 
 void stm32f_eth_init(struct stm32f_eth * eth)
@@ -85,11 +107,13 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	struct stm32_rcc * rcc = STM32_RCC;
 	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
 
+#if STM32F_ETH_ENABLE_RMII
+	DCC_LOG(LOG_TRACE, "Selecting RMII interface...");
+	syscfg->pmc = SYSCFG_MII_RMII_SEL;
+#else
 	DCC_LOG(LOG_TRACE, "Selecting MII interface...");
 	syscfg->pmc = 0;
-
-	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
-	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
+#endif
 
 	DCC_LOG(LOG_TRACE, "Enabling GPIO clocks...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
@@ -108,6 +132,29 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	stm32_gpio_clr(ETH_PHY_RST_GPIO);
 #endif
 
+#ifdef ETH_PHY_IRQ_GPIO
+	stm32_gpio_mode(ETH_PHY_IRQ_GPIO, INPUT, PULL_UP);
+#endif
+
+#if STM32F_ETH_ENABLE_RMII
+	stm32_gpio_af(ETH_RMII_TX_EN, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_TXD0, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_TXD1, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_REF_CLK, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_CRS_DV, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_RXD0, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_RXD1, GPIO_AF11);
+	stm32_gpio_af(ETH_RMII_RX_ER, GPIO_AF11);
+
+	stm32_gpio_mode(ETH_RMII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_RMII_TXD0, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_RMII_TXD1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(ETH_RMII_REF_CLK, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_RMII_CRS_DV, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_RMII_RXD0, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_RMII_RXD1, ALT_FUNC, 0);
+	stm32_gpio_mode(ETH_RMII_RX_ER, ALT_FUNC, 0);
+#else
 	stm32_gpio_af(ETH_MII_TX_CLK, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_TX_EN, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_TXD0, GPIO_AF11);
@@ -123,8 +170,6 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	stm32_gpio_af(ETH_MII_RX_ER, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_CRS, GPIO_AF11);
 	stm32_gpio_af(ETH_MII_COL, GPIO_AF11);
-	stm32_gpio_af(ETH_MDC, GPIO_AF11);
-	stm32_gpio_af(ETH_MDIO, GPIO_AF11);
 
 	stm32_gpio_mode(ETH_MII_TX_CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(ETH_MII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
@@ -141,9 +186,15 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	stm32_gpio_mode(ETH_MII_RX_ER, ALT_FUNC, 0);
 	stm32_gpio_mode(ETH_MII_CRS, ALT_FUNC, 0);
 	stm32_gpio_mode(ETH_MII_COL, ALT_FUNC, 0);
+#endif
+	stm32_gpio_af(ETH_MDC, GPIO_AF11);
+	stm32_gpio_af(ETH_MDIO, GPIO_AF11);
 
 	stm32_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_LOW);
+
+	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
+	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
 
 	/* disable MAC interrupts */
 	eth->macimr = 0;
