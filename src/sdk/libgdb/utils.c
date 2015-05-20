@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+int uint2hex(char * s, unsigned int val);
 int uint2dec(char * s, unsigned int val);
 int int2dec(char * s, int val);
 
@@ -165,6 +166,13 @@ int int2str2hex(char * pkt, unsigned int val)
 {
 	char s[12];
 	int2dec(s, val);
+	return str2hex(pkt, s);
+}
+
+int uint2hex2hex(char * pkt, unsigned int val)
+{
+	char s[10];
+	uint2hex(s, val);
 	return str2hex(pkt, s);
 }
 

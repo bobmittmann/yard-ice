@@ -27,10 +27,10 @@ CFILES = tcp_test.c zarathustra.c
 SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libdrv \
+		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libstm32drv \
 		  $(SDK)/libtty $(SDK)/libcrc $(SDK)/libconsole
 
-LIBS = cm3 stm32f util c crc drv tcpip tty console
+LIBS = cm3 stm32f util c crc stm32drv tcpip tty console
 
 INCPATH = $(SDK)/include ..
 

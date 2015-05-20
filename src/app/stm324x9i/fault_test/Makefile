@@ -27,15 +27,15 @@ CFILES = fault_test.c
 SDK = ../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libconsole \
-		   $(SDK)/libutil $(SDK)/libc
+		   $(SDK)/libutil 
 
-LIBS = cm3 stm32f console util c 
+LIBS = cm3 stm32f console util 
 
 INCPATH = $(SDK)/include ..
 
 CDEFS =
 
-CFLAGS = -g -O1 -Wall
+CFLAGS = -g -O0 -Wall
 
 MACH = stm32f429
 THINKOS = 1
