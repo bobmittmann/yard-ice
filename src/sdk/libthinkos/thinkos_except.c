@@ -236,14 +236,16 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 
 	sf = (struct cm3_except_context *)&thinkos_idle.ctx;
 	sf->r0 = (uint32_t)xcpt;
-	sf->xpsr = xpsr;
 
 	icsr = CM3_SCB->icsr;
 	if (icsr & SCB_ICSR_RETTOBASE) {
+		sf->xpsr = 0x01000000;
 		sf->pc = (uint32_t)__xcpt_thread;
 		cm3_psp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_THREAD_PSP;
 	} else {
+
+		sf->xpsr = xpsr;
 		sf->pc = (uint32_t)__xcpt_return;
 		cm3_msp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_HANDLER;

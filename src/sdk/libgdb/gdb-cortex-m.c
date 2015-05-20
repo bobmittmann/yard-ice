@@ -205,12 +205,11 @@ int thread_any(void)
 	return thread_id + THREAD_ID_OFFS;
 }
 
-bool thread_isalive(int thread_id)
+bool thread_isalive(int gdb_thread_id)
 {
-	if (thread_id == 0)
-		return true;
+	unsigned int thread_id = gdb_thread_id - THREAD_ID_OFFS;
 
-	return __thinkos_thread_isalive(thread_id - THREAD_ID_OFFS);
+	return __thinkos_thread_isalive(thread_id);
 }
 
 int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)

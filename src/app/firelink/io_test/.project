@@ -4,7 +4,6 @@
 	<comment></comment>
 	<projects>
 		<project>driver</project>
-		<project>sdklibs</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

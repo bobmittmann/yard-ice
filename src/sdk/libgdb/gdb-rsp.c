@@ -119,6 +119,7 @@ struct gdb_rspd {
 	uint8_t nonstop_mode : 1;
 	uint8_t stopped : 1;
 	uint8_t active_app : 1;
+	uint8_t session_valid : 1;
 	uint8_t last_signal;
 	uint8_t cont_signal;
 	struct {
@@ -278,6 +279,12 @@ int rsp_output(struct gdb_rspd * gdb, struct dmon_comm * comm, char * pkt)
 	char * cp;
 	int n;
 
+	if (!gdb->session_valid)
+		return 0;
+
+	if (gdb->stopped)
+		return 0;
+
 	cp = pkt;
 	*cp++ = '$';
 	*cp++ = 'O';
@@ -385,18 +392,23 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		   '1' - The remote server attached to an existing process. 
 		   '0' - The remote server created a new process. 
 		 */
-		/* XXX: if there is no active application run  */
+		/* XXX: if there is no active application */
 		if (!gdb->active_app) {
 			DCC_LOG(LOG_WARNING, "no active application, "
 					"calling dmon_app_exec()!");
 			if (dmon_app_exec(true) < 0) {
 				return rsp_error(comm, 1);
 			}
+
 			gdb->active_app = true;
 			n = str2str(pkt, "$0");
 		} else {
 			n = str2str(pkt, "$1");
 		}
+
+		/* XXX: After receiving 'qAttached' we declare the session as
+		   valid */
+		gdb->session_valid = true;
 		return rsp_send_pkt(comm, pkt, n);
 	}
 
@@ -1343,8 +1355,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_TRACE, "GDB start...");
 
-	gdb->nonstop_mode = 0;
-	gdb->noack_mode = 0;
+	gdb->nonstop_mode = false;
+	gdb->noack_mode = false;
+	gdb->session_valid = false;
 	gdb->stopped = __thinkos_suspended();
 	gdb->active_app = __thinkos_active();
 	gdb->last_signal = TARGET_SIGNAL_0;

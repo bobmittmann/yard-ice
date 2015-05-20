@@ -169,19 +169,73 @@ static bool zigbee_module_init(struct zigbee_dev * zigb)
 	return true;
 }
 
+#define ZIGBEE_PKT_MAX 512
+#define ZIGBEE_SYNC 0x02
+
+int zigbee_pkt_recv(struct zigbee_dev * zigb, uint8_t * pkt,
+		unsigned int tmo)
+{
+	int n;
+	int i;
+	int j;
+	int len;
+	int cnt;
+	int rem;
+
+	do {
+		n = serial_recv(zigb->serial, pkt, ZIGBEE_PKT_MAX, 1000000);
+		if (n <= 0)
+			return n;
+
+		/* search for sync */
+		for (i = 0; i < n; ++i) {
+			if (pkt[i] == ZIGBEE_SYNC) {
+				break;
+			}
+		}
+
+		for (j = 0; i < n; ++i, ++j) {
+			pkt[j] = pkt[i];
+		}
+
+		cnt = j;
+	} while (cnt == 0);
+
+	rem = ZIGBEE_PKT_MAX - cnt;
+	while (cnt < 4) {
+		n = serial_recv(zigb->serial, &pkt[cnt], rem, tmo);
+		if (n <= 0)
+			return n;
+		rem -= n;
+		cnt += n;
+	}
+
+	len = pkt[3];
+
+	while (cnt < len + 5) {
+		n = serial_recv(zigb->serial, &pkt[cnt], rem, tmo);
+		if (n <= 0)
+			return n;
+		rem -= n;
+		cnt += n;
+	}
+
+	return len + 5;
+}
+
 void __attribute__((noreturn)) zigbee_task(struct zigbee_dev * zigb)
 {
-	uint8_t buf[16];
+	uint8_t pkt[ZIGBEE_PKT_MAX];
 	int n;
 	int i;
 
 	for (;;) {
-		n = serial_recv(zigb->serial, buf, 16, 1000000);
+		n = zigbee_pkt_recv(zigb, pkt, 1000000);
 		if (n > 0) {
 			for (i = 0; i < n; ++i) {
-				printf(" %02x", buf[i]);
+				printf(" %02x", pkt[i]);
 			}
-			printf("\r\n");
+			printf("\n");
 		}
 	};
 }
@@ -189,7 +243,7 @@ void __attribute__((noreturn)) zigbee_task(struct zigbee_dev * zigb)
 struct zigbee_dev * zigbee_init(void)
 {
 	static struct zigbee_dev zdev;
-	static uint32_t zigb_stack[128];
+	static uint32_t zigb_stack[256];
 	static const struct thinkos_thread_inf zigb_inf = {
 		.stack_ptr = zigb_stack, 
 		.stack_size = sizeof(zigb_stack), 

@@ -25,7 +25,7 @@
 #if THINKOS_ENABLE_JOIN || THINKOS_ENABLE_DEBUG_FAULT
 bool __thinkos_thread_isalive(unsigned int th)
 {
-	bool dead;
+//	bool dead;
 
 	if (th == THINKOS_THREAD_IDLE)
 		return true;
@@ -35,7 +35,7 @@ bool __thinkos_thread_isalive(unsigned int th)
 
 	if (thinkos_rt.ctx[th] == NULL)
 		return false;
-
+#if 0
 	dead = false;
 #if THINKOS_ENABLE_JOIN
 	dead |= __bit_mem_rd(&thinkos_rt.wq_canceled, th);
@@ -45,6 +45,9 @@ bool __thinkos_thread_isalive(unsigned int th)
 #endif
 
 	return !dead;
+#endif
+
+	return true;
 }
 #endif
 
