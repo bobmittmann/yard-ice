@@ -177,7 +177,7 @@ static int rsp_error(struct dmon_comm * comm, int err)
 	return dmon_comm_send(comm, pkt, 7);
 }
 
-static int rsp_send_pkt(struct dmon_comm * comm, char * pkt, int len)
+static int rsp_pkt_send(struct dmon_comm * comm, char * pkt, int len)
 {
 	int sum = 0;
 	char c;
@@ -239,7 +239,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	cp += thread_info(thread_id, cp);
 	n = cp - pkt;
 
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
@@ -263,7 +263,7 @@ int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 	}
 	n = cp - pkt;
 
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 int rsp_thread_get_next(struct dmon_comm * comm, char * pkt)
@@ -271,7 +271,7 @@ int rsp_thread_get_next(struct dmon_comm * comm, char * pkt)
 	int n;
 
 	n = str2str(pkt, "$l");
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 int rsp_output(struct gdb_rspd * gdb, struct dmon_comm * comm, char * pkt)
@@ -298,7 +298,7 @@ int rsp_output(struct gdb_rspd * gdb, struct dmon_comm * comm, char * pkt)
 #endif
 
 	n = cp - pkt;
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 int rsp_read(struct dmon_comm * comm, const void * buf, int len)
@@ -357,7 +357,7 @@ static int rsp_stop_reply(struct gdb_rspd * gdb,
 	}
 
 	n = cp - pkt;
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 
@@ -384,7 +384,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		cp = pkt + str2str(pkt, "$Q");
 		cp += uint2hex(cp, thread_active());
 		n = cp - pkt;
-		return rsp_send_pkt(comm, pkt, n);
+		return rsp_pkt_send(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "qAttached")) {
@@ -409,12 +409,12 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		/* XXX: After receiving 'qAttached' we declare the session as
 		   valid */
 		gdb->session_valid = true;
-		return rsp_send_pkt(comm, pkt, n);
+		return rsp_pkt_send(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "qOffsets")) {
 		n = str2str(pkt, "$Text=0;Data=0;Bss=0");
-		return rsp_send_pkt(comm, pkt, n);
+		return rsp_pkt_send(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "qSymbol")) {
@@ -442,7 +442,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 #endif
 					);
 		n = cp - pkt;
-		return rsp_send_pkt(comm, pkt, n);
+		return rsp_pkt_send(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "qfThreadInfo")) {
@@ -612,7 +612,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	*cp++ = hextab[((val >> 24) & 0xf)];
 
 	n = cp - pkt;
-	return rsp_send_pkt(comm, pkt, n);
+	return rsp_pkt_send(comm, pkt, n);
 }
 
 static int rsp_all_registers_set(struct gdb_rspd * gdb, 
@@ -1027,7 +1027,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 	if (prefix(pkt, "vCont?")) {
 		DCC_LOG(LOG_TRACE, "vCont?");
 		n = str2str(pkt, "$vCont;c;C;s;S;t");
-		return rsp_send_pkt(comm, pkt, n);
+		return rsp_pkt_send(comm, pkt, n);
 	}
 
 	if (prefix(pkt, "vCont;")) {
@@ -1188,11 +1188,6 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 {
 	int ret;
 
-	pkt[len] = 0;
-//	if ((pkt[0] != 'X'))
-	if ((pkt[0] != 'X') && (pkt[0] != 'm'))
-		DCC_LOGSTR(LOG_TRACE, "'%s'", pkt);
-
 	switch (pkt[0]) {
 	case 'H':
 		ret = rsp_h_packet(gdb, comm, pkt, len);
@@ -1284,6 +1279,13 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, struct dmon_comm * comm,
 
 static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 {
+	enum {
+		RSP_DATA = 0,
+		RSP_ESC,
+		RSP_HASH,
+		RSP_SUM,
+	};
+	int state = RSP_DATA;
 	int ret = -1;
 	char * cp;
 	int pos;
@@ -1293,7 +1295,6 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 	int n;
 	int i;
 	int j;
-	bool esc = false;
 
 	rem = max;
 	sum = 0;
@@ -1311,20 +1312,39 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 
 		for (i = 0, j = 0; i < n; ++i) {
 			c = cp[i];
-			sum += c;
-			if (esc) {
-				esc = false;
-				cp[j++] = c ^ 0x20;
-			} else {
-				if (c == '#') {
-					dmon_alarm_stop();
-					return pos + i;
-					/* FIXME: check the sum!!! */
-				} else if (c == '}') {
-					esc = true;
+			if (state == RSP_DATA) {
+				sum += c;
+				if (c == '}') {
+					state = RSP_ESC;
+				} else if (c == '#') {
+					state = RSP_HASH;
+					cp[j++] = c;
 				} else {
 					cp[j++] = c;
 				}
+			} else if (state == RSP_ESC) {
+				state = RSP_DATA;
+				cp[j++] = c ^ 0x20;
+			} else if (state == RSP_HASH) {
+				state = RSP_SUM;
+				cp[j++] = c;
+			} else if (state == RSP_SUM) {
+				cp[j++] = c;
+				dmon_alarm_stop();
+				/* FIXME: check the sum!!! */
+				pos += j;
+
+#ifdef DEBUG
+				if (pkt[0] == 'X') 
+					DCC_LOG(LOG_TRACE, "<-- '$X ...'");
+				else if (pkt[0] == 'm')
+					DCC_LOG(LOG_TRACE, "<-- '$m ...'");
+				else {
+					pkt[pos] = 0;
+					DCC_LOGSTR(LOG_TRACE, "<-- '$%s'", pkt);
+				}
+#endif
+				return pos - 3;
 			}
 		}
 		pos += j;
@@ -1407,7 +1427,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_TX_PIPE)) {
-			DCC_LOG(LOG_TRACE, "TX Pipe.");
+			DCC_LOG(LOG_MSG, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 				rsp_output(gdb, comm, pkt);
 			} else {
