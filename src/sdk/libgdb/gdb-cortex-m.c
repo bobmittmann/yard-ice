@@ -172,7 +172,6 @@ int thread_active(void)
 {
 	if (thinkos_rt.active == THINKOS_THREAD_IDLE)
 		DCC_LOG(LOG_TRACE, "IDLE");
-//		return 0;
 	return thinkos_rt.active + THREAD_ID_OFFS;
 }
 
@@ -225,7 +224,7 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 
 	if (thread_id == THINKOS_THREAD_IDLE) {
 		ctx = thinkos_rt.idle_ctx;
-		DCC_LOG1(LOG_TRACE, "ThinkOS Idle thread, context=%08x!", ctx);
+		DCC_LOG1(LOG_INFO, "ThinkOS Idle thread, context=%08x!", ctx);
 	} else if (__thinkos_thread_isfaulty(thread_id)) {
 		if (thinkos_except_buf.thread_id != thread_id) {
 			DCC_LOG(LOG_ERROR, "Invalid exception thread_id!");
@@ -234,7 +233,7 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 		ctx = &thinkos_except_buf.ctx;
 	} else if (__thinkos_thread_ispaused(thread_id)) {
 		ctx = thinkos_rt.ctx[thread_id];
-		DCC_LOG2(LOG_TRACE, "ThinkOS thread=%d context=%08x!", thread_id, ctx);
+		DCC_LOG2(LOG_INFO, "ThinkOS thread=%d context=%08x!", thread_id, ctx);
 		if (((uint32_t)ctx < 0x10000000) || ((uint32_t)ctx >= 0x30000000)) {
 			DCC_LOG(LOG_ERROR, "Invalid context!");
 			return -1;

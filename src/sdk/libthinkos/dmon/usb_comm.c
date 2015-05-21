@@ -394,6 +394,7 @@ struct usb_cdc_acm {
 
 #define ACM_LC_SET        (1 << 0)
 #define ACM_USB_SUSPENDED (1 << 1)
+#define ACM_CONNECTED     (1 << 2)
 
 #define CDC_CTR_BUF_LEN 16
 
@@ -762,26 +763,30 @@ int dmon_comm_connect(struct dmon_comm * comm)
 		}
 	}
 
-	pkt = (struct cdc_notification *)buf;
-	/* bmRequestType */
-	pkt->bmRequestType = USB_CDC_NOTIFICATION;
-	/* bNotification */
-	pkt->bNotification = CDC_NOTIFICATION_SERIAL_STATE;
-	/* wValue */
-	pkt->wValue = 0;
-	/* wIndex */
-	pkt->wIndex = 1;
-	/* wLength */
-	pkt->wLength = 2;
-	/* data */
-	pkt->bData[0] = CDC_SERIAL_STATE_TX_CARRIER | CDC_SERIAL_STATE_RX_CARRIER;
-	pkt->bData[1] = 0;
+	if ((dev->acm.flags & ACM_CONNECTED) == 0) {
+		dev->acm.flags |= ACM_CONNECTED;
+		pkt = (struct cdc_notification *)buf;
+		/* bmRequestType */
+		pkt->bmRequestType = USB_CDC_NOTIFICATION;
+		/* bNotification */
+		pkt->bNotification = CDC_NOTIFICATION_SERIAL_STATE;
+		/* wValue */
+		pkt->wValue = 0;
+		/* wIndex */
+		pkt->wIndex = 1;
+		/* wLength */
+		pkt->wLength = 2;
+		/* data */
+		pkt->bData[0] = CDC_SERIAL_STATE_TX_CARRIER | 
+			CDC_SERIAL_STATE_RX_CARRIER;
+		pkt->bData[1] = 0;
 
-	ret = usb_dev_ep_pkt_xmit(dev->usb, dev->int_ep, pkt, 
-							  sizeof(struct cdc_notification));
-	if (ret < 0) {
-		DCC_LOG(LOG_WARNING, "usb_dev_ep_tx_start() failed!");
-		return ret;
+		ret = usb_dev_ep_pkt_xmit(dev->usb, dev->int_ep, pkt, 
+								  sizeof(struct cdc_notification));
+		if (ret < 0) {
+			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!");
+			return ret;
+		}
 	}
 
 	return 0;

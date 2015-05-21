@@ -242,8 +242,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	char buf[4];
 #endif
 	int len;
+	int ret;
 
-	dmon_comm_connect(comm);
+	DCC_LOG(LOG_TRACE, "Monitor start...");
+	ret = dmon_comm_connect(comm);
+	DCC_LOG1(LOG_TRACE, "dmon_comm_connect() --> %d", ret);
+
+	dmon_sleep(100);
 
 #if 0
 	dmprintf(comm, "\r\n\r\n");
@@ -320,6 +325,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+				DCC_LOG1(LOG_TRACE, "TX Pipe, %d pending chars.", cnt);
 				len = dmon_comm_send(comm, ptr, cnt);
 				__console_tx_pipe_commit(len); 
 			} else {

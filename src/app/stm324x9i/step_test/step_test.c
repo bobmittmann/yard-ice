@@ -52,6 +52,10 @@ void io_init(void)
 	stm32_gpio_set(LED4);
 }
 
+/* -------------------------------------------------------------------------
+ * LED demo 
+ * ------------------------------------------------------------------------- */
+
 int led_task(void * arg)
 {
 	int i;
@@ -76,21 +80,30 @@ int led_task(void * arg)
 	return 0;
 }
 
-uint32_t led_stack[256];
+void init_led_task(void)
+{
+	static uint32_t led_stack[256];
 
-const struct thinkos_thread_inf led_inf = {
-	.stack_ptr = led_stack,
-	.stack_size = sizeof(led_stack),
-	.priority = 8,
-	.thread_id = 2,
-	.paused = 0,
-	.tag = "LED"
-};
+	static const struct thinkos_thread_inf led_inf = {
+		.stack_ptr = led_stack,
+		.stack_size = sizeof(led_stack),
+		.priority = 8,
+		.thread_id = 2,
+		.paused = 0,
+		.tag = "LED"
+	};
 
+	thinkos_thread_create_inf(led_task, NULL, &led_inf);
+}
+
+/* -------------------------------------------------------------------------
+ * Step demo
+ * ------------------------------------------------------------------------- */
 
 int step_task(void * arg)
 {
 	for (;;) {
+		thinkos_sleep(50);
 		asm volatile ("mov r0, #0\r\n" : : : "r0");
 		asm volatile ("mov r0, #1\r\n" : : : "r0");
 		asm volatile ("mov r0, #2\r\n" : : : "r0");
@@ -106,31 +119,147 @@ int step_task(void * arg)
 }
 
 
-uint32_t step_stack[128];
+void init_step_task(void)
+{
+	static uint32_t step_stack[128];
 
-const struct thinkos_thread_inf step_inf = {
-	.stack_ptr = step_stack, 
-	.stack_size = sizeof(step_stack), 
-	.priority = 8,
-	.thread_id = 31, 
-	.paused = 0,
-	.tag = "STEP"
+	static const struct thinkos_thread_inf step_inf = {
+		.stack_ptr = step_stack, 
+		.stack_size = sizeof(step_stack), 
+		.priority = 8,
+		.thread_id = 31, 
+		.paused = 0,
+		.tag = "STEP"
+	};
+
+	thinkos_thread_create_inf(step_task, NULL, &step_inf);
+}
+
+/* -------------------------------------------------------------------------
+ * Fifo demo
+ * ------------------------------------------------------------------------- */
+
+#define FIFO_LEN 32
+
+struct fifo {
+	int sem_free; /* semaphore to signal an empty buffer */
+	int sem_avail; /* semaphore to signal a full buffer */
+	int put_mutex;
+	int get_mutex;
+	uint32_t head;
+	uint32_t tail;
+	uint64_t buf[FIFO_LEN];
 };
+
+void fifo_put(struct fifo * q, uint64_t val)
+{
+	/* waiting for room to insert a new item */
+	thinkos_sem_wait(q->sem_free);
+	thinkos_mutex_lock(q->put_mutex);
+	q->buf[q->head++ % FIFO_LEN] = val;
+	thinkos_mutex_unlock(q->put_mutex);
+	/* signal data availability */
+	thinkos_sem_post(q->sem_avail);
+}
+
+uint64_t fifo_get(struct fifo * q)
+{
+	uint64_t val;
+	/* waiting for data availability */
+	thinkos_sem_wait(q->sem_avail);
+	thinkos_mutex_lock(q->get_mutex);
+	val = q->buf[q->tail++ % FIFO_LEN];
+	thinkos_mutex_unlock(q->get_mutex);
+	/* signal free space */
+	thinkos_sem_post(q->sem_free);
+
+	return val;
+}
+
+void fifo_init(struct fifo * q)
+{
+	/* waiting for data availability */
+	q->sem_avail = thinkos_sem_alloc(0);
+	q->sem_free = thinkos_sem_alloc(FIFO_LEN);
+	q->get_mutex = thinkos_mutex_alloc();
+	q->put_mutex = thinkos_mutex_alloc();
+	q->tail = 0;
+	q->head = 0;
+}
+
+int producer_task(struct fifo * q)
+{
+	uint64_t y = 0;
+	uint64_t x0 = 0;
+	uint64_t x1 = 1;
+
+	for (;;) {
+		/* let's spend some time thinking */
+		thinkos_sleep(2);
+
+		/* insert the produced item in the queue */
+		fifo_put(q, y);
+
+		y = x1 + x0;
+		x0 = x1;
+		x1 = y;
+	}
+
+	return 0;
+}
+
+int consumer_task(struct fifo * q)
+{
+	uint64_t y = 0;
+
+	for (;;) {
+		/* insert the produced item in the queue */
+		y = fifo_get(q);
+		(void)y;
+
+		/* unload the buffer */
+//		printf(" %016llx %llu\n", y, y);
+	}
+	
+	return 0;
+};
+
+uint32_t producer_stack[128];
+uint32_t consumer_stack[128];
+struct fifo queue;
+
+static const struct thinkos_thread_inf consumer_inf = {
+	.stack_ptr = consumer_stack, 
+	.stack_size = sizeof(consumer_stack), 
+	.priority = 8,
+	.thread_id = 20, 
+	.paused = 0,
+	.tag = "CONSUME"
+};
+
+static const struct thinkos_thread_inf producer_inf = {
+	.stack_ptr = producer_stack, 
+	.stack_size = sizeof(producer_stack), 
+	.priority = 8,
+	.thread_id = 21, 
+	.paused = 0,
+	.tag = "PRODUCE"
+};
+
+void init_queue_test(void)
+{
+	fifo_init(&queue);
+	thinkos_thread_create_inf((void *)consumer_task, &queue, &consumer_inf);
+	thinkos_thread_create_inf((void *)producer_task, &queue, &producer_inf);
+};
+
 
 uint32_t clk;
 uint8_t seconds;
 uint8_t minutes;
 uint8_t hours;
+uint8_t tenths;
 
-void init_led_task(void)
-{
-	thinkos_thread_create_inf(led_task, NULL, &led_inf);
-}
-
-void init_step_task(void)
-{
-	thinkos_thread_create_inf(step_task, NULL, &step_inf);
-}
 
 int main(int argc, char ** argv)
 {
@@ -140,22 +269,27 @@ int main(int argc, char ** argv)
 
 	init_step_task();
 
+	init_queue_test();
+
 	clk = thinkos_clock();
 	seconds = 0;
 	minutes = 0;
 	hours = 0;
+	tenths = 0;
 
 	for (; ; ) {
-		clk += 1000;
+		clk += 100;
 		thinkos_alarm(clk);
-		if (++seconds == 60) {
-			seconds = 0;
-			if (++minutes == 60) {
-				minutes = 0;
-				hours++;
+		if (++tenths == 10) {
+			tenths = 0;
+			if (++seconds == 60) {
+				seconds = 0;
+				if (++minutes == 60) {
+					minutes = 0;
+					hours++;
+				}
 			}
 		}
-
 	}
 
 	return 0;
