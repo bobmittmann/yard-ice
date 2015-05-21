@@ -151,17 +151,68 @@ static void lcd_ctrl(unsigned int data)
 	lcd_out(data);
 }
 
-void lcd_puts(struct lcd_dev * dev, char * s)
+static void __set_pos(unsigned int lin, unsigned int col)
+{
+	switch (lin) {
+	case 0:
+		lcd_ctrl(LCD_SET_DDRAM_ADDR + 0 + col);
+		break;
+	case 1:
+		lcd_ctrl(LCD_SET_DDRAM_ADDR + 0x40 + col);
+		break;
+	case 2:
+		lcd_ctrl(LCD_SET_DDRAM_ADDR + 20 + col);
+		break;
+	case 3:
+		lcd_ctrl(LCD_SET_DDRAM_ADDR + 0x40 + 20 + col);
+		break;
+	}
+	lcd_usleep(37);
+}
+
+static void __puts(const char * s)
 {
 	int c;
 
-	thinkos_mutex_lock(dev->mutex);
 	while ((c = *s++) != '\0') {
 		lcd_wr(c);
 		lcd_usleep(37);
 	}
+}
+
+void lcd_set_pos(struct lcd_dev * dev, unsigned int lin, unsigned int col)
+{
+	if (lin > 3)
+		return;
+	if (col > 19)
+		return;
+
+	thinkos_mutex_lock(dev->mutex);
+	__set_pos(lin, col);
 	thinkos_mutex_unlock(dev->mutex);
 }
+
+void lcd_puts(struct lcd_dev * dev, const char * s)
+{
+	thinkos_mutex_lock(dev->mutex);
+	__puts(s);
+	thinkos_mutex_unlock(dev->mutex);
+}
+
+void lcd_at_puts(struct lcd_dev * dev, unsigned int lin,
+		unsigned int col, const char * s)
+{
+	if (lin > 3)
+		return;
+	if (col > 19)
+		return;
+
+	thinkos_mutex_lock(dev->mutex);
+	__set_pos(lin, col);
+	__puts(s);
+	thinkos_mutex_unlock(dev->mutex);
+}
+
 
 void lcd_putc(struct lcd_dev * dev, int c)
 {
@@ -193,32 +244,6 @@ void lcd_off(struct lcd_dev * dev)
 	thinkos_mutex_lock(dev->mutex);
 	lcd_ctrl(LCD_ON_OFF_CTRL);
 	lcd_usleep(40);
-	thinkos_mutex_unlock(dev->mutex);
-}
-
-void lcd_set_pos(struct lcd_dev * dev, unsigned int lin, unsigned int col)
-{
-	if (lin > 3)
-		return;
-	if (col > 19)
-		return;
-
-	thinkos_mutex_lock(dev->mutex);
-	switch (lin) {
-	case 0:
-		lcd_ctrl(LCD_SET_DDRAM_ADDR + 0 + col);
-		break;
-	case 1:
-		lcd_ctrl(LCD_SET_DDRAM_ADDR + 40 + col);
-		break;
-	case 2:
-		lcd_ctrl(LCD_SET_DDRAM_ADDR + 20 + col);
-		break;
-	case 3:
-		lcd_ctrl(LCD_SET_DDRAM_ADDR + 60 + col);
-		break;
-	}
-	lcd_usleep(37);
 	thinkos_mutex_unlock(dev->mutex);
 }
 

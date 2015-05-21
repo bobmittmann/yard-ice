@@ -30,6 +30,7 @@
 #include <thinkos.h>
 
 #include "board.h"
+#include "lcd20x4.h"
 #include "fzc_io.h"
 #include "zigbee.h"
 
@@ -59,9 +60,7 @@ int clock_task(struct lcd_dev * lcd)
 		}
 
 		sprintf(buf, "%02d:%02d:%02d", hours, minutes, seconds);
-
-		lcd_set_pos(lcd, 0, 12);
-		lcd_puts(lcd, buf);
+		lcd_at_puts(lcd, 0, 12, buf);
 	}
 
 	return 0;
@@ -83,6 +82,46 @@ void init_clock_task(struct lcd_dev * lcd)
 	thinkos_thread_create_inf((void *)clock_task, lcd, &clock_inf);
 }
 
+volatile unsigned int zap_tm = 100;
+
+int zap_task(struct lcd_dev * lcd)
+{
+	int x;
+
+	thinkos_sleep(zap_tm);
+	lcd_at_puts(lcd, 3, 0, "==");
+
+	for (;;) {
+		for (x = 0; x < 18; ++x) {
+			thinkos_sleep(zap_tm);
+			lcd_at_puts(lcd, 3, x, " ==");
+		}
+		for (; x >= 0; --x) {
+			thinkos_sleep(zap_tm);
+			lcd_at_puts(lcd, 3, x, "== ");
+		}
+	}
+
+	return 0;
+}
+
+void init_zap_task(struct lcd_dev * lcd)
+{
+	static uint32_t zap_stack[128];
+
+	static const struct thinkos_thread_inf zap_inf = {
+		.stack_ptr = zap_stack,
+		.stack_size = sizeof(zap_stack),
+		.priority = 8,
+		.thread_id = 10,
+		.paused = 0,
+		.tag = "ZAP"
+	};
+
+	thinkos_thread_create_inf((void *)zap_task, lcd, &zap_inf);
+}
+
+
 void stdio_init(void)
 {
 	FILE * f;
@@ -99,6 +138,7 @@ int main(int argc, char ** argv)
 	struct lcd_dev * lcd;
 	struct zigbee_dev * zigb;
 	int c;
+	int rate = RATE_OFF;
 
 	io_init();
 	stdio_init();
@@ -112,6 +152,7 @@ int main(int argc, char ** argv)
 	lcd_puts(lcd, "====================");
 
 	init_clock_task(lcd);
+	init_zap_task(lcd);
 
 	led_set_rate(LED_AC_PWR, RATE_1BPS);
 
@@ -127,13 +168,34 @@ int main(int argc, char ** argv)
 			led_off(LED_ALRM);
 			break;
 		case KEY_LEFT:
-			led_set_rate(LED_TRBL, RATE_2BPS);
+			zap_tm += 10;
 			break;
 		case KEY_RIGHT:
-			led_set_rate(LED_SPR, RATE_2BPS);
+			if (zap_tm > 10) {
+				zap_tm -= 10;
+			}
 			break;
 		case KEY_ENTER:
-			led_set_rate(LED_SLNC, RATE_2BPS);
+			switch (rate) {
+			case RATE_OFF:
+				rate = RATE_1BPS;
+				break;
+			case RATE_1BPS:
+				rate = RATE_2BPS;
+				break;
+			case RATE_2BPS:
+				rate = RATE_4BPS;
+				break;
+			case RATE_4BPS:
+				rate = RATE_STEADY;
+				break;
+			case RATE_STEADY:
+				rate = RATE_OFF;
+				break;
+			}
+			led_set_rate(LED_SLNC, rate);
+			led_set_rate(LED_TRBL, rate);
+			led_set_rate(LED_SPR, rate);
 			break;
 
 		};
