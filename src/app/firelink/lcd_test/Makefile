@@ -30,7 +30,7 @@ LIBS = cm3 stm32f console util c
 
 INCPATH = $(SDK)/include ../include
 
-LIBPATH = ../libs/release
+LIBPATH = ../sdklibs/Debug
 
 CDEFS =
 

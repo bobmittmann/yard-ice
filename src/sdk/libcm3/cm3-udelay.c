@@ -44,6 +44,7 @@ void cm3_udelay_calibrate(void)
 	uint32_t load;
 	uint32_t ctrl;
 
+	cm3_cpsid_i();
 	load = systick->load;
 	ctrl = systick->ctrl;
 
@@ -55,5 +56,7 @@ void cm3_udelay_calibrate(void)
 
 	systick->load = load;
 	systick->ctrl = ctrl;
+
+	cm3_cpsie_i();
 }
 

@@ -30,9 +30,12 @@
 #include <thinkos.h>
 
 #include "board.h"
+#include "lcd20x4.h"
 
 void io_init(void)
 {
+    cm3_udelay_calibrate();
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOJ);
 }
@@ -64,8 +67,7 @@ int clock_task(struct lcd_dev * lcd)
 
 		sprintf(buf, "%02d:%02d:%02d", hours, minutes, seconds);
 
-		lcd_set_pos(lcd, 0, 12);
-		lcd_puts(lcd, buf);
+		lcd_at_puts(lcd, 0, 12, buf);
 	}
 }
 
@@ -85,13 +87,37 @@ void init_clock_task(struct lcd_dev * lcd)
 	thinkos_thread_create_inf((void *)clock_task, lcd, &clock_inf);
 }
 
+void lcd_test1(struct lcd_dev * lcd)
+{
+	int x;
+	int y;
+	int c;
+
+	for (x = 0; x < 20; ++x) {
+		for (y = 0; y < 4; ++y) {
+			thinkos_sleep(50);
+			lcd_set_pos(lcd, y, x);
+			if (x < 10)
+				c = x + '0';
+			else
+				c = x - 10 + 'A';
+			lcd_putc(lcd, c);
+		}
+	}
+}
+
 int main(int argc, char ** argv)
 {
 	struct lcd_dev * lcd;
+	int x;
 
 	io_init();
 
 	lcd = lcd20x4_init();
+
+	lcd_test1(lcd);
+
+	thinkos_sleep(5);
 
 	lcd_puts(lcd, "= ThinkOS = 00:00:00");
 	lcd_puts(lcd, " Zigbee Coordinator ");
@@ -100,8 +126,22 @@ int main(int argc, char ** argv)
 
 	init_clock_task(lcd);
 
+	thinkos_sleep(2000);
+	lcd_at_puts(lcd, 3, 0, "                    ");
+
 	for (;;) {
-		thinkos_sleep(1000);
+		thinkos_sleep(100);
+		lcd_at_puts(lcd, 3, 0, "=");
+		thinkos_sleep(100);
+		lcd_at_puts(lcd, 3, 0, "==");
+		for (x = 0; x < 18; ++x) {
+			thinkos_sleep(100);
+			lcd_at_puts(lcd, 3, x, " ==");
+		}
+		thinkos_sleep(100);
+		lcd_at_puts(lcd, 3, x, " =");
+		thinkos_sleep(100);
+		lcd_at_puts(lcd, 3, x + 1, " ");
 	}
 
 	return 0;

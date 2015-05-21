@@ -1,5 +1,5 @@
 /* 
- * File:	 board.h
+ * File:	 lcd20x4.h
  * Author:   Robinson Mittmann (bobmittmann@gmail.com)
  * Target:
  * Comment:
@@ -20,53 +20,41 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#ifndef __IO_H__
-#define __IO_H__
+#ifndef __LCD20X4_H__
+#define __LCD20X4_H__
 
-#include <sys/stm32f.h>
+#include <stdbool.h>
 
-enum rate {
-	RATE_OFF = 0,
-	RATE_STEADY,
-	RATE_1BPS,
-	RATE_2BPS,
-	RATE_3BPS,
-	RATE_4BPS
-};
-
-enum led {
-	LED_TRBL = 0,
-	LED_ALRM,
-	LED_AC_PWR,
-	LED_SPR,
-	LED_SLNC
-};
-
-enum key {
-	KEY_DOWN = 1,
-	KEY_RIGHT = 2,
-	KEY_ENTER = 3,
-	KEY_UP = 4,
-	KEY_LEFT = 5
-};
+struct lcd_dev;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void io_init(void);
+struct lcd_dev * lcd20x4_init(void);
 
-void led_on(unsigned int led);
+void lcd_puts(struct lcd_dev * dev, const char * s);
 
-void led_off(unsigned int led);
+void lcd_putc(struct lcd_dev * dev, int c);
 
-void led_set_rate(unsigned int led, unsigned int rate);
+void lcd_at_puts(struct lcd_dev * dev, unsigned int lin,
+		unsigned int col, const char * s);
 
-int keypad_read(void);
+void lcd_clear(struct lcd_dev * dev);
+
+void lcd_on(struct lcd_dev * dev);
+
+void lcd_off(struct lcd_dev * dev);
+
+void lcd_set_pos(struct lcd_dev * dev, unsigned int lin, unsigned int col);
+
+void lcd_cursor_on(struct lcd_dev * dev, bool blink);
+
+void lcd_cursor_off(struct lcd_dev * dev);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __IO_H__ */
+#endif /* __LCD20X4_H__ */
 
