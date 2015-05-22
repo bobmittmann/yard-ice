@@ -246,17 +246,17 @@ bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
 
 	if (size == 2) {
 		if (addr & 0x00000002) {
-			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+			comp = COMP_BP_HIGH | (addr & 0x0ffffffc) | COMP_ENABLE;
 		} else {
-			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+			comp = COMP_BP_LOW | (addr & 0x0ffffffc) | COMP_ENABLE;
 		}
 	} else {
-		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+		comp = COMP_BP_WORD | (addr & 0x0ffffffc) | COMP_ENABLE;
 	}
 
 	fbp->comp[i] = comp;
 
-	DCC_LOG4(LOG_TRACE, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
+	DCC_LOG4(LOG_INFO, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
 			 size, fbp->comp[i]);
 
 	return true;
@@ -272,24 +272,42 @@ bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
 
 	if (size == 2) {
 		if (addr & 0x00000002) {
-			comp = COMP_BP_HIGH | (addr & 0xfffffffc) | COMP_ENABLE;
+			comp = COMP_BP_HIGH | (addr & 0x0ffffffc) | COMP_ENABLE;
 		} else {
-			comp = COMP_BP_LOW | (addr & 0xfffffffc) | COMP_ENABLE;
+			comp = COMP_BP_LOW | (addr & 0x0ffffffc) | COMP_ENABLE;
 		}
 	} else {
-		comp = COMP_BP_WORD | (addr & 0xfffffffc) | COMP_ENABLE;
+		comp = COMP_BP_WORD | (addr & 0x0ffffffc) | COMP_ENABLE;
 	}
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
-		if (fbp->comp[i] == comp) {
+		if ((fbp->comp[i] | COMP_ENABLE) == comp) {
 			fbp->comp[i] = 0;
 			return true;
 		}
 	}
 
-	DCC_LOG(LOG_WARNING, "breakpoint not found!");
+	DCC_LOG1(LOG_WARNING, "breakpoint 0x%08x not found!", addr);
+
+	return false;
+}
+
+bool dmon_breakpoint_disable(uint32_t addr)
+{
+	struct cm3_fpb * fbp = CM3_FPB;
+	int i;
+
+	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
+		if ((fbp->comp[i] & 0x0ffffffc) == (addr & 0x0ffffffc)) {
+			fbp->comp[i] &= ~COMP_ENABLE;
+			return true;
+		}
+	}
+
+	DCC_LOG1(LOG_WARNING, "breakpoint 0x%08x not found!", addr);
+
 	return false;
 }
 
@@ -338,7 +356,7 @@ int dmon_thread_step(unsigned int thread_id, bool sync)
 	/* make sure to run the scheduler */
 	__thinkos_defer_sched();
 
-	DCC_LOG1(LOG_TRACE, "thread_id=%d +++++++++++++++++++++", thread_id);
+	DCC_LOG1(LOG_INFO, "thread_id=%d +++++++++++++++++++++", thread_id);
 
 	if (sync) {
 		if ((ret = dmon_wait(DMON_THREAD_STEP)) < 0)
@@ -418,7 +436,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 	if ((dfsr = CM3_SCB->dfsr) != 0) {
 		/* clear the fault */
 		CM3_SCB->dfsr = dfsr;
-		DCC_LOG5(LOG_TRACE, "DFSR=(EXT=%c)(VCATCH=%c)"
+		DCC_LOG5(LOG_INFO, "DFSR=(EXT=%c)(VCATCH=%c)"
 				 "(DWTRAP=%c)(BKPT=%c)(HALT=%c)", 
 				 dfsr & SCB_DFSR_EXTERNAL ? '1' : '0',
 				 dfsr & SCB_DFSR_VCATCH ? '1' : '0',
@@ -434,6 +452,9 @@ void dmon_isr(struct cm3_except_context * ctx)
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
+				/* FIXME: add support for breakpoints on IRQ */
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
 				__thinkos_pause_all();
 				/* diasble all breakpoints */
 				dmon_breakpoint_clear_all();
@@ -445,7 +466,11 @@ void dmon_isr(struct cm3_except_context * ctx)
 						 thinkos_rt.active, ctx->pc);
 				/* suspend the current thread */
 				__thinkos_thread_pause(thinkos_rt.active);
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
 				__thinkos_defer_sched();
+				/* diasble this breakpoint */
+				dmon_breakpoint_disable(ctx->pc);
 			} else {
 				DCC_LOG2(LOG_ERROR, "<<BREAKPOINT>>: thread_id=%d pc=%08x ---", 
 						 thinkos_rt.active, ctx->pc);
@@ -453,6 +478,8 @@ void dmon_isr(struct cm3_except_context * ctx)
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
 				__thinkos_pause_all();
 				/* diasble all breakpoints */
 				dmon_breakpoint_clear_all();
@@ -462,7 +489,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 		if (dfsr & SCB_DFSR_HALTED) {
 			/* clear the step request */
 			CM3_DCB->demcr &= ~DCB_DEMCR_MON_STEP;
-			if ((uint32_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
+			if ((uint16_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
 				/* suspend the thread, this will clear the step request flag */
 				__thinkos_thread_pause(thinkos_rt.step_id);
 				/* signal the monitor */
@@ -476,6 +503,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 				DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
 						 thinkos_rt.step_id);
 			}
+			thinkos_rt.break_id = thinkos_rt.step_id;
 		}
 	}
 #endif
@@ -508,10 +536,16 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 	if (xcpt->thread_id >= 0) {
 		DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!", 
 				 xcpt->thread_id);
+		thinkos_rt.break_id = thinkos_rt.active;
 		dmon_signal(DMON_THREAD_FAULT);
 	} else {
+		int ipsr;
+
+		ipsr = (xcpt->ctx.xpsr & 0x1ff);
 		DCC_LOG1(LOG_ERROR, "Exception at IRQ: %d !!!", 
-				 (xcpt->ctx.xpsr & 0x1ff) - 16);
+				 ipsr - 16);
+		/* FIXME: add support for exceptions on IRQ */
+		thinkos_rt.break_id = -ipsr;
 		dmon_signal(DMON_EXCEPT);
 	}
 }

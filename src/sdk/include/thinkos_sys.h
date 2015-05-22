@@ -349,7 +349,8 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	uint32_t step_req; /* step request bitmap */
-	int32_t step_id; /* current stepping thread id */
+	int16_t step_id; /* current stepping thread id */
+	int16_t break_id; /* thread stopped by a breakpoint or step request */
 #endif
 
 #if THINKOS_ENABLE_PROFILING
@@ -890,6 +891,9 @@ bool __thinkos_thread_isalive(unsigned int thread_id);
 bool __thinkos_thread_ispaused(unsigned int thread_id);
 
 bool __thinkos_thread_isfaulty(unsigned int thread_id);
+
+void __thinkos_thread_inf_set(unsigned int thread_id, 
+							  const struct thinkos_thread_inf * inf);
 
 void __thinkos_pause_all(void);
 

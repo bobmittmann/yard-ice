@@ -56,6 +56,8 @@ extern const char hextab[];
 
 int thread_getnext(int thread_id);
 int thread_active(void);
+int thread_step_id(void);
+int thread_break_id(void);
 int thread_any(void);
 bool thread_isalive(int thread_id);
 int thread_register_get(int thread_id, int reg, uint32_t * val);
@@ -155,7 +157,7 @@ static inline int rsp_ok(struct dmon_comm * comm)
 
 static int rsp_empty(struct dmon_comm * comm)
 {
-	DCC_LOG(LOG_TRACE, "--> Empty.");
+	DCC_LOG(LOG_INFO, "--> Empty.");
 	return dmon_comm_send(comm, "$#00", 4);
 }
 
@@ -172,7 +174,7 @@ static int rsp_error(struct dmon_comm * comm, int err)
 	pkt[5] = hextab[((sum >> 4) & 0xf)];
 	pkt[6] = hextab[sum & 0xf];
 
-	DCC_LOG1(LOG_TRACE, "--> Error(%d)!", err);
+	DCC_LOG1(LOG_INFO, "--> Error(%d)!", err);
 
 	return dmon_comm_send(comm, pkt, 7);
 }
@@ -192,7 +194,7 @@ static int rsp_pkt_send(struct dmon_comm * comm, char * pkt, int len)
 	pkt[n++] = hextab[sum & 0xf];
 
 	pkt[n] = '\0';
-	DCC_LOGSTR(LOG_TRACE, "--> '%s'", pkt);
+	DCC_LOGSTR(LOG_INFO, "--> '%s'", pkt);
 
 	return dmon_comm_send(comm, pkt, n);
 }
@@ -215,11 +217,24 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	return rsp_pkt_send(comm, pkt, n);
 }
 
-int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
+int rsp_thread_info_first(struct gdb_rspd * gdb,
+						  struct dmon_comm * comm, char * pkt)
 {
 	char * cp = pkt;
 	int thread_id;
 	int n;
+
+#if 0
+	/* XXX: if there is no active application run  */
+	if (!gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "no active application, "
+				"calling dmon_app_exec()!");
+		if (dmon_app_exec(true) < 0) {
+			return rsp_error(comm, 1);
+		}
+		gdb->active_app = true;
+	}
+#endif
 
 	/* get the first thread */
 	if ((thread_id = thread_getnext(0)) < 0) {
@@ -239,7 +254,7 @@ int rsp_thread_get_first(struct dmon_comm * comm, char * pkt)
 	return rsp_pkt_send(comm, pkt, n);
 }
 
-int rsp_thread_get_next(struct dmon_comm * comm, char * pkt)
+int rsp_thread_info_next(struct dmon_comm * comm, char * pkt)
 {
 	int n;
 
@@ -399,13 +414,13 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	if (prefix(pkt, "qfThreadInfo")) {
 		DCC_LOG(LOG_INFO, "qfThreadInfo");
 		/* First Thread Info */
-		return rsp_thread_get_first(comm, pkt);
+		return rsp_thread_info_first(gdb, comm, pkt);
 	}
 
 	if (prefix(pkt, "qsThreadInfo")) {
 		DCC_LOG(LOG_INFO, "qsThreadInfo");
 		/* Sequence Thread Info */
-		return rsp_thread_get_next(comm, pkt);
+		return rsp_thread_info_next(comm, pkt);
 	}
 
 	/* Get thread info from RTOS */
@@ -767,8 +782,20 @@ static int rsp_thread_isalive(struct gdb_rspd * gdb,
 	int thread_id;
 
 	thread_id = hex2int(&pkt[1], NULL);
-	DCC_LOG1(LOG_INFO, "thread_id = %d", thread_id);
 
+	/* Find out if the thread thread-id is alive. 
+	   'OK' thread is still alive 
+	   'E NN' thread is dead */
+
+	if (thread_isalive(thread_id)) {
+		DCC_LOG1(LOG_TRACE, "thread %d is alive.", thread_id);
+		ret = rsp_ok(comm);
+	} else {
+		DCC_LOG1(LOG_TRACE, "thread %d is dead!", thread_id);
+		ret = rsp_error(comm, 1);
+	}
+
+#if 0
 	/* XXX: if there is no active application run  */
 	if (!gdb->active_app) {
 		DCC_LOG(LOG_WARNING, "no active application, "
@@ -778,15 +805,7 @@ static int rsp_thread_isalive(struct gdb_rspd * gdb,
 		}
 		gdb->active_app = true;
 	}
-
-	/* Find out if the thread thread-id is alive. 
-	   'OK' thread is still alive 
-	   'E NN' thread is dead */
-
-	if (thread_isalive(thread_id))
-		ret = rsp_ok(comm);
-	else 
-		ret = rsp_error(comm, 1);
+#endif
 
 	return ret;
 }
@@ -797,14 +816,12 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	int ret = 0;
 	int thread_id;
 
-	if ((pkt[2] == '-') && (pkt[3] == '1')) {
+	if ((pkt[2] == '-') && (pkt[3] == '1'))
 		thread_id = THREAD_ID_ALL;
-		DCC_LOG(LOG_TRACE, "all threads");
-	} else {
+	else
 		thread_id = hex2int(&pkt[2], NULL);
-		DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
-	}
 
+#if 0	
 	/* XXX: if there is no active application run  */
 	if (!gdb->active_app) {
 		DCC_LOG(LOG_WARNING, "no active application, "
@@ -814,15 +831,28 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		}
 		gdb->active_app = true;
 	}
+#endif
 
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
+		if (thread_id == THREAD_ID_ALL)
+			DCC_LOG(LOG_TRACE, "continue all threads");
+		else if (thread_id == THREAD_ID_ANY)
+			DCC_LOG(LOG_TRACE, "continue any thread");
+		else
+			DCC_LOG1(LOG_TRACE, "continue thread %d", thread_id);
 		gdb->thread_id.c = thread_id;
 		ret = rsp_ok(comm);
 		break;
 
 	case 'g':
+		if (thread_id == THREAD_ID_ALL)
+			DCC_LOG(LOG_TRACE, "get all threads");
+		else if (thread_id == THREAD_ID_ANY)
+			DCC_LOG(LOG_TRACE, "get any thread");
+		else
+			DCC_LOG1(LOG_TRACE, "get thread %d", thread_id);
 		gdb->thread_id.g = thread_id;
 		ret = rsp_ok(comm);
 		break;
@@ -833,7 +863,7 @@ static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		break; */
 
 	default:
-		DCC_LOG2(LOG_WARNING, "Unsupported 'H%c%d'", pkt[1], thread_id);
+		DCC_LOG2(LOG_WARNING, "unsupported 'H%c%d'", pkt[1], thread_id);
 		ret = rsp_empty(comm);
 	}
 
@@ -961,9 +991,14 @@ static int rsp_on_step(struct gdb_rspd * gdb, struct dmon_comm * comm,
 {
 	int thread_id;
 
+	if (gdb->stopped) {
+		DCC_LOG(LOG_WARNING, "on step, suspended already!");
+		return 0;
+	}
+
 	DCC_LOG(LOG_TRACE, "on step, suspending... ... ...");
 
-	thread_id = thread_active();
+	thread_id = thread_break_id();
 	gdb->thread_id.g = thread_id; 
 	target_halt();
 	gdb->stopped = true;
@@ -977,9 +1012,14 @@ static int rsp_on_breakpoint(struct gdb_rspd * gdb, struct dmon_comm * comm,
 {
 	int thread_id;
 
+	if (gdb->stopped) {
+		DCC_LOG(LOG_WARNING, "on breakpoint, suspended already!");
+		return 0;
+	}
+
 	DCC_LOG(LOG_TRACE, "on breakpoint, suspending... ... ...");
 
-	thread_id = thread_active();
+	thread_id = thread_break_id();
 	gdb->thread_id.g = thread_id; 
 	target_halt();
 	gdb->stopped = true;
@@ -993,9 +1033,14 @@ static int rsp_on_fault(struct gdb_rspd * gdb, struct dmon_comm * comm,
 {
 	int thread_id;
 
+	if (gdb->stopped) {
+		DCC_LOG(LOG_WARNING, "on fault, suspended already!");
+		return 0;
+	}
+
 	DCC_LOG(LOG_TRACE, "on fault, suspending... ... ...");
 
-	thread_id = thread_active();
+	thread_id = thread_break_id();
 	gdb->thread_id.g = thread_id; 
 	target_halt();
 	gdb->stopped = true;
@@ -1080,10 +1125,10 @@ static int rsp_v_packet(struct gdb_rspd * gdb,
 	int action ;
 
 	pkt[len] = '\0';
-	DCC_LOG(LOG_TRACE, "vCont ==================");
+	DCC_LOG(LOG_INFO, "vCont ==================");
 
 	if (prefix(pkt, "vCont?")) {
-		DCC_LOG(LOG_TRACE, "vCont?");
+		DCC_LOG(LOG_MSG, "vCont?");
 		n = str2str(pkt, "$vCont;c;C;s;S;t");
 		return rsp_pkt_send(comm, pkt, n);
 	}
@@ -1464,13 +1509,13 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_THREAD_STEP)) {
-			DCC_LOG(LOG_TRACE, "Thread step.");
+			DCC_LOG(LOG_INFO, "DMON_THREAD_STEP");
 			dmon_clear(DMON_THREAD_STEP);
 			rsp_on_step(gdb, comm, pkt);
 		}
 
 		if (sigset & (1 << DMON_BREAKPOINT)) {
-			DCC_LOG(LOG_TRACE, "Breakpoint.");
+			DCC_LOG(LOG_INFO, "DMON_BREAKPOINT");
 			dmon_clear(DMON_BREAKPOINT);
 			rsp_on_breakpoint(gdb, comm, pkt);
 		}

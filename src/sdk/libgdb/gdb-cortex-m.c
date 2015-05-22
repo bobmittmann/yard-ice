@@ -175,6 +175,27 @@ int thread_active(void)
 	return thinkos_rt.active + THREAD_ID_OFFS;
 }
 
+int thread_step_id(void)
+{
+	if (thinkos_rt.step_id == -1) {
+		DCC_LOG(LOG_WARNING, "invalid step thread!");
+		return thinkos_rt.active + THREAD_ID_OFFS;
+	}
+
+	return thinkos_rt.step_id + THREAD_ID_OFFS;
+}
+
+int thread_break_id(void)
+{
+	if (thinkos_rt.break_id == -1) {
+		DCC_LOG(LOG_WARNING, "invalid break thread!");
+		return thinkos_rt.active + THREAD_ID_OFFS;
+	}
+
+	return thinkos_rt.break_id + THREAD_ID_OFFS;
+}
+
+
 int thread_any(void)
 {
 	int thread_id;
@@ -185,11 +206,11 @@ int thread_any(void)
 	}
 
 	if (thinkos_rt.active == THINKOS_THREAD_IDLE)
-		DCC_LOG(LOG_WARNING, "IDLE thread!");
+		DCC_LOG(LOG_MSG, "IDLE thread!");
 	else if (thinkos_rt.active == THINKOS_THREAD_VOID)
-		DCC_LOG(LOG_WARNING, "VOID thread!");
+		DCC_LOG(LOG_MSG, "VOID thread!");
 	else
-		DCC_LOG1(LOG_WARNING, "active=%d is invalid!", thinkos_rt.active);
+		DCC_LOG1(LOG_MSG, "active=%d is invalid!", thinkos_rt.active);
 
 	/* Active thread is IDLE thread, try to get the first 
 	   available thread */
@@ -479,14 +500,14 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 	}
 
 	if (thread_id == THINKOS_THREAD_IDLE) {
-		DCC_LOG(LOG_TRACE, "ThinkOS Idle thread");
+		DCC_LOG(LOG_INFO, "ThinkOS Idle thread");
 	} else if (__thinkos_thread_isfaulty(thread_id)) {
 		if (xcpt->thread_id != thread_id) {
 			DCC_LOG(LOG_ERROR, "Invalid exception thread_id!");
 			return -1;
 		}
 	} else if (__thinkos_thread_ispaused(thread_id)) {
-		DCC_LOG1(LOG_TRACE, "ThinkOS thread=%d!", thread_id);
+		DCC_LOG1(LOG_INFO, "ThinkOS thread=%d!", thread_id);
 	} else {
 		DCC_LOG(LOG_ERROR, "Invalid thread state!");
 		return -1;

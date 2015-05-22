@@ -49,6 +49,8 @@ const uint32_t thinkos_app_blk_size = (64 + 128) * 1024;
  * Application execution
  * ------------------------------------------------------------------------- */
 
+extern const struct thinkos_thread_inf thinkos_main_inf;
+
 int dmon_app_exec(bool paused)
 {
 	uint32_t * app = (uint32_t *)thinkos_app_blk_addr;
@@ -66,6 +68,10 @@ int dmon_app_exec(bool paused)
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
 						  (void *)app_bootstrap, (void *)app);
 
+#if THINKOS_ENABLE_THREAD_INFO
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+
 	if (!paused) {
 		__thinkos_thread_resume(thread_id);
 		__thinkos_defer_sched();
@@ -79,9 +85,9 @@ bool dmon_app_suspend(void)
 	__thinkos_pause_all();
 
 	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
-		DCC_LOG(LOG_TRACE, "Current is Idle!");
+		DCC_LOG(LOG_INFO, "Current is Idle!");
 	} else {
-		DCC_LOG1(LOG_TRACE, "current_thread=%d", thinkos_rt.active);
+		DCC_LOG1(LOG_INFO, "current_thread=%d", thinkos_rt.active);
 	}
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
@@ -96,7 +102,7 @@ bool dmon_app_suspend(void)
 
 bool dmon_app_continue(void)
 {
-	DCC_LOG(LOG_TRACE, "....");
+	DCC_LOG(LOG_INFO, "....");
 
 	__thinkos_resume_all();
 

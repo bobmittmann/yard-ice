@@ -133,6 +133,7 @@ void __attribute__((noreturn)) io_task(void * arg)
 	unsigned int sw1 = 0;
 	uint32_t clk = thinkos_clock();
 	uint32_t clk_sec = clk + 1000;
+	uint32_t clk_sw = 0;
 
 	for (;;) {
 		unsigned int sw;
@@ -170,13 +171,19 @@ void __attribute__((noreturn)) io_task(void * arg)
 		if (sw != sw0) {
 			/* Debouncing */
 			sw0 = sw;
-		} if ((d = sw ^ sw1) != 0) {
+		} else if ((d = sw ^ sw1) != 0) {
 			/* State change */
 			sw1 = sw;
 			if (sw != 0) {
 				io_drv.sw_state = sw;
 				thinkos_flag_give(io_drv.sw_flag);
+				clk_sw =  clk + 500; /* first repetition */
 			}
+		} else if ((sw != 0) && (int32_t)(clk_sw - clk) < 0) {
+			/* repetition */
+			io_drv.sw_state = sw;
+			thinkos_flag_give(io_drv.sw_flag);
+			clk_sw = clk + 200; /* next repetition */
 		}
 	}
 }
