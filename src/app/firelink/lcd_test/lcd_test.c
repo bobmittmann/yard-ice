@@ -69,6 +69,8 @@ int clock_task(struct lcd_dev * lcd)
 
 		lcd_at_puts(lcd, 0, 12, buf);
 	}
+
+	return 0;
 }
 
 void init_clock_task(struct lcd_dev * lcd)

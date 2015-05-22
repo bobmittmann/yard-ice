@@ -19,18 +19,18 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-SDK = ../../../sdk
+SDK = ../../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
-		   $(SDK)/libtcpip $(SDK)/libtcpip \
+		   $(SDK)/libcrc $(SDK)/libtcpip \
 
 INCPATH = $(SDK)/include ..
 
 CFLAGS = -g -O1 -Wall
-O := Debug
+O := .
 
 MACH = stm32f429
 THINKOS = 1
-include ../../../mk/stm32f4xx.mk
+include ../../../../mk/stm32f4xx.mk
 
