@@ -27,9 +27,9 @@ CFILES = u2s-485.c serial.c board.c leds.c usb_trace.c raw_trace.c \
 
 LIBDIRS = ../sdk/libstm32f ../sdk/libcm3 ../sdk/libutil \
 		  ../sdk/libthinkos ../sdk/libc ../sdk/libice-comm \
-		  ../sdk/libdrv ../sdk/libcdc-acm 
+		  ../sdk/libcdc-acm 
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm 
+LIBS = stm32f cm3 util thinkos c ice-comm cdc-acm 
 
 INCPATH = ../sdk/include 
 

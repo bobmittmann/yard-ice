@@ -27,14 +27,16 @@
 
 void __thinkos_irq_disable_all(void)
 {
-	int irq;
+	int i;
 
-	/* adjust IRQ priorities to regular (above SysTick and bellow SVC) */
-	for (irq = 0; irq < THINKOS_IRQ_MAX; irq++) {
-		cm3_irq_disable(irq);
-		cm3_irq_pend_clr(irq);
-		thinkos_rt.irq_th[irq] = -1;
+	for (i = 0; i < CM3_ICTR; ++i)
+		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
+
+#if (THINKOS_IRQ_MAX > 0) 
+	for (i = 0; i < THINKOS_IRQ_MAX; ++i) {
+		thinkos_rt.irq_th[i] = -1;
 	}
+#endif
 }
 
 void __thinkos_kill_all(void) 

@@ -29,11 +29,11 @@ TOOLS = ../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc \
+		  $(SDK)/libstm32drv $(SDK)/libtty $(SDK)/libcrc \
 		  $(SDK)/libgdb $(SDK)/libopcodes \
 		  $(SDK)/libconsole
 
-LIBS = cm3 stm32f util thinkos c ice-comm drv tty \
+LIBS = cm3 stm32f util thinkos c ice-comm stm32drv tty \
 	   gdb opcodes console
 
 INCPATH = $(SDK)/include  

@@ -43,7 +43,6 @@ static int bmp_bit_cnt(uint32_t bmp[], int bits)
 
 	return cnt;
 }
-#endif
 
 void dmon_print_alloc(struct dmon_comm * comm)
 {
@@ -98,4 +97,6 @@ void dmon_print_alloc(struct dmon_comm * comm)
 	dmprintf(comm, "\r\n");
 
 }
+
+#endif
 
