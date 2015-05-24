@@ -35,11 +35,12 @@ LIBS = cm3 stm32f util thinkos ice-comm stm32drv gdb gcc
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
+CDEFS = CONFIG_H CM3_RAM_VECTORS "FIRELINK=0"
 
 CFLAGS = -g -O2 -Wall
 
 JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f429
+#MACH = stm32f429
+MACH = stm32f407
 include ../mk/stm32f4xx.mk
 

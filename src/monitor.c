@@ -179,12 +179,12 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 	dmon_comm_connect(comm);
 
-#if 0
+	dmon_sleep(200);
+
 	dmprintf(comm, "\r\n\r\n");
 	dmprintf(comm, __hr__);
-	dmprintf(comm, " ThikOS Debug Monitor (Ctrl+V for Help)\r\n");
+	dmprintf(comm, " ThinkOS Debug Monitor (Ctrl+V for Help)\r\n");
 	dmprintf(comm, __hr__);
-#endif
 
 	monitor_thread_id = __thinkos_thread_getnext(-1);
 

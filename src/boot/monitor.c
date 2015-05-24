@@ -242,11 +242,9 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	char buf[4];
 #endif
 	int len;
-	int ret;
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
-	ret = dmon_comm_connect(comm);
-	DCC_LOG1(LOG_TRACE, "dmon_comm_connect() --> %d", ret);
+	dmon_comm_connect(comm);
 
 	dmon_sleep(100);
 
