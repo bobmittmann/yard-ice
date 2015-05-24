@@ -23,7 +23,7 @@ OUTPUT_FORMAT ("elf32-littlearm")
 ENTRY(_reset)
 SEARCH_DIR(.)
 
-__thinkos = 0;
+__thinkos = 0x08000000;
 
 MEMORY
 {

@@ -193,12 +193,14 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
+	DCC_LOG(LOG_TRACE, "1. io_init().");
+
 #if FIRELINK
 	firelink_io_init();
 #endif
 	io_init();
 
-	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
+	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
 #if FIRELINK

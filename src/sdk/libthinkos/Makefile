@@ -30,7 +30,7 @@ DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c \
 
 MISC_CFILES = thinkos_util.c thinkos_type.c bmp_alloc.c \
 			  memcpy.c memcpy32.c memset32.c thread_getnext.c \
-			  thread_get.c suspended.c isfaulty.c ispaused.c \
+			  thread_get.c thread_inf_set.c suspended.c isfaulty.c ispaused.c \
 			  isalive.c active.c alloc_bmp_get.c obj_type_get.c\
 			  pause_all.c resume_all.c xcpt_util.c
 

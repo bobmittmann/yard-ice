@@ -411,7 +411,7 @@ void tcp_idle_tmr(void)
 	}
 }
 
-int __attribute__((noreturn)) tcp_tmr_task(void * p)
+void __attribute__((noreturn)) tcp_tmr_task(void * p)
 {
 	int mutex = net_mutex;
 	int cond = __tcp__.out.cond;
@@ -507,7 +507,6 @@ int __attribute__((noreturn)) tcp_tmr_task(void * p)
 			idle_clk += TCP_IDLE_TMR_MS;
 			tcp_idle_tmr();
 		}
-
 	}
 }
 
