@@ -189,14 +189,16 @@ void dmon_alarm_stop(void)
 int dmon_wait_idle(void)
 {
 	int ret;
-	/* request signal */
-	thinkos_dmon_rt.req |= (1 << DMON_IDLE);
+
+	/* DEbug monitor request semaphore */
+	CM3_DCB->demcr |= DCB_DEMCR_MON_REQ;
+
 	/* wait for signal */
 	if ((ret = dmon_wait(DMON_IDLE)) < 0)
 		return ret;
 
-	/* clear request */
-	thinkos_dmon_rt.req &= ~(1 << DMON_IDLE);
+	DCC_LOG(LOG_MSG, "[IDLE] zzz zzz zzz zzz");
+
 	return 0;
 }
 
@@ -386,22 +388,19 @@ void __attribute__((noinline)) dmon_context_swap(void * ctx)
 				  : : "r" (ptr0) : "r1");
 }
 
-
-static void __attribute__((noreturn, naked)) dmon_bootstrap(void)
+static void __attribute__((naked)) dmon_bootstrap(void)
 {
 	/* set the clock in the past so it won't generate signals in 
 	 the near future */
 	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
-	DCC_LOG(LOG_WARNING, "task exit.");
-	for (;;) {
-		dmon_context_swap(&thinkos_dmon_rt.ctx); 
-	}
+	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
 
 static void dmon_on_reset(struct thinkos_dmon * dmon)
 {
 	uint32_t * sp;
+
 	DCC_LOG(LOG_TRACE, "DMON_RESET");
 	sp = &thinkos_dmon_stack[(sizeof(thinkos_dmon_stack) / 4) - 10];
 	sp[0] = 0x0100000f; /* CPSR */
@@ -560,7 +559,6 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	
 	thinkos_dmon_rt.events = (1 << DMON_RESET);
 	thinkos_dmon_rt.mask = (1 << DMON_RESET);
-	thinkos_dmon_rt.req = 0;
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
 

@@ -28,11 +28,12 @@ DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c \
 			  print_context.c print_stack_usage.c soft_reset.c \
 			  app_exec.c app_load_ymodem.c print_exception.c
 
-MISC_CFILES = thinkos_util.c thinkos_type.c bmp_alloc.c \
-			  memcpy.c memcpy32.c memset32.c thread_getnext.c \
-			  thread_get.c thread_inf_set.c suspended.c isfaulty.c ispaused.c \
-			  isalive.c active.c alloc_bmp_get.c obj_type_get.c\
-			  pause_all.c resume_all.c xcpt_util.c
+MISC_CFILES = thinkos_util.c thinkos_type.c obj_type_get.c \
+			  alloc_bmp_get.c bmp_alloc.c \
+			  memcpy.c memcpy32.c memset32.c active.c suspended.c \
+			  thread_getnext.c thread_get.c thread_inf_set.c \
+			  thread_isfaulty.c thread_ispaused.c \
+			  thread_isalive.c pause_all.c resume_all.c xcpt_util.c
 
 CONSOLE_CFILES = thinkos_console.c bypass.c 
 CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c thinkos_init.c \

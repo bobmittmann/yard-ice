@@ -59,10 +59,9 @@ struct dmon_comm;
 
 struct thinkos_dmon {
 	struct dmon_comm * comm;
-	uint32_t * ctx;
-	volatile uint32_t mask;
-	volatile uint32_t events;
-	volatile uint32_t req;
+	uint32_t * ctx;           /* monitor context */
+	volatile uint32_t mask;   /* events mask */
+	volatile uint32_t events; /* events bitmap */
 	void (* task)(struct dmon_comm * comm);
 };
 

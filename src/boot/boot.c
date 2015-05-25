@@ -49,61 +49,15 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-#ifndef FIRELINK
-#define FIRELINK 1
-#endif
+void io_init(void);
 
 #if FIRELINK
-void firelink_io_init(void);
 void firelink_lcd_init(void);
-void firelink_lcd_clear(void);
 void firelink_lcd_puts(char * s);
 void firelink_lcd_putc(int c);
 #endif
 
 void monitor_task(struct dmon_comm * comm);
-
-void io_init(void)
-{
-	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
-
-#if 0
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
-	stm32_gpio_mode(LED1, OUTPUT, OPEN_DRAIN | SPEED_MED);
-	stm32_gpio_set(LED1);
-#endif
-
-#if 0
-#define LED1      STM32_GPIOG, 6
-#define LED2      STM32_GPIOG, 7
-#define LED3      STM32_GPIOG, 10
-#define LED4      STM32_GPIOG, 12
-
-	stm32_gpio_mode(LED2, OUTPUT, OPEN_DRAIN | SPEED_MED);
-	stm32_gpio_mode(LED3, OUTPUT, OPEN_DRAIN | SPEED_MED);
-	stm32_gpio_mode(LED4, OUTPUT, OPEN_DRAIN | SPEED_MED);
-
-	stm32_gpio_set(LED2);
-	stm32_gpio_clr(LED3);
-	stm32_gpio_clr(LED4);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
-
-	/* USART5 TX */
-	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(UART5_TX, GPIO_AF8);
-	/* USART5 RX */
-	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART5_RX, GPIO_AF8);
-#endif
-}
 
 #define CTRL_C 0x03
 
@@ -175,8 +129,13 @@ void monitor_init(void)
 	struct dmon_comm * comm;
 
 	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
-//	comm = usb_comm_init(&stm32f_otg_fs_dev);
+#if STM32_ENABLE_OTG_FS
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+#elif STM32_ENABLE_OTG_HS
 	comm = usb_comm_init(&stm32f_otg_hs_dev);
+#else
+#error "Undefined debug monitor comm port!"
+#endif
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
@@ -195,9 +154,6 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "1. io_init().");
 
-#if FIRELINK
-	firelink_io_init();
-#endif
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate().");
