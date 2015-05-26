@@ -89,6 +89,17 @@ int target_goto(uint32_t addr, int opt);
 #define GDB_ENABLE_VCONT 1
 #endif
 
+#ifndef GDB_ENABLE_MULTIPROCESS
+#define GDB_ENABLE_MULTIPROCESS 0
+#endif
+
+#ifndef GDB_ENABLE_QXFER_FEATURES
+#define GDB_ENABLE_QXFER_FEATURES 1
+#endif
+
+#ifndef GDB_ENABLE_QXFER_MEMORY_MAP
+#define GDB_ENABLE_QXFER_MEMORY_MAP 0
+#endif
 
 #define CTRL_B 0x02
 #define CTRL_C 0x03
@@ -124,6 +135,9 @@ struct gdb_rspd {
 	uint8_t session_valid : 1;
 	uint8_t last_signal;
 	uint8_t cont_signal;
+#if GDB_ENABLE_MULTIPROCESS
+	uint16_t pid;
+#endif
 	struct {
 		int8_t g; 
 		int8_t c;
@@ -199,6 +213,122 @@ static int rsp_pkt_send(struct dmon_comm * comm, char * pkt, int len)
 	return dmon_comm_send(comm, pkt, n);
 }
 
+int decode_thread_id(char * s)
+{
+	char * cp = s;
+	int thread_id;
+#if GDB_ENABLE_MULTIPROCESS
+	int pid;
+
+	if (cp[0] == 'p') {
+		cp++;
+		pid = hex2int(cp, &cp);
+		DCC_LOG1(LOG_TRACE, "pid=%d", pid);
+		cp++;
+	}
+#endif
+
+	if ((cp[0] == '-') && (cp[1] == '1'))
+		thread_id = THREAD_ID_ALL;
+	else
+		thread_id = hex2int(cp, NULL);
+
+	return thread_id;
+}
+
+static int rsp_thread_isalive(struct gdb_rspd * gdb, 
+							  struct dmon_comm * comm, char * pkt, int len)
+{
+	int ret = 0;
+	int thread_id;
+
+	thread_id = decode_thread_id(&pkt[1]);
+
+	/* Find out if the thread thread-id is alive. 
+	   'OK' thread is still alive 
+	   'E NN' thread is dead */
+
+	if (thread_isalive(thread_id)) {
+		DCC_LOG1(LOG_TRACE, "thread %d is alive.", thread_id);
+		ret = rsp_ok(comm);
+	} else {
+		DCC_LOG1(LOG_TRACE, "thread %d is dead!", thread_id);
+		ret = rsp_error(comm, 1);
+	}
+
+#if 0
+	/* XXX: if there is no active application run  */
+	if (!gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "no active application, "
+				"calling dmon_app_exec()!");
+		if (dmon_app_exec(true) < 0) {
+			return rsp_error(comm, 1);
+		}
+		gdb->active_app = true;
+	}
+#endif
+
+	return ret;
+}
+
+static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm, 
+						char * pkt, int len)
+{
+	int ret = 0;
+	int thread_id;
+
+	thread_id = decode_thread_id(&pkt[2]);
+
+#if 0	
+	/* XXX: if there is no active application run  */
+	if (!gdb->active_app) {
+		DCC_LOG(LOG_WARNING, "no active application, "
+				"calling dmon_app_exec()!");
+		if (dmon_app_exec(true) < 0) {
+			return rsp_error(comm, 1);
+		}
+		gdb->active_app = true;
+	}
+#endif
+
+	/* set thread for subsequent operations */
+	switch (pkt[1]) {
+	case 'c':
+		if (thread_id == THREAD_ID_ALL)
+			DCC_LOG(LOG_TRACE, "continue all threads");
+		else if (thread_id == THREAD_ID_ANY)
+			DCC_LOG(LOG_TRACE, "continue any thread");
+		else
+			DCC_LOG1(LOG_TRACE, "continue thread %d", thread_id);
+		gdb->thread_id.c = thread_id;
+		ret = rsp_ok(comm);
+		break;
+
+	case 'g':
+		if (thread_id == THREAD_ID_ALL)
+			DCC_LOG(LOG_TRACE, "get all threads");
+		else if (thread_id == THREAD_ID_ANY)
+			DCC_LOG(LOG_TRACE, "get any thread");
+		else
+			DCC_LOG1(LOG_TRACE, "get thread %d", thread_id);
+		gdb->thread_id.g = thread_id;
+		ret = rsp_ok(comm);
+		break;
+/*
+	case 'p':
+		gdb->thread_id.p = thread_id;
+		ret = rsp_ok(comm);
+		break; */
+
+	default:
+		DCC_LOG2(LOG_WARNING, "unsupported 'H%c%d'", pkt[1], thread_id);
+		ret = rsp_empty(comm);
+	}
+
+	return ret;
+}
+
+
 int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 {
 	char * cp = pkt + sizeof("qThreadExtraInfo,") - 1;
@@ -206,7 +336,7 @@ int rsp_thread_extra_info(struct dmon_comm * comm, char * pkt)
 	int n;
 
 	/* qThreadExtraInfo */
-	thread_id = hex2int(cp, NULL);
+	thread_id = decode_thread_id(cp);
 	DCC_LOG1(LOG_INFO, "thread_id=%d", thread_id);
 
 	cp = pkt;
@@ -323,15 +453,200 @@ int rsp_cmd(struct dmon_comm * comm, char * pkt, int len)
 	return rsp_ok(comm);
 }
 
+const char target_xml[] = 
+"<target>\n"
+"<architecture>arm</architecture>\n"
+"<feature name=\"org.gnu.gdb.arm.m-profile\">\n"
+"<reg name=\"r0\" bitsize=\"32\"/>\n"
+"<reg name=\"r1\" bitsize=\"32\"/>\n"
+"<reg name=\"r2\" bitsize=\"32\"/>\n"
+"<reg name=\"r3\" bitsize=\"32\"/>\n"
+"<reg name=\"r4\" bitsize=\"32\"/>\n"
+"<reg name=\"r5\" bitsize=\"32\"/>\n"
+"<reg name=\"r6\" bitsize=\"32\"/>\n"
+"<reg name=\"r7\" bitsize=\"32\"/>\n"
+"<reg name=\"r8\" bitsize=\"32\"/>\n"
+"<reg name=\"r9\" bitsize=\"32\"/>\n"
+"<reg name=\"r10\" bitsize=\"32\"/>\n"
+"<reg name=\"r11\" bitsize=\"32\"/>\n"
+"<reg name=\"r12\" bitsize=\"32\"/>\n"
+"<reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
+"<reg name=\"lr\" bitsize=\"32\"/>\n"
+"<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
+"<reg name=\"xpsr\" bitsize=\"32\"/>\n"
+//"<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>\n"
+"</feature>\n"
+#if 0
+"<feature name=\"org.gnu.gdb.arm.vfp\">\n"
+"<reg name=\"d0\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d1\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d2\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d3\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d4\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d5\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d6\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d7\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d8\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d9\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d10\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d11\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d12\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d13\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d14\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d15\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"fpsid\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"<reg name=\"fpscr\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"<reg name=\"fpexc\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"</feature>\n"
+#endif
+"</target>";
+
+const char memory_map_xml[] = 
+"<memory-map>"
+"<memory type=\"flash\" start=\"0x8000000\" length=\"0x100000\"/>"
+"<memory type=\"flash\" start=\"0x8100000\" length=\"0x100000\"/>"
+"<memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
+"<memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
+"</memory-map>";
+
+/*
+"<reg name=\"r0\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r1\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r2\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r3\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r4\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r5\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r6\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r7\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r8\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r9\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r10\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r11\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"r12\" bitsize=\"32\" type=\"uint32\"/>
+"<reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>
+"<reg name=\"lr\" bitsize=\"32\"/>
+"<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>
+"<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>
+"<feature name=\"org.gnu.gdb.arm.vfp\">"
+"<reg name=\"d0\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d1\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d2\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d3\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d4\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d5\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d6\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d7\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d8\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d9\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d10\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d11\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d12\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d13\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d14\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
+"<reg name=\"fpsid\" bitsize=\"32\" type=\"int\" group=\"float\"/>"
+"<reg name=\"fpscr\" bitsize=\"32\" type=\"int\" group=\"float\"/>"
+"<reg name=\"fpexc\" bitsize=\"32\" type=\"int\" group=\"float\"/>"
+"</feature>"
+</target>";
+
+*/
+
+int rsp_features_read(struct dmon_comm * comm, char * pkt)
+{
+	char * cp = pkt + sizeof("qXfer:features:read:") - 1;
+	char * annex;
+	int offs;
+	int size;
+	int cnt;
+	char * src;
+	int n;
+	int i;
+
+	annex = cp;
+	while (*cp != ':')
+		cp++;
+	*cp = '\0';
+	/* skip ':' */
+	cp++;
+	
+	offs = hex2int(cp, &cp);
+	/* skip ',' */
+	cp++;
+	size = hex2int(cp, NULL);
+
+	DCC_LOGSTR(LOG_INFO, "annex='%s'", annex);
+	DCC_LOG2(LOG_INFO, "offs=%d size=%d", offs, size);
+
+	cp = pkt;
+
+	src = (char *)target_xml + offs;
+	cnt = sizeof(target_xml) - 1 - offs;
+	if (cnt > size) {
+		cnt = size;
+		cp += str2str(cp, "$m");
+	} else
+		cp += str2str(cp, "$l");
+
+	for (i = 0; i < cnt; ++i)
+		cp[i] = src[i];
+	cp += cnt;
+
+	n = cp - pkt;
+	return rsp_pkt_send(comm, pkt, n);
+}
+
+int rsp_memory_map_read(struct dmon_comm * comm, char * pkt)
+{
+	char * cp = pkt + sizeof("qXfer:features:read:") - 1;
+	char * annex;
+	int offs;
+	int size;
+	int cnt;
+	char * src;
+	int n;
+	int i;
+
+	annex = cp;
+	while (*cp != ':')
+		cp++;
+	*cp = '\0';
+	/* skip ':' */
+	cp++;
+	
+	offs = hex2int(cp, &cp);
+	/* skip ',' */
+	cp++;
+	size = hex2int(cp, NULL);
+
+	DCC_LOGSTR(LOG_INFO, "annex='%s'", annex);
+	DCC_LOG2(LOG_INFO, "offs=%d size=%d", offs, size);
+
+	cp = pkt;
+
+	src = (char *)memory_map_xml + offs;
+	cnt = sizeof(memory_map_xml) - 1 - offs;
+	if (cnt > size) {
+		cnt = size;
+		cp += str2str(cp, "$m");
+	} else
+		cp += str2str(cp, "$l");
+
+	for (i = 0; i < cnt; ++i)
+		cp[i] = src[i];
+	cp += cnt;
+
+	n = cp - pkt;
+	return rsp_pkt_send(comm, pkt, n);
+}
+
+
 static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 					 char * pkt, int len)
 {
 	int thread_id;
 	char * cp;
 	int n;
-
-	pkt[len] = '\0';
-	DCC_LOGSTR(LOG_INFO, "'%s'", pkt);
 
 	if (prefix(pkt, "qRcmd,")) {
 		DCC_LOG(LOG_TRACE, "qRcmd");
@@ -394,14 +709,30 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 		DCC_LOG(LOG_TRACE, "qSupported");
 		cp = pkt + str2str(pkt, "$PacketSize=");
 		cp += uint2hex(cp, RSP_BUFFER_LEN - 1);
-		cp += str2str(cp, ";qXfer:features:read-"
-					";qRelocInsn-"
+		cp += str2str(cp, 
+#if GDB_ENABLE_QXFER_FEATURES
+					";qXfer:features:read+"
+#else
+					";qXfer:features:read-"
+#endif
+#if GDB_ENABLE_QXFER_MEMORY_MAP
+					";qXfer:memory-map:read+"
+#else
+					";qXfer:memory-map:read-"
+#endif
+#if GDB_ENABLE_MULTIPROCESS
+					";multiprocess+"
+#else
 					";multiprocess-"
+#endif
+					";qRelocInsn-"
 #if 0
 					";QPassSignals+"
 #endif
 #if GDB_ENABLE_NOACK_MODE
 					";QStartNoAckMode+"
+#else
+					";QStartNoAckMode-"
 #endif
 #if GDB_ENABLE_NOSTOP_MODE
 					";QNonStop+"
@@ -412,32 +743,36 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	}
 
 	if (prefix(pkt, "qfThreadInfo")) {
-		DCC_LOG(LOG_INFO, "qfThreadInfo");
+		DCC_LOG(LOG_MSG, "qfThreadInfo");
 		/* First Thread Info */
 		return rsp_thread_info_first(gdb, comm, pkt);
 	}
 
 	if (prefix(pkt, "qsThreadInfo")) {
-		DCC_LOG(LOG_INFO, "qsThreadInfo");
+		DCC_LOG(LOG_MSG, "qsThreadInfo");
 		/* Sequence Thread Info */
 		return rsp_thread_info_next(comm, pkt);
 	}
 
 	/* Get thread info from RTOS */
 	if (prefix(pkt, "qThreadExtraInfo")) {
-		DCC_LOG(LOG_INFO, "qThreadExtraInfo");
+		DCC_LOG(LOG_MSG, "qThreadExtraInfo");
 		return rsp_thread_extra_info(comm, pkt);
 	}
 
-	if (prefix(pkt, "qXfer:memory-map:read::")) {
-		DCC_LOG(LOG_TRACE, "qXfer:memory-map:read::");
-		return rsp_empty(comm);
-	}
-
+#if GDB_ENABLE_QXFER_FEATURES
 	if (prefix(pkt, "qXfer:features:read:")) {
 		DCC_LOG(LOG_TRACE, "qXfer:features:read:");
-		return rsp_empty(comm);
+		return rsp_features_read(comm, pkt);
 	}
+#endif
+
+#if GDB_ENABLE_QXFER_MEMORY_MAP
+	if (prefix(pkt, "qXfer:memory-map:read:")) {
+		DCC_LOG(LOG_TRACE, "qXfer:memory-map:read:");
+		return rsp_memory_map_read(comm, pkt);
+	}
+#endif
 
 	if (prefix(pkt, "qTStatus")) {
 		DCC_LOG(LOG_TRACE, "qTStatus");
@@ -462,6 +797,7 @@ static int rsp_query(struct gdb_rspd * gdb, struct dmon_comm * comm,
 	}
 
 #if 0
+
 	if (prefix(pkt, "QPassSignals:")) {
 		int sig;
 		cp = &pkt[12];
@@ -535,7 +871,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 
 	thread_id = rsp_get_g_thread(gdb);
 
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
+	DCC_LOG1(LOG_INFO, "thread_id=%d", thread_id);
 
 	cp = pkt;
 	*cp++ = '$';
@@ -543,7 +879,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	/* all integer registers */
 	for (r = 0; r < 16; r++) {
 		thread_register_get(thread_id, r, &val);
-		DCC_LOG2(LOG_INFO, "R%d = 0x%08x", r, val);
+		DCC_LOG2(LOG_MSG, "R%d = 0x%08x", r, val);
 		*cp++ = hextab[((val >> 4) & 0xf)];
 		*cp++ = hextab[(val & 0xf)];
 		*cp++ = hextab[((val >> 12) & 0xf)];
@@ -554,6 +890,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 		*cp++ = hextab[((val >> 24) & 0xf)];
 	}
 
+#if 0
 	/* all fp registers */
 	for (r = 0; r < 8; r++) {
 		*cp++ = '0' + r;
@@ -564,6 +901,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb,
 	*cp++ = '0';
 	*cp++ = '*';
 	*cp++ = ' ' + 4;
+#endif
 
 	/* cpsr */
 	thread_register_get(thread_id, 16, &val);
@@ -718,7 +1056,7 @@ int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_MSG, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
@@ -738,7 +1076,7 @@ int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 		pkt[n++] = hextab[sum & 0xf];
 	} else {
 
-		DCC_LOG2(LOG_INFO, "addr=%08x size=%d", addr, size);
+		DCC_LOG2(LOG_MSG, "addr=%08x size=%d", addr, size);
 
 		pkt[0] = '$';
 		n = 1;
@@ -752,7 +1090,7 @@ int rsp_memory_read(struct dmon_comm * comm, char * pkt, int len)
 	}
 
 	pkt[n] = '\0';
-	DCC_LOGSTR(LOG_INFO, "pkt='%s'", pkt);
+	DCC_LOGSTR(LOG_MSG, "pkt='%s'", pkt);
 	return dmon_comm_send(comm, pkt, n);
 }
 
@@ -775,100 +1113,6 @@ static int rsp_memory_write(struct dmon_comm * comm, char * pkt, int len)
 	return rsp_ok(comm);
 }
 
-static int rsp_thread_isalive(struct gdb_rspd * gdb, 
-							  struct dmon_comm * comm, char * pkt, int len)
-{
-	int ret = 0;
-	int thread_id;
-
-	thread_id = hex2int(&pkt[1], NULL);
-
-	/* Find out if the thread thread-id is alive. 
-	   'OK' thread is still alive 
-	   'E NN' thread is dead */
-
-	if (thread_isalive(thread_id)) {
-		DCC_LOG1(LOG_TRACE, "thread %d is alive.", thread_id);
-		ret = rsp_ok(comm);
-	} else {
-		DCC_LOG1(LOG_TRACE, "thread %d is dead!", thread_id);
-		ret = rsp_error(comm, 1);
-	}
-
-#if 0
-	/* XXX: if there is no active application run  */
-	if (!gdb->active_app) {
-		DCC_LOG(LOG_WARNING, "no active application, "
-				"calling dmon_app_exec()!");
-		if (dmon_app_exec(true) < 0) {
-			return rsp_error(comm, 1);
-		}
-		gdb->active_app = true;
-	}
-#endif
-
-	return ret;
-}
-
-static int rsp_h_packet(struct gdb_rspd * gdb, struct dmon_comm * comm, 
-						char * pkt, int len)
-{
-	int ret = 0;
-	int thread_id;
-
-	if ((pkt[2] == '-') && (pkt[3] == '1'))
-		thread_id = THREAD_ID_ALL;
-	else
-		thread_id = hex2int(&pkt[2], NULL);
-
-#if 0	
-	/* XXX: if there is no active application run  */
-	if (!gdb->active_app) {
-		DCC_LOG(LOG_WARNING, "no active application, "
-				"calling dmon_app_exec()!");
-		if (dmon_app_exec(true) < 0) {
-			return rsp_error(comm, 1);
-		}
-		gdb->active_app = true;
-	}
-#endif
-
-	/* set thread for subsequent operations */
-	switch (pkt[1]) {
-	case 'c':
-		if (thread_id == THREAD_ID_ALL)
-			DCC_LOG(LOG_TRACE, "continue all threads");
-		else if (thread_id == THREAD_ID_ANY)
-			DCC_LOG(LOG_TRACE, "continue any thread");
-		else
-			DCC_LOG1(LOG_TRACE, "continue thread %d", thread_id);
-		gdb->thread_id.c = thread_id;
-		ret = rsp_ok(comm);
-		break;
-
-	case 'g':
-		if (thread_id == THREAD_ID_ALL)
-			DCC_LOG(LOG_TRACE, "get all threads");
-		else if (thread_id == THREAD_ID_ANY)
-			DCC_LOG(LOG_TRACE, "get any thread");
-		else
-			DCC_LOG1(LOG_TRACE, "get thread %d", thread_id);
-		gdb->thread_id.g = thread_id;
-		ret = rsp_ok(comm);
-		break;
-/*
-	case 'p':
-		gdb->thread_id.p = thread_id;
-		ret = rsp_ok(comm);
-		break; */
-
-	default:
-		DCC_LOG2(LOG_WARNING, "unsupported 'H%c%d'", pkt[1], thread_id);
-		ret = rsp_empty(comm);
-	}
-
-	return ret;
-}
 
 static int rsp_breakpoint_insert(struct dmon_comm * comm, struct gdb_rspd * gdb,
 								 char * pkt, int len)
@@ -1521,7 +1765,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_INFO, "Comm RX.");
+			DCC_LOG(LOG_MSG, "Comm RX.");
 			if (dmon_comm_recv(comm, buf, 1) != 1) {
 				DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
 				continue;

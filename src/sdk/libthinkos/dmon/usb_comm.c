@@ -63,7 +63,9 @@ struct cdc_acm_descriptor_config {
 	struct cdc_call_management_descriptor cm;
 	struct cdc_abstract_control_management_descriptor acm;
 	struct cdc_union_1slave_descriptor un;
-//	struct usb_descriptor_endpoint ep_int;
+#if 1
+	struct usb_descriptor_endpoint ep_int;
+#endif
 	struct usb_descriptor_interface if_data;
 	struct usb_descriptor_endpoint ep_out;
 	struct usb_descriptor_endpoint ep_in;
@@ -203,7 +205,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* The interface number designated as first slave */
 			{ 1 }
 		},
-#if 0
+#if 1
 		/* Endpoint 3 descriptor */
 		.ep_int = {
 			/* Size of this descriptor in bytes */
@@ -385,8 +387,9 @@ struct usb_cdc_acm_dev {
 	uint8_t ctl_ep;
 	uint8_t in_ep;
 	uint8_t out_ep;
-//	uint8_t int_ep;
-
+#if 1
+	uint8_t int_ep;
+#endif
 	uint8_t rx_flowctrl;
 	uint8_t rx_paused;
 
@@ -469,7 +472,7 @@ const usb_dev_ep_info_t usb_mon_out_info = {
 	.on_out = usb_mon_on_rcv
 };
 
-#if 0
+#if 1
 const usb_dev_ep_info_t usb_mon_int_info = {
 	.addr = USB_ENDPOINT_IN + EP_INT_ADDR,
 	.attr = ENDPOINT_TYPE_INTERRUPT,
@@ -532,12 +535,16 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		if (value) {
 			dev->in_ep = usb_dev_ep_init(dev->usb, &usb_mon_in_info, NULL, 0);
 			dev->out_ep = usb_dev_ep_init(dev->usb, &usb_mon_out_info, NULL, 0);
-//			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_mon_int_info, NULL, 0);
+#if 1
+			dev->int_ep = usb_dev_ep_init(dev->usb, &usb_mon_int_info, NULL, 0);
+#endif
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_RECV_OK);
 		} else {
 			usb_dev_ep_ctl(dev->usb, dev->in_ep, USB_EP_DISABLE);
 			usb_dev_ep_ctl(dev->usb, dev->out_ep, USB_EP_DISABLE);
-//			usb_dev_ep_ctl(dev->usb, dev->int_ep, USB_EP_DISABLE);
+#if 1
+			usb_dev_ep_ctl(dev->usb, dev->int_ep, USB_EP_DISABLE);
+#endif
 		}
 		DCC_LOG(LOG_INFO, "[CONFIGURED]");
 		break;

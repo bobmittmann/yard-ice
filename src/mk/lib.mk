@@ -115,12 +115,18 @@ DEPDIRS_ALL:= $(DEPDIRS:%=%-all)
 
 DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 
-CLEAN_FILES := $(OFILES) $(DFILES) $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
+LFILES := $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
 
 ifeq (Windows,$(HOST))
-  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
+  CLEAN_OFILES := $(subst /,\,$(OFILES))
+  CLEAN_DFILES := $(subst /,\,$(DFILES))
+  CLEAN_LFILES := $(subst /,\,$(LFILES))
   INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
   LIB_OUT_WIN := $(subst /,\,$(LIB_OUT))
+else
+  CLEAN_OFILES := $(OFILES)
+  CLEAN_DFILES := $(DFILES)
+  CLEAN_LFILES := $(LFILES)
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
@@ -151,7 +157,9 @@ endif
 all: $(LIB_OUT)
 
 clean: deps-clean
-	$(Q)$(RMALL) $(CLEAN_FILES)
+	$(Q)$(RMALL) $(CLEAN_OFILES)
+	$(Q)$(RMALL) $(CLEAN_DFILES)
+	$(Q)$(RMALL) $(CLEAN_LFILES)
 
 install: $(LIB_OUT)
 ifeq (Windows,$(HOST))

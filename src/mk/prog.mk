@@ -186,9 +186,9 @@ LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 
 
-all: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
+all:: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
-clean: libs-clean
+clean:: libs-clean
 	$(Q)$(RMALL) $(CLEAN_FILES)
 
 prog: $(PROG_BIN)
