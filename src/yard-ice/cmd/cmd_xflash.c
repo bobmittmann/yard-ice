@@ -27,7 +27,8 @@
 #include <string.h>
 #include <sys/shell.h>
 #include <sys/tty.h>
-#include <sys/usb-cdc.h>
+#include <sys/console.h>
+#include <sys/serial.h>
 #include <sys/stm32f.h>
 
 #include "config.h"
@@ -71,8 +72,8 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	fflush(f);
 
 	raw = isfatty(f) ? ftty_lowlevel(f) : f;
-
-	if (usb_cdc_is_usb_file(raw)) {
+ 
+	if (is_console_file(raw)) {
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
 		ret = usb_xflash(offs, size);

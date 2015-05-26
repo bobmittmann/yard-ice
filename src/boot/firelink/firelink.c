@@ -22,6 +22,7 @@
 
 #include <sys/stm32f.h>
 #include <sys/delay.h>
+#include <sys/dcclog.h>
 
 #include "board.h"
 
@@ -157,8 +158,14 @@ void firelink_lcd_init(void)
 	udelay(50);
 }
 
-void firelink_io_init(void)
+void io_init(void)
 {
+	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_gpio_mode(BUZZER, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_clr(BUZZER);

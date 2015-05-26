@@ -28,6 +28,7 @@
 #define __SYS_CONSOLE_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/file.h>
 
 #ifdef __cplusplus
@@ -43,6 +44,8 @@ int console_drain(void * dev);
 int console_close(void * dev);
 
 struct file * console_fopen(void);
+
+bool is_console_file(struct file * f);
 
 #ifdef __cplusplus
 }

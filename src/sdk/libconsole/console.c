@@ -23,6 +23,7 @@
 
 #include <thinkos.h>
 #include <sys/file.h>
+#include <stdbool.h>
 
 int console_write(void * dev, const void * buf, unsigned int len) 
 {
@@ -71,5 +72,10 @@ struct file * console_fopen(void)
 	struct file * f;
 	f = (struct file *)&console_file;
 	return f;
+}
+
+bool is_console_file(struct file * f) 
+{
+	return (f->op == &console_fops) ? true : false;
 }
 

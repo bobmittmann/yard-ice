@@ -444,19 +444,3 @@ int serial_shell(void)
 				 yard_ice_greeting, yard_ice_cmd_tab);
 }
 
-#if ENABLE_MONITOR
-int console_shell(void)
-{
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
-
-	f_raw = console_fopen();
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
-
-	return shell(f_tty, yard_ice_get_prompt, 
-				 yard_ice_greeting, yard_ice_cmd_tab);
-}
-#endif
-

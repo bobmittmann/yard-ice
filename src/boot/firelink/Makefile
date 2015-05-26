@@ -22,10 +22,9 @@
 
 PROG = thinkos
 
-CFILES = boot.c monitor.c firelink.c
+CFILES = ../boot.c ../monitor.c firelink.c
 
-SDK = ../sdk
-TOOLS = ../../tools
+SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libice-comm \
@@ -43,7 +42,7 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS "FIRELINK=0"
 CFLAGS = -g -O2 -Wall
 
 JTAGTOOL_ADDR = 192.168.10.50
-#MACH = stm32f429
-MACH = stm32f407
-include ../mk/stm32f4xx.mk
+
+MACH = stm32f429
+include ../../mk/stm32f4xx.mk
 

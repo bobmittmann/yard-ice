@@ -31,6 +31,20 @@ extern const uint8_t thinkos_obj_type_lut[];
 
 static void ready_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
+#if THINKOS_IRQ_MAX > 0
+	{
+		int irq;
+		for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
+			if (thinkos_rt.irq_th[irq] == th) {
+				DCC_LOG2(LOG_INFO, "PC=%08x IRQ=%d ......", 
+						 thinkos_rt.ctx[th]->pc, irq); 
+				/* disable this interrupt source */
+				cm3_irq_enable(irq);
+				return;
+			}
+		}
+	}
+#endif
 	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 }
@@ -267,6 +281,20 @@ bool __thinkos_thread_pause(unsigned int th)
 	for (wq = 0; wq < THINKOS_WQ_LST_END; ++wq) 
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 #endif /* THINKOS_ENABLE_THREAD_STAT */
+
+#if THINKOS_IRQ_MAX > 0
+	{
+		int irq;
+		for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
+			if (thinkos_rt.irq_th[irq] == th) {
+				DCC_LOG2(LOG_INFO, "thread=%d IRQ=%d", th, irq);
+				/* disable this interrupt source */
+				cm3_irq_disable(irq);
+				break;
+			}
+		}
+	}
+#endif
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	/* posibly clear the step request */

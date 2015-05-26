@@ -124,7 +124,9 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_P:
 			dmprintf(comm, "^P\r\nPausing all threads...\r\n");
 			__thinkos_pause_all();
+			DCC_LOG(LOG_TRACE, "dmon_wait_idle()...");
 			dmon_wait_idle();
+			DCC_LOG(LOG_TRACE, "<<IDLE>>");
 			break;
 		case CTRL_Q:
 			dmprintf(comm, "^Q\r\n");

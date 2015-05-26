@@ -74,74 +74,41 @@ static inline void __attribute__((always_inline)) __wait(void) {
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
-#if THINKOS_ENABLE_DEBUG_STEP
-	volatile uint32_t * req_bit;
-	volatile uint32_t * sig_bit;
-	uint32_t val;
+#if (THINKOS_ENABLE_MONITOR)
+	register struct cm3_dcb * dcb asm("r3");
+	register uint32_t * sigptr asm("r2");
+	register uint32_t sigval asm("r1");
+	register uint32_t demcr asm("r0");
 #endif
-	/* FIXME: the profile counter does not take into 
-	 account the time spent on interrupt handlers or OS (SYS).. */
-//#if THINKOS_ENABLE_PROFILING
-#if 0 
-	volatile uint32_t * cycref = &thinkos_rt.cycref;
-	volatile uint32_t * cycidle = &thinkos_rt.cyccnt[THINKOS_CYCCNT_IDLE];
-	volatile uint32_t * cycsys = &thinkos_rt.cyccnt[THINKOS_CYCCNT_SYS];
-	register uint32_t * dwt_cyccnt asm ("lr") = (void *)&(CM3_DWT->cyccnt);
-	for (;;) {
-		uint32_t cyccnt;
-		uint32_t cycprev;
-		int32_t delta;
-
-		cm3_cpsie_i();
-		cm3_cpsid_i();
-
-		asm volatile ("ldr	%0, [%1, #0]" : "=r" (cyccnt) : "r" (dwt_cyccnt));
-		delta = cyccnt - *cycref;
-		/* update system cycle counter */
-		*cycsys += delta; 
-		/* save counter */
-		cycprev = cyccnt; 
-		asm volatile ("wfi\n"); /* wait for interrupt */
-
-		asm volatile ("ldr	%0, [%1, #0]" : "=r" (cyccnt) : "r" (dwt_cyccnt));
-		delta = cyccnt - cycprev;
-		/* update the reference */
-		*cycref = cyccnt;
-		/* update idle cycle counter */
-		*cycidle += delta; 
-	}
-#else
 
 	DCC_LOG(LOG_TRACE, "<<< Idle >>>");
 
-#if THINKOS_ENABLE_DEBUG_STEP
-	req_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.req, DMON_IDLE);
-	sig_bit = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, DMON_IDLE);
+#if (THINKOS_ENABLE_MONITOR)
+	dcb = CM3_DCB;
+	sigval = 1;
+	sigptr = CM3_BITBAND_MEM(&thinkos_dmon_rt.events, DMON_IDLE);
 #endif
-
 	for (;;) {
-#if THINKOS_ENABLE_SCHED_DEBUG
-		DCC_LOG(LOG_MSG, "zzz...");
-//		__dump_context(&thinkos_idle.ctx);
-#endif
-#if THINKOS_ENABLE_DEBUG_STEP
+#if (THINKOS_ENABLE_MONITOR)
 		/* check if the monitor is requesting a notification when
 		   entering IDLE state */
-		if ((val = *req_bit) != 0) {
-			/* Notify the monitor */
-			/* Set the IDLE signal bit */
-			*sig_bit = val;
+		asm volatile ("ldr %0, [%1, #12]\n" 
+					  : "=r" (demcr) : "r"(dcb));
+		if (demcr & DCB_DEMCR_MON_REQ) {
 			/* Call the monitor by a pending a monitor interrupt */
-			CM3_DCB->demcr |= DCB_DEMCR_MON_PEND | DCB_DEMCR_MON_REQ;
+			demcr = (demcr | DCB_DEMCR_MON_PEND) & ~DCB_DEMCR_MON_REQ;
+			asm volatile (
+						  "str %1, [%0]\n" 
+						  "str %3, [%2, #12]\n" 
+						  "isb\n" 
+						  :  : "r"(sigptr), "r"(sigval), "r"(dcb), "r"(demcr) 
+						  : );
 		}
 #endif
 #if THINKOS_ENABLE_IDLE_WFI
 		asm volatile ("wfi\n"); /* wait for interrupt */
-//		asm volatile ("wfe\n"); /* wait for interrupt */
 #endif
 	}
-
-#endif
 }
 
 static inline struct thinkos_context * __attribute__((always_inline)) 

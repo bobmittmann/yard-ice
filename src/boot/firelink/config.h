@@ -33,7 +33,6 @@
 #define THINKOS_IRQ_MAX 80
 
 #define THINKOS_ENABLE_IDLE_WFI 0
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 1
 
 #define THINKOS_ENABLE_CLOCK 1
 
@@ -117,6 +116,12 @@
 #define PRINTF_ENABLE_POINTER 0
 #define PRINTF_ENABLE_LONG 0
 #define PRINTF_ENABLE_ARG_WIDTH 0
+
+/* -------------------------------------------------------------------------
+   Board
+   -------------------------------------------------------------------------- */
+
+#define FIRELINK 1
 
 #endif /* __CONFIG_H__ */
 

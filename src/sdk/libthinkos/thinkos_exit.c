@@ -144,8 +144,11 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 
 void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 {
-	DCC_LOG2(LOG_WARNING, "<%d> code=%d", self, code); 
-	for(;;);
+	DCC_LOG2(LOG_WARNING, "<%d> code=%d", thinkos_rt.active, code); 
+	/* pretend we are somebody else */
+	thinkos_rt.active = THINKOS_THREAD_VOID;
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
 #endif /* THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN */

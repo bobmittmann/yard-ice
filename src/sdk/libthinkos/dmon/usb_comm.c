@@ -131,7 +131,7 @@ const struct cdc_acm_descriptor_config cdc_acm_desc_cfg = {
 			/* Configuration characteristics - attributes */
 			USB_CONFIG_SELF_NOWAKEUP,
 			/* Maximum power consumption of the device */
-			USB_POWER_MA(100)
+			USB_POWER_MA(250)
 		},
 		/* Communication Class Interface Descriptor Requirement */
 		{
@@ -328,19 +328,18 @@ const uint8_t cdc_acm_vendor_str[VENDOR_STR_SZ] = {
 #define PRODUCT_STR_SZ           44
 const uint8_t cdc_acm_product_str[PRODUCT_STR_SZ] = {
 	PRODUCT_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Product name: "STM32 Virtual ComPort" */
-	'S', 0, 'T', 0, 'M', 0, '3', 0, '2', 0, ' ', 0, 'V', 0, 'i', 0, 'r', 0, 
-	't', 0, 'u', 0, 'a', 0, 'l', 0, ' ', 0, 'C', 0, 'o', 0, 'm', 0, 'P', 0, 
-	'o', 0, 'r', 0, 't', 0,
+	/* Product name: "ThinkOS Debug Monitor" */
+	'T', 0, 'h', 0, 'i', 0, 'n', 0, 'k', 0, 'O', 0, 'S', 0, ' ', 0, 'D', 0, 
+	'e', 0, 'b', 0, 'u', 0, 'g', 0, ' ', 0, 'M', 0, 'o', 0, 'n', 0, 'i', 0, 
+	't', 0, 'o', 0, 'r', 0,
 };
 
-
-#define SERIAL_STR_SZ            26
+#define SERIAL_STR_SZ            30
 const uint8_t cdc_acm_serial_str[SERIAL_STR_SZ] = {
 	SERIAL_STR_SZ, USB_DESCRIPTOR_STRING,
-	/* Serial number: "0000000000001" */
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, 
-	'0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '0', 0, '1', 0
+	/* Serial number: "54 68 69 6e 6b 4f 53" */
+	'5', 0, '4', 0, '6', 0, '8', 0, '6', 0, '9', 0, '6', 0, 'E', 0, 
+	'6', 0, 'B', 0, '4', 0, 'F', 0, '5', 0, '3', 0
 };
 
 #define INTERFACE_STR_SZ         16
@@ -359,30 +358,6 @@ const uint8_t * const cdc_acm_str[] = {
 };
 
 #define STRCNT() (sizeof(cdc_acm_str) / sizeof(uint8_t *))
-
-
-#if 0
-void usb_cdc_sn_set(uint64_t sn)
-{
-	char s[24];
-	char * cp;
-	int c;
-	int i;
-	int n;
-
-	DCC_LOG2(LOG_INFO, "ESN: %08x %08x", (uint32_t)sn, (uint32_t)(sn >> 32LL));
-
-	n = sprintf(s, "%llu", sn);
-	cp = s + n - 1;
-
-	for (i = (SERIAL_STR_SZ / 2) - 1; i >= 0; --i) {
-		if (cp < s)
-			break;
-		c = *cp--;
-		cdc_acm_serial_str[i * 2] = c;
-	}
-}
-#endif
 
 struct usb_cdc_acm {
 	/* modem bits */
