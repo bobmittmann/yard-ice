@@ -27,20 +27,20 @@ CFILES = ../boot.c ../monitor.c board.c
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm $(SDK)/libgdb
+		  $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = cm3 stm32f util thinkos ice-comm gdb gcc 
+LIBS = cm3 stm32f util thinkos ice-comm gcc 
 
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
 CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-LDFLAGS = -Xlinker --gc-sections #-Xlinker --print-gc-sections
+LDFLAGS = -Xlinker --gc-sections -Xlinker --print-gc-sections
 
-#CFLAGS = -g -O2 -Wall
+#CFLAGS = -g -Os -Wall
 
 JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f407
-include ../../mk/stm32f4xx.mk
+MACH = stm32f207
+include ../../mk/stm32f2xx.mk
 

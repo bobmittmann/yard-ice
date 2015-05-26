@@ -23,24 +23,26 @@
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
-#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
 void __thinkos_thread_abort(int thread_id)
 {
-	int j;
 
 	DCC_LOG1(LOG_WARNING, "<%d> ....", thread_id); 
 
-	for (j = 0; j < THINKOS_THREADS_MAX; ++j) {
-		if (j == thread_id)
-			continue;
-		if (thinkos_rt.ctx[j] == NULL)
-			continue;
 #if THINKOS_ENABLE_TIMESHARE
-		/* schedule limit reevaluation */
-		if (thinkos_rt.sched_limit < thinkos_rt.sched_pri[j])
-			thinkos_rt.sched_limit = thinkos_rt.sched_pri[j];
-#endif
+	{
+		int j;
+
+		for (j = 0; j < THINKOS_THREADS_MAX; ++j) {
+			if (j == thread_id)
+				continue;
+			if (thinkos_rt.ctx[j] == NULL)
+				continue;
+			/* schedule limit reevaluation */
+			if (thinkos_rt.sched_limit < thinkos_rt.sched_pri[j])
+				thinkos_rt.sched_limit = thinkos_rt.sched_pri[j];
+		}
 	}
+#endif
 
 #if !THINKOS_ENABLE_THREAD_ALLOC && THINKOS_ENABLE_TIMESHARE
 	/* clear the schedule priority. In case the thread allocation
@@ -139,19 +141,6 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 
 	for(;;);
 }
-
-#else
-
-void __attribute__((noreturn)) __thinkos_thread_exit(int code)
-{
-	DCC_LOG2(LOG_WARNING, "<%d> code=%d", thinkos_rt.active, code); 
-	/* pretend we are somebody else */
-	thinkos_rt.active = THINKOS_THREAD_VOID;
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
-}
-
-#endif /* THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN */
 
 
 #if THINKOS_ENABLE_EXIT

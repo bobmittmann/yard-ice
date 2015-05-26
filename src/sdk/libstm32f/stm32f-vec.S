@@ -212,6 +212,21 @@
 	.word	stm32f_cryp_isr           /* 79 CRYP crypto */
 	.word	stm32f_hash_rng_isr       /* 80 Hash and Rng */
 #endif
+
+#if defined(STM32F4X)
+	.word   stm32f_fpu_isr            /* 81 FPU */
+	.word   stm32f_uart7_isr          /* 82 UART7 */
+	.word   stm32f_uart8_isr          /* 83 UART8 */
+	.word   stm32f_spi4_isr           /* 84 SPI4 */
+	.word   stm32f_spi5_isr           /* 85 SPI5 */
+	.word   stm32f_spi6_isr           /* 86 SPI6 */
+	.word   stm32f_sai1_isr           /* 87 SAI1 */
+	.word   stm32f_lcd_isr            /* 88 LCD-TFT */
+	.word   stm32f_lcd_err_isr        /* 89 LCD-TFT error */
+	.word   stm32f_dma2d_isr          /* 90 DMA2D */
+#endif
+
+
 .endm
 
 
@@ -606,5 +621,35 @@ _fault:
 
 	.weak       stm32f_hash_rng_isr
 	.thumb_set  stm32f_hash_rng_isr,_isr
+
+	.weak       stm32f_fpu_isr
+	.thumb_set  stm32f_fpu_isr,_isr
+
+	.weak       stm32f_uart7_isr
+	.thumb_set  stm32f_uart7_isr,_isr
+
+	.weak       stm32f_uart8_isr
+	.thumb_set  stm32f_uart8_isr,_isr
+
+	.weak       stm32f_spi4_isr
+	.thumb_set  stm32f_spi4_isr,_isr
+
+	.weak       stm32f_spi5_isr
+	.thumb_set  stm32f_spi5_isr,_isr
+
+	.weak       stm32f_spi6_isr
+	.thumb_set  stm32f_spi6_isr,_isr
+
+	.weak       stm32f_sai1_isr
+	.thumb_set  stm32f_sai1_isr,_isr
+
+	.weak       stm32f_lcd_isr
+	.thumb_set  stm32f_lcd_isr,_isr
+
+	.weak       stm32f_lcd_err_isr
+	.thumb_set  stm32f_lcd_err_isr,_isr
+
+	.weak       stm32f_dma2d_isr
+	.thumb_set  stm32f_dma2d_isr,_isr
 
 	.end

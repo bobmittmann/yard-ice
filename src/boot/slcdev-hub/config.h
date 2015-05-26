@@ -50,13 +50,13 @@
 #define THINKOS_MUTEX_MAX 32
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
 
-#define THINKOS_COND_MAX 32
+#define THINKOS_COND_MAX 64
 #define THINKOS_ENABLE_COND_ALLOC 1
 
 #define THINKOS_SEMAPHORE_MAX 32
 #define THINKOS_ENABLE_SEM_ALLOC 1
 
-#define THINKOS_EVENT_MAX 8
+#define THINKOS_EVENT_MAX 4
 #define THINKOS_ENABLE_EVENT_ALLOC 1
 
 #define THINKOS_FLAG_MAX 32
@@ -105,6 +105,7 @@
    -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_OTG_FS 1
+#define STM32F_OTG_FS_EP_MAX 3
 
 /* -------------------------------------------------------------------------
    Printf
@@ -116,6 +117,12 @@
 #define PRINTF_ENABLE_POINTER 0
 #define PRINTF_ENABLE_LONG 0
 #define PRINTF_ENABLE_ARG_WIDTH 0
+
+/* -------------------------------------------------------------------------
+   Bootloader 
+   -------------------------------------------------------------------------- */
+
+#define BOOT_ENABLE_GDB 1
 
 #endif /* __CONFIG_H__ */
 

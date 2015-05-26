@@ -34,7 +34,7 @@ LIBS = cm3 stm32f util thinkos ice-comm stm32drv gdb gcc
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS "FIRELINK=0"
+CDEFS = CONFIG_H CM3_RAM_VECTORS 
 
 #CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
 #LDFLAGS = -Xlinker --gc-sections -Xlinker --print-gc-sections

@@ -80,12 +80,14 @@ struct stm32f_otg_ep {
 	};
 };
 
-#define OTG_FS_DRIVER_EP_MAX 4
+#ifndef STM32F_OTG_FS_EP_MAX 
+#define STM32F_OTG_FS_EP_MAX 4
+#endif
 
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
 	struct stm32f_otg_fs * otg_fs;
-	struct stm32f_otg_ep ep[OTG_FS_DRIVER_EP_MAX];
+	struct stm32f_otg_ep ep[STM32F_OTG_FS_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
@@ -112,10 +114,12 @@ static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 		otg_fs->dieptxf2 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
+#if (STM32F_OTG_FS_EP_MAX > 3)
 	case 3:
 		otg_fs->dieptxf3 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
+#endif
 	}
 
 	DCC_LOG2(LOG_MSG, "addr=%d siz=%d", drv->fifo_addr, siz);
@@ -794,7 +798,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	otg_fs->daint = 0xffffffff;
 	otg_fs->daintmsk = 0;
 	otg_fs->diepempmsk = 0;
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < STM32F_OTG_FS_EP_MAX; i++) {
 		otg_fs->inep[i].diepint = 0xff;
 		otg_fs->outep[i].doepint = 0xff;
 		otg_fs->inep[i].dieptsiz = 0;
@@ -823,7 +827,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 
 	/* 1. Set the NAK bit for all OUT endpoints
 	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < STM32F_OTG_FS_EP_MAX; i++) {
 		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
 	}
 
@@ -935,6 +939,7 @@ void stm32f_otg_fs_isr(void)
 			}
 		}
 
+#if (STM32F_OTG_FS_EP_MAX > 3)
 		if (ep_intr & OTG_FS_IEPINT3) {
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
@@ -949,6 +954,7 @@ void stm32f_otg_fs_isr(void)
 				stm32f_otg_dev_ep_in(drv, 3);
 			}
 		}
+#endif
 	}
 
 	if (gintsts & OTG_FS_OEPINT) {
@@ -1031,6 +1037,7 @@ void stm32f_otg_fs_isr(void)
 			otg_fs->outep[2].doepint = doepint;
 		}
 
+#if (STM32F_OTG_FS_EP_MAX > 3)
 		if (ep_intr & OTG_FS_OEPINT3) {
 			uint32_t doepint;
 
@@ -1049,6 +1056,7 @@ void stm32f_otg_fs_isr(void)
 			/* clear interrupts */
 			otg_fs->outep[3].doepint = doepint;
 		}
+#endif
 	}
 
 	/* RxFIFO non-empty */
@@ -1150,27 +1158,6 @@ void stm32f_otg_fs_isr(void)
 		//	otg_fs->gintmsk |= OTG_FS_RXFLVLM;
 	}
 
-	if (gintsts & OTG_FS_SOF) {
-		DCC_LOG(LOG_MSG, "<SOF>");
-#if 0
-		if (--dev->rx_tmr == 0) {
-			int i;
-			/* Disable SOF interrupts */
-			otg_fs->gintmsk &= ~OTG_FS_SOFM;
-
-			DCC_LOG(LOG_MSG, "RX timeout"); 
-			/* pop data from fifo */
-			for (i = 0; i < dev->ep1_rx.len; i++) {
-				(void)otg_fs->dfifo[EP_OUT].pop;
-			}
-			ep->xfer_rem = 0;
-			ep->xfer_len = 0;
-			/* Reenable RX fifo interrupts */
-			otg_fs->gintmsk |= OTG_FS_RXFLVLM;
-		}
-#endif
-	}
-
 	if (gintsts & OTG_FS_SRQINT) {
 		/* Session request/new session detected interrupt */
 		DCC_LOG(LOG_MSG, "<SRQINT>  [POWERED]");
@@ -1188,11 +1175,6 @@ void stm32f_otg_fs_isr(void)
 		otg_fs->gotgint = gotgint;
 	}
 
-	if (gintsts & OTG_FS_GONAKEFF) {
-		DCC_LOG(LOG_MSG, "<GONAKEFF>");
-		otg_fs->gintmsk &= ~OTG_FS_GONAKEFFM;
-	}
-
 	if (gintsts & OTG_FS_ENUMDNE) {
 		DCC_LOG(LOG_MSG, "<ENUMDNE>");
 		/* Unmask global interrupts */
@@ -1203,6 +1185,22 @@ void stm32f_otg_fs_isr(void)
 	}
 
 
+	if (gintsts & OTG_FS_USBRST ) {
+		/* end of bus reset */
+		DCC_LOG(LOG_MSG, "<USBRST> --------------- [DEFAULT]");
+		stm32f_otg_dev_reset(drv);
+	}
+
+#if DEBUG
+	if (gintsts & OTG_FS_GONAKEFF) {
+		DCC_LOG(LOG_MSG, "<GONAKEFF>");
+		otg_fs->gintmsk &= ~OTG_FS_GONAKEFFM;
+	}
+
+	if (gintsts & OTG_FS_SOF) {
+		DCC_LOG(LOG_MSG, "<SOF>");
+	}
+
 	if (gintsts & OTG_FS_PTXFE) {
 		DCC_LOG(LOG_MSG, "<PTXFE>");
 	}
@@ -1210,12 +1208,6 @@ void stm32f_otg_fs_isr(void)
 	if (gintsts & OTG_FS_WKUPINT) {
 		DCC_LOG(LOG_MSG, "<WKUPINT>");
 		/* disable resume/wakeup interrupts */
-	}
-
-	if (gintsts & OTG_FS_USBRST ) {
-		/* end of bus reset */
-		DCC_LOG(LOG_MSG, "<USBRST> --------------- [DEFAULT]");
-		stm32f_otg_dev_reset(drv);
 	}
 
 	if (gintsts & OTG_FS_ESUSP) {
@@ -1237,7 +1229,7 @@ void stm32f_otg_fs_isr(void)
 	if (gintsts & OTG_FS_MMIS) {
 		DCC_LOG(LOG_MSG, "<MMIS>");
 	}
-
+#endif
 	/* clear pending interrupts */
 	otg_fs->gintsts = gintsts;
 }

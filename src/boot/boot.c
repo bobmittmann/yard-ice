@@ -38,7 +38,14 @@
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
+
+#ifndef BOOT_ENABLE_GDB
+#define BOOT_ENABLE_GDB 0
+#endif
+
+#if (BOOT_ENABLE_GDB)
 #include <gdb.h>
+#endif
 
 #include "board.h"
 
@@ -97,9 +104,11 @@ void boot_task(struct dmon_comm * comm)
 				dmprintf(comm, "^C\r\n");
 				dmon_exec(monitor_task);
 				break;
+#if (BOOT_ENABLE_GDB)
 			case '+':
 				dmon_exec(gdb_task);
 				break;
+#endif
 			default:
 				delay = false;
 			}
@@ -140,8 +149,10 @@ void monitor_init(void)
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
 
+#if (BOOT_ENABLE_GDB)
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
 	gdb_init(monitor_task);
+#endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
 	thinkos_dmon_init(comm, boot_task);
