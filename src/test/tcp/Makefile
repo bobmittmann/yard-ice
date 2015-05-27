@@ -28,9 +28,9 @@ SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libtcpip $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc
+		  $(SDK)/libtcpip $(SDK)/libstm32drv $(SDK)/libtty $(SDK)/libcrc
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc drv tcpip tty
+LIBS = cm3 stm32f util thinkos c ice-comm crc stm32drv tcpip tty
 
 INCPATH = $(SDK)/include  
 

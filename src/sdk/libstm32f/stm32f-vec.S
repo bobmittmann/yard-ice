@@ -29,7 +29,7 @@
 	/* ---------------------------------------------------------------------
 	 * Generate the vectors table 
 	 * --------------------------------------------------------------------- */
-.macro stm32f_vectors
+.macro cortex_m_vectors
 	.word	_stack
 	.word   _reset
 	.word   cm3_nmi_isr
@@ -46,6 +46,9 @@
 	.word   0
 	.word   cm3_pendsv_isr
 	.word   cm3_systick_isr
+.endm
+
+.macro stm32f_irq_vectors
 	.word	stm32f_wwdg_isr         /*  0 Window WatchDog */
 	.word	stm32f_pvd_isr          /*  1 PVD through EXTI Line detection */
 	.word	stm32f_tamp_stamp_isr   /*  2 Tamper and TimeStamps through 
@@ -226,7 +229,6 @@
 	.word   stm32f_dma2d_isr          /* 90 DMA2D */
 #endif
 
-
 .endm
 
 
@@ -241,7 +243,10 @@ __vectors:
 __rom_vectors:
 	.global __rom_vectors
 	.type __rom_vectors, %object
-	stm32f_vectors
+	cortex_m_vectors
+#ifndef CM3_RAM_VECTORS
+	stm32f_irq_vectors
+#endif
 	.size   __rom_vectors, . - __rom_vectors
 
 	.global __sizeof_rom_vectors
@@ -258,7 +263,8 @@ __sizeof_rom_vectors:
 __ram_vectors:
 	.global __ram_vectors
 	.type __ram_vectors, %object
-	stm32f_vectors
+	cortex_m_vectors
+	stm32f_irq_vectors
 	.size   __ram_vectors, . - __ram_vectors
 #endif
 

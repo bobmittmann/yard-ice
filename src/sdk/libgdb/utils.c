@@ -32,28 +32,31 @@ int uint2hex(char * s, unsigned int val);
 int uint2dec(char * s, unsigned int val);
 int int2dec(char * s, int val);
 
+static int hex_digit(int c)
+{
+	if ((c >= 'A') && (c <= 'F'))
+		c -= ('A' - 10);
+	else if ((c >= 'a') && (c <= 'f'))
+		c -= ('a' - 10);
+	else if ((c >= '0') && (c <= '9'))
+		c -= '0';
+	else
+		c = -1;
+
+	return c;
+}
+
 unsigned long hex2int(const char * __s, char ** __endp)
 {
 	unsigned long val = 0;
 	char * cp = (char *)__s;
-	char c;
+	int c;
 
 	for (; ((c = *cp) == ' '); cp++);
 
 	while ((c = *cp) != '\0') {
-
-		if (c >= 'a')
-			c &= ~('a' - 'A');
-
-		if ((c >= 'A') && (c <= 'F'))
-			c -= ('A' - 10);
-		else {
-			if ((c >= '0') && (c <= '9'))
-				c -= '0';
-			else
-				break;
-		}
-
+		if ((c = hex_digit(c)) < 0)
+			break;
 		val = val << 4;
 		val += c;
 		cp++;
@@ -82,39 +85,36 @@ bool prefix(const char * __s, const char * __prefix)
 	} 
 }
 
-const char hextab[] = { 
-	'0', '1', '2', '3', '4', '5', '6', '7',
-	'8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-};
+extern const char __hextab[];
 
 int char2hex(char * pkt, int c)
 {
-	pkt[0] = hextab[((c >> 4) & 0xf)];
-	pkt[1] = hextab[c & 0xf];
+	pkt[0] = __hextab[((c >> 4) & 0xf)];
+	pkt[1] = __hextab[c & 0xf];
 
 	return 2;
 }
 
 int short2hex(char * pkt, unsigned int val)
 {
-	pkt[0] = hextab[((val >> 4) & 0xf)];
-	pkt[1] = hextab[val & 0xf];
-	pkt[2] = hextab[((val >> 12) & 0xf)];
-	pkt[3] = hextab[((val >> 8) & 0xf)];
+	pkt[0] = __hextab[((val >> 4) & 0xf)];
+	pkt[1] = __hextab[val & 0xf];
+	pkt[2] = __hextab[((val >> 12) & 0xf)];
+	pkt[3] = __hextab[((val >> 8) & 0xf)];
 
 	return 4;
 }
 
 int long2hex(char * pkt, unsigned long val)
 {
-	pkt[0] = hextab[((val >> 4) & 0xf)];
-	pkt[1] = hextab[(val & 0xf)];
-	pkt[2] = hextab[((val >> 12) & 0xf)];
-	pkt[3] = hextab[((val >> 8) & 0xf)];
-	pkt[4] = hextab[((val >> 20) & 0xf)];
-	pkt[5] = hextab[((val >> 16) & 0xf)];
-	pkt[6] = hextab[((val >> 28) & 0xf)];
-	pkt[7] = hextab[((val >> 24) & 0xf)];
+	pkt[0] = __hextab[((val >> 4) & 0xf)];
+	pkt[1] = __hextab[(val & 0xf)];
+	pkt[2] = __hextab[((val >> 12) & 0xf)];
+	pkt[3] = __hextab[((val >> 8) & 0xf)];
+	pkt[4] = __hextab[((val >> 20) & 0xf)];
+	pkt[5] = __hextab[((val >> 16) & 0xf)];
+	pkt[6] = __hextab[((val >> 28) & 0xf)];
+	pkt[7] = __hextab[((val >> 24) & 0xf)];
 
 	return 8;
 }
@@ -137,9 +137,9 @@ int str2hex(char * pkt, const char * s)
 
 	n = 0;
 	for (cp = (char *)s; *cp != '\0'; ++cp) {
-		c = hextab[((*cp >> 4) & 0xf)];
+		c = __hextab[((*cp >> 4) & 0xf)];
 		pkt[n++] = c;
-		c = hextab[*cp & 0xf];
+		c = __hextab[*cp & 0xf];
 		pkt[n++] = c;
 	}
 
@@ -153,9 +153,9 @@ int bin2hex(char * pkt, const void * buf, int len)
 	int i;
 
 	for (i = 0; i < len; ++i) {
-		c = hextab[((cp[i] >> 4) & 0xf)];
+		c = __hextab[((cp[i] >> 4) & 0xf)];
 		pkt[i * 2] = c;
-		c = hextab[cp[i] & 0xf];
+		c = __hextab[cp[i] & 0xf];
 		pkt[i * 2 + 1] = c;
 	}
 
@@ -174,19 +174,6 @@ int uint2hex2hex(char * pkt, unsigned int val)
 	char s[10];
 	uint2hex(s, val);
 	return str2hex(pkt, s);
-}
-
-inline int hex_digit(int c)
-{
-	if (c >= 'a')
-		c &= ~('a' - 'A');
-
-	if ((c >= 'A') && (c <= 'F'))
-		c -= ('A' - 10);
-	else if ((c >= '0') && (c <= '9'))
-		c -= '0';
-
-	return c;
 }
 
 int hex2char(char * hex)

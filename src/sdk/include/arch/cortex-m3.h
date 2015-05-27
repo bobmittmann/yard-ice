@@ -499,6 +499,19 @@ struct cm3_except_context {
 	uint32_t xpsr;
 };
 
+#define CM_APSR_N (1 << 31)
+#define CM_APSR_Z (1 << 30)
+#define CM_APSR_C (1 << 29)
+#define CM_APSR_V (1 << 28)
+#define CM_APSR_Q (1 << 27)
+
+#define CM_EPSR_T (1 << 24)
+
+#define CM_APSR_MASK 0xf8000000
+#define CM_EPSR_MASK 0x0700fc00
+#define CM_IPSR_MASK 0x000001ff
+
+
 #define __NOP() __asm__ __volatile__ ("\tnop\n" : : )
 
 /****************************************************************************

@@ -212,14 +212,13 @@ int thread_any(void)
 	else
 		DCC_LOG1(LOG_MSG, "active=%d is invalid!", thinkos_rt.active);
 
-	/* Active thread is IDLE thread, try to get the first 
-	   available thread */
-
+	/* Active thread is IDLE or invalid, try to get the first 
+	   initialized thread. */
 	thread_id = __thinkos_thread_getnext(-1);
 	
 	if (thread_id < 0) {
 		DCC_LOG(LOG_WARNING, "No threads!");
-		return THREAD_ID_NONE;
+		thread_id = THINKOS_THREAD_IDLE;
 	}
 
 	return thread_id + THREAD_ID_OFFS;
@@ -313,7 +312,7 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 	case 15:
 		x = ctx->pc;
 		break;
-	case 16:
+	case 25:
 		x = ctx->xpsr;
 		break;
 #if THINKOS_ENABLE_FPU
@@ -413,8 +412,8 @@ int thread_register_set(unsigned int gdb_thread_id, int reg, uint32_t val)
 	case 15:
 		ctx->pc = val;
 		break;
-	case 16:
-//		ctx->xpsr = val;
+	case 25:
+		ctx->xpsr = (ctx->xpsr & ~CM_APSR_MASK) | (val & CM_APSR_MASK);
 		break;
 #if THINKOS_ENABLE_FPU
 	case 17 ... 33 :
@@ -729,3 +728,98 @@ int target_goto(uint32_t addr, int opt)
 	return 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Core files
+ * ------------------------------------------------------------------------- */
+
+const char target_xml[] = 
+"<target>\n"
+"<architecture>arm</architecture>\n"
+"<feature name=\"org.gnu.gdb.arm.m-profile\">\n"
+"<reg name=\"r0\" bitsize=\"32\"/>\n"
+"<reg name=\"r1\" bitsize=\"32\"/>\n"
+"<reg name=\"r2\" bitsize=\"32\"/>\n"
+"<reg name=\"r3\" bitsize=\"32\"/>\n"
+"<reg name=\"r4\" bitsize=\"32\"/>\n"
+"<reg name=\"r5\" bitsize=\"32\"/>\n"
+"<reg name=\"r6\" bitsize=\"32\"/>\n"
+"<reg name=\"r7\" bitsize=\"32\"/>\n"
+"<reg name=\"r8\" bitsize=\"32\"/>\n"
+"<reg name=\"r9\" bitsize=\"32\"/>\n"
+"<reg name=\"r10\" bitsize=\"32\"/>\n"
+"<reg name=\"r11\" bitsize=\"32\"/>\n"
+"<reg name=\"r12\" bitsize=\"32\"/>\n"
+"<reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
+"<reg name=\"lr\" bitsize=\"32\"/>\n"
+"<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
+"<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>\n"
+"</feature>\n"
+#if 0
+"<feature name=\"org.gnu.gdb.arm.vfp\">\n"
+"<reg name=\"d0\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d1\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d2\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d3\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d4\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d5\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d6\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d7\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d8\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d9\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d10\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d11\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d12\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d13\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d14\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"d15\" bitsize=\"64\" type=\"float\"/>\n"
+"<reg name=\"fpsid\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"<reg name=\"fpscr\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"<reg name=\"fpexc\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+"</feature>\n"
+#endif
+"</target>";
+
+const char memory_map_xml[] = 
+"<memory-map>"
+"<memory type=\"flash\" start=\"0x8000000\" length=\"0x100000\"/>"
+"<memory type=\"flash\" start=\"0x8100000\" length=\"0x100000\"/>"
+"<memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
+"<memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
+"</memory-map>";
+
+
+int target_file_read(const char * name, char * dst, 
+					  unsigned int offs, unsigned int size)
+{
+	char * src;
+	int len;
+	int cnt;
+	int i;
+
+	if (prefix(name, "target.xml")) {
+		src = (char *)target_xml;
+		len = sizeof(target_xml) - 1;
+#if (GDB_ENABLE_QXFER_MEMORY_MAP) 
+	} else if (prefix(name, "memmap.xml")) {
+		src = (char *)memory_map_xml;
+		len = sizeof(memory_map_xml) - 1;
+#endif
+	} else
+		return -1;
+
+	if (offs >= len)
+		return 0;
+
+	DCC_LOG3(LOG_INFO, "offs=%d len=%d size=%d", offs, len, size);
+
+	cnt = len - offs;
+	if (cnt > size)
+		cnt = size;
+
+	src += offs;
+
+	for (i = 0; i < cnt; ++i)
+		dst[i] = src[i];
+
+	return cnt;
+}

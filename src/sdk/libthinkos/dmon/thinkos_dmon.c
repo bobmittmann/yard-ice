@@ -50,7 +50,7 @@ uint32_t dmon_select(uint32_t evmask)
 {
 	uint32_t evset;
 	
-	DCC_LOG1(LOG_INFO, "evmask=%08x", evmask);
+	DCC_LOG1(LOG_MSG, "evmask=%08x", evmask);
 
 	evset = thinkos_dmon_rt.events;
 	if (evset & evmask) {
@@ -62,10 +62,10 @@ uint32_t dmon_select(uint32_t evmask)
 	thinkos_dmon_rt.mask |= evmask;
 
 	do {
-		DCC_LOG(LOG_INFO, "sleep...");
+		DCC_LOG(LOG_MSG, "sleep...");
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 		evset = thinkos_dmon_rt.events;
-		DCC_LOG1(LOG_INFO, "wakeup evset=%08x.", evset);
+		DCC_LOG1(LOG_MSG, "wakeup evset=%08x.", evset);
 	} while ((evset & evmask) == 0);
 
 	thinkos_dmon_rt.mask &= ~evmask;
@@ -88,13 +88,13 @@ int dmon_wait(int ev)
 	/* umask event */
 	thinkos_dmon_rt.mask |= mask;
 
-	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
+	DCC_LOG1(LOG_MSG, "waiting for %d, sleeping...", ev);
 	do {
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 		evset = thinkos_dmon_rt.events;
 		evmsk = thinkos_dmon_rt.mask;
 	} while ((evset & evmsk) == 0);
-	DCC_LOG(LOG_INFO, "wakeup...");
+	DCC_LOG(LOG_MSG, "wakeup...");
 
 	if (evset & mask) {
 		thinkos_dmon_rt.events = evset & ~mask;
@@ -202,7 +202,7 @@ int dmon_wait_idle(void)
 	return 0;
 }
 
-void dmon_reset(void)
+void __dmon_reset(void)
 {
 	dmon_signal(DMON_RESET);
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 

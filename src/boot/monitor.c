@@ -156,6 +156,7 @@ static void monitor_exec(struct dmon_comm * comm)
 }
 
 void gdb_task(struct dmon_comm *) __attribute__((weak, alias("monitor_task")));
+void monitor_task(struct dmon_comm *);
 
 int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 {
@@ -189,7 +190,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 		case CTRL_Q:
 			dmprintf(comm, "^Q\r\n");
-			dmon_reset();
+			dmon_exec(monitor_task);
 			break;
 		case CTRL_R:
 			dmprintf(comm, "^R\r\n");
@@ -285,7 +286,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			DCC_LOG(LOG_INFO, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
 			if (!dmon_comm_isconnected(comm))	
-				dmon_reset();
+				dmon_exec(monitor_task);
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
