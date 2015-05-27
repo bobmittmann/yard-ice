@@ -45,6 +45,11 @@
 			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libcrc</locationURI>
 		</link>
 		<link>
+			<name>libhttpd</name>
+			<type>2</type>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libhttpd</locationURI>
+		</link>
+		<link>
 			<name>libstm32drv</name>
 			<type>2</type>
 			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libstm32drv</locationURI>

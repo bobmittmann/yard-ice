@@ -623,12 +623,13 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 {
 	struct stm32f_eth * eth = STM32F_ETH;
 	struct ifnet * ifn;
+
+	stm32f_eth_init(eth);
+	stm32f_eth_mac_set(eth, 0, ethaddr);
+
 	unsigned int addr;
 	uint16_t data;
 	uint32_t phy_id;
-
-	stm32f_eth_init(eth);
-
 	DCC_LOG(LOG_TRACE, "probing PHY...");
 	for (addr = 0; addr < 32; ++addr) {
 		stm32f_eth_mii_rd(eth, addr, 0, &data);
@@ -646,7 +647,7 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 		(void)phy_id;	
 		DCC_LOG(LOG_TRACE, "PHY reset...");
 		stm32f_eth_mii_wr(eth, addr, 0, PHY_RESET);
-#if 0
+/*
 		stm32f_eth_mii_wr(eth, addr, 0, PHY_AUTO);
 		do {
 			stm32f_eth_mii_rd(eth, addr, 1, &data);
@@ -654,10 +655,8 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 
 		DCC_LOG1(LOG_TRACE, "Link is %s.", 
 				 data & PHY_LINK_UP ? "up" : " down");
-#endif
+*/
 	}
-
-	stm32f_eth_mac_set(eth, 0, ethaddr);
 
 	DCC_LOG2(LOG_INFO, "ifn_register(%I, %I)", ip_addr, netmask);
 

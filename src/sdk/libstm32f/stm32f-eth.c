@@ -190,8 +190,8 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	stm32_gpio_af(ETH_MDC, GPIO_AF11);
 	stm32_gpio_af(ETH_MDIO, GPIO_AF11);
 
-	stm32_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_mode(ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_MED);
 
 	DCC_LOG(LOG_TRACE, "Enabling ETH clocks...");
 	rcc->ahb1enr |= RCC_ETHMACRXEN | RCC_ETHMACTXEN | RCC_ETHMACEN;
