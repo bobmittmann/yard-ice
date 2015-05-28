@@ -82,7 +82,6 @@ void print_base(FILE * f, uint32_t base)
 	fprintf(f, ", Present=%s\n", BASE_ENTRY_PRESENT(base) ? "Yes" : "No");
 }
 
-
 static bool dp_stickyerr_check(FILE * f, jtag_tap_t * tap)
 {
 	uint32_t stat;
@@ -328,7 +327,7 @@ void cpu_info(FILE * f, jtag_tap_t * tap)
 	fprintf(f, " * CPUID = 0x%08x\n", cpuid);
 }
 
-void dcb_info(FILE * f, jtag_tap_t * tap)
+static void debug_info(FILE * f, jtag_tap_t * tap)
 {
 	uint32_t dfsr;
 	uint32_t dhcsr;
@@ -399,20 +398,95 @@ void dcb_info(FILE * f, jtag_tap_t * tap)
 	fprintf(f, "\n");
 }
 
+void csb_misc_info(FILE * f, jtag_tap_t * tap)
+{
+	uint32_t cpuid;
+	uint32_t icsr;
+	uint32_t vtor;
+	uint32_t aircr;
+	uint32_t scr;
+	uint32_t ccr;
+	uint32_t shpr1;
+	uint32_t shpr2;
+	uint32_t shpr3;
+	uint32_t shcsr;
+
+	fprintf(f, "- CSB registers:\n");
+
+	jtag_mem_ap_rd32(tap, ARMV7M_CPUID, &cpuid);
+	fprintf(f, " * CPUID = 0x%08x\n", cpuid);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_ICSR, &icsr);
+	fprintf(f, " *  ICSR = 0x%08x:", icsr);
+	fprintf(f, "%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d\n", 
+			(icsr & ICSR_NMIPENDSET) ? " NMIPEND" : "",
+			(icsr & ICSR_PENDSVSET) ? " PENDSV" : "",
+			(icsr & ICSR_PENDSTSET) ? " PENDST" : "",
+			(icsr & ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
+			(icsr & ICSR_ISRPENDING) ? " ISRPENDING" : "",
+			(icsr & ICSR_RETTOBASE) ? " RETTOBASE" : "",
+			(icsr & ICSR_VECTPENDING) >> 12,
+			(icsr & ICSR_VECTACTIVE));
+
+	jtag_mem_ap_rd32(tap, ARMV7M_VTOR, &vtor);
+	fprintf(f, " *  VTOR = 0x%08x\n", vtor);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_AIRCR, &aircr);
+	fprintf(f, " * AIRCR = 0x%08x\n", aircr);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_SCR, &scr);
+	fprintf(f, " *   SCR = 0x%08x\n", scr);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_CCR, &ccr);
+	fprintf(f, " *   CCR = 0x%08x\n", ccr);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_SHPR1, &shpr1);
+	fprintf(f, " * SHPR1 = 0x%08x\n", shpr1);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_SHPR2, &shpr2);
+	fprintf(f, " * SHPR2 = 0x%08x\n", shpr2);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_SHPR3, &shpr3);
+	fprintf(f, " * SHPR3 = 0x%08x\n", shpr3);
+
+	jtag_mem_ap_rd32(tap, ARMV7M_SHCSR, &shcsr);
+	fprintf(f, " * SHCSR = 0x%08x:", shcsr);
+	fprintf(f, "%s%s%s%s%s%s%s\n", 
+			(shcsr & SHCSR_SYSTICKACT) ? " SYSTICKACT" : "",
+			(shcsr & SHCSR_PENDSVACT) ? " PENDSVACT" : "",
+			(shcsr & SHCSR_MONITORACT) ? " MONITORACT" : "",
+			(shcsr & SHCSR_SVCALLACT) ? " SVCALLACT" : "",
+			(shcsr & SHCSR_USGFAULTACT) ?  " USGFAULTACT" : "",
+			(shcsr & SHCSR_BUSFAULTACT) ?  " BUSFAULTACT" : "",
+			(shcsr & SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
+}
+
+
+
 void fault_info(FILE * f, jtag_tap_t * tap)
 {
+	uint32_t hfsr;
 	uint32_t cfsr;
 	uint32_t ufsr;
 	uint32_t bfsr;
 	uint32_t bfar;
+	uint32_t mmfsr;
+	uint32_t mmfar;
+	uint32_t afsr;
 
 	fprintf(f, "- Fault status:\n");
 
-	jtag_mem_ap_rd32(tap, ARMV7M_CFSR, &cfsr);
+	jtag_mem_ap_rd32(tap, ARMV7M_HFSR, &hfsr);
+	fprintf(f, " *  HFSR = 0x%08x:", hfsr);
+	fprintf(f, "%s%s%s\n", 
+			(hfsr & HFSR_DEBUGEVT) ? " DEBUGEVT" : "",
+			(hfsr & HFSR_FORCED) ?  " FORCED" : "",
+			(hfsr & HFSR_VECTTBL) ? " VECTTBL" : "");
 
+	jtag_mem_ap_rd32(tap, ARMV7M_CFSR, &cfsr);
 	ufsr = CFSR_UFSR_GET(cfsr);
 
-	fprintf(f, " * UFSR = 0x%04x:", ufsr);
+	fprintf(f, " *  UFSR = 0x%04x:", ufsr);
 	if (ufsr & UFSR_DIVBYZERO)  
 		fprintf(f, " DIVBYZERO");
 	if (ufsr & UFSR_UNALIGNED)  
@@ -430,7 +504,7 @@ void fault_info(FILE * f, jtag_tap_t * tap)
 
 	bfsr = CFSR_BFSR_GET(cfsr);
 
-	fprintf(f, " * BFSR = 0x%04x:", bfsr);
+	fprintf(f, " *  BFSR = 0x%04x:", bfsr);
 	if (bfsr & BFSR_BFARVALID)  
 		fprintf(f, " BFARVALID");
 	if (bfsr & BFSR_LSPERR)
@@ -438,7 +512,7 @@ void fault_info(FILE * f, jtag_tap_t * tap)
 	if (bfsr & BFSR_STKERR)  
 		fprintf(f, " STKERR");
 	if (bfsr & BFSR_UNSTKERR)  
-		fprintf(f, " INVPC");
+		fprintf(f, " UNSTKERR");
 	if (bfsr & BFSR_IMPRECISERR)  
 		fprintf(f, " IMPRECISERR");
 	if (bfsr & BFSR_PRECISERR)
@@ -449,8 +523,33 @@ void fault_info(FILE * f, jtag_tap_t * tap)
 
 	if (bfsr & BFSR_BFARVALID) {
 		jtag_mem_ap_rd32(tap, ARMV7M_BFAR, &bfar);
-		fprintf(f, " * BFAR = 0x%04x\n", bfar);
+		fprintf(f, " *  BFAR = 0x%08x\n", bfar);
 	}
+
+	mmfsr = CFSR_MMFSR_GET(cfsr);
+
+	fprintf(f, " * MMFSR = 0x%02x:", mmfsr);
+	if (mmfsr & MMFSR_MMARVALID)  
+		fprintf(f, " MMARVALID");
+	if (mmfsr & MMFSR_MLSPERR)  
+		fprintf(f, " MLSPERR");
+	if (mmfsr & MMFSR_MSTKERR)  
+		fprintf(f, " MSTKERR");
+	if (mmfsr & MMFSR_MUNSTKERR)  
+		fprintf(f, " MUNSTKERR");
+	if (mmfsr & MMFSR_DACCVIOL)  
+		fprintf(f, " DACCVIOL");
+	if (mmfsr & MMFSR_IACCVIOL)  
+		fprintf(f, " IACCVIOL");
+	fprintf(f, "\n");
+
+	if (mmfsr & MMFSR_MMARVALID) {
+		jtag_mem_ap_rd32(tap, ARMV7M_MMFAR, &mmfar);
+		fprintf(f, " * MMFAR = 0x%08x\n", mmfar);
+	}
+
+	jtag_mem_ap_rd32(tap, ARMV7M_AFSR, &afsr);
+	fprintf(f, " *  AFSR = 0x%08x\n", afsr);
 }
 
 void dap_info(FILE * f, jtag_tap_t * tap)
@@ -558,7 +657,7 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which)
 		cpu_info(f, tap);
 		break;
 	case 4:
-		dcb_info(f, tap);
+		debug_info(f, tap);
 		break;
 	case 5:
 		fault_info(f, tap);
@@ -572,8 +671,8 @@ int cm3ice_info(cm3ice_ctrl_t * ctrl, FILE * f, uint32_t which)
 	default:
 		fprintf(f, "== Cortex M3 ICE ==\n");
 		dp_stickyerr_check(f, tap);
-		cpu_info(f, tap);
-		dcb_info(f, tap);
+		csb_misc_info(f, tap);
+		debug_info(f, tap);
 		fault_info(f, tap);
 	}
 

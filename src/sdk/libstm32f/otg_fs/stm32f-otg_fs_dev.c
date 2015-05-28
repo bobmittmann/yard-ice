@@ -668,7 +668,7 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 	if (ep->state == EP_WAIT_STATUS_IN) {
 		struct usb_request * req = &drv->req;
 		void * dummy = NULL;
-
+		/* Enod of SETUP transaction (OUT Data Phase) */
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
 		DCC_LOG(LOG_MSG, "EP0 [IDLE]");
@@ -721,7 +721,6 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 	/* No-Data control SETUP transaction */
 	if (req->length == 0) {
-		struct usb_request * req = &drv->req;
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
@@ -778,7 +777,6 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		/* EP enable */
 		otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 	}
-
 }
 
 static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
@@ -1255,5 +1253,4 @@ const struct usb_dev stm32f_otg_fs_dev = {
 #endif /* STM32F_ENABLE_OTG_FS */
 
 #endif /* STM32F_OTG_FS */
-
 

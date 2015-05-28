@@ -246,8 +246,9 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
 	dmon_comm_connect(comm);
+	DCC_LOG(LOG_TRACE, "Comm connected.");
 
-	dmon_sleep(100);
+//	dmon_sleep(100);
 
 #if 0
 	dmprintf(comm, "\r\n\r\n");
@@ -269,6 +270,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 	for(;;) {
 		sigset = dmon_select(sigmask);
+		DCC_LOG1(LOG_INFO, "sigset=%08x", sigset);
 
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");

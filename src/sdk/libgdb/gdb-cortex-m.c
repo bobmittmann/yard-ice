@@ -161,14 +161,23 @@ int thread_getnext(int thread_id)
 {
 	int id;
 
-	if (thread_id == THREAD_ID_IDLE)
-		return -1;
-
-	id = __thinkos_thread_getnext(thread_id - THREAD_ID_OFFS);
-	if (id < 0) {
-		DCC_LOG(LOG_WARNING, "No threads!");
+	if (thread_id == THREAD_ID_ANY) {
 		id = THINKOS_THREAD_IDLE;
+		DCC_LOG1(LOG_MSG, "thread %d (IDLE)", id);
+		return THREAD_ID_IDLE;
+	} 
+	
+	if (thread_id == THREAD_ID_IDLE)
+		id = __thinkos_thread_getnext(-1);
+	else
+		id = __thinkos_thread_getnext(thread_id - THREAD_ID_OFFS);
+
+	if (id < 0) {
+		DCC_LOG(LOG_MSG, "no more threads.");
+		return -1;
 	}
+
+	DCC_LOG1(LOG_MSG, "thread %d", id);
 	id += THREAD_ID_OFFS;
 
 	return id;
@@ -674,35 +683,56 @@ int target_mem_write(uint32_t addr, const void * ptr, unsigned int len)
 {
 	const struct flash_map * flash = &stm32f407_flash;
 	struct flash_blk blk;
+	unsigned int cnt;
+	unsigned int rem;
 	uint32_t offs;
 
-	if (!is_addr_valid(addr))
-		return -1;
+	rem = len;
 
-	if (flash_addr2block(flash, addr, &blk) < 0) {
-		uint8_t * dst = (uint8_t *)addr;
-		uint8_t * src = (uint8_t *)ptr;;
-		int i;
+	while (rem) {
+		if (!is_addr_valid(addr))
+			return -1;
 
-		for (i = 0; i < len; ++i)
-			dst[i] = src[i];
-		return len;
+		if (flash_addr2block(flash, addr, &blk) < 0) {
+			uint8_t * dst = (uint8_t *)addr;
+			uint8_t * src = (uint8_t *)ptr;;
+			int i;
+
+			/* not flash */
+			for (i = 0; i < rem; ++i)
+				dst[i] = src[i];
+
+			break;
+		}
+
+		if (blk.ro) {
+			DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
+					 blk.base, blk.size);
+			return -1;
+		}
+
+		offs = addr - flash->base;
+		if (blk.base == addr) {
+			DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
+					 blk.base, blk.size);
+			stm32_flash_erase(offs, blk.size);
+		};
+
+		if ((addr + rem) > (blk.base + blk.size)) {
+			DCC_LOG(LOG_TRACE, "crossing end of block");
+			cnt = (blk.base + blk.size) - addr;
+		} else {
+			cnt = rem;
+		}
+
+		if (stm32_flash_write(offs, ptr, cnt) < 0)
+			return -1;
+
+		rem -= cnt;
+		addr += cnt;
 	}
 
-	if (blk.ro) {
-		DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
-				 blk.base, blk.size);
-		return -1;
-	}
-
-	offs = addr - flash->base;
-	if (blk.base == addr) {
-		DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
-				 blk.base, blk.size);
-		stm32_flash_erase(offs, blk.size);
-	};
-
-	return stm32_flash_write(offs, ptr, len);
+	return len;
 }
 
 int target_mem_read(uint32_t addr, void * ptr, unsigned int len)

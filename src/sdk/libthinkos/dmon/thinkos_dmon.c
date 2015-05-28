@@ -37,7 +37,7 @@ _Pragma ("GCC optimize (\"O2\")")
 #if (THINKOS_ENABLE_MONITOR)
 
 struct thinkos_dmon thinkos_dmon_rt;
-uint32_t thinkos_dmon_stack[256];
+uint32_t thinkos_dmon_stack[240];
 const uint16_t thinkos_dmon_stack_size = sizeof(thinkos_dmon_stack);
 
 void dmon_context_swap(void * ctx); 
@@ -417,24 +417,16 @@ void dmon_isr(struct cm3_except_context * ctx)
 	uint32_t sigset = thinkos_dmon_rt.events;
 	uint32_t sigmsk = thinkos_dmon_rt.mask;
 
-#if 0
-	uint32_t demcr;
-
-	demcr = CM3_DCB->demcr;
-	(void)demcr; 
-
-	DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
-			demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
-			demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
-			demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
-#endif
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	uint32_t dfsr;
 
 	/* read SCB Debug Fault Status Register */
 	if ((dfsr = CM3_SCB->dfsr) != 0) {
+		uint32_t demcr;
+
 		/* clear the fault */
 		CM3_SCB->dfsr = dfsr;
+
 		DCC_LOG5(LOG_INFO, "DFSR=(EXT=%c)(VCATCH=%c)"
 				 "(DWTRAP=%c)(BKPT=%c)(HALT=%c)", 
 				 dfsr & SCB_DFSR_EXTERNAL ? '1' : '0',
@@ -442,6 +434,13 @@ void dmon_isr(struct cm3_except_context * ctx)
 				 dfsr & SCB_DFSR_DWTTRAP ? '1' : '0',
 				 dfsr & SCB_DFSR_BKPT ? '1' : '0',
 				 dfsr & SCB_DFSR_HALTED ? '1' : '0');
+	
+		demcr = CM3_DCB->demcr;
+
+		DCC_LOG3(LOG_INFO, "DEMCR=(REQ=%c)(PEND=%c)(STEP=%c)", 
+				 demcr & DCB_DEMCR_MON_REQ ? '1' : '0',
+				 demcr & DCB_DEMCR_MON_PEND ? '1' : '0',
+				 demcr & DCB_DEMCR_MON_STEP ? '1' : '0');
 
 		if (dfsr & SCB_DFSR_BKPT) {
 			if ((CM3_SCB->icsr & SCB_ICSR_RETTOBASE) == 0) {
@@ -486,28 +485,33 @@ void dmon_isr(struct cm3_except_context * ctx)
 		}
 
 		if (dfsr & SCB_DFSR_HALTED) {
-			/* clear the step request */
-			CM3_DCB->demcr &= ~DCB_DEMCR_MON_STEP;
-			if ((uint16_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
-				/* suspend the thread, this will clear the step request flag */
-				__thinkos_thread_pause(thinkos_rt.step_id);
-				/* signal the monitor */
-				sigset |= (1 << DMON_THREAD_STEP);
-				sigmsk |= (1 << DMON_THREAD_STEP);
-				thinkos_dmon_rt.events = sigset;
-				__thinkos_defer_sched();
-				DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ----------", 
-						 thinkos_rt.step_id, ctx->pc);
+			if (demcr & DCB_DEMCR_MON_STEP) {
+				/* clear the step request */
+				CM3_DCB->demcr = demcr & ~DCB_DEMCR_MON_STEP;
+				if ((uint16_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
+					/* suspend the thread, this will clear the 
+					   step request flag */
+					__thinkos_thread_pause(thinkos_rt.step_id);
+					/* signal the monitor */
+					sigset |= (1 << DMON_THREAD_STEP);
+					sigmsk |= (1 << DMON_THREAD_STEP);
+					thinkos_dmon_rt.events = sigset;
+					__thinkos_defer_sched();
+					DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ------", 
+							 thinkos_rt.step_id, ctx->pc);
+				} else {
+					DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
+							 thinkos_rt.step_id);
+				}
+				thinkos_rt.break_id = thinkos_rt.step_id;
 			} else {
-				DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
-						 thinkos_rt.step_id);
+				DCC_LOG(LOG_TRACE, "SCB_DFSR_HALTED !!!");
 			}
-			thinkos_rt.break_id = thinkos_rt.step_id;
 		}
 	}
 #endif
 
-	DCC_LOG1(LOG_MSG, "<%08x>", sigset);
+	DCC_LOG1(LOG_INFO, "<%08x>", sigset);
 
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);
@@ -583,6 +587,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 {
 	struct cm3_dcb * dcb = CM3_DCB;
+	uint32_t demcr; 
 	
 	thinkos_dmon_rt.events = (1 << DMON_RESET);
 	thinkos_dmon_rt.mask = (1 << DMON_RESET);
@@ -594,8 +599,14 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 
 	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);
 
-	/* enable monitor and send the start event */
-	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
+	/* clear the step request */
+	demcr = dcb->demcr;
+	
+	demcr &= ~DCB_DEMCR_MON_STEP;
+	/* enable monitor and send the reset event */
+	demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
+
+	dcb->demcr = demcr;
 }
 
 #endif /* THINKOS_ENABLE_MONITOR */

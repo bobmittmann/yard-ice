@@ -442,8 +442,17 @@ int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 		s[i] = c;
 	}
 	s[i] = '\0';
-
 	DCC_LOGSTR(LOG_TRACE, "cmd=\"%s\"", s);
+
+	if (prefix(s, "reset")) {
+		if (gdb->active_app) {
+			dmon_soft_reset(gdb->comm);
+			gdb->active_app = false;
+		}
+		if (dmon_app_exec(true) >= 0) {
+			gdb->active_app = true;
+		}
+	}
 
 	return rsp_ok(gdb);
 }
@@ -689,7 +698,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb, char * pkt)
 
 	thread_id = rsp_get_g_thread(gdb);
 
-	DCC_LOG1(LOG_INFO, "thread_id=%d", thread_id);
+	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
 
 	cp = pkt;
 	*cp++ = '$';
@@ -1454,9 +1463,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	if (gdb->shell_task == NULL)
 		gdb->shell_task = gdb_task;
 
-	dmon_comm_connect(comm);
+//	dmon_comm_connect(comm);
 
-	DCC_LOG(LOG_TRACE, "Comm connected..");
+//	DCC_LOG(LOG_TRACE, "Comm connected..");
 
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_THREAD_STEP);

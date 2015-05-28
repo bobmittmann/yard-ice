@@ -61,36 +61,36 @@
 /*************************************************************************/
 
 /* System control block (SCB) registers */
-#define ARMV7M_CPUID 0xe000ed00 /* CPUID Base Register */
-#define ARMV7M_ICSR 0xe000ed04 /* Interrupt Control and State Register */
-#define ARMV7M_VTOR 0xe000ed08 /* Vector Table Offset Register */
-#define ARMV7M_AIRCR 0xe000ed0c /* Application Interrupt and Reset 
+#define ARMV7M_CPUID  0xe000ed00 /* CPUID Base Register */
+#define ARMV7M_ICSR   0xe000ed04 /* Interrupt Control and State Register */
+#define ARMV7M_VTOR   0xe000ed08 /* Vector Table Offset Register */
+#define ARMV7M_AIRCR  0xe000ed0c /* Application Interrupt and Reset 
 								   Control Register */
-#define ARMV7M_SCR 0xe000ed10 /* System Control Register */
-#define ARMV7M_CCR 0xe000ed14 /* Configuration and Control Register */
-#define ARMV7M_SHPR1 0xe000ed18 /* System Handler Priority Register 1 */
-#define ARMV7M_SHPR2 0xe000ed1c /* System Handler Priority Register 2 */
-#define ARMV7M_SHPR3 0xe000ed20 /* System Handler Priority Register 3 */
-#define ARMV7M_SHCSR 0xe000ed24 /* System Handler Control and State Register */
-#define ARMV7M_CFSR 0xe000ed28 /* Configurable Fault Status Register */
-#define ARMV7M_HFSR 0xe000ed2c /* HardFault Status Register */
-#define ARMV7M_DFSR 0xe000ed30 /* Debug Fault Status Register */
-#define ARMV7M_MMFAR 0xe000ed34 /* MemManage Fault Address Register */
-#define ARMV7M_BFAR 0xe000ed38 /* BusFault Address Register */
-#define ARMV7M_AFSR 0xe000ed3c /* Auxiliary Fault Status Register */
-#define ARMV7M_CPACR 0xe000ed88 /* Coprocessor Access Control Register */
+#define ARMV7M_SCR    0xe000ed10 /* System Control Register */
+#define ARMV7M_CCR    0xe000ed14 /* Configuration and Control Register */
+#define ARMV7M_SHPR1  0xe000ed18 /* System Handler Priority Register 1 */
+#define ARMV7M_SHPR2  0xe000ed1c /* System Handler Priority Register 2 */
+#define ARMV7M_SHPR3  0xe000ed20 /* System Handler Priority Register 3 */
+#define ARMV7M_SHCSR  0xe000ed24 /* System Handler Control and State Register */
+#define ARMV7M_CFSR   0xe000ed28 /* Configurable Fault Status Register */
+#define ARMV7M_HFSR   0xe000ed2c /* HardFault Status Register */
+#define ARMV7M_DFSR   0xe000ed30 /* Debug Fault Status Register */
+#define ARMV7M_MMFAR  0xe000ed34 /* MemManage Fault Address Register */
+#define ARMV7M_BFAR   0xe000ed38 /* BusFault Address Register */
+#define ARMV7M_AFSR   0xe000ed3c /* Auxiliary Fault Status Register */
+#define ARMV7M_CPACR  0xe000ed88 /* Coprocessor Access Control Register */
 
 /* Additional SCB registers for the FP extension */
-#define ARMV7M_FPCCR 0xe000ef34 /* Floating-Point Context Control Register */
-#define ARMV7M_FPCAR 0xe000ef38 /* Floating-Point Context Address Register */
+#define ARMV7M_FPCCR  0xe000ef34 /* Floating-Point Context Control Register */
+#define ARMV7M_FPCAR  0xe000ef38 /* Floating-Point Context Address Register */
 #define ARMV7M_FPDSCR 0xe000ef3c /* Floating-Point Default Status 
 									Control Register */
-#define ARMV7M_MVFR0 0xe000ef40 /* Media and FP Feature Register 0 */
-#define ARMV7M_MVFR1 0xe000ef44 /* Media and FP Feature Register 1 */
+#define ARMV7M_MVFR0  0xe000ef40 /* Media and FP Feature Register 0 */
+#define ARMV7M_MVFR1  0xe000ef44 /* Media and FP Feature Register 1 */
 
-#define ARMV7M_ICTR 0xe000e004 /* Interrupt Controller Type Register */
-#define ARMV7M_ACTLR 0xe000e008 /* Auxiliary Control Register */
-#define ARMV7M_STIR 0xe000ef00  /* Software Triggered Interrupt Register */
+#define ARMV7M_ICTR   0xe000e004 /* Interrupt Controller Type Register */
+#define ARMV7M_ACTLR  0xe000e008 /* Auxiliary Control Register */
+#define ARMV7M_STIR   0xe000ef00 /* Software Triggered Interrupt Register */
 
 /* Peripheral Identification Registers */
 #define ARMV7M_SCB_PID4 0xe000efd0 
@@ -109,13 +109,13 @@
 #define ARMV7M_SCB_CID3 0xe000effc
 
 /* Debug Halting Control and Status Register */
-#define ARMV7M_DHCSR 0xe000edf0
+#define ARMV7M_DHCSR    0xe000edf0
 /* Debug Core Register Selector Register */
-#define ARMV7M_DCRSR 0xe000edf4
+#define ARMV7M_DCRSR    0xe000edf4
 /* Debug Core Register Data Register */
-#define ARMV7M_DCRDR 0xe000edf8
+#define ARMV7M_DCRDR    0xe000edf8
 /* Debug Exception and Monitor Control Register */
-#define ARMV7M_DEMCR 0xe000edfc
+#define ARMV7M_DEMCR    0xe000edfc
 
 /*************************************************************************/
 /* The system timer, SysTick                                             */
@@ -728,6 +728,30 @@
 	1 = Reset Vector Catch enabled.
 	If DHCSR.C_DEBUGEN is set to 0, the processor ignores the 
 	value of this bit. */
+
+/* ----------------------------------------------------------------------- */
+/* HardFault Status Register, HFSR                                         */ 
+/* ----------------------------------------------------------------------- */
+
+#define HFSR_DEBUGEVT (1 << 31) /* Indicates when a Debug event has occurred:
+	0 No Debug event has occurred.
+	1 Debug event has occurred. The Debug Fault Status Register has been 
+	updated.
+	The processor sets this bit to 1 only when halting debug is disabled and 
+	a Debug event occurs, see Debug event behavior on page C1-752 
+	for more information. */
+
+#define HFSR_FORCED (1 << 30) /* Indicates that a fault with configurable 
+	priority has been escalated to a HardFault exception, because it 
+	could not be made active, because of priority or because it was disabled:
+	0 No priority escalation has occurred.
+	1 Processor has escalated a configurable-priority exception to HardFault.
+	See Priority escalation on page B1-585 for more information. */
+
+#define HFSR_VECTTBL (1 << 1) /* Indicates when a fault has occurred because 
+	of a vector table read error on exception processing:
+	0 No vector table read fault has occurred.
+	1 Vector table read fault has occurred. */
 
 
 /* ----------------------------------------------------------------------- */

@@ -28,10 +28,10 @@ LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 
 INCPATH = $(SDK)/include ..
 
-CFLAGS = -g -O1 -Wall
+CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
 O := .
 
-MACH = stm32f429
+MACH = stm32f407
 THINKOS = 1
 include ../../../../mk/stm32f4xx.mk
 

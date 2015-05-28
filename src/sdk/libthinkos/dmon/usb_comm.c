@@ -360,10 +360,6 @@ const uint8_t * const cdc_acm_str[] = {
 
 #define STRCNT() (sizeof(cdc_acm_str) / sizeof(uint8_t *))
 
-struct usb_cdc_acm {
-	volatile uint8_t control; /* modem control lines */
-};
-
 const struct cdc_line_coding usb_cdc_lc = {
     .dwDTERate = 38400,
     .bCharFormat = 0,
@@ -380,8 +376,9 @@ struct usb_cdc_acm_dev {
 	/* underling USB device */
 	struct usb_dev * usb;
 
-	/* class specific block */
-	struct usb_cdc_acm acm;
+//	struct cdc_line_coding acm_lc;
+
+	volatile uint8_t acm_ctrl; /* modem control lines */
 
 	/* number of strings */
 	uint8_t ctl_ep;
@@ -567,8 +564,19 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		DCC_LOG1(LOG_INFO, "GetStEpt:%d", index);
 		break;
 
-	case SET_LINE_CODING:
-		break;
+	case SET_LINE_CODING: 
+		{
+			struct cdc_line_coding * lc;
+			lc = (struct cdc_line_coding *)dev->ctr_buf;
+			(void)lc;
+			DCC_LOG3(LOG_INFO, "CDC SetLn: idx=%d val=%d len=%d",
+					 index, value, len);
+			DCC_LOG1(LOG_INFO, "dsDTERate=%d", lc->dwDTERate);
+			DCC_LOG1(LOG_INFO, "bCharFormat=%d", lc->bCharFormat);
+			DCC_LOG1(LOG_INFO, "bParityType=%d", lc->bParityType);
+			DCC_LOG1(LOG_INFO, "bDataBits=%d", lc->bDataBits);
+			break;
+		}
 
 	case GET_LINE_CODING:
 		DCC_LOG(LOG_INFO, "CDC GetLn");
@@ -578,7 +586,7 @@ int usb_mon_on_setup(usb_class_t * cl, struct usb_request * req, void ** ptr)
 		break;
 
 	case SET_CONTROL_LINE_STATE:
-		dev->acm.control = value;
+		dev->acm_ctrl = value;
 		DCC_LOG2(LOG_INFO, "CDC_DTE_PRESENT=%d ACTIVATE_CARRIER=%d",
 				(value & CDC_DTE_PRESENT) ? 1 : 0,
 				(value & CDC_ACTIVATE_CARRIER) ? 1 : 0);
@@ -611,7 +619,7 @@ void usb_mon_on_reset(usb_class_t * cl)
 	dev->rx_cnt = 0;
 	dev->rx_pos = 0;
 	/* reset control lines */
-	dev->acm.control = 0;
+	dev->acm_ctrl = 0;
 	/* initializes EP0 */
 	dev->ctl_ep = usb_dev_ep_init(dev->usb, &usb_mon_ep0_info, 
 								  dev->ctr_buf, CDC_CTR_BUF_LEN);
@@ -621,7 +629,7 @@ void usb_mon_on_suspend(usb_class_t * cl)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)cl;
 	DCC_LOG(LOG_INFO, "...");
-	dev->acm.control = 0;
+	dev->acm_ctrl = 0;
 }
 
 void usb_mon_on_wakeup(usb_class_t * cl)
@@ -715,8 +723,8 @@ int dmon_comm_connect(struct dmon_comm * comm)
 
 	int ret;
 
-	while ((dev->acm.control & CDC_DTE_PRESENT) == 0) {
-		DCC_LOG1(LOG_TRACE, "ctrl=%02x, waiting...", dev->acm.control);
+	while ((dev->acm_ctrl & CDC_DTE_PRESENT) == 0) {
+		DCC_LOG1(LOG_TRACE, "ctrl=%02x, waiting...", dev->acm_ctrl);
 		if ((ret = dmon_wait(DMON_COMM_CTL)) < 0) {
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
@@ -757,7 +765,7 @@ int dmon_comm_connect(struct dmon_comm * comm)
 bool dmon_comm_isconnected(struct dmon_comm * comm)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
-	return (dev->acm.control & CDC_DTE_PRESENT) ? true : false;
+	return (dev->acm_ctrl & CDC_DTE_PRESENT) ? true : false;
 }
 
 void dmon_comm_rxflowctrl(struct dmon_comm * comm, bool en)

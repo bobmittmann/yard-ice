@@ -62,9 +62,6 @@ void test_call(struct thinkos_context * ctx)
 	__dump_context(ctx);
 }
 
-#endif
-
-#if 0
 static inline void __attribute__((always_inline)) __wait(void) {
 	asm volatile ("mov    r3, #1\n"
 				  "0:\n"

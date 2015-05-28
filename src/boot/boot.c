@@ -65,6 +65,7 @@ void firelink_lcd_putc(int c);
 #endif
 
 void monitor_task(struct dmon_comm * comm);
+void gdb_task(struct dmon_comm * comm);
 
 #define CTRL_C 0x03
 
@@ -131,6 +132,7 @@ void boot_task(struct dmon_comm * comm)
 	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
 	dmon_app_exec(false);
 	dmon_exec(monitor_task);
+//	dmon_exec(gdb_task);
 }
 
 void monitor_init(void)

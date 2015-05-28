@@ -273,9 +273,6 @@ int main(int argc, char ** argv)
 	struct httpd httpd;
 	int port = 80;
 
-
-	cm3_udelay_calibrate();
-
 	stm32f_nvram_env_init();
 
 	io_init();
@@ -287,7 +284,6 @@ int main(int argc, char ** argv)
 	printf(" ThinkOS (HTTPD Test)\n");
 	printf("---------------------------------------------------------\n");
 	printf("\n");
-
 
 	network_config();
 
@@ -305,7 +301,6 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
 							  &httpd4_inf);
-
 	tcp_echo_start();
 
 	tcp_qotd_start();
@@ -313,7 +308,7 @@ int main(int argc, char ** argv)
 	tftpd_start();
 
 	for (;;) {
-		stdio_shell();
+//		stdio_shell();
 		thinkos_sleep(1000);
 	}
 
