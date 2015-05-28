@@ -61,11 +61,11 @@ void dmon_soft_reset(struct dmon_comm * comm)
 	DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
 	__thinkos_irq_disable_all();
 
-	DCC_LOG(LOG_TRACE, "2. kill all threads...");
-	__thinkos_kill_all(); 
+//	DCC_LOG(LOG_TRACE, "2. kill all threads...");
+//	__thinkos_kill_all(); 
 
-	DCC_LOG(LOG_TRACE, "3. wait idle..."); 
-	dmon_wait_idle();
+//	DCC_LOG(LOG_TRACE, "3. wait idle..."); 
+//	dmon_wait_idle();
 
 	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
 	__thinkos_reset();

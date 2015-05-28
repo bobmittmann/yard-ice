@@ -19,27 +19,21 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+SDK = ../../../../sdk
 
-PROG = thinkos
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
+		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
+		   $(SDK)/libcrc $(SDK)/libtcpip $(SDK)/libhttpd \
+		   $(SDK)/libtty $(SDK)/libshell
 
-CFILES = ../boot.c ../monitor.c board.c
+INCPATH = $(SDK)/include ..
 
-SDK = ../../sdk
+CFLAGS = -g -O1 -Wall
+O := .
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm $(SDK)/libgdb
+MACH = stm32f429
+THINKOS = 1
+include ../../../../mk/stm32f4xx.mk
 
-LIBS = cm3 stm32f util thinkos ice-comm gdb gcc 
-
-INCPATH = $(SDK)/include 
-
-CDEFS = CONFIG_H CM3_RAM_VECTORS
-
-#CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-#LDFLAGS = -Xlinker --gc-sections 
-CFLAGS = -g -O2 -Wall
-
-JTAGTOOL_ADDR = 192.168.10.50
-MACH = stm32f407
-include ../../mk/stm32f4xx.mk
+all:: libs-install
 

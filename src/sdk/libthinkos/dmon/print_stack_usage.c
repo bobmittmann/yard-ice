@@ -25,18 +25,7 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
-static int scan_stack(void * stack, unsigned int size)
-{
-	uint32_t * ptr = (uint32_t *)stack;
-	int i;
-
-	for (i = 0; i < size / 4; ++i) {
-		if (ptr[i] != 0xdeadbeef)
-			break;
-	}
-
-	return i * 4;
-}
+int __scan_stack(void * stack, unsigned int size);
 
 extern uint32_t thinkos_dmon_stack[];
 extern const uint16_t thinkos_dmon_stack_size;
@@ -71,7 +60,7 @@ void dmon_print_stack_usage(struct dmon_comm * comm)
 #if THINKOS_ENABLE_THREAD_INFO
 			if (rt->th_inf[i] != NULL) {
 				dmprintf(comm, " | %6d", rt->th_inf[i]->stack_size); 
-				dmprintf(comm, " | %6d", scan_stack(rt->th_inf[i]->stack_ptr, 
+				dmprintf(comm, " | %6d", __scan_stack(rt->th_inf[i]->stack_ptr, 
 												rt->th_inf[i]->stack_size));
 			} else 
 #endif
@@ -88,7 +77,7 @@ void dmon_print_stack_usage(struct dmon_comm * comm)
 	dmprintf(comm, " | %08x", (uint32_t)&thinkos_idle); 
 	dmprintf(comm, " | %08x", (uint32_t)rt->idle_ctx); 
 	dmprintf(comm, " | %6d", THINKOS_EXCEPT_STACK_SIZE); 
-	dmprintf(comm, " | %6d", scan_stack(&thinkos_idle, 
+	dmprintf(comm, " | %6d", __scan_stack(&thinkos_idle, 
 										THINKOS_EXCEPT_STACK_SIZE));
 	dmprintf(comm, "\r\n");
 
@@ -97,7 +86,7 @@ void dmon_print_stack_usage(struct dmon_comm * comm)
 	dmprintf(comm, " | %08x", (uint32_t)thinkos_dmon_stack); 
 	dmprintf(comm, " | %08x", (uint32_t)cm3_msp_get()); 
 	dmprintf(comm, " | %6d", thinkos_dmon_stack_size); 
-	dmprintf(comm, " | %6d", scan_stack(thinkos_dmon_stack, 
+	dmprintf(comm, " | %6d", __scan_stack(thinkos_dmon_stack, 
 										thinkos_dmon_stack_size));
 	dmprintf(comm, "\r\n");
 }

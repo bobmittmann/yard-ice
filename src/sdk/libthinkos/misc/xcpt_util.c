@@ -44,6 +44,24 @@ const char __xcpt_name_lut[16][12] = {
 	"SysTick"
 };
 
+int __scan_stack(void * stack, unsigned int size)
+{
+	uint32_t * ptr = (uint32_t *)stack;
+	int i;
+
+	for (i = 0; i < size / 4; ++i) {
+		if (ptr[i] != 0xdeadbeef)
+			break;
+	}
+
+	return i * 4;
+}
+
+int __scan_stack(void * stack, unsigned int size);
+extern uint32_t thinkos_dmon_stack[];
+extern const uint16_t thinkos_dmon_stack_size;
+
+
 void __xdump(struct thinkos_except * xcpt)
 {
 #ifdef DEBUG
@@ -131,6 +149,12 @@ void __xdump(struct thinkos_except * xcpt)
 				 (icsr & SCB_ICSR_VECTPENDING) >> 12,
 				 (icsr & SCB_ICSR_VECTACTIVE));
 
+	if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {
+		DCC_LOG2(LOG_ERROR, "DMON stack free: %d/%6d", 
+				 __scan_stack(thinkos_dmon_stack, thinkos_dmon_stack_size),
+				 thinkos_dmon_stack_size); 
+	}
+
 #endif
 }
 
@@ -179,7 +203,7 @@ void __idump(const char * s, uint32_t ipsr)
 				 (shcsr & SCB_SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
 
 	icsr = CM3_SCB->icsr;
-	DCC_LOG8(LOG_ERROR, " ICSR={%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
+	DCC_LOG8(LOG_TRACE, " ICSR={%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d }", 
 				 (icsr & SCB_ICSR_NMIPENDSET) ? " NMIPEND" : "",
 				 (icsr & SCB_ICSR_PENDSVSET) ? " PENDSV" : "",
 				 (icsr & SCB_ICSR_PENDSTSET) ? " PENDST" : "",

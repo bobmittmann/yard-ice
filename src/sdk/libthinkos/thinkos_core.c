@@ -64,6 +64,7 @@ void test_call(struct thinkos_context * ctx)
 
 #endif
 
+#if 0
 static inline void __attribute__((always_inline)) __wait(void) {
 	asm volatile ("mov    r3, #1\n"
 				  "0:\n"
@@ -71,6 +72,11 @@ static inline void __attribute__((always_inline)) __wait(void) {
 				  "b.n  0b\n"
 				  "1:\n" : : : "r3"); 
 }
+#endif
+
+/* -------------------------------------------------------------------------- 
+ * Idle task
+ * --------------------------------------------------------------------------*/
 
 void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 {
@@ -110,6 +116,10 @@ void __attribute__((noreturn, naked)) thinkos_idle_task(void)
 #endif
 	}
 }
+
+/* -------------------------------------------------------------------------- 
+ * Scheduler
+ * --------------------------------------------------------------------------*/
 
 static inline struct thinkos_context * __attribute__((always_inline)) 
 __sched_entry(void) {

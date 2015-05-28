@@ -55,3 +55,4 @@ int usart_xflash(void * uart, uint32_t offs, uint32_t len)
 
 	return xflash_ram(uart, offs, len);
 }
+

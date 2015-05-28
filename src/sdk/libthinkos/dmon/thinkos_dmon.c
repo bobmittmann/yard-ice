@@ -122,13 +122,13 @@ int dmon_expect(int ev)
 	/* umask event */
 	thinkos_dmon_rt.mask |= mask;
 
-	DCC_LOG1(LOG_INFO, "waiting for %d, sleeping...", ev);
+	DCC_LOG1(LOG_MSG, "waiting for %d, sleeping...", ev);
 	do {
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 		evset = thinkos_dmon_rt.events;
 		evmsk = thinkos_dmon_rt.mask;
 	} while ((evset & evmsk) == 0);
-	DCC_LOG(LOG_INFO, "wakeup...");
+	DCC_LOG(LOG_MSG, "wakeup...");
 
 	if (evset & mask) {
 		thinkos_dmon_rt.mask = evmsk & ~mask;
@@ -202,7 +202,7 @@ int dmon_wait_idle(void)
 	return 0;
 }
 
-void __dmon_reset(void)
+void dmon_reset(void)
 {
 	dmon_signal(DMON_RESET);
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
@@ -507,7 +507,7 @@ void dmon_isr(struct cm3_except_context * ctx)
 	}
 #endif
 
-	DCC_LOG1(LOG_INFO, "<%08x>", sigset);
+	DCC_LOG1(LOG_MSG, "<%08x>", sigset);
 
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);
@@ -530,6 +530,8 @@ void __attribute__((naked)) cm3_debug_mon_isr(void)
 				  : : : "r0");
 }
 
+void __thinkos_irq_disable_all(void);
+
 void thinkos_exception_dsr(struct thinkos_except * xcpt)
 {
 	if (xcpt->thread_id >= 0) {
@@ -548,6 +550,27 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 				 ipsr - 16);
 		/* FIXME: add support for exceptions on IRQ */
 		thinkos_rt.break_id = -ipsr;
+
+		if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {
+			DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
+			__thinkos_irq_disable_all();
+			DCC_LOG(LOG_TRACE, "2. ThinkOS reset...");
+			__thinkos_reset();
+#if THINKOS_ENABLE_CONSOLE
+			DCC_LOG(LOG_TRACE, "3. console reset...");
+			__console_reset();
+#endif
+			DCC_LOG(LOG_TRACE, "4. exception reset...");
+			__exception_reset();
+#if (THINKOS_ENABLE_DEBUG_STEP)
+			DCC_LOG(LOG_TRACE, "6. clear all breakpoints...");
+			dmon_breakpoint_clear_all();
+#endif
+			DCC_LOG(LOG_TRACE, "7. restore Comm interrupts...");
+			dmon_comm_irq_config(thinkos_dmon_rt.comm);
+			DCC_LOG(LOG_TRACE, "8. reset.");
+			dmon_signal(DMON_RESET);
+		}
 #endif
 		dmon_signal(DMON_EXCEPT);
 	}
@@ -576,98 +599,4 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 }
 
 #endif /* THINKOS_ENABLE_MONITOR */
-
-#if 0
-static inline uint32_t __attribute__((always_inline)) cm3_svc_stackframe(void) {
-	register uint32_t sp;
-	asm volatile ("tst lr, #4\n" 
-				  "ite eq\n" 
-				  "mrseq %0, MSP\n" 
-				  "mrsne %0, PSP\n" 
-				  : "=r" (sp));
-	return sp;
-}
-
-
-static inline void __attribute__((always_inline)) __wait(void) {
-	asm volatile ("mov    r3, #1\n"
-				  "0:\n"
-				  "cbz	r3, 1f\n"
-				  "b.n  0b\n"
-				  "1:\n" : : : "r3"); 
-}
-
-void thinkos_debug_monitor(void)
-{
-	struct cm3_dcb * dcb = CM3_DCB;
-	uint32_t sigset = thinkos_dmon_rt.events;
-
-
-	if (dcb->demcr & DCB_DEMCR_MON_REQ) {
-		DCC_LOG(LOG_TRACE, "DCB_DEMCR_MON_REQ +++++++++++++++");
-		dcb->demcr &= ~DCB_DEMCR_MON_REQ;
-		thinkos_suspend_all();
-	}
-
-	if (sigset & (1 << DMON_EXCEPT)) {
-		sigset &= ~(1 << DMON_EXCEPT);
-		sigset |= (1 << DMON_THREAD_FAULT);
-		thinkos_dmon_rt.events = sigset;
-		dmon_on_except(&thinkos_dmon_rt);
-	}
-
-	if (sigset & (1 << DMON_RESET)) {
-		dmon_on_reset(&thinkos_dmon_rt);
-	}
-
-	/* Process monitor events */
-	if ((sigset & thinkos_dmon_rt.mask) != 0) {
-		dmon_context_swap(&thinkos_dmon_rt.ctx); 
-	}
-
-}
-
-/* THinkOS - Debug Monitor */
-void __attribute__((naked, noreturn)) cm3_debug_mon_isr(void)
-//void cm3_debug_mon_isr(void)
-{
-	register struct thinkos_context * ctx asm("r0");
-	register uint32_t lr asm("r4");
-	uint32_t idx;
-
-	/* save the context */
-	asm volatile ("mrs    %0, PSP\n" 
-				  "stmdb  %0!, {r4-r11}\n"
-				  "mov    %1, lr\n"
-				  : "=r" (ctx), "=r" (lr));
-
-	/* disable interrupts */
-	cm3_cpsid_i();
-
-	/* get the active (current) thread */	
-	idx = thinkos_rt.active;
-	/* save SP */
-	thinkos_rt.ctx[idx] = ctx;
-
-	thinkos_debug_monitor();
-
-	/* update the active thread */
-	idx = thinkos_rt.active;
-	ctx = thinkos_rt.ctx[idx];
-
-	/* enable interrupts */
-	cm3_cpsie_i();
-
-	/* restore the context */
-	asm volatile (
-				  "mov    lr, %1\n"
-				  "add    r3, %0, #8 * 4\n"
-				  "msr    PSP, r3\n"
-				  "ldmia  %0, {r4-r11}\n"
-				  "bx     lr\n"
-				  : : "r" (ctx), "r" (lr): "r3"); 
-	for(;;);
-}
-#endif
-
 

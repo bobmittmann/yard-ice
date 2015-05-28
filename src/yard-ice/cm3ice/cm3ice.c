@@ -956,21 +956,41 @@ int cm3ice_configure(cm3ice_ctrl_t * ctrl, jtag_tap_t * tap,
 
 int cm3_show_xpsr(FILE * f, unsigned int psr);
 int cm3_show_ctrl(FILE * f, unsigned int ctrl);
+int cm3_show_shcsr(FILE * f, uint32_t shcsr);
+int cm3_show_icsr(FILE * f, uint32_t icsr);
 
 int cm3ice_context_show(cm3ice_ctrl_t * ctrl, FILE * f)
 {
 	uint32_t reg[CM3_CTRL + 1];
 	jtag_tap_t * tap = ctrl->tap;
 	unsigned int id;
+	uint32_t dhcsr;
+	int ipsr;
+
+	jtag_mem_ap_rd32(tap, ARMV7M_DHCSR, &dhcsr);
+	if (dhcsr & DHCSR_S_LOCKUP) {
+		fprintf(f, " Core Locked up!!\n");
+	}
 
 	for (id = CM3_R0; id <= CM3_CTRL; id++)
 		core_reg_get(tap, &ctrl->core, id, &reg[id]);
 
+	fprintf(f, " xpsr= ");
 	cm3_show_xpsr(f, reg[CM3_XPSR]);
-
-	fprintf(f, " ");
-
+	fprintf(f, "\n ctrl= ");
 	cm3_show_ctrl(f, reg[CM3_CTRL]);
+
+	ipsr = reg[CM3_XPSR] & 0x1ff;
+	if (ipsr) {
+		uint32_t icsr;
+		uint32_t shcsr;
+		fprintf(f, "\n icsr= ");
+		jtag_mem_ap_rd32(tap, ARMV7M_ICSR, &icsr);
+		cm3_show_icsr(f, icsr);
+		fprintf(f, "\nshcsr= ");
+		jtag_mem_ap_rd32(tap, ARMV7M_SHCSR, &shcsr);
+		cm3_show_shcsr(f, shcsr);
+	}
 
 	fprintf(f, "\n\n");
 

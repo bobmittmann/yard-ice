@@ -161,9 +161,15 @@ int thread_getnext(int thread_id)
 {
 	int id;
 
+	if (thread_id == THREAD_ID_IDLE)
+		return -1;
+
 	id = __thinkos_thread_getnext(thread_id - THREAD_ID_OFFS);
-	if (id >= 0)
-		id += THREAD_ID_OFFS;
+	if (id < 0) {
+		DCC_LOG(LOG_WARNING, "No threads!");
+		id = THINKOS_THREAD_IDLE;
+	}
+	id += THREAD_ID_OFFS;
 
 	return id;
 }

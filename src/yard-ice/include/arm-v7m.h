@@ -788,6 +788,39 @@
 	an instruction fetch has occurred. The fault is signalled only if 
 	the instruction is issued. */
 
+/* ----------------------------------------------------------------------- */
+/* System Handler Control and State Register, SHCSR                        */ 
+/* ----------------------------------------------------------------------- */
+
+#define SHCSR_USGFAULTENA (1 << 18)
+#define SHCSR_BUSFAULTENA (1 << 17)
+#define SHCSR_MEMFAULTENA (1 << 16)
+#define SHCSR_SVCALLPENDED (1 << 15)
+#define SHCSR_BUSFAULTPENDED (1 << 14)
+#define SHCSR_MEMFAULTPENDED (1 << 13)
+#define SHCSR_USGFAULTPENDED (1 << 12)
+#define SHCSR_SYSTICKACT (1 << 11)
+#define SHCSR_PENDSVACT (1 << 10)
+#define SHCSR_MONITORACT (1 << 8)
+#define SHCSR_SVCALLACT (1 << 7)
+#define SHCSR_USGFAULTACT (1 << 3)
+#define SHCSR_BUSFAULTACT (1 << 1)
+#define SHCSR_MEMFAULTACT (1 << 0)
+
+/* ----------------------------------------------------------------------- */
+/* Interrupt Control State Register, ICSR                                  */
+/* ----------------------------------------------------------------------- */
+#define ICSR_NMIPENDSET (1 << 31)
+#define ICSR_PENDSVSET (1 << 28)
+#define ICSR_PENDSVCLR (1 << 27)
+#define ICSR_PENDSTSET (1 << 26)
+#define ICSR_PENDSTCLR (1 << 25)
+#define ICSR_ISRPREEMPT (1 << 23)
+#define ICSR_ISRPENDING (1 << 22)
+#define ICSR_VECTPENDING (0x1ff << 12)
+#define ICSR_RETTOBASE (1 << 11)
+#define ICSR_VECTACTIVE (0x1ff << 0)
+
 #ifdef __ASSEMBLER__
 
 #else /* __ASSEMBLER__ */

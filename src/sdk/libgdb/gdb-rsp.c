@@ -1082,6 +1082,7 @@ static int rsp_continue_with_sig(struct gdb_rspd * gdb, char * pkt)
 
 
 	sig = hex2int(&pkt[1], &cp);
+	(void)sig;
 	DCC_LOG1(LOG_TRACE, "sig=%d", sig);
 	if (*cp == ':') {
 		cp++;

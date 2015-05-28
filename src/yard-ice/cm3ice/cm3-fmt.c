@@ -42,16 +42,37 @@ const char * cm3_reg_name(int r)
 	return cm3_regnames[r];
 }
 
-int cm3_show_xpsr(FILE * f, uint32_t psr)
+extern const char __xcpt_name_lut[16][12];
+
+int cm3_show_xpsr(FILE * f, uint32_t xpsr)
 {
-	fprintf(f, "[N=%c ", ((psr >> 31) & 0x01) + '0');
-	fprintf(f, "Z=%c ", ((psr >> 30) & 0x01) + '0');
-	fprintf(f, "C=%c ", ((psr >> 29) & 0x01) + '0');
-	fprintf(f, "V=%c ", ((psr >> 28) & 0x01) + '0');
-	fprintf(f, "Q=%c ", ((psr >> 27) & 0x01) + '0');
-	fprintf(f, "ICI/IT=%02x ", ((psr >> 19) & 0xc0) | ((psr >> 10) & 0x3f));
-	fprintf(f, "XCP=%02x]", psr & 0xff);
-	
+	int ipsr = xpsr & 0x1ff;
+
+	if (ipsr < 16) { 
+		fprintf(f, "[ %c%c%c%c%c %c "
+				 "ICI/IT=%02x GE=%1x IPSR=%d (%s) ]", 
+				 (xpsr & (1 << 31)) ? 'N' : '.',
+				 (xpsr & (1 << 30)) ? 'Z' : '.',
+				 (xpsr & (1 << 29)) ? 'C' : '.',
+				 (xpsr & (1 << 28)) ? 'V' : '.',
+				 (xpsr & (1 << 27)) ? 'Q' : '.',
+				 (xpsr & (1 << 24)) ? 'T' : '.',
+				 ((xpsr >> 19) & 0xc0) | ((xpsr >> 10) & 0x3f),
+				 ((xpsr >> 16) & 0x0f),
+				 ipsr, __xcpt_name_lut[ipsr]);
+	} else {
+		fprintf(f, "[ %c%c%c%c%c %c "
+				 "ICI/IT=%02x GE=%1x IPSR=%d (IRQ %d) }", 
+				 (xpsr & (1 << 31)) ? 'N' : '.',
+				 (xpsr & (1 << 30)) ? 'Z' : '.',
+				 (xpsr & (1 << 29)) ? 'C' : '.',
+				 (xpsr & (1 << 28)) ? 'V' : '.',
+				 (xpsr & (1 << 27)) ? 'Q' : '.',
+				 (xpsr & (1 << 24)) ? 'T' : '.',
+				 ((xpsr >> 19) & 0xc0) | ((xpsr >> 10) & 0x3f),
+				 ((xpsr >> 16) & 0x0f),
+				 ipsr, ipsr - 16);
+	}
 	return 0;
 }
 
@@ -62,12 +83,39 @@ int cm3_show_xpsr(FILE * f, uint32_t psr)
 
 int cm3_show_ctrl(FILE * f, uint32_t ctrl)
 {
-	fprintf(f, "[%s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
+	fprintf(f, "[ %s ", (ctrl & (1 << 25)) ? "PSP" : "MSP");
 	fprintf(f, "%s ", (ctrl & (1 << 24)) ? "USER" : "PRIV");
 	fprintf(f, "PM=%c ", ((ctrl >> 0) & 0x01) + '0');
 	fprintf(f, "FM=%c ", ((ctrl >> 16) & 0x01) + '0');
-	fprintf(f, "BPRI=%02x] ", (ctrl >> 8) & 0xff);
+	fprintf(f, "BPRI=%02x ] ", (ctrl >> 8) & 0xff);
 
+	return 0;
+}
+
+int cm3_show_shcsr(FILE * f, uint32_t shcsr)
+{
+	fprintf(f, "[%s%s%s%s%s%s%s ]", 
+			(shcsr & SHCSR_SYSTICKACT) ? " SYSTICKACT" : "",
+			(shcsr & SHCSR_PENDSVACT) ? " PENDSVACT" : "",
+			(shcsr & SHCSR_MONITORACT) ? " MONITORACT" : "",
+			(shcsr & SHCSR_SVCALLACT) ? " SVCALLACT" : "",
+			(shcsr & SHCSR_USGFAULTACT) ?  " USGFAULTACT" : "",
+			(shcsr & SHCSR_BUSFAULTACT) ?  " BUSFAULTACT" : "",
+			(shcsr & SHCSR_MEMFAULTACT) ?  " MEMFAULTACT" : "");
+	return 0;
+}
+
+int cm3_show_icsr(FILE * f, uint32_t icsr)
+{
+	fprintf(f, "[%s%s%s%s%s%s VECTPENDING=%d VECTACTIVE=%d ]", 
+			(icsr & ICSR_NMIPENDSET) ? " NMIPEND" : "",
+			(icsr & ICSR_PENDSVSET) ? " PENDSV" : "",
+			(icsr & ICSR_PENDSTSET) ? " PENDST" : "",
+			(icsr & ICSR_ISRPREEMPT) ? " ISRPREEMPT" : "",
+			(icsr & ICSR_ISRPENDING) ? " ISRPENDING" : "",
+			(icsr & ICSR_RETTOBASE) ? " RETTOBASE" : "",
+			(icsr & ICSR_VECTPENDING) >> 12,
+			(icsr & ICSR_VECTACTIVE));
 	return 0;
 }
 
