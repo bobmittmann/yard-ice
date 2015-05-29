@@ -134,6 +134,8 @@ void thinkos_rt_snapshot_svc(int32_t * arg);
 
 void thinkos_console_svc(int32_t * arg);
 
+void thinkos_sysinfo_svc(int32_t * arg);
+
 void thinkos_nosys(int32_t * arg)
 {
 	arg[0] = THINKOS_ENOSYS;
@@ -591,6 +593,14 @@ void cm3_svc_isr(void)
 	case THINKOS_EXIT:
 #if THINKOS_ENABLE_EXIT
 		thinkos_exit_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
+
+	case THINKOS_SYSINFO:
+#if THINKOS_ENABLE_SYSINFO
+		thinkos_sysinfo_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif

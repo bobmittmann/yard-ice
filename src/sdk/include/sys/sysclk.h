@@ -18,34 +18,31 @@
  */
 
 /** 
- * @file sys/delay.h
- * @brief YARD-ICE libutil
+ * @file sys/sysclk.h
+ * @brief
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SYS_DELAY_H__
-#define __SYS_DELAY_H__
+#ifndef __SYS_SYSCLK_H__
+#define __SYS_SYSCLK_H__
 
-#include <stdint.h>
-extern int32_t udelay_factor;
+enum {
+	SYSCLK_STM32_AHB  = 0,
+	SYSCLK_STM32_APB1 = 1,
+	SYSCLK_STM32_APB2 = 2,
+	SYSCLK_STM32_TIM1 = 3,
+	SYSCLK_STM32_TIM2 = 4
+};
+
+extern const uint32_t sysclk_hz[];
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void udelay_calibrate(unsigned int ticks1ms, 
-					  unsigned int (* get_ticks)(void));
-
-void udelay(unsigned int usec);
-
-void mdelay(unsigned int msec);
-
-void delay(unsigned int sec);
-
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SYS_DELAY_H__ */
+#endif /* __SYS_SYSCLK_H__ */
 

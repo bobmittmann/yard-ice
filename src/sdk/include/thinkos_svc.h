@@ -95,7 +95,9 @@
 
 #define THINKOS_EXIT            51
 
-#define THINKOS_RT_SNAPSHOT     52
+#define THINKOS_SYSINFO         52
+
+#define THINKOS_RT_SNAPSHOT     53
 
 /* NMI calls ... */
 #define THINKOS_DEBUG_STEP_I     0
@@ -114,11 +116,14 @@
 #define CONSOLE_DRAIN     5
 #define CONSOLE_IOCTL     6
 
+#define SYSINFO_UDELAY_FACTOR 0
+#define SYSINFO_CLOCKS        1
+
 #ifndef __ASSEMBLER__
 
-/* -------------------------------------------------------------------------- 
+/* ------------------------------------------------------------------------- 
  * C service call macros 
- * --------------------------------------------------------------------------*/
+ * ------------------------------------------------------------------------- */
 
 #define __SVC_CALL(N) ( { register int ret asm("r0"); \
 	asm volatile ("svc " #N "\n" : "=r"(ret) : : ); \
@@ -365,9 +370,9 @@ static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
 	THINKOS_NMI1(THINKOS_SEM_POST_I, sem);
 }
 
-/* ---------------------------------------------------------------------------
-   Event sets
-  ----------------------------------------------------------------------------*/
+/* --------------------------------------------------------------------------
+ *  Event sets
+ * --------------------------------------------------------------------------*/
 
 static inline int __attribute__((always_inline)) thinkos_ev_alloc(void) {
 	return THINKOS_SVC(THINKOS_EVENT_ALLOC);
@@ -472,6 +477,10 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC2(THINKOS_FLAG_RELEASE, flag, sig);
 }
 
+/* ---------------------------------------------------------------------------
+   IRQ
+   ---------------------------------------------------------------------------*/
+
 static inline int __attribute__((always_inline)) thinkos_irq_wait(int irq) {
 	return THINKOS_SVC1(THINKOS_IRQ_WAIT, irq);
 }
@@ -484,6 +493,10 @@ static inline int __attribute__((always_inline))
 static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
 	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
 }
+
+/* ---------------------------------------------------------------------------
+   Console
+   ---------------------------------------------------------------------------*/
 
 static inline int __attribute__((always_inline)) 
 thinkos_console_write(const void * buf, unsigned int len) {
@@ -510,6 +523,23 @@ thinkos_console_drain(void) {
 	return THINKOS_SVC1(THINKOS_CONSOLE, CONSOLE_DRAIN);
 }
 
+/* ---------------------------------------------------------------------------
+   Sysinfo
+   ---------------------------------------------------------------------------*/
+
+static inline int __attribute__((always_inline)) 
+thinkos_sysinfo_clocks(uint32_t * clk[]) {
+	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_CLOCKS, clk);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_sysinfo_udelay_factor(int32_t * factor) {
+	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_UDELAY_FACTOR, factor);
+}
+
+/* ---------------------------------------------------------------------------
+   Interrupt service calls
+   ---------------------------------------------------------------------------*/
 
 static inline void __attribute__((always_inline)) 
 	thinkos_flag_set_i(int flag) {

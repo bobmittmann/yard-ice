@@ -185,17 +185,24 @@
 #define __VCO_HZ (((uint64_t)HSE_HZ * PLLN) / PLLM)
 #define __HCLK_HZ (__VCO_HZ / PLLP)
 
-/* This constant is used to calibrate the systick timer */
-const uint32_t cm3_systick_load_1ms = ((__HCLK_HZ / 8) / 1000) - 1;
-
 const uint32_t stm32f_ahb_hz  = __HCLK_HZ;
 const uint32_t stm32f_apb1_hz = __HCLK_HZ / 4;
 const uint32_t stm32f_tim1_hz = __HCLK_HZ / 2;
 const uint32_t stm32f_apb2_hz = __HCLK_HZ / 2;
 const uint32_t stm32f_tim2_hz = __HCLK_HZ;
 
-
 #ifndef THINKAPP
+
+/* This constant is used to calibrate the systick timer */
+const uint32_t cm3_systick_load_1ms = ((__HCLK_HZ / 8) / 1000) - 1;
+
+const uint32_t sysclk_hz[] = {
+	[SYSCLK_STM32_AHB] = __HCLK_HZ,
+	[SYSCLK_STM32_APB1] = __HCLK_HZ / 4,
+	[SYSCLK_STM32_APB2] = __HCLK_HZ / 2,
+	[SYSCLK_STM32_TIM1] = __HCLK_HZ / 2,
+	[SYSCLK_STM32_TIM2] = __HCLK_HZ,
+};
 
 void _init(void)
 {

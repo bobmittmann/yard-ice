@@ -42,6 +42,7 @@ CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c thinkos_init.c \
 		 thinkos_flag.c thinkos_except.c thinkos_debug.c \
 		 thinkos_sleep.c thinkos_break.c thinkos_pause.c \
 		 thinkos_exit.c thinkos_join.c thinkos_cancel.c \
+		 thinkos_sysinfo.c \
 		 $(addprefix misc/,$(MISC_CFILES)) \
 		 $(addprefix dmon/,$(DMON_CFILES)) \
 		 $(addprefix console/,$(CONSOLE_CFILES))

@@ -273,6 +273,8 @@ int main(int argc, char ** argv)
 	struct httpd httpd;
 	int port = 80;
 
+	thinkos_sysinfo_udelay_factor(&udelay_factor);
+
 	stm32f_nvram_env_init();
 
 	io_init();
@@ -308,7 +310,7 @@ int main(int argc, char ** argv)
 	tftpd_start();
 
 	for (;;) {
-//		stdio_shell();
+		stdio_shell();
 		thinkos_sleep(1000);
 	}
 

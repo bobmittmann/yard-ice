@@ -271,6 +271,8 @@ extern const struct fileop stm32_usart_fops_raw;
 
 extern const struct file stm32_usart5_file;
 
+#include <sys/sysclk.h>
+
 #ifdef __cplusplus
 }
 #endif

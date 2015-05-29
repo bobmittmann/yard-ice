@@ -217,6 +217,10 @@
 #define THINKOS_ENABLE_FPU 0
 #endif
 
+#ifndef THINKOS_ENABLE_SYSINFO
+#define THINKOS_ENABLE_SYSINFO 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/

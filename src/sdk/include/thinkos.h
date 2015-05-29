@@ -24,6 +24,7 @@
 #define __THINKOS_H__
 
 #include <arch/cortex-m3.h>
+#include <sys/sysclk.h>
 
 enum {
 	THINKOS_OK        =  0,
@@ -199,6 +200,10 @@ int thinkos_flag_timedtake(int flag, unsigned int ms);
 
 
 int thinkos_irq_wait(int irq);
+
+int thinkos_sysinfo_clocks(uint32_t * clk[]);
+
+int thinkos_sysinfo_udelay_factor(int32_t * factor);
 
 #ifdef __cplusplus
 }
