@@ -35,6 +35,9 @@ void cm3_default_isr(int irq)
 	cm3_irq_disable(irq);
 
 	th = thinkos_rt.irq_th[irq];
+	thinkos_rt.irq_th[irq] = -1;
+
+	/* TODO: create a wait for IRQ waiting queue. */
 
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  

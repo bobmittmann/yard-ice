@@ -205,11 +205,6 @@ void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 
-#if 0
-	/* JTAG TRST Pin */
-	stm32_gpio_mode(MODSW, INPUT, SPEED_LOW);
-#endif
-
 	/* USART5 TX */
 	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(UART5_TX, GPIO_AF8);

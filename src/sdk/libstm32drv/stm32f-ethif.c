@@ -118,15 +118,6 @@ int stm32f_ethif_send(struct ifnet * __if, const uint8_t * __dst,
 	thinkos_sem_wait(drv->tx.sem);
 
 	head = drv->tx.head;
-#if 0
-	while ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
-		DCC_LOG(LOG_INFO, "wait....");
-		thinkos_flag_take(drv->tx.flag);
-		DCC_LOG(LOG_INFO, "got flag....");
-		thinkos_sleep(200);
-		DCC_LOG(LOG_INFO, "wakeup....");
-	}
-#endif
 	if ((head - drv->tx.tail) == STM32F_ETH_TX_NDESC) {
 		DCC_LOG(LOG_PANIC, "queue full!..");
 		abort();
@@ -406,12 +397,6 @@ int stm32f_ethif_init(struct ifnet * __if)
 	drv->rx.head = 0;
 	drv->rx.tail = 0;
 
-#if 0
-	/* alloc a new semaphore */
-	drv->rx.sem = thinkos_sem_alloc(0); 
-	DCC_LOG1(LOG_INFO, "rx.sem=%d", drv->rx.sem);
-#endif
-
 	DCC_LOG(LOG_INFO, "DMA TX descriptors ...");
 	for (i = 0; i < STM32F_ETH_TX_NDESC; ++i) {
 		/* configure transmit descriptors */
@@ -442,23 +427,8 @@ int stm32f_ethif_init(struct ifnet * __if)
 	drv->tx.head = 0;
 	drv->tx.tail = 0;
 
-#if 0
-	/* alloc a new event wait queue */
-	drv->tx.flag = thinkos_flag_alloc(); 
-	DCC_LOG1(LOG_INFO, "tx.flag=%d", drv->tx.flag);
-#endif
-
-#if 1
 	drv->tx.sem = thinkos_sem_alloc(STM32F_ETH_TX_NDESC); 
 	DCC_LOG1(LOG_INFO, "tx.sem=%d", drv->tx.sem);
-#endif
-
-#if 0
-	DCC_LOG(LOG_INFO, "__os_thread_create()");
-	thinkos_thread_create_inf((void *)stm32f_ethif_input, (void *)__if, 
-							  &stm32f_ethif_inf);
-#endif
-
 
 #ifdef THINKAPP
 	/* configure and Enable interrupt */

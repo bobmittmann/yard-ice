@@ -23,10 +23,6 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,6 +31,7 @@
 #include <sys/console.h>
 #include <sys/tty.h>
 #include <sys/null.h>
+#include <sys/delay.h>
 
 #include <thinkos.h>
 
@@ -240,6 +237,8 @@ void stdio_init(void)
 
 int main(int argc, char ** argv)
 {
+	thinkos_sysinfo_udelay_factor(&udelay_factor);
+
 	stdio_init();
 
 	stm32f_nvram_env_init();

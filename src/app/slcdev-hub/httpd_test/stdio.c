@@ -88,7 +88,7 @@ int cmd_help(FILE *f, int argc, char ** argv)
 }
 
 int cmd_netcat(FILE *f, int argc, char ** argv);
-int cmd_oscheck(FILE * f, int argc, char ** argv);
+//int cmd_oscheck(FILE * f, int argc, char ** argv);
 
 const struct shell_cmd shell_cmd_tab[] = {
 

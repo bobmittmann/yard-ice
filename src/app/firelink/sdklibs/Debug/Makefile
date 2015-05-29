@@ -23,14 +23,20 @@ SDK = ../../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
-		   $(SDK)/libcrc $(SDK)/libtcpip \
+		   $(SDK)/libcrc $(SDK)/libtcpip $(SDK)/libhttpd \
+		   $(SDK)/libtty $(SDK)/libshell
 
 INCPATH = $(SDK)/include ..
 
-CFLAGS = -g -O1 -Wall
+CDEFS = CONFIG_H
+CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
 O := .
 
 MACH = stm32f429
 THINKOS = 1
 include ../../../../mk/stm32f4xx.mk
 
+all:: libs-install
+
+clean:: 
+	$(Q)$(RM) *.a

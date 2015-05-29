@@ -25,6 +25,8 @@
 
 #include <sys/stm32f.h>
 #include <sys/console.h>
+#include <sys/delay.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <thinkos.h>
@@ -34,7 +36,7 @@
 
 void io_init(void)
 {
-    cm3_udelay_calibrate();
+	thinkos_sysinfo_udelay_factor(&udelay_factor);
 
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOJ);

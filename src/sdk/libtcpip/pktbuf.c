@@ -105,10 +105,12 @@ void * pktbuf_alloc(void)
 	return (void *)p;
 }
 
+#if 0
 static inline int __is_pktbuf(void * __p) {
 	return ((uintptr_t)(__p) - (uintptr_t)__pktbuf__.pool) < 
 		PKTBUF_POOL_SIZE * sizeof(struct pktbuf);
 }
+#endif
 
 void pktbuf_free(void * ptr)
 {

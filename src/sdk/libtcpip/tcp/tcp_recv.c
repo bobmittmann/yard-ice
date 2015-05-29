@@ -26,8 +26,6 @@
 #define __USE_SYS_TCP__
 #include <sys/tcp.h>
 
-void bull_flush(void);
-
 int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 {
 	int n;

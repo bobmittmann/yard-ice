@@ -36,7 +36,7 @@ static void ready_resume(unsigned int th, unsigned int wq, bool tmw)
 		int irq;
 		for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
 			if (thinkos_rt.irq_th[irq] == th) {
-				DCC_LOG2(LOG_INFO, "PC=%08x IRQ=%d ......", 
+				DCC_LOG2(LOG_TRACE, "PC=%08x IRQ=%d ......", 
 						 thinkos_rt.ctx[th]->pc, irq); 
 				/* disable this interrupt source */
 				cm3_irq_enable(irq);
@@ -211,6 +211,32 @@ static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw)
 }
 #endif
 
+#if THINKOS_ENABLE_JOIN
+static void canceled_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+}
+#endif
+
+#if THINKOS_ENABLE_PAUSE
+static void paused_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG2(LOG_ERROR, "invalid state: thread_id=%d PC=%08x !!!!!!",
+			 th, thinkos_rt.ctx[th]->pc); 
+}
+#endif
+
+#if THINKOS_ENABLE_FAULT
+static void fault_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+
+	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+}
+#endif
+
 static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_READY] = ready_resume,
 #if THINKOS_ENABLE_TIMESHARE
@@ -240,6 +266,15 @@ static const void * const thread_resume_lut[] = {
 #if THINKOS_ENABLE_CONSOLE
 	[THINKOS_OBJ_CONREAD] = console_rd_resume,
 	[THINKOS_OBJ_CONWRITE] = console_wr_resume,
+#endif
+#if THINKOS_ENABLE_PAUSE
+	[THINKOS_OBJ_PAUSED] = paused_resume,
+#endif
+#if THINKOS_ENABLE_JOIN
+	[THINKOS_OBJ_CANCELED] = canceled_resume,
+#endif
+#if THINKOS_ENABLE_FAULT
+	[THINKOS_OBJ_FAULT] = fault_resume
 #endif
 };
 
@@ -334,9 +369,9 @@ bool __thinkos_thread_resume(unsigned int th)
 		stat = thinkos_rt.th_stat[th];
 		wq = stat >> 1;
 		tmw = stat & 1;
-		DCC_LOG3(LOG_INFO, "thread=%d wq=%d clk=%d", th, wq, tmw);
-
 		type = thinkos_obj_type_lut[wq];
+		DCC_LOG4(LOG_TRACE, "thread=%d wq=%d clk=%d type=%d", 
+				 th, wq, tmw, type);
 		resume = thread_resume_lut[type];
 		resume(th, wq, tmw);
 	}

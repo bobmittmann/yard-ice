@@ -292,10 +292,10 @@ static int rsp_thread_isalive(struct gdb_rspd * gdb, char * pkt)
 	   'E NN' thread is dead */
 
 	if (thread_isalive(thread_id)) {
-		DCC_LOG1(LOG_TRACE, "thread %d is alive.", thread_id);
+		DCC_LOG1(LOG_INFO, "thread %d is alive.", thread_id);
 		ret = rsp_ok(gdb);
 	} else {
-		DCC_LOG1(LOG_TRACE, "thread %d is dead!", thread_id);
+		DCC_LOG1(LOG_INFO, "thread %d is dead!", thread_id);
 		ret = rsp_error(gdb, 1);
 	}
 
@@ -309,7 +309,6 @@ static int rsp_h_packet(struct gdb_rspd * gdb, char * pkt)
 
 	thread_id = decode_thread_id(&pkt[2]);
 
-
 	/* set thread for subsequent operations */
 	switch (pkt[1]) {
 	case 'c':
@@ -318,7 +317,7 @@ static int rsp_h_packet(struct gdb_rspd * gdb, char * pkt)
 		else if (thread_id == THREAD_ID_ANY)
 			DCC_LOG(LOG_TRACE, "continue any thread");
 		else
-			DCC_LOG1(LOG_TRACE, "continue thread %d", thread_id);
+			DCC_LOG1(LOG_INFO, "continue thread %d", thread_id);
 		gdb->thread_id.c = thread_id;
 		ret = rsp_ok(gdb);
 		break;
@@ -329,15 +328,10 @@ static int rsp_h_packet(struct gdb_rspd * gdb, char * pkt)
 		else if (thread_id == THREAD_ID_ANY)
 			DCC_LOG(LOG_TRACE, "get any thread");
 		else
-			DCC_LOG1(LOG_TRACE, "get thread %d", thread_id);
+			DCC_LOG1(LOG_INFO, "get thread %d", thread_id);
 		gdb->thread_id.g = thread_id;
 		ret = rsp_ok(gdb);
 		break;
-/*
-	case 'p':
-		gdb->thread_id.p = thread_id;
-		ret = rsp_ok(gdb);
-		break; */
 
 	default:
 		DCC_LOG2(LOG_WARNING, "unsupported 'H%c%d'", pkt[1], thread_id);
@@ -429,6 +423,56 @@ int rsp_console_output(struct gdb_rspd * gdb, char * pkt)
 	return cnt;
 }
 
+int rsp_monitor_write(struct gdb_rspd * gdb, char * pkt, 
+					  const char * ptr, unsigned int cnt)
+{
+	char * cp = pkt;
+
+	*cp++ = '$';
+	*cp++ = 'O';
+	cp += bin2hex(cp, ptr, cnt);
+	rsp_pkt_send(gdb, pkt, cp - pkt);
+
+	return cnt;
+}
+
+int __scan_stack(void * stack, unsigned int size);
+
+void print_stack_usage(struct gdb_rspd * gdb, char * pkt)
+{
+	struct thinkos_rt * rt = &thinkos_rt;
+	char * str;
+	char * cp;
+	int i;
+	int n;
+
+	str = pkt + RSP_BUFFER_LEN - 80;
+	cp = str;
+	n = str2str(cp, "\n Th |     Tag |    Size |   Free\n");
+	rsp_monitor_write(gdb, pkt, str, n); 
+
+	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
+		if (rt->ctx[i] != NULL) {
+			cp = str;
+			cp += uint2dec(cp, i);
+			cp += str2str(cp, " | ");
+
+			if (rt->th_inf[i] != NULL) {
+				cp += str2str(cp, rt->th_inf[i]->tag);
+				cp += str2str(cp, " | ");
+				cp += uint2dec(cp, rt->th_inf[i]->stack_size);
+				cp += str2str(cp, " | ");
+				cp += uint2dec(cp, __scan_stack(rt->th_inf[i]->stack_ptr, 
+												rt->th_inf[i]->stack_size));
+				cp += str2str(cp, "\n");
+			} else 
+				cp += str2str(cp, "  ....   \n");
+			n = cp - str;
+			rsp_monitor_write(gdb, pkt, str, n); 
+		}
+	}
+}
+
 int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 {
 	char * cp = pkt + 6;
@@ -452,6 +496,9 @@ int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 		if (dmon_app_exec(true) >= 0) {
 			gdb->active_app = true;
 		}
+	} else if (prefix(s, "os")) {
+	} else if (prefix(s, "si")) {
+		print_stack_usage(gdb, pkt);
 	}
 
 	return rsp_ok(gdb);
@@ -1418,7 +1465,7 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 					DCC_LOG(LOG_MSG, "<-- '$m ...'");
 				else {
 					pkt[pos] = '\0';
-					DCC_LOGSTR(LOG_TRACE, "<-- '$%s'", pkt);
+					DCC_LOGSTR(LOG_INFO, "<-- '$%s'", pkt);
 				}
 #endif
 				return pos - 3;

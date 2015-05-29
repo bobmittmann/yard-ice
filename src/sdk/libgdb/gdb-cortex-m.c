@@ -835,11 +835,9 @@ int target_file_read(const char * name, char * dst,
 	if (prefix(name, "target.xml")) {
 		src = (char *)target_xml;
 		len = sizeof(target_xml) - 1;
-#if (GDB_ENABLE_QXFER_MEMORY_MAP) 
 	} else if (prefix(name, "memmap.xml")) {
 		src = (char *)memory_map_xml;
 		len = sizeof(memory_map_xml) - 1;
-#endif
 	} else
 		return -1;
 
