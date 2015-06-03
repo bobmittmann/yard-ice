@@ -19,6 +19,7 @@
  * http://www.gnu.org/
  */
 
+
 _Pragma ("GCC optimize (\"Ofast\")")
 
 #define __THINKOS_SYS__
@@ -40,8 +41,10 @@ void thinkos_sem_alloc_svc(int32_t * arg)
 		wq = idx + THINKOS_SEM_BASE;
 		DCC_LOG2(LOG_INFO, "sem=%d wq=%d", idx, wq);
 		arg[0] = wq;
-	} else
+	} else {
+		DCC_LOG(LOG_WARNING, "__thinkos_bmp_alloc() failed!");
 		arg[0] = idx;
+	}	
 }
 
 void thinkos_sem_free_svc(int32_t * arg)

@@ -48,7 +48,7 @@ void cm3_udelay_calibrate(void)
 	load = systick->load;
 	ctrl = systick->ctrl;
 
-	systick->load = 0xffffff;
+	systick->load = 0x00ffffff;
 	systick->ctrl = SYSTICK_CTRL_ENABLE;
 	ticks1ms = cm3_systick_load_1ms << 8;
 

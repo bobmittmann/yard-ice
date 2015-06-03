@@ -19,36 +19,23 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-PROG = simple
 
-CFILES = simple.c
+PROG = timer-test
 
-#LIBDIRS = ../../sdk/libcm3 cmx-irq
-LIBDIRS = ../../sdk/libcm3 
+CFILES = timer-test.c 
 
-LIBS = cm3
+
+LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
+		  ../../sdk/libthinkos ../../sdk/libice-comm
+
+LIBS = stm32f cm3 util thinkos ice-comm 
 
 INCPATH = ../../sdk/include 
 
+JTAGTOOL_ADDR = 192.168.10.50
+
 CFLAGS = -g -O1
 
-export MKDIR LDDIR TOOLSDIR
-
-ifndef MACH 
-MACH = stm32f100
-endif
-
-ARCH = cm3
-CPU = cortex-m3
-MACH = stm32f100x6
-CDEFS += STM32F100 "HCLK_HZ=22579200" 
-
-OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
-CROSS_COMPILE = arm-none-eabi-
-
-LDFLAGS = -nostdlib -T simple.ld
-
-include ../../mk/config.mk
-include ../../mk/prog.mk
-
+MACH = stm32f407
+include ../../mk/stm32f4xx.mk
 

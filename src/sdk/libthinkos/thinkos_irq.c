@@ -70,8 +70,10 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	/* enable this interrupt source */
 	cm3_irq_enable(irq);
 
-	/* prepare to wait ... */
-	__thinkos_wait(self);
+	/* wait for event */
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
 #endif

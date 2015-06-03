@@ -52,4 +52,5 @@ SFILES = cmx-vec.S cmx-crt0.S\
 	cmx_irq120.S cmx_irq121.S cmx_irq122.S cmx_irq123.S cmx_irq124.S\
 	cmx_irq125.S cmx_irq126.S cmx_irq127.S 
 
+include ../../../mk/config.mk
 include ../../../mk/lib.mk

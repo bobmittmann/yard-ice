@@ -373,7 +373,7 @@ struct thinkos_rt {
 	uint32_t wq_ready; /* ready threads queue */
 
 #if THINKOS_ENABLE_TIMESHARE
-	uint32_t wq_tmshare; /* Threads waiting for time share cycle */
+	volatile uint32_t wq_tmshare; /* Threads waiting for time share cycle */
 #endif
 
 #if THINKOS_ENABLE_CLOCK
@@ -719,29 +719,6 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 }
 
 
-#if THINKOS_ENABLE_TIMESHARE
-static void inline __attribute__((always_inline)) __thinkos_tmshare(void) {
-	/* if the ready queue is empty, collect
-	 the threads from the CPU wait queue */
-#if ((THINKOS_THREADS_MAX) < 32) 
-	if (thinkos_rt.wq_ready == (1 << (THINKOS_THREADS_MAX))) {
-		/* No more threads into the ready queue,
-		 move the timeshare queue to the ready queue.
-		 Keep the IDLE bit set */
-		thinkos_rt.wq_ready |= thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#else
-	if (thinkos_rt.wq_ready == 0) {
-		/* no more threads into the ready queue,
-		 move the timeshare queue to the ready queue */
-		thinkos_rt.wq_ready = thinkos_rt.wq_tmshare;
-		thinkos_rt.wq_tmshare = 0;
-	} 
-#endif
-}
-#endif
-
 static void inline __attribute__((always_inline)) __thinkos_ready_clr(void) {
 	thinkos_rt.wq_ready = 0;
 #if THINKOS_ENABLE_TIMESHARE
@@ -753,28 +730,36 @@ static void inline __attribute__((always_inline)) __thinkos_ready_clr(void) {
 #endif
 }
 
-static void inline __attribute__((always_inline)) __thinkos_wait(int thread) {
-	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thread, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-	cm3_cpsid_i();
-	/* if the ready queue is empty, collect
-	 the threads from the CPU wait queue */
-	__thinkos_tmshare();
-	cm3_cpsie_i();
-#endif
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
-}
-
 static void inline __attribute__((always_inline)) __thinkos_suspend(int thread) {
+#if (!THINKOS_ENABLE_TIMESHARE)
 	/* remove from the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, thread, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-	/* if the ready queue is empty, collect
-	 the threads from the CPU wait queue */
-	__thinkos_tmshare();
+#else
+	uint32_t ready;
+	uint32_t tmshare;
+
+	do {
+		ready = __ldrexw(&thinkos_rt.wq_ready);
+		tmshare = thinkos_rt.wq_tmshare;
+		/* remove from the ready wait queue */
+		ready &= ~(1 << thread);
+		/* if the ready queue is empty, collect
+		   the threads from the CPU wait queue */
+#if ((THINKOS_THREADS_MAX) < 32) 
+		if (ready == (1 << (THINKOS_THREADS_MAX))) {
+#else
+		if (ready == 0) {
 #endif
+				/* no more threads into the ready queue,
+				   move the timeshare queue to the ready queue */
+			ready |= tmshare;
+			tmshare = 0;
+		} 
+	} while (__strexw(&thinkos_rt.wq_ready, ready));
+
+	thinkos_rt.wq_tmshare = tmshare;
+
+#endif /* (!THINKOS_ENABLE_TIMESHARE) */
 }
 
 static int inline __attribute__((always_inline)) __wq_idx(uint32_t * ptr) {

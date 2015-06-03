@@ -138,6 +138,7 @@ void thinkos_sysinfo_svc(int32_t * arg);
 
 void thinkos_nosys(int32_t * arg)
 {
+	DCC_LOG(LOG_ERROR, "!!!");
 	arg[0] = THINKOS_ENOSYS;
 }
 

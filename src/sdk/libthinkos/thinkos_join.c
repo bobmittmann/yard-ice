@@ -59,7 +59,9 @@ void thinkos_join_svc(int32_t * arg)
 	DCC_LOG2(LOG_TRACE, "<%d> waiting to join at %d.", self, wq);
 
 	/* wait for event */
-	__thinkos_wait(self);
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 
 	/* set the return to ERROR as a default value. The
 	   exit function of the joining thread will set this to the 

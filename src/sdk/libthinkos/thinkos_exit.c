@@ -59,13 +59,7 @@ void __thinkos_thread_abort(int thread_id)
 	/* clear context. */
 	thinkos_rt.ctx[thread_id] = NULL;
 
-	/* remove from the ready wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 0);  
-#if THINKOS_ENABLE_TIMESHARE
-	/* if the ready queue is empty, collect
-	 the threads from the CPU wait queue */
-	__thinkos_tmshare();
-#endif
+	__thinkos_suspend(thread_id);
 
 	if (thread_id == thinkos_rt.active) {
 		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
@@ -88,7 +82,7 @@ void __attribute__((noreturn)) __thinkos_thread_exit(int code)
 
 #if THINKOS_ENABLE_TIMESHARE
 	/* possibly remove from the time share wait queue */
-	__bit_mem_wr(&thinkos_rt.wq_tmshare, self, 0);  
+	__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, self, 0);  
 #endif
 
 #if THINKOS_ENABLE_CANCEL

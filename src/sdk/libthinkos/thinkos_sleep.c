@@ -46,7 +46,9 @@ void thinkos_sleep_svc(int32_t * arg)
 	DCC_LOG2(LOG_MSG, "<%d> waiting %d milliseconds...", self, ms);
 
 	/* wait for event */
-	__thinkos_wait(self);
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 #else
 	DCC_LOG1(LOG_MSG, "busy wait: %d milliseconds...", ms);
 	udelay(1000 * ms);
@@ -69,7 +71,9 @@ void thinkos_alarm_svc(int32_t * arg)
 	thinkos_rt.th_stat[self] = (THINKOS_WQ_CLOCK << 1) + 1;
 #endif
 	/* wait for event */
-	__thinkos_wait(self);
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 #endif
 

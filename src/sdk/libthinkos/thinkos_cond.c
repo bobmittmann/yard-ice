@@ -108,10 +108,7 @@ void thinkos_cond_wait_svc(int32_t * arg)
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
-#if 0
-	/* assign the mutex to be locked on wakeup */
-	thinkos_rt.cond_mutex[cond] = mwq;
-#endif
+
 	/* insert into the cond wait queue */
 	__thinkos_wq_insert(cwq, self);
 	DCC_LOG3(LOG_INFO, "<%d> mutex %d unlocked, waiting on cond %d...", 
@@ -134,45 +131,10 @@ void thinkos_cond_wait_svc(int32_t * arg)
 	arg[0] = 0;
 
 	/* wait for event */
-	__thinkos_wait(self);
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
-
-#if 0
-#if THINKOS_ENABLE_TIMED_CALLS
-void thinkos_cond_hook(void)
-{
-	int32_t * arg = (int32_t *)cm3_sp_get();
-	unsigned int ret = arg[0];
-	unsigned int mwq = arg[1];
-	unsigned int mutex;
-	uint32_t lr = cm3_lr_get();
-	int self = thinkos_rt.active;
-	int th = self;
-
-	mutex = mwq - THINKOS_MUTEX_BASE;
-
-	(void)lr;
-	(void)ret;
-	(void)mwq;
-	(void)mutex;
-
-	DCC_LOG3(LOG_TRACE, "<%d>  mutex=%d lr=0x%08x...", th, mwq, lr);
-
-	for(;;);
-
-	if (thinkos_rt.lock[mutex] == -1) {
-		thinkos_rt.lock[mutex] = th;
-		DCC_LOG2(LOG_TRACE, "<%d> mutex %d locked", th, mwq);
-		return;
-	}
-
-	/* insert into the mutex wait queue */
-	__thinkos_wq_insert(mwq, th);
-	DCC_LOG2(LOG_TRACE , "<%d> waiting on mutex %d...", th, mwq);
-
-}
-#endif
-#endif
 
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -224,10 +186,6 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 		return;
 	}
 
-#if 0
-	/* assign the mutex to be locked on wakeup */
-	thinkos_rt.cond_mutex[cond] = mwq;
-#endif
 	/* insert into the cond wait queue */
 	__thinkos_tmdwq_insert(cwq, self, ms);
 	DCC_LOG3(LOG_INFO, "<%d> mutex %d unlocked, waiting on cond %d...", 
@@ -252,7 +210,9 @@ void thinkos_cond_timedwait_svc(int32_t * arg)
 	arg[0] = THINKOS_ETIMEDOUT;
 
 	/* wait for event */
-	__thinkos_wait(self);
+	__thinkos_suspend(self);
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 #endif
 
@@ -278,10 +238,6 @@ void thinkos_cond_signal_svc(int32_t * arg)
 #endif
 #endif
 
-	/* XXX: NEW experimental implementation:
-	   the cond_wait() and cond_timedwait() user
-	   calls invoque the mutex_lock() before returning */
-
 	/* insert all remaining threads into mutex wait queue */
 	if ((th = __thinkos_wq_head(cwq)) != THINKOS_THREAD_NULL) {
 		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
@@ -291,44 +247,6 @@ void thinkos_cond_signal_svc(int32_t * arg)
 		__thinkos_defer_sched();
 	}
 
-#if 0
-	unsigned int mwq;
-	unsigned int mutex;
-	if ((th = __thinkos_wq_head(cwq)) == THINKOS_THREAD_NULL) {
-		/* no threads waiting on the conditional variable. */ 
-	} else {
-		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
-
-		/* remove from the conditional variable wait queue */
-		__thinkos_wq_remove(cwq, th);
-
-		/* get the mutex to be locked */
-		mwq = thinkos_rt.cond_mutex[cond];
-		mutex = mwq - THINKOS_MUTEX_BASE;
-
-		/* check whether the mutex is locked or not */
-		if (thinkos_rt.lock[mutex] == -1) {
-			/* no threads waiting on the lock... */
-			/* set the mutex ownership to the new thread */
-			thinkos_rt.lock[mutex] = th;
-			DCC_LOG2(LOG_INFO, "<%d> mutex %d locked.", th, mwq);
-
-#if THINKOS_ENABLE_THREAD_STAT
-			/* update status */
-			thinkos_rt.th_stat[th] = 0;
-#endif
-			/* insert the thread into ready queue */
-			__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
-
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else { 
-			/* insert into the mutex wait queue */
-			__thinkos_wq_insert(mwq, th);
-			DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", th, mwq);
-		}
-	}
-#endif
 	arg[0] = 0;
 }
 
@@ -352,9 +270,6 @@ void thinkos_cond_broadcast_svc(int32_t * arg)
 	}
 #endif
 #endif
-	/* XXX: NEW experimental implementation:
-	   the cond_wait() and cond_timedwait() user
-	   calls invoque the mutex_lock() before returning */
 
 	/* insert all remaining threads into mutex wait queue */
 	if ((th = __thinkos_wq_head(cwq)) != THINKOS_THREAD_NULL) {
@@ -370,55 +285,6 @@ void thinkos_cond_broadcast_svc(int32_t * arg)
 		__thinkos_defer_sched();
 	}
 
-#if 0
-	unsigned int mwq;
-	unsigned int mutex;
-
-		/* get the mutex associated with the conditional variable */
-	if ((th = __thinkos_wq_head(cwq)) == THINKOS_THREAD_NULL) {
-		/* no threads waiting on the conditional variable. */ 
-	} else {
-		DCC_LOG2(LOG_INFO, "<%d> wakeup from cond %d.", th, cwq);
-
-		/* remove from the conditional variable wait queue */
-		__thinkos_wq_remove(cwq, th);
-
-		/* get the mutex associated with the conditional variable */
-		mwq = thinkos_rt.cond_mutex[cond];
-		mutex = mwq - THINKOS_MUTEX_BASE;
-
-		/* check whether the mutex is locked or not */
-		if (thinkos_rt.lock[mutex] == -1) {
-			/* no threads waiting on the lock... */
-			/* set the mutex ownership to the new thread */
-			thinkos_rt.lock[mutex] = th;
-
-			DCC_LOG2(LOG_INFO, "<%d> mutex %d locked.", th, mwq);
-#if THINKOS_ENABLE_THREAD_STAT
-			/* update status */
-			thinkos_rt.th_stat[th] = 0;
-#endif
-			/* insert the thread into ready queue */
-			__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
-
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else { 
-			/* insert into the mutex wait queue */
-			__thinkos_wq_insert(mwq, th);
-			DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", th, mwq);
-		}
-
-		/* insert all remaining threads into mutex wait queue */
-		while ((th = __thinkos_wq_head(cwq)) != THINKOS_THREAD_NULL) {
-			/* remove from the conditional variable wait queue */
-			__thinkos_wq_remove(cwq, th);
-			/* insert into mutex wait queue */
-			__thinkos_wq_insert(mwq, th);
-			DCC_LOG2(LOG_INFO, "<%d> waiting on mutex %d...", th, mwq);
-		}
-	}
-#endif
 	arg[0] = 0;
 }
 

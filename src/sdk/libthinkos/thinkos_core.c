@@ -304,13 +304,10 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	if (thinkos_rt.sched_val[idx] < 0) {
 		thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
 
-		cm3_cpsid_i();
-
 		/* insert into the CPU wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
+		__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, idx, 1);  
 		__thinkos_suspend(idx);
 
-		cm3_cpsie_i();
 		sched++;
 	}
 

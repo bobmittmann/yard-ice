@@ -149,11 +149,13 @@ void __xdump(struct thinkos_except * xcpt)
 				 (icsr & SCB_ICSR_VECTPENDING) >> 12,
 				 (icsr & SCB_ICSR_VECTACTIVE));
 
+#if (THINKOS_ENABLE_MONITOR)
 	if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {
 		DCC_LOG2(LOG_ERROR, "DMON stack free: %d/%6d", 
 				 __scan_stack(thinkos_dmon_stack, thinkos_dmon_stack_size),
 				 thinkos_dmon_stack_size); 
 	}
+#endif
 
 #endif
 }

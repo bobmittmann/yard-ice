@@ -308,7 +308,7 @@ bool __thinkos_thread_pause(unsigned int th)
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 #if THINKOS_ENABLE_TIMESHARE
 		/* possibly remove from the time share wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_tmshare, th, 0);
+		__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, th, 0);
 #endif
 	}
 #else
