@@ -23,13 +23,14 @@ PROG = rtos_basic
 
 CFILES = rtos_basic.c ../common/stdio.c
 
-LIBDIRS = ../../../libstm32f ../../../libcm3 ../../../libutil \
-		  ../../../libthinkos ../../../libc ../../../libice-comm
+SDK = ../../../sdk
+
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil\
+		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm
 
 LIBS = stm32f cm3 util thinkos c ice-comm
 
-INCPATH = ../../../include
-
+INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 
 
@@ -37,7 +38,7 @@ JTAGTOOL_ADDR = 192.168.0.80
 
 #MACH = stm32f405
 MACH = stm32f407
-include ../../../../mk/stm32f4xx.mk
-#include ../../../../mk/stm32f207.mk
+include ../../../mk/stm32f4xx.mk
+#include ../../../mk/stm32f207.mk
 
 

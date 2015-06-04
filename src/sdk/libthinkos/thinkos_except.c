@@ -140,6 +140,8 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 
 	__idump(__func__, cm3_ipsr_get());
 
+	__tdump();
+
 	/* suspend all threads */
 	__thinkos_pause_all();
 
@@ -168,15 +170,19 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
 	thinkos_idle.ctx.xpsr = 0x01000000;
 
+#if ((THINKOS_THREADS_MAX) < 32) 
+	if (thinkos_rt.wq_ready != (1 << (THINKOS_THREADS_MAX))) {
+#else
 	if (thinkos_rt.wq_ready != 0) {
-		DCC_LOG1(LOG_ERROR, "wq_ready=%08x, ready queue not empty !!!!!!!", 
+#endif
+		DCC_LOG1(LOG_TRACE, "wq_ready=%08x, ready queue not empty!", 
 				 thinkos_rt.wq_ready);
 		thinkos_rt.wq_ready = 0;
 	}
 
 #if THINKOS_ENABLE_TIMESHARE
 	if (thinkos_rt.wq_tmshare != 0) {
-		DCC_LOG1(LOG_ERROR, "wq_tmshare=%08x, timeshare queue not empty !!!!!", 
+		DCC_LOG1(LOG_TRACE, "wq_tmshare=%08x, timeshare queue not empty!", 
 				 thinkos_rt.wq_tmshare);
 		thinkos_rt.wq_tmshare = 0;
 	}
@@ -185,7 +191,6 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 	thinkos_exception_dsr(xcpt);
 
 	__xcpt_systick_int_enable();
-	__tdump();
 
 	cm3_cpsie_i();
 	

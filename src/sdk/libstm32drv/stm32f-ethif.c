@@ -514,7 +514,7 @@ void stm32f_eth_isr(void)
 	dmasr = eth->dmasr;
 //	show_dma_status(dmasr);
 
-	DCC_LOG1(LOG_TRACE, "DMASR=0x%08x", dmasr);
+	DCC_LOG1(LOG_INFO, "DMASR=0x%08x", dmasr);
 
 	if (dmasr & ETH_RS) {
 		DCC_LOG(LOG_INFO, "DMA RS");

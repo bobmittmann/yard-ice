@@ -29,6 +29,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/serial.h>
 #include <sys/delay.h>
+#include <sys/dcclog.h>
 
 #include <thinkos.h>
 
@@ -36,77 +37,6 @@ struct my_arg {
 	volatile uint32_t cnt;
 	volatile bool enabled;
 };
-
-int busy_task(void * arg)
-{
-	struct my_arg * dev= (struct my_arg *)arg;
-
-	dev->cnt = 0;
-
-	while (dev->enabled) {
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-		dev->cnt++;
-	}
-
-	return dev->cnt;
-}
 
 int yield_task(void * arg)
 {
@@ -261,6 +191,77 @@ void sched_speed_test(void)
 	printf("\n");
 };
 
+int busy_task(void * arg)
+{
+	struct my_arg * dev= (struct my_arg *)arg;
+
+	dev->cnt = 0;
+
+	while (dev->enabled) {
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+		dev->cnt++;
+	}
+
+	return dev->cnt;
+}
+
 void busy_test(void)
 {
 	int th[4];
@@ -345,6 +346,9 @@ void stdio_init(void);
 
 int main(int argc, char ** argv)
 {
+	DCC_LOG_INIT();
+	DCC_LOG_CONNECT();
+
 	cm3_udelay_calibrate();
 
 	stdio_init();

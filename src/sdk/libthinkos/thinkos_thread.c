@@ -128,7 +128,9 @@ void thinkos_thread_create_svc(int32_t * arg)
 
 	DCC_LOG2(LOG_INFO, "thread_id=%d sp=%08x", thread_id, sp);
 
+#if THINKOS_ENABLE_PAUSE
 	if (!init->opt.paused)
+#endif
 		__thinkos_thread_resume(thread_id);
 
 	arg[0] = thread_id;

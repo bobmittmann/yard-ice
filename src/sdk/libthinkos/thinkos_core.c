@@ -286,29 +286,26 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 			/* insert into the ready wait queue */
 			__bit_mem_wr(&thinkos_rt.wq_ready, j, 1);  
 			sched++;
-//			printf("^%d", j);
-		} else {
-//			printf("t");
 		}
 	}
-
-//	printf(".");
-
 #endif /* THINKOS_ENABLE_CLOCK */
 
 #if THINKOS_ENABLE_TIMESHARE
 	idx = thinkos_rt.active;
 
-	/* write the schedule bit into the ready bitmap */
+	/*  */
 	thinkos_rt.sched_val[idx] -= thinkos_rt.sched_pri[idx];
 	if (thinkos_rt.sched_val[idx] < 0) {
 		thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
-
-		/* insert into the CPU wait queue */
-		__bit_mem_wr((uint32_t *)&thinkos_rt.wq_tmshare, idx, 1);  
-		__thinkos_suspend(idx);
-
-		sched++;
+		
+		if (__bit_mem_rd(&thinkos_rt.wq_ready, idx) == 0) {
+			DCC_LOG1(LOG_WARNING, "thread %d is active but not ready!!!", idx);
+		} else {
+			/* insert into the CPU wait queue */
+			__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
+			__thinkos_suspend(idx);
+			sched++;
+		}
 	}
 
 #endif /* THINKOS_ENABLE_TIMESHARE */

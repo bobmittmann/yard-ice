@@ -67,6 +67,10 @@
 
 #define THINKOS_ENABLE_EXCEPTIONS  1
 
+#define THINKOS_ENABLE_BUSFAULT 1
+
+#define THINKOS_ENABLE_USAGEFAULT 1
+
 #define THINKOS_ENABLE_PROFILING   0
 
 /* -------------------------------------------------------------------------

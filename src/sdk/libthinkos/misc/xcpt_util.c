@@ -24,6 +24,7 @@ _Pragma ("GCC optimize (\"O2\")")
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
+#include <thinkos.h>
 
 const char __xcpt_name_lut[16][12] = {
 	"Thread",
@@ -280,12 +281,31 @@ void __tdump(void)
 
 	DCC_LOG1(LOG_TRACE, "Active=%d", thinkos_rt.active);
 	for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
-		if (thinkos_rt.ctx[i] != 0)
-			DCC_LOG2(LOG_TRACE, "Thread %d --> %08x", i, thinkos_rt.ctx[i]);
+		if (thinkos_rt.ctx[i] == NULL)
+			continue;
+#if THINKOS_ENABLE_THREAD_INFO
+		if (thinkos_rt.th_inf[i] != NULL) {
+			DCC_LOG7(LOG_TRACE, "%7s (%2d) SP=%08x PC=%08x LR=%08x %d/%d", 
+					 thinkos_rt.th_inf[i]->tag,
+					 i, 
+					 thinkos_rt.ctx[i], 
+					 thinkos_rt.ctx[i]->pc, 
+					 thinkos_rt.ctx[i]->lr,
+					 __scan_stack(thinkos_rt.th_inf[i]->stack_ptr, 
+								  thinkos_rt.th_inf[i]->stack_size),
+					 thinkos_rt.th_inf[i]->stack_size);
+		} else
+#endif
+		DCC_LOG4(LOG_TRACE, "....... (%2d) SP=%08x PC=%08x LR=%08x", 
+				 i, thinkos_rt.ctx[i], 
+				 thinkos_rt.ctx[i]->pc, 
+				 thinkos_rt.ctx[i]->lr);
 	}
-	DCC_LOG2(LOG_TRACE, "IDLE (%d) --> %08x", i, thinkos_rt.idle_ctx);
+	DCC_LOG2(LOG_TRACE, "<IDLE>  (%2d) SP=%08x", i, 
+			 thinkos_rt.idle_ctx);
 #if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
-	DCC_LOG2(LOG_TRACE, "VOID (%d) --> %08x", i + 1, thinkos_rt.idle_ctx);
+	DCC_LOG2(LOG_TRACE, "<VOID>  (%2d) SP=%08x", i + 1, 
+			 thinkos_rt.idle_ctx);
 #endif
 	DCC_LOG1(LOG_TRACE, "wq_ready=%08x", thinkos_rt.wq_ready);
 #if THINKOS_ENABLE_TIMESHARE

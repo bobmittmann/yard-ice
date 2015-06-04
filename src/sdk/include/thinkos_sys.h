@@ -373,7 +373,7 @@ struct thinkos_rt {
 	uint32_t wq_ready; /* ready threads queue */
 
 #if THINKOS_ENABLE_TIMESHARE
-	volatile uint32_t wq_tmshare; /* Threads waiting for time share cycle */
+	uint32_t wq_tmshare; /* Threads waiting for time share cycle */
 #endif
 
 #if THINKOS_ENABLE_CLOCK

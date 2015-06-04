@@ -384,9 +384,7 @@ bool __thinkos_thread_resume(unsigned int th)
 }
 
 
-
 #if THINKOS_ENABLE_PAUSE
-
 
 void thinkos_resume_svc(int32_t * arg)
 {
