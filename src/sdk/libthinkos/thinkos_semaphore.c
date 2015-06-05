@@ -231,11 +231,28 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 }
 #endif
 
+void __thinkos_sem_post(uint32_t wq)
+{
+	int th;
+
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		DCC_LOG1(LOG_TRACE, "wakeup sem=%d", wq);
+		/* wakeup from the sem wait queue */
+		__thinkos_wakeup(wq, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	} else {
+		DCC_LOG1(LOG_INFO, "increment sem=%d", wq);
+		/* no threads waiting on the semaphore, increment. */ 
+		thinkos_rt.sem_val[wq - THINKOS_SEM_BASE]++;
+	}
+}
+
 void thinkos_sem_post_svc(int32_t * arg)
 {	
 	unsigned int wq = arg[0];
 	unsigned int sem = wq - THINKOS_SEM_BASE;
-	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
@@ -255,22 +272,7 @@ void thinkos_sem_post_svc(int32_t * arg)
 	DCC_LOG1(LOG_INFO, "sem %d +++++++++++++ ", wq);
 
 	arg[0] = 0;
-
-	cm3_cpsid_i();
-	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
-		/* no threads waiting on the semaphore, increment. */ 
-		thinkos_rt.sem_val[sem]++;
-		cm3_cpsie_i();
-		return;
-	} 
-	/* wakeup from the sem wait queue */
-	__thinkos_wakeup(wq, th);
-	cm3_cpsie_i();
-
-	DCC_LOG2(LOG_INFO, "<%d> wakeup from sem %d ", th, wq);
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
-
+	__thinkos_sem_post(wq);
 }
 
 #endif /* THINKOS_SEM_MAX > 0 */

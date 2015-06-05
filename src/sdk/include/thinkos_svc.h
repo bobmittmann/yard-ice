@@ -53,9 +53,12 @@
 #define THINKOS_FLAG_TAKE       18
 #define THINKOS_FLAG_TIMEDTAKE  19
 #define THINKOS_FLAG_GIVE       20
-#define THINKOS_FLAG_WAIT       21
-#define THINKOS_FLAG_TIMEDWAIT  22
-#define THINKOS_FLAG_RELEASE    23
+
+#define THINKOS_GATE_WAIT       21
+#define THINKOS_GATE_TIMEDWAIT  22
+#define THINKOS_GATE_EXIT       23
+#define THINKOS_GATE_OPEN       24
+
 #define THINKOS_FLAG_VAL        24
 #define THINKOS_FLAG_CLR        25
 #define THINKOS_FLAG_SET        26

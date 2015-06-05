@@ -243,139 +243,6 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	__sched_exit(new_ctx);
 }
 
-#if (THINKOS_SEMAPHORE_MAX  > 0)
-void __thinkos_sem_post(uint32_t wq)
-{
-	int th;
-
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		DCC_LOG1(LOG_TRACE, "wakeup sem=%d", wq);
-		/* wakeup from the sem wait queue */
-		__thinkos_wakeup(wq, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	} else {
-		DCC_LOG1(LOG_INFO, "increment sem=%d", wq);
-		/* no threads waiting on the semaphore, increment. */ 
-		thinkos_rt.sem_val[wq - THINKOS_SEM_BASE]++;
-	}
-}
-#endif
-
-#if (THINKOS_EVENT_MAX > 0)
-void __thinkos_ev_raise(uint32_t wq, int ev)
-{
-	unsigned int no = wq - THINKOS_EVENT_BASE;
-	int th;
-
-	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
-		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
-		/* wakeup from the event wait queue, set the return of
-		   the thread to event */
-		DCC_LOG2(LOG_INFO, "wakeup ev=%d.%d", wq, ev);
-		__thinkos_wakeup_return(wq, th, ev);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	} else {
-		DCC_LOG2(LOG_INFO, "pending ev=%d.%d", wq, ev);
-		/* event is masked or no thread is waiting on the 
-		   event set, mark the event as pending */
-		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
-	}
-}
-#endif
-
-#if (THINKOS_FLAG_MAX > 0)
-void __thinkos_flag_give(uint32_t wq)
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-
-	/* flag_give(): wakeup a single thread waiting on the flag 
-	   OR set the flag */
-	/* get the flag state */
-	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(wq, th);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else {
-			/* set the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
-		}
-	}
-}
-#endif
-
-#if (THINKOS_FLAG_MAX > 0)
-#if THINKOS_ENABLE_FLAG_LOCK
-void __thinkos_flag_signal(uint32_t wq)
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-	/* flag_signal() wakeup a single thread waiting on the flag 
-	   OR set the flag */
-	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
-	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag)) {
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* lock the flag */
-			__bit_mem_wr(thinkos_rt.flag.lock, flag, 1);
-			__thinkos_wakeup(wq, th);
-
-			/* clear the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} 
-	}
-}
-#endif /* THINKOS_ENABLE_FLAG_LOCK */
-#endif
-
-#if (THINKOS_FLAG_MAX > 0)
-void __thinkos_flag_clr(uint32_t wq)
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-
-	/* clear the flag signal bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
-}
-#endif
-
-#if (THINKOS_FLAG_MAX > 0)
-void __thinkos_flag_set(uint32_t wq)
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-	/* set the flag and wakeup all threads waiting on the flag */
-
-	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
-
-	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(wq, th);
-		/* get the remaining threads from the queue */
-		while ((th = __thinkos_wq_head(wq)) != 
-			   THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(wq, th);
-		}
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
-}
-#endif
-
 
 static void thinkos_signal_queue(void)
 {
@@ -409,10 +276,14 @@ static void thinkos_signal_queue(void)
 #endif /* THINKOS_ENABLE_FLAG_LOCK */
 				break;
 			case 2: 
+#if THINKOS_ENABLE_FLAG_WATCH
 				__thinkos_flag_clr(wq);
+#endif
 				break;
 			case 3: 
+#if THINKOS_ENABLE_FLAG_WATCH
 				__thinkos_flag_set(wq);
+#endif
 				break;
 			}
 #endif /* (THINKOS_FLAG_MAX > 0) */

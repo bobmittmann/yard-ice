@@ -480,6 +480,14 @@ struct thinkos_rt {
 	} flag;
 #endif /* THINKOS_FLAG_MAX > 0 */
 
+#if THINKOS_GATE_MAX > 0
+	struct {
+		uint32_t sig[(THINKOS_GATE_MAX + 31) / 32]; /* flag signal */
+		uint32_t lock[(THINKOS_GATE_MAX + 31) / 32]; /* flag lock */
+	} gate;
+#endif /* THINKOS_GATE_MAX > 0 */
+
+
 #if THINKOS_MUTEX_MAX > 0
 	int8_t lock[THINKOS_MUTEX_MAX];
 #endif /* THINKOS_MUTEX_MAX > 0 */
@@ -516,6 +524,10 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_FLAG_ALLOC
 	uint32_t flag_alloc[(THINKOS_FLAG_MAX + 31) / 32];
+#endif
+
+#if THINKOS_ENABLE_GATE_ALLOC
+	uint32_t gate_alloc[(THINKOS_GATE_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
@@ -560,6 +572,10 @@ struct thinkos_rt {
 							/ sizeof(uint32_t))
 
 #define THINKOS_FLAG_BASE ((offsetof(struct thinkos_rt, wq_flag) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_GATE_BASE ((offsetof(struct thinkos_rt, wq_gate) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 
@@ -949,6 +965,16 @@ void __xcpt_irq_disable_all(void);
 void __xcpt_systick_int_disable(void);
 
 void __xcpt_systick_int_enable(void);
+
+void __thinkos_flag_give(uint32_t wq);
+void __thinkos_flag_clr(uint32_t wq);
+void __thinkos_flag_set(uint32_t wq);
+
+void __thinkos_sem_post(uint32_t wq);
+
+void __thinkos_ev_raise(uint32_t wq, int ev);
+
+void __thinkos_gate_open(uint32_t wq);
 
 #ifdef __cplusplus
 }
