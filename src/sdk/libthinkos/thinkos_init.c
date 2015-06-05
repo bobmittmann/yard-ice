@@ -165,12 +165,12 @@ void __thinkos_reset(void)
 #endif
 
 	/* initialize the SysTick module */
-	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
-	systick->val = 0;
+	systick->rvr = cm3_systick_load_1ms; /* 1ms tick period */
+	systick->cvr = 0;
 #if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
-	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
+	systick->csr = SYSTICK_CSR_ENABLE | SYSTICK_CSR_TICKINT;
 #else
-	systick->ctrl = SYSTICK_CTRL_ENABLE;
+	systick->csr = SYSTICK_CSR_ENABLE;
 #endif
 
 	/* Set the initial thread as an invalid thread,

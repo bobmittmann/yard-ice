@@ -32,10 +32,10 @@
  ****************************************************************************/
 
 /* SysTick Control / Status Register */
-#define SYSTICK_CTRL_COUNTFLAG  (0x01 << 16)
-#define SYSTICK_CTRL_CLKSOURCE  (0x01 << 2)
-#define SYSTICK_CTRL_TICKINT    (0x01 << 1)
-#define SYSTICK_CTRL_ENABLE     (0x01 << 0)
+#define SYSTICK_CSR_COUNTFLAG  (0x01 << 16)
+#define SYSTICK_CSR_CLKSOURCE  (0x01 << 2)
+#define SYSTICK_CSR_TICKINT    (0x01 << 1)
+#define SYSTICK_CSR_ENABLE     (0x01 << 0)
 
 /* SysTick Reload Register */
 #define SYSTICK_LOAD_RELOAD (0x00ffffff)
@@ -599,9 +599,9 @@ struct cm3_nvic {
   CM3 SysTick 
  ****************************************************************************/
 struct cm3_systick {
-	volatile uint32_t ctrl; /* Control and Status Register */
-	volatile uint32_t load; /* Reload Value Register */
-	volatile uint32_t val; /* Current Value Register */
+	volatile uint32_t csr; /* Control and Status Register */
+	volatile uint32_t rvr; /* Reload Value Register */
+	volatile uint32_t cvr; /* Current Value Register */
 	volatile uint32_t calib; /* Calibration Register */
 };
 

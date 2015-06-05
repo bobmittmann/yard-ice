@@ -203,6 +203,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	old_ctx = __sched_entry();
 	/* get the active (current) thread */	
 	old_thread_id = thinkos_rt.active;
+
 	/* get a thread from the ready bitmap */
 	new_thread_id = __clz(__rbit(thinkos_rt.wq_ready));
 	/* update the active thread */
@@ -242,55 +243,217 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	__sched_exit(new_ctx);
 }
 
-#if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
-
-void __attribute__((aligned(16))) cm3_systick_isr(void)
+#if (THINKOS_SEMAPHORE_MAX  > 0)
+void __thinkos_sem_post(uint32_t wq)
 {
-	int sched = 0;
-#if THINKOS_ENABLE_TIMESHARE
-	int32_t idx;
-#endif
-#if THINKOS_ENABLE_CLOCK
-	uint32_t ticks;
-	uint32_t wq;
-	int j;
+	int th;
 
-	ticks = thinkos_rt.ticks; 
-	ticks++;
-	thinkos_rt.ticks = ticks; 
-
-#if THINKOS_ENABLE_MONITOR
-	if ((int32_t)(thinkos_rt.dmclock - ticks) == 0) {
-		dmon_signal(DMON_ALARM);
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		DCC_LOG1(LOG_TRACE, "wakeup sem=%d", wq);
+		/* wakeup from the sem wait queue */
+		__thinkos_wakeup(wq, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	} else {
+		DCC_LOG1(LOG_INFO, "increment sem=%d", wq);
+		/* no threads waiting on the semaphore, increment. */ 
+		thinkos_rt.sem_val[wq - THINKOS_SEM_BASE]++;
 	}
+}
 #endif
 
-	wq = __rbit(thinkos_rt.wq_clock);
-	while ((j = __clz(wq)) < 32) {
-		wq &= ~(0x80000000 >> j);  
-		if ((int32_t)(thinkos_rt.clock[j] - ticks) <= 0) {
-#if THINKOS_ENABLE_THREAD_STAT
-			int stat;
-			/* update the thread status */
-			stat = thinkos_rt.th_stat[j];
-			thinkos_rt.th_stat[j] = 0;
-			/* remove from other wait queue, if any */
-			__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], j, 0);  
+#if (THINKOS_EVENT_MAX > 0)
+void __thinkos_ev_raise(uint32_t wq, int ev)
+{
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+	int th;
+
+	if ((__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) &&  
+		((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL)) {
+		/* wakeup from the event wait queue, set the return of
+		   the thread to event */
+		DCC_LOG2(LOG_INFO, "wakeup ev=%d.%d", wq, ev);
+		__thinkos_wakeup_return(wq, th, ev);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	} else {
+		DCC_LOG2(LOG_INFO, "pending ev=%d.%d", wq, ev);
+		/* event is masked or no thread is waiting on the 
+		   event set, mark the event as pending */
+		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
+	}
+}
 #endif
-			/* remove from the time wait queue */
-			__bit_mem_wr(&thinkos_rt.wq_clock, j, 0);  
-			DCC_LOG1(LOG_MSG, "Wakeup %d...", j);
-#if THINKOS_ENABLE_SCHED_DEBUG
-			thinkos_rt.sched_trace_req = 1;
-#endif
-			/* insert into the ready wait queue */
-			__bit_mem_wr(&thinkos_rt.wq_ready, j, 1);  
-			sched++;
+
+#if (THINKOS_FLAG_MAX > 0)
+void __thinkos_flag_give(uint32_t wq)
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	int th;
+
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+
+	/* flag_give(): wakeup a single thread waiting on the flag 
+	   OR set the flag */
+	/* get the flag state */
+	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} else {
+			/* set the flag bit */
+			__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
 		}
 	}
+}
+#endif
+
+#if (THINKOS_FLAG_MAX > 0)
+#if THINKOS_ENABLE_FLAG_LOCK
+void __thinkos_flag_signal(uint32_t wq)
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	int th;
+
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+	/* flag_signal() wakeup a single thread waiting on the flag 
+	   OR set the flag */
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag)) {
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			/* lock the flag */
+			__bit_mem_wr(thinkos_rt.flag.lock, flag, 1);
+			__thinkos_wakeup(wq, th);
+
+			/* clear the flag bit */
+			__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} 
+	}
+}
+#endif /* THINKOS_ENABLE_FLAG_LOCK */
+#endif
+
+#if (THINKOS_FLAG_MAX > 0)
+void __thinkos_flag_clr(uint32_t wq)
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+
+	/* clear the flag signal bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
+}
+#endif
+
+#if (THINKOS_FLAG_MAX > 0)
+void __thinkos_flag_set(uint32_t wq)
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	int th;
+
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+	/* set the flag and wakeup all threads waiting on the flag */
+
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(wq, th);
+		/* get the remaining threads from the queue */
+		while ((th = __thinkos_wq_head(wq)) != 
+			   THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
+		}
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
+}
+#endif
+
+
+static void thinkos_signal_queue(void)
+{
+#if (THINKOS_SEMAPHORE_MAX > 0) || (THINKOS_EVENT_MAX > 0) || \
+	(HINKOS_FLAG_MAX > 0)
+	uint32_t tail = thinkos_rt.sig.tail;
+	uint32_t opc;
+	uint32_t wq;
+
+	/* ----------------------------------------------------------------------
+	 * Process the signal queue 
+	 * ----------------------------------------------------------------------*/
+	while (tail != thinkos_rt.sig.head) {
+		opc = thinkos_rt.sig.queue[tail % THINKOS_SIG_QUEUE_LEN];
+		thinkos_rt.sig.tail = tail + 1;
+		wq = opc & 0x3ff;
+		if (opc & 0x8000) {
+			/* Event sets */
+#if (THINKOS_EVENT_MAX > 0)
+			__thinkos_ev_raise(wq, (opc & 0x7c00) >> 10);
+#endif
+		} else if (opc & 0x4000) {
+			/* Flags */
+#if (THINKOS_FLAG_MAX > 0)
+			switch ((opc & 0x0c00) >> 10) {
+			case 0: 
+				__thinkos_flag_give(wq);
+			case 1: 
+#if THINKOS_ENABLE_FLAG_LOCK
+				__thinkos_flag_signal(wq);
+#endif /* THINKOS_ENABLE_FLAG_LOCK */
+				break;
+			case 2: 
+				__thinkos_flag_clr(wq);
+				break;
+			case 3: 
+				__thinkos_flag_set(wq);
+				break;
+			}
+#endif /* (THINKOS_FLAG_MAX > 0) */
+		} else {
+			/* Semaphores */
+#if (THINKOS_SEMAPHORE_MAX  > 0)
+			__thinkos_sem_post(wq);
+#endif
+		}
+	}
+#endif
+}
+
+#if THINKOS_ENABLE_CLOCK
+static void thinkos_time_wakeup(int thread_id) 
+{
+#if THINKOS_ENABLE_THREAD_STAT
+	int stat;
+	/* update the thread status */
+	stat = thinkos_rt.th_stat[thread_id];
+	thinkos_rt.th_stat[thread_id] = 0;
+	/* remove from other wait queue, if any */
+	__bit_mem_wr(&thinkos_rt.wq_lst[stat >> 1], thread_id, 0);  
+#endif
+	/* remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, thread_id, 0);  
+	DCC_LOG1(LOG_MSG, "Wakeup %d...", thread_id);
+	/* insert into the ready wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
+	__thinkos_defer_sched();
+#if THINKOS_ENABLE_SCHED_DEBUG
+	thinkos_rt.sched_trace_req = 1;
+#endif
+}
 #endif /* THINKOS_ENABLE_CLOCK */
 
 #if THINKOS_ENABLE_TIMESHARE
+static void thinkos_timeshare(void) 
+{
+	int32_t idx;
+
 	idx = thinkos_rt.active;
 
 	/*  */
@@ -304,15 +467,55 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 			/* insert into the CPU wait queue */
 			__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  
 			__thinkos_suspend(idx);
-			sched++;
+			__thinkos_defer_sched();
+		}
+	}
+}
+#endif /* THINKOS_ENABLE_TIMESHARE */
+
+
+/* --------------------------------------------------------------------------
+ * ThinkOS - defered services
+ * --------------------------------------------------------------------------*/
+
+void __attribute__((aligned(16))) cm3_systick_isr(void)
+{
+#if THINKOS_ENABLE_CLOCK
+	uint32_t ticks;
+	uint32_t wq;
+	int j;
+#endif
+
+	thinkos_signal_queue();
+
+#if THINKOS_ENABLE_CLOCK
+	if ((CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG) == 0) {
+		DCC_LOG(LOG_INFO, "systick COUNTFLAG not set!!!");
+		return;
+	}
+
+	ticks = thinkos_rt.ticks; 
+	ticks++;
+	thinkos_rt.ticks = ticks; 
+
+	wq = __rbit(thinkos_rt.wq_clock);
+	while ((j = __clz(wq)) < 32) {
+		wq &= ~(0x80000000 >> j);  
+		if ((int32_t)(thinkos_rt.clock[j] - ticks) <= 0) {
+			thinkos_time_wakeup(j); 
 		}
 	}
 
+#if THINKOS_ENABLE_MONITOR
+	if ((int32_t)(thinkos_rt.dmclock - ticks) == 0) {
+		dmon_signal(DMON_ALARM);
+	}
+#endif
+
+#if THINKOS_ENABLE_TIMESHARE
+	thinkos_timeshare(); 
 #endif /* THINKOS_ENABLE_TIMESHARE */
 
-	if (sched)
-		__thinkos_defer_sched();
-
+#endif /* THINKOS_ENABLE_CLOCK */
 }
-#endif /* THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE */
 

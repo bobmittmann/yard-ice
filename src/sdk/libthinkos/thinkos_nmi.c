@@ -65,7 +65,8 @@ void __thinkos_debug_step_i(unsigned int thread_id)
 #endif /* THINKOS_ENABLE_DEBUG_STEP */
 
 #if (THINKOS_SEMAPHORE_MAX  > 0)
-void __thinkos_sem_post_i(int sem) 
+#if 0
+void ___thinkos_sem_post_i(int sem) 
 {
 	int th;
 
@@ -79,6 +80,13 @@ void __thinkos_sem_post_i(int sem)
 		__thinkos_defer_sched();
 	}
 }
+#endif
+void __thinkos_sem_post_i(int wq) 
+{
+	unsigned int opc = 0x0000 | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
 #else
 void __thinkos_sem_post_i(int sem) 
 {
@@ -86,6 +94,7 @@ void __thinkos_sem_post_i(int sem)
 #endif /* (THINKOS_SEMAPHORE_MAX > 0) */
 
 #if (THINKOS_EVENT_MAX > 0)
+#if 0
 void __thinkos_ev_raise_i(int wq, int ev)
 {
 	unsigned int no = wq - THINKOS_EVENT_BASE;
@@ -106,6 +115,14 @@ void __thinkos_ev_raise_i(int wq, int ev)
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 	}
 }
+#endif
+void __thinkos_ev_raise_i(int wq, int ev)
+{
+	unsigned int opc = 0x8000 | (ev << 10) | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
+
 #else
 void __thinkos_ev_raise_i(int wq, int ev)
 {
@@ -113,6 +130,7 @@ void __thinkos_ev_raise_i(int wq, int ev)
 #endif /* (THINKOS_EVENT_MAX > 0) */
 
 #if (THINKOS_FLAG_MAX > 0)
+#if 0
 /* wakeup a single thread waiting on the flag 
    OR set the flag */
 void __thinkos_flag_give_i(int wq) 
@@ -134,9 +152,17 @@ void __thinkos_flag_give_i(int wq)
 		}
 	}
 }
+#endif
+void __thinkos_flag_give_i(int wq) 
+{
+	unsigned int opc = 0x4000 | (0 << 10) | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
 
 /* wakeup a single thread waiting on the flag 
    OR set the flag */
+#if 0
 void __thinkos_flag_signal_i(int wq) 
 {
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
@@ -164,14 +190,30 @@ void __thinkos_flag_signal_i(int wq)
 	}
 #endif
 }
+#endif
+void __thinkos_gate_open_i(int wq) 
+{
+	unsigned int opc = 0x4000 | (1 << 10) | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
 
+#if 0
 void __thinkos_flag_clr_i(int wq) 
 {
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	/* clear the flag signal bit */
 	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
 }
+#endif
+void __thinkos_flag_clr_i(int wq) 
+{
+	unsigned int opc = 0x4000 | (2 << 10) | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
 
+#if 0
 /* set the flag and wakeup all threads waiting on the flag */
 void __thinkos_flag_set_i(int wq) 
 {
@@ -192,13 +234,20 @@ void __thinkos_flag_set_i(int wq)
 		__thinkos_defer_sched();
 	}
 }
+#endif
+void __thinkos_flag_set_i(int wq) 
+{
+	unsigned int opc = 0x4000 | (3 << 10) | wq;
+	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
+	__thinkos_defer_svc();
+}
 
 #else
 void __thinkos_flag_give_i(int wq) 
 {
 }
 
-void __thinkos_flag_signal_i(int wq) 
+void __thinkos_gate_open_i(int wq) 
 {
 }
 
@@ -220,7 +269,7 @@ void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 				  ".word  __thinkos_sem_post_i\n"
 				  ".word  __thinkos_ev_raise_i\n"
 				  ".word  __thinkos_flag_give_i\n"
-				  ".word  __thinkos_flag_signal_i\n"
+				  ".word  __thinkos_gate_open_i\n"
 				  ".word  __thinkos_flag_clr_i\n"
 				  ".word  __thinkos_flag_set_i\n"
 				  : : "r" (arg1), "r" (arg2), "r" (arg3), "r" (arg4) : ); 

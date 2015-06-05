@@ -30,26 +30,18 @@
 #include <sys/dcclog.h>
 
 volatile uint32_t irq_count = 0 ;
-volatile int tmr_sem;
-
-uint32_t xwq;
+int tmr_sem;
 
 void stm32f_tim3_isr(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
-//	uint32_t x;
 
 	/* Clear timer interrupt flags */
 	tim->sr = 0;
-//	irq_count++;
-//	__bit_mem_wr((uint32_t *)&xwq, irq_count & 0x1f, 1);
+	irq_count++;
 
-//	x = __ldrexw((uint32_t *)&xwq);
-//	x |= (1 << (irq_count & 0x1f));
-//	if (__strexw((uint32_t *)&xwq, x))
-//		DCC_LOG1(LOG_WARNING, "strex wxq=0x%08x failed!", xwq);
-//	thinkos_sem_post_i(tmr_sem);
-//	DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
+	thinkos_sem_post_i(tmr_sem);
+	DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
 }
 
 void timer_init(uint32_t freq)
@@ -91,6 +83,8 @@ void io_init(void)
 
 int main(int argc, char ** argv)
 {
+	int i;
+
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -102,28 +96,16 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
-//	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
-//	tmr_sem = thinkos_sem_alloc(0);
+	tmr_sem = thinkos_sem_alloc(0);
 	DCC_LOG1(LOG_TRACE, "tmr_sem=%d", tmr_sem);
-	timer_init(5);
+	timer_init(3);
 
-
-	for (;;) {
-		uint32_t x;
-
-		xwq = 0;
-//		thinkos_sem_wait(tmr_sem);
-//		DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
-//		thinkos_sleep(1000);
-
-		x = __ldrexw(&xwq);
-		udelay(100000);
-		x = 0;
-		if (__strexw(&xwq, x))
-			DCC_LOG1(LOG_WARNING, "strex wxq=0x%08x failed!", xwq);
-		else
-			DCC_LOG1(LOG_TRACE, "strex wxq=0x%08x ok.", xwq);
+	for (i = 0; ; ++i) {
+		thinkos_sem_wait(tmr_sem);
+		DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
+		thinkos_sleep((1 + (i % 9)) * 50);
 	}
 
 	return 0;

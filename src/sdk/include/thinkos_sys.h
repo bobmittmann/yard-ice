@@ -450,6 +450,16 @@ struct thinkos_rt {
 	};
 #endif
 
+#if (THINKOS_SEMAPHORE_MAX > 0) || (THINKOS_EVENT_MAX > 0) || \
+	(HINKOS_FLAG_MAX > 0)
+#define THINKOS_SIG_QUEUE_LEN 16
+	struct {
+		volatile uint32_t head;
+		volatile uint32_t tail;
+		uint16_t queue[THINKOS_SIG_QUEUE_LEN];
+	} sig;
+#endif 
+
 #if THINKOS_SEMAPHORE_MAX > 0
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
@@ -718,6 +728,12 @@ static void inline __attribute__((always_inline)) __thinkos_defer_sched(void) {
 	scb->icsr = SCB_ICSR_PENDSVSET;
 }
 
+/* flags a deferred queued syscall */
+static void inline __attribute__((always_inline)) __thinkos_defer_svc(void) {
+	struct cm3_scb * scb = CM3_SCB;
+	/* rise a pending systick interrupt */
+	scb->icsr = SCB_ICSR_PENDSTSET;
+}
 
 static void inline __attribute__((always_inline)) __thinkos_ready_clr(void) {
 	thinkos_rt.wq_ready = 0;
