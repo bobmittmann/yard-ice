@@ -119,11 +119,13 @@ void thinkos_flag_take_svc(int32_t * arg);
 void thinkos_flag_timedtake_svc(int32_t * arg);
 
 
-void thinkos_flag_release_svc(int32_t * arg);
+void thinkos_gate_open_svc(int32_t * arg);
 
-void thinkos_flag_wait_svc(int32_t * arg);
+void thinkos_gate_exit_svc(int32_t * arg);
 
-void thinkos_flag_timedwait_svc(int32_t * arg);
+void thinkos_gate_wait_svc(int32_t * arg);
+
+void thinkos_gate_timedwait_svc(int32_t * arg);
 
 
 void thinkos_irq_wait_svc(int32_t * arg);
@@ -350,34 +352,39 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
-
-
-	case THINKOS_FLAG_WAIT:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK
-		thinkos_flag_wait_svc(arg);
+	case THINKOS_GATE_WAIT:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_wait_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
-	case THINKOS_FLAG_TIMEDWAIT:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK && \
-		THINKOS_ENABLE_TIMED_CALLS
-		thinkos_flag_timedwait_svc(arg);
+	case THINKOS_GATE_TIMEDWAIT:
+#if (THINKOS_GATE_MAX > 0) && THINKOS_ENABLE_TIMED_CALLS
+		thinkos_gate_timedwait_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
-	case THINKOS_FLAG_RELEASE:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK
-		thinkos_flag_release_svc(arg);
+	case THINKOS_GATE_EXIT:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_exit_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
+	case THINKOS_GATE_OPEN:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_open_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
 
+#if 0
 	case THINKOS_FLAG_VAL:
 #if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH
 		thinkos_flag_val_svc(arg);
@@ -385,6 +392,7 @@ void cm3_svc_isr(void)
 		thinkos_nosys(arg);
 #endif
 		break;
+#endif
 
 	case THINKOS_FLAG_CLR:
 #if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH

@@ -271,9 +271,9 @@ static void thinkos_signal_queue(void)
 			case 0: 
 				__thinkos_flag_give(wq);
 			case 1: 
-#if THINKOS_ENABLE_FLAG_LOCK
-				__thinkos_flag_signal(wq);
-#endif /* THINKOS_ENABLE_FLAG_LOCK */
+#if (THINKOS_GATE_MAX > 0)
+				__thinkos_gate_open(wq);
+#endif /* (THINKOS_GATE_MAX > 0) */
 				break;
 			case 2: 
 #if THINKOS_ENABLE_FLAG_WATCH
