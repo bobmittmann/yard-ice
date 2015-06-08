@@ -164,6 +164,9 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 	int self = thinkos_rt.active;
 	unsigned int ev;
+	uint32_t mask;
+	uint32_t pend;
+	uint32_t queue;
 
 #if THINKOS_ENABLE_ARG_CHECK
 
@@ -181,28 +184,51 @@ void thinkos_ev_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
-
+	mask = thinkos_rt.ev[no].mask;
+again:
 	/* check for any pending unmasked event */
-	if ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & 
-						   thinkos_rt.ev[no].mask))) < 32) {
-		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+	pend = __ldrexw(&thinkos_rt.ev[no].pend);
+	if ((ev = __clz(__rbit(pend & mask))) < 32) {
+		pend &= ~(1 << ev);
 		arg[0] = ev;
+		DCC_LOG2(LOG_MSG, "set=0x%08x msk=0x%08x", 
+				 thinkos_rt.ev[no].pend, thinkos_rt.ev[no].mask);
+		DCC_LOG2(LOG_INFO, "pending event %d.%d!", wq, ev);
+		if (__strexw(&thinkos_rt.ev[no].pend, pend))
+			goto again;
 		return;
-	} 
+	}
+
+	__thinkos_suspend(self);
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status, mark the thread clock enable bit */
+	thinkos_rt.th_stat[self] = (wq << 1) + 1;
+#endif
+	queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+	queue |= (1 << self);
+	pend = (volatile uint32_t)thinkos_rt.ev[no].pend;
+	if (((ev = __clz(__rbit(pend & mask))) < 32) || 
+		(__strexw(&thinkos_rt.wq_lst[wq], queue))) {
+		/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+		thinkos_rt.th_stat[self] = 0;
+#endif
+		/* insert into the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+		goto again;
+	}
 
 	/* -- wait for event ---------------------------------------- */
-	DCC_LOG2(LOG_INFO, "<%d> waiting for event on %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+	/* set the clock */
+	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
+	/* insert into the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);  
 	/* Set the default return value to timeout. The
-	   flag_rise() call will change it to 0 */
+	   event_rise call will change this to 0 */
 	arg[0] = THINKOS_ETIMEDOUT;
-	/* insert into the flag wait queue */
-	__thinkos_tmdwq_insert(wq, self, ms);
-	/* remove from the ready wait queue */
-	__thinkos_suspend(self);
-	/* XXX: save the context pointer */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	__thinkos_defer_sched(); /* signal the scheduler ... */
-
+	/* signal the scheduler ... */
+	__thinkos_defer_sched(); 
 }
 #endif
 
@@ -285,7 +311,7 @@ void thinkos_ev_raise_svc(int32_t * arg)
 void thinkos_ev_mask_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	uint32_t mask = arg[1];
+	unsigned int ev = arg[1];
 	unsigned int no = wq - THINKOS_EVENT_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
@@ -303,16 +329,17 @@ void thinkos_ev_mask_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = 0;
 	/* mask the events on the mask bitmap */
-	thinkos_rt.ev[no].mask &= ~mask;
+	__bit_mem_wr(&thinkos_rt.ev[no].mask, ev, 0);  
 }
 
 void thinkos_ev_unmask_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	uint32_t mask = arg[1];
+	unsigned int ev = arg[1];
 	unsigned int no = wq - THINKOS_EVENT_BASE;
-	unsigned int ev;
+	uint32_t queue;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
@@ -330,44 +357,43 @@ void thinkos_ev_unmask_svc(int32_t * arg)
 #endif
 #endif
 
+	arg[0] = 0;
 	/* unmask the events on the mask bitmap */
-	thinkos_rt.ev[no].mask |= mask;
+	__bit_mem_wr(&thinkos_rt.ev[no].mask, ev, 1);  
 
-	/* wake up the first unmasked thread if any. */
-	if ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & mask))) < 32) {
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* a pending event was unmaksed and there is a thread waiting on 
-			   the queue, clear the event pending flag and 
-			   wakes up the thread. */
-			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
-			/* wakeup from the event wait queue, set the return of
-			   the thread to the event */
-			__thinkos_wakeup_return(wq, th, ev);
-			DCC_LOG3(LOG_INFO, "<%d> waked up with event %d.%d", th, wq, ev);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else {
-			/* no threads waiting */
+	if (__bit_mem_rd(&thinkos_rt.ev[no].pend, ev)) {
+		/* event is not pneding, return */
+		return;
+	}
+
+	do {
+		/* insert into the event wait queue */
+		queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+		/* get a thread from the queue bitmap */
+		if ((th = __clz(__rbit(queue))) == THINKOS_THREAD_NULL) {
+			/* no threads waiting on the event set, mark the event as pending */
+			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  
 			return;
-		}
-	}
+		} 
+		/* remove from the wait queue */
+		queue &= ~(1 << th);
+	} while (__strexw(&thinkos_rt.wq_lst[wq], queue));
 
-	/* wake up as many other threads as possible */
-	while ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & mask))) < 32) {
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* a pending event was unmaksed and there is a thread waiting on 
-			   the queue, clear the event pending flag and 
-			   wakes up the thread. */
-			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
-			/* wakeup from the event wait queue, set the return of
-			   the thread to the event */
-			__thinkos_wakeup_return(wq, th, ev);
-			DCC_LOG3(LOG_INFO, "<%d> waked up with event %d.%d", th, wq, ev);
-		} else {
-			/* no more threads waiting */
-			break;
-		}
-	}
+	/* insert the thread into ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
+#endif
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = ev;
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status */
+	thinkos_rt.th_stat[th] = 0;
+#endif
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+
 
 }
 

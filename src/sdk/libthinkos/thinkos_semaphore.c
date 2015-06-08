@@ -148,8 +148,6 @@ void thinkos_sem_wait_svc(int32_t * arg)
 #endif
 #endif
 
-	arg[0] = 0;
-
 	/* avoid possible race condition on sem_val */
 	/* this is only necessary in case we use the __uthread_sem_post() call
 	   inside interrupt handlers */
@@ -160,6 +158,7 @@ again:
 		sem_val--;
 		if (__strexw(&thinkos_rt.sem_val[sem], sem_val))
 			goto again;
+		arg[0] = 0;
 		return;
 	}
 
@@ -206,6 +205,7 @@ again:
 
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
+	arg[0] = THINKOS_EFAULT;
 	/* signal the scheduler ... */
 	__thinkos_defer_sched(); 
 }
