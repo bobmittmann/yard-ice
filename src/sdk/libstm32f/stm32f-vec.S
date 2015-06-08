@@ -37,13 +37,13 @@
 	.word   cm3_mem_manage_isr
 	.word   cm3_bus_fault_isr
 	.word   cm3_usage_fault_isr
-	.word   0
+	.word   cm3_except7_isr
 	.word   ice_comm_blk
-	.word   0 
-	.word   0
+	.word   cm3_except9_isr
+	.word   cm3_except10_isr
 	.word   cm3_svc_isr
 	.word   cm3_debug_mon_isr
-	.word   0
+	.word   cm3_except13_isr
 	.word   cm3_pendsv_isr
 	.word   cm3_systick_isr
 .endm
@@ -295,9 +295,6 @@ _fault:
 	 * Any function with the same name will override these definitions.
 	 */
 
-	.weak       ice_comm_blk
-	.set		ice_comm_blk, __vectors
-
 	.weak       cm3_default_isr
 	.thumb_set  cm3_default_isr,_fault
 
@@ -316,11 +313,26 @@ _fault:
 	.weak       cm3_usage_fault_isr
 	.thumb_set  cm3_usage_fault_isr,_fault
 
+	.weak       cm3_except7_isr
+	.thumb_set  cm3_except7_isr,_fault
+
+	.weak       ice_comm_blk
+	.set		ice_comm_blk, __vectors
+
+	.weak       cm3_except9_isr
+	.thumb_set  cm3_except9_isr,_fault
+
+	.weak       cm3_except10_isr
+	.thumb_set  cm3_except10_isr,_fault
+
 	.weak       cm3_svc_isr
 	.thumb_set  cm3_svc_isr,_fault
 
 	.weak       cm3_debug_mon_isr
 	.thumb_set  cm3_debug_mon_isr,_fault
+
+	.weak       cm3_except13_isr
+	.thumb_set  cm3_except13_isr,_fault
 
 	.weak     	cm3_pendsv_isr
 	.thumb_set  cm3_pendsv_isr,_fault
