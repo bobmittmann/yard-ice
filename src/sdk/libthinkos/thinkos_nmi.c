@@ -65,28 +65,17 @@ void __thinkos_debug_step_i(unsigned int thread_id)
 #endif /* THINKOS_ENABLE_DEBUG_STEP */
 
 #if (THINKOS_SEMAPHORE_MAX  > 0)
-#if 0
-void ___thinkos_sem_post_i(int sem) 
-{
-	int th;
 
-	if ((th = __thinkos_wq_head(sem)) == THINKOS_THREAD_NULL) {
-		/* no threads waiting on the semaphore, increment. */ 
-		thinkos_rt.sem_val[sem - THINKOS_SEM_BASE]++;
-	} else {
-		/* wakeup from the sem wait queue */
-		__thinkos_wakeup(sem, th);
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
-}
-#endif
+void __thinkos_sem_post_i(int wq); 
+
+#if 0
 void __thinkos_sem_post_i(int wq) 
 {
 	unsigned int opc = 0x0000 | wq;
 	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
 	__thinkos_defer_svc();
 }
+#endif
 #else
 void __thinkos_sem_post_i(int sem) 
 {
@@ -94,6 +83,9 @@ void __thinkos_sem_post_i(int sem)
 #endif /* (THINKOS_SEMAPHORE_MAX > 0) */
 
 #if (THINKOS_EVENT_MAX > 0)
+
+void __thinkos_ev_raise_i(int wq, int ev);
+
 #if 0
 void __thinkos_ev_raise_i(int wq, int ev)
 {
@@ -116,12 +108,15 @@ void __thinkos_ev_raise_i(int wq, int ev)
 	}
 }
 #endif
+
+#if 0
 void __thinkos_ev_raise_i(int wq, int ev)
 {
 	unsigned int opc = 0x8000 | (ev << 10) | wq;
 	thinkos_rt.sig.queue[thinkos_rt.sig.head++ % THINKOS_SIG_QUEUE_LEN] = opc;
 	__thinkos_defer_svc();
 }
+#endif
 
 #else
 void __thinkos_ev_raise_i(int wq, int ev)

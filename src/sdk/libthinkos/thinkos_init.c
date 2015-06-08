@@ -61,8 +61,8 @@ void __thinkos_reset(void)
 	   at higher priority. In order for the regular priority
 	   interrupts to call SVC, they shuld run at a lower priority
 	   then SVC.*/
-//	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
-	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);
+	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
+//	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);
 
 	/* SysTick interrupt has to have a lower priority then SVC,
 	 to not preempt SVC */

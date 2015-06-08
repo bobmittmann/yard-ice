@@ -243,7 +243,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	__sched_exit(new_ctx);
 }
 
-
+#if 0
 static void thinkos_signal_queue(void)
 {
 #if (THINKOS_SEMAPHORE_MAX > 0) || (THINKOS_EVENT_MAX > 0) || \
@@ -296,6 +296,7 @@ static void thinkos_signal_queue(void)
 	}
 #endif
 }
+#endif
 
 #if THINKOS_ENABLE_CLOCK
 static void thinkos_time_wakeup(int thread_id) 
@@ -357,7 +358,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	int j;
 #endif
 
-	thinkos_signal_queue();
+//	thinkos_signal_queue();
 
 #if THINKOS_ENABLE_CLOCK
 	if ((CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG) == 0) {

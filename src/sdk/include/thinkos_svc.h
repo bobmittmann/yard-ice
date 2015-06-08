@@ -368,8 +368,16 @@ static inline int __attribute__((always_inline)) thinkos_sem_post(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
+#if 0
 static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
 	THINKOS_NMI1(THINKOS_SEM_POST_I, sem);
+}
+#endif
+
+static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
+	uintptr_t * except = (uintptr_t *)(0);
+	void (* sem_post_i)(int) = (void *)except[7];
+	sem_post_i(sem);
 }
 
 /* --------------------------------------------------------------------------
@@ -408,9 +416,18 @@ static inline int __attribute__((always_inline)) thinkos_ev_unmask(
 	return THINKOS_SVC2(THINKOS_EVENT_UNMASK, set, msk);
 }
 
+#if 0
 static inline void __attribute__((always_inline)) thinkos_ev_raise_i(
 	int set, int ev) {
 	THINKOS_NMI2(THINKOS_EV_RAISE_I, set, ev);
+}
+#endif
+
+static inline void __attribute__((always_inline)) thinkos_ev_raise_i(
+	int set, int ev) {
+	uintptr_t * except = (uintptr_t *)(0);
+	void (* ev_raise_i)(int, int) = (void *)except[9];
+	ev_raise_i(set, ev);
 }
 
 /* ---------------------------------------------------------------------------
