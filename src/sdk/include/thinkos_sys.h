@@ -138,19 +138,23 @@
 #endif
 
 #ifndef THINKOS_FLAG_MAX
-#define THINKOS_FLAG_MAX 16
+#define THINKOS_FLAG_MAX 8
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_ALLOC
 #define THINKOS_ENABLE_FLAG_ALLOC 1
 #endif
 
-#ifndef THINKOS_ENABLE_FLAG_LOCK
-#define THINKOS_ENABLE_FLAG_LOCK 1
-#endif
-
 #ifndef THINKOS_ENABLE_FLAG_WATCH
 #define THINKOS_ENABLE_FLAG_WATCH 1
+#endif
+
+#ifndef THINKOS_GATE_MAX
+#define THINKOS_GATE_MAX 8
+#endif
+
+#ifndef THINKOS_ENABLE_GATE_ALLOC
+#define THINKOS_ENABLE_GATE_ALLOC 1
 #endif
 
 #ifndef THINKOS_ENABLE_TIMED_CALLS
@@ -393,12 +397,16 @@ struct thinkos_rt {
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 #if THINKOS_EVENT_MAX > 0
-	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
+	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event sets wait queues */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
-	uint32_t wq_flag[THINKOS_FLAG_MAX]; /* flags wait queue */
+	uint32_t wq_flag[THINKOS_FLAG_MAX]; /* flags wait queues */
 #endif /* THINKOS_FLAG_MAX > 0 */
+
+#if THINKOS_GATE_MAX > 0
+	uint32_t wq_gate[THINKOS_GATE_MAX]; /* gates wait queues */
+#endif /* THINKOS_GATE_MAX > 0 */
 
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
@@ -462,13 +470,16 @@ struct thinkos_rt {
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
-	struct {
-		uint32_t sig[(THINKOS_FLAG_MAX + 31) / 32]; /* flag signal */
-#if THINKOS_ENABLE_FLAG_LOCK
-		uint32_t lock[(THINKOS_FLAG_MAX + 31) / 32]; /* flag lock */
-#endif
-	} flag;
+	uint32_t flag[(THINKOS_FLAG_MAX + 31) / 32]; /* flag signal */
 #endif /* THINKOS_FLAG_MAX > 0 */
+
+#if THINKOS_GATE_MAX > 0
+	struct {
+		uint32_t sig[(THINKOS_GATE_MAX + 31) / 32]; /* flag signal */
+		uint32_t lock[(THINKOS_GATE_MAX + 31) / 32]; /* flag lock */
+	} gate;
+#endif /* THINKOS_GATE_MAX > 0 */
+
 
 #if THINKOS_MUTEX_MAX > 0
 	int8_t lock[THINKOS_MUTEX_MAX];
@@ -506,6 +517,10 @@ struct thinkos_rt {
 
 #if THINKOS_ENABLE_FLAG_ALLOC
 	uint32_t flag_alloc[(THINKOS_FLAG_MAX + 31) / 32];
+#endif
+
+#if THINKOS_ENABLE_GATE_ALLOC
+	uint32_t gate_alloc[(THINKOS_GATE_MAX + 31) / 32];
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
@@ -550,6 +565,10 @@ struct thinkos_rt {
 							/ sizeof(uint32_t))
 
 #define THINKOS_FLAG_BASE ((offsetof(struct thinkos_rt, wq_flag) \
+							 - offsetof(struct thinkos_rt, wq_lst)) \
+							/ sizeof(uint32_t))
+
+#define THINKOS_GATE_BASE ((offsetof(struct thinkos_rt, wq_gate) \
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 

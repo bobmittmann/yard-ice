@@ -122,7 +122,7 @@ void __thinkos_flag_give_i(int wq)
 
 	/* get the flag state */
 	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
+	if (__bit_mem_rd(thinkos_rt.flag, flag) == 0) {
 		/* get a thread from the queue */
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 			__thinkos_wakeup(wq, th);
@@ -130,46 +130,16 @@ void __thinkos_flag_give_i(int wq)
 			__thinkos_defer_sched();
 		} else {
 			/* set the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+			__bit_mem_wr(thinkos_rt.flag, flag, 1);  
 		}
 	}
-}
-
-/* wakeup a single thread waiting on the flag 
-   OR set the flag */
-void __thinkos_flag_signal_i(int wq) 
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
-#if THINKOS_ENABLE_FLAG_LOCK
-	if (!__bit_mem_rd(thinkos_rt.flag.lock, flag)) {
-#endif
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-#if THINKOS_ENABLE_FLAG_LOCK
-			/* lock the flag */
-			__bit_mem_wr(thinkos_rt.flag.lock, flag, 1);
-#endif
-			__thinkos_wakeup(wq, th);
-
-			/* clear the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-			return;
-		} 
-#if THINKOS_ENABLE_FLAG_LOCK
-	}
-#endif
 }
 
 void __thinkos_flag_clr_i(int wq) 
 {
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	/* clear the flag signal bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
+	__bit_mem_wr(thinkos_rt.flag, flag, 0);  
 }
 
 /* set the flag and wakeup all threads waiting on the flag */
@@ -179,7 +149,7 @@ void __thinkos_flag_set_i(int wq)
 	int th;
 
 	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+	__bit_mem_wr(thinkos_rt.flag, flag, 1);  
 
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
@@ -198,10 +168,6 @@ void __thinkos_flag_give_i(int wq)
 {
 }
 
-void __thinkos_flag_signal_i(int wq) 
-{
-}
-
 void __thinkos_flag_clr_i(int wq) 
 {
 }
@@ -209,7 +175,38 @@ void __thinkos_flag_clr_i(int wq)
 void __thinkos_flag_set_i(int wq) 
 {
 }
+
 #endif /* (THINKOS_FLAG_MAX > 0) */
+
+
+#if (THINKOS_GATE_MAX > 0)
+/* wakeup a single thread waiting on the gate OR set the flag */
+void __thinkos_gate_open_i(int wq) 
+{
+	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	int th;
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.gate.sig, flag, 1);  
+	if (!__bit_mem_rd(thinkos_rt.gate.lock, flag)) {
+		/* get a thread from the queue */
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			/* lock the flag */
+			__bit_mem_wr(thinkos_rt.gate.lock, flag, 1);
+			__thinkos_wakeup(wq, th);
+
+			/* clear the flag bit */
+			__bit_mem_wr(thinkos_rt.gate.sig, flag, 0);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+			return;
+		} 
+	}
+}
+#else
+void __thinkos_gate_open_i(int wq) 
+{
+}
+#endif /* (THINKOS_GATE_MAX > 0) */
 
 void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 {
@@ -220,7 +217,7 @@ void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 				  ".word  __thinkos_sem_post_i\n"
 				  ".word  __thinkos_ev_raise_i\n"
 				  ".word  __thinkos_flag_give_i\n"
-				  ".word  __thinkos_flag_signal_i\n"
+				  ".word  __thinkos_gate_open_i\n"
 				  ".word  __thinkos_flag_clr_i\n"
 				  ".word  __thinkos_flag_set_i\n"
 				  : : "r" (arg1), "r" (arg2), "r" (arg3), "r" (arg4) : ); 

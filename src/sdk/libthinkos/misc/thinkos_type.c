@@ -47,6 +47,9 @@ const struct {
 #if THINKOS_FLAG_MAX > 0
 	uint8_t wq_flag[THINKOS_FLAG_MAX];
 #endif
+#if THINKOS_GATE_MAX > 0
+	uint8_t wq_gate[THINKOS_GATE_MAX];
+#endif
 #if THINKOS_ENABLE_JOIN
 	uint8_t wq_join[THINKOS_THREADS_MAX];
 #endif
@@ -85,6 +88,9 @@ const struct {
 #endif
 #if THINKOS_FLAG_MAX > 0
 	.wq_flag = { [0 ... (THINKOS_FLAG_MAX - 1)] = THINKOS_OBJ_FLAG },
+#endif
+#if THINKOS_GATE_MAX > 0
+	.wq_gate = { [0 ... (THINKOS_GATE_MAX - 1)] = THINKOS_OBJ_GATE },
 #endif
 #if THINKOS_ENABLE_JOIN
 	.wq_join = { [0 ... (THINKOS_THREADS_MAX - 1)] = THINKOS_OBJ_JOIN },
@@ -132,6 +138,11 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #else
 	[THINKOS_OBJ_FLAG] = NULL,
 #endif
+#if THINKOS_ENABLE_GATE_ALLOC
+	[THINKOS_OBJ_GATE] = thinkos_rt.gate_alloc,
+#else
+	[THINKOS_OBJ_GATE] = NULL,
+#endif
 #if THINKOS_ENABLE_THREAD_ALLOC
 	[THINKOS_OBJ_JOIN] = thinkos_rt.th_alloc,
 #else
@@ -176,6 +187,9 @@ const uint16_t thinkos_wq_base_lut[] = {
 #if THINKOS_FLAG_MAX > 0
 	[THINKOS_OBJ_FLAG] = THINKOS_FLAG_BASE,
 #endif
+#if THINKOS_GATE_MAX > 0
+	[THINKOS_OBJ_GATE] = THINKOS_GATE_BASE,
+#endif
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_JOIN] = THINKOS_JOIN_BASE,
 #endif
@@ -204,6 +218,7 @@ const char thinkos_type_name_lut[][6] = {
 	[THINKOS_OBJ_SEMAPHORE] = "Sema",
 	[THINKOS_OBJ_EVENT]     = "EvSet",
 	[THINKOS_OBJ_FLAG]      = "Flag",
+	[THINKOS_OBJ_GATE]      = "Gate",
 	[THINKOS_OBJ_JOIN]      = "Join",
 	[THINKOS_OBJ_CONWRITE]  = "ConWr",
 	[THINKOS_OBJ_CONREAD]   = "ConRd",
