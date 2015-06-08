@@ -30,29 +30,70 @@
 #include <sys/dcclog.h>
 
 volatile uint32_t irq_count = 0 ;
-volatile int tmr_sem;
+volatile uint32_t tmr_count = 0 ;
+int tmr_sem;
 
-uint32_t xwq;
+
+void stm32f_tim4_isr(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM4;
+	/* Clear timer interrupt flags */
+	tim->sr = 0;
+	tmr_count++;
+	thinkos_sem_post_i(tmr_sem);
+//	DCC_LOG(LOG_TRACE, "++++");
+}
+
+void oneshot_timer(unsigned int usec)
+{
+	struct stm32f_tim * tim = STM32F_TIM4;
+
+	tim->arr = usec; 
+	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
+}
+
+void oneshot_timer_init(uint32_t freq)
+{
+	struct stm32f_tim * tim = STM32F_TIM4;
+	unsigned int div;
+
+	/* Timer clock enable */
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM4);
+	/* get the total divisior */
+	div = (stm32f_tim2_hz + (freq / 2)) / freq;
+	DCC_LOG1(LOG_TRACE, "div=%d", div);
+	/* Timer configuration */
+	tim->psc = div - 1;
+	tim->arr = 0;
+	tim->cnt = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
+	cm3_irq_enable(STM32F_IRQ_TIM4);
+}
+
 
 void stm32f_tim3_isr(void)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
-//	uint32_t x;
+#if 0
+	oneshot_timer(20); /* time to signal the semaphore after the 
+						  first wakeup, before going to sleep again. */
+#endif
+//	oneshot_timer(41); 
+//	oneshot_timer(66); /* rollback 1 */
+	oneshot_timer(69); /* rollback 2 */
+//	oneshot_timer(80); /* sleep */
 
 	/* Clear timer interrupt flags */
 	tim->sr = 0;
-//	irq_count++;
-//	__bit_mem_wr((uint32_t *)&xwq, irq_count & 0x1f, 1);
+	irq_count++;
 
-//	x = __ldrexw((uint32_t *)&xwq);
-//	x |= (1 << (irq_count & 0x1f));
-//	if (__strexw((uint32_t *)&xwq, x))
-//		DCC_LOG1(LOG_WARNING, "strex wxq=0x%08x failed!", xwq);
-//	thinkos_sem_post_i(tmr_sem);
-//	DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
+	thinkos_sem_post_i(tmr_sem);
+	DCC_LOG1(LOG_INFO, "IRQ count = %d", irq_count);
 }
 
-void timer_init(uint32_t freq)
+
+void periodic_timer_init(uint32_t freq)
 {
 	struct stm32f_tim * tim = STM32F_TIM3;
 	uint32_t div;
@@ -72,13 +113,12 @@ void timer_init(uint32_t freq)
 	/* Timer configuration */
 	tim->psc = pre - 1;
 	tim->arr = n - 1;
-	tim->cnt = 0;
-	tim->egr = 0;
+	tim->cnt = n - 1;
+	tim->cr1 = TIM_CEN; /* Enable counter */
+	tim->egr = TIM_UG; /* Force an update */
+	while (tim->sr == 0);
+	tim->sr = 0;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->ccmr1 = TIM_OC1M_PWM_MODE1;
-	tim->ccr1 = tim->arr - 2;
-	tim->cr2 = TIM_MMS_OC1REF;
-	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 
 	/* enable interrupts */
 	cm3_irq_enable(STM32F_IRQ_TIM3);
@@ -91,6 +131,8 @@ void io_init(void)
 
 int main(int argc, char ** argv)
 {
+	int i;
+
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -102,28 +144,22 @@ int main(int argc, char ** argv)
 	io_init();
 
 	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
-//	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
 
-//	tmr_sem = thinkos_sem_alloc(0);
+	tmr_sem = thinkos_sem_alloc(0);
 	DCC_LOG1(LOG_TRACE, "tmr_sem=%d", tmr_sem);
-	timer_init(5);
 
+	oneshot_timer_init(168000000 / 2);
+	periodic_timer_init(2);
 
-	for (;;) {
-		uint32_t x;
-
-		xwq = 0;
-//		thinkos_sem_wait(tmr_sem);
-//		DCC_LOG1(LOG_TRACE, "IRQ count = %d", irq_count);
-//		thinkos_sleep(1000);
-
-		x = __ldrexw(&xwq);
-		udelay(100000);
-		x = 0;
-		if (__strexw(&xwq, x))
-			DCC_LOG1(LOG_WARNING, "strex wxq=0x%08x failed!", xwq);
-		else
-			DCC_LOG1(LOG_TRACE, "strex wxq=0x%08x ok.", xwq);
+	for (i = 0; ; ++i) {
+		if ((i & 0x7) == 0)
+			DCC_LOG3(LOG_TRACE, "i=%d IRQ=%d TMR=%d", i, irq_count, tmr_count);
+		thinkos_sem_wait(tmr_sem);
+		thinkos_sem_wait(tmr_sem);
+//		if (irq_count != tmr_count)
+//			DCC_LOG2(LOG_TRACE, "IRQ=%d TMR=%d", irq_count, tmr_count);
+//		thinkos_sleep((1 + (i % 9)) * 100);
 	}
 
 	return 0;
