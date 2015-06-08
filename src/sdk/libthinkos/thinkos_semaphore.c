@@ -95,6 +95,8 @@ void thinkos_sem_wait_svc(int32_t * arg)
 	unsigned int wq = arg[0];
 	unsigned int sem = wq - THINKOS_SEM_BASE;
 	int self = thinkos_rt.active;
+	uint32_t sem_val;
+	uint32_t queue;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
@@ -116,27 +118,38 @@ void thinkos_sem_wait_svc(int32_t * arg)
 	/* avoid possible race condition on sem_val */
 	/* this is only necessary in case we use the __uthread_sem_post() call
 	   inside interrupt handlers */
-	/* TODO: study the possibility of using exclusive access instead of 
-	   disabling interrupts. */
-	cm3_cpsid_i();
-
-	if (thinkos_rt.sem_val[sem] > 0) {
-		thinkos_rt.sem_val[sem]--;
-		DCC_LOG2(LOG_INFO, "<%d> got semaphore %d...", self, wq);
-		/* reenable interrupts ... */
-		cm3_cpsie_i();
+again:
+	sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+	if (sem_val > 0) {
+		sem_val--;
+		if (__strexw(&thinkos_rt.sem_val[sem], sem_val))
+			goto again;
 		return;
-	} 
+	}
+
+	/* remove from the ready wait queue */
+	__thinkos_suspend(self);
+
+	/* insert into the event wait queue */
+#if THINKOS_ENABLE_THREAD_STAT
+	thinkos_rt.th_stat[self] = wq << 1;
+#endif
+	queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+	queue |= (1 << self);
+	if (__strexw(&thinkos_rt.wq_lst[wq], queue)) {
+		/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+		thinkos_rt.th_stat[self] = 0;
+#endif
+		/* insert into the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+		goto again;
+	}
 
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
-	/* insert into the semaphore wait queue */
-	__thinkos_wq_insert(wq, self);
-	/* remove from the ready wait queue */
-	__thinkos_suspend(self);
 	/* XXX: save the context pointer */
 	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	cm3_cpsie_i(); /* reenable interrupts ... */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 
@@ -144,6 +157,7 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 {	
 	unsigned int wq = arg[0];
 	unsigned int sem = wq - THINKOS_SEM_BASE;
+	uint32_t sem_val;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
@@ -163,18 +177,15 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 	/* avoid possible race condition on sem_val */
 	/* this is only necessary in case we use the __uthread_sem_post() call
 	   inside interrupt handlers */
-	/* TODO: study the possibility of using exclusive access instead of 
-	   disabling interrupts. */
-	cm3_cpsid_i();
-
-	if (thinkos_rt.sem_val[sem] > 0) {
-		thinkos_rt.sem_val[sem]--;
-		arg[0] = 0;
-	} else {
-		arg[0] = THINKOS_EAGAIN;
-	}
-
-	cm3_cpsie_i();
+	do {
+		sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+		if (sem_val > 0) {
+			sem_val--;
+			arg[0] = 0;
+		} else {
+			arg[0] = THINKOS_EAGAIN;
+		}
+	} while (__strexw(&thinkos_rt.sem_val[sem], sem_val));
 }
 
 #if THINKOS_ENABLE_TIMED_CALLS
@@ -205,12 +216,10 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 	   inside interrupt handlers */
 	/* TODO: study the possibility of using exclusive access instead of 
 	   disabling interrupts. */
-	cm3_cpsid_i();
 
 	if (thinkos_rt.sem_val[sem] > 0) {
 		thinkos_rt.sem_val[sem]--;
 		/* reenable interrupts ... */
-		cm3_cpsie_i();
 		arg[0] = 0;
 		return;
 	}
@@ -226,7 +235,6 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 	__thinkos_suspend(self);
 	/* XXX: save the context pointer */
 	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	cm3_cpsie_i(); /* reenable interrupts ... */
 	__thinkos_defer_sched(); /* signal the scheduler ... */
 }
 #endif
