@@ -35,10 +35,7 @@ void thinkos_flag_alloc_svc(int32_t * arg)
 
 	if ((idx = __thinkos_bmp_alloc(thinkos_rt.flag_alloc, 
 								   THINKOS_FLAG_MAX)) >= 0) {
-		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
-#if THINKOS_ENABLE_FLAG_LOCK
-		__bit_mem_wr(thinkos_rt.flag.lock, idx, 0);
-#endif
+		__bit_mem_wr(thinkos_rt.flag, idx, 0);
 		arg[0] = idx + THINKOS_FLAG_BASE;
 		DCC_LOG1(LOG_TRACE, "wq=%d", arg[0]);
 	} else {
@@ -90,9 +87,9 @@ void thinkos_flag_take_svc(int32_t * arg)
 #endif
 #endif
 
-	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
+	if (__bit_mem_rd(thinkos_rt.flag, idx)) {
 		/* clear the signal */
-		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+		__bit_mem_wr(thinkos_rt.flag, idx, 0);
 		arg[0] = 0;
 		return;
 	} 
@@ -131,9 +128,9 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 #endif
 #endif
 
-	if (__bit_mem_rd(thinkos_rt.flag.sig, idx)) {
+	if (__bit_mem_rd(thinkos_rt.flag, idx)) {
 		/* clear the signal */
-		__bit_mem_wr(thinkos_rt.flag.sig, idx, 0);
+		__bit_mem_wr(thinkos_rt.flag, idx, 0);
 		arg[0] = 0;
 		return;
 	} 
@@ -154,7 +151,7 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 #endif
 
 
-void __thinkos_flag_give(uint32_t wq)
+void __thinkos_flag_give_i(uint32_t wq)
 {
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
 	int th;
@@ -162,7 +159,7 @@ void __thinkos_flag_give(uint32_t wq)
 	/* flag_give(): wakeup a single thread waiting on the flag 
 	   OR set the flag */
 	/* get the flag state */
-	if (__bit_mem_rd(thinkos_rt.flag.sig, flag) == 0) {
+	if (__bit_mem_rd(thinkos_rt.flag, flag) == 0) {
 		/* get a thread from the queue */
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 			DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
@@ -171,7 +168,7 @@ void __thinkos_flag_give(uint32_t wq)
 			__thinkos_defer_sched();
 		} else {
 			/* set the flag bit */
-			__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+			__bit_mem_wr(thinkos_rt.flag, flag, 1);  
 		}
 	}
 }
@@ -198,7 +195,7 @@ void thinkos_flag_give_svc(int32_t * arg)
 
 	arg[0] = 0;
 
-	__thinkos_flag_give(wq);
+	__thinkos_flag_give_i(wq);
 }
 
 
@@ -228,7 +225,7 @@ void thinkos_flag_val_svc(int32_t * arg)
 	}
 #endif
 #endif
-	arg[0] = __bit_mem_rd(thinkos_rt.flag.sig, idx);
+	arg[0] = __bit_mem_rd(thinkos_rt.flag, idx);
 }
 
 void __thinkos_flag_clr(uint32_t wq)
@@ -236,7 +233,7 @@ void __thinkos_flag_clr(uint32_t wq)
 	unsigned int flag = wq - THINKOS_FLAG_BASE;
 
 	/* clear the flag signal bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 0);  
+	__bit_mem_wr(thinkos_rt.flag, flag, 0);  
 }
 
 void thinkos_flag_clr_svc(int32_t * arg)
@@ -271,7 +268,7 @@ void __thinkos_flag_set(uint32_t wq)
 	/* set the flag and wakeup all threads waiting on the flag */
 
 	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag.sig, flag, 1);  
+	__bit_mem_wr(thinkos_rt.flag, flag, 1);  
 
 	/* get a thread from the queue */
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
@@ -333,7 +330,7 @@ void thinkos_flag_watch_svc(int32_t * arg)
 	/* set the return value */
 	arg[0] = 0;
 	/* flag is set just return */
-	if (__bit_mem_rd(thinkos_rt.flag.sig, idx))
+	if (__bit_mem_rd(thinkos_rt.flag, idx))
 		return;
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
@@ -371,7 +368,7 @@ void thinkos_flag_timedwatch_svc(int32_t * arg)
 #endif
 
 	arg[0] = 0;
-	if (__bit_mem_rd(thinkos_rt.flag.sig, idx))
+	if (__bit_mem_rd(thinkos_rt.flag, idx))
 		return;
 
 	/* -- wait for event ---------------------------------------- */

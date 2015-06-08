@@ -138,19 +138,23 @@
 #endif
 
 #ifndef THINKOS_FLAG_MAX
-#define THINKOS_FLAG_MAX 16
+#define THINKOS_FLAG_MAX 8
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_ALLOC
 #define THINKOS_ENABLE_FLAG_ALLOC 1
 #endif
 
-#ifndef THINKOS_ENABLE_FLAG_LOCK
-#define THINKOS_ENABLE_FLAG_LOCK 1
-#endif
-
 #ifndef THINKOS_ENABLE_FLAG_WATCH
 #define THINKOS_ENABLE_FLAG_WATCH 1
+#endif
+
+#ifndef THINKOS_GATE_MAX
+#define THINKOS_GATE_MAX 8
+#endif
+
+#ifndef THINKOS_ENABLE_GATE_ALLOC
+#define THINKOS_ENABLE_GATE_ALLOC 1
 #endif
 
 #ifndef THINKOS_ENABLE_TIMED_CALLS
@@ -393,12 +397,16 @@ struct thinkos_rt {
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
 
 #if THINKOS_EVENT_MAX > 0
-	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event wait queue */
+	uint32_t wq_event[THINKOS_EVENT_MAX]; /* event sets wait queues */
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
-	uint32_t wq_flag[THINKOS_FLAG_MAX]; /* flags wait queue */
+	uint32_t wq_flag[THINKOS_FLAG_MAX]; /* flags wait queues */
 #endif /* THINKOS_FLAG_MAX > 0 */
+
+#if THINKOS_GATE_MAX > 0
+	uint32_t wq_gate[THINKOS_GATE_MAX]; /* gates wait queues */
+#endif /* THINKOS_GATE_MAX > 0 */
 
 #if THINKOS_ENABLE_JOIN
 	uint32_t wq_join[THINKOS_THREADS_MAX];
@@ -450,16 +458,6 @@ struct thinkos_rt {
 	};
 #endif
 
-#if (THINKOS_SEMAPHORE_MAX > 0) || (THINKOS_EVENT_MAX > 0) || \
-	(HINKOS_FLAG_MAX > 0)
-#define THINKOS_SIG_QUEUE_LEN 16
-	struct {
-		volatile uint32_t head;
-		volatile uint32_t tail;
-		uint16_t queue[THINKOS_SIG_QUEUE_LEN];
-	} sig;
-#endif 
-
 #if THINKOS_SEMAPHORE_MAX > 0
 	uint32_t sem_val[THINKOS_SEMAPHORE_MAX];
 #endif /* THINKOS_SEMAPHORE_MAX > 0 */
@@ -472,12 +470,7 @@ struct thinkos_rt {
 #endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_FLAG_MAX > 0
-	struct {
-		uint32_t sig[(THINKOS_FLAG_MAX + 31) / 32]; /* flag signal */
-#if THINKOS_ENABLE_FLAG_LOCK
-		uint32_t lock[(THINKOS_FLAG_MAX + 31) / 32]; /* flag lock */
-#endif
-	} flag;
+	uint32_t flag[(THINKOS_FLAG_MAX + 31) / 32]; /* flag signal */
 #endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_GATE_MAX > 0

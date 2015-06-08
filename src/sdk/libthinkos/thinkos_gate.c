@@ -212,7 +212,7 @@ void thinkos_gate_exit_svc(int32_t * arg)
 	__thinkos_defer_sched();
 }
 
-void __thinkos_gate_open(uint32_t wq)
+void __thinkos_gate_open_i(uint32_t wq)
 {
 	unsigned int gate = wq - THINKOS_GATE_BASE;
 	int th;
@@ -237,7 +237,7 @@ void __thinkos_gate_open(uint32_t wq)
 	}
 }
 
-void thinkos_gate_set_svc(int32_t * arg)
+void thinkos_gate_open_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	unsigned int idx = wq - THINKOS_GATE_BASE;
@@ -258,7 +258,7 @@ void thinkos_gate_set_svc(int32_t * arg)
 #endif
 	arg[0] = 0;
 
-	__thinkos_gate_set(wq);
+	__thinkos_gate_open_i(wq);
 }
 
 

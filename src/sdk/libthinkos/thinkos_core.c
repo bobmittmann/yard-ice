@@ -243,61 +243,6 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 	__sched_exit(new_ctx);
 }
 
-#if 0
-static void thinkos_signal_queue(void)
-{
-#if (THINKOS_SEMAPHORE_MAX > 0) || (THINKOS_EVENT_MAX > 0) || \
-	(HINKOS_FLAG_MAX > 0)
-	uint32_t tail = thinkos_rt.sig.tail;
-	uint32_t opc;
-	uint32_t wq;
-
-	/* ----------------------------------------------------------------------
-	 * Process the signal queue 
-	 * ----------------------------------------------------------------------*/
-	while (tail != thinkos_rt.sig.head) {
-		opc = thinkos_rt.sig.queue[tail % THINKOS_SIG_QUEUE_LEN];
-		thinkos_rt.sig.tail = tail + 1;
-		wq = opc & 0x3ff;
-		if (opc & 0x8000) {
-			/* Event sets */
-#if (THINKOS_EVENT_MAX > 0)
-			__thinkos_ev_raise(wq, (opc & 0x7c00) >> 10);
-#endif
-		} else if (opc & 0x4000) {
-			/* Flags */
-#if (THINKOS_FLAG_MAX > 0)
-			switch ((opc & 0x0c00) >> 10) {
-			case 0: 
-				__thinkos_flag_give(wq);
-			case 1: 
-#if (THINKOS_GATE_MAX > 0)
-				__thinkos_gate_open(wq);
-#endif /* (THINKOS_GATE_MAX > 0) */
-				break;
-			case 2: 
-#if THINKOS_ENABLE_FLAG_WATCH
-				__thinkos_flag_clr(wq);
-#endif
-				break;
-			case 3: 
-#if THINKOS_ENABLE_FLAG_WATCH
-				__thinkos_flag_set(wq);
-#endif
-				break;
-			}
-#endif /* (THINKOS_FLAG_MAX > 0) */
-		} else {
-			/* Semaphores */
-#if (THINKOS_SEMAPHORE_MAX  > 0)
-			__thinkos_sem_post(wq);
-#endif
-		}
-	}
-#endif
-}
-#endif
-
 #if THINKOS_ENABLE_CLOCK
 static void thinkos_time_wakeup(int thread_id) 
 {
@@ -350,21 +295,12 @@ static void thinkos_timeshare(void)
  * ThinkOS - defered services
  * --------------------------------------------------------------------------*/
 
+#if THINKOS_ENABLE_CLOCK
 void __attribute__((aligned(16))) cm3_systick_isr(void)
 {
-#if THINKOS_ENABLE_CLOCK
 	uint32_t ticks;
 	uint32_t wq;
 	int j;
-#endif
-
-//	thinkos_signal_queue();
-
-#if THINKOS_ENABLE_CLOCK
-	if ((CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG) == 0) {
-		DCC_LOG(LOG_INFO, "systick COUNTFLAG not set!!!");
-		return;
-	}
 
 	ticks = thinkos_rt.ticks; 
 	ticks++;
@@ -388,6 +324,6 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 	thinkos_timeshare(); 
 #endif /* THINKOS_ENABLE_TIMESHARE */
 
-#endif /* THINKOS_ENABLE_CLOCK */
 }
+#endif /* THINKOS_ENABLE_CLOCK */
 
