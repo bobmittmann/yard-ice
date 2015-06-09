@@ -181,27 +181,7 @@ void __thinkos_flag_set_i(int wq)
 
 #if (THINKOS_GATE_MAX > 0)
 /* wakeup a single thread waiting on the gate OR set the flag */
-void __thinkos_gate_open_i(int wq) 
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.gate.sig, flag, 1);  
-	if (!__bit_mem_rd(thinkos_rt.gate.lock, flag)) {
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* lock the flag */
-			__bit_mem_wr(thinkos_rt.gate.lock, flag, 1);
-			__thinkos_wakeup(wq, th);
-
-			/* clear the flag bit */
-			__bit_mem_wr(thinkos_rt.gate.sig, flag, 0);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-			return;
-		} 
-	}
-}
+void __thinkos_gate_open_i(int wq); 
 #else
 void __thinkos_gate_open_i(int wq) 
 {

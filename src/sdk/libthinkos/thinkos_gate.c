@@ -240,9 +240,9 @@ void __thinkos_gate_open_i(uint32_t wq)
 void thinkos_gate_open_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
+#if THINKOS_ENABLE_ARG_CHECK
 	unsigned int idx = wq - THINKOS_GATE_BASE;
 
-#if THINKOS_ENABLE_ARG_CHECK
 	if (idx >= THINKOS_GATE_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a gate!", wq);
 		arg[0] = THINKOS_EINVAL;

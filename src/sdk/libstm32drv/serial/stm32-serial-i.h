@@ -75,8 +75,8 @@
 
 struct stm32f_serial_drv {
 	struct stm32_usart * uart;
-	uint8_t tx_flag;
-	uint8_t rx_flag;
+	uint8_t tx_gate;
+	uint8_t rx_gate;
 #if SERIAL_ENABLE_TX_MUTEX
 	uint8_t tx_mutex;
 #endif

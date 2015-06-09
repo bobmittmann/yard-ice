@@ -40,7 +40,7 @@
 
 /* GPIO pin description */ 
 struct stm32f_io {
-	struct stm32f_gpio * gpio;
+	struct stm32_gpio * gpio;
 	uint8_t pin;
 };
 
@@ -50,20 +50,20 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ STM32F_GPIOC, 1 },
-	{ STM32F_GPIOC, 14 },
-	{ STM32F_GPIOC, 7 },
-	{ STM32F_GPIOC, 8 }
+	{ STM32_GPIOC, 1 },
+	{ STM32_GPIOC, 14 },
+	{ STM32_GPIOC, 7 },
+	{ STM32_GPIOC, 8 }
 };
 
 void led_on(int id)
 {
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
 {
-	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_init(void)
@@ -71,10 +71,10 @@ void leds_init(void)
 	int i;
 
 	for (i = 0; i < 5; ++i) {
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+		stm32_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
-		stm32f_gpio_clr(led_io[i].gpio, led_io[i].pin);
+		stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
 }
 
@@ -83,39 +83,39 @@ void leds_init(void)
  * ----------------------------------------------------------------------
  */
 
-#define USART1_TX STM32F_GPIOB, 6
-#define USART1_RX STM32F_GPIOB, 7
+#define USART1_TX STM32_GPIOB, 6
+#define USART1_RX STM32_GPIOB, 7
 
 struct file stm32f_uart1_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
+	.data = STM32_USART1, 
+	.op = &stm32_usart_fops 
 };
 
 void stdio_init(void)
 {
-	struct stm32f_usart * us = STM32F_USART1;
+	struct stm32_usart * us = STM32_USART1;
 #if defined(STM32F1x)
 	struct stm32f_afio * afio = STM32F_AFIO;
 #endif
 
 	/* USART1_TX */
-	stm32f_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(USART1_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 
 #if defined(STM32F1X)
 	/* USART1_RX */
-	stm32f_gpio_mode(USART1_RX, INPUT, PULL_UP);
+	stm32_gpio_mode(USART1_RX, INPUT, PULL_UP);
 	/* Use alternate pins for USART1 */
 	afio->mapr |= AFIO_USART1_REMAP;
 #elif defined(STM32F4X)
-	stm32f_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(USART1_RX, GPIO_AF7);
-	stm32f_gpio_af(USART1_TX, GPIO_AF7);
+	stm32_gpio_mode(USART1_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(USART1_RX, GPIO_AF7);
+	stm32_gpio_af(USART1_TX, GPIO_AF7);
 #endif
 
-	stm32f_usart_init(us);
-	stm32f_usart_baudrate_set(us, 115200);
-	stm32f_usart_mode_set(us, SERIAL_8N1);
-	stm32f_usart_enable(us);
+	stm32_usart_init(us);
+	stm32_usart_baudrate_set(us, 115200);
+	stm32_usart_mode_set(us, SERIAL_8N1);
+	stm32_usart_enable(us);
 
 	stdin = &stm32f_uart1_file;
 	stdout = &stm32f_uart1_file;
@@ -130,13 +130,49 @@ void io_init(void)
 {
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
 
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_clock_en(STM32F_GPIOB);
-	stm32f_gpio_clock_en(STM32F_GPIOC);
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOB);
+	stm32_gpio_clock_en(STM32_GPIOC);
+}
+
+int __attribute__((noreturn)) serial_send_task(struct serial_dev * ser)
+{
+	int thread_id = thinkos_thread_self();
+	char buf[256];
+	int i;
+	DCC_LOG1(LOG_WARNING, "<%d> started...", thread_id); 
+
+	for (i = 0; i < 128; ++i)
+		buf[i] = thread_id + '0';
+
+	for (;;) {
+		serial_send(ser, buf, 100);
+	}
 }
 
 int main(int argc, char ** argv)
 {
+	struct serial_dev * ser5;
+	uint32_t send1_stack[512];
+	const struct thinkos_thread_inf send1_inf = {
+		.stack_ptr = send1_stack, 
+		.stack_size = sizeof(send1_stack), 
+		.priority = 32,
+		.thread_id = 8, 
+		.paused = 0,
+		.tag = "SEND1"
+	};
+
+	uint32_t send2_stack[512];
+	const struct thinkos_thread_inf send2_inf = {
+		.stack_ptr = send2_stack, 
+		.stack_size = sizeof(send2_stack), 
+		.priority = 32,
+		.thread_id = 7, 
+		.paused = 0,
+		.tag = "SEND2"
+	};
+
 	int i = 0;
 
 	DCC_LOG_INIT();
@@ -162,6 +198,21 @@ int main(int argc, char ** argv)
 	printf(" Serial console test\n");
 	printf("-----------------------------------------\n");
 	printf("\n");
+
+	DCC_LOG(LOG_TRACE, "5. serial init...");
+	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+
+	DCC_LOG(LOG_TRACE, "5. TTY threads...");
+	thinkos_thread_create_inf((void *)serial_send_task, 
+							  (void *)&ser5, &send1_inf);
+	thinkos_thread_create_inf((void *)serial_send_task, 
+							  (void *)&ser5, &send2_inf);
+/*
+	thinkos_thread_create_inf((void *)serial_recv_task, 
+							  (void *)&ser5, &recv1_inf);
+	thinkos_thread_create_inf((void *)serial_recv_task, 
+							  (void *)&ser5, &recv2_inf);
+*/
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);

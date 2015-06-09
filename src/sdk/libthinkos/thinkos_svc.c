@@ -101,8 +101,6 @@ void thinkos_flag_alloc_svc(int32_t * arg);
 void thinkos_flag_free_svc(int32_t * arg);
 
 
-void thinkos_flag_val_svc(int32_t * arg);
-
 void thinkos_flag_set_svc(int32_t * arg);
 
 void thinkos_flag_clr_svc(int32_t * arg);
@@ -119,11 +117,17 @@ void thinkos_flag_take_svc(int32_t * arg);
 void thinkos_flag_timedtake_svc(int32_t * arg);
 
 
-void thinkos_flag_release_svc(int32_t * arg);
+void thinkos_gate_alloc_svc(int32_t * arg);
 
-void thinkos_flag_wait_svc(int32_t * arg);
+void thinkos_gate_free_svc(int32_t * arg);
 
-void thinkos_flag_timedwait_svc(int32_t * arg);
+void thinkos_gate_open_svc(int32_t * arg);
+
+void thinkos_gate_exit_svc(int32_t * arg);
+
+void thinkos_gate_wait_svc(int32_t * arg);
+
+void thinkos_gate_timedwait_svc(int32_t * arg);
 
 
 void thinkos_irq_wait_svc(int32_t * arg);
@@ -350,37 +354,33 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
-
-
-	case THINKOS_FLAG_WAIT:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK
-		thinkos_flag_wait_svc(arg);
+	case THINKOS_GATE_WAIT:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_wait_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
-	case THINKOS_FLAG_TIMEDWAIT:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK && \
-		THINKOS_ENABLE_TIMED_CALLS
-		thinkos_flag_timedwait_svc(arg);
+	case THINKOS_GATE_TIMEDWAIT:
+#if (THINKOS_GATE_MAX > 0) && THINKOS_ENABLE_TIMED_CALLS
+		thinkos_gate_timedwait_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
-	case THINKOS_FLAG_RELEASE:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_LOCK
-		thinkos_flag_release_svc(arg);
+	case THINKOS_GATE_EXIT:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_exit_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
 		break;
 
-
-	case THINKOS_FLAG_VAL:
-#if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH
-		thinkos_flag_val_svc(arg);
+	case THINKOS_GATE_OPEN:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_open_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
@@ -558,6 +558,18 @@ void cm3_svc_isr(void)
 		break;
 #endif
 #endif /* (THINKOS_EVENT_MAX > 0) */
+
+#if (THINKOS_GATE_MAX > 0)
+#if THINKOS_ENABLE_GATE_ALLOC
+	case THINKOS_GATE_ALLOC:
+		thinkos_gate_alloc_svc(arg);
+		break;
+
+	case THINKOS_GATE_FREE:
+		thinkos_gate_free_svc(arg);
+		break;
+#endif
+#endif /* (THINKOS_GATE_MAX > 0) */
 
 	case THINKOS_JOIN:
 #if THINKOS_ENABLE_JOIN

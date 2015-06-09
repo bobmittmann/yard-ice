@@ -53,10 +53,12 @@
 #define THINKOS_FLAG_TAKE       18
 #define THINKOS_FLAG_TIMEDTAKE  19
 #define THINKOS_FLAG_GIVE       20
-#define THINKOS_FLAG_WAIT       21
-#define THINKOS_FLAG_TIMEDWAIT  22
-#define THINKOS_FLAG_RELEASE    23
-#define THINKOS_FLAG_VAL        24
+
+#define THINKOS_GATE_WAIT       21
+#define THINKOS_GATE_TIMEDWAIT  22
+#define THINKOS_GATE_EXIT       23
+#define THINKOS_GATE_OPEN       24
+
 #define THINKOS_FLAG_CLR        25
 #define THINKOS_FLAG_SET        26
 #define THINKOS_FLAG_WATCH      27
@@ -88,23 +90,26 @@
 #define THINKOS_EVENT_ALLOC     45
 #define THINKOS_EVENT_FREE      46
 
-#define THINKOS_JOIN            47
-#define THINKOS_PAUSE           48
-#define THINKOS_RESUME          49
-#define THINKOS_CANCEL          50
+#define THINKOS_GATE_ALLOC      47
+#define THINKOS_GATE_FREE       48
 
-#define THINKOS_EXIT            51
+#define THINKOS_JOIN            49
+#define THINKOS_PAUSE           50
+#define THINKOS_RESUME          51
+#define THINKOS_CANCEL          52
 
-#define THINKOS_SYSINFO         52
+#define THINKOS_EXIT            53
 
-#define THINKOS_RT_SNAPSHOT     53
+#define THINKOS_SYSINFO         54
+
+#define THINKOS_RT_SNAPSHOT     55
 
 /* NMI calls ... */
 #define THINKOS_DEBUG_STEP_I     0
 #define THINKOS_SEM_POST_I       1
 #define THINKOS_EV_RAISE_I       2
 #define THINKOS_FLAG_GIVE_I      3
-#define THINKOS_FLAG_SIGNAL_I    4
+#define THINKOS_GATE_OPEN_I      4
 #define THINKOS_FLAG_CLR_I       5
 #define THINKOS_FLAG_SET_I       6
 
@@ -454,27 +459,37 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC2(THINKOS_FLAG_TIMEDWAIT, flag, ms);
 }
 
-static inline int __attribute__((always_inline)) thinkos_flag_give(int flag) {
-	return THINKOS_SVC1(THINKOS_FLAG_GIVE, flag);
+/* ---------------------------------------------------------------------------
+   Gates
+   ---------------------------------------------------------------------------*/
+
+static inline int __attribute__((always_inline)) thinkos_gate_alloc(void) {
+	return THINKOS_SVC(THINKOS_GATE_ALLOC);
 }
 
-static inline int __attribute__((always_inline)) thinkos_flag_take(int flag) {
-	return THINKOS_SVC1(THINKOS_FLAG_TAKE, flag);
+static inline int __attribute__((always_inline)) thinkos_gate_free(int gate) {
+	return THINKOS_SVC1(THINKOS_GATE_FREE, gate);
+}
+
+
+static inline int __attribute__((always_inline)) 
+	thinkos_gate_open(int gate) {
+	return THINKOS_SVC1(THINKOS_GATE_OPEN, gate);
 }
 
 static inline int __attribute__((always_inline)) 
-	thinkos_flag_timedtake(int flag, unsigned int ms) {
-	return THINKOS_SVC2(THINKOS_FLAG_TIMEDTAKE, flag, ms);
+	thinkos_gate_exit(int gate, unsigned int open) {
+	return THINKOS_SVC2(THINKOS_GATE_EXIT, gate, open);
 }
 
 static inline int __attribute__((always_inline)) 
-	thinkos_flag_signal(int flag) {
-	return THINKOS_SVC1(THINKOS_FLAG_GIVE, flag);
+	thinkos_gate_wait(int gate) {
+	return THINKOS_SVC1(THINKOS_GATE_WAIT, gate);
 }
 
 static inline int __attribute__((always_inline)) 
-	thinkos_flag_release( int flag, int sig) {
-	return THINKOS_SVC2(THINKOS_FLAG_RELEASE, flag, sig);
+	thinkos_gate_timedwait(int gate, unsigned int ms) {
+	return THINKOS_SVC2(THINKOS_GATE_TIMEDWAIT, gate, ms);
 }
 
 /* ---------------------------------------------------------------------------
@@ -557,16 +572,14 @@ static inline void __attribute__((always_inline))
 }
 
 static inline void  __attribute__((always_inline)) 
-	thinkos_flag_signal_i(int flag) {
-	THINKOS_NMI1(THINKOS_FLAG_SIGNAL_I, flag);
+	thinkos_gate_open_i(int flag) {
+	THINKOS_NMI1(THINKOS_GATE_OPEN_I, flag);
 }
 
 static inline void  __attribute__((always_inline)) 
 	thinkos_debug_step_i(unsigned int thread_id) {
 	THINKOS_NMI1(THINKOS_DEBUG_STEP_I, thread_id);
 }
-
-
 
 #ifdef __cplusplus
 }
