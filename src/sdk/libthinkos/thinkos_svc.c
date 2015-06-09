@@ -93,7 +93,7 @@ void thinkos_ev_raise_svc(int32_t * arg);
 
 void thinkos_ev_mask_svc(int32_t * arg);
 
-void thinkos_ev_unmask_svc(int32_t * arg);
+void thinkos_ev_clear_svc(int32_t * arg);
 
 
 void thinkos_flag_alloc_svc(int32_t * arg);
@@ -455,9 +455,9 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
-	case THINKOS_EVENT_UNMASK:
+	case THINKOS_EVENT_CLEAR:
 #if (THINKOS_EVENT_MAX > 0)
-		thinkos_ev_unmask_svc(arg);
+		thinkos_ev_clear_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif

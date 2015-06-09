@@ -34,28 +34,28 @@
 
 static unsigned int cm3_get_ticks(void)
 {
-	return 0xffffffff - (CM3_SYSTICK->val << 8);
+	return 0xffffffff - (CM3_SYSTICK->cvr << 8);
 }
 
 void cm3_udelay_calibrate(void)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;
 	uint32_t ticks1ms;
-	uint32_t load;
-	uint32_t ctrl;
+	uint32_t rvr;
+	uint32_t csr;
 
 	cm3_cpsid_i();
-	load = systick->load;
-	ctrl = systick->ctrl;
+	rvr = systick->rvr;
+	csr = systick->csr;
 
-	systick->load = 0x00ffffff;
-	systick->ctrl = SYSTICK_CTRL_ENABLE;
+	systick->rvr = 0x00ffffff;
+	systick->csr = SYSTICK_CSR_ENABLE;
 	ticks1ms = cm3_systick_load_1ms << 8;
 
 	udelay_calibrate(ticks1ms, cm3_get_ticks);
 
-	systick->load = load;
-	systick->ctrl = ctrl;
+	systick->rvr = rvr;
+	systick->csr = csr;
 
 	cm3_cpsie_i();
 }

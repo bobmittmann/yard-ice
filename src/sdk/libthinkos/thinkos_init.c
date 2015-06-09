@@ -61,8 +61,8 @@ void __thinkos_reset(void)
 	   at higher priority. In order for the regular priority
 	   interrupts to call SVC, they shuld run at a lower priority
 	   then SVC.*/
-//	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
-	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);
+	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
+//	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);
 
 	/* SysTick interrupt has to have a lower priority then SVC,
 	 to not preempt SVC */
@@ -165,12 +165,12 @@ void __thinkos_reset(void)
 #endif
 
 	/* initialize the SysTick module */
-	systick->load = cm3_systick_load_1ms; /* 1ms tick period */
-	systick->val = 0;
+	systick->rvr = cm3_systick_load_1ms; /* 1ms tick period */
+	systick->cvr = 0;
 #if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
-	systick->ctrl = SYSTICK_CTRL_ENABLE | SYSTICK_CTRL_TICKINT;
+	systick->csr = SYSTICK_CSR_ENABLE | SYSTICK_CSR_TICKINT;
 #else
-	systick->ctrl = SYSTICK_CTRL_ENABLE;
+	systick->csr = SYSTICK_CSR_ENABLE;
 #endif
 
 	/* Set the initial thread as an invalid thread,

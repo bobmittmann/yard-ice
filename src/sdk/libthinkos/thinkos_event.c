@@ -221,34 +221,10 @@ void thinkos_ev_raise_svc(int32_t * arg)
 void thinkos_ev_mask_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	uint32_t mask = arg[1];
+	unsigned int ev = arg[1];
+	unsigned int val = arg[2];
 	unsigned int no = wq - THINKOS_EVENT_BASE;
-
-#if THINKOS_ENABLE_ARG_CHECK
-	if (no >= THINKOS_EVENT_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#if THINKOS_ENABLE_EVENT_ALLOC
-	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
-		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
-		arg[0] = THINKOS_EINVAL;
-		return;
-	}
-#endif
-#endif
-
-	/* mask the events on the mask bitmap */
-	thinkos_rt.ev[no].mask &= ~mask;
-}
-
-void thinkos_ev_unmask_svc(int32_t * arg)
-{
-	unsigned int wq = arg[0];
-	uint32_t mask = arg[1];
-	unsigned int no = wq - THINKOS_EVENT_BASE;
-	unsigned int ev;
+	uint32_t queue;
 	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
@@ -266,51 +242,75 @@ void thinkos_ev_unmask_svc(int32_t * arg)
 #endif
 #endif
 
-	cm3_cpsid_i();
+	arg[0] = 0;
+	if (val == 0) {
+		/* mask the event on the mask bitmap */
+		__bit_mem_wr(&thinkos_rt.ev[no].mask, ev, 0);  
+		return;
+	}
 
-	/* unmask the events on the mask bitmap */
-	thinkos_rt.ev[no].mask |= mask;
-
-	/* wake up the first unmasked thread if any. */
-	if ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & mask))) < 32) {
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* a pending event was unmaksed and there is a thread waiting on 
-			   the queue, clear the event pending flag and 
-			   wakes up the thread. */
-			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
-			/* wakeup from the event wait queue, set the return of
-			   the thread to the event */
-			__thinkos_wakeup_return(wq, th, ev);
-			DCC_LOG3(LOG_INFO, "<%d> waked up with event %d.%d", th, wq, ev);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else {
+	do {
+		/* get the event wait queue bitmap */
+		queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+		/* get a thread from the queue bitmap */
+		if ((th = __clz(__rbit(queue))) == THINKOS_THREAD_NULL) {
 			/* no threads waiting */
-			cm3_cpsie_i();
+			__clrex();
+			/* set the mask bit on the mask bitmap */
+			__bit_mem_wr(&thinkos_rt.ev[no].mask, ev, 1);  
 			return;
-		}
-	}
+		} 
+		/* remove from the wait queue */
+		queue &= ~(1 << th);
+	} while (__strex(&thinkos_rt.wq_lst[wq], queue));
 
-	/* wake up as many other threads as possible */
-	while ((ev = __clz(__rbit(thinkos_rt.ev[no].pend & mask))) < 32) {
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			/* a pending event was unmaksed and there is a thread waiting on 
-			   the queue, clear the event pending flag and 
-			   wakes up the thread. */
-			__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
-			/* wakeup from the event wait queue, set the return of
-			   the thread to the event */
-			__thinkos_wakeup_return(wq, th, ev);
-			DCC_LOG3(LOG_INFO, "<%d> waked up with event %d.%d", th, wq, ev);
-		} else {
-			/* no more threads waiting */
-			break;
-		}
-	}
+	/* clear the event */
+	__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
 
-	cm3_cpsie_i();
+	/* set the mask bit on the mask bitmap */
+	__bit_mem_wr(&thinkos_rt.ev[no].mask, ev, 1);  
+
+	/* insert the thread into ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
+#endif
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = ev;
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status */
+	thinkos_rt.th_stat[th] = 0;
+#endif
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
+void thinkos_ev_clear_svc(int32_t * arg)
+{
+	unsigned int wq = arg[0];
+	unsigned int ev = arg[1];
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+
+#if THINKOS_ENABLE_ARG_CHECK
+	if (no >= THINKOS_EVENT_MAX) {
+		DCC_LOG1(LOG_ERROR, "object %d is not an event set!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#if THINKOS_ENABLE_EVENT_ALLOC
+	if (__bit_mem_rd(&thinkos_rt.ev_alloc, no) == 0) {
+		DCC_LOG1(LOG_ERROR, "invalid event set %d!", wq);
+		arg[0] = THINKOS_EINVAL;
+		return;
+	}
+#endif
+#endif
+
+	arg[0] = 0;
+	/* clear the event bit on the pending bitmap */
+	__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 0);  
+}
 
 #endif /* THINKOS_EVENT_MAX > 0 */
 

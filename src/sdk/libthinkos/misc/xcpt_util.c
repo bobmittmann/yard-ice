@@ -259,7 +259,7 @@ void __xcpt_systick_int_disable(void)
 #if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
 	struct cm3_systick * systick = CM3_SYSTICK;
 
-	systick->ctrl &= ~SYSTICK_CTRL_TICKINT;
+	systick->csr &= ~SYSTICK_CSR_TICKINT;
 	CM3_SCB->icsr = SCB_ICSR_PENDSTCLR;
 #endif
 }
@@ -268,7 +268,7 @@ void __xcpt_systick_int_enable(void)
 {
 #if THINKOS_ENABLE_CLOCK || THINKOS_ENABLE_TIMESHARE
 	struct cm3_systick * systick = CM3_SYSTICK;
-	systick->ctrl |= SYSTICK_CTRL_TICKINT;
+	systick->csr |= SYSTICK_CSR_TICKINT;
 #endif
 }
 

@@ -32,10 +32,10 @@
  ****************************************************************************/
 
 /* SysTick Control / Status Register */
-#define SYSTICK_CTRL_COUNTFLAG  (0x01 << 16)
-#define SYSTICK_CTRL_CLKSOURCE  (0x01 << 2)
-#define SYSTICK_CTRL_TICKINT    (0x01 << 1)
-#define SYSTICK_CTRL_ENABLE     (0x01 << 0)
+#define SYSTICK_CSR_COUNTFLAG  (0x01 << 16)
+#define SYSTICK_CSR_CLKSOURCE  (0x01 << 2)
+#define SYSTICK_CSR_TICKINT    (0x01 << 1)
+#define SYSTICK_CSR_ENABLE     (0x01 << 0)
 
 /* SysTick Reload Register */
 #define SYSTICK_LOAD_RELOAD (0x00ffffff)
@@ -599,9 +599,9 @@ struct cm3_nvic {
   CM3 SysTick 
  ****************************************************************************/
 struct cm3_systick {
-	volatile uint32_t ctrl; /* Control and Status Register */
-	volatile uint32_t load; /* Reload Value Register */
-	volatile uint32_t val; /* Current Value Register */
+	volatile uint32_t csr; /* Control and Status Register */
+	volatile uint32_t rvr; /* Reload Value Register */
+	volatile uint32_t cvr; /* Current Value Register */
 	volatile uint32_t calib; /* Calibration Register */
 };
 
@@ -990,36 +990,47 @@ static inline uint32_t __attribute__((always_inline)) __ldrexh(uint16_t * addr) 
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __ldrexw(uint32_t * addr) {
+static inline uint32_t __attribute__((always_inline)) __ldrex(uint32_t * addr) {
 	register uint32_t ret;
 	asm volatile ("ldrex %0, [%1]" : "=r" (ret) : "r" (addr));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexb(uint8_t * addr, uint8_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexb(uint8_t * addr, 
+															   uint8_t val) {
 	register uint32_t ret;
 	asm volatile ("strexb %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexh(uint16_t * addr, uint16_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexh(uint16_t * addr,
+															   uint16_t val) {
 	register uint32_t ret;
 	asm volatile ("strexh %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexw(uint32_t * addr, uint32_t val) {
+static inline uint32_t __attribute__((always_inline)) __strex(uint32_t * addr, 
+															  uint32_t val) {
 	register uint32_t ret;
 	asm volatile ("strex %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline void __attribute__((always_inline)) __clrx(void) {
+static inline void __attribute__((always_inline)) __clrex(void) {
 	asm volatile ("clrex" : );
 }
 
 static inline void __attribute__((always_inline)) __dsb(void) {
 	asm volatile ("dsb" : );
+}
+
+static inline void __attribute__((always_inline)) __isb(void) {
+	asm volatile ("isb" : );
+}
+
+static inline void __attribute__((always_inline)) __nop(void) {
+	asm volatile ("nop" : );
 }
 
 void cm3_udelay_calibrate(void);

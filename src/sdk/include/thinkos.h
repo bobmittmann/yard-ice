@@ -172,9 +172,9 @@ int thinkos_ev_timedwait(int set, unsigned int ms);
 
 int thinkos_ev_raise(int set, int ev);
 
-int thinkos_ev_mask(int set, uint32_t mask);
+int thinkos_ev_mask(int set, int ev, int val);
 
-int thinkos_ev_unmaks(int set, uint32_t mask);
+int thinkos_ev_clear(int set, int ev);
 
 
 int thinkos_flag_alloc(void);
