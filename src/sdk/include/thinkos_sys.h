@@ -474,10 +474,10 @@ struct thinkos_rt {
 #endif /* THINKOS_FLAG_MAX > 0 */
 
 #if THINKOS_GATE_MAX > 0
-	struct {
-		uint32_t sig[(THINKOS_GATE_MAX + 31) / 32]; /* flag signal */
-		uint32_t lock[(THINKOS_GATE_MAX + 31) / 32]; /* flag lock */
-	} gate;
+	/* gate bitmap, each gate takes two bits: 
+	   1 - signal the gate is open or signaled to be open, 
+	   2 - the gate is locked and can't be oepn. */
+	uint32_t gate[(THINKOS_GATE_MAX + 15) / 16]; /* gates states */
 #endif /* THINKOS_GATE_MAX > 0 */
 
 

@@ -179,12 +179,12 @@ static void gate_resume(unsigned int th, unsigned int wq, bool tmw)
 
 	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 
-	if ((__bit_mem_rd(thinkos_rt.gate.sig, idx)) && 
-		(!__bit_mem_rd(thinkos_rt.gate.lock, idx))) {
-		/* lock the flag */
-		__bit_mem_wr(thinkos_rt.gate.lock, idx, 1);
-		/* clear the signal */
-		__bit_mem_wr(thinkos_rt.gate.sig, idx, 0);
+	if ((__bit_mem_rd(thinkos_rt.gate, idx * 2)) && 
+		(!__bit_mem_rd(thinkos_rt.gate, idx * 2 + 1))) {
+		/* close the gate */
+		__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
+		/* lock the gate */
+		__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 1);
 		/* insert the thread into ready queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 #if THINKOS_ENABLE_TIMED_CALLS
