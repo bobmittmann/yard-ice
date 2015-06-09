@@ -179,6 +179,7 @@ void event_test(void)
 	int consumer_th;
 	int producer_ret;
 	int consumer_ret;
+	int i;
 
 	timer_init(2);
 
@@ -215,23 +216,24 @@ void event_test(void)
 
 	thinkos_alarm(4000);
 	printf(" * masking event %d\n", 16);
-	thinkos_ev_mask(my_ev_set, (1 << 16));
+	thinkos_ev_mask(my_ev_set, 16, 0);
 
 	thinkos_alarm(6000);
 	printf(" * masking event %d\n", 17);
-	thinkos_ev_mask(my_ev_set, (1 << 17));
+	thinkos_ev_mask(my_ev_set, 17, 0);
 
 	thinkos_alarm(8000);
 	printf(" * masking event %d\n", 18);
-	thinkos_ev_mask(my_ev_set, (1 << 18));
+	thinkos_ev_mask(my_ev_set, 18, 0);
 
 	thinkos_alarm(10000);
 	printf(" * masking event %d\n", 19);
-	thinkos_ev_mask(my_ev_set, (1 << 19));
+	thinkos_ev_mask(my_ev_set, 19, 0);
 
 	thinkos_alarm(12000);
 	printf(" * unmasking all events.\n");
-	thinkos_ev_unmask(my_ev_set, 0xffffffff);
+	for (i = 0; i< 32; ++i)
+		thinkos_ev_mask(my_ev_set, i, 1);
 
 	/* wait for the production thread to finish */
 	producer_ret = thinkos_join(producer_th);

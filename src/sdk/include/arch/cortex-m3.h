@@ -990,36 +990,47 @@ static inline uint32_t __attribute__((always_inline)) __ldrexh(uint16_t * addr) 
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __ldrexw(uint32_t * addr) {
+static inline uint32_t __attribute__((always_inline)) __ldrex(uint32_t * addr) {
 	register uint32_t ret;
 	asm volatile ("ldrex %0, [%1]" : "=r" (ret) : "r" (addr));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexb(uint8_t * addr, uint8_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexb(uint8_t * addr, 
+															   uint8_t val) {
 	register uint32_t ret;
 	asm volatile ("strexb %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexh(uint16_t * addr, uint16_t val) {
+static inline uint32_t __attribute__((always_inline)) __strexh(uint16_t * addr,
+															   uint16_t val) {
 	register uint32_t ret;
 	asm volatile ("strexh %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline uint32_t __attribute__((always_inline)) __strexw(uint32_t * addr, uint32_t val) {
+static inline uint32_t __attribute__((always_inline)) __strex(uint32_t * addr, 
+															  uint32_t val) {
 	register uint32_t ret;
 	asm volatile ("strex %0, %2, [%1]" : "=r" (ret) : "r" (addr), "r" (val));
 	return ret;
 }
 
-static inline void __attribute__((always_inline)) __clrx(void) {
+static inline void __attribute__((always_inline)) __clrex(void) {
 	asm volatile ("clrex" : );
 }
 
 static inline void __attribute__((always_inline)) __dsb(void) {
 	asm volatile ("dsb" : );
+}
+
+static inline void __attribute__((always_inline)) __isb(void) {
+	asm volatile ("isb" : );
+}
+
+static inline void __attribute__((always_inline)) __nop(void) {
+	asm volatile ("nop" : );
 }
 
 void cm3_udelay_calibrate(void);

@@ -115,14 +115,14 @@ void thinkos_sem_trywait_svc(int32_t * arg)
 	/* this is only necessary in case we use the __uthread_sem_post() call
 	   inside interrupt handlers */
 	do {
-		sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+		sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 		if (sem_val > 0) {
 			sem_val--;
 			arg[0] = 0;
 		} else {
 			arg[0] = THINKOS_EAGAIN;
 		}
-	} while (__strexw(&thinkos_rt.sem_val[sem], sem_val));
+	} while (__strex(&thinkos_rt.sem_val[sem], sem_val));
 }
 
 void thinkos_sem_wait_svc(int32_t * arg)
@@ -152,11 +152,11 @@ void thinkos_sem_wait_svc(int32_t * arg)
 	/* this is only necessary in case we use the __uthread_sem_post() call
 	   inside interrupt handlers */
 again:
-	sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+	sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 	if (sem_val > 0) {
 		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
 		sem_val--;
-		if (__strexw(&thinkos_rt.sem_val[sem], sem_val))
+		if (__strex(&thinkos_rt.sem_val[sem], sem_val))
 			goto again;
 		arg[0] = 0;
 		return;
@@ -176,7 +176,7 @@ again:
 #endif
 
 	/* insert into the event wait queue */
-	queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 
 	/* The semaphore may have been signaled while suspending (1).
 	 If this is the case roll back and restart. */
@@ -192,7 +192,7 @@ again:
 	}
 
 	queue |= (1 << self);
-	if (__strexw(&thinkos_rt.wq_lst[wq], queue)) {
+	if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
 		/* roll back */
 #if THINKOS_ENABLE_THREAD_STAT
 		thinkos_rt.th_stat[self] = 0;
@@ -236,11 +236,11 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 #endif
 
 again:
-	sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+	sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 	if (sem_val > 0) {
 		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
 		sem_val--;
-		if (__strexw(&thinkos_rt.sem_val[sem], sem_val))
+		if (__strex(&thinkos_rt.sem_val[sem], sem_val))
 			goto again;
 		arg[0] = 0;
 		return;
@@ -252,10 +252,10 @@ again:
 	/* update status, mark the thread clock enable bit */
 	thinkos_rt.th_stat[self] = (wq << 1) + 1;
 #endif
-	queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	if (((volatile uint32_t)thinkos_rt.sem_val[sem] > 0) ||
-		(__strexw(&thinkos_rt.wq_lst[wq], queue))) {
+		(__strex(&thinkos_rt.wq_lst[wq], queue))) {
 		/* roll back */
 #if THINKOS_ENABLE_THREAD_STAT
 		thinkos_rt.th_stat[self] = 0;
@@ -287,7 +287,7 @@ void cm3_except7_isr(uint32_t wq)
 
 	do {
 		/* insert into the event wait queue */
-		queue = __ldrexw(&thinkos_rt.wq_lst[wq]);
+		queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 		/* get a thread from the queue bitmap */
 		if ((th = __clz(__rbit(queue))) == THINKOS_THREAD_NULL) {
 			int sem = wq - THINKOS_SEM_BASE;
@@ -295,16 +295,16 @@ void cm3_except7_isr(uint32_t wq)
 
 			/* no threads waiting on the semaphore, increment. */ 
 			do {
-				sem_val = __ldrexw(&thinkos_rt.sem_val[sem]);
+				sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 				sem_val++;
-			} while (__strexw(&thinkos_rt.sem_val[sem], sem_val));
+			} while (__strex(&thinkos_rt.sem_val[sem], sem_val));
 
 			return;
 		} 
 	
 		/* remove from the wait queue */
 		queue &= ~(1 << th);
-	} while (__strexw(&thinkos_rt.wq_lst[wq], queue));
+	} while (__strex(&thinkos_rt.wq_lst[wq], queue));
 
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);

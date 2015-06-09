@@ -764,7 +764,7 @@ static void inline __attribute__((always_inline)) __thinkos_suspend(int thread) 
 	uint32_t tmshare;
 
 	do {
-		ready = __ldrexw(&thinkos_rt.wq_ready);
+		ready = __ldrex(&thinkos_rt.wq_ready);
 		tmshare = thinkos_rt.wq_tmshare;
 		/* remove from the ready wait queue */
 		ready &= ~(1 << thread);
@@ -780,7 +780,7 @@ static void inline __attribute__((always_inline)) __thinkos_suspend(int thread) 
 			ready |= tmshare;
 			tmshare = 0;
 		} 
-	} while (__strexw(&thinkos_rt.wq_ready, ready));
+	} while (__strex(&thinkos_rt.wq_ready, ready));
 
 	thinkos_rt.wq_tmshare = tmshare;
 

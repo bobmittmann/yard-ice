@@ -68,7 +68,7 @@
 #define THINKOS_EVENT_TIMEDWAIT 30
 #define THINKOS_EVENT_RAISE     31
 #define THINKOS_EVENT_MASK      32
-#define THINKOS_EVENT_UNMASK    33
+#define THINKOS_EVENT_CLEAR     33
 
 #define THINKOS_CONSOLE         34
 
@@ -407,13 +407,13 @@ static inline int __attribute__((always_inline)) thinkos_ev_raise(
 }
 
 static inline int __attribute__((always_inline)) thinkos_ev_mask(
-	int set, uint32_t msk) {
-	return THINKOS_SVC2(THINKOS_EVENT_MASK, set, msk);
+	int set, int ev, int val) {
+	return THINKOS_SVC3(THINKOS_EVENT_MASK, set, ev, val);
 }
 
-static inline int __attribute__((always_inline)) thinkos_ev_unmask(
-	int set, uint32_t msk) {
-	return THINKOS_SVC2(THINKOS_EVENT_UNMASK, set, msk);
+static inline int __attribute__((always_inline)) thinkos_ev_clear(
+	int set, int ev) {
+	return THINKOS_SVC2(THINKOS_EVENT_CLEAR, set, ev);
 }
 
 #if 0
