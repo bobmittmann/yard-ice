@@ -66,11 +66,15 @@ void thinkos_flag_free_svc(int32_t * arg)
  * Flag give/take family 
  * -------------------------------------------------------------------------- */
 
+/* wait for the flag */
 void thinkos_flag_take_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	int self = thinkos_rt.active;
 	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	uint32_t * flags_bmp;
+	uint32_t flags;
+	uint32_t queue;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (idx >= THINKOS_FLAG_MAX) {
@@ -87,23 +91,59 @@ void thinkos_flag_take_svc(int32_t * arg)
 #endif
 #endif
 
-	if (__bit_mem_rd(thinkos_rt.flag, idx)) {
-		/* clear the signal */
-		__bit_mem_wr(thinkos_rt.flag, idx, 0);
+#if THINKOS_FLAG_MAX < 32
+	flags_bmp = &thinkos_rt.flag[0];
+#else
+	flags_bmp = &thinkos_rt.flag[idx / 32];
+	idx %= 32;
+#endif
+
+again:
+	flags = __ldrex(flags_bmp);
+	if (flags & (1 << idx)) {
+		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		/* clear the flag */
+		flags &= ~(1 << idx);
+		if (__strex(flags_bmp, flags))
+			goto again;
 		arg[0] = 0;
 		return;
-	} 
+	}
+
+	/* (1) - suspend the thread by removing it from the
+	   ready wait queue. The __thinkos_suspend() call cannot be nested
+	   inside a LDREX/STREX pair as it may use the exclusive access itself,
+	   in case we have anabled the time sharing option.
+	   It is not a problem having a thread not contained in any waiting
+	   queue inside a system call. 
+	 */
+	__thinkos_suspend(self);
+	/* update the thread status in preparation for event wait */
+#if THINKOS_ENABLE_THREAD_STAT
+	thinkos_rt.th_stat[self] = wq << 1;
+#endif
+	/* insert into the flag wait queue */
+	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+	queue |= (1 << self);
+	/* The flag may have been signaled while suspending (1).
+	 If this is the case roll back and restart. */
+	if (((volatile uint32_t)*flags_bmp & (1 << idx)) ||
+		__strex(&thinkos_rt.wq_lst[wq], queue)) {
+		/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+		thinkos_rt.th_stat[self] = 0;
+#endif
+		/* insert into the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+		goto again;
+	}
 
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-	/* insert into the wait queue */
-	__thinkos_wq_insert(wq, self);
-	/* remove from the ready wait queue */
-	__thinkos_suspend(self);
-	/* XXX: save the context pointer */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	__thinkos_defer_sched(); /* signal the scheduler ... */
+	/* signal the scheduler ... */
+	__thinkos_defer_sched(); 
 }
+
 
 #if THINKOS_ENABLE_TIMED_CALLS
 void thinkos_flag_timedtake_svc(int32_t * arg)
@@ -112,6 +152,9 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 	uint32_t ms = (uint32_t)arg[1];
 	int self = thinkos_rt.active;
 	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	uint32_t * flags_bmp;
+	uint32_t flags;
+	uint32_t queue;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (idx >= THINKOS_FLAG_MAX) {
@@ -128,51 +171,120 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 #endif
 #endif
 
-	if (__bit_mem_rd(thinkos_rt.flag, idx)) {
-		/* clear the signal */
-		__bit_mem_wr(thinkos_rt.flag, idx, 0);
+#if THINKOS_FLAG_MAX < 32
+	flags_bmp = &thinkos_rt.flag[0];
+#else
+	flags_bmp = &thinkos_rt.flag[idx / 32];
+	idx %= 32;
+#endif
+
+again:
+	flags = __ldrex(flags_bmp);
+	if (flags & (1 << idx)) {
+		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		/* clear the flag */
+		flags &= ~(1 << idx);
+		if (__strex(flags_bmp, flags))
+			goto again;
 		arg[0] = 0;
 		return;
-	} 
+	}
+
+	/* (1) - suspend the thread by removing it from the
+	   ready wait queue. The __thinkos_suspend() call cannot be nested
+	   inside a LDREX/STREX pair as it may use the exclusive access itself,
+	   in case we have anabled the time sharing option.
+	   It is not a problem having a thread not contained in any waiting
+	   queue inside a system call. 
+	 */
+	__thinkos_suspend(self);
+	/* update the thread status in preparation for event wait */
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status, mark the thread clock enable bit */
+	thinkos_rt.th_stat[self] = (wq << 1) + 1;
+#endif
+	/* insert into the flag wait queue */
+	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+	queue |= (1 << self);
+	/* The flag may have been signaled while suspending (1).
+	 If this is the case roll back and restart. */
+	if (((volatile uint32_t)*flags_bmp & (1 << idx)) ||
+		__strex(&thinkos_rt.wq_lst[wq], queue)) {
+		/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+		thinkos_rt.th_stat[self] = 0;
+#endif
+		/* insert into the ready wait queue */
+		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+		goto again;
+	}
 
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting for flag %d...", self, wq);
-	/* Set the default return value to timeout. The
-	   flag_rise() call will change it to 0 */
-	arg[0] = THINKOS_ETIMEDOUT;
-	/* insert into the flag wait queue */
-	__thinkos_tmdwq_insert(wq, self, ms);
-	/* remove from the ready wait queue */
-	__thinkos_suspend(self);
-	/* XXX: save the context pointer */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	__thinkos_defer_sched(); /* signal the scheduler ... */
+	/* set the clock */
+	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
+	/* insert into the clock wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);  
+	/* signal the scheduler ... */
+	__thinkos_defer_sched(); 
 }
 #endif
 
 
-void __thinkos_flag_give_i(uint32_t wq)
+/* void __thinkos_flag_give_i(uint32_t wq) */
+void cm3_except10_isr(uint32_t wq)
 {
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	uint32_t * flags_bmp;
+	uint32_t flags;
+	uint32_t queue;
 	int th;
 
-	/* flag_give(): wakeup a single thread waiting on the flag 
-	   OR set the flag */
-	/* get the flag state */
-	if (__bit_mem_rd(thinkos_rt.flag, flag) == 0) {
-		/* get a thread from the queue */
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			DCC_LOG2(LOG_MSG, "<%d> waked up with flag %d", th, wq);
-			__thinkos_wakeup(wq, th);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		} else {
-			/* set the flag bit */
-			__bit_mem_wr(thinkos_rt.flag, flag, 1);  
-		}
-	}
+#if THINKOS_FLAG_MAX < 32
+	flags_bmp = &thinkos_rt.flag[0];
+#else
+	flags_bmp = &thinkos_rt.flag[idx / 32];
+	idx %= 32;
+#endif
+
+	do {
+		/* insert into the event wait queue */
+		queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+		/* get a thread from the queue bitmap */
+		if ((th = __clz(__rbit(queue))) == THINKOS_THREAD_NULL) {
+			/* no threads waiting on the flag, . */ 
+			do {
+				flags = __ldrex(flags_bmp);
+				/* set the flag */
+				flags |= (1 << idx);
+			} while (__strex(flags_bmp, flags));
+
+			return;
+		} 
+		/* remove from the wait queue */
+		queue &= ~(1 << th);
+	} while (__strex(&thinkos_rt.wq_lst[wq], queue));
+
+	/* insert the thread into ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
+#if THINKOS_ENABLE_TIMED_CALLS
+	/* possibly remove from the time wait queue */
+	__bit_mem_wr(&thinkos_rt.wq_clock, th, 0);  
+	/* set the thread's return value */
+	thinkos_rt.ctx[th]->r0 = 0;
+#endif
+#if THINKOS_ENABLE_THREAD_STAT
+	/* update status */
+	thinkos_rt.th_stat[th] = 0;
+#endif
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
 }
 
+void __thinkos_flag_give_i(uint32_t wq) 
+	__attribute__((weak, alias("cm3_except10_isr")));
+
+/* wakeup a single thread waiting on the flag OR set the flag */
 void thinkos_flag_give_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
@@ -197,8 +309,6 @@ void thinkos_flag_give_svc(int32_t * arg)
 
 	__thinkos_flag_give_i(wq);
 }
-
-
 
 /* --------------------------------------------------------------------------
  * Flag watch family 
@@ -259,34 +369,11 @@ void thinkos_flag_clr_svc(int32_t * arg)
 	__thinkos_flag_clr(wq);
 }
 
-void __thinkos_flag_set(uint32_t wq)
-{
-	unsigned int flag = wq - THINKOS_FLAG_BASE;
-	int th;
-
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-	/* set the flag and wakeup all threads waiting on the flag */
-
-	/* set the flag bit */
-	__bit_mem_wr(thinkos_rt.flag, flag, 1);  
-
-	/* get a thread from the queue */
-	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		__thinkos_wakeup(wq, th);
-		/* get the remaining threads from the queue */
-		while ((th = __thinkos_wq_head(wq)) != 
-			   THINKOS_THREAD_NULL) {
-			__thinkos_wakeup(wq, th);
-		}
-		/* signal the scheduler ... */
-		__thinkos_defer_sched();
-	}
-}
-
 void thinkos_flag_set_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
 	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	int th;
 
 #if THINKOS_ENABLE_ARG_CHECK
 	if (idx >= THINKOS_FLAG_MAX) {
@@ -304,7 +391,22 @@ void thinkos_flag_set_svc(int32_t * arg)
 #endif
 	arg[0] = 0;
 
-	__thinkos_flag_set(wq);
+	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
+	/* set the flag and wakeup all threads waiting on the flag */
+	/* set the flag bit */
+	__bit_mem_wr(thinkos_rt.flag, idx, 1);  
+
+	/* get a thread from the queue */
+	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		__thinkos_wakeup(wq, th);
+		/* get the remaining threads from the queue */
+		while ((th = __thinkos_wq_head(wq)) != 
+			   THINKOS_THREAD_NULL) {
+			__thinkos_wakeup(wq, th);
+		}
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
+	}
 }
 
 void thinkos_flag_watch_svc(int32_t * arg)
@@ -338,9 +440,8 @@ void thinkos_flag_watch_svc(int32_t * arg)
 	__thinkos_wq_insert(wq, self);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
-	/* XXX: save the context pointer */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	__thinkos_defer_sched(); /* signal the scheduler ... */
+	/* signal the scheduler ... */
+	__thinkos_defer_sched(); 
 }
 
 
@@ -380,9 +481,8 @@ void thinkos_flag_timedwatch_svc(int32_t * arg)
 	__thinkos_tmdwq_insert(wq, self, ms);
 	/* remove from the ready wait queue */
 	__thinkos_suspend(self);
-	/* XXX: save the context pointer */
-	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-	__thinkos_defer_sched(); /* signal the scheduler ... */
+	/* signal the scheduler ... */
+	__thinkos_defer_sched(); 
 }
 #endif
 

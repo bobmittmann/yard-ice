@@ -205,7 +205,6 @@ again:
 
 	/* -- wait for event ---------------------------------------- */
 	DCC_LOG2(LOG_INFO, "<%d> waiting on semaphore %d...", self, wq);
-	arg[0] = THINKOS_EFAULT;
 	/* signal the scheduler ... */
 	__thinkos_defer_sched(); 
 }
@@ -255,7 +254,7 @@ again:
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	if (((volatile uint32_t)thinkos_rt.sem_val[sem] > 0) ||
-		(__strex(&thinkos_rt.wq_lst[wq], queue))) {
+		__strex(&thinkos_rt.wq_lst[wq], queue)) {
 		/* roll back */
 #if THINKOS_ENABLE_THREAD_STAT
 		thinkos_rt.th_stat[self] = 0;

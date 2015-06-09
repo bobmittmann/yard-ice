@@ -151,7 +151,6 @@ again:
 			 self, cm3_psp_get(), thinkos_rt.ctx[self]);
 	DCC_LOG3(LOG_INFO, "<%d> ctx=%p pc=%p", 
 			 self, thinkos_rt.ctx[self], arg[6]);
-	arg[0] = THINKOS_EFAULT;
 	/* signal the scheduler ... */
 	__thinkos_defer_sched(); 
 }

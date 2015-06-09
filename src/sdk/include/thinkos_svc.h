@@ -416,13 +416,6 @@ static inline int __attribute__((always_inline)) thinkos_ev_clear(
 	return THINKOS_SVC2(THINKOS_EVENT_CLEAR, set, ev);
 }
 
-#if 0
-static inline void __attribute__((always_inline)) thinkos_ev_raise_i(
-	int set, int ev) {
-	THINKOS_NMI2(THINKOS_EV_RAISE_I, set, ev);
-}
-#endif
-
 static inline void __attribute__((always_inline)) thinkos_ev_raise_i(
 	int set, int ev) {
 	uintptr_t * except = (uintptr_t *)(0);
@@ -476,6 +469,17 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC2(THINKOS_FLAG_TIMEDTAKE, flag, ms);
 }
 
+static inline void __attribute__((always_inline)) 
+	thinkos_flag_give_i(int flag) {
+	uintptr_t * except = (uintptr_t *)(0);
+	void (* flag_give_i)(int) = (void *)except[10];
+	flag_give_i(flag);
+}
+
+/* ---------------------------------------------------------------------------
+   Gates
+   ---------------------------------------------------------------------------*/
+
 static inline int __attribute__((always_inline)) 
 	thinkos_gate_open(int gate) {
 	return THINKOS_SVC1(THINKOS_GATE_OPEN, gate);
@@ -496,6 +500,12 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC2(THINKOS_GATE_TIMEDWAIT, gate, ms);
 }
 
+static inline void __attribute__((always_inline)) 
+	thinkos_gate_open_i(int gate) {
+	uintptr_t * except = (uintptr_t *)(0);
+	void (* gate_open_i)(int) = (void *)except[13];
+	gate_open_i(gate);
+}
 
 /* ---------------------------------------------------------------------------
    IRQ
@@ -561,32 +571,10 @@ thinkos_sysinfo_udelay_factor(int32_t * factor) {
    Interrupt service calls
    ---------------------------------------------------------------------------*/
 
-static inline void __attribute__((always_inline)) 
-	thinkos_flag_set_i(int flag) {
-	THINKOS_NMI1(THINKOS_FLAG_SET_I, flag);
-}
-
-static inline void __attribute__((always_inline)) 
-	thinkos_flag_clr_i(int flag) {
-	THINKOS_NMI1(THINKOS_FLAG_CLR_I, flag);
-}
-
-static inline void __attribute__((always_inline)) 
-	thinkos_flag_give_i(int flag) {
-	THINKOS_NMI1(THINKOS_FLAG_GIVE_I, flag);
-}
-
-static inline void  __attribute__((always_inline)) 
-	thinkos_flag_signal_i(int flag) {
-	THINKOS_NMI1(THINKOS_FLAG_SIGNAL_I, flag);
-}
-
 static inline void  __attribute__((always_inline)) 
 	thinkos_debug_step_i(unsigned int thread_id) {
 	THINKOS_NMI1(THINKOS_DEBUG_STEP_I, thread_id);
 }
-
-
 
 #ifdef __cplusplus
 }
