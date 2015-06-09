@@ -26,9 +26,10 @@ CFILES = serial-test.c
 
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
-		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm
+		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
+		  ../../sdk/libstm32drv
 
-LIBS = stm32f cm3 util thinkos c ice-comm 
+LIBS = stm32f cm3 util thinkos stm32drv c ice-comm 
 
 INCPATH = ../../sdk/include 
 

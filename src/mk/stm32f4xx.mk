@@ -44,12 +44,11 @@ endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-ifdef THINKOS
+ifdef THINKAPP
 CDEFS += "THINKAPP" 
-LDFLAGS += -nostdlib -T thinkos.ld
-else
-LDFLAGS += -nostdlib -T $(MACH).ld
 endif
+
+LDFLAGS += -nostdlib -T $(MACH).ld
 
 include $(THISDIR)/prog.mk
 

@@ -119,6 +119,10 @@ void thinkos_flag_take_svc(int32_t * arg);
 void thinkos_flag_timedtake_svc(int32_t * arg);
 
 
+void thinkos_gate_alloc_svc(int32_t * arg);
+
+void thinkos_gate_free_svc(int32_t * arg);
+
 void thinkos_gate_open_svc(int32_t * arg);
 
 void thinkos_gate_exit_svc(int32_t * arg);
@@ -566,6 +570,18 @@ void cm3_svc_isr(void)
 		break;
 #endif
 #endif /* (THINKOS_EVENT_MAX > 0) */
+
+#if (THINKOS_GATE_MAX > 0)
+#if THINKOS_ENABLE_GATE_ALLOC
+	case THINKOS_GATE_ALLOC:
+		thinkos_gate_alloc_svc(arg);
+		break;
+
+	case THINKOS_GATE_FREE:
+		thinkos_gate_free_svc(arg);
+		break;
+#endif
+#endif /* (THINKOS_GATE_MAX > 0) */
 
 	case THINKOS_JOIN:
 #if THINKOS_ENABLE_JOIN

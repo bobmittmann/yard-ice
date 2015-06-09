@@ -90,16 +90,19 @@
 #define THINKOS_EVENT_ALLOC     45
 #define THINKOS_EVENT_FREE      46
 
-#define THINKOS_JOIN            47
-#define THINKOS_PAUSE           48
-#define THINKOS_RESUME          49
-#define THINKOS_CANCEL          50
+#define THINKOS_GATE_ALLOC      47
+#define THINKOS_GATE_FREE       48
 
-#define THINKOS_EXIT            51
+#define THINKOS_JOIN            49
+#define THINKOS_PAUSE           50
+#define THINKOS_RESUME          51
+#define THINKOS_CANCEL          52
 
-#define THINKOS_SYSINFO         52
+#define THINKOS_EXIT            53
 
-#define THINKOS_RT_SNAPSHOT     53
+#define THINKOS_SYSINFO         54
+
+#define THINKOS_RT_SNAPSHOT     55
 
 /* NMI calls ... */
 #define THINKOS_DEBUG_STEP_I     0
@@ -479,6 +482,15 @@ static inline void __attribute__((always_inline))
 /* ---------------------------------------------------------------------------
    Gates
    ---------------------------------------------------------------------------*/
+
+static inline int __attribute__((always_inline)) thinkos_gate_alloc(void) {
+	return THINKOS_SVC(THINKOS_GATE_ALLOC);
+}
+
+static inline int __attribute__((always_inline)) thinkos_gate_free(int gate) {
+	return THINKOS_SVC1(THINKOS_GATE_FREE, gate);
+}
+
 
 static inline int __attribute__((always_inline)) 
 	thinkos_gate_open(int gate) {

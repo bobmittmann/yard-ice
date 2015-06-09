@@ -187,17 +187,27 @@ int thinkos_flag_set(int flag);
 
 int thinkos_flag_clr(int flag);
 
-int thinkos_flag_wait(int flag);
-
-int thinkos_flag_timedwait(int flag, unsigned int ms);
-
-int thinkos_flag_signal(int flag);
-
 int thinkos_flag_give(int flag);
 
 int thinkos_flag_take(int flag);
 
 int thinkos_flag_timedtake(int flag, unsigned int ms);
+
+
+
+int thinkos_gate_alloc(void);
+
+int thinkos_gate_free(int gate);
+
+int thinkos_gate_wait(int gate);
+
+int thinkos_gate_timedwait(int gate, unsigned int ms);
+
+int thinkos_gate_signal(int gate);
+
+int thinkos_gate_open(int gate);
+
+int thinkos_gate_exit(int gate, unsigned int open);
 
 
 int thinkos_irq_wait(int irq);
