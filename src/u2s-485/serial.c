@@ -42,8 +42,8 @@
 
 struct stm32_serial_drv {
 	struct stm32_usart * uart;
-#ifndef SERDRV_TX_FLAG_NO
-	int32_t tx_flag;
+#ifndef SERDRV_TX_GATE_NO
+	int32_t tx_gate;
 #endif
 #ifndef SERDRV_RX_FLAG_NO
 	int32_t rx_flag;
@@ -74,10 +74,10 @@ struct stm32_serial_drv {
 #define RX_FLAG drv->rx_flag
 #endif
 
-#ifdef SERDRV_TX_FLAG_NO
-#define TX_FLAG (THINKOS_FLAG_BASE + SERDRV_TX_FLAG_NO)
+#ifdef SERDRV_TX_GATE_NO
+#define TX_GATE (THINKOS_GATE_BASE + SERDRV_TX_GATE_NO)
 #else
-#define TX_FLAG drv->tx_flag
+#define TX_GATE drv->tx_gate
 #endif
 
 #ifdef SERDRV_CTL_FLAG_NO
@@ -143,7 +143,7 @@ int __serial_write(struct stm32_serial_drv * drv, const void * buf,
 		int n;
 		int i;
 
-		thinkos_flag_take(TX_FLAG);
+		thinkos_gate_wait(TX_GATE);
 
 //		while (drv->flowctl_xonxoff & !drv->tx_on) {
 //			thinkos_flag_take(CTL_FLAG);
@@ -159,8 +159,7 @@ int __serial_write(struct stm32_serial_drv * drv, const void * buf,
 
 		*drv->txie = 1; 
 
-		if (free > n)
-			thinkos_flag_give(TX_FLAG);
+		thinkos_gate_exit(TX_GATE, (free > n));
 
 		rem -= n;
 		DCC_LOG1(LOG_INFO, "rem=%d", rem);
@@ -172,12 +171,11 @@ int __serial_write(struct stm32_serial_drv * drv, const void * buf,
 int __serial_drain(struct stm32_serial_drv * drv)
 {
 	do {
-		thinkos_flag_take(TX_FLAG);
+		thinkos_gate_wait(TX_GATE);
+		thinkos_gate_exit(TX_GATE, 0);
 	} while (((int32_t)drv->tx_fifo.head - drv->tx_fifo.tail) > 0);
 
 	stm32_usart_flush(drv->uart);
-
-	thinkos_flag_give(TX_FLAG);
 
 	return 0;
 }
@@ -348,7 +346,7 @@ void stm32f_usart2_isr(void)
 			*drv->txie = 0; 
 			/* enable TC interrupts */
 			*drv->tcie = 1;
-			thinkos_flag_give_i(TX_FLAG);
+			thinkos_gate_open_i(TX_GATE);
 		} else {
 			/* RS485 enable transmitter */ 
 			rs485_txen();
@@ -388,8 +386,8 @@ struct serial_dev * serial2_open(void)
 #ifndef SERDRV_RX_FLAG_NO
 	drv->rx_flag = thinkos_flag_alloc(); 
 #endif
-#ifndef SERDRV_TX_FLAG_NO
-	drv->tx_flag = thinkos_flag_alloc(); 
+#ifndef SERDRV_TX_GATE_NO
+	drv->tx_gate = thinkos_flag_alloc(); 
 #endif
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
@@ -399,7 +397,7 @@ struct serial_dev * serial2_open(void)
 	drv->tcie = CM3_BITBAND_DEV(&uart->cr1, 6);
 	drv->uart = uart;
 
-	thinkos_flag_give(TX_FLAG);
+	thinkos_gate_open(TX_GATE);
 
 	/* clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_USART2);

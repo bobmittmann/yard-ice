@@ -374,7 +374,7 @@ void usb_cdc_on_suspend(usb_class_t * cl)
 	dev->acm.flags |= ACM_USB_SUSPENDED;
 	thinkos_flag_give_i(CTL_FLAG);
 //	thinkos_flag_clr_i(TX_DONE);
-	thinkos_flag_clr_i(TX_LOCK);
+//	thinkos_flag_clr_i(TX_LOCK);
 }
 
 void usb_cdc_on_wakeup(usb_class_t * cl)

@@ -62,8 +62,10 @@
 
 #define THINKOS_FLAG_MAX 8
 #define THINKOS_ENABLE_FLAG_ALLOC 0
-#define THINKOS_ENABLE_FLAG_LOCK  0
 #define THINKOS_ENABLE_FLAG_WATCH 0
+
+#define THINKOS_GATE_MAX 4
+#define THINKOS_ENABLE_GATE_ALLOC 0
 
 #define THINKOS_ENABLE_TIMED_CALLS 1
 #define THINKOS_ENABLE_CLOCK 1
@@ -74,6 +76,7 @@
 
 #define THINKOS_ENABLE_ARG_CHECK 0
 #define THINKOS_ENABLE_DEADLOCK_CHECK 0
+#define THINKOS_ENABLE_SANITY_CHECK 0
 #define THINKOS_ENABLE_EXCEPTIONS 1
 #define THINKOS_SYSRST_ONFAULT 1
 #define THINKOS_ENABLE_RT_DEBUG 0
@@ -94,13 +97,15 @@
  * ------------------------------------------------------------------------- */
 
 #define SERDRV_RX_FLAG_NO   0
-#define SERDRV_TX_FLAG_NO   1
 #define SERDRV_CTL_FLAG_NO  2
 #define CDC_TX_DONE_NO      3
 #define CDC_TX_LOCK_NO      4
 #define CDC_CTL_FLAG_NO     5
 #define CDC_RX_FLAG_NO      6
 #define VCOM_MODE_FLAG_NO   7
+
+#define SERDRV_TX_GATE_NO   1
+
 #define CDC_RX_SEM_NO       0
 
 

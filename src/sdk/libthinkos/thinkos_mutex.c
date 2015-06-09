@@ -223,6 +223,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 #endif
 #endif
 
+#if THINKOS_ENABLE_SANITY_CHECK
 	/* sanity check: avoid unlock the mutex by a thread that 
 	   does not own the lock */
 	if (thinkos_rt.lock[mutex] != self) {
@@ -231,6 +232,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 		arg[0] = THINKOS_EPERM;
 		return;
 	}
+#endif
 
 	arg[0] = 0;
 

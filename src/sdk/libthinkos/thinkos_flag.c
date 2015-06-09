@@ -101,7 +101,7 @@ void thinkos_flag_take_svc(int32_t * arg)
 again:
 	flags = __ldrex(flags_bmp);
 	if (flags & (1 << idx)) {
-		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> signaled %d...", self, wq);
 		/* clear the flag */
 		flags &= ~(1 << idx);
 		if (__strex(flags_bmp, flags))
@@ -288,9 +288,10 @@ void __thinkos_flag_give_i(uint32_t wq)
 void thinkos_flag_give_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+
 	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;
@@ -349,9 +350,10 @@ void __thinkos_flag_clr(uint32_t wq)
 void thinkos_flag_clr_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int idx = wq - THINKOS_FLAG_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int idx = wq - THINKOS_FLAG_BASE;
+
 	if (idx >= THINKOS_FLAG_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a flag!", wq);
 		arg[0] = THINKOS_EINVAL;

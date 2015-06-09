@@ -103,6 +103,8 @@ void thinkos_gate_wait_svc(int32_t * arg)
 #endif
 	idx *= 2;
 
+	DCC_LOG1(LOG_MSG, "gate %d", wq);
+
 again:
 	/* check whether the gate is open or not */
 	gates = __ldrex(gates_bmp);
@@ -111,6 +113,7 @@ again:
 		gates = (gates & ~(3 << idx)) | (THINKOS_GATE_LOCKED << idx);
 		if (__strex(gates_bmp, gates))
 			goto again;
+		DCC_LOG2(LOG_INFO, "<%d> enter gate %d.", self, wq);
 		arg[0] = 0;
 		return;
 	}
@@ -144,7 +147,7 @@ again:
 	}
 
 	/* -- wait for event ---------------------------------------- */
-	DCC_LOG2(LOG_INFO, "<%d> waiting for gate %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting at gate %d...", self, wq);
 	/* signal the scheduler ... */
 	__thinkos_defer_sched(); 
 }
@@ -191,6 +194,7 @@ again:
 		gates = (gates & ~(3 << idx)) | (THINKOS_GATE_LOCKED << idx);
 		if (__strex(gates_bmp, gates))
 			goto again;
+		DCC_LOG2(LOG_INFO, "<%d> enter gate %d.", self, wq);
 		arg[0] = 0;
 		return;
 	}
@@ -225,7 +229,7 @@ again:
 	}
 
 	/* -- wait for event ---------------------------------------- */
-	DCC_LOG2(LOG_INFO, "<%d> waiting for gate %d...", self, wq);
+	DCC_LOG2(LOG_INFO, "<%d> waiting at gate %d...", self, wq);
 	/* set the clock */
 	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
 	/* insert into the clock wait queue */
@@ -259,11 +263,36 @@ void thinkos_gate_exit_svc(int32_t * arg)
 #endif
 #endif
 
+#if THINKOS_ENABLE_SANITY_CHECK
+	if (!__bit_mem_rd(thinkos_rt.gate, idx * 2 + 1)) {
+		DCC_LOG2(LOG_ERROR, "<%d> gate %d is not locked!", 
+				 thinkos_rt.active, wq);
+		arg[0] = THINKOS_EPERM;
+		return;
+	}
+#endif
+
+	/* The gate is locked, this will prevent any interrupt
+	   handler from messing up with the waiting queue.
+	 */
+
 	arg[0] = 0;
 
 	if (sig) {
+		DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave open.", 
+				 thinkos_rt.active, wq);
 		/* signal the gate acoording to the call argument */
 		__bit_mem_wr(thinkos_rt.gate, idx * 2, 1);
+	} else {
+		if (!__bit_mem_rd(thinkos_rt.gate, idx * 2)) {
+			/* unlock the gate */
+			__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 0);
+			DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave closed.", 
+					 thinkos_rt.active, wq);
+			return;
+		}
+		DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave open due to signal.", 
+				 thinkos_rt.active, wq);
 	}
 
 	do {
@@ -280,6 +309,8 @@ void thinkos_gate_exit_svc(int32_t * arg)
 		/* remove from the wait queue */
 		queue &= ~(1 << th);
 	} while (__strex(&thinkos_rt.wq_lst[wq], queue));
+
+	DCC_LOG2(LOG_INFO, "<%d> enter gate %d.", th, wq);
 
 	/* close the gate */
 	__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
@@ -309,8 +340,6 @@ void cm3_except13_isr(uint32_t wq)
 	uint32_t queue;
 	int th;
 
-	DCC_LOG1(LOG_INFO, "wq=%d...", wq);
-
 #if THINKOS_FLAG_MAX < 16
 	gates_bmp = &thinkos_rt.gate[0];
 #else
@@ -327,6 +356,7 @@ again:
 		gates |= THINKOS_GATE_SIGNALED << idx;
 		if (__strex(gates_bmp, gates))
 			goto again;
+		DCC_LOG1(LOG_INFO, "gate %d is locked, signaling!", wq);
 		return;
 	}
 	/* lock the gate to avoid race conditions */
@@ -342,15 +372,18 @@ again:
 			/* no threads waiting */
 			__clrex();
 			/* unlock the gate */
-			__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 0);
+			__bit_mem_wr(thinkos_rt.gate, idx + 1, 0);
+			DCC_LOG1(LOG_INFO, "opening gate %d.", wq);
 			return;
 		} 
 		/* remove from the wait queue */
 		queue &= ~(1 << th);
 	} while (__strex(&thinkos_rt.wq_lst[wq], queue));
 
+	DCC_LOG2(LOG_INFO, "<%d> enter gate %d.", th, wq);
+
 	/* close the gate */
-	__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
+	__bit_mem_wr(thinkos_rt.gate, idx, 0);
 
 	/* insert the thread into ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
@@ -374,9 +407,10 @@ void __thinkos_gate_open_i(uint32_t wq)
 void thinkos_gate_open_svc(int32_t * arg)
 {
 	unsigned int wq = arg[0];
-	unsigned int idx = wq - THINKOS_GATE_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int idx = wq - THINKOS_GATE_BASE;
+
 	if (idx >= THINKOS_GATE_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a gate!", wq);
 		arg[0] = THINKOS_EINVAL;
@@ -391,6 +425,8 @@ void thinkos_gate_open_svc(int32_t * arg)
 #endif
 #endif
 	arg[0] = 0;
+
+	DCC_LOG1(LOG_INFO, "gate %d", wq);
 
 	__thinkos_gate_open_i(wq);
 }

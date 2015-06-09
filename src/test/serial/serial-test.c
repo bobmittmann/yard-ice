@@ -58,16 +58,21 @@ const struct stm32f_io led_io[] = {
 
 void led_on(int id)
 {
+#if defined(STM32F405)
 	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
+#endif
 }
 
 void led_off(int id)
 {
+#if defined(STM32F405)
 	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
+#endif
 }
 
 void leds_init(void)
 {
+#if defined(STM32F405)
 	int i;
 
 	for (i = 0; i < 5; ++i) {
@@ -76,6 +81,7 @@ void leds_init(void)
 
 		stm32_gpio_clr(led_io[i].gpio, led_io[i].pin);
 	}
+#endif
 }
 
 /* ----------------------------------------------------------------------
@@ -85,6 +91,10 @@ void leds_init(void)
 
 #define USART1_TX STM32_GPIOB, 6
 #define USART1_RX STM32_GPIOB, 7
+
+#define UART5_TX STM32_GPIOC, 12
+#define UART5_RX STM32_GPIOD, 2
+
 
 struct file stm32f_uart1_file = {
 	.data = STM32_USART1, 
@@ -133,6 +143,19 @@ void io_init(void)
 	stm32_gpio_clock_en(STM32_GPIOA);
 	stm32_gpio_clock_en(STM32_GPIOB);
 	stm32_gpio_clock_en(STM32_GPIOC);
+
+	/* USART1_TX */
+	stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+
+#if defined(STM32F2X) 
+	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART5_RX, GPIO_AF7);
+	stm32_gpio_af(UART5_TX, GPIO_AF7);
+#elif defined(STM32F4X)
+	stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART5_RX, GPIO_AF8);
+	stm32_gpio_af(UART5_TX, GPIO_AF8);
+#endif
 }
 
 int __attribute__((noreturn)) serial_send_task(struct serial_dev * ser)
@@ -140,13 +163,17 @@ int __attribute__((noreturn)) serial_send_task(struct serial_dev * ser)
 	int thread_id = thinkos_thread_self();
 	char buf[256];
 	int i;
-	DCC_LOG1(LOG_WARNING, "<%d> started...", thread_id); 
 
-	for (i = 0; i < 128; ++i)
-		buf[i] = thread_id + '0';
+	DCC_LOG1(LOG_TRACE, "<%d> started...", thread_id); 
+	thinkos_sleep(100);
+
+	for (i = 0; i < 256; ++i) {
+		buf[i] = thread_id + ((i % 10) == 0 ? 'A' :'0');
+	}
 
 	for (;;) {
-		serial_send(ser, buf, 100);
+		serial_send(ser, buf, 150);
+		thinkos_sleep(5);
 	}
 }
 
@@ -158,7 +185,7 @@ int main(int argc, char ** argv)
 		.stack_ptr = send1_stack, 
 		.stack_size = sizeof(send1_stack), 
 		.priority = 32,
-		.thread_id = 8, 
+		.thread_id = 1, 
 		.paused = 0,
 		.tag = "SEND1"
 	};
@@ -168,10 +195,21 @@ int main(int argc, char ** argv)
 		.stack_ptr = send2_stack, 
 		.stack_size = sizeof(send2_stack), 
 		.priority = 32,
-		.thread_id = 7, 
+		.thread_id = 2, 
 		.paused = 0,
 		.tag = "SEND2"
 	};
+
+	uint32_t send3_stack[512];
+	const struct thinkos_thread_inf send3_inf = {
+		.stack_ptr = send3_stack, 
+		.stack_size = sizeof(send3_stack), 
+		.priority = 32,
+		.thread_id = 3, 
+		.paused = 0,
+		.tag = "SEND2"
+	};
+
 
 	int i = 0;
 
@@ -188,7 +226,7 @@ int main(int argc, char ** argv)
 	leds_init();
 
 	DCC_LOG(LOG_TRACE, "3. thinkos_init()");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(32));
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	DCC_LOG(LOG_TRACE, "4. stdio_init()");
 	stdio_init();
@@ -202,17 +240,21 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. serial init...");
 	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
 
-	DCC_LOG(LOG_TRACE, "5. TTY threads...");
+	DCC_LOG(LOG_TRACE, "6. Serial send threads...");
 	thinkos_thread_create_inf((void *)serial_send_task, 
-							  (void *)&ser5, &send1_inf);
+							  (void *)ser5, &send1_inf);
 	thinkos_thread_create_inf((void *)serial_send_task, 
-							  (void *)&ser5, &send2_inf);
+							  (void *)ser5, &send2_inf);
+	thinkos_thread_create_inf((void *)serial_send_task, 
+							  (void *)ser5, &send3_inf);
 /*
 	thinkos_thread_create_inf((void *)serial_recv_task, 
 							  (void *)&ser5, &recv1_inf);
 	thinkos_thread_create_inf((void *)serial_recv_task, 
 							  (void *)&ser5, &recv2_inf);
 */
+	serial_send(ser5, "\r\n\r\n", 4);
+	thinkos_sleep(500);
 
 	for (i = 0; ; i++) {
 		DCC_LOG1(LOG_TRACE, "%d", i);
@@ -232,7 +274,7 @@ int main(int argc, char ** argv)
 		led_off(2);
 		led_off(3);
 
-		thinkos_sleep(400);
+		thinkos_sleep(40000);
 	}
 
 	return 0;
