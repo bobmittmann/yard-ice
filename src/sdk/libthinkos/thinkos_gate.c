@@ -212,7 +212,8 @@ void thinkos_gate_exit_svc(int32_t * arg)
 	__thinkos_defer_sched();
 }
 
-void __thinkos_gate_open_i(uint32_t wq)
+/* void __thinkos_gate_open_i(uint32_t wq) */
+void cm3_except13_isr(uint32_t wq)
 {
 	unsigned int gate = wq - THINKOS_GATE_BASE;
 	int th;
@@ -236,6 +237,9 @@ void __thinkos_gate_open_i(uint32_t wq)
 		} 
 	}
 }
+
+void __thinkos_gate_open_i(uint32_t wq) 
+	__attribute__((weak, alias("cm3_except13_isr")));
 
 void thinkos_gate_open_svc(int32_t * arg)
 {
