@@ -26,15 +26,15 @@ CFILES = httpd_test.c tcp_echo.c stdio.c www_root.c www_img.c www_lib.c \
 		 www_cgi.c zarathustra.html.c treeview.html.c treeview.css.c tftp.c \
 		 netcat.c tcp_qotd.c thinkos.html.c
 
-SDK = ../../../sdk
-TOOLS = ../../../../tools
+SDK = ../../sdk
+TOOLS = ../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libtcpip $(SDK)/libdrv $(SDK)/libtty $(SDK)/libcrc \
+		  $(SDK)/libtcpip $(SDK)/libstm32drv $(SDK)/libtty $(SDK)/libcrc \
 		  $(SDK)/libhttpd $(SDK)/libshell
 
-LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip drv tty httpd shell
+LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip stm32drv tty httpd shell
 
 INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H
@@ -42,7 +42,7 @@ CFLAGS = -g -O2
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407
-include ../../../mk/stm32f4xx.mk
+include ../../mk/stm32f4xx.mk
 
 #JTAGTOOL_ADDR = 192.168.0.50
 #MACH = stm32f207
