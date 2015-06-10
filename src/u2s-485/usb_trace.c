@@ -108,7 +108,7 @@ int xxd(char * s, int max, uint8_t * buf, int len)
 	for (i = 0; i < cnt; ++i) {
 		snprintf(cp, rem, " %02x", buf[i]);
 		if (rem < 3) {
-			DCC_LOG1(LOG_TRACE, "rem=%d", rem);
+			DCC_LOG1(LOG_MSG, "rem=%d", rem);
 			break;
 		}
 		cp += 3;
@@ -125,7 +125,7 @@ int xxd(char * s, int max, uint8_t * buf, int len)
 	*cp++ = '\0';
 	n = cp - s;
 
-	DCC_LOG1(LOG_TRACE, "n=%d", n);
+	DCC_LOG1(LOG_MSG, "n=%d", n);
 
 	return n;
 }
@@ -213,7 +213,7 @@ int usb_printf(usb_cdc_class_t * cdc, const char *fmt, ... )
 	n = MIN(n, 128);
 
 	ret = usb_cdc_write(cdc, s, n);
-	DCC_LOG1(LOG_TRACE, "ret=%d", ret);
+	DCC_LOG1(LOG_MSG, "ret=%d", ret);
 
 	return ret;
 }

@@ -123,7 +123,10 @@ void thinkos_gate_alloc_svc(int32_t * arg);
 
 void thinkos_gate_free_svc(int32_t * arg);
 
+
 void thinkos_gate_open_svc(int32_t * arg);
+
+void thinkos_gate_close_svc(int32_t * arg);
 
 void thinkos_gate_exit_svc(int32_t * arg);
 
@@ -387,6 +390,15 @@ void cm3_svc_isr(void)
 		thinkos_nosys(arg);
 #endif
 		break;
+
+	case THINKOS_GATE_CLOSE:
+#if (THINKOS_GATE_MAX > 0) 
+		thinkos_gate_close_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
+
 
 #if 0
 	case THINKOS_FLAG_VAL:

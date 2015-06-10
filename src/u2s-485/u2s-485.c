@@ -474,8 +474,18 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 
 	for (;;) {
 		len = usb_cdc_read(cdc, buf, VCOM_BUF_SIZE, 1000);
+
+		DCC_LOG1(LOG_MSG, "rx len=%d", len);
+
 		if (len > 0) {
 			usb_stat_rx += len;
+			if (vcom->mode == VCOM_MODE_CONVERTER) {
+				led_flash(LED_RED, 50);
+				serial_send(serial, buf, len);
+			} else {
+				// forward to service input
+				vcom_service_input(vcom, buf, len);
+			}
 		} else if (len == THINKOS_ETIMEDOUT) {
 			struct serial_stat tmp;
 			uint32_t rx_cnt;
@@ -494,15 +504,8 @@ void __attribute__((noreturn)) usb_recv_task(struct vcom * vcom)
 
 			if (rx_cnt || tx_cnt)
 				DCC_LOG2(LOG_TRACE, "Serial rx=%d tx=%d", rx_cnt, tx_cnt);
-		}
-		if (vcom->mode == VCOM_MODE_CONVERTER) {
-			if (len > 0) {
-				led_flash(LED_RED, 50);
-				serial_send(serial, buf, len);
-			}
 		} else {
-			// forward to service input
-			vcom_service_input(vcom, buf, len);
+			DCC_LOG1(LOG_ERROR, "len=%d", len);
 		}
 	}
 }
@@ -544,7 +547,7 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 			led_flash(LED_AMBER, 50);
 			ts = profclk_get();
 			if (vcom->mode == VCOM_MODE_CONVERTER) {
-				DCC_LOG(LOG_INFO, "CONVERTER");
+				DCC_LOG(LOG_MSG, "CONVERTER");
 				usb_cdc_write(cdc, buf, len);
 				if (vcom_scan_match(vcom, buf, len)) {
 					DCC_LOG(LOG_WARNING, "DSP5685 XON/XOFF magic!");
@@ -569,6 +572,8 @@ void __attribute__((noreturn)) serial_recv_task(struct vcom * vcom)
 	}
 }
 
+void __tdump(void);
+
 void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 {
 	struct serial_dev * serial = vcom->serial;
@@ -581,10 +586,10 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 	usb_cdc_state_get(cdc, &prev_state);
 
 	while (1) {
-		DCC_LOG1(LOG_INFO, "[%d] usb_cdc_ctl_wait() sleep!", 
+		DCC_LOG1(LOG_MSG, "[%d] usb_cdc_ctl_wait() sleep!", 
 				 thinkos_thread_self());
 		usb_cdc_ctl_wait(cdc, 0);
-		DCC_LOG1(LOG_INFO, "[%d] wakeup ---------- ", thinkos_thread_self());
+		DCC_LOG1(LOG_MSG, "[%d] wakeup ---------- ", thinkos_thread_self());
 
 		usb_cdc_state_get(cdc, &state);
 
@@ -628,14 +633,17 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				continue;
 			}
 
-			DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
-			DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);
-			DCC_LOG1(LOG_TRACE, "parity=%d", state.cfg.parity);
-			DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
 			if (state.cfg.baudrate == 921600) {
-				vcom->mode = VCOM_MODE_SERVICE; 
-				DCC_LOG(LOG_TRACE, "Service mode magic config ...");
+				if (vcom->mode != VCOM_MODE_SERVICE) {
+					vcom->mode = VCOM_MODE_SERVICE; 
+					DCC_LOG(LOG_TRACE, "Service mode magic config ...");
+					__tdump();
+				}
 			} else {
+				DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
+				DCC_LOG1(LOG_TRACE, "databits=%d", state.cfg.databits);
+				DCC_LOG1(LOG_TRACE, "parity=%d", state.cfg.parity);
+				DCC_LOG1(LOG_TRACE, "stopbits=%d", state.cfg.stopbits);
 				/* XXX: Big hack, enable XON/XOFF flow control by either enabling
 				   it explicitly or by combining Parity=Mark with Stopbits=2.
 				   This is to enable XON/XOFF in case this driver is used to 
@@ -656,11 +664,11 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				serial_rx_enable(serial);
 			}
 		} else {
-			DCC_LOG(LOG_TRACE, "keeping serial config.");
-			DCC_LOG1(LOG_TRACE, "baudrate=%d", vcom->cfg.baudrate);
-			DCC_LOG1(LOG_TRACE, "databits=%d", vcom->cfg.databits);
-			DCC_LOG1(LOG_TRACE, "parity=%d", vcom->cfg.parity);
-			DCC_LOG1(LOG_TRACE, "stopbits=%d", vcom->cfg.stopbits);
+			DCC_LOG(LOG_INFO, "keeping serial config.");
+			DCC_LOG1(LOG_MSG, "baudrate=%d", vcom->cfg.baudrate);
+			DCC_LOG1(LOG_MSG, "databits=%d", vcom->cfg.databits);
+			DCC_LOG1(LOG_MSG, "parity=%d", vcom->cfg.parity);
+			DCC_LOG1(LOG_MSG, "stopbits=%d", vcom->cfg.stopbits);
 		}
 	}
 }

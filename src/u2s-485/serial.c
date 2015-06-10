@@ -96,10 +96,11 @@ int __serial_read(struct stm32_serial_drv * drv, void * buf,
 	int n;
 	int i;
 
-	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
+	DCC_LOG2(LOG_MSG, "1. len=%d tmo=%d", len, tmo);
 
 again:
 //	DCC_LOG(LOG_TRACE, "1.");
+//	if ((ret = thinkos_gate_timedwait(RX_GATE, tmo)) < 0) {
 	if ((ret = thinkos_flag_timedtake(RX_FLAG, tmo)) < 0) {
 		DCC_LOG2(LOG_INFO, "cnt=%d, timeout (%d ms)!", 
 				 (int32_t)(drv->rx_fifo.head - drv->rx_fifo.tail), tmo);
@@ -123,7 +124,7 @@ again:
 		DCC_LOG3(LOG_INFO, "len=%d cnt=%d n=%d", len, cnt, n);
 		thinkos_flag_give(RX_FLAG);
 	} else {
-		DCC_LOG1(LOG_INFO, "2. n=%d", n);
+		DCC_LOG1(LOG_MSG, "2. n=%d", n);
 	}
 
 	return n;
@@ -162,7 +163,7 @@ int __serial_write(struct stm32_serial_drv * drv, const void * buf,
 		thinkos_gate_exit(TX_GATE, (free > n));
 
 		rem -= n;
-		DCC_LOG1(LOG_INFO, "rem=%d", rem);
+		DCC_LOG1(LOG_MSG, "rem=%d", rem);
 	}
 
 	return len;
@@ -189,14 +190,14 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 
 	switch (opt) {
 	case SERIAL_IOCTL_ENABLE:
-		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_ENABLE");
+		DCC_LOG(LOG_MSG, "SERIAL_IOCTL_ENABLE");
 		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
 		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
 		us->cr1 |= msk;
 		break;
 
 	case SERIAL_IOCTL_DISABLE:
-		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_DISABLE");
+		DCC_LOG(LOG_MSG, "SERIAL_IOCTL_DISABLE");
 		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
 		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
 		us->cr1 &= ~msk;
@@ -217,7 +218,7 @@ int __serial_ioctl(struct stm32_serial_drv * drv, int opt,
 	case SERIAL_IOCTL_STAT_GET: 
 		{
 			struct serial_stat * stat = (struct serial_stat *)arg1;
-			DCC_LOG(LOG_INFO, "SERIAL_IOCTL_STAT_GET");
+			DCC_LOG(LOG_MSG, "SERIAL_IOCTL_STAT_GET");
 			stat->rx_cnt = drv->rx_fifo.head;
 			stat->tx_cnt = drv->tx_fifo.tail;
 			stat->err_cnt = drv->err_cnt;
@@ -258,7 +259,7 @@ flowctrl_set:
 			if (!drv->flowctl_xonxoff) {
 				drv->flowctl_xonxoff = true; 
 				drv->tx_on = true;
-				DCC_LOG(LOG_TRACE, "XON/XOFF ebabled!!!");
+				DCC_LOG(LOG_TRACE, "XON/XOFF enabled!!!");
 			}	
 			break;
 		}
@@ -327,7 +328,7 @@ void stm32f_usart2_isr(void)
 	}	
 
 	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE!");
+		DCC_LOG(LOG_MSG, "IDLE!");
 		c = us->dr;
 		(void)c;
 		thinkos_flag_give_i(RX_FLAG);

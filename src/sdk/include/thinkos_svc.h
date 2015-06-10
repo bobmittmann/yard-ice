@@ -58,51 +58,52 @@
 #define THINKOS_GATE_TIMEDWAIT  22
 #define THINKOS_GATE_EXIT       23
 #define THINKOS_GATE_OPEN       24
+#define THINKOS_GATE_CLOSE      25
 
-#define THINKOS_FLAG_CLR        25
-#define THINKOS_FLAG_SET        26
-#define THINKOS_FLAG_WATCH      27
-#define THINKOS_FLAG_TIMEDWATCH 28
+#define THINKOS_FLAG_CLR        26
+#define THINKOS_FLAG_SET        27
+#define THINKOS_FLAG_WATCH      28
+#define THINKOS_FLAG_TIMEDWATCH 29
 
-#define THINKOS_EVENT_WAIT      29
-#define THINKOS_EVENT_TIMEDWAIT 30
-#define THINKOS_EVENT_RAISE     31
-#define THINKOS_EVENT_MASK      32
-#define THINKOS_EVENT_CLEAR     33
+#define THINKOS_EVENT_WAIT      30
+#define THINKOS_EVENT_TIMEDWAIT 31
+#define THINKOS_EVENT_RAISE     32
+#define THINKOS_EVENT_MASK      33
+#define THINKOS_EVENT_CLEAR     34
 
-#define THINKOS_CONSOLE         34
+#define THINKOS_CONSOLE         35
 
-#define THINKOS_IRQ_WAIT        35
-#define THINKOS_IRQ_REGISTER    36
+#define THINKOS_IRQ_WAIT        36
+#define THINKOS_IRQ_REGISTER    37
 
-#define THINKOS_MUTEX_ALLOC     37
-#define THINKOS_MUTEX_FREE      38
+#define THINKOS_MUTEX_ALLOC     38
+#define THINKOS_MUTEX_FREE      39
 
-#define THINKOS_SEM_ALLOC       39
-#define THINKOS_SEM_FREE        40
+#define THINKOS_SEM_ALLOC       40
+#define THINKOS_SEM_FREE        41
 
-#define THINKOS_COND_ALLOC      41
-#define THINKOS_COND_FREE       42
+#define THINKOS_COND_ALLOC      42
+#define THINKOS_COND_FREE       43
 
-#define THINKOS_FLAG_ALLOC      43
-#define THINKOS_FLAG_FREE       44
+#define THINKOS_FLAG_ALLOC      44
+#define THINKOS_FLAG_FREE       45
 
-#define THINKOS_EVENT_ALLOC     45
-#define THINKOS_EVENT_FREE      46
+#define THINKOS_EVENT_ALLOC     46
+#define THINKOS_EVENT_FREE      47
 
-#define THINKOS_GATE_ALLOC      47
-#define THINKOS_GATE_FREE       48
+#define THINKOS_GATE_ALLOC      48
+#define THINKOS_GATE_FREE       49
 
-#define THINKOS_JOIN            49
-#define THINKOS_PAUSE           50
-#define THINKOS_RESUME          51
-#define THINKOS_CANCEL          52
+#define THINKOS_JOIN            50
+#define THINKOS_PAUSE           51
+#define THINKOS_RESUME          52
+#define THINKOS_CANCEL          53
 
-#define THINKOS_EXIT            53
+#define THINKOS_EXIT            54
 
-#define THINKOS_SYSINFO         54
+#define THINKOS_SYSINFO         55
 
-#define THINKOS_RT_SNAPSHOT     55
+#define THINKOS_RT_SNAPSHOT     56
 
 /* NMI calls ... */
 #define THINKOS_DEBUG_STEP_I     0
@@ -498,6 +499,11 @@ static inline int __attribute__((always_inline))
 }
 
 static inline int __attribute__((always_inline)) 
+	thinkos_gate_close(int gate) {
+	return THINKOS_SVC1(THINKOS_GATE_CLOSE, gate);
+}
+
+static inline int __attribute__((always_inline)) 
 	thinkos_gate_exit(int gate, unsigned int open) {
 	return THINKOS_SVC2(THINKOS_GATE_EXIT, gate, open);
 }
@@ -513,10 +519,17 @@ static inline int __attribute__((always_inline))
 }
 
 static inline void __attribute__((always_inline)) 
-	thinkos_gate_open_i(int gate) {
+	thinkos_gate_open_i(uint32_t gate) {
 	uintptr_t * except = (uintptr_t *)(0);
-	void (* gate_open_i)(int) = (void *)except[13];
-	gate_open_i(gate);
+	void (* __gate_i)(uint32_t, uint32_t) = (void *)except[13];
+	__gate_i(gate, 1);
+}
+
+static inline void __attribute__((always_inline)) 
+	thinkos_gate_close_i(uint32_t gate) {
+	uintptr_t * except = (uintptr_t *)(0);
+	void (* __gate_i)(uint32_t, uint32_t) = (void *)except[13];
+	__gate_i(gate, 0);
 }
 
 /* ---------------------------------------------------------------------------

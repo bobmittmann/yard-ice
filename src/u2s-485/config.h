@@ -97,14 +97,14 @@
  * ------------------------------------------------------------------------- */
 
 #define SERDRV_RX_FLAG_NO   0
-#define SERDRV_CTL_FLAG_NO  2
-#define CDC_TX_DONE_NO      3
-#define CDC_TX_LOCK_NO      4
-#define CDC_CTL_FLAG_NO     5
-#define CDC_RX_FLAG_NO      6
-#define VCOM_MODE_FLAG_NO   7
+#define SERDRV_CTL_FLAG_NO  1
+#define CDC_TX_DONE_NO      2
+#define CDC_TX_LOCK_NO      3
+#define CDC_CTL_FLAG_NO     4
+#define CDC_RX_FLAG_NO      5
+#define VCOM_MODE_FLAG_NO   6
 
-#define SERDRV_TX_GATE_NO   1
+#define SERDRV_TX_GATE_NO   0
 
 #define CDC_RX_SEM_NO       0
 

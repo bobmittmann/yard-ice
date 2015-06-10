@@ -27,10 +27,6 @@
 #error "Never use <thinkos_dmon.h> directly; include <thinkos.h> instead."
 #endif 
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
 #define __THINKOS_IRQ__

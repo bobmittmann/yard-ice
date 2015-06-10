@@ -181,7 +181,7 @@ void thinkos_flag_timedtake_svc(int32_t * arg)
 again:
 	flags = __ldrex(flags_bmp);
 	if (flags & (1 << idx)) {
-		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> signaled %d...", self, wq);
 		/* clear the flag */
 		flags &= ~(1 << idx);
 		if (__strex(flags_bmp, flags))
@@ -225,6 +225,9 @@ again:
 	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
 	/* insert into the clock wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_clock, self, 1);  
+	/* Set the default return value to timeout. The
+	   flag_give_call will change this to 0 */
+	arg[0] = THINKOS_ETIMEDOUT;
 	/* signal the scheduler ... */
 	__thinkos_defer_sched(); 
 }

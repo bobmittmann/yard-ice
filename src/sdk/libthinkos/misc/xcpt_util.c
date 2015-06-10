@@ -285,6 +285,17 @@ void __tdump(void)
 			continue;
 #if THINKOS_ENABLE_THREAD_INFO
 		if (thinkos_rt.th_inf[i] != NULL) {
+#if THINKOS_ENABLE_THREAD_STAT
+			DCC_LOG8(LOG_TRACE, "%7s (%2d-%3d) SP=%08x PC=%08x LR=%08x %d/%d", 
+					 thinkos_rt.th_inf[i]->tag,
+					 i, thinkos_rt.th_stat[i] >> 1,
+					 thinkos_rt.ctx[i], 
+					 thinkos_rt.ctx[i]->pc, 
+					 thinkos_rt.ctx[i]->lr,
+					 __scan_stack(thinkos_rt.th_inf[i]->stack_ptr, 
+								  thinkos_rt.th_inf[i]->stack_size),
+					 thinkos_rt.th_inf[i]->stack_size);
+#else
 			DCC_LOG7(LOG_TRACE, "%7s (%2d) SP=%08x PC=%08x LR=%08x %d/%d", 
 					 thinkos_rt.th_inf[i]->tag,
 					 i, 
@@ -294,12 +305,25 @@ void __tdump(void)
 					 __scan_stack(thinkos_rt.th_inf[i]->stack_ptr, 
 								  thinkos_rt.th_inf[i]->stack_size),
 					 thinkos_rt.th_inf[i]->stack_size);
+#endif
 		} else
 #endif
+#if THINKOS_ENABLE_THREAD_STAT
+		DCC_LOG6(LOG_TRACE, "....... (%2d) %s[%d] SP=%08x PC=%08x LR=%08x", 
+				 i, 
+				 thinkos_rt.th_stat[i] & 1 ? "TIMW": "WAIT",
+				 thinkos_rt.th_stat[i] >> 1,
+				 thinkos_rt.ctx[i], 
+				 thinkos_rt.ctx[i]->pc, 
+				 thinkos_rt.ctx[i]->lr);
+#else
 		DCC_LOG4(LOG_TRACE, "....... (%2d) SP=%08x PC=%08x LR=%08x", 
 				 i, thinkos_rt.ctx[i], 
 				 thinkos_rt.ctx[i]->pc, 
 				 thinkos_rt.ctx[i]->lr);
+#endif
+
+
 	}
 	DCC_LOG2(LOG_TRACE, "<IDLE>  (%2d) SP=%08x", i, 
 			 thinkos_rt.idle_ctx);
