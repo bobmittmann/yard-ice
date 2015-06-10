@@ -154,7 +154,7 @@ void thinkos_sem_wait_svc(int32_t * arg)
 again:
 	sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 	if (sem_val > 0) {
-		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> signaled %d...", self, wq);
 		sem_val--;
 		if (__strex(&thinkos_rt.sem_val[sem], sem_val))
 			goto again;
@@ -162,7 +162,7 @@ again:
 		return;
 	}
 
-	/* (1) - suspend the thread by removing it from the
+	/* (1) suspend the thread by removing it from the
 	   ready wait queue. The __thinkos_suspend() call cannot be nested
 	   inside a LDREX/STREX pair as it may use the exclusive access itself,
 	   in case we have anabled the time sharing option.
@@ -174,6 +174,10 @@ again:
 #if THINKOS_ENABLE_THREAD_STAT
 	thinkos_rt.th_stat[self] = wq << 1;
 #endif
+	/* (2) Save the context pointer. In case an interrupt wakes up
+	   this thread before the scheduler is called, this will allow
+	   the interrupt handler to locate the return value (r0) address. */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 
 	/* insert into the event wait queue */
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
@@ -237,7 +241,7 @@ void thinkos_sem_timedwait_svc(int32_t * arg)
 again:
 	sem_val = __ldrex(&thinkos_rt.sem_val[sem]);
 	if (sem_val > 0) {
-		DCC_LOG2(LOG_TRACE, "<%d> signaled %d...", self, wq);
+		DCC_LOG2(LOG_INFO, "<%d> signaled %d...", self, wq);
 		sem_val--;
 		if (__strex(&thinkos_rt.sem_val[sem], sem_val))
 			goto again;
@@ -245,12 +249,12 @@ again:
 		return;
 	}
 
-
 	__thinkos_suspend(self);
 #if THINKOS_ENABLE_THREAD_STAT
 	/* update status, mark the thread clock enable bit */
 	thinkos_rt.th_stat[self] = (wq << 1) + 1;
 #endif
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	if (((volatile uint32_t)thinkos_rt.sem_val[sem] > 0) ||
@@ -328,9 +332,10 @@ void __thinkos_sem_post_i(uint32_t wq)
 void thinkos_sem_post_svc(int32_t * arg)
 {	
 	unsigned int wq = arg[0];
-	unsigned int sem = wq - THINKOS_SEM_BASE;
 
 #if THINKOS_ENABLE_ARG_CHECK
+	unsigned int sem = wq - THINKOS_SEM_BASE;
+
 	if (sem >= THINKOS_SEMAPHORE_MAX) {
 		DCC_LOG1(LOG_ERROR, "object %d is not a semaphore!", wq);
 		arg[0] = THINKOS_EINVAL;

@@ -646,3 +646,4 @@ struct ifnet * ethif_init(const uint8_t ethaddr[], in_addr_t ip_addr,
 
 #endif /* STM32F_ETH */
 
+
