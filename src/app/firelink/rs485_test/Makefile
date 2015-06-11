@@ -19,18 +19,24 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+
+PROG = io_test
+
+CFILES = io_test.c 
+
 SDK = ../../../sdk
 
-LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
-		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
-		   $(SDK)/libtcpip $(SDK)/libtcpip \
+LIBS = cm3 stm32f stm32drv console util c driver 
 
-INCPATH = $(SDK)/include ..
+INCPATH = $(SDK)/include ../include
 
-CFLAGS = -g -O1 -Wall
-O := Debug
+LIBPATH = ../sdklibs/Debug ../driver/Debug
+
+CDEFS =
+
+CFLAGS = -g3 -Og -Wall
 
 MACH = stm32f429
-THINKAPP = 1
+THINKOS = 1
 include ../../../mk/stm32f4xx.mk
 
