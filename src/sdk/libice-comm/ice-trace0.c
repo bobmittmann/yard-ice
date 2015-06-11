@@ -27,7 +27,7 @@
 
 void ice_trace0(const struct trace_entry * __entry)
 {
-	struct ice_comm_blk * comm = (struct ice_comm_blk *)(4 * 8);
+	struct ice_comm_blk * comm = *(struct ice_comm_blk **)(4 * 8);
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 	unsigned int head;
 	
