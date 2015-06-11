@@ -213,6 +213,7 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, "    [4]  57600 8N1\r\n");
 	usb_printf(cdc, "    [5] 115200 8N1\r\n");
 	usb_printf(cdc, "    [6] 500000 8N1\r\n");
+	usb_printf(cdc, "    [t] print serial statistics\r\n");
 	usb_printf(cdc, "    [q] quit service mode\r\n");
 	usb_printf(cdc, "    [F] firmware update\r\n");
 	usb_printf(cdc, "  [A/a] absolute/relative time\r\n");
@@ -221,12 +222,26 @@ void show_menu(usb_cdc_class_t * cdc)
 	usb_printf(cdc, "  [P/p] enable/disable packets\r\n");
 	usb_printf(cdc, "  [R/r] enable/disable raw data trace\r\n");
 	usb_printf(cdc, "  [S/s] enable/disable SDU trace\r\n");
-	usb_printf(cdc, "  [U/u] enable/disable supervisory\r\n");
+	usb_printf(cdc, "  [U/u] enable/disable SDU supervisory\r\n");
 	usb_printf(cdc, "  [X/x] enable/disable XON/XOFF flow control\r\n");
 	usb_printf(cdc, "[U2S-485 %d.%d]: ", FW_VERSION_MAJOR, FW_VERSION_MINOR);
 };
 
 uint32_t protocol_buf[512];
+
+static void vcom_serial_8n1_force_cfg(struct vcom * vcom, 
+									  unsigned int baudrate)
+{
+	vcom->cfg_lock = true;
+	vcom->cfg.baudrate = baudrate;
+	vcom->cfg.databits = 8;
+	vcom->cfg.parity = 0;
+	vcom->cfg.stopbits = 1;
+	serial_rx_disable(vcom->serial);
+	serial_config_set(vcom->serial, &vcom->cfg);
+	serial_rx_enable(vcom->serial);
+	usb_printf(vcom->cdc, " - %d 8N1 (locked).\r\n", baudrate);
+}
 
 void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 {
@@ -309,70 +324,22 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			break;
 
 		case '1':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 9600;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 9600 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 9600);
 			break;
 		case '2':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 19200;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 19200 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 19200);
 			break;
 		case '3':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 38400;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 38400 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 38400);
 			break;
 		case '4':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 57600;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 57600 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 57600);
 			break;
 		case '5':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 115200;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 115200 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 115200);
 			break;
 		case '6':
-			vcom->cfg_lock = true;
-			vcom->cfg.baudrate = 500000;
-			vcom->cfg.databits = 8;
-			vcom->cfg.parity = 0;
-			vcom->cfg.stopbits = 1;
-			serial_rx_disable(vcom->serial);
-			serial_config_set(vcom->serial, &vcom->cfg);
-			serial_rx_enable(vcom->serial);
-			usb_printf(cdc, " - 500000 8N1\r\n");
+			vcom_serial_8n1_force_cfg(vcom, 500000);
 			break;
 
 		case 'U':
@@ -405,47 +372,14 @@ void vcom_service_input(struct vcom * vcom, uint8_t buf[], int len)
 			usb_printf(cdc, " - Relative timestamps...\r\n");
 			break;
 
-		case 'v':
-			usb_printf(cdc, "\r\n");
-			usb_printf(cdc, 
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-			usb_printf(cdc, "\r\n");
-			usb_printf(cdc, 
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-			usb_printf(cdc, "\r\n");
-			usb_printf(cdc, 
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF"
-	"0123456789abcdef0123456789ABCDEF0123456789abcdef0123456789ABCDEF");
-
-/*
-			usb_printf(cdc, "\r\n"
-					   "1. The qick brown fox jumps over the lazy dog.\r\n"
-					   "2. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
-			usb_printf(cdc, 
-					   "3. The qick brown fox jumps over the lazy dog.\r\n"
-					   "4. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
-			usb_printf(cdc, 
-					   "5. The qick brown fox jumps over the lazy dog.\r\n");
-			usb_printf(cdc, 
-					   "6. THE QICK BROWN FOX JUMPS OVER THE LAZY DOG.\r\n");
-*/
-			break;
-		case 't':
-			led_flash(LED_RED, 50);
-			serial_send(vcom->serial, 
-						"The qick brown fox jumps over the lazy dog.\r\n", 
-						45);
-			break;
-
-		case 'h': {
+		case 't': {
 			struct serial_stat stat;
 			serial_stat_get(vcom->serial, &stat);
-			usb_printf(cdc, " -  RX: %10d\r\n", stat.rx_cnt);
-			usb_printf(cdc, " -  TX: %10d\r\n", stat.tx_cnt);
-			usb_printf(cdc, " - Err: %10d\r\n", stat.err_cnt);
-
+			usb_printf(cdc, "\r\n"
+					   " -  RX: %10d\r\n"
+					   " -  TX: %10d\r\n"
+					   " - Err: %10d\r\n", 
+					   stat.rx_cnt, stat.tx_cnt, stat.err_cnt);
 			vcom->stat = stat;
 			break;
 		}

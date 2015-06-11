@@ -88,8 +88,6 @@ struct usb_cdc_acm_dev {
 	uint32_t ctr_buf[CDC_CTR_BUF_LEN / 4];
 };
 
-
-
 #ifdef CTL_FLAG 
 #undef CTL_FLAG 
 #endif
@@ -136,10 +134,10 @@ static inline void __memcpy(void * __dst, void * __src,  unsigned int __len)
 		dst[i] = src[i];
 }
 
-
 void usb_cdc_on_rcv(struct usb_cdc_acm_dev * dev, 
 					unsigned int ep_id, unsigned int len)
 {
+	DCC_LOG(LOG_TRACE, "thinkos_flag_give_i(RX_FLAG)");
 	thinkos_flag_give_i(RX_FLAG);
 }
 
@@ -475,20 +473,24 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 		if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
 			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 										 buf, len)) > 0) {
+				DCC_LOG1(LOG_TRACE, "1. n=%d", n);
 				return n;
 			} 
 		} else {
 			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, dev->rx_buf, 
 										 CDC_EP_IN_MAX_PKT_SIZE)) > 0) {
+				DCC_LOG1(LOG_TRACE, "2. n=%d", n);
 				dev->rx_pos = 0;
 				dev->rx_cnt = n;
 				goto read_from_buffer;
 			}
 		}
 
+		DCC_LOG1(LOG_MSG, "3. n=%d", n);
+
 		if ((ret = thinkos_flag_timedtake(RX_FLAG, msec)) < 0) {
 			if (ret == THINKOS_ETIMEDOUT) {
-				DCC_LOG(LOG_INFO, "timeout!!");
+				DCC_LOG(LOG_MSG, "timeout!!");
 			}
 			return ret;
 		}

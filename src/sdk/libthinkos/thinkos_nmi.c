@@ -71,7 +71,6 @@ void __attribute__((naked)) cm3_nmi_isr(int arg1, int arg2, int arg3, int arg4)
 				  "ldr    pc, [r12, #2]\n"
 				  ".word  __thinkos_debug_step_i\n"
 				  : : "r" (arg1), "r" (arg2), "r" (arg3), "r" (arg4) : ); 
-
 }
 
 /* FIXME: this is a hack to force linking this file. 

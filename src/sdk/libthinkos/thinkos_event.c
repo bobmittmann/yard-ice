@@ -93,12 +93,12 @@ again:
 	pend = __ldrex(&thinkos_rt.ev[no].pend);
 	if ((ev = __clz(__rbit(pend & mask))) < 32) {
 		pend &= ~(1 << ev);
-		arg[0] = ev;
 		DCC_LOG2(LOG_MSG, "set=0x%08x msk=0x%08x", 
 				 thinkos_rt.ev[no].pend, thinkos_rt.ev[no].mask);
 		DCC_LOG2(LOG_INFO, "pending event %d.%d!", wq, ev);
 		if (__strex(&thinkos_rt.ev[no].pend, pend))
 			goto again;
+		arg[0] = ev;
 		return;
 	}
 
@@ -193,12 +193,12 @@ again:
 	pend = __ldrex(&thinkos_rt.ev[no].pend);
 	if ((ev = __clz(__rbit(pend & mask))) < 32) {
 		pend &= ~(1 << ev);
-		arg[0] = ev;
 		DCC_LOG2(LOG_MSG, "set=0x%08x msk=0x%08x", 
 				 thinkos_rt.ev[no].pend, thinkos_rt.ev[no].mask);
 		DCC_LOG2(LOG_INFO, "pending event %d.%d!", wq, ev);
 		if (__strex(&thinkos_rt.ev[no].pend, pend))
 			goto again;
+		arg[0] = ev;
 		return;
 	}
 

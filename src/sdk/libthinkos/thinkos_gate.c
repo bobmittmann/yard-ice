@@ -52,7 +52,7 @@ void thinkos_gate_free_svc(int32_t * arg)
 	unsigned int idx = wq - THINKOS_GATE_BASE;
 
 	if (idx >= THINKOS_GATE_MAX) {
-		DCC_LOG1(LOG_ERROR, "object %d is not a xdmon!", wq);
+		DCC_LOG1(LOG_ERROR, "object %d is not a gate!", wq);
 		arg[0] = THINKOS_EINVAL;
 		return;
 	}
@@ -248,7 +248,6 @@ again:
  * to enter the gate.
  * - @p open == 0, the gate will be opened if signaled otherwise will stay
  * closed. 
- * - @p open < 0 will force the gate to close.
  * @return THINKOS_EINVAL if @p gate is invalid, 0 otherwise. 
  */
 
@@ -256,7 +255,7 @@ void thinkos_gate_exit_svc(int32_t * arg)
 {
 
 	unsigned int wq = arg[0];
-	int open = arg[1];
+	unsigned int open = arg[1];
 	unsigned int idx = wq - THINKOS_GATE_BASE;
 	uint32_t queue;
 	int th;
@@ -296,14 +295,6 @@ void thinkos_gate_exit_svc(int32_t * arg)
 				 thinkos_rt.active, wq);
 		/* open the gate  */
 		__bit_mem_wr(thinkos_rt.gate, idx * 2, 1);
-	} else if (open < 0) {
-			/* close the gate  */
-			__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
-			/* unlock the gate */
-			__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 0);
-			DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave closed.", 
-					 thinkos_rt.active, wq);
-			return;
 	} else { /* (open == 0) */
 		if (!__bit_mem_rd(thinkos_rt.gate, idx * 2)) {
 			/* unlock the gate */
@@ -350,8 +341,8 @@ void thinkos_gate_exit_svc(int32_t * arg)
 	__thinkos_defer_sched();
 }
 
-/* void __thinkos_gate_i(uint32_t wq, int open) */
-void cm3_except13_isr(uint32_t wq, uint32_t open)
+/* void __thinkos_gate_open_i(uint32_t wq) */
+void cm3_except13_isr(uint32_t wq)
 {
 	unsigned int idx = wq - THINKOS_GATE_BASE;
 	uint32_t * gates_bmp;
@@ -366,12 +357,6 @@ void cm3_except13_isr(uint32_t wq, uint32_t open)
 	idx %= 16;
 #endif
 	idx *= 2;
-
-	if (!open) {
-		/* close the gate */
-		__bit_mem_wr(gates_bmp, idx, 0);
-		return;
-	}
 
 again:
 	/* check whether the gate is locked or not */
@@ -423,7 +408,7 @@ again:
 	__thinkos_defer_sched();
 }
 
-void __thinkos_gate_i(uint32_t wq, uint32_t open) 
+void __thinkos_gate_open_i(uint32_t wq) 
 	__attribute__((weak, alias("cm3_except13_isr")));
 
 void thinkos_gate_open_svc(int32_t * arg)
@@ -451,7 +436,7 @@ void thinkos_gate_open_svc(int32_t * arg)
 	DCC_LOG1(LOG_INFO, "gate %d", wq);
 
 	/* open the gate */
-	__thinkos_gate_i(wq, 1);
+	__thinkos_gate_open_i(wq);
 }
 
 void thinkos_gate_close_svc(int32_t * arg)

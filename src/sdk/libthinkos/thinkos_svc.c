@@ -399,8 +399,6 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
-
-#if 0
 	case THINKOS_FLAG_VAL:
 #if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH
 		thinkos_flag_val_svc(arg);
@@ -408,7 +406,6 @@ void cm3_svc_isr(void)
 		thinkos_nosys(arg);
 #endif
 		break;
-#endif
 
 	case THINKOS_FLAG_CLR:
 #if (THINKOS_FLAG_MAX > 0) && THINKOS_ENABLE_FLAG_WATCH

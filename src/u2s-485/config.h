@@ -87,6 +87,7 @@
  * ------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_USB_DEVICE 1
+#define STM32F_USB_DRV_EP_MAX 4
 
 #define CDC_EP_OUT_MAX_PKT_SIZE 64
 #define CDC_EP_IN_MAX_PKT_SIZE 64

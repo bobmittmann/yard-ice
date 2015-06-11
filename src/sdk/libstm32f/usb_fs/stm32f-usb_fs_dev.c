@@ -43,6 +43,10 @@
 #define STM32_ENABLE_USB_DEVICE 0
 #endif 
 
+#ifndef STM32F_USB_DRV_EP_MAX 
+#define STM32F_USB_DRV_EP_MAX 8
+#endif
+
 #ifdef STM32F_USB
 
 #if STM32_ENABLE_USB_DEVICE
@@ -80,13 +84,11 @@ struct stm32f_usb_ep {
 	};
 };
 
-#define USB_DRIVER_EP_MAX 8
-
 //#define DEBUG_DBLBUF
 
 /* USB Driver */
 struct stm32f_usb_drv {
-	struct stm32f_usb_ep ep[USB_DRIVER_EP_MAX];
+	struct stm32f_usb_ep ep[STM32F_USB_DRV_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
@@ -157,7 +159,7 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 
 	len = MIN(ep->xfr_rem, ep->mxpktsz);
 
-	DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
+	DCC_LOG2(LOG_MSG, "ep_id=%d, len=%d", ep_id, len);
 
 	__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
 	ep->xfr_rem -= len;
@@ -167,10 +169,10 @@ static int __ep_pkt_send(struct stm32f_usb * usb, int ep_id,
 		/* if we put all data into the TX packet buffer but the data
 		 * didn't fill the whole packet, this is the last packet,
 		 * otherwise we need to send a ZLP to finish the transaction */
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+		DCC_LOG1(LOG_MSG, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 		ep->state = EP_IN_DATA_LAST;
 	} else {
-		DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA]", ep_id);
+		DCC_LOG1(LOG_MSG, "ep_id=%d [EP_IN_DATA]", ep_id);
 		ep->state = EP_IN_DATA;
 	}
 
@@ -285,7 +287,7 @@ int stm32f_usb_ep_pkt_xmit(struct stm32f_usb_drv * drv, int ep_id,
 	uint32_t pri;
 	uint32_t epr;
 
-	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
+	DCC_LOG2(LOG_MSG, "ep_id=%d len=%d", ep_id, len);
 
 	if (len == 0)
 		return 0;
@@ -305,7 +307,7 @@ int stm32f_usb_ep_pkt_xmit(struct stm32f_usb_drv * drv, int ep_id,
 	ep->xfr_rem = len;
 	epr = usb->epr[ep_id];
 	if (epr & USB_EP_DBL_BUF) {
-		DCC_LOG2(LOG_INFO, "double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG2(LOG_MSG, "double buffer: DTOG=%d SW_BUF=%d", 
 				 (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 		/* select the descriptor according to the data toggle bit */
@@ -313,7 +315,7 @@ int stm32f_usb_ep_pkt_xmit(struct stm32f_usb_drv * drv, int ep_id,
 		__ep_pkt_send(usb, ep_id, ep, tx_pktbuf);
 		__toggle_ep_flag(usb, ep_id, USB_SWBUF_TX);
 	} else {
-		DCC_LOG(LOG_TRACE, "single");
+		DCC_LOG(LOG_MSG, "single");
 		tx_pktbuf = &pktbuf[ep_id].tx;
 		__ep_pkt_send(usb, ep_id, ep, tx_pktbuf);
 		__set_ep_txstat(usb, ep_id, USB_TX_VALID);
@@ -388,7 +390,7 @@ int stm32f_usb_dev_ep_ctl(struct stm32f_usb_drv * drv,
 	struct stm32f_usb_ep * ep = &drv->ep[ep_id];
 	struct stm32f_usb * usb = STM32F_USB;
 
-	DCC_LOG2(LOG_INFO, "ep=%d opt=%d", ep_id, opt);
+	DCC_LOG2(LOG_MSG, "ep=%d opt=%d", ep_id, opt);
 
 	switch (opt) {
 	case USB_EP_RECV_OK:
@@ -637,7 +639,7 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 	int cnt;
 	int len;
 
-	DCC_LOG(LOG_INFO, "SETUP START <<<<<<<<<<<<<<<");
+	DCC_LOG(LOG_MSG, "SETUP START <<<<<<<<<<<<<<<");
 
 	cnt = pktbuf[0].rx.count;
 
@@ -655,7 +657,7 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 	/* No-Data control SETUP transaction */
 	if (req->length == 0) {
 		__ep_zlp_send(usb, 0);
-		DCC_LOG(LOG_INFO, "EP0 [WAIT_STATUS_IN] no data Dev->Host");
+		DCC_LOG(LOG_MSG, "EP0 [WAIT_STATUS_IN] no data Dev->Host");
 		ep->state = EP_WAIT_STATUS_IN;
 		return;
 	}
@@ -663,23 +665,23 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
 
-		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_MSG, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 #if ENABLE_PEDANTIC_CHECK
 		if (len < 0) {
 			__ep_stall(usb, 0, ep);
-			DCC_LOG(LOG_INFO, "EP0 [STALLED] len < 0");
+			DCC_LOG(LOG_MSG, "EP0 [STALLED] len < 0");
 			return;
 		}
 		if (ep->tx_buf == NULL) {
 			__ep_stall(usb, 0, ep);
-			DCC_LOG(LOG_INFO, "EP0 [STALLED] tx_buf == NULL");
+			DCC_LOG(LOG_MSG, "EP0 [STALLED] tx_buf == NULL");
 			return;
 		}
 #endif
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_MSG, "EP0 data lenght = %d", ep->xfr_rem);
 		__ep_pkt_send(usb, 0, ep, &pktbuf[0].tx);
 		__set_ep_txstat(usb, 0, USB_TX_VALID);
 		/* While enabling the last data stage, the opposite direction should
@@ -707,7 +709,7 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 		ep->xfr_ptr = ep->xfr_buf;
 		ep->xfr_rem = req->length;
 
-		DCC_LOG1(LOG_INFO, "xfr_ptr=0x%08x", ep->xfr_ptr);
+		DCC_LOG1(LOG_MSG, "xfr_ptr=0x%08x", ep->xfr_ptr);
 
 		if (ep->xfr_rem > ep->xfr_buf_len) {
 			ep->xfr_rem = ep->xfr_buf_len;
@@ -717,11 +719,11 @@ static void stm32f_usb_dev_ep0_setup(struct stm32f_usb * usb,
 		if (ep->xfr_rem < ep->mxpktsz) {
 			/* last and only transfer */
 			ep->state = EP_OUT_DATA_LAST;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
 
 		} else {
 			ep->state = EP_OUT_DATA;
-			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
 		}
 
 		__set_ep_rxstat(usb, 0, USB_RX_VALID);
@@ -759,7 +761,7 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 
 	stm32f_usb_power_on(usb);
 
-	for (i = 0;  i < USB_DRIVER_EP_MAX; ++i) {
+	for (i = 0;  i < STM32F_USB_DRV_EP_MAX; ++i) {
 		drv->ep[i].state = EP_DISABLED;
 	}
 
@@ -810,12 +812,14 @@ void stm32f_can1_tx_usb_hp_isr(void)
 
 	ep_id = USB_EP_ID_GET(sr);
 
-	DCC_LOG1(LOG_INFO, "CTR ep_id=%d", ep_id);
+	DCC_LOG1(LOG_MSG, "CTR ep_id=%d", ep_id);
 
 	epr = usb->epr[ep_id];
 	ep = &drv->ep[ep_id];
 
 	if (epr & USB_CTR_RX) {
+		int cnt;
+
 		/* OUT */
 		__clr_ep_flag(usb, ep_id, USB_CTR_RX);
 
@@ -832,23 +836,30 @@ void stm32f_can1_tx_usb_hp_isr(void)
 				 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
 				 rx_pktbuf->count);
 #endif
-		if (rx_pktbuf->count == 0) {
-			DCC_LOG3(LOG_WARNING, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
-					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
-					 rx_pktbuf->count);
-		}
+
 #ifdef DEBUG_DBLBUF
 		drv->pkt_recv++;
 #endif
-		/* call class endpoint callback */
-		ep->on_out(drv->cl, ep_id, rx_pktbuf->count);
+		if ((cnt = rx_pktbuf->count) == 0) {
+			DCC_LOG3(LOG_WARNING, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
+					 rx_pktbuf->count);
+			/* release the buffer to the USB controller */
+			__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
+		} else {
+			DCC_LOG3(LOG_TRACE, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
+					 rx_pktbuf->count);
+			/* call class endpoint callback */
+			ep->on_out(drv->cl, ep_id, cnt);
+		}
 	}
 
 	if (epr & USB_CTR_TX) {
 		/* IN */
 		__clr_ep_flag(usb, ep_id, USB_CTR_TX);
 
-		DCC_LOG3(LOG_INFO, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
+		DCC_LOG3(LOG_MSG, "ep%d: TX double buffer: DTOG=%d SW_BUF=%d", 
 				 ep_id, (epr & USB_DTOG_TX) ? 1: 0,
 				 (epr & USB_SWBUF_TX) ? 1: 0);
 
@@ -858,7 +869,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			break;
 
 		case EP_IN_DATA_LAST:
-			DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IDLE]", ep_id);
+			DCC_LOG1(LOG_MSG, "ep_id=%d [EP_IDLE]", ep_id);
 			ep->state = EP_IDLE;
 			/* call class endpoint callback */
 			ep->on_in(drv->cl, ep_id);
@@ -870,7 +881,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			/* send the next data chunk */
 			len = MIN(ep->xfr_rem, ep->mxpktsz);
 
-			DCC_LOG2(LOG_INFO, "ep_id=%d, len=%d", ep_id, len);
+			DCC_LOG2(LOG_MSG, "ep_id=%d, len=%d", ep_id, len);
 
 			/* copy to packet buffer */
 			__copy_to_pktbuf(tx_pktbuf, ep->xfr_ptr, len);
@@ -885,7 +896,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 				/* if we put all data into the TX packet buffer but the data
 				 * didn't filled the whole packet, this is the last packet,
 				 * otherwise we need to send a ZLP to finish the transaction */
-				DCC_LOG1(LOG_INFO, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
+				DCC_LOG1(LOG_MSG, "ep_id=%d [EP_IN_DATA_LAST]", ep_id);
 				ep->state = EP_IN_DATA_LAST;
 			}
 
@@ -905,48 +916,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	struct stm32f_usb_drv * drv = &stm32f_usb_drv0;
 	struct stm32f_usb * usb = STM32F_USB;
 	uint32_t sr = usb->istr;
-
-	if (sr & USB_SOF) {
-		usb->istr = ~USB_SOF;
-		DCC_LOG(LOG_INFO, "SOF");
-	}
-
-	if (sr & USB_SUSP) {
-		/* clear interrupts */
-		usb->istr = ~USB_SUSP;
-		DCC_LOG(LOG_TRACE, "SUSP");
-		stm32f_usb_dev_suspend(drv);
-	}
-
-	if (sr & USB_WKUP) {
-		usb->istr = ~USB_WKUP;
-		DCC_LOG(LOG_TRACE, "WKUP");
-		stm32f_usb_dev_wakeup(drv);
-	}
-
-	if (sr & USB_RESET) {
-		usb->istr = ~USB_RESET;
-		DCC_LOG(LOG_TRACE, "RESET");
-		stm32f_usb_dev_reset(drv);
-	}
-
-	if (sr & USB_ERR) {
-		usb->istr = ~USB_ERR;
-		DCC_LOG(LOG_WARNING, "ERR");
-		/* The USB software can usually ignore errors, since the 
-		   USB peripheral and the PC host manage retransmission in case 
-		   of errors in a fully transparent way. */
-	}
-
-	if (sr & USB_ESOF) {
-		DCC_LOG(LOG_WARNING, "USB_ESOF");
-		usb->istr = ~USB_ESOF;
-	}
-
-	if (sr & USB_PMAOVR) {
-		usb->istr = ~USB_PMAOVR;
-		DCC_LOG(LOG_WARNING, "PMAOVR");
-	}
 
 	if (sr & USB_CTR) {
 		struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
@@ -979,7 +948,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 
 		ep_id = USB_EP_ID_GET(sr);
 
-		DCC_LOG1(LOG_INFO, "CTR ep_id=%d", ep_id);
+		DCC_LOG1(LOG_MSG, "CTR ep_id=%d", ep_id);
 
 		epr = usb->epr[ep_id];
 		ep = &drv->ep[ep_id];
@@ -1039,6 +1008,50 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 			}
 		}
 	}
+
+	if (sr & USB_SUSP) {
+		/* clear interrupts */
+		usb->istr = ~USB_SUSP;
+		DCC_LOG(LOG_TRACE, "SUSP");
+		stm32f_usb_dev_suspend(drv);
+	}
+
+	if (sr & USB_WKUP) {
+		usb->istr = ~USB_WKUP;
+		DCC_LOG(LOG_TRACE, "WKUP");
+		stm32f_usb_dev_wakeup(drv);
+	}
+
+	if (sr & USB_RESET) {
+		usb->istr = ~USB_RESET;
+		DCC_LOG(LOG_TRACE, "RESET");
+		stm32f_usb_dev_reset(drv);
+	}
+
+	if (sr & USB_ERR) {
+		usb->istr = ~USB_ERR;
+		DCC_LOG(LOG_WARNING, "ERR");
+		/* The USB software can usually ignore errors, since the 
+		   USB peripheral and the PC host manage retransmission in case 
+		   of errors in a fully transparent way. */
+	}
+
+	if (sr & USB_PMAOVR) {
+		usb->istr = ~USB_PMAOVR;
+		DCC_LOG(LOG_WARNING, "PMAOVR");
+	}
+
+	if (sr & USB_ESOF) {
+		DCC_LOG(LOG_WARNING, "USB_ESOF");
+		usb->istr = ~USB_ESOF;
+	}
+
+#if 0
+	if (sr & USB_SOF) {
+		usb->istr = ~USB_SOF;
+		DCC_LOG(LOG_MSG, "SOF");
+	}
+#endif
 }
 
 /* USB device operations */

@@ -21,6 +21,7 @@
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
+#include <thinkos.h>
 
 #if THINKOS_ENABLE_THREAD_ALLOC | THINKOS_ENABLE_MUTEX_ALLOC | \
 	THINKOS_ENABLE_COND_ALLOC | THINKOS_ENABLE_SEM_ALLOC | \
@@ -38,7 +39,7 @@ int __thinkos_bmp_alloc(uint32_t bmp[], int bits)
 			return 32 * i + j;;
 		}
 	}
-	return -1;
+	return THINKOS_NOMEM;
 }
 #endif
 

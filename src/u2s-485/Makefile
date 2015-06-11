@@ -34,7 +34,8 @@ LIBS = stm32f cm3 util thinkos c ice-comm cdc-acm
 INCPATH = ../sdk/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -Ofast
+CFLAGS = -g -O2 -Wall -ffunction-sections -fdata-sections
+LDFLAGS = -Xlinker --gc-sections 
 
 JTAGTOOL_ADDR = 192.168.10.50
 #JTAG_TARGET = stm32

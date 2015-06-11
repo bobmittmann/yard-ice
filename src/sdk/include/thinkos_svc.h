@@ -54,65 +54,60 @@
 #define THINKOS_FLAG_TIMEDTAKE  19
 #define THINKOS_FLAG_GIVE       20
 
-#define THINKOS_GATE_WAIT       21
-#define THINKOS_GATE_TIMEDWAIT  22
-#define THINKOS_GATE_EXIT       23
-#define THINKOS_GATE_OPEN       24
-#define THINKOS_GATE_CLOSE      25
+#define THINKOS_FLAG_VAL        21
+#define THINKOS_FLAG_CLR        22
+#define THINKOS_FLAG_SET        23
+#define THINKOS_FLAG_WATCH      24
+#define THINKOS_FLAG_TIMEDWATCH 25
 
-#define THINKOS_FLAG_CLR        26
-#define THINKOS_FLAG_SET        27
-#define THINKOS_FLAG_WATCH      28
-#define THINKOS_FLAG_TIMEDWATCH 29
+#define THINKOS_GATE_WAIT       26
+#define THINKOS_GATE_TIMEDWAIT  27
+#define THINKOS_GATE_EXIT       28
+#define THINKOS_GATE_OPEN       29
+#define THINKOS_GATE_CLOSE      30
 
-#define THINKOS_EVENT_WAIT      30
-#define THINKOS_EVENT_TIMEDWAIT 31
-#define THINKOS_EVENT_RAISE     32
-#define THINKOS_EVENT_MASK      33
-#define THINKOS_EVENT_CLEAR     34
+#define THINKOS_EVENT_WAIT      31
+#define THINKOS_EVENT_TIMEDWAIT 32
+#define THINKOS_EVENT_RAISE     33
+#define THINKOS_EVENT_MASK      34
+#define THINKOS_EVENT_CLEAR     35
 
-#define THINKOS_CONSOLE         35
+#define THINKOS_CONSOLE         36
 
-#define THINKOS_IRQ_WAIT        36
-#define THINKOS_IRQ_REGISTER    37
+#define THINKOS_IRQ_WAIT        37
+#define THINKOS_IRQ_REGISTER    38
 
-#define THINKOS_MUTEX_ALLOC     38
-#define THINKOS_MUTEX_FREE      39
+#define THINKOS_MUTEX_ALLOC     39
+#define THINKOS_MUTEX_FREE      40
 
-#define THINKOS_SEM_ALLOC       40
-#define THINKOS_SEM_FREE        41
+#define THINKOS_SEM_ALLOC       41
+#define THINKOS_SEM_FREE        42
 
-#define THINKOS_COND_ALLOC      42
-#define THINKOS_COND_FREE       43
+#define THINKOS_COND_ALLOC      43
+#define THINKOS_COND_FREE       44
 
-#define THINKOS_FLAG_ALLOC      44
-#define THINKOS_FLAG_FREE       45
+#define THINKOS_FLAG_ALLOC      45
+#define THINKOS_FLAG_FREE       46
 
-#define THINKOS_EVENT_ALLOC     46
-#define THINKOS_EVENT_FREE      47
+#define THINKOS_EVENT_ALLOC     47
+#define THINKOS_EVENT_FREE      48
 
-#define THINKOS_GATE_ALLOC      48
-#define THINKOS_GATE_FREE       49
+#define THINKOS_GATE_ALLOC      49
+#define THINKOS_GATE_FREE       50
 
-#define THINKOS_JOIN            50
-#define THINKOS_PAUSE           51
-#define THINKOS_RESUME          52
-#define THINKOS_CANCEL          53
+#define THINKOS_JOIN            51
+#define THINKOS_PAUSE           52
+#define THINKOS_RESUME          53
+#define THINKOS_CANCEL          54
 
-#define THINKOS_EXIT            54
+#define THINKOS_EXIT            55
 
-#define THINKOS_SYSINFO         55
+#define THINKOS_SYSINFO         56
 
-#define THINKOS_RT_SNAPSHOT     56
+#define THINKOS_RT_SNAPSHOT     57
 
 /* NMI calls ... */
 #define THINKOS_DEBUG_STEP_I     0
-#define THINKOS_SEM_POST_I       1
-#define THINKOS_EV_RAISE_I       2
-#define THINKOS_FLAG_GIVE_I      3
-#define THINKOS_FLAG_SIGNAL_I    4
-#define THINKOS_FLAG_CLR_I       5
-#define THINKOS_FLAG_SET_I       6
 
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1
@@ -372,12 +367,6 @@ static inline int __attribute__((always_inline)) thinkos_sem_post(int sem) {
 	return THINKOS_SVC1(THINKOS_SEM_POST, sem);
 }
 
-#if 0
-static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
-	THINKOS_NMI1(THINKOS_SEM_POST_I, sem);
-}
-#endif
-
 static inline void  __attribute__((always_inline)) thinkos_sem_post_i(int sem) {
 	uintptr_t * except = (uintptr_t *)(0);
 	void (* sem_post_i)(int) = (void *)except[7];
@@ -521,15 +510,8 @@ static inline int __attribute__((always_inline))
 static inline void __attribute__((always_inline)) 
 	thinkos_gate_open_i(uint32_t gate) {
 	uintptr_t * except = (uintptr_t *)(0);
-	void (* __gate_i)(uint32_t, uint32_t) = (void *)except[13];
-	__gate_i(gate, 1);
-}
-
-static inline void __attribute__((always_inline)) 
-	thinkos_gate_close_i(uint32_t gate) {
-	uintptr_t * except = (uintptr_t *)(0);
-	void (* __gate_i)(uint32_t, uint32_t) = (void *)except[13];
-	__gate_i(gate, 0);
+	void (* __gate_open_i)(uint32_t) = (void *)except[13];
+	__gate_open_i(gate);
 }
 
 /* ---------------------------------------------------------------------------

@@ -35,7 +35,8 @@ enum {
 	THINKOS_EDEADLK   = -5,
 	THINKOS_EPERM     = -6,
 	THINKOS_ENOSYS    = -7,
-	THINKOS_EFAULT    = -8        
+	THINKOS_EFAULT    = -8,        
+	THINKOS_ENOMEM    = -9    
 };
 
 enum {
@@ -177,6 +178,7 @@ int thinkos_ev_mask(int set, int ev, int val);
 int thinkos_ev_clear(int set, int ev);
 
 
+
 int thinkos_flag_alloc(void);
 
 int thinkos_flag_free(int flag);
@@ -193,22 +195,66 @@ int thinkos_flag_take(int flag);
 
 int thinkos_flag_timedtake(int flag, unsigned int ms);
 
+/** @defgroup gates Gates syncronization objects.
+ *  Gates provide a convenient way of creating mutual exclusion acess to 
+ * code blocks signaled by interrupt handlers...
+ * 
+ * A gate have a lock flag and a signal flag. A gate can be in one of 
+ * the following states:
+ * - CLOSED: no threads crossed the gate yet. 
+ * - LOCKED: a thread entered the gate, closed and locked it.
+ * - OPENED: no threads are waiting in the gate, the first thread to
+ * call @c thinkos_gate_wait() will cross the gate.
+ * - SIGNALED: a thread crossed the gate and locked it, but the gate
+ * received a signal to open. When the thread exits the gate the gate will
+ * stay open.
+ * @{
+ */
 
-
+/** @brief Alloc a gate synchronization object.
+ *
+ * @param none
+ * @return return a handler for a new gate object, or a negative value if
+ * an error ocurred.
+ * Errors:
+ * - THINKOS_ENOSYS if the system call is not enabled.
+ * - THINKOS_ENOMEM no gates left in the gate pool.
+ */
 int thinkos_gate_alloc(void);
 
+/** @brief Frees the gate synchronization object.
+ *
+ * @param gate handler for a gate object which must have been returned by 
+ * a previous call to @c thinkos_gate_alloc().
+ * @return returns zero on sucess. On error a negative code value is returned.
+ * an error ocurred.
+ * Errors:
+ * - THINKOS_EINVAL @p gate is not a valid gate handler.
+ */
 int thinkos_gate_free(int gate);
 
 int thinkos_gate_wait(int gate);
 
 int thinkos_gate_timedwait(int gate, unsigned int ms);
 
-int thinkos_gate_signal(int gate);
-
 int thinkos_gate_open(int gate);
 
+int thinkos_gate_close(int gate);
+
+/** @brief Exit the gate, leaving the gate, optionally leaving it open 
+ * or closed.
+ *
+ * @param gate The gate descriptor.
+ * @param open Indicate the state of the gate on exit. 
+ * - @p open > 0, the gate will be left open, allowing for another thread 
+ * to enter the gate.
+ * - @p open == 0, the gate will be opened if signaled otherwise will stay
+ * closed. 
+ * @return THINKOS_EINVAL if @p gate is invalid, 0 otherwise. 
+ */
 int thinkos_gate_exit(int gate, unsigned int open);
 
+/**@}*/
 
 int thinkos_irq_wait(int irq);
 
