@@ -27,26 +27,28 @@ struct ice_comm_blk ice_comm_blk;
 
 void ice_comm_sync(void) 
 {
+	struct ice_comm_blk * comm = (struct ice_comm_blk *)(4 * 8);
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
 
-	ice_comm_blk.dev = DEV_SYNC;
-	ice_comm_blk.tx_head = 0;
-	ice_comm_blk.tx_tail = 0;
+	comm->dev = DEV_SYNC;
+	comm->tx_head = 0;
+	comm->tx_tail = 0;
 
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }
 
 void ice_comm_connect(void) 
 {
+	struct ice_comm_blk * comm = (struct ice_comm_blk *)(4 * 8);
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
-	ice_comm_blk.dev = DEV_SYNC;
-	while (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC) {
-			ice_comm_blk.dev = DEV_CONNECTED;
+	comm->dev = DEV_SYNC;
+	while (comm->dbg != DBG_CONNECTED) {
+		if (comm->dbg == DBG_SYNC) {
+			comm->dev = DEV_CONNECTED;
 		}
 	}
 	cm3_faultmask_set(fm);  /* restore fault mask */

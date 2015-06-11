@@ -25,18 +25,19 @@
 
 void ice_comm_w32(uint32_t data) 
 {
+	struct ice_comm_blk * comm = (struct ice_comm_blk *)(4 * 8);
 	uint32_t fm = cm3_faultmask_get(); /* save fault mask */
 	unsigned int head;
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
-	if (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC)
-			ice_comm_blk.dev = DEV_CONNECTED;
+	if (comm->dbg != DBG_CONNECTED) {
+		if (comm->dbg == DBG_SYNC)
+			comm->dev = DEV_CONNECTED;
 		goto ret;
 	}
-	head = ice_comm_blk.tx_head;
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = data;
-	ice_comm_blk.tx_head = head;
+	head = comm->tx_head;
+	comm->tx_buf.u32[head++ & 0xf] = data;
+	comm->tx_head = head;
 ret:
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }

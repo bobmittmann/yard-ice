@@ -28,22 +28,23 @@
 void ice_trace3(const struct trace_entry * __entry, int __a, 
 				int __b, int __c)
 {
+	struct ice_comm_blk * comm = (struct ice_comm_blk *)(4 * 8);
 	unsigned int head;
 	int fm = cm3_faultmask_get(); /* save fault mask */
 	
 	cm3_cpsid_f(); /* disable interrupts and faults */
-	if (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC)
-			ice_comm_blk.dev = DEV_CONNECTED;
+	if (comm->dbg != DBG_CONNECTED) {
+		if (comm->dbg == DBG_SYNC)
+			comm->dev = DEV_CONNECTED;
 		goto ret;
 	}
-	head = ice_comm_blk.tx_head;
-	while ((16 - ((head - ice_comm_blk.tx_tail) & 0xffff)) < 4);
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = (int)__entry;
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = __a;
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = __b;
-	ice_comm_blk.tx_buf.u32[head++ & 0xf] = __c;
-	ice_comm_blk.tx_head = head;
+	head = comm->tx_head;
+	while ((16 - ((head - comm->tx_tail) & 0xffff)) < 4);
+	comm->tx_buf.u32[head++ & 0xf] = (int)__entry;
+	comm->tx_buf.u32[head++ & 0xf] = __a;
+	comm->tx_buf.u32[head++ & 0xf] = __b;
+	comm->tx_buf.u32[head++ & 0xf] = __c;
+	comm->tx_head = head;
 ret:
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }
