@@ -41,15 +41,12 @@
  */
 static int lattice_ice40_io_init(unsigned int freq)
 {
-	struct stm32f_spi * spi = STM32F_SPI3;
+	struct stm32f_spi * spi = ICE40_SPI;
 	unsigned int div;
 	int br;
 
-	/* Enable peripheral clock */
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_SPI3);
+	/* Enable peripheral clock */;
+	stm32_clk_enable(STM32_RCC, ICE40_CLK_SPI);
 
 	/* Configure IO pins */
 	stm32_gpio_mode(IO_ICE40_CDONE, INPUT, PULL_UP);
@@ -61,16 +58,16 @@ static int lattice_ice40_io_init(unsigned int freq)
 	stm32_gpio_mode(IO_ICE40_SPI_SS, OUTPUT, SPEED_MED);
 
 	stm32_gpio_mode(IO_ICE40_SPI_SCK, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(IO_ICE40_SPI_SCK, GPIO_AF6);
+	stm32_gpio_af(IO_ICE40_SPI_SCK, GPIO_AF5);
 
 	stm32_gpio_mode(IO_ICE40_SPI_SDO, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(IO_ICE40_SPI_SDO, GPIO_AF6);
+	stm32_gpio_af(IO_ICE40_SPI_SDO, GPIO_AF5);
 
-	stm32_gpio_mode(IO_ICE40_SPI_SDI, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(IO_ICE40_SPI_SDI, GPIO_AF6);
+	stm32_gpio_mode(IO_ICE40_SPI_SDI, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(IO_ICE40_SPI_SDI, GPIO_AF5);
 
 	/* Configure SPI */
-	div = stm32_clk_hz(STM32_CLK_SPI3) / freq / 2;
+	div = stm32_clk_hz(ICE40_CLK_SPI) / freq / 2;
 	br = 31 - __clz(div);
 	if (div > (1 << br))
 		br++;
@@ -100,6 +97,7 @@ static int conf_start(void)
 /* The iCE40 FPGA enters SPI peripheral mode when the CRESET_B pin 
    returns High while the SPI_SS_B pin is Low. */
 	stm32_gpio_clr(IO_ICE40_SPI_SS);
+
 	/* reset */
 	stm32_gpio_clr(IO_ICE40_CRESET);
 	udelay(1);
@@ -123,7 +121,7 @@ static int conf_start(void)
  */
 static void conf_wr(int c)
 {
-	struct stm32f_spi * spi = STM32F_SPI3;
+	struct stm32f_spi * spi = ICE40_SPI;
 
 	stm32f_spi_putc(spi, c);
 
@@ -136,8 +134,8 @@ static void conf_wr(int c)
  */
 int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 {
-	int n = 0;
 	int ret;
+	int n;
 	int i;
 
 	lattice_ice40_io_init(50000);
@@ -149,11 +147,19 @@ int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 		return ret;
 	}
 
-	while (!stm32_gpio_stat(IO_ICE40_CDONE)) {
+	for (n = 0; n < max; ++n) {
+		if (stm32_gpio_stat(IO_ICE40_CDONE))
+			break;
 		conf_wr(buf[n]);
-		n++;
-		if (n > max) {
-			DCC_LOG2(LOG_ERROR, "n(%d) > max(%d)!", n, max);
+	}
+
+	if (n >= max) {
+		for (i = 0; i < 128; ++i) {
+			if (stm32_gpio_stat(IO_ICE40_CDONE))
+				break;
+			conf_wr(0x00);
+		}
+		if (!stm32_gpio_stat(IO_ICE40_CDONE)) {
 			stm32_gpio_set(IO_ICE40_SPI_SS);
 			return -2;
 		}

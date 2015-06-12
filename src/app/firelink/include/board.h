@@ -97,20 +97,22 @@
  * Lattice FPGA (iCE40LP384) connections
  * ------------------------------------------------------------------------- */
 
-#define IO_ICE40_SPI_SCK  STM32_GPIOC, 10
-#define IO_ICE40_SPI_SDO  STM32_GPIOC, 11
-#define IO_ICE40_SPI_SDI  STM32_GPIOB, 5
-#define IO_ICE40_SPI_SS   STM32_GPIOE, 1
+#define IO_ICE40_SPI_SCK  STM32_GPIOI, 1
+#define IO_ICE40_SPI_SDO  STM32_GPIOI, 3
+#define IO_ICE40_SPI_SDI  STM32_GPIOI, 2
+#define IO_ICE40_SPI_SS   STM32_GPIOI, 0
+#define ICE40_SPI         STM32F_SPI2
+#define ICE40_CLK_SPI     STM32_CLK_SPI2
 
-#define IO_ICE40_CRESET   STM32_GPIOE, 0
-#define IO_ICE40_CDONE    STM32_GPIOB, 9
+#define IO_ICE40_CRESET   STM32_GPIOE, 15
+#define IO_ICE40_CDONE    STM32_GPIOH, 8
 
-#define IO_RS485_TX       STM32_GPIOB, 6
-#define IO_RS485_RX       STM32_GPIOB, 7
-//#define RS485_CK       STM32_GPIOA, 8
-#define IO_RS485_TRG      STM32_GPIOA, 8
-#define IO_RS485_MODE     STM32_GPIOD, 6
-#define IO_RS485_USART    STM32_USART1
+
+#define IO_RS485_TX       STM32_GPIOF, 7
+#define IO_RS485_RX       STM32_GPIOF, 6
+#define IO_RS485_MODE     STM32_GPIOF, 11
+
+#define IO_RS485_USART    STM32_UART7
 
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {

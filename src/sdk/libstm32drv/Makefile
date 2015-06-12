@@ -28,7 +28,8 @@ LIB_STATIC = stm32drv
 
 SERIAL_CFILES = stm32f-serial.c stm32f-serial_dma.c stm32f-usart1.c \
 				stm32f-usart2.c stm32f-uart5.c \
-				stm32f-usart6.c stm32f-usart1_dma.c \
+				stm32f-usart6.c stm32f-uart7.c \
+				stm32f-usart1_dma.c \
 				stm32f-uart5_dma.c serial-file.c
 
 CFILES = stm32f-ethif.c stm32f-dac.c stm32f-adc.c \

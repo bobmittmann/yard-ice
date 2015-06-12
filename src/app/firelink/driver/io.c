@@ -21,6 +21,7 @@
  */
 
 #include <sys/stm32f.h>
+#include <sys/delay.h>
 #include <thinkos.h>
 #include <stdlib.h>
 #include <string.h>
@@ -201,6 +202,8 @@ void io_init(void)
 		.tag = "IO"
 	};
 
+	thinkos_sysinfo_udelay_factor(&udelay_factor);
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
@@ -208,6 +211,7 @@ void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOF);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOH);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOI);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOJ);
 

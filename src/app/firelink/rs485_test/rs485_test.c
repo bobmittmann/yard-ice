@@ -34,8 +34,15 @@
 #include "fzc_io.h"
 #include "lattice.h"
 
-extern const uint8_t ice40lp384_bin[];
-extern const unsigned int sizeof_ice40lp384_bin;
+struct rs585_dev;
+
+struct rs585_dev * rs485_init(void);
+
+int rc485_pkt_recv(struct rs585_dev * rs485, uint8_t * pkt,
+		unsigned int tmo);
+
+int rc485_pkt_send(struct rs585_dev * rs485, uint8_t * pkt,
+		unsigned int len);
 
 int clock_task(struct lcd_dev * lcd)
 {
@@ -136,37 +143,14 @@ void stdio_init(void)
 	stdin = f;
 }
 
-void rs485_init(void)
-{
-    stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-    stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
-    stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-    stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
-    stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
-
-    /* IO init */
-    stm32_gpio_mode(IO_RS485_RX, ALT_FUNC, PULL_UP);
-    stm32_gpio_af(IO_RS485_RX, GPIO_AF7);
-
-    stm32_gpio_mode(IO_RS485_TX, ALT_FUNC, PUSH_PULL | SPEED_MED);
-    stm32_gpio_af(IO_RS485_TX, GPIO_AF7);
-
-    stm32_gpio_mode(IO_RS485_TRG, INPUT, PULL_UP);
-
-    stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
-    stm32_gpio_set(IO_RS485_MODE);
-
-    lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
-}
-
 int main(int argc, char ** argv)
 {
 	struct lcd_dev * lcd;
+	struct rs585_dev * rs485;
 	int c;
 	int rate = RATE_OFF;
 
 	io_init();
-	rs485_init();
 	stdio_init();
 
 	lcd = lcd20x4_init();
@@ -175,6 +159,8 @@ int main(int argc, char ** argv)
 	lcd_puts(lcd, " Zigbee Coordinator ");
 	lcd_puts(lcd, "      Firelink      ");
 	lcd_puts(lcd, "====================");
+
+	rs485 = rs485_init();
 
 	init_clock_task(lcd);
 	init_zap_task(lcd);

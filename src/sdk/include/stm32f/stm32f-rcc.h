@@ -717,6 +717,8 @@
 /* RCC APB1 peripheral clock enable register */
 #define STM32F_RCC_APB1ENR 0x40
 
+#define RCC_UART8 31
+#define RCC_UART7 30
 #define RCC_DAC 29
 #define RCC_PWR 28
 #define RCC_CAN2 26
@@ -2525,6 +2527,8 @@ again in case of a new switch is required)
 #define STM32_CLK_TIM4      STM32_APB1, RCC_TIM4
 #define STM32_CLK_TIM3      STM32_APB1, RCC_TIM3
 #define STM32_CLK_TIM2      STM32_APB1, RCC_TIM2
+#define STM32_CLK_UART7     STM32_APB1, RCC_UART7
+#define STM32_CLK_UART8     STM32_APB1, RCC_UART8
 
 #define STM32_CLK_TIM11     STM32_APB2, RCC_TIM11
 #define STM32_CLK_TIM10     STM32_APB2, RCC_TIM10

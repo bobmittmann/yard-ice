@@ -28,8 +28,14 @@ const struct stm32_usart * const stm32_usart_lut[] = {
 	STM32_USART3,
 	STM32_UART4,
 	STM32_UART5,
-#ifdef STM32F_USART6
-	STM32_USART6
+#ifdef STM32_USART6
+	STM32_USART6,
+#endif
+#ifdef STM32_UART7
+	STM32_UART7,
+#endif
+#ifdef STM32_UART8
+	STM32_USART6,
 #endif
 };
 
@@ -43,19 +49,33 @@ const uint8_t stm32_usart_irq_lut[] = {
 #ifdef STM32_IRQ_UART4
 	STM32_IRQ_UART5,
 #endif
-#ifdef STM32F_IRQ_USART6
-	STM32_IRQ_USART6
+#ifdef STM32_IRQ_USART6
+	STM32_IRQ_USART6,
+#endif
+#ifdef STM32_IRQ_UART7
+	STM32_IRQ_UART7,
+#endif
+#ifdef STM32_IRQ_UART8
+	STM32_IRQ_UART8,
 #endif
 };
 
 #if defined(STM32F2X) || defined(STM32F4X)
 const struct stm32_clk stm32_usart_clk_lut[] = {  
-	{ STM32_APB2,  4}, 
-	{ STM32_APB1, 17}, 
-	{ STM32_APB1, 18}, 
-	{ STM32_APB1, 19}, 
-	{ STM32_APB1, 20}, 
-	{ STM32_APB2,  5}
+	{ STM32_CLK_USART1 },
+	{ STM32_CLK_USART2 },
+	{ STM32_CLK_USART3 },
+	{ STM32_CLK_UART4 },
+	{ STM32_CLK_UART5 },
+#ifdef STM32_CLK_USART6
+	{ STM32_CLK_USART6 },
+#endif
+#ifdef STM32_CLK_UART7
+	{ STM32_CLK_UART7 },
+#endif
+#ifdef STM32_CLK_UART8
+	{ STM32_CLK_UART8 },
+#endif
 };
 #endif
 
