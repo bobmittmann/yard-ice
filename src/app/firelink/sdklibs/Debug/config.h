@@ -50,6 +50,11 @@
 /* Number of packet in the buffer pool */
 #define PKTBUF_POOL_SIZE        10 
 
+/* -------------------------------------------------------------------------
+ * Serial Driver
+ * ------------------------------------------------------------------------- */
+#define SERIAL_TX_FIFO_LEN  256
+#define SERIAL_RX_FIFO_LEN  256
 
 #endif /* __CONFIG_H__ */
 

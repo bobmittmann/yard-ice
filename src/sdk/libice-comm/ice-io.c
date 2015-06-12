@@ -37,9 +37,9 @@ int ice_io_comm_write(struct ice_comm_blk * comm, const void * buf,
 	int i;
 
 	cm3_cpsid_f(); /* disable interrupts and faults */
-	if (ice_comm_blk.dbg != DBG_CONNECTED) {
-		if (ice_comm_blk.dbg == DBG_SYNC)
-			ice_comm_blk.dev = DEV_CONNECTED;
+	if (comm->dbg != DBG_CONNECTED) {
+		if (comm->dbg == DBG_SYNC)
+			comm->dev = DEV_CONNECTED;
 		goto ret;
 	}
 	head = comm->tx_head;

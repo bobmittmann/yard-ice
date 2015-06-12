@@ -257,12 +257,14 @@ void thinkos_console_svc(int32_t * arg)
 			break;
 		}
 		DCC_LOG(LOG_INFO, "Console timed read wait...");
+		/* wait for event */
+		__thinkos_suspend(self);
 		/* insert into the mutex wait queue */
 		__thinkos_tmdwq_insert(THINKOS_WQ_CONSOLE_RD, self, arg[3]);
 		/* Set the default return value to timeout. */
 		arg[0] = THINKOS_ETIMEDOUT;
-		/* wait for event */
-		__thinkos_wait(self);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched(); 
 		break;
 
 	case CONSOLE_READ:
@@ -276,10 +278,12 @@ void thinkos_console_svc(int32_t * arg)
 			break;
 		}
 		DCC_LOG(LOG_INFO, "Console read wait...");
+		/* wait for event */
+		__thinkos_suspend(self);
 		/* insert into the mutex wait queue */
 		__thinkos_wq_insert(THINKOS_WQ_CONSOLE_RD, self);
-		/* wait for event */
-		__thinkos_wait(self);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched(); 
 		break;
 
 	case CONSOLE_WRITE:
@@ -293,10 +297,12 @@ void thinkos_console_svc(int32_t * arg)
 			arg[0] = n;
 		} else {
 			DCC_LOG(LOG_INFO, "Console write wait...");
+			/* wait for event */
+			__thinkos_suspend(self);
 			/* insert into the mutex wait queue */
 			__thinkos_wq_insert(THINKOS_WQ_CONSOLE_WR, self);
-			/* wait for event */
-			__thinkos_wait(self);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched(); 
 		}
 		break;
 

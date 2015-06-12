@@ -54,6 +54,8 @@
 #define STM32_UART4 ((struct stm32_usart *)STM32F_BASE_UART4)
 #define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
 #define STM32_USART6 ((struct stm32_usart *)STM32F_BASE_USART6)
+#define STM32_UART7 ((struct stm32_usart *)STM32F_BASE_UART7)
+#define STM32_UART8 ((struct stm32_usart *)STM32F_BASE_UART8)
 
 #define STM32F_SPI1 ((struct stm32f_spi *)STM32F_BASE_SPI1)
 #define STM32F_SPI2 ((struct stm32f_spi *)STM32F_BASE_SPI2)
