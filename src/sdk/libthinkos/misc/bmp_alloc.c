@@ -39,7 +39,7 @@ int __thinkos_bmp_alloc(uint32_t bmp[], int bits)
 			return 32 * i + j;;
 		}
 	}
-	return THINKOS_NOMEM;
+	return THINKOS_ENOMEM;
 }
 #endif
 
