@@ -58,15 +58,16 @@ void stdio_init(void);
  Display TCP/IP stack statistics
 ---------------------------------------------------------------------------
 */
-#if 0
+#if 1
 void show_tcpip_stat(void)
 {
 	struct proto_stat stat;
 
-	printf("PROTO |   RX OK |  RX ERR | RX DROP |");
-	printf("   TX OK |  TX ERR | TX DROP |\n");
-	printf("------+---------+---------+---------+");
-	printf("---------+---------+---------+\n");
+	printf("PROTO |   RX OK |  RX ERR | RX DROP |"
+		   "   TX OK |  TX ERR | TX DROP |\n");
+	printf("------+---------+---------+---------+"
+		   "---------+---------+---------+\n");
+#if 0
 	etharp_proto_getstat(&stat, 0);
 	printf("ARP   | %7d | %7d | %7d |", stat.rx_ok, stat.rx_err, stat.rx_drop);
 	printf(" %7d | %7d | %7d |\n", stat.tx_ok, stat.tx_err, stat.tx_drop);
@@ -76,7 +77,8 @@ void show_tcpip_stat(void)
 	icmp_proto_getstat(&stat, 0);
 	printf("ICMP  | %7d | %7d | %7d |", stat.rx_ok, stat.rx_err, stat.rx_drop);
 	printf(" %7d | %7d | %7d |\n", stat.tx_ok, stat.tx_err, stat.tx_drop);
-	tcp_proto_getstat(&stat, 0);
+#endif
+	tcp_proto_getstat(&stat, 1);
 	printf("TCP   | %7d | %7d | %7d |", stat.rx_ok, stat.rx_err, stat.rx_drop);
 	printf(" %7d | %7d | %7d |\n", stat.tx_ok, stat.tx_err, stat.tx_drop);
 	udp_proto_getstat(&stat, 0);
@@ -176,7 +178,7 @@ int tcp_server_task(void * arg)
 		ms = (int32_t)(end - start);
 
 		printf("EOT: size=%d tm=%d(ms) speed=%d(KiB/s)\n", size, ms, size / ms);
-//		show_tcpip_stat();
+		show_tcpip_stat();
 	}
 
 	return 0;

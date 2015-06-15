@@ -115,8 +115,10 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
 			if (monitor_thread_id == - 1)
 				monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
-			dmprintf(comm, "Current thread = %d\r\n", monitor_thread_id);
-			dmon_print_thread(comm, monitor_thread_id);
+			if (monitor_thread_id != - 1) {
+				dmprintf(comm, __hr__);
+				dmon_print_thread(comm, monitor_thread_id);
+			}
 			break;
 		case CTRL_O:
 			dmon_print_osinfo(comm);
@@ -124,9 +126,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_P:
 			dmprintf(comm, "^P\r\nPausing all threads...\r\n");
 			__thinkos_pause_all();
-			DCC_LOG(LOG_TRACE, "dmon_wait_idle()...");
 			dmon_wait_idle();
-			DCC_LOG(LOG_TRACE, "<<IDLE>>");
 			break;
 		case CTRL_Q:
 			dmprintf(comm, "^Q\r\n");
@@ -135,10 +135,11 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_R:
 			dmprintf(comm, "^R\r\nResuming all threads...\r\n");
 			__thinkos_resume_all();
-			dmprintf(comm, "Restarting...\r\n");
 			break;
 		case CTRL_T:
-			dmon_print_thread(comm, monitor_thread_id);
+			if (monitor_thread_id != - 1) {
+				dmon_print_thread(comm, monitor_thread_id);
+			}
 			break;
 		case CTRL_U:
 			dmon_print_stack_usage(comm);

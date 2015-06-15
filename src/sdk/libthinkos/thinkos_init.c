@@ -94,14 +94,24 @@ void __thinkos_reset(void)
 	}
 #endif
 
-	/* initialize the idle thread */
-	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
-	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
-	thinkos_idle.ctx.xpsr = 0x01000000;
-#if (THINKOS_THREADS_MAX < 32) 
-	/* put the IDLE thread in the ready queue */
-	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#if (THINKOS_MUTEX_MAX > 0)
+	{
+		int i;
+		/* initialize the mutex locks */
+		for (i = 0; i < THINKOS_MUTEX_MAX; i++) 
+			thinkos_rt.lock[i] = -1;
+	}
 #endif
+
+#if THINKOS_EVENT_MAX > 0
+	{
+		int i;
+		/* initialize the event set mask */
+		for (i = 0; i < THINKOS_EVENT_MAX; i++) 
+			thinkos_rt.ev[i].mask = 0xffffffff;
+	}
+#endif
+
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	/* initialize the mutex allocation bitmap */ 
@@ -128,25 +138,10 @@ void __thinkos_reset(void)
 	__thinkos_bmp_init(thinkos_rt.ev_alloc, THINKOS_EVENT_MAX); 
 #endif
 
-#if (THINKOS_MUTEX_MAX > 0)
-	{
-		int i;
-		/* initialize the mutex locks */
-		for (i = 0; i < THINKOS_MUTEX_MAX; i++) 
-			thinkos_rt.lock[i] = -1;
-	}
+#if THINKOS_ENABLE_GATE_ALLOC
+	/* initialize the gate allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.gate_alloc, THINKOS_GATE_MAX); 
 #endif
-
-#if THINKOS_EVENT_MAX > 0
-	{
-		int i;
-		/* initialize the event sets */
-		for (i = 0; i < THINKOS_EVENT_MAX; i++) {
-			thinkos_rt.ev[i].pend = 0; /* no pending events */
-			thinkos_rt.ev[i].mask = 0xffffffff; /* all events a are enabled */
-		}
-	}
-#endif /* THINKOS_EVENT_MAX > 0 */
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	thinkos_rt.step_id = -1;
@@ -164,6 +159,19 @@ void __thinkos_reset(void)
 	thinkos_rt.cycref = CM3_DWT->cyccnt;
 #endif
 
+	/* initialize the idle thread */
+	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
+	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
+	thinkos_idle.ctx.xpsr = 0x01000000;
+
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#endif
+
+	/* Set the initial thread as idle. */
+	thinkos_rt.active = THINKOS_THREAD_IDLE;
+
 	/* initialize the SysTick module */
 	systick->rvr = cm3_systick_load_1ms; /* 1ms tick period */
 	systick->cvr = 0;
@@ -172,10 +180,6 @@ void __thinkos_reset(void)
 #else
 	systick->csr = SYSTICK_CSR_ENABLE;
 #endif
-
-	/* Set the initial thread as an invalid thread,
-	   to allow for the scheduler to save the current contex somewre */
-	thinkos_rt.active = THINKOS_THREAD_VOID;
 }
 
 int __thinkos_init_main(struct thinkos_thread_opt opt)
@@ -298,6 +302,11 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	DCC_LOG3(LOG_TRACE, "     flag: %2d (%2d .. %2d)", THINKOS_FLAG_MAX,
 			 THINKOS_FLAG_BASE,
 			 THINKOS_FLAG_BASE + THINKOS_FLAG_MAX - 1);
+#endif
+#if (THINKOS_GATE_MAX > 0)
+	DCC_LOG3(LOG_TRACE, "     gate: %2d (%2d .. %2d)", THINKOS_GATE_MAX,
+			 THINKOS_GATE_BASE,
+			 THINKOS_GATE_BASE + THINKOS_GATE_MAX - 1);
 #endif
 #if THINKOS_ENABLE_JOIN
 	DCC_LOG3(LOG_TRACE, "     join: %2d (%2d .. %2d)", THINKOS_THREADS_MAX,

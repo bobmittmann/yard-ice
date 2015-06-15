@@ -95,6 +95,5 @@ version:
 	$(Q)$(RM) $(VERSION_H)
 	$(Q)$(MAKE) $(VERSION_H)
 
-
 .PHONY: version
 

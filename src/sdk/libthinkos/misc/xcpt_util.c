@@ -286,7 +286,7 @@ void __tdump(void)
 #if THINKOS_ENABLE_THREAD_INFO
 		if (thinkos_rt.th_inf[i] != NULL) {
 #if THINKOS_ENABLE_THREAD_STAT
-			DCC_LOG8(LOG_TRACE, "%7s (%2d-%3d) SP=%08x PC=%08x LR=%08x %d/%d", 
+			DCC_LOG8(LOG_TRACE, "%7s (%2d %3d) SP=%08x PC=%08x LR=%08x %d/%d", 
 					 thinkos_rt.th_inf[i]->tag,
 					 i, thinkos_rt.th_stat[i] >> 1,
 					 thinkos_rt.ctx[i], 
@@ -309,10 +309,8 @@ void __tdump(void)
 		} else
 #endif
 #if THINKOS_ENABLE_THREAD_STAT
-		DCC_LOG6(LOG_TRACE, "....... (%2d) %s[%d] SP=%08x PC=%08x LR=%08x", 
-				 i, 
-				 thinkos_rt.th_stat[i] & 1 ? "TIMW": "WAIT",
-				 thinkos_rt.th_stat[i] >> 1,
+		DCC_LOG5(LOG_TRACE, "....... (%2d %3d) SP=%08x PC=%08x LR=%08x", 
+				 i, thinkos_rt.th_stat[i] >> 1,
 				 thinkos_rt.ctx[i], 
 				 thinkos_rt.ctx[i]->pc, 
 				 thinkos_rt.ctx[i]->lr);

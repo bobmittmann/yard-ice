@@ -706,8 +706,7 @@ close:
 			/* TODO: check for completly duplicated ACKs.
 			   Ref.: TCP/IP Illustrated Volume 2, pg. 971 */
 			if ((ti_len == 0) && (tiwin == tp->snd_wnd)) {
-				if ((tp->t_rxmt_tmr == 0) ||
-					ti_ack != snd_una) {
+				if ((tp->t_rxmt_tmr == 0) || ti_ack != snd_una) {
 //					dupacks = 0;
 				} else {
 					DCC_LOG2(LOG_INFO, "duplicated ACK. ti_ack=%u snd_una=%u", 
@@ -716,7 +715,6 @@ close:
 			} else {
 //				dupacks = 0;
 			}
-
 			break;
 		}
 
@@ -890,8 +888,8 @@ dodata:
 			if (tp->t_state == TCPS_ESTABLISHED) {
 //				DCC_LOG(LOG_WARNING, "out of order, drop!");
 				DCC_LOG(LOG_WARNING, "out of order, drop");
+				TCP_PROTO_STAT_ADD(rx_drop, 1);
 			}
-			TCP_PROTO_STAT_ADD(rx_drop, 1);
 			tp->t_flags |= TF_ACKNOW;
 		}
 	} else {
@@ -963,7 +961,7 @@ dropafterack:
 	return 0;
 
 dropwithreset:
-	DCC_LOG1(LOG_INFO, "<%05x> drop and RST", (int)tp);
+	DCC_LOG1(LOG_TRACE, "<%05x> drop and RST", (int)tp);
 
 	ret = 0;
 	/* TODO: check for a broadcast/multicast */
@@ -979,7 +977,7 @@ dropwithreset:
 	return ret;
 
 drop:
-	DCC_LOG(LOG_INFO, "drop");
+	DCC_LOG(LOG_TRACE, "drop");
 	TCP_PROTO_STAT_ADD(rx_drop, 1);
 
 	return 0;

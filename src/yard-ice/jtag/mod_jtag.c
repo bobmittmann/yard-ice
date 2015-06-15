@@ -119,6 +119,8 @@ int mod_jtag_init(void * jtag, int mod_id)
 
 	var_global_add(mod_id, "speed", TYPE_UINT32, ID_JTAG_CLK);
 
+	DCC_LOG(LOG_TRACE, "done.");
+
 	return 0;
 }
 

@@ -1058,13 +1058,13 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
 	for (;;) {
 		/* wait for a connection */
 		DCC_LOG(LOG_TRACE, "waiting connect...");
-		thinkos_flag_wait(gdb->con_flag);
+		thinkos_flag_take(gdb->con_flag);
 
 		/* wait for a 'target run' indication */
 		DCC_LOG(LOG_TRACE, "waiting run...");
 
 		/* wait for a target run */
-		thinkos_flag_wait(gdb->run_flag);
+		thinkos_flag_take(gdb->run_flag);
 
 		DCC_LOG(LOG_TRACE, "waiting halt...");
 

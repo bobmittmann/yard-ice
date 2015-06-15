@@ -27,6 +27,21 @@ _Pragma ("GCC optimize (\"Ofast\")")
 
 #if THINKOS_EVENT_MAX > 0
 
+#if 0
+void __thinkos_ev_info(unsigned int wq)
+{
+	unsigned int no = wq - THINKOS_EVENT_BASE;
+	uint32_t mask;
+	uint32_t pend;
+
+	mask = thinkos_rt.ev[no].mask;
+	pend = thinkos_rt.ev[no].pend;
+	(void)mask;
+	(void)pend;
+	DCC_LOG3(LOG_TRACE, "event wq=%d pend=%08x mask=%08x", wq, pend, mask);
+}
+#endif
+
 #if THINKOS_ENABLE_EVENT_ALLOC
 void thinkos_ev_alloc_svc(int32_t * arg)
 {
@@ -35,7 +50,7 @@ void thinkos_ev_alloc_svc(int32_t * arg)
 
 	if ((idx = __thinkos_bmp_alloc(thinkos_rt.ev_alloc, 
 								   THINKOS_EVENT_MAX)) >= 0) {
-		thinkos_rt.ev[idx].mask = 0;
+		thinkos_rt.ev[idx].mask = 0xffffffff;
 		thinkos_rt.ev[idx].pend = 0;
 		wq = idx + THINKOS_EVENT_BASE;
 		DCC_LOG2(LOG_MSG, "event set=%d wq=%d", idx, wq);
@@ -121,31 +136,16 @@ again:
 
 	/* insert into the event wait queue */
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
-
-	/* The event set may have been signaled while suspending (1).
-	 If this is the case roll back and restart. */
-	pend = (volatile uint32_t)thinkos_rt.ev[no].pend;
-	if ((ev = __clz(__rbit(pend & mask))) < 32) {
-		/* roll back */
-#if THINKOS_ENABLE_THREAD_STAT
-		thinkos_rt.th_stat[self] = 0;
-#endif
-		/* insert into the ready wait queue */
-		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
-		DCC_LOG2(LOG_WARNING, "<%d> rollback 1 %d...", self, wq);
-		goto again;
-	}
-
-	/* insert into the event wait queue */
 	queue |= (1 << self);
-	if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
+	pend = (volatile uint32_t)thinkos_rt.ev[no].pend;
+	if (((ev = __clz(__rbit(pend & mask))) < 32) || 
+		(__strex(&thinkos_rt.wq_lst[wq], queue))) {
 		/* roll back */
 #if THINKOS_ENABLE_THREAD_STAT
 		thinkos_rt.th_stat[self] = 0;
 #endif
 		/* insert into the ready wait queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
-		DCC_LOG2(LOG_WARNING, "<%d> rollback 2 %d...", self, wq);
 		goto again;
 	}
 
@@ -246,7 +246,7 @@ void cm3_except9_isr(uint32_t wq, int ev)
 	uint32_t queue;
 	int th;
 
-	if (__bit_mem_rd(&thinkos_rt.ev[no].mask, ev)) {
+	if (__bit_mem_rd(&thinkos_rt.ev[no].mask, ev) == 0) {
 		DCC_LOG2(LOG_INFO, "pending event %d.%d", wq, ev);
 		/* event is masked, set the event as pending */
 		__bit_mem_wr(&thinkos_rt.ev[no].pend, ev, 1);  

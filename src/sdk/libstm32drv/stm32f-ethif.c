@@ -503,6 +503,30 @@ const struct ifnet_operations stm32f_ethif_op = {
 
 struct stm32f_eth_drv stm32f_eth_drv;
 
+#if 0
+int stm32f_ethif_rx_dma_stat(void)
+{
+	struct stm32f_eth_drv * drv = &stm32f_eth_drv;
+	uint32_t tail = drv->rx.tail;
+	struct rxdma_enh_desc * rxdesc;
+	int cnt;
+
+	for (cnt = 0; ; ++cnt) {
+		rxdesc = &drv->rx.desc[tail & (STM32F_ETH_RX_NDESC - 1)];
+		if (rxdesc->st.own)
+			break;
+		tail++; 
+	}
+
+	DCC_LOG1(LOG_TRACE, "%d pending DMA descriptors!", cnt);
+
+	__thinkos_ev_info(__ifnet__.evset);
+	__tdump();
+
+	return cnt;
+}
+#endif
+
 void stm32f_eth_isr(void)
 {
 	struct stm32f_eth_drv * drv = &stm32f_eth_drv;
@@ -520,7 +544,6 @@ void stm32f_eth_isr(void)
 		DCC_LOG(LOG_INFO, "DMA RS");
 		/* disable DMA receive interrupts */
 		eth->dmaier &= ~ETH_RIE;
-	//	thinkos_sem_post_i(drv->rx.sem);
 		ifn_signal_i(drv->event);
 	}
 

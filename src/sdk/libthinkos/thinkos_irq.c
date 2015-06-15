@@ -19,6 +19,8 @@
  * http://www.gnu.org/
  */
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 #include <thinkos.h>
@@ -37,6 +39,7 @@ void cm3_default_isr(int irq)
 	th = thinkos_rt.irq_th[irq];
 	thinkos_rt.irq_th[irq] = -1;
 
+	DCC_LOG2(LOG_MSG, "<%d> IRQ %d", th, irq);
 	/* TODO: create a wait for IRQ waiting queue. */
 
 	/* insert the thread into ready queue */
@@ -59,21 +62,24 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG1(LOG_MSG, "IRQ %d", irq);
+	DCC_LOG2(LOG_MSG, "<%d> IRQ %d", self, irq);
+
+	/* wait for event */
+	__thinkos_suspend(self);
 
 	/* store the thread info */
 	thinkos_rt.irq_th[irq] = self;
 
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+
+#if 0
 	/* clear pending interrupt */
 	cm3_irq_pend_clr(irq);
+#endif
 
 	/* enable this interrupt source */
 	cm3_irq_enable(irq);
-
-	/* wait for event */
-	__thinkos_suspend(self);
-	/* signal the scheduler ... */
-	__thinkos_defer_sched();
 }
 
 #endif

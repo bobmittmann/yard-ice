@@ -63,7 +63,7 @@ void __attribute__((noreturn)) comm_tcp_write_task(struct comm_tcp * parm)
 	for (;;) {
 		/* wait for a connection */
 		DCC_LOG(LOG_TRACE, "waiting connect...");
-		thinkos_flag_wait(parm->con_flag);
+		thinkos_flag_take(parm->con_flag);
 
 		while ((tp = parm->tp) != NULL) {
 
@@ -73,7 +73,6 @@ void __attribute__((noreturn)) comm_tcp_write_task(struct comm_tcp * parm)
 			if ((len = tcp_recv(tp, net_buf, 128)) <= 0) {
 				DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
 				parm->tp = NULL;
-				thinkos_flag_clr(parm->con_flag);
 				break;
 			}
 
@@ -148,7 +147,7 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 		ice_comm_open(comm);
 		parm->tp = tp;
 
-		thinkos_flag_set(parm->con_flag);
+		thinkos_flag_give(parm->con_flag);
 
 		for (;;) {
 			if ((n = ice_comm_read(comm, buf, sizeof(buf), 250)) < 0) {
@@ -169,7 +168,6 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 		} 
 
 		parm->tp = NULL;
-		thinkos_flag_clr(parm->con_flag);
 
 		ice_comm_close(comm);
 

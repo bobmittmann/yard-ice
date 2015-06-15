@@ -81,6 +81,8 @@
 #include <sys/route.h>
 #include <sys/ip.h>
 
+#include <tcpip/stat.h>
+
 #ifdef TCP_DEBUG
 #ifndef DEBUG
 #define DEBUG

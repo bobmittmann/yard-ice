@@ -277,7 +277,6 @@ int network_config(void)
 	/* initialize the Ethernet interface */
 	/* configure the ip address */
 	ifn = ethif_init(ethaddr, ip_addr, netmask);
-//	ifn = loopif_init(ip_addr, netmask);
 
 	ifn_getname(ifn, s);
 	ifn_ipv4_get(ifn, &ip_addr, &netmask);
@@ -302,7 +301,7 @@ int network_config(void)
 #endif
 	}
 
-	loopif_init();
+//	loopif_init();
 
 	return 0;
 }
@@ -366,31 +365,34 @@ int main(int argc, char ** argv)
 
 	stm32f_nvram_env_init();
 
+	DCC_LOG(LOG_TRACE, " 1. bsp_io_ini().");
 	bsp_io_ini();
 
+	DCC_LOG(LOG_TRACE, " 2. rtc_init().");
 	rtc_init();
 
+	DCC_LOG(LOG_TRACE, " 3. supervisor_init().");
 	supervisor_init();
-	__os_sleep(10);
+	thinkos_sleep(10);
 
 #if ENABLE_NETWORK
-	DCC_LOG(LOG_TRACE, "network_config().");
+	DCC_LOG(LOG_TRACE, " 4. network_config().");
 	network_config();
 #endif
 
-	DCC_LOG(LOG_TRACE, "modules_init().");
+	DCC_LOG(LOG_TRACE, " 5. modules_init().");
 	modules_init();
 
 	tracef("* Starting system module ...");
-	DCC_LOG(LOG_TRACE, "sys_start().");
+	DCC_LOG(LOG_TRACE, " 6. sys_start().");
 	sys_start();
 
 	tracef("* Initializing YARD-ICE debugger...");
-	DCC_LOG(LOG_TRACE, "debugger_init().");
+	DCC_LOG(LOG_TRACE, " 7. debugger_init().");
 	debugger_init();
 
 	tracef("* Initializing JTAG module ...");
-	DCC_LOG(LOG_TRACE, "jtag_start().");
+	DCC_LOG(LOG_TRACE, " 8. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
 		tracef("jtag_start() failed! [ret=%d]", ret);
 		debugger_except("JTAG driver fault");
@@ -398,6 +400,7 @@ int main(int argc, char ** argv)
 
 #if (ENABLE_NAND)
 	tracef("* Initializing NAND module...");
+	DCC_LOG(LOG_TRACE, " 9. mod_nand_start().");
 	if (mod_nand_start() < 0) {
 		tracef("mod_nand_start() failed!");
 		return 0;
@@ -406,16 +409,19 @@ int main(int argc, char ** argv)
 
 #if (ENABLE_I2C)
 	tracef("* starting I2C module ... ");
+	DCC_LOG(LOG_TRACE, "10. i2c_init().");
 	i2c_init();
 #endif
 
 	tracef("* configuring initial target ... ");
+	DCC_LOG(LOG_TRACE, "11. init_target().");
 	init_target();
 
 #if (ENABLE_VCOM)
 	tracef("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
+	DCC_LOG(LOG_TRACE, "12. vcom_start().");
 	vcom_start();
 #endif
 

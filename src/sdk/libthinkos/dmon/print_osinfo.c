@@ -28,17 +28,14 @@
 int dmon_print_osinfo(struct dmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
-	uint32_t * wq;
-	int i;
 #if THINKOS_ENABLE_PROFILING
 	uint32_t cyccnt;
 	int32_t delta;
 	uint32_t cycdiv;
 	uint32_t busy;
 #endif
-#if THINKOS_MUTEX_MAX > 0
+	int i;
 	int j;
-#endif
 
 #if THINKOS_ENABLE_PROFILING
 	cyccnt = CM3_DWT->cyccnt;
@@ -181,22 +178,26 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 		thinkos_rt.cyccnt[i] = 0; 
 #endif
 
-	for (wq = rt->wq_lst; wq != rt->wq_end; ++wq) {
-		int oid;
+	for (j = 0; j < (rt->wq_end - rt->wq_lst); ++j) {
+		uint32_t wq;
 		int type;
-		if (*wq) { 
-			oid = wq - rt->wq_lst;
-			type = thinkos_obj_type_get(oid);
-			dmprintf(comm, "%3d %5s: {", oid, thinkos_type_name_lut[type]);
+		wq = rt->wq_lst[j];
+#if (THINKOS_THREADS_MAX < 32) 
+		if (wq & ~(1 << THINKOS_THREADS_MAX)) { 
+#else
+		if (wq) { 
+#endif
+			type = thinkos_obj_type_get(j);
+			dmprintf(comm, "%3d %5s: {", j, thinkos_type_name_lut[type]);
 			for (i = 0; i < THINKOS_THREADS_MAX; ++i) {
-				if (*wq & (1 << i)) 
+				if (wq & (1 << i)) 
 					dmprintf(comm, " %d", i);
 			}
 			dmprintf(comm, " }");
 #if THINKOS_MUTEX_MAX > 0
 			if (type == THINKOS_OBJ_MUTEX)
 				dmprintf(comm, " [lock=%d]", 
-						 rt->lock[oid - THINKOS_MUTEX_BASE]);
+						 rt->lock[j - THINKOS_MUTEX_BASE]);
 #endif 
 			dmprintf(comm, "\r\n");
 		}

@@ -208,6 +208,9 @@ void stm32f_eth_init(struct stm32f_eth * eth)
 	/* clear all DMA status bits */
 	eth->dmasr = 0xffffffff;
 
+	/* Reset the MMC counters to zero after read */
+	eth->mmccr = ETH_ROR;
+
 #ifdef ETH_PHY_RST_GPIO
 	DCC_LOG(LOG_TRACE, "PHY reset...");
 	udelay(1000);
@@ -242,6 +245,18 @@ void stm32f_eth_mac_set(struct stm32f_eth * eth, int idx, const uint8_t * mac)
 		(mac[2] << 16) + (mac[3] << 24);
 	eth->maca[idx].hr = mac[4] + (mac[5] << 8);
 }
+
+#if 0
+void stm32eth_st(struct stm32f_eth * eth)
+{
+	DCC_LOG1(LOG_TRACE, " TGFSCC: %9u", eth->mmctgfsccr);
+	DCC_LOG1(LOG_TRACE, "TGFMSCC: %9u", eth->mmctgfmsccr);
+	DCC_LOG1(LOG_TRACE, "   TGFC: %9u", eth->mmctgfcr);
+	DCC_LOG1(LOG_TRACE, "  RFCEC: %9u", eth->mmcrfcecr);
+	DCC_LOG1(LOG_TRACE, "  RFAEC: %9u", eth->mmcrfaecr);
+	DCC_LOG1(LOG_TRACE, "  RGUFC: %9u", eth->mmcrgufcr);
+}
+#endif
 
 #endif
 

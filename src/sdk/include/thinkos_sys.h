@@ -973,6 +973,8 @@ void __thinkos_ev_raise(uint32_t wq, int ev);
 
 void __thinkos_gate_open(uint32_t wq);
 
+void __thinkos_ev_info(unsigned int wq);
+
 #ifdef __cplusplus
 }
 #endif

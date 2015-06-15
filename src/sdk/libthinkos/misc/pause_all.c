@@ -27,8 +27,9 @@ void __thinkos_pause_all(void)
 	int32_t th;
 
 	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if (thinkos_rt.ctx[th] != NULL)
+		if (thinkos_rt.ctx[th] != NULL) {
 			__thinkos_thread_pause(th);
+		}
 	}
 
 	DCC_LOG1(LOG_TRACE, "active=%d", thinkos_rt.active);

@@ -58,7 +58,7 @@
 void yard_ice_greeting(FILE * f) 
 {
 	fprintf(f, "\nYARD-ICE " VERSION_NUM " - " VERSION_DATE "\n"
-	"(c) Copyright 2011-2014 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
+	"(c) Copyright 2011-2015 - Bob Mittmann (bobmittmann@gmail.com)\n\n");
 }
 
 const char * const prompt_tab[] = {

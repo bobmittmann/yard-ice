@@ -243,7 +243,7 @@ void thinkos_mutex_unlock_svc(int32_t * arg)
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		/* no threads waiting on the lock, just release
 		   the lock */
-		DCC_LOG2(LOG_MSG, "<%d> mutex %d released", thinkos_rt.actives, wq);
+		DCC_LOG2(LOG_MSG, "<%d> mutex %d released", thinkos_rt.active, wq);
 		thinkos_rt.lock[mutex] = -1;
 	} else {
 		/* set the mutex ownership to the new thread */

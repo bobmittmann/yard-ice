@@ -72,16 +72,14 @@
 #include <sys/route.h>
 #include <sys/ip.h>
 
+#include <tcpip/stat.h>
+
 #ifdef UDP_DEBUG
 #ifndef DEBUG
 #define DEBUG
 #endif
 #endif
 #include <sys/dcclog.h>
-
-#ifndef UDP_PCB_TAB_LEN
-#define UDP_PCB_TAB_LEN 2
-#endif
 
 #ifndef ENABLE_UDP_PROTO_STAT
 #define ENABLE_UDP_PROTO_STAT 0
