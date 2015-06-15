@@ -62,7 +62,8 @@ void thinkos_irq_wait_svc(int32_t * arg)
 	}
 #endif
 
-	DCC_LOG2(LOG_MSG, "<%d> IRQ %d", self, irq);
+	/* clear pending interrupt */
+	cm3_irq_pend_clr(irq);
 
 	/* wait for event */
 	__thinkos_suspend(self);
@@ -72,11 +73,6 @@ void thinkos_irq_wait_svc(int32_t * arg)
 
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
-
-#if 0
-	/* clear pending interrupt */
-	cm3_irq_pend_clr(irq);
-#endif
 
 	/* enable this interrupt source */
 	cm3_irq_enable(irq);

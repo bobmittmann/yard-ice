@@ -38,12 +38,6 @@ struct rs585_dev;
 
 struct rs585_dev * rs485_init(void);
 
-int rc485_pkt_recv(struct rs585_dev * rs485, uint8_t * pkt,
-		unsigned int tmo);
-
-int rc485_pkt_send(struct rs585_dev * rs485, uint8_t * pkt,
-		unsigned int len);
-
 int clock_task(struct lcd_dev * lcd)
 {
 	uint32_t clk;
@@ -106,7 +100,7 @@ int zap_task(struct lcd_dev * lcd)
 			thinkos_sleep(zap_tm);
 			lcd_at_puts(lcd, 3, x, " ==");
 		}
-		for (; x >= 0; --x) {
+		for (; --x >= 0;) {
 			thinkos_sleep(zap_tm);
 			lcd_at_puts(lcd, 3, x, "== ");
 		}
@@ -155,10 +149,10 @@ int main(int argc, char ** argv)
 
 	lcd = lcd20x4_init();
 
-	lcd_puts(lcd, "= ThinkOS = 00:00:00");
-	lcd_puts(lcd, " Zigbee Coordinator ");
-	lcd_puts(lcd, "      Firelink      ");
-	lcd_puts(lcd, "====================");
+	lcd_at_puts(lcd, 0, 0, "= ThinkOS = 00:00:00");
+	lcd_at_puts(lcd, 1, 0, "      Firelink      ");
+	lcd_at_puts(lcd, 2, 0, " RS485 Class A Test ");
+	lcd_at_puts(lcd, 3, 0, "====================");
 
 	rs485 = rs485_init();
 

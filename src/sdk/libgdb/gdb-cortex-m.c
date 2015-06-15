@@ -483,6 +483,7 @@ int thread_step_req(unsigned int gdb_thread_id)
 			DCC_LOG(LOG_ERROR, "Invalid context!");
 			return -1;
 		}
+		DCC_LOG1(LOG_TRACE, "PC=%08x!", ctx->pc);
 	}
 
 	return dmon_thread_step(thread_id, false);

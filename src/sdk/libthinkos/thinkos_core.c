@@ -30,6 +30,9 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos.h>
 #include <thinkos_except.h>
 
+#undef THINKOS_ENABLE_SCHED_DEBUG
+#define THINKOS_ENABLE_SCHED_DEBUG 1
+
 /* -------------------------------------------------------------------------- 
  * Run Time ThinkOS block
  * --------------------------------------------------------------------------*/
@@ -225,17 +228,16 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 #endif
 
 #if THINKOS_ENABLE_SCHED_DEBUG
-	if (thinkos_rt.sched_trace_req) {
-		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
-		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
-		__dump_context(new_ctx);
-		__wait();
-		thinkos_rt.sched_trace_req = 0;
-	}
+//		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
+//		DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
+//		__dump_context(new_ctx);
 #endif
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	if ((1 << new_thread_id) & thinkos_rt.step_req) {
+#if THINKOS_ENABLE_SCHED_DEBUG
+		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
+#endif
 		__sched_exit_step(new_thread_id, new_ctx);
 	} else
 #endif
@@ -256,13 +258,10 @@ static void thinkos_time_wakeup(int thread_id)
 #endif
 	/* remove from the time wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_clock, thread_id, 0);  
-	DCC_LOG1(LOG_MSG, "Wakeup %d...", thread_id);
+	DCC_LOG1(LOG_TRACE, "Wakeup %d...", thread_id);
 	/* insert into the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
 	__thinkos_defer_sched();
-#if THINKOS_ENABLE_SCHED_DEBUG
-	thinkos_rt.sched_trace_req = 1;
-#endif
 }
 #endif /* THINKOS_ENABLE_CLOCK */
 

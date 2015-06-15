@@ -45,24 +45,38 @@ static void ready_resume(unsigned int th, unsigned int wq, bool tmw)
 		}
 	}
 #endif
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
-	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+	DCC_LOG2(LOG_TRACE, "thread_id=%d PC=%08x +++++", 
+			 th, thinkos_rt.ctx[th]->pc); 
+	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 }
 #if THINKOS_ENABLE_TIMESHARE
 static void tmshare_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	DCC_LOG2(LOG_TRACE, "thread_id=%d PC=%08x +++++", 
+			 th, thinkos_rt.ctx[th]->pc); 
 	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
 
 }
 #endif
+
 #if THINKOS_ENABLE_CLOCK
 static void clock_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
-	__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 1);
+//	if ((int32_t)(thinkos_rt.clock[th] - thinkos_rt.ticks) <= 0) {
+		/* thread's clock is in the past, wakeup now. */
+//		DCC_LOG1(LOG_TRACE, "timeout PC=%08x .......", thinkos_rt.ctx[th]->pc); 
+		/* update the thread status */
+//		thinkos_rt.th_stat[th] = 0;
+		/* insert into the ready wait queue */
+//		__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);  
+//	} else {
+	DCC_LOG2(LOG_TRACE, "thread_id=%d PC=%08x +++++", 
+			 th, thinkos_rt.ctx[th]->pc); 
+		__bit_mem_wr(&thinkos_rt.wq_clock, th, 1);
+//	}
 }
 #endif
+
 #if THINKOS_MUTEX_MAX > 0
 static void mutex_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -86,6 +100,7 @@ static void mutex_resume(unsigned int th, unsigned int wq, bool tmw)
 	}
 }
 #endif
+
 #if THINKOS_COND_MAX > 0
 static void cond_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -320,7 +335,7 @@ bool __thinkos_thread_pause(unsigned int th)
 		/* remove the thread from a waiting queue, including ready  */
 		stat = thinkos_rt.th_stat[th];
 		wq = stat >> 1;
-		DCC_LOG4(LOG_INFO, "thread=%d stat=0x%02x wq=%d clk=%d", 
+		DCC_LOG4(LOG_TRACE, "thread=%d stat=0x%02x wq=%d clk=%d", 
 				 th, stat, wq, (stat & 1));
 		__bit_mem_wr(&thinkos_rt.wq_lst[wq], th, 0);
 #if THINKOS_ENABLE_TIMESHARE

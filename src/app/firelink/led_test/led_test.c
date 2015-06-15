@@ -63,22 +63,22 @@ int main(int argc, char ** argv)
 
 	for (;;) {
 		__led_on(IO_LED_SLNC);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_on(IO_LED_SPR);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_off(IO_LED_SLNC);
 		__led_on(IO_LED_AC_PWR);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_off(IO_LED_SPR);
 		__led_on(IO_LED_TRBL);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_off(IO_LED_AC_PWR);
 		__led_on(IO_LED_ALRM);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_off(IO_LED_TRBL);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 		__led_off(IO_LED_ALRM);
-		thinkos_sleep(100);
+		thinkos_sleep(2000);
 	}
 
 	return 0;

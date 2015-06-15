@@ -97,6 +97,8 @@ bool dmon_app_suspend(void)
 
 	dmon_wait_idle();
 
+	__tdump();
+
 	return true;
 }
 

@@ -328,6 +328,8 @@ void dmon_breakpoint_clear_all(void)
  * Thread stepping
  * ------------------------------------------------------------------------- */
 
+bool svc_call = false;
+
 #if (THINKOS_ENABLE_DEBUG_STEP)
 int dmon_thread_step(unsigned int thread_id, bool sync)
 {
@@ -351,6 +353,7 @@ int dmon_thread_step(unsigned int thread_id, bool sync)
 		return -1;
 	}
 
+
 	/* request stepping the thread  */
 	__bit_mem_wr(&thinkos_rt.step_req, thread_id, 1);
 	/* resume the thread */
@@ -358,7 +361,24 @@ int dmon_thread_step(unsigned int thread_id, bool sync)
 	/* make sure to run the scheduler */
 	__thinkos_defer_sched();
 
-	DCC_LOG1(LOG_INFO, "thread_id=%d +++++++++++++++++++++", thread_id);
+	{
+		uint32_t insn;
+		uint16_t * pc;
+
+		/* get PC value */
+		pc = (uint16_t *)thinkos_rt.ctx[thread_id]->pc;
+		/* get instruction */
+		insn = pc[0];
+
+
+		DCC_LOG3(LOG_TRACE, "thread_id=%d PC=%08x INSN=%04x +++++", 
+				 thread_id, pc, insn);
+
+		if ((insn & 0xdf00) == 0xdf00) {
+			DCC_LOG1(LOG_TRACE, "SVC %d", insn & 0xff); 
+			svc_call = true;
+		}
+	}
 
 	if (sync) {
 		if ((ret = dmon_wait(DMON_THREAD_STEP)) < 0)
@@ -487,8 +507,31 @@ void dmon_isr(struct cm3_except_context * ctx)
 		if (dfsr & SCB_DFSR_HALTED) {
 			if (demcr & DCB_DEMCR_MON_STEP) {
 				/* clear the step request */
-				CM3_DCB->demcr = demcr & ~DCB_DEMCR_MON_STEP;
+				if (svc_call) {
+					DCC_LOG(LOG_TRACE, "svc_call **********");
+					svc_call = false;
+					return;
+				} else {
+					CM3_DCB->demcr = demcr & ~DCB_DEMCR_MON_STEP;
+				}
 				if ((uint16_t)thinkos_rt.step_id < THINKOS_THREADS_MAX) {
+					uint16_t insn;
+					uint16_t * pc;
+					int ipsr;
+
+					/* get PC value */
+					pc = (uint16_t *)ctx->pc;
+					insn = pc[0];
+
+
+					ipsr = (ctx->xpsr & 0x1ff);
+
+					DCC_LOG1(LOG_TRACE, "ipsr=%d", ipsr);
+
+					DCC_LOG3(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x" 
+							 " insn=%04x ------", 
+							 thinkos_rt.step_id, ctx->pc, insn);
+
 					/* suspend the thread, this will clear the 
 					   step request flag */
 					__thinkos_thread_pause(thinkos_rt.step_id);
@@ -497,8 +540,6 @@ void dmon_isr(struct cm3_except_context * ctx)
 					sigmsk |= (1 << DMON_THREAD_STEP);
 					thinkos_dmon_rt.events = sigset;
 					__thinkos_defer_sched();
-					DCC_LOG2(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x ------", 
-							 thinkos_rt.step_id, ctx->pc);
 				} else {
 					DCC_LOG1(LOG_ERROR, "invalid stepping thread %d !!!", 
 							 thinkos_rt.step_id);
