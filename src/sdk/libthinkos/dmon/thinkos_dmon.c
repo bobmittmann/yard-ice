@@ -634,7 +634,9 @@ extern uintptr_t thinkos_thread_step_call;
 void __attribute__((naked)) cm3_debug_mon_isr(void)
 {
 	register struct cm3_except_context * ctx asm("r0");
+#if (THINKOS_ENABLE_DEBUG_STEP)
 	register uint32_t thread_id asm("r1");
+#endif
 
 	/* select the context stack according to the content of LR */
 	asm volatile ("tst lr, #4\n" 

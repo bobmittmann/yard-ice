@@ -36,7 +36,7 @@ INCPATH = $(SDK)/include
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
 CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-LDFLAGS = -Xlinker --gc-sections -Xlinker --print-gc-sections
+LDFLAGS = -Xlinker --gc-sections -Xlinker 
 
 #CFLAGS = -g -Os -Wall
 
