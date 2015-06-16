@@ -36,7 +36,7 @@ MISC_CFILES = thinkos_util.c thinkos_type.c obj_type_get.c \
 			  thread_isalive.c pause_all.c resume_all.c xcpt_util.c
 
 CONSOLE_CFILES = thinkos_console.c bypass.c 
-CFILES = thinkos_core.c thinkos_svc.c thinkos_nmi.c thinkos_init.c \
+CFILES = thinkos_core.c thinkos_svc.c thinkos_init.c \
 		 thinkos_thread.c thinkos_mutex.c thinkos_cond.c \
 		 thinkos_semaphore.c thinkos_event.c thinkos_irq.c \
 		 thinkos_flag.c thinkos_except.c thinkos_debug.c \

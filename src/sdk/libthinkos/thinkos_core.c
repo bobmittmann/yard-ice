@@ -30,8 +30,8 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #include <thinkos.h>
 #include <thinkos_except.h>
 
-#undef THINKOS_ENABLE_SCHED_DEBUG
-#define THINKOS_ENABLE_SCHED_DEBUG 1
+//#undef THINKOS_ENABLE_SCHED_DEBUG
+//#define THINKOS_ENABLE_SCHED_DEBUG 1
 
 /* -------------------------------------------------------------------------- 
  * Run Time ThinkOS block
@@ -159,39 +159,8 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  : : "r" (r0) : "r3"); 
 }
 
-#if 0
-/* Partially restore the context and then set the NMI pending
-   to step thread. */ 
-static inline void __attribute__((always_inline)) 
-__sched_exit_step(unsigned int thread_id, struct thinkos_context * ctx) {
-	register unsigned int r0 asm("r0") = thread_id;
-	register struct thinkos_context * r1 asm("r1") = ctx;
-	register unsigned int r2 asm("r2") = THINKOS_DEBUG_STEP_I;
-	asm volatile (
-#if THINKOS_ENABLE_SCHED_DEBUG
-				  "add    sp, #16\n"
-				  "pop    {lr}\n"
-#endif				  
-#if THINKOS_ENABLE_FPU 
-				  "add    r3, %1, #40 * 4\n"
-				  "msr    PSP, r3\n"
-				  "vldmia.64 %1!, {d0-d15}\n"
-#else
-				  "add    r3, %1, #8 * 4\n"
-				  "msr    PSP, r3\n"
-#endif
-				  "ldmia  %1, {r4-r11}\n"
-				  "movw   r3, #0xed00\n"
-				  "movt   r3, #0xe000\n"
-				  "mov.w  r12, #0x80000000\n"
-				  "str.w  r12, [r3, #4]\n" /* NMI pending */
-				  "isb    sy\n"
-				  : : "r" (r0), "r" (r1), "r" (r2) : "r3"); 
-}
-#endif
-
-/* Partially restore the context and then set the NMI pending
-   to step thread. */ 
+/* Partially restore the context and then set the DbgMon pending
+   to step the thread. */ 
 static inline void __attribute__((always_inline)) 
 __sched_exit_step(struct thinkos_context * ctx, unsigned int thread_id) 
 {
@@ -211,12 +180,20 @@ __sched_exit_step(struct thinkos_context * ctx, unsigned int thread_id)
 				  "msr    PSP, r3\n"
 #endif
 				  "ldmia  %0, {r4-r11}\n"
-				  /* CM3_DCB->demcr = DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND; */
+				  /* CM3_DCB->demcr |= DCB_DEMCR_MON_PEND; */
 				  "movw   r3, #0xedf0\n"
 				  "movt   r3, #0xe000\n"
-				  "mov.w  r2, 0x00030000\n"
-				  "str.w  r2, [r3, #12]\n" 
+				  "ldr    r2, [r3, #12]\n"
+				  "orr    r2, r2, #(1 << 17)\n"
+				  "str    r2, [r3, #12]\n"
 				  "isb    sy\n"
+				  /* This is a dummm symbol used to identify a thread step 
+					 request in the debug monitor service handler.
+				  	 The PC savet on the exception stack will point
+					 to this location.
+				   */
+				  "thinkos_thread_step_call:\n"
+				  ".global thinkos_thread_step_call\n"
 				  : : "r" (r0), "r" (r1) : "r2", "r3"); 
 }
 

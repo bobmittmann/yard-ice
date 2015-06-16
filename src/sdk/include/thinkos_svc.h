@@ -106,9 +106,6 @@
 
 #define THINKOS_RT_SNAPSHOT     57
 
-/* NMI calls ... */
-#define THINKOS_DEBUG_STEP_I     0
-
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1
 #define CONSOLE_TIMEDREAD 2
@@ -169,28 +166,6 @@
 				  "0"(r0), "r"(r1), "r"(r2), "r"(r3), "r"(r12) : ); \
 	ret; } )
 
-/* -------------------------------------------------------------------------- 
- * C NMI call macros 
- * --------------------------------------------------------------------------*/
-
-#define THINKOS_NMI1(N, A1) ( { \
-	register int r0 asm("r0") = (int)(A1); \
-	register struct cm3_scb * scb = CM3_SCB; \
-	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N) * 2; \
-	asm volatile ("str	%2, [%1, #4]\n" \
-				  "isb\n" :  :  \
-				  "r"(r0), "r"(scb), "r"(nmi) : ); \
-	} )
-
-#define THINKOS_NMI2(N, A1, A2) ( { \
-	register int r0 asm("r0") = (int)(A1); \
-	register int r1 asm("r1") = (int)(A2); \
-	register struct cm3_scb * scb = CM3_SCB; \
-	register unsigned int nmi asm("r12") = SCB_ICSR_NMIPENDSET + (N) * 2; \
-	asm volatile ("str	%3, [%2, #4]\n" \
-				  "isb\n" :  :  \
-				  "r"(r0), "r"(r1), "r"(scb), "r"(nmi) : ); \
-	} )
 
 #define THINKOS_SVC(N) __SVC_CALL(N)
 
@@ -572,15 +547,6 @@ thinkos_sysinfo_clocks(uint32_t * clk[]) {
 static inline int __attribute__((always_inline)) 
 thinkos_sysinfo_udelay_factor(int32_t * factor) {
 	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_UDELAY_FACTOR, factor);
-}
-
-/* ---------------------------------------------------------------------------
-   Interrupt service calls
-   ---------------------------------------------------------------------------*/
-
-static inline void  __attribute__((always_inline)) 
-	thinkos_debug_step_i(unsigned int thread_id) {
-	THINKOS_NMI1(THINKOS_DEBUG_STEP_I, thread_id);
 }
 
 #ifdef __cplusplus

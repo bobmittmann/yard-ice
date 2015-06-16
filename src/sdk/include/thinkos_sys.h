@@ -362,6 +362,7 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_DEBUG_STEP
 	uint32_t step_req; /* step request bitmap */
 	uint32_t step_svc; /* step at service call bitmap */
+	uint32_t step_brk; /* stop after at service call bitmap */
 	int16_t step_id; /* current stepping thread id */
 	int16_t break_id; /* thread stopped by a breakpoint or step request */
 #endif
