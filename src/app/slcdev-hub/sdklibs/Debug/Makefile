@@ -33,7 +33,7 @@ CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
 O := .
 
 MACH = stm32f407
-THINKOS = 1
+THINKAPP = 1
 include ../../../../mk/stm32f4xx.mk
 
 all:: libs-install

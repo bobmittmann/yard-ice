@@ -528,7 +528,10 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 						if (__bit_mem_rd(&thinkos_rt.step_svc, thread_id)) {
 							DCC_LOG(LOG_TRACE, "got SVC!!!!");
 							__bit_mem_wr(&thinkos_rt.step_svc, thread_id, 0);
+							/* mark the thread to stop on service return */
 							__bit_mem_wr(&thinkos_rt.step_brk, thread_id, 1);
+							/* make sure to run the scheduler */
+							__thinkos_defer_sched();
 							thinkos_rt.step_id = -1;
 							goto step_done;
 						} else {

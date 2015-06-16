@@ -266,7 +266,7 @@ static void thinkos_time_wakeup(int thread_id)
 #endif
 	/* remove from the time wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_clock, thread_id, 0);  
-	DCC_LOG1(LOG_TRACE, "Wakeup %d...", thread_id);
+	DCC_LOG1(LOG_INFO, "Wakeup %d...", thread_id);
 	/* insert into the ready wait queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, thread_id, 1);  
 	__thinkos_defer_sched();
@@ -284,9 +284,8 @@ static void thinkos_timeshare(void)
 	thinkos_rt.sched_val[idx] -= thinkos_rt.sched_pri[idx];
 	if (thinkos_rt.sched_val[idx] < 0) {
 		thinkos_rt.sched_val[idx] += thinkos_rt.sched_limit;
-		
 		if (__bit_mem_rd(&thinkos_rt.wq_ready, idx) == 0) {
-			DCC_LOG1(LOG_WARNING, "thread %d is active but not ready!!!", idx);
+			DCC_LOG1(LOG_INFO, "thread %d is active but not ready!!!", idx);
 		} else {
 			/* insert into the CPU wait queue */
 			__bit_mem_wr(&thinkos_rt.wq_tmshare, idx, 1);  

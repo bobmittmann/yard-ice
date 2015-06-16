@@ -27,11 +27,26 @@
 #include <thinkos.h>
 #include <sys/console.h>
 #include <sys/stm32f.h>
+#include <sys/delay.h>
 
 #include "board.h"
 
 void io_init(void)
 {
+	asm volatile ("mov r1, #1\r\n" : : : "r1");
+	asm volatile ("mov r1, #2\r\n" : : : "r1");
+	asm volatile ("mov r1, #3\r\n" : : : "r1");
+	asm volatile ("mov r1, #4\r\n" : : : "r1");
+	asm volatile ("mov r1, #5\r\n" : : : "r1");
+
+	thinkos_sysinfo_udelay_factor(&udelay_factor);
+
+	asm volatile ("mov r0, #5\r\n" : : : "r0");
+	asm volatile ("mov r0, #6\r\n" : : : "r0");
+	asm volatile ("mov r0, #7\r\n" : : : "r0");
+	asm volatile ("mov r0, #8\r\n" : : : "r0");
+	asm volatile ("mov r0, #9\r\n" : : : "r0");
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOG);
 }
 

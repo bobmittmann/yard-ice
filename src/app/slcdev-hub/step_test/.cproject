@@ -76,6 +76,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs.1542368774" name="Libraries (-l)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs" valueType="libs">
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="util"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.scriptfile.1091371563" name="Script files (-T)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.scriptfile" valueType="stringList">
 									<listOptionValue builtIn="false" value="stm32f407.ld"/>
