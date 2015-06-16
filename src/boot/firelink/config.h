@@ -102,7 +102,6 @@
 
 #define THINKOS_ENABLE_MPU 1
 
-
 #define THINKOS_ENABLE_FPU 0
 
 /* -------------------------------------------------------------------------

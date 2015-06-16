@@ -159,7 +159,7 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  : : "r" (r0) : "r3"); 
 }
 
-
+#if 0
 /* Partially restore the context and then set the NMI pending
    to step thread. */ 
 static inline void __attribute__((always_inline)) 
@@ -187,6 +187,37 @@ __sched_exit_step(unsigned int thread_id, struct thinkos_context * ctx) {
 				  "str.w  r12, [r3, #4]\n" /* NMI pending */
 				  "isb    sy\n"
 				  : : "r" (r0), "r" (r1), "r" (r2) : "r3"); 
+}
+#endif
+
+/* Partially restore the context and then set the NMI pending
+   to step thread. */ 
+static inline void __attribute__((always_inline)) 
+__sched_exit_step(struct thinkos_context * ctx, unsigned int thread_id) 
+{
+	register struct thinkos_context * r0 asm("r0") = ctx;
+	register unsigned int r1 asm("r1") = thread_id;
+	asm volatile (
+#if THINKOS_ENABLE_SCHED_DEBUG
+				  "add    sp, #16\n"
+				  "pop    {lr}\n"
+#endif				  
+#if THINKOS_ENABLE_FPU 
+				  "add    r3, %0, #40 * 4\n"
+				  "msr    PSP, r3\n"
+				  "vldmia.64 %0!, {d0-d15}\n"
+#else
+				  "add    r3, %0, #8 * 4\n"
+				  "msr    PSP, r3\n"
+#endif
+				  "ldmia  %0, {r4-r11}\n"
+				  /* CM3_DCB->demcr = DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND; */
+				  "movw   r3, #0xedf0\n"
+				  "movt   r3, #0xe000\n"
+				  "mov.w  r2, 0x00030000\n"
+				  "str.w  r2, [r3, #12]\n" 
+				  "isb    sy\n"
+				  : : "r" (r0), "r" (r1) : "r2", "r3"); 
 }
 
 /* --------------------------------------------------------------------------
@@ -238,7 +269,7 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 #if THINKOS_ENABLE_SCHED_DEBUG
 		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
 #endif
-		__sched_exit_step(new_thread_id, new_ctx);
+		__sched_exit_step(new_ctx, new_thread_id);
 	} else
 #endif
 	/* restore the context */

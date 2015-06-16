@@ -53,7 +53,7 @@
 #define THINKOS_COND_MAX 64
 #define THINKOS_ENABLE_COND_ALLOC 1
 
-#define THINKOS_SEMAPHORE_MAX 32
+#define THINKOS_SEMAPHORE_MAX 24
 #define THINKOS_ENABLE_SEM_ALLOC 1
 
 #define THINKOS_EVENT_MAX 4
@@ -61,14 +61,18 @@
 
 #define THINKOS_FLAG_MAX 32
 #define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
+
+#define THINKOS_GATE_MAX 16
+#define THINKOS_ENABLE_GATE_ALLOC 1
+
+#define THINKOS_ENABLE_SYSINFO 1
 
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
 #define THINKOS_ENABLE_ARG_CHECK 1
-
 #define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#define THINKOS_ENABLE_SANITY_CHECK 1
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
@@ -100,8 +104,6 @@
 
 #define THINKOS_ENABLE_FPU 0
 
-#define THINKOS_ENABLE_SYSINFO 1
-
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
@@ -119,6 +121,11 @@
 #define PRINTF_ENABLE_POINTER 0
 #define PRINTF_ENABLE_LONG 0
 #define PRINTF_ENABLE_ARG_WIDTH 0
+
+/* -------------------------------------------------------------------------
+   Board
+   -------------------------------------------------------------------------- */
+
 
 /* -------------------------------------------------------------------------
    Bootloader 
