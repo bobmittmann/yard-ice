@@ -157,6 +157,12 @@ bool dmon_breakpoint_clear(uint32_t addr, uint32_t size);
 
 void dmon_breakpoint_clear_all(void);
 
+bool dmon_watchpoint_set(uint32_t addr, uint32_t size, int access);
+
+bool dmon_watchpoint_clear(uint32_t addr, uint32_t size);
+
+void dmon_watchpoint_clear_all(void);
+
 #ifdef __cplusplus
 }
 #endif

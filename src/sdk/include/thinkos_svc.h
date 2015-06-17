@@ -117,6 +117,8 @@
 #define SYSINFO_UDELAY_FACTOR 0
 #define SYSINFO_CLOCKS        1
 
+#include <arch/cortex-m3.h>
+
 #ifndef __ASSEMBLER__
 
 /* ------------------------------------------------------------------------- 
@@ -483,7 +485,7 @@ static inline int __attribute__((always_inline))
 }
 
 static inline void __attribute__((always_inline)) 
-	thinkos_gate_open_i(uint32_t gate) {
+	thinkos_gate_open_i(int gate) {
 	uintptr_t * except = (uintptr_t *)(0);
 	void (* __gate_open_i)(uint32_t) = (void *)except[13];
 	__gate_open_i(gate);

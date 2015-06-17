@@ -75,6 +75,8 @@ enum thinkos_obj_kind {
 
 #ifndef __ASSEMBLER__
 
+#include <stdint.h>
+
 struct thinkos_thread_inf {
 	void * stack_ptr;
 	union {

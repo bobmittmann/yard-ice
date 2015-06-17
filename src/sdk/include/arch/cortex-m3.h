@@ -673,10 +673,14 @@ struct cm3_dwt {
 	volatile uint32_t lsucnt; /* RW - LSU Count Register */
 	volatile uint32_t foldcnt; /* RW - Folded-instruction Count Register */
 	volatile uint32_t pcsr; /* RO - Program Counter Sample Register */
-	volatile uint32_t comp0; /* RW - Comparator Register0 */
-	volatile uint32_t mask0; /* RW - Mask Register0 */
-	volatile uint32_t function0; /* RW 0x00000000 Function Register0 */
-	uint32_t reserved0; 
+
+	struct {
+		volatile uint32_t comp; /* RW - Comparator Register0 */
+		volatile uint32_t mask; /* RW - Mask Register0 */
+		volatile uint32_t function; /* RW 0x00000000 Function Register0 */
+		uint32_t reserved0; 
+	} wp[4]; 
+#if 0
 	volatile uint32_t comp1; /* RW - Comparator Register1 */
 	volatile uint32_t mask1; /* RW - Mask Register1 */
 	volatile uint32_t function1; /* RW 0x00000000 Function Register1 */
@@ -688,6 +692,7 @@ struct cm3_dwt {
 	volatile uint32_t comp3; /* RW - Comparator Register3 */
 	volatile uint32_t mask3; /* RW - Mask Register3 */
 	volatile uint32_t function3; /* RW 0x00000000 Function Register3 */
+#endif
 	uint32_t reserved3[(0xfd0 - 0x05c) / 4]; 
 	volatile uint32_t pid4; /* Peripheral Identification Register #4 */
 	volatile uint32_t pid5; /* Peripheral Identification Register #5 */

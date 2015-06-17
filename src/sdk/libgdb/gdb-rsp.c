@@ -925,41 +925,70 @@ static int rsp_breakpoint_insert(struct gdb_rspd * gdb, char * pkt)
 {
 	unsigned int addr;
 	unsigned int size;
+	int type;
 	char * cp;
 
-	if (pkt[1] != '0')
-		return rsp_empty(gdb);
-
+	type = pkt[1] - '0';
 	cp = &pkt[3];
 	addr = hex2int(cp, &cp);
 	cp++;
 	size = hex2int(cp, NULL);
+	DCC_LOG3(LOG_TRACE, "type=%d addr=0x%08x size=%d", type, addr, size);
+	if ((type == 0) || (type == 1)) {
+		/* 0 - software-breakpoint */
+		/* 1 - hardware-breakpoint */
+		if (dmon_breakpoint_set(addr, size))
+			return rsp_ok(gdb);
+		return rsp_error(gdb, 1);
+	}
+	if (type == 2) {
+		/* write-watchpoint */
+		if (dmon_watchpoint_set(addr, size, 2))
+			return rsp_ok(gdb);
+		return rsp_error(gdb, 1);
+	}
+	if (type == 3) {
+		/* read-watchpoint */
+		if (dmon_watchpoint_set(addr, size, 1))
+			return rsp_ok(gdb);
+		return rsp_error(gdb, 1);
+	}
+	if (type == 4) {
+		/* access-watchpoint */
+		if (dmon_watchpoint_set(addr, size, 3))
+			return rsp_ok(gdb);
+		return rsp_error(gdb, 1);
+	}
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG1(LOG_TRACE, "unsupported breakpoint type %d", type);
 
-	if (dmon_breakpoint_set(addr, size))
-		return rsp_ok(gdb);
-
-	return rsp_error(gdb, 1);
+	return rsp_empty(gdb);
 }
 
 static int rsp_breakpoint_remove(struct gdb_rspd * gdb, char * pkt)
 {
 	unsigned int addr;
 	unsigned int size;
+	int type;
 	char * cp;
 
-	if (pkt[1] != '0')
-		return rsp_empty(gdb);
-
+	type = pkt[1] - '0';
 	cp = &pkt[3];
 	addr = hex2int(cp, &cp);
 	cp++;
 	size = hex2int(cp, NULL);
-
-	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
-
-	dmon_breakpoint_clear(addr, size);
+	DCC_LOG3(LOG_TRACE, "type=%d addr=0x%08x size=%d", type, addr, size);
+	switch (type) {
+	case 0:
+	case 1:
+		dmon_breakpoint_clear(addr, size);
+		break;
+	case 2:
+	case 3:
+	case 4:
+		dmon_watchpoint_clear(addr, size);
+		break;
+	}
 
 	return rsp_ok(gdb);
 }
@@ -1393,7 +1422,7 @@ static int rsp_pkt_input(struct gdb_rspd * gdb, char * pkt, unsigned int len)
 		ret = rsp_kill(gdb);
 		break;
 	default:
-		DCC_LOGSTR(LOG_TRACE, "unsupported: '%s'", pkt);
+		DCC_LOGSTR(LOG_WARNING, "unsupported: '%s'", pkt);
 		ret = rsp_empty(gdb);
 		break;
 	}
@@ -1506,6 +1535,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	gdb->last_signal = TARGET_SIGNAL_0;
 
 	dmon_breakpoint_clear_all();
+	dmon_watchpoint_clear_all();
 
 	if (gdb->shell_task == NULL)
 		gdb->shell_task = gdb_task;

@@ -216,11 +216,12 @@ void dmon_exec(void (* task)(struct dmon_comm *))
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
 
+
+#if (THINKOS_ENABLE_DEBUG_STEP)
+
 /* -------------------------------------------------------------------------
  * Debug Breakpoint
  * ------------------------------------------------------------------------- */
-
-#if (THINKOS_ENABLE_DEBUG_STEP)
 #define BP_DEFSZ 2
 /* (Flash Patch) Number of instruction address comparators */
 #define CM3_FP_NUM_CODE 6
@@ -229,12 +230,12 @@ void dmon_exec(void (* task)(struct dmon_comm *))
 
 bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
 {
-	struct cm3_fpb * fbp = CM3_FPB;
+	struct cm3_fpb * fpb = CM3_FPB;
 	uint32_t comp;
 	int i;
 
 	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
-		if ((fbp->comp[i] & COMP_ENABLE) == 0) 
+		if ((fpb->comp[i] & COMP_ENABLE) == 0) 
 			break;
 	}
 
@@ -256,17 +257,17 @@ bool dmon_breakpoint_set(uint32_t addr, uint32_t size)
 		comp = COMP_BP_WORD | (addr & 0x0ffffffc) | COMP_ENABLE;
 	}
 
-	fbp->comp[i] = comp;
+	fpb->comp[i] = comp;
 
 	DCC_LOG4(LOG_INFO, "bp=%d addr=0x%08x size=%d comp=0x%08x ", i, addr, 
-			 size, fbp->comp[i]);
+			 size, fpb->comp[i]);
 
 	return true;
 }
 
 bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
 {
-	struct cm3_fpb * fbp = CM3_FPB;
+	struct cm3_fpb * fpb = CM3_FPB;
 	uint32_t comp;
 	int i;
 
@@ -285,8 +286,8 @@ bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
 	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
-		if ((fbp->comp[i] | COMP_ENABLE) == comp) {
-			fbp->comp[i] = 0;
+		if ((fpb->comp[i] | COMP_ENABLE) == comp) {
+			fpb->comp[i] = 0;
 			return true;
 		}
 	}
@@ -298,12 +299,12 @@ bool dmon_breakpoint_clear(uint32_t addr, uint32_t size)
 
 bool dmon_breakpoint_disable(uint32_t addr)
 {
-	struct cm3_fpb * fbp = CM3_FPB;
+	struct cm3_fpb * fpb = CM3_FPB;
 	int i;
 
 	for (i = 0; i < CM3_FP_NUM_CODE; ++i) {
-		if ((fbp->comp[i] & 0x0ffffffc) == (addr & 0x0ffffffc)) {
-			fbp->comp[i] &= ~COMP_ENABLE;
+		if ((fpb->comp[i] & 0x0ffffffc) == (addr & 0x0ffffffc)) {
+			fpb->comp[i] &= ~COMP_ENABLE;
 			return true;
 		}
 	}
@@ -315,12 +316,153 @@ bool dmon_breakpoint_disable(uint32_t addr)
 
 void dmon_breakpoint_clear_all(void)
 {
-	struct cm3_fpb * fbp = CM3_FPB;
+	struct cm3_fpb * fpb = CM3_FPB;
 	int i;
 
 	for (i = 0; i < CM3_FP_NUM_CODE + CM3_FP_NUM_LIT; ++i)
-		fbp->comp[i] = 0;
+		fpb->comp[i] = 0;
 }
+
+
+/* -------------------------------------------------------------------------
+ * Debug Watchpoint
+ * ------------------------------------------------------------------------- */
+
+#define DWT_MATCHED            (1 << 24)
+
+#define DWT_DATAVADDR1(ADDR)   ((ADDR) << 16)
+#define DWT_DATAVADDR0(ADDR)   ((ADDR) << 12)
+
+#define DWT_DATAVSIZE_BYTE     (0 << 10)
+#define DWT_DATAVSIZE_HALFWORD (1 << 10)
+#define DWT_DATAVSIZE_WORD     (2 << 10)
+
+#define DWT_LNK1ENA            (1 << 9)
+#define DWT_DATAVMATCH         (1 << 8)
+#define DWT_CYCMATCH           (1 << 7)
+#define DWT_EMITRANGE          (1 << 5)
+
+#define DWT_FUNCTION           (0xf << 0)
+
+#define DWT_DATAV_RO_BKP       (5 << 0)
+#define DWT_DATAV_WO_BKP       (6 << 0)
+#define DWT_DATAV_RW_BKP       (7 << 0)
+
+#define DWT_DATAV_RO_CMP       (9 << 0)
+#define DWT_DATAV_WO_CMP       (10 << 0)
+#define DWT_DATAV_RW_CMP       (11 << 0)
+
+#define CM3_DWT_NUMCOMP 4
+
+bool dmon_watchpoint_set(uint32_t addr, uint32_t size, int access)
+{
+	struct cm3_dwt * dwt = CM3_DWT;
+	uint32_t func;
+	int i;
+
+	for (i = 0; i < CM3_DWT_NUMCOMP; ++i) {
+		if ((dwt->wp[i].function & DWT_FUNCTION) == 0) 
+			break;
+	}
+
+	if (i == CM3_DWT_NUMCOMP) {
+		DCC_LOG(LOG_WARNING, "no more watchpoints");
+		return false;
+	}
+
+	if (size == 0)
+		return false;
+
+	if (size > 4) {
+		/* FIXME: implement ranges... */
+		return false;
+	}
+
+	dwt->wp[i].comp = addr;
+
+	if (size == 4) {
+		func = DWT_DATAVSIZE_WORD;
+		dwt->wp[i].mask = 2;
+	} else if (size == 2) {
+		func = DWT_DATAVSIZE_HALFWORD;
+		dwt->wp[i].mask = 1;
+	} else {
+		func = DWT_DATAVSIZE_BYTE;
+		dwt->wp[i].mask = 0;
+	}
+
+	if (access == 1) {
+		func |= DWT_DATAV_RO_BKP;
+	} else if (access == 2) {
+		func |= DWT_DATAV_WO_BKP;
+	} else {
+		func |= DWT_DATAV_RW_BKP;
+	}
+
+	dwt->wp[i].function = func;
+
+	DCC_LOG3(LOG_TRACE, "wp=%d addr=0x%08x size=%d", i, addr, size);
+
+	return true;
+}
+
+bool dmon_watchpoint_clear(uint32_t addr, uint32_t size)
+{
+	struct cm3_dwt * dwt = CM3_DWT;
+	int i;
+
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+
+	for (i = 0; i < CM3_DWT_NUMCOMP; ++i) {
+		if (((dwt->wp[i].function & DWT_FUNCTION) != 0) && 
+			dwt->wp[i].comp == addr) 
+			dwt->wp[i].function = 0;
+			dwt->wp[i].comp = 0;
+			return true;
+	}
+
+	DCC_LOG1(LOG_WARNING, "watchpoint 0x%08x not found!", addr);
+
+	return false;
+}
+
+
+#define DWT_MATCHED            (1 << 24)
+
+#define DWT_DATAVADDR1(ADDR)   ((ADDR) << 16)
+#define DWT_DATAVADDR0(ADDR)   ((ADDR) << 12)
+
+#define DWT_DATAVSIZE_BYTE     (0 << 10)
+#define DWT_DATAVSIZE_HALFWORD (1 << 10)
+#define DWT_DATAVSIZE_WORD     (2 << 10)
+
+#define DWT_LNK1ENA            (1 << 9)
+#define DWT_DATAVMATCH         (1 << 8)
+#define DWT_CYCMATCH           (1 << 7)
+#define DWT_EMITRANGE          (1 << 5)
+
+#define DWT_DATAV_RO_BKP       (5 << 0)
+#define DWT_DATAV_WO_BKP       (6 << 0)
+#define DWT_DATAV_RW_BKP       (7 << 0)
+
+#define DWT_DATAV_RO_CMP       (9 << 0)
+#define DWT_DATAV_WO_CMP       (10 << 0)
+#define DWT_DATAV_RW_CMP       (11 << 0)
+
+void dmon_watchpoint_clear_all(void)
+{
+	struct cm3_dwt * dwt = CM3_DWT;
+	int i;
+	int n;
+
+	n = (dwt->ctrl & DWT_CTRL_NUMCOMP) >> 28;
+
+	DCC_LOG1(LOG_TRACE, "TWD NUMCOMP=%d.", n);
+
+	for (i = 0; i < n; ++i)
+		dwt->wp[i].function = 0;
+}
+
 
 #endif
 
@@ -508,6 +650,11 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 				/* diasble all breakpoints */
 				dmon_breakpoint_clear_all();
 			}
+		}
+
+		if (dfsr & SCB_DFSR_DWTTRAP) {
+			DCC_LOG2(LOG_TRACE, "<<WATCHPOINT>>: thread_id=%d pc=%08x ---", 
+					 thinkos_rt.active, ctx->pc);
 		}
 
 		if (dfsr & SCB_DFSR_HALTED) {

@@ -209,6 +209,8 @@ void init_queue_test(void)
 };
 #endif
 
+unsigned int gcnt = 0;
+
 int main(int argc, char ** argv)
 {
 	io_init();
@@ -230,6 +232,7 @@ int main(int argc, char ** argv)
 		asm volatile ("mov r0, #7\r\n" : : : "r0");
 		asm volatile ("mov r0, #8\r\n" : : : "r0");
 		asm volatile ("mov r0, #9\r\n" : : : "r0");
+		gcnt++;
 	}
 	return 0;
 }
