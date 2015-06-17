@@ -653,8 +653,39 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 		}
 
 		if (dfsr & SCB_DFSR_DWTTRAP) {
-			DCC_LOG2(LOG_TRACE, "<<WATCHPOINT>>: thread_id=%d pc=%08x ---", 
-					 thinkos_rt.active, ctx->pc);
+			if ((CM3_SCB->icsr & SCB_ICSR_RETTOBASE) == 0) {
+				DCC_LOG2(LOG_ERROR, "<<WATCHPOINT>>: exception=%d pc=%08x", 
+						 ctx->xpsr & 0x1ff, ctx->pc);
+				DCC_LOG(LOG_ERROR, "invalid breakpoint on exception!!!");
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				/* FIXME: add support for breakpoints on IRQ */
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
+				__thinkos_pause_all();
+			} else if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				DCC_LOG2(LOG_TRACE, "<<WATCHPOINT>>: thread_id=%d pc=%08x ---", 
+						 thinkos_rt.active, ctx->pc);
+				/* suspend the current thread */
+				__thinkos_thread_pause(thinkos_rt.active);
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
+				__thinkos_defer_sched();
+			} else {
+				DCC_LOG2(LOG_ERROR, "<<WATCHPOINT>>: thread_id=%d pc=%08x ---", 
+						 thinkos_rt.active, ctx->pc);
+				DCC_LOG(LOG_ERROR, "invalid active thread!!!");
+				sigset |= (1 << DMON_BREAKPOINT);
+				sigmsk |= (1 << DMON_BREAKPOINT);
+				thinkos_dmon_rt.events = sigset;
+				/* record the break thread id */
+				thinkos_rt.break_id = thinkos_rt.active;
+				__thinkos_pause_all();
+			}
 		}
 
 		if (dfsr & SCB_DFSR_HALTED) {
