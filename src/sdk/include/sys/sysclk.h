@@ -23,6 +23,8 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#include <arch/cortex-m3.h>
+
 #ifndef __SYS_SYSCLK_H__
 #define __SYS_SYSCLK_H__
 

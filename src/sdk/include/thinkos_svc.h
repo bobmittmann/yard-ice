@@ -502,10 +502,6 @@ static inline int __attribute__((always_inline))
 	return THINKOS_SVC3(THINKOS_IRQ_REGISTER, irq, pri, isr);
 }
 
-static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
-	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
-}
-
 /* ---------------------------------------------------------------------------
    Console
    ---------------------------------------------------------------------------*/
@@ -547,6 +543,19 @@ thinkos_sysinfo_clocks(uint32_t * clk[]) {
 static inline int __attribute__((always_inline)) 
 thinkos_sysinfo_udelay_factor(int32_t * factor) {
 	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_UDELAY_FACTOR, factor);
+}
+
+static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
+	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
+}
+
+/* ---------------------------------------------------------------------------
+   Other
+   ---------------------------------------------------------------------------*/
+
+static inline void thinkos_yield(void)  {
+	CM3_SCB->icsr = SCB_ICSR_PENDSVSET; /* PendSV rise */
+	asm volatile ("dsb\n"); /* Data synchronization barrier */
 }
 
 #ifdef __cplusplus

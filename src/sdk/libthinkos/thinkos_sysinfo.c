@@ -25,6 +25,8 @@ _Pragma ("GCC optimize (\"Os\")")
 #include <thinkos_sys.h>
 #include <thinkos.h>
 
+#include <sys/sysclk.h>
+
 #if THINKOS_ENABLE_SYSINFO
 
 extern int32_t udelay_factor;
