@@ -224,12 +224,12 @@ int rtsp_request(in_addr_t host, const char * req)
 
 	if (tcp_connect(tp, host, htons(port)) < 0) {
 		fprintf(stderr, "can't connect to host!\n");
-		return 1;
+		return -1;
 	}
 
 	if (tcp_send(tp, req, strlen(req), 0) < 0) {
 		fprintf(stderr, "can't send!\n");
-		return 1;
+		return -1;
 	}
 
 	while ((n = tcp_recv(tp, buf, BUF_LEN)) > 0)  {
@@ -256,7 +256,8 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host)
 			"C->S: DESCRIBE rtsp://%s/autio.au RTSP/1.0\r\n"
 			"CSeq: 2\r\n", host);
 
-	rtsp_request(host_addr, req);
+	if (rtsp_request(host_addr, req) < 0)
+		return -1;
 
 	rtsp->rtp.port = rtp_port;
 	rtsp->rtp.addr = host_addr;
@@ -266,6 +267,7 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host)
 	return 0;
 }
 
+volatile bool do_connect = true;
 
 int main(int argc, char ** argv)
 {
@@ -277,9 +279,13 @@ int main(int argc, char ** argv)
 
 	network_config();
 
-	rtsp_connect(&rtsp, "192.168.10.254");
-
 	for (;;) {
+		if (do_connect) {
+			do_connect = false;
+			if (rtsp_connect(&rtsp, "192.168.10.254") < 0) {
+				printf("\nRTSP connection failed!\n");
+			}
+		}
 		thinkos_sleep(1000);
 		printf(".");
 	}

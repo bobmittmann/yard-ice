@@ -137,7 +137,7 @@ static inline void __memcpy(void * __dst, void * __src,  unsigned int __len)
 void usb_cdc_on_rcv(struct usb_cdc_acm_dev * dev, 
 					unsigned int ep_id, unsigned int len)
 {
-	DCC_LOG(LOG_TRACE, "thinkos_flag_give_i(RX_FLAG)");
+	DCC_LOG(LOG_INFO, "thinkos_flag_give_i(RX_FLAG)");
 	thinkos_flag_give_i(RX_FLAG);
 }
 
@@ -473,13 +473,13 @@ int usb_cdc_read(usb_cdc_class_t * cl, void * buf,
 		if (len >= CDC_EP_IN_MAX_PKT_SIZE) {
 			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, 
 										 buf, len)) > 0) {
-				DCC_LOG1(LOG_TRACE, "1. n=%d", n);
+				DCC_LOG1(LOG_INFO, "1. n=%d", n);
 				return n;
 			} 
 		} else {
 			if ((n = usb_dev_ep_pkt_recv(dev->usb, dev->out_ep, dev->rx_buf, 
 										 CDC_EP_IN_MAX_PKT_SIZE)) > 0) {
-				DCC_LOG1(LOG_TRACE, "2. n=%d", n);
+				DCC_LOG1(LOG_INFO, "2. n=%d", n);
 				dev->rx_pos = 0;
 				dev->rx_cnt = n;
 				goto read_from_buffer;

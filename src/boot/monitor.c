@@ -239,9 +239,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #if THINKOS_ENABLE_CONSOLE
 	uint8_t * ptr;
 	int cnt;
-#else
-	char buf[4];
 #endif
+	char buf[4];
 	int len;
 
 	DCC_LOG(LOG_TRACE, "Monitor start...");
@@ -298,10 +297,20 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
 					len = monitor_process_input(comm, (char *)ptr, len);
 					__console_rx_pipe_commit(len); 
+				} else {
+					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
+							"masking DMON_COMM_RCV!");
+					sigmask &= ~(1 << DMON_COMM_RCV);
 				}
 			} else {
-				DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
-				sigmask &= ~(1 << DMON_COMM_RCV);
+				DCC_LOG(LOG_TRACE, "Comm recv. rx pipe full!");
+				if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
+					monitor_process_input(comm, buf, len);
+				} else {
+					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
+							"masking DMON_COMM_RCV!");
+					sigmask &= ~(1 << DMON_COMM_RCV);
+				}
 			}
 #else
 			if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
@@ -313,11 +322,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #if THINKOS_ENABLE_CONSOLE
 		if (sigset & (1 << DMON_RX_PIPE)) {
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "RX Pipe. rx_pipe.free=%d. "
+				DCC_LOG1(LOG_TRACE, "RX Pipe. rx_pipe.free=%d. "
 						 "Unmaksing DMON_COMM_RCV!", cnt);
 				sigmask |= (1 << DMON_COMM_RCV);
 			} else {
-				DCC_LOG(LOG_INFO, "RX Pipe empty!!!");
+				DCC_LOG(LOG_TRACE, "RX Pipe empty!!!");
 			}
 			dmon_clear(DMON_RX_PIPE);
 		}
@@ -326,7 +335,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_TRACE, "TX Pipe, %d pending chars.", cnt);
+				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
 				len = dmon_comm_send(comm, ptr, cnt);
 				__console_tx_pipe_commit(len); 
 			} else {

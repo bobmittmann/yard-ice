@@ -446,13 +446,13 @@ void usb_mon_on_rcv(usb_class_t * cl, unsigned int ep_id, unsigned int len)
 
 void usb_mon_on_eot(usb_class_t * cl, unsigned int ep_id)
 {
-	DCC_LOG(LOG_INFO, "COMM_EOT");
+	DCC_LOG(LOG_MSG, "COMM_EOT");
 	dmon_signal(DMON_COMM_EOT);
 }
 
 void usb_mon_on_eot_int(usb_class_t * cl, unsigned int ep_id)
 {
-	DCC_LOG1(LOG_INFO, "ep_id=%d", ep_id);
+	DCC_LOG1(LOG_MSG, "ep_id=%d", ep_id);
 }
 
 const usb_dev_ep_info_t usb_mon_in_info = {
@@ -655,7 +655,8 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 			return n;
 		}
 
-		DCC_LOG1(LOG_INFO, "n=%d!!", n);
+
+		DCC_LOG1(LOG_MSG, "n=%d!!", n);
 
 		rem -= n;
 		ptr += n;
@@ -666,7 +667,7 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 		}
 	}
 
-	DCC_LOG1(LOG_INFO, "return=%d.", len);
+	DCC_LOG1(LOG_MSG, "return=%d.", len);
 
 	return len;
 }

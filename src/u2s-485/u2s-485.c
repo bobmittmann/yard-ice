@@ -39,7 +39,7 @@
 #include "profclk.h"
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 7
+#define FW_VERSION_MINOR 8
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 
@@ -552,8 +552,6 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 			(state.cfg.stopbits != vcom->cfg.stopbits) ||
 			(state.cfg.flowctrl != vcom->cfg.flowctrl)) {
 
-			serial_rx_disable(serial);
-
 			if (state.cfg.baudrate == 0) {
 				state.cfg.baudrate = vcom->cfg.baudrate;
 				DCC_LOG1(LOG_WARNING, "invalid baudrate, keep current: %d", 
@@ -567,11 +565,14 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 				continue;
 			}
 
+			/* stop serial receiver */
+			serial_rx_disable(serial);
+
 			if (state.cfg.baudrate == 921600) {
 				if (vcom->mode != VCOM_MODE_SERVICE) {
 					vcom->mode = VCOM_MODE_SERVICE; 
 					DCC_LOG(LOG_TRACE, "Service mode magic config ...");
-					__tdump();
+//					__tdump();
 				}
 			} else {
 				DCC_LOG1(LOG_TRACE, "baudrate=%d", state.cfg.baudrate);
@@ -595,6 +596,8 @@ void __attribute__((noreturn)) serial_ctrl_task(struct vcom * vcom)
 					vcom->cfg = state.cfg;
 					serial_config_set(serial, &vcom->cfg);
 				}
+			
+				/* start serial receiver */
 				serial_rx_enable(serial);
 			}
 		} else {

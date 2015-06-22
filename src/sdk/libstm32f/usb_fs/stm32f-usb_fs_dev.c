@@ -792,24 +792,6 @@ void stm32f_can1_tx_usb_hp_isr(void)
 
 	sr = usb->istr;
 
-	if (sr & USB_ESOF) {
-		DCC_LOG(LOG_WARNING, "USB_ESOF");
-		usb->istr = ~USB_ESOF;
-	}
-
-	if (sr & USB_ERR) {
-		DCC_LOG(LOG_WARNING, "USB_ERR");
-		usb->istr = ~USB_ERR;
-	}
-
-	if (sr & USB_PMAOVR) {
-		DCC_LOG(LOG_WARNING, "USB_PMAOVR");
-		usb->istr = ~USB_PMAOVR;
-	}
-
-	/* clear interrupt */
-//	usb->istr = sr & ~USB_CTR;
-
 	ep_id = USB_EP_ID_GET(sr);
 
 	DCC_LOG1(LOG_MSG, "CTR ep_id=%d", ep_id);
@@ -847,7 +829,7 @@ void stm32f_can1_tx_usb_hp_isr(void)
 			/* release the buffer to the USB controller */
 			__toggle_ep_flag(usb, ep_id, USB_SWBUF_RX);
 		} else {
-			DCC_LOG3(LOG_TRACE, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
+			DCC_LOG3(LOG_INFO, "RX dblbuf DOTG=%d SW_BUF=%d cnt=%d", 
 					 (epr & USB_DTOG_RX) ? 1: 0, (epr & USB_SWBUF_RX) ? 1: 0, 
 					 rx_pktbuf->count);
 			/* call class endpoint callback */
@@ -908,6 +890,23 @@ void stm32f_can1_tx_usb_hp_isr(void)
 
 		}
 	}
+
+#ifdef DEBUG
+	if (sr & USB_ESOF) {
+		DCC_LOG(LOG_WARNING, "USB_ESOF");
+		usb->istr = ~USB_ESOF;
+	}
+
+	if (sr & USB_ERR) {
+		DCC_LOG(LOG_WARNING, "USB_ERR");
+		usb->istr = ~USB_ERR;
+	}
+
+	if (sr & USB_PMAOVR) {
+		DCC_LOG(LOG_WARNING, "USB_PMAOVR");
+		usb->istr = ~USB_PMAOVR;
+	}
+#endif
 }
 
 /* USB low priority ISR */
