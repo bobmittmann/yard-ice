@@ -65,6 +65,11 @@
 			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libtcpip</locationURI>
 		</link>
 		<link>
+			<name>libtrace</name>
+			<type>2</type>
+			<locationURI>PARENT-3-PROJECT_LOC/sdk/libtrace</locationURI>
+		</link>
+		<link>
 			<name>libutil</name>
 			<type>2</type>
 			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libutil</locationURI>

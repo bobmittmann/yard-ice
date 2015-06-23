@@ -41,11 +41,9 @@
 #include <thinkos.h>
 #include <sys/console.h>
 
-struct rtp_client {
-	in_addr_t addr;
-	uint16_t port;
-	struct udp_pcb * udp;
-};
+#include <trace.h>
+
+#include "rtp.h"
 
 struct rtsp_client {
 	struct rtp_client rtp;
@@ -267,13 +265,46 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host)
 	return 0;
 }
 
+void __attribute__((noreturn)) supervisor_task(void)
+{
+	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+
+	for (;;) {
+		thinkos_sleep(250);
+		trace_fprint(stdout, TRACE_FLUSH);
+	}
+}
+
+uint32_t supervisor_stack[128];
+
+const struct thinkos_thread_inf supervisor_inf = {
+	.stack_ptr = supervisor_stack,
+	.stack_size = sizeof(supervisor_stack),
+	.priority = 1,
+	.thread_id = 1,
+	.paused = false,
+	.tag = "SUPV"
+};
+
+void supervisor_init(void)
+{
+	trace_init();
+
+	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
+							  &supervisor_inf);
+}
 volatile bool do_connect = true;
+
 
 int main(int argc, char ** argv)
 {
 	struct rtsp_client rtsp;
 
 	stdio_init();
+
+	supervisor_init();
+
+	INF("Starting RTSP test");
 
 	stm32f_nvram_env_init();
 
