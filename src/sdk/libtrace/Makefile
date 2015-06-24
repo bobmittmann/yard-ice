@@ -26,7 +26,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = trace
 
-CFILES = trace.c
+CFILES = trace.c trace_get.c trace_fmt.c trace_time.c
 
 include ../../mk/lib.mk
 

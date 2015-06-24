@@ -1,6 +1,6 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
  * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
@@ -18,27 +18,39 @@
  */
 
 /** 
- * @file sys/types.h
- * @brief YARD-ICE libc
+ * @file trace_time.c
+ * @brief Real-time trace
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SYS_TYPES_H__
-#define __SYS_TYPES_H__
+#include "trace-i.h"
 
-#define __need_size_t
-#include <stddef.h>
+int trace_ts2time(struct timeval * tv, uint32_t ts)
+{
+	uint32_t us;
 
-typedef long ssize_t;
-typedef long clock_t;
-typedef long time_t;
+	if (tv == NULL)
+		return -1;
 
-typedef int clockid_t;
+	us = trace_ts2us(ts);
 
-typedef	unsigned int off_t;
+	tv->tv_sec = us / 1000000;
+	tv->tv_usec = us - (tv->tv_sec * 1000000);
 
-typedef unsigned long useconds_t;
-typedef long suseconds_t;
+	return 0;
+}
 
-#endif	/* __SYS_TYPES_H__ */
+int trace_tm2time(struct timeval * tv, uint64_t tm)
+{
+	uint64_t us;
 
+	if (tv == NULL)
+		return -1;
+
+	us = trace_tm2us(tm);
+
+	tv->tv_sec = us / 1000000;
+	tv->tv_usec = us - ((uint64_t)tv->tv_sec * 1000000LL);
+
+	return 0;
+}

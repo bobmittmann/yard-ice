@@ -18,27 +18,29 @@
  */
 
 /** 
- * @file sys/types.h
+ * @file sys/time.h
  * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SYS_TYPES_H__
-#define __SYS_TYPES_H__
+#ifndef __SYS_TIME_H__
+#define __SYS_TIME_H__
 
-#define __need_size_t
-#include <stddef.h>
+#include <sys/types.h>
 
-typedef long ssize_t;
-typedef long clock_t;
-typedef long time_t;
+struct timeval {
+    time_t      tv_sec;     /* seconds */
+    suseconds_t tv_usec;    /* microseconds */
+};
 
-typedef int clockid_t;
+#ifdef __cplusplus
+extern "C" {
+#endif
+	
 
-typedef	unsigned int off_t;
+#ifdef __cplusplus
+}
+#endif
 
-typedef unsigned long useconds_t;
-typedef long suseconds_t;
-
-#endif	/* __SYS_TYPES_H__ */
+#endif /* __SYS_TIME_H__ */
 

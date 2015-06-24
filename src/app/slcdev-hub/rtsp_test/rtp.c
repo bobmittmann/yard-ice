@@ -73,13 +73,13 @@ int rtp_recv(struct rtp_client * __rtp, void * __buf, int __len)
 
 	if ((len = udp_recv(__rtp->udp, __buf, __len, &sin)) < 0) {
 		if (len == -ECONNREFUSED) {
-			ERR("udp_rcv ICMP error: ECONNREFUSED\n");
+			ERR("udp_rcv ICMP error: ECONNREFUSED");
 		}
 		if (len == -EFAULT) {
-			ERR("udp_rcv error: EFAULT\n");
+			ERR("udp_rcv error: EFAULT");
 		}
 		if (len == -ENOTCONN) {
-			ERR("udp_rcv error: ENOTCONN\n");
+			ERR("udp_rcv error: ENOTCONN");
 		}
 		return -1;
 	}
@@ -88,7 +88,6 @@ int rtp_recv(struct rtp_client * __rtp, void * __buf, int __len)
 		ERR("rtp version != 2");
 		return -1;
 	}
-
 
 	return 0;
 }

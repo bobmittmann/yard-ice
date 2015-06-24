@@ -265,15 +265,37 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host)
 	return 0;
 }
 
+const char * const trace_lvl_tab[] = {
+		"   NONE",
+		"  ERROR",
+		"WARNING",
+		"   INFO",
+		"  DEBUG"
+};
+
 void __attribute__((noreturn)) supervisor_task(void)
 {
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+	struct trace_entry ent;
+	struct timeval tv;
+	char s[80];
+
+	INF("<%d> started...", thinkos_thread_self());
+
+	trace_tail(&ent);
 
 	for (;;) {
 		thinkos_sleep(250);
-		trace_fprint(stdout, TRACE_FLUSH);
+
+		while (trace_getnext(&ent, s, sizeof(s)) >= 0) {
+			trace_ts2time(&tv, ent.dt);
+			printf("%s %2d.%06d: %s\n", trace_lvl_tab[ent.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec, s);
+		}
+
+		trace_flush(&ent);
 	}
 }
+
 
 uint32_t supervisor_stack[128];
 
@@ -314,7 +336,7 @@ int main(int argc, char ** argv)
 		if (do_connect) {
 			do_connect = false;
 			if (rtsp_connect(&rtsp, "192.168.10.254") < 0) {
-				printf("\nRTSP connection failed!\n");
+				WARN("RTSP connection failed!");
 			}
 		}
 		thinkos_sleep(1000);
