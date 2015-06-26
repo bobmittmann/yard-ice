@@ -45,10 +45,19 @@
 
 #include "rtp.h"
 
+#define RTSP_HOST_NAME_MAX 64
+#define RTSP_MEDIA_NAME_MAX 64
+#define RTSP_TRACK_NAME_MAX 64
+
 struct rtsp_client {
 	struct rtp_client rtp;
 	uint16_t port;
 	struct tcp_pcb * tcp;
+	uint32_t cseq;
+	in_addr_t host_addr;
+	char host_name[RTSP_HOST_NAME_MAX + 1];
+	char media_name[RTSP_MEDIA_NAME_MAX + 1];
+	char track_name[RTSP_TRACK_NAME_MAX + 1];
 };
 
 int rtp_task(struct rtp_client * clnt)
@@ -208,31 +217,61 @@ void stdio_init(void)
 
 #define BUF_LEN 128
 
-int rtsp_request(in_addr_t host, const char * req)
+int rtsp_request(struct rtsp_client * rtsp, const char * req, int len)
 {
-	int port = 544;
-	struct tcp_pcb * tp;
-	uint8_t buf[BUF_LEN];
+	struct tcp_pcb * tp = rtsp->tcp;
+	char buf[BUF_LEN];
 	int n;
+	int i;
+	int c1;
+	int c2;
+	int rem;
+	int cnt;
+	int ln;
 
-	if ((tp = tcp_alloc()) == NULL) {
-		fprintf(stderr, "can't allocate socket!\n");
+	if (tcp_send(tp, req, len, 0) < 0)  {
+		ERR("tcp_send() failed!");
 		return -1;
 	}
 
-	if (tcp_connect(tp, host, htons(port)) < 0) {
-		fprintf(stderr, "can't connect to host!\n");
-		return -1;
-	}
+	rem = BUF_LEN;
+	cnt = 0;
+	i = 0;
+	c1 = '\0';
+	ln = 0;
+	/* receive header */
+	while ((n = tcp_recv(tp, &buf[cnt], rem)) > 0)  {
+		rem -= n;
+		i = cnt;
+		cnt += n;
+		for (; i < cnt; ++i) {
+			c2 = buf[i];
+			if (c1 == '\r' && c2 == '\n') {
+				buf[i - 1] = '\0';
+				printf("%s\n", &buf[ln]);
+				if (i == ln + 1) {
+					DBG("header received");
+					return 0;
+				}
+				ln = i + 1;
+			}
+			c1 = c2;
+		}
 
-	if (tcp_send(tp, req, strlen(req), 0) < 0) {
-		fprintf(stderr, "can't send!\n");
-		return -1;
-	}
+		if (ln != 0) {
+			int j;
 
-	while ((n = tcp_recv(tp, buf, BUF_LEN)) > 0)  {
-		buf[n] = '\0';
-		printf((char *)buf);
+			for (i = 0, j = ln; j < cnt; ++i, ++j)
+				buf[i] = buf[j];
+			cnt = i;
+			rem = BUF_LEN - i;
+			ln = 0;
+		}
+
+		if (rem <= 0) {
+			ERR("buffer ovreflow!");
+			return -1;
+		}
 	}
 
 	tcp_close(tp);
@@ -240,27 +279,51 @@ int rtsp_request(in_addr_t host, const char * req)
 	return 0;
 }
 
-int rtsp_connect(struct rtsp_client * rtsp, const char * host)
+int rtsp_connect(struct rtsp_client * rtsp, const char * host, const char * mrl)
 {
+	struct tcp_pcb * tp;
 	int rtp_port = 6970;
 	in_addr_t host_addr;
+	int port = 554;
 	char req[512];
+	int len;
 
 	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
 		return -1;
 	}
 
-	sprintf(req,
-			"C->S: DESCRIBE rtsp://%s/autio.au RTSP/1.0\r\n"
-			"CSeq: 2\r\n", host);
-
-	if (rtsp_request(host_addr, req) < 0)
+	if ((tp = tcp_alloc()) == NULL) {
+		ERR("can't allocate socket!");
 		return -1;
+	}
+
+	if (tcp_connect(tp, host_addr, htons(port)) < 0) {
+		ERR("can't connect to host!");
+		tcp_close(tp);
+		return -1;
+	}
+
+	rtsp->tcp = tp;
+	rtsp->port = port;
+	rtsp->host_addr = host_addr;
+	strcpy(rtsp->host_name, host);
+	strcpy(rtsp->media_name, mrl);
+	rtsp->cseq = 2;
+
+	len = sprintf(req,
+			"OPTIONS rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n\r\n",
+			rtsp->host_name, rtsp->media_name, rtsp->cseq);
+
+	if (rtsp_request(rtsp, req, len) < 0) {
+		tcp_close(tp);
+		return -1;
+	}
 
 	rtsp->rtp.port = rtp_port;
 	rtsp->rtp.addr = host_addr;
-
-	rtp_client_start(&rtsp->rtp);
+//	rtp_client_start(&rtsp->rtp);
 
 	return 0;
 }
@@ -335,12 +398,11 @@ int main(int argc, char ** argv)
 	for (;;) {
 		if (do_connect) {
 			do_connect = false;
-			if (rtsp_connect(&rtsp, "192.168.10.254") < 0) {
+			if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
 				WARN("RTSP connection failed!");
 			}
 		}
 		thinkos_sleep(1000);
-		printf(".");
 	}
 
 	return 0;
