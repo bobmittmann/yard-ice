@@ -224,7 +224,7 @@ print_buf:
 				s[cnt++] = buf[0];
 		}
 
-		for (i = 0; (i < r) && (cnt < max); ++i, ++cnt)
+		for (i = 0; (i < n) && (cnt < max); ++i, ++cnt)
 			s[cnt] = cp[i];
 
 #if (PRINTF_ENABLE_LEFT_ALIGN)

@@ -26,21 +26,43 @@
 #define __RTP_H__
 
 #include <tcpip/udp.h>
+#include "jitbuf.h"
 
-struct rtp_client {
-	in_addr_t addr;
-	uint16_t port;
+struct ntp_time {
+    uint32_t sec;
+    uint32_t frac;
+};
+
+#if 0
+static inline void get_ntp_time(struct ntp_time * tm) {
+    tm->sec = (uint32_t)sec + 2208988800u;
+    tm->frac = (((uint64_t)msec) << 32) / 1000u;
+}
+#endif
+
+struct rtp_session {
+	in_addr_t faddr;
+	uint16_t lport[2];
+	uint16_t fport[2];
 	uint32_t start_seq;
 	uint32_t seq_no;
-	struct udp_pcb * udp;
+	uint32_t ssrc;
+	uint32_t pkt_count;
+	uint32_t octet_count;
+	struct udp_pcb * udp[2];
+	struct jitbuf * jb;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int rtp_recv(struct rtp_client * __rtp, void * __buf, int __len);
+int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin);
 
+void get_ntp_time(struct ntp_time * tm);
+
+int rtcp_send_sr_sdes(struct rtp_session * __rtp, uint32_t __rtptime,
+		struct ntp_time * __ntp, struct sockaddr_in * __sin);
 
 #ifdef __cplusplus
 }

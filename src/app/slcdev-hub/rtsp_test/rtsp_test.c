@@ -43,62 +43,71 @@
 
 #include <trace.h>
 
-#include "rtp.h"
+#include "rtsp.h"
 
-#define RTSP_HOST_NAME_MAX 64
-#define RTSP_MEDIA_NAME_MAX 64
-#define RTSP_TRACK_NAME_MAX 64
+jitbuf_t * audio_init(void);
 
-struct rtsp_client {
-	struct rtp_client rtp;
-	uint16_t port;
-	struct tcp_pcb * tcp;
-	uint32_t cseq;
-	in_addr_t host_addr;
-	char host_name[RTSP_HOST_NAME_MAX + 1];
-	char media_name[RTSP_MEDIA_NAME_MAX + 1];
-	char track_name[RTSP_TRACK_NAME_MAX + 1];
-};
-
-int rtp_task(struct rtp_client * clnt)
+int rtp_task(struct rtp_session * rtp_s)
 {
-	uint8_t buf[1472];
+	struct ntp_time ntp;
 	struct sockaddr_in sin;
-	struct udp_pcb * udp;
+	struct udp_pcb * rtp_udp;
+	struct udp_pcb * rtcp_udp;
+	uint32_t clk;
+	uint32_t now;
+	int32_t dt;
 	int len;
-	char s1[16];
 
-	printf("- Thread: %d\n", thinkos_thread_self());
-	printf("- UDP port: %d\n", clnt->port);
 
-	if ((udp = udp_alloc()) == NULL) {
+	DBG("Thread: %d", thinkos_thread_self());
+	DBG("RTP port: %d", rtp_s->lport[0]);
+	DBG("RTCP port: %d", rtp_s->lport[1]);
+
+	if ((rtp_udp = udp_alloc()) == NULL) {
 		return -1;
 	}
 
-	if (udp_bind(udp, INADDR_ANY, htons(clnt->port)) < 0) {
+	if (udp_bind(rtp_udp, INADDR_ANY, htons(rtp_s->lport[0])) < 0) {
 		return -1;
 	}
 
-	clnt->udp = udp;
+	if ((rtcp_udp = udp_alloc()) == NULL) {
+		return -1;
+	}
 
+	if (udp_bind(rtcp_udp, INADDR_ANY, htons(rtp_s->lport[1])) < 0) {
+		return -1;
+	}
+
+	rtp_s->udp[0] = rtp_udp;
+	rtp_s->udp[1] = rtcp_udp;
+
+	ntp.sec = 2208988800u;
+	ntp.frac = 0;
+
+	clk = thinkos_clock();
 	for (;;) {
-		if ((len = udp_recv(udp, buf, sizeof(buf), &sin)) < 0) {
-			if (len == -ECONNREFUSED) {
-				printf("udp_rcv ICMP error: ECONNREFUSED\n");
-			}
-			if (len == -EFAULT) {
-				printf("udp_rcv error: EFAULT\n");
-			}
-			if (len == -ENOTCONN) {
-				printf("udp_rcv error: ENOTCONN\n");
-			}
-			continue;
+		len = rtp_g711_recv(rtp_s, &sin);
+
+		if (len < 0) {
+			udp_close(rtp_s->udp[0]);
+			return -1;
 		}
 
+		now = thinkos_clock();
+		if ((dt = (int32_t)(now - clk)) > 5000) {
+			clk = now;
 
-		printf("* UDP datagram from %s:%d, len=%d\n",
-			   inet_ntop(AF_INET, (void *)&sin.sin_addr.s_addr, s1, 16),
-			   ntohs(sin.sin_port), len);
+			DBG("RTCP report");
+
+		    ntp.sec += dt / 1000;
+		    ntp.frac = (((uint64_t)(dt % 1000)) << 32) / 1000u;
+
+			sin.sin_family = AF_INET;
+			sin.sin_addr.s_addr = rtp_s->faddr;
+			sin.sin_port = htons(rtp_s->fport[1]);
+			rtcp_send_sr_sdes(rtp_s, 0, &ntp, &sin);
+		}
 
 	}	
 
@@ -116,8 +125,9 @@ const struct thinkos_thread_inf rtp_inf = {
 	.tag = "RTP"
 };
 
-void rtp_client_start(struct rtp_client * rtp)
+void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb)
 {
+	rtp->jb = jb;
 	thinkos_thread_create_inf((void *)rtp_task, (void *)rtp, &rtp_inf);
 }
 
@@ -215,77 +225,11 @@ void stdio_init(void)
 	stdin = f;
 }
 
-#define BUF_LEN 128
-
-int rtsp_request(struct rtsp_client * rtsp, const char * req, int len)
-{
-	struct tcp_pcb * tp = rtsp->tcp;
-	char buf[BUF_LEN];
-	int n;
-	int i;
-	int c1;
-	int c2;
-	int rem;
-	int cnt;
-	int ln;
-
-	if (tcp_send(tp, req, len, 0) < 0)  {
-		ERR("tcp_send() failed!");
-		return -1;
-	}
-
-	rem = BUF_LEN;
-	cnt = 0;
-	i = 0;
-	c1 = '\0';
-	ln = 0;
-	/* receive header */
-	while ((n = tcp_recv(tp, &buf[cnt], rem)) > 0)  {
-		rem -= n;
-		i = cnt;
-		cnt += n;
-		for (; i < cnt; ++i) {
-			c2 = buf[i];
-			if (c1 == '\r' && c2 == '\n') {
-				buf[i - 1] = '\0';
-				printf("%s\n", &buf[ln]);
-				if (i == ln + 1) {
-					DBG("header received");
-					return 0;
-				}
-				ln = i + 1;
-			}
-			c1 = c2;
-		}
-
-		if (ln != 0) {
-			int j;
-
-			for (i = 0, j = ln; j < cnt; ++i, ++j)
-				buf[i] = buf[j];
-			cnt = i;
-			rem = BUF_LEN - i;
-			ln = 0;
-		}
-
-		if (rem <= 0) {
-			ERR("buffer ovreflow!");
-			return -1;
-		}
-	}
-
-	tcp_close(tp);
-
-	return 0;
-}
-
 int rtsp_connect(struct rtsp_client * rtsp, const char * host, const char * mrl)
 {
 	struct tcp_pcb * tp;
-	int rtp_port = 6970;
 	in_addr_t host_addr;
-	int port = 554;
-	char req[512];
+	char buf[512];
 	int len;
 
 	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
@@ -297,32 +241,94 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host, const char * mrl)
 		return -1;
 	}
 
-	if (tcp_connect(tp, host_addr, htons(port)) < 0) {
+	if (tcp_connect(tp, host_addr, htons(rtsp->port)) < 0) {
 		ERR("can't connect to host!");
 		tcp_close(tp);
 		return -1;
 	}
 
 	rtsp->tcp = tp;
-	rtsp->port = port;
 	rtsp->host_addr = host_addr;
+	rtsp->rtp.faddr = host_addr;
+
 	strcpy(rtsp->host_name, host);
 	strcpy(rtsp->media_name, mrl);
 	rtsp->cseq = 2;
 
-	len = sprintf(req,
+	len = sprintf(buf,
 			"OPTIONS rtsp://%s/%s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"User-Agent: ThinkOS RTSP Client\r\n\r\n",
 			rtsp->host_name, rtsp->media_name, rtsp->cseq);
 
-	if (rtsp_request(rtsp, req, len) < 0) {
-		tcp_close(tp);
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"DESCRIBE rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Accept: application/sdp\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name, rtsp->cseq);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	/* FIXME: decode SDP */
+	while ((len = rtsp_line_recv(rtsp, buf, sizeof(buf), 1000)) > 0) {
+		buf[len] = '\0';
+		printf("'%s'\n", buf);
+	}
+	strcpy(rtsp->track_name, "microphone");
+
+	if (len < 0) {
+		ERR("rtsp_line_recv() failed!");
 		return -1;
 	}
 
-	rtsp->rtp.port = rtp_port;
-	rtsp->rtp.addr = host_addr;
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"SETUP rtsp://%s/%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Transport: RTP/AVP;unicast;client_port=%d-%d\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name,
+			rtsp->track_name, rtsp->cseq,
+			rtsp->rtp.lport[0], rtsp->rtp.lport[1]);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"PLAY rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Session: %016llx\r\n"
+			"Range: ntp=0.000-\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name,
+			rtsp->cseq, rtsp->sid);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+
 //	rtp_client_start(&rtsp->rtp);
 
 	return 0;
@@ -378,12 +384,14 @@ void supervisor_init(void)
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
 							  &supervisor_inf);
 }
-volatile bool do_connect = true;
 
+
+volatile bool do_connect = true;
 
 int main(int argc, char ** argv)
 {
 	struct rtsp_client rtsp;
+	struct jitbuf * jb;
 
 	stdio_init();
 
@@ -395,11 +403,21 @@ int main(int argc, char ** argv)
 
 	network_config();
 
+	jb = audio_init();
+
+	thinkos_sleep(100);
+
+	rtsp_init(&rtsp, 554);
+
+	rtp_g711_start(&rtsp.rtp, jb);
+
 	for (;;) {
 		if (do_connect) {
-			do_connect = false;
+			thinkos_sleep(1000);
 			if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
 				WARN("RTSP connection failed!");
+			} else	{
+				do_connect = false;
 			}
 		}
 		thinkos_sleep(1000);

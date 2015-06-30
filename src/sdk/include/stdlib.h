@@ -49,6 +49,8 @@ long strtol(const char * nptr, char ** endptr, int base);
 
 unsigned long strtoul(const char * nptr, char ** endptr, int base);
 
+unsigned long long strtoull(const char * nptr, char ** endptr, int base);
+
 int abs(int num);
 
 int atoi(const char *nptr);

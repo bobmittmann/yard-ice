@@ -31,6 +31,8 @@
 #include <trace.h>
 
 #include "rtp.h"
+#include "g711.h"
+#include "wavetab.h"
 
 struct rtp_packet {
     /* byte 0 */
@@ -65,13 +67,55 @@ struct rtp_packet {
     uint8_t data[]; /**< Variable-sized data payload */
 };
 
-int rtp_recv(struct rtp_client * __rtp, void * __buf, int __len)
+void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
+		uint8_t * data, unsigned int samples)
 {
-	struct sockaddr_in sin;
-	struct rtp_packet * pkt = (struct rtp_packet *)__buf;
+	int16_t * dst;
+	uint8_t * src;
+	struct sndbuf * pcm;
+	int cnt = 0;
+	int rem;
+	int i;
+	int n;
+//	static int j = 0;
+
+	rem = samples;
+	while (rem > 0) {
+		if ((pcm = sndbuf_alloc()) == NULL)
+			return;
+
+		src = (uint8_t *)&data[cnt++ * SNDBUF_LEN];
+		dst = (int16_t *)pcm->data;
+		n = rem > SNDBUF_LEN ? SNDBUF_LEN : rem;
+
+		for (i = 0; i < n; ++i)
+			dst[i] = ((int)alaw2linear(src[i]) << 3) + 0x8000;
+
+#if 0
+		for (i = 0; i < n; ++i) {
+				dst[i] = (int)wave_a3[j++] + 0x8000;
+				if (j == sizeof(wave_a3) / 2)
+					j = 0;
+		}
+#endif
+
+		jitbuf_enqueue(jb, pcm, ts);
+
+		sndbuf_free(pcm);
+
+		ts += n;
+		rem -= n;
+	}
+}
+
+int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
+{
+	uint32_t pkt_buf[256];
+	struct rtp_packet * pkt = (struct rtp_packet *)pkt_buf;
+	int data_len;
 	int len;
 
-	if ((len = udp_recv(__rtp->udp, __buf, __len, &sin)) < 0) {
+	if ((len = udp_recv(__rtp->udp[0], pkt, sizeof(pkt_buf), __sin)) < 0) {
 		if (len == -ECONNREFUSED) {
 			ERR("udp_rcv ICMP error: ECONNREFUSED");
 		}
@@ -89,7 +133,17 @@ int rtp_recv(struct rtp_client * __rtp, void * __buf, int __len)
 		return -1;
 	}
 
-	return 0;
+	if (pkt->payload != 8) {
+		ERR("rtp payload != 8");
+		return -1;
+	}
+
+	data_len = len - sizeof(struct rtp_packet);
+
+	audio_alaw_enqueue(__rtp->jb, pkt->timestamp,
+			pkt->data, data_len);
+
+	return data_len;
 }
 
 
