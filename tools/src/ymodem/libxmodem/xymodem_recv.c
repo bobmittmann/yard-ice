@@ -85,8 +85,14 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 				break;
 			}
 
+			if (c == CAN) {
+				return -1;
+			}
+
 			if (c == EOT) {
 				/* end of transmission */
+				rx->pktno = (rx->xfr_mode == MODE_YMODEM) ? 0 : 1;
+				rx->sync = (rx->fcs_mode == FCS_CRC) ? 'C' : NAK;
 				pkt[0] = ACK;
 				if ((ret = serial_send(rx->dev, pkt, 1)) < 0)
 					return ret;
@@ -98,10 +104,8 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 		rem = cnt + ((rx->fcs_mode == FCS_CRC) ? 4 : 3);
 		cp = pkt + 1;
 
-
 		/* receive the packet */
 		while (rem) {
-
 			ret = serial_recv(rx->dev, cp, rem, 500);
 			if (ret == 0)
 				goto timeout;
@@ -155,22 +159,39 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			continue;
 		}
 
-		if (seq != rx->pktno) {
-			goto error;
+		if (seq != (rx->pktno & 0xff)) {
+			if ((rx->pktno == 0) && (seq == 1)) {
+				rx->pktno++;
+				/* Fallback to XMODEM */
+				rx->xfr_mode = MODE_XMODEM_1K;
+			} else {
+				/* wrong sequence */
+				goto error;
+			}
 		}
 
-		rx->pktno = (rx->pktno + 1) & 0xff;
-		rx->retry = 10;
-		rx->sync = ACK;
-		rx->data_len = cnt;
-		rx->data_pos = 0;
+		/* YModem first packet ... */
+		if (rx->pktno == 0) {
+			pkt[0] = ACK;
+			serial_send(rx->dev, pkt, 1);
+		} else {
+			rx->retry = 10;
+			rx->sync = ACK;
+			if ((rx->count + cnt) > rx->fsize)
+				cnt = rx->fsize - rx->count;
+			rx->count += cnt;
+		}
+
+
+		rx->pktno++;
 
 		return cnt;
 
 error:
 		/* flush */
-		while (serial_recv(rx->dev, pkt, 1024, 200) > 0);
-		rx->sync = NAK;
+		serial_drain(rx->dev);
+		ret = -1;
+		break;
 
 timeout:
 
@@ -181,28 +202,28 @@ timeout:
 		}
 	}
 
-
 	pkt[0] = CAN;
 	pkt[1] = CAN;
-	pkt[2] = CAN;
 
-	serial_send(rx->dev, pkt, 3);
+	serial_send(rx->dev, pkt, 2);
 
 	return ret;
 }
 
 int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 {
-	unsigned char * dst = (unsigned char *)data;
-	int rem;
 	int ret;
 
-	if ((dst == NULL) || (len <= 0)) {
+	if ((data == NULL) || (len <= 0)) {
 		return -EINVAL;
 	}
 
-	do {
+	for (;;) {
+		int cnt;
+		int rem;
+
 		if ((rem = (rx->data_len - rx->data_pos)) > 0) {
+			unsigned char * dst = (unsigned char *)data;
 			unsigned char * src;
 			int n;
 			int i;
@@ -220,12 +241,38 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 
 		ret = xmodem_recv_pkt(rx);
 
-	} while (ret > 0);
+		if (ret < 0)
+			break;
+
+		if ((ret == 0) && (rx->xfr_mode != MODE_YMODEM))
+			break;
+
+		cnt = ret;
+
+		if (rx->pktno == 1) {
+			char * src;
+			char * dst;
+			int fsize;
+
+			src = (char *)rx->pkt.data;
+			dst = (char *)rx->fname;
+			while (*src != '\0')
+				*dst++ = *src++;
+			*dst = '\0';
+			/* skip null */
+			src++;
+			fsize = atoi(src);
+			rx->fsize = fsize;
+			ret = 0;
+			break;
+		} 
+		
+		rx->data_len = cnt;
+		rx->data_pos = 0;
+	} 
 
 	return ret;
 }
-
-
 
 int xmodem_recv_init(struct xmodem_recv * rx, const struct serial_dev * dev, 
 					int fcs_mode, int xfr_mode)
@@ -237,12 +284,13 @@ int xmodem_recv_init(struct xmodem_recv * rx, const struct serial_dev * dev,
 
 	rx->fcs_mode = fcs_mode;
 	rx->xfr_mode = xfr_mode;
-	rx->pktno = (xfr_mode == MODE_YMODEM) ? 0 : 1;
+	rx->pktno = (rx->xfr_mode == MODE_YMODEM) ? 0 : 1;
 	rx->sync = (rx->fcs_mode == FCS_CRC) ? 'C' : NAK;
 	rx->retry = 30;
 	rx->data_len = 0;
 	rx->data_pos = 0;
 	rx->fsize = 64 * 1024 * 1024;
+	rx->count = 0;
 
 	return 0;
 }
@@ -274,5 +322,4 @@ void xmodem_recv_free(struct xmodem_recv * rx)
 {
 	free(rx);
 }
-
 

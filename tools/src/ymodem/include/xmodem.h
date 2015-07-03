@@ -35,10 +35,14 @@ enum {
 	FCS_CRC = 1,
 };
 
+#define XMODEM_FNAME_MAX 117
+
 struct xmodem_recv {
 	struct serial_dev * dev;
 	unsigned int pktno;
 	unsigned int fsize;
+	unsigned int count;
+	char fname[XMODEM_FNAME_MAX + 1];
 
 	signed char fcs_mode;
 	signed char xfr_mode;
