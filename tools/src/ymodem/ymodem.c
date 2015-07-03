@@ -8,8 +8,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <libgen.h>
 
 #include "debug.h"
+
 #ifdef _WIN32
 #include <windows.h>
 static void sleep(sec) {
@@ -23,7 +25,7 @@ int usleep(useconds_t useconds) {
 #endif
 
 #include "serial.h"
-
+#include "xmodem.h"
 
 void serial_rx_task(struct serial_dev * sp)
 {
@@ -75,49 +77,175 @@ void serial_rx_start(struct serial_dev * sp)
 
 struct serial_dev * win_serial_open(const char * com_port);
 
-int ymodem_test(const char * port, int fcnt, const char * fnam[]) 
+int ymodem_send(const char * port, int fcnt, char * pathname[]) 
 {
 
 	struct serial_config cfg = {
-		.baudrate = 9600,
+		.baudrate = 115200,
 		.databits = 8,
 		.parity = 0,
 		.stopbits = 1,
 		.flowctrl = 0
 	};
 	struct serial_dev * ser;
-	int n;
+	struct xmodem_send * sy;
+	uint8_t buf[512];
+	int ret;
+	int i;
 
-	DBG(DBG_TRACE, "starting MODEM test ...");
-
-	printf("\n==== Serial test! ====\n");
-
-	printf(" 2. Oppening serial port: '%s'\n", port);
+	printf("-- serial port: '%s'\n", port);
 	fflush(stdout);
 
-	ser = win_serial_open(port);
-	if (ser == NULL) {
+	DBG(DBG_TRACE, "1. win_serial_open() ...");
+	if ((ser = win_serial_open(port)) == NULL) {
 		return 1;
 	}
 
+	DBG(DBG_TRACE, "2. xmodem_send_alloc() ...");
+	if ((sy = xmodem_send_alloc()) == NULL) {
+		return 1;
+	}
+
+	DBG(DBG_TRACE, "3. serial_config_set() ...");
 	serial_config_set(ser, &cfg);
 
-	serial_rx_start(ser);
+	xmodem_send_open(sy, ser, MODE_YMODEM);
 
-	for (n = 0; n < 10000000; ++n) {
-#ifdef _WIN32
-		Sleep(250);
-#else
-		usleep(50000);
-#endif
-		printf(".");	
-		fflush(stdout);	
-//		serial_putchar(ser, test_msg[n % sizeof(test_msg)]);
+	for (i = 0; i < fcnt; ++i) {
+		unsigned int fsize;
+		unsigned int rem;
+		char * fname;
+		FILE * f;
+		int len;
+
+		if ((f = fopen(pathname[i], "rb")) == NULL) {
+			fprintf(stderr, "ERROR: %s: open(): %s.\n",
+					__func__, strerror(errno));
+			return -1;
+		}
+
+		fname = basename(pathname[i]);
+		fseek(f, 0, SEEK_END);
+		fsize = ftell(f);
+		fseek(f, 0, SEEK_SET);
+		rem = fsize;
+
+		if ((ret = xmodem_send_start(sy, fname, fsize)) < 0) {
+			fprintf(stderr, "ERROR: %s: xmodem_send_start().\n", __func__);
+			return ret;
+		}
+
+		while (rem) {
+			if ((len = fread(buf, 1, sizeof(buf), f)) <= 0) {
+				fprintf(stderr, "ERROR: %s: fread(): %s.\n",
+						__func__, strerror(errno));
+				fclose(f);
+				return len;
+			}
+
+			if ((ret = xmodem_send_loop(sy, buf, len)) < 0) {
+				DBG(DBG_WARNING, "xmodem_send_loop() failed!");
+				fclose(f);
+				return ret;
+			}
+
+			rem -= len;
+		}
+
+		if ((ret = xmodem_send_eot(sy)) < 0) {
+			DBG(DBG_WARNING, "xmodem_send_eot() failed!");
+			fclose(f);
+			return ret;
+		}
+
+		fclose(f);
+	}
+
+	if ((ret = xmodem_send_close(sy)) < 0) {
+		DBG(DBG_WARNING, "xmodem_send_close() failed!");
+		return ret;
 	}
 
 	return 0;
 }
 
+int ymodem_recv(const char * port) 
+{
+	struct serial_config cfg = {
+		.baudrate = 115200,
+		.databits = 8,
+		.parity = 0,
+		.stopbits = 1,
+		.flowctrl = 0
+	};
+	struct serial_dev * ser;
+	struct xmodem_recv * ry;
+	uint8_t buf[512];
+	FILE * f = NULL;
+	int ret;
+
+	printf("-- serial port: '%s'\n", port);
+	fflush(stdout);
+
+	DBG(DBG_TRACE, "1. win_serial_open() ...");
+	if ((ser = win_serial_open(port)) == NULL) {
+		return 1;
+	}
+
+	DBG(DBG_TRACE, "2. xmodem_recv_alloc() ...");
+	if ((ry = xmodem_recv_alloc()) == NULL) {
+		return 1;
+	}
+
+	DBG(DBG_TRACE, "3. serial_config_set() ...");
+	serial_config_set(ser, &cfg);
+
+	DBG(DBG_TRACE, "4. xmodem_recv_init() ...");
+	xmodem_recv_init(ry, ser, FCS_CRC, MODE_YMODEM);
+
+	DBG(DBG_TRACE, "5. xmodem_recv_loop() ...");
+	while ((ret = xmodem_recv_loop(ry, buf, sizeof(buf))) >= 0) {
+		int len;
+
+		DBG(DBG_TRACE, "xmodem_recv_loop() ret = %d.", ret);
+
+		len = ret;
+		if (len == 0) {
+			if (ry->fsize == 0) {
+				printf("End of transfer\n");
+				fflush(stdout);
+				break;
+			}
+			printf("-- file='%s' size=%d\n", ry->fname, ry->fsize);
+			fflush(stdout);
+			if (f != NULL) 
+				fclose(f);
+
+			if ((f = fopen(ry->fname, "wb")) == NULL) {
+				fprintf(stderr, "ERROR: %s: open(): %s.\n",
+						__func__, strerror(errno));
+				return -1;
+			}
+		} else {
+			printf(" - data=%d\n", len);
+			fflush(stdout);
+			if ((ret = fwrite(buf, len, 1, f)) != 1) {
+				fprintf(stderr, "ERROR: %s: fwrite(): %s.\n",
+						__func__, strerror(errno));
+				fclose(f);
+				return ret;
+			}
+
+		}
+	}
+
+	if (f != NULL) 
+		fclose(f);
+
+	DBG(DBG_TRACE, "xmodem_recv_loop() ret = %d.", ret);
+
+	return ret;
+}
 
 /* -------------------------------------------------------------------------
  * Application startup
@@ -136,9 +264,7 @@ static void show_usage(void)
 	fprintf(stderr, "Usage: %s [OPTION...]\n", progname);
 	fprintf(stderr, "  -h  \tShow this help message\n");
 	fprintf(stderr, "  -v  \tShow version\n");
-	fprintf(stderr, "  -q  \tQuiet\n");
-	fprintf(stderr, "  -n  \tDon't start capturing\n");
-	fprintf(stderr, "  -r DIR \tSet root directory to DIR\n");
+	fprintf(stderr, "  -p PORT \tSet comm PORT\n");
 	fprintf(stderr, "  -d \tEnable DAV/RPC protocol over stdout/stdin\n");
 	fprintf(stderr, "\n");
 }
@@ -173,7 +299,7 @@ int main(int argc, char *argv[])
 	const char * port = "/dev/ttyS11";
 #endif
 	int fcnt;
-	const char * fnam[128];
+	char * fnam[64];
 	extern char *optarg;	/* getopt */
 	extern int optind;	/* getopt */
 	int c;
@@ -185,7 +311,7 @@ int main(int argc, char *argv[])
 		progname++;
 
 	/* parse the command line options */
-	while ((c = getopt(argc, argv, "dvhqnr:")) > 0) {
+	while ((c = getopt(argc, argv, "dvhp:")) > 0) {
 		switch (c) {
 		case 'v':
 			show_version();
@@ -193,18 +319,25 @@ int main(int argc, char *argv[])
 		case 'h':
 			show_usage();
 			return 1;
+		case 'p':
+			port = optarg;
+			break;
 		default:
 			parse_err(optarg);
 			return 2;
 		}
 	}
 
-	fcnt = 0;
 	if (optind < argc) {
-		fnam[fcnt++] = argv[optind];
-		optind++;
+		fcnt = 0;
+		do {
+			fnam[fcnt++] = argv[optind];
+			optind++;
+		} while (optind < argc);
+
+		return ymodem_send(port, fcnt, fnam); 
 	}
 
-	return ymodem_test(port, fcnt, fnam); 
+	return ymodem_recv(port); 
 }
 

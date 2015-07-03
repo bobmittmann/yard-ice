@@ -95,7 +95,7 @@ struct xmodem_recv * xmodem_recv_alloc(void);
 void xmodem_recv_free(struct xmodem_recv * rx);
 
 
-int xmodem_send_init(struct xmodem_send * sx, 
+int xmodem_send_open(struct xmodem_send * sx, 
 					 const struct serial_dev * dev, unsigned int mode);
 
 int xmodem_send_start(struct xmodem_send * sx, const char * fname, 
@@ -105,7 +105,7 @@ int xmodem_send_loop(struct xmodem_send * sx, const void * data, int len);
 
 int xmodem_send_eot(struct xmodem_send * sx);
 
-int xmodem_send_stop(struct xmodem_send * sx);
+int xmodem_send_close(struct xmodem_send * sx);
 
 int xmodem_send_cancel(struct xmodem_send * sx);
 

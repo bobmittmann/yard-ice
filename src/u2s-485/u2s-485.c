@@ -39,7 +39,7 @@
 #include "profclk.h"
 
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 8
+#define FW_VERSION_MINOR 9
 
 uint8_t fw_version[2] = { FW_VERSION_MAJOR, FW_VERSION_MINOR };
 

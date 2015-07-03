@@ -20,6 +20,7 @@
 #include <windows.h>
 
 #include "serial.h"
+#include "debug.h"
 
 #define SERIAL_DEV_RX_BUF_LEN 128
 
@@ -91,7 +92,6 @@ int win_serial_send(struct win_serial_drv * drv,
 
 	return fRes ? len : -1;
 }
-
 
 int win_serial_recv(struct win_serial_drv * drv, char * buf, 
 					unsigned int max, unsigned int tmo_msec)
@@ -180,6 +180,8 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 
 		drv->rx.cnt = dwRead;
 		drv->rx.pos = 0;
+
+	//	DBG_DUMP(DBG_TRACE, drv->rx.buf, dwRead);
 	}
 
 	cnt = drv->rx.cnt;
@@ -189,8 +191,6 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 	for (i = 0; i < cnt; ++i)
 		buf[i] = drv->rx.buf[drv->rx.pos++];
 
-	drv->rx.cnt += cnt;
-
 	if (drv->rx.pos == drv->rx.cnt)
 		drv->rx.cnt = 0;
 
@@ -199,83 +199,26 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 
 int win_serial_drain(struct win_serial_drv * drv)
 {
-	OVERLAPPED osStatus = {0};
-	DWORD dwEvtMask;
-	DWORD dwRes;
 	int ret;
 
 	assert(drv != NULL);
 
-	fprintf(stderr, "%s: wait for TX_EMPTY...\n", __func__);
-	fflush(stderr);
-
-//	SetCommMask(drv->hComm, EV_RXCHAR);
-	if (!SetCommMask(drv->hComm, EV_TXEMPTY)) {
-		fprintf(stderr, "%s: SetCommMask() failed!\n", __func__);
-		fflush(stderr);
-		// error creating overlapped event handle
-		return -1;
-	}
-
-	// Create OVERLAPPED structure's hEvent.
-	osStatus.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if (osStatus.hEvent == NULL) {
-		fprintf(stderr, "%s: CreateEvent() failed!\n", __func__);
-		fflush(stderr);
-		// error creating overlapped event handle
-		return -1;
-	}
-
-	// Wait for an event.
-	if (!WaitCommEvent(drv->hComm, &dwEvtMask, &osStatus)) {
-	
-		fprintf(stderr, "%s: 1.\n", __func__);
-		fflush(stderr);
-
+	if (!FlushFileBuffers(drv->hComm)) {
 		if (GetLastError() != ERROR_IO_PENDING) { 
-			// WriteFile failed, but isn't delayed. Report error and abort.
-			ret = -1;
+			DBG(DBG_WARNING, "FlushFileBuffers() failed with code: %d.", 
+				(int)GetLastError());
 		} else {
-			fprintf(stderr, "%s: 2.\n", __func__);
-			fflush(stderr);
-			// Write is pending.
-
-			dwRes = WaitForSingleObject(osStatus.hEvent, INFINITE);
-			switch(dwRes) {
-			// OVERLAPPED structure's event has been signaled. 
-			case WAIT_OBJECT_0:
-				if (!GetOverlappedResult(drv->hComm, &osStatus, 
-										 &dwEvtMask, FALSE))
-					ret = -1;
-				else
-					// operation completed successfully.
-					ret = 0;
-				break;
-			default:
-				// An error has occurred in WaitForSingleObject.
-				// This usually indicates a problem with the
-				// OVERLAPPED structure's event handle.
-				ret = -1;
-				break;
-			}
+			DBG(DBG_TRACE, "I/O is pending ...");
+			// WriteFile failed, but isn't delayed. Report error and abort.
 		}
+		ret = -1;
 	} else {
-		fprintf(stderr, "%s: 2.", __func__);
-		fflush(stderr);
-		// WriteFile completed immediately.
 		ret = 0;
 	}
 
-	fprintf(stderr, "%s: 3.\n", __func__);
-	fflush(stderr);
-
-	CloseHandle(osStatus.hEvent);
-
-	fprintf(stderr, "%s: done.\n", __func__);
-	fflush(stderr);
-
 	return ret;
 }
+
 
 int win_serial_close(struct win_serial_drv * drv)
 {

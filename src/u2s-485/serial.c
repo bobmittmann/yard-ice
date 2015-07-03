@@ -350,6 +350,7 @@ void stm32f_usart2_isr(void)
 			thinkos_gate_open_i(TX_GATE);
 		} else {
 			/* RS485 enable transmitter */ 
+			rs485_rxdis();
 			rs485_txen();
 			c = drv->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
 			us->dr = c;
@@ -360,6 +361,7 @@ void stm32f_usart2_isr(void)
 	if (sr & USART_TC) {
 		/* RS485 disable ransmitter */ 
 		rs485_txdis();
+		rs485_rxen();
 		/* disable TC interrupts */
 		*drv->tcie = 0;
 	}

@@ -32,6 +32,7 @@
 
 #include "xmodem.h"
 #include "crc.h"
+#include "debug.h"
 
 #define SOH  0x01
 #define STX  0x02
@@ -72,23 +73,28 @@ static int xmodem_send_pkt(struct xmodem_send * sx,
 			if ((ret = serial_recv(sx->dev, pkt, 
 								   1, XMODEM_SEND_TMOUT_MS)) <= 0) {
 				if (ret == 0) {
+					DBG(DBG_TRACE, "serial_recv() timed out!");
 					if (++retry < 20) 
 						continue;
 				}
+				DBG(DBG_WARNING, "serial_recv() failed!");
 				return ret;
 			}
 			c = *pkt;
 
 			if (c == CAN) {
+				DBG(DBG_WARNING, "CAN");
 				return -1;
 			}
 
 			if (c == 'C') {
+				DBG(DBG_TRACE, "CRC mode.");
 				sx->state = XMODEM_SEND_CRC;
 				break;
 			}
 
 			if (c == NAK) {
+				DBG(DBG_TRACE, "Checksum mode.");
 				sx->state = XMODEM_SEND_CKS;
 				break;
 			}
@@ -129,52 +135,56 @@ static int xmodem_send_pkt(struct xmodem_send * sx,
 
 	for (;;) {
 
+		DBG_DUMP(DBG_TRACE, pkt, data_len + 3);
 
 		// Send packet less FCS 
 		if ((ret = serial_send(sx->dev, pkt, data_len + 3)) < 0) {
+			DBG(DBG_WARNING, "serial_send() failed!");
 			return ret;
 		}
 
 		// Send FCS (checksum or CRC)
 		if ((ret = serial_send(sx->dev, fcs, fcs_len)) < 0) {
+			DBG(DBG_WARNING, "serial_send() failed!");
 			return ret;
 		}
 
 		// Wait for ACK
 		if ((ret = serial_recv(sx->dev, pkt, 
 							   1, XMODEM_SEND_TMOUT_MS)) <= 0) {
-			if (ret == 0) {
-				if (++retry < 10)
-					continue;
-			}
+			DBG(DBG_WARNING, "serial_recv() failed!");
 			return ret;
 		}
 
 		c = *pkt;
 
 		if (c == ACK) {
+			DBG(DBG_TRACE, "ACK");
 			break;
 		}
 
 		if (c == CAN) {
+			DBG(DBG_WARNING, "CAN");
 			ret = -1;
 			goto error;
 		}
 
 		if (c != NAK) {
+			DBG(DBG_WARNING, "NAK");
 			ret = -2;
 			goto error;
 		}
 
 
 		if (++retry == 10) {
+			DBG(DBG_WARNING, "too many retries");
 			ret = -3;
 			goto error;
 		}
 	}
 
 	sx->seq++;
-
+	
 	return 0;
 
 error:
@@ -184,7 +194,7 @@ error:
 	return ret;
 }
 
-int xmodem_send_init(struct xmodem_send * sx, 
+int xmodem_send_open(struct xmodem_send * sx, 
 					 const struct serial_dev * dev, unsigned int mode)
 {
 	if ((sx == NULL) || (dev == NULL) || (mode > MODE_YMODEM))
@@ -205,10 +215,12 @@ int xmodem_send_init(struct xmodem_send * sx,
 int xmodem_send_start(struct xmodem_send * sx, const char * fname, 
 					  unsigned int fsize)
 {
+	unsigned int timestamp = 0;
 	unsigned char * data; 
 	int max;
 	int ret;
 	int i;
+	int len;
 
 
 	if (sx->mode == MODE_YMODEM) {
@@ -217,12 +229,16 @@ int xmodem_send_start(struct xmodem_send * sx, const char * fname,
 		data++;
 		data += sprintf((char *)data, "%d", fsize);
 		data++;
-		sx->data_len = data - sx->pkt.data;
-
+		data += sprintf((char *)data, "%d", timestamp);
+		data++;
+		len = data - sx->pkt.data;
 		max =  (sx->data_len < 128) ? 128 : sx->data_max;
+//		max = 1024;
+
+		DBG(DBG_TRACE, "fname='%s' fsize=%d", fname, fsize);
 
 		/* padding */
-		for (i = 0; i < (max - sx->data_len); ++i)
+		for (i = 0; i < (max - len); ++i)
 			data[i] = '\0';
 
 		sx->seq = 0;
@@ -241,6 +257,8 @@ int xmodem_send_loop(struct xmodem_send * sx, const void * data, int len)
 
 	if ((src == NULL) || (len < 0))
 		return -EINVAL;
+
+	DBG(DBG_TRACE, "len=%d!", len);
 
 	do {
 		unsigned char * dst;
@@ -261,6 +279,7 @@ int xmodem_send_loop(struct xmodem_send * sx, const void * data, int len)
 		if (sx->data_len == sx->data_max) {
 
 			if ((ret = xmodem_send_pkt(sx, sx->pkt.data, sx->data_len)) < 0) {
+				DBG(DBG_WARNING, "xmodem_send_pkt() failed!");
 				return ret;
 			}
 
@@ -321,7 +340,7 @@ int xmodem_send_eot(struct xmodem_send * sx)
 	return ret;
 }
 
-int xmodem_send_stop(struct xmodem_send * sx)
+int xmodem_send_close(struct xmodem_send * sx)
 {
 	int ret = 0;
 	int i;

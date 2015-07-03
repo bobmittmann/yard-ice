@@ -28,8 +28,9 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <xmodem.h>
-#include <crc.h>
+#include "xmodem.h"
+#include "crc.h"
+#include "debug.h"
 
 #define SOH  0x01
 #define STX  0x02
@@ -39,6 +40,7 @@
 #define CAN  0x18
 
 #define XMODEM_RCV_TMOUT_MS 2000
+#define XMODEM_FILE_SIZE_MAX (64 * 1024 * 1024)
 
 #ifndef MIN
 #define MIN(a,b)    (((a)<(b))?(a):(b))
@@ -58,6 +60,7 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 	for (;;) {
 
 		if ((ret = serial_send(rx->dev, &rx->sync, 1)) < 0) {
+			DBG(DBG_WARNING, "serial_send() failed!");
 			return ret;
 		}
 
@@ -67,15 +70,20 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			ret = serial_recv(rx->dev, pkt, 
 									1, XMODEM_RCV_TMOUT_MS);
 
-			if (ret == 0)
+			if (ret == 0) {
+				DBG(DBG_TRACE, "serial_send() timeout!");
 				goto timeout;
+			}
 
-			if (ret < 0)
+			if (ret < 0) {
+				DBG(DBG_WARNING, "serial_send() failed!");
 				return ret;
+			}
 
 			c = pkt[0];
 
 			if (c == STX) {
+				DBG(DBG_TRACE, "STX");
 				cnt = 1024;
 				break;
 			}
@@ -86,6 +94,7 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			}
 
 			if (c == CAN) {
+				DBG(DBG_WARNING, "CAN");
 				return -1;
 			}
 
@@ -106,11 +115,20 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 
 		/* receive the packet */
 		while (rem) {
+//			ret = serial_recv(rx->dev, cp, rem > 8 ? 8 : rem, 500);
 			ret = serial_recv(rx->dev, cp, rem, 500);
-			if (ret == 0)
+
+			if (ret == 0) {
+				DBG(DBG_TRACE, "serial_recv() timeout!");
 				goto timeout;
-			if (ret < 0)
+			}
+
+			if (ret < 0) {
+				DBG(DBG_WARNING, "serial_recv() failed!");
 				return ret;
+			}
+
+//			DBG_DUMP(DBG_TRACE, cp, ret);
 
 			rem -= ret;
 			cp += ret;
@@ -119,9 +137,12 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 		/* sequence */
 		seq = pkt[1];
 		/* inverse sequence */
-		nseq = pkt[2];
+		nseq = (~pkt[2]) & 0xff;
 
-		if (seq != ((~nseq) & 0xff)) {
+//		DBG_DUMP(DBG_TRACE, pkt, cnt + ((rx->fcs_mode == FCS_CRC) ? 5 : 4));
+
+		if (seq != nseq) {
+			DBG(DBG_WARNING, "invalid sequence %02x != %02x!", seq, nseq);
 			goto error;
 		}
 
@@ -138,6 +159,7 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			cmp = (unsigned short)cp[i] << 8 | cp[i + 1];
 
 			if (cmp != crc) {
+				DBG(DBG_WARNING, "CRC error %04x!=%04x!", cmp, crc);
 				goto error;
 			}
 
@@ -148,8 +170,10 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			for (i = 0; i < cnt; ++i)
 				cks += cp[i];
 
-			if (cp[i] != cks)
+			if (cp[i] != cks) {
+				DBG(DBG_WARNING, "Checksum error!");
 				goto error;
+			}
 		}
 
 
@@ -164,8 +188,10 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 				rx->pktno++;
 				/* Fallback to XMODEM */
 				rx->xfr_mode = MODE_XMODEM_1K;
+				rx->fsize = XMODEM_FILE_SIZE_MAX;
 			} else {
 				/* wrong sequence */
+				DBG(DBG_WARNING, "wrong sequence!");
 				goto error;
 			}
 		}
@@ -215,8 +241,10 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 	int ret;
 
 	if ((data == NULL) || (len <= 0)) {
-		return -EINVAL;
+		return -1;
 	}
+
+	DBG(DBG_TRACE, "len=%d.", len);
 
 	for (;;) {
 		int cnt;
@@ -240,9 +268,11 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 		}
 
 		ret = xmodem_recv_pkt(rx);
+		DBG(DBG_TRACE, "xmodem_recv_pkt()=%d.", ret);
 
-		if (ret < 0)
+		if (ret < 0) {
 			break;
+		}
 
 		if ((ret == 0) && (rx->xfr_mode != MODE_YMODEM))
 			break;
@@ -254,6 +284,8 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 			char * dst;
 			int fsize;
 
+			DBG(DBG_TRACE, "YModem");
+
 			src = (char *)rx->pkt.data;
 			dst = (char *)rx->fname;
 			while (*src != '\0')
@@ -263,6 +295,10 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 			src++;
 			fsize = atoi(src);
 			rx->fsize = fsize;
+
+			DBG(DBG_TRACE, "fname='%s' fsize=%d", rx->fname, rx->fsize);
+
+			rx->count = 0;
 			ret = 0;
 			break;
 		} 
@@ -289,7 +325,8 @@ int xmodem_recv_init(struct xmodem_recv * rx, const struct serial_dev * dev,
 	rx->retry = 30;
 	rx->data_len = 0;
 	rx->data_pos = 0;
-	rx->fsize = 64 * 1024 * 1024;
+	rx->fsize = (rx->xfr_mode == MODE_YMODEM) ? 0 : XMODEM_FILE_SIZE_MAX;
+	rx->fname[0] = '\0';
 	rx->count = 0;
 
 	return 0;

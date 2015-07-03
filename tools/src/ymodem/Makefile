@@ -33,7 +33,7 @@ CDEFS = "WINVER=0x0600"
 
 LIBDIRS = libserial libxmodem
 
-LIBS = serial pthread m 
+LIBS = xmodem serial pthread m 
 
 INCPATH = . include 
 
