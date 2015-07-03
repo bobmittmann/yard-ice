@@ -22,53 +22,25 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __RTP_H__
-#define __RTP_H__
+#ifndef __AUDIO_H__
+#define __AUDIO_H__
 
-#include <tcpip/udp.h>
 #include "jitbuf.h"
 
-struct ntp_time {
-    uint32_t sec;
-    uint32_t frac;
-};
-
-#if 0
-static inline void get_ntp_time(struct ntp_time * tm) {
-    tm->sec = (uint32_t)sec + 2208988800u;
-    tm->frac = (((uint64_t)msec) << 32) / 1000u;
-}
-#endif
-
-struct rtp_session {
-	in_addr_t faddr;
-	uint16_t lport[2];
-	uint16_t fport[2];
-	uint32_t start_seq;
-	uint32_t seq_no;
-	uint32_t ssrc;
-	uint32_t pkt_count;
-	uint32_t octet_count;
-	struct udp_pcb * udp[2];
-	struct jitbuf * jb;
-};
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb);
 
-int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin);
+struct jitbuf* audio_init(void);
 
-void get_ntp_time(struct ntp_time * tm);
-
-int rtcp_send_sr_sdes(struct rtp_session * __rtp, uint32_t __rtptime,
-		struct ntp_time * __ntp, struct sockaddr_in * __sin);
+void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
+		uint8_t * data, unsigned int samples);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __RTP_H__ */
+#endif /* __AUDIO_H__ */
 

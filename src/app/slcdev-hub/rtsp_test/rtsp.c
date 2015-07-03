@@ -296,6 +296,127 @@ int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 	return 0;
 }
 
+int rtsp_connect(struct rtsp_client * rtsp, const char * host,
+		const char * mrl)
+{
+	struct tcp_pcb * tp;
+	in_addr_t host_addr;
+	char buf[512];
+	int len;
+
+	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
+		return -1;
+	}
+
+	if ((tp = tcp_alloc()) == NULL) {
+		ERR("can't allocate socket!");
+		return -1;
+	}
+
+	if (tcp_connect(tp, host_addr, htons(rtsp->port)) < 0) {
+		ERR("can't connect to host!");
+		tcp_close(tp);
+		return -1;
+	}
+
+	rtsp->tcp = tp;
+	rtsp->host_addr = host_addr;
+	rtsp->rtp.faddr = host_addr;
+
+	strcpy(rtsp->host_name, host);
+	strcpy(rtsp->media_name, mrl);
+	rtsp->cseq = 2;
+
+	len = sprintf(buf,
+			"OPTIONS rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n\r\n",
+			rtsp->host_name, rtsp->media_name, rtsp->cseq);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"DESCRIBE rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Accept: application/sdp\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name, rtsp->cseq);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	/* FIXME: decode SDP */
+	while ((len = rtsp_line_recv(rtsp, buf, sizeof(buf), 1000)) > 0) {
+		buf[len] = '\0';
+		printf("'%s'\n", buf);
+	}
+	strcpy(rtsp->track_name, "microphone");
+
+	if (len < 0) {
+		ERR("rtsp_line_recv() failed!");
+		return -1;
+	}
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"SETUP rtsp://%s/%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Transport: RTP/AVP;unicast;client_port=%d-%d\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name,
+			rtsp->track_name, rtsp->cseq,
+			rtsp->rtp.lport[0], rtsp->rtp.lport[1]);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"PLAY rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"User-Agent: ThinkOS RTSP Client\r\n"
+			"Session: %016llx\r\n"
+			"Range: ntp=0.000-\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name,
+			rtsp->cseq, rtsp->sid);
+
+	if (rtsp_request(rtsp, buf, len) < 0)
+		return -1;
+
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+//	rtp_client_start(&rtsp->rtp);
+
+	return 0;
+}
+
+int rtsp_close_wait(struct rtsp_client * rtsp)
+{
+	int n;
+
+	while ((n = tcp_recv(rtsp->tcp, rtsp->buf, RTSP_CLIENT_BUF_LEN)) > 0) {
+		INF("RTSP recv: %d", n);
+	}
+
+	tcp_close(rtsp->tcp);
+
+	return 0;
+}
 
 int rtsp_init(struct rtsp_client * rtsp, int port)
 {

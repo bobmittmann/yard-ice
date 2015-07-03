@@ -27,7 +27,7 @@
 #endif
 
 #ifndef SNDBUF_LEN 
-#define SNDBUF_LEN 64
+#define SNDBUF_LEN 128
 #endif
 
 #ifndef SNDBUF_POOL_SIZE

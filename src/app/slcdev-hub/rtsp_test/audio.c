@@ -30,6 +30,7 @@
 #include <thinkos.h>
 #include "jitbuf.h"
 #include "trace.h"
+#include "g711.h"
 
 #define DAC1_GPIO STM32_GPIOA
 #define DAC1_PORT 4
@@ -128,7 +129,7 @@ void stm32f_dac_init(unsigned int freq)
 
 	/*  DMA Configuration */
 	/* Peripheral address */
-	dma->s[DAC1_DMA_STRM].par = &dac->dhr12l1;
+	dma->s[DAC1_DMA_STRM].par = &dac->dhr12r1;
 	/* Memory address */
 	dma->s[DAC1_DMA_STRM].m0ar = (void *)sndbuf_zero.data;
 	dma->s[DAC1_DMA_STRM].m1ar = (void *)sndbuf_zero.data;
@@ -251,13 +252,20 @@ const struct thinkos_thread_inf audio_inf = {
 	.tag = "AUDIO"
 };
 
+#define AUDIO_DAC_OVERSAMPLE 2
+
+#define STREAM_SAMPLE_RATE 11025
+#define STREAM_CLOCK_RATE 11025
+
+#define AUDIO_SAMPLE_RATE (STREAM_SAMPLE_RATE * AUDIO_DAC_OVERSAMPLE)
+
 jitbuf_t * audio_init(void)
 {
 	sndbuf_pool_init();
 
-	stm32f_dac_init(11025);
+	stm32f_dac_init(AUDIO_SAMPLE_RATE);
 
-	jitbuf_init(&audio.jbuf, 11025, 11025, 50);
+	jitbuf_init(&audio.jbuf, STREAM_CLOCK_RATE, AUDIO_SAMPLE_RATE, 50);
 
 	thinkos_thread_create_inf((void *)audio_task, (void *)NULL, &audio_inf);
 
@@ -265,3 +273,53 @@ jitbuf_t * audio_init(void)
 }
 
 
+void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
+		uint8_t * data, unsigned int samples)
+{
+	static int32_t y0 = 0;
+	static int32_t y1 = 0;
+	static int32_t y2 = 0;
+	int16_t * dst;
+	uint8_t * src;
+	struct sndbuf * pcm;
+	int rem;
+	int i;
+	int n;
+	int32_t y;
+
+	rem = samples;
+	src = (uint8_t *)data;
+	while (rem > 0) {
+		if ((pcm = sndbuf_alloc()) == NULL)
+			return;
+
+		dst = (int16_t *)pcm->data;
+#if (STREAM_SAMPLE_RATE == AUDIO_SAMPLE_RATE)
+		n = rem > SNDBUF_LEN ? SNDBUF_LEN : rem;
+
+		for (i = 0; i < n; ++i) {
+			y = ((int)alaw2linear(src[i]) << 3) + 0x8000;
+			dst[i] = y;
+		}
+#else
+		n = rem > (SNDBUF_LEN / 2) ? (SNDBUF_LEN / 2) : rem;
+		/* Newton's quadratic interpolation */
+		for (i = 0; i < n; ++i) {
+			y0 = y1;
+			y1 = y2;
+//			y2 = ((int)alaw2linear(src[i]) << 3) + 0x8000;
+			y2 = ((int)alaw2linear(src[i]) >> 1) + 0x0800;
+			y = (6*y1 + 3*y2 - y0) / 8;
+			dst[i * 2] = y2;
+			dst[i * 2 + 1] = y;
+		}
+#endif
+
+		jitbuf_enqueue(jb, pcm, ts);
+		sndbuf_free(pcm);
+
+		ts += n;
+		rem -= n;
+		src += n;
+	}
+}

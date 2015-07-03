@@ -28,11 +28,12 @@
 #include <string.h>
 #include <sys/param.h>
 #include <errno.h>
+
+#include <thinkos.h>
 #include <trace.h>
 
 #include "rtp.h"
-#include "g711.h"
-#include "wavetab.h"
+#include "audio.h"
 
 struct rtp_packet {
     /* byte 0 */
@@ -66,47 +67,6 @@ struct rtp_packet {
 
     uint8_t data[]; /**< Variable-sized data payload */
 };
-
-void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
-		uint8_t * data, unsigned int samples)
-{
-	int16_t * dst;
-	uint8_t * src;
-	struct sndbuf * pcm;
-	int cnt = 0;
-	int rem;
-	int i;
-	int n;
-//	static int j = 0;
-
-	rem = samples;
-	while (rem > 0) {
-		if ((pcm = sndbuf_alloc()) == NULL)
-			return;
-
-		src = (uint8_t *)&data[cnt++ * SNDBUF_LEN];
-		dst = (int16_t *)pcm->data;
-		n = rem > SNDBUF_LEN ? SNDBUF_LEN : rem;
-
-		for (i = 0; i < n; ++i)
-			dst[i] = ((int)alaw2linear(src[i]) << 3) + 0x8000;
-
-#if 0
-		for (i = 0; i < n; ++i) {
-				dst[i] = (int)wave_a3[j++] + 0x8000;
-				if (j == sizeof(wave_a3) / 2)
-					j = 0;
-		}
-#endif
-
-		jitbuf_enqueue(jb, pcm, ts);
-
-		sndbuf_free(pcm);
-
-		ts += n;
-		rem -= n;
-	}
-}
 
 int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 {
@@ -146,4 +106,87 @@ int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 	return data_len;
 }
 
+int rtp_task(struct rtp_session * rtp_s)
+{
+	struct ntp_time ntp;
+	struct sockaddr_in sin;
+	struct udp_pcb * rtp_udp;
+	struct udp_pcb * rtcp_udp;
+	uint32_t clk;
+	uint32_t now;
+	int32_t dt;
+	int len;
+
+
+	DBG("Thread: %d", thinkos_thread_self());
+	DBG("RTP port: %d", rtp_s->lport[0]);
+	DBG("RTCP port: %d", rtp_s->lport[1]);
+
+	if ((rtp_udp = udp_alloc()) == NULL) {
+		return -1;
+	}
+
+	if (udp_bind(rtp_udp, INADDR_ANY, htons(rtp_s->lport[0])) < 0) {
+		return -1;
+	}
+
+	if ((rtcp_udp = udp_alloc()) == NULL) {
+		return -1;
+	}
+
+	if (udp_bind(rtcp_udp, INADDR_ANY, htons(rtp_s->lport[1])) < 0) {
+		return -1;
+	}
+
+	rtp_s->udp[0] = rtp_udp;
+	rtp_s->udp[1] = rtcp_udp;
+
+	ntp.sec = 2208988800u;
+	ntp.frac = 0;
+
+	clk = thinkos_clock();
+	for (;;) {
+		len = rtp_g711_recv(rtp_s, &sin);
+
+		if (len < 0) {
+			udp_close(rtp_s->udp[0]);
+			return -1;
+		}
+
+		now = thinkos_clock();
+		if ((dt = (int32_t)(now - clk)) > 5000) {
+			clk = now;
+
+			DBG("RTCP report");
+
+		    ntp.sec += dt / 1000;
+		    ntp.frac = (((uint64_t)(dt % 1000)) << 32) / 1000u;
+
+			sin.sin_family = AF_INET;
+			sin.sin_addr.s_addr = rtp_s->faddr;
+			sin.sin_port = htons(rtp_s->fport[1]);
+			rtcp_send_sr_sdes(rtp_s, 0, &ntp, &sin);
+		}
+
+	}
+
+	return 0;
+}
+
+uint32_t rtp_stack[1024];
+
+const struct thinkos_thread_inf rtp_inf = {
+	.stack_ptr = rtp_stack,
+	.stack_size = sizeof(rtp_stack),
+	.priority = 32,
+	.thread_id = 8,
+	.paused = 0,
+	.tag = "RTP"
+};
+
+void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb)
+{
+	rtp->jb = jb;
+	thinkos_thread_create_inf((void *)rtp_task, (void *)rtp, &rtp_inf);
+}
 

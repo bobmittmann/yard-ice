@@ -66,6 +66,11 @@ int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo);
 int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 		unsigned int len, unsigned int tmo);
 
+int rtsp_connect(struct rtsp_client * rtsp, const char * host,
+		const char * mrl);
+
+int rtsp_close_wait(struct rtsp_client * rtsp);
+
 int rtsp_init(struct rtsp_client * rtsp, int port);
 
 

@@ -44,92 +44,8 @@
 #include <trace.h>
 
 #include "rtsp.h"
+#include "audio.h"
 
-jitbuf_t * audio_init(void);
-
-int rtp_task(struct rtp_session * rtp_s)
-{
-	struct ntp_time ntp;
-	struct sockaddr_in sin;
-	struct udp_pcb * rtp_udp;
-	struct udp_pcb * rtcp_udp;
-	uint32_t clk;
-	uint32_t now;
-	int32_t dt;
-	int len;
-
-
-	DBG("Thread: %d", thinkos_thread_self());
-	DBG("RTP port: %d", rtp_s->lport[0]);
-	DBG("RTCP port: %d", rtp_s->lport[1]);
-
-	if ((rtp_udp = udp_alloc()) == NULL) {
-		return -1;
-	}
-
-	if (udp_bind(rtp_udp, INADDR_ANY, htons(rtp_s->lport[0])) < 0) {
-		return -1;
-	}
-
-	if ((rtcp_udp = udp_alloc()) == NULL) {
-		return -1;
-	}
-
-	if (udp_bind(rtcp_udp, INADDR_ANY, htons(rtp_s->lport[1])) < 0) {
-		return -1;
-	}
-
-	rtp_s->udp[0] = rtp_udp;
-	rtp_s->udp[1] = rtcp_udp;
-
-	ntp.sec = 2208988800u;
-	ntp.frac = 0;
-
-	clk = thinkos_clock();
-	for (;;) {
-		len = rtp_g711_recv(rtp_s, &sin);
-
-		if (len < 0) {
-			udp_close(rtp_s->udp[0]);
-			return -1;
-		}
-
-		now = thinkos_clock();
-		if ((dt = (int32_t)(now - clk)) > 5000) {
-			clk = now;
-
-			DBG("RTCP report");
-
-		    ntp.sec += dt / 1000;
-		    ntp.frac = (((uint64_t)(dt % 1000)) << 32) / 1000u;
-
-			sin.sin_family = AF_INET;
-			sin.sin_addr.s_addr = rtp_s->faddr;
-			sin.sin_port = htons(rtp_s->fport[1]);
-			rtcp_send_sr_sdes(rtp_s, 0, &ntp, &sin);
-		}
-
-	}	
-
-	return 0;
-}
-
-uint32_t rtp_stack[1024];
-
-const struct thinkos_thread_inf rtp_inf = {
-	.stack_ptr = rtp_stack,
-	.stack_size = sizeof(rtp_stack),
-	.priority = 32,
-	.thread_id = 8, 
-	.paused = 0,
-	.tag = "RTP"
-};
-
-void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb)
-{
-	rtp->jb = jb;
-	thinkos_thread_create_inf((void *)rtp_task, (void *)rtp, &rtp_inf);
-}
 
 void tcpip_init(void);
 
@@ -225,114 +141,6 @@ void stdio_init(void)
 	stdin = f;
 }
 
-int rtsp_connect(struct rtsp_client * rtsp, const char * host, const char * mrl)
-{
-	struct tcp_pcb * tp;
-	in_addr_t host_addr;
-	char buf[512];
-	int len;
-
-	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
-		return -1;
-	}
-
-	if ((tp = tcp_alloc()) == NULL) {
-		ERR("can't allocate socket!");
-		return -1;
-	}
-
-	if (tcp_connect(tp, host_addr, htons(rtsp->port)) < 0) {
-		ERR("can't connect to host!");
-		tcp_close(tp);
-		return -1;
-	}
-
-	rtsp->tcp = tp;
-	rtsp->host_addr = host_addr;
-	rtsp->rtp.faddr = host_addr;
-
-	strcpy(rtsp->host_name, host);
-	strcpy(rtsp->media_name, mrl);
-	rtsp->cseq = 2;
-
-	len = sprintf(buf,
-			"OPTIONS rtsp://%s/%s RTSP/1.0\r\n"
-			"CSeq: %d\r\n"
-			"User-Agent: ThinkOS RTSP Client\r\n\r\n",
-			rtsp->host_name, rtsp->media_name, rtsp->cseq);
-
-	if (rtsp_request(rtsp, buf, len) < 0)
-		return -1;
-
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
-
-	rtsp->cseq++;
-	len = sprintf(buf,
-			"DESCRIBE rtsp://%s/%s RTSP/1.0\r\n"
-			"CSeq: %d\r\n"
-			"User-Agent: ThinkOS RTSP Client\r\n"
-			"Accept: application/sdp\r\n"
-			"\r\n",
-			rtsp->host_name, rtsp->media_name, rtsp->cseq);
-
-	if (rtsp_request(rtsp, buf, len) < 0)
-		return -1;
-
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
-
-	/* FIXME: decode SDP */
-	while ((len = rtsp_line_recv(rtsp, buf, sizeof(buf), 1000)) > 0) {
-		buf[len] = '\0';
-		printf("'%s'\n", buf);
-	}
-	strcpy(rtsp->track_name, "microphone");
-
-	if (len < 0) {
-		ERR("rtsp_line_recv() failed!");
-		return -1;
-	}
-
-	rtsp->cseq++;
-	len = sprintf(buf,
-			"SETUP rtsp://%s/%s/%s RTSP/1.0\r\n"
-			"CSeq: %d\r\n"
-			"User-Agent: ThinkOS RTSP Client\r\n"
-			"Transport: RTP/AVP;unicast;client_port=%d-%d\r\n"
-			"\r\n",
-			rtsp->host_name, rtsp->media_name,
-			rtsp->track_name, rtsp->cseq,
-			rtsp->rtp.lport[0], rtsp->rtp.lport[1]);
-
-	if (rtsp_request(rtsp, buf, len) < 0)
-		return -1;
-
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
-
-	rtsp->cseq++;
-	len = sprintf(buf,
-			"PLAY rtsp://%s/%s RTSP/1.0\r\n"
-			"CSeq: %d\r\n"
-			"User-Agent: ThinkOS RTSP Client\r\n"
-			"Session: %016llx\r\n"
-			"Range: ntp=0.000-\r\n"
-			"\r\n",
-			rtsp->host_name, rtsp->media_name,
-			rtsp->cseq, rtsp->sid);
-
-	if (rtsp_request(rtsp, buf, len) < 0)
-		return -1;
-
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
-
-
-//	rtp_client_start(&rtsp->rtp);
-
-	return 0;
-}
 
 const char * const trace_lvl_tab[] = {
 		"   NONE",
@@ -412,15 +220,13 @@ int main(int argc, char ** argv)
 	rtp_g711_start(&rtsp.rtp, jb);
 
 	for (;;) {
-		if (do_connect) {
-			thinkos_sleep(1000);
-			if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
-				WARN("RTSP connection failed!");
-			} else	{
-				do_connect = false;
-			}
-		}
 		thinkos_sleep(1000);
+		if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
+			WARN("RTSP connection failed!");
+		} else	{
+			rtsp_close_wait(&rtsp);
+			WARN("RTSP connection closed!");
+		}
 	}
 
 	return 0;
