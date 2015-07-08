@@ -57,6 +57,8 @@ int win_serial_send(struct win_serial_drv * drv,
 		// error creating overlapped event handle
 		return FALSE;
 
+//	DBG_DUMP(DBG_TRACE, buf, len);
+
 	// Issue write.
 	if (!WriteFile(drv->hComm, buf, dwToWrite, &dwWritten, &osWrite)) {
 		if (GetLastError() != ERROR_IO_PENDING) { 
@@ -69,9 +71,10 @@ int win_serial_send(struct win_serial_drv * drv,
 			// OVERLAPPED structure's event has been signaled. 
 			case WAIT_OBJECT_0:
 				if (!GetOverlappedResult(drv->hComm, &osWrite, 
-										 &dwWritten, FALSE))
+										 &dwWritten, FALSE)) {
 					fRes = FALSE;
-				else
+					DBG(DBG_WARNING, "GetOverlappedResult() failed!");
+				} else
 					// Write operation completed successfully.
 					fRes = TRUE;
 				break;
@@ -79,6 +82,7 @@ int win_serial_send(struct win_serial_drv * drv,
 				// An error has occurred in WaitForSingleObject.
 				// This usually indicates a problem with the
 				// OVERLAPPED structure's event handle.
+				DBG(DBG_WARNING, "WaitForSingleObject() failed!");
 				fRes = FALSE;
 				break;
 			}
@@ -109,8 +113,7 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 
 			if (!SetCommTimeouts(drv->hComm, &drv->timeouts)) {
 				// Error setting time-outs.
-				fprintf(stderr, "%s: SetCommTimeouts() failed!\n", __func__);
-				fflush(stderr);
+				DBG(DBG_WARNING, "SetCommTimeouts() failed!");
 				return -1;
 			}
 		}
@@ -120,10 +123,9 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 		// to avoid a handle leak.
 		osReader.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 		if (osReader.hEvent == NULL) {
-			fprintf(stderr, "%s: CreateEvent() failed!\n", __func__);
-			fflush(stderr);
-			return -1;
 			// Error creating overlapped event; abort.
+			DBG(DBG_WARNING, "CreateEvent() failed!");
+			return -1;
 		}
 
 		// Issue read operation.
@@ -132,8 +134,7 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 			// Error in communications; report it.
 			if (GetLastError() != ERROR_IO_PENDING) {
 				// read not delayed?
-				fprintf(stderr, "%s: not ERROR_IO_PENDING!\n", __func__);
-				fflush(stderr);
+				DBG(DBG_WARNING, "not ERROR_IO_PENDING!");
 				fRes = FALSE;
 			} else {
 				// Write is pending.
@@ -143,9 +144,7 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 				case WAIT_OBJECT_0:
 					if (!GetOverlappedResult(drv->hComm, &osReader, 
 											 &dwRead, FALSE)) {
-						fprintf(stderr, "%s: GetOverlappedResult() failed!\n",
-								__func__);
-						fflush(stderr);
+						DBG(DBG_WARNING, "GetOverlappedResult() failed!");
 						fRes = FALSE;
 					} else {
 						// Read operation completed successfully.
@@ -156,10 +155,8 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 					// An error has occurred in WaitForSingleObject.
 					// This usually indicates a problem with the
 					// OVERLAPPED structure's event handle.
+					DBG(DBG_WARNING, "WaitForSingleObject() failed!");
 					fRes = FALSE;
-					fprintf(stderr, "%s: WaitForSingleObject() failed!\n", 
-							__func__);
-					fflush(stderr);
 					break;
 				}
 			}
@@ -180,8 +177,6 @@ int win_serial_recv(struct win_serial_drv * drv, char * buf,
 
 		drv->rx.cnt = dwRead;
 		drv->rx.pos = 0;
-
-	//	DBG_DUMP(DBG_TRACE, drv->rx.buf, dwRead);
 	}
 
 	cnt = drv->rx.cnt;
@@ -226,15 +221,13 @@ int win_serial_close(struct win_serial_drv * drv)
 
 	if (!SetCommTimeouts(drv->hComm, &drv->save_timeouts)) {
 	   // Error setting time-outs.
-		fprintf(stderr, "%s: SetCommTimeouts() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "SetCommTimeouts() failed!");
 	}
 
 	if (!SetCommState(drv->hComm, &drv->save_dcb)) {
 		// Error in SetCommState. Possibly a problem with the communications 
 		// port handle or a problem with the DCB structure itself.
-		fprintf(stderr, "%s: SetCommState() failed!\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "SetCommState() failed!");
 	}
 
 	CloseHandle(drv->hComm); 
@@ -306,16 +299,14 @@ static int win_serial_conf_set(struct win_serial_drv * drv,
 	if (!SetCommState(drv->hComm, &dcb)) {
 		// Error in SetCommState. Possibly a problem with the communications 
 		// port handle or a problem with the DCB structure itself.
-		fprintf(stderr, "%s: SetCommState() failed!\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "SetCommState() failed!");
 		return -1;
 	}
 
 	drv->dcb = dcb;
 
 	if (!ClearCommError(drv->hComm, NULL, NULL)) {
-		fprintf(stderr, "%s: ClearCommError() failed!\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "ClearCommError() failed!");
 		return -1;
 	}
 
@@ -371,18 +362,14 @@ struct serial_dev * win_serial_open(const char * com_port)
 
 	drv = (struct win_serial_drv *)malloc(sizeof(struct win_serial_drv));
 	if (drv == NULL) {
-		fprintf(stderr, "%s: malloc() failed: %s.\n", 
-				__func__, strerror(errno));
-		fflush(stderr);
+		DBG(DBG_WARNING, "malloc() failed!");
 		return NULL;
 	}
 
 	dev = (struct serial_dev *)malloc(sizeof(struct serial_dev));
 	if (dev == NULL) {
 		free(drv);
-		fprintf(stderr, "%s: malloc() failed: %s.\n", 
-				__func__, strerror(errno));
-		fflush(stderr);
+		DBG(DBG_WARNING, "malloc() failed!");
 		return NULL;
 	}
 
@@ -401,8 +388,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 					   0);
 
 	if (hComm == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "%s: CreateFile(\"%s\") failed.\n", __func__, line);
-		fflush(stderr);
+		DBG(DBG_WARNING, "CreateFile(\"%s\") failed!", line);
 		free(drv);
 		free(dev);
 		return NULL;
@@ -412,8 +398,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 	drv->save_dcb.DCBlength = sizeof(DCB);
 	if (!GetCommState(hComm, &drv->save_dcb)) {
 	// Error getting current DCB settings
-		fprintf(stderr, "%s: GetCommState() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "GetCommState() failed!");
 		free(drv);
 		free(dev);
 		CloseHandle(hComm); 
@@ -424,8 +409,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 	FillMemory(&drv->save_timeouts, sizeof(COMMTIMEOUTS), 0);
 	if (!GetCommTimeouts(hComm, &drv->save_timeouts)) {
 	   // Error getting time-outs.
-		fprintf(stderr, "%s: GetCommTimeouts() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "GetCommTimeouts() failed!");
 		free(drv);
 		free(dev);
 		CloseHandle(hComm); 
@@ -444,8 +428,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 
 	if (!SetCommTimeouts(hComm, &drv->timeouts)) {
 		// Error setting time-outs.
-		fprintf(stderr, "%s: SetCommTimeouts() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "SetCommTimeouts() failed!");
 		free(drv);
 		free(dev);
 		CloseHandle(hComm); 
@@ -457,8 +440,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 	// 16 bytes large.
 	if (!SetupComm(hComm, 16, 16)) {
 		// Error setting time-outs.
-		fprintf(stderr, "%s: SetupComm() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "SetupComm() failed!");
 		free(drv);
 		free(dev);
 		CloseHandle(hComm); 
@@ -468,8 +450,7 @@ struct serial_dev * win_serial_open(const char * com_port)
 
 	if (!PurgeComm(hComm, PURGE_TXCLEAR | PURGE_RXCLEAR)) {
 		// Error setting time-outs.
-		fprintf(stderr, "%s: PurgeComm() failed.\n", __func__);
-		fflush(stderr);
+		DBG(DBG_WARNING, "PurgeComm() failed!");
 		free(drv);
 		free(dev);
 		CloseHandle(hComm); 
@@ -482,8 +463,6 @@ struct serial_dev * win_serial_open(const char * com_port)
 	/* clear buffer */
 	drv->rx.pos = 0;
 	drv->rx.cnt = 0;
-
-//	SetCommMask(drv->hComm, EV_TXEMPTY);
 
 	return dev;
 }

@@ -64,6 +64,15 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			return ret;
 		}
 
+		if (rx->sync == NAK)
+			DBG(DBG_TRACE, "--> NAK");
+		else if (rx->sync == ACK)
+			DBG(DBG_TRACE, "--> ACK");
+		else if (rx->sync == 'C')
+			DBG(DBG_TRACE, "--> 'C'");
+		else
+			DBG(DBG_WARNING, "--> 0x%02x", rx->sync);
+
 		for (;;) {
 			int c;
 
@@ -83,28 +92,32 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 			c = pkt[0];
 
 			if (c == STX) {
-				DBG(DBG_TRACE, "STX");
+				DBG(DBG_TRACE, "<-- STX");
 				cnt = 1024;
 				break;
 			}
 
 			if (c == SOH) {
+				DBG(DBG_TRACE, "<-- SOH");
 				cnt = 128;
 				break;
 			}
 
 			if (c == CAN) {
-				DBG(DBG_WARNING, "CAN");
+				DBG(DBG_WARNING, "<-- CAN");
 				return -1;
 			}
 
 			if (c == EOT) {
+				DBG(DBG_TRACE, "<-- EOT");
 				/* end of transmission */
 				rx->pktno = (rx->xfr_mode == MODE_YMODEM) ? 0 : 1;
 				rx->sync = (rx->fcs_mode == FCS_CRC) ? 'C' : NAK;
 				pkt[0] = ACK;
 				if ((ret = serial_send(rx->dev, pkt, 1)) < 0)
 					return ret;
+
+				DBG(DBG_TRACE, "--> ACK");
 
 				return 0;
 			}
@@ -215,7 +228,7 @@ static int xmodem_recv_pkt(struct xmodem_recv * rx)
 
 error:
 		/* flush */
-		serial_drain(rx->dev);
+		while (serial_recv(rx->dev, rx->pkt.data, 1024, 200) > 0); 
 		ret = -1;
 		break;
 
@@ -244,7 +257,7 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 		return -1;
 	}
 
-	DBG(DBG_TRACE, "len=%d.", len);
+	DBG(DBG_MSG, "len=%d.", len);
 
 	for (;;) {
 		int cnt;
@@ -268,7 +281,7 @@ int xmodem_recv_loop(struct xmodem_recv * rx, void * data, int len)
 		}
 
 		ret = xmodem_recv_pkt(rx);
-		DBG(DBG_TRACE, "xmodem_recv_pkt()=%d.", ret);
+		DBG(DBG_INFO, "xmodem_recv_pkt()=%d.", ret);
 
 		if (ret < 0) {
 			break;

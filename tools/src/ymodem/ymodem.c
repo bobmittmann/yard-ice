@@ -207,7 +207,7 @@ int ymodem_recv(const char * port)
 	while ((ret = xmodem_recv_loop(ry, buf, sizeof(buf))) >= 0) {
 		int len;
 
-		DBG(DBG_TRACE, "xmodem_recv_loop() ret = %d.", ret);
+		DBG(DBG_INFO, "xmodem_recv_loop() ret = %d.", ret);
 
 		len = ret;
 		if (len == 0) {
@@ -227,8 +227,8 @@ int ymodem_recv(const char * port)
 				return -1;
 			}
 		} else {
-			printf(" - data=%d\n", len);
-			fflush(stdout);
+//			printf(" - data=%d\n", len);
+//			fflush(stdout);
 			if ((ret = fwrite(buf, len, 1, f)) != 1) {
 				fprintf(stderr, "ERROR: %s: fwrite(): %s.\n",
 						__func__, strerror(errno));

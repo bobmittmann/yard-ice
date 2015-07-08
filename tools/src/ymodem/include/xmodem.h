@@ -76,6 +76,7 @@ struct xmodem_send {
 	struct { 
 		unsigned char hdr[3];
 		unsigned char data[1024];
+		unsigned char fcs[2];
 	} pkt;
 };
 
