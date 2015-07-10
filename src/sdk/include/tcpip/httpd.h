@@ -80,8 +80,14 @@ enum {
 
 enum {
 	HTTP_UNKNOWN = 0,
-	HTTP_GET = 1,
-	HTTP_POST = 2
+	HTTP_OPTIONS = 1,
+	HTTP_GET = 2,
+	HTTP_HEAD = 3,
+	HTTP_POST = 4,
+	HTTP_PUT = 5,
+	HTTP_DELETE = 6,
+	HTTP_TRACE = 7,
+	HTTP_CONNECT = 8
 };
 
 struct httpdobj {
@@ -124,6 +130,8 @@ struct httpqry {
 	char * val;
 };
 
+#define HTTP_RCVBUF_LEN 128
+
 /* 
  * HTTP connection control structure
  */
@@ -137,6 +145,10 @@ struct httpctl {
 	uint8_t ctbound;
 	uint8_t ctlen;
 	uint8_t qrycnt;
+	uint16_t lin;
+	uint16_t cnt;
+	uint16_t pos;
+	uint8_t buf[HTTP_RCVBUF_LEN];
 	struct httpqry qrylst[HTTPD_QUERY_LST_MAX];
 	char * usr;
 	char * pwd;

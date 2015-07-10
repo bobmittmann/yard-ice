@@ -277,7 +277,7 @@ struct dhcp * dhcp_ifn_lookup(struct ifnet * __ifn)
 	return NULL;
 }
 
-static inline void dhcp_set_state(struct dhcp * dhcp, uint8_t new_state)
+static inline void dhcp_set_state(struct dhcp * dhcp, int new_state)
 {
 	if (new_state != dhcp->state) {
 		dhcp->state = new_state;
@@ -285,7 +285,7 @@ static inline void dhcp_set_state(struct dhcp * dhcp, uint8_t new_state)
 	}
 }
 
-static uint8_t *dhcp_find_option_ptr(uint8_t *field, uint8_t option_type,
+static uint8_t *dhcp_find_option_ptr(uint8_t *field, int option_type,
 									 int len, int *is_overloaded)
 {
 	int n;
@@ -377,7 +377,7 @@ static uint8_t *dhcp_get_option_ptr(struct dhcp_msg *msg,
 /**
  * Options constructors.
  */
-static inline int dhcp_option(uint8_t *opt, uint8_t type, uint8_t len)
+static inline int dhcp_option(uint8_t *opt, int type, int len)
 {
 	opt[0] = type;
 	opt[1] = len;
@@ -385,7 +385,7 @@ static inline int dhcp_option(uint8_t *opt, uint8_t type, uint8_t len)
 	return 2;
 }
 
-static inline int dhcp_option_byte(uint8_t * opt, uint8_t type, uint8_t val)
+static inline int dhcp_option_byte(uint8_t * opt, int type, uint8_t val)
 {
 	opt[0] = type;
 	opt[1] = 1;
@@ -394,7 +394,7 @@ static inline int dhcp_option_byte(uint8_t * opt, uint8_t type, uint8_t val)
 	return 3;
 }
 
-static inline int dhcp_option_short(uint8_t * opt, uint8_t type, uint16_t val)
+static inline int dhcp_option_short(uint8_t * opt, int type, uint16_t val)
 {
 	opt[0] = type;
 	opt[1] = 2;
@@ -404,7 +404,7 @@ static inline int dhcp_option_short(uint8_t * opt, uint8_t type, uint16_t val)
 	return 4;
 }
 
-static inline int dhcp_option_long(uint8_t * opt, uint8_t type, uint32_t val)
+static inline int dhcp_option_long(uint8_t * opt, int type, uint32_t val)
 {
 	opt[0] = type;
 	opt[1] = 4;
@@ -1048,7 +1048,7 @@ void dhcp_tmr(unsigned int dt)
 	} 
 }
 
-int __attribute__((noreturn)) dhcpc_task(struct udp_pcb * udp)
+void __attribute__((noreturn)) dhcpc_task(struct udp_pcb * udp)
 {
 	uint8_t buf[DHCP_MAX_SUPPORTED_MSG_SIZE];
 	struct sockaddr_in sin;

@@ -24,6 +24,7 @@
  */ 
 
 #include "httpd-i.h"
+#include "http_hdr.h"
 
 /* CRC8 (polynomial x^8 + x^5 + x^4) */
 const uint8_t crc8_lut[256] = {
@@ -122,7 +123,7 @@ static inline unsigned int crc8(unsigned int crc, const void * buf, int len) {
 #define HTTPAUTH_DIGEST             0x00
 
 
-static int get_method(struct tcp_pcb * tp)
+static int http_get_method(struct tcp_pcb * tp)
 {
 	char cp[1];
 	int hash;
@@ -155,7 +156,7 @@ static int get_method(struct tcp_pcb * tp)
 	return HTTP_UNKNOWN;
 }
 
-static int get_uri(struct tcp_pcb * tp, char * uri, int max)
+static int http_get_uri(struct tcp_pcb * tp, char * uri, int max)
 {
 	char * cp;
 	int ret;
@@ -185,7 +186,7 @@ static int get_uri(struct tcp_pcb * tp, char * uri, int max)
 	return -1;
 }
 
-static int get_version(struct tcp_pcb * tp)
+static int http_get_version(struct tcp_pcb * tp)
 {
 	int version = 0;
 	char cp[1];
@@ -216,180 +217,178 @@ static int get_version(struct tcp_pcb * tp)
 	return -1;
 }
 
-static int get_hdr_line(struct tcp_pcb * tp, char * val, int max)
-{
-	char buf[1];
-	char * cp;
-	int hash;
-	int ret;
-	int c;
-	int n;
-
-	DCC_LOG(LOG_INFO, "----------------");
-	hash = 0;
-	cp = buf;
-	/*
-	 * Parsing the Header Line
-	 */
-	for (;;) {
-		/* read data - character at time */
-		/* FIXME: this is quite slow ... */
-		if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-			return ret;
-
-		if ((c = *cp) == ':') {
-
-			cp = val;
-			n = 0;
-
-			/* remove leading blanks */
-			do {
-				if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-					return ret;
-			} while ((c = *cp) == ' ');
-
-			/* get the value */
-			while (c != '\r') {
-				if (n < max) {
-					cp++;
-					n++;
-				}
-
-				if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-					return ret;
-
-				c = *cp;
-				DCC_LOG1(LOG_INFO, "'%c'", c);
-			}
-
-			/* append zero */
-			*cp = '\0';
-			cp = buf;
-			break;
-		}
-
-		if (c == '\r')
-			break;
-
-		DCC_LOG1(LOG_INFO, "'%c'", c);
-
-		hash = __crc8(hash, c);
-	}
-
-	if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-		return ret;
-
-	if ((c = *cp) == '\n')
-		return hash;
-
-	/* Malformed request line, respond with: 400 Bad Request */
-	return -1;
-}
-
 #define HTML_HDR_VAL_LEN_MAX 80
 
-static int parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
+static int http_process_field(struct httpctl * ctl,
+		unsigned int hdr, char * val)
 {
-	char val[HTML_HDR_VAL_LEN_MAX + 1];
-	int opt;
+	DCC_LOG1(LOG_INFO, "header field received: %s", http_hdr_name[hdr]);
 
-	/*
-	 * Parsing the Header Field Lines
-	 */
-	while ((opt = get_hdr_line(tp, val, HTML_HDR_VAL_LEN_MAX)) > 0) {
-		switch (opt) {
-		/* Request Header Fields */
-		case HTTPHDR_AUTHORIZATION:
-			DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
-			break;
-		case HTTPHDR_CONTENT_TYPE:
-			/* hash the content type */
-			ctl->ctype = crc8(0, val, strlen(val));
-			DCC_LOG1(LOG_INFO, "Content-Type: 0x%02x", ctl->ctype);
-			break;
-		case HTTPHDR_CONTENT_LENGTH:
-			ctl->ctlen = atoi(val);
-			DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->ctlen);
-			break;			
-		case HTTPHDR_ACCEPT:
-			DCC_LOG1(LOG_INFO, "Accept: %c ...", val[0]);
-			break;
-		case HTTPHDR_ACCEPT_CHARSET:
-			DCC_LOG1(LOG_INFO, "Accept-Charset: %c ...", val[0]);
-			break;
-		case HTTPHDR_ACCEPT_ENCODING:
-			DCC_LOG1(LOG_INFO, "Accept-Encoding: %c ...", val[0]);
-			break;
-		case HTTPHDR_ACCEPT_LANGUAGE:
-			DCC_LOG1(LOG_INFO, "Accept-Language: %c ...", val[0]);
-			break;
-		case HTTPHDR_EXPECT:
-			DCC_LOG1(LOG_INFO, "Expect: %c ...", val[0]);
-			break;
-		case HTTPHDR_HOST:
-			DCC_LOG1(LOG_INFO, "Host: %c ...", val[0]);
-			break;
-		case HTTPHDR_IF_MATCH:
-			DCC_LOG1(LOG_INFO, "If-Match: %c ...", val[0]);
-			break;
-		case HTTPHDR_IF_MODIFIED_SINCE:
-			DCC_LOG1(LOG_INFO, "If-Modified-Since: %c ...", val[0]);
-			break;
-		case HTTPHDR_IF_NONE_MATCH:
-			DCC_LOG1(LOG_INFO, "If-None-Match: %c ...", val[0]);
-			break;
-		case HTTPHDR_IF_RANGE:
-			DCC_LOG1(LOG_INFO, "If-Range: %c ...", val[0]);
-			break;
-		case HTTPHDR_IF_UNMODIFIED_SINCE:
-			DCC_LOG1(LOG_INFO, "If-Unmodified-Since: %c ...", val[0]);
-			break;
-		case HTTPHDR_MAX_FORWARDS:
-			DCC_LOG1(LOG_INFO, "Max-Forwards: %c ...", val[0]);
-			break;
-		case HTTPHDR_PROXY_AUTHORIZATION:
-			DCC_LOG1(LOG_INFO, "Proxy-Authorization: %c ...", val[0]);
-			break;
-		case HTTPHDR_RANGE:
-			DCC_LOG1(LOG_INFO, "Range: %c ...", val[0]);
-			break;
-		case HTTPHDR_REFERER:
-			DCC_LOG1(LOG_INFO, "Referer: %c ...", val[0]);
-			break;
-		case HTTPHDR_TE:
-			DCC_LOG1(LOG_INFO, "Te: %c ...", val[0]);
-			break;
-		case HTTPHDR_USER_AGENT:
-			DCC_LOG1(LOG_INFO, "User-Agent: %c ...", val[0]);
-			break;
-		/* Hop-by-Hop Headers */
-		case HTTPHDR_CONNECTION:
-			DCC_LOG1(LOG_INFO, "Connection: %c ...", val[0]);
-			break;
-		case HTTPHDR_KEEP_ALIVE:
-			DCC_LOG1(LOG_INFO, "keep-Alive: %c ...", val[0]);
-			break;
-		case HTTPHDR_TRAILERS:
-			DCC_LOG1(LOG_INFO, "Trailers: %c ...", val[0]);
-			break;
-		case HTTPHDR_PROXY_AUTHENTICATE:
-			DCC_LOG1(LOG_INFO, "Proxy-Authenticate: %c ...", val[0]);
-			break;
-		case HTTPHDR_TRANSFER_ENCODING:
-			DCC_LOG1(LOG_INFO, "Transfer-Encoding: %c ...", val[0]);
-			break;
-		case HTTPHDR_UPGRADE:
-			DCC_LOG1(LOG_INFO, "Upgrade: %c ...", val[0]);
-			break;
-		case HTTPHDR_CACHE_CONTROL:
-			DCC_LOG1(LOG_INFO, "Cache-Control: %c ...", val[0]);
-			break;
-		default:
-			DCC_LOG2(LOG_INFO, "opt=%02x: %c ...", opt, val[0]);
+	switch (hdr) {
+	/* Request Header Fields */
+	case HTTP_HDR_AUTHORIZATION:
+		DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
+		break;
+	case HTTP_HDR_CONTENT_TYPE:
+		/* hash the content type */
+		ctl->ctype = crc8(0, val, strlen(val));
+		DCC_LOG1(LOG_INFO, "Content-Type: 0x%02x", ctl->ctype);
+		break;
+	case HTTP_HDR_CONTENT_LENGTH:
+		ctl->ctlen = atoi(val);
+		DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->ctlen);
+		break;
+	case HTTP_HDR_ACCEPT:
+		DCC_LOG1(LOG_INFO, "Accept: %c ...", val[0]);
+		break;
+	case HTTP_HDR_ACCEPT_CHARSET:
+		DCC_LOG1(LOG_INFO, "Accept-Charset: %c ...", val[0]);
+		break;
+	case HTTP_HDR_ACCEPT_ENCODING:
+		DCC_LOG1(LOG_INFO, "Accept-Encoding: %c ...", val[0]);
+		break;
+	case HTTP_HDR_ACCEPT_LANGUAGE:
+		DCC_LOG1(LOG_INFO, "Accept-Language: %c ...", val[0]);
+		break;
+	case HTTP_HDR_EXPECT:
+		DCC_LOG1(LOG_INFO, "Expect: %c ...", val[0]);
+		break;
+	case HTTP_HDR_HOST:
+		DCC_LOG1(LOG_INFO, "Host: %c ...", val[0]);
+		break;
+	case HTTP_HDR_IF_MATCH:
+		DCC_LOG1(LOG_INFO, "If-Match: %c ...", val[0]);
+		break;
+	case HTTP_HDR_IF_MODIFIED_SINCE:
+		DCC_LOG1(LOG_INFO, "If-Modified-Since: %c ...", val[0]);
+		break;
+	case HTTP_HDR_IF_NONE_MATCH:
+		DCC_LOG1(LOG_INFO, "If-None-Match: %c ...", val[0]);
+		break;
+	case HTTP_HDR_IF_RANGE:
+		DCC_LOG1(LOG_INFO, "If-Range: %c ...", val[0]);
+		break;
+	case HTTP_HDR_IF_UNMODIFIED_SINCE:
+		DCC_LOG1(LOG_INFO, "If-Unmodified-Since: %c ...", val[0]);
+		break;
+	case HTTP_HDR_MAX_FORWARDS:
+		DCC_LOG1(LOG_INFO, "Max-Forwards: %c ...", val[0]);
+		break;
+	case HTTP_HDR_PROXY_AUTHORIZATION:
+		DCC_LOG1(LOG_INFO, "Proxy-Authorization: %c ...", val[0]);
+		break;
+	case HTTP_HDR_RANGE:
+		DCC_LOG1(LOG_INFO, "Range: %c ...", val[0]);
+		break;
+	case HTTP_HDR_REFERER:
+		DCC_LOG1(LOG_INFO, "Referer: %c ...", val[0]);
+		break;
+	case HTTP_HDR_TE:
+		DCC_LOG1(LOG_INFO, "Te: %c ...", val[0]);
+		break;
+	case HTTP_HDR_USER_AGENT:
+		DCC_LOG1(LOG_INFO, "User-Agent: %c ...", val[0]);
+		break;
+	/* Hop-by-Hop Headers */
+	case HTTP_HDR_CONNECTION:
+		DCC_LOG1(LOG_INFO, "Connection: %c ...", val[0]);
+		break;
+	case HTTP_HDR_TRAILER:
+		DCC_LOG1(LOG_INFO, "Trailers: %c ...", val[0]);
+		break;
+	case HTTP_HDR_PROXY_AUTHENTICATE:
+		DCC_LOG1(LOG_INFO, "Proxy-Authenticate: %c ...", val[0]);
+		break;
+	case HTTP_HDR_TRANSFER_ENCODING:
+		DCC_LOG1(LOG_INFO, "Transfer-Encoding: %c ...", val[0]);
+		break;
+	case HTTP_HDR_UPGRADE:
+		DCC_LOG1(LOG_INFO, "Upgrade: %c ...", val[0]);
+		break;
+	case HTTP_HDR_CACHE_CONTROL:
+		DCC_LOG1(LOG_INFO, "Cache-Control: %c ...", val[0]);
+		break;
+	default:
+		DCC_LOG2(LOG_INFO, "hdr=%02x: %c ...", hdr, val[0]);
+	}
+
+	return 0;
+}
+
+static int http_parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
+{
+	char * buf = (char *)ctl->buf;
+	int n;
+	int i;
+	int c1;
+	int c2;
+	int rem;
+	int cnt;
+	int ln;
+	int pos;
+
+	rem = HTTP_RCVBUF_LEN; /* free space in the input buffer */
+	cnt = 0; /* used space in the input buffer */
+	ln = 0; /* line start */
+	pos = 0; /* header position */
+	c1 = '\0';
+
+	/* receive and decode RTSP headers */
+	while ((n = tcp_recv(tp, &buf[cnt], rem)) > 0)  {
+		rem -= n;
+		i = cnt;
+		cnt += n;
+		for (; i < cnt; ++i) {
+			c2 = buf[i];
+			if (c1 == '\r' && c2 == '\n') {
+				char * val;
+				unsigned int hdr;
+
+				buf[i - 1] = '\0';
+				if (i == ln + 1) {
+					i++;
+					ctl->cnt = cnt;
+					ctl->pos = i;
+					ctl->lin = i;
+					return 0;
+				}
+
+				if ((hdr = http_parse_field(&buf[ln], &val)) == 0) {
+					DCC_LOG(LOG_WARNING, "invalid header field");
+					return -1;
+				}
+
+				if (http_process_field(ctl, hdr, val) < 0) {
+					return -1;
+				}
+
+				/* increment header counter */
+				pos++;
+				/* move to the next line */
+				ln = i + 1;
+			}
+			c1 = c2;
+		}
+
+		if (ln != 0) {
+			int j;
+
+			for (i = 0, j = ln; j < cnt; ++i, ++j)
+				buf[i] = buf[j];
+			cnt = i;
+			rem = HTTP_RCVBUF_LEN - i;
+			ln = 0;
+		}
+
+		if (rem <= 0) {
+			DCC_LOG(LOG_ERROR, "buffer ovreflow!");
+			return -1;
 		}
 	}
 
-	return opt;
+	tcp_close(tp);
+
+	return -1;
 }
 
 int http_accept(struct httpd * httpd, struct httpctl * ctl)
@@ -406,16 +405,16 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	DCC_LOG1(LOG_INFO, "ctl=%p accepted.", ctl);
 	memset(ctl, 0, sizeof(struct httpctl));
 
-	ctl->method = get_method(tp);
+	ctl->method = http_get_method(tp);
 	DCC_LOG1(LOG_INFO, "method=%d", ctl->method);
 
-	get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
+	http_get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
 	DCC_LOG1(LOG_INFO, "uri='%c ...'", ctl->uri[0]);
 
-	ctl->version = get_version(tp);
+	ctl->version = http_get_version(tp);
 	DCC_LOG1(LOG_INFO, "version=%d", ctl->version);
 
-	if (parse_hdr(tp, ctl) < 0) {
+	if (http_parse_hdr(tp, ctl) < 0) {
 		/* Malformed request line, respond with: 400 Bad Request */
 		httpd_400(tp);
 		tcp_close(tp);
@@ -424,7 +423,7 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 
 	ctl->tp = tp;
 	ctl->httpd = httpd;
-	
+
 	DCC_LOG1(LOG_INFO, "version=%d", ctl->version);
 
 	return 0;
