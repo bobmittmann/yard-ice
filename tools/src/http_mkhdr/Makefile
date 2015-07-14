@@ -27,7 +27,7 @@ STRIP = strip
 all: Makefile $(PROJECT)
 
 clean: 
-	@rm -fv http_*.* $(OFILES) mkhdr.exe
+	@rm -fv http_*.* mime.* $(OFILES) mkhdr.exe
 
 .PHONY: all clean
 

@@ -25,7 +25,9 @@ LIB_STATIC = httpd
 
 CFILES = 200.c 400.c 401.c 403.c 404.c 405.c 408.c 409.c 410.c \
 		411.c 413.c 414.c 415.c 500.c 501.c 503.c 505.c \
-		base64.c nvparse.c httpd.c get.c post.c #dirlist.c get.c post.c 
+		base64.c nvparse.c httpd.c get.c post.c http_hdr.c http_mime.c \
+		http_resp.c http_recv.c http_send.c
+		 
 
 override INCPATH += ../include ./include
 

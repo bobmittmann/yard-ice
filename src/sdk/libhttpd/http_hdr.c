@@ -13,6 +13,60 @@
    algorithm, using libc's rand() and srand(10264)
 */
 
+const char * http_hdr_name[] = {
+	"",
+	"Accept",
+	"Accept-Charset",
+	"Accept-Encoding",
+	"Accept-Language",
+	"Accept-Ranges",
+	"Age",
+	"Allow",
+	"Authorization",
+	"Cache-Control",
+	"Connection",
+	"Content-Encoding",
+	"Content-Language",
+	"Content-Length",
+	"Content-Location",
+	"Content-MD5",
+	"Content-Range",
+	"Content-Type",
+	"Cookie",
+	"Date",
+	"ETag",
+	"Expect",
+	"Expires",
+	"From",
+	"Host",
+	"If-Match",
+	"If-Modified-Since",
+	"If-None-Match",
+	"If-Range",
+	"If-Unmodified-Since",
+	"Last-Modified",
+	"Location",
+	"Max-Forwards",
+	"Pragma",
+	"Proxy-Authenticate",
+	"Proxy-Authorization",
+	"Range",
+	"Referer",
+	"Retry-After",
+	"Server",
+	"Set-Cookie",
+	"Set-Cookie2",
+	"TE",
+	"Trailer",
+	"Transfer-Encoding",
+	"Upgrade",
+	"User-Agent",
+	"Vary",
+	"Via",
+	"Warning",
+	"WWW-Authenticate"
+};
+
 /* ----------------------------------------------------------------
  * HTTP header permutation table
  * ---------------------------------------------------------------- */
@@ -91,14 +145,14 @@ static const uint8_t h_tab[] = {
  * Get header id from header name
  * ---------------------------------------------------------------- */
 
-unsigned int http_hdr_id(const char * s)
+unsigned int http_hdr_id(const char * str)
 {
-	int i, c;
 	int h = 0;
+	int c;
+	int i;
 
-	while ((c = *s++) != '\0') {
-		i = h ^ c;
-		h = p_tab[i];
+	for (i = 0; (c = str[i]) != '\0'; ++i) {
+		h = p_tab[c ^ h];
 	}
 
 	return h_tab[h];
@@ -108,24 +162,25 @@ unsigned int http_hdr_id(const char * s)
  * Parse header field, return field id and value.
  * ---------------------------------------------------------------- */
 
-unsigned int http_parse_field(const char * buf, char ** val)
+unsigned int http_parse_field(const char * str, char ** endptr)
 {
 	int h = 0;
 	int c;
 	int i;
-	for (i = 0; (c = buf[i]) != '\0'; ++i) {
+
+	for (i = 0; (c = str[i]) != '\0'; ++i) {
 		if ((c == ':') || (c == ' ')) {
-			if (val != NULL) {
-				char * cp = (char *)&buf[i + 1];
-				/* remove leading blanks */
+			if (endptr != NULL) {
+				char * cp = (char *)&str[i + 1];
 				while (*cp == ' ')
 					cp++;
-				*val = cp;
+				*endptr = cp;
 			}
 			return h_tab[h];
 		}
 		h = p_tab[c ^ h];
 	}
+
 	return 0;
 }
 

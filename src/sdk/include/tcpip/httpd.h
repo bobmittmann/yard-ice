@@ -45,23 +45,13 @@
 #define HTTPD_QUERY_LST_MAX 16
 #endif
 
-
-/* Mime types */
-enum {
-	TEXT_HTML = 0,
-	TEXT_PLAIN,
-	TEXT_CSS,
-	APPLICATION_JAVASCRIPT,
-	APPLICATION_JASON,
-	APPLICATION_XML,
-	IMAGE_PNG,
-	IMAGE_JPEG,
-	IMAGE_GIF
-};
+/* 'GET http://www.domain.xxx/somedir/subdir/file.html HTTP/1.1' CRLF */
+#define HTTP_RCVBUF_LEN (HTTPD_URI_MAX_LEN + 16)
 
 
-enum {
-	OBJ_STATIC_HTML = 0,
+enum http_oid {
+	OBJ_VOID = 0,
+	OBJ_STATIC_HTML,
 	OBJ_STATIC_TEXT,
 	OBJ_STATIC_CSS,
 	OBJ_STATIC_JS,
@@ -78,7 +68,7 @@ enum {
 	OBJ_CODE_JS,
 };
 
-enum {
+enum http_method {
 	HTTP_UNKNOWN = 0,
 	HTTP_OPTIONS = 1,
 	HTTP_GET = 2,
@@ -88,6 +78,20 @@ enum {
 	HTTP_DELETE = 6,
 	HTTP_TRACE = 7,
 	HTTP_CONNECT = 8
+};
+
+enum mime_type {
+    TEXT_HTML = 1,
+    TEXT_PLAIN = 2,
+    TEXT_CSS = 3,
+    IMAGE_PNG = 4,
+    IMAGE_JPEG = 5,
+    IMAGE_GIF = 6,
+    APPLICATION_JAVASCRIPT = 7,
+    APPLICATION_JSON = 8,
+    APPLICATION_XML = 9,
+    MULTIPART_FORM_DATA = 10,
+    APPLICATION_X_WWW_FORM_URLENCODED = 11
 };
 
 struct httpdobj {
@@ -130,7 +134,6 @@ struct httpqry {
 	char * val;
 };
 
-#define HTTP_RCVBUF_LEN 128
 
 /* 
  * HTTP connection control structure
@@ -145,10 +148,11 @@ struct httpctl {
 	uint8_t ctbound;
 	uint8_t ctlen;
 	uint8_t qrycnt;
-	uint16_t lin;
-	uint16_t cnt;
-	uint16_t pos;
-	uint8_t buf[HTTP_RCVBUF_LEN];
+	struct {
+		uint16_t cnt;
+		uint16_t pos;
+		uint32_t buf[(HTTP_RCVBUF_LEN + 3) / 4];
+	} rcvq; /* receive queue */
 	struct httpqry qrylst[HTTPD_QUERY_LST_MAX];
 	char * usr;
 	char * pwd;
@@ -189,6 +193,10 @@ int httpd_stop(struct httpd * httpd);
 int http_accept(struct httpd * httpd, struct httpctl * ctl);
 
 int http_close(struct httpctl * ctl);
+
+int http_recv(struct httpctl * ctl, void * buf, unsigned int len);
+
+int http_send(struct httpctl * ctl, const void * buf, unsigned int len);
 
 int http_get(struct httpctl * ctl, const struct httpdobj * obj);
 

@@ -10,13 +10,7 @@
  */
 
 #include "httpd-i.h"
-
-/* application/x-www-form-urlencoded  */
-#define HASH_APPLICATION_X_WWW_FORM_URLENCODED 0x58
-
-/* multipart/form-data */
-#define HASH_MULTIPART_FORM_DATA 0x92
-
+#include "http_hdr.h"
 
 void post_url_form_recv(struct tcp_pcb * tp, int event)
 {
@@ -383,8 +377,6 @@ void post_multipart_form_recv(struct tcp_pcb * tp, int event)
 #endif
 }
 
-uint32_t mk_ext_hash(char * ext);
-
 #define HEX2INT(C) (((C) <= '9') ? (C) - '0' : (C) - ('A' - 10))
 
 #define HTTP_QUERY_KEY_MAX 16
@@ -469,7 +461,7 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 	content_type = ctl->ctype;
 	content_len = ctl->ctlen;
 
-	if ((content_type == HASH_APPLICATION_X_WWW_FORM_URLENCODED) && 
+	if ((content_type == APPLICATION_X_WWW_FORM_URLENCODED) &&
 		(content_len > 0)) {
 		char buf[HTTP_FORM_CONTENT_MAX];
 		int n;
@@ -479,7 +471,7 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 		len = content_len > HTTP_FORM_CONTENT_MAX ? 
 			HTTP_FORM_CONTENT_MAX : content_len;
 
-		if ((len = tcp_recv(ctl->tp, buf, len)) <= 0) {
+		if ((len = http_recv(ctl, buf, len)) <= 0) {
 			return len;
 		}
 
@@ -493,7 +485,7 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 
 		ctl->qrycnt = n;
 
-	} else if ((content_type == HASH_MULTIPART_FORM_DATA) && 
+	} else if ((content_type == MULTIPART_FORM_DATA) &&
 			   (content_len > 0)) {
 
 		DCC_LOG(LOG_TRACE, "multipart/form-data");

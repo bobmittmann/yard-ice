@@ -99,19 +99,19 @@ int get_data_cgi(struct httpctl * ctl)
 	rows = atoi(http_query_lookup(ctl, "rows")); 
 	DCC_LOG1(LOG_TRACE, "rows=%d", rows);
 
-	httpd_200(ctl->tp, APPLICATION_JASON);
+	httpd_200(ctl->tp, APPLICATION_JSON);
 
 	n = snprintf(s, S_MAX, "{\"list\": [");
-	tcp_send(ctl->tp, s, n, 0);
+	http_send(ctl, s, n);
 	for (i = 0; i < rows; ++i) {
 		if (i == 0)
 			n = snprintf(s, S_MAX, "{\"fname\":\"Row %d\"}", i);
 		else
 			n = snprintf(s, S_MAX, ",{\"fname\":\"Row %d\"}", i);
-		tcp_send(ctl->tp, s, n, 0);
+		http_send(ctl, s, n);
 	}
 	n = snprintf(s, S_MAX, "]}\r\n");
-	tcp_send(ctl->tp, s, n, 0);
+	http_send(ctl, s, n);
 
 	return 0;
 }

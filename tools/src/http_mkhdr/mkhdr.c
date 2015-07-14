@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 
 struct {
 	int code;
@@ -52,10 +53,12 @@ struct {
 	{ 999, NULL, NULL },
 };  
 
-struct {
+struct sym {
 	char * nm;
 	char * def;
-} http_req_hdr[] = {
+};
+
+struct sym http_req_hdr[] = {
 	{"Accept", "HTTP_HDR_ACCEPT"},
 	{"Accept-Charset", "HTTP_HDR_ACCEPT_CHARSET"},
 	{"Accept-Encoding", "HTTP_HDR_ACCEPT_ENCODING"},
@@ -109,16 +112,19 @@ struct {
 	{NULL, NULL}
 };
 
-const char * method[] = {
-	"HTTP_OPTIONS",
-	"HTTP_GET",
-	"HTTP_HEAD",
-	"HTTP_POST",
-	"HTTP_PUT",
-	"HTTP_DELETE",
-	"HTTP_TRACE",
-	"HTTP_CONNECT",
-	NULL
+struct sym mime_type[] = {
+	{"text/html",                         "TEXT_HTML"},
+	{"text/plain",                        "TEXT_PLAIN"},
+	{"text/css",                          "TEXT_CSS"},
+	{"image/png",                         "IMAGE_PNG"},
+	{"image/jpeg",                        "IMAGE_JPEG"},
+	{"image/gif",                         "IMAGE_GIF"},
+	{"application/javascript",            "APPLICATION_JAVASCRIPT"},
+	{"application/json",                  "APPLICATION_JSON"},
+	{"application/xml",                   "APPLICATION_XML"},
+	{"multipart/form-data",               "MULTIPART_FORM_DATA"},
+	{"application/x-www-form-urlencoded", "APPLICATION_X_WWW_FORM_URLENCODED"},
+	{NULL, NULL}
 };
 
 /* Pearson Hashing */
@@ -180,8 +186,8 @@ static int p_hash(uint8_t * a, char * s)
 	return h;
 }
 
-
-int mk_h_tab(FILE * f, uint8_t * h, int h_len, 
+int mk_h_tab(FILE * f, struct sym sym[],
+			 uint8_t * h, int h_len, 
 			 uint8_t * p, int p_len)
 {
 	char * s;
@@ -198,7 +204,7 @@ int mk_h_tab(FILE * f, uint8_t * h, int h_len,
 		for (i = 0; i < h_len; i++)
 			h[i] = 0;
 
-		for (i = 0; (s = http_req_hdr[i].nm) != NULL; i++) {
+		for (i = 0; (s = sym[i].nm) != NULL; i++) {
 			j = p_hash(p, s);
 			if (h[j] != 0) {
 				/* collision */
@@ -222,6 +228,111 @@ int mk_h_tab(FILE * f, uint8_t * h, int h_len,
 	return -1;
 }
 
+void dump_symtab(FILE * f, char * name, struct sym sym[])
+{
+	char * s;
+	int i;
+
+	fprintf(f, "const char * %s[] = {", name);
+	fprintf(f, "\n\t\"\",");
+	for (i = 0; (s = sym[i].nm) != NULL; i++) {
+		if (i == 0)
+			fprintf(f, "\n\t");
+		else
+			fprintf(f, ",\n\t");
+
+		fprintf(f, "\"%s\"", s);
+	}
+	fprintf(f, "\n};\n\n");
+}
+
+void dump_symdef(FILE * f, struct sym sym[])
+{
+	int i;
+
+	fprintf(f, "enum {");
+	for (i = 0; sym[i].nm != NULL; i++) {
+		if (i == 0)
+			fprintf(f, "\n\t");
+		else
+			fprintf(f, ",\n\t");
+		fprintf(f, "%s = %d", sym[i].def, i + 1);
+	}
+	fprintf(f, "\n};\n\n");
+}
+
+void write_parser(FILE * f, char * name, char * sep, bool cont)
+{
+	int i;
+	int sep_cnt;
+
+	sep_cnt = (sep == NULL) ? 0 : strlen(sep);
+
+	if (sep_cnt == 0) {
+		fprintf(f, "unsigned int %s(const char * str)\n", name);
+		fprintf(f, "{\n");
+		fprintf(f, "\tint h = 0;\n");
+		fprintf(f, "\tint c;\n");
+		fprintf(f, "\tint i;\n");
+		fprintf(f, "\n");
+		fprintf(f, "\tfor (i = 0; (c = str[i]) != '\\0'; ++i) {\n");
+		fprintf(f, "\t\th = p_tab[c ^ h];\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+		fprintf(f, "\treturn h_tab[h];\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	} else {
+		fprintf(f, "unsigned int %s(const char * str, char ** endptr)\n", 
+				name);
+		fprintf(f, "{\n");
+		fprintf(f, "\tint h = 0;\n");
+		fprintf(f, "\tint c;\n");
+		fprintf(f, "\tint i;\n");
+		fprintf(f, "\n");
+		if (cont) {
+			fprintf(f, "\tfor (i = 0; (c = str[i]) != '\\0'; ++i) {\n");
+		} else {
+			fprintf(f, "\tfor (i = 0; ; ++i) {\n");
+			fprintf(f, "\t\tc = str[i];\n");
+			fprintf(f, "\t\tif (c == '\\0') {\n");
+			fprintf(f, "\t\t\tif (endptr != NULL)\n");
+			fprintf(f, "\t\t\t\t*endptr = (char *)&str[i];\n");
+			fprintf(f, "\t\t\treturn h_tab[h];\n");
+			fprintf(f, "\t\t}\n");
+		}
+
+		if (sep_cnt == 1) {
+			fprintf(f, "\t\tif (c == '%c') {\n", sep[0]);
+		} else {
+			fprintf(f, "\t\tif ((c == '%c')", sep[0]);
+			for (i = 1; i < sep_cnt; ++i)
+				fprintf(f, " || (c == '%c')", sep[i]);
+			fprintf(f, ") {\n");
+		}
+
+		fprintf(f, "\t\t\tif (endptr != NULL) {\n");
+		fprintf(f, "\t\t\t\tchar * cp = (char *)&str[i + 1];\n");
+		fprintf(f, "\t\t\t\twhile (*cp == ' ')\n");
+		fprintf(f, "\t\t\t\t\tcp++;\n");
+		fprintf(f, "\t\t\t\t*endptr = cp;\n");
+		fprintf(f, "\t\t\t}\n");
+		fprintf(f, "\t\t\treturn h_tab[h];\n");
+		fprintf(f, "\t\t}\n");
+		fprintf(f, "\t\th = p_tab[c ^ h];\n");
+		fprintf(f, "\t}\n");
+		fprintf(f, "\n");
+		fprintf(f, "\treturn 0;\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+}
+
+/* -------------------------------------------------------------------------
+ *
+ *
+ * -------------------------------------------------------------------------
+ */
 
 int make_h(char * fname)
 {
@@ -241,27 +352,9 @@ int make_h(char * fname)
 
 	fprintf(f, "#include <stdint.h>\n\n");
 
-	fprintf(f, "enum {");
-	for (i = 0; http_req_hdr[i].nm != NULL; i++) {
-		if (i == 0)
-			fprintf(f, "\n\t");
-		else
-			fprintf(f, ",\n\t");
-		fprintf(f, "%s = %d", http_req_hdr[i].def, i + 1);
-	}
-	fprintf(f, "\n};\n\n");
+	dump_symdef(f, http_req_hdr);
 
-
-	fprintf(f, "enum {");
-	for (i = 0; method[i] != NULL; i++) {
-		if (i == 0)
-			fprintf(f, "\n\t");
-		else
-			fprintf(f, ",\n\t");
-		fprintf(f, "%s = %d", method[i], i + 1);
-	}
-	fprintf(f, "\n};\n\n");
-
+	dump_symdef(f, mime_type);
 
 	fprintf(f, "enum {");
 	for (i = 0; response[i].phrase != NULL; i++) {
@@ -281,6 +374,9 @@ int make_h(char * fname)
 	fprintf(f, "unsigned int http_hdr_id(const char * s);\n");
 	fprintf(f, "\n");
 	fprintf(f, "unsigned int http_parse_field(const char * buf, char ** val);\n");
+	fprintf(f, "\n");
+	fprintf(f, "unsigned int http_parse_content_type(const char * str, "
+		"char ** endptr);\n");
 	fprintf(f, "\n");
 	fprintf(f, "const char * http_reason_phrase(unsigned int code);\n");
 	fprintf(f, "\n");
@@ -302,7 +398,7 @@ void comment_block(FILE * f, char * comment)
 	fprintf(f, "-------------- */\n\n");
 }
 
-int make_parse_c(char * fname)
+int make_hdr_c(char * fname)
 {
 	uint8_t p_tab[256];
 	uint8_t h_tab[256];
@@ -325,13 +421,15 @@ int make_parse_c(char * fname)
 	fprintf(f, "#include <stdlib.h>\n");
 	fprintf(f, "\n");
 
-	if (mk_h_tab(f, h_tab, 256, p_tab, 256) < 0) {
+	if (mk_h_tab(f, http_req_hdr, h_tab, 256, p_tab, 256) < 0) {
 		fprintf(f, "#error \"Perfect hashing is not possible\"\n");
 		fprintf(f, "\n");
 		fclose(f);
 		return 1;
 	}
 
+	fprintf(f, "/* http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html */\n");
+	dump_symtab(f, "http_hdr_name", http_req_hdr);
 
 	comment_block(f, "HTTP header permutation table");
 	dump_tab(f, "static const", p_tab, 256, "p_tab");
@@ -340,49 +438,72 @@ int make_parse_c(char * fname)
 
 	comment_block(f, "Get header id from header name");
 
-	fprintf(f, "unsigned int http_hdr_id(const char * s)\n{\n");
-	fprintf(f, "\tint i, c;\n");
-	fprintf(f, "\tint h = 0;\n\n");
-	fprintf(f, "\twhile ((c = *s++) != '\\0') {\n");
-	fprintf(f, "\t	i = h ^ c;\n");
-	fprintf(f, "\t	h = p_tab[i];\n");
-	fprintf(f, "\t}\n\n");
-	fprintf(f, "\treturn h_tab[h];\n}\n\n");
+	write_parser(f, "http_hdr_id", "", false);
 
 	comment_block(f, "Parse header field, return field id and value.");
 
-	fprintf(f, "unsigned int http_parse_field(const char * buf, char ** val)\n");
-	fprintf(f, "{\n");
-	fprintf(f, "\tint h = 0;\n");
-	fprintf(f, "\tint c;\n");
-	fprintf(f, "\tint i;\n");
-	fprintf(f, "\tfor (i = 0; (c = buf[i]) != '\\0'; ++i) {\n");
-	fprintf(f, "\t\tif ((c == ':') || (c == ' ')) {\n");
-	fprintf(f, "\t\t\tif (val != NULL) {\n");
-	fprintf(f, "\t\t\t\tchar * cp = (char *)&buf[i + 1];\n");
-	fprintf(f, "\t\t\t\t/* remove leading blanks */\n");
-	fprintf(f, "\t\t\t\twhile (*cp == ' ')\n");
-	fprintf(f, "\t\t\t\t\tcp++;\n");
-	fprintf(f, "\t\t\t\t*val = cp;\n");											
-	fprintf(f, "\t\t\t}\n");
-	fprintf(f, "\t\t\treturn h_tab[h];\n");
-	fprintf(f, "\t\t}\n");
-	fprintf(f, "\t\th = p_tab[c ^ h];\n");
-	fprintf(f, "\t}\n");
-	fprintf(f, "\treturn 0;\n");
-	fprintf(f, "}\n");
-	fprintf(f, "\n");
+	write_parser(f, "http_parse_field", ": ", true);
 
 	fclose(f);
 
 	return 0;
 }
 
+int make_mime_c(char * fname)
+{
+	uint8_t p_tab[256];
+	uint8_t h_tab[256];
+	FILE * f;
+
+	if ((f = fopen(fname, "w+")) == NULL) {
+		fprintf(stderr, "#ERROR: fopen(): %s\n", strerror(errno));
+		return -1;
+	}
+
+	fprintf(f, "/*\n");
+	fprintf(f, " * WARNING: do not edit, this file was automatically generated.\n");
+	fprintf(f, "\n");
+	fprintf(f, "   Implementation of perfect hashing to parse MIME types\n");
+	fprintf(f, "   Perfect hashing uses a Pearson Hashing Function\n");
+	fprintf(f, "*/\n");
+	fprintf(f, "\n");
+
+	fprintf(f, "#include <stdint.h>\n");
+	fprintf(f, "#include <stdlib.h>\n");
+	fprintf(f, "\n");
+
+	if (mk_h_tab(f, mime_type, h_tab, 256, p_tab, 256) < 0) {
+		fprintf(f, "#error \"Perfect hashing is not possible\"\n");
+		fprintf(f, "\n");
+		fclose(f);
+		return 1;
+	}
+
+	fprintf(f, "/* Mime types */\n");
+	dump_symtab(f, "mime_type_name", mime_type);
+
+	comment_block(f, "MIME type permutation table");
+
+	dump_tab(f, "static const", p_tab, 256, "p_tab");
+	dump_tab(f, "static const", h_tab, 256, "h_tab");
+
+	comment_block(f, "Get header id from header name");
+
+	write_parser(f, "mime_type_id", "", false);
+
+	comment_block(f, "Parse content type.");
+
+	write_parser(f, "http_parse_content_type", ";", false);
+
+	fclose(f);
+
+	return 0;
+}
+
+
 int make_tabs_c(char * fname)
 {
 	FILE * f;
-	char * s;
-	int i;
 
 	if ((f = fopen(fname, "w+")) == NULL) {
 		fprintf(stderr, "#ERROR: fopen(): %s\n", strerror(errno));
@@ -396,17 +517,10 @@ int make_tabs_c(char * fname)
 	fprintf(f, "#include <stdlib.h>\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "const char * http_hdr_name[] = {");
-	fprintf(f, "\n\t\"\",");
-	for (i = 0; (s = http_req_hdr[i].nm) != NULL; i++) {
-		if (i == 0)
-			fprintf(f, "\n\t");
-		else
-			fprintf(f, ",\n\t");
+	dump_symtab(f, "http_hdr_name", http_req_hdr);
+	dump_symtab(f, "mime_type_name", mime_type);
 
-		fprintf(f, "\"%s\"", s);
-	}
-	fprintf(f, "\n};\n\n");
+	fclose(f);
 
 	return 0;
 }
@@ -482,7 +596,7 @@ int make_status_c(char * fname)
 	fprintf(f, "#include <stdlib.h>\n");
 	fprintf(f, "\n");
 
-	fprintf(f, "const char * http_reason_phrase[] = {");
+	fprintf(f, "static const char * reason_phrase[] = {");
 	fprintf(f, "\n\t\"\",");
 	for (i = 0; (s = response[i].phrase) != NULL; i++) {
 		if (i == 0)
@@ -505,7 +619,7 @@ int make_status_c(char * fname)
 
 	dump_tab(f, "static const", i_tab, 256, "i_tab");
 
-	fprintf(f, "const char * rtsp_reason_phrase(unsigned int code)\n{\n");
+	fprintf(f, "const char * http_reason_phrase(unsigned int code)\n{\n");
 	fprintf(f, "\tunsigned int h;\n\n");
 	if (r == 1)
 		fprintf(f, "\th = code;\n");
@@ -525,14 +639,14 @@ int main(int argc, char *argv[])
 	if (make_h("http_hdr.h") < 0)
 		return 1;
 
-	if (make_parse_c("http_hdrp.c") < 0)
+	if (make_hdr_c("http_hdr.c") < 0)
 		return 2;
-
-	if (make_tabs_c("http_hdrt.c") < 0)
-		return 3;
 
 	if (make_status_c("http_resp.c") < 0)
 		return 4;
+
+	if (make_mime_c("http_mime.c") < 0)
+		return 5;
 
 	return 0;
 }

@@ -26,198 +26,96 @@
 #include "httpd-i.h"
 #include "http_hdr.h"
 
-/* CRC8 (polynomial x^8 + x^5 + x^4) */
-const uint8_t crc8_lut[256] = {
-	  0,  49,  98,  83, 196, 245, 166, 151,
-	185, 136, 219, 234, 125,  76,  31,  46,
- 	 67, 114,  33,  16, 135, 182, 229, 212,
-	250, 203, 152, 169,  62,  15,  92, 109,
-	134, 183, 228, 213,  66, 115,  32,  17,
-	 63,  14,  93, 108, 251, 202, 153, 168,
-	197, 244, 167, 150,   1,  48,  99,  82,
-	124,  77,  30,  47, 184, 137, 218, 235,
-	 61,  12,  95, 110, 249, 200, 155, 170,
-	132, 181, 230, 215,  64, 113,  34,  19,
-	126,  79,  28, 45,  186, 139, 216, 233,
-	199, 246, 165, 148,   3,  50,  97,  80,
-	187, 138, 217, 232, 127,  78,  29,  44,
-	  2,  51,  96,  81, 198, 247, 164, 149,
-	248, 201, 154, 171,  60,  13, 94,  111,
-	 65, 112,  35,  18, 133, 180, 231, 214,
-	122,  75,  24,  41, 190, 143, 220, 237,
-	195, 242, 161, 144,   7,  54, 101,  84,
-	 57,   8,  91, 106, 253, 204, 159, 174,
-	128, 177, 226, 211,  68, 117,  38,  23,
-	252, 205, 158, 175,  56,   9,  90, 107,
-	 69, 116,  39,  22, 129, 176, 227, 210,
-	191, 142, 221, 236, 123,  74,  25,  40,
-	  6,  55, 100,  85, 194, 243, 160, 145,
-	 71, 118,  37,  20, 131, 178, 225, 208,
-	254, 207, 156, 173,  58,  11,  88, 105,
-	  4,  53, 102,  87, 192, 241, 162, 147,
-	189, 140, 223, 238, 121,  72,  27,  42,
-	193, 240, 163, 146,   5,  52, 103,  86,
-	120,  73,  26,  43, 188, 141, 222, 239,
-	130, 179, 224, 209,  70, 119,  36,  21,
-	 59,  10,  89, 104, 255, 206, 157, 172
-};
-
-static inline unsigned int __crc8(unsigned int crc, int c) {
-	return crc8_lut[crc ^ c];
-}
-
-static inline unsigned int crc8(unsigned int crc, const void * buf, int len) {
-	uint8_t * cp = (uint8_t *)buf;
-	int i;
-
-	for (i = 0; i < len; ++i) 
-		crc = crc8_lut[crc ^ cp[i]];
-
-	return crc;
-}
-
-
-/* 
- * hash values for http tokens
- */
-
-
-#define HTTPMETHOD_GET_HASH         0x55
-#define HTTPMETHOD_POST_HASH        0xeb
-
-/* Request Header Fields */
-#define HTTPHDR_ACCEPT              0xb3
-#define HTTPHDR_ACCEPT_CHARSET      0x46
-#define HTTPHDR_ACCEPT_ENCODING     0x55
-#define HTTPHDR_ACCEPT_LANGUAGE     0x9a
-#define HTTPHDR_AUTHORIZATION       0x15
-#define HTTPHDR_EXPECT              -1
-#define HTTPHDR_HOST                0xec
-#define HTTPHDR_IF_MATCH            -2
-#define HTTPHDR_IF_MODIFIED_SINCE   -3
-#define HTTPHDR_IF_NONE_MATCH       -4
-#define HTTPHDR_IF_RANGE            -5
-#define HTTPHDR_IF_UNMODIFIED_SINCE -6
-#define HTTPHDR_MAX_FORWARDS        -7
-#define HTTPHDR_PROXY_AUTHORIZATION -8
-#define HTTPHDR_RANGE               -9
-#define HTTPHDR_REFERER             0xea
-#define HTTPHDR_TE                  -10
-#define HTTPHDR_USER_AGENT          0xae
-#define HTTPHDR_CONTENT_TYPE        0xeb
-#define HTTPHDR_CONTENT_LENGTH      0x75
-
-/* Hop-by-Hop Headers */
-#define HTTPHDR_CONNECTION          0x30
-#define HTTPHDR_KEEP_ALIVE          0x11
-#define HTTPHDR_TRAILERS            -11
-#define HTTPHDR_PROXY_AUTHENTICATE  -12
-#define HTTPHDR_TRANSFER_ENCODING   -13
-#define HTTPHDR_UPGRADE             -14
-
-/* ?? */
-#define HTTPHDR_CACHE_CONTROL       0xd9
-
 /* Authentication */
 #define HTTPAUTH_BASIC              0x77
 #define HTTPAUTH_DIGEST             0x00
 
-
-static int http_get_method(struct tcp_pcb * tp)
+int http_process_request(struct httpctl * ctl, void * req)
 {
-	char cp[1];
-	int hash;
-	int ret;
+	uint32_t * up = (uint32_t *)req;
+	char * cp = (char *)req;
+	char * uri;
 	int c;
+	int i;
 
-	hash = 0;
+#if (BYTE_ORDER != LITTLE_ENDIAN)
+#error "This code works for little endian machines only."
+#endif
 
-	for (;;) {
-		/* read data - character at time */
-		/* FIXME: this is quite slow ... */
-		if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-			return ret;
-
-		if ((c = *cp) == ' ')
-			break;
-
-		DCC_LOG1(LOG_MSG, "'%c'", c);
-
-		hash = __crc8(hash, c);
+	if (up[0] == 0x20544547) { /* 'GET '*/
+		ctl->method = HTTP_GET;
+		cp += 4;
+	} else if ((up[0] == 0x54534f50) &&
+			((up[1] & 0x000000ff) == 0x00000020)) { /* 'POST ' */
+		ctl->method = HTTP_POST;
+		cp += 5;
+	} else {
+		/* Invalid or unsupported method */
+		return HTTP_NOT_IMPLEMENTED;
 	}
 
-	switch (hash) {
-	case HTTPMETHOD_GET_HASH:
-		return HTTP_GET;
-	case HTTPMETHOD_POST_HASH:
-		return HTTP_POST;
-	}
-
-	return HTTP_UNKNOWN;
-}
-
-static int http_get_uri(struct tcp_pcb * tp, char * uri, int max)
-{
-	char * cp;
-	int ret;
-	int n;
-	int c;
-
-	n = 0;
-	cp = uri;
-
-	for (n = 0; n < max; n++) {
-		/* read data - character at time */
-		/* FIXME: this is quite slow ... */
-		if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-			return ret;
-
-		if ((c = *cp) == ' ') {
-			*cp = '\0';
-			return n;
+	i = 0;
+	uri = ctl->uri;
+	while ((c = *cp++) != ' ') {
+		if ((c == '\0') || (i >= HTTPD_URI_MAX_LEN)) {
+			return HTTP_REQUEST_URI_TOO_LARGE;
 		}
-
-		DCC_LOG1(LOG_MSG, "'%c'", c);
-
-		cp++;
+		uri[i++] = c;
 	}
+	uri[i] = '\0';
 
-//	http->state = HTTPCTL_414;
-	return -1;
-}
-
-static int http_get_version(struct tcp_pcb * tp)
-{
-	int version = 0;
-	char cp[1];
-	int ret;
-	int c;
-
-	for (;;) {
-		if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-			return ret;
-
-		if ((c = *cp) == '\r')
-			break;
-
-		DCC_LOG1(LOG_MSG, "'%c'", c);
-
-		if ((c >= '0') && (c <= '9'))
-			version = (version * 10) + c - '0';
+	if ((cp[0] = 'H') && (cp[1] = 'T') && (cp[2] = 'T') &&
+		(cp[3] = 'P') && (cp[4] = '/') && (cp[5] = '1') && (cp[5] = '.')) {
+		c = cp[7];
+		if ((c >= '0') && (c <= '9')) {
+			ctl->version = 10 + c - '0';
+			return 0;
+		}
 	}
-
-	if ((ret = tcp_recv(tp, cp, 1)) <= 0)
-		return ret;
-
-	if ((c = *cp) == '\n')
-		return version;
 
 	/* Malformed request line, respond with: 400 Bad Request */
-//	http->state = HTTPCTL_400;
-	return -1;
+	return HTTP_BAD_REQUEST;
 }
 
-#define HTML_HDR_VAL_LEN_MAX 80
+int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
+{
+	char * buf = (char *)ctl->rcvq.buf;
+	int rem;
+	int cnt;
+	int c1;
+	int n;
+
+	rem = HTTP_RCVBUF_LEN; /* free space in the input buffer */
+	cnt = 0; /* used space in the input buffer */
+	c1 = '\0';
+
+	/* receive and decode HTTP request */
+	while ((n = tcp_recv(tp, &buf[cnt], rem)) > 0)  {
+		int pos;
+		int c2;
+
+		rem -= n;
+		pos = cnt;
+		cnt += n;
+		for (; pos < cnt; ++pos) {
+			c2 = buf[pos];
+			if (c1 == '\r' && c2 == '\n') {
+				buf[pos - 1] = '\0';
+				ctl->rcvq.cnt = cnt;
+				ctl->rcvq.pos = pos;
+				return http_process_request(ctl, buf);
+			}
+			c1 = c2;
+		}
+
+		if (rem <= 0) {
+			DCC_LOG(LOG_ERROR, "buffer ovreflow!");
+			break;
+		}
+	}
+
+	return -1;
+}
 
 static int http_process_field(struct httpctl * ctl,
 		unsigned int hdr, char * val)
@@ -230,12 +128,11 @@ static int http_process_field(struct httpctl * ctl,
 		DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
 		break;
 	case HTTP_HDR_CONTENT_TYPE:
-		/* hash the content type */
-		ctl->ctype = crc8(0, val, strlen(val));
+		ctl->ctype = http_parse_content_type(val, NULL);
 		DCC_LOG1(LOG_INFO, "Content-Type: 0x%02x", ctl->ctype);
 		break;
 	case HTTP_HDR_CONTENT_LENGTH:
-		ctl->ctlen = atoi(val);
+		ctl->ctlen = strtoul(val, NULL, 10);
 		DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->ctlen);
 		break;
 	case HTTP_HDR_ACCEPT:
@@ -315,45 +212,48 @@ static int http_process_field(struct httpctl * ctl,
 	return 0;
 }
 
-static int http_parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
+static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 {
-	char * buf = (char *)ctl->buf;
-	int n;
-	int i;
-	int c1;
-	int c2;
-	int rem;
+	char * buf = (char *)ctl->rcvq.buf;
 	int cnt;
-	int ln;
 	int pos;
+	int lin;
+	int c1;
 
-	rem = HTTP_RCVBUF_LEN; /* free space in the input buffer */
-	cnt = 0; /* used space in the input buffer */
-	ln = 0; /* line start */
-	pos = 0; /* header position */
-	c1 = '\0';
+	/* total bytes in the buffer */
+	cnt = ctl->rcvq.cnt;
+	/* processed bytes so far */
+	pos = ctl->rcvq.pos;
+	/* beginning of a line */
+	lin = pos;
+	/* current character */
+	c1 = (pos) ? buf[pos - 1] : '\0';
 
-	/* receive and decode RTSP headers */
-	while ((n = tcp_recv(tp, &buf[cnt], rem)) > 0)  {
-		rem -= n;
-		i = cnt;
-		cnt += n;
-		for (; i < cnt; ++i) {
-			c2 = buf[i];
+	/* receive and decode HTTP headers */
+	for (;;) {
+		int rem;
+		int c2;
+		int n;
+
+		/* search for end of line */
+		for (; pos < cnt; ++pos) {
+			/* lookahead character */
+			c2 = buf[pos];
 			if (c1 == '\r' && c2 == '\n') {
 				char * val;
 				unsigned int hdr;
 
-				buf[i - 1] = '\0';
-				if (i == ln + 1) {
-					i++;
-					ctl->cnt = cnt;
-					ctl->pos = i;
-					ctl->lin = i;
+				if (pos == lin + 1) {
+					/* end of HTTP Header */
+					pos++;
+					ctl->rcvq.cnt = cnt;
+					ctl->rcvq.pos = pos;
 					return 0;
 				}
 
-				if ((hdr = http_parse_field(&buf[ln], &val)) == 0) {
+				/* header field */
+				buf[pos - 1] = '\0';
+				if ((hdr = http_parse_field(&buf[lin], &val)) == 0) {
 					DCC_LOG(LOG_WARNING, "invalid header field");
 					return -1;
 				}
@@ -362,31 +262,46 @@ static int http_parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 					return -1;
 				}
 
-				/* increment header counter */
-				pos++;
 				/* move to the next line */
-				ln = i + 1;
+				lin = ++pos;
 			}
 			c1 = c2;
 		}
 
-		if (ln != 0) {
+		/* if we reached the end of the buffer ... */
+		if (HTTP_RCVBUF_LEN == cnt) {
+			int i;
 			int j;
 
-			for (i = 0, j = ln; j < cnt; ++i, ++j)
+			/* if the line marker is at position zero then we've reached the
+			 * end of the buffer ... */
+			if (lin == 0) {
+				DCC_LOG(LOG_ERROR, "buffer ovreflow!");
+				return -1;
+			}
+
+			/* move a partial line to the beginning of the buffer */
+			n = cnt - lin;
+			for (i = 0, j = lin; i < n; ++i, ++j)
 				buf[i] = buf[j];
-			cnt = i;
-			rem = HTTP_RCVBUF_LEN - i;
-			ln = 0;
+
+			/* update indexes */
+			cnt = n;
+			pos = n;
+			lin = 0;
 		}
 
-		if (rem <= 0) {
-			DCC_LOG(LOG_ERROR, "buffer ovreflow!");
-			return -1;
+		/* get free space at the end of input buffer */
+		rem = HTTP_RCVBUF_LEN - cnt;
+
+		/* read more data */
+		if ((n = tcp_recv(tp, &buf[cnt], rem)) <= 0) {
+			return n;
 		}
+
+		/* update the data counter */
+		cnt += n;
 	}
-
-	tcp_close(tp);
 
 	return -1;
 }
@@ -394,6 +309,7 @@ static int http_parse_hdr(struct tcp_pcb * tp, struct httpctl * ctl)
 int http_accept(struct httpd * httpd, struct httpctl * ctl)
 {
 	struct tcp_pcb * tp;
+	int code;
 
 	DCC_LOG1(LOG_INFO, "httpd=%p.", httpd);
 
@@ -403,18 +319,24 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	}
 
 	DCC_LOG1(LOG_INFO, "ctl=%p accepted.", ctl);
-	memset(ctl, 0, sizeof(struct httpctl));
 
-	ctl->method = http_get_method(tp);
-	DCC_LOG1(LOG_INFO, "method=%d", ctl->method);
+	if ((code = http_parse_request(tp, ctl)) != 0) {
+		switch (code) {
+		case HTTP_BAD_REQUEST:
+			httpd_400(tp);
+			break;
+		case HTTP_REQUEST_URI_TOO_LARGE:
+			httpd_414(tp);
+			break;
+		case HTTP_NOT_IMPLEMENTED:
+			httpd_501(tp);
+			break;
+		}
+		tcp_close(tp);
+		return -1;
+	}
 
-	http_get_uri(tp, ctl->uri, HTTPD_URI_MAX_LEN);
-	DCC_LOG1(LOG_INFO, "uri='%c ...'", ctl->uri[0]);
-
-	ctl->version = http_get_version(tp);
-	DCC_LOG1(LOG_INFO, "version=%d", ctl->version);
-
-	if (http_parse_hdr(tp, ctl) < 0) {
+	if (http_parse_header(tp, ctl) < 0) {
 		/* Malformed request line, respond with: 400 Bad Request */
 		httpd_400(tp);
 		tcp_close(tp);
@@ -492,14 +414,6 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 	dst = path;
 	sep = path;
 	oid = ctl->uri;
-
-
-//	for (opt = buf; (*opt); opt++) {
- //		if (*opt == '?') {
-//			*opt++ = '\0';
-//			break;
-//		}
-//	}
 
 	qry = NULL;
 	for (src = ctl->uri; (c = *src) != '\0'; ++src) {
