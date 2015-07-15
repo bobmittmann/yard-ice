@@ -210,6 +210,11 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	ipsr = cm3_ipsr_get();
 	__idump(__func__, ipsr);
 
+	/* reset reentry counter */
+	if (++xcpt->count > 4) {
+		for(;;);
+	}
+
 	if ((irq = __xcpt_next_active_irq(ipsr - 16)) >= 0) {
 		xpsr = 0x01000000 + irq + 16;
 	} else if ((shcsr = CM3_SCB->shcsr) & (SCB_SHCSR_SYSTICKACT | 
@@ -606,6 +611,7 @@ void __exception_reset(void)
 	__thinkos_memset32(&thinkos_except_buf, 0x00000000,
 					   sizeof(struct thinkos_except));
 	thinkos_except_buf.thread_id = -1;
+	thinkos_except_buf.count = 0;
 }
 
 void thinkos_exception_init(void)

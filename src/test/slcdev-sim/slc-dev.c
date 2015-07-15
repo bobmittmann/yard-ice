@@ -17,14 +17,14 @@
 #include "xmodem.h"
 #include "bacnet_ptp.h"
 
-#define VERSION_NUM "0.8"
-#define VERSION_DATE "Jan, 2015"
+#define VERSION_NUM "0.9"
+#define VERSION_DATE "Jul, 2015"
 
 extern const struct shell_cmd cmd_tab[];
 
 const char * version_str = "SLC Device Simulator " \
 							VERSION_NUM " - " VERSION_DATE;
-const char * copyright_str = "(c) Copyright 2014 - Mircom Group";
+const char * copyright_str = "(c) Copyright 2014-2015 - Mircom Group";
 
 void shell_greeting(FILE * f) 
 {
@@ -149,10 +149,12 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 						  io_event_stack, sizeof(io_event_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
 
+	DCC_LOG(LOG_TRACE, "6. lamp_test()");
 	/* perform a lamp test while the current sink 
 	   negative voltage stabilizes */
 	lamp_test();
 
+	DCC_LOG(LOG_TRACE, "7. slcdev_init()");
 	/* initilice the SLC device driver */
 	slcdev_init();
 
@@ -174,8 +176,8 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	/* initialize serial driver */
-//	sdrv = serdrv_init(115200);
-	sdrv = serdrv_init(57600);
+	sdrv = serdrv_init(115200);
+//	sdrv = serdrv_init(57600);
 
 	/* initialize serial TTY driver */
 	f = serdrv_tty_fopen(sdrv);
@@ -196,9 +198,11 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 		DCC_LOG(LOG_WARNING, "Console shell!");
 		slcdev_shell(f); 
 
+//		thinkos_sleep(1000);
+
 		/* BACnet protocol... */
-		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-		bacnet_ptp(sdrv);
+//		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
+//		bacnet_ptp(sdrv);
 	}
 }
 

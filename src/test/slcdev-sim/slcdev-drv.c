@@ -424,10 +424,19 @@ static void ap_hdr_decode(unsigned int msg)
 	unsigned int ilat;
 	unsigned int irq;
 
-	icfg = DEV_AP_ICFG_DEFAULT;
-	ipre = DEV_AP_IPRE_DEFAULT;
-	ipw = DEV_AP_IPW_DEFAULT;
-	ilat = DEV_AP_ILAT_DEFAULT;
+	if (slcdev_drv.ap.bmp == 0) {
+		/* No AP devices configured, ignore the communication */
+		slcdev_drv.state = DEV_IDLE;
+		DCC_LOG(LOG_INFO, "[IDLE]");
+		return;
+	}
+
+	/* AP defalt values*/
+	icfg = slcdev_drv.ap.icfg;
+	ilat = slcdev_drv.ap.ilat;
+	ipre = slcdev_drv.ap.ipre;
+	ipw = slcdev_drv.ap.ipw;
+
 	irq = 0;
 
 	DCC_LOG(LOG_INFO, "[AP]");
@@ -436,7 +445,6 @@ static void ap_hdr_decode(unsigned int msg)
 	if (sum != (msg >> 15)) {
 //		DCC_LOG1(LOG_WARNING, "MSG=%05x checksum error!", msg);
 		/* prepare for sinking current */
-		/* FIXME: configurable current sink parameters for AP */ 
 		isink_mode_set(icfg);
 		slcdev_drv.isink.pre = ipre;
 		slcdev_drv.isink.pw = ipw;
@@ -781,7 +789,7 @@ void stm32_tim10_isr(void)
 		isink_pulse(slcdev_drv.isink.pre, slcdev_drv.isink.pw); 
 //		trig_out_set();
 		slcdev_drv.isink.state = ISINK_PULSE;
-		DCC_LOG1(LOG_INFO, "<ISINK PULSE %d us>", slcdev_drv.isink.pw);
+		DCC_LOG1(LOG_MSG, "<ISINK PULSE %d us>", slcdev_drv.isink.pw);
 	}
 #if 0	
 	else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
@@ -988,7 +996,7 @@ void stm32_comp_tsc_isr(void)
 			case DEV_AP_HDR_ERR:
 				/* AP header checksum error respnse bit */
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_TRACE, "AP ERR <ISINK START WAIT>");
 				slcdev_drv.state = DEV_AP_ERR_BIT;
 				DCC_LOG(LOG_INFO, "[AP ERR BIT]");
 				break;
@@ -1002,7 +1010,7 @@ void stm32_comp_tsc_isr(void)
 				if (slcdev_drv.ap.irq) {
 					/* send the interrupt bit */
 					slcdev_drv.isink.state = ISINK_START_WAIT;
-					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+					DCC_LOG(LOG_TRACE, "AP IRQ <ISINK START WAIT>");
 				}
 				slcdev_drv.state = DEV_AP_INT_BIT;
 				DCC_LOG(LOG_INFO, "[AP INT BIT]");
@@ -1013,7 +1021,7 @@ void stm32_comp_tsc_isr(void)
 			case DEV_AP_PA_BIT:
 				/* AP command parity error respnse bit */
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_TRACE, "AP PA <ISINK START WAIT>");
 				slcdev_drv.state = DEV_AP_ACK_BIT;
 				DCC_LOG(LOG_INFO, "[AP PA BIT]");
 				break;
@@ -1111,6 +1119,7 @@ static void slcdev_reset(void)
 	slcdev_drv.ap.ilat = DEV_AP_ILAT_DEFAULT;
 	slcdev_drv.ap.ipre = DEV_AP_IPRE_DEFAULT;
 	slcdev_drv.ap.ipw = DEV_AP_IPW_DEFAULT;
+	slcdev_drv.ap.bmp = 0;
 }
 
 void slcdev_init(void)

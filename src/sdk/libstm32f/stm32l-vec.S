@@ -24,14 +24,12 @@
 	.syntax unified
 	.cpu cortex-m3
 
-	.section .vectors
-__vectors:
-	.global __vectors
+	.extern _reset
 
-	.section .rom_vectors, "ax", %progbits
-__rom_vectors:
-	.global __rom_vectors
-	.type __rom_vectors, %object
+	/* ---------------------------------------------------------------------
+	 * Generate the vectors table 
+	 * --------------------------------------------------------------------- */
+.macro cortex_m_vectors
 	.word	_stack
 	.word   _reset
 	.word   cm3_nmi_isr
@@ -39,15 +37,18 @@ __rom_vectors:
 	.word   cm3_mem_manage_isr
 	.word   cm3_bus_fault_isr
 	.word   cm3_usage_fault_isr
-	.word   0
+	.word   cm3_except7_isr
 	.word   ice_comm_blk
-	.word   0 
-	.word   0
+	.word   cm3_except9_isr
+	.word   cm3_except10_isr
 	.word   cm3_svc_isr
 	.word   cm3_debug_mon_isr
-	.word   0
+	.word   cm3_except13_isr
 	.word   cm3_pendsv_isr
 	.word   cm3_systick_isr
+.endm
+
+.macro stm32f_irq_vectors
 	.word	stm32_wwdg_isr            /*  0 Window WatchDog */
 	.word	stm32_pvd_isr             /*  1 PVD through EXTI Line detection */
 	.word	stm32_tamp_stamp_isr      /*  2 Tamper and TimeStamps through 
@@ -99,12 +100,44 @@ __rom_vectors:
 								 		 through EXTI Line */
 	.word	stm32_tim6_isr            /* 42 TIM6 */
 	.word	stm32_tim7_isr            /* 43 TIM7 */
-	
+.endm
+
+
+	.section .vectors
+__vectors:
+	.global __vectors
+
+	/* ---------------------------------------------------------------------
+	 * vectors residing in FLASH 
+	 * --------------------------------------------------------------------- */
+	.section .rom_vectors, "ax", %progbits
+__rom_vectors:
+	.global __rom_vectors
+	.type __rom_vectors, %object
+	cortex_m_vectors
+#ifndef CM3_RAM_VECTORS
+	stm32f_irq_vectors
+#endif
 	.size   __rom_vectors, . - __rom_vectors
 
-	.align  0
-	.thumb
-	.section .text.init
+	.global __sizeof_rom_vectors
+__sizeof_rom_vectors:
+	.type __sizeof_rom_vectors, %object
+	.word	__rom_vectors, . - __rom_vectors
+	.size   __sizeof_rom_vectors, . - __sizeof_rom_vectors
+
+#ifdef CM3_RAM_VECTORS
+	/* ---------------------------------------------------------------------
+	 * vectors residing in RAM 
+	 * --------------------------------------------------------------------- */
+	.section .ram_vectors, "ax", %progbits
+__ram_vectors:
+	.global __ram_vectors
+	.type __ram_vectors, %object
+	cortex_m_vectors
+	stm32f_irq_vectors
+	.size   __ram_vectors, . - __ram_vectors
+#endif
 
 	.text
 	.align  2
@@ -133,9 +166,6 @@ _fault:
 	 * Any function with the same name will override these definitions.
 	 */
 
-	.weak       ice_comm_blk
-	.set		ice_comm_blk, __vectors
-
 	.weak       cm3_default_isr
 	.thumb_set  cm3_default_isr,_fault
 
@@ -154,11 +184,26 @@ _fault:
 	.weak       cm3_usage_fault_isr
 	.thumb_set  cm3_usage_fault_isr,_fault
 
+	.weak       cm3_except7_isr
+	.thumb_set  cm3_except7_isr,_fault
+
+	.weak       ice_comm_blk
+	.set		ice_comm_blk, __vectors
+
+	.weak       cm3_except9_isr
+	.thumb_set  cm3_except9_isr,_fault
+
+	.weak       cm3_except10_isr
+	.thumb_set  cm3_except10_isr,_fault
+
 	.weak       cm3_svc_isr
 	.thumb_set  cm3_svc_isr,_fault
 
 	.weak       cm3_debug_mon_isr
 	.thumb_set  cm3_debug_mon_isr,_fault
+
+	.weak       cm3_except13_isr
+	.thumb_set  cm3_except13_isr,_fault
 
 	.weak     	cm3_pendsv_isr
 	.thumb_set  cm3_pendsv_isr,_fault

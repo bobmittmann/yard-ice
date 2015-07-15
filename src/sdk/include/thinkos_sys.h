@@ -264,9 +264,9 @@
 #define THINKOS_ENABLE_FLAG_ALLOC 0
 #endif
 
-#if (THINKOS_ENABLE_QUEUE_ALLOC) & !(THINKOS_QUEUE_MAX)
-#undef THINKOS_ENABLE_QUEUE_ALLOC
-#define THINKOS_ENABLE_QUEUE_ALLOC 0
+#if (THINKOS_ENABLE_GATE_ALLOC) & !(THINKOS_GATE_MAX)
+#undef THINKOS_ENABLE_GATE_ALLOC
+#define THINKOS_ENABLE_GATE_ALLOC 0
 #endif
 
 /* timed calls depends on clock */
@@ -650,6 +650,7 @@ struct thinkos_except {
 	uint8_t ipsr;
 	uint8_t type; /* exception type */
 	int8_t thread_id;
+	uint8_t count;
 };
 
 /* -------------------------------------------------------------------------- 

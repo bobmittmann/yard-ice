@@ -312,6 +312,7 @@ struct slcdev_drv {
 		uint8_t ipre;   /* pulse preenphasis width (microsseconds) */
 		uint8_t ilat;   /* pulse latency (microsseconds) */
 		uint16_t ipw;   /* pulse width (microsseconds) */
+		uint32_t bmp;   /* one bit per ten digit, one bit per ones digit */
 	} ap; /* AP specific options */
 	struct slcdev_trig trig; /* trigger module  */
 	struct {

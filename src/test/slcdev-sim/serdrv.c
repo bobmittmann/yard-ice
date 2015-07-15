@@ -190,7 +190,7 @@ void stm32_usart2_isr(void)
 		if (tail == dev->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*dev->txie = 0; 
-			thinkos_flag_set_i(SERDRV_TX_FLAG);
+			thinkos_flag_give_i(SERDRV_TX_FLAG);
 		} else {
 			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
 			dev->tx_fifo.tail = tail + 1;

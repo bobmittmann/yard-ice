@@ -28,6 +28,8 @@
 #include <sys/stm32f.h>
 #include <crc.h>
 
+#if (THINKOS_ENABLE_MONITOR)
+
 #define SOH  0x01
 #define STX  0x02
 #define EOT  0x04
@@ -272,6 +274,9 @@ extern const uint32_t thinkos_app_blk_size;
 
 int dmon_app_load_ymodem(struct dmon_comm * comm)
 {
+	/* FIXME: generalize the application load by removing the low
+	   level flash calls dependency */
+#ifdef STM32_FLASH_MEM
 	struct ymodem_rcv * ry = ((struct ymodem_rcv *)&_stack) - 1;
 	uint32_t base = (uint32_t)STM32_FLASH_MEM;
 	uint32_t offs = thinkos_app_blk_addr - base;
@@ -315,5 +320,10 @@ int dmon_app_load_ymodem(struct dmon_comm * comm)
 	}
 
 	return ret;
+#else
+	return -1;
+#endif
 }
+
+#endif /* THINKOS_ENABLE_MONITOR */
 

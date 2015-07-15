@@ -491,6 +491,7 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct db_info * db;
 	struct microjs_vm vm; 
 	uint32_t ctl;
+	int i;
 
 	/* initialize virtual machine */
 	rt.data_sz = sizeof(slcdev_vm_data);
@@ -661,8 +662,11 @@ void __attribute__((noreturn)) sim_event_task(void)
 		case SLC_EV_SIM_STOP:
 			DCC_LOG(LOG_TRACE, "SIM_STOP");
 			slcdev_stop();
-			thinkos_ev_mask(SLCDEV_DRV_EV, (1 << SLC_EV_SIM_RESUME) | 
-							(1 << SLC_EV_SIM_START));
+			/* disable all events */
+			for (i = 0; i < 32; ++i)
+				thinkos_ev_mask(SLCDEV_DRV_EV, i, 0);
+			thinkos_ev_mask(SLCDEV_DRV_EV, SLC_EV_SIM_RESUME, 1);
+			thinkos_ev_mask(SLCDEV_DRV_EV, SLC_EV_SIM_START, 1);
 			slcdev_drv.sim.halt = true;
 			break;
 
@@ -670,8 +674,9 @@ void __attribute__((noreturn)) sim_event_task(void)
 			DCC_LOG(LOG_TRACE, "SIM_RESUME");
 			slcdev_resume();
 			slcdev_drv.sim.halt = false;
-			/* force reprocessing posible unmasked events */
-			thinkos_ev_unmask(SLCDEV_DRV_EV, 0xffffffff);
+			/* force reprocessing posible previously masked events */
+			for (i = 0; i < 32; ++i)
+				thinkos_ev_mask(SLCDEV_DRV_EV, i, 1);
 			break;
 		}
 	}
