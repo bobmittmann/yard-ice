@@ -58,6 +58,9 @@ _Pragma ("GCC optimize (\"O2\")")
 #define THINKOS_ENABLE_USAGEFAULT 0
 #endif
 
+#ifndef THINKOS_UNROLL_EXCEPTIONS 
+#define THINKOS_UNROLL_EXCEPTIONS 1
+#endif
 
 #if (THINKOS_ENABLE_DEBUG_FAULT)
 
@@ -131,6 +134,7 @@ __xcpt_context_restore(struct thinkos_except * xcpt)
 	for(;;);
 }
 
+#if (THINKOS_UNROLL_EXCEPTIONS) 
 void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 {
 	uint32_t icsr;
@@ -264,6 +268,16 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	/* return */
 	asm volatile ("bx   %0\n" : : "r" (ret)); 
 }
+
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+
+void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
+{
+	thinkos_exception_dsr(xcpt);
+	for(;;);
+}
+
+#endif /* THINKOS_UNROLL_EXCEPTIONS */
 
 #if THINKOS_STDERR_FAULT_DUMP
 void __show_ctrl(uint32_t ctrl)
@@ -535,8 +549,6 @@ void __mem_manag(struct thinkos_except * xcpt)
 /* -------------------------------------------------------------------------
    Fault handlers 
    ------------------------------------------------------------------------- */
-
-void thinkos_default_exception_dsr(struct thinkos_except * xcpt);
 
 struct thinkos_except thinkos_except_buf;
 

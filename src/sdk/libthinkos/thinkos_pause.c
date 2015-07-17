@@ -190,7 +190,7 @@ static void flag_resume(unsigned int th, unsigned int wq, bool tmw)
 #if THINKOS_GATE_MAX > 0
 static void gate_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
-	unsigned int idx = wq - THINKOS_FLAG_BASE;
+	unsigned int idx = wq - THINKOS_GATE_BASE;
 
 	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
 
@@ -214,7 +214,6 @@ static void gate_resume(unsigned int th, unsigned int wq, bool tmw)
 	}
 }
 #endif
-
 
 #if THINKOS_ENABLE_JOIN
 static void join_resume(unsigned int th, unsigned int wq, bool tmw) 

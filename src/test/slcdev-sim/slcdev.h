@@ -190,9 +190,12 @@ struct slcdev_usr {
 	uint8_t * trig; /* trigger script */
 	uint8_t * tmr[4]; /* timers script */
 	uint8_t * usr[8]; /* user events script */
+	uint32_t verbose: 1;
 };
 
 extern struct slcdev_usr usr;
+
+#define SLCDEV_VERBOSE() (usr.verbose) 
 
 /* -------------------------------------------------------------------------
  * Sysem Sensor device
@@ -297,10 +300,11 @@ struct slcdev_trig {
 
 struct slcdev_drv {
 	int state;          /* decoder state */
+	int clip_state;     /* decoder state */
 	struct {
 		volatile uint32_t halt : 1;
 	} sim;
-	uint16_t addr;      /* current polled device address */
+	uint16_t idx;       /* current polled device index */
 	uint8_t bit_cnt;    /* message bit count */
 	uint8_t pw5en;      /* PW5 (Type ID) requested */
 	uint32_t msg;       /* message data from the panel */
@@ -312,7 +316,20 @@ struct slcdev_drv {
 		uint8_t ipre;   /* pulse preenphasis width (microsseconds) */
 		uint8_t ilat;   /* pulse latency (microsseconds) */
 		uint16_t ipw;   /* pulse width (microsseconds) */
-		uint32_t bmp;   /* one bit per ten digit, one bit per ones digit */
+		uint8_t zone;   
+		uint8_t cmd;   
+		struct {
+			uint32_t act;   /* active bitmap, one bit per ten digit, 
+							   one bit per ones digit */
+			uint8_t tens[16]; /* number of devices per ten digit */
+			uint8_t ones[10]; /* number of devices per one digit */
+		} s; /* sensors */
+		struct {
+			uint32_t act;   /* active bitmap, one bit per ten digit, 
+							   one bit per ones digit */
+			uint8_t tens[16]; /* number of devices per ten digit */
+			uint8_t ones[10]; /* number of devices per one digit */
+		} m; /* modules */
 	} ap; /* AP specific options */
 	struct slcdev_trig trig; /* trigger module  */
 	struct {
@@ -449,6 +466,15 @@ int device_attr_print(FILE * f, bool mod,
 void sim_reset(void);
 
 void slcdev_sim_stop(void);
+
+
+void slcdev_ssdev_enable(struct ss_device * dev);
+
+void slcdev_ssdev_disable(struct ss_device * dev);
+
+struct ss_device * slcdev_ssdev_getinstance(bool module, unsigned int addr);
+
+void slcdev_update_ap(void); 
 
 #ifdef __cplusplus
 }

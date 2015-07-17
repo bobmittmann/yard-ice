@@ -25,9 +25,8 @@ PROG = slc-dev
 CFILES = slc-dev.c board.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c flashfs.c shell.c\
 		 xflash.c uart_xflash_pic.c slcdev-sim.c slcdev-cfg.c\
-		 slcdev-str.c slcdev-lib.c profclk.c\
-		 bacnet_ptp.c
-#		json.c  jsmn.c json-dump.c stm32l-flash.c stm32-uart.c
+		 slcdev-str.c slcdev-lib.c profclk.c js.c \
+#		 bacnet_ptp.c 
 
 
 SDK = ../../sdk
@@ -37,12 +36,13 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
 		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell $(SDK)/libmicrojs
 
 LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell microjs
-#thinkos 
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H
-CFLAGS = -g -Os -fomit-frame-pointer
+CDEFS = CONFIG_H NDEBUG
+CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections 
+#LDFLAGS = -Wl,--gc-sections -Wl,--print-gc-sections 
 
 MACH = stm32l151xb
 

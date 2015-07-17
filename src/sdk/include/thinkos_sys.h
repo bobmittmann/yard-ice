@@ -606,6 +606,20 @@ struct thinkos_rt {
 							 - offsetof(struct thinkos_rt, wq_lst)) \
 							/ sizeof(uint32_t))
 
+/* -------------------------------------------------------------------------- 
+ * Static initialized kernel descriptors
+ * --------------------------------------------------------------------------*/
+
+#define THINKOS_MUTEX_DESC(_ID) (THINKOS_MUTEX_BASE + (_ID))
+#define THINKOS_COND_DESC(_ID)  (THINKOS_COND_BASE + (_ID))
+#define THINKOS_SEM_DESC(_ID)   (THINKOS_SEM_BASE + (_ID))
+#define THINKOS_EVENT_DESC(_ID) (THINKOS_EVENT_BASE + (_ID))
+#define THINKOS_FLAG_DESC(_ID)  (THINKOS_FLAG_BASE + (_ID))
+#define THINKOS_GATE_DESC(_ID)  (THINKOS_GATE_BASE + (_ID))
+
+/* -------------------------------------------------------------------------- 
+ * Static thead references
+ * --------------------------------------------------------------------------*/
 
 #define THINKOS_THREAD_NULL (32)
 #define THINKOS_THREAD_IDLE (THINKOS_THREADS_MAX)

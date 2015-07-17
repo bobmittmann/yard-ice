@@ -534,18 +534,17 @@ void __attribute__((noreturn)) sim_event_task(void)
 					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
 
 					/* Poll LED state */
-					if ((ctl & 0x4) == 0) {
-						led_on(dev->ledno - 1);
-					} else if ((ctl & 0x5) == 4) {
-						led_off(dev->ledno - 1);
-					} else if ((ctl & 0x5) == 5) {
+					if ((ctl & 0x5) == 0x5) {
 						led_flash(dev->ledno - 1, 64);
-					}
+					} else if ((ctl & 0x4) == 0x4) {
+						led_on(dev->ledno - 1);
+					} else
+						led_off(dev->ledno - 1);
 				}
 
-				if ((ctl & 0x4) == 0)
+				if ((ctl & 0x4) == 0x4)
 					dev->led = 1;
-				else if ((ctl & 0x5) == 4)
+				else
 					dev->led = 0;
 
 				/* simulate the device */

@@ -303,7 +303,7 @@ int32_t __model_name(void * env, int32_t argv[], int argc)
 /* Object instance resolver*/
 int32_t __this(void * env, int32_t argv[], int argc)
 {
-	argv[0] = slcdev_drv.addr;
+	argv[0] = slcdev_drv.idx;
 	return 1; /* return the number of return values */
 }	
 
@@ -439,15 +439,18 @@ int32_t __dev_enabled(void * env, int32_t argv[], int argc)
 
 	if (argc > 1) {
 		unsigned int val = argv[1];
+		struct ss_device * dev;
 
 		if (val > 1)
 			return -EXCEPT_INVALID_VALUE;
 
+		dev = &ss_dev_tab[idx];
+
 		if (val)
-			/* only enable configured devices */ 
-			ss_dev_tab[idx].enabled = ss_dev_tab[idx].cfg;
+			slcdev_ssdev_enable(dev);
 		else
-			ss_dev_tab[idx].enabled = 0;
+			slcdev_ssdev_disable(dev);
+
 		return 0;
 	}
 

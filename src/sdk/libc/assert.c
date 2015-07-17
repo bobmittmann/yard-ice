@@ -18,55 +18,21 @@
  */
 
 /** 
- * @file file.c
+ * @file assert.c
  * @brief YARD-ICE libc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
 #include <stdlib.h>
-#include <sys/file.h>
-#include <sys/null.h>
+#include <stdio.h>
 
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
-#ifndef FILE_DEV_MAX
-#define FILE_DEV_MAX 8
-#endif
-
-static struct file __file[FILE_DEV_MAX];
-
-struct file * file_alloc(void * dev, const struct fileop * op)
+void __attribute__((__noreturn__)) __assert_fail(const char *__assertion, 
+												 const char *__file, 
+												 unsigned int __line, 
+												 const char *__function) 
 {
-	struct file * f;
-	int i;
-
-	if ((dev == NULL) || (op == NULL))
-		return NULL;
-
-	for (i = 0; i < FILE_DEV_MAX; ++i) {
-		f = &__file[i];
-		if (f->data == NULL) {
-			f->data = dev;
-			f->op = op;
-			return f;
-		}
-	}
-
-	return NULL;
-}
-
-int file_free(struct file * f)
-{
-	if (f == NULL)
-		return -1;
-
-	if (f->data != NULL) {
-		f->data = NULL;
-		f->op = &null_fileop;
-	}
-
-	return 0;
+	fprintf(stderr, "%s:%d %s: Assertion '%s' failed.\n", 
+			__file, __line, __function, __assertion);
+	abort();
 }
 

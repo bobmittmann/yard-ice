@@ -776,6 +776,34 @@
 					]
 			}
 		]
+	},
+
+	"module": { 
+		"model": "AP-Monitor-Module", 
+		"ap": true,
+		"desc": "Monitor Module", 
+		"sim" : "monitor", 
+		"pw1": ["Reference Pulsewidth", 240, 360], 
+		"pw2": [
+			["Class A Normal", 240, 360],
+			["Class A Fixed", 480, 720]
+		],
+		"pw3": [
+			["Normal", 240, 360],
+			["Open", 480, 720],
+			["Short,Alarm", 720, 1080]
+		],
+		"pw4": [
+			["Normal", 670, 1430],
+			["Open", 0, 243],
+			["Short", 1619, 4000]
+		],
+		"pw5": [240, 360],
+		"lut" : {
+			"pw" : 4,
+			"tbl" : [2, 1],
+			"alm" : [3, 1]
+		}
 	}
 }
 

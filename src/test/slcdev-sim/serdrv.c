@@ -60,7 +60,7 @@ int serdrv_recv(struct serdrv * dev, void * buf, int len, unsigned int tmo)
 	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
 
 again:
-	if ((ret = thinkos_flag_timedtake(SERDRV_RX_FLAG, tmo)) < 0) {
+	if ((ret = thinkos_gate_timedwait(SERDRV_RX_GATE, tmo)) < 0) {
 		DCC_LOG1(LOG_INFO, "cnt=%d, timeout!", 
 				 (int8_t)(dev->rx_fifo.head - dev->rx_fifo.tail));
 		return ret;
@@ -79,12 +79,7 @@ again:
 
 	dev->rx_fifo.tail = tail;
 
-	if (cnt > n) {
-		DCC_LOG3(LOG_TRACE, "len=%d cnt=%d n=%d", len, cnt, n);
-		thinkos_flag_give(SERDRV_RX_FLAG);
-	} else {
-		DCC_LOG1(LOG_INFO, "2. n=%d", n);
-	}
+	thinkos_gate_exit(SERDRV_RX_GATE, cnt > n);
 
 	return n;
 }
@@ -102,7 +97,7 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 		int n;
 		int i;
 
-		thinkos_flag_take(SERDRV_TX_FLAG);
+		thinkos_gate_wait(SERDRV_TX_GATE);
 
 		head = dev->tx_fifo.head;
 		free = UART_TX_FIFO_BUF_LEN - (int8_t)(head - dev->tx_fifo.tail);
@@ -113,10 +108,11 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 		dev->tx_fifo.head = head;
 		*dev->txie = 1; 
 
-		if (free > n)
-			thinkos_flag_give(SERDRV_TX_FLAG);
-
 		rem -= n;
+		free -= n;
+
+		thinkos_gate_exit(SERDRV_TX_GATE, free);
+
 		DCC_LOG1(LOG_INFO, "rem=%d", rem);
 	}
 
@@ -126,18 +122,11 @@ int serdrv_send(struct serdrv * dev, const void * buf, int len)
 
 void serdrv_flush(struct serdrv * dev)
 {
-	unsigned int head;
-
-	head = dev->tx_fifo.head;
-
-	thinkos_flag_take(SERDRV_TX_FLAG);
-
-	if (((int8_t)head - dev->tx_fifo.tail) > 0)
-		thinkos_flag_take(SERDRV_TX_FLAG);
+	thinkos_gate_wait(SERDRV_TX_GATE);
 
 	stm32_usart_flush(STM32_USART2);
 
-	thinkos_flag_give(SERDRV_TX_FLAG);
+	thinkos_gate_exit(SERDRV_TX_GATE, 0);
 }
 
 
@@ -151,13 +140,7 @@ void stm32_usart2_isr(void)
 	uint32_t sr;
 	int c;
 	
-	sr = us->sr;
-
-	if (sr & USART_ORE) {
-		DCC_LOG(LOG_WARNING, "OVR!");
-	}
-
-	sr &= us->cr1;
+	sr = us->sr & us->cr1;
 
 	if (sr & USART_RXNE) {
 		unsigned int head;
@@ -174,15 +157,15 @@ void stm32_usart2_isr(void)
 		} else {
 			DCC_LOG(LOG_WARNING, "RX fifo full!");
 		}
-		if (free < (UART_RX_FIFO_BUF_LEN - 8)) /* fifo is more than half full */
-			thinkos_flag_give_i(SERDRV_RX_FLAG);
+		if (free == (UART_RX_FIFO_BUF_LEN - 8)) /* fifo is partially full */
+			thinkos_gate_open_i(SERDRV_RX_GATE);
 	}	
 
 	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE!");
 		c = us->dr;
 		(void)c;
-		thinkos_flag_give_i(SERDRV_RX_FLAG);
+		thinkos_gate_open_i(SERDRV_RX_GATE);
 	}
 
 	if (sr & USART_TXE) {
@@ -190,7 +173,8 @@ void stm32_usart2_isr(void)
 		if (tail == dev->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
 			*dev->txie = 0; 
-			thinkos_flag_give_i(SERDRV_TX_FLAG);
+			/* Signal the Tx thread */
+			thinkos_gate_open_i(SERDRV_TX_GATE);
 		} else {
 			us->dr = dev->tx_fifo.buf[tail & (UART_TX_FIFO_BUF_LEN - 1)];
 			dev->tx_fifo.tail = tail + 1;
@@ -209,7 +193,7 @@ struct serdrv * serdrv_init(unsigned int speed)
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
 	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
-	thinkos_flag_give(SERDRV_TX_FLAG);
+	thinkos_gate_open(SERDRV_TX_GATE);
 
 	/* clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_USART2);

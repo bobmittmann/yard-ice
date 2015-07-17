@@ -25,7 +25,8 @@
 
 #include <stdlib.h>
 
-void abort(void)
+void __attribute__ ((__noreturn__)) abort(void)
 {
 	for(;;);
 }
+

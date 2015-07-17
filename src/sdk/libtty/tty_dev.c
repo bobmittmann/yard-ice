@@ -201,6 +201,9 @@ struct tty_dev * tty_attach(const struct file * f)
 	struct tty_dev * tty;
 	int i;
 
+	if (f == NULL)
+		return NULL;
+
 	for (i = 0; i < TTY_DEV_MAX; ++i) {
 		tty = &__tty[i];
 		if (tty->f.data == NULL) {

@@ -1738,6 +1738,7 @@ void microjs_sdt_error(FILE * f, struct microjs_sdt * microjs, int err)
 		err = -err;
 
 	fflush(f);
+
 	lexer_print_err(f, lex, err);
 #endif
 }

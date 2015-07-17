@@ -297,7 +297,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		DCC_LOG1(LOG_INFO, "addr=%d", addr);
 		printf(" %d", addr);
 
-		dev = &ss_dev_tab[addr + (cdev->module ? 160 : 0)];
+		dev = slcdev_ssdev_getinstance(cdev->module, addr);
 
 		if (dev->addr != addr) {
 			DCC_LOG2(LOG_WARNING, "addr(%d) != dev->addr", 
@@ -330,13 +330,16 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 		dev->grp[3] = cdev->grp[3];
 		/* mark the device as configured */
 		dev->cfg = 1;
-		/* enable the device per configuration */
-		dev->enabled = cdev->enabled ? 1 : 0;
 		/* LED */
 		dev->ledno = cdev->ledno;
 		/* event */
 		dev->event = cdev->event;
-		
+		/* AP enabled */
+		dev->apen = mod->ap;
+		/* enable/disable the device per configuration */
+		if (cdev->enabled) 
+			slcdev_ssdev_enable(dev);
+
 		DCC_LOG3(LOG_INFO, "%s %d: enabled=%d", 
 				 dev->module ? "module" : "sensor", dev->addr, dev->enabled);
 	}
@@ -613,6 +616,8 @@ int config_load(void)
 	/* read symbol table */
 	ptr += size;
 	memcpy(slcdev_symbuf, ptr, sizeof(slcdev_symbuf));
+
+	slcdev_update_ap();
 
 	return 0;
 }

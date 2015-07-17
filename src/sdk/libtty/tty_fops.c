@@ -38,12 +38,8 @@ const struct fileop tty_ops = {
 
 FILE * tty_fopen(struct tty_dev * dev)
 {
-	if (dev == NULL) {
-		DCC_LOG(LOG_INFO, "(dev == NULL)!");
+	if (dev == NULL)
 		return NULL;
-	}
-
-	DCC_LOG(LOG_INFO, "...");
 
 	return file_alloc(dev, &tty_ops);
 }

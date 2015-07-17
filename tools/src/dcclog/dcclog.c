@@ -427,6 +427,61 @@ char * dcc_str(FILE *stream)
 	return s;
 }
 
+uint32_t ulrevbits(uint32_t v)
+{
+	// swap odd and even bits
+	v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+	// swap consecutive pairs
+	v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+	// swap nibbles ... 
+	v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+	// swap bytes
+	v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+	// swap 2-byte long pairs
+	v = ( v >> 16             ) | ( v               << 16);
+
+	return v;
+}
+
+int ultobin_msb_first(char * s, uint32_t val)
+{
+	int i;
+	int n = 0;
+
+	for (i = 31; i >=0; --i) {
+		if (val & (1 << 31))
+			break;
+		val <<= 1;
+	}
+
+	for (n = 0; i >= 0; --i, ++n) {
+		s[n] = (val & (1 << 31)) ? '1' : '0';
+		val <<= 1;
+	}
+
+	s[n] = '\0';
+
+	return n;
+}
+
+int ultobin_lsb_first(char * s, uint32_t val, int width)
+{
+	int i;
+
+	for (i = 0; (i < 32) && val; ++i) {
+		s[i] = (val & 1) ? '1' : '0';
+		val >>= 1;
+	}
+
+	for (; (i < 32) && (i < width); ++i) {
+		s[i] = '0';
+	}
+
+	s[i] = '\0';
+
+	return i;
+}
+
 #define	GOT_PERCENT     0x80
 #define	ZERO_FILL       0x40
 #define	JUST_LEFT       0x20
@@ -443,7 +498,7 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 	char flags;
 	char sign = 0;
 	int width = 0;
-	char buf[32];
+	char buf[80];
 	union {
 		char * cp;
 		uint32_t n;
@@ -559,6 +614,18 @@ int logprintf(FILE *stream, unsigned int opt, const char *fmt)
 		case 'u':
 			val.n = dcc_uint(stream);
 			val.n = sprintf(buf, "%u", val.n);
+			m++;
+			break;
+
+		case 'b':
+			val.n = dcc_uint(stream);
+			val.n = ultobin_msb_first(buf, val.n);
+			m++;
+			break;
+
+		case 'B':
+			val.n = dcc_uint(stream);
+			val.n = ultobin_lsb_first(buf, val.n, width);
 			m++;
 			break;
 
@@ -800,7 +867,7 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 	char flags;
 	char sign = 0;
 	int width = 0;
-	char buf[32];
+	char buf[80];
 	union {
 		char * cp;
 		uint32_t n;
@@ -914,6 +981,18 @@ int net_logprintf(int sock, unsigned int opt, const char *fmt)
 		case 'u':
 			val.n = net_dcc_u32(sock);
 			val.n = sprintf(buf, "%u", val.n);
+			m++;
+			break;
+
+		case 'b':
+			val.n = net_dcc_u32(sock);
+			val.n = ultobin_msb_first(buf, val.n);
+			m++;
+			break;
+
+		case 'B':
+			val.n = net_dcc_u32(sock);
+			val.n = ultobin_lsb_first(buf, val.n, width);
 			m++;
 			break;
 

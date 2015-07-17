@@ -32,7 +32,7 @@
 #include <string.h>
 #include <sys/file.h>
 #include <stdlib.h>
-#include <sys/dcclog.h>
+#include <assert.h>
 
 #ifndef PRINTF_ENABLE_LEFT_ALIGN
 #define PRINTF_ENABLE_LEFT_ALIGN 1
@@ -128,6 +128,9 @@ int vfprintf(struct file * f, const char * fmt, va_list ap)
 		long long ll;
 #endif
 	} val;
+
+	assert(f != NULL);
+	assert(fmt != NULL);
 
 	n = 0;
 	w = 0;

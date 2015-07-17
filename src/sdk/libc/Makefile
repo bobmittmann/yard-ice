@@ -36,7 +36,7 @@ CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 strcasecmp.c strcat.c strchr.c strstr.c\
 		 strcmp.c strncmp.c strcpy.c strncpy.c strlen.c\
 		 strtol.c strtoul.c vfprintf.c malloc.c calloc.c errno.c \
-		 strerror.c strtod.c strtoull.c \
+		 strerror.c strtod.c strtoull.c assert.c \
 		 rand.c stdin.c stdout.c stderr.c strtok.c null.c abort.c\
 		 time.c $(addprefix inet/,$(INET_CFILES)) \
 

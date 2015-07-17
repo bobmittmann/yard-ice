@@ -23,8 +23,6 @@
 #define DB_STACK_LIMIT (sizeof(struct fs_file) + sizeof(struct db_info))
 uint16_t db_stack = DB_STACK_LIMIT;
 
-uint32_t slcdev_symbuf[64]; /* symbol table buffer */
-
 struct db_info * db_info_get(void)
 {
 	struct fs_dirent entry;

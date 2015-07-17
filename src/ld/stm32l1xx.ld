@@ -150,7 +150,7 @@ SECTIONS
 		/* define a global symbol marking the start of the .bss section */
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
-		*(.bss)
+		*(.bss .bss*)
 	} >sram
 
 	/* advance location counter to the next 32-bit boundary */

@@ -89,7 +89,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__MSG);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; })); }} while (0)
 
 #define DCC_LOG1(__LVL, __FMT, __A) \
@@ -97,7 +97,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A)); }} while (0)
 
 #define DCC_LOG2(__LVL, __FMT, __A, __B) \
@@ -105,7 +105,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), \
 	(int)(__B)); }} while (0)
 
@@ -114,7 +114,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), \
 		(int)(__B), (int)(__C)); }} while (0)
 
@@ -123,7 +123,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D)); }} while (0)
 
@@ -132,7 +132,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E)); }} while (0)
 
@@ -141,7 +141,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F)); }} while (0)
 
@@ -150,7 +150,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F), (int)(__G)); \
 	}} while (0)
@@ -160,7 +160,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F), (int)(__G), \
 		(int)(__H)); }} while (0)
@@ -170,7 +170,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F), (int)(__G), \
 		(int)(__H), (int)(__I)); }} while (0)
@@ -181,7 +181,7 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, 0, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (int)(__A), (int)(__B), \
 		(int)(__C), (int)(__D), (int)(__E), (int)(__F), (int)(__G), \
 		(int)(__H), (int)(__I), (int)(__J)); }} while (0)
@@ -191,8 +191,23 @@ enum {
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
 	static const struct trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, LOG_OPT_STR, __FUNCTION__, _m}; \
+	log_entry = { _f, __LINE__, __LVL, LOG_OPT_STR, __FUNCTION__, _m }; \
 	(struct trace_entry *)&log_entry; }), (const char *)(__STR)); }} while (0)
+
+#define DCC_ASSERT_FAIL(__EXPR) { \
+	extern void __attribute((noreturn)) _halt(void); \
+	ice_trace1( ({ \
+	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
+	static const char _m[] __attribute__ ((section(".dccdata"))) = \
+													 "Assertion failed: '%s'";\
+	static const struct trace_entry __attribute__((section(".dcclog"))) \
+	log_entry = { _f, __LINE__, LOG_PANIC, 0, __FUNCTION__, _m }; \
+	(struct trace_entry *)&log_entry; }), (int)(__EXPR)); \
+	_halt(); }
+
+#define __STRING(x)	#x
+#undef	assert
+#define assert(EXPR) do { if (!(EXPR)) DCC_ASSERT_FAIL(__STRING(EXPR)) } while (0)
 
 #else
 

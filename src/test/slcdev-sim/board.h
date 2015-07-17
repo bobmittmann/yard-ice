@@ -137,12 +137,16 @@
 #define EEPROM_BLK_TROUBLE_LOG_OFFS  0x0200
 
 /* -------------------------------------------------------------------------
- * ThinkOS flags assignements
+ * ThinkOS kernel descriptors
  * ------------------------------------------------------------------------- */
 
-#define SERDRV_RX_FLAG (THINKOS_FLAG_BASE + 0)
-#define SERDRV_TX_FLAG (THINKOS_FLAG_BASE + 1)
-#define SLCDEV_DRV_EV  (THINKOS_EVENT_BASE + 0)
+/* serial driver transmission flag */
+//#define SERDRV_RX_FLAG THINKOS_FLAG_DESC(0) 
+#define SERDRV_RX_GATE THINKOS_GATE_DESC(1) 
+/* serial driver reception gate */
+#define SERDRV_TX_GATE THINKOS_GATE_DESC(0) 
+/* SLC device driver event set */
+#define SLCDEV_DRV_EV  THINKOS_EVENT_DESC(0) 
 
 #define IO_POLL_PERIOD_MS 16
 

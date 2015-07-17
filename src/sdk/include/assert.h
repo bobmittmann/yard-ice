@@ -18,7 +18,9 @@
 
 #ifdef	NDEBUG
 
-#define assert(EXPR)		(void)
+#define assert(EXPR)		(void)0
+
+#include <sys/dcclog.h>
 
 #else /* Not NDEBUG.  */
 
