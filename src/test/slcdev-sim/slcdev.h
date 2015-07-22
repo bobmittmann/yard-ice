@@ -318,6 +318,8 @@ struct slcdev_drv {
 		uint16_t ipw;   /* pulse width (microsseconds) */
 		uint8_t zone;   
 		uint8_t cmd;   
+		uint8_t parm;   /* command parameter */
+		uint8_t addr;   /* subaddress */
 		struct {
 			uint32_t act;   /* active bitmap, one bit per ten digit, 
 							   one bit per ones digit */

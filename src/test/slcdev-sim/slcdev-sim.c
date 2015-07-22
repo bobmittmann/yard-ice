@@ -366,11 +366,11 @@ void module_sim_monitor(void * ptr, struct ss_device * dev,
 
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
-		DCC_LOG(LOG_TRACE, "Class A switched");
+		DCC_LOG1(LOG_TRACE, "M%d Class A switched ", dev->addr);
 		dev->pw2 = device_db_pw_lookup(model->pw2lst, 2);
 		break;
 	case CLASS_A_NORMAL:
-		DCC_LOG(LOG_TRACE, "Class A normal");
+		DCC_LOG1(LOG_TRACE, "M%d Class A normal", dev->addr);
 		dev->pw2 = device_db_pw_lookup(model->pw2lst, 1);
 		break;
 	}
