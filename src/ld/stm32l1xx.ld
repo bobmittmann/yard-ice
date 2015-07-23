@@ -118,6 +118,7 @@ SECTIONS
 		*(.glue_7) *(.glue_7t) *(.vfp11_veneer) *(.v4_bx)
 		/* all .rodata sections (constants, strings, etc.)  */
 		*(.rodata .rodata.* .gnu.linkonce.r.*)
+		*(.rodata1)
 		. = ALIGN(4);
 		/* constructors */
 		PROVIDE(__ctors_start = .);
@@ -126,16 +127,30 @@ SECTIONS
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
-		/* define a global symbol marking the end of read only data sections */
-		. = ALIGN(8); 
-		PROVIDE(__text_end = .);
+		. = ALIGN(8);
 	} >flash = 0xffffffff
+
+	.ARM.extab : 
+	{ 
+		*(.ARM.extab* .gnu.linkonce.armextab.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_start = .);
+
+	.ARM.exidx : 
+	{ 
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_end = .);
+
+	/* define a global symbol marking the end of read only data sections */
+	PROVIDE(__text_end = .);
 
 	.data :
 	{
 		. = ALIGN(4);
 		/* create a global symbol marking the start of the .data section  */
 		PROVIDE (__data_start = . );
+		KEEP (*(.ram_vectors))
 		/* all .data sections  */
 		*(.data .data*)
 		/* define a global symbol marking the end of the .data section  */

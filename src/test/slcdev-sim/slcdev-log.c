@@ -5,4 +5,5 @@
 
 #include <sys/dcclog.h>
 #include "slcdev.h"
+#include "profclk.h"
 

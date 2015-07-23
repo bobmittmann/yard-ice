@@ -46,11 +46,11 @@ void slcdev_shell(FILE * f)
 	struct cmd_history * history;
 	int ret = 0;
 
-	DCC_LOG(LOG_TRACE, "history_init()");
+	DCC_LOG(LOG_MSG, "history_init()");
 
 	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
 
-	DCC_LOG(LOG_TRACE, "shell_greeting()");
+	DCC_LOG(LOG_MSG, "shell_greeting()");
 	fprintf(f, "\n%s\n%s\n\n", version_str, copyright_str);
 
 	/* start a shell on the serial TTY */
@@ -58,7 +58,7 @@ void slcdev_shell(FILE * f)
 		char * stat;
 		char * cp;
 
-		DCC_LOG(LOG_TRACE, "shell_prompt()!");
+		DCC_LOG(LOG_MSG, "shell_prompt()!");
 		fprintf(f, "[DEV]$ ");
 
 		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
@@ -67,17 +67,17 @@ void slcdev_shell(FILE * f)
 		if ((cp = shell_stripline(line)) == NULL)
 			continue;
 
-		DCC_LOG(LOG_TRACE, "history_add()");
+		DCC_LOG(LOG_MSG, "history_add()");
 		history_add(history, cp);
 
-		DCC_LOGSTR(LOG_WARNING, "cp=\"%s\"", cp);
+		DCC_LOGSTR(LOG_MSG, "cp=\"%s\"", cp);
 
 		/* try to get a command from the line */
 		if (cmd_lookup(cmd_tab, cp) == NULL) {
 			/* try to interpret a javascript code instead */
-			DCC_LOG(LOG_TRACE, "js...");
+			DCC_LOG(LOG_MSG, "js...");
 			js(f, cp, strlen(cp));
-			DCC_LOG(LOG_TRACE, "done...");
+			DCC_LOG(LOG_MSG, "done...");
 			continue;
 		}
 

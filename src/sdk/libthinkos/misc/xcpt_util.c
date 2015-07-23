@@ -70,6 +70,7 @@ void __xdump(struct thinkos_except * xcpt)
 	uint32_t icsr;
 	uint32_t ipsr;
 	uint32_t xpsr;
+	uint32_t sp;
 	int irqmax;
 	int irqbits;
 	int i;
@@ -92,6 +93,8 @@ void __xdump(struct thinkos_except * xcpt)
 		}
 	}
 
+	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
+
 	DCC_LOG4(LOG_ERROR, "   R0=%08x  R1=%08x  R2=%08x  R3=%08x", 
 			xcpt->ctx.r0, xcpt->ctx.r1, xcpt->ctx.r2, xcpt->ctx.r3);
 	DCC_LOG4(LOG_ERROR, "   R4=%08x  R5=%08x  R6=%08x  R7=%08x", 
@@ -99,7 +102,7 @@ void __xdump(struct thinkos_except * xcpt)
 	DCC_LOG4(LOG_ERROR, "   R8=%08x  R9=%08x R10=%08x R11=%08x", 
 			xcpt->ctx.r8, xcpt->ctx.r9, xcpt->ctx.r10, xcpt->ctx.r11);
 	DCC_LOG4(LOG_ERROR, "  R12=%08x  SP=%08x  LR=%08x  PC=%08x", 
-			xcpt->ctx.r12, xcpt->sp, xcpt->ctx.lr, xcpt->ctx.pc);
+			xcpt->ctx.r12, sp, xcpt->ctx.lr, xcpt->ctx.pc);
 	DCC_LOG4(LOG_ERROR, " XPSR=%08x MSP=%08x PSP=%08x RET=%08x", 
 			xcpt->ctx.xpsr, xcpt->msp, xcpt->psp, xcpt->ret);
 	xpsr = xcpt->ctx.xpsr;

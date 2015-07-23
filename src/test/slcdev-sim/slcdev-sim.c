@@ -17,11 +17,9 @@ int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
 int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
 struct slcdev_usr usr;
 
-void sim_js_exec(void * ptr, struct ss_device * dev, 
+void sim_js_exec(struct microjs_vm * vm, struct ss_device * dev, 
 				 struct db_dev_model * model, uint8_t code[])
 {
-	struct microjs_vm * vm = (struct microjs_vm *)ptr;
-
 	microjs_exec(vm, code);
 }
 
@@ -29,14 +27,36 @@ void sim_js_exec(void * ptr, struct ss_device * dev,
  * CLIP mode sensors simulation
  ----------------------------------------------------------------------- */
 
-#define REMOTE_TEST_MSK 0x2d /* 101101 */
-#define REMOTE_TEST_ON  0x00 
-#define REMOTE_TEST_OFF 0x2d 
+#define REMOTE_TEST_MSK 0xdd /* 1101 1101 */
+#define REMOTE_TEST_ON  0x88 
+#define REMOTE_TEST_OFF 0xdd 
+
+void device_led_default(struct ss_device * dev, uint32_t ctl)
+{
+	if (dev->ledno) {
+		DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
+
+		/* Poll LED state */
+		if ((ctl & 0x5) == 0x5) {
+			led_flash(dev->ledno - 1, 64);
+		} else if ((ctl & 0x4) == 0x4) {
+			led_on(dev->ledno - 1);
+		} else
+			led_off(dev->ledno - 1);
+	}
+
+	if ((ctl & 0x4) == 0x4)
+		dev->led = 1;
+	else
+		dev->led = 0;
+}
 
 /* Default control bits processing for sensors */
 void sensor_ctl_default(struct ss_device * dev, 
 					   struct db_dev_model * model, uint32_t ctl)
 {
+	device_led_default(dev, ctl);
+
 	/* Remote test */
 	switch (ctl & REMOTE_TEST_MSK) {
 	case REMOTE_TEST_ON:
@@ -81,9 +101,10 @@ void sensor_pw4_default(struct ss_device * dev, struct db_dev_model * model)
 }
 
 /* simulate a custom sensor */
-void sensor_sim_custom(void * ptr, struct ss_device * dev, 
-					   struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_custom(struct microjs_vm * vm, struct slcdev_sim * sim,
+					   struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
 	struct cmd_list * lst;
 
 	sensor_ctl_default(dev, model, ctl);
@@ -95,16 +116,18 @@ void sensor_sim_custom(void * ptr, struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(ptr, dev, model, cmd->code);
+				sim_js_exec(vm, dev, model, cmd->code);
 			}
 		}
 	}
 }
 
 /* simulate a photodetector smoke sensor */
-void sensor_sim_photo(void * ptr, struct ss_device * dev, 
-					  struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_photo(struct microjs_vm * vm, struct slcdev_sim * sim,
+					  struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -113,9 +136,11 @@ void sensor_sim_photo(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a ion smoke detector */
-void sensor_sim_ion(void * ptr, struct ss_device * dev, 
-					struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_ion(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -124,9 +149,11 @@ void sensor_sim_ion(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a heat detector sensor */
-void sensor_sim_heat(void * ptr, struct ss_device * dev, 
-					 struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_heat(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					 struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -135,9 +162,11 @@ void sensor_sim_heat(void * ptr, struct ss_device * dev,
 }
 
 /* simulate an Acclimate Photoelectric Smoke Sensor */
-void sensor_sim_acclimate(void * ptr, struct ss_device * dev, 
-						  struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_acclimate(struct microjs_vm * vm, struct slcdev_sim * sim, 
+						  struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -146,9 +175,11 @@ void sensor_sim_acclimate(void * ptr, struct ss_device * dev,
 }
 
 /* simulate an Beam Smoke Sensor */
-void sensor_sim_beam(void * ptr, struct ss_device * dev, 
-						  struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_beam(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					 struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -157,9 +188,11 @@ void sensor_sim_beam(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a COPTIR Smoke Detector Sensor */
-void sensor_sim_coptir(void * ptr, struct ss_device * dev, 
-					   struct db_dev_model * model, uint32_t ctl)
+void sensor_sim_coptir(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					   struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG3(LOG_INFO, "%s[%d].ctl=%04x", dev->module ? "module" : "sensor",
 			 dev->addr, ctl);
 
@@ -193,9 +226,10 @@ void module_pw4_default(struct ss_device * dev, struct db_dev_model * model)
 }
 
 /* simulate a custom module */
-void module_sim_custom(void * ptr, struct ss_device * dev, 
-					   struct db_dev_model * model, uint32_t ctl)
+void module_sim_custom(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					   struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
 	struct cmd_list * lst;
 
 	/* execute commands from the device model */
@@ -205,20 +239,20 @@ void module_sim_custom(void * ptr, struct ss_device * dev,
 			struct cmd_entry * cmd = &lst->cmd[i];
 			if ((ctl & cmd->seq.msk) == cmd->seq.val) {
 				DCC_LOG1(LOG_INFO, "CMD[%d]", i);
-				sim_js_exec(ptr, dev, model, cmd->code);
+				sim_js_exec(vm, dev, model, cmd->code);
 			}
 		}
 	}
 }
 
-#define CONTROL_OUT_MSK 0x2d /* 101101 */
-#define CONTROL_OUT_ON  0x00 
-#define CONTROL_OUT_OFF 0x2d 
+#define CONTROL_OUT_MSK 0xdd /* 1101 1101 */
+#define CONTROL_OUT_ON  0x88 
+#define CONTROL_OUT_OFF 0xdd 
 
-
-void module_contorl_seq(struct ss_device * dev, 
-						struct db_dev_model * model, uint32_t ctl)
+void module_contorl_seq(struct ss_device * dev, uint32_t ctl)
 {
+	device_led_default(dev, ctl);
+
 	switch (ctl & 0x7) {
 	case 0:/* 0 0 0 */
 		/* Outputs:         1  2  3  5 */
@@ -281,12 +315,14 @@ void module_contorl_seq(struct ss_device * dev,
 
 
 /* simulate a relay module */
-void module_sim_relay(void * ptr, struct ss_device * dev, 
-					  struct db_dev_model * model, uint32_t ctl)
+void module_sim_relay(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					  struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
-	module_contorl_seq(dev, model, ctl);
+	module_contorl_seq(dev, ctl);
 
 	if ((ctl & 0x81) == 0) {
 		/* 1.	Bit 10 = 0,  sent two consecutive times, 
@@ -310,12 +346,14 @@ void module_sim_relay(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a supervised cntrol module */
-void module_sim_control(void * ptr, struct ss_device * dev, 
-						struct db_dev_model * model, uint32_t ctl)
+void module_sim_control(struct microjs_vm * vm, struct slcdev_sim * sim, 
+						struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
-	module_contorl_seq(dev, model, ctl);
+	module_contorl_seq(dev, ctl);
 
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
@@ -332,12 +370,14 @@ void module_sim_control(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a firefighter telephone module */
-void module_sim_phone(void * ptr, struct ss_device * dev, 
-					  struct db_dev_model * model, uint32_t ctl)
+void module_sim_phone(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					  struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
-	module_contorl_seq(dev, model, ctl);
+	module_contorl_seq(dev, ctl);
 
 	switch (ctl & CONTROL_OUT_MSK) {
 	case CONTROL_OUT_ON:
@@ -354,15 +394,19 @@ void module_sim_phone(void * ptr, struct ss_device * dev,
 	module_pw4_default(dev, model);
 }
 
-#define CLASS_A_MSK      0x2d /* 101101 */
-#define CLASS_A_SWITCHED 0x00 
-#define CLASS_A_NORMAL   0x2d 
+#define CLASS_A_MSK      0xdd /* 1101 1101 */
+#define CLASS_A_SWITCHED 0x88 /* 1000 1000 */
+#define CLASS_A_NORMAL   0xdd /* 1101 1101 */
 
 /* simulate a monitor module */
-void module_sim_monitor(void * ptr, struct ss_device * dev, 
-						struct db_dev_model * model, uint32_t ctl)
+void module_sim_monitor(struct microjs_vm * vm, struct slcdev_sim * sim, 
+						struct ss_device * dev, struct db_dev_model * model)
 {
-	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
+	uint32_t ctl = sim->ctls;
+
+	DCC_LOG2(LOG_TRACE, "addr=%d ctl=%b", dev->addr, ctl);
+
+	module_contorl_seq(dev, ctl);
 
 	switch (ctl & CLASS_A_MSK) {
 	case CLASS_A_SWITCHED:
@@ -379,65 +423,89 @@ void module_sim_monitor(void * ptr, struct ss_device * dev,
 }
 
 /* simulate a mini-module */
-void module_sim_mini(void * ptr, struct ss_device * dev, 
-					 struct db_dev_model * model, uint32_t ctl)
+void module_sim_mini(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					 struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
+	module_contorl_seq(dev, ctl);
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	module_pw4_default(dev, model);
 }
 
 /* simulate a 2 wire module */
-void module_sim_czif(void * ptr, struct ss_device * dev, 
-					  struct db_dev_model * model, uint32_t ctl)
+void module_sim_czif(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					 struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
+	module_contorl_seq(dev, ctl);
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	module_pw4_default(dev, model);
 }
 
 /* simulate a 4-20ma input device */
-void module_sim_4_20ma(void * ptr, struct ss_device * dev, 
-					   struct db_dev_model * model, uint32_t ctl)
+void module_sim_4_20ma(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					   struct ss_device * dev, struct db_dev_model * model)
 {
+	uint32_t ctl = sim->ctls;
+
+	module_contorl_seq(dev, ctl);
+
 	DCC_LOG2(LOG_INFO, "addr=%d ctl=0x%04x", dev->addr, ctl);
 
 	module_pw4_default(dev, model);
+}
+
+void device_sim_null(struct microjs_vm * vm, struct slcdev_sim * sim, 
+					 struct ss_device * dev, struct db_dev_model * model)
+{
 }
 
 #define SIM_MODEL_NAME_MAX 12
 
 struct sim_model {
 	const char name[SIM_MODEL_NAME_MAX]; 
-	void (* run)(void * ptr, struct ss_device * dev, 
-				 struct db_dev_model * model, 
-				 uint32_t ctl);
+	void (* run)(struct microjs_vm * vm, 
+				 struct slcdev_sim * sim,
+				 struct ss_device * dev, 
+				 struct db_dev_model * model);
 };
 
-const struct sim_model sim_model_lut[] = {
-	[0] = { .name = "custom", .run = sensor_sim_custom },
-	[1] = { .name = "photo", .run = sensor_sim_photo },
-	[2] = { .name = "ion", .run = sensor_sim_ion },
-	[3] = { .name = "heat", .run = sensor_sim_heat },
-	[4] = { .name = "acclimate", .run = sensor_sim_acclimate },
-	[5] = { .name = "beam", .run = sensor_sim_beam },
-	[6] = { .name = "coptir", .run = sensor_sim_coptir },
-
-	[7] = { .name = "custom", .run = module_sim_custom },
-	[8] = { .name = "relay", .run = module_sim_relay },
-	[9] = { .name = "control", .run = module_sim_control },
-	[10] = { .name = "monitor", .run = module_sim_monitor },
-	[11] = { .name = "mini", .run = module_sim_mini },
-	[12] = { .name = "czif", .run = module_sim_czif },
-	[13] = { .name = "phone", .run = module_sim_phone },
-	[14] = { .name = "4-20mA", .run = module_sim_4_20ma }
-};
-
-#define SENSOR_SIM_CUSTOM 0
+#define SENSOR_SIM_CUSTOM 1
 /* XXX: changes in the table bellow must be refelected in 
    this two constants */
-#define MODULE_SIM_CUSTOM 7
-#define MODEL_SIM_LAST 13
+#define MODULE_SIM_CUSTOM 8
+
+#define MODEL_SIM_NULL 0
+
+#define MODEL_SIM_LAST 15
+
+const struct sim_model sim_model_lut[] = {
+	[0] = { .name = "null", .run = device_sim_null },
+
+	[1] = { .name = "custom", .run = sensor_sim_custom },
+	[2] = { .name = "photo", .run = sensor_sim_photo },
+	[3] = { .name = "ion", .run = sensor_sim_ion },
+	[4] = { .name = "heat", .run = sensor_sim_heat },
+	[5] = { .name = "acclimate", .run = sensor_sim_acclimate },
+	[6] = { .name = "beam", .run = sensor_sim_beam },
+	[7] = { .name = "coptir", .run = sensor_sim_coptir },
+
+	[8] = { .name = "custom", .run = module_sim_custom },
+	[9] = { .name = "relay", .run = module_sim_relay },
+	[10] = { .name = "control", .run = module_sim_control },
+	[11] = { .name = "monitor", .run = module_sim_monitor },
+	[12] = { .name = "mini", .run = module_sim_mini },
+	[13] = { .name = "czif", .run = module_sim_czif },
+	[14] = { .name = "phone", .run = module_sim_phone },
+	[15] = { .name = "4-20mA", .run = module_sim_4_20ma },
+
+};
 
 int sensor_sim_lookup(const char * name, unsigned int len)
 {
@@ -483,6 +551,30 @@ const char * model_sim_name(unsigned int idx)
 	return sim_model_lut[idx].name;
 }
 
+void on_ap_read_presence(void) 
+{
+	unsigned int mod;
+	unsigned int tens;
+	unsigned int ones;
+	uint32_t act;
+	uint32_t msk;
+
+	mod = slcdev_drv.sim.ap.parm & 1;
+	tens = slcdev_drv.sim.ap.parm >> 1;
+
+	for (ones = 0; ones < 10; ++ones) {
+		/* get the bitmap of active devices */
+		act = mod ? slcdev_drv.ap.m.act : slcdev_drv.ap.s.act;
+		/* compute the bit mask for the current read presence bit */
+		msk = (1 << (tens + 10)) + (1 << ones);
+		/* check for a match */
+		if ((act & msk) == msk) {
+			DCC_LOG2(LOG_TRACE, "AP %c%d presence detected.", 
+					 mod ? 'M' : 'S', tens * 10 + ones);
+		}
+	}
+}
+
 void __attribute__((noreturn)) sim_event_task(void)
 {
 	struct microjs_rt rt;
@@ -490,7 +582,8 @@ void __attribute__((noreturn)) sim_event_task(void)
 	struct ss_device * dev;
 	struct db_info * db;
 	struct microjs_vm vm; 
-	uint32_t ctl;
+	struct slcdev_sim * sim;
+	const struct sim_model * sim_model;
 	int i;
 
 	/* initialize virtual machine */
@@ -503,8 +596,10 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 	db = db_info_get();
 	dev = slcdev_drv.dev;
-	ctl = slcdev_drv.ctls;
 	model = db_dev_model_by_index(db, dev->model);
+	sim_model = &sim_model_lut[model->sim];
+
+	sim = &slcdev_drv.sim;
 
 	DCC_LOG1(LOG_INFO, "db=%08x", db);
 
@@ -518,38 +613,24 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 		if (dev != slcdev_drv.dev) {
 			dev = slcdev_drv.dev;
-			ctl = slcdev_drv.ctls;
-			/* get the model for this device */
+			/* get the model id for this device */
 			model = db_dev_model_by_index(db, dev->model);
+			sim_model = &sim_model_lut[model->sim];
 		}
 
 		switch (ev) {
 
 		case SLC_EV_DEV_POLL:
-			if (model != NULL) {
-				const struct sim_model * sim;
-				sim = &sim_model_lut[model->sim];
+			/* simulate a clip device */
+			sim_model->run(&vm, sim, dev, model);
+			break;
 
-				if (dev->ledno) {
-					DCC_LOG2(LOG_INFO, "dev=%d ctl=0x%x", dev->addr, ctl);
+		case SLC_EV_AP_DIRECT_POLL:
+			DCC_LOG1(LOG_TRACE, "AP direct poll: dev=%d", dev->addr);
+			break;
 
-					/* Poll LED state */
-					if ((ctl & 0x5) == 0x5) {
-						led_flash(dev->ledno - 1, 64);
-					} else if ((ctl & 0x4) == 0x4) {
-						led_on(dev->ledno - 1);
-					} else
-						led_off(dev->ledno - 1);
-				}
-
-				if ((ctl & 0x4) == 0x4)
-					dev->led = 1;
-				else
-					dev->led = 0;
-
-				/* simulate the device */
-				sim->run(&vm, dev, model, ctl);
-			}
+		case SLC_EV_AP_RD_PRESENCE:
+			on_ap_read_presence(); 
 			break;
 
 		case SLC_EV_TRIG:

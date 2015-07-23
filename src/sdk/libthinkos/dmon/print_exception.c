@@ -32,6 +32,7 @@ void dmon_print_exception(struct dmon_comm * comm,
 	uint32_t bfsr;
 	uint32_t ufsr;
 	uint32_t mmfsr;
+	uint32_t sp;
 
 	switch (xcpt->type) {
 	case CM3_EXCEPT_HARD_FAULT:
@@ -76,6 +77,8 @@ void dmon_print_exception(struct dmon_comm * comm,
 		}	
 	}
 
+	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
+
 	dmprintf(comm, "\r\n xpsr=%08x [N=%c Z=%c C=%c V=%c Q=%c T=%c "
 				"ICI/IT=%02x GE=%1x XCP=%d]\r\n", 
 				psr,
@@ -91,7 +94,7 @@ void dmon_print_exception(struct dmon_comm * comm,
 	dmprintf(comm, "   r0=%08x   r4=%08x   r8=%08x  r12=%08x\r\n",
 				xcpt->ctx.r0, xcpt->ctx.r4, xcpt->ctx.r8, xcpt->ctx.r12);
 	dmprintf(comm, "   r1=%08x   r5=%08x   r9=%08x   sp=%08x\r\n", 
-				xcpt->ctx.r1, xcpt->ctx.r5, xcpt->ctx.r9, xcpt->sp);
+				xcpt->ctx.r1, xcpt->ctx.r5, xcpt->ctx.r9, sp);
 	dmprintf(comm, "   r2=%08x   r6=%08x  r10=%08x   lr=%08x\r\n", 
 				xcpt->ctx.r2, xcpt->ctx.r6, xcpt->ctx.r10, xcpt->ctx.lr);
 	dmprintf(comm, "   r3=%08x   r7=%08x  r11=%08x   pc=%08x\r\n",  

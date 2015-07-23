@@ -19,27 +19,22 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-PROG = slc-dev
 
-#CFILES_GEN = device_db.c
-CFILES = slc-dev.c board.c isink.c slcdev-drv.c \
-		 serdrv.c slcdev-db.c flashfs.c shell.c\
-		 xflash.c uart_xflash_pic.c slcdev-sim.c slcdev-cfg.c\
-		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
-#		 bacnet_ptp.c 
+PROG = thinkos
 
+CFILES = boot.c ../monitor.c board.c
 
 SDK = ../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
-		  $(SDK)/libthinkos  $(SDK)/libice-comm $(SDK)/libxmodem \
-		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell $(SDK)/libmicrojs
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
+		  $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell microjs
+LIBS = cm3 stm32f util thinkos ice-comm gcc 
 
 INCPATH = $(SDK)/include 
 
-CDEFS = CONFIG_H NDEBUG
+CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
+
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 

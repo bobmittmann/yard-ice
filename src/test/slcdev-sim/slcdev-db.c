@@ -696,11 +696,31 @@ int db_dev_model_index_by_name(struct db_info * inf,
 	return -1;
 }
 
+const struct db_dev_model db_dev_model_null = {
+	.next = NULL,
+	.opt = 0,
+	.model = 0,
+	.desc = 0,
+	.sim = 0, /* Simulation algorithm */
+	.res = 0,
+	.pw1lst = NULL, /* Reference Pulse Width */
+	.pw2lst = NULL, /* Remote Test Status */
+	.pw3lst = NULL, /* Manufacturer Code */
+	.pw4lst = NULL, /* Analog */
+	.pw5lst = NULL, /* Type Id */
+	.pw4lut = {
+		.tbl = { .idx = 0, .cnt = 0 },
+		.alm = { .idx = 0, .cnt = 0 },
+		.tst = { .idx = 0, .cnt = 0 }
+	},
+	.cmd = NULL
+};
+
 struct db_dev_model * db_dev_model_by_index(struct db_info * inf,
 											unsigned int idx)
 {
 	if (inf == NULL)
-		return NULL;
+		return (struct db_dev_model *)&db_dev_model_null;
 
 	return (struct db_dev_model *)inf->obj[idx];
 }

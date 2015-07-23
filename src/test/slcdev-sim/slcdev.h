@@ -166,6 +166,10 @@ struct db_info {
 #define SLC_EV_USR7       22
 #define SLC_EV_USR8       23
 
+#define SLC_EV_AP_DIRECT_POLL 24
+#define SLC_EV_AP_GROUP_POLL  25
+#define SLC_EV_AP_RD_PRESENCE 26
+
 /***************************************************************************
   Runtime
  ***************************************************************************/
@@ -298,28 +302,34 @@ struct slcdev_trig {
 	uint16_t ap_cmp; /* AP mode compare value */
 };
 
-struct slcdev_drv {
-	int state;          /* decoder state */
-	int clip_state;     /* decoder state */
-	struct {
-		volatile uint32_t halt : 1;
-	} sim;
-	uint16_t idx;       /* current polled device index */
-	uint8_t bit_cnt;    /* message bit count */
-	uint8_t pw5en;      /* PW5 (Type ID) requested */
-	uint32_t msg;       /* message data from the panel */
+/* device simulator context */
+struct slcdev_sim {
+	volatile uint32_t halt : 1;
 	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	struct {
 		uint8_t insn;   /* AP instruction */
 		uint8_t irq;    /* Interrupt request */
+		uint8_t zone;   
+		uint8_t cmd;   
+		uint8_t parm;   /* command parameter */
+		uint8_t subaddr;   /* subaddress */
+	} ap; /* AP specific options */
+};
+
+struct slcdev_drv {
+	int state;          /* decoder state */
+	int clip_state;     /* decoder state */
+	uint16_t idx;       /* current polled device index */
+	uint8_t bit_cnt;    /* message bit count */
+	uint8_t pw5en;      /* PW5 (Type ID) requested */
+	uint32_t msg;       /* message data from the panel */
+	struct slcdev_trig trig; /* trigger module  */
+	struct slcdev_sim sim;
+	struct {
 		uint8_t icfg;   /* pulse preenphasis width (microsseconds) */
 		uint8_t ipre;   /* pulse preenphasis width (microsseconds) */
 		uint8_t ilat;   /* pulse latency (microsseconds) */
 		uint16_t ipw;   /* pulse width (microsseconds) */
-		uint8_t zone;   
-		uint8_t cmd;   
-		uint8_t parm;   /* command parameter */
-		uint8_t addr;   /* subaddress */
 		struct {
 			uint32_t act;   /* active bitmap, one bit per ten digit, 
 							   one bit per ones digit */
@@ -333,7 +343,7 @@ struct slcdev_drv {
 			uint8_t ones[10]; /* number of devices per one digit */
 		} m; /* modules */
 	} ap; /* AP specific options */
-	struct slcdev_trig trig; /* trigger module  */
+
 	struct {
 		unsigned int state; /* decoder state */
 		uint8_t pre; /* pulse preenphasis width (microsseconds) */

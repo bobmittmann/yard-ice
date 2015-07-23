@@ -31,7 +31,7 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX 0
+#define THINKOS_IRQ_MAX 44
 
 #define THINKOS_EXCEPT_STACK_SIZE 312
 
@@ -59,13 +59,13 @@
 #define THINKOS_ENABLE_SEM_ALLOC 0
 
 #define THINKOS_EVENT_MAX 1
-#define THINKOS_ENABLE_EVENT_ALLOC 0
+#define THINKOS_ENABLE_EVENT_ALLOC 1
 
 #define THINKOS_FLAG_MAX 0
 #define THINKOS_ENABLE_FLAG_ALLOC 0
 
 #define THINKOS_GATE_MAX 2
-#define THINKOS_ENABLE_GATE_ALLOC 0
+#define THINKOS_ENABLE_GATE_ALLOC 1
 
 #define THINKOS_ENABLE_THREAD_STAT 0
 #define THINKOS_ENABLE_TIMED_CALLS 1
@@ -83,41 +83,19 @@
 
 #define THINKOS_SYSRST_ONFAULT 1
 
-#define THINKOS_STDERR_FAULT_DUMP 1
+#define THINKOS_STDERR_FAULT_DUMP 0
 
 #define THINKOS_ENABLE_RT_DEBUG 0
 
 #define THINKOS_ENABLE_PROFILING 0
 
-/* -------------------------------------------------------------------------
-   MicroJS configuration
-   -------------------------------------------------------------------------- */
-
-#define MICROJS_DEBUG_ENABLED 0
-#define MICROJS_TRACE_ENABLED 0
-#define MICROJS_VERBOSE_ENABLED 1
-#define MICROJS_STRINGS_ENABLED 1
-#define MICROJS_STRINGBUF_ENABLED 0
-#define MICROJS_STDLIB_ENABLED 0
-#define MICROJS_OPTIMIZATION_ENABLED 1
-
-#define JSON_LABEL_LST_MAX 48
-#define JSON_STRING_LEN_MAX 192
+#define THINKOS_ENABLE_THREAD_INFO 0
 
 /* -------------------------------------------------------------------------
    Other configuration
    -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_PLL 0
-
-#define SHELL_LINE_MAX 72
-#define SHELL_ARG_MAX 12
-#define SHELL_HISTORY_MAX 5
-
-#define TTY_INBUF_LEN 8
-#define TTY_DEV_MAX 1
-
-#define FILE_DEV_MAX 2
 
 #endif /* __CONFIG_H__ */
 

@@ -491,12 +491,6 @@ struct thinkos_rt {
 	int8_t lock[THINKOS_MUTEX_MAX];
 #endif /* THINKOS_MUTEX_MAX > 0 */
 
-#if 0
-#if THINKOS_COND_MAX > 0
-	uint8_t cond_mutex[THINKOS_COND_MAX];
-#endif /* THINKOS_COND_MAX > 0 */
-#endif
-
 #if THINKOS_IRQ_MAX > 0
 	int8_t irq_th[THINKOS_IRQ_MAX];
 #endif /* THINKOS_IRQ_MAX */
@@ -536,8 +530,7 @@ struct thinkos_rt {
 #if THINKOS_ENABLE_THREAD_INFO
 	struct thinkos_thread_inf * th_inf[THINKOS_THREADS_MAX]; 
 #endif
-
-} __attribute__ ((aligned (8)));
+};
 
 
 /* -------------------------------------------------------------------------- 
@@ -657,10 +650,10 @@ struct thinkos_thread_init {
 struct thinkos_except {
 	struct thinkos_context ctx;
 	uint32_t ret;
-	uint32_t sp;
 	uint32_t msp;
 	uint32_t psp;
 	uint32_t icsr;
+
 	uint8_t ipsr;
 	uint8_t type; /* exception type */
 	int8_t thread_id;

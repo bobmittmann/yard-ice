@@ -100,18 +100,18 @@ __xcpt_context_save(struct thinkos_except * xcpt)
 
 	xcpt->ret = lr;
 	xcpt->ipsr = cm3_ipsr_get();
-	xcpt->sp = sp - 8 * 4;
 
-	if (lr == CM3_EXC_RET_THREAD_PSP) {
-		xcpt->psp = xcpt->sp;
-	} else {
+	if (xcpt->ret == CM3_EXC_RET_THREAD_PSP)
+		xcpt->psp = sp - 8 * 4;
+	else
 		xcpt->psp = cm3_psp_get();
-	}
 
-	xcpt->msp = cm3_msp_get() - 4 * 8;
+	xcpt->msp = cm3_msp_get() - 8 * 4;
+
 	xcpt->icsr = CM3_SCB->icsr;
 }
 
+#if 0
 static inline void __attribute__((always_inline, noreturn)) 
 __xcpt_context_restore(struct thinkos_except * xcpt)
 {
@@ -120,7 +120,7 @@ __xcpt_context_restore(struct thinkos_except * xcpt)
 	register uint32_t lr asm("r3");
 
 	ctx = (uint32_t *)&xcpt->ctx;
-	sp = xcpt->sp;
+	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
 	lr = xcpt->ret;
 
 	asm volatile ("add    %2, %2, #32\n"
@@ -133,6 +133,7 @@ __xcpt_context_restore(struct thinkos_except * xcpt)
 				  : : "r" (sp), "r" (lr), "r" (ctx) );
 	for(;;);
 }
+#endif
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
 void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
@@ -194,14 +195,16 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 
 	thinkos_exception_dsr(xcpt);
 
+#if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+#else
 	__xcpt_systick_int_enable();
-
 	cm3_cpsie_i();
-	
 	for(;;);
+#endif
 }
 
-void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
+void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 {
 	struct cm3_except_context * sf;
 	uint32_t icsr;
@@ -260,7 +263,7 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	} else {
 
 		sf->xpsr = xpsr;
-		sf->pc = (uint32_t)__xcpt_return;
+		sf->pc = (uint32_t)__xcpt_unroll;
 		cm3_msp_set((uint32_t)sf);
 		ret = CM3_EXC_RET_HANDLER;
 	} 
@@ -268,15 +271,6 @@ void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
 	/* return */
 	asm volatile ("bx   %0\n" : : "r" (ret)); 
 }
-
-#else /* THINKOS_UNROLL_EXCEPTIONS */
-
-void __attribute__((naked)) __xcpt_return(struct thinkos_except * xcpt)
-{
-	thinkos_exception_dsr(xcpt);
-	for(;;);
-}
-
 #endif /* THINKOS_UNROLL_EXCEPTIONS */
 
 #if THINKOS_STDERR_FAULT_DUMP
@@ -304,6 +298,8 @@ static void __show_xpsr(uint32_t psr)
 
 void print_except_context(struct thinkos_except * xcpt)
 {
+	uint32_t sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
+
 	__show_xpsr(xcpt->ctx.xpsr);
 
 	fprintf(stderr, "\n");
@@ -317,7 +313,7 @@ void print_except_context(struct thinkos_except * xcpt)
 	fprintf(stderr, "   r1=%08x", xcpt->ctx.r1);
 	fprintf(stderr, "   r5=%08x", xcpt->ctx.r5);
 	fprintf(stderr, "   r9=%08x", xcpt->ctx.r9);
-	fprintf(stderr, "   sp=%08x", xcpt->sp);
+	fprintf(stderr, "   sp=%08x", sp);
 	fprintf(stderr, "  msp=%08x\n", xcpt->msp);
 
 	fprintf(stderr, "   r2=%08x", xcpt->ctx.r2);
@@ -553,52 +549,91 @@ void __mem_manag(struct thinkos_except * xcpt)
 struct thinkos_except thinkos_except_buf;
 
 #if	THINKOS_ENABLE_BUSFAULT 
-void __attribute__((naked)) cm3_bus_fault_isr(void)
+void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_BUS_FAULT;
 	__bus_fault(&thinkos_except_buf);
+
+#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
-	__xcpt_return(&thinkos_except_buf);
+	__xcpt_unroll(&thinkos_except_buf);
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+	thinkos_exception_dsr(&thinkos_except_buf);
+ #if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+ #else
+	for(;;);
+ #endif
+#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
 #if	THINKOS_ENABLE_USAGEFAULT 
-void __attribute__((naked)) cm3_usage_fault_isr(void)
+void __attribute__((naked, noreturn)) cm3_usage_fault_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_USAGE_FAULT;
 	__usage_fault(&thinkos_except_buf);
+
+#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
-	__xcpt_return(&thinkos_except_buf);
+	__xcpt_unroll(&thinkos_except_buf);
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+	thinkos_exception_dsr(&thinkos_except_buf);
+ #if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+ #else
+	for(;;);
+ #endif
+#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
 #if THINKOS_ENABLE_MPU
-void __attribute__((naked)) cm3_mem_manage_isr(void)
+void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 {
 	cm3_cpsid_i();
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_MEM_MANAGE;
 	__mem_manag(&thinkos_except_buf);
+#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
-	__xcpt_return(&thinkos_except_buf);
+	__xcpt_unroll(&thinkos_except_buf);
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+	thinkos_exception_dsr(&thinkos_except_buf);
+ #if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+ #else
+	for(;;);
+ #endif
+#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 #endif
 
-void __attribute__((naked)) cm3_hard_fault_isr(void)
+void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
 	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
 	__hard_fault(&thinkos_except_buf);
+
+#if (THINKOS_UNROLL_EXCEPTIONS) 
 	__xcpt_irq_disable_all();
 	__xcpt_systick_int_disable();
-	__xcpt_return(&thinkos_except_buf);
+	__xcpt_unroll(&thinkos_except_buf);
+#else /* THINKOS_UNROLL_EXCEPTIONS */
+	thinkos_exception_dsr(&thinkos_except_buf);
+ #if THINKOS_SYSRST_ONFAULT
+	cm3_sysrst();
+ #else
+	for(;;);
+ #endif
+#endif /* THINKOS_UNROLL_EXCEPTIONS */
 }
 
 /* -------------------------------------------------------------------------
@@ -607,11 +642,6 @@ void __attribute__((naked)) cm3_hard_fault_isr(void)
 
 void thinkos_default_exception_dsr(struct thinkos_except * xcpt)
 {
-#if THINKOS_SYSRST_ONFAULT
-	cm3_sysrst();
-#else
-	for(;;);
-#endif
 }
 
 void thinkos_exception_dsr(struct thinkos_except *) 
@@ -623,24 +653,24 @@ void __exception_reset(void)
 	__thinkos_memset32(&thinkos_except_buf, 0x00000000,
 					   sizeof(struct thinkos_except));
 	thinkos_except_buf.thread_id = -1;
-	thinkos_except_buf.count = 0;
 }
 
 void thinkos_exception_init(void)
 {
 	struct cm3_scb * scb = CM3_SCB;
-	scb->shcsr = 0
 
+	scb->shcsr = 0
 #if	THINKOS_ENABLE_USAGEFAULT 
-	| SCB_SHCSR_USGFAULTENA 
+		| SCB_SHCSR_USGFAULTENA 
 #endif
 #if	THINKOS_ENABLE_BUSFAULT 
-	| SCB_SHCSR_BUSFAULTENA
+		| SCB_SHCSR_BUSFAULTENA
 #endif
 #if THINKOS_ENABLE_MPU
-	| SCB_SHCSR_MEMFAULTENA;
+		| SCB_SHCSR_MEMFAULTENA
 #endif
-	;
+		;
+
 	__exception_reset();
 }
 

@@ -135,6 +135,8 @@ __ram_vectors:
 	.global __ram_vectors
 	.type __ram_vectors, %object
 	cortex_m_vectors
+//	.global __exception_buf
+//__exception_buf:
 	stm32f_irq_vectors
 	.size   __ram_vectors, . - __ram_vectors
 #endif
@@ -346,5 +348,7 @@ _fault:
 	.weak       stm32_tim7_isr
 	.thumb_set  stm32_tim7_isr,_isr
 
+//	.weak       cortex_m_exception_buf
+//	.set        cortex_m_exception_buf, __exception_buf
 
 	.end
