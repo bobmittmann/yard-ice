@@ -39,17 +39,17 @@
 
 #include <sys/dcclog.h>
 
-#ifndef STM32_ENABLE_USB_DEVICE 
-#define STM32_ENABLE_USB_DEVICE 0
+#ifndef STM32_ENABLE_USB_DEV 
+#define STM32_ENABLE_USB_DEV 0
 #endif 
 
-#ifndef STM32F_USB_DRV_EP_MAX 
-#define STM32F_USB_DRV_EP_MAX 8
+#ifndef STM32_USB_DEV_EP_MAX 
+#define STM32_USB_DEV_EP_MAX 8
 #endif
 
 #ifdef STM32F_USB
 
-#if STM32_ENABLE_USB_DEVICE
+#if STM32_ENABLE_USB_DEV
 
 /* Endpoint state */
 typedef enum {
@@ -88,7 +88,7 @@ struct stm32f_usb_ep {
 
 /* USB Driver */
 struct stm32f_usb_drv {
-	struct stm32f_usb_ep ep[STM32F_USB_DRV_EP_MAX];
+	struct stm32f_usb_ep ep[STM32_USB_DEV_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
@@ -761,7 +761,7 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 
 	stm32f_usb_power_on(usb);
 
-	for (i = 0;  i < STM32F_USB_DRV_EP_MAX; ++i) {
+	for (i = 0;  i < STM32_USB_DEV_EP_MAX; ++i) {
 		drv->ep[i].state = EP_DISABLED;
 	}
 
@@ -1071,7 +1071,7 @@ const struct usb_dev stm32f_usb_fs_dev = {
 	.op = &stm32f_usb_ops
 };
 
-#endif /* STM32F_ENABLE_USB_DEVICE */
+#endif /* STM32_ENABLE_USB_DEV */
 
 #endif /* STM32F_USB */
 

@@ -60,7 +60,7 @@ EXTERN(stm32_usb_hp_isr)
 EXTERN(stm32_usb_lp_isr)
 EXTERN(stm32_dac_isr)
 EXTERN(stm32_comp_tsc_isr)
-EXTERN(stm32f_exti9_5_isr)
+EXTERN(stm32_exti9_5_isr)
 
 EXTERN(stm32_lcd)
 EXTERN(stm32_tim9_isr)

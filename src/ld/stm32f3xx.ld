@@ -35,77 +35,78 @@ EXTERN(cm3_pendsv_isr)
 EXTERN(cm3_systick_isr)
 EXTERN(ice_comm_blk)
 
-EXTERN(stm32f_wwdg_isr)
-EXTERN(stm32f_pvd_isr)
-EXTERN(stm32f_tamp_stamp_isr)
-EXTERN(stm32f_rtc_wkup_isr)
-EXTERN(stm32f_flash_isr)
-EXTERN(stm32f_rcc_isr)
-EXTERN(stm32f_exti0_isr)
-EXTERN(stm32f_exti1_isr)
+EXTERN(stm32_wwdg_isr)
+EXTERN(stm32_pvd_isr)
+EXTERN(stm32_tamp_stamp_isr)
+EXTERN(stm32_rtc_wkup_isr)
+EXTERN(stm32_flash_isr)
+EXTERN(stm32_rcc_isr)
+EXTERN(stm32_exti0_isr)
+EXTERN(stm32_exti1_isr)
 
-EXTERN(stm32f_exti2_tsc_isr)
-EXTERN(stm32f_exti3_isr)
-EXTERN(stm32f_exti4_isr)
-EXTERN(stm32f_dma1_stream0_isr)
-EXTERN(stm32f_dma1_stream1_isr)
-EXTERN(stm32f_dma1_stream2_isr)
-EXTERN(stm32f_dma1_stream3_isr)
-EXTERN(stm32f_dma1_stream4_isr)
-EXTERN(stm32f_dma1_stream5_isr)
-EXTERN(stm32f_dma1_stream6_isr)
-EXTERN(stm32f_adc_isr)
-EXTERN(stm32f_can1_tx_usb_hp_isr)
-EXTERN(stm32f_can1_rx0_usb_lp_isr)
-EXTERN(stm32f_can1_rx1_isr)
-EXTERN(stm32f_can1_sce_isr)
-EXTERN(stm32f_exti9_5_isr)
+EXTERN(stm32_exti2_tsc_isr)
+EXTERN(stm32_exti3_isr)
+EXTERN(stm32_exti4_isr)
+EXTERN(stm32_dma1_channel1_isr)
+EXTERN(stm32_dma1_channel2_isr)
+EXTERN(stm32_dma1_channel3_isr)
+EXTERN(stm32_dma1_channel4_isr)
+EXTERN(stm32_dma1_channel5_isr)
 
-EXTERN(stm32f_tim1_brk_tim15_isr)
-EXTERN(stm32f_tim1_up_tim16_isr)
-EXTERN(stm32f_tim1_trg_com_tim17_isr)
-EXTERN(stm32f_tim1_cc_isr)
-EXTERN(stm32f_tim2_isr)
-EXTERN(stm32f_tim3_isr)
-EXTERN(stm32f_tim4_isr)
-EXTERN(stm32f_i2c1_ev_exti23_isr)
-EXTERN(stm32f_i2c1_er_isr)
-EXTERN(stm32f_i2c2_ev_exti24_isr)
-EXTERN(stm32f_i2c2_er_isr)
-EXTERN(stm32f_spi1_isr)
-EXTERN(stm32f_spi2_isr)
-EXTERN(stm32f_usart1_exti25_isr)
-EXTERN(stm32f_usart2_exti26_isr)
-EXTERN(stm32f_usart3_exti28_isr)
-EXTERN(stm32f_exti15_10_isr)
-EXTERN(stm32f_rtc_alarm_isr)
-EXTERN(stm32f_usb_wkup_isr)
-EXTERN(stm32f_tim8_brk_isr)
-EXTERN(stm32f_tim8_up_isr)
-EXTERN(stm32f_tim8_trg_com_isr)
-EXTERN(stm32f_tim8_cc)
-EXTERN(stm32f_adc3)
+EXTERN(stm32_dma1_channel6_isr)
+EXTERN(stm32_dma1_channel7_isr)
+EXTERN(stm32_adc_isr)
+EXTERN(stm32_can1_tx_usb_hp_isr)
+EXTERN(stm32_can1_rx0_usb_lp_isr)
+EXTERN(stm32_can1_rx1_isr)
+EXTERN(stm32_can1_sce_isr)
+EXTERN(stm32_exti9_5_isr)
 
-EXTERN(stm32f_spi3_isr)
-EXTERN(stm32f_uart4_exti34_isr)
-EXTERN(stm32f_uart5_exti35_isr)
-EXTERN(stm32f_tim6_dacunder_isr)
-EXTERN(stm32f_tim7_isr)
-EXTERN(stm32f_dma2_stream0_isr)
-EXTERN(stm32f_dma2_stream1_isr)
-EXTERN(stm32f_dma2_stream2_isr)
-EXTERN(stm32f_dma2_stream3_isr)
-EXTERN(stm32f_dma2_stream4_isr)
-EXTERN(stm32f_adc4)
-EXTERN(stm32f_comp123)
-EXTERN(stm32f_comp456)
-EXTERN(stm32f_comp7)
+EXTERN(stm32_tim1_brk_tim15_isr)
+EXTERN(stm32_tim1_up_tim16_isr)
+EXTERN(stm32_tim1_trg_com_tim17_isr)
+EXTERN(stm32_tim1_cc_isr)
+EXTERN(stm32_tim2_isr)
+EXTERN(stm32_tim3_isr)
+EXTERN(stm32_tim4_isr)
+EXTERN(stm32_i2c1_ev_exti23_isr)
+EXTERN(stm32_i2c1_er_isr)
+EXTERN(stm32_i2c2_ev_exti24_isr)
+EXTERN(stm32_i2c2_er_isr)
+EXTERN(stm32_spi1_isr)
+EXTERN(stm32_spi2_isr)
+EXTERN(stm32_usart1_exti25_isr)
+EXTERN(stm32_usart2_exti26_isr)
+EXTERN(stm32_usart3_exti28_isr)
+EXTERN(stm32_exti15_10_isr)
+EXTERN(stm32_rtc_alarm_isr)
+EXTERN(stm32_usb_wkup_isr)
+EXTERN(stm32_tim8_brk_isr)
+EXTERN(stm32_tim8_up_isr)
+EXTERN(stm32_tim8_trg_com_isr)
+EXTERN(stm32_tim8_cc)
+EXTERN(stm32_adc3)
 
-EXTERN(stm32f_usb_hp_isr)
-EXTERN(stm32f_usb_lp_isr)
-EXTERN(stm32f_usb_wkup_isr)
+EXTERN(stm32_spi3_isr)
+EXTERN(stm32_uart4_exti34_isr)
+EXTERN(stm32_uart5_exti35_isr)
+EXTERN(stm32_tim6_dacunder_isr)
+EXTERN(stm32_tim7_isr)
+EXTERN(stm32_dma2_channel1_isr)
+EXTERN(stm32_dma2_channel2_isr)
+EXTERN(stm32_dma2_channel3_isr)
+EXTERN(stm32_dma2_channel4_isr)
+EXTERN(stm32_dma2_channel5_isr)
+EXTERN(stm32_adc4)
+EXTERN(stm32_comp123)
+EXTERN(stm32_comp456)
+EXTERN(stm32_comp7)
 
-EXTERN(stm32f_fpu_isr)
+EXTERN(stm32_usb_hp_isr)
+EXTERN(stm32_usb_lp_isr)
+EXTERN(stm32_usb_wkup_isr)
+
+EXTERN(stm32_fpu_isr)
 
 SECTIONS
 
@@ -148,16 +149,30 @@ SECTIONS
 		KEEP(*(SORT(.ctors.*)))
 		KEEP(*(.ctors))
 		PROVIDE(__ctors_end = .);
-		/* define a global symbol marking the end of read only data sections */
-		. = ALIGN(8); 
-		PROVIDE(__text_end = .);
+		. = ALIGN(8);
 	} >flash = 0xffffffff
+
+	.ARM.extab : 
+	{ 
+		*(.ARM.extab* .gnu.linkonce.armextab.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_start = .);
+
+	.ARM.exidx : 
+	{ 
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*) 
+	} >flash = 0xffffffff
+	PROVIDE_HIDDEN (__exidx_end = .);
+
+	/* define a global symbol marking the end of read only data sections */
+	PROVIDE(__text_end = .);
 
 	.data :
 	{
 		. = ALIGN(4);
 		/* create a global symbol marking the start of the .data section  */
 		PROVIDE (__data_start = . );
+		KEEP (*(.ram_vectors))
 		/* all .data sections  */
 		*(.data .data*)
 		/* define a global symbol marking the end of the .data section  */

@@ -91,16 +91,9 @@ void _init(void)
 	uint32_t cfg;
 	uint32_t ws;
 	int again;
-#ifdef CM3_RAM_VECTORS
-	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
-#endif
 
 	/* Make sure we are using the internal oscillator */
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSI;
-
-#if ENABLE_DEBUG_INIT
-	debug_init();
-#endif
 
 	/* Enable external oscillator */
 	cr = rcc->cr;
@@ -198,8 +191,8 @@ void _init(void)
 	rcc->cfgr = RCC_MCO_PLL | (cfg & ~RCC_SW) | RCC_SW_PLL;
 
 #ifdef CM3_RAM_VECTORS
-	/* remap the SRAM to 0x00000000  */
-	syscfg->memrmp = SYSCFG_MEM_MODE_SRAM;
+	/* Remap the VECTOR table to SRAM 0x20000000  */
+	CM3_SCB->vtor = 0x20000000; /* Vector Table Offset */
 #endif
 
 }

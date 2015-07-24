@@ -28,7 +28,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-#ifdef STM32F1X
+#if defined(STM32F1X) || defined(STM32F3X)
 
 const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 
