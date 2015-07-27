@@ -35,7 +35,7 @@
 
 /* GPIO pin description */ 
 struct stm32f_io {
-	struct stm32f_gpio * gpio;
+	struct stm32_gpio * gpio;
 	uint8_t pin;
 };
 
@@ -45,14 +45,14 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ STM32F_GPIOE,  9 }, /* LED3 */
-	{ STM32F_GPIOE, 10 }, /* LED5 */
-	{ STM32F_GPIOE, 11 }, /* LED7 */
-	{ STM32F_GPIOE, 12 }, /* LED9 */
-	{ STM32F_GPIOE, 13 }, /* LED10 */
-	{ STM32F_GPIOE, 14 }, /* LED8 */
-	{ STM32F_GPIOE, 15 }, /* LED6 */
-	{ STM32F_GPIOE,  8 }, /* LED4 */
+	{ STM32_GPIOE,  9 }, /* LED3 */
+	{ STM32_GPIOE, 10 }, /* LED5 */
+	{ STM32_GPIOE, 11 }, /* LED7 */
+	{ STM32_GPIOE, 12 }, /* LED9 */
+	{ STM32_GPIOE, 13 }, /* LED10 */
+	{ STM32_GPIOE, 14 }, /* LED8 */
+	{ STM32_GPIOE, 15 }, /* LED6 */
+	{ STM32_GPIOE,  8 }, /* LED4 */
 };
 
 
@@ -66,13 +66,13 @@ static int leds_mutex;
 
 static inline void __led_on(int id)
 {
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 	led_state[id] = 1;
 }
 
 static inline void __led_off(int id)
 {
-	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
 	led_state[id] = 0;
 }
 
@@ -80,10 +80,10 @@ static void __leds_io_init(void)
 {
 	int i;
 
-	stm32f_gpio_clock_en(STM32F_GPIOE);
+	stm32_gpio_clock_en(STM32_GPIOE);
 
 	for (i = 0; i < LED_COUNT; ++i) {
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+		stm32_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 
 		__led_off(i);
@@ -92,7 +92,7 @@ static void __leds_io_init(void)
 
 static int __leds_task(void)
 {
-	unsigned int tmr[4];
+	unsigned int tmr[LED_COUNT];
 	unsigned int i;
 	unsigned int rate;
 	unsigned int tm;
@@ -224,7 +224,7 @@ void leds_init(void)
 	printf("%s(): leds_mutex=%d.\n", __func__, leds_mutex);
 
 	thinkos_thread_create((void *)__leds_task, (void *)NULL,
-						  leds_stack, sizeof(leds_stack), 
+						  leds_stack, sizeof(leds_stack) |
 						  THINKOS_OPT_PRIORITY(2));
 
 	thinkos_sleep(100);
@@ -247,7 +247,7 @@ int btn_st;
 int btn_mutex;
 volatile int btn_event;
 
-#define PUSH_BTN STM32F_GPIOA, 0
+#define PUSH_BTN STM32_GPIOA, 0
 
 static int __btn_task(void)
 {
@@ -255,17 +255,17 @@ static int __btn_task(void)
 
 	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
 
-	stm32f_gpio_clock_en(STM32F_GPIOA);
-	stm32f_gpio_mode(PUSH_BTN, INPUT, 0);
+	stm32_gpio_clock_en(STM32_GPIOA);
+	stm32_gpio_mode(PUSH_BTN, INPUT, 0);
 
-	btn_st = stm32f_gpio_stat(PUSH_BTN) ? 1 : 0;
+	btn_st = stm32_gpio_stat(PUSH_BTN) ? 1 : 0;
 
 	for (;;) {
 
 		thinkos_sleep(50);
 
 		/* process push button */
-		st = stm32f_gpio_stat(PUSH_BTN) ? 1 : 0;
+		st = stm32_gpio_stat(PUSH_BTN) ? 1 : 0;
 		if (btn_st != st) {
 			btn_st = st;
 			thinkos_mutex_lock(btn_mutex);
@@ -286,7 +286,7 @@ static void btn_init(void)
 	printf("%s(): btn_mutex=%d.\n", __func__, btn_mutex);
 
 	thinkos_thread_create((void *)__btn_task, (void *)NULL,
-						  btn_stack, sizeof(btn_stack), 
+						  btn_stack, sizeof(btn_stack) |
 						  THINKOS_OPT_PRIORITY(2));
 	thinkos_sleep(100);
 }
@@ -471,8 +471,8 @@ int lis302_init(void)
 	gpio_io_t io;
 
 	io = lis302_cs ;
-	stm32f_gpio_clock_en(STM32F_GPIO(io.port));
-	stm32f_gpio_mode(STM32F_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
+	stm32_gpio_clock_en(STM32_GPIO(io.port));
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
 	gpio_set(io);
 
 	stm32f_spi_init(spi, &spi1_io, 500000, SPI_MSTR | SPI_CPOL | SPI_CPHA);
@@ -604,6 +604,7 @@ int main(int argc, char ** argv)
 	leds_init();
 	btn_init();
 
+#if 0
 	for (i = 0; ; ++i) {
 		led_off((i - 2) & 0x7);
 		led_on(i & 0x7);
@@ -614,12 +615,12 @@ int main(int argc, char ** argv)
 
 		thinkos_sleep(dt);
 	}
-
+#endif
 
 	acc.sem = thinkos_sem_alloc(0);
 	printf("%s(): acc.sem=%d.\n", __func__, acc.sem);
 	thinkos_thread_create((void *)accelerometer_task, (void *)&acc,
-						  accelerometer_stack, sizeof(accelerometer_stack), 
+						  accelerometer_stack, sizeof(accelerometer_stack) |
 						  THINKOS_OPT_PRIORITY(1));
 
 	for (i = 0; ; ++i) {

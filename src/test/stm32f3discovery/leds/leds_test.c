@@ -27,7 +27,7 @@
 
 /* GPIO pin description */ 
 struct stm32f_io {
-	struct stm32f_gpio * gpio;
+	struct stm32_gpio * gpio;
 	uint8_t pin;
 };
 
@@ -37,26 +37,26 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ STM32F_GPIOE,  9 }, /* LED3 */
-	{ STM32F_GPIOE, 10 }, /* LED5 */
-	{ STM32F_GPIOE, 11 }, /* LED7 */
-	{ STM32F_GPIOE, 12 }, /* LED9 */
-	{ STM32F_GPIOE, 13 }, /* LED10 */
-	{ STM32F_GPIOE, 14 }, /* LED8 */
-	{ STM32F_GPIOE, 15 }, /* LED6 */
-	{ STM32F_GPIOE,  8 }, /* LED4 */
+	{ STM32_GPIOE,  9 }, /* LED3 */
+	{ STM32_GPIOE, 10 }, /* LED5 */
+	{ STM32_GPIOE, 11 }, /* LED7 */
+	{ STM32_GPIOE, 12 }, /* LED9 */
+	{ STM32_GPIOE, 13 }, /* LED10 */
+	{ STM32_GPIOE, 14 }, /* LED8 */
+	{ STM32_GPIOE, 15 }, /* LED6 */
+	{ STM32_GPIOE,  8 }, /* LED4 */
 };
 
 #define LED_COUNT (sizeof(led_io) / sizeof(struct stm32f_io))
 
 void led_on(int id)
 {
-	stm32f_gpio_set(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_set(led_io[id].gpio, led_io[id].pin);
 }
 
 void led_off(int id)
 {
-	stm32f_gpio_clr(led_io[id].gpio, led_io[id].pin);
+	stm32_gpio_clr(led_io[id].gpio, led_io[id].pin);
 }
 
 void leds_io_init(void)
@@ -64,11 +64,11 @@ void leds_io_init(void)
 	int i;
 
 	/* Enable GPIO clock */
-	stm32f_gpio_clock_en(STM32F_GPIOE);
+	stm32_gpio_clock_en(STM32_GPIOE);
 
 	for (i = 0; i < LED_COUNT; ++i) {
 		/* configure GPIO as output */
-		stm32f_gpio_mode(led_io[i].gpio, led_io[i].pin,
+		stm32_gpio_mode(led_io[i].gpio, led_io[i].pin,
 						 OUTPUT, PUSH_PULL | SPEED_LOW);
 	}
 }

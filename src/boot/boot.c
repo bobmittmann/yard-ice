@@ -57,12 +57,9 @@ const char * const version_str = "ThinkOS Boot Loader " \
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
 void io_init(void);
-
-#if FIRELINK
-void firelink_lcd_init(void);
-void firelink_lcd_puts(char * s);
-void firelink_lcd_putc(int c);
-#endif
+void board_init(void);
+void board_tick(unsigned int cnt);
+extern const struct gdb_target board_gdb_target;
 
 void monitor_task(struct dmon_comm * comm);
 void gdb_task(struct dmon_comm * comm);
@@ -73,12 +70,14 @@ void boot_task(struct dmon_comm * comm)
 {
 	uint32_t sigmask = 0;
 	bool delay = true;
-	int cnt = 20;
+	int cnt = 0;
 	char c;
 
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_ALARM);
+
+	board_tick(cnt);
 	dmon_alarm(250);
 
 	while (delay) {
@@ -117,13 +116,11 @@ void boot_task(struct dmon_comm * comm)
 
 		if (sigset & (1 << DMON_ALARM)) {
 			dmon_clear(DMON_ALARM);
-#if FIRELINK
-			firelink_lcd_putc('.');
-#endif
-			if (--cnt == 0)
+			if (++cnt == 20)
 				delay = false;
 			else
 				dmon_alarm(250);
+			board_tick(cnt);
 		}
 
 	}
@@ -155,7 +152,7 @@ void monitor_init(void)
 
 #if (BOOT_ENABLE_GDB)
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
-	gdb_init(monitor_task);
+	gdb_init(monitor_task, &board_gdb_target);
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
@@ -174,13 +171,8 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-#if FIRELINK
-	firelink_lcd_init();
-	firelink_lcd_puts("ThinkOS 0.21        ");
-	firelink_lcd_puts("Bootloader          ");
-	firelink_lcd_puts("Debug Monitor       ");
-#endif
-		
+	board_init();
+
 	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 

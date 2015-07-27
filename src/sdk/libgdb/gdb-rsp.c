@@ -34,6 +34,8 @@
 #include <thinkos_dmon.h>
 #include <thinkos.h>
 
+#include <gdb.h>
+
 #include "signals.h"
 
 #define THREAD_ID_OFFS 64
@@ -68,8 +70,12 @@ int thread_step_req(unsigned int thread_id);
 int thread_continue(unsigned int thread_id);
 int thread_info(unsigned int gdb_thread_id, char * buf);
 
-int target_mem_write(uint32_t addr, const void * ptr, unsigned int len);
-int target_mem_read(uint32_t addr, void * ptr, unsigned int len);
+int target_mem_write(struct gdb_target * tgt, uint32_t addr, 
+					 const void * ptr, unsigned int len);
+
+int target_mem_read(struct gdb_target * tgt, uint32_t addr, 
+					void * ptr, unsigned int len);
+
 int target_file_read(const char * name, char * dst, 
 					  unsigned int offs, unsigned int size);
 
@@ -146,6 +152,7 @@ struct gdb_rspd {
 	} thread_id;
 	struct dmon_comm * comm;
 	void (* shell_task)(struct dmon_comm * comm);
+	struct gdb_target * target; 
 };
 
 static int rsp_get_g_thread(struct gdb_rspd * gdb)
@@ -886,7 +893,7 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	if (size > max)
 		size = max;
 
-	if ((ret = target_mem_read(addr, buf, size)) < 0) {
+	if ((ret = target_mem_read(gdb->target, addr, buf, size)) < 0) {
 		DCC_LOG3(LOG_INFO, "ERR: %d addr=%08x size=%d", ret, addr, size);
 		return rsp_error(gdb, 2);
 	}
@@ -1342,7 +1349,7 @@ static int rsp_memory_write_bin(struct gdb_rspd * gdb, char * pkt)
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	if (target_mem_write(addr, cp, size) < 0) {
+	if (target_mem_write(gdb->target, addr, cp, size) < 0) {
 		return rsp_error(gdb, 1);
 	}
 
@@ -1633,8 +1640,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	}
 
 }
-
-void gdb_init(void (* shell)(struct dmon_comm * ))
+ 
+void gdb_init(void (* shell)(struct dmon_comm * ), 
+			  const struct gdb_target * tgt)
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
 
@@ -1643,6 +1651,7 @@ void gdb_init(void (* shell)(struct dmon_comm * ))
 	if (shell == NULL)
 		shell = gdb_task;
 	gdb->shell_task = shell;
+	gdb->target = (struct gdb_target *)tgt;
 
 	/* enable the FPB unit */
 	CM3_FPB->ctrl = FP_KEY | FP_ENABLE;

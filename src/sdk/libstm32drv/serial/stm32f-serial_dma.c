@@ -41,7 +41,7 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 	}
 
 	if (sr & USART_IDLE) {
-		int c = us->dr;
+		int c = us->rdr;
 		(void)c;
 		DCC_LOG(LOG_TRACE, "IDLE");
 		thinkos_flag_give_i(drv->rx_idle);
@@ -71,7 +71,7 @@ void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv)
 	}
 
 	if (sr & USART_IDLE) {
-		int c = us->dr;
+		int c = us->rdr;
 		(void)c;
 		DCC_LOG(LOG_TRACE, "IDLE");
 		thinkos_flag_give_i(drv->rx_idle);
@@ -290,7 +290,7 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->tx.ifcr[TEIF_BIT] = 1;
 	drv->tx.ifcr[HTIF_BIT] = 1;
 	drv->tx.ifcr[TCIF_BIT] = 1; 
-	drv->tx.strm->par = &drv->uart->dr;
+	drv->tx.strm->par = &drv->uart->tdr;
 //	drv->tx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	/* configure TX DMA stream */
 	drv->tx.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
@@ -310,7 +310,7 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->rx.ifcr[HTIF_BIT] = 1;
 	drv->rx.ifcr[TCIF_BIT] = 1; 
 	/* peripheral address */
-	drv->rx.strm->par = &drv->uart->dr;
+	drv->rx.strm->par = &drv->uart->rdr;
 	/* cofigure FIFO */
 //	drv->rx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	/* configure DMA */

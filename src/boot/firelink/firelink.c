@@ -171,3 +171,16 @@ void io_init(void)
 	stm32_gpio_clr(BUZZER);
 }
 
+void board_init(void)
+{
+	firelink_lcd_init();
+	firelink_lcd_puts("ThinkOS 0.21        ");
+	firelink_lcd_puts("Bootloader          ");
+	firelink_lcd_puts("Debug Monitor       ");
+}
+
+void board_tick(unsigned int cnt) 
+{
+	firelink_lcd_putc('.');
+}
+

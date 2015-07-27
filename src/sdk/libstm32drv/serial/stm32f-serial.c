@@ -43,7 +43,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		uint32_t head;
 		int free;
 
-		c = us->dr;
+		c = us->rdr;
 		head = drv->rx_fifo.head;
 		free = SERIAL_RX_FIFO_LEN - (head - drv->rx_fifo.tail);
 		if (free > 0) { 
@@ -60,7 +60,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		}
 	} else	if (sr & USART_IDLE) {
 		DCC_LOG(LOG_INFO, "IDLE!");
-		c = us->dr;
+		c = us->rdr;
 		(void)c;
 		thinkos_gate_open_i(drv->rx_gate);
 	}
@@ -72,7 +72,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 			*drv->txie = 0; 
 			thinkos_gate_open_i(drv->tx_gate);
 		} else {
-			us->dr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
+			us->tdr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
 			drv->tx_fifo.tail = tail;
 		}
 	}

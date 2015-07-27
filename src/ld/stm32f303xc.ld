@@ -29,10 +29,14 @@ MEMORY
 {
 	vectors(r) : ORIGIN = 0x00000000, LENGTH = 1K
 	flash (rx) : ORIGIN = 0x08000000, LENGTH = 256K 
-	sram0 (rw) : ORIGIN = 0x20000000, LENGTH = 32K
-	sram1 (rw) : ORIGIN = 0x10000000, LENGTH = 8K
+	sram  (rw) : ORIGIN = 0x20000000, LENGTH = 40K
+	ccm   (rw) : ORIGIN = 0x10000000, LENGTH = 8K
 	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
 }
+
+REGION_ALIAS("CODE", flash);
+REGION_ALIAS("DATA", sram);
+REGION_ALIAS("STACK", ccm);
 
 INCLUDE stm32f3xx.ld
 

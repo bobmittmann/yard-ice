@@ -201,6 +201,3 @@ void _init(void)
 
 #endif /* defined(STM32F1X) || defined(STM32F3X) */
 
-
-
-

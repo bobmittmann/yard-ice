@@ -34,11 +34,10 @@ LIBS = cm3 stm32f util thinkos gdb ice-comm gcc
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
-
 CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections -Wl,--print-gc-sections 
+LDFLAGS = -Wl,--gc-sections 
 
-MACH = stm32f303xb
+MACH = stm32f303xc
 HSE_HZ = 8000000
 include ../../mk/stm32f3xx.mk
 

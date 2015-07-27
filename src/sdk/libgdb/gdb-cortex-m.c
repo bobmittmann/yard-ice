@@ -34,6 +34,8 @@
 #include <thinkos_dmon.h>
 #include <thinkos.h>
 
+#include <gdb.h>
+
 int uint2dec(char * s, unsigned int val);
 unsigned long hex2int(const char * __s, char ** __endp);
 bool prefix(const char * __s, const char * __prefix);
@@ -46,94 +48,6 @@ int uint2hex(char * s, unsigned int val);
 int hex2char(char * hex);
 extern const char hextab[];
 int uint2hex2hex(char * pkt, unsigned int val);
-
-struct mem_range {
-	char name[8];
-	uint32_t base;
-	uint32_t size;
-};
-
-const struct mem_range target_mem_map[] = {
-	{ .name = "boot", .base = 0x08000000, .size = 4 * 16 * 1024 },
-	{ .name = "app", .base = 0x08010000, .size = 64 * 1024 },
-	{ .name = "ffs", .base = 0x08020000, .size = 4 * 128 * 1024 },
-	{ .name = "sram0", .base = 0x20000000, .size = 112 * 1024 },
-	{ .name = "sram1", .base = 0x2001c000, .size = 16 * 1024 },
-	{ .name = "sram2", .base = 0x10000000, .size = 64 * 1024 }
-};
-
-struct flash_map {
-	uint32_t base;
-	uint8_t blk[];
-};
-
-struct flash_blk {
-	uint32_t base;
-	uint32_t size: 30;
-	uint32_t ro: 1;
-};
-
-#define SZ_128   7
-#define SZ_256   8
-#define SZ_1K   10
-#define SZ_2K   11
-#define SZ_4K   12
-#define SZ_8K   13
-#define SZ_16K  14
-#define SZ_32K  15
-#define SZ_64K  16
-#define SZ_128K 17
-#define SZ_256K 18
-
-#define BLK_RW  (0 << 7)
-#define BLK_RO  (1 << 7)
-
-const struct flash_map stm32f407_flash = {
-	.base = (uint32_t)STM32_FLASH_MEM,
-	.blk = {
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RO + SZ_16K, 
-		BLK_RW + SZ_64K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		BLK_RW + SZ_128K, 
-		0
-	}
-};
-
-#define BLK_SZ(BLK) (1 << ((BLK) & 0x3f)) 
-
-int flash_addr2block(const struct flash_map * map,
-					 uint32_t addr, struct flash_blk * blk) 
-{
-	uint32_t base = map->base;
-	uint32_t size;
-	int i;
-
-	if (addr < base)
-		return -1;
-
-	for (i = 0; map->blk[i] != 0; ++i) {
-		size = BLK_SZ(map->blk[i]);
-		if (addr < base + size) {
-			if (blk != NULL) {
-				blk->base = base;
-				blk->size = size;
-				blk->ro = (map->blk[i] & BLK_RO) ? 1 : 0;
-			}
-			return i;
-		}
-		base += size;
-	}
-
-	return -1;
-}
 
 #if (!THINKOS_ENABLE_PAUSE)
 #error "Need THINKOS_ENABLE_PAUSE!"
@@ -665,63 +579,97 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
  * Memory auxiliarly functions
  * ------------------------------------------------------------------------- */
 
-static bool is_addr_valid(uint32_t addr) 
-{
-	int i;
-	int n = sizeof(target_mem_map) / sizeof(struct mem_range);
+struct mem_blk {
+	uint32_t addr;
+	uint32_t size: 30;
+	uint32_t ro: 1;
+};
 
-	for (i = 0; i < n; ++i) {
-		const struct mem_range * mem = &target_mem_map[i];
-		if ((addr >= mem->base) && (addr < (mem->base + mem->size))) {
+static bool addr2block(const struct mem_desc * mem, 
+					   uint32_t addr, struct mem_blk * blk) 
+{
+	uint32_t base;
+	uint32_t size;
+	int i;
+
+	for (i = 0; mem->blk[i].cnt != 0; ++i) {
+		size = mem->blk[i].cnt << mem->blk[i].siz;
+		base = mem->blk[i].ref;
+		if ((addr >= base) && (addr < base + size)) {
+			if (blk != NULL) {
+				int pos;
+				pos = (addr - base) >> mem->blk[i].siz;
+				blk->addr = base + (pos << mem->blk[i].siz);
+				blk->size = 1 << mem->blk[i].siz;
+				blk->ro = (mem->blk[i].opt == BLK_RO) ? 1 : 0;
+			}
 			return true;
 		}
 	}
+
 	return false;
 }
 
+#define FLASH_BASE ((uint32_t)STM32_FLASH_MEM)
 
-int target_mem_write(uint32_t addr, const void * ptr, unsigned int len)
+int target_mem_write(struct gdb_target * tgt, uint32_t addr, 
+					 const void * ptr, unsigned int len)
 {
-	const struct flash_map * flash = &stm32f407_flash;
-	struct flash_blk blk;
+	struct mem_blk blk;
 	unsigned int cnt;
 	unsigned int rem;
 	uint32_t offs;
 
+	/* not flash */
+	if (addr2block(tgt->ram, addr, &blk)) {
+		uint8_t * dst = (uint8_t *)addr;
+		uint8_t * src = (uint8_t *)ptr;
+		unsigned int cnt;
+		int i;
+
+		if (blk.ro) {
+			DCC_LOG2(LOG_ERROR, "read only block addr=0x%08x size=%d", 
+					 blk.addr, blk.size);
+			return -1;
+		}
+
+		DCC_LOG2(LOG_TRACE, "RAM block addr=0x%08x size=%d", 
+				 blk.addr, blk.size);
+
+		cnt = blk.size - (addr - blk.addr);
+		if (cnt > len)
+			cnt = len;
+
+		for (i = 0; i < cnt; ++i)
+			dst[i] = src[i];
+
+		return cnt;
+	}
+
 	rem = len;
 
 	while (rem) {
-		if (!is_addr_valid(addr))
+		if (!addr2block(tgt->flash, addr, &blk)) {
+			DCC_LOG1(LOG_ERROR, "invalid address 0x%08x", addr);
 			return -1;
-
-		if (flash_addr2block(flash, addr, &blk) < 0) {
-			uint8_t * dst = (uint8_t *)addr;
-			uint8_t * src = (uint8_t *)ptr;;
-			int i;
-
-			/* not flash */
-			for (i = 0; i < rem; ++i)
-				dst[i] = src[i];
-
-			break;
 		}
 
 		if (blk.ro) {
-			DCC_LOG2(LOG_ERROR, "read only block base=0x%08x size=%d", 
-					 blk.base, blk.size);
+			DCC_LOG2(LOG_ERROR, "read only block addr=0x%08x size=%d", 
+					 blk.addr, blk.size);
 			return -1;
 		}
 
-		offs = addr - flash->base;
-		if (blk.base == addr) {
-			DCC_LOG2(LOG_TRACE, "block erase base=0x%08x size=%d", 
-					 blk.base, blk.size);
+		offs = addr - FLASH_BASE;
+		if (blk.addr == addr) {
+			DCC_LOG2(LOG_TRACE, "block erase addr=0x%08x size=%d", 
+					 blk.addr, blk.size);
 			stm32_flash_erase(offs, blk.size);
 		};
 
-		if ((addr + rem) > (blk.base + blk.size)) {
+		if ((addr + rem) > (blk.addr + blk.size)) {
 			DCC_LOG(LOG_TRACE, "crossing end of block");
-			cnt = (blk.base + blk.size) - addr;
+			cnt = (blk.addr + blk.size) - addr;
 		} else {
 			cnt = rem;
 		}
@@ -733,22 +681,37 @@ int target_mem_write(uint32_t addr, const void * ptr, unsigned int len)
 		addr += cnt;
 	}
 
-	return len;
+	return len - rem;
 }
 
-int target_mem_read(uint32_t addr, void * ptr, unsigned int len)
+int target_mem_read(struct gdb_target * tgt, uint32_t addr, 
+					void * ptr, unsigned int len)
 {
 	uint8_t * dst = (uint8_t *)ptr;
 	uint8_t * src = (uint8_t *)addr;;
-	int i;
+	struct mem_blk blk;
+	unsigned int cnt;
+	unsigned int i;
 
-	if (!is_addr_valid(addr))
+	if (addr2block(tgt->ram, addr, &blk)) {
+		/* not flash */
+		DCC_LOG2(LOG_TRACE, "RAM block addr=0x%08x size=%d", 
+				 blk.addr, blk.size);
+	} else if (addr2block(tgt->flash, addr, &blk)) {
+		/* flash */
+		DCC_LOG2(LOG_TRACE, "FLASH block addr=0x%08x size=%d", 
+				 blk.addr, blk.size);
+	} else
 		return -1;
 
-	for (i = 0; i < len; ++i)
+	cnt = blk.size - (addr - blk.addr);
+	if (cnt > len)
+		cnt = len;
+
+	for (i = 0; i < cnt; ++i)
 		dst[i] = src[i];
 
-	return len;
+	return cnt;
 }
 
 /* -------------------------------------------------------------------------
@@ -858,3 +821,111 @@ int target_file_read(const char * name, char * dst,
 
 	return cnt;
 }
+
+#if 0
+struct mem_range {
+	char name[8];
+	uint32_t base;
+	uint32_t size;
+};
+
+const struct mem_range target_mem_map[] = {
+	{ .name = "boot", .base = 0x08000000, .size = 4 * 16 * 1024 },
+	{ .name = "app", .base = 0x08010000, .size = 64 * 1024 },
+	{ .name = "ffs", .base = 0x08020000, .size = 4 * 128 * 1024 },
+	{ .name = "sram0", .base = 0x20000000, .size = 112 * 1024 },
+	{ .name = "sram1", .base = 0x2001c000, .size = 16 * 1024 },
+	{ .name = "sram2", .base = 0x10000000, .size = 64 * 1024 }
+};
+
+struct flash_map {
+	uint32_t base;
+	uint8_t blk[];
+};
+
+struct flash_blk {
+	uint32_t base;
+	uint32_t size: 30;
+	uint32_t ro: 1;
+};
+
+#define SZ_128   7
+#define SZ_256   8
+#define SZ_1K   10
+#define SZ_2K   11
+#define SZ_4K   12
+#define SZ_8K   13
+#define SZ_16K  14
+#define SZ_32K  15
+#define SZ_64K  16
+#define SZ_128K 17
+#define SZ_256K 18
+
+#define BLK_RW  (0 << 7)
+#define BLK_RO  (1 << 7)
+
+const struct flash_map stm32f407_flash = {
+	.base = (uint32_t)STM32_FLASH_MEM,
+	.blk = {
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RO + SZ_16K, 
+		BLK_RW + SZ_64K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		BLK_RW + SZ_128K, 
+		0
+	}
+};
+
+#define BLK_SZ(BLK) (1 << ((BLK) & 0x3f)) 
+
+int flash_addr2block(const struct flash_map * map,
+					 uint32_t addr, struct flash_blk * blk) 
+{
+	uint32_t base = map->base;
+	uint32_t size;
+	int i;
+
+	if (addr < base)
+		return -1;
+
+	for (i = 0; map->blk[i] != 0; ++i) {
+		size = BLK_SZ(map->blk[i]);
+		if (addr < base + size) {
+			if (blk != NULL) {
+				blk->base = base;
+				blk->size = size;
+				blk->ro = (map->blk[i] & BLK_RO) ? 1 : 0;
+			}
+			return i;
+		}
+		base += size;
+	}
+
+	return -1;
+}
+
+static bool is_addr_valid(struct mem_desc * mem, uint32_t addr) 
+{
+	uint32_t base;
+	uint32_t size;
+	int i;
+
+	for (i = 0; mem->blk[i].cnt != 0; ++i) {
+		size = mem->blk[i].cnt << mem->blk[i].siz;
+		base = mem->blk[i].ref;
+		if (addr < base + size)
+			return true;
+	}
+
+	return false;
+}
+
+#endif
+

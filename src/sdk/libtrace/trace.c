@@ -64,11 +64,16 @@ static void __timer_init(void)
 	struct stm32f_tim * tim = TRACE_TIMER;
 	uint32_t div;
 
+#ifdef STM32F_TIM5
 	/* Timer clock enable */
 	if (TRACE_TIMER == STM32F_TIM5)
 			stm32_clk_enable(STM32_RCC, STM32_CLK_TIM5);
-	else if  (TRACE_TIMER == STM32F_TIM2)
+#endif
+
+#ifdef STM32F_TIM2
+	if  (TRACE_TIMER == STM32F_TIM2)
 		stm32_clk_enable(STM32_RCC, STM32_CLK_TIM2);
+#endif
 
 	/* get the total divisior */
 	div = (stm32f_tim1_hz + (TIMESTAMP_FREQ / 2)) / TIMESTAMP_FREQ;

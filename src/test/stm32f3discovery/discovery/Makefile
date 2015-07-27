@@ -24,17 +24,17 @@ PROG = discovery
 
 CFILES = stdio.c discovery.c
 
-LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
-	  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm 
+LIBDIRS = ../../../sdk/libstm32f ../../../sdk/libcm3 ../../../sdk/libutil \
+	  ../../../sdk/libthinkos ../../../sdk/libc ../../../sdk/libice-comm 
 
 LIBS = stm32f cm3 util thinkos c ice-comm
 
-INCPATH = ../../sdk/include 
+INCPATH = ../../../sdk/include 
 
 CFLAGS = -g -O1
 
 MACH = stm32f303xb
 HSE_HZ = 8000000
 
-include ../../mk/stm32f3xx.mk
+include ../../../mk/stm32f3xx.mk
 

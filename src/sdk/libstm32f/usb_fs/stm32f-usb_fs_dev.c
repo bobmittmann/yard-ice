@@ -39,6 +39,10 @@
 
 #include <sys/dcclog.h>
 
+void led_on(unsigned int id);
+void led_off(unsigned int id);
+void led_toggle(unsigned int id);
+
 #ifndef STM32_ENABLE_USB_DEV 
 #define STM32_ENABLE_USB_DEV 0
 #endif 
@@ -191,45 +195,34 @@ static void __ep_zlp_send(struct stm32f_usb * usb, int ep_id)
 
 /* ------------------------------------------------------------------------- */
 
+#if (STM32_USB_DEV_SUSPEND) 
 static void stm32f_usb_dev_suspend(struct stm32f_usb_drv * drv)
 {
 	struct stm32f_usb * usb = STM32F_USB;
-//	int ep_id;
-	/* A brief description of a typical suspend procedure is provided below, 
-	   focused on the USB-related aspects of the application software routine 
-	   responding to the SUSP notification of the USB peripheral:
-	1. Set the FSUSP bit in the USB_CNTR register to 1. This action activates 
-	the suspend mode within the USB peripheral. As soon as the suspend mode is 
-	activated, the check on SOF reception is disabled to avoid any further 
-	SUSP interrupts being issued while the USB is suspended.
-	2. Remove or reduce any static power consumption in blocks different from 
-	the USB peripheral.
-	3. Set LP_MODE bit in USB_CNTR register to 1 to remove static power 
-	consumption in the analog USB transceivers but keeping them able to 
-	detect resume activity.
-	4. Optionally turn off external oscillator and device PLL to stop 
-	any activity inside the device. */
+
+	/* A brief description of a typical suspend procedure is provided 
+	   below, focused on the USB-related aspects of the application 
+	   software routine responding to the SUSP notification of the 
+	   USB peripheral:
+	   1. Set the FSUSP bit in the USB_CNTR register to 1. 
+	   This action activates the suspend mode within the USB peripheral. 
+	   As soon as the suspend mode is activated, the check on SOF 
+	   reception is disabled to avoid any further SUSP interrupts being 
+	   issued while the USB is suspended.
+	   2. Remove or reduce any static power consumption in blocks 
+	   different from the USB peripheral.
+	   3. Set LP_MODE bit in USB_CNTR register to 1 to remove static power 
+	   consumption in the analog USB transceivers but keeping them able to 
+	   detect resume activity.
+	   4. Optionally turn off external oscillator and device PLL to stop 
+	   any activity inside the device. */
 
 	usb->cntr |= USB_FSUSP;
-
-#if 0
-	for (ep_id = 0; ep_id < 8; ep_id++) {
-		drv->ep[ep_id].state = EP_DISABLED;
-		__set_ep_txstat(usb, ep_id, USB_TX_DISABLED);
-		__set_ep_rxstat(usb, ep_id, USB_RX_DISABLED);
-		__clr_ep_flag(usb, ep_id, USB_CTR_RX | USB_CTR_TX);
-		__set_ep_addr(usb, ep_id, 0);
-	}
-#endif
-
 	/* Enable Reset and Wakeup interrupts */
-	usb->cntr |= USB_WKUPM | USB_RESETM;
-
+	usb->cntr = USB_WKUPM | USB_RESETM;
 	drv->ev->on_suspend(drv->cl);
-
 	/* Low power mode */
 	usb->cntr |= USB_LP_MODE;
-
 	DCC_LOG(LOG_TRACE, "suspended.");
 }
 
@@ -249,6 +242,7 @@ static void stm32f_usb_dev_wakeup(struct stm32f_usb_drv * drv)
 		drv->ev->on_wakeup(drv->cl);
 	}
 }
+#endif
 
 static void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 {
@@ -265,7 +259,12 @@ static void stm32f_usb_dev_reset(struct stm32f_usb_drv * drv)
 	usb->daddr = USB_EF + 0;
 
 	/* Enable Correct transfer interrupts */
-	usb->cntr |= USB_PMAOVRM | USB_ERRM | USB_ESOFM | USB_CTRM | USB_SUSPM;
+//	usb->cntr |= | USB_ERRM | 6SB_ESOFM | USB_CTRM | USB_SUSPM;
+#if (STM32_USB_DEV_SUSPEND) 
+	usb->cntr |= USB_CTRM | USB_SUSPM;
+#else
+	usb->cntr |= USB_CTRM;
+#endif
 
 #ifdef DEBUG_DBLBUF
 	drv->pkt_read = 0;
@@ -765,10 +764,20 @@ int stm32f_usb_dev_init(struct stm32f_usb_drv * drv, usb_class_t * cl,
 		drv->ep[i].state = EP_DISABLED;
 	}
 
+	/* enable Cortex interrupts */
+	cm3_irq_enable(STM32F_IRQ_USB_LP);
+	cm3_irq_enable(STM32F_IRQ_USB_HP);
+#if (STM32_USB_DEV_SUSPEND) 
+	cm3_irq_enable(STM32F_IRQ_USB_WKUP);
 	/* Enable Reset, SOF  and Wakeup interrupts */
-	usb->cntr = USB_WKUP | USB_RESETM;
+	usb->cntr = USB_WKUPM | USB_RESETM;
+#else
+	/* Enable Reset interrupt */
+	usb->cntr = USB_RESETM;
+#endif
 
 	DCC_LOG(LOG_INFO, "[ATTACHED]");
+
 	return 0;
 }
 
@@ -789,6 +798,8 @@ void stm32f_can1_tx_usb_hp_isr(void)
 	int ep_id;
 	uint32_t sr;
 	int len;
+
+	led_toggle(3);
 
 	sr = usb->istr;
 
@@ -916,6 +927,8 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	struct stm32f_usb * usb = STM32F_USB;
 	uint32_t sr = usb->istr;
 
+	led_toggle(2);
+
 	if (sr & USB_CTR) {
 		struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 		struct stm32f_usb_ep * ep;
@@ -1008,6 +1021,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		}
 	}
 
+#if (STM32_USB_DEV_SUSPEND) 
 	if (sr & USB_SUSP) {
 		/* clear interrupts */
 		usb->istr = ~USB_SUSP;
@@ -1016,17 +1030,21 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 
 	if (sr & USB_WKUP) {
+		led_on(4);
 		usb->istr = ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
 		stm32f_usb_dev_wakeup(drv);
 	}
+#endif
 
 	if (sr & USB_RESET) {
+		led_on(7);
 		usb->istr = ~USB_RESET;
 		DCC_LOG(LOG_TRACE, "RESET");
 		stm32f_usb_dev_reset(drv);
 	}
 
+#ifdef DEBUG
 	if (sr & USB_ERR) {
 		usb->istr = ~USB_ERR;
 		DCC_LOG(LOG_WARNING, "ERR");
@@ -1044,6 +1062,7 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 		DCC_LOG(LOG_WARNING, "USB_ESOF");
 		usb->istr = ~USB_ESOF;
 	}
+#endif
 
 #if 0
 	if (sr & USB_SOF) {
@@ -1052,6 +1071,22 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 #endif
 }
+
+#if (STM32_USB_DEV_SUSPEND) 
+void stm32f_usb_wkup_isr(void) 
+{
+	struct stm32f_usb_drv * drv = &stm32f_usb_drv0;
+	struct stm32f_usb * usb = STM32F_USB;
+	uint32_t sr = usb->istr;
+
+	if (sr & USB_CTR) {
+		led_on(4);
+		usb->istr = ~USB_WKUP;
+		DCC_LOG(LOG_TRACE, "WKUP");
+		stm32f_usb_dev_wakeup(drv);
+	}
+}
+#endif
 
 /* USB device operations */
 const struct usb_dev_ops stm32f_usb_ops = {
@@ -1067,7 +1102,12 @@ const struct usb_dev stm32f_usb_fs_dev = {
 	.priv = (void *)&stm32f_usb_drv0,
 	.irq[0] = STM32F_IRQ_USB_HP,
 	.irq[1] = STM32F_IRQ_USB_LP,
+#if (STM32_USB_DEV_SUSPEND) 
+	.irq[2] = STM32F_IRQ_USB_WKUP,
+	.irq_cnt = 3,
+#else
 	.irq_cnt = 2,
+#endif
 	.op = &stm32f_usb_ops
 };
 

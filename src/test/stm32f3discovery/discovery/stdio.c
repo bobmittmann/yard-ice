@@ -32,35 +32,35 @@
  * ----------------------------------------------------------------------
  */
 
-#define UART_TX STM32F_GPIOA, 9
-#define UART_RX STM32F_GPIOA, 10
+#define UART_TX STM32_GPIOA, 9
+#define UART_RX STM32_GPIOA, 10
 
 const struct file stm32f_uart_file = {
-	.data = STM32F_USART1, 
-	.op = &stm32f_usart_fops 
+	.data = STM32_USART1, 
+	.op = &stm32_usart_fops 
 };
 
 void stdio_init(void)
 {
-	struct stm32f_usart * uart = STM32F_USART1;
+	struct stm32_usart * uart = STM32_USART1;
 
 	/* Enable GPIO */
-	stm32f_gpio_clock_en(STM32F_GPIOA);
+	stm32_gpio_clock_en(STM32_GPIOA);
 
 	/* Configure TX pin */
-	stm32f_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32f_gpio_af(UART_TX, GPIO_AF7);
+	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_af(UART_TX, GPIO_AF7);
 
 	/* Configure RX pin */
-	stm32f_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32f_gpio_af(UART_RX, GPIO_AF7);
+	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
+	stm32_gpio_af(UART_RX, GPIO_AF7);
 
-	stm32f_usart_init(uart);
-	stm32f_usart_baudrate_set(uart, 115200);
-	stm32f_usart_mode_set(uart, SERIAL_8N1);
-	stm32f_usart_enable(uart);
+	stm32_usart_init(uart);
+	stm32_usart_baudrate_set(uart, 115200);
+	stm32_usart_mode_set(uart, SERIAL_8N1);
+	stm32_usart_enable(uart);
 
-	stm32f_usart_write(uart, "Hello world!", 12);
+	stm32_usart_write(uart, "Hello world!", 12);
 
 	stderr = (struct file *)&stm32f_uart_file;
 	stdin = stderr;
