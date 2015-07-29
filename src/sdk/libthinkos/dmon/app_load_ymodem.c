@@ -269,23 +269,22 @@ unsigned long dec2int(const char * __s)
 
 
 extern uint32_t _stack;
-extern const uint32_t thinkos_app_blk_addr;
-extern const uint32_t thinkos_app_blk_size;
 
-int dmon_app_load_ymodem(struct dmon_comm * comm)
+int dmon_app_load_ymodem(struct dmon_comm * comm,
+						 uint32_t addr, unsigned int size)
 {
 	/* FIXME: generalize the application load by removing the low
 	   level flash calls dependency */
 #ifdef STM32_FLASH_MEM
 	struct ymodem_rcv * ry = ((struct ymodem_rcv *)&_stack) - 1;
 	uint32_t base = (uint32_t)STM32_FLASH_MEM;
-	uint32_t offs = thinkos_app_blk_addr - base;
+	uint32_t offs = addr - base;
 	int ret;
 
 	DCC_LOG2(LOG_INFO, "sp=%p ry=%p", cm3_sp_get(), ry);
-	DCC_LOG2(LOG_INFO, "offs=0x%08x size=%d", offs, thinkos_app_blk_size);
+	DCC_LOG2(LOG_INFO, "offs=0x%08x size=%d", offs, size);
 	ymodem_rcv_init(ry, true, false);
-	ry->fsize = thinkos_app_blk_size;
+	ry->fsize = size;
 
 	DCC_LOG(LOG_INFO, "Starting...");
 	while ((ret = ymodem_rcv_pkt(comm, ry)) >= 0) {

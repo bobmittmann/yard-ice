@@ -32,6 +32,16 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
+
+#include <gdb.h>
+extern const struct gdb_target board_gdb_target;
+void board_idle_tick(unsigned int cnt);
+void board_app_ready(void);
+
+#ifndef BOOT_ENABLE_GDB
+#define BOOT_ENABLE_GDB 0
+#endif
+
 #define CTRL_B 0x02
 #define CTRL_C 0x03
 #define CTRL_D 0x04
@@ -58,7 +68,9 @@
 #define CTRL_Y 0x19
 #define CTRL_Z 0x1a
 
-int8_t monitor_thread_id;
+#define MONITOR_STARTUP_MAGIC -111
+
+int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
@@ -68,9 +80,11 @@ static const char monitor_menu[] =
 " Ctrl+P - Pause all threads\r\n"
 " Ctrl+Q - Restart monitor\r\n"
 " Ctrl+R - Resume all threads\r\n"
+" Ctrl+S - Show memory\r\n"
 " Ctrl+T - Thread info\r\n"
 " Ctrl+U - Stack usage info\r\n"
 " Ctrl+V - Help\r\n"
+" Ctrl+W - Wipe application\r\n"
 " Ctrl+X - Exception info\r\n"
 " Ctrl+Y - YModem application upload\r\n"
 " Ctrl+Z - Restart application\r\n";
@@ -104,9 +118,11 @@ static void monitor_on_fault(struct dmon_comm * comm)
 	if (dmon_wait_idle() < 0) {
 		DCC_LOG(LOG_WARNING, "dmon_wait_idle() failed!");
 	}
-	dmprintf(comm, __hr__);
-	dmon_print_exception(comm, xcpt);
-	dmprintf(comm, __hr__);
+	if (dmon_comm_isconnected(comm)) {
+		dmprintf(comm, __hr__);
+		dmon_print_exception(comm, xcpt);
+		dmprintf(comm, __hr__);
+	}
 }
 
 static void monitor_pause_all(struct dmon_comm * comm)
@@ -126,33 +142,92 @@ static void monitor_resume_all(struct dmon_comm * comm)
 	dmprintf(comm, "Restarting...\r\n");
 }
 
-static void monitor_ymodem_recv(struct dmon_comm * comm)
+static void monitor_ymodem_recv(struct dmon_comm * comm, 
+								uint32_t addr, unsigned int size)
 {
 	dmprintf(comm, "\r\nYMODEM waiting to receive (^X to cancel) ... ");
 	dmon_soft_reset(comm);
-	if (dmon_app_load_ymodem(comm) < 0) {
+	if (dmon_app_load_ymodem(comm, addr, size) < 0) {
 		dmprintf(comm, "\r\n#ERROR: YMODEM transfer failed!\r\n");
 		return;
 	}	
 
-	if (dmon_app_exec(true) < 0) {
+	if (dmon_app_exec(addr, false) < 0) {
 		dmprintf(comm, "\r\n#ERROR: Invalid application!\r\n");
 		return;
 	}
-
-	dmprintf(comm, "\r\nStarting application...\r\n");
-	__thinkos_resume_all();
 }
 
-static void monitor_exec(struct dmon_comm * comm)
+static void monitor_app_erase(struct dmon_comm * comm, 
+							  uint32_t addr, unsigned int size)
+{
+	dmprintf(comm, "\r\nErasing application block ... ");
+	dmon_soft_reset(comm);
+	if (dmon_app_erase(comm, addr, size))
+		dmprintf(comm, "done.\r\n");
+	else	
+		dmprintf(comm, "failed!\r\n");
+}
+
+int long2hex_le(char * s, unsigned long val);
+int char2hex(char * s, int c);
+
+static void monitor_dump_mem(struct dmon_comm * comm, 
+							  uint32_t addr, unsigned int size)
+{
+	char buf[14 + 16 * 3];
+	unsigned int rem = size;
+	uint8_t * cmp = (uint8_t *)-1;
+	bool eq = false;
+
+	while (rem) {
+		int n = rem < 16 ? rem : 16;
+		uint8_t * src = (uint8_t *)addr;
+		char * cp = buf;
+		unsigned int i;
+	
+		if (cmp != (uint8_t *)-1) {
+			for (i = 0; i < n; ++i) {
+				if (src[i] != cmp[i]) {
+					eq = false;
+					goto dump_line;
+				}
+			}
+
+			if (!eq) {
+				dmon_comm_send(comm, " ...\r\n", 6);
+				eq = true;
+			}
+		} else {	
+
+dump_line:
+			cp += long2hex_le(cp, addr);
+			*cp++ = ':';
+
+			for (i = 0; i < n; ++i) {
+				*cp++ = ' ';
+				cp += char2hex(cp, src[i]);
+			}
+
+			*cp++ = '\r';
+			*cp++ = '\n';
+
+			dmon_comm_send(comm, buf, cp - buf);
+		}
+
+		addr += n;
+		rem -= n;
+		cmp = src;
+	}
+}
+
+static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
 {
 	dmon_soft_reset(comm);
-	if (dmon_app_exec(true) < 0) {
+	if (dmon_app_exec(addr, false) < 0) {
 		dmprintf(comm, "\r\n#ERROR: Invalid application!\r\n");
 		return;
 	}
-	dmprintf(comm, "\r\nStarting application...\r\n");
-	__thinkos_resume_all();
 }
 
 void gdb_task(struct dmon_comm *) __attribute__((weak, alias("monitor_task")));
@@ -160,6 +235,7 @@ void monitor_task(struct dmon_comm *);
 
 int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 {
+	const struct gdb_target * tgt = &board_gdb_target;
 	int i;
 	int j;
 	int c;
@@ -171,14 +247,16 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "^C\r\n");
 			dmon_soft_reset(comm);
 			break;
+#if (BOOT_ENABLE_GDB)
 		case '+':
 			dmon_exec(gdb_task);
 			break;
+#endif
 		case CTRL_N:
 			monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
 			if (monitor_thread_id == - 1)
 				monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
-			dmprintf(comm, "Current thread = %d\r\n", monitor_thread_id);
+			dmprintf(comm, "Thread = %d\r\n", monitor_thread_id);
 			dmon_print_thread(comm, monitor_thread_id);
 			break;
 		case CTRL_O:
@@ -196,6 +274,11 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "^R\r\n");
 			monitor_resume_all(comm);
 			break;
+		case CTRL_S:
+			dmprintf(comm, "^S\r\n");
+			monitor_dump_mem(comm, tgt->app.start_addr, 
+							 tgt->app.block_size);
+			break;
 		case CTRL_T:
 			dmon_print_thread(comm, monitor_thread_id);
 			break;
@@ -210,11 +293,17 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 		case CTRL_Y:
 			dmprintf(comm, "^Y\r\n");
-			monitor_ymodem_recv(comm);
+			monitor_ymodem_recv(comm, tgt->app.start_addr, 
+								tgt->app.block_size);
+			break;
+		case CTRL_W:
+			dmprintf(comm, "^W\r\n");
+			monitor_app_erase(comm, tgt->app.start_addr, 
+							  tgt->app.block_size);
 			break;
 		case CTRL_Z:
 			dmprintf(comm, "^Z\r\n");
-			monitor_exec(comm);
+			monitor_exec(comm, tgt->app.start_addr);
 			break;
 		default:
 			continue;
@@ -240,12 +329,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint8_t * ptr;
 	int cnt;
 #endif
-	char buf[4];
+	int tick_cnt = 0;
+	char buf[64];
 	int len;
 
-	DCC_LOG(LOG_TRACE, "Monitor start...");
-	dmon_comm_connect(comm);
-	DCC_LOG(LOG_TRACE, "Comm connected.");
+//	DCC_LOG(LOG_TRACE, "Monitor start...");
+//	dmon_comm_connect(comm);
+//	DCC_LOG(LOG_TRACE, "Comm connected.");
 
 //	dmon_sleep(100);
 
@@ -256,8 +346,6 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	dmprintf(comm, __hr__);
 #endif
 
-	monitor_thread_id = __thinkos_thread_getnext(-1);
-
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_EXCEPT);
 	sigmask |= (1 << DMON_COMM_RCV);
@@ -267,27 +355,23 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_RX_PIPE);
 #endif
 
+	if (monitor_thread_id == MONITOR_STARTUP_MAGIC) {
+		/* first time we run the monitor, start a timer to call the 
+		   board_tick() periodically */
+		sigmask |= (1 << DMON_ALARM);
+		dmon_alarm(250);
+		monitor_thread_id = -1;
+	}
+
 	for(;;) {
 		sigset = dmon_select(sigmask);
 		DCC_LOG1(LOG_INFO, "sigset=%08x", sigset);
 
-		if (sigset & (1 << DMON_THREAD_FAULT)) {
-			DCC_LOG(LOG_TRACE, "Thread fault.");
-			monitor_on_fault(comm);
-			dmon_clear(DMON_THREAD_FAULT);
-		}
-
-		if (sigset & (1 << DMON_EXCEPT)) {
-			DCC_LOG(LOG_TRACE, "System exception.");
-			monitor_on_fault(comm);
-			dmon_clear(DMON_EXCEPT);
-		}
-
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_INFO, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
-			if (!dmon_comm_isconnected(comm))	
-				dmon_exec(monitor_task);
+//			if (!dmon_comm_isconnected(comm))	
+//				dmon_exec(monitor_task);
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
@@ -304,7 +388,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				}
 			} else {
 				DCC_LOG(LOG_TRACE, "Comm recv. rx pipe full!");
-				if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
+				if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
 					monitor_process_input(comm, buf, len);
 				} else {
 					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
@@ -313,7 +397,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				}
 			}
 #else
-			if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
+			if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
 				monitor_process_input(comm, buf, len);
 			}
 #endif
@@ -344,6 +428,32 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			}
 		}
 #endif
+
+		if (sigset & (1 << DMON_ALARM)) {
+			const struct gdb_target * tgt = &board_gdb_target;
+			dmon_clear(DMON_ALARM);
+			board_idle_tick(tick_cnt++);
+			if (tick_cnt == 20 && dmon_app_exec(tgt->app.start_addr, false)) {
+				sigmask &= ~(1 << DMON_ALARM);
+				board_app_ready();
+			} else {
+				/* reastart the alarm timer */
+				dmon_alarm(250);
+			}  
+		}
+
+		if (sigset & (1 << DMON_THREAD_FAULT)) {
+			DCC_LOG(LOG_TRACE, "Thread fault.");
+			monitor_on_fault(comm);
+			dmon_clear(DMON_THREAD_FAULT);
+		}
+
+		if (sigset & (1 << DMON_EXCEPT)) {
+			DCC_LOG(LOG_TRACE, "System exception.");
+			monitor_on_fault(comm);
+			dmon_clear(DMON_EXCEPT);
+		}
+
 	}
 }
 

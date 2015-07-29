@@ -74,8 +74,14 @@ struct mem_desc {
 
 struct gdb_target {
 	char name[20];
-	const struct mem_desc * ram;
-	const struct mem_desc * flash;
+	struct {
+		const struct mem_desc * ram;
+		const struct mem_desc * flash;
+	} mem;
+	struct {
+		uint32_t start_addr;
+		uint32_t block_size;
+	} app;
 };
 
 #ifdef __cplusplus

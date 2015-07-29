@@ -1,5 +1,5 @@
 # File:		Makefile
-# Author:   Robinson Mittmann (bobmittmann@gmail.com)
+# Module: 
 # Target:
 # Comment:  
 # Copyright(C) 2012 Bob Mittmann. All Rights Reserved.
@@ -19,13 +19,25 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-include ../../mk/config.mk
 
-LIB_STATIC = util
+PROG = mems_test
 
-CFILES = udelay.c mdelay.c delay.c ilog2.c isqrt.c bswap_16.c bswap_32.c \
-		 int2dec.c uint2dec.c ll2dec.c ull2dec.c uint2hex.c ull2hex.c \
-		 long2hex.c short2hex.c char2hex.c
+CFILES = i2c-master.c mems_test.c lsm303dlhc.c l3gd20.c 
 
-include ../../mk/lib.mk
+SDK = ../../../sdk
+
+LIBS = cm3 stm32f util c console
+
+INCPATH = $(SDK)/include ../include
+
+LIBPATH = ../sdklibs/Debug
+
+CDEFS =
+
+CFLAGS = -g -O1 -Wall
+
+MACH = stm32f303xb
+HSE_HZ = 8000000
+THINKAPP = 1
+include ../../../mk/stm32f3xx.mk
 

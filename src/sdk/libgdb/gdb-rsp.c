@@ -53,7 +53,7 @@ int str2hex(char * pkt, const char * s);
 int bin2hex(char * pkt, const void * buf, int len);
 int int2str2hex(char * pkt, unsigned int val);
 int uint2hex(char * s, unsigned int val);
-int long2hex(char * pkt, unsigned long val);
+int long2hex_be(char * pkt, unsigned long val);
 int hex2char(char * hex);
 extern const char __hextab[];
 
@@ -500,7 +500,7 @@ int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 			dmon_soft_reset(gdb->comm);
 			gdb->active_app = false;
 		}
-		if (dmon_app_exec(true) >= 0) {
+		if (dmon_app_exec(gdb->target->app.start_addr, true)) {
 			gdb->active_app = true;
 		}
 	} else if (prefix(s, "os")) {
@@ -597,7 +597,7 @@ static int rsp_query(struct gdb_rspd * gdb, char * pkt)
 		if (!gdb->active_app) {
 			DCC_LOG(LOG_WARNING, "no active application, "
 					"calling dmon_app_exec()!");
-			if (dmon_app_exec(true) < 0) {
+			if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
 				return rsp_error(gdb, 1);
 			}
 
@@ -761,7 +761,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb, char * pkt)
 	for (r = 0; r < 16; r++) {
 		thread_register_get(thread_id, r, &val);
 		DCC_LOG2(LOG_MSG, "R%d = 0x%08x", r, val);
-		cp += long2hex(cp, val);
+		cp += long2hex_be(cp, val);
 	}
 
 #if 0
@@ -779,7 +779,7 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb, char * pkt)
 
 	/* xpsr */
 	thread_register_get(thread_id, 25, &val);
-	cp += long2hex(cp, val);
+	cp += long2hex_be(cp, val);
 
 	n = cp - pkt;
 	return rsp_pkt_send(gdb, pkt, n);
@@ -807,7 +807,7 @@ static int rsp_register_get(struct gdb_rspd * gdb, char * pkt)
 	*cp++ = '$';
 
 	thread_register_get(thread_id, reg, &val);
-	cp += long2hex(cp, val);
+	cp += long2hex_be(cp, val);
 
 	n = cp - pkt;
 	return rsp_pkt_send(gdb, pkt, n);
@@ -1016,9 +1016,7 @@ static int rsp_step(struct gdb_rspd * gdb, char * pkt)
 
 	DCC_LOG1(LOG_TRACE, "gdb_thread_id=%d.", thread_id);
 
-	thread_step_req(thread_id);
-
-	return 0;
+	return thread_step_req(thread_id);
 }
 
 static int rsp_stop_reply(struct gdb_rspd * gdb, char * pkt)
@@ -1230,7 +1228,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 					if (!gdb->active_app) {
 						DCC_LOG(LOG_WARNING, "no active application, "
 								"calling dmon_app_exec()!");
-						if (dmon_app_exec(true) < 0) {
+						if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
 							return rsp_error(gdb, 1);
 						}
 						gdb->active_app = true;
@@ -1256,7 +1254,18 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 				break;
 			case 's':
 				DCC_LOG1(LOG_TRACE, "Step %d", thread_id);
-				thread_step_req(thread_id);
+				/* XXX: if there is no active application run  */
+				if (!gdb->active_app) {
+					DCC_LOG(LOG_WARNING, "no active application, "
+							"calling dmon_app_exec()!");
+					if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
+						return rsp_error(gdb, 1);
+					}
+					gdb->active_app = true;
+				}
+				if (thread_step_req(thread_id) < 0) {
+					return rsp_error(gdb, 1);
+				}
 				break;
 			case 'S':
 				DCC_LOG2(LOG_TRACE, "Step %d sig=%d", thread_id, sig);

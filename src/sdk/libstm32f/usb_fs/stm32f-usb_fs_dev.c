@@ -39,10 +39,6 @@
 
 #include <sys/dcclog.h>
 
-void led_on(unsigned int id);
-void led_off(unsigned int id);
-void led_toggle(unsigned int id);
-
 #ifndef STM32_ENABLE_USB_DEV 
 #define STM32_ENABLE_USB_DEV 0
 #endif 
@@ -799,8 +795,6 @@ void stm32f_can1_tx_usb_hp_isr(void)
 	uint32_t sr;
 	int len;
 
-	led_toggle(3);
-
 	sr = usb->istr;
 
 	ep_id = USB_EP_ID_GET(sr);
@@ -927,8 +921,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	struct stm32f_usb * usb = STM32F_USB;
 	uint32_t sr = usb->istr;
 
-	led_toggle(2);
-
 	if (sr & USB_CTR) {
 		struct stm32f_usb_pktbuf * pktbuf = STM32F_USB_PKTBUF;
 		struct stm32f_usb_ep * ep;
@@ -1030,7 +1022,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 	}
 
 	if (sr & USB_WKUP) {
-		led_on(4);
 		usb->istr = ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
 		stm32f_usb_dev_wakeup(drv);
@@ -1038,7 +1029,6 @@ void stm32f_can1_rx0_usb_lp_isr(void)
 #endif
 
 	if (sr & USB_RESET) {
-		led_on(7);
 		usb->istr = ~USB_RESET;
 		DCC_LOG(LOG_TRACE, "RESET");
 		stm32f_usb_dev_reset(drv);
@@ -1080,7 +1070,6 @@ void stm32f_usb_wkup_isr(void)
 	uint32_t sr = usb->istr;
 
 	if (sr & USB_CTR) {
-		led_on(4);
 		usb->istr = ~USB_WKUP;
 		DCC_LOG(LOG_TRACE, "WKUP");
 		stm32f_usb_dev_wakeup(drv);

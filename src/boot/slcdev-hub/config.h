@@ -112,20 +112,10 @@
 #define STM32F_OTG_FS_EP_MAX 4
 
 /* -------------------------------------------------------------------------
-   Printf
-   -------------------------------------------------------------------------- */
-#define PRINTF_ENABLE_LEFT_ALIGN 0
-#define PRINTF_ENABLE_LARGE_PADDING 0
-#define PRINTF_ENABLE_FAST 0
-#define PRINTF_ENABLE_UNSIGNED 1
-#define PRINTF_ENABLE_POINTER 0
-#define PRINTF_ENABLE_LONG 0
-#define PRINTF_ENABLE_ARG_WIDTH 0
-
-/* -------------------------------------------------------------------------
-   Board
+   GDB
    -------------------------------------------------------------------------- */
 
+#define GDB_ENABLE_MEM_MAP 0
 
 /* -------------------------------------------------------------------------
    Bootloader 

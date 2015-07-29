@@ -49,8 +49,8 @@
 
 #include "board.h"
 
-#define VERSION_NUM "0.1"
-#define VERSION_DATE "Mar, 2015"
+#define VERSION_NUM "0.2"
+#define VERSION_DATE "Jul, 2015"
 
 const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
@@ -64,6 +64,7 @@ extern const struct gdb_target board_gdb_target;
 void monitor_task(struct dmon_comm * comm);
 void gdb_task(struct dmon_comm * comm);
 
+#if 0
 #define CTRL_C 0x03
 
 void boot_task(struct dmon_comm * comm)
@@ -127,10 +128,11 @@ void boot_task(struct dmon_comm * comm)
 
 //	__thinkos_thread_abort(0);
 	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
-	dmon_app_exec(false);
+	dmon_app_exec(board_gdb_target.app.start_addr, true);
 	dmon_exec(monitor_task);
 //	dmon_exec(gdb_task);
 }
+#endif
 
 void monitor_init(void)
 {
@@ -156,7 +158,7 @@ void monitor_init(void)
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
-	thinkos_dmon_init(comm, boot_task);
+	thinkos_dmon_init(comm, monitor_task);
 }
 
 int main(int argc, char ** argv)

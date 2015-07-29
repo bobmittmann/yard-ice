@@ -36,6 +36,18 @@
 
 #define SW_B1_IO STM32_GPIOA,  0 /* Push button B1 */
 
+#define LSM303_SCL  STM32_GPIOB, 6
+#define LSM303_SDA  STM32_GPIOB, 7
+#define LSM303_INT1 STM32_GPIOE, 5
+#define LSM303_INT2 STM32_GPIOE, 4
+
+#define L3GD20_SCK  STM32_GPIOA, 5
+#define L3GD20_MOSI STM32_GPIOA, 7
+#define L3GD20_MISO STM32_GPIOA, 6
+#define L3GD20_CS   STM32_GPIOE, 3
+#define L3GD20_INT2 STM32_GPIOE, 1
+#define L3GD20_INT1 STM32_GPIOE, 0
+
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_set(__gpio, __pin);

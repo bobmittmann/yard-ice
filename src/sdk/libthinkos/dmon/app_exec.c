@@ -42,8 +42,6 @@ static void __attribute__((noreturn)) app_bootstrap(void * arg)
 }
 
 extern uint32_t _stack;
-const uint32_t thinkos_app_blk_addr = 0x08010000;
-const uint32_t thinkos_app_blk_size = (64 + 128) * 1024;
 
 /* -------------------------------------------------------------------------
  * Application execution
@@ -51,9 +49,9 @@ const uint32_t thinkos_app_blk_size = (64 + 128) * 1024;
 
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
-int dmon_app_exec(bool paused)
+bool dmon_app_exec(uint32_t addr, bool paused)
 {
-	uint32_t * app = (uint32_t *)thinkos_app_blk_addr;
+	uint32_t * app = (uint32_t *)addr;
 	int thread_id = 0;
 
 	DCC_LOG1(LOG_TRACE, "app=%p", app);
@@ -62,7 +60,7 @@ int dmon_app_exec(bool paused)
 		(app[1] != 0x6e696854) ||
 		(app[2] != 0x00534f6b)) {
 		DCC_LOG(LOG_WARNING, "invalid application signature!");
-		return -1;
+		return false;
 	}
 
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
@@ -77,7 +75,7 @@ int dmon_app_exec(bool paused)
 		__thinkos_defer_sched();
 	}
 
-	return 0;
+	return true;
 }
 
 bool dmon_app_suspend(void)

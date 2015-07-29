@@ -38,7 +38,7 @@ REGION_ALIAS("CODE", flash);
 REGION_ALIAS("DATA", sram);
 REGION_ALIAS("STACK", ccm);
 
-__code_init = ORIGIN(flash) + (DEFINED(__thinkos) ? 0x10000 : 0) ;
+__code_init = ORIGIN(flash) + (DEFINED(__thinkos) ? 0x0000a000 : 0) ;
 __data_init = ORIGIN(sram) + (DEFINED(__thinkos) ? 0x01000 : 0) ;
 
 SECTIONS

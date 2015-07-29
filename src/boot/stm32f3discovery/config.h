@@ -43,9 +43,10 @@
 #define THINKOS_THREADS_MAX         8
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 
-#define THINKOS_ENABLE_JOIN         1
+#define THINKOS_ENABLE_JOIN         0
 #define THINKOS_ENABLE_PAUSE        1
 #define THINKOS_ENABLE_CANCEL       1
+#define THINKOS_ENABLE_EXIT         1
 
 #define THINKOS_MUTEX_MAX           8
 #define THINKOS_ENABLE_MUTEX_ALLOC  1
@@ -82,7 +83,7 @@
 #define THINKOS_ENABLE_RT_DEBUG       0
 #define THINKOS_ENABLE_BREAK          0
 
-#define THINKOS_ENABLE_PROFILING      1
+#define THINKOS_ENABLE_PROFILING      0
 
 #define THINKOS_ENABLE_MONITOR        1
 #define THINKOS_ENABLE_CONSOLE        1
@@ -107,15 +108,10 @@
 #define STM32_USB_DEV_SUSPEND    0
 
 /* -------------------------------------------------------------------------
-   Printf
+   GDB
    -------------------------------------------------------------------------- */
-#define PRINTF_ENABLE_LEFT_ALIGN    0
-#define PRINTF_ENABLE_LARGE_PADDING 0
-#define PRINTF_ENABLE_FAST          0
-#define PRINTF_ENABLE_UNSIGNED      1
-#define PRINTF_ENABLE_POINTER       0
-#define PRINTF_ENABLE_LONG          0
-#define PRINTF_ENABLE_ARG_WIDTH     0
+
+#define GDB_ENABLE_MEM_MAP 1
 
 /* -------------------------------------------------------------------------
    Bootloader 

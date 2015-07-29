@@ -28,7 +28,7 @@
 #include <sys/dcclog.h>
 
 #ifndef PRINTF_ENABLE_LEFT_ALIGN
-#define PRINTF_ENABLE_LEFT_ALIGN 1
+#define PRINTF_ENABLE_LEFT_ALIGN 0
 #endif
 
 #ifndef PRINTF_ENABLE_LARGE_PADDING
@@ -54,6 +54,7 @@
 #ifndef PRINTF_ENABLE_ARG_WIDTH
 #define PRINTF_ENABLE_ARG_WIDTH 0
 #endif
+
 
 int uint2dec(char * s, unsigned int val);
 int uint2hex(char * s, unsigned int val);

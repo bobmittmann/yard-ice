@@ -361,7 +361,7 @@ int thread_goto(unsigned int gdb_thread_id, uint32_t addr)
 	unsigned int thread_id = gdb_thread_id - THREAD_ID_OFFS;
 	struct thinkos_context * ctx;
 
-	if (thread_id > THINKOS_THREADS_MAX)
+	if (thread_id >= THINKOS_THREADS_MAX)
 		return -1;
 
 	if (thinkos_except_buf.thread_id == thread_id) {
@@ -385,7 +385,13 @@ int thread_step_req(unsigned int gdb_thread_id)
 	unsigned int thread_id = gdb_thread_id - THREAD_ID_OFFS;
 	struct thinkos_context * ctx;
 
-	if (thread_id > THINKOS_THREADS_MAX)
+	if (thread_id == THINKOS_THREAD_IDLE) {
+		/* thread is the IDLE try to get the first initialized 
+		   thread instead. */
+		thread_id = __thinkos_thread_getnext(-1);
+	}
+
+	if (thread_id >= THINKOS_THREADS_MAX)
 		return -1;
 
 	if (thinkos_except_buf.thread_id == thread_id) {
@@ -407,7 +413,7 @@ int thread_continue(unsigned int gdb_thread_id)
 {
 	unsigned int thread_id = gdb_thread_id - THREAD_ID_OFFS;
 
-	if (thread_id > THINKOS_THREADS_MAX)
+	if (thread_id >= THINKOS_THREADS_MAX)
 		return -1;
 
 	return __thinkos_thread_resume(thread_id);
@@ -595,7 +601,7 @@ static bool addr2block(const struct mem_desc * mem,
 	for (i = 0; mem->blk[i].cnt != 0; ++i) {
 		size = mem->blk[i].cnt << mem->blk[i].siz;
 		base = mem->blk[i].ref;
-		if ((addr >= base) && (addr < base + size)) {
+		if ((addr >= base) && (addr < (base + size))) {
 			if (blk != NULL) {
 				int pos;
 				pos = (addr - base) >> mem->blk[i].siz;
@@ -621,7 +627,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 	uint32_t offs;
 
 	/* not flash */
-	if (addr2block(tgt->ram, addr, &blk)) {
+	if (addr2block(tgt->mem.ram, addr, &blk)) {
 		uint8_t * dst = (uint8_t *)addr;
 		uint8_t * src = (uint8_t *)ptr;
 		unsigned int cnt;
@@ -649,7 +655,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 	rem = len;
 
 	while (rem) {
-		if (!addr2block(tgt->flash, addr, &blk)) {
+		if (!addr2block(tgt->mem.flash, addr, &blk)) {
 			DCC_LOG1(LOG_ERROR, "invalid address 0x%08x", addr);
 			return -1;
 		}
@@ -693,16 +699,18 @@ int target_mem_read(struct gdb_target * tgt, uint32_t addr,
 	unsigned int cnt;
 	unsigned int i;
 
-	if (addr2block(tgt->ram, addr, &blk)) {
+	if (addr2block(tgt->mem.ram, addr, &blk)) {
 		/* not flash */
-		DCC_LOG2(LOG_TRACE, "RAM block addr=0x%08x size=%d", 
+		DCC_LOG2(LOG_INFO, "RAM block addr=0x%08x size=%d", 
 				 blk.addr, blk.size);
-	} else if (addr2block(tgt->flash, addr, &blk)) {
+	} else if (addr2block(tgt->mem.flash, addr, &blk)) {
 		/* flash */
-		DCC_LOG2(LOG_TRACE, "FLASH block addr=0x%08x size=%d", 
+		DCC_LOG2(LOG_INFO, "FLASH block addr=0x%08x size=%d", 
 				 blk.addr, blk.size);
-	} else
+	} else {
+		DCC_LOG1(LOG_WARNING, "invalid mem location addr=0x%08x", addr);
 		return -1;
+	}
 
 	cnt = blk.size - (addr - blk.addr);
 	if (cnt > len)
@@ -779,6 +787,12 @@ const char target_xml[] =
 #endif
 "</target>";
 
+
+#ifndef GDB_ENABLE_MEM_MAP
+#define GDB_ENABLE_MEM_MAP 1
+#endif
+
+#if (GDB_ENABLE_MEM_MAP) 
 const char memory_map_xml[] = 
 "<memory-map>"
 "<memory type=\"flash\" start=\"0x8000000\" length=\"0x100000\"/>"
@@ -786,7 +800,7 @@ const char memory_map_xml[] =
 "<memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
 "<memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
 "</memory-map>";
-
+#endif
 
 int target_file_read(const char * name, char * dst, 
 					  unsigned int offs, unsigned int size)
@@ -799,9 +813,11 @@ int target_file_read(const char * name, char * dst,
 	if (prefix(name, "target.xml")) {
 		src = (char *)target_xml;
 		len = sizeof(target_xml) - 1;
+#if (GDB_ENABLE_MEM_MAP) 
 	} else if (prefix(name, "memmap.xml")) {
 		src = (char *)memory_map_xml;
 		len = sizeof(memory_map_xml) - 1;
+#endif
 	} else
 		return -1;
 

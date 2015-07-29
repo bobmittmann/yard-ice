@@ -87,38 +87,6 @@ bool prefix(const char * __s, const char * __prefix)
 
 extern const char __hextab[];
 
-int char2hex(char * pkt, int c)
-{
-	pkt[0] = __hextab[((c >> 4) & 0xf)];
-	pkt[1] = __hextab[c & 0xf];
-
-	return 2;
-}
-
-int short2hex(char * pkt, unsigned int val)
-{
-	pkt[0] = __hextab[((val >> 4) & 0xf)];
-	pkt[1] = __hextab[val & 0xf];
-	pkt[2] = __hextab[((val >> 12) & 0xf)];
-	pkt[3] = __hextab[((val >> 8) & 0xf)];
-
-	return 4;
-}
-
-int long2hex(char * pkt, unsigned long val)
-{
-	pkt[0] = __hextab[((val >> 4) & 0xf)];
-	pkt[1] = __hextab[(val & 0xf)];
-	pkt[2] = __hextab[((val >> 12) & 0xf)];
-	pkt[3] = __hextab[((val >> 8) & 0xf)];
-	pkt[4] = __hextab[((val >> 20) & 0xf)];
-	pkt[5] = __hextab[((val >> 16) & 0xf)];
-	pkt[6] = __hextab[((val >> 28) & 0xf)];
-	pkt[7] = __hextab[((val >> 24) & 0xf)];
-
-	return 8;
-}
-
 int str2str(char * pkt, const char * s)
 {
 	char * cp;

@@ -44,7 +44,11 @@ void board_init(void)
 {
 }
 
-void board_tick(unsigned int cnt) 
+void board_idle_tick(unsigned int cnt) 
+{
+}
+
+void board_app_ready(void)
 {
 }
 
@@ -71,7 +75,13 @@ const struct mem_desc flash_desc = {
 
 const struct gdb_target board_gdb_target = {
 	.name = "SLCDEV-HUB",
-	.ram = &sram_desc,
-	.flash = &flash_desc
+	.mem = {
+		.ram = &sram_desc,
+		.flash = &flash_desc
+	},
+	.app = {
+		.start_addr = 0x08010000,
+		.block_size = (64 + 7 * 128) * 1024
+	}
 };
 

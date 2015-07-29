@@ -58,10 +58,12 @@ void led_off(unsigned int id)
 	__led_off(led_io[id].gpio, led_io[id].pin);
 }
 
+#if 0
 void led_toggle(unsigned int id)
 {
 	__led_toggle(led_io[id].gpio, led_io[id].pin);
 }
+#endif
 
 void io_init(void)
 {
@@ -76,32 +78,25 @@ void io_init(void)
 	stm32_gpio_mode(LED8_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_mode(LED9_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_mode(LED10_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-
-	stm32_gpio_mode(SW_B1_IO, INPUT, SPEED_LOW);
 }
 
 void board_init(void)
 {
-#if 0
-	int i;
-
-	for (i = 0; i < 16; ++i) {
-		led_off((i - 2) & 0x7);
-		led_on(i & 0x7);
-		/* wait 100 ms */
-		udelay(100000);
-	}
-
-	led_off((i - 2) & 0x7);
-	udelay(100000);
-	led_off((i - 1) & 0x7);
-#endif
+	led_on(0);
 }
 
-void board_tick(unsigned int cnt) 
+void board_idle_tick(unsigned int cnt) 
 {
-	led_off((cnt - 1) & 0x1);
-	led_on(cnt & 0x1);
+	led_off(~(cnt - 1) & 0x7);
+	led_on(~cnt & 0x7);
+}
+
+void board_app_ready(void)
+{
+	int i;
+
+	for (i = 0; i < LED_COUNT; ++i) 
+		led_off(i);
 }
 
 const struct mem_desc sram_desc = {
@@ -117,15 +112,21 @@ const struct mem_desc sram_desc = {
 const struct mem_desc flash_desc = {
 	.name = "FLASH",
 	.blk = {
-		{ 0x08000000, BLK_RO, SZ_2K,  24 }, /* Bootloader */
-		{ 0x0800c000, BLK_RW, SZ_8K, 104 }, /* Application */
+		{ 0x08000000, BLK_RO, SZ_2K,  20 }, /* Bootloader: 40 KiB */
+		{ 0x0800a000, BLK_RW, SZ_2K, 108 }, /* Application:  */
 		{ 0x00000000, 0, 0, 0 }
 	}
 }; 
 
 const struct gdb_target board_gdb_target = {
 	.name = "STM32F3Discovery",
-	.ram = &sram_desc,
-	.flash = &flash_desc
+	.mem = {
+		.ram = &sram_desc,
+		.flash = &flash_desc
+	},
+	.app = {
+		.start_addr = 0x0800a000,
+		.block_size = 2048 * 108
+	}
 };
 

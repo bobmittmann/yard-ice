@@ -30,43 +30,46 @@
 
 #if defined(STM32F1X) || defined(STM32F3X)
 
-const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
+#if defined(STM32F1X)
+#define FLASH_BLOCK_SIZE 1024
+#elif defined(STM32F3X)
+#define FLASH_BLOCK_SIZE 2048
+#endif
+
+#define FLASH_ERR (FLASH_WRPRTERR | FLASH_PGPERR)
 
 int __attribute__((section (".data#"))) 
 	stm32f10x_flash_blk_erase(struct stm32_flash * flash, uint32_t addr)
 {
-	uint32_t pri;
 	uint32_t sr;
-	int again;
-	int ret = -1;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
 
 	flash->cr = FLASH_SER;
 	flash->ar = addr;
 	flash->cr = FLASH_STRT | FLASH_SER;
 
-	for (again = 4096 * 1024; again > 0; again--) {
+	do {
 		sr = flash->sr;
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
+	} while (sr & FLASH_BSY);
 
-	cm3_primask_set(pri);
-
-	return ret;
+	return sr;
 }
 
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
+	unsigned int cnt;
 	uint32_t addr;
 	uint32_t cr;
+	uint32_t sr;
+	uint32_t pri;
 
-	addr = __flash_base + offs;
+	if ((offs & ~(FLASH_BLOCK_SIZE - 1)) != offs) {
+		/* make sure we are block aligned */
+		DCC_LOG(LOG_ERROR, "offset must be block aligned!");
+		return -1;
+	}
+
+	addr = (uint32_t)STM32_FLASH_MEM + offs;
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x len=%d", addr, len);
 
@@ -78,40 +81,39 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		flash->keyr = FLASH_KEY2;
 	}
 
-	if (stm32f10x_flash_blk_erase(flash, addr) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
-		return -1;
+	cnt = 0;
+	while (cnt < len) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		sr = stm32f10x_flash_blk_erase(flash, addr);
+		cm3_primask_set(pri);
+
+		if (sr & FLASH_ERR) {
+			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
+			return -1;
+		}
+
+		cnt += FLASH_BLOCK_SIZE;
+		addr += FLASH_BLOCK_SIZE;
 	}
 
-	return len;
+	return cnt;
 }
 
 int __attribute__((section (".data#"))) 
 	stm32f10x_flash_wr16(struct stm32_flash * flash,
 						 uint16_t volatile * addr, uint16_t data)
 {
-	uint32_t pri;
 	uint32_t sr;
-	int again;
-	int ret = -1;
-
-	pri = cm3_primask_get();
-	cm3_primask_set(1);
 
 	flash->cr = FLASH_PG;
 	*addr = data;
-	
-	for (again = 4096 * 1024; again > 0; --again) {
+
+	do {
 		sr = flash->sr;
-		if ((sr & FLASH_BSY) == 0) {
-			ret = 0;
-			break;
-		}
-	}
+	} while (sr & FLASH_BSY);
 
-	cm3_primask_set(pri);
-
-	return ret;
+	return sr;
 }
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
@@ -120,7 +122,9 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	uint16_t data;
 	uint16_t * addr;
 	uint8_t * ptr;
+	uint32_t pri;
 	uint32_t cr;
+	uint32_t sr;
 	int n;
 	int i;
 
@@ -132,7 +136,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	n = (len + 1) / 2;
 
 	ptr = (uint8_t *)buf;
-	addr = (uint16_t *)(__flash_base + offs);
+	addr = (uint16_t *)((uint32_t)STM32_FLASH_MEM + offs);
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -147,7 +151,11 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	for (i = 0; i < n; i++) {
 		data = ptr[0] | (ptr[1] << 8);
 		DCC_LOG2(LOG_MSG, "0x%08x data=0x%04x", addr, data);
-		if (stm32f10x_flash_wr16(flash, addr, data) < 0) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		sr = stm32f10x_flash_wr16(flash, addr, data);
+		cm3_primask_set(pri);
+		if (sr & FLASH_ERR) {
 			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
 			return -1;
 		}
@@ -162,8 +170,6 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 
 
 #if defined(STM32F2X) || defined(STM32F4X)
-
-const uint32_t __flash_base = (uint32_t)STM32_FLASH_MEM;
 
 #define FLASH_ERR (FLASH_PGSERR | FLASH_PGPERR | FLASH_PGAERR | FLASH_WRPERR | \
 				   FLASH_OPERR)
@@ -232,7 +238,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		cm3_primask_set(pri);
 
 		if (sr & FLASH_ERR) {
-			DCC_LOG(LOG_WARNING, "stm32f10x_flash_blk_erase() failed!");
+			DCC_LOG(LOG_WARNING, "stm32f2x_flash_sect_erase() failed!");
 			return -1;
 		}
 
@@ -278,7 +284,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 	n = (len + 3) / 4;
 
 	ptr = (uint8_t *)buf;
-	addr = (uint32_t *)(__flash_base + offs);
+	addr = (uint32_t *)((uint32_t)STM32_FLASH_MEM + offs);
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -298,7 +304,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 		sr = stm32f2x_flash_wr32(flash, addr, data);
 		cm3_primask_set(pri);
 		if (sr & FLASH_ERR) {
-			DCC_LOG(LOG_WARNING, "stm32f10x_flash_wr16() failed!");
+			DCC_LOG(LOG_WARNING, "stm32f2x_flash_wr32() failed!");
 			return -1;
 		}
 		ptr += 4;
