@@ -234,9 +234,9 @@ Note: Not used in I2S mode and SPI TI mode */
 /* Bit 5 - Mode fault */
 #define SPI_MODF (1 << 5)
 /* 0: No mode fault occurred
-1: Mode fault occurred
-This flag is set by hardware and reset by a software sequence. Refer to Section 25.3.10 on
-page 674 for the software sequence.
+   1: Mode fault occurred This flag is set by hardware and reset by a 
+   software sequence. Refer to Section 25.3.10 on page 674 for the 
+   software sequence.
 Note: Not used in I2S mode */
 
 /* Bit 4 - CRC error flag */

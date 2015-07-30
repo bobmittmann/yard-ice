@@ -2746,6 +2746,8 @@ again in case of a new switch is required)
 
 #endif /* STM32F3X */
 
+#define CLK_BUS(_BUS, _BIT) _BUS
+#define CLK_BIT(_BUS, _BIT) _BIT
 
 #ifndef __ASSEMBLER__
 

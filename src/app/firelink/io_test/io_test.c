@@ -71,10 +71,10 @@ void init_clock_task(struct lcd_dev * lcd)
 	static uint32_t clock_stack[128];
 
 	static const struct thinkos_thread_inf clock_inf = {
-		.stack_ptr = clock_stack, 
-		.stack_size = sizeof(clock_stack), 
+		.stack_ptr = clock_stack,
+		.stack_size = sizeof(clock_stack),
 		.priority = 8,
-		.thread_id = 30, 
+		.thread_id = 30,
 		.paused = 0,
 		.tag = "CLOCK"
 	};

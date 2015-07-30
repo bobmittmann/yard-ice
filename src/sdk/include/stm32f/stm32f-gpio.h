@@ -361,7 +361,6 @@ struct stm32_afio {
 #define PULL_UP (1 << 5)
 #define PULL_DOWN (1 << 6)
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -431,6 +430,16 @@ static inline void stm32_gpio_wr(struct stm32_gpio *__gpio,
 
 static inline uint32_t stm32_gpio_rd(struct stm32_gpio *__gpio) {
 	return __gpio->idr;
+}
+
+static inline struct stm32_gpio * stm32_io_gpio(struct stm32_gpio * __gpio, 
+												unsigned int __pin) {
+	return __gpio;
+}
+
+static inline unsigned int stm32_io_pin(struct stm32_gpio * __gpio, 
+										unsigned int __pin) {
+	return __pin;
 }
 
 /* mode */

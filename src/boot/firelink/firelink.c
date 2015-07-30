@@ -23,6 +23,7 @@
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <sys/dcclog.h>
+#include <gdb.h>
 
 #include "board.h"
 
@@ -174,13 +175,51 @@ void io_init(void)
 void board_init(void)
 {
 	firelink_lcd_init();
-	firelink_lcd_puts("ThinkOS 0.21        ");
+	firelink_lcd_puts("ThinkOS 0.22        ");
 	firelink_lcd_puts("Bootloader          ");
 	firelink_lcd_puts("Debug Monitor       ");
 }
 
-void board_tick(unsigned int cnt) 
+void board_idle_tick(unsigned int cnt) 
 {
-	firelink_lcd_putc('.');
+	if (cnt < 20)
+		firelink_lcd_putc('.');
 }
+
+void board_app_ready(void)
+{
+}
+
+const struct mem_desc sram_desc = {
+	.name = "RAM",
+	.blk = {
+		{ 0x10000000, BLK_RW, SZ_64K,  1 }, /*  CCM - Main Stack */
+		{ 0x20000000, BLK_RO, SZ_4K,   1 }, /* Bootloader: 4KiB */
+		{ 0x20001000, BLK_RW, SZ_4K,  27 }, /* Application: 108KiB */
+		{ 0x2001c000, BLK_RW, SZ_16K,  1 }, /* SRAM 2: 16KiB */
+		{ 0x00000000, 0, 0, 0 }
+	}
+}; 
+
+const struct mem_desc flash_desc = {
+	.name = "FLASH",
+	.blk = {
+		{ 0x08000000, BLK_RO, SZ_16K,  4 }, /* Bootloader */
+		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
+		{ 0x08020000, BLK_RW, SZ_128K, 7 }, /* Application */
+		{ 0x00000000, 0, 0, 0 }
+	}
+}; 
+
+const struct gdb_target board_gdb_target = {
+	.name = "Firelink",
+	.mem = {
+		.ram = &sram_desc,
+		.flash = &flash_desc
+	},
+	.app = {
+		.start_addr = 0x08010000,
+		.block_size = (64 + 7 * 128) * 1024
+	}
+};
 

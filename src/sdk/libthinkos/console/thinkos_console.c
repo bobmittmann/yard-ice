@@ -237,7 +237,9 @@ void thinkos_console_svc(int32_t * arg)
 {
 	int self = thinkos_rt.active;
 	unsigned int req = arg[0];
+	unsigned int wq;
 	unsigned int len;
+	uint32_t queue;
 	uint8_t * buf;
 	int n;
 	
@@ -289,18 +291,49 @@ void thinkos_console_svc(int32_t * arg)
 	case CONSOLE_WRITE:
 		buf = (uint8_t *)arg[1];
 		len = arg[2];
+		wq = THINKOS_WQ_CONSOLE_WR;
 		DCC_LOG1(LOG_INFO, "Console write: len=%d", len);
+wr_again:
 		if ((n = pipe_put(&thinkos_console_rt.tx_pipe, 
 									buf, len)) > 0) {
 			DCC_LOG1(LOG_INFO, "pipe_put: n=%d", n);
 			dmon_signal(DMON_TX_PIPE);
 			arg[0] = n;
 		} else {
-			DCC_LOG(LOG_INFO, "Console write wait...");
-			/* wait for event */
+			/* (1) suspend the thread by removing it from the
+			   ready wait queue. The __thinkos_suspend() call cannot be nested
+			   inside a LDREX/STREX pair as it may use the exclusive access 
+			   itself, in case we have anabled the time sharing option.
+			   It is not a problem having a thread not contained in any 
+			   waiting queue inside a system call. */
 			__thinkos_suspend(self);
-			/* insert into the mutex wait queue */
-			__thinkos_wq_insert(THINKOS_WQ_CONSOLE_WR, self);
+			/* update the thread status in preparation for event wait */
+#if THINKOS_ENABLE_THREAD_STAT
+			thinkos_rt.th_stat[self] = wq << 1;
+#endif
+			/* (2) Save the context pointer. In case an interrupt wakes up
+			   this thread before the scheduler is called, this will allow
+			   the interrupt handler to locate the return value (r0) address. */
+			thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+
+			/* insert into the event wait queue */
+			queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+			queue |= (1 << self);
+			/* The queue may have changed while suspending (1).
+			   If this is the case roll back and restart. */
+			if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
+				/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+				thinkos_rt.th_stat[self] = 0;
+#endif
+				/* insert into the ready wait queue */
+				__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+				DCC_LOG2(LOG_WARNING, "<%d> rollback 2 %d...", self, wq);
+				goto wr_again;
+			}
+
+			/* -- wait for event ---------------------------------------- */
+			DCC_LOG2(LOG_INFO, "<%d> waiting on console write %d...", self, wq);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched(); 
 		}

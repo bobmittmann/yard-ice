@@ -114,6 +114,16 @@
 
 #define IO_RS485_USART    STM32_UART7
 
+/* -------------------------------------------------------------------------
+ * Serial Flash  connections
+ * ------------------------------------------------------------------------- */
+
+#define IO_SFLASH_SCK     STM32_GPIOC, 10
+#define IO_SFLASH_MISO    STM32_GPIOC, 11
+#define IO_SFLASH_MOSI    STM32_GPIOC, 12
+#define IO_SFLASH_CS      STM32_GPIOA, 4
+#define SPI_SFLASH        STM32F_SPI3
+
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_set(__gpio, __pin);
