@@ -52,28 +52,34 @@ const uint8_t stm32f_dma2_irqnum_lut[] = {
 	STM32F_IRQ_DMA2_STREAM7
 };
 
-#if 0
-void stm32f_dmactl_init(struct stm32f_dmactl * ctl, 
-						struct stm32f_dma * dma,
-						int strm_id)
+void stm32_dmactl_init(struct stm32_dmactl * ctl, struct stm32f_dma * dma, int id)
 {
-	ctl->strm = &dma->s[strm_id];
-	ctl->strm_id = strm_id;
-	ctl->isr = dma_isr_bitband(dma, strm_id);
-	ctl->ifcr = dma_ifcr_bitband(dma, strm_id);
+    ctl->id = id;
+    ctl->strm = &dma->s[id];
+    ctl->isr = dma_isr_bitband(dma, id);
+    ctl->ifcr = dma_ifcr_bitband(dma, id);
 
-	/* Disable DMA stream */
+   /* DMA clock enable */
+    if (dma == STM32F_DMA1) {
+        stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
+        ctl->irqno = stm32f_dma1_irqnum_lut[id];
+    } else {
+    	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA2);
+    	ctl->irqno = stm32f_dma2_irqnum_lut[id];
+    }
+
+	/* Disable DMA channel */
 	ctl->strm->cr = 0;
-	while (ctl->strm->cr & DMA_EN); 
+	while (ctl->strm->cr & DMA_EN);
 
-	/* clear all interrupt flags */
-	ctl->ifcr[FEIF_BIT] = 1;
-	ctl->ifcr[DMEIF_BIT] = 1;
-	ctl->ifcr[TEIF_BIT] = 1;
-	ctl->ifcr[HTIF_BIT] = 1;
-	ctl->ifcr[TCIF_BIT] = 1; 
+    /* Clear all interrupt flags */
+    ctl->ifcr[FEIF_BIT] = 1;
+    ctl->ifcr[DMEIF_BIT] = 1;
+    ctl->ifcr[TEIF_BIT] = 1;
+    ctl->ifcr[HTIF_BIT] = 1;
+    ctl->ifcr[TCIF_BIT] = 1;
 }
-#endif
+
 #endif
 
 #if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)

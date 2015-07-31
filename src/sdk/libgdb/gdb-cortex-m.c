@@ -800,7 +800,7 @@ const char target_xml[] =
 
 
 #ifndef GDB_ENABLE_MEM_MAP
-#define GDB_ENABLE_MEM_MAP 1
+#define GDB_ENABLE_MEM_MAP 0
 #endif
 
 #if (GDB_ENABLE_MEM_MAP) 

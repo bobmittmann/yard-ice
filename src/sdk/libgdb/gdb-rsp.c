@@ -886,7 +886,7 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_MSG, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
@@ -1365,6 +1365,7 @@ static int rsp_memory_write_bin(struct gdb_rspd * gdb, char * pkt)
 	return rsp_ok(gdb);
 }
 
+
 static int rsp_pkt_input(struct gdb_rspd * gdb, char * pkt, unsigned int len)
 {
 	int thread_id;
@@ -1569,6 +1570,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
+
+		DCC_LOG1(LOG_MSG, "sig=%08x", sigset);
+
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");
 			dmon_clear(DMON_THREAD_FAULT);
@@ -1594,7 +1598,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				continue;
 			}
 
-			DCC_LOG1(LOG_MSG, "%02x", buf[0]);
+			DCC_LOG1(LOG_MSG, "Comm RX: %02x", buf[0]);
 
 			switch (buf[0]) {
 
@@ -1634,12 +1638,14 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_TRACE, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
-			if (!dmon_comm_isconnected(comm))	
+			if (!dmon_comm_isconnected(comm)) {
+				DCC_LOG(LOG_WARNING, "Debug Monitor Comm closed!");
 				dmon_exec(gdb->shell_task);
+			}
 		}
 
 		if (sigset & (1 << DMON_TX_PIPE)) {
-			DCC_LOG(LOG_INFO, "TX Pipe.");
+			DCC_LOG(LOG_TRACE, "TX Pipe.");
 			if (rsp_console_output(gdb, pkt) <= 0) {
 				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
 				dmon_clear(DMON_TX_PIPE);

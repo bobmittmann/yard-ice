@@ -110,6 +110,7 @@ static void cond_resume(unsigned int th, unsigned int wq, bool tmw)
 	__bit_mem_wr(&thinkos_rt.wq_clock, th, tmw);
 }
 #endif
+
 #if THINKOS_SEMAPHORE_MAX > 0
 static void semaphore_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -135,6 +136,7 @@ static void semaphore_resume(unsigned int th, unsigned int wq, bool tmw)
 	}
 }
 #endif
+
 #if THINKOS_EVENT_MAX > 0
 static void evset_resume(unsigned int th, unsigned int wq, bool tmw) 
 {

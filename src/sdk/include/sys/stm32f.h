@@ -138,6 +138,19 @@ extern const uint8_t stm32f_dma2_irqnum_lut[];
 
 #if defined(STM32F2X) || defined(STM32F4X)
 
+struct stm32_dmactl {
+	/* DMA Stream ID */
+	uint8_t id;
+	/* DMA IRQ number */
+	uint8_t irqno;
+	/* DMA stream */
+	struct stm32f_dma_stream * strm;
+	/* Bitband pointer to DMA interrupt status flags */
+	uint32_t * isr;
+	/* Bitband pointer to DMA interrupt clear flags */
+	uint32_t * ifcr;
+};
+
 static inline uint32_t * dma_isr_bitband(struct stm32f_dma * dma,
 										 int stream) {
 	return CM3_BITBAND_DEV(&dma->lisr, stm32f_dma_isr_base_lut[stream]);
@@ -175,22 +188,16 @@ static inline uint32_t * dma_ifcr_bitband(struct stm32f_dma * dma,
 
 #endif
 
-#if 0
-struct stm32f_dmactl {
-	int strm_id;
-	struct stm32f_dma_stream * strm;
-	uint32_t * isr;
-	uint32_t * ifcr;
-};
-
-void stm32f_dmactl_init(struct stm32f_dmactl * ctl, 
-						struct stm32f_dma * dma,
-						int strm_id);
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*---------------------------------------------------------------------
+ * DMA
+ *---------------------------------------------------------------------*/
+
+void stm32_dmactl_init(struct stm32_dmactl * ctl,
+		struct stm32f_dma * dma, int id);
 
 /*---------------------------------------------------------------------
  * GPIO

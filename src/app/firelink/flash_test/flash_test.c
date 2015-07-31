@@ -27,6 +27,7 @@
 #include <sys/console.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <thinkos.h>
 
 #include "board.h"
@@ -87,8 +88,8 @@ void hexdump(uint32_t addr, void * data, unsigned int size)
 dump_line:
 			cp += sprintf(cp, "%06x:", addr);
 
-			for (i = 0; i < n; ++i)
-				cp += sprintf(cp, " %02x:", src[i]);
+			for (i = 0; i < n; i += 2)
+				cp += sprintf(cp, " %02x%02x", src[i], src[i + 1]);
 
 			printf("%s\n", buf);
 		}
@@ -100,7 +101,6 @@ dump_line:
 	}
 }
 
-
 void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
 {
 	uint8_t id[20];
@@ -109,7 +109,6 @@ void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
 	int sr;
 	int n;
 	int i;
-
 
 	if ((n = sflash_device_id(sf, id, sizeof(id))) < 0) {
 		printf("ERR: sflash_device_id() Failed!\n");
@@ -123,6 +122,7 @@ void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
 	sflash_page_read(sf, addr, page, sizeof(page));
 	hexdump(addr, page, sizeof(page));
 
+#if 0
 	sflash_write_enable(sf);
 	sflash_sector_erase(sf, addr);
 	cnt = 0;
@@ -134,11 +134,16 @@ void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
 
 	printf("Sector erase: %d\n", cnt);
 
+	memset(page, 0, sizeof(page));
 	sflash_page_read(sf, addr, page, sizeof(page));
 	hexdump(addr, page, sizeof(page));
+#endif
 
-	for(i = 0; i < sizeof(page); ++i)
-		page[i] = i;
+	for(i = 0; i < sizeof(page); i += 2) {
+		int val = addr + i;
+		page[i] = val >> 8;
+		page[i + 1] = val;
+	}
 
 	sflash_write_enable(sf);
 	sflash_page_write(sf, addr, page, sizeof(page));
@@ -150,6 +155,8 @@ void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
 	} while ((sr & 0x80) == 0);
 
 	printf("Page write: %d\n", cnt);
+
+	memset(page, 0, sizeof(page));
 
 	sflash_page_read(sf, addr, page, sizeof(page));
 	hexdump(addr, page, sizeof(page));

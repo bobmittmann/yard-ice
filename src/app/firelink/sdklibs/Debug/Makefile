@@ -29,7 +29,7 @@ LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 INCPATH = $(SDK)/include ..
 
 CDEFS = CONFIG_H
-CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
+CFLAGS = -Og -g3 -ggdb -fno-omit-frame-pointer -Wall
 O := .
 
 MACH = stm32f429
