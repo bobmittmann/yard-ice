@@ -46,10 +46,9 @@
 #endif
 
 #ifndef TRACE_TIMER
-#ifdef STM32F_TIM5
+#if defined(STM32F_TIM5)
 #define TRACE_TIMER STM32F_TIM5
-#endif
-#ifdef STM32F_TIM2
+#elif defined(STM32F_TIM2)
 #define TRACE_TIMER STM32F_TIM2
 #endif
 #endif

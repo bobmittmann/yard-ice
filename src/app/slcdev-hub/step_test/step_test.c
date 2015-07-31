@@ -31,6 +31,8 @@
 
 #include "board.h"
 
+void usleep(unsigned int usec);
+
 void io_init(void)
 {
 	asm volatile ("mov r1, #1\r\n" : : : "r1");
@@ -209,7 +211,8 @@ void init_queue_test(void)
 };
 #endif
 
-unsigned int gcnt = 0;
+volatile unsigned int cnt1 = 0;
+volatile unsigned int cnt2 = 0;
 
 int main(int argc, char ** argv)
 {
@@ -220,19 +223,11 @@ int main(int argc, char ** argv)
 //	init_queue_test();
 
 	for (;;) {
+//		usleep(2000);
 		thinkos_sleep(2000);
-		asm volatile ("mov r0, #0\r\n" : : : "r0");
-		asm volatile ("mov r0, #1\r\n" : : : "r0");
-		asm volatile ("mov r0, #2\r\n" : : : "r0");
-		asm volatile ("mov r0, #3\r\n" : : : "r0");
-		asm volatile ("mov r0, #4\r\n" : : : "r0");
+		cnt1++;
 		thinkos_sleep(2000);
-		asm volatile ("mov r0, #5\r\n" : : : "r0");
-		asm volatile ("mov r0, #6\r\n" : : : "r0");
-		asm volatile ("mov r0, #7\r\n" : : : "r0");
-		asm volatile ("mov r0, #8\r\n" : : : "r0");
-		asm volatile ("mov r0, #9\r\n" : : : "r0");
-		gcnt++;
+		cnt2++;
 	}
 	return 0;
 }

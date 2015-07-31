@@ -697,29 +697,40 @@ int target_mem_read(struct gdb_target * tgt, uint32_t addr,
 	uint8_t * src = (uint8_t *)addr;;
 	struct mem_blk blk;
 	unsigned int cnt;
+	unsigned int rem;
 	unsigned int i;
 
-	if (addr2block(tgt->mem.ram, addr, &blk)) {
-		/* not flash */
-		DCC_LOG2(LOG_INFO, "RAM block addr=0x%08x size=%d", 
-				 blk.addr, blk.size);
-	} else if (addr2block(tgt->mem.flash, addr, &blk)) {
-		/* flash */
-		DCC_LOG2(LOG_INFO, "FLASH block addr=0x%08x size=%d", 
-				 blk.addr, blk.size);
-	} else {
-		DCC_LOG1(LOG_WARNING, "invalid mem location addr=0x%08x", addr);
-		return -1;
+	DCC_LOG2(LOG_MSG, "0x%08x .. 0x%08x", addr, addr + len - 1);
+
+	rem = len;
+
+	while (rem) {
+		if (addr2block(tgt->mem.ram, addr, &blk)) {
+			/* not flash */
+			DCC_LOG2(LOG_INFO, "RAM block addr=0x%08x size=%d", 
+					 blk.addr, blk.size);
+		} else if (addr2block(tgt->mem.flash, addr, &blk)) {
+			/* flash */
+			DCC_LOG2(LOG_INFO, "FLASH block addr=0x%08x size=%d", 
+					 blk.addr, blk.size);
+		} else {
+			DCC_LOG1(LOG_MSG, "invalid mem location addr=0x%08x", addr);
+			return -1;
+		}
+
+		cnt = blk.size - (addr - blk.addr);
+		if (cnt > rem)
+			cnt = rem;
+
+		for (i = 0; i < cnt; ++i)
+			dst[i] = src[i];
+
+		dst += cnt;
+		src += cnt;
+		rem -= cnt;
 	}
 
-	cnt = blk.size - (addr - blk.addr);
-	if (cnt > len)
-		cnt = len;
-
-	for (i = 0; i < cnt; ++i)
-		dst[i] = src[i];
-
-	return cnt;
+	return len;
 }
 
 /* -------------------------------------------------------------------------
