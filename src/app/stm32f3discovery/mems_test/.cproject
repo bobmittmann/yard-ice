@@ -96,7 +96,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.choice.1069191339" name="Output file format (-O)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.choice" value="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.choice.binary" valueType="enumerated"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.textsection.1377648111" name="Section: -j .text" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.textsection" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.datasection.2002285894" name="Section: -j .data" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.datasection" value="true" valueType="boolean"/>
-								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.othersection.998875653" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.othersection" valueType="stringList">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.othersection.998875653" name="Other sections (-j)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.createflash.othersection" valueType="stringList">
 									<listOptionValue builtIn="false" value=".init"/>
 								</option>
 							</tool>

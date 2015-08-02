@@ -171,6 +171,19 @@ static inline uint32_t * dma_ifcr_bitband(struct stm32f_dma * dma,
 
 #if defined(STM32F1X) || defined(STM32F3X) || defined(STM32L1X)
 
+struct stm32_dmactl {
+	/* DMA Stream ID */
+	uint8_t id;
+	/* DMA IRQ number */
+	uint8_t irqno;
+	/* DMA stream */
+	struct stm32f_dma_stream * strm;
+	/* Bitband pointer to DMA interrupt status flags */
+	uint32_t * isr;
+	/* Bitband pointer to DMA interrupt clear flags */
+	uint32_t * ifcr;
+};
+
 static inline uint32_t * dma_isr_bitband(struct stm32f_dma * dma,
 										 int stream) {
 	return CM3_BITBAND_DEV(&dma->isr, (stream << 2));
