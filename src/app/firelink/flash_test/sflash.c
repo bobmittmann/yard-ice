@@ -61,73 +61,135 @@
 
 /* ERASE Operations */
 #define SF_SUBSECTOR_ERASE      0x20
+#define SF_SECTOR_ERASE         0xd8
+#define SF_DIE_ERASE            0xc4
+#define SF_BULK_ERASE           0xc7
+
+#define SF_PROGRAM_RESUME       0x7A
+#define SF_PROGRAM_SUSPEND      0x75
+
+/* 4-BYTE ADDRESS MODE Operations */
+#define SF_4BYTE_ADDR_ENTER     0xb7
+#define SF_4BYTE_ADDR_EXIT      0xe9
+
+/* Status Register Bit Definitions
+	7 Status register write enable/disable
+	0 = Enabled
+	1 = Disabled
+	Nonvolatile bit: Used with the W# signal to enable or disable writing to the status register.
+
+	5 Top/bottom
+	0 = Top
+	1 = Bottom
+	Nonvolatile bit: Determines whether the protected memory area defined by the block protect bits starts from the top or bottom of the memory array.
+
+	6, 4:2 Block protect 3–0
+	See Protected Area Sizes – Upper Area and Lower Area tables in Device Protection
+	Nonvolatile bit: Defines memory to be software protected against PROGRAM or ERASE operations. When one or more block protect bits is set to 1, a designated memory area is protected from PROGRAM and ERASE operations.
+
+	1 Write enable latch
+	0 = Cleared (Default)
+	1 = Set
+	Volatile bit: The device always powers up with this bit cleared to prevent
+	inadvertent WRITE STATUS REGISTER, PROGRAM, or ERASE operations.
+	To enable these operations, the WRITE ENABLE operation must be executed first
+	to set this bit.
+
+	0 Write in progress
+	0 = Ready
+	1 = Busy
+	Volatile bit: Indicates if one of the following command cycles is in progress:
+	WRITE STATUS REGISTER WRITE NONVOLATILE CONFIGURATION REGISTER PROGRAM ERASE
+*/
+
+#define SF_STATUS_BUSY       (1 << 0)
+#define SF_STATUS_WEN_LATCH  (1 << 1)
+
+/*  Flag Status Register Bit Definitions
+
+ 	7 Program or erase controller
+	0 = Busy
+	1 = Ready
+	Status bit: Indicates whether one of the following command cycles is in progress:
+	WRITE STATUS REGISTER, WRITE NONVOLATILE CONFIGURATION REGISTER, PROGRAM, or ERASE.
+
+	6 Erase suspend
+	0 = Not in effect
+	1 = In effect
+	Status bit: Indicates whether an ERASE operation has been or is going to be suspended.
+
+	5 Erase
+	0 = Clear
+	1 = Failure or protection error
+	Error bit: Indicates whether an ERASE operation has succeeded or failed.
+
+	4 Program
+	0 = Clear
+	1 = Failure or protection error
+	Error bit: Indicates whether a PROGRAM operation has succeeded or failed; also an attempt to program a 0 to a 1 when VPP = VPPH and the data pattern is a multiple of 64 bits.
+
+	3 VPP 0 = Enabled
+	1 = Disabled (Default)
+	Error bit: Indicates an invalid voltage on VPP during a PROGRAM or ERASE operation.
+
+	2 Program suspend
+	0 = Not in effect
+	1 = In effect
+	Status bit: Indicates whether a PROGRAM operation has been or is going to be suspended.
+
+	1 Protection
+	0 = Clear
+	1 = Failure or protection error
+	Error bit: Indicates whether an ERASE or PROGRAM operation has attempted to modify the protected array sector, or whether a PROGRAM operation has attempted to access the locked OTP space.
+ */
+
+#define SF_FLAG_READY  (1 << 7)
 
 /* -------------------------------------------------------------------------
    Serial Flash Elementary Driver
    -------------------------------------------------------------------------- */
 
+#define SF_PAGE_SIZE        256
+#define SF_SECTOR_SIZE    65536
+#define SF_SUBSECTOR_SIZE  4096
+
 struct sflash_dev {
+	int mutex;
 	struct stm32f_spi * spi;
 	struct {
 		struct stm32_gpio * gpio;
 		unsigned int pin;
-	} cs;
+	} cs; /* Chip select pin */
 	unsigned int irqno;
 	struct stm32f_dma * dma;
 	struct stm32_dmactl tx_dma;
 	struct stm32_dmactl rx_dma;
-	uint8_t iobuf[4 + 256];
+	struct {
+		bool valid;
+		bool sync;
+		uint32_t addr;
+		uint8_t cmd[4];
+		uint8_t data[SF_PAGE_SIZE];
+	} buf; /* DMA buffer */
+	uint32_t io_addr; /* Read/Write address */
 };
 
+/* Chip select high */
 static inline void sflash_cs_set(struct sflash_dev * sf) {
 	stm32_gpio_set(sf->cs.gpio, sf->cs.pin);
 }
 
+/* Chip select low */
 static inline void sflash_cs_clr(struct sflash_dev * sf) {
 	stm32_gpio_clr(sf->cs.gpio, sf->cs.pin);
 }
 
-static void sflash_io_xfer(struct sflash_dev * sf,
-					uint8_t txd[], uint8_t rxd[], 
-					unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-	unsigned int dummy;
-	unsigned int sr;
-	unsigned int i;
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	/* Enable RX interrupt */
-	spi->cr2 = SPI_RXNEIE;
-
-	while ((sr = spi->sr) & SPI_RXNE) {
-		/* clear input buffer */
-		dummy = spi->dr;
-		(void)dummy;
-		sr = spi->sr;
-	}
-	
-	/* Enable SPI */
-	spi->cr1 |= SPI_SPE;
-
-	for (i = 0; i < len; ++i) {
-		/* send dummy data */
-		spi->dr = txd[i];
-		/* wait for incoming data */
-		while (!((sr = spi->sr) & SPI_RXNE))
-			thinkos_irq_wait(sf->irqno);
-		rxd[i] = spi->dr;
-	}
-}
-
-void sflash_dma_xfer(struct sflash_dev * sf,
+/* Perform an SPI transfer (send and receive) using DMA. */
+static void sflash_dma_xfer(struct sflash_dev * sf,
 					 uint8_t txd[], uint8_t rxd[], 
 					 unsigned int len)
 {
 	struct stm32f_spi * spi = sf->spi;
-//	struct stm32_dmactl * rx_dma = &sf->rx_dma;
-//	struct stm32_dmactl * tx_dma = &sf->tx_dma;
 
 	/* Disable SPI */
 	spi->cr1 &= ~SPI_SPE;
@@ -157,20 +219,10 @@ void sflash_dma_xfer(struct sflash_dev * sf,
 
     /* wait for completion of DMA transfer */
      while (!sf->rx_dma.isr[TCIF_BIT]) {
-#if 0
+#if 1
          if (sf->rx_dma.isr[TEIF_BIT]) {
              /* XXX: DMA transfer error... */
              sf->rx_dma.ifcr[TEIF_BIT] = 1;
-         }
-
-         if (sf->rx_dma.isr[FEIF_BIT]) {
-             /* XXX: DMA fifo error... */
-             sf->rx_dma.ifcr[FEIF_BIT] = 1;
-         }
-
-         if (sf->rx_dma.isr[HTIF_BIT]) {
-        	 /* XXX: DMA half transfer... */
-        	 sf->rx_dma.ifcr[HTIF_BIT] = 1;
          }
 #endif
          /* wait DMA transfer interrupt */
@@ -183,471 +235,152 @@ void sflash_dma_xfer(struct sflash_dev * sf,
      sf->tx_dma.ifcr[TCIF_BIT] = 1;
 }
 
-void sflash_dma_send(struct sflash_dev * sf, uint8_t txd[], unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t isr;
-
-    /* configure and Enable interrupt */
-//    thinkos_irq_register(STM32F_IRQ_DMA1_STREAM7, IRQ_PRIORITY_REGULAR,
-//    		stm32f_dma1_stream7_isr);
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	/* Enable DMA */
-	spi->cr2 = SPI_TXDMAEN;
-
-	/* Disable TX DMA */
-	sf->tx_dma.strm->cr &= ~DMA_EN;
-	while (sf->tx_dma.strm->cr & DMA_EN);
-	/* Configure TX DMA transfer */
-	sf->tx_dma.strm->m0ar = txd;
-	sf->tx_dma.strm->ndtr = len;
-	/* Enable TX DMA */
-	sf->tx_dma.strm->cr |= DMA_EN;
-
-	/* Enable SPI  */
-	spi->cr1 |= SPI_SPE;
-
-    /* wait for completion of DMA transfer */
-     while (!sf->tx_dma.isr[TCIF_BIT]) {
-         if (sf->tx_dma.isr[TEIF_BIT]) {
-             /* XXX: DMA transfer error... */
-             sf->tx_dma.ifcr[TEIF_BIT] = 1;
-         }
-         /* wait DMA transfer interrupt */
-         thinkos_irq_wait(sf->tx_dma.irqno);
-     }
-
-     /* clear the RX DMA transfer complete flag */
-     sf->tx_dma.ifcr[TCIF_BIT] = 1;
-}
-
-
-void _sflash_dma_xfer(struct sflash_dev * sf,
-					 uint8_t txd[], uint8_t rxd[],
-					 unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-//	struct stm32_dmactl * rx_dma = &sf->rx_dma;
-//	struct stm32_dmactl * tx_dma = &sf->tx_dma;
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	/* Enable DMA */
-	spi->cr2 = SPI_TXDMAEN | SPI_RXDMAEN;
-
-	/* Disable TX DMA */
-	sf->tx_dma.strm->cr = 0;
-	while (sf->tx_dma.strm->cr & DMA_EN);
-
-	/* Disable RX DMA */
-	sf->rx_dma.strm->cr = 0;
-	while (sf->rx_dma.strm->cr & DMA_EN);
-
-	/* Configure TX DMA stream */
-	sf->tx_dma.strm->cr = DMA_CHSEL_SET(0) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8| DMA_PSIZE_8 |
-		DMA_CT_M0AR | DMA_MINC | DMA_DIR_MTP |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	/* Configure TX DMA transfer */
-	sf->tx_dma.strm->m0ar = txd;
-	sf->tx_dma.strm->ndtr = len;
-	/* Enable TX DMA */
-	sf->tx_dma.strm->cr |= DMA_EN;
-
-	/* Configure RX DMA stream */
-	sf->rx_dma.strm->cr = DMA_CHSEL_SET(0) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8 | DMA_PSIZE_8 |
-		DMA_CT_M0AR | DMA_MINC | DMA_DIR_PTM |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	/* Configure RX DMA transfer */
-	sf->rx_dma.strm->m0ar = rxd;
-	sf->rx_dma.strm->ndtr = len;
-	/* Enable RX DMA */
-	sf->rx_dma.strm->cr |= DMA_EN;
-
-	/* Enable SPI  */
-	spi->cr1 |= SPI_SPE;
-
-    /* wait for completion of DMA transfer */
-     while (!sf->rx_dma.isr[TCIF_BIT]) {
-         /* wait DMA transfer interrupt */
-//         thinkos_irq_wait(sf->rx_dma.irqno);
-     }
-
-     /* clear the RX DMA transfer complete flag */
-     sf->rx_dma.ifcr[TCIF_BIT] = 1;
-     /* clear the TX DMA transfer complete flag */
-     sf->tx_dma.ifcr[TCIF_BIT] = 1;
-}
-
-
-
-#define SPI_DMA_RX_STRM 2
-#define SPI_DMA_RX_CHAN 0
-#define SPI_DMA_RX_IRQ STM32F_IRQ_DMA1_STREAM2
-
-#define SPI_DMA_TX_STRM 7
-#define SPI_DMA_TX_CHAN 0
-#define SPI_DMA_TX_IRQ STM32F_IRQ_DMA1_STREAM7
-
-void __sflash_dma_xfer(struct sflash_dev * sf,
-					 uint8_t txd[], uint8_t rxd[],
-					 unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t isr;
-	uint32_t sr;
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	spi->cr2 = SPI_TXDMAEN | SPI_RXDMAEN;
-
-	/* Disable DMA channel */
-	dma->s[SPI_DMA_RX_STRM].cr = 0;
-	while (dma->s[SPI_DMA_RX_STRM].cr & DMA_EN);
-
-	dma->s[SPI_DMA_TX_STRM].cr = 0;
-	while (dma->s[SPI_DMA_TX_STRM].cr & DMA_EN);
-
-	dma->lifcr = DMA_TCIF2 | DMA_CHTIF2 | DMA_CTEIF2 | DMA_CDMEIF2 | DMA_CFEIF2;
-	dma->hifcr = DMA_TCIF5 | DMA_CHTIF5 | DMA_CTEIF5 | DMA_CDMEIF5 | DMA_CFEIF5;
-
-	/* Configure DMA channel */
-	dma->s[SPI_DMA_RX_STRM].cr = DMA_CHSEL_SET(SPI_DMA_RX_CHAN) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8 | DMA_PSIZE_8 |
-		DMA_CT_M0AR | DMA_MINC | DMA_DIR_PTM |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	dma->s[SPI_DMA_RX_STRM].par = &spi->dr;
-	dma->s[SPI_DMA_RX_STRM].m0ar = rxd;
-	dma->s[SPI_DMA_RX_STRM].ndtr = len;
-	dma->s[SPI_DMA_RX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
-
-	dma->s[SPI_DMA_TX_STRM].cr = DMA_CHSEL_SET(SPI_DMA_TX_CHAN) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8 | DMA_PSIZE_8 |
-		DMA_CT_M0AR | DMA_MINC | DMA_DIR_MTP |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	dma->s[SPI_DMA_TX_STRM].par = &spi->dr;
-	dma->s[SPI_DMA_TX_STRM].m0ar = txd;
-	dma->s[SPI_DMA_TX_STRM].ndtr = len;
-	dma->s[SPI_DMA_TX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
-
-	/* enable DMA */
-	dma->s[SPI_DMA_TX_STRM].cr |= DMA_EN;
-	dma->s[SPI_DMA_RX_STRM].cr |= DMA_EN;
-
-	/* Enable SPI transfer */
-	spi->cr1 |= SPI_SPE;
-
-	do {
-		isr = dma->lisr;
-		if (isr & DMA_TCIF2) {
-			/* clear the DMA transfer complete flag */
-			dma->lifcr = DMA_CTCIF2;
-			break;
-		}
-		if (isr & (DMA_TEIF2 | DMA_DMEIF2 | DMA_FEIF2)) {
-			dma->lifcr = DMA_CHTIF2 | DMA_CTEIF2 | DMA_CDMEIF2 | DMA_CFEIF2;
-			fprintf(stderr, "RX DMA err:%s%s%s\n",
-					isr & DMA_TEIF2 ? " TEIF" : "",
-					isr & DMA_DMEIF2 ? " DMEIF" : "",
-					isr & DMA_FEIF2 ? " FEIF" : "");
-			break;
-		}
-		isr = dma->hisr;
-		if (isr & DMA_TCIF7) {
-			dma->hifcr = DMA_CTCIF7;
-			break;
-		}
-		if (isr & (DMA_TEIF7 | DMA_DMEIF7 | DMA_FEIF7)) {
-			fprintf(stderr, "TX DMA err:%s%s%s\n",
-					isr & DMA_TEIF7 ? " TEIF" : "",
-					isr & DMA_DMEIF7 ? " DMEIF" : "",
-					isr & DMA_FEIF7 ? " FEIF" : "");
-			dma->hifcr = DMA_CHTIF7 | DMA_CTEIF7 | DMA_CDMEIF7 | DMA_CFEIF7;
-			break;
-		}
-	} while (1);
-
-//	thinkos_irq_wait(SPI_DMA_RX_IRQ);
-
-}
-
-
-volatile uint32_t dma_tx_isr = 0;
-
-/* TX DMA IRQ */
-void stm32f_dma1_stream7_isr(void)
-{
-    struct stm32f_dma * dma = STM32F_DMA1;
-    uint32_t isr;
-
-    dma_tx_isr = isr = dma->hisr;
-
-    if (isr & DMA_FEIF7) {
-        dma->hifcr = DMA_CFEIF7;
-    }
-
-    if (isr & DMA_TEIF7) {
-        dma->hifcr = DMA_CTEIF7;
-    }
-
-    if (isr & DMA_TCIF7) {
-        /* clear the DMA transfer complete flag */
-        dma->hifcr = DMA_CTCIF7;
-    }
-}
-
-void __sflash_dma_send(struct sflash_dev * sf, uint8_t txd[], unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t isr;
-
-    /* configure and Enable interrupt */
-//    thinkos_irq_register(STM32F_IRQ_DMA1_STREAM7, IRQ_PRIORITY_REGULAR,
-//    		stm32f_dma1_stream7_isr);
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	spi->cr2 = SPI_TXDMAEN;
-
-	dma->s[SPI_DMA_TX_STRM].cr = 0;
-	while (dma->s[SPI_DMA_TX_STRM].cr & DMA_EN);
-
-	dma->hifcr = DMA_CHTIF7 | DMA_CTEIF7 | DMA_CDMEIF7 | DMA_CFEIF7;
-
-	dma->s[SPI_DMA_TX_STRM].cr = DMA_CHSEL_SET(SPI_DMA_TX_CHAN) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8 | DMA_PSIZE_8 |
-		DMA_MINC | DMA_DIR_MTP |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	dma->s[SPI_DMA_TX_STRM].par = &spi->dr;
-	dma->s[SPI_DMA_TX_STRM].m0ar = txd;
-	dma->s[SPI_DMA_TX_STRM].ndtr = len;
-	dma->s[SPI_DMA_TX_STRM].fcr = 0;
-
-	/* enable DMA */
-	dma->s[SPI_DMA_TX_STRM].cr |= DMA_EN;
-
-	/* Enable SPI transfer */
-	spi->cr1 |= SPI_SPE;
-
-	do {
-		isr = dma->hisr;
-		if (isr & DMA_TCIF7) {
-			/* clear the DMA transfer complete flag */
-			dma->hifcr = DMA_CTCIF7;
-			break;
-		}
-		if (isr & (DMA_TEIF7 | DMA_DMEIF7)) {
-			fprintf(stderr, "TX DMA err:%s%s%s\n",
-					isr & DMA_TEIF7 ? " TEIF" : "",
-					isr & DMA_DMEIF7 ? " DMEIF" : "",
-					isr & DMA_FEIF7 ? " FEIF" : "");
-			dma->hifcr = DMA_CHTIF7 | DMA_CTEIF7 | DMA_CDMEIF7 | DMA_CFEIF7;
-//			break;
-		}
-
-		thinkos_irq_wait(SPI_DMA_TX_IRQ);
-	} while (1);
-
-}
-
-void sflash_dma_recv(struct sflash_dev * sf, uint8_t rxd[], unsigned int len)
-{
-	struct stm32f_spi * spi = sf->spi;
-	struct stm32f_dma * dma = STM32F_DMA1;
-	uint32_t isr;
-
-	/* Disable SPI */
-	spi->cr1 &= ~SPI_SPE;
-	/* Enable SPI transfer */
-	spi->cr2 = SPI_RXDMAEN;
-
-	while (spi->sr & SPI_RXNE) {
-		/* clear input buffer */
-		uint32_t dummy = spi->dr;
-		(void)dummy;
-	}
-
-	/* Disable DMA channel */
-	dma->s[SPI_DMA_RX_STRM].cr = 0;
-	while (dma->s[SPI_DMA_RX_STRM].cr & DMA_EN);
-
-	/* Configure DMA channel */
-	dma->s[SPI_DMA_RX_STRM].cr = DMA_CHSEL_SET(SPI_DMA_RX_CHAN) |
-		DMA_MBURST_1 | DMA_PBURST_1 | DMA_MSIZE_8 | DMA_PSIZE_8 |
-		DMA_MINC | DMA_DIR_PTM |
-		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
-	dma->s[SPI_DMA_RX_STRM].par = &spi->dr;
-	dma->s[SPI_DMA_RX_STRM].m0ar = rxd;
-	dma->s[SPI_DMA_RX_STRM].ndtr = len;
-//	dma->s[SPI_DMA_RX_STRM].fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
-	dma->s[SPI_DMA_RX_STRM].fcr = 0;
-	/* enable DMA */
-	dma->s[SPI_DMA_RX_STRM].cr |= DMA_EN;
-
-	spi->cr1 |= SPI_SPE | SPI_RXONLY;
-
-	do {
-		isr = dma->lisr;
-		if (isr & DMA_TCIF2) {
-			/* clear the DMA transfer complete flag */
-			dma->lifcr = DMA_CTCIF2;
-			break;
-		}
-		if (isr & (DMA_TEIF2 | DMA_DMEIF2 | DMA_FEIF2)) {
-			dma->lifcr = DMA_CHTIF2 | DMA_CTEIF2 | DMA_CDMEIF2 | DMA_CFEIF2;
-			fprintf(stderr, "RX DMA err:%s%s%s\n",
-					isr & DMA_TEIF2 ? " TEIF" : "",
-					isr & DMA_DMEIF2 ? " DMEIF" : "",
-					isr & DMA_FEIF2 ? " FEIF" : "");
-//			break;
-		}
-
-		thinkos_irq_wait(SPI_DMA_RX_IRQ);
-	} while (1);
-
-	spi->cr1 &= ~(SPI_SPE | SPI_RXONLY);
-}
-
 /* ------------------------------------------------------------------------
-   Serial Flash Public API 
+   Serial Flash Low Level API
    ------------------------------------------------------------------------- */
 
-int sflash_reset(struct sflash_dev * sf)
+int sf_reset(struct sflash_dev * sf)
 {
-	uint8_t data[1];
-	assert(sf != NULL);
+	uint8_t * cmd = sf->buf.cmd;
 
 	sflash_cs_clr(sf);
-	data[0] = SF_RESET_ENABLE;
-	sflash_io_xfer(sf, data, data, 1);
+	cmd[0] = SF_RESET_ENABLE;
+	sflash_dma_xfer(sf, cmd, cmd, 1);
 	sflash_cs_set(sf);
 
-	udelay(1);
+	udelay(10);
 
 	sflash_cs_clr(sf);
-	data[0] = SF_RESET_MEMORY;
-	sflash_io_xfer(sf, data, data, 1);
+	cmd[0] = SF_RESET_MEMORY;
+	sflash_dma_xfer(sf, cmd, cmd, 1);
 	sflash_cs_set(sf);
 
-	udelay(1);
+	udelay(10);
 
 	return 0;
 }
 
-int sflash_device_id(struct sflash_dev * sf, void * buf, size_t len)
+int sf_device_id(struct sflash_dev * sf)
 {
-	unsigned int cnt;
-	uint8_t * data = sf->iobuf;
-
-	assert(sf != NULL);
-	assert(buf != NULL);
-	assert(len > 0);
-
-	cnt = MIN(20, len);	
+	uint8_t * cmd = &sf->buf.cmd[3];
 
 	/* chip select low */
 	sflash_cs_clr(sf);
-	data[0] = SF_READ_ID;
-	sflash_dma_xfer(sf, data, data, cnt + 1);
-//	sflash_dma_send(sf, data, 1);
-//	sflash_dma_recv(sf, &data[1], cnt);
+	cmd[0] = SF_READ_ID;
+	sflash_dma_xfer(sf, cmd, cmd, 21);
 	/* chip select high */
 	sflash_cs_set(sf);
 
-	memcpy(buf, &data[1], cnt);
-
-	return cnt;
+	return 0;
 }
 
-int sflash_write_enable(struct sflash_dev * sf)
+int sf_write_enable(struct sflash_dev * sf)
 {
-	uint8_t cmd[1];
-
-	assert(sf != NULL);
+	uint8_t * cmd = sf->buf.cmd;
 
 	/* chip select low */
 	sflash_cs_clr(sf);
 	/* send the command */
 	cmd[0] = SF_WRITE_ENABLE;
-	sflash_io_xfer(sf, cmd, cmd, 1);
+//	sflash_dma_send(sf, cmd, 1);
+	sflash_dma_xfer(sf, cmd, cmd, 1);
 	/* chip select high */
 	sflash_cs_set(sf);
 
 	return 0;
 }
 
-int sflash_read_status(struct sflash_dev * sf)
+int sf_read_status(struct sflash_dev * sf)
 {
-	uint8_t buf[2];
-
-	assert(sf != NULL);
+	uint8_t * data = sf->buf.cmd;
 
 	/* chip select low */
 	sflash_cs_clr(sf);
 	/* send the command */
-	buf[0] = SF_STATUS_REG_RD;
-	sflash_io_xfer(sf, buf, buf, 2);
+	data[0] = SF_STATUS_REG_RD;
+	sflash_dma_xfer(sf, data, data, 2);
 	/* chip select high */
 	sflash_cs_set(sf);
 
-	return buf[1];
+	return data[1];
 }
 
-int sflash_flag_status_read(struct sflash_dev * sf)
+int sf_flag_status_read(struct sflash_dev * sf)
 {
-	uint8_t buf[2];
-
-	assert(sf != NULL);
+	uint8_t * data = sf->buf.cmd;
 
 	/* chip select low */
 	sflash_cs_clr(sf);
 	/* send the command */
-	buf[0] = SF_FLAG_STAT_REG_RD;
-	sflash_io_xfer(sf, buf, buf, 2);
+	data[0] = SF_FLAG_STAT_REG_RD;
+	sflash_dma_xfer(sf, data, data, 2);
 	/* chip select high */
 	sflash_cs_set(sf);
 
-	return buf[1];
+	return data[1];
 }
 
-int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr)
+void sf_flag_status_clear(struct sflash_dev * sf)
 {
-	uint8_t buf[4];
-
-	assert(sf != NULL);
-
-	buf[0] = SF_SUBSECTOR_ERASE;
-	buf[1] = (addr >> 16) & 0xff;
-	buf[2] = (addr >> 8) & 0xff;
-	buf[3] = addr & 0xff;
+	uint8_t * cmd = sf->buf.cmd;
 
 	/* chip select low */
 	sflash_cs_clr(sf);
-
 	/* send the command */
-	sflash_io_xfer(sf, buf, buf, 4);
+	cmd[0] = SF_FLAG_STAT_REG_CLR;
+	sflash_dma_xfer(sf, cmd, cmd, 1);
+	/* chip select high */
+	sflash_cs_set(sf);
+}
 
+int sf_subsector_erase(struct sflash_dev * sf, uint32_t addr)
+{
+	uint8_t * cmd = sf->buf.cmd;
+
+	/* Address should be subsector aligned */
+	assert((addr & (SF_SUBSECTOR_SIZE - 1)) == 0);
+
+	cmd[0] = SF_SUBSECTOR_ERASE;
+	cmd[1] = (addr >> 16) & 0xff;
+	cmd[2] = (addr >> 8) & 0xff;
+	cmd[3] = addr & 0xff;
+
+	/* chip select low */
+	sflash_cs_clr(sf);
+	/* send the command */
+	sflash_dma_xfer(sf, cmd, cmd, 4);
+//	sflash_dma_send(sf, cmd, 4);
 	/* chip select high */
 	sflash_cs_set(sf);
 
 	return 0;
 }
 
-int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
-					  const void * buf, size_t count)
+int sf_sector_erase(struct sflash_dev * sf, uint32_t addr)
 {
-	uint8_t * data = (uint8_t *)buf;
-	uint8_t cmd[4];
+	uint8_t * cmd = sf->buf.cmd;
 
-	assert(sf != NULL);
-	assert(buf != NULL);
-	assert(count > 0);
+	/* Address should be sector aligned */
+	assert((addr & (SF_SECTOR_SIZE - 1)) == 0);
+
+	cmd[0] = SF_SECTOR_ERASE;
+	cmd[1] = (addr >> 16) & 0xff;
+	cmd[2] = (addr >> 8) & 0xff;
+	cmd[3] = addr & 0xff;
+
+	/* chip select low */
+	sflash_cs_clr(sf);
+	/* send the command */
+	sflash_dma_xfer(sf, cmd, cmd, 4);
+	/* chip select high */
+	sflash_cs_set(sf);
+
+	return 0;
+}
+
+int sf_page_program(struct sflash_dev * sf, uint32_t addr, unsigned int count)
+{
+	uint8_t * cmd= sf->buf.cmd;
 
 	/* prepare the command */
 	cmd[0] = SF_PAGE_PROGRAM;
@@ -657,25 +390,18 @@ int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
 
 	/* chip select low */
 	sflash_cs_clr(sf);
-	/* send command */
-	sflash_io_xfer(sf, cmd, cmd, 4);
-	/* send data */
-	sflash_io_xfer(sf, data, data, count);
+	/* send command and data */
+	sflash_dma_xfer(sf, cmd, cmd, 4 + count);
+
 	/* chip select high */
 	sflash_cs_set(sf);
 
-	return count;
+	return 0;
 }
 
-int sflash_page_read(struct sflash_dev * sf, uint32_t addr,
-					 void * buf, size_t count)
+int sf_page_read(struct sflash_dev * sf, uint32_t addr, unsigned int count)
 {
-	uint8_t * data = (uint8_t *)buf;
-	uint8_t cmd[4];
-
-	assert(sf != NULL);
-	assert(buf != NULL);
-	assert(count > 0);
+	uint8_t * cmd = sf->buf.cmd;
 
 	/* prepare the command */
 	cmd[0] = SF_READ;
@@ -685,39 +411,387 @@ int sflash_page_read(struct sflash_dev * sf, uint32_t addr,
 
 	/* chip select low */
 	sflash_cs_clr(sf);
-	/* send the command */
-	sflash_io_xfer(sf, cmd, cmd, 4);
-	/* receive the data */
-	sflash_io_xfer(sf, data, data, count);
+	/* send the command and receive the data */
+	sflash_dma_xfer(sf, cmd, cmd, 4 + count);
 	/* chip select high */
 	sflash_cs_set(sf);
+
+	return 0;
+}
+
+/* ------------------------------------------------------------------------
+   Serial Flash Public API
+   ------------------------------------------------------------------------- */
+
+int sflash_seek(struct sflash_dev * sf, unsigned int pos)
+{
+	/* Sanity check */
+	assert(sf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+	sf->io_addr = pos;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return 0;
+}
+
+int sflash_sync(struct sflash_dev * sf)
+{
+	/* Sanity check */
+	assert(sf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	if (sf->buf.valid && !sf->buf.sync) {
+		/* Address should be page aligned */
+		assert((sf->buf.addr & (SF_PAGE_SIZE - 1)) == 0);
+		sf_write_enable(sf);
+		sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
+		while ((sf_flag_status_read(sf) & 0x80) == 0);
+	}
+
+	sf->buf.sync = true;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return 0;
+}
+
+int sflash_write(struct sflash_dev * sf, const void * buf, size_t count)
+{
+	uint8_t * src = (uint8_t *)buf;
+	unsigned int rem;
+	uint32_t addr;
+
+	/* Sanity check */
+	assert(sf != NULL);
+	assert(buf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	/* Get read/write pointer */
+	addr = sf->io_addr;
+
+	rem = count;
+	while (rem) {
+		unsigned int offs;
+		unsigned int n;
+
+		/* Check whether the data in the DMA buffer is valid or not and
+		 * if the address lies within the buffer limits  */
+		if (!sf->buf.valid || (addr < sf->buf.addr) ||
+				(addr >= sf->buf.addr + SF_PAGE_SIZE)) {
+
+			/* Flush the DMA buffer */
+			if (sf->buf.valid && !sf->buf.sync) {
+				/* Address should be page aligned */
+				assert((sf->buf.addr & (SF_PAGE_SIZE - 1)) == 0);
+				sf_write_enable(sf);
+				sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
+				while ((sf_flag_status_read(sf) & 0x80) == 0);
+
+				/* XXX: the DMA transfer on sf_page_program will override the
+				 * DMA buffer, mark the buffer as invalid then.
+				 */
+				sf->buf.valid = false;
+				sf->buf.sync = false;
+			}
+
+			sf->buf.addr = addr & ~(SF_PAGE_SIZE - 1);
+			if ((sf->buf.addr != addr) || (rem < SF_PAGE_SIZE)) {
+				/* If the address do not points to the page's first byte or
+				 * we are not writing the full buffer then read from serial flash
+				 * to fill in the gaps. */
+				sf_page_read(sf, sf->buf.addr, SF_PAGE_SIZE);
+				sf->buf.valid = true;
+				sf->buf.sync = true;
+			}
+		}
+
+		/* get the write offset within the page */
+		offs = addr - sf->buf.addr;
+		/* make sure we don't cross the page boundary */
+		n = MIN(rem, SF_PAGE_SIZE - offs);
+
+		/* copy the user data into the DMA buffer */
+		memcpy(&sf->buf.data[offs], src, n);
+		/* clear the sync flag */
+		sf->buf.sync = false;
+		/* mark the DMA buffer data as valid */
+		sf->buf.valid = true;
+
+		rem -= n;
+		addr += n;
+		src += n;
+	}
+
+	/* Update read/write pointer */
+	sf->io_addr = addr + count;
+
+	thinkos_mutex_unlock(sf->mutex);
 
 	return count;
 }
 
-int sflash_spi_fush(struct sflash_dev * sf)
+int sflash_read(struct sflash_dev * sf, void * buf, size_t count)
 {
-	struct stm32f_spi * spi;
-	unsigned int dummy;
+	uint8_t * dst = (uint8_t *)buf;
+	unsigned int rem;
+	uint32_t addr;
+
+	/* Sanity check */
+	assert(sf != NULL);
+	assert(buf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	/* Get read/write pointer */
+	addr = sf->io_addr;
+
+	rem = count;
+	while (rem) {
+		unsigned int offs;
+		unsigned int n;
+
+		/* Check whether the data in the DMA buffer is valid or not and
+		 * if the address lies within the buffer limits  */
+		if ((sf->buf.valid) && (addr >= sf->buf.addr) &&
+				(addr < sf->buf.addr + SF_PAGE_SIZE)) {
+			/* Read from serial flash */
+			sf->buf.addr = addr & ~(SF_PAGE_SIZE - 1);
+			sf_page_read(sf, sf->buf.addr, SF_PAGE_SIZE);
+			sf->buf.valid = true;
+			sf->buf.sync = true;
+		}
+
+		offs = addr - sf->buf.addr;
+		n = MIN(count, SF_PAGE_SIZE - offs);
+
+		/* copy the data from the DMA buffer */
+		memcpy(dst, &sf->buf.data[offs], n);
+		rem -= n;
+		addr += n;
+		dst += n;
+	}
+
+	/* Update read/write pointer */
+	sf->io_addr = addr + count;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return count;
+}
+
+int sflash_erase(struct sflash_dev * sf, uint32_t addr, size_t count)
+{
+	unsigned int rem;
+	uint32_t offs;
+
+	/* Sanity check */
+	assert(sf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	offs = addr & (SF_PAGE_SIZE - 1);
+	addr &= ~(SF_PAGE_SIZE - 1);
+
+	rem = count + offs;
+	while (rem > 0) {
+		unsigned int n;
+
+		if (((addr & (SF_SECTOR_SIZE - 1)) == 0) && (rem > SF_SECTOR_SIZE)) {
+			sf_write_enable(sf);
+			sf_sector_erase(sf, addr);
+			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+			n = SF_SECTOR_SIZE;
+		} else {
+			sf_write_enable(sf);
+			sf_subsector_erase(sf, addr);
+			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+			n = SF_SUBSECTOR_SIZE;
+		}
+
+		rem -= n;
+		addr += n;
+	}
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	/* FIXME: the return value is not consistent ... */
+	return count + offs;
+}
+
+int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr)
+{
+	/* Sanity check */
+	assert(sf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	sf_write_enable(sf);
+	sf_sector_erase(sf, addr);
+	while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return SF_SECTOR_SIZE;
+}
+
+int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr)
+{
+	unsigned int sr;
+	unsigned int n;
+
+	/* Sanity check */
+	assert(sf != NULL);
+
+	thinkos_mutex_lock(sf->mutex);
+
+	sr = sf_read_status(sf);
+	if (sr & SF_STATUS_BUSY) {
+		return -1;
+	}
+
+	sf_write_enable(sf);
+	sr = sf_read_status(sf);
+	if ((sr & SF_STATUS_WEN_LATCH) == 0) {
+		return -2;
+	}
+	sf_write_enable(sf);
+	sf_subsector_erase(sf, addr);
+	n = 0;
+	do {
+		n++;
+		sr = sf_flag_status_read(sf);
+	} while ((sr & SF_FLAG_READY) == 0);
+	(void)n;
+
+	sr = sf_read_status(sf);
+	if (sr & SF_STATUS_BUSY) {
+		return -1;
+	}
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return SF_SUBSECTOR_SIZE;
+}
+
+int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
+					  const void * buf, size_t count)
+{
+	unsigned int sr;
+	unsigned int n;
+
+	/* Sanity check */
+	assert(sf != NULL);
+	assert(buf != NULL);
+
+	if (count > SF_PAGE_SIZE)
+		count = SF_PAGE_SIZE;
+
+	thinkos_mutex_lock(sf->mutex);
+
+	memcpy(sf->buf.data, buf, count);
+
+	sr = sf_read_status(sf);
+	if (sr & SF_STATUS_BUSY) {
+		return -1;
+	}
+
+	sf_write_enable(sf);
+	sr = sf_read_status(sf);
+	if ((sr & SF_STATUS_WEN_LATCH) == 0) {
+		return -2;
+	}
+
+	sf_page_program(sf, addr, count);
+
+	n = 0;
+	do {
+		n++;
+		sr = sf_flag_status_read(sf);
+	} while ((sr & SF_FLAG_READY) == 0);
+	(void)n;
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return count;
+}
+
+int sflash_page_read(struct sflash_dev * sf, uint32_t addr,
+					 void * buf, size_t count)
+{
+	/* Sanity check */
+	assert(sf != NULL);
+	assert(buf != NULL);
+
+	if (count > SF_PAGE_SIZE)
+		count = SF_PAGE_SIZE;
+
+	thinkos_mutex_lock(sf->mutex);
+
+	sf_page_read(sf, addr, count);
+
+	memcpy(buf, sf->buf.data, count);
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
+
+	return count;
+}
+
+int sflash_probe(struct sflash_dev * sf, struct sflash_id * id)
+{
 	unsigned int sr;
 
+	/* Sanity check */
 	assert(sf != NULL);
-	spi = sf->spi;
+	assert(id != NULL);
 
-	while (!((sr = spi->sr) & SPI_TXE))
-		thinkos_irq_wait(sf->irqno);
+	thinkos_mutex_lock(sf->mutex);
 
-	if (sr & SPI_MODF)
-		return -2;
+	sf_reset(sf);
 
-	if (sr & SPI_RXNE) {
-		/* clear input buffer */
-		dummy = sf->spi->dr;
-		(void)dummy;
+	sr = sf_flag_status_read(sf);
+	if ((sr & SF_FLAG_READY) == 0) {
+		return -1;
 	}
+
+	sr = sf_read_status(sf);
+	if (sr & SF_STATUS_BUSY) {
+		return -1;
+	}
+
+	sf_device_id(sf);
+
+	memcpy(id, sf->buf.data, sizeof(struct sflash_id));
+
+	sf->buf.sync = false;
+	sf->buf.valid = false;
+
+	thinkos_mutex_unlock(sf->mutex);
 
 	return 0;
 }
+
 
 /* ------------------------------------------------------------------------
    SPI3 Serial Flash Instance 
@@ -726,7 +800,7 @@ int sflash_spi_fush(struct sflash_dev * sf)
 #define SPI_DMA_RX_STRM 2
 #define SPI_DMA_RX_CHAN 0
 
-//#define SPI_DMA_TX_STRM 5
+#define SPI_DMA_TX_STRM 7
 #define SPI_DMA_TX_CHAN 0
 
 struct sflash_dev * sflash_init(void)
@@ -734,7 +808,7 @@ struct sflash_dev * sflash_init(void)
 	static struct sflash_dev sflash_dev_singleton;
 	struct sflash_dev * sf = &sflash_dev_singleton;
 	struct stm32f_spi * spi = STM32F_SPI3;
-	unsigned int freq = 100000;
+	unsigned int freq = 250000; /* 25 MHz */
 	unsigned int div;
 	unsigned int br;
 
@@ -784,7 +858,6 @@ struct sflash_dev * sflash_init(void)
 		DMA_CT_M0AR | DMA_MINC | DMA_DIR_PTM |
 		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	sf->rx_dma.strm->par = &spi->dr;
-//	sf->rx_dma.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	sf->rx_dma.strm->fcr = 0;
 
 	stm32_dmactl_init(&sf->tx_dma, STM32F_DMA1, SPI_DMA_TX_STRM);
@@ -794,8 +867,15 @@ struct sflash_dev * sflash_init(void)
 		DMA_CT_M0AR | DMA_MINC | DMA_DIR_MTP |
 		DMA_TCIE | DMA_TEIE | DMA_DMEIE;
 	sf->tx_dma.strm->par = &spi->dr;
-//	sf->tx_dma.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	sf->tx_dma.strm->fcr = 0;
+
+	/* Initialize DMA buffer */
+	sf->buf.valid = false;
+	sf->buf.sync = false;
+	sf->buf.addr = 0;
+
+	/* Allocate a mutex for high level operations */
+	sf->mutex = thinkos_mutex_alloc();
 
 	/* Return this driver's instance */
 	return &sflash_dev_singleton;

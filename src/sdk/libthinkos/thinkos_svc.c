@@ -167,6 +167,11 @@ void cm3_svc_isr(void)
 	uint8_t * pc;
 	int svc;
 
+#if THINKOS_ENABLE_DEBUG_STEP
+	if ((1 << thinkos_rt.active) & thinkos_rt.step_svc)
+		__thinkos_defer_sched();
+#endif
+
 	/* get a pointer to the caller's stack */
 	arg = (int32_t * )cm3_psp_get();
 

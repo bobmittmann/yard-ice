@@ -27,6 +27,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+struct sflash_id {
+	uint8_t manufacturer;
+	uint8_t device_type;
+	uint8_t capacity;
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,7 +41,7 @@ struct sflash_dev * sflash_init(void);
 
 int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr);
 
-int sflash_write_enable(struct sflash_dev * sf);
+int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr);
 
 int sflash_page_write(struct sflash_dev * sf, uint32_t addr, 
 					  const void * buf, size_t count);
@@ -43,13 +49,7 @@ int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
 int sflash_page_read(struct sflash_dev * sf, uint32_t addr, 
 					 void * buf, size_t count);
 
-int sflash_reset(struct sflash_dev * sf);
-
-int sflash_device_id(struct sflash_dev * sf, void * buf, size_t count);
-
-int sflash_read_status(struct sflash_dev * sf);
-
-int sflash_flag_status_read(struct sflash_dev * sf);
+int sflash_probe(struct sflash_dev * sf, struct sflash_id * id);
 
 #ifdef __cplusplus
 }

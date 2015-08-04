@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
 #include <thinkos.h>
 
 #include "board.h"
@@ -44,18 +46,6 @@ void stdio_init(void)
 	stderr = f;
 	stdout = f;
 	stdin = f;
-}
-
-unsigned int micron_sf_capacity_mbits(unsigned int id)
-{
-	switch (id) {
-	case 0x19:
-		return 256;
-	case 0x20:
-		return 512;
-	}
-
-	return 0;
 }
 
 void hexdump(uint32_t addr, void * data, unsigned int size)
@@ -88,8 +78,10 @@ void hexdump(uint32_t addr, void * data, unsigned int size)
 dump_line:
 			cp += sprintf(cp, "%06x:", addr);
 
-			for (i = 0; i < n; i += 2)
-				cp += sprintf(cp, " %02x%02x", src[i], src[i + 1]);
+//			for (i = 0; i < n; i += 2)
+//				cp += sprintf(cp, " %02x%02x", src[i], src[i + 1]);
+			for (i = 0; i < n; ++i)
+				cp += sprintf(cp, " %02x", src[i]);
 
 			printf("%s\n", buf);
 		}
@@ -101,76 +93,170 @@ dump_line:
 	}
 }
 
-void serial_flash_test(struct sflash_dev * sf, uint32_t addr)
+unsigned int micron_sf_capacity_mbits(unsigned int id)
 {
-	uint8_t id[20];
-	uint8_t page[256];
-	int cnt;
-	int sr;
-	int n;
-	int i;
+	switch (id) {
+	case 0x19:
+		return 256;
+	case 0x20:
+		return 512;
+	}
 
-	if ((n = sflash_device_id(sf, id, sizeof(id))) < 0) {
+	return 0;
+}
+
+/* Serial flash: N25Q512A13GF840E
+ *
+ * Manufacturer: 0x20 (Micron)
+ * Memory Type: 0xBA
+ * Memory Capacity: 0x20 (512MiB)
+ *  */
+
+#define JEDEC_MFID_MICRON 0x20
+
+bool serial_flash_probe(struct sflash_dev * sf)
+{
+	struct sflash_id id;
+
+	if (sflash_probe(sf, &id) < 0) {
 		printf("ERR: sflash_device_id() Failed!\n");
-		return;
+		return false;
 	}
 
-	printf("Manufacturer: 0x%02x\n", id[0]);
-	printf("Device Id: 0x%02x%02x\n", id[1], id[2]);
-	printf("Capacity: %dMb\n", micron_sf_capacity_mbits(id[2]));
+	printf("Manufacturer: 0x%02x\n", id.manufacturer);
+	printf("Device Id: 0x%02x%02x\n", id.device_type, id.capacity);
+	printf("Capacity: %dMb\n", micron_sf_capacity_mbits(id.capacity));
 
-	sflash_page_read(sf, addr, page, sizeof(page));
-	hexdump(addr, page, sizeof(page));
+	if (id.manufacturer != JEDEC_MFID_MICRON)
+		return false;
 
-#if 0
-	sflash_write_enable(sf);
-	sflash_sector_erase(sf, addr);
-	cnt = 0;
-	do {
-		sr = sflash_flag_status_read(sf);
-		cnt++;
-		/* wait for ready */
-	} while ((sr & 0x80) == 0);
+	if (id.device_type != 0xba)
+		return false;
 
-	printf("Sector erase: %d\n", cnt);
+	if (id.capacity != 0x20)
+		return false;
 
-	memset(page, 0, sizeof(page));
-	sflash_page_read(sf, addr, page, sizeof(page));
-	hexdump(addr, page, sizeof(page));
-#endif
+	return true;
+}
 
-	for(i = 0; i < sizeof(page); i += 2) {
-		int val = addr + i;
-		page[i] = val >> 8;
-		page[i + 1] = val;
+#define BLOCK_SIZE 4096
+#define PAGE_SIZE 256
+
+bool block_erase(struct sflash_dev * sf, uint32_t addr)
+{
+	sflash_subsector_erase(sf, addr);
+	printf("0x%08x Sub-sector erase\n", addr);
+
+	return true;
+}
+
+bool block_erase_verify(struct sflash_dev * sf, uint32_t addr)
+{
+	uint8_t page[PAGE_SIZE];
+	int i;
+	int j;
+
+	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
+		memset(page, 0, sizeof(page));
+		sflash_page_read(sf, addr, page, sizeof(page));
+		for (i = 0; i < sizeof(page); ++i) {
+			if (page[i] != 0xff) {
+				printf("Erase check failed at address 0x%08x\n", addr + i);
+				hexdump(addr, page, sizeof(page));
+				return false;
+			}
+		}
+		addr += PAGE_SIZE;
 	}
 
-	sflash_write_enable(sf);
-	sflash_page_write(sf, addr, page, sizeof(page));
-	cnt = 0;
-	do {
-		sr = sflash_flag_status_read(sf);
-		cnt++;
-		/* wait for ready */
-	} while ((sr & 0x80) == 0);
+	return true;
+}
 
-	printf("Page write: %d\n", cnt);
+bool block_write(struct sflash_dev * sf, uint32_t addr)
+{
+	uint8_t page[PAGE_SIZE];
+	int i;
+	int j;
 
-	memset(page, 0, sizeof(page));
+	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
+		for(i = 0; i < sizeof(page); i += 2) {
+			unsigned int val = (addr + i) & 0xffff;
+			page[i] = val >> 8;
+			page[i + 1] = val;
+		}
 
-	sflash_page_read(sf, addr, page, sizeof(page));
-	hexdump(addr, page, sizeof(page));
+		sflash_page_write(sf, addr, page, sizeof(page));
+		printf("0x%08x Page write\n", addr);
+		addr += PAGE_SIZE;
+	}
+
+	return true;
+}
+
+bool block_write_verify(struct sflash_dev * sf, uint32_t addr)
+{
+	uint8_t page[PAGE_SIZE];
+	int i;
+	int j;
+
+	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
+		memset(page, 0, sizeof(page));
+		sflash_page_read(sf, addr, page, sizeof(page));
+
+		for(i = 0; i < sizeof(page); i += 2) {
+			unsigned int val = (addr + i) & 0xffff;
+			unsigned int cmp = (page[i] << 8) | page[i + 1];
+			if (val != cmp) {
+				printf("Write check failed at address 0x%08x\n", addr + i);
+				hexdump(addr, page, sizeof(page));
+				return false;
+			}
+		}
+		addr += PAGE_SIZE;
+	}
+
+	return true;
+}
+
+bool block_dump(struct sflash_dev * sf, uint32_t addr)
+{
+	uint8_t page[PAGE_SIZE];
+	int j;
+
+	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
+		memset(page, 0, sizeof(page));
+		sflash_page_read(sf, addr, page, sizeof(page));
+		hexdump(addr, page, sizeof(page));
+		addr += PAGE_SIZE;
+	}
+
+	return true;
+}
+
+void low_level_test(struct sflash_dev * sf)
+{
+	uint32_t addr = 0;
+
+	for (addr = 0; addr < 512 * 1024 * 1024; addr += BLOCK_SIZE) {
+		block_erase(sf, addr);
+		if (!block_erase_verify(sf, addr)) {
+			break;
+		}
+
+		block_write(sf, addr);
+		if (!block_write_verify(sf, addr)) {
+			break;
+		}
+
+//		thinkos_sleep(2000);
+	};
 }
 
 int main(int argc, char ** argv)
 {
 	struct lcd_dev * lcd;
 	struct sflash_dev * sf;
-	uint32_t addr = 0;
-//	int rate = RATE_OFF;
-//	int c;
 
-//	io_init();
 	stdio_init();
 
 	lcd = lcd20x4_init();
@@ -181,15 +267,15 @@ int main(int argc, char ** argv)
 
 	sf = sflash_init();
 
-	sflash_reset(sf);
-	sflash_flag_status_read(sf);
+	if (!serial_flash_probe(sf)) {
+		printf("Serial flash error!\n");
+		thinkos_sleep(5000);
+		return 1;
+	}
 
-	for (;;) {
-		serial_flash_test(sf, addr);
-		thinkos_sleep(2000);
-		addr += 256;
-	};
+	low_level_test(sf);
+
+	thinkos_sleep(5000);
 
 	return 0;
 }
-
