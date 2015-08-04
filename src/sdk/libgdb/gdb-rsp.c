@@ -744,7 +744,7 @@ static int rsp_query(struct gdb_rspd * gdb, char * pkt)
 
 static int rsp_all_registers_get(struct gdb_rspd * gdb, char * pkt)
 {
-	unsigned int val = 0;
+	uint32_t val = 0;
 	int thread_id;
 	char * cp;
 	int n;
@@ -752,17 +752,19 @@ static int rsp_all_registers_get(struct gdb_rspd * gdb, char * pkt)
 
 	thread_id = rsp_get_g_thread(gdb);
 
-	DCC_LOG1(LOG_TRACE, "thread_id=%d", thread_id);
-
 	cp = pkt;
 	*cp++ = '$';
 
 	/* all integer registers */
-	for (r = 0; r < 16; r++) {
+	for (r = 0; r < 15; r++) {
 		thread_register_get(thread_id, r, &val);
 		DCC_LOG2(LOG_MSG, "R%d = 0x%08x", r, val);
 		cp += long2hex_be(cp, val);
 	}
+
+	thread_register_get(thread_id, 15, &val);
+	cp += long2hex_be(cp, val);
+	DCC_LOG2(LOG_TRACE, "thread_id=%d PC=%08x", thread_id, val);
 
 #if 0
 	/* all fp registers */
@@ -886,7 +888,7 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 5) >> 1;
 
@@ -1264,6 +1266,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 					gdb->active_app = true;
 				}
 				if (thread_step_req(thread_id) < 0) {
+					DCC_LOG(LOG_WARNING, "thread_step_req() failed!");
 					return rsp_error(gdb, 1);
 				}
 				break;

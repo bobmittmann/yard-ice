@@ -398,12 +398,12 @@ int thread_step_req(unsigned int gdb_thread_id)
 		ctx = &thinkos_except_buf.ctx;
 	} else {
 		ctx = thinkos_rt.ctx[thread_id];
-		DCC_LOG2(LOG_TRACE, "ThinkOS thread=%d context=%08x!", thread_id, ctx);
 		if (((uint32_t)ctx < 0x10000000) || ((uint32_t)ctx >= 0x30000000)) {
-			DCC_LOG(LOG_ERROR, "Invalid context!");
+			DCC_LOG1(LOG_ERROR, "Invalid context: %08x!", ctx);
 			return -1;
 		}
-		DCC_LOG1(LOG_TRACE, "PC=%08x!", ctx->pc);
+		DCC_LOG3(LOG_TRACE, "ThinkOS thread=%d context=%08x PC=%08x!", 
+				 thread_id, ctx, ctx->pc);
 	}
 
 	return dmon_thread_step(thread_id, false);

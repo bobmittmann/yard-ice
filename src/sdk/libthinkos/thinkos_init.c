@@ -56,9 +56,9 @@ void __thinkos_reset(void)
 	 *  0xe0 - very low priority interrupts
 	 */
 
-	/* SVC shuld not be preempted by the scheduler, thus it runs 
+	/* SVC should not be preempted by the scheduler, thus it runs 
 	   at higher priority. In order for the regular priority
-	   interrupts to call SVC, they shuld run at a lower priority
+	   interrupts to call SVC, they should run at a lower priority
 	   then SVC.*/
 	cm3_except_pri_set(CM3_EXCEPT_SVC, SYSCALL_PRIORITY);
 //	cm3_except_pri_set(CM3_EXCEPT_SVC, MONITOR_PRIORITY);

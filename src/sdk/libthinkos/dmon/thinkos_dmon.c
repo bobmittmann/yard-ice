@@ -495,36 +495,8 @@ int dmon_thread_step(unsigned int thread_id, bool sync)
 
 	/* request stepping the thread  */
 	__bit_mem_wr(&thinkos_rt.step_req, thread_id, 1);
-
 	/* resume the thread */
 	__thinkos_thread_resume(thread_id);
-
-	if (__bit_mem_rd(&thinkos_rt.wq_ready, thread_id)) {
-		uint32_t insn;
-		uint16_t * pc;
-
-		/* get the PC value */
-		pc = (uint16_t *)thinkos_rt.ctx[thread_id]->pc;
-		/* get the next instruction */
-		insn = pc[0];
-
-		DCC_LOG3(LOG_TRACE, "thread_id=%d PC=%08x INSN=%04x +++++", 
-				 thread_id, pc, insn);
-
-		/* if the thread is running, and it is about to invoke 
-		   a system call then we need to step twice. */
-		if ((insn & 0xdf00) == 0xdf00) {
-			DCC_LOG1(LOG_TRACE, "SVC %d", insn & 0xff); 
-			/* the thread is stepping into a system call */
-			__bit_mem_wr(&thinkos_rt.step_svc, thread_id, 1);
-		} 
-	} else {
-		/* if the thread is not in the ready queue, 
-		   it should be waiting on a system call. Don't really
-		   step, stop right after the syscall return */
-		__bit_mem_wr(&thinkos_rt.step_brk, thread_id, 1);
-	}
-
 	/* make sure to run the scheduler */
 	__thinkos_defer_sched();
 
@@ -594,6 +566,7 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 
 		/* clear the fault */
 		CM3_SCB->dfsr = dfsr;
+
 
 		DCC_LOG5(LOG_INFO, "DFSR=(EXT=%c)(VCATCH=%c)"
 				 "(DWTRAP=%c)(BKPT=%c)(HALT=%c)", 
@@ -691,33 +664,17 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 		if (dfsr & SCB_DFSR_HALTED) {
 			if (demcr & DCB_DEMCR_MON_STEP) {
 				int thread_id = thinkos_rt.step_id;
+				/* restore the base priority */
+				cm3_basepri_set(0);
+
 				if ((unsigned int)thread_id < THINKOS_THREADS_MAX) {
 					int ipsr = (ctx->xpsr & 0x1ff);
 
 					DCC_LOG3(LOG_TRACE, "<<STEP>> thread_id=%d pc=%08x" 
 							 " ipsr=%d ------", thread_id, ctx->pc, ipsr);
 
-					if (ipsr == 0) {
-						if (__bit_mem_rd(&thinkos_rt.step_svc, thread_id)) {
-							DCC_LOG(LOG_TRACE, "wait for SVC");
-							return;
-						}
-					} else if (ipsr == CM3_EXCEPT_SVC) {
-						if (__bit_mem_rd(&thinkos_rt.step_svc, thread_id)) {
-							DCC_LOG(LOG_TRACE, "got SVC!!!!");
-							__bit_mem_wr(&thinkos_rt.step_svc, thread_id, 0);
-							/* mark the thread to stop on service return */
-							__bit_mem_wr(&thinkos_rt.step_brk, thread_id, 1);
-							/* make sure to run the scheduler */
-							__thinkos_defer_sched();
-							thinkos_rt.step_id = -1;
-							goto step_done;
-						} else {
-							DCC_LOG(LOG_ERROR, "unexpected SVC mode !!!");
-							goto step_done;
-						}	
-					} else {
-						DCC_LOG(LOG_ERROR, "unexpected exception !!!");
+					if (ipsr != 0) {
+						DCC_LOG(LOG_ERROR, "invalid step on exception !!!");
 						goto step_done;
 					}
 
@@ -743,15 +700,16 @@ step_done:
 	}
 #endif
 
-	DCC_LOG1(LOG_INFO, "<%08x>", sigset);
-
 	if (sigset & (1 << DMON_RESET)) {
 		dmon_on_reset(&thinkos_dmon_rt);
 	}
 
 	/* Process monitor events */
 	if ((sigset & sigmsk) != 0) {
+		DCC_LOG1(LOG_MSG, "<%08x>", sigset);
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
+	} else {
+		DCC_LOG1(LOG_INFO, "Unhandled signal <%08x>", sigset);
 	}
 }
 
@@ -812,24 +770,13 @@ extern uintptr_t thinkos_thread_step_call;
 void __attribute__((naked)) cm3_debug_mon_isr(void)
 {
 	register struct cm3_except_context * ctx asm("r0");
-#if (THINKOS_ENABLE_DEBUG_STEP)
-	register uint32_t thread_id asm("r1");
-#endif
-
 	/* select the context stack according to the content of LR */
 	asm volatile ("tst lr, #4\n" 
 				  "ite eq\n" 
 				  "mrseq %0, MSP\n" 
 				  "mrsne %0, PSP\n" 
 				  : "=r"(ctx) : : );
-
-#if (THINKOS_ENABLE_DEBUG_STEP)
-	/* was this a thread step request ? */
-	if (ctx->pc == (uint32_t)&thinkos_thread_step_call)
-		dbgmon_step_isr(ctx, thread_id);
-	else
-#endif
-		dbgmon_isr(ctx);
+	dbgmon_isr(ctx);
 }
 
 void __thinkos_irq_disable_all(void);

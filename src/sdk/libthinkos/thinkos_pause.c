@@ -27,7 +27,7 @@ _Pragma ("GCC optimize (\"Ofast\")")
 
 extern const uint8_t thinkos_obj_type_lut[];
 
-#if (THINKOS_ENABLE_PAUSE && ETHINKOS_ENABLE_THREAD_STAT)
+#if (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT)
 
 static void ready_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -311,7 +311,7 @@ static const void * const thread_resume_lut[] = {
 #endif
 };
 
-#endif /* (THINKOS_ENABLE_PAUSE && ETHINKOS_ENABLE_THREAD_STAT) */
+#endif /* (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT) */
 
 bool __thinkos_thread_pause(unsigned int th)
 {
@@ -390,7 +390,7 @@ bool __thinkos_thread_resume(unsigned int th)
 	__bit_mem_wr(&thinkos_rt.wq_paused, th, 0);  
 #endif
 
-#if (THINKOS_ENABLE_PAUSE && ETHINKOS_ENABLE_THREAD_STAT)
+#if (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT)
 	{
 		void (* resume)(unsigned int, unsigned int, bool);
 		unsigned int wq;
@@ -411,7 +411,7 @@ bool __thinkos_thread_resume(unsigned int th)
 #else
 	DCC_LOG1(LOG_INFO, "thread=%d [ready]", th);
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
-#endif /* (THINKOS_ENABLE_PAUSE && ETHINKOS_ENABLE_THREAD_STAT) */
+#endif /* (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT) */
 
 	return true;
 }

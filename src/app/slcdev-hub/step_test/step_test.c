@@ -31,7 +31,7 @@
 
 #include "board.h"
 
-void usleep(unsigned int usec);
+extern void usleep(unsigned int usec);
 
 void io_init(void)
 {
@@ -222,9 +222,25 @@ int main(int argc, char ** argv)
 
 //	init_queue_test();
 
+	asm volatile (
+			"1:\r\n"
+			"mov r0, #0\r\n"
+			"mov r0, #1\r\n"
+			"mov r0, #2\r\n"
+			"mov r0, #2\r\n"
+			"mov r0, #3\r\n"
+			"mov r0, #4\r\n"
+			"mov r0, #5\r\n"
+			"mov r0, #6\r\n"
+			"mov r0, #7\r\n"
+			"mov r0, #8\r\n"
+			"mov r0, #9\r\n"
+//			"b 1b\r\n"
+			: : : "r0");
+
 	for (;;) {
-//		usleep(2000);
-		thinkos_sleep(2000);
+		usleep(4000000);
+//		thinkos_sleep(2000);
 		cnt1++;
 		thinkos_sleep(2000);
 		cnt2++;

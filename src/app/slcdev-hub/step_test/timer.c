@@ -24,7 +24,8 @@
 #include <sys/delay.h>
 #include <thinkos.h>
 
-#define LCD_TMR_FREQ 1000000
+#define TMR_RESOLUTION_US 64
+#define TMR_FREQENCY_HZ (1000000 / TMR_RESOLUTION_US)
 
 void __attribute__((constructor)) usleep_timer_init(void)
 {
@@ -34,13 +35,14 @@ void __attribute__((constructor)) usleep_timer_init(void)
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM10);
 	/* get the total divisior */
-	div = (stm32f_tim2_hz + (LCD_TMR_FREQ / 2)) / LCD_TMR_FREQ;
+	div = (stm32f_tim2_hz + (TMR_FREQENCY_HZ / 2)) / TMR_FREQENCY_HZ;
 	/* Timer configuration */
 	tim->psc = div - 1;
 	tim->arr = 0;
 	tim->cnt = 0;
 	tim->dier = TIM_UIE; /* Update interrupt enable */
-	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
+	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS;
+	tim->sr = 0;
 	cm3_irq_pri_set(STM32F_IRQ_TIM10, IRQ_PRIORITY_HIGH);
 }
 
@@ -48,9 +50,11 @@ void usleep(unsigned int usec)
 {
 	struct stm32f_tim * tim = STM32F_TIM10;
 
-	tim->arr = usec - 1; 
+	tim->arr = (usec / TMR_RESOLUTION_US) - 1;
 	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN; 
-	thinkos_irq_wait(STM32F_IRQ_TIM10);
+//	while ((tim->sr & TIM_UIF) == 0) {
+		thinkos_irq_wait(STM32F_IRQ_TIM10);
+//	}
 	tim->sr = 0;
 }
 

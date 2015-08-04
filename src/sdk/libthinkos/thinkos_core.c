@@ -159,6 +159,7 @@ __sched_exit(struct thinkos_context * __ctx) {
 				  : : "r" (r0) : "r3"); 
 }
 
+#if 0
 /* Partially restore the context and then set the DbgMon pending
    to step the thread. */ 
 static inline void __attribute__((always_inline)) 
@@ -189,12 +190,46 @@ __sched_exit_step(struct thinkos_context * ctx, unsigned int thread_id)
 				  "isb    sy\n"
 				  /* This is a dummm symbol used to identify a thread step 
 					 request in the debug monitor service handler.
-				  	 The PC savet on the exception stack will point
-					 to this location.
-				   */
+				  	 The PC saved on the exception stack will point
+					 to this location. */
 				  "thinkos_thread_step_call:\n"
 				  ".global thinkos_thread_step_call\n"
 				  : : "r" (r0), "r" (r1) : "r2", "r3"); 
+}
+#endif
+
+static inline void __attribute__((always_inline)) 
+__sched_exit_step(struct thinkos_context * ctx, unsigned int thread_id) 
+{
+	register struct thinkos_context * r0 asm("r0") = ctx;
+	register unsigned int r1 asm("r1") = thread_id;
+
+	asm volatile ("movw   r2, #(1 << 5)\n"
+				  "msr    BASEPRI, r2\n"
+				  : : : "r2"); 
+	asm volatile (
+#if THINKOS_ENABLE_SCHED_DEBUG
+				  "add    sp, #16\n"
+				  "pop    {lr}\n"
+#endif				  
+#if THINKOS_ENABLE_FPU 
+				  "add    r2, %0, #40 * 4\n"
+				  "msr    PSP, r2\n"
+				  "vldmia.64 %0!, {d0-d15}\n"
+#else
+				  "add    r2, %0, #8 * 4\n"
+				  "msr    PSP, r2\n"
+#endif
+				  "ldmia  %0, {r4-r11}\n"
+				  : : "r" (r0), "r" (r1) : "r2"); 
+	/* CM3_DCB->demcr |= DCB_DEMCR_MON_STEP */
+	asm volatile ("movw   r3, #0xedf0\n"
+				  "movt   r3, #0xe000\n"
+				  "ldr    r2, [r3, #12]\n"
+				  "orr.w  r2, r2, #(1 << 18)\n"
+				  "str    r2, [r3, #12]\n"
+				  "bx     lr\n"
+				  : : : "r2", "r3"); 
 }
 
 /* --------------------------------------------------------------------------
@@ -243,11 +278,37 @@ void __attribute__((naked, aligned(16))) cm3_pendsv_isr(void)
 
 #if THINKOS_ENABLE_DEBUG_STEP
 	if ((1 << new_thread_id) & thinkos_rt.step_req) {
+		if ((1 << new_thread_id) & thinkos_rt.step_svc) {
+			thinkos_rt.step_svc &= ~(1 << new_thread_id);
+			/* set the step thread as the current thread ... */
+			thinkos_rt.step_id = new_thread_id;
+			/* step the IDLE thread instead  */
+			thinkos_rt.active = THINKOS_THREAD_IDLE;
+			new_ctx = thinkos_rt.idle_ctx;
+		} else { 
+			uint32_t insn;
+			uint16_t * pc;
 #if THINKOS_ENABLE_SCHED_DEBUG
-		DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
+			DCC_LOG1(LOG_TRACE, "active=%d", new_thread_id);
 #endif
+			/* get the PC value */
+			pc = (uint16_t *)new_ctx->pc;
+			/* get the next instruction */
+			insn = pc[0];
+			/* if the thread is running, and it is about to invoke 
+			   a system call then we don't step but set the service 
+			   flag for stepping on service exit. */
+			if ((insn & 0xdf00) == 0xdf00) {
+				/* the thread is stepping into a system call */
+				thinkos_rt.step_svc |= (1 << new_thread_id);
+				goto context_restore;
+			}
+			thinkos_rt.step_id = new_thread_id;
+		}
+		thinkos_rt.step_req &= ~(1 << new_thread_id);
 		__sched_exit_step(new_ctx, new_thread_id);
 	} else
+context_restore:
 #endif
 	/* restore the context */
 	__sched_exit(new_ctx);
