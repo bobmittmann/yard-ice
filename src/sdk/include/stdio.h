@@ -98,13 +98,8 @@ int vfscanf(FILE * f, const char * fmt, va_list ap);
 }
 #endif
 
-extern inline int putchar(int c) {
-	return fputc(c, stdout);
-};
-
-extern inline int getchar(void) {
-	return fgetc(stdin);
-};
+#define putchar(c)  fputc(c, stdout)
+#define getchar()   fgetc(stdin)
 
 #endif /* __STDIO_H__ */
 

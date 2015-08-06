@@ -409,21 +409,26 @@ enum {
 #define AP_POLL_MODE_GROUP  0x01a0
 
 /* mttt t111 1uuu u110 */
-#define AP_OPC_DIRECT_POLL_MASK 0x61e0 /* 0000 0111 1000 0110 */
-#define AP_OPC_DIRECT_POLL      0x0060 /* 0000 0110 0000 0000 */
+#define AP_OPC_DIRECT_POLL_MASK     0x61e0 /* 0000 0111 1000 0110 */
+#define AP_OPC_DIRECT_POLL          0x0060 /* 0000 0110 0000 0000 */
 
-#define AP_OPC_RD_UNITS_MASK    0x7fe0 /* 0000 0111 1111 1110 */
-#define AP_OPC_RD_PRESENCE      0x5e60 /* 0000 0110 0111 1010 */
-#define AP_OPC_RD_ALM_LATCH_U   0x3e60 /* 0000 0110 0111 1100 */
-#define AP_OPC_RD_TBL_LATCH_U   0x7e60 /* 0000 0110 0111 1110 */
+#define AP_OPC_RD_UNITS_MASK        0x7fe0 /* 0000 0111 1111 1110 */
+#define AP_OPC_RD_PRESENCE          0x5e60 /* 0000 0110 0111 1010 */
+#define AP_OPC_RD_ALM_LATCH_U       0x3e60 /* 0000 0110 0111 1100 */
+#define AP_OPC_RD_TBL_LATCH_U   	0x7e60 /* 0000 0110 0111 1110 */
+/* Sounder base */
+#define AP_OPC_RD_PRESENCE_SB       0x5a60 /* 0000 0110 0101 1010 */
+#define AP_OPC_RD_TBL_LATCH_U_SB    0x7a60 /* 0000 0110 0111 1110 */
 
-#define AP_OPC_GROUP_POLL_MASK  0x01fe /* 0111 1111 1000 0000 */
-#define AP_OPC_GROUP_POLL       0x01be /* 0111 1101 1000 0000 */
+#define AP_OPC_GROUP_POLL_MASK      0x01fe /* 0111 1111 1000 0000 */
+#define AP_OPC_GROUP_POLL           0x01be /* 0111 1101 1000 0000 */
 
-#define AP_OPC_RD_TENS_MASK     0x7dfe /* 0111 1111 1011 1110 */
-#define AP_OPC_RD_ALM_LATCH_T   0x7dbe /* 0111 1101 1011 1110 */   
-#define AP_OPC_RD_TBL_LATCH_T   0x3dbe /* 0111 1101 1011 1100 */
-#define AP_OPC_NULL             0x5dbe /* 0111 1101 1011 1010 */
+#define AP_OPC_RD_TENS_MASK         0x7dfe /* 0111 1111 1011 1110 */
+#define AP_OPC_RD_ALM_LATCH_T       0x7dbe /* 0111 1101 1011 1110 */   
+#define AP_OPC_RD_TBL_LATCH_T       0x3dbe /* 0111 1101 1011 1100 */
+#define AP_OPC_NULL                 0x5dbe /* 0111 1101 1011 1010 */
+/* Sounder base */
+#define AP_OPC_RD_TBL_LATCH_T_SB    0x39be /* 0111 1101 1001 1100 */
 
 enum ap_message {
 	AP_NULL = 0,            
@@ -575,6 +580,10 @@ static void ap_hdr_decode(uint32_t msg)
 			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens");
 			slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_T;
 			break;
+		case AP_OPC_RD_TBL_LATCH_T_SB:
+			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens SB");
+			slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_T;
+			break;
 		default:
 			switch (msg & AP_OPC_RD_UNITS_MASK) {
 			case AP_OPC_RD_PRESENCE:
@@ -591,6 +600,18 @@ static void ap_hdr_decode(uint32_t msg)
 				break;
 			case AP_OPC_RD_TBL_LATCH_U:
 				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units");
+				slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_U;
+				break;
+			case AP_OPC_RD_PRESENCE_SB:
+				tens = addr_dec_lut[(msg >> 1) & 0xf]; /* Tens address bits. */
+				DCC_LOG2(LOG_TRACE, "AP Read Presence SB %c%dx [AP_HDR_OK]", 
+					 mod ? 'M' : 'S', tens);
+				slcdev_drv.sim.ap.insn = AP_RD_PRESENCE;
+				slcdev_drv.sim.ap.parm = (tens << 1) | mod;
+				thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_AP_RD_PRESENCE);
+				break;
+			case AP_OPC_RD_TBL_LATCH_U_SB:
+				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units SB");
 				slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_U;
 				break;
 			default:

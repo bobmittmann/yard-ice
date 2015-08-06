@@ -116,31 +116,50 @@ unsigned int micron_sf_capacity_mbits(unsigned int id)
 
 bool serial_flash_probe(struct sflash_dev * sf)
 {
-	struct sflash_id id;
+	struct sflash_inf inf;
 
-	if (sflash_probe(sf, &id) < 0) {
+	if (sflash_probe(sf, &inf) < 0) {
 		printf("ERR: sflash_device_id() Failed!\n");
 		return false;
 	}
 
-	printf("Manufacturer: 0x%02x\n", id.manufacturer);
-	printf("Device Id: 0x%02x%02x\n", id.device_type, id.capacity);
-	printf("Capacity: %dMb\n", micron_sf_capacity_mbits(id.capacity));
+	printf("Manufacturer: 0x%02x\n", inf.manufacturer);
+	printf("Type: 0x%02x%02x\n", inf.device_type, inf.capacity);
+	printf("Capacity: %dMb\n", micron_sf_capacity_mbits(inf.capacity));
 
-	if (id.manufacturer != JEDEC_MFID_MICRON)
+	if (inf.manufacturer != JEDEC_MFID_MICRON)
 		return false;
 
-	if (id.device_type != 0xba)
+	if (inf.device_type != 0xba)
 		return false;
 
-	if (id.capacity != 0x20)
+	if (inf.capacity != 0x20)
 		return false;
 
 	return true;
 }
 
+/* ------------------------------------------------------------------------
+   Serial Flash Low Level API test
+   ------------------------------------------------------------------------- */
+
 #define BLOCK_SIZE 4096
 #define PAGE_SIZE 256
+
+bool sflash_dump(struct sflash_dev * sf, uint32_t addr, unsigned int len)
+{
+	uint8_t page[PAGE_SIZE];
+	int j;
+
+	for (j = 0; j < len / PAGE_SIZE; ++j) {
+		memset(page, 0, sizeof(page));
+		sflash_page_read(sf, addr, page, sizeof(page));
+		hexdump(addr, page, sizeof(page));
+		addr += PAGE_SIZE;
+	}
+
+	return true;
+}
 
 bool block_erase(struct sflash_dev * sf, uint32_t addr)
 {
@@ -218,20 +237,6 @@ bool block_write_verify(struct sflash_dev * sf, uint32_t addr)
 	return true;
 }
 
-bool block_dump(struct sflash_dev * sf, uint32_t addr)
-{
-	uint8_t page[PAGE_SIZE];
-	int j;
-
-	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
-		memset(page, 0, sizeof(page));
-		sflash_page_read(sf, addr, page, sizeof(page));
-		hexdump(addr, page, sizeof(page));
-		addr += PAGE_SIZE;
-	}
-
-	return true;
-}
 
 void low_level_test(struct sflash_dev * sf)
 {
@@ -251,6 +256,67 @@ void low_level_test(struct sflash_dev * sf)
 //		thinkos_sleep(2000);
 	};
 }
+
+
+/* ------------------------------------------------------------------------
+   Serial Flash High Level API test
+   ------------------------------------------------------------------------- */
+
+void high_level_test(struct sflash_dev * sf)
+{
+	unsigned int partition_start = 8192;
+	unsigned int partition_size = 128 * 1024;
+	unsigned int i = 0;
+
+	printf("Erasing partition: %d bytes\n", partition_size);
+	sflash_erase(sf, 0, partition_size);
+
+	printf("Writing: ");
+	/* Move the pointer to the beginning of the partition */
+	sflash_seek(sf, partition_start);
+	/* Write sequentially into flash */
+	for (i = 0; i < (partition_size / sizeof(uint32_t)); ++i) {
+		uint32_t buf[1];
+
+		if ((i % 1024) == 0)
+			printf(".");
+
+		buf[0] = i;
+		sflash_write(sf, buf, sizeof(uint32_t));
+
+	};
+
+	printf("\n");
+
+	thinkos_sleep(1000);
+
+	printf("\nVerifying: ");
+
+	/* Move the pointer to the beginning of the partition */
+	sflash_seek(sf, partition_start);
+	/* Read from flash and compare */
+	for (i = 0; i < (partition_size / sizeof(uint32_t)); ++i) {
+		uint32_t buf[1];
+
+		if ((i % 1024) == 0)
+			printf(".");
+
+		sflash_read(sf, buf, sizeof(uint32_t));
+
+		if (buf[0] != i) {
+			printf("\nWrite check failed at address 0x%08x\n",
+					i * sizeof(uint32_t));
+			thinkos_sleep(10000);
+			break;
+		}
+
+	};
+
+	printf("\nDone.\n");
+
+//	sflash_dump(sf, partition_start, partition_size);
+}
+
 
 int main(int argc, char ** argv)
 {
@@ -272,6 +338,10 @@ int main(int argc, char ** argv)
 		thinkos_sleep(5000);
 		return 1;
 	}
+
+	high_level_test(sf);
+
+	thinkos_sleep(15000);
 
 	low_level_test(sf);
 
