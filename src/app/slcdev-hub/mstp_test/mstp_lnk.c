@@ -1,77 +1,43 @@
 /* 
- * File:	 usb-test.c
- * Author:   Robinson Mittmann (bobmittmann@gmail.com)
- * Target:
- * Comment:
- * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
+ * Copyright(C) 2015 Robinson Mittmann. All Rights Reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This file is part of the YARD-ICE.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * You can receive a copy of the GNU Lesser General Public License from
+ * http://www.gnu.org/
  */
 
+/**
+ * @file mstp_lnk.c
+ * @brief MS/TP Link Layer
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */
+
+#include "mstp_lnk-i.h"
+
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
-
-#include <sys/param.h>
-#include <sys/param.h>
-
-#include <thinkos.h>
 #include <errno.h>
+
+#include <sys/param.h>
 
 #include <sys/dcclog.h>
 
-#include <bacnet/bacnet-dl.h>
-#include <bacnet/bacnet-mstp.h>
-
-#include "bacnet-i.h"
 
 /* -------------------------------------------------------------------------
  * 10 DATA LINK/PHYSICAL LAYERS: POINT-TO-POINT (MSTP)
  * ------------------------------------------------------------------------- */
 
-/* MSTP Frame  types */
-enum {
-	FRM_TOKEN                  = 0x00,
-	FRM_POLL_FOR_MASTER        = 0x01,
-	FRM_REPLY_POLL_FOR_MASTER  = 0x02, 
-	FRM_TEST_REQUEST           = 0x03,
-	FRM_TEST_RESPONSE          = 0x04,
-	FRM_BACNET_DATA_XPCT_REPLY = 0x05,
-	FRM_BACNET_DATA_NO_REPLY   = 0x06,
-	FRM_REPLY_POSTPONED        = 0x07
-};
-
-
-struct bacnet_mstp_frm {
-	struct bacnet_mstp_hdr hdr;
-	uint8_t data[];
-};
-
-/* MSTP Connection State Machine states */
-enum {
-	MSTP_INITIALIZE = 0,
-	MSTP_IDLE,
-	MSTP_ANSWER_DATA_REQUEST,
-	MSTP_NO_TOKEN,
-	MSTP_POLL_FOR_MASTER,
-	MSTP_PASS_TOKEN,
-	MSTP_USE_TOKEN,
-	MSTP_DONE_WITH_TOKEN,
-	MSTP_WAIT_FOR_REPLY
-};
 
 #define N_MAX_INFO_FRAMES 1
 //#define N_MAX_MASTER 127
@@ -79,7 +45,6 @@ enum {
 #define N_POLL 50
 #define N_RETRY_TOKEN 1
 #define N_MIN_OCTETS 4
-
 
 /* The minimum time without a DataAvailable or ReceiveError event within a 
    frame before a receiving node may discard the frame: 60 bit times. 
@@ -102,16 +67,14 @@ enum {
 #define MSTP_HDR_CRC_ERROR    -2
 #define MSTP_DATA_CRC_ERROR   -3
 
-#define MSTP_BCAST 255
-
-static int mstp_frame_recv(struct bacnet_mstp_lnk * lnk, unsigned int tmo)
+static int mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
 {
 	uint8_t * buf = lnk->rx.buf;
 	unsigned int crc;
 	int pdu_len;
 	int cnt;
 
-	if ((cnt = serial_recv(lnk->dev, buf, BACNET_MSTP_MTU, tmo)) <= 0) {
+	if ((cnt = serial_recv(lnk->dev, buf, MSTP_LNK_MTU, tmo)) <= 0) {
 		return MSTP_TIMEOUT;
 	}
 
@@ -127,11 +90,11 @@ static int mstp_frame_recv(struct bacnet_mstp_lnk * lnk, unsigned int tmo)
 		return MSTP_HDR_SYNC_ERROR;
 	}
 
-	crc = __bacnet_crc8(0xff, buf[2]);
-	crc = __bacnet_crc8(crc, buf[3]);
-	crc = __bacnet_crc8(crc, buf[4]);
-	crc = __bacnet_crc8(crc, buf[5]);
-	crc = ~__bacnet_crc8(crc, buf[6]);
+	crc = __mstp_crc8(0xff, buf[2]);
+	crc = __mstp_crc8(crc, buf[3]);
+	crc = __mstp_crc8(crc, buf[4]);
+	crc = __mstp_crc8(crc, buf[5]);
+	crc = ~__mstp_crc8(crc, buf[6]);
 
 	if (buf[7] != (crc & 0xff)) {
 		DCC_LOG2(LOG_WARNING, "CRC error: %02x != %02x", buf[7], crc);
@@ -145,7 +108,7 @@ static int mstp_frame_recv(struct bacnet_mstp_lnk * lnk, unsigned int tmo)
 	if (pdu_len > 0) {
 		unsigned int chk;
 		chk = (buf[pdu_len + 9] << 8) + buf[pdu_len + 8];
-		crc = (~bacnet_crc16(0xffff, &buf[8], pdu_len)) & 0xffff;
+		crc = (~mstp_crc16(0xffff, &buf[8], pdu_len)) & 0xffff;
 		if (crc != chk) {
 			DCC_LOG2(LOG_WARNING, "Data CRC error %04x != %04x", crc, chk);
 			lnk->rx.off = 8; 
@@ -209,7 +172,7 @@ static int mstp_frame_recv(struct bacnet_mstp_lnk * lnk, unsigned int tmo)
 
 #define REPLY_POSTPONED(_DST, _SRC) FRAME(FRM_REPLY_POSTPONED, _DST, _SRC)
 
-static int mstp_frame_send(struct bacnet_mstp_lnk * lnk, unsigned int route, 
+static int mstp_frame_send(struct mstp_lnk * lnk, unsigned int route, 
 						   uint8_t * pdu, unsigned int len)
 {
 	uint8_t * buf = lnk->tx.buf;
@@ -225,16 +188,16 @@ static int mstp_frame_send(struct bacnet_mstp_lnk * lnk, unsigned int route,
 	buf[4] = ROUTE_SRC_ADDR(route);
 	buf[5] = (len >> 8) & 0xff;
 	buf[6] = len & 0xff;
-	crc = __bacnet_crc8(0xff, buf[2]);
-	crc = __bacnet_crc8(crc, buf[3]);
-	crc = __bacnet_crc8(crc, buf[4]);
-	crc = __bacnet_crc8(crc, buf[5]);
-	buf[7] = ~__bacnet_crc8(crc, buf[6]);
+	crc = __mstp_crc8(0xff, buf[2]);
+	crc = __mstp_crc8(crc, buf[3]);
+	crc = __mstp_crc8(crc, buf[4]);
+	crc = __mstp_crc8(crc, buf[5]);
+	buf[7] = ~__mstp_crc8(crc, buf[6]);
 
 	if (len > 0) {
 		/* encode PDU */
 		uint8_t * cp = &buf[8];
-		crc = ~bacnet_crc16(0xffff, pdu, len);
+		crc = ~mstp_crc16(0xffff, pdu, len);
 		for (i = 0; i < len; ++i)
 			cp[i] = pdu[i];
 
@@ -278,7 +241,7 @@ static int mstp_frame_send(struct bacnet_mstp_lnk * lnk, unsigned int route,
 	return serial_send(lnk->dev, buf, cnt);
 }
 
-static int mstp_fast_send(struct bacnet_mstp_lnk * lnk, unsigned int route)
+static int mstp_fast_send(struct mstp_lnk * lnk, unsigned int route)
 {
 	uint8_t * buf = lnk->tx.token;
 	unsigned int crc;
@@ -287,11 +250,11 @@ static int mstp_fast_send(struct bacnet_mstp_lnk * lnk, unsigned int route)
 	buf[2] = ROUTE_FRM_TYPE(route);
 	buf[3] = ROUTE_DST_ADDR(route);
 	buf[4] = ROUTE_SRC_ADDR(route);
-	crc = __bacnet_crc8(0xff, buf[2]);
-	crc = __bacnet_crc8(crc, buf[3]);
-	crc = __bacnet_crc8(crc, buf[4]);
-	crc = __bacnet_crc8(crc, 0);
-	buf[7] = ~__bacnet_crc8(crc, 0);
+	crc = __mstp_crc8(0xff, buf[2]);
+	crc = __mstp_crc8(crc, buf[3]);
+	crc = __mstp_crc8(crc, buf[4]);
+	crc = __mstp_crc8(crc, 0);
+	buf[7] = ~__mstp_crc8(crc, 0);
 
 	switch (buf[2]) {
 	case FRM_TOKEN:
@@ -338,9 +301,7 @@ const char * state_nm[] = {
 		[MSTP_WAIT_FOR_REPLY] = "WAIT_FOR_REPLY"
 	};
 
-#define ts addr.mac[0]
-
-int bacnet_mstp_loop(struct bacnet_mstp_lnk * lnk)
+void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 {
 	uint32_t clk = 0;
 	int32_t dt;
@@ -405,7 +366,7 @@ int bacnet_mstp_loop(struct bacnet_mstp_lnk * lnk)
 
 	while (lnk->state == MSTP_INITIALIZE) {
 		/* In this state, the device waits for the network layer to 
-		   initiate a MSTP data link connection or for the physical 
+		   initiate a MSTP data lnk connection or for the physical 
 		   layer to indicate the occurrence of a physical 
 		   layer connection. */
 		thinkos_sleep(100);
@@ -414,12 +375,12 @@ int bacnet_mstp_loop(struct bacnet_mstp_lnk * lnk)
 	clk = thinkos_clock();
 
 	/* prepare for DMA transfer */
-	if (serial_dma_prepare(lnk->dev, lnk->rx.buf, BACNET_MSTP_MTU) < 0) {
+	if (serial_dma_prepare(lnk->dev, lnk->rx.buf, MSTP_LNK_MTU) < 0) {
 		DCC_LOG(LOG_WARNING, "DMA transfer not supported!");
 		/* set the trigger level above the MTU, this
 		   will force the serial driver to notify the lower layer
 		   when the channel is idle. */
-		serial_rx_trig_set(lnk->dev, BACNET_MSTP_MTU + 1);
+		serial_rx_trig_set(lnk->dev, MSTP_LNK_MTU + 1);
 	} else {
 		DCC_LOG(LOG_WARNING, "Using DMA transfer!");
 	}
@@ -477,12 +438,12 @@ transition_now:
 			DCC_LOG1(LOG_TRACE, "%6d:[IDLE] ReceivedInvalidFrame --> [IDLE]", 
 					thinkos_clock());
 		} if (rcvd_valid_frm) {
-			if (dst_addr == lnk->ts || dst_addr == MSTP_BCAST) {
+			if (dst_addr == lnk->ts || dst_addr == MSTP_ADDR_BCAST) {
 				switch (frm_type) {
 				case FRM_TOKEN:
 				case FRM_REPLY_POLL_FOR_MASTER:
-					if (dst_addr == MSTP_BCAST) {
-						DCC_LOG(LOG_ERROR, "FRM_TOKEN, dst_addr==MSTP_BCAST");
+					if (dst_addr == MSTP_ADDR_BCAST) {
+						DCC_LOG(LOG_ERROR, "FRM_TOKEN, dst_addr==MSTP_ADDR_BCAST");
 						break;
 					}
 					rcvd_valid_frm = false;
@@ -502,16 +463,17 @@ transition_now:
 
 				case FRM_BACNET_DATA_NO_REPLY:
 				case FRM_TEST_RESPONSE:
+				case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
 					thinkos_flag_give(lnk->rx.flag);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 					DCC_LOG(LOG_TRACE, "[IDLE] ReceivedDataNoReply --> [IDLE]");
 					break;
-
 				case FRM_BACNET_DATA_XPCT_REPLY:
 				case FRM_TEST_REQUEST:
+				case FRM_DATA_XPCT_REPLY ... (FRM_DATA_XPCT_REPLY + 0x3f):
 					thinkos_flag_give(lnk->rx.flag);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
-					if (dst_addr == MSTP_BCAST) {
+					if (dst_addr == MSTP_ADDR_BCAST) {
 						lnk->state = MSTP_ANSWER_DATA_REQUEST;
 						DCC_LOG(LOG_TRACE, "[IDLE] ReceivedDataNeedingReply"
 								" --> [ANSWER_DATA_REQUEST]");
@@ -553,7 +515,8 @@ transition_now:
 			frame_count++;
 			switch (frm_type) {
 			case FRM_BACNET_DATA_XPCT_REPLY:
-				if (dst_addr == MSTP_BCAST)  {
+			case FRM_DATA_XPCT_REPLY ... (FRM_DATA_XPCT_REPLY + 0x3f):
+				if (dst_addr == MSTP_ADDR_BCAST)  {
 					lnk->state = MSTP_DONE_WITH_TOKEN;
 					DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendNoWait"
 							" --> [DONE_WITH_TOKEN]", thinkos_clock());
@@ -570,6 +533,7 @@ transition_now:
 				break;
 			case FRM_TEST_RESPONSE:
 			case FRM_BACNET_DATA_NO_REPLY:
+			case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
 			default:
 				lnk->state = MSTP_DONE_WITH_TOKEN;
 				DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendNoWait"
@@ -603,6 +567,7 @@ transition_now:
 						break;
 					case FRM_TEST_RESPONSE:
 					case FRM_BACNET_DATA_NO_REPLY:
+					case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
 						thinkos_flag_give(lnk->rx.flag);
 //						bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 						lnk->state = MSTP_DONE_WITH_TOKEN;
@@ -852,7 +817,8 @@ transition_now:
 		if (SILENCE_TIMER() < T_REPLY_DELAY && lnk->tx.pdu_len > 0  &&
 			(lnk->tx.frm_type == FRM_TEST_RESPONSE ||
 			 lnk->tx.frm_type == FRM_BACNET_DATA_NO_REPLY || 
-			 lnk->tx.frm_type > 127)) {
+			 (lnk->tx.frm_type >= FRM_DATA_NO_REPLY  &&
+			 lnk->tx.frm_type < (FRM_DATA_NO_REPLY + 0x3f)))) {
 			mstp_frame_send(lnk, FRAME(lnk->tx.frm_type,  
 									   lnk->tx.dst_addr, lnk->ts),
 							lnk->tx.pdu, lnk->tx.pdu_len);
@@ -875,9 +841,8 @@ transition_now:
 	goto again;
 }
 
-int bacnet_mstp_recv(struct bacnet_mstp_lnk * lnk, 
-					 struct bacnetdl_addr * addr,
-					 uint8_t pdu[], unsigned int max)
+int mstp_lnk_recv(struct mstp_lnk * lnk, void * buf, unsigned int max,
+				  struct mstp_frame_inf * inf)
 {
 	int pdu_len;
 
@@ -892,10 +857,11 @@ int bacnet_mstp_recv(struct bacnet_mstp_lnk * lnk,
 			break;
 	};
 
-	pdu_len = lnk->rx.pdu_len;
-	memcpy(pdu, lnk->rx.pdu, pdu_len);
-	addr->mac_len = 1;
-	addr->mac[0] = lnk->rx.hdr.saddr;
+	pdu_len = MIN(lnk->rx.pdu_len, max);
+	memcpy(buf, lnk->rx.pdu, pdu_len);
+	inf->type = lnk->rx.hdr.type;
+	inf->saddr = lnk->rx.hdr.saddr;
+	inf->daddr = lnk->rx.hdr.daddr;
 
 	DCC_LOG3(LOG_TRACE, "netif=%d, saddr=%d pdu_len=%d...", 
 			 addr->netif, lnk->rx.hdr.saddr, pdu_len);
@@ -905,12 +871,16 @@ int bacnet_mstp_recv(struct bacnet_mstp_lnk * lnk,
 	return pdu_len;
 }
 
-int bacnet_mstp_send(struct bacnet_mstp_lnk * lnk, struct bacnetdl_addr * addr,
-		const uint8_t pdu[],  unsigned int len)
+int mstp_lnk_send(struct mstp_lnk * lnk, const void * buf, unsigned int cnt, 
+				  const struct mstp_frame_inf * inf)
 {
-//	uint32_t clk;
-//	int saddr = lnk->ts;
-//	int daddr = 1;
+	if (cnt > MSTP_LNK_PDU_MAX)
+		return -EINVAL;
+
+	if ((inf->type != FRM_BACNET_DATA_XPCT_REPLY) &&
+		(inf->type < FRM_DATA_XPCT_REPLY)) {
+		return -EINVAL;
+	}
 
 	for(;;) {
 		if (thinkos_flag_take(lnk->tx.flag) < 0) {
@@ -924,45 +894,37 @@ int bacnet_mstp_send(struct bacnet_mstp_lnk * lnk, struct bacnetdl_addr * addr,
 	}
 
 	/* insert frame in the transmission queue ...  */
-	memcpy(lnk->tx.pdu, pdu, len);
-	lnk->tx.pdu_len = len;
+	memcpy(lnk->tx.pdu, buf, cnt);
+	lnk->tx.frm_type = inf->type;
+	lnk->tx.dst_addr = inf->daddr;
+	lnk->tx.pdu_len = cnt;
 
-	return len;
+	return cnt;
 }
 
-const struct bacnetdl_addr mstp_bcast = {
-	.netif = 0,
-	.mac_len = 1,
-	.mac[0] = 0xff
-};
-
-struct bacnetdl_addr * bacnet_mstp_getaddr(struct bacnet_mstp_lnk * lnk)
+int mstp_lnk_getaddr(struct mstp_lnk * lnk)
 {
-	return (struct bacnetdl_addr *)&lnk->addr;
+	return lnk->ts;
 }
 
-struct bacnetdl_addr * bacnet_mstp_getbcast(struct bacnet_mstp_lnk * lnk)
+int mstp_lnk_getbcast(struct mstp_lnk * lnk)
 {
-	return (struct bacnetdl_addr *)&mstp_bcast;
+	return MSTP_ADDR_BCAST;
 }
 
-const struct bacnetdl_op bacnet_mstp_op = {
-	.recv = (void *)bacnet_mstp_recv,
-	.send = (void *)bacnet_mstp_send,
-	.getaddr = (void *)bacnet_mstp_getaddr,
-	.getbcast = (void *)bacnet_mstp_getbcast
-};
+/* -------------------------------------------------------------------------
+ * Initialization
+ * ------------------------------------------------------------------------- */
 
-int bacnet_mstp_init(struct bacnet_mstp_lnk * lnk, 
-					 const char * name, unsigned int addr,
-					 struct serial_dev * dev)
+int mstp_lnk_init(struct mstp_lnk * lnk, const char * name, 
+				  unsigned int addr, struct serial_dev * dev)
 {
-	memset(lnk, 0, sizeof(struct bacnet_mstp_lnk));
+	if (lnk == NULL)
+		return -EINVAL;
 
 	lnk->dev = dev;
 	lnk->state = MSTP_INITIALIZE;
-	lnk->addr.mac_len = 1;
-	lnk->addr.mac[0] = addr;
+	lnk->ts = addr;
 
 	DCC_LOG(LOG_TRACE, "[MSTP_INITIALIZE]");
 	lnk->rx.flag = thinkos_flag_alloc();
@@ -970,13 +932,14 @@ int bacnet_mstp_init(struct bacnet_mstp_lnk * lnk,
 
 	DCC_LOG2(LOG_TRACE, "tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
 
-//	lnk->addr.netif = bacnet_dl_register(name, lnk, &bacnet_mstp_op);
-
 	return 0;
 }
 
-int bacnet_mstp_start(struct bacnet_mstp_lnk * lnk)
+int mstp_lnk_resume(struct mstp_lnk * lnk)
 {
+	if (lnk == NULL)
+		return -EINVAL;
+
 	DCC_LOG(LOG_TRACE, "Starting BACnet MS/TP Data Link");
 
 	lnk->state = MSTP_IDLE;
@@ -985,4 +948,43 @@ int bacnet_mstp_start(struct bacnet_mstp_lnk * lnk)
 	return 0;
 }
 
+int mstp_lnk_stop(struct mstp_lnk * lnk)
+{
+	if (lnk == NULL)
+		return -EINVAL;
+
+	DCC_LOG(LOG_TRACE, "Pausing BACnet MS/TP Data Link");
+
+	lnk->state = MSTP_INITIALIZE;
+	DCC_LOG(LOG_TRACE, "[MSTP_INITIALIZE]");
+
+	return 0;
+}
+
+/* -------------------------------------------------------------------------
+ * Pool of resources
+ * ------------------------------------------------------------------------- */
+
+#ifndef MSTP_LNK_POOL_SIZE
+#define MSTP_LNK_POOL_SIZE 1
+#endif
+
+static struct mstp_lnk mstp_lnk_pool[MSTP_LNK_POOL_SIZE]; 
+
+struct mstp_lnk * mstp_lnk_alloc(void)
+{
+	struct mstp_lnk * lnk;
+	int i;
+
+	for (i = 0; i < MSTP_LNK_POOL_SIZE; ++i) { 
+		lnk = &mstp_lnk_pool[i];
+		if (!lnk->pool_alloc) {
+			memset(lnk, 0, sizeof(struct mstp_lnk));
+			lnk->pool_alloc = true;
+			return lnk;
+		}
+	}
+
+	return NULL;
+}
 

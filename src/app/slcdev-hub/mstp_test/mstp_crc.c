@@ -1,31 +1,32 @@
 /* 
- * File:	 usb-test.c
- * Author:   Robinson Mittmann (bobmittmann@gmail.com)
- * Target:
- * Comment:
- * Copyright(C) 2011 Bob Mittmann. All Rights Reserved.
+ * Copyright(C) 2015 Robinson Mittmann. All Rights Reserved.
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * This file is part of the YARD-ICE.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 3.0 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * You can receive a copy of the GNU Lesser General Public License from
+ * http://www.gnu.org/
+ */
+
+/**
+ * @file mstp_crc.c
+ * @brief Simple serial flash driver
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "bacnet-i.h"
-
-const uint8_t bacnet_crc8_lut[256] = {
+const uint8_t mstp_crc8_lut[256] = {
 	0x00, 0xfe, 0xff, 0x01, 0xfd, 0x03, 0x02, 0xfc,
 	0xf9, 0x07, 0x06, 0xf8, 0x04, 0xfa, 0xfb, 0x05,
 	0xf1, 0x0f, 0x0e, 0xf0, 0x0c, 0xf2, 0xf3, 0x0d,
@@ -60,18 +61,18 @@ const uint8_t bacnet_crc8_lut[256] = {
 	0xa9, 0x57, 0x56, 0xa8, 0x54, 0xaa, 0xab, 0x55
 };
 
-unsigned int bacnet_crc8(unsigned int crc, const void * buf, int len)
+unsigned int mstp_crc8(unsigned int crc, const void * buf, int len)
 {
 	uint8_t * cp = (uint8_t *)buf;
 	int i;
 
 	for (i = 0; i < len; ++i )
-		crc = bacnet_crc8_lut[crc ^ cp[i]];
+		crc = mstp_crc8_lut[crc ^ cp[i]];
 
 	return crc;
 }
 
-const uint16_t bacnet_crc16_lut[256] = {
+const uint16_t mstp_crc16_lut[256] = {
 	0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
 	0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
 	0x1081, 0x0108, 0x3393, 0x221a, 0x56a5, 0x472c, 0x75b7, 0x643e,
@@ -106,13 +107,13 @@ const uint16_t bacnet_crc16_lut[256] = {
 	0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78
 };
 
-unsigned int bacnet_crc16(unsigned int crc, const void * buf, int len)
+unsigned int mstp_crc16(unsigned int crc, const void * buf, int len)
 {
 	uint8_t * cp = (uint8_t *)buf;
 	int i;
 
 	for (i = 0; i < len; ++i)
-		crc = (crc >> 8) ^ bacnet_crc16_lut[(crc & 0xff) ^ cp[i]];
+		crc = (crc >> 8) ^ mstp_crc16_lut[(crc & 0xff) ^ cp[i]];
 
 	return crc;
 }

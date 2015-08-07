@@ -52,20 +52,13 @@ extern "C" {
  * instance for subsequent operations. */
 struct sflash_dev * sflash_init(void);
 
-/* Probe the SPI bus for a flash device and fill in the
- * flash information structure.
- * This API can be used to interface a block based flash filesystem.
- *
- * Return -1
- */
-
 /** @brief Probe the SPI bus for a flash device.
  *
  * fill in the flash information structure.
  *
  * @param sf The serial flash device.
  * @param inf The serial flash information structure.
- * @return #-1 if no serial flash is found, 0 otherwise.
+ * @return @b -1 if no serial flash is found, 0 otherwise.
  */
 int sflash_probe(struct sflash_dev * sf, struct sflash_inf * inf);
 
@@ -73,7 +66,7 @@ int sflash_probe(struct sflash_dev * sf, struct sflash_inf * inf);
    Serial Flash Public API (Low Level)
    ------------------------------------------------------------------------- */
 
-/** @defgroup low-level Serial Flash Low Level API
+/** @defgroup lowlevel Serial Flash Low Level API
  * This functions provide a basic operations for page read/write and
  * block/sector erasing.
  * @{
@@ -85,7 +78,7 @@ int sflash_probe(struct sflash_dev * sf, struct sflash_inf * inf);
  *
  * @param sf The serial flash device.
  * @param addr The sector address.
- * @return On error #-1 is returned, 0 otherwise.
+ * @return On error @b -1 is returned, 0 otherwise.
  */
 int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr);
 
@@ -95,7 +88,7 @@ int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr);
  *
  * @param sf The serial flash device.
  * @param addr The subsector address.
- * @return On error #-1 is returned, 0 otherwise.
+ * @return On error @b -1 is returned, 0 otherwise.
  */
 int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr);
 
@@ -108,7 +101,7 @@ int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr);
  * @param buf A pointer to the data to be written.
  * @param count Number of bytes in the buffer.
  * @return On success, the number of bytes written is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_page_write(struct sflash_dev * sf, uint32_t addr, 
 					  const void * buf, size_t count);
@@ -123,7 +116,7 @@ int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
  * @param buf A pointer to the buffer to receive the data.
  * @param count Maximum number of bytes to read from the flash.
  * @return On success, the number of bytes read is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_page_read(struct sflash_dev * sf, uint32_t addr, 
 					 void * buf, size_t count);
@@ -134,7 +127,7 @@ int sflash_page_read(struct sflash_dev * sf, uint32_t addr,
    Serial Flash Public API (High Level)
    ------------------------------------------------------------------------- */
 
-/** @defgroup high-level Serial Flash High Level API
+/** @defgroup highlevel Serial Flash High Level API
  *
  * This set of functions provide simple sequential read/write operations.
  * The read/write functions behave similarly to standard file operations.
@@ -163,7 +156,7 @@ int sflash_page_read(struct sflash_dev * sf, uint32_t addr,
  * @param addr The initial partition address.
  * @param count Minimum number of bytes to erase.
  * @return On success, the number of bytes erased is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_erase(struct sflash_dev * sf, uint32_t addr, size_t count);
 
@@ -176,7 +169,7 @@ int sflash_erase(struct sflash_dev * sf, uint32_t addr, size_t count);
  * @param buf Pointer to a buffer to receive the data.
  * @param count Number of bytes to read.
  * @return On success, the number of bytes read is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_read(struct sflash_dev * sf, void * buf, size_t count);
 
@@ -189,7 +182,7 @@ int sflash_read(struct sflash_dev * sf, void * buf, size_t count);
  * @param buf Pointer to the data.
  * @param count Number of bytes to write.
  * @return On success, the number of bytes written is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_write(struct sflash_dev * sf, const void * buf, size_t count);
 
@@ -201,7 +194,7 @@ int sflash_write(struct sflash_dev * sf, const void * buf, size_t count);
  *
  * @param sf The serial flash device.
  * @return On success, 0 is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_sync(struct sflash_dev * sf);
 
@@ -213,7 +206,7 @@ int sflash_sync(struct sflash_dev * sf);
  * @param sf The serial flash device.
  * @param pos The new address for subsequent read/write.
  * @return On success, 0 is returned.
- * On error #-1 is returned.
+ * On error @b -1 is returned.
  */
 int sflash_seek(struct sflash_dev * sf, unsigned int pos);
 

@@ -1,7 +1,7 @@
-/*
- * Copyright(c) 2004-2014 BORESTE (www.boreste.com). All Rights Reserved.
- *
- * This file is part of the libhttpd.
+/* 
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,37 +18,25 @@
  */
 
 /** 
- * @file bacnet-i.h
- * @brief BACnet library private header
+ * @file lattice.h
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
+ */
 
-#ifndef __BACNET_I_H__
-#define __BACNET_I_H__
-
-#ifdef CONFIG_H
-#include "config.h"
-#endif
+#ifndef __LATTICE_H__
+#define __LATTICE_H__
 
 #include <stdint.h>
-
-const uint8_t bacnet_crc8_lut[256];
-
-static inline unsigned int __bacnet_crc8(unsigned int crc, int c) {
-	return bacnet_crc8_lut[crc ^ c];
-}
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-unsigned int bacnet_crc8(unsigned int crc, const void * buf, int len);
-
-unsigned int bacnet_crc16(unsigned int crc, const void * buf, int len);
+int lattice_ice40_configure(const uint8_t * buf, unsigned int max);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __BACNET_I_H__ */
+#endif /* __LATTICE_H__ */
 

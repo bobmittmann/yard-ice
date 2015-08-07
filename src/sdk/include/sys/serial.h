@@ -230,14 +230,14 @@ extern inline int serial_config_set(struct serial_dev * dev,
 						  (uintptr_t)cfg, 0);
 }
 
-extern inline int serial_rx_trig_set(struct serial_dev * dev, 
-										 unsigned int lvl)
+static inline int serial_rx_trig_set(struct serial_dev * dev, 
+							  unsigned int lvl)
 {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_RX_TRIG_SET, lvl, 0);
 }
 
-extern inline int serial_dma_prepare(struct serial_dev * dev, 
-									 void * buf, unsigned int len)
+static inline int serial_dma_prepare(struct serial_dev * dev, 
+							  void * buf, unsigned int len)
 {
 	return dev->op->ioctl(dev->drv, SERIAL_IOCTL_DMA_PREPARE, 
 						  (uintptr_t)buf, len);

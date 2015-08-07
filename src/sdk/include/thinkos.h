@@ -1,5 +1,5 @@
 /* 
- * thikos.h
+ * thinkos.h
  *
  * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
@@ -182,7 +182,7 @@ int thinkos_resume(unsigned int thread_id);
 
 /** @brief causes the calling thread to relinquish the CPU.
  * The thread is moved to the end of the queue for its static priority 
- * and a new thread gets to run.</p>
+ * and a new thread gets to run.
  */
 void thinkos_yield(void);
 
