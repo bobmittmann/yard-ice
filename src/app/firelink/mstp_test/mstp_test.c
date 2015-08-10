@@ -143,9 +143,7 @@ struct serial_dev * rs485_init(void)
     stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
     stm32_gpio_set(IO_RS485_MODE);
 
-//	ser = stm32f_uart1_serial_init(500000, SERIAL_8N1);
-	ser = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
-//	ser = stm32f_uart7_serial_init(500000, SERIAL_8N1);
+	ser = stm32f_uart7_serial_dma_init(500000, SERIAL_8N1);
 
 	return ser;
 }

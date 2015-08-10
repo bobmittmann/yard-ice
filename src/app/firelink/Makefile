@@ -20,29 +20,20 @@
 # 
 
 
-PROG = thinkos
+PROG = mstp_test
 
-CFILES = ../boot.c ../monitor.c firelink.c lattice.c ice40lp384.c
+CFILES = mstp_crc.c mstp_lnk.c mstp_test.c lattice.c ice40lp384.c
 
-SDK = ../../sdk
+SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm \
-		  $(SDK)/libstm32drv $(SDK)/libgdb
+LIBS = cm3 stm32f util c crc stm32drv tcpip tty console
 
-LIBS = cm3 stm32f util thinkos ice-comm stm32drv gdb gcc 
+O = Debug
+INCPATH = $(SDK)/include ../include
+LIBPATH = ../sdklibs/Debug
 
-INCPATH = $(SDK)/include 
-
-CDEFS = CONFIG_H CM3_RAM_VECTORS 
-
-#CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-#LDFLAGS = -Xlinker --gc-sections -Xlinker --print-gc-sections
-
-CFLAGS = -g -O2 -Wall
-
-JTAGTOOL_ADDR = 192.168.10.50
+CFLAGS = -g -O0 -Wall
 
 MACH = stm32f429
-include ../../mk/stm32f4xx.mk
-
+THINKAPP = 1
+include ../../../mk/stm32f4xx.mk

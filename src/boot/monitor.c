@@ -38,6 +38,7 @@ extern const struct gdb_target board_gdb_target;
 void board_idle_tick(unsigned int cnt);
 void board_app_ready(void);
 void board_bootloader_upgrade(void);
+void board_configure(struct dmon_comm * comm);
 
 #ifndef BOOT_ENABLE_GDB
 #define BOOT_ENABLE_GDB 0
@@ -76,6 +77,7 @@ int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
 " Ctrl+C - Stop application\r\n"
+" Ctrl+K - Configure Board\r\n"
 " Ctrl+L - Upload ThinkOS\r\n"
 " Ctrl+N - Select Next Thread\r\n"
 " Ctrl+O - ThinkOS info\r\n"
@@ -261,10 +263,18 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "Thread = %d\r\n", monitor_thread_id);
 			dmon_print_thread(comm, monitor_thread_id);
 			break;
-		case CTRL_L:
-			dmprintf(comm, "^L\r\n");
+		case CTRL_K:
+			dmprintf(comm, "^K\r\n");
 			dmon_soft_reset(comm);
-			board_bootloader_upgrade();
+			board_configure(comm);
+			break;
+		case CTRL_L:
+			dmon_soft_reset(comm);
+			dmprintf(comm, "^L\r\n");
+			dmprintf(comm, "Confirm ? (yes/no) > ");
+			dmscanf(comm, "yes%n", &i);
+			if (i == 3)
+				board_bootloader_upgrade();
 			break;
 		case CTRL_O:
 			dmon_print_osinfo(comm);

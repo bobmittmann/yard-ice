@@ -23,11 +23,11 @@ include ../../mk/config.mk
 
 LIB_STATIC = thinkos
 
-DMON_CFILES = thinkos_dmon.c usb_comm.c dmprintf.c \
+DMON_CFILES = thinkos_dmon.c usb_comm.c \
 			  print_osinfo.c print_alloc.c print_thread.c \
 			  print_context.c print_stack_usage.c soft_reset.c \
 			  app_exec.c app_erase.c app_load_ymodem.c \
-			  print_exception.c
+			  print_exception.c dmgets.c dmprintf.c dmscanf.c  
 
 MISC_CFILES = thinkos_util.c thinkos_type.c obj_type_get.c \
 			  alloc_bmp_get.c bmp_alloc.c \

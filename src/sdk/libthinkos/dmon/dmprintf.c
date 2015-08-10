@@ -25,7 +25,6 @@
 #include <thinkos_dmon.h>
 #include <thinkos.h>
 #include <sys/param.h>
-#include <sys/dcclog.h>
 
 #ifndef PRINTF_ENABLE_LEFT_ALIGN
 #define PRINTF_ENABLE_LEFT_ALIGN 0

@@ -167,6 +167,15 @@ bool dmon_watchpoint_clear(uint32_t addr, uint32_t size);
 
 void dmon_watchpoint_clear_all(void);
 
+
+int dmputc(int c, struct dmon_comm * comm);
+
+int dmputs(char * s, struct dmon_comm * comm);
+
+int dmgets(char * s, int size, struct dmon_comm * comm);
+
+int dmscanf(struct dmon_comm * comm, const char *fmt, ... );
+
 #ifdef __cplusplus
 }
 #endif

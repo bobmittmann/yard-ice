@@ -171,7 +171,7 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 	cnt = ndtr - drv->rx.strm->ndtr;
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "DMA XFR cnt == 0!!!");
-		abort();
+//		abort();
 	}
 
 	if (drv->rx.buf_ptr != NULL) {

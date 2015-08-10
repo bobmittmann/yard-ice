@@ -23,6 +23,8 @@
 #include <sys/stm32f.h>
 #include <sys/delay.h>
 #include <sys/dcclog.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 #include <gdb.h>
 
 #include "board.h"
@@ -66,6 +68,59 @@ void board_idle_tick(unsigned int cnt)
 
 void board_app_ready(void)
 {
+}
+
+struct board_cfg {
+	uint32_t magic;
+	uint32_t mstp_addr;
+	uint32_t ip_addr;
+};
+
+#define CFG_MAGIC 0x01020304
+
+#define IP4_ADDR1(A) ((int)(((uint32_t)(A)) & 0xff))
+#define IP4_ADDR2(A) ((int)((((uint32_t)(A)) >> 8) & 0xff))
+#define IP4_ADDR3(A) ((int)((((uint32_t)(A)) >> 16) & 0xff))
+#define IP4_ADDR4(A) ((int)((((uint32_t)(A)) >> 24) & 0xff))
+#define IP4_ADDR(A, B, C, D) ((((A) & 0xff) << 0) | \
+		(((B) & 0xff) << 8) | (((C) & 0xff) << 16) | (((D) & 0xff) << 24))
+
+void board_configure(struct dmon_comm * comm)
+{
+	uint32_t offs = 0x10000 - 0x0100;
+	struct board_cfg * cfg = (struct board_cfg *)(0x08000000 + offs);
+	struct board_cfg buf;
+	int n;
+	int ip[4];
+
+	if (cfg->magic == CFG_MAGIC) {
+		dmprintf(comm, "MS/TP address: %d\r\n", cfg->mstp_addr);
+		dmprintf(comm, "IP address: %d.%d.%d.%d\r\n", 
+				 IP4_ADDR1(cfg->ip_addr),
+				 IP4_ADDR2(cfg->ip_addr),
+				 IP4_ADDR3(cfg->ip_addr),
+				 IP4_ADDR4(cfg->ip_addr));
+		return;
+	}
+	do {
+		dmprintf(comm, "MS/TP address > ");
+		n = dmscanf(comm, "%d", &buf.mstp_addr);
+		if (n < 0)
+			return;
+	} while (n != 1);
+	do {
+		dmprintf(comm, "IP address > ");
+		n = dmscanf(comm, "%3d.%3d.%3d.%3d", &ip[0], &ip[1], &ip[2], &ip[3]);
+		if (n < 0)
+			return;
+	} while (n != 4);
+
+	buf.ip_addr = IP4_ADDR(ip[0], ip[1], ip[2], ip[3]);
+	buf.magic = CFG_MAGIC;
+
+	stm32_flash_write(offs, &buf, sizeof(buf));
+
+	dmprintf(comm, "Configuation saved.\r\n");
 }
 
 extern const uint8_t otg_xflash_pic[];

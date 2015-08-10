@@ -26,6 +26,7 @@
 #include <gdb.h>
 
 #include "board.h"
+#include "lattice.h"
 
 #define LCD_SET_DDRAM_ADDR (1 << 7)
 
@@ -170,7 +171,11 @@ void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_gpio_mode(BUZZER, OUTPUT, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_clr(BUZZER);
+
 }
+
+extern const uint8_t ice40lp384_bin[];
+extern const unsigned int sizeof_ice40lp384_bin;
 
 void board_init(void)
 {
@@ -178,6 +183,17 @@ void board_init(void)
 	firelink_lcd_puts("ThinkOS 0.22        ");
 	firelink_lcd_puts("Bootloader          ");
 	firelink_lcd_puts("Debug Monitor       ");
+
+    /* IO init */
+    stm32_gpio_mode(IO_RS485_RX, INPUT, PULL_UP);
+
+    stm32_gpio_mode(IO_RS485_TX, OUTPUT, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_set(IO_RS485_TX);
+
+    stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_set(IO_RS485_MODE);
+
+    lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 }
 
 void board_idle_tick(unsigned int cnt) 
@@ -187,6 +203,14 @@ void board_idle_tick(unsigned int cnt)
 }
 
 void board_app_ready(void)
+{
+}
+
+void board_configure(struct dmon_comm * comm)
+{
+}
+
+void board_bootloader_upgrade(void)
 {
 }
 
