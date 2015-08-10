@@ -1,0 +1,1889 @@
+
+otg_xflash_pic.elf:     file format elf32-littlearm
+
+SYMBOL TABLE:
+00000000 l    d  .init	00000000 .init
+0000015c l    d  .text	00000000 .text
+00000710 l    d  .got	00000000 .got
+00000714 l    d  .got.plt	00000000 .got.plt
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_loc	00000000 .debug_loc
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_ranges	00000000 .debug_ranges
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .ARM.attributes	00000000 .ARM.attributes
+00000000 l    d  .debug_frame	00000000 .debug_frame
+00000000 l    df *ABS*	00000000 xflash.c
+00000000 l    df *ABS*	00000000 crc16ccitt.c
+00000000 l    df *ABS*	00000000 stm32f2xx-flash.c
+00000000 l    df *ABS*	00000000 stm32-otg_fs.c
+000003dc l     F .text	00000048 __pktbuf_copy
+00000000 l    df *ABS*	00000000 stm32-dbg.c
+00000000 l    df *ABS*	00000000 
+00000714 l     O .got.plt	00000000 _GLOBAL_OFFSET_TABLE_
+00000380 g     F .text	0000005c flash_write
+0000064c g     F .text	00000010 usb_drain
+0000070b g     O .text	00000004 stm32f_otg_fs_ep0_mpsiz_lut
+00000000 g     F .init	0000015c usb_xflash
+0000068c g     F .text	00000038 dbg_puthex
+000002f4 g     F .text	0000008c flash_erase
+0000015c g     F .text	0000014c usb_xmodem_rcv_pkt
+000002d8 g     F .text	0000001c flash_unlock
+000004f8 g     F .text	00000154 usb_recv
+000002a8 g     F .text	00000030 crc16ccitt
+0000065c g     F .text	00000030 dbg_putstr
+000006c4 g     F .text	00000018 dbg_reset
+00000424 g     F .text	000000d4 usb_send
+
+
+
+Disassembly of section .init:
+
+00000000 <usb_xflash>:
+#define MAGIC_REC_MAX 8
+
+int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
+												  unsigned int blk_size,
+												  struct magic * magic)
+{
+   0:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
+   4:	f2ad 4d7c 	subw	sp, sp, #1148	; 0x47c
+   8:	4605      	mov	r5, r0
+   a:	460e      	mov	r6, r1
+	unsigned int cnt;
+	uint32_t offs;
+	int ret;
+	int i;
+
+	if (magic != 0) {
+   c:	4617      	mov	r7, r2
+   e:	f10d 080c 	add.w	r8, sp, #12
+  12:	b19a      	cbz	r2, 3c <usb_xflash+0x3c>
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+  14:	6814      	ldr	r4, [r2, #0]
+		for (i = 0; i < magic_cnt; ++i)
+  16:	f04f 0e00 	mov.w	lr, #0
+	int ret;
+	int i;
+
+	if (magic != 0) {
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+  1a:	2c08      	cmp	r4, #8
+  1c:	bf28      	it	cs
+  1e:	2408      	movcs	r4, #8
+		for (i = 0; i < magic_cnt; ++i)
+  20:	45a6      	cmp	lr, r4
+  22:	da0c      	bge.n	3e <usb_xflash+0x3e>
+  24:	230c      	movs	r3, #12
+  26:	fb03 f30e 	mul.w	r3, r3, lr
+  2a:	18fa      	adds	r2, r7, r3
+			rec[i] = magic->rec[i];
+  2c:	3204      	adds	r2, #4
+  2e:	4443      	add	r3, r8
+  30:	ca07      	ldmia	r2, {r0, r1, r2}
+	int i;
+
+	if (magic != 0) {
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < magic_cnt; ++i)
+  32:	f10e 0e01 	add.w	lr, lr, #1
+			rec[i] = magic->rec[i];
+  36:	e883 0007 	stmia.w	r3, {r0, r1, r2}
+  3a:	e7f1      	b.n	20 <usb_xflash+0x20>
+												  unsigned int blk_size,
+												  struct magic * magic)
+{
+	struct magic_rec rec[MAGIC_REC_MAX];
+	struct xmodem_rcv rx;
+	int magic_cnt = 0;
+  3c:	4614      	mov	r4, r2
+			MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < magic_cnt; ++i)
+			rec[i] = magic->rec[i];
+	}
+
+	flash_unlock();
+  3e:	f000 f94b 	bl	2d8 <flash_unlock>
+  42:	270c      	movs	r7, #12
+  44:	fb07 8404 	mla	r4, r7, r4, r8
+  48:	1d27      	adds	r7, r4, #4
+
+	do {
+		usb_send(CDC_TX_EP, "\r\nErasing...", 12);
+  4a:	4940      	ldr	r1, [pc, #256]	; (14c <usb_xflash+0x14c>)
+  4c:	220c      	movs	r2, #12
+  4e:	4479      	add	r1, pc
+  50:	2002      	movs	r0, #2
+  52:	f000 f9e7 	bl	424 <usb_send>
+
+		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+  56:	4628      	mov	r0, r5
+  58:	4631      	mov	r1, r6
+  5a:	f000 f94b 	bl	2f4 <flash_erase>
+  5e:	2800      	cmp	r0, #0
+  60:	dbf3      	blt.n	4a <usb_xflash+0x4a>
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+  62:	493b      	ldr	r1, [pc, #236]	; (150 <usb_xflash+0x150>)
+  64:	220c      	movs	r2, #12
+  66:	4479      	add	r1, pc
+  68:	2002      	movs	r0, #2
+  6a:	f000 f9db 	bl	424 <usb_send>
+
+#define XMODEM_RCV_TMOUT_MS 2000
+
+static int usb_xmodem_rcv_init(struct xmodem_rcv * rx, int mode)
+{
+	rx->mode = mode;
+  6e:	f10d 096c 	add.w	r9, sp, #108	; 0x6c
+  72:	2301      	movs	r3, #1
+  74:	f889 3000 	strb.w	r3, [r9]
+	rx->pktno = 1;
+  78:	f889 3002 	strb.w	r3, [r9, #2]
+#ifndef ENABLE_XMODEM_CKS
+	rx->sync = (rx->mode == XMODEM_RCV_CRC) ? 'C' : NAK;
+#else
+	rx->sync = 'C';
+  7c:	2343      	movs	r3, #67	; 0x43
+  7e:	f889 3001 	strb.w	r3, [r9, #1]
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  82:	4648      	mov	r0, r9
+#ifndef ENABLE_XMODEM_CKS
+	rx->sync = (rx->mode == XMODEM_RCV_CRC) ? 'C' : NAK;
+#else
+	rx->sync = 'C';
+#endif
+	rx->retry = 15;
+  84:	230f      	movs	r3, #15
+  86:	f889 3003 	strb.w	r3, [r9, #3]
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  8a:	f000 f867 	bl	15c <usb_xmodem_rcv_pkt>
+		if ((ret = flash_erase(blk_offs, blk_size)) >= 0) {
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+  8e:	46ab      	mov	fp, r5
+			cnt = 0;
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+  90:	4680      	mov	r8, r0
+
+			usb_send(CDC_TX_EP, "\r\nXmodem... ", 12);
+
+			usb_xmodem_rcv_init(&rx, XMODEM_RCV_CRC);
+			offs = blk_offs;
+			cnt = 0;
+  92:	f04f 0a00 	mov.w	sl, #0
+
+			ret = usb_xmodem_rcv_pkt(&rx);
+
+			while (ret > 0) {
+  96:	f1b8 0f00 	cmp.w	r8, #0
+  9a:	dd21      	ble.n	e0 <usb_xflash+0xe0>
+  9c:	f10d 0c73 	add.w	ip, sp, #115	; 0x73
+				int rem = ret;
+
+				while (rem > 0) {
+					int n;
+
+					n = MIN(rem, FLASH_WR_BLK_SIZE);
+  a0:	4644      	mov	r4, r8
+  a2:	2c80      	cmp	r4, #128	; 0x80
+  a4:	bfa8      	it	ge
+  a6:	2480      	movge	r4, #128	; 0x80
+					n = MIN(n, blk_size - cnt);
+  a8:	ebca 0306 	rsb	r3, sl, r6
+  ac:	429c      	cmp	r4, r3
+  ae:	bf28      	it	cs
+  b0:	461c      	movcs	r4, r3
+					if (n == 0)
+  b2:	b184      	cbz	r4, d6 <usb_xflash+0xd6>
+						break;
+
+					flash_write(offs, src, n);
+  b4:	4658      	mov	r0, fp
+  b6:	4661      	mov	r1, ip
+  b8:	4622      	mov	r2, r4
+  ba:	f8cd c004 	str.w	ip, [sp, #4]
+
+					offs += n;
+					src += n;
+					cnt += n;
+					rem -= n;
+  be:	ebc4 0808 	rsb	r8, r4, r8
+					n = MIN(rem, FLASH_WR_BLK_SIZE);
+					n = MIN(n, blk_size - cnt);
+					if (n == 0)
+						break;
+
+					flash_write(offs, src, n);
+  c2:	f000 f95d 	bl	380 <flash_write>
+
+					offs += n;
+					src += n;
+  c6:	f8dd c004 	ldr.w	ip, [sp, #4]
+
+			while (ret > 0) {
+				unsigned char * src = rx.pkt.data;
+				int rem = ret;
+
+				while (rem > 0) {
+  ca:	f1b8 0f00 	cmp.w	r8, #0
+					if (n == 0)
+						break;
+
+					flash_write(offs, src, n);
+
+					offs += n;
+  ce:	44a3      	add	fp, r4
+					src += n;
+  d0:	44a4      	add	ip, r4
+					cnt += n;
+  d2:	44a2      	add	sl, r4
+
+			while (ret > 0) {
+				unsigned char * src = rx.pkt.data;
+				int rem = ret;
+
+				while (rem > 0) {
+  d4:	dce4      	bgt.n	a0 <usb_xflash+0xa0>
+					src += n;
+					cnt += n;
+					rem -= n;
+				}
+
+				ret = usb_xmodem_rcv_pkt(&rx);
+  d6:	4648      	mov	r0, r9
+  d8:	f000 f840 	bl	15c <usb_xmodem_rcv_pkt>
+  dc:	4680      	mov	r8, r0
+  de:	e7da      	b.n	96 <usb_xflash+0x96>
+			} 
+		}
+
+		if (ret >= 0) {
+  e0:	d1b3      	bne.n	4a <usb_xflash+0x4a>
+  e2:	ab04      	add	r3, sp, #16
+			for (i = 0; i < magic_cnt; ++i) {
+  e4:	42bb      	cmp	r3, r7
+  e6:	d011      	beq.n	10c <usb_xflash+0x10c>
+  e8:	4619      	mov	r1, r3
+				uint32_t data = *rec[i].addr;
+  ea:	f851 2c04 	ldr.w	r2, [r1, #-4]
+  ee:	330c      	adds	r3, #12
+				if ((data & rec[i].mask) != rec[i].comp) {
+  f0:	6810      	ldr	r0, [r2, #0]
+  f2:	680a      	ldr	r2, [r1, #0]
+  f4:	f853 1c08 	ldr.w	r1, [r3, #-8]
+  f8:	4002      	ands	r2, r0
+  fa:	428a      	cmp	r2, r1
+  fc:	d0f2      	beq.n	e4 <usb_xflash+0xe4>
+					ret = -1;
+					usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
+  fe:	4915      	ldr	r1, [pc, #84]	; (154 <usb_xflash+0x154>)
+ 100:	220a      	movs	r2, #10
+ 102:	4479      	add	r1, pc
+ 104:	2002      	movs	r0, #2
+ 106:	f000 f98d 	bl	424 <usb_send>
+					break;
+ 10a:	e79e      	b.n	4a <usb_xflash+0x4a>
+				}
+			}	
+		}
+
+	} while ((ret < 0) || (cnt == 0));
+ 10c:	f1ba 0f00 	cmp.w	sl, #0
+ 110:	d09b      	beq.n	4a <usb_xflash+0x4a>
+
+	usb_send(CDC_TX_EP, "\r\nDone.\r\n", 9);
+ 112:	4911      	ldr	r1, [pc, #68]	; (158 <usb_xflash+0x158>)
+ 114:	2209      	movs	r2, #9
+ 116:	4479      	add	r1, pc
+ 118:	2002      	movs	r0, #2
+ 11a:	f000 f983 	bl	424 <usb_send>
+
+	usb_drain(CDC_TX_EP);
+ 11e:	2002      	movs	r0, #2
+ 120:	f000 fa94 	bl	64c <usb_drain>
+ 124:	f640 33b8 	movw	r3, #3000	; 0xbb8
+	for(;;);
+}
+
+static void delay(unsigned int msec)
+{
+	while (msec > 0) {
+ 128:	b133      	cbz	r3, 138 <usb_xflash+0x138>
+		if (CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG)
+ 12a:	4a05      	ldr	r2, [pc, #20]	; (140 <usb_xflash+0x140>)
+ 12c:	6812      	ldr	r2, [r2, #0]
+ 12e:	03d2      	lsls	r2, r2, #15
+			msec--;
+ 130:	bf48      	it	mi
+ 132:	f103 33ff 	addmi.w	r3, r3, #4294967295
+ 136:	e7f7      	b.n	128 <usb_xflash+0x128>
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec);
+int usb_drain(int ep_id);
+
+static void reset(void)
+{
+	CM3_SCB->aircr =  SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
+ 138:	4a02      	ldr	r2, [pc, #8]	; (144 <usb_xflash+0x144>)
+ 13a:	4b03      	ldr	r3, [pc, #12]	; (148 <usb_xflash+0x148>)
+ 13c:	60da      	str	r2, [r3, #12]
+ 13e:	e7fe      	b.n	13e <usb_xflash+0x13e>
+ 140:	e000e010 	.word	0xe000e010
+ 144:	05fa0004 	.word	0x05fa0004
+ 148:	e000ed00 	.word	0xe000ed00
+ 14c:	0000068a 	.word	0x0000068a
+ 150:	0000067f 	.word	0x0000067f
+ 154:	000005f0 	.word	0x000005f0
+ 158:	000005e7 	.word	0x000005e7
+
+Disassembly of section .text:
+
+0000015c <usb_xmodem_rcv_pkt>:
+
+#define CDC_TX_EP 2
+#define CDC_RX_EP 1
+
+int usb_xmodem_rcv_pkt(struct xmodem_rcv * rx)
+{
+ 15c:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
+ 160:	4604      	mov	r4, r0
+	unsigned char * pkt = rx->pkt.hdr;
+ 162:	1d05      	adds	r5, r0, #4
+	int pos;
+	int i;
+
+	for (;;) {
+
+		if ((ret = usb_send(CDC_TX_EP, &rx->sync, 1)) < 0) {
+ 164:	2002      	movs	r0, #2
+ 166:	1c61      	adds	r1, r4, #1
+ 168:	2201      	movs	r2, #1
+ 16a:	f000 f95b 	bl	424 <usb_send>
+ 16e:	2800      	cmp	r0, #0
+ 170:	f2c0 8098 	blt.w	2a4 <usb_xmodem_rcv_pkt+0x148>
+ 174:	2200      	movs	r2, #0
+ 176:	4610      	mov	r0, r2
+		rem = 0;
+		pos = 0;
+		for (;;) {
+			int c;
+
+			if (rem == 0) {
+ 178:	b948      	cbnz	r0, 18e <usb_xmodem_rcv_pkt+0x32>
+				ret = usb_recv(CDC_RX_EP, pkt, 128, 2000);
+ 17a:	2001      	movs	r0, #1
+ 17c:	4629      	mov	r1, r5
+ 17e:	2280      	movs	r2, #128	; 0x80
+ 180:	f44f 63fa 	mov.w	r3, #2000	; 0x7d0
+ 184:	f000 f9b8 	bl	4f8 <usb_recv>
+
+				if (ret <= 0)
+ 188:	2800      	cmp	r0, #0
+ 18a:	dd79      	ble.n	280 <usb_xmodem_rcv_pkt+0x124>
+					goto timeout;
+
+				pos = 0;
+ 18c:	2200      	movs	r2, #0
+				rem = ret;
+			}
+
+			c = pkt[pos];
+ 18e:	5cab      	ldrb	r3, [r5, r2]
+			pos++;
+			rem--;
+ 190:	3801      	subs	r0, #1
+
+			if (c == STX) {
+ 192:	2b02      	cmp	r3, #2
+				pos = 0;
+				rem = ret;
+			}
+
+			c = pkt[pos];
+			pos++;
+ 194:	f102 0201 	add.w	r2, r2, #1
+			rem--;
+
+			if (c == STX) {
+ 198:	d00f      	beq.n	1ba <usb_xmodem_rcv_pkt+0x5e>
+				
+				cnt = 1024;
+				break;
+			}
+
+			if (c == SOH) {
+ 19a:	2b01      	cmp	r3, #1
+ 19c:	d010      	beq.n	1c0 <usb_xmodem_rcv_pkt+0x64>
+				
+				cnt = 128;
+				break;
+			}
+
+			if (c == EOT) {
+ 19e:	2b04      	cmp	r3, #4
+ 1a0:	d1ea      	bne.n	178 <usb_xmodem_rcv_pkt+0x1c>
+				/* end of transmission */
+				pkt[0] = ACK;
+ 1a2:	2306      	movs	r3, #6
+				pkt[1] = ACK;
+				if ((ret = usb_send(CDC_TX_EP, pkt, 2)) < 0)
+ 1a4:	2002      	movs	r0, #2
+				break;
+			}
+
+			if (c == EOT) {
+				/* end of transmission */
+				pkt[0] = ACK;
+ 1a6:	7123      	strb	r3, [r4, #4]
+				pkt[1] = ACK;
+ 1a8:	7163      	strb	r3, [r4, #5]
+				if ((ret = usb_send(CDC_TX_EP, pkt, 2)) < 0)
+ 1aa:	4629      	mov	r1, r5
+ 1ac:	4602      	mov	r2, r0
+ 1ae:	f000 f939 	bl	424 <usb_send>
+ 1b2:	ea00 70e0 	and.w	r0, r0, r0, asr #31
+ 1b6:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+			pos++;
+			rem--;
+
+			if (c == STX) {
+				
+				cnt = 1024;
+ 1ba:	f44f 6680 	mov.w	r6, #1024	; 0x400
+ 1be:	e000      	b.n	1c2 <usb_xmodem_rcv_pkt+0x66>
+				break;
+			}
+
+			if (c == SOH) {
+				
+				cnt = 128;
+ 1c0:	2680      	movs	r6, #128	; 0x80
+			}
+		}
+
+		
+
+		cp = pkt + 1;
+ 1c2:	f104 0805 	add.w	r8, r4, #5
+		for (i = 0; i < rem; ++i)
+ 1c6:	2300      	movs	r3, #0
+ 1c8:	4283      	cmp	r3, r0
+ 1ca:	d005      	beq.n	1d8 <usb_xmodem_rcv_pkt+0x7c>
+ 1cc:	18a9      	adds	r1, r5, r2
+			cp[i] = pkt[pos + i];
+ 1ce:	5cc9      	ldrb	r1, [r1, r3]
+ 1d0:	f808 1003 	strb.w	r1, [r8, r3]
+		}
+
+		
+
+		cp = pkt + 1;
+		for (i = 0; i < rem; ++i)
+ 1d4:	3301      	adds	r3, #1
+ 1d6:	e7f7      	b.n	1c8 <usb_xmodem_rcv_pkt+0x6c>
+		cp += rem;
+
+#ifndef ENABLE_XMODEM_CKS
+		rem = cnt + ((rx->mode) ? 4 : 3) - rem;
+#else
+		rem = cnt + 4 - rem;
+ 1d8:	1d37      	adds	r7, r6, #4
+		
+
+		cp = pkt + 1;
+		for (i = 0; i < rem; ++i)
+			cp[i] = pkt[pos + i];
+		cp += rem;
+ 1da:	4498      	add	r8, r3
+
+#ifndef ENABLE_XMODEM_CKS
+		rem = cnt + ((rx->mode) ? 4 : 3) - rem;
+#else
+		rem = cnt + 4 - rem;
+ 1dc:	1aff      	subs	r7, r7, r3
+#endif
+
+		/* receive the packet */
+		while (rem) {
+ 1de:	b15f      	cbz	r7, 1f8 <usb_xmodem_rcv_pkt+0x9c>
+
+			ret = usb_recv(CDC_RX_EP, cp, rem, 500);
+ 1e0:	2001      	movs	r0, #1
+ 1e2:	4641      	mov	r1, r8
+ 1e4:	463a      	mov	r2, r7
+ 1e6:	f44f 73fa 	mov.w	r3, #500	; 0x1f4
+ 1ea:	f000 f985 	bl	4f8 <usb_recv>
+			if (ret <= 0)
+ 1ee:	2800      	cmp	r0, #0
+ 1f0:	dd46      	ble.n	280 <usb_xmodem_rcv_pkt+0x124>
+				goto timeout;
+
+			rem -= ret;
+ 1f2:	1a3f      	subs	r7, r7, r0
+			cp += ret;
+ 1f4:	4480      	add	r8, r0
+ 1f6:	e7f2      	b.n	1de <usb_xmodem_rcv_pkt+0x82>
+		}
+
+		/* sequence */
+		seq = pkt[1];
+		/* inverse sequence */
+		nseq = pkt[2];
+ 1f8:	79a3      	ldrb	r3, [r4, #6]
+			rem -= ret;
+			cp += ret;
+		}
+
+		/* sequence */
+		seq = pkt[1];
+ 1fa:	7960      	ldrb	r0, [r4, #5]
+		/* inverse sequence */
+		nseq = pkt[2];
+
+		
+
+		if (seq != ((~nseq) & 0xff)) {
+ 1fc:	43db      	mvns	r3, r3
+ 1fe:	b2db      	uxtb	r3, r3
+ 200:	4298      	cmp	r0, r3
+ 202:	d132      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+
+#ifndef ENABLE_XMODEM_CKS
+		if (rx->mode) 
+#endif
+		{
+			unsigned short crc = 0;
+ 204:	463b      	mov	r3, r7
+		if (seq != ((~nseq) & 0xff)) {
+			
+			goto error;
+		}
+
+		cp = &pkt[3];
+ 206:	f104 0e07 	add.w	lr, r4, #7
+ 20a:	eb0e 0c06 	add.w	ip, lr, r6
+
+#ifndef __CRC_H__
+#define __CRC_H__
+
+static inline unsigned int __crc16ccitt(unsigned int crc, int c) {
+	crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 20e:	0219      	lsls	r1, r3, #8
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+				crc = CRC16CCITT(crc, cp[i]);
+ 210:	f81e 2b01 	ldrb.w	r2, [lr], #1
+ 214:	b289      	uxth	r1, r1
+ 216:	ea41 2313 	orr.w	r3, r1, r3, lsr #8
+	crc ^= c;
+ 21a:	4053      	eors	r3, r2
+	crc ^= (crc & 0xff) >> 4;
+ 21c:	f3c3 1203 	ubfx	r2, r3, #4, #4
+ 220:	405a      	eors	r2, r3
+	crc ^= (crc & 0x0f) << 12;
+ 222:	0313      	lsls	r3, r2, #12
+ 224:	b29b      	uxth	r3, r3
+ 226:	4053      	eors	r3, r2
+	crc ^= (crc & 0xff) << 5;
+ 228:	b2da      	uxtb	r2, r3
+ 22a:	ea83 1342 	eor.w	r3, r3, r2, lsl #5
+		{
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+ 22e:	45e6      	cmp	lr, ip
+				crc = CRC16CCITT(crc, cp[i]);
+ 230:	b29b      	uxth	r3, r3
+		{
+			unsigned short crc = 0;
+			unsigned short cmp;
+			int i;
+
+			for (i = 0; i < cnt; ++i)
+ 232:	d1ec      	bne.n	20e <usb_xmodem_rcv_pkt+0xb2>
+				crc = CRC16CCITT(crc, cp[i]);
+
+			cmp = (unsigned short)cp[i] << 8 | cp[i + 1];
+ 234:	f89e 1000 	ldrb.w	r1, [lr]
+ 238:	f89e 2001 	ldrb.w	r2, [lr, #1]
+
+			if (cmp != crc) {
+ 23c:	ea42 2201 	orr.w	r2, r2, r1, lsl #8
+ 240:	429a      	cmp	r2, r3
+ 242:	d112      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+			if (cp[i] != cks)
+				goto error;
+		}
+#endif
+
+		if (seq == ((rx->pktno - 1) & 0xff)) {
+ 244:	78a2      	ldrb	r2, [r4, #2]
+ 246:	1e53      	subs	r3, r2, #1
+ 248:	b2db      	uxtb	r3, r3
+ 24a:	4298      	cmp	r0, r3
+ 24c:	d102      	bne.n	254 <usb_xmodem_rcv_pkt+0xf8>
+			/* retransmission */
+			rx->sync = ACK;
+ 24e:	2306      	movs	r3, #6
+ 250:	7063      	strb	r3, [r4, #1]
+			continue;
+ 252:	e787      	b.n	164 <usb_xmodem_rcv_pkt+0x8>
+		}
+
+		if (seq != rx->pktno) {
+ 254:	4290      	cmp	r0, r2
+ 256:	d108      	bne.n	26a <usb_xmodem_rcv_pkt+0x10e>
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+		rx->retry = 10;
+ 258:	230a      	movs	r3, #10
+		if (seq != rx->pktno) {
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+ 25a:	3001      	adds	r0, #1
+		rx->retry = 10;
+ 25c:	70e3      	strb	r3, [r4, #3]
+		rx->sync = ACK;
+ 25e:	2306      	movs	r3, #6
+		if (seq != rx->pktno) {
+			
+			goto error;
+		}
+
+		rx->pktno = (rx->pktno + 1) & 0xff;
+ 260:	70a0      	strb	r0, [r4, #2]
+		rx->retry = 10;
+		rx->sync = ACK;
+ 262:	7063      	strb	r3, [r4, #1]
+
+		return cnt;
+ 264:	4630      	mov	r0, r6
+ 266:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+
+error:
+		/* flush */
+		while (usb_recv(CDC_RX_EP, pkt, 1024, 200) > 0);
+ 26a:	2001      	movs	r0, #1
+ 26c:	4629      	mov	r1, r5
+ 26e:	f44f 6280 	mov.w	r2, #1024	; 0x400
+ 272:	23c8      	movs	r3, #200	; 0xc8
+ 274:	f000 f940 	bl	4f8 <usb_recv>
+ 278:	2800      	cmp	r0, #0
+ 27a:	dcf6      	bgt.n	26a <usb_xmodem_rcv_pkt+0x10e>
+		rx->sync = NAK;
+ 27c:	2315      	movs	r3, #21
+ 27e:	7063      	strb	r3, [r4, #1]
+
+timeout:
+
+		if ((--rx->retry) == 0) {
+ 280:	78e3      	ldrb	r3, [r4, #3]
+ 282:	3b01      	subs	r3, #1
+ 284:	b2db      	uxtb	r3, r3
+ 286:	70e3      	strb	r3, [r4, #3]
+ 288:	2b00      	cmp	r3, #0
+ 28a:	f47f af6b 	bne.w	164 <usb_xmodem_rcv_pkt+0x8>
+			ret = -1;
+			break;
+		}
+	}
+
+	pkt[0] = CAN;
+ 28e:	2318      	movs	r3, #24
+ 290:	7123      	strb	r3, [r4, #4]
+	pkt[1] = CAN;
+ 292:	7163      	strb	r3, [r4, #5]
+	pkt[2] = CAN;
+ 294:	71a3      	strb	r3, [r4, #6]
+
+	usb_send(CDC_TX_EP, pkt, 3);
+ 296:	2002      	movs	r0, #2
+ 298:	4629      	mov	r1, r5
+ 29a:	2203      	movs	r2, #3
+ 29c:	f000 f8c2 	bl	424 <usb_send>
+
+	return ret;
+ 2a0:	f04f 30ff 	mov.w	r0, #4294967295
+}
+ 2a4:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+
+000002a8 <crc16ccitt>:
+ * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+/* CRC algorithm using the CCITT 16bit polynomial: (X^16 + X^12 + X^5 + 1). */
+unsigned int crc16ccitt(unsigned int crc, const void * buf, int len)
+{
+ 2a8:	b570      	push	{r4, r5, r6, lr}
+	unsigned int c;
+	int i;
+
+	cp = (unsigned char *)buf;
+
+	for (i = 0; i < len; i++) {
+ 2aa:	460e      	mov	r6, r1
+ 2ac:	1a73      	subs	r3, r6, r1
+ 2ae:	4293      	cmp	r3, r2
+ 2b0:	da11      	bge.n	2d6 <crc16ccitt+0x2e>
+		c = cp[i];
+		crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 2b2:	0204      	lsls	r4, r0, #8
+ 2b4:	b2a4      	uxth	r4, r4
+	int i;
+
+	cp = (unsigned char *)buf;
+
+	for (i = 0; i < len; i++) {
+		c = cp[i];
+ 2b6:	f816 5b01 	ldrb.w	r5, [r6], #1
+		crc = (crc >> 8) | ((crc & 0xff) << 8);
+ 2ba:	ea44 2010 	orr.w	r0, r4, r0, lsr #8
+		crc ^= c;
+ 2be:	4068      	eors	r0, r5
+		crc ^= (crc & 0xff) >> 4;
+ 2c0:	f3c0 1303 	ubfx	r3, r0, #4, #4
+ 2c4:	ea83 0400 	eor.w	r4, r3, r0
+		crc ^= (crc & 0x0f) << 12;
+ 2c8:	0323      	lsls	r3, r4, #12
+ 2ca:	b29b      	uxth	r3, r3
+ 2cc:	4063      	eors	r3, r4
+		crc ^= (crc & 0xff) << 5;
+ 2ce:	b2d8      	uxtb	r0, r3
+ 2d0:	ea83 1040 	eor.w	r0, r3, r0, lsl #5
+ 2d4:	e7ea      	b.n	2ac <crc16ccitt+0x4>
+	}
+
+	return crc;
+}
+ 2d6:	bd70      	pop	{r4, r5, r6, pc}
+
+000002d8 <flash_unlock>:
+void flash_unlock(void)
+{
+	struct stm32_flash * flash = STM32_FLASH;
+	uint32_t cr;
+
+	cr = flash->cr;
+ 2d8:	4b04      	ldr	r3, [pc, #16]	; (2ec <flash_unlock+0x14>)
+ 2da:	691a      	ldr	r2, [r3, #16]
+	if (cr & FLASH_LOCK) {
+ 2dc:	2a00      	cmp	r2, #0
+		/* unlock flash write */
+		flash->keyr = FLASH_KEY1;
+ 2de:	bfbf      	itttt	lt
+ 2e0:	4a03      	ldrlt	r2, [pc, #12]	; (2f0 <flash_unlock+0x18>)
+ 2e2:	605a      	strlt	r2, [r3, #4]
+		flash->keyr = FLASH_KEY2;
+ 2e4:	f102 3288 	addlt.w	r2, r2, #2290649224	; 0x88888888
+ 2e8:	605a      	strlt	r2, [r3, #4]
+ 2ea:	4770      	bx	lr
+ 2ec:	40023c00 	.word	0x40023c00
+ 2f0:	45670123 	.word	0x45670123
+
+000002f4 <flash_erase>:
+	unsigned int page;
+	unsigned int sect;
+	unsigned int size;
+	unsigned int cnt;
+
+	page = offs >> 14;
+ 2f4:	0b83      	lsrs	r3, r0, #14
+
+	/* must start at a page boundary */
+	if ((page << 14) != (offs)) {
+ 2f6:	ebb0 3f83 	cmp.w	r0, r3, lsl #14
+
+	return 0;
+}
+
+int flash_erase(uint32_t offs, unsigned int len)
+{
+ 2fa:	b530      	push	{r4, r5, lr}
+	unsigned int cnt;
+
+	page = offs >> 14;
+
+	/* must start at a page boundary */
+	if ((page << 14) != (offs)) {
+ 2fc:	d101      	bne.n	302 <flash_erase+0xe>
+ 2fe:	2200      	movs	r2, #0
+ 300:	e017      	b.n	332 <flash_erase+0x3e>
+		return -1;
+ 302:	f04f 30ff 	mov.w	r0, #4294967295
+ 306:	bd30      	pop	{r4, r5, pc}
+	while (cnt < len) {
+
+		switch (page) {
+		case 0 ... 3:
+			sect = page;
+			size = 16384;
+ 308:	f44f 4480 	mov.w	r4, #16384	; 0x4000
+static int stm32f2x_flash_sect_erase(struct stm32_flash * flash, 
+									 unsigned int sect)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
+ 30c:	f003 030f 	and.w	r3, r3, #15
+ 310:	00db      	lsls	r3, r3, #3
+ 312:	f443 3380 	orr.w	r3, r3, #65536	; 0x10000
+ 316:	4d19      	ldr	r5, [pc, #100]	; (37c <flash_erase+0x88>)
+ 318:	f043 0302 	orr.w	r3, r3, #2
+ 31c:	612b      	str	r3, [r5, #16]
+
+	do {
+		sr = flash->sr;
+ 31e:	68eb      	ldr	r3, [r5, #12]
+	} while (sr & FLASH_BSY);
+ 320:	f413 3f80 	tst.w	r3, #65536	; 0x10000
+ 324:	d1fb      	bne.n	31e <flash_erase+0x2a>
+
+	if (sr & FLASH_ERR)
+ 326:	f013 0ff2 	tst.w	r3, #242	; 0xf2
+ 32a:	d1ea      	bne.n	302 <flash_erase+0xe>
+		if (stm32f2x_flash_sect_erase(flash, sect) < 0) {
+			return -1;
+		}
+
+		cnt += size;
+		offs += size;
+ 32c:	4420      	add	r0, r4
+
+		if (stm32f2x_flash_sect_erase(flash, sect) < 0) {
+			return -1;
+		}
+
+		cnt += size;
+ 32e:	4422      	add	r2, r4
+		offs += size;
+		page = offs >> 14;
+ 330:	0b83      	lsrs	r3, r0, #14
+	if ((page << 14) != (offs)) {
+		return -1;
+	};
+
+	cnt = 0;
+	while (cnt < len) {
+ 332:	428a      	cmp	r2, r1
+ 334:	d220      	bcs.n	378 <flash_erase+0x84>
+
+		switch (page) {
+ 336:	2b07      	cmp	r3, #7
+ 338:	d814      	bhi.n	364 <flash_erase+0x70>
+ 33a:	a402      	add	r4, pc, #8	; (adr r4, 344 <flash_erase+0x50>)
+ 33c:	f854 5023 	ldr.w	r5, [r4, r3, lsl #2]
+ 340:	442c      	add	r4, r5
+ 342:	4720      	bx	r4
+ 344:	ffffffc5 	.word	0xffffffc5
+ 348:	ffffffc5 	.word	0xffffffc5
+ 34c:	ffffffc5 	.word	0xffffffc5
+ 350:	ffffffc5 	.word	0xffffffc5
+ 354:	0000002d 	.word	0x0000002d
+ 358:	0000002d 	.word	0x0000002d
+ 35c:	0000002d 	.word	0x0000002d
+ 360:	0000002d 	.word	0x0000002d
+		case 4 ... 7:
+			sect = 4;
+			size = 65536;
+			break;
+		default:
+			sect = ((page - 7) / 8) + 5;
+ 364:	3b07      	subs	r3, #7
+ 366:	08db      	lsrs	r3, r3, #3
+ 368:	3305      	adds	r3, #5
+			size = 131072;
+ 36a:	f44f 3400 	mov.w	r4, #131072	; 0x20000
+			break;
+ 36e:	e7cd      	b.n	30c <flash_erase+0x18>
+			sect = page;
+			size = 16384;
+			break;
+		case 4 ... 7:
+			sect = 4;
+			size = 65536;
+ 370:	f44f 3480 	mov.w	r4, #65536	; 0x10000
+		case 0 ... 3:
+			sect = page;
+			size = 16384;
+			break;
+		case 4 ... 7:
+			sect = 4;
+ 374:	2304      	movs	r3, #4
+ 376:	e7c9      	b.n	30c <flash_erase+0x18>
+		cnt += size;
+		offs += size;
+		page = offs >> 14;
+	}
+
+	return cnt;
+ 378:	4610      	mov	r0, r2
+}
+ 37a:	bd30      	pop	{r4, r5, pc}
+ 37c:	40023c00 	.word	0x40023c00
+
+00000380 <flash_write>:
+	uint32_t * addr;
+	uint8_t * ptr;
+	int n;
+	int i;
+
+	n = (len + 3) / 4;
+ 380:	3203      	adds	r2, #3
+
+	return 0;
+}
+
+int flash_write(uint32_t offs, const void * buf, unsigned int len)
+{
+ 382:	b570      	push	{r4, r5, r6, lr}
+	uint32_t * addr;
+	uint8_t * ptr;
+	int n;
+	int i;
+
+	n = (len + 3) / 4;
+ 384:	0892      	lsrs	r2, r2, #2
+
+	ptr = (uint8_t *)buf;
+	addr = (uint32_t *)(STM32_FLASH_ADDR + offs);
+ 386:	f100 6000 	add.w	r0, r0, #134217728	; 0x8000000
+ 38a:	3104      	adds	r1, #4
+
+	for (i = 0; i < n; i++) {
+ 38c:	2500      	movs	r5, #0
+ 38e:	4295      	cmp	r5, r2
+ 390:	da1d      	bge.n	3ce <flash_write+0x4e>
+static int stm32f2x_flash_wr32(struct stm32_flash * flash,
+							uint32_t volatile * addr, uint32_t data)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_PG | FLASH_PSIZE_32;
+ 392:	f240 2601 	movw	r6, #513	; 0x201
+
+	ptr = (uint8_t *)buf;
+	addr = (uint32_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+ 396:	f811 3c02 	ldrb.w	r3, [r1, #-2]
+ 39a:	f811 4c03 	ldrb.w	r4, [r1, #-3]
+ 39e:	041b      	lsls	r3, r3, #16
+ 3a0:	ea43 2304 	orr.w	r3, r3, r4, lsl #8
+ 3a4:	f811 4c04 	ldrb.w	r4, [r1, #-4]
+ 3a8:	4323      	orrs	r3, r4
+ 3aa:	f811 4c01 	ldrb.w	r4, [r1, #-1]
+ 3ae:	ea43 6304 	orr.w	r3, r3, r4, lsl #24
+static int stm32f2x_flash_wr32(struct stm32_flash * flash,
+							uint32_t volatile * addr, uint32_t data)
+{
+	uint32_t sr;
+
+	flash->cr = FLASH_PG | FLASH_PSIZE_32;
+ 3b2:	4c09      	ldr	r4, [pc, #36]	; (3d8 <flash_write+0x58>)
+ 3b4:	6126      	str	r6, [r4, #16]
+	*addr = data;
+ 3b6:	6003      	str	r3, [r0, #0]
+	
+	do {
+		sr = flash->sr;
+ 3b8:	68e3      	ldr	r3, [r4, #12]
+	} while (sr & FLASH_BSY);
+ 3ba:	03de      	lsls	r6, r3, #15
+ 3bc:	d4fc      	bmi.n	3b8 <flash_write+0x38>
+
+	if (sr & FLASH_ERR)
+ 3be:	f013 0ff2 	tst.w	r3, #242	; 0xf2
+ 3c2:	f101 0104 	add.w	r1, r1, #4
+ 3c6:	d104      	bne.n	3d2 <flash_write+0x52>
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+		if (stm32f2x_flash_wr32(flash, addr, data) < 0)
+			return -1;
+		ptr += 4;
+		addr++;
+ 3c8:	3004      	adds	r0, #4
+	n = (len + 3) / 4;
+
+	ptr = (uint8_t *)buf;
+	addr = (uint32_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+ 3ca:	3501      	adds	r5, #1
+ 3cc:	e7df      	b.n	38e <flash_write+0xe>
+			return -1;
+		ptr += 4;
+		addr++;
+	}
+	
+	return n * 4;
+ 3ce:	0090      	lsls	r0, r2, #2
+ 3d0:	bd70      	pop	{r4, r5, r6, pc}
+	addr = (uint32_t *)(STM32_FLASH_ADDR + offs);
+
+	for (i = 0; i < n; i++) {
+		data = ptr[0] | (ptr[1] << 8) | (ptr[2] << 16) | (ptr[3] << 24);
+		if (stm32f2x_flash_wr32(flash, addr, data) < 0)
+			return -1;
+ 3d2:	f04f 30ff 	mov.w	r0, #4294967295
+		ptr += 4;
+		addr++;
+	}
+	
+	return n * 4;
+}
+ 3d6:	bd70      	pop	{r4, r5, r6, pc}
+ 3d8:	40023c00 	.word	0x40023c00
+
+000003dc <__pktbuf_copy>:
+}
+
+static void __pktbuf_copy(void * ptr,
+						  volatile uint32_t * pop,
+						  unsigned int cnt)
+{
+ 3dc:	b530      	push	{r4, r5, lr}
+ 3de:	f022 0403 	bic.w	r4, r2, #3
+ 3e2:	4404      	add	r4, r0
+	uint32_t data;
+	int rem;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt / 4); ++i) {
+ 3e4:	42a0      	cmp	r0, r4
+ 3e6:	d00d      	beq.n	404 <__pktbuf_copy+0x28>
+		data = *pop;
+ 3e8:	680b      	ldr	r3, [r1, #0]
+ 3ea:	3004      	adds	r0, #4
+		*dst++ = data;
+		*dst++ = data >> 8;
+ 3ec:	0a1d      	lsrs	r5, r3, #8
+ 3ee:	f800 5c03 	strb.w	r5, [r0, #-3]
+		*dst++ = data >> 16;
+ 3f2:	0c1d      	lsrs	r5, r3, #16
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt / 4); ++i) {
+		data = *pop;
+		*dst++ = data;
+ 3f4:	f800 3c04 	strb.w	r3, [r0, #-4]
+		*dst++ = data >> 8;
+		*dst++ = data >> 16;
+ 3f8:	f800 5c02 	strb.w	r5, [r0, #-2]
+		*dst++ = data >> 24;
+ 3fc:	0e1b      	lsrs	r3, r3, #24
+ 3fe:	f800 3c01 	strb.w	r3, [r0, #-1]
+ 402:	e7ef      	b.n	3e4 <__pktbuf_copy+0x8>
+	}
+
+	if ((rem = cnt % 4) > 0) {
+ 404:	f012 0203 	ands.w	r2, r2, #3
+ 408:	d00b      	beq.n	422 <__pktbuf_copy+0x46>
+		/* remaining bytes */
+		data = *pop;
+ 40a:	680b      	ldr	r3, [r1, #0]
+		dst[0] = data;
+		if (rem > 1)
+ 40c:	2a01      	cmp	r2, #1
+	}
+
+	if ((rem = cnt % 4) > 0) {
+		/* remaining bytes */
+		data = *pop;
+		dst[0] = data;
+ 40e:	7003      	strb	r3, [r0, #0]
+		if (rem > 1)
+ 410:	d007      	beq.n	422 <__pktbuf_copy+0x46>
+			dst[1] = data >> 8;
+		if (rem > 2)
+ 412:	2a03      	cmp	r2, #3
+	if ((rem = cnt % 4) > 0) {
+		/* remaining bytes */
+		data = *pop;
+		dst[0] = data;
+		if (rem > 1)
+			dst[1] = data >> 8;
+ 414:	ea4f 2113 	mov.w	r1, r3, lsr #8
+		if (rem > 2)
+			dst[2] = data >> 16;
+ 418:	bf08      	it	eq
+ 41a:	0c1b      	lsreq	r3, r3, #16
+	if ((rem = cnt % 4) > 0) {
+		/* remaining bytes */
+		data = *pop;
+		dst[0] = data;
+		if (rem > 1)
+			dst[1] = data >> 8;
+ 41c:	7041      	strb	r1, [r0, #1]
+		if (rem > 2)
+			dst[2] = data >> 16;
+ 41e:	bf08      	it	eq
+ 420:	7083      	strbeq	r3, [r0, #2]
+ 422:	bd30      	pop	{r4, r5, pc}
+
+00000424 <usb_send>:
+const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[] = {
+	64, 32, 16, 8
+};
+
+int usb_send(int ep_id, void * buf, unsigned int len)
+{
+ 424:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	unsigned int rem;
+	uint8_t * xfrptr;
+
+	rem = len;
+ 428:	4615      	mov	r5, r2
+const uint8_t stm32f_otg_fs_ep0_mpsiz_lut[] = {
+	64, 32, 16, 8
+};
+
+int usb_send(int ep_id, void * buf, unsigned int len)
+{
+ 42a:	f8df e0c0 	ldr.w	lr, [pc, #192]	; 4ec <usb_send+0xc8>
+ 42e:	44fe      	add	lr, pc
+	uint8_t * xfrptr;
+
+	rem = len;
+	xfrptr = (uint8_t *)buf;
+
+	while (rem > 0) {
+ 430:	2d00      	cmp	r5, #0
+ 432:	d057      	beq.n	4e4 <usb_send+0xc0>
+		uint32_t data;
+		int i;
+
+		do {
+			/* wait for room in the fifo */
+			deptsiz = otg_fs->inep[ep_id].dieptsiz;
+ 434:	0146      	lsls	r6, r0, #5
+ 436:	f106 43a0 	add.w	r3, r6, #1342177280	; 0x50000000
+ 43a:	f8d3 3910 	ldr.w	r3, [r3, #2320]	; 0x910
+			xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+			pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+ 43e:	f3c3 44c9 	ubfx	r4, r3, #19, #10
+		int i;
+
+		do {
+			/* wait for room in the fifo */
+			deptsiz = otg_fs->inep[ep_id].dieptsiz;
+			xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+ 442:	f3c3 0312 	ubfx	r3, r3, #0, #19
+			pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+		} while ((xfrsiz == 0) && (pktcnt));
+ 446:	b90b      	cbnz	r3, 44c <usb_send+0x28>
+ 448:	2c00      	cmp	r4, #0
+ 44a:	d1f3      	bne.n	434 <usb_send+0x10>
+ 44c:	f106 4ca0 	add.w	ip, r6, #1342177280	; 0x50000000
+
+		depctl = otg_fs->inep[ep_id].diepctl;
+ 450:	f8dc 7900 	ldr.w	r7, [ip, #2304]	; 0x900
+ 454:	f3c7 040a 	ubfx	r4, r7, #0, #11
+		if (ep_id == 0)
+ 458:	b918      	cbnz	r0, 462 <usb_send+0x3e>
+			mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
+ 45a:	4b25      	ldr	r3, [pc, #148]	; (4f0 <usb_send+0xcc>)
+ 45c:	f85e 3003 	ldr.w	r3, [lr, r3]
+ 460:	5d1c      	ldrb	r4, [r3, r4]
+ 462:	1e6b      	subs	r3, r5, #1
+		else
+			mpsiz = OTG_FS_MPSIZ_GET(depctl);
+
+		if (rem > 0) {
+			pktcnt = (rem + (mpsiz - 1)) / mpsiz;
+ 464:	4423      	add	r3, r4
+ 466:	fbb3 f3f4 	udiv	r3, r3, r4
+			if (pktcnt > 7) {
+ 46a:	2b07      	cmp	r3, #7
+ 46c:	bf94      	ite	ls
+ 46e:	462c      	movls	r4, r5
+				pktcnt = 7;
+ 470:	2307      	movhi	r3, #7
+		} else {
+			pktcnt = 1;
+			xfrsiz = 0;
+		}
+
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 472:	f8df 8080 	ldr.w	r8, [pc, #128]	; 4f4 <usb_send+0xd0>
+ 476:	ea4f 43c3 	mov.w	r3, r3, lsl #19
+
+		if (rem > 0) {
+			pktcnt = (rem + (mpsiz - 1)) / mpsiz;
+			if (pktcnt > 7) {
+				pktcnt = 7;
+				xfrsiz = 7 * mpsiz;
+ 47a:	bf88      	it	hi
+ 47c:	ebc4 04c4 	rsbhi	r4, r4, r4, lsl #3
+		} else {
+			pktcnt = 1;
+			xfrsiz = 0;
+		}
+
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 480:	ea03 0808 	and.w	r8, r3, r8
+			OTG_FS_XFRSIZ_SET(xfrsiz); 
+ 484:	f3c4 0312 	ubfx	r3, r4, #0, #19
+		} else {
+			pktcnt = 1;
+			xfrsiz = 0;
+		}
+
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 488:	ea48 0303 	orr.w	r3, r8, r3
+ 48c:	f106 48a0 	add.w	r8, r6, #1342177280	; 0x50000000
+ 490:	f8c8 3910 	str.w	r3, [r8, #2320]	; 0x910
+
+		/* enable end point, clear NACK */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+
+		/* push into fifo */
+		for (i = 0; i < xfrsiz; i += 4) {
+ 494:	460b      	mov	r3, r1
+
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+			OTG_FS_XFRSIZ_SET(xfrsiz); 
+
+		/* enable end point, clear NACK */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+ 496:	f047 4704 	orr.w	r7, r7, #2214592512	; 0x84000000
+ 49a:	f8cc 7900 	str.w	r7, [ip, #2304]	; 0x900
+ 49e:	1a5f      	subs	r7, r3, r1
+
+		/* push into fifo */
+		for (i = 0; i < xfrsiz; i += 4) {
+ 4a0:	42a7      	cmp	r7, r4
+ 4a2:	d216      	bcs.n	4d2 <usb_send+0xae>
+			data = xfrptr[0] + (xfrptr[1] << 8) + 
+ 4a4:	f893 c001 	ldrb.w	ip, [r3, #1]
+ 4a8:	781f      	ldrb	r7, [r3, #0]
+				(xfrptr[2] << 16) + (xfrptr[3] << 24);
+			otg_fs->dfifo[ep_id].push = data;
+			xfrptr += 4;
+ 4aa:	3304      	adds	r3, #4
+		/* enable end point, clear NACK */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+
+		/* push into fifo */
+		for (i = 0; i < xfrsiz; i += 4) {
+			data = xfrptr[0] + (xfrptr[1] << 8) + 
+ 4ac:	eb07 270c 	add.w	r7, r7, ip, lsl #8
+				(xfrptr[2] << 16) + (xfrptr[3] << 24);
+ 4b0:	f813 cc02 	ldrb.w	ip, [r3, #-2]
+		/* enable end point, clear NACK */
+		otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+
+		/* push into fifo */
+		for (i = 0; i < xfrsiz; i += 4) {
+			data = xfrptr[0] + (xfrptr[1] << 8) + 
+ 4b4:	eb07 470c 	add.w	r7, r7, ip, lsl #16
+				(xfrptr[2] << 16) + (xfrptr[3] << 24);
+ 4b8:	f813 cc01 	ldrb.w	ip, [r3, #-1]
+ 4bc:	eb07 670c 	add.w	r7, r7, ip, lsl #24
+			otg_fs->dfifo[ep_id].push = data;
+ 4c0:	ea4f 3c00 	mov.w	ip, r0, lsl #12
+ 4c4:	f10c 4ca0 	add.w	ip, ip, #1342177280	; 0x50000000
+ 4c8:	f50c 5c80 	add.w	ip, ip, #4096	; 0x1000
+ 4cc:	f8cc 7000 	str.w	r7, [ip]
+ 4d0:	e7e5      	b.n	49e <usb_send+0x7a>
+			xfrptr += 4;
+		}	
+
+		/* wait for transfer to complete */
+		while (!(otg_fs->inep[ep_id].diepint & OTG_FS_XFRC));
+ 4d2:	f106 41a0 	add.w	r1, r6, #1342177280	; 0x50000000
+ 4d6:	f8d1 1908 	ldr.w	r1, [r1, #2312]	; 0x908
+ 4da:	07c9      	lsls	r1, r1, #31
+ 4dc:	d5f9      	bpl.n	4d2 <usb_send+0xae>
+		rem -= xfrsiz;
+ 4de:	1b2d      	subs	r5, r5, r4
+ 4e0:	4619      	mov	r1, r3
+ 4e2:	e7a5      	b.n	430 <usb_send+0xc>
+	}
+
+	return len;
+}
+ 4e4:	4610      	mov	r0, r2
+ 4e6:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
+ 4ea:	bf00      	nop
+ 4ec:	000002de 	.word	0x000002de
+ 4f0:	00000000 	.word	0x00000000
+ 4f4:	1ff80000 	.word	0x1ff80000
+
+000004f8 <usb_recv>:
+	}
+}
+
+
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
+{
+ 4f8:	e92d 43f7 	stmdb	sp!, {r0, r1, r2, r4, r5, r6, r7, r8, r9, lr}
+ 4fc:	ea4f 1940 	mov.w	r9, r0, lsl #5
+ 500:	f109 42a0 	add.w	r2, r9, #1342177280	; 0x50000000
+ 504:	461f      	mov	r7, r3
+	uint32_t setup[2];
+
+	/* get EP max packet size */
+	mxpktsz	= OTG_FS_MPSIZ_GET(otg_fs->outep[ep_id].doepctl);
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+ 506:	f04f 43a0 	mov.w	r3, #1342177280	; 0x50000000
+	uint32_t pktcnt;
+	uint32_t gintsts;
+	uint32_t setup[2];
+
+	/* get EP max packet size */
+	mxpktsz	= OTG_FS_MPSIZ_GET(otg_fs->outep[ep_id].doepctl);
+ 50a:	f8d2 5b00 	ldr.w	r5, [r2, #2816]	; 0xb00
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+ 50e:	6a5b      	ldr	r3, [r3, #36]	; 0x24
+	uint32_t pktcnt;
+	uint32_t gintsts;
+	uint32_t setup[2];
+
+	/* get EP max packet size */
+	mxpktsz	= OTG_FS_MPSIZ_GET(otg_fs->outep[ep_id].doepctl);
+ 510:	f3c5 050a 	ubfx	r5, r5, #0, #11
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+ 514:	009b      	lsls	r3, r3, #2
+	/* packets in the RX fifio */
+	pktcnt = rxfsiz / mxpktsz;
+ 516:	fbb3 f3f5 	udiv	r3, r3, r5
+	}
+}
+
+
+int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
+{
+ 51a:	4606      	mov	r6, r0
+ 51c:	4688      	mov	r8, r1
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+	/* packets in the RX fifio */
+	pktcnt = rxfsiz / mxpktsz;
+
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+ 51e:	f8d2 1b00 	ldr.w	r1, [r2, #2816]	; 0xb00
+					__pktbuf_copy(buf, &otg_fs->dfifo[ep_id].pop, cnt);
+					return cnt;
+				case OTG_FS_PKTSTS_OUT_XFER_COMP:
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+ 522:	435d      	muls	r5, r3
+	/* get the size of the RX fifio */
+	rxfsiz = otg_fs->grxfsiz * 4;
+	/* packets in the RX fifio */
+	pktcnt = rxfsiz / mxpktsz;
+
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+ 524:	f041 6180 	orr.w	r1, r1, #67108864	; 0x4000000
+ 528:	f8c2 1b00 	str.w	r1, [r2, #2816]	; 0xb00
+				case OTG_FS_PKTSTS_OUT_DATA_UPDT:
+					__pktbuf_copy(buf, &otg_fs->dfifo[ep_id].pop, cnt);
+					return cnt;
+				case OTG_FS_PKTSTS_OUT_XFER_COMP:
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 52c:	4a44      	ldr	r2, [pc, #272]	; (640 <usb_recv+0x148>)
+ 52e:	04db      	lsls	r3, r3, #19
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+ 530:	f3c5 0512 	ubfx	r5, r5, #0, #19
+				case OTG_FS_PKTSTS_OUT_DATA_UPDT:
+					__pktbuf_copy(buf, &otg_fs->dfifo[ep_id].pop, cnt);
+					return cnt;
+				case OTG_FS_PKTSTS_OUT_XFER_COMP:
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 534:	401a      	ands	r2, r3
+ 536:	4315      	orrs	r5, r2
+
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+
+	for (;;) {
+
+		gintsts = otg_fs->gintsts & otg_fs->gintmsk;
+ 538:	f04f 42a0 	mov.w	r2, #1342177280	; 0x50000000
+ 53c:	6953      	ldr	r3, [r2, #20]
+ 53e:	6991      	ldr	r1, [r2, #24]
+ 540:	4019      	ands	r1, r3
+		otg_fs->gintsts = gintsts;
+
+		if (gintsts & OTG_FS_OEPINT) {
+ 542:	0308      	lsls	r0, r1, #12
+	otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+
+	for (;;) {
+
+		gintsts = otg_fs->gintsts & otg_fs->gintmsk;
+		otg_fs->gintsts = gintsts;
+ 544:	6151      	str	r1, [r2, #20]
+
+		if (gintsts & OTG_FS_OEPINT) {
+ 546:	d52b      	bpl.n	5a0 <usb_recv+0xa8>
+			uint32_t ep_intr = (otg_fs->daint & otg_fs->daintmsk);
+ 548:	f8d2 0818 	ldr.w	r0, [r2, #2072]	; 0x818
+ 54c:	f8d2 381c 	ldr.w	r3, [r2, #2076]	; 0x81c
+ 550:	4003      	ands	r3, r0
+			if (ep_intr & OTG_FS_OEPINT0) {
+ 552:	03db      	lsls	r3, r3, #15
+ 554:	d524      	bpl.n	5a0 <usb_recv+0xa8>
+				uint32_t doepint = otg_fs->outep[0].doepint & 
+ 556:	f8d2 3b08 	ldr.w	r3, [r2, #2824]	; 0xb08
+					otg_fs->doepmsk;
+ 55a:	f8d2 0814 	ldr.w	r0, [r2, #2068]	; 0x814
+		otg_fs->gintsts = gintsts;
+
+		if (gintsts & OTG_FS_OEPINT) {
+			uint32_t ep_intr = (otg_fs->daint & otg_fs->daintmsk);
+			if (ep_intr & OTG_FS_OEPINT0) {
+				uint32_t doepint = otg_fs->outep[0].doepint & 
+ 55e:	4003      	ands	r3, r0
+					otg_fs->doepmsk;
+				if (doepint & OTG_FS_XFRC)
+ 560:	07dc      	lsls	r4, r3, #31
+}
+
+#define CDC_TX_EP 2
+static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
+{
+	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
+ 562:	bf41      	itttt	mi
+ 564:	f44f 2000 	movmi.w	r0, #524288	; 0x80000
+ 568:	f8c2 0910 	strmi.w	r0, [r2, #2320]	; 0x910
+	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+ 56c:	f8d2 0900 	ldrmi.w	r0, [r2, #2304]	; 0x900
+ 570:	f040 4004 	orrmi.w	r0, r0, #2214592512	; 0x84000000
+ 574:	bf48      	it	mi
+ 576:	f8c2 0900 	strmi.w	r0, [r2, #2304]	; 0x900
+			if (ep_intr & OTG_FS_OEPINT0) {
+				uint32_t doepint = otg_fs->outep[0].doepint & 
+					otg_fs->doepmsk;
+				if (doepint & OTG_FS_XFRC)
+					__ep_zlp_send(otg_fs, 0);
+				if (doepint & OTG_FS_STUP)
+ 57a:	0718      	lsls	r0, r3, #28
+}
+
+#define CDC_TX_EP 2
+static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
+{
+	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
+ 57c:	bf41      	itttt	mi
+ 57e:	f04f 42a0 	movmi.w	r2, #1342177280	; 0x50000000
+ 582:	f44f 2000 	movmi.w	r0, #524288	; 0x80000
+ 586:	f8c2 0910 	strmi.w	r0, [r2, #2320]	; 0x910
+	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+ 58a:	f8d2 0900 	ldrmi.w	r0, [r2, #2304]	; 0x900
+ 58e:	bf44      	itt	mi
+ 590:	f040 4004 	orrmi.w	r0, r0, #2214592512	; 0x84000000
+ 594:	f8c2 0900 	strmi.w	r0, [r2, #2304]	; 0x900
+					otg_fs->doepmsk;
+				if (doepint & OTG_FS_XFRC)
+					__ep_zlp_send(otg_fs, 0);
+				if (doepint & OTG_FS_STUP)
+					__ep_zlp_send(otg_fs, 0);
+				otg_fs->outep[0].doepint = doepint;
+ 598:	f04f 42a0 	mov.w	r2, #1342177280	; 0x50000000
+ 59c:	f8c2 3b08 	str.w	r3, [r2, #2824]	; 0xb08
+			}
+		}
+
+		if (gintsts & OTG_FS_RXFLVL) {
+ 5a0:	06ca      	lsls	r2, r1, #27
+ 5a2:	d541      	bpl.n	628 <usb_recv+0x130>
+			int cnt;
+
+			/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
+			   the application must read the Receive status pop
+			   register (OTG_FS_GRXSTSP). */
+			grxsts = otg_fs->grxstsp;
+ 5a4:	f04f 43a0 	mov.w	r3, #1342177280	; 0x50000000
+ 5a8:	6a1a      	ldr	r2, [r3, #32]
+			cnt = OTG_FS_BCNT_GET(grxsts);
+			epnum = OTG_FS_EPNUM_GET(grxsts);
+ 5aa:	f002 030f 	and.w	r3, r2, #15
+
+			if (epnum == ep_id) {
+ 5ae:	42b3      	cmp	r3, r6
+
+			/* 1. On catching an RXFLVL interrupt (OTG_FS_GINTSTS register),
+			   the application must read the Receive status pop
+			   register (OTG_FS_GRXSTSP). */
+			grxsts = otg_fs->grxstsp;
+			cnt = OTG_FS_BCNT_GET(grxsts);
+ 5b0:	f3c2 140a 	ubfx	r4, r2, #4, #11
+			epnum = OTG_FS_EPNUM_GET(grxsts);
+
+			if (epnum == ep_id) {
+ 5b4:	d117      	bne.n	5e6 <usb_recv+0xee>
+				switch (grxsts & OTG_FS_PKTSTS_MSK) {
+ 5b6:	f402 12f0 	and.w	r2, r2, #1966080	; 0x1e0000
+ 5ba:	f5b2 2f80 	cmp.w	r2, #262144	; 0x40000
+ 5be:	d007      	beq.n	5d0 <usb_recv+0xd8>
+ 5c0:	f5b2 2fc0 	cmp.w	r2, #393216	; 0x60000
+ 5c4:	d130      	bne.n	628 <usb_recv+0x130>
+				case OTG_FS_PKTSTS_OUT_DATA_UPDT:
+					__pktbuf_copy(buf, &otg_fs->dfifo[ep_id].pop, cnt);
+					return cnt;
+				case OTG_FS_PKTSTS_OUT_XFER_COMP:
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+ 5c6:	f109 43a0 	add.w	r3, r9, #1342177280	; 0x50000000
+ 5ca:	f8c3 5b10 	str.w	r5, [r3, #2832]	; 0xb10
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+					break;
+ 5ce:	e02b      	b.n	628 <usb_recv+0x130>
+			epnum = OTG_FS_EPNUM_GET(grxsts);
+
+			if (epnum == ep_id) {
+				switch (grxsts & OTG_FS_PKTSTS_MSK) {
+				case OTG_FS_PKTSTS_OUT_DATA_UPDT:
+					__pktbuf_copy(buf, &otg_fs->dfifo[ep_id].pop, cnt);
+ 5d0:	0331      	lsls	r1, r6, #12
+ 5d2:	f101 41a0 	add.w	r1, r1, #1342177280	; 0x50000000
+ 5d6:	4640      	mov	r0, r8
+ 5d8:	f501 5180 	add.w	r1, r1, #4096	; 0x1000
+ 5dc:	4622      	mov	r2, r4
+ 5de:	f7ff fefd 	bl	3dc <__pktbuf_copy>
+					return cnt;
+ 5e2:	4620      	mov	r0, r4
+ 5e4:	e029      	b.n	63a <usb_recv+0x142>
+					/* Prepare to receive more */
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+					break;
+				}
+			} else if (epnum == 0) {
+ 5e6:	b11b      	cbz	r3, 5f0 <usb_recv+0xf8>
+{
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 4; ++i) {
+ 5e8:	3403      	adds	r4, #3
+ 5ea:	08a4      	lsrs	r4, r4, #2
+ 5ec:	2300      	movs	r3, #0
+ 5ee:	e015      	b.n	61c <usb_recv+0x124>
+					otg_fs->outep[ep_id].doeptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+						OTG_FS_XFRSIZ_SET(pktcnt * mxpktsz);
+					break;
+				}
+			} else if (epnum == 0) {
+				switch (grxsts & OTG_FS_PKTSTS_MSK) {
+ 5f0:	f402 12f0 	and.w	r2, r2, #1966080	; 0x1e0000
+ 5f4:	f5b2 2f80 	cmp.w	r2, #262144	; 0x40000
+ 5f8:	d008      	beq.n	60c <usb_recv+0x114>
+ 5fa:	f5b2 2f40 	cmp.w	r2, #786432	; 0xc0000
+ 5fe:	d113      	bne.n	628 <usb_recv+0x130>
+					/* Number of words in the receive fifo */
+					/* discard other EP's data */
+					__pktbuf_discard(&otg_fs->dfifo[0].pop, cnt);
+					break;
+				case OTG_FS_PKTSTS_SETUP_UPDT:
+					__pktbuf_copy(setup, &otg_fs->dfifo[0].pop, cnt);
+ 600:	4668      	mov	r0, sp
+ 602:	4910      	ldr	r1, [pc, #64]	; (644 <usb_recv+0x14c>)
+ 604:	4622      	mov	r2, r4
+ 606:	f7ff fee9 	bl	3dc <__pktbuf_copy>
+					break;
+ 60a:	e00d      	b.n	628 <usb_recv+0x130>
+{
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 4; ++i) {
+ 60c:	3403      	adds	r4, #3
+ 60e:	08a4      	lsrs	r4, r4, #2
+ 610:	42a3      	cmp	r3, r4
+ 612:	d009      	beq.n	628 <usb_recv+0x130>
+		data = *pop;
+ 614:	4a0b      	ldr	r2, [pc, #44]	; (644 <usb_recv+0x14c>)
+{
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 4; ++i) {
+ 616:	3301      	adds	r3, #1
+		data = *pop;
+ 618:	6812      	ldr	r2, [r2, #0]
+ 61a:	e7f9      	b.n	610 <usb_recv+0x118>
+{
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 4; ++i) {
+ 61c:	42a3      	cmp	r3, r4
+ 61e:	d003      	beq.n	628 <usb_recv+0x130>
+		data = *pop;
+ 620:	4a08      	ldr	r2, [pc, #32]	; (644 <usb_recv+0x14c>)
+{
+	uint32_t data;
+	int i;
+
+	/* pop data from the fifo and copy to destination buffer */
+	for (i = 0; i < (cnt + 3) / 4; ++i) {
+ 622:	3301      	adds	r3, #1
+		data = *pop;
+ 624:	6812      	ldr	r2, [r2, #0]
+ 626:	e7f9      	b.n	61c <usb_recv+0x124>
+			} else {
+				__pktbuf_discard(&otg_fs->dfifo[0].pop, cnt);
+			}
+		}
+
+		if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
+ 628:	4b07      	ldr	r3, [pc, #28]	; (648 <usb_recv+0x150>)
+ 62a:	681b      	ldr	r3, [r3, #0]
+ 62c:	03db      	lsls	r3, r3, #15
+ 62e:	d583      	bpl.n	538 <usb_recv+0x40>
+			if (msec == 0) {
+ 630:	b10f      	cbz	r7, 636 <usb_recv+0x13e>
+//				otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+				return -1;
+			}
+			msec--;
+ 632:	3f01      	subs	r7, #1
+ 634:	e780      	b.n	538 <usb_recv+0x40>
+		}
+
+		if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
+			if (msec == 0) {
+//				otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
+				return -1;
+ 636:	f04f 30ff 	mov.w	r0, #4294967295
+			}
+			msec--;
+		}
+
+	}
+}
+ 63a:	b003      	add	sp, #12
+ 63c:	e8bd 83f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, r9, pc}
+ 640:	1ff80000 	.word	0x1ff80000
+ 644:	50001000 	.word	0x50001000
+ 648:	e000e010 	.word	0xe000e010
+
+0000064c <usb_drain>:
+
+void usb_drain(int ep_id)
+{
+	struct stm32f_otg_fs * otg_fs = STM32F_OTG_FS;
+	/* wait for transfer to complete */
+	while (!(otg_fs->inep[ep_id].diepint & OTG_FS_XFRC));
+ 64c:	0143      	lsls	r3, r0, #5
+ 64e:	f103 43a0 	add.w	r3, r3, #1342177280	; 0x50000000
+ 652:	f8d3 3908 	ldr.w	r3, [r3, #2312]	; 0x908
+ 656:	07db      	lsls	r3, r3, #31
+ 658:	d5f8      	bpl.n	64c <usb_drain>
+}
+ 65a:	4770      	bx	lr
+
+0000065c <dbg_putstr>:
+
+	usart->tdr = c;
+}
+
+void dbg_putstr(const char * s)
+{
+ 65c:	b510      	push	{r4, lr}
+ 65e:	3801      	subs	r0, #1
+	struct stm32_usart * usart = STM32_UART5;
+	int c;
+	int n;
+
+	for (n = 0; (c = s[n]) != '\0'; ++n) {
+ 660:	f810 3f01 	ldrb.w	r3, [r0, #1]!
+ 664:	b173      	cbz	r3, 684 <dbg_putstr+0x28>
+		if (c == '\n')
+ 666:	2b0a      	cmp	r3, #10
+ 668:	4a07      	ldr	r2, [pc, #28]	; (688 <dbg_putstr+0x2c>)
+ 66a:	d105      	bne.n	678 <dbg_putstr+0x1c>
+#define STM32F_BASE_UART5   0x40005000
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+
+static void stm32_uart_putc(struct stm32_usart * usart, int c)
+{
+	while (!(usart->isr & USART_TXE));
+ 66c:	6811      	ldr	r1, [r2, #0]
+ 66e:	060c      	lsls	r4, r1, #24
+ 670:	d5fc      	bpl.n	66c <dbg_putstr+0x10>
+
+	usart->tdr = c;
+ 672:	4905      	ldr	r1, [pc, #20]	; (688 <dbg_putstr+0x2c>)
+ 674:	240d      	movs	r4, #13
+ 676:	604c      	str	r4, [r1, #4]
+#define STM32F_BASE_UART5   0x40005000
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+
+static void stm32_uart_putc(struct stm32_usart * usart, int c)
+{
+	while (!(usart->isr & USART_TXE));
+ 678:	6811      	ldr	r1, [r2, #0]
+ 67a:	0609      	lsls	r1, r1, #24
+ 67c:	d5fc      	bpl.n	678 <dbg_putstr+0x1c>
+
+	usart->tdr = c;
+ 67e:	4a02      	ldr	r2, [pc, #8]	; (688 <dbg_putstr+0x2c>)
+ 680:	6053      	str	r3, [r2, #4]
+ 682:	e7ed      	b.n	660 <dbg_putstr+0x4>
+	for (n = 0; (c = s[n]) != '\0'; ++n) {
+		if (c == '\n')
+			stm32_uart_putc(usart, '\r');
+		stm32_uart_putc(usart, c);
+	}
+}
+ 684:	bd10      	pop	{r4, pc}
+ 686:	bf00      	nop
+ 688:	40005000 	.word	0x40005000
+
+0000068c <dbg_puthex>:
+
+void dbg_puthex(unsigned int val)
+{
+ 68c:	b510      	push	{r4, lr}
+	int c;
+	int n;
+	int i;
+
+	/* value is zero ? */
+	if (!val)
+ 68e:	b928      	cbnz	r0, 69c <dbg_puthex+0x10>
+#define STM32F_BASE_UART5   0x40005000
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+
+static void stm32_uart_putc(struct stm32_usart * usart, int c)
+{
+	while (!(usart->isr & USART_TXE));
+ 690:	4b0b      	ldr	r3, [pc, #44]	; (6c0 <dbg_puthex+0x34>)
+ 692:	681a      	ldr	r2, [r3, #0]
+ 694:	0612      	lsls	r2, r2, #24
+ 696:	d5fb      	bpl.n	690 <dbg_puthex+0x4>
+
+	usart->tdr = c;
+ 698:	2230      	movs	r2, #48	; 0x30
+ 69a:	605a      	str	r2, [r3, #4]
+		stm32_uart_putc(usart, c);
+	}
+}
+
+void dbg_puthex(unsigned int val)
+{
+ 69c:	2209      	movs	r2, #9
+	/* value is zero ? */
+	if (!val)
+		stm32_uart_putc(usart, '0');
+
+	n = 0;
+	for (i = 0; i < (sizeof(unsigned int) * 2); i++) {
+ 69e:	3a01      	subs	r2, #1
+ 6a0:	d00d      	beq.n	6be <dbg_puthex+0x32>
+		c = val >> ((sizeof(unsigned int) * 8) - 4);
+ 6a2:	0f03      	lsrs	r3, r0, #28
+		val <<= 4;
+ 6a4:	0100      	lsls	r0, r0, #4
+		if ((c != 0) || (n != 0))
+ 6a6:	2b00      	cmp	r3, #0
+ 6a8:	d0f9      	beq.n	69e <dbg_puthex+0x12>
+			 stm32_uart_putc(usart, c < 10 ? c + '0' : c + ('a' - 10));
+ 6aa:	2b09      	cmp	r3, #9
+ 6ac:	bfd4      	ite	le
+ 6ae:	3330      	addle	r3, #48	; 0x30
+ 6b0:	3357      	addgt	r3, #87	; 0x57
+#define STM32F_BASE_UART5   0x40005000
+#define STM32_UART5 ((struct stm32_usart *)STM32F_BASE_UART5)
+
+static void stm32_uart_putc(struct stm32_usart * usart, int c)
+{
+	while (!(usart->isr & USART_TXE));
+ 6b2:	4903      	ldr	r1, [pc, #12]	; (6c0 <dbg_puthex+0x34>)
+ 6b4:	680c      	ldr	r4, [r1, #0]
+ 6b6:	0624      	lsls	r4, r4, #24
+ 6b8:	d5fb      	bpl.n	6b2 <dbg_puthex+0x26>
+
+	usart->tdr = c;
+ 6ba:	604b      	str	r3, [r1, #4]
+ 6bc:	e7ef      	b.n	69e <dbg_puthex+0x12>
+		c = val >> ((sizeof(unsigned int) * 8) - 4);
+		val <<= 4;
+		if ((c != 0) || (n != 0))
+			 stm32_uart_putc(usart, c < 10 ? c + '0' : c + ('a' - 10));
+	}
+}
+ 6be:	bd10      	pop	{r4, pc}
+ 6c0:	40005000 	.word	0x40005000
+
+000006c4 <dbg_reset>:
+void dbg_reset(void)
+{
+	struct stm32_usart * usart = STM32_UART5;
+
+	/* disable all interrupts */
+	usart->cr1 &= ~(USART_TXEIE | USART_TCIE | USART_IDLEIE | USART_RXNEIE);
+ 6c4:	4b04      	ldr	r3, [pc, #16]	; (6d8 <dbg_reset+0x14>)
+ 6c6:	68da      	ldr	r2, [r3, #12]
+ 6c8:	f022 02f0 	bic.w	r2, r2, #240	; 0xf0
+ 6cc:	60da      	str	r2, [r3, #12]
+	/* Disable DMA */
+	usart->cr3 &= ~(USART_DMAT | USART_DMAR);
+ 6ce:	695a      	ldr	r2, [r3, #20]
+ 6d0:	f022 02c0 	bic.w	r2, r2, #192	; 0xc0
+ 6d4:	615a      	str	r2, [r3, #20]
+ 6d6:	4770      	bx	lr
+ 6d8:	40005000 	.word	0x40005000
+ 6dc:	72450a0d 	.word	0x72450a0d
+ 6e0:	6e697361 	.word	0x6e697361
+ 6e4:	2e2e2e67 	.word	0x2e2e2e67
+ 6e8:	580a0d00 	.word	0x580a0d00
+ 6ec:	65646f6d 	.word	0x65646f6d
+ 6f0:	2e2e2e6d 	.word	0x2e2e2e6d
+ 6f4:	0a0d0020 	.word	0x0a0d0020
+ 6f8:	61766e49 	.word	0x61766e49
+ 6fc:	2164696c 	.word	0x2164696c
+ 700:	440a0d00 	.word	0x440a0d00
+ 704:	2e656e6f 	.word	0x2e656e6f
+ 708:	0a0d      	.short	0x0a0d
+ 70a:	00          	.byte	0x00
+
+0000070b <stm32f_otg_fs_ep0_mpsiz_lut>:
+ 70b:	40 20 10 08                                         @ ..

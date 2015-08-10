@@ -49,11 +49,10 @@ static void reset(void)
 static void delay(unsigned int msec)
 {
 	while (msec > 0) {
-		if (CM3_SYSTICK->ctrl & SYSTICK_CTRL_COUNTFLAG)
+		if (CM3_SYSTICK->csr & SYSTICK_CSR_COUNTFLAG)
 			msec--;
 	}
 }
-
 
 #ifndef ENABLE_XMODEM_CKS
 #define ENABLE_XMODEM_CKS 1
@@ -278,14 +277,38 @@ timeout:
 	return ret;
 }
 
+struct magic_rec {
+	uint32_t * addr;
+	uint32_t mask;
+	uint32_t comp;
+};
+
+struct magic {
+	uint32_t cnt;
+	struct magic_rec rec[];
+};
+
+#define MAGIC_REC_MAX 8
+
 int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs, 
-												  unsigned int blk_size)
+												  unsigned int blk_size,
+												  struct magic * magic)
 {
+	struct magic_rec rec[MAGIC_REC_MAX];
 	struct xmodem_rcv rx;
+	int magic_cnt = 0;
 	unsigned int cnt;
 	uint32_t offs;
 	int ret;
-	
+	int i;
+
+	if (magic != 0) {
+		magic_cnt = magic->cnt > MAGIC_REC_MAX ? 
+			MAGIC_REC_MAX : magic->cnt;
+		for (i = 0; i < magic_cnt; ++i)
+			rec[i] = magic->rec[i];
+	}
+
 	flash_unlock();
 
 	do {
@@ -323,12 +346,22 @@ int __attribute__((section (".init"))) usb_xflash(uint32_t blk_offs,
 
 				ret = usb_xmodem_rcv_pkt(&rx);
 			} 
+		}
 
+		if (ret >= 0) {
+			for (i = 0; i < magic_cnt; ++i) {
+				uint32_t data = *rec[i].addr;
+				if ((data & rec[i].mask) != rec[i].comp) {
+					ret = -1;
+					usb_send(CDC_TX_EP, "\r\nInvalid!", 10);
+					break;
+				}
+			}	
 		}
 
 	} while ((ret < 0) || (cnt == 0));
 
-	usb_send(CDC_TX_EP, "\r\nDone.", 7);
+	usb_send(CDC_TX_EP, "\r\nDone.\r\n", 9);
 
 	usb_drain(CDC_TX_EP);
 

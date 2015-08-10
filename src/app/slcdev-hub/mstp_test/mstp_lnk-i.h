@@ -35,6 +35,14 @@
 #include <stdbool.h>
 #include <thinkos.h>
 
+#ifndef MSTP_LNK_POOL_SIZE
+#define MSTP_LNK_POOL_SIZE 1
+#endif
+
+#ifndef MSTP_LNK_MAX_MASTERS
+#define MSTP_LNK_MAX_MASTERS 31
+#endif
+
 struct mstp_hdr {
 	uint16_t preamble;
 	uint8_t type;
@@ -57,17 +65,15 @@ struct mstp_lnk {
 						allocated from a resource pool */
 	volatile uint8_t state; 
 	bool sole_master;
-	uint8_t ts; /* this station address */
+	uint8_t addr; /* this station address */
 	struct serial_dev * dev;
 	struct {
-		union {
-			uint8_t buf[MSTP_LNK_MTU];
-			struct {
-				struct mstp_hdr hdr;
-				uint8_t pdu[MSTP_LNK_PDU_MAX];
-			};
+		uint8_t buf[MSTP_LNK_MTU];
+		struct {
+			volatile uint16_t pdu_len;
+			struct mstp_frame_inf inf;
+			uint8_t pdu[MSTP_LNK_PDU_MAX];
 		};
-		volatile uint16_t pdu_len;
 		unsigned int off;
 		unsigned int cnt;
 		int flag;
@@ -81,6 +87,11 @@ struct mstp_lnk {
 		uint8_t pdu[MSTP_LNK_PDU_MAX];
 		int flag;
 	} tx;
+	struct {
+		void (* callback)(struct mstp_lnk * lnk, unsigned int ev);
+		uint32_t netmap[(MSTP_LNK_MAX_MASTERS + 31) / 32];
+	} mgmt;
+	struct mstp_lnk_stat stat;
 };
 
 /* MSTP Connection State Machine states */

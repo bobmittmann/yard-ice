@@ -62,7 +62,7 @@
 #endif
 
 #ifndef SERIAL_RX_FIFO_LEN
-#define SERIAL_RX_FIFO_LEN  16
+#define SERIAL_RX_FIFO_LEN  64
 #endif
 
 #ifndef SERIAL_RX_TRIG_LVL
@@ -131,6 +131,8 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 
 
 void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv);
+
+void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv);
 
 int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv, 
 					   unsigned int baudrate, unsigned int flags,

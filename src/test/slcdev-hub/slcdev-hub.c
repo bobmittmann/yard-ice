@@ -62,26 +62,41 @@ void __attribute__((noreturn)) watchdog_task(void)
 FILE * monitor_stream;
 bool monitor_auto_flush;
 
+const char * const trace_lvl_tab[] = {
+		"   NONE",
+		"  ERROR",
+		"WARNING",
+		"   INFO",
+		"  DEBUG"
+};
+
 void __attribute__((noreturn)) monitor_task(void)
 {
-	int opt;
+	struct trace_entry ent;
+	struct timeval tv;
+	char s[80];
 
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+	INF("<%d> started...", thinkos_thread_self());
+
+	trace_tail(&ent);
 
 	for (;;) {
 		thinkos_sleep(250);
 
-		if (monitor_auto_flush)
-			opt = TRACE_FLUSH;      
-		else
-			opt = 0;
+		/* fall back to stdout */
+		monitor_stream = stdout;
 
-		if (trace_fprint(monitor_stream, opt) < 0) {
-			/* fall back to stdout */
-			monitor_stream = stdout;
+		while (trace_getnext(&ent, s, sizeof(s)) >= 0) {
+			trace_ts2time(&tv, ent.dt);
+			fprintf(monitor_stream, "%s %2d.%06d: %s\n", 
+				   trace_lvl_tab[ent.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec, s);
 		}
+
+		trace_flush(&ent);
 	}
 }
+
 
 uint32_t __attribute__((aligned(8))) monitor_stack[512];
 
@@ -113,13 +128,13 @@ const struct file stm32_uart_file = {
 
 void stdio_init(void)
 {
-	struct serial_dev * console;
+	struct serial_dev * ser5;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
 
-	console = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	f_raw = serial_fopen(console);
+	ser5 = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(ser5);
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
@@ -134,9 +149,10 @@ void __attribute__((noreturn)) console_shell_task(void)
 {
 	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
 
-//	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
-
+	DBG("<%d> started...", thinkos_thread_self());
+	
 	for (;;) {
+		printf("\n...\n");
 		stdio_shell();
 	}
 }

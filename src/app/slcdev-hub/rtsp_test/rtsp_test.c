@@ -163,8 +163,9 @@ void __attribute__((noreturn)) supervisor_task(void)
 	for (;;) {
 		thinkos_sleep(250);
 
+		/* Flush the trace ring */
 		while (trace_getnext(&ent, s, sizeof(s)) >= 0) {
-			trace_ts2time(&tv, ent.dt);
+			trace_ts2timeval(&tv, ent.dt);
 			printf("%s %2d.%06d: %s\n", trace_lvl_tab[ent.ref->lvl],
 					(int)tv.tv_sec, (int)tv.tv_usec, s);
 		}

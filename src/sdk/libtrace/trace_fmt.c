@@ -216,7 +216,7 @@ print_buf:
 				for (i = 0; (i < r) && (cnt < max); ++i, ++cnt)
 					s[cnt] = ' ';
 			}
-			cnt += r;
+//			cnt += r;
 		}
 
 		if (flags & SIGN) {

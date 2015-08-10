@@ -32,7 +32,7 @@ void ice_trace_init(void)
 		__attribute__ ((section(".dccdata"))) = __FILE__;
 	static const char _m[] 
 		__attribute__ ((section(".dccdata"))) = "starting DCC LOG...\000";
-	static const struct trace_entry 
+	static const struct dcc_trace_entry 
 		__attribute__((section(".dcclog"))) 
 		log_entry = { 
 			__f, 
@@ -47,5 +47,5 @@ void ice_trace_init(void)
 	ice_comm_w32((uint32_t)&log_entry);
 }
 
-void dcclog_init(const struct trace_entry * __entry) 
+void dcclog_init(const struct dcc_trace_entry * __entry) 
 	__attribute__ ((weak, alias ("ice_trace_init")));

@@ -28,11 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
 #include <sys/param.h>
-
-#include <sys/dcclog.h>
-
+#include <trace.h>
 
 /* -------------------------------------------------------------------------
  * 10 DATA LINK/PHYSICAL LAYERS: POINT-TO-POINT (MSTP)
@@ -40,8 +37,7 @@
 
 
 #define N_MAX_INFO_FRAMES 1
-//#define N_MAX_MASTER 127
-#define N_MAX_MASTER 31
+#define N_MAX_MASTER MSTP_LNK_MAX_MASTERS
 #define N_POLL 50
 #define N_RETRY_TOKEN 1
 #define N_MIN_OCTETS 4
@@ -67,10 +63,143 @@
 #define MSTP_HDR_CRC_ERROR    -2
 #define MSTP_DATA_CRC_ERROR   -3
 
-static int mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
+int __mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
+{
+	int off = lnk->rx.off;
+	int cnt = lnk->rx.cnt;
+	uint8_t * buf = lnk->rx.buf;
+	unsigned int type;
+	unsigned int daddr;
+	uint8_t * cp;
+	uint8_t crc;
+	int len;
+
+	/* move remaining octets to the beginning of the buffer */
+	if (off) {
+		INF("shift off=%d cnt=%d", off, cnt);
+		cnt = cnt - off;
+		if (cnt > 0)
+			memcpy(buf, &buf[off], cnt);
+	} else
+		cnt = 0;
+
+	off = 0;
+	cp = &buf[cnt];
+
+	/* receive a packet header */
+	while (cnt < 8) {
+		int n;
+		int rem = MSTP_LNK_MTU - cnt;
+
+		if ((n = serial_recv(lnk->dev, cp, rem, tmo)) <= 0) {
+			INF("serial_recv=%d", n);
+			lnk->rx.off = 0;
+			lnk->rx.cnt = 0;
+			return MSTP_TIMEOUT;
+		}
+
+		cnt += n;
+		cp += n;
+	}
+
+	if (buf[0] != 0x55) {
+		WARN("frame error 1");
+		lnk->rx.off = 1;
+		lnk->rx.cnt = cnt;
+		lnk->stat.rx_err++;
+		return MSTP_HDR_SYNC_ERROR;
+	}
+
+	if (buf[1] != 0xff) {
+		WARN("frame error 2");
+		lnk->rx.off = 2;
+		lnk->rx.cnt = cnt;
+		lnk->stat.rx_err++;
+		return MSTP_HDR_SYNC_ERROR;
+	}
+
+	crc = ~mstp_crc8(0xff, &buf[2], 5);
+
+	if (buf[7] != crc) {
+		WARN("CRC error: %02x != %02x", buf[7], crc);
+		lnk->rx.off = 2;
+		lnk->rx.cnt = cnt;
+		lnk->stat.rx_err++;
+		return MSTP_HDR_CRC_ERROR;
+	}
+
+	len = (buf[5] << 8) + buf[6];
+	INF("cnt=%d len=%d", cnt, len);
+
+	if (len > 0) {
+		uint16_t crc;
+		uint16_t chk;
+
+		/* receive the frame data */
+		while (cnt < len + 10) {
+			int rem = MSTP_LNK_MTU - cnt;
+			int n;
+
+			n = serial_recv(lnk->dev, cp, rem, tmo);
+			if (n <= 0) {
+				WARN("serdrv_recv=%d", n);
+				lnk->rx.off = 0;
+				lnk->rx.cnt = 0;
+				return MSTP_TIMEOUT;
+			}
+
+			cnt += n;
+			cp += n;
+		}
+
+		chk = (buf[len + 9] << 8) + buf[len + 8];
+		crc = ~mstp_crc16(0xffff, &buf[8], len);
+		if (crc != chk) {
+			WARN("Data CRC error %04x != %04x", crc, chk);
+			lnk->rx.off = 0;
+			lnk->rx.cnt = 0;
+			lnk->stat.rx_err++;
+			return MSTP_DATA_CRC_ERROR;
+		}
+		off = len + 10;
+	} else {
+		off = 8;
+	}
+
+	lnk->rx.off = off;
+	lnk->rx.cnt = cnt;
+
+	type = buf[2];
+	daddr = buf[3];
+
+	switch (type) {
+	case FRM_TOKEN:
+		lnk->stat.rx_token++;
+		break;
+	case FRM_POLL_FOR_MASTER:
+	case FRM_REPLY_POLL_FOR_MASTER:
+	case FRM_TEST_REQUEST:
+	case FRM_TEST_RESPONSE:
+	case FRM_REPLY_POSTPONED:
+		lnk->stat.rx_mgmt++;
+		break;
+	default:
+		if (daddr == MSTP_ADDR_BCAST)
+			lnk->stat.rx_bcast++;
+		else
+			lnk->stat.rx_unicast++;
+		break;
+	}
+
+	return MSTP_RCVD_VALID_FRAME; /* Frame Type */
+}
+
+int mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
 {
 	uint8_t * buf = lnk->rx.buf;
 	unsigned int crc;
+	unsigned int type;
+	unsigned int daddr;
 	int pdu_len;
 	int cnt;
 
@@ -79,14 +208,16 @@ static int mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
 	}
 
 	if (buf[0] != 0x55) {
-		DCC_LOG(LOG_WARNING, "frame error 1");
+		WARN("frame error 1");
 		lnk->rx.off = 0; 
+		lnk->stat.rx_err++;
 		return MSTP_HDR_SYNC_ERROR;
 	}
 
 	if (buf[1] != 0xff) {
-		DCC_LOG(LOG_WARNING, "frame error 2");
+		WARN("frame error 2");
 		lnk->rx.off = 0; 
+		lnk->stat.rx_err++;
 		return MSTP_HDR_SYNC_ERROR;
 	}
 
@@ -97,54 +228,49 @@ static int mstp_frame_recv(struct mstp_lnk * lnk, unsigned int tmo)
 	crc = ~__mstp_crc8(crc, buf[6]);
 
 	if (buf[7] != (crc & 0xff)) {
-		DCC_LOG2(LOG_WARNING, "CRC error: %02x != %02x", buf[7], crc);
+		WARN("CRC error: %02x != %02x", buf[7], crc);
 		lnk->rx.off = 0; 
+		lnk->stat.rx_err++;
 		return MSTP_HDR_CRC_ERROR;
 	}
 
 	pdu_len = (buf[5] << 8) + buf[6];
-	DCC_LOG2(LOG_INFO, "cnt=%d pdu_len=%d", cnt, pdu_len);
+//	INF("cnt=%d pdu_len=%d", cnt, pdu_len);
 
 	if (pdu_len > 0) {
 		unsigned int chk;
 		chk = (buf[pdu_len + 9] << 8) + buf[pdu_len + 8];
 		crc = (~mstp_crc16(0xffff, &buf[8], pdu_len)) & 0xffff;
 		if (crc != chk) {
-			DCC_LOG2(LOG_WARNING, "Data CRC error %04x != %04x", crc, chk);
-			lnk->rx.off = 8; 
+			WARN("Data CRC error %04x != %04x", crc, chk);
+			lnk->rx.off = 8;
+			lnk->stat.rx_err++;
 			return MSTP_DATA_CRC_ERROR;
 		}
-		lnk->rx.pdu_len = pdu_len;
-		lnk->rx.off = pdu_len + 8;
+		lnk->rx.off = pdu_len + 10;
 	} else {
-		lnk->rx.pdu_len = 0;
 		lnk->rx.off = 8;
 	}
 
-	switch (buf[2]) {
+	type = buf[2];
+	daddr = buf[3];
+
+	switch (type) {
 	case FRM_TOKEN:
-		DCC_LOG(LOG_INFO, "Token");
+		lnk->stat.rx_token++;
 		break;
 	case FRM_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_INFO, "Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_REPLY_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_TRACE, "Reply Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_TEST_REQUEST:
-		DCC_LOG(LOG_TRACE, "Test Request");
-		break;
 	case FRM_TEST_RESPONSE:
-		DCC_LOG(LOG_TRACE, "Test Response");
-		break;
-	case FRM_BACNET_DATA_XPCT_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Expecting Reply");
-		break;
-	case FRM_BACNET_DATA_NO_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Not Expecting Reply");
-		break;
 	case FRM_REPLY_POSTPONED:
-		DCC_LOG(LOG_TRACE, "Reply Postponed");
+		lnk->stat.rx_mgmt++;
+		break;
+	default:
+		if (daddr == MSTP_ADDR_BCAST)
+			lnk->stat.rx_bcast++;
+		else
+			lnk->stat.rx_unicast++;
 		break;
 	}
 
@@ -177,6 +303,8 @@ static int mstp_frame_send(struct mstp_lnk * lnk, unsigned int route,
 {
 	uint8_t * buf = lnk->tx.buf;
 	unsigned int crc;
+	unsigned int type;
+	unsigned int daddr;
 	int cnt;
 	int i;
 
@@ -204,37 +332,32 @@ static int mstp_frame_send(struct mstp_lnk * lnk, unsigned int route,
 		cp[i++] = (crc & 0xff);
 		cp[i++] = (crc >> 8) & 0xff;
 
-		cnt = len + 8;
+		cnt = len + 10;
 	} else {
 		buf[8] = 0xff;
 		buf[9] = 0xff;
 		cnt = 8;
 	}
 
-	switch (buf[2]) {
+	type = buf[2];
+	daddr = buf[3];
+
+	switch (type) {
 	case FRM_TOKEN:
-		DCC_LOG(LOG_TRACE, "Token");
+		lnk->stat.tx_token++;
 		break;
 	case FRM_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_TRACE, "Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_REPLY_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_TRACE, "Reply Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_TEST_REQUEST:
-		DCC_LOG(LOG_TRACE, "Test Request");
-		break;
 	case FRM_TEST_RESPONSE:
-		DCC_LOG(LOG_TRACE, "Test Response");
-		break;
-	case FRM_BACNET_DATA_XPCT_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Expecting Reply");
-		break;
-	case FRM_BACNET_DATA_NO_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Not Expecting Reply");
-		break;
 	case FRM_REPLY_POSTPONED:
-		DCC_LOG(LOG_TRACE, "Reply Postponed");
+		lnk->stat.tx_mgmt++;
+		break;
+	default:
+		if (daddr == MSTP_ADDR_BCAST)
+			lnk->stat.tx_bcast++;
+		else
+			lnk->stat.tx_unicast++;
 		break;
 	}
 
@@ -245,6 +368,8 @@ static int mstp_fast_send(struct mstp_lnk * lnk, unsigned int route)
 {
 	uint8_t * buf = lnk->tx.token;
 	unsigned int crc;
+	unsigned int type;
+	unsigned int daddr;
 
 	/* encode token */
 	buf[2] = ROUTE_FRM_TYPE(route);
@@ -256,30 +381,25 @@ static int mstp_fast_send(struct mstp_lnk * lnk, unsigned int route)
 	crc = __mstp_crc8(crc, 0);
 	buf[7] = ~__mstp_crc8(crc, 0);
 
-	switch (buf[2]) {
+	type = buf[2];
+	daddr = buf[3];
+
+	switch (type) {
 	case FRM_TOKEN:
-		DCC_LOG(LOG_TRACE, "Token");
+		lnk->stat.tx_token++;
 		break;
 	case FRM_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_TRACE, "Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_REPLY_POLL_FOR_MASTER:
-		DCC_LOG2(LOG_TRACE, "Reply Poll For Master (%d, %d)", buf[3], buf[4]);
-		break;
 	case FRM_TEST_REQUEST:
-		DCC_LOG(LOG_TRACE, "Test Request");
-		break;
 	case FRM_TEST_RESPONSE:
-		DCC_LOG(LOG_TRACE, "Test Response");
-		break;
-	case FRM_BACNET_DATA_XPCT_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Expecting Reply");
-		break;
-	case FRM_BACNET_DATA_NO_REPLY:
-		DCC_LOG(LOG_TRACE, "BACnet Data Not Expecting Reply");
-		break;
 	case FRM_REPLY_POSTPONED:
-		DCC_LOG(LOG_TRACE, "Reply Postponed");
+		lnk->stat.tx_mgmt++;
+		break;
+	default:
+		if (daddr == MSTP_ADDR_BCAST)
+			lnk->stat.tx_bcast++;
+		else
+			lnk->stat.tx_unicast++;
 		break;
 	}
 
@@ -312,6 +432,7 @@ void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 	int retry_count;
 	int event_count;
 	int token_count; 
+	int ts; /* This station */
 	int ns; /* Next Station */
 	int ps; /* Poll Station */
 	uint32_t silence_clk;
@@ -322,7 +443,7 @@ void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 		[MSTP_INITIALIZE] = 100,
 		[MSTP_IDLE] = T_NO_TOKEN,
 		[MSTP_ANSWER_DATA_REQUEST] = T_REPLY_DELAY,
-		[MSTP_NO_TOKEN] = (T_NO_TOKEN + T_SLOT * lnk->ts),
+		[MSTP_NO_TOKEN] = (T_NO_TOKEN + T_SLOT * lnk->addr),
 		[MSTP_POLL_FOR_MASTER] = T_USAGE_TIMEOUT,
 		[MSTP_PASS_TOKEN] = T_USAGE_TIMEOUT,
 		[MSTP_USE_TOKEN] = 5,
@@ -342,7 +463,8 @@ void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 	   when this node first receives the token), set SoleMaster to FALSE, 
 	   set ReceivedValidFrame and ReceivedInvalidFrame to FALSE, and enter 
 	   the IDLE state.a */
-	ns = lnk->ts;
+	ts = lnk->addr;
+	ns = ts;
 	ps = ns;
 	lnk->sole_master = false;
 	rcvd_valid_frm = false;
@@ -360,7 +482,7 @@ void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 	lnk->tx.token[1] = 0xff;
 	lnk->tx.token[2] = 0;
 	lnk->tx.token[3] = 0;
-	lnk->tx.token[4] = lnk->ts;
+	lnk->tx.token[4] = ts;
 	lnk->tx.token[5] = 0;
 	lnk->tx.token[6] = 0;
 
@@ -376,27 +498,29 @@ void __attribute__((noreturn)) mstp_lnk_loop(struct mstp_lnk * lnk)
 
 	/* prepare for DMA transfer */
 	if (serial_dma_prepare(lnk->dev, lnk->rx.buf, MSTP_LNK_MTU) < 0) {
-		DCC_LOG(LOG_WARNING, "DMA transfer not supported!");
+		WARN("DMA transfer not supported!");
 		/* set the trigger level above the MTU, this
 		   will force the serial driver to notify the lower layer
 		   when the channel is idle. */
 		serial_rx_trig_set(lnk->dev, MSTP_LNK_MTU + 1);
 	} else {
-		DCC_LOG(LOG_WARNING, "Using DMA transfer!");
+		WARN("Using DMA transfer!");
 	}
 
-	DCC_LOG1(LOG_TRACE, "%6d:[INITIALIZE]  --> [IDLE]", clk);
+	DBG("[INITIALIZE]  --> [IDLE]");
 	RESET_SILENCE_TIMER();
 
 again:
 	/* XXX: find the clock about to expire sooner  */
 	dt = silence_clk - clk + timer_ms[lnk->state];
-	DCC_LOG3(LOG_INFO, "state=%s tmr=%d dt=%d", state_nm[lnk->state],
+/*
+	INF("state=%s tmr=%d dt=%d", state_nm[lnk->state],
 			 timer_ms[lnk->state], dt);
 	if (dt <= 0) {
-		DCC_LOG3(LOG_INFO, "state=%s tmr=%d dt=%d", state_nm[lnk->state],
+		INF("state=%s tmr=%d dt=%d", state_nm[lnk->state],
 			 timer_ms[lnk->state], dt);
 	}
+*/
 	ret = mstp_frame_recv(lnk, dt);
 	event_count += lnk->rx.off;
 	clk = thinkos_clock();
@@ -404,9 +528,9 @@ again:
 	switch (ret) {
 	case MSTP_RCVD_VALID_FRAME:
 		rcvd_valid_frm = true;
-		frm_type = lnk->rx.hdr.type;
-		dst_addr = lnk->rx.hdr.daddr;
-		src_addr = lnk->rx.hdr.saddr;
+		frm_type = lnk->rx.buf[2];
+		dst_addr = lnk->rx.buf[3];
+		src_addr = lnk->rx.buf[4];
 		RESET_SILENCE_TIMER();
 		break;
 
@@ -428,66 +552,82 @@ transition_now:
 		if (SILENCE_TIMER() >= T_NO_TOKEN) {
 			event_count = 0; /* Addendum 135-2004d-8 */
 			lnk->state = MSTP_NO_TOKEN;
-			DCC_LOG1(LOG_TRACE, "%6d:[IDLE] LostToken --> [NO_TOKEN]", 
-					 thinkos_clock());
+			DBG("[IDLE] LostToken --> [NO_TOKEN]");
 			rcvd_invalid_frm = false;
 			rcvd_valid_frm = false;
+			lnk->stat.token_lost++;
+			lnk->mgmt.callback(lnk, MSTP_EV_TOKEN_LOST);
 			goto transition_now;
 		} if (rcvd_invalid_frm) {
 			rcvd_invalid_frm = false;
-			DCC_LOG1(LOG_TRACE, "%6d:[IDLE] ReceivedInvalidFrame --> [IDLE]", 
-					thinkos_clock());
+			DBG("[IDLE] ReceivedInvalidFrame --> [IDLE]");
 		} if (rcvd_valid_frm) {
-			if (dst_addr == lnk->ts || dst_addr == MSTP_ADDR_BCAST) {
+			if (dst_addr == ts || dst_addr == MSTP_ADDR_BCAST) {
 				switch (frm_type) {
 				case FRM_TOKEN:
 				case FRM_REPLY_POLL_FOR_MASTER:
 					if (dst_addr == MSTP_ADDR_BCAST) {
-						DCC_LOG(LOG_ERROR, "FRM_TOKEN, dst_addr==MSTP_ADDR_BCAST");
+						ERR("FRM_TOKEN, dst_addr==MSTP_ADDR_BCAST");
 						break;
 					}
 					rcvd_valid_frm = false;
 					frame_count = 0;
-					lnk->sole_master = false;
+					if (lnk->sole_master) {
+						lnk->mgmt.callback(lnk, MSTP_EV_MULTIMASTER);
+						lnk->sole_master = false;
+					}
 					lnk->state = MSTP_USE_TOKEN;
-					DCC_LOG1(LOG_TRACE, "%6d:[IDLE] ReceivedToken"
-							 " --> [USE_TOKEN]", thinkos_clock());
+					DBG("[IDLE] ReceivedToken --> [USE_TOKEN]");
 					goto transition_now;
 				case FRM_POLL_FOR_MASTER:
 					mstp_fast_send(lnk, REPLY_POLL_FOR_MASTER(src_addr, 
 															  dst_addr));
 					RESET_SILENCE_TIMER();
-					DCC_LOG1(LOG_TRACE, "%6d:[IDLE] ReceivedPFM --> [IDLE]", 
-							thinkos_clock());
+					DBG("[IDLE] ReceivedPFM --> [IDLE]");
 					break;
 
 				case FRM_BACNET_DATA_NO_REPLY:
 				case FRM_TEST_RESPONSE:
 				case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
+					lnk->rx.inf.type = frm_type;
+					lnk->rx.inf.saddr = src_addr;
+					lnk->rx.inf.daddr = dst_addr;
+					lnk->rx.pdu_len = lnk->rx.off - 10;
+					memcpy(lnk->rx.pdu, &lnk->rx.buf[8], lnk->rx.pdu_len);
 					thinkos_flag_give(lnk->rx.flag);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
-					DCC_LOG(LOG_TRACE, "[IDLE] ReceivedDataNoReply --> [IDLE]");
+					DBG("[IDLE] ReceivedDataNoReply --> [IDLE]");
 					break;
 				case FRM_BACNET_DATA_XPCT_REPLY:
 				case FRM_TEST_REQUEST:
 				case FRM_DATA_XPCT_REPLY ... (FRM_DATA_XPCT_REPLY + 0x3f):
+					lnk->rx.inf.type = frm_type;
+					lnk->rx.inf.saddr = src_addr;
+					lnk->rx.inf.daddr = dst_addr;
+					lnk->rx.pdu_len = lnk->rx.off - 10;
+					memcpy(lnk->rx.pdu, &lnk->rx.buf[8], lnk->rx.pdu_len);
 					thinkos_flag_give(lnk->rx.flag);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 					if (dst_addr == MSTP_ADDR_BCAST) {
 						lnk->state = MSTP_ANSWER_DATA_REQUEST;
-						DCC_LOG(LOG_TRACE, "[IDLE] ReceivedDataNeedingReply"
+						DBG("[IDLE] ReceivedDataNeedingReply"
 								" --> [ANSWER_DATA_REQUEST]");
 					}
 					break;
 				default:
 					rcvd_valid_frm = false;
-					DCC_LOG(LOG_TRACE, "[IDLE] ReceivedUnwantedFrame"
+					DBG("[IDLE] ReceivedUnwantedFrame"
 							" --> [IDLE]");
 					break;
 				}
 			} else {
-				DCC_LOG1(LOG_TRACE, "%6d:[IDLE] NotForMe --> [IDLE]", 
-						 thinkos_clock());
+				DBG("[IDLE] NotForMe --> [IDLE]");
+				if (frm_type == FRM_REPLY_POLL_FOR_MASTER) {
+					int i = src_addr / 32;
+					int j = src_addr % 32;
+					/* keep track of other masters */
+					lnk->mgmt.netmap[i] |= 1 << j;
+				}
 			}
 			/* For DATA_EXPECTING_REPLY, we will keep the Rx Frame for
 			   reference, and the flag will be cleared in the next state */
@@ -501,13 +641,13 @@ transition_now:
 			/* no data frame awaiting transmission */
 			frame_count = N_MAX_INFO_FRAMES;
 			lnk->state = MSTP_DONE_WITH_TOKEN;
-			DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] NothingToSend"
-					" --> [DONE_WITH_TOKEN]", thinkos_clock());
+			DBG("[USE_TOKEN] NothingToSend"
+					" --> [DONE_WITH_TOKEN]");
 			goto transition_now;
 		} else {
 			frm_type = lnk->tx.frm_type;
 			dst_addr = lnk->tx.dst_addr;
-			mstp_frame_send(lnk, FRAME(frm_type, dst_addr, lnk->ts),
+			mstp_frame_send(lnk, FRAME(frm_type, dst_addr, ts),
 							lnk->tx.pdu, lnk->tx.pdu_len);
 			RESET_SILENCE_TIMER();
 			lnk->tx.pdu_len = 0;
@@ -518,26 +658,26 @@ transition_now:
 			case FRM_DATA_XPCT_REPLY ... (FRM_DATA_XPCT_REPLY + 0x3f):
 				if (dst_addr == MSTP_ADDR_BCAST)  {
 					lnk->state = MSTP_DONE_WITH_TOKEN;
-					DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendNoWait"
-							" --> [DONE_WITH_TOKEN]", thinkos_clock());
+					DBG("[USE_TOKEN] SendNoWait"
+							" --> [DONE_WITH_TOKEN]");
 				} else {
 					lnk->state = MSTP_WAIT_FOR_REPLY;
-					DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendAndWait"
-							" --> [WAIT_FOR_REPLY]", thinkos_clock());
+					DBG("[USE_TOKEN] SendAndWait"
+							" --> [WAIT_FOR_REPLY]");
 				}
 				break;
 			case FRM_TEST_REQUEST: 
 				lnk->state = MSTP_WAIT_FOR_REPLY;
-				DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendAndWait"
-						" --> [WAIT_FOR_REPLY]", thinkos_clock());
+				DBG("[USE_TOKEN] SendAndWait"
+						" --> [WAIT_FOR_REPLY]");
 				break;
 			case FRM_TEST_RESPONSE:
 			case FRM_BACNET_DATA_NO_REPLY:
 			case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
 			default:
 				lnk->state = MSTP_DONE_WITH_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[USE_TOKEN] SendNoWait"
-						" --> [DONE_WITH_TOKEN]", thinkos_clock());
+				DBG("[USE_TOKEN] SendNoWait"
+						" --> [DONE_WITH_TOKEN]");
 				break;
 			}
 		}
@@ -547,42 +687,47 @@ transition_now:
 		if (SILENCE_TIMER() >= T_REPLY_TIMEOUT) {
 			frame_count = N_MAX_INFO_FRAMES;
 			lnk->state = MSTP_DONE_WITH_TOKEN;
-			DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY] ReplyTimeout"
+			DBG("[WAIT_FOR_REPLY] ReplyTimeout"
 					" --> [DONE_WITH_TOKEN]");
 			goto transition_now;
 		} else {
 			if (rcvd_invalid_frm == true) {
 				rcvd_invalid_frm = false;
 				lnk->state = MSTP_DONE_WITH_TOKEN;
-				DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY] InvalidFrame"
+				DBG("[WAIT_FOR_REPLY] InvalidFrame"
 						" --> [DONE_WITH_TOKEN]");
 				goto transition_now;
 			} else if (rcvd_valid_frm == true) {
-				if (dst_addr == lnk->ts) {
+				if (dst_addr == ts) {
 					switch (frm_type) {
 					case FRM_REPLY_POSTPONED:
 						lnk->state = MSTP_DONE_WITH_TOKEN;
-						DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY] ReceivedPostponed"
+						DBG("[WAIT_FOR_REPLY] ReceivedPostponed"
 								" --> [DONE_WITH_TOKEN]");
 						break;
 					case FRM_TEST_RESPONSE:
 					case FRM_BACNET_DATA_NO_REPLY:
 					case FRM_DATA_NO_REPLY ... (FRM_DATA_NO_REPLY + 0x3f):
+						lnk->rx.inf.type = frm_type;
+						lnk->rx.inf.saddr = src_addr;
+						lnk->rx.inf.daddr = dst_addr;
+						lnk->rx.pdu_len = lnk->rx.off - 10;
+						memcpy(lnk->rx.pdu, &lnk->rx.buf[8], lnk->rx.pdu_len);
 						thinkos_flag_give(lnk->rx.flag);
 //						bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 						lnk->state = MSTP_DONE_WITH_TOKEN;
-						DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY] ReceivedReply"
+						DBG("[WAIT_FOR_REPLY] ReceivedReply"
 								" --> [DONE_WITH_TOKEN]");
 						break;
 					default:
 						lnk->state = MSTP_IDLE;
-						DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY]"
+						DBG("[WAIT_FOR_REPLY]"
 								" ReceivedUnexpectedFrame --> [IDLE]");
 						break;
 					}
 				} else {
 					lnk->state = MSTP_IDLE;
-					DCC_LOG(LOG_TRACE, "[WAIT_FOR_REPLY]"
+					DBG("[WAIT_FOR_REPLY]"
 							" ReceivedUnexpectedFrame --> [IDLE]");
 				}
 				rcvd_valid_frm = false;
@@ -597,24 +742,24 @@ transition_now:
 		/* SendAnotherFrame */
 		if (frame_count < N_MAX_INFO_FRAMES) {
 			lnk->state = MSTP_USE_TOKEN;
-			DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN] SendAnotherFrame"
-					" --> [USE_TOKEN]", thinkos_clock());
+			DBG("[DONE_WITH_TOKEN] SendAnotherFrame"
+					" --> [USE_TOKEN]");
 			goto transition_now;
-		} else if (lnk->sole_master == false && ns == lnk->ts) {
+		} else if (lnk->sole_master == false && ns == ts) {
 			/* NextStationUnknown - added in Addendum 135-2008v-1 */
 			/*  then the next station to which the token
 				should be sent is unknown - so PollForMaster */
-			ps = (lnk->ts + 1) % (N_MAX_MASTER + 1);
-			mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+			ps = (ts + 1) % (N_MAX_MASTER + 1);
+			mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 			RESET_SILENCE_TIMER();
 			retry_count = 0;
 			lnk->state = MSTP_POLL_FOR_MASTER;
-			DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN]"
+			DBG("[DONE_WITH_TOKEN]"
 					" NextStationUnknown --> [POLL_FOR_MASTER]", 
 					thinkos_clock());
 		} else if (token_count < (N_POLL - 1)) {
 			if (lnk->sole_master == true &&
-				ns != (lnk->ts + 1) % (N_MAX_MASTER + 1)) {
+				ns != (ts + 1) % (N_MAX_MASTER + 1)) {
 				frame_count = 0;
 #if 0
 				token_count++;
@@ -624,53 +769,53 @@ transition_now:
 				token_count = N_POLL;
 #endif
 				lnk->state = MSTP_USE_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN] SoleMaster"
-						" --> [USE_TOKEN]", thinkos_clock());
+				DBG("[DONE_WITH_TOKEN] SoleMaster"
+						" --> [USE_TOKEN]");
 				goto transition_now;
 			} else { 
 				token_count++;
-				mstp_fast_send(lnk, TOKEN(ns, lnk->ts));
+				mstp_fast_send(lnk, TOKEN(ns, ts));
 				RESET_SILENCE_TIMER();
 				retry_count = 0;
 				event_count = 0;
 				lnk->state = MSTP_PASS_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN] SendToken"
-						" --> [PASS_TOKEN]", thinkos_clock());
+				DBG("[DONE_WITH_TOKEN] SendToken"
+						" --> [PASS_TOKEN]");
 			}
 		} else if ((ps + 1) % (N_MAX_MASTER + 1) == ns) {
 			if (lnk->sole_master == true) {
 				ps = (ns + 1) % (N_MAX_MASTER + 1);
-				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 				RESET_SILENCE_TIMER();
-				ns = lnk->ts;
+				ns = ts;
 				retry_count = 0;
 				/* changed in Errata SSPC-135-2004 */
 				token_count = 1;
 				/* event_count = 0; removed in Addendum 135-2004d-8 */
 				lnk->state = MSTP_POLL_FOR_MASTER;
-				DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN]"
+				DBG("[DONE_WITH_TOKEN]"
 						" SoleMasterRestartMaintenancePFM -->"
-						" [POLL_FOR_MASTER]", thinkos_clock());
+						" [POLL_FOR_MASTER]");
 			} else {
-				ps = lnk->ts;
-				mstp_fast_send(lnk, POLL_FOR_MASTER(ns, lnk->ts));
+				ps = ts;
+				mstp_fast_send(lnk, POLL_FOR_MASTER(ns, ts));
 				RESET_SILENCE_TIMER();
 				retry_count = 0;
                 /* changed in Errata SSPC-135-2004 */
 				token_count = 1;
 				event_count = 0;
 				lnk->state = MSTP_PASS_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN] ResetMaintenancePFM"
-						" --> [PASS_TOKEN]", thinkos_clock());
+				DBG("[DONE_WITH_TOKEN] ResetMaintenancePFM"
+						" --> [PASS_TOKEN]");
 			}
 		} else {
 			ps = (ps + 1) % (N_MAX_MASTER + 1);
-			mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+			mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 			RESET_SILENCE_TIMER();
 			retry_count = 0;
 			lnk->state = MSTP_POLL_FOR_MASTER;
-			DCC_LOG1(LOG_TRACE, "%6d:[DONE_WITH_TOKEN] SendMaintenancePFM"
-					" --> [POLL_FOR_MASTER]", thinkos_clock());
+			DBG("[DONE_WITH_TOKEN] SendMaintenancePFM"
+					" --> [POLL_FOR_MASTER]");
 		}
 
 		break;
@@ -680,63 +825,60 @@ transition_now:
 			if (event_count > N_MIN_OCTETS) {
                 /* Enter the IDLE state to process the frame. */
 				lnk->state = MSTP_IDLE;
-				DCC_LOG1(LOG_TRACE, "%6d:[PASS_TOKEN] SawTokenUser"
-						" --> [IDLE]", thinkos_clock());
+				DBG("[PASS_TOKEN] SawTokenUser"
+						" --> [IDLE]");
 				goto transition_now;
 			}
 		} else {
 			if (retry_count < N_RETRY_TOKEN) {
 				retry_count++;
-				mstp_fast_send(lnk, TOKEN(ns, lnk->ts));
+				mstp_fast_send(lnk, TOKEN(ns, ts));
 				RESET_SILENCE_TIMER();
 				event_count = 0;
-				DCC_LOG1(LOG_TRACE, "%6d:[PASS_TOKEN] RetrySendToken"
-						" --> [PASS_TOKEN]", thinkos_clock());
+				DBG("[PASS_TOKEN] RetrySendToken"
+						" --> [PASS_TOKEN]");
 			} else {
 				ps = (ns + 1) % (N_MAX_MASTER + 1);
-				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 				RESET_SILENCE_TIMER();
-				ns = lnk->ts;
+				ns = ts;
 				retry_count = 0;
 				token_count = 0;
 				/* event_count = 0; removed in Addendum 135-2004d-8 */
 				lnk->state = MSTP_POLL_FOR_MASTER;
-				DCC_LOG1(LOG_TRACE, "%6d:[PASS_TOKEN] FindNewSuccessor"
-						" --> [POLL_FOR_MASTER]", thinkos_clock());
+				DBG("[PASS_TOKEN] FindNewSuccessor --> [POLL_FOR_MASTER]");
 			}
 		}
 		break;
 
 	case MSTP_NO_TOKEN:
-		if (SILENCE_TIMER() < (T_NO_TOKEN + T_SLOT * lnk->ts)) {
+		if (SILENCE_TIMER() < (T_NO_TOKEN + T_SLOT * ts)) {
 			if (event_count > N_MIN_OCTETS) {
 				lnk->state = MSTP_IDLE;
-				DCC_LOG1(LOG_TRACE, "%6d:[NO_TOKEN] SawFRame --> [IDLE]", 
-						 thinkos_clock());
+				DBG("[NO_TOKEN] SawFRame --> [IDLE]");
 				goto transition_now;
 			}
-			DCC_LOG1(LOG_TRACE, "(event_count(%d) <= N_MIN_OCTETS!!", 
+			DBG("(event_count(%d) <= N_MIN_OCTETS!!",
 					 event_count);
 		} else {
-			int ns_tmo = T_NO_TOKEN + T_SLOT * (lnk->ts + 1);
-			int mm_tmo = T_NO_TOKEN + T_SLOT * (N_MAX_MASTER  + 1);
+			int32_t ns_tmo = T_NO_TOKEN + T_SLOT * (ts + 1);
+			int32_t mm_tmo = T_NO_TOKEN + T_SLOT * (N_MAX_MASTER  + 1);
 			if (SILENCE_TIMER() < ns_tmo ||
 				SILENCE_TIMER() > mm_tmo) {
-				ps = (lnk->ts + 1) % (N_MAX_MASTER  + 1);
-				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+				ps = (ts + 1) % (N_MAX_MASTER  + 1);
+				mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 				RESET_SILENCE_TIMER();
-				ns = lnk->ts;
+				ns = ts;
 				token_count = 0;
 				/* event_count = 0; removed Addendum 135-2004d-8 */
 				retry_count = 0;
 				lnk->state = MSTP_POLL_FOR_MASTER;
-				DCC_LOG1(LOG_TRACE, "%6d:[NO_TOKEN] GenerateToken "
-						"--> [POLL_FOR_MASTER]", thinkos_clock());
+				DBG("[NO_TOKEN] GenerateToken "
+						"--> [POLL_FOR_MASTER]");
 			} else {
 				if (event_count > N_MIN_OCTETS) {
 					lnk->state = MSTP_IDLE;
-					DCC_LOG1(LOG_TRACE, "%6d:[NO_TOKEN] SawFRame "
-							 "--> [IDLE]", thinkos_clock());
+					DBG("[NO_TOKEN] SawFRame --> [IDLE]");
 					goto transition_now;
 				}
 			}
@@ -748,24 +890,27 @@ transition_now:
 		/* a previously sent Poll For Master frame in order to find  */
 		/* a successor node. */
 		if (rcvd_valid_frm == true) {
-			if (dst_addr == lnk->ts && frm_type == FRM_REPLY_POLL_FOR_MASTER) { 
-				lnk->sole_master = false;
+			if (dst_addr == ts && frm_type == FRM_REPLY_POLL_FOR_MASTER) {
 				ns = src_addr;
 				event_count = 0;
-				mstp_fast_send(lnk, TOKEN(ns, lnk->ts));
+				mstp_fast_send(lnk, TOKEN(ns, ts));
 				RESET_SILENCE_TIMER();
-				ps = lnk->ts;
+				ps = ts;
 				token_count = 0;
 				retry_count = 0;
 				rcvd_valid_frm = false;
+				if (lnk->sole_master) {
+					lnk->mgmt.callback(lnk, MSTP_EV_MULTIMASTER);
+					lnk->sole_master = false;
+				}
 				lnk->state = MSTP_PASS_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] ReceivedReplyToPFM "
-						"--> [PASS_TOKEN]", thinkos_clock());
+				DBG("[POLL_FOR_MASTER] ReceivedReplyToPFM "
+						"--> [PASS_TOKEN]");
 			} else {
 				rcvd_valid_frm = false;
 				lnk->state = MSTP_IDLE;
-				DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] "
-						 "ReceivedUnexpectedFrame --> [IDLE]", thinkos_clock());
+				DBG("[POLL_FOR_MASTER] "
+						 "ReceivedUnexpectedFrame --> [IDLE]");
 				goto transition_now;
 			}
 		} else if (SILENCE_TIMER() >= T_USAGE_TIMEOUT || 
@@ -773,37 +918,34 @@ transition_now:
 			if (lnk->sole_master == true) {
 				frame_count = 0;
 				lnk->state = MSTP_USE_TOKEN;
-				DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] SoleMaster "
-						"--> [USE_TOKEN]", thinkos_clock());
+				DBG("[POLL_FOR_MASTER] SoleMaster --> [USE_TOKEN]");
 				/* XXX: hack for testing pourposes .... */
 				RESET_SILENCE_TIMER();
 				/* XXX: end of hack. */
 			} else {
-				if (ns != lnk->ts) {
+				if (ns != ts) {
 					event_count = 0;
-					mstp_fast_send(lnk, TOKEN(ns, lnk->ts));
+					mstp_fast_send(lnk, TOKEN(ns, ts));
 					RESET_SILENCE_TIMER();
 					retry_count = 0;
 					lnk->state = MSTP_PASS_TOKEN;
-					DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] DoneWithPFM "
-							"--> [PASS_TOKEN]", thinkos_clock());
+					DBG("[POLL_FOR_MASTER] DoneWithPFM --> [PASS_TOKEN]");
 				} else {
-					if ((ps + 1) % (N_MAX_MASTER + 1) != lnk->ts) {
+					if ((ps + 1) % (N_MAX_MASTER + 1) != ts) {
 						ps = (ps + 1) % (N_MAX_MASTER + 1);
-						mstp_fast_send(lnk, POLL_FOR_MASTER(ps, lnk->ts));
+						mstp_fast_send(lnk, POLL_FOR_MASTER(ps, ts));
 						RESET_SILENCE_TIMER();
 						retry_count = 0;
-						DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] "
-								 "SendNextPFM --> [POLL_FOR_MASTER]", 
-								 thinkos_clock());
+						DBG("[POLL_FOR_MASTER] "
+							 "SendNextPFM --> [POLL_FOR_MASTER]");
 					} else {
 						lnk->sole_master = true;
 						frame_count = 0;
 						rcvd_invalid_frm = false;
 						lnk->state = MSTP_USE_TOKEN;
-						DCC_LOG1(LOG_TRACE, "%6d:[POLL_FOR_MASTER] "
-								 "DeclareSoleMaster --> [USE_TOKEN]", 
-								 thinkos_clock());
+						lnk->mgmt.callback(lnk, MSTP_EV_SOLE_MASTER);
+						DBG("[POLL_FOR_MASTER] "
+								 "DeclareSoleMaster --> [USE_TOKEN]");
 						goto transition_now;
 					}
 				}
@@ -819,19 +961,18 @@ transition_now:
 			 lnk->tx.frm_type == FRM_BACNET_DATA_NO_REPLY || 
 			 (lnk->tx.frm_type >= FRM_DATA_NO_REPLY  &&
 			 lnk->tx.frm_type < (FRM_DATA_NO_REPLY + 0x3f)))) {
-			mstp_frame_send(lnk, FRAME(lnk->tx.frm_type,  
-									   lnk->tx.dst_addr, lnk->ts),
+			mstp_frame_send(lnk, FRAME(lnk->tx.frm_type, lnk->tx.dst_addr, ts),
 							lnk->tx.pdu, lnk->tx.pdu_len);
 			RESET_SILENCE_TIMER();
 			lnk->state = MSTP_IDLE;
-			DCC_LOG(LOG_TRACE, "[ANSWER_DATA_REQUEST] Reply"
+			DBG("[ANSWER_DATA_REQUEST] Reply"
 					"--> IDLE[]");
 			rcvd_valid_frm = false;
 		} else if (SILENCE_TIMER() >= T_REPLY_DELAY) {
-			mstp_fast_send(lnk, REPLY_POSTPONED(src_addr, lnk->ts));
+			mstp_fast_send(lnk, REPLY_POSTPONED(src_addr, ts));
 			RESET_SILENCE_TIMER();
 			lnk->state = MSTP_IDLE;
-			DCC_LOG(LOG_TRACE, "[ANSWER_DATA_REQUEST] DeferredReply"
+			DBG("[ANSWER_DATA_REQUEST] DeferredReply"
 					"--> [IDLE]");
 			rcvd_valid_frm = false;
 		}
@@ -848,7 +989,7 @@ int mstp_lnk_recv(struct mstp_lnk * lnk, void * buf, unsigned int max,
 
 	for(;;) {
 		if (thinkos_flag_take(lnk->rx.flag) < 0) {
-			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
+			ERR("thinkos_flag_take() failed!");
 			abort();
 		}
 
@@ -859,12 +1000,9 @@ int mstp_lnk_recv(struct mstp_lnk * lnk, void * buf, unsigned int max,
 
 	pdu_len = MIN(lnk->rx.pdu_len, max);
 	memcpy(buf, lnk->rx.pdu, pdu_len);
-	inf->type = lnk->rx.hdr.type;
-	inf->saddr = lnk->rx.hdr.saddr;
-	inf->daddr = lnk->rx.hdr.daddr;
+	*inf = lnk->rx.inf;
 
-	DCC_LOG3(LOG_TRACE, "netif=%d, saddr=%d pdu_len=%d...", 
-			 addr->netif, lnk->rx.hdr.saddr, pdu_len);
+	DBG("saddr=%d pdu_len=%d...", lnk->rx.inf.saddr, pdu_len);
 
 	lnk->rx.pdu_len = 0;
 
@@ -884,7 +1022,7 @@ int mstp_lnk_send(struct mstp_lnk * lnk, const void * buf, unsigned int cnt,
 
 	for(;;) {
 		if (thinkos_flag_take(lnk->tx.flag) < 0) {
-			DCC_LOG(LOG_ERROR, "thinkos_flag_take() failed!");
+			ERR("thinkos_flag_take() failed!");
 			abort();
 		}
 
@@ -904,7 +1042,7 @@ int mstp_lnk_send(struct mstp_lnk * lnk, const void * buf, unsigned int cnt,
 
 int mstp_lnk_getaddr(struct mstp_lnk * lnk)
 {
-	return lnk->ts;
+	return lnk->addr;
 }
 
 int mstp_lnk_getbcast(struct mstp_lnk * lnk)
@@ -916,21 +1054,31 @@ int mstp_lnk_getbcast(struct mstp_lnk * lnk)
  * Initialization
  * ------------------------------------------------------------------------- */
 
+static void mstp_lnk_default_callback(struct mstp_lnk * lnk, unsigned int ev)
+{
+}
+
 int mstp_lnk_init(struct mstp_lnk * lnk, const char * name, 
 				  unsigned int addr, struct serial_dev * dev)
 {
 	if (lnk == NULL)
 		return -EINVAL;
 
+	if (addr > N_MAX_MASTER)
+		return -EINVAL;
+
 	lnk->dev = dev;
 	lnk->state = MSTP_INITIALIZE;
-	lnk->ts = addr;
+	lnk->addr = addr;
 
-	DCC_LOG(LOG_TRACE, "[MSTP_INITIALIZE]");
+	DBG("[MSTP_INITIALIZE]");
 	lnk->rx.flag = thinkos_flag_alloc();
 	lnk->tx.flag = thinkos_flag_alloc();
 
-	DCC_LOG2(LOG_TRACE, "tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
+
+	lnk->mgmt.callback = mstp_lnk_default_callback;
+
+	DBG("tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
 
 	return 0;
 }
@@ -940,10 +1088,10 @@ int mstp_lnk_resume(struct mstp_lnk * lnk)
 	if (lnk == NULL)
 		return -EINVAL;
 
-	DCC_LOG(LOG_TRACE, "Starting BACnet MS/TP Data Link");
+	DBG("Starting BACnet MS/TP Data Link");
 
 	lnk->state = MSTP_IDLE;
-	DCC_LOG(LOG_TRACE, "[MSTP_IDLE]");
+	DBG("[MSTP_IDLE]");
 
 	return 0;
 }
@@ -953,21 +1101,82 @@ int mstp_lnk_stop(struct mstp_lnk * lnk)
 	if (lnk == NULL)
 		return -EINVAL;
 
-	DCC_LOG(LOG_TRACE, "Pausing BACnet MS/TP Data Link");
+	DBG("Pausing BACnet MS/TP Data Link");
 
 	lnk->state = MSTP_INITIALIZE;
-	DCC_LOG(LOG_TRACE, "[MSTP_INITIALIZE]");
+	DBG("[MSTP_INITIALIZE]");
 
 	return 0;
+}
+
+int mstp_lnk_mgmt(struct mstp_lnk * lnk,
+		void (*cbk)(struct mstp_lnk *, unsigned int))
+{
+	if (lnk == NULL)
+		return -EINVAL;
+
+	lnk->mgmt.callback = cbk;
+	return 0;
+}
+
+int mstp_lnk_getstat(struct mstp_lnk * lnk, struct mstp_lnk_stat * stat, bool reset)
+{
+	if (lnk == NULL)
+		return -EINVAL;
+
+	if (stat == NULL)
+		return -EINVAL;
+
+	stat->rx_err = lnk->stat.rx_err;
+	stat->rx_err = lnk->stat.rx_token;
+	stat->rx_err = lnk->stat.rx_mgmt;
+	stat->rx_err = lnk->stat.rx_unicast;
+	stat->rx_err = lnk->stat.rx_bcast;
+	stat->rx_err = lnk->stat.tx_token;
+	stat->rx_err = lnk->stat.tx_mgmt;
+	stat->rx_err = lnk->stat.tx_unicast;
+	stat->rx_err = lnk->stat.tx_bcast;
+	stat->token_lost = lnk->stat.token_lost;
+
+	if (reset) {
+		lnk->stat.rx_err = 0;
+		lnk->stat.rx_token = 0;
+		lnk->stat.rx_mgmt = 0;
+		lnk->stat.rx_unicast = 0;
+		lnk->stat.rx_bcast = 0;
+		lnk->stat.tx_token = 0;
+		lnk->stat.tx_mgmt = 0;
+		lnk->stat.tx_unicast = 0;
+		lnk->stat.tx_bcast = 0;
+		lnk->stat.token_lost = 0;
+	}
+
+	return 0;
+}
+
+int mstp_lnk_getnetmap(struct mstp_lnk * lnk, uint8_t map[], unsigned int max)
+{
+	int addr;
+	int cnt;
+
+	if (max > MSTP_LNK_MAX_MASTERS)
+		max = MSTP_LNK_MAX_MASTERS;
+
+	for (addr = 0; addr < MSTP_LNK_MAX_MASTERS; ++addr) {
+		int i = addr / 32;
+		int j = addr % 32;
+		if (lnk->mgmt.netmap[i] & (j << i)) {
+			if (cnt < max)
+				map[cnt++] = addr;
+		}
+	}
+
+	return cnt;
 }
 
 /* -------------------------------------------------------------------------
  * Pool of resources
  * ------------------------------------------------------------------------- */
-
-#ifndef MSTP_LNK_POOL_SIZE
-#define MSTP_LNK_POOL_SIZE 1
-#endif
 
 static struct mstp_lnk mstp_lnk_pool[MSTP_LNK_POOL_SIZE]; 
 

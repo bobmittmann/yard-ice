@@ -73,8 +73,8 @@ sndbuf_t * sndbuf_alloc(void)
 		DCC_LOG2(LOG_ERROR, "failed!, allocs=%d frees=%d",
 				 sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
 
-		tracef("%s(): failed!, allocs=%d frees=%d", 
-			   __func__, sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
+		DBG("failed!, allocs=%d frees=%d", 
+			sndbuf_pool.alloc_cnt, sndbuf_pool.free_cnt);
 	}
 
 	/* critical section exit */

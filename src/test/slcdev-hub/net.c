@@ -113,7 +113,7 @@ int net_pkt_send(const void * buf, int len)
 	pkt = (struct net_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		net.stat.tx.err_cnt++;
 		return -1;
 	}
@@ -151,11 +151,11 @@ void net_pkt_recv(struct net_pkt * pkt, int len)
 	crc = pkt->crc;
 	pkt->crc = 0;
 	if (crc16ccitt(0, pkt, data_len + sizeof(struct net_pkt)) != crc) {
-		tracef("%s(): CRC error!", __func__);
+		DBG("CRC error!");
 		data_len = -1;
 		net.stat.rx.err_cnt++;
 	} else if (data_len != pkt->data_len) {
-		tracef("%s(): invalid data_len=%d!", __func__, data_len);
+		DBG("invalid data_len=%d!", data_len);
 		data_len = -1;
 		net.stat.rx.err_cnt++;
 	} else {
@@ -167,7 +167,7 @@ void net_pkt_recv(struct net_pkt * pkt, int len)
 		
 			n = (int32_t)(pkt->seq - net.rx_seq);
 			if (n > 0) {
-				tracef("%s(): SEQ error: %d pkts lost!", __func__, n);
+				DBG("SEQ error: %d pkts lost!", n);
 				net.stat.rx.seq_err_cnt += n;
 			} 
 			net.rx_seq = pkt->seq;
@@ -199,7 +199,7 @@ void net_probe_recv(char * s, int len)
 	} else {
 		net.probe_seq = 0;
 	}
-	thinkos_flag_set(net.probe_flag);
+	thinkos_flag_give(net.probe_flag);
 }
 
 void net_recv(char * s, int len)
@@ -210,7 +210,7 @@ void net_recv(char * s, int len)
 	s[len] = '\0';
 
 //	tracef("net rx: len=%d", len);
-	tracef("\"%s\"", s);
+	DBG("\"%s\"", s);
 }
 
 void __attribute__((noreturn)) net_recv_task(void)
@@ -220,13 +220,13 @@ void __attribute__((noreturn)) net_recv_task(void)
 
 	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
 
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+	DBG("<%d> started...", thinkos_thread_self());
 
 	for (;;) {
 		pkt = pktbuf_alloc();
 		if (pkt == NULL) {
 			DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-			tracef("%s(): pktbuf_alloc() failed!", __func__);
+			DBG("pktbuf_alloc() failed!");
 			thinkos_sleep(1000);
 			continue;
 		}
@@ -234,13 +234,13 @@ void __attribute__((noreturn)) net_recv_task(void)
 		len = rs485_pkt_receive(&net.link, &pkt, pktbuf_len);
 
 		if (len < 0) {
-			tracef("%s(): rs485_pkt_receive() failed!", __func__);
+			DBG("rs485_pkt_receive() failed!");
 			thinkos_sleep(1000);
 			continue;
 		}
 
 		if (len == 0) {
-			tracef("%s(): rs485_pkt_receive() == 0!", __func__);
+			DBG("rs485_pkt_receive() == 0!");
 			thinkos_sleep(1000);
 			continue;
 		}
@@ -309,8 +309,6 @@ int net_probe(void)
 	stm32_gpio_clr(RS485_MODE);
 	DCC_LOG(LOG_TRACE, "Probe mode.");
 
-	thinkos_flag_clr(net.probe_flag);
-
 	if ((pkt = pktbuf_alloc()) != NULL) {
 		uint32_t seq;
 
@@ -327,7 +325,7 @@ int net_probe(void)
 		pkt = rs485_pkt_drain(&net.link);
 		pktbuf_free(pkt);
 
-		if ((ret = thinkos_flag_timedwait(net.probe_flag, 10)) == 0) {
+		if ((ret = thinkos_flag_timedtake(net.probe_flag, 10)) == 0) {
 			if (seq != net.probe_seq) {
 				DCC_LOG(LOG_WARNING, "probe sequence mismatch!");
 				ret = -1;
@@ -391,13 +389,13 @@ int net_recv(void * buf, int len)
 	pkt = pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		return -1;
 	}
 
 	len = rs485_pkt_receive(&net.link, &pkt, pktbuf_len);
 
-//	tracef("%s(): len=%d\n", __func__, len);
+//	DBG("len=%d\n", len);
 
 	DCC_LOG1(LOG_TRACE, "%d", len);
 
@@ -414,10 +412,11 @@ int net_recv(void * buf, int len)
 
 int net_init(void)
 {
-	tracef("%s():...", __func__);
+	DBG("RS485 network init...");
 
-	if (lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin) < 0) {
-		trace("lattice_ice40_configure() failed!");
+	if (lattice_ice40_configure(ice40lp384_bin, 
+								sizeof_ice40lp384_bin) < 0) {
+		ERR("lattice_ice40_configure() failed!");
 		return -1;
 	}
 
@@ -492,7 +491,7 @@ int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts)
 	pkt = (struct audio_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		return -1;
 	}
 
@@ -509,7 +508,7 @@ int g711_alaw_send(int stream, sndbuf_t * buf, uint32_t ts)
 
 	pkt->crc = crc16ccitt(0, pkt, data_len + sizeof(struct audio_pkt));
 
-//	tracef("%s(): ts=%d data_len=%d", __func__, ts, data_len);
+//	DBG("ts=%d data_len=%d", ts, data_len);
 
 	pkt = rs485_pkt_enqueue(&net.link, pkt, 
 							data_len + sizeof(struct audio_pkt));
@@ -533,19 +532,19 @@ int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 	pkt = (struct audio_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		return -1;
 	}
 
 	len = rs485_pkt_receive(&net.link, (void **)&pkt, pktbuf_len);
 
 	if (len < 0) {
-		tracef("%s(): rs485_pkt_receive() failed!", __func__);
+		DBG("rs485_pkt_receive() failed!");
 		return -1;
 	}
 
 	if (len == 0) {
-		tracef("%s(): rs485_pkt_receive() == 0!", __func__);
+		DBG("rs485_pkt_receive() == 0!");
 		return -1;
 	}
 
@@ -555,7 +554,7 @@ int g711_alaw_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 		pkt->crc = 0;
 		if (crc16ccitt(0, pkt,
 					   data_len + sizeof(struct audio_pkt)) != crc) {
-			tracef("%s(): crc error, data_len=%d!", __func__, data_len);
+			DBG("crc error, data_len=%d!", data_len);
 			data_len = -1;
 		} else {
 			if ((data_len = len - sizeof(struct audio_pkt)) > 0) {
@@ -581,7 +580,7 @@ int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 	pkt = (struct audio_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		return -1;
 	}
 
@@ -593,7 +592,7 @@ int audio_send(int stream, sndbuf_t * buf, uint32_t ts)
 	memcpy(pkt->data, buf->data, data_len);
 	pkt->crc = crc16ccitt(0, pkt, data_len + sizeof(struct audio_pkt));
 
-//	tracef("%s(): ts=%d data_len=%d", __func__, ts, data_len);
+//	DBG("ts=%d data_len=%d", ts, data_len);
 
 	pkt = rs485_pkt_enqueue(&net.link, pkt, 
 							data_len + sizeof(struct audio_pkt));
@@ -616,19 +615,19 @@ int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 	pkt = (struct audio_pkt *)pktbuf_alloc();
 	if (pkt == NULL) {
 		DCC_LOG(LOG_ERROR, "pktbuf_alloc() failed!");
-		tracef("%s(): pktbuf_alloc() failed!\n", __func__);
+		DBG("pktbuf_alloc() failed!\n");
 		return -1;
 	}
 
 	len = rs485_pkt_receive(&net.link, (void **)&pkt, pktbuf_len);
 
 	if (len < 0) {
-		tracef("%s(): rs485_pkt_receive() failed!", __func__);
+		DBG("rs485_pkt_receive() failed!");
 		return -1;
 	}
 
 	if (len == 0) {
-		tracef("%s(): rs485_pkt_receive() == 0!", __func__);
+		DBG("rs485_pkt_receive() == 0!");
 		return -1;
 	}
 
@@ -637,13 +636,13 @@ int audio_recv(int stream, sndbuf_t * buf, uint32_t * ts)
 		crc = pkt->crc;
 		pkt->crc = 0;
 		if (pkt->data_len != data_len) {
-			tracef("%s(): data_len=%d!=%d error!", __func__, 
+			DBG("data_len=%d!=%d error!", 
 				   data_len, pkt->data_len);
 		} else if (crc16ccitt(0, pkt,
 					   data_len + sizeof(struct audio_pkt)) != crc) {
-			tracef("%s(): CRC error, data_len=%d!", __func__, data_len);
+			DBG("CRC error, data_len=%d!", data_len);
 		} else { 
-//			tracef("%s(): ts=%d data_len=%d", __func__, pkt->ts, data_len);
+//			DBG("ts=%d data_len=%d", pkt->ts, data_len);
 			*ts = pkt->ts;
 			memcpy(buf->data, pkt->data, data_len);
 			ret =  data_len / 2;

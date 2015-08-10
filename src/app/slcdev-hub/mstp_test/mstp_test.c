@@ -35,9 +35,9 @@
 
 #include <bacnet/mstp_lnk.h>
 #include <sys/console.h>
+#include <trace.h>
 
 #include "board.h"
-#include "lattice.h"
 
 /* -------------------------------------------------------------------------
  * stdio
@@ -55,6 +55,66 @@ void stdio_init(void)
 }
 
 /* -------------------------------------------------------------------------
+ * System Supervision
+ * ------------------------------------------------------------------------- */
+
+const char * const trace_lvl_tab[] = {
+		"   NONE",
+		"  ERROR",
+		"WARNING",
+		"   INFO",
+		"  DEBUG"
+};
+
+void __attribute__((noreturn)) supervisor_task(void)
+{
+	struct trace_entry trace;
+	uint32_t clk;
+
+	INF("<%d> started...", thinkos_thread_self());
+
+	trace_tail(&trace);
+
+	clk = thinkos_clock();
+	for (;;) {
+		struct timeval tv;
+		char s[80];
+
+		/* 8Hz periodic task */
+		clk += 125;
+		thinkos_alarm(clk);
+
+		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+			trace_ts2timeval(&tv, trace.dt);
+			printf("%s %2d.%06d: %s\n", trace_lvl_tab[trace.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec, s);
+		}
+
+		trace_flush(&trace);
+	}
+}
+
+
+uint32_t supervisor_stack[128];
+
+const struct thinkos_thread_inf supervisor_inf = {
+	.stack_ptr = supervisor_stack,
+	.stack_size = sizeof(supervisor_stack),
+	.priority = 32,
+	.thread_id = 31,
+	.paused = false,
+	.tag = "SUPV"
+};
+
+void supervisor_init(void)
+{
+	trace_init();
+
+	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
+							  &supervisor_inf);
+}
+
+/* -------------------------------------------------------------------------
  * MS/TP 
  * ------------------------------------------------------------------------- */
 
@@ -69,28 +129,22 @@ int mstp_task(void * arg)
 	return 0;
 }
 
-
-extern const uint8_t ice40lp384_bin[];
-extern const unsigned int sizeof_ice40lp384_bin;
-
 struct serial_dev * rs485_init(void)
 {
 	struct serial_dev * ser;
 
     /* IO init */
     stm32_gpio_mode(IO_RS485_RX, ALT_FUNC, PULL_UP);
-    stm32_gpio_af(IO_RS485_RX, GPIO_AF8);
+    stm32_gpio_af(IO_RS485_RX, RS485_USART_AF);
 
     stm32_gpio_mode(IO_RS485_TX, ALT_FUNC, PUSH_PULL | SPEED_MED);
-    stm32_gpio_af(IO_RS485_TX, GPIO_AF8);
+    stm32_gpio_af(IO_RS485_TX, RS485_USART_AF);
 
     stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
     stm32_gpio_set(IO_RS485_MODE);
 
-    lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
-
-	ser = stm32f_uart1_serial_init(500000, SERIAL_8N1);
-//	ser = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
+//	ser = stm32f_uart1_serial_init(500000, SERIAL_8N1);
+	ser = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
 //	ser = stm32f_uart7_serial_init(500000, SERIAL_8N1);
 
 	return ser;
@@ -98,22 +152,24 @@ struct serial_dev * rs485_init(void)
 
 uint32_t mstp_stack[512];
 
+const struct thinkos_thread_inf mstp_inf = {
+	.stack_ptr = mstp_stack,
+	.stack_size = sizeof(mstp_stack),
+	.priority = 8,
+	.thread_id = 1,
+	.paused = 0,
+	.tag = "MS/TP"
+};
+
 struct mstp_lnk * mstp_start(int addr)
 {
-	const struct thinkos_thread_inf mstp_inf = {
-		.stack_ptr = mstp_stack, 
-		.stack_size = sizeof(mstp_stack), 
-		.priority = 8,
-		.thread_id = 1, 
-		.paused = 0,
-		.tag = "MS/TP"
-	};
 	struct serial_dev * ser;
 	struct mstp_lnk * mstp;
 
-
 	printf("1. rs485_init() ...\n");
-	ser = rs485_init();
+	if ((ser = rs485_init()) == NULL) {
+		return NULL;
+	}
 
 	printf("2. mstp_lnk_alloc() ...\n");
 	mstp = mstp_lnk_alloc();
@@ -144,6 +200,20 @@ void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+
+    /* USART5 TX */
+    stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_af(UART5_TX, GPIO_AF8);
+    /* USART5 RX */
+    stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
+    stm32_gpio_af(UART5_RX, GPIO_AF8);
+
+    /* USART6_TX */
+    stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_af(UART6_TX, GPIO_AF7);
+    /* USART6_RX */
+    stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
+    stm32_gpio_af(UART6_RX, GPIO_AF7);
 }
 
 int recv_task(void * arg)
@@ -155,11 +225,12 @@ int recv_task(void * arg)
 
 	printf("receive task started...\n");
 
-	mstp_lnk_loop(mstp);
 	for (;;) {
 		len = mstp_lnk_recv(mstp, pdu, sizeof(pdu), &inf);
-	
-		printf("RCV: %d (%d)..\n", inf.saddr, len);
+		(void)len;
+
+//		printf("RCV: %d->%d (%d) \"%s\"\n", inf.saddr, inf.daddr,
+//				len, (char*)pdu);
 	}
 
 	return 0;
@@ -185,12 +256,25 @@ int main(int argc, char ** argv)
 	int len;
 	int i;
 
+	mstp_addr = *((uint32_t *)STM32F_UID) & 0x1f;
+
 	io_init();
 
 	stdio_init();
 
-	mstp = mstp_start(mstp_addr);
+	supervisor_init();
 
+	INF("Starting MS/TP test");
+
+	stm32f_nvram_env_init();
+
+	if ((mstp = mstp_start(mstp_addr)) == NULL) {
+		thinkos_sleep(1000);
+		return 1;
+	}
+
+//	if (mstp_addr != 10)
+//		recv_task(mstp);
 	thinkos_thread_create_inf(recv_task, mstp, &recv_inf);
 
 	for (i = 0;; ++i) {
@@ -200,9 +284,13 @@ int main(int argc, char ** argv)
 					  "%4d The quick brown fox jumps over the lazy dog.",
 					  i);
 		len++;
-		mstp_lnk_send(mstp, pdu, len, &inf);
+		if (mstp_lnk_send(mstp, pdu, len, &inf) < 0) {
+			printf("mstp_lnk_send() failed!\n");
+		} else {
+//			printf("PDU %d sent.\n", i);
+		}
 	
-		thinkos_sleep(1000);
+		thinkos_sleep(100);
 	}
 
 	return 0;

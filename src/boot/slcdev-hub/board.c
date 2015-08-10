@@ -26,6 +26,7 @@
 #include <gdb.h>
 
 #include "board.h"
+#include "lattice.h"
 
 void io_init(void)
 {
@@ -38,10 +39,25 @@ void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 }
+
+extern const uint8_t ice40lp384_bin[];
+extern const unsigned int sizeof_ice40lp384_bin;
 
 void board_init(void)
 {
+    /* IO init */
+    stm32_gpio_mode(IO_RS485_RX, INPUT, PULL_UP);
+
+    stm32_gpio_mode(IO_RS485_TX, OUTPUT, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_set(IO_RS485_TX);
+
+    stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
+    stm32_gpio_set(IO_RS485_MODE);
+
+    lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 }
 
 void board_idle_tick(unsigned int cnt) 
@@ -50,6 +66,39 @@ void board_idle_tick(unsigned int cnt)
 
 void board_app_ready(void)
 {
+}
+
+extern const uint8_t otg_xflash_pic[];
+extern const unsigned int sizeof_otg_xflash_pic;
+
+struct magic {
+	uint32_t cnt;
+	struct {
+		uint32_t addr;
+		uint32_t mask;
+		uint32_t comp;
+	} rec[];
+};
+
+const struct magic bootloader_magic = {
+	.cnt = 4,
+	.rec = {
+		{  0x08000000, 0xffffffff, 0x10010000 },
+		{  0x08000004, 0xffff0000, 0x08000000 },
+		{  0x08000008, 0xffff0000, 0x08000000 },
+		{  0x0800000c, 0xffff0000, 0x08000000 }
+	}
+};
+
+void board_bootloader_upgrade(void)
+{
+	uint32_t * xflash_code = (uint32_t *)(0x20001000);
+	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *) = 
+		((void *)xflash_code) + 1;
+
+	cm3_cpsid_f();
+	__thinkos_memcpy(xflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
+	xflash_ram(0, 65536, &bootloader_magic);
 }
 
 const struct mem_desc sram_desc = {

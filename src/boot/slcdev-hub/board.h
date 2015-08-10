@@ -35,20 +35,23 @@
  * Lattice FPGA (iCE40LP384) connections
  **************************************************************************/
 
-#define ICE40_SPI_SCK  STM32_GPIOC, 10
-#define ICE40_SPI_SDO  STM32_GPIOC, 11
-#define ICE40_SPI_SDI  STM32_GPIOB, 5
-#define ICE40_SPI_SS   STM32_GPIOE, 1
+#define IO_ICE40_SPI_SCK  STM32_GPIOC, 10
+#define IO_ICE40_SPI_SDO  STM32_GPIOC, 11
+#define IO_ICE40_SPI_SDI  STM32_GPIOB, 5
+#define IO_ICE40_SPI_SS   STM32_GPIOE, 1
+#define ICE40_SPI         STM32F_SPI3
+#define ICE40_CLK_SPI     STM32_CLK_SPI3
+#define ICE4_SPI_AF       GPIO_AF6
 
-#define ICE40_CRESET   STM32_GPIOE, 0
-#define ICE40_CDONE    STM32_GPIOB, 9
+#define IO_ICE40_CRESET   STM32_GPIOE, 0
+#define IO_ICE40_CDONE    STM32_GPIOB, 9
 
-#define RS485_TX       STM32_GPIOB, 6
-#define RS485_RX       STM32_GPIOB, 7
-//#define RS485_CK       STM32_GPIOA, 8
-#define RS485_TRG      STM32_GPIOA, 8
-#define RS485_MODE     STM32_GPIOD, 6
-#define RS485_USART    STM32_USART1
+#define IO_RS485_TX       STM32_GPIOB, 6
+#define IO_RS485_RX       STM32_GPIOB, 7
+#define IO_RS485_TRG      STM32_GPIOA, 8
+#define IO_RS485_MODE     STM32_GPIOD, 6
+#define IO_RS485_USART    STM32_USART1
+#define RS485_USART_AF    GPIO_AF7
 
 /**************************************************************************
  * Altera Cyclone FPGA connections

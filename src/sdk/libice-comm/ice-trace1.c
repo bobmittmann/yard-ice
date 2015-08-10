@@ -25,7 +25,7 @@
 #include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
-void ice_trace1(const struct trace_entry * __entry, int __a)
+void ice_trace1(const struct dcc_trace_entry * __entry, int __a)
 {
 	struct ice_comm_blk * comm = *(struct ice_comm_blk **)(4 * 8);
 	unsigned int head;
@@ -46,6 +46,6 @@ ret:
 	cm3_faultmask_set(fm);  /* restore fault mask */
 }
 
-void dcclog1(const struct trace_entry *, int) 
+void dcclog1(const struct dcc_trace_entry *, int) 
 	__attribute__ ((weak, alias ("ice_trace1")));
 

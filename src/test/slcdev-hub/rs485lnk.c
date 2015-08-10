@@ -48,7 +48,7 @@ void rs485_init(struct rs485_link * lnk,
 	uint32_t us;
 	int c;
 
-	tracef("%s():...", __func__);
+	DBG("...");
 
 	lnk->uart = uart;
 	lnk->dma = dma;
@@ -145,8 +145,8 @@ void rs485_init(struct rs485_link * lnk,
 	us = ((30 * 1000 * 1000) / speed) + 1;
 	lnk->idle_tm = (us / 1000) + 1;
 
-	tracef("idle_tm = %d.%03d", lnk->idle_tm, us % 1000);
-	tracef("%s() lnk->uart_irq=%d", __func__, lnk->uart_irq);
+	DBG("idle_tm = %d.%03d", lnk->idle_tm, us % 1000);
+	DBG("lnk->uart_irq=%d", lnk->uart_irq);
 
 #if 0
 	/* Enable SCLK pin */
@@ -180,16 +180,16 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 	DCC_LOG2(LOG_INFO, "DMA stream[%d]=0x%p", lnk->rx.dma_id, dma_strm);
 
 	if (lnk->rx.pend_pkt == NULL) {
-		trace("no queued DMA buffer");
+		DBG_S("no queued DMA buffer");
 		rcvd_pkt = NULL;
 		len = 0;
 	} else {
 		DCC_LOG(LOG_TRACE, "pending packet...");
 
-//		trace("pending packet...");
+//		DBG_S("pending packet...");
 
 		while (((sr = uart->sr) & USART_IDLE) == 0) {
-//			trace("wait UART IDLE ...");
+//			DBG_S("wait UART IDLE ...");
 			thinkos_irq_wait(lnk->uart_irq);
 		};
 
@@ -198,7 +198,7 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 		(void)c;
 
 		if (dma_strm->cr & DMA_EN) {
-//			trace("DMA enabled, disabling!");
+//			DBG_S("DMA enabled, disabling!");
 			lnk->rx.dma_strm->cr &= ~DMA_EN;
 		}
 
@@ -207,21 +207,21 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 
 			if (lnk->rx.isr[TEIF_BIT]) {
 				DCC_LOG(LOG_ERROR, "DMA transfer error!");
-				trace("DMA transfer error...");
+				DBG_S("DMA transfer error...");
 				lnk->rx.ifcr[TEIF_BIT] = 1;
 			}
 
 			if (lnk->rx.isr[FEIF_BIT]) {
-				trace("DMA fifo error...");
+				DBG_S("DMA fifo error...");
 				lnk->rx.ifcr[FEIF_BIT] = 1;
 			}
 
 			if (lnk->rx.isr[HTIF_BIT]) {
-//				trace("DMA half transfer...");
+//				DBG_S("DMA half transfer...");
 				lnk->rx.ifcr[HTIF_BIT] = 1;
 			}
 
-//			trace("wait DMA transfer ...");
+//			DBG_S("wait DMA transfer ...");
 			thinkos_irq_wait(lnk->rx.dma_irq);
 		} 
 
@@ -233,12 +233,12 @@ int rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 
 		/* clear the the DMA trasfer complete flag */
 		lnk->rx.ifcr[TCIF_BIT] = 1;
-//		tracef("DMA rcvd len=%d max_len=%d.", len, max_len);
+//		DBG_Sf("DMA rcvd len=%d max_len=%d.", len, max_len);
 	}
 
 	if (dma_strm->cr & DMA_EN) {
 		DCC_LOG(LOG_ERROR, "DMA enabled");
-		trace("ERROR: DMA enabled!");
+		DBG_S("ERROR: DMA enabled!");
 	}
 
 	lnk->rx.pend_pkt = *ppkt;
@@ -267,35 +267,35 @@ int __rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 
 	DCC_LOG2(LOG_INFO, "DMA stream[%d]=0x%p", lnk->rx.dma_id, dma_strm);
 
-//	tracef(".");
+//	DBG_Sf(".");
 	if (lnk->rx.pend_pkt == NULL) {
 		rcvd_pkt = NULL;
 		len = 0;
 	} else {
 		DCC_LOG(LOG_TRACE, "pending packet...");
 
-		trace("pending packet...");
+		DBG_S("pending packet...");
 
 		/* wait for completion of DMA transfer */
 		while (!lnk->rx.isr[TCIF_BIT]) {
 
 			if (lnk->rx.isr[TEIF_BIT]) {
 				DCC_LOG(LOG_ERROR, "DMA transfer error!");
-				trace("DMA transfer error...");
+				DBG_S("DMA transfer error...");
 				lnk->rx.ifcr[TEIF_BIT] = 1;
 			}
 
 			if (lnk->rx.isr[FEIF_BIT]) {
-				trace("DMA fifo error...");
+				DBG_S("DMA fifo error...");
 				lnk->rx.ifcr[FEIF_BIT] = 1;
 			}
 
 			if (lnk->rx.isr[HTIF_BIT]) {
-//				trace("DMA half transfer...");
+//				DBG_S("DMA half transfer...");
 				lnk->rx.ifcr[HTIF_BIT] = 1;
 			}
 
-			trace("wait...");
+			DBG_S("wait...");
 			thinkos_irq_wait(lnk->rx.dma_irq);
 		} 
 
@@ -308,12 +308,12 @@ int __rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 		/* clear the the DMA trasfer complete flag */
 		lnk->rx.ifcr[TCIF_BIT] = 1;
 
-		tracef("DMA received len=%d max_len=%d.", len, max_len);
+		DBG("DMA received len=%d max_len=%d.", len, max_len);
 	}
 
 	if (dma_strm->cr & DMA_EN) {
 		DCC_LOG(LOG_ERROR, "DMA enabled");
-		trace("ERROR: DMA enabled!");
+		DBG_S("ERROR: DMA enabled!");
 	}
 
 	lnk->rx.pend_pkt = *ppkt;
@@ -327,7 +327,7 @@ int __rs485_pkt_receive(struct rs485_link * lnk, void ** ppkt, int max_len)
 	/* clear the TC bit to start transfer */
 	if ((sr = uart->sr) & USART_TC) {
 		DCC_LOG(LOG_INFO, "TC=1");
-		trace("TC=1");
+		DBG_S("TC=1");
 		uart->sr = 0;
 	}
 
@@ -369,7 +369,7 @@ void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 		pend_pkt = lnk->tx.pend_pkt;
 
 		if ((sr = uart->sr) & USART_TC) {
-//			trace("USART TC=1, generating an idle frame");
+//			DBG_S("USART TC=1, generating an idle frame");
 			/* pulse the TE bit to generate an idle frame */
 			cr = uart->cr1;
 			uart->cr1 = cr & ~USART_TE;
@@ -382,7 +382,7 @@ void * rs485_pkt_enqueue(struct rs485_link * lnk, void * pkt, int len)
 	
 	if (dma_strm->cr & DMA_EN) {
 		DCC_LOG(LOG_ERROR, "DMA enabled");
-		trace("ERROR: DMA enabled!");
+		DBG_S("ERROR: DMA enabled!");
 	}
 
 	/* set this packet as pending */

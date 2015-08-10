@@ -37,6 +37,7 @@
 extern const struct gdb_target board_gdb_target;
 void board_idle_tick(unsigned int cnt);
 void board_app_ready(void);
+void board_bootloader_upgrade(void);
 
 #ifndef BOOT_ENABLE_GDB
 #define BOOT_ENABLE_GDB 0
@@ -75,6 +76,7 @@ int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
 " Ctrl+C - Stop application\r\n"
+" Ctrl+L - Upload ThinkOS\r\n"
 " Ctrl+N - Select Next Thread\r\n"
 " Ctrl+O - ThinkOS info\r\n"
 " Ctrl+P - Pause all threads\r\n"
@@ -259,6 +261,11 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "Thread = %d\r\n", monitor_thread_id);
 			dmon_print_thread(comm, monitor_thread_id);
 			break;
+		case CTRL_L:
+			dmprintf(comm, "^L\r\n");
+			dmon_soft_reset(comm);
+			board_bootloader_upgrade();
+			break;
 		case CTRL_O:
 			dmon_print_osinfo(comm);
 			break;
@@ -332,6 +339,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	int tick_cnt = 0;
 	char buf[64];
 	int len;
+	bool connected;
 
 //	DCC_LOG(LOG_TRACE, "Monitor start...");
 //	dmon_comm_connect(comm);
@@ -363,6 +371,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		monitor_thread_id = -1;
 	}
 
+	connected = dmon_comm_isconnected(comm);
+
 	for(;;) {
 		sigset = dmon_select(sigmask);
 		DCC_LOG1(LOG_INFO, "sigset=%08x", sigset);
@@ -370,8 +380,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_INFO, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
-//			if (!dmon_comm_isconnected(comm))	
-//				dmon_exec(monitor_task);
+			connected = dmon_comm_isconnected(comm);
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
@@ -420,7 +429,10 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
-				len = dmon_comm_send(comm, ptr, cnt);
+				if (connected) 
+					len = dmon_comm_send(comm, ptr, cnt);
+				else
+					len = cnt;
 				__console_tx_pipe_commit(len); 
 			} else {
 				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
@@ -433,7 +445,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			const struct gdb_target * tgt = &board_gdb_target;
 			dmon_clear(DMON_ALARM);
 			board_idle_tick(tick_cnt++);
-			if (tick_cnt == 20 && dmon_app_exec(tgt->app.start_addr, false)) {
+			if (tick_cnt == 20 && dmon_app_exec(tgt->app.start_addr, 
+												false)) {
 				sigmask &= ~(1 << DMON_ALARM);
 				board_app_ready();
 			} else {

@@ -37,9 +37,14 @@ struct stm32f_serial_dma_drv uart1_serial_dma_drv = {
 	}
 };
 
-void stm32f_usart1_isr(void)
+void stm32f_usart1_dma_isr(void)
 {
 	stm32f_serial_dma_isr(&uart1_serial_dma_drv);
+}
+
+void stm32f_dma2_stream5_isr(void)
+{
+	stm32f_serial_dma_rx_isr(&uart1_serial_dma_drv);
 }
 
 const struct serial_dev uart1_serial_dma_dev = {
@@ -57,10 +62,20 @@ struct serial_dev * stm32f_uart1_serial_dma_init(unsigned int baudrate,
 	stm32f_serial_dma_init(drv, baudrate, flags, 
 						   STM32F_DMA2, 4, 5, 7);
 
-	/* configure interrupts */
+	/* configure and Enable interrupts */
+#ifdef THINKAPP
+	thinkos_irq_register(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY, 
+						 stm32f_usart1_dma_isr);
+
+//	thinkos_irq_register(STM32F_IRQ_DMA2_STREAM5, SERIAL_IRQ_PRIORITY, 
+//						 stm32f_dma2_stream5_isr);
+#else
 	cm3_irq_pri_set(STM32_IRQ_USART1, SERIAL_IRQ_PRIORITY);
-	/* enable interrupts */
 	cm3_irq_enable(STM32_IRQ_USART1);
+
+	cm3_irq_pri_set(STM32F_IRQ_DMA2_STREAM5, SERIAL_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_DMA2_STREAM5);
+#endif
 
 	DCC_LOG(LOG_TRACE, "done!");
 

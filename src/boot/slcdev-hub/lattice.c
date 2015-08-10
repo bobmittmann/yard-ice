@@ -58,13 +58,13 @@ static int lattice_ice40_io_init(unsigned int freq)
 	stm32_gpio_mode(IO_ICE40_SPI_SS, OUTPUT, SPEED_MED);
 
 	stm32_gpio_mode(IO_ICE40_SPI_SCK, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_af(IO_ICE40_SPI_SCK, GPIO_AF5);
+	stm32_gpio_af(IO_ICE40_SPI_SCK, ICE4_SPI_AF);
 
 	stm32_gpio_mode(IO_ICE40_SPI_SDO, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(IO_ICE40_SPI_SDO, GPIO_AF5);
+	stm32_gpio_af(IO_ICE40_SPI_SDO, ICE4_SPI_AF);
 
 	stm32_gpio_mode(IO_ICE40_SPI_SDI, ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(IO_ICE40_SPI_SDI, GPIO_AF5);
+	stm32_gpio_af(IO_ICE40_SPI_SDI, ICE4_SPI_AF);
 
 	/* Configure SPI */
 	div = stm32_clk_hz(ICE40_CLK_SPI) / freq / 2;
@@ -109,7 +109,7 @@ static int conf_start(void)
 	}
 
 /* After driving CRESET_B High or allowing it to float High the AP must 
-   wait a minimum of 300 µs, allowing the iCE40 FPGA to clear its 
+   wait a minimum of 300 ï¿½s, allowing the iCE40 FPGA to clear its 
    internal configuration memory */
 	udelay(300);
 
@@ -170,7 +170,7 @@ int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 /*	After the CDONE output pin goes High, send at least 49 additional 
 	dummy bits, effectively 49 additional SPI_SCK 
 	clock cycles measured from rising-edge to rising-edge. */
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < 7; ++i)
 		conf_wr(0x00);
 
 	stm32_gpio_set(IO_ICE40_SPI_SS);

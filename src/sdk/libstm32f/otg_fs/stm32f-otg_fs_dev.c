@@ -877,7 +877,7 @@ void stm32f_otg_fs_isr(void)
 
 	gintsts = otg_fs->gintsts & otg_fs->gintmsk;
 
-	DCC_LOG1(LOG_MSG, "GINTSTS=0x%08x", gintsts);
+	DCC_LOG1(LOG_JABBER, "GINTSTS=0x%08x", gintsts);
 
 	if (gintsts & OTG_FS_IEPINT) {
 		uint32_t diepmsk;
@@ -885,7 +885,7 @@ void stm32f_otg_fs_isr(void)
 		uint32_t diepempmsk;
 		uint32_t msk;
 
-		DCC_LOG(LOG_MSG, "<IEPINT>");
+		DCC_LOG(LOG_JABBER, "<IEPINT>");
 
 		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
 		diepmsk = otg_fs->diepmsk;
@@ -958,7 +958,7 @@ void stm32f_otg_fs_isr(void)
 	if (gintsts & OTG_FS_OEPINT) {
 		ep_intr = (otg_fs->daint & otg_fs->daintmsk);
 
-		DCC_LOG(LOG_MSG, "<OEPINT>");
+		DCC_LOG(LOG_JABBER, "<OEPINT>");
 
 		if (ep_intr & OTG_FS_OEPINT0) {
 			uint32_t doepint;
@@ -1075,7 +1075,8 @@ void stm32f_otg_fs_isr(void)
 		stat = OTG_FS_PKTSTS_GET(grxsts);
 		(void)stat;
 
-		DCC_LOG3(LOG_MSG, "[%d] <RXFLVL> len=%d status=%d", epnum, len, stat);
+		DCC_LOG3(LOG_MSG, "[%d] <RXFLVL> len=%d status=%d", 
+				 epnum, len, stat);
 
 		if (epnum == 0) {
 
@@ -1250,7 +1251,8 @@ const struct usb_dev stm32f_otg_fs_dev = {
 	.op = &stm32f_otg_fs_ops
 };
 
-#endif /* STM32F_ENABLE_OTG_FS */
+#endif /* STM32_ENABLE_OTG_FS */
 
 #endif /* STM32F_OTG_FS */
+
 

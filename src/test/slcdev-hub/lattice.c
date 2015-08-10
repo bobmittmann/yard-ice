@@ -136,8 +136,8 @@ static void conf_wr(int c)
  */
 int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 {
-	int n = 0;
 	int ret;
+	int n;
 	int i;
 
 	lattice_ice40_io_init(50000);
@@ -149,11 +149,19 @@ int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 		return ret;
 	}
 
-	while (!stm32_gpio_stat(ICE40_CDONE)) {
+	for (n = 0; n < max; ++n) {
+		if (stm32_gpio_stat(ICE40_CDONE))
+			break;
 		conf_wr(buf[n]);
-		n++;
-		if (n > max) {
-			DCC_LOG2(LOG_ERROR, "n(%d) > max(%d)!", n, max);
+	}
+
+	if (n >= max) {
+		for (i = 0; i < 128; ++i) {
+			if (stm32_gpio_stat(ICE40_CDONE))
+				break;
+			conf_wr(0x00);
+		}
+		if (!stm32_gpio_stat(ICE40_CDONE)) {
 			stm32_gpio_set(ICE40_SPI_SS);
 			return -2;
 		}
@@ -164,7 +172,7 @@ int lattice_ice40_configure(const uint8_t * buf, unsigned int max)
 /*	After the CDONE output pin goes High, send at least 49 additional 
 	dummy bits, effectively 49 additional SPI_SCK 
 	clock cycles measured from rising-edge to rising-edge. */
-	for (i = 0; i < 6; ++i)
+	for (i = 0; i < 7; ++i)
 		conf_wr(0x00);
 
 	stm32_gpio_set(ICE40_SPI_SS);

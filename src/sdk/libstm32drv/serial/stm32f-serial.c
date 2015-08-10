@@ -56,6 +56,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 //		if (free <= (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL)) {
 		if (free == drv->rx_trig) {
 			DCC_LOG(LOG_MSG, "---");
+			__nop();
 			thinkos_gate_open_i(drv->rx_gate);
 		}
 	} else	if (sr & USART_IDLE) {

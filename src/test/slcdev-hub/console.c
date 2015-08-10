@@ -204,7 +204,7 @@ void __attribute__((noreturn)) pkt_xmt_task(void)
 	
 	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
 
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+	DBG("<%d> started...", thinkos_thread_self());
 
 	for (;;) {
 		int len;
@@ -221,7 +221,7 @@ void __attribute__((noreturn)) pkt_xmt_task(void)
 		}
 
 		if (net_pkt_send(data, len) < 0) {
-			trace("net_pkt_send() failed!");
+			DBG_S("net_pkt_send() failed!");
 			thinkos_sleep(100);
 			continue;
 		}
@@ -611,7 +611,7 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	if (argc) {
 		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
 			fprintf(f, "flush\n");
-			trace_flush();
+//			trace_flush();
 			return 0;
 		} 
 
@@ -643,7 +643,7 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	}
 
 	fprintf(f, "---------\n");
-	trace_fprint(f, TRACE_ALL);
+//	trace_fprint(f, TRACE_ALL);
 
 	return 0;
 }
@@ -747,8 +747,8 @@ int usb_shell(usb_cdc_class_t * cdc)
 	tty = tty_attach(f_raw);
 	f_tty = tty_fopen(tty);
 
-	stdout = f_tty;
-	stdin = f_tty;
+//	stdout = f_tty;
+//	stdin = f_tty;
 
 	return shell(f_tty, shell_prompt, shell_greeting, shell_cmd_tab);
 }

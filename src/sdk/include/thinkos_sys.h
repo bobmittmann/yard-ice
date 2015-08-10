@@ -937,9 +937,11 @@ bool __thinkos_active(void);
 
 bool __thinkos_suspended(void);
 
-void __thinkos_memcpy(void * __dst, void * __src,  unsigned int __len);
+void __thinkos_memcpy(void * __dst, const void * __src,  
+					  unsigned int __len);
 
-void __thinkos_memcpy32(void * __dst, void * __src,  unsigned int __len);
+void __thinkos_memcpy32(void * __dst, const void * __src,  
+						unsigned int __len);
 
 void __thinkos_memset32(void * __dst, uint32_t __val, unsigned int __len);
 

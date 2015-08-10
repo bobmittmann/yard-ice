@@ -28,6 +28,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <sys/serial.h>
 
 /** @mainpage MS/TP Data Link Layer Library
@@ -66,6 +67,19 @@ struct mstp_frame_inf {
 	uint8_t saddr; /**< source address */
 };
 
+struct mstp_lnk_stat {
+	uint32_t rx_err;
+	uint32_t rx_token;
+	uint32_t rx_mgmt;
+	uint32_t rx_unicast;
+	uint32_t rx_bcast;
+	uint32_t tx_token;
+	uint32_t tx_mgmt;
+	uint32_t tx_unicast;
+	uint32_t tx_bcast;
+	uint32_t token_lost;
+};
+
 /** @enum mstp_frame_type 
  * @brief MSTP Frame Types 
  *
@@ -81,6 +95,16 @@ enum mstp_frame_type {
 	FRM_REPLY_POSTPONED        = 0x07,
 	FRM_DATA_XPCT_REPLY        = 0x80,
 	FRM_DATA_NO_REPLY          = 0xc0
+};
+
+/** @enum mstp_frame_type
+ * @brief MSTP Frame Types
+ *
+ */
+enum mstp_mgmt_event {
+	MSTP_EV_SOLE_MASTER = 0,
+	MSTP_EV_MULTIMASTER,
+	MSTP_EV_TOKEN_LOST
 };
 
 /** @def MSTP_ADDR_BCAST
@@ -164,6 +188,24 @@ void mstp_lnk_loop(struct mstp_lnk * lnk);
 int mstp_lnk_getaddr(struct mstp_lnk * lnk);
 
 int mstp_lnk_getbcast(struct mstp_lnk * lnk);
+
+/** @brief  MS/TP link management callback registering.
+ *
+ * This function assigns a function to be called whenever an management event
+ *
+ * The callback function should be fast to avoid interference with the link
+ * control.
+ *
+ * @param lnk The MS/TP link control structure.
+ * @param cbk Callback function.
+ */
+int mstp_lnk_mgmt(struct mstp_lnk * lnk,
+		void (*cbk)(struct mstp_lnk *, unsigned int));
+
+int mstp_lnk_getstat(struct mstp_lnk * lnk,
+		struct mstp_lnk_stat * stat, bool reset);
+
+int mstp_lnk_getnetmap(struct mstp_lnk * lnk, uint8_t map[], unsigned int max);
 
 /**@}*/
 

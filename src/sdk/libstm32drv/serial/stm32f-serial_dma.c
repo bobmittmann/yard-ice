@@ -119,8 +119,8 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 
 	DCC_LOG3(LOG_TRACE, "%6d: len=%d tmo=%d", thinkos_clock(), len, tmo);
 
-	/* if the sored buffer pointer is NULL it means that
-	   we did not yet prepare ther DMA for a transfer,
+	/* if the stored buffer pointer is NULL it means that
+	   we did not yet prepare other DMA for a transfer,
 	   in this case prepare to transfer using the provided 
 	   buffer. */
 	if (drv->rx.buf_ptr == NULL) {
@@ -147,7 +147,7 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 //	DCC_LOG1(LOG_TRACE, "thinkos_flag_timedtake(%d)...", tmo);
 	if ((ret = thinkos_flag_timedtake(drv->rx_idle, tmo)) < 0) {
 		/* if the initially provided 'ndtr' differs from the
-		   dma stream then the transfer already started,
+		   DMA stream then the transfer already started,
 		   in this case we wait until it finishes. */
 		if ((cnt = ndtr - drv->rx.strm->ndtr) < 2) {
 			if (drv->rx.buf_ptr == NULL) {
@@ -224,7 +224,7 @@ int stm32f_serial_dma_send(struct stm32f_serial_dma_drv * drv,
 	/* Number of data items transfered... */
 	if ((cnt = drv->tx.strm->ndtr) != 0) {
 		DCC_LOG(LOG_ERROR, "DMA error!");
-//		abort();
+		abort();
 	}
 
 	return len - cnt;
@@ -237,7 +237,8 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 {
 	drv->rx_idle = thinkos_flag_alloc();
 	drv->tx_done = thinkos_flag_alloc();
-	DCC_LOG2(LOG_TRACE, "rx_idle=%d tx_done=%d", drv->rx_idle, drv->tx_done);
+	DCC_LOG2(LOG_TRACE, "rx_idle=%d tx_done=%d", drv->rx_idle, 
+			 drv->tx_done);
 	DCC_LOG3(LOG_TRACE, "chan=%d rx_strm=%d tx_strm=%d", 
 			 dma_chan_id, rx_dma_strm_id, tx_dma_strm_id);
 

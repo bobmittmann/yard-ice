@@ -18,40 +18,25 @@
  */
 
 /** 
- * @file trace_time.c
- * @brief Real-time trace
+ * @file lattice.h
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
- */ 
+ */
 
-#include "trace-i.h"
+#ifndef __LATTICE_H__
+#define __LATTICE_H__
 
-int trace_ts2timeval(struct timeval * tv, uint32_t ts)
-{
-	uint32_t us;
+#include <stdint.h>
 
-	if (tv == NULL)
-		return -1;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-	us = trace_ts2us(ts);
+int lattice_ice40_configure(const uint8_t * buf, unsigned int max);
 
-	tv->tv_sec = us / 1000000;
-	tv->tv_usec = us - (tv->tv_sec * 1000000);
-
-	return 0;
+#ifdef __cplusplus
 }
+#endif
 
-int trace_tm2timeval(struct timeval * tv, uint64_t tm)
-{
-	uint64_t us;
+#endif /* __LATTICE_H__ */
 
-	if (tv == NULL)
-		return -1;
-
-	us = trace_tm2us(tm);
-
-	tv->tv_sec = (us >> 10) +  (us >> 15) - (us >> 17) + (us >> 21);
-//	tv->tv_sec = us / 1000000;
-	tv->tv_usec = us - ((uint64_t)tv->tv_sec * 1000000LL);
-
-	return 0;
-}

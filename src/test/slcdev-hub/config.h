@@ -73,7 +73,7 @@
 
 #define TRACE_RING_SIZE 512
 
-#define STM32_ENABLE_USB_DEVICE 1 
+#define STM32_ENABLE_OTG_FS 1
 
 #endif /* __CONFIG_H__ */
 

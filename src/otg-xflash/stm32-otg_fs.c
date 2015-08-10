@@ -183,7 +183,8 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 		if (gintsts & OTG_FS_OEPINT) {
 			uint32_t ep_intr = (otg_fs->daint & otg_fs->daintmsk);
 			if (ep_intr & OTG_FS_OEPINT0) {
-				uint32_t doepint = otg_fs->outep[0].doepint & otg_fs->doepmsk;
+				uint32_t doepint = otg_fs->outep[0].doepint & 
+					otg_fs->doepmsk;
 				if (doepint & OTG_FS_XFRC)
 					__ep_zlp_send(otg_fs, 0);
 				if (doepint & OTG_FS_STUP)
@@ -232,7 +233,7 @@ int usb_recv(int ep_id, void * buf, unsigned int len, unsigned int msec)
 			}
 		}
 
-		if (systick->ctrl & SYSTICK_CTRL_COUNTFLAG) {
+		if (systick->csr & SYSTICK_CSR_COUNTFLAG) {
 			if (msec == 0) {
 //				otg_fs->outep[ep_id].doepctl |= OTG_FS_CNAK;
 				return -1;

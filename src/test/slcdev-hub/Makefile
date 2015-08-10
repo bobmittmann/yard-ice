@@ -22,7 +22,8 @@
 
 PROG = slcdev-hub
 
-CFILES = slcdev-hub.c console.c lattice.c pktbuf.c sndbuf.c rs485lnk.c net.c \
+CFILES = slcdev-hub.c console.c lattice.c pktbuf.c sndbuf.c \
+		 rs485lnk.c net.c \
 		 xflash.c otg_xflash_pic.c uart_xflash_pic.c ice40lp384.c
 
 SDK = ../../sdk
@@ -30,12 +31,12 @@ TOOLS = ../../../tools
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libdrv $(SDK)/libcdc-acm $(SDK)/libtty \
+		  $(SDK)/libstm32drv $(SDK)/libcdc-acm $(SDK)/libtty \
 		  $(SDK)/libxmodem $(SDK)/libshell $(SDK)/libcrc \
 		  $(SDK)/libtrace $(SDK)/libhexdump
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm tty crc xmodem \
-	   shell trace hexdump
+LIBS = gcc stm32f cm3 util thinkos c ice-comm stm32drv cdc-acm \
+	   tty crc xmodem shell trace hexdump
 
 INCPATH = $(SDK)/include 
 

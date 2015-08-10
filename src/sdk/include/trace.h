@@ -179,9 +179,9 @@ void tracef(const struct trace_ref * ref, ... );
 
 void trace(const struct trace_ref * ref);
 
-int trace_tm2time(struct timeval * tv, uint64_t tm);
+int trace_tm2timeval(struct timeval * tv, uint64_t tm);
 
-int trace_ts2time(struct timeval * tv, uint32_t ts);
+int trace_ts2timeval(struct timeval * tv, uint32_t ts);
 
 /* ----------------------------------------------------------------------
  * Trace decode

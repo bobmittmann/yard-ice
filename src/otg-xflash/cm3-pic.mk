@@ -34,8 +34,8 @@ LDSCRIPT = cm3-pic.ld
 INCPATH	:= $(INCPATH) $(realpath .) $(realpath $(BASEDIR)/sdk/include) 
 
 override SFLAGS :=  -Wall $(OPTIONS)
-override CFLAGS :=  -Wall $(OPTIONS) -Os -g
-override LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT)
+override CFLAGS :=  -Wall $(OPTIONS) -Os -g 
+override LDFLAGS := $(OPTIONS) $(LDFLAGS) -nostdlib -T $(LDSCRIPT) 
 override CROSS_COMPILE = arm-none-eabi-
 
 CC = $(CROSS_COMPILE)gcc
