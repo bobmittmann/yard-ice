@@ -46,8 +46,8 @@
 #include "rtsp.h"
 #include "audio.h"
 
-
 void tcpip_init(void);
+int webserver_init(void);
 
 int network_config(void)
 {
@@ -219,6 +219,8 @@ int main(int argc, char ** argv)
 	rtsp_init(&rtsp, 554);
 
 	rtp_g711_start(&rtsp.rtp, jb);
+
+	webserver_init();
 
 	for (;;) {
 		thinkos_sleep(1000);

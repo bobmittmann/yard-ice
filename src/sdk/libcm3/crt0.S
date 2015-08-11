@@ -80,7 +80,7 @@ _reset:
 	mov     r1, r0
 	/* go to C main function */
 	bl      main
-	b       _reset
+	b       abort
 
 /* section of initialized data at ROM */
 .L_idata_start:
@@ -130,6 +130,8 @@ _void:
 	.weak       halt
 	.thumb_set  halt,_halt
 
+	.weak       abort
+	.thumb_set  abort,_halt
 
 	.end
 

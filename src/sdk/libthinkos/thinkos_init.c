@@ -36,6 +36,31 @@ _Pragma ("GCC optimize (\"Os\")")
 extern const char thinkos_svc_nm[];
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
+void __thinkos_irq_disable_all(void)
+{
+	int i;
+
+	for (i = 0; i < CM3_ICTR; ++i)
+		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
+}
+
+void __thinkos_kill_all(void) 
+{
+	int wq;
+
+	/* clear all wait queues */
+	for (wq = 0; wq < THINKOS_WQ_LST_END; ++wq) 
+		thinkos_rt.wq_lst[wq] = 0;
+#if (THINKOS_THREADS_MAX < 32) 
+	/* put the IDLE thread in the ready queue */
+	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
+#endif
+	/* discard current thread context */
+	thinkos_rt.active = THINKOS_THREAD_VOID;
+	/* signal the scheduler ... */
+	__thinkos_defer_sched();
+}
+
 void __thinkos_reset(void)
 {
 	struct cm3_systick * systick = CM3_SYSTICK;

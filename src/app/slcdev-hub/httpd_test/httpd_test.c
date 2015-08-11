@@ -79,7 +79,7 @@ int httpd_server_task(struct httpd * httpd)
 
 	for (;;) {
 //		printf("Wating for connection.\n");
-		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...", 
+		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...",
 				 thinkos_thread_self());
 		if (http_accept(httpd, ctl) < 0) {
 //			printf("tcp_accept() failed!\n");
@@ -87,9 +87,9 @@ int httpd_server_task(struct httpd * httpd)
 		}
 
 //		printf("Connection accepted.\n");
-		DCC_LOG1(LOG_INFO, "<%d> Connection accepted...", 
+		DCC_LOG1(LOG_INFO, "<%d> Connection accepted...",
 				 thinkos_thread_self());
-	
+
 		if ((obj = http_obj_lookup(ctl)) != NULL) {
 			cnt++;
 			switch (ctl->method) {
@@ -125,7 +125,7 @@ int network_config(void)
 	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x80};
 	uint64_t esn;
 	int dhcp = 1;
-	
+
 	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
@@ -139,7 +139,7 @@ int network_config(void)
 	ethaddr[4] = ((esn >> 32) & 0xff);
 	ethaddr[5] = ((esn >> 40) & 0xff);
 
-	printf("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x\n ", 
+	printf("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x\n ",
 		   ethaddr[0], ethaddr[1], ethaddr[2],
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
@@ -173,14 +173,14 @@ int network_config(void)
 
 	ifn_getname(ifn, s);
 	ifn_ipv4_get(ifn, &ip_addr, &netmask);
-	printf("* netif %s: %s, %s\n", s, 
+	printf("* netif %s: %s, %s\n", s,
 		   inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
 		   inet_ntop(AF_INET, (void *)&netmask, s2, 16));
 
 	if (gw_addr != INADDR_ANY) {
 		/* add the default route (gateway) to ethif */
 		ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
-		printf("* default route gw: %s\n", 
+		printf("* default route gw: %s\n",
 			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
 	}
 
@@ -228,8 +228,8 @@ uint32_t httpd4_stack[384];
 
 
 const struct thinkos_thread_inf httpd1_inf = {
-	.stack_ptr = httpd1_stack, 
-	.stack_size = sizeof(httpd1_stack), 
+	.stack_ptr = httpd1_stack,
+	.stack_size = sizeof(httpd1_stack),
 	.priority = 32,
 	.thread_id = 4, 
 	.paused = 0,
@@ -237,28 +237,28 @@ const struct thinkos_thread_inf httpd1_inf = {
 };
 
 const struct thinkos_thread_inf httpd2_inf = {
-	.stack_ptr = httpd2_stack, 
-	.stack_size = sizeof(httpd2_stack), 
+	.stack_ptr = httpd2_stack,
+	.stack_size = sizeof(httpd2_stack),
 	.priority = 32,
-	.thread_id = 5, 
+	.thread_id = 5,
 	.paused = 0,
 	.tag = "HTTPD 2"
 };
 
 const struct thinkos_thread_inf httpd3_inf = {
-	.stack_ptr = httpd3_stack, 
-	.stack_size = sizeof(httpd3_stack), 
+	.stack_ptr = httpd3_stack,
+	.stack_size = sizeof(httpd3_stack),
 	.priority = 32,
-	.thread_id = 6, 
+	.thread_id = 6,
 	.paused = 0,
 	.tag = "HTTPD 3"
 };
 
 const struct thinkos_thread_inf httpd4_inf = {
-	.stack_ptr = httpd4_stack, 
-	.stack_size = sizeof(httpd4_stack), 
+	.stack_ptr = httpd4_stack,
+	.stack_size = sizeof(httpd4_stack),
 	.priority = 32,
-	.thread_id = 7, 
+	.thread_id = 7,
 	.paused = 0,
 	.tag = "HTTPD 4"
 };

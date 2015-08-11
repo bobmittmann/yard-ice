@@ -84,6 +84,7 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="trace"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="httpd"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tcpip"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="crc"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
@@ -159,13 +160,13 @@
 							<builder buildPath="${workspace_loc:/bacnet_test}/Release" id="ilg.gnuarmeclipse.managedbuild.cross.builder.1996512270" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.1021256637" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.803369433" name="Use preprocessor" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
-								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.2133894878" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.2133894878" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.921908832" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1384250682" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
-								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.47649226" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.47649226" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.487033946" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
@@ -186,6 +187,7 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="console"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="trace"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="httpd"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.input.1839263265" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

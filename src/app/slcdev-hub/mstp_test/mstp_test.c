@@ -193,7 +193,7 @@ struct mstp_lnk * mstp_start(int addr)
  * ------------------------------------------------------------------------- */
 void io_init(void)
 {
-	thinkos_sysinfo_udelay_factor(&udelay_factor);
+	thinkos_udelay_factor(&udelay_factor);
 
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);

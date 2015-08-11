@@ -670,8 +670,9 @@ int	thinkos_irq_register(int irq, int pri, void (* isr)(void));
 /**@}*/
 
 
-/** @defgroup sysinfo System Information
- *  These calls return information about the ThinkOS configuratiion
+/** @defgroup ctl OS Monitor and Cotrol.
+ *
+ * These calls return information about the ThinkOS configuratiion
  * and operational parameters.
  *
  * @{
@@ -682,14 +683,20 @@ int	thinkos_irq_register(int irq, int pri, void (* isr)(void));
  * @param clk[] pointer to an array to receive the clocks frequency list.
  * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
  */
-int thinkos_sysinfo_clocks(uint32_t * clk[]);
+int thinkos_clocks(uint32_t * clk[]);
 
 /** @brief get udelay calibration factor
  *
  * @param factor pointer to an integer. 
  * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
  */
-int thinkos_sysinfo_udelay_factor(int32_t * factor);
+int thinkos_udelay_factor(int32_t * factor);
+
+/** @brief abort the operating system.
+ *
+ * @return This function does not return.
+ */
+void __attribute__((noreturn)) thinkos_abort(void);
 
 /**@}*/
 

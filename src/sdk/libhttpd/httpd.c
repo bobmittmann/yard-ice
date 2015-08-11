@@ -102,7 +102,7 @@ int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
 			if (c1 == '\r' && c2 == '\n') {
 				buf[pos - 1] = '\0';
 				ctl->rcvq.cnt = cnt;
-				ctl->rcvq.pos = pos;
+				ctl->rcvq.pos = pos + 1;
 				return http_process_request(ctl, buf);
 			}
 			c1 = c2;

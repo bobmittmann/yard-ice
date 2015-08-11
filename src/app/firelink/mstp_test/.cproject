@@ -38,7 +38,8 @@
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.command.make.1757372347" name="Build command" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.command.make" value="make" valueType="string"/>
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.command.rm.1796247485" name="Remove command" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.command.rm" value="rm" valueType="string"/>
 							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createflash.571513005" name="Create flash image" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createflash" value="true" valueType="boolean"/>
-							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.printsize.692455947" name="Print size" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.printsize" value="true" valueType="boolean"/>
+							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.printsize.692455947" name="Print size" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.printsize" value="false" valueType="boolean"/>
+							<option id="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createlisting.266323245" name="Create extended listing" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.addtools.createlisting" value="true" valueType="boolean"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform.1577757992" isAbstract="false" osList="all" superClass="ilg.gnuarmeclipse.managedbuild.cross.targetPlatform"/>
 							<builder buildPath="${workspace_loc:/mstp_test}/Debug" id="ilg.gnuarmeclipse.managedbuild.cross.builder.294209619" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.991200649" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
@@ -51,6 +52,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.669220864" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="STM32F429"/>
 									<listOptionValue builtIn="false" value="THINKAPP"/>
+									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.1750729608" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
@@ -63,7 +65,9 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.35807875" name="Defined symbols (-D)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="STM32F429"/>
 									<listOptionValue builtIn="false" value="THINKAPP"/>
+									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.186368459" name="Language standard" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std" useByScannerDiscovery="true" value="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.default" valueType="enumerated"/>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1165169680" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.257309285" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler"/>
@@ -72,14 +76,18 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths.578434358" name="Library search path (-L)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/..&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdklibs/Debug}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/driver/Debug}&quot;"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs.191532714" name="Libraries (-l)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs" valueType="libs">
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="util"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gcc"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="util"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="console"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="trace"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="driver"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs.1949223576" name="No startup or default libs (-nostdlib)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.scriptfile.1775035029" name="Script files (-T)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.scriptfile" valueType="stringList">
@@ -153,9 +161,15 @@
 							<builder buildPath="${workspace_loc:/mstp_test}/Release" id="ilg.gnuarmeclipse.managedbuild.cross.builder.1294300865" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="ilg.gnuarmeclipse.managedbuild.cross.builder"/>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.319276144" name="Cross ARM GNU Assembler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor.1026263955" name="Use preprocessor" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.usepreprocessor" value="true" valueType="boolean"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs.1895522469" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.defs" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="DEBUG"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.1642559205" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.444394916" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs.392096108" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.defs" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="DEBUG"/>
+								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.368947908" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1347817279" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler"/>
@@ -164,6 +178,7 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths.854641886" name="Library search path (-L)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/..&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdklibs/Debug}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/driver/Debug}&quot;"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs.1603778200" name="Libraries (-l)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs" valueType="libs">
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
@@ -172,6 +187,9 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gcc"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="console"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="trace"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="driver"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.input.835934893" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

@@ -102,9 +102,7 @@
 
 #define THINKOS_EXIT            55
 
-#define THINKOS_SYSINFO         56
-
-#define THINKOS_RT_SNAPSHOT     57
+#define THINKOS_CTL             56
 
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1
@@ -114,8 +112,11 @@
 #define CONSOLE_DRAIN     5
 #define CONSOLE_IOCTL     6
 
-#define SYSINFO_UDELAY_FACTOR 0
-#define SYSINFO_CLOCKS        1
+#define THINKOS_CTL_ABORT         0
+#define THINKOS_CTL_UDELAY_FACTOR 1
+#define THINKOS_CTL_CLOCKS        2
+#define THINKOS_CTL_SNAPSHOT      3
+
 
 #include <arch/cortex-m3.h>
 
@@ -534,22 +535,29 @@ thinkos_console_drain(void) {
 }
 
 /* ---------------------------------------------------------------------------
-   Sysinfo
+   OS Monitor and Control 
    ---------------------------------------------------------------------------*/
 
 static inline int __attribute__((always_inline)) 
-thinkos_sysinfo_clocks(uint32_t * clk[]) {
-	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_CLOCKS, clk);
-}
+	thinkos_clocks(uint32_t * clk[]) {
+		return THINKOS_SVC2(THINKOS_CTL, THINKOS_CTL_CLOCKS, clk);
+	}
 
 static inline int __attribute__((always_inline)) 
-thinkos_sysinfo_udelay_factor(int32_t * factor) {
-	return THINKOS_SVC2(THINKOS_SYSINFO, SYSINFO_UDELAY_FACTOR, factor);
-}
+	thinkos_udelay_factor(int32_t * factor) {
+		return THINKOS_SVC2(THINKOS_CTL, THINKOS_CTL_UDELAY_FACTOR, factor);
+	}
 
-static inline int __attribute__((always_inline)) thinkos_rt_snapshot(void * rt) {
-	return THINKOS_SVC1(THINKOS_RT_SNAPSHOT, rt);
-}
+static inline void __attribute__((always_inline, noreturn)) 
+	thinkos_abort(void) {
+		THINKOS_SVC1(THINKOS_CTL, THINKOS_CTL_ABORT);
+		for(;;);
+	}
+
+static inline int __attribute__((always_inline)) 
+	thinkos_rt_snapshot(void * rt) {
+		return THINKOS_SVC2(THINKOS_CTL, THINKOS_CTL_SNAPSHOT, rt);
+	}
 
 /* ---------------------------------------------------------------------------
    Other

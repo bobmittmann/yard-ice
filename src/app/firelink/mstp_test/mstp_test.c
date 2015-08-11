@@ -37,6 +37,7 @@
 #include <sys/console.h>
 #include <trace.h>
 
+#include "lcd20x4.h"
 #include "board.h"
 
 /* -------------------------------------------------------------------------
@@ -191,27 +192,13 @@ struct mstp_lnk * mstp_start(int addr)
  * ------------------------------------------------------------------------- */
 void io_init(void)
 {
-	thinkos_sysinfo_udelay_factor(&udelay_factor);
+	thinkos_udelay_factor(&udelay_factor);
 
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
-
-    /* USART5 TX */
-    stm32_gpio_mode(UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-    stm32_gpio_af(UART5_TX, GPIO_AF8);
-    /* USART5 RX */
-    stm32_gpio_mode(UART5_RX, ALT_FUNC, PULL_UP);
-    stm32_gpio_af(UART5_RX, GPIO_AF8);
-
-    /* USART6_TX */
-    stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-    stm32_gpio_af(UART6_TX, GPIO_AF7);
-    /* USART6_RX */
-    stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
-    stm32_gpio_af(UART6_RX, GPIO_AF7);
 }
 
 int recv_task(void * arg)
@@ -285,6 +272,7 @@ int main(int argc, char ** argv)
 {
 	struct board_cfg * cfg = (struct board_cfg *)(CFG_ADDR);
 	struct mstp_lnk * mstp;
+	struct lcd_dev * lcd;
 	struct mstp_frame_inf inf;
 	uint8_t mstp_addr = 1;
 	uint8_t pdu[502];
@@ -304,13 +292,20 @@ int main(int argc, char ** argv)
 	io_init();
 
 	stdio_init();
+	lcd = lcd20x4_init();
+
+	lcd_at_puts(lcd, 0, 0, "= ThinkOS = 00:00:00");
+	lcd_at_puts(lcd, 1, 0, "      Firelink      ");
+	lcd_at_puts(lcd, 2, 0, " RS485 Class A Test ");
+	lcd_at_puts(lcd, 3, 0, "====================");
 
 	supervisor_init();
 
 	INF("Starting MS/TP test");
 
 	if ((mstp = mstp_start(mstp_addr)) == NULL) {
-		thinkos_sleep(1000);
+		ERR("mstp_start() failed!");
+		thinkos_sleep(10000);
 		return 1;
 	}
 

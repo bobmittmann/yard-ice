@@ -225,8 +225,8 @@
 #define THINKOS_ENABLE_FPU 0
 #endif
 
-#ifndef THINKOS_ENABLE_SYSINFO
-#define THINKOS_ENABLE_SYSINFO 0
+#ifndef THINKOS_ENABLE_CTL
+#define THINKOS_ENABLE_CTL 0
 #endif
 
 /* -------------------------------------------------------------------------- 
@@ -922,6 +922,10 @@ bool __thinkos_thread_isfaulty(unsigned int thread_id);
 
 void __thinkos_thread_inf_set(unsigned int thread_id, 
 							  const struct thinkos_thread_inf * inf);
+
+void __thinkos_irq_disable_all(void);
+
+void __thinkos_kill_all(void);
 
 void __thinkos_pause_all(void);
 

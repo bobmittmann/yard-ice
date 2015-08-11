@@ -139,11 +139,9 @@ void thinkos_irq_wait_svc(int32_t * arg);
 
 void thinkos_irq_register_svc(int32_t * arg);
 
-void thinkos_rt_snapshot_svc(int32_t * arg);
-
 void thinkos_console_svc(int32_t * arg);
 
-void thinkos_sysinfo_svc(int32_t * arg);
+void thinkos_ctl_svc(int32_t * arg);
 
 void thinkos_nosys(int32_t * arg)
 {
@@ -637,17 +635,9 @@ void cm3_svc_isr(void)
 #endif
 		break;
 
-	case THINKOS_SYSINFO:
-#if THINKOS_ENABLE_SYSINFO
-		thinkos_sysinfo_svc(arg);
-#else
-		thinkos_nosys(arg);
-#endif
-		break;
-
-	case THINKOS_RT_SNAPSHOT:
-#if THINKOS_ENABLE_RT_DEBUG
-		thinkos_rt_snapshot_svc(arg);
+	case THINKOS_CTL:
+#if THINKOS_ENABLE_CTL
+		thinkos_ctl_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif
@@ -720,7 +710,6 @@ void __attribute__((naked)) __cm3_svc_isr(void)
 				  ".word  thinkos_resume_svc\n"
 				  ".word  thinkos_cancel_svc\n"
 				  ".word  thinkos_exit_svc\n"
-				  ".word  thinkos_rt_snapshot_svc\n" */
 				  : : : ); 
 }
 #endif

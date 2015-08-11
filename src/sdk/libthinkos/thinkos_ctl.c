@@ -27,28 +27,72 @@ _Pragma ("GCC optimize (\"Os\")")
 
 #include <sys/sysclk.h>
 
-#if THINKOS_ENABLE_SYSINFO
+#if THINKOS_ENABLE_CTL
+
+static void rt_snapshot(uint32_t * dst)
+{
+	uint32_t pri = cm3_primask_get();
+	uint32_t * src;
+	int i;
+
+	cm3_primask_set(1);
+#if THINKOS_ENABLE_PROFILING
+	{
+		int self = thinkos_rt.active;
+		uint32_t cyccnt = CM3_DWT->cyccnt;
+		int32_t delta = cyccnt - thinkos_rt.cycref;
+		/* update the reference */
+		thinkos_rt.cycref = cyccnt;
+		/* update thread's cycle counter */
+		thinkos_rt.cyccnt[self] += delta; 
+	}
+#endif
+
+	src = (uint32_t *)&thinkos_rt;
+
+	for (i = 0; i < (sizeof(struct thinkos_rt) / 4); ++i)
+		dst[i] = src[i];
+
+#if THINKOS_ENABLE_PROFILING
+	/* Reset cycle counters */
+	for (i = 0; i < THINKOS_THREADS_MAX + 1; i++)
+		thinkos_rt.cyccnt[i] = 0; 
+#endif
+
+	cm3_primask_set(pri);
+}
 
 extern int32_t udelay_factor;
 
-void thinkos_sysinfo_svc(int32_t * arg)
+void thinkos_ctl_svc(int32_t * arg)
 {
 	unsigned int req = arg[0];
 	int32_t * pval;
 	const uint32_t ** ptr;
+
+	arg[0] = 0;
 	
 	switch (req) {
-	case SYSINFO_CLOCKS:
-		arg[0] = 0;
+	case THINKOS_CTL_CLOCKS:
 		ptr = (const uint32_t **)arg[1];
 		*ptr = sysclk_hz;
 		break;
 
-	case SYSINFO_UDELAY_FACTOR:
-		arg[0] = 0;
+	case THINKOS_CTL_UDELAY_FACTOR:
 		pval = (int32_t *)arg[1];
 		*pval = udelay_factor;
 		break;
+
+	case THINKOS_CTL_ABORT:
+		__thinkos_pause_all();
+		__thinkos_defer_sched();
+		break;
+
+#if THINKOS_ENABLE_RT_DEBUG
+	case THINKOS_CTL_SNAPSHOT:
+		rt_snapshot((uint32_t *)arg[1]);
+		break;
+#endif
 
 	default:
 		DCC_LOG1(LOG_ERROR, "invalid sysinfo request %d!", req);

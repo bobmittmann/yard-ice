@@ -271,7 +271,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_L:
 			dmon_soft_reset(comm);
 			dmprintf(comm, "^L\r\n");
-			dmprintf(comm, "Confirm ? (yes/no) > ");
+			dmprintf(comm, "Confirm (yes/no)? ");
 			dmscanf(comm, "yes%n", &i);
 			if (i == 3)
 				board_bootloader_upgrade();

@@ -24,7 +24,7 @@ SDK = ../../../../sdk
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
 		   $(SDK)/libcrc $(SDK)/libtcpip $(SDK)/libhttpd \
-		   $(SDK)/libtty $(SDK)/libshell
+		   $(SDK)/libtty $(SDK)/libshell $(SDK)/libtrace
 
 INCPATH = $(SDK)/include ..
 

@@ -55,7 +55,7 @@ SECTIONS
 	.dccdata :
 	{
 		. = ALIGN(4);
-		KEEP(*(.rodata.__FUNCTION__*))
+		/* KEEP(*(.rodata.__FUNCTION__*)) */
 		KEEP(*(.dccdata))
 	} >dcclog
 
@@ -118,7 +118,7 @@ SECTIONS
 		/* define a global symbol marking the start of the .bss section */
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
-		*(.bss)
+		*(.bss .bss*)
 	} >"DATA"
 
 	/* advance location counter to the next 32-bit boundary */

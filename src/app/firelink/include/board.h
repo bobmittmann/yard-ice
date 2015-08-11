@@ -113,6 +113,7 @@
 #define IO_RS485_MODE     STM32_GPIOF, 11
 
 #define IO_RS485_USART    STM32_UART7
+#define RS485_USART_AF    GPIO_AF8
 
 /* -------------------------------------------------------------------------
  * Serial Flash  connections
