@@ -324,7 +324,7 @@ int main(int argc, char ** argv)
 	for (i = 0;; ++i) {
 		inf.daddr = MSTP_ADDR_BCAST;
 		inf.type = FRM_DATA_NO_REPLY;
-		len = sprintf((char *)pdu, "%6d"
+		len = snprintf((char *)pdu, 501, "%6d"
 					  " The quick brown fox jumps over the lazy dog."
 					  " The quick brown fox jumps over the lazy dog."
 					  " The quick brown fox jumps over the lazy dog."

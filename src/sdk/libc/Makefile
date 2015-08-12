@@ -30,7 +30,7 @@ INET_CFILES = inet_addr.c inet_aton.c inet_ntoa.c inet_ntop.c
 CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 fgets.c fprintf.c fputc.c fputs.c fread.c fwrite.c\
 		 fopen.c fscanf.c vfscanf.c sscanf.c vsscanf.c file.c \
-		 ctype.c div.c\
+		 getchar.c putchar.c ctype.c div.c\
 		 memcmp.c memcpy.c memset.c memmove.c ffs.c\
 		 printf.c puts.c vsnprintf.c sprintf.c snprintf.c\
 		 strcasecmp.c strcat.c strchr.c strstr.c\
@@ -40,7 +40,6 @@ CFILES = atoi.c environ.c fclose.c fflush.c fgetc.c\
 		 rand.c stdin.c stdout.c stderr.c strtok.c null.c abort.c\
 		 time.c $(addprefix inet/,$(INET_CFILES))
 
-#	 getchar.c putchar.c 
 
 include ../../mk/lib.mk
 

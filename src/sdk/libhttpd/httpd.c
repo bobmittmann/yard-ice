@@ -236,34 +236,40 @@ static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 		int n;
 
 		/* search for end of line */
-		for (; pos < cnt; ++pos) {
+		while (pos < cnt) {
 			/* lookahead character */
-			c2 = buf[pos];
+			c2 = buf[pos++];
+			/* search for CR+LF */
 			if (c1 == '\r' && c2 == '\n') {
 				char * val;
 				unsigned int hdr;
 
-				if (pos == lin + 1) {
+				/* If the current position is 2 characters ahead of
+				   the line start then this is an empty line. */
+				if (pos == lin + 2) {
 					/* end of HTTP Header */
-					pos++;
 					ctl->rcvq.cnt = cnt;
 					ctl->rcvq.pos = pos;
 					return 0;
 				}
 
 				/* header field */
-				buf[pos - 1] = '\0';
+				buf[pos - 2] = '\0';
+				DCC_LOGSTR(LOG_TRACE, "\"%s\"", &buf[lin]);
+
 				if ((hdr = http_parse_field(&buf[lin], &val)) == 0) {
-					DCC_LOG(LOG_WARNING, "invalid header field");
+					DCC_LOGSTR(LOG_WARNING, "http_parse_field(\"%s\") failed!", 
+							   &buf[lin]);
 					return -1;
 				}
 
 				if (http_process_field(ctl, hdr, val) < 0) {
+					DCC_LOG1(LOG_WARNING, "http_process_field(%d) failed!", 
+							 &buf[lin]);
 					return -1;
 				}
-
 				/* move to the next line */
-				lin = ++pos;
+				lin = pos;
 			}
 			c1 = c2;
 		}
@@ -296,6 +302,7 @@ static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 
 		/* read more data */
 		if ((n = tcp_recv(tp, &buf[cnt], rem)) <= 0) {
+			DCC_LOG(LOG_WARNING, "tcp_recv() failed!");
 			return n;
 		}
 
@@ -321,6 +328,8 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	DCC_LOG1(LOG_INFO, "ctl=%p accepted.", ctl);
 
 	if ((code = http_parse_request(tp, ctl)) != 0) {
+		DCC_LOG1(LOG_WARNING, "http_parse_request() failed with code %d.", 
+				 code);
 		switch (code) {
 		case HTTP_BAD_REQUEST:
 			httpd_400(tp);
@@ -337,6 +346,7 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	}
 
 	if (http_parse_header(tp, ctl) < 0) {
+		DCC_LOG(LOG_WARNING, "http_parse_header() failed!");
 		/* Malformed request line, respond with: 400 Bad Request */
 		httpd_400(tp);
 		tcp_close(tp);

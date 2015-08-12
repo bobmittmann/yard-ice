@@ -191,9 +191,10 @@ enum {
 	do { if (__LVL <= LOG_LEVEL)  { ice_tracestr( ({ \
 	static const char _f[] __attribute__ ((section(".dccdata"))) = __FILE__;\
 	static const char _m[] __attribute__ ((section(".dccdata"))) = (__FMT);\
-	static const struct dcc_trace_entry __attribute__((section(".dcclog"))) \
-	log_entry = { _f, __LINE__, __LVL, LOG_OPT_STR, __FUNCTION__, _m }; \
-	(struct dcc_trace_entry *)&log_entry; }), (const char *)(__STR)); }} while (0)
+	static const struct dcc_trace_entry __attribute__((section(".dcclog")))\
+	log_entry = { _f, __LINE__, __LVL, LOG_OPT_STR, __FUNCTION__, _m };\
+	(struct dcc_trace_entry *)&log_entry; }), (const char *)(__STR));\
+	}} while (0)
 
 #define DCC_ASSERT_FAIL(__EXPR) { \
 	extern void __attribute((noreturn)) _halt(void); \

@@ -79,11 +79,12 @@ int httpd_server_task(struct httpd * httpd)
 
 	for (;;) {
 //		printf("Wating for connection.\n");
-		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...", 
+		DCC_LOG1(LOG_TRACE, "<%d> Wating for connection...", 
 				 thinkos_thread_self());
 		if (http_accept(httpd, ctl) < 0) {
-//			printf("tcp_accept() failed!\n");
-			break;
+			DCC_LOG1(LOG_WARNING, "<%d> http_accept() failed!", 
+					 thinkos_thread_self());
+			continue;
 		}
 
 //		printf("Connection accepted.\n");

@@ -104,6 +104,7 @@ struct sym http_req_hdr[] = {
 	{"Trailer", "HTTP_HDR_TRAILER"},
 	{"Transfer-Encoding", "HTTP_HDR_TRANSFER_ENCODING"},
 	{"Upgrade", "HTTP_HDR_UPGRADE"},
+	{"Upgrade-Insecure-Requests", "HTTP_HDR_UPGRADE_INSECURE_REQUESTS"},
 	{"User-Agent", "HTTP_HDR_USER_AGENT"},
 	{"Vary", "HTTP_HDR_VARY"},
 	{"Via", "HTTP_HDR_VIA"},
