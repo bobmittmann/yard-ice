@@ -259,7 +259,5 @@ int sndbuf_cmp(sndbuf_t * a, sndbuf_t * b)
 	return 0;
 }
 
-const struct sndbuf sndbuf_zero;
-
-struct sndbuf sndbuf_null;
+//struct sndbuf sndbuf_null;
 

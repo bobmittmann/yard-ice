@@ -30,8 +30,11 @@
 #include <tcpip/httpd.h>
 #include <thinkos.h>
 #include <trace.h>
+#include <fixpt.h>
 
 #include "rtsp.h"
+#include "audio.h"
+
 extern struct rtsp_client rtsp;
 
 /*---------------------------------------------------------------------------
@@ -74,17 +77,19 @@ static const char footer_html[] = HTML_FOOTER;
   ---------------------------------------------------------------------------*/
 
 const char index_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS Web Server</title>\r\n"
+	"<title>ThinkOS RTSP/RTP Demo</title>\r\n"
 	META_HTTP META_COPY LINK_ICON LINK_CSS
 	"</head>\r\n<body>\r\n"
-	"<h1>RTSP/RTP Demo</h1>\r\n";
+	"<h1>ThinkOS RTSP/RTP Demo</h1>\r\n";
 
 const char play_hdr_html[] =
 	"<p>Please fill the infomation and press <b>Play</b>.</p>\r\n"
-	"<form action=\"play.cgi\" method=\"POST\">\r\n";
+	"<form action=\"play.cgi\" method=\"POST\"><table  width=\"400\">"
+	"<col width=\"40%\"><col width=\"60%\">"
+	"\r\n";
 
 const char play_foot_html[] =
-	"<br>\r\n"
+	"</table><br>\r\n"
 	"<input type=\"submit\" value=\"Play\">\r\n"
 	"</form>\r\n";
 
@@ -96,9 +101,15 @@ const char stop_foot_html[] =
 	"<input type=\"submit\" value=\"Stop\">\r\n"
 	"</form>\r\n";
 
+const char rtsp_iframe_html[] =
+	"<iframe src=\"rtsp_msg.cgi\""
+	" width=\"100%\""
+	"></iframe>\r\n";
+
 char rtsp_host[128] = "192.168.10.254";
-char rtsp_media[128] = "u2-5";
+char rtsp_media[128] = "music";
 uint16_t rtsp_port = 5544;
+uint16_t audio_level = 100;
 
 int send_play_form(struct httpctl * ctl)
 {
@@ -109,20 +120,25 @@ int send_play_form(struct httpctl * ctl)
 	http_send(ctl, index_hdr_html, sizeof(index_hdr_html) - 1);
 	http_send(ctl, play_hdr_html, sizeof(play_hdr_html) - 1);
 
-	n = snprintf(s, S_MAX, "RTSP server:<br>\r\n"
-			"<input type=\"text\" name=\"host\"  size=\"64\" maxlength=\"128\" value=\"%s\"><br>\r\n",
+	n = snprintf(s, S_MAX, "<tr><td align=\"right\">RTSP server:</td><td>"
+			"<input type=\"text\" name=\"host\"  size=\"32\" maxlength=\"128\" value=\"%s\"></td></tr>\r\n",
 			rtsp_host);
-	tcp_send(ctl->tp, s, n, 0);
+	http_send(ctl, s, n);
 
-	n = snprintf(s, S_MAX, "TCP Port:<br>\r\n"
-			"<input type=\"text\" name=\"port\" size=\"5\" maxlength=\"5\" value=\"%d\"><br>\r\n",
+	n = snprintf(s, S_MAX, "<tr><td align=\"right\">TCP Port:</td><td>"
+			"<input type=\"text\" name=\"port\" size=\"5\" maxlength=\"5\" value=\"%d\"></td></tr>\r\n",
 			rtsp_port);
-	tcp_send(ctl->tp, s, n, 0);
+	http_send(ctl, s, n);
 
-	n = snprintf(s, S_MAX, "Media (MRL)<br>\r\n"
-			"<input type=\"text\" name=\"mrl\" size=\"64\" maxlength=\"128\" value=\"%s\"><br>\r\n",
+	n = snprintf(s, S_MAX, "<tr><td align=\"right\">Media (MRL):</td><td>"
+			"<input type=\"text\" name=\"mrl\" size=\"32\" maxlength=\"128\" value=\"%s\"></td></tr>\r\n",
 			rtsp_media);
-	tcp_send(ctl->tp, s, n, 0);
+	http_send(ctl, s, n);
+
+	n = snprintf(s, S_MAX, "<tr><td align=\"right\">Volume (0..200):</td><td>"
+			"<input type=\"text\" name=\"vol\" size=\"4\" maxlength=\"3\" value=\"%d\"></td></tr>\r\n",
+			audio_level);
+	http_send(ctl, s, n);
 
 	return http_send(ctl, play_foot_html, sizeof(play_foot_html) - 1);
 }
@@ -149,7 +165,6 @@ int send_stop_form(struct httpctl * ctl)
 			host, port, mrl, track);
 	http_send(ctl, s, n);
 
-
 	return http_send(ctl, stop_foot_html, sizeof(stop_foot_html) - 1);
 }
 
@@ -158,7 +173,21 @@ int send_error(struct httpctl * ctl, char * msg)
 	char s[S_MAX];
 	int n;
 	n = snprintf(s, S_MAX, "<p><b>Error:</b> %s!</p>\r\n", msg);
-	return tcp_send(ctl->tp, s, n, 0);
+	return http_send(ctl, s, n);
+}
+
+int rtsp_msg_cgi(struct httpctl * ctl)
+{
+	char s[S_MAX];
+	int n;
+
+	httpd_200(ctl->tp, TEXT_HTML);
+
+	while ((n = rtsp_recv(&rtsp, s, S_MAX)) > 0) {
+		http_send(ctl, s, n);
+	}
+
+	return 0;
 }
 
 int index_cgi(struct httpctl * ctl)
@@ -172,12 +201,21 @@ int play_cgi(struct httpctl * ctl)
 	strcpy(rtsp_host, http_query_lookup(ctl, "host"));
 	strcpy(rtsp_media, http_query_lookup(ctl, "mrl"));
 	rtsp_port = atoi(http_query_lookup(ctl, "port"));
+	audio_level = atoi(http_query_lookup(ctl, "vol"));
+	if (audio_level > 800)
+		audio_level = 800;
 
 	if (rtsp_connect(&rtsp, rtsp_host, rtsp_port, rtsp_media) < 0) {
+		int code;
+
 		WARN("RTSP connection failed!");
 		send_play_form(ctl);
 		send_error(ctl, "RTSP playback failed");
+		if ((code = rtsp_response_code(&rtsp)) > 200) {
+			http_send(ctl, rtsp_iframe_html, sizeof(rtsp_iframe_html) - 1);
+		}
 	} else {
+		audio_gain_set(audio_level * Q15(1.0) / 100);
 		send_stop_form(ctl);
 	}
 
@@ -197,27 +235,21 @@ int stop_cgi(struct httpctl * ctl)
   static content
   ---------------------------------------------------------------------------*/
 
-const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
-	"body { background: #f8f8f8; color: #555; font: 1.0em Arial,Helvetica,"
+const char style_css[] = "* { border: 0; margin: 0; }\r\n"
+	"body { background: #f8f8f8; color: #555; font: 0.9em Arial,Helvetica,"
 		"\"bitstream vera sans\",sans-serif; margin: 10px 10px 25px 10px; }\r\n"
 	"a { color: #779; text-decoration:none; }\r\n"
 	"a:hover { color:#335; text-decoration:none; }\r\n"
 	"p { color: #111; text-align: justify; margin: 10px 0px 20px 0px; }\r\n"
 	"ul { margin: 10px 0px 20px 0px; }\r\n"
-	"h1 { font: 0.9em; text-align:center; margin: 10px 0px 10px 0px; }\r\n"
-	"h2 { font: 0.9em; text-align:center;  margin: 10px 0px 25px 0px; }\r\n"
+	"h1 { font-size: 1.5em; text-align:left; margin: 10px 0px 10px 0px; }\r\n"
+	"h2 { font-size: 1.3em; text-align:left;  margin: 10px 0px 25px 0px; }\r\n"
 	"hr { background-color:#114; color:#112; width: 100%; height: 1px; " 
 		"margin: 10px 0px 5px 0px; }\r\n"
-	"table { border-collapse: collapse; }\r\n"
+	"table { border-collapse: collapse;  margin: 0; }\r\n"
 	"textarea { background:#fff; margin:1px 2px 1px; border:1px "
 		"solid #aaa; padding:1px 2px 1px; }\r\n"
 	"form { padding:0; margin:0; border:0; display:table;}\r\n"
-	"div.form { padding:0; margin-left:auto; margin-right:auto; "
-		"display:table; }\r\n"
-	"div.fbody { margin:0; border:0; padding:4px 12px 4px; }\r\n"
-	"div.fcol { float:left; margin:0; border:0; padding:0px 6px 0px; }\r\n"
-	"div.ffoot { padding:4px 12px 4px; border:0; margin:0; "
-		"text-align:left; }\r\n"
 	"input[type=text] { background:#fff; margin:1px 2px 1px; " 
 		"border:1px solid #444; padding:3px 3px 2px; }\r\n"
 	"input[type=text]:hover { background:#cdf; }\r\n"
@@ -396,6 +428,8 @@ struct httpdobj www_root[] = {
 		.len = 0, .ptr = play_cgi },
 	{ .oid = "stop.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
 		.len = 0, .ptr = stop_cgi },
+	{ .oid = "rtsp_msg.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+		.len = 0, .ptr = rtsp_msg_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 
@@ -404,33 +438,29 @@ struct httpddir httpd_dir[] = {
 	{ .path = NULL, .objlst = NULL }
 };
 
-int httpd_server_task(struct httpd * httpd)
+int http_server_task(struct httpd * httpd)
 {
 	struct httpctl httpctl;
 	struct httpctl * ctl = &httpctl;
 	const struct httpdobj * obj;
-	unsigned int cnt = 0;
-	unsigned int id = thinkos_thread_self();
-	(void)id;
+
+	INF("Webserver started (thread %d).", thinkos_thread_self());
 
 	for (;;) {
-//		printf("Wating for connection.\n");
 		if (http_accept(httpd, ctl) < 0) {
-//			printf("tcp_accept() failed!\n");
+			ERR("tcp_accept() failed!\n");
 			thinkos_sleep(1000);
 			continue;
 		}
 
-//		printf("Connection accepted.\n");
 		if ((obj = http_obj_lookup(ctl)) != NULL) {
-			cnt++;
 			switch (ctl->method) {
 			case HTTP_GET:
-//				DCC_LOG3(LOG_TRACE, "%2d %6d GET \"%s\"", id, cnt, obj->oid);
+				DBG("HTTP GET \"%s\"", obj->oid);
 				http_get(ctl, obj);
 				break;
 			case HTTP_POST:
-//				DCC_LOG3(LOG_TRACE, "%2d %6d POST \"%s\"", id, cnt, obj->oid);
+				DBG("HTTP POST \"%s\"", obj->oid);
 				http_post(ctl, obj);
 				break;
 			}
@@ -459,6 +489,6 @@ int webserver_init(void)
 {
 	httpd_start(&httpd, 80, 4, httpd_dir, NULL);
 
-	return thinkos_thread_create_inf((void *)httpd_server_task,
+	return thinkos_thread_create_inf((void *)http_server_task,
 			(void *)&httpd, &httpd_inf);
 }

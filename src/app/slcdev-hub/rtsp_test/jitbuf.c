@@ -29,7 +29,8 @@
 #include "trace.h"
 
 int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate, 
-				 uint32_t sample_rate, uint32_t delay_ms)
+				 uint32_t sample_rate, uint32_t delay_ms,
+				 const struct sndbuf * silence)
 {
 	uint32_t delay;
 	uint32_t tbuf;
@@ -51,11 +52,12 @@ int jitbuf_init(struct jitbuf *jb, uint32_t tsclk_rate,
 	jb->tail = 0;
 	jb->delay = delay;
 	jb->tbuf = tbuf;
+	jb->silence = (struct sndbuf *)silence;
 
 	return 0;
 }
 
-int __jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
+int __jitbuf_enqueue(struct jitbuf * jb, struct sndbuf * buf, uint32_t ts)
 {
 	uint32_t head;
 	int32_t lvl;
@@ -130,7 +132,7 @@ int __jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 
 		/* Fill the gap with silence */
 		while (cnt--)
-			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = (sndbuf_t *)&sndbuf_zero;
+			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = jb->silence;
 
 		/* The buffer is in sync... */
 	}
@@ -143,7 +145,7 @@ int __jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 	return 1;
 }
 
-int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
+int jitbuf_enqueue(struct jitbuf * jb, struct sndbuf * buf, uint32_t ts)
 {
 	uint32_t head;
 	uint32_t lvl;
@@ -187,7 +189,7 @@ int jitbuf_enqueue(struct jitbuf * jb, sndbuf_t * buf, uint32_t ts)
 
 		/* Fill the gap with silence */
 		while (cnt--)
-			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = (sndbuf_t *)&sndbuf_zero;
+			jb->fifo[head++ & (JITBUF_FIFO_LEN - 1)] = jb->silence;
 
 	} 
 

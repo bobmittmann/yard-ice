@@ -25,18 +25,22 @@
 #ifndef __AUDIO_H__
 #define __AUDIO_H__
 
-#include "jitbuf.h"
+#include <stdint.h>
 
+struct audio_player;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-struct jitbuf* audio_init(void);
+struct audio_player * audio_init(void);
 
-void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
-		uint8_t * data, unsigned int samples);
+void audio_alaw_enqueue(uint32_t ts, uint8_t * data, unsigned int samples);
+
+void audio_gain_set(int32_t gain);
+
+int32_t audio_gain_get(void);
 
 #ifdef __cplusplus
 }

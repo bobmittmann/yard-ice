@@ -43,19 +43,15 @@ extern const unsigned int sndbuf_len;
 
 typedef struct sndbuf sndbuf_t;
 
-extern const sndbuf_t sndbuf_zero;
-
-extern sndbuf_t sndbuf_null;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-sndbuf_t * sndbuf_alloc(void);
+struct sndbuf * sndbuf_alloc(void);
 
-sndbuf_t * sndbuf_use(sndbuf_t * buf);
+struct sndbuf * sndbuf_use(struct sndbuf * buf);
 
-void sndbuf_free(sndbuf_t * buf);
+void sndbuf_free(struct sndbuf * buf);
 
 void sndbuf_pool_init(void);
 

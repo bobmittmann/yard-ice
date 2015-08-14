@@ -6,11 +6,12 @@
 
 #define ALAW_AMI_MASK       0x55
 
-
+#if 1
 static inline int __top_bit(uint16_t val)
 {
 	return 31 - __clz((uint16_t)val);
 }
+#endif
 
 #if 0
 static inline int __top_bit(uint16_t bits)

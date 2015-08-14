@@ -72,11 +72,10 @@ struct rtp_packet {
 int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 {
 	uint32_t pkt_buf[1496 / 4];
-	uint32_t ts;
-	static uint32_t prev_ts;
 	struct rtp_packet * pkt = (struct rtp_packet *)pkt_buf;
-	int data_len;
 	uint8_t * data_buf;
+	uint32_t ts;
+	int data_len;
 	int len;
 
 	if ((len = udp_recv(__rtp->udp[0], pkt, sizeof(pkt_buf), __sin)) < 0) {
@@ -115,8 +114,6 @@ int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 
 	ts = ntohl(pkt->timestamp);
 	data_len = len - sizeof(struct rtp_packet);
-//	DBG("%5d data_len=%d", ts - prev_ts, data_len);
-	prev_ts = ts;
 
 	data_buf = pkt->data;
 
@@ -134,7 +131,7 @@ int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 		ts = __rtp->ts;
 		__rtp->ts = ts + SNDBUF_LEN;
 //		DBG("%5d --> %d (buf)", ts, SNDBUF_LEN);
-		audio_alaw_enqueue(__rtp->jb, ts, __rtp->buf, SNDBUF_LEN);
+		audio_alaw_enqueue(ts, __rtp->buf, SNDBUF_LEN);
 		data_buf += n;
 		data_len -= n;
 	}
@@ -147,7 +144,7 @@ int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 	ts = __rtp->ts;
 	__rtp->ts = ts + data_len;
 //	DBG("%5d --> %d (pkt)", ts, data_len);
-	audio_alaw_enqueue(__rtp->jb, ts, data_buf, data_len);
+	audio_alaw_enqueue(ts, data_buf, data_len);
 
 	return data_len;
 }
@@ -163,8 +160,7 @@ int rtp_task(struct rtp_session * rtp_s)
 	int32_t dt;
 	int len;
 
-
-	DBG("Thread: %d", thinkos_thread_self());
+	INF("RTP client started (thread %d).", thinkos_thread_self());
 	DBG("RTP port: %d", rtp_s->lport[0]);
 	DBG("RTCP port: %d", rtp_s->lport[1]);
 
@@ -250,9 +246,8 @@ const struct thinkos_thread_inf rtp_inf = {
 	.tag = "RTP"
 };
 
-void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb)
+void rtp_g711_start(struct rtp_session * rtp)
 {
-	rtp->jb = jb;
 	rtp->rem = 0;
 	rtp->octet_count = 0;
 	rtp->pkt_count = 0;

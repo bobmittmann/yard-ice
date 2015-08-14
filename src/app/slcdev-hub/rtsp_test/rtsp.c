@@ -32,7 +32,7 @@
 
 #include "rtsp.h"
 
-int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo)
+int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len)
 {
 	char * src;
 	int n;
@@ -50,7 +50,14 @@ int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo)
 		return n;
 	}
 
-	return tcp_recv(rtsp->tcp, buf, len);
+	if (rtsp->resp.content_pos >= rtsp->resp.content_len)
+		return 0;
+
+	if ((n = tcp_recv(rtsp->tcp, buf, len)) > 0) {
+		rtsp->resp.content_pos += n;
+	}
+
+	return n;
 }
 
 int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
@@ -97,7 +104,7 @@ int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 		}
 
 		/* */
-		if (rtsp->content_len == rtsp->content_pos) {
+		if (rtsp->resp.content_len == rtsp->resp.content_pos) {
 			/* get the number of remaining characters, ignoring
 			 * a possible CR at the end*/
 			n = pos - lin - (c1 == '\r') ? 1 : 0;
@@ -116,8 +123,6 @@ int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 			/* update our pointers */
 			rtsp->pos = pos;
 			rtsp->lin = lin;
-
-			DBG("end of content.");
 			return n;
 		}
 
@@ -148,7 +153,7 @@ int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 			return n;
 		}
 
-		rtsp->content_pos += n;
+		rtsp->resp.content_pos += n;
 		cnt += n;
 		rtsp->cnt = cnt;
 	}
@@ -160,6 +165,10 @@ int rtsp_request(struct rtsp_client * rtsp, const char * req, int len)
 {
 	struct tcp_pcb * tp = rtsp->tcp;
 	int ret;
+
+	rtsp->resp.code = 0;
+	rtsp->resp.content_pos = 0;
+	rtsp->resp.content_len = UINT32_MAX;
 
 	if ((ret = tcp_send(tp, req, len, 0)) < 0)  {
 		ERR("tcp_send() failed!");
@@ -209,10 +218,10 @@ void rtsp_decode_transport(struct rtsp_client * rtsp, char * s)
 				val++;
 				rtsp->rtp.fport[1] = strtoul(val, NULL, 10);
 			}
-			DBG("server_port=%d-%d", rtsp->rtp.fport[0],  rtsp->rtp.fport[1]);
+//			DBG("server_port=%d-%d", rtsp->rtp.fport[0],  rtsp->rtp.fport[1]);
 		} else if (strcmp(nam, "ssrc") == 0) {
 			ssrc = strtoul(val, NULL, 16);
-			DBG("SSRC=%0x8", ssrc);
+//			DBG("SSRC=%0x8", ssrc);
 			rtsp->rtp.ssrc = ntohl(ssrc);
 		}
 	}
@@ -259,6 +268,12 @@ int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo)
 					rtsp->cnt = cnt;
 					rtsp->pos = i;
 					rtsp->lin = i;
+
+					if (rtsp->resp.code != 200) {
+						WARN("Server response code: %d", rtsp->resp.code);
+						return -1;
+					}
+
 					return 0;
 				}
 
@@ -266,18 +281,13 @@ int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo)
 					WARN("invalid header field: \"%s\"", &buf[ln]);
 //					return -1;
 				} else {
-					DBG("header field received: %s", rtsp_hdr_name[hdr]);
+//					DBG("header field received: %s", rtsp_hdr_name[hdr]);
 					if (pos == 0) {
-						int code;
-
 						if (hdr != HDR_RTSP_1_0) {
 							WARN("invalid response");
 							return -1;
 						}
-						if ((code = atoi(val)) != 200) {
-							WARN("server response code %d", code);
-							return -1;
-						}
+						rtsp->resp.code = atoi(val);
 					} else {
 						switch (hdr) {
 						case HDR_CSEQ:
@@ -296,8 +306,8 @@ int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo)
 							break;
 
 						case HDR_CONTENT_LENGTH:
-							rtsp->content_len = strtoul(val, NULL, 10);
-							DBG("Content Length: %d", rtsp->content_len);
+							rtsp->resp.content_len = strtoul(val, NULL, 10);
+//							DBG("Content Length: %d", rtsp->content_len);
 							break;
 						}
 					}
@@ -366,7 +376,10 @@ int rtsp_request_describe(struct rtsp_client * rtsp)
 	if (rtsp_request(rtsp, buf, len) < 0)
 		return -1;
 
-	return rtsp_wait_reply(rtsp, 1000);
+	if (rtsp_wait_reply(rtsp, 1000) < 0)
+		return -1;
+
+	return 0;
 }
 
 int rtsp_request_setup(struct rtsp_client * rtsp)
@@ -448,8 +461,6 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 	rtsp->port = port;
 	rtsp->host_addr = host_addr;
 	rtsp->rtp.faddr = host_addr;
-	rtsp->content_pos = 0;
-	rtsp->content_len = UINT32_MAX;
 	rtsp->cseq = 1;
 
 	strcpy(rtsp->host_name, host);
@@ -470,7 +481,7 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 		return -1;
 	}
 
-	DBG("Track:\"%s\"", rtsp->track_name);
+	INF("Track:\"%s\"", rtsp->track_name);
 
 	if (rtsp_request_setup(rtsp) < 0) {
 		ERR("rtsp_request_setup() failed!");
@@ -541,6 +552,11 @@ char * rtsp_host_name(struct rtsp_client * rtsp)
 unsigned int rtsp_port_get(struct rtsp_client * rtsp)
 {
 	return rtsp->port;
+}
+
+int rtsp_response_code(struct rtsp_client * rtsp)
+{
+	return rtsp->resp.code;
 }
 
 int rtsp_init(struct rtsp_client * rtsp, int port)

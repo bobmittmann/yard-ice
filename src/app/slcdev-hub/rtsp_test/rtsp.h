@@ -37,17 +37,21 @@
 
 struct rtsp_client {
 	struct rtp_session rtp;
-	uint16_t port;
 	struct tcp_pcb * tcp;
 	uint32_t cseq;
 	in_addr_t host_addr;
+	uint16_t svr_port[2];
+	uint16_t port;
 	uint16_t cnt;
 	uint16_t pos;
 	uint16_t lin;
-	uint32_t content_pos;
-	uint32_t content_len;
 	uint64_t sid;
-	uint16_t svr_port[2];
+	struct {
+		uint16_t code;
+		uint32_t seq;
+		uint32_t content_pos;
+		uint32_t content_len;
+	} resp;
 	struct {
 		uint8_t fmt;
 	} media;
@@ -66,7 +70,7 @@ int rtsp_request(struct rtsp_client * rtsp, const char * req, int len);
 
 int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo);
 
-int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo);
+int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len);
 
 int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
 		unsigned int len);
@@ -85,6 +89,8 @@ char * rtsp_track_name(struct rtsp_client * rtsp);
 char * rtsp_media_name(struct rtsp_client * rtsp);
 
 char * rtsp_host_name(struct rtsp_client * rtsp);
+
+int rtsp_response_code(struct rtsp_client * rstp);
 
 unsigned int rtsp_port_get(struct rtsp_client * rtsp);
 

@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thinkos.h>
+#include <fixpt.h>
+
 #include "jitbuf.h"
 #include "trace.h"
 #include "g711.h"
@@ -70,6 +72,12 @@ void wave_pause(void)
 	/* disable DMA */
 	dma->s[DAC1_DMA_STRM].cr &= ~DMA_EN;	
 }
+
+
+const struct sndbuf sndbuf_zero = {
+		.ref = 0,
+		.data = { [0 ... SNDBUF_LEN - 1] = (1 << 15) }
+};
 
 void stm32_dma1_stream5_isr(void);
 
@@ -129,7 +137,10 @@ void stm32f_dac_init(unsigned int freq)
 
 	/*  DMA Configuration */
 	/* Peripheral address */
-	dma->s[DAC1_DMA_STRM].par = &dac->dhr12r1;
+//	dma->s[DAC1_DMA_STRM].par = &dac->dhr12r1;
+
+	dma->s[DAC1_DMA_STRM].par = &dac->dhr12l1;
+
 	/* Memory address */
 	dma->s[DAC1_DMA_STRM].m0ar = (void *)sndbuf_zero.data;
 	dma->s[DAC1_DMA_STRM].m1ar = (void *)sndbuf_zero.data;
@@ -156,13 +167,16 @@ void stm32f_dac_init(unsigned int freq)
 //	thinkos_irq_register(STM32F_IRQ_DMA1_STREAM5, 0xff, stm32_dma1_stream5_isr);
 }
 
-struct {
+struct audio_player {
 	volatile unsigned int dma_cnt;
 	volatile unsigned int clk;
 	unsigned int sps;
 	struct jitbuf jbuf;
 	struct sndbuf * pcm[2];
-} audio;
+	int32_t gain;
+};
+
+struct audio_player audio;
 
 void stm32_dma1_stream5_isr(void)
 {
@@ -209,6 +223,8 @@ int audio_task(void * arg)
 	unsigned int samples;
 	unsigned int time = 0;
 
+	INF("Audio player started (thread %d).", thinkos_thread_self());
+
 	audio.dma_cnt = 0;
 	audio.clk = thinkos_clock();
 	audio.pcm[0] = (struct sndbuf *)&sndbuf_zero;
@@ -252,29 +268,45 @@ const struct thinkos_thread_inf audio_inf = {
 	.tag = "AUDIO"
 };
 
-#define AUDIO_DAC_OVERSAMPLE 1
+#define AUDIO_DAC_OVERSAMPLE 2
 
 #define STREAM_SAMPLE_RATE 11025
 #define STREAM_CLOCK_RATE 11025
 
 #define AUDIO_SAMPLE_RATE (STREAM_SAMPLE_RATE * AUDIO_DAC_OVERSAMPLE)
 
-jitbuf_t * audio_init(void)
+struct audio_player * audio_init(void)
 {
 	sndbuf_pool_init();
 
+	audio.gain = Q15(0.125);
+
 	stm32f_dac_init(AUDIO_SAMPLE_RATE);
 
-	jitbuf_init(&audio.jbuf, STREAM_CLOCK_RATE, AUDIO_SAMPLE_RATE, 50);
+	jitbuf_init(&audio.jbuf, STREAM_CLOCK_RATE, AUDIO_SAMPLE_RATE,
+			50, &sndbuf_zero);
 
 	thinkos_thread_create_inf((void *)audio_task, (void *)NULL, &audio_inf);
 
-	return &audio.jbuf;
+	return &audio;
 }
 
+void audio_gain_set(int32_t gain)
+{
+	if (gain > Q15(8.0))
+		gain = Q15(8.0);
+	else if (gain < Q15(-8.0))
+		gain = Q15(-8.0);
 
-void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
-		uint8_t * data, unsigned int samples)
+	audio.gain = gain;
+}
+
+int32_t audio_gain_get(void)
+{
+	return audio.gain;
+}
+
+void audio_alaw_enqueue(uint32_t ts, uint8_t * data, unsigned int samples)
 {
 #if (STREAM_SAMPLE_RATE != AUDIO_SAMPLE_RATE)
 	static int32_t y0 = 0;
@@ -283,6 +315,8 @@ void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
 #endif
 	int16_t * dst;
 	uint8_t * src;
+	int32_t gain = audio.gain;
+	jitbuf_t * jb = &audio.jbuf;
 	struct sndbuf * pcm;
 	int rem;
 	int i;
@@ -300,7 +334,10 @@ void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
 		n = rem > SNDBUF_LEN ? SNDBUF_LEN : rem;
 
 		for (i = 0; i < n; ++i) {
-			y = ((int)alaw2linear(src[i]) << 3) + 0x8000;
+			y = alaw2linear(src[i]);
+			y = Q15_MUL(y , gain);
+			y = Q15_SAT(y);
+			y += 32768;
 			dst[i] = y;
 		}
 #else
@@ -309,8 +346,10 @@ void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
 		for (i = 0; i < n; ++i) {
 			y0 = y1;
 			y1 = y2;
-//			y2 = ((int)alaw2linear(src[i]) << 3) + 0x8000;
-			y2 = ((int)alaw2linear(src[i]) >> 1) + 0x0800;
+			y2 = alaw2linear(src[i]);
+			y2 = Q15_MUL(y2 , gain);
+			y2 = Q15_SAT(y2);
+			y2 += 32768;
 			y = (6*y1 + 3*y2 - y0) / 8;
 			dst[i * 2] = y2;
 			dst[i * 2 + 1] = y;

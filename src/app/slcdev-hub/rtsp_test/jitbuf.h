@@ -46,6 +46,8 @@ struct jitbuf {
 	uint32_t delay;
 	/* period of a sound buffer (TSCLK periods) */
 	uint32_t tbuf;
+	/* silence buffer */
+	struct sndbuf * silence;
 	/* time stamp at the head of the queue (TSCLK periods) */
 	volatile uint32_t head_ts;
 	volatile uint32_t head;
@@ -61,9 +63,10 @@ extern "C" {
 #endif
 
 int jitbuf_init(jitbuf_t *jb, unsigned int tsclk_rate, 
-				 unsigned int sample_rate, unsigned int delay_ms);
+				 unsigned int sample_rate, unsigned int delay_ms,
+				 const struct sndbuf * silence);
 
-int jitbuf_enqueue(jitbuf_t * jb, sndbuf_t * buf, uint32_t ts);
+int jitbuf_enqueue(jitbuf_t * jb, struct sndbuf * buf, uint32_t ts);
 
 sndbuf_t * jitbuf_dequeue(jitbuf_t * jb);
 

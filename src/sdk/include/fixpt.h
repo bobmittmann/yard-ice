@@ -4,20 +4,22 @@
 
 #include <stdint.h>
 
-// Conversion form float to fixed point Q1.15
+/* Conversion form float to fixed point Q1.15 */
 #define Q15(F) ((int32_t)((F) * 32768))
-// Convert from fractional Q1.15 to float point
-#define Q15F(Q) ((float)(((float)(Q)) / 32768.0))
-// Q15 Multiply
 
+/* Convert from fractional Q1.15 to float point */
+#define Q15F(Q) ((float)(((float)(Q)) / 32768.0))
+
+/* Q15 Multiply */
 #define Q15_MUL(X1, X2) (((int32_t)(X1) * (int32_t)(X2) + (1 << 14)) >> 15)
 //#define Q15_MUL(X1, X2) (((int32_t)(X1) * (int32_t)(X2)) >> 15)
 
 #define Q15_UMUL(X1, X2) ((((uint32_t)(X1) * (uint32_t)(X2)) + (1 << 14)) >> 15)
 
-// Q15 Divide
+/* Q15 Divide */
 #define Q15_DIV(X, Y) (((X) << 15) / (Y))
-// Q15 Saturation
+
+/* Q15 Saturation */
 #define Q15_SAT(X) ((X) < -32768) ? -32768 : (((X) > 32767) ? 32767 : (X))
 
 typedef struct {

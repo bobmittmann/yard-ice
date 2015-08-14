@@ -156,7 +156,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	struct timeval tv;
 	char s[80];
 
-	INF("<%d> started...", thinkos_thread_self());
+	INF("Supervisory task started (thread %d).", thinkos_thread_self());
 
 	trace_tail(&ent);
 
@@ -198,8 +198,6 @@ struct rtsp_client rtsp;
 
 int main(int argc, char ** argv)
 {
-	struct jitbuf * jb;
-
 	stdio_init();
 
 	supervisor_init();
@@ -210,13 +208,13 @@ int main(int argc, char ** argv)
 
 	network_config();
 
-	jb = audio_init();
+	audio_init();
 
 	thinkos_sleep(100);
 
 	rtsp_init(&rtsp, 554);
 
-	rtp_g711_start(&rtsp.rtp, jb);
+	rtp_g711_start(&rtsp.rtp);
 
 	webserver_init();
 

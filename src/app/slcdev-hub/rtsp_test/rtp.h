@@ -26,7 +26,7 @@
 #define __RTP_H__
 
 #include <tcpip/udp.h>
-#include "jitbuf.h"
+#include "sndbuf.h"
 
 struct ntp_time {
     uint32_t sec;
@@ -54,15 +54,13 @@ struct rtp_session {
 
 	uint8_t buf[SNDBUF_LEN];
 	unsigned int rem;
-
-	struct jitbuf * jb;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb);
+void rtp_g711_start(struct rtp_session * rtp);
 
 int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin);
 
