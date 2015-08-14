@@ -38,7 +38,7 @@
 #endif
 
 #ifndef HTTPD_URI_MAX_LEN
-#define HTTPD_URI_MAX_LEN 127
+#define HTTPD_URI_MAX_LEN 255
 #endif
 
 #ifndef HTTPD_QUERY_LST_MAX

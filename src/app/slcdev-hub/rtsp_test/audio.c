@@ -247,12 +247,12 @@ const struct thinkos_thread_inf audio_inf = {
 	.stack_ptr = audio_stack,
 	.stack_size = sizeof(audio_stack),
 	.priority = 32,
-	.thread_id = 8,
+	.thread_id = 2,
 	.paused = 0,
 	.tag = "AUDIO"
 };
 
-#define AUDIO_DAC_OVERSAMPLE 2
+#define AUDIO_DAC_OVERSAMPLE 1
 
 #define STREAM_SAMPLE_RATE 11025
 #define STREAM_CLOCK_RATE 11025
@@ -276,9 +276,11 @@ jitbuf_t * audio_init(void)
 void audio_alaw_enqueue(struct jitbuf * jb, uint32_t ts,
 		uint8_t * data, unsigned int samples)
 {
+#if (STREAM_SAMPLE_RATE != AUDIO_SAMPLE_RATE)
 	static int32_t y0 = 0;
 	static int32_t y1 = 0;
 	static int32_t y2 = 0;
+#endif
 	int16_t * dst;
 	uint8_t * src;
 	struct sndbuf * pcm;

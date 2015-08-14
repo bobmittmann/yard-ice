@@ -129,7 +129,7 @@ static int http_process_field(struct httpctl * ctl,
 		break;
 	case HTTP_HDR_CONTENT_TYPE:
 		ctl->ctype = http_parse_content_type(val, NULL);
-		DCC_LOG1(LOG_INFO, "Content-Type: 0x%02x", ctl->ctype);
+		DCC_LOG1(LOG_TRACE, "Content-Type: 0x%02x", ctl->ctype);
 		break;
 	case HTTP_HDR_CONTENT_LENGTH:
 		ctl->ctlen = strtoul(val, NULL, 10);
@@ -385,7 +385,7 @@ struct tcp_pcb * httpd_start(struct httpd * httpd,
 	tcp_bind(tp, INADDR_ANY, htons(port));
 
 	if (tcp_listen(tp, backlog) != 0) {
-		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!");
+		DCC_LOG(LOG_ERROR, "Can't register the TCP listener!");
 		return NULL;
 	}
 

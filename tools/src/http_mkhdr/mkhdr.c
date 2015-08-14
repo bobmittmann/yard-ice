@@ -91,6 +91,7 @@ struct sym http_req_hdr[] = {
 	{"Last-Modified", "HTTP_HDR_LAST_MODIFIED"},
 	{"Location", "HTTP_HDR_LOCATION"},
 	{"Max-Forwards", "HTTP_HDR_MAX_FORWARDS"},
+	{"Origin", "HTTP_HDR_ORIGIN"},
 	{"Pragma", "HTTP_HDR_PRAGMA"},
 	{"Proxy-Authenticate", "HTTP_HDR_PROXY_AUTHENTICATE"},
 	{"Proxy-Authorization", "HTTP_HDR_PROXY_AUTHORIZATION"},

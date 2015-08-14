@@ -31,6 +31,7 @@
 
 #include <thinkos.h>
 #include <trace.h>
+#include <assert.h>
 
 #include "rtp.h"
 #include "audio.h"
@@ -70,9 +71,12 @@ struct rtp_packet {
 
 int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 {
-	uint32_t pkt_buf[256];
+	uint32_t pkt_buf[1496 / 4];
+	uint32_t ts;
+	static uint32_t prev_ts;
 	struct rtp_packet * pkt = (struct rtp_packet *)pkt_buf;
 	int data_len;
+	uint8_t * data_buf;
 	int len;
 
 	if ((len = udp_recv(__rtp->udp[0], pkt, sizeof(pkt_buf), __sin)) < 0) {
@@ -90,18 +94,60 @@ int rtp_g711_recv(struct rtp_session * __rtp, struct sockaddr_in * __sin)
 
 	if (pkt->version != 2) {
 		ERR("rtp version != 2");
-		return -1;
+		return 0;
 	}
 
-	if (pkt->payload != 8) {
-		ERR("rtp payload != 8");
-		return -1;
+	if ((pkt->payload != 8) && (pkt->payload != 96)) {
+
+		ERR("rtp payload(%d) != 8 | 96", pkt->payload);
+		return 0;
 	}
 
+	if (pkt->csrc_len != 0) {
+		ERR("csrc_len (%d) != 0", pkt->csrc_len);
+		return 0;
+	}
+
+	if (pkt->ssrc != __rtp->ssrc) {
+		ERR("SSRC (%0x8) != %0x8 !", pkt->ssrc, __rtp->ssrc);
+		return 0;
+	}
+
+	ts = ntohl(pkt->timestamp);
 	data_len = len - sizeof(struct rtp_packet);
+//	DBG("%5d data_len=%d", ts - prev_ts, data_len);
+	prev_ts = ts;
 
-	audio_alaw_enqueue(__rtp->jb, pkt->timestamp,
-			pkt->data, data_len);
+	data_buf = pkt->data;
+
+	if (__rtp->rem) {
+		int n = SNDBUF_LEN - __rtp->rem;
+
+		if (n > data_len)
+			n = data_len;
+		memcpy(&__rtp->buf[__rtp->rem], data_buf, n);
+
+		__rtp->rem += n;
+		if (__rtp->rem < SNDBUF_LEN)
+			return 0;
+
+		ts = __rtp->ts;
+		__rtp->ts = ts + SNDBUF_LEN;
+//		DBG("%5d --> %d (buf)", ts, SNDBUF_LEN);
+		audio_alaw_enqueue(__rtp->jb, ts, __rtp->buf, SNDBUF_LEN);
+		data_buf += n;
+		data_len -= n;
+	}
+
+	if ((__rtp->rem = (data_len % SNDBUF_LEN)) != 0) {
+		data_len -= __rtp->rem;
+		memcpy(__rtp->buf, &data_buf[data_len], __rtp->rem);
+	}
+
+	ts = __rtp->ts;
+	__rtp->ts = ts + data_len;
+//	DBG("%5d --> %d (pkt)", ts, data_len);
+	audio_alaw_enqueue(__rtp->jb, ts, data_buf, data_len);
 
 	return data_len;
 }
@@ -123,18 +169,22 @@ int rtp_task(struct rtp_session * rtp_s)
 	DBG("RTCP port: %d", rtp_s->lport[1]);
 
 	if ((rtp_udp = udp_alloc()) == NULL) {
+		ERR("udp_alloc() failed!");
 		return -1;
 	}
 
 	if (udp_bind(rtp_udp, INADDR_ANY, htons(rtp_s->lport[0])) < 0) {
+		ERR("udp_bind() failed!");
 		return -1;
 	}
 
 	if ((rtcp_udp = udp_alloc()) == NULL) {
+		ERR("udp_alloc() failed!");
 		return -1;
 	}
 
 	if (udp_bind(rtcp_udp, INADDR_ANY, htons(rtp_s->lport[1])) < 0) {
+		ERR("udp_bind() failed!");
 		return -1;
 	}
 
@@ -149,6 +199,7 @@ int rtp_task(struct rtp_session * rtp_s)
 		len = rtp_g711_recv(rtp_s, &sin);
 
 		if (len < 0) {
+			ERR("rtp_g711_recv() failed!");
 			udp_close(rtp_s->udp[0]);
 			return -1;
 		}
@@ -173,6 +224,21 @@ int rtp_task(struct rtp_session * rtp_s)
 	return 0;
 }
 
+void rtp_close_session(struct rtp_session * rtp)
+{
+	rtp->ssrc = 0;
+	rtp->rem = 0;
+}
+
+void rtp_open_session(struct rtp_session * rtp, uint32_t ssrc)
+{
+	rtp->octet_count = 0;
+	rtp->pkt_count = 0;
+	rtp->seq_no = 0;
+	rtp->start_seq = 0;
+	rtp->ssrc = ntohl(ssrc);
+}
+
 uint32_t rtp_stack[1024];
 
 const struct thinkos_thread_inf rtp_inf = {
@@ -187,6 +253,13 @@ const struct thinkos_thread_inf rtp_inf = {
 void rtp_g711_start(struct rtp_session * rtp, struct jitbuf * jb)
 {
 	rtp->jb = jb;
+	rtp->rem = 0;
+	rtp->octet_count = 0;
+	rtp->pkt_count = 0;
+	rtp->seq_no = 0;
+	rtp->start_seq = 0;
+	rtp->ssrc = 0;
+
 	thinkos_thread_create_inf((void *)rtp_task, (void *)rtp, &rtp_inf);
 }
 

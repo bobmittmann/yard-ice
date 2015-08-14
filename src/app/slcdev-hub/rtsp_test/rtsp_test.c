@@ -194,12 +194,10 @@ void supervisor_init(void)
 							  &supervisor_inf);
 }
 
-
-volatile bool do_connect = true;
+struct rtsp_client rtsp;
 
 int main(int argc, char ** argv)
 {
-	struct rtsp_client rtsp;
 	struct jitbuf * jb;
 
 	stdio_init();
@@ -224,12 +222,14 @@ int main(int argc, char ** argv)
 
 	for (;;) {
 		thinkos_sleep(1000);
+/*
 		if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
 			WARN("RTSP connection failed!");
 		} else	{
 			rtsp_close_wait(&rtsp);
 			WARN("RTSP connection closed!");
 		}
+*/
 	}
 
 	return 0;

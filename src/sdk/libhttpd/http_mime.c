@@ -13,19 +13,20 @@
    algorithm, using libc's rand() and srand(10001)
 */
 
+/* Mime types */
 const char * mime_type_name[] = {
 	"",
-	"application/javascript",
-	"application/json",
-	"application/xml",
-	"application/x-www-form-urlencoded",
+	"text/html",
+	"text/plain",
+	"text/css",
 	"image/png",
 	"image/jpeg",
 	"image/gif",
-	"text/css",
-	"text/html",
-	"text/plain",
-	"multipart/form-data"
+	"application/javascript",
+	"application/json",
+	"application/xml",
+	"multipart/form-data",
+	"application/x-www-form-urlencoded"
 };
 
 /* ----------------------------------------------------------------
@@ -80,10 +81,10 @@ static const uint8_t h_tab[] = {
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
-	  0,   0,   4,   0,   0,   0,   0,   0,
-	  0,   0,   0,  10,   0,   0,   0,   9,
-	  0,   0,   2,   0,   0,   0,   3,   0,
-	  0,   0,   0,  11,   0,   0,   0,   0,
+	  0,   0,  11,   0,   0,   0,   0,   0,
+	  0,   0,   0,   2,   0,   0,   0,   1,
+	  0,   0,   8,   0,   0,   0,   9,   0,
+	  0,   0,   0,  10,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
@@ -92,14 +93,14 @@ static const uint8_t h_tab[] = {
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
-	  0,   0,   0,   6,   0,   8,   5,   0,
+	  0,   0,   0,   5,   0,   3,   4,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
-	  0,   0,   0,   0,   0,   1,   0,   0,
+	  0,   0,   0,   0,   0,   7,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,   0,   0,   0,
-	  0,   0,   0,   7,   0,   0,   0,   0
+	  0,   0,   0,   6,   0,   0,   0,   0
 };
 
 /* ----------------------------------------------------------------

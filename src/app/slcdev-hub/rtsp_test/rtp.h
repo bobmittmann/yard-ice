@@ -41,15 +41,20 @@ static inline void get_ntp_time(struct ntp_time * tm) {
 #endif
 
 struct rtp_session {
+	volatile uint32_t ssrc;
 	in_addr_t faddr;
 	uint16_t lport[2];
 	uint16_t fport[2];
 	uint32_t start_seq;
 	uint32_t seq_no;
-	uint32_t ssrc;
 	uint32_t pkt_count;
 	uint32_t octet_count;
+	uint32_t ts;
 	struct udp_pcb * udp[2];
+
+	uint8_t buf[SNDBUF_LEN];
+	unsigned int rem;
+
 	struct jitbuf * jb;
 };
 
@@ -65,6 +70,10 @@ void get_ntp_time(struct ntp_time * tm);
 
 int rtcp_send_sr_sdes(struct rtp_session * __rtp, uint32_t __rtptime,
 		struct ntp_time * __ntp, struct sockaddr_in * __sin);
+
+void rtp_close_session(struct rtp_session * rtp);
+
+void rtp_open_session(struct rtp_session * rtp, uint32_t ssrc);
 
 #ifdef __cplusplus
 }

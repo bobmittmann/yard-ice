@@ -32,6 +32,129 @@
 
 #include "rtsp.h"
 
+int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo)
+{
+	char * src;
+	int n;
+	int i;
+
+	/* read from RTSP internal buffer */
+	if ((n = (rtsp->cnt -  rtsp->pos)) > 0) {
+		if (n > len)
+			n = len;
+		src = &rtsp->buf[rtsp->pos];
+		for (i = 0; i < n; ++i)
+			buf[i] = src[i];
+
+		rtsp->cnt += n;
+		return n;
+	}
+
+	return tcp_recv(rtsp->tcp, buf, len);
+}
+
+int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
+		unsigned int len)
+{
+	struct tcp_pcb * tp = rtsp->tcp;
+	int rem;
+	int cnt;
+	int pos;
+	int lin;
+	int c1;
+	int c2;
+	int n;
+
+	cnt = rtsp->cnt;
+	pos = rtsp->pos;
+	lin = rtsp->lin;
+	c1 = (pos) ? rtsp->buf[pos - 1] : '\0';
+
+	/* receive SDP payload */
+	for (;;) {
+		/* search for end of line */
+		while (pos < cnt) {
+			c2 = rtsp->buf[pos++];
+			if (c1 == '\r' && c2 == '\n') {
+				char * dst = line;
+				char * src = &rtsp->buf[lin];
+				int i;
+
+				n = pos - lin - 2;
+				if (n > len)
+					n = len;
+
+				for (i = 0; i < n; ++i)
+					dst[i] = src[i];
+
+				/* move to the next line */
+				lin = pos;
+				rtsp->lin = lin;
+				rtsp->pos = lin;
+				return n;
+			}
+			c1 = c2;
+		}
+
+		/* */
+		if (rtsp->content_len == rtsp->content_pos) {
+			/* get the number of remaining characters, ignoring
+			 * a possible CR at the end*/
+			n = pos - lin - (c1 == '\r') ? 1 : 0;
+
+			if (n != 0) {
+				/* this is the last line and there is no CR+LF at the end of it */
+				char * dst = line;
+				char * src = &rtsp->buf[lin];
+				int i;
+
+				if (n > len)
+					n = len;
+				for (i = 0; i < n; ++i)
+					dst[i] = src[i];
+			}
+			/* update our pointers */
+			rtsp->pos = pos;
+			rtsp->lin = lin;
+
+			DBG("end of content.");
+			return n;
+		}
+
+		if (RTSP_CLIENT_BUF_LEN == cnt) {
+			int i;
+			int j;
+
+			if (lin == 0) {
+				ERR("buffer overflow!");
+				return -1;
+			}
+
+			/* move remaining data to the beginning of the buffer */
+			n = cnt - lin;
+			for (i = 0, j = lin; i < n; ++i, ++j)
+				rtsp->buf[i] = rtsp->buf[j];
+
+			cnt = n;
+			pos = n;
+			lin = 0;
+		}
+
+		/* free space in the input buffer */
+		rem = RTSP_CLIENT_BUF_LEN - cnt;
+		/* read more data */
+		if ((n = tcp_recv(tp, &rtsp->buf[cnt], rem)) <= 0) {
+			tcp_close(tp);
+			return n;
+		}
+
+		rtsp->content_pos += n;
+		cnt += n;
+		rtsp->cnt = cnt;
+	}
+
+	return 0;
+}
 
 int rtsp_request(struct rtsp_client * rtsp, const char * req, int len)
 {
@@ -49,6 +172,7 @@ int rtsp_request(struct rtsp_client * rtsp, const char * req, int len)
 
 void rtsp_decode_transport(struct rtsp_client * rtsp, char * s)
 {
+	uint32_t ssrc;
 	char * cp;
 	char * nam;
 	char * val;
@@ -87,8 +211,9 @@ void rtsp_decode_transport(struct rtsp_client * rtsp, char * s)
 			}
 			DBG("server_port=%d-%d", rtsp->rtp.fport[0],  rtsp->rtp.fport[1]);
 		} else if (strcmp(nam, "ssrc") == 0) {
-			rtsp->rtp.ssrc = strtoul(val, NULL, 16);
-			DBG("SSRC=%0x8", rtsp->rtp.ssrc);
+			ssrc = strtoul(val, NULL, 16);
+			DBG("SSRC=%0x8", ssrc);
+			rtsp->rtp.ssrc = ntohl(ssrc);
 		}
 	}
 }
@@ -138,40 +263,44 @@ int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo)
 				}
 
 				if ((hdr = rtsp_parse_hdr(&buf[ln], &val)) == 0) {
-					WARN("invalid header field");
-					return -1;
-				}
-
-				DBG("header field received: %s", rtsp_hdr_name[hdr]);
-				if (pos == 0) {
-					int code;
-
-					if (hdr != HDR_RTSP_1_0) {
-						WARN("invalid response");
-						return -1;
-					}
-					if ((code = atoi(val)) != 200) {
-						WARN("server response code %d", code);
-						return -1;
-					}
+					WARN("invalid header field: \"%s\"", &buf[ln]);
+//					return -1;
 				} else {
-					switch (hdr) {
-					case HDR_CSEQ:
-						if (atoi(val) != rtsp->cseq) {
-							WARN("invalid CSeq");
+					DBG("header field received: %s", rtsp_hdr_name[hdr]);
+					if (pos == 0) {
+						int code;
+
+						if (hdr != HDR_RTSP_1_0) {
+							WARN("invalid response");
 							return -1;
 						}
-						break;
+						if ((code = atoi(val)) != 200) {
+							WARN("server response code %d", code);
+							return -1;
+						}
+					} else {
+						switch (hdr) {
+						case HDR_CSEQ:
+							if (atoi(val) != rtsp->cseq) {
+								WARN("invalid CSeq");
+								return -1;
+							}
+							break;
 
-					case HDR_SESSION:
-						rtsp->sid = strtoull(val, NULL, 16);
-						break;
+						case HDR_SESSION:
+							rtsp->sid = strtoull(val, NULL, 16);
+							break;
 
-					case HDR_TRANSPORT:
-						rtsp_decode_transport(rtsp, val);
-						break;
+						case HDR_TRANSPORT:
+							rtsp_decode_transport(rtsp, val);
+							break;
+
+						case HDR_CONTENT_LENGTH:
+							rtsp->content_len = strtoul(val, NULL, 10);
+							DBG("Content Length: %d", rtsp->content_len);
+							break;
+						}
 					}
-
 				}
 				/* increment header counter */
 				pos++;
@@ -202,133 +331,12 @@ int rtsp_wait_reply(struct rtsp_client * rtsp, int tmo)
 	return -1;
 }
 
-int rtsp_recv(struct rtsp_client * rtsp, char * buf, int len, int tmo)
+int rtsp_request_options(struct rtsp_client * rtsp)
 {
-	char * src;
-	int n;
-	int i;
-
-	/* read from RTSP internal buffer */
-	if ((n = (rtsp->cnt -  rtsp->pos)) > 0) {
-		if (n > len)
-			n = len;
-		src = &rtsp->buf[rtsp->pos];
-		for (i = 0; i < n; ++i)
-			buf[i] = src[i];
-
-		rtsp->cnt += n;
-		return n;
-	}
-
-	return tcp_recv(rtsp->tcp, buf, len);
-}
-
-int rtsp_line_recv(struct rtsp_client * rtsp, char * line,
-		unsigned int len, unsigned int tmo)
-{
-	struct tcp_pcb * tp = rtsp->tcp;
-	int rem;
-	int cnt;
-	int pos;
-	int lin;
-	int c1;
-	int c2;
-	int n;
-
-	cnt = rtsp->cnt;
-	pos = rtsp->pos;
-	lin = rtsp->lin;
-	c1 = (pos) ? rtsp->buf[pos - 1] : '\0';
-
-	/* receive SDP payload */
-	for (;;) {
-		/* search for end of line */
-		for (; pos < cnt; ++pos) {
-			c2 = rtsp->buf[pos];
-			if (c1 == '\r' && c2 == '\n') {
-				char * dst = line;
-				char * src = &rtsp->buf[lin];
-				int i;
-
-				n = pos - lin - 1;
-				if (n > len)
-					n = len;
-
-				for (i = 0; i < n; ++i)
-					dst[i] = src[i];
-
-				/* move to the next line */
-				lin = ++pos;
-				rtsp->lin = lin;
-				rtsp->pos = lin;
-				return n;
-			}
-			c1 = c2;
-		}
-
-		if (RTSP_CLIENT_BUF_LEN == cnt) {
-			int i;
-			int j;
-
-			if (lin == 0) {
-				ERR("buffer ovreflow!");
-				return -1;
-			}
-
-			n = cnt - lin;
-			for (i = 0, j = lin; i < n; ++i, ++j)
-				rtsp->buf[i] = rtsp->buf[j];
-
-			cnt = n;
-			pos = n;
-			lin = 0;
-		}
-
-		rem = RTSP_CLIENT_BUF_LEN - cnt; /* free space in the input buffer */
-
-		if ((n = tcp_recv(tp, &rtsp->buf[cnt], rem)) <= 0) {
-			tcp_close(tp);
-			return n;
-		}
-
-		cnt += n;
-		rtsp->cnt = cnt;
-	}
-
-	return 0;
-}
-
-int rtsp_connect(struct rtsp_client * rtsp, const char * host,
-		const char * mrl)
-{
-	struct tcp_pcb * tp;
-	in_addr_t host_addr;
-	char buf[512];
+	char buf[256];
 	int len;
 
-	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
-		return -1;
-	}
-
-	if ((tp = tcp_alloc()) == NULL) {
-		ERR("can't allocate socket!");
-		return -1;
-	}
-
-	if (tcp_connect(tp, host_addr, htons(rtsp->port)) < 0) {
-		ERR("can't connect to host!");
-		tcp_close(tp);
-		return -1;
-	}
-
-	rtsp->tcp = tp;
-	rtsp->host_addr = host_addr;
-	rtsp->rtp.faddr = host_addr;
-
-	strcpy(rtsp->host_name, host);
-	strcpy(rtsp->media_name, mrl);
-	rtsp->cseq = 2;
-
+	rtsp->cseq++;
 	len = sprintf(buf,
 			"OPTIONS rtsp://%s/%s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
@@ -338,8 +346,13 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 	if (rtsp_request(rtsp, buf, len) < 0)
 		return -1;
 
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
+	return rtsp_wait_reply(rtsp, 1000);
+}
+
+int rtsp_request_describe(struct rtsp_client * rtsp)
+{
+	char buf[256];
+	int len;
 
 	rtsp->cseq++;
 	len = sprintf(buf,
@@ -353,20 +366,13 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 	if (rtsp_request(rtsp, buf, len) < 0)
 		return -1;
 
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
+	return rtsp_wait_reply(rtsp, 1000);
+}
 
-	/* FIXME: decode SDP */
-	while ((len = rtsp_line_recv(rtsp, buf, sizeof(buf), 1000)) > 0) {
-		buf[len] = '\0';
-		printf("'%s'\n", buf);
-	}
-	strcpy(rtsp->track_name, "microphone");
-
-	if (len < 0) {
-		ERR("rtsp_line_recv() failed!");
-		return -1;
-	}
+int rtsp_request_setup(struct rtsp_client * rtsp)
+{
+	char buf[256];
+	int len;
 
 	rtsp->cseq++;
 	len = sprintf(buf,
@@ -382,8 +388,13 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 	if (rtsp_request(rtsp, buf, len) < 0)
 		return -1;
 
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
+	return rtsp_wait_reply(rtsp, 1000);
+}
+
+int rtsp_request_play(struct rtsp_client * rtsp)
+{
+	char buf[256];
+	int len;
 
 	rtsp->cseq++;
 	len = sprintf(buf,
@@ -391,7 +402,9 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 			"CSeq: %d\r\n"
 			"User-Agent: ThinkOS RTSP Client\r\n"
 			"Session: %016llx\r\n"
+#if 0
 			"Range: ntp=0.000-\r\n"
+#endif
 			"\r\n",
 			rtsp->host_name, rtsp->media_name,
 			rtsp->cseq, rtsp->sid);
@@ -399,12 +412,104 @@ int rtsp_connect(struct rtsp_client * rtsp, const char * host,
 	if (rtsp_request(rtsp, buf, len) < 0)
 		return -1;
 
-	if (rtsp_wait_reply(rtsp, 1000) < 0)
-		return -1;
+	return rtsp_wait_reply(rtsp, 1000);
+}
 
-//	rtp_client_start(&rtsp->rtp);
+int rtsp_connect(struct rtsp_client * rtsp, const char * host,
+		unsigned int port, const char * mrl)
+{
+	struct tcp_pcb * tp;
+	in_addr_t host_addr;
+
+	if (!inet_aton(host, (struct in_addr *)&host_addr)) {
+		return -1;
+	}
+
+	if ((tp = tcp_alloc()) == NULL) {
+		ERR("can't allocate socket!");
+		return -1;
+	}
+
+	if (port == 0) {
+		port = rtsp->port;
+		if (port == 0)
+			port = 554;
+	}
+
+	INF("RTSP://%s:%d/%s", host, port, mrl);
+
+	if (tcp_connect(tp, host_addr, htons(port)) < 0) {
+		ERR("can't connect to host!");
+		tcp_close(tp);
+		return -1;
+	}
+
+	rtsp->tcp = tp;
+	rtsp->port = port;
+	rtsp->host_addr = host_addr;
+	rtsp->rtp.faddr = host_addr;
+	rtsp->content_pos = 0;
+	rtsp->content_len = UINT32_MAX;
+	rtsp->cseq = 1;
+
+	strcpy(rtsp->host_name, host);
+	strcpy(rtsp->media_name, mrl);
+
+	if (rtsp_request_options(rtsp) < 0) {
+		ERR("rtsp_request_options() failed!");
+		return -1;
+	}
+
+	if (rtsp_request_describe(rtsp) < 0) {
+		ERR("rtsp_request_describe() failed!");
+		return -1;
+	}
+
+	if (rtsp_sdp_decode(rtsp) < 0) {
+		ERR("rtsp_sdp_decode() failed!");
+		return -1;
+	}
+
+	DBG("Track:\"%s\"", rtsp->track_name);
+
+	if (rtsp_request_setup(rtsp) < 0) {
+		ERR("rtsp_request_setup() failed!");
+		return -1;
+	}
+
+	if (rtsp_request_play(rtsp) < 0) {
+		ERR("rtsp_request_play() failed!");
+		return -1;
+	}
 
 	return 0;
+}
+
+int rtsp_teardown(struct rtsp_client * rtsp)
+{
+	char buf[256];
+	int len;
+
+	rtsp->cseq++;
+	len = sprintf(buf,
+			"TEARDOWN rtsp://%s/%s RTSP/1.0\r\n"
+			"CSeq: %d\r\n"
+			"Session: %016llx\r\n"
+			"\r\n",
+			rtsp->host_name, rtsp->media_name,
+			rtsp->cseq, rtsp->sid);
+
+	if (rtsp_request(rtsp, buf, len) < 0) {
+		/* Error */
+	} else {
+		if (rtsp_wait_reply(rtsp, 1000) < 0) {
+			/* Error */
+		}
+	}
+
+	rtp_close_session(&rtsp->rtp);
+
+	return tcp_close(rtsp->tcp);
 }
 
 int rtsp_close_wait(struct rtsp_client * rtsp)
@@ -415,9 +520,27 @@ int rtsp_close_wait(struct rtsp_client * rtsp)
 		INF("RTSP recv: %d", n);
 	}
 
-	tcp_close(rtsp->tcp);
+	return tcp_close(rtsp->tcp);
+}
 
-	return 0;
+char * rtsp_track_name(struct rtsp_client * rtsp)
+{
+	return rtsp->track_name;
+}
+
+char * rtsp_media_name(struct rtsp_client * rtsp)
+{
+	return rtsp->media_name;
+}
+
+char * rtsp_host_name(struct rtsp_client * rtsp)
+{
+	return rtsp->host_name;
+}
+
+unsigned int rtsp_port_get(struct rtsp_client * rtsp)
+{
+	return rtsp->port;
 }
 
 int rtsp_init(struct rtsp_client * rtsp, int port)
