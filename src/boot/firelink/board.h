@@ -78,7 +78,6 @@
  * Lattice FPGA (iCE40LP384) connections
  * ------------------------------------------------------------------------- */
 
-#define ICE40_CLK_SPI     STM32_CLK_SPI2
 #define IO_ICE40_SPI_SCK  STM32_GPIOI, 1
 #define IO_ICE40_SPI_SDO  STM32_GPIOI, 3
 #define IO_ICE40_SPI_SDI  STM32_GPIOI, 2

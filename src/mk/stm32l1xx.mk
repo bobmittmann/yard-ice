@@ -27,7 +27,8 @@ ifndef MACH
 MACH = stm32l151xb
 endif
 
-ifeq ($(findstring $(MACH), stm32l151x6, stm32l151x8, stm32l151xb),)
+ifeq ($(findstring $(MACH), stm32l151x6, stm32l151x8, \
+		stm32l151xb, stm32l151xc),)
   $(error "Unsupported machine type: MACH=$(MACH)")
 endif
 

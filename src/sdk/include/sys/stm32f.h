@@ -58,7 +58,8 @@
 #include <arch/stm32f100.h>
 #endif
 
-#if defined(STM32L151X6) || defined(STM32L151X8) || defined(STM32L151XB)
+#if defined(STM32L151X6) || defined(STM32L151X8) || defined(STM32L151XB) || \
+	defined(STM32L151XC)
 #include <arch/stm32l151.h>
 #endif
 
