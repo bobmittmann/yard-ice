@@ -261,5 +261,10 @@ void _init(void)
 	rcc->cfgr = RCC_PPRE2_1 | RCC_PPRE1_1 | RCC_HPRE_1 | RCC_SW_HSE;
 	rcc->cr = rcc_cr & ~RCC_MSION;
 #endif
+
+#ifdef CM3_RAM_VECTORS
+	/* Remap the VECTOR table to SRAM 0x20000000  */
+	CM3_SCB->vtor = 0x20000000; /* Vector Table Offset */
+#endif
 }
 

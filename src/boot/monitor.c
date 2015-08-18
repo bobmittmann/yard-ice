@@ -343,13 +343,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint32_t sigmask;
 	uint32_t sigset;
 #if THINKOS_ENABLE_CONSOLE
+	bool connected;
 	uint8_t * ptr;
 	int cnt;
 #endif
 	int tick_cnt = 0;
 	char buf[64];
 	int len;
-	bool connected;
 
 //	DCC_LOG(LOG_TRACE, "Monitor start...");
 //	dmon_comm_connect(comm);
@@ -367,8 +367,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_EXCEPT);
 	sigmask |= (1 << DMON_COMM_RCV);
-	sigmask |= (1 << DMON_COMM_CTL);
 #if THINKOS_ENABLE_CONSOLE
+	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_TX_PIPE);
 	sigmask |= (1 << DMON_RX_PIPE);
 #endif
@@ -381,17 +381,21 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		monitor_thread_id = -1;
 	}
 
+#if THINKOS_ENABLE_CONSOLE
 	connected = dmon_comm_isconnected(comm);
+#endif
 
 	for(;;) {
 		sigset = dmon_select(sigmask);
 		DCC_LOG1(LOG_INFO, "sigset=%08x", sigset);
 
+#if THINKOS_ENABLE_CONSOLE
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_INFO, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
 			connected = dmon_comm_isconnected(comm);
 		}
+#endif
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
 #if THINKOS_ENABLE_CONSOLE

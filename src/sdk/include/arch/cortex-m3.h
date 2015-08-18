@@ -405,6 +405,131 @@
    1 = Enabled
    This bit is UNK/SBZP if the NOCYCCNT bit is RAO. */
 
+/****************************************************************************
+  CM3 MPU (Memory Protection Unit)
+ ****************************************************************************/
+
+/* MPU Control Register */
+/* 
+   PRIVDEFENA, bit[2]
+   When the ENABLE bit is set to 1, the meaning of this bit is:
+   0 Disables the default memory map. Any instruction or data access that does not
+   access a defined region faults.
+   1 Enables the default memory map as a background region for privileged access.
+   The background region acts as region number -1. All memory regions
+   configured in the MPU take priority over the default memory map. The system
+   address map on page B3-648 describes the default memory map.
+   When the ENABLE bit is set to 0, the processor ignores the PRIVDEFENA bit.
+   If no regions are enabled and the PRIVDEFENA and ENABLE bits are set to 1, only
+   privileged code can execute from the system address map.
+   HFNMIENA, bit[1] When the ENABLE bit is set to 1, controls whether handlers executing with priority less
+   than 0 access memory with the MPU enabled or with the MPU disabled. This applies to
+   HardFaults, NMIs, and exception handlers when FAULTMASK is set to 1:
+   0 Disables the MPU for these handlers.
+   1 Use the MPU for memory accesses by these handlers.
+   If HFNMIENA is set to 1 when ENABLE is set to 0, behavior is UNPREDICTABLE.
+   ENABLE, bit[0] Enables the MPU:
+   0 The MPU is disabled.
+   1 The MPU is enabled
+   */
+
+#define MPU_CTRL_PRIVDEFENA (1 << 2) 
+#define MPU_CTRL_HFNMIENA   (1 << 1) 
+#define MPU_CTRL_ENABLE     (1 << 0) 
+
+/*
+   MPU Region Base Address Register, MPU_RBAR 
+
+   ADDR, bits[31:5] Base address of the region.
+   VALID, bit[4] On writes, indicates whether the region to update is specified by MPU_RNR.REGION, or
+   by the REGION value specified in this write. When using the REGION value specified by
+   this write, MPU_RNR.REGION is updated to this value.
+   0 Apply the base address update to the region specified by MPU_RNR.REGION.
+   The REGION field value is ignored.
+   1 Update MPU_RNR.REGION to the value obtained by zero extending the
+   REGION value specified in this write, and apply the base address update to this
+   region.
+   This bit reads as zero.
+   REGION, bits[3:0] On writes, can specify the number of the region to update, see VALID field description.
+   On reads, returns bits[3:0] of MPU_RNR.
+   */
+
+#define MPU_RBAR_ADDR(ADDR)      ((ADDR) & 0xffffffe0) 
+#define MPU_RBAR_VALID           (1 << 4) 
+#define MPU_RBAR_REGION(REGION)  (REGION & 0xf) 
+
+/* 
+   MPU Region Attribute and Size Register, MPU_RASR
+   ATTRS, bits[31:16] The MPU Region Attribute field, This field has the following subfields, defined in Region
+   attribute control on page B3-697:
+   XN MPU_RASR[28].
+   AP[2:0] MPU_RASR[26:24].
+   TEX[2:0] MPU_RASR[21:19].
+   S MPU_RASR[18].
+   C MPU_RASR[17].
+   B MPU_RASR[16].
+   SRD, bits[15:8] Subregion Disable. For regions of 256 bytes or larger, each bit of this field controls whether
+   one of the eight equal subregions is enabled, see Memory region subregions on
+   page B3-697:
+   0 Subregion enabled.
+   1 Subregion disabled.
+   Bits[7:6] Reserved.
+   SIZE, bits[5:1] Indicates the region size. The region size, in bytes, is 2(SIZE+1). SIZE field values less than 4
+   are reserved, because the smallest supported region size is 32 bytes.
+   ENABLE, bit[0] Enables this region:
+   0 When the MPU is enabled, this region is disabled.
+   1 When the MPU is enabled, this region is enabled.
+   Enabling a region has no effect unless the MPU_CTRL.ENABLE bit is set to 1, to enable
+   the MPU.
+   */
+
+#define MPU_RASR_XN              (1 << 28) 
+
+#define MPU_RASR_AP(AP)          ((AP) << 24) 
+
+#define MPU_RASR_S               (1 << 18) 
+#define MPU_RASR_C               (1 << 17) 
+#define MPU_RASR_B               (1 << 16) 
+
+#define MPU_RASR_SRD_7           (1 << 15) 
+#define MPU_RASR_SRD_6           (1 << 14) 
+#define MPU_RASR_SRD_5           (1 << 13) 
+#define MPU_RASR_SRD_4           (1 << 12) 
+#define MPU_RASR_SRD_3           (1 << 11) 
+#define MPU_RASR_SRD_2           (1 << 10) 
+#define MPU_RASR_SRD_1           (1 << 9) 
+#define MPU_RASR_SRD_0           (1 << 8) 
+
+#define MPU_RASR_SIZE_32         (0x04 << 1) 
+#define MPU_RASR_SIZE_64         (0x05 << 1) 
+#define MPU_RASR_SIZE_128        (0x06 << 1) 
+#define MPU_RASR_SIZE_256        (0x07 << 1) 
+#define MPU_RASR_SIZE_512        (0x08 << 1) 
+#define MPU_RASR_SIZE_1K         (0x09 << 1) 
+#define MPU_RASR_SIZE_2K         (0x0a << 1) 
+#define MPU_RASR_SIZE_4K         (0x0b << 1) 
+#define MPU_RASR_SIZE_8K         (0x0c << 1) 
+#define MPU_RASR_SIZE_16K        (0x0d << 1) 
+#define MPU_RASR_SIZE_32K        (0x0e << 1) 
+#define MPU_RASR_SIZE_64K        (0x0f << 1) 
+#define MPU_RASR_SIZE_128K       (0x10 << 1) 
+#define MPU_RASR_SIZE_256K       (0x11 << 1) 
+#define MPU_RASR_SIZE_512K       (0x12 << 1) 
+#define MPU_RASR_SIZE_1M         (0x13 << 1) 
+#define MPU_RASR_SIZE_2M         (0x14 << 1) 
+#define MPU_RASR_SIZE_4M         (0x15 << 1) 
+#define MPU_RASR_SIZE_8M         (0x16 << 1) 
+#define MPU_RASR_SIZE_16M        (0x17 << 1) 
+#define MPU_RASR_SIZE_32M        (0x18 << 1) 
+#define MPU_RASR_SIZE_64M        (0x19 << 1) 
+#define MPU_RASR_SIZE_128M       (0x1a << 1) 
+#define MPU_RASR_SIZE_256M       (0x1b << 1) 
+#define MPU_RASR_SIZE_512M       (0x1c << 1) 
+#define MPU_RASR_SIZE_1G         (0x1d << 1) 
+#define MPU_RASR_SIZE_2G         (0x1e << 1) 
+#define MPU_RASR_SIZE_4G         (0x1f << 1) 
+
+#define MPU_RASR_ENABLE          (1 << 0) 
 
 /****************************************************************************
   CM3 Base addresses

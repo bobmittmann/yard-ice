@@ -888,6 +888,14 @@ This bit is set and cleared by software.
 #define STM32F_DMA_CMAR6 (0x14 + 20 * 5)
 #define STM32F_DMA_CMAR7 (0x14 + 20 * 6)
 
+#define STM32_DMA_CHANNEL1 0
+#define STM32_DMA_CHANNEL2 1
+#define STM32_DMA_CHANNEL3 2
+#define STM32_DMA_CHANNEL4 3
+#define STM32_DMA_CHANNEL5 4
+#define STM32_DMA_CHANNEL6 5
+#define STM32_DMA_CHANNEL7 6
+
 #endif
 
 

@@ -27,15 +27,15 @@ CFILES = boot.c ../monitor.c board.c
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libice-comm
+		  $(SDK)/libcrc $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = cm3 stm32f util thinkos ice-comm gcc 
+LIBS = cm3 stm32f util crc thinkos ice-comm gcc 
 
 INCPATH = $(SDK)/include 
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
 
-CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
 MACH = stm32l151xb

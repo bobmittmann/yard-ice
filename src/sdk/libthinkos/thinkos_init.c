@@ -269,6 +269,14 @@ int __thinkos_init_main(struct thinkos_thread_opt opt)
 	return self;
 }
 
+#if THINKOS_ENABLE_MPU
+void __thinkos_mpu_init(void)
+{
+	struct cm3_mpu * mpu = CM3_MPU;
+	(void)mpu;
+}
+#endif
+
 int thinkos_init(struct thinkos_thread_opt opt)
 {
 	uint32_t msp;
@@ -295,6 +303,10 @@ int thinkos_init(struct thinkos_thread_opt opt)
 
 #if THINKOS_ENABLE_EXCEPTIONS
 	thinkos_exception_init();
+#endif
+
+#if THINKOS_ENABLE_MPU
+	__thinkos_mpu_init();
 #endif
 
 	__thinkos_reset();

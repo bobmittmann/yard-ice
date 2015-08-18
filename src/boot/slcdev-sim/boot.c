@@ -45,8 +45,6 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-void io_init(void);
-
 int main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
@@ -54,10 +52,12 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "1. io_init().");
 
-	io_init();
+	board_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+	board_test();
 
 	__thinkos_thread_abort(0);
 

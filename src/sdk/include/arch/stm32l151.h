@@ -61,6 +61,7 @@
 #include <stm32f/stm32f-dma.h>
 #include <stm32f/stm32f-exti.h>
 #include <stm32f/stm32-comp.h>
+#include <stm32f/stm32-crc.h>
 
 #define STM32_BASE_UID		0x1ff80050
 #define STM32_BASE_FSMC    0xa0000000
@@ -176,6 +177,8 @@
 #define STM32_FSMC   ((struct stm32f_fsmc *)STM32_BASE_FSMC)
 #define STM32_DAC    ((struct stm32f_dac *)STM32_BASE_DAC)
 #define STM32_ADC    ((struct stm32f_adc *)STM32_BASE_ADC)
+
+#define STM32_CRC    ((struct stm32_crc *)STM32_BASE_CRC)
 
 #define STM32_EXTI   ((struct stm32f_exti *)STM32_BASE_EXTI)
 #define STM32_COMP   ((struct stm32_comp *)STM32_BASE_COMP)
