@@ -199,17 +199,17 @@ int main(int argc, char ** argv)
 	led_set_rate(LED_X1, RATE_2BPS);
 
 	for (i = 0; i < 10000; ++i) {
-		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
+//		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
 		simrpc_mem_lock(1, 0x08000000, 1024);
 		thinkos_sleep(100);
-		simrpc_mem_lock(2, 0x08000000, 1024);
+//		simrpc_mem_lock(2, 0x08000000, 1024);
 
-		thinkos_sleep(1000);
+//		thinkos_sleep(1000);
 
 		simrpc_mem_unlock(1, 0x08000000, 1024);
 		thinkos_sleep(100);
-		simrpc_mem_unlock(2, 0x08000000, 1024);
-		thinkos_sleep(1000);
+//		simrpc_mem_unlock(2, 0x08000000, 1024);
+//		thinkos_sleep(1000);
 	}
 
 	for (i = 0; i < 100000000; ++i) {

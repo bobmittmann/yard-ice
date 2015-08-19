@@ -57,7 +57,7 @@ static uint32_t simrpc_mkopc(unsigned int daddr, unsigned int insn)
 {
 	unsigned int saddr = io_addr_get();
 
-	return daddr | (saddr << 8) | ((simrpc_seq << 16) & 0xff) || (insn << 24);
+	return daddr | (saddr << 8) | ((simrpc_seq << 16) & 0xff) | (insn << 24);
 }
 
 

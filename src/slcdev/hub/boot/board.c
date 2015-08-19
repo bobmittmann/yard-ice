@@ -93,8 +93,7 @@ void board_init(void)
 	stm32_gpio_af(IO_UART5_RX, UART5_AF);
 
 	/* - UART 6 ---------------------------------------------------------*/
-//	stm32_gpio_mode(IO_UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(IO_UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(IO_UART6_TX, UART6_AF);
 	stm32_gpio_mode(IO_UART6_RX, ALT_FUNC, 0);
 	stm32_gpio_af(IO_UART6_RX, UART6_AF);

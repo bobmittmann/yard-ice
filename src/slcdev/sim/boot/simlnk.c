@@ -140,11 +140,33 @@ void stm32_usart2_isr(void)
 		c = uart->rdr;
 		(void)c;
 
-		if (sr & (USART_ORE | USART_NF | USART_FE)) {
+		if (sr & (USART_ORE | USART_NF)) {
 			DCC_LOG1(LOG_WARNING, "Error: %04b!", 
 					sr & (USART_ORE | USART_NF | USART_FE));
 		}
 
+		/* break detection */
+		if (sr & USART_FE) {
+			unsigned int cnt;
+			uint32_t opc;
+
+			/* Get number of bytes received */
+			cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
+			/* Get the opcode form the buffer head */
+			opc = simlnk.rx_buf[0];
+			/* Prepare next DMA transfer */
+			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
+
+			DCC_LOG2(LOG_TRACE, "BRK! opc=%08x cnt=%d", opc, cnt);
+
+			if (cnt > 4) {
+				/* process this request */
+				simlnk_dma_recv(opc, &simlnk.rx_buf[1], cnt - 5);
+			}
+		}
+#if 0
+		/* idle detection */
 		if (sr & USART_IDLE) {
 			unsigned int cnt;
 			uint32_t opc;
@@ -159,11 +181,12 @@ void stm32_usart2_isr(void)
 
 			DCC_LOG2(LOG_TRACE, "IDLE! opc=%08x cnt=%d", opc, cnt);
 
-			if (cnt > 4) {
+			if (cnt >= 4) {
 				/* process this request */
 				simlnk_dma_recv(opc, &simlnk.rx_buf[1], cnt - 4);
 			}
 		}
+#endif
 	}	
 
 }
@@ -295,10 +318,9 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	/* Configure 8N1 */
 	uart->cr2 = USART_STOP_1;
 	/* enable RX IDLE and errors interrupt */
-	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_IDLEIE | USART_TCIE;
+	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_TCIE;
+//	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_IDLEIE | USART_TCIE;
 
-	//uart->cr1 = USART_UE | USART_RE | USART_TE USART_RXNEIE | USART_IDLEIE | 
-	//	USART_TCIE | USART_EIE;
 
 	/* TX DMA ------------------------------------------------------------- */
 	dma->ch[TX_DMA_CHAN].ccr = 0;

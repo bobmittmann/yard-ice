@@ -187,6 +187,12 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 #endif
 	memcpy(lnk->tx.buf, buf, cnt);
 
+	{ 
+		uint32_t *p = (uint32_t *)lnk->tx.buf;
+
+		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
+	}
+
 	return serial_send(lnk->dev, lnk->tx.buf, cnt);
 //	return cnt;
 }

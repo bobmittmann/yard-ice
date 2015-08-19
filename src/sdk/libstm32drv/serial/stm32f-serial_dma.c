@@ -48,11 +48,18 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 	}
 
 	if (sr & USART_TC) {
+		uint32_t cr;
 		DCC_LOG1(LOG_MSG, "UART%d TC.", stm32_usart_lookup(uart) + 1);
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
+
 		/* diasble the transfer complete interrupt */
-		drv->uart->cr1 &= ~USART_TCIE;
+		/* Pulse TE to generate an IDLE Frame */
+		cr = uart->cr1 & ~(USART_TE | USART_TCIE);
+		/* Pulse TE to generate an IDLE Frame */
+//		uart->cr1 = cr;
+		uart->cr1 = cr | USART_TE | USART_SBK;
+
 		thinkos_flag_give_i(drv->tx_done);
 	}
 }
@@ -203,9 +210,8 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 int stm32f_serial_dma_send(struct stm32f_serial_dma_drv * drv, 
 						   const void * buf, unsigned int len)
 {
-	struct stm32_usart * uart = drv->uart;
+//	struct stm32_usart * uart = drv->uart;
 	uint32_t ccr;
-	uint32_t cr;
 	unsigned int cnt;
 
 	DCC_LOG2(LOG_MSG, "UART%d len=%d", 
@@ -215,11 +221,6 @@ int stm32f_serial_dma_send(struct stm32f_serial_dma_drv * drv,
 		DCC_LOG(LOG_ERROR, "DMA enabled");
 		abort();
 	}
-
-	/* Pulse TE to generate an IDLE Frame */
-	cr = uart->cr1;
-	uart->cr1 = cr & ~USART_TE;
-	uart->cr1 = cr | USART_TE;
 
 	/* Disable DMA */
 //	while ((ccr = drv->tx.dmactl.strm->cr) & DMA_EN)
