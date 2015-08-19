@@ -59,6 +59,7 @@ void led_off(unsigned int led);
 
 void led_set_rate(unsigned int led, unsigned int rate);
 
+unsigned int io_addr_get(void);
 
 #ifdef __cplusplus
 }

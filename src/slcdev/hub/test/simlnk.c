@@ -84,10 +84,7 @@ struct simlnk {
 		int flag;
 	} rx;
 	struct {
-		uint8_t buf[SIMLNK_MTU];
-		uint8_t token[8];
-		volatile uint16_t pdu_len;
-		uint8_t pdu[SIMLNK_PDU_MAX];
+		uint32_t buf[SIMLNK_MTU / 4];
 		int flag;
 	} tx;
 	struct simlnk_stat stat;
@@ -111,7 +108,7 @@ int simlnk_frame_recv(struct simlnk * lnk, unsigned int tmo)
 int simlnk_frame_send(struct simlnk * lnk, unsigned int route, 
 						   uint8_t * pdu, unsigned int len)
 {
-	uint8_t * buf = lnk->tx.buf;
+	uint8_t * buf = (uint8_t *)lnk->tx.buf;
 	int cnt = len;
 
 	return serial_send(lnk->dev, buf, cnt);
@@ -184,12 +181,13 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 	/* insert frame in the transmission queue ...  */
 	memcpy(lnk->tx.pdu, buf, cnt);
 	lnk->tx.pdu_len = cnt;
+
+	uint8_t * buf = lnk->tx.buf;
+	int cnt = len;
 #endif
+	memcpy(lnk->tx.buf, buf, cnt);
 
-//	uint8_t * buf = lnk->tx.buf;
-//	int cnt = len;
-
-	return serial_send(lnk->dev, buf, cnt);
+	return serial_send(lnk->dev, lnk->tx.buf, cnt);
 //	return cnt;
 }
 

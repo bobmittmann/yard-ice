@@ -22,7 +22,7 @@
 
 PROG = thinkos
 
-CFILES = boot.c board.c simlnk.c test.c
+CFILES = boot.c board.c simlnk.c simrpc_mem.c test.c
 
 SDK = ../../../sdk
 
@@ -31,7 +31,7 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 
 LIBS = cm3 stm32f util crc thinkos ice-comm gcc 
 
-INCPATH = $(SDK)/include ../include
+INCPATH = $(SDK)/include ../include ../../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
 

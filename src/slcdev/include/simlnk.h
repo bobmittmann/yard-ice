@@ -32,14 +32,17 @@
 #include <sys/serial.h> 
 
 enum simlnk_opc {
-	SIMLNK_OPC_RETURN    = 0,
-	SIMLNK_OPC_SUSPEND   = 1,
-	SIMLNK_OPC_RESUME    = 2,
-	SIMLNK_OPC_REBOOT    = 3,
-	SIMLNK_OPC_MEM_SEEK  = 4,
-	SIMLNK_OPC_MEM_ERASE = 5,
-	SIMLNK_OPC_MEM_READ  = 6,
-	SIMLNK_OPC_MEM_WRITE = 7,
+	SIMLNK_RPC_RETURN    = 0,
+	SIMLNK_RPC_SUSPEND   = 1,
+	SIMLNK_RPC_RESUME    = 2,
+	SIMLNK_RPC_REBOOT    = 3,
+
+	SIMLNK_RPC_MEM_LOCK   = 4,
+	SIMLNK_RPC_MEM_UNLOCK = 5,
+	SIMLNK_RPC_MEM_ERASE  = 6,
+	SIMLNK_RPC_MEM_READ   = 7,
+	SIMLNK_RPC_MEM_WRITE  = 8,
+	SIMLNK_RPC_MEM_SEEK   = 9,
 	
 	SIMLNK_OPC_TRACE,
 	SIMLNK_OPC_RUN_TEST,
@@ -65,6 +68,9 @@ struct simlnk_op {
 	uint32_t data[];
 };
 
+#define SIMRPC_BCAST 0xff
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,6 +79,29 @@ struct simlnk * simlnk_alloc(void);
 
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev);
+
+int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt);
+
+int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max);
+
+/* services */
+void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+
+void simrpc_init(void);
+
+void simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size);
+void simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size);
+void simrpc_mem_erase(unsigned int daddr, uint32_t base, unsigned int size);
+
+void simrpc_mem_read(unsigned int daddr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_write(unsigned int daddr, uint32_t * data, unsigned int cnt);
+
+void simrpc_mem_seek(unsigned int daddr, uint32_t base);
 
 #ifdef __cplusplus
 }

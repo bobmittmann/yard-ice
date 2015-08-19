@@ -41,17 +41,44 @@ struct simlnk {
 	uint32_t rx_buf[520 / 4];
 } simlnk;
 
+void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
+{
+
+	switch (opc >> 24) {
+	case SIMLNK_RPC_MEM_LOCK:
+		DCC_LOG(LOG_TRACE, "MEM_LOCK");
+		simrpc_mem_lock_svc(opc, data, cnt);
+		break;
+	case SIMLNK_RPC_MEM_UNLOCK:
+		DCC_LOG(LOG_TRACE, "MEM_UNLOCK");
+		simrpc_mem_unlock_svc(opc, data, cnt);
+		break;
+	case SIMLNK_RPC_MEM_ERASE:
+		DCC_LOG(LOG_TRACE, "MEM_ERASE");
+		simrpc_mem_erase_svc(opc, data, cnt);
+		break;
+	case SIMLNK_RPC_MEM_READ:
+		DCC_LOG(LOG_TRACE, "MEM_READ");
+		simrpc_mem_read_svc(opc, data, cnt);
+		break;
+	case SIMLNK_RPC_MEM_WRITE:
+		DCC_LOG(LOG_TRACE, "MEM_WRITE");
+		simrpc_mem_write_svc(opc, data, cnt);
+		break;
+	case SIMLNK_RPC_MEM_SEEK:
+		DCC_LOG(LOG_TRACE, "MEM_SEEK");
+		simrpc_mem_seek_svc(opc, data, cnt);
+		break;
+	default:
+		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
+	}
+}
+
+
 void __attribute__((noinline)) simlnk_xmit(unsigned int len)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
-	struct stm32_usart * uart = STM32_USART2;
 	uint32_t ccr;
-	uint32_t cr;
-
-	/* Pulse TE to generate an IDLE Frame */
-	cr = uart->cr1;
-	uart->cr1 = cr & ~USART_TE;
-	uart->cr1 = cr | USART_TE;
 
 	/* Disable DMA */
 	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
@@ -61,33 +88,31 @@ void __attribute__((noinline)) simlnk_xmit(unsigned int len)
 	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
 }
 
-void __attribute__((noinline)) simlnk_dma_recv(void)
+int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
 	uint32_t ccr;
-	unsigned int cnt;
+
+	simlnk.tx_buf[0] = opc;
+	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
 
 	/* Disable DMA */
-	while ((ccr = dma->ch[RX_DMA_CHAN].ccr) & DMA_EN)
-		dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN; 
+	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
+		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN; 
+	/* Program DMA transfer */
+	dma->ch[TX_DMA_CHAN].cndtr = cnt + 4;
+	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
 
-	cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
-
-	/* Prepare next DMA transfer */
-	dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
-	dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;	
-
-	DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
-	if (cnt == 4) {
-		uint8_t * p = (uint8_t *)simlnk.rx_buf;
-		DCC_LOG4(LOG_TRACE, "%02x %02x %02x %02x", p[0], p[1], p[2], p[3]);
-	} 
+	return 0;
 }
+
 
 void stm32_usart2_isr(void)
 {
+	struct stm32f_dma * dma = STM32_DMA1;
 	struct stm32_usart * uart = STM32_USART2;
 	uint32_t sr;
+	uint32_t cr;
 	
 	sr = uart->sr;
 
@@ -95,44 +120,49 @@ void stm32_usart2_isr(void)
 		DCC_LOG(LOG_INFO, "TC");
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
+		/* Pulse TE to generate an IDLE Frame */
+		cr = uart->cr1;
+		uart->cr1 = cr & ~USART_TE;
+		uart->cr1 = cr;
 		simlnk_xmit(4);
 	}
 
-	if (sr & USART_RXNE) {
-		int c = uart->rdr;
-		(void)c;
-//		DCC_LOG(LOG_TRACE, "RXNE");
-		DCC_LOG1(LOG_TRACE, "RXNE %02x", c);
-	}	
-
-#if 0
-	if (sr & USART_IDLE) {
-		int c = uart->rdr;
-		(void)c;
-		DCC_LOG(LOG_TRACE, "IDLE!");
-		simlnk_dma_recv();
-	}
-	if (sr & USART_RXNE) {
-		DCC_LOG(LOG_TRACE, "RXNE");
-	}	
-
-	if (sr & USART_TXE) {
-		DCC_LOG(LOG_TRACE, "TXE");
-		uart->cr1 &= ~USART_TXEIE;
-	}
-#endif
-
 	if (sr & (USART_IDLE | USART_ORE | USART_NF | USART_FE)) {
-		int c = uart->rdr;
+		uint32_t ccr;
+		int c;
+		
+		/* Disable DMA, this will cause the DMA TCF (transfer complete
+		 flag) to be set.*/
+		ccr = dma->ch[RX_DMA_CHAN].ccr;
+		dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+
+		/* clear interrupt status flags */
+		c = uart->rdr;
 		(void)c;
 
 		if (sr & (USART_ORE | USART_NF | USART_FE)) {
 			DCC_LOG1(LOG_WARNING, "Error: %04b!", 
 					sr & (USART_ORE | USART_NF | USART_FE));
 		}
+
 		if (sr & USART_IDLE) {
-			DCC_LOG(LOG_TRACE, "IDLE!");
-		//	simlnk_dma_recv();
+			unsigned int cnt;
+			uint32_t opc;
+
+			/* Get number of bytes received */
+			cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
+			/* Get the opcode form the buffer head */
+			opc = simlnk.rx_buf[0];
+			/* Prepare next DMA transfer */
+			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
+
+			DCC_LOG2(LOG_TRACE, "IDLE! opc=%08x cnt=%d", opc, cnt);
+
+			if (cnt > 4) {
+				/* process this request */
+				simlnk_dma_recv(opc, &simlnk.rx_buf[1], cnt - 4);
+			}
 		}
 	}	
 
@@ -156,6 +186,7 @@ void stm32_dma1_channel7_isr(void)
 	}
 }
 
+
 /* RX DMA ------------------------------------------------------------- */
 void stm32_dma1_channel6_isr(void)
 {
@@ -165,7 +196,6 @@ void stm32_dma1_channel6_isr(void)
 		DCC_LOG(LOG_TRACE, "RX TCIF");
 		/* clear the DMA transfer complete flag */
 		dma->ifcr = DMA_CTCIF6;
-		simlnk_dma_recv();
 	}
 
 	if (dma->isr & DMA_TEIF6) {
@@ -265,9 +295,9 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	/* Configure 8N1 */
 	uart->cr2 = USART_STOP_1;
 	/* enable RX IDLE and errors interrupt */
-	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_RXNEIE | USART_IDLEIE | USART_TCIE;
+	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_IDLEIE | USART_TCIE;
 
-	//uart->cr1 = USART_UE | USART_RE | USART_TE | USART_IDLEIE | 
+	//uart->cr1 = USART_UE | USART_RE | USART_TE USART_RXNEIE | USART_IDLEIE | 
 	//	USART_TCIE | USART_EIE;
 
 	/* TX DMA ------------------------------------------------------------- */
@@ -287,8 +317,8 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	dma->ch[RX_DMA_CHAN].cmar = simlnk.rx_buf;
 	dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 	dma->ch[RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
-		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE;
-//		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE | DMA_EN;
+		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE | DMA_EN;
+//		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE;
 
 #ifdef CM3_RAM_VECTORS
 	thinkos_irq_register(STM32_IRQ_USART2, IRQ_PRIORITY_LOW, 

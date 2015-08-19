@@ -26,7 +26,7 @@ CFILES = slcdev-hub.c console.c pktbuf.c net.c \
 		 xflash.c otg_xflash_pic.c uart_xflash_pic.c \
 		 ../fpga/ice40lp384.c ../fpga/lattice.c \
 		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c \
-		 ../boot/board.c simlnk.c io.c
+		 ../boot/board.c simlnk.c simrpc.c io.c
 
 SDK = ../../../sdk
 
@@ -39,7 +39,7 @@ LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 LIBS = gcc stm32f cm3 util thinkos c ice-comm stm32drv cdc-acm \
 	   tty crc xmodem shell trace hexdump
 
-INCPATH = $(SDK)/include ../include
+INCPATH = $(SDK)/include ../include ../../include
 
 JTAGTOOL_ADDR = 192.168.10.50
 

@@ -162,78 +162,6 @@ void stdio_init(void)
 
 void board_init(void);
 
-#define SIMLNK_BAUDRATE 10000
-
-struct simlnk * simlnk[5];
-
-void __attribute__((noreturn)) simlnk_recv_task(struct simlnk * lnk)
-{
-	uint32_t pkt[64];
-	INF("<%d> started...", thinkos_thread_self());
-
-	for (;;) {
-		simlnk_recv(lnk, pkt, sizeof(pkt));
-	}
-}
-
-uint32_t simlnk_stack5[256];
-
-const struct thinkos_thread_inf simlnk5_recv_inf = {
-	.stack_ptr = simlnk_stack5,
-	.stack_size = sizeof(simlnk_stack5),
-	.priority = 32,
-	.thread_id = 7,
-	.paused = false,
-	.tag = "LNKRCV5"
-};
-
-void simlink_init_all(void)
-{
-#if 0
-	struct serial_dev * ser2;
-	struct serial_dev * ser3;
-	struct serial_dev * ser4;
-	struct serial_dev * ser5;
-#endif
-	struct serial_dev * ser6;
-	struct simlnk * lnk5;
-#if 0
-	struct simlnk * lnk1;
-	struct simlnk * lnk2;
-	struct simlnk * lnk3;
-	struct simlnk * lnk4;
-
-	lnk1 = simlnk_alloc();
-	ser2 = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
-	simlnk_init(lnk1, "SIM1", 1, ser2);
-	simlnk[0] = lnk1;
-
-	lnk2 = simlnk_alloc();
-	ser3 = stm32f_uart3_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
-	simlnk_init(lnk2, "SIM2", 2, ser3);
-	simlnk[1] = lnk2;
-
-	lnk3 = simlnk_alloc();
-	ser4 = stm32f_uart4_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
-	simlnk_init(lnk3, "SIM3", 3, ser4);
-	simlnk[2] = lnk3;
-
-	lnk4 = simlnk_alloc();
-	ser5 = stm32f_uart5_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
-	simlnk_init(lnk4, "SIM4", 4, ser5);
-	simlnk[3] = lnk4;
-#endif
-
-	lnk5 = simlnk_alloc();
-	ser6 = stm32f_uart6_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
-	simlnk_init(lnk5, "SIM5", 5, ser6);
-	simlnk[4] = lnk5;
-
-	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk5,
-							  &simlnk5_recv_inf);
-}
-
-
 int main(int argc, char ** argv)
 {
 	int i;
@@ -265,21 +193,23 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "9. supervisor_init()");
 	supervisor_init();
 
-	DCC_LOG(LOG_TRACE, "10. simlink_init_all()");
-	simlink_init_all();
+	DCC_LOG(LOG_TRACE, "10. simrpc_init()");
+	simrpc_init();
 
 	led_set_rate(LED_X1, RATE_2BPS);
 
-	for (i = 0; i < 100; ++i) {
-//		DCC_LOG(LOG_TRACE, "11. simlink_send...");
-//		simlnk_send(simlnk[0], "Hello world\n", 12); 
-//		simlnk_send(simlnk[1], "Hello world\n", 12); 
-//		simlnk_send(simlnk[2], "Hello world\n", 12); 
-//		simlnk_send(simlnk[3], "Hello world\n", 12); 
-//		simlnk_send(simlnk[4], "Hello world\n", 12); 
-//		thinkos_sleep(1000);
-		simlnk_send(simlnk[4], "\xffUU", 3); 
+	for (i = 0; i < 10000; ++i) {
+		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
+		simrpc_mem_lock(1, 0x08000000, 1024);
 		thinkos_sleep(100);
+		simrpc_mem_lock(2, 0x08000000, 1024);
+
+		thinkos_sleep(1000);
+
+		simrpc_mem_unlock(1, 0x08000000, 1024);
+		thinkos_sleep(100);
+		simrpc_mem_unlock(2, 0x08000000, 1024);
+		thinkos_sleep(1000);
 	}
 
 	for (i = 0; i < 100000000; ++i) {
@@ -290,7 +220,7 @@ int main(int argc, char ** argv)
 //		simlnk_send(simlnk[3], "Hello world\n", 12); 
 //		simlnk_send(simlnk[4], "Hello world\n", 12); 
 //		thinkos_sleep(1000);
-		simlnk_send(simlnk[4], "\xffUU", 4); 
+		simrpc_mem_lock(0, 0x08000000, 1024);
 	}
 
 	DCC_LOG(LOG_TRACE, "10. net_init()");

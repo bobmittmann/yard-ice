@@ -264,6 +264,7 @@ int recv_task(void * arg)
 		if ((int32_t)(clk - thinkos_clock()) <= 0) {
 			unsigned int rate;
 			rate = octet_cnt / seconds;
+			(void)rate;
 
 			DBG("Receive: %d bcast, %d unicast, %d octets, %d.%03d KBps.",
 					bcast_cnt, unicast_cnt, octet_cnt,
@@ -361,9 +362,11 @@ int net_init(void)
 			unsigned int rate;
 
 			rate = octet_cnt / itval;
+			(void)rate;
 
-			DBG("Send: %d bcasts, %d octets, %d.%03d KBps.", bcast_cnt, octet_cnt,
-					rate / 1000, rate % 1000);
+			DBG("Send: %d bcasts, %d octets, %d.%03d KBps.", 
+				bcast_cnt, octet_cnt,
+				rate / 1000, rate % 1000);
 
 			octet_cnt = 0;
 			bcast_cnt = 0;
