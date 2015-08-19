@@ -29,28 +29,28 @@
 
 void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 {
-	struct stm32_usart * us;
+	struct stm32_usart * uart;
 	uint32_t sr;
 	
-	us = drv->uart;
-	sr = us->sr & us->cr1;
+	uart = drv->uart;
+	sr = uart->sr & uart->cr1;
 
 	if (sr & USART_ORE) {
 		DCC_LOG2(LOG_WARNING, "%6d: OVR!, ndtr=%d", 
-				 thinkos_clock_i(), drv->rx.strm->ndtr);
+				 thinkos_clock_i(), drv->rx.dmactl.strm->ndtr);
 	}
 
 	if (sr & USART_IDLE) {
-		int c = us->rdr;
+		int c = uart->rdr;
 		(void)c;
 		DCC_LOG(LOG_TRACE, "IDLE");
 		thinkos_flag_give_i(drv->rx_idle);
 	}
 
 	if (sr & USART_TC) {
-		DCC_LOG(LOG_TRACE, "TC");
+		DCC_LOG1(LOG_MSG, "UART%d TC.", stm32_usart_lookup(uart) + 1);
 		/* TC interrupt is cleared by writing 0 back to the SR register */
-		us->sr = sr & ~USART_TC;
+		uart->sr = sr & ~USART_TC;
 		/* diasble the transfer complete interrupt */
 		drv->uart->cr1 &= ~USART_TCIE;
 		thinkos_flag_give_i(drv->tx_done);
@@ -59,39 +59,43 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 
 void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv)
 {
-	struct stm32_usart * us;
-	uint32_t sr;
-	
-	us = drv->uart;
-	sr = us->sr;
-
-	if (sr & USART_ORE) {
-		DCC_LOG2(LOG_WARNING, "%6d: OVR!, ndtr=%d", 
-				 thinkos_clock_i(), drv->rx.strm->ndtr);
+	if (drv->rx.dmactl.isr[TCIF_BIT]) {
+		DCC_LOG(LOG_TRACE, "TCIF");
+		/* clear the RX DMA transfer complete flag */
+		drv->rx.dmactl.ifcr[TCIF_BIT] = 1;
+//		thinkos_flag_give_i(drv->rx_idle);
 	}
-
-	if (sr & USART_IDLE) {
-		int c = us->rdr;
-		(void)c;
-		DCC_LOG(LOG_TRACE, "IDLE");
-		thinkos_flag_give_i(drv->rx_idle);
+	if (drv->rx.dmactl.isr[TEIF_BIT]) {
+		DCC_LOG(LOG_TRACE, "TEIF");
+		/* FIXME: DMA transfer error handling... */
+		drv->rx.dmactl.ifcr[TEIF_BIT] = 1;
+//		thinkos_flag_give_i(drv->rx_idle);
+		/* Disable DMA stream */
+		drv->rx.dmactl.strm->cr &= ~DMA_EN;
 	}
-
-	DCC_LOG(LOG_TRACE, ".");
-
-#if 0
-	if (sr & USART_TC) {
-		DCC_LOG(LOG_TRACE, "TC");
-		/* TC interrupt is cleared by writing 0 back to the SR register */
-		us->sr = sr & ~USART_TC;
-	}
-#endif
 }
+
+void stm32f_serial_dma_tx_isr(struct stm32f_serial_dma_drv * drv)
+{
+	if (drv->tx.dmactl.isr[TCIF_BIT]) {
+		DCC_LOG(LOG_MSG, "TCIF");
+		/* clear the TX DMA transfer complete flag */
+		drv->tx.dmactl.ifcr[TCIF_BIT] = 1;
+	}
+	if (drv->tx.dmactl.isr[TEIF_BIT]) {
+		DCC_LOG(LOG_MSG, "TEIF");
+		/* FIXME: DMA transfer error handling... */
+		drv->tx.dmactl.ifcr[TEIF_BIT] = 1;
+		/* Disable DMA stream */
+		drv->tx.dmactl.strm->cr &= ~DMA_EN;
+	}
+}
+
 
 int stm32f_serial_dma_prepare(struct stm32f_serial_dma_drv * drv, 
 							  void * buf, unsigned int len)
 {
-	if (drv->rx.strm->cr & DMA_EN) {
+	if (drv->rx.dmactl.strm->cr & DMA_EN) {
 		DCC_LOG(LOG_ERROR, "DMA enabled");
 		return -1;
 	}
@@ -99,13 +103,13 @@ int stm32f_serial_dma_prepare(struct stm32f_serial_dma_drv * drv,
 	drv->rx.buf_ptr = buf;
 	drv->rx.buf_len = len;
 	/* clear transfer complete interrupt flags */
-	drv->rx.ifcr[TCIF_BIT] = 1; 
+	drv->rx.dmactl.ifcr[TCIF_BIT] = 1; 
 	/* Memory address */
-	drv->rx.strm->m0ar = buf;
+	drv->rx.dmactl.strm->m0ar = buf;
 	/* Number of data items to transfer */
-	drv->rx.strm->ndtr = len;
+	drv->rx.dmactl.strm->ndtr = len;
 	/* enable DMA */
-	drv->rx.strm->cr |= DMA_EN;
+	drv->rx.dmactl.strm->cr |= DMA_EN;
 
 	return 0;
 }
@@ -115,28 +119,29 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 {
 	unsigned int ndtr;
 	unsigned int cnt;
+	uint32_t cr;
 	int ret;
 
-	DCC_LOG3(LOG_TRACE, "%6d: len=%d tmo=%d", thinkos_clock(), len, tmo);
+	DCC_LOG3(LOG_MSG, "%6d: len=%d tmo=%d", thinkos_clock(), len, tmo);
 
 	/* if the stored buffer pointer is NULL it means that
 	   we did not yet prepare other DMA for a transfer,
 	   in this case prepare to transfer using the provided 
 	   buffer. */
 	if (drv->rx.buf_ptr == NULL) {
-		DCC_LOG(LOG_INFO, "DMA not prepared...");
-		if (drv->rx.strm->cr & DMA_EN) {
+		DCC_LOG(LOG_MSG, "DMA not prepared...");
+		if ((cr = drv->rx.dmactl.strm->cr) & DMA_EN) {
 			DCC_LOG(LOG_ERROR, "DMA enabled");
 			return -11;
 		}
 		/* clear transfer complete interrupt flags */
-		drv->rx.ifcr[TCIF_BIT] = 1; 
+		drv->rx.dmactl.ifcr[TCIF_BIT] = 1; 
 		/* Set memory address */
-		drv->rx.strm->m0ar = buf;
+		drv->rx.dmactl.strm->m0ar = buf;
 		/* Number of data items to transfer */
-		drv->rx.strm->ndtr = len;
+		drv->rx.dmactl.strm->ndtr = len;
 		/* enable DMA */
-		drv->rx.strm->cr |= DMA_EN;
+		drv->rx.dmactl.strm->cr = cr | DMA_TCIE | DMA_EN;
 		ndtr = len;
 	} else {
 		DCC_LOG(LOG_INFO, "DMA prepared...");
@@ -149,10 +154,10 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 		/* if the initially provided 'ndtr' differs from the
 		   DMA stream then the transfer already started,
 		   in this case we wait until it finishes. */
-		if ((cnt = ndtr - drv->rx.strm->ndtr) < 2) {
+		if ((cnt = ndtr - drv->rx.dmactl.strm->ndtr) < 2) {
 			if (drv->rx.buf_ptr == NULL) {
 				/* Disable DMA stream */
-				drv->rx.strm->cr &= ~DMA_EN;
+				drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
 			}
 			DCC_LOG(LOG_INFO, "timeout...");
 			return ret;
@@ -163,12 +168,12 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 	}
 
 	/* Disable DMA stream */
-	drv->rx.strm->cr &= ~DMA_EN;
+	drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
 	/* wait for completion of DMA transfer */
-	while (drv->rx.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
+	while (drv->rx.dmactl.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
 
 	/* Number of data items transfered... */
-	cnt = ndtr - drv->rx.strm->ndtr;
+	cnt = ndtr - drv->rx.dmactl.strm->ndtr;
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "DMA XFR cnt == 0!!!");
 //		abort();
@@ -181,13 +186,13 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 		if (buf != NULL) {
 			/* prepare next transfer */
 			/* clear transfer complete interrupt flags */
-			drv->rx.ifcr[TCIF_BIT] = 1; 
+			drv->rx.dmactl.ifcr[TCIF_BIT] = 1; 
 			/* Memory address */
-			drv->rx.strm->m0ar = (void *)buf;
+			drv->rx.dmactl.strm->m0ar = (void *)buf;
 			/* Number of data items to transfer */
-			drv->rx.strm->ndtr = len;
+			drv->rx.dmactl.strm->ndtr = len;
 			/* enable DMA */
-			drv->rx.strm->cr |= DMA_EN;
+			drv->rx.dmactl.strm->cr |= DMA_TCIE | DMA_EN;
 		}
 	}
 
@@ -198,49 +203,62 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 int stm32f_serial_dma_send(struct stm32f_serial_dma_drv * drv, 
 						   const void * buf, unsigned int len)
 {
+	struct stm32_usart * uart = drv->uart;
+	uint32_t ccr;
+	uint32_t cr;
 	unsigned int cnt;
-	DCC_LOG2(LOG_TRACE, "%6d: len=%d", thinkos_clock_i(), len);
 
-	if (drv->tx.strm->cr & DMA_EN) {
+	DCC_LOG2(LOG_MSG, "UART%d len=%d", 
+			 stm32_usart_lookup(drv->uart) + 1, len);
+
+	if ((ccr = drv->tx.dmactl.strm->cr) & DMA_EN) {
 		DCC_LOG(LOG_ERROR, "DMA enabled");
 		abort();
 	}
 
+	/* Pulse TE to generate an IDLE Frame */
+	cr = uart->cr1;
+	uart->cr1 = cr & ~USART_TE;
+	uart->cr1 = cr | USART_TE;
+
+	/* Disable DMA */
+//	while ((ccr = drv->tx.dmactl.strm->cr) & DMA_EN)
+//		drv->tx.dmactl.strm->cr = ccr & ~DMA_EN; 
+
 	/* Memory address */
-	drv->tx.strm->m0ar = (void *)buf;
+	drv->tx.dmactl.strm->m0ar = (void *)buf;
 	/* Number of data items to transfer */
-	drv->tx.strm->ndtr = len;
-	/* clear the the DMA stream transfer complete flag */
-	drv->tx.ifcr[TCIF_BIT] = 1;
+	drv->tx.dmactl.strm->ndtr = len;
 	/* clear the UART transfer complete bit */
 	drv->uart->sr &= ~USART_TC;
 	/* enable DMA */
-	drv->tx.strm->cr |= DMA_EN;
+	drv->tx.dmactl.strm->cr = ccr | DMA_EN;
 	/* enable the transfer complete interrupt */
 	drv->uart->cr1 |= USART_TCIE;
 	/* wait for the transfer to complete */
 	thinkos_flag_take(drv->tx_done);
 
 	/* Number of data items transfered... */
-	if ((cnt = drv->tx.strm->ndtr) != 0) {
+	if ((cnt = drv->tx.dmactl.strm->ndtr) != 0) {
 		DCC_LOG(LOG_ERROR, "DMA error!");
 		abort();
 	}
 
+	/* clear the the DMA stream transfer complete flag */
+	drv->tx.dmactl.ifcr[TCIF_BIT] = 1;
+
 	return len - cnt;
 }
 
+
 int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv, 
-					   unsigned int baudrate, unsigned int flags,
-					   struct stm32f_dma * dma, int dma_chan_id, 
-					   int rx_dma_strm_id, int tx_dma_strm_id)
+						   unsigned int baudrate, unsigned int flags,
+						   int dma_chan_id)
 {
 	drv->rx_idle = thinkos_flag_alloc();
 	drv->tx_done = thinkos_flag_alloc();
 	DCC_LOG2(LOG_TRACE, "rx_idle=%d tx_done=%d", drv->rx_idle, 
 			 drv->tx_done);
-	DCC_LOG3(LOG_TRACE, "chan=%d rx_strm=%d tx_strm=%d", 
-			 dma_chan_id, rx_dma_strm_id, tx_dma_strm_id);
 
 #if SERIAL_TX_MUTEX
 	drv->tx_mutex = thinkos_mutex_alloc(); 
@@ -250,51 +268,22 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	/* Enable DMA for transmission and reception */
 	stm32_usart_init(drv->uart);
 	stm32_usart_baudrate_set(drv->uart, baudrate);
-	stm32_usart_mode_set(drv->uart, SERIAL_8N1);
+	stm32_usart_mode_set(drv->uart, flags);
 
-	drv->dma = dma;
 	drv->rx.buf_ptr = NULL;
 	drv->rx.buf_len = 0;
-
-	/* -------------------------------------------------------
-	   Setup driver pointers according to the DMA stream 
-	 */
-	if (dma == STM32F_DMA1) {
-		/* DMA clock enable */
-		stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
-		DCC_LOG(LOG_TRACE, "DMA1");
-	} else {
-		/* DMA clock enable */
-		stm32_clk_enable(STM32_RCC, STM32_CLK_DMA2);
-		DCC_LOG(LOG_TRACE, "DMA2");
-	}
-
-	/* Adjust TX pointers */
-	drv->tx.strm = &dma->s[tx_dma_strm_id];
-	drv->tx.ifcr = dma_ifcr_bitband(dma, tx_dma_strm_id);
-	/* Adjust RX pointers */
-	drv->rx.strm = &dma->s[rx_dma_strm_id];
-	drv->rx.ifcr = dma_ifcr_bitband(dma, rx_dma_strm_id);
-	/* ------------------------------------------------------- 
-	 */
-
-	DCC_LOG3(LOG_TRACE, "dma=%p rx.strm=%p tx.strm=%p",
-			 drv->dma, drv->rx.strm, drv->tx.strm);
 
 	/* -------------------------------------------------------
 	   Configure TX DMA stream
 	 */
 	/* Disable DMA stream */
-	drv->tx.strm->cr = 0;
-	while (drv->tx.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	/* clear all interrupt flags */
-	drv->tx.ifcr[TEIF_BIT] = 1;
-	drv->tx.ifcr[HTIF_BIT] = 1;
-	drv->tx.ifcr[TCIF_BIT] = 1; 
-	drv->tx.strm->par = &drv->uart->tdr;
-//	drv->tx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
+	drv->tx.dmactl.strm->cr = 0;
+	/* Wait for the channel to be ready .. */
+	while (drv->tx.dmactl.strm->cr & DMA_EN); 
+	drv->tx.dmactl.strm->par = &drv->uart->tdr;
+//	drv->tx.dmactl.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	/* configure TX DMA stream */
-	drv->tx.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
+	drv->tx.dmactl.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
 		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC | 
 		DMA_DIR_MTP | DMA_TCIE | DMA_TEIE;
 	/* ------------------------------------------------------- 
@@ -304,27 +293,27 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	   Configure RX DMA stream
 	 */
 	/* Disable DMA stream */
-	drv->rx.strm->cr = 0;
-	while (drv->rx.strm->cr & DMA_EN); /* Wait for the channel to be ready .. */
-	/* clear all interrupt flags */
-	drv->rx.ifcr[TEIF_BIT] = 1;
-	drv->rx.ifcr[HTIF_BIT] = 1;
-	drv->rx.ifcr[TCIF_BIT] = 1; 
+	drv->rx.dmactl.strm->cr = 0;
+	/* Wait for the channel to be ready .. */
+	while (drv->rx.dmactl.strm->cr & DMA_EN); 
 	/* peripheral address */
-	drv->rx.strm->par = &drv->uart->rdr;
+	drv->rx.dmactl.strm->par = &drv->uart->rdr;
 	/* cofigure FIFO */
-//	drv->rx.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
+//	drv->rx.dmactl.strm->fcr = DMA_FEIE | DMA_DMDIS | DMA_FTH_FULL;
 	/* configure DMA */
-	drv->rx.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
+	drv->rx.dmactl.strm->cr = DMA_CHSEL_SET(dma_chan_id) | 
 		DMA_MSIZE_8 | DMA_PSIZE_8 | DMA_MINC |
 		DMA_DIR_PTM | DMA_TCIE | DMA_TEIE;
 	/* ------------------------------------------------------- 
 	 */
 
+	drv->uart->sr &= ~USART_TC;
+
 	/* configure the UART for DMA transfer */
-	drv->uart->cr3 |= USART_DMAT | USART_DMAR;
-	/* enable RX IDLE and errors interrupt */
-	drv->uart->cr1 |= USART_IDLEIE | USART_EIE;
+	drv->uart->cr3 |= USART_DMAT | USART_DMAR; /* | USART_EIE; */
+	/* enable RX IDLE interrupt */
+//	drv->uart->cr1 |= USART_IDLEIE;
+	drv->uart->cr1 |= USART_IDLEIE;
 	/* enable UART */
 	drv->uart->cr1 |= USART_UE | USART_TE | USART_RE;
 
@@ -353,7 +342,7 @@ int stm32f_serial_dma_close(struct stm32f_serial_dma_drv * drv)
 int stm32f_serial_dma_ioctl(struct stm32f_serial_dma_drv * drv, int opt, 
 							uintptr_t arg1, uintptr_t arg2)
 {
-	struct stm32_usart * us = drv->uart;
+	struct stm32_usart * uart = drv->uart;
 	unsigned int msk = 0;
 
 	DCC_LOG(LOG_TRACE, "...");
@@ -363,14 +352,14 @@ int stm32f_serial_dma_ioctl(struct stm32f_serial_dma_drv * drv, int opt,
 		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_ENABLE");
 		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
 		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
-		us->cr1 |= msk;
+		uart->cr1 |= msk;
 		break;
 
 	case SERIAL_IOCTL_DISABLE:
 		DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_DISABLE");
 		msk |= (arg1 & SERIAL_RX_EN) ? USART_RE : 0;
 		msk |= (arg1 & SERIAL_TX_EN) ? USART_TE : 0;
-		us->cr1 &= ~msk;
+		uart->cr1 &= ~msk;
 		break;
 
 	case SERIAL_IOCTL_DRAIN:
@@ -393,9 +382,9 @@ int stm32f_serial_dma_ioctl(struct stm32f_serial_dma_drv * drv, int opt,
 			uint32_t flags;
 			DCC_LOG(LOG_TRACE, "SERIAL_IOCTL_CONF_SET");
 
-			stm32_usart_baudrate_set(us, cfg->baudrate);
+			stm32_usart_baudrate_set(uart, cfg->baudrate);
 			flags = CFG_TO_FLAGS(cfg);
-			stm32_usart_mode_set(us, flags);
+			stm32_usart_mode_set(uart, flags);
 		}
 		break;
 

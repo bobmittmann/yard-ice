@@ -61,7 +61,7 @@
 
 #define IO_UART4_TX       STM32_GPIOC, 10
 #define IO_UART4_RX       STM32_GPIOC, 11
-#define UART4_AF          GPIO_AF7
+#define UART4_AF          GPIO_AF8
 
 #define IO_UART5_TX       STM32_GPIOC, 12
 #define IO_UART5_RX       STM32_GPIOD, 2
@@ -69,7 +69,7 @@
 
 #define IO_UART6_TX       STM32_GPIOC, 6
 #define IO_UART6_RX       STM32_GPIOC, 7
-#define UART6_AF          GPIO_AF7
+#define UART6_AF          GPIO_AF8
 
 /* -------------------------------------------------------------------------
  * LEDs 

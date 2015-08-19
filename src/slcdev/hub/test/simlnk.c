@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <sys/param.h>
 #include <sys/serial.h>
+#include <sys/dcclog.h>
 
 #include <thinkos.h>
 
@@ -134,6 +135,7 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 
 int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max)
 {
+#if 0
 	int pdu_len;
 
 	for(;;) {
@@ -153,13 +155,21 @@ int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max)
 	lnk->rx.pdu_len = 0;
 
 	return pdu_len;
+#endif
+	int cnt;
+
+	if ((cnt = serial_recv(lnk->dev, lnk->rx.buf, SIMLNK_MTU, 1000)) <= 0) {
+		return cnt;
+	}
+
+	return cnt;
 }
 
 int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt) 
 {
 	if (cnt > SIMLNK_PDU_MAX)
 		return -EINVAL;
-
+#if 0
 	for(;;) {
 		if (thinkos_flag_take(lnk->tx.flag) < 0) {
 			ERR("thinkos_flag_take() failed!");
@@ -174,33 +184,19 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 	/* insert frame in the transmission queue ...  */
 	memcpy(lnk->tx.pdu, buf, cnt);
 	lnk->tx.pdu_len = cnt;
+#endif
 
-	return cnt;
+//	uint8_t * buf = lnk->tx.buf;
+//	int cnt = len;
+
+	return serial_send(lnk->dev, buf, cnt);
+//	return cnt;
 }
 
 
 /* -------------------------------------------------------------------------
  * Initialization
  * ------------------------------------------------------------------------- */
-
-int simlnk_init(struct simlnk * lnk, const char * name, 
-				  unsigned int addr, struct serial_dev * dev)
-{
-	if (lnk == NULL)
-		return -EINVAL;
-
-	lnk->dev = dev;
-	lnk->addr = addr;
-
-	DBG("[SIMINITIALIZE]");
-	lnk->rx.flag = thinkos_flag_alloc();
-	lnk->tx.flag = thinkos_flag_alloc();
-
-
-	DBG("tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
-
-	return 0;
-}
 
 int simlnk_resume(struct simlnk * lnk)
 {
@@ -262,6 +258,26 @@ int simlnk_getstat(struct simlnk * lnk, struct simlnk_stat * stat, bool reset)
 
 	return 0;
 }
+
+int simlnk_init(struct simlnk * lnk, const char * name, 
+				unsigned int addr, struct serial_dev * dev)
+{
+	if (lnk == NULL)
+		return -EINVAL;
+
+	DCC_LOG1(LOG_TRACE, "addr=%d", addr);
+
+	lnk->dev = dev;
+	lnk->addr = addr;
+
+	lnk->rx.flag = thinkos_flag_alloc();
+	lnk->tx.flag = thinkos_flag_alloc();
+
+	DBG("tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
+
+	return 0;
+}
+
 
 /* -------------------------------------------------------------------------
  * Pool of resources

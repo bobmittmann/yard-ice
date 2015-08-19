@@ -30,12 +30,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
-#include <hexdump.h>
-
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
 #include <thinkos.h>
 
 #include <sys/dcclog.h>
@@ -186,33 +181,13 @@ int mstp_task(void * arg)
 {
 	struct mstp_lnk * mstp = (struct mstp_lnk *)arg;
 
-	printf("MS/TP task started...\n");
+	INF("MS/TP task started...\n");
 
 	mstp_lnk_loop(mstp);
 
 	return 0;
 }
 
-struct serial_dev * rs485_init(void)
-{
-	struct serial_dev * ser;
-
-    /* IO init */
-    stm32_gpio_mode(IO_RS485_RX, ALT_FUNC, PULL_UP);
-    stm32_gpio_af(IO_RS485_RX, RS485_USART_AF);
-
-    stm32_gpio_mode(IO_RS485_TX, ALT_FUNC, PUSH_PULL | SPEED_MED);
-    stm32_gpio_af(IO_RS485_TX, RS485_USART_AF);
-
-    stm32_gpio_mode(IO_RS485_MODE, OUTPUT, PUSH_PULL | SPEED_LOW);
-    stm32_gpio_set(IO_RS485_MODE);
-
-//	ser = stm32f_uart1_serial_init(500000, SERIAL_8N1);
-	ser = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
-//	ser = stm32f_uart7_serial_init(500000, SERIAL_8N1);
-
-	return ser;
-}
 
 uint32_t mstp_stack[512];
 
@@ -230,23 +205,21 @@ struct mstp_lnk * mstp_start(int addr)
 	struct serial_dev * ser;
 	struct mstp_lnk * mstp;
 
-	printf("1. rs485_init() ...\n");
-	if ((ser = rs485_init()) == NULL) {
-		return NULL;
-	}
+	DBG("1. rs485_init() ...\n");
+	ser = stm32f_uart1_serial_dma_init(500000, SERIAL_8N1);
 
-	printf("2. mstp_lnk_alloc() ...\n");
+	DBG("2. mstp_lnk_alloc() ...\n");
 	mstp = mstp_lnk_alloc();
 
-	printf("3. MS/TP link addr: %d ...\n", addr);
+	DBG("3. MS/TP link addr: %d ...\n", addr);
 	mstp_lnk_init(mstp, "MS/TP1", addr, ser);
 
-	printf("4. thinkos_thread_create_inf()\n");
+	DBG("4. thinkos_thread_create_inf()\n");
 	thinkos_thread_create_inf(mstp_task, mstp, &mstp_inf);
 
 	thinkos_sleep(100);
 
-	printf("5. mstp_lnk_resume()\n");
+	DBG("5. mstp_lnk_resume()\n");
 	mstp_lnk_resume(mstp);
 
 	return mstp;
@@ -273,7 +246,7 @@ int recv_task(void * arg)
 	unsigned int seconds = 10;
 	uint32_t clk;
 
-	printf("receive task started...\n");
+	INF("receive task started...\n");
 
 	clk = thinkos_clock() + seconds * 1000;
 	for (;;) {

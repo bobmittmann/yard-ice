@@ -86,7 +86,7 @@ int stm32_usart_mode_set(struct stm32_usart * us, unsigned int flags)
 	/* stop bits */
 	switch (SERIAL_STOPBITS(flags)) {
 	case SERIAL_STOPBITS_2:
-		DCC_LOG(LOG_INFO, "2 stop bits");
+		DCC_LOG(LOG_TRACE, "2 stop bits");
 		cr2 |= USART_STOP_2;
 		break;
 	case SERIAL_STOPBITS_1:

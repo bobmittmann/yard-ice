@@ -20,32 +20,25 @@
 # 
 
 
-PROG = slcdev-hub
+PROG = thinkos
 
-CFILES = slcdev-hub.c console.c pktbuf.c net.c \
-		 xflash.c otg_xflash_pic.c uart_xflash_pic.c \
-		 ../fpga/ice40lp384.c ../fpga/lattice.c \
-		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c \
-		 ../boot/board.c simlnk.c io.c
+CFILES = boot.c board.c simlnk.c test.c
 
 SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libstm32drv $(SDK)/libcdc-acm $(SDK)/libtty \
-		  $(SDK)/libxmodem $(SDK)/libshell $(SDK)/libcrc \
-		  $(SDK)/libtrace $(SDK)/libhexdump
+		  $(SDK)/libcrc $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = gcc stm32f cm3 util thinkos c ice-comm stm32drv cdc-acm \
-	   tty crc xmodem shell trace hexdump
+LIBS = cm3 stm32f util crc thinkos ice-comm gcc 
 
 INCPATH = $(SDK)/include ../include
 
+CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
+
+CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections 
+
 JTAGTOOL_ADDR = 192.168.10.50
 
-CDEFS = CONFIG_H
-CFLAGS = -g -O2
-
-MACH = stm32f427
-include ../../../mk/stm32f4xx.mk
-
+MACH = stm32l151xc
+include ../../../mk/stm32l1xx.mk

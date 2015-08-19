@@ -52,7 +52,8 @@ const uint8_t stm32f_dma2_irqnum_lut[] = {
 	STM32F_IRQ_DMA2_STREAM7
 };
 
-void stm32_dmactl_init(struct stm32_dmactl * ctl, struct stm32f_dma * dma, int id)
+void stm32_dmactl_init(struct stm32_dmactl * ctl, struct stm32f_dma * dma, 
+					   int id)
 {
     ctl->id = id;
     ctl->strm = &dma->s[id];

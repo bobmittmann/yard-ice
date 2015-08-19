@@ -29,14 +29,7 @@
 #ifdef STM32_UART7
 
 struct stm32f_serial_dma_drv uart7_serial_dma_drv = {
-	.uart = STM32_UART7,
-	.dma = STM32F_DMA1,
-	.rx = {
-		.strm = &STM32F_DMA1->s[3]
-	},
-	.tx = {
-		.strm = &STM32F_DMA1->s[1]
-	}
+	.uart = STM32_UART7
 };
 
 void stm32f_uart7_dma_isr(void)
@@ -44,7 +37,7 @@ void stm32f_uart7_dma_isr(void)
 	stm32f_serial_dma_isr(&uart7_serial_dma_drv);
 }
 
-void stm32f_dma2_stream3_isr(void)
+void stm32f_dma1_stream1_isr(void)
 {
 	stm32f_serial_dma_rx_isr(&uart7_serial_dma_drv);
 }
@@ -61,22 +54,23 @@ struct serial_dev * stm32f_uart7_serial_dma_init(unsigned int baudrate,
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	stm32f_serial_dma_init(drv, baudrate, flags, 
-						   STM32F_DMA1, 5, 3, 1);
+	stm32_dmactl_init(&drv->rx.dmactl, STM32F_DMA1, 1); 
+	stm32_dmactl_init(&drv->tx.dmactl, STM32F_DMA1, 3); 
+	stm32f_serial_dma_init(drv, baudrate, flags, 5);
 
 	/* configure and Enable interrupts */
 #ifdef THINKAPP
 	thinkos_irq_register(STM32_IRQ_UART7, SERIAL_IRQ_PRIORITY, 
 						 stm32f_uart7_dma_isr);
 
-//	thinkos_irq_register(STM32F_IRQ_DMA2_STREAM5, SERIAL_IRQ_PRIORITY, 
-//						 stm32f_dma2_stream5_isr);
+	thinkos_irq_register(STM32F_IRQ_DMA1_STREAM1, SERIAL_IRQ_PRIORITY, 
+						 stm32f_dma1_stream1_isr);
 #else
 	cm3_irq_pri_set(STM32_IRQ_UART7, SERIAL_IRQ_PRIORITY);
 	cm3_irq_enable(STM32_IRQ_UART7);
 
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM3, SERIAL_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM3);
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM1, SERIAL_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM1);
 #endif
 
 	DCC_LOG(LOG_TRACE, "done!");

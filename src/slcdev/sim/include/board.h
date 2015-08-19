@@ -30,43 +30,34 @@
 #define __THINKOS_IRQ__
 #include <thinkos_irq.h>
 
-#define LED1      STM32_GPIOA, 6
-#define LED2      STM32_GPIOA, 7
-#define LED3      STM32_GPIOB, 0
-#define LED4      STM32_GPIOB, 1
+#define IO_LED1         STM32_GPIOA, 6
+#define IO_LED2         STM32_GPIOA, 7
+#define IO_LED3         STM32_GPIOB, 0
+#define IO_LED4         STM32_GPIOB, 1
 
-#define USART2_TX STM32_GPIOA, 2
-#define USART2_RX STM32_GPIOA, 3
+#define IO_SW1_UP       STM32_GPIOB, 15
+#define IO_SW1_DWN      STM32_GPIOB, 14
+#define IO_SW2_UP       STM32_GPIOB, 13
+#define IO_SW2_DWN      STM32_GPIOB, 12
 
-#define COMP2     STM32_GPIOB, 5
+#define IO_UART_TX      STM32_GPIOA, 2
+#define IO_UART_RX      STM32_GPIOA, 3
 
-#define SW3A      STM32_GPIOB, 15
-#define SW3B      STM32_GPIOB, 14
-#define SW4A      STM32_GPIOB, 13
-#define SW4B      STM32_GPIOB, 12
+#define IO_COMP         STM32_GPIOB, 5
 
-#define VNEG_SW   STM32_GPIOA, 1 
+#define IO_VNEG_SW      STM32_GPIOA, 1 
 
-#define CHRG_EN   STM32_GPIOB, 6
+#define IO_IRATE        STM32_GPIOA, 5
 
-#define SINK1     STM32_GPIOB, 6
-#define SINK2     STM32_GPIOB, 7
-#define SINK3     STM32_GPIOB, 8
-#define SINK4     STM32_GPIOB, 9
+#define IO_SINK1        STM32_GPIOB, 6
+#define IO_SINK2        STM32_GPIOB, 7
+#define IO_SINK3        STM32_GPIOB, 8
+#define IO_SINK4        STM32_GPIOB, 9
 
-#define IRATE     STM32_GPIOA, 5
-
-#define SW1_OFF (0 << 0)
-#define SW1_A   (1 << 0)
-#define SW1_B   (2 << 0)
-#define SW1_MSK (3 << 0)
-
-#define SW2_OFF (0 << 2)
-#define SW2_A   (1 << 2)
-#define SW2_B   (2 << 2)
-#define SW2_MSK (3 << 2)
-
-#define LED_COUNT 4
+#define SW_OFF (0 << 0)
+#define SW_UP  (1 << 0)
+#define SW_DWN (2 << 0)
+#define SW_MSK (3 << 0)
 
 /*****************************************************************************
  * FLASH memory map
@@ -131,48 +122,20 @@
 
 #define IO_POLL_PERIOD_MS 16
 
+/* low level led on/off functions */
+static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_set(__gpio, __pin);
+}
+
+static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
+	stm32_gpio_clr(__gpio, __pin);
+}
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* low level led on/off functions */
-static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
-//	stm32_gpio_mode_af(__gpio, __pin);
-	stm32_gpio_clr(__gpio, __pin);
-}
-
-static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
-//	stm32_gpio_mode_out(__gpio, __pin);
-	stm32_gpio_set(__gpio, __pin);
-}
-
-static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
-	return stm32_gpio_is_mode_af(__gpio, __pin);
-}
-
-void __attribute__((noreturn)) io_event_task(void);
-void io_init(void);
-
-void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
-void isink_stop(void);
-
-void irate_set(unsigned int mv);
-
-void lamp_test(void);
-
-void led_on(unsigned int id);
-
-void led_off(unsigned int id);
-
-bool led_status(unsigned int id);
-
-void led_flash(unsigned int id, unsigned int ms);
-
-unsigned int timer_get(unsigned int id);
-
-void timer_set(unsigned int id, unsigned int ms);
-
-void io_shutdown(void);
+void board_init(void);
+void board_test(void);
 
 #ifdef __cplusplus
 }

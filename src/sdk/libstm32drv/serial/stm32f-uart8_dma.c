@@ -26,53 +26,63 @@
 #define __STM32_SERIAL_I__
 #include "stm32-serial-i.h"
 
-struct stm32f_serial_dma_drv uart5_serial_dma_drv = {
-	.uart = STM32_UART5
+#ifdef STM32_UART7
+
+struct stm32f_serial_dma_drv uart7_serial_dma_drv = {
+	.uart = STM32_UART7,
+	.dma = STM32F_DMA1,
+	.rx = {
+		.strm = &STM32F_DMA1->s[3]
+	},
+	.tx = {
+		.strm = &STM32F_DMA1->s[1]
+	}
 };
 
-void stm32f_uart5_isr(void)
+void stm32f_uart7_dma_isr(void)
 {
-	stm32f_serial_dma_isr(&uart5_serial_dma_drv);
+	stm32f_serial_dma_isr(&uart7_serial_dma_drv);
 }
 
-void stm32f_dma1_stream0_isr(void)
+void stm32f_dma2_stream3_isr(void)
 {
-	stm32f_serial_dma_rx_isr(&uart5_serial_dma_drv);
+	stm32f_serial_dma_rx_isr(&uart7_serial_dma_drv);
 }
 
-const struct serial_dev uart5_serial_dma_dev = {
-	.drv = &uart5_serial_dma_drv,
+const struct serial_dev uart7_serial_dma_dev = {
+	.drv = &uart7_serial_dma_drv,
 	.op = &stm32f_uart_serial_dma_op
 };
 
-struct serial_dev * stm32f_uart5_serial_dma_init(unsigned int baudrate, 
+struct serial_dev * stm32f_uart7_serial_dma_init(unsigned int baudrate, 
 												 unsigned int flags)
 {
-	struct stm32f_serial_dma_drv * drv = &uart5_serial_dma_drv;
+	struct stm32f_serial_dma_drv * drv = &uart7_serial_dma_drv;
 
 	DCC_LOG(LOG_TRACE, "...");
 
-	stm32_dmactl_init(&drv->rx.dmactl, STM32F_DMA1, 0); 
-	stm32_dmactl_init(&drv->tx.dmactl, STM32F_DMA1, 7); 
-	stm32f_serial_dma_init(drv, baudrate, flags, 4);
+	stm32f_serial_dma_init(drv, baudrate, flags, 
+						   STM32F_DMA1, 5, 3, 1);
 
 	/* configure and Enable interrupts */
 #ifdef THINKAPP
-	thinkos_irq_register(STM32_IRQ_UART5, SERIAL_IRQ_PRIORITY, 
-						 stm32f_uart5_isr);
+	thinkos_irq_register(STM32_IRQ_UART7, SERIAL_IRQ_PRIORITY, 
+						 stm32f_uart7_dma_isr);
 
-	thinkos_irq_register(STM32F_IRQ_DMA1_STREAM0, SERIAL_IRQ_PRIORITY, 
-						 stm32f_dma1_stream0_isr);
+//	thinkos_irq_register(STM32F_IRQ_DMA2_STREAM5, SERIAL_IRQ_PRIORITY, 
+//						 stm32f_dma2_stream5_isr);
 #else
-	cm3_irq_pri_set(STM32_IRQ_UART5, SERIAL_IRQ_PRIORITY);
-	cm3_irq_enable(STM32_IRQ_UART5);
+	cm3_irq_pri_set(STM32_IRQ_UART7, SERIAL_IRQ_PRIORITY);
+	cm3_irq_enable(STM32_IRQ_UART7);
 
-	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM0, SERIAL_IRQ_PRIORITY);
-	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM0);
+	cm3_irq_pri_set(STM32F_IRQ_DMA1_STREAM3, SERIAL_IRQ_PRIORITY);
+	cm3_irq_enable(STM32F_IRQ_DMA1_STREAM3);
 #endif
 
 	DCC_LOG(LOG_TRACE, "done!");
 
-	return (struct serial_dev *)&uart5_serial_dma_dev;
+	return (struct serial_dev *)&uart7_serial_dma_dev;
 }
+
+#endif
 

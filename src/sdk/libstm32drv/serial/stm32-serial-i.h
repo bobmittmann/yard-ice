@@ -101,18 +101,13 @@ struct stm32f_serial_dma_drv {
 #if SERIAL_ENABLE_TX_MUTEX
 	uint8_t tx_mutex;
 #endif
-	struct stm32f_dma * dma;
 	struct {
-		struct stm32f_dma_stream * strm;
-		/* Bitband pointer to interrupt clear flags */
-		uint32_t * volatile ifcr;
+		struct stm32_dmactl dmactl;
 	} tx;
 	struct {
-		struct stm32f_dma_stream * strm;
+		struct stm32_dmactl dmactl;
 		void * buf_ptr;
 		unsigned int buf_len;
-		/* Bitband pointer to interrupt clear flags */
-		volatile uint32_t * ifcr;
 	} rx;
 };
 
@@ -134,10 +129,11 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv);
 
 void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv);
 
+void stm32f_serial_dma_tx_isr(struct stm32f_serial_dma_drv * drv);
+
 int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv, 
-					   unsigned int baudrate, unsigned int flags,
-					   struct stm32f_dma * dma, int dma_chan_id, 
-					   int rx_dma_strm_id, int tx_dma_strm_id);
+						   unsigned int baudrate, unsigned int flags,
+						   int dma_chan_id);
 
 #ifdef __cplusplus
 }

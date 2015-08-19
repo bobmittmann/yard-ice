@@ -223,7 +223,8 @@ static int mstp_frame_send(struct mstp_lnk * lnk, unsigned int route,
 	return serial_send(lnk->dev, buf, cnt);
 }
 
-static int mstp_fast_send(struct mstp_lnk * lnk, unsigned int type, unsigned int daddr)
+static int mstp_fast_send(struct mstp_lnk * lnk, unsigned int type, 
+						  unsigned int daddr)
 {
 	uint8_t * buf = lnk->tx.token;
 	unsigned int crc;
@@ -448,7 +449,8 @@ transition_now:
 					memcpy(lnk->rx.pdu, &lnk->rx.buf[8], lnk->rx.pdu_len);
 					thinkos_flag_give(lnk->rx.flag);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
-					INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, lnk->rx.pdu_len);
+					INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, 
+						lnk->rx.pdu_len);
 					DBG("[IDLE] ReceivedDataNoReply --> [IDLE]");
 					break;
 				case FRM_BACNET_DATA_XPCT_REPLY:
@@ -460,7 +462,8 @@ transition_now:
 					lnk->rx.pdu_len = lnk->rx.off - 10;
 					memcpy(lnk->rx.pdu, &lnk->rx.buf[8], lnk->rx.pdu_len);
 					thinkos_flag_give(lnk->rx.flag);
-					INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, lnk->rx.pdu_len);
+					INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, 
+						lnk->rx.pdu_len);
 //					bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 					if (dst_addr == MSTP_ADDR_BCAST) {
 						lnk->state = MSTP_ANSWER_DATA_REQUEST;
@@ -568,7 +571,8 @@ transition_now:
 						thinkos_flag_give(lnk->rx.flag);
 //						bacnet_dl_pdu_recv_notify(lnk->addr.netif);
 						lnk->state = MSTP_DONE_WITH_TOKEN;
-						INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, lnk->rx.pdu_len);
+						INF("RCV saddr=%d pdu_len=%d", lnk->rx.inf.saddr, 
+							lnk->rx.pdu_len);
 						DBG("[WAIT_FOR_REPLY] ReceivedReply --> [DONE_WITH_TOKEN]");
 						break;
 					default:
@@ -782,7 +786,8 @@ transition_now:
 						mstp_fast_send(lnk, FRM_POLL_FOR_MASTER, ps);
 						RESET_SILENCE_TIMER();
 						retry_count = 0;
-						DBG("[POLL_FOR_MASTER] SendNextPFM --> [POLL_FOR_MASTER]");
+						DBG("[POLL_FOR_MASTER] SendNextPFM --> "
+							"[POLL_FOR_MASTER]");
 					} else {
 						lnk->sole_master = true;
 						frame_count = 0;
@@ -805,8 +810,8 @@ transition_now:
 			 lnk->tx.inf.type == FRM_BACNET_DATA_NO_REPLY ||
 			 (lnk->tx.inf.type >= FRM_DATA_NO_REPLY  &&
 			 lnk->tx.inf.type < (FRM_DATA_NO_REPLY + 0x3f)))) {
-			mstp_frame_send(lnk, MKROUTE(lnk->tx.inf.type, lnk->tx.inf.daddr, ts),
-							lnk->tx.pdu, lnk->tx.pdu_len);
+			mstp_frame_send(lnk, MKROUTE(lnk->tx.inf.type, lnk->tx.inf.daddr, 
+										 ts), lnk->tx.pdu, lnk->tx.pdu_len);
 			RESET_SILENCE_TIMER();
 			lnk->state = MSTP_IDLE;
 			DBG("[ANSWER_DATA_REQUEST] Reply"
@@ -960,7 +965,8 @@ int mstp_lnk_mgmt(struct mstp_lnk * lnk,
 	return 0;
 }
 
-int mstp_lnk_getstat(struct mstp_lnk * lnk, struct mstp_lnk_stat * stat, bool reset)
+int mstp_lnk_getstat(struct mstp_lnk * lnk, struct mstp_lnk_stat * stat, 
+					 bool reset)
 {
 	if (lnk == NULL)
 		return -EINVAL;

@@ -59,6 +59,10 @@
 					(SERIAL_PARITY_NONE << 4) | \
 					(SERIAL_STOPBITS_1 << 8)) 
 
+#define SERIAL_8N2 (SERIAL_DATABITS_8 | \
+					(SERIAL_PARITY_NONE << 4) | \
+					(SERIAL_STOPBITS_2 << 8)) 
+
 #define SERIAL_7E1 (SERIAL_DATABITS_7 | \
 					(SERIAL_PARITY_EVEN << 4) | \
 					(SERIAL_STOPBITS_1 << 8)) 
