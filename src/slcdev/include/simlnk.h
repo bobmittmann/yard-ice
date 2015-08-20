@@ -31,45 +31,21 @@
 #include <stdint.h> 
 #include <sys/serial.h> 
 
-enum simlnk_opc {
-	SIMLNK_RPC_RETURN    = 0,
-	SIMLNK_RPC_SUSPEND   = 1,
-	SIMLNK_RPC_RESUME    = 2,
-	SIMLNK_RPC_REBOOT    = 3,
+#define SIMLNK_MTU 500
+#define SIMLNK_BAUDRATE 10000
 
-	SIMLNK_RPC_MEM_LOCK   = 4,
-	SIMLNK_RPC_MEM_UNLOCK = 5,
-	SIMLNK_RPC_MEM_ERASE  = 6,
-	SIMLNK_RPC_MEM_READ   = 7,
-	SIMLNK_RPC_MEM_WRITE  = 8,
-	SIMLNK_RPC_MEM_SEEK   = 9,
-	
-	SIMLNK_OPC_TRACE,
-	SIMLNK_OPC_RUN_TEST,
-	SIMLNK_OPC_RUN_APP,
-
-	SIMLNK_OPC_FILE_OPEN,
-	SIMLNK_OPC_FILE_CREATE,
-	SIMLNK_OPC_FILE_CLOSE,
-	SIMLNK_OPC_FILE_READ,
-	SIMLNK_OPC_FILE_WRITE,
-	SIMLNK_OPC_FILE_SEEK,
-
-	SIMLNK_OPC_DIR_OPEN,
-	SIMLNK_OPC_DIR_CLOSE,
-	SIMLNK_OPC_DIR_READ,
+struct simlnk_stat {
+	uint32_t rx_err;
+	uint32_t rx_token;
+	uint32_t rx_mgmt;
+	uint32_t rx_unicast;
+	uint32_t rx_bcast;
+	uint32_t tx_token;
+	uint32_t tx_mgmt;
+	uint32_t tx_unicast;
+	uint32_t tx_bcast;
+	uint32_t token_lost;
 };
-
-struct simlnk_op {
-	uint8_t dst;
-	uint8_t src;
-	uint8_t seq;
-	uint8_t opc;
-	uint32_t data[];
-};
-
-#define SIMRPC_BCAST 0xff
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,28 +56,10 @@ struct simlnk * simlnk_alloc(void);
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev);
 
-int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt);
+int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt); 
 
-int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max);
-
-/* services */
-void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-
-void simrpc_init(void);
-
-void simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size);
-void simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size);
-void simrpc_mem_erase(unsigned int daddr, uint32_t base, unsigned int size);
-
-void simrpc_mem_read(unsigned int daddr, uint32_t * data, unsigned int cnt);
-void simrpc_mem_write(unsigned int daddr, uint32_t * data, unsigned int cnt);
-
-void simrpc_mem_seek(unsigned int daddr, uint32_t base);
+int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max,
+				unsigned int tmo);
 
 #ifdef __cplusplus
 }

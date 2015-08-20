@@ -1,6 +1,6 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.10.50
+JTAGTOOL_ADDR=192.168.10.51
 BUILD_NAME=thinkos
 TOOLS_DIR=../../../../tools
 

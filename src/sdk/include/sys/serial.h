@@ -52,7 +52,10 @@
 #define SERIAL_FLOWCTRL_NONE    0
 #define SERIAL_FLOWCTRL_RTSCTS  1
 #define SERIAL_FLOWCTRL_XONXOFF 2
-#define SERIAL_FLOWCTRL(FLAGS)  (((FLAGS) >> 12) & 0x0f)
+#define SERIAL_FLOWCTRL(FLAGS)  (((FLAGS) >> 12) & 0x03)
+
+#define SERIAL_EOT_IDLE         (1 << 14)
+#define SERIAL_EOT_BREAK        (1 << 15)
 
 /* Common character frame options */
 #define SERIAL_8N1 (SERIAL_DATABITS_8 | \

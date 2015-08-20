@@ -38,6 +38,7 @@
 
 #include "io.h"
 #include "simlnk.h"
+#include "simrpc.h"
 
 #undef DEBUG
 #undef TRACE_LEVEL
@@ -51,61 +52,112 @@
 unsigned int io_addr_get(void);
 struct simlnk * simrpc_route(unsigned int daddr);
 
-unsigned int simrpc_seq = 2;
+uint32_t simrpc_seq = 1;
 
-static uint32_t simrpc_mkopc(unsigned int daddr, unsigned int insn)
+static uint32_t simrpc_mkcall(unsigned int daddr, unsigned int seq,
+							  unsigned int insn)
 {
 	unsigned int saddr = io_addr_get();
 
-	return daddr | (saddr << 8) | ((simrpc_seq << 16) & 0xff) | (insn << 24);
+	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
+}
+
+static uint32_t simrpc_mkresp(unsigned int saddr, unsigned int seq,
+							  unsigned int insn)
+{
+	unsigned int daddr = io_addr_get();
+
+	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | 
+		(insn << 24) | SIMRPC_RESPONSE_BIT;
 }
 
 
-void simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size)
+int simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size)
 {
 	struct simlnk * iface; 
-	uint32_t pkt[3];
+	uint32_t pkt[8];
+	uint8_t seq;
+	int ret;
+	int n;
 
 	iface = simrpc_route(daddr);
 	if (iface == NULL)
-		return;
+		return -1;
 
-	pkt[0] = simrpc_mkopc(daddr, SIMLNK_RPC_MEM_LOCK);
+	seq = simrpc_seq++; 
+	pkt[0] = simrpc_mkcall(daddr, seq, SIMRPC_MEM_LOCK);
 	pkt[1] = base;
 	pkt[2] = size;
 
 	simlnk_send(iface, pkt, 4 * 3);
+	n = simlnk_recv(iface, pkt, sizeof(pkt), 100);
+	if (n != 8) {
+		if (n < 8)
+			DCC_LOG(LOG_WARNING, "timeout.");
+		else
+			DCC_LOG(LOG_WARNING, "invalid pkt len.");
+		return -1;
+	}
+	if (pkt[0] != simrpc_mkresp(daddr, seq, SIMRPC_MEM_LOCK)) {
+		DCC_LOG1(LOG_WARNING, "invalid response: %08x", pkt[0]);
+		return -1;
+	}
+
+	ret = pkt[1];
+
+	DCC_LOG1(LOG_TRACE, "ret=%d.", ret);
+	return ret;
 }
 
-void simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size)
+int simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size)
 {
 	struct simlnk * iface; 
-	uint32_t pkt[3];
+	uint32_t pkt[8];
+	uint8_t seq;
+	int ret;
+	int n;
 
 	iface = simrpc_route(daddr);
 	if (iface == NULL)
-		return;
+		return -1;
 
-	pkt[0] = simrpc_mkopc(daddr, SIMLNK_RPC_MEM_UNLOCK);
+	seq = simrpc_seq++; 
+	pkt[0] = simrpc_mkcall(daddr, seq, SIMRPC_MEM_UNLOCK);
 	pkt[1] = base;
 	pkt[2] = size;
 
 	simlnk_send(iface, pkt, 4 * 3);
+	n = simlnk_recv(iface, pkt, sizeof(pkt), 100);
+	if (n < 8) {
+		DCC_LOG(LOG_WARNING, "timeout.");
+		return n;
+	}
+	if (n != 8) {
+		DCC_LOG(LOG_WARNING, "invalid pkt len.");
+		return -1;
+	}
+	if (pkt[0] != simrpc_mkresp(daddr, seq, SIMRPC_MEM_UNLOCK)) {
+		DCC_LOG(LOG_WARNING, "invalid response.");
+		return -1;
+	}
+
+	ret = pkt[1];
+
+	DCC_LOG1(LOG_TRACE, "ret=%d.", ret);
+	return ret;
 }
 
 /* ---------------------------------------------------------------------------
  * ---------------------------------------------------------------------------
  */
 
+void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk);
+
 void __attribute__((noreturn)) simlnk_recv_task(struct simlnk * lnk)
 {
-	uint32_t pkt[520 / 4];
 	INF("<%d> started...", thinkos_thread_self());
 
-	for (;;) {
-		simlnk_recv(lnk, pkt, sizeof(pkt));
-		thinkos_sleep(1000);
-	}
+	simlnk_loop(lnk);
 }
 
 uint32_t simlnk_stack[SIMLNK_MAX][SIMLNK_STACK_SIZE];
@@ -160,35 +212,40 @@ void simrpc_init(void)
 	struct simlnk * lnk;
 
 	lnk = simlnk_alloc();
-	ser = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
+	ser = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE, 
+									   SERIAL_8N1 | SERIAL_EOT_BREAK);
 	simlnk_init(lnk, "SIM1", 1, ser);
 	simlnk[0] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[0]);
 
 	lnk = simlnk_alloc();
-	ser = stm32f_uart3_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
+	ser = stm32f_uart3_serial_dma_init(SIMLNK_BAUDRATE, 
+									   SERIAL_8N1 | SERIAL_EOT_BREAK);
 	simlnk_init(lnk, "SIM2", 2, ser);
 	simlnk[1] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[1]);
 
 	lnk = simlnk_alloc();
-	ser = stm32f_uart4_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
+	ser = stm32f_uart4_serial_dma_init(SIMLNK_BAUDRATE, 
+									   SERIAL_8N1 | SERIAL_EOT_BREAK);
 	simlnk_init(lnk, "SIM3", 3, ser);
 	simlnk[2] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[2]);
 
 	lnk = simlnk_alloc();
-	ser = stm32f_uart5_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
+	ser = stm32f_uart5_serial_dma_init(SIMLNK_BAUDRATE, 
+									   SERIAL_8N1 | SERIAL_EOT_BREAK);
 	simlnk_init(lnk, "SIM4", 4, ser);
 	simlnk[3] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[3]);
 
 	lnk = simlnk_alloc();
-	ser = stm32f_uart6_serial_dma_init(SIMLNK_BAUDRATE, SERIAL_8N1);
+	ser = stm32f_uart6_serial_dma_init(SIMLNK_BAUDRATE,
+									   SERIAL_8N1 | SERIAL_EOT_BREAK);
 	simlnk_init(lnk, "SIM5", 5, ser);
 	simlnk[4] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,

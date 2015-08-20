@@ -25,14 +25,10 @@
 
 #include "board.h"
 #include "simlnk.h"
-
-#define RPC_SRC_DST_SWAP(OPC) (((OPC) & 0xffff0000) | \
-							   (((OPC) & 0x0000ff00) >> 8) | \
-							   (((OPC) & 0x00000000) << 8))
-
-#define RPC_RESPONSE_BIT (1 << 31)
+#include "simrpc.h"
 
 int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
+int simrpc_send_int(uint32_t opc, int val);
 
 void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
@@ -41,16 +37,19 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if (cnt != 8) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
+		return;
 	};
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	DCC_LOG2(LOG_TRACE, "base=%08x size=%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
-	simrpc_send(opc, NULL, 0);
+	simrpc_send_int(opc, 0);
 }
 
 void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -60,16 +59,19 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if (cnt != 8) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
+		return;
 	};
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	DCC_LOG2(LOG_TRACE, "base=%08x size=%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
-	simrpc_send(opc, NULL, 0);
+	simrpc_send_int(opc, 0);
 }
 
 void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -83,10 +85,12 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
 	simrpc_send(opc, NULL, 0);
 }
@@ -102,10 +106,12 @@ void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
 	simrpc_send(opc, NULL, 0);
 }
@@ -121,10 +127,12 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
 	simrpc_send(opc, NULL, 0);
 }
@@ -140,10 +148,12 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
+	(void)base;
+	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
 
-	opc = RPC_SRC_DST_SWAP(opc) | RPC_RESPONSE_BIT;
+	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
 
 	simrpc_send(opc, NULL, 0);
 }

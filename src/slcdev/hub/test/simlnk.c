@@ -35,6 +35,8 @@
 #include <sys/dcclog.h>
 
 #include <thinkos.h>
+#include "simlnk.h"
+#include "simrpc.h"
 
 #undef DEBUG
 #undef TRACE_LEVEL
@@ -45,42 +47,14 @@
 #define SIMLNK_POOL_SIZE 5
 #endif
 
-#define ROUTE_FRM_TYPE(_ROUTE) ((_ROUTE) & 0xff)
-#define ROUTE_DST_ADDR(_ROUTE) (((_ROUTE) >> 8) & 0xff)
-#define ROUTE_SRC_ADDR(_ROUTE) (((_ROUTE) >> 16) & 0xff)
-
-#define MKROUTE(_TYP, _DST, _SRC) ((_TYP) + ((_DST) << 8) + ((_SRC) << 16))
-
-#define SIMLNK_MTU 512
-#define SIMLNK_PDU_MAX (SIMLNK_MTU - 11)
-
-struct simlnk_stat {
-	uint32_t rx_err;
-	uint32_t rx_token;
-	uint32_t rx_mgmt;
-	uint32_t rx_unicast;
-	uint32_t rx_bcast;
-	uint32_t tx_token;
-	uint32_t tx_mgmt;
-	uint32_t tx_unicast;
-	uint32_t tx_bcast;
-	uint32_t token_lost;
-};
-
-
 struct simlnk {
 	bool pool_alloc; /* indicate if the structure was 
 						allocated from a resource pool */
-	volatile uint8_t state; 
-	bool sole_master;
 	uint8_t addr; /* this station address */
 	struct serial_dev * dev;
 	struct {
-		uint8_t buf[SIMLNK_MTU];
-		volatile uint16_t pdu_len;
-		uint8_t pdu[SIMLNK_PDU_MAX];
-		unsigned int off;
-		unsigned int cnt;
+		uint32_t buf[SIMLNK_MTU / 4];
+		volatile unsigned int cnt;
 		int flag;
 	} rx;
 	struct {
@@ -93,78 +67,54 @@ struct simlnk {
  * Simulator Serial Link 
  * ------------------------------------------------------------------------- */
 
-int simlnk_frame_recv(struct simlnk * lnk, unsigned int tmo)
-{
-	uint8_t * buf = lnk->rx.buf;
-	int cnt;
-
-	if ((cnt = serial_recv(lnk->dev, buf, SIMLNK_MTU, tmo)) <= 0) {
-		return cnt;
-	}
-
-	return cnt;
-}
-
-int simlnk_frame_send(struct simlnk * lnk, unsigned int route, 
-						   uint8_t * pdu, unsigned int len)
-{
-	uint8_t * buf = (uint8_t *)lnk->tx.buf;
-	int cnt = len;
-
-	return serial_send(lnk->dev, buf, cnt);
-}
-
 void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 {
+	uint32_t * pkt = lnk->rx.buf;
 	uint32_t clk = 0;
-	int ret;
-
-	clk = thinkos_clock();
-
-	for (;;) {
-		ret = simlnk_frame_recv(lnk, 100);
-		(void)ret;
-		clk = thinkos_clock();
-		(void)clk;
-	}
-
-}
-
-int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max)
-{
-#if 0
-	int pdu_len;
-
-	for(;;) {
-		if (thinkos_flag_take(lnk->rx.flag) < 0) {
-			ERR("thinkos_flag_take() failed!");
-			abort();
-		}
-
-		/* check for a slot in the xmit queue ... */
-		if (lnk->rx.pdu_len) 
-			break;
-	};
-
-	pdu_len = MIN(lnk->rx.pdu_len, max);
-	memcpy(buf, lnk->rx.pdu, pdu_len);
-
-	lnk->rx.pdu_len = 0;
-
-	return pdu_len;
-#endif
 	int cnt;
 
-	if ((cnt = serial_recv(lnk->dev, lnk->rx.buf, SIMLNK_MTU, 1000)) <= 0) {
-		return cnt;
+	INF("<%d> started...", thinkos_thread_self());
+
+	for (;;) {
+		clk = thinkos_clock();
+		(void)clk;
+		if ((cnt = serial_recv(lnk->dev, pkt, SIMLNK_MTU, 0x7fffffff)) <= 0) {
+			continue;
+		}
+
+		if (SIMRPC_OPC(pkt[0]) == SIMRPC_SIGNAL) {
+			continue;
+		}
+
+		lnk->rx.cnt = cnt;
+		thinkos_flag_give(lnk->rx.flag);
 	}
+}
+
+int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max,
+				unsigned int tmo)
+{
+	unsigned int cnt;
+
+	if (thinkos_flag_timedtake(lnk->rx.flag, tmo) < 0) {
+		ERR("thinkos_flag_take() failed!");
+		return -1;
+	}
+
+	if (lnk->rx.cnt == 0) {
+		ERR("thinkos_flag_take() sync error!");
+		return -1;
+	}
+
+	cnt = MIN(lnk->rx.cnt, max);
+	memcpy(buf, lnk->rx.buf, cnt);
 
 	return cnt;
 }
 
 int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt) 
 {
-	if (cnt > SIMLNK_PDU_MAX)
+	if (cnt > SIMLNK_MTU)
 		return -EINVAL;
 #if 0
 	for(;;) {
@@ -189,6 +139,7 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 
 	{ 
 		uint32_t *p = (uint32_t *)lnk->tx.buf;
+		(void)p;
 
 		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
 	}
@@ -201,32 +152,6 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 /* -------------------------------------------------------------------------
  * Initialization
  * ------------------------------------------------------------------------- */
-
-int simlnk_resume(struct simlnk * lnk)
-{
-	if (lnk == NULL)
-		return -EINVAL;
-
-	DBG("Starting BACnet MS/TP Data Link");
-
-	lnk->state = 0;
-	DBG("[SIMIDLE]");
-
-	return 0;
-}
-
-int simlnk_stop(struct simlnk * lnk)
-{
-	if (lnk == NULL)
-		return -EINVAL;
-
-	DBG("Pausing BACnet MS/TP Data Link");
-
-	lnk->state = 0;
-	DBG("[SIMINITIALIZE]");
-
-	return 0;
-}
 
 int simlnk_getstat(struct simlnk * lnk, struct simlnk_stat * stat, bool reset)
 {
@@ -263,6 +188,9 @@ int simlnk_getstat(struct simlnk * lnk, struct simlnk_stat * stat, bool reset)
 	return 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Initialization
+ * ------------------------------------------------------------------------- */
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev)
 {

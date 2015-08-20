@@ -25,88 +25,48 @@
 
 #include "board.h"
 #include "simlnk.h"
-
-#define SIMLNK_BAUDRATE 10000
-
-/* enable RX IDLE and errors interrupt */
-#define USART_CR1 (USART_UE | USART_RE | USART_TE | USART_IDLEIE | \
-				   USART_TCIE | USART_EIE)
-
+#include "simrpc.h"
 
 #define RX_DMA_CHAN STM32_DMA_CHANNEL6
 #define TX_DMA_CHAN STM32_DMA_CHANNEL7
 
 struct simlnk {
-	uint32_t tx_buf[520 / 4];
-	uint32_t rx_buf[520 / 4];
+	uint32_t tx_buf[SIMLNK_MTU / 4];
+	uint32_t rx_buf[(SIMLNK_MTU / 4) + 1];
 } simlnk;
 
 void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
 {
 
 	switch (opc >> 24) {
-	case SIMLNK_RPC_MEM_LOCK:
-		DCC_LOG(LOG_TRACE, "MEM_LOCK");
+	case SIMRPC_MEM_LOCK:
+		DCC_LOG(LOG_MSG, "MEM_LOCK");
 		simrpc_mem_lock_svc(opc, data, cnt);
 		break;
-	case SIMLNK_RPC_MEM_UNLOCK:
-		DCC_LOG(LOG_TRACE, "MEM_UNLOCK");
+	case SIMRPC_MEM_UNLOCK:
+		DCC_LOG(LOG_MSG, "MEM_UNLOCK");
 		simrpc_mem_unlock_svc(opc, data, cnt);
 		break;
-	case SIMLNK_RPC_MEM_ERASE:
-		DCC_LOG(LOG_TRACE, "MEM_ERASE");
+	case SIMRPC_MEM_ERASE:
+		DCC_LOG(LOG_MSG, "MEM_ERASE");
 		simrpc_mem_erase_svc(opc, data, cnt);
 		break;
-	case SIMLNK_RPC_MEM_READ:
-		DCC_LOG(LOG_TRACE, "MEM_READ");
+	case SIMRPC_MEM_READ:
+		DCC_LOG(LOG_MSG, "MEM_READ");
 		simrpc_mem_read_svc(opc, data, cnt);
 		break;
-	case SIMLNK_RPC_MEM_WRITE:
-		DCC_LOG(LOG_TRACE, "MEM_WRITE");
+	case SIMRPC_MEM_WRITE:
+		DCC_LOG(LOG_MSG, "MEM_WRITE");
 		simrpc_mem_write_svc(opc, data, cnt);
 		break;
-	case SIMLNK_RPC_MEM_SEEK:
-		DCC_LOG(LOG_TRACE, "MEM_SEEK");
+	case SIMRPC_MEM_SEEK:
+		DCC_LOG(LOG_MSG, "MEM_SEEK");
 		simrpc_mem_seek_svc(opc, data, cnt);
 		break;
 	default:
 		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
 	}
 }
-
-
-void __attribute__((noinline)) simlnk_xmit(unsigned int len)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-	uint32_t ccr;
-
-	/* Disable DMA */
-	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
-		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN; 
-	/* Program DMA transfer */
-	dma->ch[TX_DMA_CHAN].cndtr = len;
-	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
-}
-
-int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-	uint32_t ccr;
-
-	simlnk.tx_buf[0] = opc;
-	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
-
-	/* Disable DMA */
-	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
-		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN; 
-	/* Program DMA transfer */
-	dma->ch[TX_DMA_CHAN].cndtr = cnt + 4;
-	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
-
-	return 0;
-}
-
-
 void stm32_usart2_isr(void)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
@@ -114,35 +74,34 @@ void stm32_usart2_isr(void)
 	uint32_t sr;
 	uint32_t cr;
 	
-	sr = uart->sr;
+	cr = uart->cr1;
+	sr = uart->sr & (cr | USART_ORE | USART_FE);
 
 	if (sr & USART_TC) {
 		DCC_LOG(LOG_INFO, "TC");
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
-		/* Pulse TE to generate an IDLE Frame */
-		cr = uart->cr1;
-		uart->cr1 = cr & ~USART_TE;
+        /* Disable the transfer complete interrupt */
+		cr &= ~USART_TCIE;
+		/* Generate a break condition */
+		cr |= USART_SBK;
 		uart->cr1 = cr;
-		simlnk_xmit(4);
 	}
 
-	if (sr & (USART_IDLE | USART_ORE | USART_NF | USART_FE)) {
+	if (sr & (USART_IDLE | USART_ORE | USART_FE)) {
 		uint32_t ccr;
 		int c;
 		
-		/* Disable DMA, this will cause the DMA TCF (transfer complete
-		 flag) to be set.*/
-		ccr = dma->ch[RX_DMA_CHAN].ccr;
-		dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+		/* Disable DMA */
+		while ((ccr = dma->ch[RX_DMA_CHAN].ccr) & DMA_EN)
+			dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN;
 
 		/* clear interrupt status flags */
 		c = uart->rdr;
 		(void)c;
 
-		if (sr & (USART_ORE | USART_NF)) {
-			DCC_LOG1(LOG_WARNING, "Error: %04b!", 
-					sr & (USART_ORE | USART_NF | USART_FE));
+		if (sr & USART_ORE) {
+			DCC_LOG(LOG_WARNING, "OVR!");
 		}
 
 		/* break detection */
@@ -158,7 +117,7 @@ void stm32_usart2_isr(void)
 			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
 
-			DCC_LOG2(LOG_TRACE, "BRK! opc=%08x cnt=%d", opc, cnt);
+			DCC_LOG2(LOG_MSG, "BRK! opc=%08x cnt=%d", opc, cnt);
 
 			if (cnt > 4) {
 				/* process this request */
@@ -228,77 +187,44 @@ void stm32_dma1_channel6_isr(void)
 	}
 }
 
-uint32_t __attribute__((noinline)) __crc32(void  * buf, unsigned int len)
+int simlnk_dma_xmit(unsigned int len)
 {
-	struct stm32_crc * crc = STM32_CRC;
-	uint8_t * src = (uint8_t *)buf;
-	uint8_t * mrk;
+	struct stm32f_dma * dma = STM32_DMA1;
+	struct stm32_usart * uart = STM32_USART2;
+	uint32_t ccr;
 
-	crc->cr = CRC_RESET;
+	/* Disable DMA */
+//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
+  //      DCC_LOG(LOG_ERROR, "DMA enabled");
+ //       abort();
+//	}
 
-	mrk = src + (len & ~3);
-	while (src != mrk) {
-		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16) + (src[3] << 24);
-		src += 4;
-	}
-	
-	switch (len & 3) {
-	case 3:
-		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16);
-		break;
-	case 2:
-		crc->dr = src[0] + (src[1] << 8);
-		break;
-	case 1:
-		crc->dr = src[0];
-		break;
-	}
+	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
+		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
 
-	return crc->dr;
+	/* Program DMA transfer */
+	dma->ch[TX_DMA_CHAN].cndtr = len;
+	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
+	/* enable the transfer complete interrupt */
+	uart->cr1 |= USART_TCIE;
+
+	return 0;
 }
 
-void __attribute__((noinline)) simlnk_enqueue(uint32_t opc, void  * buf, 
-												  unsigned int len)
+int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 {
-	struct stm32_crc * crc = STM32_CRC;
-	uint32_t * src = (uint32_t *)buf;
-	uint32_t * dst = (uint32_t *)simlnk.tx_buf;
-	uint32_t data;
-	uint32_t * mrk;
+	simlnk.tx_buf[0] = opc;
+	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
 
-	crc->cr = CRC_RESET;
+	return simlnk_dma_xmit(cnt + 4);
+}
 
-	crc->dr = opc;
-	*dst++ = opc;
+int simrpc_send_int(uint32_t opc, int val)
+{
+	simlnk.tx_buf[0] = opc;
+	simlnk.tx_buf[1] = (uint32_t)val;
 
-	mrk = src + (len >> 2);
-	while (src != mrk) {
-		data = *src++;
-		crc->dr = data;
-		*dst++ = data;
-	}
-
-	data = *src;
-	switch (len & 3) {
-	case 3:
-		data &= 0x00ffffff;
-		crc->dr = data;
-		*dst++ = data | ((crc->dr & 0xff) << 24);
-		*dst = (crc->dr >> 8) & 0xff;
-		break;
-	case 2:
-		data &= 0x0000ffff;
-		crc->dr = data;
-		*dst = data | ((crc->dr & 0xffff) << 16);
-		break;
-	case 1:
-		data &= 0x000000ff;
-		crc->dr = data;
-		*dst = data | ((crc->dr & 0xffff) << 8);
-		break;
-	case 0:
-		*dst = crc->dr & 0xffff;
-	}
+	return simlnk_dma_xmit(8);
 }
 
 int simlnk_init(struct simlnk * lnk, const char * name, 
