@@ -172,12 +172,14 @@ int simlnk_rpc(struct simlnk * lnk,
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], req, cnt);
 
+#if 0
 	{ 
 		uint32_t *p = (uint32_t *)lnk->tx.buf;
 		(void)p;
 
 		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
 	}
+#endif
 
 	if (serial_send(lnk->dev, lnk->tx.buf, 4 + cnt) < 0) {
 		return SIMRPC_EDRIVER;
@@ -196,7 +198,7 @@ int simlnk_rpc(struct simlnk * lnk,
 	cnt = lnk->rx.cnt - 4;
 	opc = lnk->rx.buf[0];
 
-	DCC_LOG2(LOG_TRACE, "resp opc=%08x cnt=%d", opc, cnt);
+	DCC_LOG2(LOG_MSG, "resp opc=%08x cnt=%d", opc, cnt);
 
 	if (opc == mkopc(saddr, daddr, seq, SIMRPC_OK)) {
 		if (rsp != NULL) {

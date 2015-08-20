@@ -137,7 +137,7 @@ int simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size);
 int simrpc_mem_erase(unsigned int daddr, uint32_t offs, unsigned int size);
 int simrpc_mem_read(unsigned int daddr, void * data, unsigned int cnt);
 int simrpc_mem_write(unsigned int daddr, const void * data, unsigned int cnt);
-
+int simrpc_mem_seek(unsigned int daddr, uint32_t offs);
 
 
 int simrpc_mem_seek(unsigned int daddr, uint32_t base);

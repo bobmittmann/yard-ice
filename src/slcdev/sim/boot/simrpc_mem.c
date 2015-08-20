@@ -67,7 +67,7 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	clk = __thinkos_ticks();
 
-	if (mem_lock == SIMRPC_BCAST) {
+	if (mem_lock != SIMRPC_BCAST) {
 		if ((int32_t)(clk - mem_clk) < MEM_LOCK_TIMEOUT_MS) {
 			DCC_LOG(LOG_WARNING, "locked");
 			simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
@@ -188,6 +188,7 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	}
 
 	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	mem_clk = __thinkos_ticks();
 }
 
 void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -214,6 +215,7 @@ void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	size = MIN(size, mem_top - addr);
 	simrpc_send(SIMRPC_REPLY_OK(opc), (void *)mem_ptr, size);
 	mem_ptr += size;
+	mem_clk = __thinkos_ticks();
 }
 
 void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -256,17 +258,20 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	simrpc_send_int(SIMRPC_REPLY_OK(opc), cnt);
 	mem_ptr += cnt;
+	mem_clk = __thinkos_ticks();
 }
 
 void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	uint32_t addr;
+	uint32_t offs;
 
 	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 	};
 
-	addr = data[0];
+	offs = data[0];
+	addr = mem_base + offs;
 	DCC_LOG1(LOG_TRACE, "addr=%08x", addr);
 
 	if ((addr < mem_base) || (addr > mem_top)) {
@@ -277,5 +282,6 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	mem_ptr = addr;
 	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	mem_clk = __thinkos_ticks();
 }
 

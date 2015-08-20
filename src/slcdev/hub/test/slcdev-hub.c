@@ -200,17 +200,40 @@ int main(int argc, char ** argv)
 	led_set_rate(LED_X1, RATE_2BPS);
 
 	for (i = 0; i < 10000; ++i) {
+		char s[128];
+
 //		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
-		simrpc_mem_lock(1, 0x08000000, 1024);
+		simrpc_mem_lock(1, 0x08010000, 8192);
+
+		DCC_LOG(LOG_TRACE, "RPC memory test.");
+
+		if (simrpc_mem_erase(1, 0, 2048) < 0) {
+			DCC_LOG(LOG_WARNING, "simrpc_mem_erase() failed!");
+		}
+
+		if (simrpc_mem_write(1, "Hello world!", 14) < 0) {
+			DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+		}
+
+		if (simrpc_mem_seek(1, 0) < 0) {
+			DCC_LOG(LOG_WARNING, "simrpc_mem_seek() failed!");
+		}
+
+		if (simrpc_mem_read(1, s, 14) < 0) {
+			DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+		}
+
+		DCC_LOGSTR(LOG_TRACE, "'%s'", s);
+
 //		thinkos_sleep(100);
 //		simrpc_mem_lock(2, 0x08000000, 1024);
 
 //		thinkos_sleep(1000);
 
-		simrpc_mem_unlock(1, 0x08000000, 1024);
+		simrpc_mem_unlock(1, 0x08010000, 8192);
 //		thinkos_sleep(100);
 //		simrpc_mem_unlock(2, 0x08000000, 1024);
-//		thinkos_sleep(1000);
+		thinkos_sleep(1000);
 	}
 
 	for (i = 0; i < 100000000; ++i) {

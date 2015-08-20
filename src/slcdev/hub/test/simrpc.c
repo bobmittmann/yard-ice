@@ -116,6 +116,19 @@ int simrpc_mem_write(unsigned int daddr, const void * data, unsigned int cnt)
 	return simlnk_rpc(iface, daddr, SIMRPC_MEM_WRITE, data, cnt, NULL, 0);
 }
 
+int simrpc_mem_seek(unsigned int daddr, uint32_t offs)
+{
+	struct simlnk * iface; 
+	uint32_t req[2];
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	req[0] = offs;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_SEEK, req, 4, NULL, 0);
+}
+
 
 /* ---------------------------------------------------------------------------
  * ---------------------------------------------------------------------------
