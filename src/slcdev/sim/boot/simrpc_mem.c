@@ -268,6 +268,7 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
+		return;
 	};
 
 	offs = data[0];

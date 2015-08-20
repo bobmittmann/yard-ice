@@ -61,6 +61,11 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt);
 int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max,
 				unsigned int tmo);
 
+int simlnk_rpc(struct simlnk * lnk, 
+			   unsigned int daddr, uint32_t insn,
+			   const void * req, unsigned int cnt,
+			   void * rsp, unsigned int max);
+
 #ifdef __cplusplus
 }
 #endif

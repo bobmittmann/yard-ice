@@ -39,6 +39,18 @@ void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
 {
 
 	switch (opc >> 24) {
+	case SIMRPC_SUSPEND:
+		simrpc_suspend_svc(opc, data, cnt);
+		break;
+	case SIMRPC_RESUME:
+		simrpc_resume_svc(opc, data, cnt);
+		break;
+	case SIMRPC_REBOOT:
+		simrpc_reboot_svc(opc, data, cnt);
+		break;
+	case SIMRPC_EXEC:
+		simrpc_exec_svc(opc, data, cnt);
+		break;
 	case SIMRPC_MEM_LOCK:
 		DCC_LOG(LOG_MSG, "MEM_LOCK");
 		simrpc_mem_lock_svc(opc, data, cnt);
@@ -292,5 +304,12 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 #endif
 
 	return 0;
+}
+	
+void simlnk_int_enable(void)
+{
+	cm3_irq_enable(STM32_IRQ_USART2);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
 }
 

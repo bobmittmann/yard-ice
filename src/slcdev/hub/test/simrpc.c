@@ -49,7 +49,48 @@
 #define SIMLNK_STACK_SIZE 1024
 #define SIMLNK_MAX 5
 
-#define SIMRPC_DEF_TMO_MS 100
+int simrpc_suspend(unsigned int daddr)
+{
+	struct simlnk * iface; 
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_SUSPEND, NULL, 0, NULL, 0);
+}
+
+int simrpc_resume(unsigned int daddr)
+{
+	struct simlnk * iface; 
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_RESUME, NULL, 0, NULL, 0);
+}
+
+int simrpc_reboot(unsigned int daddr)
+{
+	struct simlnk * iface; 
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_REBOOT, NULL, 0, NULL, 0);
+}
+
+int simrpc_exec(unsigned int daddr, uint32_t key)
+{
+	struct simlnk * iface; 
+	uint32_t req[1];
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	req[0] = key;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_EXEC, req, 4, NULL, 0);
+}
 
 int simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size)
 {

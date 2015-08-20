@@ -31,22 +31,20 @@
 #include <stdint.h> 
 
 enum simrpc_opc {
-	SIMRPC_SIGNAL = 0,
-	SIMRPC_SUSPEND   = 1,
-	SIMRPC_RESUME    = 2,
-	SIMRPC_REBOOT    = 3,
-
-	SIMRPC_MEM_LOCK   = 4,
-	SIMRPC_MEM_UNLOCK = 5,
-	SIMRPC_MEM_ERASE  = 6,
-	SIMRPC_MEM_READ   = 7,
-	SIMRPC_MEM_WRITE  = 8,
-	SIMRPC_MEM_SEEK   = 9,
+	SIMRPC_SIGNAL     = 0,
+	SIMRPC_SUSPEND    = 1,
+	SIMRPC_RESUME     = 2,
+	SIMRPC_EXEC       = 3,
+	SIMRPC_REBOOT     = 4,
+	SIMRPC_MEM_LOCK   = 5,
+	SIMRPC_MEM_UNLOCK = 6,
+	SIMRPC_MEM_ERASE  = 7,
+	SIMRPC_MEM_READ   = 8,
+	SIMRPC_MEM_WRITE  = 9,
+	SIMRPC_MEM_SEEK   = 10,
 	
-	SIMRPC_TRACE,
-	SIMRPC_RUN_TEST,
-	SIMRPC_RUN_APP,
 
+	SIMRPC_TRACE,
 	SIMRPC_FILE_OPEN,
 	SIMRPC_FILE_CREATE,
 	SIMRPC_FILE_CLOSE,
@@ -117,6 +115,8 @@ struct simrpc_hdr {
 
 #define SIMRPC_DEF_TMO_MS 100
 
+#define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -129,6 +129,11 @@ void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
 void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
 void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
 
+void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+
 void simrpc_init(void);
 
 int simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size);
@@ -139,16 +144,17 @@ int simrpc_mem_read(unsigned int daddr, void * data, unsigned int cnt);
 int simrpc_mem_write(unsigned int daddr, const void * data, unsigned int cnt);
 int simrpc_mem_seek(unsigned int daddr, uint32_t offs);
 
+int simrpc_suspend(unsigned int daddr);
+int simrpc_resume(unsigned int daddr);
+int simrpc_reboot(unsigned int daddr);
+int simrpc_exec(unsigned int daddr, uint32_t key);
 
-int simrpc_mem_seek(unsigned int daddr, uint32_t base);
 
 struct simlnk * simrpc_route(unsigned int daddr);
 
-int simlnk_rpc(struct simlnk * lnk, 
-			   unsigned int daddr, uint32_t insn,
-			   const void * req, unsigned int cnt,
-			   void * rsp, unsigned int max);
-
+int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
+int simrpc_send_int(uint32_t opc, int val);
+int simrpc_send_opc(uint32_t opc);
 
 #ifdef __cplusplus
 }

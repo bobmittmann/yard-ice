@@ -161,6 +161,50 @@ void stdio_init(void)
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 }
 
+void remote_test(unsigned int daddr)
+{
+	char s[128];
+
+	DCC_LOG1(LOG_TRACE, "RPC test, remote: %d.", daddr);
+
+	if (simrpc_suspend(daddr) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_suspend() failed!");
+	}
+
+	thinkos_sleep(500);
+
+	//		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
+	simrpc_mem_lock(daddr, 0x08010000, 8192);
+
+	if (simrpc_mem_erase(daddr, 0, 2048) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_mem_erase() failed!");
+	}
+
+	if (simrpc_mem_write(daddr, "Hello world!", 14) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+	}
+
+	if (simrpc_mem_seek(daddr, 0) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_mem_seek() failed!");
+	}
+
+	if (simrpc_mem_read(daddr, s, 14) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+	}
+
+	DCC_LOGSTR(LOG_TRACE, "'%s'", s);
+
+	if (simrpc_mem_unlock(daddr, 0x08010000, 8192) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_mem_unlock() failed!");
+	}
+
+	thinkos_sleep(500);
+
+	if (simrpc_resume(daddr) < 0) {
+		DCC_LOG(LOG_WARNING, "simrpc_resume() failed!");
+	}
+}
+
 void board_init(void);
 
 int main(int argc, char ** argv)
@@ -200,40 +244,11 @@ int main(int argc, char ** argv)
 	led_set_rate(LED_X1, RATE_2BPS);
 
 	for (i = 0; i < 10000; ++i) {
-		char s[128];
-
-//		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
-		simrpc_mem_lock(1, 0x08010000, 8192);
-
-		DCC_LOG(LOG_TRACE, "RPC memory test.");
-
-		if (simrpc_mem_erase(1, 0, 2048) < 0) {
-			DCC_LOG(LOG_WARNING, "simrpc_mem_erase() failed!");
-		}
-
-		if (simrpc_mem_write(1, "Hello world!", 14) < 0) {
-			DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
-		}
-
-		if (simrpc_mem_seek(1, 0) < 0) {
-			DCC_LOG(LOG_WARNING, "simrpc_mem_seek() failed!");
-		}
-
-		if (simrpc_mem_read(1, s, 14) < 0) {
-			DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
-		}
-
-		DCC_LOGSTR(LOG_TRACE, "'%s'", s);
-
-//		thinkos_sleep(100);
-//		simrpc_mem_lock(2, 0x08000000, 1024);
-
-//		thinkos_sleep(1000);
-
-		simrpc_mem_unlock(1, 0x08010000, 8192);
-//		thinkos_sleep(100);
-//		simrpc_mem_unlock(2, 0x08000000, 1024);
-		thinkos_sleep(1000);
+		remote_test(1);
+		remote_test(2);
+		remote_test(3);
+		remote_test(4);
+		remote_test(5);
 	}
 
 	for (i = 0; i < 100000000; ++i) {
