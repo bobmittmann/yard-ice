@@ -72,24 +72,26 @@
  | 0x08018000 | 0x0801ffff |  32KiB | Simulator Config File (JSON)  |  
  +------------+------------+--------+-------------------------------+
 */
+#define FLASH_BLK_THINKOS_OFFS      0x00000000
+#define FLASH_BLK_THINKOS_SIZE      (16 * 1024)
 
-#define FLASH_BLK_FIRMWARE_OFFS     0x00000000
-#define FLASH_BLK_FIRMWARE_SIZE     (60 * 1024)
+#define FLASH_BLK_FIRMWARE_OFFS     0x00004000
+#define FLASH_BLK_FIRMWARE_SIZE     (64 * 1024)
 
-#define FLASH_BLK_CONST_STRING_OFFS 0x0000f000
+#define FLASH_BLK_CONST_STRING_OFFS 0x00014000
 #define FLASH_BLK_CONST_STRING_SIZE (8 * 1024)
 
-#define FLASH_BLK_DB_BIN_OFFS       0x00011000
+#define FLASH_BLK_DB_BIN_OFFS       0x00016000
 #define FLASH_BLK_DB_BIN_SIZE       (8 * 1024)
 
-#define FLASH_BLK_CFG_BIN_OFFS      0x00013000
+#define FLASH_BLK_CFG_BIN_OFFS      0x00018000
 #define FLASH_BLK_CFG_BIN_SIZE      (16 * 1024)
 
-#define FLASH_BLK_DB_JSON_OFFS      0x00017000
-#define FLASH_BLK_DB_JSON_SIZE      (20 * 1024)
+#define FLASH_BLK_DB_JSON_OFFS      0x0001c000
+#define FLASH_BLK_DB_JSON_SIZE      (32 * 1024)
 
-#define FLASH_BLK_CFG_JSON_OFFS     0x0001c000
-#define FLASH_BLK_CFG_JSON_SIZE     (16 * 1024)
+#define FLASH_BLK_CFG_JSON_OFFS     0x00024000
+#define FLASH_BLK_CFG_JSON_SIZE     (32 * 1024)
 
 //#define FLASH_BLK_CODE_BIN_OFFS     0x00010000
 //#define FLASH_BLK_CODE_BIN_SIZE     (0 * 1024)

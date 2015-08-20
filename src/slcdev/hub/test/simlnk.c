@@ -37,6 +37,7 @@
 #include <thinkos.h>
 #include "simlnk.h"
 #include "simrpc.h"
+#include "io.h"
 
 #undef DEBUG
 #undef TRACE_LEVEL
@@ -58,6 +59,7 @@ struct simlnk {
 		int flag;
 	} rx;
 	struct {
+		uint32_t rpc_seq;
 		uint32_t buf[SIMLNK_MTU / 4];
 		int flag;
 	} tx;
@@ -148,6 +150,70 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 //	return cnt;
 }
 
+static uint32_t mkopc(unsigned int daddr, unsigned int saddr,
+					  unsigned int seq, unsigned int insn)
+{
+	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
+}
+
+int simlnk_rpc(struct simlnk * lnk, 
+			   unsigned int daddr, uint32_t insn,
+			   const void * req, unsigned int cnt,
+			   void * rsp, unsigned int max)
+{
+	unsigned int tmo = SIMRPC_DEF_TMO_MS;
+	unsigned int saddr = io_addr_get();
+	uint32_t opc;
+	uint32_t seq;
+
+	seq = lnk->tx.rpc_seq++; 
+	opc = mkopc(daddr, saddr, seq, insn);
+
+	lnk->tx.buf[0] = opc;
+	memcpy(&lnk->tx.buf[1], req, cnt);
+
+	{ 
+		uint32_t *p = (uint32_t *)lnk->tx.buf;
+		(void)p;
+
+		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
+	}
+
+	if (serial_send(lnk->dev, lnk->tx.buf, 4 + cnt) < 0) {
+		return SIMRPC_EDRIVER;
+	}
+
+	if (thinkos_flag_timedtake(lnk->rx.flag, tmo) < 0) {
+		ERR("thinkos_flag_take() failed!");
+		return SIMRPC_ESYSTEM;
+	}
+
+	if (lnk->rx.cnt < 4) {
+		ERR("thinkos_flag_take() link error!");
+		return SIMRPC_ELINK;
+	}
+
+	cnt = lnk->rx.cnt - 4;
+	opc = lnk->rx.buf[0];
+
+	DCC_LOG2(LOG_TRACE, "resp opc=%08x cnt=%d", opc, cnt);
+
+	if (opc == mkopc(saddr, daddr, seq, SIMRPC_OK)) {
+		if (rsp != NULL) {
+			cnt = MIN(cnt, max);
+			memcpy(rsp, &lnk->rx.buf[1], cnt);
+		}
+		return cnt;
+	}
+
+	if ((cnt == 4) && (opc == mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
+		DCC_LOG1(LOG_WARNING, "error %d.", (int)lnk->rx.buf[1]);
+		return (int)lnk->rx.buf[1];
+	}
+
+	DCC_LOG(LOG_WARNING, "invalid response.");
+	return SIMRPC_EPROTOCOL;
+}
 
 /* -------------------------------------------------------------------------
  * Initialization

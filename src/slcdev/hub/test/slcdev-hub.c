@@ -35,6 +35,7 @@
 #include <thinkos.h>
 
 #include "simlnk.h"
+#include "simrpc.h"
 #include "board.h"
 #include "net.h"
 #include "io.h"

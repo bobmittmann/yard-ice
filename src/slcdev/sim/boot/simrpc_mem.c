@@ -22,6 +22,7 @@
 
 #include <thinkos.h>
 #include <sys/serial.h>
+#include <sys/param.h>
 
 #include "board.h"
 #include "simlnk.h"
@@ -29,11 +30,30 @@
 
 int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int simrpc_send_int(uint32_t opc, int val);
+int simrpc_send_opc(uint32_t opc);
+
+#define FLASH_MIN ((uint32_t)STM32_MEM_FLASH + FLASH_BLK_FIRMWARE_OFFS) 
+#define FLASH_MAX ((uint32_t)STM32_MEM_FLASH + (256 * 1024))
+
+#define SRAM_MIN ((uint32_t)STM32_MEM_SRAM + 4096)
+#define SRAM_MAX ((uint32_t)STM32_MEM_SRAM + 32768)
+
+#define EEPROM_MIN ((uint32_t)STM32_MEM_EEPROM)
+#define EEPROM_MAX ((uint32_t)STM32_MEM_EEPROM + 8192)
+
+uint32_t mem_base;
+uint32_t mem_top;
+uint32_t mem_ptr;
+uint8_t mem_lock = SIMRPC_BCAST;
+uint32_t mem_clk;
+
+#define MEM_LOCK_TIMEOUT_MS 1000
 
 void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	uint32_t base;
 	uint32_t size;
+	uint32_t clk;
 
 	if (cnt != 8) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
@@ -42,14 +62,40 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
-	(void)base;
-	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size=%d", base, size);
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
+	clk = __thinkos_ticks();
 
-	simrpc_send_int(opc, 0);
+	if (mem_lock == SIMRPC_BCAST) {
+		if ((int32_t)(clk - mem_clk) < MEM_LOCK_TIMEOUT_MS) {
+			DCC_LOG(LOG_WARNING, "locked");
+			simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+			return;
+		}	
+		DCC_LOG(LOG_WARNING, "lock expired");
+	}
+
+	if ((base >= FLASH_MIN) && (base < FLASH_MAX)) {
+		DCC_LOG(LOG_TRACE, "Flash");
+		mem_top = MIN(FLASH_MAX, base + size);
+	} else if ((base >= EEPROM_MIN) && (base < EEPROM_MAX)) {
+		DCC_LOG(LOG_TRACE, "EEPROM");
+		mem_top = MIN(EEPROM_MAX, base + size);
+	} else if ((base >= SRAM_MIN) && (base < SRAM_MAX)) {
+		DCC_LOG(LOG_TRACE, "SRAM");
+		mem_top = MIN(EEPROM_MAX, base + size);
+	} else {
+		DCC_LOG(LOG_TRACE, "Invalid");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
+
+	mem_base = base;
+	mem_ptr = mem_base;
+	mem_lock = SIMRPC_SRC(opc);
+	mem_clk = __thinkos_ticks();
+	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -64,97 +110,172 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	base = data[0];
 	size = data[1];
-	(void)base;
-	(void)size;
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size=%d", base, size);
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
+	if (mem_lock != SIMRPC_SRC(opc)) {
+		DCC_LOG(LOG_WARNING, "Not yours");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
 
-	simrpc_send_int(opc, 0);
+	if ((base != mem_base) || (base + size != mem_top)) {
+		DCC_LOG(LOG_WARNING, "Invalid lock");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		return;
+	}
+
+	/* Sanity check */
+	if ((base >= FLASH_MIN) && (base < FLASH_MAX)) {
+		DCC_LOG(LOG_TRACE, "Flash");
+	} else if ((base >= EEPROM_MIN) && (base < EEPROM_MAX)) {
+		DCC_LOG(LOG_TRACE, "EEPROM");
+	} else if ((base >= SRAM_MIN) && (base < SRAM_MAX)) {
+		DCC_LOG(LOG_TRACE, "SRAM");
+	} else {
+		DCC_LOG(LOG_WARNING, "Internal error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		return;
+	}
+
+	mem_base = 0;
+	mem_top = 0;
+	mem_ptr = 0;
+	mem_lock = 0xff;
+	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t base;
+	uint32_t addr;
+	uint32_t offs;
 	uint32_t size;
+	int ret = 0;
 
 	if (cnt != 8) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 	};
 
-	base = data[0];
+	offs = data[0];
+	addr = mem_base + offs;
 	size = data[1];
-	(void)base;
-	(void)size;
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
+	if ((addr < mem_base) || ((addr + size) > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Invalid lock");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
+	if ((addr >= FLASH_MIN) && (addr < FLASH_MAX)) {
+		DCC_LOG(LOG_TRACE, "Flash");
+		ret = stm32_flash_erase(addr - (uint32_t)STM32_MEM_FLASH, size);
+	} else if ((addr >= EEPROM_MIN) && (addr < EEPROM_MAX)) {
+		DCC_LOG(LOG_TRACE, "EEPROM");
+	} else if ((addr >= SRAM_MIN) && (addr < SRAM_MAX)) {
+		__thinkos_memset32((void *)addr, 0, size);
+		DCC_LOG(LOG_TRACE, "SRAM");
+	} else {
+		DCC_LOG(LOG_WARNING, "Internal error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		return;
+	}
 
-	simrpc_send(opc, NULL, 0);
+	if (ret < 0) {
+		DCC_LOG(LOG_WARNING, "Memory erase error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		return;
+	}
+
+	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t base;
+	uint32_t addr;
 	uint32_t size;
 
-	if (cnt != 8) {
+	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 	};
 
-	base = data[0];
-	size = data[1];
-	(void)base;
-	(void)size;
+	size = data[0];
+	addr = mem_ptr;
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
+	if ((addr < mem_base) || (addr > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Internal error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
 
-	simrpc_send(opc, NULL, 0);
+
+	size = MIN(size, mem_top - addr);
+	simrpc_send(SIMRPC_REPLY_OK(opc), (void *)mem_ptr, size);
+	mem_ptr += size;
 }
 
 void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t base;
-	uint32_t size;
+	uint32_t addr;
+	int ret = 0;
 
-	if (cnt != 8) {
-		DCC_LOG(LOG_WARNING, "Invalid argument size");
-	};
+	addr = mem_ptr;
+	DCC_LOG2(LOG_TRACE, "addr=%08x cnt=%d", addr, cnt);
 
-	base = data[0];
-	size = data[1];
-	(void)base;
-	(void)size;
+	if ((addr < mem_base) || (addr > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Internal error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	cnt = MIN(cnt, mem_top - addr);
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
+	if ((addr >= FLASH_MIN) && (addr < FLASH_MAX)) {
+		DCC_LOG(LOG_TRACE, "Flash");
+		ret = stm32_flash_write(addr - (uint32_t)STM32_MEM_FLASH, 
+								data, cnt);
+	} else if ((addr >= EEPROM_MIN) && (addr < EEPROM_MAX)) {
+		DCC_LOG(LOG_TRACE, "EEPROM");
+	} else if ((addr >= SRAM_MIN) && (addr < SRAM_MAX)) {
+		DCC_LOG(LOG_TRACE, "SRAM");
+		__thinkos_memcpy((void *)addr, data, cnt);
+		ret = cnt;
+	} else {
+		DCC_LOG(LOG_WARNING, "Invalid memory");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		return;
+	}
 
-	simrpc_send(opc, NULL, 0);
+	if (ret < 0) {
+		DCC_LOG(LOG_WARNING, "Memory write error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		return;
+	}
+
+	simrpc_send_int(SIMRPC_REPLY_OK(opc), cnt);
+	mem_ptr += cnt;
 }
 
 void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t base;
-	uint32_t size;
+	uint32_t addr;
 
-	if (cnt != 8) {
+	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 	};
 
-	base = data[0];
-	size = data[1];
-	(void)base;
-	(void)size;
+	addr = data[0];
+	DCC_LOG1(LOG_TRACE, "addr=%08x", addr);
 
-	DCC_LOG2(LOG_TRACE, "base=%08x size-%d", base, size);
+	if ((addr < mem_base) || (addr > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Invalid");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
 
-	opc = SIMRPC_ADDR_SWAP(opc) | SIMRPC_RESPONSE_BIT;
-
-	simrpc_send(opc, NULL, 0);
+	mem_ptr = addr;
+	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 

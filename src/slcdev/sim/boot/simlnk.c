@@ -227,6 +227,13 @@ int simrpc_send_int(uint32_t opc, int val)
 	return simlnk_dma_xmit(8);
 }
 
+int simrpc_send_opc(uint32_t opc)
+{
+	simlnk.tx_buf[0] = opc;
+
+	return simlnk_dma_xmit(4);
+}
+
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev)
 {

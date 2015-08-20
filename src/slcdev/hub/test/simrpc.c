@@ -49,103 +49,73 @@
 #define SIMLNK_STACK_SIZE 1024
 #define SIMLNK_MAX 5
 
-unsigned int io_addr_get(void);
-struct simlnk * simrpc_route(unsigned int daddr);
-
-uint32_t simrpc_seq = 1;
-
-static uint32_t simrpc_mkcall(unsigned int daddr, unsigned int seq,
-							  unsigned int insn)
-{
-	unsigned int saddr = io_addr_get();
-
-	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
-}
-
-static uint32_t simrpc_mkresp(unsigned int saddr, unsigned int seq,
-							  unsigned int insn)
-{
-	unsigned int daddr = io_addr_get();
-
-	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | 
-		(insn << 24) | SIMRPC_RESPONSE_BIT;
-}
-
+#define SIMRPC_DEF_TMO_MS 100
 
 int simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size)
 {
 	struct simlnk * iface; 
-	uint32_t pkt[8];
-	uint8_t seq;
-	int ret;
-	int n;
+	uint32_t req[2];
 
-	iface = simrpc_route(daddr);
-	if (iface == NULL)
-		return -1;
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
 
-	seq = simrpc_seq++; 
-	pkt[0] = simrpc_mkcall(daddr, seq, SIMRPC_MEM_LOCK);
-	pkt[1] = base;
-	pkt[2] = size;
+	req[0] = base;
+	req[1] = size;
 
-	simlnk_send(iface, pkt, 4 * 3);
-	n = simlnk_recv(iface, pkt, sizeof(pkt), 100);
-	if (n != 8) {
-		if (n < 8)
-			DCC_LOG(LOG_WARNING, "timeout.");
-		else
-			DCC_LOG(LOG_WARNING, "invalid pkt len.");
-		return -1;
-	}
-	if (pkt[0] != simrpc_mkresp(daddr, seq, SIMRPC_MEM_LOCK)) {
-		DCC_LOG1(LOG_WARNING, "invalid response: %08x", pkt[0]);
-		return -1;
-	}
-
-	ret = pkt[1];
-
-	DCC_LOG1(LOG_TRACE, "ret=%d.", ret);
-	return ret;
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_LOCK, req, 8, NULL, 0);
 }
 
 int simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size)
 {
 	struct simlnk * iface; 
-	uint32_t pkt[8];
-	uint8_t seq;
-	int ret;
-	int n;
+	uint32_t req[2];
 
-	iface = simrpc_route(daddr);
-	if (iface == NULL)
-		return -1;
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
 
-	seq = simrpc_seq++; 
-	pkt[0] = simrpc_mkcall(daddr, seq, SIMRPC_MEM_UNLOCK);
-	pkt[1] = base;
-	pkt[2] = size;
+	req[0] = base;
+	req[1] = size;
 
-	simlnk_send(iface, pkt, 4 * 3);
-	n = simlnk_recv(iface, pkt, sizeof(pkt), 100);
-	if (n < 8) {
-		DCC_LOG(LOG_WARNING, "timeout.");
-		return n;
-	}
-	if (n != 8) {
-		DCC_LOG(LOG_WARNING, "invalid pkt len.");
-		return -1;
-	}
-	if (pkt[0] != simrpc_mkresp(daddr, seq, SIMRPC_MEM_UNLOCK)) {
-		DCC_LOG(LOG_WARNING, "invalid response.");
-		return -1;
-	}
-
-	ret = pkt[1];
-
-	DCC_LOG1(LOG_TRACE, "ret=%d.", ret);
-	return ret;
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_UNLOCK, req, 8, NULL, 0);
 }
+
+int simrpc_mem_erase(unsigned int daddr, uint32_t offs, unsigned int size)
+{
+	struct simlnk * iface; 
+	uint32_t req[2];
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	req[0] = offs;
+	req[1] = size;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_ERASE, req, 8, NULL, 0);
+}
+
+int simrpc_mem_read(unsigned int daddr, void * data, unsigned int cnt)
+{
+	struct simlnk * iface; 
+	uint32_t req[2];
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	req[0] = cnt;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_READ, req, 4, data, cnt);
+}
+
+int simrpc_mem_write(unsigned int daddr, const void * data, unsigned int cnt)
+{
+	struct simlnk * iface; 
+
+	if ((iface = simrpc_route(daddr)) == NULL)
+		return SIMRPC_EROUTE;
+
+	return simlnk_rpc(iface, daddr, SIMRPC_MEM_WRITE, data, cnt, NULL, 0);
+}
+
 
 /* ---------------------------------------------------------------------------
  * ---------------------------------------------------------------------------
