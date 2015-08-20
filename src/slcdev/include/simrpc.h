@@ -42,7 +42,7 @@ enum simrpc_opc {
 	SIMRPC_MEM_READ   = 8,
 	SIMRPC_MEM_WRITE  = 9,
 	SIMRPC_MEM_SEEK   = 10,
-	
+	SIMRPC_MEM_CRC32  = 11,
 
 	SIMRPC_TRACE,
 	SIMRPC_FILE_OPEN,
@@ -58,8 +58,8 @@ enum simrpc_opc {
 
 	SIMRPC_BUSY = 251,
 	SIMRPC_PEND = 253,
-	SIMRPC_OK = 254,
-	SIMRPC_ERR = 255
+	SIMRPC_OK   = 254,
+	SIMRPC_ERR  = 255
 };
 
 enum simrpc_err {
