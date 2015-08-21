@@ -230,13 +230,16 @@ static void join_resume(unsigned int th, unsigned int wq, bool tmw)
 static void console_rd_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
 	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
-	/* wakeup from the console wait queue */
+	/* wakeup from the console read wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
 	__thinkos_wakeup_return(wq, th, 0);
 }
 
 static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
 	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	/* wakeup from the console write wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
 	__thinkos_wakeup_return(wq, th, 0);
 }
 #endif
@@ -355,7 +358,7 @@ bool __thinkos_thread_pause(unsigned int th)
 		int irq;
 		for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
 			if (thinkos_rt.irq_th[irq] == th) {
-				DCC_LOG2(LOG_INFO, "thread=%d IRQ=%d", th, irq);
+				DCC_LOG2(LOG_TRACE, "thread=%d IRQ=%d", th, irq);
 				/* disable this interrupt source */
 				cm3_irq_disable(irq);
 				break;

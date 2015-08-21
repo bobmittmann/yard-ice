@@ -562,6 +562,18 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 				break;
 			}
 		} else if (oid == THINKOS_WQ_READY) {
+#if THINKOS_IRQ_MAX > 0
+			int irq;
+			for (irq = 0; irq < THINKOS_IRQ_MAX; ++irq) {
+				if (thinkos_rt.irq_th[irq] == thread_id) {
+					cp += str2hex(cp, "wait on IRQ[");
+					cp += int2str2hex(cp, irq);
+					cp += char2hex(cp, ']');
+					break;
+				}
+			}
+			if (irq == THINKOS_IRQ_MAX)
+#endif
 			cp += str2hex(cp, "ready");
 		} else {
 			cp += str2hex(cp, "wait on ");
@@ -573,9 +585,9 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 			DCC_LOG1(LOG_ERROR, "thread %d is paused!!!", thread_id);
 		}
 		cp += str2hex(cp, thinkos_type_name_lut[type]);
-		cp += char2hex(cp, '(');
+		cp += char2hex(cp, '[');
 		cp += int2str2hex(cp, oid);
-		cp += char2hex(cp, ')');
+		cp += char2hex(cp, ']');
 	}
 	
 	return cp - buf;

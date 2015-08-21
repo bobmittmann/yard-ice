@@ -419,6 +419,8 @@ int rsp_console_output(struct gdb_rspd * gdb, char * pkt)
 	if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
 		cp += bin2hex(cp, ptr, cnt);
 		__console_tx_pipe_commit(cnt);
+	} else {
+		DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
 	}
 #else
 	cnt = 0;
@@ -1648,15 +1650,12 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_TX_PIPE)) {
-			DCC_LOG(LOG_TRACE, "TX Pipe.");
+			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if (rsp_console_output(gdb, pkt) <= 0) {
-				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
 				dmon_clear(DMON_TX_PIPE);
 			}
 		}
-
 	}
-
 }
  
 void gdb_init(void (* shell)(struct dmon_comm * ), 

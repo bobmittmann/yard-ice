@@ -485,7 +485,7 @@ const struct thinkos_thread_inf httpd_inf = {
 
 struct httpd httpd;
 
-int webserver_init(void)
+int webserver_start(void)
 {
 	httpd_start(&httpd, 80, 4, httpd_dir, NULL);
 

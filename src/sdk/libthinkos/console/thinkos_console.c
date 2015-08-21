@@ -48,7 +48,7 @@ struct {
 	struct console_pipe rx_pipe;
 } thinkos_console_rt;
 
-static int pipe_get(struct console_pipe * pipe, 
+static int pipe_read(struct console_pipe * pipe, 
 					   uint8_t * buf, unsigned int len)
 {
 	uint32_t tail;
@@ -86,7 +86,7 @@ static int pipe_get(struct console_pipe * pipe,
 	return cnt;
 }
 
-static int pipe_put(struct console_pipe * pipe, 
+static int pipe_write(struct console_pipe * pipe, 
 					   const uint8_t * buf, unsigned int len)
 {
 	uint8_t * cp = (uint8_t *)buf;
@@ -173,8 +173,8 @@ void __console_rx_pipe_commit(unsigned int cnt)
 	buf = (uint8_t *)thinkos_rt.ctx[th]->r1;
 	max = thinkos_rt.ctx[th]->r2;
 	/* read from the RX pipe into the thread's read buffer */
-	if ((n = pipe_get(&thinkos_console_rt.rx_pipe, buf, max)) == 0) {
-		DCC_LOG(LOG_INFO, "_pipe_get() == 0");
+	if ((n = pipe_read(&thinkos_console_rt.rx_pipe, buf, max)) == 0) {
+		DCC_LOG(LOG_INFO, "_pipe_read() == 0");
 		return;
 	}
 
@@ -221,8 +221,7 @@ void __console_tx_pipe_commit(unsigned int cnt)
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 		buf = (uint8_t *)thinkos_rt.ctx[th]->r1;
 		len = thinkos_rt.ctx[th]->r2;
-		if ((n = pipe_put(&thinkos_console_rt.tx_pipe, 
-									buf, len)) > 0) {
+		if ((n = pipe_write(&thinkos_console_rt.tx_pipe, buf, len)) > 0) {
 			DCC_LOG1(LOG_INFO, "TX Pipe wakeup %d !!!", th);
 			/* wakeup from the console wait queue */
 			__thinkos_wakeup_return(wq, th, n);
@@ -248,12 +247,12 @@ void thinkos_console_svc(int32_t * arg)
 		arg[0] = 0;
 		break;
 
+#if THINKOS_ENABLE_TIMED_CALLS
 	case CONSOLE_TIMEDREAD:
 		buf = (uint8_t *)arg[1];
 		len = arg[2];
 		DCC_LOG1(LOG_INFO, "Console timed read: len=%d", len);
-		if ((n = pipe_get(&thinkos_console_rt.rx_pipe,
-									buf, len)) > 0) {
+		if ((n = pipe_read(&thinkos_console_rt.rx_pipe, buf, len)) > 0) {
 			dmon_signal(DMON_RX_PIPE);
 			arg[0] = n;
 			break;
@@ -268,13 +267,13 @@ void thinkos_console_svc(int32_t * arg)
 		/* signal the scheduler ... */
 		__thinkos_defer_sched(); 
 		break;
+#endif
 
 	case CONSOLE_READ:
 		buf = (uint8_t *)arg[1];
 		len = arg[2];
 		DCC_LOG1(LOG_INFO, "Console read: len=%d", len);
-		if ((n = pipe_get(&thinkos_console_rt.rx_pipe,
-									buf, len)) > 0) {
+		if ((n = pipe_read(&thinkos_console_rt.rx_pipe, buf, len)) > 0) {
 			dmon_signal(DMON_RX_PIPE);
 			arg[0] = n;
 			break;
@@ -294,18 +293,15 @@ void thinkos_console_svc(int32_t * arg)
 		wq = THINKOS_WQ_CONSOLE_WR;
 		DCC_LOG1(LOG_INFO, "Console write: len=%d", len);
 wr_again:
-		if ((n = pipe_put(&thinkos_console_rt.tx_pipe, 
-									buf, len)) > 0) {
-			DCC_LOG1(LOG_INFO, "pipe_put: n=%d", n);
+		if ((n = pipe_write(&thinkos_console_rt.tx_pipe, buf, len)) > 0) {
+			DCC_LOG1(LOG_INFO, "pipe_write: n=%d", n);
 			dmon_signal(DMON_TX_PIPE);
 			arg[0] = n;
 		} else {
 			/* (1) suspend the thread by removing it from the
 			   ready wait queue. The __thinkos_suspend() call cannot be nested
 			   inside a LDREX/STREX pair as it may use the exclusive access 
-			   itself, in case we have anabled the time sharing option.
-			   It is not a problem having a thread not contained in any 
-			   waiting queue inside a system call. */
+			   itself, in case we have anabled the time sharing option. */
 			__thinkos_suspend(self);
 			/* update the thread status in preparation for event wait */
 #if THINKOS_ENABLE_THREAD_STAT
@@ -315,11 +311,11 @@ wr_again:
 			   this thread before the scheduler is called, this will allow
 			   the interrupt handler to locate the return value (r0) address. */
 			thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-
-			/* insert into the event wait queue */
+			/* Insert into the event wait queue */
 			queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 			queue |= (1 << self);
-			/* The queue may have changed while suspending (1).
+			/* (3) Try to save the queu state back.
+			   The queue may have changed by an interrup handler.
 			   If this is the case roll back and restart. */
 			if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
 				/* roll back */

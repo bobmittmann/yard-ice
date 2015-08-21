@@ -1,5 +1,5 @@
 /* 
- * Copyright(C) 2013 Robinson Mittmann. All Rights Reserved.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
  * 
  * This file is part of the YARD-ICE.
  *
@@ -19,17 +19,20 @@
 
 /** 
  * @file config.h
- * @brief 
+ * @brief YARD-ICE
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define THINKOS_IRQ_MAX 81
+/* -------------------------------------------------------------------------
+   ThinkOS configuration
+   -------------------------------------------------------------------------- */
 
-#define THINKOS_ENABLE_IDLE_WFI 0
-#define THINKOS_ENABLE_IDLE_SNAPSHOT 0
+#define THINKOS_IRQ_MAX 80
+
+#define THINKOS_ENABLE_IDLE_WFI 1
 
 #define THINKOS_ENABLE_CLOCK 1
 
@@ -40,40 +43,86 @@
 #define THINKOS_THREADS_MAX 32
 #define THINKOS_ENABLE_THREAD_ALLOC 1
 
-#define THINKOS_ENABLE_JOIN 0
-#define THINKOS_ENABLE_PAUSE 0
-#define THINKOS_ENABLE_CANCEL 0
+#define THINKOS_ENABLE_JOIN 1
+#define THINKOS_ENABLE_PAUSE 1
+#define THINKOS_ENABLE_CANCEL 1
 
 #define THINKOS_MUTEX_MAX 32
 #define THINKOS_ENABLE_MUTEX_ALLOC 1
 
-#define THINKOS_COND_MAX 32
+#define THINKOS_COND_MAX 64
 #define THINKOS_ENABLE_COND_ALLOC 1
 
-#define THINKOS_SEMAPHORE_MAX 32
+#define THINKOS_SEMAPHORE_MAX 24
 #define THINKOS_ENABLE_SEM_ALLOC 1
 
-#define THINKOS_EVENT_MAX 0
+#define THINKOS_EVENT_MAX 4
 #define THINKOS_ENABLE_EVENT_ALLOC 1
 
 #define THINKOS_FLAG_MAX 32
 #define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
+
+#define THINKOS_GATE_MAX 16
+#define THINKOS_ENABLE_GATE_ALLOC 1
+
+#define THINKOS_ENABLE_SYSINFO 1
 
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
 #define THINKOS_ENABLE_ARG_CHECK 1
-
-#define THINKOS_ENABLE_DEADLOCK_CHECK 0
+#define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#define THINKOS_ENABLE_SANITY_CHECK 1
 
 #define THINKOS_ENABLE_EXCEPTIONS 1
 
-#define THINKOS_EXCEPT_STACK_SIZE 256
+#define THINKOS_EXCEPT_STACK_SIZE 320
 
-#define TRACE_RING_SIZE 512
+#define THINKOS_STDERR_FAULT_DUMP 0
+
+#define THINKOS_ENABLE_SCHED_DEBUG 0
+
+#define THINKOS_ENABLE_RT_DEBUG 1
+
+#define THINKOS_ENABLE_BREAK 1
+
+#define THINKOS_ENABLE_PROFILING 1
+
+#define THINKOS_ENABLE_MONITOR 1
+
+#define THINKOS_ENABLE_CONSOLE 1
+
+#define THINKOS_ENABLE_DEBUG_STEP 1
+
+#define THINKOS_ENABLE_DEBUG_FAULT 1
+
+#define THINKOS_ENABLE_BUSFAULT 1
+
+#define THINKOS_ENABLE_USAGEFAULT 1
+
+#define THINKOS_ENABLE_MPU 1
+
+#define THINKOS_ENABLE_FPU 0
+
+/* -------------------------------------------------------------------------
+   USB 
+   -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_OTG_FS 1
+#define STM32F_OTG_FS_EP_MAX 4
+
+/* -------------------------------------------------------------------------
+   GDB
+   -------------------------------------------------------------------------- */
+
+#define GDB_ENABLE_MEM_MAP 0
+
+/* -------------------------------------------------------------------------
+   Bootloader 
+   -------------------------------------------------------------------------- */
+
+#define BOOT_ENABLE_GDB 1
 
 #endif /* __CONFIG_H__ */
+
 

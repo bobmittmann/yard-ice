@@ -47,7 +47,7 @@
 #include "audio.h"
 
 void tcpip_init(void);
-int webserver_init(void);
+int webserver_start(void);
 
 int network_config(void)
 {
@@ -196,38 +196,55 @@ void supervisor_init(void)
 
 struct rtsp_client rtsp;
 
+unsigned int second;
+unsigned int minute;
+unsigned int hour;
+
 int main(int argc, char ** argv)
 {
+
+	uint32_t clk;
+
 	stdio_init();
 
+	printf("1. supervisor_init()... \n");
 	supervisor_init();
+
+	printf("2. NVRAM environment init... \n");
+	stm32f_nvram_env_init();
+
+	printf("3. network_config()... \n");
+	network_config();
+
+	printf("4. audio init ... \n");
+	audio_init();
+
+	printf("5. RTSP client init ... \n");
+	rtsp_init(&rtsp, 554);
+
+	printf("6. Starting G.711 RTP client ... \n");
+	rtp_g711_start(&rtsp.rtp);
+
+	printf("7. Starting webserver ... \n");
+	webserver_start();
 
 	INF("Starting RTSP test");
 
-	stm32f_nvram_env_init();
-
-	network_config();
-
-	audio_init();
-
-	thinkos_sleep(100);
-
-	rtsp_init(&rtsp, 554);
-
-	rtp_g711_start(&rtsp.rtp);
-
-	webserver_init();
-
+	clk = thinkos_clock();
+	second = 0;
+	minute = 0;
+	hour = 0;
 	for (;;) {
-		thinkos_sleep(1000);
-/*
-		if (rtsp_connect(&rtsp, "192.168.10.254", "audio") < 0) {
-			WARN("RTSP connection failed!");
-		} else	{
-			rtsp_close_wait(&rtsp);
-			WARN("RTSP connection closed!");
+		clk += 1000;
+		thinkos_alarm(clk);
+		if (++second == 60) {
+			second = 0;
+			if (++minute == 60) {
+				minute = 0;
+				hour++;
+			}
 		}
-*/
+		printf("%4d:%02d:%02d tick...\n", hour, minute, second);
 	}
 
 	return 0;
