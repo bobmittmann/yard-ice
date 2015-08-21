@@ -22,8 +22,8 @@
 
 PROG = thinkos
 
-CFILES = boot.c monitor.c board.c otg_xflash_pic.c lattice.c \
-		 ice40lp384.c
+CFILES = boot.c monitor.c board.c otg_xflash_pic.c \
+		 ../fpga/ice40lp384.c ../fpga/lattice.c \
 
 SDK = ../../../sdk
 

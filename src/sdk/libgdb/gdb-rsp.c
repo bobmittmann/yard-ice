@@ -1652,6 +1652,7 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if (rsp_console_output(gdb, pkt) <= 0) {
+				DCC_LOG(LOG_WARNING, "TX_PIPE flag cleared.");
 				dmon_clear(DMON_TX_PIPE);
 			}
 		}
