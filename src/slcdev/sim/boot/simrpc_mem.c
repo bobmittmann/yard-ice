@@ -27,6 +27,7 @@
 #include "board.h"
 #include "simlnk.h"
 #include "simrpc.h"
+#include "simrpc_svc.h"
 
 int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int simrpc_send_int(uint32_t opc, int val);
@@ -283,6 +284,105 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	mem_ptr = addr;
 	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	mem_clk = __thinkos_ticks();
+}
+
+static uint32_t __crc32(void  * buf, unsigned int len)
+{
+	struct stm32_crc * crc = STM32_CRC;
+	uint8_t * src = (uint8_t *)buf;
+	uint8_t * mrk;
+
+	crc->cr = CRC_RESET;
+
+	mrk = src + (len & ~3);
+	while (src != mrk) {
+		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16) + (src[3] << 24);
+		src += 4;
+	}
+
+	switch (len & 3) {
+	case 3:
+		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16);
+		break;
+	case 2:
+		crc->dr = src[0] + (src[1] << 8);
+		break;
+	case 1:
+		crc->dr = src[0];
+		break;
+	}
+
+	return crc->dr;
+}
+
+static uint32_t __crc32_align(void  * buf, unsigned int len)
+{
+	struct stm32_crc * crc = STM32_CRC;
+	uint32_t * src = (uint32_t *)buf;
+	uint32_t * mrk = src + (len >> 2);
+
+	crc->cr = CRC_RESET;
+	while (src != mrk)
+		crc->dr = *src++;
+	
+	if (len & 3)
+		crc->dr = *src & (0xffffffff >> ((4 - (len & 3)) * 8));
+
+	return crc->dr;
+}
+
+void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
+{
+	uint32_t addr;
+	uint32_t offs;
+	uint32_t size;
+	uint32_t crc;
+
+	if (cnt != 8) {
+		DCC_LOG(LOG_WARNING, "Invalid argument size");
+	};
+
+	offs = data[0];
+	addr = mem_base + offs;
+	size = data[1];
+
+	if ((addr < mem_base) || (addr > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Invalid");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
+
+	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
+	if ((addr < mem_base) || ((addr + size) > mem_top)) {
+		DCC_LOG(LOG_WARNING, "Invalid lock");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
+
+	/* Sanity check */
+	if ((addr >= FLASH_MIN) && (addr < FLASH_MAX)) {
+		DCC_LOG(LOG_TRACE, "Flash");
+	} else if ((addr >= EEPROM_MIN) && (addr < EEPROM_MAX)) {
+		DCC_LOG(LOG_TRACE, "EEPROM");
+	} else if ((addr >= SRAM_MIN) && (addr < SRAM_MAX)) {
+		DCC_LOG(LOG_TRACE, "SRAM");
+	} else {
+		DCC_LOG(LOG_WARNING, "Internal error");
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		return;
+	}
+
+	if (size > (mem_top - addr))
+		size = (mem_top - addr);
+
+	if ((addr & 0x3) == 0)
+		crc = __crc32_align((void *)addr, size);
+	else
+		crc = __crc32((void *)addr, size);
+
+	simrpc_send_int(SIMRPC_REPLY_OK(opc), crc);
+
 	mem_clk = __thinkos_ticks();
 }
 

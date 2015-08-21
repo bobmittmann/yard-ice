@@ -37,6 +37,7 @@
 #include <thinkos.h>
 #include "simlnk.h"
 #include "simrpc.h"
+#include "simrpc_svc.h"
 #include "io.h"
 
 #undef DEBUG
@@ -59,7 +60,6 @@ struct simlnk {
 		int flag;
 	} rx;
 	struct {
-		uint32_t rpc_seq;
 		uint32_t buf[SIMLNK_MTU / 4];
 		int flag;
 	} tx;
@@ -156,17 +156,18 @@ static uint32_t mkopc(unsigned int daddr, unsigned int saddr,
 	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
 }
 
-int simlnk_rpc(struct simlnk * lnk, 
-			   unsigned int daddr, uint32_t insn,
+int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 			   const void * req, unsigned int cnt,
 			   void * rsp, unsigned int max)
 {
-	unsigned int tmo = SIMRPC_DEF_TMO_MS;
-	unsigned int saddr = io_addr_get();
+	unsigned int daddr = sp->daddr;
+	unsigned int saddr = sp->saddr;
+	unsigned int tmo = sp->tmo;
+	struct simlnk * lnk = sp->lnk;
 	uint32_t opc;
 	uint32_t seq;
 
-	seq = lnk->tx.rpc_seq++; 
+	seq = sp->seq++; 
 	opc = mkopc(daddr, saddr, seq, insn);
 
 	lnk->tx.buf[0] = opc;

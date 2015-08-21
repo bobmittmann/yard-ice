@@ -26,6 +26,7 @@
 #include "board.h"
 #include "simlnk.h"
 #include "simrpc.h"
+#include "simrpc_svc.h"
 
 #define RX_DMA_CHAN STM32_DMA_CHANNEL6
 #define TX_DMA_CHAN STM32_DMA_CHANNEL7
@@ -52,31 +53,29 @@ void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
 		simrpc_exec_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_LOCK:
-		DCC_LOG(LOG_MSG, "MEM_LOCK");
 		simrpc_mem_lock_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_UNLOCK:
-		DCC_LOG(LOG_MSG, "MEM_UNLOCK");
 		simrpc_mem_unlock_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_ERASE:
-		DCC_LOG(LOG_MSG, "MEM_ERASE");
 		simrpc_mem_erase_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_READ:
-		DCC_LOG(LOG_MSG, "MEM_READ");
 		simrpc_mem_read_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_WRITE:
-		DCC_LOG(LOG_MSG, "MEM_WRITE");
 		simrpc_mem_write_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_SEEK:
-		DCC_LOG(LOG_MSG, "MEM_SEEK");
+		simrpc_mem_seek_svc(opc, data, cnt);
+		break;
+	case SIMRPC_MEM_CRC32:
 		simrpc_mem_seek_svc(opc, data, cnt);
 		break;
 	default:
 		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
+		simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
 	}
 }
 void stm32_usart2_isr(void)

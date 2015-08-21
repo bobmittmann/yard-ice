@@ -163,46 +163,54 @@ void stdio_init(void)
 
 void remote_test(unsigned int daddr)
 {
+	struct simrpc_pcb * sp;
 	char s[128];
 
 	DCC_LOG1(LOG_TRACE, "RPC test, remote: %d.", daddr);
 
-	if (simrpc_suspend(daddr) < 0) {
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		DCC_LOG(LOG_WARNING, "simrpc_open() failed!");
+		return;
+	}
+
+	if (simrpc_suspend(sp) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_suspend() failed!");
 	}
 
 	thinkos_sleep(500);
 
 	//		DCC_LOG(LOG_TRACE, "11. simrpc_mem_lock()...");
-	simrpc_mem_lock(daddr, 0x08010000, 8192);
+	simrpc_mem_lock(sp, 0x08010000, 8192);
 
-	if (simrpc_mem_erase(daddr, 0, 2048) < 0) {
+	if (simrpc_mem_erase(sp, 0, 2048) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_mem_erase() failed!");
 	}
 
-	if (simrpc_mem_write(daddr, "Hello world!", 14) < 0) {
+	if (simrpc_mem_write(sp, "Hello world!", 14) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
 	}
 
-	if (simrpc_mem_seek(daddr, 0) < 0) {
+	if (simrpc_mem_seek(sp, 0) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_mem_seek() failed!");
 	}
 
-	if (simrpc_mem_read(daddr, s, 14) < 0) {
+	if (simrpc_mem_read(sp, s, 14) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
 	}
 
 	DCC_LOGSTR(LOG_TRACE, "'%s'", s);
 
-	if (simrpc_mem_unlock(daddr, 0x08010000, 8192) < 0) {
+	if (simrpc_mem_unlock(sp, 0x08010000, 8192) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_mem_unlock() failed!");
 	}
 
 	thinkos_sleep(500);
 
-	if (simrpc_resume(daddr) < 0) {
+	if (simrpc_resume(sp) < 0) {
 		DCC_LOG(LOG_WARNING, "simrpc_resume() failed!");
 	}
+
+	simrpc_close(sp);
 }
 
 void board_init(void);

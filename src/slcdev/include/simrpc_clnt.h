@@ -23,53 +23,30 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __SIMLNK_H__
-#define __SIMLNK_H__
+#ifndef __SIMRPC_CLNT_H__
+#define __SIMRPC_CLNT_H__
 
 #include <stdlib.h> 
 #include <stdbool.h> 
 #include <stdint.h> 
-#include <sys/serial.h> 
 
-#include "simrpc_clnt.h"
-
-#define SIMLNK_MTU 500
-#define SIMLNK_BAUDRATE 10000
-
-struct simlnk_stat {
-	uint32_t rx_err;
-	uint32_t rx_token;
-	uint32_t rx_mgmt;
-	uint32_t rx_unicast;
-	uint32_t rx_bcast;
-	uint32_t tx_token;
-	uint32_t tx_mgmt;
-	uint32_t tx_unicast;
-	uint32_t tx_bcast;
-	uint32_t token_lost;
+struct simrpc_pcb {
+	struct simlnk * lnk;
+	uint32_t seq;
+	uint8_t daddr;
+	uint8_t saddr;
+	uint16_t tmo;
 };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct simlnk * simlnk_alloc(void);
-
-int simlnk_init(struct simlnk * lnk, const char * name, 
-				unsigned int addr, struct serial_dev * dev);
-
-int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt); 
-
-int simlnk_recv(struct simlnk * lnk, void * buf, unsigned int max,
-				unsigned int tmo);
-
-int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
-			   const void * req, unsigned int cnt,
-			   void * rsp, unsigned int max);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __SIMLNK_H__ */
+#endif /* __SIMRPC_CLNT_H__ */
+
 

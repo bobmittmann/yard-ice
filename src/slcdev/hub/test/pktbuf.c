@@ -148,4 +148,3 @@ void pktbuf_pool_init(void)
 #endif
 }
 
-

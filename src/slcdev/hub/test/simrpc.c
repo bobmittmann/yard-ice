@@ -39,6 +39,7 @@
 #include "io.h"
 #include "simlnk.h"
 #include "simrpc.h"
+#include "simrpc_svc.h"
 
 #undef DEBUG
 #undef TRACE_LEVEL
@@ -49,127 +50,94 @@
 #define SIMLNK_STACK_SIZE 1024
 #define SIMLNK_MAX 5
 
-int simrpc_suspend(unsigned int daddr)
+int simrpc_suspend(struct simrpc_pcb * sp)
 {
-	struct simlnk * iface; 
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
-
-	return simlnk_rpc(iface, daddr, SIMRPC_SUSPEND, NULL, 0, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_SUSPEND, NULL, 0, NULL, 0);
 }
 
-int simrpc_resume(unsigned int daddr)
+int simrpc_resume(struct simrpc_pcb * sp)
 {
-	struct simlnk * iface; 
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
-
-	return simlnk_rpc(iface, daddr, SIMRPC_RESUME, NULL, 0, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_RESUME, NULL, 0, NULL, 0);
 }
 
-int simrpc_reboot(unsigned int daddr)
+int simrpc_reboot(struct simrpc_pcb * sp)
 {
-	struct simlnk * iface; 
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
-
-	return simlnk_rpc(iface, daddr, SIMRPC_REBOOT, NULL, 0, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_REBOOT, NULL, 0, NULL, 0);
 }
 
-int simrpc_exec(unsigned int daddr, uint32_t key)
+int simrpc_exec(struct simrpc_pcb * sp, uint32_t key)
 {
-	struct simlnk * iface; 
 	uint32_t req[1];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
 
 	req[0] = key;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_EXEC, req, 4, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_EXEC, req, 4, NULL, 0);
 }
 
-int simrpc_mem_lock(unsigned int daddr, uint32_t base, unsigned int size)
+int simrpc_mem_lock(struct simrpc_pcb * sp, uint32_t base, unsigned int size)
 {
-	struct simlnk * iface; 
 	uint32_t req[2];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
 
 	req[0] = base;
 	req[1] = size;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_LOCK, req, 8, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_MEM_LOCK, req, 8, NULL, 0);
 }
 
-int simrpc_mem_unlock(unsigned int daddr, uint32_t base, unsigned int size)
+int simrpc_mem_unlock(struct simrpc_pcb * sp, uint32_t base, unsigned int size)
 {
-	struct simlnk * iface; 
 	uint32_t req[2];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
 
 	req[0] = base;
 	req[1] = size;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_UNLOCK, req, 8, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_MEM_UNLOCK, req, 8, NULL, 0);
 }
 
-int simrpc_mem_erase(unsigned int daddr, uint32_t offs, unsigned int size)
+int simrpc_mem_erase(struct simrpc_pcb * sp, uint32_t offs, unsigned int size)
 {
-	struct simlnk * iface; 
 	uint32_t req[2];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
 
 	req[0] = offs;
 	req[1] = size;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_ERASE, req, 8, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_MEM_ERASE, req, 8, NULL, 0);
 }
 
-int simrpc_mem_read(unsigned int daddr, void * data, unsigned int cnt)
+int simrpc_mem_read(struct simrpc_pcb * sp, void * data, unsigned int cnt)
 {
-	struct simlnk * iface; 
-	uint32_t req[2];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
+	uint32_t req[1];
 
 	req[0] = cnt;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_READ, req, 4, data, cnt);
+	return simlnk_rpc(sp, SIMRPC_MEM_READ, req, 4, data, cnt);
 }
 
-int simrpc_mem_write(unsigned int daddr, const void * data, unsigned int cnt)
+int simrpc_mem_write(struct simrpc_pcb * sp, 
+					 const void * data, unsigned int cnt)
 {
-	struct simlnk * iface; 
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
-
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_WRITE, data, cnt, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_MEM_WRITE, data, cnt, NULL, 0);
 }
 
-int simrpc_mem_seek(unsigned int daddr, uint32_t offs)
+int simrpc_mem_seek(struct simrpc_pcb * sp, uint32_t offs)
 {
-	struct simlnk * iface; 
-	uint32_t req[2];
-
-	if ((iface = simrpc_route(daddr)) == NULL)
-		return SIMRPC_EROUTE;
+	uint32_t req[1];
 
 	req[0] = offs;
 
-	return simlnk_rpc(iface, daddr, SIMRPC_MEM_SEEK, req, 4, NULL, 0);
+	return simlnk_rpc(sp, SIMRPC_MEM_SEEK, req, 4, NULL, 0);
 }
 
+int simrpc_mem_crc32(struct simrpc_pcb * sp, uint32_t offs, 
+					 unsigned int size, uint32_t * crc)
+{
+	uint32_t req[2];
+
+	req[0] = offs;
+	req[1] = size;
+
+	return simlnk_rpc(sp, SIMRPC_MEM_CRC32, req, 8, crc, 4);
+}
 
 /* ---------------------------------------------------------------------------
  * ---------------------------------------------------------------------------
@@ -230,10 +198,63 @@ const struct thinkos_thread_inf simlnk_recv_inf[SIMLNK_MAX] = {
 	}
 };
 
+
+#define SIMRPC_PCB_POOL_SIZE 4
+
+struct simrpc_pcb_entry {
+	union {
+		struct simrpc_pcb_entry * next;
+		struct simrpc_pcb pcb;
+    };
+};
+
+struct {
+	int mutex;
+	struct simrpc_pcb_entry * free;
+	struct simrpc_pcb_entry buf[SIMRPC_PCB_POOL_SIZE];
+} simrpc_pcb_pool;
+
+struct simrpc_pcb * simrpc_pcb_alloc(void)
+{
+	struct simrpc_pcb_entry * entry;
+
+	thinkos_mutex_lock(simrpc_pcb_pool.mutex);
+	if ((entry = simrpc_pcb_pool.free) != NULL)
+		simrpc_pcb_pool.free = entry->next;
+
+	thinkos_mutex_unlock(simrpc_pcb_pool.mutex);
+	return &entry->pcb;
+}
+
+void simrpc_pcb_free(struct simrpc_pcb * pcb)
+{
+	struct simrpc_pcb_entry * entry = (struct simrpc_pcb_entry *)pcb;
+
+	thinkos_mutex_lock(simrpc_pcb_pool.mutex);
+	entry->next = simrpc_pcb_pool.free;
+	simrpc_pcb_pool.free = entry;
+	thinkos_mutex_unlock(simrpc_pcb_pool.mutex);
+}
+
+void simrpc_pcb_pool_init(void)
+{
+	int i;
+
+	simrpc_pcb_pool.mutex = thinkos_mutex_alloc();
+	simrpc_pcb_pool.free = &simrpc_pcb_pool.buf[0];
+
+	for (i = 0; i < SIMRPC_PCB_POOL_SIZE - 1; ++i)
+		simrpc_pcb_pool.buf[i].next = &simrpc_pcb_pool.buf[i + 1];
+
+	simrpc_pcb_pool.buf[i].next = NULL;
+}
+
 void simrpc_init(void)
 {
 	struct serial_dev * ser;
 	struct simlnk * lnk;
+
+	simrpc_pcb_pool_init();
 
 	lnk = simlnk_alloc();
 	ser = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE, 
@@ -287,4 +308,27 @@ struct simlnk * simrpc_route(unsigned int daddr)
 	return lnk;
 }
 
+struct simrpc_pcb * simrpc_open(unsigned int daddr)
+{
+	struct simrpc_pcb * sp;
+	struct simlnk * lnk; 
+
+	if ((lnk = simrpc_route(daddr)) == NULL)
+		return NULL;
+
+	sp->lnk = lnk;
+	sp->seq = 0;
+	sp->daddr = daddr;
+	sp->saddr = io_addr_get();
+	sp->tmo = SIMRPC_DEF_TMO_MS;
+
+	return sp;
+}
+
+int simrpc_close(struct simrpc_pcb * sp)
+{
+	simrpc_pcb_free(sp);
+
+	return 0;
+}
 

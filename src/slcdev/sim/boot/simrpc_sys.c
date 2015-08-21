@@ -29,6 +29,7 @@
 #include "board.h"
 #include "simlnk.h"
 #include "simrpc.h"
+#include "simrpc_svc.h"
 
 void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
