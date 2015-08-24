@@ -100,7 +100,7 @@
 
 #define THINKOS_ENABLE_USAGEFAULT 1
 
-#define THINKOS_ENABLE_MPU 1
+#define THINKOS_ENABLE_MPU 0
 
 #define THINKOS_ENABLE_FPU 0
 
@@ -109,7 +109,7 @@
    -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_OTG_FS 1
-#define STM32F_OTG_FS_EP_MAX 4
+#define STM32_OTG_FS_EP_MAX 4
 
 /* -------------------------------------------------------------------------
    GDB
@@ -122,6 +122,51 @@
    -------------------------------------------------------------------------- */
 
 #define BOOT_ENABLE_GDB 1
+
+/* -------------------------------------------------------------------------
+ * TCP/IP
+ * ------------------------------------------------------------------------- */
+
+#define ENABLE_NETWORK 1
+#define ENABLE_NET_TCP 1
+#define ENABLE_NET_UDP 1
+#define ENABLE_NET_RAW 1
+
+#define ENABLE_TCPDUMP 0
+
+#define IFNET_INTERFACES_MAX         2
+
+#define MBUF_POOL_SIZE               128
+
+#define TCP_FAST_TMR_MS              100
+#define TCP_ENABLE_TIMEWAIT          1
+#define TCP_ENABLE_HEADER_PREDICTION 1
+#define NET_TCP_PCB_ACTIVE_MAX       64
+#define NET_UDP_PCB_ACTIVE_MAX       1
+
+#define TCP_DEFAULT_MSL_SEC          1
+#define TCP_IDLE_DET_SEC             10
+#define TCP_KEEP_ALIVE_PROBE_SEC     20
+#define TCP_MAX_IDLE_SEC             60
+#define TCP_MAX_SND_QUEUE            (1460 * 4)
+
+/* use hardware checksum */
+#define ENABLE_NET_TCP_CHECKSUM 0
+#define ENABLE_NET_UDP_CHECKSUM 0
+
+/* -------------------------------------------------------------------------
+ * Ethernet Driver
+ * ------------------------------------------------------------------------- */
+
+#define ETH_PHY_RST_GPIO         STM32_GPIOE, 5
+
+/* Number of reception DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_RX_NDESC      4
+/* Number of transmision DMA descriptors for the Ethernet driver */
+#define STM32F_ETH_TX_NDESC      4
+/* Number of packet in the buffer pool */
+#define PKTBUF_POOL_SIZE        10 
+
 
 #endif /* __CONFIG_H__ */
 

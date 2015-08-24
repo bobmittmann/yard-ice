@@ -575,4 +575,3 @@ static inline void thinkos_yield(void)  {
 #endif /* __ASSEMBLER__ */
 
 #endif /* __THINKOS_SVC_H__ */
-

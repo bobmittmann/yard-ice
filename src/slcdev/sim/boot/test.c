@@ -25,7 +25,6 @@
 #include <crc.h>
 
 #include "board.h"
-#include "simlnk.h"
 
 #define PWM_FREQ 100000
 
@@ -172,8 +171,6 @@ void leds_mode(int i)
 void board_test(void)
 {
 	isink_init();
-
-	simlnk_init(NULL, "SIM", 0, NULL);
 
 	for (;;) {
 		leds_mode(0); 

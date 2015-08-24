@@ -48,7 +48,13 @@ ifdef THINKAPP
 CDEFS += "THINKAPP" 
 endif
 
+ifdef LDSCRIPT
+LDFLAGS += -nostdlib -T $(LDSCRIPT)
+else
 LDFLAGS += -nostdlib -T $(MACH).ld
+endif
 
 include $(THISDIR)/prog.mk
+
+include $(THISDIR)/jtag.mk
 

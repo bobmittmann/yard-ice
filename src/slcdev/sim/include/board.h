@@ -23,12 +23,10 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include <sys/stm32f.h>
-#include <thinkos.h>
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
+#include <thinkos.h>
+#include <sys/stm32f.h>
 
 #define IO_LED1         STM32_GPIOA, 6
 #define IO_LED2         STM32_GPIOA, 7
@@ -132,6 +130,11 @@ static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_clr(__gpio, __pin);
 }
+
+static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
+	return stm32_gpio_stat(__gpio, __pin);
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -370,6 +370,7 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
+#if THINKOS_ENABLE_THREAD_INFO
 static int scan_stack(uint32_t * ptr, unsigned int size)
 {
 	int i;
@@ -381,6 +382,7 @@ static int scan_stack(uint32_t * ptr, unsigned int size)
 
 	return i * 4;
 }
+#endif
 
 int cmd_oscheck(FILE * f, int argc, char ** argv)
 {

@@ -29,7 +29,6 @@
 
 #include <sys/shell.h>
 #include <sys/tty.h>
-#include <sys/usb-cdc.h>
 #include <sys/serial.h>
 #include <sys/null.h>
 #include <xmodem.h>
@@ -37,7 +36,6 @@
 
 #include <thinkos.h>
 
-#include <sys/dcclog.h>
 #include <sys/delay.h>
 
 #include "trace.h"
@@ -45,8 +43,6 @@
 #include "lattice.h"
 #include "net.h"
 
-
-extern const uint8_t * ice40lp384_bin;
 extern const struct shell_cmd shell_cmd_tab[];
 extern const char * version_str;
 extern const char * copyright_str;
@@ -170,63 +166,6 @@ int cmd_stat(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-
-int usb_xflash(uint32_t offs, uint32_t len);
-
-int usart_xflash(void * uart, uint32_t offs, uint32_t len);
-
-int cmd_xflash(FILE * f, int argc, char ** argv)
-{
-	uint32_t offs = 0x00000;
-	uint32_t size = 0x00000;
-	uint32_t pri;
-	FILE * raw;
-	int ret;
-
-	if (argc < 2)
-		return SHELL_ERR_ARG_MISSING;
-
-	if (argc > 2)
-		return SHELL_ERR_EXTRA_ARGS;
-
-	do {
-		if ((strcmp(argv[1], "firmware") == 0) || 
-			(strcmp(argv[1], "firm") == 0) ||
-			(strcmp(argv[1], "f") == 0)) {
-			offs = 0;
-			size = 256 * 1024;
-			fprintf(f, "Firmware update...\n");
-			break;
-		} 
-
-		return SHELL_ERR_ARG_INVALID;
-	} while (0);
-
-	fflush(f);
-
-	raw = isfatty(f) ? ftty_lowlevel(f) : f;
-
-	if (usb_cdc_is_usb_file(raw)) {
-		pri = cm3_primask_get();
-		cm3_primask_set(1);
-		ret = usb_xflash(offs, size);
-		cm3_primask_set(pri);
-		return ret;
-	} 
-
-	if (is_serial(raw)) {
-		pri = cm3_primask_get();
-		cm3_primask_set(1);
-		ret = usart_xflash(STM32_UART5, offs, size);
-		cm3_primask_set(pri);
-
-		return ret;
-	}
-		  
-	fprintf(f, "Operation not permited in this terminal.\n");
-	return -1;
-}
-
 int cmd_reboot(FILE * f, int argc, char ** argv)
 {
 	if (argc > 1)
@@ -329,9 +268,6 @@ const struct shell_cmd shell_cmd_tab[] = {
 	{ cmd_help, "help", "?", 
 		"[COMMAND]", "show command usage (help [CMD])" },
 
-	{ cmd_xflash, "xf", "", "", 
-		"update firmware." },
-
 	{ cmd_reboot, "reboot", "rst", "", 
 		"reboot system" },
 
@@ -361,8 +297,6 @@ void shell_greeting(FILE * f)
 
 int stdio_shell(void)
 {
-	DCC_LOG(LOG_TRACE, "...");
-
 	return shell(stdout, shell_prompt, shell_greeting, shell_cmd_tab);
 }
 

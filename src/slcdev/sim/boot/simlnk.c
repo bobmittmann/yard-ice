@@ -261,9 +261,8 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	uart->cr3 = USART_ONEBIT | USART_DMAT | USART_DMAR | USART_EIE;
 	/* Configure 8N1 */
 	uart->cr2 = USART_STOP_1;
-	/* enable RX IDLE and errors interrupt */
+	/* enable UART and errors interrupt */
 	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_TCIE;
-//	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_IDLEIE | USART_TCIE;
 
 
 	/* TX DMA ------------------------------------------------------------- */
@@ -284,7 +283,6 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 	dma->ch[RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE | DMA_EN;
-//		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE;
 
 #ifdef CM3_RAM_VECTORS
 	thinkos_irq_register(STM32_IRQ_USART2, IRQ_PRIORITY_LOW, 
@@ -295,10 +293,10 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 						 stm32_dma1_channel6_isr);
 #else
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);
-	cm3_irq_enable(STM32_IRQ_USART2);
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CH7, IRQ_PRIORITY_LOW);
-	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CH6, IRQ_PRIORITY_LOW);
+	cm3_irq_enable(STM32_IRQ_USART2);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
 	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
 #endif
 

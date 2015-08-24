@@ -37,6 +37,7 @@
 #include <thinkos.h>
 
 #include "board.h"
+#include "simlnk.h"
 
 #define VERSION_NUM "0.1"
 #define VERSION_DATE "Mar, 2015"
@@ -56,6 +57,8 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+	simlnk_init(NULL, "SIM", 0, NULL);
 
 	board_test();
 

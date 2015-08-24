@@ -23,12 +23,11 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include <sys/stm32f.h>
-
 #ifdef CONFIG_H
 #include "config.h"
 #endif
 
+#include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -44,10 +43,23 @@
 #define STM32_ENABLE_OTG_FS 0
 #endif 
 
+#ifndef STM32_OTG_FS_EP_MAX 
+#define STM32_OTG_FS_EP_MAX 4
+#endif
+
+#ifndef STM32_OTG_FS_ENABLE_VBUS
+#define STM32_OTG_FS_ENABLE_VBUS 1
+#endif
+
+#define EP_MAX      STM32_OTG_FS_EP_MAX 
+#define ENABLE_VBUS STM32_OTG_FS_ENABLE_VBUS
+#define RX_FIFO_SIZE 512
+
 #ifdef STM32F_OTG_FS
 
 #if STM32_ENABLE_OTG_FS
 
+/* Endpoint state */
 enum ep_state {
 	EP_UNCONFIGURED = 0,
 	EP_IDLE,
@@ -80,24 +92,19 @@ struct stm32f_otg_ep {
 	};
 };
 
-#ifndef STM32F_OTG_FS_EP_MAX 
-#define STM32F_OTG_FS_EP_MAX 4
-#endif
-
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
 	struct stm32f_otg_fs * otg_fs;
-	struct stm32f_otg_ep ep[STM32F_OTG_FS_EP_MAX];
+	struct stm32f_otg_ep ep[EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
 	uint16_t fifo_addr;
 };
 
-#define OTG_FS_RX_FIFO_SIZE 512
-
 /* EP TX fifo memory allocation */
-static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
+static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, 
+							  int ep_id, int siz)
 {
 	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 
@@ -114,7 +121,7 @@ static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, int ep_id, int siz)
 		otg_fs->dieptxf2 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
-#if (STM32F_OTG_FS_EP_MAX > 3)
+#if (EP_MAX > 3)
 	case 3:
 		otg_fs->dieptxf3 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
@@ -160,7 +167,7 @@ static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
 		return false;
 	}
 
-	DCC_LOG2(LOG_MSG, "cnt=%d ptr=%p", cnt, ep->xfr_ptr);
+	DCC_LOG2(LOG_INFO, "cnt=%d ptr=%p", cnt, ep->xfr_ptr);
 
 	ep->xfr_ptr += cnt;
 	ep->xfr_rem -= cnt;
@@ -180,7 +187,7 @@ static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 
 	/* Number of words in the receive fifo */
 	wcnt = (len + 3) / 4;
-	DCC_LOG1(LOG_MSG, "poping %d words from FIFO.", wcnt);
+	DCC_LOG1(LOG_INFO, "poping %d words from FIFO.", wcnt);
 
 	if (ep->xfr_rem >= len) {
 		/* If we have enough room in the destination buffer
@@ -206,7 +213,7 @@ static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 
 static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 {
-	DCC_LOG(LOG_MSG, "Send: ZLP");
+	DCC_LOG(LOG_INFO, "Send: ZLP");
 
 	otg_fs->inep[epnum].dieptsiz = OTG_FS_PKTCNT_SET(1) | OTG_FS_XFRSIZ_SET(0);
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
@@ -220,6 +227,11 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 	struct stm32f_otg_ep * ep;
 	int ret;
 
+	if ((unsigned int)ep_id >= EP_MAX) {
+		DCC_LOG(LOG_WARNING, "invalid EP");
+		return -1;
+	}
+
 	ep = &drv->ep[ep_id];
 	ep->xfr_ptr = buf;
 	ep->xfr_rem = MIN(len, ep->xfr_max);
@@ -232,7 +244,7 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 		otg_fs->diepempmsk |= (1 << ep_id);
 	}
 
-	DCC_LOG4(LOG_MSG, "ep_id=%d len=%d xfr_max=%d ret=%d", 
+	DCC_LOG4(LOG_INFO, "ep_id=%d len=%d xfr_max=%d ret=%d", 
 			 ep_id, len, ep->xfr_max, ret);
 
 	return ret;
@@ -248,7 +260,12 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	int cnt;
 	int rem;
 
-	DCC_LOG2(LOG_MSG, "ep_id=%d len=%d", ep_id, len);
+	if ((unsigned int)ep_id >= EP_MAX) {
+		DCC_LOG(LOG_WARNING, "invalid EP");
+		return -1;
+	}
+
+	DCC_LOG2(LOG_INFO, "ep_id=%d len=%d", ep_id, len);
 
 	ep = &drv->ep[ep_id];
 	
@@ -293,7 +310,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 
 	/* 5. After the data payload is popped from the receive FIFO, the 
 	   RXFLVL interrupt (OTG_FS_GINTSTS) must be unmasked. */
-	DCC_LOG1(LOG_MSG, "cnt=%d enabling RXFLVL interrupt", cnt);
+	DCC_LOG1(LOG_INFO, "cnt=%d enabling RXFLVL interrupt", cnt);
 
 	/* Reenable RX fifo interrupts */
 	otg_fs->gintmsk |= OTG_FS_RXFLVLM;
@@ -308,7 +325,7 @@ int stm32f_otg_dev_ep_ctl(struct stm32f_otg_drv * drv,
 	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
 
-	DCC_LOG2(LOG_MSG, "ep=%d opt=%d", ep_id, opt);
+	DCC_LOG2(LOG_INFO, "ep=%d opt=%d", ep_id, opt);
 
 	switch (opt) {
 	case USB_EP_RECV_OK:
@@ -355,7 +372,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		return -1;
 	}
 
-	DCC_LOG3(LOG_MSG, "ep_id=%d addr=%d mxpktsz=%d", 
+	DCC_LOG3(LOG_INFO, "ep_id=%d addr=%d mxpktsz=%d", 
 			 ep_id, info->addr & 0x7f, mxpktsz);
 
 	ep = &drv->ep[ep_id];
@@ -414,7 +431,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 		uint32_t depctl;
 
 		if (info->addr & USB_ENDPOINT_IN) {
-			DCC_LOG(LOG_MSG, "IN ENDPOINT");
+			DCC_LOG(LOG_INFO, "IN ENDPOINT");
 
 			if ((info->attr & 0x03) == ENDPOINT_TYPE_BULK) {
 				ep->xfr_max = 6 * mxpktsz;
@@ -425,7 +442,7 @@ int stm32f_otg_dev_ep_init(struct stm32f_otg_drv * drv,
 			__ep_pktbuf_alloc(drv, ep_id, ep->xfr_max);
 			depctl = otg_fs->inep[ep_id].diepctl;
 		} else {
-			DCC_LOG(LOG_MSG, "OUT ENDPOINT");
+			DCC_LOG(LOG_INFO, "OUT ENDPOINT");
 			depctl = otg_fs->outep[ep_id].doepctl;
 		}
 
@@ -514,7 +531,7 @@ static inline struct stm32_gpio * vbus_gpio(struct stm32_gpio *__gpio,
 	return __gpio;
 }
 
-static void otg_fs_io_init(void)
+static void otg_io_init(void)
 {
 	DCC_LOG(LOG_MSG, "Configuring GPIO pins...");
 
@@ -531,21 +548,27 @@ static void otg_fs_io_init(void)
 #endif
 	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+#ifdef OTG_ENABLE_VBUS
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
+#else
+	stm32_gpio_mode(OTG_FS_VBUS, INPUT, 0);
+#endif
 #if 0
 	stm32_gpio_mode(OTG_FS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 #endif
 }
 
-static void otg_fs_vbus_connect(bool connect)
+static void otg_vbus_connect(bool connect)
 {
+#ifdef OTG_ENABLE_VBUS
 	if (connect)
 		stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 	else
 		stm32_gpio_mode(OTG_FS_VBUS, INPUT, 0);
+#endif
 }
 
-static void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
+static void otg_connect(struct stm32f_otg_fs * otg_fs)
 {
 	/* Connect device */
 	otg_fs->dctl &= ~OTG_FS_SDIS;
@@ -553,48 +576,34 @@ static void otg_fs_connect(struct stm32f_otg_fs * otg_fs)
 
 }
 
-static void otg_fs_disconnect(struct stm32f_otg_fs * otg_fs)
+static void otg_disconnect(struct stm32f_otg_fs * otg_fs)
 {
 	otg_fs->dctl |= OTG_FS_SDIS;
 	udelay(3000);
 }
 
-static void otg_fs_power_on(struct stm32f_otg_fs * otg_fs)
+void otg_power_on(struct stm32f_otg_fs * otg_fs)
 {
-	otg_fs_vbus_connect(true);
-
 	DCC_LOG(LOG_MSG, "Enabling USB FS clock...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGFS);
 
-	/* Initialize as a device */
-	stm32f_otg_fs_device_init(otg_fs);
-
-	otg_fs_connect(otg_fs);
+	otg_connect(otg_fs);
+	DCC_LOG(LOG_INFO, "[ATTACHED]");
+ 
+	otg_vbus_connect(true);
 
 	/* Enable Cortex interrupt */
-	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+	cm3_irq_enable(STM32F_IRQ_OTG_HS);
 }
 
-static void otg_fs_power_off(struct stm32f_otg_fs * otg_fs)
+void otg_power_off(struct stm32f_otg_fs * otg_fs)
 {
-	struct stm32_rcc * rcc = STM32_RCC;
+	otg_disconnect(otg_fs);
 
-//	usb->cntr = USB_FRES;
-	/* Removing any spurious pending interrupts */
-//	usb->istr = 0;
-	otg_fs_disconnect(otg_fs);
+	otg_vbus_connect(false);
 
-//	otg_fs_vbus_connect(false);
-
-//	usb->cntr = USB_FRES | USB_PDWN;
-
-	DCC_LOG(LOG_MSG, "Disabling USB device clock...");
-	rcc->ahb2enr &= ~RCC_OTGFSEN;
-
-	/* disabling IO pins */
-	stm32_gpio_mode(OTG_FS_DP, INPUT, 0);
-	stm32_gpio_mode(OTG_FS_DM, INPUT, 0);
-
+	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
+	stm32_clk_disable(STM32_RCC, STM32_CLK_OTGHS);
 }
 
 int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
@@ -605,18 +614,54 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	drv->cl = cl;
 	drv->ev = ev;
 
-	DCC_LOG1(LOG_MSG, "ev=0x%08x", drv->ev);
-
-	otg_fs_power_off(otg_fs);
-
-	udelay(10000);
-
 	/* Initialize IO pins */
-	otg_fs_io_init();
+	otg_io_init();
 
-	otg_fs_power_on(otg_fs);
+	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
+	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGFS);
+	
+	/* Initialize as a device */
+	stm32f_otg_fs_device_init(otg_fs);
 
-	DCC_LOG(LOG_MSG, "[ATTACHED]");
+	/* Reset global interrupts mask */
+	otg_fs->gintmsk = OTG_HS_WUIM |
+		OTG_FS_SRQIM |
+		OTG_FS_DISCINT |
+		OTG_FS_CIDSCHGM |
+		OTG_FS_IISOOXFRM |
+		OTG_FS_IISOIXFRM |
+		OTG_FS_OEPINTM |
+		OTG_FS_IEPINTM |
+		OTG_FS_EPMISM |
+		OTG_FS_EOPFM |
+		OTG_FS_ISOODRPM |
+		OTG_FS_ENUMDNEM |
+		OTG_FS_USBRSTM |
+		OTG_FS_USBSUSPM |
+		OTG_FS_ESUSPM |
+		OTG_FS_GONAKEFFM |
+		OTG_FS_GINAKEFFM |
+//		OTG_HS_NPTXFEM |
+		OTG_FS_RXFLVLM |
+		OTG_FS_SOFM |
+		OTG_FS_MMISM;
+
+
+	
+//	otg_hs_connect(otg_hs);
+	/* Enable Cortex interrupt */
+	cm3_irq_enable(STM32F_IRQ_OTG_HS);
+
+	DCC_LOG(LOG_INFO, "----------------------------------------");
+
+//	mdelay(500);
+
+//	DCC_LOG(LOG_INFO, "........................................");
+
+//	mdelay(500);
+
+	DCC_LOG(LOG_INFO, "Done.");
+
 	return 0;
 }
 
@@ -668,10 +713,10 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 	if (ep->state == EP_WAIT_STATUS_IN) {
 		struct usb_request * req = &drv->req;
 		void * dummy = NULL;
-		/* Enod of SETUP transaction (OUT Data Phase) */
+		/* End of SETUP transaction (OUT Data Phase) */
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
-		DCC_LOG(LOG_MSG, "EP0 [IDLE]");
+		DCC_LOG(LOG_INFO, "EP0 [IDLE]");
 		return;
 	}
 
@@ -683,7 +728,7 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		/* EP enable */
 		otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 		ep->state = EP_IN_DATA;
-		DCC_LOG(LOG_MSG, "EP0 [IN_DATA]");
+		DCC_LOG(LOG_INFO, "EP0 [IN_DATA]");
 		return;
 	} 
 	
@@ -724,7 +769,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
-			DCC_LOG(LOG_MSG, "address set!");
+			DCC_LOG1(LOG_INFO, "address=%d",  req->value);
 			stm32f_otg_fs_addr_set(otg_fs, req->value);
 		}
 		ep->on_setup(drv->cl, req, dummy);
@@ -735,11 +780,11 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 	if (req->type & 0x80) {
 		/* Control Read SETUP transaction (IN Data Phase) */
-		DCC_LOG(LOG_MSG, "EP0 [SETUP] IN Dev->Host");
+		DCC_LOG(LOG_INFO, "EP0 [SETUP] IN Dev->Host");
 		ep->xfr_ptr = NULL;
 		len = ep->on_setup(drv->cl, req, (void *)&ep->xfr_ptr);
 		ep->xfr_rem = MIN(req->length, len);
-		DCC_LOG1(LOG_MSG, "EP0 data lenght = %d", ep->xfr_rem);
+		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
 		/* prepare fifo to transmit */
 		if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
 			DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
@@ -752,7 +797,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		ep->xfr_ptr = ep->xfr_buf;
 		ep->xfr_rem = req->length;
 
-		DCC_LOG1(LOG_MSG, "xfr_ptr=0x%08x", ep->xfr_ptr);
+		DCC_LOG1(LOG_INFO, "xfr_ptr=0x%08x", ep->xfr_ptr);
 
 		if (ep->xfr_rem > ep->xfr_buf_len) {
 			ep->xfr_rem = ep->xfr_buf_len;
@@ -762,13 +807,13 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		if (ep->xfr_rem < ep->xfr_max) {
 			/* last and only transfer */
 			ep->state = EP_OUT_DATA_LAST;
-			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA_LAST] OUT Host->Dev!!!!");
 		} else {
 			ep->state = EP_OUT_DATA;
-			DCC_LOG(LOG_MSG, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
+			DCC_LOG(LOG_INFO, "EP0 [OUT_DATA] OUT Host->Dev!!!!");
 		}
 
-		DCC_LOG(LOG_MSG, "Prepare to receive");
+		DCC_LOG(LOG_INFO, "Prepare to receive");
 
 		/* Prepare to receive */
 		otg_fs->outep[0].doeptsiz = OTG_FS_STUPCNT_SET(0) |
@@ -777,6 +822,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		/* EP enable */
 		otg_fs->outep[0].doepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 	}
+
 }
 
 static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
@@ -796,7 +842,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	otg_fs->daint = 0xffffffff;
 	otg_fs->daintmsk = 0;
 	otg_fs->diepempmsk = 0;
-	for (i = 0; i < STM32F_OTG_FS_EP_MAX; i++) {
+	for (i = 0; i < EP_MAX; i++) {
 		otg_fs->inep[i].diepint = 0xff;
 		otg_fs->outep[i].doepint = 0xff;
 		otg_fs->inep[i].dieptsiz = 0;
@@ -808,7 +854,6 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	stm32f_otg_fs_txfifo_flush(otg_fs, TXFIFO_ALL);
 	/* Flush the Rx FIFO */
 	stm32f_otg_fs_rxfifo_flush(otg_fs);
-
 
 	/* Reset global interrupts mask */
 	otg_fs->gintmsk =  OTG_FS_SRQIM | OTG_FS_OTGINT | OTG_FS_WUIM |
@@ -825,7 +870,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 
 	/* 1. Set the NAK bit for all OUT endpoints
 	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
-	for (i = 0; i < STM32F_OTG_FS_EP_MAX; i++) {
+	for (i = 0; i < EP_MAX; i++) {
 		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
 	}
 
@@ -852,7 +897,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	/* reset fifo memory (packet buffer) allocation pointer */
 	drv->fifo_addr = 0;
 	/* initialize RX fifo size */
-	siz = OTG_FS_RX_FIFO_SIZE;
+	siz = RX_FIFO_SIZE;
 	otg_fs->grxfsiz = siz / 4;
 	/* update fifo memory allocation pointer */
 	drv->fifo_addr += siz;
@@ -937,7 +982,7 @@ void stm32f_otg_fs_isr(void)
 			}
 		}
 
-#if (STM32F_OTG_FS_EP_MAX > 3)
+#if (EP_MAX > 3)
 		if (ep_intr & OTG_FS_IEPINT3) {
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
@@ -1035,7 +1080,7 @@ void stm32f_otg_fs_isr(void)
 			otg_fs->outep[2].doepint = doepint;
 		}
 
-#if (STM32F_OTG_FS_EP_MAX > 3)
+#if (EP_MAX > 3)
 		if (ep_intr & OTG_FS_OEPINT3) {
 			uint32_t doepint;
 
@@ -1175,12 +1220,19 @@ void stm32f_otg_fs_isr(void)
 	}
 
 	if (gintsts & OTG_FS_ENUMDNE) {
-		DCC_LOG(LOG_MSG, "<ENUMDNE>");
 		/* Unmask global interrupts */
 		otg_fs->gintmsk |=  OTG_FS_IEPINTM | OTG_FS_OEPINTM |
 			OTG_FS_IISOIXFRM | OTG_FS_IISOOXFRM | OTG_FS_RXFLVLM;
 		/*  Clear global IN NAK */
 		otg_fs->dctl |= OTG_FS_CGINAK;
+
+	   /* Wait for the ENUMDNE interrupt in OTG_HS_GINTSTS.
+	   This interrupt indicates the end of reset on the USB. On receiving this 
+	   interrupt, the application must read the OTG_HS_DSTS register to 
+	   determine the enumeration speed and perform the steps listed in 
+	   Endpoint initialization on enumeration completion on page 1035.
+	   At this point, the device is ready to accept SOF packets and perform 
+	   control transfers on control endpoint 0. */
 	}
 
 
@@ -1190,6 +1242,16 @@ void stm32f_otg_fs_isr(void)
 		stm32f_otg_dev_reset(drv);
 	}
 
+	if (gintsts & OTG_FS_ESUSP) {
+		uint32_t dsts = otg_fs->dsts;
+		(void)dsts;
+
+		DCC_LOG4(LOG_INFO, "<ESUSP> %s%s ENUMSPD=%d %s", 
+				 (dsts & OTG_HS_EERR) ? " EERR" : "",
+				 (dsts & OTG_HS_SUSPSTS) ? " SUSPSTS" : "",
+				 OTG_HS_ENUMSPD_GET(dsts),
+				 otg_fs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
+	}
 #if DEBUG
 	if (gintsts & OTG_FS_GONAKEFF) {
 		DCC_LOG(LOG_MSG, "<GONAKEFF>");
@@ -1207,10 +1269,6 @@ void stm32f_otg_fs_isr(void)
 	if (gintsts & OTG_FS_WKUPINT) {
 		DCC_LOG(LOG_MSG, "<WKUPINT>");
 		/* disable resume/wakeup interrupts */
-	}
-
-	if (gintsts & OTG_FS_ESUSP) {
-		DCC_LOG(LOG_MSG, "<ESUSP>");
 	}
 
 	if (gintsts & OTG_FS_USBSUSP) {

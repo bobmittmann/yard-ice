@@ -52,7 +52,7 @@
 #if STM32_ENABLE_USB_DEV
 
 /* Endpoint state */
-typedef enum {
+enum ep_state {
 	EP_DISABLED,
 	EP_IDLE,
 	EP_STALLED,
@@ -63,9 +63,9 @@ typedef enum {
 	EP_WAIT_STATUS_OUT,
 	EP_OUT_DATA,
 	EP_OUT_DATA_LAST,
-} ep_state_t;
+};
 
-/* Endpoint control structure */
+/* Endpoint control */
 struct stm32f_usb_ep {
 	uint16_t mxpktsz; /* Maximum packet size for this EP */
 	ep_state_t state; /* Current EP state */

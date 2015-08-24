@@ -21,11 +21,10 @@
  */
 
 #include <sys/stm32f.h>
-#include <sys/delay.h>
 #include <thinkos.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/dcclog.h>
+#include <trace.h>
 
 #include "board.h"
 #include "io.h"
@@ -178,8 +177,7 @@ void __attribute__((noreturn)) io_task(void * arg)
 			sw1 = sw;
 			iodrv.sw_addr = sw & 0xf;
 			iodrv.sw_mode = (sw >> 4) & 0xf;
-			DCC_LOG2(LOG_TRACE, "addr=%d mode=%d",
-					 iodrv.sw_addr, iodrv.sw_mode);
+			INF("addr=%d mode=%d", iodrv.sw_addr, iodrv.sw_mode);
 		} 
 	}
 }
@@ -196,8 +194,6 @@ void iodrv_init(void)
 		.paused = 0,
 		.tag = "IO"
 	};
-
-//	thinkos_ctl_udelay_factor(&udelay_factor);
 
 	thinkos_thread_create_inf((void *)io_task, NULL, &io_inf);
 }

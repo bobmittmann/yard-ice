@@ -59,13 +59,13 @@
 #define THINKOS_ENABLE_SEM_ALLOC 0
 
 #define THINKOS_EVENT_MAX 1
-#define THINKOS_ENABLE_EVENT_ALLOC 1
+#define THINKOS_ENABLE_EVENT_ALLOC 0
 
 #define THINKOS_FLAG_MAX 0
 #define THINKOS_ENABLE_FLAG_ALLOC 0
 
 #define THINKOS_GATE_MAX 2
-#define THINKOS_ENABLE_GATE_ALLOC 1
+#define THINKOS_ENABLE_GATE_ALLOC 0
 
 #define THINKOS_ENABLE_THREAD_STAT 0
 #define THINKOS_ENABLE_TIMED_CALLS 1
@@ -89,7 +89,41 @@
 
 #define THINKOS_ENABLE_PROFILING 0
 
-#define THINKOS_ENABLE_THREAD_INFO 0
+/* -------------------------------------------------------------------------
+   MicroJS configuration
+   -------------------------------------------------------------------------- */
+
+#define MICROJS_DEBUG_ENABLED 0
+#define MICROJS_TRACE_ENABLED 0
+#define MICROJS_VERBOSE_ENABLED 1
+#define MICROJS_STRINGS_ENABLED 1
+#define MICROJS_STRINGBUF_ENABLED 0
+#define MICROJS_STDLIB_ENABLED 0
+#define MICROJS_OPTIMIZATION_ENABLED 1
+
+#define JSON_LABEL_LST_MAX 48
+#define JSON_STRING_LEN_MAX 192
+
+/* -------------------------------------------------------------------------
+   Shell configuration
+   -------------------------------------------------------------------------- */
+
+#define SHELL_LINE_MAX 72
+#define SHELL_ARG_MAX 12
+#define SHELL_HISTORY_MAX 5
+
+/* -------------------------------------------------------------------------
+   TTY configuration
+   -------------------------------------------------------------------------- */
+
+#define TTY_INBUF_LEN 8
+#define TTY_DEV_MAX 1
+
+/* -------------------------------------------------------------------------
+   File configuration
+   -------------------------------------------------------------------------- */
+
+#define FILE_DEV_MAX 2
 
 /* -------------------------------------------------------------------------
    Other configuration

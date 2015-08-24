@@ -645,16 +645,19 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 {
 	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
 	uint8_t * ptr = (uint8_t *)buf;
-	unsigned int rem = len;
+	unsigned int rem;
 	int ret;
 	int n;
 
+	if (len == 64)
+		DCC_LOG(LOG_WARNING, "64 bytes!");
+
+	rem = len;
 	while (rem) {
 		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {
 			DCC_LOG(LOG_WARNING, "usb_dev_ep_pkt_xmit() failed!!");
 			return n;
 		}
-
 
 		DCC_LOG1(LOG_MSG, "n=%d!!", n);
 

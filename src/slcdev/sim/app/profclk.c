@@ -18,25 +18,28 @@
  */
 
 /** 
- * @file lattice.h
- * @brief YARD-ICE
+ * @file profclk.c
+ * @brief Real-time trace
  * @author Robinson Mittmann <bobmittmann@gmail.com>
+ */ 
+
+#include "profclk.h"
+
+/* ---------------------------------------------------------------------------
+ * Profiling clock
+ * ---------------------------------------------------------------------------
  */
 
-#ifndef __LATTICE_H__
-#define __LATTICE_H__
-
-#include <stdint.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int lattice_ice40_configure(const uint8_t * buf, unsigned int max);
-
-#ifdef __cplusplus
+uint32_t profclk_us(uint32_t clk)
+{
+	return clk / 16; 
 }
-#endif
 
-#endif /* __LATTICE_H__ */
+void profclk_init(void)
+{
+	/* Enable trace */
+	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+	/* Enable cycle counter */
+	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
+}
 

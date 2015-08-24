@@ -20,19 +20,24 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <sys/stm32f.h>
-#include <sys/delay.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
 
-#include <sys/dcclog.h>
-#include <sys/usb-cdc.h>
+#include <sys/delay.h>
+#include <sys/console.h>
 #include <sys/tty.h>
+#include <sys/null.h>
 #include <trace.h>
 
 #include <thinkos.h>
+
+#include <tcpip/ethif.h>
+#include <tcpip/route.h>
+#include <tcpip/loopif.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "simlnk.h"
 #include "simrpc.h"
@@ -49,7 +54,8 @@ const char * copyright_str = "(c) Copyright 2014 - Mircom Group";
 
 
 int stdio_shell(void);
-void env_init(void);
+void tcpip_init(void);
+int webserver_start(void);
 
 /* -------------------------------------------------------------------------
  * System Supervision
@@ -119,46 +125,130 @@ void supervisor_init(void)
 							  &supervisor_inf);
 }
 
+/* -------------------------------------------------------------------------
+ * Stdio
+ * ------------------------------------------------------------------------- */
+
 void __attribute__((noreturn)) stdio_shell_task(void * arg)
 {
-	DCC_LOG1(LOG_TRACE, "thread=%d", thinkos_thread_self());
-
 	DBG("<%d> started...", thinkos_thread_self());
 	
 	for (;;) {
 		printf("\n...\n");
-		DCC_LOG(LOG_TRACE, "14. usb_shell()");
 		stdio_shell();
 	}
 }
 
-uint32_t __attribute__((aligned(8))) stdio_shell_stack[1024 + 256];
+uint32_t stdio_shell_stack[1024 + 256];
+
+const struct thinkos_thread_inf stdio_shell_inf = {
+	.stack_ptr = stdio_shell_stack,
+	.stack_size = sizeof(stdio_shell_stack),
+	.priority = 32,
+	.thread_id = 31,
+	.paused = false,
+	.tag = "SHELL"
+};
 
 void stdio_init(void)
 {
-	usb_cdc_class_t * cdc;
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
+	FILE * f;
 
-	DCC_LOG(LOG_TRACE, "13. usb_cdc_init()");
-	usb_cdc_sn_set(*((uint64_t *)STM32F_UID));
+//	f = console_fopen();
+	f = null_fopen(NULL);
 
-	cdc = usb_cdc_init(&stm32f_otg_fs_dev, 
-					   cdc_acm_def_str, 
-					   cdc_acm_def_strcnt);
+	/* initialize STDIO */
+	stderr = f;
+	stdout = f;
+	stdin = f;
 
-	f_raw = usb_cdc_fopen(cdc);
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
+//	thinkos_thread_create_inf((void *)stdio_shell_task, (void *)NULL,
+//			&stdio_shell_inf);
+}
 
-	stderr = f_tty;
-	stdout = f_tty;
-	stdin = f_tty;
+/* -------------------------------------------------------------------------
+ * TCP/IP network
+ * ------------------------------------------------------------------------- */
 
-	thinkos_thread_create((void *)stdio_shell_task, (void *)cdc,
-						  stdio_shell_stack, sizeof(stdio_shell_stack) | 
-						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+int network_config(void)
+{
+	struct ifnet * ifn;
+	in_addr_t ip_addr;
+	in_addr_t netmask = INADDR_ANY;
+	in_addr_t gw_addr = INADDR_ANY;
+	char s[64];
+	char s1[16];
+	char s2[16];
+	char * env;
+	uint8_t ethaddr[6] = { 0x1c, 0x95, 0x5d, 0x00, 0x00, 0x80};
+	uint64_t esn;
+	int dhcp;
+
+	esn = *((uint64_t *)STM32F_UID);
+
+	ethaddr[0] = ((esn >>  0) & 0xfc) | 0x02; /* Locally administered MAC */
+	ethaddr[1] = ((esn >>  8) & 0xff);
+	ethaddr[2] = ((esn >> 16) & 0xff);
+	ethaddr[3] = ((esn >> 24) & 0xff);
+	ethaddr[4] = ((esn >> 32) & 0xff);
+	ethaddr[5] = ((esn >> 40) & 0xff);
+
+	printf("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x\n ", 
+		   ethaddr[0], ethaddr[1], ethaddr[2],
+		   ethaddr[3], ethaddr[4], ethaddr[5]);
+
+	tcpip_init();
+
+//	if ((env = getenv("IPCFG")) == NULL) {
+	if (1) {
+		printf("IPCFG not set, using defaults!\n");
+		/* default configuration */
+		strcpy(s, "192.168.10.128 255.255.255.0 192.168.10.254 0");
+		/* set the default configuration */
+		setenv("IPCFG", s, 1);
+	} else {
+		strcpy(s, env);
+	}
+
+	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
+		return -1;
+	}
+
+	if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&netmask)) {
+		if (inet_aton(strtok(NULL, " ,"), (struct in_addr *)&gw_addr)) {
+			dhcp = strtoul(strtok(NULL, ""), NULL, 0);
+		}
+	}
+
+	/* initialize the Ethernet interface */
+	/* configure the ip address */
+	ifn = ethif_init(ethaddr, ip_addr, netmask);
+//	ifn = loopif_init(ip_addr, netmask);
+
+	ifn_getname(ifn, s);
+	ifn_ipv4_get(ifn, &ip_addr, &netmask);
+	printf("* netif %s: %s, %s\n", s, 
+		   inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
+		   inet_ntop(AF_INET, (void *)&netmask, s2, 16));
+
+	if (gw_addr != INADDR_ANY) {
+		/* add the default route (gateway) to ethif */
+		ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
+		printf("* default route gw: %s\n", 
+			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
+	}
+
+	if (dhcp) {
+#if 0
+		/* configure the initial ip address */
+		dhcp_start();
+		/* schedule the interface to be configured through dhcp */
+		dhcp_ifconfig(ethif, dhcp_callback);
+		printf("DHCP started.\n");
+#endif
+	}
+
+	return 0;
 }
 
 void remote_test(unsigned int daddr)
@@ -166,15 +256,12 @@ void remote_test(unsigned int daddr)
 	struct simrpc_pcb * sp;
 	char s[128];
 
-	DCC_LOG1(LOG_TRACE, "RPC test, remote: %d.", daddr);
-
 	if ((sp = simrpc_open(daddr)) == NULL) {
-		DCC_LOG(LOG_WARNING, "simrpc_open() failed!");
 		return;
 	}
 
 	if (simrpc_suspend(sp) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_suspend() failed!");
+		WARN(, "simrpc_suspend() failed!");
 	}
 
 	thinkos_sleep(500);
@@ -183,80 +270,68 @@ void remote_test(unsigned int daddr)
 	simrpc_mem_lock(sp, 0x08010000, 8192);
 
 	if (simrpc_mem_erase(sp, 0, 2048) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_mem_erase() failed!");
+		WARN(, "simrpc_mem_erase() failed!");
 	}
 
 	if (simrpc_mem_write(sp, "Hello world!", 14) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+		WARN(, "simrpc_mem_write() failed!");
 	}
 
 	if (simrpc_mem_seek(sp, 0) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_mem_seek() failed!");
+		WARN(, "simrpc_mem_seek() failed!");
 	}
 
 	if (simrpc_mem_read(sp, s, 14) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_mem_write() failed!");
+		WARN(, "simrpc_mem_write() failed!");
 	}
 
-	DCC_LOGSTR(LOG_TRACE, "'%s'", s);
-
 	if (simrpc_mem_unlock(sp, 0x08010000, 8192) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_mem_unlock() failed!");
+		WARN(, "simrpc_mem_unlock() failed!");
 	}
 
 	thinkos_sleep(500);
 
 	if (simrpc_resume(sp) < 0) {
-		DCC_LOG(LOG_WARNING, "simrpc_resume() failed!");
+		WARN(, "simrpc_resume() failed!");
 	}
 
 	simrpc_close(sp);
 }
 
-void board_init(void);
-
 int main(int argc, char ** argv)
 {
 	int i;
 
-	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
+	thinkos_udelay_factor(&udelay_factor);
 
-	DCC_LOG(LOG_TRACE, "1. board_init()");
-	board_init();
-
-	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate()");
-	cm3_udelay_calibrate();
-
-	DCC_LOG(LOG_TRACE, "3. env_init().");
 	stm32f_nvram_env_init();
 
-	DCC_LOG(LOG_TRACE, "4. thinkos_init()");
-	thinkos_init(THINKOS_OPT_PRIORITY(8) | THINKOS_OPT_ID(7));
-
-	DCC_LOG(LOG_TRACE, "5. iodrv_init()");
 	iodrv_init();
 
-	DCC_LOG(LOG_TRACE, "5. stdio_init()");
 	stdio_init();
 
-	DCC_LOG(LOG_TRACE, "6. trace_init()");
 	trace_init();
 
-	DCC_LOG(LOG_TRACE, "9. supervisor_init()");
 	supervisor_init();
-
-	DCC_LOG(LOG_TRACE, "10. simrpc_init()");
-	simrpc_init();
 
 	led_set_rate(LED_X1, RATE_2BPS);
 
+	network_config();
+
+	INF("7. Starting webserver...");
+	webserver_start();
+
+	INF("Starting SLCDEV simulator test");
+
+	simrpc_init();
+
 	for (i = 0; i < 10000; ++i) {
-		remote_test(1);
-		remote_test(2);
-		remote_test(3);
-		remote_test(4);
-		remote_test(5);
+//		remote_test(1);
+//		remote_test(2);
+//		remote_test(3);
+//		remote_test(4);
+//		remote_test(5);
+		thinkos_sleep(1000);
 	}
 
 	for (i = 0; i < 100000000; ++i) {
@@ -270,7 +345,6 @@ int main(int argc, char ** argv)
 		simrpc_mem_lock(0, 0x08000000, 1024);
 	}
 
-	DCC_LOG(LOG_TRACE, "10. net_init()");
 	net_init();
 
 	return 0;

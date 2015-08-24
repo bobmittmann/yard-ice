@@ -19,16 +19,15 @@
 
 /** 
  * @file stm32f-otg_hs_dev.c
- * @brief YARD-ICE UART console
+ * @brief STM32F USB Full Speed Device Driver
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
-
-#include <sys/stm32f.h>
 
 #ifdef CONFIG_H
 #include "config.h"
 #endif
 
+#include <sys/stm32f.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -44,10 +43,23 @@
 #define STM32_ENABLE_OTG_HS 0
 #endif 
 
+#ifndef STM32_OTG_HS_EP_MAX 
+#define STM32_OTG_HS_EP_MAX 4
+#endif
+
+#ifndef STM32_OTG_HS_ENABLE_VBUS
+#define STM32_OTG_HS_ENABLE_VBUS 1
+#endif
+
+#define EP_MAX      STM32_OTG_HS_EP_MAX 
+#define ENABLE_VBUS STM32_OTG_HS_ENABLE_VBUS
+#define RX_FIFO_SIZE 512
+
 #ifdef STM32F_OTG_HS
 
 #if STM32_ENABLE_OTG_HS
 
+/* Endpoint state */
 enum ep_state {
 	EP_UNCONFIGURED = 0,
 	EP_IDLE,
@@ -80,19 +92,15 @@ struct stm32f_otg_ep {
 	};
 };
 
-#define OTG_HS_DRIVER_EP_MAX 4
-
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
 	struct stm32f_otg_hs * otg_hs;
-	struct stm32f_otg_ep ep[OTG_HS_DRIVER_EP_MAX];
+	struct stm32f_otg_ep ep[EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
 	uint16_t fifo_addr;
 };
-
-#define OTG_HS_RX_FIFO_SIZE 512
 
 /* EP TX fifo memory allocation */
 static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv, 
@@ -113,10 +121,12 @@ static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv,
 		otg_hs->dieptxf2 = OTG_HS_INEPTXFD_SET(siz / 4) | 
 			OTG_HS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
+#if (EP_MAX > 3)
 	case 3:
 		otg_hs->dieptxf3 = OTG_HS_INEPTXFD_SET(siz / 4) | 
 			OTG_HS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
+#endif
 	}
 
 	DCC_LOG2(LOG_INFO, "addr=%d siz=%d", drv->fifo_addr, siz);
@@ -217,7 +227,7 @@ int stm32f_otg_hs_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 	struct stm32f_otg_ep * ep;
 	int ret;
 
-	if ((unsigned int)ep_id >= OTG_HS_DRIVER_EP_MAX) {
+	if ((unsigned int)ep_id >= EP_MAX) {
 		DCC_LOG(LOG_WARNING, "invalid EP");
 		return -1;
 	}
@@ -250,7 +260,7 @@ int stm32f_otg_hs_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	int cnt;
 	int rem;
 
-	if ((unsigned int)ep_id >= OTG_HS_DRIVER_EP_MAX) {
+	if ((unsigned int)ep_id >= EP_MAX) {
 		DCC_LOG(LOG_WARNING, "invalid EP");
 		return -1;
 	}
@@ -510,8 +520,6 @@ int stm32f_otg_hs_dev_ep_init(struct stm32f_otg_drv * drv,
 #define OTG_HS_DM   STM32_GPIOB, 14
 #define OTG_HS_ID   STM32_GPIOB, 12
 
-//#define STM32_OTG_HS_VBUS STM32_GPIOA, 9
-
 #ifdef STM32_OTG_HS_VBUS 
 #define OTG_HS_VBUS STM32_OTG_HS_VBUS
 #else
@@ -523,7 +531,7 @@ static inline struct stm32_gpio * vbus_gpio(struct stm32_gpio *__gpio,
 	return __gpio;
 }
 
-static void otg_hs_io_init(void)
+static void otg_io_init(void)
 {
 	DCC_LOG(LOG_INFO, "Configuring GPIO pins...");
 
@@ -535,55 +543,32 @@ static void otg_hs_io_init(void)
 	stm32_gpio_af(OTG_HS_DP, GPIO_AF12);
 	stm32_gpio_af(OTG_HS_DM, GPIO_AF12);
 	stm32_gpio_af(OTG_HS_VBUS, GPIO_AF12);
-//	stm32_gpio_af(OTG_HS_ID, GPIO_AF12);
-
+#if 0
+	stm32_gpio_af(OTG_HS_ID, GPIO_AF12);
+#endif
 	stm32_gpio_mode(OTG_HS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_HS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+#ifdef OTG_ENABLE_VBUS
+	stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_LOW);
+#else
 	stm32_gpio_mode(OTG_HS_VBUS, INPUT, 0);
-//	stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_LOW);
-//	stm32_gpio_mode(OTG_HS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+#endif
+#if 0
+	stm32_gpio_mode(OTG_HS_ID, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+#endif
 }
 
-#if 0
-void otg_hs_vbus_connect(bool connect)
+static void otg_vbus_connect(bool connect)
 {
+#ifdef OTG_ENABLE_VBUS
 	if (connect)
 		stm32_gpio_mode(OTG_HS_VBUS, ALT_FUNC, SPEED_HIGH);
 	else
 		stm32_gpio_mode(OTG_HS_VBUS, INPUT, 0);
-}
-
-static void otg_hs_power_on(struct stm32f_otg_hs * otg_hs)
-{
-	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
-	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
-
-	otg_hs_connect(otg_hs);
-	DCC_LOG(LOG_INFO, "[ATTACHED]");
- 
-	otg_hs_vbus_connect(true);
-
-	/* Enable Cortex interrupt */
-	cm3_irq_enable(STM32F_IRQ_OTG_HS);
-}
-
-static void otg_hs_power_off(struct stm32f_otg_hs * otg_hs)
-{
-	otg_hs_disconnect(otg_hs);
-
-//	otg_hs_vbus_connect(false);
-
-	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
-	stm32_clk_disable(STM32_RCC, STM32_CLK_OTGHS);
-
-	/* disabling IO pins */
-//	stm32_gpio_mode(OTG_HS_DP, INPUT, 0);
-//	stm32_gpio_mode(OTG_HS_DM, INPUT, 0);
-}
-
 #endif
+}
 
-void otg_hs_connect(struct stm32f_otg_hs * otg_hs)
+void otg_connect(struct stm32f_otg_hs * otg_hs)
 {
 	/* Connect device */
 	otg_hs->dctl &= ~OTG_HS_SDIS;
@@ -591,43 +576,35 @@ void otg_hs_connect(struct stm32f_otg_hs * otg_hs)
 
 }
 
-void otg_hs_disconnect(struct stm32f_otg_hs * otg_hs)
+void otg_disconnect(struct stm32f_otg_hs * otg_hs)
 {
 	otg_hs->dctl |= OTG_HS_SDIS;
 	udelay(3000);
 }
 
-#if 0
-int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
-		const usb_class_events_t * ev)
+static void otg_power_on(struct stm32f_otg_hs * otg_hs)
 {
-	struct stm32f_otg_hs * otg_hs = drv->otg_hs;
-
-	drv->cl = cl;
-	drv->ev = ev;
-
-	/* Initialize IO pins */
-	otg_hs_io_init();
-
 	DCC_LOG(LOG_INFO, "Enabling USB FS clock...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
 
-	/* Initialize as a device */
-	stm32f_otg_hs_device_init(otg_hs);
+	otg_connect(otg_hs);
+	DCC_LOG(LOG_INFO, "[ATTACHED]");
+ 
+	otg_vbus_connect(true);
 
 	/* Enable Cortex interrupt */
 	cm3_irq_enable(STM32F_IRQ_OTG_HS);
-
-	DCC_LOG(LOG_INFO, "----------------------------------------");
-	DCC_LOG(LOG_INFO, "[ATTACHED]");
-
-	udelay(1000000);
-
-	otg_hs_connect(otg_hs);
-
-	return 0;
 }
-#endif
+
+static void otg_power_off(struct stm32f_otg_hs * otg_hs)
+{
+	otg_disconnect(otg_hs);
+
+	otg_hs_vbus_connect(false);
+
+	DCC_LOG(LOG_INFO, "Disabling USB device clock...");
+	stm32_clk_disable(STM32_RCC, STM32_CLK_OTGHS);
+}
 
 int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 		const usb_class_events_t * ev)
@@ -638,7 +615,7 @@ int stm32f_otg_hs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	drv->ev = ev;
 
 	/* Initialize IO pins */
-	otg_hs_io_init();
+	otg_io_init();
 
 	DCC_LOG(LOG_INFO, "Enabling USB HS clock...");
 	stm32_clk_enable(STM32_RCC, STM32_CLK_OTGHS);
@@ -742,7 +719,7 @@ static void stm32f_otg_hs_dev_ep0_in(struct stm32f_otg_drv * drv)
 	if (ep->state == EP_WAIT_STATUS_IN) {
 		struct usb_request * req = &drv->req;
 		void * dummy = NULL;
-
+		/* End of SETUP transaction (OUT Data Phase) */	
 		ep->on_setup(drv->cl, req, dummy);
 		ep->state = EP_IDLE;
 		DCC_LOG(LOG_INFO, "EP0 [IDLE]");
@@ -795,7 +772,6 @@ static void stm32f_otg_hs_dev_ep0_setup(struct stm32f_otg_drv * drv)
 
 	/* No-Data control SETUP transaction */
 	if (req->length == 0) {
-		struct usb_request * req = &drv->req;
 		void * dummy = NULL;
 
 		if (((req->request << 8) | req->type) == STD_SET_ADDRESS) {
@@ -927,7 +903,7 @@ static void stm32f_otg_hs_dev_reset(struct stm32f_otg_drv * drv)
 	/* reset fifo memory (packet buffer) allocation pointer */
 	drv->fifo_addr = 0;
 	/* initialize RX fifo size */
-	siz = OTG_HS_RX_FIFO_SIZE;
+	siz = RX_FIFO_SIZE;
 	otg_hs->grxfsiz = siz / 4;
 	/* update fifo memory allocation pointer */
 	drv->fifo_addr += siz;
@@ -943,16 +919,6 @@ struct stm32f_otg_drv stm32f_otg_hs_drv0 = {
 	.otg_hs = STM32F_OTG_HS
 };
 
-void stm32f_otg_hs_ep1_out_isr(void)
-{
-	DCC_LOG(LOG_WARNING, "not implemented!");
-}
-
-void stm32f_otg_hs_ep1_in_isr(void)
-{
-	DCC_LOG(LOG_WARNING, "not implemented!");
-}
-
 void stm32f_otg_hs_isr(void)
 {
 	struct stm32f_otg_drv * drv = &stm32f_otg_hs_drv0;
@@ -962,12 +928,7 @@ void stm32f_otg_hs_isr(void)
 
 	gintsts = otg_hs->gintsts & otg_hs->gintmsk;
 
-	DCC_LOG1(LOG_MSG, "GINTSTS=0x%08x", gintsts);
-	DCC_LOG1(LOG_MSG, "PCGCCTL --> %s", 
-			 otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
-	DCC_LOG2(LOG_MSG, "GOTGCTL --> %s%s", 
-			 otg_hs->gotgctl & OTG_HS_BSVLD ? "BSVLD" : "",
-			 otg_hs->gotgctl & OTG_HS_CIDSTS ? " CIDSTS=B" : " CIDSTS=A");
+	DCC_LOG1(LOG_JABBER, "GINTSTS=0x%08x", gintsts);
 
 	if (gintsts & OTG_HS_IEPINT) {
 		uint32_t diepmsk;
@@ -975,7 +936,7 @@ void stm32f_otg_hs_isr(void)
 		uint32_t diepempmsk;
 		uint32_t msk;
 
-		DCC_LOG(LOG_MSG, "<IEPINT>");
+		DCC_LOG(LOG_JABBER, "<IEPINT>");
 
 		ep_intr = (otg_hs->daint & otg_hs->daintmsk);
 		diepmsk = otg_hs->diepmsk;
@@ -988,10 +949,10 @@ void stm32f_otg_hs_isr(void)
 			/* clear interrupts */
 			otg_hs->inep[0].diepint = diepint;
 			if (diepint & OTG_HS_XFRC) {
-				DCC_LOG(LOG_INFO, "[0] <IEPINT> <XFRC>");
+				DCC_LOG(LOG_MSG, "[0] <IEPINT> <XFRC>");
 				stm32f_otg_hs_dev_ep0_in(drv);
 			} else if (diepint & OTG_HS_TXFE) {
-				DCC_LOG(LOG_INFO, "[0] <IEPINT> <TXFE>");
+				DCC_LOG(LOG_MSG, "[0] <IEPINT> <TXFE>");
 				__ep_tx_push(drv, 0);
 			}
 		}
@@ -1027,6 +988,7 @@ void stm32f_otg_hs_isr(void)
 			}
 		}
 
+#if (EP_MAX > 3)
 		if (ep_intr & OTG_HS_IEPINT3) {
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
@@ -1039,21 +1001,6 @@ void stm32f_otg_hs_isr(void)
 			if (diepint & OTG_HS_XFRC) {
 				DCC_LOG(LOG_INFO, "[3] <IEPINT> <XFRC>");
 				stm32f_otg_hs_dev_ep_in(drv, 3);
-			}
-		}
-#if 0
-		if (ep_intr & OTG_HS_IEPINT4) {
-			/* add the Transmit FIFO empty bit to the mask */
-			msk = diepmsk | ((diepempmsk >> 4) & 0x1) << 7;
-			diepint = otg_hs->inep[4].diepint & msk;
-			otg_hs->inep[4].diepint = diepint;
-			if (diepint & OTG_HS_TXFE) {
-				DCC_LOG(LOG_INFO, "[4] <IEPINT> <TXFE>");
-				__ep_tx_push(drv, 4);
-			}
-			if (diepint & OTG_HS_XFRC) {
-				DCC_LOG(LOG_INFO, "[4] <IEPINT> <XFRC>");
-				stm32f_otg_hs_dev_ep_in(drv, 4);
 			}
 		}
 #endif
@@ -1139,6 +1086,7 @@ void stm32f_otg_hs_isr(void)
 			otg_hs->outep[2].doepint = doepint;
 		}
 
+#if (EP_MAX > 3)
 		if (ep_intr & OTG_HS_OEPINT3) {
 			uint32_t doepint;
 
@@ -1156,25 +1104,6 @@ void stm32f_otg_hs_isr(void)
 
 			/* clear interrupts */
 			otg_hs->outep[3].doepint = doepint;
-		}
-#if 0
-		if (ep_intr & OTG_HS_OEPINT4) {
-			uint32_t doepint;
-
-			doepint = otg_hs->outep[4].doepint & otg_hs->doepmsk;
-
-			if (doepint & OTG_HS_XFRC) {
-				DCC_LOG(LOG_INFO, "[4] <OEPINT> <OUT XFRC>");
-			}
-			if (doepint & OTG_HS_EPDISD) {
-				DCC_LOG(LOG_INFO, "[4] <OEPINT> <EPDISD>");
-			}
-			if (doepint & OTG_HS_STUP) {
-				DCC_LOG(LOG_INFO, "[4] <OEPINT> <STUP>");
-			}
-
-			/* clear interrupts */
-			otg_hs->outep[4].doepint = doepint;
 		}
 #endif
 	}
@@ -1278,65 +1207,11 @@ void stm32f_otg_hs_isr(void)
 		//	otg_hs->gintmsk |= OTG_HS_RXFLVLM;
 	}
 
-	if (gintsts & OTG_HS_SOF) {
-		DCC_LOG(LOG_INFO, "<SOF>");
-#if 0
-		if (--dev->rx_tmr == 0) {
-			int i;
-			/* Disable SOF interrupts */
-			otg_hs->gintmsk &= ~OTG_HS_SOFM;
-
-			DCC_LOG(LOG_INFO, "RX timeout"); 
-			/* pop data from fifo */
-			for (i = 0; i < dev->ep1_rx.len; i++) {
-				(void)otg_hs->dfifo[EP_OUT].pop;
-			}
-			ep->xfer_rem = 0;
-			ep->xfer_len = 0;
-			/* Reenable RX fifo interrupts */
-			otg_hs->gintmsk |= OTG_HS_RXFLVLM;
-		}
-#endif
-	}
-
 	if (gintsts & OTG_HS_SRQINT) {
 		/* Session request/new session detected interrupt */
-		DCC_LOG1(LOG_INFO, "<SRQINT> [POWERED] %s",
-				otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
-/* Indicates that the PHY has been suspended. This bit is updated once the PHY is suspended after the application has set the STPPCLK bit (bit 0). */
-
-//		otg_hs->gccfg = OTG_HS_VBUSBSEN | OTG_HS_PWRDWN;
-
+		DCC_LOG(LOG_MSG, "<SRQINT>  [POWERED]");
 		otg_hs->gintmsk |= OTG_HS_WUIM | OTG_HS_USBRSTM | OTG_HS_ENUMDNEM |
 			OTG_HS_ESUSPM | OTG_HS_USBSUSPM;
-#if 0
-		otg_hs->pcgcctl = 0; 
-
-	/* Core Soft Reset */
-	otg_hs->grstctl = OTG_HS_HSRST;
-	do {
-		udelay(3);
-	} while (otg_hs->grstctl & OTG_HS_HSRST);
-	otg_hs->gccfg |= OTG_HS_PWRDWN;
-#endif
-#if 0
-	DCC_LOG(LOG_INFO, "...");
-
-	/* Wait for AHB master IDLE state. */
-	while (!(otg_hs->grstctl & OTG_HS_AHBIDL)) {
-		udelay(3);
-	}
-
-	/* Core Soft Reset */
-	otg_hs->grstctl = OTG_HS_CSRST;
-	do {
-		udelay(3);
-	} while (otg_hs->grstctl & OTG_HS_CSRST);
-
-	/* Wait for 3 PHY Clocks*/
-	udelay(3);
-#endif
-
 	}
 
 	if (gintsts & OTG_HS_OTGINT) {
@@ -1347,11 +1222,6 @@ void stm32f_otg_hs_isr(void)
 			otg_hs->gintmsk = OTG_HS_SRQIM | OTG_HS_OTGINT;
 		}
 		otg_hs->gotgint = gotgint;
-	}
-
-	if (gintsts & OTG_HS_GONAKEFF) {
-		DCC_LOG(LOG_INFO, "<GONAKEFF>");
-		otg_hs->gintmsk &= ~OTG_HS_GONAKEFFM;
 	}
 
 	if (gintsts & OTG_HS_ENUMDNE) {
@@ -1379,15 +1249,6 @@ void stm32f_otg_hs_isr(void)
 	}
 
 
-	if (gintsts & OTG_HS_PTXFE) {
-		DCC_LOG(LOG_INFO, "<PTXFE>");
-	}
-
-	if (gintsts & OTG_HS_WKUPINT) {
-		DCC_LOG(LOG_INFO, "<WKUPINT>");
-		/* disable resume/wakeup interrupts */
-	}
-
 	if (gintsts & OTG_HS_USBRST ) {
 		/* end of bus reset */
 		DCC_LOG(LOG_INFO, "<USBRST> --------------- [DEFAULT]");
@@ -1403,6 +1264,25 @@ void stm32f_otg_hs_isr(void)
 				 (dsts & OTG_HS_SUSPSTS) ? " SUSPSTS" : "",
 				 OTG_HS_ENUMSPD_GET(dsts),
 				 otg_hs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
+	}
+
+#if DEBUG
+	if (gintsts & OTG_HS_GONAKEFF) {
+		DCC_LOG(LOG_INFO, "<GONAKEFF>");
+		otg_hs->gintmsk &= ~OTG_HS_GONAKEFFM;
+	}
+
+	if (gintsts & OTG_FS_SOF) {
+		DCC_LOG(LOG_MSG, "<SOF>");
+	}
+
+	if (gintsts & OTG_HS_PTXFE) {
+		DCC_LOG(LOG_INFO, "<PTXFE>");
+	}
+
+	if (gintsts & OTG_HS_WKUPINT) {
+		DCC_LOG(LOG_INFO, "<WKUPINT>");
+		/* disable resume/wakeup interrupts */
 	}
 
 	if (gintsts & OTG_HS_USBSUSP) {
@@ -1428,11 +1308,22 @@ void stm32f_otg_hs_isr(void)
 	if (gintsts & OTG_HS_CMOD) {
 		DCC_LOG(LOG_INFO, "<CMOD>");
 	}
+#endif
 
 	/* clear pending interrupts */
 	otg_hs->gintsts = gintsts;
 }
 
+
+void stm32f_otg_hs_ep1_out_isr(void)
+{
+	DCC_LOG(LOG_WARNING, "not implemented!");
+}
+
+void stm32f_otg_hs_ep1_in_isr(void)
+{
+	DCC_LOG(LOG_WARNING, "not implemented!");
+}
 
 /* USB device operations */
 const struct usb_dev_ops stm32f_otg_hs_ops = {

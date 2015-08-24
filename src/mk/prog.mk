@@ -348,8 +348,6 @@ endif
 
 include $(SCRPTDIR)/cc.mk
 
-include $(SCRPTDIR)/jtag.mk
-
 #
 # FIXME: automatic dependencies are NOT included in Cygwin.
 # The dependencie files must have the paths converted

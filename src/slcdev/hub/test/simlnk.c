@@ -32,7 +32,6 @@
 #include <stdbool.h>
 #include <sys/param.h>
 #include <sys/serial.h>
-#include <sys/dcclog.h>
 
 #include <thinkos.h>
 #include "simlnk.h"
@@ -143,7 +142,7 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 		uint32_t *p = (uint32_t *)lnk->tx.buf;
 		(void)p;
 
-		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
+		INF("%08x %08x", p[0], p[1]);
 	}
 
 	return serial_send(lnk->dev, lnk->tx.buf, cnt);
@@ -178,7 +177,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 		uint32_t *p = (uint32_t *)lnk->tx.buf;
 		(void)p;
 
-		DCC_LOG2(LOG_TRACE, "%08x %08x", p[0], p[1]);
+		INF("%08x %08x", p[0], p[1]);
 	}
 #endif
 
@@ -199,8 +198,6 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	cnt = lnk->rx.cnt - 4;
 	opc = lnk->rx.buf[0];
 
-	DCC_LOG2(LOG_MSG, "resp opc=%08x cnt=%d", opc, cnt);
-
 	if (opc == mkopc(saddr, daddr, seq, SIMRPC_OK)) {
 		if (rsp != NULL) {
 			cnt = MIN(cnt, max);
@@ -210,11 +207,11 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	}
 
 	if ((cnt == 4) && (opc == mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
-		DCC_LOG1(LOG_WARNING, "error %d.", (int)lnk->rx.buf[1]);
+		WARN("error %d.", (int)lnk->rx.buf[1]);
 		return (int)lnk->rx.buf[1];
 	}
 
-	DCC_LOG(LOG_WARNING, "invalid response.");
+	WARN("invalid response.");
 	return SIMRPC_EPROTOCOL;
 }
 
@@ -266,7 +263,7 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	if (lnk == NULL)
 		return -EINVAL;
 
-	DCC_LOG1(LOG_TRACE, "addr=%d", addr);
+	INF("addr=%d", addr);
 
 	lnk->dev = dev;
 	lnk->addr = addr;

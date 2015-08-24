@@ -22,30 +22,28 @@
 
 PROG = slcdev-hub
 
-CFILES = slcdev-hub.c console.c pktbuf.c net.c \
-		 xflash.c otg_xflash_pic.c uart_xflash_pic.c \
-		 ../fpga/ice40lp384.c ../fpga/lattice.c \
-		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c \
-		 ../boot/board.c simlnk.c simrpc.c io.c
+CFILES = slcdev-hub.c io.c console.c\
+		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c pktbuf.c net.c \
+		 simlnk.c simrpc.c webserver.c 
 
 SDK = ../../../sdk
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libc $(SDK)/libice-comm \
-		  $(SDK)/libstm32drv $(SDK)/libcdc-acm $(SDK)/libtty \
-		  $(SDK)/libxmodem $(SDK)/libshell $(SDK)/libcrc \
-		  $(SDK)/libtrace $(SDK)/libhexdump
+LIBS = gcc stm32f cm3 util console c stm32drv \
+	   tty crc xmodem shell trace hexdump tcpip httpd
 
-LIBS = gcc stm32f cm3 util thinkos c ice-comm stm32drv cdc-acm \
-	   tty crc xmodem shell trace hexdump
+LIBPATH = ../sdklibs/Debug
 
 INCPATH = $(SDK)/include ../include ../../include
 
 JTAGTOOL_ADDR = 192.168.10.50
 
-CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CDEFS = CONFIG_H NDEBUG
+CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections 
 
 MACH = stm32f427
+THINKAPP = 1
+LDSCRIPT = slcdev-hub.ld
+LOAD_ADDR = 0x08010000
 include ../../../mk/stm32f4xx.mk
 

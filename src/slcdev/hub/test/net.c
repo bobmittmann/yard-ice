@@ -39,7 +39,6 @@
 #include "pktbuf.h"
 
 #include "board.h"
-#include "lattice.h"
 #include <bacnet/mstp_lnk.h>
 
 #include "net.h"
@@ -308,13 +307,6 @@ int net_init(void)
 	int i;
 
 	DBG("RS485 network init...");
-
-	if (lattice_ice40_configure(ice40lp384_bin, 
-								sizeof_ice40lp384_bin) < 0) {
-		ERR("lattice_ice40_configure() failed!");
-		return -1;
-	}
-
 
 	if (cfg->magic == CFG_MAGIC)
 		mstp_addr = cfg->mstp_addr;

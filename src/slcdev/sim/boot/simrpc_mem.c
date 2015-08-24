@@ -36,7 +36,7 @@ int simrpc_send_opc(uint32_t opc);
 #define FLASH_MIN ((uint32_t)STM32_MEM_FLASH + FLASH_BLK_FIRMWARE_OFFS) 
 #define FLASH_MAX ((uint32_t)STM32_MEM_FLASH + (256 * 1024))
 
-#define SRAM_MIN ((uint32_t)STM32_MEM_SRAM + 4096)
+#define SRAM_MIN ((uint32_t)STM32_MEM_SRAM + 2048)
 #define SRAM_MAX ((uint32_t)STM32_MEM_SRAM + 32768)
 
 #define EEPROM_MIN ((uint32_t)STM32_MEM_EEPROM)

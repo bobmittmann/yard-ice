@@ -26,8 +26,6 @@
 
 #include "board.h"
 
-#define PWM_FREQ 100000
-
 void board_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
@@ -65,7 +63,6 @@ void board_init(void)
 
 	/* Current rate control */
 	stm32_gpio_mode(IO_IRATE, ANALOG, 0);
-	stm32_gpio_clr(IO_IRATE);
 
 	/* Current sink */
 	stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_MED);

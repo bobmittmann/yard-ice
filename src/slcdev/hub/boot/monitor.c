@@ -35,8 +35,8 @@
 
 #include <gdb.h>
 extern const struct gdb_target board_gdb_target;
-void board_idle_tick(unsigned int cnt);
-void board_app_ready(void);
+bool board_autoboot(uint32_t tick);
+void board_on_app_exec(void);
 void board_bootloader_upgrade(void);
 void board_configure(struct dmon_comm * comm);
 
@@ -377,7 +377,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		/* first time we run the monitor, start a timer to call the 
 		   board_tick() periodically */
 		sigmask |= (1 << DMON_ALARM);
-		dmon_alarm(250);
+		dmon_alarm(125);
 		monitor_thread_id = -1;
 	}
 
@@ -458,14 +458,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_ALARM)) {
 			const struct gdb_target * tgt = &board_gdb_target;
 			dmon_clear(DMON_ALARM);
-			board_idle_tick(tick_cnt++);
-			if (tick_cnt == 20 && dmon_app_exec(tgt->app.start_addr, 
-												false)) {
+			if (board_autoboot(tick_cnt++) && 
+				dmon_app_exec(tgt->app.start_addr, false)) {
 				sigmask &= ~(1 << DMON_ALARM);
-				board_app_ready();
+				board_on_app_exec();
 			} else {
 				/* reastart the alarm timer */
-				dmon_alarm(250);
+				dmon_alarm(125);
 			}  
 		}
 

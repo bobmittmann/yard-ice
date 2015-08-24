@@ -174,7 +174,8 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 #define FLASH_ERR (FLASH_PGSERR | FLASH_PGPERR | FLASH_PGAERR | FLASH_WRPERR | \
 				   FLASH_OPERR)
 
-uint32_t __attribute__((section (".data#"))) stm32f2x_flash_sect_erase(struct stm32_flash * flash, uint32_t cr)
+uint32_t __attribute__((section (".data#"), noinline)) 
+	stm32f2x_flash_sect_erase(struct stm32_flash * flash, uint32_t cr)
 {
 	uint32_t sr;
 
@@ -248,7 +249,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	return cnt;
 }
 
-uint32_t __attribute__((section (".data#"))) 
+uint32_t __attribute__((section (".data#"), noinline)) 
 	stm32f2x_flash_wr32(struct stm32_flash * flash,
 						 uint32_t volatile * addr, uint32_t data)
 {

@@ -107,6 +107,11 @@
 #define SPI_SFLASH        STM32F_SPI4
 #define SFLASH_SPI_AF     GPIO_AF6 
 
+/* -------------------------------------------------------------------------
+ * Speaker
+ * ------------------------------------------------------------------------- */
+#define IO_DAC2           STM32_GPIOA, 5
+
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_clr(__gpio, __pin);

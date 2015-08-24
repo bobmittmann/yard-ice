@@ -110,6 +110,10 @@ int target_goto(uint32_t addr, int opt);
 #define GDB_ENABLE_QXFER_MEMORY_MAP 1
 #endif
 
+#ifndef GDB_ENABLE_RXMIT
+#define GDB_ENABLE_RXMIT 0
+#endif
+
 #define CTRL_B 0x02
 #define CTRL_C 0x03
 #define CTRL_D 0x04
@@ -150,6 +154,12 @@ struct gdb_rspd {
 		int8_t g; 
 		int8_t c;
 	} thread_id;
+#if GDB_ENABLE_RXMIT
+	struct {
+		char * pkt;
+		uint16_t len;
+	} tx;
+#endif
 	struct dmon_comm * comm;
 	void (* shell_task)(struct dmon_comm * comm);
 	struct gdb_target * target; 
@@ -244,6 +254,13 @@ static int rsp_error(struct gdb_rspd * gdb, unsigned int err)
 	return dmon_comm_send(gdb->comm, pkt, 7);
 }
 
+#if GDB_ENABLE_RXMIT
+static int rsp_pkt_rxmit(struct gdb_rspd * gdb)
+{
+	return dmon_comm_send(gdb->comm, gdb->tx.pkt, gdb->tx.len);
+}
+#endif
+
 static int rsp_pkt_send(struct gdb_rspd * gdb, char * pkt, unsigned int len)
 {
 	unsigned int sum = 0;
@@ -260,6 +277,11 @@ static int rsp_pkt_send(struct gdb_rspd * gdb, char * pkt, unsigned int len)
 
 	pkt[n] = '\0';
 	DCC_LOGSTR(LOG_INFO, "--> '%s'", pkt);
+
+#if GDB_ENABLE_RXMIT
+	gdb->tx.pkt = pkt;
+	gdb->tx.len = n;
+#endif
 
 	return dmon_comm_send(gdb->comm, pkt, n);
 }
@@ -1540,8 +1562,8 @@ struct gdb_rspd gdb_rspd;
 void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
-	char buf[RSP_BUFFER_LEN];
-	char * pkt = buf;
+	char pkt[RSP_BUFFER_LEN];
+	char buf[4];
 	uint32_t sigmask;
 	uint32_t sigset;
 	int len;
@@ -1597,13 +1619,11 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		}
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
-			DCC_LOG(LOG_MSG, "Comm RX.");
+
 			if (dmon_comm_recv(comm, buf, 1) != 1) {
 				DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed!");
 				continue;
 			}
-
-			DCC_LOG1(LOG_MSG, "Comm RX: %02x", buf[0]);
 
 			switch (buf[0]) {
 
@@ -1612,11 +1632,18 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 				break;
 
 			case '-':
-				DCC_LOG(LOG_WARNING, "[NACK]");
-				dmon_exec(gdb->shell_task);
+#if GDB_ENABLE_RXMIT
+				DCC_LOG(LOG_WARNING, "[NACK] rxmit!");
+				rsp_pkt_rxmit(gdb);
+#else
+				DCC_LOG(LOG_WARNING, "[NACK]!");
+//				dmon_exec(gdb->shell_task);
+#endif
 				break;
 
 			case '$':
+				DCC_LOG(LOG_MSG, "Comm RX: '$'");
+
 				if ((len = rsp_pkt_recv(comm, pkt, RSP_BUFFER_LEN)) <= 0) {
 					DCC_LOG1(LOG_WARNING, "rsp_pkt_recv(): %d", len);
 					dmon_exec(gdb->shell_task);
