@@ -71,6 +71,7 @@ enum ep_state {
 	EP_WAIT_STATUS_OUT,
 	EP_OUT_DATA,
 	EP_OUT_DATA_LAST,
+	EP_IN_DATA_ZLP,
 };
 
 /* Endpoint control */
@@ -152,29 +153,6 @@ static void __copy_from_pktbuf(void * ptr,
 	}
 }
 
-static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
-{
-	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
-	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
-	int cnt;
-
-	/* push data into transmit fifo */
-	cnt = stm32f_otg_fs_txf_push(otg_fs, ep_id, ep->xfr_ptr);
-
-	if (cnt < 0) {
-		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_push() failed!");
-		otg_fs->diepempmsk &= ~(1 << ep_id);
-		return false;
-	}
-
-	DCC_LOG2(LOG_INFO, "cnt=%d ptr=%p", cnt, ep->xfr_ptr);
-
-	ep->xfr_ptr += cnt;
-	ep->xfr_rem -= cnt;
-
-	return true;
-}
-
 static void __ep_rx_pop(struct stm32f_otg_drv * drv, int ep_id, int len)
 {
 	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
@@ -219,35 +197,142 @@ static void __ep_zlp_send(struct stm32f_otg_fs * otg_fs, int epnum)
 	otg_fs->inep[epnum].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
 }
 
-/* start sending */
 int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 							   void * buf, unsigned int len)
 {
 	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 	struct stm32f_otg_ep * ep;
-	int ret;
+	uint32_t deptsiz;
+	uint32_t depctl;
+	uint32_t mpsiz;
+	uint32_t xfrsiz;
+	uint32_t pktcnt;
 
 	if ((unsigned int)ep_id >= EP_MAX) {
 		DCC_LOG(LOG_WARNING, "invalid EP");
 		return -1;
 	}
 
-	ep = &drv->ep[ep_id];
-	ep->xfr_ptr = buf;
-	ep->xfr_rem = MIN(len, ep->xfr_max);
-
-	/* prepare fifo to transmit */
-	if ((ret = stm32f_otg_fs_txf_setup(otg_fs, ep_id, ep->xfr_rem)) < 0) {
-		DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
-	} else {
-		/* umask FIFO empty interrupt */
-		otg_fs->diepempmsk |= (1 << ep_id);
+	deptsiz = otg_fs->inep[ep_id].dieptsiz;
+	if ((!OTG_FS_XFRSIZ_GET(deptsiz)) && (OTG_FS_PKTCNT_GET(deptsiz))) {
+		DCC_LOG3(LOG_WARNING, "ep_id=%d len=%d %d outstanding packets in FIFO", 
+				 ep_id, len, OTG_FS_PKTCNT_GET(deptsiz));
+		return -1;
 	}
 
-	DCC_LOG4(LOG_INFO, "ep_id=%d len=%d xfr_max=%d ret=%d", 
-			 ep_id, len, ep->xfr_max, ret);
+	depctl = otg_fs->inep[ep_id].diepctl;
+	if (ep_id == 0)
+		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
+	else
+		mpsiz = OTG_FS_MPSIZ_GET(depctl);
 
-	return ret;
+	if (len > 0) {
+		/* XXX: check whether to get rid of this division or not,
+		 if the CM3 div is used it is not necessary.... */
+		pktcnt = (len + (mpsiz - 1)) / mpsiz;
+		if (pktcnt > 6) {
+			pktcnt = 6;
+			xfrsiz = 6 * mpsiz;
+		} else {
+			xfrsiz = len;
+		}
+	} else {
+		/* zero lenght packet */
+		pktcnt = 1;
+		xfrsiz = 0;
+	}
+
+	ep = &drv->ep[ep_id];
+	ep->xfr_ptr = buf;
+	ep->xfr_rem = xfrsiz;
+	if ((xfrsiz % mpsiz) == 0) 
+		ep->state = EP_IN_DATA_ZLP;
+	else
+		ep->state = EP_IN_DATA;
+
+	DCC_LOG4(LOG_INFO, "ep_id=%d pktcnt=%d xfrsiz=%d xfr_max=%d", 
+			 ep_id, pktcnt, xfrsiz, ep->xfr_max);
+
+	otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+		OTG_FS_XFRSIZ_SET(xfrsiz); 
+	/* enable end point, clear NACK */
+	otg_fs->inep[ep_id].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+	/* umask FIFO empty interrupt */
+	otg_fs->diepempmsk |= (1 << ep_id);
+
+	return xfrsiz;
+}
+
+static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
+{
+	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
+	uint32_t depctl;
+	uint32_t deptsiz;
+	uint32_t mpsiz;
+	uint32_t xfrsiz;
+	uint32_t pktcnt;
+	uint32_t free;
+	uint32_t data;
+	void * buf = ep->xfr_ptr;
+	uint8_t * cp;
+	int cnt;
+	int i;
+
+	DCC_LOG2(LOG_INFO, "cnt=%d ptr=%p", cnt, ep->xfr_ptr);
+
+	free = otg_fs->inep[ep_id].dtxfsts * 4;
+	depctl = otg_fs->inep[ep_id].diepctl;
+	deptsiz = otg_fs->inep[ep_id].dieptsiz;
+	if (ep_id == 0)
+		mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
+	else
+		mpsiz = OTG_FS_MPSIZ_GET(depctl);
+	xfrsiz = OTG_FS_XFRSIZ_GET(deptsiz);
+	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
+	(void)pktcnt;
+
+	DCC_LOG5(LOG_INFO, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+			 ep_id, mpsiz, pktcnt, xfrsiz, free);
+
+	if (xfrsiz < mpsiz) {
+		if (free < xfrsiz) {
+			DCC_LOG(LOG_PANIC, "free < xfrsiz !!!");
+			otg_fs->diepempmsk &= ~(1 << ep_id);
+			return false;
+		}
+		/* Transfer the last partial packet */
+		cnt = xfrsiz;
+	} else {
+		if (free < mpsiz) {
+			DCC_LOG(LOG_PANIC, "free < mpsiz !!!");
+			otg_fs->diepempmsk &= ~(1 << ep_id);
+			return false;
+		}
+		if (free < xfrsiz) {
+			/* Transfer only full packets */
+			cnt = (free / mpsiz) * mpsiz;
+		} else {
+			/* Transfer all */
+			cnt = xfrsiz;
+		}
+	}
+
+	/* push into fifo */
+	cp = (uint8_t *)buf;
+	for (i = 0; i < cnt; i += 4) {
+		data = cp[0] + (cp[1] << 8) + (cp[2] << 16) + (cp[3] << 24);
+		otg_fs->dfifo[ep_id].push = data;
+		cp += 4;
+	}	
+
+	DCC_LOG2(LOG_MSG, "Tx: (%d) free=%d", cnt, 
+			 otg_fs->inep[ep_id].dtxfsts * 4 );
+
+	ep->xfr_ptr += cnt;
+	ep->xfr_rem -= cnt;
+
+	return true;
 }
 
 int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
@@ -698,11 +783,58 @@ static void stm32f_otg_dev_ep_out(struct stm32f_otg_drv * drv,
 static void stm32f_otg_dev_ep_in(struct stm32f_otg_drv * drv, int ep_id)
 {
 	struct stm32f_otg_ep * ep = &drv->ep[ep_id];
+	struct stm32f_otg_fs * otg_fs = drv->otg_fs;
 
-	DCC_LOG1(LOG_MSG, "ep_id=%d", ep_id);
+	if (ep->state == EP_IN_DATA_ZLP) {
+		DCC_LOG1(LOG_INFO, "ep_id=%d ZLP!", ep_id);
+		otg_fs->inep[ep_id].dieptsiz = OTG_FS_PKTCNT_SET(1) | 
+			OTG_FS_XFRSIZ_SET(0);
+		otg_fs->inep[ep_id].diepctl |= OTG_FS_EPENA | OTG_FS_CNAK;
+		/* umask FIFO empty interrupt */
+		otg_fs->diepempmsk |= (1 << ep_id);
+		ep->state = EP_IDLE;
+		return;
+	}
 
+	DCC_LOG1(LOG_INFO, "ep_id=%d EOT", ep_id);
 	/* call class endpoint callback */
 	ep->on_in(drv->cl, ep_id);
+}
+
+static void stm32f_otg_ep0_xfer_setup(struct stm32f_otg_fs * otg_fs, int len)
+{
+	uint32_t depctl;
+	uint32_t mpsiz;
+	uint32_t xfrsiz;
+	uint32_t pktcnt;
+
+	depctl = otg_fs->inep[0].diepctl;
+	mpsiz = OTGFS_EP0_MPSIZ_GET(depctl);
+
+	if (len > 0) {
+		/* XXX: check whether to get rid of this division or not,
+		 if the CM3 div is used it is not necessary.... */
+		pktcnt = (len + (mpsiz - 1)) / mpsiz;
+		if (pktcnt > 6) {
+			pktcnt = 6;
+			xfrsiz = 6 * mpsiz;
+		} else {
+			xfrsiz = len;
+		}
+	} else {
+		/* zero lenght packet */
+		pktcnt = 1;
+		xfrsiz = 0;
+	}
+
+	DCC_LOG2(LOG_INFO, "ep_id=0 pktcnt=%d xfrsiz=%d", pktcnt, xfrsiz);
+
+	otg_fs->inep[0].dieptsiz = OTG_FS_PKTCNT_SET(pktcnt) | 
+		OTG_FS_XFRSIZ_SET(xfrsiz); 
+	/* enable end point, clear NACK */
+	otg_fs->inep[0].diepctl = depctl | OTG_FS_EPENA | OTG_FS_CNAK; 
+	/* umask FIFO empty interrupt */
+	otg_fs->diepempmsk |= (1 << 0);
 }
 
 static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
@@ -720,7 +852,6 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		return;
 	}
 
-
 	if (ep->xfr_rem == 0) {
 		otg_fs->diepempmsk &= ~(1 << 0);
 		/* Prepare to receive */
@@ -732,12 +863,7 @@ static void stm32f_otg_dev_ep0_in(struct stm32f_otg_drv * drv)
 		return;
 	} 
 	
-	if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
-		DCC_LOG(LOG_ERROR, "stm32f_otg_fs_txf_setup() failed!");
-	} else {
-		/* umask FIFO empty interrupt */
-		otg_fs->diepempmsk |= (1 << 0);
-	}
+	stm32f_otg_ep0_xfer_setup(otg_fs, ep->xfr_rem);
 }
 
 static void stm32f_otg_dev_ep0_out(struct stm32f_otg_drv * drv)
@@ -786,12 +912,7 @@ static void stm32f_otg_dev_ep0_setup(struct stm32f_otg_drv * drv)
 		ep->xfr_rem = MIN(req->length, len);
 		DCC_LOG1(LOG_INFO, "EP0 data lenght = %d", ep->xfr_rem);
 		/* prepare fifo to transmit */
-		if (stm32f_otg_fs_txf_setup(otg_fs, 0, ep->xfr_rem) < 0) {
-			DCC_LOG(LOG_WARNING, "stm32f_otg_fs_txf_setup() failed!");
-		} else {
-			/* umask FIFO empty interrupt */
-			otg_fs->diepempmsk |= (1 << 0);
-		}
+		stm32f_otg_ep0_xfer_setup(otg_fs, ep->xfr_rem);
 	} else {
 		/* Control Write SETUP transaction (OUT Data Phase) */
 		ep->xfr_ptr = ep->xfr_buf;

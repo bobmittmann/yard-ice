@@ -313,6 +313,11 @@ struct simrpc_pcb * simrpc_open(unsigned int daddr)
 	struct simrpc_pcb * sp;
 	struct simlnk * lnk; 
 
+	if ((sp = simrpc_pcb_alloc()) == NULL) {
+		WARN("simrpc_pcb_alloc() failed!");
+		return NULL;
+	}
+
 	if ((lnk = simrpc_route(daddr)) == NULL)
 		return NULL;
 

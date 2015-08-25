@@ -19,26 +19,25 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+SDK = ../../../../sdk
 
-PROG = thinkos
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
+		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
+		   $(SDK)/libcrc $(SDK)/libtcpip $(SDK)/libhttpd \
+		   $(SDK)/libtty $(SDK)/libshell $(SDK)/libtrace \
+		   $(SDK)/libxmodem $(SDK)/libhexdump
 
-CFILES = boot.c board.c simlnk.c simrpc_mem.c simrpc_sys.c test.c
+INCPATH = $(SDK)/include ../../include
 
-SDK = ../../../sdk
+CDEFS = CONFIG_H
+CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
+O := .
 
-LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libcrc $(SDK)/libthinkos $(SDK)/libice-comm
+MACH = stm32f427
+THINKAPP = 1
+include ../../../../mk/stm32f4xx.mk
 
-LIBS = cm3 stm32f util crc thinkos ice-comm gcc 
+all:: libs-install
 
-INCPATH = $(SDK)/include ../include ../../include
-
-CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
-
-CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
-
-JTAGTOOL_ADDR = 192.168.10.51
-
-MACH = stm32l151xc
-include ../../../mk/stm32l1xx.mk
+clean:: 
+	$(Q)$(RM) *.a

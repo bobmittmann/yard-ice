@@ -266,8 +266,8 @@ bool board_autoboot(uint32_t tick)
 	if (mode == 0) /* Production mode */
 		return true; 
 
-	if (tick == 0)
-		wave_play();
+//	if (tick == 0)
+//		wave_play();
 
 	if (tick == 1)
 		wave_pause();

@@ -154,8 +154,8 @@ void stdio_init(void)
 {
 	FILE * f;
 
-//	f = console_fopen();
-	f = null_fopen(NULL);
+	f = console_fopen();
+//	f = null_fopen(NULL);
 
 	/* initialize STDIO */
 	stderr = f;
@@ -326,7 +326,7 @@ int main(int argc, char ** argv)
 	simrpc_init();
 
 	for (i = 0; i < 10000; ++i) {
-//		remote_test(1);
+		remote_test(1);
 //		remote_test(2);
 //		remote_test(3);
 //		remote_test(4);

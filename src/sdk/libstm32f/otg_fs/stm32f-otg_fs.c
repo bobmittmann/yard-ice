@@ -159,9 +159,9 @@ int stm32f_otg_fs_txf_setup(struct stm32f_otg_fs * otg_fs,
 		/* XXX: check whether to get rid of this division or not,
 		 if the CM3 div is used it is not necessary.... */
 		pktcnt = (len + (mpsiz - 1)) / mpsiz;
-		if (pktcnt > 7) {
-			pktcnt = 7;
-			xfrsiz = 7 * mpsiz;
+		if (pktcnt > 6) {
+			pktcnt = 6;
+			xfrsiz = 6 * mpsiz;
 		} else {
 			xfrsiz = len;
 		}
@@ -214,7 +214,7 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep_id,
 	pktcnt = OTG_FS_PKTCNT_GET(deptsiz);
 	(void)pktcnt;
 
-	DCC_LOG5(LOG_MSG, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
+	DCC_LOG5(LOG_INFO, "ep_id=%d mpsiz=%d pktcnt=%d xfrsiz=%d free=%d", 
 			 ep_id, mpsiz, pktcnt, xfrsiz, free);
 
 	if (xfrsiz < mpsiz) {
@@ -253,8 +253,6 @@ int stm32f_otg_fs_txf_push(struct stm32f_otg_fs * otg_fs, unsigned int ep_id,
 
 	return cnt;
 }
-
-
 
 void stm32f_otg_fs_device_init(struct stm32f_otg_fs * otg_fs)
 {

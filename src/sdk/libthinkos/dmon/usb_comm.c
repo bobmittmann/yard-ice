@@ -668,6 +668,8 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 			DCC_LOG1(LOG_WARNING, "ret=%d!!", ret);
 			return ret;
 		}
+
+		DCC_LOG(LOG_MSG, "EOT");
 	}
 
 	DCC_LOG1(LOG_MSG, "return=%d.", len);
