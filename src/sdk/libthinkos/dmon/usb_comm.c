@@ -649,9 +649,6 @@ int dmon_comm_send(struct dmon_comm * comm, const void * buf, unsigned int len)
 	int ret;
 	int n;
 
-	if (len == 64)
-		DCC_LOG(LOG_WARNING, "64 bytes!");
-
 	rem = len;
 	while (rem) {
 		if ((n = usb_dev_ep_pkt_xmit(dev->usb, dev->in_ep, ptr, rem)) < 0) {

@@ -213,7 +213,7 @@ static int rsp_get_c_thread(struct gdb_rspd * gdb)
 
 static inline int rsp_ack(struct gdb_rspd * gdb)
 {
-	DCC_LOG(LOG_TRACE, "--> Ack.");
+	DCC_LOG(LOG_INFO, "--> Ack.");
 	return dmon_comm_send(gdb->comm, "+", 1);
 }
 
@@ -898,8 +898,9 @@ static int rsp_register_set(struct gdb_rspd * gdb, char * pkt)
 
 int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 {
-	uint8_t buf[(RSP_BUFFER_LEN - 5) / 2];
+	uint32_t buf[((RSP_BUFFER_LEN - 8) / 2) / 4];
 	unsigned int addr;
+	uint8_t * data;
 	char * cp;
 	int size;
 	int ret;
@@ -912,9 +913,9 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
-	max = (RSP_BUFFER_LEN - 5) >> 1;
+	max = (RSP_BUFFER_LEN - 8) / 2;
 
 	if (size > max)
 		size = max;
@@ -924,11 +925,12 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 		return rsp_error(gdb, 2);
 	}
 	
+	data = (uint8_t *)buf;
 	cp = pkt;
 	*cp++ = '$';
 
 	for (i = 0; i < ret; ++i)
-		cp += char2hex(cp, buf[i]);
+		cp += char2hex(cp, data[i]);
 		
 	n = cp - pkt;
 	return rsp_pkt_send(gdb, pkt, n);
@@ -1383,7 +1385,7 @@ static int rsp_memory_write_bin(struct gdb_rspd * gdb, char * pkt)
 		DCC_LOG(LOG_WARNING, "active application!");
 	}
 
-	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
+	DCC_LOG3(LOG_TRACE, "addr=%08x size=%d cp=%08x", addr, size, cp);
 
 	if (target_mem_write(gdb->target, addr, cp, size) < 0) {
 		return rsp_error(gdb, 1);

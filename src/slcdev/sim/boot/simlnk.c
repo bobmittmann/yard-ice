@@ -128,7 +128,7 @@ void stm32_usart2_isr(void)
 			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
 
-			DCC_LOG2(LOG_MSG, "BRK! opc=%08x cnt=%d", opc, cnt);
+			DCC_LOG2(LOG_INFO, "BRK! opc=%08x cnt=%d", opc, cnt);
 
 			if (cnt > 4) {
 				/* process this request */

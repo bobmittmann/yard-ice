@@ -642,9 +642,6 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 
 	while (rem) {
 		if (addr2block(tgt->mem.ram, addr, &blk)) {
-			uint8_t * dst = (uint8_t *)addr;
-			int i;
-
 			if (blk.ro) {
 				DCC_LOG2(LOG_ERROR, "read only block addr=0x%08x size=%d", 
 						 blk.addr, blk.size);
@@ -658,9 +655,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 			if (cnt > rem)
 				cnt = rem;
 
-			for (i = 0; i < cnt; ++i)
-				dst[i] = src[i];
-
+			__thinkos_memcpy((void *)addr, src, cnt);
 		} else if (addr2block(tgt->mem.flash, addr, &blk)) {
 			uint32_t offs;
 
@@ -715,8 +710,6 @@ int target_mem_read(struct gdb_target * tgt, uint32_t addr,
 
 	while (rem) {
 		unsigned int cnt;
-		unsigned int i;
-		uint8_t * src; 
 
 		if (addr2block(tgt->mem.ram, addr, &blk)) {
 			/* not flash */
@@ -735,9 +728,7 @@ int target_mem_read(struct gdb_target * tgt, uint32_t addr,
 		if (cnt > rem)
 			cnt = rem;
 
-		src = (uint8_t *)addr;;
-		for (i = 0; i < cnt; ++i)
-			dst[i] = src[i];
+		__thinkos_memcpy(dst, (void *)addr, cnt);
 
 		addr += cnt;
 		dst += cnt;

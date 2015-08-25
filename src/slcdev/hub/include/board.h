@@ -100,12 +100,29 @@
  * Serial Flash  connections
  * ------------------------------------------------------------------------- */
 
+/* IO Pins */
 #define IO_SFLASH_SCK     STM32_GPIOE, 12
 #define IO_SFLASH_MISO    STM32_GPIOE, 13
 #define IO_SFLASH_MOSI    STM32_GPIOE, 14
 #define IO_SFLASH_CS      STM32_GPIOE, 11
+#define AF_SPI_SFLASH     GPIO_AF5
+/* SPI */
 #define SPI_SFLASH        STM32F_SPI4
-#define SFLASH_SPI_AF     GPIO_AF6 
+#define CLK_SPI_SFLASH    STM32_CLK_SPI4
+#define IRQ_SPI_SFLASH    STM32F_IRQ_SPI4
+/* DMA */
+#define DMA_SPI_SFLASH              STM32F_DMA2
+#define DMA_SPI_RX_CHAN_SFLASH      5
+#define DMA_SPI_RX_STREAM_SFLASH    3
+#define DMA_SPI_TX_CHAN_SFLASH      5
+#define DMA_SPI_TX_STREAM_SFLASH    4
+
+#if 0
+#define DMA_SPI_RX_CHAN_SFLASH      4
+#define DMA_SPI_RX_STREAM_SFLASH    0
+#define DMA_SPI_TX_CHAN_SFLASH      4
+#define DMA_SPI_TX_STREAM_SFLASH    2
+#endif
 
 /* -------------------------------------------------------------------------
  * Speaker

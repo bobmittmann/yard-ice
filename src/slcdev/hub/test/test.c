@@ -95,9 +95,15 @@ void __attribute__((noreturn)) supervisor_task(void)
 
 		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
 			trace_ts2timeval(&tv, trace.dt);
-			fprintf(monitor_stream, "%s %2d.%06d: %s\n", 
-					trace_lvl_tab[trace.ref->lvl],
-					(int)tv.tv_sec, (int)tv.tv_usec, s);
+			if (trace.ref->lvl <= TRACE_LVL_WARN)
+				fprintf(monitor_stream, "%s %2d.%06d: %s,%d: %s\n",
+						trace_lvl_tab[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec,
+						trace.ref->func, trace.ref->line, s);
+			else
+				fprintf(monitor_stream, "%s %2d.%06d: %s\n",
+						trace_lvl_tab[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec, s);
 		}
 
 		if (monitor_auto_flush)
@@ -298,6 +304,8 @@ void remote_test(unsigned int daddr)
 	simrpc_close(sp);
 }
 
+void flash_test(void);
+
 int main(int argc, char ** argv)
 {
 	int i;
@@ -325,12 +333,14 @@ int main(int argc, char ** argv)
 
 	simrpc_init();
 
+	flash_test();
+
 	for (i = 0; i < 10000; ++i) {
 		remote_test(1);
-//		remote_test(2);
-//		remote_test(3);
-//		remote_test(4);
-//		remote_test(5);
+		remote_test(2);
+		remote_test(3);
+		remote_test(4);
+		remote_test(5);
 		thinkos_sleep(1000);
 	}
 

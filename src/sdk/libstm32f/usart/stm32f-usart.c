@@ -35,7 +35,7 @@ const struct stm32_usart * const stm32_usart_lut[] = {
 	STM32_UART7,
 #endif
 #ifdef STM32_UART8
-	STM32_USART6,
+	STM32_UART8,
 #endif
 };
 

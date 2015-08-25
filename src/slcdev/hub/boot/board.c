@@ -228,13 +228,13 @@ void board_init(void)
 	stm32_gpio_set(IO_SFLASH_CS);
 
 	stm32_gpio_mode(IO_SFLASH_SCK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_af(IO_SFLASH_SCK, SFLASH_SPI_AF);
+	stm32_gpio_af(IO_SFLASH_SCK, AF_SPI_SFLASH);
 
 	stm32_gpio_mode(IO_SFLASH_MISO, ALT_FUNC, SPEED_HIGH);
-	stm32_gpio_af(IO_SFLASH_MISO, SFLASH_SPI_AF);
+	stm32_gpio_af(IO_SFLASH_MISO, AF_SPI_SFLASH);
 
 	stm32_gpio_mode(IO_SFLASH_MOSI, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-	stm32_gpio_af(IO_SFLASH_MOSI, SFLASH_SPI_AF);
+	stm32_gpio_af(IO_SFLASH_MOSI, AF_SPI_SFLASH);
 
 	/* - Speaker ----------------------------------------------------*/
 	stm32_gpio_mode(IO_DAC2, ANALOG, 0);
@@ -376,9 +376,22 @@ const struct mem_desc sram_desc = {
 	.name = "RAM",
 	.blk = {
 		{ 0x10000000, BLK_RW, SZ_64K,  1 }, /*  CCM - Main Stack */
+
 		{ 0x20000000, BLK_RO, SZ_4K,   1 }, /* Bootloader: 4KiB */
 		{ 0x20001000, BLK_RW, SZ_4K,  27 }, /* Application: 108KiB */
 		{ 0x2001c000, BLK_RW, SZ_16K,  1 }, /* SRAM 2: 16KiB */
+		{ 0x20020000, BLK_RW, SZ_64K,  1 }, /* SRAM 3: 64KiB */
+
+		{ 0x22000000, BLK_RO, SZ_512K, 1 }, /* Bootloader - bitband */
+		{ 0x22080000, BLK_RW, SZ_512K, 27}, /* Application - bitband */
+		{ 0x22e00000, BLK_RW, SZ_2M,   1 }, /* SRAM 2 - bitband */
+		{ 0x23000000, BLK_RW, SZ_8M,   1 }, /* SRAM 3 - bitband */
+
+#ifdef ENABLE_PRIPHERAL_MEM
+		{ 0x40000000, BLK_RO, SZ_1M,   1 },  /* Peripheral */
+		{ 0x42000000, BLK_RO, SZ_128M, 1 },  /* Peripheral - bitband */
+#endif
+
 		{ 0x00000000, 0, 0, 0 }
 	}
 }; 

@@ -165,6 +165,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	struct simlnk * lnk = sp->lnk;
 	uint32_t opc;
 	uint32_t seq;
+	int ret;
 
 	seq = sp->seq++; 
 	opc = mkopc(daddr, saddr, seq, insn);
@@ -185,9 +186,14 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 		return SIMRPC_EDRIVER;
 	}
 
-	if (thinkos_flag_timedtake(lnk->rx.flag, tmo) < 0) {
-		ERR("thinkos_flag_take() failed!");
-		return SIMRPC_ESYSTEM;
+	if ((ret = thinkos_flag_timedtake(lnk->rx.flag, tmo)) < 0) {
+		if (ret == THINKOS_ETIMEDOUT) {
+			WARN("thinkos_flag_take() timed out!");
+			return SIMRPC_ETIMEDOUT;
+		} else {
+			ERR("thinkos_flag_take() failed!");
+			return SIMRPC_ESYSTEM;
+		}
 	}
 
 	if (lnk->rx.cnt < 4) {

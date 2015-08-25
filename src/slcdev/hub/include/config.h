@@ -30,7 +30,7 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX 80
+#define THINKOS_IRQ_MAX 90
 
 #define THINKOS_ENABLE_IDLE_WFI 1
 
