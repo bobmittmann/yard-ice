@@ -170,10 +170,19 @@
    Serial Flash Elementary Driver
    -------------------------------------------------------------------------- */
 
+/* Serial flash geometry info */
 #define SF_PAGE_SIZE        256
 #define SF_SECTOR_SIZE    65536
 #define SF_SUBSECTOR_SIZE  4096
-#define SF_SECTOR_COUNT    1024
+//#define SF_SECTOR_COUNT    1024 /* 512Mb */
+#define SF_SECTOR_COUNT    512 /* 256Mb */
+
+/* Serial flash timing info */
+#define SF_SECTOR_ERASE_WAIT_TIME_MS     700
+#define SF_SUBSECTOR_ERASE_WAIT_TIME_MS  250
+#define SF_ERASE_STATUS_POLL_TIME_US    2000
+#define SF_PAGE_PROGRAM_WAIT_TIME_US     500
+#define SF_PROGRAM_STATUS_POLL_TIME_US    50
 
 struct sflash_dev {
 	int mutex;
@@ -288,6 +297,37 @@ void sflash_io_xfer(struct sflash_dev * sf,
 		rxd[i] = spi->dr;
 	}
 }
+
+#define SFLASH_TMR_FREQ 1000000
+
+static void sf_timer_init(void)
+{
+	struct stm32f_tim * tim = STM32F_TIM10;
+	unsigned int div;
+
+	/* Timer clock enable */
+	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM10);
+	/* get the total divisior */
+	div = (stm32f_tim2_hz + (SFLASH_TMR_FREQ / 2)) / SFLASH_TMR_FREQ;
+	/* Timer configuration */
+	tim->psc = div - 1;
+	tim->arr = 0;
+	tim->cnt = 0;
+	tim->dier = TIM_UIE; /* Update interrupt enable */
+	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS;
+	cm3_irq_pri_set(STM32F_IRQ_TIM10, IRQ_PRIORITY_HIGH);
+}
+
+static void sf_usleep(unsigned int usec)
+{
+	struct stm32f_tim * tim = STM32F_TIM10;
+
+	tim->arr = usec - 1;
+	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS | TIM_CEN;
+	thinkos_irq_wait(STM32F_IRQ_TIM10);
+	tim->sr = 0;
+}
+
 /* ------------------------------------------------------------------------
    Serial Flash Command Level private API
    ------------------------------------------------------------------------- */
@@ -484,7 +524,9 @@ int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr)
 
 	sf_write_enable(sf);
 	sf_sector_erase(sf, addr);
-	while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+	thinkos_sleep(SF_SECTOR_ERASE_WAIT_TIME_MS);
+	while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+		sf_usleep(SF_ERASE_STATUS_POLL_TIME_US);
 
 	sf->buf.sync = false;
 	sf->buf.valid = false;
@@ -497,7 +539,6 @@ int sflash_sector_erase(struct sflash_dev * sf, uint32_t addr)
 int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr)
 {
 	unsigned int sr;
-	unsigned int n;
 
 	/* Sanity check */
 	assert(sf != NULL);
@@ -514,19 +555,11 @@ int sflash_subsector_erase(struct sflash_dev * sf, uint32_t addr)
 	if ((sr & SF_STATUS_WEN_LATCH) == 0) {
 		return -2;
 	}
-	sf_write_enable(sf);
-	sf_subsector_erase(sf, addr);
-	n = 0;
-	do {
-		n++;
-		sr = sf_flag_status_read(sf);
-	} while ((sr & SF_FLAG_READY) == 0);
-	(void)n;
 
-	sr = sf_read_status(sf);
-	if (sr & SF_STATUS_BUSY) {
-		return -1;
-	}
+	sf_subsector_erase(sf, addr);
+	thinkos_sleep(SF_SUBSECTOR_ERASE_WAIT_TIME_MS);
+	while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+		sf_usleep(SF_ERASE_STATUS_POLL_TIME_US);
 
 	sf->buf.sync = false;
 	sf->buf.valid = false;
@@ -540,7 +573,6 @@ int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
 					  const void * buf, size_t count)
 {
 	unsigned int sr;
-	unsigned int n;
 
 	/* Sanity check */
 	assert(sf != NULL);
@@ -565,13 +597,9 @@ int sflash_page_write(struct sflash_dev * sf, uint32_t addr,
 	}
 
 	sf_page_program(sf, addr, count);
-
-	n = 0;
-	do {
-		n++;
-		sr = sf_flag_status_read(sf);
-	} while ((sr & SF_FLAG_READY) == 0);
-	(void)n;
+	sf_usleep(SF_PAGE_PROGRAM_WAIT_TIME_US);
+	while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+		sf_usleep(SF_PROGRAM_STATUS_POLL_TIME_US);
 
 	sf->buf.sync = false;
 	sf->buf.valid = false;
@@ -679,7 +707,9 @@ int sflash_seek(struct sflash_dev * sf, unsigned int pos)
 		if (sf->buf.valid && !sf->buf.sync) {
 			sf_write_enable(sf);
 			sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
-			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+			sf_usleep(SF_PAGE_PROGRAM_WAIT_TIME_US);
+			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+				sf_usleep(SF_PROGRAM_STATUS_POLL_TIME_US);
 		}
 		sf->buf.sync = false;
 		sf->buf.valid = false;
@@ -704,7 +734,9 @@ int sflash_sync(struct sflash_dev * sf)
 		assert((sf->buf.addr & (SF_PAGE_SIZE - 1)) == 0);
 		sf_write_enable(sf);
 		sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
-		while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+		sf_usleep(SF_PAGE_PROGRAM_WAIT_TIME_US);
+		while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+			sf_usleep(SF_PROGRAM_STATUS_POLL_TIME_US);
 	}
 
 	sf->buf.sync = true;
@@ -743,7 +775,9 @@ int sflash_write(struct sflash_dev * sf, const void * buf, size_t count)
 			if (sf->buf.valid && !sf->buf.sync) {
 				sf_write_enable(sf);
 				sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
-				while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+				sf_usleep(SF_PAGE_PROGRAM_WAIT_TIME_US);
+				while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+					sf_usleep(SF_PROGRAM_STATUS_POLL_TIME_US);
 				/* XXX: the DMA transfer on sf_page_program will override the
 				 * DMA buffer, mark the buffer as invalid then.
 				 */
@@ -816,7 +850,9 @@ int sflash_read(struct sflash_dev * sf, void * buf, size_t count)
 			if (sf->buf.valid && !sf->buf.sync) {
 				sf_write_enable(sf);
 				sf_page_program(sf, sf->buf.addr, SF_PAGE_SIZE);
-				while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+				sf_usleep(SF_PAGE_PROGRAM_WAIT_TIME_US);
+				while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+					sf_usleep(SF_PROGRAM_STATUS_POLL_TIME_US);
 			}
 
 			/* Read from serial flash */
@@ -870,12 +906,16 @@ int sflash_erase(struct sflash_dev * sf, uint32_t addr, size_t count)
 		if (((addr & (SF_SECTOR_SIZE - 1)) == 0) && (rem >= SF_SECTOR_SIZE)) {
 			sf_write_enable(sf);
 			sf_sector_erase(sf, addr);
-			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+			thinkos_sleep(SF_SECTOR_ERASE_WAIT_TIME_MS);
+			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0)
+				sf_usleep(SF_ERASE_STATUS_POLL_TIME_US);
 			n = SF_SECTOR_SIZE;
 		} else {
 			sf_write_enable(sf);
 			sf_subsector_erase(sf, addr);
+			thinkos_sleep(SF_SUBSECTOR_ERASE_WAIT_TIME_MS);
 			while ((sf_flag_status_read(sf) & SF_FLAG_READY) == 0);
+				sf_usleep(SF_ERASE_STATUS_POLL_TIME_US);
 			n = SF_SUBSECTOR_SIZE;
 		}
 
@@ -914,7 +954,9 @@ struct sflash_dev * sflash_init(void)
 	static struct sflash_dev sflash_dev_singleton;
 	struct sflash_dev * sf = &sflash_dev_singleton;
 	struct stm32f_spi * spi = SPI_SFLASH;
-	unsigned int freq = 25000000; /* 25 MHz */
+//	unsigned int freq = 10500000; /* 10.5 MHz */
+	unsigned int freq = 21000000; /* 21 MHz */
+//	unsigned int freq = 42000000; /* 42 MHz */
 	unsigned int div;
 	unsigned int br;
 
@@ -926,13 +968,13 @@ struct sflash_dev * sflash_init(void)
 	stm32_gpio_mode(IO_SFLASH_CS, OUTPUT, SPEED_HIGH);
 	stm32_gpio_set(IO_SFLASH_CS);
 
-	stm32_gpio_mode(IO_SFLASH_SCK, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_SFLASH_SCK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_af(IO_SFLASH_SCK, AF_SPI_SFLASH);
 
-	stm32_gpio_mode(IO_SFLASH_MISO, ALT_FUNC, PULL_UP);
+	stm32_gpio_mode(IO_SFLASH_MISO, ALT_FUNC, PULL_UP | SPEED_HIGH);
 	stm32_gpio_af(IO_SFLASH_MISO, AF_SPI_SFLASH);
 
-	stm32_gpio_mode(IO_SFLASH_MOSI, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_mode(IO_SFLASH_MOSI, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_af(IO_SFLASH_MOSI, AF_SPI_SFLASH);
 #endif
 
@@ -981,6 +1023,9 @@ struct sflash_dev * sflash_init(void)
 	sf->buf.valid = false;
 	sf->buf.sync = false;
 	sf->buf.addr = 0;
+
+	/* Initialize the timer */
+	sf_timer_init();
 
 	/* Allocate a mutex for high level operations */
 	sf->mutex = thinkos_mutex_alloc();

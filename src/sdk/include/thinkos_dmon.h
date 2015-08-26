@@ -70,6 +70,80 @@ static inline void dmon_signal(int ev) {
 	asm volatile ("isb\n" :  :  : );
 }
 
+
+#define SZ_128   7
+#define SZ_256   8
+#define SZ_1K   10
+#define SZ_2K   11
+#define SZ_4K   12
+#define SZ_8K   13
+#define SZ_16K  14
+#define SZ_32K  15
+#define SZ_64K  16
+#define SZ_128K 17
+#define SZ_256K 18
+#define SZ_512K 19
+#define SZ_1M   20
+#define SZ_2M   21
+#define SZ_4M   22
+#define SZ_8M   23
+#define SZ_16M  24
+#define SZ_32M  25
+#define SZ_64M  26
+#define SZ_128M 27
+#define SZ_256M 28
+#define SZ_512M 29
+#define SZ_1G   30
+#define SZ_2G   31
+
+#define BLK_RW  (0 << 7)
+#define BLK_RO  (1 << 7)
+
+struct blk_desc {
+	uint32_t ref;
+	uint8_t  opt;
+	uint8_t  siz;
+	uint16_t cnt;
+};
+
+struct mem_desc {
+	char name[8];
+	struct blk_desc blk[];
+};
+
+struct thinkos_board {
+	char name[20];
+
+	struct {
+		uint8_t minor;
+		uint8_t major;
+	} hw_ver;
+
+	struct {
+		uint8_t minor;
+		uint8_t major;
+	} sw_ver;
+
+	struct {
+		const struct mem_desc * ram;
+		const struct mem_desc * flash;
+	} memory;
+
+	struct {
+		uint32_t start_addr;
+		uint32_t block_size;
+	} application;
+
+	bool (* init)(void);
+	void (* softreset)(void);
+	bool (* autoboot)(unsigned int tick);
+	bool (* configure)(struct dmon_comm *);
+	void (* upgrade)(struct dmon_comm *);
+	void (* on_appload)(void);
+};
+
+extern const struct thinkos_board this_board;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -148,10 +222,6 @@ int dmon_app_load_ymodem(struct dmon_comm * comm,
 bool dmon_app_suspend(void);
 
 bool dmon_app_continue(void);
-
-void dmon_comm_irq_config(struct dmon_comm * comm);
-
-void dmon_irq_disable_all(void);
 
 void dmon_soft_reset(struct dmon_comm * comm);
 

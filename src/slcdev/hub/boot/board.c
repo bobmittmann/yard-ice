@@ -149,14 +149,8 @@ void wave_play_init(const uint8_t * wave, unsigned int len)
 extern const uint8_t ice40lp384_bin[];
 extern const unsigned int sizeof_ice40lp384_bin;
 
-void board_init(void)
+static void io_init(void)
 {
-	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
-
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
@@ -239,11 +233,79 @@ void board_init(void)
 	/* - Speaker ----------------------------------------------------*/
 	stm32_gpio_mode(IO_DAC2, ANALOG, 0);
 
+}
+
+bool board_init(void)
+{
+	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
+
+	io_init();
+
 	wave_play_init(wave_c4, sizeof(wave_c4));
 
 	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
+
+	return true;
 }
 
+void board_softreset(void)
+{
+	struct stm32_rcc * rcc = STM32_RCC;
+#if 0
+	struct stm32f_dma * dma;
+	int i;
+
+	/* disable DMA */
+	dma = STM32F_DMA1;
+	for(i = 0; i < 8; ++i) {
+		dma->s[i].cr = 0;
+		while (dma->s[i].cr & DMA_EN); 
+	}
+
+	dma = STM32F_DMA2;
+	for(i = 0; i < 8; ++i) {
+		dma->s[i].cr = 0;
+		while (dma->s[i].cr & DMA_EN); 
+	}
+#endif
+
+	DCC_LOG1(LOG_TRACE, "AHB1ENR=0x%08x", rcc->ahb1enr);
+	DCC_LOG1(LOG_TRACE, "AHB2ENR=0x%08x", rcc->ahb2enr);
+	DCC_LOG1(LOG_TRACE, "AHB3ENR=0x%08x", rcc->ahb3enr);
+	DCC_LOG1(LOG_TRACE, "APB1ENR=0x%08x", rcc->apb1enr);
+	DCC_LOG1(LOG_TRACE, "APB2ENR=0x%08x", rcc->apb2enr);
+
+	/* Reset all peripherals except USB_OTG and GPIOA */
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
+	rcc->ahb3rstr = ~(0);
+	rcc->apb1rstr = ~(0);
+	rcc->apb2rstr = ~(0);
+
+
+	rcc->ahb1rstr = 0;
+	rcc->ahb2rstr = 0;
+	rcc->ahb3rstr = 0;
+	rcc->apb1rstr = 0;
+	rcc->apb2rstr = 0;
+
+	/* disable all peripherals clock sources except USB_OTG and GPIOA */
+	rcc->ahb1enr = (1 << RCC_CCMDATARAM) | (1 << RCC_GPIOA); 
+	rcc->ahb2enr = (1 << RCC_OTGFS);
+	rcc->ahb3enr = 0;
+	rcc->apb1enr = 0;
+	rcc->apb2enr = 0;
+
+	/* reinitialize IO's */
+	io_init();
+
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
+}
 
 bool board_autoboot(uint32_t tick)
 {
@@ -279,7 +341,7 @@ bool board_autoboot(uint32_t tick)
 	return (tick < 40) ? false : true;
 }
 
-void board_on_app_exec(void)
+void board_on_appload(void)
 {
 	wave_pause();
 	__led_off(IO_LED1);
@@ -301,7 +363,7 @@ struct board_cfg {
 #define IP4_ADDR(A, B, C, D) ((((A) & 0xff) << 0) | \
 		(((B) & 0xff) << 8) | (((C) & 0xff) << 16) | (((D) & 0xff) << 24))
 
-void board_configure(struct dmon_comm * comm)
+bool board_configure(struct dmon_comm * comm)
 {
 	uint32_t offs = 0x10000 - 0x0100;
 	struct board_cfg * cfg = (struct board_cfg *)(0x08000000 + offs);
@@ -316,19 +378,19 @@ void board_configure(struct dmon_comm * comm)
 				 IP4_ADDR2(cfg->ip_addr),
 				 IP4_ADDR3(cfg->ip_addr),
 				 IP4_ADDR4(cfg->ip_addr));
-		return;
+		return false;
 	}
 	do {
 		dmprintf(comm, "MS/TP address > ");
 		n = dmscanf(comm, "%d", &buf.mstp_addr);
 		if (n < 0)
-			return;
+			return false;
 	} while (n != 1);
 	do {
 		dmprintf(comm, "IP address > ");
 		n = dmscanf(comm, "%3d.%3d.%3d.%3d", &ip[0], &ip[1], &ip[2], &ip[3]);
 		if (n < 0)
-			return;
+			return false;
 	} while (n != 4);
 
 	buf.ip_addr = IP4_ADDR(ip[0], ip[1], ip[2], ip[3]);
@@ -337,6 +399,8 @@ void board_configure(struct dmon_comm * comm)
 	stm32_flash_write(offs, &buf, sizeof(buf));
 
 	dmprintf(comm, "Configuation saved.\r\n");
+
+	return true;
 }
 
 extern const uint8_t otg_xflash_pic[];
@@ -361,7 +425,7 @@ const struct magic bootloader_magic = {
 	}
 };
 
-void board_bootloader_upgrade(void)
+void board_upgrade(struct dmon_comm * comm)
 {
 	uint32_t * xflash_code = (uint32_t *)(0x20001000);
 	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *) = 
@@ -406,15 +470,29 @@ const struct mem_desc flash_desc = {
 	}
 }; 
 
-const struct gdb_target board_gdb_target = {
+const struct thinkos_board this_board = {
 	.name = "SLCDEV-HUB",
-	.mem = {
+	.hw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.sw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.memory = {
 		.ram = &sram_desc,
 		.flash = &flash_desc
 	},
-	.app = {
+	.application = {
 		.start_addr = 0x08010000,
 		.block_size = (64 + 7 * 128) * 1024
-	}
+	},
+	.init = board_init,
+	.softreset = board_softreset,
+	.autoboot = board_autoboot,
+	.configure = board_configure,
+	.upgrade = board_upgrade,
+	.on_appload = board_on_appload
 };
 

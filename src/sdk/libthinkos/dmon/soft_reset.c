@@ -52,8 +52,8 @@ void dmon_soft_reset(struct dmon_comm * comm)
 	dmon_breakpoint_clear_all();
 #endif
 
-	DCC_LOG(LOG_TRACE, "8. restore Comm interrupts...");
-	dmon_comm_irq_config(comm);
+	DCC_LOG(LOG_TRACE, "8. reset this board...");
+	this_board.softreset();
 
 	DCC_LOG(LOG_TRACE, "9. done.");
 }

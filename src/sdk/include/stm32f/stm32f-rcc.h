@@ -547,29 +547,29 @@
 /* RCC AHB1 peripheral clock register */
 #define STM32F_RCC_AHB1ENR 0x30
 
-#define RCC_OTGHSULPI 30
-#define RCC_OTGHS 29
-#define RCC_ETHMACPTP 28
-#define RCC_ETHMACRX 27
-#define RCC_ETHMACTX 26
-#define RCC_ETHMAC 25
-#define RCC_DMA2D 23
-#define RCC_DMA2 22
-#define RCC_DMA1 21
-#define RCC_CCMDATARAM 20
-#define RCC_BKPSRAM 18
-#define RCC_CRC 12
-#define RCC_GPIOK 10
-#define RCC_GPIOJ 9
-#define RCC_GPIOI 8
-#define RCC_GPIOH 7
-#define RCC_GPIOG 6
-#define RCC_GPIOF 5
-#define RCC_GPIOE 4
-#define RCC_GPIOD 3
-#define RCC_GPIOC 2
-#define RCC_GPIOB 1
-#define RCC_GPIOA 0
+#define RCC_OTGHSULPI   30
+#define RCC_OTGHS       29
+#define RCC_ETHMACPTP   28
+#define RCC_ETHMACRX    27
+#define RCC_ETHMACTX    26
+#define RCC_ETHMAC      25
+#define RCC_DMA2D       23
+#define RCC_DMA2        22
+#define RCC_DMA1        21
+#define RCC_CCMDATARAM  20
+#define RCC_BKPSRAM     18
+#define RCC_CRC         12
+#define RCC_GPIOK       10
+#define RCC_GPIOJ        9
+#define RCC_GPIOI        8
+#define RCC_GPIOH        7
+#define RCC_GPIOG        6
+#define RCC_GPIOF        5
+#define RCC_GPIOE        4
+#define RCC_GPIOD        3
+#define RCC_GPIOC        2
+#define RCC_GPIOB        1
+#define RCC_GPIOA        0
 
 /* USB OTG HSULPI clock enable */
 #define RCC_OTGHSULPIEN (1 << 30)
@@ -620,6 +620,12 @@
 /* Set and cleared by software.
    0: DMA1 clock disabled
    1: DMA1 clock enabled */
+
+/* CCMDATARAM clock enable */
+#define RCC_CCMDATARAMEN (1 << 20)
+/* Set and cleared by software.
+   0: CCMDATARAM clock disabled
+   1: CCMDATARAM clock enabled */
 
 /* Bits 20:19 Reserved, always read as 0. */
 
@@ -2584,7 +2590,6 @@ again in case of a new switch is required)
 #define STM32_CLK_PWR       STM32_APB1, RCC_PWR
 #define STM32_CLK_CAN2      STM32_APB1, RCC_CAN2
 #define STM32_CLK_CAN1      STM32_APB1, RCC_CAN1
-
 #define STM32_CLK_I2C3      STM32_APB1, RCC_I2C3
 #define STM32_CLK_I2C2      STM32_APB1, RCC_I2C2
 #define STM32_CLK_I2C1      STM32_APB1, RCC_I2C1
@@ -2592,12 +2597,10 @@ again in case of a new switch is required)
 #define STM32_CLK_UART4     STM32_APB1, RCC_UART4
 #define STM32_CLK_USART3    STM32_APB1, RCC_USART3
 #define STM32_CLK_USART2    STM32_APB1, RCC_USART2
-
 #define STM32_CLK_SPI3      STM32_APB1, RCC_SPI3
 #define STM32_CLK_SPI2      STM32_APB1, RCC_SPI2
 #define STM32_CLK_WWDG      STM32_APB1, RCC_WWDG
 #define STM32_CLK_TIM14     STM32_APB1, RCC_TIM14
-
 #define STM32_CLK_TIM13     STM32_APB1, RCC_TIM13
 #define STM32_CLK_TIM12     STM32_APB1, RCC_TIM12
 #define STM32_CLK_TIM7      STM32_APB1, RCC_TIM7
@@ -2607,16 +2610,13 @@ again in case of a new switch is required)
 #define STM32_CLK_TIM3      STM32_APB1, RCC_TIM3
 #define STM32_CLK_TIM2      STM32_APB1, RCC_TIM2
 
-
 #define STM32_CLK_LTDC      STM32_APB2, RCC_LTDC
-
 #define STM32_CLK_SAI1      STM32_APB2, RCC_SAI1
 #define STM32_CLK_SPI6      STM32_APB2, RCC_SPI6
 #define STM32_CLK_SPI5      STM32_APB2, RCC_SPI5
 #define STM32_CLK_TIM11     STM32_APB2, RCC_TIM11
 #define STM32_CLK_TIM10     STM32_APB2, RCC_TIM10
 #define STM32_CLK_TIM9      STM32_APB2, RCC_TIM9
-
 #define STM32_CLK_SYSCFG    STM32_APB2, RCC_SYSCFG
 #define STM32_CLK_SPI4      STM32_APB2, RCC_SPI4
 #define STM32_CLK_SPI1      STM32_APB2, RCC_SPI1
@@ -2624,7 +2624,6 @@ again in case of a new switch is required)
 #define STM32_CLK_ADC3      STM32_APB2, RCC_ADC3
 #define STM32_CLK_ADC2      STM32_APB2, RCC_ADC2
 #define STM32_CLK_ADC1      STM32_APB2, RCC_ADC1
-
 #define STM32_CLK_USART6    STM32_APB2, RCC_USART6
 #define STM32_CLK_USART1    STM32_APB2, RCC_USART1
 #define STM32_CLK_TIM8      STM32_APB2, RCC_TIM8
@@ -2783,7 +2782,7 @@ struct stm32_rcc {
 	uint32_t res0; 
 
 	volatile uint32_t apb1rstr;
-	volatile uint32_t pb2rstr;
+	volatile uint32_t apb2rstr;
 	uint32_t res1[2]; 
 
 	volatile uint32_t ahb1enr;

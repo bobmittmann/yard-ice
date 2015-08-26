@@ -279,8 +279,6 @@ static bool __ep_tx_push(struct stm32f_otg_drv * drv, int ep_id)
 	int cnt;
 	int i;
 
-	DCC_LOG2(LOG_INFO, "cnt=%d ptr=%p", cnt, ep->xfr_ptr);
-
 	free = otg_fs->inep[ep_id].dtxfsts * 4;
 	depctl = otg_fs->inep[ep_id].diepctl;
 	deptsiz = otg_fs->inep[ep_id].dieptsiz;
@@ -731,11 +729,9 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 		OTG_FS_SOFM |
 		OTG_FS_MMISM;
 
-
-	
-//	otg_hs_connect(otg_hs);
+//	otg_fs_connect(otg_hs);
 	/* Enable Cortex interrupt */
-	cm3_irq_enable(STM32F_IRQ_OTG_HS);
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 
 	DCC_LOG(LOG_INFO, "----------------------------------------");
 
@@ -1425,8 +1421,6 @@ const struct usb_dev_ops stm32f_otg_fs_ops = {
 /* USB device driver */
 const struct usb_dev stm32f_otg_fs_dev = {
 	.priv = (void *)&stm32f_otg_fs_drv0,
-	.irq[0] = STM32F_IRQ_OTG_FS,
-	.irq_cnt = 1,
 	.op = &stm32f_otg_fs_ops
 };
 

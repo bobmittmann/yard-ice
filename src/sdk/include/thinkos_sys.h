@@ -363,8 +363,9 @@ struct thinkos_rt {
 	uint32_t step_req; /* step request bitmap */
 	uint32_t step_svc; /* step at service call bitmap */
 	uint32_t step_brk; /* stop after at service call bitmap */
-	int16_t step_id; /* current stepping thread id */
-	int16_t break_id; /* thread stopped by a breakpoint or step request */
+	int8_t step_id; /* current stepping thread id */
+	int8_t break_id; /* thread stopped by a breakpoint or step request */
+	int16_t xcpt_irq; /* Exception at IRQ */
 #endif
 
 #if THINKOS_ENABLE_PROFILING

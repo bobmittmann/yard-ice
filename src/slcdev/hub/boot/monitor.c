@@ -32,13 +32,7 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
-
 #include <gdb.h>
-extern const struct gdb_target board_gdb_target;
-bool board_autoboot(uint32_t tick);
-void board_on_app_exec(void);
-void board_bootloader_upgrade(void);
-void board_configure(struct dmon_comm * comm);
 
 #ifndef BOOT_ENABLE_GDB
 #define BOOT_ENABLE_GDB 0
@@ -239,7 +233,6 @@ void monitor_task(struct dmon_comm *);
 
 int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 {
-	const struct gdb_target * tgt = &board_gdb_target;
 	int i;
 	int j;
 	int c;
@@ -266,7 +259,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_K:
 			dmprintf(comm, "^K\r\n");
 			dmon_soft_reset(comm);
-			board_configure(comm);
+			this_board.configure(comm);
 			break;
 		case CTRL_L:
 			dmon_soft_reset(comm);
@@ -274,7 +267,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			dmprintf(comm, "Confirm (yes/no)? ");
 			dmscanf(comm, "yes%n", &i);
 			if (i == 3)
-				board_bootloader_upgrade();
+				this_board.upgrade(comm);
 			break;
 		case CTRL_O:
 			dmon_print_osinfo(comm);
@@ -293,8 +286,8 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 		case CTRL_S:
 			dmprintf(comm, "^S\r\n");
-			monitor_dump_mem(comm, tgt->app.start_addr, 
-							 tgt->app.block_size);
+			monitor_dump_mem(comm, this_board.application.start_addr, 
+							 this_board.application.block_size);
 			break;
 		case CTRL_T:
 			dmon_print_thread(comm, monitor_thread_id);
@@ -310,17 +303,17 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			break;
 		case CTRL_Y:
 			dmprintf(comm, "^Y\r\n");
-			monitor_ymodem_recv(comm, tgt->app.start_addr, 
-								tgt->app.block_size);
+			monitor_ymodem_recv(comm, this_board.application.start_addr, 
+								this_board.application.block_size);
 			break;
 		case CTRL_W:
 			dmprintf(comm, "^W\r\n");
-			monitor_app_erase(comm, tgt->app.start_addr, 
-							  tgt->app.block_size);
+			monitor_app_erase(comm, this_board.application.start_addr, 
+							  this_board.application.block_size);
 			break;
 		case CTRL_Z:
 			dmprintf(comm, "^Z\r\n");
-			monitor_exec(comm, tgt->app.start_addr);
+			monitor_exec(comm, this_board.application.start_addr);
 			break;
 		default:
 			continue;
@@ -456,12 +449,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #endif
 
 		if (sigset & (1 << DMON_ALARM)) {
-			const struct gdb_target * tgt = &board_gdb_target;
 			dmon_clear(DMON_ALARM);
-			if (board_autoboot(tick_cnt++) && 
-				dmon_app_exec(tgt->app.start_addr, false)) {
+			if (this_board.autoboot(tick_cnt++) && 
+				dmon_app_exec(this_board.application.start_addr, false)) {
 				sigmask &= ~(1 << DMON_ALARM);
-				board_on_app_exec();
+				this_board.on_appload();
 			} else {
 				/* reastart the alarm timer */
 				dmon_alarm(125);

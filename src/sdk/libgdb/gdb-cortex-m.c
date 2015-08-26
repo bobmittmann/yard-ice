@@ -118,7 +118,11 @@ int thread_break_id(void)
 {
 	if (thinkos_rt.break_id == -1) {
 		DCC_LOG(LOG_WARNING, "invalid break thread!");
-		return thinkos_rt.active + THREAD_ID_OFFS;
+		if (thinkos_rt.xcpt_irq == -1) {
+			DCC_LOG(LOG_WARNING, "No exception at IRQ!");
+			return thinkos_rt.active + THREAD_ID_OFFS;
+		}
+		return THINKOS_THREAD_VOID + THREAD_ID_OFFS;
 	}
 
 	return thinkos_rt.break_id + THREAD_ID_OFFS;
@@ -429,7 +433,7 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 	bool tmw;
 	int n;
 
-	if (thread_id > THINKOS_THREADS_MAX) {
+	if (thread_id >= THINKOS_THREAD_VOID) {
 		DCC_LOG(LOG_ERROR, "Invalid thread!");
 		return -1;
 	}
@@ -447,11 +451,14 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 		DCC_LOG(LOG_ERROR, "Invalid thread state!");
 		return -1;
 	}
-	if (thread_id > THINKOS_THREADS_MAX)
-		return 0;
 
 	if (thread_id == THINKOS_THREAD_IDLE) {
-		n = str2hex(cp, "IDLE");
+		cp += str2hex(cp, "IDLE");
+	} else if (thread_id == THINKOS_THREAD_VOID) {
+		int ipsr;
+		ipsr = (thinkos_rt.void_ctx->xpsr & 0x1ff);
+		cp += str2hex(cp, "IRQ");
+		cp += int2str2hex(cp, ipsr - 16);
 	} else {
 #if THINKOS_ENABLE_THREAD_INFO
 		if (thinkos_rt.th_inf[thread_id] != NULL)
@@ -461,11 +468,14 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 #else
 		n = int2str2hex(cp, thread_id);
 #endif
+		cp += n;
 	}
-	cp += n;
 	cp += char2hex(cp, ' ');
 
 	if (thread_id == THINKOS_THREAD_IDLE) {
+		oid = THINKOS_WQ_READY;
+		tmw = false;
+	} else if (thread_id == THINKOS_THREAD_VOID) {
 		oid = THINKOS_WQ_READY;
 		tmw = false;
 	} else if (__thinkos_thread_isfaulty(thread_id)) {
@@ -630,7 +640,7 @@ static bool addr2block(const struct mem_desc * mem,
 
 #define FLASH_BASE ((uint32_t)STM32_FLASH_MEM)
 
-int target_mem_write(struct gdb_target * tgt, uint32_t addr, 
+int target_mem_write(uint32_t addr, 
 					 const void * ptr, unsigned int len)
 {
 	uint8_t * src = (uint8_t *)ptr;
@@ -641,7 +651,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 	rem = len;
 
 	while (rem) {
-		if (addr2block(tgt->mem.ram, addr, &blk)) {
+		if (addr2block(this_board.memory.ram, addr, &blk)) {
 			if (blk.ro) {
 				DCC_LOG2(LOG_ERROR, "read only block addr=0x%08x size=%d", 
 						 blk.addr, blk.size);
@@ -656,7 +666,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 				cnt = rem;
 
 			__thinkos_memcpy((void *)addr, src, cnt);
-		} else if (addr2block(tgt->mem.flash, addr, &blk)) {
+		} else if (addr2block(this_board.memory.flash, addr, &blk)) {
 			uint32_t offs;
 
 			if (blk.ro) {
@@ -697,8 +707,7 @@ int target_mem_write(struct gdb_target * tgt, uint32_t addr,
 	return len - rem;
 }
 
-int target_mem_read(struct gdb_target * tgt, uint32_t addr, 
-					void * ptr, unsigned int len)
+int target_mem_read(uint32_t addr, void * ptr, unsigned int len)
 {
 	uint8_t * dst = (uint8_t *)ptr;
 	struct mem_blk blk;
@@ -711,11 +720,11 @@ int target_mem_read(struct gdb_target * tgt, uint32_t addr,
 	while (rem) {
 		unsigned int cnt;
 
-		if (addr2block(tgt->mem.ram, addr, &blk)) {
+		if (addr2block(this_board.memory.ram, addr, &blk)) {
 			/* not flash */
 			DCC_LOG2(LOG_INFO, "RAM block addr=0x%08x size=%d", 
 					 blk.addr, blk.size);
-		} else if (addr2block(tgt->mem.flash, addr, &blk)) {
+		} else if (addr2block(this_board.memory.flash, addr, &blk)) {
 			/* flash */
 			DCC_LOG2(LOG_INFO, "FLASH block addr=0x%08x size=%d", 
 					 blk.addr, blk.size);

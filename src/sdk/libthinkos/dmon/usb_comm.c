@@ -786,19 +786,6 @@ const usb_class_events_t usb_mon_ev = {
 	.on_error = usb_mon_on_error
 };
 
-void dmon_comm_irq_config(struct dmon_comm * comm)
-{
-	struct usb_cdc_acm_dev * dev = (struct usb_cdc_acm_dev *)comm;
-	const usb_dev_t * usb = dev->usb;
-	int i;
-
-	for (i = 0; i < usb->irq_cnt; ++i)
-		cm3_irq_pri_set(usb->irq[i], MONITOR_PRIORITY);
-
-	for (i = 0; i < usb->irq_cnt; ++i)
-		cm3_irq_enable(usb->irq[i]);
-}
-
 struct dmon_comm * usb_comm_init(const usb_dev_t * usb)
 {
 	struct usb_cdc_acm_dev * dev = &usb_cdc_rt;
@@ -813,8 +800,6 @@ struct dmon_comm * usb_comm_init(const usb_dev_t * usb)
 
 	DCC_LOG(LOG_TRACE, "usb_dev_init()");
 	usb_dev_init(dev->usb, cl, &usb_mon_ev);
-
-	dmon_comm_irq_config((struct dmon_comm *)dev);
 
 	return (struct dmon_comm *)dev;
 }

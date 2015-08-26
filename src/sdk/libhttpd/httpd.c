@@ -26,6 +26,22 @@
 #include "httpd-i.h"
 #include "http_hdr.h"
 
+#ifndef HTTPD_POOL_SIZE
+#define HTTPD_POOL_SIZE 1
+#endif
+
+/*
+ * HTTP server control structure
+ */
+
+struct httpd {
+	struct tcp_pcb * tp;
+	/* server root directory */
+	const struct httpddir * dir;
+	/* authentication data */
+	const struct httpdauth * auth;
+};
+
 /* Authentication */
 #define HTTPAUTH_BASIC              0x77
 #define HTTPAUTH_DIGEST             0x00
@@ -361,44 +377,7 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 	return 0;
 }
 
-const struct httpdauth httpd_def_authlst[] = {
-	{ .uid = 0, .lvl = 0, .name = "", .passwd = "" }
-};
 
-struct tcp_pcb * httpd_start(struct httpd * httpd, 
-							 int port, int backlog,
-							 const struct httpddir dirlst[],
-							 const struct httpdauth authlst[])
-{
-	struct tcp_pcb * tp;
-
-	if (httpd == NULL) {
-		DCC_LOG(LOG_ERROR, "Invalid parameter!");
-		return NULL;
-	}
-
-	if ((tp = tcp_alloc()) == NULL) {
-		DCC_LOG(LOG_ERROR, "Can't alloc TCP PCB!");
-		return NULL;
-	}
-
-	tcp_bind(tp, INADDR_ANY, htons(port));
-
-	if (tcp_listen(tp, backlog) != 0) {
-		DCC_LOG(LOG_ERROR, "Can't register the TCP listener!");
-		return NULL;
-	}
-
-	httpd->tp = tp;
-	httpd->dir = dirlst;
-
-	if (authlst == NULL)
-		httpd->auth = httpd_def_authlst;
-	else
-		httpd->auth = authlst;
-
-	return tp;
-}
 
 int http_close(struct httpctl * ctl)
 {
@@ -492,55 +471,68 @@ const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 	return obj;
 }
 
-#if 0
-int http_process(struct httpd * httpd, struct httpctl * ctl)
+/* ---------------------------------------------------------------------------
+ * HTTP server
+ * ---------------------------------------------------------------------------
+ */
+
+const struct httpdauth httpd_def_authlst[] = {
+	{ .uid = 0, .lvl = 0, .name = "", .passwd = "" }
+};
+
+int httpd_init(struct httpd * httpd,
+							 int port, int backlog,
+							 const struct httpddir dirlst[],
+							 const struct httpdauth authlst[])
 {
-	switch (ctl->method) {
-	case HTTPMETHOD_GET:
-		DCC_LOG(LOG_INFO, "GET");
-		http_get(httpd, ctl);
-		break;
-	case HTTPMETHOD_POST:
-		DCC_LOG(LOG_INFO, "POST");
-		http_post(httpd, ctl);
-		break;
+	struct tcp_pcb * tp;
+
+	if (httpd == NULL) {
+		DCC_LOG(LOG_ERROR, "Invalid parameter!");
+		return -1;
 	}
+
+	if ((tp = tcp_alloc()) == NULL) {
+		DCC_LOG(LOG_ERROR, "Can't alloc TCP PCB!");
+		return -2;
+	}
+
+	tcp_bind(tp, INADDR_ANY, htons(port));
+
+	if (tcp_listen(tp, backlog) != 0) {
+		DCC_LOG(LOG_ERROR, "Can't register the TCP listener!");
+		return -3;
+	}
+
+	httpd->tp = tp;
+	httpd->dir = dirlst;
+
+	if (authlst == NULL)
+		httpd->auth = httpd_def_authlst;
+	else
+		httpd->auth = authlst;
 
 	return 0;
 }
 
+/* -------------------------------------------------------------------------
+ * Pool of resources
+ * ------------------------------------------------------------------------- */
 
-#define SIZEOF_HTTPCTL (sizeof(struct httpctl) + HTTPD_URI_MAX_LEN)
-#define SIZEOF_HTTPD (sizeof(struct httpd)
+static struct httpd httpd_pool[HTTPD_POOL_SIZE];
 
-/*
- * HTTP server control structure
- */
-struct httpd {
-	struct tcp_pcb * tp;
-	/* server root directory */
-	const struct httpddir * dir;
-	/* authentication data */
-	const struct httpdauth * auth;
-	uint8_t max_con;
-	struct {
-		struct httpctl ctl;
-		uint8_t uri[HTTPD_URI_MAX_LEN];
-	} con[];
-};
-
-struct httpd * httpd_init(uint32_t * srv_buf, unsigned int srv_size,
-						  const struct httpddir dirlst[], 
-						  const struct httpdauth authlst[])
+struct httpd * httpd_alloc(void)
 {
-	struct httpdsrv * srv = (struct httpdsrv *)srv_buf;
+	struct httpd * httpd;
+	int i;
 
-	if (srv_size < (SIZEOF_HTTPD + SIZEOF_HTTPCTL)) {
-		DCC_LOG(LOG_ERROR, "invalid buffer size!");
-		return NULL;
+	for (i = 0; i < HTTPD_POOL_SIZE; ++i) {
+		httpd = &httpd_pool[i];
+		if (!httpd->auth) {
+			httpd->auth = httpd_def_authlst;
+			return httpd;
+		}
 	}
 
 	return httpd;
 }
-
-#endif

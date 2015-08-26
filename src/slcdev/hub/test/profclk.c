@@ -1,7 +1,7 @@
 /* 
- * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
- *
- * This file is part of the libmd5.
+ * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
+ * 
+ * This file is part of the YARD-ICE.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,31 +18,29 @@
  */
 
 /** 
- * @file gdb.h
- * @brief YARD-ICE libgdb
+ * @file pflock.c
+ * @brief Real-time trace
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#ifndef __GDB_H__
-#define __GDB_H__
+#include <stdlib.h>
+#include <sys/dcclog.h>
 
-#include <stdint.h>
+#include "profclk.h"
 
-#define __THINKOS_DMON__
-#include <thinkos_dmon.h>
-#include <thinkos.h>
+/* ---------------------------------------------------------------------------
+ * Profiling clock
+ * ---------------------------------------------------------------------------
+ */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+void profclk_init(void)
+{
+	/* Enable trace */
+	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
+	/* Enable cycle counter */
+	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
 
-void gdb_init(void (* shell)(struct dmon_comm * ));
-
-void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm);
-
-#ifdef __cplusplus
+	DCC_LOG1(LOG_TRACE, "DWT_CTRL=0x%08x", CM3_DWT->ctrl);
+	DCC_LOG1(LOG_TRACE, "DWT_CYCCNT=0x%08x", CM3_DWT->cyccnt);
 }
-#endif	
-
-#endif /* __GDB_H__ */
 

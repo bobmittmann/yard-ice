@@ -145,8 +145,6 @@ typedef struct usb_dev_ep usb_dev_ep_t;
 /* USB device object */
 struct usb_dev {
 	void * priv;
-	uint8_t irq[3];
-	uint8_t irq_cnt;
 	const struct usb_dev_ops * op;
 };
 

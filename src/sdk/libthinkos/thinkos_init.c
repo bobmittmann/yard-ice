@@ -170,6 +170,7 @@ void __thinkos_reset(void)
 #if THINKOS_ENABLE_DEBUG_STEP
 	thinkos_rt.step_id = -1;
 	thinkos_rt.break_id = -1;
+	thinkos_rt.xcpt_irq = -1;
 	thinkos_rt.step_req = 0;
 #endif
 

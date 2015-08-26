@@ -35,6 +35,7 @@
 
 #include "board.h"
 #include "sflash.h"
+#include "profclk.h"
 
 unsigned int micron_sf_capacity_mbits(unsigned int id)
 {
@@ -76,8 +77,9 @@ bool serial_flash_probe(struct sflash_dev * sf)
 	if (inf.device_type != 0xba)
 		return false;
 
-	if (inf.capacity != 0x20)
+	if ((inf.capacity != 0x19) && (inf.capacity != 0x20)) {
 		return false;
+	}
 
 	return true;
 }
@@ -106,8 +108,14 @@ bool sflash_dump(struct sflash_dev * sf, uint32_t addr, unsigned int len)
 
 bool block_erase(struct sflash_dev * sf, uint32_t addr)
 {
+	uint32_t ts[2];
+	uint32_t dt;
+
+	ts[0] = profclk_get();
 	sflash_subsector_erase(sf, addr);
-	printf("0x%08x Sub-sector erase\n", addr);
+	ts[1] = profclk_get();
+	dt = profclk_us(ts[1] - ts[0]);
+	printf("0x%08x Sub-sector erase: %d us\n", addr, dt);
 
 	return true;
 }
@@ -141,14 +149,20 @@ bool block_write(struct sflash_dev * sf, uint32_t addr)
 	int j;
 
 	for (j = 0; j < BLOCK_SIZE / PAGE_SIZE; ++j) {
+		uint32_t ts[2];
+		uint32_t dt;
+
 		for(i = 0; i < sizeof(page); i += 2) {
 			unsigned int val = (addr + i) & 0xffff;
 			page[i] = val >> 8;
 			page[i + 1] = val;
 		}
 
+		ts[0] = profclk_get();
 		sflash_page_write(sf, addr, page, sizeof(page));
-		printf("0x%08x Page write\n", addr);
+		ts[1] = profclk_get();
+		dt = profclk_us(ts[1] - ts[0]);
+		printf("0x%08x Page write: %d us\n", addr, dt);
 		addr += PAGE_SIZE;
 	}
 
@@ -229,10 +243,6 @@ void high_level_test(struct sflash_dev * sf)
 
 	};
 
-	printf("\n");
-
-	thinkos_sleep(1000);
-
 	printf("\nVerifying: ");
 
 	/* Move the pointer to the beginning of the partition */
@@ -265,12 +275,13 @@ void flash_test(void)
 {
 	struct sflash_dev * sf;
 
+	profclk_init();
+
 	sf = sflash_init();
 
-	if (!serial_flash_probe(sf)) {
+	while (!serial_flash_probe(sf)) {
 		printf("Serial flash error!\n");
-		thinkos_sleep(5000);
-		return;
+		thinkos_sleep(500);
 	}
 
 	high_level_test(sf);

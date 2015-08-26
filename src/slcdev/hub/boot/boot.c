@@ -56,13 +56,7 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-void board_init(void);
-void board_tick(unsigned int cnt);
-extern const struct gdb_target board_gdb_target;
-
 void monitor_task(struct dmon_comm * comm);
-void gdb_task(struct dmon_comm * comm);
-
 
 void monitor_init(void)
 {
@@ -84,7 +78,7 @@ void monitor_init(void)
 
 #if (BOOT_ENABLE_GDB)
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
-	gdb_init(monitor_task, &board_gdb_target);
+	gdb_init(monitor_task);
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
@@ -97,7 +91,7 @@ int main(int argc, char ** argv)
 	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. board_init().");
-	board_init();
+	this_board.init();
 
 	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();

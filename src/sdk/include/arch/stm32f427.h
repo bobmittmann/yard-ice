@@ -32,7 +32,7 @@
 
 #define STM32_PWR ((struct stm32_pwr *)STM32F_BASE_PWR)
 #define STM32_RCC ((struct stm32_rcc *)STM32_BASE_RCC)
-#define STM32_CRC ((struct stm32_rcc *)STM32_BASE_CRC)
+#define STM32_CRC ((struct stm32_crc *)STM32_BASE_CRC)
 #define STM32_FLASH ((struct stm32_flash *)STM32_BASE_FLASH)
 
 #define STM32F_RTC ((struct stm32f_rtc *)STM32F_BASE_RTC)

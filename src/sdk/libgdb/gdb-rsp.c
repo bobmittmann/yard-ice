@@ -70,11 +70,9 @@ int thread_step_req(unsigned int thread_id);
 int thread_continue(unsigned int thread_id);
 int thread_info(unsigned int gdb_thread_id, char * buf);
 
-int target_mem_write(struct gdb_target * tgt, uint32_t addr, 
-					 const void * ptr, unsigned int len);
+int target_mem_write(uint32_t addr, const void * ptr, unsigned int len);
 
-int target_mem_read(struct gdb_target * tgt, uint32_t addr, 
-					void * ptr, unsigned int len);
+int target_mem_read(uint32_t addr, void * ptr, unsigned int len);
 
 int target_file_read(const char * name, char * dst, 
 					  unsigned int offs, unsigned int size);
@@ -162,7 +160,6 @@ struct gdb_rspd {
 #endif
 	struct dmon_comm * comm;
 	void (* shell_task)(struct dmon_comm * comm);
-	struct gdb_target * target; 
 };
 
 static int rsp_get_g_thread(struct gdb_rspd * gdb)
@@ -524,7 +521,7 @@ int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 			dmon_soft_reset(gdb->comm);
 			gdb->active_app = false;
 		}
-		if (dmon_app_exec(gdb->target->app.start_addr, true)) {
+		if (dmon_app_exec(this_board.application.start_addr, true)) {
 			gdb->active_app = true;
 		}
 	} else if (prefix(s, "os")) {
@@ -621,7 +618,7 @@ static int rsp_query(struct gdb_rspd * gdb, char * pkt)
 		if (!gdb->active_app) {
 			DCC_LOG(LOG_WARNING, "no active application, "
 					"calling dmon_app_exec()!");
-			if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
+			if (!dmon_app_exec(this_board.application.start_addr, true)) {
 				return rsp_error(gdb, 1);
 			}
 
@@ -913,14 +910,14 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 8) / 2;
 
 	if (size > max)
 		size = max;
 
-	if ((ret = target_mem_read(gdb->target, addr, buf, size)) < 0) {
+	if ((ret = target_mem_read(addr, buf, size)) < 0) {
 		DCC_LOG3(LOG_INFO, "ERR: %d addr=%08x size=%d", ret, addr, size);
 		return rsp_error(gdb, 2);
 	}
@@ -1256,7 +1253,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 					if (!gdb->active_app) {
 						DCC_LOG(LOG_WARNING, "no active application, "
 								"calling dmon_app_exec()!");
-						if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
+						if (!dmon_app_exec(this_board.application.start_addr, true)) {
 							return rsp_error(gdb, 1);
 						}
 						gdb->active_app = true;
@@ -1286,7 +1283,8 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 				if (!gdb->active_app) {
 					DCC_LOG(LOG_WARNING, "no active application, "
 							"calling dmon_app_exec()!");
-					if (!dmon_app_exec(gdb->target->app.start_addr, true)) {
+					if (!dmon_app_exec(this_board.application.start_addr, 
+									   true)) {
 						return rsp_error(gdb, 1);
 					}
 					gdb->active_app = true;
@@ -1387,7 +1385,7 @@ static int rsp_memory_write_bin(struct gdb_rspd * gdb, char * pkt)
 
 	DCC_LOG3(LOG_TRACE, "addr=%08x size=%d cp=%08x", addr, size, cp);
 
-	if (target_mem_write(gdb->target, addr, cp, size) < 0) {
+	if (target_mem_write(addr, cp, size) < 0) {
 		return rsp_error(gdb, 1);
 	}
 
@@ -1681,15 +1679,13 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if (rsp_console_output(gdb, pkt) <= 0) {
-				DCC_LOG(LOG_WARNING, "TX_PIPE flag cleared.");
 				dmon_clear(DMON_TX_PIPE);
 			}
 		}
 	}
 }
  
-void gdb_init(void (* shell)(struct dmon_comm * ), 
-			  const struct gdb_target * tgt)
+void gdb_init(void (* shell)(struct dmon_comm * ))
 {
 	struct gdb_rspd * gdb = &gdb_rspd;
 
@@ -1698,7 +1694,6 @@ void gdb_init(void (* shell)(struct dmon_comm * ),
 	if (shell == NULL)
 		shell = gdb_task;
 	gdb->shell_task = shell;
-	gdb->target = (struct gdb_target *)tgt;
 
 	/* enable the FPB unit */
 	CM3_FPB->ctrl = FP_KEY | FP_ENABLE;

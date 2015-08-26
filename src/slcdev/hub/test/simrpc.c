@@ -152,7 +152,7 @@ void __attribute__((noreturn)) simlnk_recv_task(struct simlnk * lnk)
 	simlnk_loop(lnk);
 }
 
-uint32_t simlnk_stack[SIMLNK_MAX][SIMLNK_STACK_SIZE];
+uint32_t simlnk_stack[SIMLNK_MAX][SIMLNK_STACK_SIZE / 4];
 struct simlnk * simlnk[SIMLNK_MAX];
 
 const struct thinkos_thread_inf simlnk_recv_inf[SIMLNK_MAX] = { 

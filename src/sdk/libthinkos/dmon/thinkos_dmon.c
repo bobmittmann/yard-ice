@@ -788,6 +788,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 				 xcpt->thread_id);
 #if THINKOS_ENABLE_DEBUG_STEP
 		thinkos_rt.break_id = thinkos_rt.active;
+		thinkos_rt.xcpt_irq = -1;
 #endif
 		dmon_signal(DMON_THREAD_FAULT);
 	} else {
@@ -797,8 +798,10 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 		ipsr = (xcpt->ctx.xpsr & 0x1ff);
 		DCC_LOG1(LOG_ERROR, "Exception at IRQ: %d !!!", 
 				 ipsr - 16);
-		/* FIXME: add support for exceptions on IRQ */
-		thinkos_rt.break_id = -ipsr;
+		/* exceptions on IRQ */
+		thinkos_rt.break_id = -1;
+		thinkos_rt.xcpt_irq = ipsr;
+		thinkos_rt.void_ctx = &xcpt->ctx;
 
 		if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {
 			DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
@@ -815,8 +818,9 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 			DCC_LOG(LOG_TRACE, "6. clear all breakpoints...");
 			dmon_breakpoint_clear_all();
 #endif
-			DCC_LOG(LOG_TRACE, "7. restore Comm interrupts...");
-			dmon_comm_irq_config(thinkos_dmon_rt.comm);
+			DCC_LOG(LOG_TRACE, "7. reset board...");
+			this_board.softreset();
+
 			DCC_LOG(LOG_TRACE, "8. reset.");
 			dmon_signal(DMON_RESET);
 		}

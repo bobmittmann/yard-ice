@@ -94,6 +94,16 @@ enum mime_type {
     APPLICATION_X_WWW_FORM_URLENCODED = 11
 };
 
+
+/*
+ * HTTP server opaque control structure
+ */
+
+struct httpd;
+
+/*
+ * HTTP server object descriptor structure
+ */
 struct httpdobj {
 	const char * oid;
 	uint8_t typ;
@@ -102,10 +112,15 @@ struct httpdobj {
 	const void * ptr;
 };
 
+/*
+ * HTTP server object directory structure
+ */
+
 struct httpddir {
 	const char * path;
 	const struct httpdobj * objlst;
 };
+
 
 #define HTTPDAUTH_NAME_MAX 12
 #define HTTPDAUTH_PASSWD_MAX 12
@@ -115,18 +130,6 @@ struct httpdauth {
 	uint8_t lvl;
 	char name[HTTPDAUTH_NAME_MAX + 1];
 	char passwd[HTTPDAUTH_PASSWD_MAX + 1];
-};
-
-/*
- * HTTP server control structure
- */
-
-struct httpd {
-	struct tcp_pcb * tp;
-	/* server root directory */
-	const struct httpddir * dir;
-	/* authentication data */
-	const struct httpdauth * auth;
 };
 
 struct httpqry {
@@ -183,12 +186,23 @@ typedef int (* httpd_file_cgi_t)(struct tcp_pcb * tp, char * buf,
 extern "C" {
 #endif
 
-struct tcp_pcb * httpd_start(struct httpd * httpd, 
-							 int port, int backlog,
-							 const struct httpddir dirlst[],
-							 const struct httpdauth authlst[]);
+/* -------------------------------------------------------------------------
+ * Server
+ * ------------------------------------------------------------------------- */
+
+struct httpd * httpd_alloc(void);
+
+int httpd_free(struct httpd * httpd);
+
+int httpd_init(struct httpd * httpd, int port, int backlog,
+		const struct httpddir dirlst[],
+		const struct httpdauth authlst[]);
 
 int httpd_stop(struct httpd * httpd);
+
+/* -------------------------------------------------------------------------
+ * Connections
+ * ------------------------------------------------------------------------- */
 
 int http_accept(struct httpd * httpd, struct httpctl * ctl);
 
@@ -283,6 +297,8 @@ int httpd_nvparse(const char * s, char * name[], char * value[], int count);
 /* */
 void httpd_listen_callback(struct tcp_pcb * tp, int event, 
 						   struct httpd * httpd);
+
+
 #ifdef __cplusplus
 }
 #endif
