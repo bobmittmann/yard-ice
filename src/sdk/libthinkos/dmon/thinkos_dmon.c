@@ -593,7 +593,19 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 				thinkos_dmon_rt.events = sigset;
 				/* FIXME: add support for breakpoints on IRQ */
 				/* record the break thread id */
-				thinkos_rt.break_id = thinkos_rt.active;
+				thinkos_rt.break_id = THINKOS_THREAD_VOID;
+
+				__thinkos_memcpy(&thinkos_except_buf.ctx.r0,
+								 ctx, sizeof(struct cm3_except_context)); 
+
+#if 0
+				{
+					register uint32_t * ctx asm("r0");
+					ctx = (uint32_t *)&thinkos_except_buf.ctx.r4;
+
+					asm volatile ( "stmia %0, {r4-r11}\n" : : "r" (ctx) );
+				}
+#endif
 				__thinkos_pause_all();
 				/* diasble all breakpoints */
 				dmon_breakpoint_clear_all();
