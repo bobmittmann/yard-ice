@@ -187,7 +187,7 @@ void __thinkos_reset(void)
 	/* initialize the idle thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,
-	thinkos_idle.ctx.xpsr = 0x01000000;
+	thinkos_idle.ctx.xpsr = CM_EPSR_T; /* set the thumb bit */
 
 #if (THINKOS_THREADS_MAX < 32) 
 	/* put the IDLE thread in the ready queue */

@@ -67,7 +67,8 @@ const char * http_hdr_name[] = {
 	"Vary",
 	"Via",
 	"Warning",
-	"WWW-Authenticate"
+	"WWW-Authenticate",
+	"X-Requested-With"
 };
 
 /* ----------------------------------------------------------------
@@ -120,7 +121,7 @@ static const uint8_t h_tab[] = {
 	  0,   0,   0,   0,   0,  36,   0,   0,
 	 49,   0,   0,   0,   0,   0,   0,   0,
 	  0,   0,   0,   0,   0,  44,   0,   0,
-	  0,   0,   0,   0,  16,   0,   0,   0,
+	  0,  53,   0,   0,  16,   0,   0,   0,
 	  0,   0,   7,   0,   0,   0,   0,   0,
 	  0,   0,   0,  52,  32,  35,   0,   0,
 	  0,   0,   0,   0,  28,   0,  39,  14,
@@ -186,4 +187,39 @@ unsigned int http_parse_field(const char * str, char ** endptr)
 
 	return 0;
 }
+
+
+#ifndef HTTP_HDR_TEST
+#define HTTP_HDR_TEST 1
+#endif
+
+#if HTTP_HDR_TEST
+
+#include <stdio.h>
+#include <assert.h>
+
+int http_parser_test(void)
+{
+	int i;
+
+	for (i = 1; i < sizeof(http_hdr_name) / sizeof(char *); ++i) {
+		char s[512];
+		char * cp;
+		int hdr;
+
+		sprintf(s, "%s: field-value\n", http_hdr_name[i]);
+		hdr = http_parse_field(s, &cp);
+
+		assert(hdr == i);
+
+		if (hdr != i) {
+			printf("Can't parse: \"%s\"\n", s);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+#endif /* HTTP_HDR_TEST */
 

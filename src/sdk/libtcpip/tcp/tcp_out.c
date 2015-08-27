@@ -202,8 +202,6 @@ void checksum_check(struct tcp_pcb * tp, struct iphdr * iph,
 }
 #endif
 
-void * ip_resolve(struct iphdr * __ip, struct route * __rt);
-
 int tcp_output(struct tcp_pcb * tp)
 {
 	struct iphdr * iph;

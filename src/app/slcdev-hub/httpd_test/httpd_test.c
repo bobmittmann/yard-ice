@@ -82,8 +82,9 @@ int httpd_server_task(struct httpd * httpd)
 		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...",
 				 thinkos_thread_self());
 		if (http_accept(httpd, ctl) < 0) {
-//			printf("tcp_accept() failed!\n");
-			break;
+			printf("tcp_accept() failed!\n");
+			thinkos_sleep(100);
+			continue;
 		}
 
 //		printf("Connection accepted.\n");
@@ -265,10 +266,10 @@ const struct thinkos_thread_inf httpd4_inf = {
 
 int main(int argc, char ** argv)
 {
-	struct httpd httpd;
+	struct httpd *  httpd;
 	int port = 80;
 
-	thinkos_sysinfo_udelay_factor(&udelay_factor);
+	thinkos_udelay_factor(&udelay_factor);
 
 	stm32f_nvram_env_init();
 
@@ -284,19 +285,20 @@ int main(int argc, char ** argv)
 
 	network_config();
 
-	httpd_start(&httpd, port, 4, httpd_dir, NULL);
+	httpd = httpd_alloc();
+	httpd_init(httpd, port, 4, httpd_dir, NULL);
 	printf("Listening on port %d.\n", port);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd1_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd2_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd3_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd4_inf);
 	tcp_echo_start();
 

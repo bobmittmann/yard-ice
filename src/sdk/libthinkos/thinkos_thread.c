@@ -37,8 +37,13 @@ void __thinkos_thread_init(unsigned int thread_id, uint32_t sp,
 						   void * task, void * arg)
 {
 	struct thinkos_context * ctx;
+	uint32_t pc;
 
+	pc = (uint32_t)task;
 	sp &= 0xfffffff8; /* 64bits alignemnt */
+
+	DCC_LOG3(LOG_TRACE, "thread_id=%d pc=%08x sp=%08x", thread_id, pc, sp);
+
 	sp -= sizeof(struct thinkos_context);
 	ctx = (struct thinkos_context *)sp;
 
@@ -50,8 +55,8 @@ void __thinkos_thread_init(unsigned int thread_id, uint32_t sp,
 #else
 	ctx->lr = (uint32_t)__thinkos_thread_exit;
 #endif
-	ctx->pc = (uint32_t)task;
-	ctx->xpsr = 0x01000000;
+	ctx->pc = pc;
+	ctx->xpsr = CM_EPSR_T; /* set the thumb bit */
 	thinkos_rt.ctx[thread_id] = ctx;
 
 #if THINKOS_ENABLE_PAUSE
@@ -125,8 +130,6 @@ void thinkos_thread_create_svc(int32_t * arg)
 #endif
 
 	__thinkos_thread_init(thread_id, sp, init->task, init->arg);
-
-	DCC_LOG2(LOG_INFO, "thread_id=%d sp=%08x", thread_id, sp);
 
 #if THINKOS_ENABLE_PAUSE
 	if (!init->opt.paused)

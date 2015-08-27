@@ -72,8 +72,8 @@
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.gcsections.2140821097" name="Remove unused sections (-Xlinker --gc-sections)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.gcsections" value="false" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs.1510448516" name="No startup or default libs (-nostdlib)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs.1492257398" name="Libraries (-l)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs" valueType="libs">
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tcpip"/>

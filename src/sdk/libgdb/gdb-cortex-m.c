@@ -127,6 +127,8 @@ int thread_break_id(void)
 		return THINKOS_THREAD_VOID + THREAD_ID_OFFS;
 	}
 
+	DCC_LOG1(LOG_INFO, "break_id=%d", thinkos_rt.break_id);
+
 	return thinkos_rt.break_id + THREAD_ID_OFFS;
 }
 
@@ -242,7 +244,7 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 		x = ctx->r12;
 		break;
 	case 13:
-		x = (uint32_t)ctx;
+		x = (uint32_t)ctx + sizeof(struct thinkos_context);
 		break;
 	case 14:
 		x = ctx->lr;
@@ -727,11 +729,11 @@ int target_mem_read(uint32_t addr, void * ptr, unsigned int len)
 
 		if (addr2block(this_board.memory.ram, addr, &blk)) {
 			/* not flash */
-			DCC_LOG2(LOG_INFO, "RAM block addr=0x%08x size=%d", 
+			DCC_LOG2(LOG_MSG, "RAM block addr=0x%08x size=%d", 
 					 blk.addr, blk.size);
 		} else if (addr2block(this_board.memory.flash, addr, &blk)) {
 			/* flash */
-			DCC_LOG2(LOG_INFO, "FLASH block addr=0x%08x size=%d", 
+			DCC_LOG2(LOG_MSG, "FLASH block addr=0x%08x size=%d", 
 					 blk.addr, blk.size);
 		} else {
 			DCC_LOG1(LOG_MSG, "invalid mem location addr=0x%08x", addr);

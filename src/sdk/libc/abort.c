@@ -29,6 +29,5 @@
 void __attribute__ ((__noreturn__)) abort(void)
 {
 	thinkos_abort();
-//	for(;;);
 }
 

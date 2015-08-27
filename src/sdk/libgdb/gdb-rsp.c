@@ -208,7 +208,9 @@ static int rsp_get_c_thread(struct gdb_rspd * gdb)
 
 static inline int rsp_ack(struct gdb_rspd * gdb)
 {
+#ifdef DEBUG_PACKET
 	DCC_LOG(LOG_INFO, "--> Ack.");
+#endif
 	return dmon_comm_send(gdb->comm, "+", 1);
 }
 
@@ -221,13 +223,17 @@ static int rsp_nack(struct dmon_comm * comm)
 
 static inline int rsp_ok(struct gdb_rspd * gdb)
 {
+#ifdef DEBUG_PACKET
 	DCC_LOG(LOG_INFO, "--> Ok.");
+#endif
 	return dmon_comm_send(gdb->comm, "$OK#9a", 6);
 }
 
 static int rsp_empty(struct gdb_rspd * gdb)
 {
+#ifdef DEBUG_PACKET
 	DCC_LOG(LOG_INFO, "--> Empty.");
+#endif
 	return dmon_comm_send(gdb->comm, "$#00", 4);
 }
 
@@ -244,7 +250,9 @@ static int rsp_error(struct gdb_rspd * gdb, unsigned int err)
 	pkt[5] = __hextab[((sum >> 4) & 0xf)];
 	pkt[6] = __hextab[sum & 0xf];
 
+#ifdef DEBUG_PACKET
 	DCC_LOG1(LOG_INFO, "--> Error(%d)!", err);
+#endif
 
 	return dmon_comm_send(gdb->comm, pkt, 7);
 }
@@ -271,7 +279,10 @@ static int rsp_pkt_send(struct gdb_rspd * gdb, char * pkt, unsigned int len)
 	pkt[n++] = __hextab[sum & 0xf];
 
 	pkt[n] = '\0';
+
+#ifdef DEBUG_PACKET
 	DCC_LOGSTR(LOG_INFO, "--> '%s'", pkt);
+#endif
 
 #if GDB_ENABLE_RXMIT
 	gdb->tx.pkt = pkt;
@@ -512,9 +523,10 @@ int rsp_cmd(struct gdb_rspd * gdb, char * pkt)
 		s[i] = c;
 	}
 	s[i] = '\0';
+
 	DCC_LOGSTR(LOG_TRACE, "cmd=\"%s\"", s);
 
-	if (prefix(s, "reset")) {
+	if (prefix(s, "reset") || prefix(s, "rst")) {
 		if (gdb->active_app) {
 			dmon_soft_reset(gdb->comm);
 			gdb->active_app = false;
@@ -908,7 +920,7 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 	cp++;
 	size = hex2int(cp, NULL);
 
-	DCC_LOG2(LOG_INFO, "addr=0x%08x size=%d", addr, size);
+	DCC_LOG2(LOG_MSG, "addr=0x%08x size=%d", addr, size);
 
 	max = (RSP_BUFFER_LEN - 8) / 2;
 
@@ -916,7 +928,7 @@ int rsp_memory_read(struct gdb_rspd * gdb, char * pkt)
 		size = max;
 
 	if ((ret = target_mem_read(addr, buf, size)) < 0) {
-		DCC_LOG3(LOG_INFO, "ERR: %d addr=%08x size=%d", ret, addr, size);
+		DCC_LOG3(LOG_MSG, "ERR: %d addr=%08x size=%d", ret, addr, size);
 		return rsp_error(gdb, 2);
 	}
 	
@@ -1138,10 +1150,11 @@ static int rsp_on_fault(struct gdb_rspd * gdb, char * pkt)
 		return 0;
 	}
 
-	DCC_LOG(LOG_TRACE, "on fault, suspending... ... ...");
-
 	thread_id = thread_break_id();
 	gdb->thread_id.g = thread_id; 
+
+	DCC_LOG1(LOG_TRACE, "suspending (current=%d) ... ...", thread_id);
+
 	target_halt();
 	gdb->stopped = true;
 	gdb->last_signal = TARGET_SIGNAL_SEGV;
@@ -1529,7 +1542,7 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 				/* FIXME: check the sum!!! */
 				pos += j;
 
-#ifdef DEBUG
+#ifdef DEBUG_PACKET
 				if (pkt[0] == 'X') 
 					DCC_LOG(LOG_MSG, "<-- '$X ...'");
 				else if (pkt[0] == 'm')

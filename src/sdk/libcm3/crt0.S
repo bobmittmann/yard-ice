@@ -74,6 +74,8 @@ _reset:
 	b       .L_ctor_loop
 	.L_ctor_end:
 
+    mov     fp, #0
+	mov     r7, #0
 	/* argc = 0 */
 	mov     r0, #0
 	/* argv = NULL */
@@ -111,8 +113,10 @@ _reset:
 	.thumb_func
 	.type   _halt, %function
 _halt:
-	cpsid   i
-	b		.
+    mov     r0, #1
+2:
+	cmp     r0, #0
+	bne     2b
 	.size   _halt, . - _halt
 
 	.align  2

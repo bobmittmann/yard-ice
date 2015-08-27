@@ -817,7 +817,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 		DCC_LOG1(LOG_WARNING, "Fault at thread %d !!!!!!!!!!!!!", 
 				 xcpt->thread_id);
 #if THINKOS_ENABLE_DEBUG_STEP
-		thinkos_rt.break_id = thinkos_rt.active;
+		thinkos_rt.break_id = xcpt->thread_id;
 		thinkos_rt.xcpt_ipsr = 0;
 #endif
 		dmon_signal(DMON_THREAD_FAULT);

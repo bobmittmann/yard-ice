@@ -480,12 +480,16 @@ const struct httpdauth httpd_def_authlst[] = {
 	{ .uid = 0, .lvl = 0, .name = "", .passwd = "" }
 };
 
+int http_parser_test(void);
+
 int httpd_init(struct httpd * httpd,
 							 int port, int backlog,
 							 const struct httpddir dirlst[],
 							 const struct httpdauth authlst[])
 {
 	struct tcp_pcb * tp;
+
+	http_parser_test();
 
 	if (httpd == NULL) {
 		DCC_LOG(LOG_ERROR, "Invalid parameter!");

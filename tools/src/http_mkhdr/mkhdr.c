@@ -111,6 +111,7 @@ struct sym http_req_hdr[] = {
 	{"Via", "HTTP_HDR_VIA"},
 	{"Warning", "HTTP_HDR_WARNING"},
 	{"WWW-Authenticate", "HTTP_HDR_WWW_AUTHENTICATE"},
+	{"X-Requested-With", "HTTP_HDR_X_REQUESTED_WITH"},
 	{NULL, NULL}
 };
 
@@ -445,6 +446,43 @@ int make_hdr_c(char * fname)
 	comment_block(f, "Parse header field, return field id and value.");
 
 	write_parser(f, "http_parse_field", ": ", true);
+
+	fprintf(f, "\n");
+	fprintf(f, "#ifndef HTTP_HDR_TEST\n");
+	fprintf(f, "#define HTTP_HDR_TEST 0\n");
+	fprintf(f, "#endif\n");
+	fprintf(f, "\n");
+	fprintf(f, "#if HTTP_HDR_TEST\n");
+	fprintf(f, "\n");
+	fprintf(f, "#include <stdio.h>\n");
+	fprintf(f, "#include <assert.h>\n");
+	fprintf(f, "\n");
+	fprintf(f, "int http_parser_test(void)\n");
+	fprintf(f, "{\n");
+	fprintf(f, "\tint i;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\tfor (i = 1; i < sizeof(http_hdr_name) / sizeof(char *); ++i) {\n");
+
+	fprintf(f, "\t\tchar s[512];\n");
+	fprintf(f, "\t\tchar * cp;\n");
+	fprintf(f, "\t\tint hdr;\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tsprintf(s, \"%%s: field-value\\n\", http_hdr_name[i]);\n");
+	fprintf(f, "\t\thdr = http_parse_field(s, &cp);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tassert(hdr == i);\n");
+	fprintf(f, "\n");
+	fprintf(f, "\t\tif (hdr != i) {\n");
+	fprintf(f, "\t\t\tprintf(\"Can't parse: \\\"%%s\\\"\\n\", s);\n");
+	fprintf(f, "\t\t\treturn -1;\n");
+	fprintf(f, "\t\t}\n");
+	fprintf(f, "\t}\n");
+	fprintf(f, "\n");
+	fprintf(f, "\treturn 0;\n");
+	fprintf(f, "}\n");
+	fprintf(f, "\n");
+	fprintf(f, "#endif /* HTTP_HDR_TEST */\n");
+	fprintf(f, "\n");
 
 	fclose(f);
 

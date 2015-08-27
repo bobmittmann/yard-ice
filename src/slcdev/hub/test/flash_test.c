@@ -286,7 +286,7 @@ void flash_test(void)
 
 	high_level_test(sf);
 
-	thinkos_sleep(5000);
+	thinkos_sleep(500);
 
 	low_level_test(sf);
 }

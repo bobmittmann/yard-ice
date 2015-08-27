@@ -334,9 +334,7 @@ int main(int argc, char ** argv)
 
 	simrpc_init();
 
-	thinkos_sleep(100);
-
-	assert(1 == 2);
+	thinkos_sleep(100000);
 
 	flash_test();
 

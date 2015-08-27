@@ -29,14 +29,13 @@ static const char * const app_argv[] = {
 	"thinkos_app"
 };
 
-static void __attribute__((noreturn)) app_bootstrap(void * arg)
+static void __attribute__((naked, noreturn)) app_bootstrap(void * arg)
 {
 	int (* app_reset)(int argc, char ** argv);
 	uintptr_t thumb_call = (uintptr_t)arg | 1;
 
 	app_reset = (void *)thumb_call;
 	for (;;) {
-		DCC_LOG(LOG_TRACE, "app_reset()");
 		app_reset(1, (char **)app_argv);
 	}
 }
