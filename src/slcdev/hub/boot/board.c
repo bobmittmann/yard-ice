@@ -243,11 +243,13 @@ bool board_init(void)
 	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
 	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
 
+	DCC_LOG(LOG_TRACE, "io_init()");
 	io_init();
 
-	wave_play_init(wave_c4, sizeof(wave_c4));
+	DCC_LOG(LOG_TRACE, "wave_play_init()");
+//	wave_play_init(wave_c4, sizeof(wave_c4));
 
-	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
+//	lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);
 
 	return true;
 }

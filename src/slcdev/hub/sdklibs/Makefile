@@ -24,6 +24,9 @@
 all:
 	$(MAKE) -C Debug all
 
+clean:
+	$(MAKE) -C Debug clean
+
 help:
 	@echo 'Targets:'
 	@echo

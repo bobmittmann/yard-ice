@@ -550,8 +550,9 @@ static inline int __attribute__((always_inline))
 
 static inline void __attribute__((always_inline, noreturn)) 
 	thinkos_abort(void) {
+		for (;;) {
 		THINKOS_SVC1(THINKOS_CTL, THINKOS_CTL_ABORT);
-		for(;;);
+		}
 	}
 
 static inline int __attribute__((always_inline)) 

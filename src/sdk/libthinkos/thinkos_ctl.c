@@ -84,8 +84,10 @@ void thinkos_ctl_svc(int32_t * arg)
 		break;
 
 	case THINKOS_CTL_ABORT:
+		DCC_LOG(LOG_WARNING, "Abort!");
 		__thinkos_pause_all();
 		__thinkos_defer_sched();
+		__bkpt();
 		break;
 
 #if THINKOS_ENABLE_RT_DEBUG

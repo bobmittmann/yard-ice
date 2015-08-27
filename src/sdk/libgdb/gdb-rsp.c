@@ -23,7 +23,6 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */
 
-
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -33,7 +32,6 @@
 #define __THINKOS_DMON__
 #include <thinkos_dmon.h>
 #include <thinkos.h>
-
 #include <gdb.h>
 
 #include "signals.h"

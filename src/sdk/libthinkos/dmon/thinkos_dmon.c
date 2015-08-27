@@ -585,19 +585,40 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 
 		if (dfsr & SCB_DFSR_BKPT) {
 			if ((CM3_SCB->icsr & SCB_ICSR_RETTOBASE) == 0) {
-				DCC_LOG2(LOG_ERROR, "<<BREAKPOINT>>: exception=%d pc=%08x", 
-						 ctx->xpsr & 0x1ff, ctx->pc);
+				uint16_t insn;
+				uint16_t * pc = (uint16_t *)ctx->pc;
+				int ipsr;
+
+				ipsr = ctx->xpsr & 0x1ff;
+				insn = pc[0];
+				DCC_LOG3(LOG_ERROR, "<<BREAKPOINT>>: "
+						 "except=%d pc=%08x insn=%04x", ipsr, pc, insn);
 				DCC_LOG(LOG_ERROR, "invalid breakpoint on exception!!!");
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
 				thinkos_dmon_rt.events = sigset;
 				/* FIXME: add support for breakpoints on IRQ */
-				/* record the break thread id */
-				thinkos_rt.break_id = THINKOS_THREAD_VOID;
 
-				__thinkos_memcpy(&thinkos_except_buf.ctx.r0,
-								 ctx, sizeof(struct cm3_except_context)); 
-
+				/* Id this is a breakpoint intruction. Skip it */
+				if (insn == 0xbe00) {
+					/* Skip thr breakpoint intruction */
+					ctx->pc += 2;
+					/* suspend the current thread */
+					__thinkos_thread_pause(thinkos_rt.active);
+					/* record the break thread id */
+					thinkos_rt.break_id = thinkos_rt.active;
+					__thinkos_defer_sched();
+				} else {
+					/* record the break thread id */
+					thinkos_rt.break_id = THINKOS_THREAD_VOID;
+					thinkos_rt.void_ctx = &thinkos_except_buf.ctx;
+					thinkos_rt.xcpt_ipsr = ipsr;
+					__thinkos_memcpy(&thinkos_except_buf.ctx.r0,
+									 ctx, sizeof(struct cm3_except_context)); 
+					__thinkos_pause_all();
+					/* diasble all breakpoints */
+					dmon_breakpoint_clear_all();
+				}
 #if 0
 				{
 					register uint32_t * ctx asm("r0");
@@ -606,9 +627,6 @@ void __attribute__((noinline)) dbgmon_isr(struct cm3_except_context * ctx)
 					asm volatile ( "stmia %0, {r4-r11}\n" : : "r" (ctx) );
 				}
 #endif
-				__thinkos_pause_all();
-				/* diasble all breakpoints */
-				dmon_breakpoint_clear_all();
 			} else if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
 				sigset |= (1 << DMON_BREAKPOINT);
 				sigmsk |= (1 << DMON_BREAKPOINT);
@@ -800,7 +818,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 				 xcpt->thread_id);
 #if THINKOS_ENABLE_DEBUG_STEP
 		thinkos_rt.break_id = thinkos_rt.active;
-		thinkos_rt.xcpt_irq = -1;
+		thinkos_rt.xcpt_ipsr = 0;
 #endif
 		dmon_signal(DMON_THREAD_FAULT);
 	} else {
@@ -812,7 +830,7 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 				 ipsr - 16);
 		/* exceptions on IRQ */
 		thinkos_rt.break_id = -1;
-		thinkos_rt.xcpt_irq = ipsr;
+		thinkos_rt.xcpt_ipsr = ipsr;
 		thinkos_rt.void_ctx = &xcpt->ctx;
 
 		if (ipsr == CM3_EXCEPT_DEBUG_MONITOR) {

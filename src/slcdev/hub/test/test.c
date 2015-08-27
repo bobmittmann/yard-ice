@@ -38,6 +38,7 @@
 #include <tcpip/loopif.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <assert.h>
 
 #include "simlnk.h"
 #include "simrpc.h"
@@ -332,6 +333,10 @@ int main(int argc, char ** argv)
 	INF("Starting SLCDEV simulator test");
 
 	simrpc_init();
+
+	thinkos_sleep(100);
+
+	assert(1 == 2);
 
 	flash_test();
 

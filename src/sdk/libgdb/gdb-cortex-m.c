@@ -118,10 +118,12 @@ int thread_break_id(void)
 {
 	if (thinkos_rt.break_id == -1) {
 		DCC_LOG(LOG_WARNING, "invalid break thread!");
-		if (thinkos_rt.xcpt_irq == -1) {
+		if (thinkos_rt.xcpt_ipsr == 0) {
 			DCC_LOG(LOG_WARNING, "No exception at IRQ!");
 			return thinkos_rt.active + THREAD_ID_OFFS;
 		}
+		DCC_LOG1(LOG_WARNING, "Exception at IRQ:%d!", 
+				 thinkos_rt.xcpt_ipsr - 16);
 		return THINKOS_THREAD_VOID + THREAD_ID_OFFS;
 	}
 
@@ -170,7 +172,7 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 	struct thinkos_context * ctx;
 	uint32_t x;
 
-	if (thread_id > THINKOS_THREADS_MAX) {
+	if (thread_id > THINKOS_THREAD_VOID) {
 		DCC_LOG(LOG_ERROR, "Invalid thread!");
 		return -1;
 	}
@@ -178,6 +180,9 @@ int thread_register_get(int gdb_thread_id, int reg, uint32_t * val)
 	if (thread_id == THINKOS_THREAD_IDLE) {
 		ctx = thinkos_rt.idle_ctx;
 		DCC_LOG1(LOG_INFO, "ThinkOS Idle thread, context=%08x!", ctx);
+	} else if (thread_id == THINKOS_THREAD_VOID) {
+		ctx = thinkos_rt.void_ctx;
+		DCC_LOG1(LOG_INFO, "ThinkOS Void thread, context=%08x!", ctx);
 	} else if (__thinkos_thread_isfaulty(thread_id)) {
 		if (thinkos_except_buf.thread_id != thread_id) {
 			DCC_LOG(LOG_ERROR, "Invalid exception thread_id!");

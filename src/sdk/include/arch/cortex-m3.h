@@ -1163,6 +1163,10 @@ static inline void __attribute__((always_inline)) __nop(void) {
 	asm volatile ("nop" : );
 }
 
+static inline void __attribute__((always_inline)) __bkpt(void) {
+	asm volatile ("bkpt" : );
+}
+
 void cm3_udelay_calibrate(void);
 
 void __attribute__((noreturn)) cm3_sysrst(void);
