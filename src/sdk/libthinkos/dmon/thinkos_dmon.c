@@ -739,7 +739,7 @@ step_done:
 		DCC_LOG1(LOG_MSG, "<%08x>", sigset);
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	} else {
-		DCC_LOG1(LOG_INFO, "Unhandled signal <%08x>", sigset);
+		DCC_LOG1(LOG_JABBER, "Unhandled signal <%08x>", sigset);
 	}
 }
 

@@ -328,6 +328,8 @@ int stm32f_ethif_init(struct ifnet * __if)
 	struct stm32f_eth * eth = (struct stm32f_eth *)__if->if_io;
 	struct rxdma_enh_desc * rxdesc;
 	struct txdma_enh_desc * txdesc;
+	unsigned int rx_buf_size;
+	unsigned int tx_buf_size;
 //	struct eth_hdr * hdr;
 	int mtu;
 	int i;
@@ -336,7 +338,12 @@ int stm32f_ethif_init(struct ifnet * __if)
 	drv->ifn = __if;
 	drv->eth = eth;
 
-	mtu = STM32F_ETH_PAYLOAD_MAX;
+//	mtu = STM32F_ETH_PAYLOAD_MAX;
+	mtu = pktbuf_len - 16;
+	rx_buf_size = pktbuf_len;
+	tx_buf_size = pktbuf_len;
+	(void)tx_buf_size;
+
 	__if->if_mtu = mtu;
 	__if->if_link_speed = 100000000;
 	/* set the broadcast flag */
@@ -373,7 +380,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 		rxdesc = &drv->rx.desc[i];
 		rxdesc->rdes0 = ETH_RXDMA_OWN;
 		/* Receive buffer 1 size */
-		rxdesc->rbs1 = STM32F_ETH_RX_BUF_SIZE;
+		rxdesc->rbs1 = rx_buf_size;
 		/* Receive end of ring */
 		rxdesc->rer = 0;
 		/* Disable interrupt on completion */
@@ -450,18 +457,18 @@ int stm32f_ethif_init(struct ifnet * __if)
 
 
 	DCC_LOG3(LOG_INFO, "RX DMA: %d (desc) x %d = %d bytes", 
-			 STM32F_ETH_RX_NDESC, STM32F_ETH_RX_BUF_SIZE + 
+			 STM32F_ETH_RX_NDESC, rx_buf_size +
 			 sizeof(struct rxdma_enh_desc),
-			 STM32F_ETH_RX_NDESC * (STM32F_ETH_RX_BUF_SIZE + 
+			 STM32F_ETH_RX_NDESC * (rx_buf_size +
 			 sizeof(struct rxdma_enh_desc))); 
 	DCC_LOG3(LOG_INFO, "TX DMA: %d (desc) x %d = %d bytes", 
-			 STM32F_ETH_TX_NDESC, STM32F_ETH_TX_BUF_SIZE + 
+			 STM32F_ETH_TX_NDESC, tx_buf_size  +
 			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr),
-			 STM32F_ETH_TX_NDESC * (STM32F_ETH_TX_BUF_SIZE + 
+			 STM32F_ETH_TX_NDESC * (tx_buf_size +
 			 sizeof(struct txdma_enh_desc) + sizeof(struct eth_hdr)));
 	DCC_LOG1(LOG_INFO, "Ethernet driver memory: %d bytes", 
 			 sizeof(struct stm32f_eth_drv));
-	DCC_LOG1(LOG_INFO, "Ethernet MTU : %d bytes", STM32F_ETH_PAYLOAD_MAX);
+	DCC_LOG1(LOG_INFO, "Ethernet MTU : %d bytes", mtu);
 
 	DCC_LOG1(LOG_INFO, "<%d> DMA interrupts enabled ...", 
 			 thinkos_thread_self());

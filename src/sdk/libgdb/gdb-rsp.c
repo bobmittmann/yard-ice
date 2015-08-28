@@ -766,7 +766,7 @@ static int rsp_query(struct gdb_rspd * gdb, char * pkt)
 	}
 #endif
 
-	DCC_LOG(LOG_TRACE, "unsupported query");
+	DCC_LOGSTR(LOG_TRACE, "unsupported: \"%s\"", pkt);
 
 	return rsp_empty(gdb);
 

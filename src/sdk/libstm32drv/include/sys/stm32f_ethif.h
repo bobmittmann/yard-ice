@@ -44,6 +44,7 @@
 
 #include <sys/dcclog.h>
 
+#if 0
 #ifndef STM32F_ETH_PAYLOAD_MAX
 #define STM32F_ETH_PAYLOAD_MAX 1500
 #endif
@@ -54,6 +55,7 @@
 
 #ifndef STM32F_ETH_TX_BUF_SIZE
 #define STM32F_ETH_TX_BUF_SIZE (STM32F_ETH_PAYLOAD_MAX + 16)
+#endif
 #endif
 
 #ifndef STM32F_ETH_RX_NDESC

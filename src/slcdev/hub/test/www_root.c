@@ -34,6 +34,301 @@
 const char footer_html[] = HTML_FOOTER;
 const uint16_t sizeof_footer_html = sizeof(footer_html) - 1;
 
+#if 0
+<script type="text/javascript" src="modalbox.js"></script>
+<script type="text/javascript" src="xmlrpc.js"></script>
+<script type="text/javascript">
+	function msg_show(msg) {
+		var html = msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	function upload_msg() {
+		msg_show("Uploading firmware, please wait...");
+	}
+	function nofile_msg() {
+		msg_show("You must select a file to upload...");
+	}
+
+	function restore_defaults() {
+		dlg.okSelected = function () {
+			dlg.hide();
+			window.location.assign("restore.html");
+		}
+		dlg.cancelSelected = function () {
+			dlg.hide();
+		}
+		dlg.show('defaults_dlg', 'Restore factory settings?', 400, 100);
+	}
+	function reset() {
+		dlg.okSelected = function () {
+			dlg.hide();
+			window.location.assign("reset.html");
+		}
+		dlg.cancelSelected = function () {
+			dlg.hide();
+		}
+		dlg.show('reset_dlg', 'Reset the camera?', 400, 100);
+	}
+
+	function conf_save() {
+		xmlrpc_action('confsave', 0,
+			function () { msg_show('Configuration saved.'); }
+		);
+	}
+
+	function on_sysinfo_get(xml)
+	{
+		txt_bind(xml, 'series');
+		txt_bind(xml, 'model');
+		txt_bind(xml, 'version');
+		txt_bind(xml, 'date');
+		txt_bind(xml, 'esn');
+		txt_bind(xml, 'mac');
+		img_bind(xml, 'icon');
+	}
+
+	function init() {
+		xml_async_get("product.xml", function (xml) {
+					  document.getElementById('title').innerHTML =
+					  xml_txt_get(xml, 'series') });
+		dlg.init();
+		xml_async_get("sysinfo.xml", on_sysinfo_get);
+	}
+</script>
+</head>
+
+<body onload="init()">
+<div id="header">
+	<ul><li><img src="ip-cam-64x64.png" alt="IP Camera"/></li>
+	<li><h1 id="title">&nbsp;</h1><h2>i-LAX Electronics</h2></li><ul>
+</div>
+<div id="navigation">
+	<ul>
+		<li><a href="primary.html">Preview</a></li>
+		<li><a href="video.html">Video</a></li>
+		<li><a href="audio.html">Audio</a></li>
+		<li><a href="alarms.html">Alarms</a></li>
+		<li><a href="network.html">Network</a></li>
+		<li><a href="time.html">Time</a></li>
+		<li><a href="#" class="active">Tools</a></li>
+	</ul>
+</div>
+
+<div id="content">
+
+	<h1>System information:</h1>
+	<div class="block">
+		<div class="form">
+		<div class="fbody">
+		<table>
+		<tr>
+			<td>
+				<span id="icon" style="margin-right:40px"></span>
+			</td>
+			<td>
+				<table>
+				<tr>
+					<td align="right"><b>Camera series:</b></td>
+					<td><span id="series">unknown</span></td>
+				<tr>
+					<td align="right"><b>Camera model:</b></td>
+					<td><span id="model">unknown</span></td>
+				</tr>
+				<tr>
+					<td align="right"><b>Firmware version:</b></td>
+					<td><span id="version">unknown</span></td>
+				</tr>
+				<tr>
+					<td align="right"><b>Release date:</b></td>
+					<td><span id="date">unknown</span></td>
+				</tr>
+				<tr>
+					<td align="right"><b>Serial number:</b></td>
+					<td><span id="esn">unknown</span></td>
+				</tr>
+				<tr>
+					<td align="right"><b>Mac Address:</b></td>
+					<td><span id="mac">unknown</span></td>
+				</tr>
+				</table>
+			</td>
+		<tr>
+		</table>
+		</div>
+		</div>
+	</div>
+
+	<h1>Firmware update:</h1
+	#endif
+
+const char tools_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS HTTP Server Demo</title>\r\n"
+	META_COPY LINK_ICON LINK_CSS
+	"</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Firmware Upgrade</h1>\r\n"
+"<div class=\"form\">\r\n"
+"<form method=\"post\" enctype=\"multipart/form-data\"\r\n"
+"	action=\"/update.html\" onsubmit=\"upload_msg()\">\r\n"
+"	<div class=\"fbody\">\r\n"
+"		File:\r\n"
+"<!--[if IE]>\r\n"
+"		<input type=\"file\" id=\"browse\" class=\"text\""
+"			maxlength=\"128\" size=\"40\" name=\"firmware\" />"
+"<![endif]-->\r\n"
+"<![if !IE]>\r\n"
+"		<input type=\"text\" class=\"text\" id=\"fname\"\r\n"
+"			readonly=\"readonly\" maxlength=\"128\" size=\"40\" />\r\n"
+"		<input type=\"button\" class=\"button\" value=\"Browse...\"\r\n"
+"			onclick=\"javascript:\r\n"
+"			document.getElementById('browse').click()\" />\r\n"
+"		<input type=\"file\" class=\"hidden\" id=\"browse\"\r\n"
+"			name=\"firmware\" onchange=\"javascript:\r\n"
+"			document.getElementById('fname').value = this.value\" />\r\n"
+"<![endif]>\r\n"
+"	</div>\r\n"
+"	<div class=\"ffoot\">\r\n"
+"		<input type=\"reset\" class=\"button\" value=\"Reset\" />\r\n"
+"		<input type=\"submit\" class=\"button\" value=\"Upload...\" />\r\n"
+"	</div>\r\n"
+"</form>\r\n"
+"</div>\r\n"
+	HTML_FOOTER;
+
+const char update_html[] = DOCTYPE_HTML "<head>\r\n"
+	"<title>ThinkOS HTTP Server Demo</title>\r\n"
+	META_COPY LINK_ICON LINK_CSS
+	"</head>\r\n<body>\r\n"
+	"<h1>ThinkOS Firmware Upgrade</h1>\r\n"
+	HTML_FOOTER;
+
+#if 0
+<script type="text/javascript">
+	function alert(msg) {
+		var html = '<img style="float:none;vertical-align:middle"' +
+			'src="alert.png" alt="Alert! "/>&nbsp;'+msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	function msg_show(msg) {
+		var html = msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	function cancel() {
+		history.go(-1);
+	}
+</script>
+
+<script type="text/javascript">
+	function msg_show(msg) {
+		var html = msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	function upload_msg() {
+		msg_show("Uploading firmware, please wait...");
+	}
+	function nofile_msg() {
+		msg_show("You must select a file to upload...");
+	}
+</script>
+
+<script type="text/javascript">
+	var sysinfo_xml;
+
+	function on_pkginfo_get(xml)
+	{
+		var st;
+		txt_bind(xml, 'version');
+		txt_bind(xml, 'date');
+		st = (+xml.getElementsByTagName('status')[0].firstChild.nodeValue);
+		if (st == 1)
+			document.getElementById('agree').disabled = false;
+		else
+			alert("Package error!");
+	}
+
+	function on_disclaimer_get(txt)
+	{
+		document.getElementById('disclaimer').innerHTML = txt;
+	}
+
+	function on_agree_click(chk)
+	{
+		btn = document.getElementById('update');
+		btn.disabled = chk.checked ? false : true;
+	}
+
+	function init() {
+		xml_async_get("product.xml", function (xml) {
+					  document.getElementById('title').innerHTML =
+					  xml_txt_get(xml, 'series') });
+		xml_async_get("pkginfo.xml", on_pkginfo_get);
+		txt_async_get("download/disclaimer.txt", on_disclaimer_get);
+	}
+</script>
+</head>
+
+<body onload="init()">
+<div id="header">
+	<ul><li><img src="ip-cam-64x64.png" alt="IP Camera"/></li>
+	<li><h1 id="title">&nbsp;</h1><h2>i-LAX Electronics</h2></li><ul>
+</div>
+
+<div id="content">
+	<h1>Firmware Update</h1>
+	<div class="block">
+		<div class="form">
+		<div class="fbody">
+		<fieldset>
+			<legend>Update information:</legend>
+			<center>
+			<table>
+				<tr>
+					<td align="right"><b>Firmware version:</b></td>
+					<td><span id="version"></span></td>
+				</tr>
+				<tr>
+					<td align="right"><b>Release date:</b></td>
+					<td><span id="date"></span></td>
+				</tr>
+			</table>
+
+			<textarea rows="10" cols="80" id="disclaimer" readonly="readonly">
+			</textarea>
+			</center>
+		</fieldset>
+		<ul style="margin:1em 2em 0em" >
+		<li> If you are <b>not sure</b> about this procedure press
+		'Cancel' to return.</li>
+		<li>If you are sure you want to upgrade the device's firmware,
+		please read carefully the information above.</li>
+		<li>If you agree with the terms and conditions therein expressed,
+		check the box bellow and press the 'Update...' button.</li>
+		</ul>
+		</div>
+		</div>
+		<p id="msg"></p>
+		<form action="/install.html" >
+		<div class="form">
+			<div class="fbody">
+			<center>
+			<p><input type="checkbox" class="checkbox" id="agree"
+			disabled="disabled"	onclick="on_agree_click(this)" />
+			Yes, I agree with the above terms and conditions.</p>
+			</center>
+			</div>
+			<div class="ffoot">
+			<center>
+			<input type="button" class="button" onclick="cancel()"
+				value="Cancel" />
+			<input type="submit" class="button" id="update"
+				disabled="disabled"	value="Update..."  />
+			</center>
+			</div>
+		</div>
+		</form>
+	</div>
+</div>
+#endif
+
 /*---------------------------------------------------------------------------
   Initial page (index.html)
   ---------------------------------------------------------------------------*/
@@ -46,6 +341,7 @@ const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<p>Welcome to the <b>ThinkOS</b> web server demo initial page.</p>\r\n"
 	"<ul>\r\n"
 	"<li><a href=\"ipcfg/ipcfg_form.cgi\">IP Configuration</a></li>\r\n"
+	"<li><a href=\"tools.html\">Tools</a></li>\r\n"
 	"</ul>\r\n"
 	HTML_FOOTER;
 
@@ -102,5 +398,10 @@ struct httpdobj www_root[] = {
 		.len = sizeof(style_css) - 1, .ptr = style_css },
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(index_html) - 1, .ptr = index_html },
+	{ .oid = "tools.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
+		.len = sizeof(tools_html) - 1, .ptr = tools_html },
+	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
+		.len = sizeof(update_html) - 1, .ptr = update_html },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
+
