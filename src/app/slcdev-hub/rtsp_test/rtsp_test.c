@@ -244,8 +244,8 @@ int main(int argc, char ** argv)
 				hour++;
 			}
 		}
-		INF("One second tick mark. :) ...");
-		printf("%4d:%02d:%02d tick...\n", hour, minute, second);
+//		INF("One second tick mark. :) ...");
+//		printf("%4d:%02d:%02d tick...\n", hour, minute, second);
 	}
 
 	return 0;

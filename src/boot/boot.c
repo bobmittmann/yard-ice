@@ -56,83 +56,8 @@ const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
 
-void io_init(void);
-void board_init(void);
-void board_tick(unsigned int cnt);
-extern const struct gdb_target board_gdb_target;
-
 void monitor_task(struct dmon_comm * comm);
 void gdb_task(struct dmon_comm * comm);
-
-#if 0
-#define CTRL_C 0x03
-
-void boot_task(struct dmon_comm * comm)
-{
-	uint32_t sigmask = 0;
-	bool delay = true;
-	int cnt = 0;
-	char c;
-
-	sigmask |= (1 << DMON_COMM_RCV);
-	sigmask |= (1 << DMON_COMM_CTL);
-	sigmask |= (1 << DMON_ALARM);
-
-	board_tick(cnt);
-	dmon_alarm(250);
-
-	while (delay) {
-		uint32_t sigset;
-
-		sigset = dmon_select(sigmask);
-
-		if (sigset & (1 << DMON_COMM_CTL)) {
-			DCC_LOG(LOG_INFO, "Comm Ctl.");
-			dmon_clear(DMON_COMM_CTL);
-			if (dmon_comm_isconnected(comm)) {
-				sigmask |= (1 << DMON_COMM_RCV);
-#if 0
-				dmprintf(comm, "\r\n\r\n- ThikOS Bootloader "
-						 "- (^C to stop boot)");
-#endif
-			}
-		}
-
-		if (sigset & (1 << DMON_COMM_RCV) && 
-			(dmon_comm_recv(comm, &c, 1) == 1)) {
-			switch (c) {
-			case CTRL_C:
-				dmprintf(comm, "^C\r\n");
-				dmon_exec(monitor_task);
-				break;
-#if (BOOT_ENABLE_GDB)
-			case '+':
-				dmon_exec(gdb_task);
-				break;
-#endif
-			default:
-				delay = false;
-			}
-		}
-
-		if (sigset & (1 << DMON_ALARM)) {
-			dmon_clear(DMON_ALARM);
-			if (++cnt == 20)
-				delay = false;
-			else
-				dmon_alarm(250);
-			board_tick(cnt);
-		}
-
-	}
-
-//	__thinkos_thread_abort(0);
-	DCC_LOG(LOG_TRACE, "dmon_app_exec()");
-	dmon_app_exec(board_gdb_target.app.start_addr, true);
-	dmon_exec(monitor_task);
-//	dmon_exec(gdb_task);
-}
-#endif
 
 void monitor_init(void)
 {
@@ -154,7 +79,7 @@ void monitor_init(void)
 
 #if (BOOT_ENABLE_GDB)
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
-	gdb_init(monitor_task, &board_gdb_target);
+	gdb_init(monitor_task);
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
@@ -166,14 +91,11 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	DCC_LOG(LOG_TRACE, "1. io_init().");
-
-	io_init();
-
-	DCC_LOG(LOG_TRACE, "2. cm3_udelay_calibrate().");
+	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-	board_init();
+	DCC_LOG(LOG_TRACE, "2. board_init().");
+	this_board.init();
 
 	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));

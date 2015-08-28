@@ -430,3 +430,96 @@ void board_test(void)
 	}	
 }
 
+extern const uint8_t otg_xflash_pic[];
+extern const unsigned int sizeof_otg_xflash_pic;
+
+struct magic {
+	uint32_t cnt;
+	struct {
+		uint32_t addr;
+		uint32_t mask;
+		uint32_t comp;
+	} rec[];
+};
+
+const struct magic bootloader_magic = {
+	.cnt = 4,
+	.rec = {
+		{  0x08000000, 0xffffffff, 0x10010000 },
+		{  0x08000004, 0xffff0000, 0x08000000 },
+		{  0x08000008, 0xffff0000, 0x08000000 },
+		{  0x0800000c, 0xffff0000, 0x08000000 }
+	}
+};
+
+void board_upgrade(struct dmon_comm * comm)
+{
+	uint32_t * xflash_code = (uint32_t *)(0x20001000);
+	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *) = 
+		((void *)xflash_code) + 1;
+
+	cm3_cpsid_f();
+	__thinkos_memcpy(xflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
+	xflash_ram(0, 65536, &bootloader_magic);
+}
+
+const struct mem_desc sram_desc = {
+	.name = "RAM",
+	.blk = {
+		{ 0x10000000, BLK_RW, SZ_64K,  1 }, /*  CCM - Main Stack */
+
+		{ 0x20000000, BLK_RO, SZ_4K,   1 }, /* Bootloader: 4KiB */
+		{ 0x20001000, BLK_RW, SZ_4K,  27 }, /* Application: 108KiB */
+		{ 0x2001c000, BLK_RW, SZ_16K,  1 }, /* SRAM 2: 16KiB */
+		{ 0x20020000, BLK_RW, SZ_64K,  1 }, /* SRAM 3: 64KiB */
+
+		{ 0x22000000, BLK_RO, SZ_512K, 1 }, /* Bootloader - bitband */
+		{ 0x22080000, BLK_RW, SZ_512K, 27}, /* Application - bitband */
+		{ 0x22e00000, BLK_RW, SZ_2M,   1 }, /* SRAM 2 - bitband */
+		{ 0x23000000, BLK_RW, SZ_8M,   1 }, /* SRAM 3 - bitband */
+
+#ifdef ENABLE_PRIPHERAL_MEM
+		{ 0x40000000, BLK_RO, SZ_1M,   1 },  /* Peripheral */
+		{ 0x42000000, BLK_RO, SZ_128M, 1 },  /* Peripheral - bitband */
+#endif
+
+		{ 0x00000000, 0, 0, 0 }
+	}
+}; 
+
+const struct mem_desc flash_desc = {
+	.name = "FLASH",
+	.blk = {
+		{ 0x08000000, BLK_RO, SZ_16K,  4 }, /* Bootloader */
+		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
+		{ 0x08020000, BLK_RW, SZ_128K, 7 }, /* Application */
+		{ 0x00000000, 0, 0, 0 }
+	}
+}; 
+
+const struct thinkos_board this_board = {
+	.name = "SLCDEV-HUB",
+	.hw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.sw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.memory = {
+		.ram = &sram_desc,
+		.flash = &flash_desc
+	},
+	.application = {
+		.start_addr = 0x08010000,
+		.block_size = (64 + 7 * 128) * 1024
+	},
+	.init = board_init,
+	.softreset = board_softreset,
+	.autoboot = board_autoboot,
+	.configure = board_configure,
+	.upgrade = board_upgrade,
+	.on_appload = board_on_appload
+};
+

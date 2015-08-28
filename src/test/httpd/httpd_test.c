@@ -84,6 +84,7 @@ int httpd_server_task(struct httpd * httpd)
 		if (http_accept(httpd, ctl) < 0) {
 			DCC_LOG1(LOG_WARNING, "<%d> http_accept() failed!", 
 					 thinkos_thread_self());
+			thinkos_sleep(1000);
 			continue;
 		}
 
@@ -271,7 +272,7 @@ const struct thinkos_thread_inf httpd4_inf = {
 
 int main(int argc, char ** argv)
 {
-	struct httpd httpd;
+	struct httpd * httpd;
 	int port = 80;
 
 	DCC_LOG_INIT();
@@ -302,20 +303,21 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. network_config().");
 	network_config();
 
-	httpd_start(&httpd, port, 4, httpd_dir, NULL);
+	httpd = httpd_alloc();
+	httpd_init(httpd, port, 4, httpd_dir, NULL);
 	printf("Listening on port %d.\n", port);
 
 	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd1_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd2_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd3_inf);
 
-	thinkos_thread_create_inf((void *)httpd_server_task, (void *)&httpd,
+	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd4_inf);
 
 	DCC_LOG(LOG_TRACE, "6. TCP echo ...");

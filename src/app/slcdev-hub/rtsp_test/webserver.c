@@ -483,12 +483,14 @@ const struct thinkos_thread_inf httpd_inf = {
 	.tag = "HTTPD"
 };
 
-struct httpd httpd;
-
 int webserver_start(void)
 {
-	httpd_start(&httpd, 80, 4, httpd_dir, NULL);
+	struct httpd * httpd;
+
+	httpd = httpd_alloc();
+
+	httpd_init(httpd, 80, 4, httpd_dir, NULL);
 
 	return thinkos_thread_create_inf((void *)http_server_task,
-			(void *)&httpd, &httpd_inf);
+			(void *)httpd, &httpd_inf);
 }

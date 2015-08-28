@@ -95,8 +95,8 @@ int tcp_listen(struct tcp_pcb * __mux, int __backlog)
 		tcpip_net_unlock();
 	}
 
-	DCC_LOG2(LOG_TRACE, "<%04x> port:%d [LISTEN]", (int)tp, 
-		ntohs(tp->t_lport));
+	DCC_LOG3(LOG_TRACE, "<%04x> semaphore=%d port=%d [LISTEN]", (int)tp, 
+		tp->t_sem, ntohs(tp->t_lport));
 
 	tcpip_net_unlock();
 
