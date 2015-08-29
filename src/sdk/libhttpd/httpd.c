@@ -136,6 +136,8 @@ int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
 static int http_process_field(struct httpctl * ctl,
 		unsigned int hdr, char * val)
 {
+	char * cp;
+
 	DCC_LOG1(LOG_INFO, "header field received: %s", http_hdr_name[hdr]);
 
 	switch (hdr) {
@@ -144,8 +146,12 @@ static int http_process_field(struct httpctl * ctl,
 		DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
 		break;
 	case HTTP_HDR_CONTENT_TYPE:
-		ctl->ctype = http_parse_content_type(val, NULL);
-		DCC_LOG1(LOG_TRACE, "Content-Type: 0x%02x", ctl->ctype);
+		ctl->ctype = http_parse_content_type(val, &cp);
+		if (ctl->ctype == APPLICATION_X_WWW_FORM_URLENCODED) {
+			DCC_LOGSTR(LOG_TRACE, "application/x-www-form-urlencoded; %s", cp);
+		} else {
+			DCC_LOG1(LOG_TRACE, "Content-Type: 0x%02x", ctl->ctype);
+		}
 		break;
 	case HTTP_HDR_CONTENT_LENGTH:
 		ctl->ctlen = strtoul(val, NULL, 10);

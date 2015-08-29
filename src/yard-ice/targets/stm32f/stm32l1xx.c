@@ -35,7 +35,7 @@
 #define STM32L1XX
 #include "stm32l_defs.h"
 
-#define ERR (RDERR | OPTVERRUSR | OPTVERR | SIZERR | PGAERR | WRPERR)
+#define FERR (RDERR | OPTVERRUSR | OPTVERR | SIZERR | PGAERR | WRPERR)
 
 int stm32l1xx_flash_bsy_wait(cm3ice_ctrl_t * ctrl)
 {
@@ -45,7 +45,7 @@ int stm32l1xx_flash_bsy_wait(cm3ice_ctrl_t * ctrl)
 
 	for (again = 4096; again > 0; again--) {
 		cm3ice_rd32(ctrl, STM32F_BASE_FLASH + FLASH_SR, &sr);
-		if (sr & ERR) {
+		if (sr & FERR) {
 			DCC_LOG6(LOG_WARNING, "%s%s%s%s%s%s", 
 					 sr & RDERR ? "RDERR" : "",
 					 sr & OPTVERRUSR ? "OPTVERRUSR" : "",

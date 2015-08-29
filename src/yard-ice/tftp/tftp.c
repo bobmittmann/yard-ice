@@ -207,7 +207,7 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		
 		addr = strtoul(fname, &cp, 16);
 
-		tracef("%s(): fname=%s addr=0x%08x", __func__, fname, addr);
+		INF("fname=%s addr=0x%08x", fname, addr);
 
 		DCC_LOG1(LOG_TRACE, "addr=0x%08x", addr);
 
@@ -489,7 +489,7 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
 
-				tracef("%s(): RRQ '%s' '%s' blksize=%d", __func__, req.fname, 
+				INF("RRQ '%s' '%s' blksize=%d", req.fname, 
 					   tftp_mode[req.mode], req.blksize);
 
 				if (tftp_decode_fname(dbg, req.fname) < 0) {
@@ -534,7 +534,7 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
 
-				tracef("%s(): WRQ '%s' '%s' blksize=%d", __func__, req.fname, 
+				INF("WRQ '%s' '%s' blksize=%d", req.fname, 
 					   tftp_mode[req.mode], req.blksize);
 
 				if (tftp_decode_fname(dbg, req.fname) < 0) {
@@ -685,8 +685,8 @@ send_data:
 						if (n < 0) {
 							DCC_LOG(LOG_ERROR, "target_mem_write()!");
 							sprintf(msg, "TARGET WRITE FAIL: %08x", addr);
-							tracef("%s(): memory write failed at "
-								   "addr=0x%08x, code %d", __func__, addr, n);
+							INF("memory write failed at "
+								   "addr=0x%08x, code %d", addr, n);
 						} else {
 							DCC_LOG2(LOG_WARNING, "short read: "
 									 "ret(%d) < len(%d)!", n, len);
@@ -784,8 +784,9 @@ int tftpd_start(void)
 
 	th = thinkos_thread_create_inf((void *)tftp_daemon_task, 
 								   (void *)&debugger, &tftpd_inf);
+	(void)th;
 
-	tracef("TFTPD started th=%d", th);
+	INF("TFTPD started th=%d", th);
 
 	return 0;
 }

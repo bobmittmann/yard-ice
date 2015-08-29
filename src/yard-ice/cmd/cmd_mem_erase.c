@@ -80,13 +80,13 @@ int cmd_mem_erase(FILE * f, int argc, char ** argv)
 	dbg->transf.base = addr & ~0x03;
 	dbg->transf.size = size;
 
-	tracef("target_mem_erase: 0x%08x, %d", addr, size);
+	INF("target_mem_erase: 0x%08x, %d", addr, size);
 
 	DCC_LOG2(LOG_TRACE, "addr=0x%08x size=%d", addr, size);
 
 	ret = target_mem_erase(addr, size);
 
-	tracef("target_mem_erase: return %d", ret);
+	INF("target_mem_erase: return %d", ret);
 
 	return ret;
 }

@@ -25,10 +25,17 @@
 #include <thinkos.h>
 #include <sys/dcclog.h>
 
+#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 2) /* extra slot for void thread */
+#else
+#define CYCCNT_MAX ((THINKOS_THREADS_MAX) + 1)
+#endif
+
 int dmon_print_osinfo(struct dmon_comm * comm)
 {
 	struct thinkos_rt * rt = &thinkos_rt;
 #if THINKOS_ENABLE_PROFILING
+	uint32_t cycbuf[CYCCNT_MAX];
 	uint32_t cyccnt;
 	int32_t delta;
 	uint32_t cycdiv;
@@ -44,6 +51,10 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 	thinkos_rt.cycref = cyccnt;
 	/* update active thread's cycle counter */
 	thinkos_rt.cyccnt[thinkos_rt.active] += delta; 
+	/* copy the thread counters to a buffer */
+	__thinkos_memcpy32(cycbuf, rt->cyccnt, sizeof(cycbuf));
+	/* reset cycle counters */
+	__thinkos_memset32(rt->cyccnt, 0, sizeof(cycbuf));
 #endif
 
 //	__thinkos_memcpy32(rt, &thinkos_rt, sizeof(struct thinkos_rt));
@@ -65,9 +76,9 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 
 		cycsum = 0;
 		for (i = 0; i < THINKOS_THREADS_MAX; ++i)
-			cycsum += rt->cyccnt[i];
+			cycsum += cycbuf[i];
 		cycbusy = cycsum;
-		cycsum += rt->cyccnt[THINKOS_CYCCNT_IDLE];
+		cycsum += cycbuf[THINKOS_CYCCNT_IDLE];
 
 		cycdiv = (cycsum + 500) / 1000;
 		busy = (cycbusy + cycdiv / 2) / cycdiv;
@@ -135,7 +146,7 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 			}
 #endif
 #if THINKOS_ENABLE_PROFILING
-			busy = (rt->cyccnt[i] + cycdiv / 2) / cycdiv;
+			busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
 			dmprintf(comm, " | %3d.%d", busy / 10, busy % 10);
 #endif
 			dmprintf(comm, " |");
@@ -167,16 +178,10 @@ int dmon_print_osinfo(struct dmon_comm * comm)
 	dmprintf(comm, " |        ..."); 
 #endif
 #if THINKOS_ENABLE_PROFILING
-	busy = (rt->cyccnt[i] + cycdiv / 2) / cycdiv;
+	busy = (cycbuf[i] + cycdiv / 2) / cycdiv;
 	dmprintf(comm, " | %3d.%d", busy / 10, busy % 10);
 #endif
 	dmprintf(comm, " |\r\n");
-
-#if THINKOS_ENABLE_PROFILING
-	/* Reset cycle counters */
-	for (i = 0; i <= THINKOS_THREADS_MAX; ++i)
-		thinkos_rt.cyccnt[i] = 0; 
-#endif
 
 	for (j = 0; j < (rt->wq_end - rt->wq_lst); ++j) {
 		uint32_t wq;

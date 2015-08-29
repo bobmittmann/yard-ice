@@ -30,8 +30,10 @@ bool __thinkos_thread_isalive(unsigned int th)
 	if (th == THINKOS_THREAD_IDLE)
 		return true;
 
+#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
 	if (th == THINKOS_THREAD_VOID)
 		return (thinkos_rt.void_ctx == NULL) ? false : true;
+#endif
 
 	if (th >= THINKOS_THREADS_MAX)
 		return false;

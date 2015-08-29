@@ -48,3 +48,5 @@ LDFLAGS = -nostdlib -T $(MACH).ld
 
 include $(THISDIR)/prog.mk
 
+include $(THISDIR)/jtag.mk
+

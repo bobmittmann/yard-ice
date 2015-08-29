@@ -223,7 +223,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 
 	for (;;) {
 
-		tracef("VCOM/TCP wating for incomming connections...");
+		INF("VCOM/TCP wating for incomming connections...");
 
 		DCC_LOG(LOG_TRACE, "VCOM/TCP wating for connection.");
 		if ((tp = tcp_accept(svc)) == NULL) {
@@ -233,7 +233,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 
 		DCC_LOG(LOG_TRACE, "VCOM/TCP connection accepted.");
 
-		tracef("VCOM/TCP connection accepted.");
+		INF("VCOM/TCP connection accepted.");
 
 		vcom->tp  = tp;
 
@@ -439,7 +439,7 @@ int __attribute__((noreturn)) tcp_input_task(struct vcom * vcom)
 		tcp_close(tp);
 		vcom->tp  = NULL;
 
-		tracef("VCOM connection closed.");
+		INF("VCOM connection closed.");
 	}
 
 	DCC_LOG(LOG_ERROR, "thread loop break!!!");
@@ -558,7 +558,7 @@ int vcom_start(void)
 	tcp_bind(svc, INADDR_ANY, htons(2000));
 
 	if (tcp_listen(svc, 1) != 0) {
-		tracef("%s(): Can't register the TCP listner!", __func__);
+		INF("Can't register the TCP listner!");
 		return -1;
 	}
 
@@ -569,12 +569,13 @@ int vcom_start(void)
 	th = thinkos_thread_create_inf((void *)tcp_input_task, (void *)vcom, 
 						&tcp_input_inf);
 								
-	tracef("VCOM TCP input thread=%d", th);
+	INF("VCOM TCP input thread=%d", th);
 
 	th = thinkos_thread_create_inf((void *)serial_input_task, (void *)vcom, 
 						&serial_input_inf);
+	(void)th;
 								
-	tracef("VCOM serial input thread=%d", th);
+	INF("VCOM serial input thread=%d", th);
 
 	return 0;
 }

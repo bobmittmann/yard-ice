@@ -44,13 +44,13 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets comm tftp shell console tty gdb vcom telnet crc xmodem
 
-CFLAGS = -g -O2
-
-VERSION_DATE = "2015-06-15"
+VERSION_DATE = "2015-08-29"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "15"
+VERSION_MINOR = "16"
 
 CDEFS = CONFIG_H
+CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections 
 
 INCPATH = sdk/include yard-ice/include
 

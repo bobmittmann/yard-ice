@@ -78,7 +78,7 @@ int telnet_shell(void)
 	th = thinkos_thread_create_inf((void *)telnetd_task, NULL, 
 								   &telnet_shell_inf);
 
-	tracef("TELNET shell thread=%d", th);
+	INF("TELNET shell thread=%d", th);
 
 	return th;
 }

@@ -442,7 +442,7 @@ int rsp_cmd(struct tcp_pcb * tp, char * pkt, int len)
 	}
 	s[i] = '\0';
 
-	tracef("%s(): \"%s\"", __func__, s);
+	INF("\"%s\"", s);
 
 	if ((ret = exec(f, yard_ice_cmd_tab, s)) < 0) {
 		DCC_LOG1(LOG_ERROR, "shell_exec(): %d", ret);
@@ -1053,7 +1053,7 @@ int __attribute__((noreturn)) gdb_brk_task(struct gdb_rspd * gdb)
 	int state;
 
 	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
-	tracef("%s(): <%d>", __func__, __os_thread_self());
+	INF("<%d>", __os_thread_self());
 
 	for (;;) {
 		/* wait for a connection */
@@ -1103,7 +1103,7 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 	int state;
 
 	DCC_LOG1(LOG_TRACE, "<%d>", __os_thread_self());
-	tracef("%s(): <%d>", __func__, __os_thread_self());
+	INF("<%d>", __os_thread_self());
 
 	for (;;) {
 		if ((tp = tcp_accept(svc)) == NULL) {
@@ -1113,7 +1113,7 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 		gdb->tp = tp;
 		gdb->noack_mode = 0;
 
-		tracef("%s(): accepted: %08x", __func__, (int)tp);
+		INF("accepted: %08x", (int)tp);
 		DCC_LOG(LOG_TRACE, "accepted.");
 
 		state = target_status();
@@ -1129,7 +1129,7 @@ int __attribute__((noreturn)) gdb_task(struct gdb_rspd * gdb)
 
 		for (;;) {
 			if ((len = tcp_recv(tp, buf, 1)) <= 0) {
-				tracef("%s(): tcp_recv() failed!", __func__);
+				INF("tcp_recv() failed!");
 				DCC_LOG1(LOG_WARNING, "tcp_recv(): %d", len);
 				break;
 			}
@@ -1306,7 +1306,7 @@ int gdb_rspd_start(void)
 	tcp_bind(svc, INADDR_ANY, htons(1000));
 
 	if (tcp_listen(svc, 1) != 0) {
-		tracef("Can't register the TCP listner!");
+		WARN("Can't register the TCP listner!");
 		return -1;
 	}
 
@@ -1318,12 +1318,14 @@ int gdb_rspd_start(void)
 	th = thinkos_thread_create_inf((void *)gdb_task, (void *)&gdb_rspd, 
 								   &gdb_srv_inf);
 
-	tracef("GDB server started th=%d", th);
+	INF("GDB server started th=%d", th);
 
 	th = thinkos_thread_create_inf((void *)gdb_brk_task, (void *)&gdb_rspd, 
 								   &gdb_brk_inf);
 
-	tracef("GDB monitor started th=%d", th);
+	INF("GDB monitor started th=%d", th);
+
+	(void)th;
 
 	return 0;
 }

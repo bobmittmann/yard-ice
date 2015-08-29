@@ -707,7 +707,7 @@ int stm32f_otg_fs_dev_init(struct stm32f_otg_drv * drv, usb_class_t * cl,
 	stm32f_otg_fs_device_init(otg_fs);
 
 	/* Reset global interrupts mask */
-	otg_fs->gintmsk = OTG_HS_WUIM |
+	otg_fs->gintmsk = OTG_FS_WUIM |
 		OTG_FS_SRQIM |
 		OTG_FS_DISCINT |
 		OTG_FS_CIDSCHGM |

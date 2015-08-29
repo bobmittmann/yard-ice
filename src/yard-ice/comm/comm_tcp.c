@@ -126,7 +126,7 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 
 		tcp_bind(mux, INADDR_ANY, htons(port));
 
-		tracef("COMM TCP: waiting for incomming connections... ");
+		INF("COMM TCP: waiting for incomming connections... ");
 
 		if (tcp_listen(mux, 1) != 0) {
 			DCC_LOG(LOG_WARNING, "tcp_listen() failed!");
@@ -138,7 +138,7 @@ void __attribute__((noreturn)) comm_tcp_read_task(struct comm_tcp * parm)
 			break;
 		}
 
-		tracef("COMM TCP: connection accepted. ");
+		INF("COMM TCP: connection accepted. ");
 		DCC_LOG(LOG_TRACE, "connection accepted...");
 	
 		DCC_LOG(LOG_TRACE, "closing TCP mux............");
@@ -214,13 +214,14 @@ int comm_tcp_start(ice_comm_t * comm)
 	th = thinkos_thread_create_inf((void *)comm_tcp_read_task, 
 								   (void *)&comm_tcp, &comm_read_inf);
 
-	tracef("comm_tcp_start th=%d", th);
+	INF("comm_tcp_start th=%d", th);
 	DCC_LOG1(LOG_TRACE, "Comm read thread %d", th);
 
 	th = thinkos_thread_create_inf((void *)comm_tcp_write_task, 
 					   (void *)&comm_tcp, &comm_write_inf);
+	(void)th;
 
-	tracef("comm_tcp_write_task th=%d", th);
+	INF("comm_tcp_write_task th=%d", th);
 	DCC_LOG1(LOG_TRACE, "Comm write thread=%d.", th);
 
 	return 0;

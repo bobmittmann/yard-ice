@@ -2221,7 +2221,7 @@ int ice_drv_select(struct debugger * dbg, const ice_drv_info_t * info)
 			return ret;
 		}
 
-		tracef("- ICE driver: %s - %s - %s",
+		INF("- ICE driver: %s - %s - %s",
 			   ice->info->name, ice->info->version, ice->info->vendor);
 	} 
 
@@ -2316,7 +2316,7 @@ int target_ice_configure(FILE * f, const struct target_info * target,
 
 		fprintf(f, " - ICE driver: %s - %s - %s\n",
 				ice->info->name, ice->info->version, ice->info->vendor);
-		tracef("- ICE driver: %s - %s - %s",
+		INF("- ICE driver: %s - %s - %s",
 			   ice->info->name, ice->info->version, ice->info->vendor);
 	} 
 
@@ -2741,7 +2741,7 @@ void debugger_except(const char * msg)
 		DCC_LOG(LOG_ERROR, "undefined behavior"); 
 	}
 
-	tracef("EXCEPTION: %s", msg);
+	INF("EXCEPTION: %s", msg);
 
 	dbg->state = DBG_ST_FAULT;
 	DCC_LOG(LOG_TRACE, "[DBG_ST_FAULT]");

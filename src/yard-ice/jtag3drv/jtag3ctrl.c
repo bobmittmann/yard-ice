@@ -320,10 +320,10 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 	if ((ret = altera_configure(rbf, 65536)) < 0) {
 		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
-		tracef(" # altera_configure() failed: %d!", ret);
+		INF(" # altera_configure() failed: %d!", ret);
 //		return ret;
 	} else {
-		tracef("- FPGA configuration done (%d bytes)", ret);
+		INF("- FPGA configuration done (%d bytes)", ret);
 	}
 
 	/* Enable clock output */
@@ -360,7 +360,7 @@ bool jtag3ctrl_fpga_probe(void)
 			reg_wr(REG_INT_ST, 0xffff);
 			if (--cnt == 0) {
 				DCC_LOG1(LOG_WARNING, "IRQ line stuck at high! %d", j);
-				tracef("- FPGA IRQ probe failed. Stuck at high!");
+				INF("- FPGA IRQ probe failed. Stuck at high!");
 				return false;
 			}
 		}
@@ -371,7 +371,7 @@ bool jtag3ctrl_fpga_probe(void)
 		while (!jtag3ctrl_irq_status()) {
 			if (--cnt == 0) {
 				DCC_LOG(LOG_WARNING, "IRQ line stuck at low!");
-				tracef("- FPGA IRQ probe failed. Stuck at low.");
+				INF("- FPGA IRQ probe failed. Stuck at low.");
 				return false;
 			}
 		}
@@ -381,7 +381,7 @@ bool jtag3ctrl_fpga_probe(void)
 		reg_wr(REG_INT_ST, 0xffff);
 	}
 
-	tracef("- FPGA IRQ probe OK.");
+	INF("- FPGA IRQ probe OK.");
 
 	return true;
 }

@@ -46,7 +46,7 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	if (argc) {
 		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
 			fprintf(f, "flush\n");
-			trace_flush();
+//			trace_flush();
 			return 0;
 		} 
 
@@ -72,7 +72,7 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 	}
 
 	fprintf(f, "---------\n");
-	trace_fprint(f, TRACE_ALL);
+//	trace_fprint(f, TRACE_ALL);
 
 	return 0;
 }

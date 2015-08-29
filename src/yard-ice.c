@@ -139,47 +139,80 @@ void rtc_init(void)
 //	stm32f_rtc_init();
 }
 
+/* -------------------------------------------------------------------------
+ * System Supervision
+ * ------------------------------------------------------------------------- */
+
+const char * const trace_lvl_tab[] = {
+		"   NONE",
+		"  ERROR",
+		"WARNING",
+		"   INFO",
+		"  DEBUG"
+};
+
 FILE * volatile monitor_stream;
 volatile bool monitor_auto_flush;
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
-	int opt;
+	struct trace_entry trace;
+	uint32_t clk;
 
-	tracef("%s(): <%d> started...", __func__, thinkos_thread_self());
+	INF("<%d> started...", thinkos_thread_self());
 
+	/* fall back to stdout */
+	monitor_stream = stdout;
+
+	trace_tail(&trace);
+
+	clk = thinkos_clock();
 	for (;;) {
-		thinkos_sleep(250);
+		struct timeval tv;
+		char s[80];
+
+		/* 8Hz periodic task */
+		clk += 125;
+		thinkos_alarm(clk);
+
+		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+			trace_ts2timeval(&tv, trace.dt);
+			if (trace.ref->lvl <= TRACE_LVL_WARN)
+				fprintf(monitor_stream, "%s %2d.%06d: %s,%d: %s\n",
+						trace_lvl_tab[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec,
+						trace.ref->func, trace.ref->line, s);
+			else
+				fprintf(monitor_stream, "%s %2d.%06d: %s\n",
+						trace_lvl_tab[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec, s);
+		}
 
 		if (monitor_auto_flush)
-			opt = TRACE_FLUSH;      
-		else
-			opt = 0;
-
-		if (trace_fprint(monitor_stream, opt) < 0) {
-			/* fall back to stdout */
-			monitor_stream = stdout;
-		}
+			trace_flush(&trace);
 	}
 }
+
 
 uint32_t supervisor_stack[128];
 
 const struct thinkos_thread_inf supervisor_inf = {
-	.stack_ptr = supervisor_stack, 
+	.stack_ptr = supervisor_stack,
 	.stack_size = sizeof(supervisor_stack),
-	.priority = 1,
-	.thread_id = 1,
+	.priority = 32,
+	.thread_id = 18,
 	.paused = false,
 	.tag = "SUPV"
 };
 
 void supervisor_init(void)
 {
-	monitor_stream = stdout;
+	trace_init();
+
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
 							  &supervisor_inf);
 }
+
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
 {
@@ -243,7 +276,7 @@ int network_config(void)
 	tcpip_init();
 
 	if ((env = getenv("IPCFG")) == NULL) {
-		tracef("IPCFG not set, using defaults!\n");
+		INF("IPCFG not set, using defaults!\n");
 		/* default configuration */
 		strcpy(s, "192.168.0.128 255.255.255.0 192.168.0.1 0");
 		/* set the default configuration */
@@ -255,11 +288,11 @@ int network_config(void)
 	if ((env = getenv("ETHADDR")) != NULL) {
 		eth_strtomac(ethaddr, env);
 	} else {
-		trace("Ethernet MAC address not set, using defaults!");
+		INF("Ethernet MAC address not set, using defaults!");
 		DCC_LOG(LOG_WARNING, "Ethernet MAC address not set.");
 	}
 
-    tracef("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x",
+    INF("* mac addr: %02x-%02x-%02x-%02x-%02x-%02x",
 		   ethaddr[0], ethaddr[1], ethaddr[2],
 		   ethaddr[3], ethaddr[4], ethaddr[5]);
 
@@ -280,14 +313,16 @@ int network_config(void)
 
 	ifn_getname(ifn, s);
 	ifn_ipv4_get(ifn, &ip_addr, &netmask);
-	tracef("* netif %s: %s, %s", s, 
+	INF("* netif %s: %s, %s", s, 
 		   inet_ntop(AF_INET, (void *)&ip_addr, s1, 16),
 		   inet_ntop(AF_INET, (void *)&netmask, s2, 16));
+	(void)s1;
+	(void)s2;
 
 	if (gw_addr != INADDR_ANY) {
 		/* add the default route (gateway) to ethif */
 		ipv4_route_add(INADDR_ANY, INADDR_ANY, gw_addr, ifn);
-		tracef("* default route gw: %s", 
+		INF("* default route gw: %s", 
 			   inet_ntop(AF_INET, (void *)&gw_addr, s1, 16));
 	}
 
@@ -297,7 +332,7 @@ int network_config(void)
 		dhcp_start();
 		/* schedule the interface to be configured through dhcp */
 		dhcp_ifconfig(ethif, dhcp_callback);
-		tracef("DHCP started.\n");
+		INF("DHCP started.\n");
 #endif
 	}
 
@@ -315,25 +350,25 @@ int init_target(void)
 
 	if (target == NULL) {
 		target = target_first();
-		trace("WARNING: invalid target.");
-		tracef("Fallback to default: %s.", target->name);
+		INF("WARNING: invalid target.");
+		INF("Fallback to default: %s.", target->name);
 	};
 
-	trace("* target select...");
+	INF("* target select...");
 
 	/* TODO: ice driver selection */
 	if (target_ice_configure(stdout, target, 1) < 0) {
-		tracef("ERROR: target_ice_configure()!");
+		INF("ERROR: target_ice_configure()!");
 		return -1;
 	}
 
-	tracef("* target: %s [%s-%s-%s %s-%s-%s]", target->name, 
+	INF("* target: %s [%s-%s-%s %s-%s-%s]", target->name, 
 		   target->arch->name, target->arch->model, target->arch->vendor,
 		   target->arch->cpu->family, target->arch->cpu->model, 
 		   target->arch->cpu->vendor);
 
 	if (target_config(stdout) < 0) {
-		tracef("ERROR: target_config()!");
+		INF("ERROR: target_config()!");
 		return -1;
 	}
 
@@ -361,7 +396,7 @@ int main(int argc, char ** argv)
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 	trace_init();
 
-	tracef("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
+	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
 
 	stm32f_nvram_env_init();
 
@@ -375,50 +410,51 @@ int main(int argc, char ** argv)
 	supervisor_init();
 	thinkos_sleep(10);
 
-#if ENABLE_NETWORK
-	DCC_LOG(LOG_TRACE, " 4. network_config().");
-	network_config();
-#endif
-
 	DCC_LOG(LOG_TRACE, " 5. modules_init().");
 	modules_init();
 
-	tracef("* Starting system module ...");
+	INF("* Starting system module ...");
 	DCC_LOG(LOG_TRACE, " 6. sys_start().");
 	sys_start();
 
-	tracef("* Initializing YARD-ICE debugger...");
+	INF("* Initializing YARD-ICE debugger...");
 	DCC_LOG(LOG_TRACE, " 7. debugger_init().");
 	debugger_init();
 
-	tracef("* Initializing JTAG module ...");
+	INF("* Initializing JTAG module ...");
 	DCC_LOG(LOG_TRACE, " 8. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
-		tracef("jtag_start() failed! [ret=%d]", ret);
+		INF("jtag_start() failed! [ret=%d]", ret);
 		debugger_except("JTAG driver fault");
 	}
 
 #if (ENABLE_NAND)
-	tracef("* Initializing NAND module...");
+	INF("* Initializing NAND module...");
 	DCC_LOG(LOG_TRACE, " 9. mod_nand_start().");
 	if (mod_nand_start() < 0) {
-		tracef("mod_nand_start() failed!");
+		INF("mod_nand_start() failed!");
 		return 0;
 	}
 #endif
 
 #if (ENABLE_I2C)
-	tracef("* starting I2C module ... ");
+	INF("* starting I2C module ... ");
 	DCC_LOG(LOG_TRACE, "10. i2c_init().");
 	i2c_init();
 #endif
 
-	tracef("* configuring initial target ... ");
+	INF("* configuring initial target ... ");
 	DCC_LOG(LOG_TRACE, "11. init_target().");
 	init_target();
 
+#if ENABLE_NETWORK
+	DCC_LOG(LOG_TRACE, " 4. network_config().");
+	INF("* Initializing network...");
+	network_config();
+#endif
+
 #if (ENABLE_VCOM)
-	tracef("* starting VCOM daemon ... ");
+	INF("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
 	DCC_LOG(LOG_TRACE, "12. vcom_start().");
@@ -426,33 +462,33 @@ int main(int argc, char ** argv)
 #endif
 
 #if (ENABLE_COMM)
-	tracef("* starting COMM daemon ... ");
+	INF("* starting COMM daemon ... ");
 	comm_tcp_start(&debugger.comm);
 #endif
 
 #if (ENABLE_TFTP)
-	tracef("* starting TFTP server ... ");
+	INF("* starting TFTP server ... ");
 	tftpd_start();
 #endif
 
 #if (ENABLE_GDB)
-	tracef("* starting GDB daemon ... ");
+	INF("* starting GDB daemon ... ");
 	gdb_rspd_start();
 #endif
 
 #if ENABLE_USB
-	tracef("* starting USB shell ... ");
+	INF("* starting USB shell ... ");
 	usb_shell();
 #endif
 
 #if ENABLE_MONITOR
-	tracef("* starting ThinkOS monitor ... ");
+	INF("* starting ThinkOS monitor ... ");
 	monitor_init();
 	console_shell();
 #endif
 
 #if ENABLE_TELNET
-	tracef("* starting TELNET server ... ");
+	INF("* starting TELNET server ... ");
 	telnet_shell();
 #endif
 

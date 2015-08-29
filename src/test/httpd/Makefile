@@ -38,7 +38,8 @@ LIBS = cm3 stm32f util thinkos c ice-comm crc tcpip stm32drv tty httpd shell
 
 INCPATH = $(SDK)/include  
 CDEFS = CONFIG_H
-CFLAGS = -g -O2
+CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
+LDFLAGS = -Wl,--gc-sections
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f407

@@ -26,14 +26,6 @@
 #ifndef __SYS_PKTBUF_H__
 #define __SYS_PKTBUF_H__
 
-//#ifndef __USE_SYS_PKTBUF__
-//#error "Never use <sys/pktbuf.h> directly; include <tcpip/pktbuf.h> instead."
-//#endif 
-
-#ifdef CONFIG_H
-#include "config.h"
-#endif
-
 extern const uint16_t pktbuf_len;
 
 #ifdef __cplusplus

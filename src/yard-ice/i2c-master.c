@@ -254,7 +254,7 @@ void stm32f_i2c1_er_isr(void)
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "BERR");
-		trace("I2C BERR!");
+		INF("I2C BERR!");
 		thinkos_flag_give_i(xfer.flag);
 	}
 
@@ -262,7 +262,7 @@ void stm32f_i2c1_er_isr(void)
 		i2c->sr1 = 0;
 		xfer.ret = -1;
 		DCC_LOG(LOG_TRACE, "ARLO");
-		trace("I2C ARLO!");
+		INF("I2C ARLO!");
 		thinkos_flag_give_i(xfer.flag);
 	}
 
@@ -272,7 +272,7 @@ void stm32f_i2c1_er_isr(void)
 		i2c->cr1 = I2C_STOP | I2C_PE; /* generate a Stop condition */
 		xfer.ret = -1;
 		DCC_LOG1(LOG_INFO, "%d AF", i2c_irq_cnt);
-//		trace("I2C AF!");
+//		INF("I2C AF!");
 		thinkos_flag_give_i(xfer.flag);
 	}
 
@@ -296,12 +296,12 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 
 	DCC_LOG2(LOG_INFO, "addr=0x%02x len=%d", addr, len);
 
-//	tracef("addr=0x%02x len=%d", addr, len);
+//	INF("addr=0x%02x len=%d", addr, len);
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
 	if (thinkos_flag_timedtake(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
-	//	tracef("thinkos_flag_timedwait() tmo %d %d ", xfer.cnt, xfer.flag);
+	//	INF("thinkos_flag_timedwait() tmo %d %d ", xfer.cnt, xfer.flag);
 		DCC_LOG(LOG_TRACE, "Timeout...");
 		i2c_master_reset();
 		ret = -1;
@@ -334,7 +334,7 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 
 	i2c->cr1 = I2C_START | I2C_ACK | I2C_PE; /* generate a Start condition */
 
-//	trace("wait");
+//	INF("wait");
 	if (thinkos_flag_timedtake(xfer.flag, 100) == THINKOS_ETIMEDOUT) {
 		DCC_LOG(LOG_TRACE, "Timeout...");
 		i2c_master_reset();
@@ -430,7 +430,7 @@ void i2c_reset(void)
 void i2c_init(void)
 {
 	i2c_mutex = thinkos_mutex_alloc();
-//	tracef("I2C mutex=%d\n", i2c_mutex);
+//	INF("I2C mutex=%d\n", i2c_mutex);
 
 	thinkos_mutex_lock(i2c_mutex);
 	i2c_master_init(100000);

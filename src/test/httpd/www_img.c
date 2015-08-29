@@ -212,6 +212,7 @@ const uint8_t thinkos57x24_png[] = {
 	0x44, 0xae, 0x42, 0x60, 0x82,
 };
 
+#if 0
 const uint8_t nietzsche_jpg[] = {
 	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
 	0x01, 0x01, 0x00, 0x5f, 0x00, 0x5f, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
@@ -537,6 +538,7 @@ const uint8_t nietzsche_jpg[] = {
 	0xc5, 0x49, 0x77, 0x66, 0x92, 0x3a, 0x82, 0xcb, 0x95, 0x1d, 0xc8, 0xaf,
 	0xff, 0xd9,
 };
+#endif
 
 const uint8_t overlay_png[] = {
 	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
@@ -569,8 +571,8 @@ struct httpdobj www_img[] = {
 		.len = sizeof(thinkos57x24_png) - 1, .ptr = thinkos57x24_png },
 	{ .oid = "overlay.png", .typ = OBJ_STATIC_PNG, .lvl = 255, 
 		.len = sizeof(overlay_png) - 1, .ptr = overlay_png },
-	{ .oid = "nietzsche.jpg", .typ = OBJ_STATIC_JPEG, .lvl = 255, 
-		.len = sizeof(nietzsche_jpg) - 1, .ptr = nietzsche_jpg },
+//	{ .oid = "nietzsche.jpg", .typ = OBJ_STATIC_JPEG, .lvl = 255, 
+//		.len = sizeof(nietzsche_jpg) - 1, .ptr = nietzsche_jpg },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

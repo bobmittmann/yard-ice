@@ -109,7 +109,8 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		switch (c) {
 		case CTRL_C:
 			dmprintf(comm, "^C\r\n");
-			dmon_soft_reset(comm);
+			__thinkos_pause_all();
+//			dmon_soft_reset(comm);
 			break;
 		case CTRL_N:
 			monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
@@ -173,11 +174,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint32_t sigmask;
 	uint32_t sigset;
 #if THINKOS_ENABLE_CONSOLE
+	bool connected;
 	uint8_t * ptr;
 	int cnt;
-#else
-	char buf[4];
 #endif
+	char buf[64];
 	int len;
 
 	dmon_comm_connect(comm);
@@ -194,10 +195,14 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	sigmask = (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_EXCEPT);
 	sigmask |= (1 << DMON_COMM_RCV);
-	sigmask |= (1 << DMON_COMM_CTL);
 #if THINKOS_ENABLE_CONSOLE
+	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_TX_PIPE);
 	sigmask |= (1 << DMON_RX_PIPE);
+#endif
+
+#if THINKOS_ENABLE_CONSOLE
+	connected = dmon_comm_isconnected(comm);
 #endif
 
 	for(;;) {
@@ -215,12 +220,13 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 			dmon_clear(DMON_EXCEPT);
 		}
 
+#if THINKOS_ENABLE_CONSOLE
 		if (sigset & (1 << DMON_COMM_CTL)) {
 			DCC_LOG(LOG_INFO, "Comm Ctl.");
 			dmon_clear(DMON_COMM_CTL);
-			if (!dmon_comm_isconnected(comm))	
-				dmon_reset();
+			connected = dmon_comm_isconnected(comm);
 		}
+#endif
 
 		if (sigset & (1 << DMON_COMM_RCV)) {
 #if THINKOS_ENABLE_CONSOLE
@@ -229,13 +235,23 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
 					len = monitor_process_input(comm, (char *)ptr, len);
 					__console_rx_pipe_commit(len); 
+				} else {
+					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
+							"masking DMON_COMM_RCV!");
+					sigmask &= ~(1 << DMON_COMM_RCV);
 				}
 			} else {
-				DCC_LOG(LOG_INFO, "Comm recv. Masking DMON_COMM_RCV!");
-				sigmask &= ~(1 << DMON_COMM_RCV);
+				DCC_LOG(LOG_TRACE, "Comm recv. rx pipe full!");
+				if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
+					monitor_process_input(comm, buf, len);
+				} else {
+					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
+							"masking DMON_COMM_RCV!");
+					sigmask &= ~(1 << DMON_COMM_RCV);
+				}
 			}
 #else
-			if ((len = dmon_comm_recv(comm, buf, 4)) > 0) {
+			if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
 				monitor_process_input(comm, buf, len);
 			}
 #endif
@@ -244,11 +260,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #if THINKOS_ENABLE_CONSOLE
 		if (sigset & (1 << DMON_RX_PIPE)) {
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "RX Pipe. rx_pipe.free=%d. "
+				DCC_LOG1(LOG_TRACE, "RX Pipe. rx_pipe.free=%d. "
 						 "Unmaksing DMON_COMM_RCV!", cnt);
 				sigmask |= (1 << DMON_COMM_RCV);
 			} else {
-				DCC_LOG(LOG_INFO, "RX Pipe empty!!!");
+				DCC_LOG(LOG_TRACE, "RX Pipe empty!!!");
 			}
 			dmon_clear(DMON_RX_PIPE);
 		}
@@ -257,7 +273,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
-				len = dmon_comm_send(comm, ptr, cnt);
+				DCC_LOG1(LOG_INFO, "TX Pipe, %d pending chars.", cnt);
+				if (connected) 
+					len = dmon_comm_send(comm, ptr, cnt);
+				else
+					len = cnt;
 				__console_tx_pipe_commit(len); 
 			} else {
 				DCC_LOG(LOG_INFO, "TX Pipe empty!!!");

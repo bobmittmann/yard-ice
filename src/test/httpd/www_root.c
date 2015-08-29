@@ -408,8 +408,6 @@ struct httpdobj www_root[] = {
 		.len = sizeof(style_css) - 1, .ptr = style_css },
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = sizeof(index_html) - 1, .ptr = index_html },
-	{ .oid = "zarathustra.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
-		.len = SIZEOF_ZARATHUSTRA_HTML_GZ, .ptr = zarathustra_html_gz },
 	{ .oid = "form1.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = sizeof(form1_html) - 1, .ptr = form1_html },
 	{ .oid = "form1.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
@@ -418,12 +416,16 @@ struct httpdobj www_root[] = {
 		.len = 0, .ptr = ipcfg_form_cgi },
 	{ .oid = "ipcfg_set.cgi", .typ = OBJ_CODE_CGI, .lvl = 100, 
 		.len = 0, .ptr = ipcfg_set_cgi },
+#if 0
+	{ .oid = "zarathustra.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
+		.len = SIZEOF_ZARATHUSTRA_HTML_GZ, .ptr = zarathustra_html_gz },
 	{ .oid = "treeview.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 100, 
 		.len = SIZEOF_TREEVIEW_HTML_GZ, .ptr = treeview_html_gz },
 	{ .oid = "treeview.css", .typ = OBJ_STATIC_CSS_GZ, .lvl = 100, 
 		.len = SIZEOF_TREEVIEW_CSS_GZ, .ptr = treeview_css_gz },
 	{ .oid = "thinkos.html", .typ = OBJ_STATIC_HTML, .lvl = 255, 
 		.len = SIZEOF_THINKOS_HTML, .ptr = thinkos_html },
+#endif
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

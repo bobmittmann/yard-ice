@@ -23,12 +23,14 @@
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
+#ifdef CONFIG_H
+#include "config.h"
+#endif
+
 #include <arch/cortex-m3.h>
 #include <stdlib.h>
 #include <stdint.h>
-
 #include <sys/pktbuf.h>
-
 #include <sys/dcclog.h>
 
 /* ----------------------------------------------------------------------
@@ -37,7 +39,7 @@
  */
 
 #ifndef PKTBUF_LEN 
-#define PKTBUF_LEN (1008 + 16)
+#define PKTBUF_LEN         (1008 + 16)
 #endif
 
 #ifndef PKTBUF_POOL_SIZE
@@ -55,8 +57,7 @@
 struct pktbuf {
 	union {
 		struct pktbuf * next;
-		uint32_t data[((PKTBUF_LEN) + sizeof(uint32_t) - 1) 
-			/ sizeof(uint32_t)];
+		uint32_t data[((PKTBUF_LEN) + 3) / 4]; 
     };
 };
 
@@ -75,7 +76,7 @@ struct {
 	struct pktbuf pool[PKTBUF_POOL_SIZE];
 } __pktbuf__;
 
-const uint16_t pktbuf_len = PKTBUF_LEN;
+const uint16_t pktbuf_len = (((PKTBUF_LEN) + 3) / 4);
 
 void * pktbuf_alloc(void)
 {

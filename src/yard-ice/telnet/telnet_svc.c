@@ -212,7 +212,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 
 	for (;;) {
 
-		tracef("TELNET wating for connection.");
+		INF("TELNET wating for connection.");
 		DCC_LOG(LOG_TRACE, "TELNET: waiting for connection...");
 
 		if ((tp = tcp_accept(svc)) == NULL) {
@@ -220,7 +220,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 			break;
 		}
 
-		tracef("TELNET connection accepted.");
+		INF("TELNET connection accepted.");
 		DCC_LOG(LOG_TRACE, "TELNET: accepted.");
 
 		tn->tp  = tp;
@@ -444,7 +444,7 @@ int __attribute__((noreturn)) telnet_input_task(struct telnet_svc * tn)
 		DCC_LOG(LOG_TRACE, "close...");
 
 		tcp_close(tp);
-		tracef("TELNET connection closed.");
+		INF("TELNET connection closed.");
 		tn->tp  = NULL;
 	}
 
@@ -602,7 +602,7 @@ struct telnet_svc * telnet_svc_init(int port)
 	tcp_bind(tn->svc, INADDR_ANY, htons(port));
 
 	if (tcp_listen(tn->svc, 1) != 0) {
-		tracef("%s(): Can't register the TCP listner!", __func__);
+		INF("Can't register the TCP listner!");
 		return NULL;
 	}
 
@@ -613,8 +613,9 @@ struct telnet_svc * telnet_svc_init(int port)
 
 	th = thinkos_thread_create_inf((void *)telnet_input_task, (void *)tn, 
 								   &telnet_srv_inf);
+	(void)th;
 								
-	tracef("TELNET TCP input thread=%d", th);
+	INF("TELNET TCP input thread=%d", th);
 
 	return tn;
 }

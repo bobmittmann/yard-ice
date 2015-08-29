@@ -77,7 +77,7 @@ int console_shell(void)
 	th = thinkos_thread_create_inf((void *)console_task, NULL, 
 								   &console_shell_inf);
 
-	tracef("Console shell thread=%d", th);
+	INF("Console shell thread=%d", th);
 
 	return th;
 }

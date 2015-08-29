@@ -310,7 +310,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "5. starting HTTP workers...");
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd1_inf);
-
+#if 0
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd2_inf);
 
@@ -319,7 +319,9 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd4_inf);
+#endif
 
+#if 0
 	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
 	tcp_echo_start();
 
@@ -328,6 +330,7 @@ int main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "8. TFTP server ...");
 	tftpd_start();
+#endif
 
 	DCC_LOG(LOG_TRACE, "9. starting console shell...");
 	for (;;) {
