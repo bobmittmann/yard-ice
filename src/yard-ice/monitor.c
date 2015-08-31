@@ -67,7 +67,7 @@ static const char monitor_menu[] =
 " Ctrl+N - Select Next Thread\r\n"
 " Ctrl+O - ThinkOS info\r\n"
 " Ctrl+P - Pause all threads\r\n"
-" Ctrl+Q - Restart monitor\r\n"
+//" Ctrl+Q - Restart monitor\r\n"
 " Ctrl+R - Resume all threads\r\n"
 " Ctrl+T - Thread info\r\n"
 " Ctrl+U - Stack usage info\r\n"
@@ -148,10 +148,12 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 			__thinkos_pause_all();
 			dmon_wait_idle();
 			break;
+#if 0
 		case CTRL_Q:
 			dmprintf(comm, "^Q\r\n");
 			dmon_reset();
 			break;
+#endif
 		case CTRL_R:
 			dmprintf(comm, "^R\r\nResuming all threads...\r\n");
 			__thinkos_resume_all();

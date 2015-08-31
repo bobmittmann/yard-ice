@@ -158,7 +158,7 @@ void pktbuf_pool_init(void)
 	q = __pktbuf__.pool;
 	p = (struct pktbuf *)&__pktbuf__.free.first;
 	for (i = 0; i < PKTBUF_POOL_SIZE; ++i) {
-		DCC_LOG1(LOG_TRACE, "pktbuf=%p", q);
+		DCC_LOG1(LOG_JABBER, "pktbuf=%p", q);
 		p->next = q;
 		p = q;
 		q++;

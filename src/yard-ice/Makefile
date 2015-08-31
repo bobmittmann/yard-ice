@@ -27,7 +27,6 @@ CFILES = yard-ice.c board.c debugger.c ice_drv.c\
 		 mod_mem.c fmt_freq.c mem_hexdump.c targets.c\
 		 i2c-master.c mod_ice.c shell.c lookup.c monitor.c\
 		 console.c 
-#		 yard-ice/usb.c 
 
 LIBDIRS = ../sdk/libcm3 ../sdk/libstm32f ../sdk/libutil ../sdk/libthinkos\
 		  ../sdk/libc ../sdk/libice-comm ../sdk/libtcpip ../sdk/libstm32drv\
@@ -41,9 +40,9 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets comm tftp shell console tty gdb vcom telnet crc xmodem
 
-VERSION_DATE = "2015-08-30"
+VERSION_DATE = "2015-08-31"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "17"
+VERSION_MINOR = "18"
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections

@@ -49,15 +49,16 @@
 
 #include "board.h"
 
+#if 0
 #define VERSION_NUM "0.2"
 #define VERSION_DATE "Jul, 2015"
 
 const char * const version_str = "ThinkOS Boot Loader " \
 							VERSION_NUM " - " VERSION_DATE;
 const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
+#endif
 
 void monitor_task(struct dmon_comm * comm);
-void gdb_task(struct dmon_comm * comm);
 
 void monitor_init(void)
 {
@@ -74,8 +75,10 @@ void monitor_init(void)
 #error "Undefined debug monitor comm port!"
 #endif
 
+#if THINKOS_ENABLE_CONSOLE
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
+#endif
 
 #if (BOOT_ENABLE_GDB)
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
@@ -105,14 +108,14 @@ int main(int argc, char ** argv)
 
 	__thinkos_thread_abort(0);
 
-	for (;;) {
 #if 0
+	for (;;) {
 		thinkos_sleep(250);
 		stm32_gpio_set(LED1);
 		thinkos_sleep(250);
 		stm32_gpio_clr(LED1);
-#endif
 	}
+#endif
 
 	return 0;
 }

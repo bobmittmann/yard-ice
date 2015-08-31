@@ -458,8 +458,13 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 	int len;
 	int ret;
 
-	content_type = ctl->ctype;
-	content_len = ctl->ctlen;
+	if (obj->typ != OBJ_CODE_CGI) {
+		DCC_LOG(LOG_ERROR, "invalid object type!");
+		return -1;
+	}
+
+	content_type = ctl->content.type;
+	content_len = ctl->content.len;
 
 	if ((content_type == APPLICATION_X_WWW_FORM_URLENCODED) &&
 		(content_len > 0)) {
@@ -485,8 +490,9 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 
 		ctl->qrycnt = n;
 
-	} else if ((content_type == MULTIPART_FORM_DATA) &&
-			   (content_len > 0)) {
+//	} else if ((content_type == MULTIPART_FORM_DATA) &&
+//			   (content_len > 0)) {
+	} else if (content_type == MULTIPART_FORM_DATA) {
 
 		DCC_LOG(LOG_TRACE, "multipart/form-data");
 
@@ -500,8 +506,8 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 		
 		/* attach the pcb to the form decode callback */
 		tcp_attach(__tp, (tcp_callback_t)post_multipart_form_recv, multi);
+int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len);
 #endif
-		return 0;
 	} else {
 		/* dynamic cgi */
 		DCC_LOG1(LOG_TRACE, "content_type=%02x", content_type);

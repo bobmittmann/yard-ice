@@ -147,15 +147,21 @@ struct httpctl {
 	uint16_t version;
 	uint8_t method;
 	uint8_t auth;
-	uint8_t ctype;
-	uint8_t ctbound;
-	uint8_t ctlen;
-	uint8_t qrycnt;
+	struct {
+		uint8_t type;
+		uint8_t bdry_len;
+		uint16_t bdry_hash;
+		uint32_t len;
+		uint32_t pos;
+	} content;
 	struct {
 		uint16_t cnt;
 		uint16_t pos;
+		uint16_t lin;
+		uint16_t hash;
 		uint32_t buf[(HTTP_RCVBUF_LEN + 3) / 4];
 	} rcvq; /* receive queue */
+	uint8_t qrycnt;
 	struct httpqry qrylst[HTTPD_QUERY_LST_MAX];
 	char * usr;
 	char * pwd;
@@ -209,6 +215,8 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl);
 int http_close(struct httpctl * ctl);
 
 int http_recv(struct httpctl * ctl, void * buf, unsigned int len);
+
+int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len);
 
 int http_send(struct httpctl * ctl, const void * buf, unsigned int len);
 

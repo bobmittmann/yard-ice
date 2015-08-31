@@ -44,8 +44,10 @@ void dmon_soft_reset(struct dmon_comm * comm)
 	__console_reset();
 #endif
 
+#if (THINKOS_ENABLE_EXCEPTIONS)
 	DCC_LOG(LOG_TRACE, "6. exception reset...");
 	__exception_reset();
+#endif
 
 #if (THINKOS_ENABLE_DEBUG_STEP)
 	DCC_LOG(LOG_TRACE, "7. clear all breakpoints...");

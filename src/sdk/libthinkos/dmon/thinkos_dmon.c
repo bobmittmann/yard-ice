@@ -36,8 +36,12 @@ _Pragma ("GCC optimize (\"O2\")")
 
 #if (THINKOS_ENABLE_MONITOR)
 
+#ifndef THINKOS_DMON_STACK_SIZE
+#define THINKOS_DMON_STACK_SIZE 960
+#endif
+
 struct thinkos_dmon thinkos_dmon_rt;
-uint32_t thinkos_dmon_stack[240];
+uint32_t thinkos_dmon_stack[THINKOS_DMON_STACK_SIZE / 4];
 const uint16_t thinkos_dmon_stack_size = sizeof(thinkos_dmon_stack);
 
 void dmon_context_swap(void * ctx); 

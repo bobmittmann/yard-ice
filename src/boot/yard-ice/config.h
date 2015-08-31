@@ -67,38 +67,44 @@
 #define THINKOS_ENABLE_THREAD_STAT 1
 #define THINKOS_ENABLE_TIMED_CALLS 1
 
-#define THINKOS_ENABLE_ARG_CHECK 0
+#define THINKOS_ENABLE_ARG_CHECK      0
 #define THINKOS_ENABLE_DEADLOCK_CHECK 0
 
 #define THINKOS_EXCEPT_STACK_SIZE 320
 
-#define THINKOS_STDERR_FAULT_DUMP 0
+#define THINKOS_STDERR_FAULT_DUMP  0
 
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 
-#define THINKOS_ENABLE_RT_DEBUG 0
+#define THINKOS_ENABLE_RT_DEBUG    1
 
-#define THINKOS_ENABLE_BREAK 0
+#define THINKOS_ENABLE_BREAK       0
 
-#define THINKOS_ENABLE_PROFILING 1
+#define THINKOS_ENABLE_PROFILING   1
 
-#define THINKOS_ENABLE_MONITOR 1
+#define THINKOS_ENABLE_MONITOR     1
 
-#define THINKOS_ENABLE_CONSOLE 1
+#define THINKOS_ENABLE_CONSOLE     1
 
-#define THINKOS_ENABLE_DEBUG_STEP 0
+#define THINKOS_ENABLE_DEBUG_STEP  0
 
-#define THINKOS_ENABLE_DEBUG_FAULT 1
+#define THINKOS_ENABLE_DEBUG_FAULT 0
 
-#define THINKOS_ENABLE_EXCEPTIONS 1
+#define THINKOS_ENABLE_EXCEPTIONS  0
 
-#define THINKOS_ENABLE_BUSFAULT 1
+#define THINKOS_ENABLE_BUSFAULT    0
 
-#define THINKOS_ENABLE_USAGEFAULT 1
+#define THINKOS_ENABLE_USAGEFAULT  0
 
-#define THINKOS_ENABLE_MPU 0
+#define THINKOS_UNROLL_EXCEPTIONS  0
 
-#define THINKOS_ENABLE_FPU 0
+#define THINKOS_ENABLE_MPU         0
+
+#define THINKOS_ENABLE_FPU         0
+
+#define THINKOS_ENABLE_CTL         1
+
+#define THINKOS_DMON_STACK_SIZE    256
 
 /* -------------------------------------------------------------------------
    USB 
@@ -109,19 +115,21 @@
 /* -------------------------------------------------------------------------
    Printf
    -------------------------------------------------------------------------- */
-#define PRINTF_ENABLE_LEFT_ALIGN 0
-#define PRINTF_ENABLE_LARGE_PADDING 0
-#define PRINTF_ENABLE_FAST 0
-#define PRINTF_ENABLE_UNSIGNED 1
-#define PRINTF_ENABLE_POINTER 0
-#define PRINTF_ENABLE_LONG 0
-#define PRINTF_ENABLE_ARG_WIDTH 0
+#define PRINTF_ENABLE_LEFT_ALIGN     0
+#define PRINTF_ENABLE_LARGE_PADDING  0
+#define PRINTF_ENABLE_FAST           0
+#define PRINTF_ENABLE_UNSIGNED       1
+#define PRINTF_ENABLE_POINTER        0
+#define PRINTF_ENABLE_LONG           0
+#define PRINTF_ENABLE_ARG_WIDTH      0
 
 /* -------------------------------------------------------------------------
    Bootloader 
    -------------------------------------------------------------------------- */
 
 #define BOOT_ENABLE_GDB 0
+#define MONITOR_CONFIGURE_ENABLE 0
+#define MONITOR_DUMPMEM_ENABLE 0
 
 #endif /* __CONFIG_H__ */
 

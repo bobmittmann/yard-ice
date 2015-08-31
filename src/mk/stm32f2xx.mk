@@ -43,8 +43,6 @@ endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
-LDFLAGS += -nostdlib -T $(MACH).ld
-
 ifdef THINKAPP
 CDEFS += "THINKAPP" 
 endif

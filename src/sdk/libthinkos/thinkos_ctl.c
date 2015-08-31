@@ -29,6 +29,7 @@ _Pragma ("GCC optimize (\"Os\")")
 
 #if THINKOS_ENABLE_CTL
 
+#if THINKOS_ENABLE_RT_DEBUG
 static void rt_snapshot(uint32_t * dst)
 {
 	uint32_t pri = cm3_primask_get();
@@ -61,6 +62,7 @@ static void rt_snapshot(uint32_t * dst)
 
 	cm3_primask_set(pri);
 }
+#endif
 
 extern int32_t udelay_factor;
 

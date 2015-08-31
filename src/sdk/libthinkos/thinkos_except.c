@@ -39,7 +39,7 @@ _Pragma ("GCC optimize (\"O2\")")
 #if THINKOS_ENABLE_EXCEPTIONS
 
 #ifndef THINKOS_SYSRST_ONFAULT
-#define THINKOS_SYSRST_ONFAULT 0
+#define THINKOS_SYSRST_ONFAULT    0
 #endif
 
 #ifndef THINKOS_STDERR_FAULT_DUMP
@@ -47,11 +47,11 @@ _Pragma ("GCC optimize (\"O2\")")
 #endif
 
 #ifndef THINKOS_ENABLE_MPU
-#define THINKOS_ENABLE_MPU 0
+#define THINKOS_ENABLE_MPU        0
 #endif
 
 #ifndef THINKOS_ENABLE_BUSFAULT
-#define THINKOS_ENABLE_BUSFAULT 0
+#define THINKOS_ENABLE_BUSFAULT   0
 #endif
 
 #ifndef THINKOS_ENABLE_USAGEFAULT 
@@ -61,6 +61,7 @@ _Pragma ("GCC optimize (\"O2\")")
 #ifndef THINKOS_UNROLL_EXCEPTIONS 
 #define THINKOS_UNROLL_EXCEPTIONS 1
 #endif
+
 
 #if (THINKOS_ENABLE_DEBUG_FAULT)
 

@@ -133,6 +133,8 @@ int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
 	return -1;
 }
 
+int http_parse_multipart_form_data(struct httpctl * ctl, char * val);
+
 static int http_process_field(struct httpctl * ctl,
 		unsigned int hdr, char * val)
 {
@@ -146,16 +148,18 @@ static int http_process_field(struct httpctl * ctl,
 		DCC_LOG1(LOG_INFO, "Authorization: %c ...", val);
 		break;
 	case HTTP_HDR_CONTENT_TYPE:
-		ctl->ctype = http_parse_content_type(val, &cp);
-		if (ctl->ctype == APPLICATION_X_WWW_FORM_URLENCODED) {
+		ctl->content.type = http_parse_content_type(val, &cp);
+		if (ctl->content.type == MULTIPART_FORM_DATA) {
+			http_parse_multipart_form_data(ctl, cp);
+		} else if (ctl->content.type == APPLICATION_X_WWW_FORM_URLENCODED) {
 			DCC_LOGSTR(LOG_TRACE, "application/x-www-form-urlencoded; %s", cp);
 		} else {
-			DCC_LOG1(LOG_TRACE, "Content-Type: 0x%02x", ctl->ctype);
+			DCC_LOG1(LOG_TRACE, "Content-Type: 0x%02x", ctl->content.type);
 		}
 		break;
 	case HTTP_HDR_CONTENT_LENGTH:
-		ctl->ctlen = strtoul(val, NULL, 10);
-		DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->ctlen);
+		ctl->content.len = strtoul(val, NULL, 10);
+		DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->content.len);
 		break;
 	case HTTP_HDR_ACCEPT:
 		DCC_LOG1(LOG_INFO, "Accept: %c ...", val[0]);
@@ -272,6 +276,7 @@ static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 					/* end of HTTP Header */
 					ctl->rcvq.cnt = cnt;
 					ctl->rcvq.pos = pos;
+					ctl->rcvq.lin = pos;
 					return 0;
 				}
 
