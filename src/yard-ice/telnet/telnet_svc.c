@@ -461,7 +461,7 @@ int telnet_svc_write(struct telnet_svc * tn,
 	int rem;
 	int pos;
 
-	DCC_LOG1(LOG_TRACE, "len=%d", len);
+	DCC_LOG1(LOG_MSG, "len=%d", len);
 
 	if (tn->tp == NULL) {
 		/* discard if we are not connected */

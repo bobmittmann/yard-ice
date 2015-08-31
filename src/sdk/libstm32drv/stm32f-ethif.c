@@ -45,8 +45,10 @@
 #include "sys/ip.h"
 #include "sys/pktbuf.h"
 
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
+#include <trace.h>
+
+#undef TRACE_LEVEL
+#define TRACE_LEVEL TRACE_LVL_NONE 
 
 void stm32f_eth_isr(void);
 
@@ -234,6 +236,7 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 
 	len = st.fl;
 	DCC_LOG1(LOG_INFO, "frame len=%d", len);
+	DBG("STM32ETH: RX frame len=%d", len);
 
 	ext_st = rxdesc->ext_st;
 
@@ -241,24 +244,27 @@ int stm32f_ethif_pkt_recv(struct ifnet * __if, uint8_t ** __src,
 	switch (ext_st.ippt) {
 	case ETH_IPPT_UNKOWN:
 		DCC_LOG(LOG_INFO, "not IP!");
+		DBG("STM32ETH: not IP!");
 		break;
 	case ETH_IPPT_UDP:
-		DCC_LOG(LOG_INFO, "UDP");
+		DBG("STM32ETH: UDP");
 		break;
 	case ETH_IPPT_TCP:
-		DCC_LOG(LOG_INFO, "TCP");
+		DBG("STM32ETH: TCP");
 		break;
 	case ETH_IPPT_ICMP:
-		DCC_LOG(LOG_INFO, "ICMP");
+		DBG("STM32ETH: ICMP");
 		break;
 	}
 
 	if (ext_st.iphe) {
 		DCC_LOG(LOG_WARNING, "IP header error!");
+		DBG("IP header error!");
 		goto error;
 	}
 	if (ext_st.ippe) {
 		DCC_LOG(LOG_WARNING, "IP payload error!");
+		DBG("IP payload error!");
 		goto error;
 	}
 	if (ext_st.ipcb)
@@ -331,7 +337,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	unsigned int rx_buf_size;
 	unsigned int tx_buf_size;
 //	struct eth_hdr * hdr;
-	int mtu;
+	unsigned int mtu;
 	int i;
 
 	DCC_LOG2(LOG_INFO, "if=0x%p drv=0x%p", __if, drv);
@@ -352,6 +358,7 @@ int stm32f_ethif_init(struct ifnet * __if)
 	drv->event = __if->if_idx;
 
 	DCC_LOG1(LOG_INFO, "mtu=%d", mtu);
+	INF("STM32ETH: MTU=%d", mtu);
 
 	DCC_LOG(LOG_INFO, "MAC configuration ...");
 	/* Bit 25 - CRC stripping for Type frames */

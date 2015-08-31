@@ -30,6 +30,11 @@
 #include <stdlib.h>
 #include <tcpip/icmp.h>
 
+#include <trace.h>
+
+#undef TRACE_LEVEL
+#define TRACE_LEVEL TRACE_LVL_NONE
+
 /*
   return value:
     -1 : error not processed.
@@ -56,6 +61,7 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 #if 1
 	if (len > __len) {
 		DCC_LOG1(LOG_WARNING, "invalid len=%d!", len);
+		WARN("UDP: invalid len=%d!", len);
 		return -1;
 	}
 #endif
@@ -63,6 +69,9 @@ int udp_input(struct ifnet * __if, struct iphdr * __ip,
 	up = (struct udp_pcb *)pcb_wildlookup(__ip->saddr, __udp->sport, 
 										   __ip->daddr, __udp->dport, 
 										   &__udp__.active);
+	DBG("UDP: %I:%d > %I:%d (%d)", 
+		__ip->saddr, ntohs(__udp->sport),
+		__ip->daddr, ntohs(__udp->dport), len); 
 
 	if (up == NULL) {
 		DCC_LOG5(LOG_TRACE, "%I:%d > %I:%d (%d) port unreach", 

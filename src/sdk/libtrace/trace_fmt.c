@@ -37,8 +37,16 @@
 #define PRINTF_ENABLE_UNSIGNED 1
 #endif
 
+#ifndef PRINTF_ENABLE_IPADDR
+#define PRINTF_ENABLE_IPADDR 1
+#endif
+
 #ifndef PRINTF_ENABLE_POINTER
 #define PRINTF_ENABLE_POINTER 1
+#endif
+
+#if (PRINTF_ENABLE_IPADDR)
+#include <tcpip/in.h>
 #endif
 
 int uint2dec(char * s, unsigned int val);
@@ -138,7 +146,8 @@ int trace_fmt(struct trace_entry * entry, char * s, int max)
 
 		if (c == 'x') {
 			cp = buf;
-			val.n = (unsigned int)trace_ring.buf[tail++ & (TRACE_RING_SIZE - 1)].val;
+			val.n = (unsigned int)trace_ring.buf[tail++ & 
+				(TRACE_RING_SIZE - 1)].val;
 #if (PRINTF_ENABLE_POINTER)
 hexadecimal:
 #endif
@@ -173,15 +182,35 @@ hexadecimal:
 #if (PRINTF_ENABLE_UNSIGNED)
 		if (c == 'u') {
 			cp = buf;
-			val.n = (unsigned int)trace_ring.buf[tail++ & (TRACE_RING_SIZE - 1)].val;
+			val.n = (unsigned int)trace_ring.buf[tail++ & 
+				(TRACE_RING_SIZE - 1)].val;
 			n = uint2dec(cp, val.n);
+			goto print_buf;
+		}
+#endif
+
+#if	(PRINTF_ENABLE_IPADDR)
+		if (c == 'I') {
+			cp = buf;
+			val.u32 = (uint32_t)trace_ring.buf[tail++ & 
+				(TRACE_RING_SIZE - 1)].val;
+			cp += uint2dec(cp, IP4_ADDR1(val.u32));
+			*cp++ = '.';
+			cp += uint2dec(cp, IP4_ADDR2(val.u32));
+			*cp++ = '.';
+			cp += uint2dec(cp, IP4_ADDR3(val.u32));
+			*cp++ = '.';
+			cp += uint2dec(cp, IP4_ADDR4(val.u32));
+			n = cp - buf;
+			cp = buf;
 			goto print_buf;
 		}
 #endif
 
 #if (PRINTF_ENABLE_POINTER)
 		if (c == 'p') {
-			val.ptr = (void *)trace_ring.buf[tail++ & (TRACE_RING_SIZE - 1)].val;
+			val.ptr = (void *)trace_ring.buf[tail++ & 
+				(TRACE_RING_SIZE - 1)].val;
 			w = 8;
 			flags |= ZERO;
 			goto hexadecimal;
@@ -251,3 +280,13 @@ print_buf:
 
 	return cnt;
 }
+
+const char * const trace_lvl_nm[] = {
+		" NONE",
+		"ERROR",
+		" WARN",
+		" INFO",
+		"DEBUG",
+		"  XTR"
+};
+

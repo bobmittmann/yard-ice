@@ -76,7 +76,7 @@ struct {
 	struct pktbuf pool[PKTBUF_POOL_SIZE];
 } __pktbuf__;
 
-const uint16_t pktbuf_len = (((PKTBUF_LEN) + 3) / 4);
+const uint16_t pktbuf_len = (((PKTBUF_LEN) + 3) / 4) * 4;
 
 void * pktbuf_alloc(void)
 {

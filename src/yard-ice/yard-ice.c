@@ -38,6 +38,8 @@
 #include <sys/dcclog.h>
 
 #include <thinkos.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
@@ -115,7 +117,10 @@ const struct file stm32_uart_file = {
 
 void stdio_init(void)
 {
-	struct stm32_usart * uart = STM32_UART5;
+	struct serial_dev * ser;
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
 
 	stm32_gpio_clock_en(STM32_GPIOC);
 	stm32_gpio_clock_en(STM32_GPIOD);
@@ -124,14 +129,14 @@ void stdio_init(void)
 	stm32_gpio_af(UART_RX, GPIO_AF8);
 	stm32_gpio_af(UART_TX, GPIO_AF8);
 
-	stm32_usart_init(uart);
-	stm32_usart_baudrate_set(uart, 115200);
-	stm32_usart_mode_set(uart, SERIAL_8N1);
-	stm32_usart_enable(uart);
+	ser = stm32f_uart5_serial_init(115200, SERIAL_8N1);
+	f_raw = serial_fopen(ser);
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
 
 	stderr = (struct file *)&stm32_uart_file;
-	stdout = stderr;
-	stdin = stdout;
+	stdout = f_tty;
+	stdin = f_tty;
 }
 
 void rtc_init(void)
@@ -143,16 +148,8 @@ void rtc_init(void)
  * System Supervision
  * ------------------------------------------------------------------------- */
 
-const char * const trace_lvl_tab[] = {
-		"   NONE",
-		"  ERROR",
-		"WARNING",
-		"   INFO",
-		"  DEBUG"
-};
-
-FILE * volatile monitor_stream;
-volatile bool monitor_auto_flush;
+FILE * volatile spv_fout;
+volatile bool spv_auto_flush = false;
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
@@ -160,9 +157,6 @@ void __attribute__((noreturn)) supervisor_task(void)
 	uint32_t clk;
 
 	INF("<%d> started...", thinkos_thread_self());
-
-	/* fall back to stdout */
-	monitor_stream = stdout;
 
 	trace_tail(&trace);
 
@@ -178,17 +172,17 @@ void __attribute__((noreturn)) supervisor_task(void)
 		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
 			trace_ts2timeval(&tv, trace.dt);
 			if (trace.ref->lvl <= TRACE_LVL_WARN)
-				fprintf(monitor_stream, "%s %2d.%06d: %s,%d: %s\n",
-						trace_lvl_tab[trace.ref->lvl],
+				fprintf(spv_fout, "%s %2d.%06d: %s,%d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec,
 						trace.ref->func, trace.ref->line, s);
 			else
-				fprintf(monitor_stream, "%s %2d.%06d: %s\n",
-						trace_lvl_tab[trace.ref->lvl],
+				fprintf(spv_fout, "%s %2d.%06d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec, s);
 		}
 
-		if (monitor_auto_flush)
+		if (spv_auto_flush)
 			trace_flush(&trace);
 	}
 }
@@ -207,12 +201,11 @@ const struct thinkos_thread_inf supervisor_inf = {
 
 void supervisor_init(void)
 {
-	trace_init();
-
 	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
 							  &supervisor_inf);
-}
 
+	thinkos_sleep(1);
+}
 
 int eth_strtomac(uint8_t ethaddr[], const char * s)
 {
@@ -376,11 +369,12 @@ int init_target(void)
 }
 
 int monitor_init(void);
-int serial_shell(void);
-int console_shell(void);
+int stdio_shell(void);
+FILE * console_shell(void);
 int telnet_shell(void);
 int usb_shell(void);
 int sys_start(void);
+
 
 int main(int argc, char ** argv)
 {
@@ -389,26 +383,40 @@ int main(int argc, char ** argv)
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	stdio_init();
-	printf("\n---\n");
-
+	DCC_LOG(LOG_TRACE, " 1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
+
+	DCC_LOG(LOG_TRACE, " 2. this_board.init().");
+	this_board.init();
+
+	DCC_LOG(LOG_TRACE, " 3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+
+#if ENABLE_MONITOR
+	DCC_LOG(LOG_TRACE, " 4. monitor_init().");
+	monitor_init();
+#endif
+
+	DCC_LOG(LOG_TRACE, " 5. stdio_init().");
+	stdio_init();
+
+	printf("\n---\n");
+	/* set monitor to stderr */
+	spv_fout = stderr;
+
+	DCC_LOG(LOG_TRACE, " 6. trace_init().");
 	trace_init();
 
 	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
 
-	stm32f_nvram_env_init();
+	DCC_LOG(LOG_TRACE, " 3. supervisor_init().");
+	supervisor_init();
 
-	DCC_LOG(LOG_TRACE, " 1. bsp_io_ini().");
-	bsp_io_ini();
+	DCC_LOG(LOG_TRACE, " 2. stm32f_nvram_env_init().");
+	stm32f_nvram_env_init();
 
 	DCC_LOG(LOG_TRACE, " 2. rtc_init().");
 	rtc_init();
-
-	DCC_LOG(LOG_TRACE, " 3. supervisor_init().");
-	supervisor_init();
-	thinkos_sleep(10);
 
 	DCC_LOG(LOG_TRACE, " 5. modules_init().");
 	modules_init();
@@ -433,7 +441,7 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, " 9. mod_nand_start().");
 	if (mod_nand_start() < 0) {
 		INF("mod_nand_start() failed!");
-		return 0;
+		return 1;
 	}
 #endif
 
@@ -476,15 +484,14 @@ int main(int argc, char ** argv)
 	gdb_rspd_start();
 #endif
 
+#if ENABLE_MONITOR
+	INF("* starting console shell ... ");
+	console_shell();
+#endif
+
 #if ENABLE_USB
 	INF("* starting USB shell ... ");
 	usb_shell();
-#endif
-
-#if ENABLE_MONITOR
-	INF("* starting ThinkOS monitor ... ");
-	monitor_init();
-	console_shell();
 #endif
 
 #if ENABLE_TELNET
@@ -492,6 +499,10 @@ int main(int argc, char ** argv)
 	telnet_shell();
 #endif
 
-	return serial_shell();
+	thinkos_sleep(250);
+
+	stdio_shell();
+
+	return 0;
 }
 

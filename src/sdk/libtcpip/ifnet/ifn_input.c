@@ -34,6 +34,9 @@
 
 #include <tcpip/ifnet.h>
 
+#include <trace.h>
+#undef TRACE_LEVEL
+#define TRACE_LEVEL TRACE_LVL_NONE 
 
 #if (THINKOS_EVENT_MAX == 0)
 #error "THINKOS_EVENT_MAX == 0!"
@@ -78,6 +81,7 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 			NETIF_STAT_ADD(ifn, rx_pkt, 1);
 			if (proto == NTOHS(ETH_P_IP)) {
 				DCC_LOG(LOG_INFO, "IP");
+				DBG("IFNET: IP packet received."); 
 				ret = ip_input(ifn, (struct iphdr *)pkt, len);
 			} else if (proto == NTOHS(ETH_P_ARP)) {
 				DCC_LOG(LOG_INFO, "ARP");
@@ -85,6 +89,7 @@ void __attribute__((noreturn)) ifnet_input_task(void * arg)
 			} else {
 				NETIF_STAT_ADD(ifn, rx_drop, 1);
 				DCC_LOG1(LOG_TRACE, "unhandled protocol: %d", proto);
+				WARN("IFNET: unhandled protocol: %d", proto);
 				ret = 0;
 			}
 

@@ -63,8 +63,8 @@ extern struct httpdobj www_cgi[];
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
 	{ .path = "/img", .objlst = www_img },
-	{ .path = "/lib", .objlst = www_lib },
 	{ .path = "/cgi", .objlst = www_cgi },
+//	{ .path = "/lib", .objlst = www_lib },
 	{ .path = NULL, .objlst = NULL }
 };
 

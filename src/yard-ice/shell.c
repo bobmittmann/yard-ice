@@ -366,7 +366,7 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 		"", "show global variables" },
 
 	{ cmd_trace, "trace", "tc", 
-		"[monitor | flush | auto | keep]", "handle the trace ring..." },
+		"[sup | flush | auto | keep]", "handle the trace ring..." },
 
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
@@ -425,22 +425,9 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 	{ NULL, "", "", NULL, NULL }
 };
 
-int serial_shell(void)
+int stdio_shell(void)
 {
-	struct serial_dev * ser;
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
-
-	ser = stm32f_uart5_serial_init(115200, SERIAL_8N1);
-	f_raw = serial_fopen(ser);
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
-
-	stdout = f_tty;
-	stdin = f_tty;
-	
-	return shell(f_tty, yard_ice_get_prompt, 
+	return shell(stdout, yard_ice_get_prompt, 
 				 yard_ice_greeting, yard_ice_cmd_tab);
 }
 

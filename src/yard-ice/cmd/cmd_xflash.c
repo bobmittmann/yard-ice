@@ -72,14 +72,6 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 	fflush(f);
 
 	raw = isfatty(f) ? ftty_lowlevel(f) : f;
- 
-	if (is_console_file(raw)) {
-		pri = cm3_primask_get();
-		cm3_primask_set(1);
-		ret = usb_xflash(offs, size);
-		cm3_primask_set(pri);
-		return ret;
-	} 
 
 	if (is_serial(raw)) {
 		pri = cm3_primask_get();
@@ -89,6 +81,14 @@ int cmd_xflash(FILE * f, int argc, char ** argv)
 
 		return ret;
 	}
+ 
+	if (is_console_file(raw)) {
+		pri = cm3_primask_get();
+		cm3_primask_set(1);
+		ret = usb_xflash(offs, size);
+		cm3_primask_set(pri);
+		return ret;
+	} 
 		  
 	fprintf(f, "Operation not permited in this terminal.\n");
 	return -1;

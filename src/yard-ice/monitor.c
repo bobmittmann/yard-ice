@@ -62,7 +62,8 @@ int8_t monitor_thread_id;
 
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
-" Ctrl+C - Stop application\r\n"
+//" Ctrl+C - Stop application\r\n"
+" Ctrl+L - Upload ThinkOS\r\n"
 " Ctrl+N - Select Next Thread\r\n"
 " Ctrl+O - ThinkOS info\r\n"
 " Ctrl+P - Pause all threads\r\n"
@@ -71,7 +72,9 @@ static const char monitor_menu[] =
 " Ctrl+T - Thread info\r\n"
 " Ctrl+U - Stack usage info\r\n"
 " Ctrl+V - Help\r\n"
-" Ctrl+X - Exception info\r\n";
+" Ctrl+X - Exception info\r\n"
+//" Ctrl+Z - Restart application\r\n"
+;
 
 static const char __hr__[] = 
 "--------------------------------------------------------------\r\n";
@@ -98,6 +101,13 @@ static void monitor_on_fault(struct dmon_comm * comm)
 	dmprintf(comm, __hr__);
 }
 
+#if 0
+static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
+{
+	dmon_soft_reset(comm);
+}
+#endif
+
 int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 {
 	int i;
@@ -107,10 +117,19 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 	for (i = 0; i < len; ++i) {
 		c = buf[i];
 		switch (c) {
+#if 0
 		case CTRL_C:
 			dmprintf(comm, "^C\r\n");
-			__thinkos_pause_all();
-//			dmon_soft_reset(comm);
+			dmon_soft_reset(comm);
+			break;
+#endif
+		case CTRL_L:
+			dmon_soft_reset(comm);
+			dmprintf(comm, "^L\r\n");
+			dmprintf(comm, "Confirm (yes/no)? ");
+			dmscanf(comm, "yes%n", &i);
+			if (i == 3)
+				this_board.upgrade(comm);
 			break;
 		case CTRL_N:
 			monitor_thread_id = __thinkos_thread_getnext(monitor_thread_id);
@@ -153,6 +172,12 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_X:
 			monitor_print_fault(comm);
 			break;
+#if 0
+		case CTRL_Z:
+			dmprintf(comm, "^Z\r\n");
+			monitor_exec(comm, this_board.application.start_addr);
+			break;
+#endif
 		default:
 			continue;
 		}

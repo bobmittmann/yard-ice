@@ -135,8 +135,8 @@
 #define NET_UDP_PCB_ACTIVE_MAX       1
 
 /* use hardware checksum */
-#define  ENABLE_NET_TCP_CHECKSUM 0
-#define  ENABLE_NET_UDP_CHECKSUM 0
+#define  ENABLE_NET_TCP_CHECKSUM     0
+#define  ENABLE_NET_UDP_CHECKSUM     0
 
 /* -------------------------------------------------------------------------
  * JTAG
@@ -170,6 +170,12 @@
 #define ENABLE_VCOM     1
 #define ENABLE_I2C      1
 #define ENABLE_TELNET   1
+
+/* -------------------------------------------------------------------------
+ * Trace 
+ * ------------------------------------------------------------------------- */
+
+#define TRACE_LEVEL 5
 
 #endif /* __CONFIG_H__ */
 

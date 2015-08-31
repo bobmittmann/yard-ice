@@ -38,22 +38,11 @@
 #include <sys/os.h>
 #include <trace.h>
 
-#include <sys/dcclog.h>
-
 #include "command.h"
 #include "version.h"
 
-int console_task(void * arg)
+int __attribute__((noreturn)) console_task(FILE * f_tty)
 {
-	struct tty_dev * tty;
-	FILE * f_tty;
-	FILE * f_raw;
-
-	DCC_LOG(LOG_TRACE, "console_fopen()");
-	f_raw = console_fopen();
-	tty = tty_attach(f_raw);
-	f_tty = tty_fopen(tty);
-
 	for (;;) {
 		shell(f_tty, yard_ice_get_prompt, yard_ice_greeting, yard_ice_cmd_tab);
 	}
@@ -70,15 +59,23 @@ const struct thinkos_thread_inf console_shell_inf = {
 	.tag = "CONSOLE"
 };
 
-int console_shell(void)
+FILE * console_shell(void)
 {
+	struct tty_dev * tty;
+	FILE * f_tty;
+	FILE * f_raw;
 	int th;
 
-	th = thinkos_thread_create_inf((void *)console_task, NULL, 
+	f_raw = console_fopen();
+	tty = tty_attach(f_raw);
+	f_tty = tty_fopen(tty);
+
+	th = thinkos_thread_create_inf((void *)console_task, (void *)f_tty, 
 								   &console_shell_inf);
 
 	INF("Console shell thread=%d", th);
+	(void)th;
 
-	return th;
+	return f_tty;
 }
 

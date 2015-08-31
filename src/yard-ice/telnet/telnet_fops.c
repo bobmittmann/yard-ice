@@ -43,7 +43,7 @@ FILE * telnet_svc_fopen(struct telnet_svc * svc)
 {
 	struct file * f = (struct file *)&telnet_svc_file;
 
-	DCC_LOG(LOG_TRACE, "...");
+	DCC_LOG(LOG_MSG, "...");
 
 	f->data = (void *)svc;
 	f->op = &telnet_svc_ops; 

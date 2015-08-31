@@ -156,6 +156,8 @@ struct trace_entry {
 
 #endif
 
+extern const char * const trace_lvl_nm[];
+
 #ifdef __cplusplus
 extern "C" {
 #endif

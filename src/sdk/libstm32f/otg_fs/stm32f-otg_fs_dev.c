@@ -1364,10 +1364,10 @@ void stm32f_otg_fs_isr(void)
 		(void)dsts;
 
 		DCC_LOG4(LOG_INFO, "<ESUSP> %s%s ENUMSPD=%d %s", 
-				 (dsts & OTG_HS_EERR) ? " EERR" : "",
-				 (dsts & OTG_HS_SUSPSTS) ? " SUSPSTS" : "",
-				 OTG_HS_ENUMSPD_GET(dsts),
-				 otg_fs->pcgcctl & OTG_HS_PHYSUSP ? "PHYSUSP" : "");
+				 (dsts & OTG_FS_EERR) ? " EERR" : "",
+				 (dsts & OTG_FS_SUSPSTS) ? " SUSPSTS" : "",
+				 OTG_FS_ENUMSPD_GET(dsts),
+				 otg_fs->pcgcctl & OTG_FS_PHYSUSP ? "PHYSUSP" : "");
 	}
 #if DEBUG
 	if (gintsts & OTG_FS_GONAKEFF) {

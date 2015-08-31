@@ -180,6 +180,7 @@ void vtracef(const struct trace_ref * ref, uint32_t ts, va_list ap)
 			case 'x':
 			case 'X':
 			case 'p':
+			case 'I':
 				val = va_arg(ap, uint32_t);
 				if ((TRACE_RING_SIZE + tail - head) == 0)
 					return;
@@ -265,3 +266,4 @@ void trace(const struct trace_ref * ref)
 
 	cm3_primask_set(pri);
 }
+

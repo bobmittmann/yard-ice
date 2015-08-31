@@ -35,44 +35,65 @@
 #include "eval.h"
 #include "trace.h"
 
-extern FILE * monitor_stream;
-extern bool monitor_auto_flush;
+extern volatile FILE * spv_fout;
+extern volatile bool spv_auto_flush;
 
 int cmd_trace(FILE * f, int argc, char ** argv)
 {
+	struct trace_entry trace;
+	struct timeval tv;
+	bool flush = false;
+	char s[80];
+
 	argc--;
 	argv++;
 
 	if (argc) {
-		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
-			fprintf(f, "flush\n");
-//			trace_flush();
-			return 0;
-		} 
-
-		if ((strcmp(*argv, "monitor") == 0) || (strcmp(*argv, "m") == 0)) {
-			fprintf(f, "monitor\n");
-			monitor_stream = f;
+		if ((strcmp(*argv, "sup") == 0) || (strcmp(*argv, "s") == 0)) {
+			fprintf(f, "Supervisory trace set to this console.\n");
+			spv_fout = f;
 			return 0;
 		}
 
 		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
-			fprintf(f, "Auto flush\n");
-			monitor_auto_flush = true;
+			fprintf(f, "Supervisory auto-flush enabled.\n");
+			spv_auto_flush = true;
 			return 0;
 		}
 
 		if ((strcmp(*argv, "keep") == 0) || (strcmp(*argv, "k") == 0)) {
-			fprintf(f, "Keep trace (don't flush)\n");
-			monitor_auto_flush = false;
+			fprintf(f, "Supervisory auto-flush disabled.\n");
+			spv_auto_flush = false;
 			return 0;
 		}
 
-		return ERR_PARM;
+		if ((strcmp(*argv, "flush") == 0) || (strcmp(*argv, "f") == 0)) {
+			fprintf(f, "flush\n");
+			flush = true;
+		} else { 
+			return ERR_PARM;
+		}	
 	}
 
 	fprintf(f, "---------\n");
-//	trace_fprint(f, TRACE_ALL);
+
+	trace_tail(&trace);
+
+	while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+		trace_ts2timeval(&tv, trace.dt);
+		if (trace.ref->lvl <= TRACE_LVL_WARN)
+			fprintf(f, "%s %2d.%06d: %s,%d: %s\n",
+					trace_lvl_nm[trace.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec,
+					trace.ref->func, trace.ref->line, s);
+		else
+			fprintf(f, "%s %2d.%06d: %s\n",
+					trace_lvl_nm[trace.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec, s);
+	}
+
+	if (flush)
+		trace_flush(&trace);
 
 	return 0;
 }

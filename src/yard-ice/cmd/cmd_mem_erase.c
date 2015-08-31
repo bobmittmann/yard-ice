@@ -24,12 +24,13 @@
  */
 
 
+#include "config.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <trace.h>
 
-#include "config.h"
 #include "target.h"
 #include "debugger.h"
 #include "eval.h"

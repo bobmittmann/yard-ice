@@ -45,10 +45,9 @@
 #include <command.h>
 #include <tftpd.h>
 #include <errno.h>
+#include <trace.h>
 
 #include <sys/dcclog.h>
-
-#include "trace.h"
 
 #define MAX_TFTP_SEGSIZE 1428
 #define MAX_TFTP_MSG (MAX_TFTP_SEGSIZE + sizeof(struct tftphdr))
@@ -127,6 +126,8 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 
 	DCC_LOG1(LOG_TRACE, "block: %d", block);
 
+	DBG("TFTP: ACK, block=%d", block);
+
 	hdr.th_opcode = htons(TFTP_ACK);
 	hdr.th_block = htons(block);
 
@@ -147,6 +148,7 @@ int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
 		return -1;
 	}
 
+	DBG("TFTP: OACK. len=%d", len);
 	DCC_LOG(LOG_TRACE, "OACK....");
 
 	pkt.th_opcode = htons(TFTP_OACK);
@@ -203,11 +205,11 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 	 *   	0x0200000_2M
 	 */
 
+	INF("FFTP: fname=\"%s\"", fname);
+
 	if ((fname[0] == '0') && (fname[1] == 'x')) {
 		
 		addr = strtoul(fname, &cp, 16);
-
-		INF("fname=%s addr=0x%08x", fname, addr);
 
 		DCC_LOG1(LOG_TRACE, "addr=0x%08x", addr);
 
@@ -248,6 +250,7 @@ int tftp_decode_fname(struct debugger * dbg, char * fname)
 		}
 
 		DCC_LOG2(LOG_TRACE, "region: %08x, %d", addr, end - addr);
+		DBG("TFTP region: %08x, %d", addr, end - addr);
 
 		/* set the address and size info in the debugger state */
 		dbg->transf.base = addr;
@@ -465,16 +468,21 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 		opc = htons(hdr->th_opcode);
 		if ((opc != TFTP_RRQ) && (opc != TFTP_WRQ)) {
 			DCC_LOG1(LOG_WARNING, "invalid opc: %d", opc);
+			WARN("TFTP: invalid opc: %d", opc);
 			continue;
 		}
 
 		if (udp_connect(udp, sin.sin_addr.s_addr, sin.sin_port) < 0) {
 			DCC_LOG(LOG_WARNING, "udp_connect() error");
+			WARN("TFTP: UDP connect failed!");
 			continue;
 		}
 
 		DCC_LOG2(LOG_TRACE, "Connected to: %I.%d", sin.sin_addr.s_addr, 
 				 ntohs(sin.sin_port));
+
+//		INF("Connected to: %08x.%d", sin.sin_addr.s_addr, 
+//			ntohs(sin.sin_port));
 
 		for (;;) {
 			DCC_LOG3(LOG_INFO, "%I.%d %d", 
@@ -489,10 +497,11 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
 
-				INF("RRQ '%s' '%s' blksize=%d", req.fname, 
+				INF("TFTP: RRQ '%s' '%s' blksize=%d", req.fname, 
 					   tftp_mode[req.mode], req.blksize);
 
 				if (tftp_decode_fname(dbg, req.fname) < 0) {
+					ERR("TFTP: bad address.");
 					tftp_error(udp, &sin, TFTP_ENOTFOUND, "BAD ADDR.");
 					break;
 				}
@@ -503,6 +512,9 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
+						 addr_start, addr_end);
+
+				DBG("TFTP: start=0x%08x end=0x%08x", 
 						 addr_start, addr_end);
 
 				if (req.mode == TFTP_NETASCII) {
@@ -548,6 +560,9 @@ void __attribute__((noreturn)) tftp_daemon_task(struct debugger * dbg)
 				block = 0;
 
 				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
+						 addr_start, addr_end);
+
+				DBG("TFTP: start=0x%08x end=0x%08x", 
 						 addr_start, addr_end);
 
 				if ((req.mode == TFTP_NETASCII) || (req.mode == TFTP_OCTET)) {
@@ -648,6 +663,8 @@ send_data:
 				DCC_LOG2(LOG_TRACE, "block=%d len=%d", 
 						 htons(hdr->th_block), len);
 
+				DBG("TFTP: DATA block=%d len=%d", htons(hdr->th_block), len);
+
 				if (htons(hdr->th_block) != (block + 1)) {
 					/* retransmission, just ack */
 					DCC_LOG2(LOG_WARNING, "retransmission, block=%d len=%d", 
@@ -685,10 +702,10 @@ send_data:
 						if (n < 0) {
 							DCC_LOG(LOG_ERROR, "target_mem_write()!");
 							sprintf(msg, "TARGET WRITE FAIL: %08x", addr);
-							INF("memory write failed at "
+							WARN("memory write failed at "
 								   "addr=0x%08x, code %d", addr, n);
 						} else {
-							DCC_LOG2(LOG_WARNING, "short read: "
+							DCC_LOG2(LOG_WARNING, "short writ: "
 									 "ret(%d) < len(%d)!", n, len);
 							sprintf(msg, "TARGET SHORT WRITE: %08x", 
 									addr + n);
@@ -697,7 +714,7 @@ send_data:
 						state = TFTPD_RECV_ERROR;
 					} else {
 						if (n > len) {
-							DCC_LOG2(LOG_WARNING, "long read: "
+							DCC_LOG2(LOG_WARNING, "long write: "
 									 "ret(%d) < len(%d)!", n, len);
 						}
 						if (state == TFTPD_IDLE) {
@@ -744,14 +761,19 @@ send_data:
 				break;
 			}
 
+			DBG("TFTP: UDP receive ...");
+
 			if ((len = udp_recv_tmo(udp, buf, MAX_TFTP_MSG, &sin, 5000)) < 0) {
 				if (len == -ETIMEDOUT) {
 					DCC_LOG(LOG_WARNING, "udp_recv_tmo() timeout!");
+					WARN("TFTP: UDP receive timeout!");
 				} else {
 					if (len == -ECONNREFUSED) {
 						DCC_LOG(LOG_WARNING, "udp_recv_tmo() lost peer!");
+						WARN("TFTP: UDP peer lost!");
 					} else {
 						DCC_LOG(LOG_WARNING, "udp_recv_tmo() failed!");
+						WARN("TFTP: UDP receive failed!");
 					}
 				}
 				/* break the inner loop */

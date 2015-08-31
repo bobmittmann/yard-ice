@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <sys/file.h>
 #include <sys/null.h>
+#include <arch/cortex-m3.h>
 
 #ifdef CONFIG_H
 #include "config.h"
@@ -35,36 +36,37 @@
 #define FILE_DEV_MAX 8
 #endif
 
-static struct file __file[FILE_DEV_MAX];
+static struct file __file_dev_[FILE_DEV_MAX];
 
-struct file * file_alloc(void * dev, const struct fileop * op)
+struct file * file_alloc(void * __dev, const struct fileop * __op)
 {
 	struct file * f;
 	int i;
 
-	if ((dev == NULL) || (op == NULL))
+	if (__op == NULL)
 		return NULL;
 
 	for (i = 0; i < FILE_DEV_MAX; ++i) {
-		f = &__file[i];
-		if (f->data == NULL) {
-			f->data = dev;
-			f->op = op;
-			return f;
+		f = &__file_dev_[i];
+		while ((void *)__ldrex((uint32_t *)(&f->op)) == NULL) {
+			if (__strex((uint32_t *)(&f->op), (uint32_t)__op) == 0) {
+				f->data = __dev;
+				return f;
+			}
 		}
 	}
 
 	return NULL;
 }
 
-int file_free(struct file * f)
+int file_free(struct file * __f)
 {
-	if (f == NULL)
+	if (__f == NULL)
 		return -1;
 
-	if (f->data != NULL) {
-		f->data = NULL;
-		f->op = &null_fileop;
+	if (__f->data != NULL) {
+		__f->data = NULL;
+		__f->op = &null_fileop;
 	}
 
 	return 0;

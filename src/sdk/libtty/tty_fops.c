@@ -36,36 +36,45 @@ const struct fileop tty_ops = {
 	.close = (void *)tty_release
 };
 
-FILE * tty_fopen(struct tty_dev * dev)
+FILE * tty_fopen(struct tty_dev * __dev)
 {
-	if (dev == NULL)
+	if (__dev == NULL)
 		return NULL;
 
-	return file_alloc(dev, &tty_ops);
+	return file_alloc(__dev, &tty_ops);
 }
 
-int isfatty(struct file * f)
+int isfatty(struct file * __f)
 {
-	return (f->op == &tty_ops) ? 1 : 0;
+	if (__f == NULL)
+		return 0;
+
+	return (__f->op == &tty_ops) ? 1 : 0;
 }
 
-struct file * ftty_lowlevel(struct file * f)
+struct file * ftty_lowlevel(struct file * __f)
 {
-	if (f->op != &tty_ops) {
+	if (__f == NULL)
+		return NULL;
+
+	if (__f->op != &tty_ops) {
 		DCC_LOG(LOG_WARNING, "not a tty!");
 		return NULL;
 	}
 
-	return tty_lowlevel((struct tty_dev *)f->data);
+	return tty_lowlevel((struct tty_dev *)__f->data);
 }
 
-void * ftty_drv(struct file * f)
+void * ftty_drv(struct file * __f)
 {
-	if (f->op != &tty_ops) {
+	if (__f == NULL)
+		return NULL;
+
+	if (__f->op != &tty_ops) {
 		DCC_LOG(LOG_WARNING, "not a tty!");
 		return NULL;
 	}
 
-	return tty_drv((struct tty_dev *)f->data);
+	return tty_drv((struct tty_dev *)__f->data);
 }
 

@@ -36,7 +36,7 @@ SERIAL_CFILES = stm32f-serial.c stm32f-serial_dma.c \
 				serial-file.c
 
 CFILES = stm32f-ethif.c stm32f-dac.c stm32f-adc.c \
-		 stm32f-bkp_sram.c stm32f-io.c stm32f-rtc.c \
+		 stm32f-bkp_sram.c stm32f-rtc.c \
 		 $(addprefix serial/,$(SERIAL_CFILES))
 
 override INCPATH += ./include ../libtcpip/include

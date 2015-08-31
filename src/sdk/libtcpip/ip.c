@@ -61,6 +61,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <trace.h>
+
+#undef TRACE_LEVEL
+#define TRACE_LEVEL TRACE_LVL_NONE
 
 #ifndef IP_DEFAULT_TTL
 #define IP_DEFAULT_TTL 127
@@ -105,6 +109,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	if (__ip->ver != 4) {
 		/* unsupported version */
 		DCC_LOG(LOG_WARNING, "not ipv4!");
+		WARN("IP: not ipv4!");
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		return -1;
 	}
@@ -115,6 +120,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	if ((hdr_len < sizeof(struct iphdr)) || (hdr_len > __len)) {
 		/* invalid header length */
 		DCC_LOG(LOG_WARNING, "invalid iphdr length!");
+		WARN("IP: invalid iphdr length!");
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		return -1;
 	}
@@ -123,6 +129,8 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 		/* invalid datagram length */
 		DCC_LOG2(LOG_WARNING, "length error: ip.tot_len=%d frame.len=%d",
 				 tot_len, __len);
+		WARN("IP: length error: ip.tot_len=%d frame.len=%d",
+			 tot_len, __len);
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		return -1;
 	}
@@ -130,6 +138,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	/* TODO: check for IP flags */
 	if (__ip->ip_off & NTOHS(IP_MF)) {
 		DCC_LOG(LOG_WARNING, "ip fragmentation unsupported!");
+		WARN("IP: fragmentation unsupported!");
 		/* ip fragmentation flag set */
 		IP_PROTO_STAT_ADD(rx_drop, 1);
 		return -1;
@@ -149,6 +158,7 @@ int ip_input(struct ifnet * __if, struct iphdr * __ip, int __len)
 	len = tot_len - hdr_len;
 
 	DCC_LOG3(LOG_INFO, "IP %I > %I (%d)", __ip->saddr, __ip->daddr, __len);
+	DBG("IP %I > %I (%d)", __ip->saddr, __ip->daddr, __len);
 
 	/* check the destination ip address */
 	/* get interface ip address */

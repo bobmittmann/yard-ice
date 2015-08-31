@@ -23,17 +23,18 @@
 #include <sys/file.h>
 #include <thinkos.h>
 #include <stdlib.h>
-
+#include <arch/cortex-m3.h>
 #include <sys/dcclog.h>
 
 #include <sys/tty.h>
+#include <errno.h>
 
 #ifdef CONFIG_H
 #include "config.h"
 #endif
 
 #ifndef TTY_INBUF_LEN 
-#define TTY_INBUF_LEN 64
+#define TTY_INBUF_LEN 66
 #endif
 
 struct tty_dev {
@@ -43,7 +44,7 @@ struct tty_dev {
 	char inbuf[TTY_INBUF_LEN];
 };
 
-int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
+int tty_write(struct tty_dev * __tty, const void * __buf, unsigned int __len)
 {
 	char * cp;
 	int cnt;
@@ -51,8 +52,13 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 	int m;
 	int n;
 
-	cp = (char *)buf;
-	n = len;
+	if ((__tty == NULL) || (__buf == NULL)) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return -EINVAL;
+	}
+
+	cp = (char *)__buf;
+	n = __len;
 	cnt = 0;
 	cr = '\r';
 
@@ -63,12 +69,12 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 		if (cp[m] > 0) {
 			/* send data except '\n' */
 			if (m) {
-				if (tty->f.op->write(tty->f.data, cp, m) <= 0)
+				if (__tty->f.op->write(__tty->f.data, cp, m) <= 0)
 					return cnt;
 			}
 
 			/* cr - force to send */
-			if (tty->f.op->write(tty->f.data, &cr, 1) <= 0)
+			if (__tty->f.op->write(__tty->f.data, &cr, 1) <= 0)
 				return cnt;
 
 			cnt += m + 1;
@@ -77,7 +83,7 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 			m = 1;
 		} else {
 			if (m) {
-				if (tty->f.op->write(tty->f.data, cp, m) <= 0)
+				if (__tty->f.op->write(__tty->f.data, cp, m) <= 0)
 					return cnt;
 			}
 			cnt += m;
@@ -92,7 +98,7 @@ int tty_write(struct tty_dev * tty, const void * buf, unsigned int len)
 
 	/* send the last chunk */
 	if (m) {
-		if (tty->f.op->write(tty->f.data, cp, m) <= 0)
+		if (__tty->f.op->write(__tty->f.data, cp, m) <= 0)
 			return cnt;
 	}
 
@@ -132,24 +138,29 @@ static int tty_get_char(struct tty_dev * tty)
 	return tty->inbuf[tty->inpos++];
 }
 
-int tty_read(struct tty_dev * tty, void * buf, unsigned int len)
+int tty_read(struct tty_dev * __tty, void * __buf, unsigned int __len)
 {
 	char * s;
 	int size;
 	int pos;
 	int c;
 
-	s = (char *)buf;
-	size = len;
+	if ((__tty == NULL) || (__buf == NULL)) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return -EINVAL;
+	}
+
+	s = (char *)__buf;
+	size = __len;
 	pos = 0;
 
 	for (;;) {
-		c = tty_get_char(tty);
+		c = tty_get_char(__tty);
 
 		if ((c == IN_DEL) || (c == IN_BS)) {
 			if (pos > 0) {
 				pos--;
-				tty->f.op->write(tty->f.data, OUT_DEL, sizeof(OUT_DEL) - 1);
+				__tty->f.op->write(__tty->f.data, OUT_DEL, sizeof(OUT_DEL) - 1);
 			}
 			continue;
 		}
@@ -160,71 +171,101 @@ int tty_read(struct tty_dev * tty, void * buf, unsigned int len)
 
 		if (c != IN_EOL) {
 			if (pos == size) {
-				tty->f.op->write(tty->f.data, OUT_BEL, sizeof(OUT_BEL) - 1);
+				__tty->f.op->write(__tty->f.data, OUT_BEL, sizeof(OUT_BEL) - 1);
 				continue;
 			}
 			s[pos++] = c;
-			tty->f.op->write(tty->f.data, &c, sizeof(char));
+			__tty->f.op->write(__tty->f.data, &c, sizeof(char));
 			continue;
 		}
 
 		s[pos] = '\n';
-		tty->f.op->write(tty->f.data, OUT_EOL, sizeof(OUT_EOL) - 1);
+		__tty->f.op->write(__tty->f.data, OUT_EOL, sizeof(OUT_EOL) - 1);
 		break;
 	}
 
-	return len;
+	return __len;
 }
 
-int tty_flush(struct tty_dev * tty)
+int tty_flush(struct tty_dev * __tty)
 {
-	return tty->f.op->flush(tty->f.data);
+	if (__tty == NULL) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return -EINVAL;
+	}
+
+	return __tty->f.op->flush(__tty->f.data);
 }
 
 #ifndef TTY_DEV_MAX
 #define TTY_DEV_MAX 4
 #endif
 
-static struct tty_dev __tty[TTY_DEV_MAX];
+static struct tty_dev __tty_dev__[TTY_DEV_MAX];
 
-int tty_release(struct tty_dev * tty)
+int tty_release(struct tty_dev * __tty)
 {
-	tty->f.op->close(tty->f.data);
+	if (__tty == NULL) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return -EINVAL;
+	}
+
+	__tty->f.op->close(__tty->f.data);
+
 /*	tty->f.op = NULL;
 	tty->f.data = NULL;
 */
 	return 0;
 }
 
-struct tty_dev * tty_attach(const struct file * f)
+struct tty_dev * tty_attach(const struct file * __f)
 {
 	struct tty_dev * tty;
 	int i;
 
-	if (f == NULL)
+	if (__f == NULL) {
+		DCC_LOG(LOG_WARNING, "__f == NULL!");
 		return NULL;
+	}
+
+	if (__f->op == NULL) {
+		DCC_LOG(LOG_WARNING, "__f->op == NULL!");
+		return NULL;
+	}
 
 	for (i = 0; i < TTY_DEV_MAX; ++i) {
-		tty = &__tty[i];
-		if (tty->f.data == NULL) {
-			tty->inpos = 0;
-			tty->inlen = 0;
-			tty->f.op = f->op;
-			tty->f.data = f->data;
-			return tty;
+		tty = &__tty_dev__[i];
+		while ((void *)__ldrex((uint32_t *)(&tty->f.op)) == NULL) {
+			if (__strex((uint32_t *)(&tty->f.op), 
+						(uint32_t)__f->op) == 0) {
+				tty->f.data = __f->data;
+				tty->inpos = 0;
+				tty->inlen = 0;
+				return tty;
+			}
 		}
 	}
 
 	return NULL;
 }
 
-struct file * tty_lowlevel(struct tty_dev * tty)
+struct file * tty_lowlevel(struct tty_dev * __tty)
 {
-	return &tty->f;
+	if (__tty == NULL) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return NULL;
+	}
+
+	return &__tty->f;
 }
 
-void * tty_drv(struct tty_dev * tty)
+void * tty_drv(struct tty_dev * __tty)
 {
-	return &tty->f.data;
+	if (__tty == NULL) {
+		DCC_LOG(LOG_WARNING, "Null pointer!");
+		return NULL;
+	}
+
+	return &__tty->f.data;
 }
 

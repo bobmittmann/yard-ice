@@ -23,38 +23,35 @@
 
 PROG = yard-ice
 
-CFILES = yard-ice.c yard-ice/debugger.c yard-ice/ice_drv.c yard-ice/mod_mem.c\
-		 yard-ice/fmt_freq.c yard-ice/mem_hexdump.c yard-ice/targets.c\
-		 yard-ice/i2c-master.c yard-ice/mod_ice.c\
-		 yard-ice/shell.c yard-ice/lookup.c monitor.c\
-		 yard-ice/console.c 
+CFILES = yard-ice.c board.c debugger.c ice_drv.c\
+		 mod_mem.c fmt_freq.c mem_hexdump.c targets.c\
+		 i2c-master.c mod_ice.c shell.c lookup.c monitor.c\
+		 console.c 
 #		 yard-ice/usb.c 
 
-LIBDIRS = sdk/libcm3 sdk/libstm32f sdk/libutil sdk/libthinkos sdk/libc\
-		  sdk/libice-comm sdk/libtcpip sdk/libstm32drv sdk/libbitvec\
-		  sdk/libhexdump sdk/libcrc sdk/libaltera sdk/libopcodes\
-		  sdk/libtrace sdk/libtty sdk/libxmodem\
-		  sdk/libshell sdk/libconsole\
-		  yard-ice/arch yard-ice/jtag yard-ice/script yard-ice/cmd\
-		  yard-ice/nand yard-ice/jtag3drv yard-ice/armice yard-ice/cm3ice\
-		  yard-ice/targets yard-ice/comm yard-ice/tftp \
-		  yard-ice/gdb yard-ice/vcom yard-ice/telnet
+LIBDIRS = ../sdk/libcm3 ../sdk/libstm32f ../sdk/libutil ../sdk/libthinkos\
+		  ../sdk/libc ../sdk/libice-comm ../sdk/libtcpip ../sdk/libstm32drv\
+		  ../sdk/libbitvec ../sdk/libhexdump ../sdk/libcrc ../sdk/libaltera\
+		  ../sdk/libtrace ../sdk/libtty ../sdk/libxmodem\
+		  ../sdk/libshell ../sdk/libconsole ../sdk/libopcodes\
+		  arch jtag script cmd nand jtag3drv\
+		  armice cm3ice targets comm tftp gdb vcom telnet
 
 LIBS = cm3 stm32f util thinkos c ice-comm tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets comm tftp shell console tty gdb vcom telnet crc xmodem
 
-VERSION_DATE = "2015-08-29"
+VERSION_DATE = "2015-08-30"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "16"
+VERSION_MINOR = "17"
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-INCPATH = sdk/include yard-ice/include
+INCPATH = ../sdk/include ./include
 
-include mk/stm32f207.mk
+include ../mk/stm32f207.mk
 
 help:
 	@echo 'Targets:'
