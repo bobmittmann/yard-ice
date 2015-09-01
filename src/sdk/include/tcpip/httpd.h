@@ -46,7 +46,7 @@
 #endif
 
 /* 'GET http://www.domain.xxx/somedir/subdir/file.html HTTP/1.1' CRLF */
-#define HTTP_RCVBUF_LEN (HTTPD_URI_MAX_LEN + 16)
+#define HTTP_RCVBUF_LEN (HTTPD_URI_MAX_LEN + 17)
 
 
 enum http_oid {

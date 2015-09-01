@@ -201,31 +201,49 @@ int http_parse_multipart_form_data(struct httpctl * ctl, char * val)
 
 int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 {
+	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
 	unsigned int cnt;
 	unsigned int pos;
-	unsigned int lin;
+	unsigned int mrk;
 	unsigned int rem;
-	int c1;
-	int c2;
+	uint32_t pat;
 	int n;
 
 	cnt = ctl->rcvq.cnt;
 	pos = ctl->rcvq.pos;
-	lin = ctl->rcvq.lin;
-	c1 = (pos) ? ctl->rcvq.buf[pos - 1] : '\0';
+	mrk = ctl->rcvq.lin;
+	pat = 0;
+	if (pos > 0) {
+		pat = queue[pos - 1] << 8;
+		if (pos > 1) {
+			pat = (pat | queue[pos - 2]) << 8;
+			if (pos > 2)
+				pat = (pat | queue[pos - 3]) << 8;
+		}	
+	}
 
-	/* receive SDP payload */
+	/* receive payload */
 	for (;;) {
+		DCC_LOG3(LOG_TRACE, "lin=%d pos=%d cnt=%d", lin, pos, cnt);
+
 		/* search for end of line */
 		while (pos < cnt) {
-			c2 = ctl->rcvq.buf[pos++];
-			if (c1 == '\r' && c2 == '\n') {
+			pat |= queue[pos++];
+//			DCC_LOG1(LOG_TRACE, "c=%02x!", c2);
+			/* "\r\n--" */
+			if (pat == 0x0d0a2d2d) {
+				
+				n = cnt - pos;
+				while (n < ctl->content.bdry_len) {
+					rem = HTTP_RCVBUF_LEN - cnt;
+					if
+				}
 
-				DCC_LOG(LOG_TRACE, "new line!");
 				n = pos - lin;
+				DCC_LOG1(LOG_TRACE, "new line n=%d!", n);
 
 				if (n == ctl->content.bdry_len + 2) {
-					char * cp = (char *)&ctl->rcvq.buf[lin];
+					uint8_t * cp = &queue[lin];
 					uint32_t hash = 0;
 					int i;
 
@@ -242,7 +260,7 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 				if (n > len)
 					n = len;
 
-				memcpy(buf, &ctl->rcvq.buf[lin], n); 
+				memcpy(buf, &queue[lin], n); 
 				ctl->content.pos += n;
 
 				/* move to the next line */
@@ -251,8 +269,10 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 				ctl->rcvq.pos = lin;
 				return n;
 			}
-			c1 = c2;
+			pat <<= 8;
 		}
+
+		DCC_LOG(LOG_TRACE, "pos == cnt!");
 
 		if (HTTP_RCVBUF_LEN == cnt) {
 			if (lin == 0) {
@@ -262,7 +282,7 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 				if (n > len)
 					n = len;
 
-				memcpy(buf, &ctl->rcvq.buf[lin], n); 
+				memcpy(buf, &queue[lin], n); 
 				ctl->content.pos += n;
 
 				/* move to the line and position pointers */
@@ -274,20 +294,22 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 
 			/* move remaining data to the beginning of the buffer */
 			n = cnt - lin;
-			memcpy(ctl->rcvq.buf, &ctl->rcvq.buf[lin], n); 
+			memcpy(queue, &queue[lin], n); 
 
 			cnt = n;
 			pos = n;
 			lin = 0;
 		}
 
-		/* free space in the input buffer */
+		/* read more */
 		rem = HTTP_RCVBUF_LEN - cnt;
 		/* read more data */
-		if ((n = tcp_recv(ctl->tp, &ctl->rcvq.buf[cnt], rem)) <= 0) {
+		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
 			tcp_close(ctl->tp);
 			return n;
 		}
+
+		DCC_LOG1(LOG_TRACE, "tcp_rect() n=%d", n);
 
 		cnt += n;
 		ctl->rcvq.cnt = cnt;
