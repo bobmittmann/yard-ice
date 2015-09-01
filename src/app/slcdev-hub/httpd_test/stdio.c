@@ -27,9 +27,10 @@
 #include <sys/tty.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <sys/console.h>
 #include <sys/shell.h>
 
+#if 0
 const struct file stm32_uart_file = {
 	.data = STM32_UART5, 
 	.op = &stm32_usart_fops 
@@ -53,6 +54,19 @@ void stdio_init(void)
 	stdout = f_tty;
 	stdin = f_tty;
 }
+#endif
+
+void stdio_init(void)
+{
+	FILE * f;
+
+	f = console_fopen();
+	/* initialize STDIO */
+	stderr = f;
+	stdout = f;
+	stdin = f;
+}
+
 
 /*****************************************************************************
  * Help

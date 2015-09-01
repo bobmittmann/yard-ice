@@ -97,7 +97,6 @@ int get_data_cgi(struct httpctl * ctl)
 	int i;
 
 	rows = atoi(http_query_lookup(ctl, "rows")); 
-	DCC_LOG1(LOG_TRACE, "rows=%d", rows);
 
 	httpd_200(ctl->tp, APPLICATION_JSON);
 
@@ -226,12 +225,9 @@ int cmd_exec_cgi(struct httpctl * ctl)
 
 	cmd_ln = http_query_lookup(ctl, "cmd"); 
 	if (cmd_ln == NULL) {
-		DCC_LOG(LOG_WARNING, "invalid request!");
 		/* 400 Bad Request */
 		return httpd_400(ctl->tp);
 	}
-
-	DCC_LOGSTR(LOG_TRACE, "cmd=\"%s\"", cmd_ln);
 
 	httpd_200(ctl->tp, TEXT_PLAIN);
 

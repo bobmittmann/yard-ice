@@ -96,9 +96,11 @@
 
 #define THINKOS_ENABLE_DEBUG_FAULT 1
 
-#define THINKOS_ENABLE_BUSFAULT 1
+#define THINKOS_ENABLE_BUSFAULT    1
 
-#define THINKOS_ENABLE_USAGEFAULT 1
+#define THINKOS_ENABLE_USAGEFAULT  1
+
+#define THINKOS_UNROLL_EXCEPTIONS  1
 
 #define THINKOS_ENABLE_MPU 1
 
@@ -122,6 +124,12 @@
    -------------------------------------------------------------------------- */
 
 #define BOOT_ENABLE_GDB 1
+#define MONITOR_CONFIGURE_ENABLE  1
+#define MONITOR_DUMPMEM_ENABLE    1
+#define MONITOR_UPGRADE_ENABLE    1
+#define MONITOR_STACKUSAGE_ENABLE 1
+#define MONITOR_THREADINFO_ENABLE 1
+#define MONITOR_APPWIPE_ENABLE    1
 
 #endif /* __CONFIG_H__ */
 

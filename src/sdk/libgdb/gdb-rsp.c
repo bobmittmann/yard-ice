@@ -1397,7 +1397,9 @@ static int rsp_memory_write_bin(struct gdb_rspd * gdb, char * pkt)
 	DCC_LOG3(LOG_TRACE, "addr=%08x size=%d cp=%08x", addr, size, cp);
 
 	if (target_mem_write(addr, cp, size) < 0) {
+		/* XXX: silently ignore writing errors ...
 		return rsp_error(gdb, 1);
+		*/
 	}
 
 	return rsp_ok(gdb);

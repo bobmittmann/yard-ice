@@ -496,6 +496,22 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 
 		DCC_LOG(LOG_TRACE, "multipart/form-data");
 
+		if (http_multipart_boundary_lookup(ctl) < 0) {
+			DCC_LOG(LOG_WARNING, "http_parse_header() failed!");
+			/* Malformed request line, respond with: 400 Bad Request */
+			httpd_400(ctl->tp);
+			tcp_close(ctl->tp);
+			return -1;
+		}
+
+		if (http_parse_header(ctl->tp, ctl) < 0) {
+			DCC_LOG(LOG_WARNING, "http_parse_header() failed!");
+			/* Malformed request line, respond with: 400 Bad Request */
+			httpd_400(ctl->tp);
+			tcp_close(ctl->tp);
+			return -1;
+		}
+
 #if 0
 		multi = (struct postfilestate *)__http;
 		multi->size = content_len;

@@ -8,10 +8,10 @@
   ---------------------------------------------------------------------------*/
 
 #define HTML_FOOTER "<hr>\r\n"\
-	"<a href=\"https://code.google.com/p/yard-ice\">"\
+	"<a href=\"https://github.com/bobmittmann/yard-ice\">"\
 	"<img src=\"/img/thinkos57x24.png\"></a>\r\n"\
 	" - Cortex-M Operating System - \r\n"\
-	"<i><a href=\"https://code.google.com/p/yard-ice\">YARD-ICE</a></i><br>\r\n"\
+	"<i><a href=\"https://github.com/bobmittmann/yard-ice\">YARD-ICE</a></i><br>\r\n"\
 	"&copy; Copyright 2013-2015, Bob Mittmann<br>\r\n"\
 	"</body>\r\n</html>\r\n"
 

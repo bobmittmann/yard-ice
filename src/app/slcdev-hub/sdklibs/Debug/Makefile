@@ -29,7 +29,7 @@ LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 INCPATH = $(SDK)/include ..
 
 CDEFS = CONFIG_H
-CFLAGS = -g -Og -fno-omit-frame-pointer -Wall
+CFLAGS = -Og -ffunction-sections -fdata-sections -Wall -g3 
 O := .
 
 MACH = stm32f407

@@ -34,11 +34,10 @@
 #include <stdbool.h>
 #include <sys/serial.h>
 #include <sys/delay.h>
-#include <sys/dcclog.h>
 #include <thinkos.h>
 #include <tcpip/net.h>
-#include <tcpip/dhcp.h>
-#include <tcpip/in.h>
+
+#include <trace.h>
 
 #include "board.h"
 
@@ -63,8 +62,8 @@ extern struct httpdobj www_cgi[];
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
 	{ .path = "/img", .objlst = www_img },
-	{ .path = "/lib", .objlst = www_lib },
 	{ .path = "/cgi", .objlst = www_cgi },
+//	{ .path = "/lib", .objlst = www_lib },
 	{ .path = NULL, .objlst = NULL }
 };
 
@@ -78,28 +77,24 @@ int httpd_server_task(struct httpd * httpd)
 	(void)id;
 
 	for (;;) {
-//		printf("Wating for connection.\n");
-		DCC_LOG1(LOG_INFO, "<%d> Wating for connection...",
-				 thinkos_thread_self());
+		INF("<%d> Wating for connection...", thinkos_thread_self());
+
 		if (http_accept(httpd, ctl) < 0) {
 			printf("tcp_accept() failed!\n");
 			thinkos_sleep(100);
 			continue;
 		}
 
-//		printf("Connection accepted.\n");
-		DCC_LOG1(LOG_INFO, "<%d> Connection accepted...",
-				 thinkos_thread_self());
-
+		INF("<%d> Connection accepted...", thinkos_thread_self());
 		if ((obj = http_obj_lookup(ctl)) != NULL) {
 			cnt++;
 			switch (ctl->method) {
 			case HTTP_GET:
-				DCC_LOG3(LOG_TRACE, "%2d %6d GET \"%s\"", id, cnt, obj->oid);
+				DBG("%2d %6d GET \"%s\"", id, cnt, obj->oid);
 				http_get(ctl, obj);
 				break;
 			case HTTP_POST:
-				DCC_LOG3(LOG_TRACE, "%2d %6d POST \"%s\"", id, cnt, obj->oid);
+				DBG("%2d %6d POST \"%s\"", id, cnt, obj->oid);
 				http_post(ctl, obj);
 				break;
 			}
@@ -111,6 +106,49 @@ int httpd_server_task(struct httpd * httpd)
 	return 0;
 }
 
+void __attribute__((noreturn)) supervisor_task(void)
+{
+	struct trace_entry ent;
+	struct timeval tv;
+	char s[80];
+
+	INF("Supervisory task started (thread %d).", thinkos_thread_self());
+
+	trace_tail(&ent);
+
+	for (;;) {
+		thinkos_sleep(250);
+
+		/* Flush the trace ring */
+		while (trace_getnext(&ent, s, sizeof(s)) >= 0) {
+			trace_ts2timeval(&tv, ent.dt);
+			printf("%s %2d.%06d: %s\n", trace_lvl_nm[ent.ref->lvl],
+					(int)tv.tv_sec, (int)tv.tv_usec, s);
+		}
+
+		trace_flush(&ent);
+	}
+}
+
+
+uint32_t supervisor_stack[128];
+
+const struct thinkos_thread_inf supervisor_inf = {
+	.stack_ptr = supervisor_stack,
+	.stack_size = sizeof(supervisor_stack),
+	.priority = 1,
+	.thread_id = 1,
+	.paused = false,
+	.tag = "SUPV"
+};
+
+void supervisor_init(void)
+{
+	trace_init();
+
+	thinkos_thread_create_inf((void *)supervisor_task, (void *)NULL,
+							  &supervisor_inf);
+}
 
 int network_config(void)
 {
@@ -127,11 +165,10 @@ int network_config(void)
 	uint64_t esn;
 	int dhcp = 1;
 
-	DCC_LOG(LOG_TRACE, "tcpip_init().");
 	tcpip_init();
 
 	esn = *((uint64_t *)STM32F_UID);
-	DCC_LOG2(LOG_TRACE, "ESN=0x%08x%08x", esn >> 32, esn);
+	INF("ESN=0x%08x%08x", esn >> 32, esn);
 
 	ethaddr[0] = ((esn >>  0) & 0xfc) | 0x02; /* Locally administered MAC */
 	ethaddr[1] = ((esn >>  8) & 0xff);
@@ -158,7 +195,6 @@ int network_config(void)
 	}
 
 	if (!inet_aton(strtok(s, " ,"), (struct in_addr *)&ip_addr)) {
-		DCC_LOG(LOG_WARNING, "inet_aton() failed.");
 		return -1;
 	}
 
@@ -187,7 +223,6 @@ int network_config(void)
 
 	if (dhcp) {
 		/* start the DHCP client daemon */
-		DCC_LOG(LOG_TRACE, "dhcpc_start().");
 		dhcpc_start();
 		/* schedule the interface to be configured through DHCP */
 		dhcpc_ifconfig(ifn, NULL);
@@ -217,7 +252,7 @@ void io_init(void)
 	stm32_gpio_mode(UART6_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(UART6_TX, GPIO_AF7);
 	/* USART6_RX */
-	stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
+ 	stm32_gpio_mode(UART6_RX, ALT_FUNC, PULL_UP);
 	stm32_gpio_af(UART6_RX, GPIO_AF7);
 
 }
@@ -277,6 +312,9 @@ int main(int argc, char ** argv)
 
 	stdio_init();
 
+	printf("1. supervisor_init()... \n");
+	supervisor_init();
+
 	printf("\n");
 	printf("---------------------------------------------------------\n");
 	printf(" ThinkOS (HTTPD Test)\n");
@@ -291,7 +329,7 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd1_inf);
-
+#if 0
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd2_inf);
 
@@ -300,14 +338,19 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd4_inf);
+#endif
+
+#if 0
+	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
 	tcp_echo_start();
 
 	tcp_qotd_start();
 
 	tftpd_start();
+#endif
 
 	for (;;) {
-		stdio_shell();
+//		stdio_shell();
 		thinkos_sleep(1000);
 	}
 

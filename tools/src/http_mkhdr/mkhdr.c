@@ -69,6 +69,7 @@ struct sym http_req_hdr[] = {
 	{"Authorization", "HTTP_HDR_AUTHORIZATION"},
 	{"Cache-Control", "HTTP_HDR_CACHE_CONTROL"},
 	{"Connection", "HTTP_HDR_CONNECTION"},
+	{"Content-Disposition", "HTTP_HDR_CONTENT_DISPOSITION"},
 	{"Content-Encoding", "HTTP_HDR_CONTENT_ENCODING"},
 	{"Content-Language", "HTTP_HDR_CONTENT_LANGUAGE"},
 	{"Content-Length", "HTTP_HDR_CONTENT_LENGTH"},

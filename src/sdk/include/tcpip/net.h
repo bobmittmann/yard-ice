@@ -30,12 +30,15 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 
+#include <tcpip/in.h>
 #include <tcpip/tcp.h>
 #include <tcpip/udp.h>
 #include <tcpip/route.h>
 
 #include <tcpip/ethif.h>
 #include <tcpip/loopif.h>
+
+#include <tcpip/dhcp.h>
 #include <tcpip/httpd.h>
 
 #ifdef __cplusplus

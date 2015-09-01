@@ -150,7 +150,7 @@ struct httpctl {
 	struct {
 		uint8_t type;
 		uint8_t bdry_len;
-		uint16_t bdry_hash;
+		uint32_t bdry_hash;
 		uint32_t len;
 		uint32_t pos;
 	} content;
@@ -158,7 +158,7 @@ struct httpctl {
 		uint16_t cnt;
 		uint16_t pos;
 		uint16_t lin;
-		uint16_t hash;
+		uint32_t pat;
 		uint32_t buf[(HTTP_RCVBUF_LEN + 3) / 4];
 	} rcvq; /* receive queue */
 	uint8_t qrycnt;

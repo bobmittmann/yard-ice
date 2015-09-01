@@ -72,6 +72,10 @@ int httpd_200_js(struct tcp_pcb * __tp);
 int http_decode_uri_query(char * buf, int len, 
 						  struct httpqry lst[], int max);
 
+int http_multipart_boundary_lookup(struct httpctl * ctl);
+
+int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl);
+
 #ifdef __cplusplus
 }
 #endif

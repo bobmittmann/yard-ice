@@ -24,6 +24,9 @@
  */ 
 
 #include "httpd-i.h"
+#include <sys/param.h>
+#include <arch/cortex-m3.h>
+#include <trace.h>
 
 int http_recv(struct httpctl * ctl, void * buf, unsigned int len)
 {
@@ -155,24 +158,12 @@ int http_line_recv(struct httpctl * ctl, char * line,
 
 
 #define HASH_N 40
-#define HASH_M ((HASH_N * HASH_N * HASH_N) + (HASH_N * HASH_N) + HASH_N + 1)
+#define HASH_M ((HASH_N * HASH_N * HASH_N * HASH_N) + \
+				(HASH_N * HASH_N * HASH_N) + (HASH_N * HASH_N) + HASH_N + 1)
 
-uint32_t http_hash(uint32_t hash, uint32_t c)
+static inline uint32_t http_hash(uint32_t hash, uint32_t c)
 {
-	return hash ^ HASH_M * (c - ' ');
-}
-
-uint32_t http_boundary_hash(char * s)
-{
-	uint32_t hash = 0;
-	char * cp = s;
-	int c;
-
-	while ((c = *cp++) != '\0') {
-		hash = http_hash(hash, c);
-	}
-
-	return hash;
+	return hash ^ (HASH_M * c);
 }
 
 int http_parse_multipart_form_data(struct httpctl * ctl, char * val)
@@ -199,106 +190,44 @@ int http_parse_multipart_form_data(struct httpctl * ctl, char * val)
 	return 0;
 }
 
-int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
+int http_multipart_boundary_lookup(struct httpctl * ctl)
 {
 	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
-	unsigned int cnt;
-	unsigned int pos;
-	unsigned int mrk;
-	unsigned int rem;
+	int cnt;
+	int pos;
+	int rem;
 	uint32_t pat;
+	uint32_t hash;
 	int n;
+	int i;
 
 	cnt = ctl->rcvq.cnt;
 	pos = ctl->rcvq.pos;
-	mrk = ctl->rcvq.lin;
-	pat = 0;
-	if (pos > 0) {
-		pat = queue[pos - 1] << 8;
-		if (pos > 1) {
-			pat = (pat | queue[pos - 2]) << 8;
-			if (pos > 2)
-				pat = (pat | queue[pos - 3]) << 8;
-		}	
-	}
+	pat = 0x000d0a00;
 
 	/* receive payload */
 	for (;;) {
-		DCC_LOG3(LOG_TRACE, "lin=%d pos=%d cnt=%d", lin, pos, cnt);
-
-		/* search for end of line */
+		/* search for the pattern */
 		while (pos < cnt) {
 			pat |= queue[pos++];
-//			DCC_LOG1(LOG_TRACE, "c=%02x!", c2);
-			/* "\r\n--" */
-			if (pat == 0x0d0a2d2d) {
-				
-				n = cnt - pos;
-				while (n < ctl->content.bdry_len) {
-					rem = HTTP_RCVBUF_LEN - cnt;
-					if
-				}
-
-				n = pos - lin;
-				DCC_LOG1(LOG_TRACE, "new line n=%d!", n);
-
-				if (n == ctl->content.bdry_len + 2) {
-					uint8_t * cp = &queue[lin];
-					uint32_t hash = 0;
-					int i;
-
-					DCC_LOG(LOG_TRACE, "boundary length match!");
-					for (i = 0; i < ctl->content.bdry_len; ++i)
-						hash = http_hash(hash, cp[i]);
-
-					if (ctl->content.bdry_hash == hash) {
-						DCC_LOG(LOG_TRACE, "boundary hash match!");
-						return 0;
-					}
-				}
-
-				if (n > len)
-					n = len;
-
-				memcpy(buf, &queue[lin], n); 
-				ctl->content.pos += n;
-
-				/* move to the next line */
-				lin += n;
-				ctl->rcvq.lin = lin;
-				ctl->rcvq.pos = lin;
-				return n;
-			}
+			if (pat == 0x0d0a2d2d)
+				goto pattern_match;
 			pat <<= 8;
 		}
 
-		DCC_LOG(LOG_TRACE, "pos == cnt!");
-
 		if (HTTP_RCVBUF_LEN == cnt) {
-			if (lin == 0) {
-				DCC_LOG(LOG_TRACE, "buffer full!");
-
-				n = cnt - lin;
-				if (n > len)
-					n = len;
-
-				memcpy(buf, &queue[lin], n); 
-				ctl->content.pos += n;
-
-				/* move to the line and position pointers */
-				lin += n;
-				ctl->rcvq.lin = lin;
-				ctl->rcvq.pos = lin;
-				return n;
+			DCC_LOG(LOG_TRACE, "buffer full!");
+#ifdef DEBUG
+			if (cpy_pos != (pos - 3)) {
+				DCC_LOG(LOG_ERROR, "transfer queue integrity failed!");
+				return 0;
 			}
-
+#endif
 			/* move remaining data to the beginning of the buffer */
-			n = cnt - lin;
-			memcpy(queue, &queue[lin], n); 
-
+			n = 3;
+			memcpy(queue, &queue[pos - n], n);
 			cnt = n;
 			pos = n;
-			lin = 0;
 		}
 
 		/* read more */
@@ -308,12 +237,201 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 			tcp_close(ctl->tp);
 			return n;
 		}
-
-		DCC_LOG1(LOG_TRACE, "tcp_rect() n=%d", n);
-
 		cnt += n;
 		ctl->rcvq.cnt = cnt;
 	}
 
+pattern_match:
+	/* move remaining data to the beginning of the buffer */
+	n = cnt - pos;
+	memcpy(queue, &queue[pos], n);
+	/* the data left in the buffer is the new total count */
+	cnt = n;
+	/* set the search position  */
+	pos = 0;
+
+	/* calculate the boundary hash but first make sure
+	 we have enough data in the processing buffer (boundary marker length + CR LF) */
+	while (cnt < ctl->content.bdry_len + 2) {
+		/* receive more data from the network */
+		rem = HTTP_RCVBUF_LEN - cnt;
+		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+			tcp_close(ctl->tp);
+			return n;
+		}
+		cnt += n;
+		ctl->rcvq.cnt = cnt;
+	}
+
+	hash = 0;
+	for (i = 0; i < ctl->content.bdry_len; ++i)
+		hash = http_hash(hash, queue[i]);
+
+	if (ctl->content.bdry_hash != hash) {
+		DCC_LOG(LOG_TRACE, "boundary hash mismatch");
+		return -1;
+	}
+
+	/* skip boundary marker and CR+LF */
+	pos += ctl->content.bdry_len + 2;
+	ctl->rcvq.pat = 0;
+	ctl->rcvq.pos = pos;
+	ctl->rcvq.lin = pos;
+
+	return 0;
+}
+
+int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
+{
+	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
+	uint8_t * cpy_buf;
+	int cpy_cnt;
+	uint8_t * cp;
+	int mrk;
+	int cnt;
+	int pos;
+	int rem;
+	uint32_t pat;
+	uint32_t hash;
+	int n;
+	int i;
+
+	DCC_LOG(LOG_TRACE, "1. ...................................");
+	DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
+
+	cnt = ctl->rcvq.cnt;
+	pos = ctl->rcvq.pos;
+	pat = ctl->rcvq.pat;
+	mrk = ctl->rcvq.lin;
+
+	cpy_buf = (uint8_t *)buf;
+	cpy_cnt = 0;
+
+	if (pat == 0x0d0a2d2d) {
+pattern_match:
+		DCC_LOG(LOG_TRACE, "pattern match!");
+		if (pos > 4) {
+			int n;
+			/* copy all data up to the match pattern to the receiving buffer */
+			n = pos - mrk - 4;
+			n = MIN(n, len);
+			memcpy(&cpy_buf[cpy_cnt], &queue[mrk], n);
+			cpy_cnt += n;
+			if (cpy_cnt == len) {
+				/* no more space left in the receiving buffer,
+				   update the position of the transfer */
+				mrk += cpy_cnt;
+				/* update the transfer pointer */
+				ctl->rcvq.lin = mrk;
+				return cpy_cnt;
+			}
+			/* move remaining data to the beginning of the buffer */
+			n = cnt - pos + 4;
+			memcpy(queue, &queue[pos - 4], n); 
+			/* the data left in the buffer is the new total count */
+			cnt = n;
+			/* set the search position to just after the 4 bytes 
+			   pattern in the buffer */
+			pos = 4;
+			/* reset the copy pointer */
+			mrk = 0;
+			/* write back the receive queue state */
+			ctl->rcvq.pat = pat;
+			ctl->rcvq.cnt = cnt;
+			ctl->rcvq.pos = pos;
+			ctl->rcvq.lin = mrk;
+			return cpy_cnt;
+		}
+#ifdef DEBUG
+		if (pos != 4) {
+			DCC_LOG(LOG_ERROR, "processing poistion should be 4!");
+			return 0;
+		}
+#endif
+
+		/* calculate the boundary hash but first make sure
+		 we have enough data in the processing buffer */
+		while (cnt < (ctl->content.bdry_len + 4)) {
+			/* receive more data from the network */
+			rem = HTTP_RCVBUF_LEN - cnt;
+			if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+				tcp_close(ctl->tp);
+				return n;
+			}
+			cnt += n;
+			ctl->rcvq.cnt = cnt;
+		}
+
+		hash = 0;
+		cp = &queue[4];
+		for (i = 0; i < ctl->content.bdry_len; ++i)
+			hash = http_hash(hash, cp[i]);
+
+		if (ctl->content.bdry_hash == hash) {
+			DCC_LOG(LOG_TRACE, "boundary hash match!");
+			return 0;
+		}
+
+		DCC_LOG(LOG_TRACE, "not match!");
+		/* reset the pattern match buffer */
+		pat = 0;
+	}
+
+	/* receive payload */
+	for (;;) {
+//		DCC_LOG2(LOG_TRACE, "pos=%d cnt=%d", pos, cnt);
+
+		/* search for the pattern */
+		while (pos < cnt) {
+			pat |= queue[pos++];
+			if (pat == 0x0d0a2d2d)
+				goto pattern_match;
+			pat <<= 8;
+		}
+
+		if (mrk < (pos - 3)) {
+			int n;
+			/* copy data to receving buffer but leave 3 bytes for a possible 
+			   match on next round. */
+			n = pos - mrk - 3;
+			n = MIN(n, len);
+			memcpy(&cpy_buf[cpy_cnt], &queue[mrk], n);
+			mrk += n;
+			cpy_cnt += n;
+			if (cpy_cnt == len) {
+				/* write back the receive queue state */
+				ctl->rcvq.pat = pat;
+				ctl->rcvq.pos = pos;
+				ctl->rcvq.lin = mrk;
+				return cpy_cnt;
+			}
+		}
+
+		if (HTTP_RCVBUF_LEN == cnt) {
+			DCC_LOG(LOG_TRACE, "buffer full!");
+#ifdef DEBUG
+			if (mrk != (pos - 3)) {
+				DCC_LOG(LOG_ERROR, "transfer queue integrity failed!");
+				return 0;
+			}
+#endif
+			/* move remaining data to the beginning of the buffer */
+			n = 3;
+			memcpy(queue, &queue[pos - n], n); 
+			cnt = n;
+			pos = n;
+			mrk = 0;
+		}
+
+		/* read more */
+		rem = HTTP_RCVBUF_LEN - cnt;
+		/* read more data */
+		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+			tcp_close(ctl->tp);
+			return n;
+		}
+		cnt += n;
+		ctl->rcvq.cnt = cnt;
+	}
 }
 

@@ -228,7 +228,7 @@ void io_init(void)
 
 }
 
-uint32_t httpd1_stack[384];
+uint32_t httpd1_stack[512];
 uint32_t httpd2_stack[384];
 uint32_t httpd3_stack[384];
 uint32_t httpd4_stack[384];

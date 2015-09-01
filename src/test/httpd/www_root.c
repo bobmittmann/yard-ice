@@ -167,14 +167,14 @@ int form1_cgi(struct httpctl * ctl)
 	int i;
 
 	httpd_200(ctl->tp, TEXT_HTML);
-	tcp_send(ctl->tp, form1_hdr_html, sizeof(form1_hdr_html) - 1, 0);
+	http_send(ctl, form1_hdr_html, sizeof(form1_hdr_html) - 1);
 	for (i = 0; i < ctl->qrycnt; ++i) {
 		char * key = ctl->qrylst[i].key;
 		char * val = ctl->qrylst[i].val;
 		n = snprintf(s, S_MAX, "<p>%d. %s='%s'</p>\r\n", i + 1, key, val);
-		tcp_send(ctl->tp, s, n, 0);
+		http_send(ctl, s, n);
 	}
-	return tcp_send(ctl->tp, footer_html, sizeof(footer_html) - 1, 0);
+	return http_send(ctl, footer_html, sizeof(footer_html) - 1);
 }
 
 
@@ -223,7 +223,7 @@ int update_cgi(struct httpctl * ctl)
 	char s[S_MAX];
 	int n;
 
-	DCC_LOG(LOG_TRACE, "....");
+	DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
 
 	while ((n = http_multipart_recv(ctl, s, S_MAX)) > 0) {
 		DCC_LOG1(LOG_TRACE, "n=%d", n);

@@ -119,6 +119,7 @@ int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
 				buf[pos - 1] = '\0';
 				ctl->rcvq.cnt = cnt;
 				ctl->rcvq.pos = pos + 1;
+				ctl->rcvq.lin = pos + 1;
 				return http_process_request(ctl, buf);
 			}
 			c1 = c2;
@@ -160,6 +161,9 @@ static int http_process_field(struct httpctl * ctl,
 	case HTTP_HDR_CONTENT_LENGTH:
 		ctl->content.len = strtoul(val, NULL, 10);
 		DCC_LOG1(LOG_INFO, "Content-Length: %d", ctl->content.len);
+		break;
+	case HTTP_HDR_CONTENT_DISPOSITION:
+		DCC_LOG1(LOG_INFO, "Content-Disposition: %d", ctl->content.len);
 		break;
 	case HTTP_HDR_ACCEPT:
 		DCC_LOG1(LOG_INFO, "Accept: %c ...", val[0]);
@@ -238,7 +242,7 @@ static int http_process_field(struct httpctl * ctl,
 	return 0;
 }
 
-static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
+int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 {
 	char * buf = (char *)ctl->rcvq.buf;
 	int cnt;
@@ -251,7 +255,7 @@ static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 	/* processed bytes so far */
 	pos = ctl->rcvq.pos;
 	/* beginning of a line */
-	lin = pos;
+	lin = ctl->rcvq.lin;
 	/* current character */
 	c1 = (pos) ? buf[pos - 1] : '\0';
 
@@ -273,6 +277,10 @@ static int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 				/* If the current position is 2 characters ahead of
 				   the line start then this is an empty line. */
 				if (pos == lin + 2) {
+					if (cnt == pos) {
+						cnt = 0;
+						pos = 0;
+					}
 					/* end of HTTP Header */
 					ctl->rcvq.cnt = cnt;
 					ctl->rcvq.pos = pos;
@@ -351,6 +359,8 @@ int http_accept(struct httpd * httpd, struct httpctl * ctl)
 		DCC_LOG(LOG_ERROR, "tcp_accept().");
 		return -1;
 	}
+
+	memset(ctl, 0, sizeof(struct httpctl));
 
 	DCC_LOG1(LOG_INFO, "ctl=%p accepted.", ctl);
 
@@ -500,7 +510,7 @@ int httpd_init(struct httpd * httpd,
 {
 	struct tcp_pcb * tp;
 
-	http_parser_test();
+//	http_parser_test();
 
 	if (httpd == NULL) {
 		DCC_LOG(LOG_ERROR, "Invalid parameter!");
