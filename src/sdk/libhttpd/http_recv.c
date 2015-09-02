@@ -32,7 +32,7 @@ int http_recv(struct httpctl * ctl, void * buf, unsigned int len)
 {
 	int n;
 
-	if ((n = (ctl->rcvq.cnt - ctl->rcvq.pos)) > 0) {
+	if ((n = (ctl->rcvq.head - ctl->rcvq.pos)) > 0) {
 		uint8_t * src;
 		uint8_t * dst;
 		int i;
@@ -67,9 +67,9 @@ int http_line_recv(struct httpctl * ctl, char * line,
 	int c2;
 	int n;
 
-	cnt = ctl->rcvq.cnt;
+	cnt = ctl->rcvq.head;
 	pos = ctl->rcvq.pos;
-	lin = ctl->rcvq.lin;
+	lin = ctl->rcvq.tail;
 	c1 = (pos) ? ctl->rcvq.buf[pos - 1] : '\0';
 
 	/* receive SDP payload */
@@ -91,7 +91,7 @@ int http_line_recv(struct httpctl * ctl, char * line,
 
 				/* move to the next line */
 				lin = pos;
-				ctl->rcvq.lin = lin;
+				ctl->rcvq.tail = lin;
 				ctl->rcvq.pos = lin;
 				return n;
 			}
@@ -117,7 +117,7 @@ int http_line_recv(struct httpctl * ctl, char * line,
 			}
 			/* update our pointers */
 			ctl->rcvq.pos = pos;
-			ctl->rcvq.lin = lin;
+			ctl->rcvq.tail = lin;
 			return n;
 		}
 
@@ -150,7 +150,7 @@ int http_line_recv(struct httpctl * ctl, char * line,
 
 		ctl->content.pos += n;
 		cnt += n;
-		ctl->rcvq.cnt = cnt;
+		ctl->rcvq.head = cnt;
 	}
 
 	return 0;
@@ -201,7 +201,7 @@ int http_multipart_boundary_lookup(struct httpctl * ctl)
 	int n;
 	int i;
 
-	cnt = ctl->rcvq.cnt;
+	cnt = ctl->rcvq.head;
 	pos = ctl->rcvq.pos;
 	pat = 0x000d0a00;
 
@@ -217,12 +217,6 @@ int http_multipart_boundary_lookup(struct httpctl * ctl)
 
 		if (HTTP_RCVBUF_LEN == cnt) {
 			DCC_LOG(LOG_TRACE, "buffer full!");
-#ifdef DEBUG
-			if (cpy_pos != (pos - 3)) {
-				DCC_LOG(LOG_ERROR, "transfer queue integrity failed!");
-				return 0;
-			}
-#endif
 			/* move remaining data to the beginning of the buffer */
 			n = 3;
 			memcpy(queue, &queue[pos - n], n);
@@ -238,7 +232,7 @@ int http_multipart_boundary_lookup(struct httpctl * ctl)
 			return n;
 		}
 		cnt += n;
-		ctl->rcvq.cnt = cnt;
+		ctl->rcvq.head = cnt;
 	}
 
 pattern_match:
@@ -260,7 +254,7 @@ pattern_match:
 			return n;
 		}
 		cnt += n;
-		ctl->rcvq.cnt = cnt;
+		ctl->rcvq.head = cnt;
 	}
 
 	hash = 0;
@@ -276,7 +270,7 @@ pattern_match:
 	pos += ctl->content.bdry_len + 2;
 	ctl->rcvq.pat = 0;
 	ctl->rcvq.pos = pos;
-	ctl->rcvq.lin = pos;
+	ctl->rcvq.tail = pos;
 
 	return 0;
 }
@@ -286,60 +280,79 @@ int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
 	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
 	uint8_t * cpy_buf;
 	int cpy_cnt;
-	uint8_t * cp;
-	int mrk;
-	int cnt;
+	int tail;
+	int head;
 	int pos;
-	int rem;
 	uint32_t pat;
 	uint32_t hash;
-	int n;
-	int i;
 
-	DCC_LOG(LOG_TRACE, "1. ...................................");
-	DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
-
-	cnt = ctl->rcvq.cnt;
+	head = ctl->rcvq.head;
+	tail = ctl->rcvq.tail;
 	pos = ctl->rcvq.pos;
 	pat = ctl->rcvq.pat;
-	mrk = ctl->rcvq.lin;
+
+#ifdef DEBUG
+	if (head > HTTP_RCVBUF_LEN) {
+		DCC_LOG(LOG_ERROR, "(head > HTTP_RCVBUF_LEN)!");
+		return 0;
+	}
+	if (pos > head) {
+		DCC_LOG(LOG_ERROR, "(pos > head)!");
+		return 0;
+	}
+	if (tail > pos) {
+		DCC_LOG(LOG_ERROR, "(pos > head)!");
+		return 0;
+	}
+	if (ctl->content.bdry_hash == 0) {
+		DCC_LOG(LOG_ERROR, "(ctl->content.bdry_hash == 0)!");
+		return 0;
+	}
+#endif
 
 	cpy_buf = (uint8_t *)buf;
 	cpy_cnt = 0;
 
 	if (pat == 0x0d0a2d2d) {
+		int i;
+		uint8_t * cp;
+
 pattern_match:
-		DCC_LOG(LOG_TRACE, "pattern match!");
+		DCC_LOG3(LOG_INFO, "pattern match, tail=%d pos=%d head=%d", 
+				 tail, pos, head);
 		if (pos > 4) {
 			int n;
 			/* copy all data up to the match pattern to the receiving buffer */
-			n = pos - mrk - 4;
-			n = MIN(n, len);
-			memcpy(&cpy_buf[cpy_cnt], &queue[mrk], n);
+			n = pos - tail - 4;
+			n = MIN(n, len - cpy_cnt);
+			memcpy(&cpy_buf[cpy_cnt], &queue[tail], n);
+			tail += n;
 			cpy_cnt += n;
 			if (cpy_cnt == len) {
 				/* no more space left in the receiving buffer,
 				   update the position of the transfer */
-				mrk += cpy_cnt;
-				/* update the transfer pointer */
-				ctl->rcvq.lin = mrk;
+			
+				/* write back the receive queue state */
+				ctl->rcvq.pat = pat;
+				ctl->rcvq.pos = pos;
+				ctl->rcvq.tail = tail;
 				return cpy_cnt;
 			}
 			/* move remaining data to the beginning of the buffer */
-			n = cnt - pos + 4;
+			n = head - pos + 4;
 			memcpy(queue, &queue[pos - 4], n); 
 			/* the data left in the buffer is the new total count */
-			cnt = n;
+			head = n;
 			/* set the search position to just after the 4 bytes 
 			   pattern in the buffer */
 			pos = 4;
 			/* reset the copy pointer */
-			mrk = 0;
+			tail = 0;
 			/* write back the receive queue state */
 			ctl->rcvq.pat = pat;
-			ctl->rcvq.cnt = cnt;
+			ctl->rcvq.head = head;
 			ctl->rcvq.pos = pos;
-			ctl->rcvq.lin = mrk;
+			ctl->rcvq.tail = tail;
 			return cpy_cnt;
 		}
 #ifdef DEBUG
@@ -351,15 +364,17 @@ pattern_match:
 
 		/* calculate the boundary hash but first make sure
 		 we have enough data in the processing buffer */
-		while (cnt < (ctl->content.bdry_len + 4)) {
+		while (head < (ctl->content.bdry_len + 4)) {
+			int rem;
+			int n;
 			/* receive more data from the network */
-			rem = HTTP_RCVBUF_LEN - cnt;
-			if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+			rem = HTTP_RCVBUF_LEN - head;
+			if ((n = tcp_recv(ctl->tp, &queue[head], rem)) <= 0) {
 				tcp_close(ctl->tp);
 				return n;
 			}
-			cnt += n;
-			ctl->rcvq.cnt = cnt;
+			head += n;
+			ctl->rcvq.head = head;
 		}
 
 		hash = 0;
@@ -379,59 +394,63 @@ pattern_match:
 
 	/* receive payload */
 	for (;;) {
-//		DCC_LOG2(LOG_TRACE, "pos=%d cnt=%d", pos, cnt);
+		int rem;
+		int n;
+
+		DCC_LOG4(LOG_INFO, "tail=%d pos=%d head=%d cpy_cnt=%d", 
+				 tail, pos, head, cpy_cnt);
 
 		/* search for the pattern */
-		while (pos < cnt) {
+		while (pos < head) {
 			pat |= queue[pos++];
 			if (pat == 0x0d0a2d2d)
 				goto pattern_match;
 			pat <<= 8;
 		}
 
-		if (mrk < (pos - 3)) {
-			int n;
+		if (tail < (pos - 3)) {
 			/* copy data to receving buffer but leave 3 bytes for a possible 
 			   match on next round. */
-			n = pos - mrk - 3;
-			n = MIN(n, len);
-			memcpy(&cpy_buf[cpy_cnt], &queue[mrk], n);
-			mrk += n;
+			n = pos - tail - 3;
+			n = MIN(n, len - cpy_cnt);
+			memcpy(&cpy_buf[cpy_cnt], &queue[tail], n);
+			tail += n;
 			cpy_cnt += n;
 			if (cpy_cnt == len) {
 				/* write back the receive queue state */
 				ctl->rcvq.pat = pat;
 				ctl->rcvq.pos = pos;
-				ctl->rcvq.lin = mrk;
+				ctl->rcvq.tail = tail;
 				return cpy_cnt;
 			}
 		}
 
-		if (HTTP_RCVBUF_LEN == cnt) {
-			DCC_LOG(LOG_TRACE, "buffer full!");
+		if (HTTP_RCVBUF_LEN == head) {
+			DCC_LOG(LOG_INFO, "buffer full!");
 #ifdef DEBUG
-			if (mrk != (pos - 3)) {
+			if (tail != (pos - 3)) {
 				DCC_LOG(LOG_ERROR, "transfer queue integrity failed!");
 				return 0;
 			}
 #endif
 			/* move remaining data to the beginning of the buffer */
-			n = 3;
-			memcpy(queue, &queue[pos - n], n); 
-			cnt = n;
-			pos = n;
-			mrk = 0;
+			queue[0] = queue[pos - 3]; 
+			queue[1] = queue[pos - 2]; 
+			queue[2] = queue[pos - 1]; 
+			head = 3;
+			pos = 3;
+			tail = 0;
 		}
 
 		/* read more */
-		rem = HTTP_RCVBUF_LEN - cnt;
+		rem = HTTP_RCVBUF_LEN - head;
 		/* read more data */
-		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+		if ((n = tcp_recv(ctl->tp, &queue[head], rem)) <= 0) {
 			tcp_close(ctl->tp);
 			return n;
 		}
-		cnt += n;
-		ctl->rcvq.cnt = cnt;
+		head += n;
+		ctl->rcvq.head = head;
 	}
 }
 

@@ -117,9 +117,9 @@ int http_parse_request(struct tcp_pcb * tp, struct httpctl * ctl)
 			c2 = buf[pos];
 			if (c1 == '\r' && c2 == '\n') {
 				buf[pos - 1] = '\0';
-				ctl->rcvq.cnt = cnt;
+				ctl->rcvq.head = cnt;
 				ctl->rcvq.pos = pos + 1;
-				ctl->rcvq.lin = pos + 1;
+				ctl->rcvq.tail = pos + 1;
 				return http_process_request(ctl, buf);
 			}
 			c1 = c2;
@@ -251,11 +251,11 @@ int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 	int c1;
 
 	/* total bytes in the buffer */
-	cnt = ctl->rcvq.cnt;
+	cnt = ctl->rcvq.head;
 	/* processed bytes so far */
 	pos = ctl->rcvq.pos;
 	/* beginning of a line */
-	lin = ctl->rcvq.lin;
+	lin = ctl->rcvq.tail;
 	/* current character */
 	c1 = (pos) ? buf[pos - 1] : '\0';
 
@@ -282,9 +282,9 @@ int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 						pos = 0;
 					}
 					/* end of HTTP Header */
-					ctl->rcvq.cnt = cnt;
+					ctl->rcvq.head = cnt;
 					ctl->rcvq.pos = pos;
-					ctl->rcvq.lin = pos;
+					ctl->rcvq.tail = pos;
 					return 0;
 				}
 

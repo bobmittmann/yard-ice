@@ -105,7 +105,7 @@ const char style_css[] = "* { border: 0; margin: 0; padding:1; }\r\n"
 
 #endif
 
-#define S_MAX 256 /* HTML formatting string buffer lenght */
+#define HTML_MAX 256 /* HTML formatting string buffer lenght */
 
 static const char footer_html[] = HTML_FOOTER;
 
@@ -162,7 +162,7 @@ const char form1_hdr_html[] = DOCTYPE_HTML "<head>\r\n"
 
 int form1_cgi(struct httpctl * ctl)
 {
-	char s[S_MAX];
+	char s[HTML_MAX];
 	int n;
 	int i;
 
@@ -171,7 +171,7 @@ int form1_cgi(struct httpctl * ctl)
 	for (i = 0; i < ctl->qrycnt; ++i) {
 		char * key = ctl->qrylst[i].key;
 		char * val = ctl->qrylst[i].val;
-		n = snprintf(s, S_MAX, "<p>%d. %s='%s'</p>\r\n", i + 1, key, val);
+		n = snprintf(s, HTML_MAX, "<p>%d. %s='%s'</p>\r\n", i + 1, key, val);
 		http_send(ctl, s, n);
 	}
 	return http_send(ctl, footer_html, sizeof(footer_html) - 1);
@@ -220,14 +220,29 @@ const char update_html[] = DOCTYPE_HTML "<head>\r\n"
 
 int update_cgi(struct httpctl * ctl)
 {
-	char s[S_MAX];
+	uint8_t s[HTML_MAX];
+	int cnt = 0;
 	int n;
 
 	DCC_LOG1(LOG_TRACE, "sp=%08x", cm3_sp_get());
 
-	while ((n = http_multipart_recv(ctl, s, S_MAX)) > 0) {
+	httpd_200(ctl->tp, TEXT_PLAIN);
+
+	while ((n = http_multipart_recv(ctl, s, HTML_MAX)) > 0) {
 		DCC_LOG1(LOG_TRACE, "n=%d", n);
+		if ((cnt == 0) || (n != HTML_MAX)) {
+			DCC_LOG6(LOG_TRACE, "head: %02x %02x %02x %02x %02x %02x", 
+					 s[0], s[1], s[2], s[3], s[4], s[5]);
+			DCC_LOG6(LOG_TRACE, "tail: %02x %02x %02x %02x %02x %02x", 
+					 s[n - 6], s[n - 5], s[n - 4], 
+					 s[n - 3], s[n - 2], s[n - 1]);
+		}
+		cnt += n;
+		http_send(ctl, s, n);
 	}
+	DCC_LOG1(LOG_TRACE, "file size: %d bytes", cnt);
+
+	return 0;
 
 	httpd_200(ctl->tp, TEXT_HTML);
 

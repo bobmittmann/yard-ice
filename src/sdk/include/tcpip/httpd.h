@@ -155,10 +155,10 @@ struct httpctl {
 		uint32_t pos;
 	} content;
 	struct {
-		uint16_t cnt;
+		uint16_t head;
 		uint16_t pos;
-		uint16_t lin;
-		uint32_t pat;
+		uint16_t tail;
+		uint32_t pat; /* search compare window */
 		uint32_t buf[(HTTP_RCVBUF_LEN + 3) / 4];
 	} rcvq; /* receive queue */
 	uint8_t qrycnt;
