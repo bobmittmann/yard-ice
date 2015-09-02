@@ -221,17 +221,22 @@ const char update_html[] = DOCTYPE_HTML "<head>\r\n"
 
 int update_cgi(struct httpctl * ctl)
 {
-	char s[S_MAX];
+	char s[S_MAX + 1];
 	int n;
 	int cnt = 0;
 
-	while ((n = http_multipart_recv(ctl, s, S_MAX)) > 0) {
-		(void)n;
-		DBG("http_multipart_recv=%d", n);
+	httpd_200(ctl->tp, TEXT_PLAIN);
+
+	while ((n = http_multipart_recv(ctl, s, 1)) > 0) {
+//		(void)n;
+//		DBG("http_multipart_recv=%d", n);
 		cnt += n;
+		http_send(ctl, s, n);
 	}
 
 	DBG("file size=%d", cnt);
+
+	return 0;
 
 	httpd_200(ctl->tp, TEXT_HTML);
 

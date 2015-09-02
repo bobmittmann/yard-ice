@@ -277,14 +277,26 @@ int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 				/* If the current position is 2 characters ahead of
 				   the line start then this is an empty line. */
 				if (pos == lin + 2) {
+					/* end of HTTP Header */
 					if (cnt == pos) {
 						cnt = 0;
 						pos = 0;
+					} else {
+						int i;
+						int j;
+						int n;
+						/* move what was left in the receiving queue to the
+						 * beginning of the buffer */
+						n = cnt - pos;
+						for (i = 0, j = pos; i < n; ++i, ++j)
+							buf[i] = buf[j];
+						cnt = n;
+						pos = 0;
 					}
-					/* end of HTTP Header */
 					ctl->rcvq.head = cnt;
 					ctl->rcvq.pos = pos;
 					ctl->rcvq.tail = pos;
+					buf[cnt] = '\0';
 					return 0;
 				}
 
@@ -315,7 +327,7 @@ int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl)
 			int j;
 
 			/* if the line marker is at position zero then we've reached the
-			 * end of the buffer ... */
+			 * end of the buffer with no CR+LF detected in it... */
 			if (lin == 0) {
 				DCC_LOG(LOG_ERROR, "buffer ovreflow!");
 				return -1;

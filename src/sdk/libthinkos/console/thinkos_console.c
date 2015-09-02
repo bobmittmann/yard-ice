@@ -82,7 +82,9 @@ static int pipe_read(struct console_pipe * pipe,
 	} else {
 		__thinkos_memcpy(buf, &pipe->buf[pos], cnt);
 	}
-	pipe->tail = tail += cnt;
+
+	pipe->tail = tail + cnt;
+
 	return cnt;
 }
 
@@ -124,7 +126,7 @@ static int pipe_write(struct console_pipe * pipe,
 		__thinkos_memcpy(&pipe->buf[pos], cp, cnt);
 	}
 
-	pipe->head = head += cnt;
+	pipe->head = head + cnt;
 
 	return cnt;
 }
@@ -184,6 +186,8 @@ void __console_rx_pipe_commit(unsigned int cnt)
 	__thinkos_defer_sched();
 }
 
+/* get the a pointer from the next available character in the
+   queue and return the number of available chars */ 
 int __console_tx_pipe_ptr(uint8_t ** ptr) 
 {
 	struct console_pipe * pipe = &thinkos_console_rt.tx_pipe;
@@ -212,22 +216,18 @@ int __console_tx_pipe_ptr(uint8_t ** ptr)
 void __console_tx_pipe_commit(unsigned int cnt) 
 {
 	int wq = THINKOS_WQ_CONSOLE_WR;
-	unsigned int len;
-	uint8_t * buf;
 	int th;
-	int n;
 
 	thinkos_console_rt.tx_pipe.tail += cnt;
 	if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-		buf = (uint8_t *)thinkos_rt.ctx[th]->r1;
-		len = thinkos_rt.ctx[th]->r2;
-		if ((n = pipe_write(&thinkos_console_rt.tx_pipe, buf, len)) > 0) {
-			DCC_LOG1(LOG_INFO, "TX Pipe wakeup %d !!!", th);
-			/* wakeup from the console wait queue */
-			__thinkos_wakeup_return(wq, th, n);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-		}
+		/* XXX: To avoid a race condition when writing to the 
+		   pipe from the service call and this function (invoked
+		   from an interrupt handler), let the thread to
+		   wakes up and retry. */
+		/* wakeup from the console wait queue */
+		__thinkos_wakeup(wq, th);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched();
 	}
 }
 
@@ -298,6 +298,9 @@ wr_again:
 			dmon_signal(DMON_TX_PIPE);
 			arg[0] = n;
 		} else {
+			/* Set the return value to ZERO. The calling thread 
+			   shuould retry sending data. */
+			arg[0] = 0;
 			/* (1) suspend the thread by removing it from the
 			   ready wait queue. The __thinkos_suspend() call cannot be nested
 			   inside a LDREX/STREX pair as it may use the exclusive access 
@@ -310,6 +313,11 @@ wr_again:
 			/* (2) Save the context pointer. In case an interrupt wakes up
 			   this thread before the scheduler is called, this will allow
 			   the interrupt handler to locate the return value (r0) address. */
+			/* FIXME: the hard coded (-8) value is dependent on the 
+			   servicehandler call stack in this case of Cortex-M.
+			   This may be complettly wrong if the float point unit is enabled.
+			   A macro shuld be definde to deal with this. 
+			 */ 
 			thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
 			/* Insert into the event wait queue */
 			queue = __ldrex(&thinkos_rt.wq_lst[wq]);

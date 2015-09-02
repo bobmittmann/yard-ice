@@ -36,6 +36,7 @@
 #include <tcpip/ethif.h>
 #include <tcpip/route.h>
 #include <tcpip/loopif.h>
+#include <tcpip/udp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
@@ -70,50 +71,80 @@ const char * const trace_lvl_tab[] = {
 		"  DEBUG"
 };
 
-FILE * monitor_stream;
-bool monitor_auto_flush;
+FILE * trace_file;
+bool trace_auto_flush = true;
+const char trace_host[] = "192.168.10.254";
+const uint16_t trace_port = 11111;
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
 	struct trace_entry trace;
+    struct sockaddr_in sin;
+    struct udp_pcb * udp;
 	uint32_t clk;
+	int n;
 
 	INF("<%d> started...", thinkos_thread_self());
 
-	/* fall back to stdout */
-	monitor_stream = stdout;
+	/* set the supervisor stream to stdout */
+	trace_file = stdout;
+	/* enable auto flush */
+	trace_auto_flush = true;
 
 	trace_tail(&trace);
+
+    if ((udp = udp_alloc()) == NULL) {
+        abort();
+    }
+
+	if (!inet_aton(trace_host, &sin.sin_addr)) {
+		abort();
+	}
+	sin.sin_port = htons(trace_port);
+
+    if (udp_bind(udp, INADDR_ANY, htons(10)) < 0) {
+        abort();
+    }
+
+//    if (udp_connect(udp, sin.sin_addr.s_addr, htons(sin.sin_port)) < 0) {
+//		abort();
+//    }
 
 	clk = thinkos_clock();
 	for (;;) {
 		struct timeval tv;
-		char s[80];
+		char msg[80];
+		char s[128];
 
 		/* 8Hz periodic task */
 		clk += 125;
 		thinkos_alarm(clk);
 
-		while (trace_getnext(&trace, s, sizeof(s)) >= 0) {
+		while (trace_getnext(&trace, msg, sizeof(msg)) >= 0) {
 			trace_ts2timeval(&tv, trace.dt);
 			if (trace.ref->lvl <= TRACE_LVL_WARN)
-				fprintf(monitor_stream, "%s %2d.%06d: %s,%d: %s\n",
-						trace_lvl_tab[trace.ref->lvl],
+				n = sprintf(s, "%s %2d.%06d: %s,%d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec,
-						trace.ref->func, trace.ref->line, s);
+						trace.ref->func, trace.ref->line, msg);
 			else
-				fprintf(monitor_stream, "%s %2d.%06d: %s\n",
-						trace_lvl_tab[trace.ref->lvl],
-						(int)tv.tv_sec, (int)tv.tv_usec, s);
+				n = sprintf(s, "%s %2d.%06d: %s\n",
+						trace_lvl_nm[trace.ref->lvl],
+						(int)tv.tv_sec, (int)tv.tv_usec, msg);
+
+			/* sent log to remote station */
+            udp_sendto(udp, s, n, &sin);
+
+            /* write log to local console */
+			fwrite(s, n, 1, trace_file);
 		}
 
-		if (monitor_auto_flush)
+		if (trace_auto_flush)
 			trace_flush(&trace);
 	}
 }
 
-
-uint32_t supervisor_stack[128];
+uint32_t supervisor_stack[256];
 
 const struct thinkos_thread_inf supervisor_inf = {
 	.stack_ptr = supervisor_stack,
@@ -268,7 +299,7 @@ void remote_test(unsigned int daddr)
 	}
 
 	if (simrpc_suspend(sp) < 0) {
-		WARN(, "simrpc_suspend() failed!");
+		WARN("simrpc_suspend() failed!");
 	}
 
 	thinkos_sleep(500);
@@ -277,29 +308,29 @@ void remote_test(unsigned int daddr)
 	simrpc_mem_lock(sp, 0x08010000, 8192);
 
 	if (simrpc_mem_erase(sp, 0, 2048) < 0) {
-		WARN(, "simrpc_mem_erase() failed!");
+		WARN("simrpc_mem_erase() failed!");
 	}
 
 	if (simrpc_mem_write(sp, "Hello world!", 14) < 0) {
-		WARN(, "simrpc_mem_write() failed!");
+		WARN("simrpc_mem_write() failed!");
 	}
 
 	if (simrpc_mem_seek(sp, 0) < 0) {
-		WARN(, "simrpc_mem_seek() failed!");
+		WARN("simrpc_mem_seek() failed!");
 	}
 
 	if (simrpc_mem_read(sp, s, 14) < 0) {
-		WARN(, "simrpc_mem_write() failed!");
+		WARN("simrpc_mem_write() failed!");
 	}
 
 	if (simrpc_mem_unlock(sp, 0x08010000, 8192) < 0) {
-		WARN(, "simrpc_mem_unlock() failed!");
+		WARN("simrpc_mem_unlock() failed!");
 	}
 
 	thinkos_sleep(500);
 
 	if (simrpc_resume(sp) < 0) {
-		WARN(, "simrpc_resume() failed!");
+		WARN("simrpc_resume() failed!");
 	}
 
 	simrpc_close(sp);
@@ -334,9 +365,12 @@ int main(int argc, char ** argv)
 
 	simrpc_init();
 
-	thinkos_sleep(100000);
+	for (;;) {
+		INF("Tick...");
+		thinkos_sleep(3000);
+	}
 
-	flash_test();
+//	flash_test();
 
 	for (i = 0; i < 10000; ++i) {
 		remote_test(1);
@@ -358,7 +392,7 @@ int main(int argc, char ** argv)
 		simrpc_mem_lock(0, 0x08000000, 1024);
 	}
 
-	net_init();
+//	net_init();
 
 	return 0;
 }

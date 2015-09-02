@@ -166,6 +166,11 @@
 #define STM32F_ETH_RX_NDESC      4
 /* Number of transmision DMA descriptors for the Ethernet driver */
 #define STM32F_ETH_TX_NDESC      4
+
+/* -------------------------------------------------------------------------
+ * PAcket Buffer
+ * ------------------------------------------------------------------------- */
+
 /* Size of packet buffer */
 #define PKTBUF_LEN              (1500 + 16) 
 /* Number of packet in the buffer pool */

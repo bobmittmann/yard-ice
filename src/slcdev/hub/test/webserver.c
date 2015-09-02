@@ -45,8 +45,8 @@ int httpd_task(struct httpd * httpd)
 
 	for (;;) {
 		if (http_accept(httpd, ctl) < 0) {
-			ERR("tcp_accept() failed!\n");
-			thinkos_sleep(1000);
+			ERR("tcp_accept() failed!");
+			thinkos_sleep(100);
 			continue;
 		}
 

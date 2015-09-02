@@ -30,29 +30,65 @@
 
 int http_recv(struct httpctl * ctl, void * buf, unsigned int len)
 {
+	int head = ctl->rcvq.head;
+	int tail = ctl->rcvq.tail;
 	int n;
 
-	if ((n = (ctl->rcvq.head - ctl->rcvq.pos)) > 0) {
-		uint8_t * src;
-		uint8_t * dst;
-		int i;
+	if ((n = (head - tail)) > 0) {
+		uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
 
 		if (n > len)
 			n = len;
-
 		/* read from internal buffer */
-		src = (uint8_t *)ctl->rcvq.buf;
-		dst = (uint8_t *)buf;
-		src += ctl->rcvq.pos;
-		for (i = 0; i < n; ++i)
-			dst[i] = src[i];
-
-		ctl->rcvq.pos += n;
-
+		memcpy(buf, &queue[tail], n);
+		tail += n;
+		if (tail == head) {
+			tail = 0;
+			ctl->rcvq.head = tail;
+		}
+		ctl->rcvq.tail = tail;
 		return n;
 	}
 
 	return tcp_recv(ctl->tp, buf, len);
+}
+
+int http_content_recv(struct httpctl * ctl)
+{
+	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
+	int cnt;
+	int pos;
+	int max;
+	int n;
+
+	cnt = ctl->rcvq.head;
+	pos = ctl->rcvq.pos;
+
+	/* move remaining data to the beginning of the buffer */
+	n = cnt - pos;
+	memcpy(queue, &queue[pos], n);
+	/* the data left in the buffer is the new total count */
+	cnt = n;
+	/* set the search position  */
+	ctl->rcvq.pos = 0;
+
+	max = MIN(ctl->content.len, HTTP_RCVBUF_LEN);
+
+	while (cnt < max) {
+		int rem;
+		/* receive more data from the network */
+		rem = HTTP_RCVBUF_LEN - cnt;
+		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+			tcp_close(ctl->tp);
+			return n;
+		}
+		cnt += n;
+	}
+
+	ctl->rcvq.pos = pos;
+	ctl->rcvq.head = cnt;
+
+	return cnt;
 }
 
 int http_line_recv(struct httpctl * ctl, char * line,
@@ -156,7 +192,6 @@ int http_line_recv(struct httpctl * ctl, char * line,
 	return 0;
 }
 
-
 #define HASH_N 40
 #define HASH_M ((HASH_N * HASH_N * HASH_N * HASH_N) + \
 				(HASH_N * HASH_N * HASH_N) + (HASH_N * HASH_N) + HASH_N + 1)
@@ -203,16 +238,16 @@ int http_multipart_boundary_lookup(struct httpctl * ctl)
 
 	cnt = ctl->rcvq.head;
 	pos = ctl->rcvq.pos;
-	pat = 0x000d0a00;
+	pat = 0x00000d0a;
 
 	/* receive payload */
 	for (;;) {
 		/* search for the pattern */
 		while (pos < cnt) {
+			pat <<= 8;
 			pat |= queue[pos++];
 			if (pat == 0x0d0a2d2d)
 				goto pattern_match;
-			pat <<= 8;
 		}
 
 		if (HTTP_RCVBUF_LEN == cnt) {
@@ -232,7 +267,6 @@ int http_multipart_boundary_lookup(struct httpctl * ctl)
 			return n;
 		}
 		cnt += n;
-		ctl->rcvq.head = cnt;
 	}
 
 pattern_match:
@@ -245,7 +279,8 @@ pattern_match:
 	pos = 0;
 
 	/* calculate the boundary hash but first make sure
-	 we have enough data in the processing buffer (boundary marker length + CR LF) */
+	 we have enough data in the processing buffer
+	 (boundary marker length + CR+LF) */
 	while (cnt < ctl->content.bdry_len + 2) {
 		/* receive more data from the network */
 		rem = HTTP_RCVBUF_LEN - cnt;
@@ -254,7 +289,6 @@ pattern_match:
 			return n;
 		}
 		cnt += n;
-		ctl->rcvq.head = cnt;
 	}
 
 	hash = 0;
@@ -268,11 +302,34 @@ pattern_match:
 
 	/* skip boundary marker and CR+LF */
 	pos += ctl->content.bdry_len + 2;
+
+	/* write back the queue state */
 	ctl->rcvq.pat = 0;
 	ctl->rcvq.pos = pos;
 	ctl->rcvq.tail = pos;
+	ctl->rcvq.head = cnt;
 
 	return 0;
+}
+
+int http_recv_queue_shift(struct httpctl * ctl)
+{
+	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
+	int head = ctl->rcvq.head;
+	int tail = ctl->rcvq.tail;
+	int n;
+
+	/* move any data in the queue to the beginning of the buffer */
+	n = head - tail;
+	memcpy(queue, &queue[tail], n);
+	ctl->rcvq.tail = 0;
+	ctl->rcvq.pos = 0;
+	ctl->rcvq.head = n;
+
+	if (n < HTTP_RCVBUF_LEN)
+		queue[n] = '\0';
+
+	return n;
 }
 
 int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len)
@@ -402,14 +459,14 @@ pattern_match:
 
 		/* search for the pattern */
 		while (pos < head) {
+			pat <<= 8;
 			pat |= queue[pos++];
 			if (pat == 0x0d0a2d2d)
 				goto pattern_match;
-			pat <<= 8;
 		}
 
 		if (tail < (pos - 3)) {
-			/* copy data to receving buffer but leave 3 bytes for a possible 
+			/* copy data to receiving buffer but leave 3 bytes for a possible
 			   match on next round. */
 			n = pos - tail - 3;
 			n = MIN(n, len - cpy_cnt);
@@ -452,5 +509,7 @@ pattern_match:
 		head += n;
 		ctl->rcvq.head = head;
 	}
+
+	return 0;
 }
 

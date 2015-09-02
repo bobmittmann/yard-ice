@@ -140,6 +140,7 @@ int cmd_get(FILE * f, int argc, char ** argv)
 
 int cmd_stat(FILE * f, int argc, char ** argv)
 {
+#if 0
 	struct netstats stat;
 	bool clear = false;
 	
@@ -162,7 +163,7 @@ int cmd_stat(FILE * f, int argc, char ** argv)
 	fprintf(f, " RX | %10u | %7u | %7u | %7u |\n", 
 			stat.rx.octet_cnt, stat.rx.pkt_cnt, 
 			stat.rx.err_cnt, stat.rx.seq_err_cnt);
-
+#endif
 	return 0;
 }
 
@@ -180,8 +181,8 @@ int cmd_reboot(FILE * f, int argc, char ** argv)
 	return 0;
 }
 
-extern FILE * monitor_stream;
-extern bool monitor_auto_flush;
+extern FILE * trace_file;
+extern bool trace_auto_flush;
 
 int cmd_trace(FILE * f, int argc, char ** argv)
 {
@@ -197,25 +198,25 @@ int cmd_trace(FILE * f, int argc, char ** argv)
 
 		if ((strcmp(*argv, "monitor") == 0) || (strcmp(*argv, "m") == 0)) {
 			fprintf(f, "monitor\n");
-			monitor_stream = f;
+			trace_file = f;
 			return 0;
 		}
 
 		if ((strcmp(*argv, "null") == 0) || (strcmp(*argv, "n") == 0)) {
 			fprintf(f, "null\n");
-			monitor_stream = null_fopen(NULL);
+			trace_file = null_fopen(NULL);
 			return 0;
 		}
 
 		if ((strcmp(*argv, "auto") == 0) || (strcmp(*argv, "a") == 0)) {
 			fprintf(f, "Auto flush\n");
-			monitor_auto_flush = true;
+			trace_auto_flush = true;
 			return 0;
 		}
 
 		if ((strcmp(*argv, "keep") == 0) || (strcmp(*argv, "k") == 0)) {
 			fprintf(f, "Keep trace (don't flush)\n");
-			monitor_auto_flush = false;
+			trace_auto_flush = false;
 			return 0;
 		}
 

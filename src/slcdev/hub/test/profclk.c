@@ -39,8 +39,5 @@ void profclk_init(void)
 	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
 	/* Enable cycle counter */
 	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
-
-	DCC_LOG1(LOG_TRACE, "DWT_CTRL=0x%08x", CM3_DWT->ctrl);
-	DCC_LOG1(LOG_TRACE, "DWT_CYCCNT=0x%08x", CM3_DWT->cyccnt);
 }
 

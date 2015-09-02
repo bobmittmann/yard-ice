@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <tcpip/httpd.h>
 #include <thinkos.h>
+#include <trace.h>
 #include "www.h"
 
 const char footer_html[] = HTML_FOOTER;
@@ -162,44 +163,68 @@ const uint16_t sizeof_footer_html = sizeof(footer_html) - 1;
 	#endif
 
 const char tools_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS HTTP Server Demo</title>\r\n"
-	META_COPY LINK_ICON LINK_CSS
-	"</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Firmware Upgrade</h1>\r\n"
+    "<title>ThinkOS HTTP Server Demo</title>\r\n"
+    META_COPY LINK_ICON LINK_CSS
+    "</head>\r\n<body>\r\n"
+    "<h1>ThinkOS Firmware Upgrade</h1>\r\n"
 "<div class=\"form\">\r\n"
 "<form method=\"post\" enctype=\"multipart/form-data\"\r\n"
-"	action=\"/update.html\" onsubmit=\"upload_msg()\">\r\n"
-"	<div class=\"fbody\">\r\n"
-"		File:\r\n"
+"   action=\"/update.cgi\" onsubmit=\"upload_msg()\">\r\n"
+"   <div class=\"fbody\">\r\n"
+"       File:\r\n"
 "<!--[if IE]>\r\n"
-"		<input type=\"file\" id=\"browse\" class=\"text\""
-"			maxlength=\"128\" size=\"40\" name=\"firmware\" />"
+"       <input type=\"file\" id=\"browse\" class=\"text\""
+"           maxlength=\"128\" size=\"40\" name=\"firmware\" />"
 "<![endif]-->\r\n"
 "<![if !IE]>\r\n"
-"		<input type=\"text\" class=\"text\" id=\"fname\"\r\n"
-"			readonly=\"readonly\" maxlength=\"128\" size=\"40\" />\r\n"
-"		<input type=\"button\" class=\"button\" value=\"Browse...\"\r\n"
-"			onclick=\"javascript:\r\n"
-"			document.getElementById('browse').click()\" />\r\n"
-"		<input type=\"file\" class=\"hidden\" id=\"browse\"\r\n"
-"			name=\"firmware\" onchange=\"javascript:\r\n"
-"			document.getElementById('fname').value = this.value\" />\r\n"
+"       <input type=\"text\" class=\"text\" id=\"fname\"\r\n"
+"           readonly=\"readonly\" maxlength=\"128\" size=\"40\" />\r\n"
+"       <input type=\"button\" class=\"button\" value=\"Browse...\"\r\n"
+"           onclick=\"javascript:\r\n"
+"           document.getElementById('browse').click()\" />\r\n"
+"       <input type=\"file\" class=\"hidden\" id=\"browse\"\r\n"
+"           name=\"firmware\" onchange=\"javascript:\r\n"
+"           document.getElementById('fname').value = this.value\" />\r\n"
 "<![endif]>\r\n"
-"	</div>\r\n"
-"	<div class=\"ffoot\">\r\n"
-"		<input type=\"reset\" class=\"button\" value=\"Reset\" />\r\n"
-"		<input type=\"submit\" class=\"button\" value=\"Upload...\" />\r\n"
-"	</div>\r\n"
+"   </div>\r\n"
+"   <div class=\"ffoot\">\r\n"
+"       <input type=\"reset\" class=\"button\" value=\"Reset\" />\r\n"
+"       <input type=\"submit\" class=\"button\" value=\"Upload...\" />\r\n"
+"   </div>\r\n"
 "</form>\r\n"
 "</div>\r\n"
-	HTML_FOOTER;
+    HTML_FOOTER;
 
 const char update_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS HTTP Server Demo</title>\r\n"
-	META_COPY LINK_ICON LINK_CSS
-	"</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Firmware Upgrade</h1>\r\n"
-	HTML_FOOTER;
+    "<title>ThinkOS HTTP Server Demo</title>\r\n"
+    META_COPY LINK_ICON LINK_CSS
+    "</head>\r\n<body>\r\n"
+    "<h1>ThinkOS Firmware Upgrade</h1>\r\n"
+    HTML_FOOTER;
+
+int update_cgi(struct httpctl * ctl)
+{
+    char s[HTML_MAX + 1];
+    int n;
+    int cnt = 0;
+
+    httpd_200(ctl->tp, TEXT_PLAIN);
+
+    while ((n = http_multipart_recv(ctl, s, 1)) > 0) {
+//      (void)n;
+//      DBG("http_multipart_recv=%d", n);
+        cnt += n;
+        http_send(ctl, s, n);
+    }
+
+    DBG("file size=%d", cnt);
+
+    return 0;
+
+    httpd_200(ctl->tp, TEXT_HTML);
+
+    return http_send(ctl, update_html, sizeof(update_html) - 1);
+}
 
 #if 0
 <script type="text/javascript">
@@ -400,6 +425,8 @@ struct httpdobj www_root[] = {
 		.len = sizeof(index_html) - 1, .ptr = index_html },
 	{ .oid = "tools.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(tools_html) - 1, .ptr = tools_html },
+    { .oid = "update.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = update_cgi },
 	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(update_html) - 1, .ptr = update_html },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
