@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Device Simulator RPC Test</title>
+<meta charset="UTF-8">
+<meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015" />
+<script type="text/javascript" src="/lib/modalbox.js.gz"></script>
+<script type="text/javascript" src="/lib/zepto.js.gz"></script>
+<link rel="shortcut icon" href="/img/thinkos16x16.png" />
+<link rel="stylesheet" href="style.css" type="text/css" media="screen" />
+<script type="text/javascript">
+	function msg_show(msg) {
+		var html = msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	function upload_msg() {
+		msg_show("Uploading firmware, please wait...");
+	}
+	function nofile_msg() {
+		msg_show("You must select a file to upload...");
+	}
+
+	function restore_defaults() {
+		dlg.okSelected = function () {
+			dlg.hide();
+			window.location.assign("restore.html");
+		}
+		dlg.cancelSelected = function () {
+			dlg.hide();
+		}
+		dlg.show('defaults_dlg', 'Restore factory settings?', 400, 100);
+	}
+	function reset() {
+		dlg.okSelected = function () {
+			dlg.hide();
+			window.location.assign("reset.html");
+		}
+		dlg.cancelSelected = function () {
+			dlg.hide();
+		}
+		dlg.show('reset_dlg', 'Reset the camera?', 400, 100);
+	}
+
+	function conf_save() {
+		xmlrpc_action('confsave', 0,
+			function () { msg_show('Configuration saved.'); }
+		);
+	}
+
+	function on_sysinfo_get(xml)
+	{
+		txt_bind(xml, 'series');
+		txt_bind(xml, 'model');
+		txt_bind(xml, 'version');
+		txt_bind(xml, 'date');
+		txt_bind(xml, 'esn');
+		txt_bind(xml, 'mac');
+		img_bind(xml, 'icon');
+	}
+
+	function init() {
+		xml_async_get("product.xml", function (xml) {
+					  document.getElementById('title').innerHTML =
+					  xml_txt_get(xml, 'series') });
+		dlg.init();
+		xml_async_get("sysinfo.xml", on_sysinfo_get);
+	}
+</script>
+
+</head>
+<body>
+	<h>Device Simulator RPC Test</h>
+
+	<h1>System information:</h1>
+	<div class="block">
+		<div class="form">
+			<div class="fbody">
+				<table>
+					<tr>
+						<td><span id="icon" style="margin-right: 40px"></span></td>
+						<td>
+							<table>
+									<td align="right"><b>Device model:</b></td>
+									<td><span id="model">unknown</span></td>
+								</tr>
+								<tr>
+									<td align="right"><b>Firmware version:</b></td>
+									<td><span id="version">unknown</span></td>
+								</tr>
+								<tr>
+									<td align="right"><b>Release date:</b></td>
+									<td><span id="date">unknown</span></td>
+								</tr>
+								<tr>
+									<td align="right"><b>Serial number:</b></td>
+									<td><span id="esn">unknown</span></td>
+								</tr>
+								<tr>
+									<td align="right"><b>Mac Address:</b></td>
+									<td><span id="mac">unknown</span></td>
+								</tr>
+							</table>
+						</td>
+					<tr>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<h1>Firmware update:</h1>
+	<div class="block">
+		<div class="form">
+			<form method="post" enctype="multipart/form-data"
+				action="/update.cgi" onsubmit="upload_msg()">
+				<div class="fbody">
+					File:
+					<!--[if IE]>
+       					<input type="file" id="browse" class="text"
+           				maxlength="128" size="40" name="firmware" />"
+					<![endif]-->
+					<![if !IE]>
+					<input type="text" class="text" id="fname" readonly="readonly"
+						maxlength="128" size="40" /> <input type="button" class="button" value="Browse..."
+						onclick="javascript: document.getElementById('browse').click()" />
+					<input type="file" class="hidden" id="browse" name="firmware"
+						onchange="javascript: document.getElementById('fname').value = this.value" />
+					<![endif]>
+				</div>
+				<div class="ffoot">
+					<input type="reset" class="button" value="Reset" /> 
+					<input type="submit" class="button" value="Upload..." />
+				</div>
+			</form>
+		</div>
+		</div>
+
+		<hr>
+		<a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>
+		- Cortex-M Operating System - <i><a
+			href="https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i> <br>&copy;
+		Copyright 2013-2015, Bob Mittmann<br>
+</body>
+</html>

@@ -25,7 +25,7 @@
 
 #include <thinkos.h>
 #include <trace.h>
-#include "www.h"
+#include "www/www.h"
 
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },

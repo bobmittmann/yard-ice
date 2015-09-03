@@ -60,9 +60,19 @@ extern struct httpdobj www_img[];
   Automatically generated code
   ---------------------------------------------------------------------------*/
 
-/* File size */
 
-/* File content */
+/* --- bin2hex.py: file size --- */
+
+#define SIZEOF_STYLE_CSS 734
+
+#define SIZEOF_TOOLS_HTML 1431
+
+
+/* --- bin.hex.py: file content --- */
+
+extern const uint8_t style_css[];
+
+extern const uint8_t tools_html[];
 
 
 #endif

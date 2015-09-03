@@ -1,0 +1,143 @@
+* {
+	border: 0;
+	margin: 0;
+}
+
+body {
+	background: #f8f8f8;
+	color: #555;
+	font: 0.9em Arial, Helvetica, "bitstream vera sans", sans-serif;
+	margin: 10px 10px 25px 10px;
+}
+
+a {
+	color: #779;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #335;
+	text-decoration: none;
+}
+
+p {
+	color: #111;
+	text-align: justify;
+	margin: 10px 0px 20px 0px;
+}
+
+ul {
+	margin: 10px 0px 20px 0px;
+}
+
+h1 {
+	font-size: 1.5em;
+	text-align: left;
+	margin: 10px 0px 10px 0px;
+}
+
+h2 {
+	font-size: 1.3em;
+	text-align: left;
+	margin: 10px 0px 25px 0px;
+}
+
+hr {
+	background-color: #114;
+	color: #112;
+	width: 100%;
+	height: 1px;
+	margin: 10px 0px 5px 0px;
+}
+
+table {
+	border-collapse: collapse;
+	margin: 0;
+}
+
+textarea {
+	background: #fff;
+	margin: 1px 2px 1px;
+	border: 1px solid #aaa;
+	padding: 1px 2px 1px;
+}
+
+form {
+	padding: 0;
+	margin: 0;
+	border: 0;
+	display: table;
+}
+
+input[type=text] {
+	background: #fff;
+	margin: 1px 2px 1px;
+	border: 1px solid #444;
+	padding: 3px 3px 2px;
+}
+
+input[type=text]:hover {
+	background: #cdf;
+}
+
+input[type=button], input[type=reset], input[type=submit], button {
+	background: #ccc;
+	margin: 1px 4px 1px;
+	border: 1px solid #444;
+	padding: 4px 8px 3px;
+}
+
+input[type=button]:hover, input[type=reset]:hover, input[type=submit]:hover,
+	button:hover {
+	background: #458;
+	color: #fff;
+	text-decoration: none;
+}
+
+mbox {
+	background-color: #eee;
+	padding: 8px;
+	border: 2px solid #222;
+}
+
+dlg {
+	clear: both;
+}
+
+dlg h1 {
+	text-align: left;
+	border-bottom: 1px dashed #666;
+	font-size: 1.1em;
+	padding: 1px 0 0;
+	margin-bottom: 4px;
+	clear: both;
+	width: 100%;
+}
+
+ol {
+	background-image: url(img/overlay.png);
+}
+
+.dialog {
+	display: none
+}
+
+* html #ol {
+	background-image: none;
+	filter: progid:DXImageTransform.Microsoft.AlphaImageLoader(src="img/overlay.png",
+		sizingMethod="scale");
+}
+
+.hidden {
+	background: #fdd;
+	border: 0;
+	margin: 0;
+	padding: 0;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	filter: alpha(opacity = 0);
+	-ms-filter: "alpha(opacity=0)";
+	-khtml-opacity: 0;
+	-moz-opacity: 0;
+}
