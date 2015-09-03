@@ -92,6 +92,8 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = update_cgi },
 	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(update_html) - 1, .ptr = update_html },
+	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_NETWORK_HTML, .ptr = network_html },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

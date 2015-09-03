@@ -63,12 +63,16 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
+#define SIZEOF_NETWORK_HTML 1587
+
 #define SIZEOF_STYLE_CSS 734
 
 #define SIZEOF_TOOLS_HTML 1431
 
 
 /* --- bin.hex.py: file content --- */
+
+extern const uint8_t network_html[];
 
 extern const uint8_t style_css[];
 

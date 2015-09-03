@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head profile="http://gmpg.org/xfn/11">
+	<title>I-LAX IP Camera - Network</title>	
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<meta name="copyright" content="Copyright (c) I-LAX Electronics Inc. 2012" />
+	<link rel="shortcut icon" href="favicon.ico" />
+	<link rel="stylesheet" href="style.css" type="text/css" media="screen" />
+	<script type="text/javascript" src="modalbox.js"></script>
+	<script type="text/javascript" src="xmlrpc.js"></script>
+	<script type="text/javascript" src="network.js"></script>
+	<script type="text/javascript">
+		function init() {
+			xml_async_get("product.xml", function (xml) { 
+						  document.getElementById('title').innerHTML = 
+						  xml_txt_get(xml, 'series') });
+			dlg.init(); 
+			netinfo_init();
+			userdb_get();
+		}
+	</script>
+</head>
+
+<body onload="init()">
+	<div id="header">
+		<ul><li><img src="ip-cam-64x64.png" alt="IP Camera"/></li>
+		<li><h1 id="title">&nbsp;</h1><h2>Device Simulator</h2></li><ul>
+	</div>
+	<div id="navigation">
+		<ul>
+			<li><a href="primary.html">Preview</a></li>
+			<li><a href="video.html">Video</a></li>
+			<li><a href="audio.html">Audio</a></li>
+			<li><a href="alarms.html">Alarms</a></li>
+			<li><a href="#" class="active">Network</a></li>
+			<li><a href="time.html">Time</a></li>
+			<li><a href="tools.html">Tools</a></li>
+		</ul>
+	</div>
+	<div id="content">
+		<h1>Network configurations:</h1>
+		<div class="block">
+		<form name="netinfo">
+		<div class="form">
+			<div class="fbody">
+			<table>
+				<tr>
+					<td>
+					<input type="checkbox" class="checkbox" name="dynip" 
+						onchange="dynip_onchange(this)"/>
+					</td>
+					<td>Dynamic IP (DHCP/Zeroconf)</td>
+					<td>
+					</td>
+					<td></td>
+				<tr>
+				</tr>
+					<td>
+					<input type="checkbox" class="checkbox" name="upnp" />
+					</td>
+					<td>Enable UPnP</td>
+					<td></td>
+					<td></td>
+				</tr>
+			</table>
+			<fieldset>
+			<legend>Static IP:</legend>
+			<table>
+				<tr>
+					<td align="right">Address:</td>
+					<td>
+					<input type="text" class="text" name="ipaddr" 
+					maxlength="15" size="15">
+					</td>
+				</tr>
+				<tr>
+					<td align="right">Mask:</td>
+					<td><input type="text" class="text" name="netmask" 
+					maxlength="15" size="15"></td>
+				</tr>
+				<tr>
+					<td align="right">Gateway:</td>
+					<td><input type="text" class="text" name="gw" 
+					maxlength="15" size="15"></td>
+				</tr>
+				<tr>
+					<td align="right">Nameserver:</td>
+					<td><input type="text" class="text" name="nameserver" 
+					maxlength="15" size="15"></td>
+				</tr>
+			</table>
+			</fieldset>
+			</div>
+			<div class="ffoot">
+				<input type="button" class="button" 
+				onclick="netinfo_bind()" value="Reset" />
+				<input  type="button" class="button" 
+				onclick="netinfo_post()" value="Apply" />
+			</div>
+		</div>
+		</form>
+		</div>
+		<h1>Users:</h1>
+		<div class="block">
+		<div class="form">
+			<div class="fbody">
+				<div id="list">
+				<div id="userdb"></div>
+				</div>
+			</div>
+			<div class="ffoot">
+				<input type="button" class="button" 
+				onclick="user_add()" value="add user..." />
+			</div>
+		</div>
+		</div>
+	</div>
+
+	<div id="footer">
+		<p>Copyright &copy; 
+		<a href="http://www.mircomgroup.com">Mircom</a> 2015</p> 
+	</div>
+
+	<div id="user_dlg" class="dialog">
+		<h1 id="title"></h1>
+		<div id="fbody">
+		<center>
+			<table>
+				<tr>
+					<td align="right">Username:</td>
+					<td><input type="text" class="text" name="username" 
+					maxlength="15" style="width:8em"></td>
+				</tr>
+				<tr>
+					<td align="right">Password:</td>
+					<td><input type="password" class="text" name="passwd1" 
+					maxlength="15" style="width:8em"></td>
+				</tr>
+				<tr>
+					<td align="right">Confirm Password:</td>
+					<td><input type="password" class="text" name="passwd2" 
+					maxlength="15" style="width:8em"></td>
+				</tr>
+				<tr>
+					<td align="right"></td>
+					<td><input type="checkbox" class="checkbox" 
+					name="admin">Administrator</td>
+				</tr>
+			</table>	
+		</center>
+		</div>
+		<div id="msg"></div>
+		<div id="ffoot"><center>
+			<input type="button" class="button" 
+			onclick="dlg.okSelected()" value="OK" />
+			<input type="button" class="button" 
+			onclick="dlg.cancelSelected()" value="Cancel" />
+		</center></div>
+	</div>
+
+	<div id="delete_dlg" class="dialog">
+		<h1 id="title"></h1>
+		<div class="fbody">
+		<center>
+			<p>Press <b>Confirm</b> to delete the user.</p>	
+		</center>
+		</div>
+		<div class="ffoot"><center>
+			<input type="button" class="button" 
+			onclick="dlg.cancelSelected()" value="Cancel" />
+			<input type="button" class="button" 
+			onclick="dlg.okSelected()" value="Confirm" />
+		</center></div>
+	</div>
+
+	<div id="netcfg_dlg" class="dialog">
+		<h1 id="title"></h1>
+		<div class="fbody">
+		<center>
+		<div style="float:left">
+		<img style="float:none;vertical-align:middle" 
+		src="alert.png" alt="Alert! "/>
+		</div>
+		<div>
+		<p>The network adress may have changed. Please enter with the new address into your browser.</p> 
+		</div>
+		</center>
+		</div>
+		<div class="ffoot"><center>
+			<input type="button" class="button" 
+			onclick="dlg.hide()" value="Dismiss" />
+		</center></div>
+	</div>
+
+</body>
+</html>
+
