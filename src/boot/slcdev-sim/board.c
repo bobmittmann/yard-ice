@@ -20,10 +20,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <thinkos.h>
-#include <sys/serial.h>
-#include <crc.h>
-
 #include "board.h"
 
 #define PWM_FREQ 100000

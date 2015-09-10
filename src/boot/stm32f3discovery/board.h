@@ -24,6 +24,10 @@
 #define __BOARD_H__
 
 #include <sys/stm32f.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
+#define __THINKOS_DMON__
+#include <thinkos_dmon.h>
 
 #define LED3_IO	 STM32_GPIOE,  9 /* LED3 */
 #define LED4_IO  STM32_GPIOE,  8 /* LED4 */

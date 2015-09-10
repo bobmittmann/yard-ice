@@ -27,8 +27,6 @@
 #include <thinkos.h>
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#define __THINKOS_IRQ__
-#include <thinkos_irq.h>
 
 #define IO_LED1         STM32_GPIOA, 6
 #define IO_LED2         STM32_GPIOA, 7

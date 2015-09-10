@@ -2,10 +2,29 @@
 
 == Windows ==
 
+ 1. Install "GNU Toolchain for ARM Processros"
+ 2. Install "GNU Make" for Windows
+ 3. Install the Java JRE from Oracle.
+ 4. Download "Eclipse for C++ Developers".
+ 5. Extract the Eclipse archive downloaded to your Downloads folder.
+ 6. Get the "YARD-ICE" source code from GitHub.
+ 7. Install the "STM32 ST-LINK Utility" from STMicroelectronics
+
+
+=== GNU Toolchain for ARM Processros ===
+
 Download and install the GNU toolchain for ARM processros:
 
 https://launchpad.net/gcc-arm-embedded
 https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q1-update/+download/gcc-arm-none-eabi-4_9-2015q1-20150306-win32.exe
+https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q2-update/+download/gcc-arm-none-eabi-4_9-2015q2-20150609-win32.exe
+
+During the installation process .
+Use the default values suggested by the wizard installer.
+In the last screen, after the files were copyed, select the "Add path to environment variable" option. 
+
+
+=== GNU Make for Windows ===
 
 Download and install GNU Make:
 
@@ -13,4 +32,70 @@ http://gnuwin32.sourceforge.net/packages/make.htm
 Tip: Install on the same folder as the GCC so you won't need to modify your path. During the installation in the "Select Destination Location:" page enter:
 "C:\Program Files (x86)\GNU Tools ARM Embedded\4.9 2015q1" in the text box.
 Also there is no point of creating a "Start Menu" folder. Disable this option by uncheckintg the "Don't create a Start Menu folder" in the page: "Select Start Menu Folder". 
+
+=== Java Runtime Environement (JRE) ===
+
+Eclipse depends on a Java so a Java Runtime Environment must be installed in your system.
+
+==== Do I have Java in my system ? ====
+
+The easy way to check whether you have the JRE installed in your system is to type call the java interpreter from a windows console:
+"Start"-->"All Programs"-->"Accessories"-->"Command Prompt"
+Type: "java -version"
+The output should be something similar to this:
+
+"
+java version "1.8.0_40"
+Java(TM) SE Runtime Environment (build 1.8.0_40-b26)
+Java HotSpot(TM) 64-Bit Server VM (build 25.40-b25, mixed mode)
+"
+
+==== Installing the JRE ====
+
+http://www.oracle.com/technetwork/java/javase/downloads/index.html
+Most probably the JAva version you want is the 64 bits version for 
+Windows hosts:
+
+"Windows x64" --> "jre-8u60-windows-x64.exe"
+
+=== Eclipse IDE for C/C++ Developers ===
+
+Download and install Eclipse IDE for C/C++ Developers
+https://eclipse.org/downloads/
+
+"eclipse-cpp-mars-R-win32-x86_64.zip"
+
+It simply a matter of downloading the .ZIP (package) file from the website If you have not install any Eclipse package, and unzip the downloaded file into a directory of your choice. 
+For example "C:/eclipse"
+
+
+=== YARD-ICE Source Code ===
+
+GEt the YARD-ICE source code from github
+
+	url = git@github.com:bobmittmann/yard-ice.git
+
+https://github.com/bobmittmann/yard-ice
+
+https://github.com/bobmittmann/yard-ice/archive/YARD-ICE-0.17.zip
+
+=== "STM32 ST-LINK Utility" ===
+
+ - "STSW-LINK009" ST-Link, ST-Link/V2, ST-Link/V2-1 USB driver signed for XP, Windows7, Windows8: "stsw-link009.zip"
+ - "STSW-LINK004" STM32 ST-LINK utility: "stsw-link004.zip" 
+ - ST-LINK firmware upgrade
+
+
+=== Sumary of Packages and Files ===
+
++-------------------------------------+----------------------------------+
+| stsw-link009.zip                    | ST-LINK USB driver               |
+| stsw-link004.zip                    | STM32 ST-LINK utility            |
+| stlinkupgrade.zip                   | ST-LINK firmware upgrade         |
+| eclipse-cpp-mars-R-win32-x86_64.zip | Eclipse IDE for C/C++ Developers |
+| jre-8u60-windows-x64.exe            | Java Runtime Environement (JRE)  |
+| gcc-arm-none-eabi-4_9-2015q2-20150609-win32.exe | GNU Toolchain for ARM Processros |
+| make-3.81.exe                       | GNU Make for Windows             |
+| ThinkOS-0.2.zip                     | ThinkOS Source Code              |
++-------------------------------------+----------------------------------+
 

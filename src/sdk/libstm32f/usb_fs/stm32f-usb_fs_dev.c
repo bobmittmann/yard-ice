@@ -67,9 +67,8 @@ enum ep_state {
 
 /* Endpoint control */
 struct stm32f_usb_ep {
+	uint8_t state; /* Current EP state */
 	uint16_t mxpktsz; /* Maximum packet size for this EP */
-	ep_state_t state; /* Current EP state */
-
 	uint16_t xfr_rem; /* Bytes pendig in the transfer buffer */
 	uint16_t xfr_buf_len; /* Length of the transfer buffer */
 	uint8_t * xfr_buf; /* Transfer buffer pointer */
@@ -1089,14 +1088,6 @@ const struct usb_dev_ops stm32f_usb_ops = {
 /* USB device driver */
 const struct usb_dev stm32f_usb_fs_dev = {
 	.priv = (void *)&stm32f_usb_drv0,
-	.irq[0] = STM32F_IRQ_USB_HP,
-	.irq[1] = STM32F_IRQ_USB_LP,
-#if (STM32_USB_DEV_SUSPEND) 
-	.irq[2] = STM32F_IRQ_USB_WKUP,
-	.irq_cnt = 3,
-#else
-	.irq_cnt = 2,
-#endif
 	.op = &stm32f_usb_ops
 };
 

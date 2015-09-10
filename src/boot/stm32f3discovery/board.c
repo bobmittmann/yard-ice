@@ -21,8 +21,6 @@
  */
 
 #include "board.h"
-#include <sys/delay.h>
-#include <gdb.h>
 
 /* GPIO pin description */ 
 struct stm32f_io {
@@ -65,7 +63,7 @@ void led_toggle(unsigned int id)
 }
 #endif
 
-void io_init(void)
+static void io_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
@@ -80,23 +78,66 @@ void io_init(void)
 	stm32_gpio_mode(LED10_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
 }
 
-void board_init(void)
+bool board_init(void)
 {
+	io_init();
+
 	led_on(0);
+
+	return true;
 }
 
-void board_idle_tick(unsigned int cnt) 
+void board_softreset(void)
 {
-	led_off(~(cnt - 1) & 0x7);
-	led_on(~cnt & 0x7);
+	struct stm32_rcc * rcc = STM32_RCC;
+
+	/* Reset all peripherals except USB_OTG and GPIOA */
+	rcc->ahbrstr = ~((1 << RCC_IOPA) | (1 << RCC_IOPA)); 
+	rcc->apb1rstr = ~(1 << RCC_USB);
+	rcc->apb2rstr = ~(0);
+
+
+	rcc->ahbrstr = 0;
+	rcc->apb1rstr = 0;
+	rcc->apb2rstr = 0;
+
+	/* disable all peripherals clock sources except USB_OTG and GPIOA */
+	rcc->ahbenr = (1 << RCC_IOPA) | (1 << RCC_IOPA); 
+	rcc->apb1enr = (1 << RCC_USB);
+	rcc->apb2enr = 0;
+
+	/* reinitialize IO's */
+	io_init();
+
+	/* Enable USB interrupts */
+	cm3_irq_enable(STM32F_IRQ_USB_HP);
+	cm3_irq_enable(STM32F_IRQ_USB_LP);
 }
 
-void board_app_ready(void)
+bool board_autoboot(uint32_t tick)
+{
+	led_off(~(tick - 1) & 0x7);
+	led_on(~tick & 0x7);
+
+	/* Time window autoboot */
+	return (tick < 40) ? false : true;
+}
+
+void board_on_appload(void)
 {
 	int i;
 
 	for (i = 0; i < LED_COUNT; ++i) 
 		led_off(i);
+}
+
+void board_upgrade(struct dmon_comm * comm)
+{
+}
+
+bool board_configure(struct dmon_comm * comm)
+{
+	return true;
 }
 
 const struct mem_desc sram_desc = {
@@ -118,15 +159,31 @@ const struct mem_desc flash_desc = {
 	}
 }; 
 
-const struct gdb_target board_gdb_target = {
+const struct thinkos_board this_board = {
 	.name = "STM32F3Discovery",
-	.mem = {
+	.hw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.sw_ver = {
+		.major = 0,
+		.minor = 1,
+	},
+	.memory = {
 		.ram = &sram_desc,
 		.flash = &flash_desc
 	},
-	.app = {
+	.application = {
 		.start_addr = 0x0800a000,
 		.block_size = 2048 * 108
-	}
+	},
+
+	.init = board_init,
+	.softreset = board_softreset,
+	.autoboot = board_autoboot,
+	.configure = board_configure,
+	.upgrade = board_upgrade,
+	.on_appload = board_on_appload
 };
+
 
