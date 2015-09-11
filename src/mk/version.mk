@@ -18,9 +18,19 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+ifndef TOOLSDIR
+  $(error TOOLSDIR undefined!)
+endif	
+
 ifndef VERSION_MAJOR
 $(error VERSION_MAJOR undefined!) 
 endif
+
+ifdef PROG
+  VERSION_NAME = $(PROG)
+else
+  VERSION_NAME = 
+endif	
 
 ifndef VERSION_MINOR
   VERSION_MINOR = 0
@@ -42,48 +52,17 @@ ifndef ASSEMBLY
   ASSEMBLY = "A"
 endif
 
+ifeq ($(HOST),Windows)
+ PYTHON := "C:\Python27\python"
+else
+ PYTHON := python
+endif
+
+MKVER = $(TOOLSDIR)/mkver.py
+
 $(VERSION_H):
 	$(ACTION) "Creating: $@"
-	@NOW=`date -u +"%F %T"`; \
-	YEAR=`date -u +"%Y"`; \
-	S=$$((`date -d "$$NOW" +%s` - `date -d $(VERSION_DATE) +%s`));\
-	H=$$(($$S / (60 * 60))); \
-	VERSION_BUILD=$${H}$(VERSION_BUILD_EXTRA); \
-	export VERSION_BUILD; \
-	echo "/*" > $@; \
-	echo " * File:    $@" >> $@; \
-	echo " * Project: YARD-ICE" >> $@; \
-    echo " * Author:  Robinson Mittmann (bobmittmann@gmail.com)" >> $@; \
-	echo " * Comment: Automatically generated. DO NOT edit!" >> $@; \
-    echo " * Copyright(c) 2012-$(VERSION_YEAR) Bob Mittmann. All Rights Reserved." >> $@; \
-	echo " */" >> $@; \
-	echo  >> $@; \
-	echo "#ifndef __VERSION_H__" >> $@; \
-	echo "#define __VERSION_H__" >> $@; \
-	echo >> $@;\
-	echo "#define VERSION_NAME \"$(PROG)\"" >> $@; \
-	echo "#define VERSION_MAJOR $(VERSION_MAJOR)" >> $@; \
-	echo "#define VERSION_MINOR $(VERSION_MINOR)" >> $@; \
-	echo "#define VERSION_BUILD \"$$VERSION_BUILD\"" >> $@; \
-	echo "#define VERSION_NUM \"$(VERSION_MAJOR).$(VERSION_MINOR).$$VERSION_BUILD\"" >> $@; \
-	echo "#define VERSION_MACH \"$(MACH)\"" >> $@; \
-	echo "#define VERSION_ARCH \"$(ARCH)\"" >> $@; \
-	echo "#define VERSION_CPU \"$(CPU)\"" >> $@; \
-	echo "#define VERSION_STR \"$(PROG)-$(VERSION_MAJOR).$(VERSION_MINOR).$$VERSION_BUILD\"" >> $@; \
-	echo "#define VERSION_YEAR \"$$YEAR\"" >> $@; \
-	echo "#define VERSION_DATE \"$$NOW\"" >> $@; \
-	echo >> $@; \
-	if [ "$(PRODUCT)" != "" ]; then \
-		echo "#define PRODUCT_ID $(PRODUCT)" >> $@; \
-	fi; \
-	if [ "$(REVISION)" != "" ]; then \
-		echo "#define PRODUCT_REV $(REVISION)" >> $@; \
-	fi; \
-	if [ "$(ASSEMBLY)" != "" ]; then \
-		echo "#define ASSEMBLY '$(ASSEMBLY)'" >> $@; \
-	fi; \
-	echo >> $@; \
-	echo "#endif /* __VERSION_H__ */" >> $@
+	$(Q)$(PYTHON) $(MKVER) -o $@ -n $(VERSION_NAME) $(VERSION_MAJOR) $(VERSION_MINOR) $(VERSION_DATE)
 	
 $(PROG_TAG):
 	$(ACTION) "Creating: $@"
@@ -92,7 +71,7 @@ $(PROG_TAG):
 	cat $@
 
 version: 
-	$(Q)$(RM) $(VERSION_H)
+	$(Q)$(RMALL) $(VERSION_H)
 	$(Q)$(MAKE) $(VERSION_H)
 
 .PHONY: version

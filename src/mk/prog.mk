@@ -43,10 +43,15 @@ include $(SCRPTDIR)/cross.mk
 # generated files
 #------------------------------------------------------------------------------ 
 ifdef VERSION_MAJOR
-  VERSION_H = $(OUTDIR)/version.h
+  ifeq (Windows,$(HOST))
+    VERSION_H := $(subst /,\,$(OUTDIR)/version.h)
+  else
+  	VERSION_H = $(OUTDIR)/version.h
+  endif
 else
   VERSION_H =
 endif
+
 
 #------------------------------------------------------------------------------ 
 # generated source files
@@ -112,7 +117,7 @@ endif
 #LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
 
 LIBPATH := $(LIB_OUTDIR) $(LDDIR) $(abspath $(LIBPATH))
-INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
+INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(OUTDIR)
 
 #------------------------------------------------------------------------------ 
 # program output files

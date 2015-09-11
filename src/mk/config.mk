@@ -165,7 +165,5 @@ else
 #  ECHO := @echo
 endif
 
-DEPDIR := $(OUTDIR)/.deps
-
-export OUTDIR DEPDIR Q ACTION
+export OUTDIR Q ACTION
 
