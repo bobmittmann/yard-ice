@@ -21,23 +21,10 @@
 CONFIG_MK := $(lastword $(MAKEFILE_LIST))
 
 THISDIR := $(dir $(CONFIG_MK))
-
-ifndef SCRPTDIR
-  SCRPTDIR := $(abspath $(THISDIR))
-  BASEDIR := $(abspath $(THISDIR)/..)
-endif	
-
-ifndef TOOLSDIR
-  TOOLSDIR := $(realpath $(BASEDIR)/../tools)
-endif	
-
-#------------------------------------------------------------------------------ 
-# ld scripts
-#------------------------------------------------------------------------------ 
-ifndef LDDIR
-  LDDIR := $(realpath $(BASEDIR)/ld)
-endif	
-
+SCRPTDIR := $(abspath $(THISDIR))
+BASEDIR := $(abspath $(THISDIR)/..)
+TOOLSDIR := $(abspath $(THISDIR)/../../tools)
+LDDIR := $(abspath $(THISDIR)/../ld)
 SRCDIR := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))
 
 #------------------------------------------------------------------------------ 

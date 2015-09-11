@@ -26,6 +26,8 @@
 #define __STM32_SERIAL_I__
 #include "stm32-serial-i.h"
 
+#ifdef STM32F_IRQ_DMA2_STREAM2
+
 struct stm32f_serial_dma_drv usart6_serial_dma_drv = {
 	.uart = STM32_USART6,
 };
@@ -86,4 +88,6 @@ struct serial_dev * stm32f_uart6_serial_dma_init(unsigned int baudrate,
 
 	return (struct serial_dev *)&usart6_serial_dma_dev;
 }
+
+#endif
 

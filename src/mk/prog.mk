@@ -92,32 +92,27 @@ LIBDIRS := $(abspath $(LIBDIRS))
 # Installation directory
 #------------------------------------------------------------------------------ 
 
-INSTALL_DIR = $(abspath .)
-LIBINSTALL_DIR = $(abspath $(OUTDIR))
+INSTALLDIR = $(abspath .)
+
+#------------------------------------------------------------------------------ 
+# library output directories 
+#------------------------------------------------------------------------------ 
+
+ifeq (Windows,$(HOST))
+  LIB_INSTALLDIR := $(subst /,\,$(OUTDIR))
+  LIB_OUTDIR := $(subst /,\,$(OUTDIR))
+else
+  LIB_OUTDIR = $(OUTDIR)
+  LIB_INSTALLDIR = $(OUTDIR)
+endif
 
 #------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
-LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
-INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
+#LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
 
-#$(info --------------------------)
-#$(info OS = '$(OS)')
-#$(info OSTYPE = '$(OSTYPE)')
-#$(info HOST = '$(HOST)')
-#$(info OFILES = '$(OFILES)')
-#$(info CC = '$(CC)')
-#$(info SRCDIR = '$(SRCDIR)')
-#$(info DIRMODE = '$(DIRMODE)')
-#$(info INCPATH = '$(INCPATH)')
-#$(info LIBDIRS = '$(LIBDIRS)')
-#$(info DDIRS = '$(DDIRS)')
-#$(info INCPATH = '$(INCPATH)')
-#$(info LIBPATH = '$(LIBPATH)')
-#$(info abspath = '$(abspath .)')
-#$(info realpath = '$(realpath .)')
-#$(info CFLAGS = '$(CFLAGS)')
-#$(info --------------------------)
+LIBPATH := $(LIB_OUTDIR) $(LDDIR) $(abspath $(LIBPATH))
+INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(abspath $(OUTDIR))
 
 #------------------------------------------------------------------------------ 
 # program output files
@@ -150,17 +145,42 @@ ifeq ($(HOST),Cygwin)
   PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
 endif
 
-#export LDFLAGS INCPATH LIBPATH
-
 CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) \
 			   $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) \
 			   $(PROG_MAP)
 
 ifeq (Windows,$(HOST))
   CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
-  INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
-  LIBINSTALL_DIR := $(subst /,\,$(LIBINSTALL_DIR))
+  INSTALLDIR := $(subst /,\,$(INSTALLDIR))
+  LIB_INSTALLDIR := $(subst /,\,$(OUTDIR))
+  LIB_OUTDIR := $(subst /,\,$(OUTDIR))
+else
+  LIB_OUTDIR = $(OUTDIR)
+  LIB_INSTALLDIR = $(OUTDIR)
 endif
+
+#$(info --------------------------)
+#$(info OS = '$(OS)')
+#$(info HOST = '$(HOST)')
+#$(info DIRMODE = '$(DIRMODE)')
+#$(info LDDIR = '$(LDDIR)')
+#$(info BASEDIR = '$(BASEDIR)')
+#$(info OUTDIR = '$(OUTDIR)')
+#$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
+#$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
+#$(info OFILES = '$(OFILES)')
+#$(info CC = '$(CC)')
+#$(info SRCDIR = '$(SRCDIR)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info LIBDIRS = '$(LIBDIRS)')
+#$(info DDIRS = '$(DDIRS)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info LIBPATH = '$(LIBPATH)')
+#$(info abspath = '$(abspath .)')
+#$(info realpath = '$(realpath .)')
+#$(info CFLAGS = '$(CFLAGS)')
+#$(info --------------------------)
+
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -177,7 +197,8 @@ FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'LDFLAGS=$(LDFLAGS)'\
 				 'INCPATH=$(INCPATH)'\
 				 'LIBPATH=$(LIBPATH)'\
-				 'INSTALL_DIR=$(LIBINSTALL_DIR)'
+				 'LIBDIR=$(LIB_OUTDIR)'\
+				 'INSTALLDIR=$(LIB_INSTALLDIR)'
 
 LIBDIRS_ALL := $(LIBDIRS:%=%-all)
 
@@ -185,11 +206,12 @@ LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
 LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 
-
-all:: $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
+all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
 clean:: libs-clean
+ifneq "$(strip $(CLEAN_FILES))" ""
 	$(Q)$(RMALL) $(CLEAN_FILES)
+endif
 
 prog: $(PROG_BIN)
 
@@ -247,15 +269,15 @@ cleanRelease:
 
 $(LIBDIRS_ALL):
 	$(ACTION) "Building : $@"
-	$(Q)$(MAKE) -C $(@:%-all=%) O=$(OUTDIR)/$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
+	$(Q)$(MAKE) -C $(@:%-all=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
 
 $(LIBDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
-	$(Q)$(MAKE) -C $(@:%-clean=%) O=$(OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
+	$(Q)$(MAKE) -C $(@:%-clean=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
 
 $(LIBDIRS_INSTALL):
 	$(ACTION) "Installing : $@"
-	$(Q)$(MAKE) -C $(@:%-install=%) O=$(OUTDIR)/$(notdir $(@:%-install=%)) $(FLAGS_TO_PASS) install
+	$(Q)$(MAKE) -C $(@:%-install=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-install=%)) $(FLAGS_TO_PASS) install
 
 #------------------------------------------------------------------------------ 
 # Program targets

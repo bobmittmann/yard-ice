@@ -22,13 +22,6 @@ ifndef CONFIG_MK
  $(error Please include "config.mk" in your Makefile)
 endif
 
-THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
-
-ifndef SCRPTDIR
-  SCRPTDIR := $(abspath $(THISDIR))
-  BASEDIR := $(abspath $(THISDIR)/..)
-endif	
-
 #------------------------------------------------------------------------------ 
 # cross compiling 
 #------------------------------------------------------------------------------ 
@@ -61,27 +54,29 @@ OFILES = $(addprefix $(OUTDIR)/,\
 		   $(SFILES_GEN:.S=.o) \
 		   $(CFILES:.c=.o) \
 		   $(SFILES:.S=.o))
+
 #ODIRS = $(abspath $(sort $(dir $(OFILES))))
 ODIRS = $(sort $(dir $(OFILES)))
 
 #------------------------------------------------------------------------------ 
 # dependency files
 #------------------------------------------------------------------------------ 
-DFILES = $(addprefix $(DEPDIR)/, $(CFILES:.c=.d) $(SFILES:.S=.d))
-#DDIRS = $(abspath $(sort $(dir $(DFILES))))
-DDIRS = $(sort $(dir $(DFILES)))
+DFILES = $(OFILES:.o=.d)
 
 #------------------------------------------------------------------------------ 
 # Installation directory
 #------------------------------------------------------------------------------ 
 
-INSTALL_DIR = $(abspath .)
+INSTALLDIR = $(abspath .)
+
+ifndef LIBDIR
+  LIBDIR := $(OUTDIR)
+endif
 
 #------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
 override INCPATH += $(abspath .)
-#INCPATH := $(abspath $(INCPATH))
 
 ifeq ($(HOST),Cygwin)
   INCPATH_WIN := $(subst \,\\,$(foreach h,$(INCPATH),$(shell cygpath -w $h)))
@@ -92,19 +87,19 @@ endif
 # library output files
 #------------------------------------------------------------------------------ 
 ifdef LIB_STATIC
-  LIB_STATIC_OUT = $(OUTDIR)/lib$(LIB_STATIC).a
-  LIB_STATIC_LST = $(OUTDIR)/lib$(LIB_STATIC).lst
+  LIB_STATIC_OUT = $(LIBDIR)/lib$(LIB_STATIC).a
+  LIB_STATIC_LST = $(LIBDIR)/lib$(LIB_STATIC).lst
   LIB_OUT = $(LIB_STATIC_OUT)
   LIB_LST = $(LIB_STATIC_LST)
 endif
 
 ifdef LIB_SHARED
-  LIB_SHARED_LST = $(OUTDIR)/lib$(LIB_SHARED).lst
+  LIB_SHARED_LST = $(LIBDIR)/lib$(LIB_SHARED).lst
   ifeq ($(SOEXT),dll)
-    LIB_SHARED_OUT = $(OUTDIR)/$(LIB_SHARED).$(SOEXT)
+    LIB_SHARED_OUT = $(LIBDIR)/$(LIB_SHARED).$(SOEXT)
     LDFLAGS = -Wl,--dll
   else
-    LIB_SHARED_OUT = $(OUTDIR)/lib$(LIB_SHARED).$(SOEXT)
+    LIB_SHARED_OUT = $(LIBDIR)/lib$(LIB_SHARED).$(SOEXT)
     LDFLAGS = -Wl,-soname,$(LIB_SHARED).so
   endif
   LIB_OUT += $(LIB_SHARED_OUT)
@@ -118,23 +113,26 @@ DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 LFILES := $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
 
 ifeq (Windows,$(HOST))
-  CLEAN_OFILES := $(subst /,\,$(OFILES))
-  CLEAN_DFILES := $(subst /,\,$(DFILES))
-  CLEAN_LFILES := $(subst /,\,$(LFILES))
-  INSTALL_DIR := $(subst /,\,$(INSTALL_DIR))
+  CLEAN_OFILES := $(strip $(subst /,\,$(OFILES)))
+  CLEAN_DFILES := $(strip $(subst /,\,$(DFILES)))
+  CLEAN_LFILES := $(strip $(subst /,\,$(LFILES)))
+  OUTDIR := $(subst /,\,$(OUTDIR))
+  INSTALLDIR := $(subst /,\,$(INSTALLDIR))
   LIB_OUT_WIN := $(subst /,\,$(LIB_OUT))
 else
-  CLEAN_OFILES := $(OFILES)
-  CLEAN_DFILES := $(DFILES)
-  CLEAN_LFILES := $(LFILES)
+  CLEAN_OFILES := $(strip $(OFILES))
+  CLEAN_DFILES := $(strip $(DFILES))
+  CLEAN_LILES := $(strip $(LFILES))
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+#$(info OUTDIR = '$(OUTDIR)')
+#$(info LIB_OUT = '$(LIB_OUT)')
+#$(info ODIRS = '$(ODIRS)')
 #$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
 #$(info SRCDIR = '$(firstword $(SRCDIR))')
 #$(info LIB_STATIC = '$(LIB_STATIC)')
 #$(info LIB_STATIC_OUT = '$(LIB_STATIC_OUT)')
-#$(info ODIRS = '$(ODIRS)')
 #$(info OS = '$(OS)')
 #$(info OSTYPE = '$(OSTYPE)')
 #$(info HOST = '$(HOST)')
@@ -144,7 +142,6 @@ endif
 #$(info MAKE_MODE = '$(MAKE_MODE)')
 #$(info INCPATH = '$(INCPATH)')
 #$(info INCPATH_WIN = '$(INCPATH_WIN)')
-#$(info LIBDIRS = '$(LIBDIRS)')
 #$(info abspath = '$(abspath .)')
 #$(info realpath = '$(realpath .)')
 #$(info CFLAGS = '$(CFLAGS)')
@@ -157,15 +154,15 @@ endif
 all: $(LIB_OUT)
 
 clean: deps-clean
-	$(Q)$(RMALL) $(CLEAN_OFILES)
-	$(Q)$(RMALL) $(CLEAN_DFILES)
 	$(Q)$(RMALL) $(CLEAN_LFILES)
+	$(Q)$(RMALL) $(CLEAN_DFILES)
+	$(Q)$(RMALL) $(CLEAN_OFILES)
 
 install: $(LIB_OUT)
 ifeq (Windows,$(HOST))
-	$(Q)$(CP) $(LIB_OUT_WIN) $(INSTALL_DIR)
+	$(Q)$(CP) $(LIB_OUT_WIN) $(INSTALLDIR)
 else
-	$(Q)$(CP) $(LIB_OUT) $(INSTALL_DIR)
+	$(Q)$(CP) $(LIB_OUT) $(INSTALLDIR)
 endif
 
 
@@ -254,19 +251,9 @@ else
 	-$(Q)$(MKDIR) $@ 
 endif
 
-$(DDIRS):
-#	$(ACTION) "Creating depdir: $@"
-ifeq ($(HOST),Windows)
-	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
-else
-	-$(Q)$(MKDIR) $@ 
-endif
-
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
-$(DDIRS) : | $(ODIRS) $(CFILES_OUT)
-
-$(DFILES): | $(DDIRS)
+$(DFILES): | $(ODIRS)
 
 include $(SCRPTDIR)/cc.mk
 
