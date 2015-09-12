@@ -110,7 +110,8 @@ DEPDIRS_ALL:= $(DEPDIRS:%=%-all)
 
 DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 
-LFILES := $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) $(LIB_STATIC_LST)
+LFILES := $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) \
+		  $(LIB_STATIC_LST)
 
 ifeq (Windows,$(HOST))
   CLEAN_OFILES := $(strip $(subst /,\,$(OFILES)))
@@ -122,21 +123,21 @@ ifeq (Windows,$(HOST))
 else
   CLEAN_OFILES := $(strip $(OFILES))
   CLEAN_DFILES := $(strip $(DFILES))
-  CLEAN_LILES := $(strip $(LFILES))
+  CLEAN_LFILES := $(strip $(LFILES))
 endif
 
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+#$(info OS = '$(OS)')
+#$(info HOST = '$(HOST)')
+#$(info DIRMODE = '$(DIRMODE)')
 #$(info OUTDIR = '$(OUTDIR)')
+#$(info OFILES = '$(OFILES)')
 #$(info LIB_OUT = '$(LIB_OUT)')
 #$(info ODIRS = '$(ODIRS)')
 #$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
 #$(info SRCDIR = '$(firstword $(SRCDIR))')
 #$(info LIB_STATIC = '$(LIB_STATIC)')
 #$(info LIB_STATIC_OUT = '$(LIB_STATIC_OUT)')
-#$(info OS = '$(OS)')
-#$(info OSTYPE = '$(OSTYPE)')
-#$(info HOST = '$(HOST)')
-#$(info DIRMODE = '$(DIRMODE)')
 #$(info MSYSTEM = '$(MSYSTEM)')
 #$(info MSYSCON = '$(MSYSCON)')
 #$(info MAKE_MODE = '$(MAKE_MODE)')
@@ -147,7 +148,6 @@ endif
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info HOME = '$(HOME)')
 #$(info HOMEPATH = '$(HOMEPATH)')
-#$(info CLEAN_FILES = '$(CLEAN_FILES)')
 #$(info CFILES = '$(CFILES)')
 #$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
 
@@ -265,5 +265,4 @@ include $(SCRPTDIR)/cc.mk
 ifneq ($(HOST),Cygwin)
 -include $(DFILES)
 endif
-
 

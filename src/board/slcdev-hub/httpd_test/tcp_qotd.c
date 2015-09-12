@@ -1879,13 +1879,11 @@ void __attribute__((noreturn)) tcp_qotd_task(void * arg)
 	tcp_bind(svc, INADDR_ANY, htons(port));
 
 	if (tcp_listen(svc, 1) != 0) {
-		DCC_LOG(LOG_ERROR, "Can't register the TCP listner!");
 		abort();
 	}
 
 	for (;;) {
 		if ((tp = tcp_accept(svc)) == NULL) {
-			DCC_LOG(LOG_ERROR, "tcp_accept() failed!");
 			abort();
 		}
 
@@ -1899,7 +1897,6 @@ void __attribute__((noreturn)) tcp_qotd_task(void * arg)
 		}
 
 		tcp_close(tp);
-		DCC_LOG(LOG_INFO, "Connection closed.");
 	}
 }
 

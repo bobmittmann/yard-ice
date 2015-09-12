@@ -55,6 +55,7 @@
 									<listOptionValue builtIn="false" value="STM32F407"/>
 									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.nostdinc.1111436829" name="Do not search system directories (-nostdinc)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.assembler.nostdinc" value="false" valueType="boolean"/>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.1166850335" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.1566817793" name="Cross ARM C Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler">
@@ -68,25 +69,26 @@
 									<listOptionValue builtIn="false" value="DEBUG"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.1677717514" name="Language standard" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std" useByScannerDiscovery="true" value="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.std.default" valueType="enumerated"/>
+								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.nostdinc.308358025" name="Do not search system directories (-nostdinc)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.compiler.nostdinc" useByScannerDiscovery="true" value="false" valueType="boolean"/>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1547605183" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
 							<tool id="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler.1982302322" name="Cross ARM C++ Compiler" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.cpp.compiler"/>
-							<tool commandLinePattern="${COMMAND} ${cross_toolchain_flags} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} -Wl,-( ${INPUTS} -Wl,-) " id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.815281866" name="Cross ARM C Linker" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker">
+							<tool commandLinePattern="${COMMAND} ${cross_toolchain_flags} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker.815281866" name="Cross ARM C Linker" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.linker">
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.gcsections.2140821097" name="Remove unused sections (-Xlinker --gc-sections)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.gcsections" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs.1510448516" name="No startup or default libs (-nostdlib)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.nostdlibs" value="true" valueType="boolean"/>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs.1492257398" name="Libraries (-l)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.libs" valueType="libs">
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tcpip"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="httpd"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="util"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tty"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="shell"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="httpd"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tcpip"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32drv"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="tty"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="c"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="crc"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="console"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="trace"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stm32f"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="util"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="cm3"/>
 								</option>
 								<option id="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths.1962421229" name="Library search path (-L)" superClass="ilg.gnuarmeclipse.managedbuild.cross.option.c.linker.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/sdklibs/Debug}&quot;"/>

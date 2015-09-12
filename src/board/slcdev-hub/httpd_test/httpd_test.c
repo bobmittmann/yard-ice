@@ -63,7 +63,7 @@ struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
 	{ .path = "/img", .objlst = www_img },
 	{ .path = "/cgi", .objlst = www_cgi },
-//	{ .path = "/lib", .objlst = www_lib },
+	{ .path = "/lib", .objlst = www_lib },
 	{ .path = NULL, .objlst = NULL }
 };
 
@@ -329,7 +329,7 @@ int main(int argc, char ** argv)
 
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd1_inf);
-#if 0
+#if 1
 	thinkos_thread_create_inf((void *)httpd_server_task, (void *)httpd,
 							  &httpd2_inf);
 
@@ -340,8 +340,7 @@ int main(int argc, char ** argv)
 							  &httpd4_inf);
 #endif
 
-#if 0
-	DCC_LOG(LOG_TRACE, "6. TCP echo ...");
+#if 1
 	tcp_echo_start();
 
 	tcp_qotd_start();
@@ -350,7 +349,7 @@ int main(int argc, char ** argv)
 #endif
 
 	for (;;) {
-//		stdio_shell();
+		stdio_shell();
 		thinkos_sleep(1000);
 	}
 

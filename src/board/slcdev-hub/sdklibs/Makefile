@@ -23,10 +23,12 @@ SDK = ../../../sdk
 
 LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
 		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
-		   $(SDK)/libtcpip $(SDK)/libtcpip \
+		   $(SDK)/libtty $(SDK)/libshell $(SDK)/libtrace \
+		   $(SDK)/libtcpip $(SDK)/libcrc $(SDK)/libhttpd
 
-INCPATH = $(SDK)/include ..
+INCPATH = $(SDK)/include ../include
 
+CDEFS = CONFIG_H
 CFLAGS = -g -O1 -Wall
 O := Debug
 

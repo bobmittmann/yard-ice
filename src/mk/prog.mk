@@ -77,16 +77,8 @@ ODIRS = $(sort $(dir $(OFILES)))
 #------------------------------------------------------------------------------ 
 # dependency files
 #------------------------------------------------------------------------------ 
-#DFILES = $(abspath $(addprefix $(DEPDIR)/, $(notdir $(CFILES_OUT:.c=.d) \
-#         $(SFILES_OUT:.S=.d)) $(CFILES:.c=.d) $(SFILES:.S=.d)))
-DFILES = $(addprefix $(DEPDIR)/,\
-		   $(notdir $(CFILES_OUT:.c=.d) $(SFILES_OUT:.S=.d))\
-		   $(subst ../,,$(CFILES:.c=.d))\
-		   $(subst ../,,$(SFILES:.S=.d)))
 
-#		   $(subst ../,,$(SFILES:.s=.d)))
-#DDIRS = $(abspath $(sort $(dir $(DFILES))))
-DDIRS = $(sort $(dir $(DFILES)))
+DFILES = $(OFILES:.o=.d) $(OFILES_OUT:.c=.d)
 
 #------------------------------------------------------------------------------ 
 # library dircetories 
@@ -104,8 +96,8 @@ INSTALLDIR = $(abspath .)
 #------------------------------------------------------------------------------ 
 
 ifeq (Windows,$(HOST))
-  LIB_INSTALLDIR := $(subst /,\,$(OUTDIR))
   LIB_OUTDIR := $(subst /,\,$(OUTDIR))
+  LIB_INSTALLDIR := $(subst /,\,$(OUTDIR))
 else
   LIB_OUTDIR = $(OUTDIR)
   LIB_INSTALLDIR = $(OUTDIR)
@@ -150,42 +142,27 @@ ifeq ($(HOST),Cygwin)
   PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
 endif
 
-CLEAN_FILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) $(OFILES) $(DFILES) \
-			   $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) $(PROG_SYM) \
-			   $(PROG_MAP)
+GFILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) 
+
+PFILES := $(PROG_BIN) $(PROG_SREC) $(PROG_ELF) $(PROG_LST) \
+		  $(PROG_SYM) $(PROG_MAP)
 
 ifeq (Windows,$(HOST))
-  CLEAN_FILES := $(subst /,\,$(CLEAN_FILES))
-  INSTALLDIR := $(subst /,\,$(INSTALLDIR))
+  CLEAN_OFILES := $(strip $(subst /,\,$(OFILES)))
+  CLEAN_DFILES := $(strip $(subst /,\,$(DFILES)))
+  CLEAN_GFILES := $(strip $(subst /,\,$(LFILES)))
+  CLEAN_PFILES := $(strip $(subst /,\,$(PFILES)))
   LIB_INSTALLDIR := $(subst /,\,$(OUTDIR))
   LIB_OUTDIR := $(subst /,\,$(OUTDIR))
+  INSTALLDIR := $(subst /,\,$(INSTALLDIR))
 else
+  CLEAN_OFILES := $(strip $(OFILES))
+  CLEAN_DFILES := $(strip $(DFILES))
+  CLEAN_GFILES := $(strip $(LFILES))
+  CLEAN_PFILES := $(strip $(PFILES))
   LIB_OUTDIR = $(OUTDIR)
   LIB_INSTALLDIR = $(OUTDIR)
 endif
-
-#$(info --------------------------)
-#$(info OS = '$(OS)')
-#$(info HOST = '$(HOST)')
-#$(info DIRMODE = '$(DIRMODE)')
-#$(info LDDIR = '$(LDDIR)')
-#$(info BASEDIR = '$(BASEDIR)')
-#$(info OUTDIR = '$(OUTDIR)')
-#$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
-#$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
-#$(info OFILES = '$(OFILES)')
-#$(info CC = '$(CC)')
-#$(info SRCDIR = '$(SRCDIR)')
-#$(info INCPATH = '$(INCPATH)')
-#$(info LIBDIRS = '$(LIBDIRS)')
-#$(info DDIRS = '$(DDIRS)')
-#$(info INCPATH = '$(INCPATH)')
-#$(info LIBPATH = '$(LIBPATH)')
-#$(info abspath = '$(abspath .)')
-#$(info realpath = '$(realpath .)')
-#$(info CFLAGS = '$(CFLAGS)')
-#$(info --------------------------)
-
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
 				 'MACH=$(MACH)'\
@@ -211,11 +188,43 @@ LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
 LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 
+#$(info --------------------------)
+#$(info OS = '$(OS)')
+#$(info HOST = '$(HOST)')
+#$(info DIRMODE = '$(DIRMODE)')
+#$(info LDDIR = '$(LDDIR)')
+#$(info BASEDIR = '$(BASEDIR)')
+#$(info OUTDIR = '$(OUTDIR)')
+#$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
+#$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
+#$(info OFILES = '$(OFILES)')
+#$(info DFILES = '$(DFILES)')
+#$(info CC = '$(CC)')
+#$(info SRCDIR = '$(SRCDIR)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info LIBDIRS = '$(LIBDIRS)')
+#$(info INCPATH = '$(INCPATH)')
+#$(info LIBPATH = '$(LIBPATH)')
+#$(info abspath = '$(abspath .)')
+#$(info realpath = '$(realpath .)')
+#$(info CFLAGS = '$(CFLAGS)')
+#$(info $(shell set))
+#$(info --------------------------)
+
 all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
 clean:: libs-clean
-ifneq "$(strip $(CLEAN_FILES))" ""
-	$(Q)$(RMALL) $(CLEAN_FILES)
+ifneq "$(strip $(CLEAN_OFILES))" ""
+	$(Q)$(RMALL) $(CLEAN_OFILES)
+endif
+ifneq "$(strip $(CLEAN_DFILES))" ""
+	$(Q)$(RMALL) $(CLEAN_DFILES)
+endif
+ifneq "$(strip $(CLEAN_GFILES))" ""
+	$(Q)$(RMALL) $(CLEAN_GFILES)
+endif
+ifneq "$(strip $(CLEAN_PFILES))" ""
+	$(Q)$(RMALL) $(CLEAN_PFILES)
 endif
 
 prog: $(PROG_BIN)
@@ -344,19 +353,11 @@ $(PROG_SREC): $(PROG_ELF)
 #------------------------------------------------------------------------------ 
 
 $(ODIRS):
-#	$(ACTION) "Creating outdir: $@"
+	$(ACTION) "Creating outdir: $@"
 ifeq ($(HOST),Windows)
 	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
 else
 	$(Q)$(MKDIR) $@
-endif
-
-$(DDIRS):
-#	$(ACTION) "Creating depdir: $@"
-ifeq ($(HOST),Windows)
-	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
-else
-	$(Q)$(MKDIR) $@ 
 endif
 
 $(LIBDIRS_INSTALL): | $(ODIRS)
@@ -365,9 +366,7 @@ $(LIBDIRS_ALL): | $(ODIRS)
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
-$(DDIRS): | $(ODIRS) $(CFILES_OUT) $(HFILES_OUT)
-
-$(DFILES): | $(DDIRS) 
+$(DFILES): | $(ODIRS)
 
 ifdef VERSION_MAJOR
   include $(SCRPTDIR)/version.mk

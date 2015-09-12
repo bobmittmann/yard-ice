@@ -131,7 +131,7 @@ int tftp_error(struct udp_pcb * udp, struct sockaddr_in * sin,
 
 	len = sizeof(struct tftphdr) + n + 1;
 
-	DCC_LOG(LOG_TRACE, "1.");
+	// DCC_LOG(LOG_TRACE, "1.");
 
 	return udp_sendto(udp, &pkt, len, sin);
 }
@@ -141,13 +141,13 @@ int tftp_ack(struct udp_pcb * udp, int block, struct sockaddr_in * sin)
 	struct tftphdr hdr;
 	int ret;
 
-	DCC_LOG1(LOG_TRACE, "block: %d", block);
+	// DCC_LOG1(LOG_TRACE, "block: %d", block);
 
 	hdr.th_opcode = htons(TFTP_ACK);
 	hdr.th_block = htons(block);
 
 	if ((ret = udp_sendto(udp, &hdr, sizeof(struct tftphdr), sin)) < 0) {
-		DCC_LOG(LOG_WARNING, "udp_sendto() fail");
+		// DCC_LOG(LOG_WARNING, "udp_sendto() fail");
 	}
 
 	return ret;
@@ -159,11 +159,11 @@ int tftp_oack(struct udp_pcb * udp, struct sockaddr_in * sin,
 	struct tftp_pkt_oack pkt;
 
 	if (len > TFTP_OACK_OPT_MAX) {
-		DCC_LOG1(LOG_ERROR, "len(%d) > TFTP_OACK_OPT_MAX", len);
+		// DCC_LOG1(LOG_ERROR, "len(%d) > TFTP_OACK_OPT_MAX", len);
 		return -1;
 	}
 
-	DCC_LOG(LOG_TRACE, "OACK....");
+	// DCC_LOG(LOG_TRACE, "OACK....");
 
 	pkt.th_opcode = htons(TFTP_OACK);
 	memcpy(pkt.opt, opt, len);
@@ -218,7 +218,7 @@ int tftp_req_parse(char * hdr, struct tftp_req * req)
 	return 0;
 }
 
-int __attribute__((noreturn)) tftpd_task(void * arg)
+void __attribute__((noreturn)) tftpd_task(void * arg)
 {
 	uint8_t buf[MAX_TFTP_MSG];
 	struct tftphdr * hdr = (struct tftphdr *)buf;
@@ -234,28 +234,28 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 	int len;
 	int blksize = TFTP_SEGSIZE; 
 
-	DCC_LOG1(LOG_TRACE, "thread: %d", thinkos_thread_self());
+	// DCC_LOG1(LOG_TRACE, "thread: %d", thinkos_thread_self());
 
 	if ((udp = udp_alloc()) == NULL) {
-		DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
+		// DCC_LOG(LOG_WARNING, "udp_alloc() fail!");
 		abort();
 	}
 
 	if (udp_bind(udp, INADDR_ANY, htons(IPPORT_TFTP)) < 0) {
-		DCC_LOG(LOG_WARNING, "udp_bind() fail!");
+		// DCC_LOG(LOG_WARNING, "udp_bind() fail!");
 		abort();
 	}
 
 	for (;;) {
 		if ((len = udp_recv(udp, buf, MAX_TFTP_MSG, &sin)) < 0) {
 			if (len == -ECONNREFUSED) {
-				DCC_LOG(LOG_WARNING, "udp_rcv ICMP error: ECONNREFUSED");
+				// DCC_LOG(LOG_WARNING, "udp_rcv ICMP error: ECONNREFUSED");
 			}
 			if (len == -EFAULT) {
-				DCC_LOG(LOG_WARNING, "udp_rcv error: EFAULT");
+				// DCC_LOG(LOG_WARNING, "udp_rcv error: EFAULT");
 			}
 			if (len == -ENOTCONN) {
-				DCC_LOG(LOG_WARNING, "udp_rcv error: ENOTCONN");
+				// DCC_LOG(LOG_WARNING, "udp_rcv error: ENOTCONN");
 			}
 			continue;
 		}
@@ -263,27 +263,27 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 
 		opc = htons(hdr->th_opcode);
 		if ((opc != TFTP_RRQ) && (opc != TFTP_WRQ)) {
-			DCC_LOG1(LOG_WARNING, "invalid opc: %d", opc);
+			// DCC_LOG1(LOG_WARNING, "invalid opc: %d", opc);
 			continue;
 		}
 
 		if (udp_connect(udp, sin.sin_addr.s_addr, sin.sin_port) < 0) {
-			DCC_LOG(LOG_WARNING, "udp_connect() error");
+			// DCC_LOG(LOG_WARNING, "udp_connect() error");
 			continue;
 		}
 
-		DCC_LOG2(LOG_TRACE, "Connected to: %I.%d", sin.sin_addr.s_addr, 
-				 ntohs(sin.sin_port));
+		// DCC_LOG2(LOG_TRACE, "Connected to: %I.%d", sin.sin_addr.s_addr,
+		//		 ntohs(sin.sin_port));
 
 		for (;;) {
-			DCC_LOG3(LOG_INFO, "%I.%d %d", 
-					 sin.sin_addr.s_addr, ntohs(sin.sin_port), len);
+			// DCC_LOG3(LOG_INFO, "%I.%d %d",
+			//		 sin.sin_addr.s_addr, ntohs(sin.sin_port), len);
 
-			DCC_LOG2(LOG_INFO, "len=%d, opc=%s", len, tftp_opc[opc]);
+			// DCC_LOG2(LOG_INFO, "len=%d, opc=%s", len, tftp_opc[opc]);
 
 			switch (opc) {
 			case TFTP_RRQ:
-				DCC_LOG(LOG_TRACE, "read request: ...");
+				// DCC_LOG(LOG_TRACE, "read request: ...");
 
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
@@ -293,8 +293,8 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 				addr_end = addr_start + (1024 * 1024);
 				block = 0;
 
-				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
-						 addr_start, addr_end);
+				// DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x",
+				//		 addr_start, addr_end);
 
 				if (req.mode == TFTP_NETASCII) {
 					state = TFTPD_SEND_NETASCII;
@@ -320,7 +320,7 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 
 			case TFTP_WRQ:
 				/* Write Request */
-				DCC_LOG(LOG_TRACE, "write request...");
+				// DCC_LOG(LOG_TRACE, "write request...");
 
 				tftp_req_parse((char *)&(hdr->th_stuff), &req);
 				blksize = req.blksize;
@@ -330,8 +330,8 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 				addr_end = addr_start + (1024 * 1024);
 				block = 0;
 
-				DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x", 
-						 addr_start, addr_end);
+				// DCC_LOG2(LOG_TRACE, "start=0x%08x end=0x%08x",
+				//		 addr_start, addr_end);
 
 				if ((req.mode == TFTP_NETASCII) || (req.mode == TFTP_OCTET)) {
 					state = (req.mode == TFTP_NETASCII) ? 
@@ -350,7 +350,7 @@ int __attribute__((noreturn)) tftpd_task(void * arg)
 
 			case TFTP_ACK:
 				block = htons(hdr->th_block);
-				DCC_LOG1(LOG_TRACE, "ACK: %d.", block);
+				// DCC_LOG1(LOG_TRACE, "ACK: %d.", block);
 
 				if (state == TFTPD_SEND_NETASCII) {
 					unsigned int addr;
@@ -362,15 +362,15 @@ send_netascii:
 					rem = addr_end - addr;
 					if (rem < 0) {
 						state = TFTPD_IDLE;
-						DCC_LOG1(LOG_TRACE, "eot: %d bytes sent.", 
-								 addr_end - addr_start);
+						// DCC_LOG1(LOG_TRACE, "eot: %d bytes sent.",
+						//		 addr_end - addr_start);
 						break;
 					}
 
 					n = (rem < blksize) ? rem : blksize;
 
-					DCC_LOG2(LOG_TRACE, "send netascii: addr=0x%08x n=%d", 
-							 addr, n);
+					// DCC_LOG2(LOG_TRACE, "send netascii: addr=0x%08x n=%d",
+					//		 addr, n);
 
 					/* build the packet */
 					len = tftp_ascii_read(addr, hdr->th_data, n);
@@ -388,19 +388,19 @@ send_octet:
 					rem = addr_end - addr;
 					if (rem < 0) {
 						state = TFTPD_IDLE;
-						DCC_LOG1(LOG_TRACE, "eot: %d bytes sent.", 
-								 addr_end - addr_start);
+						// DCC_LOG1(LOG_TRACE, "eot: %d bytes sent.",
+						//		 addr_end - addr_start);
 						break;
 					}
 					n = (rem < blksize) ? rem : blksize;
 
-					DCC_LOG2(LOG_TRACE, "send octet: addr=0x%08x n=%d", addr, n);
+					// DCC_LOG2(LOG_TRACE, "send octet: addr=0x%08x n=%d", addr, n);
 
 					/* build the packet */
 					len = tftp_bin_read(addr, hdr->th_data, n);
 
 					if (len < 0) {
-						DCC_LOG(LOG_WARNING, "target memory read error.");
+						// DCC_LOG(LOG_WARNING, "target memory read error.");
 						len = 0;
 					}
 
@@ -408,11 +408,11 @@ send_data:
 					hdr->th_opcode = htons(TFTP_DATA);
 					hdr->th_block = htons(block + 1);
 
-					DCC_LOG2(LOG_TRACE, "block %d: %d bytes.", block + 1,  len);
+					// DCC_LOG2(LOG_TRACE, "block %d: %d bytes.", block + 1,  len);
 
 					if (udp_sendto(udp, hdr, 
 								   sizeof(struct tftphdr) + len, &sin) < 0) {
-						DCC_LOG(LOG_WARNING, "udp_sendto() fail");
+						// DCC_LOG(LOG_WARNING, "udp_sendto() fail");
 						state = TFTPD_IDLE;
 						break;
 					}
@@ -420,19 +420,19 @@ send_data:
 					break;
 				}
 
-				DCC_LOG(LOG_WARNING, "state invalid!");
+				// DCC_LOG(LOG_WARNING, "state invalid!");
 				break;
 
 			case TFTP_DATA:
 				/* skip the header */
 				len -= 4;
-				DCC_LOG2(LOG_TRACE, "block=%d len=%d", 
-						 htons(hdr->th_block), len);
+				// DCC_LOG2(LOG_TRACE, "block=%d len=%d",
+				//		 htons(hdr->th_block), len);
 
 				if (htons(hdr->th_block) != (block + 1)) {
 					/* retransmission, just ack */
-					DCC_LOG2(LOG_WARNING, "retransmission, block=%d len=%d", 
-							 block, len);
+					// DCC_LOG2(LOG_WARNING, "retransmission, block=%d len=%d",
+					//		 block, len);
 					tftp_ack(udp, block, &sin);
 					break;
 				}
@@ -446,15 +446,14 @@ send_data:
 					block++;
 
 					if (len != blksize) {
-						DCC_LOG(LOG_TRACE, "last packet...");
+						// DCC_LOG(LOG_TRACE, "last packet...");
 						state = TFTPD_IDLE;
 						if (len == 0) {
 							tftp_ack(udp, block, &sin);
 							break;
 						}
 					} else {
-						DCC_LOG2(LOG_TRACE, "rcvd octet: addr=0x%08x n=%d", 
-								 addr, len);
+						// DCC_LOG2(LOG_TRACE, "rcvd octet: addr=0x%08x n=%d",	addr, len);
 						/* ACK the packet before writing to
 						   speed up the transfer, errors are postponed... */
 						tftp_ack(udp, block, &sin);
@@ -464,11 +463,10 @@ send_data:
 
 					if (n < len) {
 						if (n < 0) {
-							DCC_LOG(LOG_ERROR, "target_mem_write()!");
+							// DCC_LOG(LOG_ERROR, "target_mem_write()!");
 							sprintf(msg, "TARGET WRITE FAIL: %08x", addr);
 						} else {
-							DCC_LOG2(LOG_WARNING, "short read: "
-									 "ret(%d) < len(%d)!", n, len);
+							// DCC_LOG2(LOG_WARNING, "short read: ret(%d) < len(%d)!", n, len);
 							sprintf(msg, "TARGET SHORT WRITE: %08x", 
 									addr + n);
 						}
@@ -476,8 +474,7 @@ send_data:
 						state = TFTPD_RECV_ERROR;
 					} else {
 						if (n > len) {
-							DCC_LOG2(LOG_WARNING, "long read: "
-									 "ret(%d) < len(%d)!", n, len);
+							// DCC_LOG2(LOG_WARNING, "long read: ret(%d) < len(%d)!", n, len);
 						}
 						if (state == TFTPD_IDLE) {
 							/* ack the last packet ... */
@@ -510,7 +507,7 @@ send_data:
 						   speed up the transfer, errors are postponed... */
 						tftp_ack(udp, block, &sin);
 					}
-					DCC_LOG1(LOG_TRACE, "ASCII recv %d...", len);
+					// DCC_LOG1(LOG_TRACE, "ASCII recv %d...", len);
 					tftp_ascii_write(addr, hdr->th_data, len);
 
 					break;
@@ -520,25 +517,25 @@ send_data:
 				break;
 
 			case TFTP_ERROR:
-				DCC_LOG2(LOG_TRACE, "error: %d: %s.", 
-						 htons(hdr->th_code), hdr->th_data);
+				// DCC_LOG2(LOG_TRACE, "error: %d: %s.",
+				//		 htons(hdr->th_code), hdr->th_data);
 				break;
 
 			}
 
 			if (state == TFTPD_IDLE) {
-				DCC_LOG(LOG_TRACE, "[IDLE]");
+				// DCC_LOG(LOG_TRACE, "[IDLE]");
 				break;
 			}
 
 			if ((len = udp_recv_tmo(udp, buf, MAX_TFTP_MSG, &sin, 5000)) < 0) {
 				if (len == -ETIMEDOUT) {
-					DCC_LOG(LOG_WARNING, "udp_recv_tmo() timeout!");
+					// DCC_LOG(LOG_WARNING, "udp_recv_tmo() timeout!");
 				} else {
 					if (len == -ECONNREFUSED) {
-						DCC_LOG(LOG_WARNING, "udp_recv_tmo() lost peer!");
+						// DCC_LOG(LOG_WARNING, "udp_recv_tmo() lost peer!");
 					} else {
-						DCC_LOG(LOG_WARNING, "udp_recv_tmo() failed!");
+						// DCC_LOG(LOG_WARNING, "udp_recv_tmo() failed!");
 					}
 				}
 				/* break the inner loop */
@@ -549,7 +546,7 @@ send_data:
 		}
 
 		/* disconnect */
-		DCC_LOG(LOG_TRACE, "disconnecting.");
+		// DCC_LOG(LOG_TRACE, "disconnecting.");
 		udp_connect(udp, INADDR_ANY, 0);
 	}
 }
@@ -567,6 +564,6 @@ const struct thinkos_thread_inf tftpd_inf = {
 
 int tftpd_start(void)
 {
-	return thinkos_thread_create_inf(tftpd_task, NULL, &tftpd_inf);
+	return thinkos_thread_create_inf((void *)tftpd_task, NULL, &tftpd_inf);
 }
 

@@ -166,7 +166,5 @@
 /* Number of packet in the buffer pool */
 #define PKTBUF_POOL_SIZE        10 
 
-
 #endif /* __CONFIG_H__ */
-
 

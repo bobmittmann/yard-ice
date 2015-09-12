@@ -48,16 +48,6 @@ else
   dbg_level := 0
 endif
 
-ifdef O
-  OUTDIR := $(abspath $(O))
-else
-  ifneq ($(dbg_level),0)
-    OUTDIR := $(abspath $(DEBUG_DIR))
-  else
-    OUTDIR := $(abspath $(RELEASE_DIR))
-  endif
-endif
-
 #------------------------------------------------------------------------------ 
 # Host OS detection
 #------------------------------------------------------------------------------ 
@@ -80,7 +70,7 @@ else
 #   $(info Windows 64bits)
    WIN := Win64
   endif
-  ifneq (,$(findstring MINGW, $(MSYSTEM)))
+  ifeq (,$(findstring msys, $(OSTYPE)))
 #   $(info Windows MinGW/Msys Host)
    HOST := Msys
    DIRMODE := windows
@@ -96,6 +86,24 @@ else
    endif
   endif
  endif
+endif
+
+#------------------------------------------------------------------------------ 
+# Other macros
+#------------------------------------------------------------------------------ 
+
+ifeq ($(verbose),0) 
+  Q := @
+  ACTION := @echo
+#  ECHO := @\#
+else
+  Q :=
+ ifeq ($(HOST),Windows)
+  ACTION := @rem
+ else
+  ACTION := @\#
+ endif
+#  ECHO := @echo
 endif
 
 #------------------------------------------------------------------------------ 
@@ -147,22 +155,31 @@ endif
 endif
 endif
 
-#------------------------------------------------------------------------------ 
-# Other macros
-#------------------------------------------------------------------------------ 
 
-ifeq ($(verbose),0) 
-  Q := @
-  ACTION := @echo
-#  ECHO := @\#
+ifdef O
+  OUTDIR := $(abspath $(O))
 else
-  Q :=
- ifeq ($(HOST),Windows)
-  ACTION := @rem
- else
-  ACTION := @\#
- endif
-#  ECHO := @echo
+  ifneq ($(dbg_level),0)
+    OUTDIR := $(abspath $(DEBUG_DIR))
+  else
+    OUTDIR := $(abspath $(RELEASE_DIR))
+  endif
+endif
+
+# ----------------------------------------------------------------------------
+# Function: windrv
+#   Return: windows driver letter
+# ----------------------------------------------------------------------------
+windrv = $(patsubst //j/%,j:/%,$(patsubst //i/%,i:/%,$(patsubst //h/%,h:/%,$(patsubst //h/%,h:/%,$(patsubst //g/%,g:/%,$(patsubst //f/%,f:/%,$(patsubst //e/%,e:/%,$(patsubst //d/%,d:/%,$(patsubst //c/%,c:/%,$(addprefix /,$1))))))))))
+
+ifeq ($(HOST),Windows)
+  OUTDIR := $(subst /,\,$(OUTDIR))
+  SRCDIR := $(subst /,\,$(SRCDIR))
+else
+ifeq ($(HOST),Msys)
+  OUTDIR := $(call windrv,$(OUTDIR))
+  SRCDIR := $(call windrv,$(SRCDIR))
+endif
 endif
 
 export OUTDIR Q ACTION
