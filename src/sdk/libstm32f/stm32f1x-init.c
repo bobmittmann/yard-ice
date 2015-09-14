@@ -70,6 +70,7 @@ const uint32_t stm32f_apb1_hz = HCLK_HZ / 2;
 const uint32_t stm32f_apb2_hz = HCLK_HZ;
 const uint32_t stm32f_tim1_hz = HCLK_HZ;
 const uint32_t stm32f_tim2_hz = HCLK_HZ;
+const uint32_t stm32f_hsi_hz = 8000000;
 
 #elif defined(STM32F100)
 
@@ -81,6 +82,32 @@ const uint32_t stm32f_tim2_hz = HCLK_HZ;
 #endif
 
 #ifndef THINKAPP
+
+#if defined(STM32F10X) || defined(STM32F30X)
+
+const uint32_t sysclk_hz[] = {
+	[SYSCLK_STM32_AHB] = HCLK_HZ,
+	[SYSCLK_STM32_APB1] = HCLK_HZ / 2,
+	[SYSCLK_STM32_APB2] = HCLK_HZ,
+	[SYSCLK_STM32_TIM1] = HCLK_HZ,
+	[SYSCLK_STM32_TIM2] = HCLK_HZ,
+	[SYSCLK_STM32_HSI] = 8000000,
+	[SYSCLK_STM32_HSE] = HSE_HZ,
+	[SYSCLK_STM32_LSI] = 40000,
+	[SYSCLK_STM32_LSE] = 32768
+};
+
+#elif defined(STM32F100)
+
+const uint32_t sysclk_hz[] = {
+	[SYSCLK_STM32_AHB] = HCLK_HZ,
+	[SYSCLK_STM32_APB1] = HCLK_HZ,
+	[SYSCLK_STM32_APB2] = HCLK_HZ,
+	[SYSCLK_STM32_TIM1] = HCLK_HZ,
+	[SYSCLK_STM32_TIM2] = HCLK_HZ,
+};
+
+#endif
 
 void _init(void)
 {

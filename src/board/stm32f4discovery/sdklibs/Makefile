@@ -19,25 +19,20 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
-
 SDK = ../../../sdk
 
-PROG = thinkos
-
-CFILES = ../../../boot/boot.c ../../../boot/monitor.c board.c
-
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libgdb
-
-LIBS = cm3 stm32f util thinkos gdb gcc 
+LIBDIRS =  $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libstm32drv \
+		   $(SDK)/libutil $(SDK)/libc $(SDK)/libconsole \
+		   $(SDK)/libtty $(SDK)/libshell $(SDK)/libtrace \
+		   $(SDK)/libcrc 
 
 INCPATH = $(SDK)/include ../include
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
-CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
+CDEFS = CONFIG_H
+CFLAGS = -g -O1 -Wall
+O := Debug
 
-MACH = stm32f303xc
+THINKAPP = 1
+MACH = stm32f405
 HSE_HZ = 8000000
-include ../../../mk/stm32f3xx.mk
-
+include ../../../mk/stm32f4xx.mk

@@ -1676,8 +1676,8 @@
 #define STM32F_RCC_AHBENR 0x14
 
 #if defined(STM32F3X)
-#define RCC_ADC34 24
-#define RCC_ADC12 24
+#define RCC_ADC34 29
+#define RCC_ADC12 28
 #define RCC_TSC   24
 #define RCC_IOPG  23
 #define RCC_IOPF  22
@@ -1687,7 +1687,6 @@
 #define RCC_IOPB  18
 #define RCC_IOPA  17
 #define RCC_IOPH  16
-#define RCC_AFIO  0
 #define RCC_CRC   6
 #define RCC_FMC   5
 #else
@@ -2845,6 +2844,7 @@ extern const uint32_t stm32f_apb2_hz;
 extern const uint32_t stm32f_ahb_hz;
 extern const uint32_t stm32f_tim2_hz;
 extern const uint32_t stm32f_tim1_hz;
+extern const uint32_t stm32f_hsi_hz;
 
 #ifdef __cplusplus
 extern "C" {

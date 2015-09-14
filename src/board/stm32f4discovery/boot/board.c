@@ -36,14 +36,10 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ LED3_IO }, /* LED3 */
-	{ LED5_IO }, /* LED5 */
-	{ LED7_IO }, /* LED7 */
-	{ LED9_IO }, /* LED9 */
-	{ LED10_IO }, /* LED10 */
-	{ LED8_IO }, /* LED8 */
-	{ LED6_IO }, /* LED6 */
-	{ LED4_IO }, /* LED4 */
+	{ IO_LED3 }, /* LED3 */
+	{ IO_LED5 }, /* LED5 */
+	{ IO_LED6 }, /* LED6 */
+	{ IO_LED4 }, /* LED4 */
 };
 
 #define LED_COUNT (sizeof(led_io) / sizeof(struct stm32f_io))
@@ -70,16 +66,10 @@ static void io_init(void)
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
 
-	stm32_gpio_mode(LED3_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED4_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED5_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED6_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED7_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED8_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED9_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(LED10_IO, OUTPUT, PUSH_PULL | SPEED_LOW);
-
-	stm32_gpio_mode(SW_B1_IO, INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_LED3, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED4, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED5, OUTPUT, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_LED6, OUTPUT, PUSH_PULL | SPEED_LOW);
 }
 
 bool board_init(void)
@@ -87,9 +77,6 @@ bool board_init(void)
 	io_init();
 
 	led_on(0);
-
-	cm3_irq_pri_set(STM32F_IRQ_USB_HP, MONITOR_PRIORITY);
-	cm3_irq_pri_set(STM32F_IRQ_USB_LP, MONITOR_PRIORITY);
 
 	return true;
 }
@@ -99,28 +86,31 @@ void board_softreset(void)
 	struct stm32_rcc * rcc = STM32_RCC;
 
 	/* Reset all peripherals except USB_OTG and GPIOA */
-	rcc->ahbrstr = ~(1 << RCC_IOPA); 
-	rcc->apb1rstr = ~(1 << RCC_USB);
+	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
+	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
+	rcc->ahb3rstr = ~(0);
+	rcc->apb1rstr = ~(0);
 	rcc->apb2rstr = ~(0);
 
-	rcc->ahbrstr = 0;
+
+	rcc->ahb1rstr = 0;
+	rcc->ahb2rstr = 0;
+	rcc->ahb3rstr = 0;
 	rcc->apb1rstr = 0;
 	rcc->apb2rstr = 0;
 
-	/* disable all peripherals clock sources except USB_OTG, GPIOA */
-	rcc->ahbenr = (1 << RCC_IOPA); 
-	rcc->apb1enr = (1 << RCC_USB);
+	/* disable all peripherals clock sources except USB_OTG and GPIOA */
+	rcc->ahb1enr = (1 << RCC_CCMDATARAM) | (1 << RCC_GPIOA); 
+	rcc->ahb2enr = (1 << RCC_OTGFS);
+	rcc->ahb3enr = 0;
+	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
 	/* reinitialize IO's */
 	io_init();
 
-	/* restore USB interrupt priority */
-	cm3_irq_pri_set(STM32F_IRQ_USB_HP, MONITOR_PRIORITY);
-	cm3_irq_pri_set(STM32F_IRQ_USB_LP, MONITOR_PRIORITY);
-	/* Enable USB interrupts */
-	cm3_irq_enable(STM32F_IRQ_USB_HP);
-	cm3_irq_enable(STM32F_IRQ_USB_LP);
+	/* Enable USB OTG FS interrupts */
+	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
 bool board_autoboot(uint32_t tick)
@@ -140,21 +130,62 @@ void board_on_appload(void)
 		led_off(i);
 }
 
-void board_upgrade(struct dmon_comm * comm)
-{
-}
-
 bool board_configure(struct dmon_comm * comm)
 {
 	return true;
 }
 
+extern const uint8_t otg_xflash_pic[];
+extern const unsigned int sizeof_otg_xflash_pic;
+
+struct magic {
+	uint32_t cnt;
+	struct {
+		uint32_t addr;
+		uint32_t mask;
+		uint32_t comp;
+	} rec[];
+};
+
+const struct magic bootloader_magic = {
+	.cnt = 4,
+	.rec = {
+		{  0x08000000, 0xffffffff, 0x10010000 },
+		{  0x08000004, 0xffff0000, 0x08000000 },
+		{  0x08000008, 0xffff0000, 0x08000000 },
+		{  0x0800000c, 0xffff0000, 0x08000000 }
+	}
+};
+
+void board_upgrade(struct dmon_comm * comm)
+{
+	uint32_t * xflash_code = (uint32_t *)(0x20001000);
+	int (* xflash_ram)(uint32_t, uint32_t, const struct magic *) = 
+		((void *)xflash_code) + 1;
+
+	cm3_cpsid_f();
+	__thinkos_memcpy(xflash_code, otg_xflash_pic, sizeof_otg_xflash_pic);
+	xflash_ram(0, 65536, &bootloader_magic);
+}
+
 const struct mem_desc sram_desc = {
 	.name = "RAM",
 	.blk = {
-		{ 0x10000000, BLK_RW, SZ_8K,  1 }, /*  CCM - Main Stack */
-		{ 0x20000000, BLK_RO, SZ_4K,  1 },  /* Bootloader: 4KiB */
-		{ 0x20001000, BLK_RW, SZ_4K,  11 }, /* Application: 44KiB */
+		{ 0x10000000, BLK_RW, SZ_64K,  1 }, /*  CCM - Main Stack */
+
+		{ 0x20000000, BLK_RO, SZ_4K,   1 }, /* Bootloader: 4KiB */
+		{ 0x20001000, BLK_RW, SZ_4K,  27 }, /* Application: 108KiB */
+		{ 0x2001c000, BLK_RW, SZ_16K,  1 }, /* SRAM 2: 16KiB */
+
+		{ 0x22000000, BLK_RO, SZ_512K, 1 }, /* Bootloader - bitband */
+		{ 0x22080000, BLK_RW, SZ_512K, 27}, /* Application - bitband */
+		{ 0x22e00000, BLK_RW, SZ_2M,   1 }, /* SRAM 2 - bitband */
+
+#ifdef ENABLE_PRIPHERAL_MEM
+		{ 0x40000000, BLK_RO, SZ_1M,   1 },  /* Peripheral */
+		{ 0x42000000, BLK_RO, SZ_128M, 1 },  /* Peripheral - bitband */
+#endif
+
 		{ 0x00000000, 0, 0, 0 }
 	}
 }; 
@@ -162,14 +193,15 @@ const struct mem_desc sram_desc = {
 const struct mem_desc flash_desc = {
 	.name = "FLASH",
 	.blk = {
-		{ 0x08000000, BLK_RO, SZ_2K,  20 }, /* Bootloader: 40 KiB */
-		{ 0x0800a000, BLK_RW, SZ_2K, 108 }, /* Application:  */
+		{ 0x08000000, BLK_RO, SZ_16K,  4 }, /* Bootloader */
+		{ 0x08010000, BLK_RW, SZ_64K,  1 }, /* Application */
+		{ 0x08020000, BLK_RW, SZ_128K, 7 }, /* Application */
 		{ 0x00000000, 0, 0, 0 }
 	}
 }; 
 
 const struct thinkos_board this_board = {
-	.name = "STM32F3Discovery",
+	.name = "STM32F4Discovery",
 	.hw_ver = {
 		.major = 0,
 		.minor = 1,
@@ -183,10 +215,9 @@ const struct thinkos_board this_board = {
 		.flash = &flash_desc
 	},
 	.application = {
-		.start_addr = 0x0800a000,
-		.block_size = 2048 * 108
+		.start_addr = 0x08010000,
+		.block_size = (64 + 7 * 128) * 1024
 	},
-
 	.init = board_init,
 	.softreset = board_softreset,
 	.autoboot = board_autoboot,
@@ -194,5 +225,4 @@ const struct thinkos_board this_board = {
 	.upgrade = board_upgrade,
 	.on_appload = board_on_appload
 };
-
 

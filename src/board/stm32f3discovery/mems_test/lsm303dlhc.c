@@ -43,7 +43,7 @@
 
 int lsm303_init(void)
 {
-	uint8_t lst[1];
+	uint8_t lst[128];
 	int n;
 
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
@@ -53,88 +53,38 @@ int lsm303_init(void)
 
 	i2c_init();
 
-	n = i2c_bus_scan(0x32, 0x32, lst, 1);
+again:
+	n = i2c_bus_scan(0x19, 0x1e, lst, 6);
 
-	if (n != 1) {
-		printf("Error: LSM303DLHC not found!");
+	if (n < 2) {
+		printf("Error: LSM303DLHC not found!\n");
+		thinkos_sleep(500);
+		goto again;
 		return -1;
 	}
 
-	printf("LSM303DLHC found.");
+	printf("LSM303DLHC found.\n");
 
 	return 0;
 }
 
-#if 0
-
-#define AVG_N 16
-
-struct acc_info {
-	volatile int y;
-	volatile int x;
-	volatile int z;
-	volatile bool cal_req;
-	int sem;
-};
-
-static int accelerometer_task(struct acc_info * acc)
+int lsm303_acc_wr(unsigned int reg, const void * buf, unsigned int len)
 {
-	struct {
-		int8_t x;
-		uint8_t res1;
-		int8_t y;
-		uint8_t res2;
-		int8_t z;
-	} data;
-	uint8_t cfg[4];
-	uint8_t st;
-	int x = 0;
-	int y = 0;
-	int z = 0;
-	int x_off = 0;
-	int y_off = 0;
-	int z_off = 0;
-
-	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
-
-	if (lsm303_init() < 0) {
-		return -1;
-	}
-
-	cfg[0] = CTRL_PD | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
-	cfg[1] = 0;
-	cfg[3] = 0;
-	lsm303_wr(LIS302_CTRL_REG1, cfg, 3);
-
-	for (; ;) {
-		thinkos_sleep(1);
-		/* poll the sensor */
-		lsm303_rd(LIS302_STATUS_REG, &st, 1);
-
-		if (st & STAT_ZYXDA) {
-			/* get the forces data */
-			lsm303_rd(LIS302_OUT_X, &data, 5);
-
-			/* Filter */
-			x = (x * (AVG_N - 1) / AVG_N) + data.x;
-			y = (y * (AVG_N - 1) / AVG_N) + data.y;
-			z = (z * (AVG_N - 1) / AVG_N) + data.z;
-
-			if (acc->cal_req) {
-				x_off = -x;
-				y_off = -y;
-				z_off = -z;
-				acc->cal_req = false;
-			}
-
-			acc->x = x_off + x;
-			acc->y = y_off + y;
-			acc->z = z_off + z;
-
-			thinkos_sem_post(acc->sem);
-		} 
-	}
+	return i2c_reg_write(LSM303_ACC_ADDR, reg, buf, len);
 }
 
-#endif
+int lsm303_acc_rd(unsigned int reg, void * buf, unsigned int len)
+{
+	return i2c_reg_read(LSM303_ACC_ADDR, reg, buf, len);
+}
+
+int lsm303_mag_wr(unsigned int reg, const void * buf, unsigned int len)
+{
+	return i2c_reg_write(LSM303_MAG_ADDR, reg, buf, len);
+}
+
+int lsm303_mag_rd(unsigned int reg, void * buf, unsigned int len)
+{
+	return i2c_reg_read(LSM303_MAG_ADDR, reg, buf, len);
+}
 

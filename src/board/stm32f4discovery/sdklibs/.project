@@ -22,43 +22,47 @@
 		<nature>org.eclipse.cdt.core.cnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
-		<nature>org.eclipse.cdt.core.ccnature</nature>
 	</natures>
 	<linkedResources>
 		<link>
 			<name>libc</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libc</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libc</locationURI>
 		</link>
 		<link>
 			<name>libcm3</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libcm3</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libcm3</locationURI>
 		</link>
 		<link>
 			<name>libconsole</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libconsole</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libconsole</locationURI>
 		</link>
 		<link>
 			<name>libcrc</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libcrc</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libcrc</locationURI>
 		</link>
 		<link>
-			<name>libshell</name>
+			<name>libhttpd</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libshell</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libhttpd</locationURI>
 		</link>
 		<link>
 			<name>libstm32drv</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libstm32drv</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libstm32drv</locationURI>
 		</link>
 		<link>
 			<name>libstm32f</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libstm32f</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libstm32f</locationURI>
+		</link>
+		<link>
+			<name>libtcpip</name>
+			<type>2</type>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libtcpip</locationURI>
 		</link>
 		<link>
 			<name>libtrace</name>
@@ -66,14 +70,9 @@
 			<locationURI>PARENT-3-PROJECT_LOC/sdk/libtrace</locationURI>
 		</link>
 		<link>
-			<name>libtty</name>
-			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libtty</locationURI>
-		</link>
-		<link>
 			<name>libutil</name>
 			<type>2</type>
-			<locationURI>PARENT-3-PROJECT_LOC/sdk/libutil</locationURI>
+			<locationURI>$%7BPARENT-3-PROJECT_LOC%7D/sdk/libutil</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

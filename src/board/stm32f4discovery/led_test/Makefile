@@ -20,24 +20,24 @@
 # 
 
 
+PROG = led_test
+
+CFILES = led_test.c
+
 SDK = ../../../sdk
 
-PROG = thinkos
-
-CFILES = ../../../boot/boot.c ../../../boot/monitor.c board.c
-
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil \
-		  $(SDK)/libthinkos $(SDK)/libgdb
-
-LIBS = cm3 stm32f util thinkos gdb gcc 
+LIBS = cm3 stm32f 
 
 INCPATH = $(SDK)/include ../include
 
-CDEFS = CONFIG_H CM3_RAM_VECTORS
-CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
-LDFLAGS = -Wl,--gc-sections 
+LIBPATH = ../sdklibs/Debug
 
-MACH = stm32f303xc
+CDEFS =
+
+CFLAGS = -g -O1 -Wall
+
+MACH = stm32f303xb
 HSE_HZ = 8000000
+THINKAPP = 1
 include ../../../mk/stm32f3xx.mk
 

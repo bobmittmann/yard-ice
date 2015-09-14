@@ -24,9 +24,9 @@ SDK = ../../../sdk
 
 PROG = thinkos
 
-CFILES = ../../../boot/boot.c ../../../boot/monitor.c board.c
+CFILES = ../../../boot/boot.c ../../../boot/monitor.c board.c otg_xflash_pic.c
 
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil \
+LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libthinkos $(SDK)/libgdb
 
 LIBS = cm3 stm32f util thinkos gdb gcc 
@@ -37,7 +37,7 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS
 CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-MACH = stm32f303xc
+MACH = stm32f405
 HSE_HZ = 8000000
-include ../../../mk/stm32f3xx.mk
+include ../../../mk/stm32f4xx.mk
 

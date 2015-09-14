@@ -30,7 +30,7 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX             62
+#define THINKOS_IRQ_MAX             80
 
 #define THINKOS_ENABLE_IDLE_WFI     1
 
@@ -98,21 +98,18 @@
 #define THINKOS_ENABLE_FPU            0
 #define THINKOS_ENABLE_CTL            1
 
-
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_USB_DEV     1
-#define STM32_USB_DEV_EP_MAX     4
-#define STM32_USB_DEV_VBUS_CTRL  0
-#define STM32_USB_DEV_SUSPEND    0
+#define STM32_ENABLE_OTG_FS  1
+#define STM32F_OTG_FS_EP_MAX 4
 
 /* -------------------------------------------------------------------------
    GDB
    -------------------------------------------------------------------------- */
 
-#define GDB_ENABLE_MEM_MAP 1
+#define GDB_ENABLE_MEM_MAP   0
 
 /* -------------------------------------------------------------------------
    Bootloader 

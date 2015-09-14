@@ -6,8 +6,9 @@
 #define __LSM303DL_H__
 
 /* -------------------------------------------------------------------------
-   3D accelerometer and 3D magnetometer 
+   3D accelerometer
    ------------------------------------------------------------------------- */
+#define LSM303_ACC_ADDR         0x19
 
 #define LSM303_CTRL_REG1_A      0x20
 
@@ -20,16 +21,16 @@
 #define CTRL_YEN        (1 << 1)
 #define CTRL_XEN        (1 << 0)
 
-#define ODR_LOW_POWER   0x0
-#define ODR_1HZ         0x1
-#define ODR_10HZ        0x2
-#define ODR_25HZ        0x3
-#define ODR_50HZ        0x4
-#define ODR_100HZ       0x5
-#define ODR_200HZ       0x6
-#define ODR_400HZ       0x7
-#define ODR_1620HZ      0x8
-#define ODR_5376HZ      0x9
+#define ODR_POWER_DOWN  (0x0 << 4)
+#define ODR_1HZ         (0x1 << 4)
+#define ODR_10HZ        (0x2 << 4)
+#define ODR_25HZ        (0x3 << 4)
+#define ODR_50HZ        (0x4 << 4)
+#define ODR_100HZ       (0x5 << 4)
+#define ODR_200HZ       (0x6 << 4)
+#define ODR_400HZ       (0x7 << 4)
+#define ODR_1620HZ      (0x8 << 4)
+#define ODR_5376HZ      (0x9 << 4)
 
 #define LSM303_CTRL_REG2_A      0x21
 
@@ -176,6 +177,8 @@
    3D magnetometer 
    ------------------------------------------------------------------------- */
 
+#define LSM303_MAG_ADDR         0x1e
+
 #define LSM303_CRA_REG_M        0x00
 #define LSM303_CRB_REG_M        0x01
 #define LSM303_MR_REG_M         0x02
@@ -200,6 +203,14 @@ extern "C" {
 #endif
 
 int lsm303_init(void);
+
+int lsm303_acc_wr(unsigned int reg, const void * buf, unsigned int len);
+
+int lsm303_acc_rd(unsigned int reg, void * buf, unsigned int len);
+
+int lsm303_mag_wr(unsigned int reg, const void * buf, unsigned int len);
+
+int lsm303_mag_rd(unsigned int reg, void * buf, unsigned int len);
 
 #ifdef __cplusplus
 }
