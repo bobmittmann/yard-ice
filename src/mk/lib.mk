@@ -136,6 +136,7 @@ endif
 #$(info LIB_OUT = '$(LIB_OUT)')
 #$(info ODIRS = '$(ODIRS)')
 #$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
+$(info SET = '$(shell set)')
 #$(info SRCDIR = '$(firstword $(SRCDIR))')
 #$(info LIB_STATIC = '$(LIB_STATIC)')
 #$(info LIB_STATIC_OUT = '$(LIB_STATIC_OUT)')

@@ -191,6 +191,8 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info OS = '$(OS)')
 #$(info HOST = '$(HOST)')
 #$(info DIRMODE = '$(DIRMODE)')
+#$(info LIBDIRS_ALL = '$(LIBDIRS_ALL)')
+#$(info SET = '$(shell set)')
 #$(info LDDIR = '$(LDDIR)')
 #$(info BASEDIR = '$(BASEDIR)')
 #$(info OUTDIR = '$(OUTDIR)')
@@ -210,7 +212,7 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info $(shell set))
 #$(info --------------------------)
 
-all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
+all: $(LIBDIRS_ALL) #$(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
 clean:: libs-clean
 ifneq "$(strip $(CLEAN_OFILES))" ""

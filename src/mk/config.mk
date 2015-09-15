@@ -70,7 +70,7 @@ else
 #   $(info Windows 64bits)
    WIN := Win64
   endif
-  ifeq (,$(findstring msys, $(OSTYPE)))
+  ifneq (,$(findstring msys, $(OSTYPE)))
 #   $(info Windows MinGW/Msys Host)
    HOST := Msys
    DIRMODE := windows
