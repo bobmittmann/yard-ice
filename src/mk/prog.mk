@@ -18,6 +18,7 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+
 ifndef CONFIG_MK
  $(error Please include "config.mk" in your Makefile)
 endif

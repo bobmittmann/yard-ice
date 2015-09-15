@@ -18,6 +18,10 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
+#------------------------------------------------------------------------------ 
+# Debug
+#------------------------------------------------------------------------------ 
+
 CONFIG_MK := $(lastword $(MAKEFILE_LIST))
 
 THISDIR := $(dir $(CONFIG_MK))
@@ -70,8 +74,11 @@ else
 #   $(info Windows 64bits)
    WIN := Win64
   endif
-  ifneq (,$(findstring msys, $(OSTYPE)))
+  ifneq (,$(findstring MINGW32, $(MSYSTEM)))
 #   $(info Windows MinGW/Msys Host)
+   ifneq (, $(MSYSCON))
+     $(info MSYSCON = '$(MSYSCON)')
+   endif
    HOST := Msys
    DIRMODE := windows
   else 
@@ -87,18 +94,6 @@ else
   endif
  endif
 endif
-
-
-#------------------------------------------------------------------------------ 
-# Debug
-#------------------------------------------------------------------------------ 
-
-$(info !!!!!! --------------------------)
-$(info OS = '$(OS)')
-$(info HOST = '$(HOST)')
-$(info DIRMODE = '$(DIRMODE)')
-$(info XXX = '$(findstring msys, $(OSTYPE))')
-$(info !!!!!! --------------------------)
 
 #------------------------------------------------------------------------------ 
 # Other macros
@@ -189,8 +184,8 @@ ifeq ($(HOST),Windows)
   SRCDIR := $(subst /,\,$(SRCDIR))
 else
 ifeq ($(HOST),Msys)
-  OUTDIR := $(call windrv,$(OUTDIR))
-  SRCDIR := $(call windrv,$(SRCDIR))
+#  OUTDIR := $(call windrv,$(OUTDIR))
+#  SRCDIR := $(call windrv,$(SRCDIR))
 endif
 endif
 
