@@ -2,8 +2,8 @@
    lsm320dlhc.h - ST LSM303DLHC: 3D accelerometer and 3D magnetometer 
  */
 
-#ifndef __LSM303DL_H__
-#define __LSM303DL_H__
+#ifndef __LSM303DLHC_H__
+#define __LSM303DLHC_H__
 
 /* -------------------------------------------------------------------------
    3D accelerometer
@@ -249,6 +249,10 @@ extern "C" {
 
 int lsm303_init(void);
 
+/* ----------------------------------------------------------------------
+ * Register level API
+ * ----------------------------------------------------------------------
+ */
 int lsm303_acc_wr(unsigned int reg, const void * buf, unsigned int len);
 
 int lsm303_acc_rd(unsigned int reg, void * buf, unsigned int len);
@@ -257,16 +261,19 @@ int lsm303_mag_wr(unsigned int reg, const void * buf, unsigned int len);
 
 int lsm303_mag_rd(unsigned int reg, void * buf, unsigned int len);
 
+/* ----------------------------------------------------------------------
+ * Magnetomer driver API
+ * ----------------------------------------------------------------------
+ */
+void lsm303_mag_vec_get(struct vector * v);
 
-void lms303_mag_vec_get(struct vector * v);
-
-void lms303_mag_init(void);
+void lsm303_mag_init(void);
 
 
 #ifdef __cplusplus
 }
 #endif	
 
-#endif // __LSM303DL_H__
+#endif // __LSM303DLHC_H__
 
 

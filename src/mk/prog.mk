@@ -213,7 +213,7 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info $(shell set))
 #$(info --------------------------)
 
-all: $(LIBDIRS_ALL) #$(PROG_BIN) $(PROG_SYM) $(PROG_LST)
+all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 
 clean:: libs-clean
 ifneq "$(strip $(CLEAN_OFILES))" ""
