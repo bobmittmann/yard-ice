@@ -40,9 +40,9 @@ LIBS = cm3 stm32f util thinkos c ice-comm tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets comm tftp shell console tty gdb vcom telnet crc xmodem
 
-VERSION_DATE = "2015-09-10"
+VERSION_DATE = "2015-09-15"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "19"
+VERSION_MINOR = "20"
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
