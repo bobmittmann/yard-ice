@@ -44,14 +44,14 @@ struct stm32f_io {
  */
 
 const struct stm32f_io led_io[] = {
-	{ LED3_IO }, /* LED3 */
-	{ LED5_IO }, /* LED5 */
-	{ LED7_IO }, /* LED7 */
-	{ LED9_IO }, /* LED9 */
-	{ LED10_IO }, /* LED10 */
-	{ LED8_IO }, /* LED8 */
-	{ LED6_IO }, /* LED6 */
-	{ LED4_IO }, /* LED4 */
+		{ LED9_IO }, /* LED9 */
+		{ LED7_IO }, /* LED7 */
+		{ LED5_IO }, /* LED5 */
+		{ LED3_IO }, /* LED3 */
+		{ LED4_IO }, /* LED4 */
+		{ LED6_IO }, /* LED6 */
+		{ LED8_IO }, /* LED8 */
+		{ LED10_IO }, /* LED10 */
 };
 
 #define LED_COUNT (sizeof(led_io) / sizeof(struct stm32f_io))
@@ -110,13 +110,33 @@ void accelerometer_task(struct acc_info * acc)
 
 	printf("%s(): thread %d started.\n", __func__, thinkos_thread_self());
 
-	cfg[0] = ODR_100HZ | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
+	cfg[0] = ODR_10HZ | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
 	cfg[1] = 0;
 	cfg[2] = 0;
-	cfg[3] = 0;
+	cfg[3] = CTRL_HR;
 	cfg[4] = 0;
 	cfg[5] = 0;
 	lsm303_acc_wr(LSM303_CTRL_REG1_A, cfg, 6);
+
+#if 0
+	for (x = 0; x < 10000; ++x) {
+		uint8_t rsp[6];
+
+		cfg[0] = x;
+		cfg[1] = x + 1;
+		cfg[2] = x + 2;
+		cfg[3] = x + 3;
+		cfg[4] = x + 4;
+		cfg[5] = x + 5;
+		lsm303_acc_wr(LSM303_CTRL_REG1_A, cfg, 6);
+		lsm303_acc_rd(LSM303_CTRL_REG1_A, rsp, 6);
+
+		if (rsp[0] != x || rsp[1] != x + 1 || rsp[2] != x + 2) {
+			printf("Error!\n");
+		}
+		thinkos_sleep(500);
+	}
+#endif
 
 	for (; ;) {
 		thinkos_sleep(10);
@@ -124,9 +144,8 @@ void accelerometer_task(struct acc_info * acc)
 		/* poll the sensor */
 		lsm303_acc_rd(LSM303_STATUS_REG_A, &st, 1);
 
-		if ((st & STAT_ZYXDA) ||
-			((st & (STAT_ZDA | STAT_YDA | STAT_XDA)) ==
-					(STAT_ZDA | STAT_YDA | STAT_XDA))) {
+//		if (st & STAT_ZYXDA) {
+		if (1) {
 			/* get the forces data */
 			lsm303_acc_rd(LSM303_OUT_X_L_A, &data, 6);
 
@@ -153,7 +172,7 @@ void accelerometer_task(struct acc_info * acc)
 
 uint32_t accelerometer_stack[128];
 
-const struct thinkos_thread_inf supervisor_inf = {
+const struct thinkos_thread_inf accelerometer_inf = {
     .stack_ptr = accelerometer_stack,
     .stack_size = sizeof(accelerometer_stack),
     .priority = 1,
@@ -174,7 +193,7 @@ void accelerometer(void)
     acc.sem = thinkos_sem_alloc(0);
 
     thinkos_thread_create_inf((void *)accelerometer_task, (void *)&acc,
-                              &supervisor_inf);
+                              &accelerometer_inf);
 
     for (i = 0; ; ++i) {
         thinkos_sem_wait(acc.sem);
@@ -221,6 +240,79 @@ void accelerometer(void)
 
 }
 
+static int xy_octant(struct vector * p)
+{
+	int t;
+	int o = 0;
+
+	if (p->y <  0)  {
+		p->x = -p->x;
+		p->y = -p->y;
+		o += 4;
+	}
+
+	if (p->x <= 0)  {
+		t = p->x;
+		p->x = p->y;
+		p->y = -t;
+		o += 2;
+	}
+
+	if (p->x <= p->y)  {
+		t = p->y - p->x;
+		p->x = p->x + p->y;
+		p->y = t;
+		o += 1;
+	}
+
+	return o;
+}
+
+#define COS_PI_8 0.92388
+#define SIN_PI_8 0.38268
+
+void xy_rotate_pi_8(struct vector * v)
+{
+	int x;
+	int y;
+	int c;
+	int s;
+
+	c = COS_PI_8 * 32768;
+	s = COS_PI_8 * 32768;
+
+	x = c * v->x - s * v->y;
+	y = s * v->x + c * v->y;
+
+	v->x = x / 32768;
+	v->y = y / 32768;
+}
+
+void compass(void)
+{
+    int o = 0;
+
+    /* Initialize the magnetic sensor device */
+    lsm303_mag_init();
+
+    for (;;) {
+        struct vector v;
+        int i;
+
+    	/* get the magnetic vector */
+        lsm303_mag_vec_get(&v);
+        /* rotate PI/8 (22.5 dg) */
+        xy_rotate_pi_8(&v);
+        /* get the vector's octant */
+        i = xy_octant(&v);
+        /* update LEDs */
+        if (i != o) {
+        	led_on(i);
+        	led_off(o);
+        	o = i;
+        }
+    }
+}
 
 int main(int argc, char ** argv)
 {
@@ -231,6 +323,8 @@ int main(int argc, char ** argv)
 	stdio_init();
 
 	lsm303_init();
+
+	compass();
 
 	accelerometer();
 

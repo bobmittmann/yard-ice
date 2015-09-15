@@ -57,8 +57,14 @@
 
 #define CTRL_BDU        (1 << 7)
 #define CTRL_BLE        (1 << 6)
+
 #define CTRL_FS1        (1 << 5)
 #define CTRL_FS0        (1 << 4)
+#define CTRL_FS_2G      (0 << 4)
+#define CTRL_FS_4G      (1 << 4)
+#define CTRL_FS_8G      (2 << 4)
+#define CTRL_FS_16G     (3 << 4)
+
 #define CTRL_HR         (1 << 3)
 #define CTRL_SIM        (1 << 0)
 
@@ -180,8 +186,38 @@
 #define LSM303_MAG_ADDR         0x1e
 
 #define LSM303_CRA_REG_M        0x00
+#define CRA_TEMP_EN       (1 << 7)
+#define CRA_DO2           (1 << 4)
+#define CRA_DO1           (1 << 3)
+#define CRA_DO0           (1 << 2)
+
+#define CRA_DO_0_75_HZ    (0 << 2)
+#define CRA_DO_1_5_HZ     (1 << 2)
+#define CRA_DO_3_0_HZ     (2 << 2)
+#define CRA_DO_7_5_HZ     (3 << 2)
+#define CRA_DO_15_HZ      (4 << 2)
+#define CRA_DO_30_HZ      (5 << 2)
+#define CRA_DO_75_HZ      (6 << 2)
+#define CRA_DO_220_HZ     (7 << 2)
+
 #define LSM303_CRB_REG_M        0x01
+#define CRB_GN2           (1 << 7)
+#define CRB_GN1           (1 << 6)
+#define CRB_GN0           (1 << 5)
+#define CRB_GN_1_3        (1 << 5) /* ±1.3 Gauss */
+#define CRB_GN_1_9        (2 << 5) /* ±1.9 Gauss */
+#define CRB_GN_2_5        (3 << 5) /* ±2.5 Gauss */
+#define CRB_GN_4_0        (4 << 5) /* ±4.0 Gauss */
+#define CRB_GN_4_7        (5 << 5) /* ±4.7 Gauss */
+#define CRB_GN_5_6        (6 << 5) /* ±5.6 Gauss */
+#define CRB_GN_8_1        (7 << 5) /* ±8.1 Gauss */
+
 #define LSM303_MR_REG_M         0x02
+#define MR_MD1           (1 << 1)
+#define MR_MD0           (1 << 0)
+#define MR_MD_CONTINOUS  (0 << 0)
+#define MR_MD_SINGLE     (1 << 0)
+#define MR_MD_SLEEP      (2 << 0)
 
 #define LSM303_OUT_X_H_M        0x03
 #define LSM303_OUT_X_L_M        0x04
@@ -191,12 +227,21 @@
 #define LSM303_OUT_Z_L_M        0x08
 
 #define LSM303_SR_REG_M         0x09
+#define SR_LOCK          (1 << 1)
+#define SR_DRDY          (1 << 0)
+
 #define LSM303_IRA_REG_M        0x0a
 #define LSM303_IRB_REG_M        0x0b
 #define LSM303_IRC_REG_M        0x0c
 
 #define LSM303_TEM_OUT_H_M      0x31
 #define LSM303_TEM_OUT_L_M      0x32
+
+struct vector {
+	int x;
+	int y;
+	int z;
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -211,6 +256,12 @@ int lsm303_acc_rd(unsigned int reg, void * buf, unsigned int len);
 int lsm303_mag_wr(unsigned int reg, const void * buf, unsigned int len);
 
 int lsm303_mag_rd(unsigned int reg, void * buf, unsigned int len);
+
+
+void lms303_mag_vec_get(struct vector * v);
+
+void lms303_mag_init(void);
+
 
 #ifdef __cplusplus
 }

@@ -36,12 +36,20 @@
  * ----------------------------------------------------------------------
  */
 struct i2c_xfer {
-	volatile uint8_t * ptr;
-	volatile int32_t cnt;
-	volatile int32_t rem;
+	uint8_t * buf;
+	volatile uint32_t cnt;
+	volatile uint32_t txn;
+	volatile uint32_t rxn;
 	volatile int ret;
 	uint32_t addr;
 	int32_t flag;
+	struct {
+		volatile uint32_t irq_cnt;
+		volatile uint32_t rx_cnt;
+		volatile uint32_t tx_cnt;
+		volatile uint32_t tc_cnt;
+		volatile uint32_t nack_cnt;
+	} stat;
 };
 
 struct i2c_xfer xfer;
@@ -107,43 +115,46 @@ void stm32f_i2c1_ev_isr(void)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	uint32_t sr;
+	unsigned int c;
 
-	i2c_irq_cnt++;
+	xfer.stat.irq_cnt++;
 
 	sr = i2c->isr;
 
 	if (sr & I2C_TC) {
-		xfer.ptr--;;
-		xfer.rem = xfer.cnt;
-		xfer.ret = 0;
-
+		udelay(30);
+		xfer.cnt = 0;
 		/* generate a Start condition */
-		i2c->cr2 = I2C_SADD_SET(xfer.addr) | I2C_NBYTES_SET(xfer.cnt) | I2C_RD_WRN |
+		i2c->cr2 = I2C_SADD_SET(xfer.addr) | I2C_NBYTES_SET(xfer.rxn) | I2C_RD_WRN |
 				I2C_START | I2C_AUTOEND;
+		xfer.stat.tc_cnt++;
 	}
 
 	if (sr & I2C_RXNE) {
-		*xfer.ptr++ = i2c->rxdr;
-		xfer.rem--;
-		if (xfer.rem == 0) {
+		c = i2c->rxdr;
+		xfer.buf[xfer.cnt++] = c;
+		if (xfer.cnt == xfer.rxn) {
 			xfer.ret = xfer.cnt;
 			thinkos_flag_give_i(xfer.flag);
 		}
+		xfer.stat.rx_cnt++;
 	}
 
 	if (sr & I2C_TXIS) {
-		i2c->txdr = *xfer.ptr++;
-		xfer.rem--;
-		if (xfer.rem == 0) {
+		c = xfer.buf[xfer.cnt++];
+		i2c->txdr = c;
+		if (xfer.cnt == xfer.txn) {
 			xfer.ret = xfer.cnt;
 			thinkos_flag_give_i(xfer.flag);
 		}
+		xfer.stat.tx_cnt++;
 	}
 
 	if (sr & I2C_NACKF) {
 		i2c->icr = I2C_NACKCF;
 		xfer.ret = -1;
 		thinkos_flag_give_i(xfer.flag);
+		xfer.stat.nack_cnt++;
 	}
 }
 
@@ -209,6 +220,12 @@ void i2c_master_init(unsigned int scl_freq)
 	uint32_t pclk = stm32f_hsi_hz;
 	uint32_t n;
 
+	xfer.stat.irq_cnt = 0;
+	xfer.stat.rx_cnt = 0;
+	xfer.stat.tx_cnt = 0;
+	xfer.stat.tc_cnt = 0;
+	xfer.stat.nack_cnt = 0;
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
 
 	stm32_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
@@ -229,9 +246,12 @@ void i2c_master_init(unsigned int scl_freq)
 	  tSCLH = (SCLH+1) x tPRESC
 	  tSCLL = (SCLL+1) x tPRESC */
 
-	n = pclk / (scl_freq * 2);
-	i2c->timingr = I2C_PRESC_SET(0) | I2C_SCLDEL_SET(1) |
-			I2C_SDADEL_SET(1) | I2C_SCLHL_SET(n) | I2C_SCLL_SET(n);
+	n = pclk / scl_freq;
+	(void)n;
+	i2c->timingr = I2C_PRESC_SET(1) |
+			I2C_SCLL_SET(0x13) | I2C_SCLHL_SET(0xf) |
+			I2C_SDADEL_SET(2) | I2C_SCLDEL_SET(4);
+
 
 	/* I2C Control register 2 (I2C_CR2) */
 	i2c->cr2 = 0;
@@ -333,9 +353,15 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	int ret;
 
-	xfer.ptr = (uint8_t *)buf;
-	xfer.rem = len;
-	xfer.cnt = len;
+	xfer.stat.irq_cnt = 0;
+	xfer.stat.rx_cnt = 0;
+	xfer.stat.tx_cnt = 0;
+	xfer.stat.tc_cnt = 0;
+	xfer.stat.nack_cnt = 0;
+
+	xfer.buf = (uint8_t *)buf;
+	xfer.txn = len;
+	xfer.cnt = 0;
 	xfer.addr = addr;
 	xfer.ret = 0;
 
@@ -352,19 +378,27 @@ int i2c_master_wr(unsigned int addr, const void * buf, int len)
 	return ret;
 }
 
-int i2c_master_wr_rd(unsigned int addr, const void * buf, int len)
+int i2c_master_xfer(unsigned int addr, const void * buf,
+		unsigned int txn, unsigned int rxn)
 {
 	struct stm32f_i2c * i2c = STM32F_I2C1;
 	int ret;
 
-	xfer.ptr = (uint8_t *)buf;
-	xfer.rem = 2;
-	xfer.cnt = len;
+	xfer.stat.irq_cnt = 0;
+	xfer.stat.rx_cnt = 0;
+	xfer.stat.tx_cnt = 0;
+	xfer.stat.tc_cnt = 0;
+	xfer.stat.nack_cnt = 0;
+
+	xfer.buf = (uint8_t *)buf;
+	xfer.txn = txn + 1;
+	xfer.rxn = rxn;
+	xfer.cnt = 0;
 	xfer.addr = addr;
 	xfer.ret = 0;
 
 	/* generate a Start condition */
-	i2c->cr2 = I2C_SADD_SET(addr) | I2C_NBYTES_SET(1) | I2C_START;
+	i2c->cr2 = I2C_SADD_SET(addr) | I2C_NBYTES_SET(txn) | I2C_START;
 
 	if (thinkos_flag_timedtake(xfer.flag, 10) == THINKOS_ETIMEDOUT) {
 		i2c_master_reset();
@@ -383,9 +417,9 @@ int i2c_master_rd(unsigned int addr, void * buf, int len)
 	if (len == 0)
 		return 0;
 
-	xfer.ptr = (uint8_t *)buf;
-	xfer.rem = len;
-	xfer.cnt = len;
+	xfer.buf = (uint8_t *)buf;
+	xfer.rxn = len;
+	xfer.cnt = 0;
 	xfer.ret = 0;
 
 	/* generate a Start condition */
@@ -425,7 +459,8 @@ int i2c_reg_read(unsigned int addr, unsigned int reg, void * buf, int n)
 
 	pkt[0] = reg | ((n > 1) ? 0x80 : 0);
 
-	ret = i2c_master_wr_rd(addr, buf, n);
+
+	ret = i2c_master_xfer(addr, buf, 1, n);
 
 	thinkos_mutex_unlock(i2c_mutex);
 
@@ -479,19 +514,6 @@ int i2c_bus_scan(unsigned int from, unsigned int to, uint8_t lst[], int len)
 	int n;
 
 	thinkos_mutex_lock(i2c_mutex);
-
-/*
-	stm32_gpio_mode(I2C1_SCL, OUTPUT, OPEN_DRAIN);
-	stm32_gpio_clr(I2C1_SCL);
-	udelay(50);
-	stm32_gpio_set(I2C1_SCL);
-	udelay(50);
-	stm32_gpio_clr(I2C1_SCL);
-	udelay(50);
-	stm32_gpio_set(I2C1_SCL);
-	stm32_gpio_mode(I2C1_SCL, ALT_FUNC, OPEN_DRAIN);
-	udelay(50);
-*/
 
 	/* 7 bit addresses range from 1 to 0x78 */
 	if (from < 1)

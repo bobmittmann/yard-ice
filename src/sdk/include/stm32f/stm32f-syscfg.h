@@ -90,16 +90,18 @@
    0111: PH[x] pin
    1000: PI[x] pin  */
 
-#define SYSCFG_EXTI0_PA (0x0 << 0)
-#define SYSCFG_EXTI0_PB (0x1 << 0)
-#define SYSCFG_EXTI0_PC (0x2 << 0)
-#define SYSCFG_EXTI0_PD (0x3 << 0)
-#define SYSCFG_EXTI0_PE (0x4 << 0)
-#define SYSCFG_EXTI0_PF (0x5 << 0)
-#define SYSCFG_EXTI0_PG (0x6 << 0)
-#define SYSCFG_EXTI0_PH (0x7 << 0)
-#define SYSCFG_EXTI0_PI (0x8 << 0)
+#define SYSCFG_EXTI0_MSK (0xf << 0)
+#define SYSCFG_EXTI0_PA  (0x0 << 0)
+#define SYSCFG_EXTI0_PB  (0x1 << 0)
+#define SYSCFG_EXTI0_PC  (0x2 << 0)
+#define SYSCFG_EXTI0_PD  (0x3 << 0)
+#define SYSCFG_EXTI0_PE  (0x4 << 0)
+#define SYSCFG_EXTI0_PF  (0x5 << 0)
+#define SYSCFG_EXTI0_PG  (0x6 << 0)
+#define SYSCFG_EXTI0_PH  (0x7 << 0)
+#define SYSCFG_EXTI0_PI  (0x8 << 0)
 
+#define SYSCFG_EXTI1_MSK (0xf << 4)
 #define SYSCFG_EXTI1_PA (0x0 << 4)
 #define SYSCFG_EXTI1_PB (0x1 << 4)
 #define SYSCFG_EXTI1_PC (0x2 << 4)
@@ -110,6 +112,7 @@
 #define SYSCFG_EXTI1_PH (0x7 << 4)
 #define SYSCFG_EXTI1_PI (0x8 << 4)
 
+#define SYSCFG_EXTI2_MSK (0xf << 8)
 #define SYSCFG_EXTI2_PA (0x0 << 8)
 #define SYSCFG_EXTI2_PB (0x1 << 8)
 #define SYSCFG_EXTI2_PC (0x2 << 8)
@@ -120,6 +123,7 @@
 #define SYSCFG_EXTI2_PH (0x7 << 8)
 #define SYSCFG_EXTI2_PI (0x8 << 8)
 
+#define SYSCFG_EXTI3_MSK (0xf << 12)
 #define SYSCFG_EXTI3_PA (0x0 << 12)
 #define SYSCFG_EXTI3_PB (0x1 << 12)
 #define SYSCFG_EXTI3_PC (0x2 << 12)
@@ -152,6 +156,7 @@
    0111: PH[x] pin
    1000: PI[x] pin */
 
+#define SYSCFG_EXTI4_MSK (0xf << 0)
 #define SYSCFG_EXTI4_PA (0x0 << 0)
 #define SYSCFG_EXTI4_PB (0x1 << 0)
 #define SYSCFG_EXTI4_PC (0x2 << 0)
@@ -162,6 +167,7 @@
 #define SYSCFG_EXTI4_PH (0x7 << 0)
 #define SYSCFG_EXTI4_PI (0x8 << 0)
 
+#define SYSCFG_EXTI5_MSK (0xf << 4)
 #define SYSCFG_EXTI5_PA (0x0 << 4)
 #define SYSCFG_EXTI5_PB (0x1 << 4)
 #define SYSCFG_EXTI5_PC (0x2 << 4)
@@ -172,6 +178,7 @@
 #define SYSCFG_EXTI5_PH (0x7 << 4)
 #define SYSCFG_EXTI5_PI (0x8 << 4)
 
+#define SYSCFG_EXTI6_MSK (0xf << 8)
 #define SYSCFG_EXTI6_PA (0x0 << 8)
 #define SYSCFG_EXTI6_PB (0x1 << 8)
 #define SYSCFG_EXTI6_PC (0x2 << 8)
@@ -182,6 +189,7 @@
 #define SYSCFG_EXTI6_PH (0x7 << 8)
 #define SYSCFG_EXTI6_PI (0x8 << 8)
 
+#define SYSCFG_EXTI7_MSK (0xf << 12)
 #define SYSCFG_EXTI7_PA (0x0 << 12)
 #define SYSCFG_EXTI7_PB (0x1 << 12)
 #define SYSCFG_EXTI7_PC (0x2 << 12)
@@ -213,6 +221,7 @@
    0111: PH[x] pin
    1000: PI[x] pin */
 
+#define SYSCFG_EXTI8_MSK (0xf << 0)
 #define SYSCFG_EXTI8_PA (0x0 << 0)
 #define SYSCFG_EXTI8_PB (0x1 << 0)
 #define SYSCFG_EXTI8_PC (0x2 << 0)
@@ -223,6 +232,7 @@
 #define SYSCFG_EXTI8_PH (0x7 << 0)
 #define SYSCFG_EXTI8_PI (0x8 << 0)
 
+#define SYSCFG_EXTI9_MSK (0xf << 4)
 #define SYSCFG_EXTI9_PA (0x0 << 4)
 #define SYSCFG_EXTI9_PB (0x1 << 4)
 #define SYSCFG_EXTI9_PC (0x2 << 4)
@@ -233,6 +243,7 @@
 #define SYSCFG_EXTI9_PH (0x7 << 4)
 #define SYSCFG_EXTI9_PI (0x8 << 4)
 
+#define SYSCFG_EXTI10_MSK (0xf << 8)
 #define SYSCFG_EXTI10_PA (0x0 << 8)
 #define SYSCFG_EXTI10_PB (0x1 << 8)
 #define SYSCFG_EXTI10_PC (0x2 << 8)
@@ -243,6 +254,7 @@
 #define SYSCFG_EXTI10_PH (0x7 << 8)
 #define SYSCFG_EXTI10_PI (0x8 << 8)
 
+#define SYSCFG_EXTI11_MSK (0xf << 12)
 #define SYSCFG_EXTI11_PA (0x0 << 12)
 #define SYSCFG_EXTI11_PB (0x1 << 12)
 #define SYSCFG_EXTI11_PC (0x2 << 12)
@@ -274,6 +286,7 @@
    0111: PH[x] pin
    Note: PI[15:12] are not used. */
 
+#define SYSCFG_EXTI12_MSK (0xf << 0)
 #define SYSCFG_EXTI12_PA (0x0 << 0)
 #define SYSCFG_EXTI12_PB (0x1 << 0)
 #define SYSCFG_EXTI12_PC (0x2 << 0)
@@ -284,6 +297,7 @@
 #define SYSCFG_EXTI12_PH (0x7 << 0)
 #define SYSCFG_EXTI12_PI (0x8 << 0)
 
+#define SYSCFG_EXTI13_MSK (0xf << 4)
 #define SYSCFG_EXTI13_PA (0x0 << 4)
 #define SYSCFG_EXTI13_PB (0x1 << 4)
 #define SYSCFG_EXTI13_PC (0x2 << 4)
@@ -294,6 +308,7 @@
 #define SYSCFG_EXTI13_PH (0x7 << 4)
 #define SYSCFG_EXTI13_PI (0x8 << 4)
 
+#define SYSCFG_EXTI14_MSK (0xf << 8)
 #define SYSCFG_EXTI14_PA (0x0 << 8)
 #define SYSCFG_EXTI14_PB (0x1 << 8)
 #define SYSCFG_EXTI14_PC (0x2 << 8)
@@ -304,6 +319,7 @@
 #define SYSCFG_EXTI14_PH (0x7 << 8)
 #define SYSCFG_EXTI14_PI (0x8 << 8)
 
+#define SYSCFG_EXTI15_MSK (0xf << 12)
 #define SYSCFG_EXTI15_PA (0x0 << 12)
 #define SYSCFG_EXTI15_PB (0x1 << 12)
 #define SYSCFG_EXTI15_PC (0x2 << 12)
