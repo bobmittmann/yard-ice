@@ -217,11 +217,11 @@ $(LIB_STATIC_OUT): $(OFILES)
 ifeq ($(HOST),Cygwin)
 	$(Q)$(AR) $(ARFLAGS) $(subst \,\\,$(shell cygpath -w $@)) $(OFILES_WIN) > $(DEVNULL)
 else
-ifeq ($(HOST),Windows)
-	$(foreach f,$(OFILES),$(call shell $(AR) $(ARFLAGS) $@ $(f)))
-#	$(Q)$(AR) s $@
-endif
+  ifeq ($(HOST),Windows)
+	$(foreach f,$(OFILES),$(shell $(AR) r $@ $(f)))
+  else
 	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> $(DEVNULL)
+  endif
 endif
 
 $(LIB_SHARED_OUT): $(DEPDIRS_ALL) $(OFILES)
