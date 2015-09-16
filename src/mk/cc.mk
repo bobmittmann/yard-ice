@@ -54,7 +54,7 @@ $(OUTDIR)/%.o : $(OUTDIR)/%.s
 $(OUTDIR)/%.o : $(SRCDIR)/%.c
 	$(ACTION) "CC 1: $@"
 ifeq ($(HOST),Cygwin)
-	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
 else ifeq ($(HOST),Windows)
 	$(Q)$(compile) -MMD -o $@ -c $<
 else ifeq ($(HOST),Msys)
@@ -65,11 +65,19 @@ endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/%.S
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/%.s 
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 #------------------------------------------------------------------------------ 
 # some rules to compile files on adjacent folders...
@@ -77,18 +85,26 @@ $(OUTDIR)/%.o : $(SRCDIR)/%.s
 $(OUTDIR)/%.o : $(SRCDIR)/../%.c 
 	$(ACTION) "CC 3: $@"
 ifeq ($(HOST),Cygwin)
-	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
 else
 	$(Q)$(compile) -MMD -MP -MT $@ -o $@ -c $<
 endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../%.S
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../%.s
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 #------------------------------------------------------------------------------ 
 # some rules to compile files on parent folders...
@@ -96,18 +112,26 @@ $(OUTDIR)/%.o : $(SRCDIR)/../%.s
 $(OUTDIR)/%.o : $(SRCDIR)/../../%.c
 	$(ACTION) "CC 3: $@"
 ifeq ($(HOST),Cygwin)
-	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
 else
 	$(Q)$(compile) -MMD -MP -MT $@ -o $@ -c $<
 endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../../%.S
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../../%.s
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 #------------------------------------------------------------------------------ 
 # some rules to compile files on grand-parent folders...
@@ -122,11 +146,19 @@ endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../../../%.S
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 $(OUTDIR)/%.o : $(SRCDIR)/../../../%.s
 	$(ACTION) "AS: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(assemble) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
+else
 	$(Q)$(assemble) -MD -MP -MT $@ -o $@ -c $<
+endif
 
 #------------------------------------------------------------------------------ 
 

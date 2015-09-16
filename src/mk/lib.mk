@@ -246,7 +246,7 @@ endif
 #------------------------------------------------------------------------------ 
 
 $(ODIRS):
-#	$(ACTION) "Creating outdir: $@"
+	$(ACTION) "Creating outdir: $@"
 ifeq ($(HOST),Windows)
 	$(Q)if not exist $(subst /,\,$@) $(MKDIR) $(subst /,\,$@)
 else
@@ -256,6 +256,8 @@ endif
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
 $(DFILES): | $(ODIRS)
+
+$(OFILES): | $(ODIRS)
 
 include $(SCRPTDIR)/cc.mk
 

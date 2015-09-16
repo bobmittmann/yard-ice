@@ -75,15 +75,18 @@ else
    ifneq (, $(MSYSCON))
      $(info MSYSCON = '$(MSYSCON)')
    endif
+   ifneq (, $(MAKE_MODE))
+     $(info MAKE_MODE = '$(MAKE_MODE)')
+   endif
    HOST := Msys
    DIRMODE := windows
   else 
-   ifneq (,$(findstring cygwin, $(OSTYPE)))
-    $(info Windows Cygwin Host)
+   ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
+#    $(info Windows Cygwin Host, $(shell cygpath -W))
     HOST := Cygwin
     DIRMODE := unix
    else
-    $(info Windows Native Host)
+#    $(info Windows Native Host)
     HOST := Windows
     DIRMODE := windows
    endif

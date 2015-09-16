@@ -211,6 +211,7 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info LIBPATH = '$(LIBPATH)')
 #$(info abspath = '$(abspath .)')
 #$(info realpath = '$(realpath .)')
+#$(info MAKE_MODE = '$(MAKE_MODE)')
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info $(shell set))
 #$(info --------------------------)
@@ -304,15 +305,9 @@ $(LIBDIRS_INSTALL):
 $(PROG_ELF) $(PROG_MAP): $(LIBDIRS_ALL) $(OFILES) $(OBJ_EXTRA)
 	$(ACTION) "LD: $(PROG_ELF)"
 ifeq ($(HOST),Cygwin)
-	$(Q)$(LD) $(LDFLAGS) $(OFILES_WIN) $(OBJ_EXTRA) -Wl,--print-map \
-	-Wl,--cref -Wl,--sort-common \
-	-Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group \
-	$(addprefix -L,$(LIBPATH_WIN)) -o $(PROG_ELF_WIN) > $(PROG_MAP)
+	$(Q)$(LD) $(LDFLAGS) $(OFILES_WIN) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref -Wl,--sort-common -Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group $(addprefix -L,$(LIBPATH_WIN)) -o $(PROG_ELF_WIN) > $(PROG_MAP)
 else
-	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map \
-	-Wl,--cref -Wl,--sort-common \
-	-Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group \
-	$(addprefix -L,$(LIBPATH)) -o $(PROG_ELF) > $(PROG_MAP)
+	$(Q)$(LD) $(LDFLAGS) $(OFILES) $(OBJ_EXTRA) -Wl,--print-map -Wl,--cref -Wl,--sort-common -Wl,--start-group $(addprefix -l,$(LIBS)) -Wl,--end-group $(addprefix -L,$(LIBPATH)) -o $(PROG_ELF) > $(PROG_MAP)
 endif
 
 %.sym: %.elf
@@ -339,18 +334,23 @@ $(PROG_BIN): $(PROG_ELF)
   else
 	$(Q)$(STRIP) -o $@ $<
   endif
-else
-%.bin: %.elf
-	$(ACTION) "BIN: $@"
-	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data \
-					  --output-target binary $< $@
 endif
 
-$(PROG_SREC): $(PROG_ELF)
+%.bin: %.elf
+	$(ACTION) "BIN: $@"
+ifeq ($(HOST),Cygwin)
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data --output-target binary $(subst \,\\,$(shell cygpath -w $<)) $(subst \,\\,$(shell cygpath -w $@))
+else
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data --output-target binary $< $@
+endif
+
 %.srec: %.elf
 	$(ACTION) "SREC: $@"
-	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data \
-					  --output-target srec $< $@
+ifeq ($(HOST),Cygwin)
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data --output-target srec $(subst \,\\,$(shell cygpath -w $<)) $(subst \,\\,$(shell cygpath -w $@))
+else
+	$(Q)$(OBJCOPY) -j .init -j .text -j .ARM.extab -j .ARM.exidx -j .data --output-target srec $< $@
+endif
 
 #------------------------------------------------------------------------------ 
 # Build tree
@@ -371,6 +371,8 @@ $(LIBDIRS_ALL): | $(ODIRS)
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
 $(DFILES): | $(ODIRS)
+
+$(OFILES): | $(ODIRS)
 
 ifdef VERSION_MAJOR
   include $(SCRPTDIR)/version.mk
