@@ -18,10 +18,6 @@
 # You can receive a copy of the GNU Lesser General Public License from 
 # http://www.gnu.org/
 
-#------------------------------------------------------------------------------ 
-# Debug
-#------------------------------------------------------------------------------ 
-
 CONFIG_MK := $(lastword $(MAKEFILE_LIST))
 
 THISDIR := $(dir $(CONFIG_MK))
@@ -82,12 +78,12 @@ else
    HOST := Msys
    DIRMODE := windows
   else 
-   ifneq (,$(HOME))
-#    $(info Windows Cygwin Host)
+   ifneq (,$(findstring cygwin, $(OSTYPE)))
+    $(info Windows Cygwin Host)
     HOST := Cygwin
     DIRMODE := unix
    else
-#    $(info Windows Native Host)
+    $(info Windows Native Host)
     HOST := Windows
     DIRMODE := windows
    endif

@@ -19,6 +19,9 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # 
 
+$(info !!!!!!!!!!! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++) 
+$(foreach v, $(.VARIABLES), $(info $(v) = '$($(v))'))
+$(info !!!!!!!!!!! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++) 
 
 PROG = hello
 
@@ -27,9 +30,9 @@ CFILES = hello.c ../common/stdio.c
 SDK = ../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libc $(SDK)/libice-comm  
+		  $(SDK)/libc 
 
-LIBS = cm3 stm32f util c ice-comm 
+LIBS = cm3 stm32f util 
 
 INCPATH = $(SDK)/include  
 
