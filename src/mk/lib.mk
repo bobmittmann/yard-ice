@@ -214,9 +214,9 @@ cleanRelease:
 # Library targets
 #------------------------------------------------------------------------------ 
 
-#$(OFILES_LST):
-#	$(ACTION) "OBJ: $@"
-#	$(Q)$(ECHO) $(subst \,\\,$(subst /,\,$(OFILES))) > $@
+$(OFILES_LST):
+	$(ACTION) "OBJ: $@"
+	$(Q)$(ECHO) $(subst \,\\,$(subst /,\,$(OFILES))) > $@
 
 $(LIB_STATIC_OUT): $(OFILES) 
 	$(ACTION) "AR: $@"
@@ -224,8 +224,8 @@ ifeq ($(HOST),Cygwin)
 	$(Q)$(AR) $(ARFLAGS) $(subst \,\\,$(shell cygpath -w $@)) $(OFILES_WIN) > $(DEVNULL)
 else
 ifeq ($(HOST),Windows)
-#	$(Q)$(AR) $(ARFLAGS) @$(OFILES_LST) $@ 1> $(DEVNULL)
-	$(Q)$(AR) $(ARFLAGS) $@ $(subst /,\,$(OFILES)) 1> $(DEVNULL)
+	$(Q)$(ECHO) $(subst \,\\,$(subst /,\,$(OFILES))) > $(OFILES_LST)
+	$(Q)$(AR) $(ARFLAGS) $@ @$(OFILES_LST) 1> $(DEVNULL)
 endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> $(DEVNULL)
 endif
