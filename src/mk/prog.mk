@@ -70,9 +70,11 @@ OFILES = $(addprefix $(OUTDIR)/,\
 		   $(subst ../,,$(CFILES:.c=.o))\
 		   $(subst ../,,$(SFILES:.S=.o)))
 
-#		   $(subst ../,,$(SFILES:.s=.o)))
-#ODIRS = $(abspath $(sort $(dir $(OFILES))))
-ODIRS = $(sort $(dir $(OFILES)))
+#ifeq (Windows,$(HOST))
+# ODIRS = $(sort $(subst /,\,$(dir $(OFILES))))
+#else
+  ODIRS = $(sort $(dir $(OFILES)))
+#endif
 
 #------------------------------------------------------------------------------ 
 # dependency files
@@ -198,7 +200,8 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info SET = '$(shell set)')
 #$(info LDDIR = '$(LDDIR)')
 #$(info BASEDIR = '$(BASEDIR)')
-#$(info OUTDIR = '$(OUTDIR)')
+$(info OUTDIR = '$(OUTDIR)')
+$(info ODIRS = '$(ODIRS)')
 #$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
 #$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
 #$(info OFILES = '$(OFILES)')
@@ -288,15 +291,27 @@ cleanRelease:
 
 $(LIBDIRS_ALL):
 	$(ACTION) "Building : $@"
+ifeq (Windows,$(HOST))
+	$(Q)$(MAKE) -C $(@:%-all=%) OUTDIR=$(LIB_OUTDIR)\$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
+else
 	$(Q)$(MAKE) -C $(@:%-all=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-all=%)) $(FLAGS_TO_PASS) all
+endif
 
 $(LIBDIRS_CLEAN):
 	$(ACTION) "Cleaning : $@"
+ifeq (Windows,$(HOST))
+	$(Q)$(MAKE) -C $(@:%-clean=%) OUTDIR=$(LIB_OUTDIR)\$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
+else
 	$(Q)$(MAKE) -C $(@:%-clean=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-clean=%)) $(FLAGS_TO_PASS) clean
+endif
 
 $(LIBDIRS_INSTALL):
 	$(ACTION) "Installing : $@"
+ifeq (Windows,$(HOST))
+	$(Q)$(MAKE) -C $(@:%-install=%) OUTDIR=$(LIB_OUTDIR)\$(notdir $(@:%-install=%)) $(FLAGS_TO_PASS) install
+else
 	$(Q)$(MAKE) -C $(@:%-install=%) OUTDIR=$(LIB_OUTDIR)/$(notdir $(@:%-install=%)) $(FLAGS_TO_PASS) install
+endif
 
 #------------------------------------------------------------------------------ 
 # Program targets

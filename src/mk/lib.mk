@@ -42,9 +42,17 @@ include $(SCRPTDIR)/cross.mk
 #------------------------------------------------------------------------------ 
 # generated source files
 #------------------------------------------------------------------------------ 
-HFILES_OUT = $(addprefix $(OUTDIR)/, $(HFILES_GEN))
-CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
-SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
+ifeq (Windows,$(HOST))
+  HFILES_OUT = $(addprefix $(OUTDIR)\, $(HFILES_GEN))
+  CFILES_OUT = $(addprefix $(OUTDIR)\, $(CFILES_GEN))
+  SFILES_OUT = $(addprefix $(OUTDIR)\, $(SFILES_GEN))
+  OFILES_LST = $(addprefix $(OUTDIR)\, __obj__.lst)
+else
+  HFILES_OUT = $(addprefix $(OUTDIR)/, $(HFILES_GEN))
+  CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
+  SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
+  OFILES_LST = $(addprefix $(OUTDIR)/, __obj__.lst)
+endif
 
 #------------------------------------------------------------------------------ 
 # object files
@@ -55,8 +63,11 @@ OFILES = $(addprefix $(OUTDIR)/,\
 		   $(CFILES:.c=.o) \
 		   $(SFILES:.S=.o))
 
-#ODIRS = $(abspath $(sort $(dir $(OFILES))))
-ODIRS = $(sort $(dir $(OFILES)))
+#ifeq (Windows,$(HOST))
+#  ODIRS = $(subst /,\,$(sort $(dir $(OFILES))))
+#else
+  ODIRS = $(sort $(dir $(OFILES)))
+#endif
 
 #------------------------------------------------------------------------------ 
 # dependency files
@@ -88,8 +99,13 @@ endif
 # library output files
 #------------------------------------------------------------------------------ 
 ifdef LIB_STATIC
+ifeq (Windows,$(HOST))
+  LIB_STATIC_OUT = $(LIBDIR)\lib$(LIB_STATIC).a
+  LIB_STATIC_LST = $(LIBDIR)\lib$(LIB_STATIC).lst
+else
   LIB_STATIC_OUT = $(LIBDIR)/lib$(LIB_STATIC).a
   LIB_STATIC_LST = $(LIBDIR)/lib$(LIB_STATIC).lst
+endif
   LIB_OUT = $(LIB_STATIC_OUT)
   LIB_LST = $(LIB_STATIC_LST)
 endif
@@ -112,7 +128,7 @@ DEPDIRS_ALL:= $(DEPDIRS:%=%-all)
 DEPDIRS_CLEAN := $(DEPDIRS:%=%-clean)
 
 LFILES := $(LIB_STATIC_OUT) $(LIB_SHARED_OUT) $(LIB_SHARED_LST) \
-		  $(LIB_STATIC_LST)
+		  $(LIB_STATIC_LST) $(OFILES_LST)
 
 ifeq (Windows,$(HOST))
   CLEAN_OFILES := $(strip $(subst /,\,$(OFILES)))
@@ -198,12 +214,19 @@ cleanRelease:
 # Library targets
 #------------------------------------------------------------------------------ 
 
-#$(LIB_STATIC_OUT): $(DEPDIRS_ALL) $(OFILES)
-$(LIB_STATIC_OUT): $(OFILES)
+#$(OFILES_LST):
+#	$(ACTION) "OBJ: $@"
+#	$(Q)$(ECHO) $(subst \,\\,$(subst /,\,$(OFILES))) > $@
+
+$(LIB_STATIC_OUT): $(OFILES) 
 	$(ACTION) "AR: $@"
 ifeq ($(HOST),Cygwin)
 	$(Q)$(AR) $(ARFLAGS) $(subst \,\\,$(shell cygpath -w $@)) $(OFILES_WIN) > $(DEVNULL)
 else
+ifeq ($(HOST),Windows)
+#	$(Q)$(AR) $(ARFLAGS) @$(OFILES_LST) $@ 1> $(DEVNULL)
+	$(Q)$(AR) $(ARFLAGS) $@ $(subst /,\,$(OFILES)) 1> $(DEVNULL)
+endif
 	$(Q)$(AR) $(ARFLAGS) $@ $(OFILES) 1> $(DEVNULL)
 endif
 
