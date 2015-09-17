@@ -25,7 +25,8 @@ include ../../mk/config.mk
 
 LIB_STATIC = comm
 
-CFILES = $(wildcard *.c) 
+CFILES = comm_tcp.c ice_comm.c
 
 include ../../mk/lib.mk
+
 

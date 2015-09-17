@@ -25,7 +25,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = tftp
 
-CFILES = $(wildcard *.c) 
+CFILES = tftp.c
 
 include ../../mk/lib.mk
 

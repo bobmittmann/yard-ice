@@ -23,6 +23,10 @@
 #$(foreach v, $(.VARIABLES), $(info $(v) = '$($(v))'))
 #$(info !!!!!!!!!!! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++) 
 
+SHELL := $(ComSpec)
+export SHELL
+#$(info SHELL = '$(SHELL)') 
+
 PROG = hello
 
 CFILES = ../common/stdio.c hello.c 

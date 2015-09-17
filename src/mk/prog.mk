@@ -63,8 +63,6 @@ SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 #------------------------------------------------------------------------------ 
 # object files
 #------------------------------------------------------------------------------ 
-#OFILES = $(addprefix $(OUTDIR)/, $(notdir $(CFILES_OUT:.c=.o) \
-#         $(SFILES_OUT:.S=.o)) $(CFILES:.c=.o) $(SFILES:.S=.o))
 OFILES = $(addprefix $(OUTDIR)/,\
 		   $(notdir $(CFILES_OUT:.c=.o) $(SFILES_OUT:.S=.o))\
 		   $(subst ../,,$(CFILES:.c=.o))\
@@ -108,7 +106,6 @@ endif
 #------------------------------------------------------------------------------ 
 # path variables
 #------------------------------------------------------------------------------ 
-#LIBPATH := $(addprefix $(OUTDIR)/, $(notdir $(LIBDIRS))) $(LDDIR) $(abspath $(LIBPATH))
 
 LIBPATH := $(LIB_OUTDIR) $(LDDIR) $(abspath $(LIBPATH))
 INCPATH	:= $(abspath $(INCPATH)) $(abspath .) $(OUTDIR)
@@ -167,6 +164,7 @@ else
 endif
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
+				 'SHELL=$(SHELL)'\
 				 'MACH=$(MACH)'\
 				 'CPU=$(CPU)'\
 				 'CC=$(CC)'\
@@ -190,11 +188,16 @@ LIBDIRS_CLEAN := $(LIBDIRS:%=%-clean)
 
 LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 
+#------------------------------------------------------------------------------ 
+# Make scripts debug
+#------------------------------------------------------------------------------ 
+
 #$(info --------------------------)
 #$(info OS = '$(OS)')
 #$(info HOST = '$(HOST)')
 #$(info DIRMODE = '$(DIRMODE)')
 #$(info OSTYPE = '$(OSTYPE)')
+#$(info SHELL = '$(SHELL)')
 #$(info MACHTYPE = '$(MACHTYPE)')
 #$(info LIBDIRS_ALL = '$(LIBDIRS_ALL)')
 #$(info SET = '$(shell set)')
@@ -344,11 +347,11 @@ endif
 ifeq ($(strip $(CROSS_COMPILE)),)
 $(PROG_BIN): $(PROG_ELF)
 	$(ACTION) "Strip: $(PROG_ELF)"
-  ifeq ($(HOST),Cygwin)
+ifeq ($(HOST),Cygwin)
 	$(Q)$(STRIP) -o $(PROG_BIN_WIN) $(PROG_ELF_WIN)
-  else
+else
 	$(Q)$(STRIP) -o $@ $<
-  endif
+endif
 endif
 
 %.bin: %.elf
@@ -389,11 +392,15 @@ $(DFILES): | $(ODIRS)
 
 $(OFILES): | $(ODIRS)
 
-ifdef VERSION_MAJOR
-  include $(SCRPTDIR)/version.mk
-endif
+#------------------------------------------------------------------------------ 
+# Compilation
+#------------------------------------------------------------------------------ 
 
 include $(SCRPTDIR)/cc.mk
+
+#------------------------------------------------------------------------------ 
+# Automatic dependencies
+#------------------------------------------------------------------------------ 
 
 #
 # FIXME: automatic dependencies are NOT included in Cygwin.
@@ -402,5 +409,13 @@ include $(SCRPTDIR)/cc.mk
 #
 ifneq ($(HOST),Cygwin)
 -include $(DFILES)
+endif
+
+#------------------------------------------------------------------------------ 
+# Extra stuff
+#------------------------------------------------------------------------------ 
+
+ifdef VERSION_MAJOR
+  include $(SCRPTDIR)/version.mk
 endif
 

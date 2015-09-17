@@ -25,7 +25,7 @@ include ../../mk/config.mk
 
 LIB_STATIC = gdb
 
-CFILES = $(wildcard *.c) 
+CFILES = gdb-rsp.c
 
 include ../../mk/lib.mk
 
