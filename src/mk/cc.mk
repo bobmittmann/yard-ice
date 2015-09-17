@@ -83,7 +83,7 @@ endif
 # some rules to compile files on adjacent folders...
 
 $(OUTDIR)/%.o : $(SRCDIR)/../%.c 
-	$(ACTION) "CC 3: $@"
+	$(ACTION) "CC 2: $@"
 ifeq ($(HOST),Cygwin)
 	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
 else
@@ -137,9 +137,9 @@ endif
 # some rules to compile files on grand-parent folders...
 
 $(OUTDIR)/%.o : $(SRCDIR)/../../../%.c
-	$(ACTION) "CC 3: $@"
+	$(ACTION) "CC 4: $@"
 ifeq ($(HOST),Cygwin)
-	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $<
+	$(Q)$(compile) -o $(subst \,\\,$(shell cygpath -w $@)) -c $(subst \,\\,$(shell cygpath -w $<))
 else
 	$(Q)$(compile) -MMD -o $@ -c $<
 endif

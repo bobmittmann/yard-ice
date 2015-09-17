@@ -236,7 +236,7 @@ endif
 
 ifndef OUTDIR
   ifeq ($(HOST),Windows)
-    OUTDIR := $(subst /,\,$($(abspath $(out_dir))))
+    OUTDIR := $(subst /,\,$(abspath $(out_dir)))
   else
   ifeq ($(HOST),Msys)
 #   OUTDIR := $(call windrv,$(out_dir))
