@@ -135,11 +135,20 @@ ifeq ($(HOST),Cygwin)
   INCPATH_WIN := $(subst \,\\,$(foreach h,$(INCPATH),$(shell cygpath -w $h)))
   OFILES_WIN := $(subst \,\\,$(foreach o,$(OFILES),$(shell cygpath -w $o)))
   LIBPATH_WIN := $(subst \,\\,$(foreach l,$(LIBPATH),$(shell cygpath -w $l)))
-  PROG_BIN_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_BIN)))
-  PROG_ELF_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_ELF)))
-  PROG_LST_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_LST)))
-  PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
+  ifdef PROG_BIN
+    PROG_BIN_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_BIN)))
+  endif
+  ifdef PROG_ELF
+    PROG_ELF_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_ELF)))
+  endif
+  ifdef PROG_LST
+    PROG_LST_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_LST)))
+  endif
+  ifdef PROG_SYM
+    PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
+  endif
 endif
+
 
 GFILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) 
 
@@ -192,9 +201,9 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 # Make scripts debug
 #------------------------------------------------------------------------------ 
 
-#$(info --------------------------)
+$(info <prog.mk> -------------------------------------------------------------)
 #$(info OS = '$(OS)')
-#$(info HOST = '$(HOST)')
+$(info HOST = '$(HOST)')
 #$(info DIRMODE = '$(DIRMODE)')
 #$(info OSTYPE = '$(OSTYPE)')
 #$(info SHELL = '$(SHELL)')
@@ -203,14 +212,15 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info SET = '$(shell set)')
 #$(info LDDIR = '$(LDDIR)')
 #$(info BASEDIR = '$(BASEDIR)')
-#$(info OUTDIR = '$(OUTDIR)')
+$(info OUTDIR = '$(OUTDIR)')
+$(info SRCDIR = '$(SRCDIR)')
+$(info CFILES = '$(CFILES)')
+$(info OFILES = '$(OFILES)')
 #$(info ODIRS = '$(ODIRS)')
 #$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
 #$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
-#$(info OFILES = '$(OFILES)')
 #$(info DFILES = '$(DFILES)')
 #$(info CC = '$(CC)')
-#$(info SRCDIR = '$(SRCDIR)')
 #$(info INCPATH = '$(INCPATH)')
 #$(info LIBDIRS = '$(LIBDIRS)')
 #$(info INCPATH = '$(INCPATH)')
@@ -220,7 +230,7 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 #$(info MAKE_MODE = '$(MAKE_MODE)')
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info $(shell set))
-#$(info --------------------------)
+$(info ----------------------------------------------------------- </prog.mk> )
 
 all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 

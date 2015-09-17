@@ -23,22 +23,22 @@
 #
 
 CONFIG_MK := $(lastword $(MAKEFILE_LIST))
+SOURCE_MK := $(firstword $(MAKEFILE_LIST))
 
 THISDIR := $(dir $(CONFIG_MK))
 SCRPTDIR := $(abspath $(THISDIR))
 BASEDIR := $(abspath $(THISDIR)/..)
 TOOLSDIR := $(abspath $(THISDIR)/../../tools)
 LDDIR := $(abspath $(THISDIR)/../ld)
-SRCDIR := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))
 
 #------------------------------------------------------------------------------ 
 # default output directories
 #------------------------------------------------------------------------------ 
-ifndef $(RELEASE_DIR) 
+ifndef RELEASE_DIR 
   RELEASE_DIR := release
 endif
 
-ifndef $(DEBUG_DIR) 
+ifndef DEBUG_DIR
   DEBUG_DIR := debug
 endif
 
@@ -214,17 +214,38 @@ lc = $(subst A,a,$(subst B,b,$(subst C,c,$(subst D,d,$(subst E,e,$(subst F,f,$(s
 # ----------------------------------------------------------------------------
 uc = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
 
-OUTDIR := $(abspath $(out_dir))
+# ----------------------------------------------------------------------------
+# Adjust source and output directory variables
+# SRCDIR --> Location of the Makefile
+# OUTDIR --> Location of the building generated files 
+# ----------------------------------------------------------------------------
 
-ifeq ($(HOST),Windows)
-  OUTDIR := $(subst /,\,$(OUTDIR))
-  SRCDIR := $(subst /,\,$(SRCDIR))
-else
+ifndef SRCDIR
+  src_dir := $(abspath $(dir $(SOURCE_MK)))
+  ifeq ($(HOST),Windows)
+    SRCDIR := $(subst /,\,$(src_dir))
+  else
   ifeq ($(HOST),Msys)
-#  OUTDIR := $(call windrv,$(OUTDIR))
-#  SRCDIR := $(call windrv,$(SRCDIR))
+#   SRCDIR := $(call windrv,$(src_dir))
+    SRCDIR := $(src_dir)
+  else
+    SRCDIR := $(src_dir)
+   endif
   endif
 endif
 
-export OUTDIR Q ACTION
+ifndef OUTDIR
+  ifeq ($(HOST),Windows)
+    OUTDIR := $(subst /,\,$($(abspath $(out_dir))))
+  else
+  ifeq ($(HOST),Msys)
+#   OUTDIR := $(call windrv,$(out_dir))
+    OUTDIR := $(abspath $(out_dir))
+  else
+    OUTDIR := $(abspath $(out_dir))
+  endif
+  endif
+endif
+
+export Q ACTION
 

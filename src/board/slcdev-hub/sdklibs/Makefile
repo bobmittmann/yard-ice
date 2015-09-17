@@ -30,9 +30,10 @@ INCPATH = $(SDK)/include ../include
 
 CDEFS = CONFIG_H
 CFLAGS = -g -O1 -Wall
-O := Debug
+RELEASE_DIR := Release
+DEBUG_DIR := Debug
 
-MACH = stm32f429
 THINKAPP = 1
+MACH = stm32f429
 include ../../../mk/stm32f4xx.mk
 

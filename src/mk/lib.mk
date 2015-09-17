@@ -145,20 +145,22 @@ endif
 # Make scripts debug
 #------------------------------------------------------------------------------ 
 
-#$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+$(info <lib.mk> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~)
 #$(info OS = '$(OS)')
-#$(info HOST = '$(HOST)')
+$(info HOST = '$(HOST)')
 #$(info DIRMODE = '$(DIRMODE)')
 #$(info SHELL = '$(SHELL)')
-#$(info OUTDIR = '$(OUTDIR)')
-#$(info OFILES = '$(OFILES)')
+$(info SRCDIR = '$(SRCDIR)')
+$(info OUTDIR = '$(OUTDIR)')
+$(info CFILES = '$(CFILES)')
+$(info OFILES = '$(OFILES)')
 #$(info LIB_OUT = '$(LIB_OUT)')
 #$(info ODIRS = '$(ODIRS)')
 #$(info MAKEFILE_LIST = '$(MAKEFILE_LIST)')
 #$(info SET = '$(shell set)')
-#$(info SRCDIR = '$(firstword $(SRCDIR))')
 #$(info LIB_STATIC = '$(LIB_STATIC)')
 #$(info LIB_STATIC_OUT = '$(LIB_STATIC_OUT)')
+#$(info CFILES_OUT = '$(CFILES_OUT)')
 #$(info MSYSTEM = '$(MSYSTEM)')
 #$(info MSYSCON = '$(MSYSCON)')
 #$(info MAKE_MODE = '$(MAKE_MODE)')
@@ -169,8 +171,8 @@ endif
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info HOME = '$(HOME)')
 #$(info HOMEPATH = '$(HOMEPATH)')
-#$(info CFILES = '$(CFILES)')
-#$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~)
+$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ </lib.mk>)
+#$(info OS = '$(OS)')
 
 all: $(LIB_OUT)
 
