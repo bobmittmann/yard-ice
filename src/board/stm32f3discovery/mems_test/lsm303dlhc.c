@@ -161,7 +161,159 @@ void lsm303_mag_init(void)
  * Accelerometer
  * ----------------------------------------------------------------------
  */
+#define AVG_N 16
 
+struct acc_info {
+	volatile struct vector v;
+	volatile bool cal_req;
+	int sem;
+	int mutex;
+};
+
+void accelerometer_task(struct acc_info * acc)
+{
+	struct {
+		int16_t x;
+		int16_t y;
+		int16_t z;
+	} data;
+	struct vector v;
+	struct vector off;
+	unsigned int cnt = 0;
+	uint8_t st;
+
+	v.x = 0;
+	v.y = 0;
+	v.z = 0;
+
+	off.x = 0;
+	off.y = 0;
+	off.z = 0;
+
+	for (;;) {
+//		thinkos_sleep(10);
+
+		/* wait for DRDY interrupt */
+		thinkos_irq_wait(STM32F_IRQ_EXTI9_5);
+
+		/* poll the sensor */
+		lsm303_acc_rd(LSM303_STATUS_REG_A, &st, 1);
+
+//		if (st & STAT_ZYXDA) {
+		if (1) {
+			/* get the forces data */
+			lsm303_acc_rd(LSM303_OUT_X_L_A, &data, 6);
+
+			/* Filter */
+			v.x = (v.x * (AVG_N - 1) / AVG_N) + data.x;
+			v.y = (v.y * (AVG_N - 1) / AVG_N) + data.y;
+			v.z = (v.z * (AVG_N - 1) / AVG_N) + data.z;
+
+			if (acc->cal_req) {
+				off.x = -v.x;
+				off.y = -v.y;
+				off.z = -v.z;
+				acc->cal_req = false;
+			}
+
+			if ((++cnt % (MAG_AVG_N / 2)) == 0) {
+				thinkos_mutex_lock(acc->mutex);
+				acc->v.x = off.x + v.x;
+				acc->v.y = off.y + v.y;
+				acc->v.z = off.z + v.z;
+				thinkos_mutex_unlock(acc->mutex);
+				thinkos_sem_post(acc->sem);
+			}
+		}
+	}
+}
+
+uint32_t accelerometer_stack[64];
+
+const struct thinkos_thread_inf accelerometer_inf = {
+    .stack_ptr = accelerometer_stack,
+    .stack_size = sizeof(accelerometer_stack),
+    .priority = 1,
+    .thread_id = 1,
+    .paused = false,
+    .tag = "ACC"
+};
+
+struct acc_info acc;
+
+void lsm303_acc_vec_get(struct vector * v)
+{
+	/* Wait for data from magnetic sensor device */
+    thinkos_sem_wait(acc.sem);
+    /* Read data with exclusive acccess */
+    thinkos_mutex_lock(acc.mutex);
+    *v = acc.v;
+    thinkos_mutex_unlock(acc.mutex);
+}
+
+void lsm303_acc_init(void)
+{
+	struct stm32f_exti * exti = STM32F_EXTI;
+	struct stm32f_syscfg * syscfg = STM32F_SYSCFG;
+	uint8_t cfg[6];
+	uint32_t tmp;
+
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_SYSCFG);
+
+	stm32_gpio_mode(LSM303_INT1_GIO, INPUT, SPEED_LOW);
+	stm32_gpio_mode(LSM303_INT2_GIO, INPUT, SPEED_LOW);
+
+	/* Select PE as EXTI5 input */
+	tmp = syscfg->exticr[1];
+	tmp &= ~SYSCFG_EXTI5_MSK;
+	tmp |= SYSCFG_EXTI5_PE;
+	syscfg->exticr[1] = tmp;
+
+	/* set falling edge trigger */
+	exti->ftsr |= LSM303_INT1_EXTI;
+	/* clear rising edge trigger */
+	exti->rtsr &= ~LSM303_INT1_EXTI;
+	/* Clear pending flag */
+	exti->pr = LSM303_INT1_EXTI;
+	/* unmask interrupt */
+	exti->imr |= LSM303_INT1_EXTI;
+
+	/* Select PE as EXTI4 input */
+	tmp = syscfg->exticr[1];
+	tmp &= ~SYSCFG_EXTI4_MSK;
+	tmp |= SYSCFG_EXTI4_PE;
+	syscfg->exticr[1] = tmp;
+
+	/* set falling edge trigger */
+	exti->ftsr |= LSM303_INT2_EXTI;
+	/* clear rising edge trigger */
+	exti->rtsr &= ~LSM303_INT2_EXTI;
+	/* Clear pending flag */
+	exti->pr = LSM303_INT2_EXTI;
+	/* unmask interrupt */
+	exti->imr |= LSM303_INT2_EXTI;
+
+	cfg[0] = ODR_10HZ | CTRL_ZEN | CTRL_YEN | CTRL_XEN;
+	cfg[1] = 0;
+	cfg[2] = CTRL_I1_DRDY2 | CTRL_I1_DRDY1;
+	cfg[3] = CTRL_FS_16G | CTRL_HR;
+	cfg[4] = 0;
+	cfg[5] = 0;
+	lsm303_acc_wr(LSM303_CTRL_REG1_A, cfg, 6);
+
+    acc.sem = thinkos_sem_alloc(0);
+    acc.mutex = thinkos_mutex_alloc();
+
+    thinkos_thread_create_inf((void *)accelerometer_task, (void *)&acc,
+                              &accelerometer_inf);
+}
+
+
+/* ----------------------------------------------------------------------
+ * Initialization
+ * ----------------------------------------------------------------------
+ */
 int lsm303_init(void)
 {
 	uint8_t lst[128];

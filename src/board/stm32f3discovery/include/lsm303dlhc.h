@@ -46,35 +46,68 @@
 #define LSM303_CTRL_REG3_A      0x22
 
 #define CTRL_I1_CLICK   (1 << 7)
+/* AOI1 interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_AOI1    (1 << 6)
+/* AOI2 interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_AOI2    (1 << 5)
+/* DRDY1 interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_DRDY1   (1 << 4)
+/* DRDY2 interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_DRDY2   (1 << 3)
+/* FIFO watermark interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_WTM     (1 << 2)
+/* FIFO overrun interrupt on INT1. Default value 0
+(0: disable, 1: enable) */
 #define CTRL_I1_OVERRUN (1 << 1)
 
 #define LSM303_CTRL_REG4_A      0x23
 
+/* Block data update. Default value: 0
+(0: continuous update, 1: output registers not updated until MSB and
+LSB have been read) */
 #define CTRL_BDU        (1 << 7)
+/* Big/little endian data selection. Default value 0.
+(0: data LSB @ lower address, 1: data MSB @ lower address) */
 #define CTRL_BLE        (1 << 6)
-
+/* Full-scale selection. Default value: 00
+(00: ±2 g, 01: ±4 g, 10: ±8 g, 11: ±16 g) */
 #define CTRL_FS1        (1 << 5)
 #define CTRL_FS0        (1 << 4)
 #define CTRL_FS_2G      (0 << 4)
 #define CTRL_FS_4G      (1 << 4)
 #define CTRL_FS_8G      (2 << 4)
 #define CTRL_FS_16G     (3 << 4)
-
+ /* High-resolution output mode: Default value: 0
+(0: high-resolution disable, 1: high-resolution enable) */
 #define CTRL_HR         (1 << 3)
+/* SPI serial interface mode selection. Default value: 0
+(0: 4-wire interface, 1: 3-wire interface). */
 #define CTRL_SIM        (1 << 0)
 
 #define LSM303_CTRL_REG5_A      0x24
 
+/* Reboot memory content. Default value: 0
+(0: normal mode, 1: reboot memory content) */
 #define CTRL_BOOT       (1 << 7)
+/* FIFO enable. Default value: 0
+(0: FIFO disable, 1: FIFO enable) */
 #define CTRL_FIFO_EN    (1 << 6)
+/* Latch interrupt request on INT1_SRC register, with INT1_SRC register cleared by
+reading INT1_SRC itself. Default value: 0.
+(0: interrupt request not latched, 1: interrupt request latched) */
 #define CTRL_LIR_INT1   (1 << 3)
+/* 4D enable: 4D detection is enabled on INT1 when 6D bit on INT1_CFG is set to 1. */
 #define CTRL_D4D_INT1   (1 << 2)
+/*  Latch interrupt request on INT2_SRC register, with INT2_SRC register cleared by
+reading INT2_SRC itself. Default value: 0.
+(0: interrupt request not latched, 1: interrupt request latched) */
 #define CTRL_LIR_INT2   (1 << 1)
+/* 4D enable: 4D detection is enabled on INT2 when 6D bit on INT2_CFG is set to 1. */
 #define CTRL_D4DINT2    (1 << 0)
 
 #define LSM303_CTRL_REG6_A      0x25
@@ -269,6 +302,14 @@ void lsm303_mag_vec_get(struct vector * v);
 
 void lsm303_mag_init(void);
 
+/* ----------------------------------------------------------------------
+ * Accelerometer driver API
+ * ----------------------------------------------------------------------
+ */
+
+void lsm303_acc_vec_get(struct vector * v);
+
+void lsm303_acc_init(void);
 
 #ifdef __cplusplus
 }
