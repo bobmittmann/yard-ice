@@ -132,8 +132,12 @@ else
     endif
     $(call trace2,MSYSTEM = '$(MSYSTEM)')
     $(call trace3,MSYSCON = '$(MSYSCON)')
-    ifneq (,$(findstring MINGW32, $(MSYSTEM)))
-      $(call trace1,Windows MinGW/Msys Host)
+    ifneq (,$(findstring MINGW, $(MSYSTEM)))
+      ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
+        $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
+      else
+        $(call trace1,Msys style paths: BASEDIR = '$(BASEDIR)'...)
+      endif
       ifneq (, $(MSYSCON))
         $(call trace1,MSYSCON = '$(MSYSCON)')
       endif
@@ -152,7 +156,7 @@ else
         ifneq (,$(findstring MINGW, $(UNAME)))
           $(call trace1,Windows MinGW/Msys Host)
           HOST := Msys
-          DIRMODE := windows
+          DIRMODE := msys
         else
           ifneq (,$(findstring MINGW, $(UNAME)))
             $(call trace1,Windows Cygwin Host, $(shell cygpath -W))
@@ -282,7 +286,7 @@ ifndef SRCDIR
   ifeq ($(HOST),Windows)
     SRCDIR := $(subst /,\,$(src_dir))
   else
-  ifeq ($(HOST),Msys)
+  ifeq ($(DIRMODE),msys)
     SRCDIR := $(call windrv,$(src_dir))
 # SRCDIR := $(src_dir)
   else
@@ -295,7 +299,7 @@ ifndef OUTDIR
   ifeq ($(HOST),Windows)
     OUTDIR := $(subst /,\,$(abspath $(out_dir)))
   else
-  ifeq ($(HOST),Msys)
+  ifeq ($(DIRMODE),msys)
     OUTDIR := $(call windrv,$(abspath $(out_dir)))
   else
     OUTDIR := $(abspath $(out_dir))
