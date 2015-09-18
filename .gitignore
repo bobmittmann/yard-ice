@@ -42,3 +42,5 @@ RemoteSystemsTempFiles/
 /doc/man/*
 /doc/html/*
 /doc/rtf/*
+/doc/thinkos/html/*
+/doc/thinkos/rtf/*

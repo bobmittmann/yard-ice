@@ -21,7 +21,7 @@
 
 /** 
  * @file thinkos.h
- * @brief ThikOS API
+ * @brief ThinkOS API
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
@@ -670,7 +670,7 @@ int	thinkos_irq_register(int irq, int pri, void (* isr)(void));
 /**@}*/
 
 
-/** @defgroup ctl OS Monitor and Cotrol.
+/** @defgroup ctl OS Monitor and Control.
  *
  * These calls return information about the ThinkOS configuratiion
  * and operational parameters.

@@ -146,7 +146,8 @@ else
       endif
       HOST := Msys
       DIRMODE := windows
-      SHELL := /bin/sh.exe
+      SHELL := sh.exe
+      export SHELL
     else 
       ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
       $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
