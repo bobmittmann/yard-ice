@@ -146,7 +146,8 @@ else
       endif
       HOST := Msys
       DIRMODE := windows
-      SHELL := /bin/sh.exe
+      SHELL := sh.exe
+      export SHELL
     else 
       ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
       $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
@@ -173,11 +174,12 @@ else
         DIRMODE := windows
         ifdef ComSpec
           SHELL := $(ComSpec) # Force the shell to the Windows Command Prompt
+          export SHELL
         endif
         ifdef COMSPEC
           SHELL := $(COMSPEC) # Force the shell to the Windows Command Prompt
+          export SHELL
         endif
-        export SHELL
       endif
     endif
   else
