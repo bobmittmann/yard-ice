@@ -173,7 +173,6 @@ else
 endif
 
 FLAGS_TO_PASS := $(FLAGS_TO_PASS) 'D=$(dbg_level)' 'V=$(verbose)' \
-				 'SHELL=$(SHELL)'\
 				 'MACH=$(MACH)'\
 				 'CPU=$(CPU)'\
 				 'CC=$(CC)'\
@@ -201,23 +200,23 @@ LIBDIRS_INSTALL := $(LIBDIRS:%=%-install)
 # Make scripts debug
 #------------------------------------------------------------------------------ 
 
-#$(info <prog.mk> -------------------------------------------------------------)
+$(call trace1,<prog.mk> ------------------------------------------------------)
+$(call trace1,HOST = '$(HOST)')
+$(call trace1,DIRMODE = '$(DIRMODE)')
+$(call trace1,SHELL = '$(SHELL)')
+$(call trace2,OUTDIR = '$(OUTDIR)')
+$(call trace2,SRCDIR = '$(SRCDIR)')
+$(call trace3,CFILES = '$(CFILES)')
+$(call trace3,OFILES = '$(OFILES)')
+$(call trace3,ODIRS = '$(ODIRS)')
+$(call trace3,VERSION_H = '$(VERSION_H)')
 #$(info OS = '$(OS)')
-$(info HOST = '$(HOST)')
-$(info DIRMODE = '$(DIRMODE)')
 #$(info OSTYPE = '$(OSTYPE)')
-$(info SHELL = '$(SHELL)')
 #$(info MACHTYPE = '$(MACHTYPE)')
 #$(info LIBDIRS_ALL = '$(LIBDIRS_ALL)')
 #$(info SET = '$(shell set)')
 #$(info LDDIR = '$(LDDIR)')
 #$(info BASEDIR = '$(BASEDIR)')
-$(info OUTDIR = '$(OUTDIR)')
-$(info VERSION_H = '$(VERSION_H)')
-$(info SRCDIR = '$(SRCDIR)')
-$(info CFILES = '$(CFILES)')
-$(info OFILES = '$(OFILES)')
-$(info ODIRS = '$(ODIRS)')
 #$(info LIB_OUTDIR = '$(LIB_OUTDIR)')
 #$(info LIB_INSTALLDIR = '$(LIB_INSTALLDIR)')
 #$(info DFILES = '$(DFILES)')
@@ -231,7 +230,7 @@ $(info ODIRS = '$(ODIRS)')
 #$(info MAKE_MODE = '$(MAKE_MODE)')
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info $(shell set))
-#$(info ----------------------------------------------------------- </prog.mk> )
+$(call trace1,----------------------------------------------------- </prog.mk>)
 
 all: $(LIBDIRS_ALL) $(PROG_BIN) $(PROG_SYM) $(PROG_LST)
 

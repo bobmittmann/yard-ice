@@ -145,7 +145,16 @@ endif
 # Make scripts debug
 #------------------------------------------------------------------------------ 
 
-#$(info <lib.mk> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~)
+$(call trace1,<lib.mk> ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~)
+$(call trace1,HOST = '$(HOST)')
+$(call trace1,DIRMODE = '$(DIRMODE)')
+$(call trace1,SHELL = '$(SHELL)')
+$(call trace2,OUTDIR = '$(OUTDIR)')
+$(call trace2,SRCDIR = '$(SRCDIR)')
+$(call trace3,CFILES = '$(CFILES)')
+$(call trace3,OFILES = '$(OFILES)')
+$(call trace3,ODIRS = '$(ODIRS)')
+$(call trace3,VERSION_H = '$(VERSION_H)')
 #$(info OS = '$(OS)')
 #$(info HOST = '$(HOST)')
 #$(info DIRMODE = '$(DIRMODE)')
@@ -171,8 +180,7 @@ endif
 #$(info CFLAGS = '$(CFLAGS)')
 #$(info HOME = '$(HOME)')
 #$(info HOMEPATH = '$(HOMEPATH)')
-#$(info ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ </lib.mk>)
-#$(info OS = '$(OS)')
+$(call trace1,~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ </lib.mk>)
 
 all: $(LIB_OUT)
 

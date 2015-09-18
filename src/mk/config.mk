@@ -146,6 +146,7 @@ else
       endif
       HOST := Msys
       DIRMODE := windows
+      SHELL := /bin/sh.exe
     else 
       ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
       $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
@@ -158,7 +159,7 @@ else
           HOST := Msys
           DIRMODE := msys
         else
-          ifneq (,$(findstring MINGW, $(UNAME)))
+          ifneq (,$(findstring CYGWIN, $(UNAME)))
             $(call trace1,Windows Cygwin Host, $(shell cygpath -W))
             HOST := Cygwin
             DIRMODE := unix
