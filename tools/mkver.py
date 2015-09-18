@@ -57,7 +57,7 @@ def mkver(f, name, major, minor, date):
   ref = datetime.datetime(year, month, day)
   now = datetime.datetime.now()
   diff = now - ref
-  build = (diff.days * 24) + (diff.seconds / (60 * 60))
+  build = int((diff.days * 24) + (diff.seconds / (60 * 60)))
   f.write('\n')
   f.write('#define VERSION_NAME \"{:s}\"\n'.format(name))
   f.write('#define VERSION_MAJOR {:d}\n'.format(major))

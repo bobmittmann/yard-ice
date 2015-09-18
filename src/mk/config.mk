@@ -47,6 +47,7 @@ endif
 # <V> verbose, can be either 0 or 1
 # <D> debug level: (0 == release, no debug)
 # <O> output directory
+# <T> trace level: (0 == quiet)
 #------------------------------------------------------------------------------ 
 ifdef V
   verbose := $(V)
@@ -72,13 +73,47 @@ else
   endif
 endif
 
+ifdef T
+  trace_level := $(T)
+else
+  trace_level := 0
+endif
+
+ifeq ($(trace_level),0)
+  trace1 = 
+  trace2 = 
+  trace3 = 
+else
+  ifeq ($(trace_level),1)
+    trace1 = $(info $1)
+    trace2 = 
+    trace3 = 
+  else
+    ifeq ($(trace_level),2)
+      trace1 = $(info $1)
+      trace2 = $(info $1)
+      trace3 = 
+    else
+      trace1 = $(info $1)
+      trace2 = $(info $1)
+      trace3 = $(info $1)
+    endif
+  endif
+endif
+
+ifeq ($(trace_level),4)
+  $(info !!!!!!!!!!! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++) 
+  $(foreach v, $(.VARIABLES), $(info $(v) = '$($(v))'))
+  $(info !!!!!!!!!!! ++++++++++++++++++++++++++++++++++++++++++++++++++++++++) 
+endif
+
 #------------------------------------------------------------------------------ 
 # Host OS detection
 #------------------------------------------------------------------------------ 
 
 ifeq (, $(OS))
-  OS := $(shell uname -o) 
-  ifneq (,$(findstring Linux, $(OS)))
+  UNAME := $(shell uname -o) 
+  ifneq (,$(findstring Linux, $(UNAME)))
 #   $(info Linux Host)
     HOST := Linux
     DIRMODE := unix
@@ -89,32 +124,54 @@ else
   # check if we are in a windows environment
   ifneq (,$(findstring Windows, $(OS)))
     ifeq ($(PROGRAMFILES\(X86\))$(ProgramFiles\(x86\)),)
-#     $(info Windows 32bits)
+      $(call trace1,Windows 32bits)
       WIN := Win32
     else
-#     $(info Windows 64bits)
+      $(call trace1,Windows 64bits)
       WIN := Win64
     endif
+    $(call trace2,MSYSTEM = '$(MSYSTEM)')
+    $(call trace3,MSYSCON = '$(MSYSCON)')
     ifneq (,$(findstring MINGW32, $(MSYSTEM)))
-#   $(info Windows MinGW/Msys Host)
+      $(call trace1,Windows MinGW/Msys Host)
       ifneq (, $(MSYSCON))
-        $(info MSYSCON = '$(MSYSCON)')
+        $(call trace1,MSYSCON = '$(MSYSCON)')
       endif
       ifneq (, $(MAKE_MODE))
-        $(info MAKE_MODE = '$(MAKE_MODE)')
+        $(call trace1,MAKE_MODE = '$(MAKE_MODE)')
       endif
       HOST := Msys
       DIRMODE := windows
     else 
       ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
-#       $(info Windows Cygwin Host, $(shell cygpath -W))
-        HOST := Cygwin
-        DIRMODE := unix
+      $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
+	    # UNIX style path, it can be MinGW or Cygwin
+        SHELL := /bin/sh.exe
+        UNAME := $(shell uname -s) 
+        $(call trace3,UNAME = '$(UNAME)')
+        ifneq (,$(findstring MINGW, $(UNAME)))
+          $(call trace1,Windows MinGW/Msys Host)
+          HOST := Msys
+          DIRMODE := windows
+        else
+          ifneq (,$(findstring MINGW, $(UNAME)))
+            $(call trace1,Windows Cygwin Host, $(shell cygpath -W))
+            HOST := Cygwin
+            DIRMODE := unix
+          else
+            $(error Unable to detect the host OS type)
+          endif
+        endif
       else
-       $(info Windows Native Host)
+        $(call, trace1,Windows Native Host)
         HOST := Windows
         DIRMODE := windows
-        SHELL := $(ComSpec) # Force the shell to the Windows Command Prompt
+        ifdef ComSpec
+          SHELL := $(ComSpec) # Force the shell to the Windows Command Prompt
+        endif
+        ifdef COMSPEC
+          SHELL := $(COMSPEC) # Force the shell to the Windows Command Prompt
+        endif
         export SHELL
       endif
     endif
@@ -226,8 +283,8 @@ ifndef SRCDIR
     SRCDIR := $(subst /,\,$(src_dir))
   else
   ifeq ($(HOST),Msys)
-#   SRCDIR := $(call windrv,$(src_dir))
-    SRCDIR := $(src_dir)
+    SRCDIR := $(call windrv,$(src_dir))
+# SRCDIR := $(src_dir)
   else
     SRCDIR := $(src_dir)
    endif
@@ -239,8 +296,7 @@ ifndef OUTDIR
     OUTDIR := $(subst /,\,$(abspath $(out_dir)))
   else
   ifeq ($(HOST),Msys)
-#   OUTDIR := $(call windrv,$(out_dir))
-    OUTDIR := $(abspath $(out_dir))
+    OUTDIR := $(call windrv,$(abspath $(out_dir)))
   else
     OUTDIR := $(abspath $(out_dir))
   endif
