@@ -143,6 +143,8 @@ void thinkos_console_svc(int32_t * arg);
 
 void thinkos_ctl_svc(int32_t * arg);
 
+void thinkos_comm_svc(int32_t * arg);
+
 void thinkos_nosys(int32_t * arg)
 {
 	DCC_LOG(LOG_ERROR, "!!!");
@@ -638,6 +640,18 @@ void cm3_svc_isr(void)
 	case THINKOS_CTL:
 #if THINKOS_ENABLE_CTL
 		thinkos_ctl_svc(arg);
+#else
+		thinkos_nosys(arg);
+#endif
+		break;
+
+/* ----------------------------------------------
+ * Comm 
+ * --------------------------------------------- */
+
+	case THINKOS_COMM:
+#if THINKOS_ENABLE_COMM
+		thinkos_comm_svc(arg);
 #else
 		thinkos_nosys(arg);
 #endif

@@ -229,6 +229,10 @@
 #define THINKOS_ENABLE_CTL 0
 #endif
 
+#ifndef THINKOS_ENABLE_COMM
+#define THINKOS_ENABLE_COMM 0
+#endif
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/

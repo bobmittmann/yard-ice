@@ -104,6 +104,8 @@
 
 #define THINKOS_CTL             56
 
+#define THINKOS_COMM            57
+
 #define CONSOLE_WRITE     0
 #define CONSOLE_READ      1
 #define CONSOLE_TIMEDREAD 2
@@ -111,6 +113,9 @@
 #define CONSOLE_CLOSE     4
 #define CONSOLE_DRAIN     5
 #define CONSOLE_IOCTL     6
+
+#define COMM_SEND         0
+#define COMM_RECV         1
 
 #define THINKOS_CTL_ABORT         0
 #define THINKOS_CTL_UDELAY_FACTOR 1
@@ -561,6 +566,20 @@ static inline int __attribute__((always_inline))
 	}
 
 /* ---------------------------------------------------------------------------
+   Communication channel
+   ---------------------------------------------------------------------------*/
+
+static inline int __attribute__((always_inline)) 
+thinkos_comm_send(const void * buf, unsigned int len) {
+	return THINKOS_SVC3(THINKOS_COMM, COMM_SEND, buf, len);
+}
+
+static inline int __attribute__((always_inline)) 
+thinkos_comm_recv(void * buf, unsigned int len) {
+	return THINKOS_SVC3(THINKOS_COMM, COMM_RECV, buf, len);
+}
+
+/* ---------------------------------------------------------------------------
    Other
    ---------------------------------------------------------------------------*/
 
@@ -576,3 +595,4 @@ static inline void thinkos_yield(void)  {
 #endif /* __ASSEMBLER__ */
 
 #endif /* __THINKOS_SVC_H__ */
+

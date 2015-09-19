@@ -21,7 +21,6 @@
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 include $(THISDIR)/config.mk
-include $(THISDIR)/common.mk
 
 ifndef MACH 
 MACH = stm32l151xb

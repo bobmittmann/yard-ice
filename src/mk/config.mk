@@ -145,7 +145,7 @@ else
         $(call trace1,MAKE_MODE = '$(MAKE_MODE)')
       endif
       HOST := Msys
-      DIRMODE := windows
+      DIRMODE := msys
       SHELL := sh.exe
       export SHELL
     else 

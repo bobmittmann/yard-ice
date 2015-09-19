@@ -89,6 +89,12 @@
 
 #define THINKOS_ENABLE_PROFILING 0
 
+#define THINKOS_ENABLE_CONSOLE 0
+
+#define THINKOS_ENABLE_CTL     0
+
+#define THINKOS_ENABLE_COMM    1
+
 /* -------------------------------------------------------------------------
    MicroJS configuration
    -------------------------------------------------------------------------- */
