@@ -36,8 +36,12 @@ struct simlnk {
 	uint32_t rx_buf[(SIMLNK_MTU / 4) + 1];
 } simlnk;
 
-void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
+void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 {
+	uint32_t opc = pkt[0];
+	void * data = (void *)&pkt[1];
+	int wq = THINKOS_WQ_COMM_RECV;
+	int th;
 
 	switch (opc >> 24) {
 	case SIMRPC_SUSPEND:
@@ -74,8 +78,81 @@ void simlnk_dma_recv(uint32_t opc, void * data, unsigned int cnt)
 		simrpc_mem_seek_svc(opc, data, cnt);
 		break;
 	default:
-		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			__thinkos_memcpy32((void *)thinkos_rt.ctx[th]->r1, pkt, cnt);
+			/* wakeup from the console wait queue */
+			__thinkos_wakeup_return(wq, th, cnt);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+		} else {
+		//		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
+		//		simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
+		}
+	}
+
+}
+int simlnk_dma_xmit(unsigned int len)
+{
+	struct stm32f_dma * dma = STM32_DMA1;
+	struct stm32_usart * uart = STM32_USART2;
+	uint32_t ccr;
+
+	/* Disable DMA */
+//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
+  //      DCC_LOG(LOG_ERROR, "DMA enabled");
+ //       abort();
+//	}
+
+	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
+		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+
+	/* Program DMA transfer */
+	dma->ch[TX_DMA_CHAN].cndtr = len;
+	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
+	/* enable the transfer complete interrupt */
+	uart->cr1 |= USART_TCIE;
+
+	return 0;
+}
+
+
+void thinkos_comm_svc(int32_t * arg)
+{
+	int self = thinkos_rt.active;
+	unsigned int req = arg[0];
+#if 0
+	unsigned int wq;
+	unsigned int len;
+	uint32_t queue;
+	uint8_t * buf;
+	int n;
+#endif
+
+	switch (req) {
+	case COMM_RECV:
+		DCC_LOG(LOG_INFO, "Comm recv wait...");
+		/* wait for event */
+		__thinkos_suspend(self);
+		/* insert into the comm receive wait queue */
+		__thinkos_wq_insert(THINKOS_WQ_COMM_RECV, self);
+		/* signal the scheduler ... */
+		__thinkos_defer_sched(); 
+		break;
+
+	case COMM_SEND:
+		{
+			void * buf = (void *)arg[1];
+			int cnt = arg[2];
+			__thinkos_memcpy32(simlnk.tx_buf, buf, cnt);
+			simlnk_dma_xmit(cnt);
+			arg[0] = 0;
+		}
+		break;
+
+	default:
+		DCC_LOG1(LOG_ERROR, "invalid comm request %d!", req);
+		arg[0] = THINKOS_EINVAL;
+		break;
 	}
 }
 void stm32_usart2_isr(void)
@@ -118,12 +195,9 @@ void stm32_usart2_isr(void)
 		/* break detection */
 		if (sr & USART_FE) {
 			unsigned int cnt;
-			uint32_t opc;
 
 			/* Get number of bytes received */
 			cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
-			/* Get the opcode form the buffer head */
-			opc = simlnk.rx_buf[0];
 			/* Prepare next DMA transfer */
 			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
@@ -132,7 +206,7 @@ void stm32_usart2_isr(void)
 
 			if (cnt > 4) {
 				/* process this request */
-				simlnk_dma_recv(opc, &simlnk.rx_buf[1], cnt - 5);
+				simlnk_dma_recv(simlnk.rx_buf, cnt - 5);
 			}
 		}
 #if 0
@@ -198,30 +272,6 @@ void stm32_dma1_channel6_isr(void)
 	}
 }
 
-int simlnk_dma_xmit(unsigned int len)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-	struct stm32_usart * uart = STM32_USART2;
-	uint32_t ccr;
-
-	/* Disable DMA */
-//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
-  //      DCC_LOG(LOG_ERROR, "DMA enabled");
- //       abort();
-//	}
-
-	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
-		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
-
-	/* Program DMA transfer */
-	dma->ch[TX_DMA_CHAN].cndtr = len;
-	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
-	/* enable the transfer complete interrupt */
-	uart->cr1 |= USART_TCIE;
-
-	return 0;
-}
-
 int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 {
 	simlnk.tx_buf[0] = opc;
@@ -272,8 +322,6 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	dma->ch[TX_DMA_CHAN].cmar = simlnk.tx_buf;
 	dma->ch[TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 		DMA_MINC | DMA_DIR_MTP | DMA_TEIE | DMA_TCIE;
-
-	simlnk.tx_buf[0] = 0x005555ff;
 
 	/* RX DMA ------------------------------------------------------------- */
 	dma->ch[RX_DMA_CHAN].ccr = 0;

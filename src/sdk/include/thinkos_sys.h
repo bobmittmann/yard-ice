@@ -440,6 +440,11 @@ struct thinkos_rt {
 	uint32_t wq_fault; /* fault threads wait queue */
 #endif
 
+#if THINKOS_ENABLE_COMM
+	uint32_t wq_comm_send;
+	uint32_t wq_comm_recv;
+#endif
+
 	uint32_t wq_end[0]; /* end of queue list placeholder */
 
 #if THINKOS_ENABLE_THREAD_STAT
@@ -585,6 +590,14 @@ struct thinkos_rt {
 							   / sizeof(uint32_t))
 
 #define THINKOS_WQ_CONSOLE_RD ((offsetof(struct thinkos_rt, wq_console_rd) \
+								- offsetof(struct thinkos_rt, wq_lst)) \
+							   / sizeof(uint32_t))
+
+#define THINKOS_WQ_COMM_RECV ((offsetof(struct thinkos_rt, wq_comm_recv) \
+								- offsetof(struct thinkos_rt, wq_lst)) \
+							   / sizeof(uint32_t))
+
+#define THINKOS_WQ_COMM_SEND ((offsetof(struct thinkos_rt, wq_comm_send) \
 								- offsetof(struct thinkos_rt, wq_lst)) \
 							   / sizeof(uint32_t))
 

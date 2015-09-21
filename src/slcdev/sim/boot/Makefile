@@ -29,7 +29,7 @@ SDK = ../../../sdk
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
 		  $(SDK)/libcrc $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = cm3 stm32f util crc thinkos ice-comm gcc 
+LIBS = cm3 stm32f util crc thinkos ice-comm
 
 INCPATH = $(SDK)/include ../include ../../include
 

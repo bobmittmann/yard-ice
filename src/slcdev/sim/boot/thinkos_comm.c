@@ -23,60 +23,38 @@ _Pragma ("GCC optimize (\"Ofast\")")
 
 #define __THINKOS_SYS__
 #include <thinkos_sys.h>
-#define __THINKOS_DMON__
-#include <thinkos_dmon.h>
 #include <thinkos.h>
 
 #include <sys/param.h>
 
-#if THINKOS_ENABLE_CONSOLE
-
-#if (!THINKOS_ENABLE_MONITOR)
-#error "Need THINKOS_ENABLE_MONITOR!"
-#endif
-
-#define CONSOLE_PIPE_LEN 64
-
-struct console_pipe {
-	uint32_t head;
-	uint32_t tail;
-	uint8_t buf[CONSOLE_PIPE_LEN];
-};
+#if THINKOS_ENABLE_COMM
 
 struct {
-	struct console_pipe tx_pipe;
-	struct console_pipe rx_pipe;
-} thinkos_console_rt;
+	struct {
+		void * pkt;
+		uint16_t len;
+	} recv;
+} thinkos_comm_rt;
 
-void __comm_on_recv(unsigned int cnt) 
+void __comm_on_recv(void * pkt, unsigned int pkt_len) 
 {
-	int wq = THINKOS_WQ_CONSOLE_RD;
-	unsigned int max;
-	uint8_t * buf;
-	int th;
-	int n;
-
-	thinkos_console_rt.rx_pipe.head += cnt;
-
-	DCC_LOG2(LOG_INFO, "wq=%d -> 0x%08x", wq, thinkos_rt.wq_lst[wq]);
+	int wq = THINKOS_WQ_COMM_RECV;
+	void ** pkt_ptr;
 
 	if ((th = __thinkos_wq_head(wq)) == THINKOS_THREAD_NULL) {
 		DCC_LOG(LOG_INFO, "no thread waiting.");
 		return;
 	}
 
-	DCC_LOG1(LOG_INFO, "thread_id=%d", th);
+	thinkos_comm_rt.recv.pkt = pkt;
+	thinkos_comm_rt.recv.len = len;
 
-	buf = (uint8_t *)thinkos_rt.ctx[th]->r1;
-	max = thinkos_rt.ctx[th]->r2;
-	/* read from the RX pipe into the thread's read buffer */
-	if ((n = pipe_read(&thinkos_console_rt.rx_pipe, buf, max)) == 0) {
-		DCC_LOG(LOG_INFO, "_pipe_read() == 0");
-		return;
-	}
+	pkt_ptr = (void **)thinkos_rt.ctx[th]->r1;
+	*pkt_ptr = pkt;
 
 	/* wakeup from the console wait queue */
-	__thinkos_wakeup_return(wq, th, n);
+	__thinkos_wakeup_return(wq, th, pkt_len);
+
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 }
@@ -104,23 +82,17 @@ void thinkos_comm_svc(int32_t * arg)
 {
 	int self = thinkos_rt.active;
 	unsigned int req = arg[0];
+#if 0
 	unsigned int wq;
 	unsigned int len;
 	uint32_t queue;
 	uint8_t * buf;
 	int n;
-	
+#endif
+
 	switch (req) {
 	case COMM_RECV:
-		buf = (uint8_t *)arg[1];
-		len = arg[2];
-		DCC_LOG1(LOG_INFO, "Console read: len=%d", len);
-		if ((n = pipe_read(&thinkos_console_rt.rx_pipe, buf, len)) > 0) {
-			dmon_signal(DMON_RX_PIPE);
-			arg[0] = n;
-			break;
-		}
-		DCC_LOG(LOG_INFO, "Console read wait...");
+		DCC_LOG(LOG_INFO, "Comm recv wait...");
 		/* wait for event */
 		__thinkos_suspend(self);
 		/* insert into the mutex wait queue */
@@ -130,6 +102,7 @@ void thinkos_comm_svc(int32_t * arg)
 		break;
 
 	case COMM_SEND:
+#if 0
 		buf = (uint8_t *)arg[1];
 		len = arg[2];
 		wq = THINKOS_WQ_CONSOLE_WR;
@@ -183,6 +156,7 @@ wr_again:
 			/* signal the scheduler ... */
 			__thinkos_defer_sched(); 
 		}
+#endif
 		break;
 
 	default:

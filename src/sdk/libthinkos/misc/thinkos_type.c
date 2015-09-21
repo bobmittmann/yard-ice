@@ -161,6 +161,10 @@ uint32_t * const thinkos_obj_alloc_lut[] = {
 #if THINKOS_ENABLE_FAULT
 	[THINKOS_OBJ_FAULT] = NULL,
 #endif
+#if THINKOS_ENABLE_COMM
+	[THINKOS_OBJ_COMMSEND] = NULL,
+	[THINKOS_OBJ_COMMRECV] = NULL,
+#endif
 	[THINKOS_OBJ_INVALID] = NULL
 };
 
@@ -206,6 +210,10 @@ const uint16_t thinkos_wq_base_lut[] = {
 #if THINKOS_ENABLE_FAULT
 	[THINKOS_OBJ_FAULT] = THINKOS_WQ_FAULT,
 #endif
+#if THINKOS_ENABLE_COMM
+	[THINKOS_OBJ_COMMSEND] = THINKOS_WQ_COMM_SEND,
+	[THINKOS_OBJ_COMMRECV] = THINKOS_WQ_COMM_RECV,
+#endif
 	[THINKOS_OBJ_INVALID] = 0 
 };
 
@@ -225,6 +233,8 @@ const char thinkos_type_name_lut[][6] = {
 	[THINKOS_OBJ_PAUSED]    = "Pausd",
 	[THINKOS_OBJ_CANCELED]  = "Cancl",
 	[THINKOS_OBJ_FAULT]     = "Fault",
+	[THINKOS_OBJ_COMMSEND]  = "ComSnd",
+	[THINKOS_OBJ_COMMRECV]  = "ComRcv",
 	[THINKOS_OBJ_INVALID]   = "Inval"
 };
 

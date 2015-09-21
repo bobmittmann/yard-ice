@@ -244,6 +244,24 @@ static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw)
 }
 #endif
 
+#if THINKOS_ENABLE_COMM
+static void comm_recv_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	/* wakeup from the comm recv wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
+	__thinkos_wakeup_return(wq, th, 0);
+}
+
+static void comm_send_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	/* wakeup from the comm send wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
+	__thinkos_wakeup_return(wq, th, 0);
+}
+#endif
+
 #if THINKOS_ENABLE_JOIN
 static void canceled_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
@@ -310,7 +328,11 @@ static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_CANCELED] = canceled_resume,
 #endif
 #if THINKOS_ENABLE_FAULT
-	[THINKOS_OBJ_FAULT] = fault_resume
+	[THINKOS_OBJ_FAULT] = fault_resume,
+#endif
+#if THINKOS_ENABLE_COMM
+	[THINKOS_OBJ_COMMSEND] = comm_send_resume,
+	[THINKOS_OBJ_COMMRECV] = comm_recv_resume
 #endif
 };
 
