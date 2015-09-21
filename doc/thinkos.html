@@ -52,33 +52,48 @@ h1 {
 }
 
 h2 { 
+color: #468;
 	font: 0.9em; 
 	text-align: left;  
-	margin: 10px 0px 25px 0px; 
+	margin: 0.6em 0 0.2em 0; 
 }
 
 h3 { 
 	font: 0.9em; 
 	text-align: left;
-	margin: 10px 0px 5px 0px; 
+	margin: 1.6em 0 .2em 0; 
 }
 
-ul {
-	margin: 10px 0px 20px 0px; 
-}
-dl {
-	display: block;
-	margin-top: 1em;
-	margin-bottom: 1em;
-	margin-left: 0;
-	margin-right: 0;
+h4 { 
+	font: 0.8em; 
+	text-align: left;
+	margin: .6em 0 .1em 0; 
 }
 
-dt {
+.typ {
+	font-style: bold;
+	color:#224;
+}
+
+.fun {
+	font-weight: bold;
+	color:#112;
+}
+
+.var {
+	font-style: italic;
+	color:#272;
+}
+
+.desc {
+	margin-left: 2em;
+}
+
+.code {
 	color:#227;
 	font-family: monospace, courier;
-	font-weight: bold;
-	margin: 10px 0px 5px 0px; 
+/*	font-weight: bold; */
+	margin: 0.4em 0 1em 0; 
 }
 
 hr { 
@@ -102,40 +117,74 @@ table {
 
 <body>
 <h1>ThinkOS</h1>
-<h2>Index</h2>
-<h2>Brief</h2>
-<p>ThinkOS is a low latency configurable real-time operating system specifically designed for ARM Cortex-M processors.</p>
-<h2>API</h2>
+<h1>Index</h1>
 
+<h1>Brief</h1>>
+<p>ThinkOS is a low latency configurable real-time operating system specifically designed for ARM Cortex-M processors.</p>
+
+<h1>API</h1>
 <p>ThinkOS supports several synchronisation and IPC mechanisms</p>
 
-<h3>Library Support</h3>
+<div class="group">
+<hr />
+<h2>Library Support</h2>
 
-<dl>
-<dt>
-int thinkos_init(unsigned int <i>opt</i>);
-</dt>
-<dd>
+<h3>thinkos_init</h3>
+<p>Initializes the <b>ThinkOS</b> library.</p>
+<h4>Synopsys</h4>
+<div class="code">
+#include &#60;thinkos.h&#62;<br /><br />
+<span class="typ">int</span> 
+<span class="fun">thinkos_init</span>(<span class="typ">unsigned int</span>
+<span class="var">opt</span>);
+</div>
+
+<h4>Parameters</h4>
+<p class="var">opt</p>
+<p class="desc">Default thread options.</p>
+<h4>Returns</h4>
+<p class="desc">The function returns 0 if no error ocurred, -1 otherwise.</p>
+
+<h4>Description</h4>
 <p>Initializes the <b>ThinkOS</b> library.</p>
 <p>On return the program turns into the first thread of the system.</p>
-</dd>
-</dl>
+</div>
 
-<h3>Threads</h3>
+<div class="group">
+<hr />
+<h2>Threads</h2>
 
-<dl>
-<dt>
-int thinkos_thread_create(int (* <i>task_start</i>)(void *), 
-						  void * <i>task_arg</i>, void * <i>stack_ptr</i>,
-						  unsigned int <i>opt</i>);
-</dt>
-<dd>
+<h3>thinkos_thread_create</h3>
+<p>Create a new thread.</p>
+<h4>Synopsys</h4>
+<div class="code">
+#include &#60;thinkos.h&#62;<br /><br />
+<span class="typ">int</span>
+<span class="fun">thinkos_thread_create(int (* <span class="var">task_start</span>)(void *), 
+<span class="typ">void *</span> <span class="var">task_arg</span>, 
+<span class="typ">void *</span> <span class="var">stack_ptr</span>,
+<span class="typ">unsigned int</span> <span class="var">opt</span>);
+</div>
+
+<h4>Parameters</h4>
+<p class="var">task_ptr</p>
+<p class="desc">Pointer to the thread's entry point function.</p>
+<p class="var">task_arg</p>
+<p class="desc">Argument to the thread's entry point function.</p>
+<p class="var">stack_ptr</p>
+<p class="desc">Pointer to the thread's stack.</p>
+<p class="var">opt</p>
+<p class="desc">Thread options.</p>
+
+<h4>Description</h4>
 <p>starts a new thread. The new thread starts execution by invoking 
 <code>task_start()</code>; 
 </p>
 <p><code>task_arg</code> is passed as the sole argument of <code>task_start()</code>.
 </p>
-</dd>
+</div>
+
+<h3>thinkos_thread_create_inf</h3>
 
 <dt>
 int thinkos_thread_create_inf(int (* <i>task_ptr</i>)(void *), 
@@ -164,6 +213,8 @@ int thinkos_thread_create_inf(int (* <i>task_ptr</i>)(void *),
 <dt>int thinkos_resume(int <i>thread</i>)</dt>
 
 </dl>
+
+</div>
 
 <h3>Time Wait</h3>
 
