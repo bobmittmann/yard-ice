@@ -1,22 +1,57 @@
-.group 'lib'
-Library Support
+.group 'lib' 
+	Library Support
 
 The functions in this group are related to initialization and management of the ThinkOS kernel.
 
 .func thinkos_init
-initialize the thinkos kernel.
+	initialize the ThinkOS kernel.
+
+On return the current program execution thread turns into the first thread of the system.
 
 .param unsigned int opt
 	Default thread options.
 .return int
 	The function returns 0 if no error ocurred, -1 otherwise.
 
-This function does this and that.
-
-.group 'threads'
-Threads
+.group 'threads' 
+	Threads
 
 This group of fucntions ...
 
 
+/** @brief create a new thread
+ *
+ * @param task_ptr
+ * @param task_arg
+ * @param stack_ptr
+ * @param opt 
+ * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
+ */
+int thinkos_thread_create(int (* task_ptr)(void *), 
+						  void * task_arg, void * stack_ptr,
+						  unsigned int opt);
+
+/** @brief create a new thread with extend information
+ *
+ * @param task_ptr
+ * @param task_arg
+ * @param inf
+ * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
+ */
+int thinkos_thread_create_inf(int (* task_ptr)(void *), void * task_arg,
+							  const struct thinkos_thread_inf * inf);
+
+/** @brief obtaind a handler for the calling thread
+ *
+ * @return This function always succeeds, returning the calling thread's ID.
+ */
+int const thinkos_thread_self(void);
+
+/** @brief request a thread to terminate
+ *
+ * @param thread_id thread handler
+ * @param code return code
+ * @return #THINKOS_ENOSYS if call is not implemented, #THINKOS_OK otherwise. 
+ */
+int thinkos_cancel(unsigned int thread_id, int code);
 

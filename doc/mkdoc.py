@@ -33,52 +33,151 @@ __version__ = '0.1'
 # --- constants
 PY3 = sys.version_info >= (3, 0)
 
-class DocApiFunction:
-  _param = []
-  _return = []
+class DocApiObject:
+  def __init__(self):
+    print('DocApiObject.__init__')
+    self._name = ''
+    self._brief = ''
+    self._desc = ''
+  
+class DocApiParameter(DocApiObject):
+  def __init__(self, func, name, typ):
+    super(DocApiObject, self ).__init__()
+    self._name = name
+    self._type = typ
+    self._func = func
 
-class DocApiGroup:
+class DocApiFunction(DocApiObject):
+  def __init__(self, group, name):
+    super(DocApiObject, self ).__init__()
+    self._name = name
+    self._type = 'int'
+    self._group = group 
+    self._param = {}
+  def parameter_add(self, name, typ):
+    p = DocApiParameter(self, name, typ)
+    self._param[name] = p
+    print('parameter: ' + name + ' type: ' + typ) 
+    return p
+
+class DocApiGroup(DocApiObject):
   def __init__(self, name):
-    self.name = name
-    self.desc = ''
-    self.function = []
+    super(DocApiGroup, self ).__init__()
+    self._name = name
+    self._function = {}
+
+  def function_add(self, name):
+    f = DocApiFunction(self, name)
+    self._function[name] = f
+    print('function: ' + name)
+    return f
+
+def getline(text):
+  # Return a list of the lines, breaking at line boundaries.
+  for line in text.splitlines():
+    yield line
 
 class DocTree:
-  def __init__(self, f):
-    self.name = ''
-    self.group = {}
-    self.f = f
+  def __init__(self):
+    self._name = ''
+    self._group = {}
+    self._blk = []
+
+  def readfile(self, f):
+    # Read the contents of the file into memory.
+    data = f.read()  
+    # Join comma split lines
+    self._data = re.sub(',[ \t]*\n[ \t]*', ', ', data)
+    print(self._data)
+
+  def next_line(self):
+    return next(self._lgen)
+
+  def doxygen_block(self, first_line):
+    doxygen_end = re.compile('[ \t]+\*/')
+    doxygen_line = re.compile('[ \t]+\*[ \t]+')
+    lst = []
+    lst.append(first_line)
+    while True:
+      try:
+        line = self.next_line()
+      except StopIteration as e:
+        break
+
+      if doxygen_end.match(line):
+        break
+
+      if doxygen_line.match(line):
+        s = doxygen_line.sub('', line)
+      else:
+        s = line
+
+      lst.append(s)
+
+    return lst
+
+  def tokenize(self):
+    # Return a list of the lines, breaking at line boundaries.
+    text = self._data;
+    self._lgen = getline(text);
+    doxygen_begin = re.compile('/\*\*[ \t]+')
+    while True:
+      try:
+        line = self.next_line()
+      except StopIteration as e:
+        break
+
+      if doxygen_begin.match(line):
+        lst = doxygen_block(doxygen_begin.sub('', line))
+        print('Doxygen: ')
+        print(lst)
 
   def group_add(self, name):
     g = DocApiGroup(name)
-    self.group[name] = g
+    self._group[name] = g
     print('group: ' + name)
     return g
 
   def group_dump(self):
-    for g in self.group:
+    for g in self._group:
       print('group: ' + g)
 
   def parse(self):
-    data = self.f.read()  # Read the contents of the file into memory.
     # Return a list of the lines, breaking at line boundaries.
-    text = data.splitlines()
+    text = self._data.splitlines()
     tag_re = re.compile('(\.[a-z]+) (.*)')
+    tab_re = re.compile('\t(\.[a-z]+)')
     s = ''
     for line in text:
-      if tag_re.match(line): 
+      if tag_re.match(line):
+        try:
+          o._desc = s
+        except:
+          print('----')
+          
         n = tag_re.split(line)[1]
         v = tag_re.split(line)[2]
-        if n == '.group':
+        if n == 'defgroup':
           g = self.group_add(v)
+          o = g
         elif n == '.func':
           print('function: ' + v)
-        elif n == '.param':
-          print('parameter: ' + v)
-        elif n == '.return':
+          f = g.function_add(v)
+          o = f
+        elif n == '@param':
+          l = v.rsplit(' ', 1)
+          p = f.parameter_add(l[1], l[0])
+          o = p
+        elif n == '@return':
           print('return')
         else:
           print('"' + n + '"')
+      elif tab_re.match(line):
+        try:
+          o._brief = line.replace('\t', '')
+        except:
+          print('----')
+
       else:
         s = s + line
 
@@ -180,8 +279,7 @@ def mkheader(f):
   '<meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>\n' + \
   '<title>ThinkOS</title>\n' + \
   '</head>\n'
-
-  f.write(s)
+  f.write(s.replace('\n', '\r\n'))
 
 def mkfooter(f):
   s = '<h3>Author</h3>\n' + \
@@ -193,22 +291,49 @@ def mkfooter(f):
   '<br>&copy; Copyright 2013-2015, Bob Mittmann<br>\n' + \
   '</body>\n' + \
   '</html>\n'
+  f.write(s.replace('\n', '\r\n'))
 
-  f.write(s)
+def mkapifunction(f, fun):
+  s = '\n<h3>{:s}</h3>\n<p>{:s}</p>\n'.format(fun._name, fun._desc)
+  s += '<h4>Synopsys</h4>\n<div class="code">\n'\
+  '#include &#60;thinkos.h&#62;<br /><br />\n'
+  s += '<span class="typ">{:s}</span>\n'.format(fun._type)
+  s += '<span class="fun">{:s}('.format(fun._name)
+
+def mkapigroup(f, grp):
+  s = '\n<div class="group">\n<hr />\n' \
+	  '<h2>{:s}</h2>\n<p>{:s}</p>\n\n'.format(grp._name, grp._desc)
+  f.write(s.replace('\n', '\r\n'))
+
+  for func in grp._function.values():
+      mkapifunction(f, func)
+
+#							   int (* <span class="var">task_start</span>)(void *), \n'
+#'<span class="typ">void *</span> <span class="var">task_arg</span>, \n'
+#'<span class="typ">void *</span> <span class="var">stack_ptr</span>,\n'
+#'<span class="typ">unsigned int</span> <span class="var">opt</span>);\n'
+  s += '</div>\n\n'
+  f.write(s.replace('\n', '\r\n'))
 
 def mkapidoc(f, tree):
   s = '<body>\n' + \
   '<h1>ThinkOS</h1>\n' + \
   '<h1>Index</h1>\n' + \
   '<h1>Brief</h1>\n' + \
-  '<p>ThinkOS is a low latency configurable real-time operating system specifically designed for ARM Cortex-M processors.</p>\n' + \
+  '<p>ThinkOS is a low latency configurable real-time operating system ' + \
+  'specifically designed for ARM Cortex-M processors.</p>\n' + \
   '<h1>API</h1>\n' + \
   '<p>ThinkOS supports several synchronisation and IPC mechanisms</p>\n'
-  f.write(s)
+  f.write(s.replace('\n', '\r\n'))
+
+  for grp in tree._group.values():
+    mkapigroup(f, grp)
 
 def parseinput(f):
-  tree = DocTree(fin)
-  tree.parse()
+  tree = DocTree()
+  tree.readfile(f)
+  tree.tokenize()
+#  tree.parse()
   return tree
 
 if __name__ == '__main__':
@@ -232,12 +357,12 @@ if __name__ == '__main__':
 #  else:
   fin = open("thinkos_api.txt", 'r')
 
-  tree = parseinput(fin)
-  tree.group_dump()
+  parseinput(fin)
+#  tree.group_dump()
 
-  mkheader(fout)
+#  mkheader(fout)
 
-  mkapidoc(fout, tree)
+#  mkapidoc(fout, tree)
 
-  mkfooter(fout)
+#  mkfooter(fout)
 
