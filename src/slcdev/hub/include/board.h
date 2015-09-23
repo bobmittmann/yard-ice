@@ -129,6 +129,28 @@
  * ------------------------------------------------------------------------- */
 #define IO_DAC2           STM32_GPIOA, 5
 
+/* -------------------------------------------------------------------------
+ * Ethernet 
+ * ------------------------------------------------------------------------- */
+#define IO_ETH_MII_TX_CLK  STM32_GPIOC, 3
+#define IO_ETH_MII_TX_EN   STM32_GPIOB, 11
+#define IO_ETH_MII_TXD0    STM32_GPIOB, 12
+#define IO_ETH_MII_TXD1    STM32_GPIOB, 13
+#define IO_ETH_MII_TXD2    STM32_GPIOC, 2
+#define IO_ETH_MII_TXD3    STM32_GPIOB, 8
+#define IO_ETH_MII_RX_CLK  STM32_GPIOA, 1
+#define IO_ETH_MII_RX_DV   STM32_GPIOA, 7
+#define IO_ETH_MII_RXD0    STM32_GPIOC, 4
+#define IO_ETH_MII_RXD1    STM32_GPIOC, 5
+#define IO_ETH_MII_RXD2    STM32_GPIOB, 0
+#define IO_ETH_MII_RXD3    STM32_GPIOB, 1
+#define IO_ETH_MII_RX_ER   STM32_GPIOB, 10
+#define IO_ETH_MII_CRS     STM32_GPIOA, 0
+#define IO_ETH_MII_COL     STM32_GPIOA, 3
+#define IO_ETH_MDC         STM32_GPIOC, 1 
+#define IO_ETH_MDIO        STM32_GPIOA, 2
+#define IO_ETH_PHY_RST     STM32_GPIOE, 5
+
 /* low level led on/off functions */
 static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_clr(__gpio, __pin);

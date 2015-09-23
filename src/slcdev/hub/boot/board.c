@@ -233,6 +233,43 @@ static void io_init(void)
 	/* - Speaker ----------------------------------------------------*/
 	stm32_gpio_mode(IO_DAC2, ANALOG, 0);
 
+	/* - Ethernet ----------------------------------------------------*/
+	stm32_gpio_af(IO_ETH_MII_TX_CLK, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_TX_EN, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_TXD0, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_TXD1, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_TXD2, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_TXD3, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RX_CLK, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RX_DV, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RXD0, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RXD1, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RXD2, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RXD3, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_RX_ER, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_CRS, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MII_COL, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MDC, GPIO_AF11);
+	stm32_gpio_af(IO_ETH_MDIO, GPIO_AF11);
+
+	stm32_gpio_mode(IO_ETH_MII_TX_CLK, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_TX_EN, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_TXD0, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_TXD1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_TXD2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_TXD3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	stm32_gpio_mode(IO_ETH_MII_RX_CLK, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RX_DV, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RXD0, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RXD1, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RXD2, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RXD3, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_RX_ER, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_CRS, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MII_COL, ALT_FUNC, 0);
+	stm32_gpio_mode(IO_ETH_MDC, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_mode(IO_ETH_MDIO, ALT_FUNC, OPEN_DRAIN | PULL_UP | SPEED_MED);
+
 }
 
 bool board_init(void)

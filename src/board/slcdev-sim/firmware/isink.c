@@ -36,6 +36,7 @@ struct {
 	uint32_t s1;
 	uint32_t s2;
 	uint32_t s3;
+	uint32_t s4;
 } isink_drv;
 
 static void isink_io_cfg(unsigned int mode)
@@ -376,8 +377,8 @@ void isink_mode_set(unsigned int mode)
 	if (isink_drv.mode == mode)
 		return;
 	
-	isink_io_cfg(mode & 0x1f);
-	dac->dhr12r2 = slewrate_dac_lut[(mode >> 5) & 0x3];
+	isink_io_cfg(mode & 0x3f);
+	dac->dhr12r2 = slewrate_dac_lut[(mode >> 6) & 0x3];
 	isink_drv.mode = mode;
 
 	DCC_LOG1(LOG_INFO, "irate DAC=%d", dac->dhr12r2);

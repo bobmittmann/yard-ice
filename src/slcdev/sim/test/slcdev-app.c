@@ -6,8 +6,7 @@
 #include <sys/serial.h>
 #include <sys/dcclog.h>
 #include <sys/shell.h>
-
-#include <thinkos.h>
+#include <sys/null.h>
 
 #include "config.h"
 #include "board.h"
@@ -21,10 +20,11 @@
 
 extern const struct shell_cmd cmd_tab[];
 
-const char version_str[] = "SLC Device Simulator " \
-							VERSION_NUM " - " VERSION_DATE;
-const char copyright_str[] = "(c) Copyright 2014-2015 - Mircom Group";
+extern const char version_str[];
+extern const char copyright_str[];
 
+void __attribute__((noreturn)) io_event_task(void);
+void lamp_test(void);
 
 uint32_t __attribute__((aligned(8))) io_event_stack[24];
 uint32_t __attribute__((aligned(8))) sim_event_stack[96];
@@ -40,17 +40,8 @@ int js(FILE * f, char * script, unsigned int len);
 
 void slcdev_shell(FILE * f) 
 {
-	char hist_buf[SIZEOF_CMD_HISTORY + SHELL_HISTORY_MAX * SHELL_LINE_MAX];
-	char line[SHELL_LINE_MAX];
-	struct cmd_history * history;
+#if 0
 	int ret = 0;
-
-	DCC_LOG(LOG_MSG, "history_init()");
-
-	history = history_init(hist_buf, sizeof(hist_buf), SHELL_LINE_MAX);
-
-	DCC_LOG(LOG_MSG, "shell_greeting()");
-	fprintf(f, "\n%s\n%s\n\n", version_str, copyright_str);
 
 	/* start a shell on the serial TTY */
 	do {
@@ -101,23 +92,12 @@ void slcdev_shell(FILE * f)
 
 		}
 	} while (ret != SHELL_ABORT); 
+#endif
 }
 
-int __attribute__((noreturn)) main(int argc, char ** argv)
+void board_test(void)
 {
-	struct serdrv * sdrv;
 	FILE * f;
-
-	DCC_LOG_INIT();
-	DCC_LOG_CONNECT();
-
-	DCC_LOG(LOG_INFO, "1. cm3_udelay_calibrate()");
-	/* calibrate the delay loop for udelay() and friends. */
-	cm3_udelay_calibrate();
-
-	DCC_LOG(LOG_INFO, "2. thinkos_init()");
-	/* initialize the operating system */
-	thinkos_init(THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 
 #ifndef DEBUG
 	/* wait for the device to charge a little bit before enabling
@@ -125,11 +105,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	thinkos_sleep(2000);
 #endif
 
-	DCC_LOG(LOG_INFO, "4. io_init()");
-	/* initialize IO pins */
-	io_init();
-
-	DCC_LOG(LOG_INFO, "5. isink_init()");
+	DCC_LOG(LOG_TRACE, "5. isink_init()");
 
 	/* enable the current sink driver. This will start the negative 
 	   voltage power supply */
@@ -137,7 +113,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 
 	/* configure the current sink driver to default values */
 	isink_mode_set(ISINK_CURRENT_NOM | ISINK_RATE_FAST);
-	/* dummy pulse to reet the timer */
+	/* dummy pulse to reset the timer */
 	isink_pulse(2, 0);
 
 	/* create a thread to handle IO events like switches and
@@ -177,12 +153,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 						  sim_event_stack, sizeof(sim_event_stack) | 
 						  THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	/* initialize serial driver */
-	sdrv = serdrv_init(115200);
-//	sdrv = serdrv_init(57600);
-
-	/* initialize serial TTY driver */
-	f = serdrv_tty_fopen(sdrv);
+	f = null_fopen(NULL);
 
 	/* initialize STDIO */
 	stdout = f;
@@ -203,11 +174,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 		DCC_LOG(LOG_TRACE, "Console shell!");
 		slcdev_shell(f); 
 
-//		thinkos_sleep(1000);
-
-		/* BACnet protocol... */
-//		DCC_LOG(LOG_WARNING, "BACnet Data Link Connection!");
-//		bacnet_ptp(sdrv);
+		thinkos_sleep(1000);
 	}
 }
 

@@ -36,8 +36,3 @@ O := .
 MACH = stm32f427
 THINKAPP = 1
 include ../../../../mk/stm32f4xx.mk
-
-all:: libs-install
-
-clean:: 
-	$(Q)$(RM) *.a

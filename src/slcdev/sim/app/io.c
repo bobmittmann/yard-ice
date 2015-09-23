@@ -219,9 +219,6 @@ void lamp_test(void)
 	led_flash(2, 64);
 	led_flash(3, 64);
 	thinkos_sleep(166);
-	led_flash(4, 64);
-	led_flash(5, 64);
-	thinkos_sleep(166);
 
 #if ENABLE_SAVE_LED_STATE
 	/* restore LEDs state */

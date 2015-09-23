@@ -34,6 +34,7 @@ struct {
 	uint32_t s1;
 	uint32_t s2;
 	uint32_t s3;
+	uint32_t s4;
 } isink_drv;
 
 static void isink_io_cfg(unsigned int mode)
@@ -41,310 +42,853 @@ static void isink_io_cfg(unsigned int mode)
 	int32_t s1;
 	int32_t s2;
 	int32_t s3;
+	int32_t s4;
 
 	switch (mode) {
 
 	case 0:
-	/* (128 45)[mA] (640 225)[mV] [ VCC VCC GND ] [ GND VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
+	/* (71 37)[mA] (355 185)[mV] [ NC  NC  VCC GND ] [ GND VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
-		s3 = 0;
+		s3 = -1;
+		s4 = -1;
 		break;
 
 	case 1:
-	/* (160 45)[mA] (800 225)[mV] [ VCC VCC NC  ] [ GND VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
+	/* (75 41)[mA] (375 205)[mV] [ NC  GND VCC NC  ] [ GND VCC NC  GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
-		s3 = -1;
+		s3 = 0;
+		s4 = -1;
 		break;
 
 	case 2:
-	default:
-	/* (160 57)[mA] (800 285)[mV] [ VCC VCC NC  ] [ GND VCC NC  ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
+	/* (81 37)[mA] (405 185)[mV] [ NC  NC  VCC NC  ] [ GND VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
-		s3 = 0;
+		s3 = -1;
+		s4 = -1;
 		break;
 
 	case 3:
-	/* (168 76)[mA] (840 380)[mV] [ NC  VCC NC  ] [ GND VCC GND ] VCC  */
+	/* (81 41)[mA] (405 205)[mV] [ NC  NC  VCC NC  ] [ GND VCC NC  GND ] */
 		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
-		s3 = -1;
+		s3 = 0;
+		s4 = -1;
 		break;
 
 	case 4:
-	/* (179 45)[mA] (895 225)[mV] [ GND VCC VCC ] [ GND VCC GND ] GND  */
+	/* (93 37)[mA] (465 185)[mV] [ GND VCC VCC GND ] [ GND VCC GND GND ] */
 		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
 		s2 = 0;
 		s3 = -1;
+		s4 = -1;
 		break;
 
 	case 5:
-	/* (204 45)[mA] (1020 225)[mV] [ NC  VCC VCC ] [ GND VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+	/* (101 56)[mA] (505 280)[mV] [ GND VCC GND VCC ] [ GND GND VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
+		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		s1 = -1;
-		s2 = 0;
-		s3 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = -1;
 		break;
 
 	case 6:
-	/* (204 52)[mA] (1020 260)[mV] [ NC  VCC VCC ] [ NC  VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 7:
-	/* (214 76)[mA] (1070 380)[mV] [ VCC VCC GND ] [ GND VCC GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = -1;
-		s2 = 0;
-		s3 = 0;
-		break;
-
-	case 8:
-	/* (216 82)[mA] (1080 410)[mV] [ VCC GND VCC ] [ VCC GND GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 9:
-	/* (232 82)[mA] (1160 410)[mV] [ VCC NC  VCC ] [ VCC GND GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = -1;
-		s3 = -1;
-		break;
-
-	case 10:
-	/* (232 89)[mA] (1160 445)[mV] [ VCC NC  VCC ] [ VCC NC  GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 11:
-	/* (261 45)[mA] (1305 225)[mV] [ VCC VCC VCC ] [ GND VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = -1;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 12:
-	/* (261 82)[mA] (1305 410)[mV] [ VCC VCC VCC ] [ VCC GND GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = -1;
-		s3 = -1;
-		break;
-
-	case 13:
-	/* (261 128)[mA] (1305 640)[mV] [ VCC VCC VCC ] [ VCC VCC GND ] GND  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_clr(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 14:
-	/* (299 76)[mA] (1495 380)[mV] [ GND VCC VCC ] [ GND VCC GND ] VCC  */
+	/* (103 41)[mA] (515 205)[mV] [ GND VCC VCC NC  ] [ GND VCC NC  GND ] */
 		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 15:
-	/* (324 76)[mA] (1620 380)[mV] [ VCC VCC NC  ] [ GND VCC GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = -1;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 16:
-	/* (324 115)[mA] (1620 575)[mV] [ VCC VCC NC  ] [ GND VCC NC  ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
 		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 7:
+	/* (103 46)[mA] (515 230)[mV] [ GND VCC VCC NC  ] [ GND VCC NC  NC  ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 8:
+	/* (111 41)[mA] (555 205)[mV] [ NC  VCC VCC GND ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 9:
+	/* (119 41)[mA] (595 205)[mV] [ GND GND VCC VCC ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 10:
+	/* (119 63)[mA] (595 315)[mV] [ NC  VCC GND VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 11:
+	/* (125 41)[mA] (625 205)[mV] [ NC  VCC VCC NC  ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 12:
+	/* (125 41)[mA] (625 205)[mV] [ NC  VCC VCC NC  ] [ GND VCC NC  GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 13:
+	/* (126 63)[mA] (630 315)[mV] [ VCC GND NC  NC  ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 14:
+	/* (127 41)[mA] (635 205)[mV] [ GND NC  VCC VCC ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 15:
+	/* (127 63)[mA] (635 315)[mV] [ GND NC  VCC VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 16:
+	/* (133 66)[mA] (665 330)[mV] [ NC  VCC NC  VCC ] [ GND NC  VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
 		break;
 
 	case 17:
-	/* (324 138)[mA] (1620 690)[mV] [ VCC VCC NC  ] [ VCC GND GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	/* (133 67)[mA] (665 335)[mV] [ NC  VCC NC  VCC ] [ GND NC  GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
-		s2 = -1;
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
 		s3 = -1;
+		s4 = 0;
 		break;
 
 	case 18:
-	/* (362 138)[mA] (1810 690)[mV] [ VCC GND VCC ] [ VCC GND GND ] VCC  */
+	/* (136 67)[mA] (680 335)[mV] [ VCC NC  NC  NC  ] [ GND NC  GND VCC ] */
 		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
 		s2 = 0;
 		s3 = -1;
+		s4 = 0;
 		break;
 
 	case 19:
-	/* (379 76)[mA] (1895 380)[mV] [ NC  VCC VCC ] [ GND VCC GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
+	/* (136 69)[mA] (680 345)[mV] [ VCC NC  NC  NC  ] [ GND GND NC  VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		s1 = -1;
-		s2 = 0;
-		s3 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
 		break;
 
 	case 20:
-	/* (379 96)[mA] (1895 480)[mV] [ NC  VCC VCC ] [ NC  VCC GND ] VCC  */
+	/* (142 37)[mA] (710 185)[mV] [ NC  GND VCC VCC ] [ GND VCC GND GND ] */
 		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 21:
-	/* (409 138)[mA] (2045 690)[mV] [ VCC NC  VCC ] [ VCC GND GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
-		s2 = -1;
-		s3 = -1;
-		break;
-
-	case 22:
-	/* (409 156)[mA] (2045 780)[mV] [ VCC NC  VCC ] [ VCC NC  GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
-		s2 = 0;
-		s3 = -1;
-		break;
-
-	case 23:
-	/* (438 76)[mA] (2190 380)[mV] [ VCC VCC VCC ] [ GND VCC GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		s1 = -1;
 		s2 = 0;
 		s3 = -1;
+		s4 = -1;
 		break;
 
-	case 24:
-	/* (438 138)[mA] (2190 690)[mV] [ VCC VCC VCC ] [ VCC GND GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	case 21:
+	/* (142 56)[mA] (710 280)[mV] [ NC  GND VCC VCC ] [ GND GND VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
-		s1 = 0;
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
 		s2 = -1;
-		s3 = -1;
+		s3 = 0;
+		s4 = -1;
 		break;
 
-	case 25:
-	/* (438 214)[mA] (2190 1070)[mV] [ VCC VCC VCC ] [ VCC VCC GND ] VCC  */
-		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+	case 22:
+	/* (152 44)[mA] (760 220)[mV] [ NC  NC  VCC VCC ] [ NC  VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
 		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-		stm32_gpio_set(IO_SINK4);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 		s1 = 0;
 		s2 = 0;
 		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 23:
+	/* (152 56)[mA] (760 280)[mV] [ NC  NC  VCC VCC ] [ GND GND VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 24:
+	/* (152 63)[mA] (760 315)[mV] [ NC  NC  VCC VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 25:
+	/* (152 75)[mA] (760 375)[mV] [ NC  NC  VCC VCC ] [ NC  GND VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = 0;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 26:
+	/* (156 69)[mA] (780 345)[mV] [ VCC VCC GND NC  ] [ GND GND NC  VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	default:
+	case 27:
+	/* (157 56)[mA] (785 280)[mV] [ GND VCC VCC VCC ] [ GND GND VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 28:
+	/* (157 63)[mA] (785 315)[mV] [ GND VCC VCC VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 29:
+	/* (169 37)[mA] (845 185)[mV] [ VCC NC  VCC GND ] [ GND VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 30:
+	/* (172 69)[mA] (860 345)[mV] [ VCC VCC NC  NC  ] [ GND GND NC  VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 31:
+	/* (177 37)[mA] (885 185)[mV] [ VCC GND VCC NC  ] [ GND VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 32:
+	/* (177 46)[mA] (885 230)[mV] [ VCC GND VCC NC  ] [ GND VCC NC  NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 33:
+	/* (182 60)[mA] (910 300)[mV] [ VCC GND NC  VCC ] [ GND NC  VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 34:
+	/* (182 63)[mA] (910 315)[mV] [ VCC GND NC  VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 35:
+	/* (186 93)[mA] (930 465)[mV] [ NC  VCC VCC VCC ] [ GND VCC VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 36:
+	/* (186 103)[mA] (930 515)[mV] [ NC  VCC VCC VCC ] [ GND VCC VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 37:
+	/* (188 41)[mA] (940 205)[mV] [ VCC NC  VCC NC  ] [ GND VCC NC  GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 38:
+	/* (188 46)[mA] (940 230)[mV] [ VCC NC  VCC NC  ] [ GND VCC NC  NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 39:
+	/* (194 62)[mA] (970 310)[mV] [ VCC NC  NC  VCC ] [ GND GND VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 40:
+	/* (194 67)[mA] (970 335)[mV] [ VCC NC  NC  VCC ] [ GND NC  GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 41:
+	/* (197 41)[mA] (985 205)[mV] [ VCC VCC VCC GND ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 42:
+	/* (197 103)[mA] (985 515)[mV] [ VCC VCC VCC GND ] [ VCC GND GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		s1 = 0;
+		s2 = -1;
+		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 43:
+	/* (204 62)[mA] (1020 310)[mV] [ VCC VCC GND VCC ] [ GND GND VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 44:
+	/* (204 63)[mA] (1020 315)[mV] [ VCC VCC GND VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 45:
+	/* (218 41)[mA] (1090 205)[mV] [ VCC VCC VCC NC  ] [ GND VCC NC  GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 46:
+	/* (218 46)[mA] (1090 230)[mV] [ VCC VCC VCC NC  ] [ GND VCC NC  NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 47:
+	/* (218 103)[mA] (1090 515)[mV] [ VCC VCC VCC NC  ] [ VCC GND GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = 0;
+		s2 = -1;
+		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 48:
+	/* (218 113)[mA] (1090 565)[mV] [ VCC VCC VCC NC  ] [ VCC GND NC  GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		s1 = 0;
+		s2 = -1;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 49:
+	/* (223 103)[mA] (1115 515)[mV] [ VCC GND VCC VCC ] [ GND VCC VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 50:
+	/* (223 62)[mA] (1115 310)[mV] [ VCC VCC NC  VCC ] [ GND GND VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 51:
+	/* (223 67)[mA] (1115 335)[mV] [ VCC VCC NC  VCC ] [ GND NC  GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 52:
+	/* (223 119)[mA] (1115 595)[mV] [ VCC VCC NC  VCC ] [ GND GND VCC VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 53:
+	/* (236 37)[mA] (1180 185)[mV] [ VCC NC  VCC VCC ] [ GND VCC GND GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = -1;
+		break;
+
+	case 54:
+	/* (236 56)[mA] (1180 280)[mV] [ VCC NC  VCC VCC ] [ GND GND VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 55:
+	/* (236 63)[mA] (1180 315)[mV] [ VCC NC  VCC VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 56:
+	/* (236 103)[mA] (1180 515)[mV] [ VCC NC  VCC VCC ] [ GND VCC VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 57:
+	/* (236 119)[mA] (1180 595)[mV] [ VCC NC  VCC VCC ] [ GND GND VCC VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, OPEN_DRAIN | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 58:
+	/* (260 41)[mA] (1300 205)[mV] [ VCC VCC VCC VCC ] [ GND VCC GND NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 59:
+	/* (260 63)[mA] (1300 315)[mV] [ VCC VCC VCC VCC ] [ GND GND GND VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = -1;
+		s4 = 0;
+		break;
+
+	case 60:
+	/* (260 93)[mA] (1300 465)[mV] [ VCC VCC VCC VCC ] [ GND VCC VCC GND ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = -1;
+		break;
+
+	case 61:
+	/* (260 103)[mA] (1300 515)[mV] [ VCC VCC VCC VCC ] [ GND VCC VCC NC  ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = 0;
+		s3 = 0;
+		s4 = 0;
+		break;
+
+	case 62:
+	/* (260 119)[mA] (1300 595)[mV] [ VCC VCC VCC VCC ] [ GND GND VCC VCC ] */
+		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK2, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK3, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		stm32_gpio_mode(IO_SINK4, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
+		s1 = -1;
+		s2 = -1;
+		s3 = 0;
+		s4 = 0;
 		break;
 	}
 
 	isink_drv.s1 = s1;
 	isink_drv.s2 = s2;
 	isink_drv.s3 = s3;
+	isink_drv.s4 = s4;
 }
+
+/*
+	| mode | i0(mA) | i1(mA) |
+	+------+--------+--------+
+	|    0 |     71 |     37 |
+	|    1 |     75 |     41 |
+	|    2 |     81 |     37 |
+	|    3 |     81 |     41 |
+	|    4 |     93 |     37 |
+	|    5 |    101 |     56 |
+	|    6 |    103 |     41 |
+	|    7 |    103 |     46 |
+	|    8 |    111 |     41 |
+	|    9 |    119 |     41 |
+	|   10 |    119 |     63 |
+	|   11 |    125 |     41 |
+	|   12 |    125 |     41 |
+	|   13 |    126 |     63 |
+	|   14 |    127 |     41 |
+	|   15 |    127 |     63 |
+	|   16 |    133 |     66 |
+	|   17 |    133 |     67 |
+	|   18 |    136 |     67 |
+	|   19 |    136 |     69 |
+	|   20 |    142 |     37 |
+	|   21 |    142 |     56 |
+	|   22 |    152 |     44 |
+	|   23 |    152 |     56 |
+	|   24 |    152 |     63 |
+	|   25 |    152 |     75 |
+	|   26 |    156 |     69 |
+	|   27 |    157 |     56 |
+	|   28 |    157 |     63 |
+	|   29 |    169 |     37 |
+	|   30 |    172 |     69 |
+	|   31 |    177 |     37 |
+	|   32 |    177 |     46 |
+	|   33 |    182 |     60 |
+	|   34 |    182 |     63 |
+	|   35 |    186 |     93 |
+	|   36 |    186 |    103 |
+	|   37 |    188 |     41 |
+	|   38 |    188 |     46 |
+	|   39 |    194 |     62 |
+	|   40 |    194 |     67 |
+	|   41 |    197 |     41 |
+	|   42 |    197 |    103 |
+	|   43 |    204 |     62 |
+	|   44 |    204 |     63 |
+	|   45 |    218 |     41 |
+	|   46 |    218 |     46 |
+	|   47 |    218 |    103 |
+	|   48 |    218 |    113 |
+	|   49 |    223 |    103 |
+	|   50 |    223 |     62 |
+	|   51 |    223 |     67 |
+	|   52 |    223 |    119 |
+	|   53 |    236 |     37 |
+	|   54 |    236 |     56 |
+	|   55 |    236 |     63 |
+	|   56 |    236 |    103 |
+	|   57 |    236 |    119 |
+	|   58 |    260 |     41 |
+	|   59 |    260 |     63 |
+	|   60 |    260 |     93 |
+	|   61 |    260 |    103 |
+	|   62 |    260 |    119 |
+	+------+--------+--------+
+*/
+
 
 void isink_pulse(unsigned int pre, unsigned int pulse)
 {
 	struct stm32f_tim * tim = STM32_TIM4;
 	unsigned int t1 = pulse - pre;	
 
-	tim->ccr2 = (isink_drv.s1 & t1) + 1;
-	tim->ccr3 = (isink_drv.s2 & t1) + 1;
-	tim->ccr4 = (isink_drv.s3 & t1) + 1;
+	tim->ccr1 = (isink_drv.s1 & t1) + 1;
+	tim->ccr2 = (isink_drv.s2 & t1) + 1;
+	tim->ccr3 = (isink_drv.s3 & t1) + 1;
+	tim->ccr4 = (isink_drv.s4 & t1) + 1;
 	tim->arr = 1;
  	tim->cnt = pulse + ISINK_DELAY_COMPENASTION;
 	tim->cr1 = TIM_CMS_EDGE | TIM_DIR_DOWN | TIM_OPM | TIM_URS | TIM_CEN; 

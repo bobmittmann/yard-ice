@@ -22,23 +22,23 @@
 PROG = slc-dev
 
 #CFILES_GEN = device_db.c
-CFILES = slc-dev.c board.c isink.c slcdev-drv.c \
-		 serdrv.c slcdev-db.c flashfs.c shell.c\
-		 slcdev-sim.c slcdev-cfg.c\
-		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
-#		 xflash.c uart_xflash_pic.c 
-#		 bacnet_ptp.c 
-
+CFILES = ../boot/board.c ../boot/simlnk.c ../boot/simrpc_mem.c \
+		 ../boot/simrpc_sys.c ../boot/boot.c \
+		 ../app/flashfs.c ../app/io.c ../app/isink.c ../app/js.c \
+		 ../app/profclk.c ../app/shell.c ../app/slcdev-cfg.c \
+		 ../app/slcdev-db.c \
+		 ../app/slcdev-drv.c ../app/slcdev-lib.c ../app/slcdev-log.c \
+		 ../app/slcdev-sim.c ../app/slcdev-str.c slcdev-app.c
 
 SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
-		  $(SDK)/libthinkos  $(SDK)/libice-comm $(SDK)/libxmodem \
-		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell $(SDK)/libmicrojs
+		  $(SDK)/libthinkos $(SDK)/libice-comm  $(SDK)/libcrc \
+		  $(SDK)/libmicrojs $(SDK)/libshell
 
-LIBS = gcc stm32f cm3 util c thinkos ice-comm xmodem crc tty shell microjs
+LIBS = gcc stm32f cm3 util c thinkos ice-comm crc microjs shell
 
-INCPATH = $(SDK)/include ../include
+INCPATH = $(SDK)/include ../include ../app ../../include
 
 CDEFS = CONFIG_H NDEBUG
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections

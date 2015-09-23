@@ -115,7 +115,6 @@ int simlnk_dma_xmit(unsigned int len)
 	return 0;
 }
 
-
 void thinkos_comm_svc(int32_t * arg)
 {
 	int self = thinkos_rt.active;
@@ -155,6 +154,7 @@ void thinkos_comm_svc(int32_t * arg)
 		break;
 	}
 }
+
 void stm32_usart2_isr(void)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
@@ -202,7 +202,7 @@ void stm32_usart2_isr(void)
 			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
 			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
 
-			DCC_LOG2(LOG_INFO, "BRK! opc=%08x cnt=%d", opc, cnt);
+			DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
 
 			if (cnt > 4) {
 				/* process this request */
