@@ -3,14 +3,181 @@
 <head>
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
-<script type="text/javascript" src="/lib/modalbox.js.gz"></script>"
-<script type="text/javascript" src="/lib/zepto.js.gz"></script>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
-<title>Devise Simulator RPC Test </title>
+
+<title>CRAB Device Simulator RPC Test </title>
+
+<script src="/lib/zepto.js.gz"></script>
+<script>
+
+	function test1(event) {
+		$.ajax({
+			type: 'GET',
+			url: 'test1.cgi',
+			data: { 
+				code: event.data,
+				port: $('#selport').val() 
+			},
+			dataType: 'text',
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				$('#results').empty();
+				$('#results').text(data);
+			},
+			error: function(xhr, type){
+				alert('Ajax error!') 
+				$('#result1').html('<b>Fail!</b>');
+			}
+		});
+	};
+
+	function test2(e) {
+		$.ajax({
+			type: 'GET',
+			url: 'test2.cgi',
+			dataType: 'text',
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				$('#result2').empty();
+				$('"#result2').html('<b>Ok!</b>');
+			},
+			error: function(xhr, type){
+				alert('Ajax error!') 
+				$('#result2').html('<b>Fail!</b>');
+			}
+		});
+	};
+
+    $( document ).ready(function() {
+        console.log( "document loaded" );
+        
+        $('#btn1').on('click', 1, test1);
+        $('#btn2').on('click', 2, test1);
+
+        $('#btn3').on('click', function(e) { 
+        	console.log( "test3" );
+        	$("#result3").html("<b>Hello world!</b>");
+        });
+
+        $('#btn4').on('click', function(e) { 
+        	console.log( "test4" );
+        	$("#result4").html("<b>Hello world!</b>");
+        });
+
+    });
+ 
+</script>
+
 </head>
+
 <body>
-<h1>Devise Simulator RPC Test</h1>
+<h1>CRAB  - Device Simulator RPC Test</h1>
+
+<table>
+	<thead>
+		<tr>
+		<th>Port</th>
+		<th>Status</th>
+		<th>Firmware</th>
+		<th>Database</th>
+		<th>Config</th>
+		</tr>
+	</thead>
+	<tr>
+		<td><b>Port 1</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>
+	<tr>
+		<td><b>Port 2</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 3</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 4</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 5</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>		
+</table>
+
+<table>
+	<tr>
+		<td>
+		<input id="btn1" type="button" class="button" value="Test 1" />
+		</td>
+		<td id="result1">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn2" type="button" class="button" value="Test 2" />
+		</td>
+		<td id="result2">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn3" type="button" class="button" value="Test 3" />
+		</td>
+		<td id="result3">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn4" type="button" class="button" value="Test 4" />
+		</td>
+		<td id="result4">
+		...
+		</td>		
+	</tr>
+</table>
+
+Simulator: 
+<select id="selport">
+  <option value="1">Port 1</option>
+  <option value="2">Port 2</option>
+  <option value="3">Port 3</option>
+  <option value="4">Port 4</option>
+  <option value="4">Port 5</option>
+</select>
+
+<pre>
+	<div id="results" style="
+	min-height: 200px; 
+	border-style: solid; 
+	border-width: 1px; 
+	border-color: #111;">
+	</div>
+</pre>
+
+<hr>
+<h2>Database updload</h2>
 <div class="form">
 <form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
 <div class="fbody">
@@ -37,259 +204,34 @@ File:
 </form>
 </div>
 
-<script type="text/javascript" src="modalbox.js"></script>
-<script type="text/javascript" src="xmlrpc.js"></script>
-<script type="text/javascript">
-	function msg_show(msg) {
-		var html = msg;
-		document.getElementById("msg").innerHTML = html;
-	}
-	function upload_msg() {
-		msg_show("Uploading firmware, please wait...");
-	}
-	function nofile_msg() {
-		msg_show("You must select a file to upload...");
-	}
-
-	function restore_defaults() {
-		dlg.okSelected = function () {
-			dlg.hide();
-			window.location.assign("restore.html");
-		}
-		dlg.cancelSelected = function () {
-			dlg.hide();
-		}
-		dlg.show('defaults_dlg', 'Restore factory settings?', 400, 100);
-	}
-	function reset() {
-		dlg.okSelected = function () {
-			dlg.hide();
-			window.location.assign("reset.html");
-		}
-		dlg.cancelSelected = function () {
-			dlg.hide();
-		}
-		dlg.show('reset_dlg', 'Reset the camera?', 400, 100);
-	}
-
-	function conf_save() {
-		xmlrpc_action('confsave', 0,
-			function () { msg_show('Configuration saved.'); }
-		);
-	}
-
-	function on_sysinfo_get(xml)
-	{
-		txt_bind(xml, 'series');
-		txt_bind(xml, 'model');
-		txt_bind(xml, 'version');
-		txt_bind(xml, 'date');
-		txt_bind(xml, 'esn');
-		txt_bind(xml, 'mac');
-		img_bind(xml, 'icon');
-	}
-
-	function init() {
-		xml_async_get("product.xml", function (xml) {
-					  document.getElementById('title').innerHTML =
-					  xml_txt_get(xml, 'series') });
-		dlg.init();
-		xml_async_get("sysinfo.xml", on_sysinfo_get);
-	}
-</script>
-</head>
-
-<body onload="init()">
-<div id="header">
-	<ul><li><img src="ip-cam-64x64.png" alt="IP Camera"/></li>
-	<li><h1 id="title">&nbsp;</h1><h2>i-LAX Electronics</h2></li><ul>
+<hr>
+<h2>Configuration updload</h2>
+<div class="form">
+<form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
+<div class="fbody">
+File:
+<!--[if IE]>
+       <input type="file" id="browse" class="text"
+           maxlength="128" size="40" name="firmware" />"
+<![endif]-->
+<![if !IE]>
+       <input type="text" class="text" id="fname"
+           readonly="readonly" maxlength="128" size="40" />
+       <input type="button" class="button" value="Browse..."
+           onclick="javascript:
+           document.getElementById('browse').click()" />
+       <input type="file" class="hidden" id="browse"
+           name="firmware" onchange="javascript:
+           document.getElementById('fname').value = this.value" />
+<![endif]>
+   </div>
+   <div class="ffoot">
+       <input type="reset" class="button" value="Reset" />
+       <input type="submit" class="button" value="Upload..." />
+   </div>
+</form>
 </div>
-<div id="navigation">
-	<ul>
-		<li><a href="primary.html">Preview</a></li>
-		<li><a href="video.html">Video</a></li>
-		<li><a href="audio.html">Audio</a></li>
-		<li><a href="alarms.html">Alarms</a></li>
-		<li><a href="network.html">Network</a></li>
-		<li><a href="time.html">Time</a></li>
-		<li><a href="#" class="active">Tools</a></li>
-	</ul>
-</div>
-
-<div id="content">
-
-	<h1>System information:</h1>
-	<div class="block">
-		<div class="form">
-		<div class="fbody">
-		<table>
-		<tr>
-			<td>
-				<span id="icon" style="margin-right:40px"></span>
-			</td>
-			<td>
-				<table>
-				<tr>
-					<td align="right"><b>Camera series:</b></td>
-					<td><span id="series">unknown</span></td>
-				<tr>
-					<td align="right"><b>Camera model:</b></td>
-					<td><span id="model">unknown</span></td>
-				</tr>
-				<tr>
-					<td align="right"><b>Firmware version:</b></td>
-					<td><span id="version">unknown</span></td>
-				</tr>
-				<tr>
-					<td align="right"><b>Release date:</b></td>
-					<td><span id="date">unknown</span></td>
-				</tr>
-				<tr>
-					<td align="right"><b>Serial number:</b></td>
-					<td><span id="esn">unknown</span></td>
-				</tr>
-				<tr>
-					<td align="right"><b>Mac Address:</b></td>
-					<td><span id="mac">unknown</span></td>
-				</tr>
-				</table>
-			</td>
-		<tr>
-		</table>
-		</div>
-		</div>
-	</div>
-
-	<h1>Firmware update:</h1>
-
-
-
-<script type="text/javascript">
-	function alert(msg) {
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="alert.png" alt="Alert! "/>&nbsp;'+msg;
-		document.getElementById("msg").innerHTML = html;
-	}
-	function msg_show(msg) {
-		var html = msg;
-		document.getElementById("msg").innerHTML = html;
-	}
-	function cancel() {
-		history.go(-1);
-	}
-</script>
-
-<script type="text/javascript">
-	function msg_show(msg) {
-		var html = msg;
-		document.getElementById("msg").innerHTML = html;
-	}
-	function upload_msg() {
-		msg_show("Uploading firmware, please wait...");
-	}
-	function nofile_msg() {
-		msg_show("You must select a file to upload...");
-	}
-</script>
-
-<script type="text/javascript">
-	var sysinfo_xml;
-
-	function on_pkginfo_get(xml)
-	{
-		var st;
-		txt_bind(xml, 'version');
-		txt_bind(xml, 'date');
-		st = (+xml.getElementsByTagName('status')[0].firstChild.nodeValue);
-		if (st == 1)
-			document.getElementById('agree').disabled = false;
-		else
-			alert("Package error!");
-	}
-
-	function on_disclaimer_get(txt)
-	{
-		document.getElementById('disclaimer').innerHTML = txt;
-	}
-
-	function on_agree_click(chk)
-	{
-		btn = document.getElementById('update');
-		btn.disabled = chk.checked ? false : true;
-	}
-
-	function init() {
-		xml_async_get("product.xml", function (xml) {
-					  document.getElementById('title').innerHTML =
-					  xml_txt_get(xml, 'series') });
-		xml_async_get("pkginfo.xml", on_pkginfo_get);
-		txt_async_get("download/disclaimer.txt", on_disclaimer_get);
-	}
-</script>
-</head>
-
-<body onload="init()">
-<div id="header">
-	<ul><li><img src="ip-cam-64x64.png" alt="IP Camera"/></li>
-	<li><h1 id="title">&nbsp;</h1><h2>i-LAX Electronics</h2></li><ul>
-</div>
-
-<div id="content">
-	<h1>Firmware Update</h1>
-	<div class="block">
-		<div class="form">
-		<div class="fbody">
-		<fieldset>
-			<legend>Update information:</legend>
-			<center>
-			<table>
-				<tr>
-					<td align="right"><b>Firmware version:</b></td>
-					<td><span id="version"></span></td>
-				</tr>
-				<tr>
-					<td align="right"><b>Release date:</b></td>
-					<td><span id="date"></span></td>
-				</tr>
-			</table>
-
-			<textarea rows="10" cols="80" id="disclaimer" readonly="readonly">
-			</textarea>
-			</center>
-		</fieldset>
-		<ul style="margin:1em 2em 0em" >
-		<li> If you are <b>not sure</b> about this procedure press
-		'Cancel' to return.</li>
-		<li>If you are sure you want to upgrade the device's firmware,
-		please read carefully the information above.</li>
-		<li>If you agree with the terms and conditions therein expressed,
-		check the box bellow and press the 'Update...' button.</li>
-		</ul>
-		</div>
-		</div>
-		<p id="msg"></p>
-		<form action="/install.html" >
-		<div class="form">
-			<div class="fbody">
-			<center>
-			<p><input type="checkbox" class="checkbox" id="agree"
-			disabled="disabled"	onclick="on_agree_click(this)" />
-			Yes, I agree with the above terms and conditions.</p>
-			</center>
-			</div>
-			<div class="ffoot">
-			<center>
-			<input type="button" class="button" onclick="cancel()"
-				value="Cancel" />
-			<input type="submit" class="button" id="update"
-				disabled="disabled"	value="Update..."  />
-			</center>
-			</div>
-		</div>
-		</form>
-	</div>
-</div>
-
+<hr>
 
 <hr>
 <a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>

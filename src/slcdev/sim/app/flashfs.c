@@ -181,6 +181,7 @@ bool fs_file_commit(struct fs_dirent * ep, unsigned int size)
 	return true;
 }
 
+#if 0
 /* Receive a file using XMODEM protocol */
 
 bool fs_xmodem_recv(FILE * f, const char * name)
@@ -240,4 +241,5 @@ bool fs_xmodem_recv(FILE * f, const char * name)
 
 	return fs_file_commit(&entry, cnt);
 }
+#endif
 

@@ -1,0 +1,79 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <sys/dcclog.h>
+
+#include "simlnk.h"
+#include "simrpc.h"
+#include "simrpc_svc.h"
+#include "config.h"
+#include "board.h"
+
+int simrpc_send(uint32_t hdr, void * data, unsigned int cnt)
+{
+	return thinkos_comm_send(hdr, data, cnt);
+}
+
+int simrpc_send_int(uint32_t hdr, int val)
+{
+	uint32_t data[1];
+
+	data[0] = (uint32_t)val;
+	return thinkos_comm_send(hdr, data, 4);
+}
+
+int simrpc_send_opc(uint32_t hdr)
+{
+	return thinkos_comm_send(hdr, NULL, 0);
+}
+
+void simlnk_task(void)
+{
+	uint32_t pkt[(SIMLNK_MTU + 3) / 4];
+	unsigned int cnt;
+	uint32_t hdr;
+	void * data;
+
+	DCC_LOG(LOG_TRACE, "SIMLNK!");
+
+	for (;;) {
+		cnt = thinkos_comm_recv(pkt, SIMLNK_MTU);
+		hdr = pkt[0];
+		data = (void *)&pkt[1];
+		cnt -= 4;
+
+		DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
+
+		switch SIMRPC_INSN(hdr) {
+		case SIMRPC_FILE_OPEN:
+			simrpc_file_open_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_CREATE:
+			simrpc_file_create_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_CLOSE:
+			simrpc_file_close_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_READ:
+			simrpc_file_read_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_WRITE:
+			simrpc_file_write_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_SEEK:
+			simrpc_file_seek_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_UNLINK:
+			simrpc_file_unlink_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_FILE_CRC16:
+			simrpc_file_crc16_svc(hdr, data, cnt);
+			break;
+		default:
+			DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", hdr >> 24);
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_ENOSYS);
+		}
+	}
+}
+

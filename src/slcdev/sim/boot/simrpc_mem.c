@@ -29,9 +29,9 @@
 #include "simrpc.h"
 #include "simrpc_svc.h"
 
-int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
-int simrpc_send_int(uint32_t opc, int val);
-int simrpc_send_opc(uint32_t opc);
+int __simrpc_send(uint32_t opc, void * data, unsigned int cnt);
+int __simrpc_send_int(uint32_t opc, int val);
+int __simrpc_send_opc(uint32_t opc);
 
 #define FLASH_MIN ((uint32_t)STM32_MEM_FLASH + FLASH_BLK_FIRMWARE_OFFS) 
 #define FLASH_MAX ((uint32_t)STM32_MEM_FLASH + (256 * 1024))
@@ -71,7 +71,7 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	if (mem_lock != SIMRPC_BCAST) {
 		if ((int32_t)(clk - mem_clk) < MEM_LOCK_TIMEOUT_MS) {
 			DCC_LOG(LOG_WARNING, "locked");
-			simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 			return;
 		}	
 		DCC_LOG(LOG_WARNING, "lock expired");
@@ -88,7 +88,7 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		mem_top = MIN(EEPROM_MAX, base + size);
 	} else {
 		DCC_LOG(LOG_TRACE, "Invalid");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
@@ -96,7 +96,7 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	mem_ptr = mem_base;
 	mem_lock = SIMRPC_SRC(opc);
 	mem_clk = __thinkos_ticks();
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -116,13 +116,13 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if (mem_lock != SIMRPC_SRC(opc)) {
 		DCC_LOG(LOG_WARNING, "Not yours");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 	if ((base != mem_base) || (base + size != mem_top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
 		return;
 	}
 
@@ -135,7 +135,7 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		DCC_LOG(LOG_TRACE, "SRAM");
 	} else {
 		DCC_LOG(LOG_WARNING, "Internal error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
 		return;
 	}
 
@@ -143,7 +143,7 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	mem_top = 0;
 	mem_ptr = 0;
 	mem_lock = 0xff;
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -164,7 +164,7 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 	if ((addr < mem_base) || ((addr + size) > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
@@ -178,17 +178,17 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		DCC_LOG(LOG_TRACE, "SRAM");
 	} else {
 		DCC_LOG(LOG_WARNING, "Internal error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
 		return;
 	}
 
 	if (ret < 0) {
 		DCC_LOG(LOG_WARNING, "Memory erase error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
 		return;
 	}
 
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	mem_clk = __thinkos_ticks();
 }
 
@@ -208,13 +208,13 @@ void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if ((addr < mem_base) || (addr > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Internal error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 
 	size = MIN(size, mem_top - addr);
-	simrpc_send(SIMRPC_REPLY_OK(opc), (void *)mem_ptr, size);
+	__simrpc_send(SIMRPC_REPLY_OK(opc), (void *)mem_ptr, size);
 	mem_ptr += size;
 	mem_clk = __thinkos_ticks();
 }
@@ -229,7 +229,7 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if ((addr < mem_base) || (addr > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Internal error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
@@ -247,17 +247,17 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		ret = cnt;
 	} else {
 		DCC_LOG(LOG_WARNING, "Invalid memory");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
 		return;
 	}
 
 	if (ret < 0) {
 		DCC_LOG(LOG_WARNING, "Memory write error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
 		return;
 	}
 
-	simrpc_send_int(SIMRPC_REPLY_OK(opc), cnt);
+	__simrpc_send_int(SIMRPC_REPLY_OK(opc), cnt);
 	mem_ptr += cnt;
 	mem_clk = __thinkos_ticks();
 }
@@ -278,12 +278,12 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if ((addr < mem_base) || (addr > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Invalid");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 	mem_ptr = addr;
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	mem_clk = __thinkos_ticks();
 }
 
@@ -349,14 +349,14 @@ void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if ((addr < mem_base) || (addr > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Invalid");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 	if ((addr < mem_base) || ((addr + size) > mem_top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
@@ -369,7 +369,7 @@ void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		DCC_LOG(LOG_TRACE, "SRAM");
 	} else {
 		DCC_LOG(LOG_WARNING, "Internal error");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -4);
 		return;
 	}
 
@@ -381,7 +381,7 @@ void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	else
 		crc = __crc32((void *)addr, size);
 
-	simrpc_send_int(SIMRPC_REPLY_OK(opc), crc);
+	__simrpc_send_int(SIMRPC_REPLY_OK(opc), crc);
 
 	mem_clk = __thinkos_ticks();
 }

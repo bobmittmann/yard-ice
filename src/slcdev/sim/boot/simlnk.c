@@ -32,8 +32,8 @@
 #define TX_DMA_CHAN STM32_DMA_CHANNEL7
 
 struct simlnk {
-	uint32_t tx_buf[SIMLNK_MTU / 4];
-	uint32_t rx_buf[(SIMLNK_MTU / 4) + 1];
+	uint32_t tx_buf[(SIMLNK_MTU + 3) / 4];
+	uint32_t rx_buf[(SIMLNK_MTU + 1 + 3) / 4];
 } simlnk;
 
 void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
@@ -91,6 +91,7 @@ void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 	}
 
 }
+
 int simlnk_dma_xmit(unsigned int len)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
@@ -140,10 +141,12 @@ void thinkos_comm_svc(int32_t * arg)
 
 	case COMM_SEND:
 		{
-			void * buf = (void *)arg[1];
-			int cnt = arg[2];
-			__thinkos_memcpy32(simlnk.tx_buf, buf, cnt);
-			simlnk_dma_xmit(cnt);
+			uint32_t opc = arg[1];
+			void * buf = (void *)arg[2];
+			int cnt = arg[3];
+			simlnk.tx_buf[0] = opc;
+			__thinkos_memcpy32(&simlnk.tx_buf[1], buf, cnt);
+			simlnk_dma_xmit(cnt + 4);
 			arg[0] = 0;
 		}
 		break;
@@ -272,7 +275,7 @@ void stm32_dma1_channel6_isr(void)
 	}
 }
 
-int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
+int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 {
 	simlnk.tx_buf[0] = opc;
 	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
@@ -280,7 +283,7 @@ int simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 	return simlnk_dma_xmit(cnt + 4);
 }
 
-int simrpc_send_int(uint32_t opc, int val)
+int __simrpc_send_int(uint32_t opc, int val)
 {
 	simlnk.tx_buf[0] = opc;
 	simlnk.tx_buf[1] = (uint32_t)val;
@@ -288,7 +291,7 @@ int simrpc_send_int(uint32_t opc, int val)
 	return simlnk_dma_xmit(8);
 }
 
-int simrpc_send_opc(uint32_t opc)
+int __simrpc_send_opc(uint32_t opc)
 {
 	simlnk.tx_buf[0] = opc;
 

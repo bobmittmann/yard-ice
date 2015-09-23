@@ -570,8 +570,8 @@ static inline int __attribute__((always_inline))
    ---------------------------------------------------------------------------*/
 
 static inline int __attribute__((always_inline)) 
-thinkos_comm_send(const void * buf, unsigned int len) {
-	return THINKOS_SVC3(THINKOS_COMM, COMM_SEND, buf, len);
+thinkos_comm_send(uint32_t opc, const void * buf, unsigned int len) {
+	return THINKOS_SVC4(THINKOS_COMM, COMM_SEND, opc, buf, len);
 }
 
 static inline int __attribute__((always_inline)) 

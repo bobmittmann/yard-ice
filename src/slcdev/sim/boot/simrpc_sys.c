@@ -31,6 +31,10 @@
 #include "simrpc.h"
 #include "simrpc_svc.h"
 
+int __simrpc_send(uint32_t opc, void * data, unsigned int cnt);
+int __simrpc_send_int(uint32_t opc, int val);
+int __simrpc_send_opc(uint32_t opc);
+
 void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	if (cnt != 0) {
@@ -38,7 +42,7 @@ void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	};
 
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	__thinkos_pause_all();
 }
 
@@ -49,7 +53,7 @@ void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	};
 
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	__thinkos_resume_all();
 }
 
@@ -60,7 +64,7 @@ void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	};
 
-	simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 
 	cm3_sysrst();
 }
@@ -167,17 +171,17 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		simlnk_int_enable();
 
 		if (thinkos_app_check(FLASH_BLK_FIRMWARE_OFFS)) {
-			simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+			__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 			thinkos_app_exec(FLASH_BLK_FIRMWARE_OFFS, false);
 			return;
 		}
 		DCC_LOG(LOG_WARNING, "Invalid application!");
-		simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 	if (key == SIMRPC_EXEC_KEY('T', 'E', 'S', 'T')) {
-		simrpc_send_opc(SIMRPC_REPLY_OK(opc));
+		__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 		thinkos_soft_reset();
 		simlnk_int_enable();
 		thinkos_app_exec((uint32_t)board_test, false);
@@ -185,7 +189,7 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	}
 
 	DCC_LOG(LOG_WARNING, "Invalid Key");
-	simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+	__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 }
 
 

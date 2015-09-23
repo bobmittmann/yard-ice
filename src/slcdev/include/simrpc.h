@@ -31,6 +31,9 @@
 #include <stdint.h> 
 
 enum simrpc_err {
+	SIMRPC_EBADF     = -0x7ffffff5,
+	SIMRPC_EBUSY     = -0x7ffffff6,
+	SIMRPC_ENOENT    = -0x7ffffff7,
 	SIMRPC_ENOSYS    = -0x7ffffff8,
 	SIMRPC_EINVAL    = -0x7ffffff9,
 	SIMRPC_EROUTE    = -0x7ffffffa,
@@ -80,12 +83,26 @@ int simrpc_resume(struct simrpc_pcb * sp);
 int simrpc_reboot(struct simrpc_pcb * sp);
 int simrpc_exec(struct simrpc_pcb * sp, uint32_t key);
 
+int simrpc_file_open(struct simrpc_pcb * sp, const char * path);
+
+int simrpc_file_create(struct simrpc_pcb * sp, const char * path);
+
+int simrpc_file_unlink(struct simrpc_pcb * sp, const char * path);
+
+int simrpc_file_close(struct simrpc_pcb * sp);
+
+int simrpc_file_read(struct simrpc_pcb * sp, void * data, unsigned int cnt);
+
+int simrpc_file_write(struct simrpc_pcb * sp,
+					 const void * data, unsigned int cnt);
+
+int simrpc_file_seek(struct simrpc_pcb * sp, uint32_t offs);
+
+int simrpc_file_crc32(struct simrpc_pcb * sp, const char * path, uint32_t * crc);
+
+int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path, uint32_t * crc);
 
 struct simlnk * simrpc_route(unsigned int daddr);
-
-int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
-int simrpc_send_int(uint32_t opc, int val);
-int simrpc_send_opc(uint32_t opc);
 
 #ifdef __cplusplus
 }

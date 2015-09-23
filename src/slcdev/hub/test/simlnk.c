@@ -83,7 +83,7 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 			continue;
 		}
 
-		if (SIMRPC_OPC(pkt[0]) == SIMRPC_SIGNAL) {
+		if (SIMRPC_INSN(pkt[0]) == SIMRPC_SIGNAL) {
 			continue;
 		}
 

@@ -29,71 +29,9 @@ void lamp_test(void);
 uint32_t __attribute__((aligned(8))) io_event_stack[24];
 uint32_t __attribute__((aligned(8))) sim_event_stack[96];
 
-#if THINKOS_STDERR_FAULT_DUMP
-const struct file stm32_uart_file = {
-	.data = STM32_USART2, 
-	.op = &stm32_usart_fops 
-};
-#endif
-
 int js(FILE * f, char * script, unsigned int len);
 
-void slcdev_shell(FILE * f) 
-{
-#if 0
-	int ret = 0;
-
-	/* start a shell on the serial TTY */
-	do {
-		char * stat;
-		char * cp;
-
-		DCC_LOG(LOG_MSG, "shell_prompt()!");
-		fprintf(f, "[DEV]$ ");
-
-		if (history_readline(history, f, line, SHELL_LINE_MAX) == NULL)
-			continue;
-
-		if ((cp = shell_stripline(line)) == NULL)
-			continue;
-
-		DCC_LOG(LOG_MSG, "history_add()");
-		history_add(history, cp);
-
-		DCC_LOGSTR(LOG_MSG, "cp=\"%s\"", cp);
-
-		/* try to get a command from the line */
-		if (cmd_lookup(cmd_tab, cp) == NULL) {
-			/* try to interpret a javascript code instead */
-			DCC_LOG(LOG_MSG, "js...");
-			js(f, cp, strlen(cp));
-			DCC_LOG(LOG_MSG, "done...");
-			continue;
-		}
-
-		DCC_LOG(LOG_TRACE, "shell command ...");
-
-		ret = 0;
-
-		while ((stat = cmd_get_next(&cp)) != NULL) {
-			struct shell_cmd * cmd;
-
-			if ((cmd = cmd_lookup(cmd_tab, stat)) == NULL) {
-				fprintf(f, "Command not found!\n");
-				break;
-			}
-
-			ret = cmd_exec(f, cmd, stat);
-
-			if ((ret < 0) && (ret !=  SHELL_ABORT)) {
-				fprintf(f, "Error: %d\n", -ret);
-				break;
-			}
-
-		}
-	} while (ret != SHELL_ABORT); 
-#endif
-}
+void simlnk_task(void);
 
 void board_test(void)
 {
@@ -157,11 +95,7 @@ void board_test(void)
 
 	/* initialize STDIO */
 	stdout = f;
-#if THINKOS_STDERR_FAULT_DUMP
-	stderr = (struct file *)&stm32_uart_file;
-#else
 	stderr = f;
-#endif
 
 	DCC_LOG1(LOG_TRACE, "f=%08x", f);
 	fprintf(f, "\n%s\n%s\n\n", version_str, copyright_str);
@@ -169,12 +103,6 @@ void board_test(void)
 	/* start simulation */
 	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
 
-	/* main loop */
-	for (;;) {
-		DCC_LOG(LOG_TRACE, "Console shell!");
-		slcdev_shell(f); 
-
-		thinkos_sleep(1000);
-	}
+	simlnk_task();
 }
 

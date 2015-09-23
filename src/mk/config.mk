@@ -133,10 +133,13 @@ else
     $(call trace2,MSYSTEM = '$(MSYSTEM)')
     $(call trace3,MSYSCON = '$(MSYSCON)')
     ifneq (,$(findstring MINGW, $(MSYSTEM)))
+      HOST := Msys
       ifeq (+++, $(firstword $(subst /,+++ ,$(BASEDIR))))
         $(call trace1,UNIX style paths: BASEDIR = '$(BASEDIR)'...)
+        DIRMODE := msys
       else
         $(call trace1,Msys style paths: BASEDIR = '$(BASEDIR)'...)
+        DIRMODE := windows
       endif
       ifneq (, $(MSYSCON))
         $(call trace1,MSYSCON = '$(MSYSCON)')
@@ -144,8 +147,6 @@ else
       ifneq (, $(MAKE_MODE))
         $(call trace1,MAKE_MODE = '$(MAKE_MODE)')
       endif
-      HOST := Msys
-      DIRMODE := msys
       SHELL := sh.exe
       export SHELL
     else 

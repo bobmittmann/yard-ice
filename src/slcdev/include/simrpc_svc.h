@@ -44,17 +44,21 @@ enum simrpc_opc {
 	SIMRPC_MEM_SEEK   = 10,
 	SIMRPC_MEM_CRC32  = 11,
 
-	SIMRPC_TRACE,
-	SIMRPC_FILE_OPEN,
-	SIMRPC_FILE_CREATE,
-	SIMRPC_FILE_CLOSE,
-	SIMRPC_FILE_READ,
-	SIMRPC_FILE_WRITE,
-	SIMRPC_FILE_SEEK,
+	SIMRPC_TRACE       = 32,
+	SIMRPC_FILE_OPEN   = 33,
+	SIMRPC_FILE_CREATE = 34,
+	SIMRPC_FILE_CLOSE  = 35,
+	SIMRPC_FILE_READ   = 36,
+	SIMRPC_FILE_WRITE  = 37,
+	SIMRPC_FILE_SEEK   = 38,
+	SIMRPC_FILE_UNLINK = 39,
+	SIMRPC_FILE_CRC32  = 40,
+	SIMRPC_FILE_CRC16  = 41,
+	SIMRPC_FILE_MD5SUM = 42,
 
-	SIMRPC_DIR_OPEN,
-	SIMRPC_DIR_CLOSE,
-	SIMRPC_DIR_READ,
+	SIMRPC_DIR_OPEN    = 43,
+	SIMRPC_DIR_CLOSE   = 44,
+	SIMRPC_DIR_READ    = 45,
 
 	SIMRPC_BUSY = 251,
 	SIMRPC_PEND = 253,
@@ -66,14 +70,14 @@ struct simrpc_hdr {
 	uint8_t dst;
 	uint8_t src;
 	uint8_t seq;
-	uint8_t opc;
+	uint8_t insn;
 	uint32_t data[];
 };
 
 #define SIMRPC_DST(OPC) ((OPC) & 0xff)
 #define SIMRPC_SRC(OPC) (((OPC) >> 8) & 0xff)
 #define SIMRPC_SEQ(OPC) (((OPC) >> 16) & 0xff)
-#define SIMRPC_OPC(OPC) (((OPC) >> 24) & 0xff)
+#define SIMRPC_INSN(OPC) (((OPC) >> 24) & 0xff)
 
 #define SIMRPC_PDU_MAX 500
 
@@ -111,20 +115,33 @@ extern "C" {
 #endif
 
 /* services */
-void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_mem_crc32_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_mem_lock_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_unlock_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_erase_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_read_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_seek_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_mem_crc32_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
-void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
-void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt);
+void simrpc_suspend_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_resume_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_reboot_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_exec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+
+void simrpc_file_open_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_unlink_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_read_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_seek_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_close_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_file_crc16_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 void simrpc_svc_init(void);
+
+int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
+int simrpc_send_int(uint32_t opc, int val);
+int simrpc_send_opc(uint32_t opc);
 
 #ifdef __cplusplus
 }
