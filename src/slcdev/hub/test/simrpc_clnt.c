@@ -108,10 +108,17 @@ int simrpc_mem_erase(struct simrpc_pcb * sp, uint32_t offs, unsigned int size)
 int simrpc_mem_read(struct simrpc_pcb * sp, void * data, unsigned int cnt)
 {
 	uint32_t req[1];
+	int ret;
 
 	req[0] = cnt;
+	ret = simlnk_rpc(sp, SIMRPC_MEM_READ, req, 4, data, cnt);
 
-	return simlnk_rpc(sp, SIMRPC_MEM_READ, req, 4, data, cnt);
+	/* sanity check */
+	if (ret <= cnt)
+		return ret;
+
+	return SIMRPC_EBADMSG;
+
 }
 
 int simrpc_mem_write(struct simrpc_pcb * sp, 
@@ -186,10 +193,16 @@ int simrpc_file_close(struct simrpc_pcb * sp)
 int simrpc_file_read(struct simrpc_pcb * sp, void * data, unsigned int cnt)
 {
 	uint32_t req[1];
+	int ret;
 
 	req[0] = cnt;
+	ret = simlnk_rpc(sp, SIMRPC_FILE_READ, req, 4, data, cnt);
 
-	return simlnk_rpc(sp, SIMRPC_FILE_READ, req, 4, data, cnt);
+	/* sanity check */
+	if (ret <= cnt)
+		return ret;
+
+	return SIMRPC_EBADMSG;
 }
 
 int simrpc_file_write(struct simrpc_pcb * sp,

@@ -69,14 +69,14 @@ form {
 	display: table;
 }
 
-input[type=text] {
+input[type=text], input[type=number] {
 	background: #fff;
 	margin: 1px 2px 1px;
 	border: 1px solid #444;
 	padding: 3px 3px 2px;
 }
 
-input[type=text]:hover {
+input[type=text]:hover, input[type=number]:hover {
 	background: #cdf;
 }
 

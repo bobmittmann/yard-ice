@@ -243,13 +243,13 @@ int tcp_output(struct tcp_pcb * tp)
 	DCC_LOG3(LOG_INFO, "snd_nxt=%u snd_una=%u snd_len=%d", 
 			 snd_nxt, snd_una, tp->snd_q.len);
 
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 853 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 853 */
 	idle = (snd_max == snd_una);
 
 again:
 	sendalot = 0;
 
-	/* Ref.: TCP/IP Ilustrated Voume 2, pg. 854 */
+	/* Ref.: TCP/IP Illustrated Volume 2, pg. 854 */
 	off = snd_nxt - snd_una;
 	w_rem = tp->snd_wnd - off;
 	q_rem = tp->snd_q.len - off;
@@ -262,7 +262,7 @@ again:
 	 *
 	 */
 
-	/* Ref.: TCP/IP Ilustrated Voume 2, pg. 855 */
+	/* Ref.: TCP/IP Illustrated Volume 2, pg. 855 */
 	len = MIN(w_rem, q_rem);
 
 	DCC_LOG2(LOG_INFO, "queue=%d window=%d", q_rem, w_rem);
@@ -297,7 +297,7 @@ again:
 
 	/* 
 	 * Sender silly window avoidance. ...
-	   Ref.: TCP/IP Ilustrated Voume 2, pg. 859 */
+	   Ref.: TCP/IP Illustrated Volume 2, pg. 859 */
 	if (len) {
 		if (len == tp->t_maxseg) {
 			DCC_LOG1(LOG_INFO, "len == maxseg (%d), send...", len); 
@@ -346,8 +346,8 @@ again:
 
 	DCC_LOG2(LOG_INFO, "<%05x> win=%d", (int)tp, win);
 
-	/*  Check if a window update sould be sent
-	   Ref.: TCP/IP Ilustrated Voume 2, pg. 860 */
+	/*  Check if a window update should be sent
+	   Ref.: TCP/IP Illustrated Volume 2, pg. 860 */
 	if (win > 0) {
 		int adv;
 
@@ -448,7 +448,7 @@ send:
 									sizeof(struct tcphdr));
 	}
 
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 872 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 872 */
 	optlen = 0;
 	hdrlen = sizeof(struct tcphdr);
 	if (flags & TH_SYN) {
@@ -461,7 +461,7 @@ send:
 		optlen = 4;
 	}
 	
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 873 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 873 */
 	hdrlen += optlen;
 
 	/*
@@ -475,7 +475,7 @@ send:
 
 	if (len) {
 		/* TODO: statistics */
-		/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 875 */
+		/*  Ref.: TCP/IP Illustrated Volume 2, pg. 875 */
 		/*
 		 * If we're sending everithing we've got, set PUSH.
 		 */
@@ -484,10 +484,10 @@ send:
 
 	} else {
 		/* TODO: statistics */
-		/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 876 */
+		/*  Ref.: TCP/IP Illustrated Volume 2, pg. 876 */
 	}
 
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 877 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 877 */
 	/*
 	 * Fill in fields ...
 	 */
@@ -499,7 +499,7 @@ send:
 
 	/* TODO: Calculate receive window. Don't shrink window,
 	   but avoid silly window syndrome. */
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 879 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 879 */
 	if ((win < (tcp_maxrcv / 4)) && (win < tp->t_maxseg))
 		win = 0;
 
@@ -590,7 +590,7 @@ send:
 
 	/* In transmit state, time the transmission and arrange for
 	   the retransmit.  In persist state, just set snd_max.
-	   Ref.: TCP/IP Ilustrated Voume 2, pg. 881 */
+	   Ref.: TCP/IP Illustrated Volume 2, pg. 881 */
 
 	/* TODO: perist state ?? */
 	if (flags & (TH_SYN | TH_FIN)) {
@@ -618,7 +618,7 @@ send:
 	   round-trip time + 2 * round-trip time variance.
 	   Initialize counter which is used for backoff
 	   of retransmit time. */
-	/*  Ref.: TCP/IP Ilustrated Voume 2, pg. 881 */
+	/*  Ref.: TCP/IP Illustrated Volume 2, pg. 881 */
 	if ((tp->t_rxmt_tmr == 0) && 
 		(snd_nxt != snd_una)) {
 		DCC_LOG(LOG_INFO, "not ACK or keepalive prob, start rxmt tmr");
@@ -639,12 +639,12 @@ send:
 	}
 
 	/* Data sent (as far as we can tell)
-	   Ref.: TCP/IP Ilustrated Voume 2, pg. 883 */
+	   Ref.: TCP/IP Illustrated Volume 2, pg. 883 */
 #if 0
 	if ((win > 0) && SEQ_GT(tp->rcv_nxt + win, tp->rcv_adv))
 		tp->rcv_adv = tp->rcv_nxt + win;
 #endif
-	if ((win > 0) && (win > tp->rcv_adv_wnd))
+//	if ((win > 0) && (win > tp->rcv_adv_wnd))
 		tp->rcv_adv_wnd = win;
 
 	tp->t_flags &= ~(TF_ACKNOW | TF_DELACK);

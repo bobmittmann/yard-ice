@@ -6,75 +6,95 @@
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
-<title>CRAB Device Simulator RPC Test </title>
+<title>CRAB Device Simulator - RPC Test</title>
 
+<script src="/lib/modalbox.js.gz"></script>
 <script src="/lib/zepto.js.gz"></script>
 <script>
-
-	function test1(event) {
+	function msg_show(msg) {
+		var html = msg;
+		document.getElementById("msg").innerHTML = html;
+	}
+	
+	function upload_msg() {
+		msg_show("Uploading firmware, please wait...");
+	}
+	
+	function rpc_test(event) {
+		$('#results').empty();
 		$.ajax({
 			type: 'GET',
-			url: 'test1.cgi',
+			url: 'rpc_test.cgi',
 			data: { 
-				code: event.data,
-				port: $('#selport').val() 
+				code: event.data.code,
+				port: $('#selport').val(),
+				addr: $('#addr').val(),
+				size: $('#size').val(),
+				fname: $('#fname').val()
 			},
 			dataType: 'text',
-			timeout: 500,
+			timeout: 1000,
 			context: $('body'),
 			success: function(data) {
-				$('#results').empty();
 				$('#results').text(data);
 			},
 			error: function(xhr, type){
-				alert('Ajax error!') 
-				$('#result1').html('<b>Fail!</b>');
+				$('#results').text('Ajax error!\n');
 			}
 		});
-	};
+	}
 
-	function test2(e) {
+	function form_post(event) {
+		var lst = this.elements;
+		var caption;
+		
+		$('#results').empty();
+		$('#results').text(lst.length + '\n' + 
+				lst.namedItem('__fname').value + '\n' +
+				lst.namedItem('__browse').name);
+
+//		msg_show("Uploading file, please wait...");
+		
+//		dlg.okSelected = function () {
+//			dlg.hide(); 
+//			window.location.assign('restore.html'); 
+//		}
+//		dlg.cancelSelected = function () { dlg.hide(); }
+
+		caption = 'Uploading ' + lst.namedItem('__fname').value;
+		dlg.show('upload_dlg', caption, 400, 100);
+		
 		$.ajax({
-			type: 'GET',
-			url: 'test2.cgi',
-			dataType: 'text',
-			timeout: 500,
-			context: $('body'),
-			success: function(data) {
-				$('#result2').empty();
-				$('"#result2').html('<b>Ok!</b>');
-			},
-			error: function(xhr, type){
-				alert('Ajax error!') 
-				$('#result2').html('<b>Fail!</b>');
-			}
-		});
-	};
+			url: this.action + '?port=' + $('#selport').val(),
+			type: 'POST',
+			data: new FormData( this ),
+			processData: false,
+			contentType: false
+			});
+		event.preventDefault();
+		
+		dlg.hide();
+	}
 
-    $( document ).ready(function() {
-        console.log( "document loaded" );
-        
-        $('#btn1').on('click', 1, test1);
-        $('#btn2').on('click', 2, test1);
+	Zepto( document ).ready(function() {
+		
+        $('#btn1').on('click', { code: 1 }, rpc_test);
+        $('#btn2').on('click', { code: 2 }, rpc_test);
+        $('#btn3').on('click', { code: 3 }, rpc_test);
+        $('#btn4').on('click', { code: 4 }, rpc_test);
 
-        $('#btn3').on('click', function(e) { 
-        	console.log( "test3" );
-        	$("#result3").html("<b>Hello world!</b>");
-        });
-
-        $('#btn4').on('click', function(e) { 
-        	console.log( "test4" );
-        	$("#result4").html("<b>Hello world!</b>");
-        });
-
+		$('#formdb').submit(form_post);
+		$('#formcfg').submit(form_post);
     });
- 
-</script>
+		
+//	dlg.init();
+	
 
+</script>
 </head>
 
 <body>
-<h1>CRAB  - Device Simulator RPC Test</h1>
+<h1>CRAB Device Simulator - RPC Test</h1>
 
 <table>
 	<thead>
@@ -125,47 +145,60 @@
 
 <table>
 	<tr>
+		<td>Simulator:</td>
 		<td>
-		<input id="btn1" type="button" class="button" value="Test 1" />
+			<select id="selport">
+				<option value="1">Port 1</option>
+				<option value="2">Port 2</option>
+				<option value="3">Port 3</option>
+				<option value="4">Port 4</option>
+				<option value="4">Port 5</option>
+			</select>		
 		</td>
-		<td id="result1">
-		...
-		</td>		
+		<td>
+		</td>
+		<td>
+		</td>
+		<td>
+		</td>
+		<td>
+		</td>
 	</tr>
 	<tr>
+		<td>File:</td>
 		<td>
-		<input id="btn2" type="button" class="button" value="Test 2" />
+			<input id="fname" type="text" maxlength="100" size="10" value="cfg.js" />
 		</td>
-		<td id="result2">
-		...
+		<td>
 		</td>		
+		<td>
+		</td>		
+		<td>
+			<input id="btn1" type="button" class="button" value="File Write" />		
+		</td>
+		<td>
+			<input id="btn2" type="button" class="button" value="File Read" />
+		</td>
 	</tr>
 	<tr>
+		<td>Address:</td>
 		<td>
-		<input id="btn3" type="button" class="button" value="Test 3" />
+			<input id="addr" type="text" maxlength="10" size="10" value="0x08010000" />
 		</td>
-		<td id="result3">
-		...
-		</td>		
-	</tr>
-	<tr>
+		<td>Size:</td>
 		<td>
-		<input id="btn4" type="button" class="button" value="Test 4" />
-		</td>
-		<td id="result4">
-		...
+			<input id="size" type="number" maxlength="3" size="3" min="1" max="512" value="128" />
 		</td>		
-	</tr>
+		<td>
+			<input id="btn3" type="button" class="button" value="Mem read" />	
+		</td>
+		<td>
+			<input id="btn4" type="button" class="button" value="Test 4" />
+		</td>
+		<td>
+		</td>		
+	</tr>	
 </table>
-
-Simulator: 
-<select id="selport">
-  <option value="1">Port 1</option>
-  <option value="2">Port 2</option>
-  <option value="3">Port 3</option>
-  <option value="4">Port 4</option>
-  <option value="4">Port 5</option>
-</select>
 
 <pre>
 	<div id="results" style="
@@ -177,61 +210,55 @@ Simulator:
 </pre>
 
 <hr>
-<h2>Database updload</h2>
+<h2>Database upload</h2>
 <div class="form">
-<form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
-<div class="fbody">
-File:
-<!--[if IE]>
-       <input type="file" id="browse" class="text"
-           maxlength="128" size="40" name="firmware" />"
-<![endif]-->
-<![if !IE]>
-       <input type="text" class="text" id="fname"
-           readonly="readonly" maxlength="128" size="40" />
-       <input type="button" class="button" value="Browse..."
-           onclick="javascript:
-           document.getElementById('browse').click()" />
-       <input type="file" class="hidden" id="browse"
-           name="firmware" onchange="javascript:
-           document.getElementById('fname').value = this.value" />
-<![endif]>
+<form id="formdb" enctype="multipart/form-data" action="db_load.cgi">
+	<div class="fbody">
+	File:
+	<input type="text" class="text" id="__fname" readonly="readonly" maxlength="128" size="20" />
+	<input type="button" class="button" value="Browse..." 
+		onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+	<input type="file" class="hidden" id="__browse" name="fname" 
+		onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
    </div>
    <div class="ffoot">
        <input type="reset" class="button" value="Reset" />
        <input type="submit" class="button" value="Upload..." />
    </div>
+</form>
+</div>
+				
+<hr>
+<h2>Config upload</h2>
+<div class="form">
+<form id="formcfg" enctype="multipart/form-data" action="cfg_load.cgi">
+	<div class="fbody">
+	File:
+	<input type="text" class="text" id="__fname" readonly="readonly" maxlength="128" size="20" />
+	<input type="button" class="button" value="Browse..." 
+		onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+	<input type="file" class="hidden" id="__browse" name="fname" 
+		onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
+   </div>
+   <div class="ffoot">
+       <input type="reset" class="button" value="Reset" />
+       <input type="submit" class="button" value="Upload..." />
+   </div>
+	
 </form>
 </div>
 
-<hr>
-<h2>Configuration updload</h2>
-<div class="form">
-<form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
-<div class="fbody">
-File:
-<!--[if IE]>
-       <input type="file" id="browse" class="text"
-           maxlength="128" size="40" name="firmware" />"
-<![endif]-->
-<![if !IE]>
-       <input type="text" class="text" id="fname"
-           readonly="readonly" maxlength="128" size="40" />
-       <input type="button" class="button" value="Browse..."
-           onclick="javascript:
-           document.getElementById('browse').click()" />
-       <input type="file" class="hidden" id="browse"
-           name="firmware" onchange="javascript:
-           document.getElementById('fname').value = this.value" />
-<![endif]>
-   </div>
-   <div class="ffoot">
-       <input type="reset" class="button" value="Reset" />
-       <input type="submit" class="button" value="Upload..." />
-   </div>
-</form>
+<div id="upload_dlg" class="dialog">
+	<h1 id="title"></h1>
+	<center>
+		<div style="float:left">
+		<img style="float:none;vertical-align:middle" src="alert.png" alt="Alert! "/>
+		</div>
+		<div>
+		<p>Uploading file, please wait...</p> 
+		</div>
+	</center>
 </div>
-<hr>
 
 <hr>
 <a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>

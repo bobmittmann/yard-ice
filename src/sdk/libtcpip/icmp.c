@@ -257,7 +257,7 @@ int icmp_error(struct iphdr * __ip, int __type,
 		icmpstat.icps_error++; */
 
 	/* Don't send error if not the first fragment 
-	   Ref.: TCP/IP Ilustrated Voume 2, pg. 325 */
+	   Ref.: TCP/IP Illustrated Volume 2, pg. 325 */
 	icp = (struct icmp *)__ip->opt;
 
 	if (__ip->ip_off & ~(IP_MF | IP_DF)) {

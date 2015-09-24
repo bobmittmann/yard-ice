@@ -92,6 +92,7 @@ int tcp_recv(struct tcp_pcb * __tp, void * __buf, int __len)
 		return n;
 	}
 
+	/* XXX: revisit this ... */
 //	if ((__tp->rcv_q.len == 0) || (__tp->t_flags & TF_DELACK)) {
 	if ((__tp->rcv_q.len == 0)) {
 		if (__tp->t_flags & TF_DELACK) {

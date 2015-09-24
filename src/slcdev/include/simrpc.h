@@ -31,6 +31,7 @@
 #include <stdint.h> 
 
 enum simrpc_err {
+	SIMRPC_EBADMSG   = -0x7ffffff4,
 	SIMRPC_EBADF     = -0x7ffffff5,
 	SIMRPC_EBUSY     = -0x7ffffff6,
 	SIMRPC_ENOENT    = -0x7ffffff7,
@@ -40,7 +41,7 @@ enum simrpc_err {
 	SIMRPC_EDRIVER   = -0x7ffffffb,
 	SIMRPC_ESYSTEM   = -0x7ffffffc,
 	SIMRPC_ELINK     = -0x7ffffffd,
-	SIMRPC_EPROTOCOL = -0x7ffffffe,
+	SIMRPC_EPROTO    = -0x7ffffffe,
 	SIMRPC_ETIMEDOUT = -0x7fffffff
 };
 
@@ -56,7 +57,11 @@ void simrpc_init(void);
 
 struct simrpc_pcb * simrpc_open(unsigned int daddr);
 
+int simrpc_set_timeout(struct simrpc_pcb * sp, unsigned int tmo_ms);
+
 int simrpc_close(struct simrpc_pcb * sp);
+
+
 
 int simrpc_mem_lock(struct simrpc_pcb * sp, uint32_t base, 
 					unsigned int size);

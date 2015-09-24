@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
+<link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
+
+<title>CRAB Device Simulator RPC Test </title>
+
+<script src="/lib/zepto.js.gz"></script>
+<script>
+
+	function test1(event) {
+		$.ajax({
+			type: 'GET',
+			url: 'test1.cgi',
+			data: { 
+				code: event.data.code,
+				port: $('#selport').val() 
+			},
+			dataType: 'text',
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				$('#results').empty();
+				$('#results').text(data);
+			},
+			error: function(xhr, type){
+				alert('Ajax error!') 
+				$('#result1').html('<b>Fail!</b>');
+			}
+		});
+	};
+
+	$( document ).ready(function() {
+        $('#btn1').on('click', { code: 1 }, rcp_test);
+        $('#btn2').on('click', { code: 2 }, rcp_test);
+        $('#btn2').on('click', { code: 3 }, rcp_test);
+        $('#btn2').on('click', { code: 4 }, rcp_test);
+
+    });
+ 
+</script>
+
+</head>
+
+<body>
+<h1>CRAB  - Device Simulator RPC Test</h1>
+
+<table>
+	<thead>
+		<tr>
+		<th>Port</th>
+		<th>Status</th>
+		<th>Firmware</th>
+		<th>Database</th>
+		<th>Config</th>
+		</tr>
+	</thead>
+	<tr>
+		<td><b>Port 1</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>
+	<tr>
+		<td><b>Port 2</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 3</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 4</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>	
+	<tr>
+		<td><b>Port 5</b></td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>
+		<td>...</td>		
+	</tr>		
+</table>
+
+<table>
+	<tr>
+		<td>
+		<input id="btn1" type="button" class="button" value="Test 1" />
+		</td>
+		<td id="result1">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn2" type="button" class="button" value="Test 2" />
+		</td>
+		<td id="result2">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn3" type="button" class="button" value="Test 3" />
+		</td>
+		<td id="result3">
+		...
+		</td>		
+	</tr>
+	<tr>
+		<td>
+		<input id="btn4" type="button" class="button" value="Test 4" />
+		</td>
+		<td id="result4">
+		...
+		</td>		
+	</tr>
+</table>
+
+Simulator: 
+<select id="selport">
+  <option value="1">Port 1</option>
+  <option value="2">Port 2</option>
+  <option value="3">Port 3</option>
+  <option value="4">Port 4</option>
+  <option value="4">Port 5</option>
+</select>
+
+<pre>
+	<div id="results" style="
+	min-height: 200px; 
+	border-style: solid; 
+	border-width: 1px; 
+	border-color: #111;">
+	</div>
+</pre>
+
+<hr>
+<h2>Database updload</h2>
+<div class="form">
+<form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
+<div class="fbody">
+File:
+<!--[if IE]>
+       <input type="file" id="browse" class="text"
+           maxlength="128" size="40" name="firmware" />"
+<![endif]-->
+<![if !IE]>
+       <input type="text" class="text" id="fname"
+           readonly="readonly" maxlength="128" size="40" />
+       <input type="button" class="button" value="Browse..."
+           onclick="javascript:
+           document.getElementById('browse').click()" />
+       <input type="file" class="hidden" id="browse"
+           name="firmware" onchange="javascript:
+           document.getElementById('fname').value = this.value" />
+<![endif]>
+   </div>
+   <div class="ffoot">
+       <input type="reset" class="button" value="Reset" />
+       <input type="submit" class="button" value="Upload..." />
+   </div>
+</form>
+</div>
+
+<hr>
+<h2>Configuration updload</h2>
+<div class="form">
+<form method="post" enctype="multipart/form-data" action="/update.cgi" onsubmit="upload_msg()">
+<div class="fbody">
+File:
+<!--[if IE]>
+       <input type="file" id="browse" class="text"
+           maxlength="128" size="40" name="firmware" />"
+<![endif]-->
+<![if !IE]>
+       <input type="text" class="text" id="fname"
+           readonly="readonly" maxlength="128" size="40" />
+       <input type="button" class="button" value="Browse..."
+           onclick="javascript:
+           document.getElementById('browse').click()" />
+       <input type="file" class="hidden" id="browse"
+           name="firmware" onchange="javascript:
+           document.getElementById('fname').value = this.value" />
+<![endif]>
+   </div>
+   <div class="ffoot">
+       <input type="reset" class="button" value="Reset" />
+       <input type="submit" class="button" value="Upload..." />
+   </div>
+</form>
+</div>
+<hr>
+
+<hr>
+<a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>
+- Cortex-M Operating System - 
+<i><a href="https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i>
+<br>&copy; Copyright 2013-2015, Bob Mittmann<br>
+
+</body>
+</html>
+

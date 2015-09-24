@@ -367,7 +367,7 @@ int main(int argc, char ** argv)
 
 	for (;;) {
 		INF("Tick...");
-		thinkos_sleep(3000);
+		thinkos_sleep(10000);
 	}
 
 //	flash_test();

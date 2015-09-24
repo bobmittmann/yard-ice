@@ -71,7 +71,7 @@ void simrpc_file_open_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	}
 
 	if (!fs_dirent_lookup(fname, &entry)) {
-		DCC_LOG(LOG_WARNING, "file does not exist");
+		DCC_LOGSTR(LOG_WARNING, "file does not exist: \"%s\"", fname);
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_ENOENT);
 		return;
 	}
@@ -79,11 +79,14 @@ void simrpc_file_open_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 
 	simrpc_file.entry = entry;
+	simrpc_file.offs = 0;
 	simrpc_file.max = entry.blk_size - sizeof(struct fs_file);
-	simrpc_file.offs = entry.blk_offs + sizeof(struct fs_file);
 	simrpc_file.lock = SIMRPC_SRC(hdr);
 	simrpc_file.clk = clk + FILE_LOCK_TIMEOUT_MS;
 	simrpc_file.nsync = false;
+
+	DCC_LOGSTR(LOG_TRACE, "file: \"%s\"", fname);
+	DCC_LOG1(LOG_TRACE, "size=%d", simrpc_file.entry.fp->size);
 }
 
 void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
@@ -91,8 +94,6 @@ void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	struct fs_dirent entry;
 	uint32_t clk;
 	char * fname;
-
- 	DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
 
 	fname = (char *)data;
 	fname[cnt] = '\0';
@@ -116,14 +117,18 @@ void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 	fs_file_unlink(&entry);
 
+	DCC_LOG(LOG_TRACE, "reply OK...");
 	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 
 	simrpc_file.entry = entry;
+	simrpc_file.offs = 0;
 	simrpc_file.max = entry.blk_size - sizeof(struct fs_file);
-	simrpc_file.offs = entry.blk_offs + sizeof(struct fs_file);
 	simrpc_file.lock = SIMRPC_SRC(hdr);
 	simrpc_file.clk = clk + FILE_LOCK_TIMEOUT_MS;
 	simrpc_file.nsync = false;
+
+	DCC_LOGSTR(LOG_TRACE, "file: \"%s\"", fname);
+	DCC_LOG1(LOG_TRACE, "max=%d", simrpc_file.max);
 }
 
 void simrpc_file_unlink_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
@@ -199,6 +204,8 @@ void simrpc_file_crc16_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 void simrpc_file_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
+	struct fs_file * fp;
+	unsigned int offs;
 	unsigned int rem;
 	unsigned int n;
 	uint32_t clk;
@@ -217,7 +224,7 @@ void simrpc_file_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	}
 #endif
 
-	if (simrpc_file.lock == SIMRPC_UNLOCK) {
+	if (simrpc_file.lock != SIMRPC_SRC(hdr)) {
 		DCC_LOG(LOG_WARNING, "locked");
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_EBUSY);
 		return;
@@ -226,10 +233,11 @@ void simrpc_file_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	rem = simrpc_file.max - simrpc_file.offs;
 	n = MIN(rem, cnt); 
 	
-	DCC_LOG2(LOG_INFO, "stm32_flash_write(offs=%06x size=%d)", 
-			 simrpc_file.offs, n);
-
-	stm32_flash_write(simrpc_file.offs, &data[1], n);
+	fp = simrpc_file.entry.fp;
+	offs = ((uintptr_t)&fp->data[simrpc_file.offs]) - 
+		(uintptr_t)STM32_MEM_FLASH; 
+	DCC_LOG2(LOG_TRACE, "stm32_flash_write(offs=%06x size=%d)", offs, n);
+	stm32_flash_write(offs, data, n);
 
 	simrpc_send_int(SIMRPC_REPLY_OK(hdr), n);
 
@@ -255,7 +263,7 @@ void simrpc_file_read_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	len = data[0];
 	clk = thinkos_clock();
 
-	if (simrpc_file.lock == SIMRPC_UNLOCK) {
+	if (simrpc_file.lock != SIMRPC_SRC(hdr)) {
 		DCC_LOG(LOG_WARNING, "locked");
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_EBUSY);
 		return;
@@ -266,8 +274,10 @@ void simrpc_file_read_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 	rem = fp->size - offs;
 	n = MIN(rem, len);
-	n = MIN(n, (SIMLNK_MTU - 4));
+	n = MIN(n, SIMRPC_DATA_MAX);
 
+	DCC_LOG2(LOG_TRACE, "simrpc_send(addr=%08x size=%d)", 
+			 (uintptr_t)&fp->data[offs], n);
 	simrpc_send(SIMRPC_REPLY_OK(hdr), (void *)&fp->data[offs], n);
 
 	simrpc_file.offs = offs + n;
@@ -281,14 +291,16 @@ void simrpc_file_close_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 	clk = thinkos_clock();
 
-	if (simrpc_file.lock == SIMRPC_UNLOCK) {
+	if (simrpc_file.lock != SIMRPC_SRC(hdr)) {
 		DCC_LOG(LOG_WARNING, "locked");
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_EBUSY);
 		return;
 	}
 
-	if (simrpc_file.nsync)
-		fs_file_commit(&simrpc_file.entry, cnt);
+	if (simrpc_file.nsync) {
+		DCC_LOG(LOG_TRACE, "fs_file_commit()...");
+		fs_file_commit(&simrpc_file.entry, simrpc_file.offs);
+	}
 
 	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 
@@ -309,7 +321,7 @@ void simrpc_file_seek_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	offs = data[0];
 	clk = thinkos_clock();
 
-	if (simrpc_file.lock == SIMRPC_UNLOCK) {
+	if (simrpc_file.lock != SIMRPC_SRC(hdr)) {
 		DCC_LOG(LOG_WARNING, "locked");
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_EBUSY);
 		return;

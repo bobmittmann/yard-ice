@@ -56,24 +56,25 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 
 	/* break detection */
 	if (sr & USART_FE) {
+		/* clear the frame error interrupt flag */
 		c = uart->rdr;
 		(void)c;
-		/* Disable DMA stream */
+		/* disable DMA stream */
 		drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
-		while (drv->rx.dmactl.strm->cr & DMA_EN); 
 		/* skip the break char */
 		drv->rx.dmactl.strm->ndtr++;
 		DCC_LOG(LOG_INFO, "BRK");
+		/* signal the waiting thread */
 		thinkos_flag_give_i(drv->rx_idle);
 	}
 
-		/* idle detection */
+	/* idle detection */
 	if (sr & USART_IDLE) {
 		c = uart->rdr;
 		(void)c;
 		/* Disable DMA stream */
 		drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
-		while (drv->rx.dmactl.strm->cr & DMA_EN); 
+//		while (drv->rx.dmactl.strm->cr & DMA_EN);
 		DCC_LOG(LOG_TRACE, "IDLE");
 		thinkos_flag_give_i(drv->rx_idle);
 	}

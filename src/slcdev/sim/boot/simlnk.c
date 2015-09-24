@@ -36,14 +36,21 @@ struct simlnk {
 	uint32_t rx_buf[(SIMLNK_MTU + 1 + 3) / 4];
 } simlnk;
 
-void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
+static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 {
-	uint32_t opc = pkt[0];
-	void * data = (void *)&pkt[1];
+	uint32_t opc;
+	void * data;
 	int wq = THINKOS_WQ_COMM_RECV;
 	int th;
 
-	switch (opc >> 24) {
+	/* get the opcode */
+	opc = pkt[0];
+	/* data portion */
+	data = (void *)&pkt[1];
+	/* adjust the data length */
+	cnt -= 4;
+	/* decode instruction */
+	switch (SIMRPC_INSN(opc)) {
 	case SIMRPC_SUSPEND:
 		simrpc_suspend_svc(opc, data, cnt);
 		break;
@@ -78,15 +85,19 @@ void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 		simrpc_mem_seek_svc(opc, data, cnt);
 		break;
 	default:
+		/* forward to userland */
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			__thinkos_memcpy32((void *)thinkos_rt.ctx[th]->r1, pkt, cnt);
+			*((uint32_t *)thinkos_rt.ctx[th]->r1) = opc;
+			__thinkos_memcpy32((void *)thinkos_rt.ctx[th]->r2, data, cnt);
 			/* wakeup from the console wait queue */
 			__thinkos_wakeup_return(wq, th, cnt);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched();
 		} else {
-		//		DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", opc >> 24);
-		//		simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
+			/* no user waiting, return an error */
+			DCC_LOG1(LOG_WARNING, "No thread on comm_recv wait queue, insn=%d",
+					 SIMRPC_INSN(opc));
+			simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
 		}
 	}
 
@@ -145,6 +156,10 @@ void thinkos_comm_svc(int32_t * arg)
 			void * buf = (void *)arg[2];
 			int cnt = arg[3];
 			simlnk.tx_buf[0] = opc;
+
+			DCC_LOG1(LOG_TRACE, "INSN %d!", SIMRPC_INSN(opc));
+			if (cnt == 4) 
+				DCC_LOG1(LOG_TRACE, "data[0] = %d!", *((uint32_t *)buf));
 			__thinkos_memcpy32(&simlnk.tx_buf[1], buf, cnt);
 			simlnk_dma_xmit(cnt + 4);
 			arg[0] = 0;
@@ -208,8 +223,9 @@ void stm32_usart2_isr(void)
 			DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
 
 			if (cnt > 4) {
-				/* process this request */
-				simlnk_dma_recv(simlnk.rx_buf, cnt - 5);
+				/* process this request,
+				 remove the break character from the packet length. */
+				simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
 			}
 		}
 #if 0

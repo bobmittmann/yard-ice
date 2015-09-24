@@ -19,6 +19,8 @@ int simrpc_send_int(uint32_t hdr, int val)
 {
 	uint32_t data[1];
 
+	DCC_LOG1(LOG_INFO, "val=%d", val);
+
 	data[0] = (uint32_t)val;
 	return thinkos_comm_send(hdr, data, 4);
 }
@@ -30,18 +32,14 @@ int simrpc_send_opc(uint32_t hdr)
 
 void simlnk_task(void)
 {
-	uint32_t pkt[(SIMLNK_MTU + 3) / 4];
+	uint32_t data[(SIMLNK_MTU + 3) / 4];
 	unsigned int cnt;
-	uint32_t hdr;
-	void * data;
+	uint32_t hdr = 0;
 
 	DCC_LOG(LOG_TRACE, "SIMLNK!");
 
 	for (;;) {
-		cnt = thinkos_comm_recv(pkt, SIMLNK_MTU);
-		hdr = pkt[0];
-		data = (void *)&pkt[1];
-		cnt -= 4;
+		cnt = thinkos_comm_recv(&hdr, data, SIMLNK_MTU);
 
 		DCC_LOG1(LOG_TRACE, "cnt=%d", cnt);
 
@@ -71,7 +69,7 @@ void simlnk_task(void)
 			simrpc_file_crc16_svc(hdr, data, cnt);
 			break;
 		default:
-			DCC_LOG1(LOG_WARNING, "Invalid insn: 0x%02x", hdr >> 24);
+			DCC_LOG1(LOG_WARNING, "Invalid insn: %d", SIMRPC_INSN(hdr));
 			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_ENOSYS);
 		}
 	}

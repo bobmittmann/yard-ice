@@ -51,10 +51,10 @@ extern const char footer_html[];
 extern const uint16_t sizeof_footer_html;
 
 extern struct httpdobj www_root[];
-extern struct httpdobj www_rtsp[];
 extern struct httpdobj www_ipcfg[];
 extern struct httpdobj www_lib[];
 extern struct httpdobj www_img[];
+
 
 /*---------------------------------------------------------------------------
   Automatically generated code
@@ -63,11 +63,11 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_RPC_TEST_HTML 1502
+#define SIZEOF_RPC_TEST_HTML 1948
 
 #define SIZEOF_NETWORK_HTML 1587
 
-#define SIZEOF_STYLE_CSS 749
+#define SIZEOF_STYLE_CSS 761
 
 #define SIZEOF_TOOLS_HTML 1431
 
@@ -82,5 +82,17 @@ extern const uint8_t style_css[];
 
 extern const uint8_t tools_html[];
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int rpc_test_cgi(struct httpctl * http);
+int cfg_load_cgi(struct httpctl * http);
+int db_load_cgi(struct httpctl * http);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

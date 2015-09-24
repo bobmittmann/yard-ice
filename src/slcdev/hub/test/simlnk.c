@@ -54,12 +54,12 @@ struct simlnk {
 	uint8_t addr; /* this station address */
 	struct serial_dev * dev;
 	struct {
-		uint32_t buf[SIMLNK_MTU / 4];
+		uint32_t buf[(SIMLNK_MTU + 2 + 3) / 4];
 		volatile unsigned int cnt;
 		int flag;
 	} rx;
 	struct {
-		uint32_t buf[SIMLNK_MTU / 4];
+		uint32_t buf[(SIMLNK_MTU + 3) / 4];
 		int flag;
 	} tx;
 	struct simlnk_stat stat;
@@ -79,7 +79,8 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 	for (;;) {
 		clk = thinkos_clock();
 		(void)clk;
-		if ((cnt = serial_recv(lnk->dev, pkt, SIMLNK_MTU, 0x7fffffff)) <= 0) {
+		/* Receive up to SIMLNK_MTU bytes plus the break condition */
+		if ((cnt = serial_recv(lnk->dev, pkt, SIMLNK_MTU + 2, 0x7fffffff)) <= 0) {
 			continue;
 		}
 
@@ -218,7 +219,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	}
 
 	WARN("invalid response.");
-	return SIMRPC_EPROTOCOL;
+	return SIMRPC_EPROTO;
 }
 
 /* -------------------------------------------------------------------------

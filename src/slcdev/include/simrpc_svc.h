@@ -79,7 +79,8 @@ struct simrpc_hdr {
 #define SIMRPC_SEQ(OPC) (((OPC) >> 16) & 0xff)
 #define SIMRPC_INSN(OPC) (((OPC) >> 24) & 0xff)
 
-#define SIMRPC_PDU_MAX 500
+#define SIMRPC_DATA_MAX  (512)
+#define SIMRPC_PDU_MAX   (4 + SIMRPC_DATA_MAX)
 
 #define SIMRPC_ADDR_SWAP(OPC) (((OPC) & 0xffff0000) | \
 							   (((OPC) & 0x0000ff00) >> 8) | \

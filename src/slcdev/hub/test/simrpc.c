@@ -46,7 +46,6 @@
 #define TRACE_LEVEL TRACE_LVL_WARN
 #include <trace.h>
 
-#define SIMLNK_BAUDRATE 10000
 #define SIMLNK_STACK_SIZE 1024
 #define SIMLNK_MAX 5
 
@@ -239,6 +238,12 @@ struct simrpc_pcb * simrpc_open(unsigned int daddr)
 	sp->tmo = SIMRPC_DEF_TMO_MS;
 
 	return sp;
+}
+
+int simrpc_set_timeout(struct simrpc_pcb * sp, unsigned int tmo_ms)
+{
+	sp->tmo = tmo_ms;
+	return 0;
 }
 
 int simrpc_close(struct simrpc_pcb * sp)

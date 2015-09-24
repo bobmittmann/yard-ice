@@ -80,76 +80,6 @@ int update_cgi(struct httpctl * ctl)
     return http_send(ctl, update_html, sizeof(update_html) - 1);
 }
 
-const struct fileop http_fops = {
-	.write = (void *)http_send,
-	.read = (void *)null_read,
-	.flush = (void *)null_flush,
-	.close = (void *)null_close
-};
-
-int rpc_test_file_write(FILE * f, int port);
-int rpc_test_file_read(FILE * f, int port);
-
-int test1_cgi(struct httpctl * http)
-{
-	struct file http_file = {
-		.data = http,
-		.op = &http_fops
-	};
-	struct file * f = &http_file;
-    int code;
-    int port;
-
-   	httpd_200(http->tp, TEXT_PLAIN);
-
-   	code = atoi(http_query_lookup(http, "code"));
-    INF("code=%d", code);
-    port = atoi(http_query_lookup(http, "port"));
-    INF("port=%d", port);
-
-    fprintf(f, "This is a test!\n");
-    fprintf(f, "Code = %d\n", code);
-    fprintf(f, "Port = %d\n", port);
-
-    switch (code) {
-    case 1:
-    	rpc_test_file_write(f, port);
-    	break;
-    case 2:
-    	rpc_test_file_read(f, port);
-    	break;
-    }
-
-   	return 0;
-}
-
-
-int test2_cgi(struct httpctl * http)
-{
-    char s[HTML_MAX + 1];
-   	int param;
-    int n;
-   	int i;
-
-   	param = atoi(http_query_lookup(http, "param"));
-    INF("rows=%d", param);
-
-    httpd_200(http->tp, APPLICATION_JSON);
-
-    n = snprintf(s, HTML_MAX, "{\"list\": [");
-    http_send(http, s, n);
-    for (i = 0; i < param; ++i) {
-    	if (i == 0)
-    		n = snprintf(s, HTML_MAX, "{\"fname\":\"Row %d\"}", i);
-    	else
-    		n = snprintf(s, HTML_MAX, ",{\"fname\":\"Row %d\"}", i);
-    	http_send(http, s, n);
-    }
-    n = snprintf(s, HTML_MAX, "]}\r\n");
-    http_send(http, s, n);
-
-   	return 0;
-}
 /*---------------------------------------------------------------------------
   root directory content
   ---------------------------------------------------------------------------*/
@@ -163,16 +93,18 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_TOOLS_HTML, .ptr = tools_html },
 	{ .oid = "rpc_test.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_RPC_TEST_HTML, .ptr = rpc_test_html },
+	{ .oid = "rpc_test.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+		.len = 0, .ptr = rpc_test_cgi },
     { .oid = "update.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = update_cgi },
+    { .oid = "cfg_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = cfg_load_cgi },
+    { .oid = "db_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = db_load_cgi },
 	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(update_html) - 1, .ptr = update_html },
 	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_NETWORK_HTML, .ptr = network_html },
-	{ .oid = "test1.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
-		.len = 0, .ptr = test1_cgi },
-	{ .oid = "test2.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
-		.len = 0, .ptr = test2_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

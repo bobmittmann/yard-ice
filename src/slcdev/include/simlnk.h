@@ -33,8 +33,8 @@
 
 #include "simrpc_clnt.h"
 
-#define SIMLNK_MTU 500
-#define SIMLNK_BAUDRATE 10000
+#define SIMLNK_MTU (512 + 4)
+#define SIMLNK_BAUDRATE 125000
 
 struct simlnk_stat {
 	uint32_t rx_err;
