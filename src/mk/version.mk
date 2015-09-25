@@ -60,7 +60,7 @@ endif
 
 MKVER = $(TOOLSDIR)/mkver.py
 
-$(VERSION_H):
+$(VERSION_H): Makefile
 	$(ACTION) "Creating: $@"
 	$(Q)$(PYTHON) $(MKVER) -o $@ -n $(VERSION_NAME) $(VERSION_MAJOR) $(VERSION_MINOR) $(VERSION_DATE)
 	

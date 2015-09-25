@@ -45,6 +45,26 @@ enum simrpc_err {
 	SIMRPC_ETIMEDOUT = -0x7fffffff
 };
 
+struct kernelinfo {
+	uint32_t ticks;
+	struct {
+		uint8_t major;
+		uint8_t minor;
+		uint16_t build;
+		uint32_t timestamp;
+	} version;
+};
+
+struct appinfo {
+	uint32_t uptime;
+	struct {
+		uint8_t major;
+		uint8_t minor;
+		uint16_t build;
+		uint32_t timestamp;
+	} version;
+};
+
 struct simrpc_pcb;
 
 #define SIMRPC_BCAST 0xff
@@ -88,6 +108,10 @@ int simrpc_resume(struct simrpc_pcb * sp);
 int simrpc_reboot(struct simrpc_pcb * sp);
 int simrpc_exec(struct simrpc_pcb * sp, uint32_t key);
 
+int simrpc_kernelinfo(struct simrpc_pcb * sp, struct kernelinfo * inf);
+
+int simrpc_appinfo(struct simrpc_pcb * sp, struct appinfo * inf);
+
 int simrpc_file_open(struct simrpc_pcb * sp, const char * path);
 
 int simrpc_file_create(struct simrpc_pcb * sp, const char * path);
@@ -103,9 +127,11 @@ int simrpc_file_write(struct simrpc_pcb * sp,
 
 int simrpc_file_seek(struct simrpc_pcb * sp, uint32_t offs);
 
-int simrpc_file_crc32(struct simrpc_pcb * sp, const char * path, uint32_t * crc);
+int simrpc_file_crc32(struct simrpc_pcb * sp, const char * path, 
+					  uint32_t * crc);
 
-int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path, uint32_t * crc);
+int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path, 
+					  uint32_t * crc);
 
 struct simlnk * simrpc_route(unsigned int daddr);
 

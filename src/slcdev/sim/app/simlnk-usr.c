@@ -3,12 +3,11 @@
 #include <string.h>
 
 #include <sys/dcclog.h>
+#include <thinkos.h>
 
 #include "simlnk.h"
 #include "simrpc.h"
 #include "simrpc_svc.h"
-#include "config.h"
-#include "board.h"
 
 int simrpc_send(uint32_t hdr, void * data, unsigned int cnt)
 {
@@ -30,7 +29,7 @@ int simrpc_send_opc(uint32_t hdr)
 	return thinkos_comm_send(hdr, NULL, 0);
 }
 
-void simlnk_task(void)
+void __attribute__((noreturn)) simlnk_task(void)
 {
 	uint32_t data[(SIMLNK_MTU + 3) / 4];
 	unsigned int cnt;

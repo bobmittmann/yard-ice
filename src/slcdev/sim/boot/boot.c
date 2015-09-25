@@ -28,42 +28,49 @@
 #endif
 
 #include <stdlib.h>
-#include <stdbool.h>
-
-#include <sys/stm32f.h>
-#include <sys/delay.h>
-#include <sys/dcclog.h>
-
 #include <thinkos.h>
+#include <sys/dcclog.h>
 
 #include "board.h"
 #include "simlnk.h"
 
-#define VERSION_NUM "0.1"
-#define VERSION_DATE "Mar, 2015"
+void cm3_debug_mon_isr(void)
+{
+	DCC_LOG(LOG_TRACE, "board_app_exec().");
+	board_app_exec(THINKOS_APP_ADDR);
+}
 
-const char * const version_str = "ThinkOS Boot Loader " \
-							VERSION_NUM " - " VERSION_DATE;
-const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
+void app_try_exec()
+{
+	struct cm3_dcb * dcb = CM3_DCB;
 
-int main(int argc, char ** argv)
+	DCC_LOG(LOG_TRACE, "debug/monitor");
+
+	/* enable monitor and send the reset event */
+	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
+	asm volatile ("isb\n" :  :  : );
+}
+
+int __attribute__((noreturn)) main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
-	DCC_LOG(LOG_TRACE, "1. io_init().");
-
+	DCC_LOG(LOG_TRACE, "1. board_init().");
 	board_init();
 
 	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
+	DCC_LOG(LOG_TRACE, "3. simlnk_init().");
 	simlnk_init(NULL, "SIM", 0, NULL);
 
+	DCC_LOG(LOG_TRACE, "4. app_try_exec().");
+	app_try_exec();
+	
+	DCC_LOG(LOG_TRACE, "5. board_test().");
 	board_test();
 
-	__thinkos_thread_abort(0);
-
-	return 0;
+//	return 0;
 }
 

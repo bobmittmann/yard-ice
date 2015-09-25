@@ -42,6 +42,11 @@ _Pragma ("GCC optimize (\"O2\")")
 #define THINKOS_SYSRST_ONFAULT    0
 #endif
 
+#if DEBUG
+#undef THINKOS_SYSRST_ONFAULT
+#define THINKOS_SYSRST_ONFAULT    0
+#endif
+
 #ifndef THINKOS_STDERR_FAULT_DUMP
 #define THINKOS_STDERR_FAULT_DUMP 0
 #endif

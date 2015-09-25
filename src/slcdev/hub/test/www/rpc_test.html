@@ -8,7 +8,7 @@
 
 <title>CRAB Device Simulator - RPC Test</title>
 
-<script src="/lib/modalbox.js.gz"></script>
+<!-- <script src="/lib/modalbox.js.gz"></script> -->
 <script src="/lib/zepto.js.gz"></script>
 <script>
 	function msg_show(msg) {
@@ -61,8 +61,8 @@
 //		}
 //		dlg.cancelSelected = function () { dlg.hide(); }
 
-		caption = 'Uploading ' + lst.namedItem('__fname').value;
-		dlg.show('upload_dlg', caption, 400, 100);
+//		caption = 'Uploading ' + lst.namedItem('__fname').value;
+//		dlg.show('upload_dlg', caption, 400, 100);
 		
 		$.ajax({
 			url: this.action + '?port=' + $('#selport').val(),
@@ -76,6 +76,23 @@
 		dlg.hide();
 	}
 
+	function get_status() {
+		$.ajax({"
+			type: 'GET',"
+			url: 'get_status.cgi',
+			dataType: 'json',"
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				$('#results').empty();
+				$.each(data.list, function (index, item) {
+					$('#results').append(item.fname + '<hr />')
+				});
+			},
+			error: function(xhr, type){ alert('Ajax error!') }
+		});
+	};
+	
 	Zepto( document ).ready(function() {
 		
         $('#btn1').on('click', { code: 1 }, rpc_test);
@@ -85,10 +102,11 @@
 
 		$('#formdb').submit(form_post);
 		$('#formcfg').submit(form_post);
+		
+		get_status();		
     });
 		
 //	dlg.init();
-	
 
 </script>
 </head>
@@ -108,7 +126,7 @@
 	</thead>
 	<tr>
 		<td><b>Port 1</b></td>
-		<td>...</td>
+		<td id="port1ver">...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>		

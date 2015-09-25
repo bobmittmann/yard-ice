@@ -30,6 +30,7 @@
 #include "simlnk.h"
 #include "simrpc.h"
 #include "simrpc_svc.h"
+#include "version.h"
 
 int __simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int __simrpc_send_int(uint32_t opc, int val);
@@ -69,66 +70,6 @@ void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	cm3_sysrst();
 }
 
-static const char * const app_argv[] = {
-	"thinkos_app"
-};
-
-static void __attribute__((noreturn)) app_bootstrap(void * arg)
-{
-	int (* app_reset)(int argc, char ** argv);
-	uintptr_t thumb_call = (uintptr_t)arg | 1;
-
-	app_reset = (void *)thumb_call;
-	for (;;) {
-		DCC_LOG(LOG_TRACE, "app_reset()");
-		app_reset(1, (char **)app_argv);
-	}
-}
-
-extern uint32_t _stack;
-
-/* -------------------------------------------------------------------------
- * Application execution
- * ------------------------------------------------------------------------- */
-
-extern const struct thinkos_thread_inf thinkos_main_inf;
-
-bool thinkos_app_check(uint32_t addr)
-{
-	uint32_t * app = (uint32_t *)addr;
-
-	if ((app[0] != 0x0a0de004) ||
-		(app[1] != 0x6e696854) ||
-		(app[2] != 0x00534f6b)) {
-		DCC_LOG(LOG_WARNING, "invalid application signature!");
-		return false;
-	}
-
-	return true;
-}
-
-bool thinkos_app_exec(uint32_t addr, bool paused)
-{
-	uint32_t * app = (uint32_t *)addr;
-	int thread_id = 0;
-
-	DCC_LOG1(LOG_TRACE, "app=%p", app);
-
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)app);
-
-#if THINKOS_ENABLE_THREAD_INFO
-	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
-#endif
-
-	if (!paused) {
-		__thinkos_thread_resume(thread_id);
-		__thinkos_defer_sched();
-	}
-
-	return true;
-}
-
 void simlnk_int_enable(void);
 
 void thinkos_soft_reset(void)
@@ -165,32 +106,42 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	};
 
+	thinkos_soft_reset();
+	simlnk_int_enable();
+
 	key = data[0];
 	if (key == SIMRPC_EXEC_KEY('A', 'P', 'P', 0)) {
-		thinkos_soft_reset();
-		simlnk_int_enable();
-
-		if (thinkos_app_check(FLASH_BLK_FIRMWARE_OFFS)) {
+		if (board_app_exec(THINKOS_APP_ADDR)) {
 			__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-			thinkos_app_exec(FLASH_BLK_FIRMWARE_OFFS, false);
-			return;
+		} else {
+			DCC_LOG(LOG_WARNING, "Invalid application!");
+			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 		}
-		DCC_LOG(LOG_WARNING, "Invalid application!");
-		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
+#if 0
 	if (key == SIMRPC_EXEC_KEY('T', 'E', 'S', 'T')) {
 		__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-		thinkos_soft_reset();
-		simlnk_int_enable();
 		thinkos_app_exec((uint32_t)board_test, false);
 		return;
 	}
+#endif
 
 	DCC_LOG(LOG_WARNING, "Invalid Key");
-	__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+	__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 }
 
+void simrpc_sysinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+{
+	struct kernelinfo inf;
 
+	inf.ticks = __thinkos_ticks();
+	inf.version.major = VERSION_MAJOR;
+	inf.version.minor = VERSION_MINOR;
+	inf.version.build = VERSION_BUILD;
+	inf.version.timestamp = VERSION_TIMESTAMP;
+
+	__simrpc_send(SIMRPC_REPLY_OK(hdr), &inf, sizeof(inf));
+}
 

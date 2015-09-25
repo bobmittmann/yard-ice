@@ -27,14 +27,14 @@
 extern "C" {
 #endif
 
+void io_init(void);
 void __attribute__((noreturn)) io_event_task(void);
+void io_lamp_test(void);
 
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);
 
 void irate_set(unsigned int mv);
-
-void lamp_test(void);
 
 void led_on(unsigned int id);
 

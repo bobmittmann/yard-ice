@@ -233,6 +233,11 @@
 #define THINKOS_ENABLE_COMM 0
 #endif
 
+#ifndef THINKOS_ENABLE_STACK_INIT
+#define THINKOS_ENABLE_STACK_INIT 1
+#endif
+
+
 /* -------------------------------------------------------------------------- 
  * Sanity check
  * --------------------------------------------------------------------------*/

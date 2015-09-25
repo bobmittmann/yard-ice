@@ -70,6 +70,10 @@ int simrpc_exec(struct simrpc_pcb * sp, uint32_t key)
 	return simlnk_rpc(sp, SIMRPC_EXEC, req, 4, NULL, 0);
 }
 
+int simrpc_kernelinfo(struct simrpc_pcb * sp, struct kernelinfo * inf)
+{
+	return simlnk_rpc(sp, SIMRPC_EXEC, NULL, 0, inf, sizeof(struct kernelinfo));
+}
 /* ---------------------------------------------------------------------------
  * Memory
  * ---------------------------------------------------------------------------
@@ -231,7 +235,8 @@ int simrpc_file_crc32(struct simrpc_pcb * sp, const char * path, uint32_t * crc)
 	return simlnk_rpc(sp, SIMRPC_FILE_CRC32, req, len, crc, 4);
 }
 
-int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path, uint32_t * crc)
+int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path,
+		uint32_t * crc)
 {
 	uint32_t req[64];
 	int len;

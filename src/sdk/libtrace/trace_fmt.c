@@ -78,6 +78,9 @@ int trace_fmt(struct trace_entry * entry, char * s, int max)
 		uint32_t u32;
 	} val;
 
+	/* leave room for null at the end */
+	max--;
+
 	n = 0;
 	w = 0;
 	cnt = 0;

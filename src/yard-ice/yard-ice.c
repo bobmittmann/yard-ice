@@ -163,7 +163,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 	clk = thinkos_clock();
 	for (;;) {
 		struct timeval tv;
-		char s[80];
+		char s[64];
 
 		/* 8Hz periodic task */
 		clk += 125;

@@ -33,8 +33,56 @@
 
 struct simlnk {
 	uint32_t tx_buf[(SIMLNK_MTU + 3) / 4];
-	uint32_t rx_buf[(SIMLNK_MTU + 1 + 3) / 4];
+	uint32_t rx_buf[(SIMLNK_MTU + 2 + 3) / 4];
 } simlnk;
+
+int simlnk_dma_xmit(unsigned int len)
+{
+	struct stm32f_dma * dma = STM32_DMA1;
+	struct stm32_usart * uart = STM32_USART2;
+	uint32_t ccr;
+
+	/* Disable DMA */
+//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
+  //      DCC_LOG(LOG_ERROR, "DMA enabled");
+ //       abort();
+//	}
+
+	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
+		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+
+	/* Program DMA transfer */
+	dma->ch[TX_DMA_CHAN].cndtr = len;
+	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
+	/* enable the transfer complete interrupt */
+	uart->cr1 |= USART_TCIE;
+
+	return 0;
+}
+
+int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
+{
+	simlnk.tx_buf[0] = opc;
+	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
+
+	return simlnk_dma_xmit(cnt + 4);
+}
+
+int __simrpc_send_int(uint32_t opc, int val)
+{
+	simlnk.tx_buf[0] = opc;
+	simlnk.tx_buf[1] = (uint32_t)val;
+
+	return simlnk_dma_xmit(8);
+}
+
+int __simrpc_send_opc(uint32_t opc)
+{
+	simlnk.tx_buf[0] = opc;
+
+	return simlnk_dma_xmit(4);
+}
+
 
 static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 {
@@ -62,6 +110,9 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 		break;
 	case SIMRPC_EXEC:
 		simrpc_exec_svc(opc, data, cnt);
+		break;
+	case SIMRPC_SYSINFO:
+		simrpc_sysinfo_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_LOCK:
 		simrpc_mem_lock_svc(opc, data, cnt);
@@ -97,34 +148,10 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 			/* no user waiting, return an error */
 			DCC_LOG1(LOG_WARNING, "No thread on comm_recv wait queue, insn=%d",
 					 SIMRPC_INSN(opc));
-			simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
+			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
 		}
 	}
 
-}
-
-int simlnk_dma_xmit(unsigned int len)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-	struct stm32_usart * uart = STM32_USART2;
-	uint32_t ccr;
-
-	/* Disable DMA */
-//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
-  //      DCC_LOG(LOG_ERROR, "DMA enabled");
- //       abort();
-//	}
-
-	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
-		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
-
-	/* Program DMA transfer */
-	dma->ch[TX_DMA_CHAN].cndtr = len;
-	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
-	/* enable the transfer complete interrupt */
-	uart->cr1 |= USART_TCIE;
-
-	return 0;
 }
 
 void thinkos_comm_svc(int32_t * arg)
@@ -289,29 +316,6 @@ void stm32_dma1_channel6_isr(void)
 		/* clear the DMA transfer error flag */
 		dma->ifcr = DMA_CTEIF6;
 	}
-}
-
-int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
-{
-	simlnk.tx_buf[0] = opc;
-	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
-
-	return simlnk_dma_xmit(cnt + 4);
-}
-
-int __simrpc_send_int(uint32_t opc, int val)
-{
-	simlnk.tx_buf[0] = opc;
-	simlnk.tx_buf[1] = (uint32_t)val;
-
-	return simlnk_dma_xmit(8);
-}
-
-int __simrpc_send_opc(uint32_t opc)
-{
-	simlnk.tx_buf[0] = opc;
-
-	return simlnk_dma_xmit(4);
 }
 
 int simlnk_init(struct simlnk * lnk, const char * name, 

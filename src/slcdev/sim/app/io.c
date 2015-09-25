@@ -200,7 +200,7 @@ void __attribute__((noreturn)) io_event_task(void)
 #define ENABLE_SAVE_LED_STATE 0
 #endif
 
-void lamp_test(void)
+void io_lamp_test(void)
 {
 #if ENABLE_SAVE_LED_STATE
 	uint32_t state = 0;
@@ -227,5 +227,23 @@ void lamp_test(void)
 			__led_on(led_io[i].gpio, led_io[i].pin);
 	}
 #endif
+}
+
+uint32_t __attribute__((aligned(8))) io_event_stack[24];
+
+void io_init(void) 
+{
+	/* configure switches GPIO */
+	stm32_gpio_mode(IO_SW1_UP,  INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW1_DWN, INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW2_UP,  INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW2_DWN, INPUT, PULL_UP | SPEED_LOW);
+
+	/* create a thread to handle IO events like switches and
+	   address selection. This thread also controls the LEDs flashing. */
+	thinkos_thread_create((void *)io_event_task, (void *)NULL,
+						  io_event_stack, sizeof(io_event_stack) |
+						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
+
 }
 

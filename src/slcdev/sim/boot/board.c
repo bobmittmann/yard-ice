@@ -25,6 +25,7 @@
 #include <crc.h>
 
 #include "board.h"
+#include "config.h"
 
 void board_init(void)
 {
@@ -41,18 +42,19 @@ void board_init(void)
 	stm32_gpio_clr(IO_LED3);
 	stm32_gpio_clr(IO_LED4);
 
-	/* Switches */
-	stm32_gpio_mode(IO_SW1_UP,  INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW1_DWN, INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW2_UP,  INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW2_DWN, INPUT, PULL_UP | SPEED_LOW);
-
 	/* USART2_TX */
 	stm32_gpio_mode(IO_UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
 	stm32_gpio_af(IO_UART_TX, GPIO_AF7);
 	/* USART2_RX */
 	stm32_gpio_mode(IO_UART_RX, ALT_FUNC, 0);
 	stm32_gpio_af(IO_UART_RX, GPIO_AF7);
+
+#if 0
+	/* Switches */
+	stm32_gpio_mode(IO_SW1_UP,  INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW1_DWN, INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW2_UP,  INPUT, PULL_UP | SPEED_LOW);
+	stm32_gpio_mode(IO_SW2_DWN, INPUT, PULL_UP | SPEED_LOW);
 
 	/* Comparator */ 
 	stm32_gpio_mode(IO_COMP, INPUT, SPEED_MED);
@@ -73,5 +75,100 @@ void board_init(void)
 	stm32_gpio_clr(IO_SINK2);
 	stm32_gpio_clr(IO_SINK3);
 	stm32_gpio_clr(IO_SINK4);
+#endif
+}
+
+/* -------------------------------------------------------------------------
+ * Application execution
+ * ------------------------------------------------------------------------- */
+
+static const char * const app_argv[] = {
+	"app"
+};
+
+static void __attribute__((noreturn)) app_bootstrap(void * arg)
+{
+	int (* app_reset)(int argc, char ** argv);
+	uintptr_t thumb_call = (uintptr_t)arg | 1;
+
+	app_reset = (void *)thumb_call;
+	for (;;) {
+		DCC_LOG(LOG_TRACE, "app_reset()");
+		app_reset(1, (char **)app_argv);
+	}
+}
+
+extern uint32_t _stack;
+extern const struct thinkos_thread_inf thinkos_main_inf;
+
+bool board_app_exec(uint32_t addr)
+{
+	uint32_t * app = (uint32_t *)addr;
+	int thread_id = 0;
+
+	DCC_LOG1(LOG_TRACE, "app=%p", app);
+
+	if ((app[0] != 0x0a0de004) ||
+		(app[1] != 0x6e696854) ||
+		(app[2] != 0x00534f6b)) {
+		DCC_LOG(LOG_WARNING, "invalid application signature!");
+		return false;
+	}
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
+	__thinkos_thread_abort(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
+						  (void *)app_bootstrap, (void *)app);
+
+#if THINKOS_ENABLE_THREAD_INFO
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
+	__thinkos_thread_resume(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+	__thinkos_defer_sched();
+
+	return true;
+}
+
+void board_test(void)
+{
+	for (;;) {
+		__led_on(IO_LED1);
+
+		thinkos_sleep(25);
+
+		__led_off(IO_LED3);
+
+		thinkos_sleep(100);
+
+		__led_on(IO_LED2);
+
+		thinkos_sleep(25);
+
+		__led_off(IO_LED1);
+
+		thinkos_sleep(100);
+
+		__led_on(IO_LED4);
+
+		thinkos_sleep(25);
+
+		__led_off(IO_LED2);
+
+		thinkos_sleep(100);
+
+		__led_on(IO_LED3);
+
+		thinkos_sleep(25);
+
+		__led_off(IO_LED4);
+
+		thinkos_sleep(100);
+	}	
 }
 

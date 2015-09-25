@@ -110,8 +110,10 @@ void thinkos_thread_create_svc(int32_t * arg)
 		return;
 	}
 
+#if THINKOS_ENABLE_STACK_INIT
 	/* initialize stack */
 	__thinkos_memset32(init->stack_ptr, 0xdeadbeef, init->opt.stack_size);
+#endif
 
 #if THINKOS_ENABLE_THREAD_INFO
 	thinkos_rt.th_inf[thread_id] = init->inf;
@@ -134,7 +136,12 @@ void thinkos_thread_create_svc(int32_t * arg)
 #if THINKOS_ENABLE_PAUSE
 	if (!init->opt.paused)
 #endif
+	{
+		DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
 		__thinkos_thread_resume(thread_id);
+		DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+		__thinkos_defer_sched();
+	}
 
 	arg[0] = thread_id;
 }

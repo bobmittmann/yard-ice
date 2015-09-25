@@ -28,7 +28,7 @@ CFILES = ../boot/board.c ../boot/simlnk.c ../boot/simrpc_mem.c \
 		 ../app/profclk.c ../app/shell.c ../app/slcdev-cfg.c \
 		 ../app/slcdev-db.c ../app/slcdev-drv.c ../app/slcdev-lib.c \
 		 ../app/slcdev-log.c ../app/slcdev-sim.c ../app/slcdev-str.c\
-		 slcdev-app.c simlnk-usr.c simrpc-file.c
+		 ../simlnk-usr.c ../simrpc-file.c slcdev-app.c 
 
 SDK = ../../../sdk
 
@@ -44,8 +44,11 @@ CDEFS = CONFIG_H NDEBUG
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-MACH = stm32l151xc
+VERSION_DATE = "2015-09-24"
+VERSION_MAJOR = "0"
+VERSION_MINOR = "26"
 
 JTAGTOOL_ADDR = 192.168.10.50
 
+MACH = stm32l151xc
 include ../../../mk/stm32l1xx.mk

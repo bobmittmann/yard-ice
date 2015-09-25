@@ -28,7 +28,7 @@
 
 #define PWM_FREQ 100000
 
-void isink_init(void)
+static void isink_init(void)
 {
 	struct stm32f_tim * tim = STM32_TIM2;
 	struct stm32f_dac * dac = STM32_DAC;
@@ -61,7 +61,7 @@ void isink_init(void)
 	tim->cr1 = TIM_URS | TIM_CEN; /* Enable counter */
 }
 
-void isink(int val)
+static void isink(int val)
 {
 	if (val & (1 << 0))
 		stm32_gpio_set(IO_SINK1);
@@ -84,14 +84,14 @@ void isink(int val)
 		stm32_gpio_clr(IO_SINK4);
 }
 
-void irarte(int val)
+static void irarte(int val)
 {
 	struct stm32f_dac * dac = STM32_DAC;
 
 	dac->dhr12r2 = 4095 * val / 4;
 }
 
-void isink_test(void)
+static void isink_test(void)
 {
 	int i;
 
@@ -110,7 +110,7 @@ void isink_test(void)
 	}
 }
 
-void leds_mode(int i) 
+static void leds_mode(int i) 
 {
 	int sw1 = 0;
 	int sw2 = 0;
@@ -168,7 +168,7 @@ void leds_mode(int i)
 	}
 }
 
-void board_test(void)
+void __board_test(void)
 {
 	isink_init();
 
@@ -193,7 +193,6 @@ void board_test(void)
 		leds_mode(4); 
 
 		thinkos_sleep(100);
-	
 	}	
 }
 

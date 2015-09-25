@@ -45,7 +45,7 @@ include $(SCRPTDIR)/cross.mk
 #------------------------------------------------------------------------------ 
 ifdef VERSION_MAJOR
   ifeq (Windows,$(HOST))
-    VERSION_H := $(subst /,\,$(OUTDIR)/version.h)
+    VERSION_H := $(OUTDIR)\version.h
   else
   	VERSION_H = $(OUTDIR)/version.h
   endif
@@ -56,7 +56,12 @@ endif
 #------------------------------------------------------------------------------ 
 # generated source files
 #------------------------------------------------------------------------------ 
-HFILES_OUT = $(VERSION_H) $(addprefix $(OUTDIR)/, $(HFILES_GEN))
+ifeq (Windows,$(HOST))
+  HFILES_OUT = $(VERSION_H) $(addprefix $(OUTDIR)\, $(HFILES_GEN))
+else
+  HFILES_OUT = $(VERSION_H) $(addprefix $(OUTDIR)/, $(HFILES_GEN))
+endif
+
 CFILES_OUT = $(addprefix $(OUTDIR)/, $(CFILES_GEN))
 SFILES_OUT = $(addprefix $(OUTDIR)/, $(SFILES_GEN))
 
@@ -78,7 +83,7 @@ OFILES = $(addprefix $(OUTDIR)/,\
 # dependency files
 #------------------------------------------------------------------------------ 
 
-DFILES = $(OFILES:.o=.d) $(OFILES_OUT:.c=.d)
+DFILES = $(OFILES:.o=.d)
 
 #------------------------------------------------------------------------------ 
 # library dircetories 
@@ -148,7 +153,6 @@ ifeq ($(HOST),Cygwin)
     PROG_SYM_WIN := $(subst \,\\,$(shell cygpath -w $(PROG_SYM)))
   endif
 endif
-
 
 GFILES := $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT) 
 
@@ -398,9 +402,9 @@ $(LIBDIRS_ALL): | $(ODIRS)
 
 $(HFILES_OUT) $(CFILES_OUT) $(SFILES_OUT): | $(ODIRS)
 
-$(DFILES): | $(ODIRS)
+$(DFILES): | $(ODIRS) $(HFILES_OUT)
 
-$(OFILES): | $(ODIRS)
+$(OFILES): | $(ODIRS) $(HFILES_OUT)
 
 #------------------------------------------------------------------------------ 
 # Compilation

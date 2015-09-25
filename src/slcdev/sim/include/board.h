@@ -109,6 +109,12 @@
 #define EEPROM_BLK_TROUBLE_LOG_OFFS  0x0200
 
 /* -------------------------------------------------------------------------
+ * ThinkOS application address
+ * ------------------------------------------------------------------------- */
+
+#define THINKOS_APP_ADDR ((uintptr_t)STM32_MEM_FLASH + FLASH_BLK_FIRMWARE_OFFS)
+
+/* -------------------------------------------------------------------------
  * ThinkOS kernel descriptors
  * ------------------------------------------------------------------------- */
 
@@ -140,7 +146,11 @@ extern "C" {
 #endif
 
 void board_init(void);
-void board_test(void);
+void __attribute__((noreturn)) board_test(void);
+
+bool board_app_check(uint32_t addr);
+
+bool board_app_exec(uint32_t addr);
 
 #ifdef __cplusplus
 }

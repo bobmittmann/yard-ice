@@ -95,10 +95,18 @@ void __thinkos_reset(void)
 	   regular interrupts (higher number) */
 	cm3_except_pri_set(CM3_EXCEPT_PENDSV, SCHED_PRIORITY);
 
-	cm3_except_pri_set(CM3_EXCEPT_MEM_MANAGE, EXCEPT_PRIORITY);
-	cm3_except_pri_set(CM3_EXCEPT_BUS_FAULT, EXCEPT_PRIORITY);
+#if	THINKOS_ENABLE_USAGEFAULT 
 	cm3_except_pri_set(CM3_EXCEPT_USAGE_FAULT, EXCEPT_PRIORITY);
+#endif
+#if	THINKOS_ENABLE_BUSFAULT 
+	cm3_except_pri_set(CM3_EXCEPT_BUS_FAULT, EXCEPT_PRIORITY);
+#endif
+#if THINKOS_ENABLE_MPU
+	cm3_except_pri_set(CM3_EXCEPT_MEM_MANAGE, EXCEPT_PRIORITY);
+#endif
+#if THINKOS_ENABLE_MONITOR 
 	cm3_except_pri_set(CM3_EXCEPT_DEBUG_MONITOR, MONITOR_PRIORITY);
+#endif
 
 #if THINKOS_ENABLE_FPU 
 	CM3_SCB->cpacr |= CP11_SET(3) | CP10_SET(3);
@@ -286,9 +294,11 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* disable interrupts */
 	cm3_cpsid_i();
 
+#if THINKOS_ENABLE_STACK_INIT
 	/* initialize exception stack */
 	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
 					   sizeof(thinkos_idle.except_stack));
+#endif
 
 	/* configure the thread stack */
 	cm3_psp_set(cm3_sp_get());
@@ -296,9 +306,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	/* configure the main stack */
 	msp = (uint32_t)&thinkos_idle.ctx.r0;
 	cm3_msp_set(msp);
-
-	/* configure the use of PSP in thread mode */
-	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
 	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
 
@@ -313,7 +320,6 @@ int thinkos_init(struct thinkos_thread_opt opt)
 	__thinkos_reset();
 
 	self = __thinkos_init_main(opt);
-
 
 #if (THINKOS_MUTEX_MAX > 0)
 	DCC_LOG3(LOG_TRACE, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,
@@ -365,6 +371,9 @@ int thinkos_init(struct thinkos_thread_opt opt)
 #endif
 
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");
+
+	/* configure the use of PSP in thread mode */
+	cm3_control_set(CONTROL_THREAD_PSP | CONTROL_THREAD_PRIV);
 
 	/* enable interrupts */
 	cm3_cpsie_i();

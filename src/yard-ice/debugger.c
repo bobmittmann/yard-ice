@@ -2751,7 +2751,7 @@ void debugger_except(const char * msg)
 
 int mod_ice_register(struct debugger * dbg);
 
-uint32_t dbg_poll_stack[80];
+uint32_t dbg_poll_stack[96];
 
 const struct thinkos_thread_inf dbg_poll_inf = {
 	.stack_ptr = dbg_poll_stack, 

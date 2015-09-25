@@ -25,20 +25,24 @@ CFILES = slcdev-app.c io.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c flashfs.c shell.c\
 		 slcdev-sim.c slcdev-cfg.c\
 		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
-
+		 simlnk-usr.c simrpc-file.c 
 
 SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libc $(SDK)/libutil \
-		  $(SDK)/libcrc $(SDK)/libtty $(SDK)/libshell $(SDK)/libmicrojs
+		  $(SDK)/libcrc $(SDK)/libshell $(SDK)/libmicrojs
 
-LIBS = gcc stm32f cm3 util c crc tty shell microjs
+LIBS = gcc stm32f cm3 util c crc shell microjs
 
-INCPATH = $(SDK)/include ../include
+INCPATH = $(SDK)/include ../include ../../include
 
 CDEFS = CONFIG_H NDEBUG
-CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
+
+VERSION_DATE = "2015-09-24"
+VERSION_MAJOR = "0"
+VERSION_MINOR = "2"
 
 MACH = stm32l151xc
 THINKAPP = 1

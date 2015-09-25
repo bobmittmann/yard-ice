@@ -63,7 +63,7 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_RPC_TEST_HTML 1948
+#define SIZEOF_RPC_TEST_HTML 2049
 
 #define SIZEOF_NETWORK_HTML 1587
 

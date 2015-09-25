@@ -28,8 +28,9 @@ import sys
 import os
 import codecs
 import datetime
+import time 
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 # --- constants
 PY3 = sys.version_info >= (3, 0)
@@ -55,8 +56,9 @@ def mkver(f, name, major, minor, date):
   month = int(x[1])
   day = int(x[2])
   ref = datetime.datetime(year, month, day)
-  now = datetime.datetime.now()
-  diff = now - ref
+  utcnow = datetime.datetime.utcnow()
+  unixtime = time.mktime(datetime.datetime.now().timetuple())
+  diff = utcnow - ref
   build = int((diff.days * 24) + (diff.seconds / (60 * 60)))
   f.write('\n')
   f.write('#define VERSION_NAME \"{:s}\"\n'.format(name))
@@ -70,6 +72,7 @@ def mkver(f, name, major, minor, date):
   f.write('#define VERSION_YEAR \"{:04d}\"\n'.format(year))
   f.write('#define VERSION_DATE \"{:04d}-{:02d}-{:02d}\"\n'.\
 		  format(year, month, day))
+  f.write('#define VERSION_TIMESTAMP {:d}\n'.format(int(unixtime)))
 
 #  f.write('#define VERSION_MACH \"$(MACH)\"\n')
 #  f.write('#define VERSION_ARCH \"$(ARCH)\"\n')
