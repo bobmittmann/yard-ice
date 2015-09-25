@@ -42,14 +42,17 @@ const uint16_t sizeof_footer_html = sizeof(footer_html) - 1;
   ---------------------------------------------------------------------------*/
 
 const char index_html[] = DOCTYPE_HTML "<head>\r\n"
-	"<title>ThinkOS HTTP Server Demo</title>\r\n" 
+	"<title>CRAB DEvice Simulator - Home</title>\r\n"
 	META_COPY LINK_ICON LINK_CSS
 	"</head>\r\n<body>\r\n"
-	"<h1>ThinkOS Web Server Demo</h1>\r\n"
-	"<p>Welcome to the <b>ThinkOS</b> web server demo initial page.</p>\r\n"
+	"<h1>CRAB Device Simulator - Home</h1>\r\n"
+	"<p>Welcome to the <b>CRAB</b> device simulator web interface.</p>\r\n"
+	"<p>Please select one option:</p>\r\n"
 	"<ul>\r\n"
+	"<li><a href=\"sim_config.html\">Simulator Configuration</a></li>\r\n"
+	"<li><a href=\"sim_database.html\">Simulator Database</a></li>\r\n"
+	"<li><a href=\"sim_tools.html\">Simulator Tools</a></li>\r\n"
 	"<li><a href=\"ipcfg/ipcfg_form.cgi\">IP Configuration</a></li>\r\n"
-	"<li><a href=\"tools.html\">Tools</a></li>\r\n"
 	"<li><a href=\"rpc_test.html\">RPC Test</a></li>\r\n"
 	"</ul>\r\n"
 	HTML_FOOTER;
@@ -89,18 +92,30 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_STYLE_CSS, .ptr = style_css },
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(index_html) - 1, .ptr = index_html },
-	{ .oid = "tools.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
-		.len = SIZEOF_TOOLS_HTML, .ptr = tools_html },
 	{ .oid = "rpc_test.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_RPC_TEST_HTML, .ptr = rpc_test_html },
+	{ .oid = "sim_tools.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_TOOLS_HTML, .ptr = sim_tools_html },
+	{ .oid = "sim_config.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_CONFIG_HTML, .ptr = sim_config_html },
+	{ .oid = "sim_database.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_DATABASE_HTML, .ptr = sim_database_html },
 	{ .oid = "rpc_test.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
 		.len = 0, .ptr = rpc_test_cgi },
     { .oid = "update.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = update_cgi },
     { .oid = "cfg_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = cfg_load_cgi },
+    { .oid = "file_read.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = file_read_cgi },
+    { .oid = "file_write.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = file_write_cgi },
     { .oid = "db_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = db_load_cgi },
+    { .oid = "firmware_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = firmware_load_cgi },
+    { .oid = "get_status.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = get_status_cgi },
 	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(update_html) - 1, .ptr = update_html },
 	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,

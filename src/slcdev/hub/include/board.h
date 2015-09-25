@@ -159,9 +159,13 @@ static inline void __led_on(struct stm32_gpio *__gpio, int __pin) {
 static inline void __led_off(struct stm32_gpio *__gpio, int __pin) {
 	stm32_gpio_set(__gpio, __pin);
 }
-#define FLASH_BLK_FS_OFFS     0x00020000
-#define FLASH_BLK_FS_SIZE     (256 * 1024)
 
+/* -------------------------------------------------------------------------
+ * ThinkOS application address
+ * ------------------------------------------------------------------------- */
+#define FLASH_BLK_THINKOS_OFFS      0x00000000
+#define FLASH_BLK_THINKOS_SIZE      (64 * 1024)
+#define THINKOS_APP_ADDR ((uintptr_t)STM32_MEM_FLASH + FLASH_BLK_FIRMWARE_OFFS)
 
 #ifdef __cplusplus
 extern "C" {

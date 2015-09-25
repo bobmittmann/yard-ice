@@ -111,8 +111,8 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 	case SIMRPC_EXEC:
 		simrpc_exec_svc(opc, data, cnt);
 		break;
-	case SIMRPC_SYSINFO:
-		simrpc_sysinfo_svc(opc, data, cnt);
+	case SIMRPC_KERNELINFO:
+		simrpc_kernelinfo_svc(opc, data, cnt);
 		break;
 	case SIMRPC_MEM_LOCK:
 		simrpc_mem_lock_svc(opc, data, cnt);

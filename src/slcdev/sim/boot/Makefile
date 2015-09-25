@@ -27,9 +27,9 @@ CFILES = boot.c board.c simlnk.c simrpc_mem.c simrpc_sys.c
 SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil \
-		  $(SDK)/libcrc $(SDK)/libthinkos $(SDK)/libice-comm
+		  $(SDK)/libthinkos $(SDK)/libice-comm
 
-LIBS = cm3 stm32f util crc thinkos ice-comm
+LIBS = cm3 stm32f util thinkos ice-comm
 
 INCPATH = $(SDK)/include ../include ../../include
 

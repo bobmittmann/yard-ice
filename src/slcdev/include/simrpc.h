@@ -65,6 +65,8 @@ struct appinfo {
 	} version;
 };
 
+#define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
+
 struct simrpc_pcb;
 
 #define SIMRPC_BCAST 0xff

@@ -132,9 +132,11 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 }
 
-void simrpc_sysinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
 	struct kernelinfo inf;
+
+	DCC_LOG(LOG_TRACE, "...");
 
 	inf.ticks = __thinkos_ticks();
 	inf.version.major = VERSION_MAJOR;

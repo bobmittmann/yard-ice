@@ -366,8 +366,8 @@ int main(int argc, char ** argv)
 	simrpc_init();
 
 	for (;;) {
-		INF("Tick...");
-		thinkos_sleep(10000);
+		thinkos_sleep(60000);
+		INF("Tick %d ...", ++i);
 	}
 
 //	flash_test();

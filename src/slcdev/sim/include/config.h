@@ -31,45 +31,51 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX              44
+#define THINKOS_IRQ_MAX               39
 
-#define THINKOS_EXCEPT_STACK_SIZE    312
+#if DEBUG
+#define THINKOS_EXCEPT_STACK_SIZE     248
+#else
+#define THINKOS_EXCEPT_STACK_SIZE     328
+#endif
 
-#define THINKOS_ENABLE_IDLE_WFI      1
+#define THINKOS_ENABLE_IDLE_WFI       1
 
-#define THINKOS_ENABLE_CLOCK         1
+#define THINKOS_ENABLE_CLOCK          1
 
-#define THINKOS_ENABLE_TIMESHARE     0
+#define THINKOS_ENABLE_TIMESHARE      0
 
-#define THINKOS_THREADS_MAX          3
-#define THINKOS_ENABLE_THREAD_ALLOC  0
+#define THINKOS_THREADS_MAX           4
+#define THINKOS_ENABLE_THREAD_ALLOC   0
+#define THINKOS_ENABLE_THREAD_STAT    0
+#define THINKOS_ENABLE_THREAD_INFO    0
 
-#define THINKOS_ENABLE_JOIN          0
-#define THINKOS_ENABLE_PAUSE         0
-#define THINKOS_ENABLE_CANCEL        0
-#define THINKOS_ENABLE_EXIT          0
+#define THINKOS_ENABLE_JOIN           0
+#define THINKOS_ENABLE_PAUSE          0
+#define THINKOS_ENABLE_CANCEL         0
+#define THINKOS_ENABLE_EXIT           0
 
-#define THINKOS_MUTEX_MAX            0
-#define THINKOS_ENABLE_MUTEX_ALLOC   0
+#define THINKOS_MUTEX_MAX             2
+#define THINKOS_ENABLE_MUTEX_ALLOC    0
 
-#define THINKOS_COND_MAX             0
-#define THINKOS_ENABLE_COND_ALLOC    0
+#define THINKOS_COND_MAX              0
+#define THINKOS_ENABLE_COND_ALLOC     0
 
-#define THINKOS_SEMAPHORE_MAX        0
-#define THINKOS_ENABLE_SEM_ALLOC     0
+#define THINKOS_SEMAPHORE_MAX         2
+#define THINKOS_ENABLE_SEM_ALLOC      0
 
-#define THINKOS_EVENT_MAX            1
-#define THINKOS_ENABLE_EVENT_ALLOC   0
+#define THINKOS_EVENT_MAX             1
+#define THINKOS_ENABLE_EVENT_ALLOC    0
 
-#define THINKOS_FLAG_MAX             0
-#define THINKOS_ENABLE_FLAG_ALLOC    0
-#define THINKOS_ENABLE_FLAG_WATCH    0
+#define THINKOS_FLAG_MAX              0
+#define THINKOS_ENABLE_FLAG_ALLOC     0
+#define THINKOS_ENABLE_FLAG_WATCH     0
 
 #define THINKOS_GATE_MAX              2
 #define THINKOS_ENABLE_GATE_ALLOC     0
 
 #define THINKOS_ENABLE_THREAD_STAT    0
-#define THINKOS_ENABLE_TIMED_CALLS    1
+#define THINKOS_ENABLE_TIMED_CALLS    0
 
 #define THINKOS_ENABLE_ALARM          1
 #define THINKOS_ENABLE_SLEEP          1

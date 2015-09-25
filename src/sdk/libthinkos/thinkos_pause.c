@@ -434,7 +434,7 @@ bool __thinkos_thread_resume(unsigned int th)
 		resume(th, wq, tmw);
 	}
 #else
-	DCC_LOG1(LOG_INFO, "thread=%d [ready]", th);
+	DCC_LOG1(LOG_TRACE, "thread=%d [ready]", th);
 	__bit_mem_wr(&thinkos_rt.wq_ready, th, 1);
 #endif /* (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT) */
 

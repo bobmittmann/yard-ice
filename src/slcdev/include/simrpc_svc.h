@@ -36,7 +36,7 @@ enum simrpc_opc {
 	SIMRPC_RESUME     = 2,
 	SIMRPC_EXEC       = 3,
 	SIMRPC_REBOOT     = 4,
-	SIMRPC_SYSINFO    = 5,
+	SIMRPC_KERNELINFO = 5,
 	SIMRPC_MEM_LOCK   = 6,
 	SIMRPC_MEM_UNLOCK = 7,
 	SIMRPC_MEM_ERASE  = 8,
@@ -60,6 +60,8 @@ enum simrpc_opc {
 	SIMRPC_DIR_OPEN    = 43,
 	SIMRPC_DIR_CLOSE   = 44,
 	SIMRPC_DIR_READ    = 45,
+
+	SIMRPC_APPINFO     = 46,
 
 	SIMRPC_BUSY = 251,
 	SIMRPC_PEND = 253,
@@ -110,7 +112,6 @@ struct simrpc_hdr {
 
 #define SIMRPC_DEF_TMO_MS 100
 
-#define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
 
 #ifdef __cplusplus
 extern "C" {
@@ -129,7 +130,7 @@ void simrpc_suspend_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_resume_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_reboot_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_exec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
-void simrpc_sysinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 void simrpc_file_open_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);

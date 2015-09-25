@@ -72,8 +72,14 @@ int simrpc_exec(struct simrpc_pcb * sp, uint32_t key)
 
 int simrpc_kernelinfo(struct simrpc_pcb * sp, struct kernelinfo * inf)
 {
-	return simlnk_rpc(sp, SIMRPC_EXEC, NULL, 0, inf, sizeof(struct kernelinfo));
+	return simlnk_rpc(sp, SIMRPC_KERNELINFO, NULL, 0, inf, sizeof(struct kernelinfo));
 }
+
+int simrpc_appinfo(struct simrpc_pcb * sp, struct appinfo * inf)
+{
+	return simlnk_rpc(sp, SIMRPC_APPINFO, NULL, 0, inf, sizeof(struct appinfo));
+}
+
 /* ---------------------------------------------------------------------------
  * Memory
  * ---------------------------------------------------------------------------

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
+<link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
+
+<title>CRAB Simulator Database</title>
+
+<script src="/lib/zepto.js.gz"></script>
+<script>	
+	function alert(p, msg) {		
+		var html = '<img style="float:none;vertical-align:middle"' +
+			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
+		p.innerHTML = html;
+	}
+	
+	function file_read(event) {
+		$.ajax({
+			type: 'GET',
+			url: 'file_read.cgi',
+			data: { 
+				fname: event.data.fname,
+				port: $('#selport').val(),
+			},
+			dataType: 'text',
+			timeout: 5000,
+			context: $('body'),
+			success: function(data) {
+				$('#term').text(data);
+			},
+			error: function(xhr, type){
+				$('#results').text('Ajax error!\n');
+			}
+		});
+	}
+
+	function file_upload(event) {
+		var lst = this.elements;
+		var box = this.querySelector('#__msg');
+		var port = $('#selport').val();
+		alert(box, "Uploading file, please wait...");		
+		$.ajax({
+			url: this.action + '?port=' + port,
+			type: 'POST',
+			data: new FormData(this),
+			processData: false,
+			contentType: false,
+			success: function(data) {
+				box.innerHTML = "";				
+				$('#term').text(data);				
+			},
+			error: function(xhr, type){
+				box.innerHTML = "ERROR!";
+			}
+		});
+		event.preventDefault();
+	}
+
+	Zepto( document ).ready(function() {
+		$('#formdb').on('submit', file_upload);
+        $('#btnread').on('click', { fname: 'db.js' }, file_read);        
+    });
+
+</script>
+</head>
+
+<body>
+<h1>CRAB Simulator Database</h1>
+
+<div class="form">
+	<form id="formdb" enctype="multipart/form-data" action="db_load.cgi">
+		<div class="fbody">
+		<table class="formgrid">
+		<tr>
+			<td style="text-align: right;">Simulator:</td>
+			<td>
+				<select id="selport">
+					<option value="1">Port 1</option>
+					<option value="2">Port 2</option>
+					<option value="3">Port 3</option>
+					<option value="4">Port 4</option>
+					<option value="5">Port 5</option>
+				</select>		
+			</td>
+		</tr>			
+		<tr>
+			<td style="text-align: right;">Configuration:</td>
+			<td>
+			<input type="text" class="text" id="__fname"
+				readonly="readonly" maxlength="128" size="20" /> <input
+				type="button" class="button" value="Browse..."
+				onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+			<input type="file" class="hidden" id="__browse" name="fname"
+				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
+			</td>
+		</tr>				
+		</table>				
+		</div>
+		<div class="ffoot">
+			<input type="reset" class="button" value="Reset" /> <input
+				type="submit" class="button" value="Upload..." />
+		</div>
+		<div>
+			<p id="__msg"></p>
+		</div>		
+	</form>
+</div>
+
+<div class="form" style="width: 100%;">
+	<form accept-charset="UTF-8" style="width: 100%;">
+		<textarea name="term" id="term" style="width: 100%; height: 40em;"></textarea>
+		<input id="btnread" type="button" class="button" value="Read..." /> 
+		<input id="btnwrite" type="button" class="button" value="Write..." />
+		<input id="btnsave" type="button" class="button" value="Save..." /> 
+	</form>
+</div>
+
+<hr>
+<a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>
+- Cortex-M Operating System - 
+<i><a href="https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i>
+<br>&copy; Copyright 2013-2015, Bob Mittmann<br>
+
+</body>
+</html>
+

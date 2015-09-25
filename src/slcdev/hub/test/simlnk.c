@@ -52,6 +52,7 @@ struct simlnk {
 	bool pool_alloc; /* indicate if the structure was 
 						allocated from a resource pool */
 	uint8_t addr; /* this station address */
+	uint8_t mutex;
 	struct serial_dev * dev;
 	struct {
 		uint32_t buf[(SIMLNK_MTU + 2 + 3) / 4];
@@ -171,6 +172,8 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	seq = sp->seq++; 
 	opc = mkopc(daddr, saddr, seq, insn);
 
+	thinkos_mutex_lock(lnk->mutex);
+
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], req, cnt);
 
@@ -184,21 +187,25 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 #endif
 
 	if (serial_send(lnk->dev, lnk->tx.buf, 4 + cnt) < 0) {
+		thinkos_mutex_unlock(lnk->mutex);
 		return SIMRPC_EDRIVER;
 	}
 
 	if ((ret = thinkos_flag_timedtake(lnk->rx.flag, tmo)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
 			WARN("thinkos_flag_take() timed out!");
+			thinkos_mutex_unlock(lnk->mutex);
 			return SIMRPC_ETIMEDOUT;
 		} else {
 			ERR("thinkos_flag_take() failed!");
+			thinkos_mutex_unlock(lnk->mutex);
 			return SIMRPC_ESYSTEM;
 		}
 	}
 
 	if (lnk->rx.cnt < 4) {
 		ERR("thinkos_flag_take() link error!");
+		thinkos_mutex_unlock(lnk->mutex);
 		return SIMRPC_ELINK;
 	}
 
@@ -210,15 +217,18 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 			cnt = MIN(cnt, max);
 			memcpy(rsp, &lnk->rx.buf[1], cnt);
 		}
+		thinkos_mutex_unlock(lnk->mutex);
 		return cnt;
 	}
 
 	if ((cnt == 4) && (opc == mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
 		WARN("error %d.", (int)lnk->rx.buf[1]);
+		thinkos_mutex_unlock(lnk->mutex);
 		return (int)lnk->rx.buf[1];
 	}
 
 	WARN("invalid response.");
+	thinkos_mutex_unlock(lnk->mutex);
 	return SIMRPC_EPROTO;
 }
 
@@ -277,6 +287,7 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 
 	lnk->rx.flag = thinkos_flag_alloc();
 	lnk->tx.flag = thinkos_flag_alloc();
+	lnk->mutex = thinkos_mutex_alloc();
 
 	DBG("tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);
 

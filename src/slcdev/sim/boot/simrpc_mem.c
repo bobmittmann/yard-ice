@@ -45,8 +45,8 @@ int __simrpc_send_opc(uint32_t opc);
 uint32_t mem_base;
 uint32_t mem_top;
 uint32_t mem_ptr;
-uint8_t mem_lock = SIMRPC_BCAST;
 uint32_t mem_clk;
+uint8_t mem_lock = SIMRPC_BCAST;
 
 #define MEM_LOCK_TIMEOUT_MS 1000
 
