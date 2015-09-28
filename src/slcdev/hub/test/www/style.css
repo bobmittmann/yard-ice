@@ -79,13 +79,6 @@ table.formgrid td {
 	border: 0;	
 }
 
-textarea {
-	background: #fff;
-	margin: 1px 2px 1px;
-	border: 1px solid #aaa;
-	padding: 1px 2px 1px;
-}
-
 form {
 	padding: 0;
 	margin: 0;
@@ -100,8 +93,23 @@ input[type=text], input[type=number] {
 	padding: 3px 3px 2px;
 }
 
-input[type=text]:hover, input[type=number]:hover {
+textarea:hover, input[type=text]:hover, input[type=number]:hover {
 	background: #cdf;
+}
+
+textarea, pre {
+	-moz-tab-size : 4;
+	-o-tab-size : 4;
+	tab-size : 4;
+	overflow-y: scroll;
+	background: #fff;
+	margin: 1px 2px 1px;
+	border: 1px solid #444;
+	padding: 3px 3px 2px;
+}
+
+pre {
+	overflow-x: auto;	
 }
 
 select {
@@ -151,12 +159,6 @@ dlg h1 {
 
 ol {
 	background-image: url(img/overlay.png);
-}
-
-textarea, pre {
-	-moz-tab-size : 4;
-	-o-tab-size : 4;
-	tab-size : 4;
 }
 
 .dialog {

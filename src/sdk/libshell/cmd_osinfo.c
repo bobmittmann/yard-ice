@@ -285,8 +285,10 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 	struct thinkos_context * ctx;
 	struct thinkos_rt rt;
 	unsigned int th;
+#if THINKOS_ENABLE_THREAD_STAT
 	int oid;
 	int type;
+#endif
 	int cnt;
 #if THINKOS_MUTEX_MAX > 0
 	int j;
@@ -314,9 +316,6 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 			return SHELL_ERR_ARG_INVALID;
 		}
 
-		oid = rt.th_stat[th] >> 1;
-		type = thinkos_obj_type_get(oid);
-
 		fprintf(f, " - Id: %d", th); 
 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -328,6 +327,9 @@ int cmd_thread(FILE * f, int argc, char ** argv)
 		fprintf(f, "\n"); 
 
 #if THINKOS_ENABLE_THREAD_STAT
+		oid = rt.th_stat[th] >> 1;
+		type = thinkos_obj_type_get(oid);
+
 		fprintf(f, " - Waiting on queue: %3d %5s (time wait: %s)\n", 
 				oid, thinkos_type_name_lut[type], rt.th_stat[th] & 1 ? "Yes" : " No"); 
 #endif

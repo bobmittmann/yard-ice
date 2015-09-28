@@ -8,10 +8,11 @@
 
 <title>CRAB Device Simulator - Tools</title>
 
-<!-- <script src="/lib/modalbox.js.gz"></script> -->
 <script src="/lib/zepto.js.gz"></script>
 <script>
 	function get_status(port) {
+		var tr = $('#stat' + port);
+		tr.html('<td>' + port + '</td><td></td><td></td><td></td><td></td><td></td>');
 		$.ajax({
 			type: 'GET',
 			url: 'get_status.cgi',
@@ -25,14 +26,21 @@
 				var tr = $('#stat' + port);
 				var html = '<td>' + port + '</td><td>' + data.state + '</td>';
 				if (data.hasOwnProperty('kernel')) {
-					html += '<td>' + data.kernel.version.major + '.' + 
+					html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
 					data.kernel.version.minor + '.' +
 					data.kernel.version.build + '</td>' +
 					'<td>' + data.kernel.ticks + '</td>';
+					if (data.hasOwnProperty('app')) {
+						html += '<td>DevSim-' + data.app.version.major + '.' + 
+						data.app.version.minor + '.' +
+						data.app.version.build + '</td>' +
+						'<td>' + data.app.uptime + '</td>';						
+					} else {
+						html += '<td>?.?.?</td><td>?</td>';
+					}
 				} else {
-					html += '<td>x.y.zz</td><td>0</td>';					
-				}				
-				html += '<td>?</td><td>?</td><td>?</td>';		
+					html += '<td>?.?.?</td><td>?</td>';				
+				}		
 				tr.html(html);
 			},
 			error: function(xhr, type) { 
@@ -41,7 +49,7 @@
 		});
 	}
 	
-	function status_poll(){
+	function status_poll() {
 	/*		setTimeout(status_poll, 5000); */
 		get_status(1);
 		get_status(2);
@@ -56,30 +64,7 @@
 		p.innerHTML = html;
 	}
 
-	function firmware_upload(event) {
-		var lst = this.elements;
-		var box = this.querySelector('#__msg');	
-		var port = $('#selport').val();
-		
-		alert(box, "Uploading firmware, please wait...");		
-		$.ajax({
-			url: this.action + '?port=' + port,
-			type: 'POST',
-			data: new FormData(this),
-			processData: false,
-			contentType: false,
-			success: function() {
-				box.innerHTML = "";
-				get_status(port);
-			},
-			error: function(xhr, type){
-				box.innerHTML = "ERROR!";
-			}
-		});
-		event.preventDefault();
-	}
-
-	Zepto( document ).ready(function() {
+	$(function() {
         $('#btnrefresh').on('click', status_poll);
 		$('#formfirm').on('submit', firmware_upload);		
 		status_poll();
@@ -99,13 +84,11 @@
 		<th>Kernel</th>
 		<th>Ticks</th>		
 		<th>Firmware</th>
-		<th>Database</th>
-		<th>Config</th>
+		<th>Uptime</th>
 		</tr>
 	</thead>
 	<tr id="stat1">
 		<td>1</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -118,12 +101,10 @@
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
-		<td>...</td>
 		<td>...</td>		
 	</tr>	
 	<tr id="stat3">
 		<td>3</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -136,12 +117,10 @@
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
-		<td>...</td>
 		<td>...</td>		
 	</tr>	
 	<tr id="stat5">
 		<td>5</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -154,42 +133,178 @@
 
 <hr />
 
-<table class="formgrid">
-	<tr>
-		<td style="text-align: right;">Simulator:</td>
-		<td>
-			<select id="selport">
-				<option value="1">Port 1</option>
-				<option value="2">Port 2</option>
-				<option value="3">Port 3</option>
-				<option value="4">Port 4</option>
-				<option value="5">Port 5</option>
-			</select>		
-		</td>
-	</tr>
-</table>
-
-<hr>
 <h2>Firmware upgrade</h2>
+
 <div class="form">
 	<form id="formfirm" enctype="multipart/form-data" action="firmware_load.cgi">
-		<div class="fbody">
-			File: <input type="text" class="text" id="__fname"
+		<div>
+		<table class="formgrid">
+		<tr>
+			<td style="text-align: right;">Simulator:</td>
+			<td>
+				<select id="selport">
+					<option value="1">Port 1</option>
+					<option value="2">Port 2</option>
+					<option value="3">Port 3</option>
+					<option value="4">Port 4</option>
+					<option value="5">Port 5</option>
+				</select>		
+			</td>
+		</tr>
+		<tr>
+			<td style="text-align: right;">Firmware:</td>
+			<td>
+			<input type="text" class="text" id="__fname"
 				readonly="readonly" maxlength="128" size="20" /> <input
 				type="button" class="button" value="Browse..."
 				onclick="javascript: this.form.elements.namedItem('__browse').click()" />
 			<input type="file" class="hidden" id="__browse" name="fname"
 				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
+			</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td> 
+			<input type="submit" class="button" value="Upload..." />
+			</td>
+		</tr>	
+		</table>				
 		</div>
 		<div>
 			<p id="__msg"></p>
-		</div>
+		</div>		
 	</form>
 </div>
+
+<script>
+	function firmware_upload(event) {
+		var lst = this.elements;
+		var box = this.querySelector('#__msg');	
+		var port = $('#selport').val();
+		
+		alert(box, "Uploading firmware, please wait...");
+		$('.button').prop('disabled', true);
+		$.ajax({
+			url: this.action + '?port=' + port,
+			type: 'POST',
+			data: new FormData(this),
+			processData: false,
+			contentType: false,
+			success: function() {
+				box.innerHTML = "";
+				get_status(port);
+			},
+			error: function(xhr, type){
+				alert('Ajax error!')
+			},
+			complete: function(xhr, status){
+				box.innerHTML = "";
+				$('.button').prop('disabled', false);
+			}
+		});
+		event.preventDefault();
+	}
+</script>
+
+<hr />
+<div class="form" style="min-width: 10em; max-width: 40em;">
+	<table class="formgrid" style="width: 100%; table-layout: fixed;">
+	<tr>
+		<td colspan="2">
+		<pre id="results" style="height: 10em;"></pre>		
+		</td>
+	</tr>
+	<tr>		
+		<td>
+		<input type="text" id="cmd" value="help" list="browsers" 
+		style="width: 100%; font-family: monospace;"/>
+		<datalist id="browsers">
+			<option value="ls">
+			<option value="rm cfg.bin">
+			<option value="rm db.bin">
+		</datalist>
+		</td>
+		<td style="vertical-align: top;">		
+		<button id="btnexec" class="button">Exec...</button>
+		</td>
+	</tr>
+	<tr>
+		<td>	
+<textarea id="script" style="width: 100%; height: 8em;">
+var i;
+		
+for(i = 0; i &lt; 100; i = i + 1) {
+&#09;printf("%d\n",i);
+}
+</textarea>
+		</td>
+		<td style="vertical-align: top;">						
+		<button id="btnjs" class="button">Run Script...</button>
+		</td>
+	</tr>
+	</table>
+</div>
+<script>
+	function cmd_exec() {
+		var port = $('#selport').val();
+		var cmd = $('#cmd').val();
+		$('.button').prop('disabled', true);
+		$.ajax({
+	 		type: 'GET',
+			url: 'rpc_exec.cgi',
+			data: { 
+				port: port,
+				cmd: cmd
+	 		},
+			dataType: 'text',
+			timeout: 5000,
+			context: $('body'),
+			success: function(data) {
+	 			$('#results').empty();
+	   			$('#results').text(data);
+	   		},
+			error: function(xhr, type){ 
+				alert('Ajax error!') 
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+			}
+		});
+	};
+
+	function rpc_js() {		
+		var port = $('#selport').val();
+		var script = $('#script').val();
+		$('.button').prop('disabled', true);
+		$.ajax({
+	 		type: 'GET',
+			url: 'rpc_js.cgi',
+			data: {
+				port: port,
+				script: script
+	 		},
+			dataType: 'text',
+			timeout: 5000,
+			context: $('body'),
+/*			contentType: 'multipart/form-data', */
+			success: function(data) {
+	 			$('#results').empty();
+	   			$('#results').text(data);
+	   		},
+			error: function(xhr, type){ 
+				alert('Ajax error!') 
+			},
+			complete: function() {
+				$('.button').prop('disabled', false);				
+			}
+		});
+	};
+	
+	$(function() {
+		$(document).on('click', '#btnexec', cmd_exec);
+		$(document).on('click', '#btnjs', rpc_js);
+	});
+</script>
 
 <hr>
 <a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>

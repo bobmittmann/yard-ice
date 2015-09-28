@@ -67,35 +67,12 @@ void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 
-	cm3_sysrst();
+	board_soft_reset();
+
+	board_exec(board_reboot);
 }
 
 void simlnk_int_enable(void);
-
-void thinkos_soft_reset(void)
-{
-	DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
-	__thinkos_irq_disable_all();
-
-	DCC_LOG(LOG_TRACE, "2. kill all threads...");
-	__thinkos_kill_all(); 
-
-	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
-	__thinkos_reset();
-
-#if THINKOS_ENABLE_CONSOLE
-	DCC_LOG(LOG_TRACE, "5. console reset...");
-	__console_reset();
-#endif
-
-	DCC_LOG(LOG_TRACE, "6. exception reset...");
-	__exception_reset();
-
-#if (THINKOS_ENABLE_DEBUG_STEP)
-	DCC_LOG(LOG_TRACE, "7. clear all breakpoints...");
-	dmon_breakpoint_clear_all();
-#endif
-}
 
 void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
@@ -106,8 +83,7 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	};
 
-	thinkos_soft_reset();
-	simlnk_int_enable();
+	board_soft_reset();
 
 	key = data[0];
 	if (key == SIMRPC_EXEC_KEY('A', 'P', 'P', 0)) {
@@ -134,7 +110,7 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
-	struct kernelinfo inf;
+	struct simrpc_kernelinfo inf;
 
 	DCC_LOG(LOG_TRACE, "...");
 

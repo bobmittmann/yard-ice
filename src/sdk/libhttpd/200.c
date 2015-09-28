@@ -87,12 +87,14 @@ const char http_hdr_200_gif[] = "HTTP/1.1 200 OK\r\n"
 
 const char http_hdr_200_json[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: no-cache\r\n"
 	"Connection: keep-alive\r\n"
 	"Content-Type: application/json\r\n"
 	"\r\n";
 
 const char http_hdr_200_xml[] = "HTTP/1.1 200 OK\r\n"
 	"Server: " HTTPD_SERVER_NAME "\r\n"
+	"Cache-Control: no-cache\r\n"
 	"Connection: keep-alive\r\n"
 	"Content-Type: application/xml\r\n"
 	"\r\n";

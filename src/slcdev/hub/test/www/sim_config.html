@@ -18,6 +18,8 @@
 	}
 	
 	function file_read(event) {
+		$('.button').prop('disabled', true);
+		$('#editor').text('');
 		$.ajax({
 			type: 'GET',
 			url: 'file_read.cgi',
@@ -29,10 +31,13 @@
 			timeout: 5000,
 			context: $('body'),
 			success: function(data) {
-				$('#term').text(data);
+				$('#editor').text(data);
 			},
 			error: function(xhr, type){
-				$('#results').text('Ajax error!\n');
+				alert('Ajax error!')				
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
 			}
 		});
 	}
@@ -41,27 +46,107 @@
 		var lst = this.elements;
 		var box = this.querySelector('#__msg');
 		var port = $('#selport').val();
-		alert(box, "Uploading file, please wait...");		
+		alert(box, "Uploading file, please wait...");	
+		$('.button').prop('disabled', true);
+		$('#editor').text('');
 		$.ajax({
 			url: this.action + '?port=' + port,
 			type: 'POST',
 			data: new FormData(this),
 			processData: false,
 			contentType: false,
-			success: function(data) {
-				box.innerHTML = "";				
-				$('#term').text(data);				
+			success: function(data) {				
+				$('#editor').text(data);				
 			},
 			error: function(xhr, type){
-				box.innerHTML = "ERROR!";
+				alert('Ajax error!')
+			},
+			complete: function(xhr, status){
+				box.innerHTML = "";
+				$('.button').prop('disabled', false);
 			}
 		});
 		event.preventDefault();
 	}
 
-	Zepto( document ).ready(function() {
+	function cfg_getinfo() {
+		var stat = $('#status');
+		var port = $('#selport').val();
+		stat.html('');
+		$('.button').prop('disabled', true);
+		$.ajax({
+			type: 'GET',
+			url: 'cfg_getinfo.cgi',
+			data: { 
+				port: port
+			},
+			dataType: 'json',			
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				var html 
+				try {
+					if (data.hasOwnProperty('tag')) {	
+						var tag = data.tag;
+						if (tag == '')
+							tag = '&lt;notag&gt;'
+						html = '<b>' + tag + '-' + 
+							data.version.major + '.' + 
+							data.version.minor + '.' +
+							data.version.build + '</b> -<i>' + 
+							data.desc + '</i>';
+					} else {
+					    html = '<i>' + data.error + '</i>';						
+					} 
+				} catch(err) {
+				    html = '<i>' + err.message + '</i>';
+				}
+				stat.html(html);				
+			},
+			error: function(xhr, type) { 
+				alert('Ajax error!') 
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+			}
+
+		});
+	}
+
+	function cfg_compile() {
+		var stat = $('#status');
+		var port = $('#selport').val();
+		stat.html('');
+		$('.button').prop('disabled', true);
+		$('#results').text('');
+		$.ajax({
+			type: 'GET',
+			url: 'cfg_compile.cgi',
+			data: { 
+				port: port
+			},
+			dataType: 'text',			
+			timeout: 5000,
+			context: $('body'),
+			success: function(data) {
+				$('#results').text(data);				
+			},
+			error: function(xhr, type) { 
+				alert('Ajax error!') 
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+				cfg_getinfo();
+			}
+		});
+	}
+	
+	$(function() {
 		$('#formcfg').on('submit', file_upload);
         $('#btnread').on('click', { fname: 'cfg.js' }, file_read);
+        $('#btncompile').on('click', cfg_compile);
+        $('#selport').on('change', cfg_getinfo);
+        cfg_getinfo();
     });
 
 </script>
@@ -70,10 +155,15 @@
 <body>
 <h1>CRAB Simulator Configuration</h1>
 
+
 <div class="form">
 	<form id="formcfg" enctype="multipart/form-data" action="cfg_load.cgi">
-		<div class="fbody">
+		<div>
 		<table class="formgrid">
+		<tr>
+			<td style="text-align: right;">Status:</td>
+			<td id="status"></td>
+		</tr>
 		<tr>
 			<td style="text-align: right;">Simulator:</td>
 			<td>
@@ -86,6 +176,7 @@
 				</select>		
 			</td>
 		</tr>
+		<tr>
 			<td style="text-align: right;">Configuration:</td>
 			<td>
 			<input type="text" class="text" id="__fname"
@@ -95,12 +186,14 @@
 			<input type="file" class="hidden" id="__browse" name="fname"
 				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
 			</td>
-		</tr>				
+		</tr>
+		<tr>
+			<td></td>
+			<td> 
+			<input type="submit" class="button" value="Upload..." />
+			</td>
+		</tr>	
 		</table>				
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
 		</div>
 		<div>
 			<p id="__msg"></p>
@@ -108,14 +201,16 @@
 	</form>
 </div>
 
+<div>
+	<input id="btnread" type="button" class="button" value="Read..." />
+	<input id="btncompile" type="button" class="button" value="Compile..." />
+</div>
 
-<div class="form" style="width: 100%;">
-	<form accept-charset="UTF-8" style="width: 100%;">
-		<textarea name="term" id="term" style="width: 100%; height: 40em;"></textarea>
-		<input id="btnread" type="button" class="button" value="Read..." /> 
-		<input id="btnwrite" type="button" class="button" value="Write..." />
-		<input id="btnsave" type="button" class="button" value="Save..." /> 		
-	</form>
+<div class="form" style="min-width: 10em; max-width: 40em;">
+	<pre id="results" style="width: 100%; height: 6em;">
+	</pre>		
+	<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
+	</textarea> 
 </div>
 
 <hr>

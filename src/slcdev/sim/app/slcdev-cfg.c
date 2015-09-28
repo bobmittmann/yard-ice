@@ -730,3 +730,14 @@ int config_show_info(FILE * f)
 	return 0;
 }
 
+struct slcdev_cfg_info * config_info_get(void)
+{
+	struct cfg_info * inf;
+
+	if ((inf = cfg_info_get()) == NULL)
+		return NULL;
+
+	return (struct slcdev_cfg_info *)&usr.cfg_info;
+}
+
+

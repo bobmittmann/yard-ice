@@ -81,16 +81,16 @@ enum http_method {
 };
 
 enum mime_type {
-    TEXT_HTML = 1,
-    TEXT_PLAIN = 2,
-    TEXT_CSS = 3,
-    IMAGE_PNG = 4,
-    IMAGE_JPEG = 5,
-    IMAGE_GIF = 6,
-    APPLICATION_JAVASCRIPT = 7,
-    APPLICATION_JSON = 8,
-    APPLICATION_XML = 9,
-    MULTIPART_FORM_DATA = 10,
+    TEXT_HTML              = OBJ_STATIC_HTML,
+    TEXT_PLAIN             = OBJ_STATIC_TEXT,
+    TEXT_CSS               = OBJ_STATIC_CSS,
+	APPLICATION_JAVASCRIPT = OBJ_STATIC_JS,
+    APPLICATION_JSON       = OBJ_STATIC_JSON,
+    APPLICATION_XML        = OBJ_STATIC_XML,
+    IMAGE_PNG              = OBJ_STATIC_PNG,
+    IMAGE_JPEG             = OBJ_STATIC_JPEG,
+    IMAGE_GIF              = OBJ_STATIC_GIF,
+    MULTIPART_FORM_DATA    = 10,
     APPLICATION_X_WWW_FORM_URLENCODED = 11
 };
 

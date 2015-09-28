@@ -30,6 +30,8 @@
 #include <stdbool.h> 
 #include <stdint.h> 
 
+#include <simrpc.h>
+
 enum simrpc_opc {
 	SIMRPC_SIGNAL     = 0,
 	SIMRPC_SUSPEND    = 1,
@@ -62,11 +64,19 @@ enum simrpc_opc {
 	SIMRPC_DIR_READ    = 45,
 
 	SIMRPC_APPINFO     = 46,
+	SIMRPC_DBCOMPILE   = 47,
+	SIMRPC_DBINFO      = 48,
+	SIMRPC_CFGCOMPILE  = 49,
+	SIMRPC_CFGINFO     = 50,
+	SIMRPC_SHELLEXEC   = 51,
+	SIMRPC_JSEXEC      = 52,
 
-	SIMRPC_BUSY = 251,
-	SIMRPC_PEND = 253,
-	SIMRPC_OK   = 254,
-	SIMRPC_ERR  = 255
+	SIMRPC_BUSY        = 250,
+	SIMRPC_PEND        = 251,
+	SIMRPC_FALSE       = 252,
+	SIMRPC_TRUE        = 253,
+	SIMRPC_OK          = 254,
+	SIMRPC_ERR         = 255
 };
 
 struct simrpc_hdr {
@@ -77,13 +87,12 @@ struct simrpc_hdr {
 	uint32_t data[];
 };
 
+#define SIMRPC_PDU_MAX   (4 + SIMRPC_DATA_MAX)
+
 #define SIMRPC_DST(OPC) ((OPC) & 0xff)
 #define SIMRPC_SRC(OPC) (((OPC) >> 8) & 0xff)
 #define SIMRPC_SEQ(OPC) (((OPC) >> 16) & 0xff)
 #define SIMRPC_INSN(OPC) (((OPC) >> 24) & 0xff)
-
-#define SIMRPC_DATA_MAX  (512)
-#define SIMRPC_PDU_MAX   (4 + SIMRPC_DATA_MAX)
 
 #define SIMRPC_ADDR_SWAP(OPC) (((OPC) & 0xffff0000) | \
 							   (((OPC) & 0x0000ff00) >> 8) | \
@@ -140,6 +149,14 @@ void simrpc_file_write_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_file_seek_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_file_close_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_file_crc16_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+
+void simrpc_appinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_cfginfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_dbinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 void simrpc_svc_init(void);
 

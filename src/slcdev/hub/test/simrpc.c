@@ -118,10 +118,21 @@ struct simrpc_pcb_entry {
     };
 };
 
+#ifndef SIMRPC_PCB_POOL_STAT
+#define SIMRPC_PCB_POOL_STAT 1
+#endif
+
 struct {
 	int mutex;
 	struct simrpc_pcb_entry * free;
 	struct simrpc_pcb_entry buf[SIMRPC_PCB_POOL_SIZE];
+#if SIMRPC_PCB_POOL_STAT
+	struct {
+		uint32_t alloc_cnt;
+		uint32_t free_cnt;
+		uint32_t error_cnt;
+	} stat;
+#endif
 } simrpc_pcb_pool;
 
 struct simrpc_pcb * simrpc_pcb_alloc(void)
@@ -129,10 +140,18 @@ struct simrpc_pcb * simrpc_pcb_alloc(void)
 	struct simrpc_pcb_entry * entry;
 
 	thinkos_mutex_lock(simrpc_pcb_pool.mutex);
-	if ((entry = simrpc_pcb_pool.free) != NULL)
+
+	if ((entry = simrpc_pcb_pool.free) != NULL) {
 		simrpc_pcb_pool.free = entry->next;
+#if SIMRPC_PCB_POOL_STAT
+		simrpc_pcb_pool.stat.alloc_cnt++;
+	} else {
+		simrpc_pcb_pool.stat.error_cnt++;
+#endif
+	}
 
 	thinkos_mutex_unlock(simrpc_pcb_pool.mutex);
+
 	return &entry->pcb;
 }
 
@@ -141,8 +160,12 @@ void simrpc_pcb_free(struct simrpc_pcb * pcb)
 	struct simrpc_pcb_entry * entry = (struct simrpc_pcb_entry *)pcb;
 
 	thinkos_mutex_lock(simrpc_pcb_pool.mutex);
+
 	entry->next = simrpc_pcb_pool.free;
 	simrpc_pcb_pool.free = entry;
+#if SIMRPC_PCB_POOL_STAT
+	simrpc_pcb_pool.stat.free_cnt++;
+#endif
 	thinkos_mutex_unlock(simrpc_pcb_pool.mutex);
 }
 
@@ -157,6 +180,11 @@ void simrpc_pcb_pool_init(void)
 		simrpc_pcb_pool.buf[i].next = &simrpc_pcb_pool.buf[i + 1];
 
 	simrpc_pcb_pool.buf[i].next = NULL;
+#if SIMRPC_PCB_POOL_STAT
+	simrpc_pcb_pool.stat.alloc_cnt = 0;
+	simrpc_pcb_pool.stat.error_cnt = 0;
+	simrpc_pcb_pool.stat.free_cnt = 0;
+#endif
 }
 
 void simrpc_init(void)
@@ -223,13 +251,15 @@ struct simrpc_pcb * simrpc_open(unsigned int daddr)
 	struct simrpc_pcb * sp;
 	struct simlnk * lnk; 
 
+	if ((lnk = simrpc_route(daddr)) == NULL) {
+		WARN("no route to addr %d!", daddr);
+		return NULL;
+	}
+
 	if ((sp = simrpc_pcb_alloc()) == NULL) {
 		WARN("simrpc_pcb_alloc() failed!");
 		return NULL;
 	}
-
-	if ((lnk = simrpc_route(daddr)) == NULL)
-		return NULL;
 
 	sp->lnk = lnk;
 	sp->seq = 0;

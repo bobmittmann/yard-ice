@@ -63,17 +63,17 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_SIM_TOOLS_HTML 1728
+#define SIZEOF_SIM_TOOLS_HTML 2283
 
-#define SIZEOF_SIM_DATABASE_HTML 1484
+#define SIZEOF_SIM_DATABASE_HTML 1967
 
-#define SIZEOF_SIM_CONFIG_HTML 1477
+#define SIZEOF_SIM_CONFIG_HTML 1827
 
-#define SIZEOF_RPC_TEST_HTML 2284
+#define SIZEOF_RPC_TEST_HTML 2330
 
 #define SIZEOF_NETWORK_HTML 1587
 
-#define SIZEOF_STYLE_CSS 864
+#define SIZEOF_STYLE_CSS 873
 
 #define SIZEOF_TOOLS_HTML 1431
 
@@ -100,8 +100,17 @@ extern "C" {
 #endif
 
 int rpc_test_cgi(struct httpctl * http);
+int rpc_exec_cgi(struct httpctl * http);
+int rpc_js_cgi(struct httpctl * http);
+
 int cfg_load_cgi(struct httpctl * http);
+int cfg_compile_cgi(struct httpctl * http);
+int cfg_getinfo_cgi(struct httpctl * http);
+
 int db_load_cgi(struct httpctl * http);
+int db_compile_cgi(struct httpctl * http);
+int db_getinfo_cgi(struct httpctl * http);
+
 int firmware_load_cgi(struct httpctl * http);
 int get_status_cgi(struct httpctl * http);
 int file_write_cgi(struct httpctl * http);

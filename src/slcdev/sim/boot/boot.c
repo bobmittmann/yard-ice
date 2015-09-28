@@ -51,6 +51,8 @@ void app_try_exec()
 	asm volatile ("isb\n" :  :  : );
 }
 
+int __simrpc_send_opc(uint32_t opc);
+
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
@@ -67,7 +69,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 
 	DCC_LOG(LOG_TRACE, "4. app_try_exec().");
 	app_try_exec();
-	
+
 	DCC_LOG(LOG_TRACE, "5. board_test().");
 	board_test();
 

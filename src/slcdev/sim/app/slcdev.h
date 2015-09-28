@@ -408,6 +408,7 @@ int config_compile(struct fs_file * json);
 bool config_need_update(struct fs_file * json);
 bool config_is_sane(void);
 int config_show_info(FILE * f);
+struct slcdev_cfg_info * config_info_get(void);
 
 struct db_dev_model * device_db_lookup(unsigned int id);
 bool device_db_need_update(struct fs_file * json);

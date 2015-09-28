@@ -32,6 +32,7 @@
 #define TX_DMA_CHAN STM32_DMA_CHANNEL7
 
 struct simlnk {
+	uint32_t tx_lock;
 	uint32_t tx_buf[(SIMLNK_MTU + 3) / 4];
 	uint32_t rx_buf[(SIMLNK_MTU + 2 + 3) / 4];
 } simlnk;
@@ -62,6 +63,11 @@ int simlnk_dma_xmit(unsigned int len)
 
 int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 {
+	if (__ldrex(&simlnk.tx_lock))
+		return -1;
+	if (__strex(&simlnk.tx_lock, 1))
+		return -1;
+
 	simlnk.tx_buf[0] = opc;
 	__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
 
@@ -70,6 +76,11 @@ int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
 
 int __simrpc_send_int(uint32_t opc, int val)
 {
+	if (__ldrex(&simlnk.tx_lock))
+		return -1;
+	if (__strex(&simlnk.tx_lock, 1))
+		return -1;
+
 	simlnk.tx_buf[0] = opc;
 	simlnk.tx_buf[1] = (uint32_t)val;
 
@@ -78,11 +89,15 @@ int __simrpc_send_int(uint32_t opc, int val)
 
 int __simrpc_send_opc(uint32_t opc)
 {
+	if (__ldrex(&simlnk.tx_lock))
+		return -1;
+	if (__strex(&simlnk.tx_lock, 1))
+		return -1;
+
 	simlnk.tx_buf[0] = opc;
 
 	return simlnk_dma_xmit(4);
 }
-
 
 static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 {
@@ -178,18 +193,31 @@ void thinkos_comm_svc(int32_t * arg)
 		break;
 
 	case COMM_SEND:
-		{
-			uint32_t opc = arg[1];
-			void * buf = (void *)arg[2];
-			int cnt = arg[3];
-			simlnk.tx_buf[0] = opc;
+		arg[0] = 0;
+again:
+		if (__ldrex(&simlnk.tx_lock)) {
+			/* wait for event */
+			__thinkos_suspend(self);
+			/* insert into the comm send wait queue */
+			__thinkos_wq_insert(THINKOS_WQ_COMM_SEND, self);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched(); 
+		} else {
+			uint32_t opc;
+			void * buf;
+			int cnt;
 
-			DCC_LOG1(LOG_TRACE, "INSN %d!", SIMRPC_INSN(opc));
-			if (cnt == 4) 
-				DCC_LOG1(LOG_TRACE, "data[0] = %d!", *((uint32_t *)buf));
-			__thinkos_memcpy32(&simlnk.tx_buf[1], buf, cnt);
+			if (__strex(&simlnk.tx_lock, 1))
+				goto again;
+
+			opc = arg[1];
+			buf = (void *)arg[2];
+			cnt = arg[3];
+
+			simlnk.tx_lock = 1;
+			simlnk.tx_buf[0] = opc;
+			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
 			simlnk_dma_xmit(cnt + 4);
-			arg[0] = 0;
 		}
 		break;
 
@@ -208,9 +236,15 @@ void stm32_usart2_isr(void)
 	uint32_t cr;
 	
 	cr = uart->cr1;
-	sr = uart->sr & (cr | USART_ORE | USART_FE);
+	sr = uart->sr & (cr | USART_FE);
 
 	if (sr & USART_TC) {
+		int wq = THINKOS_WQ_COMM_SEND;
+		uint32_t opc;
+		void * buf;
+		int cnt;
+		int th;
+
 		DCC_LOG(LOG_INFO, "TC");
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
@@ -219,9 +253,27 @@ void stm32_usart2_isr(void)
 		/* Generate a break condition */
 		cr |= USART_SBK;
 		uart->cr1 = cr;
+
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			/* wakeup from the console wait queue */
+			__thinkos_wakeup(wq, th);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+
+			opc = thinkos_rt.ctx[th]->r1;
+			buf = (void *)thinkos_rt.ctx[th]->r2;
+			cnt = thinkos_rt.ctx[th]->r3;
+			simlnk.tx_buf[0] = opc;
+			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
+			simlnk_dma_xmit(cnt + 4);
+		} else {
+			simlnk.tx_lock = 0;
+		}
 	}
 
-	if (sr & (USART_IDLE | USART_ORE | USART_FE)) {
+	/* break detection */
+	if (sr & USART_FE) {
+		unsigned int cnt;
 		uint32_t ccr;
 		int c;
 		
@@ -233,52 +285,20 @@ void stm32_usart2_isr(void)
 		c = uart->rdr;
 		(void)c;
 
-		if (sr & USART_ORE) {
-			DCC_LOG(LOG_WARNING, "OVR!");
+		/* Get number of bytes received */
+		cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
+		/* Prepare next DMA transfer */
+		dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+		dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
+
+		DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
+
+		if (cnt > 4) {
+			/* process this request,
+			 remove the break character from the packet length. */
+			simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
 		}
-
-		/* break detection */
-		if (sr & USART_FE) {
-			unsigned int cnt;
-
-			/* Get number of bytes received */
-			cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
-			/* Prepare next DMA transfer */
-			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
-			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
-
-			DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
-
-			if (cnt > 4) {
-				/* process this request,
-				 remove the break character from the packet length. */
-				simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
-			}
-		}
-#if 0
-		/* idle detection */
-		if (sr & USART_IDLE) {
-			unsigned int cnt;
-			uint32_t opc;
-
-			/* Get number of bytes received */
-			cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
-			/* Get the opcode form the buffer head */
-			opc = simlnk.rx_buf[0];
-			/* Prepare next DMA transfer */
-			dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
-			dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
-
-			DCC_LOG2(LOG_TRACE, "IDLE! opc=%08x cnt=%d", opc, cnt);
-
-			if (cnt >= 4) {
-				/* process this request */
-				simlnk_dma_recv(opc, &simlnk.rx_buf[1], cnt - 4);
-			}
-		}
-#endif
 	}	
-
 }
 
 /* TX DMA ------------------------------------------------------------- */
@@ -324,6 +344,8 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	struct stm32f_dma * dma = STM32_DMA1;
 	struct stm32_usart * uart = STM32_USART2;
 
+	simlnk.tx_lock = 0;
+
 	stm32_clk_enable(STM32_RCC, STM32_CLK_USART2);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_DMA1);
 
@@ -336,7 +358,6 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	uart->cr2 = USART_STOP_1;
 	/* enable UART and errors interrupt */
 	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_TCIE;
-
 
 	/* TX DMA ------------------------------------------------------------- */
 	dma->ch[TX_DMA_CHAN].ccr = 0;
@@ -374,10 +395,3 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	return 0;
 }
 	
-void simlnk_int_enable(void)
-{
-	cm3_irq_enable(STM32_IRQ_USART2);
-	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
-	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
-}
-

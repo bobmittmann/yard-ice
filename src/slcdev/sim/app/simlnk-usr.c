@@ -67,6 +67,28 @@ void __attribute__((noreturn)) simlnk_task(void)
 		case SIMRPC_FILE_CRC16:
 			simrpc_file_crc16_svc(hdr, data, cnt);
 			break;
+		case SIMRPC_APPINFO:
+			simrpc_appinfo_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_DBCOMPILE:
+			simrpc_dbcompile_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_DBINFO:
+			simrpc_dbinfo_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_CFGCOMPILE:
+			simrpc_cfgcompile_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_CFGINFO:
+			simrpc_cfginfo_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_SHELLEXEC:
+			simrpc_shellexec_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_JSEXEC:
+			simrpc_jsexec_svc(hdr, data, cnt);
+			break;
+
 		default:
 			DCC_LOG1(LOG_WARNING, "Invalid insn: %d", SIMRPC_INSN(hdr));
 			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), SIMRPC_ENOSYS);

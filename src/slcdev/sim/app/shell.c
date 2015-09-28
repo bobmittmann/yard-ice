@@ -42,10 +42,12 @@
 #include "isink.h"
 
 #include "slcdev-lib.h"
+#include "version.h"
 
 extern const struct shell_cmd cmd_tab[];
-extern const char * version_str;
-extern const char * copyright_str;
+const char version_str[] = "SLC Device Simulator " \
+							VERSION_NUM " - " VERSION_DATE;
+const char copyright_str[] = "(c) Copyright 2014-2015 - Mircom Group";
 
 /* -------------------------------------------------------------------------
  * Help
@@ -557,13 +559,11 @@ void db_cfg_purge(void)
 	symtab_init(slcdev_symbuf, sizeof(slcdev_symbuf));
 }
 
-#if 0
 int cmd_dbase(FILE * f, int argc, char ** argv)
 {
 	struct fs_dirent entry;
 	bool erase = false;
 	bool compile = false;
-	bool xfer = false;
 	bool dump = false;
 	int i;
 
@@ -580,11 +580,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "erase") == 0) || 
 			(strcmp(argv[i], "e") == 0)) {
 			erase = true;
-		} else if ((strcmp(argv[i], "xfer") == 0) || 
-			(strcmp(argv[i], "x") == 0)) {
-			xfer = true;
-			erase = true;
-			compile = true;
 		} else if ((strcmp(argv[i], "dump") == 0) || 
 			(strcmp(argv[i], "d") == 0)) {
 			dump = true;
@@ -593,15 +588,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 	}
 
 	slcdev_stop();
-
-	if (xfer) {
-		fprintf(f, "XMODEM receive: '%s'... ", "db.js");
-		if ((fs_xmodem_recv(f, "db.js")) < 0) {
-			fprintf(f, "fs_xmodem_recv() failed!\r\n");
-			return -1;
-		}
-		fprintf(f, "\n");
-	}
 
 	if (erase) {
 		fprintf(f, "Erasing DB...\n");
@@ -642,7 +628,6 @@ int cmd_dbase(FILE * f, int argc, char ** argv)
 
 int cmd_config(FILE * f, int argc, char ** argv)
 {
-	bool xfer = false;
 	bool erase = false;
 	bool compile = false;
 	bool load = false;
@@ -665,23 +650,8 @@ int cmd_config(FILE * f, int argc, char ** argv)
 		} else if ((strcmp(argv[i], "load") == 0) || 
 			(strcmp(argv[i], "l") == 0)) {
 			load = true;
-		} else if ((strcmp(argv[i], "xfer") == 0) || 
-			(strcmp(argv[i], "x") == 0)) {
-			xfer = true;
-			erase = true;
-			compile = true;
 		} else
 			return SHELL_ERR_ARG_INVALID;
-	}
-
-	if (xfer) {
-		slcdev_stop();
-		fprintf(f, "XMODEM receive: '%s'... ", "cfg.js");
-		if ((fs_xmodem_recv(f, "cfg.js")) < 0) {
-			fprintf(f, "fs_xmodem_recv() failed!\r\n");
-			return -1;
-		}
-		fprintf(f, "\n");
 	}
 
 	if (erase) {
@@ -746,7 +716,6 @@ int cmd_config(FILE * f, int argc, char ** argv)
 
 	return 0;
 }
-#endif
 
 int cmd_reboot(FILE * f, int argc, char ** argv)
 {
@@ -1130,15 +1099,6 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_alarm, "alarm", "alm", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
 		"set/get alarm level" },
 
-	{ cmd_cat, "cat", "", "<filename>", 
-		"display file content" },
-#if 0
-	{ cmd_config, "config", "cfg", "[compile|erase|load|xfer]", 
-		"configuration options" },
-
-	{ cmd_dbase, "dbase", "db", "[compile|dump|erase|xfer]", 
-		"manage device database" },
-#endif
 	{ cmd_disable, "disable", "d", "[<sens|mod|grp>[N1 .. N6]|all] ", 
 		"device disable" },
 
@@ -1148,11 +1108,37 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_group, "group", "grp", "", 
 		"show group information" },
 
-	{ cmd_isink, "isink", "isk", "[MODE [RATE [PULSE [PRE]]]]]", 
-		"isink pulse" },
-
 	{ cmd_ls, "ls", "", "", 
 		"list files" },
+
+	{ cmd_rm, "rm", "", "<FILENAME>", 
+		"remove files" },
+
+	{ cmd_trouble, "trouble", "tbl", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
+		"set/get trouble level" },
+
+#if 0
+	{ cmd_rx, "rx", "", "<FILENAME>", 
+		"Xmodem file receive" },
+#endif
+
+	{ cmd_sim, "sim", "", "[stop|resume]", 
+		"stop/resume simulation" },
+
+	{ cmd_sym, "sym", "", "", 
+		"JS symbol table dump" },
+
+	{ cmd_cat, "cat", "", "<filename>", 
+		"display file content" },
+
+	{ cmd_config, "config", "cfg", "[compile|erase|load|xfer]", 
+		"configuration options" },
+
+	{ cmd_dbase, "dbase", "db", "[compile|dump|erase|xfer]", 
+		"manage device database" },
+
+	{ cmd_isink, "isink", "isk", "[MODE [RATE [PULSE [PRE]]]]]", 
+		"isink pulse" },
 
 	{ cmd_quiet, "quiet", "q", "", 
 		"enable quiet mode" },
@@ -1160,23 +1146,8 @@ const struct shell_cmd cmd_tab[] = {
 	{ cmd_reboot, "reboot", "rst", "", 
 		"reboot system" },
 
-	{ cmd_rm, "rm", "", "<FILENAME>", 
-		"remove files" },
-#if 0
-	{ cmd_rx, "rx", "", "<FILENAME>", 
-		"Xmodem file receive" },
-#endif
-	{ cmd_sim, "sim", "", "[stop|resume]", 
-		"stop/resume simulation" },
-
-	{ cmd_sym, "sym", "", "", 
-		"JS symbol table dump" },
-
 	{ cmd_trig, "trig", "t", "[ADDR]", 
 		"trigger module address get/set" },
-
-	{ cmd_trouble, "trouble", "tbl", "[[LVL] [<sens|mod|grp>[N1 .. N6]|all]", 
-		"set/get trouble level" },
 
 	{ cmd_verbose, "verbose", "v", "", 
 		"enable verbose mode" },

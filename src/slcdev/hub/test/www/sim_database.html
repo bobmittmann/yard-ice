@@ -17,6 +17,8 @@
 	}
 	
 	function file_read(event) {
+		$('.button').prop('disabled', true);
+		$('#editor').text('');
 		$.ajax({
 			type: 'GET',
 			url: 'file_read.cgi',
@@ -28,39 +30,151 @@
 			timeout: 5000,
 			context: $('body'),
 			success: function(data) {
-				$('#term').text(data);
+				$('#editor').text(data);
 			},
 			error: function(xhr, type){
-				$('#results').text('Ajax error!\n');
+				alert('Ajax error!')				
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
 			}
 		});
 	}
-
+	
 	function file_upload(event) {
-		var lst = this.elements;
 		var box = this.querySelector('#__msg');
 		var port = $('#selport').val();
-		alert(box, "Uploading file, please wait...");		
+		alert(box, "Uploading file, please wait...");
+		$('.button').prop('disabled', true);
+		$('#editor').text('');
 		$.ajax({
 			url: this.action + '?port=' + port,
 			type: 'POST',
 			data: new FormData(this),
 			processData: false,
 			contentType: false,
-			success: function(data) {
-				box.innerHTML = "";				
-				$('#term').text(data);				
+			success: function(data) {				
+				$('#editor').text(data);				
 			},
 			error: function(xhr, type){
-				box.innerHTML = "ERROR!";
+				alert('Ajax error!')
+			},
+			complete: function(xhr, status){
+				box.innerHTML = "";				
+				$('.button').prop('disabled', false);
 			}
 		});
 		event.preventDefault();
 	}
 
-	Zepto( document ).ready(function() {
+	function db_getinfo() {
+		var stat = $('#status');
+		var port = $('#selport').val();
+//		stat.html('');
+		$('.button').prop('disabled', true);
+		$.ajax({
+			type: 'GET',
+			url: 'db_getinfo.cgi',
+			data: { 
+				port: port
+			},
+			dataType: 'json',			
+			timeout: 500,
+			context: $('body'),
+			success: function(data) {
+				var html 
+				try {
+					if (data.hasOwnProperty('desc')) {	
+						var desc = data.desc;
+						if (desc == '')
+							desc = '&lt;none&gt;'
+						html = '<b>DB - ' + 
+							data.version.major + '.' + 
+							data.version.minor + '.' +
+							data.version.build + '</b> -<i>' + 
+							desc + '</i>';
+					} else {
+					    html = '<i>' + data.error + '</i>';						
+					} 
+				} catch(err) {
+				    html = '<i>' + err.message + '</i>';
+				}
+				stat.html(html);				
+			},
+			error: function(xhr, type) { 
+				alert('Ajax error!') 
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+			}
+
+		});
+	}
+
+	function db_compile() {
+		var stat = $('#status');
+		var port = $('#selport').val();
+		stat.html('');
+		$('.button').prop('disabled', true);
+		$('#results').text('');
+		$.ajax({
+			type: 'GET',
+			url: 'db_compile.cgi',
+			data: { 
+				port: port
+			},
+			dataType: 'text',			
+			timeout: 5000,
+			context: $('body'),
+			success: function(data) {
+				$('#results').text(data);
+			},
+			error: function(xhr, type) { 
+				alert('Ajax error!') 
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+				db_getinfo();
+			}
+		});
+	}
+	
+	function file_write(event) {
+		var port = $('#selport').val();
+		var fname = event.data.fname;		
+		$('.button').prop('disabled', true);
+		$.ajax({
+//			url: 'file_write.cgi?port=' + port + '&fname=' + fname,
+			url: 'file_write.cgi',
+			type: 'POST',
+			data: $('#editor'),
+//			async: false,
+//			cache: false,
+			timeout: 5000,
+//			context: $('body'),
+			processData: false,
+			contentType: false,
+//			contentType: 'application/x-www-form-urlencoded'			
+//			contentType: 'multipart/form-data',
+//			contentType: 'text/plain',
+//			contentType: 'text/plain',
+			success: function(data) {
+			},
+			error: function(xhr, type){
+			},
+			complete: function(xhr, status){
+				$('.button').prop('disabled', false);
+			}
+		});
+		event.preventDefault();
+	}
+
+	$( document ).ready(function() {
 		$('#formdb').on('submit', file_upload);
-        $('#btnread').on('click', { fname: 'db.js' }, file_read);        
+        $('#btnread').on('click', { fname: 'db.js' }, file_read);
+        $('#btncompile').on('click', db_compile);
+        $('#selport').on('change', db_getinfo);
+        db_getinfo();
     });
 
 </script>
@@ -71,8 +185,12 @@
 
 <div class="form">
 	<form id="formdb" enctype="multipart/form-data" action="db_load.cgi">
-		<div class="fbody">
+		<div>
 		<table class="formgrid">
+		<tr>
+			<td style="text-align: right;">Status:</td>
+			<td id="status"></td>
+		</tr>
 		<tr>
 			<td style="text-align: right;">Simulator:</td>
 			<td>
@@ -84,9 +202,9 @@
 					<option value="5">Port 5</option>
 				</select>		
 			</td>
-		</tr>			
+		</tr>
 		<tr>
-			<td style="text-align: right;">Configuration:</td>
+			<td style="text-align: right;">Database:</td>
 			<td>
 			<input type="text" class="text" id="__fname"
 				readonly="readonly" maxlength="128" size="20" /> <input
@@ -95,12 +213,14 @@
 			<input type="file" class="hidden" id="__browse" name="fname"
 				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
 			</td>
-		</tr>				
+		</tr>
+		<tr>
+			<td></td>
+			<td> 
+			<input type="submit" class="button" value="Upload..." />
+			</td>
+		</tr>	
 		</table>				
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
 		</div>
 		<div>
 			<p id="__msg"></p>
@@ -108,13 +228,16 @@
 	</form>
 </div>
 
-<div class="form" style="width: 100%;">
-	<form accept-charset="UTF-8" style="width: 100%;">
-		<textarea name="term" id="term" style="width: 100%; height: 40em;"></textarea>
-		<input id="btnread" type="button" class="button" value="Read..." /> 
-		<input id="btnwrite" type="button" class="button" value="Write..." />
-		<input id="btnsave" type="button" class="button" value="Save..." /> 
-	</form>
+<div>
+	<input id="btnread" type="button" class="button" value="Read..." />
+	<input id="btncompile" type="button" class="button" value="Compile..." />
+</div>
+
+<div class="form" style="min-width: 10em; max-width: 40em;">
+	<pre id="results" style="width: 100%; height: 6em;">
+	</pre>		
+	<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
+	</textarea> 
 </div>
 
 <hr>

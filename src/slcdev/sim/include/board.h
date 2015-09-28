@@ -148,9 +148,15 @@ extern "C" {
 void board_init(void);
 void __attribute__((noreturn)) board_test(void);
 
+void board_soft_reset(void);
+
 bool board_app_check(uint32_t addr);
 
+void board_reboot(void);
+
 bool board_app_exec(uint32_t addr);
+
+void board_exec(void (* func)(void));
 
 #ifdef __cplusplus
 }

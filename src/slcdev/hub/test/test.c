@@ -72,15 +72,17 @@ const char * const trace_lvl_tab[] = {
 };
 
 FILE * trace_file;
-bool trace_auto_flush = true;
-const char trace_host[] = "192.168.10.254";
-const uint16_t trace_port = 11111;
+volatile bool trace_auto_flush = true;
+volatile bool trace_udp_enabled = false;
+const char trace_host[] = "192.168.10.1";
+const uint16_t trace_port = 1111;
 
 void __attribute__((noreturn)) supervisor_task(void)
 {
 	struct trace_entry trace;
     struct sockaddr_in sin;
     struct udp_pcb * udp;
+    bool udp_enabled;
 	uint32_t clk;
 	int n;
 
@@ -119,6 +121,7 @@ void __attribute__((noreturn)) supervisor_task(void)
 		/* 8Hz periodic task */
 		clk += 125;
 		thinkos_alarm(clk);
+		udp_enabled = trace_udp_enabled;
 
 		while (trace_getnext(&trace, msg, sizeof(msg)) >= 0) {
 			trace_ts2timeval(&tv, trace.dt);
@@ -132,11 +135,15 @@ void __attribute__((noreturn)) supervisor_task(void)
 						trace_lvl_nm[trace.ref->lvl],
 						(int)tv.tv_sec, (int)tv.tv_usec, msg);
 
-			/* sent log to remote station */
-            udp_sendto(udp, s, n, &sin);
-
             /* write log to local console */
 			fwrite(s, n, 1, trace_file);
+
+			if (udp_enabled) {
+				/* sent log to remote station */
+				if (udp_sendto(udp, s, n, &sin) < 0) {
+					udp_enabled = false;
+				}
+			}
 		}
 
 		if (trace_auto_flush)
@@ -366,7 +373,7 @@ int main(int argc, char ** argv)
 	simrpc_init();
 
 	for (;;) {
-		thinkos_sleep(60000);
+		thinkos_sleep(5000);
 		INF("Tick %d ...", ++i);
 	}
 

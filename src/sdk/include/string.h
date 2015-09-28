@@ -43,6 +43,8 @@ char * strcat(char * dst, const char * src);
 
 char * strncat(char * dst, const char * src, size_t n);
 
+size_t strlcat(char * dst, const char * src, size_t size);
+
 int strcmp(const char * s1, const char * s2);
 
 int strcasecmp(const char * s1, const char * s2);
@@ -58,6 +60,8 @@ char * strstr(const char * haystack, const char * needle);
 char * strcpy(char * dst, const char * src);
 
 char * strncpy(char * dst, const char * src, size_t n);
+
+size_t strlcpy(char * dst, const char * src, size_t size);
 
 char * strtok(char *, const char *);
 

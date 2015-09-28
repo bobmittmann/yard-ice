@@ -45,7 +45,9 @@ enum simrpc_err {
 	SIMRPC_ETIMEDOUT = -0x7fffffff
 };
 
-struct kernelinfo {
+#define SIMRPC_DATA_MAX  (512)
+
+struct simrpc_kernelinfo {
 	uint32_t ticks;
 	struct {
 		uint8_t major;
@@ -55,7 +57,7 @@ struct kernelinfo {
 	} version;
 };
 
-struct appinfo {
+struct simrpc_appinfo {
 	uint32_t uptime;
 	struct {
 		uint8_t major;
@@ -64,6 +66,33 @@ struct appinfo {
 		uint32_t timestamp;
 	} version;
 };
+
+#define CFGINFO_TAG_MAX 15
+#define CFGINFO_AUTHOR_MAX 15
+#define CFGINFO_DESC_MAX 91
+
+struct simrpc_cfginfo {
+	char tag[CFGINFO_TAG_MAX + 1];
+	char author[CFGINFO_AUTHOR_MAX + 1];
+	char desc[CFGINFO_DESC_MAX + 1];
+	struct {
+		uint8_t major;
+		uint8_t minor;
+		uint16_t build;
+	} version;
+};
+
+#define DBINFO_DESC_MAX 59
+
+struct simrpc_dbinfo {
+	char desc[DBINFO_DESC_MAX + 1];
+	struct {
+		uint8_t major;
+		uint8_t minor;
+		uint16_t build;
+	} version;
+};
+
 
 #define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
 
@@ -110,9 +139,24 @@ int simrpc_resume(struct simrpc_pcb * sp);
 int simrpc_reboot(struct simrpc_pcb * sp);
 int simrpc_exec(struct simrpc_pcb * sp, uint32_t key);
 
-int simrpc_kernelinfo(struct simrpc_pcb * sp, struct kernelinfo * inf);
+int simrpc_kernelinfo_get(struct simrpc_pcb * sp, 
+						  struct simrpc_kernelinfo * inf);
 
-int simrpc_appinfo(struct simrpc_pcb * sp, struct appinfo * inf);
+int simrpc_appinfo_get(struct simrpc_pcb * sp, struct simrpc_appinfo * inf);
+
+int simrpc_cfginfo_get(struct simrpc_pcb * sp, struct simrpc_cfginfo * inf);
+
+int simrpc_cfg_compile(struct simrpc_pcb * sp, char * resp, unsigned int max);
+
+int simrpc_dbinfo_get(struct simrpc_pcb * sp, struct simrpc_dbinfo * inf);
+
+int simrpc_db_compile(struct simrpc_pcb * sp, char * resp, unsigned int max);
+
+int simrpc_shellexec(struct simrpc_pcb * sp, const char * cmd,
+		char * resp, unsigned int max);
+
+int simrpc_jsexec(struct simrpc_pcb * sp, const char * cmd,
+		char * resp, unsigned int max);
 
 int simrpc_file_open(struct simrpc_pcb * sp, const char * path);
 

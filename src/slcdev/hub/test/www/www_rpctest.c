@@ -109,7 +109,7 @@ void rpc_test_file_write(FILE * f, int port, char * fname)
 	stop = profclk_get();
 	fprintf(f, "simrpc_file_create(): %d us.\n", profclk_us(stop - start));
 
-	n = sprintf(s, "The quick brown fox jumps over the lazy dog!");
+	n = sprintf(s, "The quick brown fox jumps over the lazy dog!\n");
 
 	start = profclk_get();
 	if (simrpc_file_write(sp, s, n) < 0) {
@@ -142,7 +142,7 @@ void rpc_test_file_read(FILE * f, int port, char * fname)
 	}
 
 	start = profclk_get();
-	if (simrpc_file_open(sp, "cfg.js") < 0) {
+	if (simrpc_file_open(sp, fname) < 0) {
 		fprintf(f, "simrpc_file_create() failed!\n");
 		simrpc_close(sp);
 		return;
@@ -381,7 +381,7 @@ int rpc_test_file_load(struct httpctl * http, int port, char * fname)
 
 	simrpc_set_timeout(sp, 500);
 
-	if (simrpc_file_create(sp, "cfg.js") < 0) {
+	if (simrpc_file_create(sp, fname) < 0) {
 		WARN("simrpc_file_create() failed!");
 		simrpc_close(sp);
 		return -1;
@@ -413,28 +413,6 @@ int rpc_test_file_load(struct httpctl * http, int port, char * fname)
 	simrpc_close(sp);
 
     return 0;
-}
-
-int db_load_cgi(struct httpctl * http)
-{
-	int port = 1;
-	char * fname = "db.js";
-
-    port = atoi(http_query_lookup(http, "port"));
-//    DBG("input file: '%s'", http_query_lookup(http, "fname"));
-
-    return rpc_test_file_load(http, port, fname);
-}
-
-int cfg_load_cgi(struct httpctl * http)
-{
-	int port;
-	char * fname = "cfg.js";
-
-    port = atoi(http_query_lookup(http, "port"));
-//    DBG("input file: '%s'", http_query_lookup(http, "fname"));
-
-    return rpc_test_file_load(http, port, fname);
 }
 
 int file_write_cgi(struct httpctl * http)
@@ -537,10 +515,12 @@ int file_read_cgi(struct httpctl * http)
 
 int get_status_cgi(struct httpctl * http)
 {
-	struct kernelinfo inf;
+	struct simrpc_kernelinfo kinf;
+	struct simrpc_appinfo ainf;
 	struct simrpc_pcb * sp;
 	unsigned int daddr;
 	char s[HTML_MAX];
+	char * cp;
 	int port;
 	int n;
 
@@ -554,25 +534,33 @@ int get_status_cgi(struct httpctl * http)
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
 	 	n = snprintf(s, HTML_MAX, "{\"state\": \"Error\"}\r\n");
-    	http_send(http, s, n);
 	} else {
-		if (simrpc_kernelinfo(sp, &inf) < 0) {
-			WARN("simrpc_kernelinfo() failed!");
+		if (simrpc_kernelinfo_get(sp, &kinf) < 0) {
+			WARN("simrpc_kernelinfo_get() failed!");
 		 	n = snprintf(s, HTML_MAX, "{\"state\": \"Offline\"}\r\n");
-	    	http_send(http, s, n);
 		} else {
-		 	n = snprintf(s, HTML_MAX, "{\"state\": \"Online\", \"kernel\": {"
-		 			"\"ticks\": %d, ", inf.ticks);
-	    	http_send(http, s, n);
-		 	n = snprintf(s, HTML_MAX, "\"version\": { \"major\": %d, "
+			cp = s;
+		 	cp += snprintf(cp, HTML_MAX, "{\"state\": \"Online\", \"kernel\": {"
+		 			"\"ticks\": %d, \"version\": { \"major\": %d, "
+		 			"\"minor\": %d, \"build\": %d }}",
+					kinf.ticks, kinf.version.major,
+					kinf.version.minor, kinf.version.build);
+			if (simrpc_appinfo_get(sp, &ainf) < 0) {
+				WARN("simrpc_appinfo() failed!");
+			 	cp += snprintf(cp, HTML_MAX, "}\r\n");
+			} else {
+			 	cp += snprintf(cp, HTML_MAX, ", \"app\": {"
+			 		"\"uptime\": %d, \"version\": { \"major\": %d, "
 		 			"\"minor\": %d, \"build\": %d }}}\r\n",
-					inf.version.major, inf.version.minor, inf.version.build);
-	    	http_send(http, s, n);
+					ainf.uptime, ainf.version.major,
+					ainf.version.minor, ainf.version.build);
+			}
+		 	n = cp - s;
 		}
 		simrpc_close(sp);
 	}
 
-   	return 0;
+	return http_send(http, s, n);
 }
 
 /*---------------------------------------------------------------------------
@@ -651,4 +639,228 @@ int firmware_load_cgi(struct httpctl * http)
 	simrpc_close(sp);
 
     return 0;
+}
+
+int rpc_shellexec(struct httpctl * http, unsigned int daddr, const char * cmd)
+{
+	struct simrpc_pcb * sp;
+	char s[SIMRPC_DATA_MAX];
+    int n;
+
+	INF("daddr=0x%02x cmd='%s'", daddr, cmd);
+    httpd_200(http->tp, TEXT_HTML);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+	} else {
+		simrpc_set_timeout(sp, 5000);
+		if ((n = simrpc_shellexec(sp, cmd, s, 512)) < 0) {
+			WARN("simrpc_shellexec() failed!");
+			n = sprintf(s, "#ERROR: simrpc_shellexec() failed!\n");
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
+}
+
+int rpc_exec_cgi(struct httpctl * http)
+{
+	unsigned int daddr;
+    char * cmd;
+    int port;
+
+    port = atoi(http_query_lookup(http, "port"));
+    cmd = http_query_lookup(http, "cmd");
+	daddr = port;
+
+	return rpc_shellexec(http, daddr, cmd);
+}
+
+int rpc_js_cgi(struct httpctl * http)
+{
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+    char * script;
+	char s[512];
+    int port;
+    int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+    script = http_query_lookup(http, "script");
+	daddr = port;
+
+//	INF("port=%d script='%s'", port, script);
+    httpd_200(http->tp, TEXT_HTML);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+	} else {
+		simrpc_set_timeout(sp, 1000);
+		if ((n = simrpc_jsexec(sp, script, s, 512)) < 0) {
+			WARN("simrpc_jsexec() failed!");
+			n = sprintf(s, "#ERROR: simrpc_jsexec() failed!\n");
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
+}
+
+/*---------------------------------------------------------------------------
+  Configuration
+  ---------------------------------------------------------------------------*/
+
+int cfg_load_cgi(struct httpctl * http)
+{
+	int port;
+	char * fname = "cfg.js";
+
+    port = atoi(http_query_lookup(http, "port"));
+
+    return rpc_test_file_load(http, port, fname);
+}
+
+int cfg_compile_cgi(struct httpctl * http)
+{
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[512];
+    int port;
+    int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+    httpd_200(http->tp, TEXT_HTML);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+	} else {
+		simrpc_set_timeout(sp, 5000);
+		if ((n = simrpc_cfg_compile(sp, s, sizeof(s))) < 0) {
+			WARN("simrpc_cfg_compile() failed!");
+			n = sprintf(s, "#ERROR: simrpc_cfg_compile() failed!\n");
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
+}
+
+int cfg_getinfo_cgi(struct httpctl * http)
+{
+	struct simrpc_cfginfo inf;
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[HTML_MAX];
+	int port;
+	int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+	INF("port=%d", port);
+
+   	httpd_200(http->tp, APPLICATION_JSON);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+	 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_open() failed!\"}\r\n");
+	} else {
+		if (simrpc_cfginfo_get(sp, &inf) < 0) {
+			WARN("simrpc_cfginfo_get() failed!");
+		 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_cfginfo_get() failed!\"}\r\n");
+		} else {
+		 	n = snprintf(s, HTML_MAX, "{\"tag\": \"%s\", \"author\": \"%s\", "
+		 			"\"desc\":\"%s\", \"version\": { \"major\": %d, "
+		 			"\"minor\": %d, \"build\": %d }}",
+					inf.tag, inf.author, inf.desc, inf.version.major,
+					inf.version.minor, inf.version.build);
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
+}
+
+/*---------------------------------------------------------------------------
+  Database
+  ---------------------------------------------------------------------------*/
+
+int db_load_cgi(struct httpctl * http)
+{
+	int port = 1;
+	char * fname = "db.js";
+
+    port = atoi(http_query_lookup(http, "port"));
+
+    return rpc_test_file_load(http, port, fname);
+}
+
+int db_compile_cgi(struct httpctl * http)
+{
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[512];
+    int port;
+    int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+    httpd_200(http->tp, TEXT_HTML);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+	} else {
+		simrpc_set_timeout(sp, 5000);
+		if ((n = simrpc_db_compile(sp, s, sizeof(s))) < 0) {
+			WARN("simrpc_db_compile() failed!");
+			n = sprintf(s, "#ERROR: simrpc_db_compile() failed!\n");
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
+}
+
+int db_getinfo_cgi(struct httpctl * http)
+{
+	struct simrpc_dbinfo inf;
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[HTML_MAX];
+	int port;
+	int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+	INF("port=%d", port);
+
+   	httpd_200(http->tp, APPLICATION_JSON);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+	 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_open() failed!\"}\r\n");
+	} else {
+		if (simrpc_dbinfo_get(sp, &inf) < 0) {
+			WARN("simrpc_dbinfo_get() failed!");
+		 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_dbinfo_get() failed!\"}\r\n");
+		} else {
+		 	n = snprintf(s, HTML_MAX,
+		 			"{\"desc\":\"%s\", \"version\": { \"major\": %d, "
+		 			"\"minor\": %d, \"build\": %d }}",
+					inf.desc, inf.version.major,
+					inf.version.minor, inf.version.build);
+		}
+		simrpc_close(sp);
+	}
+
+	return http_send(http, s, n);
 }

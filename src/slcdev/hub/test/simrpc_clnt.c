@@ -70,15 +70,53 @@ int simrpc_exec(struct simrpc_pcb * sp, uint32_t key)
 	return simlnk_rpc(sp, SIMRPC_EXEC, req, 4, NULL, 0);
 }
 
-int simrpc_kernelinfo(struct simrpc_pcb * sp, struct kernelinfo * inf)
+int simrpc_kernelinfo_get(struct simrpc_pcb * sp,
+		struct simrpc_kernelinfo * inf)
 {
-	return simlnk_rpc(sp, SIMRPC_KERNELINFO, NULL, 0, inf, sizeof(struct kernelinfo));
+	return simlnk_rpc(sp, SIMRPC_KERNELINFO, NULL, 0, inf,
+			sizeof(struct simrpc_kernelinfo));
 }
 
-int simrpc_appinfo(struct simrpc_pcb * sp, struct appinfo * inf)
+int simrpc_appinfo_get(struct simrpc_pcb * sp, struct simrpc_appinfo * inf)
 {
-	return simlnk_rpc(sp, SIMRPC_APPINFO, NULL, 0, inf, sizeof(struct appinfo));
+	return simlnk_rpc(sp, SIMRPC_APPINFO, NULL, 0, inf,
+			sizeof(struct simrpc_appinfo));
 }
+
+int simrpc_cfginfo_get(struct simrpc_pcb * sp, struct simrpc_cfginfo * inf)
+{
+	return simlnk_rpc(sp, SIMRPC_CFGINFO, NULL, 0, inf,
+			sizeof(struct simrpc_cfginfo));
+}
+
+int simrpc_cfg_compile(struct simrpc_pcb * sp, char * resp, unsigned int max)
+{
+	return simlnk_rpc(sp, SIMRPC_CFGCOMPILE, NULL, 0,  resp, max);
+}
+
+int simrpc_dbinfo_get(struct simrpc_pcb * sp, struct simrpc_dbinfo * inf)
+{
+	return simlnk_rpc(sp, SIMRPC_DBINFO, NULL, 0, inf,
+			sizeof(struct simrpc_dbinfo));
+}
+
+int simrpc_db_compile(struct simrpc_pcb * sp, char * resp, unsigned int max)
+{
+	return simlnk_rpc(sp, SIMRPC_DBCOMPILE, NULL, 0,  resp, max);
+}
+
+int simrpc_shellexec(struct simrpc_pcb * sp, const char * cmd,
+		char * resp, unsigned int max)
+{
+	return simlnk_rpc(sp, SIMRPC_SHELLEXEC, cmd, strlen(cmd), resp, max);
+}
+
+int simrpc_jsexec(struct simrpc_pcb * sp, const char * cmd,
+		char * resp, unsigned int max)
+{
+	return simlnk_rpc(sp, SIMRPC_JSEXEC, cmd, strlen(cmd), resp, max);
+}
+
 
 /* ---------------------------------------------------------------------------
  * Memory

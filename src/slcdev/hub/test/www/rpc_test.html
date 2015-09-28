@@ -96,14 +96,21 @@
 				var tr = $('#stat' + port);
 				var html = '<td>' + port + '</td><td>' + data.state + '</td>';
 				if (data.hasOwnProperty('kernel')) {
-					html += '<td>' + data.kernel.version.major + '.' + 
+					html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
 					data.kernel.version.minor + '.' +
 					data.kernel.version.build + '</td>' +
 					'<td>' + data.kernel.ticks + '</td>';
+					if (data.hasOwnProperty('app')) {
+						html += '<td>DevSim-' + data.app.version.major + '.' + 
+						data.app.version.minor + '.' +
+						data.app.version.build + '</td>' +
+						'<td>' + data.app.uptime + '</td>';						
+					} else {
+						html += '<td>?.?.?</td><td>?</td>';
+					}
 				} else {
-					html += '<td>x.y.zz</td><td>0</td>';					
-				}				
-				html += '<td>?</td><td>?</td><td>?</td>';		
+					html += '<td>?.?.?</td><td>?</td>';				
+				}		
 				tr.html(html);
 			},
 			error: function(xhr, type) { 
@@ -155,13 +162,11 @@
 		<th>Kernel</th>
 		<th>Ticks</th>		
 		<th>Firmware</th>
-		<th>Database</th>
-		<th>Config</th>
+		<th>Uptime</th>
 		</tr>
 	</thead>
 	<tr id="stat1">
 		<td>1</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -174,12 +179,10 @@
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
-		<td>...</td>
 		<td>...</td>		
 	</tr>	
 	<tr id="stat3">
 		<td>3</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -192,12 +195,10 @@
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
-		<td>...</td>
 		<td>...</td>		
 	</tr>	
 	<tr id="stat5">
 		<td>5</td>
-		<td>...</td>
 		<td>...</td>
 		<td>...</td>
 		<td>...</td>
@@ -278,7 +279,9 @@
 </table>
 
 <div style="
-	min-height: 200px; 
+	min-height: 5em;
+	max-height: 40em; 
+	overflow-y: scroll;
 	border-style: solid; 
 	border-width: 1px; 
 	border-color: #111;">

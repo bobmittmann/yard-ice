@@ -62,6 +62,7 @@ struct simlnk {
 	struct {
 		uint32_t buf[(SIMLNK_MTU + 3) / 4];
 		int flag;
+		uint32_t seq;
 	} tx;
 	struct simlnk_stat stat;
 };
@@ -169,7 +170,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	uint32_t seq;
 	int ret;
 
-	seq = sp->seq++; 
+	seq = sp->seq = lnk->tx.seq++;
 	opc = mkopc(daddr, saddr, seq, insn);
 
 	thinkos_mutex_lock(lnk->mutex);
@@ -191,6 +192,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 		return SIMRPC_EDRIVER;
 	}
 
+again:
 	if ((ret = thinkos_flag_timedtake(lnk->rx.flag, tmo)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
 			WARN("thinkos_flag_take() timed out!");
@@ -212,6 +214,8 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	cnt = lnk->rx.cnt - 4;
 	opc = lnk->rx.buf[0];
 
+	DBG("RPC: seq=%d,%d", seq, SIMRPC_SEQ(opc));
+
 	if (opc == mkopc(saddr, daddr, seq, SIMRPC_OK)) {
 		if (rsp != NULL) {
 			cnt = MIN(cnt, max);
@@ -225,6 +229,11 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 		WARN("error %d.", (int)lnk->rx.buf[1]);
 		thinkos_mutex_unlock(lnk->mutex);
 		return (int)lnk->rx.buf[1];
+	}
+
+	if ((SIMRPC_DST(opc) == saddr) && (SIMRPC_SRC(opc) == daddr)) {
+		WARN("invalid sequence: %d", SIMRPC_SEQ(opc));
+		goto again;
 	}
 
 	WARN("invalid response.");
@@ -287,6 +296,7 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 
 	lnk->rx.flag = thinkos_flag_alloc();
 	lnk->tx.flag = thinkos_flag_alloc();
+	lnk->tx.seq = 0;
 	lnk->mutex = thinkos_mutex_alloc();
 
 	DBG("tx.flag=%d rx.flag=%d", lnk->rx.flag, lnk->tx.flag);

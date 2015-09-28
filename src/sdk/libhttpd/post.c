@@ -14,8 +14,9 @@
 
 #define HEX2INT(C) (((C) <= '9') ? (C) - '0' : (C) - ('A' - 10))
 
+#ifndef HTTP_QUERY_KEY_MAX
 #define HTTP_QUERY_KEY_MAX 16
-#define HTTP_QUERY_VAL_MAX 16
+#endif
 
 int http_decode_uri_query(char * buf, int len, 
 						  struct httpqry lst[], int max)  
@@ -49,11 +50,10 @@ int http_decode_uri_query(char * buf, int len,
 			break;
 		case '=':
 			buf[j++] = '\0';
-			if (n < HTTP_QUERY_VAL_MAX)
-				lst[n++].val = &buf[j];
+			lst[n++].val = &buf[j];
 			break;
 		case '\0':
-			return n;
+			goto done;
 		case '#':
 			/* FIXME: implement fragment optional part */
 			break;
@@ -61,8 +61,9 @@ int http_decode_uri_query(char * buf, int len,
 			buf[j++] = c;
 		}
 	}
-	buf[j] = '\0';
 
+done:
+	buf[j] = '\0';
 	return n;
 }
 

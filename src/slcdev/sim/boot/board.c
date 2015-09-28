@@ -101,6 +101,52 @@ static void __attribute__((noreturn)) app_bootstrap(void * arg)
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
+void board_soft_reset(void)
+{
+	DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
+	__thinkos_irq_disable_all();
+
+	DCC_LOG(LOG_TRACE, "2. kill all threads...");
+	__thinkos_kill_all(); 
+
+	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
+	__thinkos_reset();
+
+	DCC_LOG(LOG_TRACE, "6. exception reset...");
+	__exception_reset();
+
+	cm3_irq_enable(STM32_IRQ_USART2);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
+}
+
+void board_reboot(void)
+{
+	DCC_LOG(LOG_TRACE, "thinkos_sleep()");
+	thinkos_sleep(10);
+	DCC_LOG(LOG_TRACE, "cm3_sysrst()");
+	cm3_sysrst();
+}
+
+void board_exec(void (* func)(void))
+{
+	int thread_id = 0;
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
+						  (void *)app_bootstrap, (void *)func);
+
+#if THINKOS_ENABLE_THREAD_INFO
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
+	__thinkos_thread_resume(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+	__thinkos_defer_sched();
+}
+
 bool board_app_exec(uint32_t addr)
 {
 	uint32_t * app = (uint32_t *)addr;
@@ -118,19 +164,7 @@ bool board_app_exec(uint32_t addr)
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
 	__thinkos_thread_abort(thread_id);
 
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)app);
-
-#if THINKOS_ENABLE_THREAD_INFO
-	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
-#endif
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
-	__thinkos_thread_resume(thread_id);
-
-	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
-	__thinkos_defer_sched();
+	board_exec((void *)app);
 
 	return true;
 }

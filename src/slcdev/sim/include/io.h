@@ -31,6 +31,8 @@ void io_init(void);
 void __attribute__((noreturn)) io_event_task(void);
 void io_lamp_test(void);
 
+int32_t io_time(void);
+
 void isink_start(unsigned int mode, unsigned int pre, unsigned int pulse);
 void isink_stop(void);
 

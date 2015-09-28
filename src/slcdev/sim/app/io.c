@@ -24,6 +24,7 @@
 #include "isink.h"
 #include "slcdev.h"
 #include "io.h"
+#include <time.h>
 
 #define LED_COUNT 4
 
@@ -81,6 +82,15 @@ void led_flash(unsigned int id, unsigned int ms)
 }
 
 int32_t clk_time = 0;
+
+time_t time(time_t * __timer)
+{
+	time_t now = (time_t)clk_time;
+	if (__timer != NULL)
+		*__timer = now; 
+
+	return now;
+}
 
 #define SW1_OFF (0 << 0)
 #define SW1_A   (1 << 0)
