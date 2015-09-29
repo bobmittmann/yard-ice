@@ -104,7 +104,15 @@ struct simrpc_attr_req {
 
 struct simrpc_pcb;
 
-#define SIMRPC_BCAST 0xff
+#define SIMRPC_MK_ADDR(HUB, PORT) (((HUB) << 3) | (PORT))
+
+#define SIMRPC_ADDR_RCAST(HUB) SIMRPC_MK_ADDR((HUB), 7)
+#define SIMRPC_ADDR_BCAST      SIMRPC_MK_ADDR(0x1f, 7)
+#define SIMRPC_ADDR_LCAST      SIMRPC_MK_ADDR(0x10, 7)
+
+#define SIMRPC_ADDR_RHUB(HUB)  SIMRPC_MK_ADDR((HUB), 0)
+#define SIMRPC_ADDR_LHUB       SIMRPC_MK_ADDR(0x10, 0)
+#define SIMRPC_ADDR_ANY        SIMRPC_MK_ADDR(0x1f, 0)
 
 #ifdef __cplusplus
 extern "C" {

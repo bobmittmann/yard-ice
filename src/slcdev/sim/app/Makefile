@@ -25,7 +25,8 @@ CFILES = slcdev-app.c io.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c flashfs.c shell.c\
 		 slcdev-sim.c slcdev-cfg.c\
 		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
-		 simlnk-usr.c simrpc-file.c simrpc-sys.c simrpc-sim.c
+		 simlnk-usr.c simrpc-file.c simrpc-sys.c simrpc-sim.c\
+		 simrpc-stdout.c
 
 SDK = ../../../sdk
 

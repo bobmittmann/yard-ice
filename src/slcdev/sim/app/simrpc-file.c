@@ -31,7 +31,7 @@
 #include "simrpc_svc.h"
 
 
-#define SIMRPC_UNLOCK SIMRPC_BCAST
+#define SIMRPC_UNLOCK SIMRPC_ADDR_BCAST
 
 struct {
 	uint32_t clk;

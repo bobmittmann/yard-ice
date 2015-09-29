@@ -29,6 +29,7 @@
 #include <stdlib.h> 
 #include <stdbool.h> 
 #include <stdint.h> 
+#include <stdio.h> 
 
 struct simrpc_pcb {
 	struct simlnk * lnk;
@@ -38,10 +39,17 @@ struct simrpc_pcb {
 	uint16_t tmo;
 };
 
+static inline uint32_t simrpc_mkopc(unsigned int daddr, unsigned int saddr,
+									unsigned int seq, unsigned int insn)
+{
+	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+FILE * simrpc_stdout_fopen(void);
 
 #ifdef __cplusplus
 }

@@ -152,12 +152,6 @@ int simlnk_send(struct simlnk * lnk, const void * buf, unsigned int cnt)
 //	return cnt;
 }
 
-static uint32_t mkopc(unsigned int daddr, unsigned int saddr,
-					  unsigned int seq, unsigned int insn)
-{
-	return daddr | (saddr << 8) | ((seq & 0xff) << 16) | (insn << 24);
-}
-
 int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 			   const void * req, unsigned int cnt,
 			   void * rsp, unsigned int max)
@@ -171,7 +165,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	int ret;
 
 	seq = sp->seq = lnk->tx.seq++;
-	opc = mkopc(daddr, saddr, seq, insn);
+	opc = simrpc_mkopc(daddr, saddr, seq, insn);
 
 	thinkos_mutex_lock(lnk->mutex);
 
@@ -216,7 +210,7 @@ again:
 
 	DBG("RPC: seq=%d,%d", seq, SIMRPC_SEQ(opc));
 
-	if (opc == mkopc(saddr, daddr, seq, SIMRPC_OK)) {
+	if (opc == simrpc_mkopc(saddr, daddr, seq, SIMRPC_OK)) {
 		if (rsp != NULL) {
 			cnt = MIN(cnt, max);
 			memcpy(rsp, &lnk->rx.buf[1], cnt);
@@ -225,7 +219,7 @@ again:
 		return cnt;
 	}
 
-	if ((cnt == 4) && (opc == mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
+	if ((cnt == 4) && (opc == simrpc_mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
 		WARN("error %d.", (int)lnk->rx.buf[1]);
 		thinkos_mutex_unlock(lnk->mutex);
 		return (int)lnk->rx.buf[1];

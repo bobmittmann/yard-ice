@@ -30,7 +30,7 @@ int simrpc_send_opc(uint32_t hdr)
 	return thinkos_comm_send(hdr, NULL, 0);
 }
 
-void __attribute__((noreturn)) simlnk_task(void)
+void __attribute__((noreturn)) simlnk_recv_task(void)
 {
 	uint32_t data[(SIMLNK_MTU + 3) / 4];
 	unsigned int cnt;
@@ -91,6 +91,9 @@ void __attribute__((noreturn)) simlnk_task(void)
 			break;
 		case SIMRPC_ATTR_GET:
 			simrpc_attr_get_svc(hdr, data, cnt);
+			break;
+		case SIMRPC_STDOUT_FLUSH:
+			simrpc_stdout_flush_svc(hdr, data, cnt);
 			break;
 
 		default:

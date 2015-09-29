@@ -125,6 +125,8 @@
 #define SERDRV_TX_GATE THINKOS_GATE_DESC(0) 
 /* SLC device driver event set */
 #define SLCDEV_DRV_EV  THINKOS_EVENT_DESC(0) 
+/* Console mutex */
+#define CONSOLE_MUTEX THINKOS_MUTEX_DESC(0) 
 
 #define IO_POLL_PERIOD_MS 16
 

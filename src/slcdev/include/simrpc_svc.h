@@ -73,6 +73,9 @@ enum simrpc_opc {
 
 	SIMRPC_ATTR_GET    = 53,
 
+	SIMRPC_STDOUT_DATA  = 128,
+	SIMRPC_STDOUT_FLUSH = 129,
+
 	SIMRPC_BUSY        = 250,
 	SIMRPC_PEND        = 251,
 	SIMRPC_FALSE       = 252,
@@ -167,6 +170,8 @@ int simrpc_send_int(uint32_t opc, int val);
 int simrpc_send_opc(uint32_t opc);
 
 void simrpc_attr_get_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+
+void simrpc_stdout_flush_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 #ifdef __cplusplus
 }

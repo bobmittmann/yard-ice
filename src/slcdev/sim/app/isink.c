@@ -348,6 +348,7 @@ static void isink_io_cfg(unsigned int mode)
 		s4 = -1;
 		break;
 
+	default:
 	case 25:
 	/* (157 63)[mA] (785 315)[mV] [ VCC VCC VCC GND ] [ GND GND VCC GND ] */
 		stm32_gpio_mode(IO_SINK1, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
