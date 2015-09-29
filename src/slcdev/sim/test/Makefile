@@ -28,7 +28,8 @@ CFILES = ../boot/board.c ../boot/simlnk.c ../boot/simrpc_mem.c \
 		 ../app/profclk.c ../app/shell.c ../app/slcdev-cfg.c \
 		 ../app/slcdev-db.c ../app/slcdev-drv.c ../app/slcdev-lib.c \
 		 ../app/slcdev-log.c ../app/slcdev-sim.c ../app/slcdev-str.c\
-		 ../simlnk-usr.c ../simrpc-file.c slcdev-app.c 
+		 ../app/simlnk-usr.c ../app/simrpc-file.c ../app/simrpc-sys.c \
+		 ../app/simrpc-sim.c ../app/slcdev-app.c app.c
 
 SDK = ../../../sdk
 
@@ -40,7 +41,7 @@ LIBS = gcc stm32f cm3 util c thinkos ice-comm crc microjs shell
 
 INCPATH = $(SDK)/include ../include ../app ../../include
 
-CDEFS = CONFIG_H NDEBUG
+CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 

@@ -30,9 +30,9 @@ def isink(mode):
 	
 	r40 = 66500.0 # pwm output - SINK1
 	r30 = 44200.0 # pwm output - SINK2
-	r35 = 39200.0  # pwm output - SINK3
-	r39 = 24000.0  # open drain - SINK4
-	r32 = 6190.0
+	r35 = 39200.0 # pwm output - SINK3
+	r39 = 24000.0 # pwm output - SINK4
+	r32 =  6190.0 # GND
 
 	r = [ r40, r30, r35, r39 ];
 
@@ -67,27 +67,56 @@ def isink(mode):
 #		  .format(ra / 1000, rb/ 1000), i);
 
 def print_io(x):
-	i = 0
-	while i < 4:
-		if (x[i][0] == 1):
+	j = 0
+	while j < 4:
+		if (x[j][0] == 1):
 			print("\t\tstm32_gpio_mode(IO_SINK{0:d}, ALT_FUNC, "\
-				  "PUSH_PULL | SPEED_HIGH);".format(i + 1))
-		if (x[i][0] == 2): 
+				  "PUSH_PULL | SPEED_HIGH);".format(j + 1))
+		if (x[j][0] == 2): 
 			print("\t\tstm32_gpio_mode(IO_SINK{0:d}, ALT_FUNC, "\
-				  "OPEN_DRAIN | SPEED_HIGH);".format(i + 1))
-		if (x[i][0] == 0):
+				  "OPEN_DRAIN | SPEED_HIGH);".format(j + 1))
+		if (x[j][0] == 0):
 			print("\t\tstm32_gpio_mode(IO_SINK{0:d}, OUTPUT, "\
-				  "PUSH_PULL | SPEED_HIGH);".format(i + 1))
-		i = i + 1
+				  "PUSH_PULL | SPEED_HIGH);".format(j + 1))
+		j = j + 1
 
-	i = 0
-	while i < 4:
-		if x[i][1] == 0:
-			print("\t\ts{:d} = -1;".format(i + 1))
+	j = 0
+	while j < 4:
+		if x[j][1] == 0:
+			print("\t\ts{:d} = -1;".format(j + 1))
 		else:
-			print("\t\ts{:d} = 0;".format(i + 1))
-		i = i + 1
+			print("\t\ts{:d} = 0;".format(j + 1))
+		j = j + 1
 
+def isink_dump(lst):
+	nm = [ 'GND', 'VCC', 'NC ']
+
+	r40 = 66500.0 # pwm output - SINK1
+	r30 = 44200.0 # pwm output - SINK2
+	r35 = 39200.0 # pwm output - SINK3
+	r39 = 24000.0 # pwm output - SINK4
+	r32 =  6190.0 # GND
+
+	print('R40 = {:6.3f}K'.format(r40 / 1000))
+	print('R30 = {:6.3f}K'.format(r30 / 1000))
+	print('R35 = {:6.3f}K'.format(r35 / 1000))
+	print('R39 = {:6.3f}K'.format(r39 / 1000))
+	print('R32 = {:6.3f}K'.format(r32 / 1000))
+	print
+
+	print('| Cnt | i(mA) | v(mv) | R40 | R30 | R35 | R39 |')
+	print('+-----+-------+-------+-----+-----+-----+-----+')
+	j = 0
+	for e in lst:
+		s = "| {:3d} | {:5d} | {:5d} | " .format(j, e[0], e[0] * 5)
+		k = 1
+		while k < 5:
+			s += nm[e[k]] + " | "
+			k = k + 1
+		print(s)
+		j = j + 1
+
+	print('+-----+-------+-------+-----+-----+-----+-----+')
 
 def v(x, y):
 	return (x == y) or ((x > 0) and (y == 0))
@@ -97,23 +126,26 @@ def main():
 	i_lst = []
 	nm = [ 'GND ', 'VCC ', 'NC  ']
 
-	z = 0
-	while z < 3:
-		y = 0
-		while y < 3:
-			x = 0
-			while x < 3:
-				w = 0
-				while w < 3:
+	w = 0
+	while w < 3:
+		z = 0
+		while z < 3:
+			y = 0
+			while y < 3:
+				x = 0
+				while x < 3:
 					i = isink([x, y, z, w]);
-					if (i > 1):
-						i_lst.append([i, w, x, y, z])
-					w = w + 1
-				x = x + 1
-			y = y + 1
-		z = z + 1
+					if (i > 0):
+						i_lst.append([i, x, y, z, w])
+					x = x + 1
+				y = y + 1
+			z = z + 1
+		w = w + 1
 
 	i_lst.sort()
+
+#	isink_dump(i_lst)
+#	return
 
 	q_lst = []
 	for n in i_lst:
@@ -125,10 +157,10 @@ def main():
 			z0 = n[4]
 			i1 = m[0]
 			w1 = m[1]
-			x1 = m[1]
-			y1 = m[2]
-			z1 = m[3]
-			if (i0 >= 1.8 * i1) and v(w0, w1) and v(x0, x1) \
+			x1 = m[2]
+			y1 = m[3]
+			z1 = m[4]
+			if (i0 >= 1.75 * i1) and v(w0, w1) and v(x0, x1) \
 					  and v(y0, y1) and v(z0, z1):
 				q_lst.append([n, m])
 
@@ -137,9 +169,9 @@ def main():
 		for y in q_lst:
 			d0 = abs(x[0][0] - y[0][0])
 			d1 = abs(x[1][0] - y[1][0])
-			r0 = x[0][0] * 0.05
-			r1 = x[1][0] * 0.05
-			if (d1 < r1) and (d0 < r0):
+			ref0 = x[0][0] * 0.005
+			ref1 = x[1][0] * 0.001
+			if (d1 < ref1) and (d0 < ref0):
 				p_lst.remove(y)
 		
 

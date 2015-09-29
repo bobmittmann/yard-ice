@@ -53,10 +53,17 @@ void app_try_exec()
 
 int __simrpc_send_opc(uint32_t opc);
 
+int __attribute__((noreturn)) app_default(void);
+
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
+
+#ifdef DEBUG
+	DCC_LOG(LOG_TRACE, "0. cm3_udelay_calibrate().");
+	cm3_udelay_calibrate();
+#endif
 
 	DCC_LOG(LOG_TRACE, "1. board_init().");
 	board_init();
@@ -65,13 +72,13 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	DCC_LOG(LOG_TRACE, "3. simlnk_init().");
-	simlnk_init(NULL, "SIM", 0, NULL);
+	simlnk_init(NULL, "", 0, NULL);
 
 	DCC_LOG(LOG_TRACE, "4. app_try_exec().");
 	app_try_exec();
 
-	DCC_LOG(LOG_TRACE, "5. board_test().");
-	board_test();
+	DCC_LOG(LOG_TRACE, "5. app_default().");
+	app_default();
 
 //	return 0;
 }

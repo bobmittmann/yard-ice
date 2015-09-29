@@ -25,7 +25,7 @@ CFILES = slcdev-app.c io.c isink.c slcdev-drv.c \
 		 serdrv.c slcdev-db.c flashfs.c shell.c\
 		 slcdev-sim.c slcdev-cfg.c\
 		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
-		 simlnk-usr.c simrpc-file.c simrpc-sys.c 
+		 simlnk-usr.c simrpc-file.c simrpc-sys.c simrpc-sim.c
 
 SDK = ../../../sdk
 
@@ -40,9 +40,9 @@ CDEFS = CONFIG_H NDEBUG
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-VERSION_DATE = "2015-09-29"
+VERSION_DATE = "2015-09-28"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "3"
+VERSION_MINOR = "6"
 
 LOAD_ADDR = 0x08004000
 JTAGTOOL_ADDR = 192.168.10.50

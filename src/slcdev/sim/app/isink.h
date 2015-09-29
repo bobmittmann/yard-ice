@@ -24,14 +24,19 @@
 #define __ISINK_H__
 
 #define ISINK_CURRENT_LOW     0
-#define ISINK_CURRENT_NOM     2
-#define ISINK_CURRENT_HIGH    3
-#define ISINK_CURRENT_DOUBLE  16
+#define ISINK_CURRENT_NOM     25
+#define ISINK_CURRENT_HIGH    32
+#define ISINK_CURRENT_DOUBLE  59
 
-#define ISINK_RATE_VERY_SLOW (0 << 5)
-#define ISINK_RATE_SLOW      (1 << 5)
-#define ISINK_RATE_NORMAL    (2 << 5)
-#define ISINK_RATE_FAST      (3 << 5)
+#define ISINK_RATE_VERY_SLOW  0
+#define ISINK_RATE_SLOW       1
+#define ISINK_RATE_NORMAL     2
+#define ISINK_RATE_FAST       3
+
+#define ISINK_WAVE(MODE) ((MODE) & 0x3f)
+#define ISINK_RATE(MODE) (((MODE) >> 6) & 0x03)
+
+#define ISINK_MODE(WAVE, RATE) (((WAVE) & 0x3f) + (((RATE) & 0x3) << 6))
 
 #ifdef __cplusplus
 extern "C" {

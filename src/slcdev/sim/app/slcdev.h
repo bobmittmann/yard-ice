@@ -479,8 +479,11 @@ int device_attr_print(FILE * f, bool mod,
 
 void sim_reset(void);
 
+void slcdev_sim_init(void);
+
 void slcdev_sim_stop(void);
 
+void slcdev_sim_resume(void);
 
 void slcdev_ssdev_enable(struct ss_device * dev);
 

@@ -763,12 +763,25 @@ void __attribute__((noreturn)) sim_event_task(void)
 	}
 }
 
+void slcdev_sim_resume(void)
+{
+	DCC_LOG(LOG_TRACE, "simulation resume!");
+	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
+}
+
 void slcdev_sim_stop(void)
 {
+	DCC_LOG(LOG_TRACE, "simulation stop!");
 	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_STOP);
 	while (!slcdev_drv.sim.halt) {
 		thinkos_sleep(25);
 	}
+}
+
+void slcdev_sim_init(void)
+{
+	DCC_LOG(LOG_TRACE, "initializing simulator ...");
+
 }
 
 void dev_sim_enable(bool mod, unsigned int addr)

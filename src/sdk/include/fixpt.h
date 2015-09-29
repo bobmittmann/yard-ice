@@ -22,6 +22,32 @@
 /* Q15 Saturation */
 #define Q15_SAT(X) ((X) < -32768) ? -32768 : (((X) > 32767) ? 32767 : (X))
 
+
+/* Conversion form float to fixed point Q1.15 */
+#define Q24(F) ((int32_t)((F) * (1 << 24)))
+
+/* Convert from fractional Q8.24 to float point */
+#define Q24F(Q) ((float)(((float)(Q)) / (1.0 * (1 << 24))))
+
+/* Q24 Multiply */
+#define Q24_MUL(X1, X2) (((int64_t)(X1) * (int64_t)(X2) + (1 << 23)) >> 24)
+
+/* Q24 Divide */
+#define Q24_DIV(X, Y) (((int64_t)(X) << 24) / (Y))
+
+
+/* Conversion form float to fixed point Q1.15 */
+#define Q16(F) ((int32_t)((F) * (1 << 16)))
+
+/* Convert from fractional Q8.16 to float point */
+#define Q16F(Q) ((float)(((float)(Q)) / (1.0 * (1 << 16))))
+
+/* Q16 Multiply */
+#define Q16_MUL(X1, X2) (((int64_t)(X1) * (int64_t)(X2) + (1 << 15)) >> 16)
+
+/* Q16 Divide */
+#define Q16_DIV(X, Y) (((int64_t)(X) << 16) / (Y))
+
 typedef struct {
 	int16_t re;  
 	int16_t im;  

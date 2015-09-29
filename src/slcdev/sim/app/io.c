@@ -29,7 +29,7 @@
 #define LED_COUNT 4
 
 struct {
-	uint8_t led_tmr[LED_COUNT];
+	volatile uint8_t led_tmr[LED_COUNT];
 	uint16_t usr_tmr[4];
 } io_drv;
 
@@ -77,7 +77,10 @@ bool led_status(unsigned int id)
 
 void led_flash(unsigned int id, unsigned int ms)
 {
-	io_drv.led_tmr[id] = ms / IO_POLL_PERIOD_MS;
+	unsigned int itvl = ms / IO_POLL_PERIOD_MS;
+
+	DCC_LOG2(LOG_INFO, "LED %d (%d)", id, itvl);
+	io_drv.led_tmr[id] = itvl;
 	__led_on(led_io[id].gpio, led_io[id].pin);
 }
 
@@ -127,10 +130,13 @@ void __attribute__((noreturn)) io_event_task(void)
 
 		/* process led timers */
 		for (i = 0; i < LED_COUNT; ++i) {
-			if (io_drv.led_tmr[i] == 0)
+			unsigned int itvl;
+
+			if ((itvl = io_drv.led_tmr[i]) == 0)
 				continue;
-			if (--io_drv.led_tmr[i] == 0) 
+			if (--itvl == 0) 
 				__led_off(led_io[i].gpio, led_io[i].pin);
+			io_drv.led_tmr[i] = itvl;
 		}
 
 		/* process user timers */

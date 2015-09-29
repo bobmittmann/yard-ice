@@ -93,6 +93,12 @@ struct simrpc_dbinfo {
 	} version;
 };
 
+struct simrpc_attr_req {
+	uint8_t dev_type;
+	uint8_t attr_offs;
+	uint8_t base_addr;
+	uint8_t count;
+};
 
 #define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
 
@@ -178,6 +184,15 @@ int simrpc_file_crc32(struct simrpc_pcb * sp, const char * path,
 
 int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path, 
 					  uint32_t * crc);
+
+int simrpc_mod_opt_get(struct simrpc_pcb * sp, unsigned int addr,
+		unsigned int count, uint32_t opt[]);
+
+int simrpc_sens_opt_get(struct simrpc_pcb * sp, unsigned int addr,
+		unsigned int count, uint32_t opt[]);
+
+int simrpc_attr_get(struct simrpc_pcb * sp,
+		struct simrpc_attr_req * req, uint32_t val[]);
 
 struct simlnk * simrpc_route(unsigned int daddr);
 

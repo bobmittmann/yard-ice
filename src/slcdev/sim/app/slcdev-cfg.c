@@ -286,7 +286,7 @@ static int cfg_device_list_add(struct cfg_device * cdev)
 	}
 
 	tbias = (cdev->tbias * 128) / 100;
-	icfg = (cdev->irate << 5) + (cdev->imode & 0x1f);
+	icfg = ISINK_MODE(cdev->imode, cdev->irate);
 
 	DCC_LOG4(LOG_INFO, "grp={%d %d %d %d}", 
 			 cdev->grp[0], cdev->grp[1], cdev->grp[2], cdev->grp[3]);
@@ -362,7 +362,7 @@ int cfg_device_enc(struct microjs_json_parser * jsn,
 	cdev.module = opt;
 	cdev.ilat = ILAT_DEFAULT;
 	cdev.ipre = IPRE_DEFAULT;
-	cdev.irate = ISINK_RATE_NORMAL >> 5;
+	cdev.irate = ISINK_RATE_NORMAL;
 	cdev.imode = ISINK_CURRENT_NOM;
 	cdev.tbias = 100; /* 100 % */
 

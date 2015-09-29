@@ -1,0 +1,73 @@
+R40 = 66.500K
+R30 = 44.200K
+R35 = 39.200K
+R39 = 24.000K
+R32 =  6.190K
+| Cnt | i(mA) | v(mv) | R40 | R30 | R35 | R39 |
++-----+-------+-------+-----+-----+-----+-----+
+|   0 |    37 |   185 | VCC | GND | GND | GND | 
+|   1 |    41 |   205 | VCC | GND | NC  | GND | 
+|   2 |    41 |   205 | VCC | NC  | GND | GND | 
+|   3 |    44 |   220 | VCC | GND | GND | NC  | 
+|   4 |    46 |   230 | VCC | NC  | NC  | GND | 
+|   5 |    49 |   245 | VCC | NC  | GND | NC  | 
+|   6 |    50 |   250 | VCC | GND | NC  | NC  | 
+|   7 |    56 |   280 | GND | VCC | GND | GND | 
+|   8 |    56 |   280 | VCC | NC  | NC  | NC  | 
+|   9 |    60 |   300 | NC  | VCC | GND | GND | 
+|  10 |    62 |   310 | GND | VCC | NC  | GND | 
+|  11 |    63 |   315 | GND | GND | VCC | GND | 
+|  12 |    66 |   330 | NC  | VCC | NC  | GND | 
+|  13 |    67 |   335 | GND | VCC | GND | NC  | 
+|  14 |    67 |   335 | NC  | GND | VCC | GND | 
+|  15 |    69 |   345 | GND | NC  | VCC | GND | 
+|  16 |    71 |   355 | NC  | VCC | GND | NC  | 
+|  17 |    74 |   370 | NC  | NC  | VCC | GND | 
+|  18 |    75 |   375 | GND | GND | VCC | NC  | 
+|  19 |    75 |   375 | GND | VCC | NC  | NC  | 
+|  20 |    80 |   400 | NC  | GND | VCC | NC  | 
+|  21 |    81 |   405 | NC  | VCC | NC  | NC  | 
+|  22 |    83 |   415 | GND | NC  | VCC | NC  | 
+|  23 |    90 |   450 | NC  | NC  | VCC | NC  | 
+|  24 |    93 |   465 | VCC | VCC | GND | GND | 
+|  25 |   101 |   505 | VCC | GND | VCC | GND | 
+|  26 |   103 |   515 | GND | GND | GND | VCC | 
+|  27 |   103 |   515 | VCC | VCC | NC  | GND | 
+|  28 |   110 |   550 | VCC | NC  | VCC | GND | 
+|  29 |   110 |   550 | NC  | GND | GND | VCC | 
+|  30 |   111 |   555 | VCC | VCC | GND | NC  | 
+|  31 |   113 |   565 | GND | NC  | GND | VCC | 
+|  32 |   114 |   570 | GND | GND | NC  | VCC | 
+|  33 |   119 |   595 | GND | VCC | VCC | GND | 
+|  34 |   119 |   595 | VCC | GND | VCC | NC  | 
+|  35 |   120 |   600 | NC  | NC  | GND | VCC | 
+|  36 |   122 |   610 | NC  | GND | NC  | VCC | 
+|  37 |   125 |   625 | VCC | VCC | NC  | NC  | 
+|  38 |   126 |   630 | GND | NC  | NC  | VCC | 
+|  39 |   127 |   635 | NC  | VCC | VCC | GND | 
+|  40 |   133 |   665 | VCC | NC  | VCC | NC  | 
+|  41 |   136 |   680 | NC  | NC  | NC  | VCC | 
+|  42 |   141 |   705 | VCC | GND | GND | VCC | 
+|  43 |   142 |   710 | GND | VCC | VCC | NC  | 
+|  44 |   152 |   760 | NC  | VCC | VCC | NC  | 
+|  45 |   154 |   770 | VCC | NC  | GND | VCC | 
+|  46 |   156 |   780 | VCC | GND | NC  | VCC | 
+|  47 |   157 |   785 | VCC | VCC | VCC | GND | 
+|  48 |   160 |   800 | GND | VCC | GND | VCC | 
+|  49 |   167 |   835 | GND | GND | VCC | VCC | 
+|  50 |   169 |   845 | NC  | VCC | GND | VCC | 
+|  51 |   172 |   860 | VCC | NC  | NC  | VCC | 
+|  52 |   177 |   885 | GND | VCC | NC  | VCC | 
+|  53 |   177 |   885 | NC  | GND | VCC | VCC | 
+|  54 |   182 |   910 | GND | NC  | VCC | VCC | 
+|  55 |   186 |   930 | VCC | VCC | VCC | NC  | 
+|  56 |   188 |   940 | NC  | VCC | NC  | VCC | 
+|  57 |   194 |   970 | NC  | NC  | VCC | VCC | 
+|  58 |   197 |   985 | VCC | VCC | GND | VCC | 
+|  59 |   204 |  1020 | VCC | GND | VCC | VCC | 
+|  60 |   218 |  1090 | VCC | VCC | NC  | VCC | 
+|  61 |   223 |  1115 | GND | VCC | VCC | VCC | 
+|  62 |   223 |  1115 | VCC | NC  | VCC | VCC | 
+|  63 |   236 |  1180 | NC  | VCC | VCC | VCC | 
+|  64 |   260 |  1300 | VCC | VCC | VCC | VCC | 
++-----+-------+-------+-----+-----+-----+-----+

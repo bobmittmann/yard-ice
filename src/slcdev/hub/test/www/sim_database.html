@@ -10,7 +10,7 @@
 
 <script src="/lib/zepto.js.gz"></script>
 <script>	
-	function alert(p, msg) {		
+	function alert_box(p, msg) {		
 		var html = '<img style="float:none;vertical-align:middle"' +
 			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
 		p.innerHTML = html;
@@ -44,7 +44,7 @@
 	function file_upload(event) {
 		var box = this.querySelector('#__msg');
 		var port = $('#selport').val();
-		alert(box, "Uploading file, please wait...");
+		alert_box(box, "Uploading file, please wait...");
 		$('.button').prop('disabled', true);
 		$('#editor').text('');
 		$.ajax({
@@ -70,7 +70,7 @@
 	function db_getinfo() {
 		var stat = $('#status');
 		var port = $('#selport').val();
-//		stat.html('');
+		stat.html('');
 		$('.button').prop('disabled', true);
 		$.ajax({
 			type: 'GET',
@@ -102,7 +102,7 @@
 				stat.html(html);				
 			},
 			error: function(xhr, type) { 
-				alert('Ajax error!') 
+				stat.html('<i> Ajax error: ' + type + '</i>');
 			},
 			complete: function(xhr, status){
 				$('.button').prop('disabled', false);

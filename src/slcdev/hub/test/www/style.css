@@ -62,8 +62,25 @@ table, th, td {
 }
 
 thead {
-	background: #cdf;
+	background: #b8c8e8;
 	color: black;
+}
+
+table.monitor {
+	border-collapse: collapse; 
+}
+
+table.monitor td {
+	text-align: center;
+}
+
+table.monitor tr:nth-child(odd) {
+	background: #f8f8f8;
+}
+
+table.monitor tr:nth-child(even) {
+	
+	background: #d8e8f8;
 }
 
 table.formgrid {

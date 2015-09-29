@@ -152,12 +152,11 @@ bool board_app_exec(uint32_t addr)
 	uint32_t * app = (uint32_t *)addr;
 	int thread_id = 0;
 
-	DCC_LOG1(LOG_TRACE, "app=%p", app);
-
 	if ((app[0] != 0x0a0de004) ||
 		(app[1] != 0x6e696854) ||
 		(app[2] != 0x00534f6b)) {
-		DCC_LOG(LOG_WARNING, "invalid application signature!");
+		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", app);
+
 		return false;
 	}
 
@@ -205,4 +204,6 @@ void board_test(void)
 		thinkos_sleep(100);
 	}	
 }
+
+int app_default(void) __attribute__((weak, alias("board_test")));
 

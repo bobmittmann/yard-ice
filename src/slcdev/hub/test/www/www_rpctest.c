@@ -535,6 +535,7 @@ int get_status_cgi(struct httpctl * http)
 		WARN("simrpc_open() failed!");
 	 	n = snprintf(s, HTML_MAX, "{\"state\": \"Error\"}\r\n");
 	} else {
+		simrpc_set_timeout(sp, 50);
 		if (simrpc_kernelinfo_get(sp, &kinf) < 0) {
 			WARN("simrpc_kernelinfo_get() failed!");
 		 	n = snprintf(s, HTML_MAX, "{\"state\": \"Offline\"}\r\n");
@@ -863,4 +864,69 @@ int db_getinfo_cgi(struct httpctl * http)
 	}
 
 	return http_send(http, s, n);
+}
+
+int sim_getattr_cgi(struct httpctl * http)
+{
+	struct simrpc_attr_req req;
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[HTML_MAX];
+	uint32_t val[128];
+	int port;
+	int ret;
+	int n;
+
+    port = atoi(http_query_lookup(http, "port"));
+    req.dev_type = atoi(http_query_lookup(http, "dev_type"));
+    req.attr_offs = atoi(http_query_lookup(http, "attr_offs"));
+    req.base_addr = atoi(http_query_lookup(http, "base_addr"));
+    req.count = atoi(http_query_lookup(http, "count"));
+	daddr = port;
+
+	INF("port=%d type=%d count=%d", port, req.dev_type, req.count);
+
+   	httpd_200(http->tp, APPLICATION_JSON);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+	 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_open() failed!\"}\r\n");
+	 	ret = http_send(http, s, n);
+	} else {
+		int size;
+		int cnt;
+
+		if ((size = simrpc_attr_get(sp, &req, val)) < 0) {
+			WARN("simrpc_attr_get() failed!");
+		 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_attr_get() failed!\"}\r\n");
+		 	ret = http_send(http, s, n);
+		} else if ((cnt = (size / sizeof(uint32_t))) < 1) {
+			WARN("simrpc_attr_get() invalid!");
+		 	n = snprintf(s, HTML_MAX, "{\"error\": \"simrpc_attr_get() invalid!\"}\r\n");
+		 	ret = http_send(http, s, n);
+		} else {
+			char * cp = s;
+			int i;
+
+			/* format header and first attribute */
+		 	cp += snprintf(cp, HTML_MAX, "{ \"attr\":[%d", val[0]);
+
+		 	/* encode remaining attributes */
+			for (i = 1; i < cnt; ++i) {
+				cp += snprintf(cp, HTML_MAX, ",%d", val[i]);
+				if ((n = (cp - s)) > (HTML_MAX - 16)) {
+					/* flush */
+					http_send(http, s, n);
+					cp = s;
+				}
+			}
+
+			cp += snprintf(cp, HTML_MAX, "] }\r\n");
+			n = (cp - s);
+			ret = http_send(http, s, n);
+		}
+		simrpc_close(sp);
+	}
+
+	return ret;
 }

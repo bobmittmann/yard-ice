@@ -71,6 +71,8 @@ enum simrpc_opc {
 	SIMRPC_SHELLEXEC   = 51,
 	SIMRPC_JSEXEC      = 52,
 
+	SIMRPC_ATTR_GET    = 53,
+
 	SIMRPC_BUSY        = 250,
 	SIMRPC_PEND        = 251,
 	SIMRPC_FALSE       = 252,
@@ -163,6 +165,8 @@ void simrpc_svc_init(void);
 int simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int simrpc_send_int(uint32_t opc, int val);
 int simrpc_send_opc(uint32_t opc);
+
+void simrpc_attr_get_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 #ifdef __cplusplus
 }

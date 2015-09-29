@@ -180,7 +180,7 @@ void cm3_svc_isr(void)
 	/* get the immediate data from instruction */
 	svc = pc[-2];
 
-	DCC_LOG1(LOG_MSG, "pc=0x%08x", pc);
+	DCC_LOG2(LOG_MSG, "pc=0x%08x svc=%d", pc, svc);
 
 	switch (svc) {
 	case THINKOS_THREAD_SELF:

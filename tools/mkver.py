@@ -60,6 +60,8 @@ def mkver(f, name, major, minor, date):
   unixtime = time.mktime(datetime.datetime.now().timetuple())
   diff = utcnow - ref
   build = int((diff.days * 24) + (diff.seconds / (60 * 60)))
+  if build < 0:
+    build = 0
   f.write('\n')
   f.write('#define VERSION_NAME \"{:s}\"\n'.format(name))
   f.write('#define VERSION_MAJOR {:d}\n'.format(major))

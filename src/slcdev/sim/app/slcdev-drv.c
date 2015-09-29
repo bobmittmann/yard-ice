@@ -268,7 +268,7 @@ void dev_sim_reset(void)
 
 		/* current sink configuration */
 		dev->tbias = 128; /* time accuracy multiplication factor */
-		dev->icfg = ISINK_CURRENT_NOM | ISINK_RATE_NORMAL;
+		dev->icfg = ISINK_MODE(ISINK_CURRENT_NOM, ISINK_RATE_NORMAL);
 		dev->ipre = IPRE_DEFAULT; /* current sink preenphasis time */
 		dev->ilat = ILAT_DEFAULT; /* current sink latency (PW reponse time) */
 
@@ -330,7 +330,7 @@ static unsigned int ap_chksum(unsigned int msg)
 /* default current sink pulse time in AP mode */
 #define DEV_AP_IPW_DEFAULT 200 
 /* default current sink mode */
-#define DEV_AP_ICFG_DEFAULT (ISINK_CURRENT_NOM | ISINK_RATE_NORMAL)
+#define DEV_AP_ICFG_DEFAULT ISINK_MODE(ISINK_CURRENT_NOM, ISINK_RATE_NORMAL)
 
 
 /* -------------------------------------------------------------------------
@@ -1014,13 +1014,13 @@ void stm32_tim10_isr(void)
 //					 slcdev_drv.addr, slcdev_drv.state);
 		}
 
-		DCC_LOG(LOG_INFO, "[RST] !!!!!!!!");
+		DCC_LOG(LOG_MSG, "[RST] !!!!!!!!");
 		slcdev_drv.state = DEV_RST;
 
 		/* XXX: sanity check. Reset the current sink state machine */
 		if (slcdev_drv.isink.state != ISINK_IDLE) {
 			slcdev_drv.isink.state = ISINK_IDLE;
-			DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+			DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 		}
 
 		return;
@@ -1041,7 +1041,7 @@ void stm32_tim10_isr(void)
 	else if (slcdev_drv.isink.state == ISINK_END_WAIT) {
 		/* after a valid pulse the line does not return high !!!! */
 		slcdev_drv.isink.state = ISINK_IDLE;
-		DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+		DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 	}
 #endif
 
@@ -1056,7 +1056,7 @@ void stm32_tim10_isr(void)
 	case DEV_RST:
 		/* reset the device state */
 		slcdev_drv.state = DEV_MSG;
-		DCC_LOG(LOG_INFO, "[MSG]");
+		DCC_LOG(LOG_MSG, "[MSG]");
 		slcdev_drv.msg = bit;
 		slcdev_drv.bit_cnt = 1;
 		/* reset the simultaor module */
@@ -1116,6 +1116,8 @@ void stm32_comp_tsc_isr(void)
 	struct ss_device * dev = slcdev_drv.dev;
 	uint32_t ftsr;
 
+	DCC_LOG(LOG_JABBER, "!!!!");
+
 	/* get the falling edge sensing configuration */
 	ftsr = exti->ftsr;
 
@@ -1140,14 +1142,14 @@ void stm32_comp_tsc_isr(void)
 		if (slcdev_drv.isink.state == ISINK_START_WAIT) {
 			tim->arr = slcdev_drv.isink.lat;
 			slcdev_drv.isink.state = ISINK_LATENCY;
-			DCC_LOG(LOG_INFO, "<ISINK LATENCY>");
+			DCC_LOG(LOG_MSG, "<ISINK LATENCY>");
 		} else {
 
 			/*-------------------------------------------------------------
 			  Input
 			  -------------------------------------------------------------*/
 			if (slcdev_drv.state == DEV_IDLE) {
-				DCC_LOG(LOG_INFO, "......");
+				DCC_LOG(LOG_JABBER, "......");
 				return;
 			}
 
@@ -1185,7 +1187,7 @@ void stm32_comp_tsc_isr(void)
 		case ISINK_LATENCY: /* pulse aborted */
 //			trig_out_clr();
 			slcdev_drv.isink.state = ISINK_IDLE;
-			DCC_LOG(LOG_WARNING, "<ISINK IDLE>");
+			DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 			slcdev_drv.state = DEV_IDLE;
 			DCC_LOG(LOG_WARNING, "Pulse aborted! [IDLE]");
 			break;
@@ -1195,21 +1197,21 @@ void stm32_comp_tsc_isr(void)
 			case DEV_PW1_ISINK:
 				slcdev_drv.isink.pw = (dev->pw2 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW2_ISINK;
 				DCC_LOG(LOG_INFO, "[PW2 ISINK]");
 				break;
 			case DEV_PW2_ISINK:
 				slcdev_drv.isink.pw = (dev->pw3 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW3_ISINK;
 				DCC_LOG(LOG_INFO, "[PW3 ISINK]");
 				break;
 			case DEV_PW3_ISINK:
 				slcdev_drv.isink.pw = (dev->pw4 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW4_ISINK;
 				DCC_LOG(LOG_INFO, "[PW4 ISINK]");
 				break;
@@ -1219,35 +1221,35 @@ void stm32_comp_tsc_isr(void)
 					slcdev_drv.isink.pw = (dev->pw5 * dev->tbias) / 128;
 					slcdev_drv.isink.state = ISINK_START_WAIT;
 					DCC_LOG1(LOG_TRACE, "PW5=%d", slcdev_drv.isink.pw);
-					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+					DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 					slcdev_drv.state = DEV_PW5_ISINK;
 					DCC_LOG(LOG_INFO, "[PW5 ISINK]");
 				} else {
 					slcdev_drv.isink.state = ISINK_IDLE;
-					DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+					DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 					slcdev_drv.state = DEV_IDLE;
 					DCC_LOG1(LOG_INFO, "[%d IDLE]", dev->addr);
 				}
 				break;
 			case DEV_PW5_ISINK:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				slcdev_drv.state = DEV_IDLE;
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
 			case DEV_AP_ERR_BIT:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				slcdev_drv.state = DEV_IDLE;
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				break;
 			case DEV_AP_INT_BIT:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				goto ap_hdr_done;
 			case DEV_AP_CMD_ACK_BIT:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				slcdev_drv.state = ap_3rd_phase();
 				if (slcdev_drv.state == DEV_AP_ADDR_RX) {
 					/* wait for the subaddress to be sent from the panel,
@@ -1256,11 +1258,11 @@ void stm32_comp_tsc_isr(void)
 				}
 			case DEV_AP_RD_PRESENCE:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				goto ap_rd_presence;
 			case DEV_AP_ADDR_ACK_BIT:
 				slcdev_drv.isink.state = ISINK_IDLE;
-				DCC_LOG(LOG_INFO, "<ISINK IDLE>");
+				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				slcdev_drv.state = ap_4th_phase();
 				break;
 			}
@@ -1276,7 +1278,7 @@ void stm32_comp_tsc_isr(void)
 				/* respond with PW1 */
 				slcdev_drv.isink.pw = (dev->pw1 * dev->tbias) / 128;
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+				DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 				slcdev_drv.state = DEV_PW1_ISINK;
 				DCC_LOG(LOG_INFO, "[PW1 ISINK]");
 				break;
@@ -1340,14 +1342,14 @@ ap_rd_presence:
 							 mod ? 'M' : 'S', tens * 10 + ones);
 					/* AP group command parity error respnse bit */
 					slcdev_drv.isink.state = ISINK_START_WAIT;
-					DCC_LOG(LOG_INFO, "<ISINK START WAIT>");
+					DCC_LOG(LOG_MSG, "<ISINK START WAIT>");
 				}
 				break;
 
 			case DEV_AP_CMD_PA_BIT:
 				/* AP command parity bit */
 				slcdev_drv.isink.state = ISINK_START_WAIT;
-				DCC_LOG(LOG_INFO, "<ISINK START WAIT> [AP CMD ACK BIT]");
+				DCC_LOG(LOG_MSG, "<ISINK START WAIT> [AP CMD ACK BIT]");
 				slcdev_drv.state = DEV_AP_CMD_ACK_BIT;
 				break;
 
@@ -1390,7 +1392,7 @@ void stm32_tim4_isr(void)
 	/* End of current pulse. wait for the SLC line to go up */
 	slcdev_drv.isink.state = ISINK_END_WAIT;
 
-	DCC_LOG(LOG_INFO, "<ISINK END WAIT>");
+	DCC_LOG(LOG_MSG, "<ISINK END WAIT>");
 
 	/* Start a timeout timer */
 //	tim10->arr = 4500; 
@@ -1423,8 +1425,6 @@ static void slc_sense_init(void)
 	/* Unmask interrupt */
 	exti->imr |= COMP1_EXTI;
 
-	cm3_irq_pri_set(STM32_IRQ_COMP, IRQ_PRIORITY_HIGHEST);
-
 	/* Timer clock enable */
 	stm32_clk_enable(STM32_RCC, STM32_CLK_TIM10);
 	/* get the total divisior */
@@ -1436,7 +1436,17 @@ static void slc_sense_init(void)
 	tim->dier = TIM_UIE; /* Update interrupt enable */
 	tim->cr1 = TIM_CMS_EDGE | TIM_OPM | TIM_URS; 
 
+#if defined(THINKAPP) || defined(CM3_RAM_VECTORS)
+	thinkos_irq_register(STM32_IRQ_COMP, IRQ_PRIORITY_HIGHEST, 
+						 stm32_comp_tsc_isr);
+	thinkos_irq_register(STM32_IRQ_TIM10, IRQ_PRIORITY_VERY_HIGH, 
+						 stm32_tim10_isr);
+#else
+	cm3_irq_pri_set(STM32_IRQ_COMP, IRQ_PRIORITY_HIGHEST);
 	cm3_irq_pri_set(STM32_IRQ_TIM10, IRQ_PRIORITY_VERY_HIGH);
+#endif
+	cm3_irq_disable(STM32_IRQ_COMP);
+	cm3_irq_disable(STM32_IRQ_TIM10);
 }
 
 static void slcdev_reset(void)
@@ -1483,6 +1493,8 @@ void slcdev_init(void)
 
 void slcdev_stop(void)
 {
+	DCC_LOG(LOG_TRACE, "...");
+
 	/* Enable interrupt */
 	cm3_irq_disable(STM32_IRQ_COMP);
 	/* Enable interrupt */
@@ -1505,6 +1517,8 @@ void slcdev_stop(void)
 
 void slcdev_resume(void)
 {
+	DCC_LOG(LOG_TRACE, "...");
+
 	/* Enable interrupt */
 	cm3_irq_enable(STM32_IRQ_COMP);
 	/* Enable interrupt */

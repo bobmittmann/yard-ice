@@ -12,7 +12,6 @@
 <script>
 	function get_status(port) {
 		var tr = $('#stat' + port);
-		tr.html('<td>' + port + '</td><td></td><td></td><td></td><td></td><td></td>');
 		$.ajax({
 			type: 'GET',
 			url: 'get_status.cgi',
@@ -20,7 +19,7 @@
 				port: port
 			},
 			dataType: 'json',			
-			timeout: 500,
+			timeout: 250,
 			context: $('body'),
 			success: function(data) {
 				var tr = $('#stat' + port);
@@ -39,7 +38,7 @@
 						html += '<td>?.?.?</td><td>?</td>';
 					}
 				} else {
-					html += '<td>?.?.?</td><td>?</td>';				
+					html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
 				}		
 				tr.html(html);
 			},
@@ -58,7 +57,7 @@
 		get_status(5);
 	}
 
-	function alert(p, msg) {		
+	function alert_box(p, msg) {		
 		var html = '<img style="float:none;vertical-align:middle"' +
 			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
 		p.innerHTML = html;
@@ -182,7 +181,7 @@
 		var box = this.querySelector('#__msg');	
 		var port = $('#selport').val();
 		
-		alert(box, "Uploading firmware, please wait...");
+		alert_box(box, "Uploading firmware, please wait...");
 		$('.button').prop('disabled', true);
 		$.ajax({
 			url: this.action + '?port=' + port,
@@ -192,7 +191,9 @@
 			contentType: false,
 			success: function() {
 				box.innerHTML = "";
-				get_status(port);
+			    setTimeout(function(){ 
+			    	get_status(port);
+			    }, 500);  
 			},
 			error: function(xhr, type){
 				alert('Ajax error!')
@@ -207,6 +208,7 @@
 </script>
 
 <hr />
+
 <div class="form" style="min-width: 10em; max-width: 40em;">
 	<table class="formgrid" style="width: 100%; table-layout: fixed;">
 	<tr>

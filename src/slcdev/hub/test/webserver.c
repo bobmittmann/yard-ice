@@ -69,7 +69,7 @@ int httpd_task(struct httpd * httpd)
 	return 0;
 }
 
-#define HTTPD_STACK_SIZE 2048
+#define HTTPD_STACK_SIZE (2048 + 512)
 #define HTTPD_TASK_CNT 2
 
 uint32_t httpd_stack[HTTPD_TASK_CNT][HTTPD_STACK_SIZE / 4];

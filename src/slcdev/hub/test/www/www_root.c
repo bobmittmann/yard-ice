@@ -49,6 +49,7 @@ const char index_html[] = DOCTYPE_HTML "<head>\r\n"
 	"<p>Welcome to the <b>CRAB</b> device simulator web interface.</p>\r\n"
 	"<p>Please select one option:</p>\r\n"
 	"<ul>\r\n"
+	"<li><a href=\"sim_monitor.html\">Devices Monitor</a></li>\r\n"
 	"<li><a href=\"sim_config.html\">Simulator Configuration</a></li>\r\n"
 	"<li><a href=\"sim_database.html\">Simulator Database</a></li>\r\n"
 	"<li><a href=\"sim_tools.html\">Simulator Tools</a></li>\r\n"
@@ -100,6 +101,8 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_SIM_CONFIG_HTML, .ptr = sim_config_html },
 	{ .oid = "sim_database.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_SIM_DATABASE_HTML, .ptr = sim_database_html },
+	{ .oid = "sim_monitor.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_MONITOR_HTML, .ptr = sim_monitor_html },
 	{ .oid = "rpc_test.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
 		.len = 0, .ptr = rpc_test_cgi },
     { .oid = "update.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
@@ -128,6 +131,8 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = cfg_getinfo_cgi },
     { .oid = "db_getinfo.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = db_getinfo_cgi },
+    { .oid = "sim_getattr.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+        .len = 0, .ptr = sim_getattr_cgi },
 	{ .oid = "update.html", .typ = OBJ_STATIC_HTML, .lvl = 255,
 		.len = sizeof(update_html) - 1, .ptr = update_html },
 	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,

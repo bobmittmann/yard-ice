@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include "slcdev.h"
 #include "io.h"
+#include "isink.h"
 #include "slcdev-lib.h"
 #include <sys/dcclog.h>
 
@@ -613,12 +614,12 @@ int32_t __dev_imode(void * env, int32_t argv[], int argc)
 		if (val > 25)
 			return -EXCEPT_INVALID_VALUE;
 
-		icfg = (icfg & ~(0x1f)) + val;
+		icfg = ISINK_MODE(val, ISINK_RATE(icfg));
 		ss_dev_tab[idx].icfg = icfg;
 		return 0;
 	}
 
-	argv[0] = icfg & 0x1f;
+	argv[0] = ISINK_WAVE(icfg);
 
 	return 1; /* return the number of return values */
 }
@@ -639,12 +640,12 @@ int32_t __dev_irate(void * env, int32_t argv[], int argc)
 		if (val > 3)
 			return -EXCEPT_INVALID_VALUE;
 	
-		icfg = (icfg & ~(0x07 << 5)) + (val << 5);
+		icfg = ISINK_MODE(ISINK_WAVE(icfg), val);
 		ss_dev_tab[idx].icfg = icfg;
 		return 0;
 	}
 
-	argv[0] = icfg >> 5;
+	argv[0] = ISINK_RATE(icfg);
 
 	return 1; /* return the number of return values */
 }

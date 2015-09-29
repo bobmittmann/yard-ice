@@ -94,6 +94,43 @@ int simrpc_cfg_compile(struct simrpc_pcb * sp, char * resp, unsigned int max)
 	return simlnk_rpc(sp, SIMRPC_CFGCOMPILE, NULL, 0,  resp, max);
 }
 
+int simrpc_mod_opt_get(struct simrpc_pcb * sp, unsigned int addr,
+		unsigned int count, uint32_t opt[])
+{
+	struct simrpc_attr_req req;
+
+	req.dev_type = 1;
+	req.attr_offs = 0;
+	req.base_addr = addr;
+	req.count = count;
+
+	return simlnk_rpc(sp, SIMRPC_ATTR_GET, &req, sizeof(req),
+			opt, count * sizeof(uint32_t));
+}
+
+int simrpc_sens_opt_get(struct simrpc_pcb * sp, unsigned int addr,
+		unsigned int count, uint32_t opt[])
+{
+	struct simrpc_attr_req req;
+
+	req.dev_type = 0;
+	req.attr_offs = 0;
+	req.base_addr = addr;
+	req.count = count;
+
+	return simlnk_rpc(sp, SIMRPC_ATTR_GET, &req, sizeof(req),
+			opt, count * sizeof(uint32_t));
+}
+
+int simrpc_attr_get(struct simrpc_pcb * sp,
+		struct simrpc_attr_req * req, uint32_t val[])
+{
+	unsigned int count = req->count;
+
+	return simlnk_rpc(sp, SIMRPC_ATTR_GET, req, sizeof(req),
+			val, count * sizeof(uint32_t));
+}
+
 int simrpc_dbinfo_get(struct simrpc_pcb * sp, struct simrpc_dbinfo * inf)
 {
 	return simlnk_rpc(sp, SIMRPC_DBINFO, NULL, 0, inf,

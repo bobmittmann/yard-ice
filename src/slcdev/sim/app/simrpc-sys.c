@@ -28,6 +28,7 @@
 #include <sys/shell.h>
 #include <sys/file.h>
 #include <sys/null.h>
+#include <sys/dcclog.h>
 
 #include "board.h"
 #include "simlnk.h"
@@ -197,13 +198,15 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		slcdev_stop();
 		struct fs_dirent bin;
 
-		slcdev_stop();
+		DCC_LOG(LOG_TRACE, "pausing simulation!");
+		slcdev_sim_stop();
 
 		/* Erase current configuration */
-		fs_dirent_get(&bin, FLASHFS_DB_BIN);
+		fs_dirent_get(&bin, FLASHFS_CFG_BIN);
 		fs_file_unlink(&bin);
 
 		if (config_compile(json.fp) < 0) {
+			DCC_LOG(LOG_WARNING, "config_compile() failed!");
 			fprintf(f, "# Error!\n");
 			/* purge the invalid config */
 			fs_dirent_get(&bin, FLASHFS_CFG_BIN);
@@ -218,11 +221,14 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 					rt->stack_sz, sizeof(slcdev_vm_stack));
 
 			if (config_save(json.fp) < 0) {
+				DCC_LOG(LOG_WARNING, "config_save() failed!");
 				fprintf(f, "# Error: config_save()!\n");
 			} else if (config_load() < 0) {
+				DCC_LOG(LOG_WARNING, "config_load() failed!");
 				fprintf(f, "# Error: config_load()!\n");
 			} else {
-				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
+				DCC_LOG(LOG_TRACE, "restarting simulation!");
+				slcdev_sim_resume();
 			}
 		}
 	}
