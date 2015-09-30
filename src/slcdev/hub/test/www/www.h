@@ -77,7 +77,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_NETWORK_HTML 1707
 
-#define SIZEOF_STYLE_CSS 1226
+#define SIZEOF_STYLE_CSS 1232
 
 #define SIZEOF_TOOLS_HTML 1431
 
