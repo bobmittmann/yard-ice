@@ -47,6 +47,10 @@ endif
 OPTIONS	= -mcpu=$(CPU) -mthumb -mthumb-interwork 
 CROSS_COMPILE = arm-none-eabi-
 
+ifdef THINKAPP
+CDEFS += "THINKAPP" 
+endif
+
 ifdef LDSCRIPT
 LDFLAGS += -nostdlib -T $(LDSCRIPT)
 else

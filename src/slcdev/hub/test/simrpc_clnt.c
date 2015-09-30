@@ -142,10 +142,18 @@ int simrpc_db_compile(struct simrpc_pcb * sp, char * resp, unsigned int max)
 	return simlnk_rpc(sp, SIMRPC_DBCOMPILE, NULL, 0,  resp, max);
 }
 
+#if 0
 int simrpc_shellexec(struct simrpc_pcb * sp, const char * cmd,
 		char * resp, unsigned int max)
 {
 	return simlnk_rpc(sp, SIMRPC_SHELLEXEC, cmd, strlen(cmd), resp, max);
+}
+#endif
+
+int simrpc_shellexec(struct simrpc_pcb * sp, const char * cmd,
+		char * resp, unsigned int max)
+{
+	return simlnk_rpc(sp, SIMRPC_SHELLEXEC, cmd, strlen(cmd), NULL, 0);
 }
 
 int simrpc_jsexec(struct simrpc_pcb * sp, const char * cmd,
@@ -332,3 +340,7 @@ int simrpc_file_crc16(struct simrpc_pcb * sp, const char * path,
  * ---------------------------------------------------------------------------
  */
 
+int simrpc_stdout_flush(struct simrpc_pcb * sp)
+{
+	return simlnk_rpc_async(sp, SIMRPC_STDOUT_FLUSH, NULL, 0);
+}

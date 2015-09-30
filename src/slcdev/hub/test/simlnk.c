@@ -41,12 +41,24 @@
 
 #undef DEBUG
 #undef TRACE_LEVEL
-#define TRACE_LEVEL TRACE_LVL_WARN
+#define TRACE_LEVEL TRACE_LVL_INF
 #include <trace.h>
 
 #ifndef SIMLNK_POOL_SIZE
 #define SIMLNK_POOL_SIZE 5
 #endif
+
+#ifndef SIMLINK_STDOUT_BUF_SIZE
+#define SIMLINK_STDOUT_BUF_SIZE 8192
+#endif
+
+#define PIPE_LEN SIMLINK_STDOUT_BUF_SIZE
+
+struct pipe {
+    uint32_t head;
+    uint32_t tail;
+    uint8_t buf[SIMLINK_STDOUT_BUF_SIZE];
+};
 
 struct simlnk {
 	bool pool_alloc; /* indicate if the structure was 
@@ -64,11 +76,94 @@ struct simlnk {
 		int flag;
 		uint32_t seq;
 	} tx;
+	struct pipe stdout_pipe;
 	struct simlnk_stat stat;
 };
+
+static int pipe_write(struct pipe * pipe, const uint8_t * buf, unsigned int len)
+{
+    uint8_t * cp = (uint8_t *)buf;
+    uint32_t head;
+    int max;
+    int cnt;
+    int pos;
+
+    /* pipe->head is declared as volatile,
+       for performance reasons we read it only once at
+       the beginning and write it back at the end. */
+    head = pipe->head;
+    /* get the maximum number of chars we can write into buffer */
+    if ((max = pipe->tail + PIPE_LEN - head) == 0)
+        return 0;
+    /* cnt is the number of chars we will write to the buffer,
+       it should be the the minimum of max and len */
+    cnt = MIN(max, len);
+    /* get the tail position in the buffer */
+    pos = (head % PIPE_LEN);
+    /* check whether to wrap around or on not */
+    if ((pos + cnt) > PIPE_LEN) {
+        /* we need to perform two reads */
+        int n;
+        int m;
+        /* get the number of chars from tail pos until the end of buffer */
+        n = PIPE_LEN - pos;
+        /* the remaining chars are at the beginning of the buffer */
+        m = cnt - n;
+        memcpy(&pipe->buf[pos], cp, n);
+        memcpy(&pipe->buf[0], cp + n, m);
+    } else {
+        memcpy(&pipe->buf[pos], cp, cnt);
+    }
+
+    pipe->head = head + cnt;
+
+    return cnt;
+}
+
+static int pipe_read(struct pipe * pipe, uint8_t * buf, unsigned int len)
+{
+    uint32_t tail;
+    int max;
+    int cnt;
+    int pos;
+
+    /* pipe->tail is declared as volatile,
+       for performance reasons we read it only once at
+       the beginning and write it back at the end. */
+    tail = pipe->tail;
+    /* get the maximum number of chars we can read from the buffer */
+    if ((max = pipe->head - tail) == 0)
+        return 0;
+    /* cnt is the number of chars we will read from the buffer,
+       it should be the the minimum of max and len */
+    cnt = MIN(max, len);
+    /* get the tail position in the buffer */
+    pos = (tail % PIPE_LEN);
+    /* check whether to wrap around or on not */
+    if ((pos + cnt) > PIPE_LEN) {
+        /* we need to perform two reads */
+        int n;
+        int m;
+        /* get the number of chars from tail pos until the end of buffer */
+        n = PIPE_LEN - pos;
+        /* the remaining chars are at the beginning of the buffer */
+        m = cnt - n;
+        memcpy(buf, &pipe->buf[pos], n);
+        memcpy(buf + n, &pipe->buf[0], m);
+    } else {
+        memcpy(buf, &pipe->buf[pos], cnt);
+    }
+
+    pipe->tail = tail + cnt;
+
+    return cnt;
+}
+
 /* -------------------------------------------------------------------------
- * Simulator Serial Link 
+ * Simulator Serial Link
  * ------------------------------------------------------------------------- */
+
+
 
 void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 {
@@ -80,13 +175,28 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 
 	for (;;) {
 		clk = thinkos_clock();
+		uint32_t opc;
+		unsigned int insn;
+		unsigned int seq;
+
 		(void)clk;
 		/* Receive up to SIMLNK_MTU bytes plus the break condition */
 		if ((cnt = serial_recv(lnk->dev, pkt, SIMLNK_MTU + 2, 0x7fffffff)) <= 0) {
 			continue;
 		}
 
-		if (SIMRPC_INSN(pkt[0]) == SIMRPC_SIGNAL) {
+		opc = pkt[0];
+		insn = SIMRPC_INSN(opc);
+		seq = SIMRPC_SEQ(opc);
+
+		if (insn == SIMRPC_SIGNAL) {
+			continue;
+		}
+
+		if ((cnt > 4) && (insn == SIMRPC_STDOUT_DATA)) {
+			int n = cnt - 4;
+			DBG("pipe write, %d bytes, seq=%d.", n, seq);
+			pipe_write(&lnk->stdout_pipe, (uint8_t *)&pkt[1], cnt - 4);
 			continue;
 		}
 
@@ -233,6 +343,45 @@ again:
 	WARN("invalid response.");
 	thinkos_mutex_unlock(lnk->mutex);
 	return SIMRPC_EPROTO;
+}
+
+int simrpc_stdout_get(struct simrpc_pcb * sp, void * buf, unsigned int max)
+{
+	struct simlnk * lnk = sp->lnk;
+	int cnt;
+
+	cnt = pipe_read(&lnk->stdout_pipe, buf, max);
+
+	DBG("pipe_read, %d bytes", cnt);
+
+	return cnt;
+}
+
+int simlnk_rpc_async(struct simrpc_pcb * sp, uint32_t insn,
+			   const void * buf, unsigned int cnt)
+{
+	struct simlnk * lnk = sp->lnk;
+	unsigned int daddr = sp->daddr;
+	unsigned int saddr = sp->saddr;
+	uint32_t opc;
+	uint32_t seq;
+
+	seq = sp->seq = lnk->tx.seq++;
+	opc = simrpc_mkopc(daddr, saddr, seq, insn);
+
+	thinkos_mutex_lock(lnk->mutex);
+
+	lnk->tx.buf[0] = opc;
+	memcpy(&lnk->tx.buf[1], buf, cnt);
+
+	if (serial_send(lnk->dev, lnk->tx.buf, 4 + cnt) < 0) {
+		thinkos_mutex_unlock(lnk->mutex);
+		return SIMRPC_EDRIVER;
+	}
+
+	thinkos_mutex_unlock(lnk->mutex);
+
+	return cnt;
 }
 
 /* -------------------------------------------------------------------------

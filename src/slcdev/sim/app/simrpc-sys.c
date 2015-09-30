@@ -127,7 +127,7 @@ const struct fileop simrpc_fops = {
 };
 
 
-void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+void __simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
 	char * line = (char *)data;
 	struct rpc_str str;
@@ -148,15 +148,40 @@ void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		ret = cmd_exec(f, cmd, line);
 		if ((ret < 0) && (ret !=  SHELL_ABORT)) {
 			fprintf(f, "Error: %d\n", -ret);
-		} 
+		}	
 	}
 
 	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
 }
 
+void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+{
+	char * line = (char *)data;
+	struct shell_cmd * cmd;
+	FILE * f = stdout;
+	int ret;
+
+	DCC_LOG(LOG_TRACE, "...");
+
+	line[cnt] = '\0';
+
+	if ((cmd = cmd_lookup(cmd_tab, line)) == NULL) {
+		fprintf(f, "Command not found!\n");
+		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+	} else {
+		ret = cmd_exec(f, cmd, line);
+		if (ret < 0) {
+			fprintf(f, "Error: %d\n", -ret);
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), ret);
+		} else {
+			simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
+		}
+	}
+}
+
 int js(FILE * f, char * script, unsigned int len);
 
-void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+void __simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
 	char * line = (char *)data;
 	struct rpc_str str;
@@ -176,6 +201,23 @@ void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
 }
+
+void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+{
+	char * script = (char *)data;
+	int ret;
+
+	if (cnt < SIMRPC_DATA_MAX)
+		script[cnt] = '\0';
+
+	ret = js(stdout, script, cnt);
+
+	if (ret < 0)
+		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), ret);
+	else
+		simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
+}
+
 
 void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {

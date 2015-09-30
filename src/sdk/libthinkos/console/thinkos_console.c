@@ -64,11 +64,11 @@ static int pipe_read(struct console_pipe * pipe,
 	if ((max = pipe->head - tail) == 0)
 		return 0;
 	/* cnt is the number of chars we will read from the buffer,
-	   it should be the the minimum of max and len */
+	   it should be the minimum of max and len */
 	cnt = MIN(max, len);
 	/* get the tail position in the buffer */
 	pos = (tail % CONSOLE_PIPE_LEN);
-	/* check whether to wrap arround or on not */
+	/* check whether to wrap around or on not */
 	if ((pos + cnt) > CONSOLE_PIPE_LEN) {
 		/* we need to perform two reads */
 		int n;
@@ -105,13 +105,13 @@ static int pipe_write(struct console_pipe * pipe,
 	if ((max = pipe->tail + CONSOLE_PIPE_LEN - head) == 0)
 		return 0;
 	/* cnt is the number of chars we will write to the buffer,
-	   it should be the the minimum of max and len */
+	   it should be the minimum of max and len */
 	cnt = MIN(max, len);
 	/* get the tail position in the buffer */
 	pos = (head % CONSOLE_PIPE_LEN);
 	DCC_LOG4(LOG_INFO, "head=%d tail=%d cnt=%d pos=%d", 
 			 head, pipe->tail, cnt, pos);
-	/* check whether to wrap arround or on not */
+	/* check whether to wrap around or on not */
 	if ((pos + cnt) > CONSOLE_PIPE_LEN) {
 		/* we need to perform two reads */
 		int n;
@@ -143,7 +143,7 @@ int __console_rx_pipe_ptr(uint8_t ** ptr)
 	pos = (head % CONSOLE_PIPE_LEN);
 	/* get the free space */
 	cnt = pipe->tail + CONSOLE_PIPE_LEN - head;
-	/* check whether to wrap arround or on not */
+	/* check whether to wrap around or on not */
 	if ((pos + cnt) > CONSOLE_PIPE_LEN) {
 		/* get the number of chars from head pos until the end of buffer */
 		cnt = CONSOLE_PIPE_LEN - pos;
@@ -202,7 +202,7 @@ int __console_tx_pipe_ptr(uint8_t ** ptr)
 	cnt = pipe->head - tail;
 	DCC_LOG4(LOG_INFO, "head=%d tail=%d cnt=%d pos=%d", 
 			 pipe->head, tail, cnt, pos);
-	/* check whether to wrap arround or on not */
+	/* check whether to wrap around or on not */
 	if ((pos + cnt) > CONSOLE_PIPE_LEN) {
 		/* get the number of chars from tail pos until the end of buffer */
 		cnt = CONSOLE_PIPE_LEN - pos;

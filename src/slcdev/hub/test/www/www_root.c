@@ -119,6 +119,8 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = firmware_load_cgi },
     { .oid = "get_status.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = get_status_cgi },
+    { .oid = "get_stdout.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+    		.len = 0, .ptr = get_stdout_cgi },
     { .oid = "rpc_exec.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = rpc_exec_cgi },
     { .oid = "rpc_js.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,

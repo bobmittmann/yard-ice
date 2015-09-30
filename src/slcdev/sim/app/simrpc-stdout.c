@@ -52,6 +52,7 @@ int simrpc_stdout_write(struct simrpc_console * out,
 		if (n > free)
 			n = free;
 		memcpy(&out->buf[out->len], buf, n);
+		rem -= n;
 		out->len += n;
 		if (out->len == SIMRPC_DATA_MAX) {
 			uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 

@@ -29,7 +29,7 @@ CFILES = ../boot/board.c ../boot/simlnk.c ../boot/simrpc_mem.c \
 		 ../app/slcdev-db.c ../app/slcdev-drv.c ../app/slcdev-lib.c \
 		 ../app/slcdev-log.c ../app/slcdev-sim.c ../app/slcdev-str.c\
 		 ../app/simlnk-usr.c ../app/simrpc-file.c ../app/simrpc-sys.c \
-		 ../app/simrpc-sim.c ../app/slcdev-app.c app.c
+		 ../app/simrpc-sim.c ../app/simrpc-stdout.c ../app/slcdev-app.c app.c
 
 SDK = ../../../sdk
 

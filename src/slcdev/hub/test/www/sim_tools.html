@@ -10,6 +10,35 @@
 
 <script src="/lib/zepto.js.gz"></script>
 <script>
+
+	function get_stdout() {
+		var port = $('#selport').val();
+		$.ajax({
+	 		type: 'GET',
+			url: 'get_stdout.cgi',
+			data: { 
+				port: port,
+	 		},
+			dataType: 'text',
+			timeout: 100,
+			context: $('body'),
+			success: function(data) {
+				if (data) {
+					var pre = $('#results');
+   					pre.append(data);
+   			    	pre.scrollTop(pre.prop("scrollHeight"));
+   			    	stdout_flush_tmo = 500;
+				}
+	   			setTimeout(get_stdout, stdout_flush_tmo);
+	   		},
+			error: function(xhr, type){  
+				setTimeout(get_stdout, 5000);
+			},
+			complete: function(xhr, status){				
+			}
+		});
+	};
+
 	function get_status(port) {
 		var tr = $('#stat' + port);
 		$.ajax({
@@ -43,7 +72,9 @@
 				tr.html(html);
 			},
 			error: function(xhr, type) { 
-				alert('Ajax error!') 
+				alert('Ajax error!');
+				if (port == $('#selport').val())
+					stdout_flush_tmo = 5000;
 			}
 		});
 	}
@@ -65,15 +96,34 @@
 
 	$(function() {
         $('#btnrefresh').on('click', status_poll);
-		$('#formfirm').on('submit', firmware_upload);		
+		$('#formfirm').on('submit', firmware_upload);
 		status_poll();
+		$('#selport').on('change', get_stdout);
+		get_stdout();
+		stdout_flush_tmo = 500;
     });
 
 </script>
 </head>
 
 <body>
-<h1>CRAB Device Simulator - Tools</h1>
+<div id="header">
+	<h1>CRAB Simulator Tools</h1>
+</div>
+
+<div id="navigation">
+	<ul>
+		<li><a href="index.html">Home</a></li>
+		<li><a href="sim_database.html">Database</a></li>
+		<li><a href="sim_config.html">Config</a></li>
+		<li><a href="sim_monitor.html">Monitor</a></li>
+		<li><a href="#" class="active">Tools</a></li>		
+		<li><a href="rpc_test.html">Test</a></li>
+	</ul>
+</div>
+
+<div id="content">
+
 
 <table>
 	<thead>
@@ -196,7 +246,7 @@
 			    }, 500);  
 			},
 			error: function(xhr, type){
-				alert('Ajax error!')
+				alert('Ajax error!');
 			},
 			complete: function(xhr, status){
 				box.innerHTML = "";
@@ -211,6 +261,8 @@
 
 <div class="form" style="min-width: 10em; max-width: 40em;">
 	<table class="formgrid" style="width: 100%; table-layout: fixed;">
+	<col width="70%">
+  	<col width="30%">
 	<tr>
 		<td colspan="2">
 		<pre id="results" style="height: 10em;"></pre>		
@@ -221,9 +273,16 @@
 		<input type="text" id="cmd" value="help" list="browsers" 
 		style="width: 100%; font-family: monospace;"/>
 		<datalist id="browsers">
+			<option value="help">
 			<option value="ls">
 			<option value="rm cfg.bin">
 			<option value="rm db.bin">
+			<option value="disable sens all">
+			<option value="disable mod all">
+			<option value="disable sens 1 2 3">
+			<option value="disable mod 1 2 3">
+			<option value="enable mod 1 2 3">
+			<option value="enable mod 1 2 3">
 		</datalist>
 		</td>
 		<td style="vertical-align: top;">		
@@ -232,7 +291,7 @@
 	</tr>
 	<tr>
 		<td>	
-<textarea id="script" style="width: 100%; height: 8em;">
+<textarea id="script" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 8em;">
 var i;
 		
 for(i = 0; i &lt; 100; i = i + 1) {
@@ -262,11 +321,12 @@ for(i = 0; i &lt; 100; i = i + 1) {
 			timeout: 5000,
 			context: $('body'),
 			success: function(data) {
-	 			$('#results').empty();
-	   			$('#results').text(data);
+//	 			$('#results').empty();
+//	   			$('#results').text(data);
 	   		},
 			error: function(xhr, type){ 
-				alert('Ajax error!') 
+				alert('Ajax error!');
+				stdout_flush_tmo = 5000;
 			},
 			complete: function(xhr, status){
 				$('.button').prop('disabled', false);
@@ -279,22 +339,19 @@ for(i = 0; i &lt; 100; i = i + 1) {
 		var script = $('#script').val();
 		$('.button').prop('disabled', true);
 		$.ajax({
-	 		type: 'GET',
-			url: 'rpc_js.cgi',
-			data: {
-				port: port,
-				script: script
-	 		},
+	 		type: 'POST',
+			url: 'rpc_js.cgi?port=' + port,
+	 		data: script,
 			dataType: 'text',
 			timeout: 5000,
 			context: $('body'),
-/*			contentType: 'multipart/form-data', */
+ 			contentType: 'text/plain',
 			success: function(data) {
-	 			$('#results').empty();
-	   			$('#results').text(data);
+	   			/* $('#results').text(data); */
 	   		},
 			error: function(xhr, type){ 
-				alert('Ajax error!') 
+				alert('Ajax error!'); 
+				stdout_flush_tmo = 5000;				
 			},
 			complete: function() {
 				$('.button').prop('disabled', false);				
@@ -308,12 +365,13 @@ for(i = 0; i &lt; 100; i = i + 1) {
 	});
 </script>
 
-<hr>
-<a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>
-- Cortex-M Operating System - 
-<i><a href="https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i>
-<br>&copy; Copyright 2013-2015, Bob Mittmann<br>
+</div>
+
+<div id="footer">
+<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
+<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
+&copy; Copyright 2013-2015, Bob Mittmann<br>
+</div>
 
 </body>
 </html>
-

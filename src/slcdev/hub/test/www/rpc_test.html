@@ -109,7 +109,7 @@
 						html += '<td>?.?.?</td><td>?</td>';
 					}
 				} else {
-					html += '<td>?.?.?</td><td>?</td>';				
+					html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
 				}		
 				tr.html(html);
 			},
@@ -152,8 +152,23 @@
 </head>
 
 <body>
-<h1>CRAB Device Simulator - RPC Test</h1>
 
+<div id="header">
+	<h1>CRAB Simulator - RPC Test</h1>
+</div>
+
+<div id="navigation">
+	<ul>
+		<li><a href="index.html">Home</a></li>
+		<li><a href="sim_database.html">Database</a></li>
+		<li><a href="sim_config.html">Config</a></li>
+		<li><a href="sim_monitor.html">Monitor</a></li>
+		<li><a href="sim_tools.html">Tools</a></li>	
+		<li><a href="#" class="active">Test</a></li>
+	</ul>
+</div>
+
+<div id="content">
 <table>
 	<thead>
 		<tr>
@@ -355,12 +370,13 @@
 	</form>
 </div>
 
-<hr>
-<a href="https://github.com/bobmittmann/yard-ice"> <b>ThinkOS</b></a>
-- Cortex-M Operating System - 
-<i><a href="https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i>
-<br>&copy; Copyright 2013-2015, Bob Mittmann<br>
+</div>
+
+<div id="footer">
+<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
+<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
+&copy; Copyright 2013-2015, Bob Mittmann<br>
+</div>
 
 </body>
 </html>
-

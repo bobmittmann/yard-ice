@@ -9,6 +9,7 @@
 #include <simrpc.h>
 #include <trace.h>
 #include <hexdump.h>
+#include <thinkos.h>
 #include <sys/file.h>
 #include <sys/null.h>
 #include "profclk.h"
@@ -358,6 +359,10 @@ const char error_html[] = "<!DOCTYPE html><html><body>\r\n"
 		"ERROR!\r\n"
 		"</body></html>\r\n";
 
+const char ok_html[] = "<!DOCTYPE html><html><body>\r\n"
+		"OK\r\n"
+		"</body></html>\r\n";
+
 int rpc_test_file_load(struct httpctl * http, int port, char * fname)
 {
 	struct simrpc_pcb * sp;
@@ -507,6 +512,47 @@ int file_read_cgi(struct httpctl * http)
 
 	if (simrpc_file_close(sp) < 0) {
 		WARN("simrpc_file_close() failed!");
+	}
+
+	simrpc_close(sp);
+	return 0;
+}
+
+int simrpc_stdout_get(struct simrpc_pcb * sp, void * buf, unsigned int max);
+
+int get_stdout_cgi(struct httpctl * http)
+{
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char buf[HTML_MAX];
+	int port;
+	int n;
+
+	port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+    httpd_200(http->tp, TEXT_PLAIN);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed!");
+	    return http_send(http, error_html, sizeof(error_html) - 1);
+	}
+
+	n = simrpc_stdout_get(sp, buf, sizeof(buf));
+	if (n == 0) {
+//		DBG("simrpc_stdout_flush()...");
+		simrpc_stdout_flush(sp);
+		thinkos_sleep(50);
+		n = simrpc_stdout_get(sp, buf, sizeof(buf));
+	}
+
+	while (n > 0) {
+		http_send(http, buf, n);
+		n = simrpc_stdout_get(sp, buf, sizeof(buf));
+	}
+
+	if (n < 0) {
+		WARN("simrpc_stdout_get() failed!");
 	}
 
 	simrpc_close(sp);
@@ -683,31 +729,34 @@ int rpc_js_cgi(struct httpctl * http)
 {
 	struct simrpc_pcb * sp;
 	unsigned int daddr;
-    char * script;
-	char s[512];
+	char script[512];
     int port;
+    int cnt;
     int n;
 
     port = atoi(http_query_lookup(http, "port"));
-    script = http_query_lookup(http, "script");
 	daddr = port;
 
-//	INF("port=%d script='%s'", port, script);
     httpd_200(http->tp, TEXT_HTML);
+
+    cnt = http_recv(http, script, sizeof(script) - 1);
+    script[cnt] = '\0';
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
-		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+		http_send(http, error_html, sizeof(error_html) - 1);
 	} else {
 		simrpc_set_timeout(sp, 1000);
-		if ((n = simrpc_jsexec(sp, script, s, 512)) < 0) {
+		if ((n = simrpc_jsexec(sp, script, script, cnt)) < 0) {
 			WARN("simrpc_jsexec() failed!");
-			n = sprintf(s, "#ERROR: simrpc_jsexec() failed!\n");
+			http_send(http, error_html, sizeof(error_html) - 1);
+		} else {
+			http_send(http, ok_html, sizeof(ok_html) - 1);
 		}
 		simrpc_close(sp);
 	}
 
-	return http_send(http, s, n);
+	return 0;
 }
 
 /*---------------------------------------------------------------------------

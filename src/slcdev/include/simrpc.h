@@ -204,6 +204,8 @@ int simrpc_attr_get(struct simrpc_pcb * sp,
 
 struct simlnk * simrpc_route(unsigned int daddr);
 
+int simrpc_stdout_flush(struct simrpc_pcb * sp);
+
 #ifdef __cplusplus
 }
 #endif

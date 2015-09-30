@@ -42,11 +42,13 @@ int __simrpc_send_opc(uint32_t opc);
 #define EEPROM_MIN ((uint32_t)STM32_MEM_EEPROM)
 #define EEPROM_MAX ((uint32_t)STM32_MEM_EEPROM + 8192)
 
+#define SIMRPC_UNLOCK SIMRPC_ADDR_BCAST
+
 uint32_t mem_base;
 uint32_t mem_top;
 uint32_t mem_ptr;
 uint32_t mem_clk;
-uint8_t mem_lock = SIMRPC_BCAST;
+uint8_t mem_lock = SIMRPC_UNLOCK;
 
 #define MEM_LOCK_TIMEOUT_MS 1000
 
@@ -68,7 +70,7 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	clk = __thinkos_ticks();
 
-	if (mem_lock != SIMRPC_BCAST) {
+	if (mem_lock != SIMRPC_UNLOCK) {
 		if ((int32_t)(clk - mem_clk) < MEM_LOCK_TIMEOUT_MS) {
 			DCC_LOG(LOG_WARNING, "locked");
 			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);

@@ -67,6 +67,9 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 			   const void * req, unsigned int cnt,
 			   void * rsp, unsigned int max);
 
+int simlnk_rpc_async(struct simrpc_pcb * sp, uint32_t insn,
+			   const void * buf, unsigned int cnt);
+
 #ifdef __cplusplus
 }
 #endif
