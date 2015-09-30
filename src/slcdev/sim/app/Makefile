@@ -41,9 +41,9 @@ CDEFS = CONFIG_H NDEBUG
 CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-VERSION_DATE = "2015-09-28"
+VERSION_DATE = "2015-09-30"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "6"
+VERSION_MINOR = "7"
 
 LOAD_ADDR = 0x08004000
 JTAGTOOL_ADDR = 192.168.10.50

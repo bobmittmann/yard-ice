@@ -25,6 +25,7 @@
 
 #include "board.h"
 #include "flashfs.h"
+#include "stats.h"
 #include <stdio.h>
 #include <thinkos.h>
 #include <microjs.h>
@@ -351,6 +352,7 @@ struct slcdev_drv {
 		uint16_t pw; /* pulse width (microsseconds) */
 	} isink;
 	struct ss_device * volatile dev;
+	struct slcdev_stats stats;
 };
 
 /* Control bits simulation trigger:
@@ -492,6 +494,8 @@ void slcdev_ssdev_disable(struct ss_device * dev);
 struct ss_device * slcdev_ssdev_getinstance(bool module, unsigned int addr);
 
 void slcdev_update_ap(void); 
+
+void slcdev_stats_get(struct slcdev_stats * stats);
 
 #ifdef __cplusplus
 }

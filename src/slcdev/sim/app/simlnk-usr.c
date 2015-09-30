@@ -95,6 +95,9 @@ void __attribute__((noreturn)) simlnk_recv_task(void)
 		case SIMRPC_STDOUT_FLUSH:
 			simrpc_stdout_flush_svc(hdr, data, cnt);
 			break;
+		case SIMRPC_STATS:
+			simrpc_stats_get_svc(hdr, data, cnt);
+			break;
 
 		default:
 			DCC_LOG1(LOG_WARNING, "Invalid insn: %d", SIMRPC_INSN(hdr));

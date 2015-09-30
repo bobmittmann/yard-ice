@@ -29,6 +29,7 @@
 #include <stdlib.h> 
 #include <stdbool.h> 
 #include <stdint.h> 
+#include "stats.h"
 
 enum simrpc_err {
 	SIMRPC_EBADMSG   = -0x7ffffff4,
@@ -100,6 +101,13 @@ struct simrpc_attr_req {
 	uint8_t count;
 };
 
+struct simrpc_stats {
+	uint32_t uptime;
+	bool db_ok;
+	bool cfg_ok;
+    struct slcdev_stats dev;
+};
+
 #define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
 
 struct simrpc_pcb;
@@ -152,6 +160,8 @@ int simrpc_suspend(struct simrpc_pcb * sp);
 int simrpc_resume(struct simrpc_pcb * sp);
 int simrpc_reboot(struct simrpc_pcb * sp);
 int simrpc_exec(struct simrpc_pcb * sp, uint32_t key);
+
+int simrpc_stats_get(struct simrpc_pcb * sp, struct simrpc_stats * stats);
 
 int simrpc_kernelinfo_get(struct simrpc_pcb * sp, 
 						  struct simrpc_kernelinfo * inf);

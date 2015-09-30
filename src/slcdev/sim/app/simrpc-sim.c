@@ -24,6 +24,7 @@
 #include <sys/serial.h>
 #include <sys/param.h>
 #include <string.h>
+#include <time.h>
 
 #include "board.h"
 #include "simlnk.h"
@@ -80,5 +81,17 @@ void simrpc_attr_get_svc(uint32_t hdr, uint32_t * data, unsigned int len)
 	}
 
 	simrpc_send(SIMRPC_REPLY_OK(hdr), val, cnt * sizeof(uint32_t));
+}
+
+void simrpc_stats_get_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+{
+	struct simrpc_stats stats;
+
+	stats.uptime = time(NULL);
+	stats.db_ok = device_db_is_sane();
+	stats.cfg_ok = config_is_sane();
+	slcdev_stats_get((struct slcdev_stats *)&stats.dev);
+
+	simrpc_send(SIMRPC_REPLY_OK(hdr), &stats, sizeof(stats));
 }
 

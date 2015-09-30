@@ -465,13 +465,24 @@ static void ap_hdr_decode(uint32_t msg)
 	unsigned int ipw;
 	unsigned int ilat;
 	unsigned int irq;
+	bool chk;
 
+	sum = ap_chksum(msg);
+	chk = (sum == (msg >> 15));
+
+	if (!chk)
+		slcdev_drv.stats.ap_herr++;
+	else
+		slcdev_drv.stats.ap_poll++;
+
+#if 0
 	if ((slcdev_drv.ap.s.act == 0) && (slcdev_drv.ap.m.act == 0)) {
 		/* No AP devices active, ignore the communication */
 		slcdev_drv.state = DEV_IDLE;
 		DCC_LOG(LOG_INFO, "[IDLE]");
 		return;
 	}
+#endif
 
 	/* AP defalt values*/
 	icfg = slcdev_drv.ap.icfg;
@@ -481,19 +492,23 @@ static void ap_hdr_decode(uint32_t msg)
 
 	irq = 0;
 
-	sum = ap_chksum(msg);
+	if (!chk) {
+		if ((slcdev_drv.ap.s.act == 0) && (slcdev_drv.ap.m.act == 0)) {
+			/* No AP devices active, ignore the communication */
+			slcdev_drv.state = DEV_IDLE;
+			DCC_LOG(LOG_INFO, "[IDLE]");
+		} else {
+			DCC_LOG3(LOG_WARNING, "hdr=%05x sum=%x diff=%x!", 
+					 msg, sum, sum ^ (msg >> 15));
 
-	if (sum != (msg >> 15)) {
-		DCC_LOG3(LOG_WARNING, "hdr=%05x sum=%x diff=%x!", 
-				 msg, sum, sum ^ (msg >> 15));
-
-		/* prepare for current sinking */
-		isink_mode_set(icfg);
-		slcdev_drv.isink.pre = ipre;
-		slcdev_drv.isink.pw = ipw;
-		slcdev_drv.isink.lat = ilat;
-		slcdev_drv.state = DEV_AP_HDR_ERR;
-		DCC_LOG(LOG_WARNING, "[AP_HDR_ERR]");
+			/* prepare for current sinking */
+			isink_mode_set(icfg);
+			slcdev_drv.isink.pre = ipre;
+			slcdev_drv.isink.pw = ipw;
+			slcdev_drv.isink.lat = ilat;
+			slcdev_drv.state = DEV_AP_HDR_ERR;
+			DCC_LOG(LOG_WARNING, "[AP_HDR_ERR]");
+		}
 		return;
 	}
 
@@ -565,18 +580,22 @@ static void ap_hdr_decode(uint32_t msg)
 		case AP_OPC_NULL:
 			DCC_LOG(LOG_TRACE, "AP Null");
 			slcdev_drv.sim.ap.insn = AP_NULL;
+			slcdev_drv.stats.ap_null++;
 			break;
 		case AP_OPC_RD_ALM_LATCH_T:
 			DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Tens");
 			slcdev_drv.sim.ap.insn = AP_RD_ALM_LATCH_T;
+			slcdev_drv.stats.ap_ralt++;
 			break;
 		case AP_OPC_RD_TBL_LATCH_T:
 			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens");
 			slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_T;
+			slcdev_drv.stats.ap_rtlt++;
 			break;
 		case AP_OPC_RD_TBL_LATCH_T_SB:
 			DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Tens SB");
 			slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_T;
+			slcdev_drv.stats.ap_rtltsb++;
 			break;
 		default:
 			switch (msg & AP_OPC_RD_UNITS_MASK) {
@@ -587,14 +606,17 @@ static void ap_hdr_decode(uint32_t msg)
 				slcdev_drv.sim.ap.insn = AP_RD_PRESENCE;
 				slcdev_drv.sim.ap.parm = (tens << 1) | mod;
 				thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_AP_RD_PRESENCE);
+				slcdev_drv.stats.ap_rp++;
 				break;
 			case AP_OPC_RD_ALM_LATCH_U:
 				DCC_LOG(LOG_TRACE, "AP Read Alarm Latch Units");
 				slcdev_drv.sim.ap.insn = AP_RD_ALM_LATCH_U;
+				slcdev_drv.stats.ap_ralu++;
 				break;
 			case AP_OPC_RD_TBL_LATCH_U:
 				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units");
 				slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_U;
+				slcdev_drv.stats.ap_rtlu++;
 				break;
 			case AP_OPC_RD_PRESENCE_SB:
 				tens = addr_dec_lut[(msg >> 1) & 0xf]; /* Tens address bits. */
@@ -603,10 +625,12 @@ static void ap_hdr_decode(uint32_t msg)
 				slcdev_drv.sim.ap.insn = AP_RD_PRESENCE;
 				slcdev_drv.sim.ap.parm = (tens << 1) | mod;
 				thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_AP_RD_PRESENCE);
+				slcdev_drv.stats.ap_rpsb++;
 				break;
 			case AP_OPC_RD_TBL_LATCH_U_SB:
 				DCC_LOG(LOG_TRACE, "AP Read Trouble Latch Units SB");
 				slcdev_drv.sim.ap.insn = AP_RD_TBL_LATCH_U;
+				slcdev_drv.stats.ap_rtlusb++;
 				break;
 			default:
 //				DCC_LOG1(LOG_WARNING, "AP hdr err: %017B", msg);
@@ -614,6 +638,7 @@ static void ap_hdr_decode(uint32_t msg)
 						 msg & 0x1f, (msg  >> 5) & 0x0f, (msg >> 9) & 0x3f);
 				slcdev_drv.sim.ap.insn = AP_NULL;
 				slcdev_drv.state = DEV_IDLE;
+				slcdev_drv.stats.ap_uerr++;
 				DCC_LOG(LOG_INFO, "[IDLE]");
 				return;
 			}
@@ -924,6 +949,7 @@ static void clip_msg_decode(uint32_t msg)
 	if (parity != (msg >> 12)) {
 		DCC_LOG1(LOG_WARNING, "MSG=%04x parity error!", msg);
 		slcdev_drv.state = DEV_IDLE;
+		slcdev_drv.stats.clip_err++;
 		DCC_LOG(LOG_INFO, "[IDLE]");
 		return;
 	}
@@ -942,6 +968,8 @@ static void clip_msg_decode(uint32_t msg)
 		DCC_LOG1(LOG_INFO, "ctls=0x%04x", slcdev_drv.sim.ctls);
 	}
 	slcdev_drv.dev = dev;
+
+	slcdev_drv.stats.clip_poll++;
 
 	/* trigger module */
 	if ((msg & slcdev_drv.trig.msk) == slcdev_drv.trig.cmp) {
@@ -972,8 +1000,11 @@ static void clip_msg_decode(uint32_t msg)
 		/* signal the simulator */
 		thinkos_ev_raise_i(SLCDEV_DRV_EV, SLC_EV_DEV_POLL);
 
-		/* update poll counter */
+		/* update device's poll counter */
 		dev->pcnt++;
+
+		/* update clip response counter */
+		slcdev_drv.stats.clip_resp++;
 
 		if (dev->event != 0) {
 			/* if an simulation event is correlated to the device,
@@ -1006,12 +1037,12 @@ void stm32_tim10_isr(void)
 	if (csr & COMP_CMP1OUT) {
 		/* VSLC at 24V (Power Level) */
 
-
-		/* XXX: this is for debug only */
 		if ((slcdev_drv.state != DEV_IDLE) &&
 			(slcdev_drv.state != DEV_PW5_ISINK)) {
 //			DCC_LOG2(LOG_WARNING, "%d: unexpected state: %d", 
 //					 slcdev_drv.addr, slcdev_drv.state);
+			/* update general protocol error counter */
+			slcdev_drv.stats.proto_err++;
 		}
 
 		DCC_LOG(LOG_MSG, "[RST] !!!!!!!!");
@@ -1229,6 +1260,8 @@ void stm32_comp_tsc_isr(void)
 					DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 					slcdev_drv.state = DEV_IDLE;
 					DCC_LOG1(LOG_INFO, "[%d IDLE]", dev->addr);
+					/* update clip response counter */
+					slcdev_drv.stats.clip_resp++;
 				}
 				break;
 			case DEV_PW5_ISINK:
@@ -1236,6 +1269,10 @@ void stm32_comp_tsc_isr(void)
 				DCC_LOG(LOG_MSG, "<ISINK IDLE>");
 				slcdev_drv.state = DEV_IDLE;
 				DCC_LOG(LOG_INFO, "[IDLE]");
+				/* update clip PW5 poll counter */
+				slcdev_drv.stats.clip_pw5++;
+				/* update clip response counter */
+				slcdev_drv.stats.clip_resp++;
 				break;
 			case DEV_AP_ERR_BIT:
 				slcdev_drv.isink.state = ISINK_IDLE;
@@ -1666,5 +1703,10 @@ struct ss_device * slcdev_ssdev_getinstance(bool module, unsigned int addr)
 	dev = &ss_dev_tab[addr + (module ? 160 : 0)];
 
 	return dev;
+}
+
+void slcdev_stats_get(struct slcdev_stats * stats)
+{
+	*stats = slcdev_drv.stats;
 }
 

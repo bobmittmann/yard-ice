@@ -89,6 +89,12 @@ int simrpc_cfginfo_get(struct simrpc_pcb * sp, struct simrpc_cfginfo * inf)
 			sizeof(struct simrpc_cfginfo));
 }
 
+int simrpc_stats_get(struct simrpc_pcb * sp, struct simrpc_stats * stats)
+{
+	return simlnk_rpc(sp, SIMRPC_STATS, NULL, 0, stats,
+			sizeof(struct simrpc_stats));
+}
+
 int simrpc_cfg_compile(struct simrpc_pcb * sp, char * resp, unsigned int max)
 {
 	return simlnk_rpc(sp, SIMRPC_CFGCOMPILE, NULL, 0,  resp, max);

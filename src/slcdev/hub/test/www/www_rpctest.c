@@ -575,37 +575,38 @@ int get_status_cgi(struct httpctl * http)
 
 	INF("port=%d", port);
 
-   	httpd_200(http->tp, APPLICATION_JSON);
-
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
-	 	n = snprintf(s, HTML_MAX, "{\"state\": \"Error\"}\r\n");
-	} else {
-		simrpc_set_timeout(sp, 50);
-		if (simrpc_kernelinfo_get(sp, &kinf) < 0) {
-			WARN("simrpc_kernelinfo_get() failed!");
-		 	n = snprintf(s, HTML_MAX, "{\"state\": \"Offline\"}\r\n");
-		} else {
-			cp = s;
-		 	cp += snprintf(cp, HTML_MAX, "{\"state\": \"Online\", \"kernel\": {"
-		 			"\"ticks\": %d, \"version\": { \"major\": %d, "
-		 			"\"minor\": %d, \"build\": %d }}",
-					kinf.ticks, kinf.version.major,
-					kinf.version.minor, kinf.version.build);
-			if (simrpc_appinfo_get(sp, &ainf) < 0) {
-				WARN("simrpc_appinfo() failed!");
-			 	cp += snprintf(cp, HTML_MAX, "}\r\n");
-			} else {
-			 	cp += snprintf(cp, HTML_MAX, ", \"app\": {"
-			 		"\"uptime\": %d, \"version\": { \"major\": %d, "
-		 			"\"minor\": %d, \"build\": %d }}}\r\n",
-					ainf.uptime, ainf.version.major,
-					ainf.version.minor, ainf.version.build);
-			}
-		 	n = cp - s;
-		}
-		simrpc_close(sp);
+		return rpc_json_error(http, 0, "simrpc_open() failed");
 	}
+
+	simrpc_set_timeout(sp, 50);
+
+   	httpd_200(http->tp, APPLICATION_JSON);
+
+	if (simrpc_kernelinfo_get(sp, &kinf) < 0) {
+		WARN("simrpc_kernelinfo_get() failed!");
+	 	n = snprintf(s, HTML_MAX, "{\"state\": \"Offline\"}\r\n");
+	} else {
+		cp = s;
+	 	cp += snprintf(cp, HTML_MAX, "{\"state\": \"Online\", \"kernel\": {"
+	 			"\"ticks\": %d, \"version\": { \"major\": %d, "
+	 			"\"minor\": %d, \"build\": %d }}",
+				kinf.ticks, kinf.version.major,
+				kinf.version.minor, kinf.version.build);
+		if (simrpc_appinfo_get(sp, &ainf) < 0) {
+			WARN("simrpc_appinfo() failed!");
+		 	cp += snprintf(cp, HTML_MAX, "}\r\n");
+		} else {
+		 	cp += snprintf(cp, HTML_MAX, ", \"app\": {"
+		 		"\"uptime\": %d, \"version\": { \"major\": %d, "
+	 			"\"minor\": %d, \"build\": %d }}}\r\n",
+				ainf.uptime, ainf.version.major,
+				ainf.version.minor, ainf.version.build);
+		}
+	 	n = cp - s;
+	}
+	simrpc_close(sp);
 
 	return http_send(http, s, n);
 }

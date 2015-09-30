@@ -70,9 +70,9 @@ int httpd_task(struct httpd * httpd)
 }
 
 #define HTTPD_STACK_SIZE (2048 + 512)
-#define HTTPD_TASK_CNT 2
+#define HTTPD_TASK_CNT 4
 
-uint32_t httpd_stack[HTTPD_TASK_CNT][HTTPD_STACK_SIZE / 4];
+uint32_t httpd_stack[HTTPD_TASK_CNT][HTTPD_STACK_SIZE / 4] __attribute__((section (".ccm")));
 
 const struct thinkos_thread_inf httpd_inf[HTTPD_TASK_CNT] = {
 	{
@@ -90,6 +90,22 @@ const struct thinkos_thread_inf httpd_inf[HTTPD_TASK_CNT] = {
 		.thread_id = 8,
 		.paused = false,
 		.tag = "HTTPD2"
+	},
+	{
+		.stack_ptr = httpd_stack[2],
+		.stack_size = HTTPD_STACK_SIZE,
+		.priority = 32,
+		.thread_id = 9,
+		.paused = false,
+		.tag = "HTTPD4"
+	},
+	{
+		.stack_ptr = httpd_stack[3],
+		.stack_size = HTTPD_STACK_SIZE,
+		.priority = 32,
+		.thread_id = 10,
+		.paused = false,
+		.tag = "HTTPD4"
 	},
 };
 

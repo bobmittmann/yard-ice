@@ -78,13 +78,40 @@ table.monitor td {
 	text-align: center;
 }
 
-table.monitor tr:nth-child(odd) {
+table.monitor tbody tr:nth-child(odd) {
 	background: #f8f8f8;
 }
 
-table.monitor tr:nth-child(even) {
+table.monitor tbody tr:nth-child(even) {
 	
 	background: #d8e8f8;
+}
+
+table.zebra {
+	border-collapse: collapse;
+	border: 1px solid black; 
+	table-layout: fixed;
+}
+
+table.zebra td {
+	text-align: center;
+
+	padding: 0;
+	margin: 0;	
+}
+
+table.zebra tbody tr:nth-child(odd) {
+	background: #f8f8f8;
+}
+
+table.zebra tbody tr:nth-child(even) {
+	
+	background: #d8e8f8;
+}
+
+table.zebra thead {
+	background: #a0b0e0;
+	color: black;
 }
 
 table.formgrid {
