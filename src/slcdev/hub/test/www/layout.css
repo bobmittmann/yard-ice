@@ -1,0 +1,179 @@
+* {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+body {
+	background: #fff;
+	color: #333;
+	font: 0.9em Arial, Helvetica, "bitstream vera sans", sans-serif;
+	margin: 0;
+}
+
+a {
+	color: #779;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #335;
+	text-decoration: none;
+}
+
+p {
+	color: #111;
+	text-align: justify;
+	margin: 10px 0px 20px 0px;
+}
+
+h1 {
+	font-size: 1.5em;
+	text-align: left;
+	margin: .2em 0 1em 0;
+	letter-spacing:-2px;
+	text-align:left;
+	font-weight:600;
+}
+
+h2 {
+	font-size: 1.3em;
+	text-align: left;
+	margin: .2em 0 0.4em 0;
+}
+
+
+body {
+	background: #fff;
+	color: #333;
+	font: 0.9em Arial, Helvetica, "bitstream vera sans", sans-serif;
+	margin: 0;
+	position: relative;
+	float: left;
+	margin: 0 auto;
+	width: 1000px;
+}
+
+header {
+	border-bottom:1px solid black;
+	position: fixed; 
+	left: 0px; 
+	top: 0px;
+	clear: both;
+	padding: 0px 0px 8px 8px;
+    height: 36px;
+    width: 1000px;
+    background: #ddd;  
+}
+
+header h1 {
+	letter-spacing:-2px;
+	text-align:left;
+}
+
+.container {
+	position: relative;
+	margin: 0 auto;
+	width: 1000px;
+	background: #666633;  
+}
+
+.wrapper {
+	position: relative;
+	left: 0px; 
+	top: 36px;
+	width: 1000px;
+	float: left;  
+}
+
+nav {
+	position: fixed;
+	left: 0px;  
+	top: 36px;
+	width: 100px;  
+	height: 100%;
+	background: #fff;   
+}
+
+nav li {
+	float: right; 
+	width: 96px;
+	list-style:none;
+	font-weight:600;
+}
+
+nav div.top {
+	border-right: 1px solid black;
+	position: relative;
+	top: 0px;
+	height: 10px;
+}
+
+nav div.tabs {
+	position: relative;
+	top: 0px;
+	border: 0;
+	overflow: auto;
+}
+
+nav div.bot {
+	border-right: 1px solid black;
+	position: relative;
+	top: 0px;
+	height: 100%;	
+}
+  
+nav a {
+	border-left: 1px solid black;
+	border-right: 1px solid black; 
+	border-bottom: 1px solid black;
+	border-top-left-radius: 5px;
+	border-bottom-left-radius: 5px; 	
+	display: block;
+	line-height: 1.8em; 
+	text-align: center;
+	text-decoration: none;
+	color: #444;
+	background: #eee;
+}
+
+nav a.top {
+	border-top: 1px solid black;
+}
+
+nav a.active {
+	border-right:0;
+	color: #000;
+	background: #fff;
+}
+
+nav a:hover {
+	background: #444;
+	color:#eee;
+}
+
+section {
+    float: right; 
+    background: #FFFFFF;
+    padding: 8px 0px 0px 8px;
+    width: 900px;  
+}
+
+footer {
+  border-top:1px solid black;
+  position: fixed;
+  bottom: 0;
+  left: 0; 
+  height: 40px;
+  width: 1000px;
+  clear: both;  
+  font-size: 75%;
+  background: #fff;  
+}
+
+body {
+  margin-bottom: 120px;
+}

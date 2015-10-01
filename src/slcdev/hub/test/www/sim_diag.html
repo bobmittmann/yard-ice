@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
 <title>CRAB Simulator Diagnostics</title>
 
-<script src="/lib/zepto.js.gz"></script>
+<script src="zepto.min.js"></script>
 <script>
 	function row_create(tbody, i, name) {
 		var row = tbody.insertRow(i);
@@ -18,7 +19,7 @@
 	}
 	
 	function table_create() {
-		var table = document.getElementById('stats');
+		var table = $('#stats')[0];
 		var tbody = table.getElementsByTagName('tbody')[0];
 		var row = tbody.insertRow(0);
 			
@@ -32,8 +33,8 @@
 		row_create(tbody, 4, 'Clip parity error');
 		row_create(tbody, 5, 'Clip poll responses');
 		row_create(tbody, 6, 'Clip PW5 requests');
-		row_create(tbody, 7, 'AP mode poll received');
-		row_create(tbody, 8, 'AP mode header checksum error');
+		row_create(tbody, 7, 'AP poll received');
+		row_create(tbody, 8, 'AP header checksum error');
 		row_create(tbody, 9, 'AP Null');
 		row_create(tbody, 10, 'AP Read Alarm Latch Tens');
 		row_create(tbody, 11, 'AP Read Trouble Latch Tens');
@@ -142,60 +143,69 @@
 	
 	$(function() {
 		table_create();
-		poll_stats()
+//		poll_stats()
     });
 
 </script>
 </head>
 
 <body>
-<div id="header">
-	<h1>CRAB Simulator Diagnostics</h1>
+<div class="wrapper">	
+	<section>
+		<table id="stats" class="zebra">
+		 	<col width="250px" />
+		    <col width="75px" />
+		    <col width="75px" />
+		    <col width="75px" />
+		    <col width="75px" />
+		    <col width="75px" />
+			<thead>
+				<tr>
+					<th style="border-top-style: hidden; border-left-style: hidden; background: #fff"></th>
+					<th>Port 1</th>
+					<th>Port 2</th>
+					<th>Port 3</th>
+					<th>Port 4</th>
+					<th>Port 5</th>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>	
+		</table>
+		
+		*<b>AP</b>: Advanced Protocol.
+		*<b>SB</b>: Sounder Base.
+	</section>		
 </div>
 
-<div id="navigation">
-	<ul>
-		<li><a href="index.html">Home</a></li>
+<header>
+	<h1>CRAB Simulator Diagnostics</h1>		
+</header>
+
+<nav>
+	<div class="top"></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>				
 		<li><a href="sim_database.html">Database</a></li>
 		<li><a href="sim_config.html">Config</a></li>
 		<li><a href="sim_monitor.html">Monitor</a></li>
-		<li><a href="sim_tools.html">Tools</a></li>	
- 		<li><a href="#" class="active">Diagnostics</a></li>
-	</ul>
-</div>
+		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a class="active" href="#">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a href="sim_test.html">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>				
+	</ul></div>
+	<div class="bot"></div>
+</nav>
 
-<div id="content">
-
-<table id="stats" class="zebra">
- 	<col width="10em" />
-    <col width="6em" />
-    <col width="6em" />
-    <col width="6em" />
-    <col width="6em" />
-    <col width="6em" />
-	<thead>
-	<tr>
-		<th></th>
-		<th>Port 1</th>
-		<th>Port 2</th>
-		<th>Port 3</th>
-		<th>Port 4</th>
-		<th>Port 5</th>
-	</tr>
-	</thead>
-	<tbody>
-	</tbody>	
-</table>
-
-*<b>AP</b>: Advanced Protocol.
-*<b>SB</b>: Sounder Base.
-</div>
-
-<div id="footer">
-<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
-<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
-&copy; Copyright 2013-2015, Bob Mittmann<br>
-</div>
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>
 
 </body>
 </html>
+

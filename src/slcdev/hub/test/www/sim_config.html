@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
 <title>CRAB Simulator Configuration</title>
@@ -154,33 +155,18 @@
 </head>
 
 <body>
-<div id="header">
-	<h1>CRAB Simulator Configuration</h1>
-</div>
 
-<div id="navigation">
-	<ul>
-		<li><a href="index.html">Home</a></li>
-		<li><a href="sim_database.html">Database</a></li>
-		<li><a href="#" class="active">Config</a></li>
-		<li><a href="sim_monitor.html">Monitor</a></li>
-		<li><a href="sim_tools.html">Tools</a></li>
-		<li><a href="sim_diag.html">Diagnostics</a></li>
-	</ul>
-</div>
-
-<div id="content">
-
-<div class="form">
+<div class="wrapper">		
+	<section>
 	<form id="formcfg" enctype="multipart/form-data" action="cfg_load.cgi">
 		<div>
 		<table class="formgrid">
 		<tr>
-			<td style="text-align: right;">Status:</td>
+			<th>Status:</th>
 			<td id="status"></td>
 		</tr>
 		<tr>
-			<td style="text-align: right;">Simulator:</td>
+			<th>Simulator:</th>
 			<td>
 				<select id="selport">
 					<option value="1">Port 1</option>
@@ -192,7 +178,7 @@
 			</td>
 		</tr>
 		<tr>
-			<td style="text-align: right;">Configuration:</td>
+			<th>Configuration:</th>
 			<td>
 			<input type="text" class="text" id="__fname"
 				readonly="readonly" maxlength="128" size="20" /> <input
@@ -214,27 +200,48 @@
 			<p id="__msg"></p>
 		</div>		
 	</form>
+	</section>
+
+	<section>
+		<input id="btnread" type="button" class="button" value="Read..." />
+		<input id="btncompile" type="button" class="button" value="Compile..." />
+	</section>
+	
+	<section>
+		<pre id="results" style="width: 100%; height: 6em;">
+		</pre>		
+		<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
+		</textarea> 
+	</section>
 </div>
 
-<div>
-	<input id="btnread" type="button" class="button" value="Read..." />
-	<input id="btncompile" type="button" class="button" value="Compile..." />
-</div>
+<header>
+	<h1>CRAB Simulator Configuration</h1>		
+</header>
 
-<div class="form" style="min-width: 10em; max-width: 40em;">
-	<pre id="results" style="width: 100%; height: 6em;">
-	</pre>		
-	<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
-	</textarea> 
-</div>
+<nav>
+	<div class="top" ></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>		
+		<li><a href="sim_database.html">Database</a></li>		
+		<li><a class="active" href="#">Config</a></li>
+		<li><a href="sim_monitor.html">Monitor</a></li>
+		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a href="sim_diag.html">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a href="sim_test.html">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>				
+	</ul></div>
+	<div class="bot"></div>
+</nav>
 
-</div>
-
-<div id="footer">
-<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
-<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
-&copy; Copyright 2013-2015, Bob Mittmann<br>
-</div>
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>
 
 </body>
 </html>

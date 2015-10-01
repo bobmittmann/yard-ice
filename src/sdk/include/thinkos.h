@@ -626,7 +626,7 @@ void thinkos_gate_open_i(int gate);
 
 
 /** @brief Close the gate if the gate is @b OPEN or 
- * remove pending signaling it the gate is @ LOCKED.
+ * remove pending signaling if the gate is @ LOCKED.
  *
  * @param gate The gate descriptor.
  * @return #THINKOS_EINVAL if @p gate is invalid, #THINKOS_OK otherwise. 

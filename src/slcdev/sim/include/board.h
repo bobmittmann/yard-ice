@@ -119,14 +119,13 @@
  * ------------------------------------------------------------------------- */
 
 /* serial driver transmission flag */
-//#define SERDRV_RX_FLAG THINKOS_FLAG_DESC(0) 
-#define SERDRV_RX_GATE THINKOS_GATE_DESC(1) 
-/* serial driver reception gate */
-#define SERDRV_TX_GATE THINKOS_GATE_DESC(0) 
-/* SLC device driver event set */
 #define SLCDEV_DRV_EV  THINKOS_EVENT_DESC(0) 
 /* Console mutex */
 #define CONSOLE_MUTEX THINKOS_MUTEX_DESC(0) 
+/* JS VM mutex */
+#define JSRUNTIME_MUTEX THINKOS_MUTEX_DESC(1) 
+/* serial driver reception gate */
+#define JSRUNTIME_GATE THINKOS_GATE_DESC(0) 
 
 #define IO_POLL_PERIOD_MS 16
 

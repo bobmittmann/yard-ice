@@ -10,35 +10,6 @@
 
 <script src="/lib/zepto.js.gz"></script>
 <script>
-
-	function get_stdout() {
-		var port = $('#selport').val();
-		$.ajax({
-	 		type: 'GET',
-			url: 'get_stdout.cgi',
-			data: { 
-				port: port,
-	 		},
-			dataType: 'text',
-			timeout: 100,
-			context: $('body'),
-			success: function(data) {
-				if (data) {
-					var pre = $('#results');
-   					pre.append(data);
-   			    	pre.scrollTop(pre.prop("scrollHeight"));
-   			    	stdout_flush_tmo = 500;
-				}
-	   			setTimeout(get_stdout, stdout_flush_tmo);
-	   		},
-			error: function(xhr, type){  
-				setTimeout(get_stdout, 5000);
-			},
-			complete: function(xhr, status){				
-			}
-		});
-	};
-
 	function get_status(port) {
 		var tr = $('#stat' + port);
 		$.ajax({
@@ -94,97 +65,110 @@
 		p.innerHTML = html;
 	}
 
+
+	function firmware_upload(event) {
+		var lst = this.elements;
+		var box = this.querySelector('#__msg');	
+		var port = $('#selport').val();
+		
+		alert_box(box, "Uploading firmware, please wait...");
+		$('.button').prop('disabled', true);
+		$.ajax({
+			url: this.action + '?port=' + port,
+			type: 'POST',
+			data: new FormData(this),
+			processData: false,
+			contentType: false,
+			success: function() {
+				box.innerHTML = "";
+			    setTimeout(function(){ 
+			    	get_status(port);
+			    }, 500);  
+			},
+			error: function(xhr, type){
+				alert('Ajax error!');
+			},
+			complete: function(xhr, status){
+				box.innerHTML = "";
+				$('.button').prop('disabled', false);
+			}
+		});
+		event.preventDefault();
+	}
+
 	$(function() {
         $('#btnrefresh').on('click', status_poll);
 		$('#formfirm').on('submit', firmware_upload);
 		status_poll();
-		$('#selport').on('change', get_stdout);
-		get_stdout();
-		stdout_flush_tmo = 500;
     });
 
 </script>
 </head>
 
 <body>
-<div id="header">
-	<h1>CRAB Simulator Tools</h1>
-</div>
 
-<div id="navigation">
-	<ul>
-		<li><a href="index.html">Home</a></li>
-		<li><a href="sim_database.html">Database</a></li>
-		<li><a href="sim_config.html">Config</a></li>
-		<li><a href="sim_monitor.html">Monitor</a></li>
-		<li><a href="#" class="active">Tools</a></li>	
-		<li><a href="sim_diag.html">Diagnostics</a></li>
-	</ul>
-</div>
+<div class="wrapper">	
+	<section>
+		<h2>Ports Status</h2>
+		<table>
+			<thead>
+				<tr>
+				<th>Port</th>
+				<th>Status</th>
+				<th>Kernel</th>
+				<th>Ticks</th>		
+				<th>Firmware</th>
+				<th>Uptime</th>
+				</tr>
+			</thead>
+			<tr id="stat1">
+				<td>1</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>
+			<tr id="stat2">
+				<td>2</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat3">
+				<td>3</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat4">
+				<td>4</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat5">
+				<td>5</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>				
+			</tr>		
+		</table>
 
-<div id="content">
+		<input id="btnrefresh" type="button" class="button" value="Refresh..." />
+	</section>
 
+	<h2>Firmware upgrade</h2>
 
-<table>
-	<thead>
-		<tr>
-		<th>Port</th>
-		<th>Status</th>
-		<th>Kernel</th>
-		<th>Ticks</th>		
-		<th>Firmware</th>
-		<th>Uptime</th>
-		</tr>
-	</thead>
-	<tr id="stat1">
-		<td>1</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>
-	<tr id="stat2">
-		<td>2</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat3">
-		<td>3</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat4">
-		<td>4</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat5">
-		<td>5</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>				
-	</tr>		
-</table>
-
-<input id="btnrefresh" type="button" class="button" value="Refresh..." />
-
-<hr />
-
-<h2>Firmware upgrade</h2>
-
-<div class="form">
+	<section>	
 	<form id="formfirm" enctype="multipart/form-data" action="firmware_load.cgi">
 		<div>
 		<table class="formgrid">
@@ -223,155 +207,37 @@
 			<p id="__msg"></p>
 		</div>		
 	</form>
+
+	</section>
 </div>
 
-<script>
-	function firmware_upload(event) {
-		var lst = this.elements;
-		var box = this.querySelector('#__msg');	
-		var port = $('#selport').val();
-		
-		alert_box(box, "Uploading firmware, please wait...");
-		$('.button').prop('disabled', true);
-		$.ajax({
-			url: this.action + '?port=' + port,
-			type: 'POST',
-			data: new FormData(this),
-			processData: false,
-			contentType: false,
-			success: function() {
-				box.innerHTML = "";
-			    setTimeout(function(){ 
-			    	get_status(port);
-			    }, 500);  
-			},
-			error: function(xhr, type){
-				alert('Ajax error!');
-			},
-			complete: function(xhr, status){
-				box.innerHTML = "";
-				$('.button').prop('disabled', false);
-			}
-		});
-		event.preventDefault();
-	}
-</script>
+<header>
+	<h1>CRAB Simulator Firmware</h1>		
+</header>
 
-<hr />
+<nav>
+	<div class="top"></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>				
+		<li><a href="sim_database.html">Database</a></li>
+		<li><a href="sim_config.html">Config</a></li>
+		<li><a href="sim_monitor.html">Monitor</a></li>
+		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a class="active" href="#">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a href="sim_test.html">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>				
+	</ul></div>
+	<div class="bot"></div>
+</nav>
 
-<div class="form" style="min-width: 10em; max-width: 40em;">
-	<table class="formgrid" style="width: 100%; table-layout: fixed;">
-	<col width="70%">
-  	<col width="30%">
-	<tr>
-		<td colspan="2">
-		<pre id="results" style="height: 10em;"></pre>		
-		</td>
-	</tr>
-	<tr>		
-		<td>
-		<input type="text" id="cmd" value="help" list="browsers" 
-		style="width: 100%; font-family: monospace;"/>
-		<datalist id="browsers">
-			<option value="help">
-			<option value="ls">
-			<option value="rm cfg.bin">
-			<option value="rm db.bin">
-			<option value="disable sens all">
-			<option value="disable mod all">
-			<option value="disable sens 1 2 3">
-			<option value="disable mod 1 2 3">
-			<option value="enable mod 1 2 3">
-			<option value="enable mod 1 2 3">
-		</datalist>
-		</td>
-		<td style="vertical-align: top;">		
-		<button id="btnexec" class="button">Exec...</button>
-		</td>
-	</tr>
-	<tr>
-		<td>	
-<textarea id="script" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 8em;">
-var i;
-		
-for(i = 0; i &lt; 100; i = i + 1) {
-&#09;printf("%d\n",i);
-}
-</textarea>
-		</td>
-		<td style="vertical-align: top;">						
-		<button id="btnjs" class="button">Run Script...</button>
-		</td>
-	</tr>
-	</table>
-</div>
-<script>
-	function cmd_exec() {
-		var port = $('#selport').val();
-		var cmd = $('#cmd').val();
-		$('.button').prop('disabled', true);
-		$.ajax({
-	 		type: 'GET',
-			url: 'rpc_exec.cgi',
-			data: { 
-				port: port,
-				cmd: cmd
-	 		},
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
-			success: function(data) {
-//	 			$('#results').empty();
-//	   			$('#results').text(data);
-	   		},
-			error: function(xhr, type){ 
-				alert('Ajax error!');
-				stdout_flush_tmo = 5000;
-			},
-			complete: function(xhr, status){
-				$('.button').prop('disabled', false);
-			}
-		});
-	};
-
-	function rpc_js() {		
-		var port = $('#selport').val();
-		var script = $('#script').val();
-		$('.button').prop('disabled', true);
-		$.ajax({
-	 		type: 'POST',
-			url: 'rpc_js.cgi?port=' + port,
-	 		data: script,
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
- 			contentType: 'text/plain',
-			success: function(data) {
-	   			/* $('#results').text(data); */
-	   		},
-			error: function(xhr, type){ 
-				alert('Ajax error!'); 
-				stdout_flush_tmo = 5000;				
-			},
-			complete: function() {
-				$('.button').prop('disabled', false);				
-			}
-		});
-	};
-	
-	$(function() {
-		$(document).on('click', '#btnexec', cmd_exec);
-		$(document).on('click', '#btnjs', rpc_js);
-	});
-</script>
-
-</div>
-
-<div id="footer">
-<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
-<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
-&copy; Copyright 2013-2015, Bob Mittmann<br>
-</div>
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>
 
 </body>
 </html>

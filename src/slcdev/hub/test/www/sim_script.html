@@ -163,72 +163,141 @@
 </head>
 
 <body>
-	<div class="wrapper">
+<div class="wrapper">
+
 	<section>
-		<table class="formgrid" style="width: 100%; table-layout: fixed;">
-		<col width="70%">
-	  	<col width="30%">
-		<tr>
-			<td colspan="2">
-			<pre id="results" style="height: 10em;"></pre>		
-			</td>
-		</tr>
-		<tr>		
-			<td>
-			<input type="text" id="cmd" value="help" list="browsers" 
-			style="width: 100%; font-family: monospace;"/>
-			<datalist id="browsers">
-				<option value="help">
-				<option value="ls">
-				<option value="rm cfg.bin">
-				<option value="rm db.bin">
-				<option value="disable sens all">
-				<option value="disable mod all">
-				<option value="disable sens 1 2 3">
-				<option value="disable mod 1 2 3">
-				<option value="enable mod 1 2 3">
-				<option value="enable mod 1 2 3">
-			</datalist>
-			</td>
-			<td style="vertical-align: top;">		
-			<button id="btnexec" class="button">Exec...</button>
-			</td>
-		</tr>
-		<tr>
-			<td>	
-<textarea id="script" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 8em;">
+		<div class="jsbox">
+		<table class="thidden">
+			<tr><th>Port 1:</th></tr>
+			<tr style="height: 100%;"><td>
+				<textarea class="script" id="script" autocomplete="off" wrap="logical" spellcheck="false" 
+				style="width: 100%; height: 100%;">
 var i;
 		
 for(i = 0; i &lt; 100; i = i + 1) {
 &#09;printf("%d\n",i);
 }
-</textarea>
-		</td>
-		<td style="vertical-align: top;">						
-		<button id="btnjs" class="button">Run Script...</button>
-		</td>
-	</tr>
-	</table>
+				</textarea>
+			</td></tr>
+			<tr style="height: auto;"><td>
+				<button id="btnjs" class="button">Run Script...</button>
+			</td></tr>
+		</table>
+		</div>		
+		<div class="termbox">				
+			<pre id="results" style="height: 100%;"></pre>
+		</div>
 	</section>
-			
+	
+	<section>
+		<div class="jsbox">
+		<table class="thidden">
+			<tr><th>Port 2:</th></tr>
+			<tr style="height: 100%;"><td>
+				<textarea class="script" id="script" autocomplete="off" wrap="logical" spellcheck="false"">
+var i;
+		
+for(i = 0; i &lt; 100; i = i + 1) {
+&#09;printf("%d\n",i);
+}
+				</textarea>
+			</td></tr>
+			<tr style="height: auto;"><td>
+				<button id="btnjs" class="button">Run Script...</button>
+			</td></tr>
+		</table>
+		</div>		
+		<div class="termbox">				
+			<pre id="results" style="height: 100%;"></pre>
+		</div>
+	</section>			
+	
+	<section>
+		<div class="jsbox">
+		<table class="thidden">
+			<tr><th>Port 3:</th></tr>
+			<tr style="height: 100%;"><td>
+				<textarea class="script" id="script" autocomplete="off" wrap="logical" spellcheck="false"">
+var i;
+		
+for(i = 0; i &lt; 100; i = i + 1) {
+&#09;printf("%d\n",i);
+}
+				</textarea>
+			</td></tr>
+			<tr style="height: auto;"><td>
+				<button id="btnjs" class="button">Run Script...</button>
+			</td></tr>
+		</table>
+		</div>		
+		<div class="termbox">				
+			<pre id="results" style="height: 100%;"></pre>
+		</div>
+	</section>			
+	
+		<section>
+		<div class="jsbox">
+		<table class="thidden">
+			<tr><th>Port 4:</th></tr>
+			<tr style="height: 100%;"><td>
+				<textarea class="script" id="script" autocomplete="off" wrap="logical" spellcheck="false">
+var i;
+		
+for(i = 0; i &lt; 100; i = i + 1) {
+&#09;printf("%d\n",i);
+}
+				</textarea>
+			</td></tr>
+			<tr style="height: auto;"><td>
+				<button id="btnjs" class="button">Run Script...</button>
+			</td></tr>
+		</table>
+		</div>		
+		<div class="termbox">				
+			<pre id="results" style="height: 100%;"></pre>
+		</div>
+	</section>			
+	
+		<section>
+		<div class="jsbox">
+		<table class="thidden">
+			<tr><th>Port 5:</th></tr>
+			<tr style="height: 100%;"><td>
+				<textarea class="script" id="script" autocomplete="off" wrap="logical" spellcheck="false">
+var i;
+		
+for(i = 0; i &lt; 100; i = i + 1) {
+&#09;printf("%d\n",i);
+}
+				</textarea>
+			</td></tr>
+			<tr style="height: auto;"><td>
+				<button id="btnjs" class="button">Run Script...</button>
+			</td></tr>
+		</table>
+		</div>		
+		<div class="termbox">				
+			<pre id="results" style="height: 100%;"></pre>
+		</div>
+	</section>			
+				
 </div>
 	
-	<header>
-		<h1>CRAB Simulator Tools</h1>
-	</header>
-
+<header>
+	<h1>CRAB Simulator Tools</h1>
+</header>
 
 <nav>
 	<div class="top"></div>
 	<div class="tabs"><ul>
 		<li><a class="top" href="index.html">Home</a></li>
-		<li><a class="active" href="#">Network</a></li>				
+		<li><a href="network.html">Network</a></li>				
 		<li><a href="sim_database.html">Database</a></li>
 		<li><a href="sim_config.html">Config</a></li>
 		<li><a href="sim_monitor.html">Monitor</a></li>
 		<li><a href="sim_tools.html">Tools</a></li>
 		<li><a href="sim_diag.html">Diagnostics</a></li>
-		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a class="active" href="#">Scripts</a></li>
 		<li><a href="sim_test.html">Tests</a></li>
 		<li><a href="sim_firmware.html">Firmware</a></li>			
 	</ul>

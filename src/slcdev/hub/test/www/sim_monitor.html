@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
 <title>CRAB Device Monitor</title>
@@ -96,26 +97,10 @@
 </head>
 
 <body>
+<div class="wrapper">	
 
-<div id="header">
-	<h1>CRAB Simulator Monitor</h1>
-</div>
+	<section>
 
-<div id="navigation">
-	<ul>
-		<li><a href="index.html">Home</a></li>
-		<li><a href="sim_database.html">Database</a></li>
-		<li><a href="sim_config.html">Config</a></li>
-		<li><a href="#" class="active">Monitor</a></li>
-		<li><a href="sim_tools.html">Tools</a></li>
-		<li><a href="sim_diag.html">Diagnostics</a></li>
-	</ul>
-</div>
-
-<div id="content">
-
-
-<div class="form">
 	<table class="formgrid">
 	<tr>
 		<td style="text-align: right;">Simulator:</td>
@@ -144,8 +129,9 @@
 		</td>
 	</tr>	
 	</table>				
-</div>
+</section>
 
+<section>
 <table class="monitor">
 	<thead>
 		<tr>
@@ -164,13 +150,36 @@
 	</tbody>
 </table>
 
-</div>
+</section>
 
-<div id="footer">
-<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
-<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
-&copy; Copyright 2013-2015, Bob Mittmann<br>
-</div>
+<header>
+	<h1>CRAB Simulator Monitor</h1>		
+</header>
+
+<nav>
+	<div class="top"></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>		
+		<li><a href="sim_database.html">Database</a></li>		
+		<li><a href="sim_config.html">Config</a></li>
+		<li><a class="active" href="#">Monitor</a></li>
+		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a href="sim_diag.html">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a href="sim_test.html">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>
+	</ul></div>
+	<div class="bot"></div>
+</nav>
+
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>
 
 </body>
 </html>
+

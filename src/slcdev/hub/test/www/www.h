@@ -63,30 +63,34 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_SIM_DIAG_HTML 1822
+#define SIZEOF_SIM_FIRMWARE_HTML 2056
 
-#define SIZEOF_INDEX_HTML 634
+#define SIZEOF_SIM_DIAG_HTML 1948
 
-#define SIZEOF_SIM_MONITOR_HTML 1579
+#define SIZEOF_INDEX_HTML 1463
+
+#define SIZEOF_SIM_MONITOR_HTML 1667
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 2749
+#define SIZEOF_SIM_TOOLS_HTML 2079
 
-#define SIZEOF_SIM_DATABASE_HTML 2133
+#define SIZEOF_SIM_DATABASE_HTML 2194
 
-#define SIZEOF_SIM_CONFIG_HTML 1994
+#define SIZEOF_SIM_CONFIG_HTML 2065
 
 #define SIZEOF_RPC_TEST_HTML 2495
 
-#define SIZEOF_NETWORK_HTML 1707
+#define SIZEOF_NETWORK_HTML 1101
 
-#define SIZEOF_STYLE_CSS 1306
+#define SIZEOF_STYLE_CSS 1030
 
 #define SIZEOF_TOOLS_HTML 1431
 
 
 /* --- bin.hex.py: file content --- */
+
+extern const uint8_t sim_firmware_html[];
 
 extern const uint8_t sim_diag_html[];
 
@@ -144,3 +148,4 @@ int sim_getstats_cgi(struct httpctl * http);
 #endif
 
 #endif
+

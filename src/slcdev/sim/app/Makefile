@@ -22,7 +22,7 @@
 PROG = slcdev-app
 
 CFILES = slcdev-app.c io.c isink.c slcdev-drv.c \
-		 serdrv.c slcdev-db.c flashfs.c shell.c\
+		 slcdev-db.c flashfs.c shell.c\
 		 slcdev-sim.c slcdev-cfg.c\
 		 slcdev-str.c slcdev-lib.c profclk.c js.c slcdev-log.c\
 		 simlnk-usr.c simrpc-file.c simrpc-sys.c simrpc-sim.c\
@@ -38,7 +38,7 @@ LIBS = gcc stm32f cm3 util c crc shell microjs
 INCPATH = $(SDK)/include ../include ../../include
 
 CDEFS = CONFIG_H NDEBUG
-CFLAGS = -g -O2 -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
+CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
 VERSION_DATE = "2015-09-30"

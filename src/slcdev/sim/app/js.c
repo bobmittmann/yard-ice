@@ -51,31 +51,38 @@ void __attribute__((noreturn)) js_runtime_task(void)
 	int ret;
 
 	for (;;) {
+		thinkos_gate_wait(JSRUNTIME_GATE); 
+
+		thinkos_mutex_lock(JSRUNTIME_MUTEX); 
+
 		rt = symtab_rt_get(symtab);
+		fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
 
 		if (rt->stack_sz > sizeof(stack)) {
 			fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
-			continue;
-		}
+		} else {
 
 #if MICROJS_TRACE_ENABLED
-		microjs_vm_tracef = f;
+			microjs_vm_tracef = f;
 #endif
 
-		/* initialize virtual machine instance */
-		microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
+			/* initialize virtual machine instance */
+			microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
 
-		start_clk = profclk_get();
-		if ((ret = microjs_exec(&vm, slcdev_jscode)) != 0){
-			fprintf(f, "# exec error: %d\n", ret);
-			continue;
+
+			start_clk = profclk_get();
+			if ((ret = microjs_exec(&vm, slcdev_jscode)) != 0){
+				fprintf(f, "# exec error: %d\n", ret);
+			} else {
+				if (SLCDEV_VERBOSE()) {
+					stop_clk = profclk_get();
+					fprintf(f, "Exec time: %d us.\n", 
+							profclk_us(stop_clk - start_clk));
+				}
+			}
 		}
 
-		if (SLCDEV_VERBOSE()) {
-			stop_clk = profclk_get();
-			fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
-		}
-		fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
+		thinkos_mutex_unlock(JSRUNTIME_MUTEX); 
 	}
 }
 
@@ -109,6 +116,11 @@ int js(FILE * f, char * script, unsigned int len)
 		return -1;
 	}
 
+	/* foce JS VM to stop */
+	memset(slcdev_jscode, (MISCOP | OPC_ABT), sizeof(slcdev_jscode));
+
+	thinkos_mutex_lock(JSRUNTIME_MUTEX); 
+
 	symstat = symtab_state_save(symtab);
 
 	/* start the syntax direct translation */
@@ -123,39 +135,42 @@ int js(FILE * f, char * script, unsigned int len)
 		DCC_LOG1(LOG_WARNING, "compile error: %d", ret);
 		microjs_sdt_error(f, microjs, ret);
 		DCC_LOG(LOG_TRACE, "...");
-		return -1;
-	}
-
-	/* end the syntax direct translation */
-	if ((ret = microjs_sdt_end(microjs)) < 0) {
+		ret = -1;
+	} else if ((ret = microjs_sdt_end(microjs)) < 0) {
+		/* end the syntax direct translation */
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# translation error: %d\n", -ret);
 		DCC_LOG1(LOG_WARNING, "translation error: %d", ret);
 		microjs_sdt_error(f, microjs, ret);
 		DCC_LOG(LOG_TRACE, "...");
-		return -1;
+		ret = -1;
+	} else {
+		stop_clk = profclk_get();
+		/* get the compiled code size */
+		code_sz = ret;
+		rt = symtab_rt_get(symtab);
+
+		if (SLCDEV_VERBOSE()) {
+			fprintf(f, " - Compile time: %d us.\n", 
+					profclk_us(stop_clk - start_clk));
+			fprintf(f, " - code: %d\n", code_sz);
+			fprintf(f, " - data: %d of %d\n", rt->data_sz, 
+					sizeof(slcdev_vm_data));
+		}
+
+		if (rt->data_sz > sizeof(slcdev_vm_data)) {
+			symtab_state_rollback(symtab, symstat);
+			fprintf(f, "# data overflow. %d bytes required\n", rt->data_sz);
+			ret = -1;
+		} else {
+			thinkos_gate_open(JSRUNTIME_GATE); 
+			ret = 0;
+		}
 	}
 
-	stop_clk = profclk_get();
+	thinkos_mutex_unlock(JSRUNTIME_MUTEX); 
 
-	/* get the compiled code size */
-	code_sz = ret;
-	rt = symtab_rt_get(symtab);
-
-	if (SLCDEV_VERBOSE()) {
-		fprintf(f, " - Compile time: %d us.\n", 
-				profclk_us(stop_clk - start_clk));
-		fprintf(f, " - code: %d\n", code_sz);
-		fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
-	}
-
-	if (rt->data_sz > sizeof(slcdev_vm_data)) {
-		symtab_state_rollback(symtab, symstat);
-		fprintf(f, "# data overflow. %d bytes required\n", rt->data_sz);
-		return -1;
-	}
-
-	return 0;
+	return ret;
 }
 
 
