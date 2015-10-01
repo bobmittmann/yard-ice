@@ -19,10 +19,13 @@ void __attribute__((noreturn)) sim_event_task(void);
 
 void __attribute__((noreturn)) simlnk_recv_task(void);
 
+void __attribute__((noreturn)) js_runtime_task(void);
+
 //uint32_t __attribute__((aligned(8))) sim_event_stack[96];
 uint32_t __attribute__((aligned(8))) simlnk_stack[512 + 256];
 
 void isink_test(void);
+void js_runtime_init(void);
 
 int __attribute__((noreturn)) app_main(void)
 {
@@ -92,6 +95,8 @@ int __attribute__((noreturn)) app_main(void)
 	/* stay forever in the SIMLNK task */
 	simlnk_task();
 #endif
+
+	js_runtime_init();
 
 	/* create a thread to handle simulation link incoming requests */
 	thinkos_thread_create((void *)simlnk_recv_task, (void *)NULL,

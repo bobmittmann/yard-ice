@@ -35,16 +35,65 @@
 #include <sys/dcclog.h>
 
 uint32_t slcdev_symbuf[64]; /* symbol table buffer */
+uint8_t slcdev_jscode[512]; /* compiled code */
+
+uint32_t __attribute__((aligned(8))) js_runtime_stack[512];
+
+void __attribute__((noreturn)) js_runtime_task(void)
+{
+	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
+	struct microjs_rt * rt;
+	struct microjs_vm vm; 
+	uint32_t start_clk;
+	uint32_t stop_clk;
+	int32_t stack[16]; /* exec stack */
+	FILE * f = stderr;
+	int ret;
+
+	for (;;) {
+		rt = symtab_rt_get(symtab);
+
+		if (rt->stack_sz > sizeof(stack)) {
+			fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
+			continue;
+		}
+
+#if MICROJS_TRACE_ENABLED
+		microjs_vm_tracef = f;
+#endif
+
+		/* initialize virtual machine instance */
+		microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
+
+		start_clk = profclk_get();
+		if ((ret = microjs_exec(&vm, slcdev_jscode)) != 0){
+			fprintf(f, "# exec error: %d\n", ret);
+			continue;
+		}
+
+		if (SLCDEV_VERBOSE()) {
+			stop_clk = profclk_get();
+			fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
+		}
+		fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
+	}
+}
+
+void js_runtime_init(void)
+{
+	/* create a thread to run microjs scripts */
+	thinkos_thread_create((void *)js_runtime_task, (void *)NULL,
+						  js_runtime_stack, sizeof(js_runtime_stack) | 
+						  THINKOS_OPT_PRIORITY(3) | THINKOS_OPT_ID(3));
+}
+
 
 int js(FILE * f, char * script, unsigned int len)
 {
 	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
-	uint8_t code[512]; /* compiled code */
 	uint32_t sdtbuf[64]; /* compiler buffer */
-	int32_t stack[16]; /* exec stack */
 	struct microjs_sdt * microjs; 
 	struct microjs_rt * rt;
-	struct microjs_vm vm; 
 	struct symstat symstat;
 	uint32_t start_clk;
 	uint32_t stop_clk;
@@ -63,11 +112,11 @@ int js(FILE * f, char * script, unsigned int len)
 	symstat = symtab_state_save(symtab);
 
 	/* start the syntax direct translation */
-	microjs_sdt_begin(microjs, code, sizeof(code));
+	microjs_sdt_begin(microjs, slcdev_jscode, sizeof(slcdev_jscode));
 
 	start_clk = profclk_get();
 	/* compile */
-	microjs_sdt_begin(microjs, code, sizeof(code));
+	microjs_sdt_begin(microjs, slcdev_jscode, sizeof(slcdev_jscode));
 	if ((ret = microjs_compile(microjs, script, len)) < 0) {
 		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# compile error: %d\n", -ret);
@@ -98,37 +147,15 @@ int js(FILE * f, char * script, unsigned int len)
 				profclk_us(stop_clk - start_clk));
 		fprintf(f, " - code: %d\n", code_sz);
 		fprintf(f, " - data: %d of %d\n", rt->data_sz, sizeof(slcdev_vm_data));
-		fprintf(f, " - stack: %d of %d\n", rt->stack_sz, sizeof(stack));
 	}
 
 	if (rt->data_sz > sizeof(slcdev_vm_data)) {
+		symtab_state_rollback(symtab, symstat);
 		fprintf(f, "# data overflow. %d bytes required\n", rt->data_sz);
 		return -1;
 	}
 
-	if (rt->stack_sz > sizeof(stack)) {
-		fprintf(f, "# stack overflow. %d bytes required\n", rt->stack_sz);
-		return -1;
-	}
-
-#if MICROJS_TRACE_ENABLED
-	microjs_vm_tracef = f;
-#endif
-
-	/* initialize virtual machine instance */
-	microjs_vm_init(&vm, rt, NULL, slcdev_vm_data, stack);
-
-	start_clk = profclk_get();
-	if ((ret = microjs_exec(&vm, code)) != 0){
-		fprintf(f, "# exec error: %d\n", ret);
-		return -1;
-	}
-
-	if (SLCDEV_VERBOSE()) {
-		stop_clk = profclk_get();
-		fprintf(f, "Exec time: %d us.\n", profclk_us(stop_clk - start_clk));
-	}
-
 	return 0;
 }
+
 
