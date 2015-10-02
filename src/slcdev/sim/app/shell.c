@@ -44,6 +44,8 @@
 #include "slcdev-lib.h"
 #include "version.h"
 
+#if ENABLE_SHELL
+
 extern const struct shell_cmd cmd_tab[];
 const char version_str[] = "SLC Device Simulator " \
 							VERSION_NUM " - " VERSION_DATE;
@@ -1160,4 +1162,6 @@ const struct shell_cmd cmd_tab[] = {
 
 	{ NULL, "", "", NULL, NULL }
 };
+
+#endif
 

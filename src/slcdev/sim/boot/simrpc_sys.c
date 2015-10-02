@@ -69,14 +69,16 @@ void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	board_soft_reset();
 
-	board_exec(board_reboot);
+	board_exec(board_reboot, NULL);
 }
 
 void simlnk_int_enable(void);
+void app_default(void *);
 
 void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	uint32_t key;
+	const char * mode;
 
 	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
@@ -87,25 +89,23 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	key = data[0];
 	if (key == SIMRPC_EXEC_KEY('A', 'P', 'P', 0)) {
-		if (board_app_exec(THINKOS_APP_ADDR)) {
-			__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-		} else {
-			DCC_LOG(LOG_WARNING, "Invalid application!");
-			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
-		}
+		mode = "normal";
+	} else if (key == SIMRPC_EXEC_KEY('S', 'A', 'F', 'E')) {
+		mode = "safe";
+	} else {
+		DCC_LOG(LOG_WARNING, "Invalid Key");
+		board_exec(app_default, NULL);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 		return;
 	}
 
-#if 0
-	if (key == SIMRPC_EXEC_KEY('T', 'E', 'S', 'T')) {
+	if (board_app_exec(THINKOS_APP_ADDR, (void *)mode)) {
 		__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-		thinkos_app_exec((uint32_t)board_test, false);
-		return;
+	} else {
+		DCC_LOG(LOG_WARNING, "Invalid application!");
+		board_exec(app_default, NULL);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 	}
-#endif
-
-	DCC_LOG(LOG_WARNING, "Invalid Key");
-	__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 }
 
 void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)

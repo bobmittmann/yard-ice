@@ -124,8 +124,8 @@
 #define CONSOLE_MUTEX THINKOS_MUTEX_DESC(0) 
 /* JS VM mutex */
 #define JSRUNTIME_MUTEX THINKOS_MUTEX_DESC(1) 
-/* serial driver reception gate */
-#define JSRUNTIME_GATE THINKOS_GATE_DESC(0) 
+/* serial driver reception flag */
+#define JSRUNTIME_FLAG THINKOS_FLAG_DESC(0) 
 
 #define IO_POLL_PERIOD_MS 16
 
@@ -153,11 +153,11 @@ void board_soft_reset(void);
 
 bool board_app_check(uint32_t addr);
 
-void board_reboot(void);
+void board_reboot(void * arg);
 
-bool board_app_exec(uint32_t addr);
+bool board_app_exec(uint32_t addr, void * arg);
 
-void board_exec(void (* func)(void));
+void board_exec(void (* func)(void *), void * arg);
 
 #ifdef __cplusplus
 }

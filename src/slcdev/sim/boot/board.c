@@ -82,22 +82,6 @@ void board_init(void)
  * Application execution
  * ------------------------------------------------------------------------- */
 
-static const char * const app_argv[] = {
-	"app"
-};
-
-static void __attribute__((noreturn)) app_bootstrap(void * arg)
-{
-	int (* app_reset)(int argc, char ** argv);
-	uintptr_t thumb_call = (uintptr_t)arg | 1;
-
-	app_reset = (void *)thumb_call;
-	for (;;) {
-		DCC_LOG(LOG_TRACE, "app_reset()");
-		app_reset(1, (char **)app_argv);
-	}
-}
-
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
@@ -120,7 +104,7 @@ void board_soft_reset(void)
 	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
 }
 
-void board_reboot(void)
+void board_reboot(void * arg)
 {
 	DCC_LOG(LOG_TRACE, "thinkos_sleep()");
 	thinkos_sleep(10);
@@ -128,13 +112,12 @@ void board_reboot(void)
 	cm3_sysrst();
 }
 
-void board_exec(void (* func)(void))
+void board_exec(void (* func)(void *), void * arg)
 {
 	int thread_id = 0;
 
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)func);
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, arg);
 
 #if THINKOS_ENABLE_THREAD_INFO
 	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
@@ -147,14 +130,14 @@ void board_exec(void (* func)(void))
 	__thinkos_defer_sched();
 }
 
-bool board_app_exec(uint32_t addr)
+bool board_app_exec(uint32_t addr, void * arg)
 {
-	uint32_t * app = (uint32_t *)addr;
+	uint32_t * signature = (uint32_t *)addr;
 	int thread_id = 0;
 
-	if ((app[0] != 0x0a0de004) ||
-		(app[1] != 0x6e696854) ||
-		(app[2] != 0x00534f6b)) {
+	if ((signature[0] != 0x0a0de004) ||
+		(signature[1] != 0x6e696854) ||
+		(signature[2] != 0x00534f6b)) {
 		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", app);
 
 		return false;
@@ -163,10 +146,19 @@ bool board_app_exec(uint32_t addr)
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
 	__thinkos_thread_abort(thread_id);
 
-	board_exec((void *)app);
+	board_exec((void *)(addr | 1), arg);
 
 	return true;
 }
+
+static const char * const app_argv[] = {
+	"app",
+};
+
+static const char * const svc_argv[] = {
+	"svc",
+};
+
 
 void board_test(void)
 {

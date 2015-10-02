@@ -51,7 +51,7 @@ void __attribute__((noreturn)) js_runtime_task(void)
 	int ret;
 
 	for (;;) {
-		thinkos_gate_wait(JSRUNTIME_GATE); 
+		thinkos_flag_take(JSRUNTIME_FLAG); 
 
 		thinkos_mutex_lock(JSRUNTIME_MUTEX); 
 
@@ -163,7 +163,7 @@ int js(FILE * f, char * script, unsigned int len)
 			fprintf(f, "# data overflow. %d bytes required\n", rt->data_sz);
 			ret = -1;
 		} else {
-			thinkos_gate_open(JSRUNTIME_GATE); 
+			thinkos_flag_give(JSRUNTIME_FLAG); 
 			ret = 0;
 		}
 	}

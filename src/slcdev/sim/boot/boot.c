@@ -37,7 +37,7 @@
 void cm3_debug_mon_isr(void)
 {
 	DCC_LOG(LOG_TRACE, "board_app_exec().");
-	board_app_exec(THINKOS_APP_ADDR);
+	board_app_exec(THINKOS_APP_ADDR, "app");
 }
 
 void app_try_exec()

@@ -67,11 +67,11 @@
 #define THINKOS_EVENT_MAX             1
 #define THINKOS_ENABLE_EVENT_ALLOC    0
 
-#define THINKOS_FLAG_MAX              0
+#define THINKOS_FLAG_MAX              2
 #define THINKOS_ENABLE_FLAG_ALLOC     0
 #define THINKOS_ENABLE_FLAG_WATCH     0
 
-#define THINKOS_GATE_MAX              2
+#define THINKOS_GATE_MAX              0
 #define THINKOS_ENABLE_GATE_ALLOC     0
 
 #define THINKOS_ENABLE_THREAD_STAT    0

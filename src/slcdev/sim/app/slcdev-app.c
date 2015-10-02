@@ -27,7 +27,7 @@ uint32_t __attribute__((aligned(8))) simlnk_stack[512 + 256];
 void isink_test(void);
 void js_runtime_init(void);
 
-int __attribute__((noreturn)) app_main(void)
+int __attribute__((noreturn)) app_main(const char * mode)
 {
 	FILE * f;
 
@@ -60,28 +60,18 @@ int __attribute__((noreturn)) app_main(void)
 	/* initialize constat string buffer */
 	const_strbuf_init();
 
-	/* initializes database */
-	device_db_init();
-
-	/* load configuration */
-	config_load();
-
 	/* initializing simulator */
 	slcdev_sim_init();
 
-#if 0
-	for (;;) {
-		isink_test();
+	/* initializes database */
+	device_db_init();
 
-		udelay(50000);
-		udelay(50000);
-		udelay(50000);
-		udelay(50000);
+	if (strcmp(mode, "safe") == 0) {
+		/* load configuration */
+		config_load();
+		/* start simulation */
+		slcdev_sim_resume();
 	}
-#endif
-
-	/* start simulation */
-	slcdev_sim_resume();
 
 #if 0
 	/* create a thread to handle simulation events. This is the 

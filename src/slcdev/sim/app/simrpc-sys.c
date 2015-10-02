@@ -100,62 +100,9 @@ void simrpc_dbinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	simrpc_send(SIMRPC_REPLY_OK(hdr), &inf, sizeof(inf));
 }
 
-struct rpc_str {
-	char buf[SIMRPC_DATA_MAX];
-	unsigned int len;
-};
-
-int simrpc_write(struct rpc_str * str, const char * buf, int cnt)
-{
-	int rem = SIMRPC_DATA_MAX - str->len;
-	int n = cnt;
-
-	if (n > rem)
-		n = rem;
-
-	memcpy(&str->buf[str->len], buf, n);
-	str->len += n;
-
-	return cnt;
-}
-
-const struct fileop simrpc_fops = {
-	.write = (void *)simrpc_write,
-	.read = (void *)null_read,
-	.flush = (void *)null_flush,
-	.close = (void *)null_close
-};
-
-
-void __simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
-{
-	char * line = (char *)data;
-	struct rpc_str str;
-	struct file rpc_file = {
-		.data = &str,
-		.op = &simrpc_fops
-	};
-	struct file * f = &rpc_file;
-	struct shell_cmd * cmd;
-	int ret;
-
-	str.len = 0;
-	line[cnt] = '\0';
-
-	if ((cmd = cmd_lookup(cmd_tab, line)) == NULL) {
-		fprintf(f, "Command not found!\n");
-	} else {
-		ret = cmd_exec(f, cmd, line);
-		if ((ret < 0) && (ret !=  SHELL_ABORT)) {
-			fprintf(f, "Error: %d\n", -ret);
-		}	
-	}
-
-	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
-}
-
 void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
+#if ENABLE_SHELL
 	char * line = (char *)data;
 	struct shell_cmd * cmd;
 	FILE * f = stdout;
@@ -177,30 +124,12 @@ void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 			simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 		}
 	}
+#else
+	simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+#endif
 }
 
 int js(FILE * f, char * script, unsigned int len);
-
-void __simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
-{
-	char * line = (char *)data;
-	struct rpc_str str;
-	struct file rpc_file = {
-		.data = &str,
-		.op = &simrpc_fops
-	};
-	struct file * f = &rpc_file;
-	FILE * tmp = stdout;
-
-	str.len = 0;
-	stdout = f;
-	if (cnt < SIMRPC_DATA_MAX)
-		line[cnt] = '\0';
-	js(f, line, cnt);
-	stdout = tmp;
-
-	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
-}
 
 void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
@@ -221,17 +150,8 @@ void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
-	struct rpc_str str;
-	struct file rpc_file = {
-		.data = &str,
-		.op = &simrpc_fops
-	};
-	struct file * f = &rpc_file;
-	FILE * tmp = stdout;
 	struct fs_dirent json;
-
-	str.len = 0;
-	stdout = f;
+	FILE * f = stdout;
 
 	fs_dirent_get(&json, FLASHFS_CFG_JSON);
 	if (config_is_sane() && !config_need_update(json.fp)) {
@@ -274,27 +194,14 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 			}
 		}
 	}
-
-	stdout = tmp;
-
-	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
 }
 
 void db_cfg_purge(void);
 
 void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
-	struct rpc_str str;
-	struct file rpc_file = {
-		.data = &str,
-		.op = &simrpc_fops
-	};
-	struct file * f = &rpc_file;
-	FILE * tmp = stdout;
 	struct fs_dirent json;
-
-	str.len = 0;
-	stdout = f;
+	FILE * f = stdout;
 
 	fs_dirent_get(&json, FLASHFS_DB_JSON);
 	if (!device_db_need_update(json.fp)) {
@@ -332,9 +239,5 @@ void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 					rt->stack_sz, sizeof(slcdev_vm_stack));
 		}
 	}
-
-	stdout = tmp;
-
-	simrpc_send(SIMRPC_REPLY_OK(hdr), str.buf, str.len);
 }
 
