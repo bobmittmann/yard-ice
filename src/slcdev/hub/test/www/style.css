@@ -239,7 +239,14 @@ table.thidden {
 	height: 100%;	
 }
 
-table.thidden td,th {
+table.thidden td {
+	text-align: left;
+	margin: 0;
+	border: 0;
+	padding: 0;			
+}
+
+table.thidden th {
 	text-align: left;
 	margin: 0;
 	border: 0;

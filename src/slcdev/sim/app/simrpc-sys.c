@@ -159,6 +159,7 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	} else {
 		slcdev_stop();
 		struct fs_dirent bin;
+		struct microjs_rt * rt;
 
 		DCC_LOG(LOG_TRACE, "pausing simulation!");
 		slcdev_sim_stop();
@@ -173,27 +174,35 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 			/* purge the invalid config */
 			fs_dirent_get(&bin, FLASHFS_CFG_BIN);
 			fs_file_unlink(&bin);
-		} else {
-			struct microjs_rt * rt;
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+			return;
+		} 
+		
+		rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+		fprintf(f, " - data: %d of %d\n", 
+				rt->data_sz, sizeof(slcdev_vm_data));
+		fprintf(f, " - stack: %d of %d\n", 
+				rt->stack_sz, sizeof(slcdev_vm_stack));
 
-			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
-			fprintf(f, " - data: %d of %d\n", 
-					rt->data_sz, sizeof(slcdev_vm_data));
-			fprintf(f, " - stack: %d of %d\n", 
-					rt->stack_sz, sizeof(slcdev_vm_stack));
+		if (config_save(json.fp) < 0) {
+			DCC_LOG(LOG_WARNING, "config_save() failed!");
+			fprintf(f, "# Error: config_save()!\n");
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -2);
+			return;
+		} 
 
-			if (config_save(json.fp) < 0) {
-				DCC_LOG(LOG_WARNING, "config_save() failed!");
-				fprintf(f, "# Error: config_save()!\n");
-			} else if (config_load() < 0) {
-				DCC_LOG(LOG_WARNING, "config_load() failed!");
-				fprintf(f, "# Error: config_load()!\n");
-			} else {
-				DCC_LOG(LOG_TRACE, "restarting simulation!");
-				slcdev_sim_resume();
-			}
-		}
+		if (config_load() < 0) {
+			DCC_LOG(LOG_WARNING, "config_load() failed!");
+			fprintf(f, "# Error: config_load()!\n");
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -2);
+			return;
+		} 
+
+		DCC_LOG(LOG_TRACE, "restarting simulation!");
+		slcdev_sim_resume();
 	}
+
+	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 }
 
 void db_cfg_purge(void);
@@ -208,6 +217,7 @@ void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		fprintf(f, "Up-to-date.\n");
 	} else {
 		struct fs_dirent bin;
+		struct microjs_rt * rt;
 
 		slcdev_stop();
 
@@ -215,10 +225,12 @@ void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		dev_sim_uncofigure_all();
 
 		/* Erase database */
+		DCC_LOG(LOG_TRACE, "Erasing database...");
 		fs_dirent_get(&bin, FLASHFS_DB_BIN);
 		fs_file_unlink(&bin);
 
 		/* Erase config */
+		DCC_LOG(LOG_TRACE, "Erasing configuration...");
 		fs_dirent_get(&bin, FLASHFS_CFG_BIN);
 		fs_file_unlink(&bin);
 
@@ -230,14 +242,18 @@ void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 
 		if (!device_db_compile(json.fp)) {
 			printf("Parse error!\n");
-		} else {
-			struct microjs_rt * rt;
-			rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
-			fprintf(f, " - data: %d of %d\n", 
-					rt->data_sz, sizeof(slcdev_vm_data));
-			fprintf(f, " - stack: %d of %d\n", 
-					rt->stack_sz, sizeof(slcdev_vm_stack));
-		}
+			DCC_LOG(LOG_WARNING, "device_db_compile() failed!");
+			simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+			return;
+		} 
+
+		rt = symtab_rt_get((struct symtab *)slcdev_symbuf);
+		fprintf(f, " - data: %d of %d\n", 
+				rt->data_sz, sizeof(slcdev_vm_data));
+		fprintf(f, " - stack: %d of %d\n", 
+				rt->stack_sz, sizeof(slcdev_vm_stack));
 	}
+
+	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 }
 

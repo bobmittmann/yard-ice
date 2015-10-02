@@ -42,12 +42,18 @@ const uint16_t sizeof_footer_html = sizeof(footer_html) - 1;
   ---------------------------------------------------------------------------*/
 
 struct httpdobj www_root[] = {
+	{ .oid = "layout.css", .typ = OBJ_STATIC_CSS_GZ, .lvl = 255,
+		.len = SIZEOF_LAYOUT_CSS, .ptr = layout_css },
 	{ .oid = "style.css", .typ = OBJ_STATIC_CSS_GZ, .lvl = 255,
 		.len = SIZEOF_STYLE_CSS, .ptr = style_css },
+	{ .oid = "zepto.min.js", .typ = OBJ_STATIC_JS_GZ, .lvl = 255,
+		.len = SIZEOF_ZEPTO_MIN_JS, .ptr = zepto_min_js },
+	{ .oid = "simlib.js", .typ = OBJ_STATIC_JS_GZ, .lvl = 255,
+		.len = SIZEOF_SIMLIB_JS, .ptr = simlib_js },
 	{ .oid = "index.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_INDEX_HTML - 1, .ptr = index_html },
-	{ .oid = "rpc_test.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
-		.len = SIZEOF_RPC_TEST_HTML, .ptr = rpc_test_html },
+	{ .oid = "sim_test.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_TEST_HTML, .ptr = sim_test_html },
 	{ .oid = "sim_tools.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_SIM_TOOLS_HTML, .ptr = sim_tools_html },
 	{ .oid = "sim_config.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
@@ -58,6 +64,12 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_SIM_MONITOR_HTML, .ptr = sim_monitor_html },
 	{ .oid = "sim_diag.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_SIM_DIAG_HTML, .ptr = sim_diag_html },
+	{ .oid = "sim_script.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_SCRIPT_HTML, .ptr = sim_script_html },
+	{ .oid = "sim_firmware.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_FIRMWARE_HTML, .ptr = sim_firmware_html },
+	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_NETWORK_HTML, .ptr = network_html },
 	{ .oid = "rpc_test.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
 		.len = 0, .ptr = rpc_test_cgi },
     { .oid = "cfg_load.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
@@ -90,8 +102,6 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = sim_getattr_cgi },
     { .oid = "sim_getstats.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = sim_getstats_cgi },
-	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
-		.len = SIZEOF_NETWORK_HTML, .ptr = network_html },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

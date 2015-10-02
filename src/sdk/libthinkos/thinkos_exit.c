@@ -65,6 +65,8 @@ void __thinkos_thread_abort(int thread_id)
 		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
 		/* pretend we are somebody else */
 		thinkos_rt.active = THINKOS_THREAD_VOID;
+	} else {
+		DCC_LOG1(LOG_TRACE, "active thread=%d", thinkos_rt.active); 
 	}
 
 	/* signal the scheduler ... */

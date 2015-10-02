@@ -24,12 +24,15 @@
  */ 
 
 #include <thinkos.h>
-#include <trace.h>
 #include "www/www.h"
+
+#undef DEBUG
+#undef TRACE_LEVEL
+#define TRACE_LEVEL TRACE_LVL_INF
+#include <trace.h>
 
 struct httpddir httpd_dir[] = {
 	{ .path = "/", .objlst = www_root },
-	{ .path = "/lib", .objlst = www_lib },
 	{ .path = "/img", .objlst = www_img },
 	{ .path = "/ipcfg", .objlst = www_ipcfg },
 	{ .path = NULL, .objlst = NULL }
@@ -38,32 +41,34 @@ struct httpddir httpd_dir[] = {
 int httpd_task(struct httpd * httpd)
 {
 	struct httpctl httpctl;
-	struct httpctl * ctl = &httpctl;
+	struct httpctl * http = &httpctl;
 	const struct httpdobj * obj;
 
 	INF("Webserver started (thread %d).", thinkos_thread_self());
 
 	for (;;) {
-		if (http_accept(httpd, ctl) < 0) {
+		if (http_accept(httpd, http) < 0) {
 			ERR("tcp_accept() failed!");
 			thinkos_sleep(100);
 			continue;
 		}
 
-		if ((obj = http_obj_lookup(ctl)) != NULL) {
-			switch (ctl->method) {
+		if ((obj = http_obj_lookup(http)) != NULL) {
+			switch (http->method) {
 			case HTTP_GET:
 				DBG("HTTP GET \"%s\"", obj->oid);
-				http_get(ctl, obj);
+				http_get(http, obj);
 				break;
 			case HTTP_POST:
 				DBG("HTTP POST \"%s\"", obj->oid);
-				http_post(ctl, obj);
+				http_post(http, obj);
 				break;
 			}
+		} else {
+			WARN("HTTP 404 Not Found: \"%s\"", http_uri_get(http));
 		}
 
-		http_close(ctl);
+		http_close(http);
 	}
 
 	return 0;

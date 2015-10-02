@@ -212,11 +212,15 @@ int httpd_stop(struct httpd * httpd);
 
 int http_accept(struct httpd * httpd, struct httpctl * ctl);
 
+const char * http_uri_get(struct httpctl * http);
+
 int http_close(struct httpctl * ctl);
 
 int http_recv(struct httpctl * ctl, void * buf, unsigned int len);
 
 int http_multipart_recv(struct httpctl * ctl, void * buf, unsigned int len);
+
+int http_content_recv(struct httpctl * ctl, void * buf, unsigned int len);
 
 int http_send(struct httpctl * ctl, const void * buf, unsigned int len);
 

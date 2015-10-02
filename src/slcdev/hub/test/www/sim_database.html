@@ -9,63 +9,41 @@
 
 <title>CRAB Simulator Database</title>
 
-<script src="/lib/zepto.js.gz"></script>
-<script>	
-	function alert_box(p, msg) {		
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
-		p.innerHTML = html;
-	}
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
+
+<script>
+	function get_stdout() {
+		var port = $('#selport').val();
+		var pre = $('#results');
+		simlib_stdout_flush(port, pre);
+	};
 	
 	function file_read(event) {
-		$('.button').prop('disabled', true);
-		$('#editor').text('');
-		$.ajax({
-			type: 'GET',
-			url: 'file_read.cgi',
-			data: { 
-				fname: event.data.fname,
-				port: $('#selport').val(),
-			},
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
-			success: function(data) {
-				$('#editor').text(data);
-			},
-			error: function(xhr, type){
-				alert('Ajax error!')				
-			},
-			complete: function(xhr, status){
-				$('.button').prop('disabled', false);
-			}
-		});
+		var port = $('#selport').val();
+		var editor = $('#editor');
+		var fname = 'db.js';
+		
+		editor.text('');		
+		simlib_edit_file_read(port, fname, editor);
+	}
+	
+	function file_write(event) {
+		var port = $('#selport').val();
+		var editor = $('#editor');
+		var fname = 'db.js';
+		
+		simlib_edit_file_write(port, fname, editor);
 	}
 	
 	function file_upload(event) {
-		var box = this.querySelector('#__msg');
+		var form = this;
+		var msg_box = form.querySelector('#__msg');
 		var port = $('#selport').val();
-		alert_box(box, "Uploading file, please wait...");
-		$('.button').prop('disabled', true);
-		$('#editor').text('');
-		$.ajax({
-			url: this.action + '?port=' + port,
-			type: 'POST',
-			data: new FormData(this),
-			processData: false,
-			contentType: false,
-			success: function(data) {				
-				$('#editor').text(data);				
-			},
-			error: function(xhr, type){
-				alert('Ajax error!')
-			},
-			complete: function(xhr, status){
-				box.innerHTML = "";				
-				$('.button').prop('disabled', false);
-			}
-		});
-		event.preventDefault();
+		var editor = $('#editor');
+
+		editor.text('');
+		simlib_edit_file_upload(port, editor, form, msg_box);
 	}
 
 	function db_getinfo() {
@@ -115,9 +93,12 @@
 	function db_compile() {
 		var stat = $('#status');
 		var port = $('#selport').val();
+		var box = $('#__msg')[0];
+		
 		stat.html('');
 		$('.button').prop('disabled', true);
-		$('#results').text('');
+		alert_show(box, "Compiling database, please wait...");
+
 		$.ajax({
 			type: 'GET',
 			url: 'db_compile.cgi',
@@ -125,57 +106,30 @@
 				port: port
 			},
 			dataType: 'text',			
-			timeout: 5000,
+			timeout: 10500,
 			context: $('body'),
 			success: function(data) {
-				$('#results').text(data);
+				$('#results').append(data);
 			},
-			error: function(xhr, type) { 
-				alert('Ajax error!') 
+			error: function(xhr, type) {  
+				$('#results').append('Ajax error: ' + type + '\n');
 			},
 			complete: function(xhr, status){
+				alert_hide(box);			
 				$('.button').prop('disabled', false);
 				db_getinfo();
 			}
 		});
 	}
 	
-	function file_write(event) {
-		var port = $('#selport').val();
-		var fname = event.data.fname;		
-		$('.button').prop('disabled', true);
-		$.ajax({
-//			url: 'file_write.cgi?port=' + port + '&fname=' + fname,
-			url: 'file_write.cgi',
-			type: 'POST',
-			data: $('#editor'),
-//			async: false,
-//			cache: false,
-			timeout: 5000,
-//			context: $('body'),
-			processData: false,
-			contentType: false,
-//			contentType: 'application/x-www-form-urlencoded'			
-//			contentType: 'multipart/form-data',
-//			contentType: 'text/plain',
-//			contentType: 'text/plain',
-			success: function(data) {
-			},
-			error: function(xhr, type){
-			},
-			complete: function(xhr, status){
-				$('.button').prop('disabled', false);
-			}
-		});
-		event.preventDefault();
-	}
-
-	$( document ).ready(function() {
+	$(function() {
 		$('#formdb').on('submit', file_upload);
-        $('#btnread').on('click', { fname: 'db.js' }, file_read);
+        $('#btnread').on('click', file_read);
+        $('#btnwrite').on('click', file_write);
         $('#btncompile').on('click', db_compile);
         $('#selport').on('change', db_getinfo);
         db_getinfo();
+        get_stdout();
     });
 
 </script>
@@ -231,13 +185,14 @@
 	
 	<section>
 		<input id="btnread" type="button" class="button" value="Read..." />
+		<input id="btnwrite" type="button" class="button" value="Write..." />
 		<input id="btncompile" type="button" class="button" value="Compile..." />
 	</section>
 	
 	<section>
-		<pre id="results" style="width: 100%; height: 6em;">
+		<pre id="results" style="width: 100%; height: 10em;">
 		</pre>		
-		<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
+		<textarea id="editor" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 20em;">
 		</textarea>		
 	</section>		
 </div>
@@ -264,10 +219,8 @@
 </nav>
 
 <footer>
-	<a href="https://https://github.com/bobmittmann/yard-ice">
-	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
-	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
-	&copy; Copyright 2013-2015, Bob Mittmann
+	Powered by
+	<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png" alt=ThinkOS></a>
 </footer>
 
 </body>

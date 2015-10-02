@@ -9,90 +9,28 @@
 
 <title>CRAB Simulator Tools</title>
 
-<script src="/lib/zepto.js.gz"></script>
-<script>
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
 
+<script>
 	function get_stdout() {
 		var port = $('#selport').val();
-		$.ajax({
-	 		type: 'GET',
-			url: 'get_stdout.cgi',
-			data: { 
-				port: port,
-	 		},
-			dataType: 'text',
-			timeout: 100,
-			context: $('body'),
-			success: function(data) {
-				if (data) {
-					var pre = $('#results');
-   					pre.append(data);
-   			    	pre.scrollTop(pre.prop("scrollHeight"));
-   			    	stdout_flush_tmo = 500;
-				}
-	   			setTimeout(get_stdout, stdout_flush_tmo);
-	   		},
-			error: function(xhr, type){  
-				setTimeout(get_stdout, 5000);
-			},
-			complete: function(xhr, status){				
-			}
-		});
+		var pre = $('#results');
+		simlib_stdout_flush(port, pre);
 	};
 
 	function get_status(port) {
 		var tr = $('#stat' + port);
-		$.ajax({
-			type: 'GET',
-			url: 'get_status.cgi',
-			data: { 
-				port: port
-			},
-			dataType: 'json',			
-			timeout: 250,
-			context: $('body'),
-			success: function(data) {
-				var tr = $('#stat' + port);
-				var html = '<td>' + port + '</td><td>' + data.state + '</td>';
-				if (data.hasOwnProperty('kernel')) {
-					html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
-					data.kernel.version.minor + '.' +
-					data.kernel.version.build + '</td>' +
-					'<td>' + data.kernel.ticks + '</td>';
-					if (data.hasOwnProperty('app')) {
-						html += '<td>DevSim-' + data.app.version.major + '.' + 
-						data.app.version.minor + '.' +
-						data.app.version.build + '</td>' +
-						'<td>' + data.app.uptime + '</td>';						
-					} else {
-						html += '<td>?.?.?</td><td>?</td>';
-					}
-				} else {
-					html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
-				}		
-				tr.html(html);
-			},
-			error: function(xhr, type) { 
-				alert('Ajax error!');
-				if (port == $('#selport').val())
-					stdout_flush_tmo = 5000;
-			}
-		});
+		simlib_status_get(port, tr);
 	}
 	
 	function status_poll() {
-	/*		setTimeout(status_poll, 5000); */
+		setTimeout(status_poll, 5000);
 		get_status(1);
 		get_status(2);
 		get_status(3);
 		get_status(4);
 		get_status(5);
-	}
-
-	function alert_box(p, msg) {		
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
-		p.innerHTML = html;
 	}
 
 	function cmd_exec() {
@@ -127,25 +65,8 @@
 		var port = $('#selport').val();
 		var script = $('#script').val();
 		$('.button').prop('disabled', true);
-		$.ajax({
-	 		type: 'POST',
-			url: 'rpc_js.cgi?port=' + port,
-	 		data: script,
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
- 			contentType: 'text/plain',
-			success: function(data) {
-	   			/* $('#results').text(data); */
-	   		},
-			error: function(xhr, type){ 
-				alert('Ajax error!'); 
-				stdout_flush_tmo = 5000;				
-			},
-			complete: function() {
-				$('.button').prop('disabled', false);				
-			}
-		});
+		simlib_js_post(port, script);
+		$('.button').prop('disabled', false);
 	};
 	
 	$(function() {
@@ -163,7 +84,7 @@
 </head>
 
 <body>
-	<div class="wrapper">
+<div class="wrapper">
 	<section>
 		<table class="formgrid" style="width: 100%; table-layout: fixed;">
 		<col width="70%">
@@ -222,11 +143,11 @@ for(i = 0; i &lt; 100; i = i + 1) {
 	<div class="top"></div>
 	<div class="tabs"><ul>
 		<li><a class="top" href="index.html">Home</a></li>
-		<li><a class="active" href="#">Network</a></li>				
+		<li><a href="network.html">Network</a></li>				
 		<li><a href="sim_database.html">Database</a></li>
 		<li><a href="sim_config.html">Config</a></li>
 		<li><a href="sim_monitor.html">Monitor</a></li>
-		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a class="active" href="#">Tools</a></li>
 		<li><a href="sim_diag.html">Diagnostics</a></li>
 		<li><a href="sim_script.html">Scripts</a></li>
 		<li><a href="sim_test.html">Tests</a></li>

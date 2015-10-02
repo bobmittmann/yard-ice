@@ -122,8 +122,15 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 		DCC_LOG(LOG_MSG, "DMA not prepared...");
 		if ((cr = drv->rx.dmactl.strm->cr) & DMA_EN) {
 			DCC_LOG(LOG_ERROR, "DMA enabled");
+#if 0
 			return -11;
+#endif
+			/* Disable DMA stream */
+			drv->rx.dmactl.strm->cr = 0;
+			/* Wait for the channel to be ready .. */
+			while (drv->rx.dmactl.strm->cr & DMA_EN);
 		}
+
 		/* clear transfer complete interrupt flags */
 		drv->rx.dmactl.ifcr[TCIF_BIT] = 1; 
 		/* Set memory address */

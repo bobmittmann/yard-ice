@@ -4,17 +4,33 @@
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
-<title>CRAB Device Simulator - RPC Test</title>
+<title>CRAB Simulator - RPC Test</title>
 
-<!-- <script src="/lib/modalbox.js.gz"></script> -->
-<script src="/lib/zepto.js.gz"></script>
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
+
 <script>
-	function alert(p, msg) {		
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
-		p.innerHTML = html;
+	function get_stdout() {
+		var port = $('#selport').val();
+		var pre = $('#results');
+		simlib_stdout_flush(port, pre);
+	};
+	
+	function get_status(port) {
+		var tr = $('#stat' + port);
+		simlib_status_get(port, tr);
+	}
+	
+	function status_poll() {
+		setTimeout(status_poll, 5000);
+		get_status(1);
+		get_status(2);
+		get_status(3);
+		get_status(4);
+		get_status(5);
 	}
 
 	function rpc_test(event) {
@@ -82,42 +98,6 @@
 		event.preventDefault();
 	}
 
-	function get_status(port) {
-		$.ajax({
-			type: 'GET',
-			url: 'get_status.cgi',
-			data: { 
-				port: port
-			},
-			dataType: 'json',			
-			timeout: 500,
-			context: $('body'),
-			success: function(data) {
-				var tr = $('#stat' + port);
-				var html = '<td>' + port + '</td><td>' + data.state + '</td>';
-				if (data.hasOwnProperty('kernel')) {
-					html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
-					data.kernel.version.minor + '.' +
-					data.kernel.version.build + '</td>' +
-					'<td>' + data.kernel.ticks + '</td>';
-					if (data.hasOwnProperty('app')) {
-						html += '<td>DevSim-' + data.app.version.major + '.' + 
-						data.app.version.minor + '.' +
-						data.app.version.build + '</td>' +
-						'<td>' + data.app.uptime + '</td>';						
-					} else {
-						html += '<td>?.?.?</td><td>?</td>';
-					}
-				} else {
-					html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
-				}		
-				tr.html(html);
-			},
-			error: function(xhr, type) { 
-				alert('Ajax error!') 
-			}
-		});
-	}
 	
 	function status_poll(){
 /*		setTimeout(status_poll, 5000); */
@@ -128,7 +108,7 @@
 		get_status(5);
 	}
 	
-	Zepto( document ).ready(function() {
+	$(function() {
         $('#btnrefresh').on('click', status_poll);
         $('#btn1').on('click', { code: 1 }, rpc_test);
         $('#btn2').on('click', { code: 2 }, rpc_test);
@@ -140,243 +120,253 @@
         $('#btn8').on('click', { code: 8 }, rpc_test);
         $('#btn9').on('click', { code: 9 }, rpc_test);
         $('#btn10').on('click', { code: 10 }, rpc_test);
-        
+        $('#btn11').on('click', { code: 11 }, rpc_test);
+
 		$('#formdb').on('submit', file_upload);
 		$('#formcfg').on('submit', file_upload);
 		$('#formfirm').on('submit', firmware_upload);
 		
 		status_poll();
     });
-
 </script>
 </head>
 
 <body>
 
-<div id="header">
-	<h1>CRAB Simulator - RPC Test</h1>
-</div>
+<div class="wrapper">
+	<section>
+		<h2>Port Status</h2>
+		<table class="zebra">
+			<thead>
+				<tr>
+				<th>Port</th>
+				<th>Status</th>
+				<th>Kernel</th>
+				<th>Ticks</th>		
+				<th>Firmware</th>
+				<th>Uptime</th>
+				</tr>
+			</thead>
+			<tr id="stat1">
+				<td>1</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>
+			<tr id="stat2">
+				<td>2</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat3">
+				<td>3</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat4">
+				<td>4</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>		
+			</tr>	
+			<tr id="stat5">
+				<td>5</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>				
+			</tr>		
+		</table>
 
-<div id="navigation">
-	<ul>
-		<li><a href="index.html">Home</a></li>
+		<input id="btnrefresh" type="button" class="button" value="Refresh..." />
+	</section>
+	
+	<section>
+		<h2>RPC Tests</h2>
+		<table class="formgrid">
+			<tr>
+				<td style="text-align: right;">Simulator:</td>
+				<td>
+					<select id="selport">
+						<option value="1">Port 1</option>
+						<option value="2">Port 2</option>
+						<option value="3">Port 3</option>
+						<option value="4">Port 4</option>
+						<option value="5">Port 5</option>
+					</select>		
+				</td>
+				<td>
+				</td>
+				<td>
+					<input id="btn2" type="button" value="Suspend" />
+				</td>		
+				<td>
+					<input id="btn3" type="button" value="Resume" />
+				</td>
+				<td>
+					<input id="btn10" type="button" value="Exec" />
+				</td>
+				<td>
+					<input id="btn1" type="button" value="Reset" />
+				</td>		
+				<td>
+					<input id="btn11" type="button" value="Safe" />
+				</td>		
+						
+			</tr>
+			<tr>
+				<td style="text-align: right;">File:</td>
+				<td>
+					<input id="fname" type="text" maxlength="100" size="10" value="cfg.js" />
+				</td>
+				<td>
+				</td>		
+				<td>
+				</td>		
+				<td>
+					<input id="btn4" type="button" value="File Write" />		
+				</td>
+				<td>
+					<input id="btn5" type="button" value="File Read" />
+				</td>
+				<td>
+					<input id="btn6" type="button" value="File Erase" />
+				</td>		
+			</tr>
+			<tr>
+				<td style="text-align: right;">Address:</td>
+				<td>
+					<input id="addr" type="text" maxlength="10" size="10" value="0x08010000" />
+				</td>
+				<td style="text-align: right;">Size:</td>
+				<td>
+					<input id="size" type="number" maxlength="4" size="3" min="1" max="8192" value="256" />
+				</td>		
+				<td>
+					<input id="btn7" type="button" value="Mem read" />	
+				</td>
+				<td>
+					<input id="btn8" type="button" value="Mem erase" />
+				</td>
+				<td>
+					<input id="btn9" type="button" value="Mem CRC" />
+				</td>		
+			</tr>	
+		</table>
+		
+		<div class="termbox">							
+			<pre id="results" style="height: 100%;"></pre>
+		</div>		
+	</section>
+
+	<section>		
+		<h2>Database upload</h2>
+		<div class="form">
+			<form id="formdb" enctype="multipart/form-data" action="db_load.cgi">
+				<div class="fbody">
+					File: <input type="text" class="text" id="__fname"
+						readonly="readonly" maxlength="128" size="20" /> <input
+						type="button" class="button" value="Browse..."
+						onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+					<input type="file" class="hidden" id="__browse" name="fname"
+						onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
+				</div>
+				<div class="ffoot">
+					<input type="reset" class="button" value="Reset" /> <input
+						type="submit" class="button" value="Upload..." />
+				</div>
+				<div>
+					<p id="__msg"></p>
+				</div>		
+			</form>
+		</div>
+	</section>
+
+	<section>		
+		<h2>Config upload</h2>
+		<div class="form">
+			<form id="formcfg" enctype="multipart/form-data" action="cfg_load.cgi">
+				<div class="fbody">
+					File: <input type="text" class="text" id="__fname"
+						readonly="readonly" maxlength="128" size="20" /> <input
+						type="button" class="button" value="Browse..."
+						onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+					<input type="file" class="hidden" id="__browse" name="fname"
+						onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
+				</div>
+				<div class="ffoot">
+					<input type="reset" class="button" value="Reset" /> <input
+						type="submit" class="button" value="Upload..." />
+				</div>
+				<div>
+					<p id="__msg"></p>
+				</div>
+			</form>
+		</div>
+	</section>
+
+	<section>				
+		<h2>Firmware upgrade</h2>
+		<div class="form">
+			<form id="formfirm" enctype="multipart/form-data" action="firmware_load.cgi">
+				<div class="fbody">
+					File: <input type="text" class="text" id="__fname"
+						readonly="readonly" maxlength="128" size="20" /> <input
+						type="button" class="button" value="Browse..."
+						onclick="javascript: this.form.elements.namedItem('__browse').click()" />
+					<input type="file" class="hidden" id="__browse" name="fname"
+						onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
+				</div>
+				<div class="ffoot">
+					<input type="reset" class="button" value="Reset" /> <input
+						type="submit" class="button" value="Upload..." />
+				</div>
+				<div>
+					<p id="__msg"></p>
+				</div>
+			</form>
+		</div>
+	</section>
+
+</div>
+	
+<header>
+	<h1>CRAB Simulator - RPC Test</h1>
+</header>
+
+
+<nav>
+	<div class="top"></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>				
 		<li><a href="sim_database.html">Database</a></li>
 		<li><a href="sim_config.html">Config</a></li>
 		<li><a href="sim_monitor.html">Monitor</a></li>
-		<li><a href="sim_tools.html">Tools</a></li>	
+		<li><a href="sim_tools.html">Tools</a></li>
 		<li><a href="sim_diag.html">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a class="active" href="#">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>			
 	</ul>
-</div>
+	</div><div class="bot"></div>
+</nav>
 
-<div id="content">
-<table>
-	<thead>
-		<tr>
-		<th>Port</th>
-		<th>Status</th>
-		<th>Kernel</th>
-		<th>Ticks</th>		
-		<th>Firmware</th>
-		<th>Uptime</th>
-		</tr>
-	</thead>
-	<tr id="stat1">
-		<td>1</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>
-	<tr id="stat2">
-		<td>2</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat3">
-		<td>3</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat4">
-		<td>4</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>		
-	</tr>	
-	<tr id="stat5">
-		<td>5</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>
-		<td>...</td>				
-	</tr>		
-</table>
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>	
 
-<input id="btnrefresh" type="button" class="button" value="Refresh..." />
-
-<hr />
-
-<table class="formgrid">
-	<tr>
-		<td style="text-align: right;">Simulator:</td>
-		<td>
-			<select id="selport">
-				<option value="1">Port 1</option>
-				<option value="2">Port 2</option>
-				<option value="3">Port 3</option>
-				<option value="4">Port 4</option>
-				<option value="5">Port 5</option>
-			</select>		
-		</td>
-		<td>
-		</td>
-		<td>
-			<input id="btn10" type="button" value="Exec" />
-		</td>
-		<td>
-			<input id="btn1" type="button" value="Reset" />
-		</td>		
-		<td>
-			<input id="btn2" type="button" value="Suspend" />
-		</td>		
-		<td>
-			<input id="btn3" type="button" value="Resume" />
-		</td>		
-	</tr>
-	<tr>
-		<td style="text-align: right;">File:</td>
-		<td>
-			<input id="fname" type="text" maxlength="100" size="10" value="cfg.js" />
-		</td>
-		<td>
-		</td>		
-		<td>
-		</td>		
-		<td>
-			<input id="btn4" type="button" value="File Write" />		
-		</td>
-		<td>
-			<input id="btn5" type="button" value="File Read" />
-		</td>
-		<td>
-			<input id="btn6" type="button" value="File Erase" />
-		</td>		
-	</tr>
-	<tr>
-		<td style="text-align: right;">Address:</td>
-		<td>
-			<input id="addr" type="text" maxlength="10" size="10" value="0x08010000" />
-		</td>
-		<td style="text-align: right;">Size:</td>
-		<td>
-			<input id="size" type="number" maxlength="4" size="3" min="1" max="8192" value="256" />
-		</td>		
-		<td>
-			<input id="btn7" type="button" value="Mem read" />	
-		</td>
-		<td>
-			<input id="btn8" type="button" value="Mem erase" />
-		</td>
-		<td>
-			<input id="btn9" type="button" value="Mem CRC" />
-		</td>		
-	</tr>	
-</table>
-
-<div style="
-	min-height: 5em;
-	max-height: 40em; 
-	overflow-y: scroll;
-	border-style: solid; 
-	border-width: 1px; 
-	border-color: #111;">
-	<pre id="results">
-	</pre>	
-</div>
-
-<hr>
-<h2>Database upload</h2>
-<div class="form">
-	<form id="formdb" enctype="multipart/form-data" action="db_load.cgi">
-		<div class="fbody">
-			File: <input type="text" class="text" id="__fname"
-				readonly="readonly" maxlength="128" size="20" /> <input
-				type="button" class="button" value="Browse..."
-				onclick="javascript: this.form.elements.namedItem('__browse').click()" />
-			<input type="file" class="hidden" id="__browse" name="fname"
-				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
-		</div>
-		<div>
-			<p id="__msg"></p>
-		</div>		
-	</form>
-</div>
-
-<hr>
-<h2>Config upload</h2>
-<div class="form">
-	<form id="formcfg" enctype="multipart/form-data" action="cfg_load.cgi">
-		<div class="fbody">
-			File: <input type="text" class="text" id="__fname"
-				readonly="readonly" maxlength="128" size="20" /> <input
-				type="button" class="button" value="Browse..."
-				onclick="javascript: this.form.elements.namedItem('__browse').click()" />
-			<input type="file" class="hidden" id="__browse" name="fname"
-				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
-		</div>
-		<div>
-			<p id="__msg"></p>
-		</div>
-	</form>
-</div>
-
-<hr>
-<h2>Firmware upgrade</h2>
-<div class="form">
-	<form id="formfirm" enctype="multipart/form-data" action="firmware_load.cgi">
-		<div class="fbody">
-			File: <input type="text" class="text" id="__fname"
-				readonly="readonly" maxlength="128" size="20" /> <input
-				type="button" class="button" value="Browse..."
-				onclick="javascript: this.form.elements.namedItem('__browse').click()" />
-			<input type="file" class="hidden" id="__browse" name="fname"
-				onchange="javascript: this.form.elements.namedItem('__fname').value = this.value" />
-		</div>
-		<div class="ffoot">
-			<input type="reset" class="button" value="Reset" /> <input
-				type="submit" class="button" value="Upload..." />
-		</div>
-		<div>
-			<p id="__msg"></p>
-		</div>
-	</form>
-</div>
-
-</div>
-
-<div id="footer">
-<a href="https://https://github.com/bobmittmann/yard-ice"><img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System - 
-<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br>
-&copy; Copyright 2013-2015, Bob Mittmann<br>
-</div>
-
-</body>
-</html>

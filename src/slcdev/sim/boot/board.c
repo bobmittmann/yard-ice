@@ -116,7 +116,11 @@ void board_exec(void (* func)(void *), void * arg)
 {
 	int thread_id = 0;
 
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_init()");
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
+	__thinkos_thread_abort(thread_id);
+
+
+	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(arg=%p)", arg);
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, arg);
 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -133,18 +137,16 @@ void board_exec(void (* func)(void *), void * arg)
 bool board_app_exec(uint32_t addr, void * arg)
 {
 	uint32_t * signature = (uint32_t *)addr;
-	int thread_id = 0;
+//	int thread_id = 0;
 
 	if ((signature[0] != 0x0a0de004) ||
 		(signature[1] != 0x6e696854) ||
 		(signature[2] != 0x00534f6b)) {
-		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", app);
+		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", 
+				 signature);
 
 		return false;
 	}
-
-	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
-	__thinkos_thread_abort(thread_id);
 
 	board_exec((void *)(addr | 1), arg);
 
@@ -160,7 +162,7 @@ static const char * const svc_argv[] = {
 };
 
 
-void board_test(void)
+void board_test(void * arg)
 {
 	for (;;) {
 		__led_on(IO_LED1);
@@ -197,5 +199,6 @@ void board_test(void)
 	}	
 }
 
-int app_default(void) __attribute__((weak, alias("board_test")));
+int app_default(void * arg) __attribute__((weak, alias("board_test")));
+
 

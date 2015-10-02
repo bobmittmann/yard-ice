@@ -41,7 +41,7 @@
 
 #undef DEBUG
 #undef TRACE_LEVEL
-#define TRACE_LEVEL TRACE_LVL_INF
+#define TRACE_LEVEL TRACE_LVL_DBG
 #include <trace.h>
 
 #ifndef SIMLNK_POOL_SIZE
@@ -310,7 +310,7 @@ again:
 	}
 
 	if (lnk->rx.cnt < 4) {
-		ERR("thinkos_flag_take() link error!");
+		ERR("thinkos_flag_take() link error, lnk->rx.cnt=%d!", lnk->rx.cnt);
 		thinkos_mutex_unlock(lnk->mutex);
 		return SIMRPC_ELINK;
 	}
@@ -336,7 +336,8 @@ again:
 	}
 
 	if ((SIMRPC_DST(opc) == saddr) && (SIMRPC_SRC(opc) == daddr)) {
-		WARN("invalid sequence: %d", SIMRPC_SEQ(opc));
+		WARN("invalid sequence %d, expect %d (insn=%d).",
+				SIMRPC_SEQ(opc), seq, SIMRPC_INSN(opc));
 		goto again;
 	}
 
@@ -351,8 +352,9 @@ int simrpc_stdout_get(struct simrpc_pcb * sp, void * buf, unsigned int max)
 	int cnt;
 
 	cnt = pipe_read(&lnk->stdout_pipe, buf, max);
-
-	DBG("pipe_read, %d bytes", cnt);
+	if (cnt) {
+		DBG("pipe_read, %d bytes", cnt);
+	}
 
 	return cnt;
 }
@@ -366,10 +368,13 @@ int simlnk_rpc_async(struct simrpc_pcb * sp, uint32_t insn,
 	uint32_t opc;
 	uint32_t seq;
 
+	if (thinkos_mutex_trylock(lnk->mutex) < 0) {
+		WARN("SIMLNK busy!");
+		return -1;
+	}
+
 	seq = sp->seq = lnk->tx.seq++;
 	opc = simrpc_mkopc(daddr, saddr, seq, insn);
-
-	thinkos_mutex_lock(lnk->mutex);
 
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], buf, cnt);

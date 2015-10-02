@@ -49,6 +49,23 @@ void rpc_test_exec(FILE * f, int port)
 	}
 }
 
+void rpc_test_safe(FILE * f, int port)
+{
+	unsigned int daddr = port;
+	struct simrpc_pcb * sp;
+
+	fprintf(f, "%s(): ...\n", __func__);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		fprintf(f, "simrpc_open() failed!\n");
+	} else {
+		if (simrpc_exec(sp, SIMRPC_EXEC_KEY('S', 'A', 'F', 'E')) < 0) {
+			fprintf(f, "simrpc_exec() failed!\n");
+		}
+		simrpc_close(sp);
+	}
+}
+
 void rpc_test_suspend(FILE * f, int port)
 {
 	unsigned int daddr = port;
@@ -314,6 +331,9 @@ int rpc_test_cgi(struct httpctl * http)
 
     switch (code) {
 
+    case 11:
+    	rpc_test_safe(f, port);
+    	break;
     case 10:
     	rpc_test_exec(f, port);
     	break;
@@ -435,10 +455,9 @@ int file_write_cgi(struct httpctl * http)
 	daddr = port;
 	INF("port=%d fname='%s'", port, fname);
 
-    httpd_200(http->tp, TEXT_HTML);
-
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
+		httpd_200(http->tp, TEXT_HTML);
 	    return http_send(http, error_html, sizeof(error_html) - 1);
 	}
 
@@ -450,7 +469,7 @@ int file_write_cgi(struct httpctl * http)
 		return -1;
 	}
 
-    while ((n = http_multipart_recv(http, buf, 512)) > 0) {
+    while ((n = http_content_recv(http, buf, 512)) > 0) {
     	if (simrpc_file_write(sp, buf, n) < 0) {
     		WARN("simrpc_file_write() failed!");
     		simrpc_close(sp);
@@ -459,7 +478,7 @@ int file_write_cgi(struct httpctl * http)
     }
 
 	if (n < 0) {
-		WARN("http_multipart_recv() failed!");
+		WARN("http_content_recv() failed!");
 	}
 
 	if (simrpc_file_close(sp) < 0) {
@@ -467,6 +486,8 @@ int file_write_cgi(struct httpctl * http)
 	}
 
 	simrpc_close(sp);
+
+    httpd_200(http->tp, TEXT_HTML);
 	return http_send(http, file_saved_html, sizeof(file_saved_html) - 1);
 
 }
@@ -573,7 +594,7 @@ int get_status_cgi(struct httpctl * http)
     port = atoi(http_query_lookup(http, "port"));
 	daddr = port;
 
-	INF("port=%d", port);
+	DBG("get_status_cgi: port=%d", port);
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
@@ -778,6 +799,8 @@ int cfg_compile_cgi(struct httpctl * http)
 {
 	struct simrpc_pcb * sp;
 	unsigned int daddr;
+	uint32_t clk_start;
+	uint32_t clk_stop;
 	char s[512];
     int port;
     int n;
@@ -791,11 +814,18 @@ int cfg_compile_cgi(struct httpctl * http)
 		WARN("simrpc_open() failed!");
 		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
 	} else {
-		simrpc_set_timeout(sp, 5000);
-		if ((n = simrpc_cfg_compile(sp, s, sizeof(s))) < 0) {
-			WARN("simrpc_cfg_compile() failed!");
-			n = sprintf(s, "#ERROR: simrpc_cfg_compile() failed!\n");
+		simrpc_set_timeout(sp, 10000);
+		clk_start = profclk_get();
+		n = simrpc_cfg_compile(sp, s, sizeof(s));
+		clk_stop = profclk_get();
+		if (n < 0) {
+			WARN("simrpc_cfg_compile() failed, with code=%d after %d us!",
+					n, profclk_us(clk_stop - clk_start));
+			n = sprintf(s, "#ERROR: simrpc_cfg_compile() failed!\r\n");
+		} else {
+			INF("configuration compiled in %d us.", profclk_us(clk_stop - clk_start));
 		}
+
 		simrpc_close(sp);
 	}
 
@@ -814,7 +844,7 @@ int cfg_getinfo_cgi(struct httpctl * http)
     port = atoi(http_query_lookup(http, "port"));
 	daddr = port;
 
-	INF("port=%d", port);
+	DBG("cfg_getinfo_cgi: port=%d", port);
 
    	httpd_200(http->tp, APPLICATION_JSON);
 
@@ -856,6 +886,8 @@ int db_compile_cgi(struct httpctl * http)
 {
 	struct simrpc_pcb * sp;
 	unsigned int daddr;
+	uint32_t clk_start;
+	uint32_t clk_stop;
 	char s[512];
     int port;
     int n;
@@ -867,12 +899,18 @@ int db_compile_cgi(struct httpctl * http)
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
-		n = sprintf(s, "#ERROR: simrpc_open() failed!\n");
+		n = sprintf(s, "#ERROR: simrpc_open() failed!\r\n");
 	} else {
-		simrpc_set_timeout(sp, 5000);
-		if ((n = simrpc_db_compile(sp, s, sizeof(s))) < 0) {
-			WARN("simrpc_db_compile() failed!");
-			n = sprintf(s, "#ERROR: simrpc_db_compile() failed!\n");
+		simrpc_set_timeout(sp, 10000);
+		clk_start = profclk_get();
+		n = simrpc_db_compile(sp, s, sizeof(s));
+		clk_stop = profclk_get();
+		if (n < 0) {
+			WARN("simrpc_db_compile() failed, with code=%d after %d us!",
+					n, profclk_us(clk_stop - clk_start));
+			n = sprintf(s, "#ERROR: simrpc_db_compile() failed!\r\n");
+		} else {
+			INF("database compiled in %d us.", profclk_us(clk_stop - clk_start));
 		}
 		simrpc_close(sp);
 	}
@@ -892,7 +930,7 @@ int db_getinfo_cgi(struct httpctl * http)
     port = atoi(http_query_lookup(http, "port"));
 	daddr = port;
 
-	INF("port=%d", port);
+	DBG("db_getinfo_cgi port=%d", port);
 
    	httpd_200(http->tp, APPLICATION_JSON);
 

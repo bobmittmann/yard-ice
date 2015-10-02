@@ -9,70 +9,47 @@
 
 <title>CRAB Simulator Configuration</title>
 
-<script src="/lib/zepto.js.gz"></script>
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
+
 <script>
-	
-	function alert_box(p, msg) {		
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
-		p.innerHTML = html;
-	}
+	function get_stdout() {
+		var port = $('#selport').val();
+		var pre = $('#results');
+		simlib_stdout_flush(port, pre);
+	};
 	
 	function file_read(event) {
-		$('.button').prop('disabled', true);
-		$('#editor').text('');
-		$.ajax({
-			type: 'GET',
-			url: 'file_read.cgi',
-			data: { 
-				fname: event.data.fname,
-				port: $('#selport').val(),
-			},
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
-			success: function(data) {
-				$('#editor').text(data);
-			},
-			error: function(xhr, type){
-				alert('Ajax error!')
-			},
-			complete: function(xhr, status){
-				$('.button').prop('disabled', false);
-			}
-		});
-	}
-
-	function file_upload(event) {
-		var lst = this.elements;
-		var box = this.querySelector('#__msg');
 		var port = $('#selport').val();
-		alert_box(box, "Uploading file, please wait...");	
-		$('.button').prop('disabled', true);
-		$('#editor').text('');
-		$.ajax({
-			url: this.action + '?port=' + port,
-			type: 'POST',
-			data: new FormData(this),
-			processData: false,
-			contentType: false,
-			success: function(data) {				
-				$('#editor').text(data);				
-			},
-			error: function(xhr, type){
-				alert('Ajax error!')
-			},
-			complete: function(xhr, status){
-				box.innerHTML = "";
-				$('.button').prop('disabled', false);
-			}
-		});
-		event.preventDefault();
+		var editor = $('#editor');
+		var fname = 'cfg.js';
+		
+		editor.text('');		
+		simlib_edit_file_read(port, fname, editor);
 	}
+	
+	function file_write(event) {
+		var port = $('#selport').val();
+		var editor = $('#editor');
+		var fname = 'cfg.js';
+		
+		simlib_edit_file_write(port, fname, editor);
+	}
+	
+	function file_upload(event) {
+		var form = this;
+		var msg_box = form.querySelector('#__msg');
+		var port = $('#selport').val();
+		var editor = $('#editor');
 
+		editor.text('');
+		simlib_edit_file_upload(port, editor, form, msg_box);
+	}
+	
 	function cfg_getinfo() {
 		var stat = $('#status');
 		var port = $('#selport').val();
+		
 		stat.html('');
 		$('.button').prop('disabled', true);
 		$.ajax({
@@ -105,22 +82,24 @@
 				stat.html(html);				
 			},
 			error: function(xhr, type) { 
-//				alert('Ajax error!') 
-				stat.html('<i> Ajax error: ' + type + '</i>');
+				$('#results').append('Ajax error: ' + type + '\n');
 			},
-			complete: function(xhr, status){
+			complete: function(xhr, status) {
 				$('.button').prop('disabled', false);
 			}
 
 		});
 	}
-
+	
 	function cfg_compile() {
 		var stat = $('#status');
 		var port = $('#selport').val();
+		var box = $('#__msg')[0];
+
 		stat.html('');
 		$('.button').prop('disabled', true);
-		$('#results').text('');
+		alert_show(box, "Compiling configuration, please wait...");
+		
 		$.ajax({
 			type: 'GET',
 			url: 'cfg_compile.cgi',
@@ -128,15 +107,16 @@
 				port: port
 			},
 			dataType: 'text',			
-			timeout: 5000,
+			timeout: 5500,
 			context: $('body'),
 			success: function(data) {
 				$('#results').text(data);				
 			},
-			error: function(xhr, type) { 
-				alert('Ajax error!') 
+			error: function(xhr, type) {
+				$('#results').append('Ajax error: ' + type + '\n');
 			},
 			complete: function(xhr, status){
+				alert_hide(box);
 				$('.button').prop('disabled', false);
 				cfg_getinfo();
 			}
@@ -145,7 +125,8 @@
 	
 	$(function() {
 		$('#formcfg').on('submit', file_upload);
-        $('#btnread').on('click', { fname: 'cfg.js' }, file_read);
+        $('#btnread').on('click', file_read);
+        $('#btnwrite').on('click', file_write);
         $('#btncompile').on('click', cfg_compile);
         $('#selport').on('change', cfg_getinfo);
         cfg_getinfo();
@@ -204,11 +185,12 @@
 
 	<section>
 		<input id="btnread" type="button" class="button" value="Read..." />
+		<input id="btnwrite" type="button" class="button" value="Write..." />		
 		<input id="btncompile" type="button" class="button" value="Compile..." />
 	</section>
 	
 	<section>
-		<pre id="results" style="width: 100%; height: 6em;">
+		<pre id="results" style="width: 100%; height: 10em;">
 		</pre>		
 		<textarea name="editor" id="editor" style="width: 100%; height: 20em;">
 		</textarea> 

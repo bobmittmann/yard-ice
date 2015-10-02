@@ -76,10 +76,12 @@ _reset:
 
     mov     fp, #0
 	mov     r7, #0
+#if 0
 	/* argc = 0 */
 	mov     r0, #0
 	/* argv = NULL */
 	mov     r1, r0
+#endif
 	/* go to C main function */
 	bl      main
 	b       abort

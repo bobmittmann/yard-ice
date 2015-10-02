@@ -31,6 +31,8 @@ int __attribute__((noreturn)) app_main(const char * mode)
 {
 	FILE * f;
 
+	DCC_LOG1(LOG_WARNING, "mode=%p.", mode);
+
 //	f = null_fopen(NULL);
 	f = simrpc_stdout_fopen();
 
@@ -67,6 +69,8 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	device_db_init();
 
 	if (strcmp(mode, "safe") == 0) {
+		DCC_LOG(LOG_WARNING, "safe mode!");
+	} else {
 		/* load configuration */
 		config_load();
 		/* start simulation */
@@ -97,5 +101,5 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	sim_event_task();
 }
 
-int main(void) __attribute__((weak, alias("app_main")));
+int main(void *) __attribute__((weak, alias("app_main")));
 

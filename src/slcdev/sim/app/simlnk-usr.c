@@ -41,7 +41,7 @@ void __attribute__((noreturn)) simlnk_recv_task(void)
 	for (;;) {
 		cnt = thinkos_comm_recv(&hdr, data, SIMLNK_MTU);
 
-		DCC_LOG1(LOG_TRACE, "comm receive: %d bytes", cnt);
+		DCC_LOG1(LOG_INFO, "comm receive: %d bytes", cnt);
 
 		switch SIMRPC_INSN(hdr) {
 		case SIMRPC_FILE_OPEN:

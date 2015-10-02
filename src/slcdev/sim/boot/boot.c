@@ -53,7 +53,7 @@ void app_try_exec()
 
 int __simrpc_send_opc(uint32_t opc);
 
-int __attribute__((noreturn)) app_default(void);
+int __attribute__((noreturn)) app_default(void * arg);
 
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
@@ -78,7 +78,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	app_try_exec();
 
 	DCC_LOG(LOG_TRACE, "5. app_default().");
-	app_default();
+	app_default(NULL);
 
 //	return 0;
 }

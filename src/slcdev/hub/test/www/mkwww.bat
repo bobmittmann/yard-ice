@@ -1,6 +1,6 @@
 @echo off
 rem 
-rem Build the html content converting .html files int .c files
+rem Build the html content converting .html, .css and .js files int .c files
 rem
 
 set TOOLS_DIR=..\..\..\..\..\tools
@@ -21,5 +21,6 @@ cd %1
 :ALL
 for %%f in (*.html) do %TOOLS_DIR%\bin2hex.py -z -H www.h -o %%f.c %%f
 for %%f in (*.css) do %TOOLS_DIR%\bin2hex.py -z -H www.h -o %%f.c %%f
+for %%f in (*.js) do %TOOLS_DIR%\bin2hex.py -z -H www.h -o %%f.c %%f
 
 :EOF

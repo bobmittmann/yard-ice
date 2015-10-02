@@ -4,67 +4,28 @@
 <meta charset="UTF-8">
 <meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
 <link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
 <link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
 
 <title>CRAB Device Simulator - Tools</title>
 
-<script src="/lib/zepto.js.gz"></script>
-<script>
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
+
+<script>	
 	function get_status(port) {
 		var tr = $('#stat' + port);
-		$.ajax({
-			type: 'GET',
-			url: 'get_status.cgi',
-			data: { 
-				port: port
-			},
-			dataType: 'json',			
-			timeout: 250,
-			context: $('body'),
-			success: function(data) {
-				var tr = $('#stat' + port);
-				var html = '<td>' + port + '</td><td>' + data.state + '</td>';
-				if (data.hasOwnProperty('kernel')) {
-					html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
-					data.kernel.version.minor + '.' +
-					data.kernel.version.build + '</td>' +
-					'<td>' + data.kernel.ticks + '</td>';
-					if (data.hasOwnProperty('app')) {
-						html += '<td>DevSim-' + data.app.version.major + '.' + 
-						data.app.version.minor + '.' +
-						data.app.version.build + '</td>' +
-						'<td>' + data.app.uptime + '</td>';						
-					} else {
-						html += '<td>?.?.?</td><td>?</td>';
-					}
-				} else {
-					html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
-				}		
-				tr.html(html);
-			},
-			error: function(xhr, type) { 
-				alert('Ajax error!');
-				if (port == $('#selport').val())
-					stdout_flush_tmo = 5000;
-			}
-		});
+		simlib_status_get(port, tr);
 	}
 	
 	function status_poll() {
-	/*		setTimeout(status_poll, 5000); */
+		setTimeout(status_poll, 5000);
 		get_status(1);
 		get_status(2);
 		get_status(3);
 		get_status(4);
 		get_status(5);
 	}
-
-	function alert_box(p, msg) {		
-		var html = '<img style="float:none;vertical-align:middle"' +
-			'src="/img/alert.png" alt="Alert! "/>&nbsp;' + msg;
-		p.innerHTML = html;
-	}
-
 
 	function firmware_upload(event) {
 		var lst = this.elements;

@@ -420,6 +420,12 @@ int http_close(struct httpctl * ctl)
 
 const char http_index_obj[] = "index.html";
 
+
+const char * http_uri_get(struct httpctl * http)
+{
+	return http->uri;
+}
+
 const struct httpdobj * http_obj_lookup(struct httpctl * ctl)
 {
 	struct httpd * httpd = ctl->httpd;

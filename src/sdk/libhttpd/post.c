@@ -12,6 +12,8 @@
 #include "httpd-i.h"
 #include "http_hdr.h"
 
+#include <sys/param.h>
+
 #define HEX2INT(C) (((C) <= '9') ? (C) - '0' : (C) - ('A' - 10))
 
 #ifndef HTTP_QUERY_KEY_MAX
@@ -81,6 +83,45 @@ char * http_query_lookup(struct httpctl * ctl, char * key)
 	return "\0";
 }
 
+/* Receive content on the receiving queue */
+static int http_content_enqueue(struct httpctl * ctl)
+{
+	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
+	int cnt;
+	int pos;
+	int max;
+	int n;
+
+	cnt = ctl->rcvq.head;
+	pos = ctl->rcvq.pos;
+
+	/* move remaining data to the beginning of the buffer */
+	n = cnt - pos;
+	memcpy(queue, &queue[pos], n);
+	/* the data left in the buffer is the new total count */
+	cnt = n;
+	/* set the search position  */
+	ctl->rcvq.pos = 0;
+
+	max = MIN(ctl->content.len, HTTP_RCVBUF_LEN);
+
+	while (cnt < max) {
+		int rem;
+		/* receive more data from the network */
+		rem = HTTP_RCVBUF_LEN - cnt;
+		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
+			tcp_close(ctl->tp);
+			return n;
+		}
+		cnt += n;
+	}
+
+	ctl->rcvq.pos = pos;
+	ctl->rcvq.head = cnt;
+
+	return cnt;
+}
+
 int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 {
 	int (* cgi)(struct httpctl * ctl);
@@ -108,7 +149,7 @@ int http_post(struct httpctl * ctl, const struct httpdobj * obj)
 
 		DCC_LOG(LOG_TRACE, "application/x-www-form-urlencoded");
 
-		if ((len = http_content_recv(ctl)) <= 0) {
+		if ((len = http_content_enqueue(ctl)) <= 0) {
 			return len;
 		}
 		buf = (char *)ctl->rcvq.buf;

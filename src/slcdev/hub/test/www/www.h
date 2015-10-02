@@ -63,7 +63,21 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_SIM_FIRMWARE_HTML 2056
+#define SIZEOF_JQUERY_2_1_4_MIN_JS 29519
+
+#define SIZEOF_ZEPTO_MIN_JS 9377
+
+#define SIZEOF_SIMLIB_JS 1120
+
+#define SIZEOF_MODALBOX_JS 1430
+
+#define SIZEOF_LAYOUT_CSS 790
+
+#define SIZEOF_SIM_TEST_HTML 2267
+
+#define SIZEOF_SIM_SCRIPT_HTML 1965
+
+#define SIZEOF_SIM_FIRMWARE_HTML 1690
 
 #define SIZEOF_SIM_DIAG_HTML 1948
 
@@ -73,22 +87,36 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 2079
+#define SIZEOF_SIM_TOOLS_HTML 1615
 
-#define SIZEOF_SIM_DATABASE_HTML 2194
+#define SIZEOF_SIM_DATABASE_HTML 1934
 
-#define SIZEOF_SIM_CONFIG_HTML 2065
+#define SIZEOF_SIM_CONFIG_HTML 1961
 
 #define SIZEOF_RPC_TEST_HTML 2495
 
 #define SIZEOF_NETWORK_HTML 1101
 
-#define SIZEOF_STYLE_CSS 1030
+#define SIZEOF_STYLE_CSS 1031
 
 #define SIZEOF_TOOLS_HTML 1431
 
 
 /* --- bin.hex.py: file content --- */
+
+extern const uint8_t jquery_2_1_4_min_js[];
+
+extern const uint8_t zepto_min_js[];
+
+extern const uint8_t simlib_js[];
+
+extern const uint8_t modalbox_js[];
+
+extern const uint8_t layout_css[];
+
+extern const uint8_t sim_test_html[];
+
+extern const uint8_t sim_script_html[];
 
 extern const uint8_t sim_firmware_html[];
 
@@ -148,4 +176,5 @@ int sim_getstats_cgi(struct httpctl * http);
 #endif
 
 #endif
+
 

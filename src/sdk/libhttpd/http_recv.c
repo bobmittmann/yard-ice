@@ -53,42 +53,41 @@ int http_recv(struct httpctl * ctl, void * buf, unsigned int len)
 	return tcp_recv(ctl->tp, buf, len);
 }
 
-int http_content_recv(struct httpctl * ctl)
+int http_content_recv(struct httpctl * ctl, void * buf, unsigned int len)
 {
-	uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
-	int cnt;
-	int pos;
+	int head = ctl->rcvq.head;
+	int tail = ctl->rcvq.tail;
 	int max;
 	int n;
 
-	cnt = ctl->rcvq.head;
-	pos = ctl->rcvq.pos;
+	if ((max = ctl->content.len - ctl->content.pos) == 0)
+		return 0;
 
-	/* move remaining data to the beginning of the buffer */
-	n = cnt - pos;
-	memcpy(queue, &queue[pos], n);
-	/* the data left in the buffer is the new total count */
-	cnt = n;
-	/* set the search position  */
-	ctl->rcvq.pos = 0;
+	if (max > len)
+		max = len;
 
-	max = MIN(ctl->content.len, HTTP_RCVBUF_LEN);
+	if ((n = (head - tail)) > 0) {
+		uint8_t * queue = (uint8_t *)ctl->rcvq.buf;
 
-	while (cnt < max) {
-		int rem;
-		/* receive more data from the network */
-		rem = HTTP_RCVBUF_LEN - cnt;
-		if ((n = tcp_recv(ctl->tp, &queue[cnt], rem)) <= 0) {
-			tcp_close(ctl->tp);
-			return n;
+		if (n > max)
+			n = max;
+		/* read from internal buffer */
+		memcpy(buf, &queue[tail], n);
+		tail += n;
+		if (tail == head) {
+			tail = 0;
+			ctl->rcvq.head = tail;
 		}
-		cnt += n;
+		ctl->rcvq.tail = tail;
+		ctl->content.pos += n;
+		return n;
 	}
 
-	ctl->rcvq.pos = pos;
-	ctl->rcvq.head = cnt;
+	n = tcp_recv(ctl->tp, buf, max);
+	if (n > 0)
+		ctl->content.pos += n;
 
-	return cnt;
+	return n;
 }
 
 int http_line_recv(struct httpctl * ctl, char * line,

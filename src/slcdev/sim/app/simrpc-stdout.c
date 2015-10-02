@@ -25,6 +25,7 @@
 #include <sys/null.h>
 #include <sys/param.h>
 #include <string.h>
+#include <sys/dcclog.h>
 
 #include "board.h"
 #include "simlnk.h"
@@ -43,6 +44,8 @@ int simrpc_stdout_write(struct simrpc_console * out,
 	int rem = cnt;
 	int free;
 	int n;
+
+	DCC_LOG1(LOG_TRACE, "cnt=%d.", cnt);
 
 	thinkos_mutex_lock(CONSOLE_MUTEX);
 
@@ -92,6 +95,7 @@ void simrpc_stdout_flush_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
 									out->seq++, SIMRPC_STDOUT_DATA);
 		simrpc_send(opc, (void *)out->buf, out->len);
+		DCC_LOG1(LOG_TRACE, "len=%d.", out->len);
 		out->len = 0;
 	}
 

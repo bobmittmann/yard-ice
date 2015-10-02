@@ -103,7 +103,7 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	} else {
 		DCC_LOG(LOG_WARNING, "Invalid application!");
-		board_exec(app_default, NULL);
+		board_exec(app_default, (void *)mode);
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 	}
 }

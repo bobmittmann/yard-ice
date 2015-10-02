@@ -38,9 +38,9 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-VERSION_DATE = "2015-09-27"
+VERSION_DATE = "2015-10-01"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "27"
+VERSION_MINOR = "28"
 
 JTAGTOOL_ADDR = 192.168.10.50
 

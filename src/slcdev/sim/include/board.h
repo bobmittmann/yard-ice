@@ -147,7 +147,7 @@ extern "C" {
 #endif
 
 void board_init(void);
-void __attribute__((noreturn)) board_test(void);
+void __attribute__((noreturn)) board_test(void * arg);
 
 void board_soft_reset(void);
 

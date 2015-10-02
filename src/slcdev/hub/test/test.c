@@ -373,7 +373,7 @@ int main(int argc, char ** argv)
 	simrpc_init();
 
 	for (;;) {
-		thinkos_sleep(5000);
+		thinkos_sleep(60000);
 		INF("Tick %d ...", ++i);
 	}
 

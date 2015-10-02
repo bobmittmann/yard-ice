@@ -76,8 +76,6 @@ int http_multipart_boundary_lookup(struct httpctl * ctl);
 
 int http_parse_header(struct tcp_pcb * tp, struct httpctl * ctl);
 
-int http_content_recv(struct httpctl * ctl);
-
 int http_recv_queue_shift(struct httpctl * ctl);
 
 #ifdef __cplusplus

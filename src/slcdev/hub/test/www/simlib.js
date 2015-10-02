@@ -1,6 +1,6 @@
-var stdout_flush_tmo[5];
+var stdout_flush_tmo = [500, 500, 500, 500, 500];
 
-function get_stdout(pre, port) {
+function simlib_stdout_flush(port, pre) {
 	$.ajax({
 		type: 'GET',
 		url: 'get_stdout.cgi',
@@ -14,14 +14,171 @@ function get_stdout(pre, port) {
 			if (data) {
 				pre.append(data);
 				pre.scrollTop(pre.prop("scrollHeight"));
-				stdout_flush_tmo = 500;
+				stdout_flush_tmo[port] = 500;
 			}
-			setTimeout(get_stdout, stdout_flush_tmo[port], pre, port);
+			setTimeout(simlib_stdout_flush, stdout_flush_tmo[port], port, pre);
 		},
+		error: function(xhr, type) {
+			setTimeout(simlib_stdout_flush, 5000, port, pre);
+		},
+		complete: function(xhr, status) {
+		}
+	});
+};
+
+function simlib_status_get(port, tr) {	
+	$.ajax({
+		type: 'GET',
+		url: 'get_status.cgi',
+		data: { 
+			port: port
+		},
+		dataType: 'json',			
+		timeout: 250,
+		context: $('body'),
+		success: function(data) {
+			var html = '<td>' + port + '</td><td>' + data.state + '</td>';
+			if (data.hasOwnProperty('kernel')) {
+				html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
+				data.kernel.version.minor + '.' +
+				data.kernel.version.build + '</td>' +
+				'<td>' + data.kernel.ticks + '</td>';
+				if (data.hasOwnProperty('app')) {
+					html += '<td>DevSim-' + data.app.version.major + '.' + 
+					data.app.version.minor + '.' +
+					data.app.version.build + '</td>' +
+					'<td>' + data.app.uptime + '</td>';						
+				} else {
+					html += '<td>?.?.?</td><td>?</td>';
+				}
+			} else {
+				html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
+			}		
+			tr.html(html);
+		},
+		error: function(xhr, type) { 
+			stdout_flush_tmo[port] = 5000;
+		}
+	});
+}
+
+function simlib_js_post(port, script) {		
+	$.ajax({
+ 		type: 'POST',
+		url: 'rpc_js.cgi?port=' + port,
+ 		data: script,
+		dataType: 'text',
+		timeout: 250,
+		async: false,
+		context: $('body'),
+		contentType: 'json',
+		success: function(data) {
+   		},
 		error: function(xhr, type){
-			setTimeout(get_stdout, 5000, pre, port);
+			stdout_flush_tmo[port] = 5000;
 		},
-		complete: function(xhr, status){
+		complete: function() {
+		}
+	});
+};
+
+function alert_show(__box, __msg) {		
+	var html = '<img style="float:none;vertical-align:middle"' +
+		'src="/img/alert.png" alt="Alert! "/>&nbsp;' + __msg;
+	__box.innerHTML = html;
+}
+
+function alert_hide(__box) {
+	__box.innerHTML = "";
+}
+
+function simlib_edit_file_read(port, fname, editor) {
+	editor.text('');	
+	$('.button').prop('disabled', true);
+	$.ajax({
+		type: 'GET',
+		url: 'file_read.cgi',
+		data: { 
+			fname: fname,
+			port: port,
+		},
+		dataType: 'text',
+		timeout: 5000,
+/*		async: false, */
+		context: $('body'),
+		success: function(data) {
+			editor.text(data);
+		},
+		error: function(xhr, type) {
+			alert('Ajax error!')
+		},
+		complete: function(xhr, status) {
+			$('.button').prop('disabled', false);
+		}
+	});
+}
+
+function simlib_edit_file_upload(port, editor, __form, __box) {
+	editor.text('');
+	
+	if (!(__box === undefined)) {
+		alert_show(__box, "Uploading file, please wait...");
+	}
+	
+	$('.button').prop('disabled', true);
+	
+	$.ajax({
+		url: __form.action + '?port=' + port,
+		type: 'POST',
+		data: new FormData(__form),
+		processData: false,
+		contentType: false,
+		/* async: false, */
+		success: function(data) {				
+			editor.text(data);
+		},
+		error: function(xhr, type) {
+			alert('Ajax error!')
+		},
+		complete: function(xhr, status) {
+			if (!(__box === undefined)) {
+				alert_hide(__box);
+			}
+			$('.button').prop('disabled', false);
+		}
+	});
+	
+	event.preventDefault();
+}
+
+function simlib_edit_file_write(port, fname, editor, __box) {	
+	var text = editor.val();
+	
+	if (!(__box === undefined)) {
+		alert_show(__box, "Uploading file, please wait...");
+	}
+	
+	$('.button').prop('disabled', true);	
+
+	$.ajax({
+ 		type: 'POST',
+		url: 'file_write.cgi?port=' + port + '&fname=' + fname,
+ 		data: text,
+		dataType: 'text',
+		timeout: 5000,
+/*		async: false, */
+		context: $('body'),
+		contentType: 'text/plain',
+		success: function(data) {
+   		},
+		error: function(xhr, type){
+			stdout_flush_tmo[port] = 5000;
+		},
+		complete: function() {
+			if (!(__box === undefined)) {
+				alert_hide(__box);
+			}
+			$('.button').prop('disabled', false);			
 		}
 	});
 };
