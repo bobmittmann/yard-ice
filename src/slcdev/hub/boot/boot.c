@@ -76,9 +76,11 @@ void monitor_init(void)
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
 
-#if (BOOT_ENABLE_GDB)
+#ifndef TEST
+#if (BOOT_ENABLE_GDB) 
 	DCC_LOG(LOG_TRACE, "3. gdb_init()");
 	gdb_init(monitor_task);
+#endif
 #endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");

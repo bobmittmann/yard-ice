@@ -199,8 +199,7 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 
 		(void)clk;
 		/* Receive up to SIMLNK_MTU bytes plus the break condition */
-//		if ((cnt = serial_recv(lnk->dev, pkt, SIMLINK_XFER_MAX, 0x7fffffff)) <= 0) {
-		if ((cnt = serial_recv(lnk->dev, pkt, SIMLINK_XFER_MAX, 5000)) <= 0) {
+		if ((cnt = serial_recv(lnk->dev, pkt, SIMLINK_XFER_MAX, 30000)) <= 0) {
 			INF("SIMLNK %d idle.", lnk->addr);
 			continue;
 		}

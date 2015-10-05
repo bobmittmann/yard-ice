@@ -428,8 +428,10 @@ int rsp_thread_info_next(struct gdb_rspd * gdb, char * pkt)
 	return rsp_pkt_send(gdb, pkt, n);
 }
 
+#if (THINKOS_ENABLE_CONSOLE)
 int rsp_console_output(struct gdb_rspd * gdb, char * pkt)
 {
+	uint8_t * ptr;
 	char * cp;
 	int cnt;
 	int n;
@@ -440,26 +442,22 @@ int rsp_console_output(struct gdb_rspd * gdb, char * pkt)
 	if (gdb->stopped)
 		return 0;
 
-	cp = pkt;
-	*cp++ = '$';
-	*cp++ = 'O';
-#if (THINKOS_ENABLE_CONSOLE)
-	uint8_t * ptr;
 	if ((cnt = __console_tx_pipe_ptr(&ptr)) > 0) {
+		cp = pkt;
+		*cp++ = '$';
+		*cp++ = 'O';
 		cp += bin2hex(cp, ptr, cnt);
 		__console_tx_pipe_commit(cnt);
+		n = cp - pkt;
+		rsp_pkt_send(gdb, pkt, n);
 	} else {
 		DCC_LOG(LOG_INFO, "TX Pipe empty!!!");
 	}
-#else
-	cnt = 0;
-#endif
 
-	n = cp - pkt;
-	rsp_pkt_send(gdb, pkt, n);
 
 	return cnt;
 }
+#endif
 
 int rsp_monitor_write(struct gdb_rspd * gdb, char * pkt, 
 					  const char * ptr, unsigned int cnt)
@@ -1606,7 +1604,9 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 	sigmask |= (1 << DMON_COMM_RCV);
 	sigmask |= (1 << DMON_COMM_CTL);
 	sigmask |= (1 << DMON_BREAKPOINT);
+#if (THINKOS_ENABLE_CONSOLE)
 	sigmask |= (1 << DMON_TX_PIPE);
+#endif
 	for(;;) {
 		
 		sigset = dmon_select(sigmask);
@@ -1689,12 +1689,14 @@ void __attribute__((noreturn)) gdb_task(struct dmon_comm * comm)
 			}
 		}
 
+#if (THINKOS_ENABLE_CONSOLE)
 		if (sigset & (1 << DMON_TX_PIPE)) {
 			DCC_LOG(LOG_INFO, "TX Pipe.");
 			if (rsp_console_output(gdb, pkt) <= 0) {
 				dmon_clear(DMON_TX_PIPE);
 			}
 		}
+#endif
 	}
 }
  

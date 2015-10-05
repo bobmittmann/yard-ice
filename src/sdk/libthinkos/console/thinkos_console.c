@@ -38,8 +38,8 @@ _Pragma ("GCC optimize (\"Ofast\")")
 #define CONSOLE_PIPE_LEN 64
 
 struct console_pipe {
-	uint32_t head;
-	uint32_t tail;
+	volatile uint32_t head;
+	volatile uint32_t tail;
 	uint8_t buf[CONSOLE_PIPE_LEN];
 };
 
@@ -131,6 +131,11 @@ static int pipe_write(struct console_pipe * pipe,
 	return cnt;
 }
 
+static bool pipe_isfull(struct console_pipe * pipe)
+{
+	return (pipe->tail + CONSOLE_PIPE_LEN) == pipe->head;
+}
+
 int __console_rx_pipe_ptr(uint8_t ** ptr) 
 {
 	struct console_pipe * pipe = &thinkos_console_rt.rx_pipe;
@@ -212,7 +217,6 @@ int __console_tx_pipe_ptr(uint8_t ** ptr)
 	return cnt;
 }
 
-
 void __console_tx_pipe_commit(unsigned int cnt) 
 {
 	int wq = THINKOS_WQ_CONSOLE_WR;
@@ -231,6 +235,28 @@ void __console_tx_pipe_commit(unsigned int cnt)
 	}
 }
 
+#if (THINKOS_ENABLE_PAUSE && THINKOS_ENABLE_THREAD_STAT)
+void __console_rd_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	/* wakeup from the console read wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
+	__thinkos_wakeup_return(wq, th, 0);
+}
+
+void __console_wr_resume(unsigned int th, unsigned int wq, bool tmw) 
+{
+	if (pipe_isfull(&thinkos_console_rt.tx_pipe)) {
+		DCC_LOG1(LOG_TRACE, "PC=%08x pipe full ..", thinkos_rt.ctx[th]->pc); 
+		dmon_signal(DMON_TX_PIPE);
+	} else {
+		DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	}
+	/* wakeup from the console write wait queue setting the return value to 0.
+	   The calling thread should retry the operation. */
+	__thinkos_wakeup_return(wq, th, 0);
+}
+#endif
 
 void thinkos_console_svc(int32_t * arg)
 {
@@ -319,10 +345,24 @@ wr_again:
 			   A macro shuld be definde to deal with this. 
 			 */ 
 			thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
-			/* Insert into the event wait queue */
+
 			queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+			
+			/* The pipe may have been flushed while suspending (1).
+			   If this is the case roll back and restart. */
+			if (!pipe_isfull(&thinkos_console_rt.tx_pipe)) {
+				/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+				thinkos_rt.th_stat[self] = 0;
+#endif
+				/* insert into the ready wait queue */
+				__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+				DCC_LOG2(LOG_WARNING, "<%d> rollback 1 %d...", self, wq);
+				goto wr_again;
+			}
+			/* Insert into the event wait queue */
 			queue |= (1 << self);
-			/* (3) Try to save the queu state back.
+			/* (3) Try to save back the queue state.
 			   The queue may have changed by an interrup handler.
 			   If this is the case roll back and restart. */
 			if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
@@ -337,9 +377,11 @@ wr_again:
 			}
 
 			/* -- wait for event ---------------------------------------- */
-			DCC_LOG2(LOG_INFO, "<%d> waiting on console write %d...", self, wq);
+			DCC_LOG2(LOG_MSG, "<%d> waiting on console write %d...", 
+					 self, wq);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched(); 
+
 		}
 		break;
 
@@ -348,6 +390,7 @@ wr_again:
 		break;
 
 	case CONSOLE_IOCTL:
+		DCC_LOG(LOG_TRACE, "CONSOLE_IOCTL");
 		arg[0] = 0;
 		break;
 

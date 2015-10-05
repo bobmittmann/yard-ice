@@ -351,9 +351,23 @@ void board_softreset(void)
 	board_comm_irqen();
 }
 
+void app_default(void * arg);
+
 bool board_autoboot(uint32_t tick)
 {
 	int mode = 0;
+
+	/* get the mode selection from the rotary switch (SW4) */
+	mode |= stm32_gpio_stat(IO_MODE0) ? 0 : (1 << 0);
+	mode |= stm32_gpio_stat(IO_MODE2) ? 0 : (1 << 1);
+	mode |= stm32_gpio_stat(IO_MODE1) ? 0 : (1 << 2);
+	mode |= stm32_gpio_stat(IO_MODE3) ? 0 : (1 << 3);
+
+	if (mode == 8) { /* test mode */
+		if (tick == 1)
+			__thinkos_exec(0, app_default, NULL, false);
+		return false;
+	}
 
 	if (tick & 1) {
 		__led_on(IO_LED1);
@@ -362,12 +376,6 @@ bool board_autoboot(uint32_t tick)
 		__led_off(IO_LED1);
 		__led_off(IO_LED2);
 	}
-
-	/* get the mode selection from the rotary switch (SW4) */
-	mode |= stm32_gpio_stat(IO_MODE0) ? 0 : (1 << 0);
-	mode |= stm32_gpio_stat(IO_MODE2) ? 0 : (1 << 1);
-	mode |= stm32_gpio_stat(IO_MODE1) ? 0 : (1 << 2);
-	mode |= stm32_gpio_stat(IO_MODE3) ? 0 : (1 << 3);
 
 	if (mode == 0) /* Production mode */
 		return true; 
@@ -544,4 +552,26 @@ const struct thinkos_board this_board = {
 	.on_appload = board_on_appload,
 	.comm_irqen = board_comm_irqen
 };
+
+
+void board_test(void * arg)
+{
+	DCC_LOG1(LOG_TRACE, "arg=%p", arg);
+
+	for (;;) {
+		__led_on(IO_LED1);
+
+		thinkos_sleep(100);
+
+		__led_off(IO_LED1);
+
+		__led_on(IO_LED2);
+
+		thinkos_sleep(100);
+
+		__led_off(IO_LED2);
+	}	
+}
+
+void app_default(void * arg) __attribute__((weak, alias("board_test")));
 

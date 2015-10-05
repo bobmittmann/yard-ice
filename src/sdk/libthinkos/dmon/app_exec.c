@@ -40,13 +40,9 @@ static void __attribute__((naked, noreturn)) app_bootstrap(void * arg)
 	}
 }
 
-extern uint32_t _stack;
-
 /* -------------------------------------------------------------------------
  * Application execution
  * ------------------------------------------------------------------------- */
-
-extern const struct thinkos_thread_inf thinkos_main_inf;
 
 bool dmon_app_exec(uint32_t addr, bool paused)
 {
@@ -62,17 +58,7 @@ bool dmon_app_exec(uint32_t addr, bool paused)
 		return false;
 	}
 
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, 
-						  (void *)app_bootstrap, (void *)app);
-
-#if THINKOS_ENABLE_THREAD_INFO
-	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
-#endif
-
-	if (!paused) {
-		__thinkos_thread_resume(thread_id);
-		__thinkos_defer_sched();
-	}
+	__thinkos_exec(thread_id, (void *)app_bootstrap, (void *)app, paused);
 
 	return true;
 }

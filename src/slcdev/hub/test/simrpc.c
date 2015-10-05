@@ -195,11 +195,12 @@ void simrpc_init(void)
 	simrpc_pcb_pool_init();
 
 	lnk = simlnk_alloc();
-/*	ser = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE,
-									   SERIAL_8N1 | SERIAL_EOT_BREAK); */
 
-	ser = stm32f_uart2_serial_init(SIMLNK_BAUDRATE,
+	ser = stm32f_uart2_serial_dma_init(SIMLNK_BAUDRATE,
 									   SERIAL_8N1 | SERIAL_EOT_BREAK);
+
+//	ser = stm32f_uart2_serial_init(SIMLNK_BAUDRATE,
+									   //SERIAL_8N1 | SERIAL_EOT_BREAK);
 
 	simlnk_init(lnk, "SIM1", 1, ser);
 	simlnk[0] = lnk;

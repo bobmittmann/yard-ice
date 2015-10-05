@@ -233,21 +233,8 @@ static void join_resume(unsigned int th, unsigned int wq, bool tmw)
 #endif
 
 #if THINKOS_ENABLE_CONSOLE
-static void console_rd_resume(unsigned int th, unsigned int wq, bool tmw) 
-{
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
-	/* wakeup from the console read wait queue setting the return value to 0.
-	   The calling thread should retry the operation. */
-	__thinkos_wakeup_return(wq, th, 0);
-}
-
-static void console_wr_resume(unsigned int th, unsigned int wq, bool tmw) 
-{
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
-	/* wakeup from the console write wait queue setting the return value to 0.
-	   The calling thread should retry the operation. */
-	__thinkos_wakeup_return(wq, th, 0);
-}
+void __console_rd_resume(unsigned int th, unsigned int wq, bool tmw);
+void __console_wr_resume(unsigned int th, unsigned int wq, bool tmw);
 #endif
 
 #if THINKOS_ENABLE_COMM
@@ -324,8 +311,8 @@ static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_JOIN] = join_resume,
 #endif
 #if THINKOS_ENABLE_CONSOLE
-	[THINKOS_OBJ_CONREAD] = console_rd_resume,
-	[THINKOS_OBJ_CONWRITE] = console_wr_resume,
+	[THINKOS_OBJ_CONREAD] = __console_rd_resume,
+	[THINKOS_OBJ_CONWRITE] = __console_wr_resume,
 #endif
 #if THINKOS_ENABLE_PAUSE
 	[THINKOS_OBJ_PAUSED] = paused_resume,

@@ -178,6 +178,8 @@ void __attribute__((noreturn)) io_task(void * arg)
 			iodrv.sw_addr = sw & 0xf;
 			iodrv.sw_mode = (sw >> 4) & 0xf;
 			INF("addr=%d mode=%d", iodrv.sw_addr, iodrv.sw_mode);
+			if (iodrv.sw_mode == 7)
+				thinkos_console_ioctl(0, NULL, 0);
 		} 
 	}
 }

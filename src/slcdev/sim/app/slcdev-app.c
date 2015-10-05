@@ -31,7 +31,7 @@ int __attribute__((noreturn)) app_main(const char * mode)
 {
 	FILE * f;
 
-	DCC_LOG1(LOG_WARNING, "mode=%p.", mode);
+	DCC_LOG1(LOG_TRACE, "mode=%p.", mode);
 
 //	f = null_fopen(NULL);
 	f = simrpc_stdout_fopen();
@@ -63,18 +63,21 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	const_strbuf_init();
 
 	/* initializing simulator */
+	DCC_LOG(LOG_TRACE, "slcdev_sim_init().");
 	slcdev_sim_init();
 
 	/* initializes database */
+	DCC_LOG(LOG_TRACE, "device_db_init().");
 	device_db_init();
 
 	if (strcmp(mode, "safe") == 0) {
-		DCC_LOG(LOG_WARNING, "safe mode!");
+		DCC_LOG(LOG_TRACE, "safe mode!");
 	} else {
+		DCC_LOG(LOG_TRACE, "normal mode!");
 		/* load configuration */
-		config_load();
+//		config_load();
 		/* start simulation */
-		slcdev_sim_resume();
+//		slcdev_sim_resume();
 	}
 
 #if 0
@@ -90,6 +93,7 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	simlnk_task();
 #endif
 
+	DCC_LOG(LOG_TRACE, "js_runtime_init().");
 	js_runtime_init();
 
 	/* create a thread to handle simulation link incoming requests */
@@ -98,6 +102,7 @@ int __attribute__((noreturn)) app_main(const char * mode)
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 
 	/* stay forever in the simulator task */
+	DCC_LOG(LOG_TRACE, "sim_event_task().");
 	sim_event_task();
 }
 

@@ -31,6 +31,7 @@
 #include "simlnk.h"
 #include "simrpc.h"
 #include "simrpc_svc.h"
+#include "io.h"
 
 struct simrpc_console {
 	char buf[SIMRPC_DATA_MAX];
@@ -113,8 +114,12 @@ void simrpc_test(void)
 	int seq = 0;
 
 	for (;;) {
-		if ((seq % 10) == 0) {
+		if ((seq % 20) == 0) {
 			DCC_LOG1(LOG_TRACE, "seq=%d.", seq);
+			int rem = seq / 20;
+			int i = rem % 4;
+
+			led_flash(i, 32);
 		}
 		opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
 						   seq++, SIMRPC_STDOUT_DATA);

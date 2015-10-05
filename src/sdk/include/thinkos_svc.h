@@ -520,6 +520,11 @@ thinkos_console_write(const void * buf, unsigned int len) {
 }
 
 static inline int __attribute__((always_inline)) 
+thinkos_console_ioctl(unsigned int ioctl, void * arg, unsigned int size) {
+	return THINKOS_SVC4(THINKOS_CONSOLE, CONSOLE_IOCTL, ioctl, arg, size);
+}
+
+static inline int __attribute__((always_inline)) 
 thinkos_console_read(void * buf, unsigned int len) {
 	return THINKOS_SVC3(THINKOS_CONSOLE, CONSOLE_READ, buf, len);
 }

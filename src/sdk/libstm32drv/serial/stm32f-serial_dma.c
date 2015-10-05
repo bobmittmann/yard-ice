@@ -35,7 +35,7 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 	int c;
 
 	cr = uart->cr1;
-	sr = uart->sr & (cr | USART_ORE | USART_FE);
+	sr = uart->sr & (cr | USART_ORE | USART_LBD);
 
 	if (sr & USART_TC) {
 		DCC_LOG1(LOG_MSG, "UART%d TC.", stm32_usart_lookup(uart) + 1);
@@ -55,10 +55,9 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 	}
 
 	/* break detection */
-	if (sr & USART_FE) {
-		/* clear the frame error interrupt flag */
-		c = uart->rdr;
-		(void)c;
+	if (sr & USART_LBD) {
+		/* clear the break detection interrupt flag */
+		uart->sr = sr & ~(USART_ORE | USART_LBD);
 		/* disable DMA stream */
 		drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
 		/* skip the break char */
@@ -142,7 +141,7 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 		drv->rx.dmactl.strm->cr = cr | DMA_TCIE | DMA_EN;
 		ndtr = len;
 	} else {
-		DCC_LOG(LOG_INFO, "DMA prepared...");
+		DCC_LOG(LOG_MSG, "DMA prepared...");
 		ndtr = drv->rx.buf_len;
 	}
 
@@ -167,10 +166,6 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 
 	/* Number of data items transfered... */
 	cnt = ndtr - drv->rx.dmactl.strm->ndtr;
-	if (cnt == 0) {
-		DCC_LOG(LOG_WARNING, "DMA XFR cnt == 0!!!");
-		abort();
-	}
 
 	if (drv->rx.buf_ptr != NULL) {
 		/* prepare next transfer */
@@ -189,7 +184,11 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 		}
 	}
 
-	DCC_LOG2(LOG_INFO, "%6d: cnt=%d", thinkos_clock_i(), cnt);
+	if (cnt == 0)
+		DCC_LOG1(LOG_WARNING, "%6d: DMA XFR cnt == 0!!!", thinkos_clock_i());
+	else
+		DCC_LOG2(LOG_INFO, "%6d: cnt=%d", thinkos_clock_i(), cnt);
+
 	return cnt;
 }
 
@@ -208,7 +207,6 @@ void stm32f_serial_dma_tx_isr(struct stm32f_serial_dma_drv * drv)
 		drv->tx.dmactl.strm->cr &= ~DMA_EN;
 	}
 }
-
 
 int stm32f_serial_dma_prepare(struct stm32f_serial_dma_drv * drv, 
 							  void * buf, unsigned int len)
@@ -427,8 +425,8 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->uart->cr3 |= USART_DMAT | USART_DMAR;
 
 	if (flags & SERIAL_EOT_BREAK) {
-		/* enable error interrupt */
-		drv->uart->cr3 |= USART_EIE;
+		/* line break detection */
+		drv->uart->cr2 |= USART_LBDIE;
 	} else {
 		/* enable RX IDLE interrupt */
 		drv->uart->cr1 |= USART_IDLEIE;

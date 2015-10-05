@@ -39,31 +39,17 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 	
 	cr = uart->cr1;
 
-#if STM32L1x
-	sr = uart->sr & (cr | USART_ORE | USART_FE);
-#else
 	sr = uart->sr & (cr | USART_ORE | USART_LBD);
-#endif
 
-#if STM32L1x
 	/* break detection */
-	if (sr & USART_FE) {
-		/* clear the frame error interrupt flag */
-		c = uart->rdr;
-		(void)c;
-		DCC_LOG(LOG_INFO, "BRK");
-#if SERIAL_ENABLE_STATS
-		drv->stats.err_frm++;
-#endif
-		/* signal the waiting thread */
-		thinkos_gate_open_i(drv->rx_gate);
-		brk = 1;
-	}
-#else
 	if (sr & USART_LBD) {
 		/* clear the break detection interrupt flag */
 		uart->sr = sr & ~(USART_ORE | USART_LBD);
-		DCC_LOG(LOG_INFO, "BRK");
+
+		DCC_LOG(LOG_TRACE, "BRK");
+
+		/* remove the break char from the queue */
+		drv->rx_fifo.head--;
 #if SERIAL_ENABLE_STATS
 		drv->stats.rx_brk++;
 #endif
@@ -71,7 +57,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		thinkos_gate_open_i(drv->rx_gate);
 		return;
 	}
-#endif
+
 	if (sr & USART_IDLE) { /* idle detection */
 		DCC_LOG(LOG_INFO, "IDLE!");
 		c = uart->rdr;
@@ -195,14 +181,8 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 	drv->uart->sr &= ~USART_TC;
 
 	if (flags & SERIAL_EOT_BREAK) {
-#if STM32L1x
-		/* enable error interrupt */
-		drv->uart->cr3 |= USART_EIE;
-#else
 		/* line break detection */
 		drv->uart->cr2 |= USART_LBDIE;
-		/*  USART_LINEN */
-#endif
 	} else {
 		/* enable RX IDLE interrupt */
 		drv->uart->cr1 |= USART_IDLEIE;
