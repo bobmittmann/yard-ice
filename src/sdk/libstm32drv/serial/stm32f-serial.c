@@ -32,40 +32,85 @@
 
 void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 {
-	struct stm32_usart * us;
+	struct stm32_usart * uart = drv->uart;
+	uint32_t cr;
 	uint32_t sr;
 	int c;
 	
-	us = drv->uart;
-	sr = us->sr & us->cr1;
+	cr = uart->cr1;
+
+#if STM32L1x
+	sr = uart->sr & (cr | USART_ORE | USART_FE);
+#else
+	sr = uart->sr & (cr | USART_ORE | USART_LBD);
+#endif
+
+#if STM32L1x
+	/* break detection */
+	if (sr & USART_FE) {
+		/* clear the frame error interrupt flag */
+		c = uart->rdr;
+		(void)c;
+		DCC_LOG(LOG_INFO, "BRK");
+#if SERIAL_ENABLE_STATS
+		drv->stats.err_frm++;
+#endif
+		/* signal the waiting thread */
+		thinkos_gate_open_i(drv->rx_gate);
+		brk = 1;
+	}
+#else
+	if (sr & USART_LBD) {
+		/* clear the break detection interrupt flag */
+		uart->sr = sr & ~(USART_ORE | USART_LBD);
+		DCC_LOG(LOG_INFO, "BRK");
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_brk++;
+#endif
+		/* signal the waiting thread */
+		thinkos_gate_open_i(drv->rx_gate);
+		return;
+	}
+#endif
+	if (sr & USART_IDLE) { /* idle detection */
+		DCC_LOG(LOG_INFO, "IDLE!");
+		c = uart->rdr;
+		(void)c;
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_idle++;
+#endif
+		thinkos_gate_open_i(drv->rx_gate);
+		return;
+	}
 
 	if (sr & USART_RXNE) {
 		uint32_t head;
 		int free;
 
-		c = us->rdr;
+		c = uart->rdr;
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_cnt++;
+#endif
+
 		head = drv->rx_fifo.head;
 		free = SERIAL_RX_FIFO_LEN - (head - drv->rx_fifo.tail);
 		if (free > 0) { 
 			drv->rx_fifo.buf[head & (SERIAL_RX_FIFO_LEN - 1)] = c;
 			drv->rx_fifo.head = head + 1;
 			free--;
+			if (free == drv->rx_trig) {
+				DCC_LOG(LOG_MSG, "---");
+				thinkos_gate_open_i(drv->rx_gate);
+			}
 		} else {
 			DCC_LOG(LOG_INFO, "RX fifo full!");
+#if SERIAL_ENABLE_STATS
+			drv->stats.rx_drop++;
+#endif
 		}
-//		if (free <= (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL)) {
-		if (free == drv->rx_trig) {
-			DCC_LOG(LOG_MSG, "---");
-			__nop();
-			thinkos_gate_open_i(drv->rx_gate);
-		}
-	} else	if (sr & USART_IDLE) {
-		DCC_LOG(LOG_INFO, "IDLE!");
-		c = us->rdr;
-		(void)c;
-		thinkos_gate_open_i(drv->rx_gate);
 	}
 
+#if 0
 	if (sr & USART_TXE) {
 		uint32_t tail = drv->tx_fifo.tail;
 		if (tail == drv->tx_fifo.head) {
@@ -73,13 +118,45 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 			*drv->txie = 0; 
 			thinkos_gate_open_i(drv->tx_gate);
 		} else {
-			us->tdr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
+			uart->tdr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
 			drv->tx_fifo.tail = tail;
+		}
+	}
+#else
+	if (sr & USART_TXE) {
+		uint32_t tail = drv->tx_fifo.tail;
+		if (tail == drv->tx_fifo.head) {
+			/* FIFO empty, disable TXE interrupts, Enable TC interrupt */
+			uart->cr1 = (cr & ~USART_TXEIE) | USART_TCIE;
+		} else {
+			uart->tdr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
+			drv->tx_fifo.tail = tail;
+		}
+	}
+#endif
+
+	if (sr & USART_TC) {
+		DCC_LOG1(LOG_MSG, "UART%d TC.", stm32_usart_lookup(uart) + 1);
+		/* TC interrupt is cleared by writing 0 back to the SR register */
+		uart->sr = sr & ~USART_TC;
+		/* disable the transfer complete interrupt */
+		cr &= ~USART_TCIE;
+		if (cr & USART_IDLEIE) {
+			/* Pulse TE to generate an IDLE Frame */
+			uart->cr1 = cr & ~USART_TE;
+			uart->cr1 = cr | USART_TE;
+		} else {
+			/* Generate a brake condition */
+			uart->cr1 = cr | USART_SBK;
+			thinkos_gate_open_i(drv->tx_gate);
 		}
 	}
 
 	if (sr & USART_ORE) {
 		DCC_LOG(LOG_INFO, "OVR!");
+#if SERIAL_ENABLE_STATS
+		drv->stats.err_ovr++;
+#endif
 	}
 }
 
@@ -103,9 +180,9 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 
 	drv->tx_fifo.head = drv->tx_fifo.tail = 0;
 	drv->rx_fifo.head = drv->rx_fifo.tail = 0;
-	drv->rx_trig = (SERIAL_RX_FIFO_LEN - SERIAL_RX_TRIG_LVL);
+	drv->rx_trig = SERIAL_RX_TRIG_LVL;
 
-	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
+//	drv->txie = CM3_BITBAND_DEV(&uart->cr1, 7);
 	thinkos_gate_open(drv->tx_gate);
 
 	stm32_usart_init(uart);
@@ -113,10 +190,27 @@ int stm32f_serial_init(struct stm32f_serial_drv * drv,
 	stm32_usart_mode_set(uart, SERIAL_8N1);
 
 	/* enable RX interrupt */
-	uart->cr1 |= USART_RXNEIE | USART_IDLEIE;
+	uart->cr1 |= USART_RXNEIE;
+
+	drv->uart->sr &= ~USART_TC;
+
+	if (flags & SERIAL_EOT_BREAK) {
+#if STM32L1x
+		/* enable error interrupt */
+		drv->uart->cr3 |= USART_EIE;
+#else
+		/* line break detection */
+		drv->uart->cr2 |= USART_LBDIE;
+		/*  USART_LINEN */
+#endif
+	} else {
+		/* enable RX IDLE interrupt */
+		drv->uart->cr1 |= USART_IDLEIE;
+	}
 
 	/* enable UART */
-	stm32_usart_enable(uart);
+	drv->uart->cr1 |= USART_UE | USART_TE | USART_RE;
+
 
 	return 0;
 }
@@ -133,17 +227,28 @@ int stm32f_serial_recv(struct stm32f_serial_drv * drv, void * buf,
 
 	DCC_LOG2(LOG_INFO, "1. len=%d tmo=%d", len, tmo);
 
+//	thinkos_trace("stm32f_serial_recv() 1.");
+
 again:
+
+	thinkos_trace("stm32f_serial_recv() 2.");
+
 	if ((ret = thinkos_gate_timedwait(drv->rx_gate, tmo)) < 0) {
 		DCC_LOG1(LOG_INFO, "cnt=%d, timeout!", 
 				 drv->rx_fifo.head - drv->rx_fifo.tail);
+
+		thinkos_trace("stm32f_serial_recv() 3.");
+
 		return ret;
 	}
+
+	thinkos_trace("stm32f_serial_recv() 4.");
 
 	tail = drv->rx_fifo.tail;
 	cnt = drv->rx_fifo.head - tail;
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "RX FIFO empty!");
+		thinkos_gate_exit(drv->rx_gate, 0);
 		goto again;
 	}
 	n = MIN(len, cnt);
@@ -167,8 +272,11 @@ again:
 int stm32f_serial_send(struct stm32f_serial_drv * drv, const void * buf,
 						unsigned int len)
 {
+	struct stm32_usart * uart = drv->uart;
 	uint8_t * cp = (uint8_t *)buf;
 	int rem = len;
+	uint32_t cr;
+
 
 	DCC_LOG1(LOG_INFO, "len=%d", len);
 
@@ -191,7 +299,14 @@ int stm32f_serial_send(struct stm32f_serial_drv * drv, const void * buf,
 		for (i = 0; i < n; ++i) 
 			drv->tx_fifo.buf[head++ % SERIAL_TX_FIFO_LEN] = cp[i];
 		drv->tx_fifo.head = head;
-		*drv->txie = 1; 
+
+		/* enable TX empty interrupt */
+//		*drv->txie = 1;
+
+		do {
+			cr = __ldrex((uint32_t *)&uart->cr1);
+			cr |= USART_TXEIE;
+		} while (__strex((uint32_t *)&uart->cr1, cr));
 
 		free -= n;
 		rem -= n;

@@ -108,6 +108,12 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 
 	/* get the opcode */
 	opc = pkt[0];
+
+	DCC_LOG4(LOG_INFO, "dst=%02x src=%02x insn=%d seq=%d", 
+			 SIMRPC_DST(opc), SIMRPC_SRC(opc),
+			 SIMRPC_INSN(opc), SIMRPC_SEQ(opc));
+
+
 	/* data portion */
 	data = (void *)&pkt[1];
 	/* adjust the data length */
@@ -166,7 +172,6 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_ENOSYS);
 		}
 	}
-
 }
 
 void thinkos_comm_svc(int32_t * arg)
@@ -245,7 +250,7 @@ void stm32_usart2_isr(void)
 		int cnt;
 		int th;
 
-		DCC_LOG(LOG_INFO, "TC");
+		DCC_LOG(LOG_MSG, "TC");
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
         /* Disable the transfer complete interrupt */
@@ -292,11 +297,13 @@ void stm32_usart2_isr(void)
 		dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
 
 		DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
-
+	
 		if (cnt > 4) {
 			/* process this request,
 			 remove the break character from the packet length. */
 			simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
+		} else {
+			DCC_LOG1(LOG_WARNING, "short pkt! cnt=%d", cnt);
 		}
 	}	
 }

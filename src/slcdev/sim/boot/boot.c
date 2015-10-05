@@ -78,7 +78,7 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	app_try_exec();
 
 	DCC_LOG(LOG_TRACE, "5. app_default().");
-	app_default(NULL);
+	app_default("app");
 
 //	return 0;
 }

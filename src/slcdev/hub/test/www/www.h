@@ -67,7 +67,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_ZEPTO_MIN_JS 9377
 
-#define SIZEOF_SIMLIB_JS 1120
+#define SIZEOF_SIMLIB_JS 1091
 
 #define SIZEOF_MODALBOX_JS 1430
 
@@ -77,7 +77,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_SIM_SCRIPT_HTML 1965
 
-#define SIZEOF_SIM_FIRMWARE_HTML 1690
+#define SIZEOF_SIM_FIRMWARE_HTML 1678
 
 #define SIZEOF_SIM_DIAG_HTML 1948
 
@@ -87,7 +87,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 1615
+#define SIZEOF_SIM_TOOLS_HTML 1707
 
 #define SIZEOF_SIM_DATABASE_HTML 1934
 

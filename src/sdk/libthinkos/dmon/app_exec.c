@@ -77,8 +77,35 @@ bool dmon_app_exec(uint32_t addr, bool paused)
 	return true;
 }
 
+
+static void __dmon_irq_disable_all(void)
+{
+	int i;
+
+	for (i = 0; i < NVIC_IRQ_REGS; ++i) {
+		/* save interrupt state */
+		thinkos_dmon_rt.nvic_ie[i] = CM3_NVIC->iser[i];
+		DCC_LOG2(LOG_TRACE, "nvic_ie[%d]=0x%08x", 
+				i, thinkos_dmon_rt.nvic_ie[i]);
+		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
+	}
+	this_board.comm_irqen();
+}
+
+static void __dmon_irq_restore_all(void)
+{
+	int i;
+
+	for (i = 0; i < NVIC_IRQ_REGS; ++i) {
+		/* restore interrupt state */
+		CM3_NVIC->iser[i] = thinkos_dmon_rt.nvic_ie[i];
+	}
+}
+
 bool dmon_app_suspend(void)
 {
+	__dmon_irq_disable_all();
+
 	__thinkos_pause_all();
 
 	if (thinkos_rt.active == THINKOS_THREADS_MAX) {
@@ -102,6 +129,8 @@ bool dmon_app_continue(void)
 	DCC_LOG(LOG_INFO, "....");
 
 	__thinkos_resume_all();
+
+	__dmon_irq_restore_all();
 
 	return true;
 }

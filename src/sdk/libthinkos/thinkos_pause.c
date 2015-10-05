@@ -190,14 +190,20 @@ static void flag_resume(unsigned int th, unsigned int wq, bool tmw)
 #endif
 
 #if THINKOS_GATE_MAX > 0
-static void gate_resume(unsigned int th, unsigned int wq, bool tmw) 
+void __thinkos_gate_resume(unsigned int th, unsigned int wq, bool tmw) 
 {
 	unsigned int idx = wq - THINKOS_GATE_BASE;
+	int open;
+	int lock;
+	
+	open = __bit_mem_rd(thinkos_rt.gate, idx * 2);
+	lock = __bit_mem_rd(thinkos_rt.gate, idx * 2 + 1); 
 
-	DCC_LOG1(LOG_TRACE, "PC=%08x ...........", thinkos_rt.ctx[th]->pc); 
+	DCC_LOG3(LOG_TRACE, "PC=%08x open=%d lock=%d...........", 
+			 thinkos_rt.ctx[th]->pc, open, lock);
 
-	if ((__bit_mem_rd(thinkos_rt.gate, idx * 2)) && 
-		(!__bit_mem_rd(thinkos_rt.gate, idx * 2 + 1))) {
+	/* THINKOS_GATE_SIGNALED */
+	if (open && !lock) {
 		/* close the gate */
 		__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
 		/* lock the gate */
@@ -312,7 +318,7 @@ static const void * const thread_resume_lut[] = {
 	[THINKOS_OBJ_FLAG] = flag_resume,
 #endif
 #if THINKOS_GATE_MAX > 0
-	[THINKOS_OBJ_GATE] = gate_resume,
+	[THINKOS_OBJ_GATE] = __thinkos_gate_resume,
 #endif
 #if THINKOS_ENABLE_JOIN
 	[THINKOS_OBJ_JOIN] = join_resume,

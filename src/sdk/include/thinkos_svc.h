@@ -121,7 +121,7 @@
 #define THINKOS_CTL_UDELAY_FACTOR 1
 #define THINKOS_CTL_CLOCKS        2
 #define THINKOS_CTL_SNAPSHOT      3
-
+#define THINKOS_CTL_TRACE         4
 
 #include <arch/cortex-m3.h>
 
@@ -558,6 +558,11 @@ static inline void __attribute__((always_inline, noreturn))
 		for (;;) {
 		THINKOS_SVC1(THINKOS_CTL, THINKOS_CTL_ABORT);
 		}
+	}
+
+static inline int __attribute__((always_inline))
+	thinkos_trace(const char * msg) {
+		return THINKOS_SVC2(THINKOS_CTL, THINKOS_CTL_TRACE, msg);
 	}
 
 static inline int __attribute__((always_inline)) 

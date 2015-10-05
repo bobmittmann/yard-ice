@@ -92,7 +92,8 @@ void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv)
 		DCC_LOG(LOG_TRACE, "TCIF");
 		/* clear the RX DMA transfer complete flag */
 		drv->rx.dmactl.ifcr[TCIF_BIT] = 1;
-		thinkos_flag_give_i(drv->rx_idle);
+/*	XXX: slcdev debug.
+ * thinkos_flag_give_i(drv->rx_idle); */
 	}
 	if (drv->rx.dmactl.isr[TEIF_BIT]) {
 		DCC_LOG(LOG_TRACE, "TEIF");
@@ -168,7 +169,7 @@ int stm32f_serial_dma_recv(struct stm32f_serial_dma_drv * drv,
 	cnt = ndtr - drv->rx.dmactl.strm->ndtr;
 	if (cnt == 0) {
 		DCC_LOG(LOG_WARNING, "DMA XFR cnt == 0!!!");
-//		abort();
+		abort();
 	}
 
 	if (drv->rx.buf_ptr != NULL) {
@@ -423,7 +424,7 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	drv->uart->sr &= ~USART_TC;
 
 	/* configure the UART for DMA transfer */
-	drv->uart->cr3 |= USART_DMAT | USART_DMAR | USART_EIE;
+	drv->uart->cr3 |= USART_DMAT | USART_DMAR;
 
 	if (flags & SERIAL_EOT_BREAK) {
 		/* enable error interrupt */

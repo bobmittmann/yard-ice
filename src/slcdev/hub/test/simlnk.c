@@ -32,6 +32,7 @@
 #include <stdbool.h>
 #include <sys/param.h>
 #include <sys/serial.h>
+#include <assert.h>
 
 #include <thinkos.h>
 #include "simlnk.h"
@@ -60,6 +61,8 @@ struct pipe {
     uint8_t buf[SIMLINK_STDOUT_BUF_SIZE];
 };
 
+#define SIMLINK_XFER_MAX (SIMLNK_MTU + 2)
+
 struct simlnk {
 	bool pool_alloc; /* indicate if the structure was 
 						allocated from a resource pool */
@@ -67,7 +70,7 @@ struct simlnk {
 	uint8_t mutex;
 	struct serial_dev * dev;
 	struct {
-		uint32_t buf[(SIMLNK_MTU + 2 + 3) / 4];
+		uint32_t buf[(SIMLINK_XFER_MAX + 3) / 4];
 		volatile unsigned int cnt;
 		int flag;
 	} rx;
@@ -76,6 +79,7 @@ struct simlnk {
 		int flag;
 		uint32_t seq;
 	} tx;
+	uint8_t stdout_seq;
 	struct pipe stdout_pipe;
 	struct simlnk_stat stat;
 };
@@ -164,7 +168,6 @@ static int pipe_read(struct pipe * pipe, uint8_t * buf, unsigned int len)
  * ------------------------------------------------------------------------- */
 
 
-
 void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 {
 	uint32_t * pkt = lnk->rx.buf;
@@ -172,6 +175,21 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 	int cnt;
 
 	INF("<%d> started...", thinkos_thread_self());
+#if 0
+	/* prepare for DMA transfer */
+	assert(serial_dma_prepare(lnk->dev, lnk->rx.buf, SIMLINK_XFER_MAX) == 0);
+#endif
+
+	/* prepare for DMA transfer */
+	if (serial_dma_prepare(lnk->dev, lnk->rx.buf, SIMLINK_XFER_MAX) < 0) {
+		WARN("DMA transfer not supported!");
+		/* set the trigger level above the MTU, this
+		   will force the serial driver to notify the lower layer
+		   when the channel is idle. */
+		serial_rx_trig_set(lnk->dev, SIMLINK_XFER_MAX);
+	} else {
+		INF("Using DMA transfer!");
+	}
 
 	for (;;) {
 		clk = thinkos_clock();
@@ -181,25 +199,39 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 
 		(void)clk;
 		/* Receive up to SIMLNK_MTU bytes plus the break condition */
-		if ((cnt = serial_recv(lnk->dev, pkt, SIMLNK_MTU + 2, 0x7fffffff)) <= 0) {
+//		if ((cnt = serial_recv(lnk->dev, pkt, SIMLINK_XFER_MAX, 0x7fffffff)) <= 0) {
+		if ((cnt = serial_recv(lnk->dev, pkt, SIMLINK_XFER_MAX, 5000)) <= 0) {
+			INF("SIMLNK %d idle.", lnk->addr);
 			continue;
 		}
 
 		opc = pkt[0];
 		insn = SIMRPC_INSN(opc);
 		seq = SIMRPC_SEQ(opc);
+		(void)seq;
 
 		if (insn == SIMRPC_SIGNAL) {
 			continue;
 		}
 
-		if ((cnt > 4) && (insn == SIMRPC_STDOUT_DATA)) {
+		if ((cnt >= 4) && (insn == SIMRPC_STDOUT_DATA)) {
 			int n = cnt - 4;
-			DBG("pipe write, %d bytes, seq=%d.", n, seq);
-			pipe_write(&lnk->stdout_pipe, (uint8_t *)&pkt[1], cnt - 4);
+			DBG("RPC stdout: seq=%d cnt=%d.", seq, cnt);
+//			DBG("pipe write, %d bytes, seq=%d.", n, seq);
+//			fwrite(&pkt[1], n, 1, stdout);
+			if ((lnk->stdout_seq & 0xff) != seq) {
+				WARN("RPC stdout: invalid seq %d, expected %d.", seq,
+						lnk->stdout_seq & 0xff);
+				/* Reset sequence */
+				lnk->stdout_seq = seq;
+			}
+			lnk->stdout_seq++;
+			pipe_write(&lnk->stdout_pipe, (uint8_t *)&pkt[1], n);
 			continue;
 		}
 
+		DBG("RPC recv: daddr=%02x saddr=%02x insn=%d seq=%d.",
+				SIMRPC_DST(opc), SIMRPC_SRC(opc), insn, seq);
 		lnk->rx.cnt = cnt;
 		thinkos_flag_give(lnk->rx.flag);
 	}
@@ -274,13 +306,15 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	uint32_t seq;
 	int ret;
 
-	seq = sp->seq = lnk->tx.seq++;
-	opc = simrpc_mkopc(daddr, saddr, seq, insn);
-
 	thinkos_mutex_lock(lnk->mutex);
 
+	seq = sp->seq = lnk->tx.seq++;
+	opc = simrpc_mkopc(daddr, saddr, seq, insn);
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], req, cnt);
+
+	INF("RPC <%d> daddr=%d insn=%d seq=%d tmo=%d. <<",
+			thinkos_thread_self(), daddr, insn, seq, tmo);
 
 #if 0
 	{ 
@@ -292,6 +326,7 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 #endif
 
 	if (serial_send(lnk->dev, lnk->tx.buf, 4 + cnt) < 0) {
+		WARN("RPC <%d> serial_send() error!", thinkos_thread_self());
 		thinkos_mutex_unlock(lnk->mutex);
 		return SIMRPC_EDRIVER;
 	}
@@ -299,18 +334,18 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 again:
 	if ((ret = thinkos_flag_timedtake(lnk->rx.flag, tmo)) < 0) {
 		if (ret == THINKOS_ETIMEDOUT) {
-			WARN("thinkos_flag_take() timed out!");
+			WARN("RPC <%d> thinkos_flag_take() timed out!", thinkos_thread_self());
 			thinkos_mutex_unlock(lnk->mutex);
 			return SIMRPC_ETIMEDOUT;
 		} else {
-			ERR("thinkos_flag_take() failed!");
+			ERR("RPC <%d> thinkos_flag_take() failed!", thinkos_thread_self());
 			thinkos_mutex_unlock(lnk->mutex);
 			return SIMRPC_ESYSTEM;
 		}
 	}
 
 	if (lnk->rx.cnt < 4) {
-		ERR("thinkos_flag_take() link error, lnk->rx.cnt=%d!", lnk->rx.cnt);
+		ERR("RPC <%d> link error, rx.cnt=%d! >>", thinkos_thread_self(), lnk->rx.cnt);
 		thinkos_mutex_unlock(lnk->mutex);
 		return SIMRPC_ELINK;
 	}
@@ -318,30 +353,33 @@ again:
 	cnt = lnk->rx.cnt - 4;
 	opc = lnk->rx.buf[0];
 
-	DBG("RPC: seq=%d,%d", seq, SIMRPC_SEQ(opc));
+//	DBG("RPC: seq=%d,%d", seq, SIMRPC_SEQ(opc));
 
 	if (opc == simrpc_mkopc(saddr, daddr, seq, SIMRPC_OK)) {
 		if (rsp != NULL) {
 			cnt = MIN(cnt, max);
 			memcpy(rsp, &lnk->rx.buf[1], cnt);
 		}
+		INF("RPC <%d> OK. >>", thinkos_thread_self());
 		thinkos_mutex_unlock(lnk->mutex);
 		return cnt;
 	}
 
 	if ((cnt == 4) && (opc == simrpc_mkopc(saddr, daddr, seq, SIMRPC_ERR))) {
-		WARN("error %d.", (int)lnk->rx.buf[1]);
+		int ret = (int)lnk->rx.buf[1];
+		WARN("RPC <%d> error %d! >>", thinkos_thread_self(), ret);
 		thinkos_mutex_unlock(lnk->mutex);
-		return (int)lnk->rx.buf[1];
+		return ret;
 	}
 
 	if ((SIMRPC_DST(opc) == saddr) && (SIMRPC_SRC(opc) == daddr)) {
-		WARN("invalid sequence %d, expect %d (insn=%d).",
-				SIMRPC_SEQ(opc), seq, SIMRPC_INSN(opc));
+		WARN("RPC <%d> invalid seq %d, expect %d (insn=%d). >>",
+				thinkos_thread_self(), SIMRPC_SEQ(opc), seq, SIMRPC_INSN(opc));
 		goto again;
 	}
 
-	WARN("invalid response.");
+	WARN("RPC <%d> invalid response.", thinkos_thread_self());
+
 	thinkos_mutex_unlock(lnk->mutex);
 	return SIMRPC_EPROTO;
 }
@@ -353,7 +391,8 @@ int simrpc_stdout_get(struct simrpc_pcb * sp, void * buf, unsigned int max)
 
 	cnt = pipe_read(&lnk->stdout_pipe, buf, max);
 	if (cnt) {
-		DBG("pipe_read, %d bytes", cnt);
+		//fwrite(buf, cnt, 1, stdout);
+//		DBG("pipe_read, %d bytes", cnt);
 	}
 
 	return cnt;
@@ -375,6 +414,9 @@ int simlnk_rpc_async(struct simrpc_pcb * sp, uint32_t insn,
 
 	seq = sp->seq = lnk->tx.seq++;
 	opc = simrpc_mkopc(daddr, saddr, seq, insn);
+
+	INF("RPC Async <%d> daddr=%d insn=%d seq=%d --",
+			thinkos_thread_self(), daddr, insn, seq);
 
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], buf, cnt);

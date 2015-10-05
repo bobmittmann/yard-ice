@@ -19,18 +19,10 @@
 		simlib_stdout_flush(port, pre);
 	};
 
-	function get_status(port) {
-		var tr = $('#stat' + port);
-		simlib_status_get(port, tr);
-	}
-	
-	function status_poll() {
-		setTimeout(status_poll, 5000);
-		get_status(1);
-		get_status(2);
-		get_status(3);
-		get_status(4);
-		get_status(5);
+	function get_status() {
+		var port = $('#selport').val();
+		var row = $('#stat')[0];
+		simlib_status_get(port, row);
 	}
 
 	function cmd_exec() {
@@ -70,28 +62,59 @@
 	};
 	
 	$(function() {
-        $('#btnrefresh').on('click', status_poll);
-		$('#formfirm').on('submit', firmware_upload);
-		status_poll();
 		$('#selport').on('change', get_stdout);
+		$('#btnexec').on('click',  cmd_exec);
+		$('#btnjs').on('click', rpc_js);
+		get_status();
 		get_stdout();
-		stdout_flush_tmo = 500;
-		$(document).on('click', '#btnexec', cmd_exec);
-		$(document).on('click', '#btnjs', rpc_js);
 	});
 </script>
 
 </head>
 
 <body>
-<div class="wrapper">
+<div class="wrapper">	
 	<section>
+		<h2>Port Status</h2>
+		<table>
+			<thead>
+				<tr>
+				<th>Port</th>
+				<th>Status</th>
+				<th>Kernel</th>
+				<th>Ticks</th>		
+				<th>Firmware</th>
+				<th>Uptime</th>
+				</tr>
+			</thead>
+			<tr id="stat">
+				<td>
+				<select id="selport" style="border: 0;">
+					<option value="1">Port 1</option>
+					<option value="2">Port 2</option>
+					<option value="3">Port 3</option>
+					<option value="4">Port 4</option>
+					<option value="5">Port 5</option>
+				</select>
+				</td>		
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>
+				<td>...</td>						
+			</tr>
+		</table>
+	</section>
+
+	<section>
+		<h2>Script</h2>
+
 		<table class="formgrid" style="width: 100%; table-layout: fixed;">
 		<col width="70%">
 	  	<col width="30%">
 		<tr>
 			<td colspan="2">
-			<pre id="results" style="height: 10em;"></pre>		
+			<pre id="results" style="height: 16em;"></pre>		
 			</td>
 		</tr>
 		<tr>		
@@ -117,11 +140,14 @@
 		</tr>
 		<tr>
 			<td>	
-<textarea id="script" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 8em;">
-var i;
-		
-for(i = 0; i &lt; 100; i = i + 1) {
-&#09;printf("%d\n",i);
+<textarea id="script" autocomplete="off" wrap="logical" spellcheck="false" style="width: 100%; height: 12em;">
+var i, j;
+
+for(j = 0; j &lt; 200; j = j + 1) {
+  printf("\n%4d: ", j);		
+  for(i = 0; i &lt; 20; i = i + 1) {
+    printf("%4d",i);
+  }
 }
 </textarea>
 		</td>

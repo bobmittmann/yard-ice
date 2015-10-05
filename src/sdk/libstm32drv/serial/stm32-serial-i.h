@@ -73,6 +73,10 @@
 #define SERIAL_IRQ_PRIORITY IRQ_PRIORITY_REGULAR
 #endif
 
+#ifndef SERIAL_ENABLE_STATS
+#define SERIAL_ENABLE_STATS 1
+#endif
+
 struct stm32f_serial_drv {
 	struct stm32_usart * uart;
 	uint8_t tx_gate;
@@ -81,7 +85,7 @@ struct stm32f_serial_drv {
 	uint8_t tx_mutex;
 #endif
 	uint16_t rx_trig;
-	uint32_t * txie;
+//	uint32_t * txie;
 	struct {
 		volatile uint32_t head;
 		volatile uint32_t tail;
@@ -92,6 +96,16 @@ struct stm32f_serial_drv {
 		volatile uint32_t tail;
 		uint8_t buf[SERIAL_RX_FIFO_LEN];
 	} rx_fifo;	
+#if SERIAL_ENABLE_STATS
+	struct {
+		uint32_t rx_drop;
+		uint32_t err_ovr;
+		uint32_t err_frm;
+		uint32_t rx_brk;
+		uint32_t rx_idle;
+		uint32_t rx_cnt;
+	} stats;
+#endif
 };
 
 struct stm32f_serial_dma_drv {

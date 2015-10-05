@@ -53,11 +53,14 @@ enum dmon_ev_no {
 
 struct dmon_comm;
 
+#define NVIC_IRQ_REGS ((THINKOS_IRQ_MAX + 31) / 32)
+
 struct thinkos_dmon {
 	struct dmon_comm * comm;
 	uint32_t * ctx;           /* monitor context */
 	volatile uint32_t mask;   /* events mask */
 	volatile uint32_t events; /* events bitmap */
+	uint32_t nvic_ie[NVIC_IRQ_REGS]; /* interrupt state */
 	void (* task)(struct dmon_comm * comm);
 };
 
@@ -140,6 +143,7 @@ struct thinkos_board {
 	bool (* configure)(struct dmon_comm *);
 	void (* upgrade)(struct dmon_comm *);
 	void (* on_appload)(void);
+	void (* comm_irqen)(void);
 };
 
 extern const struct thinkos_board this_board;

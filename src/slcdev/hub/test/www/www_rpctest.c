@@ -198,6 +198,7 @@ void rpc_test_file_remove(FILE * f, int port, char * fname)
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		fprintf(f, "simrpc_open() failed!\n");
 	} else {
+		simrpc_set_timeout(sp, 500);
 		if (simrpc_file_unlink(sp, fname) < 0) {
 			fprintf(f, "simrpc_file_unlink() failed!\n");
 		}
@@ -323,7 +324,7 @@ int rpc_test_cgi(struct httpctl * http)
     size = atoi(http_query_lookup(http, "size"));
     fname = http_query_lookup(http, "fname");
 
-    INF("code=%d port=%d", port);
+    INF("rpc_test.cgi: code=%d port=%d", code, port);
 
     fprintf(f, "This is a test!\n");
     fprintf(f, "Code = %d\n", code);
@@ -562,9 +563,9 @@ int get_stdout_cgi(struct httpctl * http)
 	n = simrpc_stdout_get(sp, buf, sizeof(buf));
 	if (n == 0) {
 //		DBG("simrpc_stdout_flush()...");
-		simrpc_stdout_flush(sp);
-		thinkos_sleep(50);
-		n = simrpc_stdout_get(sp, buf, sizeof(buf));
+//		simrpc_stdout_flush(sp);
+//		thinkos_sleep(50);
+//		n = simrpc_stdout_get(sp, buf, sizeof(buf));
 	}
 
 	while (n > 0) {
@@ -752,7 +753,9 @@ int rpc_js_cgi(struct httpctl * http)
 	struct simrpc_pcb * sp;
 	unsigned int daddr;
 	char script[512];
+	char * cp = script;
     int port;
+    int rem;
     int cnt;
     int n;
 
@@ -761,8 +764,27 @@ int rpc_js_cgi(struct httpctl * http)
 
     httpd_200(http->tp, TEXT_HTML);
 
-    cnt = http_recv(http, script, sizeof(script) - 1);
+    rem = sizeof(script) - 1;
+
+    while (rem) {
+    	int n;
+    	n = http_content_recv(http, cp, rem);
+
+    	if (n < 0) {
+    		WARN("http_content_recv() failed!");
+    		return n;
+    	}
+
+    	if (n == 0)
+    		break;
+
+    	cp += n;
+    	cnt += n;
+    	rem -= n;
+    }
+
     script[cnt] = '\0';
+    printf("<<--\n%s\n-->>\n", script);
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
@@ -844,7 +866,7 @@ int cfg_getinfo_cgi(struct httpctl * http)
     port = atoi(http_query_lookup(http, "port"));
 	daddr = port;
 
-	DBG("cfg_getinfo_cgi: port=%d", port);
+	DBG("cfg_getinfo.cgi: port=%d", port);
 
    	httpd_200(http->tp, APPLICATION_JSON);
 

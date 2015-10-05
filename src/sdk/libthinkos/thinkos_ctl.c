@@ -92,6 +92,10 @@ void thinkos_ctl_svc(int32_t * arg)
 		__bkpt();
 		break;
 
+	case THINKOS_CTL_TRACE:
+		DCC_LOGSTR(LOG_MSG, "%s", (char *)arg[1]);
+		break;
+
 #if THINKOS_ENABLE_RT_DEBUG
 	case THINKOS_CTL_SNAPSHOT:
 		rt_snapshot((uint32_t *)arg[1]);

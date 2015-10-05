@@ -1,6 +1,6 @@
 #!/bin/sh
 
-JTAGTOOL_ADDR=192.168.10.50
+JTAGTOOL_ADDR=192.168.10.51
 BUILD_NAME=thinkos
 TOOLS_DIR=../../../../tools
 
@@ -14,6 +14,6 @@ if [ $? = 0 ] ; then
 fi
 
 if [ $? = 0 ] ; then
-	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf 
+	${TOOLS_DIR}/dcclog -h ${JTAGTOOL_ADDR} debug/${BUILD_NAME}.elf | tee dbg.log
 fi
 

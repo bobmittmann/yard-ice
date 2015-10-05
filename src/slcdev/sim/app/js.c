@@ -39,6 +39,8 @@ uint8_t slcdev_jscode[512]; /* compiled code */
 
 uint32_t __attribute__((aligned(8))) js_runtime_stack[512];
 
+void simrpc_test(void);
+
 void __attribute__((noreturn)) js_runtime_task(void)
 {
 	struct symtab * symtab = (struct symtab *)slcdev_symbuf; /* symbols */
@@ -49,6 +51,9 @@ void __attribute__((noreturn)) js_runtime_task(void)
 	int32_t stack[16]; /* exec stack */
 	FILE * f = stderr;
 	int ret;
+
+
+	simrpc_test();
 
 	for (;;) {
 		thinkos_flag_take(JSRUNTIME_FLAG); 
@@ -150,19 +155,22 @@ int js(FILE * f, char * script, unsigned int len)
 		code_sz = ret;
 		rt = symtab_rt_get(symtab);
 
-		if (SLCDEV_VERBOSE()) {
+//		if (SLCDEV_VERBOSE()) {
 			fprintf(f, " - Compile time: %d us.\n", 
 					profclk_us(stop_clk - start_clk));
 			fprintf(f, " - code: %d\n", code_sz);
 			fprintf(f, " - data: %d of %d\n", rt->data_sz, 
 					sizeof(slcdev_vm_data));
-		}
+//		}
 
 		if (rt->data_sz > sizeof(slcdev_vm_data)) {
 			symtab_state_rollback(symtab, symstat);
 			fprintf(f, "# data overflow. %d bytes required\n", rt->data_sz);
+			DCC_LOG1(LOG_WARNING, "data overflow. %d bytes required\n", 
+					 rt->data_sz);
 			ret = -1;
 		} else {
+			DCC_LOG(LOG_TRACE, "signaling JS runtime.");
 			thinkos_flag_give(JSRUNTIME_FLAG); 
 			ret = 0;
 		}

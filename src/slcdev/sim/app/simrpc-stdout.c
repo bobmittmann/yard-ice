@@ -45,7 +45,7 @@ int simrpc_stdout_write(struct simrpc_console * out,
 	int free;
 	int n;
 
-	DCC_LOG1(LOG_TRACE, "cnt=%d.", cnt);
+	DCC_LOG2(LOG_MSG, "<%d> cnt=%d.", cnt, thinkos_thread_self());
 
 	thinkos_mutex_lock(CONSOLE_MUTEX);
 
@@ -105,5 +105,21 @@ void simrpc_stdout_flush_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 FILE * simrpc_stdout_fopen(void)
 {
 	return (FILE *)&simrpc_stdout_file;
+}
+
+void simrpc_test(void)
+{
+	uint32_t opc;
+	int seq = 0;
+
+	for (;;) {
+		if ((seq % 10) == 0) {
+			DCC_LOG1(LOG_TRACE, "seq=%d.", seq);
+		}
+		opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+						   seq++, SIMRPC_STDOUT_DATA);
+
+		simrpc_send_opc(opc);
+	}
 }
 

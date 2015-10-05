@@ -37,24 +37,25 @@ function simlib_status_get(port, tr) {
 		timeout: 250,
 		context: $('body'),
 		success: function(data) {
-			var html = '<td>' + port + '</td><td>' + data.state + '</td>';
+			tr.cells[1].innerHTML = data.state;
 			if (data.hasOwnProperty('kernel')) {
-				html += '<td>ThinkOS-' + data.kernel.version.major + '.' + 
-				data.kernel.version.minor + '.' +
-				data.kernel.version.build + '</td>' +
-				'<td>' + data.kernel.ticks + '</td>';
-				if (data.hasOwnProperty('app')) {
-					html += '<td>DevSim-' + data.app.version.major + '.' + 
-					data.app.version.minor + '.' +
-					data.app.version.build + '</td>' +
-					'<td>' + data.app.uptime + '</td>';						
-				} else {
-					html += '<td>?.?.?</td><td>?</td>';
-				}
+				tr.cells[2].innerHTML = 'ThinkOS-' + data.kernel.version.major + '.' + 
+					data.kernel.version.minor + '.' +
+					data.kernel.version.build;
+				tr.cells[3].innerHTML = data.kernel.ticks;
 			} else {
-				html += '<td>?.?.?</td><td>?</td><td>?.?.?</td><td>?</td>';				
-			}		
-			tr.html(html);
+				tr.cells[2].innerHTML = '?.?.?';
+				tr.cells[3].innerHTML = '?';
+			}
+			if (data.hasOwnProperty('app')) {
+				tr.cells[4].innerHTML = 'DevSim-' + data.app.version.major + '.' + 
+					data.app.version.minor + '.' +
+					data.app.version.build;
+				tr.cells[5].innerHTML = data.app.uptime;						
+			} else {
+				tr.cells[4].innerHTML = '?.?.?';
+				tr.cells[5].innerHTML = '?';
+			}
 		},
 		error: function(xhr, type) { 
 			stdout_flush_tmo[port] = 5000;
@@ -69,7 +70,6 @@ function simlib_js_post(port, script) {
  		data: script,
 		dataType: 'text',
 		timeout: 250,
-		async: false,
 		context: $('body'),
 		contentType: 'json',
 		success: function(data) {

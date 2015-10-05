@@ -763,6 +763,11 @@ void target_halt(void)
 	dmon_app_suspend();
 }
 
+void target_continue(void)
+{
+	dmon_app_continue();
+}
+
 int target_goto(uint32_t addr, int opt)
 {
 	return 0;

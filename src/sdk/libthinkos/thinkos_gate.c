@@ -62,7 +62,6 @@ void thinkos_gate_free_svc(int32_t * arg)
 
 #endif
 
-
 /* --------------------------------------------------------------------------
  * 
  * -------------------------------------------------------------------------- */
@@ -95,7 +94,7 @@ void thinkos_gate_wait_svc(int32_t * arg)
 #endif
 #endif
 
-#if THINKOS_FLAG_MAX < 16
+#if THINKOS_GATE_MAX < 16
 	gates_bmp = &thinkos_rt.gate[0];
 #else
 	gates_bmp = &thinkos_rt.gate[idx / 16];
@@ -130,7 +129,11 @@ again:
 #if THINKOS_ENABLE_THREAD_STAT
 	thinkos_rt.th_stat[self] = wq << 1;
 #endif
-	/* insert into the flag wait queue */
+	/* (2) Save the context pointer. In case an interrupt wakes up
+	   this thread before the scheduler is called, this will allow
+	   the interrupt handler to locate the return value (r0) address. */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+	/* insert into the gate wait queue */
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	/* The gate may have been signaled while suspending (1).
@@ -178,7 +181,8 @@ void thinkos_gate_timedwait_svc(int32_t * arg)
 #endif
 #endif
 
-#if THINKOS_FLAG_MAX < 16
+
+#if THINKOS_GATE_MAX < 16
 	gates_bmp = &thinkos_rt.gate[0];
 #else
 	gates_bmp = &thinkos_rt.gate[idx / 16];
@@ -186,9 +190,18 @@ void thinkos_gate_timedwait_svc(int32_t * arg)
 #endif
 	idx *= 2;
 
+	DCC_LOG1(LOG_MSG, "gate %d", wq);
+
 again:
 	/* check whether the gate is open or not */
 	gates = __ldrex(gates_bmp);
+
+	if (((gates >> idx) & 3) == 3) {
+		DCC_LOG1(LOG_ERROR, "<%d> invalid state, open and locked.", self);
+		arg[0] = 0;
+		return;
+	}
+
 	if (((gates >> idx) & 3) == THINKOS_GATE_SIGNALED) {
 		/* close and lock the gate */
 		gates = (gates & ~(3 << idx)) | (THINKOS_GATE_LOCKED << idx);
@@ -198,6 +211,7 @@ again:
 		arg[0] = 0;
 		return;
 	}
+
 
 	/* (1) - suspend the thread by removing it from the
 	   ready wait queue. The __thinkos_suspend() call cannot be nested
@@ -212,7 +226,11 @@ again:
 	/* update status, mark the thread clock enable bit */
 	thinkos_rt.th_stat[self] = (wq << 1) + 1;
 #endif
-	/* insert into the flag wait queue */
+	/* (2) Save the context pointer. In case an interrupt wakes up
+	   this thread before the scheduler is called, this will allow
+	   the interrupt handler to locate the return value (r0) address. */
+	thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+	/* insert into the gate wait queue */
 	queue = __ldrex(&thinkos_rt.wq_lst[wq]);
 	queue |= (1 << self);
 	/* The gate may have been signaled while suspending (1).
@@ -225,11 +243,14 @@ again:
 #endif
 		/* insert into the ready wait queue */
 		__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+		DCC_LOG1(LOG_INFO, "<%d> again.", self);
 		goto again;
 	}
 
 	/* -- wait for event ---------------------------------------- */
-	DCC_LOG2(LOG_INFO, "<%d> waiting at gate %d...", self, wq);
+	DCC_LOG3(LOG_INFO, "<%d> waiting at gate %d, state=%d...", 
+			 self, wq, (gates >> idx) & 3);
+
 	/* set the clock */
 	thinkos_rt.clock[self] = thinkos_rt.ticks + ms;
 	/* insert into the clock wait queue */
@@ -287,6 +308,8 @@ void thinkos_gate_exit_svc(int32_t * arg)
 	}
 #endif
 
+	DCC_LOG1(LOG_MSG, "gate %d", wq);
+
 	/* The gate is locked, this will prevent any interrupt
 	   handler from messing up with the waiting queue.
 	 */
@@ -294,7 +317,7 @@ void thinkos_gate_exit_svc(int32_t * arg)
 	arg[0] = 0;
 
 	if (open > 0) {
-		DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave open.", 
+		DCC_LOG2(LOG_TRACE, "<%d> exit gate %d, leave open.", 
 				 thinkos_rt.active, wq);
 		/* open the gate  */
 		__bit_mem_wr(thinkos_rt.gate, idx * 2, 1);
@@ -310,10 +333,11 @@ void thinkos_gate_exit_svc(int32_t * arg)
 				 thinkos_rt.active, wq);
 	}
 
-		/* get the gate wait queue bitmap */
+	/* get the gate wait queue bitmap */
 	queue = thinkos_rt.wq_lst[wq];
 	/* get a thread from the queue bitmap */
 	if ((th = __clz(__rbit(queue))) == THINKOS_THREAD_NULL) {
+		DCC_LOG2(LOG_MSG, "<%d> unlock gate %d.", thinkos_rt.active, wq);
 		/* unlock the gate */
 		__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 0);
 		return;
@@ -353,7 +377,7 @@ void cm3_except13_isr(uint32_t wq)
 	uint32_t queue;
 	int th;
 
-#if THINKOS_FLAG_MAX < 16
+#if THINKOS_GATE_MAX < 16
 	gates_bmp = &thinkos_rt.gate[0];
 #else
 	gates_bmp = &thinkos_rt.gate[idx / 16];

@@ -76,6 +76,7 @@ int target_file_read(const char * name, char * dst,
 					  unsigned int offs, unsigned int size);
 
 void target_halt(void);
+void target_continue(void);
 int target_goto(uint32_t addr, int opt);
 
 #ifndef RSP_BUFFER_LEN
@@ -1194,7 +1195,7 @@ static int rsp_continue(struct gdb_rspd * gdb, char * pkt)
 		thread_goto(thread_id, addr);
 	}
 
-	dmon_app_continue();
+	target_continue();
 	gdb->stopped = false;
 
 	return rsp_stop_reply(gdb, pkt);
@@ -1217,7 +1218,7 @@ static int rsp_continue_with_sig(struct gdb_rspd * gdb, char * pkt)
 		target_goto(addr, 0);
 	}
 
-	dmon_app_continue();
+	target_continue();
 	gdb->stopped = false;
 
 	return rsp_stop_reply(gdb, pkt);
@@ -1269,7 +1270,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 						}
 						gdb->active_app = true;
 					}
-					dmon_app_continue();
+					target_continue();
 					gdb->stopped = false;
 				} else {
 					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
@@ -1280,7 +1281,7 @@ static int rsp_v_packet(struct gdb_rspd * gdb, char * pkt)
 				DCC_LOG2(LOG_TRACE, "Continue %d sig=%d", thread_id, sig);
 				if (thread_id == THREAD_ID_ALL) {
 					DCC_LOG(LOG_TRACE, "Continue all!");
-					dmon_app_continue();
+					target_continue();
 					gdb->stopped = false;
 				} else {
 					DCC_LOG1(LOG_TRACE, "Continue %d", thread_id);
@@ -1335,7 +1336,7 @@ static int rsp_detach(struct gdb_rspd * gdb)
 
 #if 0
 	if (gdb->stopped)
-		dmon_app_continue();
+		target_continue();
 #endif
 
 	/* reply OK */
@@ -1353,7 +1354,7 @@ static int rsp_kill(struct gdb_rspd * gdb)
 
 #if 0
 	if (gdb->stopped)
-		dmon_app_continue();
+		target_continue();
 #endif
 
 	rsp_ok(gdb);
@@ -1543,14 +1544,13 @@ static int rsp_pkt_recv(struct dmon_comm * comm, char * pkt, int max)
 				dmon_alarm_stop();
 				/* FIXME: check the sum!!! */
 				pos += j;
-
+				pkt[pos] = '\0';
 #ifdef DEBUG_PACKET
 				if (pkt[0] == 'X') 
 					DCC_LOG(LOG_MSG, "<-- '$X ...'");
 				else if (pkt[0] == 'm')
 					DCC_LOG(LOG_MSG, "<-- '$m ...'");
 				else {
-					pkt[pos] = '\0';
 					DCC_LOGSTR(LOG_INFO, "<-- '$%s'", pkt);
 				}
 #endif
