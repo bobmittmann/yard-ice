@@ -40,7 +40,7 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS
 CFLAGS = -g -Os -Wall -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections
 
-JTAGTOOL_ADDR = 192.168.10.50
+JTAGTOOL_ADDR = 192.168.10.51
 MACH = stm32f427
 include ../../../mk/stm32f4xx.mk
 

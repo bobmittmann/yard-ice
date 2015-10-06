@@ -26,6 +26,7 @@ uint32_t __attribute__((aligned(8))) simlnk_stack[512 + 256];
 
 void isink_test(void);
 void js_runtime_init(void);
+void simrpc_test_signal(void);
 
 int __attribute__((noreturn)) app_main(const char * mode)
 {
@@ -100,6 +101,12 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	thinkos_thread_create((void *)simlnk_recv_task, (void *)NULL,
 						  simlnk_stack, sizeof(simlnk_stack) | 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+
+
+	for(;;) {
+		thinkos_sleep(3000);
+		simrpc_test_signal();
+	}
 
 	/* stay forever in the simulator task */
 	DCC_LOG(LOG_TRACE, "sim_event_task().");

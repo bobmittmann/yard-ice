@@ -241,7 +241,8 @@ void stm32_usart2_isr(void)
 	uint32_t cr;
 	
 	cr = uart->cr1;
-	sr = uart->sr & (cr | USART_FE);
+//	sr = uart->sr & (cr | USART_FE);
+	sr = uart->sr & (cr | USART_LBD);
 
 	if (sr & USART_TC) {
 		int wq = THINKOS_WQ_COMM_SEND;
@@ -275,7 +276,7 @@ void stm32_usart2_isr(void)
 			simlnk.tx_lock = 0;
 		}
 	}
-
+#if 0
 	/* break detection */
 	if (sr & USART_FE) {
 		unsigned int cnt;
@@ -289,6 +290,35 @@ void stm32_usart2_isr(void)
 		/* clear interrupt status flags */
 		c = uart->rdr;
 		(void)c;
+
+		/* Get number of bytes received */
+		cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
+		/* Prepare next DMA transfer */
+		dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+		dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
+
+		DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
+	
+		if (cnt > 4) {
+			/* process this request,
+			 remove the break character from the packet length. */
+			simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
+		} else {
+			DCC_LOG1(LOG_WARNING, "short pkt! cnt=%d", cnt);
+		}
+	}	
+#endif
+	/* break detection */
+	if (sr & USART_LBD) {
+		unsigned int cnt;
+		uint32_t ccr;
+
+		/* Disable DMA */
+		while ((ccr = dma->ch[RX_DMA_CHAN].ccr) & DMA_EN)
+			dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+
+		/* clear the break detection interrupt flag */
+		uart->sr = sr & ~USART_LBD;
 
 		/* Get number of bytes received */
 		cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
@@ -360,11 +390,17 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	uart->gtpr = 1;
 	uart->brr = stm32f_apb1_hz / SIMLNK_BAUDRATE;
 	/* configure the UART for DMA transfer */
-	uart->cr3 = USART_ONEBIT | USART_DMAT | USART_DMAR | USART_EIE;
+//	uart->cr3 = USART_ONEBIT | USART_DMAT | USART_DMAR | USART_EIE;
+	uart->cr3 = USART_ONEBIT | USART_DMAT | USART_DMAR;
 	/* Configure 8N1 */
-	uart->cr2 = USART_STOP_1;
+//	uart->cr2 = USART_STOP_1;
+	/* line break detection */
+	uart->cr2 = USART_STOP_1 |  USART_LINEN | USART_LBDIE;
 	/* enable UART and errors interrupt */
-	uart->cr1 = USART_UE | USART_RE | USART_TE | USART_TCIE;
+	uart->cr1 = USART_UE | USART_RE | USART_TE;
+
+	/* Generate a break condition */
+	uart->cr1 |= USART_SBK;
 
 	/* TX DMA ------------------------------------------------------------- */
 	dma->ch[TX_DMA_CHAN].ccr = 0;

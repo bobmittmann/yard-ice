@@ -426,7 +426,7 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 
 	if (flags & SERIAL_EOT_BREAK) {
 		/* line break detection */
-		drv->uart->cr2 |= USART_LBDIE;
+		drv->uart->cr2 |= USART_LBDIE | USART_LINEN;
 	} else {
 		/* enable RX IDLE interrupt */
 		drv->uart->cr1 |= USART_IDLEIE;
