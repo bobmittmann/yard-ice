@@ -9,6 +9,7 @@
 #include <sys/null.h>
 
 #include "config.h"
+#include "profclk.h"
 #include "board.h"
 #include "isink.h"
 #include "slcdev.h"
@@ -44,6 +45,9 @@ int __attribute__((noreturn)) app_main(const char * mode)
 
 	io_init();
 
+	/* initialize profiling clock */
+	profclk_init();
+
 	/* enable the current sink driver. This will start the negative 
 	   voltage power supply */
 	isink_init();
@@ -71,14 +75,28 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	DCC_LOG(LOG_TRACE, "device_db_init().");
 	device_db_init();
 
+	/* initializes database */
 	if (strcmp(mode, "safe") == 0) {
 		DCC_LOG(LOG_TRACE, "safe mode!");
+#if 0
+	for(;;) {
+		thinkos_sleep(1000);
+		led_flash(4, 250);
+	}
+#endif
 	} else {
+
+#if 0
+	for(;;) {
+		thinkos_sleep(1000);
+		led_flash(3, 250);
+	}
+#endif
 		DCC_LOG(LOG_TRACE, "normal mode!");
 		/* load configuration */
-//		config_load();
+		config_load();
 		/* start simulation */
-//		slcdev_sim_resume();
+		slcdev_sim_resume();
 	}
 
 #if 0
@@ -102,11 +120,13 @@ int __attribute__((noreturn)) app_main(const char * mode)
 						  simlnk_stack, sizeof(simlnk_stack) | 
 						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
 
-
+#if 0
 	for(;;) {
 		thinkos_sleep(3000);
+		led_flash(3, 100);
 		simrpc_test_signal();
 	}
+#endif
 
 	/* stay forever in the simulator task */
 	DCC_LOG(LOG_TRACE, "sim_event_task().");

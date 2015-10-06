@@ -63,6 +63,9 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 		/* skip the break char */
 		drv->rx.dmactl.strm->ndtr++;
 		DCC_LOG(LOG_INFO, "BRK");
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_brk++;
+#endif
 		/* signal the waiting thread */
 		thinkos_flag_give_i(drv->rx_idle);
 	}
@@ -75,6 +78,9 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 		drv->rx.dmactl.strm->cr &= ~(DMA_TCIE | DMA_EN);
 //		while (drv->rx.dmactl.strm->cr & DMA_EN);
 		DCC_LOG(LOG_TRACE, "IDLE");
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_idle++;
+#endif
 		thinkos_flag_give_i(drv->rx_idle);
 	}
 
@@ -82,12 +88,19 @@ void stm32f_serial_dma_isr(struct stm32f_serial_dma_drv * drv)
 		c = uart->rdr;
 		(void)c;
 		DCC_LOG(LOG_WARNING, "OVR!");
+#if SERIAL_ENABLE_STATS
+		drv->stats.err_ovr++;
+#endif
+
 	}
 }
 
 void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv)
 {
 	if (drv->rx.dmactl.isr[TCIF_BIT]) {
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_dmatc++;
+#endif
 		DCC_LOG(LOG_TRACE, "TCIF");
 		/* clear the RX DMA transfer complete flag */
 		drv->rx.dmactl.ifcr[TCIF_BIT] = 1;
@@ -95,6 +108,9 @@ void stm32f_serial_dma_rx_isr(struct stm32f_serial_dma_drv * drv)
  * thinkos_flag_give_i(drv->rx_idle); */
 	}
 	if (drv->rx.dmactl.isr[TEIF_BIT]) {
+#if SERIAL_ENABLE_STATS
+		drv->stats.rx_dmate++;
+#endif
 		DCC_LOG(LOG_TRACE, "TEIF");
 		/* FIXME: DMA transfer error handling... */
 		drv->rx.dmactl.ifcr[TEIF_BIT] = 1;
@@ -419,7 +435,8 @@ int stm32f_serial_dma_init(struct stm32f_serial_dma_drv * drv,
 	/* ------------------------------------------------------- 
 	 */
 
-	drv->uart->sr &= ~USART_TC;
+	/* Clear pending interrupts */
+	drv->uart->sr = 0;
 
 	/* configure the UART for DMA transfer */
 	drv->uart->cr3 |= USART_DMAT | USART_DMAR;

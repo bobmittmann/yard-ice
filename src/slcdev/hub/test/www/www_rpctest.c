@@ -562,10 +562,10 @@ int get_stdout_cgi(struct httpctl * http)
 
 	n = simrpc_stdout_get(sp, buf, sizeof(buf));
 	if (n == 0) {
-//		DBG("simrpc_stdout_flush()...");
-//		simrpc_stdout_flush(sp);
-//		thinkos_sleep(50);
-//		n = simrpc_stdout_get(sp, buf, sizeof(buf));
+		DBG("simrpc_stdout_flush()...");
+		simrpc_stdout_flush(sp);
+		thinkos_sleep(50);
+		n = simrpc_stdout_get(sp, buf, sizeof(buf));
 	}
 
 	while (n > 0) {

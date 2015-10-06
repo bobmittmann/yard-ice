@@ -230,11 +230,13 @@ void io_lamp_test(void)
 #endif
 
 	led_flash(0, 64);
+	thinkos_sleep(125);
 	led_flash(1, 64);
-	thinkos_sleep(166);
+	thinkos_sleep(125);
 	led_flash(2, 64);
+	thinkos_sleep(125);
 	led_flash(3, 64);
-	thinkos_sleep(166);
+	thinkos_sleep(125);
 
 #if ENABLE_SAVE_LED_STATE
 	/* restore LEDs state */

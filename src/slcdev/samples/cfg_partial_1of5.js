@@ -68,5 +68,13 @@
 			'sensor[1].alarm = 3;',
 		],
 	},
+
+	"events": { 
+		"init" : [
+			'printf("\n----------------------\n");',
+			'printf("Config partial 1 of 5\n");',
+			'printf("----------------------\n");'
+		],
+	}
 }
 

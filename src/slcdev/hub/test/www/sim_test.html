@@ -20,7 +20,7 @@
 	};
 	
 	function get_status(port) {
-		var tr = $('#stat' + port);
+		var tr = $('#stat' + port)[0];
 		simlib_status_get(port, tr);
 	}
 	
@@ -60,7 +60,7 @@
 	function file_upload(event) {
 		var lst = this.elements;
 		var box = this.querySelector('#__msg');		
-		alert(box, "Uploading file, please wait...");		
+		alert_show(box, "Uploading file, please wait...");		
 		$.ajax({
 			url: this.action + '?port=' + $('#selport').val(),
 			type: 'POST',
@@ -68,10 +68,10 @@
 			processData: false,
 			contentType: false,
 			success: function() {
-				box.innerHTML = "";
+				alert_hide(box);
 			},
 			error: function(xhr, type){
-				box.innerHTML = "ERROR!";
+				alert_show(box, "ERROR!");
 			}
 		});
 		event.preventDefault();
@@ -81,7 +81,7 @@
 		var lst = this.elements;
 		var box = this.querySelector('#__msg');		
 		
-		alert(box, "Uploading firmware, please wait...");		
+		alert_show(box, "Uploading firmware, please wait...");		
 		$.ajax({
 			url: this.action + '?port=' + $('#selport').val(),
 			type: 'POST',
@@ -89,25 +89,15 @@
 			processData: false,
 			contentType: false,
 			success: function() {
-				box.innerHTML = "";
+				alert_hide(box);
 			},
 			error: function(xhr, type){
-				box.innerHTML = "ERROR!";
+				alert_show(box, "ERROR!");
 			}
 		});
 		event.preventDefault();
 	}
 
-	
-	function status_poll(){
-/*		setTimeout(status_poll, 5000); */
-		get_status(1);
-		get_status(2);
-		get_status(3);
-		get_status(4);
-		get_status(5);
-	}
-	
 	$(function() {
         $('#btnrefresh').on('click', status_poll);
         $('#btn1').on('click', { code: 1 }, rpc_test);

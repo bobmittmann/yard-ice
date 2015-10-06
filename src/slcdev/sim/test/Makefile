@@ -23,7 +23,7 @@ PROG = slc-dev
 
 #CFILES_GEN = device_db.c
 CFILES = ../boot/board.c ../boot/simlnk.c ../boot/simrpc_mem.c \
-		 ../boot/simrpc_sys.c ../boot/boot.c \
+		 ../boot/simrpc_sys.c ../boot/crc32.c ../boot/boot.c \
 		 ../app/flashfs.c ../app/io.c ../app/isink.c ../app/js.c \
 		 ../app/profclk.c ../app/shell.c ../app/slcdev-cfg.c \
 		 ../app/slcdev-db.c ../app/slcdev-drv.c ../app/slcdev-lib.c \

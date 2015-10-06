@@ -67,6 +67,9 @@ _Pragma ("GCC optimize (\"O2\")")
 #define THINKOS_UNROLL_EXCEPTIONS 1
 #endif
 
+#ifndef THINKOS_ENABLE_EXCEPT_RESET
+#define THINKOS_ENABLE_EXCEPT_RESET 1
+#endif
 
 #if (THINKOS_ENABLE_DEBUG_FAULT)
 
@@ -118,6 +121,9 @@ __xcpt_context_save(struct thinkos_except * xcpt)
 	xcpt->msp = cm3_msp_get() - 8 * 4;
 
 	xcpt->icsr = CM3_SCB->icsr;
+
+	/* record the current thread */
+	xcpt->thread_id = thinkos_rt.active;
 }
 
 #if 0
@@ -395,6 +401,8 @@ void __hard_fault(struct thinkos_except * xcpt)
 	struct cm3_scb * scb = CM3_SCB;
 	uint32_t hfsr;
 
+	xcpt->type = CM3_EXCEPT_HARD_FAULT;
+
 	hfsr = scb->hfsr;
 
 	DCC_LOG3(LOG_ERROR, "Hard fault:%s%s%s", 
@@ -555,7 +563,12 @@ void __mem_manag(struct thinkos_except * xcpt)
    Fault handlers 
    ------------------------------------------------------------------------- */
 
-struct thinkos_except thinkos_except_buf;
+struct thinkos_except thinkos_except_buf __attribute__((section(".heap")));
+
+struct thinkos_except * __thinkos_except_buf(void)
+{
+	return &thinkos_except_buf;
+}
 
 #if	THINKOS_ENABLE_BUSFAULT 
 void __attribute__((naked, noreturn)) cm3_bus_fault_isr(void)
@@ -628,7 +641,6 @@ void __attribute__((naked, noreturn)) cm3_mem_manage_isr(void)
 void __attribute__((naked, noreturn)) cm3_hard_fault_isr(void)
 {
 	__xcpt_context_save(&thinkos_except_buf);
-	thinkos_except_buf.type = CM3_EXCEPT_HARD_FAULT;
 	__hard_fault(&thinkos_except_buf);
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
@@ -657,12 +669,14 @@ void thinkos_exception_dsr(struct thinkos_except *)
 	__attribute__((weak, alias("thinkos_default_exception_dsr")));
 
 
+#if THINKOS_ENABLE_EXCEPT_RESET
 void __exception_reset(void)
 {
 	__thinkos_memset32(&thinkos_except_buf, 0x00000000,
 					   sizeof(struct thinkos_except));
 	thinkos_except_buf.thread_id = -1;
 }
+#endif
 
 void thinkos_exception_init(void)
 {
@@ -680,7 +694,9 @@ void thinkos_exception_init(void)
 #endif
 		;
 
+#if THINKOS_ENABLE_EXCEPT_RESET
 	__exception_reset();
+#endif
 }
 
 #endif /* THINKOS_ENABLE_EXCEPTIONS */

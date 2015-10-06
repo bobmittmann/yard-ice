@@ -52,7 +52,7 @@ void __attribute__((noreturn)) js_runtime_task(void)
 	FILE * f = stderr;
 	int ret;
 
-	simrpc_test();
+//	simrpc_test();
 
 	for (;;) {
 		thinkos_flag_take(JSRUNTIME_FLAG); 

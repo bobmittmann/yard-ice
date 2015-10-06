@@ -29,15 +29,69 @@
 
 #include <stdlib.h>
 #include <thinkos.h>
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
 #include <sys/dcclog.h>
 
 #include "board.h"
 #include "simlnk.h"
+#include "crc32.h"
+#include "simrpc_svc.h"
+
+/* FIXME: this is a mark to keep the symbol __heap_end in 
+   the symbols listing. */
+extern int __heap_end;
+const void * heap_end = &__heap_end; 
+uint32_t except_crc __attribute__((section(".heap")));
+
+int __attribute__((noreturn)) app_default(void * arg);
+int __simrpc_send(uint32_t opc, const void * data, unsigned int cnt);
+
+void thinkos_exception_dsr(struct thinkos_except * xcpt)
+{
+	except_crc = crc32_align((void *)xcpt, sizeof(struct thinkos_except));
+	DCC_LOG2(LOG_TRACE, "except=%d crc=%08x.", xcpt->type, except_crc);
+}
+
+const struct simrpc_link link_up = {
+	.id = 0,
+	.pdu = { 0, 0, 0}
+};
 
 void cm3_debug_mon_isr(void)
 {
-	DCC_LOG(LOG_TRACE, "board_app_exec().");
-	board_app_exec(THINKOS_APP_ADDR, "app");
+	struct thinkos_except * xcpt;
+	bool fault = false;
+	char * mode;
+	uint32_t crc;
+
+	xcpt = __thinkos_except_buf();
+	if (xcpt->type != 0) {
+		DCC_LOG(LOG_TRACE, "check for exception.");
+		crc = crc32_align((void *)xcpt, sizeof(struct thinkos_except));
+		if (crc == except_crc) {
+			DCC_LOG(LOG_TRACE, "valid exception in the buffer.");
+			except_crc = 0;
+			fault = true;
+		} else {
+			__thinkos_memset32((void *)xcpt, 0, sizeof(struct thinkos_except));
+		}
+	} 
+
+	if (fault) {
+		mode = "safe";
+		__simrpc_send(simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+								   0, SIMRPC_FAULT), 
+					  xcpt, sizeof(struct thinkos_except));
+	} else {
+		mode = "normal";
+		__simrpc_send(simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+								   0, SIMRPC_LINK), &link_up, sizeof(link_up));
+
+	}
+
+	DCC_LOG1(LOG_TRACE, "board_app_exec(%s).", mode);
+	board_app_exec(THINKOS_APP_ADDR, mode);
 }
 
 void app_try_exec()
@@ -50,10 +104,6 @@ void app_try_exec()
 	dcb->demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 	asm volatile ("isb\n" :  :  : );
 }
-
-int __simrpc_send_opc(uint32_t opc);
-
-int __attribute__((noreturn)) app_default(void * arg);
 
 int __attribute__((noreturn)) main(int argc, char ** argv)
 {
@@ -78,7 +128,9 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	app_try_exec();
 
 	DCC_LOG(LOG_TRACE, "5. app_default().");
-	app_default("app");
+
+
+	app_default("normal");
 
 //	return 0;
 }

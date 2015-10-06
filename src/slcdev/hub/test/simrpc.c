@@ -206,7 +206,7 @@ void simrpc_init(void)
 	simlnk[0] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[0]);
-/*
+
 	lnk = simlnk_alloc();
 	ser = stm32f_uart3_serial_dma_init(SIMLNK_BAUDRATE, 
 									   SERIAL_8N1 | SERIAL_EOT_BREAK);
@@ -238,7 +238,7 @@ void simrpc_init(void)
 	simlnk[4] = lnk;
 	thinkos_thread_create_inf((void *)simlnk_recv_task, (void *)lnk,
 							  &simlnk_recv_inf[4]);
-							  */
+
 }
 
 struct simlnk * simrpc_route(unsigned int daddr) 

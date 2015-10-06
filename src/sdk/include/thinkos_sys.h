@@ -1014,6 +1014,8 @@ void __thinkos_gate_open(uint32_t wq);
 
 void __thinkos_ev_info(unsigned int wq);
 
+struct thinkos_except * __thinkos_except_buf(void);
+
 /* -------------------------------------------------------------------------
  * Main thread exec
  * ------------------------------------------------------------------------- */

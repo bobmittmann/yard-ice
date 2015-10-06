@@ -123,6 +123,16 @@ struct stm32f_serial_dma_drv {
 		void * buf_ptr;
 		unsigned int buf_len;
 	} rx;
+#if SERIAL_ENABLE_STATS
+	struct {
+		uint32_t err_ovr;
+		uint32_t rx_brk;
+		uint32_t rx_idle;
+		uint32_t rx_cnt;
+		uint32_t rx_dmatc;
+		uint32_t rx_dmate;
+	} stats;
+#endif
 };
 
 extern const struct serial_op stm32f_uart_serial_op;

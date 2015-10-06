@@ -209,15 +209,23 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 		seq = SIMRPC_SEQ(opc);
 		(void)seq;
 
-		if (insn == SIMRPC_SIGNAL) {
+		if (insn == SIMRPC_LINK) {
+			WARN("SIMLNK %d signal: seq=%d cnt=%d.", lnk->addr, seq, cnt);
+			lnk->stdout_seq = 0;
+			continue;
+		}
+
+		if (insn == SIMRPC_FAULT) {
+			WARN("SIMLNK %d fault: seq=%d cnt=%d!", lnk->addr, seq, cnt);
+			lnk->stdout_seq = 0;
 			continue;
 		}
 
 		if ((cnt >= 4) && (insn == SIMRPC_STDOUT_DATA)) {
 			int n = cnt - 4;
-			DBG("RPC stdout: seq=%d cnt=%d.", seq, cnt);
-//			DBG("pipe write, %d bytes, seq=%d.", n, seq);
-//			fwrite(&pkt[1], n, 1, stdout);
+/*
+			DBG("RPC stdout: seq=%d cnt=%d.", seq, n);
+*/
 			if ((lnk->stdout_seq & 0xff) != seq) {
 				WARN("RPC stdout: invalid seq %d, expected %d.", seq,
 						lnk->stdout_seq & 0xff);
@@ -228,9 +236,10 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 			pipe_write(&lnk->stdout_pipe, (uint8_t *)&pkt[1], n);
 			continue;
 		}
-
-		DBG("RPC recv: daddr=%02x saddr=%02x insn=%d seq=%d.",
-				SIMRPC_DST(opc), SIMRPC_SRC(opc), insn, seq);
+/*
+		DBG("RPC recv: daddr=%02x saddr=%02x insn=%d seq=%d cnt=%d.",
+				SIMRPC_DST(opc), SIMRPC_SRC(opc), insn, seq, cnt);
+*/
 		lnk->rx.cnt = cnt;
 		thinkos_flag_give(lnk->rx.flag);
 	}

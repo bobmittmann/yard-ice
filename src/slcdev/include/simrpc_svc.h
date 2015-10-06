@@ -33,7 +33,7 @@
 #include <simrpc.h>
 
 enum simrpc_opc {
-	SIMRPC_SIGNAL     = 0,
+	SIMRPC_LINK       = 0,
 	SIMRPC_SUSPEND    = 1,
 	SIMRPC_RESUME     = 2,
 	SIMRPC_EXEC       = 3,
@@ -71,18 +71,25 @@ enum simrpc_opc {
 	SIMRPC_SHELLEXEC   = 51,
 	SIMRPC_JSEXEC      = 52,
 
-	SIMRPC_ATTR_GET    = 53,
-	SIMRPC_STATS       = 54,
+	SIMRPC_ATTR_GET     = 53,
+	SIMRPC_STATS        = 54,
 
 	SIMRPC_STDOUT_DATA  = 128,
 	SIMRPC_STDOUT_FLUSH = 129,
 
-	SIMRPC_BUSY        = 250,
-	SIMRPC_PEND        = 251,
-	SIMRPC_FALSE       = 252,
-	SIMRPC_TRUE        = 253,
-	SIMRPC_OK          = 254,
-	SIMRPC_ERR         = 255
+	SIMRPC_FAULT        = 248,
+	SIMRPC_SIGNAL       = 249,
+	SIMRPC_BUSY         = 250,
+	SIMRPC_PEND         = 251,
+	SIMRPC_FALSE        = 252,
+	SIMRPC_TRUE         = 253,
+	SIMRPC_OK           = 254,
+	SIMRPC_ERR          = 255
+};
+
+struct simrpc_link {
+	uint8_t id;
+	uint8_t pdu[3];
 };
 
 struct simrpc_hdr {

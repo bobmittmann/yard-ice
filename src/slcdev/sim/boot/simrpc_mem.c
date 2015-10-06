@@ -28,6 +28,7 @@
 #include "simlnk.h"
 #include "simrpc.h"
 #include "simrpc_svc.h"
+#include "crc32.h"
 
 int __simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int __simrpc_send_int(uint32_t opc, int val);
@@ -44,11 +45,19 @@ int __simrpc_send_opc(uint32_t opc);
 
 #define SIMRPC_UNLOCK SIMRPC_ADDR_BCAST
 
-uint32_t mem_base;
-uint32_t mem_top;
-uint32_t mem_ptr;
-uint32_t mem_clk;
-uint8_t mem_lock = SIMRPC_UNLOCK;
+struct {
+	uint32_t base;
+	uint32_t top;
+	uint32_t ptr;
+	uint32_t clk;
+	uint8_t lock;
+} simrpc_mem = {
+	.base = 0,
+	.top = 0,
+	.ptr = 0,
+	.clk = 0,
+	.lock = SIMRPC_UNLOCK
+};
 
 #define MEM_LOCK_TIMEOUT_MS 1000
 
@@ -70,8 +79,8 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	clk = __thinkos_ticks();
 
-	if (mem_lock != SIMRPC_UNLOCK) {
-		if ((int32_t)(clk - mem_clk) < MEM_LOCK_TIMEOUT_MS) {
+	if (simrpc_mem.lock != SIMRPC_UNLOCK) {
+		if ((int32_t)(clk - simrpc_mem.clk) < MEM_LOCK_TIMEOUT_MS) {
 			DCC_LOG(LOG_WARNING, "locked");
 			__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 			return;
@@ -81,23 +90,23 @@ void simrpc_mem_lock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	if ((base >= FLASH_MIN) && (base < FLASH_MAX)) {
 		DCC_LOG(LOG_TRACE, "Flash");
-		mem_top = MIN(FLASH_MAX, base + size);
+		simrpc_mem.top = MIN(FLASH_MAX, base + size);
 	} else if ((base >= EEPROM_MIN) && (base < EEPROM_MAX)) {
 		DCC_LOG(LOG_TRACE, "EEPROM");
-		mem_top = MIN(EEPROM_MAX, base + size);
+		simrpc_mem.top = MIN(EEPROM_MAX, base + size);
 	} else if ((base >= SRAM_MIN) && (base < SRAM_MAX)) {
 		DCC_LOG(LOG_TRACE, "SRAM");
-		mem_top = MIN(EEPROM_MAX, base + size);
+		simrpc_mem.top = MIN(EEPROM_MAX, base + size);
 	} else {
 		DCC_LOG(LOG_TRACE, "Invalid");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
-	mem_base = base;
-	mem_ptr = mem_base;
-	mem_lock = SIMRPC_SRC(opc);
-	mem_clk = __thinkos_ticks();
+	simrpc_mem.base = base;
+	simrpc_mem.ptr = simrpc_mem.base;
+	simrpc_mem.lock = SIMRPC_SRC(opc);
+	simrpc_mem.clk = __thinkos_ticks();
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
@@ -116,13 +125,13 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	DCC_LOG2(LOG_TRACE, "base=%08x size=%d", base, size);
 
-	if (mem_lock != SIMRPC_SRC(opc)) {
+	if (simrpc_mem.lock != SIMRPC_SRC(opc)) {
 		DCC_LOG(LOG_WARNING, "Not yours");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
-	if ((base != mem_base) || (base + size != mem_top)) {
+	if ((base != simrpc_mem.base) || (base + size != simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -3);
 		return;
@@ -141,10 +150,10 @@ void simrpc_mem_unlock_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	}
 
-	mem_base = 0;
-	mem_top = 0;
-	mem_ptr = 0;
-	mem_lock = 0xff;
+	simrpc_mem.base = 0;
+	simrpc_mem.top = 0;
+	simrpc_mem.ptr = 0;
+	simrpc_mem.lock = 0xff;
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
@@ -160,11 +169,11 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	};
 
 	offs = data[0];
-	addr = mem_base + offs;
+	addr = simrpc_mem.base + offs;
 	size = data[1];
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
-	if ((addr < mem_base) || ((addr + size) > mem_top)) {
+	if ((addr < simrpc_mem.base) || ((addr + size) > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
@@ -191,7 +200,7 @@ void simrpc_mem_erase_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	}
 
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-	mem_clk = __thinkos_ticks();
+	simrpc_mem.clk = __thinkos_ticks();
 }
 
 void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -204,21 +213,21 @@ void simrpc_mem_read_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	};
 
 	size = data[0];
-	addr = mem_ptr;
+	addr = simrpc_mem.ptr;
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
 
-	if ((addr < mem_base) || (addr > mem_top)) {
+	if ((addr < simrpc_mem.base) || (addr > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Internal error");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 
-	size = MIN(size, mem_top - addr);
-	__simrpc_send(SIMRPC_REPLY_OK(opc), (void *)mem_ptr, size);
-	mem_ptr += size;
-	mem_clk = __thinkos_ticks();
+	size = MIN(size, simrpc_mem.top - addr);
+	__simrpc_send(SIMRPC_REPLY_OK(opc), (void *)simrpc_mem.ptr, size);
+	simrpc_mem.ptr += size;
+	simrpc_mem.clk = __thinkos_ticks();
 }
 
 void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -226,16 +235,16 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	uint32_t addr;
 	int ret = 0;
 
-	addr = mem_ptr;
+	addr = simrpc_mem.ptr;
 	DCC_LOG2(LOG_TRACE, "addr=%08x cnt=%d", addr, cnt);
 
-	if ((addr < mem_base) || (addr > mem_top)) {
+	if ((addr < simrpc_mem.base) || (addr > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Internal error");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
-	cnt = MIN(cnt, mem_top - addr);
+	cnt = MIN(cnt, simrpc_mem.top - addr);
 
 	if ((addr >= FLASH_MIN) && (addr < FLASH_MAX)) {
 		DCC_LOG(LOG_TRACE, "Flash");
@@ -260,8 +269,8 @@ void simrpc_mem_write_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	}
 
 	__simrpc_send_int(SIMRPC_REPLY_OK(opc), cnt);
-	mem_ptr += cnt;
-	mem_clk = __thinkos_ticks();
+	simrpc_mem.ptr += cnt;
+	simrpc_mem.clk = __thinkos_ticks();
 }
 
 void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -275,63 +284,18 @@ void simrpc_mem_seek_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	};
 
 	offs = data[0];
-	addr = mem_base + offs;
+	addr = simrpc_mem.base + offs;
 	DCC_LOG1(LOG_TRACE, "addr=%08x", addr);
 
-	if ((addr < mem_base) || (addr > mem_top)) {
+	if ((addr < simrpc_mem.base) || (addr > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Invalid");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
-	mem_ptr = addr;
+	simrpc_mem.ptr = addr;
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-	mem_clk = __thinkos_ticks();
-}
-
-static uint32_t __crc32(void  * buf, unsigned int len)
-{
-	struct stm32_crc * crc = STM32_CRC;
-	uint8_t * src = (uint8_t *)buf;
-	uint8_t * mrk;
-
-	crc->cr = CRC_RESET;
-
-	mrk = src + (len & ~3);
-	while (src != mrk) {
-		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16) + (src[3] << 24);
-		src += 4;
-	}
-
-	switch (len & 3) {
-	case 3:
-		crc->dr = src[0] + (src[1] << 8) + (src[2] << 16);
-		break;
-	case 2:
-		crc->dr = src[0] + (src[1] << 8);
-		break;
-	case 1:
-		crc->dr = src[0];
-		break;
-	}
-
-	return crc->dr;
-}
-
-static uint32_t __crc32_align(void  * buf, unsigned int len)
-{
-	struct stm32_crc * crc = STM32_CRC;
-	uint32_t * src = (uint32_t *)buf;
-	uint32_t * mrk = src + (len >> 2);
-
-	crc->cr = CRC_RESET;
-	while (src != mrk)
-		crc->dr = *src++;
-	
-	if (len & 3)
-		crc->dr = *src & (0xffffffff >> ((4 - (len & 3)) * 8));
-
-	return crc->dr;
+	simrpc_mem.clk = __thinkos_ticks();
 }
 
 void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -346,17 +310,17 @@ void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	};
 
 	offs = data[0];
-	addr = mem_base + offs;
+	addr = simrpc_mem.base + offs;
 	size = data[1];
 
-	if ((addr < mem_base) || (addr > mem_top)) {
+	if ((addr < simrpc_mem.base) || (addr > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Invalid");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
 	}
 
 	DCC_LOG2(LOG_TRACE, "addr=%08x size=%d", addr, size);
-	if ((addr < mem_base) || ((addr + size) > mem_top)) {
+	if ((addr < simrpc_mem.base) || ((addr + size) > simrpc_mem.top)) {
 		DCC_LOG(LOG_WARNING, "Invalid lock");
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
 		return;
@@ -375,16 +339,16 @@ void simrpc_mem_crc_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 		return;
 	}
 
-	if (size > (mem_top - addr))
-		size = (mem_top - addr);
+	if (size > (simrpc_mem.top - addr))
+		size = (simrpc_mem.top - addr);
 
 	if ((addr & 0x3) == 0)
-		crc = __crc32_align((void *)addr, size);
+		crc = crc32_align((void *)addr, size);
 	else
-		crc = __crc32((void *)addr, size);
+		crc = crc32((void *)addr, size);
 
 	__simrpc_send_int(SIMRPC_REPLY_OK(opc), crc);
 
-	mem_clk = __thinkos_ticks();
+	simrpc_mem.clk = __thinkos_ticks();
 }
 

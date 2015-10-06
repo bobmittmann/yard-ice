@@ -13,44 +13,40 @@
 <script src="simlib.js"></script>
 
 <script>	
-	function get_status(port) {
-		var tr = $('#stat' + port);
-		simlib_status_get(port, tr);
+	function get_port_status(port) {
+		var row = $('#stat' + port)[0];		
+		simlib_status_get(port, row);
 	}
-	
+
 	function status_poll() {
-		setTimeout(status_poll, 5000);
-		get_status(1);
-		get_status(2);
-		get_status(3);
-		get_status(4);
-		get_status(5);
+//		setTimeout(status_poll, 5000);
+		get_port_status(1);
+		get_port_status(2);
+		get_port_status(3);
+		get_port_status(4);
+		get_port_status(5);
 	}
 
 	function firmware_upload(event) {
-		var lst = this.elements;
-		var box = this.querySelector('#__msg');	
+		var form = this;
+		var msg_box = form.querySelector('#__msg');
 		var port = $('#selport').val();
 		
-		alert_box(box, "Uploading firmware, please wait...");
+		alert_show(msg_box, "Uploading firmware, please wait...");
 		$('.button').prop('disabled', true);
 		$.ajax({
-			url: this.action + '?port=' + port,
+			url: 'firmware_load.cgi?port=' + port,
 			type: 'POST',
 			data: new FormData(this),
 			processData: false,
 			contentType: false,
 			success: function() {
-				box.innerHTML = "";
-			    setTimeout(function(){ 
-			    	get_status(port);
-			    }, 500);  
 			},
 			error: function(xhr, type){
 				alert('Ajax error!');
 			},
 			complete: function(xhr, status){
-				box.innerHTML = "";
+				alert_hide(msg_box);
 				$('.button').prop('disabled', false);
 			}
 		});
@@ -82,48 +78,49 @@
 				<th>Uptime</th>
 				</tr>
 			</thead>
-			<tr id="stat1">
-				<td>1</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>		
-			</tr>
-			<tr id="stat2">
-				<td>2</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>		
-			</tr>	
-			<tr id="stat3">
-				<td>3</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>		
-			</tr>	
-			<tr id="stat4">
-				<td>4</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>		
-			</tr>	
-			<tr id="stat5">
-				<td>5</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>
-				<td>...</td>				
-			</tr>		
+			<tbody>			
+				<tr id="stat1">
+					<td>1</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>		
+				</tr>
+				<tr id="stat2">
+					<td>2</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>		
+				</tr>	
+				<tr id="stat3">
+					<td>3</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>		
+				</tr>	
+				<tr id="stat4">
+					<td>4</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>		
+				</tr>	
+				<tr id="stat5">
+					<td>5</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>
+					<td>...</td>				
+				</tr>
+			</tbodyt>		
 		</table>
-
 		<input id="btnrefresh" type="button" class="button" value="Refresh..." />
 	</section>
 
@@ -185,10 +182,10 @@
 		<li><a href="sim_config.html">Config</a></li>
 		<li><a href="sim_monitor.html">Monitor</a></li>
 		<li><a href="sim_tools.html">Tools</a></li>
-		<li><a class="active" href="#">Diagnostics</a></li>
+		<li><a href="sim_diag.html">Diagnostics</a></li>
 		<li><a href="sim_script.html">Scripts</a></li>
 		<li><a href="sim_test.html">Tests</a></li>
-		<li><a href="sim_firmware.html">Firmware</a></li>				
+		<li><a class="active" href="#"">Firmware</a></li>				
 	</ul></div>
 	<div class="bot"></div>
 </nav>

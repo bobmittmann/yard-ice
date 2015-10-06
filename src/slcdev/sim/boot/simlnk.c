@@ -28,6 +28,12 @@
 #include "simrpc.h"
 #include "simrpc_svc.h"
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
+#ifndef ENABLE_SIMLNK_SANITY_CHECK
+#define ENABLE_SIMLNK_SANITY_CHECK 0
+#endif
+
 #define RX_DMA_CHAN STM32_DMA_CHANNEL6
 #define TX_DMA_CHAN STM32_DMA_CHANNEL7
 
@@ -37,21 +43,27 @@ struct simlnk {
 	uint32_t rx_buf[(SIMLNK_MTU + 2 + 3) / 4];
 } simlnk;
 
-int simlnk_dma_xmit(unsigned int len)
+static int simlnk_dma_xmit(unsigned int len)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
 	struct stm32_usart * uart = STM32_USART2;
 	uint32_t ccr;
 
+	ccr = dma->ch[TX_DMA_CHAN].ccr;
+
+#if ENABLE_SIMLNK_SANITY_CHECK
 	/* Disable DMA */
-//	if ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN) {
-  //      DCC_LOG(LOG_ERROR, "DMA enabled");
- //       abort();
-//	}
-
-	while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN)
+	if (ccr & DMA_EN) {
+        DCC_LOG(LOG_ERROR, "DMA enabled");
+		/* disable DMA */
 		dma->ch[TX_DMA_CHAN].ccr = ccr & ~DMA_EN;
+		while ((ccr = dma->ch[TX_DMA_CHAN].ccr) & DMA_EN);
+	} 
+#endif
+	/* Make sure the TC interrupt is clear */
+	uart->sr &= ~USART_TC;
 
+	DCC_LOG1(LOG_INFO, "DMA start %d bytes.", len);
 	/* Program DMA transfer */
 	dma->ch[TX_DMA_CHAN].cndtr = len;
 	dma->ch[TX_DMA_CHAN].ccr = ccr | DMA_EN;	
@@ -61,7 +73,7 @@ int simlnk_dma_xmit(unsigned int len)
 	return 0;
 }
 
-int __simrpc_send(uint32_t opc, void * data, unsigned int cnt)
+int __simrpc_send(uint32_t opc, const void * data, unsigned int cnt)
 {
 	if (__ldrex(&simlnk.tx_lock))
 		return -1;
@@ -198,15 +210,65 @@ void thinkos_comm_svc(int32_t * arg)
 		break;
 
 	case COMM_SEND:
+		/* Set the return value to ZERO. This system call never fails. */
 		arg[0] = 0;
 again:
 		if (__ldrex(&simlnk.tx_lock)) {
-			/* wait for event */
+			unsigned int wq = THINKOS_WQ_COMM_SEND;
+			uint32_t queue;
+			/* (1) suspend the thread by removing it from the
+			   ready wait queue. The __thinkos_suspend() call cannot be nested
+			   inside a LDREX/STREX pair as it may use the exclusive access 
+			   itself,
+			   in case we have anabled the time sharing option.
+			   It is not a problem having a thread not contained in any 
+			   waiting queue inside a system call. */ 
 			__thinkos_suspend(self);
-			/* insert into the comm send wait queue */
-			__thinkos_wq_insert(THINKOS_WQ_COMM_SEND, self);
+			/* update the thread status in preparation for event wait */
+#if THINKOS_ENABLE_THREAD_STAT
+			thinkos_rt.th_stat[self] = wq << 1;
+#endif
+			/* (2) Save the context pointer. In case an interrupt wakes up
+			   this thread before the scheduler is called, this will allow
+			   the interrupt handler to locate the return value (r0) address. */
+			thinkos_rt.ctx[self] = (struct thinkos_context *)&arg[-8];
+			/* Get the event wait queue... */
+			queue = __ldrex(&thinkos_rt.wq_lst[wq]);
+
+			/* The lock may have been released while suspending (1).
+			   If this is the case roll back and restart. */
+			if (!simlnk.tx_lock) {
+				/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+				thinkos_rt.th_stat[self] = 0;
+#endif
+				/* insert into the ready wait queue */
+				__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+				DCC_LOG2(LOG_WARNING, "<%d> rollback 1 %d...", self, wq);
+				goto again;
+			}
+
+			/* Insert into the event wait queue */
+			queue |= (1 << self);
+			/* (3) Try to save back the queue state.
+			   The queue may have changed by an interrup handler.
+			   If this is the case roll back and restart. */
+			if (__strex(&thinkos_rt.wq_lst[wq], queue)) {
+				/* roll back */
+#if THINKOS_ENABLE_THREAD_STAT
+				thinkos_rt.th_stat[self] = 0;
+#endif
+				/* insert into the ready wait queue */
+				__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);  
+				DCC_LOG2(LOG_WARNING, "<%d> rollback 2 %d...", self, wq);
+				goto again;
+			}
+			/* -- wait for event ---------------------------------------- */
+			DCC_LOG2(LOG_MSG, "<%d> waiting on console write %d...", 
+					 self, wq);
 			/* signal the scheduler ... */
 			__thinkos_defer_sched(); 
+
 		} else {
 			uint32_t opc;
 			void * buf;
@@ -251,7 +313,6 @@ void stm32_usart2_isr(void)
 		int cnt;
 		int th;
 
-		DCC_LOG(LOG_MSG, "TC");
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
         /* Disable the transfer complete interrupt */
@@ -260,7 +321,11 @@ void stm32_usart2_isr(void)
 		cr |= USART_SBK;
 		uart->cr1 = cr;
 
+		/* disable DMA */
+		dma->ch[TX_DMA_CHAN].ccr &= ~DMA_EN;
+
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			DCC_LOG(LOG_INFO, "TC xmit pending...");
 			/* wakeup from the console wait queue */
 			__thinkos_wakeup(wq, th);
 			/* signal the scheduler ... */
@@ -271,9 +336,12 @@ void stm32_usart2_isr(void)
 			cnt = thinkos_rt.ctx[th]->r3;
 			simlnk.tx_buf[0] = opc;
 			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
+
 			simlnk_dma_xmit(cnt + 4);
 		} else {
+
 			simlnk.tx_lock = 0;
+			DCC_LOG(LOG_INFO, "TC TX unlock.");
 		}
 	}
 #if 0
@@ -338,24 +406,25 @@ void stm32_usart2_isr(void)
 	}	
 }
 
+
+#if ENABLE_SIMLNK_SANITY_CHECK
 /* TX DMA ------------------------------------------------------------- */
 void stm32_dma1_channel7_isr(void)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
 
 	if (dma->isr & DMA_TCIF7) {
-		DCC_LOG(LOG_MSG, "TX TCIF");
+		DCC_LOG(LOG_TRACE, "TX TCIF");
 		/* clear the DMA transfer complete flag */
 		dma->ifcr = DMA_CTCIF7;
 	}
 
 	if (dma->isr & DMA_TEIF7) {
-		DCC_LOG(LOG_TRACE, "TX TEIF");
+		DCC_LOG(LOG_WARNING, "TX TEIF");
 		/* clear the DMA transfer complete flag */
 		dma->ifcr = DMA_CTEIF7;
 	}
 }
-
 
 /* RX DMA ------------------------------------------------------------- */
 void stm32_dma1_channel6_isr(void)
@@ -369,11 +438,12 @@ void stm32_dma1_channel6_isr(void)
 	}
 
 	if (dma->isr & DMA_TEIF6) {
-		DCC_LOG(LOG_TRACE, "RX TEIF");
+		DCC_LOG(LOG_WARNING, "RX TEIF");
 		/* clear the DMA transfer error flag */
 		dma->ifcr = DMA_CTEIF6;
 	}
 }
+#endif
 
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev)
@@ -399,16 +469,21 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	/* enable UART and errors interrupt */
 	uart->cr1 = USART_UE | USART_RE | USART_TE;
 
-	/* Generate a break condition */
-	uart->cr1 |= USART_SBK;
+	/* Clear pending TC and BRK interrupts */
+	uart->sr = 0;
 
 	/* TX DMA ------------------------------------------------------------- */
 	dma->ch[TX_DMA_CHAN].ccr = 0;
 	while (dma->ch[TX_DMA_CHAN].ccr & DMA_EN); 
 	dma->ch[TX_DMA_CHAN].cpar = &uart->dr;
 	dma->ch[TX_DMA_CHAN].cmar = simlnk.tx_buf;
+#if ENABLE_SIMLNK_SANITY_CHECK
 	dma->ch[TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 		DMA_MINC | DMA_DIR_MTP | DMA_TEIE | DMA_TCIE;
+#else
+	dma->ch[TX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
+		DMA_MINC | DMA_DIR_MTP;
+#endif
 
 	/* RX DMA ------------------------------------------------------------- */
 	dma->ch[RX_DMA_CHAN].ccr = 0;
@@ -416,25 +491,37 @@ int simlnk_init(struct simlnk * lnk, const char * name,
 	dma->ch[RX_DMA_CHAN].cpar = &uart->dr;
 	dma->ch[RX_DMA_CHAN].cmar = simlnk.rx_buf;
 	dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+#if ENABLE_SIMLNK_SANITY_CHECK
 	dma->ch[RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
 		DMA_MINC | DMA_DIR_PTM | DMA_TEIE | DMA_TCIE | DMA_EN;
+#else
+	dma->ch[RX_DMA_CHAN].ccr = DMA_MSIZE_8 | DMA_PSIZE_8 | 
+		DMA_MINC | DMA_DIR_PTM | DMA_EN;
+#endif
 
 #ifdef CM3_RAM_VECTORS
 	thinkos_irq_register(STM32_IRQ_USART2, IRQ_PRIORITY_LOW, 
 						 stm32_usart2_isr);
+#if ENABLE_SIMLNK_SANITY_CHECK
 	thinkos_irq_register(STM32_IRQ_DMA1_CH7, IRQ_PRIORITY_LOW, 
 						 stm32_dma1_channel7_isr);
 	thinkos_irq_register(STM32_IRQ_DMA1_CH6, IRQ_PRIORITY_LOW, 
 						 stm32_dma1_channel6_isr);
+#endif
 #else
 	cm3_irq_pri_set(STM32_IRQ_USART2, IRQ_PRIORITY_LOW);
+	cm3_irq_enable(STM32_IRQ_USART2);
+#if ENABLE_SIMLNK_SANITY_CHECK
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CH7, IRQ_PRIORITY_LOW);
 	cm3_irq_pri_set(STM32_IRQ_DMA1_CH6, IRQ_PRIORITY_LOW);
-	cm3_irq_enable(STM32_IRQ_USART2);
 	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
 	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
+#endif
 #endif
 
+	DCC_LOG1(LOG_TRACE, "SIMLKN started, baudrate=%d.", 
+			 SIMLNK_BAUDRATE); 
 	return 0;
 }
-	
+

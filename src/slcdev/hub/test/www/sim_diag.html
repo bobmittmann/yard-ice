@@ -111,7 +111,7 @@
 		tab.rows[19].cells[i].innerHTML = s.ap_rtlusb; /* AP Read Trouble Latch Units Sounder Base"*/
 	}
 
-	function get_stats(port) {
+	function get_port_stats(port) {
 		$.ajax({
 			type: 'GET',
 			url: 'sim_getstats.cgi',
@@ -134,17 +134,17 @@
 	}
 	
 	function poll_stats() {
-		get_stats(1);
-		get_stats(2);
-		get_stats(3);
-		get_stats(4);
-		get_stats(5);
+		get_port_stats(1);
+		get_port_stats(2);
+		get_port_stats(3);
+		get_port_stats(4);
+		get_port_stats(5);
 		setTimeout(poll_stats, 2000);
 	}
 	
 	$(function() {
 		table_create();
-//		poll_stats()
+		poll_stats()
     });
 
 </script>

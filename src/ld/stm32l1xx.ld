@@ -166,11 +166,19 @@ SECTIONS
 		PROVIDE (__bss_start = . );
 		/* all .bss sections  */
 		*(.bss .bss*)
+			. = ALIGN(4);
+		PROVIDE (__bss_end = . );
 	} >sram
 
 	/* advance location counter to the next 32-bit boundary */
-	. = ALIGN(4);
-	PROVIDE (__bss_end = . );
-	PROVIDE (__heap_start = . );
+	.heap :
+	{
+		PROVIDE (__heap_start = . );
+		/* all .heap sections  */
+		*(.heap .heap*)
+		/* advance location counter to the next 32-bit boundary */
+		. = ALIGN(4);
+		PROVIDE (__heap_end = . );
+	} >sram
 }
 

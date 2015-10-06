@@ -22,7 +22,7 @@
 
 PROG = thinkos
 
-CFILES = boot.c board.c simlnk.c simrpc_mem.c simrpc_sys.c #test.c 
+CFILES = boot.c board.c crc32.c simlnk.c simrpc_mem.c simrpc_sys.c 
 
 SDK = ../../../sdk
 
@@ -38,9 +38,9 @@ CDEFS = CONFIG_H CM3_RAM_VECTORS NDEBUG
 CFLAGS = -g -Os -Wall -fomit-frame-pointer -ffunction-sections -fdata-sections
 LDFLAGS = -Wl,--gc-sections 
 
-VERSION_DATE = "2015-10-01"
+VERSION_DATE = "2015-10-06"
 VERSION_MAJOR = "0"
-VERSION_MINOR = "28"
+VERSION_MINOR = "29"
 
 JTAGTOOL_ADDR = 192.168.10.50
 

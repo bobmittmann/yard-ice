@@ -1,7 +1,7 @@
 /* 
- * Copyright(C) 2012 Robinson Mittmann. All Rights Reserved.
- * 
- * This file is part of the YARD-ICE.
+ * Copyright(c) 2004-2012 BORESTE (www.boreste.com). All Rights Reserved.
+ *
+ * This file is part of the libcrc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,29 +18,27 @@
  */
 
 /** 
- * @file profclk.c
- * @brief Real-time trace
+ * @file crc32.h
+ * @brief YARD-ICE libcrc
  * @author Robinson Mittmann <bobmittmann@gmail.com>
  */ 
 
-#include "profclk.h"
+#include <stdint.h>
 
-/* ---------------------------------------------------------------------------
- * Profiling clock
- * ---------------------------------------------------------------------------
- */
+#ifndef __CRC32_H__
+#define __CRC32_H__
 
-uint32_t profclk_us(uint32_t clk)
-{
-	/* XXX: Assume 16MHz clock */
-	return clk / 16; 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+uint32_t crc32(void  * buf, unsigned int len);
+
+uint32_t crc32_align(void  * buf, unsigned int len);
+
+#ifdef __cplusplus
 }
+#endif	
 
-void profclk_init(void)
-{
-	/* Enable trace */
-	CM3_DCB->demcr |= DCB_DEMCR_TRCENA;
-	/* Enable cycle counter */
-	CM3_DWT->ctrl |= DWT_CTRL_CYCCNTENA;
-}
+#endif /* __CRC32_H__ */
 

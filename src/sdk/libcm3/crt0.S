@@ -38,6 +38,8 @@ _reset:
 0:
 	/* jump to hardware initialization code */
 	/* disable interrupts */
+    mov     r8, r0
+    mov     r9, r1
 	bl		_init
 
 	/* copy initialized variables .data section  (Copy from ROM to RAM) */
@@ -76,12 +78,10 @@ _reset:
 
     mov     fp, #0
 	mov     r7, #0
-#if 0
-	/* argc = 0 */
-	mov     r0, #0
+	/* argc  */
+	mov     r0, r8
 	/* argv = NULL */
-	mov     r1, r0
-#endif
+	mov     r1, r9
 	/* go to C main function */
 	bl      main
 	b       abort

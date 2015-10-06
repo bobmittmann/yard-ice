@@ -215,21 +215,31 @@ void __thinkos_reset(void)
 #endif
 }
 
-int __thinkos_init_main(struct thinkos_thread_opt opt)
+#define __PRIORITY(OPT)   (((OPT) >> 16) & 0xff)
+#define __ID(OPT)         (((OPT) >> 24) & 0x7f)
+#define __PAUSED(OPT)     (((OPT) >> 31) & 0x01)
+#define __STACK_SIZE(OPT) ((OPT) & 0xffff)
+
+
+static int __thinkos_init_main(uint32_t opt)
 {
+#if THINKOS_ENABLE_TIMESHARE
+	int priority = __PRIORITY(opt);
+#endif
+	int id = __ID(opt);
 	int self;
 
 	/* initialize the main thread */ 
-	/* alloc main thread */
-	if (opt.id >= THINKOS_THREADS_MAX)
-		opt.id = THINKOS_THREADS_MAX - 1;
+	if (id >= THINKOS_THREADS_MAX)
+		id = THINKOS_THREADS_MAX - 1;
 
 #if THINKOS_ENABLE_THREAD_ALLOC
 	/* initialize the thread allocation bitmap */ 
 	thinkos_rt.th_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
-	self = thinkos_alloc_lo(thinkos_rt.th_alloc, opt.id);
+	/* alloc main thread */
+	self = thinkos_alloc_lo(thinkos_rt.th_alloc, id);
 #else
-	self = opt.id;
+	self = id;
 #endif
 
 #if THINKOS_ENABLE_THREAD_INFO
@@ -246,14 +256,14 @@ int __thinkos_init_main(struct thinkos_thread_opt opt)
 #error "THINKOS_SCHED_LIMIT_MAX < THINKOS_SCHED_LIMIT_MIN !!!"
 #endif
 
-	if (opt.priority > THINKOS_SCHED_LIMIT_MAX)
-		opt.priority = THINKOS_SCHED_LIMIT_MAX;
+	if (priority > THINKOS_SCHED_LIMIT_MAX)
+		priority = THINKOS_SCHED_LIMIT_MAX;
 
-	thinkos_rt.sched_pri[self] = opt.priority;
-	thinkos_rt.sched_val[self] = opt.priority / 2;
+	thinkos_rt.sched_pri[self] = priority;
+	thinkos_rt.sched_val[self] = priority / 2;
 
 	/* set the initial schedule limit */
-	thinkos_rt.sched_limit = opt.priority;
+	thinkos_rt.sched_limit = priority;
 	if (thinkos_rt.sched_limit < THINKOS_SCHED_LIMIT_MIN)
 		thinkos_rt.sched_limit = THINKOS_SCHED_LIMIT_MIN;
 #endif /* THINKOS_ENABLE_TIMESHARE */
@@ -262,11 +272,11 @@ int __thinkos_init_main(struct thinkos_thread_opt opt)
 	thinkos_rt.active = self;
 	__bit_mem_wr(&thinkos_rt.wq_ready, self, 1);
 
-	DCC_LOG2(LOG_TRACE, "threads_max=%d ready=%08x", 
-			 THINKOS_THREADS_MAX, thinkos_rt.wq_ready);
+	DCC_LOG3(LOG_TRACE, "<%d> threads_max=%d ready=%08x", 
+			 self, THINKOS_THREADS_MAX, thinkos_rt.wq_ready);
 
 #if THINKOS_ENABLE_PAUSE
-	if (opt.paused) {
+	if (__PAUSED(opt)) {
 		/* insert into the paused list */
 		__bit_mem_wr(&thinkos_rt.wq_paused, self, 1);
 	} 
@@ -286,7 +296,7 @@ void __thinkos_mpu_init(void)
 }
 #endif
 
-int thinkos_init(struct thinkos_thread_opt opt)
+int thinkos_init(uint32_t opt)
 {
 	uint32_t msp;
 	int self;

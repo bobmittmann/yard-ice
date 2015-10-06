@@ -31,6 +31,7 @@ void board_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_CRC);
 
 	/* LEDs */
 	stm32_gpio_mode(IO_LED1, OUTPUT, PUSH_PULL | SPEED_LOW);
@@ -95,9 +96,6 @@ void board_soft_reset(void)
 
 	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
 	__thinkos_reset();
-
-	DCC_LOG(LOG_TRACE, "6. exception reset...");
-	__exception_reset();
 
 	cm3_irq_enable(STM32_IRQ_USART2);
 	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
