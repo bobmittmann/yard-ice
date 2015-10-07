@@ -422,6 +422,8 @@ int rpc_test_file_load(struct httpctl * http, int port, char * fname)
     	}
         http_send(http, buf, n);
     	stop = profclk_get();
+		(void)start;
+		(void)stop;
     	DBG("simrpc_file_write(): %d us.", profclk_us(stop - start));
     	cnt += n;
     }
@@ -765,7 +767,7 @@ int rpc_js_cgi(struct httpctl * http)
     httpd_200(http->tp, TEXT_HTML);
 
     rem = sizeof(script) - 1;
-
+	cnt = 0;
     while (rem) {
     	int n;
     	n = http_content_recv(http, cp, rem);
@@ -840,12 +842,15 @@ int cfg_compile_cgi(struct httpctl * http)
 		clk_start = profclk_get();
 		n = simrpc_cfg_compile(sp, s, sizeof(s));
 		clk_stop = profclk_get();
+		(void)clk_start;
+		(void)clk_stop;
 		if (n < 0) {
 			WARN("simrpc_cfg_compile() failed, with code=%d after %d us!",
 					n, profclk_us(clk_stop - clk_start));
 			n = sprintf(s, "#ERROR: simrpc_cfg_compile() failed!\r\n");
 		} else {
-			INF("configuration compiled in %d us.", profclk_us(clk_stop - clk_start));
+			INF("configuration compiled in %d us.", 
+				profclk_us(clk_stop - clk_start));
 		}
 
 		simrpc_close(sp);
@@ -927,6 +932,8 @@ int db_compile_cgi(struct httpctl * http)
 		clk_start = profclk_get();
 		n = simrpc_db_compile(sp, s, sizeof(s));
 		clk_stop = profclk_get();
+		(void)clk_start;
+		(void)clk_stop;
 		if (n < 0) {
 			WARN("simrpc_db_compile() failed, with code=%d after %d us!",
 					n, profclk_us(clk_stop - clk_start));

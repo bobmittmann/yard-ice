@@ -20,11 +20,20 @@
 # 
 
 
-PROG = slcdev-hub
+PROG = test
 
-CFILES = slcdev-hub.c io.c console.c\
-		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c pktbuf.c net.c \
-		 simlnk.c simrpc.c webserver.c 
+WWW_CFILES = www/index.html.c www/layout.css.c www/modalbox.js.c \
+			 www/network.html.c www/rpc_test.html.c www/sim_config.html.c \
+			 www/sim_database.html.c www/sim_diag.html.c \
+			 www/sim_firmware.html.c www/sim_monitor.html.c \
+			 www/sim_script.html.c www/sim_test.html.c \
+			 www/sim_tools.html.c www/simlib.js.c www/style.css.c \
+			 www/www_diag.c www/www_img.c www/www_ipcfg.c \
+			 www/www_root.c www/www_rpctest.c www/zepto.min.js.c
+
+CFILES = test.c io.c console.c\
+		 ../mstp/mstp_crc.c ../mstp/mstp_lnk.c \
+		 simlnk.c simrpc.c simrpc_clnt.c webserver.c $(WWW_CFILES)
 
 SDK = ../../../sdk
 

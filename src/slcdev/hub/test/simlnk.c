@@ -167,6 +167,11 @@ static int pipe_read(struct pipe * pipe, uint8_t * buf, unsigned int len)
  * Simulator Serial Link
  * ------------------------------------------------------------------------- */
 
+void simlnk_mgmt(struct simlnk * lnk, struct simrpc_mgmt * mgmt, int cnt)
+{
+	WARN("MGMT %d signal=%d", lnk->addr, mgmt->typ);
+	lnk->stdout_seq = 0;
+}
 
 void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 {
@@ -209,15 +214,8 @@ void __attribute__((noreturn)) simlnk_loop(struct simlnk * lnk)
 		seq = SIMRPC_SEQ(opc);
 		(void)seq;
 
-		if (insn == SIMRPC_LINK) {
-			WARN("SIMLNK %d signal: seq=%d cnt=%d.", lnk->addr, seq, cnt);
-			lnk->stdout_seq = 0;
-			continue;
-		}
-
-		if (insn == SIMRPC_FAULT) {
-			WARN("SIMLNK %d fault: seq=%d cnt=%d!", lnk->addr, seq, cnt);
-			lnk->stdout_seq = 0;
+		if (insn == SIMRPC_MGMT_SIGNAL) {
+			simlnk_mgmt(lnk, (struct simrpc_mgmt *)&pkt[1], cnt - 4);
 			continue;
 		}
 
