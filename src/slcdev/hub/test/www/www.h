@@ -63,6 +63,8 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
+#define SIZEOF_SIM_DEBUG_HTML 901
+
 #define SIZEOF_JQUERY_2_1_4_MIN_JS 29519
 
 #define SIZEOF_ZEPTO_MIN_JS 9377
@@ -73,29 +75,29 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_LAYOUT_CSS 790
 
-#define SIZEOF_SIM_TEST_HTML 2253
+#define SIZEOF_SIM_TEST_HTML 2263
 
-#define SIZEOF_SIM_SCRIPT_HTML 1965
+#define SIZEOF_SIM_SCRIPT_HTML 1975
 
-#define SIZEOF_SIM_FIRMWARE_HTML 1679
+#define SIZEOF_SIM_FIRMWARE_HTML 1691
 
-#define SIZEOF_SIM_DIAG_HTML 1947
+#define SIZEOF_SIM_DIAG_HTML 1960
 
-#define SIZEOF_INDEX_HTML 1463
+#define SIZEOF_INDEX_HTML 1471
 
-#define SIZEOF_SIM_MONITOR_HTML 1667
+#define SIZEOF_SIM_MONITOR_HTML 1676
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 1721
+#define SIZEOF_SIM_TOOLS_HTML 1730
 
-#define SIZEOF_SIM_DATABASE_HTML 1934
+#define SIZEOF_SIM_DATABASE_HTML 1944
 
-#define SIZEOF_SIM_CONFIG_HTML 1966
+#define SIZEOF_SIM_CONFIG_HTML 1976
 
 #define SIZEOF_RPC_TEST_HTML 2495
 
-#define SIZEOF_NETWORK_HTML 1101
+#define SIZEOF_NETWORK_HTML 1111
 
 #define SIZEOF_STYLE_CSS 1031
 
@@ -103,6 +105,8 @@ extern struct httpdobj www_img[];
 
 
 /* --- bin.hex.py: file content --- */
+
+extern const uint8_t sim_debug_html[];
 
 extern const uint8_t jquery_2_1_4_min_js[];
 
@@ -176,5 +180,6 @@ int sim_getstats_cgi(struct httpctl * http);
 #endif
 
 #endif
+
 
 

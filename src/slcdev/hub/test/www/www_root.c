@@ -68,6 +68,8 @@ struct httpdobj www_root[] = {
 		.len = SIZEOF_SIM_SCRIPT_HTML, .ptr = sim_script_html },
 	{ .oid = "sim_firmware.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_SIM_FIRMWARE_HTML, .ptr = sim_firmware_html },
+	{ .oid = "sim_debug.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
+		.len = SIZEOF_SIM_DEBUG_HTML, .ptr = sim_debug_html },
 	{ .oid = "network.html", .typ = OBJ_STATIC_HTML_GZ, .lvl = 255,
 		.len = SIZEOF_NETWORK_HTML, .ptr = network_html },
 	{ .oid = "rpc_test.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,

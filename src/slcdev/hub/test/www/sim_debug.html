@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="copyright" content="Copyright (c) Bob Mittmann 2014-2015"/>
+<link rel="shortcut icon" href="/img/thinkos16x16.png"/>
+<link rel="stylesheet" href="layout.css" type="text/css" media="screen"/>
+<link rel="stylesheet" href="style.css" type="text/css" media="screen"/>
+
+<title>CRAB Simulator Debug</title>
+
+<script src="zepto.min.js"></script>
+<script src="simlib.js"></script>
+
+<script>
+	$(function() {
+	});
+</script>
+
+</head>
+
+<body>
+<div class="wrapper">	
+	<section>
+		<h2>Threads Status</h2>
+		<table id="context">
+			<thead>
+				<tr>
+				<th style="border-top-style: hidden; border-left-style: hidden; background: #fff"></th>
+				<th>Except</th>
+				<th>Simulator</th>
+				<th>IO</th>
+				<th>SimLnk</th>		
+				<th>MicroJS</th>
+				</tr>
+			</thead>
+			<tbody>
+			<tr>
+				<th>R0</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R1</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R2</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R3</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R4</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R5</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R6</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R7</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R8</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R9</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R10</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R11</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>R12</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>SP</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>LR</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>
+			<tr>
+				<th>PC</th>		
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>
+				<td>0</td>						
+			</tr>			
+			</tbody>
+		</table>
+	</section>
+			
+</div>
+	
+	<header>
+		<h1>CRAB Simulator Debug</h1>
+	</header>
+
+
+<nav>
+	<div class="top"></div>
+	<div class="tabs"><ul>
+		<li><a class="top" href="index.html">Home</a></li>
+		<li><a href="network.html">Network</a></li>				
+		<li><a href="sim_database.html">Database</a></li>
+		<li><a href="sim_config.html">Config</a></li>
+		<li><a href="sim_monitor.html">Monitor</a></li>
+		<li><a href="sim_tools.html">Tools</a></li>
+		<li><a href="sim_diag.html">Diagnostics</a></li>
+		<li><a href="sim_script.html">Scripts</a></li>
+		<li><a href="sim_test.html">Tests</a></li>
+		<li><a href="sim_firmware.html">Firmware</a></li>
+		<li><a class="active" href="#">Debug</a></li>
+	</ul>
+	</div><div class="bot"></div>
+</nav>
+
+<footer>
+	<a href="https://https://github.com/bobmittmann/yard-ice">
+	<img src="/img/thinkos47x20.png"></a> - Cortex-M Operating System -
+	<i><a href="https://https://github.com/bobmittmann/yard-ice">YARD-ICE</a></i><br />
+	&copy; Copyright 2013-2015, Bob Mittmann
+</footer>	
