@@ -142,22 +142,27 @@ static inline bool __is_led_on(struct stm32_gpio *__gpio, int __pin) {
 	return stm32_gpio_stat(__gpio, __pin);
 }
 
+enum app_boot_mode {
+	APP_MODE_NORMAL = 0,
+	APP_MODE_FAULT = 1,
+	APP_MODE_SAFE = 2
+};
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void board_init(void);
-void __attribute__((noreturn)) board_test(void * arg);
 
 void board_soft_reset(void);
 
 bool board_app_check(uint32_t addr);
 
-void board_reboot(void * arg);
+void board_reboot(int delay);
 
-bool board_app_exec(uint32_t addr, void * arg);
+bool board_app_exec(uint32_t addr, int mode);
 
-void board_exec(void (* func)(void *), void * arg);
+void board_exec(void (* func)(int), int mode);
 
 #ifdef __cplusplus
 }

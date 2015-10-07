@@ -440,7 +440,7 @@ int thread_info(unsigned int gdb_thread_id, char * buf)
 	bool tmw;
 	int n;
 
-	if (thread_id >= THINKOS_THREAD_VOID) {
+	if (thread_id > THINKOS_THREAD_VOID) {
 		DCC_LOG(LOG_ERROR, "Invalid thread!");
 		return -1;
 	}

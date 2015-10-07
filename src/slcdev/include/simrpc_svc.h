@@ -33,19 +33,21 @@
 #include <simrpc.h>
 
 enum simrpc_opc {
-	SIMRPC_LINK       = 0,
-	SIMRPC_SUSPEND    = 1,
-	SIMRPC_RESUME     = 2,
-	SIMRPC_EXEC       = 3,
-	SIMRPC_REBOOT     = 4,
-	SIMRPC_KERNELINFO = 5,
-	SIMRPC_MEM_LOCK   = 6,
-	SIMRPC_MEM_UNLOCK = 7,
-	SIMRPC_MEM_ERASE  = 8,
-	SIMRPC_MEM_READ   = 9,
-	SIMRPC_MEM_WRITE  = 10,
-	SIMRPC_MEM_SEEK   = 11,
-	SIMRPC_MEM_CRC32  = 12,
+	SIMRPC_MGMT_SIGNAL = 0,
+	SIMRPC_SUSPEND     = 1,
+	SIMRPC_RESUME      = 2,
+	SIMRPC_EXEC        = 3,
+	SIMRPC_REBOOT      = 4,
+	SIMRPC_KERNELINFO  = 5,
+	SIMRPC_MEM_LOCK    = 6,
+	SIMRPC_MEM_UNLOCK  = 7,
+	SIMRPC_MEM_ERASE   = 8,
+	SIMRPC_MEM_READ    = 9,
+	SIMRPC_MEM_WRITE   = 10,
+	SIMRPC_MEM_SEEK    = 11,
+	SIMRPC_MEM_CRC32   = 12,
+	SIMRPC_EXCEPTINFO  = 13,
+	SIMRPC_THREADINFO  = 14,
 
 	SIMRPC_TRACE       = 32,
 	SIMRPC_FILE_OPEN   = 33,
@@ -87,9 +89,16 @@ enum simrpc_opc {
 	SIMRPC_ERR          = 255
 };
 
-struct simrpc_link {
-	uint8_t id;
-	uint8_t pdu[3];
+enum {
+	SIMRPC_MGMT_LINK_UP = 0,
+	SIMRPC_MGMT_FAULT = 1
+};
+
+struct simrpc_mgmt {
+	uint8_t typ;
+	union {
+		uint8_t pdu[3];
+	};
 };
 
 struct simrpc_hdr {
@@ -153,6 +162,8 @@ void simrpc_resume_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_reboot_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_exec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_exceptinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_threadinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 void simrpc_file_open_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_file_create_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);

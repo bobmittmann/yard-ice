@@ -69,16 +69,16 @@ void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	board_soft_reset();
 
-	board_exec(board_reboot, NULL);
+	board_exec(board_reboot, 0);
 }
 
 void simlnk_int_enable(void);
-void app_default(void *);
+void app_default(int);
 
 void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	uint32_t key;
-	const char * mode;
+	int mode;
 
 	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
@@ -89,21 +89,21 @@ void simrpc_exec_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 	key = data[0];
 	if (key == SIMRPC_EXEC_KEY('A', 'P', 'P', 0)) {
-		mode = "normal";
+		mode = APP_MODE_NORMAL;
 	} else if (key == SIMRPC_EXEC_KEY('S', 'A', 'F', 'E')) {
-		mode = "safe";
+		mode = APP_MODE_SAFE;
 	} else {
 		DCC_LOG(LOG_WARNING, "Invalid Key");
-		board_exec(app_default, NULL);
+		board_exec(app_default, APP_MODE_SAFE);
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 		return;
 	}
 
-	if (board_app_exec(THINKOS_APP_ADDR, (void *)mode)) {
+	if (board_app_exec(THINKOS_APP_ADDR, mode)) {
 		__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 	} else {
 		DCC_LOG(LOG_WARNING, "Invalid application!");
-		board_exec(app_default, (void *)mode);
+		board_exec(app_default, mode);
 		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
 	}
 }
@@ -121,5 +121,42 @@ void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	inf.version.timestamp = VERSION_TIMESTAMP;
 
 	__simrpc_send(SIMRPC_REPLY_OK(hdr), &inf, sizeof(inf));
+}
+
+#define __THINKOS_SYS__
+#include <thinkos_sys.h>
+
+void simrpc_exceptinfo_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
+{
+	struct thinkos_except * xcpt;
+	xcpt = __thinkos_except_buf();
+
+	__simrpc_send(SIMRPC_REPLY_OK(opc), xcpt, sizeof(struct thinkos_except));
+}
+
+void simrpc_threadinfo_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
+{
+	unsigned int thread_id;
+	struct thinkos_context * ctx;
+
+	if (cnt != 4) {
+		DCC_LOG(LOG_WARNING, "Invalid argument size");
+		return;
+	}
+
+	thread_id = data[0];
+
+	if (thread_id > THINKOS_THREADS_MAX) {
+		DCC_LOG(LOG_ERROR, "Invalid thread!");
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
+		return;
+	}
+
+	if (thread_id == THINKOS_THREAD_IDLE)
+		ctx = thinkos_rt.idle_ctx;
+	else
+		ctx = thinkos_rt.ctx[thread_id];
+
+	__simrpc_send(SIMRPC_REPLY_OK(opc), ctx, sizeof(struct thinkos_context));
 }
 

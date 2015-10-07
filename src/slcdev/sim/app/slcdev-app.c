@@ -29,11 +29,24 @@ void isink_test(void);
 void js_runtime_init(void);
 void simrpc_test_signal(void);
 
-int __attribute__((noreturn)) app_main(const char * mode)
+void read_fault(void)
+{
+	volatile uint32_t * ptr = (uint32_t *)(0x0);
+	uint32_t x;
+	int i;
+
+	for (i = 0; i < (16 << 4); ++i) {
+		x = *ptr;
+		(void)x;
+		ptr += 0x10000000 / (2 << 4);
+	}
+}
+
+int __attribute__((noreturn)) app_main(int mode)
 {
 	FILE * f;
 
-	DCC_LOG1(LOG_TRACE, "mode=%p.", mode);
+	DCC_LOG1(LOG_TRACE, "mode=%d.", mode);
 
 //	f = null_fopen(NULL);
 	f = simrpc_stdout_fopen();
@@ -76,28 +89,17 @@ int __attribute__((noreturn)) app_main(const char * mode)
 	device_db_init();
 
 	/* initializes database */
-	if (strcmp(mode, "safe") == 0) {
-		DCC_LOG(LOG_TRACE, "safe mode!");
-#if 0
-	for(;;) {
-		thinkos_sleep(1000);
-		led_flash(4, 250);
-	}
-#endif
-	} else {
-
-#if 0
-	for(;;) {
-		thinkos_sleep(1000);
-		led_flash(3, 250);
-	}
-#endif
+	if (mode == APP_MODE_NORMAL) {
 		DCC_LOG(LOG_TRACE, "normal mode!");
 		/* load configuration */
 		config_load();
 		/* start simulation */
 		slcdev_sim_resume();
+	} else {
+		DCC_LOG(LOG_TRACE, "safe mode!");
 	}
+
+	read_fault();
 
 #if 0
 	/* create a thread to handle simulation events. This is the 

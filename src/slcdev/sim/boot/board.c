@@ -102,15 +102,15 @@ void board_soft_reset(void)
 	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
 }
 
-void board_reboot(void * arg)
+void board_reboot(int delay)
 {
 	DCC_LOG(LOG_TRACE, "thinkos_sleep()");
-	thinkos_sleep(10);
+	thinkos_sleep(delay);
 	DCC_LOG(LOG_TRACE, "cm3_sysrst()");
 	cm3_sysrst();
 }
 
-void board_exec(void (* func)(void *), void * arg)
+void board_exec(void (* func)(int), int mode)
 {
 	int thread_id = 0;
 
@@ -118,8 +118,8 @@ void board_exec(void (* func)(void *), void * arg)
 	__thinkos_thread_abort(thread_id);
 
 
-	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(arg=%p)", arg);
-	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, arg);
+	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(mode=%d)", mode);
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, (void *)mode);
 
 #if THINKOS_ENABLE_THREAD_INFO
 	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
@@ -132,10 +132,9 @@ void board_exec(void (* func)(void *), void * arg)
 	__thinkos_defer_sched();
 }
 
-bool board_app_exec(uint32_t addr, void * arg)
+bool board_app_exec(uint32_t addr, int mode)
 {
 	uint32_t * signature = (uint32_t *)addr;
-//	int thread_id = 0;
 
 	if ((signature[0] != 0x0a0de004) ||
 		(signature[1] != 0x6e696854) ||
@@ -146,57 +145,48 @@ bool board_app_exec(uint32_t addr, void * arg)
 		return false;
 	}
 
-	board_exec((void *)(addr | 1), arg);
+	board_exec((void *)(addr | 1), mode);
 
 	return true;
 }
 
-static const char * const app_argv[] = {
-	"app",
-};
-
-static const char * const svc_argv[] = {
-	"svc",
-};
-
-
-void board_test(void * arg)
+void board_test(int mode)
 {
+	if (mode == APP_MODE_FAULT) {
+		for (;;) {
+			__led_on(IO_LED1);
+//			__led_on(IO_LED2);
+			__led_on(IO_LED3);
+//			__led_on(IO_LED4);
+			thinkos_sleep(100);
+			__led_off(IO_LED1);
+			__led_off(IO_LED2);
+			__led_off(IO_LED3);
+			__led_off(IO_LED4);
+			thinkos_sleep(234);
+		}
+	}
+
 	for (;;) {
 		__led_on(IO_LED1);
-
 		thinkos_sleep(25);
-
 		__led_off(IO_LED3);
-
 		thinkos_sleep(100);
-
 		__led_on(IO_LED2);
-
 		thinkos_sleep(25);
-
 		__led_off(IO_LED1);
-
 		thinkos_sleep(100);
-
 		__led_on(IO_LED4);
-
 		thinkos_sleep(25);
-
 		__led_off(IO_LED2);
-
 		thinkos_sleep(100);
-
 		__led_on(IO_LED3);
-
 		thinkos_sleep(25);
-
 		__led_off(IO_LED4);
-
 		thinkos_sleep(100);
 	}	
 }
 
-int app_default(void * arg) __attribute__((weak, alias("board_test")));
+int app_default(int) __attribute__((weak, alias("board_test")));
 
 

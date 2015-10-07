@@ -44,7 +44,7 @@ extern int __heap_end;
 const void * heap_end = &__heap_end; 
 uint32_t except_crc __attribute__((section(".heap")));
 
-int __attribute__((noreturn)) app_default(void * arg);
+void app_default(int mode);
 int __simrpc_send(uint32_t opc, const void * data, unsigned int cnt);
 
 void thinkos_exception_dsr(struct thinkos_except * xcpt)
@@ -53,18 +53,15 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 	DCC_LOG2(LOG_TRACE, "except=%d crc=%08x.", xcpt->type, except_crc);
 }
 
-const struct simrpc_link link_up = {
-	.id = 0,
-	.pdu = { 0, 0, 0}
-};
-
 void cm3_debug_mon_isr(void)
 {
+	struct simrpc_mgmt mgmt;
 	struct thinkos_except * xcpt;
 	bool fault = false;
-	char * mode;
 	uint32_t crc;
-
+	uint32_t opc;
+	int mode;
+	
 	xcpt = __thinkos_except_buf();
 	if (xcpt->type != 0) {
 		DCC_LOG(LOG_TRACE, "check for exception.");
@@ -79,22 +76,24 @@ void cm3_debug_mon_isr(void)
 	} 
 
 	if (fault) {
-		mode = "safe";
-		__simrpc_send(simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
-								   0, SIMRPC_FAULT), 
-					  xcpt, sizeof(struct thinkos_except));
+		mode = APP_MODE_FAULT;
+		mgmt.typ = SIMRPC_MGMT_FAULT;
 	} else {
-		mode = "normal";
-		__simrpc_send(simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
-								   0, SIMRPC_LINK), &link_up, sizeof(link_up));
-
+		mode = APP_MODE_NORMAL;
+		mgmt.typ = SIMRPC_MGMT_LINK_UP;
 	}
+	opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+					   0, SIMRPC_MGMT_SIGNAL);
+	__simrpc_send(opc, &mgmt, sizeof(struct simrpc_mgmt));
 
-	DCC_LOG1(LOG_TRACE, "board_app_exec(%s).", mode);
-	board_app_exec(THINKOS_APP_ADDR, mode);
+	DCC_LOG1(LOG_TRACE, "board_app_exec(%d).", mode);
+	if (fault || !board_app_exec(THINKOS_APP_ADDR, mode)) {
+		DCC_LOG1(LOG_TRACE, "board_exec(%d).", mode);
+		board_exec(app_default, mode);
+	}	
 }
 
-void app_try_exec()
+void app_exec()
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 
@@ -105,7 +104,7 @@ void app_try_exec()
 	asm volatile ("isb\n" :  :  : );
 }
 
-int __attribute__((noreturn)) main(int argc, char ** argv)
+int main(int argc, char ** argv)
 {
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
@@ -124,14 +123,9 @@ int __attribute__((noreturn)) main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "3. simlnk_init().");
 	simlnk_init(NULL, "", 0, NULL);
 
-	DCC_LOG(LOG_TRACE, "4. app_try_exec().");
-	app_try_exec();
+	DCC_LOG(LOG_TRACE, "4. app_exec().");
+	app_exec();
 
-	DCC_LOG(LOG_TRACE, "5. app_default().");
-
-
-	app_default("normal");
-
-//	return 0;
+	return 0;
 }
 
