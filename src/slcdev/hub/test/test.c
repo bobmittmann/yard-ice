@@ -305,7 +305,7 @@ void remote_test(unsigned int daddr)
 		return;
 	}
 
-	if (simrpc_suspend(sp) < 0) {
+	if (simrpc_suspend(sp, 0xffffffff) < 0) {
 		WARN("simrpc_suspend() failed!");
 	}
 
@@ -336,7 +336,7 @@ void remote_test(unsigned int daddr)
 
 	thinkos_sleep(500);
 
-	if (simrpc_resume(sp) < 0) {
+	if (simrpc_resume(sp, 0xffffffff) < 0) {
 		WARN("simrpc_resume() failed!");
 	}
 

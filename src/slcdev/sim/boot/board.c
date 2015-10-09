@@ -86,6 +86,15 @@ void board_init(void)
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
+void board_comm_irqen(void)
+{
+	cm3_irq_enable(STM32_IRQ_USART2);
+#if ENABLE_SIMLNK_SANITY_CHECK
+	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
+	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
+#endif
+}
+
 void board_soft_reset(void)
 {
 	DCC_LOG(LOG_TRACE, "1. disable all interrupts"); 
@@ -97,11 +106,7 @@ void board_soft_reset(void)
 	DCC_LOG(LOG_TRACE, "4. ThinkOS reset...");
 	__thinkos_reset();
 
-	cm3_irq_enable(STM32_IRQ_USART2);
-#if ENABLE_SIMLNK_SANITY_CHECK
-	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
-	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
-#endif
+	board_comm_irqen();
 }
 
 void board_reboot(int delay)

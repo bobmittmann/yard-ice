@@ -164,6 +164,8 @@ bool board_app_exec(uint32_t addr, int mode);
 
 void board_exec(void (* func)(int), int mode);
 
+void board_comm_irqen(void);
+
 #ifdef __cplusplus
 }
 #endif

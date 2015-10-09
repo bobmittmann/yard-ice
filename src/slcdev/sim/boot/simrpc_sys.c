@@ -36,46 +36,59 @@ int __simrpc_send(uint32_t opc, void * data, unsigned int cnt);
 int __simrpc_send_int(uint32_t opc, int val);
 int __simrpc_send_opc(uint32_t opc);
 
+#define NVIC_IRQ_REGS ((THINKOS_IRQ_MAX + 31) / 32)
+
+uint32_t nvic_ie[NVIC_IRQ_REGS]; /* interrupt state */
+uint8_t active;
+
+static void __irq_disable_all(void)
+{
+	int i;
+
+	/* disbale systick interrupt */
+	CM3_SYSTICK->csr &= ~SYSTICK_CSR_TICKINT;
+	for (i = 0; i < NVIC_IRQ_REGS; ++i) {
+		/* save interrupt state */
+		nvic_ie[i] = CM3_NVIC->iser[i];
+		CM3_NVIC->icer[i] = 0xffffffff; /* disable all interrupts */
+	}
+	board_comm_irqen();
+}
+
+static void __irq_restore_all(void)
+{
+	int i;
+
+	for (i = 0; i < NVIC_IRQ_REGS; ++i) {
+		/* restore interrupt state */
+		CM3_NVIC->iser[i] = nvic_ie[i];
+	}
+	/* enable systick interrupt */
+	CM3_SYSTICK->csr |= SYSTICK_CSR_TICKINT;
+}
+
+
 void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t bitmask;
-	int th;
+	__irq_disable_all();
 
-	if (cnt != 4) {
-		DCC_LOG(LOG_WARNING, "Invalid argument size");
-		return;
-	};
-
-	bitmask = data[0];
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if ((bitmask & (1 << th)) && (thinkos_rt.ctx[th] != NULL))
-			__thinkos_thread_pause(th);
+	active = thinkos_rt.active;
+	if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
+		__thinkos_thread_pause(thinkos_rt.active);
+		__thinkos_defer_sched();
 	}
-
-	__thinkos_defer_sched();
 
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
 
 void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	uint32_t bitmask;
-	int th;
-
-	if (cnt != 4) {
-		DCC_LOG(LOG_WARNING, "Invalid argument size");
-		return;
-	};
-
-	bitmask = data[0];
-
-	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
-		if ((bitmask & (1 << th)) && (thinkos_rt.ctx[th] != NULL))
-			__thinkos_thread_resume(th);
-	}
+	if ((uint32_t)active < THINKOS_THREADS_MAX)
+		__thinkos_thread_resume(active);
 
 	__thinkos_defer_sched();
+
+	__irq_restore_all();
 
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
 }
