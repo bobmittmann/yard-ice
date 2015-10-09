@@ -150,6 +150,9 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 	case SIMRPC_EXCEPTINFO:
 		simrpc_exceptinfo_svc(opc, data, cnt);
 		break;
+	case SIMRPC_THREADINFO:
+		simrpc_threadinfo_svc(opc, data, cnt);
+		break;
 	case SIMRPC_MEM_LOCK:
 		simrpc_mem_lock_svc(opc, data, cnt);
 		break;
@@ -188,6 +191,126 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 		}
 	}
 }
+
+void stm32_usart2_isr(void)
+{
+	struct stm32f_dma * dma = STM32_DMA1;
+	struct stm32_usart * uart = STM32_USART2;
+	uint32_t sr;
+	uint32_t cr;
+	
+	cr = uart->cr1;
+	sr = uart->sr & (cr | USART_LBD);
+
+	if (sr & USART_TC) {
+		int wq = THINKOS_WQ_COMM_SEND;
+		uint32_t opc;
+		void * buf;
+		int cnt;
+		int th;
+
+		/* TC interrupt is cleared by writing 0 back to the SR register */
+		uart->sr = sr & ~USART_TC;
+        /* Disable the transfer complete interrupt */
+		cr &= ~USART_TCIE;
+		/* Generate a break condition */
+		cr |= USART_SBK;
+		uart->cr1 = cr;
+
+		/* disable DMA */
+		dma->ch[TX_DMA_CHAN].ccr &= ~DMA_EN;
+
+		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+			DCC_LOG(LOG_INFO, "TC xmit pending...");
+			/* wakeup from the console wait queue */
+			__thinkos_wakeup(wq, th);
+			/* signal the scheduler ... */
+			__thinkos_defer_sched();
+
+			opc = thinkos_rt.ctx[th]->r1;
+			buf = (void *)thinkos_rt.ctx[th]->r2;
+			cnt = thinkos_rt.ctx[th]->r3;
+			simlnk.tx_buf[0] = opc;
+			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
+
+			simlnk_dma_xmit(cnt + 4);
+		} else {
+
+			simlnk.tx_lock = 0;
+			DCC_LOG(LOG_INFO, "TC TX unlock.");
+		}
+	}
+
+	/* break detection */
+	if (sr & USART_LBD) {
+		unsigned int cnt;
+		uint32_t ccr;
+
+		/* Disable DMA */
+		dma->ch[RX_DMA_CHAN].ccr &= ~DMA_EN;
+		/* Wait for DMA to stop */
+		while ((ccr = dma->ch[RX_DMA_CHAN].ccr) & DMA_EN);
+
+		/* clear the break detection interrupt flag */
+		uart->sr = sr & ~USART_LBD;
+		/* Get number of bytes received */
+		cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
+		/* Prepare next DMA transfer */
+		dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
+		dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
+
+		DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
+	
+		if (cnt > 4) {
+			/* process this request,
+			 remove the break character from the packet length. */
+			simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
+		} else {
+			DCC_LOG1(LOG_WARNING, "short pkt! cnt=%d", cnt);
+		}
+	}	
+}
+
+
+#if ENABLE_SIMLNK_SANITY_CHECK
+/* TX DMA ------------------------------------------------------------- */
+void stm32_dma1_channel7_isr(void)
+{
+	struct stm32f_dma * dma = STM32_DMA1;
+
+	if (dma->isr & DMA_TCIF7) {
+		DCC_LOG(LOG_TRACE, "TX TCIF");
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF7;
+	}
+
+	if (dma->isr & DMA_TEIF7) {
+		DCC_LOG(LOG_WARNING, "TX TEIF");
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTEIF7;
+	}
+}
+
+/* RX DMA ------------------------------------------------------------- */
+void stm32_dma1_channel6_isr(void)
+{
+	struct stm32f_dma * dma = STM32_DMA1;
+
+	if (dma->isr & DMA_TCIF6) {
+		DCC_LOG(LOG_TRACE, "RX TCIF");
+		/* clear the DMA transfer complete flag */
+		dma->ifcr = DMA_CTCIF6;
+	}
+
+	if (dma->isr & DMA_TEIF6) {
+		DCC_LOG(LOG_WARNING, "RX TEIF");
+		/* clear the DMA transfer error flag */
+		dma->ifcr = DMA_CTEIF6;
+	}
+}
+#endif
+
+_Pragma ("GCC optimize (\"Os\")")
 
 void thinkos_comm_svc(int32_t * arg)
 {
@@ -298,123 +421,6 @@ again:
 	}
 }
 
-void stm32_usart2_isr(void)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-	struct stm32_usart * uart = STM32_USART2;
-	uint32_t sr;
-	uint32_t cr;
-	
-	cr = uart->cr1;
-	sr = uart->sr & (cr | USART_LBD);
-
-	if (sr & USART_TC) {
-		int wq = THINKOS_WQ_COMM_SEND;
-		uint32_t opc;
-		void * buf;
-		int cnt;
-		int th;
-
-		/* TC interrupt is cleared by writing 0 back to the SR register */
-		uart->sr = sr & ~USART_TC;
-        /* Disable the transfer complete interrupt */
-		cr &= ~USART_TCIE;
-		/* Generate a break condition */
-		cr |= USART_SBK;
-		uart->cr1 = cr;
-
-		/* disable DMA */
-		dma->ch[TX_DMA_CHAN].ccr &= ~DMA_EN;
-
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
-			DCC_LOG(LOG_INFO, "TC xmit pending...");
-			/* wakeup from the console wait queue */
-			__thinkos_wakeup(wq, th);
-			/* signal the scheduler ... */
-			__thinkos_defer_sched();
-
-			opc = thinkos_rt.ctx[th]->r1;
-			buf = (void *)thinkos_rt.ctx[th]->r2;
-			cnt = thinkos_rt.ctx[th]->r3;
-			simlnk.tx_buf[0] = opc;
-			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
-
-			simlnk_dma_xmit(cnt + 4);
-		} else {
-
-			simlnk.tx_lock = 0;
-			DCC_LOG(LOG_INFO, "TC TX unlock.");
-		}
-	}
-
-	/* break detection */
-	if (sr & USART_LBD) {
-		unsigned int cnt;
-		uint32_t ccr;
-
-		/* Disable DMA */
-		while ((ccr = dma->ch[RX_DMA_CHAN].ccr) & DMA_EN)
-			dma->ch[RX_DMA_CHAN].ccr = ccr & ~DMA_EN;
-
-		/* clear the break detection interrupt flag */
-		uart->sr = sr & ~USART_LBD;
-
-		/* Get number of bytes received */
-		cnt = sizeof(simlnk.rx_buf) - dma->ch[RX_DMA_CHAN].cndtr;
-		/* Prepare next DMA transfer */
-		dma->ch[RX_DMA_CHAN].cndtr = sizeof(simlnk.rx_buf);
-		dma->ch[RX_DMA_CHAN].ccr = ccr | DMA_EN;
-
-		DCC_LOG1(LOG_INFO, "BRK! cnt=%d", cnt);
-	
-		if (cnt > 4) {
-			/* process this request,
-			 remove the break character from the packet length. */
-			simlnk_dma_recv(simlnk.rx_buf, cnt - 1);
-		} else {
-			DCC_LOG1(LOG_WARNING, "short pkt! cnt=%d", cnt);
-		}
-	}	
-}
-
-
-#if ENABLE_SIMLNK_SANITY_CHECK
-/* TX DMA ------------------------------------------------------------- */
-void stm32_dma1_channel7_isr(void)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-
-	if (dma->isr & DMA_TCIF7) {
-		DCC_LOG(LOG_TRACE, "TX TCIF");
-		/* clear the DMA transfer complete flag */
-		dma->ifcr = DMA_CTCIF7;
-	}
-
-	if (dma->isr & DMA_TEIF7) {
-		DCC_LOG(LOG_WARNING, "TX TEIF");
-		/* clear the DMA transfer complete flag */
-		dma->ifcr = DMA_CTEIF7;
-	}
-}
-
-/* RX DMA ------------------------------------------------------------- */
-void stm32_dma1_channel6_isr(void)
-{
-	struct stm32f_dma * dma = STM32_DMA1;
-
-	if (dma->isr & DMA_TCIF6) {
-		DCC_LOG(LOG_TRACE, "RX TCIF");
-		/* clear the DMA transfer complete flag */
-		dma->ifcr = DMA_CTCIF6;
-	}
-
-	if (dma->isr & DMA_TEIF6) {
-		DCC_LOG(LOG_WARNING, "RX TEIF");
-		/* clear the DMA transfer error flag */
-		dma->ifcr = DMA_CTEIF6;
-	}
-}
-#endif
 
 int simlnk_init(struct simlnk * lnk, const char * name, 
 				unsigned int addr, struct serial_dev * dev)

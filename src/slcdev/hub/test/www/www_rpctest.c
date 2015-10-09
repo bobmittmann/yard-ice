@@ -563,12 +563,12 @@ int get_stdout_cgi(struct httpctl * http)
 	}
 
 	n = simrpc_stdout_get(sp, buf, sizeof(buf));
-	if (n == 0) {
+/*	if (n == 0) {
 		DBG("simrpc_stdout_flush()...");
 		simrpc_stdout_flush(sp);
 		thinkos_sleep(50);
 		n = simrpc_stdout_get(sp, buf, sizeof(buf));
-	}
+	} */
 
 	while (n > 0) {
 		http_send(http, buf, n);
@@ -601,7 +601,7 @@ int get_status_cgi(struct httpctl * http)
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed!");
-		return rpc_json_error(http, 0, "simrpc_open() failed");
+		return rpc_json_error(http, s, 0, "simrpc_open() failed");
 	}
 
 	simrpc_set_timeout(sp, 50);

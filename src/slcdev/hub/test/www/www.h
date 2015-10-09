@@ -45,7 +45,7 @@
 #define LINK_CSS "<link rel=\"stylesheet\" href=\"/style.css\" "\
 	"type=\"text/css\" media=\"screen\"/>\r\n"
 
-#define HTML_MAX 512 /* HTML formatting string buffer length */
+#define HTML_MAX 1024 /* HTML formatting string buffer length */
 
 extern const char footer_html[];
 extern const uint16_t sizeof_footer_html;
@@ -63,13 +63,13 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_SIM_DEBUG_HTML 901
+#define SIZEOF_SIM_DEBUG_HTML 1647
 
 #define SIZEOF_JQUERY_2_1_4_MIN_JS 29519
 
 #define SIZEOF_ZEPTO_MIN_JS 9377
 
-#define SIZEOF_SIMLIB_JS 1091
+#define SIZEOF_SIMLIB_JS 1064
 
 #define SIZEOF_MODALBOX_JS 1430
 
@@ -79,7 +79,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_SIM_SCRIPT_HTML 1975
 
-#define SIZEOF_SIM_FIRMWARE_HTML 1691
+#define SIZEOF_SIM_FIRMWARE_HTML 1683
 
 #define SIZEOF_SIM_DIAG_HTML 1960
 
@@ -89,7 +89,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 1730
+#define SIZEOF_SIM_TOOLS_HTML 1736
 
 #define SIZEOF_SIM_DATABASE_HTML 1944
 
@@ -99,7 +99,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_NETWORK_HTML 1111
 
-#define SIZEOF_STYLE_CSS 1031
+#define SIZEOF_STYLE_CSS 1029
 
 #define SIZEOF_TOOLS_HTML 1431
 
@@ -172,8 +172,9 @@ int sim_getattr_cgi(struct httpctl * http);
 
 int get_stdout_cgi(struct httpctl * http);
 
-int rpc_json_error(struct httpctl * http, int code, const char * msg);
+int rpc_json_error(struct httpctl * http, char * buf, int code, const char * msg);
 int sim_getstats_cgi(struct httpctl * http);
+int sim_get_os_state_cgi(struct httpctl * http);
 
 #ifdef __cplusplus
 }

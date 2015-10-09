@@ -17,9 +17,9 @@
 
 #define JSON_ERR_MAX 128
 
-int rpc_json_error(struct httpctl * http, int code, const char * msg)
+int rpc_json_error(struct httpctl * http, char * buf, int code, const char * msg)
 {
-	char json[JSON_ERR_MAX];
+	char * json = buf;
 	int n;
 
    	if (msg == NULL) {
@@ -52,7 +52,7 @@ int sim_getstats_cgi(struct httpctl * http)
 
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		WARN("simrpc_open() failed");
-		return rpc_json_error(http, -1, "simrpc_open() failed");
+		return rpc_json_error(http, s, -1, "simrpc_open() failed");
 	}
 
 	simrpc_set_timeout(sp, 50);
@@ -61,7 +61,7 @@ int sim_getstats_cgi(struct httpctl * http)
 
 	if (retcode < 0) {
 		WARN("simrpc_stats_get() failed");
-		return rpc_json_error(http, retcode, "simrpc_stats_get() failed");
+		return rpc_json_error(http, s, retcode, "simrpc_stats_get() failed");
 	}
 
    	httpd_200(http->tp, APPLICATION_JSON);
@@ -112,3 +112,76 @@ int sim_getstats_cgi(struct httpctl * http)
 	return http_send(http, s, n);
 }
 
+int sim_get_os_state_cgi(struct httpctl * http)
+{
+	struct simrpc_threadinfo thread;
+	struct simrpc_exceptinfo except;
+	struct simrpc_pcb * sp;
+	char * cp;
+	unsigned int daddr;
+	char s[HTML_MAX];
+	int retcode;
+	int port;
+	int n;
+	int i;
+	int j;
+
+    port = atoi(http_query_lookup(http, "port"));
+	daddr = port;
+
+	INF("OS state, port=%d", port);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed");
+		return rpc_json_error(http, s, -1, "simrpc_open() failed");
+	}
+
+	simrpc_set_timeout(sp, 50);
+	retcode = simrpc_exceptinfo_get(sp, &except);
+	if (retcode < 0) {
+		WARN("simrpc_exceptinfo_get() failed");
+		rpc_json_error(http, s, retcode, "simrpc_exceptinfo_get() failed");
+		simrpc_close(sp);
+		return -1;
+	}
+
+   	cp = s;
+	cp += sprintf(cp, "{\"except\":{\"ctx\":[");
+	for (j = 0; j <= 12; ++j)
+		cp += sprintf(cp, "%d,", except.ctx.r[j]);
+	cp += sprintf(cp, "%d,%d,%d,%d]}",
+			except.ctx.sp, except.ctx.lr, except.ctx.pc, except.ctx.xpsr);
+
+	n = 0;
+	for (i = 0; i < 4; ++i) {
+		retcode = simrpc_threadinfo_get(sp, i, &thread);
+		if (retcode < 0) {
+			WARN("simrpc_threadinfo_get() failed");
+			if (retcode < -2) {
+				simrpc_close(sp);
+				rpc_json_error(http, s, retcode, "simrpc_threadinfo_get() failed");
+				return -1;
+			}
+		} else {
+			if (n == 0)
+				cp += sprintf(cp, ",\"threads\":[{\"id\":%d,\"ctx\":[", i);
+			else
+				cp += sprintf(cp, ",{\"id\":%d,\"ctx\":[", i);
+			for (j = 0; j <= 12; ++j)
+				cp += sprintf(cp, "%d,", thread.ctx.r[j]);
+			cp += sprintf(cp, "%d,%d,%d,%d]}",
+				thread.ctx.sp, thread.ctx.lr, thread.ctx.pc, thread.ctx.xpsr);
+			n++;
+		}
+	}
+	if (n > 0) {
+		cp += sprintf(cp, "]}");
+	} else {
+		cp += sprintf(cp, "}");
+	}
+	simrpc_close(sp);
+
+	n = cp - s;
+   	httpd_200(http->tp, APPLICATION_JSON);
+	return http_send(http, s, n);
+}

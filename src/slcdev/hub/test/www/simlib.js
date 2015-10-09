@@ -14,12 +14,9 @@ function simlib_stdout_flush(port, pre) {
 			if (data) {
 				pre.append(data);
 				pre.scrollTop(pre.prop("scrollHeight"));
-				stdout_flush_tmo[port] = 500;
 			}
-			setTimeout(simlib_stdout_flush, stdout_flush_tmo[port], port, pre);
 		},
 		error: function(xhr, type) {
-			setTimeout(simlib_stdout_flush, 5000, port, pre);
 		},
 		complete: function(xhr, status) {
 		}

@@ -47,10 +47,9 @@ table.zebra {
 	table-layout: fixed;
 }
 
-table.zebra td {
+table.zebra td, table.zebra th {
 	text-align: center;
-
-	padding: 0;
+	padding: 2px 4px 2px 4px;
 	margin: 0;	
 }
 

@@ -77,6 +77,23 @@ int simrpc_kernelinfo_get(struct simrpc_pcb * sp,
 			sizeof(struct simrpc_kernelinfo));
 }
 
+int simrpc_exceptinfo_get(struct simrpc_pcb * sp,
+		struct simrpc_exceptinfo * inf)
+{
+	return simlnk_rpc(sp, SIMRPC_EXCEPTINFO, NULL, 0, inf,
+			sizeof(struct simrpc_exceptinfo));
+}
+
+int simrpc_threadinfo_get(struct simrpc_pcb * sp, int thread_id,
+		struct simrpc_threadinfo * inf)
+{
+	int32_t req[1];
+
+	req[0] = thread_id;
+	return simlnk_rpc(sp, SIMRPC_THREADINFO, req, 4, inf,
+			sizeof(struct simrpc_threadinfo));
+}
+
 int simrpc_appinfo_get(struct simrpc_pcb * sp, struct simrpc_appinfo * inf)
 {
 	return simlnk_rpc(sp, SIMRPC_APPINFO, NULL, 0, inf,

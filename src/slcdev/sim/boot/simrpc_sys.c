@@ -38,24 +38,46 @@ int __simrpc_send_opc(uint32_t opc);
 
 void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	if (cnt != 0) {
+	uint32_t bitmask;
+	int th;
+
+	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 		return;
 	};
 
+	bitmask = data[0];
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if ((bitmask & (1 << th)) && (thinkos_rt.ctx[th] != NULL))
+			__thinkos_thread_pause(th);
+	}
+
+	__thinkos_defer_sched();
+
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-	__thinkos_pause_all();
 }
 
 void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	if (cnt != 0) {
+	uint32_t bitmask;
+	int th;
+
+	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 		return;
 	};
 
+	bitmask = data[0];
+
+	for (th = 0; th < THINKOS_THREADS_MAX; ++th) {
+		if ((bitmask & (1 << th)) && (thinkos_rt.ctx[th] != NULL))
+			__thinkos_thread_resume(th);
+	}
+
+	__thinkos_defer_sched();
+
 	__simrpc_send_opc(SIMRPC_REPLY_OK(opc));
-	__thinkos_resume_all();
 }
 
 void simrpc_reboot_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
@@ -129,26 +151,51 @@ void simrpc_kernelinfo_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 void simrpc_exceptinfo_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	struct thinkos_except * xcpt;
+	struct simrpc_exceptinfo inf;
+
 	xcpt = __thinkos_except_buf();
 
-	__simrpc_send(SIMRPC_REPLY_OK(opc), xcpt, sizeof(struct thinkos_except));
+	inf.ctx.r[0] = xcpt->ctx.r0;
+	inf.ctx.r[1] = xcpt->ctx.r1;
+	inf.ctx.r[2] = xcpt->ctx.r2;
+	inf.ctx.r[3] = xcpt->ctx.r3;
+	inf.ctx.r[4] = xcpt->ctx.r4;
+	inf.ctx.r[5] = xcpt->ctx.r5;
+	inf.ctx.r[6] = xcpt->ctx.r6;
+	inf.ctx.r[7] = xcpt->ctx.r7;
+	inf.ctx.r[8] = xcpt->ctx.r8;
+	inf.ctx.r[9] = xcpt->ctx.r9;
+	inf.ctx.r[10] = xcpt->ctx.r10;
+	inf.ctx.r[11] = xcpt->ctx.r11;
+	inf.ctx.r[12] = xcpt->ctx.r12;
+	inf.ctx.sp = xcpt->psp;
+	inf.ctx.lr = xcpt->ctx.lr;
+	inf.ctx.pc = xcpt->ctx.pc;
+	inf.ctx.xpsr = xcpt->ctx.xpsr;
+	inf.psp = xcpt->psp;
+	inf.msp = xcpt->msp;
+	inf.ret = xcpt->ret;
+	inf.icsr = xcpt->icsr;
+
+	__simrpc_send(SIMRPC_REPLY_OK(opc), &inf, sizeof(struct simrpc_exceptinfo));
 }
 
 void simrpc_threadinfo_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	unsigned int thread_id;
+	int32_t thread_id;
 	struct thinkos_context * ctx;
+	struct simrpc_threadinfo inf;
 
 	if (cnt != 4) {
 		DCC_LOG(LOG_WARNING, "Invalid argument size");
 		return;
 	}
 
-	thread_id = data[0];
+	thread_id = (int32_t)data[0];
 
 	if (thread_id > THINKOS_THREADS_MAX) {
-		DCC_LOG(LOG_ERROR, "Invalid thread!");
-		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), SIMRPC_EINVAL);
+		DCC_LOG1(LOG_ERROR, "Invalid thread: %d!", thread_id);
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -1);
 		return;
 	}
 
@@ -157,6 +204,30 @@ void simrpc_threadinfo_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 	else
 		ctx = thinkos_rt.ctx[thread_id];
 
-	__simrpc_send(SIMRPC_REPLY_OK(opc), ctx, sizeof(struct thinkos_context));
+	if (ctx == NULL){
+		DCC_LOG(LOG_ERROR, "Invalid context!");
+		__simrpc_send_int(SIMRPC_REPLY_ERR(opc), -2);
+		return;
+	}
+
+	inf.ctx.r[0] = ctx->r0;
+	inf.ctx.r[1] = ctx->r1;
+	inf.ctx.r[2] = ctx->r2;
+	inf.ctx.r[3] = ctx->r3;
+	inf.ctx.r[4] = ctx->r4;
+	inf.ctx.r[5] = ctx->r5;
+	inf.ctx.r[6] = ctx->r6;
+	inf.ctx.r[7] = ctx->r7;
+	inf.ctx.r[8] = ctx->r8;
+	inf.ctx.r[9] = ctx->r9;
+	inf.ctx.r[10] = ctx->r10;
+	inf.ctx.r[11] = ctx->r11;
+	inf.ctx.r[12] = ctx->r12;
+	inf.ctx.sp = (uint32_t)ctx;
+	inf.ctx.lr = ctx->lr;
+	inf.ctx.pc = ctx->pc;
+	inf.ctx.xpsr = ctx->xpsr;
+
+	__simrpc_send(SIMRPC_REPLY_OK(opc), &inf, sizeof(struct simrpc_threadinfo));
 }
 

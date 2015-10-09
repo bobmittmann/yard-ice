@@ -106,3 +106,13 @@ void __attribute__((noreturn)) simlnk_recv_task(void)
 	}
 }
 
+uint32_t __attribute__((aligned(8))) simlnk_stack[512 + 256];
+
+void simlnk_usr_init(void)
+{
+	/* create a thread to handle simulation link incoming requests */
+	thinkos_thread_create((void *)simlnk_recv_task, (void *)NULL,
+						  simlnk_stack, sizeof(simlnk_stack) | 
+						  THINKOS_OPT_PRIORITY(2) | THINKOS_OPT_ID(2));
+}
+

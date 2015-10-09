@@ -29,6 +29,8 @@
 #include <stdlib.h> 
 #include <stdbool.h> 
 #include <stdint.h> 
+#include <arch/cortex-m3.h>
+
 #include "stats.h"
 
 enum simrpc_err {
@@ -56,6 +58,31 @@ struct simrpc_kernelinfo {
 		uint16_t build;
 		uint32_t timestamp;
 	} version;
+};
+
+struct simrpc_exceptinfo {
+	struct cm3_context ctx;
+	uint32_t ret;
+	uint32_t msp;
+	uint32_t psp;
+	uint32_t icsr;
+
+	uint8_t ipsr;
+	uint8_t type; /* exception type */
+	int8_t thread_id;
+	uint8_t count;
+};
+
+struct simrpc_threadinfo {
+	uint8_t idx;
+	uint8_t tmw: 1;
+	uint8_t alloc: 1;
+	uint16_t wq;
+	int8_t sched_val;
+	uint8_t sched_pri;
+	int32_t timeout;
+	uint32_t cyccnt;
+	struct cm3_context ctx;
 };
 
 struct simrpc_appinfo {
@@ -165,6 +192,12 @@ int simrpc_stats_get(struct simrpc_pcb * sp, struct simrpc_stats * stats);
 
 int simrpc_kernelinfo_get(struct simrpc_pcb * sp, 
 						  struct simrpc_kernelinfo * inf);
+
+int simrpc_exceptinfo_get(struct simrpc_pcb * sp,
+		struct simrpc_exceptinfo * inf);
+
+int simrpc_threadinfo_get(struct simrpc_pcb * sp, int thread_id,
+		struct simrpc_threadinfo * inf);
 
 int simrpc_appinfo_get(struct simrpc_pcb * sp, struct simrpc_appinfo * inf);
 

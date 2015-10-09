@@ -87,7 +87,7 @@ struct httpdobj www_root[] = {
     { .oid = "get_status.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = get_status_cgi },
     { .oid = "get_stdout.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
-    		.len = 0, .ptr = get_stdout_cgi },
+    	.len = 0, .ptr = get_stdout_cgi },
     { .oid = "rpc_exec.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = rpc_exec_cgi },
     { .oid = "rpc_js.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
@@ -104,6 +104,8 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = sim_getattr_cgi },
     { .oid = "sim_getstats.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
         .len = 0, .ptr = sim_getstats_cgi },
+	{ .oid = "sim_get_os_state.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+		.len = 0, .ptr = sim_get_os_state_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

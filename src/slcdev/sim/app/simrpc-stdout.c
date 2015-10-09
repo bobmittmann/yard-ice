@@ -39,14 +39,15 @@ struct simrpc_console {
 	unsigned int seq;
 };
 
+void stdout_flush_tmr_rst(void); 
+void stdout_flush_tmr_clr(void); 
+
 int simrpc_stdout_write(struct simrpc_console * out, 
 						 const char * buf, int cnt)
 {
 	int rem = cnt;
 	int free;
 	int n;
-
-	DCC_LOG2(LOG_MSG, "<%d> cnt=%d.", cnt, thinkos_thread_self());
 
 	thinkos_mutex_lock(CONSOLE_MUTEX);
 
@@ -61,8 +62,14 @@ int simrpc_stdout_write(struct simrpc_console * out,
 		if (out->len == SIMRPC_DATA_MAX) {
 			uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
 										out->seq++, SIMRPC_STDOUT_DATA);
+	
+			DCC_LOG2(LOG_TRACE, "<%d> flush %d bytes.", 
+					 thinkos_thread_self(), out->len);
 			simrpc_send(opc, (void *)out->buf, out->len);
 			out->len = 0;
+			stdout_flush_tmr_clr(); 
+		} else {
+			stdout_flush_tmr_rst(); 
 		}
 	}
 
@@ -84,6 +91,25 @@ const struct file simrpc_stdout_file = {
 	.data = &console_stdout,
 	.op = &simrpc_stdout_fops
 };
+
+void stdout_flush(void)
+{
+	struct simrpc_console * out;
+
+	out = (struct simrpc_console *)simrpc_stdout_file.data; 
+	thinkos_mutex_lock(CONSOLE_MUTEX);
+
+	if (out->len > 0) {
+		uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+									out->seq++, SIMRPC_STDOUT_DATA);
+		simrpc_send(opc, (void *)out->buf, out->len);
+		DCC_LOG2(LOG_TRACE, "<%d> flush %d bytes.", 
+				 thinkos_thread_self(), out->len);
+		out->len = 0;
+	}
+
+	thinkos_mutex_unlock(CONSOLE_MUTEX);
+}
 
 void simrpc_stdout_flush_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {

@@ -13,8 +13,67 @@
 <script src="simlib.js"></script>
 
 <script>
+	function hex32(x) {
+	   return (0x100000000 + x).toString(16).substr(-8).toUpperCase();
+	}
+	
+	function thread_error() {
+		var tab = $('#context')[0];
+
+		for (var j = 1; j < 5; ++j)
+			for (var i = 0; i < 17; ++i)
+				tab.rows[i  + 1].cells[j].innerHTML = 'xxxxxxxx';
+	}
+
+	function thread_update(tab, col, reg) {
+		var j = col + 1;
+		
+		for (var i = 0; i < 17; ++i)
+			tab.rows[i  + 1].cells[j].innerHTML = hex32(reg[i]);	
+	}
+
+	function thread_update_all(data) {
+		var tab = $('#context')[0];
+		
+		thread_update(tab, 0, data.except.ctx);
+		thread_update(tab, 1, data.threads[0].ctx);
+		thread_update(tab, 2, data.threads[1].ctx);
+		thread_update(tab, 3, data.threads[2].ctx);
+		thread_update(tab, 4, data.threads[3].ctx);
+	}
+
+	function get_os_state(port) {
+		$.ajax({
+			type: 'GET',
+			url: 'sim_get_os_state.cgi',
+			data: { 
+				port: port
+			},
+			dataType: 'json',			
+			timeout: 250,
+			context: $('body'),
+			success: function(data) {
+				if (data.hasOwnProperty('error')) {
+					thread_error();
+				} else {
+					thread_update_all(data);
+				}		
+			},
+			error: function(xhr, type) {				
+			}
+		});
+	}
+	
+	function poll_os_state() {
+		var port = $('#selport').val();
+		get_os_state(port);
+	}
+	
 	$(function() {
-	});
+		flushTmr = setInterval(poll_os_state, 500);
+		poll_os_state();
+    });
+
 </script>
 
 </head>
@@ -23,7 +82,7 @@
 <div class="wrapper">	
 	<section>
 		<h2>Threads Status</h2>
-		<table id="context">
+		<table id="context" class="zebra">
 			<thead>
 				<tr>
 				<th style="border-top-style: hidden; border-left-style: hidden; background: #fff"></th>
@@ -34,139 +93,182 @@
 				<th>MicroJS</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody style="font-family: monospace; font-size: 125%;">
 			<tr>
 				<th>R0</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R1</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R2</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R3</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R4</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R5</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R6</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R7</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R8</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R9</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R10</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R11</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>R12</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>SP</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>LR</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
 			</tr>
 			<tr>
 				<th>PC</th>		
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>
-				<td>0</td>						
-			</tr>			
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
+			</tr>
+			<tr>
+				<th>XPSR</th>		
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>
+				<td>00000000</td>						
+			</tr>						
 			</tbody>
 		</table>
 	</section>
-			
+
+	<section>			
+		<table class="formgrid">
+			<tr>
+				<td style="text-align: right;">Simulator:</td>
+				<td>
+					<select id="selport">
+						<option value="1">Port 1</option>
+						<option value="2">Port 2</option>
+						<option value="3">Port 3</option>
+						<option value="4">Port 4</option>
+						<option value="5">Port 5</option>
+					</select>		
+				</td>
+				<td>
+				</td>
+				<td>
+					<input id="btn_suspend" type="button" value="Suspend" />
+				</td>		
+				<td>
+					<input id="btn_resume" type="button" value="Resume" />
+				</td>
+				<td>
+					<input id="btn_exec" type="button" value="Exec" />
+				</td>
+				<td>
+					<input id="btn_reset" type="button" value="Reset" />
+				</td>		
+				<td>
+					<input id="btn_safe" type="button" value="Safe" />
+				</td>	
+			</tr>
+			<tr>
+			</tr>
+		</table>			
+	</section>
 </div>
 	
 	<header>

@@ -98,8 +98,10 @@ void board_soft_reset(void)
 	__thinkos_reset();
 
 	cm3_irq_enable(STM32_IRQ_USART2);
+#if ENABLE_SIMLNK_SANITY_CHECK
 	cm3_irq_enable(STM32_IRQ_DMA1_CH7);
 	cm3_irq_enable(STM32_IRQ_DMA1_CH6);
+#endif
 }
 
 void board_reboot(int delay)
@@ -116,7 +118,6 @@ void board_exec(void (* func)(int), int mode)
 
 	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
 	__thinkos_thread_abort(thread_id);
-
 
 	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(mode=%d)", mode);
 	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, (void *)mode);

@@ -30,7 +30,8 @@
 
 struct {
 	volatile uint8_t led_tmr[LED_COUNT];
-	uint16_t usr_tmr[4];
+	volatile uint16_t usr_tmr[4];
+	volatile uint16_t stdout_tmr; 
 } io_drv;
 
 const struct {
@@ -42,6 +43,21 @@ const struct {
 	{ IO_LED3 },
 	{ IO_LED4 }
 };
+
+void stdout_flush(void);
+
+#define STDOU_FLUSH_TMO_MS 100
+
+void stdout_flush_tmr_rst(void) 
+{
+	io_drv.stdout_tmr = (STDOU_FLUSH_TMO_MS + IO_POLL_PERIOD_MS - 1) / 
+		IO_POLL_PERIOD_MS;
+}
+
+void stdout_flush_tmr_clr(void) 
+{
+	io_drv.stdout_tmr = 0;
+}
 
 void timer_set(unsigned int id, unsigned int ms)
 {
@@ -114,6 +130,7 @@ void __attribute__((noreturn)) io_event_task(void)
 	uint32_t clk_sec = clk + 1000;
 
 	for (;;) {
+		unsigned int itvl;
 		unsigned int sw;
 		unsigned int d;
 		uint32_t pb;
@@ -130,8 +147,6 @@ void __attribute__((noreturn)) io_event_task(void)
 
 		/* process led timers */
 		for (i = 0; i < LED_COUNT; ++i) {
-			unsigned int itvl;
-
 			if ((itvl = io_drv.led_tmr[i]) == 0)
 				continue;
 			if (--itvl == 0) 
@@ -140,23 +155,31 @@ void __attribute__((noreturn)) io_event_task(void)
 		}
 
 		/* process user timers */
-		if (io_drv.usr_tmr[0]) {
-			if (--io_drv.usr_tmr[0] == 0) 
+		if ((itvl = io_drv.usr_tmr[0]) != 0) {
+			if (--itvl == 0) 
 				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR1);
+			io_drv.usr_tmr[0] = itvl;
 		}
-		if (io_drv.usr_tmr[1]) {
-			if (--io_drv.usr_tmr[1] == 0) 
+		if ((itvl = io_drv.usr_tmr[1]) != 0) {
+			if (--itvl == 0) 
 				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR2);
+			io_drv.usr_tmr[1] = itvl;
 		}
-		if (io_drv.usr_tmr[2]) {
-			if (--io_drv.usr_tmr[2] == 0) 
+		if ((itvl = io_drv.usr_tmr[2]) != 0) {
+			if (--itvl == 0) 
 				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR3);
+			io_drv.usr_tmr[2] = itvl;
 		}
-		if (io_drv.usr_tmr[3]) {
-			if (--io_drv.usr_tmr[3] == 0) 
+		if ((itvl = io_drv.usr_tmr[3]) != 0) {
+			if (--itvl == 0) 
 				thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_TMR4);
+			io_drv.usr_tmr[3] = itvl;
 		}
-
+		if ((itvl = io_drv.stdout_tmr) != 0) {
+			if (--itvl == 0) 
+				stdout_flush();
+			io_drv.stdout_tmr = itvl;
+		}
 
 		pb = gpiob->idr; 
 
@@ -247,7 +270,7 @@ void io_lamp_test(void)
 #endif
 }
 
-uint32_t __attribute__((aligned(8))) io_event_stack[24];
+uint32_t __attribute__((aligned(8))) io_event_stack[32];
 
 void io_init(void) 
 {
@@ -262,6 +285,5 @@ void io_init(void)
 	thinkos_thread_create((void *)io_event_task, (void *)NULL,
 						  io_event_stack, sizeof(io_event_stack) |
 						  THINKOS_OPT_PRIORITY(1) | THINKOS_OPT_ID(1));
-
 }
 

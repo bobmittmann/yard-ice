@@ -32,7 +32,7 @@
 #define FLASH_ERR (FLASH_RDERR | FLASH_OPTVERRUSR | FLASH_OPTVERR | \
 				   FLASH_SIZERR | FLASH_PGAERR | FLASH_WRPERR)
 
-int __attribute__((section (".data#"))) 
+uint32_t __attribute__((section (".data#"))) 
 	stm32l_flash_blk_erase(struct stm32_flash * flash, uint32_t volatile * addr)
 {
 	uint32_t sr = flash->sr;
@@ -46,7 +46,7 @@ int __attribute__((section (".data#")))
 
 	flash->pecr = 0;
 
-	return (sr & FLASH_ERR) ? -1 : 0;
+	return sr;
 }
 
 #define FLASH_PAGE_SIZE 256
@@ -56,11 +56,8 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t addr;
 	uint32_t pecr;
-	int ret;
 	int rem = len;
 	int cnt;
-
-//	uint32_t cr;
 
 	offs &= ~(FLASH_PAGE_SIZE - 1);
 
@@ -84,17 +81,17 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 	rem = len;
 	while (rem) {
 		uint32_t pri;
+		uint32_t sr;
 
 		DCC_LOG1(LOG_INFO, "addr=0x%08x", addr);
 
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
-		ret = stm32l_flash_blk_erase(flash, (uint32_t *)addr);
+		sr = stm32l_flash_blk_erase(flash, (uint32_t *)addr);
 		cm3_primask_set(pri);
 
-		if (ret < 0) {
+		if (sr & FLASH_ERR) {
 #if DEBUG
-			uint32_t sr = flash->sr;
 			DCC_LOG6(LOG_WARNING, "erase failed: %s%s%s%s%s%s", 
 					 sr & FLASH_RDERR ? "RDERR" : "",
 					 sr & FLASH_OPTVERRUSR ? "OPTVERRUSR" : "",
@@ -103,7 +100,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 					 sr & FLASH_PGAERR ? "PGAERR" : "",
 					 sr & FLASH_WRPERR ? "WRPERR" : "");
 #endif
-			cnt = ret;
+			cnt = -1;
 			break;
 		}
 		addr += FLASH_PAGE_SIZE;
@@ -120,9 +117,8 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
    offs must be half page aligned.
  */
 
-int __attribute__((section (".data#"))) 
-	stm32l_flash_pg_wr(uint32_t offs, uint8_t * src,  
-					   uint32_t pos, uint32_t cnt)
+uint32_t __attribute__((section (".data#"))) 
+stm32l_flash_pg_wr(uint32_t offs, uint8_t * src,  uint32_t pos, uint32_t cnt)
 {
 	struct stm32_flash * flash = STM32_FLASH;
 	uint32_t base = (uint32_t)STM32_MEM_FLASH;
@@ -137,9 +133,8 @@ int __attribute__((section (".data#")))
 		sr = flash->sr;
 	} while (sr & FLASH_BSY);
 
-	if (sr & FLASH_ERR) {
-		return -1;
-	}
+	if (sr & FLASH_ERR)
+		return sr;
 
 	dst = (uint32_t *)(base + offs);
 
@@ -162,11 +157,7 @@ int __attribute__((section (".data#")))
 
 	flash->pecr = 0;
 
-	if (sr & FLASH_ERR) {
-		return -1;
-	}
-
-	return cnt;
+	return sr;
 }
 
 int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
@@ -201,7 +192,7 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 		uint32_t pos;
 		uint32_t cnt;
 		uint32_t pri;
-		int ret;
+		uint32_t sr;
 
 		/* adjust offset for half page alignement */
 		pos = offs - (offs & ~((FLASH_PAGE_SIZE / 2) - 1));
@@ -218,12 +209,13 @@ int stm32_flash_write(uint32_t offs, const void * buf, unsigned int len)
 		pri = cm3_primask_get();
 		cm3_primask_set(1);
 		/* start half page write */
-		ret = stm32l_flash_pg_wr(offs, ptr, pos, cnt);
+		sr = stm32l_flash_pg_wr(offs, ptr, pos, cnt);
+
 		cm3_primask_set(pri);
 
-		if (ret < 0) {
+		if (sr & FLASH_ERR) {
 			DCC_LOG(LOG_WARNING, "Flash write failed!");
-			return ret;
+			return -1;
 		}
 
 		ptr += cnt;

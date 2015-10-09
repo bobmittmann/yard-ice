@@ -66,7 +66,7 @@
 		$('#btnexec').on('click',  cmd_exec);
 		$('#btnjs').on('click', rpc_js);
 		get_status();
-		get_stdout();
+		flushTmr = setInterval(get_stdout, 500);		
 	});
 </script>
 
