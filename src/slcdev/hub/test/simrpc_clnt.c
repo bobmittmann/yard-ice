@@ -46,14 +46,22 @@
 #define TRACE_LEVEL TRACE_LVL_WARN
 #include <trace.h>
 
-int simrpc_suspend(struct simrpc_pcb * sp)
+int simrpc_suspend(struct simrpc_pcb * sp, uint32_t bitmask)
 {
-	return simlnk_rpc(sp, SIMRPC_SUSPEND, NULL, 0, NULL, 0);
+	uint32_t req[1];
+
+	req[0] = bitmask;
+
+	return simlnk_rpc(sp, SIMRPC_SUSPEND, req, 4, NULL, 0);
 }
 
-int simrpc_resume(struct simrpc_pcb * sp)
+int simrpc_resume(struct simrpc_pcb * sp, uint32_t bitmask)
 {
-	return simlnk_rpc(sp, SIMRPC_RESUME, NULL, 0, NULL, 0);
+	uint32_t req[1];
+
+	req[0] = bitmask;
+
+	return simlnk_rpc(sp, SIMRPC_RESUME, req, 4, NULL, 0);
 }
 
 int simrpc_reboot(struct simrpc_pcb * sp)

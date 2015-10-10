@@ -76,7 +76,7 @@ void rpc_test_suspend(FILE * f, int port)
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		fprintf(f, "simrpc_open() failed!\n");
 	} else {
-		if (simrpc_suspend(sp) < 0) {
+		if (simrpc_suspend(sp, 0xffffffff) < 0) {
 			fprintf(f, "simrpc_suspend() failed!\n");
 		}
 		simrpc_close(sp);
@@ -93,7 +93,7 @@ void rpc_test_resume(FILE * f, int port)
 	if ((sp = simrpc_open(daddr)) == NULL) {
 		fprintf(f, "simrpc_open() failed!\n");
 	} else {
-		if (simrpc_resume(sp) < 0) {
+		if (simrpc_resume(sp, 0xffffffff) < 0) {
 			fprintf(f, "simrpc_resume() failed!\n");
 		}
 		simrpc_close(sp);
@@ -661,7 +661,7 @@ int firmware_load_cgi(struct httpctl * http)
 	    return http_send(http, error_html, sizeof(error_html) - 1);
 	}
 
-	if (simrpc_suspend(sp) < 0) {
+	if (simrpc_suspend(sp, 0xffffffff) < 0) {
 		WARN("simrpc_suspend() failed!");
 		simrpc_close(sp);
 	    return http_send(http, error_html, sizeof(error_html) - 1);

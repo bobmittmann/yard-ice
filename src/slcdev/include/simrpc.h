@@ -183,8 +183,9 @@ int simrpc_mem_seek(struct simrpc_pcb * sp,
 int simrpc_mem_crc32(struct simrpc_pcb * sp, uint32_t offs, 
 					 unsigned int size, uint32_t * crc);
 
-int simrpc_suspend(struct simrpc_pcb * sp);
-int simrpc_resume(struct simrpc_pcb * sp);
+int simrpc_suspend(struct simrpc_pcb * sp, uint32_t bitmask);
+int simrpc_resume(struct simrpc_pcb * sp, uint32_t bitmask);
+
 int simrpc_reboot(struct simrpc_pcb * sp);
 int simrpc_exec(struct simrpc_pcb * sp, uint32_t key);
 
