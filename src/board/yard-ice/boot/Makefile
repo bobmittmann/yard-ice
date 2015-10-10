@@ -22,15 +22,15 @@
 
 PROG = thinkos
 
-CFILES = ../boot.c ../monitor.c board.c
+CFILES = boot.c monitor.c board.c 
 
-SDK = ../../sdk
+SDK = ../../../sdk
 
 LIBDIRS = $(SDK)/libstm32f $(SDK)/libcm3 $(SDK)/libutil $(SDK)/libthinkos
 
 LIBS = cm3 stm32f util thinkos gcc 
 
-INCPATH = $(SDK)/include 
+INCPATH = $(SDK)/include ../include
 
 CDEFS = CONFIG_H CM3_RAM_VECTORS
 
@@ -39,5 +39,5 @@ LDFLAGS = -Wl,--gc-sections
 
 JTAGTOOL_ADDR = 192.168.10.50
 MACH = stm32f207
-include ../../mk/stm32f2xx.mk
+include ../../../mk/stm32f2xx.mk
 
