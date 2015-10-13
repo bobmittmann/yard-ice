@@ -42,8 +42,8 @@ struct simrpc_console {
 void stdout_flush_tmr_rst(void); 
 void stdout_flush_tmr_clr(void); 
 
-int simrpc_stdout_write(struct simrpc_console * out, 
-						 const char * buf, int cnt)
+static int __simrpc_stdout_write(struct simrpc_console * out, 
+								 const char * buf, int cnt)
 {
 	int rem = cnt;
 	int free;
@@ -63,7 +63,7 @@ int simrpc_stdout_write(struct simrpc_console * out,
 			uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
 										out->seq++, SIMRPC_STDOUT_DATA);
 	
-			DCC_LOG2(LOG_TRACE, "<%d> flush %d bytes.", 
+			DCC_LOG2(LOG_INFO, "<%d> flush %d bytes.", 
 					 thinkos_thread_self(), out->len);
 			simrpc_send(opc, (void *)out->buf, out->len);
 			out->len = 0;
@@ -78,10 +78,28 @@ int simrpc_stdout_write(struct simrpc_console * out,
 	return cnt;
 }
 
+static int __simrpc_stdout_flush(struct simrpc_console * out) 
+{
+	thinkos_mutex_lock(CONSOLE_MUTEX);
+
+	if (out->len > 0) {
+		uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
+									out->seq++, SIMRPC_STDOUT_DATA);
+		simrpc_send(opc, (void *)out->buf, out->len);
+		DCC_LOG2(LOG_INFO, "<%d> flush %d bytes.", 
+				 thinkos_thread_self(), out->len);
+		out->len = 0;
+	}
+
+	thinkos_mutex_unlock(CONSOLE_MUTEX);
+
+	return 0;
+}
+
 const struct fileop simrpc_stdout_fops = {
-	.write = (void *)simrpc_stdout_write,
+	.write = (void *)__simrpc_stdout_write,
 	.read = (void *)null_read,
-	.flush = (void *)null_flush,
+	.flush = (void *)__simrpc_stdout_flush,
 	.close = (void *)null_close
 };
 
@@ -91,25 +109,6 @@ const struct file simrpc_stdout_file = {
 	.data = &console_stdout,
 	.op = &simrpc_stdout_fops
 };
-
-void stdout_flush(void)
-{
-	struct simrpc_console * out;
-
-	out = (struct simrpc_console *)simrpc_stdout_file.data; 
-	thinkos_mutex_lock(CONSOLE_MUTEX);
-
-	if (out->len > 0) {
-		uint32_t opc = simrpc_mkopc(SIMRPC_ADDR_LHUB, SIMRPC_ADDR_ANY, 
-									out->seq++, SIMRPC_STDOUT_DATA);
-		simrpc_send(opc, (void *)out->buf, out->len);
-		DCC_LOG2(LOG_TRACE, "<%d> flush %d bytes.", 
-				 thinkos_thread_self(), out->len);
-		out->len = 0;
-	}
-
-	thinkos_mutex_unlock(CONSOLE_MUTEX);
-}
 
 void simrpc_stdout_flush_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
@@ -134,6 +133,7 @@ FILE * simrpc_stdout_fopen(void)
 	return (FILE *)&simrpc_stdout_file;
 }
 
+#if 0
 const char msg[] = {
 	"When Zarathustra was thirty years old, he left his home and the lake of his home, and went into the mountains.  There he enjoyed his spirit and solitude, and for ten years did not weary of it.  But at last his heart changed,--and rising one morning with the rosy dawn, he went before the sun, and spake thus unto it:\n"
 	"Thou great star!  What would be thy happiness if thou hadst not those for whom thou shinest!\n"
@@ -176,4 +176,6 @@ void simrpc_test_signal(void)
 
 	simrpc_send(opc, (void *)msg, 32);
 }
+
+#endif
 

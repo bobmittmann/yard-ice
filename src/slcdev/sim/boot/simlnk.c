@@ -28,8 +28,6 @@
 #include "simrpc.h"
 #include "simrpc_svc.h"
 
-_Pragma ("GCC optimize (\"Ofast\")")
-
 #ifndef ENABLE_SIMLNK_SANITY_CHECK
 #define ENABLE_SIMLNK_SANITY_CHECK 0
 #endif
@@ -39,6 +37,7 @@ _Pragma ("GCC optimize (\"Ofast\")")
 
 struct simlnk {
 	uint32_t tx_lock;
+	uint32_t rx_pend;
 	uint32_t tx_buf[(SIMLNK_MTU + 3) / 4];
 	uint32_t rx_buf[(SIMLNK_MTU + 2 + 3) / 4];
 } simlnk;
@@ -111,26 +110,8 @@ int __simrpc_send_opc(uint32_t opc)
 	return simlnk_dma_xmit(4);
 }
 
-static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
+void simlnk_simrpc_input(uint32_t opc, void * data, unsigned int cnt)
 {
-	uint32_t opc;
-	void * data;
-	int wq = THINKOS_WQ_COMM_RECV;
-	int th;
-
-	/* get the opcode */
-	opc = pkt[0];
-
-	DCC_LOG4(LOG_INFO, "dst=%02x src=%02x insn=%d seq=%d", 
-			 SIMRPC_DST(opc), SIMRPC_SRC(opc),
-			 SIMRPC_INSN(opc), SIMRPC_SEQ(opc));
-
-
-	/* data portion */
-	data = (void *)&pkt[1];
-	/* adjust the data length */
-	cnt -= 4;
-	/* decode instruction */
 	switch (SIMRPC_INSN(opc)) {
 	case SIMRPC_SUSPEND:
 		simrpc_suspend_svc(opc, data, cnt);
@@ -174,7 +155,40 @@ static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 	case SIMRPC_MEM_CRC32:
 		simrpc_mem_seek_svc(opc, data, cnt);
 		break;
-	default:
+	}
+}
+
+_Pragma ("GCC optimize (\"Ofast\")")
+
+static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
+{
+	uint32_t opc;
+	void * data;
+	int wq = THINKOS_WQ_COMM_RECV;
+	int th;
+
+	/* get the opcode */
+	opc = pkt[0];
+
+	DCC_LOG4(LOG_INFO, "dst=%02x src=%02x insn=%d seq=%d", 
+			 SIMRPC_DST(opc), SIMRPC_SRC(opc),
+			 SIMRPC_INSN(opc), SIMRPC_SEQ(opc));
+
+	/* data portion */
+	data = (void *)&pkt[1];
+	/* adjust the data length */
+	cnt -= 4;
+	/* decode instruction */
+	if (SIMRPC_INSN(opc) < 32) { 
+		if (simlnk.tx_lock) {
+			/* save for later */
+			if (simlnk.rx_pend)
+				DCC_LOG(LOG_WARNING, "pending data in the RX buffer!");
+			simlnk.rx_pend = cnt + 4;
+		} else {
+			simlnk_simrpc_input(opc, data, cnt);
+		}
+	} else {
 		/* forward to userland */
 		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 			*((uint32_t *)thinkos_rt.ctx[th]->r1) = opc;
@@ -205,7 +219,7 @@ void stm32_usart2_isr(void)
 	if (sr & USART_TC) {
 		int wq = THINKOS_WQ_COMM_SEND;
 		uint32_t opc;
-		void * buf;
+		void * data;
 		int cnt;
 		int th;
 
@@ -220,7 +234,15 @@ void stm32_usart2_isr(void)
 		/* disable DMA */
 		dma->ch[TX_DMA_CHAN].ccr &= ~DMA_EN;
 
-		if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
+		if (simlnk.rx_pend) {
+			opc = simlnk.rx_buf[0];
+			data = (void *)&simlnk.rx_buf[1];
+			cnt = simlnk.rx_pend - 4;
+			simlnk.tx_lock = 0;
+			simlnk.rx_pend = 0;
+			simlnk_simrpc_input(opc, data, cnt);
+			DCC_LOG(LOG_TRACE, "TC RX pend.");
+		} else if ((th = __thinkos_wq_head(wq)) != THINKOS_THREAD_NULL) {
 			DCC_LOG(LOG_INFO, "TC xmit pending...");
 			/* wakeup from the console wait queue */
 			__thinkos_wakeup(wq, th);
@@ -228,14 +250,13 @@ void stm32_usart2_isr(void)
 			__thinkos_defer_sched();
 
 			opc = thinkos_rt.ctx[th]->r1;
-			buf = (void *)thinkos_rt.ctx[th]->r2;
+			data = (void *)thinkos_rt.ctx[th]->r2;
 			cnt = thinkos_rt.ctx[th]->r3;
 			simlnk.tx_buf[0] = opc;
-			__thinkos_memcpy(&simlnk.tx_buf[1], buf, cnt);
+			__thinkos_memcpy(&simlnk.tx_buf[1], data, cnt);
 
 			simlnk_dma_xmit(cnt + 4);
 		} else {
-
 			simlnk.tx_lock = 0;
 			DCC_LOG(LOG_INFO, "TC TX unlock.");
 		}

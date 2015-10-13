@@ -200,8 +200,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[FLASH].blk.size = 256;
 		mem[FLASH].blk.count = memsz * 4;
 		mem[EEPROM].blk.count = 2048;
-		/* FIXME: configure SRAM */
-		mem[SRAM].blk.count = 16;
+		mem[SRAM].blk.count = 32;
 		mem[CCM].blk.count = 0;
 		break;
 
@@ -217,7 +216,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[FLASH].blk.count = memsz * 4;
 		mem[EEPROM].blk.count = 3072;
 		/* FIXME: configure SRAM */
-		mem[SRAM].blk.count = 16;
+		mem[SRAM].blk.count = 80;
 		mem[CCM].blk.count = 0;
 		break;
 
@@ -230,7 +229,7 @@ int stm32f_pos_config(FILE * f, const ice_drv_t * ice,
 		mem[FLASH].blk.count = memsz / 16;
 		mem[EEPROM].blk.count = 4096;
 		/* FIXME: configure SRAM */
-		mem[SRAM].blk.count = 16;
+		mem[SRAM].blk.count = 80;
 		mem[CCM].blk.count = 0;
 		break;
 
