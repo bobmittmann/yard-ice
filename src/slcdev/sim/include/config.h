@@ -34,7 +34,8 @@
 #define THINKOS_IRQ_MAX               39
 
 #if DEBUG
-#define THINKOS_EXCEPT_STACK_SIZE     240
+//#define THINKOS_EXCEPT_STACK_SIZE     240
+#define THINKOS_EXCEPT_STACK_SIZE     320
 #else
 #define THINKOS_EXCEPT_STACK_SIZE     328
 #endif
@@ -100,7 +101,11 @@
  
 #define THINKOS_ENABLE_COMM           1
 
+#if DEBUG
+#define THINKOS_ENABLE_STACK_INIT     1
+#else
 #define THINKOS_ENABLE_STACK_INIT     0
+#endif
 
 /* -------------------------------------------------------------------------
    MicroJS configuration

@@ -50,6 +50,9 @@ int __simrpc_send(uint32_t opc, const void * data, unsigned int cnt);
 void thinkos_exception_dsr(struct thinkos_except * xcpt)
 {
 	except_crc = crc32_align((void *)xcpt, sizeof(struct thinkos_except));
+#ifdef DEBUG
+	__tdump();
+#endif
 	DCC_LOG2(LOG_TRACE, "except=%d crc=%08x.", xcpt->type, except_crc);
 }
 

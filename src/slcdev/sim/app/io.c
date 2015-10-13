@@ -44,8 +44,6 @@ const struct {
 	{ IO_LED4 }
 };
 
-void stdout_flush(void);
-
 #define STDOU_FLUSH_TMO_MS 100
 
 void stdout_flush_tmr_rst(void) 
@@ -177,7 +175,7 @@ void __attribute__((noreturn)) io_event_task(void)
 		}
 		if ((itvl = io_drv.stdout_tmr) != 0) {
 			if (--itvl == 0) 
-				stdout_flush();
+				fflush(stdout);
 			io_drv.stdout_tmr = itvl;
 		}
 
