@@ -380,6 +380,7 @@ int main(int argc, char ** argv)
 {
 	int ret;
 
+#ifndef THINKAPP
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -395,6 +396,8 @@ int main(int argc, char ** argv)
 #if ENABLE_MONITOR
 	DCC_LOG(LOG_TRACE, " 4. monitor_init().");
 	monitor_init();
+#endif
+
 #endif
 
 	DCC_LOG(LOG_TRACE, " 5. stdio_init().");

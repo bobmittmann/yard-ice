@@ -381,7 +381,7 @@ void __attribute__((aligned(16))) cm3_systick_isr(void)
 		}
 	}
 
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DMCLOCK
 	if ((int32_t)(thinkos_rt.dmclock - ticks) == 0) {
 		dmon_signal(DMON_ALARM);
 	}

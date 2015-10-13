@@ -42,7 +42,25 @@ const char * cm3_reg_name(int r)
 	return cm3_regnames[r];
 }
 
-extern const char __xcpt_name_lut[16][12];
+static const char xcpt_name_lut[16][12] = {
+	"Thread",
+	"Reset",
+	"NMI",
+	"HardFault",
+	"MemManage",
+	"BusFault",
+	"UsageFault",
+	"Invalid 7",
+	"Invalid 8",
+	"Invalid 9",
+	"Invalid 10",
+	"SVCall",
+	"DbgMonitor",
+	"Invalid 13",
+	"PendSV",
+	"SysTick"
+};
+
 
 int cm3_show_xpsr(FILE * f, uint32_t xpsr)
 {
@@ -59,7 +77,7 @@ int cm3_show_xpsr(FILE * f, uint32_t xpsr)
 				 (xpsr & (1 << 24)) ? 'T' : '.',
 				 ((xpsr >> 19) & 0xc0) | ((xpsr >> 10) & 0x3f),
 				 ((xpsr >> 16) & 0x0f),
-				 ipsr, __xcpt_name_lut[ipsr]);
+				 ipsr, xcpt_name_lut[ipsr]);
 	} else {
 		fprintf(f, "[ %c%c%c%c%c %c "
 				 "ICI/IT=%02x GE=%1x IPSR=%d (IRQ %d) }", 

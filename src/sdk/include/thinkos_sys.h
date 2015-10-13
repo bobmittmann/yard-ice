@@ -193,6 +193,26 @@
 #define THINKOS_ENABLE_EXCEPTIONS  1
 #endif
 
+#ifndef THINKOS_SYSRST_ONFAULT
+#define THINKOS_SYSRST_ONFAULT    0
+#endif
+
+#ifndef THINKOS_STDERR_FAULT_DUMP
+#define THINKOS_STDERR_FAULT_DUMP 0
+#endif
+
+#ifndef THINKOS_ENABLE_BUSFAULT
+#define THINKOS_ENABLE_BUSFAULT   0
+#endif
+
+#ifndef THINKOS_ENABLE_USAGEFAULT 
+#define THINKOS_ENABLE_USAGEFAULT 0
+#endif
+
+#ifndef THINKOS_UNROLL_EXCEPTIONS 
+#define THINKOS_UNROLL_EXCEPTIONS  0
+#endif
+
 #ifndef THINKOS_ENABLE_SCHED_DEBUG
 #define THINKOS_ENABLE_SCHED_DEBUG 0
 #endif
@@ -209,12 +229,20 @@
 #define THINKOS_ENABLE_MONITOR     0
 #endif
 
+#ifndef THINKOS_ENABLE_DMCLOCK
+#define THINKOS_ENABLE_DMCLOCK     THINKOS_ENABLE_MONITOR
+#endif
+
 #ifndef THINKOS_ENABLE_DEBUG_STEP 
 #define THINKOS_ENABLE_DEBUG_STEP  0
 #endif
 
 #ifndef THINKOS_ENABLE_DEBUG_FAULT
 #define THINKOS_ENABLE_DEBUG_FAULT 0
+#endif
+
+#ifndef THINKOS_ENABLE_EXCEPT_RESET
+#define THINKOS_ENABLE_EXCEPT_RESET 1
 #endif
 
 #ifndef THINKOS_ENABLE_MPU 
@@ -472,7 +500,7 @@ struct thinkos_rt {
 		uint32_t ticks;
 		/* This fields are used for time wait (e.g. sleep()) */
 		uint32_t clock[THINKOS_THREADS_MAX];
-#if THINKOS_ENABLE_MONITOR
+#if THINKOS_ENABLE_DMCLOCK
 		/* monitor timer */
 		uint32_t dmclock;
 #endif

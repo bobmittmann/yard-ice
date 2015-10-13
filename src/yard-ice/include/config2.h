@@ -32,89 +32,87 @@
 
 #define THINKOS_IRQ_MAX 80
 
-#define THINKOS_ENABLE_IDLE_WFI 1
+#define THINKOS_ENABLE_IDLE_WFI       1
 
-#define THINKOS_ENABLE_CLOCK 1
+#define THINKOS_ENABLE_CLOCK          1
 
-#define THINKOS_ENABLE_TIMESHARE 0
-#define THINKOS_SCHED_LIMIT_MAX 32
-#define THINKOS_SCHED_LIMIT_MIN 1
+#define THINKOS_ENABLE_TIMESHARE      0
+#define THINKOS_SCHED_LIMIT_MAX       32
+#define THINKOS_SCHED_LIMIT_MIN       1
 
-#define THINKOS_THREADS_MAX 20
-#define THINKOS_ENABLE_THREAD_ALLOC 1
+#define THINKOS_THREADS_MAX           20
+#define THINKOS_ENABLE_THREAD_ALLOC   1
 
-#define THINKOS_ENABLE_JOIN 0
-#define THINKOS_ENABLE_PAUSE 0
-#define THINKOS_ENABLE_CANCEL 0
-#define THINKOS_ENABLE_EXIT 0
+#define THINKOS_ENABLE_JOIN           0
+#define THINKOS_ENABLE_PAUSE          0
+#define THINKOS_ENABLE_CANCEL         0
+#define THINKOS_ENABLE_EXIT           0
 
-#define THINKOS_MUTEX_MAX 16
-#define THINKOS_ENABLE_MUTEX_ALLOC 1
+#define THINKOS_MUTEX_MAX             16
+#define THINKOS_ENABLE_MUTEX_ALLOC    1
 
-#define THINKOS_COND_MAX 16
-#define THINKOS_ENABLE_COND_ALLOC 1
+#define THINKOS_COND_MAX              16
+#define THINKOS_ENABLE_COND_ALLOC     1
 
-#define THINKOS_SEMAPHORE_MAX 16
-#define THINKOS_ENABLE_SEM_ALLOC 1
+#define THINKOS_SEMAPHORE_MAX         16
+#define THINKOS_ENABLE_SEM_ALLOC      1
 
-#define THINKOS_EVENT_MAX 2
-#define THINKOS_ENABLE_EVENT_ALLOC 1
+#define THINKOS_EVENT_MAX             2
+#define THINKOS_ENABLE_EVENT_ALLOC    1
 
-#define THINKOS_FLAG_MAX 16
-#define THINKOS_ENABLE_FLAG_ALLOC 1
-#define THINKOS_ENABLE_FLAG_SYSCALL 1
+#define THINKOS_FLAG_MAX              16
+#define THINKOS_ENABLE_FLAG_ALLOC     1
+#define THINKOS_ENABLE_FLAG_SYSCALL   1
 
-#define THINKOS_ENABLE_THREAD_STAT 1
-#define THINKOS_ENABLE_TIMED_CALLS 1
+#define THINKOS_ENABLE_THREAD_STAT    1
+#define THINKOS_ENABLE_TIMED_CALLS    1
 
 #define THINKOS_ENABLE_ARG_CHECK      0
 #define THINKOS_ENABLE_DEADLOCK_CHECK 0
 
-#define THINKOS_EXCEPT_STACK_SIZE 320
+#define THINKOS_EXCEPT_STACK_SIZE     320
 
-#define THINKOS_STDERR_FAULT_DUMP  0
+#define THINKOS_STDERR_FAULT_DUMP     0
 
-#define THINKOS_ENABLE_SCHED_DEBUG 0
+#define THINKOS_ENABLE_SCHED_DEBUG    0
 
-#define THINKOS_ENABLE_RT_DEBUG    0
+#define THINKOS_ENABLE_RT_DEBUG       0
 
-#define THINKOS_ENABLE_BREAK       0
+#define THINKOS_ENABLE_BREAK          0
 
-#define THINKOS_ENABLE_PROFILING   1
+#define THINKOS_ENABLE_PROFILING      1
 
-#define THINKOS_ENABLE_MONITOR     1
+#define THINKOS_ENABLE_MONITOR        1
 
-#define THINKOS_ENABLE_CONSOLE     1
+#define THINKOS_ENABLE_CONSOLE        1
 
-#define THINKOS_ENABLE_DEBUG_STEP  0
+#define THINKOS_ENABLE_DEBUG_STEP     0
 
-#define THINKOS_ENABLE_DEBUG_FAULT 0
+#define THINKOS_ENABLE_DEBUG_FAULT    0
 
-#define THINKOS_ENABLE_EXCEPTIONS     0
+#define THINKOS_ENABLE_EXCEPTIONS     1
 #define THINKOS_UNROLL_EXCEPTIONS     0
-#define THINKOS_SYSRST_ONFAULT        1
+#define THINKOS_SYSRST_ONFAULT        0
 #define THINKOS_STDERR_FAULT_DUMP     0
 #define THINKOS_ENABLE_EXCEPT_RESET   0
+#define THINKOS_ENABLE_BUSFAULT       0
+#define THINKOS_ENABLE_USAGEFAULT     0
 
-#define THINKOS_ENABLE_BUSFAULT    0
+#define THINKOS_ENABLE_MPU            0
 
-#define THINKOS_ENABLE_USAGEFAULT  0
+#define THINKOS_ENABLE_FPU            0
 
-#define THINKOS_UNROLL_EXCEPTIONS  0
+#define THINKOS_ENABLE_CTL            0
 
-#define THINKOS_ENABLE_MPU         0
+#define THINKOS_DMON_STACK_SIZE       256
 
-#define THINKOS_ENABLE_FPU         0
-
-#define THINKOS_ENABLE_CTL         0
-
-#define THINKOS_DMON_STACK_SIZE    256
+#define THINKOS_ENABLE_STACK_INIT     0
 
 /* -------------------------------------------------------------------------
    USB 
    -------------------------------------------------------------------------- */
 
-#define STM32_ENABLE_OTG_FS 1
+#define STM32_ENABLE_OTG_FS          1
 
 /* -------------------------------------------------------------------------
    Printf
@@ -126,14 +124,6 @@
 #define PRINTF_ENABLE_POINTER        0
 #define PRINTF_ENABLE_LONG           0
 #define PRINTF_ENABLE_ARG_WIDTH      0
-
-/* -------------------------------------------------------------------------
-   Bootloader 
-   -------------------------------------------------------------------------- */
-
-#define BOOT_ENABLE_GDB 0
-#define MONITOR_CONFIGURE_ENABLE 0
-#define MONITOR_DUMPMEM_ENABLE 0
 
 #endif /* __CONFIG_H__ */
 

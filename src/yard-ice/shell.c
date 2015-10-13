@@ -370,16 +370,16 @@ const struct shell_cmd yard_ice_cmd_tab[] = {
 
 	{ cmd_sleep, "sleep", "", 
 		"", "delay for a specific amount of time" },
-
+#if 0
 	{ cmd_osinfo, "sys", "os", 
 		"", "show OS status" },
-
 	{ cmd_oscheck, "check", "ck", 
 		"", "perform OS sanity check" },
 
 	{ cmd_thread, "thread", "th", 
 		"[ID]", "show thread status" },
 
+#endif
 	{ cmd_fpga, "fpga", "rbf", 
 		"[erase] [load]", "update FPGA program." },
 

@@ -39,51 +39,19 @@
 
 #include <sys/dcclog.h>
 
-#ifndef BOOT_ENABLE_GDB
-#define BOOT_ENABLE_GDB 0
-#endif
-
-#if (BOOT_ENABLE_GDB)
-#include <gdb.h>
-#endif
-
 #include "board.h"
-
-#if 0
-#define VERSION_NUM "0.2"
-#define VERSION_DATE "Jul, 2015"
-
-const char * const version_str = "ThinkOS Boot Loader " \
-							VERSION_NUM " - " VERSION_DATE;
-const char * const copyright_str = "(c) Copyright 2015 - Bob Mittmann";
-#endif
 
 void monitor_task(struct dmon_comm * comm);
 
-void monitor_init(void)
+static void monitor_init(void)
 {
 	struct dmon_comm * comm;
 
 	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
-#if STM32_ENABLE_OTG_FS
 	comm = usb_comm_init(&stm32f_otg_fs_dev);
-#elif STM32_ENABLE_OTG_HS
-	comm = usb_comm_init(&stm32f_otg_hs_dev);
-#elif STM32_ENABLE_USB_DEV
-	comm = usb_comm_init(&stm32f_usb_fs_dev);
-#else
-#error "Undefined debug monitor comm port!"
-#endif
 
-#if THINKOS_ENABLE_CONSOLE
 	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
 	thinkos_console_init();
-#endif
-
-#if (BOOT_ENABLE_GDB)
-	DCC_LOG(LOG_TRACE, "3. gdb_init()");
-	gdb_init(monitor_task);
-#endif
 
 	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
 	thinkos_dmon_init(comm, monitor_task);
@@ -97,14 +65,19 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
 
-	DCC_LOG(LOG_TRACE, "2. thinkos_init().");
-	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
+	for(;;);
 
-	DCC_LOG(LOG_TRACE, "3. board_init().");
+	DCC_LOG(LOG_TRACE, "2. board_init().");
 	this_board.init();
+
+	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
+	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
 	DCC_LOG(LOG_TRACE, "4. monitor_init()");
 	monitor_init();
+
+	DCC_LOG(LOG_TRACE, "5. __thinkos_thread_abort()");
+	__thinkos_thread_abort(0);
 
 	return 0;
 }

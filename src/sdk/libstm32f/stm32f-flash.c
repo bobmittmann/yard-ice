@@ -191,13 +191,12 @@ uint32_t __attribute__((section (".data#"), noinline))
 int stm32_flash_erase(unsigned int offs, unsigned int len)
 {
 	struct stm32_flash * flash = STM32_FLASH;
-	unsigned int page;
-	unsigned int sect;
-	unsigned int size;
 	unsigned int cnt;
 	uint32_t pri;
 	uint32_t cr;
 	uint32_t sr;
+
+	pri = cm3_primask_get();
 
 	cr = flash->cr;
 	if (cr & FLASH_LOCK) {
@@ -207,30 +206,31 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		flash->keyr = FLASH_KEY2;
 	}
 
-	page = offs >> 14;
-	
-	if ((page << 14) != (offs)) {
-		DCC_LOG(LOG_ERROR, "offset must be a aligned to a sector boundary.");
-		return -1;
-	};
-
-	pri = cm3_primask_get();
-
 	cnt = 0;
 	while (cnt < len) {
-		switch (page) {
-		case 0 ... 3:
+		unsigned int page;
+		unsigned int sect;
+		unsigned int size;
+
+		page = offs >> 14;
+		if ((page << 14) != (offs)) {
+			DCC_LOG(LOG_ERROR, "offset must be a aligned to a page boundary.");
+			return -1;
+		};
+
+		if (page < 4) {
 			sect = page;
 			size = 16384;
-			break;
-		case 4 ... 7:
+		} else if (page == 4) {
 			sect = 4;
 			size = 65536;
-			break;
-		default:
+		} else if ((page % 8) == 0) {
 			sect = ((page - 7) / 8) + 5;
 			size = 131072;
-			break;
+		} else {
+			DCC_LOG(LOG_ERROR, "offset must be a aligned to a "
+					"sector boundary.");
+			return -1;
 		}
 
 		cr = FLASH_STRT | FLASH_SER | FLASH_SNB(sect);
@@ -244,6 +244,7 @@ int stm32_flash_erase(unsigned int offs, unsigned int len)
 		}
 
 		cnt += size;
+		offs += size;
 	}
 
 	return cnt;

@@ -166,8 +166,10 @@ void dmon_clear(int event)
 int dmon_sleep(unsigned int ms)
 {
 	dmon_clear(DMON_ALARM);
+#if THINKOS_ENABLE_DMCLOCK
 	/* set the clock */
 	thinkos_rt.dmclock = thinkos_rt.ticks + ms;
+#endif
 	/* wait for signal */
 	return dmon_wait(DMON_ALARM);
 }
@@ -176,14 +178,18 @@ void dmon_alarm(unsigned int ms)
 {
 	dmon_clear(DMON_ALARM);
 	dmon_unmask(DMON_ALARM);
+#if THINKOS_ENABLE_DMCLOCK
 	/* set the clock */
 	thinkos_rt.dmclock = thinkos_rt.ticks + ms;
+#endif
 }
 
 void dmon_alarm_stop(void)
 {
+#if THINKOS_ENABLE_DMCLOCK
 	/* set the clock in the past so it won't generate a signal */
 	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
+#endif
 	/* make sure the signal is cleared */
 	dmon_clear(DMON_ALARM);
 	/* mask the signal */
@@ -536,7 +542,9 @@ static void __attribute__((naked)) dmon_bootstrap(void)
 {
 	/* set the clock in the past so it won't generate signals in 
 	 the near future */
+#if THINKOS_ENABLE_DMCLOCK
 	thinkos_rt.dmclock = thinkos_rt.ticks - 1;
+#endif
 	thinkos_dmon_rt.task(thinkos_dmon_rt.comm);
 	dmon_context_swap(&thinkos_dmon_rt.ctx); 
 }
@@ -846,8 +854,10 @@ void thinkos_exception_dsr(struct thinkos_except * xcpt)
 			DCC_LOG(LOG_TRACE, "3. console reset...");
 			__console_reset();
 #endif
+#if 0
 			DCC_LOG(LOG_TRACE, "4. exception reset...");
 			__exception_reset();
+#endif
 #if (THINKOS_ENABLE_DEBUG_STEP)
 			DCC_LOG(LOG_TRACE, "6. clear all breakpoints...");
 			dmon_breakpoint_clear_all();
@@ -877,15 +887,18 @@ void thinkos_dmon_init(void * comm, void (* task)(struct dmon_comm * ))
 	thinkos_dmon_rt.comm = comm;
 	thinkos_dmon_rt.task = task;
 
+#if THINKOS_ENABLE_STACK_INIT
 	__thinkos_memset32(thinkos_dmon_stack, 0xdeadbeef, 
 					   sizeof(thinkos_dmon_stack));
-
+#endif
 	DCC_LOG1(LOG_TRACE, "comm=%0p", comm);
 
-	/* clear the step request */
 	demcr = dcb->demcr;
-	
+
+#if THINKOS_ENABLE_DEBUG_STEP
+	/* clear the step request */
 	demcr &= ~DCB_DEMCR_MON_STEP;
+#endif
 	/* enable monitor and send the reset event */
 	demcr |= DCB_DEMCR_MON_EN | DCB_DEMCR_MON_PEND;
 

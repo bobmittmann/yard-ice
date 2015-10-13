@@ -247,7 +247,7 @@ static inline void __attribute__((always_inline)) __os_int_wait(int irq) {
 
 static inline uint32_t __attribute__((always_inline)) __os_ms_ticks() {
 #if ENABLE_THINKOS
-	return __thinkos_ticks();
+	return thinkos_clock();
 #else
 	return 0;
 #endif

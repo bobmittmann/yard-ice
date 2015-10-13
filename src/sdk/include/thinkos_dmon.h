@@ -220,8 +220,8 @@ bool dmon_app_exec(uint32_t addr, bool paused);
 bool dmon_app_erase(struct dmon_comm * comm, 
 					uint32_t addr, unsigned int size);
 
-int dmon_app_load_ymodem(struct dmon_comm * comm,
-						 uint32_t addr, unsigned int size);
+int dmon_ymodem_flash(struct dmon_comm * comm,
+					  uint32_t addr, unsigned int size);
 
 bool dmon_app_suspend(void);
 

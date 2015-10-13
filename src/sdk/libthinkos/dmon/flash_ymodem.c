@@ -56,7 +56,7 @@ struct ymodem_rcv {
 	} pkt;
 };
 
-int ymodem_rcv_init(struct ymodem_rcv * rx, bool crc_mode, bool xmodem)
+static int ymodem_rcv_init(struct ymodem_rcv * rx, bool crc_mode, bool xmodem)
 {
 	rx->pktno = 0;
 	rx->crc_mode = crc_mode;
@@ -70,7 +70,8 @@ int ymodem_rcv_init(struct ymodem_rcv * rx, bool crc_mode, bool xmodem)
 	return 0;
 }
 
-int ymodem_rcv_cancel(struct dmon_comm * comm, struct ymodem_rcv * rx)
+#if 0
+static int ymodem_rcv_cancel(struct dmon_comm * comm, struct ymodem_rcv * rx)
 {
 	unsigned char * pkt = rx->pkt.hdr;
 
@@ -82,6 +83,7 @@ int ymodem_rcv_cancel(struct dmon_comm * comm, struct ymodem_rcv * rx)
 
 	return 0;
 }
+#endif
 
 static int ymodem_rcv_pkt(struct dmon_comm * comm, struct ymodem_rcv * rx)
 {
@@ -270,12 +272,16 @@ unsigned long dec2int(const char * __s)
 
 extern uint32_t _stack;
 
-int dmon_app_load_ymodem(struct dmon_comm * comm,
-						 uint32_t addr, unsigned int size)
+/* Receive a file and write it into the flash using the YMODEM preotocol */
+int dmon_ymodem_flash(struct dmon_comm * comm,
+					  uint32_t addr, unsigned int size)
 {
 	/* FIXME: generalize the application load by removing the low
 	   level flash calls dependency */
 #ifdef STM32_FLASH_MEM
+	/* The YMODEM state machine is allocated at the top of 
+	   the stack, make sure there is no app running before 
+	   calling the dmon_ymodem_flash()! */
 	struct ymodem_rcv * ry = ((struct ymodem_rcv *)&_stack) - 1;
 	uint32_t base = (uint32_t)STM32_FLASH_MEM;
 	uint32_t offs = addr - base;

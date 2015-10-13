@@ -39,7 +39,7 @@ int __simrpc_send_opc(uint32_t opc);
 #define NVIC_IRQ_REGS ((THINKOS_IRQ_MAX + 31) / 32)
 
 uint32_t nvic_ie[NVIC_IRQ_REGS]; /* interrupt state */
-uint8_t active;
+uint8_t wq_ready;
 
 static void __irq_disable_all(void)
 {
@@ -67,14 +67,15 @@ static void __irq_restore_all(void)
 	CM3_SYSTICK->csr |= SYSTICK_CSR_TICKINT;
 }
 
-
 void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
 	__irq_disable_all();
 
-	active = thinkos_rt.active;
+	wq_ready = thinkos_rt.wq_ready;
+	thinkos_rt.wq_ready = 0;
 	if ((uint32_t)thinkos_rt.active < THINKOS_THREADS_MAX) {
-		__thinkos_thread_pause(thinkos_rt.active);
+		wq_ready |= (1 << thinkos_rt.active);
+		thinkos_rt.active = THINKOS_THREAD_IDLE;
 		__thinkos_defer_sched();
 	}
 
@@ -83,9 +84,7 @@ void simrpc_suspend_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 
 void simrpc_resume_svc(uint32_t opc, uint32_t * data, unsigned int cnt)
 {
-	if ((uint32_t)active < THINKOS_THREADS_MAX)
-		__thinkos_thread_resume(active);
-
+	thinkos_rt.wq_ready = wq_ready;
 	__thinkos_defer_sched();
 
 	__irq_restore_all();

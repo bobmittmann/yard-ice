@@ -39,27 +39,39 @@
 #include <gdb.h>
 
 #ifndef MONITOR_CONFIGURE_ENABLE
-#define MONITOR_CONFIGURE_ENABLE  0
+#define MONITOR_CONFIGURE_ENABLE   0
 #endif
 
 #ifndef MONITOR_DUMPMEM_ENABLE
-#define MONITOR_DUMPMEM_ENABLE    0
+#define MONITOR_DUMPMEM_ENABLE     0
 #endif
 
 #ifndef MONITOR_UPGRADE_ENABLE
-#define MONITOR_UPGRADE_ENABLE    1
+#define MONITOR_UPGRADE_ENABLE     0
 #endif
 
 #ifndef MONITOR_STACKUSAGE_ENABLE
-#define MONITOR_STACKUSAGE_ENABLE 0
+#define MONITOR_STACKUSAGE_ENABLE  1
 #endif
 
 #ifndef MONITOR_THREADINFO_ENABLE
-#define MONITOR_THREADINFO_ENABLE 0
+#define MONITOR_THREADINFO_ENABLE  1
 #endif
 
 #ifndef MONITOR_APPWIPE_ENABLE
-#define MONITOR_APPWIPE_ENABLE    0
+#define MONITOR_APPWIPE_ENABLE     1
+#endif
+
+#ifndef MONITOR_APPTERM_ENABLE
+#define MONITOR_APPTERM_ENABLE     1
+#endif
+
+#ifndef MONITOR_APPRESTART_ENABLE
+#define MONITOR_APPRESTART_ENABLE  1
+#endif
+
+#ifndef MONITOR_FAULT_ENABLE
+#define MONITOR_FAULT_ENABLE       0
 #endif
 
 #define CTRL_B 0x02
@@ -95,7 +107,9 @@ int8_t monitor_thread_id = MONITOR_STARTUP_MAGIC;
 
 static const char monitor_menu[] = 
 "- ThinkOS Monitor Commands:\r\n"
+#if (MONITOR_APPTERM_ENABLE)
 " Ctrl+C - Stop app\r\n"
+#endif
 #if (MONITOR_CONFIGURE_ENABLE)
 " Ctrl+K - Configure Board\r\n"
 #endif
@@ -122,11 +136,14 @@ static const char monitor_menu[] =
 #if (MONITOR_APPWIPE_ENABLE)
 " Ctrl+W - Wipe application\r\n"
 #endif
-#if (THINKOS_ENABLE_EXCEPTIONS)
+#if (MONITOR_FAULT_ENABLE)
 " Ctrl+X - Exception info\r\n"
 #endif
 " Ctrl+Y - YMODEM app upload\r\n"
-" Ctrl+Z - Restart app\r\n";
+#if (MONITOR_APPRESTART_ENABLE)
+" Ctrl+Z - Restart app\r\n"
+#endif
+;
 
 static const char __hr__[] = 
 "--------------------------------------------------------------\r\n";
@@ -138,19 +155,62 @@ static void monitor_show_help(struct dmon_comm * comm)
 	dmon_comm_send(comm, __hr__, sizeof(__hr__) - 1);
 }
 
-#if (THINKOS_ENABLE_EXCEPTIONS)
+extern uint32_t _stack;
+extern const struct thinkos_thread_inf thinkos_main_inf;
+
+static void board_exec(void (* func)(int), int mode)
+{
+	int thread_id = 0;
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_abort()");
+	__thinkos_thread_abort(thread_id);
+
+	DCC_LOG1(LOG_TRACE, "__thinkos_thread_init(mode=%d)", mode);
+	__thinkos_thread_init(thread_id, (uintptr_t)&_stack, func, (void *)mode);
+
+#if THINKOS_ENABLE_THREAD_INFO
+	__thinkos_thread_inf_set(thread_id, &thinkos_main_inf);
+#endif
+
+	DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
+	__thinkos_thread_resume(thread_id);
+
+	DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+	__thinkos_defer_sched();
+}
+
+bool monitor_app_exec(uint32_t addr, int mode)
+{
+	uint32_t * signature = (uint32_t *)addr;
+
+	if ((signature[0] != 0x0a0de004) ||
+		(signature[1] != 0x6e696854) ||
+		(signature[2] != 0x00534f6b)) {
+		DCC_LOG1(LOG_WARNING, "invalid application signature, addr=%p!", 
+				 signature);
+
+		return false;
+	}
+
+	board_exec((void *)(addr | 1), mode);
+
+	return true;
+}
+
+#if (MONITOR_FAULT_ENABLE)
 static void monitor_print_fault(struct dmon_comm * comm)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
 
 	switch (xcpt->type == 0) {
-		dmprintf(comm, "No fault!");
+		dmon_comm_send(comm, "No fault.\r\n", 11);
 		return;
 	}
 
 	dmon_print_exception(comm, xcpt);
 }
 
+#if 0
 static void monitor_on_fault(struct dmon_comm * comm)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
@@ -159,11 +219,12 @@ static void monitor_on_fault(struct dmon_comm * comm)
 		DCC_LOG(LOG_WARNING, "dmon_wait_idle() failed!");
 	}
 	if (dmon_comm_isconnected(comm)) {
-		dmprintf(comm, __hr__);
+		dmon_comm_send(comm, __hr__, sizeof(__hr__) - 1);
 		dmon_print_exception(comm, xcpt);
-		dmprintf(comm, __hr__);
+		dmon_comm_send(comm, __hr__, sizeof(__hr__) - 1);
 	}
 }
+#endif
 #endif
 
 #if (MONITOR_THREADINFO_ENABLE)
@@ -186,23 +247,23 @@ static void monitor_resume_all(struct dmon_comm * comm)
 #endif
 
 static const char ymodem_rcv_msg[] = 
-"\r\nYMODEM receive (^X to cancel) ... ";
+"\r\nYMODEM recv (^X to cancel) ... ";
 static const char ymodem_err_msg[] = 
-"\r\n#ERROR: YMODEM failed!\r\n";
+"\r\n#ERR: YMODEM failed!\r\n";
 static const char app_invalid_msg[] = 
-"\r\n#ERROR: Invalid app!\r\n";
+"\r\n#ERR: Invalid app!\r\n";
 
 static void monitor_ymodem_recv(struct dmon_comm * comm, 
 								uint32_t addr, unsigned int size)
 {
 	dmon_comm_send(comm, ymodem_rcv_msg, sizeof(ymodem_rcv_msg) - 1);
 	dmon_soft_reset(comm);
-	if (dmon_app_load_ymodem(comm, addr, size) < 0) {
+	if (dmon_ymodem_flash(comm, addr, size) < 0) {
 		dmon_comm_send(comm, ymodem_err_msg, sizeof(ymodem_err_msg) - 1);
 		return;
 	}	
 
-	if (dmon_app_exec(addr, false) < 0) {
+	if (monitor_app_exec(addr, 0) < 0) {
 		dmon_comm_send(comm, app_invalid_msg, sizeof(app_invalid_msg) - 1);
 		return;
 	}
@@ -275,6 +336,7 @@ dump_line:
 }
 #endif
 
+#if (MONITOR_APPRESTART_ENABLE)
 static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
 {
 	if (dmon_app_exec(addr, false) < 0) {
@@ -282,6 +344,7 @@ static void monitor_exec(struct dmon_comm * comm, unsigned int addr)
 		return;
 	}
 }
+#endif
 
 //void gdb_task(struct dmon_comm *) __attribute__((weak, alias("monitor_task")));
 void monitor_task(struct dmon_comm *);
@@ -295,10 +358,12 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 	for (i = 0; i < len; ++i) {
 		c = buf[i];
 		switch (c) {
+#if (MONITOR_APPTERM_ENABLE)
 		case CTRL_C:
 			dmon_comm_send(comm, "^C\r\n", 4);
 			dmon_soft_reset(comm);
 			break;
+#endif
 #if (BOOT_ENABLE_GDB)
 		case '+':
 			dmon_exec(gdb_task);
@@ -365,7 +430,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 		case CTRL_V:
 			monitor_show_help(comm);
 			break;
-#if (THINKOS_ENABLE_EXCEPTIONS)
+#if (MONITOR_FAULT_ENABLE)
 		case CTRL_X:
 			monitor_print_fault(comm);
 			break;
@@ -382,11 +447,13 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 							  this_board.application.block_size);
 			break;
 #endif
+#if (MONITOR_APPRESTART_ENABLE)
 		case CTRL_Z:
 			dmon_comm_send(comm, "^Z\r\n", 4);
 			dmon_soft_reset(comm);
 			monitor_exec(comm, this_board.application.start_addr);
 			break;
+#endif
 		default:
 			continue;
 		}
@@ -405,6 +472,7 @@ int monitor_process_input(struct dmon_comm * comm, char * buf, int len)
 
 void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 {
+	uint32_t tick_cnt = 0;
 	uint32_t sigmask = 0;
 	uint32_t sigset;
 #if THINKOS_ENABLE_CONSOLE
@@ -412,7 +480,6 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint8_t * ptr;
 	int cnt;
 #endif
-	int tick_cnt = 0;
 	char buf[64];
 	int len;
 
@@ -429,7 +496,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	dmprintf(comm, __hr__);
 #endif
 
-#if (THINKOS_ENABLE_EXCEPTIONS)
+#if (MONITOR_FAULT_ENABLE)
 	sigmask |= (1 << DMON_THREAD_FAULT);
 	sigmask |= (1 << DMON_EXCEPT);
 #endif
@@ -445,8 +512,8 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #endif
 		/* first time we run the monitor, start a timer to call the 
 		   board_tick() periodically */
-		sigmask |= (1 << DMON_ALARM);
-		dmon_alarm(125);
+//		sigmask |= (1 << DMON_ALARM);
+//		dmon_alarm(125);
 #if (MONITOR_THREADINFO_ENABLE)
 		monitor_thread_id = -1;
 	}
@@ -471,22 +538,16 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_COMM_RCV)) {
 #if THINKOS_ENABLE_CONSOLE
 			if ((cnt = __console_rx_pipe_ptr(&ptr)) > 0) {
-				DCC_LOG1(LOG_INFO, "Comm recv. rx_pipe.free=%d", cnt);
 				if ((len = dmon_comm_recv(comm, ptr, cnt)) > 0) {
 					len = monitor_process_input(comm, (char *)ptr, len);
 					__console_rx_pipe_commit(len); 
 				} else {
-					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
-							"masking DMON_COMM_RCV!");
 					sigmask &= ~(1 << DMON_COMM_RCV);
 				}
 			} else {
-				DCC_LOG(LOG_TRACE, "Comm recv. rx pipe full!");
 				if ((len = dmon_comm_recv(comm, buf, sizeof(buf))) > 0) {
 					monitor_process_input(comm, buf, len);
 				} else {
-					DCC_LOG(LOG_WARNING, "dmon_comm_recv() failed, "
-							"masking DMON_COMM_RCV!");
 					sigmask &= ~(1 << DMON_COMM_RCV);
 				}
 			}
@@ -529,16 +590,15 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 		if (sigset & (1 << DMON_ALARM)) {
 			dmon_clear(DMON_ALARM);
 			if (this_board.autoboot(tick_cnt++) && 
-				dmon_app_exec(this_board.application.start_addr, false)) {
+				monitor_app_exec(this_board.application.start_addr, 0)) {
 				sigmask &= ~(1 << DMON_ALARM);
-				this_board.on_appload();
 			} else {
 				/* reastart the alarm timer */
 				dmon_alarm(125);
 			}  
 		}
 
-#if (THINKOS_ENABLE_EXCEPTIONS)
+#if (MONITOR_FAULT_ENABLE)
 		if (sigset & (1 << DMON_THREAD_FAULT)) {
 			DCC_LOG(LOG_TRACE, "Thread fault.");
 			monitor_on_fault(comm);

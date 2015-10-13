@@ -28,10 +28,16 @@
 void dmon_print_exception(struct dmon_comm * comm, 
 						  struct thinkos_except * xcpt)
 {
-	uint32_t psr = xcpt->ctx.xpsr;
-	uint32_t bfsr;
-	uint32_t ufsr;
+//	uint32_t psr = xcpt->ctx.xpsr;
+#if THINKOS_ENABLE_MPU 
 	uint32_t mmfsr;
+#endif
+#if THINKOS_ENABLE_BUSFAULT
+	uint32_t bfsr;
+#endif
+#if THINKOS_ENABLE_USAGEFAULT 
+	uint32_t ufsr;
+#endif
 	uint32_t sp;
 
 	switch (xcpt->type) {
@@ -39,17 +45,23 @@ void dmon_print_exception(struct dmon_comm * comm,
 		dmprintf(comm, " Hard Fault at ");
 		break;
 
+#if THINKOS_ENABLE_MPU 
 	case CM3_EXCEPT_MEM_MANAGE:
 		dmprintf(comm, " Memory Manager Fault at ");
 		break;
+#endif
 
+#if THINKOS_ENABLE_BUSFAULT
 	case CM3_EXCEPT_BUS_FAULT:
 		dmprintf(comm, " Bus Fault at ");
 		break;
+#endif
 
+#if THINKOS_ENABLE_USAGEFAULT 
 	case CM3_EXCEPT_USAGE_FAULT: 
 		dmprintf(comm, " Usage Fault at ");
 		break;
+#endif
 	}
 
 	if (xcpt->thread_id != -1) {
@@ -78,7 +90,7 @@ void dmon_print_exception(struct dmon_comm * comm,
 	}
 
 	sp = (xcpt->ret == CM3_EXC_RET_THREAD_PSP) ? xcpt->psp : xcpt->msp;
-
+#if 0
 	dmprintf(comm, "\r\n xpsr=%08x [N=%c Z=%c C=%c V=%c Q=%c T=%c "
 				"ICI/IT=%02x GE=%1x XCP=%d]\r\n", 
 				psr,
@@ -99,8 +111,11 @@ void dmon_print_exception(struct dmon_comm * comm,
 				xcpt->ctx.r2, xcpt->ctx.r6, xcpt->ctx.r10, xcpt->ctx.lr);
 	dmprintf(comm, "   r3=%08x   r7=%08x  r11=%08x   pc=%08x\r\n",  
 				xcpt->ctx.r3, xcpt->ctx.r7, xcpt->ctx.r11, xcpt->ctx.pc);
+#endif
+	dmon_print_context(comm, &xcpt->ctx, sp);
 
 	switch (xcpt->type) {
+#if THINKOS_ENABLE_MPU 
 	case CM3_EXCEPT_MEM_MANAGE:
 		mmfsr = SCB_CFSR_MMFSR_GET(CM3_SCB->cfsr);
 		dmprintf(comm, "mmfsr=%02x [", mmfsr);
@@ -121,7 +136,9 @@ void dmon_print_exception(struct dmon_comm * comm,
 			dmprintf(comm, " Fault address --> %08x\r\n", 
 					 (uint32_t)CM3_SCB->mmfar);
 		break;
+#endif
 
+#if THINKOS_ENABLE_BUSFAULT
 	case CM3_EXCEPT_BUS_FAULT:
 		bfsr = SCB_CFSR_BFSR_GET(CM3_SCB->cfsr);
 		dmprintf(comm, " bfsr=%02x [", bfsr);
@@ -144,7 +161,9 @@ void dmon_print_exception(struct dmon_comm * comm,
 			dmprintf(comm, " Fault address --> %08x\r\n", 
 					 (uint32_t)CM3_SCB->bfar);
 		break;
+#endif
 
+#if THINKOS_ENABLE_USAGEFAULT 
 	case CM3_EXCEPT_USAGE_FAULT: 
 		ufsr = SCB_CFSR_UFSR_GET(CM3_SCB->cfsr);
 		dmprintf(comm, " ufsr=%04x [", ufsr);
@@ -162,6 +181,7 @@ void dmon_print_exception(struct dmon_comm * comm,
 			dmprintf(comm, " UNDEFINSTR");
 		dmprintf(comm, " ]\r\n");
 		break;
+#endif
 	}
 
 }
