@@ -58,12 +58,6 @@ extern const unsigned int sizeof_ice40lp384_bin;
 
 bool board_init(void)
 {
-	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
-	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
-	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
-
 	io_init();
 
     lattice_ice40_configure(ice40lp384_bin, sizeof_ice40lp384_bin);

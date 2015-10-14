@@ -56,18 +56,25 @@ void __thinkos_thread_abort(int thread_id)
 	__bit_mem_wr(&thinkos_rt.th_alloc, thread_id, 0);
 #endif
 
+	if (thread_id == thinkos_rt.active) {
+		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
+#if THINKOS_ENABLE_THREAD_VOID 
+		/* pretend we are somebody else */
+		thinkos_rt.active = THINKOS_THREAD_VOID;
+#else
+		DCC_LOG(LOG_WARNING, "abort current thread won't clear context!"); 
+#endif
+	} else {
+		DCC_LOG1(LOG_TRACE, "active thread=%d", thinkos_rt.active); 
+	}
+
 	/* clear context. */
 	thinkos_rt.ctx[thread_id] = NULL;
 
 	__thinkos_suspend(thread_id);
 
-	if (thread_id == thinkos_rt.active) {
-		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
-		/* pretend we are somebody else */
-		thinkos_rt.active = THINKOS_THREAD_VOID;
-	} else {
-		DCC_LOG1(LOG_TRACE, "active thread=%d", thinkos_rt.active); 
-	}
+
+	DCC_LOG1(LOG_TRACE, "ready=%08x", thinkos_rt.wq_ready);
 
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();

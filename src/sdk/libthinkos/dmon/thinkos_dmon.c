@@ -749,6 +749,7 @@ step_done:
 	/* Process monitor events */
 	if ((sigset & sigmsk) != 0) {
 		DCC_LOG1(LOG_MSG, "<%08x>", sigset);
+		DCC_LOG1(LOG_INFO, "monitor ctx=%08x", thinkos_dmon_rt.ctx);
 		dmon_context_swap(&thinkos_dmon_rt.ctx); 
 	} else {
 		DCC_LOG1(LOG_JABBER, "Unhandled signal <%08x>", sigset);

@@ -475,6 +475,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	uint32_t tick_cnt = 0;
 	uint32_t sigmask = 0;
 	uint32_t sigset;
+	uint32_t ready;
 #if THINKOS_ENABLE_CONSOLE
 	bool connected;
 	uint8_t * ptr;
@@ -483,7 +484,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 	char buf[64];
 	int len;
 
-//	DCC_LOG(LOG_TRACE, "Monitor start...");
+	DCC_LOG1(LOG_TRACE, "Monitor start (sp=%08x)...", cm3_sp_get());
+	ready = thinkos_rt.wq_ready;
+	DCC_LOG1(LOG_TRACE, "ready=%08x", thinkos_rt.wq_ready);
+
+
 //	dmon_comm_connect(comm);
 //	DCC_LOG(LOG_TRACE, "Comm connected.");
 
@@ -510,10 +515,11 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #if (MONITOR_THREADINFO_ENABLE)
 	if (monitor_thread_id == MONITOR_STARTUP_MAGIC) {
 #endif
-		/* first time we run the monitor, start a timer to call the 
-		   board_tick() periodically */
-//		sigmask |= (1 << DMON_ALARM);
-//		dmon_alarm(125);
+	/* first time we run the monitor, start a timer to call the 
+	   board_tick() periodically */
+	sigmask |= (1 << DMON_ALARM);
+	dmon_alarm(125);
+
 #if (MONITOR_THREADINFO_ENABLE)
 		monitor_thread_id = -1;
 	}
@@ -525,7 +531,7 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 
 	for(;;) {
 		sigset = dmon_select(sigmask);
-		DCC_LOG1(LOG_INFO, "sigset=%08x", sigset);
+		DCC_LOG1(LOG_MSG, "sigset=%08x", sigset);
 
 #if THINKOS_ENABLE_CONSOLE
 		if (sigset & (1 << DMON_COMM_CTL)) {
@@ -588,9 +594,14 @@ void __attribute__((noreturn)) monitor_task(struct dmon_comm * comm)
 #endif
 
 		if (sigset & (1 << DMON_ALARM)) {
+			uint32_t tmp = thinkos_rt.wq_ready;
+			if (tmp != ready) {
+				ready = tmp;
+				DCC_LOG1(LOG_TRACE, "ready=%08x", ready);
+			}
 			dmon_clear(DMON_ALARM);
-			if (this_board.autoboot(tick_cnt++) && 
-				monitor_app_exec(this_board.application.start_addr, 0)) {
+			if (this_board.autoboot(tick_cnt++)) {
+				monitor_app_exec(this_board.application.start_addr, 0);
 				sigmask &= ~(1 << DMON_ALARM);
 			} else {
 				/* reastart the alarm timer */

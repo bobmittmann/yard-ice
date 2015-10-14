@@ -28,36 +28,25 @@
 /**************************************************************************
  * Sebug serial
  **************************************************************************/
-#define UART5_TX       STM32_GPIOC, 12
-#define UART5_RX       STM32_GPIOD, 2
+#define IO_UART5_TX       STM32_GPIOC, 12
+#define IO_UART5_RX       STM32_GPIOD, 2
 
 /**************************************************************************
- * Lattice FPGA (iCE40LP384) connections
+ * Relay and Power
  **************************************************************************/
 
-#define ICE40_SPI_SCK  STM32_GPIOC, 10
-#define ICE40_SPI_SDO  STM32_GPIOC, 11
-#define ICE40_SPI_SDI  STM32_GPIOB, 5
-#define ICE40_SPI_SS   STM32_GPIOE, 1
-
-#define ICE40_CRESET   STM32_GPIOE, 0
-#define ICE40_CDONE    STM32_GPIOB, 9
-
-#define RS485_TX       STM32_GPIOB, 6
-#define RS485_RX       STM32_GPIOB, 7
-//#define RS485_CK       STM32_GPIOA, 8
-#define RS485_TRG      STM32_GPIOA, 8
-#define RS485_MODE     STM32_GPIOD, 6
-#define RS485_USART    STM32_USART1
+#define IO_RELAY_GPIO     STM32_GPIOB, 9
+#define IO_PWR_EN_GPIO    STM32_GPIOD, 12 
+#define IO_PWR_MON_GPIO   STM32_GPIOD, 11
 
 /**************************************************************************
  * Altera Cyclone FPGA connections
  **************************************************************************/
 
-#define FPGA_EXTI      STM32_GPIOB, 15
+#define IO_FPGA_EXTI      STM32_GPIOB, 15
+#define IO_UART6_TX       STM32_GPIOC, 6
+#define IO_UART6_RX       STM32_GPIOD, 7
 
-#define UART6_TX       STM32_GPIOC, 6
-#define UART6_RX       STM32_GPIOD, 7
 
 #define FLASH_BLK_FS_OFFS     0x00020000
 #define FLASH_BLK_FS_SIZE     (256 * 1024)

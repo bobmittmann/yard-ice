@@ -50,219 +50,219 @@
  * --------------------------------------------------------------------------*/
 
 #ifndef THINKOS_EXCEPT_STACK_SIZE
-#define THINKOS_EXCEPT_STACK_SIZE 320
+#define THINKOS_EXCEPT_STACK_SIZE       320
 #endif
 
 #ifndef THINKOS_IRQ_MAX 
-#define THINKOS_IRQ_MAX 80
+#define THINKOS_IRQ_MAX                 80
 #endif
 
 #ifndef THINKOS_THREADS_MAX 
-#define THINKOS_THREADS_MAX 8
+#define THINKOS_THREADS_MAX             8
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_ALLOC
-#define THINKOS_ENABLE_THREAD_ALLOC 1
+#define THINKOS_ENABLE_THREAD_ALLOC     1
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_INFO
-#define THINKOS_ENABLE_THREAD_INFO 1
+#define THINKOS_ENABLE_THREAD_INFO      1
 #endif
 
 #ifndef THINKOS_ENABLE_THREAD_STAT
-#define THINKOS_ENABLE_THREAD_STAT 1
+#define THINKOS_ENABLE_THREAD_STAT      1
 #endif
 
 #ifndef THINKOS_ENABLE_IDLE_WFI
-#define THINKOS_ENABLE_IDLE_WFI 1
+#define THINKOS_ENABLE_IDLE_WFI         1
 #endif
 
 #ifndef THINKOS_ENABLE_JOIN
-#define THINKOS_ENABLE_JOIN 1
+#define THINKOS_ENABLE_JOIN             1
 #endif
 
 #ifndef THINKOS_ENABLE_PAUSE
-#define THINKOS_ENABLE_PAUSE 1
+#define THINKOS_ENABLE_PAUSE            1
 #endif
 
 #ifndef THINKOS_ENABLE_CANCEL
-#define THINKOS_ENABLE_CANCEL 1
+#define THINKOS_ENABLE_CANCEL           1
 #endif
 
 #ifndef THINKOS_ENABLE_EXIT
-#define THINKOS_ENABLE_EXIT 1
+#define THINKOS_ENABLE_EXIT             1
 #endif
 
 #ifndef THINKOS_ENABLE_TIMESHARE
-#define THINKOS_ENABLE_TIMESHARE 1
+#define THINKOS_ENABLE_TIMESHARE        1
 #endif
 
 #ifndef THINKOS_SCHED_LIMIT_MAX
-#define THINKOS_SCHED_LIMIT_MAX 32
+#define THINKOS_SCHED_LIMIT_MAX         32
 #endif
 
 #ifndef THINKOS_SCHED_LIMIT_MIN
-#define THINKOS_SCHED_LIMIT_MIN 1
+#define THINKOS_SCHED_LIMIT_MIN         1
 #endif
 
 #ifndef THINKOS_MUTEX_MAX
-#define THINKOS_MUTEX_MAX 8
+#define THINKOS_MUTEX_MAX               8
 #endif
 
 #ifndef THINKOS_ENABLE_MUTEX_ALLOC
-#define THINKOS_ENABLE_MUTEX_ALLOC 1
+#define THINKOS_ENABLE_MUTEX_ALLOC      1
 #endif
 
 #ifndef THINKOS_COND_MAX
-#define THINKOS_COND_MAX 8
+#define THINKOS_COND_MAX                8
 #endif
 
 #ifndef THINKOS_ENABLE_COND_ALLOC
-#define THINKOS_ENABLE_COND_ALLOC 1
+#define THINKOS_ENABLE_COND_ALLOC       1
 #endif
 
 #ifndef THINKOS_SEMAPHORE_MAX
-#define THINKOS_SEMAPHORE_MAX 8
+#define THINKOS_SEMAPHORE_MAX           8
 #endif
 
 #ifndef THINKOS_ENABLE_SEM_ALLOC
-#define THINKOS_ENABLE_SEM_ALLOC 1
+#define THINKOS_ENABLE_SEM_ALLOC        1
 #endif
 
 #ifndef THINKOS_EVENT_MAX
-#define THINKOS_EVENT_MAX 4
+#define THINKOS_EVENT_MAX               4
 #endif
 
 #ifndef THINKOS_ENABLE_EVENT_ALLOC
-#define THINKOS_ENABLE_EVENT_ALLOC 1
+#define THINKOS_ENABLE_EVENT_ALLOC      1
 #endif
 
 #ifndef THINKOS_FLAG_MAX
-#define THINKOS_FLAG_MAX 8
+#define THINKOS_FLAG_MAX                8
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_ALLOC
-#define THINKOS_ENABLE_FLAG_ALLOC 1
+#define THINKOS_ENABLE_FLAG_ALLOC       1
 #endif
 
 #ifndef THINKOS_ENABLE_FLAG_WATCH
-#define THINKOS_ENABLE_FLAG_WATCH 1
+#define THINKOS_ENABLE_FLAG_WATCH       1
 #endif
 
 #ifndef THINKOS_GATE_MAX
-#define THINKOS_GATE_MAX 8
+#define THINKOS_GATE_MAX                8
 #endif
 
 #ifndef THINKOS_ENABLE_GATE_ALLOC
-#define THINKOS_ENABLE_GATE_ALLOC 1
+#define THINKOS_ENABLE_GATE_ALLOC       1
 #endif
 
 #ifndef THINKOS_ENABLE_TIMED_CALLS
-#define THINKOS_ENABLE_TIMED_CALLS 1
+#define THINKOS_ENABLE_TIMED_CALLS      1
 #endif
 
 #ifndef THINKOS_ENABLE_CLOCK
-#define THINKOS_ENABLE_CLOCK 1
+#define THINKOS_ENABLE_CLOCK            1
 #endif
 
 #ifndef THINKOS_ENABLE_ALARM
-#define THINKOS_ENABLE_ALARM 1
+#define THINKOS_ENABLE_ALARM            1
 #endif
 
 #ifndef THINKOS_ENABLE_SLEEP
-#define THINKOS_ENABLE_SLEEP 1
+#define THINKOS_ENABLE_SLEEP            1
 #endif
 
 #ifndef THINKOS_ENABLE_BREAK
-#define THINKOS_ENABLE_BREAK 1
+#define THINKOS_ENABLE_BREAK            1
 #endif
 
 #ifndef THINKOS_ENABLE_ARG_CHECK
-#define THINKOS_ENABLE_ARG_CHECK 1
+#define THINKOS_ENABLE_ARG_CHECK        1
 #endif
 
 #ifndef THINKOS_ENABLE_DEADLOCK_CHECK
-#define THINKOS_ENABLE_DEADLOCK_CHECK 1
+#define THINKOS_ENABLE_DEADLOCK_CHECK   1
 #endif
 
 #ifndef THINKOS_ENABLE_SANITY_CHECK
-#define THINKOS_ENABLE_SANITY_CHECK 1
+#define THINKOS_ENABLE_SANITY_CHECK     1
 #endif
 
 #ifndef THINKOS_ENABLE_EXCEPTIONS
-#define THINKOS_ENABLE_EXCEPTIONS  1
+#define THINKOS_ENABLE_EXCEPTIONS       1
 #endif
 
 #ifndef THINKOS_SYSRST_ONFAULT
-#define THINKOS_SYSRST_ONFAULT    0
+#define THINKOS_SYSRST_ONFAULT          0
 #endif
 
 #ifndef THINKOS_STDERR_FAULT_DUMP
-#define THINKOS_STDERR_FAULT_DUMP 0
+#define THINKOS_STDERR_FAULT_DUMP       0
 #endif
 
 #ifndef THINKOS_ENABLE_BUSFAULT
-#define THINKOS_ENABLE_BUSFAULT   0
+#define THINKOS_ENABLE_BUSFAULT         0
 #endif
 
 #ifndef THINKOS_ENABLE_USAGEFAULT 
-#define THINKOS_ENABLE_USAGEFAULT 0
+#define THINKOS_ENABLE_USAGEFAULT       0
 #endif
 
 #ifndef THINKOS_UNROLL_EXCEPTIONS 
-#define THINKOS_UNROLL_EXCEPTIONS  0
+#define THINKOS_UNROLL_EXCEPTIONS       0
 #endif
 
 #ifndef THINKOS_ENABLE_SCHED_DEBUG
-#define THINKOS_ENABLE_SCHED_DEBUG 0
+#define THINKOS_ENABLE_SCHED_DEBUG      0
 #endif
 
 #ifndef THINKOS_ENABLE_RT_DEBUG
-#define THINKOS_ENABLE_RT_DEBUG    0
+#define THINKOS_ENABLE_RT_DEBUG         0
 #endif
 
 #ifndef THINKOS_ENABLE_PROFILING
-#define THINKOS_ENABLE_PROFILING   0
+#define THINKOS_ENABLE_PROFILING        0
 #endif
 
 #ifndef THINKOS_ENABLE_MONITOR
-#define THINKOS_ENABLE_MONITOR     0
+#define THINKOS_ENABLE_MONITOR          0
 #endif
 
 #ifndef THINKOS_ENABLE_DMCLOCK
-#define THINKOS_ENABLE_DMCLOCK     THINKOS_ENABLE_MONITOR
+#define THINKOS_ENABLE_DMCLOCK          0
 #endif
 
 #ifndef THINKOS_ENABLE_DEBUG_STEP 
-#define THINKOS_ENABLE_DEBUG_STEP  0
+#define THINKOS_ENABLE_DEBUG_STEP       0
 #endif
 
 #ifndef THINKOS_ENABLE_DEBUG_FAULT
-#define THINKOS_ENABLE_DEBUG_FAULT 0
+#define THINKOS_ENABLE_DEBUG_FAULT      0
 #endif
 
 #ifndef THINKOS_ENABLE_EXCEPT_RESET
-#define THINKOS_ENABLE_EXCEPT_RESET 1
+#define THINKOS_ENABLE_EXCEPT_RESET     1
 #endif
 
 #ifndef THINKOS_ENABLE_MPU 
-#define THINKOS_ENABLE_MPU 0
+#define THINKOS_ENABLE_MPU              0
 #endif
 
 #ifndef THINKOS_ENABLE_FPU 
-#define THINKOS_ENABLE_FPU 0
+#define THINKOS_ENABLE_FPU              0
 #endif
 
 #ifndef THINKOS_ENABLE_CTL
-#define THINKOS_ENABLE_CTL 0
+#define THINKOS_ENABLE_CTL              0
 #endif
 
 #ifndef THINKOS_ENABLE_COMM
-#define THINKOS_ENABLE_COMM 0
+#define THINKOS_ENABLE_COMM             0
 #endif
 
 #ifndef THINKOS_ENABLE_STACK_INIT
-#define THINKOS_ENABLE_STACK_INIT 1
+#define THINKOS_ENABLE_STACK_INIT       1
 #endif
 
 
@@ -323,6 +323,11 @@
 	THINKOS_ENABLE_CANCEL || THINKOS_ENABLE_DEBUG_STEP 
  #undef THINKOS_ENABLE_THREAD_STAT
  #define THINKOS_ENABLE_THREAD_STAT 1
+#endif
+
+#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+ #undef THINKOS_ENABLE_THREAD_VOID
+ #define THINKOS_ENABLE_THREAD_VOID 1
 #endif
 
 /* -------------------------------------------------------------------------- 
@@ -389,7 +394,7 @@ struct thinkos_rt {
 	struct thinkos_context * ctx[THINKOS_THREADS_MAX]; 
 	/* Idle thread context pointer */
 	struct thinkos_context * idle_ctx; 
-#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+#if THINKOS_ENABLE_THREAD_VOID 
 	/* void thread context pointer */
 	struct thinkos_context * void_ctx; 
 #endif
@@ -409,7 +414,7 @@ struct thinkos_rt {
 	/* Reference cycle state ... */
 	uint32_t cycref;
 	/* Per thread cycle count */
-#if THINKOS_ENABLE_EXIT || THINKOS_ENABLE_JOIN
+#if THINKOS_ENABLE_THREAD_VOID 
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 2]; /* extra slot for void thread */
 #else
 	uint32_t cyccnt[(THINKOS_THREADS_MAX) + 1];
@@ -667,7 +672,9 @@ struct thinkos_rt {
 
 #define THINKOS_THREAD_NULL (32)
 #define THINKOS_THREAD_IDLE (THINKOS_THREADS_MAX)
+#if THINKOS_ENABLE_THREAD_VOID 
 #define THINKOS_THREAD_VOID (THINKOS_THREADS_MAX + 1)
+#endif
 
 #if 0
 #define THINKOS_CYCCNT_SYS  (THINKOS_THREADS_MAX)

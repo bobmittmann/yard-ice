@@ -30,34 +30,31 @@
 
 #include "board.h"
 
-#define RELAY_GPIO STM32_GPIOB, 9
-#define PWR_EN_GPIO STM32_GPIOD, 12 
-#define PWR_MON_GPIO STM32_GPIOD, 11
-
-#if 0
 static void io_init(void)
 {
+	DCC_LOG1(LOG_TRACE, "clk[AHB]=%d", stm32f_ahb_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB1]=%d", stm32f_apb1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM1]=%d", stm32f_tim1_hz);
+	DCC_LOG1(LOG_TRACE, "clk[APB2]=%d", stm32f_apb2_hz);
+	DCC_LOG1(LOG_TRACE, "clk[TIM2]=%d", stm32f_tim2_hz);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
-//	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
-//	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
 
 	/* - Relay ------------------------------------------------------------*/
-//	stm32_gpio_mode(RELAY_GPIO, OUTPUT, SPEED_LOW);
-//	stm32_gpio_clr(RELAY_GPIO);
+	stm32_gpio_mode(IO_RELAY_GPIO, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_RELAY_GPIO);
 
 	/* - External Power ---------------------------------------------------*/
-//	stm32_gpio_mode(PWR_EN_GPIO, OUTPUT, SPEED_LOW);
-//	stm32_gpio_clr(PWR_EN_GPIO);
-//	stm32_gpio_mode(PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
-
+	stm32_gpio_mode(IO_PWR_EN_GPIO, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_PWR_EN_GPIO);
+	stm32_gpio_mode(IO_PWR_MON_GPIO, INPUT, SPEED_LOW | PULL_UP);
 }
-#endif
 
 bool board_init(void)
 {
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
-	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	io_init();
 
 	return true;
 }
@@ -82,13 +79,29 @@ void board_softreset(void)
 	rcc->apb1enr = 0;
 	rcc->apb2enr = 0;
 
+	io_init();
+
 	/* Enable USB OTG FS interrupts */
 	cm3_irq_enable(STM32F_IRQ_OTG_FS);
 }
 
 bool board_autoboot(uint32_t tick)
 {
-	return (tick > 24) ? true : false;
+	return true;
+
+	if (tick < 4) {
+		if (tick & 1)
+			stm32_gpio_clr(IO_RELAY_GPIO);
+		else
+			stm32_gpio_set(IO_RELAY_GPIO);
+	}
+
+	if (tick > (3 * 8)) 
+		return true;
+
+	DCC_LOG1(LOG_TRACE, "tick=%d", tick);
+
+	return false;
 }
 
 void board_on_appload(void)

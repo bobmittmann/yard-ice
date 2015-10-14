@@ -47,17 +47,15 @@
 #define STM32_OTG_FS_EP_MAX 4
 #endif
 
-#ifndef STM32_OTG_FS_ENABLE_VBUS
-#define STM32_OTG_FS_ENABLE_VBUS 1
+#ifndef STM32_OTG_FS_VBUS_ENABLE
+#define STM32_OTG_FS_VBUS_ENABLE 1
 #endif
 
-#define EP_MAX      STM32_OTG_FS_EP_MAX 
-#define ENABLE_VBUS STM32_OTG_FS_ENABLE_VBUS
-#define RX_FIFO_SIZE 512
+#if defined(STM32F_OTG_FS) &&  (STM32_ENABLE_OTG_FS)
 
-#ifdef STM32F_OTG_FS
-
-#if STM32_ENABLE_OTG_FS
+#define OTG_EP_MAX          STM32_OTG_FS_EP_MAX 
+#define OTG_VBUS_ENABLE     STM32_OTG_FS_VBUS_ENABLE
+#define OTG_RX_FIFO_SIZE    512
 
 /* Endpoint state */
 enum ep_state {
@@ -96,7 +94,7 @@ struct stm32f_otg_ep {
 /* USB Device runtime driver data */
 struct stm32f_otg_drv {
 	struct stm32f_otg_fs * otg_fs;
-	struct stm32f_otg_ep ep[EP_MAX];
+	struct stm32f_otg_ep ep[OTG_EP_MAX];
 	usb_class_t * cl;
 	const struct usb_class_events * ev;
 	struct usb_request req;
@@ -122,7 +120,7 @@ static void __ep_pktbuf_alloc(struct stm32f_otg_drv * drv,
 		otg_fs->dieptxf2 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
 		break;
-#if (EP_MAX > 3)
+#if (OTG_EP_MAX > 3)
 	case 3:
 		otg_fs->dieptxf3 = OTG_FS_INEPTXFD_SET(siz / 4) | 
 			OTG_FS_INEPTXSA_SET(drv->fifo_addr / 4);
@@ -208,7 +206,7 @@ int stm32f_otg_dev_ep_pkt_xmit(struct stm32f_otg_drv * drv, int ep_id,
 	uint32_t xfrsiz;
 	uint32_t pktcnt;
 
-	if ((unsigned int)ep_id >= EP_MAX) {
+	if ((unsigned int)ep_id >= OTG_EP_MAX) {
 		DCC_LOG(LOG_WARNING, "invalid EP");
 		return -1;
 	}
@@ -343,7 +341,7 @@ int stm32f_otg_dev_ep_pkt_recv(struct stm32f_otg_drv * drv, int ep_id,
 	int cnt;
 	int rem;
 
-	if ((unsigned int)ep_id >= EP_MAX) {
+	if ((unsigned int)ep_id >= OTG_EP_MAX) {
 		DCC_LOG(LOG_WARNING, "invalid EP");
 		return -1;
 	}
@@ -631,7 +629,7 @@ static void otg_io_init(void)
 #endif
 	stm32_gpio_mode(OTG_FS_DP, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
 	stm32_gpio_mode(OTG_FS_DM, ALT_FUNC, PUSH_PULL | SPEED_HIGH);
-#ifdef OTG_ENABLE_VBUS
+#ifdef OTG_VBUS_ENABLE
 	stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 #else
 	stm32_gpio_mode(OTG_FS_VBUS, INPUT, 0);
@@ -643,7 +641,7 @@ static void otg_io_init(void)
 
 static void otg_vbus_connect(bool connect)
 {
-#ifdef OTG_ENABLE_VBUS
+#ifdef OTG_VBUS_ENABLE
 	if (connect)
 		stm32_gpio_mode(OTG_FS_VBUS, ALT_FUNC, SPEED_LOW);
 	else
@@ -959,7 +957,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	otg_fs->daint = 0xffffffff;
 	otg_fs->daintmsk = 0;
 	otg_fs->diepempmsk = 0;
-	for (i = 0; i < EP_MAX; i++) {
+	for (i = 0; i < OTG_EP_MAX; i++) {
 		otg_fs->inep[i].diepint = 0xff;
 		otg_fs->outep[i].doepint = 0xff;
 		otg_fs->inep[i].dieptsiz = 0;
@@ -987,7 +985,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 
 	/* 1. Set the NAK bit for all OUT endpoints
 	   – SNAK = 1 in OTG_FS_DOEPCTLx (for all OUT endpoints) */
-	for (i = 0; i < EP_MAX; i++) {
+	for (i = 0; i < OTG_EP_MAX; i++) {
 		otg_fs->outep[i].doepctl = OTG_FS_SNAK;
 	}
 
@@ -1014,7 +1012,7 @@ static void stm32f_otg_dev_reset(struct stm32f_otg_drv * drv)
 	/* reset fifo memory (packet buffer) allocation pointer */
 	drv->fifo_addr = 0;
 	/* initialize RX fifo size */
-	siz = RX_FIFO_SIZE;
+	siz = OTG_RX_FIFO_SIZE;
 	otg_fs->grxfsiz = siz / 4;
 	/* update fifo memory allocation pointer */
 	drv->fifo_addr += siz;
@@ -1099,7 +1097,7 @@ void stm32f_otg_fs_isr(void)
 			}
 		}
 
-#if (EP_MAX > 3)
+#if (OTG_EP_MAX > 3)
 		if (ep_intr & OTG_FS_IEPINT3) {
 			/* add the Transmit FIFO empty bit to the mask */
 			msk = diepmsk | ((diepempmsk >> 3) & 0x1) << 7;
@@ -1197,7 +1195,7 @@ void stm32f_otg_fs_isr(void)
 			otg_fs->outep[2].doepint = doepint;
 		}
 
-#if (EP_MAX > 3)
+#if (OTG_EP_MAX > 3)
 		if (ep_intr & OTG_FS_OEPINT3) {
 			uint32_t doepint;
 
@@ -1424,8 +1422,6 @@ const struct usb_dev stm32f_otg_fs_dev = {
 	.op = &stm32f_otg_fs_ops
 };
 
-#endif /* STM32_ENABLE_OTG_FS */
-
-#endif /* STM32F_OTG_FS */
+#endif /* STM32_ENABLE_OTG_FS && STM32F_OTG_FS */
 
 

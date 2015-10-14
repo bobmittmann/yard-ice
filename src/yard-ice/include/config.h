@@ -30,9 +30,9 @@
    ThinkOS configuration
    -------------------------------------------------------------------------- */
 
-#define THINKOS_IRQ_MAX 80
+#define THINKOS_IRQ_MAX               80
 
-#define THINKOS_ENABLE_IDLE_WFI       1
+#define THINKOS_ENABLE_IDLE_WFI       0
 
 #define THINKOS_ENABLE_CLOCK          1
 
@@ -76,8 +76,6 @@
 
 #define THINKOS_EXCEPT_STACK_SIZE     320
 
-#define THINKOS_STDERR_FAULT_DUMP     0
-
 #define THINKOS_ENABLE_CTL            1
 
 #define THINKOS_ENABLE_SCHED_DEBUG    0
@@ -89,27 +87,25 @@
 #define THINKOS_ENABLE_PROFILING      1
 
 #define THINKOS_ENABLE_MONITOR        1
+#define THINKOS_ENABLE_DMCLOCK        1
 
 #define THINKOS_ENABLE_CONSOLE        1
 
-#define THINKOS_ENABLE_DEBUG_STEP     0
-
-#define THINKOS_ENABLE_DEBUG_FAULT    0
-
 #define THINKOS_ENABLE_EXCEPTIONS     1
 #define THINKOS_UNROLL_EXCEPTIONS     1
-#define THINKOS_SYSRST_ONFAULT        0
-#define THINKOS_STDERR_FAULT_DUMP     0
 #define THINKOS_ENABLE_EXCEPT_RESET   0
 #define THINKOS_ENABLE_BUSFAULT       1
 #define THINKOS_ENABLE_USAGEFAULT     1
+#define THINKOS_SYSRST_ONFAULT        0
+#define THINKOS_STDERR_FAULT_DUMP     0
 
 #define THINKOS_ENABLE_MPU            0
 #define THINKOS_ENABLE_FPU            0
 
 #define THINKOS_ENABLE_DEBUG_STEP     0
+#define THINKOS_ENABLE_DEBUG_FAULT    1
 
-#define THINKOS_DMON_STACK_SIZE       256
+#define THINKOS_DMON_STACK_SIZE       512
 
 #define THINKOS_ENABLE_STACK_INIT     1
 
@@ -118,6 +114,7 @@
    -------------------------------------------------------------------------- */
 
 #define STM32_ENABLE_OTG_FS          1
+#define STM32_OTG_FS_EP_MAX          4
 
 #define CDC_EP_OUT_MAX_PKT_SIZE 64
 #define CDC_EP_IN_MAX_PKT_SIZE  64

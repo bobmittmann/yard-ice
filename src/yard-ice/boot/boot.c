@@ -43,29 +43,15 @@
 
 void monitor_task(struct dmon_comm * comm);
 
-static void monitor_init(void)
+int main(int argc, char ** argv)
 {
 	struct dmon_comm * comm;
 
-	DCC_LOG(LOG_TRACE, "1. usb_comm_init()");
-	comm = usb_comm_init(&stm32f_otg_fs_dev);
-
-	DCC_LOG(LOG_TRACE, "2. thinkos_console_init()");
-	thinkos_console_init();
-
-	DCC_LOG(LOG_TRACE, "4. thinkos_dmon_init()");
-	thinkos_dmon_init(comm, monitor_task);
-}
-
-int main(int argc, char ** argv)
-{
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
 	DCC_LOG(LOG_TRACE, "1. cm3_udelay_calibrate().");
 	cm3_udelay_calibrate();
-
-	for(;;);
 
 	DCC_LOG(LOG_TRACE, "2. board_init().");
 	this_board.init();
@@ -73,10 +59,18 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "3. thinkos_init().");
 	thinkos_init(THINKOS_OPT_PRIORITY(0) | THINKOS_OPT_ID(0));
 
-	DCC_LOG(LOG_TRACE, "4. monitor_init()");
-	monitor_init();
+	DCC_LOG(LOG_TRACE, "4. thinkos_console_init()");
+	thinkos_console_init();
 
-	DCC_LOG(LOG_TRACE, "5. __thinkos_thread_abort()");
+	DCC_LOG(LOG_TRACE, "5. usb_comm_init()");
+	comm = usb_comm_init(&stm32f_otg_fs_dev);
+
+	DCC_LOG(LOG_TRACE, "6. thinkos_dmon_init()");
+	thinkos_dmon_init(comm, monitor_task);
+
+	thinkos_sleep(2000);
+
+	DCC_LOG(LOG_TRACE, "7. __thinkos_thread_abort()");
 	__thinkos_thread_abort(0);
 
 	return 0;

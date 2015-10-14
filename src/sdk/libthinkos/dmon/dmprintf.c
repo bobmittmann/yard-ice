@@ -26,32 +26,32 @@
 #include <thinkos.h>
 #include <sys/param.h>
 
-#ifndef PRINTF_ENABLE_LEFT_ALIGN
-#define PRINTF_ENABLE_LEFT_ALIGN 0
+#ifndef DMPRINTF_ENABLE_LEFT_ALIGN
+#define DMPRINTF_ENABLE_LEFT_ALIGN    0
 #endif
 
-#ifndef PRINTF_ENABLE_LARGE_PADDING
-#define PRINTF_ENABLE_LARGE_PADDING 0
+#ifndef DMPRINTF_ENABLE_LARGE_PADDING
+#define DMPRINTF_ENABLE_LARGE_PADDING 0
 #endif
 
-#ifndef PRINTF_ENABLE_FAST
-#define PRINTF_ENABLE_FAST 1
+#ifndef DMPRINTF_ENABLE_FAST
+#define DMPRINTF_ENABLE_FAST          1
 #endif
 
-#ifndef PRINTF_ENABLE_UNSIGNED
-#define PRINTF_ENABLE_UNSIGNED 1
+#ifndef DMPRINTF_ENABLE_UNSIGNED
+#define DMPRINTF_ENABLE_UNSIGNED      1
 #endif
 
-#ifndef PRINTF_ENABLE_POINTER
-#define PRINTF_ENABLE_POINTER 0
+#ifndef DMPRINTF_ENABLE_POINTER
+#define DMPRINTF_ENABLE_POINTER       0
 #endif
 
-#ifndef PRINTF_ENABLE_LONG
-#define PRINTF_ENABLE_LONG 0
+#ifndef DMPRINTF_ENABLE_LONG
+#define DMPRINTF_ENABLE_LONG          0
 #endif
 
-#ifndef PRINTF_ENABLE_ARG_WIDTH
-#define PRINTF_ENABLE_ARG_WIDTH 0
+#ifndef DMPRINTF_ENABLE_ARG_WIDTH
+#define DMPRINTF_ENABLE_ARG_WIDTH    0
 #endif
 
 
@@ -61,7 +61,7 @@ int uint2hex(char * s, unsigned int val);
 int ull2dec(char * s, unsigned long long val);
 int ull2hex(char * s, unsigned long long val);
 
-#if PRINTF_ENABLE_LONG
+#if DMPRINTF_ENABLE_LONG
 #define BUF_LEN 22
 #else
 #define BUF_LEN 12
@@ -76,13 +76,13 @@ int ull2hex(char * s, unsigned long long val);
 #define LONG2 0x40
 
 
-#if (PRINTF_ENABLE_LONG)
-#undef PRINTF_ENABLE_LARGE_PADDING
-#define PRINTF_ENABLE_LARGE_PADDING 1
+#if (DMPRINTF_ENABLE_LONG)
+#undef DMPRINTF_ENABLE_LARGE_PADDING
+#define DMPRINTF_ENABLE_LARGE_PADDING 1
 #endif
 
 static const char __zeros[]  = {  
-#if (PRINTF_ENABLE_LARGE_PADDING)
+#if (DMPRINTF_ENABLE_LARGE_PADDING)
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', '0', '0', '0', '0', 
 	'0', '0', '0', '0', 
@@ -91,7 +91,7 @@ static const char __zeros[]  = {
 	'0', '0', '0', '0', };
 	
 static const char __blanks[] = {
-#if (PRINTF_ENABLE_LARGE_PADDING)
+#if (DMPRINTF_ENABLE_LARGE_PADDING)
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
 	' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 
@@ -118,7 +118,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 		void * ptr;
 		unsigned int n;
 		int i;
-#if (PRINTF_ENABLE_LONG)
+#if (DMPRINTF_ENABLE_LONG)
 		unsigned long long ull;
 		long long ll;
 #endif
@@ -129,7 +129,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 	n = 0;
 	w = 0;
 	cnt = 0;
-#if (PRINTF_ENABLE_FAST)
+#if (DMPRINTF_ENABLE_FAST)
 	cp = (char *)fmt;
 #endif
 	for (flags = 0; (c = *fmt++); ) {
@@ -137,7 +137,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 			if (c == '%') {
 				w = 0;
 				flags = PERCENT;
-#if (PRINTF_ENABLE_FAST)
+#if (DMPRINTF_ENABLE_FAST)
 				if (n) {
 					n = dmon_comm_send(comm, cp, n);
 					cp = (char *)fmt;
@@ -148,7 +148,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 				continue;
 			}
 
-#if (PRINTF_ENABLE_FAST)
+#if (DMPRINTF_ENABLE_FAST)
 			n++;
 #else
 			buf[0] = c;
@@ -170,7 +170,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 			continue;
 		}
 
-#if (PRINTF_ENABLE_LEFT_ALIGN)
+#if (DMPRINTF_ENABLE_LEFT_ALIGN)
 		if (c == '-') {
 			flags |= LEFT;
 			continue;
@@ -180,14 +180,14 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 			continue;
 #endif
 
-#if (PRINTF_ENABLE_ARG_WIDTH)
+#if (DMPRINTF_ENABLE_ARG_WIDTH)
 		if (c == '*') {
 			w = va_arg(ap, int);
 			continue;
 		}
 #endif
 
-#if (PRINTF_ENABLE_LONG)
+#if (DMPRINTF_ENABLE_LONG)
 		if (c == 'l') {
 			flags |= (flags & LONG) ? LONG2 : LONG;
 			continue;
@@ -201,7 +201,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 
 		if (c == 'd') {
 			cp = buf;
-#if PRINTF_ENABLE_LONG
+#if DMPRINTF_ENABLE_LONG
 			if (flags & LONG2) {
 				val.ll = va_arg(ap, long long);
 				if (val.ll < 0) {
@@ -230,7 +230,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 
 		if (c == 'x') {
 			cp = buf;
-#if PRINTF_ENABLE_LONG
+#if DMPRINTF_ENABLE_LONG
 			if (flags & LONG2) {
 				val.ull = va_arg(ap, unsigned long long);
 				n = ull2hex(cp, val.ull);
@@ -238,7 +238,7 @@ int dmprintf(struct dmon_comm * comm, const char *fmt, ... )
 #endif
 			{
 				val.n = va_arg(ap, unsigned int);
-#if (PRINTF_ENABLE_POINTER)
+#if (DMPRINTF_ENABLE_POINTER)
 hexadecimal:
 #endif
 				n = uint2hex(cp, val.n);
@@ -254,10 +254,10 @@ hexadecimal:
 			goto print_buf;
 		}
 
-#if (PRINTF_ENABLE_UNSIGNED)
+#if (DMPRINTF_ENABLE_UNSIGNED)
 		if (c == 'u') {
 			cp = buf;
-#if PRINTF_ENABLE_LONG
+#if DMPRINTF_ENABLE_LONG
 			if (flags & LONG2) {
 				val.ull = va_arg(ap, unsigned long long);
 				n = ull2dec(cp, val.ull);
@@ -271,7 +271,7 @@ hexadecimal:
 		}
 #endif
 
-#if (PRINTF_ENABLE_POINTER)
+#if (DMPRINTF_ENABLE_POINTER)
 		if (c == 'p') {
 			val.ptr = va_arg(ap, void *);
 			w = 8;
@@ -289,7 +289,7 @@ print_char:
 		n = 1;
 
 print_buf:
-#if (PRINTF_ENABLE_LEFT_ALIGN)
+#if (DMPRINTF_ENABLE_LEFT_ALIGN)
 		if (!(flags & LEFT) && (w > n)) {
 #else
 		if (w > n) {
@@ -312,7 +312,7 @@ print_buf:
 
 		cnt += dmon_comm_send(comm, cp, n);
 
-#if (PRINTF_ENABLE_LEFT_ALIGN)
+#if (DMPRINTF_ENABLE_LEFT_ALIGN)
 		if ((flags & LEFT) && (w > n)) {
 			r = dmon_comm_send(comm, __blanks, w - n);
 			cnt += r;
@@ -322,13 +322,13 @@ print_buf:
 		flags = 0;
 		w = 0;
 
-#if (PRINTF_ENABLE_FAST)
+#if (DMPRINTF_ENABLE_FAST)
 		cp = (char *)fmt;
 		n = 0;
 #endif
 	}
 
-#if (PRINTF_ENABLE_FAST)
+#if (DMPRINTF_ENABLE_FAST)
 	if (n) {
 		r = dmon_comm_send(comm, cp, n);
 		cnt+= r;;

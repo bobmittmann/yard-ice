@@ -33,6 +33,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <time.h>
 
 #if defined(WIN32)
   #include <winsock2.h>
@@ -1616,6 +1617,7 @@ int main(int argc, char *argv[])
 	int log_set = 0;
 	int sock;
 	int c;
+	time_t t;
 	FILE * f;
 
 	/* the prog name start just after the last lash */
@@ -1667,9 +1669,13 @@ int main(int argc, char *argv[])
 		usage(prog);
 	}
 	
+	printf("\n== ARM DCC log viewer ==\n");
+	fflush(stdout);
+	 
 	while (optind < argc) {
 		strcpy(appfname, argv[optind]);
 		printf(" - elf: %s\n", appfname);
+		fflush(stdout);
 		/* if elf_fd is set then force loading the elf file */
 		if (load_elf(appfname) < 0) {
 			return 1;
@@ -1698,8 +1704,6 @@ int main(int argc, char *argv[])
 
 	__term_sig_handler(cleanup);
 
-	printf("== ARM DCC log viewer ==\n\n");
-
 	if (log_set) {
 		if (strcmp(logfname, "-") == 0) {
 			f = stdin;
@@ -1713,6 +1717,7 @@ int main(int argc, char *argv[])
 		if (host_set) {
 
 			printf(" - host: %s:%d\n", host, port);
+			fflush(stdout);
 			if ((sock = net_connect(host, port)) < 0) {
 				fprintf(stderr, "%s: can't connect to '%s'\n", prog, host);
 				return 5;
@@ -1720,7 +1725,9 @@ int main(int argc, char *argv[])
 
 			dcc_sock = sock;
 
-			printf("\n");
+			t = time(NULL);
+			printf(" - log date: %s\n", asctime(localtime(&t)));
+			fflush(stdout);
 
 			if (net_dcc_log_expand(sock) < 0) {
 				cleanup();
@@ -1742,6 +1749,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n");
+	fflush(stdout);
 
 	if (dcc_log_expand(f) < 0) {
 		cleanup();

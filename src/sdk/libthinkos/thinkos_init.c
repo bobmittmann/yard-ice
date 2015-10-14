@@ -55,8 +55,12 @@ void __thinkos_kill_all(void)
 	/* put the IDLE thread in the ready queue */
 	__bit_mem_wr(&thinkos_rt.wq_ready, THINKOS_THREADS_MAX, 1);
 #endif
+#if THINKOS_ENABLE_THREAD_VOID 
 	/* discard current thread context */
 	thinkos_rt.active = THINKOS_THREAD_VOID;
+#else
+	DCC_LOG(LOG_WARNING, "can't set current thread to void!"); 
+#endif
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();
 }
@@ -301,36 +305,6 @@ int thinkos_init(uint32_t opt)
 	uint32_t msp;
 	int self;
 
-	/* disable interrupts */
-	cm3_cpsid_i();
-
-#if THINKOS_ENABLE_STACK_INIT
-	/* initialize exception stack */
-	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
-					   sizeof(thinkos_idle.except_stack));
-#endif
-
-	/* configure the thread stack */
-	cm3_psp_set(cm3_sp_get());
-
-	/* configure the main stack */
-	msp = (uint32_t)&thinkos_idle.ctx.r0;
-	cm3_msp_set(msp);
-
-	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
-
-#if THINKOS_ENABLE_EXCEPTIONS
-	thinkos_exception_init();
-#endif
-
-#if THINKOS_ENABLE_MPU
-	__thinkos_mpu_init();
-#endif
-
-	__thinkos_reset();
-
-	self = __thinkos_init_main(opt);
-
 #if (THINKOS_MUTEX_MAX > 0)
 	DCC_LOG3(LOG_TRACE, "    mutex: %2d (%2d .. %2d)", THINKOS_MUTEX_MAX,
 			 THINKOS_MUTEX_BASE,
@@ -380,6 +354,36 @@ int thinkos_init(uint32_t opt)
 	DCC_LOG1(LOG_TRACE, "    fault: (%2d)", THINKOS_WQ_FAULT); 
 #endif
 
+	/* disable interrupts */
+	cm3_cpsid_i();
+
+#if THINKOS_ENABLE_STACK_INIT
+	/* initialize exception stack */
+	__thinkos_memset32(thinkos_idle.except_stack, 0xdeadbeef, 
+					   sizeof(thinkos_idle.except_stack));
+#endif
+
+	/* configure the thread stack */
+	cm3_psp_set(cm3_sp_get());
+
+	/* configure the main stack */
+	msp = (uint32_t)&thinkos_idle.ctx.r0;
+	cm3_msp_set(msp);
+
+	DCC_LOG2(LOG_TRACE, "msp=0x%08x idle=0x%08x", msp, &thinkos_idle);
+
+#if THINKOS_ENABLE_EXCEPTIONS
+	thinkos_exception_init();
+#endif
+
+#if THINKOS_ENABLE_MPU
+	__thinkos_mpu_init();
+#endif
+
+	__thinkos_reset();
+
+	self = __thinkos_init_main(opt);
+
 	DCC_LOG(LOG_TRACE, "enabling interrupts!");
 
 	/* configure the use of PSP in thread mode */
@@ -393,7 +397,6 @@ int thinkos_init(uint32_t opt)
 
 	return self;
 }
-
 
 const char * const thinkos_svc_link = thinkos_svc_nm;
 
