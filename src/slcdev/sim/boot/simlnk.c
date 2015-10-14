@@ -42,6 +42,8 @@ struct simlnk {
 	uint32_t rx_buf[(SIMLNK_MTU + 2 + 3) / 4];
 } simlnk;
 
+_Pragma ("GCC optimize (\"Ofast\")")
+
 static int simlnk_dma_xmit(unsigned int len)
 {
 	struct stm32f_dma * dma = STM32_DMA1;
@@ -157,8 +159,6 @@ void simlnk_simrpc_input(uint32_t opc, void * data, unsigned int cnt)
 		break;
 	}
 }
-
-_Pragma ("GCC optimize (\"Ofast\")")
 
 static void simlnk_dma_recv(uint32_t * pkt, unsigned int cnt)
 {

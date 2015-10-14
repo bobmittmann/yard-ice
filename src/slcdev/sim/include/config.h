@@ -37,7 +37,7 @@
 //#define THINKOS_EXCEPT_STACK_SIZE     240
 #define THINKOS_EXCEPT_STACK_SIZE     320
 #else
-#define THINKOS_EXCEPT_STACK_SIZE     328
+#define THINKOS_EXCEPT_STACK_SIZE     320
 #endif
 
 #define THINKOS_ENABLE_IDLE_WFI       1
@@ -100,6 +100,8 @@
 #define THINKOS_ENABLE_CTL            0
  
 #define THINKOS_ENABLE_COMM           1
+
+#define THINKOS_ENABLE_THREAD_VOID    1
 
 #if DEBUG
 #define THINKOS_ENABLE_STACK_INIT     1

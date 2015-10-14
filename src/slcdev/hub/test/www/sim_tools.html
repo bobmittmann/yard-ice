@@ -25,46 +25,29 @@
 		simlib_status_get(port, row);
 	}
 
-	function cmd_exec() {
-		var port = $('#selport').val();
-		var cmd = $('#cmd').val();
-		$('.button').prop('disabled', true);
-		$.ajax({
-	 		type: 'GET',
-			url: 'rpc_exec.cgi',
-			data: { 
-				port: port,
-				cmd: cmd
-	 		},
-			dataType: 'text',
-			timeout: 5000,
-			context: $('body'),
-			success: function(data) {
-//	 			$('#results').empty();
-//	   			$('#results').text(data);
-	   		},
-			error: function(xhr, type){ 
-				alert('Ajax error!');
-				stdout_flush_tmo = 5000;
-			},
-			complete: function(xhr, status){
-				$('.button').prop('disabled', false);
-			}
-		});
-	};
-
-	function rpc_js() {		
+	function rpc_jsexec() {		
 		var port = $('#selport').val();
 		var script = $('#script').val();
 		$('.button').prop('disabled', true);
 		simlib_js_post(port, script);
 		$('.button').prop('disabled', false);
 	};
-	
+
+	function rpc_jsstop() {
+		var port = $('#selport').val();
+		simlib_microjs_ctl(port, 0);		
+	}
+
+	function clr_stdout() {
+		var pre = $('#results')[0];
+		pre.innerHTML = '';		
+	};
+
 	$(function() {
 		$('#selport').on('change', get_status);
-		$('#btnexec').on('click',  cmd_exec);
-		$('#btnjs').on('click', rpc_js);
+		$('#btnjs').on('click', rpc_jsexec);
+		$('#btnstop').on('click', rpc_jsstop);
+		$('#btnclr').on('click', clr_stdout);
 		get_status();
 		flushTmr = setInterval(get_stdout, 500);		
 	});
@@ -107,35 +90,14 @@
 	</section>
 
 	<section>
-		<h2>Script</h2>
+		<h2>MicroJS Script</h2>
 
 		<table class="formgrid" style="width: 100%; table-layout: fixed;">
 		<col width="70%">
 	  	<col width="30%">
-		<tr>
+		<tr style="height: 100%;">
 			<td colspan="2">
-			<pre id="results" style="height: 16em;"></pre>		
-			</td>
-		</tr>
-		<tr>		
-			<td>
-			<input type="text" id="cmd" value="help" list="browsers" 
-			style="width: 100%; font-family: monospace;"/>
-			<datalist id="browsers">
-				<option value="help">
-				<option value="ls">
-				<option value="rm cfg.bin">
-				<option value="rm db.bin">
-				<option value="disable sens all">
-				<option value="disable mod all">
-				<option value="disable sens 1 2 3">
-				<option value="disable mod 1 2 3">
-				<option value="enable mod 1 2 3">
-				<option value="enable mod 1 2 3">
-			</datalist>
-			</td>
-			<td style="vertical-align: top;">		
-			<button id="btnexec" class="button">Exec...</button>
+			<pre id="results" style="height: 20em;"></pre>		
 			</td>
 		</tr>
 		<tr>
@@ -152,7 +114,9 @@ for(j = 0; j &lt; 200; j = j + 1) {
 </textarea>
 		</td>
 		<td style="vertical-align: top;">						
-		<button id="btnjs" class="button">Run Script...</button>
+		<button id="btnjs" class="button">Run...</button> <br />
+		<button id="btnstop" class="button">Stop</button> <br />
+		<button id="btnclr" class="button">Clear</button>
 		</td>
 	</tr>
 	</table>

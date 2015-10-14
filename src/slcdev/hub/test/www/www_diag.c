@@ -36,6 +36,14 @@ int rpc_json_error(struct httpctl * http, char * buf, int code, const char * msg
 	return http_send(http, json, n);
 }
 
+const static char json_ok_msg[] = "{\"ret\": \"OK\"}";
+
+int rpc_json_ok(struct httpctl * http)
+{
+   	httpd_200(http->tp, APPLICATION_JSON);
+	return http_send(http, json_ok_msg, sizeof(json_ok_msg));
+}
+
 int sim_getstats_cgi(struct httpctl * http)
 {
 	struct simrpc_stats stats;
@@ -110,6 +118,38 @@ int sim_getstats_cgi(struct httpctl * http)
 	n = cp - s;
 
 	return http_send(http, s, n);
+}
+
+int sim_microjs_ctl_cgi(struct httpctl * http)
+{
+	struct simrpc_pcb * sp;
+	unsigned int daddr;
+	char s[128];
+	int port;
+	int ctl;
+	int retcode;
+
+	port = atoi(http_query_lookup(http, "port"));
+	ctl = atoi(http_query_lookup(http, "ctl"));
+	daddr = port;
+
+	INF("MicroJS ctl, port=%d ctl=%d", port, ctl);
+
+	if ((sp = simrpc_open(daddr)) == NULL) {
+		WARN("simrpc_open() failed");
+		return rpc_json_error(http, s, -1, "simrpc_open() failed");
+	}
+
+	simrpc_set_timeout(sp, 50);
+	retcode = simrpc_jsctl(sp, ctl);
+	simrpc_close(sp);
+
+	if (retcode < 0) {
+		WARN("simrpc_stats_get() failed");
+		return rpc_json_error(http, s, retcode, "simrpc_stats_get() failed");
+	}
+
+	return rpc_json_ok(http);
 }
 
 int sim_get_os_state_cgi(struct httpctl * http)

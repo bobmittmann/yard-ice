@@ -106,6 +106,8 @@ struct httpdobj www_root[] = {
         .len = 0, .ptr = sim_getstats_cgi },
 	{ .oid = "sim_get_os_state.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
 		.len = 0, .ptr = sim_get_os_state_cgi },
+	{ .oid = "sim_microjs_ctl.cgi", .typ = OBJ_CODE_CGI, .lvl = 100,
+		.len = 0, .ptr = sim_microjs_ctl_cgi },
 	{ .oid = NULL, .typ = 0, .lvl = 0, .len = 0, .ptr = NULL }
 };
 

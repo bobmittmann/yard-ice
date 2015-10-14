@@ -36,6 +36,10 @@ _Pragma ("GCC optimize (\"O2\")")
 
 #if (THINKOS_ENABLE_MONITOR)
 
+#if (!THINKOS_ENABLE_THREAD_VOID)
+#error "Need THINKOS_ENABLE_THREAD_VOID"
+#endif
+
 #ifndef THINKOS_DMON_STACK_SIZE
 #define THINKOS_DMON_STACK_SIZE 960
 #endif

@@ -193,6 +193,15 @@ int simrpc_jsexec(struct simrpc_pcb * sp, const char * cmd,
 	return simlnk_rpc(sp, SIMRPC_JSEXEC, cmd, strlen(cmd), resp, max);
 }
 
+int simrpc_jsctl(struct simrpc_pcb * sp, unsigned int ctl)
+{
+	uint32_t req[1];
+
+	req[0] = ctl & 0xff;
+
+	return simlnk_rpc(sp, SIMRPC_JSCTL, req, 4, NULL, 0);
+}
+
 
 /* ---------------------------------------------------------------------------
  * Memory

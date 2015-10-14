@@ -76,6 +76,8 @@ enum simrpc_opc {
 	SIMRPC_ATTR_GET     = 53,
 	SIMRPC_STATS        = 54,
 
+	SIMRPC_JSCTL         = 55,
+
 	SIMRPC_STDOUT_DATA  = 128,
 	SIMRPC_STDOUT_FLUSH = 129,
 
@@ -181,6 +183,7 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
+void simrpc_jsctl_svc(uint32_t hdr, uint32_t * data, unsigned int cnt);
 
 void simrpc_svc_init(void);
 

@@ -108,8 +108,14 @@ struct microjs_rt {
 };
 
 struct microjs_vm {
-	int32_t * bp; /* host data pointer */
-	int32_t * sp; /* host stack pointer */
+	volatile uint8_t abort;
+	uint8_t trace_en: 1;
+	uint8_t res: 7;
+	uint16_t pc;
+	uint16_t sp;
+	uint16_t xp;
+	int32_t * data;  /* host data area pointer */
+	int32_t * stack; /* host stack area */
 	void * env; /* environment */
 };
 
@@ -128,6 +134,8 @@ void microjs_vm_clr_data(struct microjs_vm * vm,
 						 const struct microjs_rt * rt);
 
 int microjs_exec(struct microjs_vm * vm, uint8_t code[]);
+
+void microjs_abort(struct microjs_vm * vm);
 
 void strbuf_init(uint16_t * buf, unsigned int len);
 

@@ -59,7 +59,7 @@ void __thinkos_kill_all(void)
 	/* discard current thread context */
 	thinkos_rt.active = THINKOS_THREAD_VOID;
 #else
-	DCC_LOG(LOG_WARNING, "can't set current thread to void!"); 
+	DCC_LOG(LOG_PANIC, "can't set current thread to void!"); 
 #endif
 	/* signal the scheduler ... */
 	__thinkos_defer_sched();

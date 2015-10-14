@@ -63,13 +63,15 @@ extern struct httpdobj www_img[];
 
 /* --- bin2hex.py: file size --- */
 
-#define SIZEOF_SIM_DEBUG_HTML 1647
+#define SIZEOF_SIMRPC_CLNT_C 1823
+
+#define SIZEOF_SIM_DEBUG_HTML 1656
 
 #define SIZEOF_JQUERY_2_1_4_MIN_JS 29519
 
 #define SIZEOF_ZEPTO_MIN_JS 9377
 
-#define SIZEOF_SIMLIB_JS 1064
+#define SIZEOF_SIMLIB_JS 1113
 
 #define SIZEOF_MODALBOX_JS 1430
 
@@ -89,7 +91,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_WWW_RPCTEST_C 3000
 
-#define SIZEOF_SIM_TOOLS_HTML 1736
+#define SIZEOF_SIM_TOOLS_HTML 1471
 
 #define SIZEOF_SIM_DATABASE_HTML 1944
 
@@ -105,6 +107,8 @@ extern struct httpdobj www_img[];
 
 
 /* --- bin.hex.py: file content --- */
+
+extern const uint8_t simrpc_clnt_c[];
 
 extern const uint8_t sim_debug_html[];
 
@@ -175,6 +179,7 @@ int get_stdout_cgi(struct httpctl * http);
 int rpc_json_error(struct httpctl * http, char * buf, int code, const char * msg);
 int sim_getstats_cgi(struct httpctl * http);
 int sim_get_os_state_cgi(struct httpctl * http);
+int sim_microjs_ctl_cgi(struct httpctl * http);
 
 #ifdef __cplusplus
 }

@@ -123,6 +123,11 @@ __xcpt_context_restore(struct thinkos_except * xcpt)
 #endif
 
 #if (THINKOS_UNROLL_EXCEPTIONS) 
+
+#if (!THINKOS_ENABLE_THREAD_VOID)
+#error "Need THINKOS_ENABLE_THREAD_VOID"
+#endif
+
 void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 {
 	uint32_t icsr;
@@ -155,10 +160,8 @@ void __attribute__((naked)) __xcpt_thread(struct thinkos_except * xcpt)
 		xcpt->thread_id = -1;
 	}
 
-#if THINKOS_ENABLE_THREAD_VOID 
 	/* set the active thread to void */
 	thinkos_rt.active = THINKOS_THREAD_VOID;
-#endif
 	/* reset the IDLE thread */
 	thinkos_rt.idle_ctx = &thinkos_idle.ctx;
 	thinkos_idle.ctx.pc = (uint32_t)thinkos_idle_task,

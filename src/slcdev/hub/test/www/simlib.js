@@ -23,6 +23,25 @@ function simlib_stdout_flush(port, pre) {
 	});
 };
 
+function simlib_microjs_ctl(port, ctl)
+{
+	$.ajax({
+		type: 'GET',
+		url: 'sim_microjs_ctl.cgi',
+		data: { 
+			port: port,
+			ctl: ctl
+		},
+		dataType: 'json',			
+		timeout: 250,
+		context: $('body'),
+		success: function(data) {
+		},
+		error: function(xhr, type) { 
+		}
+	});
+}
+
 function simlib_status_get(port, tr) {	
 	$.ajax({
 		type: 'GET',

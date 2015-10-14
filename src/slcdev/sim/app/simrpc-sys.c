@@ -129,7 +129,10 @@ void simrpc_shellexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 #endif
 }
 
-int js(FILE * f, char * script, unsigned int len);
+int js(char * script, unsigned int len);
+int js_stop(void);
+int js_play(void);
+int js_pause(void);
 
 void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {
@@ -139,7 +142,7 @@ void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 	if (cnt < SIMRPC_DATA_MAX)
 		script[cnt] = '\0';
 
-	ret = js(stdout, script, cnt);
+	ret = js(script, cnt);
 
 	if (ret < 0)
 		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), ret);
@@ -147,6 +150,34 @@ void simrpc_jsexec_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
 }
 
+void simrpc_jsctl_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
+{
+	unsigned int ctl;
+
+	if (cnt != 4) {
+		DCC_LOG1(LOG_WARNING, "Invalid packet size, cnt=%d", cnt);
+		return;
+	};
+
+	ctl = data[0] & 0xff;
+
+	switch (ctl & 0xff) {
+	case SIMRPC_JSCTL_PAUSE:
+		js_pause();
+		break;
+	case SIMRPC_JSCTL_PLAY:
+		js_play();
+		break;
+	case SIMRPC_JSCTL_STOP:
+		js_stop();
+		break;
+	default:
+		simrpc_send_int(SIMRPC_REPLY_ERR(hdr), -1);
+		return;
+	}
+
+	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));
+}
 
 void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 {

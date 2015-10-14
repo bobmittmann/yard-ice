@@ -25,8 +25,7 @@
 
 void __thinkos_thread_abort(int thread_id)
 {
-
-	DCC_LOG1(LOG_WARNING, "<%d> ....", thread_id); 
+	DCC_LOG1(LOG_TRACE, "<%d> ....", thread_id); 
 
 #if THINKOS_ENABLE_TIMESHARE
 	{
@@ -57,12 +56,12 @@ void __thinkos_thread_abort(int thread_id)
 #endif
 
 	if (thread_id == thinkos_rt.active) {
-		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
 #if THINKOS_ENABLE_THREAD_VOID 
+		DCC_LOG(LOG_TRACE, "set active thread to void!"); 
 		/* pretend we are somebody else */
 		thinkos_rt.active = THINKOS_THREAD_VOID;
 #else
-		DCC_LOG(LOG_WARNING, "abort current thread won't clear context!"); 
+		DCC_LOG(LOG_PANIC, "abort current thread won't clear context!"); 
 #endif
 	} else {
 		DCC_LOG1(LOG_TRACE, "active thread=%d", thinkos_rt.active); 

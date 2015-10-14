@@ -135,6 +135,13 @@ struct simrpc_stats {
     struct slcdev_stats dev;
 };
 
+
+enum simrpc_jsctl {
+	SIMRPC_JSCTL_PAUSE = 0,
+	SIMRPC_JSCTL_PLAY  = 1,
+	SIMRPC_JSCTL_STOP  = 2
+};
+
 #define SIMRPC_EXEC_KEY(A, B, C, D) (A | (B << 8) | (C << 16)  | (D << 24))
 
 struct simrpc_pcb;
@@ -215,6 +222,8 @@ int simrpc_shellexec(struct simrpc_pcb * sp, const char * cmd,
 
 int simrpc_jsexec(struct simrpc_pcb * sp, const char * cmd,
 		char * resp, unsigned int max);
+
+int simrpc_jsctl(struct simrpc_pcb * sp, unsigned int ctl);
 
 int simrpc_file_open(struct simrpc_pcb * sp, const char * path);
 

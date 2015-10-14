@@ -89,6 +89,9 @@ void __attribute__((noreturn)) simlnk_recv_task(void)
 		case SIMRPC_JSEXEC:
 			simrpc_jsexec_svc(hdr, data, cnt);
 			break;
+		case SIMRPC_JSCTL:
+			simrpc_jsctl_svc(hdr, data, cnt);
+			break;
 		case SIMRPC_ATTR_GET:
 			simrpc_attr_get_svc(hdr, data, cnt);
 			break;

@@ -129,6 +129,8 @@ int main(int argc, char ** argv)
 	DCC_LOG(LOG_TRACE, "4. app_exec().");
 	app_exec();
 
+	DCC_LOG(LOG_ERROR, "5. error!!!");
+
 	return 0;
 }
 
