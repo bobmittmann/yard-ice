@@ -27,6 +27,11 @@
 #include "board.h"
 #include "config.h"
 
+/* FIXME: this is a mark to keep the symbol __heap_end in 
+   the symbols listing. */
+extern int __heap_end;
+const void * heap_end = &__heap_end; 
+
 void board_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);

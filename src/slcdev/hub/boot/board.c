@@ -29,6 +29,7 @@
 
 #include "board.h"
 #include "lattice.h"
+#include "version.h"
 
 #define DAC1_DMA_STREAM  5
 #define DAC2_DMA_STREAM  6
@@ -533,8 +534,9 @@ const struct thinkos_board this_board = {
 		.minor = 1,
 	},
 	.sw_ver = {
-		.major = 0,
-		.minor = 1,
+		.major = VERSION_MAJOR,
+		.minor = VERSION_MINOR
+//		.build = VERSION_BUILD
 	},
 	.memory = {
 		.ram = &sram_desc,

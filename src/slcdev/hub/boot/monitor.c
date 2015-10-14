@@ -145,7 +145,7 @@ static void monitor_ymodem_recv(struct dmon_comm * comm,
 {
 	dmprintf(comm, "\r\nYMODEM waiting to receive (^X to cancel) ... ");
 	dmon_soft_reset(comm);
-	if (dmon_app_load_ymodem(comm, addr, size) < 0) {
+	if (dmon_ymodem_flash(comm, addr, size) < 0) {
 		dmprintf(comm, "\r\n#ERROR: YMODEM transfer failed!\r\n");
 		return;
 	}	

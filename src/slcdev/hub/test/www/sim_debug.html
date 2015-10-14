@@ -36,10 +36,9 @@
 		var tab = $('#context')[0];
 		
 		thread_update(tab, 0, data.except.ctx);
-		thread_update(tab, 1, data.threads[0].ctx);
-		thread_update(tab, 2, data.threads[1].ctx);
-		thread_update(tab, 3, data.threads[2].ctx);
-		thread_update(tab, 4, data.threads[3].ctx);
+		for (var i = 0; i < data.threads.length; ++i) {
+			thread_update(tab, data.threads[i].id + 1, data.threads[i].ctx);	
+		}
 	}
 
 	function get_os_state(port) {
@@ -68,10 +67,17 @@
 		var port = $('#selport').val();
 		get_os_state(port);
 	}
+
+	function set_refresh_rate() {
+		var rate = $('#sel_refresh').val();
+		clearInterval(pollTmr);
+		pollTmr = setInterval(poll_os_state, rate);
+	}
 	
 	$(function() {
-		flushTmr = setInterval(poll_os_state, 250);
+		pollTmr = setInterval(poll_os_state, 1000);
 		poll_os_state();
+		$('#sel_refresh').on('change', set_refresh_rate);
     });
 
 </script>
@@ -256,9 +262,6 @@
 					<input id="btn_resume" type="button" value="Resume" />
 				</td>
 				<td>
-					<input id="btn_exec" type="button" value="Exec" />
-				</td>
-				<td>
 					<input id="btn_reset" type="button" value="Reset" />
 				</td>		
 				<td>
@@ -266,6 +269,27 @@
 				</td>	
 			</tr>
 			<tr>
+				<td style="text-align: right;">Refresh rate:</td>
+				<td>
+					<select id="sel_refresh">
+						<option value="125">125 ms</option>
+						<option value="250">250 ms</option>
+						<option value="500">500 ms</option>
+						<option value="1000" selected>1 second</option>
+						<option value="2000">2 seconds</option>
+						<option value="4000">4 seconds</option>
+					</select>		
+				</td>
+				<td>
+				</td>
+				<td>					
+				</td>		
+				<td>					
+				</td>
+				<td>					
+				</td>		
+				<td>					
+				</td>			
 			</tr>
 		</table>			
 	</section>

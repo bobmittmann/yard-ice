@@ -319,8 +319,10 @@ int simlnk_rpc(struct simrpc_pcb * sp, uint32_t insn,
 	lnk->tx.buf[0] = opc;
 	memcpy(&lnk->tx.buf[1], req, cnt);
 
+/*
 	INF("RPC <%d> daddr=%d insn=%d seq=%d tmo=%d. <<",
 			thinkos_thread_self(), daddr, insn, seq, tmo);
+*/
 
 #if 0
 	{ 
@@ -366,7 +368,9 @@ again:
 			cnt = MIN(cnt, max);
 			memcpy(rsp, &lnk->rx.buf[1], cnt);
 		}
+/*
 		INF("RPC <%d> OK. >>", thinkos_thread_self());
+*/
 		thinkos_mutex_unlock(lnk->mutex);
 		return cnt;
 	}
