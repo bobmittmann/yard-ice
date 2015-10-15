@@ -96,7 +96,7 @@ void cm3_debug_mon_isr(void)
 	}	
 }
 
-void app_exec()
+void app_exec(void)
 {
 	struct cm3_dcb * dcb = CM3_DCB;
 

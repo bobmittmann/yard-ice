@@ -213,7 +213,7 @@ void simrpc_cfgcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		fprintf(f, " - data: %d of %d\n", 
 				rt->data_sz, sizeof(slcdev_vm_data));
 		fprintf(f, " - stack: %d of %d\n", 
-				rt->stack_sz, sizeof(slcdev_vm_stack));
+				rt->stack_sz, sizeof(slcdev_sim_stack));
 
 		if (config_save(json.fp) < 0) {
 			DCC_LOG(LOG_WARNING, "config_save() failed!");
@@ -282,7 +282,7 @@ void simrpc_dbcompile_svc(uint32_t hdr, uint32_t * data, unsigned int cnt)
 		fprintf(f, " - data: %d of %d\n", 
 				rt->data_sz, sizeof(slcdev_vm_data));
 		fprintf(f, " - stack: %d of %d\n", 
-				rt->stack_sz, sizeof(slcdev_vm_stack));
+				rt->stack_sz, sizeof(slcdev_sim_stack));
 	}
 
 	simrpc_send_opc(SIMRPC_REPLY_OK(hdr));

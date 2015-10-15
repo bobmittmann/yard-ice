@@ -15,13 +15,20 @@
  ----------------------------------------------------------------------- */
 
 int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
-int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
+
+int32_t slcdev_sim_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
+struct microjs_vm slcdev_sim_vm; 
+
 struct slcdev_usr usr;
 
 void sim_js_exec(struct microjs_vm * vm, struct ss_device * dev, 
 				 struct db_dev_model * model, uint8_t code[])
 {
 	microjs_exec(vm, code);
+	vm->pc = 0;
+	vm->sp = 0;
+	vm->xp = 0;
+	vm->abort = 0;
 }
 
 /*----------------------------------------------------------------------
@@ -578,22 +585,19 @@ void on_ap_read_presence(void)
 
 void __attribute__((noreturn)) sim_event_task(void)
 {
+	struct microjs_vm * vm = &slcdev_sim_vm; 
 	struct microjs_rt rt;
 	struct db_dev_model * model;
 	struct ss_device * dev;
 	struct db_info * db;
-	struct microjs_vm vm; 
 	struct slcdev_sim * sim;
 	const struct sim_model * sim_model;
-	int i;
+	uint8_t * js_code;
 
 	/* initialize virtual machine */
 	rt.data_sz = sizeof(slcdev_vm_data);
-	rt.stack_sz = sizeof(slcdev_vm_stack);
-	microjs_vm_init(&vm, &rt, NULL, slcdev_vm_data, slcdev_vm_stack);
-
-	/* guard period */
-	thinkos_sleep(2000);
+	rt.stack_sz = sizeof(slcdev_sim_stack);
+	microjs_vm_init(vm, &rt, NULL, slcdev_vm_data, slcdev_sim_stack);
 
 	db = db_info_get();
 	dev = slcdev_drv.dev;
@@ -610,7 +614,9 @@ void __attribute__((noreturn)) sim_event_task(void)
 		DCC_LOG(LOG_INFO, ".1");
 
 		/* wait for an event */
+		slcdev_drv.sim.busy = false;
 		ev = thinkos_ev_wait(SLCDEV_DRV_EV);
+		slcdev_drv.sim.busy = true;
 
 		if (dev != slcdev_drv.dev) {
 			dev = slcdev_drv.dev;
@@ -623,165 +629,178 @@ void __attribute__((noreturn)) sim_event_task(void)
 
 		case SLC_EV_DEV_POLL:
 			/* simulate a clip device */
-			sim_model->run(&vm, sim, dev, model);
-			break;
+			sim_model->run(vm, sim, dev, model);
+			continue;
 
 		case SLC_EV_AP_DIRECT_POLL:
 			DCC_LOG1(LOG_TRACE, "AP direct poll: dev=%d", dev->addr);
-			break;
+			continue;
 
 		case SLC_EV_AP_RD_PRESENCE:
 			on_ap_read_presence(); 
-			break;
+			continue;
 
-		case SLC_EV_TRIG:
-			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
-			microjs_exec(&vm, usr.trig);
-			break;
-
-		case SLC_EV_SW1_OFF:
-			DCC_LOG(LOG_TRACE, "SW1_OFF");
-			microjs_exec(&vm, usr.sw[0].off);
-			break;
-
-		case SLC_EV_SW1_UP:
-			DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
-			microjs_exec(&vm, usr.sw[0].up);
-			break;
-
-		case SLC_EV_SW1_DOWN:
-			DCC_LOG(LOG_TRACE, "SW1_DOWN");
-			microjs_exec(&vm, usr.sw[0].down);
-			break;
-
-		case SLC_EV_SW2_OFF:
-			DCC_LOG(LOG_TRACE, "SW2_OFF");
-			microjs_exec(&vm, usr.sw[1].off);
-			break;
-
-		case SLC_EV_SW2_UP:
-			DCC_LOG(LOG_TRACE, "SW2_UP");
-			microjs_exec(&vm, usr.sw[1].up);
-			break;
-
-		case SLC_EV_SW2_DOWN:
-			DCC_LOG(LOG_TRACE, "SW2_DOWN");
-			microjs_exec(&vm, usr.sw[1].down);
-			break;
-
-		case SLC_EV_TMR1:
-			DCC_LOG(LOG_TRACE, "TMR1");
-			microjs_exec(&vm, usr.tmr[0]);
-			break;
-
-		case SLC_EV_TMR2:
-			DCC_LOG(LOG_TRACE, "TMR2");
-			microjs_exec(&vm, usr.tmr[1]);
-			break;
-
-		case SLC_EV_TMR3:
-			DCC_LOG(LOG_TRACE, "TMR3");
-			microjs_exec(&vm, usr.tmr[2]);
-			break;
-
-		case SLC_EV_TMR4:
-			DCC_LOG(LOG_TRACE, "TMR4");
-			microjs_exec(&vm, usr.tmr[3]);
-			break;
-
-		case SLC_EV_USR1:
-			DCC_LOG(LOG_TRACE, "USR1");
-			microjs_exec(&vm, usr.usr[0]);
-			break;
-
-		case SLC_EV_USR2:
-			DCC_LOG(LOG_TRACE, "USR2");
-			microjs_exec(&vm, usr.usr[1]);
-			break;
-
-		case SLC_EV_USR3:
-			DCC_LOG(LOG_TRACE, "USR3");
-			microjs_exec(&vm, usr.usr[2]);
-			break;
-
-		case SLC_EV_USR4:
-			DCC_LOG(LOG_TRACE, "USR4");
-			microjs_exec(&vm, usr.usr[3]);
-			break;
-
-		case SLC_EV_USR5:
-			DCC_LOG(LOG_TRACE, "USR5");
-			microjs_exec(&vm, usr.usr[4]);
-			break;
-
-		case SLC_EV_USR6:
-			DCC_LOG(LOG_TRACE, "USR6");
-			microjs_exec(&vm, usr.usr[5]);
-			break;
-
-		case SLC_EV_USR7:
-			DCC_LOG(LOG_TRACE, "USR7");
-			microjs_exec(&vm, usr.usr[6]);
-			break;
-
-		case SLC_EV_USR8:
-			DCC_LOG(LOG_TRACE, "USR8");
-			microjs_exec(&vm, usr.usr[7]);
-			break;
+		default:
+			continue;
 
 		case SLC_EV_SIM_START:
 			DCC_LOG(LOG_TRACE, "SIM_START");
 			db = db_info_get();
 			/* clear virtual machine data area */
-			microjs_vm_clr_data(&vm, &rt);
+			microjs_vm_clr_data(vm, &rt);
 			/* run script */
-			microjs_exec(&vm, usr.init);
-			/* resume simulation */
-			thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_RESUME);
+			js_code = usr.init;
 			break;
 
-		case SLC_EV_SIM_STOP:
-			DCC_LOG(LOG_TRACE, "SIM_STOP");
-			slcdev_stop();
-			/* disable all events */
-			for (i = 0; i < 32; ++i)
-				thinkos_ev_mask(SLCDEV_DRV_EV, i, 0);
-			thinkos_ev_mask(SLCDEV_DRV_EV, SLC_EV_SIM_RESUME, 1);
-			thinkos_ev_mask(SLCDEV_DRV_EV, SLC_EV_SIM_START, 1);
-			slcdev_drv.sim.halt = true;
+		case SLC_EV_TRIG:
+			DCC_LOG1(LOG_INFO, "trigger %d", dev->addr);
+			js_code = usr.trig;
 			break;
 
-		case SLC_EV_SIM_RESUME:
-			DCC_LOG(LOG_TRACE, "SIM_RESUME");
-			slcdev_resume();
-			slcdev_drv.sim.halt = false;
-			/* force reprocessing posible previously masked events */
-			for (i = 0; i < 32; ++i)
-				thinkos_ev_mask(SLCDEV_DRV_EV, i, 1);
+		case SLC_EV_SW1_OFF:
+			DCC_LOG(LOG_TRACE, "SW1_OFF");
+			js_code = usr.sw[0].off;
+			break;
+
+		case SLC_EV_SW1_UP:
+			DCC_LOG1(LOG_TRACE, "SW1_UP %p", usr.sw[0].up);
+			js_code = usr.sw[0].up;
+			break;
+
+		case SLC_EV_SW1_DOWN:
+			DCC_LOG(LOG_TRACE, "SW1_DOWN");
+			js_code = usr.sw[0].down;
+			break;
+
+		case SLC_EV_SW2_OFF:
+			DCC_LOG(LOG_TRACE, "SW2_OFF");
+			js_code = usr.sw[1].off;
+			break;
+
+		case SLC_EV_SW2_UP:
+			DCC_LOG(LOG_TRACE, "SW2_UP");
+			js_code = usr.sw[1].up;
+			break;
+
+		case SLC_EV_SW2_DOWN:
+			DCC_LOG(LOG_TRACE, "SW2_DOWN");
+			js_code = usr.sw[1].down;
+			break;
+
+		case SLC_EV_TMR1:
+			DCC_LOG(LOG_TRACE, "TMR1");
+			js_code = usr.tmr[0];
+			break;
+
+		case SLC_EV_TMR2:
+			DCC_LOG(LOG_TRACE, "TMR2");
+			js_code = usr.tmr[1];
+			break;
+
+		case SLC_EV_TMR3:
+			DCC_LOG(LOG_TRACE, "TMR3");
+			js_code = usr.tmr[2];
+			break;
+
+		case SLC_EV_TMR4:
+			DCC_LOG(LOG_TRACE, "TMR4");
+			js_code = usr.tmr[3];
+			break;
+
+		case SLC_EV_USR1:
+			DCC_LOG(LOG_TRACE, "USR1");
+			js_code = usr.usr[0];
+			break;
+
+		case SLC_EV_USR2:
+			DCC_LOG(LOG_TRACE, "USR2");
+			js_code = usr.usr[1];
+			break;
+
+		case SLC_EV_USR3:
+			DCC_LOG(LOG_TRACE, "USR3");
+			js_code = usr.usr[2];
+			break;
+
+		case SLC_EV_USR4:
+			DCC_LOG(LOG_TRACE, "USR4");
+			js_code = usr.usr[3];
+			break;
+
+		case SLC_EV_USR5:
+			DCC_LOG(LOG_TRACE, "USR5");
+			js_code = usr.usr[4];
+			break;
+
+		case SLC_EV_USR6:
+			DCC_LOG(LOG_TRACE, "USR6");
+			js_code = usr.usr[5];
+			break;
+
+		case SLC_EV_USR7:
+			DCC_LOG(LOG_TRACE, "USR7");
+			js_code = usr.usr[6];
+			break;
+
+		case SLC_EV_USR8:
+			DCC_LOG(LOG_TRACE, "USR8");
+			js_code = usr.usr[7];
 			break;
 		}
+
+		microjs_exec(vm, js_code);
+		vm->pc = 0;
+		vm->sp = 0;
+		vm->xp = 0;
+		vm->abort = 0;
 	}
 }
 
 void slcdev_sim_resume(void)
 {
+	int i;
+
 	DCC_LOG(LOG_TRACE, "simulation resume!");
+
+	/* clear and enable all events */
+	for (i = 0; i < 32; ++i) {
+		thinkos_ev_mask(SLCDEV_DRV_EV, i, 1);
+	}	
+	/* clear device related events */
+	thinkos_ev_clear(SLCDEV_DRV_EV, SLC_EV_DEV_POLL);
+	thinkos_ev_clear(SLCDEV_DRV_EV, SLC_EV_AP_DIRECT_POLL);
+	thinkos_ev_clear(SLCDEV_DRV_EV, SLC_EV_AP_RD_PRESENCE);
+
+	/* trigger the start script */
 	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_START);
+
+	slcdev_resume();
 }
 
 void slcdev_sim_stop(void)
 {
+	struct microjs_vm * vm = &slcdev_sim_vm; 
+	int i;
+
 	DCC_LOG(LOG_TRACE, "simulation stop!");
-	thinkos_ev_raise(SLCDEV_DRV_EV, SLC_EV_SIM_STOP);
-	while (!slcdev_drv.sim.halt) {
+
+	slcdev_stop();
+	/* disable all events */
+	for (i = 0; i < 32; ++i)
+		thinkos_ev_mask(SLCDEV_DRV_EV, i, 0);
+
+	/* : stop any running script */
+	microjs_abort(vm);
+
+	while (slcdev_drv.sim.busy) {
 		thinkos_sleep(25);
 	}
 }
 
+
 void slcdev_sim_init(void)
 {
 	DCC_LOG(LOG_TRACE, "initializing simulator ...");
-
 }
 
 void dev_sim_enable(bool mod, unsigned int addr)

@@ -141,35 +141,36 @@ struct db_info {
   Events
  ***************************************************************************/
 
-#define SLC_EV_SIM_STOP   0
-#define SLC_EV_SIM_START  1
-#define SLC_EV_SIM_RESUME 2
-#define SLC_EV_DEV_POLL   3
-#define SLC_EV_TRIG       4
-#define SLC_EV_SW1_OFF    5
-#define SLC_EV_SW1_UP     6
-#define SLC_EV_SW1_DOWN   7
-#define SLC_EV_SW2_OFF    8
-#define SLC_EV_SW2_UP     9
-#define SLC_EV_SW2_DOWN   10
+enum slc_event {
+	/* Clip poll */
+	SLC_EV_DEV_POLL       = 0,
+	SLC_EV_AP_DIRECT_POLL = 1,
+	SLC_EV_AP_GROUP_POLL  = 2,
+	SLC_EV_AP_RD_PRESENCE = 3,
 
-#define SLC_EV_TMR1       11
-#define SLC_EV_TMR2       12
-#define SLC_EV_TMR3       13
-#define SLC_EV_TMR4       14
+	SLC_EV_TRIG           = 4,
+	SLC_EV_SW1_OFF        = 5,
+	SLC_EV_SW1_UP         = 6,
+	SLC_EV_SW1_DOWN       = 7,
+	SLC_EV_SW2_OFF        = 8,
+	SLC_EV_SW2_UP         = 9,
+	SLC_EV_SW2_DOWN       = 10,
 
-#define SLC_EV_USR1       16
-#define SLC_EV_USR2       17
-#define SLC_EV_USR3       18
-#define SLC_EV_USR4       19
-#define SLC_EV_USR5       20
-#define SLC_EV_USR6       21
-#define SLC_EV_USR7       22
-#define SLC_EV_USR8       23
+	SLC_EV_TMR1           = 11,
+	SLC_EV_TMR2           = 12,
+	SLC_EV_TMR3           = 13,
+	SLC_EV_TMR4           = 14,
 
-#define SLC_EV_AP_DIRECT_POLL 24
-#define SLC_EV_AP_GROUP_POLL  25
-#define SLC_EV_AP_RD_PRESENCE 26
+	SLC_EV_USR1           = 16,
+	SLC_EV_USR2           = 17,
+	SLC_EV_USR3           = 18,
+	SLC_EV_USR4           = 19,
+	SLC_EV_USR5           = 20,
+	SLC_EV_USR6           = 21,
+	SLC_EV_USR7           = 22,
+	SLC_EV_USR8           = 23,
+	SLC_EV_SIM_START      = 31
+};
 
 /***************************************************************************
   Runtime
@@ -305,7 +306,7 @@ struct slcdev_trig {
 
 /* device simulator context */
 struct slcdev_sim {
-	volatile uint32_t halt : 1;
+	volatile bool busy; 
 	uint32_t ctls;      /* consecutive polling sequence control bit pattern */
 	struct {
 		uint8_t insn;   /* AP instruction */
@@ -367,11 +368,11 @@ struct slcdev_drv {
  */
 
 #define SLCDEV_VM_STACK_SZ 64
-#define SLCDEV_VM_DATA_SZ 64
+#define SLCDEV_VM_DATA_SZ  64
 
 extern struct slcdev_drv slcdev_drv;
 extern int32_t slcdev_vm_data[SLCDEV_VM_DATA_SZ / 4]; /* data area */
-extern int32_t slcdev_vm_stack[SLCDEV_VM_STACK_SZ / 4]; /* data area */
+extern int32_t slcdev_sim_stack[SLCDEV_VM_STACK_SZ / 4]; /* stack area */
 extern uint32_t slcdev_symbuf[64]; /* symbol table buffer */
 
 #ifdef __cplusplus

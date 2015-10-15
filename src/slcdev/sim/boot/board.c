@@ -27,11 +27,6 @@
 #include "board.h"
 #include "config.h"
 
-/* FIXME: this is a mark to keep the symbol __heap_end in 
-   the symbols listing. */
-extern int __heap_end;
-const void * heap_end = &__heap_end; 
-
 void board_init(void)
 {
 	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
@@ -54,34 +49,6 @@ void board_init(void)
 	/* USART2_RX */
 	stm32_gpio_mode(IO_UART_RX, ALT_FUNC, 0);
 	stm32_gpio_af(IO_UART_RX, GPIO_AF7);
-
-#if 0
-	/* Switches */
-	stm32_gpio_mode(IO_SW1_UP,  INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW1_DWN, INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW2_UP,  INPUT, PULL_UP | SPEED_LOW);
-	stm32_gpio_mode(IO_SW2_DWN, INPUT, PULL_UP | SPEED_LOW);
-
-	/* Comparator */ 
-	stm32_gpio_mode(IO_COMP, INPUT, SPEED_MED);
-
-	/* Negative volatge supply */
-	stm32_gpio_mode(IO_VNEG_SW, ALT_FUNC, PUSH_PULL | SPEED_MED);
-	stm32_gpio_af(IO_VNEG_SW, GPIO_AF1);
-
-	/* Current rate control */
-	stm32_gpio_mode(IO_IRATE, ANALOG, 0);
-
-	/* Current sink */
-	stm32_gpio_mode(IO_SINK1, OUTPUT, PUSH_PULL | SPEED_MED);
-	stm32_gpio_mode(IO_SINK2, OUTPUT, PUSH_PULL | SPEED_MED);
-	stm32_gpio_mode(IO_SINK3, OUTPUT, PUSH_PULL | SPEED_MED);
-	stm32_gpio_mode(IO_SINK4, OUTPUT, PUSH_PULL | SPEED_MED);
-	stm32_gpio_clr(IO_SINK1);
-	stm32_gpio_clr(IO_SINK2);
-	stm32_gpio_clr(IO_SINK3);
-	stm32_gpio_clr(IO_SINK4);
-#endif
 }
 
 /* -------------------------------------------------------------------------
@@ -163,17 +130,16 @@ bool board_app_exec(uint32_t addr, int mode)
 
 void board_test(int mode)
 {
+	__led_off(IO_LED2);
+	__led_off(IO_LED4);
+
 	if (mode == APP_MODE_FAULT) {
 		for (;;) {
 			__led_on(IO_LED1);
-//			__led_on(IO_LED2);
 			__led_on(IO_LED3);
-//			__led_on(IO_LED4);
 			thinkos_sleep(100);
 			__led_off(IO_LED1);
-			__led_off(IO_LED2);
 			__led_off(IO_LED3);
-			__led_off(IO_LED4);
 			thinkos_sleep(234);
 		}
 	}
