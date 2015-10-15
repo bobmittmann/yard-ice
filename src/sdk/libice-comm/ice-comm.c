@@ -23,7 +23,9 @@
 #include <sys/ice-comm.h>
 #include <arch/cortex-m3.h>
 
+#ifndef THINKAPP
 struct ice_comm_blk ice_comm_blk;
+#endif
 
 void ice_comm_sync(void) 
 {

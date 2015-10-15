@@ -71,7 +71,7 @@
 #endif
 
 #ifndef MONITOR_FAULT_ENABLE
-#define MONITOR_FAULT_ENABLE       0
+#define MONITOR_FAULT_ENABLE       1
 #endif
 
 #define CTRL_B 0x02
@@ -155,6 +155,9 @@ static void monitor_show_help(struct dmon_comm * comm)
 	dmon_comm_send(comm, __hr__, sizeof(__hr__) - 1);
 }
 
+extern int __heap_end;
+const void * heap_end = &__heap_end; 
+uint32_t except_crc __attribute__((section(".heap")));
 extern uint32_t _stack;
 extern const struct thinkos_thread_inf thinkos_main_inf;
 
@@ -210,7 +213,6 @@ static void monitor_print_fault(struct dmon_comm * comm)
 	dmon_print_exception(comm, xcpt);
 }
 
-#if 0
 static void monitor_on_fault(struct dmon_comm * comm)
 {
 	struct thinkos_except * xcpt = &thinkos_except_buf;
@@ -224,7 +226,6 @@ static void monitor_on_fault(struct dmon_comm * comm)
 		dmon_comm_send(comm, __hr__, sizeof(__hr__) - 1);
 	}
 }
-#endif
 #endif
 
 #if (MONITOR_THREADINFO_ENABLE)

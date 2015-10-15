@@ -63,6 +63,8 @@ void board_softreset(void)
 {
 	struct stm32_rcc * rcc = STM32_RCC;
 
+	DCC_LOG(LOG_TRACE, "...");
+
 	/* Reset all peripherals except USB_OTG and GPIOA */
 	rcc->ahb1rstr = ~(1 << RCC_GPIOA); 
 	rcc->ahb2rstr = ~(1 << RCC_OTGFS);
@@ -154,7 +156,7 @@ const struct thinkos_board this_board = {
 		.flash = &flash_desc
 	},
 	.application = {
-		.start_addr = 0x08040000,
+		.start_addr = 0x08020000,
 		.block_size = 256 * 1024
 	},
 	.init = board_init,

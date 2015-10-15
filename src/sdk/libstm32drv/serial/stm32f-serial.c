@@ -122,7 +122,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 #endif
 
 	if (sr & USART_TC) {
-		DCC_LOG1(LOG_MSG, "UART%d TC.", stm32_usart_lookup(uart) + 1);
+		DCC_LOG1(LOG_TRACE, "UART%d TC.", stm32_usart_lookup(uart) + 1);
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
 		/* disable the transfer complete interrupt */

@@ -30,7 +30,7 @@ CFILES = yard-ice.c board.c debugger.c ice_drv.c\
 
 SDK = ../../sdk
 
-LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil\
+LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil $(SDK)/libice-comm\
 		  $(SDK)/libc $(SDK)/libtcpip $(SDK)/libstm32drv\
 		  $(SDK)/libbitvec $(SDK)/libhexdump $(SDK)/libcrc $(SDK)/libaltera\
 		  $(SDK)/libtrace $(SDK)/libtty $(SDK)/libxmodem\
@@ -39,7 +39,7 @@ LIBDIRS = $(SDK)/libcm3 $(SDK)/libstm32f $(SDK)/libutil\
 		  ../armice ../cm3ice ../targets ../tftp ../gdb ../vcom ../telnet \
 		  ../comm 
 
-LIBS = cm3 stm32f util c tcpip stm32drv bitvec hexdump \
+LIBS = cm3 stm32f util ice-comm c tcpip stm32drv bitvec hexdump \
 	altera opcodes trace arch jtag script cmd nand jtag3drv armice cm3ice\
 	targets tftp shell console tty gdb vcom telnet crc xmodem comm 
 
@@ -56,7 +56,7 @@ INCPATH = ../../sdk/include ../include
 MACH = stm32f207
 THINKAPP = 1
 LDSCRIPT = yard-ice.ld
-LOAD_ADDR = 0x08040000
+LOAD_ADDR = 0x08020000
 include ../../mk/stm32f2xx.mk
 
 help:

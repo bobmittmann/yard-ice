@@ -148,6 +148,10 @@ void __thinkos_reset(void)
 	}
 #endif
 
+#if THINKOS_ENABLE_THREAD_ALLOC
+	/* initialize the thread allocation bitmap */ 
+	__thinkos_bmp_init(thinkos_rt.th_alloc, THINKOS_THREADS_MAX); 
+#endif
 
 #if THINKOS_ENABLE_MUTEX_ALLOC
 	/* initialize the mutex allocation bitmap */ 
@@ -238,8 +242,6 @@ static int __thinkos_init_main(uint32_t opt)
 		id = THINKOS_THREADS_MAX - 1;
 
 #if THINKOS_ENABLE_THREAD_ALLOC
-	/* initialize the thread allocation bitmap */ 
-	thinkos_rt.th_alloc[0] = (uint32_t)(0xffffffffLL << THINKOS_THREADS_MAX);
 	/* alloc main thread */
 	self = thinkos_alloc_lo(thinkos_rt.th_alloc, id);
 #else

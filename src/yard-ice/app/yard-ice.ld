@@ -28,14 +28,14 @@ MEMORY
 	vectors(r) : ORIGIN = 0x00000000, LENGTH = 1K
 	flash (rx) : ORIGIN = 0x08000000, LENGTH = 512K
 	sram  (rw) : ORIGIN = 0x20000000, LENGTH = 128K
-	dcclog (r) : ORIGIN = 0x40000000, LENGTH = 1024K
+	dcclog (r) : ORIGIN = 0x40100000, LENGTH = 1024K
 }
 
 REGION_ALIAS("CODE", flash);
 REGION_ALIAS("DATA", sram);
 
-__code_init = ORIGIN(flash) + 0x40000;
-__data_init = ORIGIN(sram)  + 0x01000;
+__code_init = ORIGIN(flash) + 0x20000;
+__data_init = ORIGIN(sram)  + 0x0c000;
 _stack = ORIGIN(sram) + LENGTH(sram);
 
 SECTIONS

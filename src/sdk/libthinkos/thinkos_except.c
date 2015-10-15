@@ -211,6 +211,7 @@ void __attribute__((naked)) __xcpt_unroll(struct thinkos_except * xcpt)
 
 	/* reset reentry counter */
 	if (++xcpt->count > 4) {
+		DCC_LOG(LOG_ERROR, "too many reentries...");
 		for(;;);
 	}
 
@@ -673,6 +674,9 @@ void thinkos_exception_init(void)
 
 #if THINKOS_ENABLE_EXCEPT_RESET
 	__exception_reset();
+#else
+	thinkos_except_buf.count = 0;
+	thinkos_except_buf.thread_id = -1;
 #endif
 }
 

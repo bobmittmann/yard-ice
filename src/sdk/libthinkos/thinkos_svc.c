@@ -147,7 +147,13 @@ void thinkos_comm_svc(int32_t * arg);
 
 void thinkos_nosys(int32_t * arg)
 {
-	DCC_LOG(LOG_ERROR, "!!!");
+#if DEBUG
+	/* get PC value */
+	uint8_t * pc = (uint8_t *)arg[6];
+	/* get the immediate data from instruction */
+	int svc = pc[-2];
+	DCC_LOG1(LOG_ERROR, "svc=%d!!!", svc);
+#endif
 	arg[0] = THINKOS_ENOSYS;
 }
 
