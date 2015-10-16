@@ -35,9 +35,9 @@
  * Relay and Power
  **************************************************************************/
 
-#define IO_RELAY_GPIO     STM32_GPIOB, 9
-#define IO_PWR_EN_GPIO    STM32_GPIOD, 12 
-#define IO_PWR_MON_GPIO   STM32_GPIOD, 11
+#define IO_RELAY          STM32_GPIOB, 9
+#define IO_PWR_EN         STM32_GPIOD, 12 
+#define IO_PWR_MON        STM32_GPIOD, 11
 
 /**************************************************************************
  * Altera Cyclone FPGA connections
@@ -47,6 +47,11 @@
 #define IO_UART6_TX       STM32_GPIOC, 6
 #define IO_UART6_RX       STM32_GPIOD, 7
 
+#define IO_N_CONFIG       STM32_GPIOE, 0
+#define IO_CONF_DONE      STM32_GPIOE, 1
+#define IO_N_STATUS       STM32_GPIOC, 11
+#define IO_DCLK           STM32_GPIOC, 10
+#define IO_DATA0          STM32_GPIOB, 5
 
 #define FLASH_BLK_FS_OFFS     0x00020000
 #define FLASH_BLK_FS_SIZE     (256 * 1024)

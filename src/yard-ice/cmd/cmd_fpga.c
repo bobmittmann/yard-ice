@@ -75,6 +75,7 @@ int flash_xmodem_recv(FILE * f, uint32_t offs)
 	return cnt;
 }
 
+int jtag3ctrl_init(const void * rbf, int size);
 
 int cmd_fpga(FILE * f, int argc, char ** argv)
 {
@@ -82,6 +83,7 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 	uint32_t flash_offs = (uint8_t *)rbf - STM32_FLASH_MEM;
 	bool erase = false;
 	bool load = false;
+	bool cfg = false;
 
 	if (argc > 1) {
 		int i = 1;
@@ -92,6 +94,10 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 			} else if ((strcmp(argv[i], "load") == 0) || 
 					   (strcmp(argv[i], "l") == 0)) {
 				load = true;
+			} else if ((strcmp(argv[i], "config") == 0) || 
+					   (strcmp(argv[i], "cfg") == 0) || 
+					   (strcmp(argv[i], "c") == 0)) {
+				cfg = true;
 			} else {
 				fprintf(f, "Invalid argument: %s\n", argv[i]);
 				return -1;
@@ -117,6 +123,14 @@ int cmd_fpga(FILE * f, int argc, char ** argv)
 		fprintf(f, "Loading FPGA .rbf file at 0x%08x...\n", (uint32_t)rbf);
 		if (flash_xmodem_recv(f, flash_offs) < 0) {
 			fprintf(f, "fpga_xmodem_recv() failed!\n");
+			return -1;
+		}
+	};
+
+	if (cfg) {
+		fprintf(f, "Configuring FPGA...\n");
+		if (jtag3ctrl_init(rbf, 38177) < 0) {
+			fprintf(f, "jtag3ctrl_init() failed!\n");
 			return -1;
 		}
 	};

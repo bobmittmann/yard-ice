@@ -312,16 +312,15 @@ int jtag3ctrl_init(const void * rbf, int size)
 
 	/* Configure memory controller ... */
 	stm32f_fsmc_init();
-		
 	/* Configure external interrupt ... */
 	stm32f_exti_init(STM32_GPIOD, 6, EXTI_EDGE_RISING);
 	/* Initialize clock output */
 	stm32f_mco2_init();
 
-	if ((ret = altera_configure(rbf, 65536)) < 0) {
+	if ((ret = altera_configure(rbf, size)) < 0) {
 		DCC_LOG1(LOG_ERROR, "altera_configure() failed: %d!", ret);
 		INF(" # altera_configure() failed: %d!", ret);
-//		return ret;
+		return ret;
 	} else {
 		INF("- FPGA configuration done (%d bytes)", ret);
 	}
@@ -330,7 +329,7 @@ int jtag3ctrl_init(const void * rbf, int size)
 	stm32f_mco2_enable();
 
 	/* wait for the FPGA initialize */
-	__os_sleep(20);
+	thinkos_sleep(20);
 
 	/* initial configuration */
 	reg_wr(REG_CFG, 0);

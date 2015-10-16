@@ -54,6 +54,7 @@
 
 #include <yard-ice/drv.h>
 
+#include "board.h"
 #include "module.h"
 #include "debugger.h"
 #include "gdb_rspd.h"
@@ -112,22 +113,12 @@ const struct file stm32_uart_file = {
 	.op = &stm32_usart_fops 
 };
 
-#define UART_TX STM32_GPIOC, 12
-#define UART_RX STM32_GPIOD, 2
-
 void stdio_init(void)
 {
 	struct serial_dev * ser;
 	struct tty_dev * tty;
 	FILE * f_tty;
 	FILE * f_raw;
-
-	stm32_gpio_clock_en(STM32_GPIOC);
-	stm32_gpio_clock_en(STM32_GPIOD);
-	stm32_gpio_mode(UART_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
-	stm32_gpio_mode(UART_RX, ALT_FUNC, PULL_UP);
-	stm32_gpio_af(UART_RX, GPIO_AF8);
-	stm32_gpio_af(UART_TX, GPIO_AF8);
 
 	ser = stm32f_uart5_serial_init(115200, SERIAL_8N1);
 	f_raw = serial_fopen(ser);
@@ -348,10 +339,12 @@ int init_target(void)
 	};
 
 	INF("* target select...");
+	DCC_LOG1(LOG_TRACE, "target='%s'", target->name);
 
 	/* TODO: ice driver selection */
 	if (target_ice_configure(stdout, target, 1) < 0) {
 		INF("ERROR: target_ice_configure()!");
+		DCC_LOG(LOG_WARNING, "target_ice_configure() failed!");
 		return -1;
 	}
 
@@ -362,6 +355,7 @@ int init_target(void)
 
 	if (target_config(stdout) < 0) {
 		INF("ERROR: target_config()!");
+		DCC_LOG(LOG_WARNING, "target_config() failed!");
 		return -1;
 	}
 
@@ -375,12 +369,58 @@ int telnet_shell(void);
 int usb_shell(void);
 int sys_start(void);
 
+void io_init(void)
+{
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOA);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOB);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOC);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOD);
+	stm32_clk_enable(STM32_RCC, STM32_CLK_GPIOE);
+
+	/* - Relay ------------------------------------------------------------*/
+	stm32_gpio_mode(IO_RELAY, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_RELAY);
+
+	/* - External Power ---------------------------------------------------*/
+	stm32_gpio_mode(IO_PWR_EN, OUTPUT, SPEED_LOW);
+	stm32_gpio_clr(IO_PWR_EN);
+	stm32_gpio_mode(IO_PWR_MON, INPUT, SPEED_LOW | PULL_UP);
+
+	/* - Debug UART -------------------------------------------------------*/
+	stm32_gpio_mode(IO_UART5_TX, ALT_FUNC, PUSH_PULL | SPEED_LOW);
+	stm32_gpio_mode(IO_UART5_RX, ALT_FUNC, PULL_UP);
+
+	stm32_gpio_af(IO_UART5_RX, GPIO_AF8);
+	stm32_gpio_af(IO_UART5_TX, GPIO_AF8);
+
+	/* - FPGA PRogramming ------------------------------------------------*/
+	stm32_gpio_mode(IO_N_CONFIG, OUTPUT, SPEED_MED);
+	stm32_gpio_set(IO_N_CONFIG);
+
+	stm32_gpio_mode(IO_CONF_DONE, INPUT, SPEED_MED | PULL_UP);
+#if 0
+	stm32_gpio_mode(IO_N_STATUS, INPUT, SPEED_MED | PULL_UP);
+#endif
+	stm32_gpio_mode(IO_N_STATUS, ALT_FUNC, PULL_UP | SPEED_MED);
+	stm32_gpio_af(IO_N_STATUS, GPIO_AF6);
+
+	stm32_gpio_mode(IO_DCLK, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(IO_DCLK, GPIO_AF6);
+
+	stm32_gpio_mode(IO_DATA0, ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(IO_DATA0, GPIO_AF6);
+}
 
 int main(int argc, char ** argv)
 {
 	int ret;
 
-#ifndef THINKAPP
+	io_init();
+
+#ifdef THINKAPP
+	DCC_LOG(LOG_TRACE, " 1. thinkos_udelay_factor().");
+	thinkos_udelay_factor(&udelay_factor);
+#else
 	DCC_LOG_INIT();
 	DCC_LOG_CONNECT();
 
@@ -412,28 +452,28 @@ int main(int argc, char ** argv)
 
 	INF("## YARD-ICE " VERSION_NUM " - " VERSION_DATE " ##");
 
-	DCC_LOG(LOG_TRACE, " 3. supervisor_init().");
+	DCC_LOG(LOG_TRACE, " 7. supervisor_init().");
 	supervisor_init();
 
-	DCC_LOG(LOG_TRACE, " 2. stm32f_nvram_env_init().");
+	DCC_LOG(LOG_TRACE, " 8. stm32f_nvram_env_init().");
 	stm32f_nvram_env_init();
 
-	DCC_LOG(LOG_TRACE, " 2. rtc_init().");
+	DCC_LOG(LOG_TRACE, " 9. rtc_init().");
 	rtc_init();
 
-	DCC_LOG(LOG_TRACE, " 5. modules_init().");
+	DCC_LOG(LOG_TRACE, " 10. modules_init().");
 	modules_init();
 
 	INF("* Starting system module ...");
-	DCC_LOG(LOG_TRACE, " 6. sys_start().");
+	DCC_LOG(LOG_TRACE, " 11. sys_start().");
 	sys_start();
 
 	INF("* Initializing YARD-ICE debugger...");
-	DCC_LOG(LOG_TRACE, " 7. debugger_init().");
+	DCC_LOG(LOG_TRACE, " 12. debugger_init().");
 	debugger_init();
 
 	INF("* Initializing JTAG module ...");
-	DCC_LOG(LOG_TRACE, " 8. jtag_start().");
+	DCC_LOG(LOG_TRACE, " 13. jtag_start().");
 	if ((ret = jtag_start()) < 0) {
 		INF("jtag_start() failed! [ret=%d]", ret);
 		debugger_except("JTAG driver fault");
@@ -441,7 +481,7 @@ int main(int argc, char ** argv)
 
 #if (ENABLE_NAND)
 	INF("* Initializing NAND module...");
-	DCC_LOG(LOG_TRACE, " 9. mod_nand_start().");
+	DCC_LOG(LOG_TRACE, " 14. mod_nand_start().");
 	if (mod_nand_start() < 0) {
 		INF("mod_nand_start() failed!");
 		return 1;
@@ -450,16 +490,16 @@ int main(int argc, char ** argv)
 
 #if (ENABLE_I2C)
 	INF("* starting I2C module ... ");
-	DCC_LOG(LOG_TRACE, "10. i2c_init().");
+	DCC_LOG(LOG_TRACE, "15. i2c_init().");
 	i2c_init();
 #endif
 
 	INF("* configuring initial target ... ");
-	DCC_LOG(LOG_TRACE, "11. init_target().");
+	DCC_LOG(LOG_TRACE, "16. init_target().");
 	init_target();
 
 #if ENABLE_NETWORK
-	DCC_LOG(LOG_TRACE, " 4. network_config().");
+	DCC_LOG(LOG_TRACE, " 17. network_config().");
 	INF("* Initializing network...");
 	network_config();
 #endif
@@ -468,42 +508,49 @@ int main(int argc, char ** argv)
 	INF("* starting VCOM daemon ... ");
 	/* connect the UART to the JTAG auxiliary pins */
 	jtag3ctrl_aux_uart(true);
-	DCC_LOG(LOG_TRACE, "12. vcom_start().");
+	DCC_LOG(LOG_TRACE, "18. vcom_start().");
 	vcom_start();
 #endif
 
 #if (ENABLE_COMM)
 	INF("* starting COMM daemon ... ");
+	DCC_LOG(LOG_TRACE, "19. comm_tcp_start().");
 	comm_tcp_start(&debugger.comm);
 #endif
 
 #if (ENABLE_TFTP)
 	INF("* starting TFTP server ... ");
+	DCC_LOG(LOG_TRACE, "20. tftpd_start().");
 	tftpd_start();
 #endif
 
 #if (ENABLE_GDB)
 	INF("* starting GDB daemon ... ");
+	DCC_LOG(LOG_TRACE, "21. gdb_rspd_start().");
 	gdb_rspd_start();
 #endif
 
 #if ENABLE_MONITOR
 	INF("* starting console shell ... ");
+	DCC_LOG(LOG_TRACE, "22. console_shell().");
 	console_shell();
 #endif
 
 #if ENABLE_USB
 	INF("* starting USB shell ... ");
+	DCC_LOG(LOG_TRACE, "23. usb_shell().");
 	usb_shell();
 #endif
 
 #if ENABLE_TELNET
 	INF("* starting TELNET server ... ");
+	DCC_LOG(LOG_TRACE, "24. telnet_shell().");
 	telnet_shell();
 #endif
 
 	thinkos_sleep(250);
 
+	DCC_LOG(LOG_TRACE, "25. stdio_shell().");
 	stdio_shell();
 
 	return 0;
