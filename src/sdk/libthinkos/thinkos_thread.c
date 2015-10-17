@@ -138,9 +138,9 @@ void thinkos_thread_create_svc(int32_t * arg)
 	if (!init->opt.paused)
 #endif
 	{
-		DCC_LOG(LOG_TRACE, "__thinkos_thread_resume()");
+		DCC_LOG(LOG_JABBER, "__thinkos_thread_resume()");
 		__thinkos_thread_resume(thread_id);
-		DCC_LOG(LOG_TRACE, "__thinkos_defer_sched()");
+		DCC_LOG(LOG_JABBER, "__thinkos_defer_sched()");
 		__thinkos_defer_sched();
 	}
 

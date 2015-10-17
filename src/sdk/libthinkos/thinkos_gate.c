@@ -38,7 +38,7 @@ void thinkos_gate_alloc_svc(int32_t * arg)
 		__bit_mem_wr(thinkos_rt.gate, idx * 2, 0);
 		__bit_mem_wr(thinkos_rt.gate, idx * 2 + 1, 0);
 		arg[0] = idx + THINKOS_GATE_BASE;
-		DCC_LOG1(LOG_TRACE, "wq=%d", arg[0]);
+		DCC_LOG1(LOG_INFO, "wq=%d", arg[0]);
 	} else {
 		arg[0] = idx;
 	}
@@ -330,7 +330,7 @@ void thinkos_gate_exit_svc(int32_t * arg)
 			gates = __ldrex(gates_bmp);
 			gates |= (__GATE_SIGNALED << idx);
 		} while (__strex(gates_bmp, gates));
-		DCC_LOG2(LOG_TRACE, "<%d> exit gate %d, leave open.", 
+		DCC_LOG2(LOG_INFO, "<%d> exit gate %d, leave open.", 
 				 thinkos_rt.active, wq);
 	} else { /* (open == 0) */
 again:

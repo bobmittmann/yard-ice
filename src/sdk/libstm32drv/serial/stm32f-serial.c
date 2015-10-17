@@ -46,7 +46,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		/* clear the break detection interrupt flag */
 		uart->sr = sr & ~(USART_ORE | USART_LBD);
 
-		DCC_LOG(LOG_TRACE, "BRK");
+		DCC_LOG(LOG_INFO, "BRK");
 
 		/* remove the break char from the queue */
 		drv->rx_fifo.head--;
@@ -96,12 +96,13 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 		}
 	}
 
-#if 0
+#if 1
 	if (sr & USART_TXE) {
 		uint32_t tail = drv->tx_fifo.tail;
 		if (tail == drv->tx_fifo.head) {
 			/* FIFO empty, disable TXE interrupts */
-			*drv->txie = 0; 
+	//		*drv->txie = 0; 
+			uart->cr1 = cr & ~USART_TXEIE;
 			thinkos_gate_open_i(drv->tx_gate);
 		} else {
 			uart->tdr = drv->tx_fifo.buf[tail++ % SERIAL_TX_FIFO_LEN];
@@ -122,7 +123,7 @@ void stm32f_serial_isr(struct stm32f_serial_drv * drv)
 #endif
 
 	if (sr & USART_TC) {
-		DCC_LOG1(LOG_TRACE, "UART%d TC.", stm32_usart_lookup(uart) + 1);
+		DCC_LOG1(LOG_JABBER, "UART%d TC.", stm32_usart_lookup(uart) + 1);
 		/* TC interrupt is cleared by writing 0 back to the SR register */
 		uart->sr = sr & ~USART_TC;
 		/* disable the transfer complete interrupt */

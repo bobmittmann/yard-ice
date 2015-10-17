@@ -44,7 +44,7 @@ static const struct stm32f_spi_io spi3_io = {
 	.sck = GPIO(GPIOC, 10)  /* SCK */
 };
 
-static int altera_io_init(void)
+int altera_io_init(void)
 {
 	gpio_io_t io;
 
@@ -115,14 +115,64 @@ static void conf_wr(int c)
 
 int altera_configure(const uint8_t * buf, unsigned int max)
 {
+	struct stm32f_spi * spi = STM32F_SPI3;
+	unsigned int div;
+	gpio_io_t io;
+	int freq = 1000000;
 	int n = 0;
 	int ret;
-
-	altera_io_init();
-	
-	stm32f_spi_init(STM32F_SPI3, &spi3_io, 500000, SPI_MSTR | SPI_LSBFIRST);
+	int br;
+	int i;
 
 	DCC_LOG2(LOG_TRACE, "rbf=%08x max=%d", buf, max);
+	
+	io = n_config;
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, OUTPUT, SPEED_MED);
+	gpio_set(n_config);
+
+	io = conf_done;
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, PULL_UP | SPEED_MED);
+
+	io = n_status;
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, INPUT, PULL_UP | SPEED_MED);
+
+	io = spi3_io.sck;
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
+					ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF6);
+
+	io = spi3_io.mosi;
+	stm32_gpio_mode(STM32_GPIO(io.port), io.pin, 
+					ALT_FUNC, PUSH_PULL | SPEED_MED);
+	stm32_gpio_af(STM32_GPIO(io.port), io.pin, GPIO_AF6);
+
+	/* Enable peripheral clock */;
+	stm32_clk_enable(STM32_RCC, STM32_CLK_SPI3);
+
+	/* Configure SPI */
+	div = stm32_clk_hz(STM32_CLK_SPI3) / freq / 2;
+	br = 31 - __clz(div);
+	if (div > (1 << br))
+		br++;
+
+    DCC_LOG3(LOG_TRACE, "SPI freq=%d div=%d br=%d", freq, div, br);
+
+	spi->cr1 = 0;
+	spi->cr2 = 0;
+	spi->i2scfgr = 0;
+	spi->i2spr = 0;
+
+	/* Master mode, LSB first */
+	spi->cr1 = SPI_SPE | SPI_BR_SET(br) | SPI_MSTR |
+		SPI_SSM | SPI_SSI | SPI_LSBFIRST;
+
+//#define SPI_CPOL (1 << 1)
+//#define SPI_CPHA (1 << 0)
+//	for (i = 0; i < 128; ++i) {
+//		conf_wr(0xff);
+//	}
+
+	udelay(40);
 
 	while ((ret = conf_start()) < 0) {
 		DCC_LOG(LOG_ERROR, "conf_start() failed!");
@@ -145,6 +195,14 @@ int altera_configure(const uint8_t * buf, unsigned int max)
 		conf_wr(buf[n]);
 		n++;
 		if (n > max) {
+			for (i = 0; i < 5000000; ++i) {
+//				udelay(100);
+				conf_wr(0xff);
+				if (gpio_status(conf_done)) {
+					return 0;
+				};
+			}
+
 			DCC_LOG2(LOG_ERROR, "n(%d) > max(%d)!", n, max);
 			return -6;
 		}
