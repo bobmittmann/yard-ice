@@ -65,7 +65,7 @@ extern struct httpdobj www_img[];
 
 #define SIZEOF_SIMRPC_CLNT_C 1823
 
-#define SIZEOF_SIM_DEBUG_HTML 1780
+#define SIZEOF_SIM_DEBUG_HTML 1947
 
 #define SIZEOF_JQUERY_2_1_4_MIN_JS 29519
 

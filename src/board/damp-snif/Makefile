@@ -20,23 +20,26 @@
 # 
 
 
-PROG = serial-analyzer
+PROG = damp-snif
 
-CFILES = serial-analyzer.c serial.c pfclock.c leds.c 
+CFILES = damp-snif.c serial.c board.c leds.c usb_trace.c \
+		 sdu_trace.c damp_trace.c usb_xflash_pic.c profclk.c
 
 LIBDIRS = ../../sdk/libstm32f ../../sdk/libcm3 ../../sdk/libutil \
 		  ../../sdk/libthinkos ../../sdk/libc ../../sdk/libice-comm \
-		  ../../sdk/libdrv ../../sdk/libcdc-acm 
+		  ../../sdk/libcdc-acm 
 
-LIBS = stm32f cm3 util thinkos c ice-comm drv cdc-acm 
+LIBS = stm32f cm3 util thinkos c ice-comm cdc-acm 
 
-INCPATH = ../sdk/include 
+INCPATH = ../../sdk/include 
 
 CDEFS = CONFIG_H
-CFLAGS = -g -O1
+CFLAGS = -g -O2 -Wall -ffunction-sections -fdata-sections
+LDFLAGS = -Xlinker --gc-sections 
+
+JTAGTOOL_ADDR = 192.168.10.50
+#JTAG_TARGET = stm32
 
 MACH = stm32f103x6
 include ../../mk/stm32f103.mk
-
-#include ../mk/stm32f207.mk
 

@@ -13,6 +13,11 @@
 <script src="simlib.js"></script>
 
 <script>
+	const SIM_DBG_SUSPEND = 1;
+	const SIM_DBG_RESUME = 2;
+	const SIM_DBG_RESET = 3;
+	const SIM_DBG_SAFE_MODE = 4;
+
 	function hex32(x) {
 	   return (0x100000000 + x).toString(16).substr(-8).toUpperCase();
 	}
@@ -68,16 +73,62 @@
 		get_os_state(port);
 	}
 
-	function set_refresh_rate() {
-		var rate = $('#sel_refresh').val();
-		clearInterval(pollTmr);
-		pollTmr = setInterval(poll_os_state, rate);
+	function poll_os_state() {
+		var port = $('#selport').val();
+		get_os_state(port);
 	}
+	
+	
+	function sim_debug_cmd(port, cmd) {
+		$.ajax({
+			type: 'GET',
+			url: 'sim_debug_cmd.cgi',
+			data: { 
+				port: port,
+				cmd: cmd
+			},
+			dataType: 'json',			
+			timeout: 250,
+			context: $('body'),
+			success: function(data) {
+				if (data.hasOwnProperty('error')) {					
+				} else {
+				}		
+			},
+			error: function(xhr, type) {				
+			}
+		});
+	}
+	
+	function sim_safe_mode() {
+		var port = $('#selport').val();
+		sim_debug_cmd(port, SIM_DBG_SAFE_MODE);
+	}
+	
+	function sim_reset() {
+		var port = $('#selport').val();
+		sim_debug_cmd(port, SIM_DBG_RESET);
+	}
+	
+	function sim_thinkos_suspend() {
+		var port = $('#selport').val();
+		sim_debug_cmd(port, SIM_DBG_SUSPEND);
+	}
+	
+	function sim_thinkos_resume() {
+		var port = $('#selport').val();
+		sim_debug_cmd(port, SIM_DBG_RESUME);
+	}
+	
 	
 	$(function() {
 		pollTmr = setInterval(poll_os_state, 1000);
 		poll_os_state();
 		$('#sel_refresh').on('change', set_refresh_rate);
+        $('#btn_suspend').on('click', sim_thinkos_suspend);
+        $('#btn_resume').on('click', sim_thinkos_resume);
+        $('#btn_reset').on('click', sim_reset);
+        $('#btn_safe').on('click', sim_safe_mode);
     });
 
 </script>
@@ -261,12 +312,6 @@
 				<td>
 					<input id="btn_resume" type="button" value="Resume" />
 				</td>
-				<td>
-					<input id="btn_reset" type="button" value="Reset" />
-				</td>		
-				<td>
-					<input id="btn_safe" type="button" value="Safe" />
-				</td>	
 			</tr>
 			<tr>
 				<td style="text-align: right;">Refresh rate:</td>
@@ -279,17 +324,15 @@
 						<option value="2000">2 seconds</option>
 						<option value="4000">4 seconds</option>
 					</select>		
-				</td>
+				</td>				
 				<td>
 				</td>
-				<td>					
+				<td>
+					<input id="btn_reset" type="button" value="Reset" />
 				</td>		
-				<td>					
-				</td>
-				<td>					
-				</td>		
-				<td>					
-				</td>			
+				<td>
+					<input id="btn_safe" type="button" value="Safe" />
+				</td>	
 			</tr>
 		</table>			
 	</section>
